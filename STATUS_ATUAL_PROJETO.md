@@ -167,8 +167,12 @@ Atualizado em 2026-09-16.
   consultas pagas nao canceladas. RLS, permissao financeira e escopo por
   profissional/paciente foram preservados; pacotes continuam fora do ticket
   medio para evitar dupla contagem. A tela de recebimentos mostra o novo bloco
-  com as formulas explicitadas. Proximos candidatos: comparacao temporal,
-  exportacao auditada e quebra de performance por profissional. Detalhes em
+  com as formulas explicitadas. O Incremento 2 acrescenta a janela anterior de
+  mesma duracao, sem sobreposicao, e compara receita recebida, concluidas,
+  comparecimento e ticket medio por diferenca absoluta ou pontos percentuais;
+  a interface tolera a ordem do rollout entre web e backend. Proximos
+  candidatos: exportacao auditada e quebra de performance por profissional.
+  Detalhes em
   `docs/history/phases/fase-263-relatorios-financeiros-performance.md`.
 - Fase 261 (escopo de trabalho: gaps de seguranca e privacidade
   identificados no audit da fase) **concluida tecnicamente em 2026-09-15,

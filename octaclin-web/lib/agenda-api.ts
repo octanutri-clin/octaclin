@@ -205,6 +205,29 @@ export interface LinhaRecebimentoProfissionalApi {
   isentas: number;
 }
 
+export interface IndicadoresPerformanceApi {
+  totalConsultas: number;
+  concluidas: number;
+  faltas: number;
+  canceladas: number;
+  taxaComparecimentoPercentual: number;
+  taxaFaltaPercentual: number;
+  taxaCancelamentoPercentual: number;
+  ticketMedioRecebidoCentavos: number;
+}
+
+export interface ResumoPeriodoAnteriorApi {
+  inicioEm: string;
+  fimEm: string;
+  consultas: number;
+  recebidoCentavos: number;
+  pendenteCentavos: number;
+  isentas: number;
+  pacotesRecebidoCentavos: number;
+  pacotesPendenteCentavos: number;
+  performance: IndicadoresPerformanceApi;
+}
+
 export interface ResumoRecebimentosApi {
   inicioEm: string;
   fimEm: string;
@@ -214,16 +237,8 @@ export interface ResumoRecebimentosApi {
   isentas: number;
   pacotesRecebidoCentavos: number;
   pacotesPendenteCentavos: number;
-  performance: {
-    totalConsultas: number;
-    concluidas: number;
-    faltas: number;
-    canceladas: number;
-    taxaComparecimentoPercentual: number;
-    taxaFaltaPercentual: number;
-    taxaCancelamentoPercentual: number;
-    ticketMedioRecebidoCentavos: number;
-  };
+  performance: IndicadoresPerformanceApi;
+  comparacaoPeriodoAnterior: ResumoPeriodoAnteriorApi;
   porProfissional: LinhaRecebimentoProfissionalApi[];
 }
 

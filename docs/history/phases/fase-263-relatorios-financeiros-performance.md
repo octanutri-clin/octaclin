@@ -1,6 +1,6 @@
 # Fase 263 - Relatorios financeiros e de performance por cliente
 
-Status: em andamento. Incremento 1 implementado em 2026-09-16.
+Status: em andamento. Incrementos 1 e 2 implementados em 2026-09-16.
 
 ## Objetivo
 
@@ -35,6 +35,23 @@ A tela de recebimentos apresenta os indicadores em um cartao separado, com
 rotulo ajustado para gestor, profissional ou paciente filtrado e uma explicacao
 curta das bases de calculo. O fluxo existente por profissional foi preservado.
 
+## Incremento 2 - comparacao com o periodo anterior
+
+O mesmo endpoint passou a consultar a janela imediatamente anterior com a
+mesma duracao e sem sobrepor o limite inicial do periodo atual. A resposta
+inclui os totais financeiros e os indicadores de performance anteriores depois
+dos mesmos filtros de tenant, profissional e paciente.
+
+A interface compara receita recebida (consultas mais pacotes), consultas
+concluidas, taxa de comparecimento e ticket medio. Dinheiro e contagens usam
+diferenca absoluta; taxas usam pontos percentuais. Essa decisao evita variacao
+percentual indefinida quando a base anterior e zero. O fim do dia selecionado
+tambem foi corrigido para `23:59:59.999`, o ultimo milissegundo do dia.
+
+O cartao e tolerante a uma janela curta de rollout na qual a web nova ainda
+receba a resposta do backend anterior: sem `comparacaoPeriodoAnterior`, a tela
+mantem o resumo atual e apenas omite a comparacao.
+
 ## Evidencia TDD e validacoes
 
 - RED: o teste de dominio falhou porque
@@ -45,13 +62,16 @@ curta das bases de calculo. O fluxo existente por profissional foi preservado.
   depois do mesmo filtro seguro do resumo financeiro.
 - A regressao visual da agenda usa o novo contrato e verifica o cartao de
   desempenho.
+- RED do Incremento 2: o teste do servico falhou porque o contrato ainda nao
+  expunha `comparacaoPeriodoAnterior`.
+- GREEN do Incremento 2: o servico confirmou a janela anterior sem sobreposicao,
+  e a regressao visual confirmou valores atuais, anteriores e diferenca em
+  pontos percentuais.
 
 ## Proximos incrementos candidatos
 
-1. Evolucao temporal e comparacao com periodo anterior, sem inferir tendencia
-   quando a base for insuficiente.
-2. Exportacao auditada dos indicadores, respeitando filtros e autorizacao.
-3. Quebra gerencial por profissional com as mesmas formulas do consolidado.
+1. Exportacao auditada dos indicadores, respeitando filtros e autorizacao.
+2. Quebra gerencial por profissional com as mesmas formulas do consolidado.
 
 Esses candidatos ainda nao estao concluidos e devem passar por priorizacao
 antes de ampliar o contrato.

@@ -40,14 +40,18 @@ function consulta(sobrescrever: Partial<AgendaConsultaOrm> = {}): AgendaConsulta
 function montarServico(opcoes: {
   consulta?: AgendaConsultaOrm | null;
   consultas?: Partial<AgendaConsultaOrm>[];
+  consultasPeriodoAnterior?: Partial<AgendaConsultaOrm>[];
   pacote?: Partial<PacoteSessaoOrm> | null;
   pacotes?: Partial<PacoteSessaoOrm>[];
+  pacotesPeriodoAnterior?: Partial<PacoteSessaoOrm>[];
   profissionalDoUsuario?: unknown;
   paciente?: unknown;
 } = {}) {
   const salvarConsulta = jest.fn(async (dados: AgendaConsultaOrm) => dados);
   let filtroConsultas: Record<string, unknown> = {};
   let filtroPacotes: Record<string, unknown> = {};
+  let numeroBuscaConsultas = 0;
+  let numeroBuscaPacotes = 0;
 
   const gerenciador = {
     getRepository: jest.fn((entidade: unknown) => {
@@ -56,7 +60,11 @@ function montarServico(opcoes: {
           findOne: jest.fn(async () => (opcoes.consulta === undefined ? consulta() : opcoes.consulta)),
           find: jest.fn(async (parametros: { where: Record<string, unknown> }) => {
             filtroConsultas = parametros.where;
-            return opcoes.consultas ?? [];
+            const resultado = numeroBuscaConsultas === 0
+              ? (opcoes.consultas ?? [])
+              : (opcoes.consultasPeriodoAnterior ?? []);
+            numeroBuscaConsultas += 1;
+            return resultado;
           }),
           save: salvarConsulta
         };
@@ -66,7 +74,11 @@ function montarServico(opcoes: {
           findOne: jest.fn(async () => opcoes.pacote ?? null),
           find: jest.fn(async (parametros: { where: Record<string, unknown> }) => {
             filtroPacotes = parametros.where;
-            return opcoes.pacotes ?? [];
+            const resultado = numeroBuscaPacotes === 0
+              ? (opcoes.pacotes ?? [])
+              : (opcoes.pacotesPeriodoAnterior ?? []);
+            numeroBuscaPacotes += 1;
+            return resultado;
           }),
           create: jest.fn((dados: Record<string, unknown>) => dados),
           save: jest.fn(async (dados: Record<string, unknown>) => ({
@@ -280,6 +292,48 @@ describe('ServicoFinanceiroAgenda', () => {
       );
 
       expect(filtroConsultas().profissionalId).toBe('profissional-7');
+    });
+
+    it('deve comparar com uma janela anterior de mesma duracao sem sobrepor os limites', async () => {
+      const { servico } = montarServico({
+        consultas: [
+          consulta({ status: 'concluida', statusPagamento: 'pago', valorCentavos: 20000 }),
+          consulta({ id: 'consulta-2', status: 'falta', statusPagamento: 'pendente', valorCentavos: 12000 })
+        ],
+        consultasPeriodoAnterior: [
+          consulta({ id: 'consulta-anterior-1', status: 'concluida', statusPagamento: 'pago', valorCentavos: 15000 }),
+          consulta({ id: 'consulta-anterior-2', status: 'cancelada', statusPagamento: 'pago', valorCentavos: 99900 })
+        ],
+        pacotes: [{ statusPagamento: 'pago', valorTotalCentavos: 50000 }],
+        pacotesPeriodoAnterior: [{ statusPagamento: 'pago', valorTotalCentavos: 30000 }]
+      });
+
+      const resumo = await servico.resumoRecebimentos(
+        'tenant-1',
+        { inicioEm: '2026-08-01T00:00:00.000Z', fimEm: '2026-08-31T23:59:59.999Z' },
+        colaborador
+      );
+
+      expect(resumo.comparacaoPeriodoAnterior).toEqual({
+        inicioEm: '2026-07-01T00:00:00.000Z',
+        fimEm: '2026-07-31T23:59:59.999Z',
+        consultas: 1,
+        recebidoCentavos: 15000,
+        pendenteCentavos: 0,
+        isentas: 0,
+        pacotesRecebidoCentavos: 30000,
+        pacotesPendenteCentavos: 0,
+        performance: {
+          totalConsultas: 2,
+          concluidas: 1,
+          faltas: 0,
+          canceladas: 1,
+          taxaComparecimentoPercentual: 100,
+          taxaFaltaPercentual: 0,
+          taxaCancelamentoPercentual: 50,
+          ticketMedioRecebidoCentavos: 15000
+        }
+      });
     });
 
     it('deve filtrar consultas e pacotes pelo paciente do deep link financeiro', async () => {

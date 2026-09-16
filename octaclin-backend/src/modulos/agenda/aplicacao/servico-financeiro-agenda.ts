@@ -161,10 +161,41 @@ export class ServicoFinanceiroAgenda {
         }))
       );
 
+      const duracaoInclusivaMs = fimEm.getTime() - inicioEm.getTime() + 1;
+      const fimPeriodoAnterior = new Date(inicioEm.getTime() - 1);
+      const inicioPeriodoAnterior = new Date(inicioEm.getTime() - duracaoInclusivaMs);
+      const consultasPeriodoAnterior = await gerenciador.getRepository(AgendaConsultaOrm).find({
+        where: {
+          tenantId,
+          inicioEm: Between(inicioPeriodoAnterior, fimPeriodoAnterior),
+          ...(profissionalId ? { profissionalId } : {}),
+          ...(filtro.pacienteId ? { pacienteId: filtro.pacienteId } : {})
+        },
+        order: { inicioEm: 'ASC' },
+        take: 5000
+      });
+      const linhasPeriodoAnterior = consultasPeriodoAnterior.map((consulta) => ({
+        status: consulta.status,
+        statusPagamento: consulta.statusPagamento ?? 'pendente',
+        valorCentavos: consulta.valorCentavos ?? 0
+      }));
+      const totaisPeriodoAnterior = somarRecebimentos(linhasPeriodoAnterior);
+      const performancePeriodoAnterior = calcularIndicadoresPerformance(linhasPeriodoAnterior);
+
       const pacotes = await gerenciador.getRepository(PacoteSessaoOrm).find({
         where: {
           tenantId,
           criadoEm: Between(inicioEm, fimEm),
+          canceladoEm: IsNull(),
+          ...(profissionalId ? { profissionalId } : {}),
+          ...(filtro.pacienteId ? { pacienteId: filtro.pacienteId } : {})
+        },
+        take: 2000
+      });
+      const pacotesPeriodoAnterior = await gerenciador.getRepository(PacoteSessaoOrm).find({
+        where: {
+          tenantId,
+          criadoEm: Between(inicioPeriodoAnterior, fimPeriodoAnterior),
           canceladoEm: IsNull(),
           ...(profissionalId ? { profissionalId } : {}),
           ...(filtro.pacienteId ? { pacienteId: filtro.pacienteId } : {})
@@ -179,6 +210,14 @@ export class ServicoFinanceiroAgenda {
         performance,
         pacotesRecebidoCentavos: this.somarPacotes(pacotes, 'pago'),
         pacotesPendenteCentavos: this.somarPacotes(pacotes, 'pendente'),
+        comparacaoPeriodoAnterior: {
+          inicioEm: inicioPeriodoAnterior.toISOString(),
+          fimEm: fimPeriodoAnterior.toISOString(),
+          ...totaisPeriodoAnterior,
+          pacotesRecebidoCentavos: this.somarPacotes(pacotesPeriodoAnterior, 'pago'),
+          pacotesPendenteCentavos: this.somarPacotes(pacotesPeriodoAnterior, 'pendente'),
+          performance: performancePeriodoAnterior
+        },
         porProfissional: await this.quebrarPorProfissional(gerenciador, tenantId, consultas)
       };
     });

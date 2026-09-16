@@ -2847,8 +2847,13 @@ publicado antes de ampliar a superficie de mudancas visuais.
     ticket medio de consultas.
   - A tela de recebimentos apresenta o novo cartao de desempenho para gestor,
     profissional e paciente filtrado, com as bases de calculo explicitadas.
-  - Proximos incrementos candidatos: comparacao temporal, exportacao auditada e
-    quebra de performance por profissional. Detalhes em
+  - Incremento 2 implementado em 2026-09-16: o endpoint devolve a janela
+    imediatamente anterior de mesma duracao, sob os mesmos filtros seguros, e
+    a tela compara receita recebida, concluidas, comparecimento e ticket medio
+    por diferenca absoluta ou pontos percentuais. O limite final do dia passou
+    a incluir `23:59:59.999` e a renderizacao tolera a ordem do rollout.
+  - Proximos incrementos candidatos: exportacao auditada e quebra de
+    performance por profissional. Detalhes em
     `docs/history/phases/fase-263-relatorios-financeiros-performance.md`.
 
 Documento de execução e prioridades: `ROADMAP_QUALIDADE_SEGURANCA_FASES_248_262.md`.
@@ -2866,7 +2871,7 @@ Matriz operacional: `MATRIZ_SKILLS_PLUGINS_MODELOS_FASES_243_248_262.md`.
   remover a variavel avulsa, e transformar o check numa sonda real do
   `octaclin-ai-service`, quando meia configuracao volta a ser falha.
 - Relatorios financeiros e de performance por cliente. **Em andamento na Fase
-  263; primeiro incremento implementado.**
+  263; incrementos 1 e 2 implementados.**
 - Marketplace de modelos de questionarios.
 - White-label por clinica.
 - Multi-unidade por tenant.
