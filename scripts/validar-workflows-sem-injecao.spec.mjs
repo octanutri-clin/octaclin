@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { existsSync, mkdtempSync, rmSync } from 'node:fs';
+import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
@@ -30,6 +30,13 @@ function bashDisponivel() {
 }
 
 const bash = bashDisponivel();
+
+test('workflow mobile chama explicitamente o script doctor do Expo', () => {
+  const workflow = readFileSync(new URL('../.github/workflows/ci.yml', import.meta.url), 'utf8');
+
+  assert.match(workflow, /EXPO_OFFLINE: "1"[\s\S]*?run: pnpm run doctor/);
+  assert.doesNotMatch(workflow, /- run: pnpm doctor/);
+});
 
 for (const payload of payloadsInjecao) {
   test(`rejeita input interpolado no script com payload: ${payload}`, () => {
