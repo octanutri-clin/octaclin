@@ -151,6 +151,15 @@ Atualizado em 2026-09-16.
   Nao restou P0/P1 no candidato exercitado. A fase continua aberta para
   reconciliacao final e decisao humana; ClamAV/issue `#234`, juridico,
   dominio/identidade e selecao do piloto nao foram convertidos em verde.
+  O Incremento 3 reconciliou operacao em 2026-09-16: readiness/banco/migrations
+  e login publicos ficaram saudaveis; o health detalhado permaneceu degradado
+  somente pelo antimalware, fazendo o monitor `35116115427` reprovar de forma
+  fail-closed e deduplicada na `#234`. O backup diario `35074836592` passou e o
+  restore dedicado mais recente devido (`34747454997`, 2026-09-13) tambem.
+  Contratos de backup, monitor, smoke somente leitura, suporte, lancamento e
+  rollout foram renovados localmente com sucesso. Decisao atual: **NO-GO
+  temporario para o piloto**, pelos gates externos; desenvolvimento de produto
+  independente pode continuar sem fechar a Fase 262.
 - Fase 261 (escopo de trabalho: gaps de seguranca e privacidade
   identificados no audit da fase) **concluida tecnicamente em 2026-09-15,
   com excecoes operacionais abertas; incrementos 1 a 4 integrados**.

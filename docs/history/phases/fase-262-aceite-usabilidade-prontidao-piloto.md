@@ -1,6 +1,7 @@
 # Fase 262 - Aceite de usabilidade e prontidao para piloto
 
-Status: em andamento. Incrementos 1 e 2 concluidos tecnicamente em 2026-09-16.
+Status: em andamento. Incrementos 1 a 3 concluidos tecnicamente em 2026-09-16;
+decisao atual `NO-GO temporario` pelos gates externos listados abaixo.
 
 ## Objetivo
 
@@ -73,6 +74,32 @@ Nenhum P0/P1 permaneceu aberto no candidato exercitado. Isso conclui o gate de
 staging mutavel da fase, mas nao equivale ao GO do piloto nem prova os gates
 externos descritos abaixo.
 
+## Incremento 3 - reconciliacao operacional e decisao atual
+
+A reconciliacao de 2026-09-16 confirmou por leitura publica sanitizada:
+
+- `/health/pronto` HTTP 200, com banco e migrations `ok`;
+- `/health/detalhado` HTTP 200, `degradado` somente em `antimalware`; backend,
+  banco, migrations, Redis, email, WhatsApp, Google Calendar e IA ficaram `ok`;
+- `/login` HTTP 200 com a identidade OctaClin;
+- o monitor agendado `35116115427` reprovou de forma fail-closed por esse
+  estado degradado e deduplicou o incidente existente `#234`;
+- o backup diario `35074836592` aprovou dump, estrutura, checksum, envio ao B2
+  privado e verificacao remota; o restore nao era devido nessa rodada;
+- o ultimo restore recorrente devido, `34747454997` de 2026-09-13, aprovou
+  validacao do destino e restore dedicado.
+
+Foram renovados com sucesso os contratos locais de backup/restore, backup de
+producao, monitor externo, smoke de producao somente leitura, suporte, operacao
+de lancamento e rollout seguro. Portanto observabilidade, backup/restore,
+suporte e rollback estao tecnicamente reconciliados para o candidato atual.
+
+A decisao permanece `NO-GO temporario`: nao ha P0/P1 funcional conhecido no
+candidato, mas faltam ClamAV/encerramento da issue `#234`, aceite juridico,
+dominio/identidade oficial e selecao do primeiro cliente piloto. Esses itens
+podem aguardar sem bloquear o desenvolvimento independente do produto, mas nao
+podem ser reinterpretados como aceite do piloto.
+
 ## Estado operacional observado na abertura
 
 - Produção: backend readiness `200`, web login `200`, banco e migrations `ok`.
@@ -87,8 +114,10 @@ externos descritos abaixo.
 
 ## Criterios para o proximo incremento
 
-- Reconciliar observabilidade, backup/restore, suporte e rollback no mesmo
-  candidato aceito.
-- Registrar a decisao humana e as excecoes residuais de cada gate externo.
+- Provisionar ClamAV sem recurso pago ou registrar decisao humana explicita
+  sobre a excecao residual; manter `#234` aberta enquanto o health degradar.
+- Obter aceite juridico, dominio/identidade oficial e selecionar o primeiro
+  cliente piloto fora do Git.
+- Registrar a decisao humana final de GO somente depois desses gates.
 - Nao declarar GO enquanto ClamAV, juridico, dominio/identidade e selecao do
   piloto nao tiverem decisao explicita ou excecao residual aceita.
