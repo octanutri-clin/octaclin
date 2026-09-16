@@ -160,6 +160,16 @@ Atualizado em 2026-09-16.
   rollout foram renovados localmente com sucesso. Decisao atual: **NO-GO
   temporario para o piloto**, pelos gates externos; desenvolvimento de produto
   independente pode continuar sem fechar a Fase 262.
+- Fase 263 - Relatorios financeiros e de performance por cliente, **em
+  andamento desde 2026-09-16**. O primeiro incremento reutiliza o fechamento
+  financeiro seguro da agenda, sem migration, e acrescenta concluidas, faltas,
+  canceladas, taxas de comparecimento/falta/cancelamento e ticket medio de
+  consultas pagas nao canceladas. RLS, permissao financeira e escopo por
+  profissional/paciente foram preservados; pacotes continuam fora do ticket
+  medio para evitar dupla contagem. A tela de recebimentos mostra o novo bloco
+  com as formulas explicitadas. Proximos candidatos: comparacao temporal,
+  exportacao auditada e quebra de performance por profissional. Detalhes em
+  `docs/history/phases/fase-263-relatorios-financeiros-performance.md`.
 - Fase 261 (escopo de trabalho: gaps de seguranca e privacidade
   identificados no audit da fase) **concluida tecnicamente em 2026-09-15,
   com excecoes operacionais abertas; incrementos 1 a 4 integrados**.

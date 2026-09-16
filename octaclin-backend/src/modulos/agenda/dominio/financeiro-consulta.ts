@@ -133,6 +133,52 @@ export interface LinhaFaturamento {
   valorCentavos: number;
 }
 
+export interface IndicadoresPerformance {
+  totalConsultas: number;
+  concluidas: number;
+  faltas: number;
+  canceladas: number;
+  taxaComparecimentoPercentual: number;
+  taxaFaltaPercentual: number;
+  taxaCancelamentoPercentual: number;
+  ticketMedioRecebidoCentavos: number;
+}
+
+function percentual(parte: number, total: number): number {
+  if (total === 0) return 0;
+  return Math.round((parte / total) * 1000) / 10;
+}
+
+/**
+ * Indicadores gerenciais do periodo. Comparecimento e falta usam apenas
+ * consultas encerradas como base; agendamentos futuros nao derrubam a taxa.
+ * O ticket medio considera somente consultas pagas e nao canceladas. Pacotes
+ * nao entram aqui porque sao contabilizados em linha financeira separada.
+ */
+export function calcularIndicadoresPerformance(
+  linhas: readonly LinhaFaturamento[]
+): IndicadoresPerformance {
+  const concluidas = linhas.filter((linha) => linha.status === 'concluida').length;
+  const faltas = linhas.filter((linha) => linha.status === 'falta').length;
+  const canceladas = linhas.filter((linha) => linha.status === 'cancelada').length;
+  const baseComparecimento = concluidas + faltas;
+  const pagas = linhas.filter(
+    (linha) => entraNoFaturamento(linha.status) && linha.statusPagamento === 'pago'
+  );
+  const recebidoCentavos = pagas.reduce((total, linha) => total + linha.valorCentavos, 0);
+
+  return {
+    totalConsultas: linhas.length,
+    concluidas,
+    faltas,
+    canceladas,
+    taxaComparecimentoPercentual: percentual(concluidas, baseComparecimento),
+    taxaFaltaPercentual: percentual(faltas, baseComparecimento),
+    taxaCancelamentoPercentual: percentual(canceladas, linhas.length),
+    ticketMedioRecebidoCentavos: pagas.length === 0 ? 0 : Math.round(recebidoCentavos / pagas.length)
+  };
+}
+
 /**
  * Soma o periodo. Consulta cancelada fica de fora inteira; isenta conta como
  * atendimento realizado mas nao entra em recebido nem em pendente — senao o

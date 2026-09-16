@@ -18,6 +18,10 @@ function mesCorrente() {
   return { inicio: emTexto(primeiro), fim: emTexto(ultimo) };
 }
 
+function formatarPercentual(valor: number) {
+  return `${valor.toLocaleString('pt-BR', { maximumFractionDigits: 1 })}%`;
+}
+
 interface ResumoRecebimentosProps {
   contexto?: 'gestor' | 'profissional';
   pacienteId?: string;
@@ -73,6 +77,28 @@ export function ResumoRecebimentos({ contexto = 'gestor', pacienteId }: ResumoRe
       ]
     : [];
 
+  const indicadoresPerformance = resumo?.performance
+    ? [
+        { rotulo: 'Consultas no período', valor: String(resumo.performance.totalConsultas) },
+        { rotulo: 'Concluídas', valor: String(resumo.performance.concluidas) },
+        { rotulo: 'Faltas', valor: String(resumo.performance.faltas) },
+        { rotulo: 'Canceladas', valor: String(resumo.performance.canceladas) },
+        {
+          rotulo: 'Taxa de comparecimento',
+          valor: formatarPercentual(resumo.performance.taxaComparecimentoPercentual)
+        },
+        { rotulo: 'Taxa de falta', valor: formatarPercentual(resumo.performance.taxaFaltaPercentual) },
+        {
+          rotulo: 'Taxa de cancelamento',
+          valor: formatarPercentual(resumo.performance.taxaCancelamentoPercentual)
+        },
+        {
+          rotulo: 'Ticket médio recebido',
+          valor: formatarValorBRL(resumo.performance.ticketMedioRecebidoCentavos)
+        }
+      ]
+    : [];
+
   return (
     <div className="grid gap-4">
       {erro ? (
@@ -121,6 +147,34 @@ export function ResumoRecebimentos({ contexto = 'gestor', pacienteId }: ResumoRe
           </p>
         </CartaoConteudo>
       </Cartao>
+
+      {resumo?.performance ? (
+        <Cartao>
+          <CartaoCabecalho>
+            <CartaoTitulo>
+              {pacienteId
+                ? 'Desempenho do paciente no período'
+                : contexto === 'profissional'
+                  ? 'Meu desempenho no período'
+                  : 'Desempenho no período'}
+            </CartaoTitulo>
+          </CartaoCabecalho>
+          <CartaoConteudo className="grid gap-4">
+            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+              {indicadoresPerformance.map((indicador) => (
+                <article key={indicador.rotulo} className="rounded-md border border-linha bg-superficie p-3">
+                  <p className="text-xs text-texto-suave">{indicador.rotulo}</p>
+                  <p className="mt-1 break-words text-base font-semibold">{indicador.valor}</p>
+                </article>
+              ))}
+            </div>
+            <p className="text-xs text-texto-suave">
+              Comparecimento e falta usam apenas consultas concluídas ou marcadas como falta. A taxa de cancelamento
+              usa todas as consultas do período. O ticket médio considera somente consultas pagas e não canceladas.
+            </p>
+          </CartaoConteudo>
+        </Cartao>
+      ) : null}
 
       {contexto === 'gestor' ? <Cartao>
         <CartaoCabecalho>

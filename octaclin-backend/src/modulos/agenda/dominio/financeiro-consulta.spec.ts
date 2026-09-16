@@ -1,4 +1,5 @@
 import {
+  calcularIndicadoresPerformance,
   calcularConsumoPacote,
   entraNoFaturamento,
   formatarValorBRL,
@@ -45,6 +46,40 @@ describe('financeiro da consulta', () => {
     expect(totais.pendenteCentavos).toBe(15000);
     expect(totais.isentas).toBe(1);
     expect(totais.consultas).toBe(3);
+  });
+
+  it('deve calcular indicadores de performance sem misturar pacotes no ticket medio', () => {
+    const indicadores = calcularIndicadoresPerformance([
+      { status: 'concluida', statusPagamento: 'pago', valorCentavos: 18000 },
+      { status: 'concluida', statusPagamento: 'pago', valorCentavos: 12000 },
+      { status: 'falta', statusPagamento: 'pendente', valorCentavos: 15000 },
+      { status: 'cancelada', statusPagamento: 'pago', valorCentavos: 99900 },
+      { status: 'agendada', statusPagamento: 'pendente', valorCentavos: 20000 }
+    ]);
+
+    expect(indicadores).toEqual({
+      totalConsultas: 5,
+      concluidas: 2,
+      faltas: 1,
+      canceladas: 1,
+      taxaComparecimentoPercentual: 66.7,
+      taxaFaltaPercentual: 33.3,
+      taxaCancelamentoPercentual: 20,
+      ticketMedioRecebidoCentavos: 15000
+    });
+  });
+
+  it('deve devolver taxas zeradas quando nao ha base encerrada nem consultas', () => {
+    expect(calcularIndicadoresPerformance([])).toEqual({
+      totalConsultas: 0,
+      concluidas: 0,
+      faltas: 0,
+      canceladas: 0,
+      taxaComparecimentoPercentual: 0,
+      taxaFaltaPercentual: 0,
+      taxaCancelamentoPercentual: 0,
+      ticketMedioRecebidoCentavos: 0
+    });
   });
 
   it('deve tratar falta como sessao consumida e cancelamento como vaga devolvida', () => {

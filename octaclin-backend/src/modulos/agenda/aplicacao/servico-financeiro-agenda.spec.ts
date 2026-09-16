@@ -242,6 +242,16 @@ describe('ServicoFinanceiroAgenda', () => {
       // Pacote sai em linha propria: somar junto contaria o atendimento duas vezes.
       expect(resumo.pacotesRecebidoCentavos).toBe(150000);
       expect(resumo.pacotesPendenteCentavos).toBe(90000);
+      expect(resumo.performance).toEqual({
+        totalConsultas: 3,
+        concluidas: 2,
+        faltas: 0,
+        canceladas: 1,
+        taxaComparecimentoPercentual: 100,
+        taxaFaltaPercentual: 0,
+        taxaCancelamentoPercentual: 33.3,
+        ticketMedioRecebidoCentavos: 18000
+      });
       expect(resumo.porProfissional).toEqual([
         {
           profissionalId: 'profissional-1',
