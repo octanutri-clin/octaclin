@@ -16,9 +16,10 @@ Atualizado em 2026-09-17.
   para evitar custo externo neste momento; o gate continua pendente e isso nao
   concede GO de seguranca. A Fase 262 continua em `NO-GO temporario` por
   ClamAV, juridico, dominio/identidade e selecao do piloto. Trabalho de produto
-  independente foi retomado na Fase 265 apenas para definir o contrato de
-  prioridade de acompanhamento explicavel, sem codigo ou migration ate o
-  aceite humano da semantica e da formula.
+  independente foi retomado na Fase 265. A definicao da prioridade de
+  acompanhamento explicavel foi integrada pelo PR `#256`; o proprietario
+  aceitou a semantica e a formula e autorizou o Incremento 265.1, limitado ao
+  calculador de dominio puro, sem migration, persistencia, job, UI ou efeitos.
 - Reconciliacao de 2026-09-15: as migrations pendentes `1039` a `1045` foram
   aplicadas fora de banda em staging e producao, e os deploys de backend e web
   ficaram `Live`. Nova verificacao publica confirmou `/health/pronto` `200`,
@@ -387,15 +388,18 @@ Atualizado em 2026-09-17.
   cumprida com o pacote interno do PR `#255`; a execucao externa foi adiada pelo
   proprietario, preservando o gate pendente.
 - Fase 265 - Fundacao da inteligencia: prioridade de acompanhamento calculada
-  com override auditado, **iniciada somente na definicao de produto**.
+  com override auditado, **em andamento**.
   Corresponde ao PB-01 da Onda 2 em
   `docs/product/OCTACLIN_PRODUCT_FEATURE_AUDIT.md`. A proposta separa prioridade
   operacional de risco clinico, usa apenas sinais estruturados de engajamento,
   mantem IA e efeitos automaticos fora do calculo e exige override humano
   auditado e temporario. Por envolver dado clinico, migration e job, o risco
-  minimo e R4: codigo futuro exige aceite explicito da formula, TDD de
-  isolamento, rollback e migration fora de banda com role owner. Nenhum codigo,
-  DDL ou ambiente foi alterado neste incremento. Plano:
+  minimo e R4: persistencia futura exige TDD de isolamento, rollback e migration
+  fora de banda com role owner. A semantica e a formula foram aceitas depois do
+  PR `#256`; o Incremento 265.1 implementa apenas o calculador de dominio puro,
+  versionado e fail-closed, com 7/7 testes focados, typecheck, build e suite
+  completa do backend aprovados (186 suites, 1.749 testes). Nenhum DDL, banco,
+  job, UI, automacao ou ambiente foi alterado. Plano:
   `docs/history/phases/PLANO_FASE_265.md`.
 - Fase 261 (escopo de trabalho: gaps de seguranca e privacidade
   identificados no audit da fase) **concluida tecnicamente em 2026-09-15,
