@@ -3069,6 +3069,79 @@ publicado antes de ampliar a superficie de mudancas visuais.
   - Um incremento restante (264.2, unificar a timeline do resumo com a do
     historico) segue pendente. Seis dos sete incrementos da Onda 1 (264.1,
     264.3, 264.4, 264.5, 264.6, 264.7) estao entregues.
+  - **264.2 investigado em 2026-09-17 e propositalmente nao implementado**:
+    a investigacao encontrou um fato novo que muda a complexidade real do
+    incremento em relacao ao que a auditoria original supunha, e o item foi
+    parado antes de qualquer mudanca de codigo (nenhum arquivo de producao
+    foi tocado nesta investigacao). Registro para quem continuar:
+    - O resumo (`obterProntuario`, 7 fontes montadas em JS) e a timeline
+      paginada (`listarLinhaDoTempoPaginada`, 14 fontes via SQL bruto com
+      `UNION ALL`) partilham o mesmo DTO (`EventoProntuarioPacienteDto`,
+      com `descricao?: string`), e ambas ja aplicam a mesma checagem de
+      escopo (`garantirPacienteExiste`, que restringe por
+      `profissionalResponsavelId` quando o usuario e `Professional`) e as
+      mesmas tres flags de permissao por tipo de evento
+      (`planos_alimentares.ler`, `agenda.financeiro.ler`,
+      `comunicacoes.mensagens.ler`) — nesse ponto a premissa da auditoria
+      se confirma e a troca de fonte e segura do ponto de vista de escopo
+      por tenant/profissional.
+    - O problema real e outro: o SQL bruto da timeline paginada **nunca
+      preenche `descricao`** para nenhum dos 14 tipos (sempre `undefined`),
+      enquanto o resumo preenche `descricao` para tres tipos via mapeadores
+      em JS — `mensagem` (`extrairTextoMensagem`, le `payload.texto` em
+      claro), `resposta_formulario` (`Score final <scoreFinal>`) e
+      `checkin_rapido` (`Humor: ... - Adesao ao plano: ...% - Sintomas:
+      ...`, que **decifra** `LogDiarioRapidoOrm.valorCriptografado` via
+      `CriptografiaDadosSensiveis.descriptografar`). `evolucao_clinica` e
+      `tarefa_acompanhamento` **deliberadamente nao tem `descricao`** nos
+      dois lados (comentario no codigo: "o resumo do prontuario e uma
+      referencia, nao o conteudo clinico") — ou seja, a ausencia de
+      `descricao` la e uma decisao de privacidade ja tomada, nao uma
+      lacuna.
+    - Essa `descricao` de `mensagem` e efetivamente exibida hoje: a aba
+      "Mensagens" do prontuario (`prontuario-paciente.tsx:1664`) filtra
+      `linhaDoTempo` por `tipo === 'mensagem'` e passa para o mesmo
+      componente `LinhaDoTempoProntuario` usado na aba Historico, que
+      renderiza `evento.descricao` quando presente. Trocar a fonte do
+      resumo pela SQL bruta sem mais nada faria a pre-visualizacao da
+      mensagem desaparecer da aba Mensagens — uma regressao visivel, nao
+      so uma diferenca de contagem de tipos.
+    - Trazer paridade de verdade exige mais que "chamar a mesma funcao dos
+      dois lugares": `mensagem` e `resposta_formulario` sao computaveis
+      dentro do proprio SQL (dado em claro, so precisa entrar no
+      `jsonb_build_object` de metadados e ganhar uma coluna `descricao` na
+      CTE `timeline`, hoje inexistente); `checkin_rapido` **não pode** ser
+      calculado em SQL porque a chave de cifragem vive na aplicacao, entao
+      exige uma etapa de pos-processamento em JS que busque
+      `LogDiarioRapidoOrm` pelos ids retornados pela SQL e decifre cada um
+      — um shape de solucao hibrido (SQL + decifragem em JS) que a secao 17
+      da auditoria nao antecipou nem dimensionou.
+    - Efeito colateral a decidir antes de implementar: se a `descricao` for
+      adicionada na fonte compartilhada, a aba **Historico** (que hoje
+      nunca mostra `descricao` para nenhum tipo) passa a exibir conteudo
+      decifrado que nao exibia antes — um ganho de produto real, mas uma
+      mudanca de comportamento visivel fora do escopo literal "unificar
+      resumo com historico" e que merece decisao explicita, nao arrastar
+      dentro da correcao.
+    - Tambem teria custo de teste nao trivial: os cinco blocos de teste de
+      `obterProntuario` em `servico-pacientes.spec.ts` montam o
+      `gerenciador` mockado só com `getRepository(...).find(...)`; nenhum
+      mocka `gerenciador.query(...)`. Fazer o resumo passar a chamar a SQL
+      bruta exige adaptar os cinco para tambem simular `query(...)` com
+      linhas equivalentes as que os `.find()` atuais descrevem, sem perder
+      nenhuma asserção de negocio ja coberta (proxima consulta, tarefa
+      vencida, falha de comunicacao etc., que continuam dependendo das
+      entidades tipadas originais, nao da timeline generica).
+    - Proximo passo recomendado, nao executado aqui: (1) decidir com o
+      dono do produto se a Historico deve ganhar `descricao` decifrada
+      para os tres tipos ou se o resumo deve abrir mao dela para os tres
+      (perda de produto, mas escopo minimo); (2) so entao extrair a
+      construcao do SQL para um metodo privado compartilhado, ajustar
+      `listarLinhaDoTempoPaginada` para usa-lo sem mudanca de
+      comportamento, migrar o resumo para o mesmo metodo, escrever o teste
+      negativo de permissao exigido pela secao 17 e os testes de paridade
+      de tipo, e so depois adaptar os cinco testes existentes de
+      `obterProntuario`.
 
 Documento de execução e prioridades: `ROADMAP_QUALIDADE_SEGURANCA_FASES_248_262.md`.
 Matriz operacional: `MATRIZ_SKILLS_PLUGINS_MODELOS_FASES_243_248_262.md`.

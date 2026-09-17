@@ -318,6 +318,28 @@ Atualizado em 2026-09-16.
   `git diff --check` e `pnpm security:secrets`.
   Um incremento restante (264.2, unificar a timeline do resumo com a do
   historico) continua pendente.
+  **264.2 investigado em 2026-09-17, nao implementado.** Nenhum arquivo de
+  producao foi alterado nesta investigacao. Achado que muda a complexidade
+  real do item frente ao que a auditoria supunha: o SQL bruto de
+  `listarLinhaDoTempoPaginada` nunca preenche `descricao` para nenhum dos
+  14 tipos de evento, mas o resumo (`obterProntuario`) preenche `descricao`
+  para tres deles em JS -- `mensagem`, `resposta_formulario` e
+  `checkin_rapido`, este ultimo exigindo decifragem de
+  `LogDiarioRapidoOrm.valorCriptografado` que so pode ocorrer na aplicacao,
+  nunca dentro do SQL. Essa `descricao` de `mensagem` ja e exibida hoje na
+  aba "Mensagens" do prontuario (mesmo componente da aba Historico). Trocar
+  a fonte do resumo pela SQL bruta sem mais nada regride essa
+  pre-visualizacao; dar paridade de verdade exige extrair a SQL para um
+  metodo compartilhado, somar uma etapa de decifragem em JS so para
+  `checkin_rapido`, decidir se a aba Historico passa a exibir esse
+  conteudo decifrado que nunca exibiu (efeito colateral de produto que
+  merece decisao explicita), e adaptar os cinco blocos de teste de
+  `obterProntuario` que hoje so mockam `getRepository(...).find(...)` e
+  nao `gerenciador.query(...)`. Detalhe completo e proximo passo
+  recomendado em `CHECKLIST_FASES_FUTURAS_PRODUCAO.md`, entrada da Fase
+  264. A Fase 264 fecha com 6 dos 7 incrementos da Onda 1 entregues; 264.2
+  fica para uma rodada dedicada, com decisao de produto tomada antes do
+  codigo.
 - Fase 261 (escopo de trabalho: gaps de seguranca e privacidade
   identificados no audit da fase) **concluida tecnicamente em 2026-09-15,
   com excecoes operacionais abertas; incrementos 1 a 4 integrados**.
