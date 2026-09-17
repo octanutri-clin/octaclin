@@ -1941,14 +1941,15 @@ test.describe('painel clinico profissional', () => {
     await page.route('**/api/dashboard/clinico?*', async (route) => {
       await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({
         contexto: { periodo: 'hoje', inicioEm: '2026-07-22T00:00:00.000Z', fimEm: '2026-07-22T23:59:59.999Z', profissionalId: 'profissional-1', profissionalNome: 'Dra. Carla' },
-        indicadores: { consultasHoje: 1, proximas: 1, concluidas: 0, reagendadas: 0, canceladas: 0, faltas: 0, semRetorno30: 1, semRetorno60: 0, semRetorno90Mais: 0, formulariosPendentes: 1, tarefasVencidas: 1, solicitacoesPendentes: 1, comunicacoesEmAlerta: 1, pacientesRiscoAlto: 1 },
+        indicadores: { consultasHoje: 1, proximas: 1, concluidas: 3, reagendadas: 2, canceladas: 1, faltas: 4, semRetorno30: 1, semRetorno60: 0, semRetorno90Mais: 0, formulariosPendentes: 1, tarefasVencidas: 1, solicitacoesPendentes: 1, comunicacoesEmAlerta: 1, pacientesRiscoAlto: 1 },
         atendimentos: [{ id: 'consulta-1', pacienteId: 'paciente-1', profissionalId: 'profissional-1', pacienteNome: 'Ana Souza', inicioEm: '2026-07-22T13:00:00.000Z', fimEm: '2026-07-22T14:00:00.000Z', status: 'agendada' }],
         semRetorno: [{ pacienteId: 'paciente-2', profissionalId: 'profissional-1', pacienteNome: 'Bruno Lima', nivelRisco: 'alto', scoreRisco: 82, diasSemRetorno: 31, faixa: '30' }],
         tarefasVencidas: [{ id: 'tarefa-1', pacienteId: 'paciente-1', profissionalId: 'profissional-1', pacienteNome: 'Ana Souza', titulo: 'Revisar plano alimentar', prioridade: 'alta', vencimentoEm: '2026-07-21T12:00:00.000Z' }],
         formulariosPendentes: [{ id: 'envio-1', pacienteId: 'paciente-1', profissionalId: 'profissional-1', pacienteNome: 'Ana Souza', questionarioId: 'questionario-1', respondidoEm: '2026-07-21T10:00:00.000Z' }],
         solicitacoesPendentes: [{ id: 'solicitacao-1', profissionalId: 'profissional-1', solicitanteNome: 'Marina Reis', inicioEm: '2026-07-23T14:00:00.000Z', fimEm: '2026-07-23T14:30:00.000Z', expiraEm: '2026-07-23T12:00:00.000Z' }],
         comunicacoes: [{ id: 'mensagem-1', pacienteId: 'paciente-1', profissionalId: 'profissional-1', pacienteNome: 'Ana Souza', status: 'recebido', criadoEm: '2026-07-22T10:00:00.000Z' }],
-        alertas: [], selecaoObrigatoria: false
+        alertas: [{ id: 'conduta_vencida:profissional-1:conduta-1', tipo: 'conduta_vencida', prioridade: 2, recursoId: 'conduta-1', pacienteId: 'paciente-1', ocorridoEm: '2026-07-20T00:00:00.000Z', ocultavel: true }],
+        selecaoObrigatoria: false
       }) });
     });
     await page.goto('/dashboard?profissionalId=profissional-2');
@@ -1956,6 +1957,11 @@ test.describe('painel clinico profissional', () => {
     await expect(page.getByRole('heading', { name: 'painel clínico' })).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Painel clínico' })).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Hoje em foco' })).toBeVisible();
+    const cartaoDesfechos = page.locator('.shadow-cartao', { hasText: 'Desfechos do período' });
+    await expect(cartaoDesfechos).toBeVisible();
+    await expect(cartaoDesfechos).toContainText('3');
+    await expect(cartaoDesfechos).toContainText('4 faltas, 1 canceladas, 2 reagendadas');
+    await expect(page.getByText('Conduta terapêutica vencida')).toBeVisible();
     await expect(page.getByText('Ana Souza').first()).toBeVisible();
     await expect(page.getByLabel('Profissional em contexto')).toHaveCount(0);
     await expect(page.getByRole('link', { name: 'Criar retorno' })).toHaveAttribute('href', /pacienteId=paciente-2/);
@@ -2156,6 +2162,126 @@ test.describe('agenda de producao', () => {
       page.getByText('Consulta cancelada e horário liberado na agenda interna. Integrações processadas conforme configuração.')
     ).toBeVisible();
     await expect(consultaAna.getByText('Cancelada')).toBeVisible();
+    await assertSemOverflowHorizontal(page);
+  });
+
+  test('filtra consultas nao confirmadas nas proximas 48 horas', async ({ page }) => {
+    await prepararDashboardMockado(page);
+    const agora = Date.now();
+    const hora = 60 * 60 * 1000;
+    await page.route('**/api/agenda/consultas', async (route) => {
+      if (route.request().method() !== 'GET') {
+        await route.fallback();
+        return;
+      }
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify([
+          {
+            id: 'consulta-nao-confirmada',
+            tenantId: 'tenant-1',
+            pacienteId: 'paciente-1',
+            pacienteNome: 'Paciente Sem Confirmacao',
+            profissionalId: 'profissional-1',
+            profissionalNome: 'Dra. Carla',
+            titulo: 'Consulta',
+            inicioEm: new Date(agora + 6 * hora).toISOString(),
+            fimEm: new Date(agora + 7 * hora).toISOString(),
+            timezone: 'America/Sao_Paulo',
+            status: 'agendada',
+            notificacoes: {},
+            payload: {},
+            criadoEm: '2026-07-20T10:00:00.000Z',
+            atualizadoEm: '2026-07-20T10:00:00.000Z'
+          },
+          {
+            id: 'consulta-confirmada',
+            tenantId: 'tenant-1',
+            pacienteId: 'paciente-2',
+            pacienteNome: 'Paciente Confirmado',
+            profissionalId: 'profissional-1',
+            profissionalNome: 'Dra. Carla',
+            titulo: 'Consulta',
+            inicioEm: new Date(agora + 10 * hora).toISOString(),
+            fimEm: new Date(agora + 11 * hora).toISOString(),
+            timezone: 'America/Sao_Paulo',
+            status: 'agendada',
+            notificacoes: { confirmacaoPaciente: { status: 'confirmada', origem: 'whatsapp', confirmadaEm: new Date(agora - hora).toISOString() } },
+            payload: {},
+            criadoEm: '2026-07-20T10:00:00.000Z',
+            atualizadoEm: '2026-07-20T10:00:00.000Z'
+          },
+          {
+            id: 'consulta-fora-da-janela',
+            tenantId: 'tenant-1',
+            pacienteId: 'paciente-3',
+            pacienteNome: 'Paciente Fora Da Janela',
+            profissionalId: 'profissional-1',
+            profissionalNome: 'Dra. Carla',
+            titulo: 'Consulta',
+            inicioEm: new Date(agora + 72 * hora).toISOString(),
+            fimEm: new Date(agora + 73 * hora).toISOString(),
+            timezone: 'America/Sao_Paulo',
+            status: 'agendada',
+            notificacoes: {},
+            payload: {},
+            criadoEm: '2026-07-20T10:00:00.000Z',
+            atualizadoEm: '2026-07-20T10:00:00.000Z'
+          },
+          {
+            id: 'consulta-passada',
+            tenantId: 'tenant-1',
+            pacienteId: 'paciente-4',
+            pacienteNome: 'Paciente Passado',
+            profissionalId: 'profissional-1',
+            profissionalNome: 'Dra. Carla',
+            titulo: 'Consulta',
+            inicioEm: new Date(agora - 2 * hora).toISOString(),
+            fimEm: new Date(agora - hora).toISOString(),
+            timezone: 'America/Sao_Paulo',
+            status: 'agendada',
+            notificacoes: {},
+            payload: {},
+            criadoEm: '2026-07-20T10:00:00.000Z',
+            atualizadoEm: '2026-07-20T10:00:00.000Z'
+          },
+          {
+            id: 'consulta-cancelada-sem-confirmacao',
+            tenantId: 'tenant-1',
+            pacienteId: 'paciente-5',
+            pacienteNome: 'Paciente Cancelado',
+            profissionalId: 'profissional-1',
+            profissionalNome: 'Dra. Carla',
+            titulo: 'Consulta',
+            inicioEm: new Date(agora + 5 * hora).toISOString(),
+            fimEm: new Date(agora + 6 * hora).toISOString(),
+            timezone: 'America/Sao_Paulo',
+            status: 'cancelada',
+            notificacoes: {},
+            payload: {},
+            criadoEm: '2026-07-20T10:00:00.000Z',
+            atualizadoEm: '2026-07-20T10:00:00.000Z'
+          }
+        ])
+      });
+    });
+    await page.goto('/agenda');
+
+    await expect(page.getByRole('heading', { name: 'Agenda', exact: true })).toBeVisible();
+    const botaoFiltro = page.getByRole('button', { name: 'Não confirmadas (1)' });
+    await expect(botaoFiltro).toBeVisible();
+
+    await botaoFiltro.click();
+
+    await expect(page.locator('article').filter({ hasText: 'Paciente Sem Confirmacao' })).toBeVisible();
+    await expect(page.locator('article').filter({ hasText: 'Paciente Confirmado' })).toHaveCount(0);
+    await expect(page.locator('article').filter({ hasText: 'Paciente Fora Da Janela' })).toHaveCount(0);
+    await expect(page.locator('article').filter({ hasText: 'Paciente Passado' })).toHaveCount(0);
+    await expect(page.locator('article').filter({ hasText: 'Paciente Cancelado' })).toHaveCount(0);
+
+    await botaoFiltro.click();
+    await expect(page.locator('article').filter({ hasText: 'Paciente Confirmado' })).toBeVisible();
     await assertSemOverflowHorizontal(page);
   });
 
@@ -2618,6 +2744,61 @@ test.describe('prontuario do paciente', () => {
 
     await page.getByRole('button', { name: 'Abrir ação' }).click();
     await expect(page.getByRole('heading', { name: 'Mensagens do paciente' })).toBeVisible();
+    await assertSemOverflowHorizontal(page);
+  });
+
+  test('permite comparar duas avaliacoes antropometricas alem das duas ultimas', async ({ page }) => {
+    await prepararProntuarioMockado(page);
+    const avaliacoesBase = [
+      {
+        id: 'avaliacao-2', pacienteId: 'paciente-1', avaliadaEm: '2026-07-21', protocolo: 'nenhum',
+        medidas: { pesoKg: 68.2, alturaCm: 165 },
+        resultado: { imc: 25.05, protocoloAplicado: 'nenhum', avisos: [] },
+        criadoEm: '2026-07-21T13:00:00.000Z'
+      },
+      {
+        id: 'avaliacao-1', pacienteId: 'paciente-1', avaliadaEm: '2026-06-21', protocolo: 'nenhum',
+        medidas: { pesoKg: 70.4, alturaCm: 165 },
+        resultado: { imc: 25.86, protocoloAplicado: 'nenhum', avisos: [] },
+        criadoEm: '2026-06-21T13:00:00.000Z'
+      },
+      {
+        id: 'avaliacao-0', pacienteId: 'paciente-1', avaliadaEm: '2026-01-10', protocolo: 'nenhum',
+        medidas: { pesoKg: 75.0, alturaCm: 165 },
+        resultado: { imc: 27.55, protocoloAplicado: 'nenhum', avisos: [] },
+        criadoEm: '2026-01-10T13:00:00.000Z'
+      }
+    ];
+    await page.route('**/api/pacientes/paciente-1/avaliacoes-antropometricas', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ avaliacoes: avaliacoesBase, deltaUltimas: [{ campo: 'pesoKg', anterior: 70.4, atual: 68.2, variacao: -2.2 }] })
+      });
+    });
+    await page.route('**/api/pacientes/paciente-1/avaliacoes-antropometricas?**', async (route) => {
+      const url = new URL(route.request().url());
+      expect(url.searchParams.get('avaliacaoAnteriorId')).toBe('avaliacao-0');
+      expect(url.searchParams.get('avaliacaoAtualId')).toBe('avaliacao-2');
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          avaliacoes: avaliacoesBase,
+          deltaUltimas: [{ campo: 'pesoKg', anterior: 70.4, atual: 68.2, variacao: -2.2 }],
+          deltaSelecionado: [{ campo: 'pesoKg', anterior: 75.0, atual: 68.2, variacao: -6.8 }]
+        })
+      });
+    });
+    await page.goto('/pacientes/paciente-1');
+
+    await page.getByRole('tab', { name: 'Avaliações' }).click();
+    const comparar = page.locator('.shadow-cartao', { hasText: 'Comparar avaliações' });
+    await comparar.getByLabel('Avaliação anterior para comparar').selectOption('avaliacao-0');
+    await comparar.getByLabel('Avaliação atual para comparar').selectOption('avaliacao-2');
+    await comparar.getByRole('button', { name: 'Comparar' }).click();
+    await expect(comparar.getByText('-6,80 kg')).toBeVisible();
+    await expect(comparar.getByText('75,00 para 68,20')).toBeVisible();
     await assertSemOverflowHorizontal(page);
   });
 

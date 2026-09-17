@@ -35,6 +35,12 @@ describe('ControladorPortalPaciente', () => {
       categoria: 'meta',
       status: 'concluida'
     });
+    const marcarMaterialVisualizado = jest.fn().mockResolvedValue({
+      id: 'envio-1',
+      materialId: 'material-1',
+      status: 'visualizado',
+      visualizadoEm: new Date('2026-09-17T12:00:00.000Z')
+    });
     const exportarDadosLgpd = jest.fn().mockResolvedValue({
       formato: 'json',
       titular: { pacienteId: 'paciente-1' },
@@ -49,6 +55,7 @@ describe('ControladorPortalPaciente', () => {
         registrarConsentimentoLgpd,
         exportarDadosLgpd,
         concluirTarefa,
+        marcarMaterialVisualizado,
         ...servicos
       } as unknown as ServicoPortalPaciente,
       {} as ServicoAgenda,
@@ -61,7 +68,7 @@ describe('ControladorPortalPaciente', () => {
       ip: '127.0.0.1'
     } as unknown as Request;
 
-    return { controlador, registrar, requisicao };
+    return { controlador, registrar, requisicao, marcarMaterialVisualizado };
   }
 
   describe('check-in rapido', () => {
@@ -137,6 +144,25 @@ describe('ControladorPortalPaciente', () => {
           acao: 'portal.paciente.tarefa.concluir',
           recursoTipo: 'acompanhamento_tarefa',
           recursoId: 'tarefa-1'
+        })
+      );
+    });
+  });
+
+  describe('marcacao de material educativo como visualizado pelo paciente', () => {
+    it('deve chamar o servico com o id do envio e registrar a acao correta', async () => {
+      const { controlador, registrar, requisicao, marcarMaterialVisualizado } = criarCenario();
+
+      const envio = await controlador.marcarMaterialVisualizado(usuario, requisicao, 'envio-1');
+
+      expect(envio).toEqual(expect.objectContaining({ id: 'envio-1', status: 'visualizado' }));
+      expect(marcarMaterialVisualizado).toHaveBeenCalledWith('tenant-1', 'usuario-1', 'envio-1');
+      expect(registrar).toHaveBeenCalledWith(
+        expect.objectContaining({
+          acao: 'portal.paciente.material.marcar_visualizado',
+          recursoTipo: 'envio_material_paciente',
+          recursoId: 'envio-1',
+          metadados: { materialId: 'material-1' }
         })
       );
     });

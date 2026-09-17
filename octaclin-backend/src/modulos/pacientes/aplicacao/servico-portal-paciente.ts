@@ -278,6 +278,13 @@ export interface TarefaAcompanhamentoPaciente {
   atualizadoEm: Date;
 }
 
+export interface MaterialVisualizadoPortalPaciente {
+  id: string;
+  materialId: string;
+  status: string;
+  visualizadoEm?: Date;
+}
+
 export interface PerfilPortalPaciente {
   paciente: ResumoPortalPaciente['paciente'];
   perfil: ResumoPortalPaciente['perfil'];
@@ -1197,6 +1204,34 @@ export class ServicoPortalPaciente {
       });
 
       return this.mapearTarefaAcompanhamento(tarefa);
+    });
+  }
+
+  /** Idempotente: uma vez marcado, chamadas seguintes nao sobrescrevem a data original. */
+  async marcarMaterialVisualizado(
+    tenantId: string,
+    usuarioId: string,
+    envioId: string
+  ): Promise<MaterialVisualizadoPortalPaciente> {
+    return this.executorTenant.executar(tenantId, async (gerenciador) => {
+      const paciente = await gerenciador.getRepository(PacienteOrm).findOne({
+        where: { tenantId, usuarioId, arquivadoEm: IsNull() }
+      });
+      if (!paciente) throw new ForbiddenException('Usuario nao possui paciente vinculado.');
+
+      const repositorio = gerenciador.getRepository(EnvioMaterialPacienteOrm);
+      const envio = await repositorio.findOne({
+        where: { id: envioId, tenantId, pacienteId: paciente.id }
+      });
+      if (!envio) throw new NotFoundException('Material nao encontrado para este paciente.');
+
+      if (!envio.visualizadoEm) {
+        envio.visualizadoEm = new Date();
+        if (envio.status === 'enviado') envio.status = 'visualizado';
+        await repositorio.save(envio);
+      }
+
+      return { id: envio.id, materialId: envio.materialId, status: envio.status, visualizadoEm: envio.visualizadoEm };
     });
   }
 

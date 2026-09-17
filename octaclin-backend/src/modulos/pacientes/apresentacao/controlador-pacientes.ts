@@ -21,7 +21,7 @@ import { GuardaJwt } from '../../auth/apresentacao/guarda-jwt';
 import { GuardaPapeis } from '../../auth/apresentacao/guarda-papeis';
 import { GuardaPermissoes } from '../../auth/apresentacao/guarda-permissoes';
 import { UsuarioAutenticado } from '../../auth/dominio/usuario-autenticado';
-import { AtualizarPacienteDto, AtualizarTarefaAcompanhamentoDto, CriarAvaliacaoAntropometricaDto, CriarEvolucaoClinicaDto, CriarPacienteDto, CriarTarefaAcompanhamentoDto, ImportarPacientesDto, ListarLinhaTempoProntuarioDto, ListarPacientesDto, VerificarDuplicidadePacienteDto } from '../aplicacao/dtos';
+import { AtualizarPacienteDto, AtualizarTarefaAcompanhamentoDto, CriarAvaliacaoAntropometricaDto, CriarEvolucaoClinicaDto, CriarPacienteDto, CriarTarefaAcompanhamentoDto, ImportarPacientesDto, ListarAvaliacoesAntropometricasDto, ListarLinhaTempoProntuarioDto, ListarPacientesDto, VerificarDuplicidadePacienteDto } from '../aplicacao/dtos';
 import { ServicoDuplicidadePacientes } from '../aplicacao/servico-duplicidade-pacientes';
 import { ServicoImportacaoPacientes } from '../aplicacao/servico-importacao-pacientes';
 import { ServicoPacientes } from '../aplicacao/servico-pacientes';
@@ -337,9 +337,10 @@ export class ControladorPacientes {
   async listarAvaliacoesAntropometricas(
     @UsuarioAtual() usuario: UsuarioAutenticado,
     @Req() requisicao: Request,
-    @Param('id', ParseUUIDPipe) id: string
+    @Param('id', ParseUUIDPipe) id: string,
+    @Query() filtros: ListarAvaliacoesAntropometricasDto
   ) {
-    const serie = await this.servicoPacientes.listarAvaliacoesAntropometricas(usuario.tenantId, id, usuario);
+    const serie = await this.servicoPacientes.listarAvaliacoesAntropometricas(usuario.tenantId, id, usuario, filtros);
     await this.servicoAuditoria.registrar({
       tenantId: usuario.tenantId,
       usuarioId: usuario.usuarioId,

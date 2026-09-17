@@ -820,10 +820,22 @@ export interface AvaliacaoAntropometricaRespostaDto {
   criadoEm: Date;
 }
 
+export class ListarAvaliacoesAntropometricasDto {
+  @IsOptional()
+  @IsUUID()
+  avaliacaoAnteriorId?: string;
+
+  @IsOptional()
+  @IsUUID()
+  avaliacaoAtualId?: string;
+}
+
 export interface SerieAntropometricaRespostaDto {
   avaliacoes: AvaliacaoAntropometricaRespostaDto[];
   /** Comparacao entre as duas mais recentes, ja calculada para o painel. */
   deltaUltimas: DeltaAntropometrico[];
+  /** So presente quando avaliacaoAnteriorId e avaliacaoAtualId sao informados. */
+  deltaSelecionado?: DeltaAntropometrico[];
 }
 
 export class EmitirDocumentoClinicoDto {

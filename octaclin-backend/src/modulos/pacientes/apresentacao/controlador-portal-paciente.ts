@@ -226,6 +226,26 @@ export class ControladorPortalPaciente {
     return tarefa;
   }
 
+  @Patch('paciente/materiais/:envioId/visualizacao')
+  async marcarMaterialVisualizado(
+    @UsuarioAtual() usuario: UsuarioAutenticado,
+    @Req() requisicao: Request,
+    @Param('envioId', ParseUUIDPipe) envioId: string
+  ) {
+    const envio = await this.servicoPortal.marcarMaterialVisualizado(usuario.tenantId, usuario.usuarioId, envioId);
+    await this.servicoAuditoria.registrar({
+      tenantId: usuario.tenantId,
+      usuarioId: usuario.usuarioId,
+      acao: 'portal.paciente.material.marcar_visualizado',
+      recursoTipo: 'envio_material_paciente',
+      recursoId: envio.id,
+      ip: requisicao.ip,
+      userAgent: this.obterUserAgent(requisicao),
+      metadados: { materialId: envio.materialId }
+    });
+    return envio;
+  }
+
   @Post('paciente/consultas/:consultaId/desmarcar')
   async desmarcarConsulta(
     @UsuarioAtual() usuario: UsuarioAutenticado,

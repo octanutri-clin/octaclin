@@ -1825,6 +1825,103 @@ describe('ServicoPortalPaciente', () => {
     });
   });
 
+  describe('marcarMaterialVisualizado', () => {
+    function cenarioMateriais(envioMaterials: Record<string, any>[]) {
+      return criarServico({
+        pacientes: [
+          {
+            id: 'paciente-1',
+            tenantId: 'tenant-1',
+            usuarioId: 'usuario-paciente-1',
+            nomeCriptografado: Buffer.from('cripto:Ana Paula')
+          }
+        ],
+        consultas: [],
+        envios: [],
+        questionarios: [],
+        mensagens: [],
+        tarefas: [],
+        envioMaterials
+      });
+    }
+
+    it('marca visualizadoEm e muda o status para visualizado', async () => {
+      const { servico, repositorios } = cenarioMateriais([
+        {
+          id: 'envio-1',
+          tenantId: 'tenant-1',
+          pacienteId: 'paciente-1',
+          materialId: 'material-1',
+          enviadoPorUsuarioId: 'profissional-1',
+          status: 'enviado',
+          enviadoEm: new Date('2026-07-22T12:00:00.000Z'),
+          criadoEm: new Date('2026-07-22T12:00:00.000Z'),
+          atualizadoEm: new Date('2026-07-22T12:00:00.000Z')
+        }
+      ]);
+
+      const envio = await servico.marcarMaterialVisualizado('tenant-1', 'usuario-paciente-1', 'envio-1');
+
+      expect(envio).toEqual(
+        expect.objectContaining({ id: 'envio-1', status: 'visualizado', visualizadoEm: expect.any(Date) })
+      );
+      expect(repositorios.envioMaterial.save).toHaveBeenCalledWith(
+        expect.objectContaining({ id: 'envio-1', status: 'visualizado', visualizadoEm: expect.any(Date) })
+      );
+    });
+
+    it('e idempotente: a segunda chamada nao altera a data de visualizacao', async () => {
+      const { servico, repositorios } = cenarioMateriais([
+        {
+          id: 'envio-1',
+          tenantId: 'tenant-1',
+          pacienteId: 'paciente-1',
+          materialId: 'material-1',
+          enviadoPorUsuarioId: 'profissional-1',
+          status: 'enviado',
+          enviadoEm: new Date('2026-07-22T12:00:00.000Z'),
+          criadoEm: new Date('2026-07-22T12:00:00.000Z'),
+          atualizadoEm: new Date('2026-07-22T12:00:00.000Z')
+        }
+      ]);
+
+      const primeira = await servico.marcarMaterialVisualizado('tenant-1', 'usuario-paciente-1', 'envio-1');
+      repositorios.envioMaterial.save.mockClear();
+      const segunda = await servico.marcarMaterialVisualizado('tenant-1', 'usuario-paciente-1', 'envio-1');
+
+      expect(segunda.visualizadoEm).toEqual(primeira.visualizadoEm);
+      expect(repositorios.envioMaterial.save).not.toHaveBeenCalled();
+    });
+
+    it('nao permite marcar envio de outro paciente como visualizado (404, nao 403)', async () => {
+      const { servico } = cenarioMateriais([
+        {
+          id: 'envio-de-outro',
+          tenantId: 'tenant-1',
+          pacienteId: 'paciente-2',
+          materialId: 'material-1',
+          enviadoPorUsuarioId: 'profissional-1',
+          status: 'enviado',
+          enviadoEm: new Date('2026-07-22T12:00:00.000Z'),
+          criadoEm: new Date('2026-07-22T12:00:00.000Z'),
+          atualizadoEm: new Date('2026-07-22T12:00:00.000Z')
+        }
+      ]);
+
+      await expect(
+        servico.marcarMaterialVisualizado('tenant-1', 'usuario-paciente-1', 'envio-de-outro')
+      ).rejects.toThrow(NotFoundException);
+    });
+
+    it('rejeita usuario sem paciente vinculado', async () => {
+      const { servico } = criarServico({ pacientes: [], envioMaterials: [] });
+
+      await expect(
+        servico.marcarMaterialVisualizado('tenant-1', 'usuario-sem-paciente', 'envio-1')
+      ).rejects.toThrow(ForbiddenException);
+    });
+  });
+
   describe('trocas liberadas ao paciente', () => {
     const PUBLICADO_EM = new Date('2026-08-08T12:00:00.000Z');
 

@@ -44,7 +44,8 @@ import {
   PortalPacienteApi,
   registrarOuEnfileirarCheckinRapidoPaciente,
   registrarConsentimentoLgpdPaciente,
-  registrarSolicitacaoLgpdPaciente
+  registrarSolicitacaoLgpdPaciente,
+  marcarMaterialVisualizadoPaciente
 } from '@/lib/portal-api';
 import { usePortalPaciente } from '@/components/portal/portal-contexto';
 import { PlanoAlimentarPaciente } from '@/components/portal/plano-alimentar-paciente';
@@ -432,6 +433,7 @@ export function PortalPaciente({ secao }: { secao: SecaoPortal }) {
   const [consultaParaDesmarcar, setConsultaParaDesmarcar] = useState<string | null>(null);
   const [concluindoTarefaId, setConcluindoTarefaId] = useState<string | null>(null);
   const [tarefaParaConcluir, setTarefaParaConcluir] = useState<string | null>(null);
+  const [marcandoMaterialId, setMarcandoMaterialId] = useState<string | null>(null);
 
   useEffect(() => {
     if (portal) setFormularioPerfil(montarFormularioPerfil(portal));
@@ -476,6 +478,29 @@ export function PortalPaciente({ secao }: { secao: SecaoPortal }) {
     } finally {
       setConcluindoTarefaId(null);
       setTarefaParaConcluir(null);
+    }
+  }
+
+  async function marcarMaterialVisualizado(envioId: string) {
+    setMarcandoMaterialId(envioId);
+    setErro(null);
+    setSucesso(null);
+    try {
+      const materialAtualizado = await marcarMaterialVisualizadoPaciente(envioId);
+      setPortal((atual) =>
+        atual
+          ? {
+              ...atual,
+              materiaisDisponiveis: (atual.materiaisDisponiveis ?? []).map((material) =>
+                material.id === envioId ? { ...material, ...materialAtualizado } : material
+              )
+            }
+          : atual
+      );
+    } catch (erroAtual) {
+      setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao marcar material como lido.');
+    } finally {
+      setMarcandoMaterialId(null);
     }
   }
 
@@ -957,18 +982,32 @@ export function PortalPaciente({ secao }: { secao: SecaoPortal }) {
                         {material.resumo ? <p className="mt-3 break-words text-sm text-texto-suave">{material.resumo}</p> : null}
                         {material.observacao ? <p className="mt-2 break-words text-xs text-texto-suave">{material.observacao}</p> : null}
                         {material.conteudo ? <p className="mt-3 line-clamp-4 break-words text-sm text-texto-forte">{material.conteudo}</p> : null}
-                        {material.url ? (
-                          <a
-                            href={material.url}
-                            target="_blank"
-                            rel="noreferrer"
-                            aria-label={`Abrir ${material.titulo}`}
-                            className={classesBotao({ tamanho: 'sm', className: 'mt-3 max-w-full' })}
-                          >
-                            <ExternalLink className="h-4 w-4 shrink-0" />
-                            <span className="truncate">Abrir material</span>
-                          </a>
-                        ) : null}
+                        <div className="mt-3 flex flex-wrap items-center gap-2">
+                          {material.url ? (
+                            <a
+                              href={material.url}
+                              target="_blank"
+                              rel="noreferrer"
+                              aria-label={`Abrir ${material.titulo}`}
+                              className={classesBotao({ tamanho: 'sm', className: 'max-w-full' })}
+                            >
+                              <ExternalLink className="h-4 w-4 shrink-0" />
+                              <span className="truncate">Abrir material</span>
+                            </a>
+                          ) : null}
+                          {material.visualizadoEm ? (
+                            <p className="text-xs text-texto-suave">Lido em {formatarDataHora(material.visualizadoEm)}</p>
+                          ) : (
+                            <Botao
+                              type="button"
+                              tamanho="sm"
+                              disabled={marcandoMaterialId === material.id}
+                              onClick={() => void marcarMaterialVisualizado(material.id)}
+                            >
+                              {marcandoMaterialId === material.id ? 'Marcando' : 'Marcar como lido'}
+                            </Botao>
+                          )}
+                        </div>
                       </article>
                     ))
                   ) : (

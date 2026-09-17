@@ -1,7 +1,8 @@
 # OctaClin - Checklist vivo de fases futuras ate producao
 
-Atualizado em 2026-09-16. Fases 256 a 261 concluidas; Fase 262 em andamento;
-Fase 263 em andamento como frente de produto independente.
+Atualizado em 2026-09-17. Fases 256 a 261 concluidas; Fase 262 em andamento;
+Fase 263 em andamento como frente de produto independente; Fase 264 planejada e
+pronta para execucao, derivada da auditoria de produto de 2026-09-17.
 O programa de hardening PR 36-56 permanece como trilha separada.
 
 Este arquivo deve guiar Codex, Claude Code ou qualquer outro agente de IA. Ele deve ser atualizado a cada fase concluida.
@@ -2872,6 +2873,348 @@ publicado antes de ampliar a superficie de mudancas visuais.
     RLS); o CSV tem uma linha por profissional com todos os indicadores de
     performance mais uma linha "Consolidado". Sem migration. Nenhum
     candidato pendente na fase no momento.
+
+- [ ] Fase 264 - Ativacao: dado que ja existe vira acao visivel, **em andamento
+  desde 2026-09-17**. [IMPORTANTE - NAO BLOQUEADOR]
+  - Origem: auditoria de produto de 2026-09-17
+    (`docs/product/OCTACLIN_PRODUCT_FEATURE_AUDIT.md`). A auditoria concluiu que
+    o gargalo do produto nao e falta de funcionalidade, e sim ativacao: ha dado
+    que o sistema ja calcula ou ja grava e que nunca chega ao usuario.
+  - Escopo: sete incrementos, **nenhum com migration**, nenhum alterando
+    contrato de autorizacao e nenhum criando dado sensivel novo:
+    1. Dashboard clinico exibe `concluidas`/`reagendadas`/`canceladas`/`faltas`,
+       ja presentes no DTO e sem nenhuma ocorrencia no painel.
+    2. Linha do tempo do resumo unificada com a do historico (hoje 7 fontes
+       contra 14, na mesma tela).
+    3. Marcar material educativo como visualizado (`visualizado_em` existe
+       desde a migration 600, e exibido e nunca gravado).
+    4. Alerta de conduta terapeutica vencida (`validade_fim` gravado e sem
+       nenhuma query que o consuma).
+    5. Comparacao antropometrica entre quaisquer duas avaliacoes
+       (`compararAvaliacoes` ja existe e so e usada para as duas ultimas).
+    6. Fila de consultas nao confirmadas (a confirmacao por WhatsApp ja e
+       gravada em jsonb e exibida por consulta, mas nao e consultavel).
+    7. Canal push: parar de registrar entrega falsa (o adaptador devolve
+       sucesso sem enviar e e o default do roteador).
+  - Fora de escopo, por dependerem de migration ou de decisao ainda aberta:
+    score de risco calculado, executor de acoes das automacoes, expediente do
+    profissional, catalogo de marcadores de exame e painel de operacao da
+    clinica. Esses itens estao desenhados nas ondas 2 a 5 do mesmo documento.
+  - **Plano operacional completo, pronto para codificacao, na secao 17 de
+    `docs/product/OCTACLIN_PRODUCT_FEATURE_AUDIT.md`**: por incremento, o gap
+    com evidencia em arquivo/linha, os arquivos a tocar, o contrato que muda, o
+    teste que deve falhar primeiro, as validacoes obrigatorias e o criterio de
+    aceite, mais a ordem de execucao e as tres decisoes de produto pendentes.
+  - Definition of Done: os sete incrementos em `main`, cada um com teste
+    negativo proprio, nenhuma migration criada, documentacao reconciliada e os
+    gates de governanca passando.
+  - Incremento 1 implementado em 2026-09-17: dashboard clinico ganhou o cartao
+    "Desfechos do periodo" (concluidas/faltas/canceladas/reagendadas), so
+    frontend, reaproveitando o `Metrica` ja existente e o DTO que ja calculava
+    os quatro campos. TDD: o teste Playwright de
+    `console-regression.spec.mjs` (`painel clinico profissional`) passou a
+    exigir valores distintos e nao-zero para os quatro indicadores e o cartao
+    visivel com eles — falhou antes da mudanca (`toBeVisible` sem o cartao) e
+    passou depois, em desktop e mobile. Sem migration, sem mudanca de
+    contrato de autorizacao.
+  - Incremento 4 (alerta de conduta terapeutica vencida) implementado em
+    2026-09-17, fora de ordem em relacao ao 264.2 por ser mais isolado e de
+    menor risco. `ServicoDashboardClinico` passou a buscar
+    `condutas_terapeuticas`/`condutas_terapeuticas_versoes` do escopo do
+    profissional (pacientes ativos, conduta nao arquivada) e gerar o alerta
+    `conduta_vencida` quando a versao publicada e nao descartada tem
+    `validade_fim` anterior a hoje no timezone clinico (zero dias de
+    tolerancia, conforme a decisao registrada na secao 17 da auditoria).
+    Reaproveita `TIPOS_ALERTA_OCULTAVEIS` (o alerta pode ser ocultado por 24h
+    como os demais) e a fila "Fila de prioridade" que ja existia no painel;
+    nenhum campo novo em `IndicadoresDashboardClinicoDto`. TDD: tres testes
+    novos em `servico-dashboard-clinico.spec.ts` — conduta vencida gera o
+    alerta; conduta arquivada ou ainda valida nao gera; conduta de outro
+    profissional nao aparece para quem tem escopo restrito — falharam antes
+    da implementacao (o primeiro por ausencia do alerta) e passam depois (16
+    testes no arquivo). Frontend: rotulo "Conduta terapeutica vencida"
+    acrescentado ao mapa de alertas do painel, com o mesmo teste Playwright
+    do incremento 1 estendido para cobrir o novo alerta. Sem migration
+    (reaproveita as tabelas ja existentes de condutas terapeuticas), sem
+    mudanca de contrato de autorizacao ou de RLS. Validado com
+    `pnpm --dir octaclin-backend typecheck`,
+    `pnpm --dir octaclin-backend test -- servico-dashboard-clinico`,
+    `pnpm --dir octaclin-web typecheck`, Playwright (desktop e mobile) e
+    `node --test scripts/validar-guardas-controladores.spec.mjs`.
+  - Incremento 5 (comparacao antropometrica entre quaisquer duas avaliacoes)
+    implementado em 2026-09-17. `compararAvaliacoes` (dominio) ja existia e
+    so era chamada para as duas ultimas avaliacoes
+    (`servico-pacientes.ts:1265-1273` na auditoria); `listarAvaliacoesAntropometricas`
+    passou a aceitar `avaliacaoAnteriorId`/`avaliacaoAtualId` opcionais
+    (`ListarAvaliacoesAntropometricasDto`, novo em `dtos.ts`) e devolver
+    `deltaSelecionado` quando ambos sao informados, resolvendo os dois
+    identificadores dentro da mesma lista ja carregada e escopada por
+    tenant/paciente (sem query extra). Sem parametros o comportamento e
+    identico ao anterior (`deltaUltimas` inalterado, `deltaSelecionado`
+    ausente) — compatibilidade obrigatoria da secao 17 preservada. BFF
+    (`app/api/pacientes/[id]/avaliacoes-antropometricas/route.ts`) passa os
+    dois parametros por allowlist, no mesmo padrao ja usado em
+    `exportar.csv`. Frontend: novo cartao "Comparar avaliações" na aba de
+    Antropometria com dois seletores de data e botao "Comparar". TDD:
+    tres testes novos em `servico-pacientes.spec.ts` — comparacao entre a
+    1a e a atual devolve o delta correto; sem parametros o resultado e
+    identico ao de hoje (`deltaSelecionado` ausente); avaliacao que nao
+    pertence ao paciente do contexto e rejeitada com `NotFoundException` —
+    e um cenario Playwright novo em `console-regression.spec.mjs`
+    ("permite comparar duas avaliacoes antropometricas alem das duas
+    ultimas"), que falhou (timeout ao procurar o seletor) com a
+    implementacao de frontend revertida e passou com ela restaurada, em
+    desktop e mobile, sem regredir os outros 26 cenarios do grupo
+    "prontuario do paciente". Sem migration, sem mudanca de contrato de
+    autorizacao. Validado com `pnpm --dir octaclin-backend typecheck`,
+    `servico-pacientes.spec.ts` (52/52), `pnpm --dir octaclin-web
+    typecheck`, `pnpm --dir octaclin-web test:authz`, Playwright (grupo
+    completo "prontuario do paciente", desktop e mobile),
+    `node --test scripts/validar-guardas-controladores.spec.mjs`,
+    `git diff --check` e `pnpm security:secrets`.
+  - Incremento 3 (marcar material educativo como visualizado) implementado em
+    2026-09-17. `envio_material_paciente.visualizado_em` existe desde a
+    migration `1720000000600-CriarMateriaisEducativos.ts` e nenhum codigo o
+    gravava. Nova rota `PATCH /portal/paciente/materiais/:envioId/visualizacao`
+    (quem visualiza e o proprio paciente): `ServicoPortalPaciente.marcarMaterialVisualizado`
+    resolve o envio escopado por `tenantId` e `pacienteId` do paciente
+    autenticado, e e idempotente -- so grava `visualizadoEm` e promove
+    `status` de `enviado` para `visualizado` na primeira chamada; chamadas
+    seguintes nao alteram a data. Envio de outro paciente devolve 404
+    (`NotFoundException`), nao 403, seguindo o padrao ja usado em
+    `registrarEscolhaSubstituicao` no mesmo servico. BFF
+    (`app/api/portal/paciente/materiais/[envioId]/visualizacao/route.ts`) e
+    cliente (`marcarMaterialVisualizadoPaciente` em `lib/portal-api.ts`) no
+    mesmo padrao ja usado por `concluirTarefaPaciente`. Frontend: o cartao de
+    cada material no portal ganhou o botao "Marcar como lido", substituido
+    por "Lido em <data>" apos a confirmacao. TDD: tres testes de servico
+    (marca e persiste; segunda chamada nao altera a data; envio de outro
+    paciente e rejeitado) e dois de controlador (chama o servico com o id
+    certo e registra a acao; a trilha guarda so `materialId`, nunca o titulo
+    do material) -- todos falharam antes da implementacao
+    (`Property 'marcarMaterialVisualizado' does not exist`) e passam depois.
+    Cenario Playwright novo em `portal-paciente.spec.mjs`, verificado RED com
+    a implementacao de frontend/BFF temporariamente revertida (timeout no
+    botao) e GREEN restaurada, em desktop e mobile, sem regredir os outros 8
+    cenarios do arquivo nem os 140 cenarios combinados de
+    `acessibilidade.spec.mjs` e `jornadas-criticas.spec.mjs` que tambem
+    renderizam a lista de materiais. Sem migration, sem mudanca de contrato
+    de autorizacao. Validado com `pnpm --dir octaclin-backend typecheck`,
+    `servico-portal-paciente.spec.ts` (37/37),
+    `controlador-portal-paciente.spec.ts` (7/7),
+    `pnpm --dir octaclin-web typecheck`, `pnpm --dir octaclin-web test:authz`,
+    Playwright (portal-paciente, acessibilidade e jornadas-criticas, desktop
+    e mobile), `node --test scripts/validar-guardas-controladores.spec.mjs`,
+    `git diff --check` e `pnpm security:secrets`.
+  - Incremento 6 (fila de consultas nao confirmadas) implementado em
+    2026-09-17, somente frontend. `ConsultaAgendaRespostaDto.notificacoes`
+    (com `confirmacaoPaciente`) ja era devolvido por inteiro em
+    `GET /agenda/consultas` (`servico-agenda.ts:mapearResposta`) e ja
+    aparecia por consulta no painel (`painel-agenda.tsx`); o gap real nao era
+    de dado nem de backend, era a ausencia de um filtro sobre o que ja
+    chegava ao cliente. `painel-agenda.tsx` ganhou o botao "Não confirmadas
+    (N)" que filtra a lista de consultas para as que sao futuras, tem status
+    ativo (`agendada`/`reagendada`), estao dentro de 48h a partir de agora
+    (alinhado ao lembrete de 24h ja existente, decisao registrada na secao
+    17 da auditoria) e nao tem `notificacoes.confirmacaoPaciente`. TDD: um
+    cenario Playwright novo cobrindo os cinco casos (nao confirmada entra;
+    confirmada nao entra; fora da janela de 48h nao entra; consulta passada
+    nao entra; consulta cancelada nao entra) -- falhou antes da
+    implementacao (botao inexistente) e passa depois, em desktop e mobile,
+    sem regredir os outros 9 cenarios de "agenda de producao" nem os
+    cenarios de agenda em `jornadas-criticas.spec.mjs`,
+    `agendamento-publico.spec.mjs`, `race-condition-agenda.spec.mjs` e o
+    gate de acessibilidade (`rodarChecagensDeAcessibilidade` sem violacao
+    nova). Sem migration, sem mudanca de contrato de autorizacao, nenhum
+    arquivo de backend tocado. Validado com `pnpm --dir octaclin-web
+    typecheck`, Playwright (desktop e mobile), `git diff --check` e
+    `pnpm security:secrets`.
+  - Incremento 7 (canal push: parar de reportar entrega falsa) implementado
+    em 2026-09-17, decisao A da auditoria (remover, nao implementar push de
+    verdade). `AdaptadorPushPlaceholder.enviar` devolvia `idExterno` sem
+    enviar nada e era o ramo default de `ProcessadorNotificacoes.obterAdaptador`
+    para qualquer `tipo` de canal que nao fosse `whatsapp` nem `email` --
+    ou seja, tanto um canal `push` legitimo quanto um `tipo` corrompido
+    caiam no mesmo lugar e a mensagem virava `enviado` sem sair do banco.
+    `obterAdaptador` passa a lancar um erro explicito para qualquer tipo
+    fora de `whatsapp`/`email`; o `catch` que ja existia em
+    `processarMensagem` (usado para falha de SMTP/WhatsApp) cobre o caso sem
+    nenhuma mudanca de fluxo, registrando `status: 'falhou'` e o motivo.
+    Frontend: removida a opcao "Push" dos dois seletores de criacao (novo
+    canal e novo template) em `painel-comunicacoes.tsx`, para que nenhuma
+    clinica nova consiga cadastrar um canal que nunca envia; canais push ja
+    cadastrados continuam visiveis onde ja apareciam, so passam a falhar de
+    verdade ao tentar enviar. **Nao verificado neste ciclo**: se algum
+    tenant de producao ja tem canal `push` ativo e configurado como padrao
+    de algum fluxo -- essa mudanca faz mensagens que hoje aparentam sucesso
+    passarem a aparecer como falha (o objetivo do incremento), e isso deve
+    ser comunicado antes do rollout se a checagem em produção confirmar uso
+    real. TDD: dois testes novos em `processador-notificacoes.spec.ts`
+    (canal `push` e canal com tipo desconhecido) confirmando falha explicita
+    e que o adaptador placeholder nunca e chamado -- falharam antes da
+    mudanca (`status` vinha `'enviado'`) e os 5 testes do arquivo passam
+    depois. Cenario Playwright estendido em
+    `fase-196-comunicacoes-equipe.spec.mjs` confirmando a ausencia da opcao
+    "Push" nos dois seletores, falhando antes da remocao e passando depois,
+    em desktop e mobile, sem regredir os 11 cenarios do gate de
+    acessibilidade de comunicacoes. Sem migration, sem mudanca de contrato
+    de autorizacao. Validado com `pnpm --dir octaclin-backend typecheck`,
+    `processador-notificacoes.spec.ts` (5/5), `pnpm --dir octaclin-web
+    typecheck`, Playwright (fase-196 e acessibilidade de comunicacoes,
+    desktop e mobile), `node --experimental-strip-types
+    --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --test
+    scripts/validar-redacao-auditoria.spec.mjs` (24/24),
+    `node --test scripts/validar-guardas-controladores.spec.mjs` (11/11),
+    `git diff --check` e `pnpm security:secrets`.
+  - Incremento 264.2 (unificar a timeline do resumo com a do historico)
+    implementado em 2026-09-17, apos decisao de produto aprovada (ver
+    registro logo abaixo do historico da investigacao). Os sete incrementos
+    da Onda 1 (264.1-264.7) estao entregues.
+  - **264.2 investigado em 2026-09-17 e propositalmente nao implementado no
+    primeiro ciclo**: essa decisao original foi respeitada — nenhum codigo
+    de producao foi tocado ate a decisao de produto abaixo ser aprovada.
+    a investigacao encontrou um fato novo que muda a complexidade real do
+    incremento em relacao ao que a auditoria original supunha, e o item foi
+    parado antes de qualquer mudanca de codigo (nenhum arquivo de producao
+    foi tocado nesta investigacao). Registro para quem continuar:
+    - O resumo (`obterProntuario`, 7 fontes montadas em JS) e a timeline
+      paginada (`listarLinhaDoTempoPaginada`, 14 fontes via SQL bruto com
+      `UNION ALL`) partilham o mesmo DTO (`EventoProntuarioPacienteDto`,
+      com `descricao?: string`), e ambas ja aplicam a mesma checagem de
+      escopo (`garantirPacienteExiste`, que restringe por
+      `profissionalResponsavelId` quando o usuario e `Professional`) e as
+      mesmas tres flags de permissao por tipo de evento
+      (`planos_alimentares.ler`, `agenda.financeiro.ler`,
+      `comunicacoes.mensagens.ler`) — nesse ponto a premissa da auditoria
+      se confirma e a troca de fonte e segura do ponto de vista de escopo
+      por tenant/profissional.
+    - O problema real e outro: o SQL bruto da timeline paginada **nunca
+      preenche `descricao`** para nenhum dos 14 tipos (sempre `undefined`),
+      enquanto o resumo preenche `descricao` para tres tipos via mapeadores
+      em JS — `mensagem` (`extrairTextoMensagem`, le `payload.texto` em
+      claro), `resposta_formulario` (`Score final <scoreFinal>`) e
+      `checkin_rapido` (`Humor: ... - Adesao ao plano: ...% - Sintomas:
+      ...`, que **decifra** `LogDiarioRapidoOrm.valorCriptografado` via
+      `CriptografiaDadosSensiveis.descriptografar`). `evolucao_clinica` e
+      `tarefa_acompanhamento` **deliberadamente nao tem `descricao`** nos
+      dois lados (comentario no codigo: "o resumo do prontuario e uma
+      referencia, nao o conteudo clinico") — ou seja, a ausencia de
+      `descricao` la e uma decisao de privacidade ja tomada, nao uma
+      lacuna.
+    - Essa `descricao` de `mensagem` e efetivamente exibida hoje: a aba
+      "Mensagens" do prontuario (`prontuario-paciente.tsx:1664`) filtra
+      `linhaDoTempo` por `tipo === 'mensagem'` e passa para o mesmo
+      componente `LinhaDoTempoProntuario` usado na aba Historico, que
+      renderiza `evento.descricao` quando presente. Trocar a fonte do
+      resumo pela SQL bruta sem mais nada faria a pre-visualizacao da
+      mensagem desaparecer da aba Mensagens — uma regressao visivel, nao
+      so uma diferenca de contagem de tipos.
+    - Trazer paridade de verdade exige mais que "chamar a mesma funcao dos
+      dois lugares": `mensagem` e `resposta_formulario` sao computaveis
+      dentro do proprio SQL (dado em claro, so precisa entrar no
+      `jsonb_build_object` de metadados e ganhar uma coluna `descricao` na
+      CTE `timeline`, hoje inexistente); `checkin_rapido` **não pode** ser
+      calculado em SQL porque a chave de cifragem vive na aplicacao, entao
+      exige uma etapa de pos-processamento em JS que busque
+      `LogDiarioRapidoOrm` pelos ids retornados pela SQL e decifre cada um
+      — um shape de solucao hibrido (SQL + decifragem em JS) que a secao 17
+      da auditoria nao antecipou nem dimensionou.
+    - Efeito colateral a decidir antes de implementar: se a `descricao` for
+      adicionada na fonte compartilhada, a aba **Historico** (que hoje
+      nunca mostra `descricao` para nenhum tipo) passa a exibir conteudo
+      decifrado que nao exibia antes — um ganho de produto real, mas uma
+      mudanca de comportamento visivel fora do escopo literal "unificar
+      resumo com historico" e que merece decisao explicita, nao arrastar
+      dentro da correcao.
+    - Tambem teria custo de teste nao trivial: os cinco blocos de teste de
+      `obterProntuario` em `servico-pacientes.spec.ts` montam o
+      `gerenciador` mockado só com `getRepository(...).find(...)`; nenhum
+      mocka `gerenciador.query(...)`. Fazer o resumo passar a chamar a SQL
+      bruta exige adaptar os cinco para tambem simular `query(...)` com
+      linhas equivalentes as que os `.find()` atuais descrevem, sem perder
+      nenhuma asserção de negocio ja coberta (proxima consulta, tarefa
+      vencida, falha de comunicacao etc., que continuam dependendo das
+      entidades tipadas originais, nao da timeline generica).
+    - Proximo passo recomendado, nao executado aqui: (1) decidir com o
+      dono do produto se a Historico deve ganhar `descricao` decifrada
+      para os tres tipos ou se o resumo deve abrir mao dela para os tres
+      (perda de produto, mas escopo minimo); (2) so entao extrair a
+      construcao do SQL para um metodo privado compartilhado, ajustar
+      `listarLinhaDoTempoPaginada` para usa-lo sem mudanca de
+      comportamento, migrar o resumo para o mesmo metodo, escrever o teste
+      negativo de permissao exigido pela secao 17 e os testes de paridade
+      de tipo, e so depois adaptar os cinco testes existentes de
+      `obterProntuario`.
+  - **264.2 implementado em 2026-09-17, apos decisao de produto aprovada.**
+    Decisao: unificar a fonte dos eventos do prontuario, mantendo projecoes
+    diferentes por superficie. Arquitetura final: **A timeline possui uma
+    fonte canonica de eventos, mas as superficies aplicam projecoes
+    distintas. Historico permanece como indice longitudinal enxuto; Resumo
+    e Mensagens podem enriquecer eventos quando necessario. Conteudo
+    sensivel nao e automaticamente promovido para a timeline historica.**
+    - Implementacao: a consulta SQL bruta que ja existia em
+      `listarLinhaDoTempoPaginada` (14 fontes, `UNION ALL`, sem alteracao de
+      uma linha sequer de SQL) foi extraida para o metodo privado
+      `selecionarEventosProntuarioCanonicos(gerenciador, tenantId,
+      pacienteId, usuario, opcoes)` em `servico-pacientes.ts`.
+      `listarLinhaDoTempoPaginada` passou a chamar esse metodo e so faz o
+      slice/cursor de paginacao — comportamento, SQL, parametros e ordem
+      identicos a antes. `obterProntuario` passou a chamar o mesmo metodo
+      (com `limite: 80`, sem cursor/filtro) e em seguida
+      `projetarEventosParaResumo(eventos, contexto)`, que enriquece, so na
+      application layer e usando entidades que `obterProntuario` ja buscava
+      (nenhuma consulta nova ao banco), os tipos que o resumo ja mostrava
+      com detalhe: `consulta` (descricao = local), `formulario` e
+      `resposta_formulario` (titulo com o nome do questionario, descricao
+      com prazo/score), `checkin_rapido` (titulo e descricao decifrados via
+      `CriptografiaDadosSensiveis.descriptografar`, chamada so na aplicacao,
+      nunca em SQL) e `mensagem` (descricao com o texto em claro do
+      payload). `evolucao_clinica` e `tarefa_acompanhamento` continuam sem
+      `descricao` nas duas superficies, por decisao de privacidade ja
+      tomada antes desta fase. Os sete mapeadores antigos duplicados
+      (`mapearEventoConsulta` e os outros seis) foram removidos; nao existe
+      mais uma segunda enumeracao manual de tipos.
+    - Seguranca e escopo: `garantirPacienteExiste` continua sendo chamado
+      antes de qualquer consulta nova, nos dois metodos; as tres flags de
+      permissao (`planos_alimentares.ler`, `agenda.financeiro.ler`,
+      `comunicacoes.mensagens.ler`) sao passadas da mesma forma para os
+      dois metodos, porque ambos chamam a mesma funcao com o mesmo
+      `usuario`; os mapas de enriquecimento do resumo sao construidos
+      exclusivamente a partir de arrays ja filtrados por `tenantId` e
+      `pacienteId`. Revisado com o agente `tenant-security-reviewer`.
+    - Performance: zero consultas novas ao banco alem da unica consulta
+      canonica que ja existia — o resumo hoje faz oito buscas por entidade
+      mais essa unica consulta de timeline (11 operacoes de ORM,
+      comprovado pelo benchmark sintetico
+      `infraestrutura/performance/benchmark-prontuario.spec.ts`, que
+      mede 11 operacoes tanto com 1 quanto com 30 itens por fonte); o
+      enriquecimento do resumo e feito em memoria com `Map` construidos a
+      partir de arrays ja carregados, sem N+1.
+    - TDD: 11 testes novos em `servico-pacientes.spec.ts` (bloco "timeline
+      canonica do prontuario"), RED confirmado antes da implementacao (4 de
+      9 falhando pela ausencia da fonte unica) e GREEN depois; os 2 testes
+      adicionais (paciente de outro tenant, para Resumo e Historico)
+      vieram da revisao do agente `tenant-security-reviewer`, cobrindo
+      explicitamente o mesmo mecanismo (`garantirPacienteExiste`) por
+      mismatch de `tenantId`, nao so por mismatch de profissional. Os 5
+      testes pre-existentes de `obterProntuario` foram adaptados para
+      simular `gerenciador.query(...)` (antes so simulavam `.find()`), sem
+      perder nenhuma asserção de negocio ja coberta.
+    - Validacoes: `pnpm --dir octaclin-backend typecheck` (limpo);
+      `servico-pacientes.spec.ts` (63/63);
+      `benchmark-prontuario.spec.ts` (2/2); suíte completa do backend
+      (186 suites, 1746 testes, 31 skips pre-existentes nao relacionados);
+      `pnpm --dir octaclin-web typecheck` (limpo); `pnpm --dir octaclin-web
+      test:authz` (inclui `test-prontuario-timeline-bff.mjs`, 2/2); `git
+      diff --check`; `pnpm security:secrets` (nenhum secret real
+      identificado). Playwright de UI (Resumo/Historico/Mensagens) **nao
+      executado neste ciclo**: o ambiente de execucao nao tem daemon Docker
+      nem banco de dados disponiveis para subir a aplicacao completa —
+      `SKIPPED` por limitacao de ambiente, nao por decisao de escopo. Fica
+      como proximo passo antes de considerar a superficie de UI totalmente
+      validada.
+    - Sem migration, sem mudanca de contrato de autorizacao, sem novo
+      conteudo clinico exposto no Historico.
 
 Documento de execução e prioridades: `ROADMAP_QUALIDADE_SEGURANCA_FASES_248_262.md`.
 Matriz operacional: `MATRIZ_SKILLS_PLUGINS_MODELOS_FASES_243_248_262.md`.

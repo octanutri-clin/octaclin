@@ -1,6 +1,6 @@
 # OctaClin - Status atual do projeto
 
-Atualizado em 2026-09-16.
+Atualizado em 2026-09-17.
 
 ## Snapshot
 
@@ -170,10 +170,201 @@ Atualizado em 2026-09-16.
   com as formulas explicitadas. O Incremento 2 acrescenta a janela anterior de
   mesma duracao, sem sobreposicao, e compara receita recebida, concluidas,
   comparecimento e ticket medio por diferenca absoluta ou pontos percentuais;
-  a interface tolera a ordem do rollout entre web e backend. Proximos
-  candidatos: exportacao auditada e quebra de performance por profissional.
+  a interface tolera a ordem do rollout entre web e backend. O Incremento 3
+  (PR `#251`) levou os mesmos indicadores de performance para a quebra por
+  profissional, calculados isoladamente por profissional com a formula do
+  consolidado. O Incremento 4 (PR `#252`) entregou a exportacao auditada em
+  `GET /agenda/financeiro/recebimentos/exportar.csv`, reaproveitando
+  `resumoRecebimentos` por inteiro e registrando na auditoria apenas o volume
+  exportado, nunca o conteudo. Os dois candidatos documentados apos o
+  Incremento 2 estao entregues; nenhum candidato pendente na fase no momento.
   Detalhes em
   `docs/history/phases/fase-263-relatorios-financeiros-performance.md`.
+- Fase 264 - Ativacao: dado que ja existe vira acao visivel, **planejada em
+  2026-09-17 e concluida na mesma data (7 de 7 incrementos da Onda 1
+  entregues)**.
+  Nasce da auditoria ampla de produto e
+  funcionalidades registrada em
+  `docs/product/OCTACLIN_PRODUCT_FEATURE_AUDIT.md`, que mapeou o produto real a
+  partir do codigo (20 modulos backend, 33 controladores, 85 entidades, 209
+  rotas BFF, 31 paginas, 9 jobs) e concluiu que o gargalo nao e falta de
+  funcionalidade, e sim ativacao. Tres achados sustentam a fase: `score_risco` e
+  `statusAdesao` sao digitados a mao e nascem zerados, mas comandam dashboard,
+  filtros, recall e API publica, sem nenhuma rotina que os calcule; o motor de
+  automacoes oferece quatro gatilhos e tres acoes na interface, executa um
+  gatilho e **nenhuma acao**; e ao menos oito eventos de dominio sao emitidos
+  contra uma unica automacao que reage. A Fase 264 cobre so a primeira onda —
+  sete incrementos sem migration, que tornam visivel dado ja calculado ou ja
+  gravado. Score calculado, executor de acoes, expediente do profissional,
+  catalogo de marcadores e painel de operacao da clinica ficam para as ondas
+  seguintes, por dependerem de migration ou de decisao de produto ainda aberta.
+  O plano operacional por incremento — evidencia, arquivos, contrato, teste que
+  deve falhar primeiro, validacoes e aceite — esta na secao 17 do documento de
+  auditoria.
+  **Incremento 264.1 entregue em 2026-09-17** (`octaclin-web`, somente
+  frontend): o painel clinico passou a exibir concluidas/faltas/canceladas/
+  reagendadas no cartao "Desfechos do periodo", reaproveitando o componente
+  `Metrica` e o DTO que ja calculava os quatro campos
+  (`dtos-dashboard-clinico.ts:41-44`) sem nenhuma chamada de rede nova.
+  Validado com `pnpm --dir octaclin-web typecheck` (limpo) e o cenario
+  Playwright `painel clinico profissional` em `console-regression.spec.mjs`
+  (desktop e mobile) apos tornar o teste RED primeiro — passou a exigir
+  valores nao-zero e distintos para os quatro indicadores e falhou antes da
+  implementacao por falta do cartao. `git diff --check` e
+  `pnpm security:secrets` limpos. Sem migration, sem mudanca de contrato de
+  autorizacao.
+  **Incremento 264.4 entregue em 2026-09-17** (backend + frontend): o
+  dashboard clinico passou a alertar conduta terapeutica vencida.
+  `ServicoDashboardClinico` busca `condutas_terapeuticas` e
+  `condutas_terapeuticas_versoes` do escopo do profissional (pacientes
+  ativos, conduta nao arquivada) e gera o alerta `conduta_vencida` quando a
+  versao publicada e nao descartada tem `validade_fim` anterior a hoje no
+  timezone clinico -- zero dias de tolerancia, a decisao registrada na
+  secao 17 da auditoria. Reaproveita `TIPOS_ALERTA_OCULTAVEIS` (ocultavel
+  por 24h como os demais alertas) e a fila "Fila de prioridade" que ja
+  existia; nenhum campo novo em `IndicadoresDashboardClinicoDto`. TDD: tres
+  testes novos em `servico-dashboard-clinico.spec.ts` (conduta vencida gera
+  alerta; conduta arquivada ou ainda valida nao gera; conduta de outro
+  profissional nao aparece para escopo restrito) -- o primeiro falhou antes
+  da implementacao por ausencia do alerta e os 16 testes do arquivo passam
+  depois. Rotulo "Conduta terapeutica vencida" acrescentado ao painel, com
+  o mesmo cenario Playwright do incremento 1 estendido para cobrir o novo
+  alerta (desktop e mobile). Sem migration, sem mudanca de contrato de
+  autorizacao ou de RLS. Validado com `pnpm --dir octaclin-backend
+  typecheck`, a suite `servico-dashboard-clinico.spec.ts` (16/16),
+  `pnpm --dir octaclin-web typecheck`, Playwright,
+  `node --test scripts/validar-guardas-controladores.spec.mjs`,
+  `git diff --check` e `pnpm security:secrets`.
+  **Incremento 264.5 entregue em 2026-09-17** (backend + BFF + frontend):
+  comparacao antropometrica entre quaisquer duas avaliacoes, nao so as duas
+  ultimas. `listarAvaliacoesAntropometricas` aceita `avaliacaoAnteriorId`/
+  `avaliacaoAtualId` opcionais e devolve `deltaSelecionado` resolvendo os
+  dois identificadores dentro da mesma lista ja carregada e escopada por
+  tenant/paciente, sem query extra; sem parametros o comportamento e
+  identico ao anterior (compatibilidade obrigatoria preservada). BFF
+  encaminha os dois parametros por allowlist (padrao ja usado em
+  `exportar.csv`). Frontend: cartao "Comparar avaliações" na aba de
+  Antropometria com dois seletores de data e botao "Comparar". TDD: tres
+  testes novos no backend (comparacao 1a x atual; sem parametros nao muda
+  nada; avaliacao de outro paciente rejeitada com 404) e um cenario
+  Playwright novo, que falhou com a implementacao de frontend
+  temporariamente revertida (timeout no seletor) e passou restaurada, em
+  desktop e mobile, sem regredir os outros 26 cenarios de "prontuario do
+  paciente". Sem migration, sem mudanca de contrato de autorizacao.
+  Validado com `pnpm --dir octaclin-backend typecheck`,
+  `servico-pacientes.spec.ts` (52/52), `pnpm --dir octaclin-web typecheck`,
+  `pnpm --dir octaclin-web test:authz`, Playwright (grupo completo),
+  `node --test scripts/validar-guardas-controladores.spec.mjs`,
+  `git diff --check` e `pnpm security:secrets`.
+  **Incremento 264.3 entregue em 2026-09-17** (backend + BFF + frontend):
+  marcar material educativo como visualizado.
+  `envio_material_paciente.visualizado_em` existia desde a migration 600 e
+  nunca era gravado. Nova rota `PATCH /portal/paciente/materiais/:envioId/visualizacao`,
+  chamada pelo proprio paciente: idempotente (so grava na primeira chamada e
+  promove `status` de `enviado` para `visualizado`), e rejeita com 404 (nao
+  403) o envio que pertence a outro paciente, seguindo o padrao ja usado em
+  `registrarEscolhaSubstituicao`. Frontend: botao "Marcar como lido" no
+  cartao de cada material do portal, substituido por "Lido em <data>" apos
+  a confirmacao. TDD: tres testes de servico e dois de controlador (a
+  trilha de auditoria guarda so `materialId`, nunca o titulo do material),
+  todos falhando antes da implementacao. Cenario Playwright novo, verificado
+  RED com o frontend/BFF temporariamente revertido e GREEN restaurado, em
+  desktop e mobile, sem regredir os outros cenarios de
+  `portal-paciente.spec.mjs` nem os 140 cenarios combinados de
+  `acessibilidade.spec.mjs` e `jornadas-criticas.spec.mjs`. Sem migration,
+  sem mudanca de contrato de autorizacao. Validado com
+  `pnpm --dir octaclin-backend typecheck`, `servico-portal-paciente.spec.ts`
+  (37/37), `controlador-portal-paciente.spec.ts` (7/7),
+  `pnpm --dir octaclin-web typecheck`, `pnpm --dir octaclin-web test:authz`,
+  Playwright, `node --test scripts/validar-guardas-controladores.spec.mjs`,
+  `git diff --check` e `pnpm security:secrets`.
+  **Incremento 264.6 entregue em 2026-09-17** (somente frontend): fila de
+  consultas nao confirmadas. `notificacoes.confirmacaoPaciente` ja era
+  devolvido por inteiro em `GET /agenda/consultas` e ja aparecia por
+  consulta no painel; faltava um filtro sobre o que ja chegava ao cliente,
+  nao dado nem rota nova. `painel-agenda.tsx` ganhou o botao "Não
+  confirmadas (N)", que filtra para consultas futuras, com status ativo,
+  dentro de 48h a partir de agora e sem confirmacao do paciente (janela
+  alinhada ao lembrete de 24h ja existente). TDD: um cenario Playwright
+  cobrindo os cinco casos da regra, falhando antes da implementacao e
+  passando depois, em desktop e mobile, sem regredir os demais cenarios de
+  agenda em quatro arquivos de teste diferentes nem o gate de
+  acessibilidade. Sem migration, sem mudanca de contrato de autorizacao,
+  nenhum arquivo de backend tocado. Validado com `pnpm --dir octaclin-web
+  typecheck`, Playwright, `git diff --check` e `pnpm security:secrets`.
+  **Incremento 264.7 entregue em 2026-09-17** (backend + frontend), decisao
+  A da auditoria: remover o canal push em vez de implementar envio real.
+  `AdaptadorPushPlaceholder` devolvia sucesso sem enviar nada e era o ramo
+  default de `ProcessadorNotificacoes.obterAdaptador` para qualquer tipo de
+  canal fora de `whatsapp`/`email`. `obterAdaptador` passa a lancar erro
+  explicito nesse caso, reaproveitando o `catch` que ja existia em
+  `processarMensagem` (mesmo tratamento de falha de SMTP/WhatsApp, sem
+  mudanca de fluxo). Frontend: removida a opcao "Push" dos dois seletores
+  de criacao (novo canal, novo template); canais push ja cadastrados
+  continuam visiveis, so passam a falhar de verdade ao enviar.
+  **Nao verificado neste ciclo**: se algum tenant de producao ja tem canal
+  push ativo -- se a checagem em producao confirmar uso real, isso deve ser
+  comunicado antes do rollout, pois mensagens que hoje aparentam sucesso
+  passarao a aparecer como falha (o objetivo do incremento). TDD: dois
+  testes novos (canal push e canal com tipo desconhecido) confirmando falha
+  explicita, falhando antes da mudanca e passando depois (5/5 no arquivo).
+  Cenario Playwright estendido confirmando a ausencia da opcao "Push",
+  falhando antes e passando depois, em desktop e mobile, sem regredir os
+  11 cenarios do gate de acessibilidade de comunicacoes. Sem migration, sem
+  mudanca de contrato de autorizacao. Validado com `pnpm --dir
+  octaclin-backend typecheck`, `processador-notificacoes.spec.ts` (5/5),
+  `pnpm --dir octaclin-web typecheck`, Playwright,
+  `node --test scripts/validar-redacao-auditoria.spec.mjs` (24/24),
+  `node --test scripts/validar-guardas-controladores.spec.mjs` (11/11),
+  `git diff --check` e `pnpm security:secrets`.
+  **264.2 investigado em 2026-09-17 e implementado no mesmo dia, apos
+  decisao de produto aprovada.** A investigacao original (nao implementada
+  no primeiro ciclo) encontrou um achado que mudava a complexidade real do
+  item frente ao que a auditoria supunha: o SQL bruto de
+  `listarLinhaDoTempoPaginada` nunca preenche `descricao` para nenhum dos
+  14 tipos de evento, mas o resumo (`obterProntuario`) preenche `descricao`
+  para tres deles em JS -- `mensagem`, `resposta_formulario` e
+  `checkin_rapido`, este ultimo exigindo decifragem de
+  `LogDiarioRapidoOrm.valorCriptografado` que so pode ocorrer na aplicacao,
+  nunca dentro do SQL. Uma troca ingenua de fonte regrediria essa
+  pre-visualizacao (exibida hoje na aba "Mensagens" do prontuario).
+  Decisao de produto aprovada: unificar a fonte dos eventos do prontuario,
+  mantendo projecoes diferentes por superficie. **Arquitetura implementada:
+  a timeline possui uma fonte canonica de eventos, mas as superficies
+  aplicam projecoes distintas. Historico permanece como indice
+  longitudinal enxuto; Resumo e Mensagens podem enriquecer eventos quando
+  necessario. Conteudo sensivel nao e automaticamente promovido para a
+  timeline historica.** A SQL bruta de 14 fontes (inalterada) foi extraida
+  para o metodo privado `selecionarEventosProntuarioCanonicos`, agora
+  compartilhado por `listarLinhaDoTempoPaginada` (Historico, comportamento
+  e paginacao identicos a antes) e por `obterProntuario` (Resumo), que
+  enriquece os eventos retornados via `projetarEventosParaResumo` usando
+  as entidades que ja buscava (sem consulta nova ao banco): `consulta`,
+  `formulario`, `resposta_formulario`, `checkin_rapido` (decifragem so na
+  aplicacao) e `mensagem` ganham o mesmo detalhe de antes;
+  `evolucao_clinica` e `tarefa_acompanhamento` continuam sem `descricao`
+  nas duas superficies, por decisao de privacidade ja tomada antes desta
+  fase. Os sete mapeadores duplicados antigos foram removidos -- nao
+  existe mais uma segunda enumeracao manual de tipos. Escopo por
+  tenant/profissional e as tres flags de permissao permanecem identicos
+  (mesma chamada, mesmo `usuario`, revisado com o agente
+  `tenant-security-reviewer`, que sugeriu dois testes negativos adicionais
+  de paciente-em-outro-tenant, incluidos nesta entrega). TDD: 11 testes
+  novos em `servico-pacientes.spec.ts` (9 com RED confirmado antes da
+  implementacao, mais 2 de cross-tenant) e os 5 blocos de teste
+  pre-existentes de `obterProntuario` foram adaptados para tambem simular
+  `gerenciador.query(...)`. Validado com `pnpm --dir octaclin-backend
+  typecheck` (limpo), suite completa do backend (186 suites, 1746 testes),
+  `benchmark-prontuario.spec.ts` (2/2,
+  confirma zero consultas novas alem da unica consulta canonica),
+  `pnpm --dir octaclin-web typecheck` (limpo), `pnpm --dir octaclin-web
+  test:authz` (inclui `test-prontuario-timeline-bff.mjs`), `git diff
+  --check` e `pnpm security:secrets`. Playwright de UI **nao executado
+  neste ciclo** -- sem daemon Docker/banco disponivel no ambiente de
+  execucao para subir a aplicacao completa; `SKIPPED` por limitacao de
+  ambiente, registrado como proximo passo, nao como aceite. Detalhe
+  completo em `CHECKLIST_FASES_FUTURAS_PRODUCAO.md`, entrada da Fase 264.
+  A Fase 264 fecha com os sete incrementos da Onda 1 entregues.
 - Fase 261 (escopo de trabalho: gaps de seguranca e privacidade
   identificados no audit da fase) **concluida tecnicamente em 2026-09-15,
   com excecoes operacionais abertas; incrementos 1 a 4 integrados**.

@@ -4,7 +4,7 @@ import { MensagemNotificacaoOrm } from '../infraestrutura/mensagem-notificacao.o
 import { TemplateMensagemOrm } from '../infraestrutura/template-mensagem.orm';
 import { UsuarioOrm } from '../../usuarios/infraestrutura/usuario.orm';
 
-function criarProcessador(adaptadorEmail: { enviar: jest.Mock }) {
+function criarProcessador(adaptadorEmail: { enviar: jest.Mock }, tipoCanal: string = 'email') {
   const mensagem = {
     id: 'mensagem-1',
     tenantId: 'tenant-1',
@@ -14,7 +14,7 @@ function criarProcessador(adaptadorEmail: { enviar: jest.Mock }) {
     erro: undefined as string | undefined,
     payload: { destino: 'paciente@example.com' }
   };
-  const canal = { id: 'canal-1', tenantId: 'tenant-1', tipo: 'email' };
+  const canal = { id: 'canal-1', tenantId: 'tenant-1', tipo: tipoCanal };
   const template = { id: 'template-1', tenantId: 'tenant-1', canal: 'email' };
   const repositorioMensagens = {
     update: jest.fn(async () => ({ affected: 1 })),
@@ -58,7 +58,7 @@ function criarProcessador(adaptadorEmail: { enviar: jest.Mock }) {
     criptografia as never
   );
 
-  return { processador, mensagem, repositorioMensagens };
+  return { processador, mensagem, repositorioMensagens, adaptadorPlaceholder };
 }
 
 describe('ProcessadorNotificacoes', () => {
@@ -100,5 +100,31 @@ describe('ProcessadorNotificacoes', () => {
     await processador.processarMensagem('tenant-1', 'mensagem-1');
 
     expect(adaptadorEmail.enviar).not.toHaveBeenCalled();
+  });
+
+  it('canal push registra falha explicita em vez de sucesso silencioso', async () => {
+    const adaptadorEmail = { enviar: jest.fn(async () => ({ idExterno: 'email-1' })) };
+    const { processador, mensagem, adaptadorPlaceholder } = criarProcessador(adaptadorEmail, 'push');
+
+    await expect(
+      processador.processarMensagem('tenant-1', 'mensagem-1', { propagarErro: false })
+    ).resolves.toBeUndefined();
+
+    expect(mensagem.status).toBe('falhou');
+    expect(mensagem.erro).toBeTruthy();
+    expect(adaptadorPlaceholder.enviar).not.toHaveBeenCalled();
+  });
+
+  it('canal com tipo desconhecido registra falha explicita em vez de sucesso silencioso', async () => {
+    const adaptadorEmail = { enviar: jest.fn(async () => ({ idExterno: 'email-1' })) };
+    const { processador, mensagem, adaptadorPlaceholder } = criarProcessador(adaptadorEmail, 'sms');
+
+    await expect(
+      processador.processarMensagem('tenant-1', 'mensagem-1', { propagarErro: false })
+    ).resolves.toBeUndefined();
+
+    expect(mensagem.status).toBe('falhou');
+    expect(mensagem.erro).toBeTruthy();
+    expect(adaptadorPlaceholder.enviar).not.toHaveBeenCalled();
   });
 });

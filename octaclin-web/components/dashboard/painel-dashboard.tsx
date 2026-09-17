@@ -55,6 +55,7 @@ function nomeAlerta(tipo: string) {
   return {
     sem_retorno_risco_alto: 'Paciente de risco sem retorno',
     tarefa_vencida: 'Tarefa vencida',
+    conduta_vencida: 'Conduta terapêutica vencida',
     atendimento_proximo: 'Atendimento proximo',
     formulario_pendente: 'Formulario pendente',
     solicitacao_pendente: 'Solicitacao pendente',
@@ -250,8 +251,9 @@ export function PainelDashboard() {
 
       <section aria-labelledby="hoje-em-foco" className="grid gap-3 border-t border-linha pt-4">
         <div><h2 id="hoje-em-foco" className="text-base font-semibold text-tinta">Hoje em foco</h2><p className="mt-1 text-sm text-texto-suave">Indicadores para organizar a rotina clínica.</p></div>
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6">
         <Metrica rotulo="Hoje" valor={dados.indicadores.consultasHoje} delta={{ valor: `${dados.indicadores.proximas} proximas`, tipo: 'neutro' }} icone={<CalendarDays size={18} />} />
+        <Metrica rotulo="Desfechos do período" valor={dados.indicadores.concluidas} delta={{ valor: `${dados.indicadores.faltas} faltas, ${dados.indicadores.canceladas} canceladas, ${dados.indicadores.reagendadas} reagendadas`, tipo: 'neutro' }} icone={<CheckCircle2 size={18} />} />
         <Metrica rotulo="Sem retorno" valor={dados.indicadores.semRetorno30} delta={{ valor: `${dados.indicadores.semRetorno60} em 60d, ${dados.indicadores.semRetorno90Mais} em 90+d`, tipo: 'neutro' }} icone={<UserRoundPlus size={18} />} />
         <Metrica rotulo="Pendências" valor={dados.indicadores.tarefasVencidas + dados.indicadores.formulariosPendentes} delta={{ valor: `${dados.indicadores.tarefasVencidas} tarefas, ${dados.indicadores.formulariosPendentes} formularios`, tipo: 'neutro' }} icone={<ClipboardList size={18} />} />
         <Metrica rotulo="Comunicações" valor={dados.indicadores.comunicacoesEmAlerta} delta={{ valor: `${dados.indicadores.solicitacoesPendentes} solicitacoes pendentes`, tipo: 'neutro' }} icone={<MessageSquareWarning size={18} />} />

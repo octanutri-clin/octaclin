@@ -719,7 +719,6 @@ export function PainelComunicacoes() {
               >
                 <option value="email">Email</option>
                 <option value="whatsapp">WhatsApp</option>
-                <option value="push">Push</option>
               </Selecao>
             </div>
             <div className="space-y-1.5">
@@ -778,7 +777,6 @@ export function PainelComunicacoes() {
               >
                 <option value="email">Email</option>
                 <option value="whatsapp">WhatsApp</option>
-                <option value="push">Push</option>
               </Selecao>
             </div>
             <div className="space-y-1.5">
