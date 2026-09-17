@@ -1,6 +1,7 @@
 # Fase 263 - Relatorios financeiros e de performance por cliente
 
-Status: em andamento. Incrementos 1, 2, 3 e 4 implementados em 2026-09-16.
+Status: concluida. Incrementos 1, 2, 3 e 4 implementados e integrados em
+2026-09-16 pelos PRs GitHub `#249`, `#250`, `#251` e `#252`.
 
 ## Objetivo
 
@@ -148,7 +149,7 @@ aplicado no formulario).
   financeira do cliente (mesma lacuna ja registrada no Incremento 3);
   cobertura visual dedicada a essa tela continua pendente.
 
-## Proximos incrementos candidatos
+## Encerramento
 
 Nenhum candidato pendente no momento. Os dois candidatos documentados apos o
 Incremento 2 (exportacao auditada e quebra por profissional) foram entregues

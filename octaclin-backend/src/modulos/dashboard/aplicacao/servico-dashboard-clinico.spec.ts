@@ -618,6 +618,68 @@ describe('ServicoDashboardClinico', () => {
     expect(alertaConduta?.ocultavel).toBe(true);
   });
 
+  it('permite ocultar o alerta de conduta terapeutica enquanto ela continuar vencida no escopo profissional', async () => {
+    const profissionalUuid = '11111111-1111-4111-8111-111111111111';
+    const pacienteUuid = '22222222-2222-4222-8222-222222222222';
+    const condutaUuid = '33333333-3333-4333-8333-333333333333';
+    (registros.get(ProfissionalOrm) as ProfissionalOrm[]).push(
+      profissional(profissionalUuid, 'usuario-conduta-vencida')
+    );
+    (registros.get(PacienteOrm) as PacienteOrm[]).push(
+      paciente(pacienteUuid, profissionalUuid, 10)
+    );
+    (registros.get(CondutaTerapeuticaOrm) as CondutaTerapeuticaOrm[]).push(
+      condutaTerapeutica(condutaUuid, pacienteUuid, profissionalUuid)
+    );
+    (registros.get(CondutaTerapeuticaVersaoOrm) as CondutaTerapeuticaVersaoOrm[]).push(
+      condutaVersaoPublicada(
+        '44444444-4444-4444-8444-444444444444',
+        condutaUuid,
+        '2026-07-01'
+      )
+    );
+    const usuarioConduta = usuario('Professional', 'usuario-conduta-vencida');
+    const alertaId = `conduta_vencida:${profissionalUuid}:${condutaUuid}`;
+
+    const resultado = await servico.ocultarAlerta('tenant-1', alertaId, usuarioConduta);
+
+    expect(resultado.alertaId).toBe(alertaId);
+    expect(salvarOcultacao).toHaveBeenCalledWith(
+      expect.objectContaining({ tenantId: 'tenant-1', alertaId })
+    );
+  });
+
+  it('recusa ocultar conduta terapeutica que ainda nao venceu', async () => {
+    const profissionalUuid = '55555555-5555-4555-8555-555555555555';
+    const pacienteUuid = '66666666-6666-4666-8666-666666666666';
+    const condutaUuid = '77777777-7777-4777-8777-777777777777';
+    (registros.get(ProfissionalOrm) as ProfissionalOrm[]).push(
+      profissional(profissionalUuid, 'usuario-conduta-valida')
+    );
+    (registros.get(PacienteOrm) as PacienteOrm[]).push(
+      paciente(pacienteUuid, profissionalUuid, 10)
+    );
+    (registros.get(CondutaTerapeuticaOrm) as CondutaTerapeuticaOrm[]).push(
+      condutaTerapeutica(condutaUuid, pacienteUuid, profissionalUuid)
+    );
+    (registros.get(CondutaTerapeuticaVersaoOrm) as CondutaTerapeuticaVersaoOrm[]).push(
+      condutaVersaoPublicada(
+        '88888888-8888-4888-8888-888888888888',
+        condutaUuid,
+        '2026-08-01'
+      )
+    );
+
+    await expect(
+      servico.ocultarAlerta(
+        'tenant-1',
+        `conduta_vencida:${profissionalUuid}:${condutaUuid}`,
+        usuario('Professional', 'usuario-conduta-valida')
+      )
+    ).rejects.toBeInstanceOf(BadRequestException);
+    expect(salvarOcultacao).not.toHaveBeenCalled();
+  });
+
   it('nao gera alerta de conduta vencida quando a conduta esta arquivada ou a validade ainda nao passou', async () => {
     (registros.get(CondutaTerapeuticaOrm) as CondutaTerapeuticaOrm[]).push(
       condutaTerapeutica('conduta-arquivada-1', 'paciente-risco', 'profissional-1', { arquivadaEm: diasAntes(1) }),

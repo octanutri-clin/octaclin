@@ -2799,6 +2799,10 @@ test.describe('prontuario do paciente', () => {
     await comparar.getByRole('button', { name: 'Comparar' }).click();
     await expect(comparar.getByText('-6,80 kg')).toBeVisible();
     await expect(comparar.getByText('75,00 para 68,20')).toBeVisible();
+
+    await comparar.getByLabel('Avaliação atual para comparar').selectOption('avaliacao-1');
+    await expect(comparar.getByText('-6,80 kg')).toBeHidden();
+    await expect(comparar.getByText('75,00 para 68,20')).toBeHidden();
     await assertSemOverflowHorizontal(page);
   });
 
