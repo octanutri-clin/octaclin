@@ -2,14 +2,14 @@
 
 > Status: aprovado para planejamento e execucao sequencial
 >
-> Atualizado em: 2026-09-10
+> Atualizado em: 2026-09-17
 >
 > Estado do SQ-4: integrado no `main` pelo PR GitHub #215 em 2026-09-08
-> (`dc8334f`). Estado do PR 53: **gate externo PASS; checks e review humano
-> pendentes** na PR GitHub #216. O restore real, isolado e medido da execucao
-> `34286684698` aprovou RPO/RTO e manifestos no banco dedicado. Object Lock
-> COMPLIANCE permanece excecao aberta e nao comprovada; sua ativacao no bucket
-> e irreversivel e exige decisao operacional separada.
+> (`dc8334f`). Estado do PR 53: integrado no `main` pelo PR GitHub #216
+> (`6fe17ae`) com checks e merge humanos. O restore real, isolado e medido da
+> execucao `34286684698` aprovou RPO/RTO e manifestos no banco dedicado. Object
+> Lock COMPLIANCE permanece excecao aberta e nao comprovada; sua ativacao no
+> bucket e irreversivel e exige decisao operacional separada.
 >
 > Estado do PR 54: integrado no `main` pelo PR GitHub #222 em 2026-09-10
 > (merge `804e0bb7c714d7fc835db812229c6ffcb90c626a`, base `f6f90ef`). Os checks
@@ -23,18 +23,15 @@
 > (Formularios/check-ins ponta a ponta) fica desbloqueada para iniciar auditoria
 > e implementacao incremental, sem que isso implique aceite do PR 55.
 >
-> Proximo item autorizado, por decisao do proprietario em 2026-09-04: fechar as
-> duas dividas nomeadas pela fase 2 do PR 52 antes de abrir o PR 53. O gate de
-> migration fora de banda foi integrado pelo PR GitHub #196 (`7faf3b1`); o
-> fallback `NEXT_PUBLIC_API_URL`, pelo PR GitHub #197 (`51fa2ec`). A triagem das
-> vulnerabilidades high esta em revisao na branch
-> `chore/supply-chain-fast-uri-3-1-6`. Os 7 PRs de bump do Dependabot foram
-> resolvidos em 2026-09-05: sete mergeados, dois fechados por bump inaplicavel e
-> dois -- a subida do runtime para o Node 26 -- fechados com reabertura
-> **agendada para 2026-10-28**, data de LTS do Node 26. Com a fila encerrada, o
-> PR 53 fica autorizado. As tres fases do PR 52 estao
-> no `main` (PRs GitHub #191, #194 e #195), e o PR 53 fica autorizado ao fim
-> dessa fila.
+> Estado reconciliado em 2026-09-17: as Fases 256 a 261, 263 e 264 foram
+> integradas; a Fase 262 continua sem GO pelos gates externos, e a Fase 265 nao
+> foi autorizada. Nao ha pull request aberta depois do merge humano do PR
+> GitHub #254. O proximo incremento e a preparacao do PR 55, sem confundir
+> pacote de engajamento com pentest executado. O gate continua exigindo
+> profissional independente, cadeia de custodia, remediacao, reteste e decisao
+> humana para venda publica; ele nao adiciona automaticamente um bloqueador a
+> Fase 262. Pacote:
+> `docs/governance/PACOTE_ENGAJAMENTO_PENTEST_PR55.md`.
 > O PR 51 foi integrado no `main` pelos PRs GitHub #189 e #190.
 > Estado do PR 36: integrado no `main` pelo PR GitHub #158 em 2026-08-28.
 > Estado do PR 37: integrado no `main` pelo PR GitHub #159 em 2026-08-28.
@@ -707,6 +704,11 @@ Skills Claude: `security-review`, `receiving-code-review`,
 
 Gate minimo: relatorio independente, cadeia de custodia, remediation/retest e
 decisao humana de GO/NO-GO. Automacao nao substitui este gate.
+
+Pacote de preparacao: `PACOTE_ENGAJAMENTO_PENTEST_PR55.md`. Ele define
+pre-condicoes, regras de engajamento, tratamento privado de evidencia,
+remediacao/reteste e a matriz fail-closed de GO/NO-GO. A existencia ou o merge
+do pacote nao satisfaz nenhum gate externo do PR 55.
 
 ### PR 56 - Mobile MASVS/MASTG
 

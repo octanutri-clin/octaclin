@@ -7,6 +7,16 @@ Atualizado em 2026-09-17.
 - Produto: OctaClin.
 - Repositorio: `octanutri-clin/octaclin`.
 - Branch principal: `main`.
+- Reconciliacao de 2026-09-17: o PR GitHub `#254` foi integrado no `main` pelo
+  merge `9b7831491519ec052005c2f01642c6ab2fead9aa`; todos os checks aplicaveis
+  passaram e nao restou PR aberta. A fila volta ao PR 55 da governanca. Foi
+  iniciado um pacote documental R5 para contratar e executar pentest
+  independente com regras de engajamento, cadeia de custodia, remediacao,
+  reteste e decisao humana fail-closed para venda publica. Nenhuma execucao de
+  pentest independente do PR 55, contratacao, autorizacao de alvo ou evidencia
+  correspondente ocorreu. Esse gate nao altera os bloqueadores atuais da Fase
+  262, cujo `NO-GO temporario` continua ligado a ClamAV, juridico,
+  dominio/identidade e selecao do piloto. A Fase 265 permanece nao autorizada.
 - Reconciliacao de 2026-09-15: as migrations pendentes `1039` a `1045` foram
   aplicadas fora de banda em staging e producao, e os deploys de backend e web
   ficaram `Live`. Nova verificacao publica confirmou `/health/pronto` `200`,
