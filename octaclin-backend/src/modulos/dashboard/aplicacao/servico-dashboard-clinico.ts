@@ -961,6 +961,37 @@ export class ServicoDashboardClinico {
         (tarefa.status === 'pendente' || tarefa.status === 'em_andamento') &&
         !!tarefa.vencimentoEm &&
         tarefa.vencimentoEm.getTime() < agora;
+    } else if (partes.tipo === 'conduta_vencida') {
+      const conduta = await gerenciador.getRepository(CondutaTerapeuticaOrm).findOne({
+        where: {
+          id: partes.recursoId,
+          tenantId,
+          profissionalId: contexto.id
+        }
+      });
+      pacienteId = conduta?.pacienteId;
+      if (conduta && !conduta.arquivadaEm) {
+        const versoesPublicadas = await gerenciador
+          .getRepository(CondutaTerapeuticaVersaoOrm)
+          .find({
+            where: {
+              tenantId,
+              condutaTerapeuticaId: conduta.id,
+              publicadaEm: Not(IsNull()),
+              descartadaEm: IsNull()
+            }
+          });
+        const versaoAtual = versoesPublicadas.find(
+          (versao) =>
+            versao.tenantId === tenantId &&
+            versao.condutaTerapeuticaId === conduta.id &&
+            !!versao.publicadaEm &&
+            !versao.descartadaEm
+        );
+        alertaAtual =
+          !!versaoAtual?.validadeFim &&
+          versaoAtual.validadeFim < this.dataIsoNoTimezoneClinico();
+      }
     } else if (partes.tipo === 'desmarcacao_paciente') {
       const consulta = await gerenciador.getRepository(AgendaConsultaOrm).findOne({
         where: {

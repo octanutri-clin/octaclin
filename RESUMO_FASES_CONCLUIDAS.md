@@ -1,6 +1,7 @@
 # OctaClin - Resumo das fases concluidas
 
-Atualizado em 2026-09-11 com a conclusao da Fase 259.
+Atualizado em 2026-09-17 com a conclusao da Fase 264 e a reconciliacao da
+Fase 263. A Fase 262 permanece aberta por gates externos do piloto.
 
 Fase 136 (2026-07-25) adicionou sincronizacao em tempo real com a Google
 Agenda pessoal de cada profissional: conexao OAuth individual, notificacao
@@ -831,6 +832,34 @@ O OctaClin ja possui uma base SaaS multi-tenant com backend NestJS, frontend Nex
   codificam ciclos de vida genuinamente diferentes. Nenhuma migration em
   nenhum incremento. Ver
   `docs/history/phases/fase-259-acesso-convite-ativacao.md`.
+- Fase 260 - Desempenho, resiliencia e diagnostico operacional: prontuario
+  passou a carregar evolucoes e tarefas sob demanda, mensagens respeitam a
+  permissao de comunicacoes, falhas exibem codigo para suporte e leituras de
+  PHI ganharam retry duravel de auditoria via outbox. O gate de performance
+  limita requests do Resumo e a paginacao de profissionais foi paralelizada.
+  Nenhuma migration. PR `#231`, merge `1ef9ce7`. Ver
+  `docs/history/phases/fase-260-desempenho-resiliencia-diagnostico.md`.
+- Fase 261 - Regressao de seguranca e privacidade do SaaS publico: concluida
+  tecnicamente com excecoes operacionais registradas. Integrou ClamAV real
+  quando configurado, gate de guardas de controladores, revogacao OAuth Google,
+  SLA do inventario de seguranca e reforcos de isolamento/RLS, LGPD e uploads.
+  O provisionamento externo de ClamAV e o plano de criptografia PHI permanecem
+  gates operacionais, nao falsos verdes. PRs `#232`, `#233`, `#235` e `#236`.
+- Fase 263 - Relatorios financeiros e de performance por cliente: quatro
+  incrementos consolidaram indicadores de desfecho e ticket medio, comparacao
+  com o periodo anterior, quebra por profissional e exportacao CSV auditada,
+  sempre sobre o mesmo escopo financeiro seguro. Nenhuma migration. PRs `#249`
+  a `#252`. Ver
+  `docs/history/phases/fase-263-relatorios-financeiros-performance.md`.
+- Fase 264 - Ativacao: dado existente virou acao visivel em sete incrementos:
+  desfechos no dashboard, timeline canonica do prontuario, material marcado
+  como lido, alerta de conduta vencida, comparacao antropometrica arbitraria,
+  fila de consultas nao confirmadas e falha explicita para push inexistente.
+  PR `#253`, merge `1f69cc9`, sem migration. A revisao pos-merge adicionou as
+  regressoes que faltavam para ocultar `conduta_vencida` somente enquanto atual
+  e para limpar o delta antropometrico ao trocar a selecao. Detalhes em
+  `CHECKLIST_FASES_FUTURAS_PRODUCAO.md` e
+  `docs/product/OCTACLIN_PRODUCT_FEATURE_AUDIT.md`.
 - Fase 255 - Prontuario clinico orientado a linha de cuidado: o componente
   principal ganhou fronteiras tipadas para navegacao e timeline; Materiais,
   Anexos e profissionais passaram a carregar sob demanda com falhas locais;

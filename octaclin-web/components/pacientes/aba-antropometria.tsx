@@ -361,7 +361,12 @@ export function AbaAntropometria({ pacienteId, podeGerenciar }: AbaAntropometria
                 <Selecao
                   aria-label="Avaliação anterior para comparar"
                   value={avaliacaoAnteriorId}
-                  onChange={(evento) => setAvaliacaoAnteriorId(evento.target.value)}
+                  disabled={comparando}
+                  onChange={(evento) => {
+                    setAvaliacaoAnteriorId(evento.target.value);
+                    setDeltaSelecionado(undefined);
+                    setErroComparacao(null);
+                  }}
                 >
                   <option value="">Selecionar avaliação</option>
                   {serie.avaliacoes.map((avaliacao) => (
@@ -376,7 +381,12 @@ export function AbaAntropometria({ pacienteId, podeGerenciar }: AbaAntropometria
                 <Selecao
                   aria-label="Avaliação atual para comparar"
                   value={avaliacaoAtualId}
-                  onChange={(evento) => setAvaliacaoAtualId(evento.target.value)}
+                  disabled={comparando}
+                  onChange={(evento) => {
+                    setAvaliacaoAtualId(evento.target.value);
+                    setDeltaSelecionado(undefined);
+                    setErroComparacao(null);
+                  }}
                 >
                   <option value="">Selecionar avaliação</option>
                   {serie.avaliacoes.map((avaliacao) => (

@@ -160,8 +160,9 @@ Atualizado em 2026-09-17.
   rollout foram renovados localmente com sucesso. Decisao atual: **NO-GO
   temporario para o piloto**, pelos gates externos; desenvolvimento de produto
   independente pode continuar sem fechar a Fase 262.
-- Fase 263 - Relatorios financeiros e de performance por cliente, **em
-  andamento desde 2026-09-16**. O primeiro incremento reutiliza o fechamento
+- Fase 263 - Relatorios financeiros e de performance por cliente, **concluida
+  em 2026-09-16, com quatro incrementos integrados pelos PRs `#249` a `#252`**.
+  O primeiro incremento reutiliza o fechamento
   financeiro seguro da agenda, sem migration, e acrescenta concluidas, faltas,
   canceladas, taxas de comparecimento/falta/cancelamento e ticket medio de
   consultas pagas nao canceladas. RLS, permissao financeira e escopo por
@@ -364,7 +365,21 @@ Atualizado em 2026-09-17.
   execucao para subir a aplicacao completa; `SKIPPED` por limitacao de
   ambiente, registrado como proximo passo, nao como aceite. Detalhe
   completo em `CHECKLIST_FASES_FUTURAS_PRODUCAO.md`, entrada da Fase 264.
-  A Fase 264 fecha com os sete incrementos da Onda 1 entregues.
+  A Fase 264 fecha com os sete incrementos da Onda 1 entregues pelo PR `#253`,
+  merge `1f69cc9`. A revisao pos-merge corrigiu neste follow-up dois falsos
+  aceites: o alerta `conduta_vencida` agora pode ser ocultado por 24h somente
+  enquanto a conduta publicada continuar vencida e no escopo; e a comparacao
+  antropometrica limpa o delta anterior quando qualquer seletor muda. Os dois
+  comportamentos receberam regressao automatizada. Nenhuma migration ou
+  mudanca de autorizacao. A proxima acao recomendada e retomar a trilha de
+  hardening pelo PR 55; nenhuma Fase 265 deve iniciar sem decisao explicita.
+- Fase 265 - Fundacao da inteligencia: score de risco calculado com override
+  auditado, **planejada e nao iniciada**. Corresponde ao PB-01 da Onda 2 em
+  `docs/product/OCTACLIN_PRODUCT_FEATURE_AUDIT.md` e aguarda decisao explicita
+  sobre pesos e sinais. Por envolver dado clinico, migration e job, o risco
+  minimo e R4: a execucao futura exige TDD de isolamento, rollback e migration
+  fora de banda com role owner. Nenhum codigo, DDL ou producao foi alterado para
+  esta fase neste encerramento.
 - Fase 261 (escopo de trabalho: gaps de seguranca e privacidade
   identificados no audit da fase) **concluida tecnicamente em 2026-09-15,
   com excecoes operacionais abertas; incrementos 1 a 4 integrados**.

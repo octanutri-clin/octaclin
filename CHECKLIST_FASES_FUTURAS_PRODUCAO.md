@@ -1,8 +1,8 @@
 # OctaClin - Checklist vivo de fases futuras ate producao
 
-Atualizado em 2026-09-17. Fases 256 a 261 concluidas; Fase 262 em andamento;
-Fase 263 em andamento como frente de produto independente; Fase 264 planejada e
-pronta para execucao, derivada da auditoria de produto de 2026-09-17.
+Atualizado em 2026-09-17. Fases 256 a 261, 263 e 264 concluidas; Fase 262
+permanece em andamento pelos gates externos do piloto; Fase 265 planejada e
+aguardando decisao explicita para iniciar.
 O programa de hardening PR 36-56 permanece como trilha separada.
 
 Este arquivo deve guiar Codex, Claude Code ou qualquer outro agente de IA. Ele deve ser atualizado a cada fase concluida.
@@ -2839,7 +2839,8 @@ publicado antes de ampliar a superficie de mudancas visuais.
     juridico, dominio/identidade e selecao do cliente, sem bloquear trabalho de
     produto independente.
 
-- [~] Fase 263 - Relatorios financeiros e de performance por cliente.
+- [x] Fase 263 - Relatorios financeiros e de performance por cliente.
+  [CONCLUIDA EM 2026-09-16]
   - Incremento 1 implementado em 2026-09-16 sem migration: o resumo financeiro
     seguro existente passou a derivar concluidas, faltas, canceladas, taxas de
     comparecimento/falta/cancelamento e ticket medio recebido em consultas.
@@ -2872,10 +2873,11 @@ publicado antes de ampliar a superficie de mudancas visuais.
     Reaproveita `resumoRecebimentos` por inteiro (mesmo filtro, escopo e
     RLS); o CSV tem uma linha por profissional com todos os indicadores de
     performance mais uma linha "Consolidado". Sem migration. Nenhum
-    candidato pendente na fase no momento.
+    candidato pendente na fase no momento. Integrada pelos PRs GitHub `#249`,
+    `#250`, `#251` e `#252`.
 
-- [ ] Fase 264 - Ativacao: dado que ja existe vira acao visivel, **em andamento
-  desde 2026-09-17**. [IMPORTANTE - NAO BLOQUEADOR]
+- [x] Fase 264 - Ativacao: dado que ja existe vira acao visivel. [CONCLUIDA EM
+  2026-09-17] [IMPORTANTE - NAO BLOQUEADOR]
   - Origem: auditoria de produto de 2026-09-17
     (`docs/product/OCTACLIN_PRODUCT_FEATURE_AUDIT.md`). A auditoria concluiu que
     o gargalo do produto nao e falta de funcionalidade, e sim ativacao: ha dado
@@ -3215,6 +3217,44 @@ publicado antes de ampliar a superficie de mudancas visuais.
       validada.
     - Sem migration, sem mudanca de contrato de autorizacao, sem novo
       conteudo clinico exposto no Historico.
+  - Encerramento: os sete incrementos foram integrados pelo PR GitHub `#253`,
+    merge `1f69cc9`. A revisao pos-merge encontrou dois defeitos de integridade
+    do fluxo e os corrige neste follow-up: `conduta_vencida` volta a cumprir o
+    contrato de ocultacao por 24h, com revalidacao de tenant, profissional,
+    paciente, conduta ativa e versao publicada vencida; e a comparacao
+    antropometrica limpa o resultado anterior ao trocar qualquer avaliacao,
+    evitando associar um delta antigo a uma selecao nova. TDD dedicado cobre o
+    caminho positivo/negativo do backend e a regressao visual em desktop e
+    mobile. Nenhuma migration ou mudanca de contrato de autorizacao.
+  - Excecao de processo registrada: apesar da regra da secao 17 da auditoria
+    prever um incremento por branch/PR, os sete incrementos foram integrados em
+    uma unica branch e no PR `#253`. A excecao nao deve virar precedente para
+    as ondas seguintes.
+  - Proximo passo recomendado: nao iniciar automaticamente a Fase 265. Retomar
+    a trilha separada de hardening pelo PR 55 e exigir aceite humano/checks
+    antes do PR 56. Depois, decidir explicitamente se a proxima fase de produto
+    abre a Onda 2 da auditoria, com PB-01 (score de risco explicavel) antes de
+    gatilhos ou executor de automacoes.
+  - Modelo recomendado para o PR 55: modelo de maior capacidade com raciocinio
+    `max`, por ser trabalho R5 de menor privilegio e configuracao externa.
+    Skills/capacidades: security review, threat modeling, code verification e
+    validacao de configuracao; GitHub/`gh` apenas para evidencia e fluxo de PR.
+
+- [ ] Fase 265 - Fundacao da inteligencia: score de risco calculado com
+  override auditado. [PLANEJADA - AGUARDA DECISAO EXPLICITA]
+  - Origem: PB-01 e Onda 2 de
+    `docs/product/OCTACLIN_PRODUCT_FEATURE_AUDIT.md`.
+  - Dependencia de produto: definir pesos e sinais explicaveis antes de escrever
+    codigo. O score deve ser deterministico, reproduzivel e revisavel; IA nao
+    calcula nem decide risco clinico.
+  - Risco minimo R4: envolve dado clinico, migration e job. Exige branch/PR por
+    incremento, teste positivo e negativo de tenant/profissional, plano de
+    rollback e aplicacao de migration somente fora de banda com role owner.
+  - Ordem da Onda 2 permanece `PB-01 -> PB-02 -> PB-03 -> PB-05`; nao ligar
+    `paciente.risco_alto` nem criar novos gatilhos antes de concluir o score e o
+    executor nas etapas correspondentes.
+  - Estado: planejamento apenas. Nenhuma implementacao, migration ou mudanca de
+    producao autorizada neste encerramento.
 
 Documento de execução e prioridades: `ROADMAP_QUALIDADE_SEGURANCA_FASES_248_262.md`.
 Matriz operacional: `MATRIZ_SKILLS_PLUGINS_MODELOS_FASES_243_248_262.md`.
@@ -3230,8 +3270,8 @@ Matriz operacional: `MATRIZ_SKILLS_PLUGINS_MODELOS_FASES_243_248_262.md`.
   isso e ruido e nao risco. Ao escolher o provedor: definir o par completo ou
   remover a variavel avulsa, e transformar o check numa sonda real do
   `octaclin-ai-service`, quando meia configuracao volta a ser falha.
-- Relatorios financeiros e de performance por cliente. **Em andamento na Fase
-  263; incrementos 1 e 2 implementados.**
+- Relatorios financeiros e de performance por cliente: **concluidos na Fase
+  263, com quatro incrementos integrados pelos PRs `#249` a `#252`.**
 - Marketplace de modelos de questionarios.
 - White-label por clinica.
 - Multi-unidade por tenant.
