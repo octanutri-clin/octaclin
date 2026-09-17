@@ -3,7 +3,8 @@
 Atualizado em 2026-09-17. Fases 256 a 261, 263 e 264 concluidas; Fase 262
 permanece em andamento pelos gates externos do piloto; Fase 265 planejada e
 aguardando decisao explicita para iniciar.
-O programa de hardening PR 36-56 permanece como trilha separada.
+O programa de hardening PR 36-56 permanece como trilha separada, com o pacote
+interno do PR 55 em preparacao e todos os gates externos ainda pendentes.
 
 Este arquivo deve guiar Codex, Claude Code ou qualquer outro agente de IA. Ele deve ser atualizado a cada fase concluida.
 
@@ -3648,13 +3649,31 @@ numeros de PR do GitHub. Cada item deve entrar em branch e PR isolados.
   - [x] Ledger de falso positivo exige cobertura de todos os caminhos, evidencia, owner e prazo.
   - [ ] Executar o workflow autorizado no head do PR e registrar a evidencia sanitizada.
   - [ ] Zerar ou decidir cada `critical/high` confirmado e concluir checks/review/merge humanos.
-- [ ] PR 55 - Concluir pentest independente, reteste e GO/NO-GO.
+- [~] PR 55 - Concluir pentest independente, reteste e GO/NO-GO.
+  - [x] Pacote interno de engajamento define independencia, pre-condicoes,
+    escopo, proibicoes, parada, evidencia e cadeia de custodia em
+    `docs/governance/PACOTE_ENGAJAMENTO_PENTEST_PR55.md`.
+  - [x] Fluxo de remediacao/reteste e matriz fail-closed de GO/NO-GO de
+    seguranca para venda publica definidos; pacote documental nao conta como
+    teste executado nem adiciona bloqueador a Fase 262.
+  - [ ] Resolver ou aceitar formalmente a pendencia externa do PR 54 que afete
+    a validade do ensaio.
+  - [ ] Selecionar profissional independente e aprovar contrato, retencao,
+    descarte, alvo, janela, origens, limites e contatos em canal privado.
+  - [ ] Provar que staging nao compartilha dados, recursos ou credenciais com
+    producao e que integracoes/egress usam somente sandbox ou sinks autorizados.
+  - [ ] Executar o pentest somente em staging isolado e sintetico e preservar
+    relatorio bruto/PoCs fora do repositorio publico.
+  - [ ] Remediar achados bloqueadores e obter reteste independente em `PASS`.
+  - [ ] Registrar resumo sanitizado, hashes de custodia, riscos residuais e
+    decisao humana de GO/NO-GO de seguranca para venda publica.
 - [ ] PR 56 - Aplicar MASVS/MASTG antes de distribuir o mobile.
 
 Fonte canonica de escopo, gates e skills do Claude Code:
 `docs/governance/PROGRAMA_HARDENING_SEGURANCA_PRS_36_56.md`.
 
-Proximo item autorizado: concluir a PR 54 com DAST/probes internos no staging
-isolado, checks e merge humanos. A retomada funcional comeca na Fase 256; alertas sem solucao
-permanecem abertos e revisaveis, enquanto novo critical/high corrigivel volta a
-bloquear a fila.
+Proximo item autorizado: concluir a preparacao e a contratacao independente do
+PR 55. A execucao externa depende de autorizacao escrita, alvo isolado e dados
+sinteticos; o merge do pacote nao satisfaz o gate. PR 56 continua condicionado
+a decisao explicita de distribuir o Mobile, e a Fase 265 nao deve iniciar por
+inferencia desta trilha.
