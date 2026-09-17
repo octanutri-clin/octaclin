@@ -36,8 +36,10 @@ código antes de entrar aqui; onde a conferência corrigiu o achado, o texto reg
 4. **O sistema sabe muito e age quase nada.** `[F]` Pelo menos oito eventos de domínio são emitidos e
    registrados (check-in respondido, formulário respondido, confirmação de consulta por WhatsApp, falha de
    envio, mensagem recebida, consulta concluída, tarefa concluída, solicitação pública) e **um único** deles
-   aciona automação. A confirmação de consulta que o paciente manda pelo WhatsApp é gravada na consulta e não
-   muda o status dela (`servico-webhook-whatsapp.ts:292-323`).
+   aciona automação. A confirmação que o paciente manda pelo WhatsApp é gravada em
+   `consulta.notificacoes.confirmacaoPaciente` e **exibida** no painel da agenda (`painel-agenda.tsx:196`),
+   mas não muda o status da consulta nem alimenta fila, filtro ou automação: ninguém consegue perguntar
+   "quem ainda não confirmou amanhã?" (`servico-webhook-whatsapp.ts:292-325`).
 
 5. **O paciente registra e ninguém é avisado.** `[F]` `registrarCheckin` não emite notificação, evento ou
    alerta — o check-in vira uma linha da timeline. Adesão declarada (0-100), sintomas e humor entram no banco e
@@ -168,7 +170,7 @@ explícita e sem lacuna funcional evidente.
 | Exames laboratoriais | Lista por coleta, marcador texto livre | Sem série, sem "está alterado?" | Catálogo de marcadores + faixa de referência + série por marcador | Alto | M | **P1** |
 | Materiais educativos | `visualizadoEm` exibido, nunca gravado | Coluna que mente | Marcar leitura no portal | Médio | P | **P1** |
 | Evolução clínica | Texto livre sem estrutura | Redigitação a cada consulta | Template por profissional + pré-preenchimento com dados da consulta | Alto | M | **P1** |
-| Confirmação por WhatsApp | Gravada, sem efeito | Confirmação não confirma nada | Atualizar status da consulta e alimentar a agenda | Médio | P | **P1** |
+| Confirmação por WhatsApp | Exibida por consulta, sem efeito derivado | Não dá para saber quem não confirmou | Fila/filtro de não confirmadas | Médio | P | **P1** |
 | Plano alimentar | Sem duplicação entre pacientes | Montar do zero a cada paciente | "Duplicar de outro paciente" e "salvar como modelo" a partir do plano | Alto | M | **P1** |
 | Condutas terapêuticas | Validade gravada sem alerta | Conduta vence em silêncio | Alerta de conduta vencida no dashboard | Médio | P | **P1** |
 | Lista de pacientes | Sem ação em massa | Uma a uma | Seleção múltipla para envio de formulário/material/mensagem | Médio | M | **P2** |
@@ -176,7 +178,7 @@ explícita e sem lacuna funcional evidente.
 | Painel do cliente | Só assinatura | Dono não gerencia a operação | Painel de operação da clínica | Alto | M | **P2** |
 | Comparação antropométrica | Só as duas últimas | Não compara 1ª × atual | Comparação entre quaisquer duas avaliações + meta | Médio | P | **P2** |
 | Evolução fotográfica | Uma foto por vez | Sem antes/depois | Comparação lado a lado por protocolo de pose | Médio | P | **P2** |
-| Perfil de cadastro | Tags/origem/categoria sem uso | Segmentação impossível | Filtrar e segmentar por esses campos | Médio | P | **P2** |
+| Perfil de cadastro | Tags/origem/categoria dentro de blob cifrado | Segmentação impossível sem migration | Campo pesquisável protegido + filtro | Médio | M | **P3** |
 | Notificações in-app | Sem preferência, por polling | Fadiga de notificação | Preferência por usuário + digest | Médio | M | **P2** |
 | Templates de mensagem | Sem biblioteca inicial | Clínica nova começa vazia | Conjunto inicial + edição + preview | Médio | P | **P2** |
 | Modelos de plano | Sem edição | Corrigir exige recriar | `PUT` de modelo | Baixo | P | **P2** |
@@ -198,12 +200,14 @@ Critério: valor claro, esforço pequeno, risco baixo, sem migration pesada e se
    O dashboard já tem infraestrutura de fila e alerta.
 4. **Comparação antropométrica entre quaisquer duas avaliações.** `[F]` `compararAvaliacoes` já existe e é
    chamada só para as duas últimas (`servico-pacientes.ts:1265-1273`). É expor o que já foi escrito.
-5. **Filtro por tag/origem/categoria na lista de pacientes.** `[F]` Os campos são coletados
-   (`perfil-cadastro-paciente.tsx:339-343`) e o filtro salvo tem allowlist de 4 critérios que não os inclui.
+5. *(Reclassificado — **não** é quick win.)* Filtro por tag/origem/categoria: ver seção 3 e PB-10. `[F]` Os
+   campos vivem dentro de `perfil_cadastro_paciente.operacao_criptografada`, um `bytea` único
+   (`perfil-cadastro-paciente.orm.ts:17-18`), então não há como filtrar em SQL sem migration e sem uma decisão
+   sobre campo pesquisável protegido. Movido para a onda de estrutura.
 6. **Remover ou implementar o canal push.** `[F]` `adaptador-push-placeholder.ts:9-15` retorna sucesso sem
    enviar, e é o ramo default do roteador. Enquanto existir assim, a central de falhas mente.
-7. **Confirmação de consulta atualiza o status.** `[F]` O webhook já grava a confirmação na consulta
-   (`servico-webhook-whatsapp.ts:292-323`); falta refletir na agenda.
+7. **Fila de consultas não confirmadas.** `[F]` A confirmação já é gravada em jsonb e exibida por consulta
+   (`painel-agenda.tsx:196`); falta poder filtrar/contar quem **não** confirmou — hoje é olhar uma a uma.
 8. **`PUT` de modelo de plano alimentar.** `[F]` O controlador tem GET/POST/GET:id/DELETE e não tem edição.
 9. **Alerta de check-in com adesão baixa.** `[F]` `adesaoPlano` (0-100) já é coletada; um limiar simples
    gera a primeira automação com efeito real.
@@ -345,7 +349,7 @@ Ordenadas por "o dado já existe" → "o efeito não existe".
 | Check-in respondido com adesão baixa | Nada | Tarefa + alerta no dashboard |
 | Check-in atrasado | Gatilho existe na UI, sem executor | Mensagem ao paciente + fila de atenção |
 | Formulário respondido | Notificação in-app + webhook | Resumo ao profissional; item de revisão pré-consulta |
-| Confirmação de consulta (WhatsApp) | Gravada na consulta, sem efeito | Status confirmado; lista de não confirmados para follow-up |
+| Confirmação de consulta (WhatsApp) | Gravada e exibida por consulta; sem efeito derivado | Fila de não confirmadas + follow-up automático |
 | Falta registrada | Registrada no desfecho | Reagendamento proativo; contagem no score de risco |
 | Conduta vencendo | Data gravada, sem consumidor | Alerta de revisão |
 | Próxima revisão do perfil (`proximaRevisaoEm`) | Coletada e nunca lida | Tarefa automática |
@@ -525,8 +529,8 @@ de esgotar a versão determinística de cada um.
 | PB-07 | Marcar material como visualizado | Quick win | Médio | P | Baixo | backend, frontend |
 | PB-08 | Alerta de conduta vencida | Quick win | Médio | P | Baixo | backend, frontend |
 | PB-09 | Comparação antropométrica arbitrária | Quick win | Médio | P | Baixo | backend, frontend |
-| PB-10 | Filtro por tag/origem/categoria | Quick win | Médio | P | Baixo | backend, frontend |
-| PB-11 | Confirmação WhatsApp atualiza status | Quick win | Médio | P | Baixo | backend |
+| PB-10 | Campo pesquisável protegido para tag/origem/categoria + filtro | Evolução | Médio | M | Médio | backend, banco, produto (proteção de dado) |
+| PB-11 | Fila/filtro de consultas não confirmadas | Quick win | Médio | P | Baixo | backend, frontend |
 | PB-12 | Unificar timeline do resumo com a do histórico | Correção | Médio | P | Baixo | backend |
 | PB-13 | Duplicar plano alimentar / salvar como modelo | Evolução | Alto | M | Baixo | backend, frontend |
 | PB-14 | Caminho manual para paciente com condição especial (mantendo o bloqueio do cálculo automático) | Correção | Alto | M | Médio | backend, frontend, produto |
@@ -553,7 +557,7 @@ de esgotar a versão determinística de cada um.
 
 Sequência por dependência técnica, não por valor aparente.
 
-**Onda 1 — pequenos incrementos, sem migration** (PB-04, PB-06, PB-07, PB-08, PB-09, PB-10, PB-11, PB-12)
+**Onda 1 — pequenos incrementos, sem migration** (PB-04, PB-06, PB-07, PB-08, PB-09, PB-11, PB-12)
 Tudo usa tabela existente e resolve incoerência visível: dado calculado e não exibido, coluna que nunca é
 escrita, endpoint sem tela. Entrega percepção de qualidade rápida e não bloqueia nada.
 
@@ -567,7 +571,7 @@ Templates e duplicação primeiro, resumo clínico depois, preparação pré-con
 resumo. PB-14 entra aqui porque toca o mesmo fluxo de plano e exige decisão de produto antes do código.
 Nenhuma depende da Onda 2, podem correr em paralelo se houver capacidade.
 
-**Onda 4 — estrutura** (PB-17, PB-18, PB-19, PB-24)
+**Onda 4 — estrutura** (PB-10, PB-17, PB-18, PB-19, PB-24)
 Exige migration e, portanto, o procedimento fora de banda com role owner. Agrupar as migrations reduz o número
 de janelas operacionais.
 
@@ -595,3 +599,186 @@ Para evitar retrabalho de quem ler este documento depois:
 - **Webhooks e API pública já existem** e são maduros.
 - **Preferências de comunicação do paciente já existem** e são respeitadas.
 - **PWA, offline, MFA, sessões, LGPD, importação CSV e duplicidade de paciente já existem.**
+
+---
+
+## 17. Plano operacional — Fase 264 (pronto para execução)
+
+Esta seção é o **handoff de engenharia**. Foi escrita para ser executada por outro modelo (Sonnet 5 ou
+Opus 4.8) sem precisar refazer a investigação: cada incremento traz o gap com evidência, os arquivos exatos,
+o contrato que muda, o teste que deve falhar primeiro e o critério de aceite.
+
+**Escopo da fase**: a Onda 1 do roteiro — sete incrementos que transformam dado que o sistema **já calcula ou
+já grava** em algo visível e acionável. Nenhum deles exige migration, nenhum altera contrato de autorização,
+nenhum cria dado sensível novo. É deliberadamente a fase de menor risco e maior relação valor/esforço.
+
+**Fora de escopo nesta fase** (não antecipar): score de risco calculado, executor de ações de automação,
+expediente, catálogo de marcadores de exame, painel de operação da clínica, qualquer migration. Essas entram
+nas ondas 2 a 5 e dependem de decisões registradas na seção 14.
+
+### Regras de execução (valem para todos os incrementos)
+
+1. **Um incremento = uma branch = uma PR.** Nunca push direto em `main`. Nomear `feat/fase264-<slug>` ou
+   `fix/fase264-<slug>`.
+2. **TDD obrigatório**: escrever o teste que falha (RED) antes da implementação, e registrar na PR que ele
+   falhou pelo motivo certo. Comportamento novo sem teste negativo não fecha.
+3. **Escopo mínimo**: não refatorar o que está ao redor, não renomear, não "aproveitar a viagem". Se aparecer
+   um defeito fora do incremento, registrar e seguir.
+4. **Sem migration nesta fase.** Se um incremento parecer exigir DDL, **pare** — o desenho está errado ou o
+   item não pertence à Fase 264.
+5. **Preservar as fronteiras existentes**: RLS por tenant, escopo por profissional em toda leitura,
+   criptografia campo a campo, auditoria que registra o rastro sem o conteúdo clínico, BFF chamando o backend
+   por `requisitarBackendAutenticado`/`exigirPermissaoBff`.
+6. **Antes do push, sempre**: `git diff --check`, `pnpm security:secrets`, typecheck dos projetos tocados e os
+   testes listados no incremento. Declarar PASS/FAIL/NA na PR, com o motivo de cada NA.
+7. **Preencher o template de PR** (`.github/PULL_REQUEST_TEMPLATE.md`) sem marcar como executada nenhuma
+   validação que não rodou.
+
+---
+
+### 264.1 — Dashboard clínico exibe os indicadores que já calcula
+
+- **Gap** `[F]`: `concluidas`, `reagendadas`, `canceladas` e `faltas` existem em
+  `dtos-dashboard-clinico.ts:38-44`, são preenchidos pelo serviço e **não têm nenhuma ocorrência** em
+  `octaclin-web/components/dashboard/painel-dashboard.tsx` (que hoje renderiza 5 cartões, linhas 254-258).
+- **Mudança**: só frontend. Nenhuma alteração de backend, DTO ou permissão.
+- **Arquivos**: `octaclin-web/components/dashboard/painel-dashboard.tsx`;
+  `octaclin-web/tests/visual/console-regression.spec.mjs` (mock do dashboard).
+- **Desenho**: acrescentar um cartão "Desfechos do período" com concluídas / faltas / canceladas /
+  reagendadas. Manter o padrão `Metrica` já usado; não inventar componente novo.
+- **TDD**: no mock existente do dashboard em `console-regression.spec.mjs`, incluir os quatro campos e
+  asseverar que os valores aparecem na tela — o teste falha hoje porque nada os renderiza.
+- **Validações**: `pnpm --dir octaclin-web typecheck`; o cenário Playwright do console; `git diff --check`;
+  `pnpm security:secrets`.
+- **Aceite**: os quatro números aparecem para o profissional, respeitando o filtro de período já existente
+  (hoje/7/30), sem nova chamada de rede.
+
+### 264.2 — Unificar a linha do tempo do resumo com a do histórico
+
+- **Gap** `[F]`: `obterProntuario` monta a timeline com 7 fontes (`servico-pacientes.ts:783-796`) enquanto a
+  timeline paginada usa 14 (`:960-1190`). A mesma tela mostra dois prontuários diferentes: antropometria,
+  exames, documentos, fotos, anexos e financeiro só aparecem na aba Histórico.
+- **Mudança**: backend. Fazer o resumo consumir a mesma fonte de verdade da timeline paginada (primeira
+  página), em vez de manter uma segunda montagem divergente.
+- **Arquivos**: `octaclin-backend/src/modulos/pacientes/aplicacao/servico-pacientes.ts`;
+  `servico-pacientes.spec.ts`.
+- **Cuidado**: a timeline paginada aplica filtro por permissão e por escopo de profissional. A unificação
+  **não pode** afrouxar isso — o teste negativo abaixo é obrigatório.
+- **TDD**: (a) teste que um paciente com avaliação antropométrica passa a ter esse evento no resumo — falha
+  hoje; (b) teste negativo garantindo que um evento gateado por permissão **não** aparece para quem não tem a
+  permissão.
+- **Validações**: typecheck backend; `servico-pacientes.spec.ts`; `pnpm test:guardas-controladores`.
+- **Aceite**: resumo e histórico mostram o mesmo conjunto de tipos de evento, com a mesma regra de permissão.
+
+### 264.3 — Marcar material educativo como visualizado
+
+- **Gap** `[F]`: `envio_material_paciente.visualizado_em` existe desde a migration
+  `1720000000600-CriarMateriaisEducativos.ts:36`, é mapeado em três DTOs e exibido — e **nenhum código o
+  grava** fora dos seeds. O controlador de materiais tem apenas listar, criar, listar-por-paciente e enviar
+  (`controlador-materiais.ts:22-60`).
+- **Mudança**: rota nova no **portal do paciente** (quem visualiza é o paciente), BFF e UI.
+- **Arquivos**: `controlador-portal-paciente.ts` (rota nova), `servico-portal-paciente.ts`;
+  `octaclin-web/app/api/portal/paciente/materiais/[envioId]/visualizacao/route.ts` (novo);
+  `octaclin-web/components/portal/portal-paciente.tsx`; specs correspondentes.
+- **Contrato**: `PATCH /portal/paciente/materiais/:envioId/visualizacao` → marca `visualizadoEm` **uma única
+  vez** (idempotente: se já houver valor, não sobrescrever) e devolve o envio atualizado.
+- **Cuidado**: o envio precisa pertencer ao paciente autenticado — teste negativo obrigatório para envio de
+  outro paciente (deve dar 404, não 403, seguindo o padrão do módulo).
+- **TDD**: (a) marca e persiste; (b) segunda chamada não altera a data; (c) envio de outro paciente é
+  rejeitado.
+- **Validações**: typecheck backend e web; specs do portal; `pnpm --dir octaclin-web test:authz`;
+  `pnpm test:guardas-controladores`.
+- **Aceite**: o profissional passa a ver, na aba Materiais do prontuário, quais materiais foram abertos.
+
+### 264.4 — Alerta de conduta terapêutica vencida
+
+- **Gap** `[F]`: `conduta_terapeutica_versao.validade_fim` é gravado
+  (`conduta-terapeutica-versao.orm.ts:13`) e exibido, mas nenhuma query o usa: o dashboard não consulta essa
+  tabela.
+- **Mudança**: backend (nova fila/alerta no dashboard) + frontend (exibição).
+- **Arquivos**: `servico-dashboard-clinico.ts` (agregação e `montarAlertas`),
+  `dtos-dashboard-clinico.ts`, `painel-dashboard.tsx`, specs.
+- **Regra**: considerar apenas a **versão publicada e não arquivada** de condutas do escopo do profissional,
+  com `validade_fim` anterior a hoje. Reaproveitar o mecanismo de ocultação de alerta por 24 h que já existe
+  (`TIPOS_ALERTA_OCULTAVEIS`) — incluir o tipo novo ali.
+- **TDD**: (a) conduta vencida entra no alerta; (b) conduta arquivada ou ainda válida não entra; (c) conduta
+  de outro profissional não aparece para quem tem escopo restrito.
+- **Validações**: typecheck; spec do dashboard; `pnpm test:guardas-controladores`.
+- **Aceite**: o profissional vê no dashboard as condutas vencidas e consegue ocultar o alerta por 24 h como
+  nos demais.
+
+### 264.5 — Comparação antropométrica entre quaisquer duas avaliações
+
+- **Gap** `[F]`: `compararAvaliacoes` já existe (`dominio/antropometria.ts:513`) e é chamada **apenas** para
+  as duas últimas avaliações (`servico-pacientes.ts:1265-1273`, campo `deltaUltimas`).
+- **Mudança**: backend (parâmetros para escolher as duas avaliações) + frontend (seletor).
+- **Arquivos**: controlador/serviço de antropometria em `modulos/pacientes`,
+  `octaclin-web/components/pacientes/aba-antropometria.tsx`, specs.
+- **Contrato**: aceitar dois identificadores de avaliação na listagem/consulta e devolver o comparativo; sem
+  eles, manter exatamente o comportamento atual (`deltaUltimas`) — **compatibilidade obrigatória**, a tela
+  atual não pode quebrar durante o rollout.
+- **TDD**: (a) comparação entre a 1ª e a atual devolve o delta correto; (b) sem parâmetros, o resultado é
+  idêntico ao de hoje; (c) avaliação de outro paciente é rejeitada.
+- **Validações**: typecheck; specs de domínio e serviço de antropometria.
+- **Aceite**: o profissional escolhe duas datas e vê a variação entre elas, não só entre as duas últimas.
+
+### 264.6 — Fila de consultas não confirmadas
+
+- **Gap** `[F]`: a confirmação do paciente por WhatsApp é gravada em
+  `consulta.notificacoes.confirmacaoPaciente` (`servico-webhook-whatsapp.ts:292-325`) e exibida por consulta
+  (`painel-agenda.tsx:196`), mas não existe forma de perguntar **quem não confirmou**.
+- **Mudança**: backend (filtro/contagem sobre o jsonb, sem migration — Postgres consulta
+  `notificacoes->'confirmacaoPaciente'`) + frontend (filtro na agenda e contador).
+- **Arquivos**: `servico-agenda.ts` (feed/consulta), `dtos.ts` da agenda, `painel-agenda.tsx`, specs.
+- **Regra**: "não confirmada" = consulta futura, em status ativo (`agendada`/`reagendada`), sem
+  `confirmacaoPaciente`. **Não** alterar o campo `status` da consulta — isso exigiria mudar o CHECK do banco e
+  está fora do escopo da fase.
+- **TDD**: (a) consulta sem confirmação entra na fila; (b) consulta confirmada não entra; (c) consulta
+  cancelada ou passada não entra.
+- **Validações**: typecheck; specs da agenda; cenário Playwright da agenda.
+- **Aceite**: o profissional filtra a agenda do dia seguinte por "não confirmadas" e age em lote manualmente
+  (o disparo automático fica para a Onda 2).
+
+### 264.7 — Canal push: parar de reportar entrega falsa
+
+- **Gap** `[F]`: `AdaptadorPushPlaceholder` devolve `idExterno: push-local-<uuid>` **sem enviar nada**
+  (`adaptadores/adaptador-push-placeholder.ts:8-16`) e é o ramo **default** do roteador
+  (`processador-notificacoes.ts:108-113`: qualquer tipo que não seja `whatsapp` nem `email` cai nele). A
+  mensagem é registrada como entregue.
+- **Decisão de produto necessária** — duas opções, com recomendação:
+  - **(A, recomendada)** Remover `push` do catálogo de canais selecionáveis na UI e trocar o default do
+    roteador por falha explícita (`canal não suportado`), de modo que nada seja marcado como entregue sem
+    envio. Custo baixo, remove a mentira do sistema.
+  - **(B)** Implementar push de verdade. Exige provider, credenciais e device token — não cabe na Fase 264.
+- **Se a decisão for (A) — arquivos**: `processador-notificacoes.ts` (default explícito),
+  `octaclin-web/components/comunicacoes/painel-comunicacoes.tsx` (remover a opção do seletor), specs.
+- **TDD**: (a) canal desconhecido resulta em falha registrada com motivo, **não** em sucesso; (b) canal
+  existente configurado como `push` não marca a mensagem como enviada.
+- **Cuidado**: verificar se existe canal `push` já cadastrado em algum tenant antes de mudar o
+  comportamento — se existir, a mudança transforma "sucesso silencioso" em "falha visível", que é o objetivo,
+  mas precisa ser comunicado no corpo da PR.
+- **Validações**: typecheck; specs de comunicações; `pnpm audit:redacao-auditoria`.
+- **Aceite**: nenhuma mensagem aparece como entregue sem ter sido enviada.
+
+### Ordem sugerida de execução
+
+`264.1` → `264.2` → `264.4` → `264.5` → `264.3` → `264.6` → `264.7`
+
+Racional: começa pelos dois de exibição pura (risco quase nulo, valor imediato e nenhuma dependência), segue
+pelos dois que mexem em agregação clínica já existente, depois os dois que criam rota nova, e fecha com o de
+comunicação — que depende da decisão de produto e é o único que muda comportamento de entrega.
+
+### Decisões de produto pendentes nesta fase
+
+| Decisão | Bloqueia | Recomendação |
+| --- | --- | --- |
+| Push: remover ou implementar | 264.7 | Remover agora (opção A); implementar quando houver provider |
+| Alerta de conduta vencida deve considerar quantos dias de tolerância | 264.4 | Zero dias: vencida é vencida; ajustar depois com uso real |
+| Fila de não confirmadas cobre quantas horas à frente | 264.6 | 48 h, alinhado ao lembrete de 24 h que já existe |
+
+### Definition of Done da Fase 264
+
+A fase fecha quando: os sete incrementos estiverem em `main`; cada um com teste negativo próprio; nenhuma
+migration criada; `CHECKLIST_FASES_FUTURAS_PRODUCAO.md`, `STATUS_ATUAL_PROJETO.md` e este documento
+atualizados com o que foi entregue e o que não foi; e os gates de governança (`guardas-controladores`,
+`redacao-auditoria`, `actions-imutaveis`, `confiabilidade`, `security:secrets`) passando.

@@ -1,7 +1,8 @@
 # OctaClin - Checklist vivo de fases futuras ate producao
 
-Atualizado em 2026-09-16. Fases 256 a 261 concluidas; Fase 262 em andamento;
-Fase 263 em andamento como frente de produto independente.
+Atualizado em 2026-09-17. Fases 256 a 261 concluidas; Fase 262 em andamento;
+Fase 263 em andamento como frente de produto independente; Fase 264 planejada e
+pronta para execucao, derivada da auditoria de produto de 2026-09-17.
 O programa de hardening PR 36-56 permanece como trilha separada.
 
 Este arquivo deve guiar Codex, Claude Code ou qualquer outro agente de IA. Ele deve ser atualizado a cada fase concluida.
@@ -2872,6 +2873,40 @@ publicado antes de ampliar a superficie de mudancas visuais.
     RLS); o CSV tem uma linha por profissional com todos os indicadores de
     performance mais uma linha "Consolidado". Sem migration. Nenhum
     candidato pendente na fase no momento.
+
+- [ ] Fase 264 - Ativacao: dado que ja existe vira acao visivel. [IMPORTANTE - NAO BLOQUEADOR]
+  - Origem: auditoria de produto de 2026-09-17
+    (`docs/product/OCTACLIN_PRODUCT_FEATURE_AUDIT.md`). A auditoria concluiu que
+    o gargalo do produto nao e falta de funcionalidade, e sim ativacao: ha dado
+    que o sistema ja calcula ou ja grava e que nunca chega ao usuario.
+  - Escopo: sete incrementos, **nenhum com migration**, nenhum alterando
+    contrato de autorizacao e nenhum criando dado sensivel novo:
+    1. Dashboard clinico exibe `concluidas`/`reagendadas`/`canceladas`/`faltas`,
+       ja presentes no DTO e sem nenhuma ocorrencia no painel.
+    2. Linha do tempo do resumo unificada com a do historico (hoje 7 fontes
+       contra 14, na mesma tela).
+    3. Marcar material educativo como visualizado (`visualizado_em` existe
+       desde a migration 600, e exibido e nunca gravado).
+    4. Alerta de conduta terapeutica vencida (`validade_fim` gravado e sem
+       nenhuma query que o consuma).
+    5. Comparacao antropometrica entre quaisquer duas avaliacoes
+       (`compararAvaliacoes` ja existe e so e usada para as duas ultimas).
+    6. Fila de consultas nao confirmadas (a confirmacao por WhatsApp ja e
+       gravada em jsonb e exibida por consulta, mas nao e consultavel).
+    7. Canal push: parar de registrar entrega falsa (o adaptador devolve
+       sucesso sem enviar e e o default do roteador).
+  - Fora de escopo, por dependerem de migration ou de decisao ainda aberta:
+    score de risco calculado, executor de acoes das automacoes, expediente do
+    profissional, catalogo de marcadores de exame e painel de operacao da
+    clinica. Esses itens estao desenhados nas ondas 2 a 5 do mesmo documento.
+  - **Plano operacional completo, pronto para codificacao, na secao 17 de
+    `docs/product/OCTACLIN_PRODUCT_FEATURE_AUDIT.md`**: por incremento, o gap
+    com evidencia em arquivo/linha, os arquivos a tocar, o contrato que muda, o
+    teste que deve falhar primeiro, as validacoes obrigatorias e o criterio de
+    aceite, mais a ordem de execucao e as tres decisoes de produto pendentes.
+  - Definition of Done: os sete incrementos em `main`, cada um com teste
+    negativo proprio, nenhuma migration criada, documentacao reconciliada e os
+    gates de governanca passando.
 
 Documento de execução e prioridades: `ROADMAP_QUALIDADE_SEGURANCA_FASES_248_262.md`.
 Matriz operacional: `MATRIZ_SKILLS_PLUGINS_MODELOS_FASES_243_248_262.md`.

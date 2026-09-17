@@ -170,10 +170,35 @@ Atualizado em 2026-09-16.
   com as formulas explicitadas. O Incremento 2 acrescenta a janela anterior de
   mesma duracao, sem sobreposicao, e compara receita recebida, concluidas,
   comparecimento e ticket medio por diferenca absoluta ou pontos percentuais;
-  a interface tolera a ordem do rollout entre web e backend. Proximos
-  candidatos: exportacao auditada e quebra de performance por profissional.
+  a interface tolera a ordem do rollout entre web e backend. O Incremento 3
+  (PR `#251`) levou os mesmos indicadores de performance para a quebra por
+  profissional, calculados isoladamente por profissional com a formula do
+  consolidado. O Incremento 4 (PR `#252`) entregou a exportacao auditada em
+  `GET /agenda/financeiro/recebimentos/exportar.csv`, reaproveitando
+  `resumoRecebimentos` por inteiro e registrando na auditoria apenas o volume
+  exportado, nunca o conteudo. Os dois candidatos documentados apos o
+  Incremento 2 estao entregues; nenhum candidato pendente na fase no momento.
   Detalhes em
   `docs/history/phases/fase-263-relatorios-financeiros-performance.md`.
+- Fase 264 - Ativacao: dado que ja existe vira acao visivel, **planejada em
+  2026-09-17, ainda nao iniciada**. Nasce da auditoria ampla de produto e
+  funcionalidades registrada em
+  `docs/product/OCTACLIN_PRODUCT_FEATURE_AUDIT.md`, que mapeou o produto real a
+  partir do codigo (20 modulos backend, 33 controladores, 85 entidades, 209
+  rotas BFF, 31 paginas, 9 jobs) e concluiu que o gargalo nao e falta de
+  funcionalidade, e sim ativacao. Tres achados sustentam a fase: `score_risco` e
+  `statusAdesao` sao digitados a mao e nascem zerados, mas comandam dashboard,
+  filtros, recall e API publica, sem nenhuma rotina que os calcule; o motor de
+  automacoes oferece quatro gatilhos e tres acoes na interface, executa um
+  gatilho e **nenhuma acao**; e ao menos oito eventos de dominio sao emitidos
+  contra uma unica automacao que reage. A Fase 264 cobre so a primeira onda —
+  sete incrementos sem migration, que tornam visivel dado ja calculado ou ja
+  gravado. Score calculado, executor de acoes, expediente do profissional,
+  catalogo de marcadores e painel de operacao da clinica ficam para as ondas
+  seguintes, por dependerem de migration ou de decisao de produto ainda aberta.
+  O plano operacional por incremento — evidencia, arquivos, contrato, teste que
+  deve falhar primeiro, validacoes e aceite — esta na secao 17 do documento de
+  auditoria. Nenhum codigo de produto foi alterado no planejamento.
 - Fase 261 (escopo de trabalho: gaps de seguranca e privacidade
   identificados no audit da fase) **concluida tecnicamente em 2026-09-15,
   com excecoes operacionais abertas; incrementos 1 a 4 integrados**.
