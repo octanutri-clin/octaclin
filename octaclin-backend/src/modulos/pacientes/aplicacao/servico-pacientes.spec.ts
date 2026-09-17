@@ -743,10 +743,37 @@ describe('ServicoPacientes', () => {
         }
       ]
     ]);
+    const linhasCanonicas = [
+      {
+        id: 'mensagem-1', tipo: 'mensagem', titulo: 'Mensagem recebida', data: '2026-07-22T16:00:00.000Z',
+        status: 'recebido', origemId: 'mensagem-1', origem: 'Comunicacoes', metadados: {}
+      },
+      {
+        id: 'consulta-1', tipo: 'consulta', titulo: 'Consulta de retorno', data: '2026-07-22T13:00:00.000Z',
+        status: 'agendada', origemId: 'consulta-1', origem: 'Agenda',
+        metadados: { fimEm: '2026-07-22T14:00:00.000Z' }
+      },
+      {
+        id: 'diario-1', tipo: 'checkin_rapido', titulo: 'Registro de habitos', data: '2026-07-21T18:00:00.000Z',
+        status: 'registrado', origemId: 'diario-1', origem: 'Portal do paciente', metadados: { tipoDiario: 'humor' }
+      },
+      {
+        id: 'resposta-1', tipo: 'resposta_formulario', titulo: 'Resposta de formulario', data: '2026-07-21T15:00:00.000Z',
+        status: 'finalizado', origemId: 'envio-1', origem: 'Formularios', metadados: { envioQuestionarioId: 'envio-1' }
+      },
+      {
+        id: 'envio-1', tipo: 'formulario', titulo: 'Formulario', data: '2026-07-20T13:00:00.000Z',
+        status: 'enviado', origemId: 'questionario-1', origem: 'Formularios',
+        metadados: { envioQuestionarioId: 'envio-1', expiraEm: '2026-07-25T13:00:00.000Z' }
+      }
+    ];
     const servico = new ServicoPacientes(
       {
         executar: jest.fn((_tenantId: string, operacao: (gerenciador: unknown) => Promise<unknown>) =>
-          operacao({ getRepository: jest.fn((entidade) => repositorios.get(entidade)) })
+          operacao({
+            getRepository: jest.fn((entidade) => repositorios.get(entidade)),
+            query: jest.fn(async () => linhasCanonicas)
+          })
         )
       } as never,
       {
@@ -865,7 +892,10 @@ describe('ServicoPacientes', () => {
     const servico = new ServicoPacientes(
       {
         executar: jest.fn((_tenantId: string, operacao: (gerenciador: unknown) => Promise<unknown>) =>
-          operacao({ getRepository: jest.fn((entidade) => repositorios.get(entidade)) })
+          operacao({
+            getRepository: jest.fn((entidade) => repositorios.get(entidade)),
+            query: jest.fn(async () => [])
+          })
         )
       } as never,
       {
@@ -962,7 +992,10 @@ describe('ServicoPacientes', () => {
     const servico = new ServicoPacientes(
       {
         executar: jest.fn((_tenantId: string, operacao: (gerenciador: unknown) => Promise<unknown>) =>
-          operacao({ getRepository: jest.fn((entidade) => repositorios.get(entidade)) })
+          operacao({
+            getRepository: jest.fn((entidade) => repositorios.get(entidade)),
+            query: jest.fn(async () => [])
+          })
         )
       } as never,
       {
@@ -1048,7 +1081,23 @@ describe('ServicoPacientes', () => {
     const servico = new ServicoPacientes(
       {
         executar: jest.fn((_tenantId: string, operacao: (gerenciador: unknown) => Promise<unknown>) =>
-          operacao({ getRepository: jest.fn((entidade) => repositorios.get(entidade)) })
+          operacao({
+            getRepository: jest.fn((entidade) => repositorios.get(entidade)),
+            query: jest.fn(async () =>
+              evolucoesSalvas.map((evolucao) => ({
+                id: evolucao.id,
+                tipo: 'evolucao_clinica',
+                titulo: null,
+                tituloCriptografado: evolucao.tituloCriptografado,
+                data: (evolucao.criadoEm as Date).toISOString(),
+                status: evolucao.tipo,
+                origemId: evolucao.id,
+                origem: 'Prontuario',
+                autorUsuarioId: evolucao.autorUsuarioId,
+                metadados: { visibilidade: evolucao.visibilidade }
+              }))
+            )
+          })
         )
       } as never,
       {
@@ -1140,7 +1189,22 @@ describe('ServicoPacientes', () => {
     const servico = new ServicoPacientes(
       {
         executar: jest.fn((_tenantId: string, operacao: (gerenciador: unknown) => Promise<unknown>) =>
-          operacao({ getRepository: jest.fn((entidade) => repositorios.get(entidade)) })
+          operacao({
+            getRepository: jest.fn((entidade) => repositorios.get(entidade)),
+            query: jest.fn(async () =>
+              tarefasSalvas.map((tarefa) => ({
+                id: tarefa.id,
+                tipo: 'tarefa_acompanhamento',
+                titulo: null,
+                tituloCriptografado: tarefa.tituloCriptografado,
+                data: (tarefa.vencimentoEm as Date) ?? (tarefa.criadoEm as Date),
+                status: tarefa.status,
+                origemId: tarefa.id,
+                origem: 'Acompanhamento',
+                metadados: { categoria: tarefa.categoria, prioridade: tarefa.prioridade }
+              }))
+            )
+          })
         )
       } as never,
       {
@@ -1945,6 +2009,288 @@ describe('ServicoPacientes - avaliacao antropometrica', () => {
 
     expect(pagina.itens[0].titulo).toBe('Ajuste de conduta');
     expect(pagina.itens[1].titulo).toBe('Titulo ilegivel.');
+  });
+});
+
+/**
+ * Fase 264.2: resumo (`obterProntuario`) e historico (`listarLinhaDoTempoPaginada`)
+ * passam a consultar a mesma definicao canonica de eventos (a mesma SQL, extraida
+ * para um metodo privado compartilhado). Cada superficie continua projetando um
+ * nivel de detalhe proprio: o resumo enriquece alguns tipos com descricao textual
+ * usando as entidades que ja busca para o "contexto operacional"; o historico
+ * permanece um indice enxuto, sem descriptografar conteudo clinico so para
+ * exibi-lo na timeline.
+ */
+describe('ServicoPacientes - timeline canonica do prontuario (Fase 264.2)', () => {
+  const criptografiaFakeTimeline = () => ({
+    criptografar: jest.fn((valor: string) => Buffer.from(`criptografado:${valor}`)),
+    descriptografar: jest.fn((valor: Buffer) => valor.toString().replace('criptografado:', ''))
+  });
+
+  const pacientePadrao = {
+    id: 'paciente-1',
+    tenantId: 'tenant-1',
+    profissionalResponsavelId: 'profissional-1',
+    nomeCriptografado: Buffer.from('criptografado:Maria'),
+    statusAdesao: 'novo',
+    scoreRisco: '0',
+    criadoEm: new Date('2026-07-01T10:00:00.000Z'),
+    atualizadoEm: new Date('2026-07-01T10:00:00.000Z')
+  };
+
+  function criarGerenciadorProntuario(
+    query: jest.Mock,
+    overrides: Map<unknown, { find?: jest.Mock; findOne?: jest.Mock }> = new Map(),
+    paciente: Record<string, unknown> = pacientePadrao
+  ) {
+    const padrao = new Map<unknown, { find?: jest.Mock; findOne?: jest.Mock }>([
+      [PacienteOrm, { findOne: jest.fn(async () => paciente) }],
+      [ProfissionalOrm, { findOne: jest.fn(async () => null) }],
+      [AgendaConsultaOrm, { find: jest.fn(async () => []) }],
+      [EnvioQuestionarioOrm, { find: jest.fn(async () => []) }],
+      [RespostaCheckinOrm, { find: jest.fn(async () => []) }],
+      [LogDiarioRapidoOrm, { find: jest.fn(async () => []) }],
+      [MensagemNotificacaoOrm, { find: jest.fn(async () => []) }],
+      [EvolucaoClinicaOrm, { find: jest.fn(async () => []) }],
+      [AcompanhamentoTarefaOrm, { find: jest.fn(async () => []) }],
+      [QuestionarioOrm, { find: jest.fn(async () => []) }],
+      [PlanoAlimentarOrm, { findOne: jest.fn(async () => null) }]
+    ]);
+    for (const [entidade, implementacao] of overrides) padrao.set(entidade, implementacao);
+
+    return {
+      query,
+      getRepository: jest.fn((entidade: unknown) => {
+        const implementacao = padrao.get(entidade);
+        if (!implementacao) {
+          throw new Error(`Repositorio nao mapeado no teste: ${(entidade as { name?: string })?.name ?? entidade}`);
+        }
+        return implementacao;
+      })
+    };
+  }
+
+  function montarServicoTimeline(gerenciador: ReturnType<typeof criarGerenciadorProntuario>) {
+    return new ServicoPacientes(
+      { executar: jest.fn((_tenantId: string, operacao: (g: unknown) => Promise<unknown>) => operacao(gerenciador)) } as never,
+      criptografiaFakeTimeline() as never,
+      limitesPermitidos as never
+    );
+  }
+
+  it('resumo e historico enviam exatamente a mesma consulta SQL para a mesma definicao de eventos', async () => {
+    const queryResumo = jest.fn(async (_sql: string, _parametros: unknown[]) => [] as unknown[]);
+    const servicoResumo = montarServicoTimeline(criarGerenciadorProntuario(queryResumo));
+    await servicoResumo.obterProntuario('tenant-1', 'paciente-1', usuarioColaborador);
+
+    const queryHistorico = jest.fn(async (_sql: string, _parametros: unknown[]) => [] as unknown[]);
+    const servicoHistorico = montarServicoTimeline(criarGerenciadorProntuario(queryHistorico));
+    await servicoHistorico.listarLinhaDoTempoPaginada('tenant-1', 'paciente-1', usuarioColaborador);
+
+    expect(queryResumo).toHaveBeenCalledTimes(1);
+    expect(queryHistorico).toHaveBeenCalledTimes(1);
+    expect(queryResumo.mock.calls[0][0]).toBe(queryHistorico.mock.calls[0][0]);
+  });
+
+  it('resumo passa a incluir tipos de evento que antes so apareciam no historico, respeitando a permissao', async () => {
+    const eventosCanonicos = [
+      {
+        id: 'documento-1', tipo: 'documento_emitido', titulo: 'Atestado', data: '2026-08-05T10:00:00.000Z',
+        status: 'emitido', origemId: 'documento-1', origem: 'Documentos', metadados: {}
+      },
+      {
+        id: 'exame-1', tipo: 'exame_laboratorial', titulo: 'Coleta de exames laboratoriais',
+        data: '2026-08-04T10:00:00.000Z', status: 'registrada', origemId: 'exame-1',
+        origem: 'Exames laboratoriais', metadados: {}
+      }
+    ];
+    const query = jest.fn(async () => eventosCanonicos);
+    const servico = montarServicoTimeline(criarGerenciadorProntuario(query));
+
+    const prontuario = await servico.obterProntuario('tenant-1', 'paciente-1', usuarioColaborador);
+
+    expect(prontuario.linhaDoTempo.map((evento) => evento.tipo)).toEqual(
+      expect.arrayContaining(['documento_emitido', 'exame_laboratorial'])
+    );
+  });
+
+  it('resumo passa as mesmas tres flags de permissao para a consulta canonica que o historico ja usava', async () => {
+    const query = jest.fn(async (_sql: string, _parametros: unknown[]) => [] as unknown[]);
+    const servico = montarServicoTimeline(criarGerenciadorProntuario(query));
+
+    await servico.obterProntuario('tenant-1', 'paciente-1', {
+      ...usuarioColaborador,
+      permissoes: ['planos_alimentares.ler']
+    });
+
+    expect(query).toHaveBeenCalledTimes(1);
+    const parametros = query.mock.calls[0][1] as unknown[];
+    // Mesma ordem/posicao usada por listarLinhaDoTempoPaginada: [8]=planos, [9]=financeiro, [10]=comunicacoes.
+    expect(parametros[8]).toBe(true);
+    expect(parametros[9]).toBe(false);
+    expect(parametros[10]).toBe(false);
+  });
+
+  it('resumo nao inclui mensagem na timeline quando falta comunicacoes.mensagens.ler, mesmo com mensagens no canal', async () => {
+    const eventosCanonicos = [
+      {
+        id: 'mensagem-1', tipo: 'mensagem', titulo: 'Mensagem recebida', data: '2026-08-05T10:00:00.000Z',
+        status: 'recebido', origemId: 'mensagem-1', origem: 'Comunicacoes', metadados: {}
+      }
+    ];
+    // A propria fonte canonica ja filtra por permissao (mesma logica de sempre);
+    // este mock simula esse filtro para o proposito do teste, retornando vazio
+    // quando o parametro de permissao (indice 10) e falso -- exatamente como o
+    // SQL real faz com `AND $11::boolean`.
+    const query = jest.fn(async (_sql: string, parametros: unknown[]) =>
+      parametros[10] ? eventosCanonicos : []
+    );
+    const servico = montarServicoTimeline(criarGerenciadorProntuario(query));
+
+    const prontuario = await servico.obterProntuario('tenant-1', 'paciente-1', {
+      ...usuarioColaborador,
+      permissoes: []
+    });
+
+    expect(prontuario.linhaDoTempo).toHaveLength(0);
+  });
+
+  it('historico nao expoe descricao nem conteudo decifrado de mensagem (indice enxuto)', async () => {
+    const query = jest.fn(async () => [
+      {
+        id: 'mensagem-1', tipo: 'mensagem', titulo: 'Mensagem recebida', data: '2026-08-05T10:00:00.000Z',
+        status: 'recebido', origemId: 'mensagem-1', origem: 'Comunicacoes', metadados: {}
+      }
+    ]);
+    const servico = montarServicoTimeline(criarGerenciadorProntuario(query));
+
+    const pagina = await servico.listarLinhaDoTempoPaginada('tenant-1', 'paciente-1', {
+      ...usuarioColaborador,
+      permissoes: ['comunicacoes.mensagens.ler']
+    });
+
+    expect(pagina.itens[0]).not.toHaveProperty('descricao');
+    expect(pagina.itens[0].metadados).toEqual({});
+  });
+
+  it('historico nao descriptografa registro de habitos automaticamente (so titulo generico e metadados minimos)', async () => {
+    const query = jest.fn(async () => [
+      {
+        id: 'diario-1', tipo: 'checkin_rapido', titulo: 'Registro de habitos', data: '2026-08-05T10:00:00.000Z',
+        status: 'registrado', origemId: 'diario-1', origem: 'Portal do paciente',
+        metadados: { tipoDiario: 'humor' }
+      }
+    ]);
+    const servico = montarServicoTimeline(criarGerenciadorProntuario(query));
+
+    const pagina = await servico.listarLinhaDoTempoPaginada('tenant-1', 'paciente-1', usuarioColaborador);
+
+    expect(pagina.itens[0]).not.toHaveProperty('descricao');
+    expect(pagina.itens[0].titulo).toBe('Registro de habitos');
+    expect(pagina.itens[0].metadados).toEqual({ tipoDiario: 'humor' });
+  });
+
+  it('resumo enriquece registro de habitos com o detalhe decifrado, so na application layer', async () => {
+    const diarioCriptografado = {
+      id: 'diario-1',
+      tenantId: 'tenant-1',
+      pacienteId: 'paciente-1',
+      tipo: 'humor' as const,
+      valorCriptografado: Buffer.from('criptografado:{"humor":"bem","adesaoPlano":90}'),
+      registradoEm: new Date('2026-08-05T10:00:00.000Z')
+    };
+    const eventosCanonicos = [
+      {
+        id: 'diario-1', tipo: 'checkin_rapido', titulo: 'Registro de habitos', data: '2026-08-05T10:00:00.000Z',
+        status: 'registrado', origemId: 'diario-1', origem: 'Portal do paciente',
+        metadados: { tipoDiario: 'humor' }
+      }
+    ];
+    const query = jest.fn(async () => eventosCanonicos);
+    const overrides = new Map<unknown, { find?: jest.Mock; findOne?: jest.Mock }>([
+      [LogDiarioRapidoOrm, { find: jest.fn(async () => [diarioCriptografado]) }]
+    ]);
+    const servico = montarServicoTimeline(criarGerenciadorProntuario(query, overrides));
+
+    const prontuario = await servico.obterProntuario('tenant-1', 'paciente-1', usuarioColaborador);
+
+    expect(prontuario.linhaDoTempo[0]).toEqual(
+      expect.objectContaining({
+        tipo: 'checkin_rapido',
+        titulo: 'Registro de humor',
+        descricao: 'Humor: bem - Adesao ao plano: 90%'
+      })
+    );
+  });
+
+  it('evolucao clinica e tarefa de acompanhamento continuam sem descricao clinica no resumo e no historico', async () => {
+    const eventosCanonicos = [
+      {
+        id: 'evolucao-1', tipo: 'evolucao_clinica', titulo: null,
+        tituloCriptografado: Buffer.from('criptografado:Ajuste de plano'),
+        data: '2026-08-05T10:00:00.000Z', status: 'ajuste_plano', origemId: 'evolucao-1',
+        origem: 'Prontuario', metadados: { visibilidade: 'privada' }
+      },
+      {
+        id: 'tarefa-1', tipo: 'tarefa_acompanhamento', titulo: null,
+        tituloCriptografado: Buffer.from('criptografado:Beber agua'),
+        data: '2026-08-04T10:00:00.000Z', status: 'pendente', origemId: 'tarefa-1',
+        origem: 'Acompanhamento', metadados: { categoria: 'meta' }
+      }
+    ];
+
+    const queryResumo = jest.fn(async () => eventosCanonicos);
+    const servicoResumo = montarServicoTimeline(criarGerenciadorProntuario(queryResumo));
+    const prontuario = await servicoResumo.obterProntuario('tenant-1', 'paciente-1', usuarioColaborador);
+    expect(prontuario.linhaDoTempo[0]).not.toHaveProperty('descricao');
+    expect(prontuario.linhaDoTempo[1]).not.toHaveProperty('descricao');
+    expect(prontuario.linhaDoTempo[0].titulo).toBe('Ajuste de plano');
+    expect(prontuario.linhaDoTempo[1].titulo).toBe('Beber agua');
+
+    const queryHistorico = jest.fn(async () => eventosCanonicos);
+    const servicoHistorico = montarServicoTimeline(criarGerenciadorProntuario(queryHistorico));
+    const pagina = await servicoHistorico.listarLinhaDoTempoPaginada('tenant-1', 'paciente-1', usuarioColaborador);
+    expect(pagina.itens[0]).not.toHaveProperty('descricao');
+    expect(pagina.itens[1]).not.toHaveProperty('descricao');
+  });
+
+  it('nao permite obter prontuario de paciente fora do escopo do profissional autenticado', async () => {
+    const query = jest.fn(async () => []);
+    const overrides = new Map<unknown, { find?: jest.Mock; findOne?: jest.Mock }>([
+      [PacienteOrm, { findOne: jest.fn(async () => null) }]
+    ]);
+    const servico = montarServicoTimeline(criarGerenciadorProntuario(query, overrides));
+
+    await expect(
+      servico.obterProntuario('tenant-1', 'paciente-de-outro-profissional', usuarioProfissional)
+    ).rejects.toBeInstanceOf(NotFoundException);
+    expect(query).not.toHaveBeenCalled();
+  });
+
+  it('retorna 404 (nao vaza existencia) quando obterProntuario e chamado para paciente de outro tenant', async () => {
+    const query = jest.fn(async () => []);
+    const overrides = new Map<unknown, { find?: jest.Mock; findOne?: jest.Mock }>([
+      [PacienteOrm, { findOne: jest.fn(async () => null) }]
+    ]);
+    const servico = montarServicoTimeline(criarGerenciadorProntuario(query, overrides));
+
+    await expect(
+      servico.obterProntuario('tenant-1', 'paciente-de-outro-tenant', usuarioColaborador)
+    ).rejects.toBeInstanceOf(NotFoundException);
+    expect(query).not.toHaveBeenCalled();
+  });
+
+  it('retorna 404 (nao vaza existencia) quando listarLinhaDoTempoPaginada e chamado para paciente de outro tenant', async () => {
+    const query = jest.fn(async () => []);
+    const overrides = new Map<unknown, { find?: jest.Mock; findOne?: jest.Mock }>([
+      [PacienteOrm, { findOne: jest.fn(async () => null) }]
+    ]);
+    const servico = montarServicoTimeline(criarGerenciadorProntuario(query, overrides));
+
+    await expect(
+      servico.listarLinhaDoTempoPaginada('tenant-1', 'paciente-de-outro-tenant', usuarioColaborador)
+    ).rejects.toBeInstanceOf(NotFoundException);
+    expect(query).not.toHaveBeenCalled();
   });
 });
 

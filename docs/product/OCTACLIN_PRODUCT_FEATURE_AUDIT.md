@@ -670,6 +670,17 @@ nas ondas 2 a 5 e dependem de decisões registradas na seção 14.
 - **Validações**: typecheck backend; `servico-pacientes.spec.ts`; `pnpm test:guardas-controladores`.
 - **Aceite**: resumo e histórico mostram o mesmo conjunto de tipos de evento, com a mesma regra de permissão.
 
+**Atualização (execução do incremento)**: a investigação inicial mostrou que uma troca ingênua de
+`obterProntuario` para `listarLinhaDoTempoPaginada` removeria `descricao` de eventos que o resumo já
+enriquecia (mensagem, resposta de formulário, registro de hábitos), então a unificação exigiu desenho
+adicional (seleção canônica → projeção por superfície → enriquecimento em application layer), não apenas
+a troca de chamada descrita acima. O desenho final implementado extraiu a consulta SQL única já usada pelo
+Histórico para um método privado (`selecionarEventosProntuarioCanonicos`), compartilhado por Resumo e
+Histórico, e o Resumo passou a enriquecer os eventos retornados usando as entidades que já buscava (sem
+consulta adicional ao banco), preservando o enriquecimento anterior. O Histórico permanece com o mesmo
+comportamento e a mesma SQL de antes. Ver decisão registrada em `CHECKLIST_FASES_FUTURAS_PRODUCAO.md` e
+`STATUS_ATUAL_PROJETO.md`.
+
 ### 264.3 — Marcar material educativo como visualizado
 
 - **Gap** `[F]`: `envio_material_paciente.visualizado_em` existe desde a migration

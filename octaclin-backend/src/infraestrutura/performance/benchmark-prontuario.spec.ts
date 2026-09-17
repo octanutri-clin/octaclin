@@ -43,6 +43,50 @@ function repositorioCom(metodo: 'find' | 'findOne', retorno: unknown) {
   return { [metodo]: jest.fn(async () => retorno) } as Record<'find' | 'findOne', jest.Mock>;
 }
 
+function linhasCanonicasSinteticas(quantidadePorFonte: number) {
+  const linhas: Record<string, unknown>[] = [];
+  for (let indice = 0; indice < quantidadePorFonte; indice += 1) {
+    linhas.push(
+      {
+        id: `consulta-${indice}`, tipo: 'consulta', titulo: `Consulta ${indice}`,
+        data: instante(indice).toISOString(), status: 'concluida', origemId: `consulta-${indice}`,
+        origem: 'Agenda', metadados: {}
+      },
+      {
+        id: `envio-${indice}`, tipo: 'formulario', titulo: 'Formulario',
+        data: instante(indice).toISOString(), status: 'respondido', origemId: `questionario-${indice}`,
+        origem: 'Formularios', metadados: { envioQuestionarioId: `envio-${indice}` }
+      },
+      {
+        id: `resposta-${indice}`, tipo: 'resposta_formulario', titulo: 'Resposta de formulario',
+        data: instante(indice).toISOString(), status: 'finalizado', origemId: `envio-${indice}`,
+        origem: 'Formularios', metadados: {}
+      },
+      {
+        id: `diario-${indice}`, tipo: 'checkin_rapido', titulo: 'Registro de habitos',
+        data: instante(indice).toISOString(), status: 'registrado', origemId: `diario-${indice}`,
+        origem: 'Portal do paciente', metadados: { tipoDiario: 'humor' }
+      },
+      {
+        id: `mensagem-${indice}`, tipo: 'mensagem', titulo: 'Mensagem',
+        data: instante(indice).toISOString(), status: 'enviado', origemId: `mensagem-${indice}`,
+        origem: 'Comunicacoes', metadados: {}
+      },
+      {
+        id: `evolucao-${indice}`, tipo: 'evolucao_clinica', titulo: `Evolucao ${indice}`,
+        data: instante(indice).toISOString(), status: 'observacao', origemId: `evolucao-${indice}`,
+        origem: 'Prontuario', metadados: {}
+      },
+      {
+        id: `tarefa-${indice}`, tipo: 'tarefa_acompanhamento', titulo: `Tarefa ${indice}`,
+        data: instante(indice).toISOString(), status: 'concluida', origemId: `tarefa-${indice}`,
+        origem: 'Acompanhamento', metadados: {}
+      }
+    );
+  }
+  return linhas.sort((a, b) => new Date(b.data as string).getTime() - new Date(a.data as string).getTime());
+}
+
 function montarResumoSintetico(quantidadePorFonte: number) {
   const questionarios = serie(quantidadePorFonte, (indice) => ({
     id: `questionario-${indice}`,
@@ -131,7 +175,10 @@ function montarResumoSintetico(quantidadePorFonte: number) {
     [QuestionarioOrm, repositorioCom('find', questionarios)]
   ]);
   const gerenciador = {
-    getRepository: jest.fn((entidade: unknown) => repositorios.get(entidade))
+    getRepository: jest.fn((entidade: unknown) => repositorios.get(entidade)),
+    query: jest.fn(async (_sql: string, parametros: unknown[]) =>
+      linhasCanonicasSinteticas(quantidadePorFonte).slice(0, parametros[11] as number)
+    )
   };
   const servico = new ServicoPacientes(
     { executar: jest.fn((_tenantId: string, operacao: (alvo: unknown) => Promise<unknown>) => operacao(gerenciador)) } as never,

@@ -3066,10 +3066,13 @@ publicado antes de ampliar a superficie de mudancas visuais.
     scripts/validar-redacao-auditoria.spec.mjs` (24/24),
     `node --test scripts/validar-guardas-controladores.spec.mjs` (11/11),
     `git diff --check` e `pnpm security:secrets`.
-  - Um incremento restante (264.2, unificar a timeline do resumo com a do
-    historico) segue pendente. Seis dos sete incrementos da Onda 1 (264.1,
-    264.3, 264.4, 264.5, 264.6, 264.7) estao entregues.
-  - **264.2 investigado em 2026-09-17 e propositalmente nao implementado**:
+  - Incremento 264.2 (unificar a timeline do resumo com a do historico)
+    implementado em 2026-09-17, apos decisao de produto aprovada (ver
+    registro logo abaixo do historico da investigacao). Os sete incrementos
+    da Onda 1 (264.1-264.7) estao entregues.
+  - **264.2 investigado em 2026-09-17 e propositalmente nao implementado no
+    primeiro ciclo**: essa decisao original foi respeitada — nenhum codigo
+    de producao foi tocado ate a decisao de produto abaixo ser aprovada.
     a investigacao encontrou um fato novo que muda a complexidade real do
     incremento em relacao ao que a auditoria original supunha, e o item foi
     parado antes de qualquer mudanca de codigo (nenhum arquivo de producao
@@ -3142,6 +3145,76 @@ publicado antes de ampliar a superficie de mudancas visuais.
       negativo de permissao exigido pela secao 17 e os testes de paridade
       de tipo, e so depois adaptar os cinco testes existentes de
       `obterProntuario`.
+  - **264.2 implementado em 2026-09-17, apos decisao de produto aprovada.**
+    Decisao: unificar a fonte dos eventos do prontuario, mantendo projecoes
+    diferentes por superficie. Arquitetura final: **A timeline possui uma
+    fonte canonica de eventos, mas as superficies aplicam projecoes
+    distintas. Historico permanece como indice longitudinal enxuto; Resumo
+    e Mensagens podem enriquecer eventos quando necessario. Conteudo
+    sensivel nao e automaticamente promovido para a timeline historica.**
+    - Implementacao: a consulta SQL bruta que ja existia em
+      `listarLinhaDoTempoPaginada` (14 fontes, `UNION ALL`, sem alteracao de
+      uma linha sequer de SQL) foi extraida para o metodo privado
+      `selecionarEventosProntuarioCanonicos(gerenciador, tenantId,
+      pacienteId, usuario, opcoes)` em `servico-pacientes.ts`.
+      `listarLinhaDoTempoPaginada` passou a chamar esse metodo e so faz o
+      slice/cursor de paginacao — comportamento, SQL, parametros e ordem
+      identicos a antes. `obterProntuario` passou a chamar o mesmo metodo
+      (com `limite: 80`, sem cursor/filtro) e em seguida
+      `projetarEventosParaResumo(eventos, contexto)`, que enriquece, so na
+      application layer e usando entidades que `obterProntuario` ja buscava
+      (nenhuma consulta nova ao banco), os tipos que o resumo ja mostrava
+      com detalhe: `consulta` (descricao = local), `formulario` e
+      `resposta_formulario` (titulo com o nome do questionario, descricao
+      com prazo/score), `checkin_rapido` (titulo e descricao decifrados via
+      `CriptografiaDadosSensiveis.descriptografar`, chamada so na aplicacao,
+      nunca em SQL) e `mensagem` (descricao com o texto em claro do
+      payload). `evolucao_clinica` e `tarefa_acompanhamento` continuam sem
+      `descricao` nas duas superficies, por decisao de privacidade ja
+      tomada antes desta fase. Os sete mapeadores antigos duplicados
+      (`mapearEventoConsulta` e os outros seis) foram removidos; nao existe
+      mais uma segunda enumeracao manual de tipos.
+    - Seguranca e escopo: `garantirPacienteExiste` continua sendo chamado
+      antes de qualquer consulta nova, nos dois metodos; as tres flags de
+      permissao (`planos_alimentares.ler`, `agenda.financeiro.ler`,
+      `comunicacoes.mensagens.ler`) sao passadas da mesma forma para os
+      dois metodos, porque ambos chamam a mesma funcao com o mesmo
+      `usuario`; os mapas de enriquecimento do resumo sao construidos
+      exclusivamente a partir de arrays ja filtrados por `tenantId` e
+      `pacienteId`. Revisado com o agente `tenant-security-reviewer`.
+    - Performance: zero consultas novas ao banco alem da unica consulta
+      canonica que ja existia — o resumo hoje faz oito buscas por entidade
+      mais essa unica consulta de timeline (11 operacoes de ORM,
+      comprovado pelo benchmark sintetico
+      `infraestrutura/performance/benchmark-prontuario.spec.ts`, que
+      mede 11 operacoes tanto com 1 quanto com 30 itens por fonte); o
+      enriquecimento do resumo e feito em memoria com `Map` construidos a
+      partir de arrays ja carregados, sem N+1.
+    - TDD: 11 testes novos em `servico-pacientes.spec.ts` (bloco "timeline
+      canonica do prontuario"), RED confirmado antes da implementacao (4 de
+      9 falhando pela ausencia da fonte unica) e GREEN depois; os 2 testes
+      adicionais (paciente de outro tenant, para Resumo e Historico)
+      vieram da revisao do agente `tenant-security-reviewer`, cobrindo
+      explicitamente o mesmo mecanismo (`garantirPacienteExiste`) por
+      mismatch de `tenantId`, nao so por mismatch de profissional. Os 5
+      testes pre-existentes de `obterProntuario` foram adaptados para
+      simular `gerenciador.query(...)` (antes so simulavam `.find()`), sem
+      perder nenhuma asserção de negocio ja coberta.
+    - Validacoes: `pnpm --dir octaclin-backend typecheck` (limpo);
+      `servico-pacientes.spec.ts` (63/63);
+      `benchmark-prontuario.spec.ts` (2/2); suíte completa do backend
+      (186 suites, 1746 testes, 31 skips pre-existentes nao relacionados);
+      `pnpm --dir octaclin-web typecheck` (limpo); `pnpm --dir octaclin-web
+      test:authz` (inclui `test-prontuario-timeline-bff.mjs`, 2/2); `git
+      diff --check`; `pnpm security:secrets` (nenhum secret real
+      identificado). Playwright de UI (Resumo/Historico/Mensagens) **nao
+      executado neste ciclo**: o ambiente de execucao nao tem daemon Docker
+      nem banco de dados disponiveis para subir a aplicacao completa —
+      `SKIPPED` por limitacao de ambiente, nao por decisao de escopo. Fica
+      como proximo passo antes de considerar a superficie de UI totalmente
+      validada.
+    - Sem migration, sem mudanca de contrato de autorizacao, sem novo
+      conteudo clinico exposto no Historico.
 
 Documento de execução e prioridades: `ROADMAP_QUALIDADE_SEGURANCA_FASES_248_262.md`.
 Matriz operacional: `MATRIZ_SKILLS_PLUGINS_MODELOS_FASES_243_248_262.md`.

@@ -1,6 +1,6 @@
 # OctaClin - Status atual do projeto
 
-Atualizado em 2026-09-16.
+Atualizado em 2026-09-17.
 
 ## Snapshot
 
@@ -181,7 +181,8 @@ Atualizado em 2026-09-16.
   Detalhes em
   `docs/history/phases/fase-263-relatorios-financeiros-performance.md`.
 - Fase 264 - Ativacao: dado que ja existe vira acao visivel, **planejada em
-  2026-09-17 e em execucao desde a mesma data (Incremento 1 entregue)**.
+  2026-09-17 e concluida na mesma data (7 de 7 incrementos da Onda 1
+  entregues)**.
   Nasce da auditoria ampla de produto e
   funcionalidades registrada em
   `docs/product/OCTACLIN_PRODUCT_FEATURE_AUDIT.md`, que mapeou o produto real a
@@ -316,30 +317,54 @@ Atualizado em 2026-09-16.
   `node --test scripts/validar-redacao-auditoria.spec.mjs` (24/24),
   `node --test scripts/validar-guardas-controladores.spec.mjs` (11/11),
   `git diff --check` e `pnpm security:secrets`.
-  Um incremento restante (264.2, unificar a timeline do resumo com a do
-  historico) continua pendente.
-  **264.2 investigado em 2026-09-17, nao implementado.** Nenhum arquivo de
-  producao foi alterado nesta investigacao. Achado que muda a complexidade
-  real do item frente ao que a auditoria supunha: o SQL bruto de
+  **264.2 investigado em 2026-09-17 e implementado no mesmo dia, apos
+  decisao de produto aprovada.** A investigacao original (nao implementada
+  no primeiro ciclo) encontrou um achado que mudava a complexidade real do
+  item frente ao que a auditoria supunha: o SQL bruto de
   `listarLinhaDoTempoPaginada` nunca preenche `descricao` para nenhum dos
   14 tipos de evento, mas o resumo (`obterProntuario`) preenche `descricao`
   para tres deles em JS -- `mensagem`, `resposta_formulario` e
   `checkin_rapido`, este ultimo exigindo decifragem de
   `LogDiarioRapidoOrm.valorCriptografado` que so pode ocorrer na aplicacao,
-  nunca dentro do SQL. Essa `descricao` de `mensagem` ja e exibida hoje na
-  aba "Mensagens" do prontuario (mesmo componente da aba Historico). Trocar
-  a fonte do resumo pela SQL bruta sem mais nada regride essa
-  pre-visualizacao; dar paridade de verdade exige extrair a SQL para um
-  metodo compartilhado, somar uma etapa de decifragem em JS so para
-  `checkin_rapido`, decidir se a aba Historico passa a exibir esse
-  conteudo decifrado que nunca exibiu (efeito colateral de produto que
-  merece decisao explicita), e adaptar os cinco blocos de teste de
-  `obterProntuario` que hoje so mockam `getRepository(...).find(...)` e
-  nao `gerenciador.query(...)`. Detalhe completo e proximo passo
-  recomendado em `CHECKLIST_FASES_FUTURAS_PRODUCAO.md`, entrada da Fase
-  264. A Fase 264 fecha com 6 dos 7 incrementos da Onda 1 entregues; 264.2
-  fica para uma rodada dedicada, com decisao de produto tomada antes do
-  codigo.
+  nunca dentro do SQL. Uma troca ingenua de fonte regrediria essa
+  pre-visualizacao (exibida hoje na aba "Mensagens" do prontuario).
+  Decisao de produto aprovada: unificar a fonte dos eventos do prontuario,
+  mantendo projecoes diferentes por superficie. **Arquitetura implementada:
+  a timeline possui uma fonte canonica de eventos, mas as superficies
+  aplicam projecoes distintas. Historico permanece como indice
+  longitudinal enxuto; Resumo e Mensagens podem enriquecer eventos quando
+  necessario. Conteudo sensivel nao e automaticamente promovido para a
+  timeline historica.** A SQL bruta de 14 fontes (inalterada) foi extraida
+  para o metodo privado `selecionarEventosProntuarioCanonicos`, agora
+  compartilhado por `listarLinhaDoTempoPaginada` (Historico, comportamento
+  e paginacao identicos a antes) e por `obterProntuario` (Resumo), que
+  enriquece os eventos retornados via `projetarEventosParaResumo` usando
+  as entidades que ja buscava (sem consulta nova ao banco): `consulta`,
+  `formulario`, `resposta_formulario`, `checkin_rapido` (decifragem so na
+  aplicacao) e `mensagem` ganham o mesmo detalhe de antes;
+  `evolucao_clinica` e `tarefa_acompanhamento` continuam sem `descricao`
+  nas duas superficies, por decisao de privacidade ja tomada antes desta
+  fase. Os sete mapeadores duplicados antigos foram removidos -- nao
+  existe mais uma segunda enumeracao manual de tipos. Escopo por
+  tenant/profissional e as tres flags de permissao permanecem identicos
+  (mesma chamada, mesmo `usuario`, revisado com o agente
+  `tenant-security-reviewer`, que sugeriu dois testes negativos adicionais
+  de paciente-em-outro-tenant, incluidos nesta entrega). TDD: 11 testes
+  novos em `servico-pacientes.spec.ts` (9 com RED confirmado antes da
+  implementacao, mais 2 de cross-tenant) e os 5 blocos de teste
+  pre-existentes de `obterProntuario` foram adaptados para tambem simular
+  `gerenciador.query(...)`. Validado com `pnpm --dir octaclin-backend
+  typecheck` (limpo), suite completa do backend (186 suites, 1746 testes),
+  `benchmark-prontuario.spec.ts` (2/2,
+  confirma zero consultas novas alem da unica consulta canonica),
+  `pnpm --dir octaclin-web typecheck` (limpo), `pnpm --dir octaclin-web
+  test:authz` (inclui `test-prontuario-timeline-bff.mjs`), `git diff
+  --check` e `pnpm security:secrets`. Playwright de UI **nao executado
+  neste ciclo** -- sem daemon Docker/banco disponivel no ambiente de
+  execucao para subir a aplicacao completa; `SKIPPED` por limitacao de
+  ambiente, registrado como proximo passo, nao como aceite. Detalhe
+  completo em `CHECKLIST_FASES_FUTURAS_PRODUCAO.md`, entrada da Fase 264.
+  A Fase 264 fecha com os sete incrementos da Onda 1 entregues.
 - Fase 261 (escopo de trabalho: gaps de seguranca e privacidade
   identificados no audit da fase) **concluida tecnicamente em 2026-09-15,
   com excecoes operacionais abertas; incrementos 1 a 4 integrados**.

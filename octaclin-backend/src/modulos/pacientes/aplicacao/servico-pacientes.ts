@@ -785,22 +785,17 @@ export class ServicoPacientes {
       const questionariosPorId = new Map(questionarios.map((questionario) => [questionario.id, questionario]));
       const enviosPorId = new Map(envios.map((envio) => [envio.id, envio]));
 
-      const linhaDoTempo = [
-        ...consultas.map((consulta) => this.mapearEventoConsulta(consulta)),
-        ...envios.map((envio) => this.mapearEventoEnvioQuestionario(envio, questionariosPorId.get(envio.questionarioId)?.titulo)),
-        ...respostas.map((resposta) =>
-          this.mapearEventoRespostaQuestionario(
-            resposta,
-            questionariosPorId.get(enviosPorId.get(resposta.envioQuestionarioId)?.questionarioId ?? '')?.titulo
-          )
-        ),
-        ...diarios.map((diario) => this.mapearEventoCheckinRapido(diario)),
-        ...(podeLerComunicacoes ? mensagens.map((mensagem) => this.mapearEventoMensagem(mensagem)) : []),
-        ...evolucoes.map((evolucao) => this.mapearEventoEvolucao(evolucao)),
-        ...tarefas.map((tarefa) => this.mapearEventoTarefa(tarefa))
-      ]
-        .sort((a, b) => b.data.getTime() - a.data.getTime())
-        .slice(0, 80);
+      const eventosCanonicos = await this.selecionarEventosProntuarioCanonicos(gerenciador, tenantId, pacienteId, usuario, {
+        limite: 80
+      });
+      const linhaDoTempo = this.projetarEventosParaResumo(eventosCanonicos, {
+        consultasPorId: new Map(consultas.map((consulta) => [consulta.id, consulta])),
+        enviosPorId,
+        respostasPorId: new Map(respostas.map((resposta) => [resposta.id, resposta])),
+        diariosPorId: new Map(diarios.map((diario) => [diario.id, diario])),
+        mensagensPorId: new Map(mensagens.map((mensagem) => [mensagem.id, mensagem])),
+        questionariosPorId
+      });
 
       const agora = new Date();
       const formulariosPendentes = envios.filter((envio) => envio.status === 'pendente' || envio.status === 'enviado');
@@ -959,7 +954,53 @@ export class ServicoPacientes {
 
     return this.executorTenant.executar(tenantId, async (gerenciador) => {
       await this.garantirPacienteExiste(gerenciador, tenantId, pacienteId, usuario);
-      const linhas = await gerenciador.query<LinhaTimelinePaginada[]>(`
+      const linhas = await this.selecionarEventosProntuarioCanonicos(gerenciador, tenantId, pacienteId, usuario, {
+        limite: limite + 1,
+        cursor: cursorDecodificado,
+        tipo: filtros.tipo,
+        inicio,
+        fim,
+        responsavelId: filtros.responsavelId
+      });
+
+      const itens = linhas.slice(0, limite);
+      const ultimo = itens.at(-1);
+      return {
+        itens,
+        proximoCursor: linhas.length > limite && ultimo
+          ? this.codificarCursorTimeline({ data: ultimo.data.toISOString(), id: ultimo.id })
+          : undefined
+      };
+    });
+  }
+
+  /**
+   * Fonte canonica dos eventos do prontuario (Fase 264.2): a mesma consulta que
+   * a timeline paginada (Historico) sempre usou, extraida para que o resumo
+   * (`obterProntuario`) tambem a use, em vez de manter uma segunda enumeracao
+   * manual de tipos em JS. So seleciona: tipo, id, data, origem, metadados
+   * estruturais minimos e as tres permissoes por tipo de evento que ja existiam
+   * (`planos_alimentares.ler`, `agenda.financeiro.ler`, `comunicacoes.mensagens.ler`).
+   * Nunca descriptografa conteudo clinico (so titulo, e so para os dois tipos que
+   * ja tinham titulo cifrado antes desta fase). Enriquecimento de descricao para
+   * o resumo e responsabilidade de `projetarEventosParaResumo`, chamado pelo
+   * caller -- nunca aqui, para que o Historico continue enxuto por construcao.
+   */
+  private async selecionarEventosProntuarioCanonicos(
+    gerenciador: EntityManager,
+    tenantId: string,
+    pacienteId: string,
+    usuario: UsuarioAutenticado,
+    opcoes: {
+      limite: number;
+      cursor?: CursorTimeline;
+      tipo?: TipoEventoProntuarioPaciente;
+      inicio?: Date;
+      fim?: Date;
+      responsavelId?: string;
+    }
+  ): Promise<EventoProntuarioPacienteDto[]> {
+    const linhas = await gerenciador.query<LinhaTimelinePaginada[]>(`
         WITH contexto AS (
           SELECT profissional_responsavel_id, usuario_id
           FROM pacientes
@@ -1155,40 +1196,32 @@ export class ServicoPacientes {
         ORDER BY data DESC, id DESC
         LIMIT $12
       `, [
-        tenantId,
-        pacienteId,
-        cursorDecodificado?.data ?? null,
-        cursorDecodificado?.id ?? null,
-        filtros.tipo ?? null,
-        inicio?.toISOString() ?? null,
-        fim?.toISOString() ?? null,
-        filtros.responsavelId ?? null,
-        usuario.permissoes.includes('planos_alimentares.ler'),
-        usuario.permissoes.includes('agenda.financeiro.ler'),
-        usuario.permissoes.includes('comunicacoes.mensagens.ler'),
-        limite + 1
-      ]);
+      tenantId,
+      pacienteId,
+      opcoes.cursor?.data ?? null,
+      opcoes.cursor?.id ?? null,
+      opcoes.tipo ?? null,
+      opcoes.inicio?.toISOString() ?? null,
+      opcoes.fim?.toISOString() ?? null,
+      opcoes.responsavelId ?? null,
+      usuario.permissoes.includes('planos_alimentares.ler'),
+      usuario.permissoes.includes('agenda.financeiro.ler'),
+      usuario.permissoes.includes('comunicacoes.mensagens.ler'),
+      opcoes.limite
+    ]);
 
-      const itens = linhas.slice(0, limite).map((linha) => ({
-        id: linha.id,
-        tipo: linha.tipo,
-        titulo: this.lerTituloTimeline(linha),
-        data: new Date(linha.data),
-        status: linha.status ?? undefined,
-        origemId: linha.origemId ?? undefined,
-        origem: linha.origem ?? undefined,
-        responsavelId: linha.responsavelId ?? undefined,
-        autorUsuarioId: linha.autorUsuarioId ?? undefined,
-        metadados: linha.metadados ?? undefined
-      }));
-      const ultimo = itens.at(-1);
-      return {
-        itens,
-        proximoCursor: linhas.length > limite && ultimo
-          ? this.codificarCursorTimeline({ data: ultimo.data.toISOString(), id: ultimo.id })
-          : undefined
-      };
-    });
+    return linhas.map((linha) => ({
+      id: linha.id,
+      tipo: linha.tipo,
+      titulo: this.lerTituloTimeline(linha),
+      data: new Date(linha.data),
+      status: linha.status ?? undefined,
+      origemId: linha.origemId ?? undefined,
+      origem: linha.origem ?? undefined,
+      responsavelId: linha.responsavelId ?? undefined,
+      autorUsuarioId: linha.autorUsuarioId ?? undefined,
+      metadados: linha.metadados ?? undefined
+    }));
   }
 
   private async garantirLimitePermitido(tenantId: string, recurso: 'pacientes') {
@@ -1482,61 +1515,86 @@ export class ServicoPacientes {
     }
   }
 
-  private mapearEventoConsulta(consulta: AgendaConsultaOrm): EventoProntuarioPacienteDto {
-    return {
-      id: consulta.id,
-      tipo: 'consulta',
-      titulo: consulta.titulo,
-      descricao: consulta.local,
-      data: consulta.inicioEm,
-      status: consulta.status,
-      origemId: consulta.id,
-      metadados: {
-        fimEm: consulta.fimEm,
-        googleEventId: consulta.googleEventId,
-        googleEventHtmlLink: consulta.googleEventHtmlLink
+  /**
+   * Projecao do resumo (Fase 264.2): parte da mesma fonte canonica que o
+   * Historico (`selecionarEventosProntuarioCanonicos`) e enriquece, so na
+   * application layer e so para os tipos que o resumo ja mostrava com detalhe
+   * (consulta, formulario, resposta_formulario, checkin_rapido, mensagem),
+   * usando as entidades que `obterProntuario` ja buscou -- nenhuma consulta
+   * adicional ao banco. Evolucao clinica e tarefa de acompanhamento
+   * permanecem sem `descricao`, pelo mesmo motivo de sempre: o resumo e uma
+   * referencia, o conteudo clinico so e carregado quando a area especifica e
+   * aberta.
+   */
+  private projetarEventosParaResumo(
+    eventos: EventoProntuarioPacienteDto[],
+    contexto: {
+      consultasPorId: Map<string, AgendaConsultaOrm>;
+      enviosPorId: Map<string, EnvioQuestionarioOrm>;
+      respostasPorId: Map<string, RespostaCheckinOrm>;
+      diariosPorId: Map<string, LogDiarioRapidoOrm>;
+      mensagensPorId: Map<string, MensagemNotificacaoOrm>;
+      questionariosPorId: Map<string, QuestionarioOrm>;
+    }
+  ): EventoProntuarioPacienteDto[] {
+    return eventos.map((evento) => {
+      switch (evento.tipo) {
+        case 'consulta': {
+          const consulta = contexto.consultasPorId.get(evento.id);
+          return consulta ? { ...evento, descricao: consulta.local } : evento;
+        }
+        case 'formulario': {
+          const envio = contexto.enviosPorId.get(evento.id);
+          if (!envio) return evento;
+          const tituloQuestionario = contexto.questionariosPorId.get(envio.questionarioId)?.titulo;
+          return {
+            ...evento,
+            titulo: tituloQuestionario ?? evento.titulo,
+            descricao: envio.expiraEm ? `Expira em ${envio.expiraEm.toISOString()}` : undefined
+          };
+        }
+        case 'resposta_formulario': {
+          const resposta = contexto.respostasPorId.get(evento.id);
+          if (!resposta) return evento;
+          const envio = contexto.enviosPorId.get(resposta.envioQuestionarioId);
+          const tituloQuestionario = envio ? contexto.questionariosPorId.get(envio.questionarioId)?.titulo : undefined;
+          return {
+            ...evento,
+            titulo: `Resposta de ${tituloQuestionario ?? 'formulario'}`,
+            descricao: resposta.scoreFinal ? `Score final ${resposta.scoreFinal}` : undefined
+          };
+        }
+        case 'checkin_rapido': {
+          const diario = contexto.diariosPorId.get(evento.id);
+          if (!diario) return evento;
+          return {
+            ...evento,
+            titulo: this.tituloCheckinRapido(diario.tipo),
+            descricao: this.descreverCheckinRapido(diario)
+          };
+        }
+        case 'mensagem': {
+          const mensagem = contexto.mensagensPorId.get(evento.id);
+          if (!mensagem) return evento;
+          return { ...evento, descricao: this.extrairTextoMensagem(mensagem) };
+        }
+        default:
+          return evento;
       }
-    };
+    });
   }
 
-  private mapearEventoEnvioQuestionario(envio: EnvioQuestionarioOrm, tituloQuestionario?: string): EventoProntuarioPacienteDto {
-    return {
-      id: envio.id,
-      tipo: 'formulario',
-      titulo: tituloQuestionario ?? 'Formulario',
-      descricao: envio.expiraEm ? `Expira em ${envio.expiraEm.toISOString()}` : undefined,
-      data: envio.enviadoEm ?? envio.expiraEm ?? new Date(0),
-      status: envio.status,
-      origemId: envio.questionarioId,
-      metadados: {
-        envioQuestionarioId: envio.id,
-        expiraEm: envio.expiraEm
-      }
-    };
-  }
-
-  private mapearEventoRespostaQuestionario(resposta: RespostaCheckinOrm, tituloQuestionario?: string): EventoProntuarioPacienteDto {
-    return {
-      id: resposta.id,
-      tipo: 'resposta_formulario',
-      titulo: `Resposta de ${tituloQuestionario ?? 'formulario'}`,
-      descricao: resposta.scoreFinal ? `Score final ${resposta.scoreFinal}` : undefined,
-      data: resposta.finalizadoEm ?? resposta.criadoEm,
-      status: resposta.finalizadoEm ? 'finalizado' : 'em_andamento',
-      origemId: resposta.envioQuestionarioId,
-      metadados: {
-        scoreFinal: resposta.scoreFinal
-      }
-    };
-  }
-
-  private mapearEventoCheckinRapido(diario: LogDiarioRapidoOrm): EventoProntuarioPacienteDto {
+  private tituloCheckinRapido(tipo: LogDiarioRapidoOrm['tipo']): string {
     const titulos: Record<LogDiarioRapidoOrm['tipo'], string> = {
       refeicao: 'Registro de refeicao',
       humor: 'Registro de humor',
       agua: 'Registro de agua',
       atividade: 'Registro de atividade'
     };
+    return titulos[tipo];
+  }
+
+  private descreverCheckinRapido(diario: LogDiarioRapidoOrm): string | undefined {
     const valor = this.lerValorDiario(diario);
     const detalhes = [
       typeof valor.humor === 'string' ? `Humor: ${valor.humor}` : undefined,
@@ -1544,17 +1602,7 @@ export class ServicoPacientes {
       typeof valor.sintomas === 'string' && valor.sintomas.trim() ? `Sintomas: ${valor.sintomas.trim()}` : undefined,
       typeof valor.observacoes === 'string' && valor.observacoes.trim() ? valor.observacoes.trim() : undefined
     ].filter((detalhe): detalhe is string => Boolean(detalhe));
-
-    return {
-      id: diario.id,
-      tipo: 'checkin_rapido',
-      titulo: titulos[diario.tipo],
-      descricao: detalhes.join(' - ') || undefined,
-      data: diario.registradoEm,
-      status: 'registrado',
-      origemId: diario.id,
-      metadados: { tipoDiario: diario.tipo }
-    };
+    return detalhes.join(' - ') || undefined;
   }
 
   /**
@@ -1586,65 +1634,6 @@ export class ServicoPacientes {
     } catch {
       return {};
     }
-  }
-
-  private mapearEventoMensagem(mensagem: MensagemNotificacaoOrm): EventoProntuarioPacienteDto {
-    return {
-      id: mensagem.id,
-      tipo: 'mensagem',
-      titulo: mensagem.status === 'recebido' ? 'Mensagem recebida' : 'Mensagem',
-      descricao: this.extrairTextoMensagem(mensagem),
-      data: mensagem.enviadoEm ?? mensagem.criadoEm,
-      status: mensagem.status,
-      origemId: mensagem.id,
-      metadados: {
-        canalId: mensagem.canalId,
-        templateId: mensagem.templateId,
-        erro: mensagem.erro
-      }
-    };
-  }
-
-  /**
-   * Sem `descricao`: o resumo do prontuario e uma referencia, nao o conteudo
-   * clinico. O detalhe decifrado so e carregado quando a area de evolucoes e aberta
-   * (GET /pacientes/:id/evolucoes, que usa mapearEvolucao).
-   */
-  private mapearEventoEvolucao(evolucao: EvolucaoClinicaOrm): EventoProntuarioPacienteDto {
-    return {
-      id: evolucao.id,
-      tipo: 'evolucao_clinica',
-      titulo: this.lerTituloEvolucao(evolucao),
-      data: evolucao.criadoEm,
-      status: evolucao.tipo,
-      origemId: evolucao.id,
-      metadados: {
-        autorUsuarioId: evolucao.autorUsuarioId,
-        visibilidade: evolucao.visibilidade
-      }
-    };
-  }
-
-  /**
-   * Sem `descricao`: mesmo racional de mapearEventoEvolucao. O detalhe decifrado
-   * so e carregado quando a area de acompanhamento e aberta (GET
-   * /pacientes/:id/tarefas-acompanhamento, que usa mapearTarefa).
-   */
-  private mapearEventoTarefa(tarefa: AcompanhamentoTarefaOrm): EventoProntuarioPacienteDto {
-    return {
-      id: tarefa.id,
-      tipo: 'tarefa_acompanhamento',
-      titulo: this.lerTituloTarefa(tarefa),
-      data: tarefa.vencimentoEm ?? tarefa.criadoEm,
-      status: tarefa.status,
-      origemId: tarefa.id,
-      metadados: {
-        categoria: tarefa.categoria,
-        prioridade: tarefa.prioridade,
-        profissionalId: tarefa.profissionalId,
-        concluidoEm: tarefa.concluidoEm
-      }
-    };
   }
 
   private extrairTextoMensagem(mensagem: MensagemNotificacaoOrm): string | undefined {
