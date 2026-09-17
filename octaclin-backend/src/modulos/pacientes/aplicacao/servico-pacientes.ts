@@ -29,6 +29,7 @@ import {
   AvaliacaoAntropometricaRespostaDto,
   CriarAvaliacaoAntropometricaDto,
   CriarEvolucaoClinicaDto,
+  ListarAvaliacoesAntropometricasDto,
   SerieAntropometricaRespostaDto,
   CriarPacienteDto,
   CriarTarefaAcompanhamentoDto,
@@ -1250,7 +1251,8 @@ export class ServicoPacientes {
   async listarAvaliacoesAntropometricas(
     tenantId: string,
     pacienteId: string,
-    usuario: UsuarioAutenticado
+    usuario: UsuarioAutenticado,
+    filtros?: ListarAvaliacoesAntropometricasDto
   ): Promise<SerieAntropometricaRespostaDto> {
     return this.executorTenant.executar(tenantId, async (gerenciador) => {
       await this.garantirPacienteExiste(gerenciador, tenantId, pacienteId, usuario);
@@ -1270,7 +1272,20 @@ export class ServicoPacientes {
             )
           : [];
 
-      return { avaliacoes, deltaUltimas };
+      let deltaSelecionado: SerieAntropometricaRespostaDto['deltaSelecionado'];
+      if (filtros?.avaliacaoAnteriorId && filtros?.avaliacaoAtualId) {
+        const anteriorSelecionada = avaliacoes.find((item) => item.id === filtros.avaliacaoAnteriorId);
+        const atualSelecionada = avaliacoes.find((item) => item.id === filtros.avaliacaoAtualId);
+        if (!anteriorSelecionada || !atualSelecionada) {
+          throw new NotFoundException('Avaliacao antropometrica nao encontrada.');
+        }
+        deltaSelecionado = compararAvaliacoes(
+          { ...anteriorSelecionada.resultado, pesoKg: anteriorSelecionada.medidas.pesoKg },
+          { ...atualSelecionada.resultado, pesoKg: atualSelecionada.medidas.pesoKg }
+        );
+      }
+
+      return { avaliacoes, deltaUltimas, ...(deltaSelecionado ? { deltaSelecionado } : {}) };
     });
   }
 

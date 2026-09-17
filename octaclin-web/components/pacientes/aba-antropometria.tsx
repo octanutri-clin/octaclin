@@ -166,6 +166,11 @@ export function AbaAntropometria({ pacienteId, podeGerenciar }: AbaAntropometria
   const [sucesso, setSucesso] = useState<string | null>(null);
   const [formulario, setFormulario] = useState<FormularioAvaliacao>(formularioInicial);
   const [metricaId, setMetricaId] = useState('peso');
+  const [avaliacaoAnteriorId, setAvaliacaoAnteriorId] = useState('');
+  const [avaliacaoAtualId, setAvaliacaoAtualId] = useState('');
+  const [deltaSelecionado, setDeltaSelecionado] = useState<SerieAntropometricaApi['deltaSelecionado']>(undefined);
+  const [comparando, setComparando] = useState(false);
+  const [erroComparacao, setErroComparacao] = useState<string | null>(null);
   const iniciarRequisicao = useRequisicaoCancelavel();
 
   const carregar = useCallback(async () => {
@@ -254,6 +259,21 @@ export function AbaAntropometria({ pacienteId, podeGerenciar }: AbaAntropometria
     }
   }
 
+  async function comparar() {
+    if (!avaliacaoAnteriorId || !avaliacaoAtualId) return;
+    setErroComparacao(null);
+    setDeltaSelecionado(undefined);
+    setComparando(true);
+    try {
+      const dados = await listarAvaliacoesAntropometricas(pacienteId, { avaliacaoAnteriorId, avaliacaoAtualId });
+      setDeltaSelecionado(dados.deltaSelecionado ?? []);
+    } catch (erroAtual) {
+      setErroComparacao(mensagemFalhaInterface(erroAtual, 'Não foi possível comparar as avaliações.'));
+    } finally {
+      setComparando(false);
+    }
+  }
+
   const ultima = serie?.avaliacoes[0];
 
   return (
@@ -325,6 +345,84 @@ export function AbaAntropometria({ pacienteId, podeGerenciar }: AbaAntropometria
                 );
               })}
             </ul>
+          </CartaoConteudo>
+        </Cartao>
+      ) : null}
+
+      {serie && serie.avaliacoes.length >= 2 ? (
+        <Cartao>
+          <CartaoCabecalho>
+            <CartaoTitulo>Comparar avaliações</CartaoTitulo>
+          </CartaoCabecalho>
+          <CartaoConteudo>
+            <div className="grid gap-3 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
+              <label className="grid gap-1">
+                <Rotulo>De</Rotulo>
+                <Selecao
+                  aria-label="Avaliação anterior para comparar"
+                  value={avaliacaoAnteriorId}
+                  onChange={(evento) => setAvaliacaoAnteriorId(evento.target.value)}
+                >
+                  <option value="">Selecionar avaliação</option>
+                  {serie.avaliacoes.map((avaliacao) => (
+                    <option key={avaliacao.id} value={avaliacao.id}>
+                      {formatarData(avaliacao.avaliadaEm)}
+                    </option>
+                  ))}
+                </Selecao>
+              </label>
+              <label className="grid gap-1">
+                <Rotulo>Para</Rotulo>
+                <Selecao
+                  aria-label="Avaliação atual para comparar"
+                  value={avaliacaoAtualId}
+                  onChange={(evento) => setAvaliacaoAtualId(evento.target.value)}
+                >
+                  <option value="">Selecionar avaliação</option>
+                  {serie.avaliacoes.map((avaliacao) => (
+                    <option key={avaliacao.id} value={avaliacao.id}>
+                      {formatarData(avaliacao.avaliadaEm)}
+                    </option>
+                  ))}
+                </Selecao>
+              </label>
+              <Botao
+                type="button"
+                disabled={!avaliacaoAnteriorId || !avaliacaoAtualId || comparando}
+                onClick={() => void comparar()}
+              >
+                Comparar
+              </Botao>
+            </div>
+            {erroComparacao ? (
+              <p role="alert" className="mt-3 text-sm text-perigo-forte">
+                {erroComparacao}
+              </p>
+            ) : null}
+            {deltaSelecionado ? (
+              <ul className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                {deltaSelecionado.length ? (
+                  deltaSelecionado.map((delta) => {
+                    const meta = ROTULO_DELTA[delta.campo] ?? { rotulo: delta.campo, unidade: '' };
+                    const sinal = delta.variacao > 0 ? '+' : '';
+                    return (
+                      <li key={delta.campo} className="rounded-md border border-linha bg-superficie p-3">
+                        <p className="text-xs text-texto-suave">{meta.rotulo}</p>
+                        <p className="text-sm font-semibold text-tinta">
+                          {sinal}
+                          {formatar(delta.variacao, 2)} {meta.unidade}
+                        </p>
+                        <p className="text-xs text-texto-suave">
+                          {formatar(delta.anterior, 2)} para {formatar(delta.atual, 2)}
+                        </p>
+                      </li>
+                    );
+                  })
+                ) : (
+                  <li className="text-sm text-texto-suave">Nenhuma medida em comum entre as duas avaliações.</li>
+                )}
+              </ul>
+            ) : null}
           </CartaoConteudo>
         </Cartao>
       ) : null}

@@ -1614,6 +1614,82 @@ describe('ServicoPacientes - avaliacao antropometrica', () => {
     ]);
   });
 
+  it('deve comparar a primeira e a atual quando os identificadores forem informados', async () => {
+    const registro = (id: string, data: string, peso: number, imc: number) => ({
+      id,
+      pacienteId: 'paciente-1',
+      avaliadaEm: data,
+      protocolo: 'nenhum',
+      medidasCriptografadas: Buffer.from(`criptografado:${JSON.stringify({ pesoKg: peso })}`),
+      resultadoCriptografado: Buffer.from(
+        `criptografado:${JSON.stringify({ imc, protocoloAplicado: 'nenhum', avisos: [] })}`
+      ),
+      criadoEm: new Date(`${data}T12:00:00.000Z`)
+    });
+    const { servico } = montarServico({
+      avaliacoes: [
+        registro('a3', '2026-08-04', 78.1, 25.5),
+        registro('a2', '2026-07-04', 80.0, 26.1),
+        registro('a1', '2026-01-04', 90.0, 30.0)
+      ]
+    });
+
+    const serie = await servico.listarAvaliacoesAntropometricas('tenant-1', 'paciente-1', usuarioColaborador, {
+      avaliacaoAnteriorId: 'a1',
+      avaliacaoAtualId: 'a3'
+    });
+
+    expect(serie.deltaUltimas).toEqual([
+      { campo: 'pesoKg', anterior: 80.0, atual: 78.1, variacao: -1.9 },
+      { campo: 'imc', anterior: 26.1, atual: 25.5, variacao: -0.6 }
+    ]);
+    expect(serie.deltaSelecionado).toEqual([
+      { campo: 'pesoKg', anterior: 90.0, atual: 78.1, variacao: -11.9 },
+      { campo: 'imc', anterior: 30.0, atual: 25.5, variacao: -4.5 }
+    ]);
+  });
+
+  it('nao devolve deltaSelecionado quando nenhum identificador de comparacao e informado', async () => {
+    const registro = (id: string, data: string) => ({
+      id,
+      pacienteId: 'paciente-1',
+      avaliadaEm: data,
+      protocolo: 'nenhum',
+      medidasCriptografadas: Buffer.from('criptografado:{"pesoKg":80}'),
+      resultadoCriptografado: Buffer.from('criptografado:{"protocoloAplicado":"nenhum","avisos":[]}'),
+      criadoEm: new Date(`${data}T12:00:00.000Z`)
+    });
+    const { servico } = montarServico({
+      avaliacoes: [registro('a2', '2026-08-04'), registro('a1', '2026-06-04')]
+    });
+
+    const serie = await servico.listarAvaliacoesAntropometricas('tenant-1', 'paciente-1', usuarioColaborador);
+
+    expect(serie.deltaSelecionado).toBeUndefined();
+  });
+
+  it('rejeita comparacao com avaliacao que nao pertence ao paciente do contexto', async () => {
+    const registro = (id: string, data: string) => ({
+      id,
+      pacienteId: 'paciente-1',
+      avaliadaEm: data,
+      protocolo: 'nenhum',
+      medidasCriptografadas: Buffer.from('criptografado:{"pesoKg":80}'),
+      resultadoCriptografado: Buffer.from('criptografado:{"protocoloAplicado":"nenhum","avisos":[]}'),
+      criadoEm: new Date(`${data}T12:00:00.000Z`)
+    });
+    const { servico } = montarServico({
+      avaliacoes: [registro('a2', '2026-08-04'), registro('a1', '2026-06-04')]
+    });
+
+    await expect(
+      servico.listarAvaliacoesAntropometricas('tenant-1', 'paciente-1', usuarioColaborador, {
+        avaliacaoAnteriorId: 'avaliacao-de-outro-paciente',
+        avaliacaoAtualId: 'a2'
+      })
+    ).rejects.toThrow(NotFoundException);
+  });
+
   it('nao deve devolver delta com uma unica avaliacao', async () => {
     const { servico } = montarServico({
       avaliacoes: [

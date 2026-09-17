@@ -2941,7 +2941,38 @@ publicado antes de ampliar a superficie de mudancas visuais.
     `pnpm --dir octaclin-backend test -- servico-dashboard-clinico`,
     `pnpm --dir octaclin-web typecheck`, Playwright (desktop e mobile) e
     `node --test scripts/validar-guardas-controladores.spec.mjs`.
-  - Cinco incrementos restantes (264.2, 264.3, 264.5, 264.6, 264.7) seguem
+  - Incremento 5 (comparacao antropometrica entre quaisquer duas avaliacoes)
+    implementado em 2026-09-17. `compararAvaliacoes` (dominio) ja existia e
+    so era chamada para as duas ultimas avaliacoes
+    (`servico-pacientes.ts:1265-1273` na auditoria); `listarAvaliacoesAntropometricas`
+    passou a aceitar `avaliacaoAnteriorId`/`avaliacaoAtualId` opcionais
+    (`ListarAvaliacoesAntropometricasDto`, novo em `dtos.ts`) e devolver
+    `deltaSelecionado` quando ambos sao informados, resolvendo os dois
+    identificadores dentro da mesma lista ja carregada e escopada por
+    tenant/paciente (sem query extra). Sem parametros o comportamento e
+    identico ao anterior (`deltaUltimas` inalterado, `deltaSelecionado`
+    ausente) — compatibilidade obrigatoria da secao 17 preservada. BFF
+    (`app/api/pacientes/[id]/avaliacoes-antropometricas/route.ts`) passa os
+    dois parametros por allowlist, no mesmo padrao ja usado em
+    `exportar.csv`. Frontend: novo cartao "Comparar avaliações" na aba de
+    Antropometria com dois seletores de data e botao "Comparar". TDD:
+    tres testes novos em `servico-pacientes.spec.ts` — comparacao entre a
+    1a e a atual devolve o delta correto; sem parametros o resultado e
+    identico ao de hoje (`deltaSelecionado` ausente); avaliacao que nao
+    pertence ao paciente do contexto e rejeitada com `NotFoundException` —
+    e um cenario Playwright novo em `console-regression.spec.mjs`
+    ("permite comparar duas avaliacoes antropometricas alem das duas
+    ultimas"), que falhou (timeout ao procurar o seletor) com a
+    implementacao de frontend revertida e passou com ela restaurada, em
+    desktop e mobile, sem regredir os outros 26 cenarios do grupo
+    "prontuario do paciente". Sem migration, sem mudanca de contrato de
+    autorizacao. Validado com `pnpm --dir octaclin-backend typecheck`,
+    `servico-pacientes.spec.ts` (52/52), `pnpm --dir octaclin-web
+    typecheck`, `pnpm --dir octaclin-web test:authz`, Playwright (grupo
+    completo "prontuario do paciente", desktop e mobile),
+    `node --test scripts/validar-guardas-controladores.spec.mjs`,
+    `git diff --check` e `pnpm security:secrets`.
+  - Quatro incrementos restantes (264.2, 264.3, 264.6, 264.7) seguem
     pendentes.
 
 Documento de execução e prioridades: `ROADMAP_QUALIDADE_SEGURANCA_FASES_248_262.md`.

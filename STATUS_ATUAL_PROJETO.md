@@ -234,7 +234,28 @@ Atualizado em 2026-09-16.
   `pnpm --dir octaclin-web typecheck`, Playwright,
   `node --test scripts/validar-guardas-controladores.spec.mjs`,
   `git diff --check` e `pnpm security:secrets`.
-  Cinco incrementos restantes (264.2, 264.3, 264.5, 264.6, 264.7) continuam
+  **Incremento 264.5 entregue em 2026-09-17** (backend + BFF + frontend):
+  comparacao antropometrica entre quaisquer duas avaliacoes, nao so as duas
+  ultimas. `listarAvaliacoesAntropometricas` aceita `avaliacaoAnteriorId`/
+  `avaliacaoAtualId` opcionais e devolve `deltaSelecionado` resolvendo os
+  dois identificadores dentro da mesma lista ja carregada e escopada por
+  tenant/paciente, sem query extra; sem parametros o comportamento e
+  identico ao anterior (compatibilidade obrigatoria preservada). BFF
+  encaminha os dois parametros por allowlist (padrao ja usado em
+  `exportar.csv`). Frontend: cartao "Comparar avaliações" na aba de
+  Antropometria com dois seletores de data e botao "Comparar". TDD: tres
+  testes novos no backend (comparacao 1a x atual; sem parametros nao muda
+  nada; avaliacao de outro paciente rejeitada com 404) e um cenario
+  Playwright novo, que falhou com a implementacao de frontend
+  temporariamente revertida (timeout no seletor) e passou restaurada, em
+  desktop e mobile, sem regredir os outros 26 cenarios de "prontuario do
+  paciente". Sem migration, sem mudanca de contrato de autorizacao.
+  Validado com `pnpm --dir octaclin-backend typecheck`,
+  `servico-pacientes.spec.ts` (52/52), `pnpm --dir octaclin-web typecheck`,
+  `pnpm --dir octaclin-web test:authz`, Playwright (grupo completo),
+  `node --test scripts/validar-guardas-controladores.spec.mjs`,
+  `git diff --check` e `pnpm security:secrets`.
+  Quatro incrementos restantes (264.2, 264.3, 264.6, 264.7) continuam
   pendentes.
 - Fase 261 (escopo de trabalho: gaps de seguranca e privacidade
   identificados no audit da fase) **concluida tecnicamente em 2026-09-15,

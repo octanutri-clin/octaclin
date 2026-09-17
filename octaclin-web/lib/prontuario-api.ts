@@ -252,6 +252,7 @@ export interface DeltaAntropometricoApi {
 export interface SerieAntropometricaApi {
   avaliacoes: AvaliacaoAntropometricaApi[];
   deltaUltimas: DeltaAntropometricoApi[];
+  deltaSelecionado?: DeltaAntropometricoApi[];
 }
 
 export interface RegistrarAvaliacaoAntropometricaEntrada {
@@ -267,10 +268,14 @@ export interface RegistrarAvaliacaoAntropometricaEntrada {
 
 export async function listarAvaliacoesAntropometricas(
   pacienteId: string,
-  opcoes: { signal?: AbortSignal } = {}
+  opcoes: { signal?: AbortSignal; avaliacaoAnteriorId?: string; avaliacaoAtualId?: string } = {}
 ): Promise<SerieAntropometricaApi> {
+  const parametros = new URLSearchParams();
+  if (opcoes.avaliacaoAnteriorId) parametros.set('avaliacaoAnteriorId', opcoes.avaliacaoAnteriorId);
+  if (opcoes.avaliacaoAtualId) parametros.set('avaliacaoAtualId', opcoes.avaliacaoAtualId);
+  const query = parametros.toString();
   const resposta = await fetch(
-    `/api/pacientes/${encodeURIComponent(pacienteId)}/avaliacoes-antropometricas`,
+    `/api/pacientes/${encodeURIComponent(pacienteId)}/avaliacoes-antropometricas${query ? `?${query}` : ''}`,
     { cache: 'no-store', signal: opcoes.signal }
   );
   if (!resposta.ok) {

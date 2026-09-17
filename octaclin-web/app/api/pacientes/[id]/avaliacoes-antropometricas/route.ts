@@ -5,11 +5,17 @@ interface Params {
   params: Promise<{ id: string }>;
 }
 
-export async function GET(_request: NextRequest, props: Params) {
+export async function GET(request: NextRequest, props: Params) {
   const params = await props.params;
   try {
+    const parametros = new URLSearchParams();
+    for (const nome of ['avaliacaoAnteriorId', 'avaliacaoAtualId']) {
+      const valor = request.nextUrl.searchParams.get(nome);
+      if (valor) parametros.set(nome, valor);
+    }
+    const query = parametros.toString();
     const resposta = await requisitarBackendAutenticado(
-      `/pacientes/${encodeURIComponent(params.id)}/avaliacoes-antropometricas`
+      `/pacientes/${encodeURIComponent(params.id)}/avaliacoes-antropometricas${query ? `?${query}` : ''}`
     );
     return new NextResponse(await resposta.text(), {
       status: resposta.status,

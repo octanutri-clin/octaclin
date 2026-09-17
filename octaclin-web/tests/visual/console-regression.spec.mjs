@@ -2627,6 +2627,61 @@ test.describe('prontuario do paciente', () => {
     await assertSemOverflowHorizontal(page);
   });
 
+  test('permite comparar duas avaliacoes antropometricas alem das duas ultimas', async ({ page }) => {
+    await prepararProntuarioMockado(page);
+    const avaliacoesBase = [
+      {
+        id: 'avaliacao-2', pacienteId: 'paciente-1', avaliadaEm: '2026-07-21', protocolo: 'nenhum',
+        medidas: { pesoKg: 68.2, alturaCm: 165 },
+        resultado: { imc: 25.05, protocoloAplicado: 'nenhum', avisos: [] },
+        criadoEm: '2026-07-21T13:00:00.000Z'
+      },
+      {
+        id: 'avaliacao-1', pacienteId: 'paciente-1', avaliadaEm: '2026-06-21', protocolo: 'nenhum',
+        medidas: { pesoKg: 70.4, alturaCm: 165 },
+        resultado: { imc: 25.86, protocoloAplicado: 'nenhum', avisos: [] },
+        criadoEm: '2026-06-21T13:00:00.000Z'
+      },
+      {
+        id: 'avaliacao-0', pacienteId: 'paciente-1', avaliadaEm: '2026-01-10', protocolo: 'nenhum',
+        medidas: { pesoKg: 75.0, alturaCm: 165 },
+        resultado: { imc: 27.55, protocoloAplicado: 'nenhum', avisos: [] },
+        criadoEm: '2026-01-10T13:00:00.000Z'
+      }
+    ];
+    await page.route('**/api/pacientes/paciente-1/avaliacoes-antropometricas', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ avaliacoes: avaliacoesBase, deltaUltimas: [{ campo: 'pesoKg', anterior: 70.4, atual: 68.2, variacao: -2.2 }] })
+      });
+    });
+    await page.route('**/api/pacientes/paciente-1/avaliacoes-antropometricas?**', async (route) => {
+      const url = new URL(route.request().url());
+      expect(url.searchParams.get('avaliacaoAnteriorId')).toBe('avaliacao-0');
+      expect(url.searchParams.get('avaliacaoAtualId')).toBe('avaliacao-2');
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          avaliacoes: avaliacoesBase,
+          deltaUltimas: [{ campo: 'pesoKg', anterior: 70.4, atual: 68.2, variacao: -2.2 }],
+          deltaSelecionado: [{ campo: 'pesoKg', anterior: 75.0, atual: 68.2, variacao: -6.8 }]
+        })
+      });
+    });
+    await page.goto('/pacientes/paciente-1');
+
+    await page.getByRole('tab', { name: 'Avaliações' }).click();
+    const comparar = page.locator('.shadow-cartao', { hasText: 'Comparar avaliações' });
+    await comparar.getByLabel('Avaliação anterior para comparar').selectOption('avaliacao-0');
+    await comparar.getByLabel('Avaliação atual para comparar').selectOption('avaliacao-2');
+    await comparar.getByRole('button', { name: 'Comparar' }).click();
+    await expect(comparar.getByText('-6,80 kg')).toBeVisible();
+    await expect(comparar.getByText('75,00 para 68,20')).toBeVisible();
+    await assertSemOverflowHorizontal(page);
+  });
+
   test('exibe linha do tempo clinica consolidada', async ({ page }) => {
     await prepararProntuarioMockado(page, {
       permissoesExtras: ['agenda.financeiro.ler', 'planos_alimentares.ler', 'profissionais.ler']
