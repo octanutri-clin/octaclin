@@ -255,8 +255,29 @@ Atualizado em 2026-09-16.
   `pnpm --dir octaclin-web test:authz`, Playwright (grupo completo),
   `node --test scripts/validar-guardas-controladores.spec.mjs`,
   `git diff --check` e `pnpm security:secrets`.
-  Quatro incrementos restantes (264.2, 264.3, 264.6, 264.7) continuam
-  pendentes.
+  **Incremento 264.3 entregue em 2026-09-17** (backend + BFF + frontend):
+  marcar material educativo como visualizado.
+  `envio_material_paciente.visualizado_em` existia desde a migration 600 e
+  nunca era gravado. Nova rota `PATCH /portal/paciente/materiais/:envioId/visualizacao`,
+  chamada pelo proprio paciente: idempotente (so grava na primeira chamada e
+  promove `status` de `enviado` para `visualizado`), e rejeita com 404 (nao
+  403) o envio que pertence a outro paciente, seguindo o padrao ja usado em
+  `registrarEscolhaSubstituicao`. Frontend: botao "Marcar como lido" no
+  cartao de cada material do portal, substituido por "Lido em <data>" apos
+  a confirmacao. TDD: tres testes de servico e dois de controlador (a
+  trilha de auditoria guarda so `materialId`, nunca o titulo do material),
+  todos falhando antes da implementacao. Cenario Playwright novo, verificado
+  RED com o frontend/BFF temporariamente revertido e GREEN restaurado, em
+  desktop e mobile, sem regredir os outros cenarios de
+  `portal-paciente.spec.mjs` nem os 140 cenarios combinados de
+  `acessibilidade.spec.mjs` e `jornadas-criticas.spec.mjs`. Sem migration,
+  sem mudanca de contrato de autorizacao. Validado com
+  `pnpm --dir octaclin-backend typecheck`, `servico-portal-paciente.spec.ts`
+  (37/37), `controlador-portal-paciente.spec.ts` (7/7),
+  `pnpm --dir octaclin-web typecheck`, `pnpm --dir octaclin-web test:authz`,
+  Playwright, `node --test scripts/validar-guardas-controladores.spec.mjs`,
+  `git diff --check` e `pnpm security:secrets`.
+  Tres incrementos restantes (264.2, 264.6, 264.7) continuam pendentes.
 - Fase 261 (escopo de trabalho: gaps de seguranca e privacidade
   identificados no audit da fase) **concluida tecnicamente em 2026-09-15,
   com excecoes operacionais abertas; incrementos 1 a 4 integrados**.

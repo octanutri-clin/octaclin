@@ -2972,8 +2972,41 @@ publicado antes de ampliar a superficie de mudancas visuais.
     completo "prontuario do paciente", desktop e mobile),
     `node --test scripts/validar-guardas-controladores.spec.mjs`,
     `git diff --check` e `pnpm security:secrets`.
-  - Quatro incrementos restantes (264.2, 264.3, 264.6, 264.7) seguem
-    pendentes.
+  - Incremento 3 (marcar material educativo como visualizado) implementado em
+    2026-09-17. `envio_material_paciente.visualizado_em` existe desde a
+    migration `1720000000600-CriarMateriaisEducativos.ts` e nenhum codigo o
+    gravava. Nova rota `PATCH /portal/paciente/materiais/:envioId/visualizacao`
+    (quem visualiza e o proprio paciente): `ServicoPortalPaciente.marcarMaterialVisualizado`
+    resolve o envio escopado por `tenantId` e `pacienteId` do paciente
+    autenticado, e e idempotente -- so grava `visualizadoEm` e promove
+    `status` de `enviado` para `visualizado` na primeira chamada; chamadas
+    seguintes nao alteram a data. Envio de outro paciente devolve 404
+    (`NotFoundException`), nao 403, seguindo o padrao ja usado em
+    `registrarEscolhaSubstituicao` no mesmo servico. BFF
+    (`app/api/portal/paciente/materiais/[envioId]/visualizacao/route.ts`) e
+    cliente (`marcarMaterialVisualizadoPaciente` em `lib/portal-api.ts`) no
+    mesmo padrao ja usado por `concluirTarefaPaciente`. Frontend: o cartao de
+    cada material no portal ganhou o botao "Marcar como lido", substituido
+    por "Lido em <data>" apos a confirmacao. TDD: tres testes de servico
+    (marca e persiste; segunda chamada nao altera a data; envio de outro
+    paciente e rejeitado) e dois de controlador (chama o servico com o id
+    certo e registra a acao; a trilha guarda so `materialId`, nunca o titulo
+    do material) -- todos falharam antes da implementacao
+    (`Property 'marcarMaterialVisualizado' does not exist`) e passam depois.
+    Cenario Playwright novo em `portal-paciente.spec.mjs`, verificado RED com
+    a implementacao de frontend/BFF temporariamente revertida (timeout no
+    botao) e GREEN restaurada, em desktop e mobile, sem regredir os outros 8
+    cenarios do arquivo nem os 140 cenarios combinados de
+    `acessibilidade.spec.mjs` e `jornadas-criticas.spec.mjs` que tambem
+    renderizam a lista de materiais. Sem migration, sem mudanca de contrato
+    de autorizacao. Validado com `pnpm --dir octaclin-backend typecheck`,
+    `servico-portal-paciente.spec.ts` (37/37),
+    `controlador-portal-paciente.spec.ts` (7/7),
+    `pnpm --dir octaclin-web typecheck`, `pnpm --dir octaclin-web test:authz`,
+    Playwright (portal-paciente, acessibilidade e jornadas-criticas, desktop
+    e mobile), `node --test scripts/validar-guardas-controladores.spec.mjs`,
+    `git diff --check` e `pnpm security:secrets`.
+  - Tres incrementos restantes (264.2, 264.6, 264.7) seguem pendentes.
 
 Documento de execução e prioridades: `ROADMAP_QUALIDADE_SEGURANCA_FASES_248_262.md`.
 Matriz operacional: `MATRIZ_SKILLS_PLUGINS_MODELOS_FASES_243_248_262.md`.

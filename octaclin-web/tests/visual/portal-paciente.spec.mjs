@@ -433,6 +433,42 @@ test.describe('portal do paciente', () => {
     await assertSemOverflowHorizontal(page);
   });
 
+  test('paciente marca material educativo como lido', async ({ page }) => {
+    let chamouVisualizacao = false;
+    await prepararSessaoPaciente(page);
+    await page.route((url) => url.pathname === '/api/portal/paciente', async (route) => {
+      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(portalPaciente) });
+    });
+    await page.route(
+      (url) => url.pathname === '/api/portal/paciente/materiais/envio-material-1/visualizacao',
+      async (route) => {
+        chamouVisualizacao = true;
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({
+            ...portalPaciente.materiaisDisponiveis[0],
+            status: 'visualizado',
+            visualizadoEm: '2026-08-01T12:00:00.000Z'
+          })
+        });
+      }
+    );
+
+    await page.goto('/portal/plano');
+
+    const cartaoMaterial = page.locator('article', { hasText: 'Guia de hidratacao' });
+    const botaoMarcarLido = cartaoMaterial.getByRole('button', { name: 'Marcar como lido' });
+    await expect(botaoMarcarLido).toBeVisible();
+
+    await botaoMarcarLido.click();
+
+    await expect.poll(() => chamouVisualizacao).toBe(true);
+    await expect(cartaoMaterial.getByText(/Lido em/)).toBeVisible();
+    await expect(botaoMarcarLido).toHaveCount(0);
+    await assertSemOverflowHorizontal(page);
+  });
+
   test('mostra a curva de peso sem numero clinico derivado junto', async ({ page }) => {
     await prepararPortal(page);
     await page.goto('/portal/checkins');

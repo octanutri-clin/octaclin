@@ -392,6 +392,16 @@ export async function concluirTarefaPaciente(tarefaId: string): Promise<TarefaAc
   return resposta.json() as Promise<TarefaAcompanhamentoPortalApi>;
 }
 
+export async function marcarMaterialVisualizadoPaciente(
+  envioId: string
+): Promise<NonNullable<PortalPacienteApi['materiaisDisponiveis']>[number]> {
+  const resposta = await fetch(`/api/portal/paciente/materiais/${envioId}/visualizacao`, { method: 'PATCH' });
+  if (!resposta.ok) {
+    throw new ErroApiPortal(resposta.status, await extrairMensagemErro(resposta));
+  }
+  return resposta.json() as Promise<NonNullable<PortalPacienteApi['materiaisDisponiveis']>[number]>;
+}
+
 export async function obterFormularioRespondidoPaciente(
   respostaId: string,
   opcoes?: { signal?: AbortSignal }
