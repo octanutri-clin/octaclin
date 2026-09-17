@@ -7,16 +7,18 @@ Atualizado em 2026-09-17.
 - Produto: OctaClin.
 - Repositorio: `octanutri-clin/octaclin`.
 - Branch principal: `main`.
-- Reconciliacao de 2026-09-17: o PR GitHub `#254` foi integrado no `main` pelo
-  merge `9b7831491519ec052005c2f01642c6ab2fead9aa`; todos os checks aplicaveis
-  passaram e nao restou PR aberta. A fila volta ao PR 55 da governanca. Foi
-  iniciado um pacote documental R5 para contratar e executar pentest
-  independente com regras de engajamento, cadeia de custodia, remediacao,
-  reteste e decisao humana fail-closed para venda publica. Nenhuma execucao de
-  pentest independente do PR 55, contratacao, autorizacao de alvo ou evidencia
-  correspondente ocorreu. Esse gate nao altera os bloqueadores atuais da Fase
-  262, cujo `NO-GO temporario` continua ligado a ClamAV, juridico,
-  dominio/identidade e selecao do piloto. A Fase 265 permanece nao autorizada.
+- Reconciliacao de 2026-09-17: os PRs GitHub `#254` e `#255` foram integrados no
+  `main`, o ultimo pelo merge `2b1e3641d73bccaea03092f418d64b346b0d2414`;
+  todos os checks aplicaveis passaram e nao restou PR aberta. O pacote interno
+  do PR 55 define engajamento, cadeia de custodia, remediacao, reteste e decisao
+  humana fail-closed, mas nenhuma execucao, contratacao, autorizacao de alvo ou
+  evidencia correspondente ocorreu. O proprietario decidiu adiar o pentest
+  para evitar custo externo neste momento; o gate continua pendente e isso nao
+  concede GO de seguranca. A Fase 262 continua em `NO-GO temporario` por
+  ClamAV, juridico, dominio/identidade e selecao do piloto. Trabalho de produto
+  independente foi retomado na Fase 265 apenas para definir o contrato de
+  prioridade de acompanhamento explicavel, sem codigo ou migration ate o
+  aceite humano da semantica e da formula.
 - Reconciliacao de 2026-09-15: as migrations pendentes `1039` a `1045` foram
   aplicadas fora de banda em staging e producao, e os deploys de backend e web
   ficaram `Live`. Nova verificacao publica confirmou `/health/pronto` `200`,
@@ -381,15 +383,20 @@ Atualizado em 2026-09-17.
   enquanto a conduta publicada continuar vencida e no escopo; e a comparacao
   antropometrica limpa o delta anterior quando qualquer seletor muda. Os dois
   comportamentos receberam regressao automatizada. Nenhuma migration ou
-  mudanca de autorizacao. A proxima acao recomendada e retomar a trilha de
-  hardening pelo PR 55; nenhuma Fase 265 deve iniciar sem decisao explicita.
-- Fase 265 - Fundacao da inteligencia: score de risco calculado com override
-  auditado, **planejada e nao iniciada**. Corresponde ao PB-01 da Onda 2 em
-  `docs/product/OCTACLIN_PRODUCT_FEATURE_AUDIT.md` e aguarda decisao explicita
-  sobre pesos e sinais. Por envolver dado clinico, migration e job, o risco
-  minimo e R4: a execucao futura exige TDD de isolamento, rollback e migration
-  fora de banda com role owner. Nenhum codigo, DDL ou producao foi alterado para
-  esta fase neste encerramento.
+  mudanca de autorizacao. A recomendacao de retomar primeiro o PR 55 foi
+  cumprida com o pacote interno do PR `#255`; a execucao externa foi adiada pelo
+  proprietario, preservando o gate pendente.
+- Fase 265 - Fundacao da inteligencia: prioridade de acompanhamento calculada
+  com override auditado, **iniciada somente na definicao de produto**.
+  Corresponde ao PB-01 da Onda 2 em
+  `docs/product/OCTACLIN_PRODUCT_FEATURE_AUDIT.md`. A proposta separa prioridade
+  operacional de risco clinico, usa apenas sinais estruturados de engajamento,
+  mantem IA e efeitos automaticos fora do calculo e exige override humano
+  auditado e temporario. Por envolver dado clinico, migration e job, o risco
+  minimo e R4: codigo futuro exige aceite explicito da formula, TDD de
+  isolamento, rollback e migration fora de banda com role owner. Nenhum codigo,
+  DDL ou ambiente foi alterado neste incremento. Plano:
+  `docs/history/phases/PLANO_FASE_265.md`.
 - Fase 261 (escopo de trabalho: gaps de seguranca e privacidade
   identificados no audit da fase) **concluida tecnicamente em 2026-09-15,
   com excecoes operacionais abertas; incrementos 1 a 4 integrados**.
