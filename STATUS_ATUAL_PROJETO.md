@@ -291,7 +291,33 @@ Atualizado em 2026-09-16.
   acessibilidade. Sem migration, sem mudanca de contrato de autorizacao,
   nenhum arquivo de backend tocado. Validado com `pnpm --dir octaclin-web
   typecheck`, Playwright, `git diff --check` e `pnpm security:secrets`.
-  Dois incrementos restantes (264.2, 264.7) continuam pendentes.
+  **Incremento 264.7 entregue em 2026-09-17** (backend + frontend), decisao
+  A da auditoria: remover o canal push em vez de implementar envio real.
+  `AdaptadorPushPlaceholder` devolvia sucesso sem enviar nada e era o ramo
+  default de `ProcessadorNotificacoes.obterAdaptador` para qualquer tipo de
+  canal fora de `whatsapp`/`email`. `obterAdaptador` passa a lancar erro
+  explicito nesse caso, reaproveitando o `catch` que ja existia em
+  `processarMensagem` (mesmo tratamento de falha de SMTP/WhatsApp, sem
+  mudanca de fluxo). Frontend: removida a opcao "Push" dos dois seletores
+  de criacao (novo canal, novo template); canais push ja cadastrados
+  continuam visiveis, so passam a falhar de verdade ao enviar.
+  **Nao verificado neste ciclo**: se algum tenant de producao ja tem canal
+  push ativo -- se a checagem em producao confirmar uso real, isso deve ser
+  comunicado antes do rollout, pois mensagens que hoje aparentam sucesso
+  passarao a aparecer como falha (o objetivo do incremento). TDD: dois
+  testes novos (canal push e canal com tipo desconhecido) confirmando falha
+  explicita, falhando antes da mudanca e passando depois (5/5 no arquivo).
+  Cenario Playwright estendido confirmando a ausencia da opcao "Push",
+  falhando antes e passando depois, em desktop e mobile, sem regredir os
+  11 cenarios do gate de acessibilidade de comunicacoes. Sem migration, sem
+  mudanca de contrato de autorizacao. Validado com `pnpm --dir
+  octaclin-backend typecheck`, `processador-notificacoes.spec.ts` (5/5),
+  `pnpm --dir octaclin-web typecheck`, Playwright,
+  `node --test scripts/validar-redacao-auditoria.spec.mjs` (24/24),
+  `node --test scripts/validar-guardas-controladores.spec.mjs` (11/11),
+  `git diff --check` e `pnpm security:secrets`.
+  Um incremento restante (264.2, unificar a timeline do resumo com a do
+  historico) continua pendente.
 - Fase 261 (escopo de trabalho: gaps de seguranca e privacidade
   identificados no audit da fase) **concluida tecnicamente em 2026-09-15,
   com excecoes operacionais abertas; incrementos 1 a 4 integrados**.

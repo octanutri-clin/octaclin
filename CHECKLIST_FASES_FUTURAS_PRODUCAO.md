@@ -3029,7 +3029,46 @@ publicado antes de ampliar a superficie de mudancas visuais.
     arquivo de backend tocado. Validado com `pnpm --dir octaclin-web
     typecheck`, Playwright (desktop e mobile), `git diff --check` e
     `pnpm security:secrets`.
-  - Dois incrementos restantes (264.2, 264.7) seguem pendentes.
+  - Incremento 7 (canal push: parar de reportar entrega falsa) implementado
+    em 2026-09-17, decisao A da auditoria (remover, nao implementar push de
+    verdade). `AdaptadorPushPlaceholder.enviar` devolvia `idExterno` sem
+    enviar nada e era o ramo default de `ProcessadorNotificacoes.obterAdaptador`
+    para qualquer `tipo` de canal que nao fosse `whatsapp` nem `email` --
+    ou seja, tanto um canal `push` legitimo quanto um `tipo` corrompido
+    caiam no mesmo lugar e a mensagem virava `enviado` sem sair do banco.
+    `obterAdaptador` passa a lancar um erro explicito para qualquer tipo
+    fora de `whatsapp`/`email`; o `catch` que ja existia em
+    `processarMensagem` (usado para falha de SMTP/WhatsApp) cobre o caso sem
+    nenhuma mudanca de fluxo, registrando `status: 'falhou'` e o motivo.
+    Frontend: removida a opcao "Push" dos dois seletores de criacao (novo
+    canal e novo template) em `painel-comunicacoes.tsx`, para que nenhuma
+    clinica nova consiga cadastrar um canal que nunca envia; canais push ja
+    cadastrados continuam visiveis onde ja apareciam, so passam a falhar de
+    verdade ao tentar enviar. **Nao verificado neste ciclo**: se algum
+    tenant de producao ja tem canal `push` ativo e configurado como padrao
+    de algum fluxo -- essa mudanca faz mensagens que hoje aparentam sucesso
+    passarem a aparecer como falha (o objetivo do incremento), e isso deve
+    ser comunicado antes do rollout se a checagem em produção confirmar uso
+    real. TDD: dois testes novos em `processador-notificacoes.spec.ts`
+    (canal `push` e canal com tipo desconhecido) confirmando falha explicita
+    e que o adaptador placeholder nunca e chamado -- falharam antes da
+    mudanca (`status` vinha `'enviado'`) e os 5 testes do arquivo passam
+    depois. Cenario Playwright estendido em
+    `fase-196-comunicacoes-equipe.spec.mjs` confirmando a ausencia da opcao
+    "Push" nos dois seletores, falhando antes da remocao e passando depois,
+    em desktop e mobile, sem regredir os 11 cenarios do gate de
+    acessibilidade de comunicacoes. Sem migration, sem mudanca de contrato
+    de autorizacao. Validado com `pnpm --dir octaclin-backend typecheck`,
+    `processador-notificacoes.spec.ts` (5/5), `pnpm --dir octaclin-web
+    typecheck`, Playwright (fase-196 e acessibilidade de comunicacoes,
+    desktop e mobile), `node --experimental-strip-types
+    --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --test
+    scripts/validar-redacao-auditoria.spec.mjs` (24/24),
+    `node --test scripts/validar-guardas-controladores.spec.mjs` (11/11),
+    `git diff --check` e `pnpm security:secrets`.
+  - Um incremento restante (264.2, unificar a timeline do resumo com a do
+    historico) segue pendente. Seis dos sete incrementos da Onda 1 (264.1,
+    264.3, 264.4, 264.5, 264.6, 264.7) estao entregues.
 
 Documento de execução e prioridades: `ROADMAP_QUALIDADE_SEGURANCA_FASES_248_262.md`.
 Matriz operacional: `MATRIZ_SKILLS_PLUGINS_MODELOS_FASES_243_248_262.md`.

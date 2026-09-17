@@ -109,6 +109,10 @@ export class ProcessadorNotificacoes extends WorkerHost {
   private obterAdaptador(tipo: CanalNotificacaoOrm['tipo']): AdaptadorNotificacao {
     if (tipo === 'whatsapp') return this.whatsapp;
     if (tipo === 'email') return this.email;
-    return this.push;
+    // Push nao tem envio real (ver AdaptadorPushPlaceholder): antes disto,
+    // qualquer canal com tipo nao reconhecido caia aqui e a mensagem virava
+    // "enviada" sem sair do banco. Falhar explicitamente evita que a central
+    // de falhas minta sobre uma entrega que nao aconteceu.
+    throw new Error(`Canal de notificacao "${tipo}" nao possui envio real configurado.`);
   }
 }

@@ -88,6 +88,8 @@ test.describe('Fase 196 - comunicacoes e equipe', () => {
     await areas.getByRole('tab', { name: 'Configurações' }).click();
     await expect(page.getByText('Novo canal')).toBeVisible();
     await expect(page.getByText('Novo template')).toBeVisible();
+    await expect(page.locator('#canal-tipo').getByRole('option', { name: 'Push' })).toHaveCount(0);
+    await expect(page.locator('#template-canal').getByRole('option', { name: 'Push' })).toHaveCount(0);
   });
 
   test('separa diretorio, disponibilidade e integracoes da equipe clinica', async ({ page }) => {
