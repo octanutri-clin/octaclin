@@ -2165,6 +2165,126 @@ test.describe('agenda de producao', () => {
     await assertSemOverflowHorizontal(page);
   });
 
+  test('filtra consultas nao confirmadas nas proximas 48 horas', async ({ page }) => {
+    await prepararDashboardMockado(page);
+    const agora = Date.now();
+    const hora = 60 * 60 * 1000;
+    await page.route('**/api/agenda/consultas', async (route) => {
+      if (route.request().method() !== 'GET') {
+        await route.fallback();
+        return;
+      }
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify([
+          {
+            id: 'consulta-nao-confirmada',
+            tenantId: 'tenant-1',
+            pacienteId: 'paciente-1',
+            pacienteNome: 'Paciente Sem Confirmacao',
+            profissionalId: 'profissional-1',
+            profissionalNome: 'Dra. Carla',
+            titulo: 'Consulta',
+            inicioEm: new Date(agora + 6 * hora).toISOString(),
+            fimEm: new Date(agora + 7 * hora).toISOString(),
+            timezone: 'America/Sao_Paulo',
+            status: 'agendada',
+            notificacoes: {},
+            payload: {},
+            criadoEm: '2026-07-20T10:00:00.000Z',
+            atualizadoEm: '2026-07-20T10:00:00.000Z'
+          },
+          {
+            id: 'consulta-confirmada',
+            tenantId: 'tenant-1',
+            pacienteId: 'paciente-2',
+            pacienteNome: 'Paciente Confirmado',
+            profissionalId: 'profissional-1',
+            profissionalNome: 'Dra. Carla',
+            titulo: 'Consulta',
+            inicioEm: new Date(agora + 10 * hora).toISOString(),
+            fimEm: new Date(agora + 11 * hora).toISOString(),
+            timezone: 'America/Sao_Paulo',
+            status: 'agendada',
+            notificacoes: { confirmacaoPaciente: { status: 'confirmada', origem: 'whatsapp', confirmadaEm: new Date(agora - hora).toISOString() } },
+            payload: {},
+            criadoEm: '2026-07-20T10:00:00.000Z',
+            atualizadoEm: '2026-07-20T10:00:00.000Z'
+          },
+          {
+            id: 'consulta-fora-da-janela',
+            tenantId: 'tenant-1',
+            pacienteId: 'paciente-3',
+            pacienteNome: 'Paciente Fora Da Janela',
+            profissionalId: 'profissional-1',
+            profissionalNome: 'Dra. Carla',
+            titulo: 'Consulta',
+            inicioEm: new Date(agora + 72 * hora).toISOString(),
+            fimEm: new Date(agora + 73 * hora).toISOString(),
+            timezone: 'America/Sao_Paulo',
+            status: 'agendada',
+            notificacoes: {},
+            payload: {},
+            criadoEm: '2026-07-20T10:00:00.000Z',
+            atualizadoEm: '2026-07-20T10:00:00.000Z'
+          },
+          {
+            id: 'consulta-passada',
+            tenantId: 'tenant-1',
+            pacienteId: 'paciente-4',
+            pacienteNome: 'Paciente Passado',
+            profissionalId: 'profissional-1',
+            profissionalNome: 'Dra. Carla',
+            titulo: 'Consulta',
+            inicioEm: new Date(agora - 2 * hora).toISOString(),
+            fimEm: new Date(agora - hora).toISOString(),
+            timezone: 'America/Sao_Paulo',
+            status: 'agendada',
+            notificacoes: {},
+            payload: {},
+            criadoEm: '2026-07-20T10:00:00.000Z',
+            atualizadoEm: '2026-07-20T10:00:00.000Z'
+          },
+          {
+            id: 'consulta-cancelada-sem-confirmacao',
+            tenantId: 'tenant-1',
+            pacienteId: 'paciente-5',
+            pacienteNome: 'Paciente Cancelado',
+            profissionalId: 'profissional-1',
+            profissionalNome: 'Dra. Carla',
+            titulo: 'Consulta',
+            inicioEm: new Date(agora + 5 * hora).toISOString(),
+            fimEm: new Date(agora + 6 * hora).toISOString(),
+            timezone: 'America/Sao_Paulo',
+            status: 'cancelada',
+            notificacoes: {},
+            payload: {},
+            criadoEm: '2026-07-20T10:00:00.000Z',
+            atualizadoEm: '2026-07-20T10:00:00.000Z'
+          }
+        ])
+      });
+    });
+    await page.goto('/agenda');
+
+    await expect(page.getByRole('heading', { name: 'Agenda', exact: true })).toBeVisible();
+    const botaoFiltro = page.getByRole('button', { name: 'Não confirmadas (1)' });
+    await expect(botaoFiltro).toBeVisible();
+
+    await botaoFiltro.click();
+
+    await expect(page.locator('article').filter({ hasText: 'Paciente Sem Confirmacao' })).toBeVisible();
+    await expect(page.locator('article').filter({ hasText: 'Paciente Confirmado' })).toHaveCount(0);
+    await expect(page.locator('article').filter({ hasText: 'Paciente Fora Da Janela' })).toHaveCount(0);
+    await expect(page.locator('article').filter({ hasText: 'Paciente Passado' })).toHaveCount(0);
+    await expect(page.locator('article').filter({ hasText: 'Paciente Cancelado' })).toHaveCount(0);
+
+    await botaoFiltro.click();
+    await expect(page.locator('article').filter({ hasText: 'Paciente Confirmado' })).toBeVisible();
+    await assertSemOverflowHorizontal(page);
+  });
+
   test('exibe codigo de correlacao para suporte quando a agenda falha ao carregar', async ({ page }) => {
     await prepararDashboardMockado(page, { googleConectado: false });
     await page.route('**/api/agenda/consultas', async (route) => {

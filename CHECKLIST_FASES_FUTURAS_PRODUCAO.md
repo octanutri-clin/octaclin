@@ -3006,7 +3006,30 @@ publicado antes de ampliar a superficie de mudancas visuais.
     Playwright (portal-paciente, acessibilidade e jornadas-criticas, desktop
     e mobile), `node --test scripts/validar-guardas-controladores.spec.mjs`,
     `git diff --check` e `pnpm security:secrets`.
-  - Tres incrementos restantes (264.2, 264.6, 264.7) seguem pendentes.
+  - Incremento 6 (fila de consultas nao confirmadas) implementado em
+    2026-09-17, somente frontend. `ConsultaAgendaRespostaDto.notificacoes`
+    (com `confirmacaoPaciente`) ja era devolvido por inteiro em
+    `GET /agenda/consultas` (`servico-agenda.ts:mapearResposta`) e ja
+    aparecia por consulta no painel (`painel-agenda.tsx`); o gap real nao era
+    de dado nem de backend, era a ausencia de um filtro sobre o que ja
+    chegava ao cliente. `painel-agenda.tsx` ganhou o botao "Não confirmadas
+    (N)" que filtra a lista de consultas para as que sao futuras, tem status
+    ativo (`agendada`/`reagendada`), estao dentro de 48h a partir de agora
+    (alinhado ao lembrete de 24h ja existente, decisao registrada na secao
+    17 da auditoria) e nao tem `notificacoes.confirmacaoPaciente`. TDD: um
+    cenario Playwright novo cobrindo os cinco casos (nao confirmada entra;
+    confirmada nao entra; fora da janela de 48h nao entra; consulta passada
+    nao entra; consulta cancelada nao entra) -- falhou antes da
+    implementacao (botao inexistente) e passa depois, em desktop e mobile,
+    sem regredir os outros 9 cenarios de "agenda de producao" nem os
+    cenarios de agenda em `jornadas-criticas.spec.mjs`,
+    `agendamento-publico.spec.mjs`, `race-condition-agenda.spec.mjs` e o
+    gate de acessibilidade (`rodarChecagensDeAcessibilidade` sem violacao
+    nova). Sem migration, sem mudanca de contrato de autorizacao, nenhum
+    arquivo de backend tocado. Validado com `pnpm --dir octaclin-web
+    typecheck`, Playwright (desktop e mobile), `git diff --check` e
+    `pnpm security:secrets`.
+  - Dois incrementos restantes (264.2, 264.7) seguem pendentes.
 
 Documento de execução e prioridades: `ROADMAP_QUALIDADE_SEGURANCA_FASES_248_262.md`.
 Matriz operacional: `MATRIZ_SKILLS_PLUGINS_MODELOS_FASES_243_248_262.md`.

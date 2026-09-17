@@ -231,6 +231,16 @@ function consultaAtiva(consulta: ConsultaAgendaApi) {
   return consulta.status === 'agendada' || consulta.status === 'reagendada';
 }
 
+/** Alinhado ao lembrete de 24h ja existente: cobre o dobro da janela dele. */
+const JANELA_NAO_CONFIRMADAS_MS = 48 * 60 * 60 * 1000;
+
+function consultaNaoConfirmada(consulta: ConsultaAgendaApi, agora: number) {
+  if (!consultaAtiva(consulta)) return false;
+  const inicio = new Date(consulta.inicioEm).getTime();
+  if (Number.isNaN(inicio) || inicio <= agora || inicio > agora + JANELA_NAO_CONFIRMADAS_MS) return false;
+  return !consulta.notificacoes?.confirmacaoPaciente;
+}
+
 function descricaoLinkPublico(linkPublico: LinkAgendamentoPublicoApi | null) {
   if (!linkPublico) return 'Nenhum link ativo. Rotacione para gerar o primeiro endereco publico.';
   return linkPublico.urlPublica ?? linkPublico.mensagemUrlPublica;
@@ -267,6 +277,7 @@ export function PainelAgenda() {
   const [rotacionarLinkPendente, setRotacionarLinkPendente] = useState(false);
   const [podeLerFinanceiro, setPodeLerFinanceiro] = useState(false);
   const [urlExportacaoAgenda, setUrlExportacaoAgenda] = useState<string | null>(null);
+  const [apenasNaoConfirmadas, setApenasNaoConfirmadas] = useState(false);
 
   useEffect(() => {
     const noventaDias = 90 * 24 * 60 * 60 * 1000;
@@ -283,6 +294,11 @@ export function PainelAgenda() {
     () => [...consultas].sort((a, b) => new Date(a.inicioEm).getTime() - new Date(b.inicioEm).getTime()),
     [consultas]
   );
+  const consultasNaoConfirmadas = useMemo(
+    () => proximasConsultas.filter((consulta) => consultaNaoConfirmada(consulta, Date.now())),
+    [proximasConsultas]
+  );
+  const consultasExibidas = apenasNaoConfirmadas ? consultasNaoConfirmadas : proximasConsultas;
   const solicitacoesPendentes = useMemo(
     () => solicitacoes.filter((solicitacao) => solicitacao.status === 'pendente' || solicitacao.status === 'processando'),
     [solicitacoes]
@@ -1302,10 +1318,18 @@ export function PainelAgenda() {
           <CartaoCabecalho className="flex-col items-start sm:flex-row sm:items-center">
             <div>
               <h2 className="text-base font-semibold">Consultas agendadas</h2>
-              <p className="mt-1 text-sm text-texto-suave">{proximasConsultas.length} consultas no período carregado</p>
+              <p className="mt-1 text-sm text-texto-suave">{consultasExibidas.length} consultas no período carregado</p>
             </div>
             <FaixaAcoes rotulo="Ações das consultas agendadas">
               <BarraCarregamento visivel={carregando} rotulo="Carregando agenda" />
+              <Botao
+                type="button"
+                variante={apenasNaoConfirmadas ? 'primario' : 'secundario'}
+                aria-pressed={apenasNaoConfirmadas}
+                onClick={() => setApenasNaoConfirmadas((atual) => !atual)}
+              >
+                Não confirmadas ({consultasNaoConfirmadas.length})
+              </Botao>
               <a
                 href={urlExportacaoAgenda ?? '#'}
                 aria-disabled={!urlExportacaoAgenda}
@@ -1324,9 +1348,9 @@ export function PainelAgenda() {
             </FaixaAcoes>
           </CartaoCabecalho>
           <CartaoConteudo>
-            {proximasConsultas.length ? (
+            {consultasExibidas.length ? (
               <div className="grid gap-3">
-                {proximasConsultas.map((consulta) => {
+                {consultasExibidas.map((consulta) => {
                   const paciente = pacientePorId(pacientesLista, consulta.pacienteId);
                   const profissional = profissionalPorId(profissionaisLista, consulta.profissionalId);
                   return (
@@ -1443,6 +1467,8 @@ export function PainelAgenda() {
                   );
                 })}
               </div>
+            ) : apenasNaoConfirmadas ? (
+              <EstadoVazio titulo="Nenhuma consulta não confirmada" descricao="Todas as consultas das próximas 48 horas já foram confirmadas pelo paciente." />
             ) : (
               <EstadoVazio titulo="Nenhuma consulta agendada" descricao="Use o formulário ao lado para criar o primeiro agendamento." />
             )}

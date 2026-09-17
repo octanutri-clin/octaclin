@@ -277,7 +277,21 @@ Atualizado em 2026-09-16.
   `pnpm --dir octaclin-web typecheck`, `pnpm --dir octaclin-web test:authz`,
   Playwright, `node --test scripts/validar-guardas-controladores.spec.mjs`,
   `git diff --check` e `pnpm security:secrets`.
-  Tres incrementos restantes (264.2, 264.6, 264.7) continuam pendentes.
+  **Incremento 264.6 entregue em 2026-09-17** (somente frontend): fila de
+  consultas nao confirmadas. `notificacoes.confirmacaoPaciente` ja era
+  devolvido por inteiro em `GET /agenda/consultas` e ja aparecia por
+  consulta no painel; faltava um filtro sobre o que ja chegava ao cliente,
+  nao dado nem rota nova. `painel-agenda.tsx` ganhou o botao "Não
+  confirmadas (N)", que filtra para consultas futuras, com status ativo,
+  dentro de 48h a partir de agora e sem confirmacao do paciente (janela
+  alinhada ao lembrete de 24h ja existente). TDD: um cenario Playwright
+  cobrindo os cinco casos da regra, falhando antes da implementacao e
+  passando depois, em desktop e mobile, sem regredir os demais cenarios de
+  agenda em quatro arquivos de teste diferentes nem o gate de
+  acessibilidade. Sem migration, sem mudanca de contrato de autorizacao,
+  nenhum arquivo de backend tocado. Validado com `pnpm --dir octaclin-web
+  typecheck`, Playwright, `git diff --check` e `pnpm security:secrets`.
+  Dois incrementos restantes (264.2, 264.7) continuam pendentes.
 - Fase 261 (escopo de trabalho: gaps de seguranca e privacidade
   identificados no audit da fase) **concluida tecnicamente em 2026-09-15,
   com excecoes operacionais abertas; incrementos 1 a 4 integrados**.
