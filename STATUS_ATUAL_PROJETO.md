@@ -181,7 +181,8 @@ Atualizado em 2026-09-16.
   Detalhes em
   `docs/history/phases/fase-263-relatorios-financeiros-performance.md`.
 - Fase 264 - Ativacao: dado que ja existe vira acao visivel, **planejada em
-  2026-09-17, ainda nao iniciada**. Nasce da auditoria ampla de produto e
+  2026-09-17 e em execucao desde a mesma data (Incremento 1 entregue)**.
+  Nasce da auditoria ampla de produto e
   funcionalidades registrada em
   `docs/product/OCTACLIN_PRODUCT_FEATURE_AUDIT.md`, que mapeou o produto real a
   partir do codigo (20 modulos backend, 33 controladores, 85 entidades, 209
@@ -198,7 +199,20 @@ Atualizado em 2026-09-16.
   seguintes, por dependerem de migration ou de decisao de produto ainda aberta.
   O plano operacional por incremento — evidencia, arquivos, contrato, teste que
   deve falhar primeiro, validacoes e aceite — esta na secao 17 do documento de
-  auditoria. Nenhum codigo de produto foi alterado no planejamento.
+  auditoria.
+  **Incremento 264.1 entregue em 2026-09-17** (`octaclin-web`, somente
+  frontend): o painel clinico passou a exibir concluidas/faltas/canceladas/
+  reagendadas no cartao "Desfechos do periodo", reaproveitando o componente
+  `Metrica` e o DTO que ja calculava os quatro campos
+  (`dtos-dashboard-clinico.ts:41-44`) sem nenhuma chamada de rede nova.
+  Validado com `pnpm --dir octaclin-web typecheck` (limpo) e o cenario
+  Playwright `painel clinico profissional` em `console-regression.spec.mjs`
+  (desktop e mobile) apos tornar o teste RED primeiro — passou a exigir
+  valores nao-zero e distintos para os quatro indicadores e falhou antes da
+  implementacao por falta do cartao. `git diff --check` e
+  `pnpm security:secrets` limpos. Sem migration, sem mudanca de contrato de
+  autorizacao. Os demais seis incrementos (264.2 a 264.7) continuam
+  pendentes.
 - Fase 261 (escopo de trabalho: gaps de seguranca e privacidade
   identificados no audit da fase) **concluida tecnicamente em 2026-09-15,
   com excecoes operacionais abertas; incrementos 1 a 4 integrados**.

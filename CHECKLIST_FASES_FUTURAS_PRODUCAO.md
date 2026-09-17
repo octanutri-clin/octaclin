@@ -2874,7 +2874,8 @@ publicado antes de ampliar a superficie de mudancas visuais.
     performance mais uma linha "Consolidado". Sem migration. Nenhum
     candidato pendente na fase no momento.
 
-- [ ] Fase 264 - Ativacao: dado que ja existe vira acao visivel. [IMPORTANTE - NAO BLOQUEADOR]
+- [ ] Fase 264 - Ativacao: dado que ja existe vira acao visivel, **em andamento
+  desde 2026-09-17**. [IMPORTANTE - NAO BLOQUEADOR]
   - Origem: auditoria de produto de 2026-09-17
     (`docs/product/OCTACLIN_PRODUCT_FEATURE_AUDIT.md`). A auditoria concluiu que
     o gargalo do produto nao e falta de funcionalidade, e sim ativacao: ha dado
@@ -2907,6 +2908,16 @@ publicado antes de ampliar a superficie de mudancas visuais.
   - Definition of Done: os sete incrementos em `main`, cada um com teste
     negativo proprio, nenhuma migration criada, documentacao reconciliada e os
     gates de governanca passando.
+  - Incremento 1 implementado em 2026-09-17: dashboard clinico ganhou o cartao
+    "Desfechos do periodo" (concluidas/faltas/canceladas/reagendadas), so
+    frontend, reaproveitando o `Metrica` ja existente e o DTO que ja calculava
+    os quatro campos. TDD: o teste Playwright de
+    `console-regression.spec.mjs` (`painel clinico profissional`) passou a
+    exigir valores distintos e nao-zero para os quatro indicadores e o cartao
+    visivel com eles — falhou antes da mudanca (`toBeVisible` sem o cartao) e
+    passou depois, em desktop e mobile. Sem migration, sem mudanca de
+    contrato de autorizacao. Seis incrementos restantes (264.2 a 264.7)
+    seguem pendentes.
 
 Documento de execução e prioridades: `ROADMAP_QUALIDADE_SEGURANCA_FASES_248_262.md`.
 Matriz operacional: `MATRIZ_SKILLS_PLUGINS_MODELOS_FASES_243_248_262.md`.

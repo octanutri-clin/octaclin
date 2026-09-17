@@ -1941,7 +1941,7 @@ test.describe('painel clinico profissional', () => {
     await page.route('**/api/dashboard/clinico?*', async (route) => {
       await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({
         contexto: { periodo: 'hoje', inicioEm: '2026-07-22T00:00:00.000Z', fimEm: '2026-07-22T23:59:59.999Z', profissionalId: 'profissional-1', profissionalNome: 'Dra. Carla' },
-        indicadores: { consultasHoje: 1, proximas: 1, concluidas: 0, reagendadas: 0, canceladas: 0, faltas: 0, semRetorno30: 1, semRetorno60: 0, semRetorno90Mais: 0, formulariosPendentes: 1, tarefasVencidas: 1, solicitacoesPendentes: 1, comunicacoesEmAlerta: 1, pacientesRiscoAlto: 1 },
+        indicadores: { consultasHoje: 1, proximas: 1, concluidas: 3, reagendadas: 2, canceladas: 1, faltas: 4, semRetorno30: 1, semRetorno60: 0, semRetorno90Mais: 0, formulariosPendentes: 1, tarefasVencidas: 1, solicitacoesPendentes: 1, comunicacoesEmAlerta: 1, pacientesRiscoAlto: 1 },
         atendimentos: [{ id: 'consulta-1', pacienteId: 'paciente-1', profissionalId: 'profissional-1', pacienteNome: 'Ana Souza', inicioEm: '2026-07-22T13:00:00.000Z', fimEm: '2026-07-22T14:00:00.000Z', status: 'agendada' }],
         semRetorno: [{ pacienteId: 'paciente-2', profissionalId: 'profissional-1', pacienteNome: 'Bruno Lima', nivelRisco: 'alto', scoreRisco: 82, diasSemRetorno: 31, faixa: '30' }],
         tarefasVencidas: [{ id: 'tarefa-1', pacienteId: 'paciente-1', profissionalId: 'profissional-1', pacienteNome: 'Ana Souza', titulo: 'Revisar plano alimentar', prioridade: 'alta', vencimentoEm: '2026-07-21T12:00:00.000Z' }],
@@ -1956,6 +1956,10 @@ test.describe('painel clinico profissional', () => {
     await expect(page.getByRole('heading', { name: 'painel clínico' })).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Painel clínico' })).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Hoje em foco' })).toBeVisible();
+    const cartaoDesfechos = page.locator('.shadow-cartao', { hasText: 'Desfechos do período' });
+    await expect(cartaoDesfechos).toBeVisible();
+    await expect(cartaoDesfechos).toContainText('3');
+    await expect(cartaoDesfechos).toContainText('4 faltas, 1 canceladas, 2 reagendadas');
     await expect(page.getByText('Ana Souza').first()).toBeVisible();
     await expect(page.getByLabel('Profissional em contexto')).toHaveCount(0);
     await expect(page.getByRole('link', { name: 'Criar retorno' })).toHaveAttribute('href', /pacienteId=paciente-2/);
