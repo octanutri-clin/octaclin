@@ -1,10 +1,12 @@
 # OctaClin - Checklist vivo de fases futuras ate producao
 
 Atualizado em 2026-09-17. Fases 256 a 261, 263 e 264 concluidas; Fase 262
-permanece em andamento pelos gates externos do piloto; Fase 265 planejada e
-aguardando decisao explicita para iniciar.
-O programa de hardening PR 36-56 permanece como trilha separada, com o pacote
-interno do PR 55 em preparacao e todos os gates externos ainda pendentes.
+permanece em andamento pelos gates externos do piloto; Fase 265 iniciada apenas
+na definicao do contrato de produto, sem codigo ou migration.
+O programa de hardening PR 36-56 permanece como trilha separada. O pacote
+interno do PR 55 foi integrado, mas o proprietario adiou a contratacao do
+pentest para evitar custo neste momento; todos os gates externos seguem
+pendentes e a decisao nao equivale a `PASS`.
 
 Este arquivo deve guiar Codex, Claude Code ou qualquer outro agente de IA. Ele deve ser atualizado a cada fase concluida.
 
@@ -3231,18 +3233,18 @@ publicado antes de ampliar a superficie de mudancas visuais.
     prever um incremento por branch/PR, os sete incrementos foram integrados em
     uma unica branch e no PR `#253`. A excecao nao deve virar precedente para
     as ondas seguintes.
-  - Proximo passo recomendado: nao iniciar automaticamente a Fase 265. Retomar
-    a trilha separada de hardening pelo PR 55 e exigir aceite humano/checks
-    antes do PR 56. Depois, decidir explicitamente se a proxima fase de produto
-    abre a Onda 2 da auditoria, com PB-01 (score de risco explicavel) antes de
-    gatilhos ou executor de automacoes.
+  - Recomendacao de encerramento cumprida em 2026-09-17: a trilha separada de
+    hardening foi retomada pelo pacote interno do PR 55, integrado no PR GitHub
+    `#255`. A contratacao externa foi adiada pelo proprietario sem converter o
+    gate em `PASS`, e a Fase 265 recebeu autorizacao apenas para definir o
+    contrato de produto antes de qualquer codigo ou migration.
   - Modelo recomendado para o PR 55: modelo de maior capacidade com raciocinio
     `max`, por ser trabalho R5 de menor privilegio e configuracao externa.
     Skills/capacidades: security review, threat modeling, code verification e
     validacao de configuracao; GitHub/`gh` apenas para evidencia e fluxo de PR.
 
-- [ ] Fase 265 - Fundacao da inteligencia: score de risco calculado com
-  override auditado. [PLANEJADA - AGUARDA DECISAO EXPLICITA]
+- [~] Fase 265 - Fundacao da inteligencia: prioridade de acompanhamento
+  calculada com override auditado. [DEFINICAO DE PRODUTO EM ANDAMENTO]
   - Origem: PB-01 e Onda 2 de
     `docs/product/OCTACLIN_PRODUCT_FEATURE_AUDIT.md`.
   - Dependencia de produto: definir pesos e sinais explicaveis antes de escrever
@@ -3254,8 +3256,12 @@ publicado antes de ampliar a superficie de mudancas visuais.
   - Ordem da Onda 2 permanece `PB-01 -> PB-02 -> PB-03 -> PB-05`; nao ligar
     `paciente.risco_alto` nem criar novos gatilhos antes de concluir o score e o
     executor nas etapas correspondentes.
-  - Estado: planejamento apenas. Nenhuma implementacao, migration ou mudanca de
-    producao autorizada neste encerramento.
+  - Primeiro incremento iniciado em 2026-09-17: proposta de contrato em
+    `docs/history/phases/PLANO_FASE_265.md`, separando prioridade operacional de
+    risco clinico e definindo formula explicavel, override humano, sequencia de
+    implementacao e gates R4. Nenhum codigo, migration, job ou mudanca de
+    producao foi autorizado neste incremento. A implementacao aguarda aceite
+    explicito da semantica, pesos, janelas e faixas.
 
 Documento de execução e prioridades: `ROADMAP_QUALIDADE_SEGURANCA_FASES_248_262.md`.
 Matriz operacional: `MATRIZ_SKILLS_PLUGINS_MODELOS_FASES_243_248_262.md`.
@@ -3642,13 +3648,16 @@ numeros de PR do GitHub. Cada item deve entrar em branch e PR isolados.
   - [x] Gate externo: execucao `34286684698` PASS no banco dedicado confirmado, com restore mais validacao em 124 segundos e idade do snapshot de aproximadamente 152 segundos.
   - [ ] Object Lock COMPLIANCE no bucket: nao comprovado; permanece excecao aberta ate decisao irreversivel de infraestrutura e custo.
   - [x] Checks, review e merge humanos: PR GitHub `#216`, merge `6fe17ae`, com CI e CodeQL pos-merge verdes.
-- [~] PR 54 - Executar DAST, fuzzing e pentest interno em staging isolado.
+- [x] PR 54 - Executar DAST, fuzzing e pentest interno em staging isolado.
   - [x] Regras de engajamento restringem o teste ao runner e aos recursos descartaveis.
   - [x] ZAP Baseline passivo `2.17.0` fixado por digest e sem publicacao do relatorio bruto.
   - [x] Probes cobrem auth, BFLA, BOLA, mass assignment, parser, limites, upload, webhook e rate limit em 26/30 requisicoes seriais.
   - [x] Ledger de falso positivo exige cobertura de todos os caminhos, evidencia, owner e prazo.
-  - [ ] Executar o workflow autorizado no head do PR e registrar a evidencia sanitizada.
-  - [ ] Zerar ou decidir cada `critical/high` confirmado e concluir checks/review/merge humanos.
+  - [x] Workflow executado em staging descartavel; repeticao remota
+    `35108404379` passou com migrations, isolamento de dois tenants/RLS,
+    jornadas, ZAP, onboarding e teardown Neon.
+  - [x] Nenhum P0/P1 permaneceu no candidato exercitado; checks/review/merge
+    humanos concluidos pelo PR GitHub `#222`, merge `804e0bb`.
 - [~] PR 55 - Concluir pentest independente, reteste e GO/NO-GO.
   - [x] Pacote interno de engajamento define independencia, pre-condicoes,
     escopo, proibicoes, parada, evidencia e cadeia de custodia em
@@ -3656,6 +3665,9 @@ numeros de PR do GitHub. Cada item deve entrar em branch e PR isolados.
   - [x] Fluxo de remediacao/reteste e matriz fail-closed de GO/NO-GO de
     seguranca para venda publica definidos; pacote documental nao conta como
     teste executado nem adiciona bloqueador a Fase 262.
+  - [~] Contratacao e execucao externas adiadas pelo proprietario em 2026-09-17
+    para evitar custo neste momento; o adiamento preserva todos os gates abaixo
+    como pendentes e nao equivale a aceite de risco ou `PASS`.
   - [ ] Resolver ou aceitar formalmente a pendencia externa do PR 54 que afete
     a validade do ensaio.
   - [ ] Selecionar profissional independente e aprovar contrato, retencao,
@@ -3672,8 +3684,8 @@ numeros de PR do GitHub. Cada item deve entrar em branch e PR isolados.
 Fonte canonica de escopo, gates e skills do Claude Code:
 `docs/governance/PROGRAMA_HARDENING_SEGURANCA_PRS_36_56.md`.
 
-Proximo item autorizado: concluir a preparacao e a contratacao independente do
-PR 55. A execucao externa depende de autorizacao escrita, alvo isolado e dados
-sinteticos; o merge do pacote nao satisfaz o gate. PR 56 continua condicionado
-a decisao explicita de distribuir o Mobile, e a Fase 265 nao deve iniciar por
-inferencia desta trilha.
+Proximo item autorizado: definir o contrato de produto da Fase 265 conforme
+`docs/history/phases/PLANO_FASE_265.md`. A implementacao depende de aceite
+explicito da semantica, pesos, janelas e faixas. PR 55 permanece adiado e
+pendente; PR 56 continua condicionado a decisao explicita de distribuir o
+Mobile.

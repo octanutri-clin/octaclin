@@ -24,13 +24,14 @@
 > e implementacao incremental, sem que isso implique aceite do PR 55.
 >
 > Estado reconciliado em 2026-09-17: as Fases 256 a 261, 263 e 264 foram
-> integradas; a Fase 262 continua sem GO pelos gates externos, e a Fase 265 nao
-> foi autorizada. Nao ha pull request aberta depois do merge humano do PR
-> GitHub #254. O proximo incremento e a preparacao do PR 55, sem confundir
-> pacote de engajamento com pentest executado. O gate continua exigindo
-> profissional independente, cadeia de custodia, remediacao, reteste e decisao
-> humana para venda publica; ele nao adiciona automaticamente um bloqueador a
-> Fase 262. Pacote:
+> integradas; a Fase 262 continua sem GO pelos gates externos. O pacote interno
+> do PR 55 foi integrado pelo PR GitHub #255 (merge `2b1e364`), mas o
+> proprietario adiou a contratacao do pentest para evitar custo externo neste
+> momento. O gate continua exigindo profissional independente, cadeia de
+> custodia, remediacao, reteste e decisao humana para venda publica; o adiamento
+> nao equivale a `PASS` e nao adiciona automaticamente um bloqueador a Fase 262.
+> A Fase 265 foi iniciada somente para definir o contrato de produto, sem codigo
+> ou migration antes do aceite humano da formula. Pacote:
 > `docs/governance/PACOTE_ENGAJAMENTO_PENTEST_PR55.md`.
 > O PR 51 foi integrado no `main` pelos PRs GitHub #189 e #190.
 > Estado do PR 36: integrado no `main` pelo PR GitHub #158 em 2026-08-28.
