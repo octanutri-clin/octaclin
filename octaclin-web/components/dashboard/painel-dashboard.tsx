@@ -55,6 +55,7 @@ function nomeAlerta(tipo: string) {
   return {
     sem_retorno_risco_alto: 'Paciente de risco sem retorno',
     tarefa_vencida: 'Tarefa vencida',
+    conduta_vencida: 'Conduta terapêutica vencida',
     atendimento_proximo: 'Atendimento proximo',
     formulario_pendente: 'Formulario pendente',
     solicitacao_pendente: 'Solicitacao pendente',

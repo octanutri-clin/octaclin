@@ -1948,7 +1948,8 @@ test.describe('painel clinico profissional', () => {
         formulariosPendentes: [{ id: 'envio-1', pacienteId: 'paciente-1', profissionalId: 'profissional-1', pacienteNome: 'Ana Souza', questionarioId: 'questionario-1', respondidoEm: '2026-07-21T10:00:00.000Z' }],
         solicitacoesPendentes: [{ id: 'solicitacao-1', profissionalId: 'profissional-1', solicitanteNome: 'Marina Reis', inicioEm: '2026-07-23T14:00:00.000Z', fimEm: '2026-07-23T14:30:00.000Z', expiraEm: '2026-07-23T12:00:00.000Z' }],
         comunicacoes: [{ id: 'mensagem-1', pacienteId: 'paciente-1', profissionalId: 'profissional-1', pacienteNome: 'Ana Souza', status: 'recebido', criadoEm: '2026-07-22T10:00:00.000Z' }],
-        alertas: [], selecaoObrigatoria: false
+        alertas: [{ id: 'conduta_vencida:profissional-1:conduta-1', tipo: 'conduta_vencida', prioridade: 2, recursoId: 'conduta-1', pacienteId: 'paciente-1', ocorridoEm: '2026-07-20T00:00:00.000Z', ocultavel: true }],
+        selecaoObrigatoria: false
       }) });
     });
     await page.goto('/dashboard?profissionalId=profissional-2');
@@ -1960,6 +1961,7 @@ test.describe('painel clinico profissional', () => {
     await expect(cartaoDesfechos).toBeVisible();
     await expect(cartaoDesfechos).toContainText('3');
     await expect(cartaoDesfechos).toContainText('4 faltas, 1 canceladas, 2 reagendadas');
+    await expect(page.getByText('Conduta terapêutica vencida')).toBeVisible();
     await expect(page.getByText('Ana Souza').first()).toBeVisible();
     await expect(page.getByLabel('Profissional em contexto')).toHaveCount(0);
     await expect(page.getByRole('link', { name: 'Criar retorno' })).toHaveAttribute('href', /pacienteId=paciente-2/);

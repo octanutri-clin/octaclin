@@ -211,7 +211,30 @@ Atualizado em 2026-09-16.
   valores nao-zero e distintos para os quatro indicadores e falhou antes da
   implementacao por falta do cartao. `git diff --check` e
   `pnpm security:secrets` limpos. Sem migration, sem mudanca de contrato de
-  autorizacao. Os demais seis incrementos (264.2 a 264.7) continuam
+  autorizacao.
+  **Incremento 264.4 entregue em 2026-09-17** (backend + frontend): o
+  dashboard clinico passou a alertar conduta terapeutica vencida.
+  `ServicoDashboardClinico` busca `condutas_terapeuticas` e
+  `condutas_terapeuticas_versoes` do escopo do profissional (pacientes
+  ativos, conduta nao arquivada) e gera o alerta `conduta_vencida` quando a
+  versao publicada e nao descartada tem `validade_fim` anterior a hoje no
+  timezone clinico -- zero dias de tolerancia, a decisao registrada na
+  secao 17 da auditoria. Reaproveita `TIPOS_ALERTA_OCULTAVEIS` (ocultavel
+  por 24h como os demais alertas) e a fila "Fila de prioridade" que ja
+  existia; nenhum campo novo em `IndicadoresDashboardClinicoDto`. TDD: tres
+  testes novos em `servico-dashboard-clinico.spec.ts` (conduta vencida gera
+  alerta; conduta arquivada ou ainda valida nao gera; conduta de outro
+  profissional nao aparece para escopo restrito) -- o primeiro falhou antes
+  da implementacao por ausencia do alerta e os 16 testes do arquivo passam
+  depois. Rotulo "Conduta terapeutica vencida" acrescentado ao painel, com
+  o mesmo cenario Playwright do incremento 1 estendido para cobrir o novo
+  alerta (desktop e mobile). Sem migration, sem mudanca de contrato de
+  autorizacao ou de RLS. Validado com `pnpm --dir octaclin-backend
+  typecheck`, a suite `servico-dashboard-clinico.spec.ts` (16/16),
+  `pnpm --dir octaclin-web typecheck`, Playwright,
+  `node --test scripts/validar-guardas-controladores.spec.mjs`,
+  `git diff --check` e `pnpm security:secrets`.
+  Cinco incrementos restantes (264.2, 264.3, 264.5, 264.6, 264.7) continuam
   pendentes.
 - Fase 261 (escopo de trabalho: gaps de seguranca e privacidade
   identificados no audit da fase) **concluida tecnicamente em 2026-09-15,

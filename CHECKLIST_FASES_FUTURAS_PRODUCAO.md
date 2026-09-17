@@ -2916,8 +2916,33 @@ publicado antes de ampliar a superficie de mudancas visuais.
     exigir valores distintos e nao-zero para os quatro indicadores e o cartao
     visivel com eles — falhou antes da mudanca (`toBeVisible` sem o cartao) e
     passou depois, em desktop e mobile. Sem migration, sem mudanca de
-    contrato de autorizacao. Seis incrementos restantes (264.2 a 264.7)
-    seguem pendentes.
+    contrato de autorizacao.
+  - Incremento 4 (alerta de conduta terapeutica vencida) implementado em
+    2026-09-17, fora de ordem em relacao ao 264.2 por ser mais isolado e de
+    menor risco. `ServicoDashboardClinico` passou a buscar
+    `condutas_terapeuticas`/`condutas_terapeuticas_versoes` do escopo do
+    profissional (pacientes ativos, conduta nao arquivada) e gerar o alerta
+    `conduta_vencida` quando a versao publicada e nao descartada tem
+    `validade_fim` anterior a hoje no timezone clinico (zero dias de
+    tolerancia, conforme a decisao registrada na secao 17 da auditoria).
+    Reaproveita `TIPOS_ALERTA_OCULTAVEIS` (o alerta pode ser ocultado por 24h
+    como os demais) e a fila "Fila de prioridade" que ja existia no painel;
+    nenhum campo novo em `IndicadoresDashboardClinicoDto`. TDD: tres testes
+    novos em `servico-dashboard-clinico.spec.ts` — conduta vencida gera o
+    alerta; conduta arquivada ou ainda valida nao gera; conduta de outro
+    profissional nao aparece para quem tem escopo restrito — falharam antes
+    da implementacao (o primeiro por ausencia do alerta) e passam depois (16
+    testes no arquivo). Frontend: rotulo "Conduta terapeutica vencida"
+    acrescentado ao mapa de alertas do painel, com o mesmo teste Playwright
+    do incremento 1 estendido para cobrir o novo alerta. Sem migration
+    (reaproveita as tabelas ja existentes de condutas terapeuticas), sem
+    mudanca de contrato de autorizacao ou de RLS. Validado com
+    `pnpm --dir octaclin-backend typecheck`,
+    `pnpm --dir octaclin-backend test -- servico-dashboard-clinico`,
+    `pnpm --dir octaclin-web typecheck`, Playwright (desktop e mobile) e
+    `node --test scripts/validar-guardas-controladores.spec.mjs`.
+  - Cinco incrementos restantes (264.2, 264.3, 264.5, 264.6, 264.7) seguem
+    pendentes.
 
 Documento de execução e prioridades: `ROADMAP_QUALIDADE_SEGURANCA_FASES_248_262.md`.
 Matriz operacional: `MATRIZ_SKILLS_PLUGINS_MODELOS_FASES_243_248_262.md`.

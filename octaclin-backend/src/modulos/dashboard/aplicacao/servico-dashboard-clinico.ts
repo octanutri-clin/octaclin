@@ -1,5 +1,5 @@
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
-import { Between, EntityManager, In, IsNull, LessThan, MoreThan } from 'typeorm';
+import { Between, EntityManager, In, IsNull, LessThan, MoreThan, Not } from 'typeorm';
 import { ExecutorTenant } from '../../../infraestrutura/banco-dados/executor-tenant';
 import { PROFISSIONAL_SENTINELA_INEXISTENTE } from '../../../infraestrutura/seguranca/escopo-profissional';
 import { CriptografiaDadosSensiveis } from '../../../infraestrutura/seguranca/criptografia-dados-sensiveis';
@@ -8,6 +8,8 @@ import { AgendaConsultaOrm } from '../../agenda/infraestrutura/agenda-consulta.o
 import { AgendaSolicitacaoOrm } from '../../agenda/infraestrutura/agenda-solicitacao.orm';
 import { MensagemNotificacaoOrm } from '../../comunicacoes/infraestrutura/mensagem-notificacao.orm';
 import { AcompanhamentoTarefaOrm } from '../../pacientes/infraestrutura/acompanhamento-tarefa.orm';
+import { CondutaTerapeuticaOrm } from '../../pacientes/infraestrutura/conduta-terapeutica.orm';
+import { CondutaTerapeuticaVersaoOrm } from '../../pacientes/infraestrutura/conduta-terapeutica-versao.orm';
 import { PacienteOrm } from '../../pacientes/infraestrutura/paciente.orm';
 import { ProfissionalOrm } from '../../profissionais/infraestrutura/profissional.orm';
 import { EnvioQuestionarioOrm } from '../../questionarios/infraestrutura/envio-questionario.orm';
@@ -39,6 +41,7 @@ const STATUS_CONSULTA_ATIVA = new Set(['agendada', 'reagendada']);
 const UUID_VALIDO = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const TIPOS_ALERTA_OCULTAVEIS = new Set([
   'tarefa_vencida',
+  'conduta_vencida',
   'desmarcacao_paciente',
   'atendimento_proximo',
   'formulario_pendente',
@@ -57,10 +60,18 @@ interface DadosAgregados {
   pacientes: PacienteOrm[];
   consultasConcluidas: AgendaConsultaOrm[];
   tarefas: AcompanhamentoTarefaOrm[];
+  condutas: CondutaTerapeuticaOrm[];
+  condutasVersoes: CondutaTerapeuticaVersaoOrm[];
   envios: EnvioQuestionarioOrm[];
   solicitacoes: AgendaSolicitacaoOrm[];
   mensagens: MensagemNotificacaoOrm[];
   ocultacoes: DashboardAlertaOcultoOrm[];
+}
+
+interface CondutaVencidaResolvida {
+  condutaId: string;
+  pacienteId: string;
+  validadeFim: Date;
 }
 
 @Injectable()
@@ -203,6 +214,8 @@ export class ServicoDashboardClinico {
         pacientes,
         consultasConcluidas: [],
         tarefas: [],
+        condutas: [],
+        condutasVersoes: [],
         envios: [],
         solicitacoes,
         mensagens: [],
@@ -269,11 +282,28 @@ export class ServicoDashboardClinico {
         })
       ]);
 
+    const condutas = await gerenciador.getRepository(CondutaTerapeuticaOrm).find({
+      where: { tenantId, pacienteId: In(pacienteIds), arquivadaEm: IsNull() }
+    });
+    const condutaIds = condutas.map((conduta) => conduta.id);
+    const condutasVersoes = condutaIds.length
+      ? await gerenciador.getRepository(CondutaTerapeuticaVersaoOrm).find({
+          where: {
+            tenantId,
+            condutaTerapeuticaId: In(condutaIds),
+            publicadaEm: Not(IsNull()),
+            descartadaEm: IsNull()
+          }
+        })
+      : [];
+
     return {
       consultas,
       pacientes,
       consultasConcluidas,
       tarefas,
+      condutas,
+      condutasVersoes,
       envios,
       solicitacoes,
       mensagens,
@@ -344,6 +374,7 @@ export class ServicoDashboardClinico {
         )
         .map((ocultacao) => ocultacao.alertaId)
     );
+    const condutasVencidas = this.montarCondutasVencidas(dados.condutas, dados.condutasVersoes, pacientesPorId, tenantId, contexto.id);
     const alertas = this.montarAlertas(
       contexto.id,
       semRetorno,
@@ -351,7 +382,8 @@ export class ServicoDashboardClinico {
       atendimentosCompletos,
       formulariosPendentes,
       solicitacoesPendentes,
-      comunicacoes
+      comunicacoes,
+      condutasVencidas
     ).filter((alerta) => !alerta.ocultavel || !ocultas.has(alerta.id));
 
     return {
@@ -436,6 +468,57 @@ export class ServicoDashboardClinico {
       .sort((a, b) => a.vencimentoEm.getTime() - b.vencimentoEm.getTime());
   }
 
+  private montarCondutasVencidas(
+    condutas: CondutaTerapeuticaOrm[],
+    versoes: CondutaTerapeuticaVersaoOrm[],
+    pacientes: Map<string, PacienteOrm>,
+    tenantId: string,
+    profissionalId: string
+  ): CondutaVencidaResolvida[] {
+    const hojeIso = this.dataIsoNoTimezoneClinico();
+    const condutasEscopo = new Map(
+      condutas
+        .filter(
+          (conduta) =>
+            conduta.tenantId === tenantId &&
+            conduta.profissionalId === profissionalId &&
+            !conduta.arquivadaEm &&
+            pacientes.has(conduta.pacienteId)
+        )
+        .map((conduta) => [conduta.id, conduta.pacienteId])
+    );
+
+    const numeroVencedorPorConduta = new Map<string, number>();
+    const vencidasPorConduta = new Map<string, CondutaVencidaResolvida>();
+    for (const versao of versoes) {
+      const pacienteId = condutasEscopo.get(versao.condutaTerapeuticaId);
+      if (
+        !pacienteId ||
+        versao.tenantId !== tenantId ||
+        !versao.publicadaEm ||
+        versao.descartadaEm ||
+        !versao.validadeFim ||
+        versao.validadeFim >= hojeIso
+      ) {
+        continue;
+      }
+      const numeroAtual = numeroVencedorPorConduta.get(versao.condutaTerapeuticaId) ?? -1;
+      if (versao.numero > numeroAtual) {
+        numeroVencedorPorConduta.set(versao.condutaTerapeuticaId, versao.numero);
+        vencidasPorConduta.set(versao.condutaTerapeuticaId, {
+          condutaId: versao.condutaTerapeuticaId,
+          pacienteId,
+          validadeFim: new Date(`${versao.validadeFim}T00:00:00.000Z`)
+        });
+      }
+    }
+    return [...vencidasPorConduta.values()];
+  }
+
+  private dataIsoNoTimezoneClinico(): string {
+    return new Intl.DateTimeFormat('en-CA', { timeZone: this.obterTimezoneClinico() }).format(new Date());
+  }
+
   private montarFormularios(
     envios: EnvioQuestionarioOrm[],
     pacientes: Map<string, PacienteOrm>,
@@ -513,7 +596,8 @@ export class ServicoDashboardClinico {
     atendimentos: AtendimentoDashboardClinicoDto[],
     formularios: FormularioPendenteDashboardClinicoDto[],
     solicitacoes: SolicitacaoPendenteDashboardClinicoDto[],
-    comunicacoes: ComunicacaoDashboardClinicoDto[]
+    comunicacoes: ComunicacaoDashboardClinicoDto[],
+    condutasVencidas: CondutaVencidaResolvida[]
   ): AlertaDashboardClinicoDto[] {
     const alertas: AlertaDashboardClinicoDto[] = [];
 
@@ -536,6 +620,17 @@ export class ServicoDashboardClinico {
         recursoId: item.id,
         pacienteId: item.pacienteId,
         ocorridoEm: item.vencimentoEm,
+        ocultavel: true
+      });
+    }
+    for (const item of condutasVencidas) {
+      alertas.push({
+        id: `conduta_vencida:${profissionalId}:${item.condutaId}`,
+        tipo: 'conduta_vencida',
+        prioridade: 2,
+        recursoId: item.condutaId,
+        pacienteId: item.pacienteId,
+        ocorridoEm: item.validadeFim,
         ocultavel: true
       });
     }

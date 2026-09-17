@@ -9,6 +9,7 @@ export type NivelRiscoDashboard = 'baixo' | 'medio' | 'alto';
 export type TipoAlertaDashboardClinico =
   | 'sem_retorno_risco_alto'
   | 'tarefa_vencida'
+  | 'conduta_vencida'
   | 'desmarcacao_paciente'
   | 'atendimento_proximo'
   | 'formulario_pendente'

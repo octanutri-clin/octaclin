@@ -7,6 +7,8 @@ import { AgendaConsultaOrm } from '../../agenda/infraestrutura/agenda-consulta.o
 import { AgendaSolicitacaoOrm } from '../../agenda/infraestrutura/agenda-solicitacao.orm';
 import { MensagemNotificacaoOrm } from '../../comunicacoes/infraestrutura/mensagem-notificacao.orm';
 import { AcompanhamentoTarefaOrm } from '../../pacientes/infraestrutura/acompanhamento-tarefa.orm';
+import { CondutaTerapeuticaOrm } from '../../pacientes/infraestrutura/conduta-terapeutica.orm';
+import { CondutaTerapeuticaVersaoOrm } from '../../pacientes/infraestrutura/conduta-terapeutica-versao.orm';
 import { PacienteOrm } from '../../pacientes/infraestrutura/paciente.orm';
 import { ProfissionalOrm } from '../../profissionais/infraestrutura/profissional.orm';
 import { EnvioQuestionarioOrm } from '../../questionarios/infraestrutura/envio-questionario.orm';
@@ -18,6 +20,8 @@ type RegistroTeste =
   | ProfissionalOrm
   | AgendaConsultaOrm
   | AcompanhamentoTarefaOrm
+  | CondutaTerapeuticaOrm
+  | CondutaTerapeuticaVersaoOrm
   | EnvioQuestionarioOrm
   | AgendaSolicitacaoOrm
   | MensagemNotificacaoOrm
@@ -100,6 +104,46 @@ function consulta(
   };
 }
 
+function condutaTerapeutica(
+  id: string,
+  pacienteId: string,
+  profissionalId: string,
+  opcoes: Partial<CondutaTerapeuticaOrm> = {}
+): CondutaTerapeuticaOrm {
+  return {
+    id,
+    tenantId: 'tenant-1',
+    pacienteId,
+    profissionalId,
+    tipo: 'meta',
+    criadoEm: diasAntes(30),
+    atualizadoEm: diasAntes(30),
+    ...opcoes
+  };
+}
+
+function condutaVersaoPublicada(
+  id: string,
+  condutaTerapeuticaId: string,
+  validadeFim: string,
+  opcoes: Partial<CondutaTerapeuticaVersaoOrm> = {}
+): CondutaTerapeuticaVersaoOrm {
+  return {
+    id,
+    tenantId: 'tenant-1',
+    condutaTerapeuticaId,
+    numero: 1,
+    tituloCriptografado: Buffer.from('titulo'),
+    conteudoCriptografado: Buffer.from('conteudo'),
+    validadeFim,
+    criadoPorUsuarioId: 'usuario-1',
+    publicadaEm: diasAntes(20),
+    criadoEm: diasAntes(20),
+    atualizadoEm: diasAntes(20),
+    ...opcoes
+  };
+}
+
 describe('ServicoDashboardClinico', () => {
   let servico: ServicoDashboardClinico;
   let registros: Map<Function, RegistroTeste[]>;
@@ -141,6 +185,8 @@ describe('ServicoDashboardClinico', () => {
           consulta('hoje-outro-tenant', 'paciente-outro-tenant', 'profissional-1', 'agendada', new Date('2026-07-27T19:00:00.000Z'), 'tenant-2')
         ]
       ],
+      [CondutaTerapeuticaOrm, []],
+      [CondutaTerapeuticaVersaoOrm, []],
       [
         AcompanhamentoTarefaOrm,
         [
@@ -552,6 +598,55 @@ describe('ServicoDashboardClinico', () => {
     const resultado = await servico.ocultarAlerta('tenant-1', alertaId, usuarioUuid);
     expect(resultado.alertaId).toBe(alertaId);
     expect(salvarOcultacao).toHaveBeenCalledWith(expect.objectContaining({ tenantId: 'tenant-1', alertaId }));
+  });
+
+  it('gera alerta de conduta terapeutica vencida quando a validade fim ja passou', async () => {
+    (registros.get(CondutaTerapeuticaOrm) as CondutaTerapeuticaOrm[]).push(
+      condutaTerapeutica('conduta-vencida-1', 'paciente-risco', 'profissional-1')
+    );
+    (registros.get(CondutaTerapeuticaVersaoOrm) as CondutaTerapeuticaVersaoOrm[]).push(
+      condutaVersaoPublicada('versao-vencida-1', 'conduta-vencida-1', '2026-07-01')
+    );
+
+    const resumo = await servico.obterResumo('tenant-1', { periodo: 'hoje' }, profissionalUm);
+
+    expect(resumo.alertas.map((item) => item.id)).toContain(
+      'conduta_vencida:profissional-1:conduta-vencida-1'
+    );
+    const alertaConduta = resumo.alertas.find((item) => item.tipo === 'conduta_vencida');
+    expect(alertaConduta?.pacienteId).toBe('paciente-risco');
+    expect(alertaConduta?.ocultavel).toBe(true);
+  });
+
+  it('nao gera alerta de conduta vencida quando a conduta esta arquivada ou a validade ainda nao passou', async () => {
+    (registros.get(CondutaTerapeuticaOrm) as CondutaTerapeuticaOrm[]).push(
+      condutaTerapeutica('conduta-arquivada-1', 'paciente-risco', 'profissional-1', { arquivadaEm: diasAntes(1) }),
+      condutaTerapeutica('conduta-valida-1', 'paciente-risco', 'profissional-1')
+    );
+    (registros.get(CondutaTerapeuticaVersaoOrm) as CondutaTerapeuticaVersaoOrm[]).push(
+      condutaVersaoPublicada('versao-arquivada-1', 'conduta-arquivada-1', '2026-07-01'),
+      condutaVersaoPublicada('versao-valida-1', 'conduta-valida-1', '2026-08-01')
+    );
+
+    const resumo = await servico.obterResumo('tenant-1', { periodo: 'hoje' }, profissionalUm);
+
+    expect(resumo.alertas.map((item) => item.tipo)).not.toContain('conduta_vencida');
+  });
+
+  it('nao mostra conduta vencida de outro profissional para quem tem escopo restrito', async () => {
+    (registros.get(CondutaTerapeuticaOrm) as CondutaTerapeuticaOrm[]).push(
+      condutaTerapeutica('conduta-outro-1', 'paciente-outro', 'profissional-2')
+    );
+    (registros.get(CondutaTerapeuticaVersaoOrm) as CondutaTerapeuticaVersaoOrm[]).push(
+      condutaVersaoPublicada('versao-outro-1', 'conduta-outro-1', '2026-07-01')
+    );
+
+    const resumo = await servico.obterResumo('tenant-1', { periodo: 'hoje' }, profissionalUm);
+
+    expect(resumo.alertas.map((item) => item.id)).not.toContain(
+      'conduta_vencida:profissional-1:conduta-outro-1'
+    );
+    expect(resumo.alertas.map((item) => item.tipo)).not.toContain('conduta_vencida');
   });
 
   it('calcula hoje no timezone clinico e usa fallback para configuracao invalida', async () => {
