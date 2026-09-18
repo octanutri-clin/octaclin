@@ -59,6 +59,7 @@ import { CriptografarCamposResiduaisFase2611720000001042 } from './migracoes/172
 import { AdicionarModeloRetencaoLgpdPacientes1720000001043 } from './migracoes/1720000001043-AdicionarModeloRetencaoLgpdPacientes';
 import { AdicionarCategoriaMensagemNotificacao1720000001044 } from './migracoes/1720000001044-AdicionarCategoriaMensagemNotificacao';
 import { ExpandirCategoriaArquivosMidia1720000001045 } from './migracoes/1720000001045-ExpandirCategoriaArquivosMidia';
+import { AdicionarPrioridadeAcompanhamento1720000001046 } from './migracoes/1720000001046-AdicionarPrioridadeAcompanhamento';
 import { UserActionLogOrm } from '../auditoria/user-action-log.orm';
 import { ConsentimentoLgpdOrm } from '../lgpd/consentimento-lgpd.orm';
 import { TombstoneExclusaoLgpdOrm } from '../lgpd/tombstone-exclusao-lgpd.orm';
@@ -102,6 +103,8 @@ import { LogDiarioRapidoOrm } from '../../modulos/mobile/infraestrutura/log-diar
 import { SincronizacaoMobileOrm } from '../../modulos/mobile/infraestrutura/sincronizacao-mobile.orm';
 import { ConvitePacienteOrm } from '../../modulos/pacientes/infraestrutura/convite-paciente.orm';
 import { AcompanhamentoTarefaOrm } from '../../modulos/pacientes/infraestrutura/acompanhamento-tarefa.orm';
+import { PrioridadeAcompanhamentoPacienteOrm } from '../../modulos/pacientes/infraestrutura/prioridade-acompanhamento-paciente.orm';
+import { PrioridadeAcompanhamentoHistoricoOrm } from '../../modulos/pacientes/infraestrutura/prioridade-acompanhamento-historico.orm';
 import { EvolucaoClinicaOrm } from '../../modulos/pacientes/infraestrutura/evolucao-clinica.orm';
 import { AvaliacaoAntropometricaOrm } from '../../modulos/pacientes/infraestrutura/avaliacao-antropometrica.orm';
 import { DocumentoEmitidoOrm } from '../../modulos/pacientes/infraestrutura/documento-emitido.orm';
@@ -226,6 +229,8 @@ export function criarOpcoesTypeOrm(): TypeOrmModuleOptions & DataSourceOptions {
       CondutaTerapeuticaVersaoOrm,
       ConvitePacienteOrm,
       AcompanhamentoTarefaOrm,
+      PrioridadeAcompanhamentoPacienteOrm,
+      PrioridadeAcompanhamentoHistoricoOrm,
       EvolucaoClinicaOrm,
       AvaliacaoAntropometricaOrm,
       DocumentoEmitidoOrm,
@@ -345,7 +350,8 @@ export function criarOpcoesTypeOrm(): TypeOrmModuleOptions & DataSourceOptions {
         CriptografarCamposResiduaisFase2611720000001042,
         AdicionarModeloRetencaoLgpdPacientes1720000001043,
         AdicionarCategoriaMensagemNotificacao1720000001044,
-        ExpandirCategoriaArquivosMidia1720000001045
+        ExpandirCategoriaArquivosMidia1720000001045,
+        AdicionarPrioridadeAcompanhamento1720000001046
       ],
     migrationsRun: executarMigracoesNoBoot(),
     synchronize: false,
