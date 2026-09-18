@@ -5,6 +5,7 @@ import { Botao } from '@/components/ui/botao';
 import { AlertaOperacional } from '@/components/ui/feedback';
 import { Modal, ModalConfirmacao } from '@/components/ui/modal';
 import { mensagemFalhaInterface } from '@/lib/erros-interface';
+import { converterDataOverrideParaIso } from '@/lib/prioridade-acompanhamento';
 import {
   CODIGOS_MOTIVO_OVERRIDE_PRIORIDADE_ACOMPANHAMENTO,
   removerOverridePrioridadeAcompanhamento,
@@ -69,7 +70,7 @@ export function SecaoPrioridadeAcompanhamento({ pacienteId, prioridade, podeGere
     setSalvando(true);
     setErro(null);
     try {
-      const expiraEmIso = new Date(`${expiraEm}T23:59:59.000Z`).toISOString();
+      const expiraEmIso = converterDataOverrideParaIso(expiraEm);
       const atualizado = await solicitarOverridePrioridadeAcompanhamento(pacienteId, {
         faixa,
         codigoMotivo,

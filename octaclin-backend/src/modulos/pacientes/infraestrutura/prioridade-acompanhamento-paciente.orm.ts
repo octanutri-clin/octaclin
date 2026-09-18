@@ -39,8 +39,8 @@ export class PrioridadeAcompanhamentoPacienteOrm {
   calculadoEm: Date;
 
   /**
-   * Override "tudo ou nada": os cinco campos abaixo existem juntos ou nenhum
-   * (check constraint da migration 1046). `overrideCodigoMotivo` e validado
+   * Override "tudo ou nada": os seis campos abaixo existem juntos ou nenhum
+   * (check constraint endurecida pela migration 1047). `overrideCodigoMotivo` e validado
    * contra o enum fechado (`CODIGOS_MOTIVO_OVERRIDE_PRIORIDADE_ACOMPANHAMENTO`)
    * na camada de aplicacao (DTO); a coluna continua `varchar(60)` porque o
    * enum aprovado cabe folgado nesse tamanho e nao ha ganho em duplicar a

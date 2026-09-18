@@ -1,5 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { EntityManager, IsNull, MoreThanOrEqual } from 'typeorm';
+import { Between, EntityManager, IsNull, LessThanOrEqual, MoreThan } from 'typeorm';
 import { ExecutorTenant } from '../../../infraestrutura/banco-dados/executor-tenant';
 import { CriptografiaDadosSensiveis } from '../../../infraestrutura/seguranca/criptografia-dados-sensiveis';
 import { AgendaConsultaOrm } from '../../agenda/infraestrutura/agenda-consulta.orm';
@@ -21,9 +21,7 @@ export interface ResultadoRecalculoPrioridadeTenant {
   pacientesComFalha: number;
 }
 
-/** > 90 dias (a maior janela da formula 265.1) com folga, para nao cortar falta na borda. */
-const JANELA_BUSCA_CONSULTAS_DIAS = 100;
-const LIMITE_CONSULTAS_POR_PACIENTE = 60;
+const JANELA_FALTAS_DIAS = 90;
 
 /**
  * Fase 265, Incremento 265.3 (`docs/history/phases/PLANO_FASE_265.md`):
@@ -50,41 +48,46 @@ export class ServicoRecalculoPrioridadeAcompanhamento {
   ) {}
 
   async recalcularTenant(tenantId: string, agora = new Date()): Promise<ResultadoRecalculoPrioridadeTenant> {
-    return this.executorTenant.executar(tenantId, async (gerenciador) => {
-      const pacientes = await gerenciador
+    const pacientes = await this.executorTenant.executar(tenantId, async (gerenciador) =>
+      gerenciador
         .getRepository(PacienteOrm)
-        .find({ where: { tenantId, arquivadoEm: IsNull() } });
+        .find({ select: { id: true }, where: { tenantId, arquivadoEm: IsNull() } })
+    );
 
-      const resultado: ResultadoRecalculoPrioridadeTenant = {
-        pacientesAvaliados: pacientes.length,
-        pacientesAtualizados: 0,
-        pacientesInalterados: 0,
-        pacientesComFalha: 0
-      };
+    const resultado: ResultadoRecalculoPrioridadeTenant = {
+      pacientesAvaliados: pacientes.length,
+      pacientesAtualizados: 0,
+      pacientesInalterados: 0,
+      pacientesComFalha: 0
+    };
 
-      for (const paciente of pacientes) {
-        try {
-          const gravouHistoricoNovo = await this.recalcularPaciente(gerenciador, tenantId, paciente.id, agora);
-          if (gravouHistoricoNovo) resultado.pacientesAtualizados += 1;
-          else resultado.pacientesInalterados += 1;
-        } catch (erro) {
-          resultado.pacientesComFalha += 1;
-          // So o nome da classe do erro entra no log -- mesma disciplina de
-          // ServicoAuditoria. O ultimo valor valido de
-          // prioridades_acompanhamento_paciente para este paciente
-          // permanece intacto: nenhuma escrita parcial ou incorreta chega
-          // ao banco quando este catch dispara.
-          this.logger.warn({
-            evento: 'prioridade_acompanhamento.recalculo_falhou',
-            tenantId,
-            pacienteId: paciente.id,
-            erroNome: erro instanceof Error ? erro.name : 'ErroDesconhecido'
-          });
-        }
+    for (const paciente of pacientes) {
+      try {
+        // Cada paciente usa uma transacao propria. Uma instrucao PostgreSQL
+        // com erro aborta a transacao atual; separar as unidades de trabalho
+        // impede que esse estado contamine os pacientes seguintes. A trava
+        // de rodada por tenant continua mantida pelo processador enquanto
+        // este metodo executa.
+        const gravouHistoricoNovo = await this.executorTenant.executar(tenantId, (gerenciador) =>
+          this.recalcularPaciente(gerenciador, tenantId, paciente.id, agora)
+        );
+        if (gravouHistoricoNovo) resultado.pacientesAtualizados += 1;
+        else resultado.pacientesInalterados += 1;
+      } catch (erro) {
+        resultado.pacientesComFalha += 1;
+        // So o nome da classe do erro entra no log -- mesma disciplina de
+        // ServicoAuditoria. Como toda a operacao do paciente foi revertida,
+        // o ultimo valor valido permanece intacto.
+        this.logger.warn({
+          evento: 'prioridade_acompanhamento.recalculo_falhou',
+          tenantId,
+          pacienteId: paciente.id,
+          erroNome: erro instanceof Error ? erro.name : 'ErroDesconhecido'
+        });
       }
+    }
 
-      return resultado;
-    });
+    return resultado;
   }
 
   private async recalcularPaciente(
@@ -93,40 +96,41 @@ export class ServicoRecalculoPrioridadeAcompanhamento {
     pacienteId: string,
     agora: Date
   ): Promise<boolean> {
-    const janelaInicio = new Date(agora.getTime() - JANELA_BUSCA_CONSULTAS_DIAS * 24 * 60 * 60 * 1000);
+    const janelaFaltasInicio = new Date(agora.getTime() - JANELA_FALTAS_DIAS * 24 * 60 * 60 * 1000);
+    const repositorioConsultas = gerenciador.getRepository(AgendaConsultaOrm);
 
-    const [consultas, ultimoRegistro] = await Promise.all([
-      gerenciador.getRepository(AgendaConsultaOrm).find({
-        where: { tenantId, pacienteId, inicioEm: MoreThanOrEqual(janelaInicio) },
-        order: { inicioEm: 'DESC' },
-        take: LIMITE_CONSULTAS_POR_PACIENTE
+    const [consultasComFalta, ultimaConsultaConcluida, proximaConsulta, ultimoRegistro] = await Promise.all([
+      repositorioConsultas.find({
+        select: { id: true, inicioEm: true },
+        where: { tenantId, pacienteId, status: 'falta', inicioEm: Between(janelaFaltasInicio, agora) }
+      }),
+      repositorioConsultas.findOne({
+        select: { inicioEm: true },
+        where: { tenantId, pacienteId, status: 'concluida', inicioEm: LessThanOrEqual(agora) },
+        order: { inicioEm: 'DESC' }
+      }),
+      repositorioConsultas.findOne({
+        select: { inicioEm: true },
+        where: [
+          { tenantId, pacienteId, status: 'agendada', inicioEm: MoreThan(agora) },
+          { tenantId, pacienteId, status: 'reagendada', inicioEm: MoreThan(agora) }
+        ],
+        order: { inicioEm: 'ASC' }
       }),
       gerenciador
         .getRepository(LogDiarioRapidoOrm)
         .findOne({ where: { tenantId, pacienteId }, order: { registradoEm: 'DESC' } })
     ]);
 
-    const faltas = consultas
-      .filter((consulta) => consulta.status === 'falta')
-      .map((consulta) => ({ consultaId: consulta.id, ocorreuEm: consulta.inicioEm }));
-
-    const ultimaConsultaConcluidaEm = maisRecente(
-      consultas.filter((consulta) => consulta.status === 'concluida').map((consulta) => consulta.inicioEm)
-    );
-
-    const proximaConsultaEm = maisProxima(
-      consultas
-        .filter((consulta) => (consulta.status === 'agendada' || consulta.status === 'reagendada') && consulta.inicioEm >= agora)
-        .map((consulta) => consulta.inicioEm)
-    );
+    const faltas = consultasComFalta.map((consulta) => ({ consultaId: consulta.id, ocorreuEm: consulta.inicioEm }));
 
     const ultimoRegistroHabitos = ultimoRegistro ? this.lerRegistroHabitos(ultimoRegistro) : undefined;
 
     const resultado = calcularPrioridadeAcompanhamento({
       agora,
       faltas,
-      ultimaConsultaConcluidaEm,
-      proximaConsultaEm,
+      ultimaConsultaConcluidaEm: ultimaConsultaConcluida?.inicioEm,
+      proximaConsultaEm: proximaConsulta?.inicioEm,
       ultimoRegistroHabitos
     });
 
@@ -216,14 +220,6 @@ export class ServicoRecalculoPrioridadeAcompanhamento {
     );
     return true;
   }
-}
-
-function maisRecente(datas: Date[]): Date | undefined {
-  return datas.reduce<Date | undefined>((atual, data) => (!atual || data > atual ? data : atual), undefined);
-}
-
-function maisProxima(datas: Date[]): Date | undefined {
-  return datas.reduce<Date | undefined>((atual, data) => (!atual || data < atual ? data : atual), undefined);
 }
 
 function mesmoDiaUtc(a: Date, b: Date): boolean {

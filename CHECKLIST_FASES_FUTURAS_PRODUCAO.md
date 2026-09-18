@@ -3336,8 +3336,8 @@ publicado antes de ampliar a superficie de mudancas visuais.
     backend (190 suites, 1.776 testes, 31 skips preexistentes), `git diff
     --check` e `pnpm security:secrets`. Detalhe completo em
     `docs/history/phases/PLANO_FASE_265.md`, secao 9.
-  - Incremento 265.4 implementado em 2026-09-18, em branch dedicada
-    (`feat/fase265-leitura-override`), **so backend**: tres metodos novos em
+  - Incremento 265.4 implementado e integrado em 2026-09-18 pelo PR GitHub
+    `#260`, **so backend**: tres metodos novos em
     `ServicoPacientes` e tres rotas em `ControladorPacientes` --
     `GET /pacientes/:id/prioridade-acompanhamento` (le o que 265.3 ja
     calculou, sem recalcular; devolve `valorCalculado` e `valorEfetivo`,
@@ -3367,9 +3367,8 @@ publicado antes de ampliar a superficie de mudancas visuais.
     `node --test scripts/validar-guardas-controladores.spec.mjs` (11/11),
     `git diff --check` e `pnpm security:secrets`. Detalhe completo em
     `docs/history/phases/PLANO_FASE_265.md`, secao 10.
-  - UI da 265.4 implementada em 2026-09-18, em branch dedicada
-    (`feat/fase265-ui-prioridade-acompanhamento`, PR aberta, aguardando
-    merge humano): novo BFF `GET
+  - UI da 265.4 implementada e integrada em 2026-09-18 pelo PR GitHub `#261`:
+    novo BFF `GET
     app/api/pacientes/[id]/prioridade-acompanhamento/route.ts` (mesmo padrao
     de `requisitarBackendAutenticado` das demais rotas do prontuario) e
     `obterPrioridadeAcompanhamento` em `lib/prontuario-api.ts`. O componente
@@ -3398,8 +3397,8 @@ publicado antes de ampliar a superficie de mudancas visuais.
     `fase-252-navegacao-descoberta.spec.mjs`, `reflow-visual.spec.mjs`,
     `fase-254-pacientes.spec.mjs` e `aviso-acesso-negado.spec.mjs`), `git
     diff --check` e `pnpm security:secrets`.
-  - Incremento 265.5 implementado em 2026-09-18, em branch dedicada
-    (`feat/fase265-enum-motivo-formula-v2`), decisao de produto explicita do
+  - Incremento 265.5 implementado e integrado em 2026-09-18 pelo PR GitHub
+    `#262`, decisao de produto explicita do
     dono, fechando dois gaps documentados desde 265.2/265.3. **Enum fechado
     de `codigoMotivo`**: vocabulario aprovado (`evento_recente_nao_capturado`,
     `informacao_externa_relevante`, `acompanhamento_intensificado`,
@@ -3427,8 +3426,8 @@ publicado antes de ampliar a superficie de mudancas visuais.
     `node --test scripts/validar-guardas-controladores.spec.mjs` (11/11),
     `git diff --check` e `pnpm security:secrets`. Detalhe completo em
     `docs/history/phases/PLANO_FASE_265.md`, secao 12.
-  - Incremento 265.6 implementado em 2026-09-18, em branch dedicada
-    (`feat/fase265-ui-override-prioridade-acompanhamento`), decisao de
+  - Incremento 265.6 implementado e integrado em 2026-09-18 pelo PR GitHub
+    `#263`, decisao de
     produto explicita do dono: UI de gerenciamento de override, consumindo
     inteiramente as rotas ja existentes do backend (265.4/265.5) -- sem
     mudanca de backend. Nova secao "Prioridade de acompanhamento" na aba
@@ -3899,8 +3898,8 @@ numeros de PR do GitHub. Cada item deve entrar em branch e PR isolados.
 Fonte canonica de escopo, gates e skills do Claude Code:
 `docs/governance/PROGRAMA_HARDENING_SEGURANCA_PRS_36_56.md`.
 
-Proximo item autorizado: definir o contrato de produto da Fase 265 conforme
-`docs/history/phases/PLANO_FASE_265.md`. A implementacao depende de aceite
-explicito da semantica, pesos, janelas e faixas. PR 55 permanece adiado e
-pendente; PR 56 continua condicionado a decisao explicita de distribuir o
-Mobile.
+Proximo item autorizado: concluir a correcao de robustez da Fase 265 em PR
+dedicado e, apos checks e merge humanos, executar o rollout fora de banda das
+migrations `1046` e `1047` primeiro em staging e somente depois em producao,
+seguindo `RUNBOOK_PRODUCAO.md`. PR 55 permanece adiado e pendente; PR 56
+continua condicionado a decisao explicita de distribuir o Mobile.

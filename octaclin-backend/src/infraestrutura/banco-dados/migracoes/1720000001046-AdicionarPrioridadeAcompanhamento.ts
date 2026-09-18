@@ -23,10 +23,10 @@ import { MigrationInterface, QueryRunner } from 'typeorm';
  *   consegue `update`/`delete`/`truncate` por SQL comum.
  *
  * Override "tudo ou nada": a check constraint em
- * `prioridades_acompanhamento_paciente` obriga os cinco campos de override
+ * `prioridades_acompanhamento_paciente` obriga os campos de controle do override
  * (faixa, codigo de motivo, expiracao, ator, instante) a existirem juntos ou
- * nenhum -- o contrato do plano ("override tem expiracao obrigatoria") vira
- * mecanismo, nao so disciplina de aplicacao.
+ * nenhum. A migration corretiva 1047 inclui tambem a justificativa cifrada
+ * nessa invariavel "tudo ou nada" sem reescrever esta migration publicada.
  *
  * `override_codigo_motivo` fica como `varchar` livre nesta migration porque
  * o conjunto fechado de codigos de motivo ainda nao foi definido pelo

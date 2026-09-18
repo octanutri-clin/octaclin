@@ -53,6 +53,15 @@ Atualizado em 2026-09-18.
   exige um operador humano ou uma sessao com a `DATABASE_URL` de producao
   (role `neondb_owner`) confirmada explicitamente por quem a fornece.
   Detalhe completo em `docs/history/phases/PLANO_FASE_265.md`, secao 14.
+- Correcao de robustez da Fase 265 iniciada em 2026-09-18 na branch
+  `fix/fase265-prioridade-hardening`, ainda sem merge: separa o recalculo em
+  uma transacao por paciente, consulta faltas/ultima concluida/proxima futura
+  sem a janela/limite compartilhados, serializa a expiracao lazy com lock de
+  linha, alinha a data maxima de 90 dias da UI com o limite do backend e cria
+  a migration corretiva `1047` para incluir a justificativa cifrada na
+  constraint "tudo ou nada". Nenhuma migration foi aplicada por esta branch;
+  o rollout devera tratar `1046` e `1047` como o bundle esperado, primeiro em
+  staging e somente depois em producao.
 - Reconciliacao de 2026-09-18: os PRs GitHub `#257` (Incremento 265.1,
   calculador de dominio puro), `#258` (Incremento 265.2, persistencia e
   RLS) e `#259` (Incremento 265.3, recalculo idempotente) foram integrados
@@ -66,8 +75,8 @@ Atualizado em 2026-09-18.
   "obrigatorio" que nao existe em nenhuma entidade de questionarios hoje,
   entao o job wireia os outros tres sinais e omite esse de proposito, ate
   existir decisao de produto explicita. Na sequencia, o Incremento 265.4
-  (leitura e override auditado, **so backend**) foi implementado em branch
-  dedicada `feat/fase265-leitura-override`: rota de leitura do valor
+  (leitura e override auditado, **so backend**) foi integrado pelo PR GitHub
+  `#260`: rota de leitura do valor
   efetivo (calculado ou override), criacao/alteracao/remocao de override
   com expiracao obrigatoria (ate 90 dias) e expiracao lazy na propria
   leitura. O gate `validar-redacao-auditoria.mjs` pegou um erro real antes
@@ -528,9 +537,8 @@ Atualizado em 2026-09-18.
   scripts/validar-guardas-controladores.spec.mjs`, `git diff --check` e
   `pnpm security:secrets`. Plano e evidencia completa:
   `docs/history/phases/PLANO_FASE_265.md`, secoes 8-10.
-  A pendencia de UI do 265.4 foi fechada em branch dedicada
-  `feat/fase265-ui-prioridade-acompanhamento` (PR aberta, aguardando
-  merge humano): o prontuario do paciente busca
+  A pendencia de UI do 265.4 foi integrada pelo PR GitHub `#261`: o prontuario
+  do paciente busca
   `GET /pacientes/:id/prioridade-acompanhamento` (novo BFF em
   `app/api/pacientes/[id]/prioridade-acompanhamento/route.ts`, mesmo padrao
   de `requisitarBackendAutenticado`) e troca o rotulo "Risco {score} pontos"

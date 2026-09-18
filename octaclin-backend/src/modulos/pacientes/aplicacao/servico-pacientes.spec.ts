@@ -2440,6 +2440,10 @@ describe('ServicoPacientes - prioridade de acompanhamento (Fase 265.4)', () => {
 
     expect(resposta.valorEfetivo).toEqual({ faixa: 'baixa', origem: 'calculado' });
     expect(resposta.override).toBeUndefined();
+    expect(repositorioPrioridadeAtual.findOne).toHaveBeenCalledWith({
+      where: { tenantId: 'tenant-1', pacienteId: 'paciente-1' },
+      lock: { mode: 'pessimistic_write' }
+    });
     expect(repositorioPrioridadeAtual.save).toHaveBeenCalledWith(expect.objectContaining({ overrideFaixa: undefined }));
     expect(historicoSalvo).toHaveLength(1);
     expect(historicoSalvo[0]).toEqual(expect.objectContaining({ tipoEvento: 'override_expirado' }));
