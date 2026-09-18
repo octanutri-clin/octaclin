@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import * as nextHeaders from 'next/headers';
 import { DELETE as removerOverride, POST as criarOverride } from '../app/api/pacientes/[id]/prioridade-acompanhamento/override/route';
+import { converterDataOverrideParaIso } from '../lib/prioridade-acompanhamento';
 
 const { __clearCookies, __setCookies } = nextHeaders as typeof nextHeaders & {
   __clearCookies: () => void;
@@ -31,6 +32,14 @@ const corpoOverride = JSON.stringify({
   codigoMotivo: 'acompanhamento_intensificado',
   justificativa: 'paciente em situacao de risco social',
   expiraEm: '2026-12-01T00:00:00.000Z'
+});
+
+test('data maxima exibida pela UI preserva o horario e permanece dentro de 90 dias', () => {
+  const agora = new Date('2026-09-18T12:34:56.789Z');
+  const expiraEm = converterDataOverrideParaIso('2026-12-17', agora);
+
+  assert.equal(expiraEm, '2026-12-17T12:34:56.789Z');
+  assert.ok(new Date(expiraEm).getTime() - agora.getTime() <= 90 * 24 * 60 * 60 * 1000);
 });
 
 test('POST do override recusa sessao ausente antes de chamar o backend', async () => {

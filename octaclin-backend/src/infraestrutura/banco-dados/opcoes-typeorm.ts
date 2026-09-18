@@ -60,6 +60,7 @@ import { AdicionarModeloRetencaoLgpdPacientes1720000001043 } from './migracoes/1
 import { AdicionarCategoriaMensagemNotificacao1720000001044 } from './migracoes/1720000001044-AdicionarCategoriaMensagemNotificacao';
 import { ExpandirCategoriaArquivosMidia1720000001045 } from './migracoes/1720000001045-ExpandirCategoriaArquivosMidia';
 import { AdicionarPrioridadeAcompanhamento1720000001046 } from './migracoes/1720000001046-AdicionarPrioridadeAcompanhamento';
+import { EndurecerIntegridadeOverridePrioridade1720000001047 } from './migracoes/1720000001047-EndurecerIntegridadeOverridePrioridade';
 import { UserActionLogOrm } from '../auditoria/user-action-log.orm';
 import { ConsentimentoLgpdOrm } from '../lgpd/consentimento-lgpd.orm';
 import { TombstoneExclusaoLgpdOrm } from '../lgpd/tombstone-exclusao-lgpd.orm';
@@ -351,7 +352,8 @@ export function criarOpcoesTypeOrm(): TypeOrmModuleOptions & DataSourceOptions {
         AdicionarModeloRetencaoLgpdPacientes1720000001043,
         AdicionarCategoriaMensagemNotificacao1720000001044,
         ExpandirCategoriaArquivosMidia1720000001045,
-        AdicionarPrioridadeAcompanhamento1720000001046
+        AdicionarPrioridadeAcompanhamento1720000001046,
+        EndurecerIntegridadeOverridePrioridade1720000001047
       ],
     migrationsRun: executarMigracoesNoBoot(),
     synchronize: false,

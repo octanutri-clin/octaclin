@@ -47,7 +47,31 @@ function montarServico(cenario: Cenario = {}) {
     find: jest.fn(async (_opcoes: Record<string, unknown>) => pacientes)
   };
   const repositorioConsultas = {
-    find: jest.fn(async ({ where }: { where: { pacienteId: string } }) => consultasPorPaciente[where.pacienteId] ?? [])
+    find: jest.fn(async ({ where }: { where: { pacienteId: string; status?: string; inicioEm?: { _value?: unknown } } }) => {
+      const consultas = consultasPorPaciente[where.pacienteId] ?? [];
+      const valorJanela = where.inicioEm?._value;
+      const [inicio, fim] = Array.isArray(valorJanela) ? valorJanela : [valorJanela, undefined];
+      return consultas.filter((consulta) => {
+        if (where.status && consulta.status !== where.status) return false;
+        if (inicio instanceof Date && (consulta.inicioEm as Date) < inicio) return false;
+        if (fim instanceof Date && (consulta.inicioEm as Date) > fim) return false;
+        return true;
+      });
+    }),
+    findOne: jest.fn(
+      async ({ where, order }: { where: { pacienteId: string; status?: string } | { pacienteId: string; status?: string }[]; order: { inicioEm: 'ASC' | 'DESC' } }) => {
+        const alternativas = Array.isArray(where) ? where : [where];
+        const pacienteId = alternativas[0]?.pacienteId;
+        const status = new Set(alternativas.map((item) => item.status));
+        const consultas = (consultasPorPaciente[pacienteId] ?? [])
+          .filter((consulta) => status.has(consulta.status as string))
+          .sort((a, b) => {
+            const diferenca = (a.inicioEm as Date).getTime() - (b.inicioEm as Date).getTime();
+            return order.inicioEm === 'ASC' ? diferenca : -diferenca;
+          });
+        return consultas[0] ?? null;
+      }
+    )
   };
   const repositorioDiarios = {
     findOne: jest.fn(async ({ where }: { where: { pacienteId: string } }) => diarioPorPaciente[where.pacienteId] ?? null)
@@ -104,6 +128,7 @@ function montarServico(cenario: Cenario = {}) {
     servico,
     executorTenant,
     repositorioPacientes,
+    repositorioConsultas,
     repositorioPrioridadeAtual,
     repositorioHistorico,
     prioridadesSalvas,
@@ -241,7 +266,7 @@ describe('ServicoRecalculoPrioridadeAcompanhamento', () => {
   });
 
   it('uma falha em um paciente preserva o ultimo valor valido e nao interrompe os demais', async () => {
-    const { servico, prioridadesSalvas, repositorioPrioridadeAtual } = montarServico({
+    const { servico, executorTenant, prioridadesSalvas, repositorioPrioridadeAtual } = montarServico({
       pacientes: [
         { id: 'paciente-com-falha', tenantId: 'tenant-1', arquivadoEm: null },
         { id: 'paciente-ok', tenantId: 'tenant-1', arquivadoEm: null }
@@ -269,10 +294,66 @@ describe('ServicoRecalculoPrioridadeAcompanhamento', () => {
 
     expect(resultado.pacientesAvaliados).toBe(2);
     expect(resultado.pacientesComFalha).toBe(1);
+    // Uma transacao curta lista os pacientes e cada paciente usa sua propria
+    // transacao. Assim, um erro SQL que aborte uma delas nao contamina as
+    // escritas dos pacientes seguintes.
+    expect(executorTenant.executar).toHaveBeenCalledTimes(3);
     expect(prioridadesSalvas.some((registro) => registro.pacienteId === 'paciente-ok')).toBe(true);
     expect(repositorioPrioridadeAtual.save).not.toHaveBeenCalledWith(
       expect.objectContaining({ pacienteId: 'paciente-com-falha' })
     );
+  });
+
+  it('busca faltas, ultima consulta concluida e proxima consulta sem compartilhar janela ou limite', async () => {
+    const ultimaConcluida = diasAtras(120);
+    const proxima = new Date(AGORA.getTime() + 180 * DIA_MS);
+    const { servico, repositorioConsultas, prioridadesSalvas } = montarServico({
+      consultasPorPaciente: {
+        'paciente-1': [
+          { id: 'consulta-concluida-antiga', pacienteId: 'paciente-1', status: 'concluida', inicioEm: ultimaConcluida },
+          { id: 'consulta-futura', pacienteId: 'paciente-1', status: 'agendada', inicioEm: proxima }
+        ]
+      }
+    });
+
+    await servico.recalcularTenant('tenant-1', AGORA);
+
+    expect(repositorioConsultas.find).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({ tenantId: 'tenant-1', pacienteId: 'paciente-1', status: 'falta' })
+      })
+    );
+    expect(repositorioConsultas.findOne).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({ status: 'concluida' }),
+        order: { inicioEm: 'DESC' }
+      })
+    );
+    expect(repositorioConsultas.findOne).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.arrayContaining([
+          expect.objectContaining({ status: 'agendada' }),
+          expect.objectContaining({ status: 'reagendada' })
+        ]),
+        order: { inicioEm: 'ASC' }
+      })
+    );
+    expect(prioridadesSalvas[0]).toEqual(expect.objectContaining({ score: 0 }));
+  });
+
+  it('pontua sem retorno quando a ultima consulta concluida ocorreu ha mais de 100 dias', async () => {
+    const { servico, prioridadesSalvas } = montarServico({
+      consultasPorPaciente: {
+        'paciente-1': [
+          { id: 'consulta-concluida-antiga', pacienteId: 'paciente-1', status: 'concluida', inicioEm: diasAtras(120) }
+        ]
+      }
+    });
+
+    await servico.recalcularTenant('tenant-1', AGORA);
+
+    expect(prioridadesSalvas[0]).toEqual(expect.objectContaining({ score: 25, faixa: 'baixa' }));
+    expect(prioridadesSalvas[0]?.fatores).toContainEqual({ codigo: 'sem_retorno_programado', pontos: 25 });
   });
 
   it('sem sinal algum, mantem score zero e fatores vazios (formulario_vencido nao existe mais na formula 1.1.0)', async () => {

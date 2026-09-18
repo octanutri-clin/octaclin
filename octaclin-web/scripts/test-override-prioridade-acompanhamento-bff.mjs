@@ -30,6 +30,7 @@ writeFileSync(join(pastaTemporaria, 'tsconfig.json'), JSON.stringify({
   files: [
     'scripts/override-prioridade-acompanhamento-bff.spec.ts',
     'app/api/pacientes/[id]/prioridade-acompanhamento/override/route.ts',
+    'lib/prioridade-acompanhamento.ts',
     'lib/server/sessao-bff.ts'
   ].map((arquivo) => join(raiz, arquivo))
 }, null, 2), 'utf8');

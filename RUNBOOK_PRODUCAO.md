@@ -785,6 +785,99 @@ e os quatro indices `idx_*` da migration, alem das chaves primarias. So depois
 disso usar uma conta e paciente sinteticos autorizados para registrar uma
 coleta, listar a serie e confirmar auditoria sem valor clinico no log.
 
+### Prioridade de acompanhamento (Fase 265) - migrations 1046 e 1047
+
+O rollout da Fase 265 usa duas migrations consecutivas como um unico bundle:
+
+- `1720000001046-AdicionarPrioridadeAcompanhamento`: cria estado atual,
+  historico append-only, RLS/FORCE RLS, policies e triggers;
+- `1720000001047-EndurecerIntegridadeOverridePrioridade`: substitui a
+  constraint de override para exigir tambem a justificativa cifrada.
+
+Ambas sao `@aplicacao fora-de-banda`. A `1047` corrige a `1046` antes do
+primeiro rollout conhecido; nao edite a migration publicada `1046` para
+incorporar a correcao retroativamente.
+
+**Pre-condicoes**
+
+1. Branch e commit candidatos devem conter as duas migrations registradas em
+   `opcoes-typeorm.ts` e os checks da PR corretiva aprovados.
+2. Confirmar projeto, branch, banco e role owner do ambiente alvo com
+   `select current_database(), current_user;`. Nunca usar a URL runtime.
+3. Confirmar backup recente e restore exercitado conforme
+   `RUNBOOK_BACKUP_RESTORE.md`.
+4. Resolver a falha de readiness por schema pendente e qualquer outro alerta
+   aberto que torne o rollout inseguro; nao usar a migration para mascarar uma
+   falha independente.
+5. Manter `BANCO_EXECUTAR_MIGRACOES=false` no runtime.
+
+**Ordem por ambiente**
+
+Execute primeiro em staging. Producao so com staging verificado:
+
+```powershell
+pnpm --dir octaclin-backend run typeorm -- migration:show
+```
+
+As unicas linhas pendentes esperadas para esta fase sao, nesta ordem, `1046`
+e `1047`. Se uma delas estiver aplicada sem a outra, se houver migration
+anterior pendente ou se aparecer qualquer terceira pendencia, pare e investigue
+antes de escrever no banco.
+
+```powershell
+pnpm --dir octaclin-backend migration:run
+pnpm --dir octaclin-backend run typeorm -- migration:show
+```
+
+Depois, com a mesma conexao owner confirmada, verifique:
+
+```sql
+select relname, relrowsecurity, relforcerowsecurity
+from pg_class
+where relname in (
+  'prioridades_acompanhamento_paciente',
+  'prioridades_acompanhamento_historico'
+)
+order by relname;
+
+select polname, tablename
+from pg_policies
+where tablename in (
+  'prioridades_acompanhamento_paciente',
+  'prioridades_acompanhamento_historico'
+)
+order by tablename, polname;
+
+select conname, pg_get_constraintdef(oid)
+from pg_constraint
+where conrelid = 'prioridades_acompanhamento_paciente'::regclass
+  and conname = 'prioridades_acompanhamento_override_completo_check';
+```
+
+As duas tabelas precisam retornar `relrowsecurity = true` e
+`relforcerowsecurity = true`; as policies esperadas sao
+`isolamento_tenant_prioridades_acompanhamento_paciente` e
+`isolamento_tenant_prioridades_acompanhamento_historico`; a definicao da
+constraint precisa conter `override_justificativa_criptografada IS NULL` e
+`IS NOT NULL`.
+
+Finalize cada ambiente confirmando `/health/pronto` em `200`, migrations `ok`
+em `/health/detalhado` e uma leitura autenticada sintetica da prioridade. Nao
+dispare manualmente o job diario como parte da verificacao de schema.
+Remova `DATABASE_URL` da sessao PowerShell ao terminar:
+
+```powershell
+Remove-Item Env:DATABASE_URL
+```
+
+**Rollback**
+
+Reimplante a versao anterior da aplicacao e mantenha as migrations aditivas.
+Nao execute `migration:revert` automaticamente: o `down` de `1047` enfraquece
+a integridade do override e o `down` de `1046` remove a projecao de estado
+atual. Reversao de schema exige backup confirmado, janela deliberada e aceite
+humano explicito.
+
 ### Backup e restore
 
 Para RPO/RTO, manifesto dinamico do restore, estado de Object Lock e resposta a

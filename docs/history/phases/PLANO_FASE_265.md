@@ -826,10 +826,9 @@ copiada de outro ambiente.
    migration, PR `#258`, merge `bf1976a`), 265.3 (PR `#259`, merge
    `8de87f9`) e 265.4 (PR `#260`, merge `4b18371`, mais a UI em PR `#261`,
    merge `d80abd4`) **ja estao integrados no `main`** e ja leem/escrevem
-   as tabelas que esta migration cria. 265.5 (PR `#262`, aberta) e 265.6
-   (PR `#263`, aberta, empilhada sobre a `#262`) sao mudanca de aplicacao
-   pura, sem DDL, e nao dependem desta migration estar aplicada em
-   producao para funcionar corretamente quando mergeadas.
+   as tabelas que esta migration cria. 265.5 (PR `#262`) e 265.6 (PR
+   `#263`) foram integradas depois deste preflight; sao mudancas de aplicacao
+   pura, sem DDL.
 3. **Migration exata**: `1720000001046-AdicionarPrioridadeAcompanhamento`,
    confirmada por `git log` (introduzida no commit `b908eba`, unico commit
    que a toca ate hoje). Tagged `@aplicacao fora-de-banda` (exige role
@@ -887,21 +886,20 @@ copiada de outro ambiente.
     DDL sem confirmacao humana adicional, mesmo que as credenciais de
     banco estivessem disponiveis.
 
-### Gap adicional encontrado (nao pedido, mas relevante)
+### Gap adicional encontrado (fechado pela correcao de robustez)
 
 Ao contrario de toda migration anterior desta fase de rollout (cada uma
 tem sua propria subsecao em `RUNBOOK_PRODUCAO.md`, ex. "Fase 216 - plano
 alimentar e catalogo TACO", "Agenda publica segura (Fase 253)"),
-**`1720000001046-AdicionarPrioridadeAcompanhamento` ainda nao tem uma
+Na data deste preflight,
+**`1720000001046-AdicionarPrioridadeAcompanhamento` ainda nao tinha uma
 subsecao dedicada no runbook**. A secao generica
 "BANCO_EXECUTAR_MIGRACOES em producao" cobre o procedimento, mas nao
 documenta os detalhes especificos desta migration (tabelas esperadas,
 contagem de migrations antes/depois, verificacao de RLS/policies
-especificas). Registrado aqui como pendencia -- nao escrito no runbook
-nesta sessao porque preencher essa subsecao exigiria os mesmos dados de
-producao (contagem real de migrations, projeto/branch Neon) que os itens
-4-6 acima ja identificaram como indisponiveis aqui; escrever com
-placeholders adivinhados seria pior que nao escrever.
+especificas). A branch corretiva `fix/fase265-prioridade-hardening` fechou
+essa pendencia com uma secao que trata `1046` e `1047` como bundle esperado,
+sem preencher identidade ou contagem operacional com valores adivinhados.
 
 ### Conclusao desta etapa
 
@@ -918,3 +916,62 @@ restore testados recentes; (c) executar os passos 4-8 (identidade
 Neon/staging/producao/role) presencialmente ou numa sessao com acesso; (d)
 so entao seguir a ordem da secao 11 acima. Esta sessao nao tentou nenhum
 DDL e nao alterou nenhum estado de producao.
+
+## 15. Correcao de robustez antes do rollout
+
+Revisao posterior aos PRs `#257`-`#264` encontrou quatro regressões de
+implementacao e duas divergencias operacionais antes da aplicacao do schema:
+
+- a mesma busca de no maximo 60 consultas, limitada aos ultimos 100 dias,
+  alimentava faltas, ultima consulta concluida e proxima consulta. Isso
+  omitia justamente pacientes com retorno mais atrasado e podia escolher o
+  conjunto errado quando havia muitas consultas futuras;
+- todo o tenant era recalculado numa unica transacao. Um erro SQL do Postgres
+  abortaria essa transacao e impediria os pacientes seguintes de persistir,
+  apesar do `try/catch` por paciente;
+- duas leituras concorrentes podiam registrar duas vezes
+  `override_expirado`, pois a linha nao era bloqueada antes da expiracao lazy;
+- a constraint "tudo ou nada" da migration `1046` nao incluia
+  `override_justificativa_criptografada`;
+- a UI oferecia a data `hoje + 90 dias`, mas enviava `23:59:59Z`, podendo
+  exceder o limite exato do backend;
+- estado historico dos PRs e o proximo passo do checklist estavam defasados.
+
+Correcao implementada em `fix/fase265-prioridade-hardening`:
+
+- uma transacao curta lista ids e cada paciente e recalculado em transacao
+  propria; o advisory lock por tenant continua abrangendo a rodada no
+  processador;
+- faltas usam a janela exata de 90 dias, a ultima concluida e buscada sem
+  corte inferior e a proxima futura usa ordem ascendente, sem lista comum ou
+  limite compartilhado;
+- leitura/criacao/remocao de override bloqueiam a linha com
+  `pessimistic_write` antes de decidir sobre expiracao ou mutacao;
+- migration aditiva `1720000001047-EndurecerIntegridadeOverridePrioridade`
+  substitui somente a constraint e mantem a migration `1046` publicada
+  imutavel em comportamento;
+- a Web preserva o horario atual ao converter a data escolhida, mantendo a
+  opcao maxima dentro de 90 dias;
+- `RUNBOOK_PRODUCAO.md` exige que `1046` e `1047` aparecam juntas como as
+  unicas pendencias esperadas antes do rollout. Qualquer divergencia exige
+  parada, nao inferencia.
+
+Rollback de aplicacao: reimplantar a versao anterior e manter as migrations
+aditivas aplicadas. Nao executar `migration:revert` automaticamente: o `down`
+de `1047` enfraquece a constraint e o de `1046` remove o estado atual
+recomputavel. Nenhuma migration ou DDL foi executada durante esta correcao.
+
+Validacoes locais da branch:
+
+- `PASS` - TDD focado do backend, 3 suites e 88/88 testes;
+- `PASS` - suite completa do backend, 191 suites e 1.793 testes; 37 skips
+  preexistentes;
+- `PASS` - typecheck e build do backend e da Web;
+- `PASS` - `pnpm --dir octaclin-web test:authz`; lint da Web sem erros (56
+  warnings preexistentes) e build de producao;
+- `PASS` - gate de migrations fora de banda, 13/13; matriz de confiabilidade,
+  scan de secrets e `git diff --check`;
+- `SKIPPED` - ensaio local em PostgreSQL descartavel, porque o ambiente
+  Windows desta sessao nao possui Docker. O job Backend NestJS da PR deve
+  executar `migration:run` e o gate RLS em Postgres real antes do merge;
+- `NA` - staging, producao e DDL externo: nenhum ambiente externo foi escrito.

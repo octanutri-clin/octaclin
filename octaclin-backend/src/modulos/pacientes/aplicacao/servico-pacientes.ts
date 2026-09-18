@@ -732,9 +732,8 @@ export class ServicoPacientes {
   ): Promise<PrioridadeAcompanhamentoRespostaDto> {
     return this.executorTenant.executar(tenantId, async (gerenciador) => {
       await this.garantirPacienteExiste(gerenciador, tenantId, pacienteId, usuario);
-      const atual = await gerenciador
-        .getRepository(PrioridadeAcompanhamentoPacienteOrm)
-        .findOne({ where: { tenantId, pacienteId } });
+      const repositorio = gerenciador.getRepository(PrioridadeAcompanhamentoPacienteOrm);
+      let atual = await repositorio.findOne({ where: { tenantId, pacienteId } });
 
       if (!atual) {
         return {
@@ -745,9 +744,19 @@ export class ServicoPacientes {
       }
 
       if (atual.overrideExpiraEm && atual.overrideExpiraEm <= new Date()) {
-        await this.registrarEventoPrioridade(gerenciador, tenantId, pacienteId, 'override_expirado', atual, undefined);
-        this.limparOverridePrioridade(atual);
-        await gerenciador.getRepository(PrioridadeAcompanhamentoPacienteOrm).save(atual);
+        // A primeira leitura evita lock exclusivo no caminho comum. Quando
+        // parece vencido, reler com FOR UPDATE serializa GETs concorrentes:
+        // somente o primeiro ainda encontra o override e grava o evento.
+        const atualBloqueado = await repositorio.findOne({
+          where: { tenantId, pacienteId },
+          lock: { mode: 'pessimistic_write' }
+        });
+        if (atualBloqueado) atual = atualBloqueado;
+        if (atual.overrideExpiraEm && atual.overrideExpiraEm <= new Date()) {
+          await this.registrarEventoPrioridade(gerenciador, tenantId, pacienteId, 'override_expirado', atual, undefined);
+          this.limparOverridePrioridade(atual);
+          await repositorio.save(atual);
+        }
       }
 
       return this.montarRespostaPrioridade(atual);
@@ -784,7 +793,7 @@ export class ServicoPacientes {
       await this.garantirPacienteExiste(gerenciador, tenantId, pacienteId, usuario);
       const repositorio = gerenciador.getRepository(PrioridadeAcompanhamentoPacienteOrm);
       const atual =
-        (await repositorio.findOne({ where: { tenantId, pacienteId } })) ??
+        (await repositorio.findOne({ where: { tenantId, pacienteId }, lock: { mode: 'pessimistic_write' } })) ??
         repositorio.create({
           tenantId,
           pacienteId,
@@ -831,7 +840,7 @@ export class ServicoPacientes {
     return this.executorTenant.executar(tenantId, async (gerenciador) => {
       await this.garantirPacienteExiste(gerenciador, tenantId, pacienteId, usuario);
       const repositorio = gerenciador.getRepository(PrioridadeAcompanhamentoPacienteOrm);
-      const atual = await repositorio.findOne({ where: { tenantId, pacienteId } });
+      const atual = await repositorio.findOne({ where: { tenantId, pacienteId }, lock: { mode: 'pessimistic_write' } });
       if (!atual || !atual.overrideFaixa) {
         throw new NotFoundException('Nao ha override ativo para este paciente.');
       }
