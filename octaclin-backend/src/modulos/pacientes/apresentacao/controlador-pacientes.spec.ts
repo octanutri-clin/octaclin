@@ -2,7 +2,7 @@ import { Request } from 'express';
 import { ServicoAuditoria } from '../../../infraestrutura/auditoria/servico-auditoria';
 import { CHAVE_PAPEIS, CHAVE_PERMISSOES } from '../../auth/apresentacao/decorators';
 import { UsuarioAutenticado } from '../../auth/dominio/usuario-autenticado';
-import { AtualizarTarefaAcompanhamentoDto } from '../aplicacao/dtos';
+import { AtualizarTarefaAcompanhamentoDto, SolicitarOverridePrioridadeAcompanhamentoDto } from '../aplicacao/dtos';
 import { ServicoDuplicidadePacientes } from '../aplicacao/servico-duplicidade-pacientes';
 import { ServicoImportacaoPacientes } from '../aplicacao/servico-importacao-pacientes';
 import { ServicoPacientes } from '../aplicacao/servico-pacientes';
@@ -336,14 +336,14 @@ describe('ControladorPacientes', () => {
       );
     });
 
-    it('audita a solicitacao de override sem gravar codigoMotivo nem justificativa na trilha generica', async () => {
+    it('audita a solicitacao de override com codigoMotivo (enum fechado), nunca a justificativa na trilha generica', async () => {
       const solicitarOverridePrioridadeAcompanhamento = jest
         .fn()
         .mockResolvedValue({ valorEfetivo: { faixa: 'alta', origem: 'override' } });
       const { controlador, registrar, requisicao } = criarCenario({ solicitarOverridePrioridadeAcompanhamento });
-      const dadosOverride = {
-        faixa: 'alta' as const,
-        codigoMotivo: 'decisao_clinica',
+      const dadosOverride: SolicitarOverridePrioridadeAcompanhamentoDto = {
+        faixa: 'alta',
+        codigoMotivo: 'acompanhamento_intensificado',
         justificativa: 'paciente em situacao de risco social',
         expiraEm: '2026-12-01T00:00:00.000Z'
       };
@@ -361,9 +361,12 @@ describe('ControladorPacientes', () => {
         ([entrada]) => entrada.acao === 'pacientes.prioridade_acompanhamento.override_solicitado'
       );
       expect(chamadaAuditoria).toBeDefined();
-      expect(chamadaAuditoria![0].metadados).toEqual({ faixa: 'alta', expiraEm: '2026-12-01T00:00:00.000Z' });
+      expect(chamadaAuditoria![0].metadados).toEqual({
+        faixa: 'alta',
+        codigoMotivo: 'acompanhamento_intensificado',
+        expiraEm: '2026-12-01T00:00:00.000Z'
+      });
       expect(JSON.stringify(chamadaAuditoria![0].metadados)).not.toContain('risco social');
-      expect(JSON.stringify(chamadaAuditoria![0].metadados)).not.toContain('decisao_clinica');
     });
 
     it('audita a remocao do override', async () => {

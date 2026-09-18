@@ -1,5 +1,6 @@
 import { Column, CreateDateColumn, Entity, PrimaryGeneratedColumn, UpdateDateColumn } from 'typeorm';
 import type {
+  CodigoMotivoOverridePrioridadeAcompanhamento,
   FaixaPrioridadeAcompanhamento,
   FatorPrioridadeAcompanhamento
 } from '../dominio/prioridade-acompanhamento';
@@ -39,16 +40,17 @@ export class PrioridadeAcompanhamentoPacienteOrm {
 
   /**
    * Override "tudo ou nada": os cinco campos abaixo existem juntos ou nenhum
-   * (check constraint da migration 1046). `overrideCodigoMotivo` continua
-   * `string` livre porque o conjunto fechado de codigos ainda nao foi
-   * definido pelo produto -- a validacao chega com o fluxo de escrita em
-   * 265.4.
+   * (check constraint da migration 1046). `overrideCodigoMotivo` e validado
+   * contra o enum fechado (`CODIGOS_MOTIVO_OVERRIDE_PRIORIDADE_ACOMPANHAMENTO`)
+   * na camada de aplicacao (DTO); a coluna continua `varchar(60)` porque o
+   * enum aprovado cabe folgado nesse tamanho e nao ha ganho em duplicar a
+   * validacao como `check` de banco.
    */
   @Column({ name: 'override_faixa', type: 'varchar', length: 10, nullable: true })
   overrideFaixa?: FaixaPrioridadeAcompanhamento;
 
   @Column({ name: 'override_codigo_motivo', type: 'varchar', length: 60, nullable: true })
-  overrideCodigoMotivo?: string;
+  overrideCodigoMotivo?: CodigoMotivoOverridePrioridadeAcompanhamento;
 
   @Column({ name: 'override_justificativa_criptografada', type: 'bytea', nullable: true })
   overrideJustificativaCriptografada?: Buffer;

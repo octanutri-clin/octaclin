@@ -565,11 +565,12 @@ export class ControladorPacientes {
       recursoId: id,
       ip: requisicao.ip,
       userAgent: this.obterUserAgent(requisicao),
-      // Nunca a justificativa nem o codigo de motivo (texto livre validado, sem
-      // enum fechado ainda -- secao 3.3 do PLANO_FASE_265.md): os dois ja ficam
-      // no historico de dominio (prioridades_acompanhamento_historico), que tem
-      // RLS proprio; a trilha generica so recebe o que e vocabulario fechado.
-      metadados: { faixa: dados.faixa, expiraEm: dados.expiraEm }
+      // codigoMotivo e enum fechado desde a Fase 265.5 (validado via @IsIn no
+      // DTO), por isso pode entrar na trilha generica. A justificativa nunca
+      // entra aqui -- e a unica parte livre e cifrada, e fica exclusivamente
+      // no historico de dominio (prioridades_acompanhamento_historico), que
+      // tem RLS proprio.
+      metadados: { faixa: dados.faixa, codigoMotivo: dados.codigoMotivo, expiraEm: dados.expiraEm }
     });
     return prioridade;
   }

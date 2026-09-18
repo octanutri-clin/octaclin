@@ -1,4 +1,5 @@
 import {
+  CODIGOS_MOTIVO_OVERRIDE_PRIORIDADE_ACOMPANHAMENTO,
   calcularPrioridadeAcompanhamento,
   VERSAO_FORMULA_PRIORIDADE_ACOMPANHAMENTO
 } from './prioridade-acompanhamento';
@@ -9,6 +10,19 @@ const DIA_MS = 24 * 60 * 60 * 1000;
 function diasAntes(dias: number): Date {
   return new Date(AGORA.getTime() - dias * DIA_MS);
 }
+
+describe('CODIGOS_MOTIVO_OVERRIDE_PRIORIDADE_ACOMPANHAMENTO', () => {
+  it('e o vocabulario fechado aprovado, com "outro" como ultima categoria fechada', () => {
+    expect(CODIGOS_MOTIVO_OVERRIDE_PRIORIDADE_ACOMPANHAMENTO).toEqual([
+      'evento_recente_nao_capturado',
+      'informacao_externa_relevante',
+      'acompanhamento_intensificado',
+      'acompanhamento_reduzido',
+      'correcao_de_dado',
+      'outro'
+    ]);
+  });
+});
 
 describe('calcularPrioridadeAcompanhamento', () => {
   it('devolve prioridade baixa e explicacao vazia sem sinais', () => {
@@ -58,20 +72,6 @@ describe('calcularPrioridadeAcompanhamento', () => {
     }).fatores).not.toContainEqual(expect.objectContaining({ codigo: 'sem_retorno_programado' }));
   });
 
-  it('pontua uma vez quando existe formulario obrigatorio nao respondido vencido ha mais de sete dias', () => {
-    const resultado = calcularPrioridadeAcompanhamento({
-      agora: AGORA,
-      formularios: [
-        { envioId: 'envio-valido', obrigatorio: true, vencimentoEm: new Date(AGORA.getTime() - 7 * DIA_MS - 1) },
-        { envioId: 'envio-limite', obrigatorio: true, vencimentoEm: diasAntes(7) },
-        { envioId: 'envio-opcional', obrigatorio: false, vencimentoEm: diasAntes(20) },
-        { envioId: 'envio-respondido', obrigatorio: true, vencimentoEm: diasAntes(20), respondidoEm: diasAntes(10) }
-      ]
-    });
-
-    expect(resultado.fatores).toContainEqual({ codigo: 'formulario_vencido', pontos: 10, quantidade: 1 });
-  });
-
   it('pontua adesao declarada abaixo de 50 por cento apenas em registro dos ultimos 30 dias', () => {
     expect(calcularPrioridadeAcompanhamento({
       agora: AGORA,
@@ -100,9 +100,6 @@ describe('calcularPrioridadeAcompanhamento', () => {
         { consultaId: 'consulta-2', ocorreuEm: diasAntes(2) }
       ],
       ultimaConsultaConcluidaEm: diasAntes(61),
-      formularios: [
-        { envioId: 'envio-1', obrigatorio: true, vencimentoEm: diasAntes(8) }
-      ],
       ultimoRegistroHabitos: { registradoEm: diasAntes(1), adesaoPercentual: 20 }
     });
 
@@ -111,7 +108,6 @@ describe('calcularPrioridadeAcompanhamento', () => {
     expect(alta.fatores.map((fator) => fator.codigo)).toEqual([
       'faltas_recentes',
       'sem_retorno_programado',
-      'formulario_vencido',
       'adesao_declarada_baixa'
     ]);
 
@@ -127,10 +123,8 @@ describe('calcularPrioridadeAcompanhamento', () => {
         { consultaId: 'consulta-1', ocorreuEm: diasAntes(1) },
         { consultaId: 'consulta-2', ocorreuEm: diasAntes(2) }
       ],
-      formularios: [
-        { envioId: 'envio-1', obrigatorio: true, vencimentoEm: diasAntes(8) }
-      ]
-    })).toEqual(expect.objectContaining({ score: 70, faixa: 'alta' }));
+      ultimoRegistroHabitos: { registradoEm: diasAntes(1), adesaoPercentual: 20 }
+    })).toEqual(expect.objectContaining({ score: 75, faixa: 'alta' }));
   });
 
   it('rejeita datas invalidas e percentual fora do contrato', () => {
@@ -144,9 +138,5 @@ describe('calcularPrioridadeAcompanhamento', () => {
       agora: AGORA,
       faltas: [{ consultaId: ' ', ocorreuEm: AGORA }]
     })).toThrow('Falta invalida.');
-    expect(() => calcularPrioridadeAcompanhamento({
-      agora: AGORA,
-      formularios: [{ envioId: '', obrigatorio: true, vencimentoEm: diasAntes(8) }]
-    })).toThrow('Formulario invalido.');
   });
 });

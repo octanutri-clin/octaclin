@@ -562,3 +562,124 @@ ambiente (`/opt/pw-browsers/chromium`), porque a versao do
 `@playwright/test` do projeto esperava um `chromium_headless_shell` mais
 novo que nao estava pre-instalado. Usado um `playwright.config.mjs` local,
 descartavel, apenas para rodar a suite; nao versionado nesta branch.
+
+## 12. Incremento 265.5 - enum fechado de motivo e formula v1.1.0
+
+Decisao de produto explicita do dono (2026-09-18), fechando dois gaps
+documentados desde 265.2/265.3: o enum de `codigoMotivo` do override e o
+sinal `formulario_vencido` da formula. Implementado em branch dedicada
+`feat/fase265-enum-motivo-formula-v2`, so backend.
+
+### Enum fechado de `codigoMotivo`
+
+Vocabulario aprovado, exportado como
+`CODIGOS_MOTIVO_OVERRIDE_PRIORIDADE_ACOMPANHAMENTO` em
+`prioridade-acompanhamento.ts` (dominio, mesmo arquivo da formula, por ser
+vocabulario do dominio de prioridade, nao so do DTO):
+
+- `evento_recente_nao_capturado`
+- `informacao_externa_relevante`
+- `acompanhamento_intensificado`
+- `acompanhamento_reduzido`
+- `correcao_de_dado`
+- `outro`
+
+`SolicitarOverridePrioridadeAcompanhamentoDto.codigoMotivo` trocou
+`@IsString/@MinLength/@MaxLength` por `@IsIn(CODIGOS_MOTIVO_...)`, tipado
+com o union `CodigoMotivoOverridePrioridadeAcompanhamento` -- a mesma
+fronteira (`ValidationPipe` global do Nest) que ja rejeita `faixa` fora de
+`baixa/media/alta` agora rejeita `codigoMotivo` fora do enum, incluindo
+`outro` mal-empregado como se fosse um campo de texto (`outro` e uma
+categoria fechada como as demais; o detalhe continua exclusivamente na
+`justificativa`, cifrada). Nao houve mudanca na coluna do banco
+(`override_codigo_motivo varchar(60)`, migration 1046): o enum aprovado
+cabe folgado nesse tamanho e a validacao de aplicacao ja e a fronteira
+correta, sem ganho em duplicar como `check` de banco. Os tipos TypeScript
+das duas entidades ORM (`PrioridadeAcompanhamentoPacienteOrm`,
+`PrioridadeAcompanhamentoHistoricoOrm`) e da resposta
+(`PrioridadeAcompanhamentoRespostaDto.override.codigoMotivo`) foram
+estreitados do `string` livre anterior para o union fechado.
+
+Como agora e vocabulario fechado (nao mais texto livre sem enum), o gate
+`validar-redacao-auditoria.mjs` passou a aceitar `codigoMotivo` na trilha
+generica (`user_action_logs`) -- chave `codigomotivo` adicionada a
+`CHAVES_SEGURAS` com a justificativa escrita. O controlador
+(`solicitarOverridePrioridadeAcompanhamento`) agora inclui `codigoMotivo`
+no `metadados` do evento `override_solicitado`, junto de `faixa` e
+`expiraEm`; a `justificativa` continua nunca entrando ali, exclusivamente
+cifrada no historico de dominio.
+
+TDD: `dtos.spec.ts` novo (arquivo nao existia para o modulo de pacientes),
+usando `validate()` do `class-validator` direto na classe do DTO -- mesmo
+padrao ja usado em `dtos-agendamento-publico.spec.ts`. Três testes:
+aceita cada um dos seis codigos do enum; rejeita um codigo plausivel fora
+do enum (`decisao_clinica`, o codigo livre usado nos fixtures antes desta
+branch); rejeita string vazia. Os fixtures de `servico-pacientes.spec.ts`
+e `controlador-pacientes.spec.ts` que usavam codigos inventados
+(`decisao_clinica`, `motivo_anterior`, `motivo_novo`, `motivo`) foram
+atualizados para codigos reais do enum aprovado.
+
+### Formula v1.1.0: remocao de `formulario_vencido`
+
+`VERSAO_FORMULA_PRIORIDADE_ACOMPANHAMENTO` mudou de `1.0.0` para `1.1.0`.
+O fator `formulario_vencido`, o tipo `FormularioParaPrioridadeAcompanhamento`,
+o campo `formularios` de `EntradaPrioridadeAcompanhamento` e a funcao
+`contarFormulariosVencidos` foram removidos do calculador. Decisao de
+produto explicita: o dominio de questionarios nao tem hoje o conceito de
+"obrigatorio" que o fator exigia, e criar esse campo so para alimentar a
+formula seria modelar comportamento novo por conveniencia de calculo, nao
+por necessidade real do dominio. Pode voltar numa formula futura (`1.2.0`
+ou posterior) se e quando o produto adquirir esse conceito.
+
+Formula efetiva em `1.1.0`:
+
+- faltas recentes: 30 por falta unica na janela de 90 dias, maximo 60;
+- sem retorno programado (>60 dias sem consulta concluida e sem proxima
+  agendada): 25;
+- adesao declarada baixa (<50% no registro mais recente dos ultimos 30
+  dias): 15;
+- total continua limitado a 100;
+- faixas inalteradas: baixa 0-39, media 40-69, alta 70-100.
+
+`ServicoRecalculoPrioridadeAcompanhamento` (265.3) ja nunca passava
+`formularios` ao calculador (gap documentado desde 265.3), entao nenhuma
+mudanca de codigo foi necessaria ali alem do comentario, que foi reescrito
+para nao descrever mais um gap que deixou de existir.
+
+**Compatibilidade com historico existente**: um registro em
+`prioridades_acompanhamento_historico` com `versaoFormula: '1.0.0'` pode
+ter pontuado `formulario_vencido`; um registro `1.1.0` nunca pontua esse
+fator. A leitura (`obterPrioridadeAcompanhamento`, 265.4) devolve o que
+esta persistido em `prioridades_acompanhamento_paciente.versaoFormula` sem
+recalcular, entao um paciente cujo ultimo calculo seja `1.0.0` (produzido
+antes deste deploy) so mostra a formula nova depois do proximo
+`@Cron` do job de recalculo (265.3) rodar para ele -- nenhuma migration de
+dado foi feita nem pedida para forcar isso, por decisao explicita ("nao
+crie migration de questionario" nesta autorizacao, e nenhuma outra
+migration foi pedida para o historico).
+
+TDD: `prioridade-acompanhamento.spec.ts` -- removido o teste dedicado a
+`formulario_vencido` e a asserção equivalente no teste de rejeição de
+formularios invalidos; o teste "combina fatores" recalculado sem o fator
+(a combinacao que antes somava faltas+formulario para 70 agora usa
+faltas+adesao para 75, mesma cobertura de cruzar o limiar de `alta` com
+dois fatores). Novo teste garante o vocabulario exportado do enum de
+motivo. `servico-recalculo-prioridade-acompanhamento.spec.ts` teve os
+fixtures de `versaoFormula` atualizados de `1.0.0` para `1.1.0` (mesmo
+comportamento testado, versao real).
+
+Validacoes desta branch:
+
+- `PASS` - TDD dos itens acima;
+- `PASS` - suite completa do backend: 191 suites, 1.793 testes, 31 skips
+  preexistentes (nenhum novo skip);
+- `PASS` - `pnpm --dir octaclin-backend typecheck`;
+- `PASS` - `pnpm --dir octaclin-backend build` (`dist/main.js` validado);
+- `PASS` - `pnpm test:redacao-auditoria` (24/24, incluindo a chave nova
+  `codigomotivo`);
+- `PASS` - `node --test scripts/validar-guardas-controladores.spec.mjs`
+  (11/11);
+- `PASS` - `git diff --check`;
+- `PASS` - `pnpm security:secrets`;
+- `NA` - migration, DDL ou schema novo (nenhuma coluna mudou de tipo ou
+  tamanho; a validacao e inteiramente de aplicacao).
