@@ -3244,7 +3244,7 @@ publicado antes de ampliar a superficie de mudancas visuais.
     validacao de configuracao; GitHub/`gh` apenas para evidencia e fluxo de PR.
 
 - [~] Fase 265 - Fundacao da inteligencia: prioridade de acompanhamento
-  calculada com override auditado. [DEFINICAO DE PRODUTO EM ANDAMENTO]
+  calculada com override auditado. [EM ANDAMENTO: 265.1 e 265.2 entregues]
   - Origem: PB-01 e Onda 2 de
     `docs/product/OCTACLIN_PRODUCT_FEATURE_AUDIT.md`.
   - Dependencia de produto: definir pesos e sinais explicaveis antes de escrever
@@ -3261,13 +3261,42 @@ publicado antes de ampliar a superficie de mudancas visuais.
     risco clinico e definindo formula explicavel, override humano, sequencia de
     implementacao e gates R4. O proprietario aceitou a semantica, pesos, janelas
     e faixas depois do merge do PR `#256` e autorizou a continuidade.
-  - Incremento 265.1 implementado em branch dedicada: calculador de dominio
-    puro, deterministico e versionado (`1.0.0`), com fatores fechados, janelas
-    UTC, deduplicacao, cap em 100, faixas existentes e validacao fail-closed.
-    TDD: 7/7 testes focados; typecheck, build e suite completa do backend
-    aprovados (186 suites, 1.749 testes, 37 skips preexistentes). Sem banco,
-    migration, RLS, job, UI, automacao ou mudanca de producao. Integracao ainda
-    depende de checks e merge humanos da PR deste incremento.
+  - Incremento 265.1 implementado e integrado em 2026-09-17 (PR GitHub `#257`,
+    merge `38f5a30`): calculador de dominio puro, deterministico e versionado
+    (`1.0.0`), com fatores fechados, janelas UTC, deduplicacao, cap em 100,
+    faixas existentes e validacao fail-closed. TDD: 7/7 testes focados;
+    typecheck, build e suite completa do backend aprovados (186 suites, 1.749
+    testes, 37 skips preexistentes). Sem banco, migration, RLS, job, UI,
+    automacao ou mudanca de producao.
+  - Incremento 265.2 implementado em 2026-09-18, em branch dedicada
+    (`feat/fase265-persistencia-prioridade`): migration aditiva
+    `1720000001046-AdicionarPrioridadeAcompanhamento` cria
+    `prioridades_acompanhamento_paciente` (estado atual, uma linha por
+    paciente, override "tudo ou nada" com expiracao obrigatoria por check
+    constraint) e `prioridades_acompanhamento_historico` (append-only,
+    protegida por trigger que rejeita `update`/`delete`/`truncate` mesmo para
+    o dono da tabela -- mesmo mecanismo de `user_action_logs`, migration
+    1038). Ambas com RLS + FORCE RLS e policy de isolamento por tenant; as
+    duas entram automaticamente no gate exaustivo
+    `rls-isolamento-tenant.integracao.spec.ts` (inventario via catalogo do
+    Postgres, sem edicao manual do teste). Rollback assimetrico: `down()`
+    remove so o estado atual (recomputavel); o historico nunca e apagado por
+    rollback, conforme exigido pelo plano. So schema: nenhum servico, job ou
+    UI consome as tabelas novas neste incremento -- decisao deliberada para
+    isolar o risco da migration do risco de logica de negocio (265.3/265.4).
+    TDD: 11/11 testes da migration (RED confirmado por ausencia do arquivo).
+    Execucao real da migration nao foi feita nesta sessao por ausencia de
+    Docker/Postgres no ambiente remoto; o ensaio em banco descartavel
+    acontece de fato no job "Backend NestJS" do OctaClin CI
+    (`pnpm run migration:run` contra Postgres real do CI, seguido de
+    `pnpm test:rls:testcontainers`). Aplicacao em producao continua exigindo
+    o procedimento fora de banda com role owner do `RUNBOOK_PRODUCAO.md`, nao
+    executado aqui. Validado com `pnpm --dir octaclin-backend typecheck`,
+    `pnpm --dir octaclin-backend build`, suite completa do backend (188
+    suites, 1.766 testes, 31 skips preexistentes),
+    `node scripts/validar-migracoes-fora-de-banda.mjs`, `git diff --check` e
+    `pnpm security:secrets`. Detalhe completo em
+    `docs/history/phases/PLANO_FASE_265.md`, secao 8.
 
 Documento de execução e prioridades: `ROADMAP_QUALIDADE_SEGURANCA_FASES_248_262.md`.
 Matriz operacional: `MATRIZ_SKILLS_PLUGINS_MODELOS_FASES_243_248_262.md`.

@@ -1,12 +1,22 @@
 # OctaClin - Status atual do projeto
 
-Atualizado em 2026-09-17.
+Atualizado em 2026-09-18.
 
 ## Snapshot
 
 - Produto: OctaClin.
 - Repositorio: `octanutri-clin/octaclin`.
 - Branch principal: `main`.
+- Reconciliacao de 2026-09-18: o PR GitHub `#257` (Incremento 265.1, calculador
+  de dominio puro) foi integrado no `main` pelo merge `38f5a30`; todos os
+  checks aplicaveis passaram antes do merge humano. Na sequencia, o
+  Incremento 265.2 (persistencia e RLS) foi implementado em branch dedicada
+  `feat/fase265-persistencia-prioridade`: migration aditiva criando
+  `prioridades_acompanhamento_paciente` e `prioridades_acompanhamento_historico`
+  (append-only, protegida por trigger), ambas com RLS/FORCE RLS e policy de
+  isolamento por tenant, sem nenhum servico ou job consumindo as tabelas
+  ainda. Detalhe completo em `docs/history/phases/PLANO_FASE_265.md`, secao 8,
+  e em `CHECKLIST_FASES_FUTURAS_PRODUCAO.md`, entrada da Fase 265.
 - Reconciliacao de 2026-09-17: os PRs GitHub `#254` e `#255` foram integrados no
   `main`, o ultimo pelo merge `2b1e3641d73bccaea03092f418d64b346b0d2414`;
   todos os checks aplicaveis passaram e nao restou PR aberta. O pacote interno
@@ -396,10 +406,29 @@ Atualizado em 2026-09-17.
   auditado e temporario. Por envolver dado clinico, migration e job, o risco
   minimo e R4: persistencia futura exige TDD de isolamento, rollback e migration
   fora de banda com role owner. A semantica e a formula foram aceitas depois do
-  PR `#256`; o Incremento 265.1 implementa apenas o calculador de dominio puro,
-  versionado e fail-closed, com 7/7 testes focados, typecheck, build e suite
-  completa do backend aprovados (186 suites, 1.749 testes). Nenhum DDL, banco,
-  job, UI, automacao ou ambiente foi alterado. Plano:
+  PR `#256`. O Incremento 265.1 (calculador de dominio puro, versionado e
+  fail-closed, 7/7 testes focados) foi integrado em 2026-09-17 pelo PR GitHub
+  `#257`, merge `38f5a30`. O Incremento 265.2 (persistencia e RLS) foi
+  implementado em 2026-09-18 em branch dedicada
+  (`feat/fase265-persistencia-prioridade`, ainda nao mergeada): migration
+  aditiva `1720000001046-AdicionarPrioridadeAcompanhamento` cria
+  `prioridades_acompanhamento_paciente` (estado atual, override "tudo ou
+  nada" com expiracao obrigatoria por check constraint) e
+  `prioridades_acompanhamento_historico` (append-only, protegida por trigger
+  que rejeita update/delete/truncate mesmo para o dono da tabela, mesmo
+  mecanismo de `user_action_logs`), ambas com RLS/FORCE RLS e policy de
+  isolamento por tenant -- as duas entram automaticamente no gate exaustivo
+  de RLS (`rls-isolamento-tenant.integracao.spec.ts`, inventario via catalogo
+  do Postgres). So schema: nenhum servico, job ou UI consome as tabelas
+  ainda. TDD: 11/11 testes da migration. A execucao real da migration nao foi
+  feita nesta sessao por ausencia de Docker/Postgres no ambiente remoto; o
+  ensaio em banco descartavel ocorre de fato no job "Backend NestJS" do
+  OctaClin CI (`pnpm run migration:run` contra Postgres real do CI, seguido
+  de `pnpm test:rls:testcontainers`); a aplicacao em producao continua
+  exigindo o procedimento fora de banda com role owner do
+  `RUNBOOK_PRODUCAO.md`. Validado com typecheck, build, suite completa do
+  backend (188 suites, 1.766 testes), `validar-migracoes-fora-de-banda.mjs`,
+  `git diff --check` e `pnpm security:secrets`. Plano e evidencia completa:
   `docs/history/phases/PLANO_FASE_265.md`.
 - Fase 261 (escopo de trabalho: gaps de seguranca e privacidade
   identificados no audit da fase) **concluida tecnicamente em 2026-09-15,

@@ -84,7 +84,7 @@ Implementar em incrementos separados, cada um em branch e PR proprios:
    - versao literal da formula;
    - testes de limite, janela, combinacao, cap em 100 e ausencia de sinais;
    - nenhuma integracao com dashboard ou automacoes.
-2. **265.2 - Persistencia e RLS**
+2. **265.2 - Persistencia e RLS** [IMPLEMENTADO NESTA BRANCH]
    - migration aditiva para estado calculado, versao, instante e override;
    - historico append-only protegido por tenant e `FORCE ROW LEVEL SECURITY`;
    - rollback limitado: consumidores podem voltar a ignorar os campos, mas o
@@ -114,10 +114,27 @@ compatibilidade de leitura e rollback aprovados.
   e nao risco clinico.
 - [x] Proprietario aceita pesos, janelas e faixas da formula inicial.
 - [ ] Revisao de seguranca confirma que fatores e justificativa nao vazam PHI
-  em logs, auditoria, filas ou respostas sem permissao.
-- [ ] Desenho da migration confirma RLS/FORCE RLS, role owner e rollback.
+  em logs, auditoria, filas ou respostas sem permissao. **Ainda nao aplicavel
+  de verdade**: nenhum servico le ou escreve `prioridades_acompanhamento_*`
+  neste incremento (265.2 e so schema), entao nao ha fluxo de dado para
+  revisar ainda. Revisitar quando 265.3/265.4 introduzirem o job e a leitura.
+- [x] Desenho da migration confirma RLS/FORCE RLS, role owner e rollback,
+  **para o schema criado no incremento 265.2**: `enable row level security` +
+  `force row level security` + policy `ALL`/`public` isolando por
+  `tenant_id` nas duas tabelas novas (prova automatica no gate exaustivo
+  `rls-isolamento-tenant.integracao.spec.ts`, que inventaria toda tabela com
+  `tenant_id` a partir do catalogo do banco -- as duas tabelas novas entram
+  nele sem edicao manual); migration marcada `@aplicacao fora-de-banda`
+  (`validar-migracoes-fora-de-banda.mjs`); rollback assimetrico documentado
+  (`down()` remove so o estado atual, nunca o historico). Execucao real fora
+  de banda com role owner em producao continua pendente, fora do escopo
+  desta migration em si.
 - [ ] Matriz de testes cobre tenant, profissional, override, expiracao,
-  idempotencia e formula versionada.
+  idempotencia e formula versionada. **Parcialmente coberto por 265.2**:
+  isolamento por tenant e a forma "tudo ou nada" do override (com expiracao
+  obrigatoria) ja sao garantidos no schema e teste automaticamente pelo gate
+  de RLS exaustivo. Escopo por profissional, idempotencia do job e leitura
+  versionada continuam pendentes ate 265.3/265.4.
 
 O merge do plano, isoladamente, nao substituiu o aceite. O aceite foi dado na
 instrucao posterior do proprietario para seguir com a implementacao.
@@ -159,3 +176,97 @@ Validacoes desta branch:
 - `PASS` - suite completa do backend, 186 suites e 1.749 testes; 37 skips
   preexistentes;
 - `NA` - banco, migration, RLS, job, UI e ambiente externo, fora do incremento.
+
+## 8. Incremento 265.2 - implementacao e evidencia
+
+Migration `1720000001046-AdicionarPrioridadeAcompanhamento` (classe
+`AdicionarPrioridadeAcompanhamento1720000001046`), registrada em
+`opcoes-typeorm.ts` junto com duas entidades TypeORM novas
+(`PrioridadeAcompanhamentoPacienteOrm`,
+`PrioridadeAcompanhamentoHistoricoOrm`) em
+`octaclin-backend/src/modulos/pacientes/infraestrutura/`. So schema: nenhum
+servico, controlador ou job le ou escreve estas tabelas neste incremento --
+decisao deliberada para manter o risco desta migration isolado do risco de
+logica de negocio, que chega em 265.3/265.4.
+
+Duas tabelas:
+
+- `prioridades_acompanhamento_paciente`: uma linha por paciente
+  (`unique (tenant_id, paciente_id)`) com o ultimo estado calculado (`score`
+  entre 0 e 100, `faixa` em `baixa/media/alta`, `fatores` jsonb, `versao_formula`,
+  `calculado_em`) e o override humano em vigor, se houver. Os cinco campos de
+  override (`override_faixa`, `override_codigo_motivo`,
+  `override_justificativa_criptografada`, `override_expira_em`,
+  `override_ator_usuario_id`, `override_criado_em`) sao protegidos por uma
+  check constraint "tudo ou nada": existem juntos ou nenhum, tornando
+  mecanismo o requisito do plano de que "o override tem expiracao
+  obrigatoria" (secao 3.3). A justificativa e cifrada (`bytea`), nunca texto
+  livre em coluna legivel. Indice parcial em `override_expira_em` para o
+  futuro job de expiracao (265.3) nao precisar de table scan.
+- `prioridades_acompanhamento_historico`: append-only, uma linha por evento
+  (`calculo`, `override_criado`, `override_alterado`, `override_expirado`,
+  `override_removido`). Protegida pelo mesmo mecanismo de trigger de
+  `user_action_logs` (migration 1038): uma funcao que rejeita `update` e
+  `delete` por linha e `truncate` por statement, com `enable always` para
+  continuar valendo mesmo em `session_replication_role = 'replica'`. Nem o
+  dono da tabela consegue mutar por SQL comum.
+
+Ambas com `enable row level security` + `force row level security` e policy
+unica `using`/`with check (tenant_id = nullif(current_setting('app.tenant_id',
+true), '')::uuid)` -- a mesma expressao que
+`rls-isolamento-tenant.integracao.spec.ts` reconhece automaticamente. Esse
+teste inventaria **toda** tabela publica com coluna `tenant_id` a partir do
+catalogo do Postgres (`pg_class`/`pg_attribute`), entao as duas tabelas novas
+entram no gate exaustivo de RLS sem precisar editar o arquivo de teste.
+
+Rollback deliberadamente assimetrico: `down()` remove
+`prioridades_acompanhamento_paciente` (projecao recomputavel, sem perda real),
+mas nunca `prioridades_acompanhamento_historico` -- cumprindo literalmente "o
+historico ja criado nao deve ser apagado automaticamente" (secao 4, item 2 do
+plano). Revertida a migration, o historico fica orfa (sem escritor), nao
+vazia.
+
+`override_codigo_motivo` permanece `varchar` livre nesta migration: o
+conjunto fechado de codigos de motivo ainda nao foi definido pelo produto
+(secao 3.3 so diz "codigo de motivo fechado", sem enumerar os valores).
+Fechar esse conjunto e validar contra ele e trabalho de aplicacao do
+incremento 265.4, quando o fluxo de escrita do override for implementado --
+nao antecipado aqui para nao inventar decisao de produto que ainda nao foi
+tomada.
+
+### Por que nenhuma migration foi executada nesta sessao
+
+Confirmando banco, branch e role alvo antes de qualquer execucao (regra do
+`AGENTS.md`): o ambiente de execucao remoto usado para este incremento nao
+tem daemon Docker nem instancia Postgres disponiveis, entao a migration nao
+foi rodada aqui contra banco nenhum -- nem descartavel nem de qualquer outro
+tipo. O "ensaio em banco descartavel" que o plano exige acontece de forma
+real no job `Backend NestJS` do OctaClin CI: ele sobe um Postgres
+`timescale/timescaledb-ha:pg15` descartavel como service container, roda
+`pnpm run migration:run` contra ele (aplica esta migration de verdade) e em
+seguida `pnpm test:rls:testcontainers`, que confirma RLS/FORCE RLS e a policy
+de isolamento com uma role restrita (sem `BYPASSRLS`, sem ownership). A
+aplicacao real em producao continua exigindo o procedimento fora de banda com
+role owner do `RUNBOOK_PRODUCAO.md`, que nao foi executado e nao faz parte
+deste incremento.
+
+Validacoes desta branch:
+
+- `PASS` - TDD RED: spec da migration falhou por ausencia do arquivo antes da
+  implementacao (`Cannot find module`);
+- `PASS` - spec da migration, 11/11 testes (estrutura das duas tabelas,
+  constraint de score, constraint "tudo ou nada" do override, indice parcial
+  de expiracao, RLS/FORCE RLS e policy nas duas tabelas, trigger append-only,
+  declaracao `@aplicacao fora-de-banda`, reversibilidade assimetrica do
+  `down()`);
+- `PASS` - `node scripts/validar-migracoes-fora-de-banda.mjs` (59 migrations
+  declaradas, a nova entra nas 57 que exigem role owner);
+- `PASS` - typecheck do backend;
+- `PASS` - build e verificacao do artefato (`dist/main.js`);
+- `PASS` - suite completa do backend, 188 suites e 1.766 testes; 31 skips
+  preexistentes;
+- `NA` - execucao real da migration contra qualquer banco (sem Docker/Postgres
+  neste ambiente); fica para o `Backend NestJS` do OctaClin CI e, em
+  producao, para o procedimento fora de banda do runbook;
+- `NA` - servico, job, UI e RLS aplicado a um fluxo de leitura/escrita real,
+  fora deste incremento (chegam em 265.3/265.4).
