@@ -840,13 +840,13 @@ where relname in (
 )
 order by relname;
 
-select polname, tablename
+select policyname, tablename
 from pg_policies
 where tablename in (
   'prioridades_acompanhamento_paciente',
   'prioridades_acompanhamento_historico'
 )
-order by tablename, polname;
+order by tablename, policyname;
 
 select conname, pg_get_constraintdef(oid)
 from pg_constraint
