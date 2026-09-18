@@ -89,6 +89,8 @@ const CHAVES_SEGURAS = new Map([
   ['origem', 'canal de origem (portal, mobile, operacao_manual)'],
   ['status', 'situacao do recurso, enum'],
   ['tipo', 'tipo do recurso, enum'],
+  ['faixa', 'faixa da prioridade de acompanhamento (baixa, media, alta), enum fechado no DTO'],
+  ['origemvalorefetivo', 'se o valor efetivo da prioridade de acompanhamento veio do calculo ou de override, enum'],
   ['tipos', 'nomes dos campos enviados (Object.keys), nao os valores'],
   ['campos', 'nomes dos campos alterados (Object.keys), nao os valores'],
   ['tipopessoa', 'pessoa fisica ou juridica da clinica contratante, nao do paciente'],

@@ -315,4 +315,82 @@ describe('ControladorPacientes', () => {
       ]);
     });
   });
+
+  describe('prioridade de acompanhamento (Fase 265.4)', () => {
+    it('audita a leitura sem vazar o codigo de motivo nem a justificativa do override', async () => {
+      const obterPrioridadeAcompanhamento = jest
+        .fn()
+        .mockResolvedValue({ valorEfetivo: { faixa: 'alta', origem: 'override' } });
+      const { controlador, registrar, requisicao } = criarCenario({ obterPrioridadeAcompanhamento });
+
+      const resposta = await controlador.obterPrioridadeAcompanhamento(usuario, requisicao, 'paciente-1');
+
+      expect(obterPrioridadeAcompanhamento).toHaveBeenCalledWith('tenant-1', 'paciente-1', usuario);
+      expect(resposta).toEqual({ valorEfetivo: { faixa: 'alta', origem: 'override' } });
+      expect(registrar).toHaveBeenCalledWith(
+        expect.objectContaining({
+          acao: 'pacientes.prioridade_acompanhamento.ler',
+          recursoId: 'paciente-1',
+          metadados: { origemValorEfetivo: 'override' }
+        })
+      );
+    });
+
+    it('audita a solicitacao de override sem gravar codigoMotivo nem justificativa na trilha generica', async () => {
+      const solicitarOverridePrioridadeAcompanhamento = jest
+        .fn()
+        .mockResolvedValue({ valorEfetivo: { faixa: 'alta', origem: 'override' } });
+      const { controlador, registrar, requisicao } = criarCenario({ solicitarOverridePrioridadeAcompanhamento });
+      const dadosOverride = {
+        faixa: 'alta' as const,
+        codigoMotivo: 'decisao_clinica',
+        justificativa: 'paciente em situacao de risco social',
+        expiraEm: '2026-12-01T00:00:00.000Z'
+      };
+
+      await controlador.solicitarOverridePrioridadeAcompanhamento(usuario, requisicao, 'paciente-1', dadosOverride);
+
+      expect(solicitarOverridePrioridadeAcompanhamento).toHaveBeenCalledWith(
+        'tenant-1',
+        'paciente-1',
+        'usuario-1',
+        dadosOverride,
+        usuario
+      );
+      const chamadaAuditoria = registrar.mock.calls.find(
+        ([entrada]) => entrada.acao === 'pacientes.prioridade_acompanhamento.override_solicitado'
+      );
+      expect(chamadaAuditoria).toBeDefined();
+      expect(chamadaAuditoria![0].metadados).toEqual({ faixa: 'alta', expiraEm: '2026-12-01T00:00:00.000Z' });
+      expect(JSON.stringify(chamadaAuditoria![0].metadados)).not.toContain('risco social');
+      expect(JSON.stringify(chamadaAuditoria![0].metadados)).not.toContain('decisao_clinica');
+    });
+
+    it('audita a remocao do override', async () => {
+      const removerOverridePrioridadeAcompanhamento = jest
+        .fn()
+        .mockResolvedValue({ valorEfetivo: { faixa: 'baixa', origem: 'calculado' } });
+      const { controlador, registrar, requisicao } = criarCenario({ removerOverridePrioridadeAcompanhamento });
+
+      await controlador.removerOverridePrioridadeAcompanhamento(usuario, requisicao, 'paciente-1');
+
+      expect(removerOverridePrioridadeAcompanhamento).toHaveBeenCalledWith('tenant-1', 'paciente-1', usuario);
+      expect(registrar).toHaveBeenCalledWith(
+        expect.objectContaining({
+          acao: 'pacientes.prioridade_acompanhamento.override_removido',
+          recursoId: 'paciente-1'
+        })
+      );
+    });
+
+    it('protege as duas mutacoes de override com pacientes.gerenciar; a leitura fica na permissao padrao da classe', () => {
+      expect(
+        Reflect.getMetadata(CHAVE_PERMISSOES, ControladorPacientes.prototype.solicitarOverridePrioridadeAcompanhamento)
+      ).toEqual(['pacientes.gerenciar']);
+      expect(
+        Reflect.getMetadata(CHAVE_PERMISSOES, ControladorPacientes.prototype.removerOverridePrioridadeAcompanhamento)
+      ).toEqual(['pacientes.gerenciar']);
+      expect(Reflect.getMetadata(CHAVE_PERMISSOES, ControladorPacientes.prototype.obterPrioridadeAcompanhamento)).toBeUndefined();
+    });
+  });
 });

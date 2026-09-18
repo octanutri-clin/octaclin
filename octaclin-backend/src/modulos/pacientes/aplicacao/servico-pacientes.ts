@@ -42,22 +42,29 @@ import {
   ProntuarioPacienteRespostaDto,
   TarefaAcompanhamentoRespostaDto,
   ListarPacientesDto,
-  ResultadoSolicitacaoEliminacaoLgpdDto
+  PrioridadeAcompanhamentoRespostaDto,
+  ResultadoSolicitacaoEliminacaoLgpdDto,
+  SolicitarOverridePrioridadeAcompanhamentoDto
 } from './dtos';
 import { AcompanhamentoTarefaOrm } from '../infraestrutura/acompanhamento-tarefa.orm';
 import { AvaliacaoAntropometricaOrm } from '../infraestrutura/avaliacao-antropometrica.orm';
 import { EvolucaoClinicaOrm } from '../infraestrutura/evolucao-clinica.orm';
 import { PacienteOrm } from '../infraestrutura/paciente.orm';
+import { PrioridadeAcompanhamentoHistoricoOrm } from '../infraestrutura/prioridade-acompanhamento-historico.orm';
+import { PrioridadeAcompanhamentoPacienteOrm } from '../infraestrutura/prioridade-acompanhamento-paciente.orm';
 import { TombstoneExclusaoLgpdOrm } from '../../../infraestrutura/lgpd/tombstone-exclusao-lgpd.orm';
 import { UsuarioOrm } from '../../usuarios/infraestrutura/usuario.orm';
 import { RefreshTokenOrm } from '../../auth/infraestrutura/refresh-token.orm';
 import { SessaoUsuarioOrm } from '../../auth/infraestrutura/sessao-usuario.orm';
+import { VERSAO_FORMULA_PRIORIDADE_ACOMPANHAMENTO } from '../dominio/prioridade-acompanhamento';
 
 /**
  * Teto de linhas por exportacao. Exportacao em massa de PHI e vetor de
  * exfiltracao: acima disto o caminho e o protocolo LGPD, nao um GET.
  */
 export const LIMITE_LINHAS_EXPORTACAO = 5000;
+/** Secao 3.3 do PLANO_FASE_265.md: override nunca fica sem prazo, maximo 90 dias. */
+const LIMITE_DIAS_OVERRIDE_PRIORIDADE = 90;
 const PAGINA_EXPORTACAO = 100;
 const LIMITE_PADRAO_TIMELINE = 20;
 const LIMITE_MAXIMO_TIMELINE = 50;
@@ -705,6 +712,192 @@ export class ServicoPacientes {
 
       return this.mapearTarefa(await repositorio.save(tarefa));
     });
+  }
+
+  /**
+   * Fase 265.4: leitura do valor efetivo da prioridade de acompanhamento
+   * (265.1-265.3), com override humano quando presente. Nunca calcula --
+   * so le o que o job (265.3) ja persistiu. Sem linha ainda (job nao rodou
+   * para este paciente) devolve o mesmo default que o calculador produz na
+   * ausencia de sinais (`score 0`, `baixa`), em vez de 404: a ausencia de
+   * calculo nao e um erro, e um estado valido de paciente novo.
+   */
+  async obterPrioridadeAcompanhamento(
+    tenantId: string,
+    pacienteId: string,
+    usuario: UsuarioAutenticado
+  ): Promise<PrioridadeAcompanhamentoRespostaDto> {
+    return this.executorTenant.executar(tenantId, async (gerenciador) => {
+      await this.garantirPacienteExiste(gerenciador, tenantId, pacienteId, usuario);
+      const atual = await gerenciador
+        .getRepository(PrioridadeAcompanhamentoPacienteOrm)
+        .findOne({ where: { tenantId, pacienteId } });
+
+      if (!atual) {
+        return {
+          pacienteId,
+          valorCalculado: { score: 0, faixa: 'baixa', fatores: [] },
+          valorEfetivo: { faixa: 'baixa', origem: 'calculado' }
+        };
+      }
+
+      if (atual.overrideExpiraEm && atual.overrideExpiraEm <= new Date()) {
+        await this.registrarEventoPrioridade(gerenciador, tenantId, pacienteId, 'override_expirado', atual, undefined);
+        this.limparOverridePrioridade(atual);
+        await gerenciador.getRepository(PrioridadeAcompanhamentoPacienteOrm).save(atual);
+      }
+
+      return this.montarRespostaPrioridade(atual);
+    });
+  }
+
+  /**
+   * Cria ou substitui o override em vigor. "Somente papel e permissao que
+   * hoje podem editar o paciente podem solicitar override" (secao 3.3 do
+   * `PLANO_FASE_265.md`) e cumprido no controlador via a mesma permissao
+   * `pacientes.gerenciar` das outras mutacoes de paciente; aqui a fronteira
+   * revalidada e tenant/escopo profissional, via `garantirPacienteExiste`.
+   * `expiraEm` obrigatorio e limitado a 90 dias -- o override nunca fica
+   * sem prazo. A justificativa e cifrada antes de tocar o banco; nunca
+   * entra em log comum nem no metadata do historico.
+   */
+  async solicitarOverridePrioridadeAcompanhamento(
+    tenantId: string,
+    pacienteId: string,
+    atorUsuarioId: string,
+    dados: SolicitarOverridePrioridadeAcompanhamentoDto,
+    usuario: UsuarioAutenticado
+  ): Promise<PrioridadeAcompanhamentoRespostaDto> {
+    const expiraEm = new Date(dados.expiraEm);
+    const agora = new Date();
+    if (Number.isNaN(expiraEm.getTime()) || expiraEm <= agora) {
+      throw new BadRequestException('A expiracao do override deve ser uma data futura.');
+    }
+    if (expiraEm.getTime() - agora.getTime() > LIMITE_DIAS_OVERRIDE_PRIORIDADE * 24 * 60 * 60 * 1000) {
+      throw new BadRequestException(`A expiracao do override nao pode passar de ${LIMITE_DIAS_OVERRIDE_PRIORIDADE} dias.`);
+    }
+
+    return this.executorTenant.executar(tenantId, async (gerenciador) => {
+      await this.garantirPacienteExiste(gerenciador, tenantId, pacienteId, usuario);
+      const repositorio = gerenciador.getRepository(PrioridadeAcompanhamentoPacienteOrm);
+      const atual =
+        (await repositorio.findOne({ where: { tenantId, pacienteId } })) ??
+        repositorio.create({
+          tenantId,
+          pacienteId,
+          score: 0,
+          faixa: 'baixa' as const,
+          fatores: [],
+          versaoFormula: VERSAO_FORMULA_PRIORIDADE_ACOMPANHAMENTO,
+          calculadoEm: agora
+        });
+
+      const haviaOverrideAtivo = Boolean(atual.overrideFaixa && atual.overrideExpiraEm && atual.overrideExpiraEm > agora);
+
+      atual.overrideFaixa = dados.faixa;
+      atual.overrideCodigoMotivo = dados.codigoMotivo;
+      atual.overrideJustificativaCriptografada = this.criptografia.criptografar(dados.justificativa);
+      atual.overrideExpiraEm = expiraEm;
+      atual.overrideAtorUsuarioId = atorUsuarioId;
+      atual.overrideCriadoEm = agora;
+      await repositorio.save(atual);
+
+      await this.registrarEventoPrioridade(
+        gerenciador,
+        tenantId,
+        pacienteId,
+        haviaOverrideAtivo ? 'override_alterado' : 'override_criado',
+        atual,
+        atorUsuarioId
+      );
+
+      return this.montarRespostaPrioridade(atual);
+    });
+  }
+
+  /**
+   * Remocao explicita do override, pedida por quem tem permissao de gerenciar
+   * o paciente. O valor efetivo volta ao calculado sem apagar o historico
+   * ja gravado (mesmo principio do rollback assimetrico da migration 265.2).
+   */
+  async removerOverridePrioridadeAcompanhamento(
+    tenantId: string,
+    pacienteId: string,
+    usuario: UsuarioAutenticado
+  ): Promise<PrioridadeAcompanhamentoRespostaDto> {
+    return this.executorTenant.executar(tenantId, async (gerenciador) => {
+      await this.garantirPacienteExiste(gerenciador, tenantId, pacienteId, usuario);
+      const repositorio = gerenciador.getRepository(PrioridadeAcompanhamentoPacienteOrm);
+      const atual = await repositorio.findOne({ where: { tenantId, pacienteId } });
+      if (!atual || !atual.overrideFaixa) {
+        throw new NotFoundException('Nao ha override ativo para este paciente.');
+      }
+
+      await this.registrarEventoPrioridade(gerenciador, tenantId, pacienteId, 'override_removido', atual, usuario.usuarioId);
+      this.limparOverridePrioridade(atual);
+      await repositorio.save(atual);
+
+      return this.montarRespostaPrioridade(atual);
+    });
+  }
+
+  private limparOverridePrioridade(atual: PrioridadeAcompanhamentoPacienteOrm): void {
+    atual.overrideFaixa = undefined;
+    atual.overrideCodigoMotivo = undefined;
+    atual.overrideJustificativaCriptografada = undefined;
+    atual.overrideExpiraEm = undefined;
+    atual.overrideAtorUsuarioId = undefined;
+    atual.overrideCriadoEm = undefined;
+  }
+
+  /**
+   * Historico append-only (265.2): registra faixa anterior/nova, codigo de
+   * motivo e versao da formula -- nunca a justificativa, mesmo cifrada.
+   */
+  private async registrarEventoPrioridade(
+    gerenciador: EntityManager,
+    tenantId: string,
+    pacienteId: string,
+    tipoEvento: 'override_criado' | 'override_alterado' | 'override_expirado' | 'override_removido',
+    atual: PrioridadeAcompanhamentoPacienteOrm,
+    atorUsuarioId: string | undefined
+  ): Promise<void> {
+    const repositorio = gerenciador.getRepository(PrioridadeAcompanhamentoHistoricoOrm);
+    await repositorio.save(
+      repositorio.create({
+        tenantId,
+        pacienteId,
+        tipoEvento,
+        score: atual.score,
+        faixa: atual.overrideFaixa ?? atual.faixa,
+        versaoFormula: atual.versaoFormula,
+        atorUsuarioId,
+        overrideCodigoMotivo: atual.overrideCodigoMotivo,
+        overrideExpiraEm: atual.overrideExpiraEm
+      })
+    );
+  }
+
+  private montarRespostaPrioridade(atual: PrioridadeAcompanhamentoPacienteOrm): PrioridadeAcompanhamentoRespostaDto {
+    const overrideAtivo = atual.overrideFaixa && atual.overrideExpiraEm && atual.overrideExpiraEm > new Date();
+    return {
+      pacienteId: atual.pacienteId,
+      versaoFormula: atual.versaoFormula,
+      calculadoEm: atual.calculadoEm,
+      valorCalculado: { score: atual.score, faixa: atual.faixa, fatores: atual.fatores ?? [] },
+      valorEfetivo: overrideAtivo
+        ? { faixa: atual.overrideFaixa as 'baixa' | 'media' | 'alta', origem: 'override' }
+        : { faixa: atual.faixa, origem: 'calculado' },
+      override: overrideAtivo
+        ? {
+            faixa: atual.overrideFaixa as 'baixa' | 'media' | 'alta',
+            codigoMotivo: atual.overrideCodigoMotivo as string,
+            expiraEm: atual.overrideExpiraEm as Date,
+            criadoEm: atual.overrideCriadoEm as Date,
+            atorUsuarioId: atual.overrideAtorUsuarioId as string
+          }
+        : undefined
+    };
   }
 
   async obterProntuario(

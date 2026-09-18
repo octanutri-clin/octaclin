@@ -21,7 +21,7 @@ import { GuardaJwt } from '../../auth/apresentacao/guarda-jwt';
 import { GuardaPapeis } from '../../auth/apresentacao/guarda-papeis';
 import { GuardaPermissoes } from '../../auth/apresentacao/guarda-permissoes';
 import { UsuarioAutenticado } from '../../auth/dominio/usuario-autenticado';
-import { AtualizarPacienteDto, AtualizarTarefaAcompanhamentoDto, CriarAvaliacaoAntropometricaDto, CriarEvolucaoClinicaDto, CriarPacienteDto, CriarTarefaAcompanhamentoDto, ImportarPacientesDto, ListarAvaliacoesAntropometricasDto, ListarLinhaTempoProntuarioDto, ListarPacientesDto, VerificarDuplicidadePacienteDto } from '../aplicacao/dtos';
+import { AtualizarPacienteDto, AtualizarTarefaAcompanhamentoDto, CriarAvaliacaoAntropometricaDto, CriarEvolucaoClinicaDto, CriarPacienteDto, CriarTarefaAcompanhamentoDto, ImportarPacientesDto, ListarAvaliacoesAntropometricasDto, ListarLinhaTempoProntuarioDto, ListarPacientesDto, SolicitarOverridePrioridadeAcompanhamentoDto, VerificarDuplicidadePacienteDto } from '../aplicacao/dtos';
 import { ServicoDuplicidadePacientes } from '../aplicacao/servico-duplicidade-pacientes';
 import { ServicoImportacaoPacientes } from '../aplicacao/servico-importacao-pacientes';
 import { ServicoPacientes } from '../aplicacao/servico-pacientes';
@@ -520,6 +520,78 @@ export class ControladorPacientes {
       }
     });
     return tarefa;
+  }
+
+  @Get(':id/prioridade-acompanhamento')
+  async obterPrioridadeAcompanhamento(
+    @UsuarioAtual() usuario: UsuarioAutenticado,
+    @Req() requisicao: Request,
+    @Param('id', ParseUUIDPipe) id: string
+  ) {
+    const prioridade = await this.servicoPacientes.obterPrioridadeAcompanhamento(usuario.tenantId, id, usuario);
+    await this.servicoAuditoria.registrar({
+      tenantId: usuario.tenantId,
+      usuarioId: usuario.usuarioId,
+      acao: 'pacientes.prioridade_acompanhamento.ler',
+      recursoTipo: 'paciente',
+      recursoId: id,
+      ip: requisicao.ip,
+      userAgent: this.obterUserAgent(requisicao),
+      metadados: { origemValorEfetivo: prioridade.valorEfetivo.origem }
+    });
+    return prioridade;
+  }
+
+  @Post(':id/prioridade-acompanhamento/override')
+  @Permissoes('pacientes.gerenciar')
+  async solicitarOverridePrioridadeAcompanhamento(
+    @UsuarioAtual() usuario: UsuarioAutenticado,
+    @Req() requisicao: Request,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dados: SolicitarOverridePrioridadeAcompanhamentoDto
+  ) {
+    const prioridade = await this.servicoPacientes.solicitarOverridePrioridadeAcompanhamento(
+      usuario.tenantId,
+      id,
+      usuario.usuarioId,
+      dados,
+      usuario
+    );
+    await this.servicoAuditoria.registrar({
+      tenantId: usuario.tenantId,
+      usuarioId: usuario.usuarioId,
+      acao: 'pacientes.prioridade_acompanhamento.override_solicitado',
+      recursoTipo: 'paciente',
+      recursoId: id,
+      ip: requisicao.ip,
+      userAgent: this.obterUserAgent(requisicao),
+      // Nunca a justificativa nem o codigo de motivo (texto livre validado, sem
+      // enum fechado ainda -- secao 3.3 do PLANO_FASE_265.md): os dois ja ficam
+      // no historico de dominio (prioridades_acompanhamento_historico), que tem
+      // RLS proprio; a trilha generica so recebe o que e vocabulario fechado.
+      metadados: { faixa: dados.faixa, expiraEm: dados.expiraEm }
+    });
+    return prioridade;
+  }
+
+  @Delete(':id/prioridade-acompanhamento/override')
+  @Permissoes('pacientes.gerenciar')
+  async removerOverridePrioridadeAcompanhamento(
+    @UsuarioAtual() usuario: UsuarioAutenticado,
+    @Req() requisicao: Request,
+    @Param('id', ParseUUIDPipe) id: string
+  ) {
+    const prioridade = await this.servicoPacientes.removerOverridePrioridadeAcompanhamento(usuario.tenantId, id, usuario);
+    await this.servicoAuditoria.registrar({
+      tenantId: usuario.tenantId,
+      usuarioId: usuario.usuarioId,
+      acao: 'pacientes.prioridade_acompanhamento.override_removido',
+      recursoTipo: 'paciente',
+      recursoId: id,
+      ip: requisicao.ip,
+      userAgent: this.obterUserAgent(requisicao)
+    });
+    return prioridade;
   }
 
   @Patch(':id')
