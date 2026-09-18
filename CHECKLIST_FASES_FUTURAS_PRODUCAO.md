@@ -3244,7 +3244,8 @@ publicado antes de ampliar a superficie de mudancas visuais.
     validacao de configuracao; GitHub/`gh` apenas para evidencia e fluxo de PR.
 
 - [~] Fase 265 - Fundacao da inteligencia: prioridade de acompanhamento
-  calculada com override auditado. [EM ANDAMENTO: 265.1, 265.2 e 265.3 entregues]
+  calculada com override auditado. [EM ANDAMENTO: 265.1-265.4 entregues no
+  backend; UI da 265.4 pendente]
   - Origem: PB-01 e Onda 2 de
     `docs/product/OCTACLIN_PRODUCT_FEATURE_AUDIT.md`.
   - Dependencia de produto: definir pesos e sinais explicaveis antes de escrever
@@ -3298,8 +3299,8 @@ publicado antes de ampliar a superficie de mudancas visuais.
     preexistentes), `node scripts/validar-migracoes-fora-de-banda.mjs`,
     `git diff --check` e `pnpm security:secrets`. Detalhe completo em
     `docs/history/phases/PLANO_FASE_265.md`, secao 8.
-  - Incremento 265.3 implementado em 2026-09-18, em branch dedicada
-    (`feat/fase265-recalculo-idempotente`): `ServicoRecalculoPrioridadeAcompanhamento`
+  - Incremento 265.3 implementado e integrado em 2026-09-18 (PR GitHub
+    `#259`, merge `8de87f9`): `ServicoRecalculoPrioridadeAcompanhamento`
     le faltas/consultas/registro de habitos de cada paciente ativo do tenant,
     chama o calculador de 265.1 e persiste nas tabelas de 265.2;
     `ProcessadorRecalculoPrioridadeAcompanhamento` agenda isso uma vez por
@@ -3331,6 +3332,37 @@ publicado antes de ampliar a superficie de mudancas visuais.
     backend (190 suites, 1.776 testes, 31 skips preexistentes), `git diff
     --check` e `pnpm security:secrets`. Detalhe completo em
     `docs/history/phases/PLANO_FASE_265.md`, secao 9.
+  - Incremento 265.4 implementado em 2026-09-18, em branch dedicada
+    (`feat/fase265-leitura-override`), **so backend**: tres metodos novos em
+    `ServicoPacientes` e tres rotas em `ControladorPacientes` --
+    `GET /pacientes/:id/prioridade-acompanhamento` (le o que 265.3 ja
+    calculou, sem recalcular; devolve `valorCalculado` e `valorEfetivo`,
+    que e o override quando ha um em vigor); `POST .../override`
+    (`pacientes.gerenciar`, expiracao obrigatoria ate 90 dias, justificativa
+    cifrada, evento `override_criado` ou `override_alterado` no historico
+    conforme ja havia override ativo); `DELETE .../override`
+    (`pacientes.gerenciar`, evento `override_removido`). Expiracao lazy na
+    leitura: o `GET` detecta override vencido, grava `override_expirado` e
+    devolve o calculado como efetivo, sem precisar de job dedicado.
+    **Gate de auditoria pegou um erro real antes do merge**: a primeira
+    tentativa gravava `codigoMotivo` (texto livre sem enum fechado) na
+    trilha generica (`user_action_logs`) e `validar-redacao-auditoria.mjs`
+    reprovou -- corrigido removendo esse campo da trilha generica (fica so
+    no historico de dominio, que tem RLS proprio); `faixa` e
+    `origemValorEfetivo` foram registrados como vocabulario fechado no
+    gate. TDD: 10/10 testes de servico e 4/4 de controlador. **Pendencia
+    explicita, nao escondida**: a UI ("trocar o rotulo Risco por Prioridade
+    de acompanhamento") nao foi feita nesta branch -- o texto "Risco" hoje
+    mostra o campo legado `score_risco`, e uma troca literal do rotulo sem
+    buscar o DTO novo deixaria a tela mais enganosa, nao menos. Fica como
+    trabalho de frontend a parte (BFF + cliente + componente). Sem
+    migration nova. Validado com `pnpm --dir octaclin-backend typecheck`,
+    `pnpm --dir octaclin-backend build`, suite completa do backend (190
+    suites, 1.821 testes, 31 skips preexistentes),
+    `pnpm test:redacao-auditoria` (24/24),
+    `node --test scripts/validar-guardas-controladores.spec.mjs` (11/11),
+    `git diff --check` e `pnpm security:secrets`. Detalhe completo em
+    `docs/history/phases/PLANO_FASE_265.md`, secao 10.
 
 Documento de execução e prioridades: `ROADMAP_QUALIDADE_SEGURANCA_FASES_248_262.md`.
 Matriz operacional: `MATRIZ_SKILLS_PLUGINS_MODELOS_FASES_243_248_262.md`.

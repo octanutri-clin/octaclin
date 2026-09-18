@@ -14,6 +14,8 @@ import { WebhookAssinaturaOrm } from '../../integracoes/infraestrutura/webhook-a
 import { AcompanhamentoTarefaOrm } from '../infraestrutura/acompanhamento-tarefa.orm';
 import { EvolucaoClinicaOrm } from '../infraestrutura/evolucao-clinica.orm';
 import { PacienteOrm } from '../infraestrutura/paciente.orm';
+import { PrioridadeAcompanhamentoHistoricoOrm } from '../infraestrutura/prioridade-acompanhamento-historico.orm';
+import { PrioridadeAcompanhamentoPacienteOrm } from '../infraestrutura/prioridade-acompanhamento-paciente.orm';
 import { TombstoneExclusaoLgpdOrm } from '../../../infraestrutura/lgpd/tombstone-exclusao-lgpd.orm';
 import { UsuarioOrm } from '../../usuarios/infraestrutura/usuario.orm';
 import { RefreshTokenOrm } from '../../auth/infraestrutura/refresh-token.orm';
@@ -2291,6 +2293,284 @@ describe('ServicoPacientes - timeline canonica do prontuario (Fase 264.2)', () =
       servico.listarLinhaDoTempoPaginada('tenant-1', 'paciente-de-outro-tenant', usuarioColaborador)
     ).rejects.toBeInstanceOf(NotFoundException);
     expect(query).not.toHaveBeenCalled();
+  });
+});
+
+describe('ServicoPacientes - prioridade de acompanhamento (Fase 265.4)', () => {
+  const AGORA = new Date('2026-09-18T12:00:00.000Z');
+  const DIA_MS = 24 * 60 * 60 * 1000;
+
+  const pacientePadrao = {
+    id: 'paciente-1',
+    tenantId: 'tenant-1',
+    profissionalResponsavelId: 'profissional-1'
+  };
+
+  function criptografiaFakePrioridade() {
+    return {
+      criptografar: jest.fn((valor: string) => Buffer.from(`cripto:${valor}`)),
+      descriptografar: jest.fn((valor: Buffer) => valor.toString().replace('cripto:', ''))
+    };
+  }
+
+  function montarServicoPrioridade(opcoes: {
+    prioridadeAtual?: Record<string, unknown> | null;
+    paciente?: Record<string, unknown> | null;
+  }) {
+    let prioridadeAtual = opcoes.prioridadeAtual ?? null;
+    const historicoSalvo: Record<string, unknown>[] = [];
+    const criptografia = criptografiaFakePrioridade();
+
+    const repositorioPaciente = {
+      findOne: jest.fn(async () => ('paciente' in opcoes ? opcoes.paciente : pacientePadrao))
+    };
+    const repositorioProfissional = { findOne: jest.fn(async () => null) };
+    const repositorioPrioridadeAtual = {
+      findOne: jest.fn(async () => prioridadeAtual),
+      create: jest.fn((dados: Record<string, unknown>) => ({ ...dados })),
+      save: jest.fn(async (registro: Record<string, unknown>) => {
+        prioridadeAtual = { ...registro };
+        return prioridadeAtual;
+      })
+    };
+    const repositorioHistorico = {
+      create: jest.fn((dados: Record<string, unknown>) => ({ criadoEm: AGORA, ...dados })),
+      save: jest.fn(async (registro: Record<string, unknown>) => {
+        historicoSalvo.push(registro);
+        return registro;
+      })
+    };
+
+    const gerenciador = {
+      getRepository: jest.fn((entidade: unknown) => {
+        if (entidade === PacienteOrm) return repositorioPaciente;
+        if (entidade === ProfissionalOrm) return repositorioProfissional;
+        if (entidade === PrioridadeAcompanhamentoPacienteOrm) return repositorioPrioridadeAtual;
+        if (entidade === PrioridadeAcompanhamentoHistoricoOrm) return repositorioHistorico;
+        throw new Error(`Repositorio nao mapeado no teste: ${(entidade as { name?: string })?.name ?? entidade}`);
+      })
+    };
+
+    const servico = new ServicoPacientes(
+      { executar: jest.fn((_tenantId: string, operacao: (g: unknown) => Promise<unknown>) => operacao(gerenciador)) } as never,
+      criptografia as never,
+      limitesPermitidos as never
+    );
+
+    return { servico, repositorioPrioridadeAtual, repositorioHistorico, historicoSalvo, criptografia };
+  }
+
+  it('sem calculo ainda, devolve baixa/score 0 como valor efetivo, sem override', async () => {
+    const { servico } = montarServicoPrioridade({ prioridadeAtual: null });
+
+    const resposta = await servico.obterPrioridadeAcompanhamento('tenant-1', 'paciente-1', usuarioColaborador);
+
+    expect(resposta.valorCalculado).toEqual({ score: 0, faixa: 'baixa', fatores: [] });
+    expect(resposta.valorEfetivo).toEqual({ faixa: 'baixa', origem: 'calculado' });
+    expect(resposta.override).toBeUndefined();
+  });
+
+  it('sem override ativo, o valor efetivo e o calculado', async () => {
+    const { servico } = montarServicoPrioridade({
+      prioridadeAtual: {
+        pacienteId: 'paciente-1',
+        tenantId: 'tenant-1',
+        score: 60,
+        faixa: 'media',
+        fatores: [{ codigo: 'faltas_recentes', pontos: 60, quantidade: 2 }],
+        versaoFormula: '1.0.0',
+        calculadoEm: AGORA
+      }
+    });
+
+    const resposta = await servico.obterPrioridadeAcompanhamento('tenant-1', 'paciente-1', usuarioColaborador);
+
+    expect(resposta.valorEfetivo).toEqual({ faixa: 'media', origem: 'calculado' });
+    expect(resposta.override).toBeUndefined();
+  });
+
+  it('com override ativo (nao expirado), o valor efetivo e o override, mas o calculado continua visivel', async () => {
+    const { servico } = montarServicoPrioridade({
+      prioridadeAtual: {
+        pacienteId: 'paciente-1',
+        tenantId: 'tenant-1',
+        score: 10,
+        faixa: 'baixa',
+        fatores: [],
+        versaoFormula: '1.0.0',
+        calculadoEm: AGORA,
+        overrideFaixa: 'alta',
+        overrideCodigoMotivo: 'decisao_clinica',
+        overrideJustificativaCriptografada: Buffer.from('cripto:paciente em risco social'),
+        overrideExpiraEm: new Date(AGORA.getTime() + 10 * DIA_MS),
+        overrideAtorUsuarioId: 'usuario-profissional-1',
+        overrideCriadoEm: new Date(AGORA.getTime() - DIA_MS)
+      }
+    });
+
+    const resposta = await servico.obterPrioridadeAcompanhamento('tenant-1', 'paciente-1', usuarioColaborador);
+
+    expect(resposta.valorEfetivo).toEqual({ faixa: 'alta', origem: 'override' });
+    expect(resposta.valorCalculado).toEqual(expect.objectContaining({ score: 10, faixa: 'baixa' }));
+    expect(resposta.override).toEqual(
+      expect.objectContaining({ faixa: 'alta', codigoMotivo: 'decisao_clinica', atorUsuarioId: 'usuario-profissional-1' })
+    );
+  });
+
+  it('com override expirado, expira sozinho na leitura: volta ao calculado e registra o evento no historico', async () => {
+    const { servico, repositorioPrioridadeAtual, historicoSalvo } = montarServicoPrioridade({
+      prioridadeAtual: {
+        pacienteId: 'paciente-1',
+        tenantId: 'tenant-1',
+        score: 10,
+        faixa: 'baixa',
+        fatores: [],
+        versaoFormula: '1.0.0',
+        calculadoEm: AGORA,
+        overrideFaixa: 'alta',
+        overrideCodigoMotivo: 'decisao_clinica',
+        overrideJustificativaCriptografada: Buffer.from('cripto:justificativa'),
+        overrideExpiraEm: new Date(AGORA.getTime() - DIA_MS),
+        overrideAtorUsuarioId: 'usuario-profissional-1',
+        overrideCriadoEm: new Date(AGORA.getTime() - 5 * DIA_MS)
+      }
+    });
+
+    const resposta = await servico.obterPrioridadeAcompanhamento('tenant-1', 'paciente-1', usuarioColaborador);
+
+    expect(resposta.valorEfetivo).toEqual({ faixa: 'baixa', origem: 'calculado' });
+    expect(resposta.override).toBeUndefined();
+    expect(repositorioPrioridadeAtual.save).toHaveBeenCalledWith(expect.objectContaining({ overrideFaixa: undefined }));
+    expect(historicoSalvo).toHaveLength(1);
+    expect(historicoSalvo[0]).toEqual(expect.objectContaining({ tipoEvento: 'override_expirado' }));
+  });
+
+  it('cria override valido, criptografa a justificativa e nunca grava o texto em claro', async () => {
+    const { servico, repositorioPrioridadeAtual, historicoSalvo, criptografia } = montarServicoPrioridade({
+      prioridadeAtual: {
+        pacienteId: 'paciente-1',
+        tenantId: 'tenant-1',
+        score: 10,
+        faixa: 'baixa',
+        fatores: [],
+        versaoFormula: '1.0.0',
+        calculadoEm: AGORA
+      }
+    });
+
+    const resposta = await servico.solicitarOverridePrioridadeAcompanhamento(
+      'tenant-1',
+      'paciente-1',
+      'usuario-profissional-1',
+      { faixa: 'alta', codigoMotivo: 'decisao_clinica', justificativa: 'paciente em risco social', expiraEm: new Date(AGORA.getTime() + 30 * DIA_MS).toISOString() },
+      usuarioColaborador
+    );
+
+    expect(resposta.valorEfetivo).toEqual({ faixa: 'alta', origem: 'override' });
+    expect(criptografia.criptografar).toHaveBeenCalledWith('paciente em risco social');
+    const salvo = repositorioPrioridadeAtual.save.mock.calls[0][0] as Record<string, unknown>;
+    expect(salvo.overrideJustificativaCriptografada).toEqual(Buffer.from('cripto:paciente em risco social'));
+    expect(JSON.stringify(salvo)).not.toContain('risco social');
+    expect(historicoSalvo[0]).toEqual(expect.objectContaining({ tipoEvento: 'override_criado' }));
+    expect(JSON.stringify(historicoSalvo[0])).not.toContain('risco social');
+  });
+
+  it('alterar um override ja ativo registra override_alterado, nao override_criado', async () => {
+    const { servico, historicoSalvo } = montarServicoPrioridade({
+      prioridadeAtual: {
+        pacienteId: 'paciente-1',
+        tenantId: 'tenant-1',
+        score: 10,
+        faixa: 'baixa',
+        fatores: [],
+        versaoFormula: '1.0.0',
+        calculadoEm: AGORA,
+        overrideFaixa: 'media',
+        overrideCodigoMotivo: 'motivo_anterior',
+        overrideJustificativaCriptografada: Buffer.from('cripto:antiga'),
+        overrideExpiraEm: new Date(AGORA.getTime() + 5 * DIA_MS),
+        overrideAtorUsuarioId: 'usuario-profissional-1',
+        overrideCriadoEm: new Date(AGORA.getTime() - DIA_MS)
+      }
+    });
+
+    await servico.solicitarOverridePrioridadeAcompanhamento(
+      'tenant-1',
+      'paciente-1',
+      'usuario-profissional-2',
+      { faixa: 'alta', codigoMotivo: 'motivo_novo', justificativa: 'novo motivo', expiraEm: new Date(AGORA.getTime() + 30 * DIA_MS).toISOString() },
+      usuarioColaborador
+    );
+
+    expect(historicoSalvo[0]).toEqual(
+      expect.objectContaining({ tipoEvento: 'override_alterado' })
+    );
+  });
+
+  it('rejeita override com expiracao alem de 90 dias', async () => {
+    const { servico } = montarServicoPrioridade({ prioridadeAtual: null });
+
+    await expect(
+      servico.solicitarOverridePrioridadeAcompanhamento(
+        'tenant-1',
+        'paciente-1',
+        'usuario-profissional-1',
+        { faixa: 'alta', codigoMotivo: 'motivo', justificativa: 'justificativa valida', expiraEm: new Date(AGORA.getTime() + 91 * DIA_MS).toISOString() },
+        usuarioColaborador
+      )
+    ).rejects.toBeInstanceOf(BadRequestException);
+  });
+
+  it('rejeita override com expiracao no passado', async () => {
+    const { servico } = montarServicoPrioridade({ prioridadeAtual: null });
+
+    await expect(
+      servico.solicitarOverridePrioridadeAcompanhamento(
+        'tenant-1',
+        'paciente-1',
+        'usuario-profissional-1',
+        { faixa: 'alta', codigoMotivo: 'motivo', justificativa: 'justificativa valida', expiraEm: new Date(AGORA.getTime() - DIA_MS).toISOString() },
+        usuarioColaborador
+      )
+    ).rejects.toBeInstanceOf(BadRequestException);
+  });
+
+  it('remove o override ativo, limpa os campos e registra override_removido', async () => {
+    const { servico, repositorioPrioridadeAtual, historicoSalvo } = montarServicoPrioridade({
+      prioridadeAtual: {
+        pacienteId: 'paciente-1',
+        tenantId: 'tenant-1',
+        score: 10,
+        faixa: 'baixa',
+        fatores: [],
+        versaoFormula: '1.0.0',
+        calculadoEm: AGORA,
+        overrideFaixa: 'alta',
+        overrideCodigoMotivo: 'decisao_clinica',
+        overrideJustificativaCriptografada: Buffer.from('cripto:justificativa'),
+        overrideExpiraEm: new Date(AGORA.getTime() + 10 * DIA_MS),
+        overrideAtorUsuarioId: 'usuario-profissional-1',
+        overrideCriadoEm: new Date(AGORA.getTime() - DIA_MS)
+      }
+    });
+
+    const resposta = await servico.removerOverridePrioridadeAcompanhamento('tenant-1', 'paciente-1', usuarioColaborador);
+
+    expect(resposta.valorEfetivo).toEqual({ faixa: 'baixa', origem: 'calculado' });
+    expect(repositorioPrioridadeAtual.save).toHaveBeenCalledWith(expect.objectContaining({ overrideFaixa: undefined }));
+    expect(historicoSalvo[0]).toEqual(expect.objectContaining({ tipoEvento: 'override_removido' }));
+  });
+
+  it('nao permite ler nem alterar prioridade de paciente fora do escopo do profissional', async () => {
+    const { servico, repositorioPrioridadeAtual } = montarServicoPrioridade({
+      prioridadeAtual: null,
+      paciente: null
+    });
+
+    await expect(
+      servico.obterPrioridadeAcompanhamento('tenant-1', 'paciente-1', usuarioProfissional)
+    ).rejects.toBeInstanceOf(NotFoundException);
+    expect(repositorioPrioridadeAtual.findOne).not.toHaveBeenCalled();
   });
 });
 

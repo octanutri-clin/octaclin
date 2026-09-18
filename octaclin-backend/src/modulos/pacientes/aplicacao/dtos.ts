@@ -911,3 +911,50 @@ export class VerificarDuplicidadePacienteDto {
   @IsDateString()
   dataNascimento?: string;
 }
+
+/**
+ * Fase 265.4: solicitar override humano da prioridade de acompanhamento.
+ * `codigoMotivo` continua string livre validada (nao enum fechado) porque o
+ * conjunto de codigos ainda nao foi definido pelo produto -- mesma decisao
+ * documentada na migration 265.2. `expiraEm` e obrigatorio (o override nunca
+ * fica sem expiracao) e validado no servico contra o teto de 90 dias.
+ */
+export class SolicitarOverridePrioridadeAcompanhamentoDto {
+  @IsIn(['baixa', 'media', 'alta'])
+  faixa: 'baixa' | 'media' | 'alta';
+
+  @IsString()
+  @MinLength(3)
+  @MaxLength(60)
+  codigoMotivo: string;
+
+  @IsString()
+  @MinLength(3)
+  @MaxLength(2000)
+  justificativa: string;
+
+  @IsDateString()
+  expiraEm: string;
+}
+
+export interface PrioridadeAcompanhamentoRespostaDto {
+  pacienteId: string;
+  versaoFormula?: string;
+  calculadoEm?: Date;
+  valorCalculado: {
+    score: number;
+    faixa: 'baixa' | 'media' | 'alta';
+    fatores: Array<{ codigo: string; pontos: number; quantidade?: number }>;
+  };
+  valorEfetivo: {
+    faixa: 'baixa' | 'media' | 'alta';
+    origem: 'calculado' | 'override';
+  };
+  override?: {
+    faixa: 'baixa' | 'media' | 'alta';
+    codigoMotivo: string;
+    expiraEm: Date;
+    criadoEm: Date;
+    atorUsuarioId: string;
+  };
+}

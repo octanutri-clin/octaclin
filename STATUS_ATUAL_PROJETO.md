@@ -8,22 +8,31 @@ Atualizado em 2026-09-18.
 - Repositorio: `octanutri-clin/octaclin`.
 - Branch principal: `main`.
 - Reconciliacao de 2026-09-18: os PRs GitHub `#257` (Incremento 265.1,
-  calculador de dominio puro) e `#258` (Incremento 265.2, persistencia e
-  RLS) foram integrados no `main` pelos merges `38f5a30` e `bf1976a`; todos
-  os checks aplicaveis passaram antes de cada merge humano, incluindo o job
-  "Backend NestJS" da PR `#258` que rodou a migration nova contra um
-  Postgres real de CI e confirmou RLS/FORCE RLS com `pnpm
-  test:rls:testcontainers`. Na sequencia, o Incremento 265.3 (recalculo
-  idempotente) foi implementado em branch dedicada
-  `feat/fase265-recalculo-idempotente`: um servico e um job diario no
-  worker leem os sinais de cada paciente ativo, chamam o calculador de
-  265.1 e persistem nas tabelas de 265.2, reaproveitando o claim/lock por
-  advisory lock ja existente (`executarPorTenantAtivo`) sem mecanismo novo.
-  Gap real documentado (nao adivinhado): o sinal `formulario_vencido` exige
-  um campo "obrigatorio" que nao existe em nenhuma entidade de
-  questionarios hoje, entao o job wireia os outros tres sinais e omite esse
-  de proposito, ate existir decisao de produto explicita. Detalhe completo
-  em `docs/history/phases/PLANO_FASE_265.md`, secoes 8 e 9, e em
+  calculador de dominio puro), `#258` (Incremento 265.2, persistencia e
+  RLS) e `#259` (Incremento 265.3, recalculo idempotente) foram integrados
+  no `main` pelos merges `38f5a30`, `bf1976a` e `8de87f9`; todos os checks
+  aplicaveis passaram antes de cada merge humano, incluindo o job "Backend
+  NestJS" da PR `#258` que rodou a migration nova contra um Postgres real
+  de CI e confirmou RLS/FORCE RLS com `pnpm test:rls:testcontainers`. O
+  Incremento 265.3 reaproveitou o claim/lock por advisory lock ja existente
+  (`executarPorTenantAtivo`) sem mecanismo novo, e documentou um gap real
+  (nao adivinhado): o sinal `formulario_vencido` exige um campo
+  "obrigatorio" que nao existe em nenhuma entidade de questionarios hoje,
+  entao o job wireia os outros tres sinais e omite esse de proposito, ate
+  existir decisao de produto explicita. Na sequencia, o Incremento 265.4
+  (leitura e override auditado, **so backend**) foi implementado em branch
+  dedicada `feat/fase265-leitura-override`: rota de leitura do valor
+  efetivo (calculado ou override), criacao/alteracao/remocao de override
+  com expiracao obrigatoria (ate 90 dias) e expiracao lazy na propria
+  leitura. O gate `validar-redacao-auditoria.mjs` pegou um erro real antes
+  do merge (a trilha generica ia gravar `codigoMotivo`, texto livre sem
+  enum fechado) e foi corrigido removendo esse campo da trilha generica --
+  fica so no historico de dominio, que tem RLS proprio. **Pendencia
+  explicita**: a troca do rotulo "Risco" na UI nao foi feita, porque uma
+  troca literal sem buscar o DTO novo deixaria a tela mostrando o campo
+  legado sob um nome mais autoritativo, o oposto do que a fase pretende;
+  fica como trabalho de frontend a parte. Detalhe completo em
+  `docs/history/phases/PLANO_FASE_265.md`, secoes 8-10, e em
   `CHECKLIST_FASES_FUTURAS_PRODUCAO.md`, entrada da Fase 265.
 - Reconciliacao de 2026-09-17: os PRs GitHub `#254` e `#255` foram integrados no
   `main`, o ultimo pelo merge `2b1e3641d73bccaea03092f418d64b346b0d2414`;
@@ -431,8 +440,8 @@ Atualizado em 2026-09-18.
   test:rls:testcontainers`, os 20 checks passaram e o merge humano seguiu.
   Aplicacao em producao continua exigindo o procedimento fora de banda com
   role owner do `RUNBOOK_PRODUCAO.md`, ainda nao executado.
-  O Incremento 265.3 (recalculo idempotente) foi implementado em 2026-09-18
-  em branch dedicada (`feat/fase265-recalculo-idempotente`):
+  O Incremento 265.3 (recalculo idempotente) foi integrado em 2026-09-18
+  pelo PR GitHub `#259`, merge `8de87f9`:
   `ServicoRecalculoPrioridadeAcompanhamento` le faltas/consultas/registro de
   habitos de cada paciente ativo do tenant, chama o calculador de 265.1 e
   persiste nas tabelas de 265.2; `ProcessadorRecalculoPrioridadeAcompanhamento`
@@ -447,11 +456,32 @@ Atualizado em 2026-09-18.
   existe em nenhuma entidade de questionarios hoje -- o job wireia os
   outros tres sinais e omite esse de proposito, ate existir decisao de
   produto explicita (mesmo cuidado ja registrado para
-  `override_codigo_motivo` na migration 265.2). TDD: 9/9 testes do servico
-  e 1/1 do processador. Sem migration nova. Validado com typecheck, build,
-  suite completa do backend (190 suites, 1.776 testes), `git diff --check`
-  e `pnpm security:secrets`. Plano e evidencia completa:
-  `docs/history/phases/PLANO_FASE_265.md`, secoes 8 e 9.
+  `override_codigo_motivo` na migration 265.2).
+  O Incremento 265.4 (leitura e override auditado, **so backend**) foi
+  implementado em 2026-09-18 em branch dedicada
+  (`feat/fase265-leitura-override`): `GET /pacientes/:id/prioridade-acompanhamento`
+  le o que 265.3 ja calculou (nunca recalcula) e devolve o valor efetivo
+  (override quando ha um em vigor, senao o calculado); `POST`/`DELETE
+  .../override` (`pacientes.gerenciar`) criam, alteram (`override_alterado`
+  vs `override_criado`, conforme ja havia override ativo) e removem o
+  override, com expiracao obrigatoria ate 90 dias e justificativa cifrada.
+  A leitura tambem expira o override sozinha quando vencido (evento
+  `override_expirado` no historico), sem precisar de job dedicado.
+  **Achado do gate de auditoria antes do merge**: a primeira versao gravava
+  `codigoMotivo` (texto livre sem enum fechado) na trilha generica
+  (`user_action_logs`) e `validar-redacao-auditoria.mjs` reprovou --
+  corrigido removendo esse campo da trilha generica (fica so no historico
+  de dominio, que tem RLS proprio). **Pendencia explicita**: a troca do
+  rotulo "Risco" na UI nao foi feita nesta branch -- o texto hoje mostra o
+  campo legado `score_risco`, e uma troca literal do rotulo sem buscar o
+  DTO novo deixaria a tela mais enganosa, nao menos; fica como trabalho de
+  frontend a parte. TDD: 9/9 e 1/1 testes do 265.3, 10/10 e 4/4 do 265.4.
+  Sem migration nova em nenhum dos dois incrementos. Validado com
+  typecheck, build, suite completa do backend (190 suites, 1.821 testes),
+  `pnpm test:redacao-auditoria`, `node --test
+  scripts/validar-guardas-controladores.spec.mjs`, `git diff --check` e
+  `pnpm security:secrets`. Plano e evidencia completa:
+  `docs/history/phases/PLANO_FASE_265.md`, secoes 8-10.
 - Fase 261 (escopo de trabalho: gaps de seguranca e privacidade
   identificados no audit da fase) **concluida tecnicamente em 2026-09-15,
   com excecoes operacionais abertas; incrementos 1 a 4 integrados**.

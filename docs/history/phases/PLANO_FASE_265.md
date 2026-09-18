@@ -96,7 +96,7 @@ Implementar em incrementos separados, cada um em branch e PR proprios:
    - claim/lock existente, tenant explicito e idempotencia por paciente,
      versao da formula e janela;
    - falha preserva o ultimo valor valido e fica observavel sem incluir PHI.
-4. **265.4 - Leitura e override auditado**
+4. **265.4 - Leitura e override auditado** [IMPLEMENTADO NESTA BRANCH, so backend]
    - DTO minimo com valor efetivo, calculado, faixa, fatores fechados, versao,
      data do calculo e estado do override;
    - UI troca o rotulo ambiguo `Risco` por `Prioridade de acompanhamento`;
@@ -113,14 +113,19 @@ compatibilidade de leitura e rollback aprovados.
 - [x] Proprietario aceita explicitamente a semantica de prioridade operacional,
   e nao risco clinico.
 - [x] Proprietario aceita pesos, janelas e faixas da formula inicial.
-- [~] Revisao de seguranca confirma que fatores e justificativa nao vazam PHI
-  em logs, auditoria, filas ou respostas sem permissao. **Parcialmente
-  coberto por 265.3**: o job de recalculo agora le e escreve
-  `prioridades_acompanhamento_*` de verdade, mas so registra `tenantId`,
-  `pacienteId` e `erro.name` em log de falha -- nunca o conteudo decifrado
-  de habitos, nem `fatores`/`score`. Ainda nao ha nenhuma rota que devolva
-  esse dado a um cliente HTTP (isso e 265.4); revisitar este gate quando o
-  DTO de leitura existir, porque so ai existe resposta para auditar.
+- [x] Revisao de seguranca confirma que fatores e justificativa nao vazam PHI
+  em logs, auditoria, filas ou respostas sem permissao. **Fechado por
+  265.4**: a rota de leitura devolve `fatores`/`score`/`faixa` (dado
+  estruturado, sem texto livre) so para quem tem `pacientes.ler` e escopo
+  de tenant/profissional ja revalidado; a justificativa do override nunca
+  sai do banco (nem cifrada) em nenhuma resposta HTTP. Na trilha generica
+  de auditoria (`user_action_logs`), o gate `validar-redacao-auditoria.mjs`
+  reprovou a primeira tentativa por gravar `codigoMotivo` (texto livre sem
+  enum fechado) em claro -- corrigido removendo esse campo do metadata da
+  trilha generica (ele fica so no historico de dominio, que tem RLS
+  proprio); `faixa` e `origemValorEfetivo` foram registrados como
+  vocabulario fechado no gate, com justificativa escrita. A justificativa
+  do override em si nunca aparece em nenhum dos dois logs.
 - [x] Desenho da migration confirma RLS/FORCE RLS, role owner e rollback,
   **para o schema criado no incremento 265.2**: `enable row level security` +
   `force row level security` + policy `ALL`/`public` isolando por
@@ -132,18 +137,17 @@ compatibilidade de leitura e rollback aprovados.
   (`down()` remove so o estado atual, nunca o historico). Execucao real fora
   de banda com role owner em producao continua pendente, fora do escopo
   desta migration em si.
-- [~] Matriz de testes cobre tenant, profissional, override, expiracao,
-  idempotencia e formula versionada. **Parcialmente coberto por 265.2 e
-  265.3**: isolamento por tenant e a forma "tudo ou nada" do override (com
-  expiracao obrigatoria) sao garantidos no schema e testados
-  automaticamente pelo gate de RLS exaustivo; idempotencia por paciente,
-  versao da formula e janela (dia UTC) agora tem 9 testes dedicados no
-  servico de recalculo, incluindo o caso "falha em um paciente preserva o
-  ultimo valor valido e nao interrompe os demais". Escopo por profissional
-  nao se aplica ao job (ele recalcula todos os pacientes ativos do tenant,
-  sem filtro de profissional -- esse escopo e do caminho de leitura);
-  expiracao de override e leitura versionada continuam pendentes, ambas
-  atribuidas a 265.4.
+- [x] Matriz de testes cobre tenant, profissional, override, expiracao,
+  idempotencia e formula versionada. Isolamento por tenant e a forma "tudo
+  ou nada" do override (com expiracao obrigatoria) sao garantidos no schema
+  e testados automaticamente pelo gate de RLS exaustivo (265.2);
+  idempotencia por paciente, versao da formula e janela (dia UTC) tem 9
+  testes dedicados no servico de recalculo (265.3); escopo por profissional
+  (paciente fora do escopo nao pode ler nem alterar override), criacao,
+  alteracao (`override_alterado` != `override_criado`), remocao e expiracao
+  lazy na leitura (com evento `override_expirado` no historico) tem 10
+  testes dedicados no servico de leitura/override (265.4). Cada incremento
+  fechou a parte da matriz que dependia dele existir.
 
 O merge do plano, isoladamente, nao substituiu o aceite. O aceite foi dado na
 instrucao posterior do proprietario para seguir com a implementacao.
@@ -364,3 +368,106 @@ Validacoes desta branch:
 - `NA` - migration, DDL ou schema novo (nenhum: 265.3 so consome o schema
   que 265.2 ja criou);
 - `NA` - UI, rota HTTP ou leitura do valor calculado por um cliente (265.4).
+
+## 10. Incremento 265.4 - implementacao e evidencia (so backend)
+
+Tres metodos novos em `ServicoPacientes`
+(`octaclin-backend/src/modulos/pacientes/aplicacao/servico-pacientes.ts`),
+reaproveitando `garantirPacienteExiste` (mesma fronteira de tenant/escopo
+profissional de todo o resto do modulo, ja provada nos testes existentes) e
+tres rotas novas em `ControladorPacientes`:
+
+- `GET /pacientes/:id/prioridade-acompanhamento` (permissao padrao da
+  classe, `pacientes.ler`): devolve `valorCalculado` (score, faixa,
+  fatores, versao, data do calculo -- o que 265.3 persistiu, nunca
+  recalculado aqui) e `valorEfetivo` (a faixa que deve orientar o trabalho
+  da equipe agora: a do override quando ha um em vigor, senao a calculada).
+  Sem calculo ainda (job nao rodou para o paciente), devolve o mesmo
+  default que o calculador produz sem sinais (`score 0`, `baixa`) em vez de
+  404 -- ausencia de calculo e um estado valido de paciente novo, nao um
+  erro.
+- `POST /pacientes/:id/prioridade-acompanhamento/override` (`pacientes.gerenciar`,
+  a mesma permissao de toda mutacao de paciente -- secao 3.3 do plano):
+  cria ou substitui o override em vigor. `expiraEm` e obrigatorio e limitado
+  a 90 dias (`BadRequestException` fora da janela ou no passado). A
+  justificativa e cifrada antes de tocar o banco. O evento gravado no
+  historico e `override_criado` na primeira vez e `override_alterado`
+  quando ja havia um override ativo (nao expirado) no momento da troca --
+  a distincao que a secao 3.3 pede ("Criar, alterar, expirar ou remover
+  override gera auditoria").
+- `DELETE /pacientes/:id/prioridade-acompanhamento/override` (`pacientes.gerenciar`):
+  remove o override em vigor, `404` se nao houver nenhum. O valor efetivo
+  volta ao calculado sem apagar o historico ja gravado -- mesmo principio
+  do rollback assimetrico da migration 265.2.
+
+**Expiracao lazy na leitura**: a rota `GET` verifica se o override
+armazenado ja passou de `overrideExpiraEm`; se sim, grava `override_expirado`
+no historico, limpa os cinco campos de override do estado atual e devolve o
+valor calculado como efetivo -- tudo na mesma chamada de leitura, sem
+precisar de um job dedicado so para isso. Nao existe outro ponto no plano
+responsavel por essa transicao (265.3 deliberadamente nao mexe em override),
+entao a leitura e o lugar certo: e onde o sistema primeiro percebe, de
+qualquer jeito, que o override venceu.
+
+### Auditoria: dois caminhos, dois papeis
+
+O historico de dominio (`prioridades_acompanhamento_historico`, RLS
+proprio, append-only) grava o motivo em texto curto (`codigoMotivo`) porque
+e a fonte de verdade operacional para reconstruir "por que esta faixa
+estava em vigor". A trilha generica (`user_action_logs`, usada por todo o
+resto do backend) **nao** grava `codigoMotivo`: a primeira tentativa foi
+reprovada pelo gate `validar-redacao-auditoria.mjs` porque `codigoMotivo`
+ainda nao tem enum fechado no DTO (secao 3.3: "codigo de motivo fechado"
+que o produto nunca definiu -- mesmo gap ja registrado na migration 265.2) e
+o gate ja tem um precedente explicito para exatamente este caso
+(`motivotecnico`, cujo comentario diz que `motivo` livre "continua virando
+`possuiMotivo`" para nao liberar texto digitado por pessoa em call sites
+futuros com o mesmo nome de chave). A correcao seguiu o mesmo padrao: a
+trilha generica so recebe `faixa` (enum fechado) e `expiraEm` (timestamp,
+ja um padrao existente); `codigoMotivo` e a justificativa ficam
+exclusivamente no historico de dominio, nunca na trilha generica.
+
+### O que ficou fora deste incremento, de proposito
+
+- **UI ("trocar o rotulo Risco por Prioridade de acompanhamento")**: o
+  texto "Risco" hoje em `octaclin-web/components/pacientes/prontuario-paciente.tsx:953`
+  mostra `pacientes.score_risco` (o campo legado, digitado a mao, que este
+  incremento nao apaga nem sobrescreve). Uma troca literal do texto
+  mantendo a mesma fonte de dado deixaria a tela mais enganosa, nao menos:
+  chamaria o numero manual de "Prioridade de acompanhamento", o nome que a
+  Fase 265 existe para reservar a um valor de verdade calculado. Fazer essa
+  troca direito exige buscar o DTO novo (BFF + cliente + componente), que e
+  trabalho de frontend a parte, nao uma renomeacao de uma linha. Registrado
+  aqui como pendencia explicita, nao escondido.
+- Gatilho de automacao (`paciente.risco_alto`) continua desligado, como em
+  todo o resto da fase -- nenhum codigo deste incremento o aciona.
+- Fechar o enum de `codigoMotivo` -- ainda depende de decisao de produto,
+  mesmo gap do 265.3.
+
+Validacoes desta branch:
+
+- `PASS` - TDD RED: os testes novos falharam por metodo inexistente em
+  `ServicoPacientes` antes da implementacao;
+- `PASS` - 10/10 testes novos em `servico-pacientes.spec.ts` (sem calculo
+  ainda; sem override o efetivo e o calculado; com override ativo o
+  efetivo e o override e o calculado continua visivel; override expirado
+  expira sozinho na leitura e registra o evento; cria override cifrando a
+  justificativa e sem vaza-la; alterar override ativo registra
+  `override_alterado`; rejeita expiracao alem de 90 dias; rejeita
+  expiracao no passado; remove override e registra `override_removido`;
+  paciente fora do escopo do profissional nao le nem altera);
+- `PASS` - 4/4 testes novos em `controlador-pacientes.spec.ts` (audita
+  leitura sem vazar codigo de motivo/justificativa; audita override sem
+  gravar codigoMotivo/justificativa na trilha generica; audita remocao;
+  as duas mutacoes protegidas por `pacientes.gerenciar`, leitura na
+  permissao padrao da classe);
+- `PASS` - `pnpm test:redacao-auditoria` (24/24, incluindo a cobertura das
+  duas chaves novas);
+- `PASS` - `node --test scripts/validar-guardas-controladores.spec.mjs`
+  (11/11);
+- `PASS` - typecheck do backend;
+- `PASS` - build e verificacao do artefato (`dist/main.js`);
+- `PASS` - suite completa do backend, 190 suites e 1.821 testes; 31 skips
+  preexistentes;
+- `NA` - migration, DDL ou schema novo;
+- `NA` - UI, BFF ou cliente web (pendencia explicita acima).
