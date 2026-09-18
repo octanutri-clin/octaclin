@@ -3245,8 +3245,8 @@ publicado antes de ampliar a superficie de mudancas visuais.
 
 - [~] Fase 265 - Fundacao da inteligencia: prioridade de acompanhamento
   calculada com override auditado. [EM ANDAMENTO: 265.1-265.4 entregues;
-  265.5 (enum fechado de motivo + formula v1.1.0) em PR aberta; UI de
-  override e migration em producao pendentes]
+  265.5 (enum fechado de motivo + formula v1.1.0) e 265.6 (UI de override)
+  em PRs abertas; migration em producao pendente]
   - Origem: PB-01 e Onda 2 de
     `docs/product/OCTACLIN_PRODUCT_FEATURE_AUDIT.md`.
   - Dependencia de produto: definir pesos e sinais explicaveis antes de escrever
@@ -3424,6 +3424,38 @@ publicado antes de ampliar a superficie de mudancas visuais.
     `node --test scripts/validar-guardas-controladores.spec.mjs` (11/11),
     `git diff --check` e `pnpm security:secrets`. Detalhe completo em
     `docs/history/phases/PLANO_FASE_265.md`, secao 12.
+  - Incremento 265.6 implementado em 2026-09-18, em branch dedicada
+    (`feat/fase265-ui-override-prioridade-acompanhamento`), decisao de
+    produto explicita do dono: UI de gerenciamento de override, consumindo
+    inteiramente as rotas ja existentes do backend (265.4/265.5) -- sem
+    mudanca de backend. Nova secao "Prioridade de acompanhamento" na aba
+    Resumo do prontuario mostra, sempre separados, o valor calculado
+    (faixa, score, fatores) e o valor efetivo (com origem explicita:
+    calculada ou ajustada manualmente, mais validade do override). Acao
+    "Ajustar prioridade" (so com `pacientes.gerenciar`) abre um modal com
+    select de faixa, select de motivo restrito ao enum fechado da 265.5,
+    justificativa e data de expiracao (1-90 dias); com override ativo, o
+    modal alterna para "Salvar alteração" e oferece "Remover ajuste" numa
+    confirmacao separada. Nenhum campo edita score, fatores ou versao da
+    formula diretamente. Novo BFF `POST`/`DELETE` em
+    `prioridade-acompanhamento/override/route.ts` com
+    `exigirPermissaoBff('pacientes.gerenciar')` (mesmo padrao ja usado em
+    `tarefas-acompanhamento/[tarefaId]/route.ts`). Decisao de arquitetura:
+    a secao nova recebe a prioridade via props do componente pai em vez de
+    se auto-buscar, para o cabecalho sticky (fechado na UI do 265.4) e a
+    secao nunca ficarem dessincronizados apos um ajuste. TDD: novo par
+    `test-override-prioridade-acompanhamento-bff.mjs` /
+    `override-prioridade-acompanhamento-bff.spec.ts` (6/6 -- sessao
+    ausente e sessao sem `pacientes.gerenciar` recusadas antes do backend
+    em POST e DELETE; encaminhamento correto de corpo e paciente
+    codificado), somado ao `test:authz`; 6 testes Playwright novos em
+    `console-regression.spec.mjs` (criar, alterar, remover, erro de rede,
+    paciente fora do escopo, ausencia de permissao), 66/66 no bloco
+    "prontuario do paciente" completo. Validado com `pnpm typecheck`,
+    `pnpm lint`, `pnpm test:authz` completo, `acessibilidade.spec.mjs`
+    completo (268/268) e `fase-249-densidade-responsividade.spec.mjs`
+    (6/6), `git diff --check` e `pnpm security:secrets`. Detalhe completo
+    em `docs/history/phases/PLANO_FASE_265.md`, secao 13.
 
 Documento de execução e prioridades: `ROADMAP_QUALIDADE_SEGURANCA_FASES_248_262.md`.
 Matriz operacional: `MATRIZ_SKILLS_PLUGINS_MODELOS_FASES_243_248_262.md`.

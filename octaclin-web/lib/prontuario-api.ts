@@ -148,6 +148,61 @@ export async function obterPrioridadeAcompanhamento(pacienteId: string): Promise
   return resposta.json() as Promise<PrioridadeAcompanhamentoApi>;
 }
 
+/** Vocabulario fechado aprovado na Fase 265.5 -- mesmo enum do backend (`@IsIn`). */
+export const CODIGOS_MOTIVO_OVERRIDE_PRIORIDADE_ACOMPANHAMENTO: Array<{
+  codigo: CodigoMotivoOverridePrioridadeAcompanhamentoApi;
+  rotulo: string;
+}> = [
+  { codigo: 'evento_recente_nao_capturado', rotulo: 'Evento recente ainda não capturado pelo cálculo' },
+  { codigo: 'informacao_externa_relevante', rotulo: 'Informação externa relevante' },
+  { codigo: 'acompanhamento_intensificado', rotulo: 'Acompanhamento precisa ser intensificado' },
+  { codigo: 'acompanhamento_reduzido', rotulo: 'Acompanhamento pode ser reduzido' },
+  { codigo: 'correcao_de_dado', rotulo: 'Correção de dado' },
+  { codigo: 'outro', rotulo: 'Outro' }
+];
+
+export type CodigoMotivoOverridePrioridadeAcompanhamentoApi =
+  | 'evento_recente_nao_capturado'
+  | 'informacao_externa_relevante'
+  | 'acompanhamento_intensificado'
+  | 'acompanhamento_reduzido'
+  | 'correcao_de_dado'
+  | 'outro';
+
+export interface SolicitarOverridePrioridadeAcompanhamentoEntrada {
+  faixa: FaixaPrioridadeAcompanhamentoApi;
+  codigoMotivo: CodigoMotivoOverridePrioridadeAcompanhamentoApi;
+  justificativa: string;
+  expiraEm: string;
+}
+
+export async function solicitarOverridePrioridadeAcompanhamento(
+  pacienteId: string,
+  entrada: SolicitarOverridePrioridadeAcompanhamentoEntrada
+): Promise<PrioridadeAcompanhamentoApi> {
+  const resposta = await fetch(`/api/pacientes/${encodeURIComponent(pacienteId)}/prioridade-acompanhamento/override`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(entrada)
+  });
+  if (!resposta.ok) {
+    await lancarErroApi(resposta);
+  }
+
+  return resposta.json() as Promise<PrioridadeAcompanhamentoApi>;
+}
+
+export async function removerOverridePrioridadeAcompanhamento(pacienteId: string): Promise<PrioridadeAcompanhamentoApi> {
+  const resposta = await fetch(`/api/pacientes/${encodeURIComponent(pacienteId)}/prioridade-acompanhamento/override`, {
+    method: 'DELETE'
+  });
+  if (!resposta.ok) {
+    await lancarErroApi(resposta);
+  }
+
+  return resposta.json() as Promise<PrioridadeAcompanhamentoApi>;
+}
+
 export async function obterProntuarioPaciente(pacienteId: string): Promise<ProntuarioPacienteApi> {
   const resposta = await fetch(`/api/pacientes/${encodeURIComponent(pacienteId)}/prontuario`, { cache: 'no-store' });
   if (!resposta.ok) {
