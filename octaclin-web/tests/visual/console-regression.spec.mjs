@@ -159,6 +159,14 @@ async function prepararSessaoConsoleMockada(page) {
   });
 }
 
+function dataFuturaIso(dias) {
+  return new Date(Date.now() + dias * 24 * 60 * 60 * 1000).toISOString();
+}
+
+function dataFutura(dias) {
+  return dataFuturaIso(dias).slice(0, 10);
+}
+
 async function assertSemOverflowHorizontal(page) {
   const medidas = await page.evaluate(() => ({
     larguraDocumento: document.documentElement.scrollWidth,
@@ -1099,18 +1107,55 @@ async function prepararProntuarioMockado(page, {
     });
   });
 
+  let overridePrioridade = null;
+  let falhaOverridePrioridade = null;
+
+  function respostaPrioridadeAtual() {
+    const overrideAtivo = overridePrioridade && new Date(overridePrioridade.expiraEm) > new Date('2026-07-21T10:00:00.000Z');
+    return {
+      pacienteId: 'paciente-1',
+      versaoFormula: '1.1.0',
+      calculadoEm: '2026-07-21T10:00:00.000Z',
+      valorCalculado: { score: 82, faixa: 'alta', fatores: [{ codigo: 'faltas_recentes', pontos: 60, quantidade: 2 }] },
+      valorEfetivo: overrideAtivo ? { faixa: overridePrioridade.faixa, origem: 'override' } : { faixa: 'alta', origem: 'calculado' },
+      override: overrideAtivo
+        ? {
+            faixa: overridePrioridade.faixa,
+            codigoMotivo: overridePrioridade.codigoMotivo,
+            expiraEm: overridePrioridade.expiraEm,
+            criadoEm: '2026-07-21T10:00:00.000Z',
+            atorUsuarioId: 'usuario-profissional-1'
+          }
+        : undefined
+    };
+  }
+
   await page.route('**/api/pacientes/paciente-1/prioridade-acompanhamento', async (route) => {
-    await route.fulfill({
-      status: 200,
-      contentType: 'application/json',
-      body: JSON.stringify({
-        pacienteId: 'paciente-1',
-        versaoFormula: '1.0.0',
-        calculadoEm: '2026-07-21T10:00:00.000Z',
-        valorCalculado: { score: 82, faixa: 'alta', fatores: [] },
-        valorEfetivo: { faixa: 'alta', origem: 'calculado' }
-      })
-    });
+    await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(respostaPrioridadeAtual()) });
+  });
+
+  await page.route('**/api/pacientes/paciente-1/prioridade-acompanhamento/override', async (route) => {
+    const requisicao = route.request();
+    if (requisicao.method() === 'POST') {
+      if (falhaOverridePrioridade) {
+        await route.fulfill({
+          status: falhaOverridePrioridade.status,
+          contentType: 'application/json',
+          body: JSON.stringify({ mensagem: falhaOverridePrioridade.mensagem })
+        });
+        return;
+      }
+      const corpo = requisicao.postDataJSON();
+      overridePrioridade = { faixa: corpo.faixa, codigoMotivo: corpo.codigoMotivo, expiraEm: corpo.expiraEm };
+      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(respostaPrioridadeAtual()) });
+      return;
+    }
+    if (requisicao.method() === 'DELETE') {
+      overridePrioridade = null;
+      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(respostaPrioridadeAtual()) });
+      return;
+    }
+    await route.fulfill({ status: 405, contentType: 'application/json', body: JSON.stringify({ mensagem: 'Método inesperado.' }) });
   });
 
   await page.route('**/api/pacientes/paciente-1/perfil-cadastro', async (route) => {
@@ -1945,7 +1990,9 @@ async function prepararProntuarioMockado(page, {
     leiturasAnexos: () => leiturasAnexos,
     leiturasProfissionais: () => leiturasProfissionais,
     leiturasEvolucoes: () => leiturasEvolucoes,
-    leiturasTarefas: () => leiturasTarefas
+    leiturasTarefas: () => leiturasTarefas,
+    definirOverridePrioridade: (valor) => { overridePrioridade = valor; },
+    definirFalhaOverridePrioridade: (valor) => { falhaOverridePrioridade = valor; }
   };
 }
 
@@ -3045,6 +3092,114 @@ test.describe('prontuario do paciente', () => {
     await page.getByRole('button', { name: 'Excluir anexo', exact: true }).click();
     await expect(page.getByText('Nenhum anexo clínico')).toBeVisible();
     await assertSemOverflowHorizontal(page);
+  });
+
+  test('permite ajustar manualmente a prioridade de acompanhamento, mantendo calculado e efetivo separados', async ({ page }) => {
+    await prepararProntuarioMockado(page);
+    await page.goto('/pacientes/paciente-1');
+
+    const secao = page.locator('section', { has: page.getByRole('heading', { name: 'Prioridade de acompanhamento' }) });
+    await expect(secao.getByText('Alta · 82 pontos')).toBeVisible();
+    await expect(secao.getByText('Sem ajuste manual em vigor.')).toBeVisible();
+
+    await secao.getByRole('button', { name: 'Ajustar prioridade' }).click();
+    const modal = page.getByRole('dialog', { name: 'Ajustar prioridade de acompanhamento' });
+    await expect(modal.getByRole('button', { name: 'Aplicar ajuste' })).toBeVisible();
+    await modal.getByLabel('Nova faixa').selectOption('baixa');
+    await modal.getByLabel('Motivo').selectOption('acompanhamento_reduzido');
+    await modal.getByLabel('Justificativa').fill('Paciente estabilizou após intervenção recente.');
+    await modal.getByLabel('Válido até').fill(dataFutura(10));
+    await modal.getByRole('button', { name: 'Aplicar ajuste' }).click();
+
+    await expect(modal).toBeHidden();
+    await expect(secao.getByText('Baixa — ajustada manualmente')).toBeVisible();
+    await expect(secao.getByText('Alta · 82 pontos')).toBeVisible();
+    await assertSemOverflowHorizontal(page);
+  });
+
+  test('permite alterar um ajuste manual ja ativo', async ({ page }) => {
+    const controle = await prepararProntuarioMockado(page);
+    controle.definirOverridePrioridade({
+      faixa: 'alta',
+      codigoMotivo: 'acompanhamento_intensificado',
+      expiraEm: dataFuturaIso(5)
+    });
+    await page.goto('/pacientes/paciente-1');
+
+    const secao = page.locator('section', { has: page.getByRole('heading', { name: 'Prioridade de acompanhamento' }) });
+    await expect(secao.getByText('Alta — ajustada manualmente')).toBeVisible();
+
+    await secao.getByRole('button', { name: 'Ajustar prioridade' }).click();
+    const modal = page.getByRole('dialog', { name: 'Ajustar prioridade de acompanhamento' });
+    await modal.getByLabel('Nova faixa').selectOption('media');
+    await modal.getByLabel('Motivo').selectOption('correcao_de_dado');
+    await modal.getByLabel('Justificativa').fill('Ajuste após revisão do caso.');
+    await modal.getByLabel('Válido até').fill(dataFutura(20));
+    await modal.getByRole('button', { name: 'Salvar alteração' }).click();
+
+    await expect(modal).toBeHidden();
+    await expect(secao.getByText('Média — ajustada manualmente')).toBeVisible();
+  });
+
+  test('permite remover o ajuste manual, voltando ao calculado', async ({ page }) => {
+    const controle = await prepararProntuarioMockado(page);
+    controle.definirOverridePrioridade({
+      faixa: 'alta',
+      codigoMotivo: 'acompanhamento_intensificado',
+      expiraEm: dataFuturaIso(5)
+    });
+    await page.goto('/pacientes/paciente-1');
+
+    const secao = page.locator('section', { has: page.getByRole('heading', { name: 'Prioridade de acompanhamento' }) });
+    await secao.getByRole('button', { name: 'Ajustar prioridade' }).click();
+    const modal = page.getByRole('dialog', { name: 'Ajustar prioridade de acompanhamento' });
+    await modal.getByRole('button', { name: 'Remover ajuste' }).click();
+    await page.getByRole('dialog', { name: 'Remover ajuste manual' }).getByRole('button', { name: 'Remover' }).click();
+
+    await expect(page.getByRole('dialog')).toHaveCount(0);
+    await expect(secao.getByText('Sem ajuste manual em vigor.')).toBeVisible();
+  });
+
+  test('trata falha de rede ao salvar o ajuste sem quebrar a tela', async ({ page }) => {
+    const controle = await prepararProntuarioMockado(page);
+    controle.definirFalhaOverridePrioridade({ status: 500, mensagem: 'Falha sintetica ao salvar override.' });
+    await page.goto('/pacientes/paciente-1');
+
+    const secao = page.locator('section', { has: page.getByRole('heading', { name: 'Prioridade de acompanhamento' }) });
+    await secao.getByRole('button', { name: 'Ajustar prioridade' }).click();
+    const modal = page.getByRole('dialog', { name: 'Ajustar prioridade de acompanhamento' });
+    await modal.getByLabel('Justificativa').fill('Tentativa que deve falhar de propósito.');
+    await modal.getByLabel('Válido até').fill(dataFutura(10));
+    await modal.getByRole('button', { name: 'Aplicar ajuste' }).click();
+
+    await expect(modal.getByText('Não foi possível salvar o ajuste de prioridade. Tente novamente.')).toBeVisible();
+    await expect(modal).toBeVisible();
+    await expect(page.getByText('Internal server error')).toHaveCount(0);
+  });
+
+  test('trata paciente fora do escopo ao tentar ajustar a prioridade', async ({ page }) => {
+    const controle = await prepararProntuarioMockado(page);
+    controle.definirFalhaOverridePrioridade({ status: 404, mensagem: 'Paciente não encontrado no escopo do profissional.' });
+    await page.goto('/pacientes/paciente-1');
+
+    const secao = page.locator('section', { has: page.getByRole('heading', { name: 'Prioridade de acompanhamento' }) });
+    await secao.getByRole('button', { name: 'Ajustar prioridade' }).click();
+    const modal = page.getByRole('dialog', { name: 'Ajustar prioridade de acompanhamento' });
+    await modal.getByLabel('Justificativa').fill('Tentativa fora do escopo do profissional.');
+    await modal.getByLabel('Válido até').fill(dataFutura(10));
+    await modal.getByRole('button', { name: 'Aplicar ajuste' }).click();
+
+    await expect(modal.getByText('Este conteúdo não está mais disponível.')).toBeVisible();
+    await expect(modal).toBeVisible();
+  });
+
+  test('oculta a acao de ajustar prioridade sem a permissao pacientes.gerenciar', async ({ page }) => {
+    await prepararProntuarioMockado(page, { permissoesRemovidas: ['pacientes.gerenciar'] });
+    await page.goto('/pacientes/paciente-1');
+
+    const secao = page.locator('section', { has: page.getByRole('heading', { name: 'Prioridade de acompanhamento' }) });
+    await expect(secao.getByText('Alta · 82 pontos')).toBeVisible();
+    await expect(secao.getByRole('button', { name: 'Ajustar prioridade' })).toHaveCount(0);
   });
 });
 
