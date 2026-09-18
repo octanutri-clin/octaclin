@@ -7,16 +7,24 @@ Atualizado em 2026-09-18.
 - Produto: OctaClin.
 - Repositorio: `octanutri-clin/octaclin`.
 - Branch principal: `main`.
-- Reconciliacao de 2026-09-18: o PR GitHub `#257` (Incremento 265.1, calculador
-  de dominio puro) foi integrado no `main` pelo merge `38f5a30`; todos os
-  checks aplicaveis passaram antes do merge humano. Na sequencia, o
-  Incremento 265.2 (persistencia e RLS) foi implementado em branch dedicada
-  `feat/fase265-persistencia-prioridade`: migration aditiva criando
-  `prioridades_acompanhamento_paciente` e `prioridades_acompanhamento_historico`
-  (append-only, protegida por trigger), ambas com RLS/FORCE RLS e policy de
-  isolamento por tenant, sem nenhum servico ou job consumindo as tabelas
-  ainda. Detalhe completo em `docs/history/phases/PLANO_FASE_265.md`, secao 8,
-  e em `CHECKLIST_FASES_FUTURAS_PRODUCAO.md`, entrada da Fase 265.
+- Reconciliacao de 2026-09-18: os PRs GitHub `#257` (Incremento 265.1,
+  calculador de dominio puro) e `#258` (Incremento 265.2, persistencia e
+  RLS) foram integrados no `main` pelos merges `38f5a30` e `bf1976a`; todos
+  os checks aplicaveis passaram antes de cada merge humano, incluindo o job
+  "Backend NestJS" da PR `#258` que rodou a migration nova contra um
+  Postgres real de CI e confirmou RLS/FORCE RLS com `pnpm
+  test:rls:testcontainers`. Na sequencia, o Incremento 265.3 (recalculo
+  idempotente) foi implementado em branch dedicada
+  `feat/fase265-recalculo-idempotente`: um servico e um job diario no
+  worker leem os sinais de cada paciente ativo, chamam o calculador de
+  265.1 e persistem nas tabelas de 265.2, reaproveitando o claim/lock por
+  advisory lock ja existente (`executarPorTenantAtivo`) sem mecanismo novo.
+  Gap real documentado (nao adivinhado): o sinal `formulario_vencido` exige
+  um campo "obrigatorio" que nao existe em nenhuma entidade de
+  questionarios hoje, entao o job wireia os outros tres sinais e omite esse
+  de proposito, ate existir decisao de produto explicita. Detalhe completo
+  em `docs/history/phases/PLANO_FASE_265.md`, secoes 8 e 9, e em
+  `CHECKLIST_FASES_FUTURAS_PRODUCAO.md`, entrada da Fase 265.
 - Reconciliacao de 2026-09-17: os PRs GitHub `#254` e `#255` foram integrados no
   `main`, o ultimo pelo merge `2b1e3641d73bccaea03092f418d64b346b0d2414`;
   todos os checks aplicaveis passaram e nao restou PR aberta. O pacote interno
@@ -409,8 +417,7 @@ Atualizado em 2026-09-18.
   PR `#256`. O Incremento 265.1 (calculador de dominio puro, versionado e
   fail-closed, 7/7 testes focados) foi integrado em 2026-09-17 pelo PR GitHub
   `#257`, merge `38f5a30`. O Incremento 265.2 (persistencia e RLS) foi
-  implementado em 2026-09-18 em branch dedicada
-  (`feat/fase265-persistencia-prioridade`, ainda nao mergeada): migration
+  integrado em 2026-09-18 pelo PR GitHub `#258`, merge `bf1976a`: migration
   aditiva `1720000001046-AdicionarPrioridadeAcompanhamento` cria
   `prioridades_acompanhamento_paciente` (estado atual, override "tudo ou
   nada" com expiracao obrigatoria por check constraint) e
@@ -419,17 +426,32 @@ Atualizado em 2026-09-18.
   mecanismo de `user_action_logs`), ambas com RLS/FORCE RLS e policy de
   isolamento por tenant -- as duas entram automaticamente no gate exaustivo
   de RLS (`rls-isolamento-tenant.integracao.spec.ts`, inventario via catalogo
-  do Postgres). So schema: nenhum servico, job ou UI consome as tabelas
-  ainda. TDD: 11/11 testes da migration. A execucao real da migration nao foi
-  feita nesta sessao por ausencia de Docker/Postgres no ambiente remoto; o
-  ensaio em banco descartavel ocorre de fato no job "Backend NestJS" do
-  OctaClin CI (`pnpm run migration:run` contra Postgres real do CI, seguido
-  de `pnpm test:rls:testcontainers`); a aplicacao em producao continua
-  exigindo o procedimento fora de banda com role owner do
-  `RUNBOOK_PRODUCAO.md`. Validado com typecheck, build, suite completa do
-  backend (188 suites, 1.766 testes), `validar-migracoes-fora-de-banda.mjs`,
-  `git diff --check` e `pnpm security:secrets`. Plano e evidencia completa:
-  `docs/history/phases/PLANO_FASE_265.md`.
+  do Postgres). O job "Backend NestJS" da PR `#258` rodou a migration contra
+  um Postgres real de CI e confirmou RLS/FORCE RLS com `pnpm
+  test:rls:testcontainers`, os 20 checks passaram e o merge humano seguiu.
+  Aplicacao em producao continua exigindo o procedimento fora de banda com
+  role owner do `RUNBOOK_PRODUCAO.md`, ainda nao executado.
+  O Incremento 265.3 (recalculo idempotente) foi implementado em 2026-09-18
+  em branch dedicada (`feat/fase265-recalculo-idempotente`):
+  `ServicoRecalculoPrioridadeAcompanhamento` le faltas/consultas/registro de
+  habitos de cada paciente ativo do tenant, chama o calculador de 265.1 e
+  persiste nas tabelas de 265.2; `ProcessadorRecalculoPrioridadeAcompanhamento`
+  agenda isso uma vez por dia, so no processo worker, reaproveitando o
+  claim/lock por advisory lock ja existente
+  (`executarPorTenantAtivo`/`rodada-por-tenant.ts`), sem mecanismo novo.
+  Idempotente por paciente, versao da formula e janela (dia UTC): so grava
+  um evento novo no historico se o ultimo para essa combinacao nao for de
+  hoje; falha por paciente e isolada e preserva o ultimo valor valido, sem
+  interromper os demais. **Gap real documentado, nao adivinhado**: o sinal
+  `formulario_vencido` da formula exige um campo "obrigatorio" que nao
+  existe em nenhuma entidade de questionarios hoje -- o job wireia os
+  outros tres sinais e omite esse de proposito, ate existir decisao de
+  produto explicita (mesmo cuidado ja registrado para
+  `override_codigo_motivo` na migration 265.2). TDD: 9/9 testes do servico
+  e 1/1 do processador. Sem migration nova. Validado com typecheck, build,
+  suite completa do backend (190 suites, 1.776 testes), `git diff --check`
+  e `pnpm security:secrets`. Plano e evidencia completa:
+  `docs/history/phases/PLANO_FASE_265.md`, secoes 8 e 9.
 - Fase 261 (escopo de trabalho: gaps de seguranca e privacidade
   identificados no audit da fase) **concluida tecnicamente em 2026-09-15,
   com excecoes operacionais abertas; incrementos 1 a 4 integrados**.
