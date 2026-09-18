@@ -3244,11 +3244,11 @@ publicado antes de ampliar a superficie de mudancas visuais.
     validacao de configuracao; GitHub/`gh` apenas para evidencia e fluxo de PR.
 
 - [~] Fase 265 - Fundacao da inteligencia: prioridade de acompanhamento
-  calculada com override auditado. [EM ANDAMENTO: 265.1-265.4 e a UI da
-  265.4 entregues no `main`; 265.5 (enum fechado de motivo + formula
-  v1.1.0) e 265.6 (UI de override) em PRs abertas; preflight de leitura da
-  migration 265.2 em producao concluido -- parou antes de DDL por
-  ausencia de credencial de producao nesta sessao, ver secao 12 do plano]
+  calculada com override auditado. [EM ANDAMENTO: 265.1-265.5 e a UI da
+  265.4 entregues no `main`; 265.6 (UI de override) em PR aberta;
+  preflight de leitura da migration 265.2 em producao concluido -- parou
+  antes de DDL por ausencia de credencial de producao nesta sessao, ver
+  secao 13 do plano]
   - Origem: PB-01 e Onda 2 de
     `docs/product/OCTACLIN_PRODUCT_FEATURE_AUDIT.md`.
   - Dependencia de produto: definir pesos e sinais explicaveis antes de escrever
@@ -3397,6 +3397,35 @@ publicado antes de ampliar a superficie de mudancas visuais.
     `fase-252-navegacao-descoberta.spec.mjs`, `reflow-visual.spec.mjs`,
     `fase-254-pacientes.spec.mjs` e `aviso-acesso-negado.spec.mjs`), `git
     diff --check` e `pnpm security:secrets`.
+  - Incremento 265.5 implementado em 2026-09-18, em branch dedicada
+    (`feat/fase265-enum-motivo-formula-v2`), decisao de produto explicita do
+    dono, fechando dois gaps documentados desde 265.2/265.3. **Enum fechado
+    de `codigoMotivo`**: vocabulario aprovado (`evento_recente_nao_capturado`,
+    `informacao_externa_relevante`, `acompanhamento_intensificado`,
+    `acompanhamento_reduzido`, `correcao_de_dado`, `outro`) exportado do
+    dominio e validado no DTO via `@IsIn`, substituindo a string livre
+    anterior; `outro` e categoria fechada, nao escape para texto livre --
+    o detalhe continua exclusivamente na justificativa cifrada. Como agora
+    e vocabulario fechado, `codigoMotivo` passou a entrar na trilha generica
+    de auditoria (`validar-redacao-auditoria.mjs` atualizado com a chave
+    nova); a justificativa nunca entra ali. **Formula v1.1.0**: o fator
+    `formulario_vencido` foi removido (dominio de questionarios nao tem o
+    conceito de "obrigatorio" que o fator exigia, e criar esse campo so
+    para a formula seria modelar comportamento novo por conveniencia);
+    formula efetiva fica com faltas recentes (30/falta, max 60), sem
+    retorno programado (25) e adesao declarada baixa (15), faixas
+    inalteradas. Sem migration nova -- a mudanca e inteiramente de
+    aplicacao. TDD: `dtos.spec.ts` novo para o modulo de pacientes (usa
+    `validate()` do `class-validator` direto na classe do DTO, mesmo padrao
+    de `dtos-agendamento-publico.spec.ts`), com teste negativo para codigo
+    fora do enum; testes do calculador, do servico de recalculo e do
+    controlador atualizados para a formula e os fixtures reais. Validado
+    com suite completa do backend (191 suites, 1.793 testes, 31 skips
+    preexistentes), `pnpm typecheck`, `pnpm build`,
+    `pnpm test:redacao-auditoria` (24/24),
+    `node --test scripts/validar-guardas-controladores.spec.mjs` (11/11),
+    `git diff --check` e `pnpm security:secrets`. Detalhe completo em
+    `docs/history/phases/PLANO_FASE_265.md`, secao 12.
   - Preflight de leitura para a migration 265.2 em producao executado em
     2026-09-18, por autorizacao explicita do dono do produto. **Resultado:
     parou antes de qualquer DDL.** Confirmado por evidencia local (git,
@@ -3414,7 +3443,7 @@ publicado antes de ampliar a superficie de mudancas visuais.
     2026-09-12 -- sinal de saude de producao que por si so ja recomendaria
     nao prosseguir sem confirmacao humana, independente das credenciais.
     Nenhum estado de producao foi alterado. Detalhe completo em
-    `docs/history/phases/PLANO_FASE_265.md`, secao 12.
+    `docs/history/phases/PLANO_FASE_265.md`, secao 13.
 
 Documento de execução e prioridades: `ROADMAP_QUALIDADE_SEGURANCA_FASES_248_262.md`.
 Matriz operacional: `MATRIZ_SKILLS_PLUGINS_MODELOS_FASES_243_248_262.md`.

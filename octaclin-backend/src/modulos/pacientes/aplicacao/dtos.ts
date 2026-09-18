@@ -28,6 +28,10 @@ import type { TipoEvolucaoClinica, VisibilidadeEvolucaoClinica } from '../infrae
 import type { TipoCondutaTerapeutica } from '../infraestrutura/conduta-terapeutica.orm';
 import { PROTOCOLOS_COMPOSICAO } from '../dominio/antropometria';
 import { TIPOS_DOCUMENTO_CLINICO } from '../dominio/documentos-clinicos';
+import {
+  CODIGOS_MOTIVO_OVERRIDE_PRIORIDADE_ACOMPANHAMENTO,
+  type CodigoMotivoOverridePrioridadeAcompanhamento
+} from '../dominio/prioridade-acompanhamento';
 import type { TipoDocumentoClinico } from '../dominio/documentos-clinicos';
 import type {
   DeltaAntropometrico,
@@ -913,20 +917,21 @@ export class VerificarDuplicidadePacienteDto {
 }
 
 /**
- * Fase 265.4: solicitar override humano da prioridade de acompanhamento.
- * `codigoMotivo` continua string livre validada (nao enum fechado) porque o
- * conjunto de codigos ainda nao foi definido pelo produto -- mesma decisao
- * documentada na migration 265.2. `expiraEm` e obrigatorio (o override nunca
- * fica sem expiracao) e validado no servico contra o teto de 90 dias.
+ * Fase 265.4/265.5: solicitar override humano da prioridade de acompanhamento.
+ * `codigoMotivo` e enum fechado (`CODIGOS_MOTIVO_OVERRIDE_PRIORIDADE_ACOMPANHAMENTO`,
+ * aprovado pelo dono do produto) -- nunca aceita codigo arbitrario. `outro` e
+ * uma categoria fechada como as demais, nao um escape para texto livre: o
+ * detalhe continua exclusivamente na `justificativa`, cifrada antes de tocar
+ * o banco e nunca replicada na trilha generica de auditoria. `expiraEm` e
+ * obrigatorio (o override nunca fica sem expiracao) e validado no servico
+ * contra o teto de 90 dias.
  */
 export class SolicitarOverridePrioridadeAcompanhamentoDto {
   @IsIn(['baixa', 'media', 'alta'])
   faixa: 'baixa' | 'media' | 'alta';
 
-  @IsString()
-  @MinLength(3)
-  @MaxLength(60)
-  codigoMotivo: string;
+  @IsIn(CODIGOS_MOTIVO_OVERRIDE_PRIORIDADE_ACOMPANHAMENTO)
+  codigoMotivo: CodigoMotivoOverridePrioridadeAcompanhamento;
 
   @IsString()
   @MinLength(3)
@@ -952,7 +957,7 @@ export interface PrioridadeAcompanhamentoRespostaDto {
   };
   override?: {
     faixa: 'baixa' | 'media' | 'alta';
-    codigoMotivo: string;
+    codigoMotivo: CodigoMotivoOverridePrioridadeAcompanhamento;
     expiraEm: Date;
     criadoEm: Date;
     atorUsuarioId: string;

@@ -91,6 +91,7 @@ const CHAVES_SEGURAS = new Map([
   ['tipo', 'tipo do recurso, enum'],
   ['faixa', 'faixa da prioridade de acompanhamento (baixa, media, alta), enum fechado no DTO'],
   ['origemvalorefetivo', 'se o valor efetivo da prioridade de acompanhamento veio do calculo ou de override, enum'],
+  ['codigomotivo', 'motivo do override de prioridade de acompanhamento, enum fechado aprovado na Fase 265.5 (evento_recente_nao_capturado, informacao_externa_relevante, acompanhamento_intensificado, acompanhamento_reduzido, correcao_de_dado, outro) -- "outro" e categoria fechada, nunca escape para texto livre; a justificativa continua exclusivamente cifrada, fora desta trilha'],
   ['tipos', 'nomes dos campos enviados (Object.keys), nao os valores'],
   ['campos', 'nomes dos campos alterados (Object.keys), nao os valores'],
   ['tipopessoa', 'pessoa fisica ou juridica da clinica contratante, nao do paciente'],

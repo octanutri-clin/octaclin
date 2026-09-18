@@ -56,7 +56,10 @@ import { TombstoneExclusaoLgpdOrm } from '../../../infraestrutura/lgpd/tombstone
 import { UsuarioOrm } from '../../usuarios/infraestrutura/usuario.orm';
 import { RefreshTokenOrm } from '../../auth/infraestrutura/refresh-token.orm';
 import { SessaoUsuarioOrm } from '../../auth/infraestrutura/sessao-usuario.orm';
-import { VERSAO_FORMULA_PRIORIDADE_ACOMPANHAMENTO } from '../dominio/prioridade-acompanhamento';
+import {
+  VERSAO_FORMULA_PRIORIDADE_ACOMPANHAMENTO,
+  type CodigoMotivoOverridePrioridadeAcompanhamento
+} from '../dominio/prioridade-acompanhamento';
 
 /**
  * Teto de linhas por exportacao. Exportacao em massa de PHI e vetor de
@@ -891,7 +894,7 @@ export class ServicoPacientes {
       override: overrideAtivo
         ? {
             faixa: atual.overrideFaixa as 'baixa' | 'media' | 'alta',
-            codigoMotivo: atual.overrideCodigoMotivo as string,
+            codigoMotivo: atual.overrideCodigoMotivo as CodigoMotivoOverridePrioridadeAcompanhamento,
             expiraEm: atual.overrideExpiraEm as Date,
             criadoEm: atual.overrideCriadoEm as Date,
             atorUsuarioId: atual.overrideAtorUsuarioId as string

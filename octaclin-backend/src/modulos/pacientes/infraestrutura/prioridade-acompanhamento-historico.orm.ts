@@ -1,5 +1,6 @@
 import { Column, CreateDateColumn, Entity, PrimaryGeneratedColumn } from 'typeorm';
 import type {
+  CodigoMotivoOverridePrioridadeAcompanhamento,
   FaixaPrioridadeAcompanhamento,
   FatorPrioridadeAcompanhamento
 } from '../dominio/prioridade-acompanhamento';
@@ -48,7 +49,7 @@ export class PrioridadeAcompanhamentoHistoricoOrm {
   atorUsuarioId?: string;
 
   @Column({ name: 'override_codigo_motivo', type: 'varchar', length: 60, nullable: true })
-  overrideCodigoMotivo?: string;
+  overrideCodigoMotivo?: CodigoMotivoOverridePrioridadeAcompanhamento;
 
   @Column({ name: 'override_expira_em', type: 'timestamptz', nullable: true })
   overrideExpiraEm?: Date;

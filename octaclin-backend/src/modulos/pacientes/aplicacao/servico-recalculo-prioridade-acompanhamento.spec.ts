@@ -164,7 +164,7 @@ describe('ServicoRecalculoPrioridadeAcompanhamento', () => {
           tenantId: 'tenant-1',
           pacienteId: 'paciente-1',
           tipoEvento: 'calculo',
-          versaoFormula: '1.0.0',
+          versaoFormula: '1.1.0',
           score: 0,
           faixa: 'baixa',
           criadoEm: new Date('2026-09-18T02:00:00.000Z')
@@ -189,7 +189,7 @@ describe('ServicoRecalculoPrioridadeAcompanhamento', () => {
           tenantId: 'tenant-1',
           pacienteId: 'paciente-1',
           tipoEvento: 'calculo',
-          versaoFormula: '1.0.0',
+          versaoFormula: '1.1.0',
           score: 0,
           faixa: 'baixa',
           criadoEm: new Date('2026-09-17T10:00:00.000Z')
@@ -215,7 +215,7 @@ describe('ServicoRecalculoPrioridadeAcompanhamento', () => {
           score: 10,
           faixa: 'baixa',
           fatores: [],
-          versaoFormula: '1.0.0',
+          versaoFormula: '1.1.0',
           calculadoEm: diasAtras(5),
           overrideFaixa: 'alta',
           overrideCodigoMotivo: 'decisao_clinica',
@@ -259,7 +259,7 @@ describe('ServicoRecalculoPrioridadeAcompanhamento', () => {
           score: 25,
           faixa: 'media',
           fatores: [],
-          versaoFormula: '1.0.0',
+          versaoFormula: '1.1.0',
           calculadoEm: diasAtras(1)
         }
       }
@@ -275,7 +275,7 @@ describe('ServicoRecalculoPrioridadeAcompanhamento', () => {
     );
   });
 
-  it('nao aplica fator de formulario vencido: o sinal e omitido de proposito nesta versao do job', async () => {
+  it('sem sinal algum, mantem score zero e fatores vazios (formulario_vencido nao existe mais na formula 1.1.0)', async () => {
     const { servico, prioridadesSalvas } = montarServico({
       pacientes: [{ id: 'paciente-1', tenantId: 'tenant-1', arquivadoEm: null }]
     });

@@ -2378,7 +2378,7 @@ describe('ServicoPacientes - prioridade de acompanhamento (Fase 265.4)', () => {
         score: 60,
         faixa: 'media',
         fatores: [{ codigo: 'faltas_recentes', pontos: 60, quantidade: 2 }],
-        versaoFormula: '1.0.0',
+        versaoFormula: '1.1.0',
         calculadoEm: AGORA
       }
     });
@@ -2397,10 +2397,10 @@ describe('ServicoPacientes - prioridade de acompanhamento (Fase 265.4)', () => {
         score: 10,
         faixa: 'baixa',
         fatores: [],
-        versaoFormula: '1.0.0',
+        versaoFormula: '1.1.0',
         calculadoEm: AGORA,
         overrideFaixa: 'alta',
-        overrideCodigoMotivo: 'decisao_clinica',
+        overrideCodigoMotivo: 'acompanhamento_intensificado',
         overrideJustificativaCriptografada: Buffer.from('cripto:paciente em risco social'),
         overrideExpiraEm: new Date(AGORA.getTime() + 10 * DIA_MS),
         overrideAtorUsuarioId: 'usuario-profissional-1',
@@ -2413,7 +2413,7 @@ describe('ServicoPacientes - prioridade de acompanhamento (Fase 265.4)', () => {
     expect(resposta.valorEfetivo).toEqual({ faixa: 'alta', origem: 'override' });
     expect(resposta.valorCalculado).toEqual(expect.objectContaining({ score: 10, faixa: 'baixa' }));
     expect(resposta.override).toEqual(
-      expect.objectContaining({ faixa: 'alta', codigoMotivo: 'decisao_clinica', atorUsuarioId: 'usuario-profissional-1' })
+      expect.objectContaining({ faixa: 'alta', codigoMotivo: 'acompanhamento_intensificado', atorUsuarioId: 'usuario-profissional-1' })
     );
   });
 
@@ -2425,10 +2425,10 @@ describe('ServicoPacientes - prioridade de acompanhamento (Fase 265.4)', () => {
         score: 10,
         faixa: 'baixa',
         fatores: [],
-        versaoFormula: '1.0.0',
+        versaoFormula: '1.1.0',
         calculadoEm: AGORA,
         overrideFaixa: 'alta',
-        overrideCodigoMotivo: 'decisao_clinica',
+        overrideCodigoMotivo: 'acompanhamento_intensificado',
         overrideJustificativaCriptografada: Buffer.from('cripto:justificativa'),
         overrideExpiraEm: new Date(AGORA.getTime() - DIA_MS),
         overrideAtorUsuarioId: 'usuario-profissional-1',
@@ -2453,7 +2453,7 @@ describe('ServicoPacientes - prioridade de acompanhamento (Fase 265.4)', () => {
         score: 10,
         faixa: 'baixa',
         fatores: [],
-        versaoFormula: '1.0.0',
+        versaoFormula: '1.1.0',
         calculadoEm: AGORA
       }
     });
@@ -2462,7 +2462,7 @@ describe('ServicoPacientes - prioridade de acompanhamento (Fase 265.4)', () => {
       'tenant-1',
       'paciente-1',
       'usuario-profissional-1',
-      { faixa: 'alta', codigoMotivo: 'decisao_clinica', justificativa: 'paciente em risco social', expiraEm: new Date(AGORA.getTime() + 30 * DIA_MS).toISOString() },
+      { faixa: 'alta', codigoMotivo: 'acompanhamento_intensificado', justificativa: 'paciente em risco social', expiraEm: new Date(AGORA.getTime() + 30 * DIA_MS).toISOString() },
       usuarioColaborador
     );
 
@@ -2483,10 +2483,10 @@ describe('ServicoPacientes - prioridade de acompanhamento (Fase 265.4)', () => {
         score: 10,
         faixa: 'baixa',
         fatores: [],
-        versaoFormula: '1.0.0',
+        versaoFormula: '1.1.0',
         calculadoEm: AGORA,
         overrideFaixa: 'media',
-        overrideCodigoMotivo: 'motivo_anterior',
+        overrideCodigoMotivo: 'acompanhamento_reduzido',
         overrideJustificativaCriptografada: Buffer.from('cripto:antiga'),
         overrideExpiraEm: new Date(AGORA.getTime() + 5 * DIA_MS),
         overrideAtorUsuarioId: 'usuario-profissional-1',
@@ -2498,7 +2498,7 @@ describe('ServicoPacientes - prioridade de acompanhamento (Fase 265.4)', () => {
       'tenant-1',
       'paciente-1',
       'usuario-profissional-2',
-      { faixa: 'alta', codigoMotivo: 'motivo_novo', justificativa: 'novo motivo', expiraEm: new Date(AGORA.getTime() + 30 * DIA_MS).toISOString() },
+      { faixa: 'alta', codigoMotivo: 'correcao_de_dado', justificativa: 'novo motivo', expiraEm: new Date(AGORA.getTime() + 30 * DIA_MS).toISOString() },
       usuarioColaborador
     );
 
@@ -2515,7 +2515,7 @@ describe('ServicoPacientes - prioridade de acompanhamento (Fase 265.4)', () => {
         'tenant-1',
         'paciente-1',
         'usuario-profissional-1',
-        { faixa: 'alta', codigoMotivo: 'motivo', justificativa: 'justificativa valida', expiraEm: new Date(AGORA.getTime() + 91 * DIA_MS).toISOString() },
+        { faixa: 'alta', codigoMotivo: 'outro', justificativa: 'justificativa valida', expiraEm: new Date(AGORA.getTime() + 91 * DIA_MS).toISOString() },
         usuarioColaborador
       )
     ).rejects.toBeInstanceOf(BadRequestException);
@@ -2529,7 +2529,7 @@ describe('ServicoPacientes - prioridade de acompanhamento (Fase 265.4)', () => {
         'tenant-1',
         'paciente-1',
         'usuario-profissional-1',
-        { faixa: 'alta', codigoMotivo: 'motivo', justificativa: 'justificativa valida', expiraEm: new Date(AGORA.getTime() - DIA_MS).toISOString() },
+        { faixa: 'alta', codigoMotivo: 'outro', justificativa: 'justificativa valida', expiraEm: new Date(AGORA.getTime() - DIA_MS).toISOString() },
         usuarioColaborador
       )
     ).rejects.toBeInstanceOf(BadRequestException);
@@ -2543,10 +2543,10 @@ describe('ServicoPacientes - prioridade de acompanhamento (Fase 265.4)', () => {
         score: 10,
         faixa: 'baixa',
         fatores: [],
-        versaoFormula: '1.0.0',
+        versaoFormula: '1.1.0',
         calculadoEm: AGORA,
         overrideFaixa: 'alta',
-        overrideCodigoMotivo: 'decisao_clinica',
+        overrideCodigoMotivo: 'acompanhamento_intensificado',
         overrideJustificativaCriptografada: Buffer.from('cripto:justificativa'),
         overrideExpiraEm: new Date(AGORA.getTime() + 10 * DIA_MS),
         overrideAtorUsuarioId: 'usuario-profissional-1',
