@@ -482,6 +482,32 @@ Atualizado em 2026-09-18.
   scripts/validar-guardas-controladores.spec.mjs`, `git diff --check` e
   `pnpm security:secrets`. Plano e evidencia completa:
   `docs/history/phases/PLANO_FASE_265.md`, secoes 8-10.
+  A pendencia de UI do 265.4 foi fechada em branch dedicada
+  `feat/fase265-ui-prioridade-acompanhamento` (PR aberta, aguardando
+  merge humano): o prontuario do paciente busca
+  `GET /pacientes/:id/prioridade-acompanhamento` (novo BFF em
+  `app/api/pacientes/[id]/prioridade-acompanhamento/route.ts`, mesmo padrao
+  de `requisitarBackendAutenticado`) e troca o rotulo "Risco {score} pontos"
+  por "Prioridade de acompanhamento: {faixa}", incluindo o sufixo "(ajustada
+  manualmente)" quando o valor efetivo vem de um override ativo. A busca
+  roda como recurso independente (`carregarPrioridadeAcompanhamento`, com o
+  proprio estado e sem bloquear o carregamento do prontuario), seguindo o
+  padrao ja usado para materiais/anexos/evolucoes nesta tela -- uma falha ou
+  ausencia de mock nessa chamada mostra "-" no lugar da faixa, em vez de
+  derrubar a tela inteira; o render tambem tolera uma resposta sem
+  `valorEfetivo` sem lancar excecao. Nao ha UI de criacao de override nesta
+  branch (fora do escopo minimo do plano). TDD: novo par
+  `test-prioridade-acompanhamento-bff.mjs`/`prioridade-acompanhamento-bff.spec.ts`
+  (sessao ausente recusada antes do backend; paciente codificado
+  corretamente na URL) somado ao `test:authz`; suite Playwright existente
+  ajustada (`console-regression.spec.mjs` e
+  `fase-249-densidade-responsividade.spec.mjs`) para mockar o endpoint novo
+  e validado com `pnpm typecheck`, `pnpm lint`, `pnpm test:authz` completo e
+  as suites Playwright afetadas (268 testes de acessibilidade, 54 do
+  prontuario em `console-regression.spec.mjs`, mais
+  `jornadas-criticas.spec.mjs`, `fase-248`, `fase-249`, `fase-252`,
+  `reflow-visual.spec.mjs`, `fase-254-pacientes.spec.mjs` e
+  `aviso-acesso-negado.spec.mjs`).
 - Fase 261 (escopo de trabalho: gaps de seguranca e privacidade
   identificados no audit da fase) **concluida tecnicamente em 2026-09-15,
   com excecoes operacionais abertas; incrementos 1 a 4 integrados**.

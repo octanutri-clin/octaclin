@@ -96,7 +96,9 @@ Implementar em incrementos separados, cada um em branch e PR proprios:
    - claim/lock existente, tenant explicito e idempotencia por paciente,
      versao da formula e janela;
    - falha preserva o ultimo valor valido e fica observavel sem incluir PHI.
-4. **265.4 - Leitura e override auditado** [IMPLEMENTADO NESTA BRANCH, so backend]
+4. **265.4 - Leitura e override auditado** [backend implementado em
+   `feat/fase265-leitura-override`; UI implementada em
+   `feat/fase265-ui-prioridade-acompanhamento`, secao 11]
    - DTO minimo com valor efetivo, calculado, faixa, fatores fechados, versao,
      data do calculo e estado do override;
    - UI troca o rotulo ambiguo `Risco` por `Prioridade de acompanhamento`;
@@ -471,3 +473,92 @@ Validacoes desta branch:
   preexistentes;
 - `NA` - migration, DDL ou schema novo;
 - `NA` - UI, BFF ou cliente web (pendencia explicita acima).
+
+## 11. Incremento 265.4 - fechamento da pendencia de UI
+
+Fecha a pendencia explicita registrada na secao 10: a troca do rotulo
+"Risco" pela "Prioridade de acompanhamento" no prontuario do paciente,
+buscando o valor efetivo real do endpoint de leitura do 265.4 em vez de
+renomear o texto sobre o campo legado `score_risco`. Implementado em
+2026-09-18 em branch dedicada `feat/fase265-ui-prioridade-acompanhamento`.
+
+Escopo:
+
+- Novo BFF `octaclin-web/app/api/pacientes/[id]/prioridade-acompanhamento/route.ts`
+  (`GET` apenas), no mesmo padrao das demais rotas do prontuario:
+  `requisitarBackendAutenticado` para a chamada ao backend com sessao, e
+  `ErroSessaoAusente` mapeado para `401` sem vazar detalhe interno.
+- `obterPrioridadeAcompanhamento` novo em `octaclin-web/lib/prontuario-api.ts`,
+  tipado (`PrioridadeAcompanhamentoApi`, `FaixaPrioridadeAcompanhamentoApi`),
+  seguindo o padrao dos demais clientes de sub-recurso desta tela
+  (`cache: 'no-store'`, `lancarErroApi` em resposta nao-ok).
+- `ProntuarioPaciente` (`components/pacientes/prontuario-paciente.tsx`)
+  troca a linha "Risco {score} pontos - {statusAdesao}" por "Prioridade de
+  acompanhamento: {faixa} - {statusAdesao}", com o sufixo "(ajustada
+  manualmente)" quando `valorEfetivo.origem === 'override'`.
+
+Decisao de arquitetura relevante: a busca da prioridade **nao** entra no
+`Promise.all` do `carregar()` principal. Uma primeira versao fazia isso e
+quebrou o padrao ja estabelecido nesta tela (cada sub-recurso --
+materiais, anexos, evolucoes, tarefas -- tem seu proprio `carregarX` com
+estado de falha independente, para uma falha isolada nao derrubar o
+prontuario inteiro). Bundlar a chamada nova no `carregar()` principal fazia
+qualquer mock ou resposta ausente para o endpoint novo virar uma falha de
+carregamento da tela inteira -- confirmado ao rodar a suite Playwright
+existente, onde `fase-249-densidade-responsividade.spec.mjs` tem um
+catch-all de rota que devolve `[]` para qualquer caminho nao mapeado
+explicitamente, e o componente tentava ler `valorEfetivo.faixa` de um
+array, quebrando o render (`TypeError: Cannot read properties of
+undefined`). Corrigido de duas formas, as duas necessarias: (1)
+`carregarPrioridadeAcompanhamento` virou um efeito independente, com o
+proprio estado, que nunca marca `falhaCarregamento` -- uma falha ou
+ausencia de mock mostra "-" no lugar da faixa; (2) o render tambem passou a
+usar encadeamento opcional ate `valorEfetivo` (`prioridadeAcompanhamento?.valorEfetivo`),
+para tolerar uma resposta 200 com formato inesperado sem lancar excecao --
+o endpoint e um limite de sistema (rede), nao uma garantia interna.
+
+Fora do escopo desta branch, de proposito: nenhuma UI de criacao, edicao
+ou remocao de override. O plano so pede a troca do rotulo; criar uma
+interface para o fluxo de override (`POST`/`DELETE .../override`) e
+decisao de produto separada, nao incluida aqui.
+
+Validacoes desta branch:
+
+- `PASS` - `pnpm typecheck` (sem erros);
+- `PASS` - `pnpm lint` (0 erros; os avisos pre-existentes de
+  `react-hooks/set-state-in-effect` no arquivo seguem o mesmo padrao ja
+  presente nos demais `useEffect` desta tela, nenhum novo introduzido);
+- `PASS` - TDD do BFF novo: `test-prioridade-acompanhamento-bff.mjs` /
+  `prioridade-acompanhamento-bff.spec.ts` (2/2 -- sessao ausente recusada
+  com `401` antes de chamar o backend; paciente com barra no id codificado
+  corretamente na URL de encaminhamento), seguindo o mesmo padrao de
+  `test-prontuario-timeline-bff.mjs`;
+- `PASS` - `pnpm test:authz` completo (cadeia com o teste novo incluido);
+- `PASS` - suite Playwright `console-regression.spec.mjs`, bloco
+  "prontuario do paciente" completo (54/54; mock novo do endpoint
+  adicionado a `prepararProntuarioMockado`, asserção do texto antigo
+  "Risco 82 pontos" atualizada para "Prioridade de acompanhamento: Alta");
+- `PASS` - `fase-249-densidade-responsividade.spec.mjs` completo (6/6, apos
+  adicionar o mock explicito do endpoint novo e a correcao defensiva no
+  render -- via as duas correcoes, nao uma so);
+- `PASS` - `acessibilidade.spec.mjs` completo (268/268, incluindo o teste
+  de detalhe do paciente que roda checagem de axe);
+- `PASS` - `fase-248-estados-recuperacao.spec.mjs`,
+  `fase-252-navegacao-descoberta.spec.mjs`, `fase-254-pacientes.spec.mjs`,
+  `reflow-visual.spec.mjs` e `aviso-acesso-negado.spec.mjs` (92/92 no
+  conjunto);
+- `PASS` - `jornadas-criticas.spec.mjs` (roda dentro do conjunto acima,
+  sem regressao);
+- `PASS` - `git diff --check`;
+- `PASS` - `pnpm security:secrets` ("Nenhum secret real identificado pelos
+  padroes locais");
+- `NA` - migration, DDL, RLS ou schema (nenhuma mudanca de backend nesta
+  branch);
+- `NA` - UI de override (fora do escopo, secao acima).
+
+Nota de ambiente: os testes Playwright locais precisaram apontar
+`launchOptions.executablePath` para o binario Chromium ja presente no
+ambiente (`/opt/pw-browsers/chromium`), porque a versao do
+`@playwright/test` do projeto esperava um `chromium_headless_shell` mais
+novo que nao estava pre-instalado. Usado um `playwright.config.mjs` local,
+descartavel, apenas para rodar a suite; nao versionado nesta branch.

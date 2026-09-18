@@ -1099,6 +1099,20 @@ async function prepararProntuarioMockado(page, {
     });
   });
 
+  await page.route('**/api/pacientes/paciente-1/prioridade-acompanhamento', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        pacienteId: 'paciente-1',
+        versaoFormula: '1.0.0',
+        calculadoEm: '2026-07-21T10:00:00.000Z',
+        valorCalculado: { score: 82, faixa: 'alta', fatores: [] },
+        valorEfetivo: { faixa: 'alta', origem: 'calculado' }
+      })
+    });
+  });
+
   await page.route('**/api/pacientes/paciente-1/perfil-cadastro', async (route) => {
     await route.fulfill({
       status: 200,
@@ -2814,7 +2828,7 @@ test.describe('prontuario do paciente', () => {
 
     await expect(page.getByRole('heading', { name: 'Prontuário do paciente' })).toBeVisible();
     await expect(page.getByText('Ana Souza')).toBeVisible();
-    await expect(page.getByText('Risco 82 pontos')).toBeVisible();
+    await expect(page.getByText('Prioridade de acompanhamento: Alta')).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Linha de cuidado' })).toBeVisible();
     await page.getByRole('tab', { name: 'Atendimentos' }).click();
     await page.getByRole('tablist', { name: 'Subáreas de Atendimentos' }).getByRole('tab', { name: 'Histórico' }).click();

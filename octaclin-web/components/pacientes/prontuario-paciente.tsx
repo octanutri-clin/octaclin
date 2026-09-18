@@ -74,11 +74,14 @@ import {
   listarEvolucoesClinicas,
   listarLinhaDoTempoPaginada,
   listarTarefasAcompanhamento,
+  obterPrioridadeAcompanhamento,
   obterProntuarioPaciente,
   type CategoriaTarefaAcompanhamentoApi,
   type EventoProntuarioPacienteApi,
   type EvolucaoClinicaApi,
+  type FaixaPrioridadeAcompanhamentoApi,
   type PaginaLinhaDoTempoProntuarioApi,
+  type PrioridadeAcompanhamentoApi,
   type PrioridadeTarefaAcompanhamentoApi,
   type ProntuarioPacienteApi,
   type TarefaAcompanhamentoApi,
@@ -154,6 +157,11 @@ function formatarData(valor?: string) {
   const data = new Date(valor);
   if (Number.isNaN(data.getTime())) return valor;
   return new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short', timeZone: 'UTC' }).format(data);
+}
+
+/** Fase 265: "Risco" era o rotulo ambiguo; o valor efetivo pode vir de override humano. */
+function rotuloFaixaPrioridadeAcompanhamento(faixa: FaixaPrioridadeAcompanhamentoApi) {
+  return { baixa: 'Baixa', media: 'Média', alta: 'Alta' }[faixa];
 }
 
 function mapearEvolucaoParaEvento(evolucao: EvolucaoClinicaApi): EventoProntuarioPacienteApi {
@@ -264,6 +272,7 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
   const requisicaoHistorico = useRef<AbortController | null>(null);
   const responsavelSolicitadoId = useRef<string | null>(null);
   const router = useRouter();
+  const [prioridadeAcompanhamento, setPrioridadeAcompanhamento] = useState<PrioridadeAcompanhamentoApi | null>(null);
 
   const carregar = useCallback(async () => {
     setCarregando(true);
@@ -275,6 +284,14 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
       setFalhaCarregamento(classificarFalhaInterface(erroAtual, 'Não foi possível carregar o prontuário.'));
     } finally {
       setCarregando(false);
+    }
+  }, [pacienteId]);
+
+  const carregarPrioridadeAcompanhamento = useCallback(async () => {
+    try {
+      setPrioridadeAcompanhamento(await obterPrioridadeAcompanhamento(pacienteId));
+    } catch {
+      setPrioridadeAcompanhamento(null);
     }
   }, [pacienteId]);
 
@@ -578,6 +595,10 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
   useEffect(() => {
     void carregar();
   }, [carregar]);
+
+  useEffect(() => {
+    void carregarPrioridadeAcompanhamento();
+  }, [carregarPrioridadeAcompanhamento]);
 
   useEffect(() => {
     setAgora(Date.now());
@@ -950,7 +971,12 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
             <div className="min-w-0">
               <h2 className="break-words text-lg font-semibold text-tinta">{dados.paciente.nome}</h2>
               <p className="mt-1 text-sm text-texto-suave">
-                Risco {Number(dados.paciente.scoreRisco).toFixed(0)} pontos - {dados.paciente.statusAdesao}
+                Prioridade de acompanhamento:{' '}
+                {prioridadeAcompanhamento?.valorEfetivo
+                  ? rotuloFaixaPrioridadeAcompanhamento(prioridadeAcompanhamento.valorEfetivo.faixa)
+                  : '-'}
+                {prioridadeAcompanhamento?.valorEfetivo?.origem === 'override' ? ' (ajustada manualmente)' : ''} -{' '}
+                {dados.paciente.statusAdesao}
               </p>
               <p className="mt-1 text-sm text-texto-suave">
                 Contato {dados.paciente.contato ?? '-'} - Nascimento {formatarData(dados.paciente.dataNascimento)}
