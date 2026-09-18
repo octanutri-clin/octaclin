@@ -3245,7 +3245,7 @@ publicado antes de ampliar a superficie de mudancas visuais.
 
 - [~] Fase 265 - Fundacao da inteligencia: prioridade de acompanhamento
   calculada com override auditado. [EM ANDAMENTO: 265.1-265.4 entregues no
-  backend; UI da 265.4 pendente]
+  backend; UI da 265.4 implementada em PR aberta, aguardando merge humano]
   - Origem: PB-01 e Onda 2 de
     `docs/product/OCTACLIN_PRODUCT_FEATURE_AUDIT.md`.
   - Dependencia de produto: definir pesos e sinais explicaveis antes de escrever
@@ -3363,6 +3363,37 @@ publicado antes de ampliar a superficie de mudancas visuais.
     `node --test scripts/validar-guardas-controladores.spec.mjs` (11/11),
     `git diff --check` e `pnpm security:secrets`. Detalhe completo em
     `docs/history/phases/PLANO_FASE_265.md`, secao 10.
+  - UI da 265.4 implementada em 2026-09-18, em branch dedicada
+    (`feat/fase265-ui-prioridade-acompanhamento`, PR aberta, aguardando
+    merge humano): novo BFF `GET
+    app/api/pacientes/[id]/prioridade-acompanhamento/route.ts` (mesmo padrao
+    de `requisitarBackendAutenticado` das demais rotas do prontuario) e
+    `obterPrioridadeAcompanhamento` em `lib/prontuario-api.ts`. O componente
+    `ProntuarioPaciente` troca "Risco {score} pontos" por "Prioridade de
+    acompanhamento: {faixa}" (mais "(ajustada manualmente)" quando o valor
+    efetivo vem de override ativo), buscando o dado em
+    `carregarPrioridadeAcompanhamento`, um recurso independente com o
+    proprio estado -- nao bloqueia nem derruba o carregamento do prontuario
+    se falhar, seguindo o mesmo padrao ja usado para materiais, anexos e
+    evolucoes nesta tela. O render tambem tolera uma resposta sem
+    `valorEfetivo` sem lancar excecao (limite de sistema: resposta de rede).
+    Nenhuma UI de criacao/edicao de override nesta branch -- fora do escopo
+    minimo do plano ("UI troca o rotulo"). TDD: novo par
+    `test-prioridade-acompanhamento-bff.mjs` /
+    `prioridade-acompanhamento-bff.spec.ts` (sessao ausente recusada antes
+    do backend; paciente codificado corretamente na URL), somado ao
+    `test:authz`. Suites Playwright existentes ajustadas para mockar o
+    endpoint novo (`console-regression.spec.mjs`,
+    `fase-249-densidade-responsividade.spec.mjs`), com a asserção do texto
+    antigo "Risco 82 pontos" atualizada para o texto novo. Validado com
+    `pnpm typecheck`, `pnpm lint`, `pnpm test:authz` completo e as suites
+    Playwright afetadas (268 testes de acessibilidade, 54 do prontuario em
+    `console-regression.spec.mjs`, mais `jornadas-criticas.spec.mjs`,
+    `fase-248-estados-recuperacao.spec.mjs`,
+    `fase-249-densidade-responsividade.spec.mjs`,
+    `fase-252-navegacao-descoberta.spec.mjs`, `reflow-visual.spec.mjs`,
+    `fase-254-pacientes.spec.mjs` e `aviso-acesso-negado.spec.mjs`), `git
+    diff --check` e `pnpm security:secrets`.
 
 Documento de execução e prioridades: `ROADMAP_QUALIDADE_SEGURANCA_FASES_248_262.md`.
 Matriz operacional: `MATRIZ_SKILLS_PLUGINS_MODELOS_FASES_243_248_262.md`.

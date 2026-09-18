@@ -113,6 +113,41 @@ export interface TarefaAcompanhamentoApi extends CriarTarefaAcompanhamentoEntrad
   atualizadoEm: string;
 }
 
+export type FaixaPrioridadeAcompanhamentoApi = 'baixa' | 'media' | 'alta';
+
+export interface PrioridadeAcompanhamentoApi {
+  pacienteId: string;
+  versaoFormula?: string;
+  calculadoEm?: string;
+  valorCalculado: {
+    score: number;
+    faixa: FaixaPrioridadeAcompanhamentoApi;
+    fatores: Array<{ codigo: string; pontos: number; quantidade?: number }>;
+  };
+  valorEfetivo: {
+    faixa: FaixaPrioridadeAcompanhamentoApi;
+    origem: 'calculado' | 'override';
+  };
+  override?: {
+    faixa: FaixaPrioridadeAcompanhamentoApi;
+    codigoMotivo: string;
+    expiraEm: string;
+    criadoEm: string;
+    atorUsuarioId: string;
+  };
+}
+
+export async function obterPrioridadeAcompanhamento(pacienteId: string): Promise<PrioridadeAcompanhamentoApi> {
+  const resposta = await fetch(`/api/pacientes/${encodeURIComponent(pacienteId)}/prioridade-acompanhamento`, {
+    cache: 'no-store'
+  });
+  if (!resposta.ok) {
+    await lancarErroApi(resposta);
+  }
+
+  return resposta.json() as Promise<PrioridadeAcompanhamentoApi>;
+}
+
 export async function obterProntuarioPaciente(pacienteId: string): Promise<ProntuarioPacienteApi> {
   const resposta = await fetch(`/api/pacientes/${encodeURIComponent(pacienteId)}/prontuario`, { cache: 'no-store' });
   if (!resposta.ok) {

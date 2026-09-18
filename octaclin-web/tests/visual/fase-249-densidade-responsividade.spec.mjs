@@ -123,6 +123,15 @@ async function prepararConsole(page) {
         linhaDoTempo: []
       });
     }
+    if (caminho === `/api/pacientes/${paciente.id}/prioridade-acompanhamento`) {
+      return responderJson(route, {
+        pacienteId: paciente.id,
+        versaoFormula: '1.0.0',
+        calculadoEm: '2026-08-20T10:00:00.000Z',
+        valorCalculado: { score: 28, faixa: 'media', fatores: [] },
+        valorEfetivo: { faixa: 'media', origem: 'calculado' }
+      });
+    }
     if (caminho.endsWith('/prontuario/timeline')) return responderJson(route, { itens: [], proximoCursor: null });
     if (caminho.endsWith('/avaliacoes-antropometricas')) return responderJson(route, { avaliacoes: [], deltaUltimas: [] });
     if (caminho === '/api/materiais' || caminho.includes('/materiais/pacientes/')) return responderJson(route, []);
