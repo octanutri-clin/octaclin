@@ -683,3 +683,119 @@ Validacoes desta branch:
 - `PASS` - `pnpm security:secrets`;
 - `NA` - migration, DDL ou schema novo (nenhuma coluna mudou de tipo ou
   tamanho; a validacao e inteiramente de aplicacao).
+
+## 13. Incremento 265.6 - UI de gerenciamento de override
+
+Decisao de produto explicita do dono (2026-09-18): o profissional pode
+gerenciar o override de prioridade de acompanhamento pela interface, nao
+so pela API. Implementado em branch dedicada
+`feat/fase265-ui-override-prioridade-acompanhamento`, consumindo
+inteiramente as rotas ja existentes do backend (265.4/265.5) -- nenhuma
+mudanca de backend nesta branch.
+
+### Escopo
+
+Novo componente `octaclin-web/components/pacientes/prioridade-acompanhamento.tsx`
+(`SecaoPrioridadeAcompanhamento`), renderizado na aba "Resumo" do
+prontuario, logo apos "Contexto operacional". Mostra, sempre separados:
+
+- prioridade calculada (faixa + score + lista de fatores que explicam o
+  calculo, com quantidade quando aplicavel);
+- prioridade efetiva, com origem explicita ("calculada automaticamente" ou
+  "ajustada manualmente");
+- validade do override quando um esta em vigor.
+
+Acao "Ajustar prioridade" (visivel somente com `pacientes.gerenciar`, a
+mesma condicao ja usada para as demais mutacoes desta tela) abre um
+`Modal` (`components/ui/modal.tsx`, o mesmo componente generico ja usado
+por `PerfilCadastroPaciente` -- nao um painel inline, para nao competir por
+espaco na faixa de acoes sticky) com: select de faixa (baixa/media/alta),
+select de motivo usando exclusivamente o enum fechado aprovado na 265.5
+(`CODIGOS_MOTIVO_OVERRIDE_PRIORIDADE_ACOMPANHAMENTO`, reexportado do
+cliente web), textarea de justificativa e campo de data de expiracao
+(`type="date"`, `min`/`max` client-side refletindo a regra de 1 a 90 dias
+que o backend ja aplica -- client-side e so UX, o backend continua a
+fronteira autoritativa). Nao ha campo para score, fatores ou versao da
+formula: esses continuam somente-leitura, exibidos fora do formulario.
+Com override ja ativo, o botao de submissao muda de "Aplicar ajuste" para
+"Salvar alteração" e aparece "Remover ajuste", que abre uma
+`ModalConfirmacao` separada antes de chamar o `DELETE`.
+
+Microcopy seguiu a sugestao do dono do produto: "A prioridade ajuda a
+organizar quais pacientes podem precisar de acompanhamento mais cedo. O
+ajuste manual e temporario e nao altera o calculo automatico do sistema."
+-- presente tanto na secao quanto na descricao do modal. Nenhum texto
+trata o ajuste como decisao clinica automatizada nem usa "risco clinico".
+
+### BFF e cliente
+
+Novo `POST`/`DELETE` em
+`app/api/pacientes/[id]/prioridade-acompanhamento/override/route.ts`,
+mesmo padrao das demais rotas do prontuario
+(`requisitarBackendAutenticado`, `ErroSessaoAusente` -> 401), com a
+adicao de `exigirPermissaoBff('pacientes.gerenciar')` antes de chamar o
+backend -- mesmo padrao ja usado em
+`tarefas-acompanhamento/[tarefaId]/route.ts` (`PATCH`), a unica outra
+rota de pacientes que faz essa checagem no BFF. `solicitarOverridePrioridadeAcompanhamento`
+e `removerOverridePrioridadeAcompanhamento` novos em `lib/prontuario-api.ts`,
+seguindo o padrao dos demais clientes desta tela.
+
+### Decisao de arquitetura: estado compartilhado com o cabecalho
+
+`SecaoPrioridadeAcompanhamento` recebe `prioridade` e `aoAtualizar` como
+props, em vez de buscar seus proprios dados (diferente do padrao de
+`ResumoAntropometrico`, que se auto-busca). Motivo: o cabecalho sticky do
+prontuario (fechado no incremento da UI do 265.4) ja mantem seu proprio
+estado `prioridadeAcompanhamento` e mostra um resumo compacto da mesma
+prioridade em todas as abas. Se a secao nova buscasse os dados de forma
+independente, criar ou remover um override pela secao deixaria o
+cabecalho desatualizado ate o proximo reload -- uma inconsistencia visivel
+(cabecalho dizendo "calculada", secao dizendo "ajustada manualmente" para
+o mesmo paciente, na mesma tela). Levantar o estado para o componente pai
+(`ProntuarioPaciente`) e passar `aoAtualizar={setPrioridadeAcompanhamento}`
+mantém uma unica fonte de verdade e corrige os dois pontos de exibicao com
+a mesma chamada.
+
+### O que ficou fora deste incremento, de proposito
+
+- Nenhuma mudanca de backend: as rotas `POST`/`DELETE`
+  `/pacientes/:id/prioridade-acompanhamento/override` ja existiam (265.4),
+  com `pacientes.gerenciar` preservado.
+- Nenhuma UI para o enum de `codigoMotivo` alem do que a 265.5 aprovou --
+  a lista de opcoes do select vem diretamente do vocabulario fechado, sem
+  texto livre adicional.
+
+Validacoes desta branch:
+
+- `PASS` - `pnpm typecheck`;
+- `PASS` - `pnpm lint` (0 erros; avisos pre-existentes de
+  `react-hooks/set-state-in-effect` inalterados, nenhum novo introduzido
+  pelos arquivos desta branch);
+- `PASS` - TDD do BFF novo: `test-override-prioridade-acompanhamento-bff.mjs`
+  / `override-prioridade-acompanhamento-bff.spec.ts` (6/6 -- sessao
+  ausente recusada com 401 antes do backend, tanto no POST quanto no
+  DELETE; sessao sem `pacientes.gerenciar` recusada com 403 antes do
+  backend, tanto no POST quanto no DELETE; POST encaminha corpo e
+  paciente codificado corretamente; DELETE encaminha paciente codificado
+  corretamente), incluido em `pnpm test:authz`;
+- `PASS` - `pnpm test:authz` completo;
+- `PASS` - suite Playwright nova em `console-regression.spec.mjs`, bloco
+  "prontuario do paciente" (66/66 no total, incluindo as 6 novas):
+  cria ajuste mantendo calculado e efetivo separados; altera ajuste ja
+  ativo; remove ajuste e volta ao calculado; trata falha de rede (500) ao
+  salvar sem quebrar a tela; trata paciente fora do escopo (404) com a
+  mensagem apropriada; oculta a acao sem `pacientes.gerenciar` mas
+  mantem a leitura visivel;
+- `PASS` - `acessibilidade.spec.mjs` completo (268/268, incluindo o teste
+  de detalhe do paciente com checagem de axe sobre a secao nova);
+- `PASS` - `fase-249-densidade-responsividade.spec.mjs` completo (6/6,
+  incluindo o teste de prontuario no celular);
+- `PASS` - `git diff --check`;
+- `PASS` - `pnpm security:secrets`;
+- `NA` - migration, DDL, RLS ou schema (nenhuma mudanca de backend nesta
+  branch).
+
+Nota de ambiente: mesma observacao da secao 11 sobre
+`launchOptions.executablePath` para rodar Playwright localmente com o
+Chromium ja presente no ambiente; config local descartavel, nao
+versionada.

@@ -34,6 +34,7 @@ import { AbaEvolucaoFotografica } from './aba-evolucao-fotografica';
 import { AbaCondutasTerapeuticas } from './aba-condutas-terapeuticas';
 import { AbaDocumentos, ConsultaConcluidaOpcao } from './aba-documentos';
 import { PerfilCadastroPaciente } from './perfil-cadastro-paciente';
+import { SecaoPrioridadeAcompanhamento } from './prioridade-acompanhamento';
 import { PlanoAlimentarProfissional } from './plano-alimentar-profissional';
 import { classeStatus, formatarDataHora, LinhaDoTempoProntuario as LinhaDoTempo } from './linha-do-tempo-prontuario';
 import {
@@ -1191,6 +1192,12 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
               </div>
             </dl>
           </section>
+          <SecaoPrioridadeAcompanhamento
+            pacienteId={pacienteId}
+            prioridade={prioridadeAcompanhamento}
+            podeGerenciar={podeGerenciarPaciente}
+            aoAtualizar={setPrioridadeAcompanhamento}
+          />
           <section aria-labelledby="atividade-prontuario-titulo" className="rounded-md border border-linha bg-white p-4">
             <h2 id="atividade-prontuario-titulo" className="text-base font-semibold text-tinta">Atividade do prontuário</h2>
             <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-3 sm:grid-cols-3 xl:grid-cols-6">

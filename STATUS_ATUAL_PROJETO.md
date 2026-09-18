@@ -21,10 +21,17 @@ Atualizado em 2026-09-18.
   `1.1.0` (faltas recentes, sem retorno programado, adesao declarada
   baixa -- sem `formulario_vencido`), sem nenhuma migration nova. Detalhe
   completo em `docs/history/phases/PLANO_FASE_265.md`, secao 12. O dono
-  tambem aprovou a UI de gerenciamento de override e autorizou o preflight
-  de leitura para a aplicacao real da migration 265.2 em producao --
-  ambos em andamento nesta mesma sessao, reportados separadamente quando
-  concluidos.
+  tambem aprovou a UI de gerenciamento de override, implementada em
+  branch dedicada `feat/fase265-ui-override-prioridade-acompanhamento`
+  (PR aberta, aguardando merge): nova secao "Prioridade de acompanhamento"
+  na aba Resumo mostra calculado e efetivo sempre separados, com acao
+  "Ajustar prioridade" (so `pacientes.gerenciar`) restrita ao enum fechado
+  de motivo da 265.5; sem mudanca de backend, so BFF POST/DELETE novo
+  consumindo as rotas ja existentes da 265.4. Detalhe completo em
+  `docs/history/phases/PLANO_FASE_265.md`, secao 13. O dono tambem
+  autorizou o preflight de leitura para a aplicacao real da migration
+  265.2 em producao -- em andamento nesta mesma sessao, reportado
+  separadamente quando concluido.
 - Reconciliacao de 2026-09-18: os PRs GitHub `#257` (Incremento 265.1,
   calculador de dominio puro), `#258` (Incremento 265.2, persistencia e
   RLS) e `#259` (Incremento 265.3, recalculo idempotente) foram integrados
