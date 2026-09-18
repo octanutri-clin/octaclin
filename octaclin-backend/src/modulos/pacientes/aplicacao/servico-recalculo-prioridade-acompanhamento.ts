@@ -31,16 +31,14 @@ const LIMITE_CONSULTAS_POR_PACIENTE = 60;
  * nas tabelas de 265.2. Servico puro de worker, sem efeito externo (nao
  * envia mensagem, nao dispara automacao, nao altera `pacientes.score_risco`).
  *
- * Sinal `formulario_vencido` (formula 265.1) e deliberadamente OMITIDO deste
- * job: ele exige saber se um questionario e "obrigatorio", e nenhuma
- * entidade do modulo de questionarios (`QuestionarioOrm`,
- * `EnvioQuestionarioOrm`, `AgendamentoQuestionarioOrm`) tem esse campo hoje.
- * Assumir que todo envio conta, ou que nenhum conta, seria inventar uma
- * decisao de produto que ainda nao foi tomada -- o mesmo cuidado que a
- * migration 265.2 ja registrou para `override_codigo_motivo`. Os outros tres
- * sinais (faltas recentes, sem retorno programado, adesao declarada baixa)
- * mapeiam para dado que ja existe e sao calculados normalmente. Fechar esse
- * gap exige decisao de produto explicita antes de qualquer codigo.
+ * A formula (265.1/265.5, versao `1.1.0`) usa tres sinais -- faltas
+ * recentes, sem retorno programado, adesao declarada baixa --, todos
+ * mapeados para dado que ja existe. O fator `formulario_vencido` da versao
+ * `1.0.0` foi removido na 265.5 por decisao de produto: o dominio de
+ * questionarios nao tem o conceito de "obrigatorio" que o fator exigia, e
+ * modelar isso so para alimentar a formula seria inventar comportamento
+ * novo. Pode voltar numa formula futura se o produto adquirir esse
+ * conceito.
  */
 @Injectable()
 export class ServicoRecalculoPrioridadeAcompanhamento {

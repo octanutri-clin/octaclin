@@ -7,6 +7,24 @@ Atualizado em 2026-09-18.
 - Produto: OctaClin.
 - Repositorio: `octanutri-clin/octaclin`.
 - Branch principal: `main`.
+- Reconciliacao de 2026-09-18 (decisoes de produto para destravar a Fase
+  265): o dono do produto aprovou o vocabulario fechado de `codigoMotivo`
+  (`evento_recente_nao_capturado`, `informacao_externa_relevante`,
+  `acompanhamento_intensificado`, `acompanhamento_reduzido`,
+  `correcao_de_dado`, `outro`) e decidiu remover `formulario_vencido` da
+  formula em vez de criar um campo "obrigatorio" artificial em
+  questionarios. Implementado em branch dedicada
+  `feat/fase265-enum-motivo-formula-v2` (PR aberta, aguardando merge):
+  `codigoMotivo` agora e `@IsIn` contra o enum (nunca aceita codigo
+  arbitrario) e passou a entrar na trilha generica de auditoria, ja que
+  deixou de ser texto livre; a formula de prioridade avancou para a versao
+  `1.1.0` (faltas recentes, sem retorno programado, adesao declarada
+  baixa -- sem `formulario_vencido`), sem nenhuma migration nova. Detalhe
+  completo em `docs/history/phases/PLANO_FASE_265.md`, secao 12. O dono
+  tambem aprovou a UI de gerenciamento de override e autorizou o preflight
+  de leitura para a aplicacao real da migration 265.2 em producao --
+  ambos em andamento nesta mesma sessao, reportados separadamente quando
+  concluidos.
 - Reconciliacao de 2026-09-18: os PRs GitHub `#257` (Incremento 265.1,
   calculador de dominio puro), `#258` (Incremento 265.2, persistencia e
   RLS) e `#259` (Incremento 265.3, recalculo idempotente) foram integrados

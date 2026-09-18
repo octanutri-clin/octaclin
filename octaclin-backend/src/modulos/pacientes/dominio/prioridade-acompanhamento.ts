@@ -1,23 +1,26 @@
-export const VERSAO_FORMULA_PRIORIDADE_ACOMPANHAMENTO = '1.0.0';
+/**
+ * `1.1.0`: a `1.0.0` incluia o fator `formulario_vencido`, removido nesta
+ * versao porque o dominio de questionarios nao tem hoje o conceito de
+ * "obrigatorio" que o fator exigia (ver `CodigoFatorPrioridadeAcompanhamento`
+ * abaixo) -- modelar isso so para alimentar a formula seria inventar uma
+ * decisao de produto que ainda nao foi tomada. `formulario_vencido` pode
+ * voltar numa formula futura se e quando o produto adquirir o conceito de
+ * formulario obrigatorio + prazo. Nunca reutilize `1.0.0` para esta
+ * semantica: um registro historico com `versaoFormula: '1.0.0'` pode ter
+ * pontuado `formulario_vencido`, e um com `1.1.0` nunca pontua.
+ */
+export const VERSAO_FORMULA_PRIORIDADE_ACOMPANHAMENTO = '1.1.0';
 
 export type FaixaPrioridadeAcompanhamento = 'baixa' | 'media' | 'alta';
 
 export type CodigoFatorPrioridadeAcompanhamento =
   | 'faltas_recentes'
   | 'sem_retorno_programado'
-  | 'formulario_vencido'
   | 'adesao_declarada_baixa';
 
 export interface FaltaParaPrioridadeAcompanhamento {
   consultaId: string;
   ocorreuEm: Date;
-}
-
-export interface FormularioParaPrioridadeAcompanhamento {
-  envioId: string;
-  obrigatorio: boolean;
-  vencimentoEm: Date;
-  respondidoEm?: Date | null;
 }
 
 export interface RegistroHabitosParaPrioridadeAcompanhamento {
@@ -30,7 +33,6 @@ export interface EntradaPrioridadeAcompanhamento {
   faltas?: readonly FaltaParaPrioridadeAcompanhamento[];
   ultimaConsultaConcluidaEm?: Date | null;
   proximaConsultaEm?: Date | null;
-  formularios?: readonly FormularioParaPrioridadeAcompanhamento[];
   ultimoRegistroHabitos?: RegistroHabitosParaPrioridadeAcompanhamento | null;
 }
 
@@ -50,7 +52,6 @@ export interface ResultadoPrioridadeAcompanhamento {
 const DIA_MS = 24 * 60 * 60 * 1000;
 const JANELA_FALTAS_MS = 90 * DIA_MS;
 const LIMITE_SEM_RETORNO_MS = 60 * DIA_MS;
-const LIMITE_FORMULARIO_VENCIDO_MS = 7 * DIA_MS;
 const JANELA_REGISTRO_HABITOS_MS = 30 * DIA_MS;
 
 export function calcularPrioridadeAcompanhamento(
@@ -74,11 +75,6 @@ export function calcularPrioridadeAcompanhamento(
 
   if (estaSemRetornoProgramado(entrada, agoraMs)) {
     fatores.push({ codigo: 'sem_retorno_programado', pontos: 25 });
-  }
-
-  const formulariosVencidos = contarFormulariosVencidos(entrada.formularios ?? [], agoraMs);
-  if (formulariosVencidos > 0) {
-    fatores.push({ codigo: 'formulario_vencido', pontos: 10, quantidade: formulariosVencidos });
   }
 
   if (temAdesaoDeclaradaBaixa(entrada.ultimoRegistroHabitos, agoraMs)) {
@@ -122,26 +118,6 @@ function estaSemRetornoProgramado(
   return proximaConsultaMs === undefined || proximaConsultaMs <= agoraMs;
 }
 
-function contarFormulariosVencidos(
-  formularios: readonly FormularioParaPrioridadeAcompanhamento[],
-  agoraMs: number
-): number {
-  const vencidos = new Set<string>();
-  for (const formulario of formularios) {
-    if (!formulario.envioId.trim()) throw new Error('Formulario invalido.');
-    validarData(formulario.vencimentoEm, 'Data de vencimento do formulario invalida.');
-    validarDataOpcional(formulario.respondidoEm, 'Data de resposta do formulario invalida.');
-    if (
-      formulario.obrigatorio &&
-      !formulario.respondidoEm &&
-      formulario.vencimentoEm.getTime() < agoraMs - LIMITE_FORMULARIO_VENCIDO_MS
-    ) {
-      vencidos.add(formulario.envioId);
-    }
-  }
-  return vencidos.size;
-}
-
 function temAdesaoDeclaradaBaixa(
   registro: RegistroHabitosParaPrioridadeAcompanhamento | null | undefined,
   agoraMs: number
@@ -176,3 +152,22 @@ function validarData(data: Date, mensagem: string): void {
 function validarDataOpcional(data: Date | null | undefined, mensagem: string): void {
   if (data !== null && data !== undefined) validarData(data, mensagem);
 }
+
+/**
+ * Vocabulario fechado do motivo de override da prioridade de acompanhamento,
+ * aprovado pelo dono do produto para a Fase 265. `outro` e uma categoria
+ * fechada como as demais -- nunca um escape para texto livre no codigo; o
+ * detalhe do motivo continua exclusivamente na justificativa cifrada, que
+ * nunca entra na trilha generica de auditoria.
+ */
+export const CODIGOS_MOTIVO_OVERRIDE_PRIORIDADE_ACOMPANHAMENTO = [
+  'evento_recente_nao_capturado',
+  'informacao_externa_relevante',
+  'acompanhamento_intensificado',
+  'acompanhamento_reduzido',
+  'correcao_de_dado',
+  'outro'
+] as const;
+
+export type CodigoMotivoOverridePrioridadeAcompanhamento =
+  (typeof CODIGOS_MOTIVO_OVERRIDE_PRIORIDADE_ACOMPANHAMENTO)[number];
