@@ -13,25 +13,46 @@ Atualizado em 2026-09-18.
   `acompanhamento_intensificado`, `acompanhamento_reduzido`,
   `correcao_de_dado`, `outro`) e decidiu remover `formulario_vencido` da
   formula em vez de criar um campo "obrigatorio" artificial em
-  questionarios. Implementado em branch dedicada
-  `feat/fase265-enum-motivo-formula-v2` (PR aberta, aguardando merge):
-  `codigoMotivo` agora e `@IsIn` contra o enum (nunca aceita codigo
-  arbitrario) e passou a entrar na trilha generica de auditoria, ja que
-  deixou de ser texto livre; a formula de prioridade avancou para a versao
-  `1.1.0` (faltas recentes, sem retorno programado, adesao declarada
-  baixa -- sem `formulario_vencido`), sem nenhuma migration nova. Detalhe
-  completo em `docs/history/phases/PLANO_FASE_265.md`, secao 12. O dono
-  tambem aprovou a UI de gerenciamento de override, implementada em
-  branch dedicada `feat/fase265-ui-override-prioridade-acompanhamento`
-  (PR aberta, aguardando merge): nova secao "Prioridade de acompanhamento"
-  na aba Resumo mostra calculado e efetivo sempre separados, com acao
-  "Ajustar prioridade" (so `pacientes.gerenciar`) restrita ao enum fechado
-  de motivo da 265.5; sem mudanca de backend, so BFF POST/DELETE novo
-  consumindo as rotas ja existentes da 265.4. Detalhe completo em
-  `docs/history/phases/PLANO_FASE_265.md`, secao 13. O dono tambem
-  autorizou o preflight de leitura para a aplicacao real da migration
-  265.2 em producao -- em andamento nesta mesma sessao, reportado
-  separadamente quando concluido.
+  questionarios, alem de aprovar a UI de gerenciamento de override e
+  autorizar o preflight de leitura da migration 265.2 em producao. O
+  Incremento 265.5 (enum fechado + formula v1.1.0) foi integrado no
+  `main` pelo PR GitHub `#262`; `codigoMotivo` agora e `@IsIn` contra o
+  enum (nunca aceita codigo arbitrario) e passou a entrar na trilha
+  generica de auditoria, ja que deixou de ser texto livre; a formula de
+  prioridade avancou para a versao `1.1.0` (faltas recentes, sem retorno
+  programado, adesao declarada baixa -- sem `formulario_vencido`), sem
+  nenhuma migration nova. Detalhe completo em
+  `docs/history/phases/PLANO_FASE_265.md`, secao 12.
+- Reconciliacao de 2026-09-18 (UI de gerenciamento de override, Incremento
+  265.6): integrada no `main` pelo PR GitHub `#263`
+  (`feat/fase265-ui-override-prioridade-acompanhamento`): nova secao
+  "Prioridade de acompanhamento" na aba Resumo mostra calculado e efetivo
+  sempre separados, com acao "Ajustar prioridade" (so
+  `pacientes.gerenciar`) restrita ao enum fechado de motivo da 265.5; sem
+  mudanca de backend, so BFF POST/DELETE novo consumindo as rotas ja
+  existentes da 265.4. Detalhe completo em
+  `docs/history/phases/PLANO_FASE_265.md`, secao 13.
+- Reconciliacao de 2026-09-18 (preflight da migration 265.2 em producao):
+  por autorizacao explicita do dono do produto, esta sessao fez o
+  preflight de leitura exigido antes de aplicar
+  `1720000001046-AdicionarPrioridadeAcompanhamento` em producao.
+  **Resultado: parou antes de qualquer DDL**, sem alterar nenhum estado
+  de producao. Confirmado por evidencia local: SHA do `main` (`d80abd4`
+  no momento do preflight; 265.5 e 265.6 integrados depois, no mesmo
+  ciclo), os incrementos 265.2-265.4 que dependem do schema ja
+  integrados, a migration exata (ja validada contra Postgres real em CI)
+  e a ordem documentada no `RUNBOOK_PRODUCAO.md`. **Nao pode ser
+  confirmado nesta sessao**, por ausencia total de credencial de banco de
+  producao/Neon/runtime no ambiente: estado de migrations em staging e
+  producao, branch/database exatos do Neon, a role que seria usada, e
+  evidencia de backup/restore recentes (script dedicado e
+  PowerShell-only, exige credencial que este ambiente nao tem). Achado
+  adicional: a issue GitHub `#234` ("[Alerta producao] Saude externa
+  indisponivel") continua aberta desde 2026-09-12 -- por si so ja
+  recomendaria nao prosseguir sem confirmacao humana. Aplicar a migration
+  exige um operador humano ou uma sessao com a `DATABASE_URL` de producao
+  (role `neondb_owner`) confirmada explicitamente por quem a fornece.
+  Detalhe completo em `docs/history/phases/PLANO_FASE_265.md`, secao 14.
 - Reconciliacao de 2026-09-18: os PRs GitHub `#257` (Incremento 265.1,
   calculador de dominio puro), `#258` (Incremento 265.2, persistencia e
   RLS) e `#259` (Incremento 265.3, recalculo idempotente) foram integrados

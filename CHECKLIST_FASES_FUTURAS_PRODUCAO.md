@@ -3244,9 +3244,12 @@ publicado antes de ampliar a superficie de mudancas visuais.
     validacao de configuracao; GitHub/`gh` apenas para evidencia e fluxo de PR.
 
 - [~] Fase 265 - Fundacao da inteligencia: prioridade de acompanhamento
-  calculada com override auditado. [EM ANDAMENTO: 265.1-265.4 entregues;
-  265.5 (enum fechado de motivo + formula v1.1.0) e 265.6 (UI de override)
-  em PRs abertas; migration em producao pendente]
+  calculada com override auditado. [EM ANDAMENTO: 265.1-265.6 entregues no
+  `main`, incluindo enum fechado de motivo, formula v1.1.0 e UI de
+  override; preflight de leitura da migration 265.2 em producao concluido
+  -- parou antes de DDL por ausencia de credencial de producao nesta
+  sessao, ver secao 14 do plano. Falta apenas aplicar a migration nos
+  ambientes que exigem o fluxo]
   - Origem: PB-01 e Onda 2 de
     `docs/product/OCTACLIN_PRODUCT_FEATURE_AUDIT.md`.
   - Dependencia de produto: definir pesos e sinais explicaveis antes de escrever
@@ -3456,6 +3459,24 @@ publicado antes de ampliar a superficie de mudancas visuais.
     completo (268/268) e `fase-249-densidade-responsividade.spec.mjs`
     (6/6), `git diff --check` e `pnpm security:secrets`. Detalhe completo
     em `docs/history/phases/PLANO_FASE_265.md`, secao 13.
+  - Preflight de leitura para a migration 265.2 em producao executado em
+    2026-09-18, por autorizacao explicita do dono do produto. **Resultado:
+    parou antes de qualquer DDL.** Confirmado por evidencia local (git,
+    leitura de codigo e do runbook): SHA do `main` (`d80abd4`), que os
+    incrementos 265.2-265.4 que dependem do schema ja estao integrados, a
+    migration exata (`1720000001046-AdicionarPrioridadeAcompanhamento`,
+    ja validada contra Postgres real em CI) e a ordem documentada no
+    `RUNBOOK_PRODUCAO.md`. **Nao pode ser confirmado nesta sessao, por
+    ausencia total de credencial de banco de producao/Neon/runtime**:
+    estado de migrations em staging e producao, branch/database exatos do
+    Neon, a role que seria usada, e evidencia de backup/restore recentes
+    (o script correspondente e PowerShell-only e exige credencial que este
+    ambiente nao tem). Achado adicional: a issue GitHub `#234` ("[Alerta
+    producao] Saude externa indisponivel") continua aberta desde
+    2026-09-12 -- sinal de saude de producao que por si so ja recomendaria
+    nao prosseguir sem confirmacao humana, independente das credenciais.
+    Nenhum estado de producao foi alterado. Detalhe completo em
+    `docs/history/phases/PLANO_FASE_265.md`, secao 14.
 
 Documento de execução e prioridades: `ROADMAP_QUALIDADE_SEGURANCA_FASES_248_262.md`.
 Matriz operacional: `MATRIZ_SKILLS_PLUGINS_MODELOS_FASES_243_248_262.md`.
