@@ -91,7 +91,7 @@ Implementar em incrementos separados, cada um em branch e PR proprios:
      historico ja criado nao deve ser apagado automaticamente;
    - migration executada somente fora de banda com role owner, apos ensaio em
      banco descartavel.
-3. **265.3 - Recalculo idempotente**
+3. **265.3 - Recalculo idempotente** [IMPLEMENTADO NESTA BRANCH]
    - servico e job no worker, sem efeito externo;
    - claim/lock existente, tenant explicito e idempotencia por paciente,
      versao da formula e janela;
@@ -113,11 +113,14 @@ compatibilidade de leitura e rollback aprovados.
 - [x] Proprietario aceita explicitamente a semantica de prioridade operacional,
   e nao risco clinico.
 - [x] Proprietario aceita pesos, janelas e faixas da formula inicial.
-- [ ] Revisao de seguranca confirma que fatores e justificativa nao vazam PHI
-  em logs, auditoria, filas ou respostas sem permissao. **Ainda nao aplicavel
-  de verdade**: nenhum servico le ou escreve `prioridades_acompanhamento_*`
-  neste incremento (265.2 e so schema), entao nao ha fluxo de dado para
-  revisar ainda. Revisitar quando 265.3/265.4 introduzirem o job e a leitura.
+- [~] Revisao de seguranca confirma que fatores e justificativa nao vazam PHI
+  em logs, auditoria, filas ou respostas sem permissao. **Parcialmente
+  coberto por 265.3**: o job de recalculo agora le e escreve
+  `prioridades_acompanhamento_*` de verdade, mas so registra `tenantId`,
+  `pacienteId` e `erro.name` em log de falha -- nunca o conteudo decifrado
+  de habitos, nem `fatores`/`score`. Ainda nao ha nenhuma rota que devolva
+  esse dado a um cliente HTTP (isso e 265.4); revisitar este gate quando o
+  DTO de leitura existir, porque so ai existe resposta para auditar.
 - [x] Desenho da migration confirma RLS/FORCE RLS, role owner e rollback,
   **para o schema criado no incremento 265.2**: `enable row level security` +
   `force row level security` + policy `ALL`/`public` isolando por
@@ -129,12 +132,18 @@ compatibilidade de leitura e rollback aprovados.
   (`down()` remove so o estado atual, nunca o historico). Execucao real fora
   de banda com role owner em producao continua pendente, fora do escopo
   desta migration em si.
-- [ ] Matriz de testes cobre tenant, profissional, override, expiracao,
-  idempotencia e formula versionada. **Parcialmente coberto por 265.2**:
-  isolamento por tenant e a forma "tudo ou nada" do override (com expiracao
-  obrigatoria) ja sao garantidos no schema e teste automaticamente pelo gate
-  de RLS exaustivo. Escopo por profissional, idempotencia do job e leitura
-  versionada continuam pendentes ate 265.3/265.4.
+- [~] Matriz de testes cobre tenant, profissional, override, expiracao,
+  idempotencia e formula versionada. **Parcialmente coberto por 265.2 e
+  265.3**: isolamento por tenant e a forma "tudo ou nada" do override (com
+  expiracao obrigatoria) sao garantidos no schema e testados
+  automaticamente pelo gate de RLS exaustivo; idempotencia por paciente,
+  versao da formula e janela (dia UTC) agora tem 9 testes dedicados no
+  servico de recalculo, incluindo o caso "falha em um paciente preserva o
+  ultimo valor valido e nao interrompe os demais". Escopo por profissional
+  nao se aplica ao job (ele recalcula todos os pacientes ativos do tenant,
+  sem filtro de profissional -- esse escopo e do caminho de leitura);
+  expiracao de override e leitura versionada continuam pendentes, ambas
+  atribuidas a 265.4.
 
 O merge do plano, isoladamente, nao substituiu o aceite. O aceite foi dado na
 instrucao posterior do proprietario para seguir com a implementacao.
@@ -270,3 +279,88 @@ Validacoes desta branch:
   producao, para o procedimento fora de banda do runbook;
 - `NA` - servico, job, UI e RLS aplicado a um fluxo de leitura/escrita real,
   fora deste incremento (chegam em 265.3/265.4).
+
+## 9. Incremento 265.3 - implementacao e evidencia
+
+`ServicoRecalculoPrioridadeAcompanhamento`
+(`octaclin-backend/src/modulos/pacientes/aplicacao/`) le os sinais de cada
+paciente ativo do tenant (faltas em `agenda_consultas` nos ultimos ~100 dias,
+ultima consulta concluida e proxima consulta futura, ultimo registro de
+habitos decifrado), chama o calculador puro de 265.1
+(`calcularPrioridadeAcompanhamento`) e persiste o resultado nas tabelas de
+265.2. `ProcessadorRecalculoPrioridadeAcompanhamento` agenda isso uma vez por
+dia (`@Cron('0 9 * * *')`, mesmo horario do recall de inatividade) usando
+`executarPorTenantAtivo` -- o claim/lock por advisory lock Postgres ja
+existente (`rodada-por-tenant.ts`), reaproveitado tal como esta, sem nenhum
+mecanismo de trava novo. So roda no processo `worker`/`all`
+(`deveExecutarProcessadores()`), nunca no `web`, mesmo padrao dos demais
+processadores agendados do repositorio.
+
+### Gap real encontrado: sinal `formulario_vencido` nao foi wireado
+
+A formula 265.1 pontua "formulario obrigatorio vencido ha mais de 7 dias",
+mas nenhuma entidade do modulo de questionarios (`QuestionarioOrm`,
+`EnvioQuestionarioOrm`, `AgendamentoQuestionarioOrm`) tem hoje um campo que
+diga se um questionario e obrigatorio -- o conceito simplesmente nao existe
+no schema atual. Assumir que todo envio conta (ou que nenhum conta) seria
+inventar uma decisao de produto que ainda nao foi tomada, o mesmo cuidado ja
+registrado para `override_codigo_motivo` na migration 265.2. Este incremento
+**wireia os outros tres sinais normalmente** (faltas recentes, sem retorno
+programado, adesao declarada baixa) e **omite `formularios` de proposito**
+na chamada ao calculador -- o campo e opcional no contrato de 265.1 e
+contribui zero pontos quando ausente, entao o job nunca calcula um score
+errado, so um score que ainda nao inclui esse sinal. Fechar esse gap exige
+decisao de produto explicita (por exemplo, um campo `obrigatorio` em
+`QuestionarioOrm` com sua propria migration) antes de qualquer codigo.
+
+### Idempotencia e tratamento de falha
+
+Idempotencia por paciente, versao da formula e janela (dia UTC, a mesma
+cadencia do `@Cron` diario): antes de gravar um evento `calculo` no
+historico, o servico busca o ultimo evento `calculo` para o mesmo
+(`tenantId`, `pacienteId`, `versaoFormula`) e so grava um novo se esse
+ultimo nao for de hoje. O estado atual (`prioridades_acompanhamento_paciente`)
+e sempre atualizado (e um cache), mas o historico nunca ganha uma segunda
+linha de `calculo` por dia, mesmo que o job rode duas vezes (retry,
+redeploy). Os campos de override do estado atual nunca sao tocados pelo job:
+o registro e lido inteiro do banco, so os campos calculados sao
+reatribuidos, e `save()` grava os campos de override de volta exatamente
+como estavam. Expirar override e o fluxo de leitura com o "valor efetivo"
+continuam fora deste incremento, atribuidos a 265.4.
+
+Falha por paciente (dado corrompido, excecao do calculador de dominio por
+entrada invalida) e isolada num `try/catch` por paciente dentro do loop do
+tenant: o paciente seguinte continua sendo processado, o log de falha traz
+so `tenantId`, `pacienteId` e `erro.name` -- nunca conteudo decifrado nem
+`fatores`/`score` -- e o ultimo valor valido em
+`prioridades_acompanhamento_paciente` permanece intacto (nenhuma escrita
+parcial chega ao banco quando o catch dispara). Uma falha ao decifrar
+`valorCriptografado` do registro de habitos e tratada separadamente e de
+forma mais branda, no mesmo padrao ja usado por `lerTituloTimeline`/
+`lerValorDiario` em `ServicoPacientes`: o sinal de adesao fica ausente, mas
+o restante do calculo do paciente continua normalmente -- um humor
+ilegivel nao deveria apagar o calculo inteiro do paciente.
+
+Validacoes desta branch:
+
+- `PASS` - TDD RED: as duas specs novas falharam por ausencia dos modulos
+  antes da implementacao (`Cannot find module`);
+- `PASS` - `servico-recalculo-prioridade-acompanhamento.spec.ts`, 9/9 testes
+  (tenant explicito sem vazar para outro tenant; grava estado + historico na
+  primeira vez; idempotencia no mesmo dia; novo evento no dia seguinte;
+  override preservado; falha em um paciente nao interrompe os demais e
+  preserva o ultimo valor valido; ausencia deliberada do fator
+  `formulario_vencido`; adesao baixa calculada a partir do registro
+  decifrado; registro de habitos ilegivel so remove aquele sinal, sem
+  derrubar o paciente);
+- `PASS` - `processador-recalculo-prioridade-acompanhamento.spec.ts`, 1/1
+  teste (recalcula todos os tenants ativos via `executarPorTenantAtivo`);
+- `PASS` - `modulo-pacientes.spec.ts` (modulo continua carregando com as
+  duas novas entidades, servico e processador registrados);
+- `PASS` - typecheck do backend;
+- `PASS` - build e verificacao do artefato (`dist/main.js`);
+- `PASS` - suite completa do backend, 190 suites e 1.776 testes; 31 skips
+  preexistentes;
+- `NA` - migration, DDL ou schema novo (nenhum: 265.3 so consome o schema
+  que 265.2 ja criou);
+- `NA` - UI, rota HTTP ou leitura do valor calculado por um cliente (265.4).

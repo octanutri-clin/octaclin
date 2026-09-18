@@ -65,6 +65,13 @@ import { EvolucaoFotograficaArquivoOrm } from './infraestrutura/evolucao-fotogra
 import { CondutaTerapeuticaOrm } from './infraestrutura/conduta-terapeutica.orm';
 import { CondutaTerapeuticaVersaoOrm } from './infraestrutura/conduta-terapeutica-versao.orm';
 import { FiltroSalvoPacienteOrm } from './infraestrutura/filtro-salvo-paciente.orm';
+import { PrioridadeAcompanhamentoPacienteOrm } from './infraestrutura/prioridade-acompanhamento-paciente.orm';
+import { PrioridadeAcompanhamentoHistoricoOrm } from './infraestrutura/prioridade-acompanhamento-historico.orm';
+import { ServicoRecalculoPrioridadeAcompanhamento } from './aplicacao/servico-recalculo-prioridade-acompanhamento';
+import { ProcessadorRecalculoPrioridadeAcompanhamento } from './aplicacao/processador-recalculo-prioridade-acompanhamento';
+import { deveExecutarProcessadores } from '../../infraestrutura/processamento/papel-processo';
+
+const processadores = deveExecutarProcessadores() ? [ProcessadorRecalculoPrioridadeAcompanhamento] : [];
 
 @Module({
   imports: [
@@ -100,7 +107,9 @@ import { FiltroSalvoPacienteOrm } from './infraestrutura/filtro-salvo-paciente.o
       ArquivoMidiaOrm,
       CondutaTerapeuticaOrm,
       CondutaTerapeuticaVersaoOrm,
-      FiltroSalvoPacienteOrm
+      FiltroSalvoPacienteOrm,
+      PrioridadeAcompanhamentoPacienteOrm,
+      PrioridadeAcompanhamentoHistoricoOrm
     ]),
     ModuloTenancy,
     ModuloAuth,
@@ -141,7 +150,9 @@ import { FiltroSalvoPacienteOrm } from './infraestrutura/filtro-salvo-paciente.o
     CriptografiaDadosSensiveis,
     ServicoSenhas,
     ServicoAuditoria,
-    ProcessadorOutboxAuditoria
+    ProcessadorOutboxAuditoria,
+    ServicoRecalculoPrioridadeAcompanhamento,
+    ...processadores
   ],
   exports: [ServicoPacientes, ServicoConvitesPaciente, ServicoPortalPaciente, ServicoDocumentosClinicos]
 })
