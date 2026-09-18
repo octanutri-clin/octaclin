@@ -2,9 +2,11 @@
 
 ## 1. Estado e decisao de sequencia
 
-Fase iniciada em 2026-09-17 somente para definicao do contrato de produto e
-arquitetura. Nenhum codigo de producao, migration, job ou configuracao externa
-faz parte deste primeiro incremento.
+Fase iniciada em 2026-09-17 pela definicao do contrato de produto e arquitetura.
+O proprietario aceitou explicitamente a semantica e a formula apos o merge do
+PR GitHub `#256` e autorizou a continuidade. O Incremento 265.1 implementa
+somente o calculador de dominio puro: nenhuma migration, persistencia, consulta,
+job, UI, automacao ou configuracao externa faz parte dele.
 
 O PR 55 continua pendente como gate externo para venda publica. O proprietario
 decidiu adiar sua contratacao para evitar custo neste momento. Isso nao converte
@@ -77,7 +79,7 @@ qualquer modelo de IA.
 
 Implementar em incrementos separados, cada um em branch e PR proprios:
 
-1. **265.1 - Dominio puro e explicacao**
+1. **265.1 - Dominio puro e explicacao** [IMPLEMENTADO NESTA BRANCH]
    - calculador deterministico, sem banco e sem efeitos;
    - versao literal da formula;
    - testes de limite, janela, combinacao, cap em 100 e ausencia de sinais;
@@ -106,24 +108,54 @@ continuam fora desta fase ate os incrementos PB-02/PB-03 correspondentes. O
 campo legado `score_risco` nao deve ser sobrescrito antes de existir migration,
 compatibilidade de leitura e rollback aprovados.
 
-## 5. Gates antes de codigo
+## 5. Gates da fase
 
-- [ ] Proprietario aceita explicitamente a semantica de prioridade operacional,
+- [x] Proprietario aceita explicitamente a semantica de prioridade operacional,
   e nao risco clinico.
-- [ ] Proprietario aceita pesos, janelas e faixas da formula inicial.
+- [x] Proprietario aceita pesos, janelas e faixas da formula inicial.
 - [ ] Revisao de seguranca confirma que fatores e justificativa nao vazam PHI
   em logs, auditoria, filas ou respostas sem permissao.
 - [ ] Desenho da migration confirma RLS/FORCE RLS, role owner e rollback.
 - [ ] Matriz de testes cobre tenant, profissional, override, expiracao,
   idempotencia e formula versionada.
 
-O merge deste plano registra a proposta e a sequencia, mas nao substitui o
-aceite explicito dos dois primeiros itens.
+O merge do plano, isoladamente, nao substituiu o aceite. O aceite foi dado na
+instrucao posterior do proprietario para seguir com a implementacao.
 
 ## 6. Validacao deste incremento
 
 - `NA` - testes de aplicacao: nenhum codigo de producao foi alterado.
 - `NA` - migration e banco: nenhuma migration foi criada ou executada.
-- `PENDENTE` - revisao/aceite humano da semantica e da formula.
+- `PASS` - revisao/aceite humano da semantica e da formula, confirmado pelo
+  proprietario apos o merge do PR `#256`.
 - Obrigatorios antes do push: validacao documental, `git diff --check` e
   `pnpm security:secrets`.
+
+## 7. Incremento 265.1 - implementacao e evidencia
+
+Implementado em
+`octaclin-backend/src/modulos/pacientes/dominio/prioridade-acompanhamento.ts`,
+sem dependencias de NestJS, TypeORM, relogio global ou infraestrutura. O
+chamador fornece explicitamente o instante de referencia e somente estruturas
+minimas: ids opacos, datas, obrigatoriedade e percentual de adesao declarado.
+
+Propriedades do contrato:
+
+- versao literal `1.0.0` acompanha todo resultado;
+- janelas moveis avaliadas por instante UTC, com limites de 90 e 30 dias
+  inclusivos; `mais de 60` e `mais de 7` permanecem estritos;
+- faltas e formularios vencidos sao deduplicados por identificador;
+- fatores saem em ordem estavel, com codigos fechados e sem texto livre;
+- score limitado a 100 e faixas preservadas (`0-39`, `40-69`, `70-100`);
+- datas invalidas e adesao fora de `0-100` falham explicitamente;
+- nenhum valor e persistido, publicado, exibido ou usado para efeito externo.
+
+Validacoes desta branch:
+
+- `PASS` - TDD RED: spec falhou por ausencia do modulo antes da implementacao;
+- `PASS` - spec focada, 7/7 testes;
+- `PASS` - typecheck do backend;
+- `PASS` - build e verificacao do artefato do backend;
+- `PASS` - suite completa do backend, 186 suites e 1.749 testes; 37 skips
+  preexistentes;
+- `NA` - banco, migration, RLS, job, UI e ambiente externo, fora do incremento.

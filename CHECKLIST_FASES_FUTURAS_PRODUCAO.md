@@ -3259,9 +3259,15 @@ publicado antes de ampliar a superficie de mudancas visuais.
   - Primeiro incremento iniciado em 2026-09-17: proposta de contrato em
     `docs/history/phases/PLANO_FASE_265.md`, separando prioridade operacional de
     risco clinico e definindo formula explicavel, override humano, sequencia de
-    implementacao e gates R4. Nenhum codigo, migration, job ou mudanca de
-    producao foi autorizado neste incremento. A implementacao aguarda aceite
-    explicito da semantica, pesos, janelas e faixas.
+    implementacao e gates R4. O proprietario aceitou a semantica, pesos, janelas
+    e faixas depois do merge do PR `#256` e autorizou a continuidade.
+  - Incremento 265.1 implementado em branch dedicada: calculador de dominio
+    puro, deterministico e versionado (`1.0.0`), com fatores fechados, janelas
+    UTC, deduplicacao, cap em 100, faixas existentes e validacao fail-closed.
+    TDD: 7/7 testes focados; typecheck, build e suite completa do backend
+    aprovados (186 suites, 1.749 testes, 37 skips preexistentes). Sem banco,
+    migration, RLS, job, UI, automacao ou mudanca de producao. Integracao ainda
+    depende de checks e merge humanos da PR deste incremento.
 
 Documento de execução e prioridades: `ROADMAP_QUALIDADE_SEGURANCA_FASES_248_262.md`.
 Matriz operacional: `MATRIZ_SKILLS_PLUGINS_MODELOS_FASES_243_248_262.md`.
