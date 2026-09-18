@@ -1155,7 +1155,7 @@ async function prepararProntuarioMockado(page, {
       await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(respostaPrioridadeAtual()) });
       return;
     }
-    await route.fulfill({ status: 405, contentType: 'application/json', body: JSON.stringify({ mensagem: 'Metodo inesperado.' }) });
+    await route.fulfill({ status: 405, contentType: 'application/json', body: JSON.stringify({ mensagem: 'Método inesperado.' }) });
   });
 
   await page.route('**/api/pacientes/paciente-1/perfil-cadastro', async (route) => {
@@ -3179,7 +3179,7 @@ test.describe('prontuario do paciente', () => {
 
   test('trata paciente fora do escopo ao tentar ajustar a prioridade', async ({ page }) => {
     const controle = await prepararProntuarioMockado(page);
-    controle.definirFalhaOverridePrioridade({ status: 404, mensagem: 'Paciente nao encontrado no escopo do profissional.' });
+    controle.definirFalhaOverridePrioridade({ status: 404, mensagem: 'Paciente não encontrado no escopo do profissional.' });
     await page.goto('/pacientes/paciente-1');
 
     const secao = page.locator('section', { has: page.getByRole('heading', { name: 'Prioridade de acompanhamento' }) });
