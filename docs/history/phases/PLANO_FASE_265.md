@@ -562,3 +562,122 @@ ambiente (`/opt/pw-browsers/chromium`), porque a versao do
 `@playwright/test` do projeto esperava um `chromium_headless_shell` mais
 novo que nao estava pre-instalado. Usado um `playwright.config.mjs` local,
 descartavel, apenas para rodar a suite; nao versionado nesta branch.
+
+## 12. Preflight de leitura para a migration 265.2 em producao
+
+Autorizacao explicita do dono do produto (2026-09-18): preparar a execucao
+real de `1720000001046-AdicionarPrioridadeAcompanhamento` em producao,
+mas **somente leitura nesta etapa**, seguindo os 11 pontos de confirmacao
+exigidos antes de qualquer DDL, com instrucao explicita de parar e
+reportar em vez de adivinhar qualquer identidade ambigua.
+
+**Resultado: PAROU antes de DDL.** Nenhuma migration foi executada.
+Metade dos pontos exigidos nao pode ser confirmada nesta sessao porque o
+ambiente de execucao nao tem nenhuma credencial de banco de producao,
+Neon ou runtime -- nao e uma decisao, e um limite de acesso: `env | grep
+-iE 'neon|database_url|prod'` nao devolveu nenhuma variavel. Aplicar a
+migration exige uma sessao ou operador com a `DATABASE_URL` de producao
+(role `neondb_owner`) confirmada explicitamente, nunca inventada ou
+copiada de outro ambiente.
+
+### O que foi confirmado nesta sessao (evidencia obtida agora, leitura local)
+
+1. **SHA/estado do `main`**: `d80abd4` (`git log -1 origin/main`,
+   2026-09-18T08:17:37-03:00), "Merge pull request #261 -- UI da
+   prioridade de acompanhamento".
+2. **Incrementos da 265 que dependem deste schema**: 265.2 (a propria
+   migration, PR `#258`, merge `bf1976a`), 265.3 (PR `#259`, merge
+   `8de87f9`) e 265.4 (PR `#260`, merge `4b18371`, mais a UI em PR `#261`,
+   merge `d80abd4`) **ja estao integrados no `main`** e ja leem/escrevem
+   as tabelas que esta migration cria. 265.5 (PR `#262`, aberta) e 265.6
+   (PR `#263`, aberta, empilhada sobre a `#262`) sao mudanca de aplicacao
+   pura, sem DDL, e nao dependem desta migration estar aplicada em
+   producao para funcionar corretamente quando mergeadas.
+3. **Migration exata**: `1720000001046-AdicionarPrioridadeAcompanhamento`,
+   confirmada por `git log` (introduzida no commit `b908eba`, unico commit
+   que a toca ate hoje). Tagged `@aplicacao fora-de-banda` (exige role
+   owner, nunca a role de runtime). Cria `prioridades_acompanhamento_paciente`
+   e `prioridades_acompanhamento_historico`, ambas com RLS/FORCE RLS,
+   policy de isolamento por tenant e a segunda protegida por trigger
+   append-only. Ja validada contra Postgres real em CI
+   (`pnpm test:rls:testcontainers`) no momento do merge da `#258`
+   (secao 8 deste documento) -- essa e evidencia de que a migration roda
+   corretamente num Postgres 15 limpo, **nao** evidencia de que ja foi
+   aplicada em staging ou producao.
+11. **Ordem seguida pelo runbook** (`RUNBOOK_PRODUCAO.md`, secao
+    "BANCO_EXECUTAR_MIGRACOES em producao", e o padrao repetido em cada
+    subsecao de migration por fase, ex. "Fase 216", "Agenda publica segura
+    (Fase 253)"): confirmar projeto/branch/banco/role explicitamente ->
+    `migration:show` (antes, para provar que so a migration da vez esta
+    pendente) -> `migration:run` com `DATABASE_URL` de owner exportada na
+    sessao -> `migration:show` (depois, para confirmar aplicada) ->
+    verificar tabelas/RLS/FORCE RLS/policies esperadas -> deploy/health.
+    `BANCO_EXECUTAR_MIGRACOES` deve continuar `false` (ou ausente) nos
+    runtimes -- a migration e sempre um ato deliberado fora do boot, nunca
+    automatica.
+
+### O que NAO pode ser confirmado nesta sessao, e por que
+
+4. **Estado de migrations em staging**: desconhecido. Exigiria
+   `migration:show` contra a `DATABASE_URL` de staging, que este ambiente
+   nao tem.
+5. **Estado de migrations em producao**: desconhecido, mesmo motivo.
+6. **Branch/database exatos do Neon de producao**: desconhecido. O
+   proprio runbook usa placeholder (`<URL owner de producao confirmada>`)
+   de proposito -- o valor real nunca fica no repositorio e precisa vir de
+   um cofre de segredos ou de quem opera o Neon.
+7 e 8. **Role e confirmacao de que e owner, nao runtime**: o runbook e
+   inequivoco sobre a exigencia (`neondb_owner`; a role de runtime
+   `octaclin_app_producao` nao tem `CREATE` no schema `public`), mas esta
+   sessao nao tem nenhuma credencial de banco para confirmar qual seria
+   usada.
+9. **Ultimo backup e ultimo teste de restore**: existe um runbook dedicado
+   (`RUNBOOK_BACKUP_RESTORE.md`) com um script proprio
+   (`validar-backup-restore.ps1`), mas e PowerShell/Windows-only e exige
+   `RESTORE_DATABASE_URL` mais confirmacao manual (`CONFIRMAR_RESTORE_TESTE=SIM`)
+   -- nao executavel neste ambiente Linux, e sem essas credenciais de
+   qualquer forma. Verificacao indireta: nao ha issue aberta
+   `[Alerta producao] Backup automatico falhou` no repositorio agora
+   (`gh`/API GitHub, 2026-09-18) -- sinal fraco de ausencia de falha
+   conhecida, **nao prova de um backup e restore recentes e bem-sucedidos**.
+10. **Saude atual de producao**: ha uma issue aberta e nao resolvida,
+    **`#234` "[Alerta producao] Saude externa indisponivel"**, criada em
+    2026-09-12 e com atualizacao em 2026-09-13 -- um sinal real e atual de
+    que o monitor de saude externo de producao reportou indisponibilidade
+    e o item continua aberto. Esta sessao nao tem acesso ao endpoint de
+    saude real nem ao painel do monitor para confirmar se o quadro mudou
+    desde entao. Isso por si so ja seria motivo para nao prosseguir com
+    DDL sem confirmacao humana adicional, mesmo que as credenciais de
+    banco estivessem disponiveis.
+
+### Gap adicional encontrado (nao pedido, mas relevante)
+
+Ao contrario de toda migration anterior desta fase de rollout (cada uma
+tem sua propria subsecao em `RUNBOOK_PRODUCAO.md`, ex. "Fase 216 - plano
+alimentar e catalogo TACO", "Agenda publica segura (Fase 253)"),
+**`1720000001046-AdicionarPrioridadeAcompanhamento` ainda nao tem uma
+subsecao dedicada no runbook**. A secao generica
+"BANCO_EXECUTAR_MIGRACOES em producao" cobre o procedimento, mas nao
+documenta os detalhes especificos desta migration (tabelas esperadas,
+contagem de migrations antes/depois, verificacao de RLS/policies
+especificas). Registrado aqui como pendencia -- nao escrito no runbook
+nesta sessao porque preencher essa subsecao exigiria os mesmos dados de
+producao (contagem real de migrations, projeto/branch Neon) que os itens
+4-6 acima ja identificaram como indisponiveis aqui; escrever com
+placeholders adivinhados seria pior que nao escrever.
+
+### Conclusao desta etapa
+
+Nao ha identidade ambigua a resolver por releitura de documentacao -- e
+um limite de acesso de infraestrutura, exatamente o caso em que a
+instrucao do dono do produto pede para parar e reportar em vez de
+adivinhar. **Proximo passo concreto**: um operador humano (ou uma sessao
+explicitamente equipada com a `DATABASE_URL` de producao com role
+`neondb_owner`, confirmada por quem a fornece) precisa: (a) confirmar se
+a issue `#234` ainda reflete o estado atual de producao e resolve-la ou
+documentar por que e seguro prosseguir mesmo assim; (b) rodar
+`validar-backup-restore.ps1` ou confirmar por outro meio que ha backup e
+restore testados recentes; (c) executar os passos 4-8 (identidade
+Neon/staging/producao/role) presencialmente ou numa sessao com acesso; (d)
+so entao seguir a ordem da secao 11 acima. Esta sessao nao tentou nenhum
+DDL e nao alterou nenhum estado de producao.

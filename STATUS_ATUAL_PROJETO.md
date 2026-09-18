@@ -7,6 +7,26 @@ Atualizado em 2026-09-18.
 - Produto: OctaClin.
 - Repositorio: `octanutri-clin/octaclin`.
 - Branch principal: `main`.
+- Reconciliacao de 2026-09-18 (preflight da migration 265.2 em producao):
+  por autorizacao explicita do dono do produto, esta sessao fez o
+  preflight de leitura exigido antes de aplicar
+  `1720000001046-AdicionarPrioridadeAcompanhamento` em producao.
+  **Resultado: parou antes de qualquer DDL**, sem alterar nenhum estado
+  de producao. Confirmado por evidencia local: SHA do `main` (`d80abd4`),
+  os incrementos 265.2-265.4 que dependem do schema ja integrados, a
+  migration exata (ja validada contra Postgres real em CI) e a ordem
+  documentada no `RUNBOOK_PRODUCAO.md`. **Nao pode ser confirmado nesta
+  sessao**, por ausencia total de credencial de banco de
+  producao/Neon/runtime no ambiente: estado de migrations em staging e
+  producao, branch/database exatos do Neon, a role que seria usada, e
+  evidencia de backup/restore recentes (script dedicado e
+  PowerShell-only, exige credencial que este ambiente nao tem). Achado
+  adicional: a issue GitHub `#234` ("[Alerta producao] Saude externa
+  indisponivel") continua aberta desde 2026-09-12 -- por si so ja
+  recomendaria nao prosseguir sem confirmacao humana. Aplicar a migration
+  exige um operador humano ou uma sessao com a `DATABASE_URL` de producao
+  (role `neondb_owner`) confirmada explicitamente por quem a fornece.
+  Detalhe completo em `docs/history/phases/PLANO_FASE_265.md`, secao 12.
 - Reconciliacao de 2026-09-18: os PRs GitHub `#257` (Incremento 265.1,
   calculador de dominio puro), `#258` (Incremento 265.2, persistencia e
   RLS) e `#259` (Incremento 265.3, recalculo idempotente) foram integrados
