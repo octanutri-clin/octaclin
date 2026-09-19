@@ -3154,10 +3154,18 @@ test.describe('prontuario do paciente', () => {
     await secao.getByRole('button', { name: 'Ajustar prioridade' }).click();
     const modal = page.getByRole('dialog', { name: 'Ajustar prioridade de acompanhamento' });
     await modal.getByRole('button', { name: 'Remover ajuste' }).click();
-    await page.getByRole('dialog', { name: 'Remover ajuste manual' }).getByRole('button', { name: 'Remover' }).click();
+    const confirmacao = page.getByRole('dialog', { name: 'Remover ajuste manual' });
+    await expect(modal).toBeHidden();
+    await expect(confirmacao).toBeVisible();
+    await confirmacao.getByRole('button', { name: 'Remover' }).click();
 
     await expect(page.getByRole('dialog')).toHaveCount(0);
     await expect(secao.getByText('Sem ajuste manual em vigor.')).toBeVisible();
+    await expect.poll(() => page.evaluate(() => document.body.style.overflow)).toBe('');
+    await page.reload();
+    await expect(secao.getByText('Sem ajuste manual em vigor.')).toBeVisible();
+    await secao.getByRole('button', { name: 'Ajustar prioridade' }).click();
+    await expect(page.getByRole('dialog', { name: 'Ajustar prioridade de acompanhamento' })).toBeVisible();
   });
 
   test('trata falha de rede ao salvar o ajuste sem quebrar a tela', async ({ page }) => {

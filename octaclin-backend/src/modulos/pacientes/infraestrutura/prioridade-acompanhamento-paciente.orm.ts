@@ -47,22 +47,22 @@ export class PrioridadeAcompanhamentoPacienteOrm {
    * validacao como `check` de banco.
    */
   @Column({ name: 'override_faixa', type: 'varchar', length: 10, nullable: true })
-  overrideFaixa?: FaixaPrioridadeAcompanhamento;
+  overrideFaixa?: FaixaPrioridadeAcompanhamento | null;
 
   @Column({ name: 'override_codigo_motivo', type: 'varchar', length: 60, nullable: true })
-  overrideCodigoMotivo?: CodigoMotivoOverridePrioridadeAcompanhamento;
+  overrideCodigoMotivo?: CodigoMotivoOverridePrioridadeAcompanhamento | null;
 
   @Column({ name: 'override_justificativa_criptografada', type: 'bytea', nullable: true })
-  overrideJustificativaCriptografada?: Buffer;
+  overrideJustificativaCriptografada?: Buffer | null;
 
   @Column({ name: 'override_expira_em', type: 'timestamptz', nullable: true })
-  overrideExpiraEm?: Date;
+  overrideExpiraEm?: Date | null;
 
   @Column({ name: 'override_ator_usuario_id', type: 'uuid', nullable: true })
-  overrideAtorUsuarioId?: string;
+  overrideAtorUsuarioId?: string | null;
 
   @Column({ name: 'override_criado_em', type: 'timestamptz', nullable: true })
-  overrideCriadoEm?: Date;
+  overrideCriadoEm?: Date | null;
 
   @CreateDateColumn({ name: 'criado_em', type: 'timestamptz' })
   criadoEm: Date;

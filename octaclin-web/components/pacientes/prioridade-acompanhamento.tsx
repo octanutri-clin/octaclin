@@ -65,6 +65,20 @@ export function SecaoPrioridadeAcompanhamento({ pacienteId, prioridade, podeGere
     setAberto(true);
   }
 
+  function abrirConfirmacaoRemocao() {
+    setErro(null);
+    // Nao mantenha dois modais ativos ao mesmo tempo: os dois traps de foco e
+    // locks de scroll competiam e podiam deixar a pagina bloqueada ao fechar.
+    setAberto(false);
+    setConfirmandoRemocao(true);
+  }
+
+  function cancelarConfirmacaoRemocao() {
+    if (removendo) return;
+    setConfirmandoRemocao(false);
+    setAberto(true);
+  }
+
   async function salvarAjuste(evento: FormEvent) {
     evento.preventDefault();
     setSalvando(true);
@@ -97,6 +111,7 @@ export function SecaoPrioridadeAcompanhamento({ pacienteId, prioridade, podeGere
     } catch (erroAtual) {
       setErro(mensagemFalhaInterface(erroAtual, 'Não foi possível remover o ajuste manual.'));
       setConfirmandoRemocao(false);
+      setAberto(true);
     } finally {
       setRemovendo(false);
     }
@@ -219,7 +234,7 @@ export function SecaoPrioridadeAcompanhamento({ pacienteId, prioridade, podeGere
           </label>
           <div className="flex flex-wrap justify-end gap-2">
             {overrideAtivo ? (
-              <Botao type="button" variante="secundario" onClick={() => setConfirmandoRemocao(true)} disabled={salvando}>
+              <Botao type="button" variante="secundario" onClick={abrirConfirmacaoRemocao} disabled={salvando}>
                 Remover ajuste
               </Botao>
             ) : null}
@@ -237,7 +252,7 @@ export function SecaoPrioridadeAcompanhamento({ pacienteId, prioridade, podeGere
         rotuloConfirmar="Remover"
         confirmando={removendo}
         aoConfirmar={() => void removerAjuste()}
-        aoCancelar={() => setConfirmandoRemocao(false)}
+        aoCancelar={cancelarConfirmacaoRemocao}
       />
     </section>
   );

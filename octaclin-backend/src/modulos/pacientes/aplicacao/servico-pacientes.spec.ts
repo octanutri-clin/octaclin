@@ -2444,7 +2444,7 @@ describe('ServicoPacientes - prioridade de acompanhamento (Fase 265.4)', () => {
       where: { tenantId: 'tenant-1', pacienteId: 'paciente-1' },
       lock: { mode: 'pessimistic_write' }
     });
-    expect(repositorioPrioridadeAtual.save).toHaveBeenCalledWith(expect.objectContaining({ overrideFaixa: undefined }));
+    expect(repositorioPrioridadeAtual.save).toHaveBeenCalledWith(expect.objectContaining({ overrideFaixa: null }));
     expect(historicoSalvo).toHaveLength(1);
     expect(historicoSalvo[0]).toEqual(expect.objectContaining({ tipoEvento: 'override_expirado' }));
   });
@@ -2561,7 +2561,16 @@ describe('ServicoPacientes - prioridade de acompanhamento (Fase 265.4)', () => {
     const resposta = await servico.removerOverridePrioridadeAcompanhamento('tenant-1', 'paciente-1', usuarioColaborador);
 
     expect(resposta.valorEfetivo).toEqual({ faixa: 'baixa', origem: 'calculado' });
-    expect(repositorioPrioridadeAtual.save).toHaveBeenCalledWith(expect.objectContaining({ overrideFaixa: undefined }));
+    expect(repositorioPrioridadeAtual.save).toHaveBeenCalledWith(
+      expect.objectContaining({
+        overrideFaixa: null,
+        overrideCodigoMotivo: null,
+        overrideJustificativaCriptografada: null,
+        overrideExpiraEm: null,
+        overrideAtorUsuarioId: null,
+        overrideCriadoEm: null
+      })
+    );
     expect(historicoSalvo[0]).toEqual(expect.objectContaining({ tipoEvento: 'override_removido' }));
   });
 

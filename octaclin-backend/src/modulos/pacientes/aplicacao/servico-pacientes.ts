@@ -854,12 +854,14 @@ export class ServicoPacientes {
   }
 
   private limparOverridePrioridade(atual: PrioridadeAcompanhamentoPacienteOrm): void {
-    atual.overrideFaixa = undefined;
-    atual.overrideCodigoMotivo = undefined;
-    atual.overrideJustificativaCriptografada = undefined;
-    atual.overrideExpiraEm = undefined;
-    atual.overrideAtorUsuarioId = undefined;
-    atual.overrideCriadoEm = undefined;
+    // TypeORM ignora propriedades `undefined` no `save`; `null` e necessario
+    // para emitir o UPDATE que limpa de fato as seis colunas nullable.
+    atual.overrideFaixa = null;
+    atual.overrideCodigoMotivo = null;
+    atual.overrideJustificativaCriptografada = null;
+    atual.overrideExpiraEm = null;
+    atual.overrideAtorUsuarioId = null;
+    atual.overrideCriadoEm = null;
   }
 
   /**
@@ -884,8 +886,8 @@ export class ServicoPacientes {
         faixa: atual.overrideFaixa ?? atual.faixa,
         versaoFormula: atual.versaoFormula,
         atorUsuarioId,
-        overrideCodigoMotivo: atual.overrideCodigoMotivo,
-        overrideExpiraEm: atual.overrideExpiraEm
+        overrideCodigoMotivo: atual.overrideCodigoMotivo ?? undefined,
+        overrideExpiraEm: atual.overrideExpiraEm ?? undefined
       })
     );
   }
