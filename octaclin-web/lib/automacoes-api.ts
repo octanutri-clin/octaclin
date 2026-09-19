@@ -1,5 +1,20 @@
 import { PacienteResumo, ProfissionalResumo, RespostaPaginada, listarPacientes, listarProfissionais } from './cadastros-api';
 
+export type TipoAcaoAutomacao = 'notificar_profissional' | 'enviar_template' | 'criar_tarefa';
+
+export interface AcaoAutomacaoApi {
+  tipo: TipoAcaoAutomacao;
+}
+
+export interface ResultadoAcaoAutomacaoApi {
+  indice: number;
+  tipo: TipoAcaoAutomacao;
+  chaveIdempotencia: string;
+  status: 'pendente' | 'executando' | 'executada' | 'ignorada' | 'falhou' | 'simulada';
+  tentativas: number;
+  codigoErro?: string;
+}
+
 export interface RegraAutomacaoApi {
   id: string;
   tenantId: string;
@@ -7,7 +22,7 @@ export interface RegraAutomacaoApi {
   nome: string;
   gatilho: Record<string, unknown>;
   condicoes: Array<Record<string, unknown>>;
-  acoes: Array<Record<string, unknown>>;
+  acoes: AcaoAutomacaoApi[];
   ativa: boolean;
   criadoEm: string;
 }
@@ -18,8 +33,8 @@ export interface ExecucaoRegraApi {
   regraId: string;
   pacienteId?: string;
   status: 'pendente' | 'processando' | 'executado' | 'ignorado' | 'falhou';
-  resultado: Record<string, unknown>;
-  erro?: string;
+  resultado: Record<string, unknown> & { acoes?: ResultadoAcaoAutomacaoApi[] };
+  erro?: string | null;
   criadoEm: string;
 }
 
@@ -28,7 +43,7 @@ export interface CriarRegraAutomacaoEntrada {
   nome: string;
   gatilho: Record<string, unknown>;
   condicoes: Array<Record<string, unknown>>;
-  acoes: Array<Record<string, unknown>>;
+  acoes: AcaoAutomacaoApi[];
   ativa?: boolean;
 }
 

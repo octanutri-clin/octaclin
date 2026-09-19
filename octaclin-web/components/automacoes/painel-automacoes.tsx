@@ -7,8 +7,10 @@ import { Cartao, CartaoCabecalho, CartaoConteudo, CartaoTitulo } from '@/compone
 import { AreaTexto, Campo, Rotulo, Selecao } from '@/components/ui/campo';
 import { AlertaOperacional, BarraCarregamento, EstadoVazio } from '@/components/ui/feedback';
 import {
+  AcaoAutomacaoApi,
   ExecucaoRegraApi,
   RegraAutomacaoApi,
+  TipoAcaoAutomacao,
   alterarAtivacaoRegra,
   carregarBootstrapAutomacoes,
   criarRegraAutomacao,
@@ -26,7 +28,7 @@ interface FormularioRegra {
   campo: string;
   operador: 'igual' | 'maior_que' | 'maior_ou_igual' | 'menor_que' | 'inclui';
   valor: string;
-  acaoTipo: string;
+  acaoTipo: TipoAcaoAutomacao;
   diasSemConsulta: string;
   intervaloMinimoDias: string;
   limitePorExecucao: string;
@@ -156,13 +158,42 @@ function ResumoRecall({
   );
 }
 
-function descreverAcao(acoes: Array<Record<string, unknown>>) {
+function descreverAcao(acoes: AcaoAutomacaoApi[]) {
   const rotulos: Record<string, string> = {
     notificar_profissional: 'notificar o profissional',
     enviar_template: 'enviar uma mensagem aprovada',
     criar_tarefa: 'criar uma tarefa de acompanhamento'
   };
   return acoes.map((acao) => rotulos[String(acao.tipo)] ?? resumirJson(acao)).join(', ');
+}
+
+const ROTULOS_STATUS_ACAO: Record<string, string> = {
+  pendente: 'pendente',
+  executando: 'em andamento',
+  executada: 'concluída',
+  ignorada: 'ignorada',
+  falhou: 'falhou',
+  simulada: 'seria executada'
+};
+
+function ResumoAcoesExecucao({ execucao }: { execucao: ExecucaoRegraApi }) {
+  const acoes = execucao.resultado.acoes;
+  if (!Array.isArray(acoes)) {
+    return <p className="break-all text-xs text-texto-suave">Resultado: {resumirJson(execucao.resultado)}</p>;
+  }
+  if (!acoes.length) {
+    return <p className="text-xs text-texto-suave">Nenhuma ação necessária.</p>;
+  }
+  return (
+    <ul className="grid gap-1 text-xs text-texto-suave">
+      {acoes.map((acao) => (
+        <li key={acao.chaveIdempotencia}>
+          {descreverAcao([{ tipo: acao.tipo }])}: {ROTULOS_STATUS_ACAO[acao.status] ?? acao.status}
+          {acao.tentativas > 0 ? ` (${acao.tentativas} tentativa${acao.tentativas === 1 ? '' : 's'})` : ''}
+        </li>
+      ))}
+    </ul>
+  );
 }
 
 export function PainelAutomacoes() {
@@ -472,7 +503,12 @@ export function PainelAutomacoes() {
                   <Selecao
                     id="regra-acao"
                     value={formularioRegra.acaoTipo}
-                    onChange={(evento) => setFormularioRegra((atual) => ({ ...atual, acaoTipo: evento.target.value }))}
+                    onChange={(evento) =>
+                      setFormularioRegra((atual) => ({
+                        ...atual,
+                        acaoTipo: evento.target.value as TipoAcaoAutomacao
+                      }))
+                    }
                   >
                     <option value="notificar_profissional">Notificar profissional</option>
                     <option value="enviar_template">Enviar template</option>
@@ -658,8 +694,9 @@ export function PainelAutomacoes() {
                       pacientes={pacientes?.itens ?? []}
                     />
                   ) : (
-                    <p className="break-all text-xs text-texto-suave">Resultado: {resumirJson(execucao.resultado)}</p>
+                    <ResumoAcoesExecucao execucao={execucao} />
                   )}
+                  {execucao.erro ? <p className="text-xs text-perigo">{execucao.erro}</p> : null}
                 </div>
               ))
             ) : (

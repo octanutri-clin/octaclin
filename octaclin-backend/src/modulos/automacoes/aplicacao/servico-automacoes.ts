@@ -10,6 +10,7 @@ import { AvaliarRegraDto, CriarRegraAutomacaoDto } from './dtos';
 import { ExecucaoRegraOrm } from '../infraestrutura/execucao-regra.orm';
 import { RegraAutomacaoOrm } from '../infraestrutura/regra-automacao.orm';
 import { avaliarCondicoes } from '../dominio/avaliador-regras';
+import { ContratoAcaoAutomacaoInvalido, criarResultadosAcoes, validarAcoesAutomacao } from '../dominio/acoes-automacao';
 
 export const FILA_AUTOMACOES = 'automacoes';
 
@@ -21,6 +22,7 @@ export class ServicoAutomacoes {
   ) {}
 
   async criarRegra(tenantId: string, dados: CriarRegraAutomacaoDto, usuario: UsuarioAutenticado): Promise<RegraAutomacaoOrm> {
+    const acoes = this.validarAcoes(dados.acoes);
     return this.executorTenant.executar(tenantId, async (gerenciador) => {
       const profissionalIdDoUsuario = await resolverProfissionalIdDoUsuario(gerenciador, tenantId, usuario);
       return gerenciador.getRepository(RegraAutomacaoOrm).save(
@@ -30,7 +32,7 @@ export class ServicoAutomacoes {
           nome: dados.nome,
           gatilho: dados.gatilho,
           condicoes: dados.condicoes,
-          acoes: dados.acoes,
+          acoes,
           ativa: false
         })
       );
@@ -103,22 +105,24 @@ export class ServicoAutomacoes {
       await this.validarPacienteNoEscopo(gerenciador, tenantId, dados.pacienteId, usuario);
 
       const avaliacao = avaliarCondicoes(regra.condicoes, dados.contexto ?? {});
+      const acoes = this.validarAcoes(regra.acoes);
       const repositorio = gerenciador.getRepository(ExecucaoRegraOrm);
-      return repositorio.save(
-        repositorio.create({
+      const execucao = await repositorio.save(repositorio.create({
           tenantId,
           regraId: regra.id,
           pacienteId: dados.pacienteId,
           status: avaliacao.executar ? 'executado' : 'ignorado',
-          resultado: {
-            simulacao: true,
-            executar: avaliacao.executar,
-            motivos: avaliacao.motivos,
-            acoesPlanejadas: avaliacao.executar ? regra.acoes : [],
-            contexto: dados.contexto ?? {}
-          }
-        })
-      );
+          resultado: {}
+        }));
+      execucao.resultado = {
+        simulacao: true,
+        executar: avaliacao.executar,
+        motivos: avaliacao.motivos,
+        acoesPlanejadas: avaliacao.executar ? acoes : [],
+        acoes: avaliacao.executar ? criarResultadosAcoes(execucao.id, acoes, 'simulada') : [],
+        contexto: dados.contexto ?? {}
+      };
+      return repositorio.save(execucao);
     });
   }
 
@@ -163,5 +167,14 @@ export class ServicoAutomacoes {
       where: { id: pacienteId, tenantId, ...(profissionalId ? { profissionalResponsavelId: profissionalId } : {}) }
     });
     if (!paciente) throw new NotFoundException('Paciente nao encontrado.');
+  }
+
+  private validarAcoes(acoes: unknown) {
+    try {
+      return validarAcoesAutomacao(acoes);
+    } catch (erro) {
+      if (erro instanceof ContratoAcaoAutomacaoInvalido) throw new BadRequestException(erro.message);
+      throw erro;
+    }
   }
 }
