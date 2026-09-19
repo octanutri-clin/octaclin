@@ -2,9 +2,14 @@ import { PacienteResumo, ProfissionalResumo, RespostaPaginada, listarPacientes, 
 
 export type TipoAcaoAutomacao = 'notificar_profissional' | 'enviar_template' | 'criar_tarefa';
 
-export interface AcaoAutomacaoApi {
-  tipo: TipoAcaoAutomacao;
-}
+export type AcaoAutomacaoApi =
+  | { tipo: Exclude<TipoAcaoAutomacao, 'criar_tarefa'> }
+  | {
+      tipo: 'criar_tarefa';
+      titulo: string;
+      prioridade: 'baixa' | 'media' | 'alta';
+      prazoDias: number;
+    };
 
 export interface ResultadoAcaoAutomacaoApi {
   indice: number;

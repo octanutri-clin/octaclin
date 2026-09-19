@@ -262,6 +262,13 @@ Critério: valor claro, esforço pequeno, risco baixo, sem migration pesada e se
   opt-out que o recall já respeita) · **Dependências**: backend, job, produto (limites de disparo).
 - **Evidência**: `painel-automacoes.tsx:384-387,477-479`; `processador-automacoes.ts:43-51`;
   `avaliador-regras.ts:19-25`; `servico-recall-inatividade.ts:72-116,321-333`.
+- **Estado da remediação em 2026-09-19**: a fundação confiável e
+  `notificar_profissional` foram integrados nos PRs `#269` e `#270`; a migration
+  `1048` foi verificada em staging e produção. `criar_tarefa` está em
+  implementação em revisão no PR `#271` da Fase 266.3, com contrato fechado,
+  título cifrado e deduplicação. `enviar_template` e os gatilhos reais
+  permanecem pendentes, de
+  modo que o PB-02 ainda não está concluído.
 
 ### 5.3 Resumo clínico do paciente (os primeiros 10 segundos)
 - **Atual** `[F]`: a aba Resumo traz próxima ação, próxima consulta, contexto operacional (último atendimento,

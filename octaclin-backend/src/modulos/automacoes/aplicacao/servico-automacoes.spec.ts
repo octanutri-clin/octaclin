@@ -145,6 +145,49 @@ describe('ServicoAutomacoes', () => {
     expect(repositorios.regra.save).not.toHaveBeenCalled();
   });
 
+  it('deve rejeitar criar_tarefa sem titulo, prioridade e prazo antes de persistir', async () => {
+    const { servico, repositorios } = criarServico();
+
+    await expect(
+      servico.criarRegra(
+        'tenant-1',
+        {
+          profissionalId: 'profissional-1',
+          nome: 'Tarefa incompleta',
+          gatilho: { tipo: 'checkin.atrasado' },
+          condicoes: [],
+          acoes: [{ tipo: 'criar_tarefa' }] as never
+        },
+        usuarioColaborador
+      )
+    ).rejects.toBeInstanceOf(BadRequestException);
+    expect(repositorios.regra.save).not.toHaveBeenCalled();
+  });
+
+  it('deve persistir criar_tarefa com contrato normalizado', async () => {
+    const { servico, repositorios } = criarServico({
+      profissional: { id: 'profissional-1', tenantId: 'tenant-1', usuarioId: 'usuario-profissional-1' }
+    });
+
+    await servico.criarRegra(
+      'tenant-1',
+      {
+        profissionalId: 'profissional-1',
+        nome: 'Tarefa de retorno',
+        gatilho: { tipo: 'checkin.atrasado' },
+        condicoes: [],
+        acoes: [{ tipo: 'criar_tarefa', titulo: '  Revisar retorno  ', prioridade: 'alta', prazoDias: 2 }]
+      },
+      usuarioColaborador
+    );
+
+    expect(repositorios.regra.save).toHaveBeenCalledWith(
+      expect.objectContaining({
+        acoes: [{ tipo: 'criar_tarefa', titulo: 'Revisar retorno', prioridade: 'alta', prazoDias: 2 }]
+      })
+    );
+  });
+
   it('deve simular regra inativa e persistir o historico sem enfileirar acoes', async () => {
     const { servico, fila, repositorios } = criarServico({
       regra: {

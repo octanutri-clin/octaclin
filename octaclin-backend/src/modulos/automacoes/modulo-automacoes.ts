@@ -19,6 +19,10 @@ import { ExecucaoRegraOrm } from './infraestrutura/execucao-regra.orm';
 import { RegraAutomacaoOrm } from './infraestrutura/regra-automacao.orm';
 import { deveExecutarProcessadores } from '../../infraestrutura/processamento/papel-processo';
 import { DespachanteAcoesAutomacao } from './aplicacao/despachante-acoes-automacao';
+import { CriptografiaDadosSensiveis } from '../../infraestrutura/seguranca/criptografia-dados-sensiveis';
+import { AcompanhamentoTarefaOrm } from '../pacientes/infraestrutura/acompanhamento-tarefa.orm';
+import { ProfissionalOrm } from '../profissionais/infraestrutura/profissional.orm';
+import { UsuarioOrm } from '../usuarios/infraestrutura/usuario.orm';
 
 const processadores = deveExecutarProcessadores()
   ? [ProcessadorAutomacoes, ProcessadorLembretesAgenda, ProcessadorRecallInatividade]
@@ -27,7 +31,16 @@ const processadores = deveExecutarProcessadores()
 @Module({
   imports: [
     BullModule.registerQueue({ name: FILA_AUTOMACOES }),
-    TypeOrmModule.forFeature([RegraAutomacaoOrm, ExecucaoRegraOrm, UserActionLogOrm, AgendaConsultaOrm, PacienteOrm]),
+    TypeOrmModule.forFeature([
+      RegraAutomacaoOrm,
+      ExecucaoRegraOrm,
+      UserActionLogOrm,
+      AgendaConsultaOrm,
+      PacienteOrm,
+      AcompanhamentoTarefaOrm,
+      ProfissionalOrm,
+      UsuarioOrm
+    ]),
     ModuloAuth,
     ModuloTenancy,
     ModuloComunicacoes
@@ -38,6 +51,7 @@ const processadores = deveExecutarProcessadores()
     ServicoLembretesAgenda,
     ServicoRecallInatividade,
     DespachanteAcoesAutomacao,
+    CriptografiaDadosSensiveis,
     ...processadores,
     ServicoAuditoria
   ],
