@@ -44,7 +44,7 @@ validacao fechada, estado por acao, chave de idempotencia nem executor.
    - novo tipo `automacao_executada` no centro de notificacoes;
    - migration aditiva para ampliar a constraint de tipos;
    - fan-out transacional, link autorizado e idempotencia por execucao/acao.
-3. **266.3 - `criar_tarefa`** [EM IMPLEMENTACAO]
+3. **266.3 - `criar_tarefa`** [EM REVISAO]
    - contrato de titulo, prioridade e prazo;
    - conteudo cifrado, escopo de tenant/profissional e deduplicacao.
 4. **266.4 - `enviar_template`** [PENDENTE]
@@ -206,7 +206,10 @@ continua indisponivel ate 266.4.
 - [x] Testes focados reproduziram as ausencias antes da implementacao e passam
   depois dela.
 - [x] Suite completa, builds e gates de governanca.
-- [ ] Checks e revisao humana da PR contra `main`.
+- [ ] Checks e revisao humana da PR `#271` contra `main`.
+
+A implementacao esta publicada no PR `#271`; a conclusao deste incremento
+permanece condicionada aos checks remotos e ao merge humano.
 
 A 266.3 nao adiciona migration, provider, segredo ou configuracao externa. O
 rollback operacional e reimplantar a versao anterior. Tarefas ja criadas sao

@@ -265,8 +265,9 @@ Critério: valor claro, esforço pequeno, risco baixo, sem migration pesada e se
 - **Estado da remediação em 2026-09-19**: a fundação confiável e
   `notificar_profissional` foram integrados nos PRs `#269` e `#270`; a migration
   `1048` foi verificada em staging e produção. `criar_tarefa` está em
-  implementação na Fase 266.3 com contrato fechado, título cifrado e
-  deduplicação. `enviar_template` e os gatilhos reais permanecem pendentes, de
+  implementação em revisão no PR `#271` da Fase 266.3, com contrato fechado,
+  título cifrado e deduplicação. `enviar_template` e os gatilhos reais
+  permanecem pendentes, de
   modo que o PB-02 ainda não está concluído.
 
 ### 5.3 Resumo clínico do paciente (os primeiros 10 segundos)

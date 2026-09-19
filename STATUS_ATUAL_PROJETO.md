@@ -12,7 +12,7 @@ Atualizado em 2026-09-19.
   checks verdes. A migration `1048` foi aplicada fora de banda primeiro em
   staging e depois em producao; readiness respondeu HTTP 200 nos dois
   ambientes, com banco e 61 migrations em estado `ok`. O Incremento 266.3
-  esta em implementacao na branch `feat/fase266-3-criar-tarefa`: adiciona o
+  esta em revisao no PR `#271`, branch `feat/fase266-3-criar-tarefa`: adiciona o
   contrato fechado de titulo/prioridade/prazo, escrita cifrada tenant-aware e
   deduplicacao por UUID deterministico, sem nova migration. Plano e limites em
   `docs/history/phases/PLANO_FASE_266.md`.
@@ -563,7 +563,7 @@ Atualizado em 2026-09-19.
   notificacao ao profissional, 266.3 criacao de tarefa e 266.4 envio de
   template. A 266.1 foi integrada pelo PR `#269`; a 266.2 foi integrada pelo
   PR `#270`, e a migration aditiva `1048` foi aplicada e verificada em staging
-  e producao. A 266.3 esta em implementacao, sem nova migration. O PR 55
+  e producao. A 266.3 esta em revisao no PR `#271`, sem nova migration. O PR 55
   permanece adiado e o PR 56 continua condicionado a uma decisao explicita de
   distribuir o Mobile.
 - Fase 261 (escopo de trabalho: gaps de seguranca e privacidade
