@@ -1,9 +1,22 @@
 import { PacienteResumo, ProfissionalResumo, RespostaPaginada, listarPacientes, listarProfissionais } from './cadastros-api';
+import {
+  CanalNotificacaoApi,
+  TemplateMensagemApi,
+  listarCanais,
+  listarTemplates
+} from './comunicacoes-api';
 
 export type TipoAcaoAutomacao = 'notificar_profissional' | 'enviar_template' | 'criar_tarefa';
 
 export type AcaoAutomacaoApi =
-  | { tipo: Exclude<TipoAcaoAutomacao, 'criar_tarefa'> }
+  | { tipo: 'notificar_profissional' }
+  | { tipo: 'enviar_template' }
+  | {
+      tipo: 'enviar_template';
+      canalId: string;
+      templateId: string;
+      intervaloMinimoHoras: number;
+    }
   | {
       tipo: 'criar_tarefa';
       titulo: string;
@@ -63,6 +76,8 @@ export interface BootstrapAutomacoes {
   execucoes: ExecucaoRegraApi[];
   profissionais: RespostaPaginada<ProfissionalResumo>;
   pacientes: RespostaPaginada<PacienteResumo>;
+  canais: CanalNotificacaoApi[];
+  templates: TemplateMensagemApi[];
 }
 
 class ErroApiAutomacoes extends Error {
@@ -136,11 +151,13 @@ export async function listarExecucoesAutomacao(): Promise<ExecucaoRegraApi[]> {
 }
 
 export async function carregarBootstrapAutomacoes(): Promise<BootstrapAutomacoes> {
-  const [regras, execucoes, profissionais, pacientes] = await Promise.all([
+  const [regras, execucoes, profissionais, pacientes, canais, templates] = await Promise.all([
     listarRegrasAutomacao(),
     listarExecucoesAutomacao(),
     listarProfissionais(),
-    listarPacientes()
+    listarPacientes(),
+    listarCanais(),
+    listarTemplates()
   ]);
-  return { regras, execucoes, profissionais, pacientes };
+  return { regras, execucoes, profissionais, pacientes, canais, templates };
 }

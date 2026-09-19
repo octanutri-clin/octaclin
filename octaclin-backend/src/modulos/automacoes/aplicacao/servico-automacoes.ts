@@ -12,6 +12,7 @@ import { ExecucaoRegraOrm } from '../infraestrutura/execucao-regra.orm';
 import { RegraAutomacaoOrm } from '../infraestrutura/regra-automacao.orm';
 import { avaliarCondicoes } from '../dominio/avaliador-regras';
 import { ContratoAcaoAutomacaoInvalido, criarResultadosAcoes, validarAcoesAutomacao } from '../dominio/acoes-automacao';
+import { ehGatilhoInatividade } from '../dominio/recall-inatividade';
 
 export const FILA_AUTOMACOES = 'automacoes';
 
@@ -23,7 +24,7 @@ export class ServicoAutomacoes {
   ) {}
 
   async criarRegra(tenantId: string, dados: CriarRegraAutomacaoDto, usuario: UsuarioAutenticado): Promise<RegraAutomacaoOrm> {
-    const acoes = this.validarAcoes(dados.acoes);
+    const acoes = this.validarAcoes(dados.acoes, ehGatilhoInatividade(dados.gatilho));
     return this.executorTenant.executar(tenantId, async (gerenciador) => {
       const profissionalIdDoUsuario = await resolverProfissionalIdDoUsuario(gerenciador, tenantId, usuario);
       const profissionalId =
@@ -109,7 +110,7 @@ export class ServicoAutomacoes {
       await this.validarPacienteNoEscopo(gerenciador, tenantId, dados.pacienteId, usuario);
 
       const avaliacao = avaliarCondicoes(regra.condicoes, dados.contexto ?? {});
-      const acoes = this.validarAcoes(regra.acoes);
+      const acoes = this.validarAcoes(regra.acoes, ehGatilhoInatividade(regra.gatilho));
       const repositorio = gerenciador.getRepository(ExecucaoRegraOrm);
       const execucao = await repositorio.save(repositorio.create({
           tenantId,
@@ -186,9 +187,9 @@ export class ServicoAutomacoes {
     return profissional.id;
   }
 
-  private validarAcoes(acoes: unknown) {
+  private validarAcoes(acoes: unknown, permitirTemplateEspecializado = false) {
     try {
-      return validarAcoesAutomacao(acoes);
+      return validarAcoesAutomacao(acoes, { permitirTemplateEspecializado });
     } catch (erro) {
       if (erro instanceof ContratoAcaoAutomacaoInvalido) throw new BadRequestException(erro.message);
       throw erro;

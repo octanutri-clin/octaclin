@@ -14,6 +14,7 @@ function criarCenario(opcoes: {
   resultado?: Record<string, unknown>;
   condicoes?: Array<Record<string, unknown>>;
   acoes?: Array<Record<string, unknown>>;
+  gatilho?: Record<string, unknown>;
   executarAcao?: jest.Mock;
 } = {}) {
   const execucao = {
@@ -30,6 +31,7 @@ function criarCenario(opcoes: {
     tenantId: 'tenant-1',
     profissionalId: 'profissional-1',
     ativa: true,
+    gatilho: opcoes.gatilho ?? { tipo: 'checkin.atrasado' },
     condicoes: opcoes.condicoes ?? [{ campo: 'checkinsPerdidos', operador: 'maior_ou_igual', valor: 3 }],
     acoes: opcoes.acoes ?? [{ tipo: 'notificar_profissional' }]
   } as unknown as RegraAutomacaoOrm;
@@ -157,11 +159,21 @@ describe('ProcessadorAutomacoes', () => {
     );
   });
 
-  it('registra falha definitiva sem retry quando a acao ainda nao possui executor', async () => {
+  it('registra falha definitiva sem retry quando um executor recusa a acao', async () => {
     const executarAcao = jest.fn(async () => {
       throw new AcaoAutomacaoNaoDisponivel('enviar_template');
     });
-    const cenario = criarCenario({ acoes: [{ tipo: 'enviar_template' }], executarAcao });
+    const cenario = criarCenario({
+      acoes: [
+        {
+          tipo: 'enviar_template',
+          canalId: '11111111-1111-4111-8111-111111111111',
+          templateId: '22222222-2222-4222-8222-222222222222',
+          intervaloMinimoHoras: 24
+        }
+      ],
+      executarAcao
+    });
 
     await expect(cenario.processador.process(cenario.job())).resolves.toBeUndefined();
 
@@ -171,6 +183,19 @@ describe('ProcessadorAutomacoes', () => {
       expect.objectContaining({
         acoes: [expect.objectContaining({ status: 'falhou', codigoErro: 'acao_nao_disponivel' })]
       })
+    );
+  });
+
+  it('preserva o contrato especializado de template somente no gatilho de inatividade', async () => {
+    const cenario = criarCenario({
+      gatilho: { tipo: 'paciente.inativo', diasSemConsulta: 60 },
+      acoes: [{ tipo: 'enviar_template' }]
+    });
+
+    await cenario.processador.process(cenario.job());
+
+    expect(cenario.executarAcao).toHaveBeenCalledWith(
+      expect.objectContaining({ acao: { tipo: 'enviar_template' } })
     );
   });
 
@@ -187,7 +212,7 @@ describe('ProcessadorAutomacoes', () => {
 
     expect(executarAcao).toHaveBeenCalledTimes(1);
     expect(cenario.execucao.status).toBe('falhou');
-    expect(cenario.execucao.erro).toBe('A acao de criar tarefa exige um paciente.');
+    expect(cenario.execucao.erro).toBe('A acao exige um paciente.');
     expect(cenario.execucao.resultado).toEqual(
       expect.objectContaining({
         acoes: [expect.objectContaining({ status: 'falhou', codigoErro: 'paciente_obrigatorio' })]

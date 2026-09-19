@@ -1,7 +1,7 @@
 import { InjectQueue } from '@nestjs/bullmq';
 import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { Queue } from 'bullmq';
-import { EntityManager, In, QueryFailedError } from 'typeorm';
+import { EntityManager, In, JsonContains, MoreThanOrEqual, QueryFailedError } from 'typeorm';
 import { ExecutorTenant } from '../../../infraestrutura/banco-dados/executor-tenant';
 import { OutboxEventoOrm } from '../../../infraestrutura/outbox/outbox-evento.orm';
 import { CriptografiaDadosSensiveis } from '../../../infraestrutura/seguranca/criptografia-dados-sensiveis';
@@ -16,7 +16,12 @@ import {
   RegistrarNotaWhatsappDto
 } from './dtos';
 import { redisConfigurado } from './configuracao-redis';
-import { canalAutorizado, interpretarPreferenciasComunicacao, preferenciasComunicacaoPadrao } from '../dominio/preferencias-comunicacao';
+import {
+  canalAutorizado,
+  dentroHorarioPermitido,
+  interpretarPreferenciasComunicacao,
+  preferenciasComunicacaoPadrao
+} from '../dominio/preferencias-comunicacao';
 import { CanalNotificacaoOrm } from '../infraestrutura/canal-notificacao.orm';
 import { MensagemNotificacaoOrm } from '../infraestrutura/mensagem-notificacao.orm';
 import { aplicarConteudoMensagem, comPayloadCompleto } from './cripto-conteudo-mensagem';
@@ -25,6 +30,28 @@ import { TemplateMensagemOrm } from '../infraestrutura/template-mensagem.orm';
 export const FILA_NOTIFICACOES = 'notificacoes';
 
 const CONSTRAINT_IDEMPOTENCIA_MENSAGEM = 'uq_mensagens_notificacao_tenant_chave_idempotencia';
+export const EVENTO_TEMPLATE_AUTOMACAO = 'automacao.regra.template';
+
+export interface EntradaMensagemAutomacao {
+  pacienteId: string;
+  canalId: string;
+  templateId: string;
+  intervaloMinimoHoras: number;
+  chaveIdempotencia: string;
+}
+
+export type ResultadoMensagemAutomacao =
+  | { status: 'enfileirada'; mensagemId: string }
+  | { status: 'ignorada'; motivo: 'opt_out' | 'fora_horario_permitido' | 'limite_frequencia' }
+  | {
+      status: 'indisponivel';
+      motivo:
+        | 'paciente_indisponivel'
+        | 'canal_indisponivel'
+        | 'template_indisponivel'
+        | 'contato_ausente'
+        | 'contato_ilegivel';
+    };
 
 @Injectable()
 export class ServicoComunicacoes {
@@ -227,6 +254,96 @@ export class ServicoComunicacoes {
   }
 
   /**
+   * Caminho fechado das automacoes genericas. Idempotencia, politicas do
+   * paciente, limite de frequencia, mensagem e outbox compartilham a mesma
+   * transacao. O advisory lock impede duas regras concorrentes de furarem o
+   * limite do mesmo paciente/canal.
+   */
+  async enfileirarMensagemAutomacao(
+    tenantId: string,
+    dados: EntradaMensagemAutomacao,
+    agora = new Date()
+  ): Promise<ResultadoMensagemAutomacao> {
+    return this.executorTenant.executar(tenantId, async (gerenciador) => {
+      await gerenciador.query('select pg_advisory_xact_lock(hashtextextended($1, 0))', [
+        `automacao-comunicacao:${tenantId}:${dados.pacienteId}:${dados.canalId}`
+      ]);
+
+      const repositorioMensagens = gerenciador.getRepository(MensagemNotificacaoOrm);
+      const existente = await repositorioMensagens.findOne({
+        select: { id: true },
+        where: { tenantId, chaveIdempotencia: dados.chaveIdempotencia }
+      });
+      if (existente) return { status: 'enfileirada', mensagemId: existente.id };
+
+      const [paciente, canal, template] = await Promise.all([
+        gerenciador.getRepository(PacienteOrm).findOne({
+          where: { id: dados.pacienteId, tenantId }
+        }),
+        gerenciador.getRepository(CanalNotificacaoOrm).findOne({
+          where: { id: dados.canalId, tenantId, ativo: true }
+        }),
+        gerenciador.getRepository(TemplateMensagemOrm).findOne({
+          where: { id: dados.templateId, tenantId }
+        })
+      ]);
+
+      if (!paciente) return { status: 'indisponivel', motivo: 'paciente_indisponivel' };
+      if (!canal || (canal.tipo !== 'email' && canal.tipo !== 'whatsapp')) {
+        return { status: 'indisponivel', motivo: 'canal_indisponivel' };
+      }
+      if (!template || template.canal !== canal.tipo || (canal.tipo === 'whatsapp' && !template.aprovado)) {
+        return { status: 'indisponivel', motivo: 'template_indisponivel' };
+      }
+
+      let preferencias;
+      try {
+        preferencias = paciente.contatoCriptografado
+          ? interpretarPreferenciasComunicacao(this.criptografia.descriptografar(paciente.contatoCriptografado))
+          : preferenciasComunicacaoPadrao();
+      } catch {
+        return { status: 'indisponivel', motivo: 'contato_ilegivel' };
+      }
+
+      if (!canalAutorizado(preferencias, canal.tipo)) {
+        return { status: 'ignorada', motivo: 'opt_out' };
+      }
+      if (!dentroHorarioPermitido(agora, preferencias.horarioPermitido)) {
+        return { status: 'ignorada', motivo: 'fora_horario_permitido' };
+      }
+
+      const destino = preferencias.contatos[canal.tipo];
+      if (!destino) return { status: 'indisponivel', motivo: 'contato_ausente' };
+
+      const criadoDepoisDe = new Date(agora.getTime() - dados.intervaloMinimoHoras * 60 * 60 * 1000);
+      const recente = await repositorioMensagens.findOne({
+        select: { id: true },
+        where: {
+          tenantId,
+          pacienteId: dados.pacienteId,
+          canalId: dados.canalId,
+          status: In(['pendente', 'processando', 'enviado']),
+          payload: JsonContains({ evento: EVENTO_TEMPLATE_AUTOMACAO }),
+          criadoEm: MoreThanOrEqual(criadoDepoisDe)
+        }
+      });
+      if (recente) return { status: 'ignorada', motivo: 'limite_frequencia' };
+
+      const mensagem = await this.persistirMensagem(
+        gerenciador,
+        tenantId,
+        dados.pacienteId,
+        canal,
+        template,
+        { destino, evento: EVENTO_TEMPLATE_AUTOMACAO },
+        dados.chaveIdempotencia,
+        'administrativo'
+      );
+      return { status: 'enfileirada', mensagemId: mensagem.id };
+    });
+  }
+
+  /**
    * `chaveIdempotencia` e opcional: chamadores que nao a informam mantem o
    * comportamento antigo (sempre cria). Quando informada, um retry de HTTP ou
    * duplo clique na mesma chave retorna a mensagem ja criada em vez de
@@ -310,29 +427,52 @@ export class ServicoComunicacoes {
         }
       }
 
-      const novaMensagem = gerenciador.getRepository(MensagemNotificacaoOrm).create({
+      return this.persistirMensagem(
+        gerenciador,
         tenantId,
-        pacienteId: dados.pacienteId,
-        canalId: canal.id,
-        templateId: template.id,
-        status: 'pendente',
-        categoria: dados.categoria ?? 'administrativo',
-        chaveIdempotencia
-      });
-      aplicarConteudoMensagem(novaMensagem, dados.payload, this.criptografia);
-      const mensagemCriada = await gerenciador.getRepository(MensagemNotificacaoOrm).save(novaMensagem);
-
-      await gerenciador.getRepository(OutboxEventoOrm).save(
-        gerenciador.getRepository(OutboxEventoOrm).create({
-          tenantId,
-          tipo: 'notificacao.enviar',
-          status: 'pendente',
-          payload: { mensagemId: mensagemCriada.id }
-        })
+        dados.pacienteId,
+        canal,
+        template,
+        dados.payload,
+        chaveIdempotencia,
+        dados.categoria ?? 'administrativo'
       );
-
-      return mensagemCriada;
     });
+  }
+
+  private async persistirMensagem(
+    gerenciador: EntityManager,
+    tenantId: string,
+    pacienteId: string,
+    canal: CanalNotificacaoOrm,
+    template: TemplateMensagemOrm,
+    payload: Record<string, unknown>,
+    chaveIdempotencia: string | undefined,
+    categoria: MensagemNotificacaoOrm['categoria']
+  ): Promise<MensagemNotificacaoOrm> {
+    const repositorioMensagens = gerenciador.getRepository(MensagemNotificacaoOrm);
+    const novaMensagem = repositorioMensagens.create({
+      tenantId,
+      pacienteId,
+      canalId: canal.id,
+      templateId: template.id,
+      status: 'pendente',
+      categoria,
+      chaveIdempotencia
+    });
+    aplicarConteudoMensagem(novaMensagem, payload, this.criptografia);
+    const mensagemCriada = await repositorioMensagens.save(novaMensagem);
+
+    const repositorioOutbox = gerenciador.getRepository(OutboxEventoOrm);
+    await repositorioOutbox.save(
+      repositorioOutbox.create({
+        tenantId,
+        tipo: 'notificacao.enviar',
+        status: 'pendente',
+        payload: { mensagemId: mensagemCriada.id }
+      })
+    );
+    return mensagemCriada;
   }
 
   private ehConflitoIdempotenciaMensagem(erro: unknown): boolean {

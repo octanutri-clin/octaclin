@@ -11,11 +11,13 @@ Atualizado em 2026-09-19.
   pelos PRs `#269` (merge `143353f`) e `#270` (merge `b4276cd`), com todos os
   checks verdes. A migration `1048` foi aplicada fora de banda primeiro em
   staging e depois em producao; readiness respondeu HTTP 200 nos dois
-  ambientes, com banco e 61 migrations em estado `ok`. O Incremento 266.3
-  esta em revisao no PR `#271`, branch `feat/fase266-3-criar-tarefa`: adiciona o
-  contrato fechado de titulo/prioridade/prazo, escrita cifrada tenant-aware e
-  deduplicacao por UUID deterministico, sem nova migration. Plano e limites em
-  `docs/history/phases/PLANO_FASE_266.md`.
+  ambientes, com banco e 61 migrations em estado `ok`. O Incremento 266.3 foi
+  integrado pelo PR `#271` (merge `70e343d`), com contrato fechado de
+  titulo/prioridade/prazo, escrita cifrada tenant-aware e deduplicacao por UUID
+  deterministico. O Incremento 266.4 esta em revisao no PR `#272`, branch
+  `feat/fase266-4-enviar-template`: canal e template explicitos, opt-out e
+  janela obrigatorios, limite de frequencia, idempotencia e outbox, sem nova
+  migration. Plano e limites em `docs/history/phases/PLANO_FASE_266.md`.
 - Reconciliacao de 2026-09-18 (decisoes de produto para destravar a Fase
   265): o dono do produto aprovou o vocabulario fechado de `codigoMotivo`
   (`evento_recente_nao_capturado`, `informacao_externa_relevante`,
@@ -563,9 +565,10 @@ Atualizado em 2026-09-19.
   notificacao ao profissional, 266.3 criacao de tarefa e 266.4 envio de
   template. A 266.1 foi integrada pelo PR `#269`; a 266.2 foi integrada pelo
   PR `#270`, e a migration aditiva `1048` foi aplicada e verificada em staging
-  e producao. A 266.3 esta em revisao no PR `#271`, sem nova migration. O PR 55
-  permanece adiado e o PR 56 continua condicionado a uma decisao explicita de
-  distribuir o Mobile.
+  e producao. A 266.3 foi integrada pelo PR `#271` (merge `70e343d`). A 266.4
+  esta em revisao no PR `#272`, branch `feat/fase266-4-enviar-template`, sem
+  nova migration. O PR 55 permanece adiado e o PR 56 continua condicionado a
+  uma decisao explicita de distribuir o Mobile.
 - Fase 261 (escopo de trabalho: gaps de seguranca e privacidade
   identificados no audit da fase) **concluida tecnicamente em 2026-09-15,
   com excecoes operacionais abertas; incrementos 1 a 4 integrados**.

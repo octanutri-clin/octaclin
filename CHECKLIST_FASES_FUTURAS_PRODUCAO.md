@@ -3492,11 +3492,12 @@ publicado antes de ampliar a superficie de mudancas visuais.
     notificacao, idempotencia por execucao/acao e a migration aditiva `1048` da
     constraint; integrado no PR `#270` (merge `b4276cd`), com rollout fora de
     banda verificado em staging e producao e 61 migrations registradas.
-  - [~] 266.3 - Implementar `criar_tarefa` com contrato de produto, criptografia
-    e deduplicacao; em revisao no PR `#271`, branch
-    `feat/fase266-3-criar-tarefa`, sem nova migration.
-  - [ ] 266.4 - Implementar `enviar_template` com canal/template explicitos,
-    opt-out, janela, frequencia e outbox.
+  - [x] 266.3 - Implementar `criar_tarefa` com contrato de produto, criptografia
+    e deduplicacao; integrado no PR `#271` (merge `70e343d`), sem nova
+    migration.
+  - [~] 266.4 - Implementar `enviar_template` com canal/template explicitos,
+    opt-out, janela, frequencia e outbox; em revisao no PR `#272`, branch
+    `feat/fase266-4-enviar-template`, sem nova migration.
   - [ ] Depois do PB-02, seguir obrigatoriamente para PB-03 e depois PB-05.
   - Plano, risco e rollback: `docs/history/phases/PLANO_FASE_266.md`.
 
@@ -3940,7 +3941,7 @@ Fonte canonica de escopo, gates e skills do Claude Code:
     provisionado; a issue GitHub `#234` continua aberta e este debito nao foi
     convertido em `PASS` pela conclusao da fase.
 
-Proximo item: concluir o Incremento 266.3 (`criar_tarefa`) no PR `#271`, obter
-checks verdes e merge humano; depois iniciar 266.4 (`enviar_template`). PR 55
-permanece adiado e pendente; PR 56 continua condicionado a decisao explicita
-de distribuir o Mobile.
+Proximo item: concluir o Incremento 266.4 (`enviar_template`) com checks verdes
+e merge humano; depois iniciar PB-03 (gatilhos reais). PR 55 permanece adiado
+e pendente; PR 56 continua condicionado a decisao explicita de distribuir o
+Mobile.

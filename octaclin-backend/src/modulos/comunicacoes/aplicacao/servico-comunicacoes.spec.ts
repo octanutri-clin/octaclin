@@ -45,6 +45,7 @@ function criarRepositorioFake(nome: string, dados: Record<string, unknown>) {
           : null;
       }
       if (nome === 'profissional') return dados.profissional ?? null;
+      if (nome === 'mensagem' && consulta.where.criadoEm) return dados.mensagemRecente ?? null;
       return consulta.where.id || consulta.where.chaveIdempotencia ? dados.mensagem ?? null : null;
     })
   };
@@ -68,7 +69,8 @@ function criarServico(dados: Record<string, unknown>) {
       if (entidade === PacienteOrm) return repositorios.paciente;
       if (entidade === ProfissionalOrm) return repositorios.profissional;
       throw new Error(`Repositorio nao mapeado: ${entidade.name}`);
-    })
+    }),
+    query: jest.fn(async () => [{ bloqueado: true }])
   };
   const executorTenant = {
     executar: jest.fn((_tenantId: string, operacao: (gerenciador: unknown) => Promise<unknown>) =>
@@ -86,7 +88,8 @@ function criarServico(dados: Record<string, unknown>) {
       gerarHashesBuscaPii: jest.fn(() => ['hash-busca'])
     } as never),
     fila,
-    repositorios
+    repositorios,
+    gerenciador
   };
 }
 
@@ -155,6 +158,203 @@ describe('ServicoComunicacoes', () => {
     await servico.publicarEventoNotificacao('tenant-1', 'mensagem-1');
 
     expect(fila.add).not.toHaveBeenCalled();
+  });
+
+  it('deve enfileirar mensagem de automacao com outbox, lock e chave idempotente', async () => {
+    const contato = JSON.stringify({
+      email: 'paciente@example.com',
+      preferencias: {
+        email: true,
+        whatsapp: true,
+        canalPreferido: 'qualquer',
+        horarioPermitido: { inicio: '08:00', fim: '20:00', timezone: 'America/Sao_Paulo' }
+      }
+    });
+    const { servico, repositorios, gerenciador } = criarServico({
+      canal: { id: 'canal-1', tenantId: 'tenant-1', tipo: 'email', ativo: true },
+      template: { id: 'template-1', tenantId: 'tenant-1', canal: 'email', aprovado: false },
+      paciente: {
+        id: 'paciente-1',
+        tenantId: 'tenant-1',
+        contatoCriptografado: Buffer.from(`cripto:${contato}`)
+      }
+    });
+
+    await expect(
+      servico.enfileirarMensagemAutomacao(
+        'tenant-1',
+        {
+          pacienteId: 'paciente-1',
+          canalId: 'canal-1',
+          templateId: 'template-1',
+          intervaloMinimoHoras: 24,
+          chaveIdempotencia: 'automacao:execucao-1:acao:0'
+        },
+        new Date('2026-09-19T13:00:00.000Z')
+      )
+    ).resolves.toEqual({ status: 'enfileirada', mensagemId: 'mensagem-1' });
+
+    expect(gerenciador.query).toHaveBeenCalledWith(
+      'select pg_advisory_xact_lock(hashtextextended($1, 0))',
+      ['automacao-comunicacao:tenant-1:paciente-1:canal-1']
+    );
+    expect(repositorios.mensagem.save).toHaveBeenCalledWith(
+      expect.objectContaining({
+        tenantId: 'tenant-1',
+        pacienteId: 'paciente-1',
+        canalId: 'canal-1',
+        templateId: 'template-1',
+        status: 'pendente',
+        categoria: 'administrativo',
+        chaveIdempotencia: 'automacao:execucao-1:acao:0',
+        payload: { destino: 'paciente@example.com', evento: 'automacao.regra.template' }
+      })
+    );
+    expect(repositorios.outbox.save).toHaveBeenCalledWith(
+      expect.objectContaining({
+        tenantId: 'tenant-1',
+        tipo: 'notificacao.enviar',
+        status: 'pendente',
+        payload: { mensagemId: 'mensagem-1' }
+      })
+    );
+  });
+
+  it('deve devolver a mensagem existente antes de reavaliar politicas no retry idempotente', async () => {
+    const { servico, repositorios } = criarServico({ mensagem: { id: 'mensagem-existente' } });
+
+    await expect(
+      servico.enfileirarMensagemAutomacao('tenant-1', {
+        pacienteId: 'paciente-1',
+        canalId: 'canal-1',
+        templateId: 'template-1',
+        intervaloMinimoHoras: 24,
+        chaveIdempotencia: 'automacao:execucao-1:acao:0'
+      })
+    ).resolves.toEqual({ status: 'enfileirada', mensagemId: 'mensagem-existente' });
+
+    expect(repositorios.paciente.findOne).not.toHaveBeenCalled();
+    expect(repositorios.outbox.save).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    {
+      nome: 'opt-out',
+      contato: {
+        email: 'paciente@example.com',
+        preferencias: { email: false, whatsapp: true, canalPreferido: 'qualquer' }
+      },
+      agora: '2026-09-19T13:00:00.000Z',
+      motivo: 'opt_out'
+    },
+    {
+      nome: 'fora da janela',
+      contato: {
+        email: 'paciente@example.com',
+        preferencias: {
+          email: true,
+          whatsapp: true,
+          canalPreferido: 'qualquer',
+          horarioPermitido: { inicio: '08:00', fim: '20:00', timezone: 'America/Sao_Paulo' }
+        }
+      },
+      agora: '2026-09-19T02:00:00.000Z',
+      motivo: 'fora_horario_permitido'
+    }
+  ])('deve ignorar automacao por $nome sem criar mensagem', async ({ contato, agora, motivo }) => {
+    const { servico, repositorios } = criarServico({
+      canal: { id: 'canal-1', tenantId: 'tenant-1', tipo: 'email', ativo: true },
+      template: { id: 'template-1', tenantId: 'tenant-1', canal: 'email', aprovado: true },
+      paciente: {
+        id: 'paciente-1',
+        tenantId: 'tenant-1',
+        contatoCriptografado: Buffer.from(`cripto:${JSON.stringify(contato)}`)
+      }
+    });
+
+    await expect(
+      servico.enfileirarMensagemAutomacao(
+        'tenant-1',
+        {
+          pacienteId: 'paciente-1',
+          canalId: 'canal-1',
+          templateId: 'template-1',
+          intervaloMinimoHoras: 24,
+          chaveIdempotencia: 'automacao:execucao-1:acao:0'
+        },
+        new Date(agora)
+      )
+    ).resolves.toEqual({ status: 'ignorada', motivo });
+
+    expect(repositorios.mensagem.save).not.toHaveBeenCalled();
+    expect(repositorios.outbox.save).not.toHaveBeenCalled();
+  });
+
+  it('deve aplicar limite de frequencia somente depois das preferencias e antes do outbox', async () => {
+    const contato = JSON.stringify({
+      whatsapp: '5511999999999',
+      preferencias: {
+        email: true,
+        whatsapp: true,
+        canalPreferido: 'whatsapp',
+        horarioPermitido: { inicio: '08:00', fim: '20:00', timezone: 'America/Sao_Paulo' }
+      }
+    });
+    const { servico, repositorios } = criarServico({
+      canal: { id: 'canal-1', tenantId: 'tenant-1', tipo: 'whatsapp', ativo: true },
+      template: { id: 'template-1', tenantId: 'tenant-1', canal: 'whatsapp', aprovado: true },
+      paciente: {
+        id: 'paciente-1',
+        tenantId: 'tenant-1',
+        contatoCriptografado: Buffer.from(`cripto:${contato}`)
+      },
+      mensagemRecente: { id: 'mensagem-recente' }
+    });
+
+    await expect(
+      servico.enfileirarMensagemAutomacao(
+        'tenant-1',
+        {
+          pacienteId: 'paciente-1',
+          canalId: 'canal-1',
+          templateId: 'template-1',
+          intervaloMinimoHoras: 24,
+          chaveIdempotencia: 'automacao:execucao-1:acao:0'
+        },
+        new Date('2026-09-19T13:00:00.000Z')
+      )
+    ).resolves.toEqual({ status: 'ignorada', motivo: 'limite_frequencia' });
+
+    expect(repositorios.mensagem.findOne).toHaveBeenCalledWith({
+      select: { id: true },
+      where: expect.objectContaining({
+        tenantId: 'tenant-1',
+        pacienteId: 'paciente-1',
+        canalId: 'canal-1'
+      })
+    });
+    expect(repositorios.outbox.save).not.toHaveBeenCalled();
+  });
+
+  it('deve recusar recurso removido ou template WhatsApp nao aprovado sem retry externo', async () => {
+    const { servico, repositorios } = criarServico({
+      canal: { id: 'canal-1', tenantId: 'tenant-1', tipo: 'whatsapp', ativo: true },
+      template: { id: 'template-1', tenantId: 'tenant-1', canal: 'whatsapp', aprovado: false },
+      paciente: { id: 'paciente-1', tenantId: 'tenant-1' }
+    });
+
+    await expect(
+      servico.enfileirarMensagemAutomacao('tenant-1', {
+        pacienteId: 'paciente-1',
+        canalId: 'canal-1',
+        templateId: 'template-1',
+        intervaloMinimoHoras: 24,
+        chaveIdempotencia: 'automacao:execucao-1:acao:0'
+      })
+    ).resolves.toEqual({ status: 'indisponivel', motivo: 'template_indisponivel' });
+
+    expect(repositorios.mensagem.save).not.toHaveBeenCalled();
+    expect(repositorios.outbox.save).not.toHaveBeenCalled();
   });
 
   it('deve listar mensagens somente no contexto do tenant', async () => {

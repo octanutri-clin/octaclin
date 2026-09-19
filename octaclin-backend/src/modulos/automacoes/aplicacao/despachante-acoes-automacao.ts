@@ -4,6 +4,7 @@ import { IsNull } from 'typeorm';
 import { ExecutorTenant } from '../../../infraestrutura/banco-dados/executor-tenant';
 import { CriptografiaDadosSensiveis } from '../../../infraestrutura/seguranca/criptografia-dados-sensiveis';
 import { registrarNotificacao } from '../../notificacoes/aplicacao/registrar-notificacao';
+import { ServicoComunicacoes } from '../../comunicacoes/aplicacao/servico-comunicacoes';
 import { AcompanhamentoTarefaOrm } from '../../pacientes/infraestrutura/acompanhamento-tarefa.orm';
 import { PacienteOrm } from '../../pacientes/infraestrutura/paciente.orm';
 import { ProfissionalOrm } from '../../profissionais/infraestrutura/profissional.orm';
@@ -46,7 +47,7 @@ export class DestinoAcaoAutomacaoInvalido extends FalhaDefinitivaAcaoAutomacao {
     super(
       codigo,
       codigo === 'paciente_obrigatorio'
-        ? 'A acao de criar tarefa exige um paciente.'
+        ? 'A acao exige um paciente.'
         : 'O destino da acao nao esta mais disponivel.'
     );
     this.name = 'DestinoAcaoAutomacaoInvalido';
@@ -62,7 +63,8 @@ export class DestinoAcaoAutomacaoInvalido extends FalhaDefinitivaAcaoAutomacao {
 export class DespachanteAcoesAutomacao {
   constructor(
     private readonly executorTenant: ExecutorTenant,
-    private readonly criptografia: CriptografiaDadosSensiveis
+    private readonly criptografia: CriptografiaDadosSensiveis,
+    private readonly comunicacoes: ServicoComunicacoes
   ) {}
 
   async executar(entrada: EntradaExecucaoAcaoAutomacao): Promise<SaidaExecucaoAcaoAutomacao> {
@@ -133,7 +135,33 @@ export class DespachanteAcoesAutomacao {
       });
     }
 
-    throw new AcaoAutomacaoNaoDisponivel(entrada.acao.tipo);
+    if (entrada.acao.tipo === 'enviar_template') {
+      if (!('canalId' in entrada.acao)) {
+        throw new AcaoAutomacaoNaoDisponivel('enviar_template');
+      }
+      if (!entrada.pacienteId) throw new DestinoAcaoAutomacaoInvalido('paciente_obrigatorio');
+      const resultado = await this.comunicacoes.enfileirarMensagemAutomacao(entrada.tenantId, {
+        pacienteId: entrada.pacienteId,
+        canalId: entrada.acao.canalId,
+        templateId: entrada.acao.templateId,
+        intervaloMinimoHoras: entrada.acao.intervaloMinimoHoras,
+        chaveIdempotencia: entrada.chaveIdempotencia
+      });
+      if (resultado.status === 'ignorada') return { status: 'ignorada' };
+      if (resultado.status === 'indisponivel') {
+        throw new DestinoAcaoAutomacaoInvalido('destino_indisponivel');
+      }
+
+      try {
+        await this.comunicacoes.publicarEventoNotificacao(entrada.tenantId, resultado.mensagemId);
+      } catch {
+        // Mensagem e outbox ja foram confirmados na mesma transacao. A fila e
+        // apenas o atalho; o poller duravel assume quando Redis falha.
+      }
+      return { status: 'executada' };
+    }
+
+    throw new AcaoAutomacaoNaoDisponivel((entrada.acao as { tipo: TipoAcaoAutomacao }).tipo);
   }
 }
 
