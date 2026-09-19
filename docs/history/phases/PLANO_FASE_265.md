@@ -975,3 +975,46 @@ Validacoes locais da branch:
   Windows desta sessao nao possui Docker. O job Backend NestJS da PR deve
   executar `migration:run` e o gate RLS em Postgres real antes do merge;
 - `NA` - staging, producao e DDL externo: nenhum ambiente externo foi escrito.
+
+## 16. Fechamento operacional e correcao da remocao de override
+
+O rollout foi concluido em 2026-09-18, depois do merge da correcao de
+robustez pelo PR GitHub `#265` (`98e6a47`), da correcao documental pelo PR
+`#266` (`837aabc`) e da correcao funcional da remocao de override pelo PR
+`#267` (`9fe1936`).
+
+Durante o smoke de staging, remover um override pela interface revelou duas
+causas independentes:
+
+- o backend atribuía `undefined` aos seis campos nullable; o TypeORM ignorava
+  essas propriedades no `save` e o banco mantinha o override;
+- a Web mantinha os modais de edicao e confirmacao ativos ao mesmo tempo, e os
+  dois traps de foco/locks de scroll podiam deixar a tela bloqueada.
+
+O PR `#267` passou a persistir `null` explicitamente nos seis campos, tipou o
+estado nullable na entidade ORM e garantiu que apenas um modal esteja ativo. A
+regressao cobre fechamento dos dialogos, desbloqueio da pagina, persistencia
+apos reload e reabertura do editor. Todos os checks da PR e do `main` passaram.
+
+### Evidencia do rollout
+
+- staging: `1046` e `1047` aplicadas com role owner; `migration:show`, RLS,
+  FORCE RLS, policies, constraint, readiness e leitura autenticada verificados;
+- producao: backup do dia aprovado na execucao GitHub Actions `35323621203` e
+  ultima prova de restore dedicado aprovada na execucao `34766699715`;
+- preflight de producao confirmou o banco `Octaclin-db-producao`, a role
+  `neondb_owner` e somente `1046`/`1047` pendentes;
+- depois de `migration:run`, nenhuma migration ficou pendente; as duas tabelas
+  retornaram RLS e FORCE RLS ativos, as duas policies de isolamento por tenant
+  estavam presentes e a constraint exigia tambem a justificativa cifrada nos
+  dois ramos;
+- `/health/pronto` de producao retornou HTTP 200, com banco e migrations `ok`
+  e 60 migrations registradas; a Web `/login` retornou HTTP 200;
+- smoke autenticado manual com conta e paciente sinteticos confirmou criar e
+  remover o override, manter a interface responsiva e preservar a remocao
+  depois do reload.
+
+O `/health/detalhado` continua degradado somente porque o ClamAV nao esta
+provisionado. A issue GitHub `#234` recebeu a evidencia sanitizada e permanece
+aberta; a conclusao da Fase 265 nao transforma esse debito, o pentest externo
+do PR 55 ou a distribuicao Mobile do PR 56 em `PASS`.

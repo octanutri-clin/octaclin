@@ -32,36 +32,23 @@ Atualizado em 2026-09-18.
   mudanca de backend, so BFF POST/DELETE novo consumindo as rotas ja
   existentes da 265.4. Detalhe completo em
   `docs/history/phases/PLANO_FASE_265.md`, secao 13.
-- Reconciliacao de 2026-09-18 (preflight da migration 265.2 em producao):
-  por autorizacao explicita do dono do produto, esta sessao fez o
-  preflight de leitura exigido antes de aplicar
-  `1720000001046-AdicionarPrioridadeAcompanhamento` em producao.
-  **Resultado: parou antes de qualquer DDL**, sem alterar nenhum estado
-  de producao. Confirmado por evidencia local: SHA do `main` (`d80abd4`
-  no momento do preflight; 265.5 e 265.6 integrados depois, no mesmo
-  ciclo), os incrementos 265.2-265.4 que dependem do schema ja
-  integrados, a migration exata (ja validada contra Postgres real em CI)
-  e a ordem documentada no `RUNBOOK_PRODUCAO.md`. **Nao pode ser
-  confirmado nesta sessao**, por ausencia total de credencial de banco de
-  producao/Neon/runtime no ambiente: estado de migrations em staging e
-  producao, branch/database exatos do Neon, a role que seria usada, e
-  evidencia de backup/restore recentes (script dedicado e
-  PowerShell-only, exige credencial que este ambiente nao tem). Achado
-  adicional: a issue GitHub `#234` ("[Alerta producao] Saude externa
-  indisponivel") continua aberta desde 2026-09-12 -- por si so ja
-  recomendaria nao prosseguir sem confirmacao humana. Aplicar a migration
-  exige um operador humano ou uma sessao com a `DATABASE_URL` de producao
-  (role `neondb_owner`) confirmada explicitamente por quem a fornece.
-  Detalhe completo em `docs/history/phases/PLANO_FASE_265.md`, secao 14.
-- Correcao de robustez da Fase 265 iniciada em 2026-09-18 na branch
-  `fix/fase265-prioridade-hardening`, ainda sem merge: separa o recalculo em
-  uma transacao por paciente, consulta faltas/ultima concluida/proxima futura
-  sem a janela/limite compartilhados, serializa a expiracao lazy com lock de
-  linha, alinha a data maxima de 90 dias da UI com o limite do backend e cria
-  a migration corretiva `1047` para incluir a justificativa cifrada na
-  constraint "tudo ou nada". Nenhuma migration foi aplicada por esta branch;
-  o rollout devera tratar `1046` e `1047` como o bundle esperado, primeiro em
-  staging e somente depois em producao.
+- Reconciliacao de 2026-09-18 (fechamento operacional da Fase 265): o
+  preflight inicialmente parou antes de DDL, como exigido, e o operador depois
+  confirmou o alvo de producao `Octaclin-db-producao`, a role owner
+  `neondb_owner`, o backup aprovado na execucao GitHub Actions `35323621203` e
+  a ultima prova de restore dedicado aprovada na execucao `34766699715`. As
+  migrations `1046` e `1047` foram aplicadas fora de banda primeiro em staging
+  e depois em producao; `migration:show`, RLS/FORCE RLS, as duas policies por
+  tenant e a constraint completa do override foram verificados. O readiness
+  voltou a HTTP 200 com 60 migrations registradas. A correcao de robustez foi
+  integrada no PR GitHub `#265`, a consulta de policies do runbook foi
+  corrigida no PR `#266` e a persistencia da remocao do override e o bloqueio
+  da UI foram corrigidos no PR `#267`. O smoke autenticado com conta e paciente
+  sinteticos confirmou criar e remover o ajuste, manter a tela responsiva e
+  preservar a remocao apos reload. O health detalhado permanece degradado
+  somente pelo ClamAV nao provisionado; a issue `#234` continua aberta, sem
+  falso `PASS`. Detalhe em `docs/history/phases/PLANO_FASE_265.md`, secoes
+  14-16.
 - Reconciliacao de 2026-09-18: os PRs GitHub `#257` (Incremento 265.1,
   calculador de dominio puro), `#258` (Incremento 265.2, persistencia e
   RLS) e `#259` (Incremento 265.3, recalculo idempotente) foram integrados
@@ -470,7 +457,7 @@ Atualizado em 2026-09-18.
   cumprida com o pacote interno do PR `#255`; a execucao externa foi adiada pelo
   proprietario, preservando o gate pendente.
 - Fase 265 - Fundacao da inteligencia: prioridade de acompanhamento calculada
-  com override auditado, **em andamento**.
+  com override auditado, **concluida**.
   Corresponde ao PB-01 da Onda 2 em
   `docs/product/OCTACLIN_PRODUCT_FEATURE_AUDIT.md`. A proposta separa prioridade
   operacional de risco clinico, usa apenas sinais estruturados de engajamento,
@@ -493,8 +480,8 @@ Atualizado em 2026-09-18.
   do Postgres). O job "Backend NestJS" da PR `#258` rodou a migration contra
   um Postgres real de CI e confirmou RLS/FORCE RLS com `pnpm
   test:rls:testcontainers`, os 20 checks passaram e o merge humano seguiu.
-  Aplicacao em producao continua exigindo o procedimento fora de banda com
-  role owner do `RUNBOOK_PRODUCAO.md`, ainda nao executado.
+  A aplicacao em producao foi executada fora de banda com role owner, depois de
+  backup e preflight, e verificada conforme o `RUNBOOK_PRODUCAO.md`.
   O Incremento 265.3 (recalculo idempotente) foi integrado em 2026-09-18
   pelo PR GitHub `#259`, merge `8de87f9`:
   `ServicoRecalculoPrioridadeAcompanhamento` le faltas/consultas/registro de
@@ -562,6 +549,11 @@ Atualizado em 2026-09-18.
   `jornadas-criticas.spec.mjs`, `fase-248`, `fase-249`, `fase-252`,
   `reflow-visual.spec.mjs`, `fase-254-pacientes.spec.mjs` e
   `aviso-acesso-negado.spec.mjs`).
+- Fase 266 - Selecao do proximo incremento de produto, **pendente de definicao
+  explicita**. Nenhum escopo, branch, migration ou codigo foi autorizado; a
+  especificacao e a implementacao dependem de decisao do proprietario. O PR 55
+  permanece adiado e o PR 56 continua condicionado a uma decisao explicita de
+  distribuir o Mobile.
 - Fase 261 (escopo de trabalho: gaps de seguranca e privacidade
   identificados no audit da fase) **concluida tecnicamente em 2026-09-15,
   com excecoes operacionais abertas; incrementos 1 a 4 integrados**.
