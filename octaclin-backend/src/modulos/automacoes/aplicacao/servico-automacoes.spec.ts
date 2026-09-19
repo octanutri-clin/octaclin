@@ -88,6 +88,25 @@ describe('ServicoAutomacoes', () => {
     );
   });
 
+  it('deve rejeitar acao fora do contrato antes de persistir a regra', async () => {
+    const { servico, repositorios } = criarServico();
+
+    await expect(
+      servico.criarRegra(
+        'tenant-1',
+        {
+          profissionalId: 'profissional-1',
+          nome: 'Regra insegura',
+          gatilho: { tipo: 'checkin' },
+          condicoes: [],
+          acoes: [{ tipo: 'executar_codigo' }] as never
+        },
+        usuarioColaborador
+      )
+    ).rejects.toBeInstanceOf(BadRequestException);
+    expect(repositorios.regra.save).not.toHaveBeenCalled();
+  });
+
   it('deve simular regra inativa e persistir o historico sem enfileirar acoes', async () => {
     const { servico, fila, repositorios } = criarServico({
       regra: {
@@ -108,7 +127,17 @@ describe('ServicoAutomacoes', () => {
     expect(simulacao).toEqual(
       expect.objectContaining({
         status: 'executado',
-        resultado: expect.objectContaining({ simulacao: true, executar: true })
+        resultado: expect.objectContaining({
+          simulacao: true,
+          executar: true,
+          acoes: [
+            expect.objectContaining({
+              tipo: 'notificar_profissional',
+              status: 'simulada',
+              chaveIdempotencia: 'automacao:execucao-1:acao:0'
+            })
+          ]
+        })
       })
     );
     expect(repositorios.regra.findOne).toHaveBeenCalledWith({

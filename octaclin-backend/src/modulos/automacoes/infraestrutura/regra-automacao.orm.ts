@@ -1,4 +1,5 @@
 import { Column, CreateDateColumn, Entity, PrimaryGeneratedColumn } from 'typeorm';
+import { AcaoAutomacao } from '../dominio/acoes-automacao';
 
 @Entity('regras_automacao')
 export class RegraAutomacaoOrm {
@@ -21,7 +22,7 @@ export class RegraAutomacaoOrm {
   condicoes: Array<Record<string, unknown>>;
 
   @Column({ type: 'jsonb', default: [] })
-  acoes: Array<Record<string, unknown>>;
+  acoes: AcaoAutomacao[];
 
   @Column({ type: 'boolean', default: true })
   ativa: boolean;

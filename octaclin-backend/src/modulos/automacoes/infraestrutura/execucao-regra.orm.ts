@@ -21,7 +21,7 @@ export class ExecucaoRegraOrm {
   resultado: Record<string, unknown>;
 
   @Column({ type: 'text', nullable: true })
-  erro?: string;
+  erro?: string | null;
 
   @CreateDateColumn({ name: 'criado_em', type: 'timestamptz' })
   criadoEm: Date;

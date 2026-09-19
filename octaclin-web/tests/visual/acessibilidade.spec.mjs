@@ -2350,7 +2350,20 @@ const execucaoSimulacaoComumFixture = {
   regraId: 'regra-conv-ativa',
   pacienteId: 'pac-auto-1',
   status: 'executado',
-  resultado: { simulacao: true, executar: true, gatilho: 'paciente.risco_alto' },
+  resultado: {
+    simulacao: true,
+    executar: true,
+    gatilho: 'paciente.risco_alto',
+    acoes: [
+      {
+        indice: 0,
+        tipo: 'criar_tarefa',
+        chaveIdempotencia: 'automacao:exec-sim-comum:acao:0',
+        status: 'simulada',
+        tentativas: 0
+      }
+    ]
+  },
   criadoEm: '2026-08-05T10:00:00.000Z'
 };
 
@@ -2477,6 +2490,7 @@ test.describe('gate de acessibilidade - automacoes (PR 24)', () => {
     await expect(page.getByRole('button', { name: 'Simular recall de Recall de pacientes inativos' })).toBeVisible();
 
     await expect(page.getByText('Regra: regra-conv-ativa')).toBeVisible();
+    await expect(page.getByText('criar uma tarefa de acompanhamento: seria executada')).toBeVisible();
     await expect(page.getByText('Regra: regra-recall')).toBeVisible();
     await expect(page.getByText('Seriam contatados (2):')).toBeVisible();
     await expect(page.getByText('Marcos Andrade - 75 dias sem consulta')).toBeVisible();
@@ -2598,7 +2612,20 @@ test.describe('gate de acessibilidade - automacoes (PR 24)', () => {
         regraId: regraConvencionalInativaFixture.id,
         pacienteId: 'pac-auto-1',
         status: 'executado',
-        resultado: { simulacao: true, executar: true, gatilho: 'checkin.atrasado' },
+        resultado: {
+          simulacao: true,
+          executar: true,
+          gatilho: 'checkin.atrasado',
+          acoes: [
+            {
+              indice: 0,
+              tipo: 'notificar_profissional',
+              chaveIdempotencia: 'automacao:exec-simulacao-teste:acao:0',
+              status: 'simulada',
+              tentativas: 0
+            }
+          ]
+        },
         criadoEm: '2026-08-08T10:00:00.000Z'
       })
     }));

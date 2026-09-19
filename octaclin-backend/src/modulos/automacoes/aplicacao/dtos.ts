@@ -1,4 +1,5 @@
 import { IsArray, IsBoolean, IsObject, IsOptional, IsString, IsUUID, MaxLength } from 'class-validator';
+import { AcaoAutomacao } from '../dominio/acoes-automacao';
 
 export class CriarRegraAutomacaoDto {
   @IsUUID()
@@ -15,7 +16,7 @@ export class CriarRegraAutomacaoDto {
   condicoes: Array<Record<string, unknown>>;
 
   @IsArray()
-  acoes: Array<Record<string, unknown>>;
+  acoes: AcaoAutomacao[];
 
   @IsOptional()
   @IsBoolean()

@@ -1,8 +1,8 @@
 # OctaClin - Checklist vivo de fases futuras ate producao
 
-Atualizado em 2026-09-18. Fases 256 a 261 e 263 a 265 concluidas; Fase 262
-permanece em andamento pelos gates externos do piloto; Fase 266 aguarda
-definicao explicita do proximo incremento de produto.
+Atualizado em 2026-09-19. Fases 256 a 261 e 263 a 265 concluidas; Fase 262
+permanece em andamento pelos gates externos do piloto; Fase 266 esta em
+andamento com o PB-02 de execucao real das automacoes.
 O programa de hardening PR 36-56 permanece como trilha separada. O pacote
 interno do PR 55 foi integrado, mas o proprietario adiou a contratacao do
 pentest para evitar custo neste momento; todos os gates externos seguem
@@ -3484,11 +3484,18 @@ publicado antes de ampliar a superficie de mudancas visuais.
     `#234`, sem ser convertido em `PASS`. Detalhe completo na secao 16 do
     plano da fase.
 
-- [ ] Fase 266 - Selecao do proximo incremento de produto. [PENDENTE DE
-  DEFINICAO: nenhum escopo, branch, migration ou codigo foi autorizado]
-  - Exige decisao explicita do proprietario antes de especificacao ou
-    implementacao. Este marcador existe para manter a sequencia documental e
-    nao inicia uma nova entrega.
+- [~] Fase 266 - Execucao real das automacoes (PB-02). [EM ANDAMENTO]
+  - [~] 266.1 - Contrato fechado, estado por acao, chave idempotente,
+    checkpoints de retry/retomada e resultado estruturado na Web; sem efeito
+    real e sem migration.
+  - [ ] 266.2 - Implementar `notificar_profissional`, incluindo o tipo de
+    notificacao e a migration aditiva da constraint.
+  - [ ] 266.3 - Implementar `criar_tarefa` com contrato de produto, criptografia
+    e deduplicacao.
+  - [ ] 266.4 - Implementar `enviar_template` com canal/template explicitos,
+    opt-out, janela, frequencia e outbox.
+  - [ ] Depois do PB-02, seguir obrigatoriamente para PB-03 e depois PB-05.
+  - Plano, risco e rollback: `docs/history/phases/PLANO_FASE_266.md`.
 
 Documento de execução e prioridades: `ROADMAP_QUALIDADE_SEGURANCA_FASES_248_262.md`.
 Matriz operacional: `MATRIZ_SKILLS_PLUGINS_MODELOS_FASES_243_248_262.md`.
@@ -3930,6 +3937,7 @@ Fonte canonica de escopo, gates e skills do Claude Code:
     provisionado; a issue GitHub `#234` continua aberta e este debito nao foi
     convertido em `PASS` pela conclusao da fase.
 
-Proximo item: selecionar explicitamente o proximo incremento de produto antes
-de abrir nova branch. PR 55 permanece adiado e pendente; PR 56 continua
-condicionado a decisao explicita de distribuir o Mobile.
+Proximo item: concluir o Incremento 266.1 em PR propria e, somente depois do
+merge humano, iniciar 266.2 (`notificar_profissional`). PR 55 permanece adiado
+e pendente; PR 56 continua condicionado a decisao explicita de distribuir o
+Mobile.

@@ -18,6 +18,7 @@ import { PacienteOrm } from '../pacientes/infraestrutura/paciente.orm';
 import { ExecucaoRegraOrm } from './infraestrutura/execucao-regra.orm';
 import { RegraAutomacaoOrm } from './infraestrutura/regra-automacao.orm';
 import { deveExecutarProcessadores } from '../../infraestrutura/processamento/papel-processo';
+import { DespachanteAcoesAutomacao } from './aplicacao/despachante-acoes-automacao';
 
 const processadores = deveExecutarProcessadores()
   ? [ProcessadorAutomacoes, ProcessadorLembretesAgenda, ProcessadorRecallInatividade]
@@ -32,7 +33,14 @@ const processadores = deveExecutarProcessadores()
     ModuloComunicacoes
   ],
   controllers: [ControladorAutomacoes],
-  providers: [ServicoAutomacoes, ServicoLembretesAgenda, ServicoRecallInatividade, ...processadores, ServicoAuditoria],
+  providers: [
+    ServicoAutomacoes,
+    ServicoLembretesAgenda,
+    ServicoRecallInatividade,
+    DespachanteAcoesAutomacao,
+    ...processadores,
+    ServicoAuditoria
+  ],
   exports: [ServicoAutomacoes, ServicoLembretesAgenda, ServicoRecallInatividade]
 })
 export class ModuloAutomacoes {}

@@ -1,12 +1,20 @@
 # OctaClin - Status atual do projeto
 
-Atualizado em 2026-09-18.
+Atualizado em 2026-09-19.
 
 ## Snapshot
 
 - Produto: OctaClin.
 - Repositorio: `octanutri-clin/octaclin`.
 - Branch principal: `main`.
+- Reconciliacao de 2026-09-19: o proprietario aprovou a Fase 266 para executar
+  o PB-02 do audit de produto antes de conectar os gatilhos PB-03. O Incremento
+  266.1 esta em implementacao na branch
+  `feat/fase266-1-executor-automacoes`: contrato fechado das tres acoes, estado
+  e tentativas por acao, chave idempotente deterministica, checkpoints de
+  retomada e exibicao estruturada na Web. Nenhum efeito real, migration, deploy
+  ou acao externa pertence a esta primeira PR. Plano e limites em
+  `docs/history/phases/PLANO_FASE_266.md`.
 - Reconciliacao de 2026-09-18 (decisoes de produto para destravar a Fase
   265): o dono do produto aprovou o vocabulario fechado de `codigoMotivo`
   (`evento_recente_nao_capturado`, `informacao_externa_relevante`,
@@ -549,11 +557,12 @@ Atualizado em 2026-09-18.
   `jornadas-criticas.spec.mjs`, `fase-248`, `fase-249`, `fase-252`,
   `reflow-visual.spec.mjs`, `fase-254-pacientes.spec.mjs` e
   `aviso-acesso-negado.spec.mjs`).
-- Fase 266 - Selecao do proximo incremento de produto, **pendente de definicao
-  explicita**. Nenhum escopo, branch, migration ou codigo foi autorizado; a
-  especificacao e a implementacao dependem de decisao do proprietario. O PR 55
-  permanece adiado e o PR 56 continua condicionado a uma decisao explicita de
-  distribuir o Mobile.
+- Fase 266 - Execucao real das automacoes (PB-02), **em andamento desde
+  2026-09-19**. O proprietario aprovou a ordem 266.1 fundacao confiavel, 266.2
+  notificacao ao profissional, 266.3 criacao de tarefa e 266.4 envio de
+  template. A 266.1 nao habilita efeitos: impede falso sucesso, fecha o
+  contrato e prepara idempotencia/retry. O PR 55 permanece adiado e o PR 56
+  continua condicionado a uma decisao explicita de distribuir o Mobile.
 - Fase 261 (escopo de trabalho: gaps de seguranca e privacidade
   identificados no audit da fase) **concluida tecnicamente em 2026-09-15,
   com excecoes operacionais abertas; incrementos 1 a 4 integrados**.
