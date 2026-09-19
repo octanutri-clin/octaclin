@@ -22,6 +22,14 @@ const usuarioProfissional: UsuarioAutenticado = {
   permissoes: []
 };
 
+const usuarioSuperAdmin: UsuarioAutenticado = {
+  usuarioId: 'usuario-admin-1',
+  tenantId: 'tenant-1',
+  papel: 'SuperAdmin',
+  emailHash: 'hash-admin',
+  permissoes: []
+};
+
 function criarRepositorioFake(nome: string, dados: Record<string, unknown>) {
   return {
     create: jest.fn((entrada: Record<string, unknown>) => ({ id: `${nome}-1`, ...entrada })),
@@ -68,7 +76,9 @@ function criarServico(dados: Record<string, unknown> = {}) {
 
 describe('ServicoAutomacoes', () => {
   it('deve criar regra no contexto do tenant', async () => {
-    const { servico, executorTenant, repositorios } = criarServico();
+    const { servico, executorTenant, repositorios } = criarServico({
+      profissional: { id: 'profissional-1', tenantId: 'tenant-1', usuarioId: 'usuario-profissional-1' }
+    });
 
     await servico.criarRegra(
       'tenant-1',
@@ -86,6 +96,34 @@ describe('ServicoAutomacoes', () => {
     expect(repositorios.regra.save).toHaveBeenCalledWith(
       expect.objectContaining({ tenantId: 'tenant-1', profissionalId: 'profissional-1', ativa: false })
     );
+  });
+
+  it('deve rejeitar profissional inexistente ou fora do tenant ao criar regra como SuperAdmin', async () => {
+    const { servico, repositorios } = criarServico({ profissional: null });
+
+    await expect(
+      servico.criarRegra(
+        'tenant-1',
+        {
+          profissionalId: 'profissional-de-outro-tenant',
+          nome: 'Regra fora do tenant',
+          gatilho: { tipo: 'checkin' },
+          condicoes: [],
+          acoes: [{ tipo: 'notificar_profissional' }]
+        },
+        usuarioSuperAdmin
+      )
+    ).rejects.toBeInstanceOf(NotFoundException);
+    expect(repositorios.profissional.findOne).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          id: 'profissional-de-outro-tenant',
+          tenantId: 'tenant-1',
+          arquivadoEm: expect.objectContaining({ _type: 'isNull' })
+        })
+      })
+    );
+    expect(repositorios.regra.save).not.toHaveBeenCalled();
   });
 
   it('deve rejeitar acao fora do contrato antes de persistir a regra', async () => {

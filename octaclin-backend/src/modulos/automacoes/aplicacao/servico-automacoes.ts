@@ -1,11 +1,12 @@
 import { InjectQueue } from '@nestjs/bullmq';
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { Queue } from 'bullmq';
-import { EntityManager, In, JsonContains } from 'typeorm';
+import { EntityManager, In, IsNull, JsonContains } from 'typeorm';
 import { ExecutorTenant } from '../../../infraestrutura/banco-dados/executor-tenant';
 import { resolverProfissionalIdDoUsuario } from '../../../infraestrutura/seguranca/escopo-profissional';
 import { UsuarioAutenticado } from '../../auth/dominio/usuario-autenticado';
 import { PacienteOrm } from '../../pacientes/infraestrutura/paciente.orm';
+import { ProfissionalOrm } from '../../profissionais/infraestrutura/profissional.orm';
 import { AvaliarRegraDto, CriarRegraAutomacaoDto } from './dtos';
 import { ExecucaoRegraOrm } from '../infraestrutura/execucao-regra.orm';
 import { RegraAutomacaoOrm } from '../infraestrutura/regra-automacao.orm';
@@ -25,10 +26,13 @@ export class ServicoAutomacoes {
     const acoes = this.validarAcoes(dados.acoes);
     return this.executorTenant.executar(tenantId, async (gerenciador) => {
       const profissionalIdDoUsuario = await resolverProfissionalIdDoUsuario(gerenciador, tenantId, usuario);
+      const profissionalId =
+        profissionalIdDoUsuario ??
+        (await this.validarProfissionalNoTenant(gerenciador, tenantId, dados.profissionalId));
       return gerenciador.getRepository(RegraAutomacaoOrm).save(
         gerenciador.getRepository(RegraAutomacaoOrm).create({
           tenantId,
-          profissionalId: profissionalIdDoUsuario ?? dados.profissionalId,
+          profissionalId,
           nome: dados.nome,
           gatilho: dados.gatilho,
           condicoes: dados.condicoes,
@@ -167,6 +171,19 @@ export class ServicoAutomacoes {
       where: { id: pacienteId, tenantId, ...(profissionalId ? { profissionalResponsavelId: profissionalId } : {}) }
     });
     if (!paciente) throw new NotFoundException('Paciente nao encontrado.');
+  }
+
+  private async validarProfissionalNoTenant(
+    gerenciador: EntityManager,
+    tenantId: string,
+    profissionalId: string
+  ): Promise<string> {
+    const profissional = await gerenciador.getRepository(ProfissionalOrm).findOne({
+      select: { id: true },
+      where: { id: profissionalId, tenantId, arquivadoEm: IsNull() }
+    });
+    if (!profissional) throw new NotFoundException('Profissional nao encontrado.');
+    return profissional.id;
   }
 
   private validarAcoes(acoes: unknown) {

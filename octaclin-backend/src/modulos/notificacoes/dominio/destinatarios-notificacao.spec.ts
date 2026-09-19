@@ -65,6 +65,17 @@ describe('destinatariosDaNotificacao', () => {
     expect(destinatarios).not.toContain('paciente');
   });
 
+  it('automacao notifica somente perfis clinicos autorizados do evento', () => {
+    const destinatarios = destinatariosDaNotificacao(usuarios, 'prof-ana', 'automacao_executada');
+
+    expect(destinatarios).toContain('admin');
+    expect(destinatarios).toContain('prof-ana');
+    expect(destinatarios).not.toContain('prof-bruno');
+    expect(destinatarios).not.toContain('colab');
+    expect(destinatarios).not.toContain('paciente');
+    expect(destinatarios).not.toContain('gestor');
+  });
+
   it('nao repete o destinatario quando o responsavel tambem e SuperAdmin', () => {
     const destinatarios = destinatariosDaNotificacao(
       [{ id: 'admin-e-prof', role: 'SuperAdmin' }],

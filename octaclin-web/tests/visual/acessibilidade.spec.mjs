@@ -213,7 +213,8 @@ async function prepararDashboardMockado(page) {
           'agenda.consultas.criar',
           'pacientes.listar',
           'questionarios.ler',
-          'comunicacoes.mensagens.ler'
+          'comunicacoes.mensagens.ler',
+          'automacoes.gerenciar'
         ],
         destinoInicial: '/dashboard'
       })
@@ -236,6 +237,16 @@ async function prepararDashboardMockado(page) {
             recursoId: '33333333-3333-4333-8333-333333333333',
             lidoEm: null,
             criadoEm: '2026-08-06T10:00:00.000Z'
+          },
+          {
+            id: '66666666-6666-4666-8666-666666666666',
+            tipo: 'automacao_executada',
+            pacienteId: '22222222-2222-4222-8222-222222222222',
+            pacienteNome: 'Paciente Sintetico',
+            recursoTipo: 'execucao_automacao',
+            recursoId: '77777777-7777-4777-8777-777777777777',
+            lidoEm: null,
+            criadoEm: '2026-08-06T10:01:00.000Z'
           }
         ]
       })
@@ -873,8 +884,11 @@ test.describe('gate de acessibilidade - rotas criticas', () => {
     // O sino da Fase 210 precisa estar em tela para as checagens abaixo o
     // cobrirem. Sem esta linha, uma permissao faltando no mock faria o gate
     // passar sem nunca olhar para o botao.
-    await expect(page.getByRole('button', { name: 'Notificações, 2 não lidas' })).toBeVisible();
+    const sino = page.getByRole('button', { name: 'Notificações, 2 não lidas' });
+    await expect(sino).toBeVisible();
     await rodarChecagensDeAcessibilidade(page);
+    await sino.click();
+    await expect(page.getByRole('menuitem', { name: /Automação executada/ })).toHaveAttribute('href', '/automacoes');
   });
 
   test('agenda interna', async ({ page }) => {

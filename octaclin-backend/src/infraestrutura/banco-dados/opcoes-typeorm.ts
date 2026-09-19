@@ -61,6 +61,7 @@ import { AdicionarCategoriaMensagemNotificacao1720000001044 } from './migracoes/
 import { ExpandirCategoriaArquivosMidia1720000001045 } from './migracoes/1720000001045-ExpandirCategoriaArquivosMidia';
 import { AdicionarPrioridadeAcompanhamento1720000001046 } from './migracoes/1720000001046-AdicionarPrioridadeAcompanhamento';
 import { EndurecerIntegridadeOverridePrioridade1720000001047 } from './migracoes/1720000001047-EndurecerIntegridadeOverridePrioridade';
+import { AdicionarAutomacaoExecutadaNotificacoes1720000001048 } from './migracoes/1720000001048-AdicionarAutomacaoExecutadaNotificacoes';
 import { UserActionLogOrm } from '../auditoria/user-action-log.orm';
 import { ConsentimentoLgpdOrm } from '../lgpd/consentimento-lgpd.orm';
 import { TombstoneExclusaoLgpdOrm } from '../lgpd/tombstone-exclusao-lgpd.orm';
@@ -353,7 +354,8 @@ export function criarOpcoesTypeOrm(): TypeOrmModuleOptions & DataSourceOptions {
         AdicionarCategoriaMensagemNotificacao1720000001044,
         ExpandirCategoriaArquivosMidia1720000001045,
         AdicionarPrioridadeAcompanhamento1720000001046,
-        EndurecerIntegridadeOverridePrioridade1720000001047
+        EndurecerIntegridadeOverridePrioridade1720000001047,
+        AdicionarAutomacaoExecutadaNotificacoes1720000001048
       ],
     migrationsRun: executarMigracoesNoBoot(),
     synchronize: false,
