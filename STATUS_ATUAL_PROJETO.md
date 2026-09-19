@@ -14,10 +14,14 @@ Atualizado em 2026-09-19.
   ambientes, com banco e 61 migrations em estado `ok`. O Incremento 266.3 foi
   integrado pelo PR `#271` (merge `70e343d`), com contrato fechado de
   titulo/prioridade/prazo, escrita cifrada tenant-aware e deduplicacao por UUID
-  deterministico. O Incremento 266.4 esta em revisao no PR `#272`, branch
-  `feat/fase266-4-enviar-template`: canal e template explicitos, opt-out e
-  janela obrigatorios, limite de frequencia, idempotencia e outbox, sem nova
-  migration. Plano e limites em `docs/history/phases/PLANO_FASE_266.md`.
+  deterministico. O Incremento 266.4 foi integrado pelo PR `#272` (merge
+  `716e38e` em `main`, 20/20 checks verdes, merge humano confirmado via
+  GitHub): canal e template explicitos, opt-out e janela obrigatorios, limite
+  de frequencia, idempotencia e outbox, sem nova migration. Com isso a Fase
+  266 (PB-02) esta concluida; o proximo item de produto e o PB-03 (ligar os
+  gatilhos reais `checkin.atrasado`, `questionario.respondido` e
+  `paciente.risco_alto`). Plano e limites em
+  `docs/history/phases/PLANO_FASE_266.md`.
 - Reconciliacao de 2026-09-18 (decisoes de produto para destravar a Fase
   265): o dono do produto aprovou o vocabulario fechado de `codigoMotivo`
   (`evento_recente_nao_capturado`, `informacao_externa_relevante`,
@@ -560,14 +564,18 @@ Atualizado em 2026-09-19.
   `jornadas-criticas.spec.mjs`, `fase-248`, `fase-249`, `fase-252`,
   `reflow-visual.spec.mjs`, `fase-254-pacientes.spec.mjs` e
   `aviso-acesso-negado.spec.mjs`).
-- Fase 266 - Execucao real das automacoes (PB-02), **em andamento desde
+- Fase 266 - Execucao real das automacoes (PB-02), **concluida em
   2026-09-19**. O proprietario aprovou a ordem 266.1 fundacao confiavel, 266.2
   notificacao ao profissional, 266.3 criacao de tarefa e 266.4 envio de
   template. A 266.1 foi integrada pelo PR `#269`; a 266.2 foi integrada pelo
   PR `#270`, e a migration aditiva `1048` foi aplicada e verificada em staging
   e producao. A 266.3 foi integrada pelo PR `#271` (merge `70e343d`). A 266.4
-  esta em revisao no PR `#272`, branch `feat/fase266-4-enviar-template`, sem
-  nova migration. O PR 55 permanece adiado e o PR 56 continua condicionado a
+  foi integrada pelo PR `#272` (merge `716e38e`, branch
+  `feat/fase266-4-enviar-template`, sem nova migration, 20/20 checks verdes e
+  merge humano). Com o PB-02 concluido, a sequencia da Onda 2 do audit segue
+  obrigatoriamente para o PB-03 (ligar `checkin.atrasado`,
+  `questionario.respondido` e `paciente.risco_alto`) e depois o PB-05 (alerta
+  de adesao baixa). O PR 55 permanece adiado e o PR 56 continua condicionado a
   uma decisao explicita de distribuir o Mobile.
 - Fase 261 (escopo de trabalho: gaps de seguranca e privacidade
   identificados no audit da fase) **concluida tecnicamente em 2026-09-15,

@@ -3484,7 +3484,8 @@ publicado antes de ampliar a superficie de mudancas visuais.
     `#234`, sem ser convertido em `PASS`. Detalhe completo na secao 16 do
     plano da fase.
 
-- [~] Fase 266 - Execucao real das automacoes (PB-02). [EM ANDAMENTO]
+- [x] Fase 266 - Execucao real das automacoes (PB-02). [CONCLUIDA em
+  2026-09-19]
   - [x] 266.1 - Contrato fechado, estado por acao, chave idempotente,
     checkpoints de retry/retomada e resultado estruturado na Web; sem efeito
     real e sem migration. Integrado no PR `#269`, merge `143353f`.
@@ -3495,10 +3496,12 @@ publicado antes de ampliar a superficie de mudancas visuais.
   - [x] 266.3 - Implementar `criar_tarefa` com contrato de produto, criptografia
     e deduplicacao; integrado no PR `#271` (merge `70e343d`), sem nova
     migration.
-  - [~] 266.4 - Implementar `enviar_template` com canal/template explicitos,
-    opt-out, janela, frequencia e outbox; em revisao no PR `#272`, branch
-    `feat/fase266-4-enviar-template`, sem nova migration.
-  - [ ] Depois do PB-02, seguir obrigatoriamente para PB-03 e depois PB-05.
+  - [x] 266.4 - Implementar `enviar_template` com canal/template explicitos,
+    opt-out, janela, frequencia e outbox; integrado no PR `#272` (merge
+    `716e38e` em `main`), branch `feat/fase266-4-enviar-template`, sem nova
+    migration, 20/20 checks de CI verdes e merge humano confirmado via GitHub.
+  - [x] Com o PB-02 concluido, a sequencia obrigatoria da Onda 2 segue para o
+    PB-03 e depois o PB-05 (ver proximo item do roadmap abaixo).
   - Plano, risco e rollback: `docs/history/phases/PLANO_FASE_266.md`.
 
 Documento de execução e prioridades: `ROADMAP_QUALIDADE_SEGURANCA_FASES_248_262.md`.
@@ -3941,7 +3944,9 @@ Fonte canonica de escopo, gates e skills do Claude Code:
     provisionado; a issue GitHub `#234` continua aberta e este debito nao foi
     convertido em `PASS` pela conclusao da fase.
 
-Proximo item: concluir o Incremento 266.4 (`enviar_template`) com checks verdes
-e merge humano; depois iniciar PB-03 (gatilhos reais). PR 55 permanece adiado
-e pendente; PR 56 continua condicionado a decisao explicita de distribuir o
-Mobile.
+Proximo item: propor e obter autorizacao explicita do proprietario para a
+Fase 267 - PB-03 (ligar os gatilhos reais `checkin.atrasado`,
+`questionario.respondido` e `paciente.risco_alto` ao executor de automacoes
+concluido na Fase 266), seguida do PB-05 (alerta de check-in com adesao
+baixa), na ordem obrigatoria da Onda 2. PR 55 permanece adiado e pendente; PR
+56 continua condicionado a decisao explicita de distribuir o Mobile.

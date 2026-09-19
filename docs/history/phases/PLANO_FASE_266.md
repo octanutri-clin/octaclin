@@ -48,10 +48,11 @@ validacao fechada, estado por acao, chave de idempotencia nem executor.
    - contrato de titulo, prioridade e prazo;
    - conteudo cifrado, escopo de tenant/profissional e deduplicacao.
    - integrado no PR `#271`, merge `70e343d`, com todos os checks verdes.
-4. **266.4 - `enviar_template`** [EM REVISAO]
+4. **266.4 - `enviar_template`** [CONCLUIDO]
    - template e canal explicitos;
    - opt-out e janela de comunicacao obrigatorios, sem bypass automatico;
    - limite de frequencia, outbox e chave de idempotencia.
+   - integrado no PR `#272`, merge `716e38e`, com todos os checks verdes.
 
 Depois da Fase 266, a sequencia de produto e PB-03 (gatilhos reais) e PB-05
 (alerta de baixa adesao), nessa ordem.
@@ -266,14 +267,17 @@ automaticamente pelo rollback.
 - [x] Testes focados reproduziram as ausencias antes da implementacao e passam
   depois dela.
 - [x] Suite completa, builds e gates de governanca.
-- [ ] Checks e revisao humana da PR `#272` contra `main`.
+- [x] Checks e revisao humana da PR `#272` contra `main`: 20/20 check runs
+  concluidos com sucesso e merge humano (`merged_by: octanutri-clin`),
+  confirmado via GitHub em 2026-09-19; merge `716e38e`.
 
 A 266.4 nao adiciona migration, segredo ou configuracao externa. O rollback
 operacional e reimplantar a versao anterior; mensagens ja enfileiradas e o
 outbox correspondente nao devem ser apagados automaticamente. A validacao
 local usa mocks e nao chama WhatsApp, Gmail ou outro provider externo.
-A implementacao esta publicada no PR `#272`; a conclusao permanece condicionada
-aos checks remotos e ao merge humano.
+A implementacao foi integrada no PR `#272`, merge `716e38e`, depois dos checks
+remotos e do merge humano. Com este incremento, a Fase 266 (PB-02) esta
+concluida.
 
 ## 14. Evidencia local do Incremento 266.4
 
