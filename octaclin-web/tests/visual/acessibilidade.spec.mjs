@@ -2289,7 +2289,7 @@ test.describe('gate de acessibilidade - profissionais (PR 23)', () => {
 // "disparo" e a acao da regra em producao, fora do alcance deste teste.
 // ---------------------------------------------------------------------------
 
-const permissoesAutomacoes = ['automacoes.gerenciar'];
+const permissoesAutomacoes = ['automacoes.gerenciar', 'comunicacoes.mensagens.ler'];
 
 const profissionaisAutomacoesFixture = [{ id: 'prof-auto-1', tenantId: 'tenant-1', nome: 'Dra. Camila Duarte' }];
 
@@ -2299,6 +2299,52 @@ const pacientesAutomacoesFixture = [
   { id: 'pac-auto-3', nome: 'Juliana Prado' },
   { id: 'pac-auto-4', nome: 'Ricardo Nunes' },
   { id: 'pac-auto-5', nome: 'Beatriz Ramos' }
+];
+
+const canaisAutomacoesFixture = [
+  {
+    id: '11111111-1111-4111-8111-111111111111',
+    tenantId: 'tenant-1',
+    tipo: 'email',
+    nome: 'E-mail clínico',
+    configuracao: {},
+    ativo: true
+  },
+  {
+    id: '33333333-3333-4333-8333-333333333333',
+    tenantId: 'tenant-1',
+    tipo: 'whatsapp',
+    nome: 'WhatsApp oficial',
+    configuracao: {},
+    ativo: true
+  }
+];
+
+const templatesAutomacoesFixture = [
+  {
+    id: '22222222-2222-4222-8222-222222222222',
+    tenantId: 'tenant-1',
+    canal: 'email',
+    nome: 'Lembrete de acompanhamento',
+    conteudo: {},
+    aprovado: false
+  },
+  {
+    id: '44444444-4444-4444-8444-444444444444',
+    tenantId: 'tenant-1',
+    canal: 'whatsapp',
+    nome: 'Retorno de acompanhamento',
+    conteudo: {},
+    aprovado: true
+  },
+  {
+    id: '55555555-5555-4555-8555-555555555555',
+    tenantId: 'tenant-1',
+    canal: 'whatsapp',
+    nome: 'Rascunho não aprovado',
+    conteudo: {},
+    aprovado: false
+  }
 ];
 
 const regraConvencionalInativaFixture = {
@@ -2477,12 +2523,29 @@ function prepararPacientesAutomacoes(page, { itens = pacientesAutomacoesFixture 
   );
 }
 
-async function prepararAutomacoes(page, { sessao, regras, execucoes, profissionais, pacientes } = {}) {
+function prepararCanaisAutomacoes(page, { itens = canaisAutomacoesFixture } = {}) {
+  return page.route('**/api/comunicacoes/canais', (route) =>
+    route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(itens) })
+  );
+}
+
+function prepararTemplatesAutomacoes(page, { itens = templatesAutomacoesFixture } = {}) {
+  return page.route('**/api/comunicacoes/templates', (route) =>
+    route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(itens) })
+  );
+}
+
+async function prepararAutomacoes(
+  page,
+  { sessao, regras, execucoes, profissionais, pacientes, canais, templates } = {}
+) {
   await prepararSessaoAutomacoes(page, sessao);
   await prepararListaRegras(page, regras);
   await prepararHistoricoExecucoes(page, execucoes);
   await prepararProfissionaisAutomacoes(page, profissionais);
   await prepararPacientesAutomacoes(page, pacientes);
+  await prepararCanaisAutomacoes(page, canais);
+  await prepararTemplatesAutomacoes(page, templates);
 }
 
 test.describe('gate de acessibilidade - automacoes (PR 24)', () => {
@@ -2638,6 +2701,48 @@ test.describe('gate de acessibilidade - automacoes (PR 24)', () => {
       { tipo: 'criar_tarefa', titulo: 'Analisar retorno do check-in', prioridade: 'alta', prazoDias: 2 }
     ]);
     await expect(page.getByText(/criar a tarefa “Analisar retorno do check-in” com prioridade alta e prazo de 2 dias/)).toBeVisible();
+    await rodarChecagensDeAcessibilidadeSemNavegacaoPorTeclado(page);
+  });
+
+  test('nova regra - configura envio por template com canal e limite de frequência fechados', async ({ page }) => {
+    await prepararAutomacoes(page);
+    let corpoRecebido;
+    await page.route('**/api/automacoes/regras', async (route) => {
+      if (route.request().method() !== 'POST') return route.fallback();
+      corpoRecebido = route.request().postDataJSON();
+      await route.fulfill({
+        status: 201,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          id: 'regra-template-nova',
+          tenantId: 'tenant-1',
+          ...corpoRecebido,
+          ativa: false,
+          criadoEm: '2026-09-19T18:00:00.000Z'
+        })
+      });
+    });
+    await page.goto('/automacoes');
+
+    await page.getByLabel('Ação', { exact: true }).selectOption('enviar_template');
+    await page.getByLabel('Canal de envio').selectOption('33333333-3333-4333-8333-333333333333');
+    await expect(page.getByLabel('Template')).toHaveValue('44444444-4444-4444-8444-444444444444');
+    await expect(page.getByLabel('Template').getByRole('option', { name: 'Rascunho não aprovado' })).toHaveCount(0);
+    await page.getByLabel('Intervalo mínimo entre envios (horas)').fill('48');
+    await page.getByRole('button', { name: 'Salvar regra' }).click();
+
+    await expect(page.getByText('Regra salva como rascunho. Simule antes de ativar.')).toBeVisible();
+    expect(corpoRecebido.acoes).toEqual([
+      {
+        tipo: 'enviar_template',
+        canalId: '33333333-3333-4333-8333-333333333333',
+        templateId: '44444444-4444-4444-8444-444444444444',
+        intervaloMinimoHoras: 48
+      }
+    ]);
+    await expect(
+      page.getByText(/enviar o template “Retorno de acompanhamento” pelo canal WhatsApp oficial, no máximo uma vez a cada 48 horas/)
+    ).toBeVisible();
     await rodarChecagensDeAcessibilidadeSemNavegacaoPorTeclado(page);
   });
 

@@ -11,6 +11,7 @@ import {
   validarAcoesAutomacao
 } from '../dominio/acoes-automacao';
 import { avaliarCondicoes } from '../dominio/avaliador-regras';
+import { ehGatilhoInatividade } from '../dominio/recall-inatividade';
 import { ExecucaoRegraOrm } from '../infraestrutura/execucao-regra.orm';
 import { RegraAutomacaoOrm } from '../infraestrutura/regra-automacao.orm';
 import {
@@ -101,7 +102,9 @@ export class ProcessadorAutomacoes extends WorkerHost {
       }
 
       try {
-        regra.acoes = validarAcoesAutomacao(regra.acoes);
+        regra.acoes = validarAcoesAutomacao(regra.acoes, {
+          permitirTemplateEspecializado: ehGatilhoInatividade(regra.gatilho)
+        });
       } catch (erro) {
         execucao.status = 'falhou';
         execucao.erro =

@@ -2,12 +2,12 @@ import { EntityManager } from 'typeorm';
 import { ExecutorTenant } from '../../../infraestrutura/banco-dados/executor-tenant';
 import { CriptografiaDadosSensiveis } from '../../../infraestrutura/seguranca/criptografia-dados-sensiveis';
 import { registrarNotificacao } from '../../notificacoes/aplicacao/registrar-notificacao';
+import { ServicoComunicacoes } from '../../comunicacoes/aplicacao/servico-comunicacoes';
 import { AcompanhamentoTarefaOrm } from '../../pacientes/infraestrutura/acompanhamento-tarefa.orm';
 import { PacienteOrm } from '../../pacientes/infraestrutura/paciente.orm';
 import { ProfissionalOrm } from '../../profissionais/infraestrutura/profissional.orm';
 import { UsuarioOrm } from '../../usuarios/infraestrutura/usuario.orm';
 import {
-  AcaoAutomacaoNaoDisponivel,
   DestinoAcaoAutomacaoInvalido,
   DespachanteAcoesAutomacao
 } from './despachante-acoes-automacao';
@@ -60,9 +60,15 @@ function criarDespachante() {
     operacao(gerenciador)
   );
   const criptografar = jest.fn((valor: string) => Buffer.from(`cifrado:${valor}`, 'utf8'));
+  const enfileirarMensagemAutomacao = jest.fn().mockResolvedValue({
+    status: 'enfileirada',
+    mensagemId: '77777777-7777-4777-8777-777777777777'
+  });
+  const publicarEventoNotificacao = jest.fn().mockResolvedValue(undefined);
   const despachante = new DespachanteAcoesAutomacao(
     { executar } as unknown as ExecutorTenant,
-    { criptografar } as unknown as CriptografiaDadosSensiveis
+    { criptografar } as unknown as CriptografiaDadosSensiveis,
+    { enfileirarMensagemAutomacao, publicarEventoNotificacao } as unknown as ServicoComunicacoes
   );
   return {
     despachante,
@@ -75,7 +81,9 @@ function criarDespachante() {
     repositorioTarefas,
     repositorioPacientes,
     repositorioProfissionais,
-    repositorioUsuarios
+    repositorioUsuarios,
+    enfileirarMensagemAutomacao,
+    publicarEventoNotificacao
   };
 }
 
@@ -95,6 +103,13 @@ const acaoCriarTarefa = {
   titulo: 'Revisar acompanhamento',
   prioridade: 'alta' as const,
   prazoDias: 2
+};
+
+const acaoEnviarTemplate = {
+  tipo: 'enviar_template' as const,
+  canalId: '77777777-7777-4777-8777-777777777777',
+  templateId: '88888888-8888-4888-8888-888888888888',
+  intervaloMinimoHoras: 24
 };
 
 describe('DespachanteAcoesAutomacao', () => {
@@ -229,13 +244,61 @@ describe('DespachanteAcoesAutomacao', () => {
     expect(executarInsert).not.toHaveBeenCalled();
   });
 
-  it('mantem enviar_template indisponivel neste incremento', async () => {
-    const { despachante, executar } = criarDespachante();
+  it('enfileira template com politica fechada e publica somente o atalho da fila', async () => {
+    const { despachante, enfileirarMensagemAutomacao, publicarEventoNotificacao } = criarDespachante();
 
-    await expect(despachante.executar({ ...entrada, acao: { tipo: 'enviar_template' } })).rejects.toBeInstanceOf(
-      AcaoAutomacaoNaoDisponivel
+    await expect(despachante.executar({ ...entrada, acao: acaoEnviarTemplate })).resolves.toEqual({
+      status: 'executada'
+    });
+
+    expect(enfileirarMensagemAutomacao).toHaveBeenCalledWith(entrada.tenantId, {
+      pacienteId: entrada.pacienteId,
+      canalId: acaoEnviarTemplate.canalId,
+      templateId: acaoEnviarTemplate.templateId,
+      intervaloMinimoHoras: 24,
+      chaveIdempotencia: entrada.chaveIdempotencia
+    });
+    expect(publicarEventoNotificacao).toHaveBeenCalledWith(
+      entrada.tenantId,
+      '77777777-7777-4777-8777-777777777777'
     );
-    expect(executar).not.toHaveBeenCalled();
+    expect(JSON.stringify(enfileirarMensagemAutomacao.mock.calls)).not.toContain('observacaoPrivada');
+  });
+
+  it('considera executada quando a publicacao imediata falha, pois o outbox permanece duravel', async () => {
+    const { despachante, publicarEventoNotificacao } = criarDespachante();
+    publicarEventoNotificacao.mockRejectedValueOnce(new Error('redis indisponivel'));
+
+    await expect(despachante.executar({ ...entrada, acao: acaoEnviarTemplate })).resolves.toEqual({
+      status: 'executada'
+    });
+  });
+
+  it('propaga opt-out, janela e frequencia como acao ignorada, sem publicar', async () => {
+    const { despachante, enfileirarMensagemAutomacao, publicarEventoNotificacao } = criarDespachante();
+    enfileirarMensagemAutomacao.mockResolvedValueOnce({ status: 'ignorada', motivo: 'opt_out' });
+
+    await expect(despachante.executar({ ...entrada, acao: acaoEnviarTemplate })).resolves.toEqual({
+      status: 'ignorada'
+    });
+    expect(publicarEventoNotificacao).not.toHaveBeenCalled();
+  });
+
+  it('falha definitivamente quando enviar_template nao possui paciente ou recurso disponivel', async () => {
+    const { despachante, enfileirarMensagemAutomacao } = criarDespachante();
+
+    await expect(
+      despachante.executar({ ...entrada, pacienteId: undefined, acao: acaoEnviarTemplate })
+    ).rejects.toMatchObject({ codigo: 'paciente_obrigatorio', retriavel: false });
+
+    enfileirarMensagemAutomacao.mockResolvedValueOnce({
+      status: 'indisponivel',
+      motivo: 'template_indisponivel'
+    });
+    await expect(despachante.executar({ ...entrada, acao: acaoEnviarTemplate })).rejects.toMatchObject({
+      codigo: 'destino_indisponivel',
+      retriavel: false
+    });
   });
 
   it('propaga falha de persistencia para o retry do processador', async () => {

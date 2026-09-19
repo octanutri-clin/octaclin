@@ -3,7 +3,19 @@ export const TIPOS_ACAO_AUTOMACAO = ['notificar_profissional', 'enviar_template'
 export type TipoAcaoAutomacao = (typeof TIPOS_ACAO_AUTOMACAO)[number];
 
 export interface AcaoAutomacaoSimples {
-  tipo: Exclude<TipoAcaoAutomacao, 'criar_tarefa'>;
+  tipo: 'notificar_profissional';
+}
+
+export interface AcaoEnviarTemplateAutomacao {
+  tipo: 'enviar_template';
+  canalId: string;
+  templateId: string;
+  intervaloMinimoHoras: number;
+}
+
+/** Contrato exclusivo do recall especializado, que escolhe canal por paciente. */
+export interface AcaoEnviarTemplateEspecializado {
+  tipo: 'enviar_template';
 }
 
 export type PrioridadeTarefaAutomacao = 'baixa' | 'media' | 'alta';
@@ -15,7 +27,11 @@ export interface AcaoCriarTarefaAutomacao {
   prazoDias: number;
 }
 
-export type AcaoAutomacao = AcaoAutomacaoSimples | AcaoCriarTarefaAutomacao;
+export type AcaoAutomacao =
+  | AcaoAutomacaoSimples
+  | AcaoEnviarTemplateAutomacao
+  | AcaoEnviarTemplateEspecializado
+  | AcaoCriarTarefaAutomacao;
 
 export type StatusResultadoAcaoAutomacao =
   | 'pendente'
@@ -50,7 +66,17 @@ function possuiExatamenteAsChaves(item: Record<string, unknown>, esperadas: stri
   return chaves.length === esperadas.length && esperadas.every((chave) => chaves.includes(chave));
 }
 
-export function validarAcoesAutomacao(valor: unknown): AcaoAutomacao[] {
+function ehUuidCanonico(valor: unknown): valor is string {
+  return (
+    typeof valor === 'string' &&
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(valor)
+  );
+}
+
+export function validarAcoesAutomacao(
+  valor: unknown,
+  opcoes: { permitirTemplateEspecializado?: boolean } = {}
+): AcaoAutomacao[] {
   if (!Array.isArray(valor) || valor.length === 0) {
     throw new ContratoAcaoAutomacaoInvalido('A regra precisa conter ao menos uma acao.');
   }
@@ -85,6 +111,34 @@ export function validarAcoesAutomacao(valor: unknown): AcaoAutomacao[] {
         titulo,
         prioridade: item.prioridade as PrioridadeTarefaAutomacao,
         prazoDias: Number(item.prazoDias)
+      };
+    }
+
+    if (item.tipo === 'enviar_template') {
+      if (opcoes.permitirTemplateEspecializado && possuiExatamenteAsChaves(item, ['tipo'])) {
+        return { tipo: 'enviar_template' };
+      }
+      if (!possuiExatamenteAsChaves(item, ['tipo', 'canalId', 'templateId', 'intervaloMinimoHoras'])) {
+        throw new ContratoAcaoAutomacaoInvalido(`Acao ${indice + 1} contem campos fora do contrato atual.`);
+      }
+      if (!ehUuidCanonico(item.canalId)) {
+        throw new ContratoAcaoAutomacaoInvalido(`Acao ${indice + 1} possui canal invalido.`);
+      }
+      if (!ehUuidCanonico(item.templateId)) {
+        throw new ContratoAcaoAutomacaoInvalido(`Acao ${indice + 1} possui template invalido.`);
+      }
+      if (
+        !Number.isInteger(item.intervaloMinimoHoras) ||
+        Number(item.intervaloMinimoHoras) < 1 ||
+        Number(item.intervaloMinimoHoras) > 720
+      ) {
+        throw new ContratoAcaoAutomacaoInvalido(`Acao ${indice + 1} possui intervalo de frequencia invalido.`);
+      }
+      return {
+        tipo: 'enviar_template',
+        canalId: item.canalId,
+        templateId: item.templateId,
+        intervaloMinimoHoras: Number(item.intervaloMinimoHoras)
       };
     }
 

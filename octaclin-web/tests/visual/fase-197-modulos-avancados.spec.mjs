@@ -41,6 +41,16 @@ async function prepararSessao(page) {
     contentType: 'application/json',
     body: JSON.stringify({ itens: [{ id: profissionalId, nome: 'Profissional Teste' }], total: 1 })
   }));
+  await page.route('**/api/comunicacoes/canais', (route) => route.fulfill({
+    status: 200,
+    contentType: 'application/json',
+    body: '[]'
+  }));
+  await page.route('**/api/comunicacoes/templates', (route) => route.fulfill({
+    status: 200,
+    contentType: 'application/json',
+    body: '[]'
+  }));
   await page.route('**/api/mobile/midias/uploads**', (route) => route.fulfill({
     status: 200,
     contentType: 'application/json',

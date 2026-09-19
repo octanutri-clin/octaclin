@@ -18,6 +18,7 @@ import {
   simularRegraAutomacao
 } from '@/lib/automacoes-api';
 import { PacienteResumo, ProfissionalResumo, RespostaPaginada } from '@/lib/cadastros-api';
+import { CanalNotificacaoApi, TemplateMensagemApi } from '@/lib/comunicacoes-api';
 
 const GATILHO_INATIVIDADE = 'paciente.inativo';
 
@@ -32,6 +33,9 @@ interface FormularioRegra {
   tarefaTitulo: string;
   tarefaPrioridade: 'baixa' | 'media' | 'alta';
   tarefaPrazoDias: string;
+  canalId: string;
+  templateId: string;
+  intervaloMinimoHoras: string;
   diasSemConsulta: string;
   intervaloMinimoDias: string;
   limitePorExecucao: string;
@@ -57,6 +61,9 @@ const regraInicial: FormularioRegra = {
   tarefaTitulo: 'Revisar acompanhamento',
   tarefaPrioridade: 'media',
   tarefaPrazoDias: '1',
+  canalId: '',
+  templateId: '',
+  intervaloMinimoHoras: '24',
   diasSemConsulta: '60',
   intervaloMinimoDias: '30',
   limitePorExecucao: '25'
@@ -173,12 +180,37 @@ function rotuloTipoAcao(tipo: TipoAcaoAutomacao) {
   return rotulos[tipo];
 }
 
-function descreverAcao(acoes: AcaoAutomacaoApi[]) {
+function nomeCanal(canais: CanalNotificacaoApi[], id: string) {
+  return canais.find((canal) => canal.id === id)?.nome ?? id;
+}
+
+function nomeTemplate(templates: TemplateMensagemApi[], id: string) {
+  return templates.find((template) => template.id === id)?.nome ?? id;
+}
+
+function templatesElegiveisDoCanal(
+  templates: TemplateMensagemApi[],
+  canais: CanalNotificacaoApi[],
+  canalId: string
+) {
+  const canal = canais.find((item) => item.id === canalId);
+  if (!canal) return [];
+  return templates.filter((template) => template.canal === canal.tipo && (canal.tipo !== 'whatsapp' || template.aprovado));
+}
+
+function descreverAcao(
+  acoes: AcaoAutomacaoApi[],
+  canais: CanalNotificacaoApi[],
+  templates: TemplateMensagemApi[]
+) {
   return acoes
     .map((acao) => {
       if (acao.tipo === 'criar_tarefa' && 'titulo' in acao) {
         const prioridades = { baixa: 'baixa', media: 'média', alta: 'alta' };
         return `criar a tarefa “${acao.titulo}” com prioridade ${prioridades[acao.prioridade]} e prazo de ${acao.prazoDias} dia${acao.prazoDias === 1 ? '' : 's'}`;
+      }
+      if (acao.tipo === 'enviar_template' && 'canalId' in acao) {
+        return `enviar o template “${nomeTemplate(templates, acao.templateId)}” pelo canal ${nomeCanal(canais, acao.canalId)}, no máximo uma vez a cada ${acao.intervaloMinimoHoras} hora${acao.intervaloMinimoHoras === 1 ? '' : 's'}`;
       }
       return rotuloTipoAcao(acao.tipo);
     })
@@ -187,7 +219,15 @@ function descreverAcao(acoes: AcaoAutomacaoApi[]) {
 
 function montarAcaoFormulario(formulario: FormularioRegra, ehInatividade: boolean): AcaoAutomacaoApi {
   if (ehInatividade) return { tipo: 'enviar_template' };
-  if (formulario.acaoTipo !== 'criar_tarefa') return { tipo: formulario.acaoTipo };
+  if (formulario.acaoTipo === 'enviar_template') {
+    return {
+      tipo: 'enviar_template',
+      canalId: formulario.canalId,
+      templateId: formulario.templateId,
+      intervaloMinimoHoras: Number(formulario.intervaloMinimoHoras)
+    };
+  }
+  if (formulario.acaoTipo === 'notificar_profissional') return { tipo: 'notificar_profissional' };
   return {
     tipo: 'criar_tarefa',
     titulo: formulario.tarefaTitulo.trim(),
@@ -229,6 +269,8 @@ export function PainelAutomacoes() {
   const [regras, setRegras] = useState<RegraAutomacaoApi[]>([]);
   const [profissionais, setProfissionais] = useState<RespostaPaginada<ProfissionalResumo> | null>(null);
   const [pacientes, setPacientes] = useState<RespostaPaginada<PacienteResumo> | null>(null);
+  const [canais, setCanais] = useState<CanalNotificacaoApi[]>([]);
+  const [templates, setTemplates] = useState<TemplateMensagemApi[]>([]);
   const [execucoes, setExecucoes] = useState<ExecucaoRegraApi[]>([]);
   const [formularioRegra, setFormularioRegra] = useState<FormularioRegra>(regraInicial);
   const [formularioAvaliacao, setFormularioAvaliacao] = useState<FormularioAvaliacao>(avaliacaoInicial);
@@ -248,9 +290,26 @@ export function PainelAutomacoes() {
       setExecucoes(bootstrap.execucoes);
       setProfissionais(bootstrap.profissionais);
       setPacientes(bootstrap.pacientes);
+      setCanais(bootstrap.canais);
+      setTemplates(bootstrap.templates);
       setFormularioRegra((atual) => ({
         ...atual,
-        profissionalId: atual.profissionalId || bootstrap.profissionais.itens[0]?.id || ''
+        profissionalId: atual.profissionalId || bootstrap.profissionais.itens[0]?.id || '',
+        ...(() => {
+          const canaisElegiveis = bootstrap.canais.filter(
+            (canal) => canal.ativo && (canal.tipo === 'email' || canal.tipo === 'whatsapp')
+          );
+          const canalId = canaisElegiveis.some((canal) => canal.id === atual.canalId)
+            ? atual.canalId
+            : canaisElegiveis[0]?.id || '';
+          const templatesElegiveis = templatesElegiveisDoCanal(bootstrap.templates, canaisElegiveis, canalId);
+          return {
+            canalId,
+            templateId: templatesElegiveis.some((template) => template.id === atual.templateId)
+              ? atual.templateId
+              : templatesElegiveis[0]?.id || ''
+          };
+        })()
       }));
       setFormularioAvaliacao((atual) => ({
         ...atual,
@@ -263,6 +322,15 @@ export function PainelAutomacoes() {
       setCarregando(false);
     }
   }
+
+  const canaisElegiveis = canais.filter(
+    (canal) => canal.ativo && (canal.tipo === 'email' || canal.tipo === 'whatsapp')
+  );
+  const templatesElegiveis = templatesElegiveisDoCanal(templates, canaisElegiveis, formularioRegra.canalId);
+  const envioTemplateIncompleto =
+    !gatilhoInatividadeSelecionado &&
+    formularioRegra.acaoTipo === 'enviar_template' &&
+    (!formularioRegra.canalId || !formularioRegra.templateId);
 
   async function salvarRegra(evento: FormEvent<HTMLFormElement>) {
     evento.preventDefault();
@@ -593,6 +661,70 @@ export function PainelAutomacoes() {
                     </div>
                   </>
                 ) : null}
+                {formularioRegra.acaoTipo === 'enviar_template' ? (
+                  <>
+                    <div className="space-y-1.5">
+                      <Rotulo htmlFor="regra-canal">Canal de envio</Rotulo>
+                      <Selecao
+                        id="regra-canal"
+                        value={formularioRegra.canalId}
+                        onChange={(evento) => {
+                          const canalId = evento.target.value;
+                          const primeiroTemplate = templatesElegiveisDoCanal(templates, canaisElegiveis, canalId)[0];
+                          setFormularioRegra((atual) => ({
+                            ...atual,
+                            canalId,
+                            templateId: primeiroTemplate?.id || ''
+                          }));
+                        }}
+                        required
+                      >
+                        {canaisElegiveis.length ? null : <option value="">Nenhum canal disponível</option>}
+                        {canaisElegiveis.map((canal) => (
+                          <option key={canal.id} value={canal.id}>
+                            {canal.nome} ({canal.tipo === 'whatsapp' ? 'WhatsApp' : 'e-mail'})
+                          </option>
+                        ))}
+                      </Selecao>
+                    </div>
+                    <div className="space-y-1.5">
+                      <Rotulo htmlFor="regra-template">Template</Rotulo>
+                      <Selecao
+                        id="regra-template"
+                        value={formularioRegra.templateId}
+                        onChange={(evento) =>
+                          setFormularioRegra((atual) => ({ ...atual, templateId: evento.target.value }))
+                        }
+                        required
+                      >
+                        {templatesElegiveis.length ? null : <option value="">Nenhum template disponível</option>}
+                        {templatesElegiveis.map((template) => (
+                          <option key={template.id} value={template.id}>
+                            {template.nome}
+                          </option>
+                        ))}
+                      </Selecao>
+                    </div>
+                    <div className="space-y-1.5">
+                      <Rotulo htmlFor="regra-intervalo-template">Intervalo mínimo entre envios (horas)</Rotulo>
+                      <Campo
+                        id="regra-intervalo-template"
+                        type="number"
+                        min={1}
+                        max={720}
+                        step={1}
+                        value={formularioRegra.intervaloMinimoHoras}
+                        onChange={(evento) =>
+                          setFormularioRegra((atual) => ({
+                            ...atual,
+                            intervaloMinimoHoras: evento.target.value
+                          }))
+                        }
+                        required
+                      />
+                    </div>
+                  </>
+                ) : null}
               </>
             )}
           </div>
@@ -602,7 +734,11 @@ export function PainelAutomacoes() {
               : 'Toda regra nova fica em rascunho. Simule o resultado antes de ativar.'}
           </p>
           <div className="mt-3 flex justify-end">
-            <Botao type="submit" variante="primario" disabled={salvando || !profissionais?.itens.length}>
+            <Botao
+              type="submit"
+              variante="primario"
+              disabled={salvando || !profissionais?.itens.length || envioTemplateIncompleto}
+            >
               <Save size={16} />
               Salvar regra
             </Botao>
@@ -627,7 +763,7 @@ export function PainelAutomacoes() {
                   </div>
                   <p className="truncate text-xs text-texto-suave">{nomeProfissional(profissionais?.itens ?? [], regra.profissionalId)}</p>
                   <p className="text-xs text-texto-suave"><strong>Quando:</strong> {descreverGatilho(regra.gatilho)}.</p>
-                  <p className="text-xs text-texto-suave"><strong>Fazer:</strong> {descreverAcao(regra.acoes)}.</p>
+                  <p className="text-xs text-texto-suave"><strong>Fazer:</strong> {descreverAcao(regra.acoes, canais, templates)}.</p>
                   {String(regra.gatilho.tipo) === GATILHO_INATIVIDADE ? (
                     <Botao
                       type="button"

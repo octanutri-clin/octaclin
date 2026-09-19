@@ -44,10 +44,11 @@ validacao fechada, estado por acao, chave de idempotencia nem executor.
    - novo tipo `automacao_executada` no centro de notificacoes;
    - migration aditiva para ampliar a constraint de tipos;
    - fan-out transacional, link autorizado e idempotencia por execucao/acao.
-3. **266.3 - `criar_tarefa`** [EM REVISAO]
+3. **266.3 - `criar_tarefa`** [CONCLUIDO]
    - contrato de titulo, prioridade e prazo;
    - conteudo cifrado, escopo de tenant/profissional e deduplicacao.
-4. **266.4 - `enviar_template`** [PENDENTE]
+   - integrado no PR `#271`, merge `70e343d`, com todos os checks verdes.
+4. **266.4 - `enviar_template`** [EM IMPLEMENTACAO]
    - template e canal explicitos;
    - opt-out e janela de comunicacao obrigatorios, sem bypass automatico;
    - limite de frequencia, outbox e chave de idempotencia.
@@ -206,10 +207,10 @@ continua indisponivel ate 266.4.
 - [x] Testes focados reproduziram as ausencias antes da implementacao e passam
   depois dela.
 - [x] Suite completa, builds e gates de governanca.
-- [ ] Checks e revisao humana da PR `#271` contra `main`.
+- [x] Checks e revisao humana da PR `#271` contra `main`; merge `70e343d`.
 
-A implementacao esta publicada no PR `#271`; a conclusao deste incremento
-permanece condicionada aos checks remotos e ao merge humano.
+A implementacao foi integrada no PR `#271`, merge `70e343d`, depois dos checks
+remotos e do merge humano.
 
 A 266.3 nao adiciona migration, provider, segredo ou configuracao externa. O
 rollback operacional e reimplantar a versao anterior. Tarefas ja criadas sao
@@ -235,3 +236,61 @@ automaticamente pelo rollback.
   22 exigido pelo repositorio;
 - `NA` - migration, banco externo e providers: este incremento reutiliza a
   tabela, RLS, criptografia e chave primaria existentes.
+
+## 13. Implementacao e gates do Incremento 266.4
+
+- [x] `enviar_template` exige contrato fechado com UUIDs explicitos de canal e
+  template e intervalo inteiro de 1 a 720 horas; campos extras e bypass de
+  opt-out sao rejeitados.
+- [x] O fluxo generico aceita somente canais diretos ativos (`email` ou
+  `whatsapp`), template compativel e, no WhatsApp, template aprovado.
+- [x] Opt-out, canal preferido e janela de comunicacao do paciente sao
+  obrigatorios e nao possuem bypass automatico.
+- [x] O limite de frequencia cobre mensagens genericas do mesmo paciente e
+  canal em estado pendente, processando ou enviado; um advisory lock por
+  tenant/paciente/canal fecha a corrida entre regras concorrentes.
+- [x] A chave `automacao:<execucaoId>:acao:<indice>` reutiliza o indice unico
+  existente e o retry idempotente e resolvido antes de reavaliar politicas.
+- [x] Mensagem e evento `notificacao.enviar` do outbox sao gravados na mesma
+  transacao tenant-aware; falha da publicacao imediata no Redis nao converte um
+  efeito duravel em falha.
+- [x] Contexto da regra, observacoes e dados clinicos nao sao copiados para a
+  mensagem. O payload contem somente destino de roteamento e o evento fechado
+  `automacao.regra.template`.
+- [x] A Web lista somente canais diretos ativos, filtra templates compativeis e
+  esconde rascunhos de WhatsApp, coleta o intervalo e envia o mesmo contrato
+  discriminado do backend.
+- [x] O contrato simples `{ tipo: 'enviar_template' }` permanece exclusivo do
+  recall de inatividade; regras genericas legadas incompletas continuam
+  fail-closed.
+- [x] Testes focados reproduziram as ausencias antes da implementacao e passam
+  depois dela.
+- [x] Suite completa, builds e gates de governanca.
+- [ ] Checks e revisao humana da PR contra `main`.
+
+A 266.4 nao adiciona migration, segredo ou configuracao externa. O rollback
+operacional e reimplantar a versao anterior; mensagens ja enfileiradas e o
+outbox correspondente nao devem ser apagados automaticamente. A validacao
+local usa mocks e nao chama WhatsApp, Gmail ou outro provider externo.
+
+## 14. Evidencia local do Incremento 266.4
+
+- `PASS` - 19 suites e 197/197 testes dos modulos de automacoes e comunicacoes;
+- `PASS` - typecheck do backend e da Web;
+- `PASS` - suite completa do backend: 195 suites e 1.852 testes; 4 suites e
+  37 testes preexistentes permaneceram skipped;
+- `PASS` - builds do backend e da Web;
+- `PASS` - lint da Web sem erros e com 56 warnings preexistentes;
+- `PASS` - 10/10 cenarios Playwright de acessibilidade de Automacoes em
+  desktop e 10/10 em mobile, incluindo canal, template aprovado e payload
+  fechado;
+- `PASS` - regressao da Fase 197 em desktop e mobile;
+- `PASS` - matriz de confiabilidade com 40 referencias criticas, gate de
+  redacao de auditoria com 24/24 testes, scanner de secrets, documentacao
+  canonica e `git diff --check`;
+- `SKIPPED` - validacao local em Node 22: o host desta sessao usa Node 24.19.0
+  e emite o aviso de engine; o CI da PR deve repetir os gates no runtime Node
+  22 exigido pelo repositorio;
+- `NA` - migration, banco externo, staging, producao e providers: o incremento
+  reutiliza tabelas, RLS, criptografia, outbox e adaptadores existentes, e os
+  testes nao fazem disparos externos.
