@@ -7,13 +7,15 @@ Atualizado em 2026-09-19.
 - Produto: OctaClin.
 - Repositorio: `octanutri-clin/octaclin`.
 - Branch principal: `main`.
-- Reconciliacao de 2026-09-19: o Incremento 266.1 foi integrado pelo PR `#269`
-  (merge `143353f`) com todos os checks verdes. O Incremento 266.2 esta em
-  implementacao na branch `feat/fase266-2-notificar-profissional`: habilita a
-  notificacao interna `automacao_executada`, com transacao tenant,
-  idempotencia por execucao/acao, link autorizado e migration aditiva `1048`
-  fora de banda. A migration ainda nao foi aplicada em staging ou producao.
-  Plano e limites em `docs/history/phases/PLANO_FASE_266.md`.
+- Reconciliacao de 2026-09-19: os Incrementos 266.1 e 266.2 foram integrados
+  pelos PRs `#269` (merge `143353f`) e `#270` (merge `b4276cd`), com todos os
+  checks verdes. A migration `1048` foi aplicada fora de banda primeiro em
+  staging e depois em producao; readiness respondeu HTTP 200 nos dois
+  ambientes, com banco e 61 migrations em estado `ok`. O Incremento 266.3
+  esta em implementacao na branch `feat/fase266-3-criar-tarefa`: adiciona o
+  contrato fechado de titulo/prioridade/prazo, escrita cifrada tenant-aware e
+  deduplicacao por UUID deterministico, sem nova migration. Plano e limites em
+  `docs/history/phases/PLANO_FASE_266.md`.
 - Reconciliacao de 2026-09-18 (decisoes de produto para destravar a Fase
   265): o dono do produto aprovou o vocabulario fechado de `codigoMotivo`
   (`evento_recente_nao_capturado`, `informacao_externa_relevante`,
@@ -559,10 +561,11 @@ Atualizado em 2026-09-19.
 - Fase 266 - Execucao real das automacoes (PB-02), **em andamento desde
   2026-09-19**. O proprietario aprovou a ordem 266.1 fundacao confiavel, 266.2
   notificacao ao profissional, 266.3 criacao de tarefa e 266.4 envio de
-  template. A 266.1 foi integrada pelo PR `#269`; a 266.2 habilita somente a
-  notificacao interna ao profissional, sem provider externo, e inclui a
-  migration aditiva `1048` ainda nao aplicada. O PR 55 permanece adiado e o PR
-  56 continua condicionado a uma decisao explicita de distribuir o Mobile.
+  template. A 266.1 foi integrada pelo PR `#269`; a 266.2 foi integrada pelo
+  PR `#270`, e a migration aditiva `1048` foi aplicada e verificada em staging
+  e producao. A 266.3 esta em implementacao, sem nova migration. O PR 55
+  permanece adiado e o PR 56 continua condicionado a uma decisao explicita de
+  distribuir o Mobile.
 - Fase 261 (escopo de trabalho: gaps de seguranca e privacidade
   identificados no audit da fase) **concluida tecnicamente em 2026-09-15,
   com excecoes operacionais abertas; incrementos 1 a 4 integrados**.

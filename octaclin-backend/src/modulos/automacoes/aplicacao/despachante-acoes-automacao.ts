@@ -1,7 +1,13 @@
 import { Injectable } from '@nestjs/common';
 import { createHash } from 'crypto';
+import { IsNull } from 'typeorm';
 import { ExecutorTenant } from '../../../infraestrutura/banco-dados/executor-tenant';
+import { CriptografiaDadosSensiveis } from '../../../infraestrutura/seguranca/criptografia-dados-sensiveis';
 import { registrarNotificacao } from '../../notificacoes/aplicacao/registrar-notificacao';
+import { AcompanhamentoTarefaOrm } from '../../pacientes/infraestrutura/acompanhamento-tarefa.orm';
+import { PacienteOrm } from '../../pacientes/infraestrutura/paciente.orm';
+import { ProfissionalOrm } from '../../profissionais/infraestrutura/profissional.orm';
+import { UsuarioOrm } from '../../usuarios/infraestrutura/usuario.orm';
 import { AcaoAutomacao, TipoAcaoAutomacao } from '../dominio/acoes-automacao';
 
 export interface EntradaExecucaoAcaoAutomacao {
@@ -19,13 +25,31 @@ export interface SaidaExecucaoAcaoAutomacao {
   status: 'executada' | 'ignorada';
 }
 
-export class AcaoAutomacaoNaoDisponivel extends Error {
-  readonly codigo = 'acao_nao_disponivel';
+export abstract class FalhaDefinitivaAcaoAutomacao extends Error {
   readonly retriavel = false;
 
+  protected constructor(readonly codigo: string, mensagem: string) {
+    super(mensagem);
+    this.name = 'FalhaDefinitivaAcaoAutomacao';
+  }
+}
+
+export class AcaoAutomacaoNaoDisponivel extends FalhaDefinitivaAcaoAutomacao {
   constructor(readonly tipo: TipoAcaoAutomacao) {
-    super('Acao de automacao ainda nao habilitada.');
+    super('acao_nao_disponivel', 'Acao de automacao ainda nao habilitada.');
     this.name = 'AcaoAutomacaoNaoDisponivel';
+  }
+}
+
+export class DestinoAcaoAutomacaoInvalido extends FalhaDefinitivaAcaoAutomacao {
+  constructor(codigo: 'paciente_obrigatorio' | 'destino_indisponivel') {
+    super(
+      codigo,
+      codigo === 'paciente_obrigatorio'
+        ? 'A acao de criar tarefa exige um paciente.'
+        : 'O destino da acao nao esta mais disponivel.'
+    );
+    this.name = 'DestinoAcaoAutomacaoInvalido';
   }
 }
 
@@ -36,34 +60,91 @@ export class AcaoAutomacaoNaoDisponivel extends Error {
  */
 @Injectable()
 export class DespachanteAcoesAutomacao {
-  constructor(private readonly executorTenant: ExecutorTenant) {}
+  constructor(
+    private readonly executorTenant: ExecutorTenant,
+    private readonly criptografia: CriptografiaDadosSensiveis
+  ) {}
 
   async executar(entrada: EntradaExecucaoAcaoAutomacao): Promise<SaidaExecucaoAcaoAutomacao> {
-    if (entrada.acao.tipo !== 'notificar_profissional') {
-      throw new AcaoAutomacaoNaoDisponivel(entrada.acao.tipo);
+    if (entrada.acao.tipo === 'notificar_profissional') {
+      return this.executorTenant.executar(entrada.tenantId, async (gerenciador) => {
+        await registrarNotificacao(gerenciador, entrada.tenantId, {
+          tipo: 'automacao_executada',
+          recursoTipo: 'execucao_automacao',
+          recursoId: identificadorDeterministico('notificacao-automacao', entrada.chaveIdempotencia),
+          pacienteId: entrada.pacienteId,
+          profissionalId: entrada.profissionalId
+        });
+        return { status: 'executada' };
+      });
     }
 
-    return this.executorTenant.executar(entrada.tenantId, async (gerenciador) => {
-      await registrarNotificacao(gerenciador, entrada.tenantId, {
-        tipo: 'automacao_executada',
-        recursoTipo: 'execucao_automacao',
-        recursoId: identificadorNotificacao(entrada.chaveIdempotencia),
-        pacienteId: entrada.pacienteId,
-        profissionalId: entrada.profissionalId
+    if (entrada.acao.tipo === 'criar_tarefa') {
+      const acao = entrada.acao;
+      if (!entrada.pacienteId) throw new DestinoAcaoAutomacaoInvalido('paciente_obrigatorio');
+      const tarefaId = identificadorDeterministico('tarefa-automacao', entrada.chaveIdempotencia);
+
+      return this.executorTenant.executar(entrada.tenantId, async (gerenciador) => {
+        const repositorioTarefas = gerenciador.getRepository(AcompanhamentoTarefaOrm);
+        const existente = await repositorioTarefas.findOne({
+          select: { id: true },
+          where: { id: tarefaId, tenantId: entrada.tenantId }
+        });
+        if (existente) return { status: 'executada' };
+
+        const paciente = await gerenciador.getRepository(PacienteOrm).findOne({
+          select: { id: true },
+          where: { id: entrada.pacienteId, tenantId: entrada.tenantId }
+        });
+        const profissional = await gerenciador.getRepository(ProfissionalOrm).findOne({
+          select: { id: true, usuarioId: true },
+          where: { id: entrada.profissionalId, tenantId: entrada.tenantId, arquivadoEm: IsNull() }
+        });
+        const usuario = profissional
+          ? await gerenciador.getRepository(UsuarioOrm).findOne({
+              select: { id: true },
+              where: { id: profissional.usuarioId, tenantId: entrada.tenantId, ativo: true }
+            })
+          : null;
+        if (!paciente || !profissional || !usuario) {
+          throw new DestinoAcaoAutomacaoInvalido('destino_indisponivel');
+        }
+
+        const vencimentoEm = new Date(Date.now() + acao.prazoDias * 24 * 60 * 60 * 1000);
+        await repositorioTarefas
+          .createQueryBuilder()
+          .insert()
+          .into(AcompanhamentoTarefaOrm)
+          .values({
+            id: tarefaId,
+            tenantId: entrada.tenantId,
+            pacienteId: entrada.pacienteId,
+            profissionalId: usuario.id,
+            tituloCriptografado: this.criptografia.criptografar(acao.titulo),
+            categoria: 'tarefa',
+            prioridade: acao.prioridade,
+            status: 'pendente',
+            vencimentoEm
+          })
+          .orIgnore()
+          .execute();
+
+        return { status: 'executada' };
       });
-      return { status: 'executada' };
-    });
+    }
+
+    throw new AcaoAutomacaoNaoDisponivel(entrada.acao.tipo);
   }
 }
 
 /**
- * O indice unico de notificacoes usa `recurso_id` (uuid). A chave da acao e
- * estavel, mas textual; este UUID v8 deterministico conserva a idempotencia por
- * execucao/indice sem persistir a chave interna nem adicionar payload livre.
+ * Os efeitos persistidos usam UUID. A chave da acao e estavel, mas textual;
+ * este UUID v8 deterministico conserva a idempotencia por execucao/indice sem
+ * persistir a chave interna nem adicionar payload livre.
  */
-function identificadorNotificacao(chaveIdempotencia: string): string {
+function identificadorDeterministico(finalidade: string, chaveIdempotencia: string): string {
   const bytes = createHash('sha256')
-    .update(`octaclin:notificacao-automacao:${chaveIdempotencia}`, 'utf8')
+    .update(`octaclin:${finalidade}:${chaveIdempotencia}`, 'utf8')
     .digest()
     .subarray(0, 16);
   bytes[6] = (bytes[6] & 0x0f) | 0x80;

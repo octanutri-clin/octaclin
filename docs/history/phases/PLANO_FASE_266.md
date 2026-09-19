@@ -40,11 +40,11 @@ validacao fechada, estado por acao, chave de idempotencia nem executor.
      estruturado para backend e Web;
    - nenhuma migration e nenhum efeito real neste incremento.
    - integrado no PR `#269`, merge `143353f`, com todos os checks verdes.
-2. **266.2 - `notificar_profissional`** [EM IMPLEMENTACAO]
+2. **266.2 - `notificar_profissional`** [CONCLUIDO]
    - novo tipo `automacao_executada` no centro de notificacoes;
    - migration aditiva para ampliar a constraint de tipos;
    - fan-out transacional, link autorizado e idempotencia por execucao/acao.
-3. **266.3 - `criar_tarefa`** [PENDENTE]
+3. **266.3 - `criar_tarefa`** [EM IMPLEMENTACAO]
    - contrato de titulo, prioridade e prazo;
    - conteudo cifrado, escopo de tenant/profissional e deduplicacao.
 4. **266.4 - `enviar_template`** [PENDENTE]
@@ -81,9 +81,10 @@ staging e producao. Seu rollback e reimplantar a versao anterior. Os campos
 novos ficam somente no JSON `resultado`; consumidores antigos ja toleram campos
 adicionais.
 
-A 266.2 inclui a migration aditiva `1048`, aplicada fora de banda e ainda nao
-executada em ambiente externo. O rollback operacional preferencial e
-reimplantar a aplicacao anterior mantendo a ampliacao compativel da constraint.
+A 266.2 inclui a migration aditiva `1048`, aplicada e verificada fora de banda
+primeiro em staging e depois em producao apos o merge do PR `#270`. O rollback
+operacional preferencial e reimplantar a aplicacao anterior mantendo a
+ampliacao compativel da constraint.
 O `down` apaga apenas notificacoes `automacao_executada` antes de restaurar a
 constraint antiga e, por isso, exige janela, backup e aceite humano explicito;
 nao deve ser executado automaticamente.
@@ -153,12 +154,12 @@ rascunhos permanecem disponiveis.
 - [x] Testes focados reproduziram as ausencias antes da implementacao e passam
   depois dela.
 - [x] Suite completa, builds, gates de governanca e Playwright afetado.
-- [ ] Checks e revisao humana da PR contra `main`.
-- [ ] Migration aplicada e verificada primeiro em staging e depois em
-  producao, somente apos merge e na sequencia do runbook.
+- [x] Checks e revisao humana da PR `#270` contra `main`; merge `b4276cd`.
+- [x] Migration aplicada e verificada primeiro em staging e depois em
+  producao, na sequencia do runbook.
 
-Nenhum provider externo e acionado neste incremento. As acoes `criar_tarefa` e
-`enviar_template` continuam indisponiveis ate 266.3 e 266.4, respectivamente.
+Nenhum provider externo e acionado neste incremento. A acao `enviar_template`
+continua indisponivel ate 266.4.
 
 ## 10. Evidencia local do Incremento 266.2
 
@@ -174,5 +175,60 @@ Nenhum provider externo e acionado neste incremento. As acoes `criar_tarefa` e
 - `SKIPPED` - validacao local em Node 22: o host desta sessao usa Node 24.19.0
   e emite o aviso de engine; o CI da PR deve repetir os gates no runtime Node 22
   exigido pelo repositorio;
-- `NA` - migration, banco externo, staging, producao e providers: a migration
-  `1048` foi apenas criada e registrada, sem aplicacao externa nesta PR.
+- `PASS` - migration `1048` aplicada fora de banda primeiro em staging e
+  depois em producao; readiness HTTP 200 nos dois ambientes, com banco e 61
+  migrations registradas em estado `ok`;
+- `PASS` - health detalhado HTTP 200 nos dois ambientes; staging permaneceu
+  degradado somente por ClamAV e Google Calendar incompleto, e producao
+  somente por ClamAV;
+- `NA` - providers externos: o efeito deste incremento e exclusivamente
+  interno ao centro de notificacoes.
+
+## 11. Implementacao e gates do Incremento 266.3
+
+- [x] `criar_tarefa` exige contrato fechado com titulo de 3 a 180 caracteres,
+  prioridade `baixa|media|alta` e prazo inteiro de 1 a 365 dias.
+- [x] O titulo da tarefa criada e cifrado com o servico existente; contexto da
+  avaliacao, observacoes e outros dados clinicos nao sao copiados para o
+  efeito.
+- [x] O efeito roda dentro de `ExecutorTenant` e revalida paciente, perfil
+  profissional e usuario ativo no mesmo tenant antes da escrita.
+- [x] O ID do perfil profissional da regra e resolvido para o ID de usuario
+  exigido por `acompanhamento_tarefas.profissional_id`.
+- [x] O ID da tarefa e um UUID v8 deterministico derivado da chave da acao; a
+  insercao usa `ON CONFLICT DO NOTHING`, impedindo duplicacao em retry sem DDL.
+- [x] Ausencia de paciente ou destino removido/inativo termina em falha
+  definitiva com codigo fechado e nao consome retries transitorios.
+- [x] A Web coleta e exibe titulo, prioridade e prazo e envia o mesmo contrato
+  discriminado do backend.
+- [x] Regras legadas `criar_tarefa` sem parametros permanecem fail-closed: nao
+  passam a criar efeitos com defaults silenciosos e precisam ser recriadas.
+- [x] Testes focados reproduziram as ausencias antes da implementacao e passam
+  depois dela.
+- [x] Suite completa, builds e gates de governanca.
+- [ ] Checks e revisao humana da PR contra `main`.
+
+A 266.3 nao adiciona migration, provider, segredo ou configuracao externa. O
+rollback operacional e reimplantar a versao anterior. Tarefas ja criadas sao
+registros clinico-operacionais legitimos e nao devem ser apagadas
+automaticamente pelo rollback.
+
+## 12. Evidencia local do Incremento 266.3
+
+- `PASS` - 9 suites e 85/85 testes do modulo de automacoes;
+- `PASS` - typecheck do backend e da Web;
+- `PASS` - suite completa do backend: 195 suites e 1.834 testes; 4 suites e
+  37 testes preexistentes permaneceram skipped;
+- `PASS` - builds do backend e da Web;
+- `PASS` - lint da Web sem erros e com 56 warnings preexistentes;
+- `PASS` - 9/9 cenarios Playwright de acessibilidade de Automacoes em desktop
+  e 9/9 em mobile, incluindo configuracao e payload fechado de
+  `criar_tarefa`;
+- `PASS` - matriz de confiabilidade com 40 referencias criticas, gate de
+  redacao de auditoria com 24/24 testes, scanner de secrets, documentacao
+  canonica e `git diff --check`;
+- `SKIPPED` - validacao local em Node 22: o host desta sessao usa Node 24.19.0
+  e emite o aviso de engine; o CI da PR deve repetir os gates no runtime Node
+  22 exigido pelo repositorio;
+- `NA` - migration, banco externo e providers: este incremento reutiliza a
+  tabela, RLS, criptografia e chave primaria existentes.

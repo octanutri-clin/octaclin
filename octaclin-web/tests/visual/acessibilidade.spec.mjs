@@ -2320,7 +2320,7 @@ const regraConvencionalAtivaFixture = {
   nome: 'Alertar risco alto',
   gatilho: { tipo: 'paciente.risco_alto' },
   condicoes: [{ campo: 'frustracaoScore', operador: 'maior_que', valor: 70 }],
-  acoes: [{ tipo: 'criar_tarefa' }],
+  acoes: [{ tipo: 'criar_tarefa', titulo: 'Revisar acompanhamento', prioridade: 'alta', prazoDias: 2 }],
   ativa: true,
   criadoEm: '2026-08-02T10:00:00.000Z'
 };
@@ -2604,6 +2604,41 @@ test.describe('gate de acessibilidade - automacoes (PR 24)', () => {
     await expect(page.getByRole('button', { name: 'Salvar regra' })).toBeVisible();
 
     await rodarChecagensDeAcessibilidade(page);
+  });
+
+  test('nova regra - configura criar tarefa com contrato fechado', async ({ page }) => {
+    await prepararAutomacoes(page);
+    let corpoRecebido;
+    await page.route('**/api/automacoes/regras', async (route) => {
+      if (route.request().method() !== 'POST') return route.fallback();
+      corpoRecebido = route.request().postDataJSON();
+      await route.fulfill({
+        status: 201,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          id: 'regra-tarefa-nova',
+          tenantId: 'tenant-1',
+          ...corpoRecebido,
+          ativa: false,
+          criadoEm: '2026-09-19T15:00:00.000Z'
+        })
+      });
+    });
+    await page.goto('/automacoes');
+
+    await page.getByLabel('Ação', { exact: true }).selectOption('criar_tarefa');
+    await expect(page.getByLabel('Título da tarefa')).toHaveValue('Revisar acompanhamento');
+    await page.getByLabel('Título da tarefa').fill('Analisar retorno do check-in');
+    await page.getByLabel('Prioridade da tarefa').selectOption('alta');
+    await page.getByLabel('Prazo em dias').fill('2');
+    await page.getByRole('button', { name: 'Salvar regra' }).click();
+
+    await expect(page.getByText('Regra salva como rascunho. Simule antes de ativar.')).toBeVisible();
+    expect(corpoRecebido.acoes).toEqual([
+      { tipo: 'criar_tarefa', titulo: 'Analisar retorno do check-in', prioridade: 'alta', prazoDias: 2 }
+    ]);
+    await expect(page.getByText(/criar a tarefa “Analisar retorno do check-in” com prioridade alta e prazo de 2 dias/)).toBeVisible();
+    await rodarChecagensDeAcessibilidadeSemNavegacaoPorTeclado(page);
   });
 
   // Interacao relevante: uma regra inativa nao pode ser ativada antes da

@@ -29,6 +29,9 @@ interface FormularioRegra {
   operador: 'igual' | 'maior_que' | 'maior_ou_igual' | 'menor_que' | 'inclui';
   valor: string;
   acaoTipo: TipoAcaoAutomacao;
+  tarefaTitulo: string;
+  tarefaPrioridade: 'baixa' | 'media' | 'alta';
+  tarefaPrazoDias: string;
   diasSemConsulta: string;
   intervaloMinimoDias: string;
   limitePorExecucao: string;
@@ -51,6 +54,9 @@ const regraInicial: FormularioRegra = {
   operador: 'maior_ou_igual',
   valor: '3',
   acaoTipo: 'notificar_profissional',
+  tarefaTitulo: 'Revisar acompanhamento',
+  tarefaPrioridade: 'media',
+  tarefaPrazoDias: '1',
   diasSemConsulta: '60',
   intervaloMinimoDias: '30',
   limitePorExecucao: '25'
@@ -158,13 +164,36 @@ function ResumoRecall({
   );
 }
 
-function descreverAcao(acoes: AcaoAutomacaoApi[]) {
-  const rotulos: Record<string, string> = {
+function rotuloTipoAcao(tipo: TipoAcaoAutomacao) {
+  const rotulos: Record<TipoAcaoAutomacao, string> = {
     notificar_profissional: 'notificar o profissional',
     enviar_template: 'enviar uma mensagem aprovada',
     criar_tarefa: 'criar uma tarefa de acompanhamento'
   };
-  return acoes.map((acao) => rotulos[String(acao.tipo)] ?? resumirJson(acao)).join(', ');
+  return rotulos[tipo];
+}
+
+function descreverAcao(acoes: AcaoAutomacaoApi[]) {
+  return acoes
+    .map((acao) => {
+      if (acao.tipo === 'criar_tarefa' && 'titulo' in acao) {
+        const prioridades = { baixa: 'baixa', media: 'média', alta: 'alta' };
+        return `criar a tarefa “${acao.titulo}” com prioridade ${prioridades[acao.prioridade]} e prazo de ${acao.prazoDias} dia${acao.prazoDias === 1 ? '' : 's'}`;
+      }
+      return rotuloTipoAcao(acao.tipo);
+    })
+    .join(', ');
+}
+
+function montarAcaoFormulario(formulario: FormularioRegra, ehInatividade: boolean): AcaoAutomacaoApi {
+  if (ehInatividade) return { tipo: 'enviar_template' };
+  if (formulario.acaoTipo !== 'criar_tarefa') return { tipo: formulario.acaoTipo };
+  return {
+    tipo: 'criar_tarefa',
+    titulo: formulario.tarefaTitulo.trim(),
+    prioridade: formulario.tarefaPrioridade,
+    prazoDias: Number(formulario.tarefaPrazoDias)
+  };
 }
 
 const ROTULOS_STATUS_ACAO: Record<string, string> = {
@@ -188,7 +217,7 @@ function ResumoAcoesExecucao({ execucao }: { execucao: ExecucaoRegraApi }) {
     <ul className="grid gap-1 text-xs text-texto-suave">
       {acoes.map((acao) => (
         <li key={acao.chaveIdempotencia}>
-          {descreverAcao([{ tipo: acao.tipo }])}: {ROTULOS_STATUS_ACAO[acao.status] ?? acao.status}
+          {rotuloTipoAcao(acao.tipo)}: {ROTULOS_STATUS_ACAO[acao.status] ?? acao.status}
           {acao.tentativas > 0 ? ` (${acao.tentativas} tentativa${acao.tentativas === 1 ? '' : 's'})` : ''}
         </li>
       ))}
@@ -266,7 +295,7 @@ export function PainelAutomacoes() {
                 valor: valorCondicao(formularioRegra.valor)
               }
             ],
-        acoes: [{ tipo: ehInatividade ? 'enviar_template' : formularioRegra.acaoTipo }],
+        acoes: [montarAcaoFormulario(formularioRegra, ehInatividade)],
         ativa: false
       });
       setRegras((atuais) => [criada, ...atuais]);
@@ -515,6 +544,55 @@ export function PainelAutomacoes() {
                     <option value="criar_tarefa">Criar tarefa</option>
                   </Selecao>
                 </div>
+                {formularioRegra.acaoTipo === 'criar_tarefa' ? (
+                  <>
+                    <div className="space-y-1.5 md:col-span-2">
+                      <Rotulo htmlFor="regra-tarefa-titulo">Título da tarefa</Rotulo>
+                      <Campo
+                        id="regra-tarefa-titulo"
+                        minLength={3}
+                        maxLength={180}
+                        value={formularioRegra.tarefaTitulo}
+                        onChange={(evento) =>
+                          setFormularioRegra((atual) => ({ ...atual, tarefaTitulo: evento.target.value }))
+                        }
+                        required
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Rotulo htmlFor="regra-tarefa-prioridade">Prioridade da tarefa</Rotulo>
+                      <Selecao
+                        id="regra-tarefa-prioridade"
+                        value={formularioRegra.tarefaPrioridade}
+                        onChange={(evento) =>
+                          setFormularioRegra((atual) => ({
+                            ...atual,
+                            tarefaPrioridade: evento.target.value as FormularioRegra['tarefaPrioridade']
+                          }))
+                        }
+                      >
+                        <option value="baixa">Baixa</option>
+                        <option value="media">Média</option>
+                        <option value="alta">Alta</option>
+                      </Selecao>
+                    </div>
+                    <div className="space-y-1.5">
+                      <Rotulo htmlFor="regra-tarefa-prazo">Prazo em dias</Rotulo>
+                      <Campo
+                        id="regra-tarefa-prazo"
+                        type="number"
+                        min={1}
+                        max={365}
+                        step={1}
+                        value={formularioRegra.tarefaPrazoDias}
+                        onChange={(evento) =>
+                          setFormularioRegra((atual) => ({ ...atual, tarefaPrazoDias: evento.target.value }))
+                        }
+                        required
+                      />
+                    </div>
+                  </>
+                ) : null}
               </>
             )}
           </div>

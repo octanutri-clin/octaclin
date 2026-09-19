@@ -13,7 +13,10 @@ import {
 import { avaliarCondicoes } from '../dominio/avaliador-regras';
 import { ExecucaoRegraOrm } from '../infraestrutura/execucao-regra.orm';
 import { RegraAutomacaoOrm } from '../infraestrutura/regra-automacao.orm';
-import { AcaoAutomacaoNaoDisponivel, DespachanteAcoesAutomacao } from './despachante-acoes-automacao';
+import {
+  DespachanteAcoesAutomacao,
+  FalhaDefinitivaAcaoAutomacao
+} from './despachante-acoes-automacao';
 import { FILA_AUTOMACOES } from './servico-automacoes';
 
 interface JobAutomacao {
@@ -169,9 +172,9 @@ export class ProcessadorAutomacoes extends WorkerHost {
     erro: unknown,
     deveRetentar: boolean
   ): Promise<void> {
-    const indisponivel = erro instanceof AcaoAutomacaoNaoDisponivel;
-    const mensagem = indisponivel
-      ? 'Acao de automacao ainda nao habilitada.'
+    const falhaDefinitiva = erro instanceof FalhaDefinitivaAcaoAutomacao;
+    const mensagem = falhaDefinitiva
+      ? erro.message
       : deveRetentar
         ? 'Falha temporaria ao executar acao de automacao.'
         : 'Falha definitiva ao executar acao de automacao.';
@@ -183,7 +186,7 @@ export class ProcessadorAutomacoes extends WorkerHost {
       acoes[resultadoAcao.indice] = {
         ...acoes[resultadoAcao.indice],
         status: deveRetentar ? 'pendente' : 'falhou',
-        codigoErro: indisponivel ? erro.codigo : 'falha_execucao'
+        codigoErro: falhaDefinitiva ? erro.codigo : 'falha_execucao'
       };
       execucao.status = deveRetentar ? 'pendente' : 'falhou';
       execucao.erro = mensagem;
@@ -238,6 +241,6 @@ export class ProcessadorAutomacoes extends WorkerHost {
   }
 
   private erroRetriavel(erro: unknown): boolean {
-    return !(erro instanceof AcaoAutomacaoNaoDisponivel);
+    return !(erro instanceof FalhaDefinitivaAcaoAutomacao);
   }
 }

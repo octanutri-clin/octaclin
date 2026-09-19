@@ -2,7 +2,11 @@ import { Job } from 'bullmq';
 import { In } from 'typeorm';
 import { ExecucaoRegraOrm } from '../infraestrutura/execucao-regra.orm';
 import { RegraAutomacaoOrm } from '../infraestrutura/regra-automacao.orm';
-import { AcaoAutomacaoNaoDisponivel, DespachanteAcoesAutomacao } from './despachante-acoes-automacao';
+import {
+  AcaoAutomacaoNaoDisponivel,
+  DestinoAcaoAutomacaoInvalido,
+  DespachanteAcoesAutomacao
+} from './despachante-acoes-automacao';
 import { ProcessadorAutomacoes } from './processador-automacoes';
 
 function criarCenario(opcoes: {
@@ -155,9 +159,9 @@ describe('ProcessadorAutomacoes', () => {
 
   it('registra falha definitiva sem retry quando a acao ainda nao possui executor', async () => {
     const executarAcao = jest.fn(async () => {
-      throw new AcaoAutomacaoNaoDisponivel('criar_tarefa');
+      throw new AcaoAutomacaoNaoDisponivel('enviar_template');
     });
-    const cenario = criarCenario({ acoes: [{ tipo: 'criar_tarefa' }], executarAcao });
+    const cenario = criarCenario({ acoes: [{ tipo: 'enviar_template' }], executarAcao });
 
     await expect(cenario.processador.process(cenario.job())).resolves.toBeUndefined();
 
@@ -166,6 +170,27 @@ describe('ProcessadorAutomacoes', () => {
     expect(cenario.execucao.resultado).toEqual(
       expect.objectContaining({
         acoes: [expect.objectContaining({ status: 'falhou', codigoErro: 'acao_nao_disponivel' })]
+      })
+    );
+  });
+
+  it('registra o codigo fechado de destino invalido sem retry', async () => {
+    const executarAcao = jest.fn(async () => {
+      throw new DestinoAcaoAutomacaoInvalido('paciente_obrigatorio');
+    });
+    const cenario = criarCenario({
+      acoes: [{ tipo: 'criar_tarefa', titulo: 'Revisar acompanhamento', prioridade: 'media', prazoDias: 1 }],
+      executarAcao
+    });
+
+    await expect(cenario.processador.process(cenario.job())).resolves.toBeUndefined();
+
+    expect(executarAcao).toHaveBeenCalledTimes(1);
+    expect(cenario.execucao.status).toBe('falhou');
+    expect(cenario.execucao.erro).toBe('A acao de criar tarefa exige um paciente.');
+    expect(cenario.execucao.resultado).toEqual(
+      expect.objectContaining({
+        acoes: [expect.objectContaining({ status: 'falhou', codigoErro: 'paciente_obrigatorio' })]
       })
     );
   });
@@ -194,7 +219,10 @@ describe('ProcessadorAutomacoes', () => {
   it('retoma plano parcial sem repetir uma acao ja concluida', async () => {
     const cenario = criarCenario({
       status: 'processando',
-      acoes: [{ tipo: 'notificar_profissional' }, { tipo: 'criar_tarefa' }],
+      acoes: [
+        { tipo: 'notificar_profissional' },
+        { tipo: 'criar_tarefa', titulo: 'Revisar acompanhamento', prioridade: 'media', prazoDias: 1 }
+      ],
       resultado: {
         executar: true,
         acoes: [
@@ -220,7 +248,10 @@ describe('ProcessadorAutomacoes', () => {
 
     expect(cenario.executarAcao).toHaveBeenCalledTimes(1);
     expect(cenario.executarAcao).toHaveBeenCalledWith(
-      expect.objectContaining({ acao: { tipo: 'criar_tarefa' }, chaveIdempotencia: 'automacao:execucao-1:acao:1' })
+      expect.objectContaining({
+        acao: { tipo: 'criar_tarefa', titulo: 'Revisar acompanhamento', prioridade: 'media', prazoDias: 1 },
+        chaveIdempotencia: 'automacao:execucao-1:acao:1'
+      })
     );
     expect(cenario.execucao.resultado).toEqual(
       expect.objectContaining({
