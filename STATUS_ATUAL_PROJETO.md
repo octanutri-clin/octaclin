@@ -14,7 +14,7 @@ Atualizado em 2026-09-19.
   ambientes, com banco e 61 migrations em estado `ok`. O Incremento 266.3 foi
   integrado pelo PR `#271` (merge `70e343d`), com contrato fechado de
   titulo/prioridade/prazo, escrita cifrada tenant-aware e deduplicacao por UUID
-  deterministico. O Incremento 266.4 esta em implementacao na branch
+  deterministico. O Incremento 266.4 esta em revisao no PR `#272`, branch
   `feat/fase266-4-enviar-template`: canal e template explicitos, opt-out e
   janela obrigatorios, limite de frequencia, idempotencia e outbox, sem nova
   migration. Plano e limites em `docs/history/phases/PLANO_FASE_266.md`.
@@ -566,9 +566,9 @@ Atualizado em 2026-09-19.
   template. A 266.1 foi integrada pelo PR `#269`; a 266.2 foi integrada pelo
   PR `#270`, e a migration aditiva `1048` foi aplicada e verificada em staging
   e producao. A 266.3 foi integrada pelo PR `#271` (merge `70e343d`). A 266.4
-  esta em implementacao na branch `feat/fase266-4-enviar-template`, sem nova
-  migration. O PR 55 permanece adiado e o PR 56 continua condicionado a uma
-  decisao explicita de distribuir o Mobile.
+  esta em revisao no PR `#272`, branch `feat/fase266-4-enviar-template`, sem
+  nova migration. O PR 55 permanece adiado e o PR 56 continua condicionado a
+  uma decisao explicita de distribuir o Mobile.
 - Fase 261 (escopo de trabalho: gaps de seguranca e privacidade
   identificados no audit da fase) **concluida tecnicamente em 2026-09-15,
   com excecoes operacionais abertas; incrementos 1 a 4 integrados**.

@@ -265,10 +265,10 @@ Critério: valor claro, esforço pequeno, risco baixo, sem migration pesada e se
 - **Estado da remediação em 2026-09-19**: a fundação confiável,
   `notificar_profissional` e `criar_tarefa` foram integrados nos PRs `#269`,
   `#270` e `#271`; a migration `1048` foi verificada em staging e produção. O
-  `enviar_template` está em implementação na Fase 266.4 com canal e template
-  explícitos, políticas obrigatórias do paciente, limite de frequência,
-  idempotência e outbox. Os gatilhos reais permanecem pendentes, de modo que o
-  PB-02 ainda não está concluído.
+  `enviar_template` está em revisão no PR `#272` da Fase 266.4 com canal e
+  template explícitos, políticas obrigatórias do paciente, limite de
+  frequência, idempotência e outbox. Os gatilhos reais permanecem pendentes,
+  de modo que o PB-02 ainda não está concluído.
 
 ### 5.3 Resumo clínico do paciente (os primeiros 10 segundos)
 - **Atual** `[F]`: a aba Resumo traz próxima ação, próxima consulta, contexto operacional (último atendimento,

@@ -3496,7 +3496,7 @@ publicado antes de ampliar a superficie de mudancas visuais.
     e deduplicacao; integrado no PR `#271` (merge `70e343d`), sem nova
     migration.
   - [~] 266.4 - Implementar `enviar_template` com canal/template explicitos,
-    opt-out, janela, frequencia e outbox; em implementacao na branch
+    opt-out, janela, frequencia e outbox; em revisao no PR `#272`, branch
     `feat/fase266-4-enviar-template`, sem nova migration.
   - [ ] Depois do PB-02, seguir obrigatoriamente para PB-03 e depois PB-05.
   - Plano, risco e rollback: `docs/history/phases/PLANO_FASE_266.md`.

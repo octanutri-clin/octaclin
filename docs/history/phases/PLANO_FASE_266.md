@@ -48,7 +48,7 @@ validacao fechada, estado por acao, chave de idempotencia nem executor.
    - contrato de titulo, prioridade e prazo;
    - conteudo cifrado, escopo de tenant/profissional e deduplicacao.
    - integrado no PR `#271`, merge `70e343d`, com todos os checks verdes.
-4. **266.4 - `enviar_template`** [EM IMPLEMENTACAO]
+4. **266.4 - `enviar_template`** [EM REVISAO]
    - template e canal explicitos;
    - opt-out e janela de comunicacao obrigatorios, sem bypass automatico;
    - limite de frequencia, outbox e chave de idempotencia.
@@ -266,12 +266,14 @@ automaticamente pelo rollback.
 - [x] Testes focados reproduziram as ausencias antes da implementacao e passam
   depois dela.
 - [x] Suite completa, builds e gates de governanca.
-- [ ] Checks e revisao humana da PR contra `main`.
+- [ ] Checks e revisao humana da PR `#272` contra `main`.
 
 A 266.4 nao adiciona migration, segredo ou configuracao externa. O rollback
 operacional e reimplantar a versao anterior; mensagens ja enfileiradas e o
 outbox correspondente nao devem ser apagados automaticamente. A validacao
 local usa mocks e nao chama WhatsApp, Gmail ou outro provider externo.
+A implementacao esta publicada no PR `#272`; a conclusao permanece condicionada
+aos checks remotos e ao merge humano.
 
 ## 14. Evidencia local do Incremento 266.4
 
