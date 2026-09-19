@@ -1,8 +1,8 @@
 # OctaClin - Checklist vivo de fases futuras ate producao
 
-Atualizado em 2026-09-17. Fases 256 a 261, 263 e 264 concluidas; Fase 262
-permanece em andamento pelos gates externos do piloto; Fase 265 iniciada apenas
-na definicao do contrato de produto, sem codigo ou migration.
+Atualizado em 2026-09-18. Fases 256 a 261 e 263 a 265 concluidas; Fase 262
+permanece em andamento pelos gates externos do piloto; Fase 266 aguarda
+definicao explicita do proximo incremento de produto.
 O programa de hardening PR 36-56 permanece como trilha separada. O pacote
 interno do PR 55 foi integrado, mas o proprietario adiou a contratacao do
 pentest para evitar custo neste momento; todos os gates externos seguem
@@ -3243,13 +3243,11 @@ publicado antes de ampliar a superficie de mudancas visuais.
     Skills/capacidades: security review, threat modeling, code verification e
     validacao de configuracao; GitHub/`gh` apenas para evidencia e fluxo de PR.
 
-- [~] Fase 265 - Fundacao da inteligencia: prioridade de acompanhamento
-  calculada com override auditado. [EM ANDAMENTO: 265.1-265.6 entregues no
-  `main`, incluindo enum fechado de motivo, formula v1.1.0 e UI de
-  override; preflight de leitura da migration 265.2 em producao concluido
-  -- parou antes de DDL por ausencia de credencial de producao nesta
-  sessao, ver secao 14 do plano. Falta apenas aplicar a migration nos
-  ambientes que exigem o fluxo]
+- [x] Fase 265 - Fundacao da inteligencia: prioridade de acompanhamento
+  calculada com override auditado. [CONCLUIDA: 265.1-265.6 e correcoes de
+  robustez integradas no `main`; migrations `1046`/`1047` aplicadas e
+  verificadas em staging e producao; smoke autenticado de criar/remover
+  override aprovado apos o PR `#267`. Evidencia final na secao 16 do plano]
   - Origem: PB-01 e Onda 2 de
     `docs/product/OCTACLIN_PRODUCT_FEATURE_AUDIT.md`.
   - Dependencia de produto: definir pesos e sinais explicaveis antes de escrever
@@ -3476,6 +3474,21 @@ publicado antes de ampliar a superficie de mudancas visuais.
     nao prosseguir sem confirmacao humana, independente das credenciais.
     Nenhum estado de producao foi alterado. Detalhe completo em
     `docs/history/phases/PLANO_FASE_265.md`, secao 14.
+  - Fechamento operacional concluido em 2026-09-18: correcao de robustez
+    no PR `#265`, runbook corrigido no PR `#266` e remocao persistente do
+    override/UI sem bloqueio no PR `#267`. As migrations `1046` e `1047`
+    foram aplicadas primeiro em staging e depois em producao, com
+    `migration:show`, RLS/FORCE RLS, policies e constraint conferidos. O
+    readiness de producao voltou a HTTP 200 e o smoke autenticado sintetico
+    passou inclusive depois do reload. O ClamAV continua pendente na issue
+    `#234`, sem ser convertido em `PASS`. Detalhe completo na secao 16 do
+    plano da fase.
+
+- [ ] Fase 266 - Selecao do proximo incremento de produto. [PENDENTE DE
+  DEFINICAO: nenhum escopo, branch, migration ou codigo foi autorizado]
+  - Exige decisao explicita do proprietario antes de especificacao ou
+    implementacao. Este marcador existe para manter a sequencia documental e
+    nao inicia uma nova entrega.
 
 Documento de execução e prioridades: `ROADMAP_QUALIDADE_SEGURANCA_FASES_248_262.md`.
 Matriz operacional: `MATRIZ_SKILLS_PLUGINS_MODELOS_FASES_243_248_262.md`.
@@ -3898,8 +3911,25 @@ numeros de PR do GitHub. Cada item deve entrar em branch e PR isolados.
 Fonte canonica de escopo, gates e skills do Claude Code:
 `docs/governance/PROGRAMA_HARDENING_SEGURANCA_PRS_36_56.md`.
 
-Proximo item autorizado: concluir a correcao de robustez da Fase 265 em PR
-dedicado e, apos checks e merge humanos, executar o rollout fora de banda das
-migrations `1046` e `1047` primeiro em staging e somente depois em producao,
-seguindo `RUNBOOK_PRODUCAO.md`. PR 55 permanece adiado e pendente; PR 56
-continua condicionado a decisao explicita de distribuir o Mobile.
+- [x] Fechamento operacional da Fase 265 - prioridade de acompanhamento
+  explicavel.
+  - [x] Correcao de robustez integrada pelo PR GitHub `#265` (`98e6a47`).
+  - [x] Consulta de policies do runbook corrigida pelo PR GitHub `#266`
+    (`837aabc`).
+  - [x] Remocao do override corrigida no backend e na UI pelo PR GitHub `#267`
+    (`9fe1936`), com regressao automatizada e pipeline pos-merge verde.
+  - [x] Migrations `1046` e `1047` aplicadas fora de banda primeiro em staging
+    e depois em producao, sempre com role owner confirmada e verificacao antes
+    e depois por `migration:show`.
+  - [x] Em producao, RLS/FORCE RLS, policies por tenant e constraint completa
+    do override verificadas; `/health/pronto` recuperado para HTTP 200 com 60
+    migrations registradas.
+  - [x] Smoke autenticado com conta e paciente sinteticos: criar override,
+    remover, manter a tela responsiva e confirmar a remocao depois do reload.
+  - [~] `/health/detalhado` permanece degradado somente pelo ClamAV nao
+    provisionado; a issue GitHub `#234` continua aberta e este debito nao foi
+    convertido em `PASS` pela conclusao da fase.
+
+Proximo item: selecionar explicitamente o proximo incremento de produto antes
+de abrir nova branch. PR 55 permanece adiado e pendente; PR 56 continua
+condicionado a decisao explicita de distribuir o Mobile.

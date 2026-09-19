@@ -860,6 +860,15 @@ O OctaClin ja possui uma base SaaS multi-tenant com backend NestJS, frontend Nex
   e para limpar o delta antropometrico ao trocar a selecao. Detalhes em
   `CHECKLIST_FASES_FUTURAS_PRODUCAO.md` e
   `docs/product/OCTACLIN_PRODUCT_FEATURE_AUDIT.md`.
+- Fase 265 - Fundacao da inteligencia: prioridade de acompanhamento explicavel
+  passou a combinar calculo versionado e override humano temporario, auditado e
+  isolado por tenant. Os incrementos entregaram calculador, persistencia com
+  RLS/FORCE RLS, recalculo idempotente, API, motivo fechado e interface que
+  separa valor calculado do efetivo. As migrations `1046` e `1047` foram
+  aplicadas fora de banda em staging e producao; schema, readiness e smoke
+  autenticado de criar/remover override apos reload foram aprovados. PRs
+  `#256` a `#267`. O ClamAV externo permanece pendente na issue `#234`, sem
+  falso `PASS`. Ver `docs/history/phases/PLANO_FASE_265.md`.
 - Fase 255 - Prontuario clinico orientado a linha de cuidado: o componente
   principal ganhou fronteiras tipadas para navegacao e timeline; Materiais,
   Anexos e profissionais passaram a carregar sob demanda com falhas locais;
