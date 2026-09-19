@@ -28,7 +28,7 @@ validacao fechada, estado por acao, chave de idempotencia nem executor.
 
 ## 3. Sequencia aprovada
 
-1. **266.1 - contrato e executor confiavel** [EM IMPLEMENTACAO]
+1. **266.1 - contrato e executor confiavel** [CONCLUIDO]
    - fechar o vocabulario dos tres tipos de acao;
    - rejeitar objetos e campos desconhecidos antes de persistir;
    - persistir estado e numero de tentativas por acao no JSON existente;
@@ -39,7 +39,8 @@ validacao fechada, estado por acao, chave de idempotencia nem executor.
    - manter `acoesPlanejadas` por compatibilidade e adicionar resultado
      estruturado para backend e Web;
    - nenhuma migration e nenhum efeito real neste incremento.
-2. **266.2 - `notificar_profissional`** [PENDENTE]
+   - integrado no PR `#269`, merge `143353f`, com todos os checks verdes.
+2. **266.2 - `notificar_profissional`** [EM IMPLEMENTACAO]
    - novo tipo `automacao_executada` no centro de notificacoes;
    - migration aditiva para ampliar a constraint de tipos;
    - fan-out transacional, link autorizado e idempotencia por execucao/acao.
@@ -72,14 +73,20 @@ Depois da Fase 266, a sequencia de produto e PB-03 (gatilhos reais) e PB-05
 
 ## 5. Risco, rollout e rollback
 
-Classificacao: **R4**, porque a fundacao atravessa tenancy e prepara efeitos
-sobre comunicacao e dados de acompanhamento, embora a 266.1 nao habilite esses
-efeitos.
+Classificacao: **R4**, porque a fundacao atravessa tenancy e a 266.2 habilita
+um efeito persistente visivel no centro de notificacoes.
 
-Nao ha DDL, migration, segredo, configuracao externa ou escrita em staging e
-producao. O rollback da 266.1 e reimplantar a versao anterior. Os campos novos
-ficam somente no JSON `resultado`; consumidores antigos ja toleram campos
+Na 266.1 nao houve DDL, migration, segredo, configuracao externa ou escrita em
+staging e producao. Seu rollback e reimplantar a versao anterior. Os campos
+novos ficam somente no JSON `resultado`; consumidores antigos ja toleram campos
 adicionais.
+
+A 266.2 inclui a migration aditiva `1048`, aplicada fora de banda e ainda nao
+executada em ambiente externo. O rollback operacional preferencial e
+reimplantar a aplicacao anterior mantendo a ampliacao compativel da constraint.
+O `down` apaga apenas notificacoes `automacao_executada` antes de restaurar a
+constraint antiga e, por isso, exige janela, backup e aceite humano explicito;
+nao deve ser executado automaticamente.
 
 Durante a transicao, qualquer avaliacao generica que alcance uma acao ainda sem
 executor termina explicitamente em `falhou` com `acao_nao_disponivel`. As
@@ -97,7 +104,7 @@ rascunhos permanecem disponiveis.
 - [x] Backend e Web compartilham vocabulario e estado fechado das acoes.
 - [x] Suite completa do backend e build de backend/Web.
 - [x] Gates de confiabilidade, secrets e `git diff --check`.
-- [ ] Checks e revisao humana da PR contra `main`.
+- [x] Checks e revisao humana da PR contra `main`; merge `143353f`.
 
 ## 7. Fora do escopo da 266.1
 
@@ -126,3 +133,46 @@ rascunhos permanecem disponiveis.
   exigido pelo repositorio;
 - `NA` - migration, banco externo, staging, producao e providers: a 266.1 nao
   possui DDL nem efeitos externos.
+
+## 9. Implementacao e gates do Incremento 266.2
+
+- [x] Novo tipo fechado `automacao_executada` no backend e na Web.
+- [x] Fan-out reutiliza `registrarNotificacao` dentro de `ExecutorTenant`.
+- [x] `recurso_id` recebe UUID v8 deterministico derivado da chave
+  `automacao:<execucaoId>:acao:<indice>`, preservando a deduplicacao do indice
+  unico existente sem expor a chave interna.
+- [x] Contexto da regra e dados clinicos nao sao copiados para a notificacao.
+- [x] Destinatarios ficam limitados a SuperAdmin e profissional responsavel;
+  colaborador, paciente, cliente e profissional alheio nao recebem o evento.
+- [x] Regras criadas por SuperAdmin validam que o profissional existe, esta
+  ativo e pertence ao tenant antes de persistir.
+- [x] A Web apresenta o rotulo `Automação executada` com link autorizado para
+  `/automacoes`.
+- [x] Migration `1048` amplia apenas `notificacoes_tipo_check`, preserva os
+  tipos existentes e esta registrada como aplicacao fora de banda.
+- [x] Testes focados reproduziram as ausencias antes da implementacao e passam
+  depois dela.
+- [x] Suite completa, builds, gates de governanca e Playwright afetado.
+- [ ] Checks e revisao humana da PR contra `main`.
+- [ ] Migration aplicada e verificada primeiro em staging e depois em
+  producao, somente apos merge e na sequencia do runbook.
+
+Nenhum provider externo e acionado neste incremento. As acoes `criar_tarefa` e
+`enviar_template` continuam indisponiveis ate 266.3 e 266.4, respectivamente.
+
+## 10. Evidencia local do Incremento 266.2
+
+- `PASS` - testes focados: 7 suites e 62/62 testes;
+- `PASS` - suite completa do backend: 195 suites e 1.819 testes; 4 suites e
+  37 testes preexistentes permaneceram skipped;
+- `PASS` - typecheck e build do backend;
+- `PASS` - typecheck, lint e build da Web; lint sem erros e com 56 warnings
+  preexistentes;
+- `PASS` - dashboard Playwright em desktop e mobile, incluindo rotulo e link
+  autorizado da notificacao;
+- `PASS` - matriz de confiabilidade com 40 referencias criticas;
+- `SKIPPED` - validacao local em Node 22: o host desta sessao usa Node 24.19.0
+  e emite o aviso de engine; o CI da PR deve repetir os gates no runtime Node 22
+  exigido pelo repositorio;
+- `NA` - migration, banco externo, staging, producao e providers: a migration
+  `1048` foi apenas criada e registrada, sem aplicacao externa nesta PR.

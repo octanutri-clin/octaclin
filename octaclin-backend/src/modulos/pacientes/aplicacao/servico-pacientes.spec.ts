@@ -2300,6 +2300,14 @@ describe('ServicoPacientes - prioridade de acompanhamento (Fase 265.4)', () => {
   const AGORA = new Date('2026-09-18T12:00:00.000Z');
   const DIA_MS = 24 * 60 * 60 * 1000;
 
+  beforeEach(() => {
+    jest.useFakeTimers().setSystemTime(AGORA);
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
+  });
+
   const pacientePadrao = {
     id: 'paciente-1',
     tenantId: 'tenant-1',

@@ -878,6 +878,61 @@ a integridade do override e o `down` de `1046` remove a projecao de estado
 atual. Reversao de schema exige backup confirmado, janela deliberada e aceite
 humano explicito.
 
+### Notificacao de automacao (Fase 266.2) - migration 1048
+
+A migration `1720000001048-AdicionarAutomacaoExecutadaNotificacoes` amplia a
+constraint `notificacoes_tipo_check` com o tipo `automacao_executada`. Ela e
+aditiva, nao conecta provider externo e esta marcada como `@aplicacao
+fora-de-banda`.
+
+Depois do merge e antes de implantar a aplicacao da 266.2, confirme o ambiente,
+o banco e a role owner com `select current_database(), current_user;`, use a URL
+owner somente na sessao administrativa e mantenha
+`BANCO_EXECUTAR_MIGRACOES=false` no runtime. Execute primeiro em staging:
+
+```powershell
+pnpm --dir octaclin-backend run typeorm -- migration:show
+pnpm --dir octaclin-backend migration:run
+pnpm --dir octaclin-backend run typeorm -- migration:show
+```
+
+Antes da escrita, a unica pendencia esperada deste incremento e a `1048`. Pare
+se houver migration anterior pendente ou qualquer pendencia inesperada. Depois
+da aplicacao, verifique a constraint e confirme que RLS/FORCE RLS e a policy da
+tabela continuam presentes:
+
+```sql
+select conname, pg_get_constraintdef(oid) as definicao
+from pg_constraint
+where conrelid = 'notificacoes'::regclass
+  and conname = 'notificacoes_tipo_check';
+
+select c.relname, c.relrowsecurity, c.relforcerowsecurity
+from pg_class c
+where c.relname = 'notificacoes';
+
+select policyname, tablename
+from pg_policies
+where tablename = 'notificacoes'
+order by policyname;
+```
+
+A constraint precisa conter `automacao_executada`; RLS e FORCE RLS devem ficar
+ativos e a policy tenant existente deve permanecer listada. Finalize com
+`/health/pronto` em HTTP 200, migrations `ok` em `/health/detalhado` e um smoke
+sintetico autorizado. Repita a mesma sequencia em producao somente depois do
+aceite de staging. Ao terminar:
+
+```powershell
+Remove-Item Env:DATABASE_URL
+```
+
+**Rollback:** prefira reimplantar a aplicacao anterior e manter a constraint
+ampliada, que e retrocompativel. Nao execute `migration:revert`
+automaticamente: o `down` precisa apagar as notificacoes
+`automacao_executada` antes de restaurar a constraint anterior. Reversao de
+schema exige backup confirmado, janela deliberada e aceite humano explicito.
+
 ### Backup e restore
 
 Para RPO/RTO, manifesto dinamico do restore, estado de Object Lock e resposta a

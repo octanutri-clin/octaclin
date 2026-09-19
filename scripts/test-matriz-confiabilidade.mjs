@@ -20,6 +20,8 @@ const referenciasObrigatorias = [
   'octaclin-backend/src/modulos/automacoes/dominio/acoes-automacao.spec.ts',
   'octaclin-backend/src/modulos/automacoes/aplicacao/servico-automacoes.spec.ts',
   'octaclin-backend/src/modulos/automacoes/aplicacao/processador-automacoes.spec.ts',
+  'octaclin-backend/src/modulos/automacoes/aplicacao/despachante-acoes-automacao.spec.ts',
+  'octaclin-backend/src/infraestrutura/banco-dados/migracoes/1720000001048-AdicionarAutomacaoExecutadaNotificacoes.spec.ts',
   'octaclin-backend/src/modulos/mobile/aplicacao/servico-mobile.spec.ts',
   'octaclin-backend/src/modulos/gamificacao/aplicacao/servico-gamificacao.spec.ts',
   'octaclin-web/tests/visual/fase-197-modulos-avancados.spec.mjs',

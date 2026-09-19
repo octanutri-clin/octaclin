@@ -3,4 +3,5 @@ export type TipoNotificacao =
   | 'solicitacao_agendamento'
   | 'formulario_respondido'
   | 'falha_envio'
-  | 'tarefa_concluida';
+  | 'tarefa_concluida'
+  | 'automacao_executada';

@@ -2,7 +2,9 @@ export type TipoNotificacao =
   | 'mensagem_recebida'
   | 'solicitacao_agendamento'
   | 'formulario_respondido'
-  | 'falha_envio';
+  | 'falha_envio'
+  | 'tarefa_concluida'
+  | 'automacao_executada';
 
 export interface NotificacaoApi {
   id: string;
@@ -24,14 +26,18 @@ const rotulos: Record<TipoNotificacao, string> = {
   mensagem_recebida: 'Nova mensagem recebida',
   solicitacao_agendamento: 'Nova solicitacao de agendamento',
   formulario_respondido: 'Formulario respondido',
-  falha_envio: 'Falha no envio de mensagem'
+  falha_envio: 'Falha no envio de mensagem',
+  tarefa_concluida: 'Tarefa concluída pelo paciente',
+  automacao_executada: 'Automação executada'
 };
 
 const destinos: Record<TipoNotificacao, string> = {
   mensagem_recebida: '/comunicacoes',
   solicitacao_agendamento: '/agenda',
   formulario_respondido: '/questionarios',
-  falha_envio: '/comunicacoes'
+  falha_envio: '/comunicacoes',
+  tarefa_concluida: '/pacientes',
+  automacao_executada: '/automacoes'
 };
 
 export function rotuloNotificacao(tipo: TipoNotificacao) {
