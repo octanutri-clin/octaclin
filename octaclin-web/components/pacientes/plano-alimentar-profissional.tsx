@@ -39,6 +39,7 @@ import {
   type FonteCatalogoApi,
   type FormulaEnergeticaApi,
   type ItemPlanoAlimentarEntrada,
+  type MetodoMacrosManualApi,
   type NutrientesPor100gApi,
   type PlanoAlimentarApi,
   type PlanoAlimentarResumoApi,
@@ -96,6 +97,11 @@ interface FormularioPlano {
   possuiCondicaoEspecial: boolean;
   aplicabilidadeFormulaConfirmada: boolean;
   justificativaCondicaoEspecial: string;
+  metodoMacrosManual: MetodoMacrosManualApi;
+  metaEnergeticaManualKcal: number;
+  carboidratosGPorKg: number;
+  proteinasGPorKg: number;
+  gordurasGPorKg: number;
   justificativaDivergenciaClinica: string;
   objetivos: string;
   observacoes: string;
@@ -150,6 +156,11 @@ function formularioInicial(avaliacaoId = ''): FormularioPlano {
     possuiCondicaoEspecial: false,
     aplicabilidadeFormulaConfirmada: false,
     justificativaCondicaoEspecial: '',
+    metodoMacrosManual: 'percentual',
+    metaEnergeticaManualKcal: 2000,
+    carboidratosGPorKg: 3,
+    proteinasGPorKg: 1.2,
+    gordurasGPorKg: 1,
     justificativaDivergenciaClinica: '',
     objetivos: '',
     observacoes: '',
@@ -201,12 +212,19 @@ function formularioDaVersao(versao: VersaoPlanoAlimentarApi, avaliacaoPadrao = '
     formula: versao.formulaCodigo ?? 'mifflin_st_jeor_1990',
     fatorAtividade: calculo?.fatorAtividade ?? 1.4,
     ajusteEnergeticoKcal: calculo?.ajusteEnergeticoKcal ?? 0,
-    carboidratosBasisPoints: calculo?.distribuicaoMacros.carboidratosBasisPoints ?? 5000,
-    proteinasBasisPoints: calculo?.distribuicaoMacros.proteinasBasisPoints ?? 2000,
-    gordurasBasisPoints: calculo?.distribuicaoMacros.gordurasBasisPoints ?? 3000,
+    // Ausente quando o plano foi feito em g/kg: volta para o padrao percentual.
+    carboidratosBasisPoints: calculo?.distribuicaoMacros?.carboidratosBasisPoints ?? 5000,
+    proteinasBasisPoints: calculo?.distribuicaoMacros?.proteinasBasisPoints ?? 2000,
+    gordurasBasisPoints: calculo?.distribuicaoMacros?.gordurasBasisPoints ?? 3000,
     possuiCondicaoEspecial: calculo?.possuiCondicaoEspecial ?? false,
     aplicabilidadeFormulaConfirmada: calculo?.aplicabilidadeFormulaConfirmada ?? false,
     justificativaCondicaoEspecial: calculo?.justificativaCondicaoEspecial ?? '',
+    metodoMacrosManual: calculo?.metodoMacrosManual ?? 'percentual',
+    metaEnergeticaManualKcal:
+      calculo?.origemMeta === 'manual' ? (calculo.metaEnergeticaKcal ?? 2000) : 2000,
+    carboidratosGPorKg: calculo?.macrosGramasPorKg?.carboidratosGPorKg ?? 3,
+    proteinasGPorKg: calculo?.macrosGramasPorKg?.proteinasGPorKg ?? 1.2,
+    gordurasGPorKg: calculo?.macrosGramasPorKg?.gordurasGPorKg ?? 1,
     justificativaDivergenciaClinica: calculo?.justificativaDivergenciaClinica ?? '',
     objetivos: versao.objetivos ?? '',
     observacoes: versao.observacoes ?? '',
@@ -326,18 +344,34 @@ function itensParaBiblioteca(itens: ItemFormulario[]): ItemPlanoAlimentarEntrada
 }
 
 function montarEntrada(formulario: FormularioPlano): AtualizarRascunhoPlanoAlimentarEntrada {
+  // Condicao especial e meta manual andam juntas: o backend recusa uma sem a
+  // outra, porque a formula preditiva continua bloqueada para esse paciente.
+  const manual = formulario.possuiCondicaoEspecial;
+  const porPeso = manual && formulario.metodoMacrosManual === 'gramas_por_kg';
   return {
     avaliacaoAntropometricaId: formulario.avaliacaoAntropometricaId,
-    formula: formulario.formula,
-    fatorAtividade: formulario.fatorAtividade,
-    ajusteEnergeticoKcal: formulario.ajusteEnergeticoKcal,
-    distribuicaoMacros: {
-      carboidratosBasisPoints: formulario.carboidratosBasisPoints,
-      proteinasBasisPoints: formulario.proteinasBasisPoints,
-      gordurasBasisPoints: formulario.gordurasBasisPoints
-    },
+    origemMeta: manual ? 'manual' : 'formula',
+    formula: manual ? undefined : formulario.formula,
+    fatorAtividade: manual ? undefined : formulario.fatorAtividade,
+    ajusteEnergeticoKcal: manual ? undefined : formulario.ajusteEnergeticoKcal,
+    metodoMacrosManual: manual ? formulario.metodoMacrosManual : undefined,
+    metaEnergeticaManualKcal: manual && !porPeso ? formulario.metaEnergeticaManualKcal : undefined,
+    macrosGramasPorKg: porPeso
+      ? {
+          carboidratosGPorKg: formulario.carboidratosGPorKg,
+          proteinasGPorKg: formulario.proteinasGPorKg,
+          gordurasGPorKg: formulario.gordurasGPorKg
+        }
+      : undefined,
+    distribuicaoMacros: porPeso
+      ? undefined
+      : {
+          carboidratosBasisPoints: formulario.carboidratosBasisPoints,
+          proteinasBasisPoints: formulario.proteinasBasisPoints,
+          gordurasBasisPoints: formulario.gordurasBasisPoints
+        },
     possuiCondicaoEspecial: formulario.possuiCondicaoEspecial,
-    aplicabilidadeFormulaConfirmada: formulario.aplicabilidadeFormulaConfirmada,
+    aplicabilidadeFormulaConfirmada: manual ? undefined : formulario.aplicabilidadeFormulaConfirmada,
     justificativaCondicaoEspecial: formulario.possuiCondicaoEspecial
       ? formulario.justificativaCondicaoEspecial.trim()
       : undefined,
@@ -385,25 +419,39 @@ function formatarNumero(valor?: number, casas = 0) {
 
 function validarFormulario(formulario: FormularioPlano): string[] {
   const erros: string[] = [];
+  const manual = formulario.possuiCondicaoEspecial;
+  const porPeso = manual && formulario.metodoMacrosManual === 'gramas_por_kg';
   if (!formulario.avaliacaoAntropometricaId) erros.push('Selecione a avaliacao antropometrica usada no calculo.');
   if (!formulario.objetivos.trim()) erros.push('Informe o objetivo clinico do plano.');
-  if (!formulario.aplicabilidadeFormulaConfirmada) erros.push('Confirme a aplicabilidade da formula selecionada.');
-  if (formulario.fatorAtividade < 1.4 || formulario.fatorAtividade > 2.4) {
-    erros.push('O fator de atividade deve estar entre 1,40 e 2,40.');
+  if (!manual) {
+    if (!formulario.aplicabilidadeFormulaConfirmada) erros.push('Confirme a aplicabilidade da formula selecionada.');
+    if (formulario.fatorAtividade < 1.4 || formulario.fatorAtividade > 2.4) {
+      erros.push('O fator de atividade deve estar entre 1,40 e 2,40.');
+    }
   }
   if (
+    !porPeso &&
     formulario.carboidratosBasisPoints +
       formulario.proteinasBasisPoints +
       formulario.gordurasBasisPoints !==
-    10000
+      10000
   ) {
     erros.push('A distribuicao de macronutrientes deve totalizar 100%.');
   }
-  if (formulario.possuiCondicaoEspecial && !formulario.justificativaCondicaoEspecial.trim()) {
-    erros.push('Descreva a condicao especial informada.');
+  if (manual && formulario.justificativaCondicaoEspecial.trim().length < 10) {
+    erros.push('Descreva a condicao especial informada com pelo menos 10 caracteres.');
   }
-  if (formulario.possuiCondicaoEspecial) {
-    erros.push('O calculo automatico nao esta disponivel para condicoes especiais neste MVP.');
+  if (manual && !porPeso && (formulario.metaEnergeticaManualKcal < 1 || formulario.metaEnergeticaManualKcal > 20000)) {
+    erros.push('A meta energetica manual deve estar entre 1 e 20.000 kcal.');
+  }
+  if (porPeso) {
+    const gramasPorKg = [formulario.carboidratosGPorKg, formulario.proteinasGPorKg, formulario.gordurasGPorKg];
+    if (gramasPorKg.some((valor) => valor < 0 || valor > 50)) {
+      erros.push('Cada macronutriente em g/kg deve estar entre 0 e 50.');
+    }
+    if (gramasPorKg.every((valor) => valor === 0)) {
+      erros.push('Informe ao menos um macronutriente em g/kg.');
+    }
   }
   formulario.refeicoes.forEach((refeicao, indiceRefeicao) => {
     if (!refeicao.nome.trim()) erros.push(`Informe o nome da refeicao ${indiceRefeicao + 1}.`);
@@ -901,6 +949,9 @@ export function PlanoAlimentarProfissional({ pacienteId, podeGerenciar, aoAltera
   const sequenciaCarregamento = useRef(0);
 
   const somaMacros = formulario.carboidratosBasisPoints + formulario.proteinasBasisPoints + formulario.gordurasBasisPoints;
+  // Condicao especial implica meta manual: e a saida que substitui a recusa.
+  const metaManual = formulario.possuiCondicaoEspecial;
+  const macrosPorPeso = metaManual && formulario.metodoMacrosManual === 'gramas_por_kg';
 
   const refeicoesPrevistas = formulario.refeicoes.map((refeicao) => ({
     itens: refeicao.itens.map((item) => ({
@@ -1158,7 +1209,7 @@ export function PlanoAlimentarProfissional({ pacienteId, podeGerenciar, aoAltera
 
                   <fieldset className="grid gap-4 rounded-md border border-linha bg-white p-4">
                     <legend className="px-1 text-sm font-semibold text-tinta">Cálculo energetico</legend>
-                    <p className="text-sm text-texto-suave">Estimativa baseada em equacao populacional. Revise os dados e a aplicabilidade antes de definir ou publicar uma meta.</p>
+                    <p className="text-sm text-texto-suave">{metaManual ? 'Condição especial: a fórmula populacional não se aplica. Informe a meta manualmente e registre a justificativa clínica.' : 'Estimativa baseada em equacao populacional. Revise os dados e a aplicabilidade antes de definir ou publicar uma meta.'}</p>
                     <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
                       <label className="grid gap-1 text-xs font-semibold uppercase text-texto-suave">
                         Avaliação antropométrica
@@ -1167,46 +1218,82 @@ export function PlanoAlimentarProfissional({ pacienteId, podeGerenciar, aoAltera
                           {avaliacoes.map((avaliacao) => <option key={avaliacao.id} value={avaliacao.id}>{formatarData(avaliacao.avaliadaEm)} - {avaliacao.medidas.pesoKg ?? '-'} kg / {avaliacao.medidas.alturaCm ?? '-'} cm</option>)}
                         </Selecao>
                       </label>
-                      <label className="grid gap-1 text-xs font-semibold uppercase text-texto-suave">
-                        Fórmula
-                        <Selecao value={formulario.formula} onChange={(evento) => atualizar((atual) => ({ ...atual, formula: evento.target.value as FormulaEnergeticaApi }))}>
-                          <option value="mifflin_st_jeor_1990">Mifflin-St Jeor (1990)</option>
-                          <option value="harris_benedict_revisada_1984">Harris-Benedict revisada (1984)</option>
-                          <option value="fao_oms_unu_1985">FAO/OMS/UNU (1985)</option>
-                        </Selecao>
-                      </label>
-                      <label className="grid gap-1 text-xs font-semibold uppercase text-texto-suave">
-                        Fator de atividade
-                        <Campo type="number" min="1.4" max="2.4" step="0.01" value={formulario.fatorAtividade} onChange={(evento) => atualizar((atual) => ({ ...atual, fatorAtividade: Number(evento.target.value) }))} required />
-                      </label>
-                      <label className="grid gap-1 text-xs font-semibold uppercase text-texto-suave">
-                        Ajuste energetico (kcal)
-                        <Campo type="number" min="-10000" max="10000" step="1" value={formulario.ajusteEnergeticoKcal} onChange={(evento) => atualizar((atual) => ({ ...atual, ajusteEnergeticoKcal: Number(evento.target.value) }))} />
-                      </label>
-                    </div>
-                    <div className="grid gap-3 rounded-md bg-superficie p-3 sm:grid-cols-3">
-                      {([
-                        ['carboidratosBasisPoints', 'Carboidratos (%)'],
-                        ['proteinasBasisPoints', 'Proteinas (%)'],
-                        ['gordurasBasisPoints', 'Gorduras (%)']
-                      ] as const).map(([campo, rotulo]) => (
-                        <label key={campo} className="grid gap-1 text-xs font-semibold uppercase text-texto-suave">
-                          {rotulo}
-                          <Campo type="number" min="0" max="100" step="0.01" value={formulario[campo] / 100} onChange={(evento) => atualizar((atual) => ({ ...atual, [campo]: Math.round(Number(evento.target.value) * 100) }))} required />
+                      {metaManual ? null : (
+                        <>
+                          <label className="grid gap-1 text-xs font-semibold uppercase text-texto-suave">
+                            Fórmula
+                            <Selecao value={formulario.formula} onChange={(evento) => atualizar((atual) => ({ ...atual, formula: evento.target.value as FormulaEnergeticaApi }))}>
+                              <option value="mifflin_st_jeor_1990">Mifflin-St Jeor (1990)</option>
+                              <option value="harris_benedict_revisada_1984">Harris-Benedict revisada (1984)</option>
+                              <option value="fao_oms_unu_1985">FAO/OMS/UNU (1985)</option>
+                            </Selecao>
+                          </label>
+                          <label className="grid gap-1 text-xs font-semibold uppercase text-texto-suave">
+                            Fator de atividade
+                            <Campo type="number" min="1.4" max="2.4" step="0.01" value={formulario.fatorAtividade} onChange={(evento) => atualizar((atual) => ({ ...atual, fatorAtividade: Number(evento.target.value) }))} required />
+                          </label>
+                          <label className="grid gap-1 text-xs font-semibold uppercase text-texto-suave">
+                            Ajuste energetico (kcal)
+                            <Campo type="number" min="-10000" max="10000" step="1" value={formulario.ajusteEnergeticoKcal} onChange={(evento) => atualizar((atual) => ({ ...atual, ajusteEnergeticoKcal: Number(evento.target.value) }))} />
+                          </label>
+                        </>
+                      )}
+                      {metaManual ? (
+                        <label className="grid gap-1 text-xs font-semibold uppercase text-texto-suave">
+                          Método dos macronutrientes
+                          <Selecao value={formulario.metodoMacrosManual} onChange={(evento) => atualizar((atual) => ({ ...atual, metodoMacrosManual: evento.target.value as MetodoMacrosManualApi }))}>
+                            <option value="percentual">Percentual da meta energética</option>
+                            <option value="gramas_por_kg">Gramas por quilo (g/kg)</option>
+                          </Selecao>
                         </label>
-                      ))}
-                      <p className={`sm:col-span-3 text-sm font-medium ${somaMacros === 10000 ? 'text-sucesso-forte' : 'text-perigo'}`}>Total: {(somaMacros / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}%</p>
+                      ) : null}
+                      {metaManual && !macrosPorPeso ? (
+                        <label className="grid gap-1 text-xs font-semibold uppercase text-texto-suave">
+                          Meta energética (kcal)
+                          <Campo type="number" min="1" max="20000" step="1" value={formulario.metaEnergeticaManualKcal} onChange={(evento) => atualizar((atual) => ({ ...atual, metaEnergeticaManualKcal: Number(evento.target.value) }))} required />
+                        </label>
+                      ) : null}
                     </div>
-                    <label className="flex min-h-11 items-start gap-3 rounded-md border border-linha p-3 text-sm text-tinta">
-                      <input type="checkbox" className="mt-1 h-4 w-4 accent-primaria" checked={formulario.aplicabilidadeFormulaConfirmada} onChange={(evento) => atualizar((atual) => ({ ...atual, aplicabilidadeFormulaConfirmada: evento.target.checked }))} />
-                      <span>Revisei os dados da avaliação e confirmo a aplicabilidade da fórmula para este paciente.</span>
-                    </label>
+                    {macrosPorPeso ? (
+                      <div className="grid gap-3 rounded-md bg-superficie p-3 sm:grid-cols-3">
+                        {([
+                          ['carboidratosGPorKg', 'Carboidratos (g/kg)'],
+                          ['proteinasGPorKg', 'Proteinas (g/kg)'],
+                          ['gordurasGPorKg', 'Gorduras (g/kg)']
+                        ] as const).map(([campo, rotulo]) => (
+                          <label key={campo} className="grid gap-1 text-xs font-semibold uppercase text-texto-suave">
+                            {rotulo}
+                            <Campo type="number" min="0" max="50" step="0.01" value={formulario[campo]} onChange={(evento) => atualizar((atual) => ({ ...atual, [campo]: Number(evento.target.value) }))} required />
+                          </label>
+                        ))}
+                        <p className="sm:col-span-3 text-sm text-texto-suave">A meta energética é calculada a partir dos gramas prescritos e do peso da avaliação selecionada.</p>
+                      </div>
+                    ) : (
+                      <div className="grid gap-3 rounded-md bg-superficie p-3 sm:grid-cols-3">
+                        {([
+                          ['carboidratosBasisPoints', 'Carboidratos (%)'],
+                          ['proteinasBasisPoints', 'Proteinas (%)'],
+                          ['gordurasBasisPoints', 'Gorduras (%)']
+                        ] as const).map(([campo, rotulo]) => (
+                          <label key={campo} className="grid gap-1 text-xs font-semibold uppercase text-texto-suave">
+                            {rotulo}
+                            <Campo type="number" min="0" max="100" step="0.01" value={formulario[campo] / 100} onChange={(evento) => atualizar((atual) => ({ ...atual, [campo]: Math.round(Number(evento.target.value) * 100) }))} required />
+                          </label>
+                        ))}
+                        <p className={`sm:col-span-3 text-sm font-medium ${somaMacros === 10000 ? 'text-sucesso-forte' : 'text-perigo'}`}>Total: {(somaMacros / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}%</p>
+                      </div>
+                    )}
+                    {metaManual ? null : (
+                      <label className="flex min-h-11 items-start gap-3 rounded-md border border-linha p-3 text-sm text-tinta">
+                        <input type="checkbox" className="mt-1 h-4 w-4 accent-primaria" checked={formulario.aplicabilidadeFormulaConfirmada} onChange={(evento) => atualizar((atual) => ({ ...atual, aplicabilidadeFormulaConfirmada: evento.target.checked }))} />
+                        <span>Revisei os dados da avaliação e confirmo a aplicabilidade da fórmula para este paciente.</span>
+                      </label>
+                    )}
                     <label className="flex min-h-11 items-start gap-3 rounded-md border border-linha p-3 text-sm text-tinta">
                       <input type="checkbox" className="mt-1 h-4 w-4 accent-primaria" checked={formulario.possuiCondicaoEspecial} onChange={(evento) => atualizar((atual) => ({ ...atual, possuiCondicaoEspecial: evento.target.checked }))} />
                       <span>O paciente possui condicao especial que exige justificativa clínica.</span>
                     </label>
-                    {formulario.possuiCondicaoEspecial ? <label className="grid gap-1 text-xs font-semibold uppercase text-texto-suave">Justificativa da condicao especial<AreaTexto value={formulario.justificativaCondicaoEspecial} onChange={(evento) => atualizar((atual) => ({ ...atual, justificativaCondicaoEspecial: evento.target.value }))} maxLength={2000} required /></label> : null}
-                    {formulario.possuiCondicaoEspecial ? <AlertaOperacional mensagem="O cálculo automático deste MVP não atende condições especiais. Registre a justificativa e use uma conduta individual fora deste fluxo." /> : null}
+                    {metaManual ? <label className="grid gap-1 text-xs font-semibold uppercase text-texto-suave">Justificativa da condicao especial<AreaTexto value={formulario.justificativaCondicaoEspecial} onChange={(evento) => atualizar((atual) => ({ ...atual, justificativaCondicaoEspecial: evento.target.value }))} maxLength={2000} required /></label> : null}
                   </fieldset>
 
                   <fieldset className="grid gap-3 rounded-md border border-linha bg-white p-4">
@@ -1303,11 +1390,17 @@ export function PlanoAlimentarProfissional({ pacienteId, podeGerenciar, aoAltera
 
                   {plano.draft.calculo ? (
                     <section className="grid gap-3 rounded-md border border-linha bg-white p-4">
-                      <div><h3 className="text-sm font-semibold text-tinta">Resultado calculado</h3><p className="text-sm text-texto-suave">{plano.draft.calculo.estimativa.aviso}</p></div>
+                      <div><h3 className="text-sm font-semibold text-tinta">{plano.draft.calculo.estimativa ? 'Resultado calculado' : 'Meta definida manualmente'}</h3><p className="text-sm text-texto-suave">{plano.draft.calculo.estimativa ? plano.draft.calculo.estimativa.aviso : 'Condição especial: meta informada pelo profissional, sem fórmula populacional.'}</p></div>
                       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-                        <div><p className="text-xs text-texto-suave">Repouso estimado</p><p className="text-lg font-semibold text-tinta">{formatarNumero(plano.draft.calculo.estimativa.metabolismoRepousoKcal)} kcal</p></div>
-                        <div><p className="text-xs text-texto-suave">GET estimado</p><p className="text-lg font-semibold text-tinta">{formatarNumero(plano.draft.calculo.estimativa.gastoEnergeticoTotalKcal)} kcal</p></div>
-                        <div><p className="text-xs text-texto-suave">Meta ajustada</p><p className="text-lg font-semibold text-tinta">{formatarNumero(plano.draft.calculo.metaEnergeticaKcal)} kcal</p></div>
+                        {plano.draft.calculo.estimativa ? (
+                          <>
+                            <div><p className="text-xs text-texto-suave">Repouso estimado</p><p className="text-lg font-semibold text-tinta">{formatarNumero(plano.draft.calculo.estimativa.metabolismoRepousoKcal)} kcal</p></div>
+                            <div><p className="text-xs text-texto-suave">GET estimado</p><p className="text-lg font-semibold text-tinta">{formatarNumero(plano.draft.calculo.estimativa.gastoEnergeticoTotalKcal)} kcal</p></div>
+                          </>
+                        ) : (
+                          <div><p className="text-xs text-texto-suave">Método dos macros</p><p className="text-lg font-semibold text-tinta">{plano.draft.calculo.metodoMacrosManual === 'gramas_por_kg' ? 'g/kg' : 'Percentual'}</p></div>
+                        )}
+                        <div><p className="text-xs text-texto-suave">{plano.draft.calculo.estimativa ? 'Meta ajustada' : 'Meta energética'}</p><p className="text-lg font-semibold text-tinta">{formatarNumero(plano.draft.calculo.metaEnergeticaKcal)} kcal</p></div>
                         <div><p className="text-xs text-texto-suave">Total das refeições</p><p className="text-lg font-semibold text-tinta">{formatarNumero(plano.draft.totais?.energiaKcal)} kcal</p></div>
                       </div>
                       {plano.draft.calculo.alertasDivergenciaClinica?.length ? (
@@ -1330,7 +1423,11 @@ export function PlanoAlimentarProfissional({ pacienteId, podeGerenciar, aoAltera
                           </label>
                         </div>
                       ) : null}
-                      <details className="text-sm text-texto-suave"><summary className="cursor-pointer font-medium text-tinta">Fórmula e fonte</summary><p className="mt-2">{plano.draft.calculo.estimativa.formulaAplicada}</p><p className="mt-1">{plano.draft.calculo.estimativa.fonte}</p></details>
+                      {plano.draft.calculo.estimativa ? (
+                        <details className="text-sm text-texto-suave"><summary className="cursor-pointer font-medium text-tinta">Fórmula e fonte</summary><p className="mt-2">{plano.draft.calculo.estimativa.formulaAplicada}</p><p className="mt-1">{plano.draft.calculo.estimativa.fonte}</p></details>
+                      ) : (
+                        <details className="text-sm text-texto-suave"><summary className="cursor-pointer font-medium text-tinta">Justificativa da condição especial</summary><p className="mt-2">{plano.draft.calculo.justificativaCondicaoEspecial}</p></details>
+                      )}
                     </section>
                   ) : null}
 

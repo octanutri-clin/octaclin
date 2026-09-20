@@ -15,6 +15,7 @@ import { PlanoAlimentarRefeicaoOrm } from '../infraestrutura/plano-alimentar-ref
 import { PlanoAlimentarSubstituicaoOrm } from '../infraestrutura/plano-alimentar-substituicao.orm';
 import { PlanoAlimentarVersaoOrm } from '../infraestrutura/plano-alimentar-versao.orm';
 import { PlanoAlimentarOrm } from '../infraestrutura/plano-alimentar.orm';
+import { MetodoMacrosManual } from '../dominio/calculo-nutricional';
 import { AtualizarRascunhoPlanoAlimentarDto } from './dtos';
 import { ServicoPlanosAlimentares } from './servico-planos-alimentares';
 
@@ -160,6 +161,7 @@ function usuarioProfissional(): UsuarioAutenticado {
 function dadosRascunho(alimentoComposicaoId?: string): AtualizarRascunhoPlanoAlimentarDto {
   return {
     avaliacaoAntropometricaId: AVALIACAO_ID,
+    origemMeta: 'formula',
     formula: 'mifflin_st_jeor_1990',
     fatorAtividade: 1.4,
     ajusteEnergeticoKcal: 0,
@@ -470,8 +472,10 @@ describe('ServicoPlanosAlimentares', () => {
     );
     const versao = repositorios.get(PlanoAlimentarVersaoOrm)!.registros[0] as PlanoAlimentarVersaoOrm;
 
-    expect(versao.revisadaEm).toBeUndefined();
-    expect(versao.revisadaPorUsuarioId).toBeUndefined();
+    // `null`, nao `undefined`: o TypeORM ignora propriedade `undefined` no save,
+    // entao so `null` invalida de fato a revisao no banco depois de uma edicao.
+    expect(versao.revisadaEm).toBeNull();
+    expect(versao.revisadaPorUsuarioId).toBeNull();
     expect(repositorios.get(PlanoAlimentarRefeicaoOrm)!.registros).toHaveLength(1);
     expect(repositorios.get(PlanoAlimentarItemOrm)!.registros).toHaveLength(1);
     expect(resposta.totais).toEqual({
@@ -508,6 +512,111 @@ describe('ServicoPlanosAlimentares', () => {
       servico.atualizarRascunho(TENANT_ID, PACIENTE_ID, PLANO_ID, usuarioProfissional(), dados)
     ).rejects.toBeInstanceOf(BadRequestException);
     expect(executor.executar).not.toHaveBeenCalled();
+  });
+
+  describe('caminho manual para condicao especial (PB-14)', () => {
+    function dadosManuais(
+      metodo: MetodoMacrosManual,
+      alimentoComposicaoId?: string
+    ): AtualizarRascunhoPlanoAlimentarDto {
+      const dados = dadosRascunho(alimentoComposicaoId);
+      dados.origemMeta = 'manual';
+      dados.possuiCondicaoEspecial = true;
+      dados.justificativaCondicaoEspecial = 'Doenca renal cronica em tratamento conservador.';
+      dados.metodoMacrosManual = metodo;
+      dados.aplicabilidadeFormulaConfirmada = false;
+      if (metodo === 'percentual') {
+        dados.metaEnergeticaManualKcal = 1800;
+      } else {
+        dados.macrosGramasPorKg = {
+          carboidratosGPorKg: 3,
+          proteinasGPorKg: 0.6,
+          gordurasGPorKg: 1
+        };
+      }
+      return dados;
+    }
+
+    it('aceita meta manual em percentual sem aplicar formula', async () => {
+      const resposta = await servico.atualizarRascunho(
+        TENANT_ID,
+        PACIENTE_ID,
+        PLANO_ID,
+        usuarioProfissional(),
+        dadosManuais('percentual')
+      );
+      const versao = repositorios.get(PlanoAlimentarVersaoOrm)!.registros[0] as PlanoAlimentarVersaoOrm;
+
+      // `null` limpa a coluna de verdade: um rascunho que comecou pela formula
+      // e virou manual nao pode manter o codigo da formula antiga no banco.
+      expect(versao.formulaCodigo).toBeNull();
+      expect(versao.formulaVersao).toBeNull();
+      // Nenhuma estimativa preditiva foi produzida no caminho manual.
+      expect((resposta.calculo as { estimativa?: unknown }).estimativa).toBeUndefined();
+      expect(resposta.calculo).toEqual(
+        expect.objectContaining({
+          origemMeta: 'manual',
+          metodoMacrosManual: 'percentual',
+          possuiCondicaoEspecial: true,
+          metaEnergeticaKcal: 1800,
+          // 50/20/30 de 1800 kcal, pelo mesmo motor do caminho automatico.
+          metasMacronutrientes: { carboidratosG: 225, proteinasG: 90, gordurasG: 60 }
+        })
+      );
+    });
+
+    it('aceita meta manual em g/kg e deriva a energia dos macros prescritos', async () => {
+      const resposta = await servico.atualizarRascunho(
+        TENANT_ID,
+        PACIENTE_ID,
+        PLANO_ID,
+        usuarioProfissional(),
+        dadosManuais('gramas_por_kg')
+      );
+
+      // Peso da avaliacao vinculada: 80 kg.
+      expect(resposta.calculo).toEqual(
+        expect.objectContaining({
+          origemMeta: 'manual',
+          metodoMacrosManual: 'gramas_por_kg',
+          metasMacronutrientes: { carboidratosG: 240, proteinasG: 48, gordurasG: 80 },
+          metaEnergeticaKcal: 240 * 4 + 48 * 4 + 80 * 9
+        })
+      );
+    });
+
+    it('recusa meta manual sem condicao especial para nao virar atalho da formula', async () => {
+      const dados = dadosManuais('percentual');
+      dados.possuiCondicaoEspecial = false;
+
+      await expect(
+        servico.atualizarRascunho(TENANT_ID, PACIENTE_ID, PLANO_ID, usuarioProfissional(), dados)
+      ).rejects.toThrow('condicao especial');
+      expect(executor.executar).not.toHaveBeenCalled();
+    });
+
+    it('exige justificativa da condicao especial no caminho manual', async () => {
+      const dados = dadosManuais('percentual');
+      dados.justificativaCondicaoEspecial = '   ';
+
+      await expect(
+        servico.atualizarRascunho(TENANT_ID, PACIENTE_ID, PLANO_ID, usuarioProfissional(), dados)
+      ).rejects.toThrow('justificativa');
+      expect(executor.executar).not.toHaveBeenCalled();
+    });
+
+    it('permite revisar e publicar um plano feito pelo caminho manual', async () => {
+      const dados = dadosManuais('percentual');
+      dados.justificativaDivergenciaClinica = 'Meta pactuada com a equipe de nefrologia.';
+      await servico.atualizarRascunho(TENANT_ID, PACIENTE_ID, PLANO_ID, usuarioProfissional(), dados);
+
+      await expect(
+        servico.revisar(TENANT_ID, PACIENTE_ID, PLANO_ID, usuarioProfissional())
+      ).resolves.toBeDefined();
+      await expect(
+        servico.publicar(TENANT_ID, PACIENTE_ID, PLANO_ID, usuarioProfissional())
+      ).resolves.toBeDefined();
+    });
   });
 
   it('bloqueia publicacao sem revisao', async () => {

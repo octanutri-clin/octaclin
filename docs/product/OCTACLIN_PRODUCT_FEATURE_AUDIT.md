@@ -435,13 +435,14 @@ Onde o tempo se perde hoje, com evidência:
    editados e nenhuma clínica nasce com biblioteca.
 5. **Sem ação em massa** `[F]` na lista de pacientes.
 6. **Lembrar manualmente dos follow-ups** `[F]`: a única automação com efeito é o recall de inatividade.
-7. **Paciente com condição especial fica sem caminho** `[F]`: `possuiCondicaoEspecial: true` recusa o cálculo
-   com mensagem explícita — "o calculo automatico nao e seguro e nao esta disponivel nesta fase"
-   (`servico-planos-alimentares.ts:317-321`). **Isto é uma trava de segurança clínica deliberada e correta, e
-   não deve ser removida.** O gap de produto não é a trava: é que **não existe caminho alternativo** — o
-   profissional recebe uma recusa e nenhuma rota manual para seguir com esse paciente. `[H]` Em clínica de
-   nutrição essa população é frequente; oferecer entrada manual com a fórmula desativada (mantendo o bloqueio
-   do cálculo automático) resolveria sem tocar na decisão de segurança.
+7. ~~**Paciente com condição especial fica sem caminho**~~ `[RESOLVIDO na Fase 270 — PB-14]`:
+   `possuiCondicaoEspecial: true` recusava o cálculo com mensagem explícita — "o calculo automatico nao e
+   seguro e nao esta disponivel nesta fase". **A trava de segurança clínica era deliberada e correta, e foi
+   preservada.** O gap nunca foi a trava: era **não existir caminho alternativo**. Confirmou-se que era pior
+   que o descrito aqui — o profissional não conseguia nem salvar o rascunho, e a interface mandava usar "uma
+   conduta individual fora deste fluxo". A Fase 270 entregou a entrada manual com a fórmula desativada: o
+   profissional informa a meta e escolhe, por paciente, expressar os macronutrientes em percentual da meta
+   energética ou em g/kg de peso.
 
 O que já é muito bom e **não deve ser mexido**: antropometria, documentos clínicos, substituições com escolha
 do paciente, linha do tempo paginada, recall com simulação, central de falhas, entrega de mensagem.
@@ -622,10 +623,16 @@ Nenhuma depende da Onda 2, podem correr em paralelo se houver capacidade.
   sem backend novo: os três passos já tinham rota existente e autorizada
   por paciente. Copia somente a estrutura de refeições; avaliação
   antropométrica, cálculo energético, objetivo clínico e confirmações
-  continuam sendo do paciente de destino. O próximo item da onda é o
-  **PB-14**, cujo gap está confirmado no código (`atualizarRascunho` hoje
-  recusa `possuiCondicaoEspecial: true`) e que exige decisão de produto
-  antes do código, como o próprio roteiro já previa.
+  continuam sendo do paciente de destino. O **PB-14 foi entregue pela Fase
+  270**: a trava do cálculo automático **continua** (equação populacional
+  nesse paciente produz número que ninguém deveria usar), e o que passou a
+  existir é a saída que faltava. A decisão de produto do proprietário foi
+  entrada manual da meta, com o método dos macronutrientes escolhido **por
+  paciente** — percentual da meta energética ou g/kg de peso —, publicando
+  normalmente com justificativa clínica obrigatória. Confirmou-se que o beco
+  sem saída era pior do que o descrito nesta seção: o profissional não
+  conseguia nem salvar o rascunho. O próximo item da onda é o **PB-15**
+  (template de evolução clínica com pré-preenchimento).
 
 **Onda 4 — estrutura** (PB-10, PB-17, PB-18, PB-19, PB-24)
 Exige migration e, portanto, o procedimento fora de banda com role owner. Agrupar as migrations reduz o número

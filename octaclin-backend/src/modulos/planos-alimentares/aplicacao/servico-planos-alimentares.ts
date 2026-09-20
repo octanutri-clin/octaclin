@@ -16,10 +16,14 @@ import type { PermissaoOctaClin } from '../../auth/dominio/permissoes';
 import { AvaliacaoAntropometricaOrm } from '../../pacientes/infraestrutura/avaliacao-antropometrica.orm';
 import { PacienteOrm } from '../../pacientes/infraestrutura/paciente.orm';
 import {
+  calcularEnergiaDasMetas,
   calcularEstimativaEnergetica,
   calcularMetasMacronutrientes,
+  calcularMetasMacronutrientesPorPeso,
   calcularNutrientesDaPorcao,
+  MetodoMacrosManual,
   NutrientesPor100g,
+  OrigemMetaPlano,
   SexoCalculoEnergetico
 } from '../dominio/calculo-nutricional';
 import {
@@ -311,13 +315,25 @@ export class ServicoPlanosAlimentares {
   ) {
     this.garantirPapelProfissional(usuario);
     this.garantirPermissao(usuario, 'planos_alimentares.gerenciar');
-    if (!dados.aplicabilidadeFormulaConfirmada) {
-      throw new BadRequestException('Confirme explicitamente a aplicabilidade da formula antes de calcular o plano.');
-    }
-    if (dados.possuiCondicaoEspecial) {
+    const metaManual = dados.origemMeta === 'manual';
+    // A trava clinica continua: condicao especial nunca usa formula preditiva.
+    // O que mudou e existir uma saida -- a meta manual -- em vez de recusa seca.
+    if (dados.possuiCondicaoEspecial && !metaManual) {
       throw new BadRequestException(
-        'Condicao especial informada: o calculo automatico nao e seguro e nao esta disponivel nesta fase.'
+        'Condicao especial informada: o calculo automatico nao e seguro. Informe a meta manualmente.'
       );
+    }
+    if (metaManual && !dados.possuiCondicaoEspecial) {
+      throw new BadRequestException(
+        'A meta manual existe para paciente com condicao especial declarada; nao e atalho para pular a formula.'
+      );
+    }
+    if (metaManual) {
+      if (!dados.justificativaCondicaoEspecial?.trim()) {
+        throw new BadRequestException('Descreva a justificativa clinica da condicao especial.');
+      }
+    } else if (!dados.aplicabilidadeFormulaConfirmada) {
+      throw new BadRequestException('Confirme explicitamente a aplicabilidade da formula antes de calcular o plano.');
     }
 
     return this.executorTenant.executar(tenantId, async (gerenciador) => {
@@ -337,19 +353,32 @@ export class ServicoPlanosAlimentares {
         }
       });
       const entradaCalculo = this.validarAvaliacaoAntropometrica(avaliacao);
-      let estimativa: ReturnType<typeof calcularEstimativaEnergetica>;
+      let estimativa: ReturnType<typeof calcularEstimativaEnergetica> | undefined;
       let metasMacronutrientes: ReturnType<typeof calcularMetasMacronutrientes>;
+      let metaEnergeticaKcal: number;
       try {
-        estimativa = calcularEstimativaEnergetica({
-          formula: dados.formula,
-          sexo: entradaCalculo.sexo,
-          idadeAnos: entradaCalculo.idadeAnos,
-          pesoKg: entradaCalculo.pesoKg,
-          alturaCm: entradaCalculo.alturaCm,
-          fatorAtividade: dados.fatorAtividade
-        });
-        const metaEnergeticaKcal = estimativa.gastoEnergeticoTotalKcal + (dados.ajusteEnergeticoKcal ?? 0);
-        metasMacronutrientes = calcularMetasMacronutrientes(metaEnergeticaKcal, dados.distribuicaoMacros);
+        if (metaManual && dados.metodoMacrosManual === 'gramas_por_kg') {
+          // Em g/kg os macros sao a prescricao; a energia e consequencia deles.
+          metasMacronutrientes = calcularMetasMacronutrientesPorPeso(
+            entradaCalculo.pesoKg,
+            dados.macrosGramasPorKg!
+          );
+          metaEnergeticaKcal = calcularEnergiaDasMetas(metasMacronutrientes);
+        } else if (metaManual) {
+          metaEnergeticaKcal = dados.metaEnergeticaManualKcal!;
+          metasMacronutrientes = calcularMetasMacronutrientes(metaEnergeticaKcal, dados.distribuicaoMacros);
+        } else {
+          estimativa = calcularEstimativaEnergetica({
+            formula: dados.formula,
+            sexo: entradaCalculo.sexo,
+            idadeAnos: entradaCalculo.idadeAnos,
+            pesoKg: entradaCalculo.pesoKg,
+            alturaCm: entradaCalculo.alturaCm,
+            fatorAtividade: dados.fatorAtividade
+          });
+          metaEnergeticaKcal = estimativa.gastoEnergeticoTotalKcal + (dados.ajusteEnergeticoKcal ?? 0);
+          metasMacronutrientes = calcularMetasMacronutrientes(metaEnergeticaKcal, dados.distribuicaoMacros);
+        }
       } catch (erro) {
         throw new BadRequestException(erro instanceof Error ? erro.message : 'Dados invalidos para o calculo nutricional.');
       }
@@ -363,7 +392,6 @@ export class ServicoPlanosAlimentares {
         throw new BadRequestException(erro instanceof Error ? erro.message : 'Estrutura do plano alimentar invalida.');
       }
 
-      const metaEnergeticaKcal = estimativa.gastoEnergeticoTotalKcal + (dados.ajusteEnergeticoKcal ?? 0);
       const alertasDivergenciaClinica = this.avaliarDivergenciasNutricionais(
         metaEnergeticaKcal,
         metasMacronutrientes,
@@ -379,14 +407,19 @@ export class ServicoPlanosAlimentares {
           pesoKg: entradaCalculo.pesoKg,
           alturaCm: entradaCalculo.alturaCm
         },
+        origemMeta: dados.origemMeta,
+        metodoMacrosManual: metaManual ? dados.metodoMacrosManual : undefined,
+        macrosGramasPorKg:
+          metaManual && dados.metodoMacrosManual === 'gramas_por_kg' ? dados.macrosGramasPorKg : undefined,
         possuiCondicaoEspecial: dados.possuiCondicaoEspecial,
         justificativaCondicaoEspecial: dados.justificativaCondicaoEspecial?.trim(),
-        aplicabilidadeFormulaConfirmada: dados.aplicabilidadeFormulaConfirmada,
-        fatorAtividade: dados.fatorAtividade,
+        aplicabilidadeFormulaConfirmada: metaManual ? false : dados.aplicabilidadeFormulaConfirmada,
+        fatorAtividade: metaManual ? undefined : dados.fatorAtividade,
         estimativa,
-        ajusteEnergeticoKcal: dados.ajusteEnergeticoKcal ?? 0,
+        ajusteEnergeticoKcal: metaManual ? 0 : (dados.ajusteEnergeticoKcal ?? 0),
         metaEnergeticaKcal,
-        distribuicaoMacros: dados.distribuicaoMacros,
+        distribuicaoMacros:
+          metaManual && dados.metodoMacrosManual === 'gramas_por_kg' ? undefined : dados.distribuicaoMacros,
         metasMacronutrientes,
         alertasDivergenciaClinica,
         justificativaDivergenciaClinica: dados.justificativaDivergenciaClinica?.trim()
@@ -394,8 +427,10 @@ export class ServicoPlanosAlimentares {
 
       await this.substituirFilhos(gerenciador, tenantId, rascunho.id, estrutura);
       rascunho.avaliacaoAntropometricaId = avaliacao!.id;
-      rascunho.formulaCodigo = estimativa.formulaCodigo;
-      rascunho.formulaVersao = estimativa.formulaVersao;
+      // `null` e proposital: se o rascunho ja tinha formula e virou manual, so
+      // `null` limpa a coluna -- `undefined` deixaria a formula antiga no banco.
+      rascunho.formulaCodigo = estimativa?.formulaCodigo ?? null;
+      rascunho.formulaVersao = estimativa?.formulaVersao ?? null;
       rascunho.motorCalculoVersao = MOTOR_CALCULO_VERSAO;
       rascunho.objetivosCriptografados = this.criptografia.criptografar(dados.objetivos.trim());
       rascunho.observacoesCriptografadas = dados.observacoes?.trim()
@@ -403,9 +438,12 @@ export class ServicoPlanosAlimentares {
         : undefined;
       rascunho.calculoSnapshotCriptografado = this.criptografia.criptografar(JSON.stringify(calculoSnapshot));
       rascunho.totaisSnapshotCriptografado = this.criptografia.criptografar(JSON.stringify(totais));
-      rascunho.revisadaEm = undefined;
-      rascunho.revisadaPorUsuarioId = undefined;
-      rascunho.hashConteudo = undefined;
+      // Editar invalida a revisao: quem revisou aprovou outro conteudo. Precisa
+      // ser `null` -- com `undefined` o TypeORM nao escreve a coluna e o plano
+      // continuaria "revisado" no banco, publicavel sem passar pela revisao.
+      rascunho.revisadaEm = null;
+      rascunho.revisadaPorUsuarioId = null;
+      rascunho.hashConteudo = null;
       await gerenciador.getRepository(PlanoAlimentarVersaoOrm).save(rascunho);
       return this.montarVersao(gerenciador, rascunho);
     });
@@ -1034,8 +1072,6 @@ export class ServicoPlanosAlimentares {
   private garantirRascunhoCompleto(rascunho: PlanoAlimentarVersaoOrm): void {
     if (
       !rascunho.avaliacaoAntropometricaId ||
-      !rascunho.formulaCodigo ||
-      !rascunho.formulaVersao ||
       !rascunho.motorCalculoVersao ||
       !rascunho.objetivosCriptografados ||
       !rascunho.calculoSnapshotCriptografado ||
@@ -1044,16 +1080,39 @@ export class ServicoPlanosAlimentares {
       throw new BadRequestException('Complete o calculo e o conteudo do rascunho antes de continuar.');
     }
     const calculo = this.lerJsonCriptografado<{
+      origemMeta?: OrigemMetaPlano;
+      metodoMacrosManual?: MetodoMacrosManual;
       possuiCondicaoEspecial?: boolean;
+      justificativaCondicaoEspecial?: unknown;
       aplicabilidadeFormulaConfirmada?: boolean;
       alertasDivergenciaClinica?: unknown;
       justificativaDivergenciaClinica?: unknown;
     }>(rascunho.calculoSnapshotCriptografado);
-    if (calculo.possuiCondicaoEspecial) {
-      throw new BadRequestException('Plano com condicao especial nao pode usar o fluxo automatico desta fase.');
+    const metaManual = calculo.origemMeta === 'manual';
+    // A trava continua valendo para o caminho automatico; o manual e a saida.
+    if (calculo.possuiCondicaoEspecial !== metaManual) {
+      throw new BadRequestException(
+        'Plano com condicao especial exige meta manual; meta manual exige condicao especial declarada.'
+      );
     }
-    if (calculo.aplicabilidadeFormulaConfirmada !== true) {
-      throw new BadRequestException('A aplicabilidade da formula precisa estar explicitamente confirmada.');
+    if (metaManual) {
+      const justificativa =
+        typeof calculo.justificativaCondicaoEspecial === 'string'
+          ? calculo.justificativaCondicaoEspecial.trim()
+          : '';
+      if (!justificativa) {
+        throw new BadRequestException('A condicao especial precisa de justificativa clinica registrada.');
+      }
+      if (!calculo.metodoMacrosManual) {
+        throw new BadRequestException('Registre como os macronutrientes manuais foram definidos.');
+      }
+    } else {
+      if (!rascunho.formulaCodigo || !rascunho.formulaVersao) {
+        throw new BadRequestException('Complete o calculo e o conteudo do rascunho antes de continuar.');
+      }
+      if (calculo.aplicabilidadeFormulaConfirmada !== true) {
+        throw new BadRequestException('A aplicabilidade da formula precisa estar explicitamente confirmada.');
+      }
     }
     const alertas = Array.isArray(calculo.alertasDivergenciaClinica)
       ? calculo.alertasDivergenciaClinica.filter((alerta): alerta is string => typeof alerta === 'string')

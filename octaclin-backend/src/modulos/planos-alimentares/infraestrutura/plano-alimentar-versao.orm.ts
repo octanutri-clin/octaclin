@@ -28,11 +28,14 @@ export class PlanoAlimentarVersaoOrm {
   @Column({ name: 'avaliacao_antropometrica_id', type: 'uuid', nullable: true })
   avaliacaoAntropometricaId?: string;
 
+  // `null` (e nao `undefined`) e o que limpa a coluna: o TypeORM ignora
+  // propriedade `undefined` no save. Vale para todo campo que o fluxo precisa
+  // zerar de verdade -- formula no caminho manual, revisao apos edicao.
   @Column({ name: 'formula_codigo', type: 'varchar', length: 80, nullable: true })
-  formulaCodigo?: string;
+  formulaCodigo?: string | null;
 
   @Column({ name: 'formula_versao', type: 'varchar', length: 40, nullable: true })
-  formulaVersao?: string;
+  formulaVersao?: string | null;
 
   @Column({ name: 'motor_calculo_versao', type: 'varchar', length: 40, nullable: true })
   motorCalculoVersao?: string;
@@ -50,13 +53,13 @@ export class PlanoAlimentarVersaoOrm {
   totaisSnapshotCriptografado?: Buffer;
 
   @Column({ name: 'hash_conteudo', type: 'char', length: 64, nullable: true })
-  hashConteudo?: string;
+  hashConteudo?: string | null;
 
   @Column({ name: 'revisada_em', type: 'timestamptz', nullable: true })
-  revisadaEm?: Date;
+  revisadaEm?: Date | null;
 
   @Column({ name: 'revisada_por_usuario_id', type: 'uuid', nullable: true })
-  revisadaPorUsuarioId?: string;
+  revisadaPorUsuarioId?: string | null;
 
   @Column({ name: 'publicada_em', type: 'timestamptz', nullable: true })
   publicadaEm?: Date;

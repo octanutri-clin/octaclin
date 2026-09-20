@@ -19,7 +19,14 @@ import {
   ValidateIf,
   ValidateNested
 } from 'class-validator';
-import { FORMULAS_ENERGETICAS, FormulaEnergetica } from '../dominio/calculo-nutricional';
+import {
+  FORMULAS_ENERGETICAS,
+  FormulaEnergetica,
+  METODOS_MACROS_MANUAIS,
+  MetodoMacrosManual,
+  ORIGENS_META_PLANO,
+  OrigemMetaPlano
+} from '../dominio/calculo-nutricional';
 import {
   ORIGENS_MODELO_PLANO_ALIMENTAR,
   OrigemModeloPlanoAlimentar
@@ -335,24 +342,78 @@ export class DistribuicaoMacrosDto {
   gordurasBasisPoints: number;
 }
 
+export class MacrosGramasPorKgDto {
+  @IsNumber({ maxDecimalPlaces: 4 })
+  @Min(0)
+  @Max(50)
+  carboidratosGPorKg: number;
+
+  @IsNumber({ maxDecimalPlaces: 4 })
+  @Min(0)
+  @Max(50)
+  proteinasGPorKg: number;
+
+  @IsNumber({ maxDecimalPlaces: 4 })
+  @Min(0)
+  @Max(50)
+  gordurasGPorKg: number;
+}
+
 export class AtualizarRascunhoPlanoAlimentarDto {
   @IsUUID()
   avaliacaoAntropometricaId: string;
 
+  /**
+   * `manual` existe para o paciente com condicao especial, cujo calculo
+   * automatico continua bloqueado. O servico exige que as duas coisas andem
+   * juntas: condicao especial <-> meta manual.
+   */
+  @IsIn(ORIGENS_META_PLANO)
+  origemMeta: OrigemMetaPlano;
+
+  @ValidateIf((dto: AtualizarRascunhoPlanoAlimentarDto) => dto.origemMeta !== 'manual')
   @IsIn(FORMULAS_ENERGETICAS)
   formula: FormulaEnergetica;
 
+  @ValidateIf((dto: AtualizarRascunhoPlanoAlimentarDto) => dto.origemMeta !== 'manual')
   @IsNumber({ maxDecimalPlaces: 4 })
   @Min(1.4)
   @Max(2.4)
   fatorAtividade: number;
 
+  @ValidateIf((dto: AtualizarRascunhoPlanoAlimentarDto) => dto.origemMeta !== 'manual')
   @IsOptional()
   @IsNumber({ maxDecimalPlaces: 4 })
   @Min(-10_000)
   @Max(10_000)
   ajusteEnergeticoKcal?: number;
 
+  @ValidateIf((dto: AtualizarRascunhoPlanoAlimentarDto) => dto.origemMeta === 'manual')
+  @IsIn(METODOS_MACROS_MANUAIS)
+  metodoMacrosManual?: MetodoMacrosManual;
+
+  /** Em `gramas_por_kg` a energia e derivada dos macros, entao nao e digitada. */
+  @ValidateIf(
+    (dto: AtualizarRascunhoPlanoAlimentarDto) =>
+      dto.origemMeta === 'manual' && dto.metodoMacrosManual === 'percentual'
+  )
+  @IsNumber({ maxDecimalPlaces: 4 })
+  @Min(1)
+  @Max(20_000)
+  metaEnergeticaManualKcal?: number;
+
+  @ValidateIf(
+    (dto: AtualizarRascunhoPlanoAlimentarDto) =>
+      dto.origemMeta === 'manual' && dto.metodoMacrosManual === 'gramas_por_kg'
+  )
+  @ValidateNested()
+  @Type(() => MacrosGramasPorKgDto)
+  macrosGramasPorKg?: MacrosGramasPorKgDto;
+
+  @ValidateIf(
+    (dto: AtualizarRascunhoPlanoAlimentarDto) =>
+      dto.origemMeta !== 'manual' || dto.metodoMacrosManual === 'percentual'
+  )
   @ValidateNested()
   @Type(() => DistribuicaoMacrosDto)
   distribuicaoMacros: DistribuicaoMacrosDto;
@@ -360,11 +421,14 @@ export class AtualizarRascunhoPlanoAlimentarDto {
   @IsBoolean()
   possuiCondicaoEspecial: boolean;
 
+  /** Nao ha formula para confirmar no caminho manual. */
+  @ValidateIf((dto: AtualizarRascunhoPlanoAlimentarDto) => dto.origemMeta !== 'manual')
   @IsBoolean()
   aplicabilidadeFormulaConfirmada: boolean;
 
-  @IsOptional()
+  @ValidateIf((dto: AtualizarRascunhoPlanoAlimentarDto) => dto.possuiCondicaoEspecial)
   @IsString()
+  @MinLength(10)
   @MaxLength(2_000)
   justificativaCondicaoEspecial?: string;
 

@@ -63,18 +63,32 @@ export interface RefeicaoPlanoAlimentarEntrada {
   itens: ItemPlanoAlimentarEntrada[];
 }
 
+export type OrigemMetaPlanoApi = 'formula' | 'manual';
+export type MetodoMacrosManualApi = 'percentual' | 'gramas_por_kg';
+
+export interface MacrosGramasPorKgApi {
+  carboidratosGPorKg: number;
+  proteinasGPorKg: number;
+  gordurasGPorKg: number;
+}
+
 export interface AtualizarRascunhoPlanoAlimentarEntrada {
   avaliacaoAntropometricaId: string;
-  formula: FormulaEnergeticaApi;
-  fatorAtividade: number;
+  /** `manual` e o caminho do paciente com condicao especial: sem formula. */
+  origemMeta: OrigemMetaPlanoApi;
+  formula?: FormulaEnergeticaApi;
+  fatorAtividade?: number;
   ajusteEnergeticoKcal?: number;
-  distribuicaoMacros: {
+  metodoMacrosManual?: MetodoMacrosManualApi;
+  metaEnergeticaManualKcal?: number;
+  macrosGramasPorKg?: MacrosGramasPorKgApi;
+  distribuicaoMacros?: {
     carboidratosBasisPoints: number;
     proteinasBasisPoints: number;
     gordurasBasisPoints: number;
   };
   possuiCondicaoEspecial: boolean;
-  aplicabilidadeFormulaConfirmada: boolean;
+  aplicabilidadeFormulaConfirmada?: boolean;
   justificativaCondicaoEspecial?: string;
   justificativaDivergenciaClinica?: string;
   objetivos: string;
@@ -148,8 +162,12 @@ export interface CalculoPlanoAlimentarApi {
   aplicabilidadeFormulaConfirmada: boolean;
   alertasDivergenciaClinica?: string[];
   justificativaDivergenciaClinica?: string;
-  fatorAtividade: number;
-  estimativa: {
+  /** Ausentes no caminho manual: nenhuma formula preditiva foi aplicada. */
+  origemMeta?: OrigemMetaPlanoApi;
+  metodoMacrosManual?: MetodoMacrosManualApi;
+  macrosGramasPorKg?: MacrosGramasPorKgApi;
+  fatorAtividade?: number;
+  estimativa?: {
     metabolismoRepousoKcal: number;
     gastoEnergeticoTotalKcal: number;
     formulaCodigo: FormulaEnergeticaApi;
@@ -160,7 +178,7 @@ export interface CalculoPlanoAlimentarApi {
   };
   ajusteEnergeticoKcal: number;
   metaEnergeticaKcal: number;
-  distribuicaoMacros: AtualizarRascunhoPlanoAlimentarEntrada['distribuicaoMacros'];
+  distribuicaoMacros?: AtualizarRascunhoPlanoAlimentarEntrada['distribuicaoMacros'];
   metasMacronutrientes: {
     carboidratosG: number;
     proteinasG: number;

@@ -47,6 +47,26 @@ Atualizado em 2026-09-20.
   reais das automacoes) esta concluido; o proximo item obrigatorio da Onda 2
   e o PB-05 (alerta de check-in com adesao baixa). Plano e limites em
   `docs/history/phases/PLANO_FASE_267.md`.
+- Reconciliacao de 2026-09-20: Fase 270 entrega o **PB-14 (caminho manual
+  para paciente com condicao especial)**, segundo item da Onda 3. O bloqueio
+  do calculo automatico continua -- aplicar equacao populacional nesse
+  paciente produz numero que ninguem deveria usar. O que passa a existir e a
+  saida: antes marcar a condicao especial impedia ate salvar o rascunho e a
+  interface mandava usar "uma conduta individual fora deste fluxo". Agora o
+  profissional informa a meta manualmente e escolhe, por paciente, expressar
+  os macros em percentual da meta energetica ou em g/kg de peso (decisao do
+  proprietario); em g/kg a energia e derivada dos gramas prescritos, para nao
+  existir uma segunda fonte de verdade. O servico exige a invariante nos dois
+  sentidos: condicao especial <-> meta manual, checada tambem em
+  `revisar`/`publicar`. O plano manual publica normalmente, com justificativa
+  clinica obrigatoria e registro explicito da origem manual no snapshot.
+  Durante a fase foi encontrado e corrigido um defeito **pre-existente e mais
+  grave**: `atualizarRascunho` invalidava a revisao com `undefined`, que o
+  TypeORM ignora no `save()`, entao a coluna `revisada_em` mantinha o valor
+  antigo e era possivel revisar, editar e publicar sem nova revisao. Passou a
+  usar `null`. Sem migration. Implementado nesta branch; checks remotos e
+  merge humano pendentes. Plano e limites em
+  `docs/history/phases/PLANO_FASE_270.md`.
 - Reconciliacao de 2026-09-20: a Onda 3 do audit (devolver tempo ao
   profissional) comecou, com a ordem aprovada pelo proprietario:
   PB-13 -> PB-14 -> PB-15 -> PB-23 -> PB-16 -> PB-25 (este ultimo depende do
