@@ -53,12 +53,14 @@ de vocabulario, ao contrario do contrato de `acoes` (fechado desde a Fase
      vazias (o proprio evento e o filtro) e contexto contendo somente IDs
      opacos, nunca resposta de formulario.
    - integrado nesta branch; ver secao 8 para evidencia local.
-2. **267.2 - `paciente.risco_alto`** [PENDENTE]
-   - liga o evento de recalculo de prioridade/risco (Fase 265) a fundacao de
-     disparo da 267.1;
-   - decisao de produto a confirmar antes de codigo: disparar a cada
-     recalculo que cruzar o limiar de risco alto, ou somente na transicao de
-     faixa (evitar re-disparo diario para quem permanece em risco alto).
+2. **267.2 - `paciente.risco_alto`** [CONCLUIDO]
+   - liga o recalculo diario de prioridade de acompanhamento (Fase 265) a
+     fundacao de disparo da 267.1;
+   - regra de produto aprovada: dispara na ENTRADA em faixa alta (baixa/media
+     -> alta), e o primeiro calculo de um paciente que ja nasce em alta conta
+     como entrada; `alta -> alta` nao dispara de novo; override manual do
+     profissional nunca dispara automacao neste incremento;
+   - integrado nesta branch; ver secao 11 para evidencia local.
 3. **267.3 - `checkin.atrasado`** [PENDENTE]
    - exige uma rodada periodica (equivalente a um `@Cron`) que ainda nao
      existe para este sinal; depende de decisao de produto sobre a janela de
@@ -78,7 +80,23 @@ e uma regressao desta fase, e uma lacuna de produto pre-existente sobre o que
 produto pendente para uma fase futura de hardening do motor de automacoes,
 sem bloquear a 267.1.
 
-## 4. Invariantes da fundacao (267.1, reutilizadas pela 267.2 e 267.3)
+### Observacao de revisao (267.2)
+
+A revisao de isolamento por tenant/profissional e de vazamento de dado
+clinico (score/fatores/override) da 267.2 nao encontrou nenhum achado de
+risco: o `tenantId` de `recalcularPaciente` nunca e reatribuido no loop de
+`recalcularTenant`, `dispararGatilhoAutomacao` continua resolvendo regra e
+profissional exclusivamente a partir do `tenantId`/paciente corretos, e o
+contexto duravel enviado (`{ evento: 'paciente.risco_alto' }`) nao carrega
+score, faixa, fatores nem justificativa de override. A revisao sugeriu, como
+melhoria opcional e nao bloqueante, um teste de regressao explicito para
+"regra de outro tenant nunca dispara" alem da cobertura estrutural ja
+existente; o teste "respeita isolamento por tenant e profissional" em
+`servico-recalculo-prioridade-acompanhamento.spec.ts` ja inclui uma regra de
+`tenant-2` no mesmo cenario e confirma que ela nao produz execucao, o que
+cobre o caso na pratica.
+
+## 4. Invariantes da fundacao (267.1, reutilizadas pela 267.2 e ainda pela 267.3)
 
 - O disparo so considera regras `ativa = true` do mesmo tenant do evento de
   origem e do profissional responsavel pelo paciente (`pacientes.profissional_responsavel_id`).
@@ -179,3 +197,96 @@ menos uma simulacao persistida da mesma regra.
   incremento reutiliza colunas e tabelas existentes (`outbox_eventos`,
   `execucoes_regra`, `regras_automacao`) e nao aciona nenhum provider
   externo.
+
+## 9. Regra de disparo e gates do Incremento 267.2
+
+Regra aprovada pelo proprietario: o gatilho `paciente.risco_alto` dispara
+quando a prioridade calculada deterministicamente (Fase 265,
+`calcularPrioridadeAcompanhamento`) ENTRA na faixa `alta`:
+
+- baixa/media -> alta: dispara;
+- primeiro calculo do paciente ja em alta (sem faixa anterior para comparar):
+  dispara, conta como entrada;
+- alta -> alta: nao dispara de novo;
+- override manual do profissional (`solicitarOverridePrioridadeAcompanhamento`
+  em `servico-pacientes.ts`) nunca dispara automacao neste incremento — o
+  gatilho so e alcancavel a partir do calculo deterministico
+  (`ServicoRecalculoPrioridadeAcompanhamento.recalcularPaciente`), nunca do
+  caminho de override, que grava um `tipoEvento` diferente
+  (`override_criado`/`override_alterado`/...) no mesmo historico e nunca
+  chama o disparo.
+
+Implementacao:
+
+- `entrouEmAltaPrioridade(faixaAnterior, faixaAtual)`
+  (`modulos/pacientes/dominio/prioridade-acompanhamento.ts`) e a funcao pura
+  que decide a transicao, testada exaustivamente de forma isolada.
+- `ServicoRecalculoPrioridadeAcompanhamento.atualizarEstadoAtual` passou a
+  devolver a faixa calculada anterior (lida antes de sobrescrever o cache),
+  nunca a `overrideFaixa`.
+- `recalcularPaciente` chama `dispararGatilhoAutomacao` (fundacao da 267.1)
+  somente quando `registrarHistoricoSeNovo` acabou de gravar um evento
+  `calculo` novo E `entrouEmAltaPrioridade` for verdadeiro -- dentro da MESMA
+  transacao/`gerenciador` do recalculo e do historico, exatamente como as
+  demais escritas desse metodo.
+- A chave de origem do disparo (`origemId`) e
+  `${pacienteId}:${versaoFormula}:${diaUtc}`: a mesma janela (paciente,
+  versao da formula, dia UTC) que ja impede um segundo evento `calculo` no
+  mesmo dia impede tambem um segundo disparo, sem precisar de coluna nova.
+- O contexto duravel enviado a fundacao contem somente
+  `{ evento: 'paciente.risco_alto' }` -- nenhum score, fator ou justificativa
+  de override.
+
+Gates:
+
+- [x] Escopo e regra de disparo aprovados pelo proprietario antes do codigo.
+- [x] Testes focados escritos antes da implementacao cobrindo os 8 cenarios
+  pedidos (transicao para alta, primeiro calculo em alta, alta -> alta,
+  baixa/media sem transicao, override sem disparo, retry no mesmo dia,
+  isolamento tenant/profissional, outbox retomavel apos falha de fila).
+- [x] Nenhuma mudanca na fundacao da 267.1
+  (`dispararGatilhoAutomacao`/`ProcessadorOutboxGatilhosAutomacao`): o
+  gatilho `paciente.risco_alto` a reutiliza sem alterar seu contrato.
+- [x] `ServicoRecalculoPrioridadeAcompanhamento` continua sem efeito externo
+  proprio alem do disparo -- a formula, o cache e o historico da Fase 265
+  nao mudam de comportamento.
+- [x] Web descreve "a prioridade calculada entrar em alta", nao "enquanto
+  estiver em alta".
+- [x] Suite completa do backend e builds de backend/Web.
+- [x] Gates de confiabilidade, secrets e `git diff --check`.
+- [ ] Checks e revisao humana da PR contra `main`.
+
+## 10. Fora do escopo da 267.2
+
+- ligar `checkin.atrasado` (267.3);
+- alerta de baixa adesao (PB-05);
+- qualquer mudanca na formula do score de risco, nas faixas ou no fluxo de
+  override da Fase 265;
+- endpoint de recalculo sob demanda (hoje so existe a rodada diaria via
+  `ProcessadorRecalculoPrioridadeAcompanhamento`);
+- migration, provider externo ou configuracao de producao.
+
+## 11. Evidencia local do Incremento 267.2
+
+- `PASS` - testes focados do dominio: 12/12
+  (`prioridade-acompanhamento.spec.ts`, incluindo 6 novos casos de
+  `entrouEmAltaPrioridade`).
+- `PASS` - testes focados do servico de recalculo: 19/19
+  (`servico-recalculo-prioridade-acompanhamento.spec.ts`, 11 preexistentes +
+  8 novos cobrindo os cenarios pedidos, incluindo o evento de outbox
+  processado pelo `ProcessadorOutboxGatilhosAutomacao` real sob falha de
+  fila).
+- `PASS` - suite completa do backend: 199 suites executadas, 1.900/1.900
+  testes; 3 suites (31 testes) permaneceram skipped, mesmo padrao ja
+  documentado nas fases 265/266/267.1 (integracao dependente de ambiente).
+- `PASS` - typecheck e build do backend.
+- `PASS` - typecheck, lint e build da Web; lint sem erros e com 56 warnings
+  preexistentes (mesma contagem da 267.1).
+- `PASS` - matriz de confiabilidade e scanner de secrets.
+- `SKIPPED` - Playwright de Automacoes: mesma limitacao de ambiente da 267.1
+  (cache de Chromium do sandbox na revisao 1194, `@playwright/test` desta
+  sessao exige 1243); mudanca nesta fase e apenas textual, o CI da PR roda
+  com o cache correto.
+- `SKIPPED` - validacao local em Node 22: o host desta sessao usa Node 24.
+- `NA` - migration, banco externo, staging, producao e providers: o
+  incremento nao adiciona coluna, tabela nem efeito externo novo.

@@ -27,10 +27,15 @@ Atualizado em 2026-09-20.
   de origem, identidade deterministica, publicacao exclusiva pelo outbox via
   `ProcessadorOutboxGatilhosAutomacao`) e conecta `questionario.respondido` ao
   termino idempotente de `finalizarFormularioPaciente`, com condicoes vazias
-  e contexto somente com IDs opacos. Implementado nesta branch; checks
-  remotos e merge humano pendentes. Depois do 267.1, seguem 267.2
-  (`paciente.risco_alto`) e 267.3 (`checkin.atrasado`), nessa ordem, antes do
-  PB-05. Plano e limites em `docs/history/phases/PLANO_FASE_267.md`.
+  e contexto somente com IDs opacos. O Incremento 267.2 liga o recalculo
+  diario de prioridade de acompanhamento (Fase 265) a essa mesma fundacao,
+  sem altera-la: dispara `paciente.risco_alto` quando a faixa calculada
+  deterministicamente entra em `alta` (baixa/media -> alta, ou primeiro
+  calculo ja em alta), nunca dispara de novo em `alta -> alta` nem por
+  override manual do profissional, e o contexto duravel carrega somente o
+  tipo do evento. Ambos implementados nesta branch; checks remotos e merge
+  humano pendentes. Falta 267.3 (`checkin.atrasado`) antes do PB-05. Plano e
+  limites em `docs/history/phases/PLANO_FASE_267.md`.
 - Reconciliacao de 2026-09-18 (decisoes de produto para destravar a Fase
   265): o dono do produto aprovou o vocabulario fechado de `codigoMotivo`
   (`evento_recente_nao_capturado`, `informacao_externa_relevante`,
@@ -593,9 +598,13 @@ Atualizado em 2026-09-20.
   (execucao e outbox na mesma transacao do evento de origem, identidade
   deterministica por `(regra, origem)`, publicacao exclusiva pelo outbox) e
   conecta `questionario.respondido` ao termino idempotente de
-  `finalizarFormularioPaciente`. Checks remotos e merge humano pendentes.
-  Ordem de continuidade: 267.2 (`paciente.risco_alto`), depois 267.3
-  (`checkin.atrasado`), antes do PB-05.
+  `finalizarFormularioPaciente`. O Incremento 267.2 liga `paciente.risco_alto`
+  ao recalculo diario de prioridade da Fase 265, reutilizando a mesma
+  fundacao sem altera-la: dispara na entrada em faixa alta (baixa/media ->
+  alta, ou primeiro calculo ja em alta), nunca em `alta -> alta` nem por
+  override manual, e o contexto duravel carrega somente o tipo do evento.
+  Checks remotos e merge humano pendentes para os dois incrementos. Falta
+  267.3 (`checkin.atrasado`) antes do PB-05.
 - Fase 261 (escopo de trabalho: gaps de seguranca e privacidade
   identificados no audit da fase) **concluida tecnicamente em 2026-09-15,
   com excecoes operacionais abertas; incrementos 1 a 4 integrados**.

@@ -145,6 +145,20 @@ function classificarFaixa(score: number): FaixaPrioridadeAcompanhamento {
   return 'baixa';
 }
 
+/**
+ * Decide se este calculo e uma ENTRADA em risco alto: `alta -> alta` nao
+ * conta de novo (o paciente ja estava sinalizado), mas o primeiro calculo
+ * de um paciente que ja nasce em `alta` conta como entrada, porque nao ha
+ * `faixaAnterior` alguma para comparar. So compara a faixa calculada
+ * deterministicamente (nunca a faixa de override).
+ */
+export function entrouEmAltaPrioridade(
+  faixaAnterior: FaixaPrioridadeAcompanhamento | undefined,
+  faixaAtual: FaixaPrioridadeAcompanhamento
+): boolean {
+  return faixaAtual === 'alta' && faixaAnterior !== 'alta';
+}
+
 function validarData(data: Date, mensagem: string): void {
   if (!(data instanceof Date) || !Number.isFinite(data.getTime())) throw new Error(mensagem);
 }

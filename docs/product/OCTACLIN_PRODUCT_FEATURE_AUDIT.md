@@ -274,9 +274,14 @@ Critério: valor claro, esforço pequeno, risco baixo, sem migration pesada e se
   (execução e outbox na mesma transação do evento de origem, identidade
   determinística, publicação exclusiva pelo outbox) e liga
   `questionario.respondido` de fato — o primeiro dos três gatilhos órfãos a
-  sair da vitrine. `paciente.risco_alto` (267.2) e `checkin.atrasado` (267.3)
-  seguem pendentes, e o alerta de adesão baixa (PB-05) permanece como próximo
-  item obrigatório depois deles.
+  sair da vitrine. O Incremento 267.2 liga `paciente.risco_alto` ao recálculo
+  diário de prioridade de acompanhamento da Fase 265, reutilizando a mesma
+  fundação sem alterá-la: dispara na entrada em faixa alta (baixa/média ->
+  alta, ou primeiro cálculo já em alta), nunca em `alta -> alta` nem por
+  override manual do profissional, e o contexto durável carrega somente o
+  tipo do evento — nunca score, fatores ou justificativa. `checkin.atrasado`
+  (267.3) segue pendente, e o alerta de adesão baixa (PB-05) permanece como
+  próximo item obrigatório depois dele.
 
 ### 5.3 Resumo clínico do paciente (os primeiros 10 segundos)
 - **Atual** `[F]`: a aba Resumo traz próxima ação, próxima consulta, contexto operacional (último atendimento,

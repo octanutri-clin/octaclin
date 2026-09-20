@@ -2,11 +2,14 @@ import { Injectable, Logger } from '@nestjs/common';
 import { Between, EntityManager, IsNull, LessThanOrEqual, MoreThan } from 'typeorm';
 import { ExecutorTenant } from '../../../infraestrutura/banco-dados/executor-tenant';
 import { CriptografiaDadosSensiveis } from '../../../infraestrutura/seguranca/criptografia-dados-sensiveis';
+import { dispararGatilhoAutomacao } from '../../automacoes/aplicacao/disparar-gatilho-automacao';
 import { AgendaConsultaOrm } from '../../agenda/infraestrutura/agenda-consulta.orm';
 import { LogDiarioRapidoOrm } from '../../mobile/infraestrutura/log-diario-rapido.orm';
 import {
+  FaixaPrioridadeAcompanhamento,
   ResultadoPrioridadeAcompanhamento,
-  calcularPrioridadeAcompanhamento
+  calcularPrioridadeAcompanhamento,
+  entrouEmAltaPrioridade
 } from '../dominio/prioridade-acompanhamento';
 import { PacienteOrm } from '../infraestrutura/paciente.orm';
 import { PrioridadeAcompanhamentoHistoricoOrm } from '../infraestrutura/prioridade-acompanhamento-historico.orm';
@@ -26,8 +29,11 @@ const JANELA_FALTAS_DIAS = 90;
 /**
  * Fase 265, Incremento 265.3 (`docs/history/phases/PLANO_FASE_265.md`):
  * recalculo idempotente da prioridade de acompanhamento (265.1), persistido
- * nas tabelas de 265.2. Servico puro de worker, sem efeito externo (nao
- * envia mensagem, nao dispara automacao, nao altera `pacientes.score_risco`).
+ * nas tabelas de 265.2. Servico de worker sem efeito externo proprio (nao
+ * envia mensagem, nao altera `pacientes.score_risco`); desde a Fase 267.2
+ * (PB-03) ele registra, na mesma transacao do recalculo, o disparo do
+ * gatilho `paciente.risco_alto` quando a faixa calculada entra em `alta` --
+ * ver `dispararRiscoAltoSeNecessario` abaixo.
  *
  * A formula (265.1/265.5, versao `1.1.0`) usa tres sinais -- faltas
  * recentes, sem retorno programado, adesao declarada baixa --, todos
@@ -134,8 +140,12 @@ export class ServicoRecalculoPrioridadeAcompanhamento {
       ultimoRegistroHabitos
     });
 
-    await this.atualizarEstadoAtual(gerenciador, tenantId, pacienteId, agora, resultado);
-    return this.registrarHistoricoSeNovo(gerenciador, tenantId, pacienteId, agora, resultado);
+    const faixaAnterior = await this.atualizarEstadoAtual(gerenciador, tenantId, pacienteId, agora, resultado);
+    const gravouHistoricoNovo = await this.registrarHistoricoSeNovo(gerenciador, tenantId, pacienteId, agora, resultado);
+    if (gravouHistoricoNovo) {
+      await this.dispararRiscoAltoSeNecessario(gerenciador, tenantId, pacienteId, faixaAnterior, resultado, agora);
+    }
+    return gravouHistoricoNovo;
   }
 
   /**
@@ -168,15 +178,21 @@ export class ServicoRecalculoPrioridadeAcompanhamento {
    * `save()` os grava de volta exatamente como estavam lidos. Expiracao de
    * override e leitura com o valor efetivo ficam para 265.4, de proposito.
    */
+  /**
+   * Devolve a faixa calculada ANTERIOR (antes desta escrita), para o
+   * gatilho `paciente.risco_alto` decidir se houve entrada em `alta`.
+   * `undefined` quando este e o primeiro calculo do paciente.
+   */
   private async atualizarEstadoAtual(
     gerenciador: EntityManager,
     tenantId: string,
     pacienteId: string,
     agora: Date,
     resultado: ResultadoPrioridadeAcompanhamento
-  ): Promise<void> {
+  ): Promise<FaixaPrioridadeAcompanhamento | undefined> {
     const repositorio = gerenciador.getRepository(PrioridadeAcompanhamentoPacienteOrm);
     const atual = await repositorio.findOne({ where: { tenantId, pacienteId } });
+    const faixaAnterior = atual?.faixa;
     const registro = atual ?? repositorio.create({ tenantId, pacienteId });
     registro.score = resultado.score;
     registro.faixa = resultado.faixa;
@@ -184,6 +200,7 @@ export class ServicoRecalculoPrioridadeAcompanhamento {
     registro.versaoFormula = resultado.versaoFormula;
     registro.calculadoEm = agora;
     await repositorio.save(registro);
+    return faixaAnterior;
   }
 
   /**
@@ -220,10 +237,45 @@ export class ServicoRecalculoPrioridadeAcompanhamento {
     );
     return true;
   }
+
+  /**
+   * PB-03 (Fase 267.2): dispara `paciente.risco_alto` quando o calculo
+   * deterministico entra em `alta` -- nunca por override, que nao passa por
+   * este metodo (override e escrito exclusivamente por `servico-pacientes.ts`,
+   * fora do fluxo de recalculo). So chamado quando `registrarHistoricoSeNovo`
+   * acabou de gravar um evento `calculo` novo, entao a chave de origem
+   * (paciente, versao da formula, dia UTC) e igual a chave de idempotencia
+   * daquele evento -- a mesma condicao que evita historico duplicado no
+   * mesmo dia tambem evita um segundo disparo. O contexto duravel carrega
+   * somente o tipo do evento, nunca score, fatores ou justificativa.
+   */
+  private async dispararRiscoAltoSeNecessario(
+    gerenciador: EntityManager,
+    tenantId: string,
+    pacienteId: string,
+    faixaAnterior: FaixaPrioridadeAcompanhamento | undefined,
+    resultado: ResultadoPrioridadeAcompanhamento,
+    agora: Date
+  ): Promise<void> {
+    if (!entrouEmAltaPrioridade(faixaAnterior, resultado.faixa)) return;
+
+    await dispararGatilhoAutomacao(gerenciador, tenantId, {
+      tipo: 'paciente.risco_alto',
+      pacienteId,
+      origemTipo: 'prioridade_acompanhamento_calculo',
+      origemId: `${pacienteId}:${resultado.versaoFormula}:${diaUtcChave(agora)}`,
+      contexto: { evento: 'paciente.risco_alto' }
+    });
+  }
 }
 
 function mesmoDiaUtc(a: Date, b: Date): boolean {
   return (
     a.getUTCFullYear() === b.getUTCFullYear() && a.getUTCMonth() === b.getUTCMonth() && a.getUTCDate() === b.getUTCDate()
   );
+}
+
+/** Chave estavel do dia UTC, usada apenas como identificador opaco de origem. */
+function diaUtcChave(data: Date): string {
+  return data.toISOString().slice(0, 10);
 }

@@ -3513,8 +3513,12 @@ publicado antes de ampliar a superficie de mudancas visuais.
     `finalizarFormularioPaciente`, com condicoes vazias e contexto somente
     com IDs opacos. Implementado nesta branch; checks remotos e merge humano
     pendentes.
-  - [ ] 267.2 - Ligar `paciente.risco_alto` ao recalculo de prioridade da
-    Fase 265, reutilizando a fundacao da 267.1.
+  - [x] 267.2 - Ligar `paciente.risco_alto` ao recalculo diario de prioridade
+    da Fase 265, reutilizando a fundacao da 267.1 sem altera-la. Dispara na
+    entrada em faixa alta (baixa/media -> alta, ou primeiro calculo ja em
+    alta); `alta -> alta` nao dispara de novo; override manual do
+    profissional nunca dispara automacao. Implementado nesta branch; checks
+    remotos e merge humano pendentes.
   - [ ] 267.3 - Ligar `checkin.atrasado`, com rodada periodica propria.
   - Plano, risco e rollback: `docs/history/phases/PLANO_FASE_267.md`.
 
@@ -3958,8 +3962,8 @@ Fonte canonica de escopo, gates e skills do Claude Code:
     provisionado; a issue GitHub `#234` continua aberta e este debito nao foi
     convertido em `PASS` pela conclusao da fase.
 
-Proximo item: concluir o Incremento 267.1 (`questionario.respondido`) com
-checks verdes e merge humano; depois seguir para 267.2 (`paciente.risco_alto`)
-e 267.3 (`checkin.atrasado`), nessa ordem, antes do PB-05 (alerta de check-in
-com adesao baixa). PR 55 permanece adiado e pendente; PR 56 continua
-condicionado a decisao explicita de distribuir o Mobile.
+Proximo item: concluir os Incrementos 267.1 (`questionario.respondido`) e
+267.2 (`paciente.risco_alto`) com checks verdes e merge humano; depois
+implementar 267.3 (`checkin.atrasado`) antes do PB-05 (alerta de check-in com
+adesao baixa). PR 55 permanece adiado e pendente; PR 56 continua condicionado
+a decisao explicita de distribuir o Mobile.
