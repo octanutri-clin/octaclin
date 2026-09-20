@@ -1,10 +1,10 @@
 # OctaClin - Checklist vivo de fases futuras ate producao
 
 Atualizado em 2026-09-20. Fases 256 a 261 e 263 a 268 concluidas; Fase 262
-permanece em andamento pelos gates externos do piloto. Com a Fase 268, o
-PB-05 (alerta de check-in com adesao baixa) esta implementado nesta branch;
-checks remotos e merge humano pendentes. Com isso a Onda 2 do audit de
-produto (PB-01 -> PB-02 -> PB-03 -> PB-05) fica completa apos o merge.
+permanece em andamento pelos gates externos do piloto. Com a Fase 268
+mergeada (PR `#275`, merge `306d2ed`), o PB-05 (alerta de check-in com
+adesao baixa) esta concluido. Com isso a Onda 2 do audit de produto
+(PB-01 -> PB-02 -> PB-03 -> PB-05) fica completa.
 O programa de hardening PR 36-56 permanece como trilha separada. O pacote
 interno do PR 55 foi integrado, mas o proprietario adiou a contratacao do
 pentest para evitar custo neste momento; todos os gates externos seguem
@@ -3538,8 +3538,8 @@ publicado antes de ampliar a superficie de mudancas visuais.
     confirmado via GitHub em 2026-09-20.
   - Plano, risco e rollback: `docs/history/phases/PLANO_FASE_267.md`.
 
-- [x] Fase 268 - Alerta de check-in com adesao baixa (PB-05). [IMPLEMENTADA
-  em 2026-09-20; checks remotos e merge humano pendentes]
+- [x] Fase 268 - Alerta de check-in com adesao baixa (PB-05). [CONCLUIDA em
+  2026-09-20]
   - [x] Contrato fechado `{ tipo: 'checkin.adesao_baixa', limiarAdesao:
     inteiro de 1 a 100 }`, default de produto 50 (mesmo corte ja usado pelo
     fator `adesao_declarada_baixa` da formula de prioridade de
@@ -3559,8 +3559,9 @@ publicado antes de ampliar a superficie de mudancas visuais.
     tomada para `questionario.respondido`/`paciente.risco_alto`).
   - [x] Com isso, a Onda 2 do audit de produto (PB-01 -> PB-02 -> PB-03 ->
     PB-05) fica completa.
-  - PR `#275`, branch `feat/fase268-alerta-checkin-adesao-baixa`; checks
-    remotos e merge humano pendentes.
+  - PR `#275` (branch `feat/fase268-alerta-checkin-adesao-baixa`), merge
+    `306d2ed` em `main`, todos os 8 checks de CI verdes (incluindo "Demo
+    local smoke") e merge humano confirmado via GitHub em 2026-09-20.
   - Plano, risco e rollback: `docs/history/phases/PLANO_FASE_268.md`.
 
 Documento de execução e prioridades: `ROADMAP_QUALIDADE_SEGURANCA_FASES_248_262.md`.
@@ -4003,8 +4004,9 @@ Fonte canonica de escopo, gates e skills do Claude Code:
     provisionado; a issue GitHub `#234` continua aberta e este debito nao foi
     convertido em `PASS` pela conclusao da fase.
 
-Proximo item: concluir os checks remotos e o merge humano da Fase 268
-(PB-05, ultimo item da Onda 2 do audit). Com esse merge, a Onda 2 fica
-completa (PB-01 -> PB-02 -> PB-03 -> PB-05). PR 55 permanece adiado e
+Proximo item: com a Fase 268 (PB-05) mergeada, a Onda 2 do audit de produto
+(PB-01 -> PB-02 -> PB-03 -> PB-05) esta completa. Nenhum proximo item
+obrigatorio pendente nesta trilha; itens seguintes do backlog (Onda 3)
+dependem de nova priorizacao do dono do produto. PR 55 permanece adiado e
 pendente; PR 56 continua condicionado a decisao explicita de distribuir o
 Mobile.

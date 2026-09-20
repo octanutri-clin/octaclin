@@ -66,10 +66,11 @@ Atualizado em 2026-09-20.
   baixa" no formulario de criacao de regras, com o campo "Limiar de adesao
   (%)" (default 50); reusa o simulador generico de regras sem endpoint
   dedicado, mesma decisao ja tomada para
-  `questionario.respondido`/`paciente.risco_alto`. Implementado nesta
-  branch; checks remotos e merge humano pendentes. Com o merge, a Onda 2 do
-  audit de produto (PB-01 -> PB-02 -> PB-03 -> PB-05) fica completa. Plano e
-  limites em `docs/history/phases/PLANO_FASE_268.md`.
+  `questionario.respondido`/`paciente.risco_alto`. Integrado no `main` pelo
+  PR GitHub `#275` (merge `306d2ed`, todos os 8 checks de CI verdes,
+  incluindo "Demo local smoke", merge humano confirmado via GitHub). Com
+  isso a Onda 2 do audit de produto (PB-01 -> PB-02 -> PB-03 -> PB-05) fica
+  completa. Plano e limites em `docs/history/phases/PLANO_FASE_268.md`.
 - Reconciliacao de 2026-09-18 (decisoes de produto para destravar a Fase
   265): o dono do produto aprovou o vocabulario fechado de `codigoMotivo`
   (`evento_recente_nao_capturado`, `informacao_externa_relevante`,
@@ -650,19 +651,20 @@ Atualizado em 2026-09-20.
   isso o PB-03 esta concluido; proximo item obrigatorio da Onda 2: PB-05
   (alerta de check-in com adesao baixa).
 - Fase 268 - Alerta de check-in com adesao baixa (PB-05, ultimo item da
-  Onda 2). Contrato fechado `{ tipo: 'checkin.adesao_baixa', limiarAdesao:
-  inteiro de 1 a 100 }`, default 50 (mesmo corte do fator
-  `adesao_declarada_baixa` da formula de prioridade de acompanhamento da
-  Fase 265). Dispara por check-in individual em `registrarCheckinRapido`
-  quando a adesao declarada fica estritamente abaixo do limiar de uma regra
-  ativa do profissional responsavel, reutilizando `dispararParaRegra`
-  (nucleo por-regra da 267.3) pelo mesmo motivo de `checkin.atrasado`. Chave
-  de idempotencia pelo proprio registro de check-in; contexto duravel
-  carrega somente o tipo do evento. Web ganhou a opcao "Check-in com adesao
-  baixa" com o campo "Limiar de adesao (%)", reusando o simulador generico
-  de regras. Implementado nesta branch; checks remotos e merge humano
-  pendentes. Com o merge, a Onda 2 (PB-01 -> PB-02 -> PB-03 -> PB-05) fica
-  completa.
+  Onda 2), **concluida em 2026-09-20**. Contrato fechado
+  `{ tipo: 'checkin.adesao_baixa', limiarAdesao: inteiro de 1 a 100 }`,
+  default 50 (mesmo corte do fator `adesao_declarada_baixa` da formula de
+  prioridade de acompanhamento da Fase 265). Dispara por check-in individual
+  em `registrarCheckinRapido` quando a adesao declarada fica estritamente
+  abaixo do limiar de uma regra ativa do profissional responsavel,
+  reutilizando `dispararParaRegra` (nucleo por-regra da 267.3) pelo mesmo
+  motivo de `checkin.atrasado`. Chave de idempotencia pelo proprio registro
+  de check-in; contexto duravel carrega somente o tipo do evento. Web ganhou
+  a opcao "Check-in com adesao baixa" com o campo "Limiar de adesao (%)",
+  reusando o simulador generico de regras. Integrado no `main` pelo PR
+  `#275` (merge `306d2ed`, branch `feat/fase268-alerta-checkin-adesao-baixa`,
+  todos os 8 checks de CI verdes, merge humano confirmado via GitHub). Com
+  isso a Onda 2 (PB-01 -> PB-02 -> PB-03 -> PB-05) esta completa.
 - Fase 261 (escopo de trabalho: gaps de seguranca e privacidade
   identificados no audit da fase) **concluida tecnicamente em 2026-09-15,
   com excecoes operacionais abertas; incrementos 1 a 4 integrados**.
