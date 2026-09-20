@@ -3559,6 +3559,8 @@ publicado antes de ampliar a superficie de mudancas visuais.
     tomada para `questionario.respondido`/`paciente.risco_alto`).
   - [x] Com isso, a Onda 2 do audit de produto (PB-01 -> PB-02 -> PB-03 ->
     PB-05) fica completa.
+  - PR `#275`, branch `feat/fase268-alerta-checkin-adesao-baixa`; checks
+    remotos e merge humano pendentes.
   - Plano, risco e rollback: `docs/history/phases/PLANO_FASE_268.md`.
 
 Documento de execução e prioridades: `ROADMAP_QUALIDADE_SEGURANCA_FASES_248_262.md`.
