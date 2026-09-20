@@ -3528,6 +3528,11 @@ publicado antes de ampliar a superficie de mudancas visuais.
     Implementado nesta branch; checks remotos e merge humano pendentes.
   - [x] Com os tres incrementos concluidos, o PB-03 esta concluido. Proximo
     item obrigatorio da Onda 2: PB-05 (alerta de check-in com adesao baixa).
+  - [x] Correcao pos-267.3: removida condicao generica morta que a Web ainda
+    anexava aos gatilhos `questionario.respondido`/`paciente.risco_alto`
+    (contexto real de disparo e opaco, condicao nunca casaria).
+  - PR `#273`, branch `claude/fase-266-proximas-etapas-ofxeek`; checks
+    remotos e merge humano pendentes.
   - Plano, risco e rollback: `docs/history/phases/PLANO_FASE_267.md`.
 
 Documento de execução e prioridades: `ROADMAP_QUALIDADE_SEGURANCA_FASES_248_262.md`.
