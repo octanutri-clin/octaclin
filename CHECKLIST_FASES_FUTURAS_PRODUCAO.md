@@ -1,10 +1,12 @@
 # OctaClin - Checklist vivo de fases futuras ate producao
 
-Atualizado em 2026-09-20. Fases 256 a 261 e 263 a 268 concluidas; Fase 262
+Atualizado em 2026-09-20. Fases 256 a 261 e 263 a 269 concluidas; Fase 262
 permanece em andamento pelos gates externos do piloto. Com a Fase 268
 mergeada (PR `#275`, merge `306d2ed`), o PB-05 (alerta de check-in com
-adesao baixa) esta concluido. Com isso a Onda 2 do audit de produto
-(PB-01 -> PB-02 -> PB-03 -> PB-05) fica completa.
+adesao baixa) esta concluido e a Onda 2 do audit de produto
+(PB-01 -> PB-02 -> PB-03 -> PB-05) esta completa. A Onda 3 (devolver tempo
+ao profissional) comecou pela Fase 269 (PB-13); a ordem aprovada pelo
+proprietario e PB-13 -> PB-14 -> PB-15 -> PB-23 -> PB-16 -> PB-25.
 O programa de hardening PR 36-56 permanece como trilha separada. O pacote
 interno do PR 55 foi integrado, mas o proprietario adiou a contratacao do
 pentest para evitar custo neste momento; todos os gates externos seguem
@@ -3564,6 +3566,29 @@ publicado antes de ampliar a superficie de mudancas visuais.
     local smoke") e merge humano confirmado via GitHub em 2026-09-20.
   - Plano, risco e rollback: `docs/history/phases/PLANO_FASE_268.md`.
 
+- [x] Fase 269 - Duplicar plano alimentar de outro paciente (PB-13, primeiro
+  item da Onda 3). [IMPLEMENTADA em 2026-09-20; checks remotos e merge
+  humano pendentes]
+  - [x] Escopo real confirmado antes de codar: a metade "salvar como modelo"
+    do PB-13 **ja estava entregue** (`ServicoModelosPlanoAlimentar` no
+    backend e o componente `ModelosPlanoAlimentar` no editor de plano).
+    Faltava apenas duplicar a partir do plano de outro paciente.
+  - [x] Origem escolhida buscando por nome entre os proprios pacientes
+    (decisao do proprietario), depois escolhendo qual plano daquele paciente
+    duplicar; prefere a versao publicada e cai para o rascunho quando nao ha
+    publicada.
+  - [x] Sem backend novo: os tres passos (buscar paciente, listar planos do
+    paciente, ler o plano) ja tinham rota existente, cada uma autorizada por
+    paciente no backend (`garantirPacienteNoEscopo`/`obterPlanoNoEscopo`).
+    Nenhuma consulta nova atravessando pacientes foi criada.
+  - [x] Invariante clinica: copia somente refeicoes, itens, substituicoes,
+    horarios e orientacoes. Avaliacao antropometrica, formula, macros,
+    objetivo clinico e confirmacoes de aplicabilidade/condicao especial
+    continuam sendo do paciente de destino -- e a interface diz isso antes
+    da acao. Reusa o mesmo par de conversao da aplicacao de modelo, em vez
+    de um segundo caminho de copia.
+  - Plano, risco e rollback: `docs/history/phases/PLANO_FASE_269.md`.
+
 Documento de execução e prioridades: `ROADMAP_QUALIDADE_SEGURANCA_FASES_248_262.md`.
 Matriz operacional: `MATRIZ_SKILLS_PLUGINS_MODELOS_FASES_243_248_262.md`.
 
@@ -4004,9 +4029,11 @@ Fonte canonica de escopo, gates e skills do Claude Code:
     provisionado; a issue GitHub `#234` continua aberta e este debito nao foi
     convertido em `PASS` pela conclusao da fase.
 
-Proximo item: com a Fase 268 (PB-05) mergeada, a Onda 2 do audit de produto
-(PB-01 -> PB-02 -> PB-03 -> PB-05) esta completa. Nenhum proximo item
-obrigatorio pendente nesta trilha; itens seguintes do backlog (Onda 3)
-dependem de nova priorizacao do dono do produto. PR 55 permanece adiado e
+Proximo item: concluir os checks remotos e o merge humano da Fase 269
+(PB-13, primeiro item da Onda 3); depois seguir a ordem aprovada pelo
+proprietario para a Onda 3 -- PB-14 (caminho manual para paciente com
+condicao especial, que exige decisao de produto propria antes do codigo),
+PB-15, PB-23, PB-16 e por ultimo PB-25, que depende do PB-16. A Onda 2
+(PB-01 -> PB-02 -> PB-03 -> PB-05) esta completa. PR 55 permanece adiado e
 pendente; PR 56 continua condicionado a decisao explicita de distribuir o
 Mobile.

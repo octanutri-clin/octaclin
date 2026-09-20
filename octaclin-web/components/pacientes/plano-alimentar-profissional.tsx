@@ -52,6 +52,7 @@ import {
 } from '@/lib/prontuario-api';
 import { PainelNutricional } from '@/components/pacientes/painel-nutricional';
 import { nutrientesDaPorcao } from '@/lib/nutricao-plano';
+import { DuplicarPlanoDeOutroPaciente } from '@/components/pacientes/duplicar-plano-de-outro-paciente';
 import { ModelosPlanoAlimentar } from '@/components/pacientes/modelos-plano-alimentar';
 import { BibliotecaReceitasNutricionais } from '@/components/pacientes/biblioteca-receitas-nutricionais';
 
@@ -1218,6 +1219,20 @@ export function PlanoAlimentarProfissional({ pacienteId, podeGerenciar, aoAltera
                     refeicoesAtuais={() => refeicoesParaModelo(formulario)}
                     aoAplicar={(refeicoes) =>
                       atualizar((atual) => ({ ...atual, refeicoes: refeicoesDoModelo(refeicoes) }))
+                    }
+                    desabilitado={Boolean(operacao)}
+                  />
+
+                  {/* Mesma conversao do modelo de proposito: duplicar so difere na origem
+                      das refeicoes, entao passar pelo mesmo par garante chaves novas e o
+                      item completo, sem um segundo caminho de copia para divergir. */}
+                  <DuplicarPlanoDeOutroPaciente
+                    pacienteIdAtual={pacienteId}
+                    aoAplicar={(versao) =>
+                      atualizar((atual) => ({
+                        ...atual,
+                        refeicoes: refeicoesDoModelo(refeicoesParaModelo(formularioDaVersao(versao)))
+                      }))
                     }
                     desabilitado={Boolean(operacao)}
                   />

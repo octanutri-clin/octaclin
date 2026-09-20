@@ -47,6 +47,25 @@ Atualizado em 2026-09-20.
   reais das automacoes) esta concluido; o proximo item obrigatorio da Onda 2
   e o PB-05 (alerta de check-in com adesao baixa). Plano e limites em
   `docs/history/phases/PLANO_FASE_267.md`.
+- Reconciliacao de 2026-09-20: a Onda 3 do audit (devolver tempo ao
+  profissional) comecou, com a ordem aprovada pelo proprietario:
+  PB-13 -> PB-14 -> PB-15 -> PB-23 -> PB-16 -> PB-25 (este ultimo depende do
+  PB-16). A Fase 269 entrega o PB-13. A leitura do codigo antes de
+  implementar mostrou que a metade "salvar como modelo" do PB-13 ja estava
+  entregue (`ServicoModelosPlanoAlimentar` e o componente
+  `ModelosPlanoAlimentar` no editor de plano); faltava apenas duplicar a
+  partir do plano de outro paciente. A origem e escolhida buscando por nome
+  entre os proprios pacientes e depois escolhendo o plano; a versao
+  publicada e preferida, com o rascunho como alternativa. Nao houve backend
+  novo: os tres passos (buscar paciente, listar planos dele, ler o plano) ja
+  tinham rota existente, cada uma autorizada por paciente
+  (`garantirPacienteNoEscopo`/`obterPlanoNoEscopo`), entao nenhuma consulta
+  nova atravessando pacientes foi criada. Copia somente refeicoes, itens,
+  substituicoes, horarios e orientacoes -- avaliacao antropometrica,
+  formula, macros, objetivo clinico e confirmacoes continuam sendo do
+  paciente de destino, e a interface diz isso antes da acao. Implementado
+  nesta branch; checks remotos e merge humano pendentes. Plano e limites em
+  `docs/history/phases/PLANO_FASE_269.md`.
 - Reconciliacao de 2026-09-20: Fase 268 (PB-05, alerta de check-in com
   adesao baixa, ultimo item da Onda 2) implementada. Contrato fechado
   `{ tipo: 'checkin.adesao_baixa', limiarAdesao: inteiro de 1 a 100 }`,
@@ -665,6 +684,16 @@ Atualizado em 2026-09-20.
   `#275` (merge `306d2ed`, branch `feat/fase268-alerta-checkin-adesao-baixa`,
   todos os 8 checks de CI verdes, merge humano confirmado via GitHub). Com
   isso a Onda 2 (PB-01 -> PB-02 -> PB-03 -> PB-05) esta completa.
+- Fase 269 - Duplicar plano alimentar de outro paciente (PB-13, primeiro
+  item da Onda 3). "Salvar como modelo" ja existia e nao foi tocado; a fase
+  entrega duplicar a partir do plano de outro paciente, com a origem
+  escolhida por busca de nome entre os proprios pacientes. Sem backend novo:
+  reusa `GET /pacientes?busca=`, `GET /pacientes/:id/planos-alimentares` e
+  `GET /pacientes/:id/planos-alimentares/:planoId`, todas ja autorizadas por
+  paciente. Copia so a estrutura de refeicoes; o calculo energetico, a
+  avaliacao antropometrica, o objetivo clinico e as confirmacoes continuam
+  do paciente de destino. Implementado nesta branch; checks remotos e merge
+  humano pendentes.
 - Fase 261 (escopo de trabalho: gaps de seguranca e privacidade
   identificados no audit da fase) **concluida tecnicamente em 2026-09-15,
   com excecoes operacionais abertas; incrementos 1 a 4 integrados**.
