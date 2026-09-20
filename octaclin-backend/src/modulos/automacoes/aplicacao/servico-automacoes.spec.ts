@@ -85,7 +85,7 @@ describe('ServicoAutomacoes', () => {
       {
         profissionalId: 'profissional-1',
         nome: 'Risco alto',
-        gatilho: { tipo: 'checkin' },
+        gatilho: { tipo: 'checkin.atrasado' },
         condicoes: [{ campo: 'frustracaoScore', operador: 'maior_que', valor: 70 }],
         acoes: [{ tipo: 'notificar_profissional' }]
       },
@@ -107,7 +107,7 @@ describe('ServicoAutomacoes', () => {
         {
           profissionalId: 'profissional-de-outro-tenant',
           nome: 'Regra fora do tenant',
-          gatilho: { tipo: 'checkin' },
+          gatilho: { tipo: 'checkin.atrasado' },
           condicoes: [],
           acoes: [{ tipo: 'notificar_profissional' }]
         },
@@ -126,6 +126,44 @@ describe('ServicoAutomacoes', () => {
     expect(repositorios.regra.save).not.toHaveBeenCalled();
   });
 
+  it('deve rejeitar gatilho de tipo desconhecido antes de persistir a regra', async () => {
+    const { servico, repositorios } = criarServico();
+
+    await expect(
+      servico.criarRegra(
+        'tenant-1',
+        {
+          profissionalId: 'profissional-1',
+          nome: 'Regra com gatilho invalido',
+          gatilho: { tipo: 'checkin' } as never,
+          condicoes: [],
+          acoes: [{ tipo: 'notificar_profissional' }]
+        },
+        usuarioColaborador
+      )
+    ).rejects.toBeInstanceOf(BadRequestException);
+    expect(repositorios.regra.save).not.toHaveBeenCalled();
+  });
+
+  it('deve rejeitar gatilho com campo fora do contrato antes de persistir a regra', async () => {
+    const { servico, repositorios } = criarServico();
+
+    await expect(
+      servico.criarRegra(
+        'tenant-1',
+        {
+          profissionalId: 'profissional-1',
+          nome: 'Regra com campo extra no gatilho',
+          gatilho: { tipo: 'questionario.respondido', campoExtra: 1 } as never,
+          condicoes: [],
+          acoes: [{ tipo: 'notificar_profissional' }]
+        },
+        usuarioColaborador
+      )
+    ).rejects.toBeInstanceOf(BadRequestException);
+    expect(repositorios.regra.save).not.toHaveBeenCalled();
+  });
+
   it('deve rejeitar acao fora do contrato antes de persistir a regra', async () => {
     const { servico, repositorios } = criarServico();
 
@@ -135,7 +173,7 @@ describe('ServicoAutomacoes', () => {
         {
           profissionalId: 'profissional-1',
           nome: 'Regra insegura',
-          gatilho: { tipo: 'checkin' },
+          gatilho: { tipo: 'checkin.atrasado' },
           condicoes: [],
           acoes: [{ tipo: 'executar_codigo' }] as never
         },
@@ -305,7 +343,7 @@ describe('ServicoAutomacoes', () => {
         {
           profissionalId: 'profissional-outro-2',
           nome: 'Risco alto',
-          gatilho: { tipo: 'checkin' },
+          gatilho: { tipo: 'checkin.atrasado' },
           condicoes: [],
           acoes: [{ tipo: 'notificar_profissional' }]
         },

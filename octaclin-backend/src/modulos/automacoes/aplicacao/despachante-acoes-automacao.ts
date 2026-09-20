@@ -1,5 +1,4 @@
 import { Injectable } from '@nestjs/common';
-import { createHash } from 'crypto';
 import { IsNull } from 'typeorm';
 import { ExecutorTenant } from '../../../infraestrutura/banco-dados/executor-tenant';
 import { CriptografiaDadosSensiveis } from '../../../infraestrutura/seguranca/criptografia-dados-sensiveis';
@@ -10,6 +9,7 @@ import { PacienteOrm } from '../../pacientes/infraestrutura/paciente.orm';
 import { ProfissionalOrm } from '../../profissionais/infraestrutura/profissional.orm';
 import { UsuarioOrm } from '../../usuarios/infraestrutura/usuario.orm';
 import { AcaoAutomacao, TipoAcaoAutomacao } from '../dominio/acoes-automacao';
+import { identificadorDeterministico } from '../dominio/identificador-deterministico';
 
 export interface EntradaExecucaoAcaoAutomacao {
   tenantId: string;
@@ -163,20 +163,4 @@ export class DespachanteAcoesAutomacao {
 
     throw new AcaoAutomacaoNaoDisponivel((entrada.acao as { tipo: TipoAcaoAutomacao }).tipo);
   }
-}
-
-/**
- * Os efeitos persistidos usam UUID. A chave da acao e estavel, mas textual;
- * este UUID v8 deterministico conserva a idempotencia por execucao/indice sem
- * persistir a chave interna nem adicionar payload livre.
- */
-function identificadorDeterministico(finalidade: string, chaveIdempotencia: string): string {
-  const bytes = createHash('sha256')
-    .update(`octaclin:${finalidade}:${chaveIdempotencia}`, 'utf8')
-    .digest()
-    .subarray(0, 16);
-  bytes[6] = (bytes[6] & 0x0f) | 0x80;
-  bytes[8] = (bytes[8] & 0x3f) | 0x80;
-  const hexadecimal = bytes.toString('hex');
-  return `${hexadecimal.slice(0, 8)}-${hexadecimal.slice(8, 12)}-${hexadecimal.slice(12, 16)}-${hexadecimal.slice(16, 20)}-${hexadecimal.slice(20)}`;
 }

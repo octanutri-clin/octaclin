@@ -1,8 +1,8 @@
 # OctaClin - Checklist vivo de fases futuras ate producao
 
-Atualizado em 2026-09-19. Fases 256 a 261 e 263 a 265 concluidas; Fase 262
-permanece em andamento pelos gates externos do piloto; Fase 266 esta em
-andamento com o PB-02 de execucao real das automacoes.
+Atualizado em 2026-09-20. Fases 256 a 261 e 263 a 266 concluidas; Fase 262
+permanece em andamento pelos gates externos do piloto; Fase 267 esta em
+andamento com o PB-03 de gatilhos reais das automacoes.
 O programa de hardening PR 36-56 permanece como trilha separada. O pacote
 interno do PR 55 foi integrado, mas o proprietario adiou a contratacao do
 pentest para evitar custo neste momento; todos os gates externos seguem
@@ -3504,6 +3504,20 @@ publicado antes de ampliar a superficie de mudancas visuais.
     PB-03 e depois o PB-05 (ver proximo item do roadmap abaixo).
   - Plano, risco e rollback: `docs/history/phases/PLANO_FASE_266.md`.
 
+- [~] Fase 267 - Gatilhos reais das automacoes (PB-03). [EM ANDAMENTO]
+  - [x] 267.1 - Fechar o contrato de `gatilho` numa uniao discriminada
+    (preservando o especializado de `paciente.inativo`) e criar a fundacao
+    duravel de disparo (execucao + outbox na mesma transacao do evento de
+    origem, identidade deterministica, publicacao exclusivamente pelo
+    outbox). Conecta `questionario.respondido` ao termino idempotente de
+    `finalizarFormularioPaciente`, com condicoes vazias e contexto somente
+    com IDs opacos. Implementado nesta branch; checks remotos e merge humano
+    pendentes.
+  - [ ] 267.2 - Ligar `paciente.risco_alto` ao recalculo de prioridade da
+    Fase 265, reutilizando a fundacao da 267.1.
+  - [ ] 267.3 - Ligar `checkin.atrasado`, com rodada periodica propria.
+  - Plano, risco e rollback: `docs/history/phases/PLANO_FASE_267.md`.
+
 Documento de execução e prioridades: `ROADMAP_QUALIDADE_SEGURANCA_FASES_248_262.md`.
 Matriz operacional: `MATRIZ_SKILLS_PLUGINS_MODELOS_FASES_243_248_262.md`.
 
@@ -3944,9 +3958,8 @@ Fonte canonica de escopo, gates e skills do Claude Code:
     provisionado; a issue GitHub `#234` continua aberta e este debito nao foi
     convertido em `PASS` pela conclusao da fase.
 
-Proximo item: propor e obter autorizacao explicita do proprietario para a
-Fase 267 - PB-03 (ligar os gatilhos reais `checkin.atrasado`,
-`questionario.respondido` e `paciente.risco_alto` ao executor de automacoes
-concluido na Fase 266), seguida do PB-05 (alerta de check-in com adesao
-baixa), na ordem obrigatoria da Onda 2. PR 55 permanece adiado e pendente; PR
-56 continua condicionado a decisao explicita de distribuir o Mobile.
+Proximo item: concluir o Incremento 267.1 (`questionario.respondido`) com
+checks verdes e merge humano; depois seguir para 267.2 (`paciente.risco_alto`)
+e 267.3 (`checkin.atrasado`), nessa ordem, antes do PB-05 (alerta de check-in
+com adesao baixa). PR 55 permanece adiado e pendente; PR 56 continua
+condicionado a decisao explicita de distribuir o Mobile.

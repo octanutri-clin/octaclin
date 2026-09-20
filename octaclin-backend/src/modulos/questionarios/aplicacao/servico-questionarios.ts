@@ -10,6 +10,7 @@ import { UsuarioAutenticado } from '../../auth/dominio/usuario-autenticado';
 import { ArquivoMidiaOrm } from '../../mobile/infraestrutura/arquivo-midia.orm';
 import { registrarNotificacao } from '../../notificacoes/aplicacao/registrar-notificacao';
 import { registrarEventoWebhook } from '../../integracoes/aplicacao/registrar-evento-webhook';
+import { dispararGatilhoAutomacao } from '../../automacoes/aplicacao/disparar-gatilho-automacao';
 import { PacienteOrm } from '../../pacientes/infraestrutura/paciente.orm';
 import { normalizarConfiguracaoPergunta } from '../dominio/configuracao-pergunta';
 import { MODELOS_QUESTIONARIO, ModeloQuestionarioResumo, resumirModeloQuestionario } from '../dominio/modelos-questionario';
@@ -1306,6 +1307,17 @@ export class ServicoQuestionarios {
           respostaId: respostaCheckin.id,
           respondidoEm: agora.toISOString()
         }
+      });
+
+      // Fundacao duravel do PB-03: cria execucao + outbox na mesma transacao do
+      // fato de origem. So IDs opacos entram no contexto — nunca a resposta do
+      // formulario. Publicar na fila fica a cargo do outbox (retomavel).
+      await dispararGatilhoAutomacao(gerenciador, tenantId, {
+        tipo: 'questionario.respondido',
+        pacienteId: envio.pacienteId,
+        origemTipo: 'envio_questionario',
+        origemId: envio.id,
+        contexto: { evento: 'questionario.respondido', envioId: envio.id }
       });
 
       return {

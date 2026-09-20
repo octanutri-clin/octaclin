@@ -2,6 +2,9 @@ import { UsuarioAutenticado } from '../../auth/dominio/usuario-autenticado';
 import { ProfissionalOrm } from '../../profissionais/infraestrutura/profissional.orm';
 import { ArquivoMidiaOrm } from '../../mobile/infraestrutura/arquivo-midia.orm';
 import { WebhookAssinaturaOrm } from '../../integracoes/infraestrutura/webhook-assinatura.orm';
+import { RegraAutomacaoOrm } from '../../automacoes/infraestrutura/regra-automacao.orm';
+import { ExecucaoRegraOrm } from '../../automacoes/infraestrutura/execucao-regra.orm';
+import { OutboxEventoOrm } from '../../../infraestrutura/outbox/outbox-evento.orm';
 import { ServicoQuestionarios } from './servico-questionarios';
 import { CategoriaPerguntaOrm } from '../infraestrutura/categoria-pergunta.orm';
 import { AgendamentoQuestionarioOrm } from '../infraestrutura/agendamento-questionario.orm';
@@ -40,7 +43,8 @@ function criarRepositorioFake(
     | 'agendamento'
     | 'paciente'
     | 'arquivoMidia'
-    | 'profissional',
+    | 'profissional'
+    | 'regraAutomacao',
   dados: Record<string, any>
 ) {
   const itens = dados[`${nome}s`] as Record<string, any>[];
@@ -129,6 +133,19 @@ function criarRepositorioFake(
     ) {
       return new Date(String(valorItem)).getTime() <= new Date(String((valorConsulta as { _value?: unknown })._value)).getTime();
     }
+    if (
+      valorConsulta &&
+      typeof valorConsulta === 'object' &&
+      '_type' in valorConsulta &&
+      (valorConsulta as { _type?: string })._type === 'jsonContains'
+    ) {
+      const esperado = ((valorConsulta as { _value?: unknown })._value ?? {}) as Record<string, unknown>;
+      return (
+        typeof valorItem === 'object' &&
+        valorItem !== null &&
+        Object.entries(esperado).every(([chave, valor]) => (valorItem as Record<string, unknown>)[chave] === valor)
+      );
+    }
     return valorItem === valorConsulta;
   }
 }
@@ -145,8 +162,11 @@ function criarServico(dados: Record<string, any>) {
     agendamento: criarRepositorioFake('agendamento', dados),
     paciente: criarRepositorioFake('paciente', dados),
     arquivoMidia: criarRepositorioFake('arquivoMidia', { arquivoMidias: dados.arquivoMidias ?? [] }),
-    profissional: criarRepositorioFake('profissional', { profissionals: dados.profissionals ?? [] })
+    profissional: criarRepositorioFake('profissional', { profissionals: dados.profissionals ?? [] }),
+    regraAutomacao: criarRepositorioFake('regraAutomacao', { regraAutomacaos: dados.regrasAutomacao ?? [] })
   };
+  const execucoesRegra = (dados.execucoesRegra ?? (dados.execucoesRegra = [])) as Record<string, any>[];
+  const outboxEventos = (dados.outboxEventos ?? (dados.outboxEventos = [])) as Record<string, any>[];
   const gerenciador = {
     getRepository: jest.fn((entidade: { name: string }) => {
       if (entidade === CategoriaPerguntaOrm) return repositorios.categoria;
@@ -159,6 +179,7 @@ function criarServico(dados: Record<string, any>) {
       if (entidade === AgendamentoQuestionarioOrm) return repositorios.agendamento;
       if (entidade === ProfissionalOrm) return repositorios.profissional;
       if (entidade === ArquivoMidiaOrm) return repositorios.arquivoMidia;
+      if (entidade === RegraAutomacaoOrm) return repositorios.regraAutomacao;
       if (entidade.name === 'PacienteOrm') return repositorios.paciente;
       // Tenant sem usuario ativo: o formulario respondido nao tem destinatario e
       // o publicador da Fase 210 sai antes de escrever. O fan-out em si esta
@@ -166,13 +187,44 @@ function criarServico(dados: Record<string, any>) {
       if (entidade.name === 'UsuarioOrm') return { find: jest.fn(async () => []) };
       if (entidade === WebhookAssinaturaOrm) return { find: jest.fn(async () => []) };
       throw new Error(`Repositorio nao mapeado: ${entidade.name}`);
+    }),
+    // Suporta os inserts idempotentes de `dispararGatilhoAutomacao` (fundacao do PB-03):
+    // registra em `dados.execucoesRegra`/`dados.outboxEventos` e respeita orIgnore por id.
+    createQueryBuilder: jest.fn(() => {
+      let alvo: (Record<string, any>[]) | undefined;
+      let valoresAtuais: Record<string, unknown> = {};
+      const builder: {
+        insert: () => typeof builder;
+        into: (entidade: unknown) => typeof builder;
+        values: (valores: Record<string, unknown>) => typeof builder;
+        orIgnore: () => typeof builder;
+        execute: () => Promise<{ identifiers: unknown[] }>;
+      } = {
+        insert: jest.fn(() => builder),
+        into: jest.fn((entidade: unknown) => {
+          if (entidade === ExecucaoRegraOrm) alvo = execucoesRegra;
+          else if (entidade === OutboxEventoOrm) alvo = outboxEventos;
+          else throw new Error('Entidade nao suportada no insert fake.');
+          return builder;
+        }),
+        values: jest.fn((valores: Record<string, unknown>) => {
+          valoresAtuais = valores;
+          return builder;
+        }),
+        orIgnore: jest.fn(() => builder),
+        execute: jest.fn(async () => {
+          if (!alvo!.some((item) => item.id === valoresAtuais.id)) alvo!.push({ ...valoresAtuais });
+          return { identifiers: [] };
+        })
+      };
+      return builder;
     })
   };
   const executorTenant = {
     executar: jest.fn((_tenantId: string, operacao: (gerenciador: unknown) => Promise<unknown>) => operacao(gerenciador))
   };
 
-  return { servico: new ServicoQuestionarios(executorTenant as never), dados, repositorios };
+  return { servico: new ServicoQuestionarios(executorTenant as never), dados, repositorios, execucoesRegra, outboxEventos };
 }
 
 describe('ServicoQuestionarios', () => {
@@ -814,6 +866,140 @@ describe('ServicoQuestionarios', () => {
     expect(dados.envios[0].rascunhoAtualizadoEm).toBeUndefined();
     expect(dados.envios[0].rascunhoVersao).toBe(0);
     expect(dados.pacientes[0].ultimoCheckinEm).toBeInstanceOf(Date);
+  });
+
+  it('deve criar o evento duravel do gatilho questionario.respondido uma unica vez ao finalizar', async () => {
+    const { servico, execucoesRegra, outboxEventos } = criarServico({
+      categorias: [],
+      questionarios: [{ id: 'q1', tenantId: 'tenant-1', titulo: 'Check-in' }],
+      perguntas: [],
+      opcaos: [],
+      envios: [{ id: 'envio-1', tenantId: 'tenant-1', questionarioId: 'q1', pacienteId: 'paciente-1', status: 'enviado' }],
+      respostaCheckins: [],
+      respostaValors: [],
+      pacientes: [
+        { id: 'paciente-1', tenantId: 'tenant-1', profissionalResponsavelId: 'profissional-1', ultimoCheckinEm: null }
+      ],
+      regrasAutomacao: [
+        {
+          id: 'regra-1',
+          tenantId: 'tenant-1',
+          profissionalId: 'profissional-1',
+          ativa: true,
+          gatilho: { tipo: 'questionario.respondido' }
+        }
+      ]
+    });
+    const token = servico.gerarTokenFormularioPaciente('tenant-1', 'envio-1');
+
+    await servico.finalizarFormularioPaciente(token, { respostas: [] });
+
+    expect(execucoesRegra).toHaveLength(1);
+    expect(execucoesRegra[0]).toEqual(
+      expect.objectContaining({ tenantId: 'tenant-1', regraId: 'regra-1', pacienteId: 'paciente-1', status: 'pendente' })
+    );
+    expect(execucoesRegra[0].resultado.contexto).toEqual({ evento: 'questionario.respondido', envioId: 'envio-1' });
+    expect(JSON.stringify(execucoesRegra[0])).not.toMatch(/resposta|observ/i);
+    expect(outboxEventos).toHaveLength(1);
+    expect(outboxEventos[0]).toEqual(
+      expect.objectContaining({
+        tenantId: 'tenant-1',
+        tipo: 'automacao.gatilho.disparar',
+        status: 'pendente',
+        payload: expect.objectContaining({ execucaoId: execucoesRegra[0].id })
+      })
+    );
+  });
+
+  it('nao cria evento duravel em replay: reenviar a mesma finalizacao nao duplica a execucao', async () => {
+    const { servico, execucoesRegra, outboxEventos } = criarServico({
+      categorias: [],
+      questionarios: [{ id: 'q1', tenantId: 'tenant-1', titulo: 'Check-in' }],
+      perguntas: [],
+      opcaos: [],
+      envios: [{ id: 'envio-1', tenantId: 'tenant-1', questionarioId: 'q1', pacienteId: 'paciente-1', status: 'enviado' }],
+      respostaCheckins: [],
+      respostaValors: [],
+      pacientes: [
+        { id: 'paciente-1', tenantId: 'tenant-1', profissionalResponsavelId: 'profissional-1', ultimoCheckinEm: null }
+      ],
+      regrasAutomacao: [
+        {
+          id: 'regra-1',
+          tenantId: 'tenant-1',
+          profissionalId: 'profissional-1',
+          ativa: true,
+          gatilho: { tipo: 'questionario.respondido' }
+        }
+      ]
+    });
+    const token = servico.gerarTokenFormularioPaciente('tenant-1', 'envio-1');
+
+    await servico.finalizarFormularioPaciente(token, { respostas: [] });
+    await servico.finalizarFormularioPaciente(token, { respostas: [] });
+
+    expect(execucoesRegra).toHaveLength(1);
+    expect(outboxEventos).toHaveLength(1);
+  });
+
+  it('nao cria evento duravel quando a regra pertence a outro profissional (isolamento)', async () => {
+    const { servico, execucoesRegra, outboxEventos } = criarServico({
+      categorias: [],
+      questionarios: [{ id: 'q1', tenantId: 'tenant-1', titulo: 'Check-in' }],
+      perguntas: [],
+      opcaos: [],
+      envios: [{ id: 'envio-1', tenantId: 'tenant-1', questionarioId: 'q1', pacienteId: 'paciente-1', status: 'enviado' }],
+      respostaCheckins: [],
+      respostaValors: [],
+      pacientes: [
+        { id: 'paciente-1', tenantId: 'tenant-1', profissionalResponsavelId: 'profissional-1', ultimoCheckinEm: null }
+      ],
+      regrasAutomacao: [
+        {
+          id: 'regra-de-outro-profissional',
+          tenantId: 'tenant-1',
+          profissionalId: 'profissional-outro',
+          ativa: true,
+          gatilho: { tipo: 'questionario.respondido' }
+        }
+      ]
+    });
+    const token = servico.gerarTokenFormularioPaciente('tenant-1', 'envio-1');
+
+    await servico.finalizarFormularioPaciente(token, { respostas: [] });
+
+    expect(execucoesRegra).toHaveLength(0);
+    expect(outboxEventos).toHaveLength(0);
+  });
+
+  it('nao cria evento duravel quando a regra correspondente pertence a outro tenant', async () => {
+    const { servico, execucoesRegra, outboxEventos } = criarServico({
+      categorias: [],
+      questionarios: [{ id: 'q1', tenantId: 'tenant-1', titulo: 'Check-in' }],
+      perguntas: [],
+      opcaos: [],
+      envios: [{ id: 'envio-1', tenantId: 'tenant-1', questionarioId: 'q1', pacienteId: 'paciente-1', status: 'enviado' }],
+      respostaCheckins: [],
+      respostaValors: [],
+      pacientes: [
+        { id: 'paciente-1', tenantId: 'tenant-1', profissionalResponsavelId: 'profissional-1', ultimoCheckinEm: null }
+      ],
+      regrasAutomacao: [
+        {
+          id: 'regra-de-outro-tenant',
+          tenantId: 'tenant-2',
+          profissionalId: 'profissional-1',
+          ativa: true,
+          gatilho: { tipo: 'questionario.respondido' }
+        }
+      ]
+    });
+    const token = servico.gerarTokenFormularioPaciente('tenant-1', 'envio-1');
+
+    await servico.finalizarFormularioPaciente(token, { respostas: [] });
+
+    expect(execucoesRegra).toHaveLength(0);
+    expect(outboxEventos).toHaveLength(0);
   });
 
   it('deve devolver a resposta existente ao repetir a finalizacao do formulario', async () => {

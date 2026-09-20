@@ -268,9 +268,15 @@ Critério: valor claro, esforço pequeno, risco baixo, sem migration pesada e se
   `enviar_template` foi integrado no PR `#272` (merge `716e38e` em `main`,
   20/20 checks verdes, merge humano) com canal e template explícitos,
   políticas obrigatórias do paciente, limite de frequência, idempotência e
-  outbox. Com isso o PB-02 está concluído; os gatilhos reais (PB-03) e o
-  alerta de adesão baixa (PB-05) permanecem como próximos itens obrigatórios
-  da Onda 2.
+  outbox. Com isso o PB-02 está concluído. O PB-03 (gatilhos reais) está em
+  andamento desde 2026-09-20: o Incremento 267.1 fecha o contrato de
+  `gatilho` numa união discriminada, cria a fundação durável de disparo
+  (execução e outbox na mesma transação do evento de origem, identidade
+  determinística, publicação exclusiva pelo outbox) e liga
+  `questionario.respondido` de fato — o primeiro dos três gatilhos órfãos a
+  sair da vitrine. `paciente.risco_alto` (267.2) e `checkin.atrasado` (267.3)
+  seguem pendentes, e o alerta de adesão baixa (PB-05) permanece como próximo
+  item obrigatório depois deles.
 
 ### 5.3 Resumo clínico do paciente (os primeiros 10 segundos)
 - **Atual** `[F]`: a aba Resumo traz próxima ação, próxima consulta, contexto operacional (último atendimento,

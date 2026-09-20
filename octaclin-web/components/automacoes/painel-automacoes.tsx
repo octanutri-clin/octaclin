@@ -97,7 +97,7 @@ function descreverGatilho(gatilho: Record<string, unknown>) {
   }
   const rotulos: Record<string, string> = {
     'checkin.atrasado': 'um check-in estiver atrasado',
-    'questionario.respondido': 'um formulario for respondido',
+    'questionario.respondido': 'um formulario for respondido (automatico, sem precisar solicitar avaliacao)',
     'paciente.risco_alto': 'um paciente entrar em risco alto'
   };
   return rotulos[String(gatilho.tipo)] ?? resumirJson(gatilho);
@@ -279,6 +279,7 @@ export function PainelAutomacoes() {
   const [carregando, setCarregando] = useState(false);
   const [salvando, setSalvando] = useState(false);
   const gatilhoInatividadeSelecionado = formularioRegra.gatilhoTipo === GATILHO_INATIVIDADE;
+  const gatilhoQuestionarioSelecionado = formularioRegra.gatilhoTipo === 'questionario.respondido';
 
   async function carregar() {
     setCarregando(true);
@@ -510,7 +511,7 @@ export function PainelAutomacoes() {
                 onChange={(evento) => setFormularioRegra((atual) => ({ ...atual, gatilhoTipo: evento.target.value }))}
               >
                 <option value="checkin.atrasado">Check-in atrasado</option>
-                <option value="questionario.respondido">Questionário respondido</option>
+                <option value="questionario.respondido">Questionário respondido (automático)</option>
                 <option value="paciente.risco_alto">Paciente em risco alto</option>
                 <option value={GATILHO_INATIVIDADE}>Paciente sem consulta há muito tempo</option>
               </Selecao>
@@ -731,7 +732,9 @@ export function PainelAutomacoes() {
           <p className="mt-3 rounded-md border border-linha bg-fundo px-3 py-2 text-sm text-texto-suave">
             {gatilhoInatividadeSelecionado
               ? 'O recall só alcanca pacientes deste profissional que aceitam receber mensagens. Simule para ver a lista exata antes de ativar.'
-              : 'Toda regra nova fica em rascunho. Simule o resultado antes de ativar.'}
+              : gatilhoQuestionarioSelecionado
+                ? 'Depois de ativada, esta regra dispara sozinha sempre que um paciente deste profissional responder um formulário — não é preciso solicitar avaliação. Simule o resultado antes de ativar.'
+                : 'Toda regra nova fica em rascunho. Simule o resultado antes de ativar.'}
           </p>
           <div className="mt-3 flex justify-end">
             <Botao

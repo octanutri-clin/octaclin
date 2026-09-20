@@ -1,5 +1,6 @@
 import { Column, CreateDateColumn, Entity, PrimaryGeneratedColumn } from 'typeorm';
 import { AcaoAutomacao } from '../dominio/acoes-automacao';
+import { GatilhoAutomacao } from '../dominio/gatilhos-automacao';
 
 @Entity('regras_automacao')
 export class RegraAutomacaoOrm {
@@ -16,7 +17,7 @@ export class RegraAutomacaoOrm {
   nome: string;
 
   @Column({ type: 'jsonb' })
-  gatilho: Record<string, unknown>;
+  gatilho: GatilhoAutomacao;
 
   @Column({ type: 'jsonb', default: [] })
   condicoes: Array<Record<string, unknown>>;

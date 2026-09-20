@@ -1,5 +1,6 @@
 import { IsArray, IsBoolean, IsObject, IsOptional, IsString, IsUUID, MaxLength } from 'class-validator';
 import { AcaoAutomacao } from '../dominio/acoes-automacao';
+import { GatilhoAutomacao } from '../dominio/gatilhos-automacao';
 
 export class CriarRegraAutomacaoDto {
   @IsUUID()
@@ -10,7 +11,7 @@ export class CriarRegraAutomacaoDto {
   nome: string;
 
   @IsObject()
-  gatilho: Record<string, unknown>;
+  gatilho: GatilhoAutomacao;
 
   @IsArray()
   condicoes: Array<Record<string, unknown>>;

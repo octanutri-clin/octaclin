@@ -1,6 +1,6 @@
 # OctaClin - Status atual do projeto
 
-Atualizado em 2026-09-19.
+Atualizado em 2026-09-20.
 
 ## Snapshot
 
@@ -18,10 +18,19 @@ Atualizado em 2026-09-19.
   `716e38e` em `main`, 20/20 checks verdes, merge humano confirmado via
   GitHub): canal e template explicitos, opt-out e janela obrigatorios, limite
   de frequencia, idempotencia e outbox, sem nova migration. Com isso a Fase
-  266 (PB-02) esta concluida; o proximo item de produto e o PB-03 (ligar os
-  gatilhos reais `checkin.atrasado`, `questionario.respondido` e
-  `paciente.risco_alto`). Plano e limites em
+  266 (PB-02) esta concluida. Plano e limites em
   `docs/history/phases/PLANO_FASE_266.md`.
+- Reconciliacao de 2026-09-20: Fase 267 (PB-03, gatilhos reais) iniciada. O
+  Incremento 267.1 fecha o contrato de `gatilho` das regras numa uniao
+  discriminada (preservando o especializado de `paciente.inativo`), cria a
+  fundacao duravel de disparo (execucao e outbox na mesma transacao do fato
+  de origem, identidade deterministica, publicacao exclusiva pelo outbox via
+  `ProcessadorOutboxGatilhosAutomacao`) e conecta `questionario.respondido` ao
+  termino idempotente de `finalizarFormularioPaciente`, com condicoes vazias
+  e contexto somente com IDs opacos. Implementado nesta branch; checks
+  remotos e merge humano pendentes. Depois do 267.1, seguem 267.2
+  (`paciente.risco_alto`) e 267.3 (`checkin.atrasado`), nessa ordem, antes do
+  PB-05. Plano e limites em `docs/history/phases/PLANO_FASE_267.md`.
 - Reconciliacao de 2026-09-18 (decisoes de produto para destravar a Fase
   265): o dono do produto aprovou o vocabulario fechado de `codigoMotivo`
   (`evento_recente_nao_capturado`, `informacao_externa_relevante`,
@@ -577,6 +586,16 @@ Atualizado em 2026-09-19.
   `questionario.respondido` e `paciente.risco_alto`) e depois o PB-05 (alerta
   de adesao baixa). O PR 55 permanece adiado e o PR 56 continua condicionado a
   uma decisao explicita de distribuir o Mobile.
+- Fase 267 - Gatilhos reais das automacoes (PB-03), **em andamento desde
+  2026-09-20**. O Incremento 267.1 fecha o contrato de `gatilho` numa uniao
+  discriminada (preserva o especializado de `paciente.inativo`), cria a
+  fundacao duravel de disparo reutilizavel pelos proximos incrementos
+  (execucao e outbox na mesma transacao do evento de origem, identidade
+  deterministica por `(regra, origem)`, publicacao exclusiva pelo outbox) e
+  conecta `questionario.respondido` ao termino idempotente de
+  `finalizarFormularioPaciente`. Checks remotos e merge humano pendentes.
+  Ordem de continuidade: 267.2 (`paciente.risco_alto`), depois 267.3
+  (`checkin.atrasado`), antes do PB-05.
 - Fase 261 (escopo de trabalho: gaps de seguranca e privacidade
   identificados no audit da fase) **concluida tecnicamente em 2026-09-15,
   com excecoes operacionais abertas; incrementos 1 a 4 integrados**.

@@ -59,7 +59,15 @@ export interface ResultadoSelecaoRecall {
   excluidos: ExclusaoRecall[];
 }
 
-export function normalizarConfiguracaoRecall(gatilho: Record<string, unknown>): ConfiguracaoRecallInatividade {
+/**
+ * Aceita `unknown` de proposito: o chamador tipicamente tem um gatilho da
+ * uniao discriminada `GatilhoAutomacao` (`dominio/gatilhos-automacao.ts`), que
+ * nao tem assinatura de indice e por isso nao e estruturalmente atribuivel a
+ * `Record<string, unknown>`. A normalizacao continua tolerante a entrada
+ * incompleta ou de formato antigo — o clamping abaixo nunca lanca.
+ */
+export function normalizarConfiguracaoRecall(valor: unknown): ConfiguracaoRecallInatividade {
+  const gatilho = ehObjeto(valor) ? valor : {};
   return {
     diasSemConsulta: inteiroEmFaixa(gatilho.diasSemConsulta, DIAS_SEM_CONSULTA_PADRAO, DIAS_SEM_CONSULTA_MINIMO, 3650),
     statusAdesao: listaDeTextos(gatilho.statusAdesao),
@@ -68,8 +76,13 @@ export function normalizarConfiguracaoRecall(gatilho: Record<string, unknown>): 
   };
 }
 
-export function ehGatilhoInatividade(gatilho: Record<string, unknown> | undefined): boolean {
-  return String(gatilho?.tipo ?? '') === GATILHO_INATIVIDADE;
+export function ehGatilhoInatividade(valor: unknown): boolean {
+  const gatilho = ehObjeto(valor) ? valor : {};
+  return String(gatilho.tipo ?? '') === GATILHO_INATIVIDADE;
+}
+
+function ehObjeto(valor: unknown): valor is Record<string, unknown> {
+  return typeof valor === 'object' && valor !== null;
 }
 
 /**
