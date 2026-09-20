@@ -1,8 +1,20 @@
+import {
+  DIAS_SEM_CHECKIN_MAXIMO,
+  DIAS_SEM_CHECKIN_MINIMO,
+  DIAS_SEM_CHECKIN_PADRAO,
+  GATILHO_CHECKIN_ATRASADO,
+  INTERVALO_MINIMO_DIAS_MAXIMO as CHECKIN_INTERVALO_MINIMO_DIAS_MAXIMO,
+  INTERVALO_MINIMO_DIAS_MINIMO as CHECKIN_INTERVALO_MINIMO_DIAS_MINIMO,
+  INTERVALO_MINIMO_DIAS_PADRAO as CHECKIN_INTERVALO_MINIMO_DIAS_PADRAO,
+  LIMITE_POR_EXECUCAO_MAXIMO as CHECKIN_LIMITE_POR_EXECUCAO_MAXIMO,
+  LIMITE_POR_EXECUCAO_MINIMO as CHECKIN_LIMITE_POR_EXECUCAO_MINIMO,
+  LIMITE_POR_EXECUCAO_PADRAO as CHECKIN_LIMITE_POR_EXECUCAO_PADRAO
+} from './checkin-atrasado';
 import { GATILHO_INATIVIDADE } from './recall-inatividade';
 
 export const TIPOS_GATILHO_AUTOMACAO = [
   GATILHO_INATIVIDADE,
-  'checkin.atrasado',
+  GATILHO_CHECKIN_ATRASADO,
   'questionario.respondido',
   'paciente.risco_alto'
 ] as const;
@@ -18,8 +30,12 @@ export interface GatilhoInatividadeAutomacao {
   limitePorExecucao?: number;
 }
 
+/** Contrato fechado do gatilho periodico: os tres parametros sempre existem apos a validacao (ver `checkin-atrasado.ts`). */
 export interface GatilhoCheckinAtrasadoAutomacao {
-  tipo: 'checkin.atrasado';
+  tipo: typeof GATILHO_CHECKIN_ATRASADO;
+  diasSemCheckin: number;
+  intervaloMinimoDias: number;
+  limitePorExecucao: number;
 }
 
 export interface GatilhoQuestionarioRespondidoAutomacao {
@@ -60,10 +76,27 @@ function ehNumeroFinito(valor: unknown): valor is number {
 }
 
 /**
+ * Campo opcional com default de produto quando ausente, mas VALIDADO (nunca
+ * clamado) quando presente -- ao contrario do recall, que so existia antes
+ * deste contrato fechado e por isso normaliza de forma tolerante na leitura.
+ * `checkin.atrasado` nasce com o contrato fechado, entao a escrita rejeita
+ * de imediato um valor fora da faixa.
+ */
+function validarInteiroDoContrato(valor: unknown, campo: string, padrao: number, minimo: number, maximo: number): number {
+  if (valor === undefined) return padrao;
+  if (typeof valor !== 'number' || !Number.isInteger(valor) || valor < minimo || valor > maximo) {
+    throw new ContratoGatilhoAutomacaoInvalido(`${campo} precisa ser um inteiro entre ${minimo} e ${maximo}.`);
+  }
+  return valor;
+}
+
+/**
  * Fecha o vocabulario de gatilhos: rejeita tipo desconhecido e campo fora do
- * contrato antes de a regra ser persistida. Cada tipo exceto o recall
- * especializado aceita somente `{ tipo }` hoje; parametros novos entram junto
- * do incremento que passa a interpreta-los (ver `docs/history/phases/PLANO_FASE_267.md`).
+ * contrato antes de a regra ser persistida. `paciente.inativo` e
+ * `checkin.atrasado` tem parametros proprios (o segundo com defaults de
+ * produto aplicados quando ausentes); `questionario.respondido` e
+ * `paciente.risco_alto` aceitam somente `{ tipo }` (ver
+ * `docs/history/phases/PLANO_FASE_267.md`).
  */
 export function validarGatilhoAutomacao(valor: unknown): GatilhoAutomacao {
   if (!ehObjeto(valor)) {
@@ -106,8 +139,41 @@ export function validarGatilhoAutomacao(valor: unknown): GatilhoAutomacao {
     return resultado;
   }
 
+  if (valor.tipo === GATILHO_CHECKIN_ATRASADO) {
+    const permitidas = ['tipo', 'diasSemCheckin', 'intervaloMinimoDias', 'limitePorExecucao'];
+    if (!possuiApenasAsChavesPermitidas(valor, permitidas)) {
+      throw new ContratoGatilhoAutomacaoInvalido('O gatilho de checkin atrasado contem campos fora do contrato atual.');
+    }
+    return {
+      tipo: GATILHO_CHECKIN_ATRASADO,
+      diasSemCheckin: validarInteiroDoContrato(
+        valor.diasSemCheckin,
+        'diasSemCheckin',
+        DIAS_SEM_CHECKIN_PADRAO,
+        DIAS_SEM_CHECKIN_MINIMO,
+        DIAS_SEM_CHECKIN_MAXIMO
+      ),
+      intervaloMinimoDias: validarInteiroDoContrato(
+        valor.intervaloMinimoDias,
+        'intervaloMinimoDias',
+        CHECKIN_INTERVALO_MINIMO_DIAS_PADRAO,
+        CHECKIN_INTERVALO_MINIMO_DIAS_MINIMO,
+        CHECKIN_INTERVALO_MINIMO_DIAS_MAXIMO
+      ),
+      limitePorExecucao: validarInteiroDoContrato(
+        valor.limitePorExecucao,
+        'limitePorExecucao',
+        CHECKIN_LIMITE_POR_EXECUCAO_PADRAO,
+        CHECKIN_LIMITE_POR_EXECUCAO_MINIMO,
+        CHECKIN_LIMITE_POR_EXECUCAO_MAXIMO
+      )
+    };
+  }
+
   if (!possuiApenasAsChavesPermitidas(valor, ['tipo']) || Object.keys(valor).length !== 1) {
     throw new ContratoGatilhoAutomacaoInvalido('O gatilho contem campos fora do contrato atual.');
   }
-  return { tipo: valor.tipo as Exclude<TipoGatilhoAutomacao, typeof GATILHO_INATIVIDADE> };
+  return {
+    tipo: valor.tipo as Exclude<TipoGatilhoAutomacao, typeof GATILHO_INATIVIDADE | typeof GATILHO_CHECKIN_ATRASADO>
+  };
 }

@@ -85,7 +85,7 @@ describe('ServicoAutomacoes', () => {
       {
         profissionalId: 'profissional-1',
         nome: 'Risco alto',
-        gatilho: { tipo: 'checkin.atrasado' },
+        gatilho: { tipo: 'questionario.respondido' },
         condicoes: [{ campo: 'frustracaoScore', operador: 'maior_que', valor: 70 }],
         acoes: [{ tipo: 'notificar_profissional' }]
       },
@@ -107,7 +107,7 @@ describe('ServicoAutomacoes', () => {
         {
           profissionalId: 'profissional-de-outro-tenant',
           nome: 'Regra fora do tenant',
-          gatilho: { tipo: 'checkin.atrasado' },
+          gatilho: { tipo: 'questionario.respondido' },
           condicoes: [],
           acoes: [{ tipo: 'notificar_profissional' }]
         },
@@ -173,7 +173,7 @@ describe('ServicoAutomacoes', () => {
         {
           profissionalId: 'profissional-1',
           nome: 'Regra insegura',
-          gatilho: { tipo: 'checkin.atrasado' },
+          gatilho: { tipo: 'questionario.respondido' },
           condicoes: [],
           acoes: [{ tipo: 'executar_codigo' }] as never
         },
@@ -192,7 +192,7 @@ describe('ServicoAutomacoes', () => {
         {
           profissionalId: 'profissional-1',
           nome: 'Tarefa incompleta',
-          gatilho: { tipo: 'checkin.atrasado' },
+          gatilho: { tipo: 'questionario.respondido' },
           condicoes: [],
           acoes: [{ tipo: 'criar_tarefa' }] as never
         },
@@ -212,7 +212,7 @@ describe('ServicoAutomacoes', () => {
       {
         profissionalId: 'profissional-1',
         nome: 'Tarefa de retorno',
-        gatilho: { tipo: 'checkin.atrasado' },
+        gatilho: { tipo: 'questionario.respondido' },
         condicoes: [],
         acoes: [{ tipo: 'criar_tarefa', titulo: '  Revisar retorno  ', prioridade: 'alta', prazoDias: 2 }]
       },
@@ -343,7 +343,7 @@ describe('ServicoAutomacoes', () => {
         {
           profissionalId: 'profissional-outro-2',
           nome: 'Risco alto',
-          gatilho: { tipo: 'checkin.atrasado' },
+          gatilho: { tipo: 'questionario.respondido' },
           condicoes: [],
           acoes: [{ tipo: 'notificar_profissional' }]
         },

@@ -61,11 +61,13 @@ de vocabulario, ao contrario do contrato de `acoes` (fechado desde a Fase
      como entrada; `alta -> alta` nao dispara de novo; override manual do
      profissional nunca dispara automacao neste incremento;
    - integrado nesta branch; ver secao 11 para evidencia local.
-3. **267.3 - `checkin.atrasado`** [PENDENTE]
-   - exige uma rodada periodica (equivalente a um `@Cron`) que ainda nao
-     existe para este sinal; depende de decisao de produto sobre a janela de
-     atraso e o teto de disparo por paciente, no mesmo espirito do recall de
-     inatividade.
+3. **267.3 - `checkin.atrasado`** [CONCLUIDO]
+   - rodada periodica propria (`@Cron` diario, mesmo mecanismo de
+     `executarPorTenantAtivo` ja usado pelo recall e pela prioridade), com
+     contrato fechado de tres parametros e defaults de produto aprovados;
+   - integrado nesta branch; ver secao 15 para evidencia local. Com este
+     incremento, o PB-03 (gatilhos reais do motor de automacoes) esta
+     concluido.
 
 ### Observacao de revisao (267.1)
 
@@ -96,7 +98,18 @@ existente; o teste "respeita isolamento por tenant e profissional" em
 `tenant-2` no mesmo cenario e confirma que ela nao produz execucao, o que
 cobre o caso na pratica.
 
-## 4. Invariantes da fundacao (267.1, reutilizadas pela 267.2 e ainda pela 267.3)
+### Observacao de revisao (267.3)
+
+A revisao de isolamento por tenant/profissional da 267.3 nao encontrou
+nenhum achado de risco: `dispararGatilhoAutomacao` mantem o comportamento
+pre-refactor, o novo `dispararParaRegra` so aceita `regra`/`tenantId` ja
+resolvidos pelo chamador (nunca dado de requisicao), e a selecao de
+candidatos filtra estritamente por `tenantId` e por
+`profissionalResponsavelId: regra.profissionalId`. O teste "nao inclui
+paciente arquivado, de outro profissional ou de outro tenant" em
+`servico-checkin-atrasado.spec.ts` cobre exatamente esse cenario negativo.
+
+## 4. Invariantes da fundacao (267.1, reutilizadas pela 267.2 e pela 267.3)
 
 - O disparo so considera regras `ativa = true` do mesmo tenant do evento de
   origem e do profissional responsavel pelo paciente (`pacientes.profissional_responsavel_id`).
@@ -122,6 +135,15 @@ cobre o caso na pratica.
   contrato: condicoes vazias sempre avaliam como atendidas, e o restante do
   pipeline (validacao de acoes, retry, idempotencia por acao) e o mesmo dos
   incrementos anteriores.
+- (267.3) `dispararGatilhoAutomacao` ganhou um nucleo exportado,
+  `dispararParaRegra`, que cria a execucao/outbox de UMA regra ja
+  identificada, sem casar por tenant/profissional/tipo de gatilho de novo.
+  Necessario porque `checkin.atrasado` tem parametros proprios por regra
+  (`diasSemCheckin`/`intervaloMinimoDias`/`limitePorExecucao`): usar o
+  casamento generico da 267.1/267.2 aplicaria o limiar de uma regra a
+  candidatos selecionados para outra regra do mesmo profissional. A 267.1 e
+  a 267.2 continuam usando `dispararGatilhoAutomacao` sem alteracao de
+  comportamento.
 
 ## 5. Risco, rollout e rollback
 
@@ -290,3 +312,133 @@ Gates:
 - `SKIPPED` - validacao local em Node 22: o host desta sessao usa Node 24.
 - `NA` - migration, banco externo, staging, producao e providers: o
   incremento nao adiciona coluna, tabela nem efeito externo novo.
+
+## 12. Contrato e regra de disparo do Incremento 267.3
+
+Contrato fechado aprovado pelo proprietario:
+
+```
+{
+  tipo: "checkin.atrasado",
+  diasSemCheckin: inteiro de 1 a 365,      // default de produto: 7
+  intervaloMinimoDias: inteiro de 1 a 365, // default de produto: 7
+  limitePorExecucao: inteiro de 1 a 200    // default de produto: 100
+}
+```
+
+Regras de selecao:
+
+- referencia de atraso e `paciente.ultimoCheckinEm`; quando nunca houve
+  check-in, usa `paciente.criadoEm`;
+- so entram pacientes ativos (nao arquivados) do profissional dono da regra,
+  no tenant da rodada;
+- paciente cujo ultimo disparo desta MESMA regra foi mais recente que
+  `intervaloMinimoDias` fica de fora (motivo `disparo_recente`) — assim uma
+  rodada diaria nao repete o lembrete todo dia enquanto o paciente segue
+  atrasado;
+- excedente alem de `limitePorExecucao` fica de fora (motivo
+  `limite_por_execucao`), priorizando quem esta atrasado ha mais tempo —
+  ordenacao deterministica, mesmo criterio do recall de inatividade;
+- simulacao nominal (candidatos + motivos fechados de exclusao) obrigatoria
+  antes de ativar, no mesmo espirito do recall; nunca despacha nenhuma acao.
+
+Implementacao:
+
+- `dominio/checkin-atrasado.ts`: `selecionarCandidatosCheckinAtrasado` (pura,
+  motivos fechados `dentro_do_prazo`/`disparo_recente`/`limite_por_execucao`)
+  e `normalizarConfiguracaoCheckinAtrasado` (defensiva na leitura, mesmo
+  padrao do recall).
+- `dominio/gatilhos-automacao.ts`: `checkin.atrasado` ganhou validacao HARD
+  na escrita (rejeita fora da faixa 1-365/1-365/1-200 e campo desconhecido),
+  ao contrario do soft-clamp historico do recall — o contrato nasce fechado
+  nesta fase, entao a escrita pode recusar de imediato.
+- `aplicacao/servico-checkin-atrasado.ts`: `simular` (nominal, nunca
+  despacha) e `processarRodada` (real, chama `dispararParaRegra` por
+  candidato, cada um na sua propria transacao, regra e paciente isolados
+  entre si).
+- `aplicacao/processador-checkin-atrasado.ts`: `@Cron` diario (mesma
+  cadencia do recall e da prioridade), usando `executarPorTenantAtivo` —
+  mesmo mecanismo ja usado pelos demais processadores periodicos, garantindo
+  que a falha de um tenant nao interrompe os demais.
+- `POST /automacoes/checkin-atrasado/simulacoes` (novo endpoint,
+  autenticado e autorizado pelos mesmos guards da rota de recall) e a Web
+  substituiu o campo livre "Campo/Operador/Valor" (que nunca fazia sentido
+  para este gatilho) pelos tres parametros reais, com botao dedicado
+  "Simular checkin atrasado".
+
+## 13. Gates do Incremento 267.3
+
+- [x] Escopo, contrato fechado e defaults de produto aprovados pelo
+  proprietario antes do codigo.
+- [x] Testes focados escritos antes da implementacao cobrindo os 9 cenarios
+  pedidos (vencido entra, dentro do prazo nao entra, sem historico usa
+  `criadoEm`, arquivado/outro profissional/outro tenant nao entra, intervalo
+  minimo impede repeticao, limite deterministico, retry sem duplicar,
+  simulacao nunca despacha, uma regra com erro nao interrompe as demais).
+- [x] `dispararParaRegra` extraido da fundacao sem alterar o comportamento
+  de `dispararGatilhoAutomacao` usado pela 267.1/267.2 (suites das duas
+  fases continuam verdes sem alteracao).
+- [x] Web substitui o campo livre `checkinsPerdidos` pelos tres parametros
+  reais do contrato fechado.
+- [x] `pnpm --dir octaclin-backend typecheck` / `build` / `test --runInBand`.
+- [x] `pnpm --dir octaclin-web typecheck` / `lint`.
+- [x] `pnpm test:guardas-controladores`.
+- [x] `pnpm test:redacao-auditoria` (nova chave `diasSemCheckin` registrada
+  em `CHAVES_SEGURAS` de `scripts/validar-redacao-auditoria.mjs`, mesmo
+  tratamento ja dado a `diasSemConsulta` do recall).
+- [x] `pnpm test:confiabilidade` e `pnpm security:secrets`.
+- [x] `git diff --check`.
+- [ ] Checks e revisao humana da PR contra `main`.
+
+Com os gates acima verdes, o **PB-03 (gatilhos reais do motor de
+automacoes) esta concluido**. O proximo item obrigatorio da Onda 2 do audit
+e o **PB-05 (alerta de check-in com adesao baixa)**.
+
+## 14. Fora do escopo da 267.3
+
+- PB-05 (alerta de check-in com adesao baixa);
+- qualquer mudanca no recall de inatividade (fluxo especializado,
+  inalterado) ou nos gatilhos `questionario.respondido`/`paciente.risco_alto`
+  alem da extracao de `dispararParaRegra`, que preserva o comportamento
+  deles;
+- endpoint de disparo manual/sob demanda para `checkin.atrasado` (hoje so
+  existe a rodada diaria via `ProcessadorCheckinAtrasado`);
+- migration, provider externo ou configuracao de producao.
+
+## 15. Evidencia local do Incremento 267.3
+
+- `PASS` - testes focados do dominio: 10/10 (`checkin-atrasado.spec.ts`).
+- `PASS` - testes focados do contrato fechado: 5 novos casos em
+  `gatilhos-automacao.spec.ts` (defaults, valores explicitos, faixa
+  invalida, campo fora do contrato).
+- `PASS` - testes focados do servico: 12/12
+  (`servico-checkin-atrasado.spec.ts`), cobrindo simulacao nominal, rodada
+  real, intervalo minimo, limite deterministico, retry sem duplicar e
+  isolamento de erro entre regras da mesma rodada.
+- `PASS` - `pnpm --dir octaclin-backend typecheck`.
+- `PASS` - `pnpm --dir octaclin-backend build`.
+- `PASS` - `pnpm --dir octaclin-backend test --runInBand`: 201 suites
+  executadas (3 puladas, mesmo padrao ja documentado nas fases
+  265/266/267.1/267.2 de integracao dependente de ambiente), 1.931/1.931
+  testes.
+- `PASS` - `pnpm --dir octaclin-web typecheck`.
+- `PASS` - `pnpm --dir octaclin-web lint`: 0 erros, 56 warnings preexistentes
+  (mesma contagem das fases anteriores).
+- `PASS` - `pnpm --dir octaclin-web build`.
+- `PASS` - `pnpm test:guardas-controladores`: 11/11.
+- `PASS` - `pnpm test:redacao-auditoria`: 24/24 apos registrar
+  `diassemcheckin` em `CHAVES_SEGURAS`.
+- `PASS` - `pnpm test:confiabilidade`: 40 referencias criticas.
+- `PASS` - `pnpm security:secrets`: nenhum segredo real identificado.
+- `PASS` - `git diff --check`.
+- `SKIPPED` - `pnpm validate:docs`: exige PowerShell, indisponivel neste
+  sandbox Linux (mesma limitacao de ambiente ja registrada nas fases
+  anteriores). O modo `-DocsOnly` do script so roda `git status --short`
+  alem dos passos condicionados a `-not $DocsOnly`; verificado manualmente
+  com `git status --short` e `git diff --check` neste ciclo.
+- `SKIPPED` - Playwright de Automacoes: mesma limitacao de ambiente das
+  fases 267.1/267.2 (cache de Chromium do sandbox na revisao 1194,
+  `@playwright/test` desta sessao exige 1243).
+- `NA` - migration, banco externo, staging, producao e providers: o
+  incremento reutiliza tabelas e colunas existentes e nao aciona provider
+  externo.

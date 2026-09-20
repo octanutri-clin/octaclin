@@ -268,9 +268,9 @@ Critério: valor claro, esforço pequeno, risco baixo, sem migration pesada e se
   `enviar_template` foi integrado no PR `#272` (merge `716e38e` em `main`,
   20/20 checks verdes, merge humano) com canal e template explícitos,
   políticas obrigatórias do paciente, limite de frequência, idempotência e
-  outbox. Com isso o PB-02 está concluído. O PB-03 (gatilhos reais) está em
-  andamento desde 2026-09-20: o Incremento 267.1 fecha o contrato de
-  `gatilho` numa união discriminada, cria a fundação durável de disparo
+  outbox. Com isso o PB-02 está concluído. O PB-03 (gatilhos reais) foi
+  concluído em 2026-09-20 pela Fase 267: o Incremento 267.1 fecha o contrato
+  de `gatilho` numa união discriminada, cria a fundação durável de disparo
   (execução e outbox na mesma transação do evento de origem, identidade
   determinística, publicação exclusiva pelo outbox) e liga
   `questionario.respondido` de fato — o primeiro dos três gatilhos órfãos a
@@ -279,9 +279,16 @@ Critério: valor claro, esforço pequeno, risco baixo, sem migration pesada e se
   fundação sem alterá-la: dispara na entrada em faixa alta (baixa/média ->
   alta, ou primeiro cálculo já em alta), nunca em `alta -> alta` nem por
   override manual do profissional, e o contexto durável carrega somente o
-  tipo do evento — nunca score, fatores ou justificativa. `checkin.atrasado`
-  (267.3) segue pendente, e o alerta de adesão baixa (PB-05) permanece como
-  próximo item obrigatório depois dele.
+  tipo do evento — nunca score, fatores ou justificativa. O Incremento 267.3
+  liga `checkin.atrasado` numa rodada periódica própria (diária, por
+  tenant), com contrato fechado de três parâmetros
+  (`diasSemCheckin`/`intervaloMinimoDias`/`limitePorExecucao`, defaults de
+  produto 7/7/100), simulação nominal com motivos fechados de exclusão e a
+  Web substituindo o campo livre que existia para este gatilho pelos
+  parâmetros reais — o terceiro e último gatilho órfão sai da vitrine. Com
+  os três incrementos, nenhum dos quatro gatilhos do motor de automações
+  permanece "vitrine": todos executam de fato. O alerta de adesão baixa
+  (PB-05) é o próximo item obrigatório da Onda 2.
 
 ### 5.3 Resumo clínico do paciente (os primeiros 10 segundos)
 - **Atual** `[F]`: a aba Resumo traz próxima ação, próxima consulta, contexto operacional (último atendimento,

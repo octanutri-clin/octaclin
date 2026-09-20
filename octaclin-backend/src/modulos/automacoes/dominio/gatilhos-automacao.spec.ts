@@ -23,12 +23,49 @@ describe('validarGatilhoAutomacao', () => {
     });
   });
 
-  it.each(['checkin.atrasado', 'questionario.respondido', 'paciente.risco_alto'])(
-    'aceita %s somente com o campo tipo',
-    (tipo) => {
-      expect(validarGatilhoAutomacao({ tipo })).toEqual({ tipo });
-    }
-  );
+  it.each(['questionario.respondido', 'paciente.risco_alto'])('aceita %s somente com o campo tipo', (tipo) => {
+    expect(validarGatilhoAutomacao({ tipo })).toEqual({ tipo });
+  });
+
+  it('aceita checkin.atrasado sem parametros e aplica os defaults de produto', () => {
+    expect(validarGatilhoAutomacao({ tipo: 'checkin.atrasado' })).toEqual({
+      tipo: 'checkin.atrasado',
+      diasSemCheckin: 7,
+      intervaloMinimoDias: 7,
+      limitePorExecucao: 100
+    });
+  });
+
+  it('aceita checkin.atrasado com os tres parametros explicitos dentro da faixa', () => {
+    expect(
+      validarGatilhoAutomacao({
+        tipo: 'checkin.atrasado',
+        diasSemCheckin: 14,
+        intervaloMinimoDias: 30,
+        limitePorExecucao: 50
+      })
+    ).toEqual({ tipo: 'checkin.atrasado', diasSemCheckin: 14, intervaloMinimoDias: 30, limitePorExecucao: 50 });
+  });
+
+  it.each([
+    ['diasSemCheckin', 0],
+    ['diasSemCheckin', 366],
+    ['diasSemCheckin', 1.5],
+    ['intervaloMinimoDias', 0],
+    ['intervaloMinimoDias', 366],
+    ['limitePorExecucao', 0],
+    ['limitePorExecucao', 201]
+  ])('rejeita checkin.atrasado com %s fora da faixa fechada (%s)', (campo, valor) => {
+    expect(() => validarGatilhoAutomacao({ tipo: 'checkin.atrasado', [campo]: valor })).toThrow(
+      ContratoGatilhoAutomacaoInvalido
+    );
+  });
+
+  it('rejeita campo fora do contrato em checkin.atrasado', () => {
+    expect(() => validarGatilhoAutomacao({ tipo: 'checkin.atrasado', campoExtra: 1 })).toThrow(
+      ContratoGatilhoAutomacaoInvalido
+    );
+  });
 
   it('rejeita tipo de gatilho desconhecido', () => {
     expect(() => validarGatilhoAutomacao({ tipo: 'checkin' })).toThrow(ContratoGatilhoAutomacaoInvalido);

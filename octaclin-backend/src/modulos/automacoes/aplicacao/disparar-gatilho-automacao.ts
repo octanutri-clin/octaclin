@@ -61,46 +61,65 @@ export async function dispararGatilhoAutomacao(
   });
   if (!regras.length) return [];
 
-  const contexto = evento.contexto ?? {};
   const disparos: DisparoGatilhoAutomacao[] = [];
-
   for (const regra of regras) {
-    const chave = `automacao:gatilho:${regra.id}:${evento.origemTipo}:${evento.origemId}`;
-    const execucaoId = identificadorDeterministico('execucao-gatilho-automacao', chave);
-    const outboxId = identificadorDeterministico('outbox-gatilho-automacao', chave);
-    const jobId = `execucao-regra-${execucaoId}`;
-
-    await gerenciador
-      .createQueryBuilder()
-      .insert()
-      .into(ExecucaoRegraOrm)
-      .values({
-        id: execucaoId,
-        tenantId,
-        regraId: regra.id,
-        pacienteId: evento.pacienteId,
-        status: 'pendente',
-        resultado: { contexto }
-      })
-      .orIgnore()
-      .execute();
-
-    await gerenciador
-      .createQueryBuilder()
-      .insert()
-      .into(OutboxEventoOrm)
-      .values({
-        id: outboxId,
-        tenantId,
-        tipo: TIPO_OUTBOX_GATILHO_AUTOMACAO,
-        status: 'pendente',
-        payload: { execucaoId, jobId, contexto }
-      })
-      .orIgnore()
-      .execute();
-
-    disparos.push({ execucaoId, jobId, contexto });
+    disparos.push(await dispararParaRegra(gerenciador, tenantId, regra, evento));
   }
-
   return disparos;
+}
+
+/**
+ * Nucleo de `dispararGatilhoAutomacao`: cria a execucao e o outbox de UMA
+ * regra ja identificada, sem casar por profissional/tipo de gatilho.
+ *
+ * Exportado a parte para gatilhos cuja elegibilidade depende de parametros
+ * proprios da regra (ex.: `checkin.atrasado`, cujo `diasSemCheckin`,
+ * `intervaloMinimoDias` e `limitePorExecucao` variam por regra) -- o
+ * chamador ja selecionou o candidato PARA ESTA regra especifica, entao
+ * repetir o casamento generico por tenant/profissional/tipo de
+ * `dispararGatilhoAutomacao` disparia indevidamente outras regras do mesmo
+ * profissional e tipo que usem limiares diferentes.
+ */
+export async function dispararParaRegra(
+  gerenciador: EntityManager,
+  tenantId: string,
+  regra: RegraAutomacaoOrm,
+  evento: EventoGatilhoAutomacao
+): Promise<DisparoGatilhoAutomacao> {
+  const contexto = evento.contexto ?? {};
+  const chave = `automacao:gatilho:${regra.id}:${evento.origemTipo}:${evento.origemId}`;
+  const execucaoId = identificadorDeterministico('execucao-gatilho-automacao', chave);
+  const outboxId = identificadorDeterministico('outbox-gatilho-automacao', chave);
+  const jobId = `execucao-regra-${execucaoId}`;
+
+  await gerenciador
+    .createQueryBuilder()
+    .insert()
+    .into(ExecucaoRegraOrm)
+    .values({
+      id: execucaoId,
+      tenantId,
+      regraId: regra.id,
+      pacienteId: evento.pacienteId,
+      status: 'pendente',
+      resultado: { contexto }
+    })
+    .orIgnore()
+    .execute();
+
+  await gerenciador
+    .createQueryBuilder()
+    .insert()
+    .into(OutboxEventoOrm)
+    .values({
+      id: outboxId,
+      tenantId,
+      tipo: TIPO_OUTBOX_GATILHO_AUTOMACAO,
+      status: 'pendente',
+      payload: { execucaoId, jobId, contexto }
+    })
+    .orIgnore()
+    .execute();
+
+  return { execucaoId, jobId, contexto };
 }

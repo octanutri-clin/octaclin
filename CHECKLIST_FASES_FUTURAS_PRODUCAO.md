@@ -1,8 +1,9 @@
 # OctaClin - Checklist vivo de fases futuras ate producao
 
-Atualizado em 2026-09-20. Fases 256 a 261 e 263 a 266 concluidas; Fase 262
-permanece em andamento pelos gates externos do piloto; Fase 267 esta em
-andamento com o PB-03 de gatilhos reais das automacoes.
+Atualizado em 2026-09-20. Fases 256 a 261 e 263 a 267 concluidas; Fase 262
+permanece em andamento pelos gates externos do piloto. Com a Fase 267, o
+PB-03 (gatilhos reais das automacoes) esta concluido; o proximo item da Onda
+2 do audit e o PB-05 (alerta de check-in com adesao baixa).
 O programa de hardening PR 36-56 permanece como trilha separada. O pacote
 interno do PR 55 foi integrado, mas o proprietario adiou a contratacao do
 pentest para evitar custo neste momento; todos os gates externos seguem
@@ -3504,7 +3505,8 @@ publicado antes de ampliar a superficie de mudancas visuais.
     PB-03 e depois o PB-05 (ver proximo item do roadmap abaixo).
   - Plano, risco e rollback: `docs/history/phases/PLANO_FASE_266.md`.
 
-- [~] Fase 267 - Gatilhos reais das automacoes (PB-03). [EM ANDAMENTO]
+- [x] Fase 267 - Gatilhos reais das automacoes (PB-03). [CONCLUIDA em
+  2026-09-20]
   - [x] 267.1 - Fechar o contrato de `gatilho` numa uniao discriminada
     (preservando o especializado de `paciente.inativo`) e criar a fundacao
     duravel de disparo (execucao + outbox na mesma transacao do evento de
@@ -3519,7 +3521,13 @@ publicado antes de ampliar a superficie de mudancas visuais.
     alta); `alta -> alta` nao dispara de novo; override manual do
     profissional nunca dispara automacao. Implementado nesta branch; checks
     remotos e merge humano pendentes.
-  - [ ] 267.3 - Ligar `checkin.atrasado`, com rodada periodica propria.
+  - [x] 267.3 - Ligar `checkin.atrasado`, com rodada periodica propria
+    (`@Cron` diario via `executarPorTenantAtivo`), contrato fechado de tres
+    parametros (`diasSemCheckin`/`intervaloMinimoDias`/`limitePorExecucao`,
+    defaults 7/7/100) e simulacao nominal com motivos fechados de exclusao.
+    Implementado nesta branch; checks remotos e merge humano pendentes.
+  - [x] Com os tres incrementos concluidos, o PB-03 esta concluido. Proximo
+    item obrigatorio da Onda 2: PB-05 (alerta de check-in com adesao baixa).
   - Plano, risco e rollback: `docs/history/phases/PLANO_FASE_267.md`.
 
 Documento de execução e prioridades: `ROADMAP_QUALIDADE_SEGURANCA_FASES_248_262.md`.
@@ -3962,8 +3970,8 @@ Fonte canonica de escopo, gates e skills do Claude Code:
     provisionado; a issue GitHub `#234` continua aberta e este debito nao foi
     convertido em `PASS` pela conclusao da fase.
 
-Proximo item: concluir os Incrementos 267.1 (`questionario.respondido`) e
-267.2 (`paciente.risco_alto`) com checks verdes e merge humano; depois
-implementar 267.3 (`checkin.atrasado`) antes do PB-05 (alerta de check-in com
-adesao baixa). PR 55 permanece adiado e pendente; PR 56 continua condicionado
-a decisao explicita de distribuir o Mobile.
+Proximo item: concluir os checks remotos e o merge humano da Fase 267
+(267.1, 267.2 e 267.3 — PB-03 completo); depois propor e iniciar o PB-05
+(alerta de check-in com adesao baixa), ultimo item da Onda 2 do audit. PR 55
+permanece adiado e pendente; PR 56 continua condicionado a decisao explicita
+de distribuir o Mobile.

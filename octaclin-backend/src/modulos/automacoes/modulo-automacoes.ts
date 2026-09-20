@@ -7,10 +7,12 @@ import { ModuloAuth } from '../auth/modulo-auth';
 import { ModuloComunicacoes } from '../comunicacoes/modulo-comunicacoes';
 import { ModuloTenancy } from '../tenancy/modulo-tenancy';
 import { ProcessadorAutomacoes } from './aplicacao/processador-automacoes';
+import { ProcessadorCheckinAtrasado } from './aplicacao/processador-checkin-atrasado';
 import { ProcessadorLembretesAgenda } from './aplicacao/processador-lembretes-agenda';
 import { ProcessadorOutboxGatilhosAutomacao } from './aplicacao/processador-outbox-gatilhos-automacao';
 import { ProcessadorRecallInatividade } from './aplicacao/processador-recall-inatividade';
 import { FILA_AUTOMACOES, ServicoAutomacoes } from './aplicacao/servico-automacoes';
+import { ServicoCheckinAtrasado } from './aplicacao/servico-checkin-atrasado';
 import { ServicoLembretesAgenda } from './aplicacao/servico-lembretes-agenda';
 import { ServicoRecallInatividade } from './aplicacao/servico-recall-inatividade';
 import { ControladorAutomacoes } from './apresentacao/controlador-automacoes';
@@ -31,7 +33,8 @@ const processadores = deveExecutarProcessadores()
       ProcessadorAutomacoes,
       ProcessadorLembretesAgenda,
       ProcessadorRecallInatividade,
-      ProcessadorOutboxGatilhosAutomacao
+      ProcessadorOutboxGatilhosAutomacao,
+      ProcessadorCheckinAtrasado
     ]
   : [];
 
@@ -58,11 +61,12 @@ const processadores = deveExecutarProcessadores()
     ServicoAutomacoes,
     ServicoLembretesAgenda,
     ServicoRecallInatividade,
+    ServicoCheckinAtrasado,
     DespachanteAcoesAutomacao,
     CriptografiaDadosSensiveis,
     ...processadores,
     ServicoAuditoria
   ],
-  exports: [ServicoAutomacoes, ServicoLembretesAgenda, ServicoRecallInatividade]
+  exports: [ServicoAutomacoes, ServicoLembretesAgenda, ServicoRecallInatividade, ServicoCheckinAtrasado]
 })
 export class ModuloAutomacoes {}

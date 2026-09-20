@@ -46,3 +46,8 @@ export class SimularRecallDto {
   @IsUUID()
   regraId: string;
 }
+
+export class SimularCheckinAtrasadoDto {
+  @IsUUID()
+  regraId: string;
+}
