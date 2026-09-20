@@ -67,6 +67,36 @@ describe('validarGatilhoAutomacao', () => {
     );
   });
 
+  it('aceita checkin.adesao_baixa sem parametros e aplica o default de produto', () => {
+    expect(validarGatilhoAutomacao({ tipo: 'checkin.adesao_baixa' })).toEqual({
+      tipo: 'checkin.adesao_baixa',
+      limiarAdesao: 50
+    });
+  });
+
+  it('aceita checkin.adesao_baixa com o limiar explicito dentro da faixa', () => {
+    expect(validarGatilhoAutomacao({ tipo: 'checkin.adesao_baixa', limiarAdesao: 30 })).toEqual({
+      tipo: 'checkin.adesao_baixa',
+      limiarAdesao: 30
+    });
+  });
+
+  it.each([
+    ['limiarAdesao', 0],
+    ['limiarAdesao', 101],
+    ['limiarAdesao', 1.5]
+  ])('rejeita checkin.adesao_baixa com %s fora da faixa fechada (%s)', (campo, valor) => {
+    expect(() => validarGatilhoAutomacao({ tipo: 'checkin.adesao_baixa', [campo]: valor })).toThrow(
+      ContratoGatilhoAutomacaoInvalido
+    );
+  });
+
+  it('rejeita campo fora do contrato em checkin.adesao_baixa', () => {
+    expect(() => validarGatilhoAutomacao({ tipo: 'checkin.adesao_baixa', campoExtra: 1 })).toThrow(
+      ContratoGatilhoAutomacaoInvalido
+    );
+  });
+
   it('rejeita tipo de gatilho desconhecido', () => {
     expect(() => validarGatilhoAutomacao({ tipo: 'checkin' })).toThrow(ContratoGatilhoAutomacaoInvalido);
   });

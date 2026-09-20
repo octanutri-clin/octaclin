@@ -1,9 +1,10 @@
 # OctaClin - Checklist vivo de fases futuras ate producao
 
-Atualizado em 2026-09-20. Fases 256 a 261 e 263 a 267 concluidas; Fase 262
-permanece em andamento pelos gates externos do piloto. Com a Fase 267, o
-PB-03 (gatilhos reais das automacoes) esta concluido; o proximo item da Onda
-2 do audit e o PB-05 (alerta de check-in com adesao baixa).
+Atualizado em 2026-09-20. Fases 256 a 261 e 263 a 268 concluidas; Fase 262
+permanece em andamento pelos gates externos do piloto. Com a Fase 268, o
+PB-05 (alerta de check-in com adesao baixa) esta implementado nesta branch;
+checks remotos e merge humano pendentes. Com isso a Onda 2 do audit de
+produto (PB-01 -> PB-02 -> PB-03 -> PB-05) fica completa apos o merge.
 O programa de hardening PR 36-56 permanece como trilha separada. O pacote
 interno do PR 55 foi integrado, mas o proprietario adiou a contratacao do
 pentest para evitar custo neste momento; todos os gates externos seguem
@@ -3537,6 +3538,29 @@ publicado antes de ampliar a superficie de mudancas visuais.
     confirmado via GitHub em 2026-09-20.
   - Plano, risco e rollback: `docs/history/phases/PLANO_FASE_267.md`.
 
+- [x] Fase 268 - Alerta de check-in com adesao baixa (PB-05). [IMPLEMENTADA
+  em 2026-09-20; checks remotos e merge humano pendentes]
+  - [x] Contrato fechado `{ tipo: 'checkin.adesao_baixa', limiarAdesao:
+    inteiro de 1 a 100 }`, default de produto 50 (mesmo corte ja usado pelo
+    fator `adesao_declarada_baixa` da formula de prioridade de
+    acompanhamento da Fase 265, para manter os dois sinais de "adesao
+    baixa" do produto consistentes entre si).
+  - [x] Dispara por check-in individual (nao por rodada): quando a adesao
+    declarada em `registrarCheckinRapido` (portal do paciente) fica
+    estritamente abaixo do limiar de uma regra ativa do profissional
+    responsavel. Reusa `dispararParaRegra` (nucleo por-regra extraido na
+    267.3) porque a elegibilidade depende do limiar proprio de cada regra.
+  - [x] Idempotencia pela identidade do proprio registro de check-in;
+    contexto duravel carrega somente o tipo do evento, nunca a adesao
+    declarada, humor ou qualquer outro conteudo do check-in.
+  - [x] Web: nova opcao "Check-in com adesao baixa" no formulario de criacao
+    de regras, com o campo "Limiar de adesao (%)" (default 50); reusa o
+    simulador generico de regras, sem endpoint dedicado (mesma decisao ja
+    tomada para `questionario.respondido`/`paciente.risco_alto`).
+  - [x] Com isso, a Onda 2 do audit de produto (PB-01 -> PB-02 -> PB-03 ->
+    PB-05) fica completa.
+  - Plano, risco e rollback: `docs/history/phases/PLANO_FASE_268.md`.
+
 Documento de execução e prioridades: `ROADMAP_QUALIDADE_SEGURANCA_FASES_248_262.md`.
 Matriz operacional: `MATRIZ_SKILLS_PLUGINS_MODELOS_FASES_243_248_262.md`.
 
@@ -3977,8 +4001,8 @@ Fonte canonica de escopo, gates e skills do Claude Code:
     provisionado; a issue GitHub `#234` continua aberta e este debito nao foi
     convertido em `PASS` pela conclusao da fase.
 
-Proximo item: concluir os checks remotos e o merge humano da Fase 267
-(267.1, 267.2 e 267.3 — PB-03 completo); depois propor e iniciar o PB-05
-(alerta de check-in com adesao baixa), ultimo item da Onda 2 do audit. PR 55
-permanece adiado e pendente; PR 56 continua condicionado a decisao explicita
-de distribuir o Mobile.
+Proximo item: concluir os checks remotos e o merge humano da Fase 268
+(PB-05, ultimo item da Onda 2 do audit). Com esse merge, a Onda 2 fica
+completa (PB-01 -> PB-02 -> PB-03 -> PB-05). PR 55 permanece adiado e
+pendente; PR 56 continua condicionado a decisao explicita de distribuir o
+Mobile.

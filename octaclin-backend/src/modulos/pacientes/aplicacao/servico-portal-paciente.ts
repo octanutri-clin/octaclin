@@ -11,6 +11,7 @@ import {
   normalizarModalidadeConsulta
 } from '../../agenda/dominio/teleconsulta';
 import { AgendaConsultaOrm } from '../../agenda/infraestrutura/agenda-consulta.orm';
+import { dispararGatilhoCheckinAdesaoBaixa } from '../../automacoes/aplicacao/disparar-gatilho-checkin-adesao-baixa';
 import { AvaliacaoAntropometricaOrm } from '../infraestrutura/avaliacao-antropometrica.orm';
 import type { MedidasAntropometricas } from '../dominio/antropometria';
 import { MensagemNotificacaoOrm } from '../../comunicacoes/infraestrutura/mensagem-notificacao.orm';
@@ -909,6 +910,17 @@ export class ServicoPortalPaciente {
 
       paciente.ultimoCheckinEm = registradoEm;
       await repositorioPacientes.save(paciente);
+
+      // Fundacao duravel do PB-03 reutilizada pelo PB-05: cria execucao +
+      // outbox na mesma transacao do check-in. So o tipo do evento entra no
+      // contexto -- nunca a adesao declarada, o humor ou qualquer outro
+      // conteudo do check-in (ver disparar-gatilho-checkin-adesao-baixa.ts).
+      await dispararGatilhoCheckinAdesaoBaixa(gerenciador, tenantId, {
+        pacienteId: paciente.id,
+        profissionalId: paciente.profissionalResponsavelId,
+        adesaoPlano: dados.adesaoPlano,
+        checkinId: diario.id
+      });
 
       if (dados.idLocal) {
         await repositorioSincronizacoes.save(
