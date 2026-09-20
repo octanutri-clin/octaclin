@@ -514,3 +514,19 @@ Evidencia:
 - `PASS` - `pnpm --dir octaclin-web typecheck` e `lint` sem novos erros.
 
 Commit: `e9a54b5`.
+
+## 18. Fechamento: PR #273 merge confirmado
+
+Apos o commit `89b97c0` (registro da correcao da secao 17), o job "OctaClin
+CI" reexecutou na PR `#273` sobre esse commit e todos os 8 jobs concluiram
+com sucesso, incluindo "Demo local smoke" (com "Smoke visual Playwright"
+verde). A PR foi revisada e mergeada por humano em `main` no commit
+`9e78f31` em 2026-09-20.
+
+Com o merge confirmado, o **PB-03 (gatilhos reais do motor de automacoes)
+esta definitivamente concluido**. `CHECKLIST_FASES_FUTURAS_PRODUCAO.md` e
+`STATUS_ATUAL_PROJETO.md` foram atualizados para substituir "checks remotos
+e merge humano pendentes" pela evidencia real do merge. O proximo item
+obrigatorio da Onda 2 do audit e o **PB-05 (alerta de check-in com adesao
+baixa)**, ainda sem escopo, contrato ou regras aprovadas pelo dono do
+produto.

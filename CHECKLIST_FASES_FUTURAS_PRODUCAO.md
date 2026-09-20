@@ -3513,26 +3513,28 @@ publicado antes de ampliar a superficie de mudancas visuais.
     origem, identidade deterministica, publicacao exclusivamente pelo
     outbox). Conecta `questionario.respondido` ao termino idempotente de
     `finalizarFormularioPaciente`, com condicoes vazias e contexto somente
-    com IDs opacos. Implementado nesta branch; checks remotos e merge humano
-    pendentes.
+    com IDs opacos.
   - [x] 267.2 - Ligar `paciente.risco_alto` ao recalculo diario de prioridade
     da Fase 265, reutilizando a fundacao da 267.1 sem altera-la. Dispara na
     entrada em faixa alta (baixa/media -> alta, ou primeiro calculo ja em
     alta); `alta -> alta` nao dispara de novo; override manual do
-    profissional nunca dispara automacao. Implementado nesta branch; checks
-    remotos e merge humano pendentes.
+    profissional nunca dispara automacao.
   - [x] 267.3 - Ligar `checkin.atrasado`, com rodada periodica propria
     (`@Cron` diario via `executarPorTenantAtivo`), contrato fechado de tres
     parametros (`diasSemCheckin`/`intervaloMinimoDias`/`limitePorExecucao`,
     defaults 7/7/100) e simulacao nominal com motivos fechados de exclusao.
-    Implementado nesta branch; checks remotos e merge humano pendentes.
   - [x] Com os tres incrementos concluidos, o PB-03 esta concluido. Proximo
     item obrigatorio da Onda 2: PB-05 (alerta de check-in com adesao baixa).
   - [x] Correcao pos-267.3: removida condicao generica morta que a Web ainda
     anexava aos gatilhos `questionario.respondido`/`paciente.risco_alto`
     (contexto real de disparo e opaco, condicao nunca casaria).
-  - PR `#273`, branch `claude/fase-266-proximas-etapas-ofxeek`; checks
-    remotos e merge humano pendentes.
+  - [x] Correcao do gate "Demo local smoke": teste de acessibilidade de
+    `automacoes` desatualizado desde a 267.3 (esperava campos removidos)
+    corrigido para o comportamento atual do formulario.
+  - PR `#273` (branch `claude/fase-266-proximas-etapas-ofxeek`), merge
+    `9e78f31` em `main`, todos os checks de CI verdes (incluindo "Demo local
+    smoke" apos a correcao do teste de acessibilidade) e merge humano
+    confirmado via GitHub em 2026-09-20.
   - Plano, risco e rollback: `docs/history/phases/PLANO_FASE_267.md`.
 
 Documento de execução e prioridades: `ROADMAP_QUALIDADE_SEGURANCA_FASES_248_262.md`.
