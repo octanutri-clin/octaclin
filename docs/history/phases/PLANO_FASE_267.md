@@ -442,3 +442,38 @@ e o **PB-05 (alerta de check-in com adesao baixa)**.
 - `NA` - migration, banco externo, staging, producao e providers: o
   incremento reutiliza tabelas e colunas existentes e nao aciona provider
   externo.
+
+## 16. Correcao pos-267.3: condicao morta no formulario Web
+
+Durante o fechamento da fase, foi identificado (e reportado ao proprietario)
+que o formulario de criacao de regras em `painel-automacoes.tsx` ainda
+anexava uma condicao generica (`campo`/`operador`/`valor`) aos gatilhos
+`questionario.respondido` e `paciente.risco_alto`. O contexto real de
+disparo desses gatilhos (via `dispararGatilhoAutomacao`/`dispararParaRegra`)
+e opaco (`{ evento: "..." }`), sem nenhum campo generico do tipo
+`frustracaoScore`/`checkinsPerdidos`. Uma regra criada com essa condicao
+pelo formulario nunca dispararia de fato, mesmo apos ativada, sem qualquer
+erro visivel ao usuario.
+
+O proprietario pediu a correcao. Como o seletor de gatilho da Web so
+oferece 4 tipos (inatividade, checkin atrasado, questionario respondido,
+risco alto) e os dois primeiros ja usam `condicoes: []` (elegibilidade
+resolvida dentro do proprio gatilho), o ramo generico de campo/operador/
+valor so era alcancado - e sempre incorretamente - pelos dois gatilhos
+automaticos. Correcao: `condicoes: []` para todos os gatilhos disponiveis no
+formulario e remocao dos campos mortos (`FormularioRegra.campo/operador/
+valor`, `valorCondicao`, os inputs correspondentes), preservando o seletor
+de acao (`blocoAcao`) para questionario/risco alto. `avaliarCondicoes` trata
+array vazio como vacuamente satisfeito (mesmo mecanismo ja usado por
+`paciente.inativo` e `checkin.atrasado`), entao o comportamento de disparo
+dos dois gatilhos automaticos nao muda.
+
+Evidencia:
+- `PASS` - `pnpm --dir octaclin-web typecheck`.
+- `PASS` - `pnpm --dir octaclin-web lint`: 0 erros, 56 warnings preexistentes
+  (mesma contagem da 267.3; nenhum novo warning introduzido no arquivo).
+- `PASS` - `pnpm security:secrets`.
+- `PASS` - `git diff --check`.
+- `NA` - backend: nenhum arquivo de backend foi alterado por esta correcao.
+
+Commit: `d879366`.
