@@ -477,3 +477,40 @@ Evidencia:
 - `NA` - backend: nenhum arquivo de backend foi alterado por esta correcao.
 
 Commit: `d879366`.
+
+## 17. Correcao do gate "Demo local smoke" da PR #273
+
+A PR `#273` falhou no job "Demo local smoke" (step "Smoke visual Playwright"):
+o teste `tests/visual/acessibilidade.spec.mjs:2638` ("nova regra - alterna
+gatilho e troca campos condicionais de forma acessivel") ainda esperava os
+campos genericos `Campo`/`Operador`/`Valor` para `checkin.atrasado` (default
+do formulario) e, apos alternar, novamente para o mesmo gatilho - campos
+removidos pela correcao da secao 16 (commit `d879366`). Esse teste ja estava
+desatualizado desde o commit `be3424c` (267.3), que substituiu esses campos
+pelos tres parametros reais do checkin.atrasado; a lacuna so nao apareceu
+antes porque o Playwright local desta sessao esta `SKIPPED` (revisao de
+Chromium do sandbox incompativel com a exigida pelo `@playwright/test`
+instalado).
+
+Corrigido atualizando o teste para o comportamento correto e atual: com
+`checkin.atrasado` selecionado (default), os tres campos do contrato fechado
+e o seletor de Acao ficam visiveis e nenhum de `Campo`/`Operador`/`Valor`
+existe; com "Paciente sem consulta ha muito tempo", so os campos de
+inatividade ficam visiveis (sem Acao); com "Paciente em risco alto", so o
+seletor de Acao fica visivel; voltando a `checkin.atrasado`, os tres campos
+do contrato fechado e a Acao voltam.
+
+Evidencia:
+- `PASS` - verificado localmente com um workaround so de ambiente (symlinks
+  em `/opt/pw-browsers` apontando a revisao 1194 instalada para a revisao
+  1243 exigida pelo `@playwright/test` desta sessao; nada commitado no
+  repositorio): 20/20 testes de `automacoes` em `acessibilidade.spec.mjs`
+  passam em `desktop-chromium` e `mobile-chromium`, incluindo o teste
+  corrigido.
+- `PASS` - o teste relacionado de `fase-197-modulos-avancados.spec.mjs`
+  ("simula regra rascunho antes de permitir ativacao", que usa fixture de
+  regra ja persistida e nao passa pelo formulario de criacao) continua
+  verde nos dois projetos.
+- `PASS` - `pnpm --dir octaclin-web typecheck` e `lint` sem novos erros.
+
+Commit: `e9a54b5`.
