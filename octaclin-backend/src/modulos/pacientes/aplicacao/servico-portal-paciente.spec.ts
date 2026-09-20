@@ -1,6 +1,9 @@
 import { BadRequestException, ConflictException, ForbiddenException, NotFoundException } from '@nestjs/common';
 import { ConsentimentoLgpdOrm } from '../../../infraestrutura/lgpd/consentimento-lgpd.orm';
 import { AgendaConsultaOrm } from '../../agenda/infraestrutura/agenda-consulta.orm';
+import { RegraAutomacaoOrm } from '../../automacoes/infraestrutura/regra-automacao.orm';
+import { ExecucaoRegraOrm } from '../../automacoes/infraestrutura/execucao-regra.orm';
+import { OutboxEventoOrm } from '../../../infraestrutura/outbox/outbox-evento.orm';
 import { MensagemNotificacaoOrm } from '../../comunicacoes/infraestrutura/mensagem-notificacao.orm';
 import { EnvioMaterialPacienteOrm } from '../../materiais/infraestrutura/envio-material-paciente.orm';
 import { MaterialEducativoOrm } from '../../materiais/infraestrutura/material-educativo.orm';
@@ -46,6 +49,19 @@ function criarRepositorioFake(nome: string, dados: Record<string, any>) {
       (valorConsulta as { _type?: string })._type === 'isNull'
     ) {
       return valorItem === null || valorItem === undefined;
+    }
+    if (
+      valorConsulta &&
+      typeof valorConsulta === 'object' &&
+      '_type' in valorConsulta &&
+      (valorConsulta as { _type?: string })._type === 'jsonContains'
+    ) {
+      const esperado = ((valorConsulta as { _value?: unknown })._value ?? {}) as Record<string, unknown>;
+      return (
+        typeof valorItem === 'object' &&
+        valorItem !== null &&
+        Object.entries(esperado).every(([chave, valor]) => (valorItem as Record<string, unknown>)[chave] === valor)
+      );
     }
     return valorItem === valorConsulta;
   }
@@ -100,8 +116,11 @@ function criarServico(dados: Record<string, any>) {
     planoAlimentarRefeicao: criarRepositorioFake('planoAlimentarRefeicao', dados),
     planoAlimentarItem: criarRepositorioFake('planoAlimentarItem', dados),
     planoAlimentarSubstituicao: criarRepositorioFake('planoAlimentarSubstituicao', dados),
-    planoAlimentarEscolha: criarRepositorioFake('planoAlimentarEscolha', dados)
+    planoAlimentarEscolha: criarRepositorioFake('planoAlimentarEscolha', dados),
+    regraAutomacao: criarRepositorioFake('regraAutomacao', { regraAutomacaos: dados.regrasAutomacao ?? [] })
   };
+  const execucoesRegra = (dados.execucoesRegra ?? (dados.execucoesRegra = [])) as Record<string, any>[];
+  const outboxEventos = (dados.outboxEventos ?? (dados.outboxEventos = [])) as Record<string, any>[];
   const gerenciador = {
     getRepository: jest.fn((entidade: { name: string }) => {
       if (entidade === PacienteOrm) return repositorios.paciente;
@@ -124,8 +143,41 @@ function criarServico(dados: Record<string, any>) {
       if (entidade === PlanoAlimentarItemOrm) return repositorios.planoAlimentarItem;
       if (entidade === PlanoAlimentarSubstituicaoOrm) return repositorios.planoAlimentarSubstituicao;
       if (entidade === PlanoAlimentarEscolhaPacienteOrm) return repositorios.planoAlimentarEscolha;
+      if (entidade === RegraAutomacaoOrm) return repositorios.regraAutomacao;
       if (entidade === AvaliacaoAntropometricaOrm) return { find: jest.fn(async () => []) };
       throw new Error(`Repositorio nao mapeado: ${entidade.name}`);
+    }),
+    // Suporta os inserts idempotentes de `dispararGatilhoCheckinAdesaoBaixa`
+    // (reutiliza a fundacao duravel do PB-03): registra em
+    // `dados.execucoesRegra`/`dados.outboxEventos` e respeita orIgnore por id.
+    createQueryBuilder: jest.fn(() => {
+      let alvo: Record<string, any>[] | undefined;
+      let valoresAtuais: Record<string, unknown> = {};
+      const builder: {
+        insert: () => typeof builder;
+        into: (entidade: unknown) => typeof builder;
+        values: (valores: Record<string, unknown>) => typeof builder;
+        orIgnore: () => typeof builder;
+        execute: () => Promise<{ identifiers: unknown[] }>;
+      } = {
+        insert: jest.fn(() => builder),
+        into: jest.fn((entidade: unknown) => {
+          if (entidade === ExecucaoRegraOrm) alvo = execucoesRegra;
+          else if (entidade === OutboxEventoOrm) alvo = outboxEventos;
+          else throw new Error('Entidade nao suportada no insert fake.');
+          return builder;
+        }),
+        values: jest.fn((valores: Record<string, unknown>) => {
+          valoresAtuais = valores;
+          return builder;
+        }),
+        orIgnore: jest.fn(() => builder),
+        execute: jest.fn(async () => {
+          if (!alvo!.some((item) => item.id === valoresAtuais.id)) alvo!.push({ ...valoresAtuais });
+          return { identifiers: [] };
+        })
+      };
+      return builder;
     })
   };
   const executorTenant = {
@@ -137,7 +189,12 @@ function criarServico(dados: Record<string, any>) {
     gerarHashesBuscaPii: jest.fn(() => ['hash-busca'])
   };
 
-  return { servico: new ServicoPortalPaciente(executorTenant as never, criptografia as never), repositorios };
+  return {
+    servico: new ServicoPortalPaciente(executorTenant as never, criptografia as never),
+    repositorios,
+    execucoesRegra,
+    outboxEventos
+  };
 }
 
 describe('ServicoPortalPaciente', () => {
@@ -909,6 +966,158 @@ describe('ServicoPortalPaciente', () => {
         ultimoCheckinEm: expect.any(Date)
       })
     );
+  });
+
+  it('dispara checkin.adesao_baixa quando a adesao declarada fica abaixo do limiar da regra', async () => {
+    const { servico, execucoesRegra, outboxEventos } = criarServico({
+      pacientes: [
+        {
+          id: 'paciente-1',
+          tenantId: 'tenant-1',
+          usuarioId: 'usuario-paciente-1',
+          nomeCriptografado: Buffer.from('cripto:Ana Paula'),
+          profissionalResponsavelId: 'profissional-1'
+        }
+      ],
+      consultas: [],
+      envios: [],
+      questionarios: [],
+      mensagens: [],
+      diarios: [],
+      sincronizacaos: [],
+      regrasAutomacao: [
+        {
+          id: 'regra-1',
+          tenantId: 'tenant-1',
+          profissionalId: 'profissional-1',
+          ativa: true,
+          gatilho: { tipo: 'checkin.adesao_baixa', limiarAdesao: 50 }
+        }
+      ]
+    });
+
+    const checkin = await (servico as any).registrarCheckinRapido('tenant-1', 'usuario-paciente-1', {
+      humor: 'mal',
+      adesaoPlano: 30
+    });
+
+    expect(execucoesRegra).toHaveLength(1);
+    expect(execucoesRegra[0]).toEqual(
+      expect.objectContaining({ tenantId: 'tenant-1', regraId: 'regra-1', pacienteId: 'paciente-1', status: 'pendente' })
+    );
+    expect(execucoesRegra[0].resultado.contexto).toEqual({ evento: 'checkin.adesao_baixa' });
+    expect(JSON.stringify(execucoesRegra[0])).not.toMatch(/humor|sintoma|observ|30/);
+    expect(outboxEventos).toHaveLength(1);
+    expect(checkin).toEqual(expect.objectContaining({ adesaoPlano: 30 }));
+  });
+
+  it('nao dispara checkin.adesao_baixa quando a adesao declarada e igual ou maior que o limiar da regra', async () => {
+    const { execucoesRegra, servico } = criarServico({
+      pacientes: [
+        {
+          id: 'paciente-1',
+          tenantId: 'tenant-1',
+          usuarioId: 'usuario-paciente-1',
+          nomeCriptografado: Buffer.from('cripto:Ana Paula'),
+          profissionalResponsavelId: 'profissional-1'
+        }
+      ],
+      consultas: [],
+      envios: [],
+      questionarios: [],
+      mensagens: [],
+      diarios: [],
+      sincronizacaos: [],
+      regrasAutomacao: [
+        {
+          id: 'regra-1',
+          tenantId: 'tenant-1',
+          profissionalId: 'profissional-1',
+          ativa: true,
+          gatilho: { tipo: 'checkin.adesao_baixa', limiarAdesao: 50 }
+        }
+      ]
+    });
+
+    await (servico as any).registrarCheckinRapido('tenant-1', 'usuario-paciente-1', {
+      humor: 'bem',
+      adesaoPlano: 80
+    });
+
+    expect(execucoesRegra).toEqual([]);
+  });
+
+  it('nao dispara checkin.adesao_baixa de uma regra de outro profissional (isolamento)', async () => {
+    const { execucoesRegra, servico } = criarServico({
+      pacientes: [
+        {
+          id: 'paciente-1',
+          tenantId: 'tenant-1',
+          usuarioId: 'usuario-paciente-1',
+          nomeCriptografado: Buffer.from('cripto:Ana Paula'),
+          profissionalResponsavelId: 'profissional-1'
+        }
+      ],
+      consultas: [],
+      envios: [],
+      questionarios: [],
+      mensagens: [],
+      diarios: [],
+      sincronizacaos: [],
+      regrasAutomacao: [
+        {
+          id: 'regra-de-outro-profissional',
+          tenantId: 'tenant-1',
+          profissionalId: 'outro-profissional',
+          ativa: true,
+          gatilho: { tipo: 'checkin.adesao_baixa', limiarAdesao: 90 }
+        }
+      ]
+    });
+
+    await (servico as any).registrarCheckinRapido('tenant-1', 'usuario-paciente-1', {
+      humor: 'mal',
+      adesaoPlano: 10
+    });
+
+    expect(execucoesRegra).toEqual([]);
+  });
+
+  it('reenvio da mesma operacao offline nao duplica o disparo de checkin.adesao_baixa', async () => {
+    const dados = {
+      pacientes: [
+        {
+          id: 'paciente-1',
+          tenantId: 'tenant-1',
+          usuarioId: 'usuario-paciente-1',
+          nomeCriptografado: Buffer.from('cripto:Ana Paula'),
+          profissionalResponsavelId: 'profissional-1'
+        }
+      ],
+      consultas: [],
+      envios: [],
+      questionarios: [],
+      mensagens: [],
+      diarios: [],
+      sincronizacaos: [],
+      regrasAutomacao: [
+        {
+          id: 'regra-1',
+          tenantId: 'tenant-1',
+          profissionalId: 'profissional-1',
+          ativa: true,
+          gatilho: { tipo: 'checkin.adesao_baixa', limiarAdesao: 50 }
+        }
+      ]
+    };
+    const { servico, execucoesRegra, outboxEventos } = criarServico(dados);
+    const entrada = { idLocal: 'pwa-checkin-adesao-1', humor: 'mal' as const, adesaoPlano: 10 };
+
+    await servico.registrarCheckinRapido('tenant-1', 'usuario-paciente-1', entrada);
+    await servico.registrarCheckinRapido('tenant-1', 'usuario-paciente-1', entrada);
+
+    expect(execucoesRegra).toHaveLength(1);
+    expect(outboxEventos).toHaveLength(1);
   });
 
   it('deve reaproveitar check-in quando a mesma operacao offline for reenviada', async () => {

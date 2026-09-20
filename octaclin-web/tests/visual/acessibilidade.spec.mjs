@@ -2669,9 +2669,20 @@ test.describe('gate de acessibilidade - automacoes (PR 24)', () => {
     await expect(page.getByLabel('Valor')).toHaveCount(0);
     await expect(page.getByLabel('Ação', { exact: true })).toBeVisible();
 
+    await page.getByLabel('Gatilho').selectOption({ label: 'Check-in com adesão baixa' });
+
+    await expect(page.getByLabel('Dias sem consulta')).toHaveCount(0);
+    await expect(page.getByLabel('Dias sem check-in')).toHaveCount(0);
+    await expect(page.getByLabel('Campo')).toHaveCount(0);
+    await expect(page.getByLabel('Operador')).toHaveCount(0);
+    await expect(page.getByLabel('Valor')).toHaveCount(0);
+    await expect(page.getByLabel('Limiar de adesão (%)')).toHaveValue('50');
+    await expect(page.getByLabel('Ação', { exact: true })).toBeVisible();
+
     await page.getByLabel('Gatilho').selectOption({ label: 'Check-in atrasado' });
 
     await expect(page.getByLabel('Dias sem consulta')).toHaveCount(0);
+    await expect(page.getByLabel('Limiar de adesão (%)')).toHaveCount(0);
     await expect(page.getByLabel('Campo')).toHaveCount(0);
     await expect(page.getByLabel('Operador')).toHaveCount(0);
     await expect(page.getByLabel('Valor')).toHaveCount(0);

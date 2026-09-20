@@ -1,4 +1,10 @@
 import {
+  GATILHO_CHECKIN_ADESAO_BAIXA,
+  LIMIAR_ADESAO_MAXIMO,
+  LIMIAR_ADESAO_MINIMO,
+  LIMIAR_ADESAO_PADRAO
+} from './checkin-adesao-baixa';
+import {
   DIAS_SEM_CHECKIN_MAXIMO,
   DIAS_SEM_CHECKIN_MINIMO,
   DIAS_SEM_CHECKIN_PADRAO,
@@ -15,6 +21,7 @@ import { GATILHO_INATIVIDADE } from './recall-inatividade';
 export const TIPOS_GATILHO_AUTOMACAO = [
   GATILHO_INATIVIDADE,
   GATILHO_CHECKIN_ATRASADO,
+  GATILHO_CHECKIN_ADESAO_BAIXA,
   'questionario.respondido',
   'paciente.risco_alto'
 ] as const;
@@ -38,6 +45,12 @@ export interface GatilhoCheckinAtrasadoAutomacao {
   limitePorExecucao: number;
 }
 
+/** Contrato fechado do gatilho por check-in: o limiar sempre existe apos a validacao (ver `checkin-adesao-baixa.ts`). */
+export interface GatilhoCheckinAdesaoBaixaAutomacao {
+  tipo: typeof GATILHO_CHECKIN_ADESAO_BAIXA;
+  limiarAdesao: number;
+}
+
 export interface GatilhoQuestionarioRespondidoAutomacao {
   tipo: 'questionario.respondido';
 }
@@ -49,6 +62,7 @@ export interface GatilhoPacienteRiscoAltoAutomacao {
 export type GatilhoAutomacao =
   | GatilhoInatividadeAutomacao
   | GatilhoCheckinAtrasadoAutomacao
+  | GatilhoCheckinAdesaoBaixaAutomacao
   | GatilhoQuestionarioRespondidoAutomacao
   | GatilhoPacienteRiscoAltoAutomacao;
 
@@ -170,10 +184,30 @@ export function validarGatilhoAutomacao(valor: unknown): GatilhoAutomacao {
     };
   }
 
+  if (valor.tipo === GATILHO_CHECKIN_ADESAO_BAIXA) {
+    const permitidas = ['tipo', 'limiarAdesao'];
+    if (!possuiApenasAsChavesPermitidas(valor, permitidas)) {
+      throw new ContratoGatilhoAutomacaoInvalido('O gatilho de adesao baixa contem campos fora do contrato atual.');
+    }
+    return {
+      tipo: GATILHO_CHECKIN_ADESAO_BAIXA,
+      limiarAdesao: validarInteiroDoContrato(
+        valor.limiarAdesao,
+        'limiarAdesao',
+        LIMIAR_ADESAO_PADRAO,
+        LIMIAR_ADESAO_MINIMO,
+        LIMIAR_ADESAO_MAXIMO
+      )
+    };
+  }
+
   if (!possuiApenasAsChavesPermitidas(valor, ['tipo']) || Object.keys(valor).length !== 1) {
     throw new ContratoGatilhoAutomacaoInvalido('O gatilho contem campos fora do contrato atual.');
   }
   return {
-    tipo: valor.tipo as Exclude<TipoGatilhoAutomacao, typeof GATILHO_INATIVIDADE | typeof GATILHO_CHECKIN_ATRASADO>
+    tipo: valor.tipo as Exclude<
+      TipoGatilhoAutomacao,
+      typeof GATILHO_INATIVIDADE | typeof GATILHO_CHECKIN_ATRASADO | typeof GATILHO_CHECKIN_ADESAO_BAIXA
+    >
   };
 }

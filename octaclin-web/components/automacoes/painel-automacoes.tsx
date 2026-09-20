@@ -23,6 +23,7 @@ import { CanalNotificacaoApi, TemplateMensagemApi } from '@/lib/comunicacoes-api
 
 const GATILHO_INATIVIDADE = 'paciente.inativo';
 const GATILHO_CHECKIN_ATRASADO = 'checkin.atrasado';
+const GATILHO_CHECKIN_ADESAO_BAIXA = 'checkin.adesao_baixa';
 
 interface FormularioRegra {
   profissionalId: string;
@@ -41,6 +42,7 @@ interface FormularioRegra {
   checkinDiasSemCheckin: string;
   checkinIntervaloMinimoDias: string;
   checkinLimitePorExecucao: string;
+  checkinAdesaoLimiar: string;
 }
 
 interface FormularioAvaliacao {
@@ -68,7 +70,8 @@ const regraInicial: FormularioRegra = {
   limitePorExecucao: '25',
   checkinDiasSemCheckin: '7',
   checkinIntervaloMinimoDias: '7',
-  checkinLimitePorExecucao: '100'
+  checkinLimitePorExecucao: '100',
+  checkinAdesaoLimiar: '50'
 };
 
 const avaliacaoInicial: FormularioAvaliacao = {
@@ -94,6 +97,9 @@ function descreverGatilho(gatilho: Record<string, unknown>) {
   }
   if (String(gatilho.tipo) === GATILHO_CHECKIN_ATRASADO) {
     return `um check-in ficar ${gatilho.diasSemCheckin ?? 7} dias atrasado (automatico; no maximo um lembrete a cada ${gatilho.intervaloMinimoDias ?? 7} dias por paciente, ate ${gatilho.limitePorExecucao ?? 100} pacientes por rodada diaria)`;
+  }
+  if (String(gatilho.tipo) === GATILHO_CHECKIN_ADESAO_BAIXA) {
+    return `um paciente responder um check-in com adesao declarada abaixo de ${gatilho.limiarAdesao ?? 50}% (automatico, por check-in)`;
   }
   const rotulos: Record<string, string> = {
     'questionario.respondido': 'um formulario for respondido (automatico, sem precisar solicitar avaliacao)',
@@ -332,6 +338,7 @@ export function PainelAutomacoes() {
   const [salvando, setSalvando] = useState(false);
   const gatilhoInatividadeSelecionado = formularioRegra.gatilhoTipo === GATILHO_INATIVIDADE;
   const gatilhoCheckinSelecionado = formularioRegra.gatilhoTipo === GATILHO_CHECKIN_ATRASADO;
+  const gatilhoAdesaoBaixaSelecionado = formularioRegra.gatilhoTipo === GATILHO_CHECKIN_ADESAO_BAIXA;
   const gatilhoQuestionarioSelecionado = formularioRegra.gatilhoTipo === 'questionario.respondido';
   const gatilhoRiscoAltoSelecionado = formularioRegra.gatilhoTipo === 'paciente.risco_alto';
 
@@ -395,6 +402,7 @@ export function PainelAutomacoes() {
 
     const ehInatividade = formularioRegra.gatilhoTipo === GATILHO_INATIVIDADE;
     const ehCheckinAtrasado = formularioRegra.gatilhoTipo === GATILHO_CHECKIN_ATRASADO;
+    const ehAdesaoBaixa = formularioRegra.gatilhoTipo === GATILHO_CHECKIN_ADESAO_BAIXA;
 
     try {
       const criada = await criarRegraAutomacao({
@@ -420,7 +428,12 @@ export function PainelAutomacoes() {
                 intervaloMinimoDias: Number(formularioRegra.checkinIntervaloMinimoDias || 7),
                 limitePorExecucao: Number(formularioRegra.checkinLimitePorExecucao || 100)
               }
-            : { tipo: formularioRegra.gatilhoTipo },
+            : ehAdesaoBaixa
+              ? {
+                  tipo: GATILHO_CHECKIN_ADESAO_BAIXA,
+                  limiarAdesao: Number(formularioRegra.checkinAdesaoLimiar || 50)
+                }
+              : { tipo: formularioRegra.gatilhoTipo },
         condicoes: [],
         acoes: [montarAcaoFormulario(formularioRegra, ehInatividade)],
         ativa: false
@@ -721,6 +734,7 @@ export function PainelAutomacoes() {
                 onChange={(evento) => setFormularioRegra((atual) => ({ ...atual, gatilhoTipo: evento.target.value }))}
               >
                 <option value="checkin.atrasado">Check-in atrasado</option>
+                <option value={GATILHO_CHECKIN_ADESAO_BAIXA}>Check-in com adesão baixa</option>
                 <option value="questionario.respondido">Questionário respondido (automático)</option>
                 <option value="paciente.risco_alto">Paciente em risco alto</option>
                 <option value={GATILHO_INATIVIDADE}>Paciente sem consulta há muito tempo</option>
@@ -813,6 +827,24 @@ export function PainelAutomacoes() {
                 </div>
                 {blocoAcao}
               </>
+            ) : gatilhoAdesaoBaixaSelecionado ? (
+              <>
+                <div className="space-y-1.5">
+                  <Rotulo htmlFor="regra-adesao-limiar">Limiar de adesão (%)</Rotulo>
+                  <Campo
+                    id="regra-adesao-limiar"
+                    type="number"
+                    min={1}
+                    max={100}
+                    value={formularioRegra.checkinAdesaoLimiar}
+                    onChange={(evento) =>
+                      setFormularioRegra((atual) => ({ ...atual, checkinAdesaoLimiar: evento.target.value }))
+                    }
+                    required
+                  />
+                </div>
+                {blocoAcao}
+              </>
             ) : (
               <>{blocoAcao}</>
             )}
@@ -826,7 +858,9 @@ export function PainelAutomacoes() {
                   ? 'Depois de ativada, esta regra dispara quando a prioridade calculada de um paciente deste profissional entrar em alta — não enquanto ele permanecer em alta. Um ajuste manual de prioridade pelo profissional não conta como disparo. Simule o resultado antes de ativar.'
                   : gatilhoCheckinSelecionado
                     ? 'Depois de ativada, esta regra roda sozinha uma vez por dia e lembra pacientes deste profissional com check-in atrasado, no máximo uma vez a cada intervalo mínimo. Simule para ver a lista exata antes de ativar.'
-                    : 'Toda regra nova fica em rascunho. Simule o resultado antes de ativar.'}
+                    : gatilhoAdesaoBaixaSelecionado
+                      ? 'Depois de ativada, esta regra dispara sozinha sempre que um paciente deste profissional responder um check-in com adesão declarada abaixo do limiar — um disparo por check-in, sem esperar rodada. Simule o resultado antes de ativar.'
+                      : 'Toda regra nova fica em rascunho. Simule o resultado antes de ativar.'}
           </p>
           <div className="mt-3 flex justify-end">
             <Botao
