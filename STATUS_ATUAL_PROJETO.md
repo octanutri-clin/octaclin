@@ -39,10 +39,13 @@ Atualizado em 2026-09-20.
   (`diasSemCheckin`/`intervaloMinimoDias`/`limitePorExecucao`, defaults de
   produto 7/7/100), simulacao nominal com motivos fechados de exclusao e a
   Web substituindo o campo livre `checkinsPerdidos` pelos parametros reais.
-  Os tres incrementos estao implementados nesta branch; checks remotos e
-  merge humano pendentes. Com isso o PB-03 (gatilhos reais das automacoes)
-  esta concluido; o proximo item obrigatorio da Onda 2 e o PB-05 (alerta de
-  check-in com adesao baixa). Plano e limites em
+  Uma correcao pos-267.3 removeu uma condicao generica morta que a Web ainda
+  anexava aos gatilhos `questionario.respondido`/`paciente.risco_alto`
+  (contexto real de disparo e opaco, condicao nunca casaria). Integrado no
+  `main` pelo PR GitHub `#273` (merge `9e78f31`, todos os checks de CI
+  verdes, merge humano confirmado via GitHub). Com isso o PB-03 (gatilhos
+  reais das automacoes) esta concluido; o proximo item obrigatorio da Onda 2
+  e o PB-05 (alerta de check-in com adesao baixa). Plano e limites em
   `docs/history/phases/PLANO_FASE_267.md`.
 - Reconciliacao de 2026-09-18 (decisoes de produto para destravar a Fase
   265): o dono do produto aprovou o vocabulario fechado de `codigoMotivo`
@@ -616,9 +619,13 @@ Atualizado em 2026-09-20.
   7/7/100) e simulacao nominal com motivos fechados de exclusao; a fundacao
   ganhou `dispararParaRegra` (nucleo por-regra, sem alterar o comportamento
   usado pela 267.1/267.2) porque a elegibilidade deste gatilho depende de
-  parametro proprio de cada regra. Checks remotos e merge humano pendentes
-  para os tres incrementos. Com isso o PB-03 esta concluido; proximo item
-  obrigatorio da Onda 2: PB-05 (alerta de check-in com adesao baixa).
+  parametro proprio de cada regra. Uma correcao pos-267.3 removeu uma
+  condicao generica morta que a Web ainda anexava aos gatilhos
+  `questionario.respondido`/`paciente.risco_alto`. Integrado no `main` pelo
+  PR `#273` (merge `9e78f31`, branch `claude/fase-266-proximas-etapas-ofxeek`,
+  todos os checks de CI verdes, merge humano confirmado via GitHub). Com
+  isso o PB-03 esta concluido; proximo item obrigatorio da Onda 2: PB-05
+  (alerta de check-in com adesao baixa).
 - Fase 261 (escopo de trabalho: gaps de seguranca e privacidade
   identificados no audit da fase) **concluida tecnicamente em 2026-09-15,
   com excecoes operacionais abertas; incrementos 1 a 4 integrados**.
