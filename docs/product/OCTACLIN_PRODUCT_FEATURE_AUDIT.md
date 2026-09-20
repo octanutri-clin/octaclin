@@ -291,7 +291,7 @@ Critério: valor claro, esforço pequeno, risco baixo, sem migration pesada e se
   2026-09-20 pela Fase 267.
 
   O PB-05 (alerta de check-in com adesão baixa), último item obrigatório da
-  Onda 2, foi implementado pela Fase 268: contrato fechado
+  Onda 2, foi concluído em 2026-09-20 pela Fase 268: contrato fechado
   `{ tipo: 'checkin.adesao_baixa', limiarAdesao: inteiro de 1 a 100 }`
   (default 50, o mesmo corte que a fórmula de prioridade de acompanhamento
   da Fase 265 já usa para `adesao_declarada_baixa`, mantendo os dois sinais
@@ -301,8 +301,8 @@ Critério: valor claro, esforço pequeno, risco baixo, sem migration pesada e se
   responsável, reutilizando o núcleo por-regra já extraído em `checkin.atrasado`
   porque a elegibilidade depende do limiar próprio de cada regra. O
   contexto durável carrega somente o tipo do evento, nunca a adesão
-  declarada nem qualquer outro conteúdo do check-in. Com o merge desta
-  fase, a Onda 2 do audit (PB-01 -> PB-02 -> PB-03 -> PB-05) fica completa.
+  declarada nem qualquer outro conteúdo do check-in. Com este merge, a Onda
+  2 do audit (PB-01 -> PB-02 -> PB-03 -> PB-05) está completa.
 
 ### 5.3 Resumo clínico do paciente (os primeiros 10 segundos)
 - **Atual** `[F]`: a aba Resumo traz próxima ação, próxima consulta, contexto operacional (último atendimento,

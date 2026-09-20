@@ -181,3 +181,18 @@ Nenhuma acao de producao, seed ou dado real foi usada nesta fase.
   neste sandbox Linux, substituida manualmente.
 - `NA` - migration, banco externo, staging, producao e providers: reusa
   tabelas existentes, nenhum provider externo acionado.
+
+## 9. Fechamento: PR #275 merge confirmado
+
+O job "OctaClin CI" rodou sobre o commit `a1d0f1b` (head da PR `#275`) e
+todos os 8 jobs concluiram com sucesso, incluindo "Demo local smoke" (com
+"Smoke visual Playwright" verde). A PR foi revisada e mergeada por humano em
+`main` no commit `306d2ed` em 2026-09-20.
+
+Com o merge confirmado, o **PB-05 (alerta de check-in com adesao baixa)
+esta definitivamente concluido**. `CHECKLIST_FASES_FUTURAS_PRODUCAO.md` e
+`STATUS_ATUAL_PROJETO.md` foram atualizados para substituir "checks remotos
+e merge humano pendentes" pela evidencia real do merge. Com isso, a **Onda 2
+do audit de produto (PB-01 -> PB-02 -> PB-03 -> PB-05) esta completa** — nao
+ha proximo item obrigatorio nesta trilha; itens seguintes do backlog
+(Onda 3) dependem de nova priorizacao do dono do produto.
