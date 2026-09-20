@@ -120,7 +120,7 @@ export function DuplicarPlanoDeOutroPaciente({
       </div>
 
       <p className="text-xs text-texto-suave">
-        Copia apenas as refeições e substituições. A avaliação antropométrica, o cálculo energético, o objetivo
+        Duplica apenas as refeições e substituições. A avaliação antropométrica, o cálculo energético, o objetivo
         clínico e as confirmações continuam sendo os deste paciente.
       </p>
 
