@@ -112,7 +112,9 @@ commit. Nenhuma acao de producao, seed ou dado real foi usada.
 
 - [x] `pnpm --dir octaclin-backend typecheck`.
 - [x] `pnpm --dir octaclin-backend test` -- 1960 testes, 203 suites, 0 falhas.
+- [x] `pnpm --dir octaclin-backend build` -- artefato de producao validado.
 - [x] `pnpm --dir octaclin-web typecheck`.
+- [x] `pnpm --dir octaclin-web build`.
 - [x] `pnpm --dir octaclin-web lint` (0 erros; 56 warnings preexistentes,
   nenhum novo).
 - [x] `pnpm --dir octaclin-web test:planos-alimentares:bff` -- 20/20.

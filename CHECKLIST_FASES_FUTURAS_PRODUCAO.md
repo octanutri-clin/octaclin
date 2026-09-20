@@ -3614,6 +3614,17 @@ publicado antes de ampliar a superficie de mudancas visuais.
     ignora no `save()`, entao `revisada_em` mantinha o valor antigo e dava
     para revisar, editar e publicar sem nova revisao. Passou a usar `null`.
   - [x] Sem migration: as colunas afetadas ja eram nullable.
+  - Commit `7e7c5e0` na branch `feat/fase270-caminho-manual-condicao-especial`,
+    em 2026-09-20.
+  - Validacoes: backend typecheck, `pnpm --dir octaclin-backend test`
+    (1960 testes, 203 suites, 0 falhas) e build; web typecheck, lint
+    (0 erros, 56 warnings preexistentes), build,
+    `test:planos-alimentares:bff` (20/20), `test:authz`, `test:linguagem`;
+    Playwright `fase-270-condicao-especial-manual.spec.mjs` 6/6 estavel em 3
+    execucoes e `console-regression` 114/114; `security:secrets`,
+    `test:confiabilidade` e `git diff --check`. `validate:docs` ficou
+    `SKIPPED` por falta de `powershell` no sandbox Linux, substituido por
+    `git status --short`.
   - Plano, risco e rollback: `docs/history/phases/PLANO_FASE_270.md`.
 
 Documento de execução e prioridades: `ROADMAP_QUALIDADE_SEGURANCA_FASES_248_262.md`.
