@@ -1,8 +1,9 @@
 # OctaClin - Checklist vivo de fases futuras ate producao
 
-Atualizado em 2026-09-19. Fases 256 a 261 e 263 a 265 concluidas; Fase 262
-permanece em andamento pelos gates externos do piloto; Fase 266 esta em
-andamento com o PB-02 de execucao real das automacoes.
+Atualizado em 2026-09-20. Fases 256 a 261 e 263 a 267 concluidas; Fase 262
+permanece em andamento pelos gates externos do piloto. Com a Fase 267, o
+PB-03 (gatilhos reais das automacoes) esta concluido; o proximo item da Onda
+2 do audit e o PB-05 (alerta de check-in com adesao baixa).
 O programa de hardening PR 36-56 permanece como trilha separada. O pacote
 interno do PR 55 foi integrado, mas o proprietario adiou a contratacao do
 pentest para evitar custo neste momento; todos os gates externos seguem
@@ -3484,7 +3485,8 @@ publicado antes de ampliar a superficie de mudancas visuais.
     `#234`, sem ser convertido em `PASS`. Detalhe completo na secao 16 do
     plano da fase.
 
-- [~] Fase 266 - Execucao real das automacoes (PB-02). [EM ANDAMENTO]
+- [x] Fase 266 - Execucao real das automacoes (PB-02). [CONCLUIDA em
+  2026-09-19]
   - [x] 266.1 - Contrato fechado, estado por acao, chave idempotente,
     checkpoints de retry/retomada e resultado estruturado na Web; sem efeito
     real e sem migration. Integrado no PR `#269`, merge `143353f`.
@@ -3495,11 +3497,43 @@ publicado antes de ampliar a superficie de mudancas visuais.
   - [x] 266.3 - Implementar `criar_tarefa` com contrato de produto, criptografia
     e deduplicacao; integrado no PR `#271` (merge `70e343d`), sem nova
     migration.
-  - [~] 266.4 - Implementar `enviar_template` com canal/template explicitos,
-    opt-out, janela, frequencia e outbox; em revisao no PR `#272`, branch
-    `feat/fase266-4-enviar-template`, sem nova migration.
-  - [ ] Depois do PB-02, seguir obrigatoriamente para PB-03 e depois PB-05.
+  - [x] 266.4 - Implementar `enviar_template` com canal/template explicitos,
+    opt-out, janela, frequencia e outbox; integrado no PR `#272` (merge
+    `716e38e` em `main`), branch `feat/fase266-4-enviar-template`, sem nova
+    migration, 20/20 checks de CI verdes e merge humano confirmado via GitHub.
+  - [x] Com o PB-02 concluido, a sequencia obrigatoria da Onda 2 segue para o
+    PB-03 e depois o PB-05 (ver proximo item do roadmap abaixo).
   - Plano, risco e rollback: `docs/history/phases/PLANO_FASE_266.md`.
+
+- [x] Fase 267 - Gatilhos reais das automacoes (PB-03). [CONCLUIDA em
+  2026-09-20]
+  - [x] 267.1 - Fechar o contrato de `gatilho` numa uniao discriminada
+    (preservando o especializado de `paciente.inativo`) e criar a fundacao
+    duravel de disparo (execucao + outbox na mesma transacao do evento de
+    origem, identidade deterministica, publicacao exclusivamente pelo
+    outbox). Conecta `questionario.respondido` ao termino idempotente de
+    `finalizarFormularioPaciente`, com condicoes vazias e contexto somente
+    com IDs opacos. Implementado nesta branch; checks remotos e merge humano
+    pendentes.
+  - [x] 267.2 - Ligar `paciente.risco_alto` ao recalculo diario de prioridade
+    da Fase 265, reutilizando a fundacao da 267.1 sem altera-la. Dispara na
+    entrada em faixa alta (baixa/media -> alta, ou primeiro calculo ja em
+    alta); `alta -> alta` nao dispara de novo; override manual do
+    profissional nunca dispara automacao. Implementado nesta branch; checks
+    remotos e merge humano pendentes.
+  - [x] 267.3 - Ligar `checkin.atrasado`, com rodada periodica propria
+    (`@Cron` diario via `executarPorTenantAtivo`), contrato fechado de tres
+    parametros (`diasSemCheckin`/`intervaloMinimoDias`/`limitePorExecucao`,
+    defaults 7/7/100) e simulacao nominal com motivos fechados de exclusao.
+    Implementado nesta branch; checks remotos e merge humano pendentes.
+  - [x] Com os tres incrementos concluidos, o PB-03 esta concluido. Proximo
+    item obrigatorio da Onda 2: PB-05 (alerta de check-in com adesao baixa).
+  - [x] Correcao pos-267.3: removida condicao generica morta que a Web ainda
+    anexava aos gatilhos `questionario.respondido`/`paciente.risco_alto`
+    (contexto real de disparo e opaco, condicao nunca casaria).
+  - PR `#273`, branch `claude/fase-266-proximas-etapas-ofxeek`; checks
+    remotos e merge humano pendentes.
+  - Plano, risco e rollback: `docs/history/phases/PLANO_FASE_267.md`.
 
 Documento de execução e prioridades: `ROADMAP_QUALIDADE_SEGURANCA_FASES_248_262.md`.
 Matriz operacional: `MATRIZ_SKILLS_PLUGINS_MODELOS_FASES_243_248_262.md`.
@@ -3941,7 +3975,8 @@ Fonte canonica de escopo, gates e skills do Claude Code:
     provisionado; a issue GitHub `#234` continua aberta e este debito nao foi
     convertido em `PASS` pela conclusao da fase.
 
-Proximo item: concluir o Incremento 266.4 (`enviar_template`) com checks verdes
-e merge humano; depois iniciar PB-03 (gatilhos reais). PR 55 permanece adiado
-e pendente; PR 56 continua condicionado a decisao explicita de distribuir o
-Mobile.
+Proximo item: concluir os checks remotos e o merge humano da Fase 267
+(267.1, 267.2 e 267.3 — PB-03 completo); depois propor e iniciar o PB-05
+(alerta de check-in com adesao baixa), ultimo item da Onda 2 do audit. PR 55
+permanece adiado e pendente; PR 56 continua condicionado a decisao explicita
+de distribuir o Mobile.

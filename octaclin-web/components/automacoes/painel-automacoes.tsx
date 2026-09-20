@@ -14,6 +14,7 @@ import {
   alterarAtivacaoRegra,
   carregarBootstrapAutomacoes,
   criarRegraAutomacao,
+  simularCheckinAtrasadoAutomacao,
   simularRecallAutomacao,
   simularRegraAutomacao
 } from '@/lib/automacoes-api';
@@ -21,14 +22,12 @@ import { PacienteResumo, ProfissionalResumo, RespostaPaginada } from '@/lib/cada
 import { CanalNotificacaoApi, TemplateMensagemApi } from '@/lib/comunicacoes-api';
 
 const GATILHO_INATIVIDADE = 'paciente.inativo';
+const GATILHO_CHECKIN_ATRASADO = 'checkin.atrasado';
 
 interface FormularioRegra {
   profissionalId: string;
   nome: string;
   gatilhoTipo: string;
-  campo: string;
-  operador: 'igual' | 'maior_que' | 'maior_ou_igual' | 'menor_que' | 'inclui';
-  valor: string;
   acaoTipo: TipoAcaoAutomacao;
   tarefaTitulo: string;
   tarefaPrioridade: 'baixa' | 'media' | 'alta';
@@ -39,6 +38,9 @@ interface FormularioRegra {
   diasSemConsulta: string;
   intervaloMinimoDias: string;
   limitePorExecucao: string;
+  checkinDiasSemCheckin: string;
+  checkinIntervaloMinimoDias: string;
+  checkinLimitePorExecucao: string;
 }
 
 interface FormularioAvaliacao {
@@ -52,11 +54,8 @@ interface FormularioAvaliacao {
 
 const regraInicial: FormularioRegra = {
   profissionalId: '',
-  nome: 'Risco alto por check-ins perdidos',
+  nome: 'Lembrete de check-in atrasado',
   gatilhoTipo: 'checkin.atrasado',
-  campo: 'checkinsPerdidos',
-  operador: 'maior_ou_igual',
-  valor: '3',
   acaoTipo: 'notificar_profissional',
   tarefaTitulo: 'Revisar acompanhamento',
   tarefaPrioridade: 'media',
@@ -66,7 +65,10 @@ const regraInicial: FormularioRegra = {
   intervaloMinimoHoras: '24',
   diasSemConsulta: '60',
   intervaloMinimoDias: '30',
-  limitePorExecucao: '25'
+  limitePorExecucao: '25',
+  checkinDiasSemCheckin: '7',
+  checkinIntervaloMinimoDias: '7',
+  checkinLimitePorExecucao: '100'
 };
 
 const avaliacaoInicial: FormularioAvaliacao = {
@@ -77,11 +79,6 @@ const avaliacaoInicial: FormularioAvaliacao = {
   frustracaoScore: '72',
   observacao: 'Avaliacao manual pelo console OctaClin.'
 };
-
-function valorCondicao(valor: string) {
-  const numero = Number(valor);
-  return Number.isFinite(numero) && valor.trim() !== '' ? numero : valor;
-}
 
 function nomeProfissional(profissionais: ProfissionalResumo[], id: string) {
   return profissionais.find((profissional) => profissional.id === id)?.nome ?? id;
@@ -95,12 +92,67 @@ function descreverGatilho(gatilho: Record<string, unknown>) {
   if (String(gatilho.tipo) === GATILHO_INATIVIDADE) {
     return `um paciente ficar ${gatilho.diasSemConsulta ?? 60} dias sem consulta concluida`;
   }
+  if (String(gatilho.tipo) === GATILHO_CHECKIN_ATRASADO) {
+    return `um check-in ficar ${gatilho.diasSemCheckin ?? 7} dias atrasado (automatico; no maximo um lembrete a cada ${gatilho.intervaloMinimoDias ?? 7} dias por paciente, ate ${gatilho.limitePorExecucao ?? 100} pacientes por rodada diaria)`;
+  }
   const rotulos: Record<string, string> = {
-    'checkin.atrasado': 'um check-in estiver atrasado',
-    'questionario.respondido': 'um formulario for respondido',
-    'paciente.risco_alto': 'um paciente entrar em risco alto'
+    'questionario.respondido': 'um formulario for respondido (automatico, sem precisar solicitar avaliacao)',
+    'paciente.risco_alto': 'a prioridade calculada do paciente entrar em alta (automatico; nao dispara de novo enquanto permanecer em alta, nem por ajuste manual do profissional)'
   };
   return rotulos[String(gatilho.tipo)] ?? resumirJson(gatilho);
+}
+
+const MOTIVOS_EXCLUSAO_CHECKIN_ATRASADO: Record<string, string> = {
+  dentro_do_prazo: 'ainda dentro do prazo de check-in',
+  disparo_recente: 'ja recebeu lembrete dentro do intervalo minimo',
+  limite_por_execucao: 'ficou fora do limite desta rodada'
+};
+
+interface CandidatoCheckinAtrasadoApi {
+  pacienteId: string;
+  diasSemCheckin: number;
+}
+
+function ResumoCheckinAtrasado({
+  candidatos,
+  excluidos,
+  pacientes
+}: {
+  candidatos: CandidatoCheckinAtrasadoApi[];
+  excluidos: ExclusaoRecallApi[];
+  pacientes: PacienteResumo[];
+}) {
+  return (
+    <div className="grid gap-2 text-xs">
+      <div>
+        <strong>Receberiam lembrete ({candidatos.length}):</strong>
+        {candidatos.length ? (
+          <ul className="mt-1 grid gap-0.5 text-texto-suave">
+            {candidatos.map((candidato) => (
+              <li key={candidato.pacienteId}>
+                {nomePaciente(pacientes, candidato.pacienteId)} - {candidato.diasSemCheckin} dias sem check-in
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="mt-1 text-texto-suave">Ninguem nesta rodada.</p>
+        )}
+      </div>
+      {excluidos.length ? (
+        <div>
+          <strong>Fora ({excluidos.length}):</strong>
+          <ul className="mt-1 grid gap-0.5 text-texto-suave">
+            {excluidos.map((excluido) => (
+              <li key={`${excluido.pacienteId}-${excluido.motivo}`}>
+                {nomePaciente(pacientes, excluido.pacienteId)} -{' '}
+                {MOTIVOS_EXCLUSAO_CHECKIN_ATRASADO[excluido.motivo] ?? excluido.motivo}
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+    </div>
+  );
 }
 
 const MOTIVOS_EXCLUSAO_RECALL: Record<string, string> = {
@@ -279,6 +331,9 @@ export function PainelAutomacoes() {
   const [carregando, setCarregando] = useState(false);
   const [salvando, setSalvando] = useState(false);
   const gatilhoInatividadeSelecionado = formularioRegra.gatilhoTipo === GATILHO_INATIVIDADE;
+  const gatilhoCheckinSelecionado = formularioRegra.gatilhoTipo === GATILHO_CHECKIN_ATRASADO;
+  const gatilhoQuestionarioSelecionado = formularioRegra.gatilhoTipo === 'questionario.respondido';
+  const gatilhoRiscoAltoSelecionado = formularioRegra.gatilhoTipo === 'paciente.risco_alto';
 
   async function carregar() {
     setCarregando(true);
@@ -339,13 +394,18 @@ export function PainelAutomacoes() {
     setSucesso(null);
 
     const ehInatividade = formularioRegra.gatilhoTipo === GATILHO_INATIVIDADE;
+    const ehCheckinAtrasado = formularioRegra.gatilhoTipo === GATILHO_CHECKIN_ATRASADO;
 
     try {
       const criada = await criarRegraAutomacao({
         profissionalId: formularioRegra.profissionalId,
         nome: formularioRegra.nome.trim(),
-        // Inatividade nao usa condicao sobre contexto: quem seleciona os pacientes e o
-        // proprio gatilho, com os limites de frequencia dentro dele.
+        // Nenhum gatilho hoje disponivel no formulario avalia condicao sobre
+        // contexto: cada um resolve sua propria elegibilidade (rodada
+        // periodica com limites de frequencia para inatividade/checkin
+        // atrasado, ou o proprio evento para questionario/risco alto, cujo
+        // contexto de disparo real e opaco e nunca teria um campo para casar
+        // contra uma condicao generica).
         gatilho: ehInatividade
           ? {
               tipo: GATILHO_INATIVIDADE,
@@ -353,16 +413,15 @@ export function PainelAutomacoes() {
               intervaloMinimoDias: Number(formularioRegra.intervaloMinimoDias || 30),
               limitePorExecucao: Number(formularioRegra.limitePorExecucao || 25)
             }
-          : { tipo: formularioRegra.gatilhoTipo },
-        condicoes: ehInatividade
-          ? []
-          : [
-              {
-                campo: formularioRegra.campo,
-                operador: formularioRegra.operador,
-                valor: valorCondicao(formularioRegra.valor)
+          : ehCheckinAtrasado
+            ? {
+                tipo: GATILHO_CHECKIN_ATRASADO,
+                diasSemCheckin: Number(formularioRegra.checkinDiasSemCheckin || 7),
+                intervaloMinimoDias: Number(formularioRegra.checkinIntervaloMinimoDias || 7),
+                limitePorExecucao: Number(formularioRegra.checkinLimitePorExecucao || 100)
               }
-            ],
+            : { tipo: formularioRegra.gatilhoTipo },
+        condicoes: [],
         acoes: [montarAcaoFormulario(formularioRegra, ehInatividade)],
         ativa: false
       });
@@ -422,6 +481,26 @@ export function PainelAutomacoes() {
     }
   }
 
+  async function simularCheckinAtrasado(regra: RegraAutomacaoApi) {
+    setSalvando(true);
+    setErro(null);
+    setSucesso(null);
+    try {
+      const execucao = await simularCheckinAtrasadoAutomacao(regra.id);
+      setExecucoes((atuais) => [execucao, ...atuais].slice(0, 8));
+      const total = Number(execucao.resultado.totalCandidatos ?? 0);
+      setSucesso(
+        total
+          ? `Simulação concluída: ${total} paciente(s) receberiam lembrete. Confira a lista antes de ativar.`
+          : 'Simulação concluída: nenhum paciente receberia lembrete agora.'
+      );
+    } catch (erroAtual) {
+      setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao simular checkin atrasado.');
+    } finally {
+      setSalvando(false);
+    }
+  }
+
   async function alternarAtivacao(regra: RegraAutomacaoApi) {
     setSalvando(true);
     setErro(null);
@@ -440,6 +519,138 @@ export function PainelAutomacoes() {
   useEffect(() => {
     void carregar();
   }, []);
+
+  // Compartilhado pelos gatilhos que ainda escolhem uma acao configuravel
+  // (checkin atrasado e os gatilhos genericos de condicao livre). Inatividade
+  // fica de fora porque usa o contrato especializado de `enviar_template`.
+  const blocoAcao = (
+    <>
+      <div className="space-y-1.5">
+        <Rotulo htmlFor="regra-acao">Ação</Rotulo>
+        <Selecao
+          id="regra-acao"
+          value={formularioRegra.acaoTipo}
+          onChange={(evento) =>
+            setFormularioRegra((atual) => ({
+              ...atual,
+              acaoTipo: evento.target.value as TipoAcaoAutomacao
+            }))
+          }
+        >
+          <option value="notificar_profissional">Notificar profissional</option>
+          <option value="enviar_template">Enviar template</option>
+          <option value="criar_tarefa">Criar tarefa</option>
+        </Selecao>
+      </div>
+      {formularioRegra.acaoTipo === 'criar_tarefa' ? (
+        <>
+          <div className="space-y-1.5 md:col-span-2">
+            <Rotulo htmlFor="regra-tarefa-titulo">Título da tarefa</Rotulo>
+            <Campo
+              id="regra-tarefa-titulo"
+              minLength={3}
+              maxLength={180}
+              value={formularioRegra.tarefaTitulo}
+              onChange={(evento) => setFormularioRegra((atual) => ({ ...atual, tarefaTitulo: evento.target.value }))}
+              required
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Rotulo htmlFor="regra-tarefa-prioridade">Prioridade da tarefa</Rotulo>
+            <Selecao
+              id="regra-tarefa-prioridade"
+              value={formularioRegra.tarefaPrioridade}
+              onChange={(evento) =>
+                setFormularioRegra((atual) => ({
+                  ...atual,
+                  tarefaPrioridade: evento.target.value as FormularioRegra['tarefaPrioridade']
+                }))
+              }
+            >
+              <option value="baixa">Baixa</option>
+              <option value="media">Média</option>
+              <option value="alta">Alta</option>
+            </Selecao>
+          </div>
+          <div className="space-y-1.5">
+            <Rotulo htmlFor="regra-tarefa-prazo">Prazo em dias</Rotulo>
+            <Campo
+              id="regra-tarefa-prazo"
+              type="number"
+              min={1}
+              max={365}
+              step={1}
+              value={formularioRegra.tarefaPrazoDias}
+              onChange={(evento) => setFormularioRegra((atual) => ({ ...atual, tarefaPrazoDias: evento.target.value }))}
+              required
+            />
+          </div>
+        </>
+      ) : null}
+      {formularioRegra.acaoTipo === 'enviar_template' ? (
+        <>
+          <div className="space-y-1.5">
+            <Rotulo htmlFor="regra-canal">Canal de envio</Rotulo>
+            <Selecao
+              id="regra-canal"
+              value={formularioRegra.canalId}
+              onChange={(evento) => {
+                const canalId = evento.target.value;
+                const primeiroTemplate = templatesElegiveisDoCanal(templates, canaisElegiveis, canalId)[0];
+                setFormularioRegra((atual) => ({
+                  ...atual,
+                  canalId,
+                  templateId: primeiroTemplate?.id || ''
+                }));
+              }}
+              required
+            >
+              {canaisElegiveis.length ? null : <option value="">Nenhum canal disponível</option>}
+              {canaisElegiveis.map((canal) => (
+                <option key={canal.id} value={canal.id}>
+                  {canal.nome} ({canal.tipo === 'whatsapp' ? 'WhatsApp' : 'e-mail'})
+                </option>
+              ))}
+            </Selecao>
+          </div>
+          <div className="space-y-1.5">
+            <Rotulo htmlFor="regra-template">Template</Rotulo>
+            <Selecao
+              id="regra-template"
+              value={formularioRegra.templateId}
+              onChange={(evento) => setFormularioRegra((atual) => ({ ...atual, templateId: evento.target.value }))}
+              required
+            >
+              {templatesElegiveis.length ? null : <option value="">Nenhum template disponível</option>}
+              {templatesElegiveis.map((template) => (
+                <option key={template.id} value={template.id}>
+                  {template.nome}
+                </option>
+              ))}
+            </Selecao>
+          </div>
+          <div className="space-y-1.5">
+            <Rotulo htmlFor="regra-intervalo-template">Intervalo mínimo entre envios (horas)</Rotulo>
+            <Campo
+              id="regra-intervalo-template"
+              type="number"
+              min={1}
+              max={720}
+              step={1}
+              value={formularioRegra.intervaloMinimoHoras}
+              onChange={(evento) =>
+                setFormularioRegra((atual) => ({
+                  ...atual,
+                  intervaloMinimoHoras: evento.target.value
+                }))
+              }
+              required
+            />
+          </div>
+        </>
+      ) : null}
+    </>
+  );
 
   return (
     <section className="grid gap-4">
@@ -510,7 +721,7 @@ export function PainelAutomacoes() {
                 onChange={(evento) => setFormularioRegra((atual) => ({ ...atual, gatilhoTipo: evento.target.value }))}
               >
                 <option value="checkin.atrasado">Check-in atrasado</option>
-                <option value="questionario.respondido">Questionário respondido</option>
+                <option value="questionario.respondido">Questionário respondido (automático)</option>
                 <option value="paciente.risco_alto">Paciente em risco alto</option>
                 <option value={GATILHO_INATIVIDADE}>Paciente sem consulta há muito tempo</option>
               </Selecao>
@@ -556,182 +767,66 @@ export function PainelAutomacoes() {
                   />
                 </div>
               </>
-            ) : (
+            ) : gatilhoCheckinSelecionado ? (
               <>
                 <div className="space-y-1.5">
-                  <Rotulo htmlFor="regra-campo">Campo</Rotulo>
+                  <Rotulo htmlFor="regra-checkin-dias">Dias sem check-in</Rotulo>
                   <Campo
-                    id="regra-campo"
-                    value={formularioRegra.campo}
-                    onChange={(evento) => setFormularioRegra((atual) => ({ ...atual, campo: evento.target.value }))}
+                    id="regra-checkin-dias"
+                    type="number"
+                    min={1}
+                    max={365}
+                    value={formularioRegra.checkinDiasSemCheckin}
+                    onChange={(evento) =>
+                      setFormularioRegra((atual) => ({ ...atual, checkinDiasSemCheckin: evento.target.value }))
+                    }
                     required
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <Rotulo htmlFor="regra-operador">Operador</Rotulo>
-                  <Selecao
-                    id="regra-operador"
-                    value={formularioRegra.operador}
-                    onChange={(evento) =>
-                      setFormularioRegra((atual) => ({
-                        ...atual,
-                        operador: evento.target.value as FormularioRegra['operador']
-                      }))
-                    }
-                  >
-                    <option value="igual">Igual</option>
-                    <option value="maior_que">Maior que</option>
-                    <option value="maior_ou_igual">Maior ou igual</option>
-                    <option value="menor_que">Menor que</option>
-                    <option value="inclui">Inclui</option>
-                  </Selecao>
-                </div>
-                <div className="space-y-1.5">
-                  <Rotulo htmlFor="regra-valor">Valor</Rotulo>
+                  <Rotulo htmlFor="regra-checkin-intervalo-minimo">Intervalo minimo entre lembretes (dias)</Rotulo>
                   <Campo
-                    id="regra-valor"
-                    value={formularioRegra.valor}
-                    onChange={(evento) => setFormularioRegra((atual) => ({ ...atual, valor: evento.target.value }))}
+                    id="regra-checkin-intervalo-minimo"
+                    type="number"
+                    min={1}
+                    max={365}
+                    value={formularioRegra.checkinIntervaloMinimoDias}
+                    onChange={(evento) =>
+                      setFormularioRegra((atual) => ({ ...atual, checkinIntervaloMinimoDias: evento.target.value }))
+                    }
                     required
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <Rotulo htmlFor="regra-acao">Ação</Rotulo>
-                  <Selecao
-                    id="regra-acao"
-                    value={formularioRegra.acaoTipo}
+                  <Rotulo htmlFor="regra-checkin-limite-execucao">Limite de pacientes por rodada</Rotulo>
+                  <Campo
+                    id="regra-checkin-limite-execucao"
+                    type="number"
+                    min={1}
+                    max={200}
+                    value={formularioRegra.checkinLimitePorExecucao}
                     onChange={(evento) =>
-                      setFormularioRegra((atual) => ({
-                        ...atual,
-                        acaoTipo: evento.target.value as TipoAcaoAutomacao
-                      }))
+                      setFormularioRegra((atual) => ({ ...atual, checkinLimitePorExecucao: evento.target.value }))
                     }
-                  >
-                    <option value="notificar_profissional">Notificar profissional</option>
-                    <option value="enviar_template">Enviar template</option>
-                    <option value="criar_tarefa">Criar tarefa</option>
-                  </Selecao>
+                    required
+                  />
                 </div>
-                {formularioRegra.acaoTipo === 'criar_tarefa' ? (
-                  <>
-                    <div className="space-y-1.5 md:col-span-2">
-                      <Rotulo htmlFor="regra-tarefa-titulo">Título da tarefa</Rotulo>
-                      <Campo
-                        id="regra-tarefa-titulo"
-                        minLength={3}
-                        maxLength={180}
-                        value={formularioRegra.tarefaTitulo}
-                        onChange={(evento) =>
-                          setFormularioRegra((atual) => ({ ...atual, tarefaTitulo: evento.target.value }))
-                        }
-                        required
-                      />
-                    </div>
-                    <div className="space-y-1.5">
-                      <Rotulo htmlFor="regra-tarefa-prioridade">Prioridade da tarefa</Rotulo>
-                      <Selecao
-                        id="regra-tarefa-prioridade"
-                        value={formularioRegra.tarefaPrioridade}
-                        onChange={(evento) =>
-                          setFormularioRegra((atual) => ({
-                            ...atual,
-                            tarefaPrioridade: evento.target.value as FormularioRegra['tarefaPrioridade']
-                          }))
-                        }
-                      >
-                        <option value="baixa">Baixa</option>
-                        <option value="media">Média</option>
-                        <option value="alta">Alta</option>
-                      </Selecao>
-                    </div>
-                    <div className="space-y-1.5">
-                      <Rotulo htmlFor="regra-tarefa-prazo">Prazo em dias</Rotulo>
-                      <Campo
-                        id="regra-tarefa-prazo"
-                        type="number"
-                        min={1}
-                        max={365}
-                        step={1}
-                        value={formularioRegra.tarefaPrazoDias}
-                        onChange={(evento) =>
-                          setFormularioRegra((atual) => ({ ...atual, tarefaPrazoDias: evento.target.value }))
-                        }
-                        required
-                      />
-                    </div>
-                  </>
-                ) : null}
-                {formularioRegra.acaoTipo === 'enviar_template' ? (
-                  <>
-                    <div className="space-y-1.5">
-                      <Rotulo htmlFor="regra-canal">Canal de envio</Rotulo>
-                      <Selecao
-                        id="regra-canal"
-                        value={formularioRegra.canalId}
-                        onChange={(evento) => {
-                          const canalId = evento.target.value;
-                          const primeiroTemplate = templatesElegiveisDoCanal(templates, canaisElegiveis, canalId)[0];
-                          setFormularioRegra((atual) => ({
-                            ...atual,
-                            canalId,
-                            templateId: primeiroTemplate?.id || ''
-                          }));
-                        }}
-                        required
-                      >
-                        {canaisElegiveis.length ? null : <option value="">Nenhum canal disponível</option>}
-                        {canaisElegiveis.map((canal) => (
-                          <option key={canal.id} value={canal.id}>
-                            {canal.nome} ({canal.tipo === 'whatsapp' ? 'WhatsApp' : 'e-mail'})
-                          </option>
-                        ))}
-                      </Selecao>
-                    </div>
-                    <div className="space-y-1.5">
-                      <Rotulo htmlFor="regra-template">Template</Rotulo>
-                      <Selecao
-                        id="regra-template"
-                        value={formularioRegra.templateId}
-                        onChange={(evento) =>
-                          setFormularioRegra((atual) => ({ ...atual, templateId: evento.target.value }))
-                        }
-                        required
-                      >
-                        {templatesElegiveis.length ? null : <option value="">Nenhum template disponível</option>}
-                        {templatesElegiveis.map((template) => (
-                          <option key={template.id} value={template.id}>
-                            {template.nome}
-                          </option>
-                        ))}
-                      </Selecao>
-                    </div>
-                    <div className="space-y-1.5">
-                      <Rotulo htmlFor="regra-intervalo-template">Intervalo mínimo entre envios (horas)</Rotulo>
-                      <Campo
-                        id="regra-intervalo-template"
-                        type="number"
-                        min={1}
-                        max={720}
-                        step={1}
-                        value={formularioRegra.intervaloMinimoHoras}
-                        onChange={(evento) =>
-                          setFormularioRegra((atual) => ({
-                            ...atual,
-                            intervaloMinimoHoras: evento.target.value
-                          }))
-                        }
-                        required
-                      />
-                    </div>
-                  </>
-                ) : null}
+                {blocoAcao}
               </>
+            ) : (
+              <>{blocoAcao}</>
             )}
           </div>
           <p className="mt-3 rounded-md border border-linha bg-fundo px-3 py-2 text-sm text-texto-suave">
             {gatilhoInatividadeSelecionado
               ? 'O recall só alcanca pacientes deste profissional que aceitam receber mensagens. Simule para ver a lista exata antes de ativar.'
-              : 'Toda regra nova fica em rascunho. Simule o resultado antes de ativar.'}
+              : gatilhoQuestionarioSelecionado
+                ? 'Depois de ativada, esta regra dispara sozinha sempre que um paciente deste profissional responder um formulário — não é preciso solicitar avaliação. Simule o resultado antes de ativar.'
+                : gatilhoRiscoAltoSelecionado
+                  ? 'Depois de ativada, esta regra dispara quando a prioridade calculada de um paciente deste profissional entrar em alta — não enquanto ele permanecer em alta. Um ajuste manual de prioridade pelo profissional não conta como disparo. Simule o resultado antes de ativar.'
+                  : gatilhoCheckinSelecionado
+                    ? 'Depois de ativada, esta regra roda sozinha uma vez por dia e lembra pacientes deste profissional com check-in atrasado, no máximo uma vez a cada intervalo mínimo. Simule para ver a lista exata antes de ativar.'
+                    : 'Toda regra nova fica em rascunho. Simule o resultado antes de ativar.'}
           </p>
           <div className="mt-3 flex justify-end">
             <Botao
@@ -773,6 +868,17 @@ export function PainelAutomacoes() {
                     >
                       <Play size={16} />
                       Simular recall
+                    </Botao>
+                  ) : null}
+                  {String(regra.gatilho.tipo) === GATILHO_CHECKIN_ATRASADO ? (
+                    <Botao
+                      type="button"
+                      onClick={() => void simularCheckinAtrasado(regra)}
+                      disabled={salvando}
+                      aria-label={`Simular checkin atrasado de ${regra.nome}`}
+                    >
+                      <Play size={16} />
+                      Simular checkin atrasado
                     </Botao>
                   ) : null}
                   <Botao
@@ -904,6 +1010,12 @@ export function PainelAutomacoes() {
                   {execucao.resultado.gatilho === GATILHO_INATIVIDADE && Array.isArray(execucao.resultado.candidatos) ? (
                     <ResumoRecall
                       candidatos={execucao.resultado.candidatos as CandidatoRecallApi[]}
+                      excluidos={(execucao.resultado.excluidos ?? []) as ExclusaoRecallApi[]}
+                      pacientes={pacientes?.itens ?? []}
+                    />
+                  ) : execucao.resultado.gatilho === GATILHO_CHECKIN_ATRASADO && Array.isArray(execucao.resultado.candidatos) ? (
+                    <ResumoCheckinAtrasado
+                      candidatos={execucao.resultado.candidatos as CandidatoCheckinAtrasadoApi[]}
                       excluidos={(execucao.resultado.excluidos ?? []) as ExclusaoRecallApi[]}
                       pacientes={pacientes?.itens ?? []}
                     />

@@ -7,9 +7,12 @@ import { ModuloAuth } from '../auth/modulo-auth';
 import { ModuloComunicacoes } from '../comunicacoes/modulo-comunicacoes';
 import { ModuloTenancy } from '../tenancy/modulo-tenancy';
 import { ProcessadorAutomacoes } from './aplicacao/processador-automacoes';
+import { ProcessadorCheckinAtrasado } from './aplicacao/processador-checkin-atrasado';
 import { ProcessadorLembretesAgenda } from './aplicacao/processador-lembretes-agenda';
+import { ProcessadorOutboxGatilhosAutomacao } from './aplicacao/processador-outbox-gatilhos-automacao';
 import { ProcessadorRecallInatividade } from './aplicacao/processador-recall-inatividade';
 import { FILA_AUTOMACOES, ServicoAutomacoes } from './aplicacao/servico-automacoes';
+import { ServicoCheckinAtrasado } from './aplicacao/servico-checkin-atrasado';
 import { ServicoLembretesAgenda } from './aplicacao/servico-lembretes-agenda';
 import { ServicoRecallInatividade } from './aplicacao/servico-recall-inatividade';
 import { ControladorAutomacoes } from './apresentacao/controlador-automacoes';
@@ -23,9 +26,16 @@ import { CriptografiaDadosSensiveis } from '../../infraestrutura/seguranca/cript
 import { AcompanhamentoTarefaOrm } from '../pacientes/infraestrutura/acompanhamento-tarefa.orm';
 import { ProfissionalOrm } from '../profissionais/infraestrutura/profissional.orm';
 import { UsuarioOrm } from '../usuarios/infraestrutura/usuario.orm';
+import { OutboxEventoOrm } from '../../infraestrutura/outbox/outbox-evento.orm';
 
 const processadores = deveExecutarProcessadores()
-  ? [ProcessadorAutomacoes, ProcessadorLembretesAgenda, ProcessadorRecallInatividade]
+  ? [
+      ProcessadorAutomacoes,
+      ProcessadorLembretesAgenda,
+      ProcessadorRecallInatividade,
+      ProcessadorOutboxGatilhosAutomacao,
+      ProcessadorCheckinAtrasado
+    ]
   : [];
 
 @Module({
@@ -39,7 +49,8 @@ const processadores = deveExecutarProcessadores()
       PacienteOrm,
       AcompanhamentoTarefaOrm,
       ProfissionalOrm,
-      UsuarioOrm
+      UsuarioOrm,
+      OutboxEventoOrm
     ]),
     ModuloAuth,
     ModuloTenancy,
@@ -50,11 +61,12 @@ const processadores = deveExecutarProcessadores()
     ServicoAutomacoes,
     ServicoLembretesAgenda,
     ServicoRecallInatividade,
+    ServicoCheckinAtrasado,
     DespachanteAcoesAutomacao,
     CriptografiaDadosSensiveis,
     ...processadores,
     ServicoAuditoria
   ],
-  exports: [ServicoAutomacoes, ServicoLembretesAgenda, ServicoRecallInatividade]
+  exports: [ServicoAutomacoes, ServicoLembretesAgenda, ServicoRecallInatividade, ServicoCheckinAtrasado]
 })
 export class ModuloAutomacoes {}

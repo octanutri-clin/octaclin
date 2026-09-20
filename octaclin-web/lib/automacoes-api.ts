@@ -139,6 +139,13 @@ export async function simularRecallAutomacao(regraId: string): Promise<ExecucaoR
   });
 }
 
+export async function simularCheckinAtrasadoAutomacao(regraId: string): Promise<ExecucaoRegraApi> {
+  return requisitar<ExecucaoRegraApi>('/api/automacoes/checkin-atrasado/simulacoes', {
+    method: 'POST',
+    body: JSON.stringify({ regraId })
+  });
+}
+
 export async function alterarAtivacaoRegra(id: string, ativa: boolean): Promise<RegraAutomacaoApi> {
   return requisitar<RegraAutomacaoApi>(`/api/automacoes/regras/${id}/ativacao`, {
     method: 'PATCH',

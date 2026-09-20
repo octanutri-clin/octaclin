@@ -1,5 +1,10 @@
 import { AgendaConsultaOrm } from '../../agenda/infraestrutura/agenda-consulta.orm';
 import { LogDiarioRapidoOrm } from '../../mobile/infraestrutura/log-diario-rapido.orm';
+import { OutboxEventoOrm } from '../../../infraestrutura/outbox/outbox-evento.orm';
+import { ProcessadorOutboxGatilhosAutomacao } from '../../automacoes/aplicacao/processador-outbox-gatilhos-automacao';
+import { RegraAutomacaoOrm } from '../../automacoes/infraestrutura/regra-automacao.orm';
+import { ExecucaoRegraOrm } from '../../automacoes/infraestrutura/execucao-regra.orm';
+import { TenantOrm } from '../../tenancy/infraestrutura/tenant.orm';
 import { PacienteOrm } from '../infraestrutura/paciente.orm';
 import { PrioridadeAcompanhamentoHistoricoOrm } from '../infraestrutura/prioridade-acompanhamento-historico.orm';
 import { PrioridadeAcompanhamentoPacienteOrm } from '../infraestrutura/prioridade-acompanhamento-paciente.orm';
@@ -29,6 +34,8 @@ interface Cenario {
   diarioPorPaciente?: Record<string, Record<string, unknown> | undefined>;
   prioridadeAtualPorPaciente?: Record<string, Record<string, unknown> | undefined>;
   historicoExistente?: Record<string, unknown>[];
+  /** Regras de automacao ativas visiveis ao gatilho `paciente.risco_alto`. */
+  regrasAutomacao?: Record<string, unknown>[];
 }
 
 function montarServico(cenario: Cenario = {}) {
@@ -42,9 +49,31 @@ function montarServico(cenario: Cenario = {}) {
   );
   const prioridadesSalvas: Record<string, unknown>[] = [];
   const historicoSalvo: Record<string, unknown>[] = [...(cenario.historicoExistente ?? [])];
+  const regrasAutomacao = cenario.regrasAutomacao ?? [];
+  const execucoesRegra: Record<string, unknown>[] = [];
+  const outboxEventos: Record<string, unknown>[] = [];
+  const idsInseridos = new Set<string>();
 
   const repositorioPacientes = {
-    find: jest.fn(async (_opcoes: Record<string, unknown>) => pacientes)
+    find: jest.fn(async (_opcoes: Record<string, unknown>) => pacientes),
+    // Usado por `dispararGatilhoAutomacao` (fundacao do PB-03) para resolver o
+    // profissional responsavel do paciente antes de casar regras.
+    findOne: jest.fn(
+      async ({ where }: { where: { id: string; tenantId: string } }) =>
+        pacientes.find((paciente) => paciente.id === where.id && paciente.tenantId === where.tenantId) ?? null
+    )
+  };
+  const repositorioRegraAutomacao = {
+    find: jest.fn(
+      async ({ where }: { where: { tenantId: string; ativa: boolean; profissionalId: string; gatilho: { _value?: Record<string, unknown> } } }) =>
+        regrasAutomacao.filter(
+          (regra) =>
+            regra.tenantId === where.tenantId &&
+            regra.ativa === where.ativa &&
+            regra.profissionalId === where.profissionalId &&
+            (regra.gatilho as Record<string, unknown> | undefined)?.tipo === where.gatilho?._value?.tipo
+        )
+    )
   };
   const repositorioConsultas = {
     find: jest.fn(async ({ where }: { where: { pacienteId: string; status?: string; inicioEm?: { _value?: unknown } } }) => {
@@ -114,7 +143,43 @@ function montarServico(cenario: Cenario = {}) {
       if (entidade === LogDiarioRapidoOrm) return repositorioDiarios;
       if (entidade === PrioridadeAcompanhamentoPacienteOrm) return repositorioPrioridadeAtual;
       if (entidade === PrioridadeAcompanhamentoHistoricoOrm) return repositorioHistorico;
+      if (entidade === RegraAutomacaoOrm) return repositorioRegraAutomacao;
       throw new Error(`Repositorio nao mapeado no teste: ${(entidade as { name?: string })?.name ?? entidade}`);
+    }),
+    // Suporta os inserts idempotentes de `dispararGatilhoAutomacao` (fundacao
+    // do PB-03, reutilizada pelo gatilho `paciente.risco_alto`).
+    createQueryBuilder: jest.fn(() => {
+      let alvo: Record<string, unknown>[] | undefined;
+      let valoresAtuais: Record<string, unknown> = {};
+      const builder: {
+        insert: () => typeof builder;
+        into: (entidade: unknown) => typeof builder;
+        values: (valores: Record<string, unknown>) => typeof builder;
+        orIgnore: () => typeof builder;
+        execute: () => Promise<{ identifiers: unknown[] }>;
+      } = {
+        insert: jest.fn(() => builder),
+        into: jest.fn((entidade: unknown) => {
+          if (entidade === ExecucaoRegraOrm) alvo = execucoesRegra;
+          else if (entidade === OutboxEventoOrm) alvo = outboxEventos;
+          else throw new Error('Entidade nao suportada no insert fake.');
+          return builder;
+        }),
+        values: jest.fn((valores: Record<string, unknown>) => {
+          valoresAtuais = valores;
+          return builder;
+        }),
+        orIgnore: jest.fn(() => builder),
+        execute: jest.fn(async () => {
+          const id = String(valoresAtuais.id);
+          if (!idsInseridos.has(id)) {
+            idsInseridos.add(id);
+            alvo!.push({ ...valoresAtuais });
+          }
+          return { identifiers: [] };
+        })
+      };
+      return builder;
     })
   };
 
@@ -131,8 +196,11 @@ function montarServico(cenario: Cenario = {}) {
     repositorioConsultas,
     repositorioPrioridadeAtual,
     repositorioHistorico,
+    repositorioRegraAutomacao,
     prioridadesSalvas,
-    historicoSalvo
+    historicoSalvo,
+    execucoesRegra,
+    outboxEventos
   };
 }
 
@@ -406,5 +474,214 @@ describe('ServicoRecalculoPrioridadeAcompanhamento', () => {
 
     expect(resultado.pacientesComFalha).toBe(0);
     expect(prioridadesSalvas[0]).toEqual(expect.objectContaining({ score: 0, faixa: 'baixa' }));
+  });
+});
+
+describe('ServicoRecalculoPrioridadeAcompanhamento - gatilho paciente.risco_alto (Fase 267.2)', () => {
+  const AGORA_DIA_SEGUINTE = new Date(AGORA.getTime() + DIA_MS);
+  const pacienteComProfissional = { id: 'paciente-1', tenantId: 'tenant-1', arquivadoEm: null, profissionalResponsavelId: 'profissional-1' };
+  const regraRiscoAlto = {
+    id: 'regra-risco-alto-1',
+    tenantId: 'tenant-1',
+    profissionalId: 'profissional-1',
+    ativa: true,
+    gatilho: { tipo: 'paciente.risco_alto' }
+  };
+
+  const consultasBaixa = [{ id: 'falta-unica', pacienteId: 'paciente-1', status: 'falta', inicioEm: diasAtras(1) }];
+  const consultasAlta = [
+    { id: 'falta-1', pacienteId: 'paciente-1', status: 'falta', inicioEm: diasAtras(1) },
+    { id: 'falta-2', pacienteId: 'paciente-1', status: 'falta', inicioEm: diasAtras(2) },
+    { id: 'concluida-antiga', pacienteId: 'paciente-1', status: 'concluida', inicioEm: diasAtras(61) }
+  ];
+
+  it('dispara uma vez quando a faixa sobe de baixa/media para alta', async () => {
+    const consultasPorPaciente: Record<string, Record<string, unknown>[]> = { 'paciente-1': consultasBaixa };
+    const { servico, execucoesRegra, outboxEventos } = montarServico({
+      pacientes: [pacienteComProfissional],
+      consultasPorPaciente,
+      regrasAutomacao: [regraRiscoAlto]
+    });
+
+    const primeiro = await servico.recalcularTenant('tenant-1', AGORA);
+    expect(primeiro.pacientesAtualizados).toBe(1);
+    expect(execucoesRegra).toHaveLength(0);
+
+    consultasPorPaciente['paciente-1'] = consultasAlta;
+    const segundo = await servico.recalcularTenant('tenant-1', AGORA_DIA_SEGUINTE);
+
+    expect(segundo.pacientesAtualizados).toBe(1);
+    expect(execucoesRegra).toHaveLength(1);
+    expect(execucoesRegra[0]).toEqual(
+      expect.objectContaining({ tenantId: 'tenant-1', regraId: 'regra-risco-alto-1', pacienteId: 'paciente-1', status: 'pendente' })
+    );
+    expect(outboxEventos).toHaveLength(1);
+    expect(outboxEventos[0]).toEqual(
+      expect.objectContaining({ tenantId: 'tenant-1', tipo: 'automacao.gatilho.disparar', status: 'pendente' })
+    );
+    expect(JSON.stringify(execucoesRegra.concat(outboxEventos))).not.toMatch(/score|fator|justificativa/i);
+  });
+
+  it('dispara no primeiro calculo do paciente quando ele ja nasce em alta', async () => {
+    const { servico, execucoesRegra } = montarServico({
+      pacientes: [pacienteComProfissional],
+      consultasPorPaciente: { 'paciente-1': consultasAlta },
+      regrasAutomacao: [regraRiscoAlto]
+    });
+
+    await servico.recalcularTenant('tenant-1', AGORA);
+
+    expect(execucoesRegra).toHaveLength(1);
+  });
+
+  it('nao dispara de novo quando a faixa ja estava alta (alta -> alta)', async () => {
+    const { servico, execucoesRegra } = montarServico({
+      pacientes: [pacienteComProfissional],
+      consultasPorPaciente: { 'paciente-1': consultasAlta },
+      regrasAutomacao: [regraRiscoAlto],
+      historicoExistente: [
+        {
+          tenantId: 'tenant-1',
+          pacienteId: 'paciente-1',
+          tipoEvento: 'calculo',
+          versaoFormula: '1.1.0',
+          score: 85,
+          faixa: 'alta',
+          criadoEm: diasAtras(1)
+        }
+      ],
+      prioridadeAtualPorPaciente: {
+        'paciente-1': {
+          id: 'prioridade-1',
+          tenantId: 'tenant-1',
+          pacienteId: 'paciente-1',
+          score: 85,
+          faixa: 'alta',
+          fatores: [],
+          versaoFormula: '1.1.0',
+          calculadoEm: diasAtras(1)
+        }
+      }
+    });
+
+    await servico.recalcularTenant('tenant-1', AGORA);
+
+    expect(execucoesRegra).toHaveLength(0);
+  });
+
+  it('nao dispara quando a faixa calculada permanece em baixa ou media', async () => {
+    const { servico, execucoesRegra } = montarServico({
+      pacientes: [pacienteComProfissional],
+      consultasPorPaciente: { 'paciente-1': consultasBaixa },
+      regrasAutomacao: [regraRiscoAlto]
+    });
+
+    await servico.recalcularTenant('tenant-1', AGORA);
+
+    expect(execucoesRegra).toHaveLength(0);
+  });
+
+  it('override manual para alta nao dispara automacao: so a faixa calculada deterministicamente conta', async () => {
+    const { servico, execucoesRegra, outboxEventos } = montarServico({
+      pacientes: [pacienteComProfissional],
+      consultasPorPaciente: { 'paciente-1': consultasBaixa },
+      regrasAutomacao: [regraRiscoAlto],
+      prioridadeAtualPorPaciente: {
+        'paciente-1': {
+          id: 'prioridade-1',
+          tenantId: 'tenant-1',
+          pacienteId: 'paciente-1',
+          score: 0,
+          faixa: 'baixa',
+          fatores: [],
+          versaoFormula: '1.1.0',
+          calculadoEm: diasAtras(5),
+          overrideFaixa: 'alta',
+          overrideCodigoMotivo: 'acompanhamento_intensificado',
+          overrideAtorUsuarioId: 'usuario-profissional-1',
+          overrideCriadoEm: diasAtras(3)
+        }
+      }
+    });
+
+    await servico.recalcularTenant('tenant-1', AGORA);
+
+    expect(execucoesRegra).toHaveLength(0);
+    expect(outboxEventos).toHaveLength(0);
+  });
+
+  it('retry/reexecucao no mesmo dia nao duplica o disparo', async () => {
+    const { servico, execucoesRegra, outboxEventos } = montarServico({
+      pacientes: [pacienteComProfissional],
+      consultasPorPaciente: { 'paciente-1': consultasAlta },
+      regrasAutomacao: [regraRiscoAlto]
+    });
+
+    await servico.recalcularTenant('tenant-1', AGORA);
+    await servico.recalcularTenant('tenant-1', AGORA);
+
+    expect(execucoesRegra).toHaveLength(1);
+    expect(outboxEventos).toHaveLength(1);
+  });
+
+  it('respeita isolamento por tenant e profissional: so a regra do profissional responsavel pelo paciente dispara', async () => {
+    const { servico, execucoesRegra } = montarServico({
+      pacientes: [pacienteComProfissional],
+      consultasPorPaciente: { 'paciente-1': consultasAlta },
+      regrasAutomacao: [
+        { id: 'regra-outro-profissional', tenantId: 'tenant-1', profissionalId: 'profissional-outro', ativa: true, gatilho: { tipo: 'paciente.risco_alto' } },
+        { id: 'regra-outro-tenant', tenantId: 'tenant-2', profissionalId: 'profissional-1', ativa: true, gatilho: { tipo: 'paciente.risco_alto' } },
+        regraRiscoAlto
+      ]
+    });
+
+    await servico.recalcularTenant('tenant-1', AGORA);
+
+    expect(execucoesRegra).toHaveLength(1);
+    expect(execucoesRegra[0]).toEqual(expect.objectContaining({ regraId: 'regra-risco-alto-1' }));
+  });
+
+  it('o evento de outbox gerado pela entrada em risco alto e recuperado pelo processador quando a fila falha', async () => {
+    const { servico, outboxEventos } = montarServico({
+      pacientes: [pacienteComProfissional],
+      consultasPorPaciente: { 'paciente-1': consultasAlta },
+      regrasAutomacao: [regraRiscoAlto]
+    });
+
+    await servico.recalcularTenant('tenant-1', AGORA);
+    expect(outboxEventos).toHaveLength(1);
+
+    const evento = { ...outboxEventos[0], tentativas: 0, criadoEm: AGORA } as OutboxEventoOrm;
+    const repositorioOutbox = {
+      find: jest.fn(async () => [evento]),
+      update: jest.fn(async () => ({ affected: 1 })),
+      save: jest.fn(async (registro: OutboxEventoOrm) => registro)
+    };
+    const fonteDados = {
+      createQueryRunner: jest.fn(() => ({
+        connect: jest.fn(async () => undefined),
+        release: jest.fn(async () => undefined),
+        query: jest.fn(async (sql: string) => (sql.includes('pg_try_advisory_lock') ? [{ obtida: true }] : []))
+      })),
+      getRepository: (entidade: unknown) => {
+        if (entidade === TenantOrm) return { find: jest.fn(async () => [{ id: 'tenant-1', status: 'ativo' }]) };
+        throw new Error('Repositorio inesperado');
+      }
+    };
+    const executorTenantOutbox = {
+      executar: (_tenantId: string, operacao: (g: unknown) => Promise<unknown>) => operacao({ getRepository: () => repositorioOutbox })
+    };
+    const filaAutomacoes = { add: jest.fn(async () => Promise.reject(new Error('fila indisponivel'))) };
+
+    const processador = new ProcessadorOutboxGatilhosAutomacao(
+      fonteDados as never,
+      executorTenantOutbox as never,
+      filaAutomacoes as never
+    );
+    await processador.processarPendentes();
+
+    expect(repositorioOutbox.save).toHaveBeenCalledWith(
+      expect.objectContaining({ status: 'pendente', erro: expect.stringContaining('fila indisponivel') })
+    );
   });
 });

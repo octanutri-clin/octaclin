@@ -141,6 +141,7 @@ const CHAVES_SEGURAS = new Map([
   ['limite', 'paginacao'],
   ['arquivosremovidos', 'contagem de arquivos apagados junto com a evolucao fotografica'],
   ['diassemconsulta', 'janela em dias da regra de recall; e parametro da regra, nao o historico de um paciente'],
+  ['diassemcheckin', 'janela em dias da regra de checkin atrasado (Fase 267.3); e parametro da regra, nao o historico de um paciente'],
   ['duracaoms', 'duracao da chamada ao provedor de IA'],
   ['limitesolicitado', 'teto de linhas pedido na exportacao'],
   [

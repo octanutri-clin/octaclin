@@ -2632,36 +2632,50 @@ test.describe('gate de acessibilidade - automacoes (PR 24)', () => {
   });
 
   // Interacao relevante: alterna o gatilho da "Nova regra" entre check-in
-  // atrasado e inatividade e confirma a troca acessivel dos campos
-  // condicionais, sem nunca submeter o formulario (POST /regras
+  // atrasado, inatividade e risco alto e confirma a troca acessivel dos
+  // campos condicionais, sem nunca submeter o formulario (POST /regras
   // deliberadamente sem mock nesta PR - nenhuma regra e criada de verdade).
+  // Nenhum gatilho disponivel usa mais Campo/Operador/Valor: cada um resolve
+  // sua propria elegibilidade (rodada periodica ou evento opaco), entao a
+  // condicao generica foi removida do formulario (ver Fase 267.3).
   test('nova regra - alterna gatilho e troca campos condicionais de forma acessivel (interacao relevante)', async ({ page }) => {
     await prepararAutomacoes(page);
     await page.goto('/automacoes');
 
     await expect(page.getByRole('heading', { name: 'Nova regra' })).toBeVisible();
-    await expect(page.getByLabel('Campo')).toBeVisible();
-    await expect(page.getByLabel('Operador')).toBeVisible();
-    await expect(page.getByLabel('Valor')).toBeVisible();
+    await expect(page.getByLabel('Campo')).toHaveCount(0);
+    await expect(page.getByLabel('Operador')).toHaveCount(0);
+    await expect(page.getByLabel('Valor')).toHaveCount(0);
+    await expect(page.getByLabel('Dias sem check-in')).toHaveValue('7');
+    await expect(page.getByLabel('Intervalo minimo entre lembretes (dias)')).toHaveValue('7');
+    await expect(page.getByLabel('Limite de pacientes por rodada')).toHaveValue('100');
     await expect(page.getByLabel('Ação', { exact: true })).toBeVisible();
     await expect(page.getByLabel('Dias sem consulta')).toHaveCount(0);
 
     await page.getByLabel('Gatilho').selectOption({ label: 'Paciente sem consulta há muito tempo' });
 
-    await expect(page.getByLabel('Campo')).toHaveCount(0);
-    await expect(page.getByLabel('Operador')).toHaveCount(0);
-    await expect(page.getByLabel('Valor')).toHaveCount(0);
+    await expect(page.getByLabel('Dias sem check-in')).toHaveCount(0);
     await expect(page.getByLabel('Ação', { exact: true })).toHaveCount(0);
     await expect(page.getByLabel('Dias sem consulta')).toHaveValue('60');
     await expect(page.getByLabel('Intervalo minimo entre recalls (dias)')).toHaveValue('30');
     await expect(page.getByLabel('Limite de pacientes por rodada')).toHaveValue('25');
 
+    await page.getByLabel('Gatilho').selectOption({ label: 'Paciente em risco alto' });
+
+    await expect(page.getByLabel('Dias sem consulta')).toHaveCount(0);
+    await expect(page.getByLabel('Dias sem check-in')).toHaveCount(0);
+    await expect(page.getByLabel('Campo')).toHaveCount(0);
+    await expect(page.getByLabel('Operador')).toHaveCount(0);
+    await expect(page.getByLabel('Valor')).toHaveCount(0);
+    await expect(page.getByLabel('Ação', { exact: true })).toBeVisible();
+
     await page.getByLabel('Gatilho').selectOption({ label: 'Check-in atrasado' });
 
     await expect(page.getByLabel('Dias sem consulta')).toHaveCount(0);
-    await expect(page.getByLabel('Campo')).toBeVisible();
-    await expect(page.getByLabel('Operador')).toBeVisible();
-    await expect(page.getByLabel('Valor')).toBeVisible();
+    await expect(page.getByLabel('Campo')).toHaveCount(0);
+    await expect(page.getByLabel('Operador')).toHaveCount(0);
+    await expect(page.getByLabel('Valor')).toHaveCount(0);
+    await expect(page.getByLabel('Dias sem check-in')).toHaveValue('7');
     await expect(page.getByLabel('Ação', { exact: true })).toBeVisible();
 
     await expect(page.getByRole('button', { name: 'Salvar regra' })).toBeVisible();

@@ -13,6 +13,7 @@ import { RegraAutomacaoOrm } from '../infraestrutura/regra-automacao.orm';
 import { avaliarCondicoes } from '../dominio/avaliador-regras';
 import { ContratoAcaoAutomacaoInvalido, criarResultadosAcoes, validarAcoesAutomacao } from '../dominio/acoes-automacao';
 import { ehGatilhoInatividade } from '../dominio/recall-inatividade';
+import { ContratoGatilhoAutomacaoInvalido, GatilhoAutomacao, validarGatilhoAutomacao } from '../dominio/gatilhos-automacao';
 
 export const FILA_AUTOMACOES = 'automacoes';
 
@@ -24,7 +25,8 @@ export class ServicoAutomacoes {
   ) {}
 
   async criarRegra(tenantId: string, dados: CriarRegraAutomacaoDto, usuario: UsuarioAutenticado): Promise<RegraAutomacaoOrm> {
-    const acoes = this.validarAcoes(dados.acoes, ehGatilhoInatividade(dados.gatilho));
+    const gatilho = this.validarGatilho(dados.gatilho);
+    const acoes = this.validarAcoes(dados.acoes, ehGatilhoInatividade(gatilho));
     return this.executorTenant.executar(tenantId, async (gerenciador) => {
       const profissionalIdDoUsuario = await resolverProfissionalIdDoUsuario(gerenciador, tenantId, usuario);
       const profissionalId =
@@ -35,7 +37,7 @@ export class ServicoAutomacoes {
           tenantId,
           profissionalId,
           nome: dados.nome,
-          gatilho: dados.gatilho,
+          gatilho,
           condicoes: dados.condicoes,
           acoes,
           ativa: false
@@ -192,6 +194,15 @@ export class ServicoAutomacoes {
       return validarAcoesAutomacao(acoes, { permitirTemplateEspecializado });
     } catch (erro) {
       if (erro instanceof ContratoAcaoAutomacaoInvalido) throw new BadRequestException(erro.message);
+      throw erro;
+    }
+  }
+
+  private validarGatilho(gatilho: unknown): GatilhoAutomacao {
+    try {
+      return validarGatilhoAutomacao(gatilho);
+    } catch (erro) {
+      if (erro instanceof ContratoGatilhoAutomacaoInvalido) throw new BadRequestException(erro.message);
       throw erro;
     }
   }

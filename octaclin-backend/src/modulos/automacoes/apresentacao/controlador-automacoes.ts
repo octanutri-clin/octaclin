@@ -6,8 +6,15 @@ import { GuardaJwt } from '../../auth/apresentacao/guarda-jwt';
 import { GuardaPapeis } from '../../auth/apresentacao/guarda-papeis';
 import { GuardaPermissoes } from '../../auth/apresentacao/guarda-permissoes';
 import { UsuarioAutenticado } from '../../auth/dominio/usuario-autenticado';
-import { AlterarAtivacaoRegraDto, AvaliarRegraDto, CriarRegraAutomacaoDto, SimularRecallDto } from '../aplicacao/dtos';
+import {
+  AlterarAtivacaoRegraDto,
+  AvaliarRegraDto,
+  CriarRegraAutomacaoDto,
+  SimularCheckinAtrasadoDto,
+  SimularRecallDto
+} from '../aplicacao/dtos';
 import { ServicoAutomacoes } from '../aplicacao/servico-automacoes';
+import { ServicoCheckinAtrasado } from '../aplicacao/servico-checkin-atrasado';
 import { ServicoRecallInatividade } from '../aplicacao/servico-recall-inatividade';
 
 @Controller('automacoes')
@@ -18,6 +25,7 @@ export class ControladorAutomacoes {
   constructor(
     private readonly servicoAutomacoes: ServicoAutomacoes,
     private readonly servicoRecallInatividade: ServicoRecallInatividade,
+    private readonly servicoCheckinAtrasado: ServicoCheckinAtrasado,
     private readonly servicoAuditoria: ServicoAuditoria
   ) {}
 
@@ -90,6 +98,29 @@ export class ControladorAutomacoes {
       totalExcluidos: resultado.excluidos.length,
       diasSemConsulta: resultado.configuracao.diasSemConsulta
     });
+    return resultado.execucao;
+  }
+
+  @Post('checkin-atrasado/simulacoes')
+  async simularCheckinAtrasado(
+    @UsuarioAtual() usuario: UsuarioAutenticado,
+    @Req() requisicao: Request,
+    @Body() dados: SimularCheckinAtrasadoDto
+  ) {
+    const resultado = await this.servicoCheckinAtrasado.simular(usuario.tenantId, dados.regraId, usuario);
+    await this.registrarAuditoria(
+      usuario,
+      requisicao,
+      'automacoes.checkin_atrasado.simular',
+      'execucao_regra',
+      resultado.execucao.id,
+      {
+        regraId: dados.regraId,
+        totalCandidatos: resultado.candidatos.length,
+        totalExcluidos: resultado.excluidos.length,
+        diasSemCheckin: resultado.configuracao.diasSemCheckin
+      }
+    );
     return resultado.execucao;
   }
 

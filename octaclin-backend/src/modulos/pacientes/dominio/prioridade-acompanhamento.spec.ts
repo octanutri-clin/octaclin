@@ -1,6 +1,7 @@
 import {
   CODIGOS_MOTIVO_OVERRIDE_PRIORIDADE_ACOMPANHAMENTO,
   calcularPrioridadeAcompanhamento,
+  entrouEmAltaPrioridade,
   VERSAO_FORMULA_PRIORIDADE_ACOMPANHAMENTO
 } from './prioridade-acompanhamento';
 
@@ -138,5 +139,33 @@ describe('calcularPrioridadeAcompanhamento', () => {
       agora: AGORA,
       faltas: [{ consultaId: ' ', ocorreuEm: AGORA }]
     })).toThrow('Falta invalida.');
+  });
+});
+
+describe('entrouEmAltaPrioridade', () => {
+  it('dispara quando a faixa anterior era baixa ou media e a atual e alta', () => {
+    expect(entrouEmAltaPrioridade('baixa', 'alta')).toBe(true);
+    expect(entrouEmAltaPrioridade('media', 'alta')).toBe(true);
+  });
+
+  it('dispara no primeiro calculo do paciente quando ja nasce em alta (sem faixa anterior)', () => {
+    expect(entrouEmAltaPrioridade(undefined, 'alta')).toBe(true);
+  });
+
+  it('nao dispara de novo quando a faixa anterior ja era alta', () => {
+    expect(entrouEmAltaPrioridade('alta', 'alta')).toBe(false);
+  });
+
+  it('nao dispara quando a faixa atual nao e alta, mesmo vindo de alta (nao e regressao a tratar aqui)', () => {
+    expect(entrouEmAltaPrioridade('alta', 'media')).toBe(false);
+    expect(entrouEmAltaPrioridade('alta', 'baixa')).toBe(false);
+  });
+
+  it('nao dispara quando permanece em baixa ou media', () => {
+    expect(entrouEmAltaPrioridade('baixa', 'baixa')).toBe(false);
+    expect(entrouEmAltaPrioridade('baixa', 'media')).toBe(false);
+    expect(entrouEmAltaPrioridade('media', 'media')).toBe(false);
+    expect(entrouEmAltaPrioridade(undefined, 'baixa')).toBe(false);
+    expect(entrouEmAltaPrioridade(undefined, 'media')).toBe(false);
   });
 });

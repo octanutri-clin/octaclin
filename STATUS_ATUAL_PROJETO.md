@@ -1,6 +1,6 @@
 # OctaClin - Status atual do projeto
 
-Atualizado em 2026-09-19.
+Atualizado em 2026-09-20.
 
 ## Snapshot
 
@@ -14,10 +14,36 @@ Atualizado em 2026-09-19.
   ambientes, com banco e 61 migrations em estado `ok`. O Incremento 266.3 foi
   integrado pelo PR `#271` (merge `70e343d`), com contrato fechado de
   titulo/prioridade/prazo, escrita cifrada tenant-aware e deduplicacao por UUID
-  deterministico. O Incremento 266.4 esta em revisao no PR `#272`, branch
-  `feat/fase266-4-enviar-template`: canal e template explicitos, opt-out e
-  janela obrigatorios, limite de frequencia, idempotencia e outbox, sem nova
-  migration. Plano e limites em `docs/history/phases/PLANO_FASE_266.md`.
+  deterministico. O Incremento 266.4 foi integrado pelo PR `#272` (merge
+  `716e38e` em `main`, 20/20 checks verdes, merge humano confirmado via
+  GitHub): canal e template explicitos, opt-out e janela obrigatorios, limite
+  de frequencia, idempotencia e outbox, sem nova migration. Com isso a Fase
+  266 (PB-02) esta concluida. Plano e limites em
+  `docs/history/phases/PLANO_FASE_266.md`.
+- Reconciliacao de 2026-09-20: Fase 267 (PB-03, gatilhos reais) iniciada. O
+  Incremento 267.1 fecha o contrato de `gatilho` das regras numa uniao
+  discriminada (preservando o especializado de `paciente.inativo`), cria a
+  fundacao duravel de disparo (execucao e outbox na mesma transacao do fato
+  de origem, identidade deterministica, publicacao exclusiva pelo outbox via
+  `ProcessadorOutboxGatilhosAutomacao`) e conecta `questionario.respondido` ao
+  termino idempotente de `finalizarFormularioPaciente`, com condicoes vazias
+  e contexto somente com IDs opacos. O Incremento 267.2 liga o recalculo
+  diario de prioridade de acompanhamento (Fase 265) a essa mesma fundacao,
+  sem altera-la: dispara `paciente.risco_alto` quando a faixa calculada
+  deterministicamente entra em `alta` (baixa/media -> alta, ou primeiro
+  calculo ja em alta), nunca dispara de novo em `alta -> alta` nem por
+  override manual do profissional, e o contexto duravel carrega somente o
+  tipo do evento. O Incremento 267.3 liga `checkin.atrasado` numa rodada
+  periodica propria (`@Cron` diario via `executarPorTenantAtivo`), com
+  contrato fechado de tres parametros
+  (`diasSemCheckin`/`intervaloMinimoDias`/`limitePorExecucao`, defaults de
+  produto 7/7/100), simulacao nominal com motivos fechados de exclusao e a
+  Web substituindo o campo livre `checkinsPerdidos` pelos parametros reais.
+  Os tres incrementos estao implementados nesta branch; checks remotos e
+  merge humano pendentes. Com isso o PB-03 (gatilhos reais das automacoes)
+  esta concluido; o proximo item obrigatorio da Onda 2 e o PB-05 (alerta de
+  check-in com adesao baixa). Plano e limites em
+  `docs/history/phases/PLANO_FASE_267.md`.
 - Reconciliacao de 2026-09-18 (decisoes de produto para destravar a Fase
   265): o dono do produto aprovou o vocabulario fechado de `codigoMotivo`
   (`evento_recente_nao_capturado`, `informacao_externa_relevante`,
@@ -560,15 +586,39 @@ Atualizado em 2026-09-19.
   `jornadas-criticas.spec.mjs`, `fase-248`, `fase-249`, `fase-252`,
   `reflow-visual.spec.mjs`, `fase-254-pacientes.spec.mjs` e
   `aviso-acesso-negado.spec.mjs`).
-- Fase 266 - Execucao real das automacoes (PB-02), **em andamento desde
+- Fase 266 - Execucao real das automacoes (PB-02), **concluida em
   2026-09-19**. O proprietario aprovou a ordem 266.1 fundacao confiavel, 266.2
   notificacao ao profissional, 266.3 criacao de tarefa e 266.4 envio de
   template. A 266.1 foi integrada pelo PR `#269`; a 266.2 foi integrada pelo
   PR `#270`, e a migration aditiva `1048` foi aplicada e verificada em staging
   e producao. A 266.3 foi integrada pelo PR `#271` (merge `70e343d`). A 266.4
-  esta em revisao no PR `#272`, branch `feat/fase266-4-enviar-template`, sem
-  nova migration. O PR 55 permanece adiado e o PR 56 continua condicionado a
+  foi integrada pelo PR `#272` (merge `716e38e`, branch
+  `feat/fase266-4-enviar-template`, sem nova migration, 20/20 checks verdes e
+  merge humano). Com o PB-02 concluido, a sequencia da Onda 2 do audit segue
+  obrigatoriamente para o PB-03 (ligar `checkin.atrasado`,
+  `questionario.respondido` e `paciente.risco_alto`) e depois o PB-05 (alerta
+  de adesao baixa). O PR 55 permanece adiado e o PR 56 continua condicionado a
   uma decisao explicita de distribuir o Mobile.
+- Fase 267 - Gatilhos reais das automacoes (PB-03), **concluida em
+  2026-09-20**. O Incremento 267.1 fecha o contrato de `gatilho` numa uniao
+  discriminada (preserva o especializado de `paciente.inativo`), cria a
+  fundacao duravel de disparo reutilizavel pelos proximos incrementos
+  (execucao e outbox na mesma transacao do evento de origem, identidade
+  deterministica por `(regra, origem)`, publicacao exclusiva pelo outbox) e
+  conecta `questionario.respondido` ao termino idempotente de
+  `finalizarFormularioPaciente`. O Incremento 267.2 liga `paciente.risco_alto`
+  ao recalculo diario de prioridade da Fase 265, reutilizando a mesma
+  fundacao sem altera-la: dispara na entrada em faixa alta (baixa/media ->
+  alta, ou primeiro calculo ja em alta), nunca em `alta -> alta` nem por
+  override manual, e o contexto duravel carrega somente o tipo do evento. O
+  Incremento 267.3 liga `checkin.atrasado` numa rodada periodica propria
+  (`@Cron` diario), com contrato fechado de tres parametros (defaults
+  7/7/100) e simulacao nominal com motivos fechados de exclusao; a fundacao
+  ganhou `dispararParaRegra` (nucleo por-regra, sem alterar o comportamento
+  usado pela 267.1/267.2) porque a elegibilidade deste gatilho depende de
+  parametro proprio de cada regra. Checks remotos e merge humano pendentes
+  para os tres incrementos. Com isso o PB-03 esta concluido; proximo item
+  obrigatorio da Onda 2: PB-05 (alerta de check-in com adesao baixa).
 - Fase 261 (escopo de trabalho: gaps de seguranca e privacidade
   identificados no audit da fase) **concluida tecnicamente em 2026-09-15,
   com excecoes operacionais abertas; incrementos 1 a 4 integrados**.
