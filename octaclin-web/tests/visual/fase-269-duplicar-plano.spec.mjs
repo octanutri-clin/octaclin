@@ -130,23 +130,18 @@ async function prepararSessao(page) {
       })
   );
 
+  // Vazio de proposito: este teste nao exercita antropometria. Uma avaliacao
+  // sintetica incompleta (sem os campos obrigatorios de
+  // `AvaliacaoAntropometricaApi`, como `avaliadaEm`) derrubava a pagina com
+  // um erro de runtime em `ResumoAntropometrico` — mesmo padrao ja usado por
+  // `prepararAvaliacoesAntropometricas` em acessibilidade.spec.mjs.
   await page.route(
     (url) => url.pathname === `/api/pacientes/${pacienteDestino.id}/avaliacoes-antropometricas`,
     (route) =>
       route.fulfill({
         status: 200,
         contentType: 'application/json',
-        body: JSON.stringify({
-          avaliacoes: [
-            {
-              id: 'avaliacao-1',
-              pacienteId: pacienteDestino.id,
-              registradaEm: '2026-08-01T12:00:00.000Z',
-              medidas: { pesoKg: 70, alturaCm: 170, idadeAnos: 30, sexoBiologico: 'feminino' }
-            }
-          ],
-          deltaUltimas: []
-        })
+        body: JSON.stringify({ avaliacoes: [], deltaUltimas: [] })
       })
   );
 

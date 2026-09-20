@@ -150,3 +150,55 @@ Nenhuma acao de producao, seed ou dado real foi usada nesta fase.
    ambiguidade para leitor de tela tambem, e nao so para o teste.
 - `NA` - backend, migration, banco, staging, producao e providers: nenhum
   arquivo de backend alterado; nenhuma rota nova.
+
+### Terceiro defeito: achado so depois do push, pelo CI (PR #277)
+
+O job "Demo local smoke" da PR falhou de forma intermitente em
+`fase-269-duplicar-plano.spec.mjs`, com `expect(locator).toBeVisible()`
+estourando o timeout ao procurar a regiao "Duplicar de outro paciente"
+logo apos `page.goto`. A primeira hipotese (carga do CI, 654 testes em
+sequencia num worker so) levou a um ajuste especulativo de timeout, que foi
+descartado depois: reproduzir o teste localmente, isolado e sem qualquer
+carga de CI, repetiu a mesma falha intermitente (cerca de 1 em cada 4 a 9
+execucoes), o que descartou "e so lentidao do CI" como causa.
+
+A causa real, isolada pelo stack trace de uma das execucoes locais que
+falhou: `TypeError: Cannot read properties of undefined (reading 'slice')`
+em `components/pacientes/resumo-antropometrico.tsx`, dentro de
+`formatarData()`. O mock de
+`/api/pacientes/:id/avaliacoes-antropometricas` usado por
+`prepararSessao()` tinha um formato que nao corresponde ao tipo real
+`AvaliacaoAntropometricaApi` (`lib/prontuario-api.ts`): usava
+`registradaEm` em vez de `avaliadaEm`, aninhava `idadeAnos`/`sexoBiologico`
+dentro de `medidas` em vez de os manter no nivel raiz, e faltavam os campos
+obrigatorios `protocolo`, `resultado` e `criadoEm`. Como `avaliadaEm`
+chegava `undefined`, `formatarData` quebrava em runtime; o boundary de erro
+do Next (`app/error.tsx`) substituia a pagina inteira por uma tela de erro,
+o que explica por que a regiao nunca aparecia -- nao era lentidao, era a
+pagina genuinamente quebrada, de forma intermitente conforme o timing de
+render/hidratacao.
+
+Este teste nao exercita antropometria, entao a correcao foi trocar o mock
+por uma resposta vazia (`{ avaliacoes: [], deltaUltimas: [] }`), o mesmo
+padrao ja usado por `prepararAvaliacoesAntropometricas` em
+`acessibilidade.spec.mjs`. O ajuste especulativo de timeout foi revertido
+depois de confirmada a causa real, para nao carregar no teste uma margem
+que nao resolve nada.
+
+Verificacao: `tests/visual/fase-269-duplicar-plano.spec.mjs` rodado 8 vezes
+em sequencia apos a correcao, 48/48 (6 testes x 8 execucoes), sem nenhuma
+falha -- consistente com a natureza intermitente do bug original, que so
+uma unica execucao verde nao provaria ter sido corrigido.
+
+Licao: fixture de teste que nao segue o tipo real da API pode quebrar a
+pagina em runtime de forma silenciosa e intermitente, sem que o teste em si
+aponte a causa raiz (o sintoma visivel foi um timeout de visibilidade, nao
+o erro de tipo). Isso so foi pego pelo CI, nao pelas 6 execucoes locais
+originais antes do push -- reforca que uma execucao local isolada nao basta
+para provar ausencia de comportamento intermitente.
+
+- `PASS` - `pnpm --dir octaclin-web typecheck` (repetido apos a correcao).
+- `PASS` - `pnpm --dir octaclin-web lint` (repetido apos a correcao): 0
+  erros, 56 warnings preexistentes, mesma contagem de antes.
+- `PASS` - `tests/visual/fase-269-duplicar-plano.spec.mjs`: 48/48 em 8
+  execucoes locais consecutivas apos a correcao.
