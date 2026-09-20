@@ -612,6 +612,21 @@ Templates e duplicação primeiro, resumo clínico depois, preparação pré-con
 resumo. PB-14 entra aqui porque toca o mesmo fluxo de plano e exige decisão de produto antes do código.
 Nenhuma depende da Onda 2, podem correr em paralelo se houver capacidade.
 
+- **Estado da Onda 3**: ordem confirmada pelo proprietário em 2026-09-20
+  (PB-13 → PB-14 → PB-15 → PB-23 → PB-16 → PB-25). O **PB-13 foi entregue
+  pela Fase 269**. A leitura do código mostrou que metade dele já existia:
+  "salvar como modelo" e "aplicar modelo" já estavam prontos
+  (`ServicoModelosPlanoAlimentar` + componente `ModelosPlanoAlimentar`). A
+  Fase 269 fechou o que faltava — duplicar a partir do plano de **outro
+  paciente**, escolhido por busca de nome entre os próprios pacientes —
+  sem backend novo: os três passos já tinham rota existente e autorizada
+  por paciente. Copia somente a estrutura de refeições; avaliação
+  antropométrica, cálculo energético, objetivo clínico e confirmações
+  continuam sendo do paciente de destino. O próximo item da onda é o
+  **PB-14**, cujo gap está confirmado no código (`atualizarRascunho` hoje
+  recusa `possuiCondicaoEspecial: true`) e que exige decisão de produto
+  antes do código, como o próprio roteiro já previa.
+
 **Onda 4 — estrutura** (PB-10, PB-17, PB-18, PB-19, PB-24)
 Exige migration e, portanto, o procedimento fora de banda com role owner. Agrupar as migrations reduz o número
 de janelas operacionais.
