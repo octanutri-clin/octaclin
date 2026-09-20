@@ -167,6 +167,55 @@ export function calcularMetasMacronutrientes(
   };
 }
 
+/**
+ * Caminho manual: a meta nao vem de formula preditiva. Ou o profissional digita
+ * os macros em g/kg (e a energia e consequencia deles), ou digita a energia e
+ * distribui em percentual pelo mesmo motor do caminho automatico.
+ */
+export const METODOS_MACROS_MANUAIS = ['percentual', 'gramas_por_kg'] as const;
+export type MetodoMacrosManual = (typeof METODOS_MACROS_MANUAIS)[number];
+
+export const ORIGENS_META_PLANO = ['formula', 'manual'] as const;
+export type OrigemMetaPlano = (typeof ORIGENS_META_PLANO)[number];
+
+export interface MacrosGramasPorKg {
+  carboidratosGPorKg: number;
+  proteinasGPorKg: number;
+  gordurasGPorKg: number;
+}
+
+export function calcularMetasMacronutrientesPorPeso(pesoKg: number, gramasPorKg: MacrosGramasPorKg) {
+  if (!Number.isFinite(pesoKg) || pesoKg < 1 || pesoKg > 500) {
+    throw new Error('Peso deve estar entre 1 e 500 kg.');
+  }
+  const valores = [gramasPorKg.carboidratosGPorKg, gramasPorKg.proteinasGPorKg, gramasPorKg.gordurasGPorKg];
+  if (valores.some((valor) => !Number.isFinite(valor) || valor < 0 || valor > 50)) {
+    throw new Error('Cada macronutriente em g/kg deve estar entre 0 e 50.');
+  }
+  if (valores.every((valor) => valor === 0)) {
+    throw new Error('Informe ao menos um macronutriente em g/kg.');
+  }
+
+  return {
+    carboidratosG: arredondar4(pesoKg * gramasPorKg.carboidratosGPorKg),
+    proteinasG: arredondar4(pesoKg * gramasPorKg.proteinasGPorKg),
+    gordurasG: arredondar4(pesoKg * gramasPorKg.gordurasGPorKg)
+  };
+}
+
+/** Em g/kg a energia e derivada dos macros prescritos, nao digitada em paralelo. */
+export function calcularEnergiaDasMetas(metas: {
+  carboidratosG: number;
+  proteinasG: number;
+  gordurasG: number;
+}): number {
+  const energia = arredondar4(metas.carboidratosG * 4 + metas.proteinasG * 4 + metas.gordurasG * 9);
+  if (energia <= 0 || energia > 20_000) {
+    throw new Error('Meta energetica resultante deve estar entre 1 e 20.000 kcal.');
+  }
+  return energia;
+}
+
 export function calcularNutrientesDaPorcao(nutrientes: NutrientesPor100g, quantidadeGramas: number) {
   if (!Number.isFinite(quantidadeGramas) || quantidadeGramas <= 0 || quantidadeGramas > 10_000) {
     throw new Error('Quantidade deve estar entre 0 e 10.000 gramas.');

@@ -3589,6 +3589,33 @@ publicado antes de ampliar a superficie de mudancas visuais.
     de um segundo caminho de copia.
   - Plano, risco e rollback: `docs/history/phases/PLANO_FASE_269.md`.
 
+- [x] Fase 270 - Caminho manual para paciente com condicao especial (PB-14,
+  segundo item da Onda 3). [IMPLEMENTADA em 2026-09-20; checks remotos e
+  merge humano pendentes]
+  - [x] O bloqueio do calculo automatico **continua**: equacao populacional
+    em paciente com condicao especial produz numero que ninguem deveria
+    usar. O gap nunca foi a trava, era nao existir alternativa -- na pratica
+    o profissional nao conseguia nem salvar o rascunho e a interface mandava
+    usar "uma conduta individual fora deste fluxo".
+  - [x] Decisao do proprietario: meta informada manualmente, com o metodo dos
+    macronutrientes escolhido **por paciente** -- percentual da meta
+    energetica ou g/kg de peso; e o plano manual publica normalmente.
+  - [x] Em g/kg a energia e derivada dos gramas prescritos (4/4/9), sem kcal
+    digitada em paralelo, para nao haver duas fontes de verdade. O peso vem
+    da avaliacao antropometrica ja vinculada; peso seco/ideal fica fora desta
+    fase.
+  - [x] So a etapa da estimativa e substituida: `calcularMetasMacronutrientes`
+    e os alertas de divergencia nao dependem da formula e seguem identicos.
+  - [x] Invariante nos dois sentidos, checada tambem em `revisar`/`publicar`:
+    condicao especial exige meta manual, e meta manual exige condicao
+    especial declarada (para nao virar atalho de quem quer pular a formula).
+  - [x] Corrigido um defeito **pre-existente e mais grave** encontrado nas
+    mesmas linhas: a invalidacao da revisao usava `undefined`, que o TypeORM
+    ignora no `save()`, entao `revisada_em` mantinha o valor antigo e dava
+    para revisar, editar e publicar sem nova revisao. Passou a usar `null`.
+  - [x] Sem migration: as colunas afetadas ja eram nullable.
+  - Plano, risco e rollback: `docs/history/phases/PLANO_FASE_270.md`.
+
 Documento de execução e prioridades: `ROADMAP_QUALIDADE_SEGURANCA_FASES_248_262.md`.
 Matriz operacional: `MATRIZ_SKILLS_PLUGINS_MODELOS_FASES_243_248_262.md`.
 
@@ -4029,11 +4056,11 @@ Fonte canonica de escopo, gates e skills do Claude Code:
     provisionado; a issue GitHub `#234` continua aberta e este debito nao foi
     convertido em `PASS` pela conclusao da fase.
 
-Proximo item: concluir os checks remotos e o merge humano da Fase 269
-(PB-13, primeiro item da Onda 3); depois seguir a ordem aprovada pelo
-proprietario para a Onda 3 -- PB-14 (caminho manual para paciente com
-condicao especial, que exige decisao de produto propria antes do codigo),
-PB-15, PB-23, PB-16 e por ultimo PB-25, que depende do PB-16. A Onda 2
+Proximo item: concluir os checks remotos e o merge humano da Fase 270
+(PB-14, segundo item da Onda 3); depois seguir a ordem aprovada pelo
+proprietario para a Onda 3 -- PB-15 (template de evolucao clinica com
+pre-preenchimento), PB-23, PB-16 e por ultimo PB-25, que depende do PB-16.
+O PB-13 foi entregue pela Fase 269 (PR `#277`, merge `4e36bda`). A Onda 2
 (PB-01 -> PB-02 -> PB-03 -> PB-05) esta completa. PR 55 permanece adiado e
 pendente; PR 56 continua condicionado a decisao explicita de distribuir o
 Mobile.
