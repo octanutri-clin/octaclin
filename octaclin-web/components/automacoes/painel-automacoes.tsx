@@ -28,9 +28,6 @@ interface FormularioRegra {
   profissionalId: string;
   nome: string;
   gatilhoTipo: string;
-  campo: string;
-  operador: 'igual' | 'maior_que' | 'maior_ou_igual' | 'menor_que' | 'inclui';
-  valor: string;
   acaoTipo: TipoAcaoAutomacao;
   tarefaTitulo: string;
   tarefaPrioridade: 'baixa' | 'media' | 'alta';
@@ -59,9 +56,6 @@ const regraInicial: FormularioRegra = {
   profissionalId: '',
   nome: 'Lembrete de check-in atrasado',
   gatilhoTipo: 'checkin.atrasado',
-  campo: 'checkinsPerdidos',
-  operador: 'maior_ou_igual',
-  valor: '3',
   acaoTipo: 'notificar_profissional',
   tarefaTitulo: 'Revisar acompanhamento',
   tarefaPrioridade: 'media',
@@ -85,11 +79,6 @@ const avaliacaoInicial: FormularioAvaliacao = {
   frustracaoScore: '72',
   observacao: 'Avaliacao manual pelo console OctaClin.'
 };
-
-function valorCondicao(valor: string) {
-  const numero = Number(valor);
-  return Number.isFinite(numero) && valor.trim() !== '' ? numero : valor;
-}
 
 function nomeProfissional(profissionais: ProfissionalResumo[], id: string) {
   return profissionais.find((profissional) => profissional.id === id)?.nome ?? id;
@@ -411,9 +400,12 @@ export function PainelAutomacoes() {
       const criada = await criarRegraAutomacao({
         profissionalId: formularioRegra.profissionalId,
         nome: formularioRegra.nome.trim(),
-        // Inatividade e checkin atrasado nao usam condicao sobre contexto: quem
-        // seleciona os pacientes e o proprio gatilho (rodada periodica), com os
-        // limites de frequencia dentro dele.
+        // Nenhum gatilho hoje disponivel no formulario avalia condicao sobre
+        // contexto: cada um resolve sua propria elegibilidade (rodada
+        // periodica com limites de frequencia para inatividade/checkin
+        // atrasado, ou o proprio evento para questionario/risco alto, cujo
+        // contexto de disparo real e opaco e nunca teria um campo para casar
+        // contra uma condicao generica).
         gatilho: ehInatividade
           ? {
               tipo: GATILHO_INATIVIDADE,
@@ -429,16 +421,7 @@ export function PainelAutomacoes() {
                 limitePorExecucao: Number(formularioRegra.checkinLimitePorExecucao || 100)
               }
             : { tipo: formularioRegra.gatilhoTipo },
-        condicoes:
-          ehInatividade || ehCheckinAtrasado
-            ? []
-            : [
-                {
-                  campo: formularioRegra.campo,
-                  operador: formularioRegra.operador,
-                  valor: valorCondicao(formularioRegra.valor)
-                }
-              ],
+        condicoes: [],
         acoes: [montarAcaoFormulario(formularioRegra, ehInatividade)],
         ativa: false
       });
@@ -831,46 +814,7 @@ export function PainelAutomacoes() {
                 {blocoAcao}
               </>
             ) : (
-              <>
-                <div className="space-y-1.5">
-                  <Rotulo htmlFor="regra-campo">Campo</Rotulo>
-                  <Campo
-                    id="regra-campo"
-                    value={formularioRegra.campo}
-                    onChange={(evento) => setFormularioRegra((atual) => ({ ...atual, campo: evento.target.value }))}
-                    required
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <Rotulo htmlFor="regra-operador">Operador</Rotulo>
-                  <Selecao
-                    id="regra-operador"
-                    value={formularioRegra.operador}
-                    onChange={(evento) =>
-                      setFormularioRegra((atual) => ({
-                        ...atual,
-                        operador: evento.target.value as FormularioRegra['operador']
-                      }))
-                    }
-                  >
-                    <option value="igual">Igual</option>
-                    <option value="maior_que">Maior que</option>
-                    <option value="maior_ou_igual">Maior ou igual</option>
-                    <option value="menor_que">Menor que</option>
-                    <option value="inclui">Inclui</option>
-                  </Selecao>
-                </div>
-                <div className="space-y-1.5">
-                  <Rotulo htmlFor="regra-valor">Valor</Rotulo>
-                  <Campo
-                    id="regra-valor"
-                    value={formularioRegra.valor}
-                    onChange={(evento) => setFormularioRegra((atual) => ({ ...atual, valor: evento.target.value }))}
-                    required
-                  />
-                </div>
-                {blocoAcao}
-              </>
+              <>{blocoAcao}</>
             )}
           </div>
           <p className="mt-3 rounded-md border border-linha bg-fundo px-3 py-2 text-sm text-texto-suave">
