@@ -1,15 +1,16 @@
 # PR 50 — Containers e runtime.
 #
 # Base fixada por digest imutavel (indice OCI multi-arch linux/amd64+arm64),
-# resolvido em 2026-09-01 no Docker Hub oficial (library/python:3.12-slim). A tag
+# resolvido em 2026-09-21 no Docker Hub oficial (library/python:3.14-slim). A tag
 # humana permanece para legibilidade; o digest e a ancora real. Atualizacao do
-# digest segue o processo em docs/governance/RELATORIO_SEGURANCA_PR50_2026-09-01.md.
+# digest segue o processo em docs/governance/RELATORIO_SEGURANCA_PR50_2026-09-01.md:
+# novo digest -> scan -> build -> harness de runtime -> SBOM -> review -> merge.
 #
 # requirements.txt continua sendo a lista de dependencias diretas; o lock traz o
 # grafo transitivo resolvido em versoes exatas e verificado por hash. Regenerar:
 #   uv pip compile requirements.txt --generate-hashes --universal \
 #     --python-version 3.12 --output-file requirements.lock.txt
-FROM python:3.14-slim@sha256:cad9a2c871761c413caa6fdd6441c783451e740a48aaeba60ae62a8b53525ef6 AS build
+FROM python:3.14-slim@sha256:caaf356f40667c496d405780745b9ac25771c189a51dfcc42430d531ea09f8a2 AS build
 WORKDIR /app
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
@@ -18,7 +19,7 @@ COPY requirements.txt requirements.lock.txt ./
 # Assim o runtime nao executa pip: sem gerenciador de pacotes no estagio final.
 RUN pip install --no-cache-dir --require-hashes --prefix=/install -r requirements.lock.txt
 
-FROM python:3.14-slim@sha256:cad9a2c871761c413caa6fdd6441c783451e740a48aaeba60ae62a8b53525ef6 AS runtime
+FROM python:3.14-slim@sha256:caaf356f40667c496d405780745b9ac25771c189a51dfcc42430d531ea09f8a2 AS runtime
 WORKDIR /app
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
