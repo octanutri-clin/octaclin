@@ -64,8 +64,11 @@ Atualizado em 2026-09-20.
   grave**: `atualizarRascunho` invalidava a revisao com `undefined`, que o
   TypeORM ignora no `save()`, entao a coluna `revisada_em` mantinha o valor
   antigo e era possivel revisar, editar e publicar sem nova revisao. Passou a
-  usar `null`. Sem migration. Implementado nesta branch; checks remotos e
-  merge humano pendentes. Plano e limites em
+  usar `null`. Sem migration. **Concluida**: PR `#278` mergeada em `main` no
+  commit `4c896b0` em 2026-09-20, com os 20 check runs verdes sobre `5f1899d`
+  -- incluindo "Demo local smoke", que desta vez passou na primeira tentativa
+  porque o fixture Playwright foi montado ja no formato real dos tipos.
+  Proximo item da Onda 3: PB-15. Plano e limites em
   `docs/history/phases/PLANO_FASE_270.md`.
 - Reconciliacao de 2026-09-20: a Onda 3 do audit (devolver tempo ao
   profissional) comecou, com a ordem aprovada pelo proprietario:
