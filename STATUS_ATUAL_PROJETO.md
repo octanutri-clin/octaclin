@@ -1,6 +1,6 @@
 # OctaClin - Status atual do projeto
 
-Atualizado em 2026-09-20.
+Atualizado em 2026-09-21.
 
 ## Snapshot
 
@@ -70,6 +70,27 @@ Atualizado em 2026-09-20.
   porque o fixture Playwright foi montado ja no formato real dos tipos.
   Proximo item da Onda 3: PB-15. Plano e limites em
   `docs/history/phases/PLANO_FASE_270.md`.
+- Reconciliacao de 2026-09-21: Fase 271 entrega o **PB-15 (template de
+  evolucao clinica com pre-preenchimento)**, terceiro item da Onda 3. Mesmo
+  padrao arquitetural dos modelos de plano alimentar (Fase 269): tabela nova
+  `modelos_evolucao_clinica` (RLS, origem pessoal/clinica),
+  `ServicoModelosEvolucaoClinica` (criar/listar/obter/arquivar) e rota
+  `evolucoes/modelos` fora de `/pacientes/:id`, sem endpoint de "aplicar" --
+  o cliente le o modelo e o formulario de nova evolucao pre-preenche
+  localmente, e o salvamento continua passando pela validacao normal de
+  criar evolucao. Leitura do codigo antes de implementar encontrou um gap
+  nao adivinhado: a formulacao literal do audit ("peso/IMC da mesma
+  consulta") nao e implementavel hoje sem migration adicional, porque nem
+  evolucao clinica nem avaliacao antropometrica tem vinculo com consulta.
+  Decisao de escopo: o pre-preenchimento correlaciona por data civil (usa a
+  avaliacao antropometrica mais recente datada de hoje), reaproveitando a
+  rota `GET /pacientes/:id/avaliacoes-antropometricas` ja existente e ja
+  autorizada -- **sem nenhuma mudanca de backend** nessa parte; vincular
+  formalmente evolucao/avaliacao a consulta de origem fica registrado como
+  gap de produto separado, fora do escopo desta fase. Unica migration:
+  `1720000001049-CriarModelosEvolucaoClinica`, aditiva. Implementado nesta
+  branch; checks remotos e merge humano pendentes. Plano e limites em
+  `docs/history/phases/PLANO_FASE_271.md`.
 - Reconciliacao de 2026-09-20: a Onda 3 do audit (devolver tempo ao
   profissional) comecou, com a ordem aprovada pelo proprietario:
   PB-13 -> PB-14 -> PB-15 -> PB-23 -> PB-16 -> PB-25 (este ultimo depende do
