@@ -1,12 +1,15 @@
 # OctaClin - Checklist vivo de fases futuras ate producao
 
-Atualizado em 2026-09-20. Fases 256 a 261 e 263 a 269 concluidas; Fase 262
-permanece em andamento pelos gates externos do piloto. Com a Fase 268
+Atualizado em 2026-09-21. Fases 256 a 261, 263 a 270 e 271 concluidas; Fase
+262 permanece em andamento pelos gates externos do piloto. Com a Fase 268
 mergeada (PR `#275`, merge `306d2ed`), o PB-05 (alerta de check-in com
 adesao baixa) esta concluido e a Onda 2 do audit de produto
 (PB-01 -> PB-02 -> PB-03 -> PB-05) esta completa. A Onda 3 (devolver tempo
 ao profissional) comecou pela Fase 269 (PB-13); a ordem aprovada pelo
-proprietario e PB-13 -> PB-14 -> PB-15 -> PB-23 -> PB-16 -> PB-25.
+proprietario e PB-13 -> PB-14 -> PB-15 -> PB-23 -> PB-16 -> PB-25. O PB-13
+(Fase 269, PR `#277`) e o PB-14 (Fase 270, PR `#278`) estao mergeados; o
+PB-15 (Fase 271, template de evolucao clinica com pre-preenchimento) foi
+implementado nesta branch, com checks remotos e merge humano pendentes.
 O programa de hardening PR 36-56 permanece como trilha separada. O pacote
 interno do PR 55 foi integrado, mas o proprietario adiou a contratacao do
 pentest para evitar custo neste momento; todos os gates externos seguem
@@ -3627,6 +3630,48 @@ publicado antes de ampliar a superficie de mudancas visuais.
     `git status --short`.
   - Plano, risco e rollback: `docs/history/phases/PLANO_FASE_270.md`.
 
+- [x] Fase 271 - Template de evolucao clinica com pre-preenchimento (PB-15,
+  terceiro item da Onda 3). [IMPLEMENTADA em 2026-09-21; checks remotos e
+  merge humano pendentes]
+  - [x] Mesmo padrao arquitetural do PB-13: tabela nova
+    `modelos_evolucao_clinica` (origem pessoal/clinica, RLS/FORCE RLS,
+    mesma constraint origem/profissional), `ServicoModelosEvolucaoClinica`
+    (criar/listar/obter/arquivar), sem rota de "aplicar" -- o cliente le o
+    modelo e o formulario pre-preenche localmente, o salvamento continua
+    passando pela validacao normal de `POST /pacientes/:id/evolucoes`.
+  - [x] Gap real encontrado antes de codar, nao adivinhado: a formulacao
+    literal do audit ("peso/IMC da mesma consulta") nao e implementavel hoje
+    sem migration adicional -- nem `evolucoes_clinicas` nem
+    `avaliacoes_antropometricas` tem `consulta_id`. Decisao de escopo:
+    pre-preenchimento correlaciona por data civil (avaliacao mais recente
+    datada de hoje), nao por vinculo formal de consulta; vincular
+    evolucao/avaliacao a consulta de origem fica registrado como gap de
+    produto separado (secao 6.B do audit), fora do escopo desta fase.
+  - [x] Pre-preenchimento de peso/IMC **sem nenhuma mudanca de backend**:
+    reaproveita `GET /pacientes/:id/avaliacoes-antropometricas`, ja
+    existente e ja autorizada (mesma rota da Fase 264.5), nunca sobrescreve
+    conteudo que o profissional ja tenha digitado ou trazido de um modelo.
+  - [x] Unica migration da fase: `1720000001049-CriarModelosEvolucaoClinica`,
+    aditiva.
+  - Validacoes: backend typecheck e build; suite completa do backend
+    (206 suites, 1985 testes, 0 falhas; RLS via testcontainers SKIPPED por
+    falta de Docker no sandbox); web typecheck, lint (0 erros, 58 warnings
+    preexistentes), build; `test:authz` com o par novo
+    `evolucoes-modelos-bff`; Playwright `console-regression.spec.mjs`
+    completo (118/118, desktop+mobile, incluindo os 2 cenarios novos do
+    PB-15) e `jornadas-criticas.spec.mjs` (12/12); gates de raiz da
+    Governanca de repositorio (a11y:matriz, confiabilidade,
+    redacao-auditoria, resposta-auditoria, migracoes-fora-de-banda,
+    actions-imutaveis, guardas-controladores, seguranca-dinamica,
+    triagem-seguranca, inventario-security-quality, tooling-agentes,
+    versao-pnpm, excecoes-supply-chain, grupos-dependabot, versao-node,
+    dockerfiles-runtime, licencas, lock-python, sbom); `git diff --check` e
+    `security:secrets`. `test:workflows-seguros` reprova so o subteste que
+    exige PowerShell, indisponivel neste sandbox Linux -- mesma limitacao de
+    ambiente ja documentada em ciclos anteriores, nao uma regressao desta
+    fase.
+  - Plano, risco e rollback: `docs/history/phases/PLANO_FASE_271.md`.
+
 Documento de execução e prioridades: `ROADMAP_QUALIDADE_SEGURANCA_FASES_248_262.md`.
 Matriz operacional: `MATRIZ_SKILLS_PLUGINS_MODELOS_FASES_243_248_262.md`.
 
@@ -4067,11 +4112,10 @@ Fonte canonica de escopo, gates e skills do Claude Code:
     provisionado; a issue GitHub `#234` continua aberta e este debito nao foi
     convertido em `PASS` pela conclusao da fase.
 
-Proximo item: concluir os checks remotos e o merge humano da Fase 270
-(PB-14, segundo item da Onda 3); depois seguir a ordem aprovada pelo
-proprietario para a Onda 3 -- PB-15 (template de evolucao clinica com
-pre-preenchimento), PB-23, PB-16 e por ultimo PB-25, que depende do PB-16.
-O PB-13 foi entregue pela Fase 269 (PR `#277`, merge `4e36bda`). A Onda 2
-(PB-01 -> PB-02 -> PB-03 -> PB-05) esta completa. PR 55 permanece adiado e
-pendente; PR 56 continua condicionado a decisao explicita de distribuir o
-Mobile.
+Proximo item: concluir os checks remotos e o merge humano da Fase 271
+(PB-15, terceiro item da Onda 3); depois seguir a ordem aprovada pelo
+proprietario para a Onda 3 -- PB-23, PB-16 e por ultimo PB-25, que depende
+do PB-16. O PB-13 foi entregue pela Fase 269 (PR `#277`, merge `4e36bda`) e
+o PB-14 pela Fase 270 (PR `#278`). A Onda 2 (PB-01 -> PB-02 -> PB-03 ->
+PB-05) esta completa. PR 55 permanece adiado e pendente; PR 56 continua
+condicionado a decisao explicita de distribuir o Mobile.

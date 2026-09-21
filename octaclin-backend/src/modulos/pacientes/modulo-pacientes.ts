@@ -44,7 +44,7 @@ import { ServicoFiltrosSalvosPacientes } from './aplicacao/servico-filtros-salvo
 import { ServicoPortalPaciente } from './aplicacao/servico-portal-paciente';
 import { ControladorConvitesPaciente } from './apresentacao/controlador-convites-paciente';
 import { ControladorDocumentosClinicos } from './apresentacao/controlador-documentos-clinicos';
-import { ControladorPacientes } from './apresentacao/controlador-pacientes';
+import { ControladorModelosEvolucaoClinica, ControladorPacientes } from './apresentacao/controlador-pacientes';
 import { ControladorPerfilCadastroPaciente } from './apresentacao/controlador-perfil-cadastro-paciente';
 import { ControladorExamesLaboratoriais } from './apresentacao/controlador-exames-laboratoriais';
 import { ControladorConsentimentosEvolucaoFotografica } from './apresentacao/controlador-consentimentos-evolucao-fotografica';
@@ -55,6 +55,7 @@ import { ControladorPortalPaciente } from './apresentacao/controlador-portal-pac
 import { AcompanhamentoTarefaOrm } from './infraestrutura/acompanhamento-tarefa.orm';
 import { ConvitePacienteOrm } from './infraestrutura/convite-paciente.orm';
 import { EvolucaoClinicaOrm } from './infraestrutura/evolucao-clinica.orm';
+import { ModeloEvolucaoClinicaOrm } from './infraestrutura/modelo-evolucao-clinica.orm';
 import { AvaliacaoAntropometricaOrm } from './infraestrutura/avaliacao-antropometrica.orm';
 import { DocumentoEmitidoOrm } from './infraestrutura/documento-emitido.orm';
 import { PacienteOrm } from './infraestrutura/paciente.orm';
@@ -68,6 +69,7 @@ import { FiltroSalvoPacienteOrm } from './infraestrutura/filtro-salvo-paciente.o
 import { PrioridadeAcompanhamentoPacienteOrm } from './infraestrutura/prioridade-acompanhamento-paciente.orm';
 import { PrioridadeAcompanhamentoHistoricoOrm } from './infraestrutura/prioridade-acompanhamento-historico.orm';
 import { ServicoRecalculoPrioridadeAcompanhamento } from './aplicacao/servico-recalculo-prioridade-acompanhamento';
+import { ServicoModelosEvolucaoClinica } from './aplicacao/servico-modelos-evolucao-clinica';
 import { ProcessadorRecalculoPrioridadeAcompanhamento } from './aplicacao/processador-recalculo-prioridade-acompanhamento';
 import { deveExecutarProcessadores } from '../../infraestrutura/processamento/papel-processo';
 
@@ -82,6 +84,7 @@ const processadores = deveExecutarProcessadores() ? [ProcessadorRecalculoPriorid
       ConvitePacienteOrm,
       AcompanhamentoTarefaOrm,
       EvolucaoClinicaOrm,
+      ModeloEvolucaoClinicaOrm,
       AvaliacaoAntropometricaOrm,
       DocumentoEmitidoOrm,
       UsuarioOrm,
@@ -131,7 +134,8 @@ const processadores = deveExecutarProcessadores() ? [ProcessadorRecalculoPriorid
     ControladorCondutasTerapeuticas,
     ControladorConvitesPaciente,
     ControladorPortalPaciente,
-    ControladorDocumentosClinicos
+    ControladorDocumentosClinicos,
+    ControladorModelosEvolucaoClinica
   ],
   providers: [
     ServicoPacientes,
@@ -152,6 +156,7 @@ const processadores = deveExecutarProcessadores() ? [ProcessadorRecalculoPriorid
     ServicoAuditoria,
     ProcessadorOutboxAuditoria,
     ServicoRecalculoPrioridadeAcompanhamento,
+    ServicoModelosEvolucaoClinica,
     ...processadores
   ],
   exports: [ServicoPacientes, ServicoConvitesPaciente, ServicoPortalPaciente, ServicoDocumentosClinicos]

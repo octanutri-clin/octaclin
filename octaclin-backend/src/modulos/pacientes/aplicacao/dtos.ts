@@ -26,6 +26,10 @@ import type {
 } from '../infraestrutura/acompanhamento-tarefa.orm';
 import type { TipoEvolucaoClinica, VisibilidadeEvolucaoClinica } from '../infraestrutura/evolucao-clinica.orm';
 import type { TipoCondutaTerapeutica } from '../infraestrutura/conduta-terapeutica.orm';
+import {
+  ORIGENS_MODELO_EVOLUCAO_CLINICA,
+  type OrigemModeloEvolucaoClinica
+} from '../dominio/modelos-evolucao-clinica';
 import { PROTOCOLOS_COMPOSICAO } from '../dominio/antropometria';
 import { TIPOS_DOCUMENTO_CLINICO } from '../dominio/documentos-clinicos';
 import {
@@ -499,6 +503,62 @@ export interface EvolucaoClinicaRespostaDto {
   visibilidade: VisibilidadeEvolucaoClinica;
   criadoEm: Date;
   atualizadoEm: Date;
+}
+
+// Mesmo teto de paginacao dos modelos de plano alimentar (Fase 269); auto-
+// contido aqui para nao acoplar o modulo pacientes ao de planos alimentares.
+const PAGINA_MAXIMA_MODELOS_EVOLUCAO = 1_000;
+
+export class CriarModeloEvolucaoClinicaDto {
+  @IsString()
+  @MinLength(1)
+  @MaxLength(180)
+  nome: string;
+
+  @IsIn(ORIGENS_MODELO_EVOLUCAO_CLINICA)
+  origem: OrigemModeloEvolucaoClinica;
+
+  @IsOptional()
+  @IsIn(['consulta', 'retorno', 'observacao', 'ajuste_plano'])
+  tipo?: TipoEvolucaoClinica;
+
+  @IsString()
+  @MinLength(3)
+  @MaxLength(6000)
+  conteudo: string;
+}
+
+export class ListarModelosEvolucaoClinicaDto {
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(PAGINA_MAXIMA_MODELOS_EVOLUCAO)
+  pagina = 1;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(100)
+  limite = 25;
+
+  @IsOptional()
+  @IsIn(ORIGENS_MODELO_EVOLUCAO_CLINICA)
+  origem?: OrigemModeloEvolucaoClinica;
+}
+
+export interface ModeloEvolucaoClinicaResumoRespostaDto {
+  id: string;
+  nome: string;
+  origem: OrigemModeloEvolucaoClinica;
+  tipo: TipoEvolucaoClinica;
+  tamanhoConteudo: number;
+  atualizadoEm: Date;
+}
+
+export interface ModeloEvolucaoClinicaRespostaDto extends Omit<ModeloEvolucaoClinicaResumoRespostaDto, 'atualizadoEm'> {
+  conteudo: string;
 }
 
 export class CriarTarefaAcompanhamentoDto {

@@ -1062,6 +1062,7 @@ async function prepararProntuarioMockado(page, {
   let anexos = [];
   let documentos = [];
   let corpoDocumentoEmitido = null;
+  let modeloEvolucaoCriado = null;
   let statusPortal = statusPortalInicial;
   let revogouConvite = false;
   let desativouContaAcesso = false;
@@ -1580,6 +1581,61 @@ async function prepararProntuarioMockado(page, {
     });
   });
 
+  // Modelos de evolucao (PB-15): um modelo da clinica ja existente por
+  // padrao, para os testes de "aplicar" nao dependerem de round-trip de
+  // criacao; testes que exercitam "salvar como modelo" capturam o corpo
+  // enviado em `modeloEvolucaoCriado`.
+  await page.route('**/api/evolucoes/modelos*', async (route) => {
+    if (route.request().method() === 'POST') {
+      modeloEvolucaoCriado = route.request().postDataJSON();
+      await route.fulfill({
+        status: 201,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          id: 'modelo-evolucao-novo',
+          nome: modeloEvolucaoCriado.nome,
+          origem: modeloEvolucaoCriado.origem,
+          tipo: modeloEvolucaoCriado.tipo ?? 'observacao',
+          tamanhoConteudo: modeloEvolucaoCriado.conteudo.length
+        })
+      });
+      return;
+    }
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        itens: [
+          {
+            id: 'modelo-evolucao-1',
+            nome: 'Retorno padrão',
+            origem: 'clinica',
+            tipo: 'retorno',
+            tamanhoConteudo: 30,
+            atualizadoEm: '2026-07-20T10:00:00.000Z'
+          }
+        ],
+        total: 1,
+        pagina: 1,
+        limite: 100
+      })
+    });
+  });
+  await page.route('**/api/evolucoes/modelos/modelo-evolucao-1', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        id: 'modelo-evolucao-1',
+        nome: 'Retorno padrão',
+        origem: 'clinica',
+        tipo: 'retorno',
+        tamanhoConteudo: 30,
+        conteudo: 'Paciente relata boa adesao. Orientacoes reforcadas.'
+      })
+    });
+  });
+
   await page.route('**/api/pacientes/paciente-1/evolucoes', async (route) => {
     if (route.request().method() === 'POST') {
       criouEvolucao = true;
@@ -1978,6 +2034,7 @@ async function prepararProntuarioMockado(page, {
 
   return {
     corpoDocumentoEmitido: () => corpoDocumentoEmitido,
+    modeloEvolucaoCriado: () => modeloEvolucaoCriado,
     criouEvolucao: () => criouEvolucao,
     criouTarefa: () => criouTarefa,
     criouMaterial: () => criouMaterial,
@@ -2976,6 +3033,71 @@ test.describe('prontuario do paciente', () => {
     await expect(page.getByText('Evolução clínica registrada.')).toBeVisible();
     await expect(page.getByText('Conduta ajustada')).toBeVisible();
     await expect(page.getByText('Aumentar ingestão de água no período da tarde.')).toBeVisible();
+    await assertSemOverflowHorizontal(page);
+  });
+
+  test('permite aplicar e salvar modelo de evolução clínica (PB-15)', async ({ page }) => {
+    const prontuario = await prepararProntuarioMockado(page);
+    await page.goto('/pacientes/paciente-1');
+
+    await page.getByRole('tab', { name: 'Atendimentos' }).click();
+    await expect(page.getByRole('heading', { name: 'Modelos de evolução' })).toBeVisible();
+
+    await page.getByLabel('Aplicar modelo à evolução').selectOption('modelo-evolucao-1');
+    await page.getByRole('button', { name: 'Aplicar' }).click();
+
+    await expect(page.getByLabel('Tipo da evolução')).toHaveValue('retorno');
+    await expect(page.getByLabel('Conteúdo da evolução')).toHaveValue('Paciente relata boa adesao. Orientacoes reforcadas.');
+    await expect(page.getByText('Modelo aplicado à evolução. Revise e registre para confirmar.')).toBeVisible();
+
+    await page.getByLabel('Salvar evolução atual como modelo').fill('Meu modelo de retorno');
+    await page.getByRole('button', { name: 'Salvar modelo' }).click();
+
+    await expect.poll(() => prontuario.modeloEvolucaoCriado()).toEqual({
+      nome: 'Meu modelo de retorno',
+      origem: 'pessoal',
+      tipo: 'retorno',
+      conteudo: 'Paciente relata boa adesao. Orientacoes reforcadas.'
+    });
+    await expect(page.getByText('Modelo salvo.')).toBeVisible();
+    await assertSemOverflowHorizontal(page);
+  });
+
+  test('pré-preenche peso e IMC quando há avaliação antropométrica de hoje (PB-15)', async ({ page }) => {
+    await prepararProntuarioMockado(page);
+    // Data real do dia do teste: a pre-preenchimento correlaciona por data
+    // civil, nao por vinculo formal de consulta (ver PLANO_FASE_271.md).
+    const hoje = new Date().toLocaleDateString('en-CA');
+    await page.route('**/api/pacientes/paciente-1/avaliacoes-antropometricas', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          avaliacoes: [
+            {
+              id: 'avaliacao-hoje', pacienteId: 'paciente-1', avaliadaEm: hoje, protocolo: 'nenhum',
+              medidas: { pesoKg: 70, alturaCm: 165 },
+              resultado: { imc: 24.5, protocoloAplicado: 'nenhum', avisos: [] },
+              criadoEm: `${hoje}T13:00:00.000Z`
+            },
+            {
+              id: 'avaliacao-1', pacienteId: 'paciente-1', avaliadaEm: '2026-06-21', protocolo: 'nenhum',
+              medidas: { pesoKg: 70.4, alturaCm: 165 },
+              resultado: { imc: 25.86, protocoloAplicado: 'nenhum', avisos: [] },
+              criadoEm: '2026-06-21T13:00:00.000Z'
+            }
+          ],
+          deltaUltimas: []
+        })
+      });
+    });
+    await page.goto('/pacientes/paciente-1');
+
+    await page.getByRole('tab', { name: 'Atendimentos' }).click();
+    await expect(
+      page.getByText('Peso e IMC da avaliação de hoje já foram pré-preenchidos abaixo — edite ou remova livremente.')
+    ).toBeVisible();
+    await expect(page.getByLabel('Conteúdo da evolução')).toHaveValue('Peso: 70,0 kg · IMC: 24,50 (avaliação de hoje)\n\n');
     await assertSemOverflowHorizontal(page);
   });
 

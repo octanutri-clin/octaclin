@@ -62,6 +62,7 @@ import { ExpandirCategoriaArquivosMidia1720000001045 } from './migracoes/1720000
 import { AdicionarPrioridadeAcompanhamento1720000001046 } from './migracoes/1720000001046-AdicionarPrioridadeAcompanhamento';
 import { EndurecerIntegridadeOverridePrioridade1720000001047 } from './migracoes/1720000001047-EndurecerIntegridadeOverridePrioridade';
 import { AdicionarAutomacaoExecutadaNotificacoes1720000001048 } from './migracoes/1720000001048-AdicionarAutomacaoExecutadaNotificacoes';
+import { CriarModelosEvolucaoClinica1720000001049 } from './migracoes/1720000001049-CriarModelosEvolucaoClinica';
 import { UserActionLogOrm } from '../auditoria/user-action-log.orm';
 import { ConsentimentoLgpdOrm } from '../lgpd/consentimento-lgpd.orm';
 import { TombstoneExclusaoLgpdOrm } from '../lgpd/tombstone-exclusao-lgpd.orm';
@@ -108,6 +109,7 @@ import { AcompanhamentoTarefaOrm } from '../../modulos/pacientes/infraestrutura/
 import { PrioridadeAcompanhamentoPacienteOrm } from '../../modulos/pacientes/infraestrutura/prioridade-acompanhamento-paciente.orm';
 import { PrioridadeAcompanhamentoHistoricoOrm } from '../../modulos/pacientes/infraestrutura/prioridade-acompanhamento-historico.orm';
 import { EvolucaoClinicaOrm } from '../../modulos/pacientes/infraestrutura/evolucao-clinica.orm';
+import { ModeloEvolucaoClinicaOrm } from '../../modulos/pacientes/infraestrutura/modelo-evolucao-clinica.orm';
 import { AvaliacaoAntropometricaOrm } from '../../modulos/pacientes/infraestrutura/avaliacao-antropometrica.orm';
 import { DocumentoEmitidoOrm } from '../../modulos/pacientes/infraestrutura/documento-emitido.orm';
 import { PacienteOrm } from '../../modulos/pacientes/infraestrutura/paciente.orm';
@@ -234,6 +236,7 @@ export function criarOpcoesTypeOrm(): TypeOrmModuleOptions & DataSourceOptions {
       PrioridadeAcompanhamentoPacienteOrm,
       PrioridadeAcompanhamentoHistoricoOrm,
       EvolucaoClinicaOrm,
+      ModeloEvolucaoClinicaOrm,
       AvaliacaoAntropometricaOrm,
       DocumentoEmitidoOrm,
       FiltroSalvoPacienteOrm,
@@ -355,7 +358,8 @@ export function criarOpcoesTypeOrm(): TypeOrmModuleOptions & DataSourceOptions {
         ExpandirCategoriaArquivosMidia1720000001045,
         AdicionarPrioridadeAcompanhamento1720000001046,
         EndurecerIntegridadeOverridePrioridade1720000001047,
-        AdicionarAutomacaoExecutadaNotificacoes1720000001048
+        AdicionarAutomacaoExecutadaNotificacoes1720000001048,
+        CriarModelosEvolucaoClinica1720000001049
       ],
     migrationsRun: executarMigracoesNoBoot(),
     synchronize: false,

@@ -29,6 +29,8 @@ import { Botao, classesBotao } from '@/components/ui/botao';
 import { Abas } from '@/components/ui/abas';
 import { AbaAntropometria } from './aba-antropometria';
 import { ResumoAntropometrico } from './resumo-antropometrico';
+import { formatarMetricaAntropometrica, METRICAS_ANTROPOMETRICAS } from './metricas-antropometricas';
+import { ModelosEvolucaoClinica } from './modelos-evolucao-clinica';
 import { AbaExamesLaboratoriais } from './aba-exames-laboratoriais';
 import { AbaEvolucaoFotografica } from './aba-evolucao-fotografica';
 import { AbaCondutasTerapeuticas } from './aba-condutas-terapeuticas';
@@ -72,11 +74,13 @@ import {
 import {
   criarEvolucaoClinica,
   criarTarefaAcompanhamento,
+  listarAvaliacoesAntropometricas,
   listarEvolucoesClinicas,
   listarLinhaDoTempoPaginada,
   listarTarefasAcompanhamento,
   obterPrioridadeAcompanhamento,
   obterProntuarioPaciente,
+  type AvaliacaoAntropometricaApi,
   type CategoriaTarefaAcompanhamentoApi,
   type EventoProntuarioPacienteApi,
   type EvolucaoClinicaApi,
@@ -225,6 +229,9 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
   const [carregandoEvolucoes, setCarregandoEvolucoes] = useState(false);
   const [evolucoesSolicitadas, setEvolucoesSolicitadas] = useState(false);
   const [evolucoesCarregadas, setEvolucoesCarregadas] = useState(false);
+  const [avaliacaoAntropometricaHoje, setAvaliacaoAntropometricaHoje] = useState<AvaliacaoAntropometricaApi | null>(
+    null
+  );
   const [carregandoTarefas, setCarregandoTarefas] = useState(false);
   const [tarefasSolicitadas, setTarefasSolicitadas] = useState(false);
   const [tarefasCarregadas, setTarefasCarregadas] = useState(false);
@@ -342,7 +349,39 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
     } finally {
       setCarregandoEvolucoes(false);
     }
+    // Recurso independente: uma falha aqui nunca derruba a tela de evolucoes,
+    // so deixa de pre-preencher peso/IMC (mesmo padrao ja usado para
+    // prioridade de acompanhamento nesta mesma tela).
+    try {
+      const serie = await listarAvaliacoesAntropometricas(pacienteId);
+      const hoje = new Date().toLocaleDateString('en-CA');
+      const maisRecenteHoje = serie.avaliacoes
+        .filter((avaliacao) => avaliacao.avaliadaEm === hoje)
+        .sort((a, b) => b.criadoEm.localeCompare(a.criadoEm))[0];
+      setAvaliacaoAntropometricaHoje(maisRecenteHoje ?? null);
+    } catch {
+      setAvaliacaoAntropometricaHoje(null);
+    }
   }, [pacienteId]);
+
+  // Pre-preenche peso/IMC quando ha avaliacao antropometrica de hoje, sem
+  // nunca sobrescrever conteudo que o profissional ja tenha digitado ou
+  // trazido de um modelo.
+  useEffect(() => {
+    if (!avaliacaoAntropometricaHoje) return;
+    setFormularioEvolucao((atual) => {
+      if (atual.conteudo.trim().length > 0) return atual;
+      const peso = METRICAS_ANTROPOMETRICAS.find((metrica) => metrica.id === 'peso')!;
+      const imc = METRICAS_ANTROPOMETRICAS.find((metrica) => metrica.id === 'imc')!;
+      const valorPeso = peso.ler(avaliacaoAntropometricaHoje);
+      const valorImc = imc.ler(avaliacaoAntropometricaHoje);
+      if (valorPeso === undefined && valorImc === undefined) return atual;
+      const partes: string[] = [];
+      if (valorPeso !== undefined) partes.push(`Peso: ${formatarMetricaAntropometrica(valorPeso, peso.casas)} kg`);
+      if (valorImc !== undefined) partes.push(`IMC: ${formatarMetricaAntropometrica(valorImc, imc.casas)}`);
+      return { ...atual, conteudo: `${partes.join(' · ')} (avaliação de hoje)\n\n` };
+    });
+  }, [avaliacaoAntropometricaHoje]);
 
   const carregarTarefas = useCallback(async () => {
     setCarregandoTarefas(true);
@@ -1252,6 +1291,13 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
           />
         ) : <EsqueletoPagina rotulo="Carregando evoluções clínicas" />
       ) : <>
+      {podeGerenciarPaciente ? <ModelosEvolucaoClinica
+        tipoAtual={() => formularioEvolucao.tipo}
+        conteudoAtual={() => formularioEvolucao.conteudo}
+        aoAplicar={(modelo) => setFormularioEvolucao((atual) => ({ ...atual, tipo: modelo.tipo, conteudo: modelo.conteudo }))}
+        desabilitado={salvandoEvolucao}
+      /> : null}
+
       {podeGerenciarPaciente ? <form onSubmit={registrarEvolucao} className="grid gap-3 rounded-md border border-linha bg-white p-4">
         <div>
           <h2 className="text-base font-semibold text-tinta">Nova evolução clínica</h2>
@@ -1284,6 +1330,11 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
         </div>
         <label className="grid gap-1 text-xs font-semibold text-texto-suave">
           Conteúdo da evolução
+          {avaliacaoAntropometricaHoje ? (
+            <p className="font-normal normal-case text-texto-suave">
+              Peso e IMC da avaliação de hoje já foram pré-preenchidos abaixo — edite ou remova livremente.
+            </p>
+          ) : null}
           <textarea
             className="min-h-[112px] rounded-md border border-linha px-3 py-2 text-sm font-normal text-tinta"
             value={formularioEvolucao.conteudo}

@@ -21,9 +21,10 @@ import { GuardaJwt } from '../../auth/apresentacao/guarda-jwt';
 import { GuardaPapeis } from '../../auth/apresentacao/guarda-papeis';
 import { GuardaPermissoes } from '../../auth/apresentacao/guarda-permissoes';
 import { UsuarioAutenticado } from '../../auth/dominio/usuario-autenticado';
-import { AtualizarPacienteDto, AtualizarTarefaAcompanhamentoDto, CriarAvaliacaoAntropometricaDto, CriarEvolucaoClinicaDto, CriarPacienteDto, CriarTarefaAcompanhamentoDto, ImportarPacientesDto, ListarAvaliacoesAntropometricasDto, ListarLinhaTempoProntuarioDto, ListarPacientesDto, SolicitarOverridePrioridadeAcompanhamentoDto, VerificarDuplicidadePacienteDto } from '../aplicacao/dtos';
+import { AtualizarPacienteDto, AtualizarTarefaAcompanhamentoDto, CriarAvaliacaoAntropometricaDto, CriarEvolucaoClinicaDto, CriarModeloEvolucaoClinicaDto, CriarPacienteDto, CriarTarefaAcompanhamentoDto, ImportarPacientesDto, ListarAvaliacoesAntropometricasDto, ListarLinhaTempoProntuarioDto, ListarModelosEvolucaoClinicaDto, ListarPacientesDto, SolicitarOverridePrioridadeAcompanhamentoDto, VerificarDuplicidadePacienteDto } from '../aplicacao/dtos';
 import { ServicoDuplicidadePacientes } from '../aplicacao/servico-duplicidade-pacientes';
 import { ServicoImportacaoPacientes } from '../aplicacao/servico-importacao-pacientes';
+import { ServicoModelosEvolucaoClinica } from '../aplicacao/servico-modelos-evolucao-clinica';
 import { ServicoPacientes } from '../aplicacao/servico-pacientes';
 
 @Controller('pacientes')
@@ -709,5 +710,39 @@ export class ControladorPacientes {
   private obterUserAgent(requisicao: Request): string | undefined {
     const userAgent = requisicao.headers['user-agent'];
     return Array.isArray(userAgent) ? userAgent.join(', ') : userAgent;
+  }
+}
+
+// Modelo de evolucao clinica nao pertence a um paciente (e do profissional ou
+// da clinica), entao a rota vive fora de `/pacientes/:id` -- mesmo padrao de
+// `ControladorModelosPlanoAlimentar` (Fase 269).
+@Controller('evolucoes/modelos')
+@UseGuards(GuardaJwt, GuardaPapeis, GuardaPermissoes)
+@Papeis('SuperAdmin', 'Professional')
+export class ControladorModelosEvolucaoClinica {
+  constructor(private readonly servico: ServicoModelosEvolucaoClinica) {}
+
+  @Get()
+  @Permissoes('pacientes.ler')
+  listar(@UsuarioAtual() usuario: UsuarioAutenticado, @Query() consulta: ListarModelosEvolucaoClinicaDto) {
+    return this.servico.listar(usuario.tenantId, usuario, consulta);
+  }
+
+  @Post()
+  @Permissoes('pacientes.gerenciar')
+  criar(@UsuarioAtual() usuario: UsuarioAutenticado, @Body() dados: CriarModeloEvolucaoClinicaDto) {
+    return this.servico.criar(usuario.tenantId, usuario, dados);
+  }
+
+  @Get(':modeloId')
+  @Permissoes('pacientes.ler')
+  obter(@UsuarioAtual() usuario: UsuarioAutenticado, @Param('modeloId', ParseUUIDPipe) modeloId: string) {
+    return this.servico.obter(usuario.tenantId, modeloId, usuario);
+  }
+
+  @Delete(':modeloId')
+  @Permissoes('pacientes.gerenciar')
+  arquivar(@UsuarioAtual() usuario: UsuarioAutenticado, @Param('modeloId', ParseUUIDPipe) modeloId: string) {
+    return this.servico.arquivar(usuario.tenantId, modeloId, usuario);
   }
 }

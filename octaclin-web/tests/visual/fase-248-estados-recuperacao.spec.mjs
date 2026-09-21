@@ -177,6 +177,7 @@ async function prepararProntuario(page) {
   await page.route('**/api/pacientes/paciente-1/avaliacoes-antropometricas', (route) =>
     responderJson(route, { avaliacoes: [], deltaUltimas: [] })
   );
+  await page.route('**/api/evolucoes/modelos*', (route) => responderJson(route, { itens: [], total: 0 }));
   await page.route('**/api/pacientes/paciente-1/evolucoes', async (route) => {
     if (route.request().method() !== 'POST') {
       await responderJson(route, []);

@@ -268,6 +268,71 @@ export async function listarEvolucoesClinicas(pacienteId: string): Promise<Evolu
   return resposta.json() as Promise<EvolucaoClinicaApi[]>;
 }
 
+export type OrigemModeloEvolucaoApi = 'pessoal' | 'clinica';
+
+export interface ModeloEvolucaoClinicaResumoApi {
+  id: string;
+  nome: string;
+  origem: OrigemModeloEvolucaoApi;
+  tipo: TipoEvolucaoClinicaApi;
+  tamanhoConteudo: number;
+  atualizadoEm: string;
+}
+
+export interface ModeloEvolucaoClinicaApi extends Omit<ModeloEvolucaoClinicaResumoApi, 'atualizadoEm'> {
+  conteudo: string;
+}
+
+// Modelos nao pertencem a um paciente: a rota vive fora de `/pacientes/:id`.
+const BASE_MODELOS_EVOLUCAO = '/api/evolucoes/modelos';
+
+export async function listarModelosEvolucaoClinica(): Promise<{ itens: ModeloEvolucaoClinicaResumoApi[]; total: number }> {
+  // Limite alto: o seletor ainda carrega tudo de uma vez, mesma decisao ja
+  // tomada para os modelos de plano alimentar (Fase 269).
+  const resposta = await fetch(`${BASE_MODELOS_EVOLUCAO}?pagina=1&limite=100`, { cache: 'no-store' });
+  if (!resposta.ok) {
+    await lancarErroApi(resposta);
+  }
+
+  return resposta.json() as Promise<{ itens: ModeloEvolucaoClinicaResumoApi[]; total: number }>;
+}
+
+export async function obterModeloEvolucaoClinica(modeloId: string): Promise<ModeloEvolucaoClinicaApi> {
+  const resposta = await fetch(`${BASE_MODELOS_EVOLUCAO}/${encodeURIComponent(modeloId)}`, { cache: 'no-store' });
+  if (!resposta.ok) {
+    await lancarErroApi(resposta);
+  }
+
+  return resposta.json() as Promise<ModeloEvolucaoClinicaApi>;
+}
+
+export async function criarModeloEvolucaoClinica(entrada: {
+  nome: string;
+  origem: OrigemModeloEvolucaoApi;
+  tipo?: TipoEvolucaoClinicaApi;
+  conteudo: string;
+}): Promise<ModeloEvolucaoClinicaResumoApi> {
+  const resposta = await fetch(BASE_MODELOS_EVOLUCAO, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(entrada)
+  });
+  if (!resposta.ok) {
+    await lancarErroApi(resposta);
+  }
+
+  return resposta.json() as Promise<ModeloEvolucaoClinicaResumoApi>;
+}
+
+export async function arquivarModeloEvolucaoClinica(modeloId: string): Promise<{ id: string; arquivadoEm: string }> {
+  const resposta = await fetch(`${BASE_MODELOS_EVOLUCAO}/${encodeURIComponent(modeloId)}`, { method: 'DELETE' });
+  if (!resposta.ok) {
+    await lancarErroApi(resposta);
+  }
+
+  return resposta.json() as Promise<{ id: string; arquivadoEm: string }>;
+}
+
 export async function criarTarefaAcompanhamento(
   pacienteId: string,
   entrada: CriarTarefaAcompanhamentoEntrada
