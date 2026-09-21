@@ -8,10 +8,10 @@ adesao baixa) esta concluido e a Onda 2 do audit de produto
 ao profissional) ja entregou o PB-13 (Fase 269, PR `#277`, merge `4e36bda`)
 e o PB-14 (Fase 270, PR `#278`, merge `4c896b0`); a ordem aprovada pelo
 proprietario e PB-13 -> PB-14 -> PB-15 -> PB-23 -> PB-16 -> PB-25. O PB-15
-(Fase 271, template de evolucao clinica com pre-preenchimento) e o PB-23
-(Fase 272, biblioteca de condutas/orientacoes reutilizaveis) foram
-implementados nesta mesma branch, com checks remotos e merge humano
-pendentes.
+(Fase 271, template de evolucao clinica com pre-preenchimento), o PB-23
+(Fase 272, biblioteca de condutas/orientacoes reutilizaveis) e o PB-16
+(Fase 273, resumo clinico do paciente) foram implementados nesta mesma
+branch, com checks remotos e merge humano pendentes.
 O programa de hardening PR 36-56 permanece como trilha separada. O pacote
 interno do PR 55 foi integrado, mas o proprietario adiou a contratacao do
 pentest para evitar custo neste momento; todos os gates externos seguem
@@ -3716,6 +3716,51 @@ publicado antes de ampliar a superficie de mudancas visuais.
     indisponivel neste sandbox Linux -- mesma limitacao de ambiente ja
     documentada, nao uma regressao desta fase.
   - Plano, risco e rollback: `docs/history/phases/PLANO_FASE_272.md`.
+
+- [x] Fase 273 - Resumo clinico do paciente (PB-16, quinto item da Onda 3).
+  [IMPLEMENTADA em 2026-09-21; checks remotos e merge humano pendentes]
+  - [x] Sem migration -- unica fase da Onda 3 ate aqui sem uma. Leitura do
+    codigo antes de implementar mostrou que quatro das cinco leituras
+    pedidas pelo audit ja tinham todo o dado buscado ou facilmente
+    buscavel (delta desde a ultima avaliacao e desde o inicio via
+    `compararAvaliacoes`, ja usado em `listarAvaliacoesAntropometricas`;
+    objetivo do plano vigente, ja buscado para `planoAtual`, so faltava
+    decifrar; adesao declarada recente, ja calculada em
+    `indicadoresRecentes`). A quinta ("exames fora da faixa") depende do
+    catalogo de marcadores (PB-17, ainda nao implementado) e ficou fora de
+    escopo, registrada como gap de produto.
+  - [x] Condutas vencendo (citado na "Melhoria" do audit, fora da lista
+    dos cinco) reaproveita a mesma decisao clinica ja usada no alerta do
+    dashboard (Fase 264.4) -- extraida para dois modulos compartilhados
+    (`infraestrutura/tempo/timezone-clinico.ts`,
+    `modulos/pacientes/dominio/condutas-vencidas.ts`) em vez de duplicar o
+    codigo, para as duas telas nunca divergirem se a regra mudar.
+    `ServicoDashboardClinico` refatorado para usar os modulos extraidos,
+    suite do dashboard (23/23) confirmando comportamento identico antes e
+    depois.
+  - [x] Nenhuma fronteira de autorizacao nova: tudo dentro do
+    `obterProntuario` existente, protegido pelo mesmo guard
+    (`pacientes.ler`), com `objetivoPlanoVigente` gated pela mesma
+    permissao (`planos_alimentares.ler`) que ja protege `planoAtual`.
+  - [x] Gate de acessibilidade encontrou uma violacao real (axe-core,
+    regra `definition-list`) na primeira versao do bloco novo -- `<dl>`
+    com `<div>` direto contendo `<p>` em vez de grupos `<dt>`/`<dd>`.
+    Corrigida antes do fechamento, seguindo o mesmo padrao ja usado no
+    bloco "Contexto operacional".
+  - Validacoes: backend typecheck e build; suite completa do backend
+    (210 suites, 2015 testes, 0 falhas; RLS via testcontainers SKIPPED por
+    falta de Docker no sandbox); web typecheck, lint (0 erros, mesmos
+    warnings preexistentes), build; `test:authz` (cadeia completa, sem par
+    novo pois nao ha BFF novo nesta fase); Playwright
+    `console-regression.spec.mjs` + `fase-248-estados-recuperacao.spec.mjs`
+    (64/64 desktop+mobile), `fase-249`/`fase-269`/`fase-270` (9/9 desktop),
+    `acessibilidade.spec.mjs` completo (136/136 desktop, incluindo os
+    cenarios que exercitam a aba Resumo); gates de raiz da Governanca de
+    repositorio (mesma lista das Fases 271/272); `git diff --check` e
+    `security:secrets`. `test:workflows-seguros` reprova so o subteste que
+    exige PowerShell, indisponivel neste sandbox Linux -- mesma limitacao
+    de ambiente ja documentada, nao uma regressao desta fase.
+  - Plano, risco e rollback: `docs/history/phases/PLANO_FASE_273.md`.
 
 Documento de execução e prioridades: `ROADMAP_QUALIDADE_SEGURANCA_FASES_248_262.md`.
 Matriz operacional: `MATRIZ_SKILLS_PLUGINS_MODELOS_FASES_243_248_262.md`.

@@ -2,6 +2,7 @@ import { BadRequestException, ConflictException, ForbiddenException, Injectable,
 import { And, ArrayContains, EntityManager, FindOptionsWhere, In, IsNull, LessThan, MoreThanOrEqual, Not, QueryFailedError, Raw } from 'typeorm';
 import { ExecutorTenant } from '../../../infraestrutura/banco-dados/executor-tenant';
 import { montarCsv } from '../../../infraestrutura/exportacao/csv';
+import { dataIsoNoTimezoneClinico, obterTimezoneClinico } from '../../../infraestrutura/tempo/timezone-clinico';
 import { CriptografiaDadosSensiveis } from '../../../infraestrutura/seguranca/criptografia-dados-sensiveis';
 import { AgendaConsultaOrm } from '../../agenda/infraestrutura/agenda-consulta.orm';
 import { ServicoPortalCliente } from '../../clientes/aplicacao/servico-portal-cliente';
@@ -48,6 +49,9 @@ import {
 } from './dtos';
 import { AcompanhamentoTarefaOrm } from '../infraestrutura/acompanhamento-tarefa.orm';
 import { AvaliacaoAntropometricaOrm } from '../infraestrutura/avaliacao-antropometrica.orm';
+import { CondutaTerapeuticaOrm } from '../infraestrutura/conduta-terapeutica.orm';
+import { CondutaTerapeuticaVersaoOrm } from '../infraestrutura/conduta-terapeutica-versao.orm';
+import { condutaEstaVencida, resolverVersaoVigentePorConduta } from '../dominio/condutas-vencidas';
 import { EvolucaoClinicaOrm } from '../infraestrutura/evolucao-clinica.orm';
 import { PacienteOrm } from '../infraestrutura/paciente.orm';
 import { PrioridadeAcompanhamentoHistoricoOrm } from '../infraestrutura/prioridade-acompanhamento-historico.orm';
@@ -924,7 +928,19 @@ export class ServicoPacientes {
 
       const podeLerPlanos = usuario.permissoes.includes('planos_alimentares.ler');
       const podeLerComunicacoes = usuario.permissoes.includes('comunicacoes.mensagens.ler');
-      const [consultas, envios, respostas, diarios, mensagens, evolucoes, tarefas, planoAtual] = await Promise.all([
+      const [
+        consultas,
+        envios,
+        respostas,
+        diarios,
+        mensagens,
+        evolucoes,
+        tarefas,
+        planoAtual,
+        avaliacoesRecentes,
+        primeiraAvaliacao,
+        condutasPaciente
+      ] = await Promise.all([
         gerenciador.getRepository(AgendaConsultaOrm).find({
           where: { tenantId, pacienteId },
           order: { inicioEm: 'DESC' },
@@ -970,7 +986,20 @@ export class ServicoPacientes {
               },
               order: { atualizadoEm: 'DESC' }
             })
-          : Promise.resolve(null)
+          : Promise.resolve(null),
+        gerenciador.getRepository(AvaliacaoAntropometricaOrm).find({
+          where: { tenantId, pacienteId, excluidaEm: IsNull() },
+          order: { avaliadaEm: 'DESC', criadoEm: 'DESC' },
+          take: 2
+        }),
+        gerenciador.getRepository(AvaliacaoAntropometricaOrm).find({
+          where: { tenantId, pacienteId, excluidaEm: IsNull() },
+          order: { avaliadaEm: 'ASC', criadoEm: 'ASC' },
+          take: 1
+        }),
+        gerenciador.getRepository(CondutaTerapeuticaOrm).find({
+          where: { tenantId, pacienteId, arquivadaEm: IsNull() }
+        })
       ]);
 
       const versaoPlanoAtual = planoAtual?.versaoPublicadaAtualId
@@ -984,6 +1013,55 @@ export class ServicoPacientes {
             }
           })
         : null;
+
+      const condutaIds = condutasPaciente.map((conduta) => conduta.id);
+      const versoesCondutas = condutaIds.length
+        ? await gerenciador.getRepository(CondutaTerapeuticaVersaoOrm).find({
+            where: {
+              tenantId,
+              condutaTerapeuticaId: In(condutaIds),
+              publicadaEm: Not(IsNull()),
+              descartadaEm: IsNull()
+            }
+          })
+        : [];
+      const hojeIsoTimezoneClinico = dataIsoNoTimezoneClinico(obterTimezoneClinico());
+      const vigentePorConduta = resolverVersaoVigentePorConduta(versoesCondutas);
+      const tipoPorCondutaId = new Map(condutasPaciente.map((conduta) => [conduta.id, conduta.tipo]));
+      const condutasVencendo: ProntuarioPacienteRespostaDto['resumo']['leituraClinica']['condutasVencendo'] = [];
+      for (const [condutaId, versao] of vigentePorConduta) {
+        if (!condutaEstaVencida(versao, hojeIsoTimezoneClinico)) continue;
+        condutasVencendo.push({
+          condutaId,
+          tipo: tipoPorCondutaId.get(condutaId)!,
+          validadeFim: new Date(`${versao.validadeFim}T00:00:00.000Z`)
+        });
+      }
+
+      const [avaliacaoAtualOrm, avaliacaoAnteriorOrm] = avaliacoesRecentes;
+      const avaliacaoAtual = avaliacaoAtualOrm ? this.mapearAvaliacaoAntropometrica(avaliacaoAtualOrm) : undefined;
+      const avaliacaoAnterior = avaliacaoAnteriorOrm
+        ? this.mapearAvaliacaoAntropometrica(avaliacaoAnteriorOrm)
+        : undefined;
+      const deltaUltimaAvaliacao =
+        avaliacaoAtual && avaliacaoAnterior
+          ? compararAvaliacoes(
+              { ...avaliacaoAnterior.resultado, pesoKg: avaliacaoAnterior.medidas.pesoKg },
+              { ...avaliacaoAtual.resultado, pesoKg: avaliacaoAtual.medidas.pesoKg }
+            )
+          : [];
+      const avaliacaoInicialOrm = primeiraAvaliacao[0];
+      const avaliacaoInicial =
+        avaliacaoInicialOrm && avaliacaoInicialOrm.id !== avaliacaoAtualOrm?.id
+          ? this.mapearAvaliacaoAntropometrica(avaliacaoInicialOrm)
+          : undefined;
+      const deltaDesdeInicio =
+        avaliacaoAtual && avaliacaoInicial
+          ? compararAvaliacoes(
+              { ...avaliacaoInicial.resultado, pesoKg: avaliacaoInicial.medidas.pesoKg },
+              { ...avaliacaoAtual.resultado, pesoKg: avaliacaoAtual.medidas.pesoKg }
+            )
+          : [];
 
       const idsQuestionarios = Array.from(new Set(envios.map((envio) => envio.questionarioId).filter(Boolean)));
       const questionarios = idsQuestionarios.length
@@ -1057,6 +1135,10 @@ export class ServicoPacientes {
                 }
               : undefined;
 
+      const objetivoPlanoVigente = versaoPlanoAtual?.objetivosCriptografados
+        ? this.criptografia.descriptografar(versaoPlanoAtual.objetivosCriptografados)
+        : undefined;
+
       return {
         paciente: this.mapearResposta(pacienteOrm),
         resumo: {
@@ -1094,7 +1176,13 @@ export class ServicoPacientes {
             ? { mensagemId: falhaComunicacao.id, registradaEm: falhaComunicacao.criadoEm }
             : undefined,
           indicadoresRecentes,
-          proximaConduta
+          proximaConduta,
+          leituraClinica: {
+            deltaUltimaAvaliacao,
+            deltaDesdeInicio,
+            objetivoPlanoVigente,
+            condutasVencendo
+          }
         },
         linhaDoTempo
       };

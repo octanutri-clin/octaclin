@@ -113,6 +113,33 @@ Atualizado em 2026-09-21.
   `1720000001050-CriarBibliotecaCondutas`, aditiva. Implementado nesta
   branch; checks remotos e merge humano pendentes. Plano e limites em
   `docs/history/phases/PLANO_FASE_272.md`.
+- Reconciliacao de 2026-09-21: Fase 273 entrega o **PB-16 (resumo clinico
+  do paciente)**, quinto item da Onda 3, na mesma branch das Fases 271/272.
+  Sem migration -- primeira fase da Onda 3 sem uma. Leitura do codigo antes
+  de implementar mostrou que quatro das cinco leituras pedidas pelo audit
+  ja tinham todo o dado buscado ou facilmente buscavel: delta desde a
+  ultima avaliacao e desde o inicio reaproveitam `compararAvaliacoes`, ja
+  usada por `listarAvaliacoesAntropometricas`; objetivo do plano vigente
+  ja era buscado para `planoAtual`, so faltava decifrar; adesao declarada
+  recente ja aparece em `indicadoresRecentes`. A quinta ("exames fora da
+  faixa") depende do catalogo de marcadores (PB-17, ainda nao
+  implementado) e ficou fora de escopo. Condutas vencendo (citado na
+  "Melhoria" do audit) reaproveita a mesma decisao clinica ja usada no
+  alerta do dashboard (Fase 264.4), extraida para dois modulos
+  compartilhados (`infraestrutura/tempo/timezone-clinico.ts`,
+  `modulos/pacientes/dominio/condutas-vencidas.ts`) em vez de duplicar o
+  codigo -- `ServicoDashboardClinico` refatorado para usar os modulos
+  extraidos, sem mudar comportamento (suite do dashboard 23/23 antes e
+  depois). Nenhuma fronteira de autorizacao nova: tudo dentro do
+  `obterProntuario` existente, mesmo guard `pacientes.ler`, com
+  `objetivoPlanoVigente` gated pela mesma permissao
+  `planos_alimentares.ler` ja usada em `planoAtual`. O gate de
+  acessibilidade encontrou uma violacao real (axe-core, regra
+  `definition-list`) na primeira versao do bloco novo no frontend -- `<dl>`
+  com `<div>` direto contendo `<p>` em vez de grupos `<dt>`/`<dd>` --
+  corrigida antes do fechamento. Implementado nesta branch; checks remotos
+  e merge humano pendentes. Plano e limites em
+  `docs/history/phases/PLANO_FASE_273.md`.
 - Reconciliacao de 2026-09-20: a Onda 3 do audit (devolver tempo ao
   profissional) comecou, com a ordem aprovada pelo proprietario:
   PB-13 -> PB-14 -> PB-15 -> PB-23 -> PB-16 -> PB-25 (este ultimo depende do

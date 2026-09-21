@@ -1603,7 +1603,12 @@ async function prepararProntuarioMockado(page, {
             ? '2026-07-29T18:00:00.000Z'
             : criouEvolucao
               ? '2026-07-22T18:00:00.000Z'
-              : '2026-07-22T16:00:00.000Z'
+              : '2026-07-22T16:00:00.000Z',
+          leituraClinica: {
+            deltaUltimaAvaliacao: [],
+            deltaDesdeInicio: [],
+            condutasVencendo: []
+          }
         },
         linhaDoTempo: eventos
       })

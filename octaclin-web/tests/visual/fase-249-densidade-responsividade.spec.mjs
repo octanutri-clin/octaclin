@@ -118,6 +118,11 @@ async function prepararConsole(page) {
             titulo: 'Revisar plano alimentar',
             descricao: 'Confirmar adesão e ajustar distribuição das refeições.',
             dataReferencia: '2026-08-24T13:00:00.000Z'
+          },
+          leituraClinica: {
+            deltaUltimaAvaliacao: [],
+            deltaDesdeInicio: [],
+            condutasVencendo: []
           }
         },
         linhaDoTempo: []

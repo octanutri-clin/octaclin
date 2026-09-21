@@ -4,6 +4,8 @@ import { MensagemNotificacaoOrm } from '../../modulos/comunicacoes/infraestrutur
 import { LogDiarioRapidoOrm } from '../../modulos/mobile/infraestrutura/log-diario-rapido.orm';
 import { ServicoPacientes } from '../../modulos/pacientes/aplicacao/servico-pacientes';
 import { AcompanhamentoTarefaOrm } from '../../modulos/pacientes/infraestrutura/acompanhamento-tarefa.orm';
+import { AvaliacaoAntropometricaOrm } from '../../modulos/pacientes/infraestrutura/avaliacao-antropometrica.orm';
+import { CondutaTerapeuticaOrm } from '../../modulos/pacientes/infraestrutura/conduta-terapeutica.orm';
 import { EvolucaoClinicaOrm } from '../../modulos/pacientes/infraestrutura/evolucao-clinica.orm';
 import { PacienteOrm } from '../../modulos/pacientes/infraestrutura/paciente.orm';
 import { PlanoAlimentarOrm } from '../../modulos/planos-alimentares/infraestrutura/plano-alimentar.orm';
@@ -172,7 +174,9 @@ function montarResumoSintetico(quantidadePorFonte: number) {
     [PlanoAlimentarVersaoOrm, repositorioCom('findOne', {
       id: 'versao-1', tenantId: 'tenant-1', planoId: 'plano-1', numero: 1, publicadaEm: instante(0)
     })],
-    [QuestionarioOrm, repositorioCom('find', questionarios)]
+    [QuestionarioOrm, repositorioCom('find', questionarios)],
+    [AvaliacaoAntropometricaOrm, repositorioCom('find', [])],
+    [CondutaTerapeuticaOrm, repositorioCom('find', [])]
   ]);
   const gerenciador = {
     getRepository: jest.fn((entidade: unknown) => repositorios.get(entidade)),
@@ -204,9 +208,9 @@ describe('benchmark sintetico do prontuario', () => {
     const resumoPequeno = await pequeno.servico.obterProntuario('tenant-1', 'paciente-1', usuarioSuperAdmin);
     const resumoCarregado = await carregado.servico.obterProntuario('tenant-1', 'paciente-1', usuarioSuperAdmin);
 
-    expect(totalOperacoes(pequeno.repositorios)).toBe(11);
-    expect(totalOperacoes(carregado.repositorios)).toBe(11);
-    expect(carregado.gerenciador.getRepository).toHaveBeenCalledTimes(11);
+    expect(totalOperacoes(pequeno.repositorios)).toBe(14);
+    expect(totalOperacoes(carregado.repositorios)).toBe(14);
+    expect(carregado.gerenciador.getRepository).toHaveBeenCalledTimes(14);
     expect(carregado.repositorios.get(QuestionarioOrm)?.find).toHaveBeenCalledTimes(1);
     expect(resumoPequeno.linhaDoTempo).toHaveLength(7);
     expect(resumoCarregado.linhaDoTempo).toHaveLength(80);

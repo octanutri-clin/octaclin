@@ -216,7 +216,12 @@ async function prepararProntuario(page) {
         mensagens: 0,
         evolucoes: criacoesEvolucao > 1 ? 1 : 0,
         tarefasPendentes: 0,
-        indicadoresRecentes: []
+        indicadoresRecentes: [],
+        leituraClinica: {
+          deltaUltimaAvaliacao: [],
+          deltaDesdeInicio: [],
+          condutasVencendo: []
+        }
       },
       linhaDoTempo: []
     });

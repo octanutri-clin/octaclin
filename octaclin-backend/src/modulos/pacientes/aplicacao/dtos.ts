@@ -419,6 +419,22 @@ export interface ProntuarioPacienteRespostaDto {
       referenciaId?: string;
       dataReferencia?: Date;
     };
+    // PB-16 (Fase 273): "os primeiros 10 segundos" do prontuario -- delta
+    // antropometrico, objetivo do plano vigente e condutas vencendo. Sem
+    // "exames fora da faixa": depende do catalogo de marcadores (PB-17),
+    // ainda nao implementado (ver PLANO_FASE_273.md, secao 3). Adesao
+    // declarada recente continua so em `indicadoresRecentes`, sem campo
+    // duplicado aqui.
+    leituraClinica: {
+      deltaUltimaAvaliacao: DeltaAntropometrico[];
+      deltaDesdeInicio: DeltaAntropometrico[];
+      objetivoPlanoVigente?: string;
+      condutasVencendo: Array<{
+        condutaId: string;
+        tipo: TipoCondutaTerapeutica;
+        validadeFim: Date;
+      }>;
+    };
   };
   linhaDoTempo: EventoProntuarioPacienteDto[];
 }

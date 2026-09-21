@@ -164,6 +164,50 @@ function formatarData(valor?: string) {
   return new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short', timeZone: 'UTC' }).format(data);
 }
 
+const ROTULO_DELTA_ANTROPOMETRICO: Record<string, { rotulo: string; unidade: string }> = {
+  pesoKg: { rotulo: 'Peso', unidade: 'kg' },
+  imc: { rotulo: 'IMC', unidade: '' },
+  rcq: { rotulo: 'RCQ', unidade: '' },
+  percentualGordura: { rotulo: 'Gordura corporal', unidade: '%' },
+  massaGordaKg: { rotulo: 'Massa gorda', unidade: 'kg' },
+  massaMagraKg: { rotulo: 'Massa magra', unidade: 'kg' }
+};
+
+const ROTULO_TIPO_CONDUTA: Record<string, string> = {
+  meta: 'Meta',
+  orientacao: 'Orientação',
+  suplemento: 'Suplemento',
+  produto: 'Produto',
+  formula_manipulada: 'Fórmula manipulada'
+};
+
+function formatarDelta(valor: number, casas = 1) {
+  return valor.toLocaleString('pt-BR', { minimumFractionDigits: casas, maximumFractionDigits: casas });
+}
+
+function DeltaAntropometricoLista({ titulo, deltas }: { titulo: string; deltas: ProntuarioPacienteApi['resumo']['leituraClinica']['deltaUltimaAvaliacao'] }) {
+  return (
+    <div className="border-l-2 border-primaria pl-3">
+      <dt className="text-xs font-semibold text-texto-suave">{titulo}</dt>
+      {deltas.length ? (
+        <dd className="mt-1 grid gap-1">
+          {deltas.map((delta) => {
+            const meta = ROTULO_DELTA_ANTROPOMETRICO[delta.campo] ?? { rotulo: delta.campo, unidade: '' };
+            const sinal = delta.variacao > 0 ? '+' : '';
+            return (
+              <p key={delta.campo} className="text-sm font-medium text-tinta">
+                {meta.rotulo}: {sinal}{formatarDelta(delta.variacao)} {meta.unidade}
+              </p>
+            );
+          })}
+        </dd>
+      ) : (
+        <dd className="mt-1 text-sm text-texto-suave">Sem avaliações suficientes para comparar.</dd>
+      )}
+    </div>
+  );
+}
+
 /** Fase 265: "Risco" era o rotulo ambiguo; o valor efetivo pode vir de override humano. */
 function rotuloFaixaPrioridadeAcompanhamento(faixa: FaixaPrioridadeAcompanhamentoApi) {
   return { baixa: 'Baixa', media: 'Média', alta: 'Alta' }[faixa];
@@ -1228,6 +1272,38 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
                     : 'Acesso não disponível'}
                 </dd>
                 {dados.resumo.falhaComunicacao ? <dd className="text-xs text-texto-suave">Registrada em {formatarDataHora(dados.resumo.falhaComunicacao.registradaEm)}</dd> : null}
+              </div>
+            </dl>
+          </section>
+          <section aria-labelledby="leitura-clinica-titulo" className="grid gap-4 rounded-md border border-linha bg-white p-4">
+            <div>
+              <h2 id="leitura-clinica-titulo" className="text-base font-semibold text-tinta">Leitura clínica</h2>
+              <p className="mt-1 text-sm text-texto-suave">Os primeiros sinais para orientar a consulta, sem abrir outra aba.</p>
+            </div>
+            <dl className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+              <DeltaAntropometricoLista titulo="Desde a última avaliação" deltas={dados.resumo.leituraClinica.deltaUltimaAvaliacao} />
+              <DeltaAntropometricoLista titulo="Desde o início" deltas={dados.resumo.leituraClinica.deltaDesdeInicio} />
+              <div className="border-l-2 border-primaria pl-3">
+                <dt className="text-xs font-semibold text-texto-suave">Objetivo do plano vigente</dt>
+                <dd className="mt-1 text-sm font-medium text-tinta">
+                  {permissoes.includes('planos_alimentares.ler')
+                    ? dados.resumo.leituraClinica.objetivoPlanoVigente ?? 'Nenhum plano publicado'
+                    : 'Acesso não disponível'}
+                </dd>
+              </div>
+              <div className="border-l-2 border-primaria pl-3">
+                <dt className="text-xs font-semibold text-texto-suave">Condutas vencendo</dt>
+                {dados.resumo.leituraClinica.condutasVencendo.length ? (
+                  <dd className="mt-1 grid gap-1">
+                    {dados.resumo.leituraClinica.condutasVencendo.map((conduta) => (
+                      <p key={conduta.condutaId} className="text-sm font-medium text-tinta">
+                        {ROTULO_TIPO_CONDUTA[conduta.tipo] ?? conduta.tipo} - venceu em {formatarData(conduta.validadeFim)}
+                      </p>
+                    ))}
+                  </dd>
+                ) : (
+                  <dd className="mt-1 text-sm text-texto-suave">Nenhuma</dd>
+                )}
               </div>
             </dl>
           </section>

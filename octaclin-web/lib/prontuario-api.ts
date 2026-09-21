@@ -64,6 +64,16 @@ export interface ProntuarioPacienteApi {
       referenciaId?: string;
       dataReferencia?: string;
     };
+    leituraClinica: {
+      deltaUltimaAvaliacao: DeltaAntropometricoApi[];
+      deltaDesdeInicio: DeltaAntropometricoApi[];
+      objetivoPlanoVigente?: string;
+      condutasVencendo: Array<{
+        condutaId: string;
+        tipo: 'meta' | 'orientacao' | 'suplemento' | 'produto' | 'formula_manipulada';
+        validadeFim: string;
+      }>;
+    };
   };
   linhaDoTempo: EventoProntuarioPacienteApi[];
 }

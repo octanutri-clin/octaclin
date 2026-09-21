@@ -10,6 +10,7 @@ import { MensagemNotificacaoOrm } from '../../comunicacoes/infraestrutura/mensag
 import { AcompanhamentoTarefaOrm } from '../../pacientes/infraestrutura/acompanhamento-tarefa.orm';
 import { CondutaTerapeuticaOrm } from '../../pacientes/infraestrutura/conduta-terapeutica.orm';
 import { CondutaTerapeuticaVersaoOrm } from '../../pacientes/infraestrutura/conduta-terapeutica-versao.orm';
+import { condutaEstaVencida, resolverVersaoVigentePorConduta } from '../../pacientes/dominio/condutas-vencidas';
 import { PacienteOrm } from '../../pacientes/infraestrutura/paciente.orm';
 import { ProfissionalOrm } from '../../profissionais/infraestrutura/profissional.orm';
 import { EnvioQuestionarioOrm } from '../../questionarios/infraestrutura/envio-questionario.orm';
@@ -32,9 +33,12 @@ import {
   TarefaVencidaDashboardClinicoDto
 } from './dtos-dashboard-clinico';
 import { DashboardAlertaOcultoOrm } from '../infraestrutura/dashboard-alerta-oculto.orm';
+import {
+  dataIsoNoTimezoneClinico as calcularDataIsoNoTimezoneClinico,
+  obterTimezoneClinico as calcularTimezoneClinico
+} from '../../../infraestrutura/tempo/timezone-clinico';
 
 const LIMITE_FILA = 50;
-const TIMEZONE_CLINICO_PADRAO = 'America/Sao_Paulo';
 const STATUS_PACIENTE_INATIVO = new Set(['inativo', 'pausado', 'encerrado', 'fechado']);
 const STATUS_COMUNICACAO_ALERTA = new Set(['pendente', 'falhou', 'recebido']);
 const STATUS_CONSULTA_ATIVA = new Set(['agendada', 'reagendada']);
@@ -488,35 +492,24 @@ export class ServicoDashboardClinico {
         .map((conduta) => [conduta.id, conduta.pacienteId])
     );
 
-    const numeroVencedorPorConduta = new Map<string, number>();
-    const vencidasPorConduta = new Map<string, CondutaVencidaResolvida>();
-    for (const versao of versoes) {
-      const pacienteId = condutasEscopo.get(versao.condutaTerapeuticaId);
-      if (
-        !pacienteId ||
-        versao.tenantId !== tenantId ||
-        !versao.publicadaEm ||
-        versao.descartadaEm ||
-        !versao.validadeFim ||
-        versao.validadeFim >= hojeIso
-      ) {
-        continue;
-      }
-      const numeroAtual = numeroVencedorPorConduta.get(versao.condutaTerapeuticaId) ?? -1;
-      if (versao.numero > numeroAtual) {
-        numeroVencedorPorConduta.set(versao.condutaTerapeuticaId, versao.numero);
-        vencidasPorConduta.set(versao.condutaTerapeuticaId, {
-          condutaId: versao.condutaTerapeuticaId,
-          pacienteId,
-          validadeFim: new Date(`${versao.validadeFim}T00:00:00.000Z`)
-        });
-      }
+    const versoesNoEscopo = versoes.filter(
+      (versao) => versao.tenantId === tenantId && condutasEscopo.has(versao.condutaTerapeuticaId)
+    );
+    const vigentePorConduta = resolverVersaoVigentePorConduta(versoesNoEscopo);
+    const vencidas: CondutaVencidaResolvida[] = [];
+    for (const [condutaId, versao] of vigentePorConduta) {
+      if (!condutaEstaVencida(versao, hojeIso)) continue;
+      vencidas.push({
+        condutaId,
+        pacienteId: condutasEscopo.get(condutaId)!,
+        validadeFim: new Date(`${versao.validadeFim}T00:00:00.000Z`)
+      });
     }
-    return [...vencidasPorConduta.values()];
+    return vencidas;
   }
 
   private dataIsoNoTimezoneClinico(): string {
-    return new Intl.DateTimeFormat('en-CA', { timeZone: this.obterTimezoneClinico() }).format(new Date());
+    return calcularDataIsoNoTimezoneClinico(this.obterTimezoneClinico());
   }
 
   private montarFormularios(
@@ -869,13 +862,7 @@ export class ServicoDashboardClinico {
   }
 
   private obterTimezoneClinico(): string {
-    const configurado = process.env.GOOGLE_CALENDAR_TIMEZONE?.trim() || TIMEZONE_CLINICO_PADRAO;
-    try {
-      new Intl.DateTimeFormat('en-US', { timeZone: configurado }).format();
-      return configurado;
-    } catch {
-      return TIMEZONE_CLINICO_PADRAO;
-    }
+    return calcularTimezoneClinico();
   }
 
   private extrairPartesData(
