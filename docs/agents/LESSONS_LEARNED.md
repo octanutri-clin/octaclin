@@ -138,3 +138,23 @@ intercambiaveis. Correcao: normalizar antes de casar conteudo, usar paths e
 comandos apropriados ao shell e confirmar o processo real. Como nao repetir:
 consultar o playbook antes de improvisar. Controle: `ENVIRONMENT_PLAYBOOK.md`.
 Status do controle: documented.
+
+## 2026-09-21 - Inventario de seguranca venceu e travou main e 15 PRs
+
+Problema: a causa `SQ-2026-004` chegou ao `revisarEm` (2026-09-20) e, na virada
+do dia, o check "Governanca de repositorio" passou a falhar em `main` e em todos
+os 15 PRs abertos, 13 deles do Dependabot. Nenhum diff causou a falha: ela e
+disparada por data. Causa: `capturar-inventario-security-quality.mjs` so roda
+onde existe `gh` com escopo `security_events`, ou seja, na maquina de alguem;
+nenhum job avisa antes do vencimento. O inventario so envelhece em silencio ate
+detonar. Correcao: a revisao foi feita de verdade -- consulta ao registry
+mostrou que o digest da base do ia-service, fixado em 2026-09-01, estava
+desatualizado; o PR `#293` reancorou no indice atual, o CI provou compatibilidade
+e os 3 alertas critical sairam do Security tab, porque o upstream publicou
+correcao (5.40.1-6+deb13u1). A causa passou a `mitigado` com a evidencia datada.
+Como nao repetir: tratar `revisarEm` como prazo operacional com aviso previo, e
+nao como alarme que so toca depois de vencido; renovar data sem revisao e falso
+verde, e o SLA por severidade existe justamente para impedir isso. Controle:
+pendente -- job que avise antes do vencimento, sem jamais renovar a data
+sozinho, porque renovacao automatica seria uma maquina de falso verde. Status do
+controle: proposed.
