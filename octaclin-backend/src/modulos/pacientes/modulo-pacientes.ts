@@ -40,6 +40,7 @@ import { ServicoExamesLaboratoriais } from './aplicacao/servico-exames-laborator
 import { ServicoConsentimentosEvolucaoFotografica } from './aplicacao/servico-consentimentos-evolucao-fotografica';
 import { ServicoEvolucoesFotograficas } from './aplicacao/servico-evolucoes-fotograficas';
 import { ServicoCondutasTerapeuticas } from './aplicacao/servico-condutas-terapeuticas';
+import { ServicoBibliotecaCondutas } from './aplicacao/servico-biblioteca-condutas';
 import { ServicoFiltrosSalvosPacientes } from './aplicacao/servico-filtros-salvos-pacientes';
 import { ServicoPortalPaciente } from './aplicacao/servico-portal-paciente';
 import { ControladorConvitesPaciente } from './apresentacao/controlador-convites-paciente';
@@ -49,7 +50,10 @@ import { ControladorPerfilCadastroPaciente } from './apresentacao/controlador-pe
 import { ControladorExamesLaboratoriais } from './apresentacao/controlador-exames-laboratoriais';
 import { ControladorConsentimentosEvolucaoFotografica } from './apresentacao/controlador-consentimentos-evolucao-fotografica';
 import { ControladorEvolucoesFotograficas } from './apresentacao/controlador-evolucoes-fotograficas';
-import { ControladorCondutasTerapeuticas } from './apresentacao/controlador-condutas-terapeuticas';
+import {
+  ControladorBibliotecaCondutas,
+  ControladorCondutasTerapeuticas
+} from './apresentacao/controlador-condutas-terapeuticas';
 import { ControladorFiltrosSalvosPacientes } from './apresentacao/controlador-filtros-salvos-pacientes';
 import { ControladorPortalPaciente } from './apresentacao/controlador-portal-paciente';
 import { AcompanhamentoTarefaOrm } from './infraestrutura/acompanhamento-tarefa.orm';
@@ -64,6 +68,7 @@ import { ConsentimentoEvolucaoFotograficaOrm } from './infraestrutura/consentime
 import { EvolucaoFotograficaOrm } from './infraestrutura/evolucao-fotografica.orm';
 import { EvolucaoFotograficaArquivoOrm } from './infraestrutura/evolucao-fotografica-arquivo.orm';
 import { CondutaTerapeuticaOrm } from './infraestrutura/conduta-terapeutica.orm';
+import { BibliotecaCondutaOrm } from './infraestrutura/biblioteca-conduta.orm';
 import { CondutaTerapeuticaVersaoOrm } from './infraestrutura/conduta-terapeutica-versao.orm';
 import { FiltroSalvoPacienteOrm } from './infraestrutura/filtro-salvo-paciente.orm';
 import { PrioridadeAcompanhamentoPacienteOrm } from './infraestrutura/prioridade-acompanhamento-paciente.orm';
@@ -109,6 +114,7 @@ const processadores = deveExecutarProcessadores() ? [ProcessadorRecalculoPriorid
       EvolucaoFotograficaArquivoOrm,
       ArquivoMidiaOrm,
       CondutaTerapeuticaOrm,
+      BibliotecaCondutaOrm,
       CondutaTerapeuticaVersaoOrm,
       FiltroSalvoPacienteOrm,
       PrioridadeAcompanhamentoPacienteOrm,
@@ -132,6 +138,7 @@ const processadores = deveExecutarProcessadores() ? [ProcessadorRecalculoPriorid
     ControladorConsentimentosEvolucaoFotografica,
     ControladorEvolucoesFotograficas,
     ControladorCondutasTerapeuticas,
+    ControladorBibliotecaCondutas,
     ControladorConvitesPaciente,
     ControladorPortalPaciente,
     ControladorDocumentosClinicos,
@@ -146,6 +153,7 @@ const processadores = deveExecutarProcessadores() ? [ProcessadorRecalculoPriorid
     ServicoConsentimentosEvolucaoFotografica,
     ServicoEvolucoesFotograficas,
     ServicoCondutasTerapeuticas,
+    ServicoBibliotecaCondutas,
     ServicoArmazenamentoObjetos,
     ServicoImportacaoPacientes,
     ServicoConvitesPaciente,

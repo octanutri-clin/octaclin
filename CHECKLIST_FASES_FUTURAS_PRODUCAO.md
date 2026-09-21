@@ -1,15 +1,17 @@
 # OctaClin - Checklist vivo de fases futuras ate producao
 
-Atualizado em 2026-09-21. Fases 256 a 261, 263 a 270 e 271 concluidas; Fase
-262 permanece em andamento pelos gates externos do piloto. Com a Fase 268
-mergeada (PR `#275`, merge `306d2ed`), o PB-05 (alerta de check-in com
+Atualizado em 2026-09-21. Fases 256 a 261, 263 a 270, 271 e 272 concluidas;
+Fase 262 permanece em andamento pelos gates externos do piloto. Com a Fase
+268 mergeada (PR `#275`, merge `306d2ed`), o PB-05 (alerta de check-in com
 adesao baixa) esta concluido e a Onda 2 do audit de produto
 (PB-01 -> PB-02 -> PB-03 -> PB-05) esta completa. A Onda 3 (devolver tempo
 ao profissional) ja entregou o PB-13 (Fase 269, PR `#277`, merge `4e36bda`)
 e o PB-14 (Fase 270, PR `#278`, merge `4c896b0`); a ordem aprovada pelo
 proprietario e PB-13 -> PB-14 -> PB-15 -> PB-23 -> PB-16 -> PB-25. O PB-15
-(Fase 271, template de evolucao clinica com pre-preenchimento) foi
-implementado nesta branch, com checks remotos e merge humano pendentes.
+(Fase 271, template de evolucao clinica com pre-preenchimento) e o PB-23
+(Fase 272, biblioteca de condutas/orientacoes reutilizaveis) foram
+implementados nesta mesma branch, com checks remotos e merge humano
+pendentes.
 O programa de hardening PR 36-56 permanece como trilha separada. O pacote
 interno do PR 55 foi integrado, mas o proprietario adiou a contratacao do
 pentest para evitar custo neste momento; todos os gates externos seguem
@@ -3674,6 +3676,47 @@ publicado antes de ampliar a superficie de mudancas visuais.
     fase.
   - Plano, risco e rollback: `docs/history/phases/PLANO_FASE_271.md`.
 
+- [x] Fase 272 - Biblioteca de condutas/orientacoes reutilizaveis (PB-23,
+  quarto item da Onda 3). [IMPLEMENTADA em 2026-09-21; checks remotos e
+  merge humano pendentes]
+  - [x] O documento de auditoria pede para replicar a biblioteca de
+    perguntas de `questionarios` ("nao e preciso inventar padrao novo").
+    Leitura do codigo antes de implementar mostrou tres pontos desse padrao
+    que nao se aplicam a condutas sem custo real, e a decisao para cada um:
+    tabela dedicada em vez de flag na tabela real (conduta exige
+    `pacienteId`, pergunta nao), sem rota de "aplicar" (mesmo principio ja
+    usado no PB-13/PB-15, o cliente le e pre-preenche localmente), e sem
+    categoria livre nova -- reusa o enum `TipoCondutaTerapeutica` ja
+    existente, para nao duplicar classificacao.
+  - [x] `titulo`/`conteudo` da biblioteca sao cifrados em repouso, como a
+    tabela real `condutas_terapeuticas_versoes` -- e o mesmo tipo de
+    orientacao clinica. Por isso, diferente da biblioteca de perguntas
+    (que busca por texto em claro), esta biblioteca nao tem busca textual
+    server-side, so filtro por `tipo`; a UI lista ate 100 itens num
+    seletor simples, mesma UX de `ModelosPlanoAlimentar`/
+    `ModelosEvolucaoClinica`, sem trocar seguranca por conveniencia.
+  - [x] Biblioteca sempre do tenant inteiro (sem separacao pessoal/clinica,
+    diferente do PB-13/PB-15): e conhecimento da clinica, mesma decisao ja
+    usada na biblioteca de perguntas.
+  - [x] Sem visibilidade pessoal/clinica a decidir, o servico ficou mais
+    simples que `ServicoModelosEvolucaoClinica` -- nenhum dominio dedicado
+    foi necessario.
+  - [x] Unica migration da fase: `1720000001050-CriarBibliotecaCondutas`,
+    aditiva.
+  - Validacoes: backend typecheck e build; suite completa do backend
+    (208 suites, 2002 testes, 0 falhas; RLS via testcontainers SKIPPED por
+    falta de Docker no sandbox); web typecheck, lint (0 erros, 2 warnings
+    novos da mesma classe ja tolerada); build; `test:authz` com o par novo
+    `biblioteca-condutas-bff`; Playwright `console-regression.spec.mjs`
+    completo (120/120, desktop+mobile, incluindo o cenario novo do PB-23 e
+    sem regredir a jornada pre-existente da Fase 239 de conduta
+    terapeutica); gates de raiz da Governanca de repositorio (mesma lista
+    da Fase 271); `git diff --check` e `security:secrets`.
+    `test:workflows-seguros` reprova so o subteste que exige PowerShell,
+    indisponivel neste sandbox Linux -- mesma limitacao de ambiente ja
+    documentada, nao uma regressao desta fase.
+  - Plano, risco e rollback: `docs/history/phases/PLANO_FASE_272.md`.
+
 Documento de execução e prioridades: `ROADMAP_QUALIDADE_SEGURANCA_FASES_248_262.md`.
 Matriz operacional: `MATRIZ_SKILLS_PLUGINS_MODELOS_FASES_243_248_262.md`.
 
@@ -4114,11 +4157,11 @@ Fonte canonica de escopo, gates e skills do Claude Code:
     provisionado; a issue GitHub `#234` continua aberta e este debito nao foi
     convertido em `PASS` pela conclusao da fase.
 
-Proximo item: concluir os checks remotos e o merge humano da Fase 271
-(PB-15, terceiro item da Onda 3); depois seguir a ordem aprovada pelo
-proprietario para a Onda 3 -- PB-23, PB-16 e por ultimo PB-25, que depende
-do PB-16. O PB-13 foi entregue pela Fase 269 (PR `#277`, merge `4e36bda`) e
-o PB-14 pela Fase 270 (PR `#278`, merge `4c896b0`). A Onda 2
+Proximo item: concluir os checks remotos e o merge humano das Fases 271
+(PB-15) e 272 (PB-23, quarto item da Onda 3); depois seguir a ordem
+aprovada pelo proprietario para a Onda 3 -- PB-16 e por ultimo PB-25, que
+depende do PB-16. O PB-13 foi entregue pela Fase 269 (PR `#277`, merge
+`4e36bda`) e o PB-14 pela Fase 270 (PR `#278`, merge `4c896b0`). A Onda 2
 (PB-01 -> PB-02 -> PB-03 -> PB-05) esta completa. PR 55 permanece adiado e
 pendente; PR 56 continua condicionado a decisao explicita de distribuir o
 Mobile.

@@ -91,6 +91,28 @@ Atualizado em 2026-09-21.
   `1720000001049-CriarModelosEvolucaoClinica`, aditiva. Implementado nesta
   branch; checks remotos e merge humano pendentes. Plano e limites em
   `docs/history/phases/PLANO_FASE_271.md`.
+- Reconciliacao de 2026-09-21: Fase 272 entrega o **PB-23 (biblioteca de
+  condutas/orientacoes reutilizaveis)**, quarto item da Onda 3, na mesma
+  branch da Fase 271. O audit pede para replicar a biblioteca de perguntas
+  de `questionarios` ("nao e preciso inventar padrao novo"); a leitura do
+  codigo antes de implementar mostrou tres pontos desse padrao que nao se
+  aplicam a condutas sem custo real -- pergunta reaproveita a propria
+  tabela via flag porque ja precisa de um `questionarioId`, conduta sempre
+  precisa de um `pacienteId` -- entao a biblioteca usa tabela dedicada
+  (`biblioteca_condutas`), mesmo desenho ja validado no PB-13/PB-15; sem
+  rota de "aplicar" (mesmo principio de nao duplicar a validacao clinica);
+  e sem categoria livre nova, reaproveitando o enum `TipoCondutaTerapeutica`
+  ja existente em vez de uma segunda classificacao paralela. Diferente do
+  PB-13/PB-15, a biblioteca e sempre do tenant inteiro (sem separacao
+  pessoal/clinica), mesma decisao ja usada na biblioteca de perguntas.
+  `titulo`/`conteudo` sao cifrados em repouso como a conduta real -- por
+  isso, diferente da biblioteca de perguntas (que busca por texto em
+  claro), esta nao tem busca textual server-side, so filtro por `tipo`; a
+  UI lista ate 100 itens, mesma UX ja usada nos modelos de plano
+  alimentar/evolucao clinica. Unica migration:
+  `1720000001050-CriarBibliotecaCondutas`, aditiva. Implementado nesta
+  branch; checks remotos e merge humano pendentes. Plano e limites em
+  `docs/history/phases/PLANO_FASE_272.md`.
 - Reconciliacao de 2026-09-20: a Onda 3 do audit (devolver tempo ao
   profissional) comecou, com a ordem aprovada pelo proprietario:
   PB-13 -> PB-14 -> PB-15 -> PB-23 -> PB-16 -> PB-25 (este ultimo depende do

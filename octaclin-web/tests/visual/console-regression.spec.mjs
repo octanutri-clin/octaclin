@@ -1063,6 +1063,7 @@ async function prepararProntuarioMockado(page, {
   let documentos = [];
   let corpoDocumentoEmitido = null;
   let modeloEvolucaoCriado = null;
+  let itemBibliotecaCondutaCriado = null;
   let statusPortal = statusPortalInicial;
   let revogouConvite = false;
   let desativouContaAcesso = false;
@@ -1241,6 +1242,58 @@ async function prepararProntuarioMockado(page, {
       body: JSON.stringify(new URL(route.request().url()).pathname.endsWith('/profissional-1')
         ? profissional
         : { itens: [profissional], total: 1 })
+    });
+  });
+
+  // Biblioteca de condutas (PB-23): um item ja existente por padrao, para os
+  // testes de "aplicar" nao dependerem de round-trip de criacao; testes que
+  // exercitam "salvar na biblioteca" capturam o corpo em
+  // `itemBibliotecaCondutaCriado`.
+  await page.route('**/api/biblioteca-condutas*', async (route) => {
+    if (route.request().method() === 'POST') {
+      itemBibliotecaCondutaCriado = route.request().postDataJSON();
+      await route.fulfill({
+        status: 201,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          id: 'biblioteca-conduta-nova',
+          nome: itemBibliotecaCondutaCriado.nome,
+          tipo: itemBibliotecaCondutaCriado.tipo,
+          tamanhoConteudo: itemBibliotecaCondutaCriado.conteudo.length
+        })
+      });
+      return;
+    }
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        itens: [
+          {
+            id: 'biblioteca-conduta-1',
+            nome: 'Orientação pós-consulta padrão',
+            tipo: 'orientacao',
+            tamanhoConteudo: 40,
+            atualizadoEm: '2026-07-20T10:00:00.000Z'
+          }
+        ],
+        total: 1,
+        pagina: 1,
+        limite: 100
+      })
+    });
+  });
+  await page.route('**/api/biblioteca-condutas/biblioteca-conduta-1', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        id: 'biblioteca-conduta-1',
+        nome: 'Orientação pós-consulta padrão',
+        tipo: 'orientacao',
+        tamanhoConteudo: 40,
+        conteudo: 'Manter hidratacao e retornar em 30 dias caso persista.'
+      })
     });
   });
 
@@ -2035,6 +2088,7 @@ async function prepararProntuarioMockado(page, {
   return {
     corpoDocumentoEmitido: () => corpoDocumentoEmitido,
     modeloEvolucaoCriado: () => modeloEvolucaoCriado,
+    itemBibliotecaCondutaCriado: () => itemBibliotecaCondutaCriado,
     criouEvolucao: () => criouEvolucao,
     criouTarefa: () => criouTarefa,
     criouMaterial: () => criouMaterial,
@@ -3159,6 +3213,39 @@ test.describe('prontuario do paciente', () => {
     await expect.poll(() => prontuario.condutas()[0]?.arquivadaEm).toBeTruthy();
     await expect(page.getByText('Conduta arquivada.')).toBeVisible();
     await expect(page.getByText('Arquivada', { exact: true })).toBeVisible();
+    await assertSemOverflowHorizontal(page);
+  });
+
+  test('permite aplicar e salvar item na biblioteca de condutas (PB-23)', async ({ page }) => {
+    const prontuario = await prepararProntuarioMockado(page);
+    await page.goto('/pacientes/paciente-1');
+
+    await page.getByRole('tablist', { name: 'Áreas principais do prontuário' }).getByRole('tab', { name: 'Plano' }).click();
+    const subareas = page.getByRole('tablist', { name: 'Subáreas de Plano' });
+    await subareas.getByRole('tab', { name: 'Acompanhamento' }).focus();
+    await page.keyboard.press('ArrowRight');
+    await expect(subareas.getByRole('tab', { name: 'Condutas terapêuticas' })).toHaveAttribute('aria-selected', 'true');
+    await expect(page.getByRole('heading', { name: 'Biblioteca de condutas' })).toBeVisible();
+
+    await page.getByLabel('Aplicar item da biblioteca').selectOption('biblioteca-conduta-1');
+    await page.getByRole('button', { name: 'Aplicar' }).click();
+
+    await expect(page.getByLabel('Tipo')).toHaveValue('orientacao');
+    await expect(page.getByLabel('Título')).toHaveValue('Orientação pós-consulta padrão');
+    await expect(page.getByLabel('Conteúdo documentado')).toHaveValue(
+      'Manter hidratacao e retornar em 30 dias caso persista.'
+    );
+    await expect(page.getByText('Item aplicado. Revise antes de criar o rascunho.')).toBeVisible();
+
+    await page.getByLabel('Salvar conduta atual na biblioteca').fill('Minha orientação padrão');
+    await page.getByRole('button', { name: 'Salvar na biblioteca' }).click();
+
+    await expect.poll(() => prontuario.itemBibliotecaCondutaCriado()).toEqual({
+      nome: 'Minha orientação padrão',
+      tipo: 'orientacao',
+      conteudo: 'Manter hidratacao e retornar em 30 dias caso persista.'
+    });
+    await expect(page.getByText('Item salvo na biblioteca.')).toBeVisible();
     await assertSemOverflowHorizontal(page);
   });
 

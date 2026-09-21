@@ -633,6 +633,57 @@ export class AtualizarRascunhoCondutaTerapeuticaDto {
   validadeFim?: string;
 }
 
+const TIPOS_CONDUTA_TERAPEUTICA = ['meta', 'orientacao', 'suplemento', 'produto', 'formula_manipulada'] as const;
+// Mesmo teto de paginacao dos modelos de plano alimentar/evolucao clinica.
+const PAGINA_MAXIMA_BIBLIOTECA_CONDUTAS = 1_000;
+
+export class CriarBibliotecaCondutaDto {
+  @IsString()
+  @MinLength(1)
+  @MaxLength(180)
+  nome: string;
+
+  @IsIn(TIPOS_CONDUTA_TERAPEUTICA)
+  tipo: TipoCondutaTerapeutica;
+
+  @IsString()
+  @MinLength(3)
+  @MaxLength(6000)
+  conteudo: string;
+}
+
+export class ListarBibliotecaCondutasDto {
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(PAGINA_MAXIMA_BIBLIOTECA_CONDUTAS)
+  pagina = 1;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(100)
+  limite = 25;
+
+  @IsOptional()
+  @IsIn(TIPOS_CONDUTA_TERAPEUTICA)
+  tipo?: TipoCondutaTerapeutica;
+}
+
+export interface BibliotecaCondutaResumoRespostaDto {
+  id: string;
+  nome: string;
+  tipo: TipoCondutaTerapeutica;
+  tamanhoConteudo: number;
+  atualizadoEm: Date;
+}
+
+export interface BibliotecaCondutaRespostaDto extends Omit<BibliotecaCondutaResumoRespostaDto, 'atualizadoEm'> {
+  conteudo: string;
+}
+
 export interface TarefaAcompanhamentoRespostaDto {
   id: string;
   tenantId: string;

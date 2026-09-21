@@ -46,3 +46,36 @@ export function atualizarRascunhoCondutaTerapeutica(pacienteId: string, condutaI
 export function publicarCondutaTerapeutica(pacienteId: string, condutaId: string) { return requisitar<CondutaTerapeuticaApi>(`${base(pacienteId)}/${encodeURIComponent(condutaId)}/publicacao`, { method: 'POST' }); }
 export function criarNovaVersaoCondutaTerapeutica(pacienteId: string, condutaId: string) { return requisitar<CondutaTerapeuticaApi>(`${base(pacienteId)}/${encodeURIComponent(condutaId)}/nova-versao`, { method: 'POST' }); }
 export function arquivarCondutaTerapeutica(pacienteId: string, condutaId: string) { return requisitar<{ id: string; arquivadaEm: string }>(`${base(pacienteId)}/${encodeURIComponent(condutaId)}/arquivamento`, { method: 'POST' }); }
+
+export interface BibliotecaCondutaResumoApi {
+  id: string;
+  nome: string;
+  tipo: TipoCondutaTerapeuticaApi;
+  tamanhoConteudo: number;
+  atualizadoEm: string;
+}
+
+export interface BibliotecaCondutaApi extends Omit<BibliotecaCondutaResumoApi, 'atualizadoEm'> {
+  conteudo: string;
+}
+
+// Item de biblioteca nao pertence a um paciente: a rota vive fora de
+// `/pacientes/:id`, mesmo padrao dos modelos de evolucao clinica (Fase 271).
+const baseBiblioteca = '/api/biblioteca-condutas';
+
+export function listarBibliotecaCondutas(): Promise<{ itens: BibliotecaCondutaResumoApi[]; total: number }> {
+  // Limite alto: o seletor ainda carrega tudo de uma vez, mesma decisao ja
+  // tomada para os modelos de plano alimentar/evolucao clinica.
+  return requisitar(`${baseBiblioteca}?pagina=1&limite=100`);
+}
+export function obterBibliotecaConduta(itemId: string) {
+  return requisitar<BibliotecaCondutaApi>(`${baseBiblioteca}/${encodeURIComponent(itemId)}`);
+}
+export function criarBibliotecaConduta(entrada: { nome: string; tipo: TipoCondutaTerapeuticaApi; conteudo: string }) {
+  return requisitar<BibliotecaCondutaResumoApi>(baseBiblioteca, { method: 'POST', body: JSON.stringify(entrada) });
+}
+export function arquivarBibliotecaConduta(itemId: string) {
+  return requisitar<{ id: string; arquivadoEm: string }>(`${baseBiblioteca}/${encodeURIComponent(itemId)}`, {
+    method: 'DELETE'
+  });
+}
