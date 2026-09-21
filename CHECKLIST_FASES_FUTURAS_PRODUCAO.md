@@ -5,10 +5,10 @@ Atualizado em 2026-09-21. Fases 256 a 261, 263 a 270 e 271 concluidas; Fase
 mergeada (PR `#275`, merge `306d2ed`), o PB-05 (alerta de check-in com
 adesao baixa) esta concluido e a Onda 2 do audit de produto
 (PB-01 -> PB-02 -> PB-03 -> PB-05) esta completa. A Onda 3 (devolver tempo
-ao profissional) comecou pela Fase 269 (PB-13); a ordem aprovada pelo
-proprietario e PB-13 -> PB-14 -> PB-15 -> PB-23 -> PB-16 -> PB-25. O PB-13
-(Fase 269, PR `#277`) e o PB-14 (Fase 270, PR `#278`) estao mergeados; o
-PB-15 (Fase 271, template de evolucao clinica com pre-preenchimento) foi
+ao profissional) ja entregou o PB-13 (Fase 269, PR `#277`, merge `4e36bda`)
+e o PB-14 (Fase 270, PR `#278`, merge `4c896b0`); a ordem aprovada pelo
+proprietario e PB-13 -> PB-14 -> PB-15 -> PB-23 -> PB-16 -> PB-25. O PB-15
+(Fase 271, template de evolucao clinica com pre-preenchimento) foi
 implementado nesta branch, com checks remotos e merge humano pendentes.
 O programa de hardening PR 36-56 permanece como trilha separada. O pacote
 interno do PR 55 foi integrado, mas o proprietario adiou a contratacao do
@@ -3593,8 +3593,8 @@ publicado antes de ampliar a superficie de mudancas visuais.
   - Plano, risco e rollback: `docs/history/phases/PLANO_FASE_269.md`.
 
 - [x] Fase 270 - Caminho manual para paciente com condicao especial (PB-14,
-  segundo item da Onda 3). [IMPLEMENTADA em 2026-09-20; checks remotos e
-  merge humano pendentes]
+  segundo item da Onda 3). [CONCLUIDA em 2026-09-20; PR `#278` mergeada em
+  `main` no commit `4c896b0`, com os 20 check runs verdes]
   - [x] O bloqueio do calculo automatico **continua**: equacao populacional
     em paciente com condicao especial produz numero que ninguem deveria
     usar. O gap nunca foi a trava, era nao existir alternativa -- na pratica
@@ -3617,8 +3617,10 @@ publicado antes de ampliar a superficie de mudancas visuais.
     ignora no `save()`, entao `revisada_em` mantinha o valor antigo e dava
     para revisar, editar e publicar sem nova revisao. Passou a usar `null`.
   - [x] Sem migration: as colunas afetadas ja eram nullable.
-  - Commit `7e7c5e0` na branch `feat/fase270-caminho-manual-condicao-especial`,
-    em 2026-09-20.
+  - Commits `7e7c5e0` e `5f1899d`, integrados pela PR `#278` (merge `4c896b0`)
+    em 2026-09-20. Todos os 20 check runs passaram sobre `5f1899d`, incluindo
+    "Demo local smoke" -- que, diferente das Fases 269 e 270 anteriores,
+    ficou verde na primeira tentativa.
   - Validacoes: backend typecheck, `pnpm --dir octaclin-backend test`
     (1960 testes, 203 suites, 0 falhas) e build; web typecheck, lint
     (0 erros, 56 warnings preexistentes), build,
@@ -4116,6 +4118,7 @@ Proximo item: concluir os checks remotos e o merge humano da Fase 271
 (PB-15, terceiro item da Onda 3); depois seguir a ordem aprovada pelo
 proprietario para a Onda 3 -- PB-23, PB-16 e por ultimo PB-25, que depende
 do PB-16. O PB-13 foi entregue pela Fase 269 (PR `#277`, merge `4e36bda`) e
-o PB-14 pela Fase 270 (PR `#278`). A Onda 2 (PB-01 -> PB-02 -> PB-03 ->
-PB-05) esta completa. PR 55 permanece adiado e pendente; PR 56 continua
-condicionado a decisao explicita de distribuir o Mobile.
+o PB-14 pela Fase 270 (PR `#278`, merge `4c896b0`). A Onda 2
+(PB-01 -> PB-02 -> PB-03 -> PB-05) esta completa. PR 55 permanece adiado e
+pendente; PR 56 continua condicionado a decisao explicita de distribuir o
+Mobile.
