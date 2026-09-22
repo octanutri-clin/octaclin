@@ -5,6 +5,7 @@ import { CriptografiaDadosSensiveis } from '../../../infraestrutura/seguranca/cr
 import { resolverProfissionalIdDoUsuario } from '../../../infraestrutura/seguranca/escopo-profissional';
 import { UsuarioAutenticado } from '../../auth/dominio/usuario-autenticado';
 import { AtualizarRascunhoCondutaTerapeuticaDto, CriarCondutaTerapeuticaDto } from './dtos';
+import { resolverConsultaOpcional } from './vinculo-consulta';
 import { CondutaTerapeuticaOrm, TipoCondutaTerapeutica } from '../infraestrutura/conduta-terapeutica.orm';
 import { CondutaTerapeuticaVersaoOrm } from '../infraestrutura/conduta-terapeutica-versao.orm';
 import { PacienteOrm } from '../infraestrutura/paciente.orm';
@@ -23,6 +24,7 @@ export type CondutaTerapeuticaResposta = {
     validadeFim?: string;
     estado: 'rascunho' | 'publicada' | 'descartada';
     publicadaEm?: Date;
+    consultaId?: string;
     criadoEm: Date;
   }>;
 };
@@ -56,11 +58,12 @@ export class ServicoCondutasTerapeuticas {
     this.validarPeriodo(dados.validadeInicio, dados.validadeFim);
     return this.executorTenant.executar(tenantId, async (gerenciador) => {
       const paciente = await this.garantirPacienteNoEscopo(gerenciador, tenantId, pacienteId, usuario, true);
+      const consultaId = await resolverConsultaOpcional(gerenciador, tenantId, pacienteId, dados.consultaId);
       const repositorio = gerenciador.getRepository(CondutaTerapeuticaOrm);
       const conduta = await repositorio.save(repositorio.create({
         tenantId, pacienteId, profissionalId: paciente.profissionalResponsavelId, tipo: dados.tipo
       }));
-      const versao = await this.criarVersao(gerenciador, tenantId, conduta.id, 1, usuario.usuarioId, dados);
+      const versao = await this.criarVersao(gerenciador, tenantId, conduta.id, 1, usuario.usuarioId, dados, consultaId);
       return this.mapear(conduta, [versao]);
     });
   }
@@ -107,10 +110,11 @@ export class ServicoCondutasTerapeuticas {
     });
   }
 
-  async criarNovaVersao(tenantId: string, pacienteId: string, condutaId: string, usuario: UsuarioAutenticado) {
+  async criarNovaVersao(tenantId: string, pacienteId: string, condutaId: string, usuario: UsuarioAutenticado, consultaId?: string) {
     this.garantirPapelProfissional(usuario);
     return this.executorTenant.executar(tenantId, async (gerenciador) => {
       const conduta = await this.obterCondutaNoEscopo(gerenciador, tenantId, pacienteId, condutaId, usuario, true);
+      const consultaResolvida = await resolverConsultaOpcional(gerenciador, tenantId, conduta.pacienteId, consultaId);
       const repositorio = gerenciador.getRepository(CondutaTerapeuticaVersaoOrm);
       const atual = await repositorio.findOne({ where: { tenantId, condutaTerapeuticaId: conduta.id, descartadaEm: IsNull() }, order: { numero: 'DESC' }, lock: { mode: 'pessimistic_write' } });
       if (!atual) throw new NotFoundException('Versao da conduta nao encontrada.');
@@ -118,7 +122,8 @@ export class ServicoCondutasTerapeuticas {
       const nova = await repositorio.save(repositorio.create({
         tenantId, condutaTerapeuticaId: conduta.id, numero: atual.numero + 1,
         tituloCriptografado: atual.tituloCriptografado, conteudoCriptografado: atual.conteudoCriptografado,
-        validadeInicio: atual.validadeInicio, validadeFim: atual.validadeFim, criadoPorUsuarioId: usuario.usuarioId
+        validadeInicio: atual.validadeInicio, validadeFim: atual.validadeFim, criadoPorUsuarioId: usuario.usuarioId,
+        consultaId: consultaResolvida
       }));
       return this.mapear(conduta, [nova]);
     });
@@ -134,13 +139,14 @@ export class ServicoCondutasTerapeuticas {
     });
   }
 
-  private async criarVersao(gerenciador: EntityManager, tenantId: string, condutaId: string, numero: number, usuarioId: string, dados: CriarCondutaTerapeuticaDto) {
+  private async criarVersao(gerenciador: EntityManager, tenantId: string, condutaId: string, numero: number, usuarioId: string, dados: CriarCondutaTerapeuticaDto, consultaId?: string) {
     const repositorio = gerenciador.getRepository(CondutaTerapeuticaVersaoOrm);
     return repositorio.save(repositorio.create({
       tenantId, condutaTerapeuticaId: condutaId, numero, criadoPorUsuarioId: usuarioId,
       tituloCriptografado: this.criptografia.criptografar(dados.titulo.trim()),
       conteudoCriptografado: this.criptografia.criptografar(dados.conteudo.trim()),
-      validadeInicio: dados.validadeInicio?.slice(0, 10), validadeFim: dados.validadeFim?.slice(0, 10)
+      validadeInicio: dados.validadeInicio?.slice(0, 10), validadeFim: dados.validadeFim?.slice(0, 10),
+      consultaId
     }));
   }
 
@@ -180,7 +186,7 @@ export class ServicoCondutasTerapeuticas {
         conteudo: this.criptografia.descriptografar(versao.conteudoCriptografado),
         validadeInicio: versao.validadeInicio, validadeFim: versao.validadeFim,
         estado: versao.descartadaEm ? 'descartada' : versao.publicadaEm ? 'publicada' : 'rascunho',
-        publicadaEm: versao.publicadaEm, criadoEm: versao.criadoEm
+        publicadaEm: versao.publicadaEm, consultaId: versao.consultaId, criadoEm: versao.criadoEm
       }))
     };
   }

@@ -31,6 +31,10 @@ export class ColetaExameLaboratorialOrm {
   @Column({ name: 'excluida_em', type: 'timestamptz', nullable: true })
   excluidaEm?: Date;
 
+  /** PB-24 (Fase 275): consulta de origem, opcional. */
+  @Column({ name: 'consulta_id', type: 'uuid', nullable: true })
+  consultaId?: string;
+
   @CreateDateColumn({ name: 'criado_em', type: 'timestamptz' })
   criadoEm: Date;
 }

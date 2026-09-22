@@ -16,6 +16,8 @@ export class CondutaTerapeuticaVersaoOrm {
   @Column({ name: 'revisada_por_usuario_id', type: 'uuid', nullable: true }) revisadaPorUsuarioId?: string;
   @Column({ name: 'publicada_em', type: 'timestamptz', nullable: true }) publicadaEm?: Date;
   @Column({ name: 'descartada_em', type: 'timestamptz', nullable: true }) descartadaEm?: Date;
+  /** PB-24 (Fase 275): consulta de origem, opcional. */
+  @Column({ name: 'consulta_id', type: 'uuid', nullable: true }) consultaId?: string;
   @CreateDateColumn({ name: 'criado_em', type: 'timestamptz' }) criadoEm: Date;
   @UpdateDateColumn({ name: 'atualizado_em', type: 'timestamptz' }) atualizadoEm: Date;
 }

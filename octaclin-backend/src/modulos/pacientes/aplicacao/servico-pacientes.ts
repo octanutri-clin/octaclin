@@ -18,6 +18,7 @@ import { EnvioQuestionarioOrm } from '../../questionarios/infraestrutura/envio-q
 import { QuestionarioOrm } from '../../questionarios/infraestrutura/questionario.orm';
 import { RespostaCheckinOrm } from '../../questionarios/infraestrutura/resposta-checkin.orm';
 import { registrarEventoWebhook } from '../../integracoes/aplicacao/registrar-evento-webhook';
+import { resolverConsultaOpcional } from './vinculo-consulta';
 import {
   calcularAntropometria,
   compararAvaliacoes,
@@ -29,6 +30,7 @@ import {
   AtualizarPacienteDto,
   AtualizarTarefaAcompanhamentoDto,
   AvaliacaoAntropometricaRespostaDto,
+  ConsultaRecenteRespostaDto,
   CriarAvaliacaoAntropometricaDto,
   CriarEvolucaoClinicaDto,
   ListarAvaliacoesAntropometricasDto,
@@ -611,6 +613,33 @@ export class ServicoPacientes {
     return resumo;
   }
 
+  /**
+   * PB-24 (Fase 275): lista para o seletor opcional "Vincular a consulta" nas
+   * telas de criacao de evolucao, avaliacao, conduta e exame. Mesmo teto de
+   * 30 registros ja usado para a linha do tempo do prontuario.
+   */
+  async listarConsultasRecentes(
+    tenantId: string,
+    pacienteId: string,
+    usuario: UsuarioAutenticado
+  ): Promise<ConsultaRecenteRespostaDto[]> {
+    return this.executorTenant.executar(tenantId, async (gerenciador) => {
+      await this.garantirPacienteExiste(gerenciador, tenantId, pacienteId, usuario);
+      const consultas = await gerenciador.getRepository(AgendaConsultaOrm).find({
+        where: { tenantId, pacienteId },
+        order: { inicioEm: 'DESC' },
+        take: 30
+      });
+
+      return consultas.map((consulta) => ({
+        id: consulta.id,
+        titulo: consulta.titulo,
+        inicioEm: consulta.inicioEm,
+        status: consulta.status
+      }));
+    });
+  }
+
   async criarEvolucaoClinica(
     tenantId: string,
     pacienteId: string,
@@ -620,6 +649,7 @@ export class ServicoPacientes {
   ): Promise<EvolucaoClinicaRespostaDto> {
     return this.executorTenant.executar(tenantId, async (gerenciador) => {
       await this.garantirPacienteExiste(gerenciador, tenantId, pacienteId, usuario);
+      const consultaId = await resolverConsultaOpcional(gerenciador, tenantId, pacienteId, dados.consultaId);
 
       const repositorio = gerenciador.getRepository(EvolucaoClinicaOrm);
       const evolucao = repositorio.create({
@@ -629,7 +659,8 @@ export class ServicoPacientes {
         tituloCriptografado: this.criptografia.criptografar(dados.titulo.trim()),
         conteudoCriptografado: this.criptografia.criptografar(dados.conteudo.trim()),
         tipo: dados.tipo ?? 'observacao',
-        visibilidade: dados.visibilidade ?? 'privada'
+        visibilidade: dados.visibilidade ?? 'privada',
+        consultaId
       });
 
       return this.mapearEvolucao(await repositorio.save(evolucao));
@@ -1572,6 +1603,7 @@ export class ServicoPacientes {
   ): Promise<AvaliacaoAntropometricaRespostaDto> {
     return this.executorTenant.executar(tenantId, async (gerenciador) => {
       const paciente = await this.garantirPacienteExiste(gerenciador, tenantId, pacienteId, usuario);
+      const consultaId = await resolverConsultaOpcional(gerenciador, tenantId, pacienteId, dados.consultaId);
 
       const avaliadaEm = dados.avaliadaEm ?? dataCivil(new Date());
       const protocolo = dados.protocolo ?? 'nenhum';
@@ -1599,7 +1631,8 @@ export class ServicoPacientes {
           formulaAplicada: resultado.formulaAplicada,
           observacoesCriptografadas: dados.observacoes?.trim()
             ? this.criptografia.criptografar(dados.observacoes.trim())
-            : undefined
+            : undefined,
+          consultaId
         })
       );
 
@@ -1688,6 +1721,7 @@ export class ServicoPacientes {
       observacoes: avaliacao.observacoesCriptografadas
         ? this.criptografia.descriptografar(avaliacao.observacoesCriptografadas)
         : undefined,
+      consultaId: avaliacao.consultaId,
       criadoEm: avaliacao.criadoEm
     };
   }
@@ -1755,6 +1789,7 @@ export class ServicoPacientes {
       conteudo: this.criptografia.descriptografar(evolucao.conteudoCriptografado),
       tipo: evolucao.tipo,
       visibilidade: evolucao.visibilidade,
+      consultaId: evolucao.consultaId,
       criadoEm: evolucao.criadoEm,
       atualizadoEm: evolucao.atualizadoEm
     };
