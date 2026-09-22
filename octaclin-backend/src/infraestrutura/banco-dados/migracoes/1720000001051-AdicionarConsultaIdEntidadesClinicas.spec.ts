@@ -39,10 +39,8 @@ describe('AdicionarConsultaIdEntidadesClinicas1720000001051', () => {
   it.each(tabelas)('cria indice parcial de consulta_id por tenant em %s', async (tabela) => {
     const { sqlUp } = await executar();
 
-    expect(sqlUp).toMatch(
-      new RegExp(
-        `create index if not exists idx_${tabela}_consulta\\s+on ${tabela} \\(tenant_id, consulta_id\\)\\s+where consulta_id is not null`
-      )
+    expect(sqlUp).toContain(
+      `create index if not exists idx_${tabela}_consulta\n        on ${tabela} (tenant_id, consulta_id)\n        where consulta_id is not null;`
     );
   });
 
