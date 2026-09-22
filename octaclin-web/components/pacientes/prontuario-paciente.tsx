@@ -1307,6 +1307,46 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
               </div>
             </dl>
           </section>
+          {proximaConsulta && dados.resumo.preparacaoConsulta ? (
+            <section aria-labelledby="preparacao-consulta-titulo" className="grid gap-4 rounded-md border border-linha bg-white p-4">
+              <div>
+                <h2 id="preparacao-consulta-titulo" className="text-base font-semibold text-tinta">Preparação da próxima consulta</h2>
+                <p className="mt-1 text-sm text-texto-suave">
+                  O que mudou desde o atendimento de {formatarData(dados.resumo.preparacaoConsulta.desdeAtendimentoEm)}.
+                </p>
+              </div>
+              <dl className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+                <div className="border-l-2 border-primaria pl-3">
+                  <dt className="text-xs font-semibold text-texto-suave">Avaliação antropométrica</dt>
+                  <dd className="mt-1 text-sm font-medium text-tinta">
+                    {dados.resumo.preparacaoConsulta.novaAvaliacaoAntropometrica
+                      ? 'Nova avaliação registrada — veja o delta em Leitura clínica'
+                      : 'Sem avaliação nova'}
+                  </dd>
+                </div>
+                <div className="border-l-2 border-primaria pl-3">
+                  <dt className="text-xs font-semibold text-texto-suave">Check-ins</dt>
+                  <dd className="mt-1 text-sm font-medium text-tinta">{dados.resumo.preparacaoConsulta.checkinsRegistrados}</dd>
+                </div>
+                <div className="border-l-2 border-primaria pl-3">
+                  <dt className="text-xs font-semibold text-texto-suave">Formulários respondidos</dt>
+                  <dd className="mt-1 text-sm font-medium text-tinta">{dados.resumo.preparacaoConsulta.formulariosRespondidos}</dd>
+                </div>
+                <div className="border-l-2 border-primaria pl-3">
+                  <dt className="text-xs font-semibold text-texto-suave">Mensagens recebidas</dt>
+                  <dd className="mt-1 text-sm font-medium text-tinta">{dados.resumo.preparacaoConsulta.mensagensRecebidas}</dd>
+                </div>
+                <div className="border-l-2 border-primaria pl-3">
+                  <dt className="text-xs font-semibold text-texto-suave">Trocas no plano vigente</dt>
+                  <dd className="mt-1 text-sm font-medium text-tinta">
+                    {permissoes.includes('planos_alimentares.ler')
+                      ? dados.resumo.preparacaoConsulta.escolhasSubstituicao ?? 'Nenhum plano publicado'
+                      : 'Acesso não disponível'}
+                  </dd>
+                </div>
+              </dl>
+            </section>
+          ) : null}
           <SecaoPrioridadeAcompanhamento
             pacienteId={pacienteId}
             prioridade={prioridadeAcompanhamento}

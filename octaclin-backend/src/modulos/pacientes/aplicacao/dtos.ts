@@ -435,6 +435,20 @@ export interface ProntuarioPacienteRespostaDto {
         validadeFim: Date;
       }>;
     };
+    // PB-25 (Fase 274): "o que mudou desde o ultimo atendimento concluido"
+    // -- versao deterministica da preparacao pre-consulta (audit secao 6.C
+    // e 12). So presente quando ha um atendimento concluido para comparar;
+    // sem ele nao ha "desde quando". O delta de peso/IMC em si continua so
+    // em `leituraClinica`, sem duplicar; aqui so o booleano de "ha
+    // avaliacao nova".
+    preparacaoConsulta?: {
+      desdeAtendimentoEm: Date;
+      novaAvaliacaoAntropometrica: boolean;
+      checkinsRegistrados: number;
+      formulariosRespondidos: number;
+      mensagensRecebidas: number;
+      escolhasSubstituicao?: number;
+    };
   };
   linhaDoTempo: EventoProntuarioPacienteDto[];
 }

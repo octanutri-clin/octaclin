@@ -6,6 +6,7 @@ import { MensagemNotificacaoOrm } from '../../comunicacoes/infraestrutura/mensag
 import { LogDiarioRapidoOrm } from '../../mobile/infraestrutura/log-diario-rapido.orm';
 import { PlanoAlimentarOrm } from '../../planos-alimentares/infraestrutura/plano-alimentar.orm';
 import { PlanoAlimentarVersaoOrm } from '../../planos-alimentares/infraestrutura/plano-alimentar-versao.orm';
+import { PlanoAlimentarEscolhaPacienteOrm } from '../../planos-alimentares/infraestrutura/plano-alimentar-escolha-paciente.orm';
 import { ProfissionalOrm } from '../../profissionais/infraestrutura/profissional.orm';
 import { EnvioQuestionarioOrm } from '../../questionarios/infraestrutura/envio-questionario.orm';
 import { QuestionarioOrm } from '../../questionarios/infraestrutura/questionario.orm';
@@ -1004,7 +1005,8 @@ describe('ServicoPacientes', () => {
         }
       ],
       [AvaliacaoAntropometricaOrm, { find: jest.fn(async () => []) }],
-      [CondutaTerapeuticaOrm, { find: jest.fn(async () => []) }]
+      [CondutaTerapeuticaOrm, { find: jest.fn(async () => []) }],
+      [PlanoAlimentarEscolhaPacienteOrm, { count: jest.fn(async () => 0) }]
     ]);
     const servico = new ServicoPacientes(
       {
@@ -1505,6 +1507,300 @@ describe('ServicoPacientes', () => {
     expect(prontuario.resumo.leituraClinica.deltaDesdeInicio).toEqual([]);
     expect(prontuario.resumo.leituraClinica.objetivoPlanoVigente).toBeUndefined();
     expect(prontuario.resumo.leituraClinica.condutasVencendo).toEqual([]);
+  });
+
+  it('monta preparacaoConsulta com contadores desde o ultimo atendimento concluido e trocas do plano vigente (PB-25)', async () => {
+    const paciente = {
+      id: 'paciente-1',
+      tenantId: 'tenant-1',
+      profissionalResponsavelId: 'profissional-1',
+      nomeCriptografado: Buffer.from('cripto:Maria'),
+      statusAdesao: 'em_acompanhamento',
+      scoreRisco: '40',
+      criadoEm: new Date('2026-01-01T10:00:00.000Z'),
+      atualizadoEm: new Date('2026-01-01T10:00:00.000Z')
+    };
+    const desdeAtendimentoEm = new Date('2026-06-01T13:00:00.000Z');
+    const consultaConcluida = {
+      id: 'consulta-concluida',
+      tenantId: 'tenant-1',
+      pacienteId: 'paciente-1',
+      titulo: 'Consulta anterior',
+      inicioEm: desdeAtendimentoEm,
+      fimEm: new Date('2026-06-01T14:00:00.000Z'),
+      status: 'concluida'
+    };
+    const avaliacaoAtual = {
+      id: 'avaliacao-atual',
+      pacienteId: 'paciente-1',
+      avaliadaEm: '2026-07-20',
+      protocolo: 'nenhum',
+      medidasCriptografadas: Buffer.from(`cripto:${JSON.stringify({ pesoKg: 78 })}`),
+      resultadoCriptografado: Buffer.from(
+        `cripto:${JSON.stringify({ imc: 25, protocoloAplicado: 'nenhum', avisos: [] })}`
+      ),
+      criadoEm: new Date('2026-07-20T10:00:00.000Z')
+    };
+    const repositorios = new Map<unknown, Record<string, unknown>>([
+      [PacienteOrm, { findOne: jest.fn(async () => paciente) }],
+      [AgendaConsultaOrm, { find: jest.fn(async () => [consultaConcluida]) }],
+      [EnvioQuestionarioOrm, { find: jest.fn(async () => []) }],
+      [
+        RespostaCheckinOrm,
+        {
+          find: jest.fn(async () => [
+            {
+              id: 'resposta-antiga',
+              tenantId: 'tenant-1',
+              pacienteId: 'paciente-1',
+              envioQuestionarioId: 'envio-antigo',
+              finalizadoEm: new Date('2026-05-01T10:00:00.000Z'),
+              criadoEm: new Date('2026-05-01T09:00:00.000Z')
+            },
+            {
+              id: 'resposta-nova',
+              tenantId: 'tenant-1',
+              pacienteId: 'paciente-1',
+              envioQuestionarioId: 'envio-novo',
+              finalizadoEm: new Date('2026-06-15T10:00:00.000Z'),
+              criadoEm: new Date('2026-06-15T09:00:00.000Z')
+            }
+          ])
+        }
+      ],
+      [
+        LogDiarioRapidoOrm,
+        {
+          find: jest.fn(async () => [
+            {
+              id: 'diario-antigo',
+              tenantId: 'tenant-1',
+              pacienteId: 'paciente-1',
+              tipo: 'humor',
+              valor: {},
+              registradoEm: new Date('2026-05-01T18:00:00.000Z')
+            },
+            {
+              id: 'diario-novo',
+              tenantId: 'tenant-1',
+              pacienteId: 'paciente-1',
+              tipo: 'humor',
+              valor: {},
+              registradoEm: new Date('2026-06-20T18:00:00.000Z')
+            }
+          ])
+        }
+      ],
+      [
+        MensagemNotificacaoOrm,
+        {
+          find: jest.fn(async () => [
+            {
+              id: 'mensagem-recebida-antiga',
+              tenantId: 'tenant-1',
+              pacienteId: 'paciente-1',
+              status: 'recebido',
+              payload: {},
+              criadoEm: new Date('2026-05-01T20:00:00.000Z')
+            },
+            {
+              id: 'mensagem-recebida-nova',
+              tenantId: 'tenant-1',
+              pacienteId: 'paciente-1',
+              status: 'recebido',
+              payload: {},
+              criadoEm: new Date('2026-06-25T20:00:00.000Z')
+            },
+            {
+              id: 'mensagem-enviada-nova',
+              tenantId: 'tenant-1',
+              pacienteId: 'paciente-1',
+              status: 'enviado',
+              payload: {},
+              criadoEm: new Date('2026-06-26T20:00:00.000Z')
+            }
+          ])
+        }
+      ],
+      [EvolucaoClinicaOrm, { find: jest.fn(async () => []) }],
+      [AcompanhamentoTarefaOrm, { find: jest.fn(async () => []) }],
+      [
+        PlanoAlimentarOrm,
+        {
+          findOne: jest.fn(async () => ({
+            id: 'plano-1',
+            tenantId: 'tenant-1',
+            pacienteId: 'paciente-1',
+            versaoPublicadaAtualId: 'versao-1',
+            atualizadoEm: new Date('2026-06-10T12:00:00.000Z')
+          }))
+        }
+      ],
+      [
+        PlanoAlimentarVersaoOrm,
+        {
+          findOne: jest.fn(async () => ({
+            id: 'versao-1',
+            tenantId: 'tenant-1',
+            planoId: 'plano-1',
+            numero: 1,
+            publicadaEm: new Date('2026-06-10T12:00:00.000Z')
+          }))
+        }
+      ],
+      [
+        AvaliacaoAntropometricaOrm,
+        {
+          find: jest.fn(async (opcoes: { order?: { avaliadaEm?: string } }) =>
+            opcoes?.order?.avaliadaEm === 'ASC' ? [avaliacaoAtual] : [avaliacaoAtual]
+          )
+        }
+      ],
+      [CondutaTerapeuticaOrm, { find: jest.fn(async () => []) }],
+      [PlanoAlimentarEscolhaPacienteOrm, { count: jest.fn(async () => 3) }]
+    ]);
+    const servico = new ServicoPacientes(
+      {
+        executar: jest.fn((_tenantId: string, operacao: (gerenciador: unknown) => Promise<unknown>) =>
+          operacao({
+            getRepository: jest.fn((entidade) => repositorios.get(entidade)),
+            query: jest.fn(async () => [])
+          })
+        )
+      } as never,
+      {
+        criptografar: jest.fn(),
+        descriptografar: jest.fn((valor: Buffer) => valor.toString().replace('cripto:', ''))
+      } as never,
+      limitesPermitidos as never
+    );
+
+    const prontuario = await servico.obterProntuario('tenant-1', 'paciente-1', {
+      ...usuarioColaborador,
+      permissoes: ['planos_alimentares.ler']
+    });
+
+    expect(prontuario.resumo.preparacaoConsulta).toEqual({
+      desdeAtendimentoEm,
+      novaAvaliacaoAntropometrica: true,
+      checkinsRegistrados: 1,
+      formulariosRespondidos: 1,
+      mensagensRecebidas: 1,
+      escolhasSubstituicao: 3
+    });
+    const chamadaEscolhas = (repositorios.get(PlanoAlimentarEscolhaPacienteOrm) as { count: jest.Mock }).count.mock
+      .calls[0][0];
+    expect(chamadaEscolhas.where.tenantId).toBe('tenant-1');
+    expect(chamadaEscolhas.where.versaoId).toBe('versao-1');
+  });
+
+  it('preparacaoConsulta fica indefinido sem atendimento concluido anterior (PB-25)', async () => {
+    const paciente = {
+      id: 'paciente-1',
+      tenantId: 'tenant-1',
+      profissionalResponsavelId: 'profissional-1',
+      nomeCriptografado: Buffer.from('cripto:Maria'),
+      statusAdesao: 'novo',
+      scoreRisco: '0',
+      criadoEm: new Date('2026-01-01T10:00:00.000Z'),
+      atualizadoEm: new Date('2026-01-01T10:00:00.000Z')
+    };
+    const repositorios = new Map<unknown, Record<string, unknown>>([
+      [PacienteOrm, { findOne: jest.fn(async () => paciente) }],
+      [AgendaConsultaOrm, { find: jest.fn(async () => []) }],
+      [EnvioQuestionarioOrm, { find: jest.fn(async () => []) }],
+      [RespostaCheckinOrm, { find: jest.fn(async () => []) }],
+      [LogDiarioRapidoOrm, { find: jest.fn(async () => []) }],
+      [MensagemNotificacaoOrm, { find: jest.fn(async () => []) }],
+      [EvolucaoClinicaOrm, { find: jest.fn(async () => []) }],
+      [AcompanhamentoTarefaOrm, { find: jest.fn(async () => []) }],
+      [AvaliacaoAntropometricaOrm, { find: jest.fn(async () => []) }],
+      [CondutaTerapeuticaOrm, { find: jest.fn(async () => []) }]
+    ]);
+    const servico = new ServicoPacientes(
+      {
+        executar: jest.fn((_tenantId: string, operacao: (gerenciador: unknown) => Promise<unknown>) =>
+          operacao({
+            getRepository: jest.fn((entidade) => repositorios.get(entidade)),
+            query: jest.fn(async () => [])
+          })
+        )
+      } as never,
+      {
+        criptografar: jest.fn(),
+        descriptografar: jest.fn((valor: Buffer) => valor.toString().replace('cripto:', ''))
+      } as never,
+      limitesPermitidos as never
+    );
+
+    const prontuario = await servico.obterProntuario('tenant-1', 'paciente-1', usuarioColaborador);
+
+    expect(prontuario.resumo.preparacaoConsulta).toBeUndefined();
+  });
+
+  it('preparacaoConsulta computa contadores sem permissao de planos, deixando escolhasSubstituicao indefinido (PB-25)', async () => {
+    const paciente = {
+      id: 'paciente-1',
+      tenantId: 'tenant-1',
+      profissionalResponsavelId: 'profissional-1',
+      nomeCriptografado: Buffer.from('cripto:Maria'),
+      statusAdesao: 'em_acompanhamento',
+      scoreRisco: '40',
+      criadoEm: new Date('2026-01-01T10:00:00.000Z'),
+      atualizadoEm: new Date('2026-01-01T10:00:00.000Z')
+    };
+    const desdeAtendimentoEm = new Date('2026-06-01T13:00:00.000Z');
+    const consultaConcluida = {
+      id: 'consulta-concluida',
+      tenantId: 'tenant-1',
+      pacienteId: 'paciente-1',
+      titulo: 'Consulta anterior',
+      inicioEm: desdeAtendimentoEm,
+      fimEm: new Date('2026-06-01T14:00:00.000Z'),
+      status: 'concluida'
+    };
+    const repositorios = new Map<unknown, Record<string, unknown>>([
+      [PacienteOrm, { findOne: jest.fn(async () => paciente) }],
+      [AgendaConsultaOrm, { find: jest.fn(async () => [consultaConcluida]) }],
+      [EnvioQuestionarioOrm, { find: jest.fn(async () => []) }],
+      [RespostaCheckinOrm, { find: jest.fn(async () => []) }],
+      [LogDiarioRapidoOrm, { find: jest.fn(async () => []) }],
+      [MensagemNotificacaoOrm, { find: jest.fn(async () => []) }],
+      [EvolucaoClinicaOrm, { find: jest.fn(async () => []) }],
+      [AcompanhamentoTarefaOrm, { find: jest.fn(async () => []) }],
+      [AvaliacaoAntropometricaOrm, { find: jest.fn(async () => []) }],
+      [CondutaTerapeuticaOrm, { find: jest.fn(async () => []) }]
+    ]);
+    const servico = new ServicoPacientes(
+      {
+        executar: jest.fn((_tenantId: string, operacao: (gerenciador: unknown) => Promise<unknown>) =>
+          operacao({
+            getRepository: jest.fn((entidade) => repositorios.get(entidade)),
+            query: jest.fn(async () => [])
+          })
+        )
+      } as never,
+      {
+        criptografar: jest.fn(),
+        descriptografar: jest.fn((valor: Buffer) => valor.toString().replace('cripto:', ''))
+      } as never,
+      limitesPermitidos as never
+    );
+
+    const prontuario = await servico.obterProntuario('tenant-1', 'paciente-1', {
+      ...usuarioColaborador,
+      permissoes: []
+    });
+
+    expect(prontuario.resumo.preparacaoConsulta).toEqual({
+      desdeAtendimentoEm,
+      novaAvaliacaoAntropometrica: false,
+      checkinsRegistrados: 0,
+      formulariosRespondidos: 0,
+      mensagensRecebidas: 0,
+      escolhasSubstituicao: undefined
+    });
+    expect(repositorios.get(PlanoAlimentarEscolhaPacienteOrm)).toBeUndefined();
   });
 
   it('le titulo de evolucao historica (so em claro) e marca ilegivel a decifrada com falha', async () => {

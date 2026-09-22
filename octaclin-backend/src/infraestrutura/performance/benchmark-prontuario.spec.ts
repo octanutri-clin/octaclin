@@ -9,6 +9,7 @@ import { CondutaTerapeuticaOrm } from '../../modulos/pacientes/infraestrutura/co
 import { EvolucaoClinicaOrm } from '../../modulos/pacientes/infraestrutura/evolucao-clinica.orm';
 import { PacienteOrm } from '../../modulos/pacientes/infraestrutura/paciente.orm';
 import { PlanoAlimentarOrm } from '../../modulos/planos-alimentares/infraestrutura/plano-alimentar.orm';
+import { PlanoAlimentarEscolhaPacienteOrm } from '../../modulos/planos-alimentares/infraestrutura/plano-alimentar-escolha-paciente.orm';
 import { PlanoAlimentarVersaoOrm } from '../../modulos/planos-alimentares/infraestrutura/plano-alimentar-versao.orm';
 import { EnvioQuestionarioOrm } from '../../modulos/questionarios/infraestrutura/envio-questionario.orm';
 import { QuestionarioOrm } from '../../modulos/questionarios/infraestrutura/questionario.orm';
@@ -41,8 +42,8 @@ function serie(quantidade: number, criar: (indice: number) => Record<string, unk
   return Array.from({ length: quantidade }, (_, indice) => criar(indice));
 }
 
-function repositorioCom(metodo: 'find' | 'findOne', retorno: unknown) {
-  return { [metodo]: jest.fn(async () => retorno) } as Record<'find' | 'findOne', jest.Mock>;
+function repositorioCom(metodo: 'find' | 'findOne' | 'count', retorno: unknown) {
+  return { [metodo]: jest.fn(async () => retorno) } as Record<'find' | 'findOne' | 'count', jest.Mock>;
 }
 
 function linhasCanonicasSinteticas(quantidadePorFonte: number) {
@@ -176,7 +177,8 @@ function montarResumoSintetico(quantidadePorFonte: number) {
     })],
     [QuestionarioOrm, repositorioCom('find', questionarios)],
     [AvaliacaoAntropometricaOrm, repositorioCom('find', [])],
-    [CondutaTerapeuticaOrm, repositorioCom('find', [])]
+    [CondutaTerapeuticaOrm, repositorioCom('find', [])],
+    [PlanoAlimentarEscolhaPacienteOrm, repositorioCom('count', 0)]
   ]);
   const gerenciador = {
     getRepository: jest.fn((entidade: unknown) => repositorios.get(entidade)),
@@ -208,9 +210,9 @@ describe('benchmark sintetico do prontuario', () => {
     const resumoPequeno = await pequeno.servico.obterProntuario('tenant-1', 'paciente-1', usuarioSuperAdmin);
     const resumoCarregado = await carregado.servico.obterProntuario('tenant-1', 'paciente-1', usuarioSuperAdmin);
 
-    expect(totalOperacoes(pequeno.repositorios)).toBe(14);
-    expect(totalOperacoes(carregado.repositorios)).toBe(14);
-    expect(carregado.gerenciador.getRepository).toHaveBeenCalledTimes(14);
+    expect(totalOperacoes(pequeno.repositorios)).toBe(15);
+    expect(totalOperacoes(carregado.repositorios)).toBe(15);
+    expect(carregado.gerenciador.getRepository).toHaveBeenCalledTimes(15);
     expect(carregado.repositorios.get(QuestionarioOrm)?.find).toHaveBeenCalledTimes(1);
     expect(resumoPequeno.linhaDoTempo).toHaveLength(7);
     expect(resumoCarregado.linhaDoTempo).toHaveLength(80);

@@ -1608,6 +1608,14 @@ async function prepararProntuarioMockado(page, {
             deltaUltimaAvaliacao: [],
             deltaDesdeInicio: [],
             condutasVencendo: []
+          },
+          preparacaoConsulta: {
+            desdeAtendimentoEm: '2026-07-15T13:00:00.000Z',
+            novaAvaliacaoAntropometrica: false,
+            checkinsRegistrados: 2,
+            formulariosRespondidos: 1,
+            mensagensRecebidas: 1,
+            escolhasSubstituicao: 3
           }
         },
         linhaDoTempo: eventos
@@ -3251,6 +3259,23 @@ test.describe('prontuario do paciente', () => {
       conteudo: 'Manter hidratacao e retornar em 30 dias caso persista.'
     });
     await expect(page.getByText('Item salvo na biblioteca.')).toBeVisible();
+    await assertSemOverflowHorizontal(page);
+  });
+
+  test('mostra a preparação da próxima consulta com o que mudou desde o último atendimento (PB-25)', async ({ page }) => {
+    await prepararProntuarioMockado(page, { permissoesExtras: ['planos_alimentares.ler'] });
+    await page.goto('/pacientes/paciente-1');
+
+    const secao = page.getByRole('region', { name: 'Preparação da próxima consulta' });
+    await expect(secao).toBeVisible();
+    await expect(secao.getByText('O que mudou desde o atendimento de 15/07/2026.')).toBeVisible();
+    await expect(secao.getByText('Sem avaliação nova')).toBeVisible();
+    await expect(secao.getByText('Check-ins')).toBeVisible();
+    await expect(secao.getByText('2', { exact: true })).toBeVisible();
+    await expect(secao.getByText('Formulários respondidos')).toBeVisible();
+    await expect(secao.getByText('Mensagens recebidas')).toBeVisible();
+    await expect(secao.getByText('Trocas no plano vigente')).toBeVisible();
+    await expect(secao.getByText('3', { exact: true })).toBeVisible();
     await assertSemOverflowHorizontal(page);
   });
 

@@ -74,6 +74,14 @@ export interface ProntuarioPacienteApi {
         validadeFim: string;
       }>;
     };
+    preparacaoConsulta?: {
+      desdeAtendimentoEm: string;
+      novaAvaliacaoAntropometrica: boolean;
+      checkinsRegistrados: number;
+      formulariosRespondidos: number;
+      mensagensRecebidas: number;
+      escolhasSubstituicao?: number;
+    };
   };
   linhaDoTempo: EventoProntuarioPacienteApi[];
 }

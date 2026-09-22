@@ -1,5 +1,5 @@
 import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
-import { And, ArrayContains, EntityManager, FindOptionsWhere, In, IsNull, LessThan, MoreThanOrEqual, Not, QueryFailedError, Raw } from 'typeorm';
+import { And, ArrayContains, EntityManager, FindOptionsWhere, In, IsNull, LessThan, MoreThan, MoreThanOrEqual, Not, QueryFailedError, Raw } from 'typeorm';
 import { ExecutorTenant } from '../../../infraestrutura/banco-dados/executor-tenant';
 import { montarCsv } from '../../../infraestrutura/exportacao/csv';
 import { dataIsoNoTimezoneClinico, obterTimezoneClinico } from '../../../infraestrutura/tempo/timezone-clinico';
@@ -10,6 +10,7 @@ import { MensagemNotificacaoOrm } from '../../comunicacoes/infraestrutura/mensag
 import { LogDiarioRapidoOrm } from '../../mobile/infraestrutura/log-diario-rapido.orm';
 import { PlanoAlimentarOrm } from '../../planos-alimentares/infraestrutura/plano-alimentar.orm';
 import { PlanoAlimentarVersaoOrm } from '../../planos-alimentares/infraestrutura/plano-alimentar-versao.orm';
+import { PlanoAlimentarEscolhaPacienteOrm } from '../../planos-alimentares/infraestrutura/plano-alimentar-escolha-paciente.orm';
 import { UsuarioAutenticado } from '../../auth/dominio/usuario-autenticado';
 import { resolverProfissionalIdDoUsuario } from '../../../infraestrutura/seguranca/escopo-profissional';
 import { ProfissionalOrm } from '../../profissionais/infraestrutura/profissional.orm';
@@ -1002,6 +1003,8 @@ export class ServicoPacientes {
         })
       ]);
 
+      const ultimoAtendimento = consultas.find((consulta) => consulta.status === 'concluida');
+
       const versaoPlanoAtual = planoAtual?.versaoPublicadaAtualId
         ? await gerenciador.getRepository(PlanoAlimentarVersaoOrm).findOne({
             where: {
@@ -1013,6 +1016,17 @@ export class ServicoPacientes {
             }
           })
         : null;
+
+      const escolhasSubstituicao =
+        podeLerPlanos && versaoPlanoAtual && ultimoAtendimento
+          ? await gerenciador.getRepository(PlanoAlimentarEscolhaPacienteOrm).count({
+              where: {
+                tenantId,
+                versaoId: versaoPlanoAtual.id,
+                criadoEm: MoreThan(ultimoAtendimento.inicioEm)
+              }
+            })
+          : undefined;
 
       const condutaIds = condutasPaciente.map((conduta) => conduta.id);
       const versoesCondutas = condutaIds.length
@@ -1063,6 +1077,23 @@ export class ServicoPacientes {
             )
           : [];
 
+      const preparacaoConsulta: ProntuarioPacienteRespostaDto['resumo']['preparacaoConsulta'] = ultimoAtendimento
+        ? {
+            desdeAtendimentoEm: ultimoAtendimento.inicioEm,
+            novaAvaliacaoAntropometrica: Boolean(
+              avaliacaoAtualOrm && dataCivil(ultimoAtendimento.inicioEm) < avaliacaoAtualOrm.avaliadaEm
+            ),
+            checkinsRegistrados: diarios.filter((diario) => diario.registradoEm > ultimoAtendimento.inicioEm).length,
+            formulariosRespondidos: respostas.filter(
+              (resposta) => resposta.finalizadoEm && resposta.finalizadoEm > ultimoAtendimento.inicioEm
+            ).length,
+            mensagensRecebidas: mensagens.filter(
+              (mensagem) => mensagem.status === 'recebido' && mensagem.criadoEm > ultimoAtendimento.inicioEm
+            ).length,
+            escolhasSubstituicao
+          }
+        : undefined;
+
       const idsQuestionarios = Array.from(new Set(envios.map((envio) => envio.questionarioId).filter(Boolean)));
       const questionarios = idsQuestionarios.length
         ? await gerenciador.getRepository(QuestionarioOrm).find({ where: { tenantId, id: In(idsQuestionarios) } })
@@ -1089,7 +1120,6 @@ export class ServicoPacientes {
       const falhaComunicacao = podeLerComunicacoes
         ? mensagens.find((mensagem) => mensagem.status === 'falhou')
         : undefined;
-      const ultimoAtendimento = consultas.find((consulta) => consulta.status === 'concluida');
       const proximaConsulta = consultas
         .filter((consulta) =>
           (consulta.status === 'agendada' || consulta.status === 'reagendada') && consulta.inicioEm >= agora
@@ -1182,7 +1212,8 @@ export class ServicoPacientes {
             deltaDesdeInicio,
             objetivoPlanoVigente,
             condutasVencendo
-          }
+          },
+          preparacaoConsulta
         },
         linhaDoTempo
       };

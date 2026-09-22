@@ -1,17 +1,19 @@
 # OctaClin - Checklist vivo de fases futuras ate producao
 
-Atualizado em 2026-09-21. Fases 256 a 261, 263 a 270, 271 e 272 concluidas;
-Fase 262 permanece em andamento pelos gates externos do piloto. Com a Fase
-268 mergeada (PR `#275`, merge `306d2ed`), o PB-05 (alerta de check-in com
-adesao baixa) esta concluido e a Onda 2 do audit de produto
-(PB-01 -> PB-02 -> PB-03 -> PB-05) esta completa. A Onda 3 (devolver tempo
-ao profissional) ja entregou o PB-13 (Fase 269, PR `#277`, merge `4e36bda`)
-e o PB-14 (Fase 270, PR `#278`, merge `4c896b0`); a ordem aprovada pelo
-proprietario e PB-13 -> PB-14 -> PB-15 -> PB-23 -> PB-16 -> PB-25. O PB-15
-(Fase 271, template de evolucao clinica com pre-preenchimento), o PB-23
-(Fase 272, biblioteca de condutas/orientacoes reutilizaveis) e o PB-16
-(Fase 273, resumo clinico do paciente) foram implementados nesta mesma
-branch, com checks remotos e merge humano pendentes.
+Atualizado em 2026-09-22. Fases 256 a 261, 263 a 270, 271, 272 e 273
+concluidas; Fase 262 permanece em andamento pelos gates externos do
+piloto. Com a Fase 268 mergeada (PR `#275`, merge `306d2ed`), o PB-05
+(alerta de check-in com adesao baixa) esta concluido e a Onda 2 do audit
+de produto (PB-01 -> PB-02 -> PB-03 -> PB-05) esta completa. A Onda 3
+(devolver tempo ao profissional) ja entregou o PB-13 (Fase 269, PR `#277`,
+merge `4e36bda`) e o PB-14 (Fase 270, PR `#278`, merge `4c896b0`); a ordem
+aprovada pelo proprietario e PB-13 -> PB-14 -> PB-15 -> PB-23 -> PB-16 ->
+PB-25. O PB-15 (Fase 271, template de evolucao clinica com
+pre-preenchimento), o PB-23 (Fase 272, biblioteca de condutas/orientacoes
+reutilizaveis), o PB-16 (Fase 273, resumo clinico do paciente) e o PB-25
+(Fase 274, preparacao pre-consulta deterministica, ultimo item da Onda 3)
+foram implementados nesta mesma branch, com checks remotos e merge humano
+pendentes.
 O programa de hardening PR 36-56 permanece como trilha separada. O pacote
 interno do PR 55 foi integrado, mas o proprietario adiou a contratacao do
 pentest para evitar custo neste momento; todos os gates externos seguem
@@ -3761,6 +3763,46 @@ publicado antes de ampliar a superficie de mudancas visuais.
     exige PowerShell, indisponivel neste sandbox Linux -- mesma limitacao
     de ambiente ja documentada, nao uma regressao desta fase.
   - Plano, risco e rollback: `docs/history/phases/PLANO_FASE_273.md`.
+
+- [x] Fase 274 - Preparacao pre-consulta deterministica (PB-25, sexto e
+  ultimo item da Onda 3). [IMPLEMENTADA em 2026-09-22; checks remotos e
+  merge humano pendentes]
+  - [x] Sem migration. O audit descreve o estado final como um disparo
+    automatico "30 minutos antes" da consulta, mas recomenda
+    explicitamente construir primeiro a versao deterministica -- essa e a
+    fase entregue aqui; automatizar o disparo fica registrado como
+    extensao futura natural (existe um padrao reaproveitavel,
+    `ProcessadorLembretesAgenda`), nao um gap escondido.
+  - [x] Nenhuma query nova alem de uma: `escolhasSubstituicao`
+    (`PlanoAlimentarEscolhaPacienteOrm.count`, condicional a permissao,
+    plano publicado e atendimento concluido). Os demais quatro sinais do
+    audit (avaliacao nova, check-ins, formularios respondidos, mensagens
+    recebidas) sao contados a partir de arrays ja buscados em
+    `obterProntuario`, filtrados pela data do ultimo atendimento
+    concluido.
+  - [x] Sem vinculo `consulta_id` real (PB-24, Onda 4, ainda nao
+    implementado), "desde o ultimo encontro" e aproximado por janela de
+    data -- mesma classe de limitacao ja documentada no PB-15/PB-16.
+  - [x] Nenhuma fronteira de autorizacao nova: tudo dentro do
+    `obterProntuario` existente, mesmo guard `pacientes.ler`;
+    `escolhasSubstituicao` (contagem, nao conteudo) gated pela mesma
+    permissao que ja protege `planoAtual`/`objetivoPlanoVigente`.
+  - Validacoes: backend typecheck e build; suite completa do backend
+    (210 suites, 2018 testes, 0 falhas; RLS via testcontainers SKIPPED por
+    falta de Docker no sandbox); web typecheck, lint (0 erros, mesmos
+    warnings preexistentes), build; `test:authz` (cadeia completa, sem par
+    novo pois o campo viaja no endpoint `prontuario` ja existente);
+    Playwright `console-regression.spec.mjs` +
+    `fase-248-estados-recuperacao.spec.mjs` (65/65 desktop+mobile,
+    incluindo o cenario novo do PB-25), `acessibilidade.spec.mjs` completo
+    (136/136 desktop, sem violacao nova -- o bloco novo so aparece quando
+    ha consulta futura, ausente nos fixtures de acessibilidade); gates de
+    raiz da Governanca de repositorio (mesma lista das Fases 271-273);
+    `git diff --check` e `security:secrets`. `test:workflows-seguros`
+    reprova so o subteste que exige PowerShell, indisponivel neste sandbox
+    Linux -- mesma limitacao de ambiente ja documentada, nao uma
+    regressao desta fase.
+  - Plano, risco e rollback: `docs/history/phases/PLANO_FASE_274.md`.
 
 Documento de execução e prioridades: `ROADMAP_QUALIDADE_SEGURANCA_FASES_248_262.md`.
 Matriz operacional: `MATRIZ_SKILLS_PLUGINS_MODELOS_FASES_243_248_262.md`.

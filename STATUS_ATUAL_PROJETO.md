@@ -1,6 +1,6 @@
 # OctaClin - Status atual do projeto
 
-Atualizado em 2026-09-21.
+Atualizado em 2026-09-22.
 
 ## Snapshot
 
@@ -140,6 +140,32 @@ Atualizado em 2026-09-21.
   corrigida antes do fechamento. Implementado nesta branch; checks remotos
   e merge humano pendentes. Plano e limites em
   `docs/history/phases/PLANO_FASE_273.md`.
+- Reconciliacao de 2026-09-22: Fase 274 entrega o **PB-25 (preparacao
+  pre-consulta deterministica)**, sexto e ultimo item da Onda 3, na mesma
+  branch das Fases 271-273. Sem migration. O audit descreve o estado final
+  do produto como um disparo automatico "30 minutos antes" da consulta,
+  mas recomenda explicitamente construir primeiro a versao deterministica
+  antes de qualquer IA -- essa versao deterministica e o que esta fase
+  entrega; automatizar o disparo fica fora de escopo, registrado como
+  extensao futura natural (existe um padrao reaproveitavel no codigo,
+  `ProcessadorLembretesAgenda`, para quando essa decisao de produto for
+  tomada). "Ultimo atendimento concluido" ja era resolvido em memoria por
+  `obterProntuario`; a partir dessa data, quatro dos cinco sinais do audit
+  (avaliacao antropometrica nova, check-ins, formularios respondidos,
+  mensagens recebidas) sao contados a partir de arrays ja buscados na
+  mesma funcao, sem nenhuma query nova. O quinto (trocas de substituicao no
+  plano vigente) precisou de uma unica query nova
+  (`PlanoAlimentarEscolhaPacienteOrm.count`), condicional a permissao,
+  plano publicado e atendimento concluido -- mesmo gate ja usado em
+  `objetivoPlanoVigente` (PB-16). Sem vinculo `consulta_id` real (PB-24,
+  Onda 4, ainda nao implementado), "desde o ultimo encontro" continua
+  aproximado por janela de data, mesma classe de limitacao ja documentada
+  no PB-15/PB-16. Nenhuma fronteira de autorizacao nova: tudo dentro do
+  `obterProntuario` existente, mesmo guard `pacientes.ler`. Com esta fase,
+  a Onda 3 do audit (PB-13 -> PB-14 -> PB-15 -> PB-23 -> PB-16 -> PB-25)
+  esta implementada por completo nesta branch, com checks remotos e merge
+  humano pendentes. Plano e limites em
+  `docs/history/phases/PLANO_FASE_274.md`.
 - Reconciliacao de 2026-09-20: a Onda 3 do audit (devolver tempo ao
   profissional) comecou, com a ordem aprovada pelo proprietario:
   PB-13 -> PB-14 -> PB-15 -> PB-23 -> PB-16 -> PB-25 (este ultimo depende do
