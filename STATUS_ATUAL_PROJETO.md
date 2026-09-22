@@ -171,6 +171,21 @@ Atualizado em 2026-09-22.
   2026-09-22, 21/21 check runs verdes incluindo "Demo local smoke" na
   primeira tentativa, merge humano confirmado via GitHub). Plano e limites
   em `docs/history/phases/PLANO_FASE_274.md`.
+- Reconciliacao de 2026-09-22: a Onda 4 do audit (estrutura -- PB-10,
+  PB-17, PB-18, PB-19, PB-24) comecou, com a ordem confirmada pelo
+  proprietario: PB-24 -> PB-18 -> PB-19 -> PB-17 -> PB-10. PB-24 primeiro
+  por ser o mais mecanico (sem decisao de produto pendente) e por fechar o
+  gap ja registrado tres vezes nas Fases 271/273/274 ("desde o ultimo
+  encontro" aproximado por data civil, sem vinculo formal de consulta).
+  Toda a onda exige migration: cada fase entrega a migration aditiva na
+  propria PR, mas a aplicacao fora de banda em staging/producao com role
+  owner fica com o proprietario. Escopo confirmado do PB-24: vinculo
+  `consulta_id` opcional (nullable) em `evolucoes_clinicas`,
+  `avaliacoes_antropometricas`, `condutas_terapeuticas_versoes` e
+  `exames_laboratoriais`, com seletor opcional "Vincular a consulta" nas
+  quatro telas de criacao, listando consultas recentes do paciente. Sem
+  selecao, o registro fica sem vinculo, como hoje -- sem introduzir
+  conceito novo de "consulta em andamento". Proximo item: Fase 275 (PB-24).
 - Reconciliacao de 2026-09-20: a Onda 3 do audit (devolver tempo ao
   profissional) comecou, com a ordem aprovada pelo proprietario:
   PB-13 -> PB-14 -> PB-15 -> PB-23 -> PB-16 -> PB-25 (este ultimo depende do

@@ -638,6 +638,28 @@ Nenhuma depende da Onda 2, podem correr em paralelo se houver capacidade.
 Exige migration e, portanto, o procedimento fora de banda com role owner. Agrupar as migrations reduz o número
 de janelas operacionais.
 
+- **Estado da Onda 4**: ordem confirmada pelo proprietário em 2026-09-22
+  (PB-24 → PB-18 → PB-19 → PB-17 → PB-10). PB-24 primeiro por ser o mais
+  mecânico (sem decisão de produto pendente) e por fechar o gap já
+  registrado três vezes nas Fases 271/273/274 ("desde o último encontro"
+  aproximado por data civil, sem vínculo formal de consulta). PB-18 e PB-19
+  entram juntos por formarem o par de agenda (expediente por profissional
+  habilita a recorrência de consulta). PB-17 depois, por tocar
+  interpretação de exame (risco médio). PB-10 por último, por exigir
+  decisão de produto/privacidade sobre quais campos saem do blob cifrado
+  antes de qualquer código.
+- **Política de migration desta onda**: cada fase entrega a migration
+  aditiva na própria PR (roda em CI/testcontainers), mas a aplicação fora
+  de banda em staging/produção com role owner permanece com o
+  proprietário, seguindo o runbook — não é aplicada pelo agente.
+- **Escopo confirmado do PB-24**: vínculo `consulta_id` opcional (nullable)
+  em `evolucoes_clinicas`, `avaliacoes_antropometricas`,
+  `condutas_terapeuticas_versoes` e `exames_laboratoriais`, com um seletor
+  opcional "Vincular a consulta" nas quatro telas de criação, listando as
+  consultas recentes do paciente. Sem seleção, o registro fica sem vínculo,
+  como hoje — compatível com o fluxo atual, sem introduzir um conceito novo
+  de "consulta em andamento".
+
 **Onda 5 — projetos maiores** (PB-26, PB-27, PB-21, PB-29)
 Painel de operação depende de indicadores que as ondas anteriores já terão normalizado. Auditoria para a
 clínica exige decisão jurídica antes de qualquer código.
