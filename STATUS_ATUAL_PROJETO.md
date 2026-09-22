@@ -88,8 +88,9 @@ Atualizado em 2026-09-22.
   autorizada -- **sem nenhuma mudanca de backend** nessa parte; vincular
   formalmente evolucao/avaliacao a consulta de origem fica registrado como
   gap de produto separado, fora do escopo desta fase. Unica migration:
-  `1720000001049-CriarModelosEvolucaoClinica`, aditiva. Implementado nesta
-  branch; checks remotos e merge humano pendentes. Plano e limites em
+  `1720000001049-CriarModelosEvolucaoClinica`, aditiva. Integrado pelo PR
+  `#303` (branch `claude/jolly-turing-1eup7k`, merge `65459c8` em `main`
+  em 2026-09-22, 21/21 check runs verdes). Plano e limites em
   `docs/history/phases/PLANO_FASE_271.md`.
 - Reconciliacao de 2026-09-21: Fase 272 entrega o **PB-23 (biblioteca de
   condutas/orientacoes reutilizaveis)**, quarto item da Onda 3, na mesma
@@ -110,8 +111,9 @@ Atualizado em 2026-09-22.
   claro), esta nao tem busca textual server-side, so filtro por `tipo`; a
   UI lista ate 100 itens, mesma UX ja usada nos modelos de plano
   alimentar/evolucao clinica. Unica migration:
-  `1720000001050-CriarBibliotecaCondutas`, aditiva. Implementado nesta
-  branch; checks remotos e merge humano pendentes. Plano e limites em
+  `1720000001050-CriarBibliotecaCondutas`, aditiva. Integrado pelo PR
+  `#303` (branch `claude/jolly-turing-1eup7k`, merge `65459c8` em `main`
+  em 2026-09-22, 21/21 check runs verdes). Plano e limites em
   `docs/history/phases/PLANO_FASE_272.md`.
 - Reconciliacao de 2026-09-21: Fase 273 entrega o **PB-16 (resumo clinico
   do paciente)**, quinto item da Onda 3, na mesma branch das Fases 271/272.
@@ -137,8 +139,9 @@ Atualizado em 2026-09-22.
   acessibilidade encontrou uma violacao real (axe-core, regra
   `definition-list`) na primeira versao do bloco novo no frontend -- `<dl>`
   com `<div>` direto contendo `<p>` em vez de grupos `<dt>`/`<dd>` --
-  corrigida antes do fechamento. Implementado nesta branch; checks remotos
-  e merge humano pendentes. Plano e limites em
+  corrigida antes do fechamento. Integrado pelo PR `#303` (branch
+  `claude/jolly-turing-1eup7k`, merge `65459c8` em `main` em 2026-09-22,
+  21/21 check runs verdes). Plano e limites em
   `docs/history/phases/PLANO_FASE_273.md`.
 - Reconciliacao de 2026-09-22: Fase 274 entrega o **PB-25 (preparacao
   pre-consulta deterministica)**, sexto e ultimo item da Onda 3, na mesma
@@ -163,9 +166,11 @@ Atualizado em 2026-09-22.
   no PB-15/PB-16. Nenhuma fronteira de autorizacao nova: tudo dentro do
   `obterProntuario` existente, mesmo guard `pacientes.ler`. Com esta fase,
   a Onda 3 do audit (PB-13 -> PB-14 -> PB-15 -> PB-23 -> PB-16 -> PB-25)
-  esta implementada por completo nesta branch, com checks remotos e merge
-  humano pendentes. Plano e limites em
-  `docs/history/phases/PLANO_FASE_274.md`.
+  esta **completa**. Integrado, junto com as Fases 271-273, pelo PR `#303`
+  (branch `claude/jolly-turing-1eup7k`, merge `65459c8` em `main` em
+  2026-09-22, 21/21 check runs verdes incluindo "Demo local smoke" na
+  primeira tentativa, merge humano confirmado via GitHub). Plano e limites
+  em `docs/history/phases/PLANO_FASE_274.md`.
 - Reconciliacao de 2026-09-20: a Onda 3 do audit (devolver tempo ao
   profissional) comecou, com a ordem aprovada pelo proprietario:
   PB-13 -> PB-14 -> PB-15 -> PB-23 -> PB-16 -> PB-25 (este ultimo depende do
@@ -182,8 +187,8 @@ Atualizado em 2026-09-22.
   nova atravessando pacientes foi criada. Copia somente refeicoes, itens,
   substituicoes, horarios e orientacoes -- avaliacao antropometrica,
   formula, macros, objetivo clinico e confirmacoes continuam sendo do
-  paciente de destino, e a interface diz isso antes da acao. Implementado
-  nesta branch; checks remotos e merge humano pendentes. Plano e limites em
+  paciente de destino, e a interface diz isso antes da acao. Integrado pelo
+  PR `#277` (merge `4e36bda`). Plano e limites em
   `docs/history/phases/PLANO_FASE_269.md`.
 - Reconciliacao de 2026-09-20: Fase 268 (PB-05, alerta de check-in com
   adesao baixa, ultimo item da Onda 2) implementada. Contrato fechado
@@ -811,8 +816,7 @@ Atualizado em 2026-09-22.
   `GET /pacientes/:id/planos-alimentares/:planoId`, todas ja autorizadas por
   paciente. Copia so a estrutura de refeicoes; o calculo energetico, a
   avaliacao antropometrica, o objetivo clinico e as confirmacoes continuam
-  do paciente de destino. Implementado nesta branch; checks remotos e merge
-  humano pendentes.
+  do paciente de destino. Integrado pelo PR `#277` (merge `4e36bda`).
 - Fase 261 (escopo de trabalho: gaps de seguranca e privacidade
   identificados no audit da fase) **concluida tecnicamente em 2026-09-15,
   com excecoes operacionais abertas; incrementos 1 a 4 integrados**.
