@@ -1458,7 +1458,14 @@ async function prepararProntuarioMockado(page, {
         tipo: 'consulta',
         titulo: 'Consulta de retorno',
         descricao: 'Online',
-        data: '2026-09-22T13:00:00.000Z',
+        // Relativa, como os outros fixtures deste arquivo ja fazem. Esta e a
+        // consulta que o prontuario destaca como proxima, e `proximaConsulta`
+        // so considera `data >= Date.now()`: com data escrita a mao o fixture
+        // passa ate o instante escrito e reprova para sempre depois dele. Foi o
+        // que `2026-09-22T13:00:00.000Z` fez ao virar as 13:00 UTC, derrubando
+        // tres testes deste bloco em desktop e mobile, em `main` e em todo PR
+        // aberto, sem diff nenhum ter mudado.
+        data: dataFuturaIso(1),
         status: 'agendada'
       },
       {
