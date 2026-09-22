@@ -161,7 +161,14 @@ dias -- e um workflow proprio, fora dos required checks, entao o vermelho
 notifica sem travar a fila, o oposto do que acontece quando a causa vence de
 fato. O job `capturar` da a captura um lugar onde rodar: o runner tem `gh` e o
 job pede `security-events: read`, o que remove a dependencia de alguem ter as
-duas coisas na propria maquina. Nenhum dos dois escreve no inventario --
+duas coisas na propria maquina. Medido no run 35725722178, nao suposto: com essa
+permissao o GITHUB_TOKEN le `branches/main` e `code-scanning/alerts`, mas
+devolve 403 em `dependabot/alerts` -- alertas do Dependabot ficam fora do
+alcance do GITHUB_TOKEN, e a captura completa exige um token proprio em
+`INVENTARIO_GITHUB_TOKEN`. A captura segue fail-closed nesse caso: snapshot
+parcial que se apresenta como completo quebraria a cobertura bijetiva, porque
+alerta invisivel nao entra em causa nenhuma e ninguem percebe a falta.
+Nenhum dos dois jobs escreve no inventario --
 `contents: read` sem excecao -- porque renovar `revisarEm` sozinho seria a
 maquina de falso verde; triar alerta em causa continua sendo julgamento com
 evidencia. Status do controle: implemented.

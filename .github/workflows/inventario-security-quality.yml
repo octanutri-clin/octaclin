@@ -30,12 +30,12 @@ on:
     # Segundas as 09:00 UTC. O SLA mais curto (critical) e de 14 dias, entao uma
     # passada por semana sempre cai dentro da janela de 7 dias antes do fim.
     - cron: "0 9 * * 1"
-  pull_request:
-    paths:
-      - "docs/governance/inventario-security-quality.json"
-      - "scripts/capturar-inventario-security-quality.mjs"
-      - "scripts/alertar-vencimento-inventario.mjs"
-      - ".github/workflows/inventario-security-quality.yml"
+
+# Sem gatilho de pull_request, de proposito. Uma causa perto de vencer nao e
+# defeito do PR que calhou de abrir naquele dia, e captura em todo PR gastaria
+# quota para produzir o mesmo snapshot varias vezes. Os scripts daqui continuam
+# cobertos em PR por `test:inventario-security-quality`, dentro do job
+# "Governanca de repositorio".
 
 permissions:
   contents: read
@@ -83,9 +83,31 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
 
+      # Medido no run 35725722178 (2026-09-22), nao suposto: com
+      # `security-events: read` o GITHUB_TOKEN le `branches/main` e
+      # `code-scanning/alerts` -- mas devolve 403 em `dependabot/alerts`
+      # ("Resource not accessible by integration"). Alertas do Dependabot ficam
+      # fora do alcance do GITHUB_TOKEN, entao a captura completa precisa de um
+      # token proprio com "Dependabot alerts: read" e "Code scanning alerts:
+      # read", guardado em INVENTARIO_GITHUB_TOKEN.
+      #
+      # A captura continua fail-closed quando o token nao alcanca algum dos
+      # quatro endpoints: snapshot parcial que se apresenta como completo
+      # quebraria a cobertura bijetiva -- alerta invisivel nao entra em causa
+      # nenhuma e ninguem percebe a falta.
+      - name: Token em uso
+        env:
+          TEM_TOKEN_PROPRIO: ${{ secrets.INVENTARIO_GITHUB_TOKEN != '' }}
+        run: |
+          if [ "$TEM_TOKEN_PROPRIO" = "true" ]; then
+            echo "Captura usando INVENTARIO_GITHUB_TOKEN."
+          else
+            echo "::warning::INVENTARIO_GITHUB_TOKEN ausente; caindo no GITHUB_TOKEN, que nao le alertas do Dependabot. A captura vai reprovar nesse endpoint."
+          fi
+
       - name: Capturar inventario
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.INVENTARIO_GITHUB_TOKEN || secrets.GITHUB_TOKEN }}
         run: node scripts/capturar-inventario-security-quality.mjs > inventario-capturado.json
 
       - name: Resumo da captura
