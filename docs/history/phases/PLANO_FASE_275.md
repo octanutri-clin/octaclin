@@ -75,3 +75,59 @@ escopo que a consulta existe.
 - Playwright do prontuário (`console-regression.spec.mjs -g "prontuario do paciente"`) cobrindo o
   seletor novo, sem regredir os cenários existentes.
 - `git diff --check`, `pnpm security:secrets`.
+
+## 8. Entregue (2026-09-22)
+
+Escopo do plano implementado sem desvio. Dois pontos de leitura antes de codar que não estavam
+explícitos acima, encontrados no código real:
+
+- `ServicoCondutasTerapeuticas.criarNovaVersao` (revisão de uma conduta já publicada) também aceita
+  `consultaId` opcional, além de `criar` (primeira versão) — o plano já previa isso na tabela da
+  seção 4, mas o controller não tinha corpo de requisição nesse endpoint; foi adicionado
+  `NovaVersaoCondutaTerapeuticaDto` (só `consultaId?`) para cobrir esse caso sem tocar
+  `AtualizarRascunhoCondutaTerapeuticaDto`, que segue sem o campo (edição de rascunho não é criação).
+- O seletor "Vincular a consulta" no formulário de conduta terapêutica só aparece na criação de uma
+  conduta nova, não na edição de rascunho (`!editando`) — a ação "Nova versão" é um botão de uma
+  etapa só, sem formulário próprio, então não ganhou o seletor nesta fase (ficaria fora do escopo
+  mínimo de "quatro telas de criação" que o proprietário confirmou).
+
+Arquivos principais:
+
+- Backend: `1720000001051-AdicionarConsultaIdEntidadesClinicas.ts` (+ `.spec.ts`), 4 ORMs
+  (`evolucao-clinica`, `avaliacao-antropometrica`, `conduta-terapeutica-versao`,
+  `coleta-exame-laboratorial`), `vinculo-consulta.ts` (+ `.spec.ts`), `dtos.ts`,
+  `servico-pacientes.ts`, `servico-condutas-terapeuticas.ts`, `servico-exames-laboratoriais.ts`,
+  `controlador-pacientes.ts`, `controlador-condutas-terapeuticas.ts`.
+- Frontend: `seletor-consulta-recente.tsx` (novo, reutilizado nas 4 telas),
+  `app/api/pacientes/[id]/consultas-recentes/route.ts` (novo BFF), `lib/prontuario-api.ts`,
+  `lib/condutas-terapeuticas-api.ts`, `lib/exames-laboratoriais-api.ts`,
+  `aba-antropometria.tsx`, `aba-condutas-terapeuticas.tsx`, `aba-exames-laboratoriais.tsx`,
+  `prontuario-paciente.tsx`.
+- Docs: `MAPA_ROTAS_PERMISSOES.md` (rota nova), `TESTES_E_VALIDACOES.md` (specs recentes),
+  `CHECKLIST_FASES_FUTURAS_PRODUCAO.md`, `STATUS_ATUAL_PROJETO.md`.
+
+Validações executadas (evidência do mesmo ciclo, 2026-09-22):
+
+- `pnpm --dir octaclin-backend test --runInBand vinculo-consulta.spec.ts servico-pacientes.spec.ts servico-condutas-terapeuticas.spec.ts servico-exames-laboratoriais.spec.ts 1720000001051-AdicionarConsultaIdEntidadesClinicas.spec.ts` — PASS (10 + 83 + 8 + 8 + 10 testes).
+- `pnpm --dir octaclin-backend test --runInBand src/modulos/pacientes` — PASS (386/386, suíte completa do módulo).
+- `pnpm --dir octaclin-backend typecheck` — PASS.
+- `pnpm --dir octaclin-web typecheck` — PASS.
+- `pnpm --dir octaclin-web lint` — PASS (0 erros; warnings pré-existentes de outro padrão do
+  projeto, incluídos os do componente novo, não bloqueiam).
+- `pnpm --dir octaclin-web build` — PASS, rota `/api/pacientes/[id]/consultas-recentes` presente no
+  build.
+- `pnpm --dir octaclin-web test:authz` — PASS (15 scripts encadeados, exit 0).
+- Playwright `console-regression.spec.mjs -g "prontuario do paciente"` (desktop-chromium) — PASS
+  (37/37), incluindo o orçamento de endpoints da aba Resumo (o fetch novo é lazy, só ocorre quando
+  um formulário com o seletor é aberto) e os cenários de evolução/antropometria/conduta já
+  existentes, sem regressão.
+- `git diff --check` — PASS (sem problema de espaço em branco).
+- `pnpm security:secrets` — PASS (nenhum secret identificado).
+
+Gap conhecido e não coberto nesta fase (pré-existente, não introduzido por ela): a aba de exames
+laboratoriais não tem suíte Playwright própria no repositório — o seletor ali foi validado por
+typecheck/build/lint e pela spec de serviço (`servico-exames-laboratoriais.spec.ts`), não por E2E.
+
+Aplicação fora de banda da migration em staging/produção **não executada** nesta fase — fica com o
+proprietário, conforme a política registrada nas seções 2 e no `CHECKLIST_FASES_FUTURAS_PRODUCAO.md`.
+PR ainda não aberta.

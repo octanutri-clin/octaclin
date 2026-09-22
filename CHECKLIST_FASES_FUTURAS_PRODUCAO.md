@@ -4272,7 +4272,19 @@ terapeutica, exame laboratorial), com seletor opcional "Vincular a
 consulta" nas telas de criacao, sem introduzir conceito novo de "consulta
 em andamento". Plano e limites em `docs/history/phases/PLANO_FASE_275.md`.
 
-Proximo item: PB-24 (Fase 275, vinculo `consulta_id`), primeiro item da
+PB-24 (Fase 275, vinculo `consulta_id`), primeiro item da Onda 4, foi
+implementado em 2026-09-22 na branch `feat/fase275-vinculo-consulta-id`:
+migration aditiva (coluna nullable + indice parcial por tenant) nas quatro
+tabelas, validacao "mesmo tenant, mesmo paciente" isolada em
+`resolverConsultaOpcional` (404, nao 403, para consulta fora do escopo),
+rota nova `GET /pacientes/:id/consultas-recentes` e o seletor opcional
+"Vincular a consulta" reutilizado nas quatro telas de criacao. Migration
+entra na PR; aplicacao fora de banda em staging/producao continua com o
+proprietario. PR ainda nao aberta/mergeada -- ver
+`docs/history/phases/PLANO_FASE_275.md` para o detalhamento e
+`STATUS_ATUAL_PROJETO.md` para o estado corrente do merge.
+
+Proximo item apos a Fase 275 mergeada: PB-18 (Fase 276), segundo item da
 Onda 4. O programa de hardening PR 36-56 permanece como trilha separada --
 PR 55 permanece adiado e pendente; PR 56 continua condicionado a decisao
 explicita de distribuir o Mobile.

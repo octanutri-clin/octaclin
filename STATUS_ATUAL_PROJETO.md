@@ -185,7 +185,29 @@ Atualizado em 2026-09-22.
   `exames_laboratoriais`, com seletor opcional "Vincular a consulta" nas
   quatro telas de criacao, listando consultas recentes do paciente. Sem
   selecao, o registro fica sem vinculo, como hoje -- sem introduzir
-  conceito novo de "consulta em andamento". Proximo item: Fase 275 (PB-24).
+  conceito novo de "consulta em andamento".
+- Reconciliacao de 2026-09-22 (2): Fase 275 (PB-24) implementada na branch
+  `feat/fase275-vinculo-consulta-id` -- migration aditiva reversivel
+  (`1720000001051-AdicionarConsultaIdEntidadesClinicas`), coluna
+  `consulta_id` (uuid, nullable, `references agenda_consultas(id)`) nas
+  quatro entidades, validacao "mesmo tenant, mesmo paciente" isolada em
+  `resolverConsultaOpcional` (404, nao 403, mesmo padrao ja usado em
+  `ServicoDocumentosClinicos.resolverConsultaDeOrigem`), wiring nos quatro
+  pontos de criacao (`ServicoPacientes.criarEvolucaoClinica`,
+  `ServicoPacientes.registrarAvaliacaoAntropometrica`,
+  `ServicoCondutasTerapeuticas.criar`/`criarNovaVersao`,
+  `ServicoExamesLaboratoriais.criar`), rota nova
+  `GET /pacientes/:id/consultas-recentes` e o componente
+  `SeletorConsultaRecente` reutilizado nas quatro telas. Validado:
+  specs de backend (migration, `vinculo-consulta`, os 3 servicos tocados)
+  verdes, `pnpm --dir octaclin-backend typecheck` limpo,
+  `pnpm --dir octaclin-web typecheck`/`lint`/`build` limpos, suite
+  Playwright "prontuario do paciente" (37 cenarios, desktop) sem
+  regressao. Migration entra na PR; aplicacao fora de banda em
+  staging/producao continua com o proprietario -- nao executada nesta
+  fase. PR ainda nao aberta. Plano em
+  `docs/history/phases/PLANO_FASE_275.md`. Proximo item: Fase 276 (PB-18),
+  apos merge da Fase 275.
 - Reconciliacao de 2026-09-20: a Onda 3 do audit (devolver tempo ao
   profissional) comecou, com a ordem aprovada pelo proprietario:
   PB-13 -> PB-14 -> PB-15 -> PB-23 -> PB-16 -> PB-25 (este ultimo depende do
