@@ -2775,16 +2775,20 @@
         "code-scanning:400",
         "code-scanning:402"
       ],
-      "disposicao": "aguardando_upstream",
+      "disposicao": "mitigado",
       "severidadeContextual": "critical",
       "owner": "octanutri-clin/octaclin (proprietario do repositorio)",
-      "revisarEm": "2026-09-20",
+      "revisarEm": "2026-09-22",
       "ondaDestino": "SQ-2",
       "evidencia": [
         "Recaptura da main 98b6e5f em 2026-09-08: 173 alertas Trivy na imagem final library/octaclin-ia-service; 3 critical, 51 high, 57 medium, 57 low e 5 none.",
         "Todos os 173 registros do Security tab informam versaoCorrigida null; nenhum foi encerrado, dispensado ou ocultado.",
         "O PR #213 removeu pip, msgpack e setuptools do runtime por procedencia de camada; no pos-merge, o run Trivy 34256077527 aprovou build, identidade, SBOM das imagens e Provenance do SBOM.",
-        "A imagem continua fixada por digest oficial em octaclin-ai-service/Dockerfile; trocar base ou executar upgrade mutavel exige nova avaliacao de suporte, compatibilidade e reproducibilidade."
+        "A imagem continua fixada por digest oficial em octaclin-ai-service/Dockerfile; trocar base ou executar upgrade mutavel exige nova avaliacao de suporte, compatibilidade e reproducibilidade.",
+        "Revisao de 2026-09-21: consulta autenticada ao registry-1.docker.io mostrou que o digest fixado em 2026-09-01 (sha256:cad9a2c871761c413caa6fdd6441c783451e740a48aaeba60ae62a8b53525ef6) estava desatualizado; a tag 3.14-slim passou a apontar para sha256:caaf356f40667c496d405780745b9ac25771c189a51dfcc42430d531ea09f8a2, indice OCI multi-arch com linux/amd64 e linux/arm64/v8 confirmados.",
+        "O PR #293 (merge 129ba7f) reancorou os dois estagios do Dockerfile nesse digest, sem trocar de base. O run 35619818620 na main aprovou harness de runtime hardened, Trivy sobre a imagem final, SBOM CycloneDX e a prova de reproducao semantica; OS detectado debian 13.7.",
+        "Depois desse merge os 3 alertas critical do ia-service sairam do Security tab: o upstream publicou correcao (Fixed Version 5.40.1-6+deb13u1) e a base reancorada ja a carrega. A premissa original de que nenhum dos 173 alertas tinha versao corrigida deixou de valer.",
+        "Pendente desta revisao: recaptura completa do snapshot, para reconciliar as referencias que fecharam e triar alertas novos. O capturar-inventario-security-quality.mjs depende de `gh` com escopo security_events, indisponivel no ambiente que executou esta revisao."
       ],
       "preCondicoes": [
         "A exploracao depende de o pacote Debian sinalizado estar alcancavel pelo fluxo do servico; o scanner nao publicou versao corrigida e a ausencia de patch nao demonstra falso positivo.",

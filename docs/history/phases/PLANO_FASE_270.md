@@ -165,3 +165,32 @@ commit. Nenhuma acao de producao, seed ou dado real foi usada.
 3. **Endpoints nao mockados devolvendo 401** (`prioridade-acompanhamento`,
    `escolhas-paciente`, `notificacoes`) disparavam "sua sessao expirou", que
    abortava o submit antes da requisicao do rascunho.
+
+## 11. Fechamento: PR #278 merge confirmado
+
+O CI rodou sobre o commit `5f1899d` (head da PR `#278`) e **todos os 20 check
+runs concluiram com sucesso**, incluindo "Demo local smoke" (o job que falhou
+nas Fases 269 e 270 anteriores a correcao de fixture) e "Backend NestJS",
+"Web Next.js", CodeQL, Semgrep, Trivy e os builds de imagem. Nenhum check
+falhou e nenhuma thread de revisao foi aberta. A PR foi revisada e mergeada
+por humano em `main` no commit `4c896b0`, em 2026-09-20.
+
+Vale registrar: o "Demo local smoke" passou **na primeira tentativa** desta
+fase. Nas duas fases anteriores ele so ficou verde depois de uma correcao
+pos-push. A diferenca foi montar o fixture Playwright ja no formato real dos
+tipos (`PlanoAlimentarApi` com `historico`, nutrientes dentro de
+`composicaoSnapshot.nutrientesPor100g`) em vez de descobrir isso pelo CI --
+a licao das secoes anteriores aplicada antes do push, nao depois.
+
+Com o merge confirmado, o **PB-14 (caminho manual para paciente com condicao
+especial) esta definitivamente concluido**, e com ele o segundo item da Onda
+3. `CHECKLIST_FASES_FUTURAS_PRODUCAO.md` e `STATUS_ATUAL_PROJETO.md` foram
+atualizados para substituir "checks remotos e merge humano pendentes" pela
+evidencia real do merge.
+
+Tambem entrou em `main`, junto, a correcao do defeito pre-existente da secao
+6: a invalidacao da revisao apos edicao agora usa `null` e de fato persiste,
+fechando a brecha que permitia publicar um plano editado sem nova revisao.
+
+Proximo item da Onda 3: **PB-15** (template de evolucao clinica com
+pre-preenchimento).
