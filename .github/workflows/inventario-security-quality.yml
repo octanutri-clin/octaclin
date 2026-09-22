@@ -1,0 +1,108 @@
+# Captura do inventario Security & Quality, e aviso antes do vencimento.
+#
+# Por que este workflow existe
+# ----------------------------
+# Em 2026-09-20 a causa SQ-2026-004 venceu por data e o check `Governanca de
+# repositorio` foi de verde a vermelho de um dia para o outro, travando `main`
+# e 15 PRs. O vencimento estava certo; faltaram duas coisas.
+#
+# 1. Aviso. `validarInventario` so fala depois que ja e tarde -- a reprovacao e
+#    o proprio sintoma. O job `alertar` gasta a folga que ainda existe.
+# 2. Um lugar onde a captura possa rodar. `capturar-inventario-security-quality`
+#    depende de `gh` e de permissao de leitura dos alertas; quem precisava
+#    recapturar nem sempre tinha as duas. O runner tem.
+#
+# O que este workflow NAO faz, deliberadamente: nao escreve no inventario, nao
+# renova `revisarEm` e nao altera disposicao -- por isso `contents: read`, sem
+# excecao. Renovar sozinho seria a maquina de falso verde que o inventario
+# existe para impedir: a data avancaria sem ninguem olhar um alerta. Triar
+# alerta em causa continua sendo julgamento, com evidencia e revisao.
+name: Inventario Security & Quality
+
+on:
+  workflow_dispatch:
+    inputs:
+      dias_aviso:
+        description: "Janela do aviso de vencimento, em dias"
+        required: false
+        default: "7"
+  schedule:
+    # Segundas as 09:00 UTC. O SLA mais curto (critical) e de 14 dias, entao uma
+    # passada por semana sempre cai dentro da janela de 7 dias antes do fim.
+    - cron: "0 9 * * 1"
+  pull_request:
+    paths:
+      - "docs/governance/inventario-security-quality.json"
+      - "scripts/capturar-inventario-security-quality.mjs"
+      - "scripts/alertar-vencimento-inventario.mjs"
+      - ".github/workflows/inventario-security-quality.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: octaclin-inventario-sq-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: "22"
+
+jobs:
+  alertar:
+    name: Aviso de vencimento
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - run: node --test scripts/alertar-vencimento-inventario.spec.mjs
+
+      # Reprova de proposito dentro da janela: e o vermelho deste run agendado
+      # que notifica. Como este workflow nao e required check de PR, o vermelho
+      # avisa sem travar a fila -- o oposto do que acontece quando a causa
+      # vence de fato.
+      - name: Causas proximas do vencimento
+        env:
+          DIAS_AVISO: ${{ inputs.dias_aviso || '7' }}
+        run: node scripts/alertar-vencimento-inventario.mjs --dias "$DIAS_AVISO"
+
+  capturar:
+    name: Capturar snapshot
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      # Leitura dos alertas, e so leitura. A captura nunca escreve no repo.
+      security-events: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Capturar inventario
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: node scripts/capturar-inventario-security-quality.mjs > inventario-capturado.json
+
+      - name: Resumo da captura
+        run: node scripts/resumir-captura-inventario.mjs inventario-capturado.json
+
+      # O artefato e a saida principal. O eco em blocos existe porque em alguns
+      # ambientes de agente o download de artefato do Actions e barrado pela
+      # politica de egresso (o blob storage fica fora da allowlist), e sem ele a
+      # captura chega ao CI mas nao chega a quem precisa reconciliar. Cada bloco
+      # leva indice e o conjunto leva um sha256, entao a remontagem e conferivel
+      # em vez de confiada.
+      - name: Eco conferivel do snapshot
+        run: node scripts/resumir-captura-inventario.mjs inventario-capturado.json --eco
+
+      - name: Publicar snapshot
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: inventario-security-quality-capturado
+          path: inventario-capturado.json
+          retention-days: 7
