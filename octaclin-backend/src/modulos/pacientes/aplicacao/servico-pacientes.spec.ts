@@ -1168,6 +1168,92 @@ describe('ServicoPacientes', () => {
     expect(prontuario.linhaDoTempo[0]).not.toHaveProperty('descricao');
   });
 
+  describe('PB-24 (Fase 275): vinculo opcional com consulta', () => {
+    const paciente = {
+      id: 'paciente-1',
+      tenantId: 'tenant-1',
+      profissionalResponsavelId: 'profissional-1',
+      nomeCriptografado: Buffer.from('cripto:Maria'),
+      statusAdesao: 'em_acompanhamento',
+      scoreRisco: '40',
+      criadoEm: new Date('2026-07-01T10:00:00.000Z'),
+      atualizadoEm: new Date('2026-07-01T10:00:00.000Z')
+    };
+
+    function montarServicoComEvolucoes(agenda: Record<string, unknown>[]) {
+      const evolucoesSalvas: Record<string, unknown>[] = [];
+      const repositorios = new Map<unknown, Record<string, unknown>>([
+        [PacienteOrm, { findOne: jest.fn(async () => paciente) }],
+        [AgendaConsultaOrm, { findOne: jest.fn(async ({ where }: any) => agenda.find((c) => c.id === where.id && c.tenantId === where.tenantId && c.pacienteId === where.pacienteId) ?? null) }],
+        [
+          EvolucaoClinicaOrm,
+          {
+            create: jest.fn((dados: Record<string, unknown>) => dados),
+            save: jest.fn(async (dados: Record<string, unknown>) => {
+              const salvo = { id: 'evolucao-1', criadoEm: new Date('2026-07-22T17:00:00.000Z'), atualizadoEm: new Date('2026-07-22T17:00:00.000Z'), ...dados };
+              evolucoesSalvas.push(salvo);
+              return salvo;
+            })
+          }
+        ]
+      ]);
+      const servico = new ServicoPacientes(
+        { executar: jest.fn((_tenantId: string, operacao: (gerenciador: unknown) => Promise<unknown>) => operacao({ getRepository: jest.fn((entidade) => repositorios.get(entidade)) })) } as never,
+        { criptografar: jest.fn((valor: string) => Buffer.from(`cripto:${valor}`)), descriptografar: jest.fn((valor: Buffer) => valor.toString().replace('cripto:', '')) } as never,
+        limitesPermitidos as never
+      );
+      return { servico, evolucoesSalvas };
+    }
+
+    it('persiste consultaId na evolucao clinica quando a consulta pertence ao mesmo paciente', async () => {
+      const { servico, evolucoesSalvas } = montarServicoComEvolucoes([{ id: 'consulta-1', tenantId: 'tenant-1', pacienteId: 'paciente-1' }]);
+
+      const evolucao = await servico.criarEvolucaoClinica(
+        'tenant-1',
+        'paciente-1',
+        'usuario-profissional-1',
+        { titulo: 'Consulta inicial', conteudo: 'Paciente relatou melhora de adesao.', consultaId: 'consulta-1' },
+        usuarioColaborador
+      );
+
+      expect(evolucao.consultaId).toBe('consulta-1');
+      expect(evolucoesSalvas[0]).toEqual(expect.objectContaining({ consultaId: 'consulta-1' }));
+    });
+
+    it('rejeita com 404 (nao 403) quando a consulta e de outro paciente', async () => {
+      const { servico } = montarServicoComEvolucoes([{ id: 'consulta-1', tenantId: 'tenant-1', pacienteId: 'outro-paciente' }]);
+
+      await expect(
+        servico.criarEvolucaoClinica(
+          'tenant-1',
+          'paciente-1',
+          'usuario-profissional-1',
+          { titulo: 'Consulta inicial', conteudo: 'Paciente relatou melhora de adesao.', consultaId: 'consulta-1' },
+          usuarioColaborador
+        )
+      ).rejects.toBeInstanceOf(NotFoundException);
+    });
+
+    it('lista as consultas recentes do paciente para o seletor', async () => {
+      const consultas = [
+        { id: 'consulta-1', titulo: 'Retorno', inicioEm: new Date('2026-07-20T13:00:00.000Z'), status: 'concluida' }
+      ];
+      const repositorios = new Map<unknown, Record<string, unknown>>([
+        [PacienteOrm, { findOne: jest.fn(async () => paciente) }],
+        [AgendaConsultaOrm, { find: jest.fn(async () => consultas) }]
+      ]);
+      const servico = new ServicoPacientes(
+        { executar: jest.fn((_tenantId: string, operacao: (gerenciador: unknown) => Promise<unknown>) => operacao({ getRepository: jest.fn((entidade) => repositorios.get(entidade)) })) } as never,
+        { criptografar: jest.fn(), descriptografar: jest.fn() } as never,
+        limitesPermitidos as never
+      );
+
+      const resultado = await servico.listarConsultasRecentes('tenant-1', 'paciente-1', usuarioColaborador);
+
+      expect(resultado).toEqual([expect.objectContaining({ id: 'consulta-1', titulo: 'Retorno', status: 'concluida' })]);
+    });
+  });
+
   it('deve criar tarefa de acompanhamento e exibir pendencia no prontuario', async () => {
     const paciente = {
       id: 'paciente-1',
@@ -2106,7 +2192,7 @@ describe('ServicoPacientes - avaliacao antropometrica', () => {
     gerarHashesBuscaPii: jest.fn(() => ['hash-busca'])
   });
 
-  function montarServico(opcoes: { avaliacoes?: Record<string, unknown>[] } = {}) {
+  function montarServico(opcoes: { avaliacoes?: Record<string, unknown>[]; agenda?: Record<string, unknown>[] } = {}) {
     const paciente = {
       id: 'paciente-1',
       tenantId: 'tenant-1',
@@ -2124,10 +2210,17 @@ describe('ServicoPacientes - avaliacao antropometrica', () => {
       find: jest.fn(async () => opcoes.avaliacoes ?? []),
       findOne: jest.fn(async () => (opcoes.avaliacoes ?? [])[0] ?? null)
     };
-    const gerenciador = {
-      getRepository: jest.fn((entidade: unknown) =>
-        entidade === PacienteOrm ? { findOne: jest.fn(async () => paciente) } : repositorioAvaliacoes
+    const repositorioAgenda = {
+      findOne: jest.fn(async ({ where }: any) =>
+        (opcoes.agenda ?? []).find((c) => c.id === where.id && c.tenantId === where.tenantId && c.pacienteId === where.pacienteId) ?? null
       )
+    };
+    const gerenciador = {
+      getRepository: jest.fn((entidade: unknown) => {
+        if (entidade === PacienteOrm) return { findOne: jest.fn(async () => paciente) };
+        if (entidade === AgendaConsultaOrm) return repositorioAgenda;
+        return repositorioAvaliacoes;
+      })
     };
     const executorTenant = {
       executar: jest.fn((_tenantId: string, operacao: (gerenciador: unknown) => Promise<unknown>) =>
@@ -2173,6 +2266,40 @@ describe('ServicoPacientes - avaliacao antropometrica', () => {
     // A formula fica em claro: descreve o metodo, nao o paciente.
     expect(gravado.formulaAplicada).toContain('Jackson & Pollock 1978');
     expect(criptografia.criptografar).toHaveBeenCalledWith(expect.stringContaining('"pesoKg":80'));
+  });
+
+  it('PB-24 (Fase 275): persiste consultaId quando a consulta pertence ao mesmo paciente', async () => {
+    const { servico, repositorioAvaliacoes } = montarServico({
+      agenda: [{ id: 'consulta-1', tenantId: 'tenant-1', pacienteId: 'paciente-1' }]
+    });
+
+    const avaliacao = await servico.registrarAvaliacaoAntropometrica(
+      'tenant-1',
+      'paciente-1',
+      'usuario-colaborador-1',
+      { avaliadaEm: '2026-08-04', pesoKg: 80, alturaCm: 180, consultaId: 'consulta-1' },
+      usuarioColaborador
+    );
+
+    expect(avaliacao.consultaId).toBe('consulta-1');
+    const gravado = repositorioAvaliacoes.save.mock.calls[0][0] as Record<string, unknown>;
+    expect(gravado.consultaId).toBe('consulta-1');
+  });
+
+  it('PB-24 (Fase 275): rejeita com 404 quando a consulta e de outro paciente', async () => {
+    const { servico } = montarServico({
+      agenda: [{ id: 'consulta-1', tenantId: 'tenant-1', pacienteId: 'outro-paciente' }]
+    });
+
+    await expect(
+      servico.registrarAvaliacaoAntropometrica(
+        'tenant-1',
+        'paciente-1',
+        'usuario-colaborador-1',
+        { avaliadaEm: '2026-08-04', pesoKg: 80, alturaCm: 180, consultaId: 'consulta-1' },
+        usuarioColaborador
+      )
+    ).rejects.toBeInstanceOf(NotFoundException);
   });
 
   it('nao deve recalcular no historico: le o resultado gravado, nao o dominio atual', async () => {

@@ -13,6 +13,8 @@ export interface ColetaExameLaboratorialApi {
   recebidaEm?: string;
   laboratorio?: string;
   observacoes?: string;
+  /** PB-24 (Fase 275): consulta de origem, opcional. */
+  consultaId?: string;
   marcadores: MarcadorExameLaboratorialApi[];
 }
 
@@ -30,6 +32,8 @@ export interface CriarColetaExameLaboratorialEntrada {
   laboratorio?: string;
   observacoes?: string;
   marcadores: CriarMarcadorExameLaboratorialEntrada[];
+  /** PB-24 (Fase 275): consulta de origem, opcional. */
+  consultaId?: string;
 }
 
 export class ErroApiExamesLaboratoriais extends Error {

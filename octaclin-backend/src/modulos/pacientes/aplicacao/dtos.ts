@@ -185,6 +185,8 @@ export class CriarColetaExameLaboratorialDto {
   @IsOptional() @IsString() @MaxLength(4000) observacoes?: string;
   @IsArray() @ArrayMaxSize(100) @ValidateNested({ each: true }) @Type(() => MarcadorExameLaboratorialDto)
   marcadores: MarcadorExameLaboratorialDto[];
+  /** PB-24 (Fase 275): consulta de origem, opcional. */
+  @IsOptional() @IsUUID() consultaId?: string;
 }
 
 export class RegistrarConsentimentoEvolucaoFotograficaDto {
@@ -520,6 +522,23 @@ export class CriarEvolucaoClinicaDto {
   @IsOptional()
   @IsIn(['privada'])
   visibilidade?: VisibilidadeEvolucaoClinica;
+
+  /** PB-24 (Fase 275): consulta de origem, opcional. */
+  @IsOptional()
+  @IsUUID()
+  consultaId?: string;
+}
+
+/**
+ * PB-24 (Fase 275): consultas recentes do paciente, para o seletor opcional
+ * "Vincular a consulta" nas quatro telas de criacao. Sem dado clinico -- so o
+ * necessario para o profissional reconhecer a consulta na lista.
+ */
+export interface ConsultaRecenteRespostaDto {
+  id: string;
+  titulo: string;
+  inicioEm: Date;
+  status: string;
 }
 
 export interface EvolucaoClinicaRespostaDto {
@@ -531,6 +550,7 @@ export interface EvolucaoClinicaRespostaDto {
   conteudo: string;
   tipo: TipoEvolucaoClinica;
   visibilidade: VisibilidadeEvolucaoClinica;
+  consultaId?: string;
   criadoEm: Date;
   atualizadoEm: Date;
 }
@@ -641,6 +661,18 @@ export class CriarCondutaTerapeuticaDto {
   @IsOptional()
   @IsDateString()
   validadeFim?: string;
+
+  /** PB-24 (Fase 275): consulta de origem, opcional. */
+  @IsOptional()
+  @IsUUID()
+  consultaId?: string;
+}
+
+/** PB-24 (Fase 275): consulta de origem opcional para a versao criada. */
+export class NovaVersaoCondutaTerapeuticaDto {
+  @IsOptional()
+  @IsUUID()
+  consultaId?: string;
 }
 
 export class AtualizarRascunhoCondutaTerapeuticaDto {
@@ -949,6 +981,11 @@ export class CriarAvaliacaoAntropometricaDto {
   @IsString()
   @MaxLength(2000)
   observacoes?: string;
+
+  /** PB-24 (Fase 275): consulta de origem, opcional. */
+  @IsOptional()
+  @IsUUID()
+  consultaId?: string;
 }
 
 export interface AvaliacaoAntropometricaRespostaDto {
@@ -962,6 +999,7 @@ export interface AvaliacaoAntropometricaRespostaDto {
   resultado: ResultadoAntropometrico;
   formulaAplicada?: string;
   observacoes?: string;
+  consultaId?: string;
   criadoEm: Date;
 }
 

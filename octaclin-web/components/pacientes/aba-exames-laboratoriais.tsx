@@ -6,6 +6,7 @@ import { Botao } from '@/components/ui/botao';
 import { AreaTexto, Campo, Rotulo } from '@/components/ui/campo';
 import { AlertaOperacional, AlertaSucesso, BarraCarregamento, EstadoVazio } from '@/components/ui/feedback';
 import { mensagemFalhaInterface } from '@/lib/erros-interface';
+import { SeletorConsultaRecente } from './seletor-consulta-recente';
 import {
   criarColetaExameLaboratorial,
   listarExamesLaboratoriais,
@@ -19,6 +20,8 @@ interface FormularioColeta {
   laboratorio: string;
   observacoes: string;
   marcadores: CriarMarcadorExameLaboratorialEntrada[];
+  /** PB-24 (Fase 275): consulta de origem, opcional. */
+  consultaId: string;
 }
 
 function novoMarcador(): CriarMarcadorExameLaboratorialEntrada {
@@ -31,7 +34,8 @@ function formularioInicial(): FormularioColeta {
     recebidaEm: '',
     laboratorio: '',
     observacoes: '',
-    marcadores: [novoMarcador()]
+    marcadores: [novoMarcador()],
+    consultaId: ''
   };
 }
 
@@ -117,7 +121,8 @@ export function AbaExamesLaboratoriais({ pacienteId, podeGerenciar }: AbaExamesL
         recebidaEm: formulario.recebidaEm || undefined,
         laboratorio: formulario.laboratorio.trim() || undefined,
         observacoes: formulario.observacoes.trim() || undefined,
-        marcadores
+        marcadores,
+        consultaId: formulario.consultaId || undefined
       });
       setFormulario(formularioInicial());
       setSucesso('Coleta laboratorial registrada no prontuário.');
@@ -176,6 +181,7 @@ export function AbaExamesLaboratoriais({ pacienteId, podeGerenciar }: AbaExamesL
           </div>
 
           <div className="grid gap-1"><Rotulo htmlFor="coleta-observacoes">Observações</Rotulo><AreaTexto id="coleta-observacoes" value={formulario.observacoes} maxLength={4000} onChange={(evento) => setFormulario((atual) => ({ ...atual, observacoes: evento.target.value }))} /></div>
+          <SeletorConsultaRecente pacienteId={pacienteId} value={formulario.consultaId} onChange={(consultaId) => setFormulario((atual) => ({ ...atual, consultaId }))} disabled={salvando} />
           <div className="flex justify-end"><Botao type="submit" variante="primario" carregando={salvando}><FlaskConical size={16} />Registrar coleta</Botao></div>
         </form>
       ) : null}

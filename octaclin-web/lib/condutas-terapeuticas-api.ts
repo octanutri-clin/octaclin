@@ -10,6 +10,8 @@ export interface VersaoCondutaTerapeuticaApi {
   validadeFim?: string;
   estado: EstadoVersaoCondutaApi;
   publicadaEm?: string;
+  /** PB-24 (Fase 275): consulta de origem, opcional. */
+  consultaId?: string;
   criadoEm: string;
 }
 
@@ -26,6 +28,8 @@ export interface SalvarCondutaTerapeuticaEntrada {
   conteudo: string;
   validadeInicio?: string;
   validadeFim?: string;
+  /** PB-24 (Fase 275): consulta de origem, opcional. So aceito na criacao. */
+  consultaId?: string;
 }
 
 async function requisitar<T>(caminho: string, init?: RequestInit): Promise<T> {
@@ -44,7 +48,12 @@ export function atualizarRascunhoCondutaTerapeutica(pacienteId: string, condutaI
   return requisitar<CondutaTerapeuticaApi>(`${base(pacienteId)}/${encodeURIComponent(condutaId)}/rascunho`, { method: 'PUT', body: JSON.stringify(entrada) });
 }
 export function publicarCondutaTerapeutica(pacienteId: string, condutaId: string) { return requisitar<CondutaTerapeuticaApi>(`${base(pacienteId)}/${encodeURIComponent(condutaId)}/publicacao`, { method: 'POST' }); }
-export function criarNovaVersaoCondutaTerapeutica(pacienteId: string, condutaId: string) { return requisitar<CondutaTerapeuticaApi>(`${base(pacienteId)}/${encodeURIComponent(condutaId)}/nova-versao`, { method: 'POST' }); }
+export function criarNovaVersaoCondutaTerapeutica(pacienteId: string, condutaId: string, consultaId?: string) {
+  return requisitar<CondutaTerapeuticaApi>(`${base(pacienteId)}/${encodeURIComponent(condutaId)}/nova-versao`, {
+    method: 'POST',
+    body: consultaId ? JSON.stringify({ consultaId }) : undefined
+  });
+}
 export function arquivarCondutaTerapeutica(pacienteId: string, condutaId: string) { return requisitar<{ id: string; arquivadaEm: string }>(`${base(pacienteId)}/${encodeURIComponent(condutaId)}/arquivamento`, { method: 'POST' }); }
 
 export interface BibliotecaCondutaResumoApi {

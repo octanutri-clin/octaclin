@@ -4255,8 +4255,36 @@ entraram juntos pelo PR `#303` (branch `claude/jolly-turing-1eup7k`, merge
 local smoke" na primeira tentativa, merge humano confirmado via GitHub). A
 Onda 2 (PB-01 -> PB-02 -> PB-03 -> PB-05) tambem esta completa.
 
-Proximo item: nenhuma onda nova aprovada ainda pelo proprietario para o
-audit de produto; aguardar decisao antes de iniciar qualquer fase seguinte.
-O programa de hardening PR 36-56 permanece como trilha separada -- PR 55
-permanece adiado e pendente; PR 56 continua condicionado a decisao
+A Onda 4 do audit de produto (estrutura -- PB-10, PB-17, PB-18, PB-19,
+PB-24) comecou em 2026-09-22, com a ordem confirmada pelo proprietario:
+**PB-24 -> PB-18 -> PB-19 -> PB-17 -> PB-10**. PB-24 primeiro por ser o
+mais mecanico (sem decisao de produto pendente) e por fechar o gap ja
+registrado tres vezes nas Fases 271/273/274 ("desde o ultimo encontro"
+aproximado por data civil, sem vinculo formal de consulta); PB-18 e PB-19
+entram juntos por formarem o par de agenda; PB-17 depois, por tocar
+interpretacao de exame (risco medio); PB-10 por ultimo, por exigir decisao
+de produto/privacidade sobre quais campos saem do blob cifrado. Toda a
+onda exige migration: cada fase entrega a migration aditiva na propria PR,
+mas a aplicacao fora de banda em staging/producao com role owner fica com
+o proprietario. Escopo confirmado do PB-24: vinculo `consulta_id` opcional
+nas quatro entidades clinicas (evolucao, avaliacao antropometrica, conduta
+terapeutica, exame laboratorial), com seletor opcional "Vincular a
+consulta" nas telas de criacao, sem introduzir conceito novo de "consulta
+em andamento". Plano e limites em `docs/history/phases/PLANO_FASE_275.md`.
+
+PB-24 (Fase 275, vinculo `consulta_id`), primeiro item da Onda 4, foi
+implementado em 2026-09-22 na branch `feat/fase275-vinculo-consulta-id`:
+migration aditiva (coluna nullable + indice parcial por tenant) nas quatro
+tabelas, validacao "mesmo tenant, mesmo paciente" isolada em
+`resolverConsultaOpcional` (404, nao 403, para consulta fora do escopo),
+rota nova `GET /pacientes/:id/consultas-recentes` e o seletor opcional
+"Vincular a consulta" reutilizado nas quatro telas de criacao. Migration
+entra na PR; aplicacao fora de banda em staging/producao continua com o
+proprietario. PR ainda nao aberta/mergeada -- ver
+`docs/history/phases/PLANO_FASE_275.md` para o detalhamento e
+`STATUS_ATUAL_PROJETO.md` para o estado corrente do merge.
+
+Proximo item apos a Fase 275 mergeada: PB-18 (Fase 276), segundo item da
+Onda 4. O programa de hardening PR 36-56 permanece como trilha separada --
+PR 55 permanece adiado e pendente; PR 56 continua condicionado a decisao
 explicita de distribuir o Mobile.

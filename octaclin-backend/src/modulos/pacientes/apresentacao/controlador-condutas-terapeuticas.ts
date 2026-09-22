@@ -10,7 +10,8 @@ import {
   AtualizarRascunhoCondutaTerapeuticaDto,
   CriarBibliotecaCondutaDto,
   CriarCondutaTerapeuticaDto,
-  ListarBibliotecaCondutasDto
+  ListarBibliotecaCondutasDto,
+  NovaVersaoCondutaTerapeuticaDto
 } from '../aplicacao/dtos';
 import { ServicoBibliotecaCondutas } from '../aplicacao/servico-biblioteca-condutas';
 import { ServicoCondutasTerapeuticas } from '../aplicacao/servico-condutas-terapeuticas';
@@ -55,8 +56,8 @@ export class ControladorCondutasTerapeuticas {
 
   @Post(':id/condutas-terapeuticas/:condutaId/nova-versao')
   @Permissoes('pacientes.gerenciar')
-  async criarNovaVersao(@UsuarioAtual() usuario: UsuarioAutenticado, @Req() requisicao: Request, @Param('id', ParseUUIDPipe) pacienteId: string, @Param('condutaId', ParseUUIDPipe) condutaId: string) {
-    const conduta = await this.servico.criarNovaVersao(usuario.tenantId, pacienteId, condutaId, usuario);
+  async criarNovaVersao(@UsuarioAtual() usuario: UsuarioAutenticado, @Req() requisicao: Request, @Param('id', ParseUUIDPipe) pacienteId: string, @Param('condutaId', ParseUUIDPipe) condutaId: string, @Body() dados?: NovaVersaoCondutaTerapeuticaDto) {
+    const conduta = await this.servico.criarNovaVersao(usuario.tenantId, pacienteId, condutaId, usuario, dados?.consultaId);
     await this.auditar(usuario, requisicao, 'pacientes.condutas_terapeuticas.nova_versao', pacienteId, { condutaId });
     return conduta;
   }

@@ -37,6 +37,10 @@ export class EvolucaoClinicaOrm {
   @Column({ type: 'varchar', length: 40, default: 'privada' })
   visibilidade: VisibilidadeEvolucaoClinica;
 
+  /** PB-24 (Fase 275): consulta de origem, opcional. */
+  @Column({ name: 'consulta_id', type: 'uuid', nullable: true })
+  consultaId?: string;
+
   @CreateDateColumn({ name: 'criado_em', type: 'timestamptz' })
   criadoEm: Date;
 

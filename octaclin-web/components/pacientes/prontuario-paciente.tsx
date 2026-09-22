@@ -31,6 +31,7 @@ import { AbaAntropometria } from './aba-antropometria';
 import { ResumoAntropometrico } from './resumo-antropometrico';
 import { formatarMetricaAntropometrica, METRICAS_ANTROPOMETRICAS } from './metricas-antropometricas';
 import { ModelosEvolucaoClinica } from './modelos-evolucao-clinica';
+import { SeletorConsultaRecente } from './seletor-consulta-recente';
 import { AbaExamesLaboratoriais } from './aba-exames-laboratoriais';
 import { AbaEvolucaoFotografica } from './aba-evolucao-fotografica';
 import { AbaCondutasTerapeuticas } from './aba-condutas-terapeuticas';
@@ -98,6 +99,8 @@ interface FormularioEvolucao {
   titulo: string;
   tipo: TipoEvolucaoClinicaApi;
   conteudo: string;
+  /** PB-24 (Fase 275): consulta de origem, opcional. */
+  consultaId: string;
 }
 
 interface FormularioTarefa {
@@ -132,7 +135,8 @@ interface FiltrosHistorico {
 const formularioEvolucaoInicial: FormularioEvolucao = {
   titulo: '',
   tipo: 'observacao',
-  conteudo: ''
+  conteudo: '',
+  consultaId: ''
 };
 
 const formularioTarefaInicial: FormularioTarefa = {
@@ -522,7 +526,8 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
         titulo: formularioEvolucao.titulo.trim(),
         conteudo: formularioEvolucao.conteudo.trim(),
         tipo: formularioEvolucao.tipo,
-        visibilidade: 'privada'
+        visibilidade: 'privada',
+        consultaId: formularioEvolucao.consultaId || undefined
       });
       setFormularioEvolucao(formularioEvolucaoInicial);
       setSucesso('Evolução clínica registrada.');
@@ -1460,6 +1465,12 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
             maxLength={6000}
           />
         </label>
+        <SeletorConsultaRecente
+          pacienteId={pacienteId}
+          value={formularioEvolucao.consultaId}
+          onChange={(consultaId) => setFormularioEvolucao((atual) => ({ ...atual, consultaId }))}
+          disabled={salvandoEvolucao}
+        />
         <div className="flex justify-end">
           <Botao type="submit" variante="primario" disabled={salvandoEvolucao}>
             <Save size={16} />

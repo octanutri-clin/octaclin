@@ -5,13 +5,14 @@ import { CriptografiaDadosSensiveis } from '../../../infraestrutura/seguranca/cr
 import { resolverProfissionalIdDoUsuario } from '../../../infraestrutura/seguranca/escopo-profissional';
 import { UsuarioAutenticado } from '../../auth/dominio/usuario-autenticado';
 import { CriarColetaExameLaboratorialDto } from './dtos';
+import { resolverConsultaOpcional } from './vinculo-consulta';
 import { ColetaExameLaboratorialOrm } from '../infraestrutura/coleta-exame-laboratorial.orm';
 import { MarcadorExameLaboratorialOrm } from '../infraestrutura/marcador-exame-laboratorial.orm';
 import { PacienteOrm } from '../infraestrutura/paciente.orm';
 
 type ResultadoMarcador = { nome: string; valor: string; unidade?: string; referencia?: string; metodo?: string };
 export type ColetaExameLaboratorialResposta = {
-  id: string; coletadaEm: string; recebidaEm?: string; laboratorio?: string; observacoes?: string;
+  id: string; coletadaEm: string; recebidaEm?: string; laboratorio?: string; observacoes?: string; consultaId?: string;
   marcadores: Array<ResultadoMarcador & { id: string }>;
 };
 
@@ -22,13 +23,15 @@ export class ServicoExamesLaboratoriais {
   async criar(tenantId: string, pacienteId: string, dados: CriarColetaExameLaboratorialDto, usuario: UsuarioAutenticado): Promise<ColetaExameLaboratorialResposta> {
     return this.executorTenant.executar(tenantId, async (gerenciador) => {
       await this.garantirPacienteAcessivel(gerenciador, tenantId, pacienteId, usuario);
+      const consultaId = await resolverConsultaOpcional(gerenciador, tenantId, pacienteId, dados.consultaId);
       const coletas = gerenciador.getRepository(ColetaExameLaboratorialOrm);
       const marcadores = gerenciador.getRepository(MarcadorExameLaboratorialOrm);
       const coleta = await coletas.save(coletas.create({
         tenantId, pacienteId, autorUsuarioId: usuario.usuarioId, coletadaEm: dados.coletadaEm,
         recebidaEm: dados.recebidaEm,
         laboratorioCriptografado: dados.laboratorio ? this.criptografia.criptografar(dados.laboratorio) : undefined,
-        observacoesCriptografadas: dados.observacoes ? this.criptografia.criptografar(dados.observacoes) : undefined
+        observacoesCriptografadas: dados.observacoes ? this.criptografia.criptografar(dados.observacoes) : undefined,
+        consultaId
       }));
       const itens = await Promise.all(dados.marcadores.map(async (marcador, ordemExibicao) => marcadores.save(marcadores.create({
         tenantId, coletaId: coleta.id, ordemExibicao,
@@ -65,6 +68,7 @@ export class ServicoExamesLaboratoriais {
       id: coleta.id, coletadaEm: coleta.coletadaEm, recebidaEm: coleta.recebidaEm,
       laboratorio: coleta.laboratorioCriptografado ? this.criptografia.descriptografar(coleta.laboratorioCriptografado) : undefined,
       observacoes: coleta.observacoesCriptografadas ? this.criptografia.descriptografar(coleta.observacoesCriptografadas) : undefined,
+      consultaId: coleta.consultaId,
       marcadores: marcadores.map((marcador) => ({ id: marcador.id, ...JSON.parse(this.criptografia.descriptografar(marcador.resultadoCriptografado)) as ResultadoMarcador }))
     };
   }

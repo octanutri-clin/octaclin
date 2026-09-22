@@ -291,6 +291,27 @@ export class ControladorPacientes {
     return prontuario;
   }
 
+  @Get(':id/consultas-recentes')
+  async listarConsultasRecentes(
+    @UsuarioAtual() usuario: UsuarioAutenticado,
+    @Req() requisicao: Request,
+    @Param('id', ParseUUIDPipe) id: string
+  ) {
+    const consultas = await this.servicoPacientes.listarConsultasRecentes(usuario.tenantId, id, usuario);
+    await this.servicoAuditoria.registrar({
+      tenantId: usuario.tenantId,
+      usuarioId: usuario.usuarioId,
+      acao: 'pacientes.consultas_recentes.listar',
+      recursoTipo: 'paciente',
+      recursoId: id,
+      ip: requisicao.ip,
+      userAgent: this.obterUserAgent(requisicao),
+      metadados: { total: consultas.length },
+      garantirRetentativa: true
+    });
+    return consultas;
+  }
+
   @Get(':id/evolucoes')
   async listarEvolucoes(
     @UsuarioAtual() usuario: UsuarioAutenticado,
