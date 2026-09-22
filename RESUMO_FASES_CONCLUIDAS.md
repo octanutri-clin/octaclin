@@ -869,6 +869,33 @@ O OctaClin ja possui uma base SaaS multi-tenant com backend NestJS, frontend Nex
   autenticado de criar/remover override apos reload foram aprovados. PRs
   `#256` a `#267`. O ClamAV externo permanece pendente na issue `#234`, sem
   falso `PASS`. Ver `docs/history/phases/PLANO_FASE_265.md`.
+- Fases 269-274 - Onda 3 do audit de produto (devolver tempo ao profissional),
+  **completa**: PB-13 -> PB-14 -> PB-15 -> PB-23 -> PB-16 -> PB-25. PB-13
+  (Fase 269) entrega duplicar plano alimentar a partir de outro paciente,
+  reusando rotas ja autorizadas por paciente, sem backend novo. PB-14 (Fase
+  270) entrega o caminho manual para paciente com condicao especial, saida
+  do bloqueio do calculo automatico com meta manual e conduta expressa por
+  paciente. PB-15 (Fase 271) entrega modelos de evolucao clinica reutilizaveis
+  (origem pessoal/clinica, RLS) com pre-preenchimento local de peso/IMC via
+  correlacao por data civil, sem endpoint de "aplicar". PB-23 (Fase 272)
+  entrega biblioteca de condutas/orientacoes reutilizaveis, sempre do tenant
+  inteiro, nome/conteudo cifrados como a conduta real. PB-16 (Fase 273)
+  entrega resumo clinico no prontuario (delta antropometrico, objetivo do
+  plano vigente, condutas vencendo), sem migration, extraindo a decisao de
+  "conduta vencida" para modulo compartilhado com o dashboard. PB-25 (Fase
+  274) entrega a preparacao pre-consulta deterministica (o que mudou desde o
+  ultimo atendimento concluido), sem migration, deixando o disparo automatico
+  "30 minutos antes" como extensao futura. Fase 269 integrada pelo PR `#277`
+  (merge `4e36bda`); Fase 270 pelo PR `#278` (merge `4c896b0`); Fases 271-274
+  juntas pelo PR `#303` (branch `claude/jolly-turing-1eup7k`, merge `65459c8`
+  em `main` em 2026-09-22, 21/21 check runs verdes). Ver
+  `docs/history/phases/PLANO_FASE_269.md` a `PLANO_FASE_274.md`.
+
+  *Nota de cobertura deste resumo: as Fases 266-268 (executor de automacoes e
+  PB-05, fechamento da Onda 2) ainda nao tem entrada propria neste arquivo;
+  ficam registradas em `CHECKLIST_FASES_FUTURAS_PRODUCAO.md` e
+  `STATUS_ATUAL_PROJETO.md`, com o backfill aqui pendente para um proximo
+  fechamento de fase.*
 - Fase 255 - Prontuario clinico orientado a linha de cuidado: o componente
   principal ganhou fronteiras tipadas para navegacao e timeline; Materiais,
   Anexos e profissionais passaram a carregar sob demanda com falhas locais;

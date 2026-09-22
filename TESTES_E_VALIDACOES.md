@@ -38,6 +38,8 @@ Specs recentes importantes:
 
 ```powershell
 pnpm --dir octaclin-backend test --runInBand servico-usuarios-cliente.spec.ts servico-recuperacao-senha.spec.ts servico-portal-cliente.spec.ts permissoes.spec.ts guarda-permissoes.spec.ts
+pnpm --dir octaclin-backend test --runInBand servico-modelos-evolucao-clinica.spec.ts servico-biblioteca-condutas.spec.ts condutas-vencidas.spec.ts modelos-evolucao-clinica.spec.ts timezone-clinico.spec.ts servico-pacientes.spec.ts
+pnpm --dir octaclin-backend test --runInBand 1720000001049-CriarModelosEvolucaoClinica.spec.ts 1720000001050-CriarBibliotecaCondutas.spec.ts
 ```
 
 No Windows/Codex, prefira o script `test` do pacote backend. O formato `pnpm --dir octaclin-backend exec jest ...` pode nao resolver o binario local do Jest corretamente em alguns shells.
