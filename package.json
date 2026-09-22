@@ -40,7 +40,7 @@
     "test:guardas-controladores": "node --test scripts/validar-guardas-controladores.spec.mjs",
     "test:workflows-seguros": "node --test scripts/validar-workflows-sem-injecao.spec.mjs scripts/validar-preflight-fail-closed.spec.mjs",
     "test:triagem-seguranca": "node --test scripts/validar-triagem-seguranca.spec.mjs",
-    "test:inventario-security-quality": "node --test scripts/validar-inventario-security-quality.spec.mjs scripts/capturar-inventario-security-quality.spec.mjs && node scripts/validar-inventario-security-quality.mjs",
+    "test:inventario-security-quality": "node --test scripts/validar-inventario-security-quality.spec.mjs scripts/capturar-inventario-security-quality.spec.mjs scripts/alertar-vencimento-inventario.spec.mjs scripts/resumir-captura-inventario.spec.mjs && node scripts/validar-inventario-security-quality.mjs",
     "test:tooling-agentes": "node --test scripts/validar-tooling-agentes.spec.mjs",
     "test:versao-pnpm": "node --test scripts/validar-versao-pnpm.spec.mjs",
     "test:versao-node": "node --test scripts/validar-versao-node.spec.mjs",

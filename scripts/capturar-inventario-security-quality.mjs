@@ -121,7 +121,15 @@ export function consultarPaginasGh(endpoint, { executar = spawnSync } = {}) {
     { encoding: 'utf8', maxBuffer: 32 * 1024 * 1024 },
   );
   if (resultado.status !== 0) {
-    throw new Error(`GitHub API falhou para ${endpoint}; reautentique com gh auth login.`);
+    // O motivo precisa vir junto: rodando no CI nao existe `gh auth login`, e a
+    // falha tipica passa a ser permissao faltando no GITHUB_TOKEN. Sem o stderr
+    // e sem o endpoint, um 403 em um dos quatro endpoints vira adivinhacao.
+    const motivo = String(resultado.stderr ?? '').trim();
+    throw new Error(
+      `GitHub API falhou para ${endpoint} (status ${resultado.status})` +
+        `${motivo ? `: ${motivo}` : ''}. ` +
+        'Localmente, reautentique com `gh auth login`; no CI, confira as permissoes do GITHUB_TOKEN.',
+    );
   }
   const paginas = JSON.parse(resultado.stdout);
   return paginas.flat();
