@@ -659,10 +659,11 @@ de janelas operacionais.
   consultas recentes do paciente. Sem seleção, o registro fica sem vínculo,
   como hoje — compatível com o fluxo atual, sem introduzir um conceito novo
   de "consulta em andamento".
-- **PB-24 implementado em 2026-09-22** (branch `feat/fase275-vinculo-consulta-id`,
-  PR ainda não aberta): migration, validação de escopo e o seletor nas
-  quatro telas foram entregues conforme o escopo acima, sem desvio. Detalhe
-  em `docs/history/phases/PLANO_FASE_275.md`. Aplicação fora de banda em
+- **PB-24 concluído em 2026-09-22** (PR `#305`, branch
+  `feat/fase275-vinculo-consulta-id`, merge `e92c0ec`): migration, validação
+  de escopo e o seletor nas quatro telas foram entregues conforme o escopo
+  acima, sem desvio. Detalhe em `docs/history/phases/PLANO_FASE_275.md`.
+  Aplicação fora de banda em
   staging/produção segue com o proprietário. Próximo item da onda: PB-18.
 
 **Onda 5 — projetos maiores** (PB-26, PB-27, PB-21, PB-29)
