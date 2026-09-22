@@ -1344,7 +1344,12 @@ function prepararProntuarioPaciente(page, paciente = pacienteFixture) {
           mensagens: 1,
           evolucoes: 1,
           tarefasPendentes: 1,
-          indicadoresRecentes: []
+          indicadoresRecentes: [],
+          leituraClinica: {
+            deltaUltimaAvaliacao: [],
+            deltaDesdeInicio: [],
+            condutasVencendo: []
+          }
         },
         linhaDoTempo: []
       })

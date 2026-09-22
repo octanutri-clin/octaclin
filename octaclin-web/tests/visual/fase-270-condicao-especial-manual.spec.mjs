@@ -162,7 +162,12 @@ async function prepararSessao(page) {
             mensagens: 0,
             evolucoes: 0,
             tarefasPendentes: 0,
-            indicadoresRecentes: []
+            indicadoresRecentes: [],
+            leituraClinica: {
+              deltaUltimaAvaliacao: [],
+              deltaDesdeInicio: [],
+              condutasVencendo: []
+            }
           },
           linhaDoTempo: []
         })

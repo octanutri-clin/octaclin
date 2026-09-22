@@ -40,21 +40,26 @@ import { ServicoExamesLaboratoriais } from './aplicacao/servico-exames-laborator
 import { ServicoConsentimentosEvolucaoFotografica } from './aplicacao/servico-consentimentos-evolucao-fotografica';
 import { ServicoEvolucoesFotograficas } from './aplicacao/servico-evolucoes-fotograficas';
 import { ServicoCondutasTerapeuticas } from './aplicacao/servico-condutas-terapeuticas';
+import { ServicoBibliotecaCondutas } from './aplicacao/servico-biblioteca-condutas';
 import { ServicoFiltrosSalvosPacientes } from './aplicacao/servico-filtros-salvos-pacientes';
 import { ServicoPortalPaciente } from './aplicacao/servico-portal-paciente';
 import { ControladorConvitesPaciente } from './apresentacao/controlador-convites-paciente';
 import { ControladorDocumentosClinicos } from './apresentacao/controlador-documentos-clinicos';
-import { ControladorPacientes } from './apresentacao/controlador-pacientes';
+import { ControladorModelosEvolucaoClinica, ControladorPacientes } from './apresentacao/controlador-pacientes';
 import { ControladorPerfilCadastroPaciente } from './apresentacao/controlador-perfil-cadastro-paciente';
 import { ControladorExamesLaboratoriais } from './apresentacao/controlador-exames-laboratoriais';
 import { ControladorConsentimentosEvolucaoFotografica } from './apresentacao/controlador-consentimentos-evolucao-fotografica';
 import { ControladorEvolucoesFotograficas } from './apresentacao/controlador-evolucoes-fotograficas';
-import { ControladorCondutasTerapeuticas } from './apresentacao/controlador-condutas-terapeuticas';
+import {
+  ControladorBibliotecaCondutas,
+  ControladorCondutasTerapeuticas
+} from './apresentacao/controlador-condutas-terapeuticas';
 import { ControladorFiltrosSalvosPacientes } from './apresentacao/controlador-filtros-salvos-pacientes';
 import { ControladorPortalPaciente } from './apresentacao/controlador-portal-paciente';
 import { AcompanhamentoTarefaOrm } from './infraestrutura/acompanhamento-tarefa.orm';
 import { ConvitePacienteOrm } from './infraestrutura/convite-paciente.orm';
 import { EvolucaoClinicaOrm } from './infraestrutura/evolucao-clinica.orm';
+import { ModeloEvolucaoClinicaOrm } from './infraestrutura/modelo-evolucao-clinica.orm';
 import { AvaliacaoAntropometricaOrm } from './infraestrutura/avaliacao-antropometrica.orm';
 import { DocumentoEmitidoOrm } from './infraestrutura/documento-emitido.orm';
 import { PacienteOrm } from './infraestrutura/paciente.orm';
@@ -63,11 +68,13 @@ import { ConsentimentoEvolucaoFotograficaOrm } from './infraestrutura/consentime
 import { EvolucaoFotograficaOrm } from './infraestrutura/evolucao-fotografica.orm';
 import { EvolucaoFotograficaArquivoOrm } from './infraestrutura/evolucao-fotografica-arquivo.orm';
 import { CondutaTerapeuticaOrm } from './infraestrutura/conduta-terapeutica.orm';
+import { BibliotecaCondutaOrm } from './infraestrutura/biblioteca-conduta.orm';
 import { CondutaTerapeuticaVersaoOrm } from './infraestrutura/conduta-terapeutica-versao.orm';
 import { FiltroSalvoPacienteOrm } from './infraestrutura/filtro-salvo-paciente.orm';
 import { PrioridadeAcompanhamentoPacienteOrm } from './infraestrutura/prioridade-acompanhamento-paciente.orm';
 import { PrioridadeAcompanhamentoHistoricoOrm } from './infraestrutura/prioridade-acompanhamento-historico.orm';
 import { ServicoRecalculoPrioridadeAcompanhamento } from './aplicacao/servico-recalculo-prioridade-acompanhamento';
+import { ServicoModelosEvolucaoClinica } from './aplicacao/servico-modelos-evolucao-clinica';
 import { ProcessadorRecalculoPrioridadeAcompanhamento } from './aplicacao/processador-recalculo-prioridade-acompanhamento';
 import { deveExecutarProcessadores } from '../../infraestrutura/processamento/papel-processo';
 
@@ -82,6 +89,7 @@ const processadores = deveExecutarProcessadores() ? [ProcessadorRecalculoPriorid
       ConvitePacienteOrm,
       AcompanhamentoTarefaOrm,
       EvolucaoClinicaOrm,
+      ModeloEvolucaoClinicaOrm,
       AvaliacaoAntropometricaOrm,
       DocumentoEmitidoOrm,
       UsuarioOrm,
@@ -106,6 +114,7 @@ const processadores = deveExecutarProcessadores() ? [ProcessadorRecalculoPriorid
       EvolucaoFotograficaArquivoOrm,
       ArquivoMidiaOrm,
       CondutaTerapeuticaOrm,
+      BibliotecaCondutaOrm,
       CondutaTerapeuticaVersaoOrm,
       FiltroSalvoPacienteOrm,
       PrioridadeAcompanhamentoPacienteOrm,
@@ -129,9 +138,11 @@ const processadores = deveExecutarProcessadores() ? [ProcessadorRecalculoPriorid
     ControladorConsentimentosEvolucaoFotografica,
     ControladorEvolucoesFotograficas,
     ControladorCondutasTerapeuticas,
+    ControladorBibliotecaCondutas,
     ControladorConvitesPaciente,
     ControladorPortalPaciente,
-    ControladorDocumentosClinicos
+    ControladorDocumentosClinicos,
+    ControladorModelosEvolucaoClinica
   ],
   providers: [
     ServicoPacientes,
@@ -142,6 +153,7 @@ const processadores = deveExecutarProcessadores() ? [ProcessadorRecalculoPriorid
     ServicoConsentimentosEvolucaoFotografica,
     ServicoEvolucoesFotograficas,
     ServicoCondutasTerapeuticas,
+    ServicoBibliotecaCondutas,
     ServicoArmazenamentoObjetos,
     ServicoImportacaoPacientes,
     ServicoConvitesPaciente,
@@ -152,6 +164,7 @@ const processadores = deveExecutarProcessadores() ? [ProcessadorRecalculoPriorid
     ServicoAuditoria,
     ProcessadorOutboxAuditoria,
     ServicoRecalculoPrioridadeAcompanhamento,
+    ServicoModelosEvolucaoClinica,
     ...processadores
   ],
   exports: [ServicoPacientes, ServicoConvitesPaciente, ServicoPortalPaciente, ServicoDocumentosClinicos]

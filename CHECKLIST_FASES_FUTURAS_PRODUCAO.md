@@ -1,14 +1,19 @@
 # OctaClin - Checklist vivo de fases futuras ate producao
 
-Atualizado em 2026-09-20. Fases 256 a 261 e 263 a 270 concluidas; Fase 262
-permanece em andamento pelos gates externos do piloto. Com a Fase 268
-mergeada (PR `#275`, merge `306d2ed`), o PB-05 (alerta de check-in com
-adesao baixa) esta concluido e a Onda 2 do audit de produto
-(PB-01 -> PB-02 -> PB-03 -> PB-05) esta completa. A Onda 3 (devolver tempo
-ao profissional) ja entregou o PB-13 (Fase 269, PR `#277`, merge `4e36bda`)
-e o PB-14 (Fase 270, PR `#278`, merge `4c896b0`); a ordem aprovada pelo
-proprietario e PB-13 -> PB-14 -> PB-15 -> PB-23 -> PB-16 -> PB-25, entao o
-proximo item e o PB-15.
+Atualizado em 2026-09-22. Fases 256 a 261, 263 a 270, 271, 272 e 273
+concluidas; Fase 262 permanece em andamento pelos gates externos do
+piloto. Com a Fase 268 mergeada (PR `#275`, merge `306d2ed`), o PB-05
+(alerta de check-in com adesao baixa) esta concluido e a Onda 2 do audit
+de produto (PB-01 -> PB-02 -> PB-03 -> PB-05) esta completa. A Onda 3
+(devolver tempo ao profissional) ja entregou o PB-13 (Fase 269, PR `#277`,
+merge `4e36bda`) e o PB-14 (Fase 270, PR `#278`, merge `4c896b0`); a ordem
+aprovada pelo proprietario e PB-13 -> PB-14 -> PB-15 -> PB-23 -> PB-16 ->
+PB-25. O PB-15 (Fase 271, template de evolucao clinica com
+pre-preenchimento), o PB-23 (Fase 272, biblioteca de condutas/orientacoes
+reutilizaveis), o PB-16 (Fase 273, resumo clinico do paciente) e o PB-25
+(Fase 274, preparacao pre-consulta deterministica, ultimo item da Onda 3)
+foram implementados nesta mesma branch, com checks remotos e merge humano
+pendentes.
 O programa de hardening PR 36-56 permanece como trilha separada. O pacote
 interno do PR 55 foi integrado, mas o proprietario adiou a contratacao do
 pentest para evitar custo neste momento; todos os gates externos seguem
@@ -3631,6 +3636,174 @@ publicado antes de ampliar a superficie de mudancas visuais.
     `git status --short`.
   - Plano, risco e rollback: `docs/history/phases/PLANO_FASE_270.md`.
 
+- [x] Fase 271 - Template de evolucao clinica com pre-preenchimento (PB-15,
+  terceiro item da Onda 3). [IMPLEMENTADA em 2026-09-21; checks remotos e
+  merge humano pendentes]
+  - [x] Mesmo padrao arquitetural do PB-13: tabela nova
+    `modelos_evolucao_clinica` (origem pessoal/clinica, RLS/FORCE RLS,
+    mesma constraint origem/profissional), `ServicoModelosEvolucaoClinica`
+    (criar/listar/obter/arquivar), sem rota de "aplicar" -- o cliente le o
+    modelo e o formulario pre-preenche localmente, o salvamento continua
+    passando pela validacao normal de `POST /pacientes/:id/evolucoes`.
+  - [x] Gap real encontrado antes de codar, nao adivinhado: a formulacao
+    literal do audit ("peso/IMC da mesma consulta") nao e implementavel hoje
+    sem migration adicional -- nem `evolucoes_clinicas` nem
+    `avaliacoes_antropometricas` tem `consulta_id`. Decisao de escopo:
+    pre-preenchimento correlaciona por data civil (avaliacao mais recente
+    datada de hoje), nao por vinculo formal de consulta; vincular
+    evolucao/avaliacao a consulta de origem fica registrado como gap de
+    produto separado (secao 6.B do audit), fora do escopo desta fase.
+  - [x] Pre-preenchimento de peso/IMC **sem nenhuma mudanca de backend**:
+    reaproveita `GET /pacientes/:id/avaliacoes-antropometricas`, ja
+    existente e ja autorizada (mesma rota da Fase 264.5), nunca sobrescreve
+    conteudo que o profissional ja tenha digitado ou trazido de um modelo.
+  - [x] Unica migration da fase: `1720000001049-CriarModelosEvolucaoClinica`,
+    aditiva.
+  - Validacoes: backend typecheck e build; suite completa do backend
+    (206 suites, 1985 testes, 0 falhas; RLS via testcontainers SKIPPED por
+    falta de Docker no sandbox); web typecheck, lint (0 erros, 58 warnings
+    preexistentes), build; `test:authz` com o par novo
+    `evolucoes-modelos-bff`; Playwright `console-regression.spec.mjs`
+    completo (118/118, desktop+mobile, incluindo os 2 cenarios novos do
+    PB-15) e `jornadas-criticas.spec.mjs` (12/12); gates de raiz da
+    Governanca de repositorio (a11y:matriz, confiabilidade,
+    redacao-auditoria, resposta-auditoria, migracoes-fora-de-banda,
+    actions-imutaveis, guardas-controladores, seguranca-dinamica,
+    triagem-seguranca, inventario-security-quality, tooling-agentes,
+    versao-pnpm, excecoes-supply-chain, grupos-dependabot, versao-node,
+    dockerfiles-runtime, licencas, lock-python, sbom); `git diff --check` e
+    `security:secrets`. `test:workflows-seguros` reprova so o subteste que
+    exige PowerShell, indisponivel neste sandbox Linux -- mesma limitacao de
+    ambiente ja documentada em ciclos anteriores, nao uma regressao desta
+    fase.
+  - Plano, risco e rollback: `docs/history/phases/PLANO_FASE_271.md`.
+
+- [x] Fase 272 - Biblioteca de condutas/orientacoes reutilizaveis (PB-23,
+  quarto item da Onda 3). [IMPLEMENTADA em 2026-09-21; checks remotos e
+  merge humano pendentes]
+  - [x] O documento de auditoria pede para replicar a biblioteca de
+    perguntas de `questionarios` ("nao e preciso inventar padrao novo").
+    Leitura do codigo antes de implementar mostrou tres pontos desse padrao
+    que nao se aplicam a condutas sem custo real, e a decisao para cada um:
+    tabela dedicada em vez de flag na tabela real (conduta exige
+    `pacienteId`, pergunta nao), sem rota de "aplicar" (mesmo principio ja
+    usado no PB-13/PB-15, o cliente le e pre-preenche localmente), e sem
+    categoria livre nova -- reusa o enum `TipoCondutaTerapeutica` ja
+    existente, para nao duplicar classificacao.
+  - [x] `titulo`/`conteudo` da biblioteca sao cifrados em repouso, como a
+    tabela real `condutas_terapeuticas_versoes` -- e o mesmo tipo de
+    orientacao clinica. Por isso, diferente da biblioteca de perguntas
+    (que busca por texto em claro), esta biblioteca nao tem busca textual
+    server-side, so filtro por `tipo`; a UI lista ate 100 itens num
+    seletor simples, mesma UX de `ModelosPlanoAlimentar`/
+    `ModelosEvolucaoClinica`, sem trocar seguranca por conveniencia.
+  - [x] Biblioteca sempre do tenant inteiro (sem separacao pessoal/clinica,
+    diferente do PB-13/PB-15): e conhecimento da clinica, mesma decisao ja
+    usada na biblioteca de perguntas.
+  - [x] Sem visibilidade pessoal/clinica a decidir, o servico ficou mais
+    simples que `ServicoModelosEvolucaoClinica` -- nenhum dominio dedicado
+    foi necessario.
+  - [x] Unica migration da fase: `1720000001050-CriarBibliotecaCondutas`,
+    aditiva.
+  - Validacoes: backend typecheck e build; suite completa do backend
+    (208 suites, 2002 testes, 0 falhas; RLS via testcontainers SKIPPED por
+    falta de Docker no sandbox); web typecheck, lint (0 erros, 2 warnings
+    novos da mesma classe ja tolerada); build; `test:authz` com o par novo
+    `biblioteca-condutas-bff`; Playwright `console-regression.spec.mjs`
+    completo (120/120, desktop+mobile, incluindo o cenario novo do PB-23 e
+    sem regredir a jornada pre-existente da Fase 239 de conduta
+    terapeutica); gates de raiz da Governanca de repositorio (mesma lista
+    da Fase 271); `git diff --check` e `security:secrets`.
+    `test:workflows-seguros` reprova so o subteste que exige PowerShell,
+    indisponivel neste sandbox Linux -- mesma limitacao de ambiente ja
+    documentada, nao uma regressao desta fase.
+  - Plano, risco e rollback: `docs/history/phases/PLANO_FASE_272.md`.
+
+- [x] Fase 273 - Resumo clinico do paciente (PB-16, quinto item da Onda 3).
+  [IMPLEMENTADA em 2026-09-21; checks remotos e merge humano pendentes]
+  - [x] Sem migration -- unica fase da Onda 3 ate aqui sem uma. Leitura do
+    codigo antes de implementar mostrou que quatro das cinco leituras
+    pedidas pelo audit ja tinham todo o dado buscado ou facilmente
+    buscavel (delta desde a ultima avaliacao e desde o inicio via
+    `compararAvaliacoes`, ja usado em `listarAvaliacoesAntropometricas`;
+    objetivo do plano vigente, ja buscado para `planoAtual`, so faltava
+    decifrar; adesao declarada recente, ja calculada em
+    `indicadoresRecentes`). A quinta ("exames fora da faixa") depende do
+    catalogo de marcadores (PB-17, ainda nao implementado) e ficou fora de
+    escopo, registrada como gap de produto.
+  - [x] Condutas vencendo (citado na "Melhoria" do audit, fora da lista
+    dos cinco) reaproveita a mesma decisao clinica ja usada no alerta do
+    dashboard (Fase 264.4) -- extraida para dois modulos compartilhados
+    (`infraestrutura/tempo/timezone-clinico.ts`,
+    `modulos/pacientes/dominio/condutas-vencidas.ts`) em vez de duplicar o
+    codigo, para as duas telas nunca divergirem se a regra mudar.
+    `ServicoDashboardClinico` refatorado para usar os modulos extraidos,
+    suite do dashboard (23/23) confirmando comportamento identico antes e
+    depois.
+  - [x] Nenhuma fronteira de autorizacao nova: tudo dentro do
+    `obterProntuario` existente, protegido pelo mesmo guard
+    (`pacientes.ler`), com `objetivoPlanoVigente` gated pela mesma
+    permissao (`planos_alimentares.ler`) que ja protege `planoAtual`.
+  - [x] Gate de acessibilidade encontrou uma violacao real (axe-core,
+    regra `definition-list`) na primeira versao do bloco novo -- `<dl>`
+    com `<div>` direto contendo `<p>` em vez de grupos `<dt>`/`<dd>`.
+    Corrigida antes do fechamento, seguindo o mesmo padrao ja usado no
+    bloco "Contexto operacional".
+  - Validacoes: backend typecheck e build; suite completa do backend
+    (210 suites, 2015 testes, 0 falhas; RLS via testcontainers SKIPPED por
+    falta de Docker no sandbox); web typecheck, lint (0 erros, mesmos
+    warnings preexistentes), build; `test:authz` (cadeia completa, sem par
+    novo pois nao ha BFF novo nesta fase); Playwright
+    `console-regression.spec.mjs` + `fase-248-estados-recuperacao.spec.mjs`
+    (64/64 desktop+mobile), `fase-249`/`fase-269`/`fase-270` (9/9 desktop),
+    `acessibilidade.spec.mjs` completo (136/136 desktop, incluindo os
+    cenarios que exercitam a aba Resumo); gates de raiz da Governanca de
+    repositorio (mesma lista das Fases 271/272); `git diff --check` e
+    `security:secrets`. `test:workflows-seguros` reprova so o subteste que
+    exige PowerShell, indisponivel neste sandbox Linux -- mesma limitacao
+    de ambiente ja documentada, nao uma regressao desta fase.
+  - Plano, risco e rollback: `docs/history/phases/PLANO_FASE_273.md`.
+
+- [x] Fase 274 - Preparacao pre-consulta deterministica (PB-25, sexto e
+  ultimo item da Onda 3). [IMPLEMENTADA em 2026-09-22; checks remotos e
+  merge humano pendentes]
+  - [x] Sem migration. O audit descreve o estado final como um disparo
+    automatico "30 minutos antes" da consulta, mas recomenda
+    explicitamente construir primeiro a versao deterministica -- essa e a
+    fase entregue aqui; automatizar o disparo fica registrado como
+    extensao futura natural (existe um padrao reaproveitavel,
+    `ProcessadorLembretesAgenda`), nao um gap escondido.
+  - [x] Nenhuma query nova alem de uma: `escolhasSubstituicao`
+    (`PlanoAlimentarEscolhaPacienteOrm.count`, condicional a permissao,
+    plano publicado e atendimento concluido). Os demais quatro sinais do
+    audit (avaliacao nova, check-ins, formularios respondidos, mensagens
+    recebidas) sao contados a partir de arrays ja buscados em
+    `obterProntuario`, filtrados pela data do ultimo atendimento
+    concluido.
+  - [x] Sem vinculo `consulta_id` real (PB-24, Onda 4, ainda nao
+    implementado), "desde o ultimo encontro" e aproximado por janela de
+    data -- mesma classe de limitacao ja documentada no PB-15/PB-16.
+  - [x] Nenhuma fronteira de autorizacao nova: tudo dentro do
+    `obterProntuario` existente, mesmo guard `pacientes.ler`;
+    `escolhasSubstituicao` (contagem, nao conteudo) gated pela mesma
+    permissao que ja protege `planoAtual`/`objetivoPlanoVigente`.
+  - Validacoes: backend typecheck e build; suite completa do backend
+    (210 suites, 2018 testes, 0 falhas; RLS via testcontainers SKIPPED por
+    falta de Docker no sandbox); web typecheck, lint (0 erros, mesmos
+    warnings preexistentes), build; `test:authz` (cadeia completa, sem par
+    novo pois o campo viaja no endpoint `prontuario` ja existente);
+    Playwright `console-regression.spec.mjs` +
+    `fase-248-estados-recuperacao.spec.mjs` (65/65 desktop+mobile,
+    incluindo o cenario novo do PB-25), `acessibilidade.spec.mjs` completo
+    (136/136 desktop, sem violacao nova -- o bloco novo so aparece quando
+    ha consulta futura, ausente nos fixtures de acessibilidade); gates de
+    raiz da Governanca de repositorio (mesma lista das Fases 271-273);
+    `git diff --check` e `security:secrets`. `test:workflows-seguros`
+    reprova so o subteste que exige PowerShell, indisponivel neste sandbox
+    Linux -- mesma limitacao de ambiente ja documentada, nao uma
+    regressao desta fase.
+  - Plano, risco e rollback: `docs/history/phases/PLANO_FASE_274.md`.
+
 Documento de execução e prioridades: `ROADMAP_QUALIDADE_SEGURANCA_FASES_248_262.md`.
 Matriz operacional: `MATRIZ_SKILLS_PLUGINS_MODELOS_FASES_243_248_262.md`.
 
@@ -4071,10 +4244,11 @@ Fonte canonica de escopo, gates e skills do Claude Code:
     provisionado; a issue GitHub `#234` continua aberta e este debito nao foi
     convertido em `PASS` pela conclusao da fase.
 
-Proximo item: **PB-15** (template de evolucao clinica com pre-preenchimento),
-terceiro item da Onda 3; depois PB-23, PB-16 e por ultimo PB-25, que depende
-do PB-16. O PB-13 foi entregue pela Fase 269 (PR `#277`, merge `4e36bda`) e o
-PB-14 pela Fase 270 (PR `#278`, merge `4c896b0`). A Onda 2
+Proximo item: concluir os checks remotos e o merge humano das Fases 271
+(PB-15) e 272 (PB-23, quarto item da Onda 3); depois seguir a ordem
+aprovada pelo proprietario para a Onda 3 -- PB-16 e por ultimo PB-25, que
+depende do PB-16. O PB-13 foi entregue pela Fase 269 (PR `#277`, merge
+`4e36bda`) e o PB-14 pela Fase 270 (PR `#278`, merge `4c896b0`). A Onda 2
 (PB-01 -> PB-02 -> PB-03 -> PB-05) esta completa. PR 55 permanece adiado e
 pendente; PR 56 continua condicionado a decisao explicita de distribuir o
 Mobile.

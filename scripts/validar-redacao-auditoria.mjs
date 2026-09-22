@@ -713,6 +713,15 @@ const ENVOLTORIOS_DECLARADOS = [
     repassa: 'entrada.metadados',
     porque:
       'mesma razao do gemeo em servico-modelos-plano-alimentar.ts: transacao em curso, entrada nomeada para o literal ficar a vista'
+  },
+  {
+    arquivo: 'octaclin-backend/src/modulos/pacientes/aplicacao/servico-modelos-evolucao-clinica.ts',
+    envoltorio: 'registrarAuditoria',
+    argumento: 1,
+    entradaDaTrilha: true,
+    repassa: 'entrada.metadados',
+    porque:
+      'mesmo gemeo de servico-modelos-plano-alimentar.ts (Fase 271, PB-15): transacao em curso, entrada nomeada para o literal ficar a vista'
   }
 ];
 

@@ -1062,6 +1062,8 @@ async function prepararProntuarioMockado(page, {
   let anexos = [];
   let documentos = [];
   let corpoDocumentoEmitido = null;
+  let modeloEvolucaoCriado = null;
+  let itemBibliotecaCondutaCriado = null;
   let statusPortal = statusPortalInicial;
   let revogouConvite = false;
   let desativouContaAcesso = false;
@@ -1240,6 +1242,58 @@ async function prepararProntuarioMockado(page, {
       body: JSON.stringify(new URL(route.request().url()).pathname.endsWith('/profissional-1')
         ? profissional
         : { itens: [profissional], total: 1 })
+    });
+  });
+
+  // Biblioteca de condutas (PB-23): um item ja existente por padrao, para os
+  // testes de "aplicar" nao dependerem de round-trip de criacao; testes que
+  // exercitam "salvar na biblioteca" capturam o corpo em
+  // `itemBibliotecaCondutaCriado`.
+  await page.route('**/api/biblioteca-condutas*', async (route) => {
+    if (route.request().method() === 'POST') {
+      itemBibliotecaCondutaCriado = route.request().postDataJSON();
+      await route.fulfill({
+        status: 201,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          id: 'biblioteca-conduta-nova',
+          nome: itemBibliotecaCondutaCriado.nome,
+          tipo: itemBibliotecaCondutaCriado.tipo,
+          tamanhoConteudo: itemBibliotecaCondutaCriado.conteudo.length
+        })
+      });
+      return;
+    }
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        itens: [
+          {
+            id: 'biblioteca-conduta-1',
+            nome: 'Orientação pós-consulta padrão',
+            tipo: 'orientacao',
+            tamanhoConteudo: 40,
+            atualizadoEm: '2026-07-20T10:00:00.000Z'
+          }
+        ],
+        total: 1,
+        pagina: 1,
+        limite: 100
+      })
+    });
+  });
+  await page.route('**/api/biblioteca-condutas/biblioteca-conduta-1', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        id: 'biblioteca-conduta-1',
+        nome: 'Orientação pós-consulta padrão',
+        tipo: 'orientacao',
+        tamanhoConteudo: 40,
+        conteudo: 'Manter hidratacao e retornar em 30 dias caso persista.'
+      })
     });
   });
 
@@ -1556,7 +1610,20 @@ async function prepararProntuarioMockado(page, {
             ? '2026-07-29T18:00:00.000Z'
             : criouEvolucao
               ? '2026-07-22T18:00:00.000Z'
-              : '2026-07-22T16:00:00.000Z'
+              : '2026-07-22T16:00:00.000Z',
+          leituraClinica: {
+            deltaUltimaAvaliacao: [],
+            deltaDesdeInicio: [],
+            condutasVencendo: []
+          },
+          preparacaoConsulta: {
+            desdeAtendimentoEm: '2026-07-15T13:00:00.000Z',
+            novaAvaliacaoAntropometrica: false,
+            checkinsRegistrados: 2,
+            formulariosRespondidos: 1,
+            mensagensRecebidas: 1,
+            escolhasSubstituicao: 3
+          }
         },
         linhaDoTempo: eventos
       })
@@ -1583,6 +1650,61 @@ async function prepararProntuarioMockado(page, {
           }
         ],
         deltaUltimas: [{ campo: 'pesoKg', anterior: 70.4, atual: 68.2, variacao: -2.2 }]
+      })
+    });
+  });
+
+  // Modelos de evolucao (PB-15): um modelo da clinica ja existente por
+  // padrao, para os testes de "aplicar" nao dependerem de round-trip de
+  // criacao; testes que exercitam "salvar como modelo" capturam o corpo
+  // enviado em `modeloEvolucaoCriado`.
+  await page.route('**/api/evolucoes/modelos*', async (route) => {
+    if (route.request().method() === 'POST') {
+      modeloEvolucaoCriado = route.request().postDataJSON();
+      await route.fulfill({
+        status: 201,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          id: 'modelo-evolucao-novo',
+          nome: modeloEvolucaoCriado.nome,
+          origem: modeloEvolucaoCriado.origem,
+          tipo: modeloEvolucaoCriado.tipo ?? 'observacao',
+          tamanhoConteudo: modeloEvolucaoCriado.conteudo.length
+        })
+      });
+      return;
+    }
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        itens: [
+          {
+            id: 'modelo-evolucao-1',
+            nome: 'Retorno padrão',
+            origem: 'clinica',
+            tipo: 'retorno',
+            tamanhoConteudo: 30,
+            atualizadoEm: '2026-07-20T10:00:00.000Z'
+          }
+        ],
+        total: 1,
+        pagina: 1,
+        limite: 100
+      })
+    });
+  });
+  await page.route('**/api/evolucoes/modelos/modelo-evolucao-1', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        id: 'modelo-evolucao-1',
+        nome: 'Retorno padrão',
+        origem: 'clinica',
+        tipo: 'retorno',
+        tamanhoConteudo: 30,
+        conteudo: 'Paciente relata boa adesao. Orientacoes reforcadas.'
       })
     });
   });
@@ -1985,6 +2107,8 @@ async function prepararProntuarioMockado(page, {
 
   return {
     corpoDocumentoEmitido: () => corpoDocumentoEmitido,
+    modeloEvolucaoCriado: () => modeloEvolucaoCriado,
+    itemBibliotecaCondutaCriado: () => itemBibliotecaCondutaCriado,
     criouEvolucao: () => criouEvolucao,
     criouTarefa: () => criouTarefa,
     criouMaterial: () => criouMaterial,
@@ -2986,6 +3110,71 @@ test.describe('prontuario do paciente', () => {
     await assertSemOverflowHorizontal(page);
   });
 
+  test('permite aplicar e salvar modelo de evolução clínica (PB-15)', async ({ page }) => {
+    const prontuario = await prepararProntuarioMockado(page);
+    await page.goto('/pacientes/paciente-1');
+
+    await page.getByRole('tab', { name: 'Atendimentos' }).click();
+    await expect(page.getByRole('heading', { name: 'Modelos de evolução' })).toBeVisible();
+
+    await page.getByLabel('Aplicar modelo à evolução').selectOption('modelo-evolucao-1');
+    await page.getByRole('button', { name: 'Aplicar' }).click();
+
+    await expect(page.getByLabel('Tipo da evolução')).toHaveValue('retorno');
+    await expect(page.getByLabel('Conteúdo da evolução')).toHaveValue('Paciente relata boa adesao. Orientacoes reforcadas.');
+    await expect(page.getByText('Modelo aplicado à evolução. Revise e registre para confirmar.')).toBeVisible();
+
+    await page.getByLabel('Salvar evolução atual como modelo').fill('Meu modelo de retorno');
+    await page.getByRole('button', { name: 'Salvar modelo' }).click();
+
+    await expect.poll(() => prontuario.modeloEvolucaoCriado()).toEqual({
+      nome: 'Meu modelo de retorno',
+      origem: 'pessoal',
+      tipo: 'retorno',
+      conteudo: 'Paciente relata boa adesao. Orientacoes reforcadas.'
+    });
+    await expect(page.getByText('Modelo salvo.')).toBeVisible();
+    await assertSemOverflowHorizontal(page);
+  });
+
+  test('pré-preenche peso e IMC quando há avaliação antropométrica de hoje (PB-15)', async ({ page }) => {
+    await prepararProntuarioMockado(page);
+    // Data real do dia do teste: a pre-preenchimento correlaciona por data
+    // civil, nao por vinculo formal de consulta (ver PLANO_FASE_271.md).
+    const hoje = new Date().toLocaleDateString('en-CA');
+    await page.route('**/api/pacientes/paciente-1/avaliacoes-antropometricas', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          avaliacoes: [
+            {
+              id: 'avaliacao-hoje', pacienteId: 'paciente-1', avaliadaEm: hoje, protocolo: 'nenhum',
+              medidas: { pesoKg: 70, alturaCm: 165 },
+              resultado: { imc: 24.5, protocoloAplicado: 'nenhum', avisos: [] },
+              criadoEm: `${hoje}T13:00:00.000Z`
+            },
+            {
+              id: 'avaliacao-1', pacienteId: 'paciente-1', avaliadaEm: '2026-06-21', protocolo: 'nenhum',
+              medidas: { pesoKg: 70.4, alturaCm: 165 },
+              resultado: { imc: 25.86, protocoloAplicado: 'nenhum', avisos: [] },
+              criadoEm: '2026-06-21T13:00:00.000Z'
+            }
+          ],
+          deltaUltimas: []
+        })
+      });
+    });
+    await page.goto('/pacientes/paciente-1');
+
+    await page.getByRole('tab', { name: 'Atendimentos' }).click();
+    await expect(
+      page.getByText('Peso e IMC da avaliação de hoje já foram pré-preenchidos abaixo — edite ou remova livremente.')
+    ).toBeVisible();
+    await expect(page.getByLabel('Conteúdo da evolução')).toHaveValue('Peso: 70,0 kg · IMC: 24,50 (avaliação de hoje)\n\n');
+    await assertSemOverflowHorizontal(page);
+  });
+
   test('permite prescrever tarefa de acompanhamento', async ({ page }) => {
     const prontuario = await prepararProntuarioMockado(page);
     await page.goto('/pacientes/paciente-1');
@@ -3044,6 +3233,56 @@ test.describe('prontuario do paciente', () => {
     await expect.poll(() => prontuario.condutas()[0]?.arquivadaEm).toBeTruthy();
     await expect(page.getByText('Conduta arquivada.')).toBeVisible();
     await expect(page.getByText('Arquivada', { exact: true })).toBeVisible();
+    await assertSemOverflowHorizontal(page);
+  });
+
+  test('permite aplicar e salvar item na biblioteca de condutas (PB-23)', async ({ page }) => {
+    const prontuario = await prepararProntuarioMockado(page);
+    await page.goto('/pacientes/paciente-1');
+
+    await page.getByRole('tablist', { name: 'Áreas principais do prontuário' }).getByRole('tab', { name: 'Plano' }).click();
+    const subareas = page.getByRole('tablist', { name: 'Subáreas de Plano' });
+    await subareas.getByRole('tab', { name: 'Acompanhamento' }).focus();
+    await page.keyboard.press('ArrowRight');
+    await expect(subareas.getByRole('tab', { name: 'Condutas terapêuticas' })).toHaveAttribute('aria-selected', 'true');
+    await expect(page.getByRole('heading', { name: 'Biblioteca de condutas' })).toBeVisible();
+
+    await page.getByLabel('Aplicar item da biblioteca').selectOption('biblioteca-conduta-1');
+    await page.getByRole('button', { name: 'Aplicar' }).click();
+
+    await expect(page.getByLabel('Tipo')).toHaveValue('orientacao');
+    await expect(page.getByLabel('Título')).toHaveValue('Orientação pós-consulta padrão');
+    await expect(page.getByLabel('Conteúdo documentado')).toHaveValue(
+      'Manter hidratacao e retornar em 30 dias caso persista.'
+    );
+    await expect(page.getByText('Item aplicado. Revise antes de criar o rascunho.')).toBeVisible();
+
+    await page.getByLabel('Salvar conduta atual na biblioteca').fill('Minha orientação padrão');
+    await page.getByRole('button', { name: 'Salvar na biblioteca' }).click();
+
+    await expect.poll(() => prontuario.itemBibliotecaCondutaCriado()).toEqual({
+      nome: 'Minha orientação padrão',
+      tipo: 'orientacao',
+      conteudo: 'Manter hidratacao e retornar em 30 dias caso persista.'
+    });
+    await expect(page.getByText('Item salvo na biblioteca.')).toBeVisible();
+    await assertSemOverflowHorizontal(page);
+  });
+
+  test('mostra a preparação da próxima consulta com o que mudou desde o último atendimento (PB-25)', async ({ page }) => {
+    await prepararProntuarioMockado(page, { permissoesExtras: ['planos_alimentares.ler'] });
+    await page.goto('/pacientes/paciente-1');
+
+    const secao = page.getByRole('region', { name: 'Preparação da próxima consulta' });
+    await expect(secao).toBeVisible();
+    await expect(secao.getByText('O que mudou desde o atendimento de 15/07/2026.')).toBeVisible();
+    await expect(secao.getByText('Sem avaliação nova')).toBeVisible();
+    await expect(secao.getByText('Check-ins')).toBeVisible();
+    await expect(secao.getByText('2', { exact: true })).toBeVisible();
+    await expect(secao.getByText('Formulários respondidos')).toBeVisible();
+    await expect(secao.getByText('Mensagens recebidas')).toBeVisible();
+    await expect(secao.getByText('Trocas no plano vigente')).toBeVisible();
+    await expect(secao.getByText('3', { exact: true })).toBeVisible();
     await assertSemOverflowHorizontal(page);
   });
 

@@ -1,6 +1,6 @@
 # OctaClin - Status atual do projeto
 
-Atualizado em 2026-09-20.
+Atualizado em 2026-09-22.
 
 ## Snapshot
 
@@ -70,6 +70,102 @@ Atualizado em 2026-09-20.
   porque o fixture Playwright foi montado ja no formato real dos tipos.
   Proximo item da Onda 3: PB-15. Plano e limites em
   `docs/history/phases/PLANO_FASE_270.md`.
+- Reconciliacao de 2026-09-21: Fase 271 entrega o **PB-15 (template de
+  evolucao clinica com pre-preenchimento)**, terceiro item da Onda 3. Mesmo
+  padrao arquitetural dos modelos de plano alimentar (Fase 269): tabela nova
+  `modelos_evolucao_clinica` (RLS, origem pessoal/clinica),
+  `ServicoModelosEvolucaoClinica` (criar/listar/obter/arquivar) e rota
+  `evolucoes/modelos` fora de `/pacientes/:id`, sem endpoint de "aplicar" --
+  o cliente le o modelo e o formulario de nova evolucao pre-preenche
+  localmente, e o salvamento continua passando pela validacao normal de
+  criar evolucao. Leitura do codigo antes de implementar encontrou um gap
+  nao adivinhado: a formulacao literal do audit ("peso/IMC da mesma
+  consulta") nao e implementavel hoje sem migration adicional, porque nem
+  evolucao clinica nem avaliacao antropometrica tem vinculo com consulta.
+  Decisao de escopo: o pre-preenchimento correlaciona por data civil (usa a
+  avaliacao antropometrica mais recente datada de hoje), reaproveitando a
+  rota `GET /pacientes/:id/avaliacoes-antropometricas` ja existente e ja
+  autorizada -- **sem nenhuma mudanca de backend** nessa parte; vincular
+  formalmente evolucao/avaliacao a consulta de origem fica registrado como
+  gap de produto separado, fora do escopo desta fase. Unica migration:
+  `1720000001049-CriarModelosEvolucaoClinica`, aditiva. Implementado nesta
+  branch; checks remotos e merge humano pendentes. Plano e limites em
+  `docs/history/phases/PLANO_FASE_271.md`.
+- Reconciliacao de 2026-09-21: Fase 272 entrega o **PB-23 (biblioteca de
+  condutas/orientacoes reutilizaveis)**, quarto item da Onda 3, na mesma
+  branch da Fase 271. O audit pede para replicar a biblioteca de perguntas
+  de `questionarios` ("nao e preciso inventar padrao novo"); a leitura do
+  codigo antes de implementar mostrou tres pontos desse padrao que nao se
+  aplicam a condutas sem custo real -- pergunta reaproveita a propria
+  tabela via flag porque ja precisa de um `questionarioId`, conduta sempre
+  precisa de um `pacienteId` -- entao a biblioteca usa tabela dedicada
+  (`biblioteca_condutas`), mesmo desenho ja validado no PB-13/PB-15; sem
+  rota de "aplicar" (mesmo principio de nao duplicar a validacao clinica);
+  e sem categoria livre nova, reaproveitando o enum `TipoCondutaTerapeutica`
+  ja existente em vez de uma segunda classificacao paralela. Diferente do
+  PB-13/PB-15, a biblioteca e sempre do tenant inteiro (sem separacao
+  pessoal/clinica), mesma decisao ja usada na biblioteca de perguntas.
+  `titulo`/`conteudo` sao cifrados em repouso como a conduta real -- por
+  isso, diferente da biblioteca de perguntas (que busca por texto em
+  claro), esta nao tem busca textual server-side, so filtro por `tipo`; a
+  UI lista ate 100 itens, mesma UX ja usada nos modelos de plano
+  alimentar/evolucao clinica. Unica migration:
+  `1720000001050-CriarBibliotecaCondutas`, aditiva. Implementado nesta
+  branch; checks remotos e merge humano pendentes. Plano e limites em
+  `docs/history/phases/PLANO_FASE_272.md`.
+- Reconciliacao de 2026-09-21: Fase 273 entrega o **PB-16 (resumo clinico
+  do paciente)**, quinto item da Onda 3, na mesma branch das Fases 271/272.
+  Sem migration -- primeira fase da Onda 3 sem uma. Leitura do codigo antes
+  de implementar mostrou que quatro das cinco leituras pedidas pelo audit
+  ja tinham todo o dado buscado ou facilmente buscavel: delta desde a
+  ultima avaliacao e desde o inicio reaproveitam `compararAvaliacoes`, ja
+  usada por `listarAvaliacoesAntropometricas`; objetivo do plano vigente
+  ja era buscado para `planoAtual`, so faltava decifrar; adesao declarada
+  recente ja aparece em `indicadoresRecentes`. A quinta ("exames fora da
+  faixa") depende do catalogo de marcadores (PB-17, ainda nao
+  implementado) e ficou fora de escopo. Condutas vencendo (citado na
+  "Melhoria" do audit) reaproveita a mesma decisao clinica ja usada no
+  alerta do dashboard (Fase 264.4), extraida para dois modulos
+  compartilhados (`infraestrutura/tempo/timezone-clinico.ts`,
+  `modulos/pacientes/dominio/condutas-vencidas.ts`) em vez de duplicar o
+  codigo -- `ServicoDashboardClinico` refatorado para usar os modulos
+  extraidos, sem mudar comportamento (suite do dashboard 23/23 antes e
+  depois). Nenhuma fronteira de autorizacao nova: tudo dentro do
+  `obterProntuario` existente, mesmo guard `pacientes.ler`, com
+  `objetivoPlanoVigente` gated pela mesma permissao
+  `planos_alimentares.ler` ja usada em `planoAtual`. O gate de
+  acessibilidade encontrou uma violacao real (axe-core, regra
+  `definition-list`) na primeira versao do bloco novo no frontend -- `<dl>`
+  com `<div>` direto contendo `<p>` em vez de grupos `<dt>`/`<dd>` --
+  corrigida antes do fechamento. Implementado nesta branch; checks remotos
+  e merge humano pendentes. Plano e limites em
+  `docs/history/phases/PLANO_FASE_273.md`.
+- Reconciliacao de 2026-09-22: Fase 274 entrega o **PB-25 (preparacao
+  pre-consulta deterministica)**, sexto e ultimo item da Onda 3, na mesma
+  branch das Fases 271-273. Sem migration. O audit descreve o estado final
+  do produto como um disparo automatico "30 minutos antes" da consulta,
+  mas recomenda explicitamente construir primeiro a versao deterministica
+  antes de qualquer IA -- essa versao deterministica e o que esta fase
+  entrega; automatizar o disparo fica fora de escopo, registrado como
+  extensao futura natural (existe um padrao reaproveitavel no codigo,
+  `ProcessadorLembretesAgenda`, para quando essa decisao de produto for
+  tomada). "Ultimo atendimento concluido" ja era resolvido em memoria por
+  `obterProntuario`; a partir dessa data, quatro dos cinco sinais do audit
+  (avaliacao antropometrica nova, check-ins, formularios respondidos,
+  mensagens recebidas) sao contados a partir de arrays ja buscados na
+  mesma funcao, sem nenhuma query nova. O quinto (trocas de substituicao no
+  plano vigente) precisou de uma unica query nova
+  (`PlanoAlimentarEscolhaPacienteOrm.count`), condicional a permissao,
+  plano publicado e atendimento concluido -- mesmo gate ja usado em
+  `objetivoPlanoVigente` (PB-16). Sem vinculo `consulta_id` real (PB-24,
+  Onda 4, ainda nao implementado), "desde o ultimo encontro" continua
+  aproximado por janela de data, mesma classe de limitacao ja documentada
+  no PB-15/PB-16. Nenhuma fronteira de autorizacao nova: tudo dentro do
+  `obterProntuario` existente, mesmo guard `pacientes.ler`. Com esta fase,
+  a Onda 3 do audit (PB-13 -> PB-14 -> PB-15 -> PB-23 -> PB-16 -> PB-25)
+  esta implementada por completo nesta branch, com checks remotos e merge
+  humano pendentes. Plano e limites em
+  `docs/history/phases/PLANO_FASE_274.md`.
 - Reconciliacao de 2026-09-20: a Onda 3 do audit (devolver tempo ao
   profissional) comecou, com a ordem aprovada pelo proprietario:
   PB-13 -> PB-14 -> PB-15 -> PB-23 -> PB-16 -> PB-25 (este ultimo depende do

@@ -29,6 +29,8 @@ import { Botao, classesBotao } from '@/components/ui/botao';
 import { Abas } from '@/components/ui/abas';
 import { AbaAntropometria } from './aba-antropometria';
 import { ResumoAntropometrico } from './resumo-antropometrico';
+import { formatarMetricaAntropometrica, METRICAS_ANTROPOMETRICAS } from './metricas-antropometricas';
+import { ModelosEvolucaoClinica } from './modelos-evolucao-clinica';
 import { AbaExamesLaboratoriais } from './aba-exames-laboratoriais';
 import { AbaEvolucaoFotografica } from './aba-evolucao-fotografica';
 import { AbaCondutasTerapeuticas } from './aba-condutas-terapeuticas';
@@ -72,11 +74,13 @@ import {
 import {
   criarEvolucaoClinica,
   criarTarefaAcompanhamento,
+  listarAvaliacoesAntropometricas,
   listarEvolucoesClinicas,
   listarLinhaDoTempoPaginada,
   listarTarefasAcompanhamento,
   obterPrioridadeAcompanhamento,
   obterProntuarioPaciente,
+  type AvaliacaoAntropometricaApi,
   type CategoriaTarefaAcompanhamentoApi,
   type EventoProntuarioPacienteApi,
   type EvolucaoClinicaApi,
@@ -160,6 +164,50 @@ function formatarData(valor?: string) {
   return new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short', timeZone: 'UTC' }).format(data);
 }
 
+const ROTULO_DELTA_ANTROPOMETRICO: Record<string, { rotulo: string; unidade: string }> = {
+  pesoKg: { rotulo: 'Peso', unidade: 'kg' },
+  imc: { rotulo: 'IMC', unidade: '' },
+  rcq: { rotulo: 'RCQ', unidade: '' },
+  percentualGordura: { rotulo: 'Gordura corporal', unidade: '%' },
+  massaGordaKg: { rotulo: 'Massa gorda', unidade: 'kg' },
+  massaMagraKg: { rotulo: 'Massa magra', unidade: 'kg' }
+};
+
+const ROTULO_TIPO_CONDUTA: Record<string, string> = {
+  meta: 'Meta',
+  orientacao: 'Orientação',
+  suplemento: 'Suplemento',
+  produto: 'Produto',
+  formula_manipulada: 'Fórmula manipulada'
+};
+
+function formatarDelta(valor: number, casas = 1) {
+  return valor.toLocaleString('pt-BR', { minimumFractionDigits: casas, maximumFractionDigits: casas });
+}
+
+function DeltaAntropometricoLista({ titulo, deltas }: { titulo: string; deltas: ProntuarioPacienteApi['resumo']['leituraClinica']['deltaUltimaAvaliacao'] }) {
+  return (
+    <div className="border-l-2 border-primaria pl-3">
+      <dt className="text-xs font-semibold text-texto-suave">{titulo}</dt>
+      {deltas.length ? (
+        <dd className="mt-1 grid gap-1">
+          {deltas.map((delta) => {
+            const meta = ROTULO_DELTA_ANTROPOMETRICO[delta.campo] ?? { rotulo: delta.campo, unidade: '' };
+            const sinal = delta.variacao > 0 ? '+' : '';
+            return (
+              <p key={delta.campo} className="text-sm font-medium text-tinta">
+                {meta.rotulo}: {sinal}{formatarDelta(delta.variacao)} {meta.unidade}
+              </p>
+            );
+          })}
+        </dd>
+      ) : (
+        <dd className="mt-1 text-sm text-texto-suave">Sem avaliações suficientes para comparar.</dd>
+      )}
+    </div>
+  );
+}
+
 /** Fase 265: "Risco" era o rotulo ambiguo; o valor efetivo pode vir de override humano. */
 function rotuloFaixaPrioridadeAcompanhamento(faixa: FaixaPrioridadeAcompanhamentoApi) {
   return { baixa: 'Baixa', media: 'Média', alta: 'Alta' }[faixa];
@@ -225,6 +273,9 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
   const [carregandoEvolucoes, setCarregandoEvolucoes] = useState(false);
   const [evolucoesSolicitadas, setEvolucoesSolicitadas] = useState(false);
   const [evolucoesCarregadas, setEvolucoesCarregadas] = useState(false);
+  const [avaliacaoAntropometricaHoje, setAvaliacaoAntropometricaHoje] = useState<AvaliacaoAntropometricaApi | null>(
+    null
+  );
   const [carregandoTarefas, setCarregandoTarefas] = useState(false);
   const [tarefasSolicitadas, setTarefasSolicitadas] = useState(false);
   const [tarefasCarregadas, setTarefasCarregadas] = useState(false);
@@ -342,7 +393,39 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
     } finally {
       setCarregandoEvolucoes(false);
     }
+    // Recurso independente: uma falha aqui nunca derruba a tela de evolucoes,
+    // so deixa de pre-preencher peso/IMC (mesmo padrao ja usado para
+    // prioridade de acompanhamento nesta mesma tela).
+    try {
+      const serie = await listarAvaliacoesAntropometricas(pacienteId);
+      const hoje = new Date().toLocaleDateString('en-CA');
+      const maisRecenteHoje = serie.avaliacoes
+        .filter((avaliacao) => avaliacao.avaliadaEm === hoje)
+        .sort((a, b) => b.criadoEm.localeCompare(a.criadoEm))[0];
+      setAvaliacaoAntropometricaHoje(maisRecenteHoje ?? null);
+    } catch {
+      setAvaliacaoAntropometricaHoje(null);
+    }
   }, [pacienteId]);
+
+  // Pre-preenche peso/IMC quando ha avaliacao antropometrica de hoje, sem
+  // nunca sobrescrever conteudo que o profissional ja tenha digitado ou
+  // trazido de um modelo.
+  useEffect(() => {
+    if (!avaliacaoAntropometricaHoje) return;
+    setFormularioEvolucao((atual) => {
+      if (atual.conteudo.trim().length > 0) return atual;
+      const peso = METRICAS_ANTROPOMETRICAS.find((metrica) => metrica.id === 'peso')!;
+      const imc = METRICAS_ANTROPOMETRICAS.find((metrica) => metrica.id === 'imc')!;
+      const valorPeso = peso.ler(avaliacaoAntropometricaHoje);
+      const valorImc = imc.ler(avaliacaoAntropometricaHoje);
+      if (valorPeso === undefined && valorImc === undefined) return atual;
+      const partes: string[] = [];
+      if (valorPeso !== undefined) partes.push(`Peso: ${formatarMetricaAntropometrica(valorPeso, peso.casas)} kg`);
+      if (valorImc !== undefined) partes.push(`IMC: ${formatarMetricaAntropometrica(valorImc, imc.casas)}`);
+      return { ...atual, conteudo: `${partes.join(' · ')} (avaliação de hoje)\n\n` };
+    });
+  }, [avaliacaoAntropometricaHoje]);
 
   const carregarTarefas = useCallback(async () => {
     setCarregandoTarefas(true);
@@ -1192,6 +1275,78 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
               </div>
             </dl>
           </section>
+          <section aria-labelledby="leitura-clinica-titulo" className="grid gap-4 rounded-md border border-linha bg-white p-4">
+            <div>
+              <h2 id="leitura-clinica-titulo" className="text-base font-semibold text-tinta">Leitura clínica</h2>
+              <p className="mt-1 text-sm text-texto-suave">Os primeiros sinais para orientar a consulta, sem abrir outra aba.</p>
+            </div>
+            <dl className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+              <DeltaAntropometricoLista titulo="Desde a última avaliação" deltas={dados.resumo.leituraClinica.deltaUltimaAvaliacao} />
+              <DeltaAntropometricoLista titulo="Desde o início" deltas={dados.resumo.leituraClinica.deltaDesdeInicio} />
+              <div className="border-l-2 border-primaria pl-3">
+                <dt className="text-xs font-semibold text-texto-suave">Objetivo do plano vigente</dt>
+                <dd className="mt-1 text-sm font-medium text-tinta">
+                  {permissoes.includes('planos_alimentares.ler')
+                    ? dados.resumo.leituraClinica.objetivoPlanoVigente ?? 'Nenhum plano publicado'
+                    : 'Acesso não disponível'}
+                </dd>
+              </div>
+              <div className="border-l-2 border-primaria pl-3">
+                <dt className="text-xs font-semibold text-texto-suave">Condutas vencendo</dt>
+                {dados.resumo.leituraClinica.condutasVencendo.length ? (
+                  <dd className="mt-1 grid gap-1">
+                    {dados.resumo.leituraClinica.condutasVencendo.map((conduta) => (
+                      <p key={conduta.condutaId} className="text-sm font-medium text-tinta">
+                        {ROTULO_TIPO_CONDUTA[conduta.tipo] ?? conduta.tipo} - venceu em {formatarData(conduta.validadeFim)}
+                      </p>
+                    ))}
+                  </dd>
+                ) : (
+                  <dd className="mt-1 text-sm text-texto-suave">Nenhuma</dd>
+                )}
+              </div>
+            </dl>
+          </section>
+          {proximaConsulta && dados.resumo.preparacaoConsulta ? (
+            <section aria-labelledby="preparacao-consulta-titulo" className="grid gap-4 rounded-md border border-linha bg-white p-4">
+              <div>
+                <h2 id="preparacao-consulta-titulo" className="text-base font-semibold text-tinta">Preparação da próxima consulta</h2>
+                <p className="mt-1 text-sm text-texto-suave">
+                  O que mudou desde o atendimento de {formatarData(dados.resumo.preparacaoConsulta.desdeAtendimentoEm)}.
+                </p>
+              </div>
+              <dl className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+                <div className="border-l-2 border-primaria pl-3">
+                  <dt className="text-xs font-semibold text-texto-suave">Avaliação antropométrica</dt>
+                  <dd className="mt-1 text-sm font-medium text-tinta">
+                    {dados.resumo.preparacaoConsulta.novaAvaliacaoAntropometrica
+                      ? 'Nova avaliação registrada — veja o delta em Leitura clínica'
+                      : 'Sem avaliação nova'}
+                  </dd>
+                </div>
+                <div className="border-l-2 border-primaria pl-3">
+                  <dt className="text-xs font-semibold text-texto-suave">Check-ins</dt>
+                  <dd className="mt-1 text-sm font-medium text-tinta">{dados.resumo.preparacaoConsulta.checkinsRegistrados}</dd>
+                </div>
+                <div className="border-l-2 border-primaria pl-3">
+                  <dt className="text-xs font-semibold text-texto-suave">Formulários respondidos</dt>
+                  <dd className="mt-1 text-sm font-medium text-tinta">{dados.resumo.preparacaoConsulta.formulariosRespondidos}</dd>
+                </div>
+                <div className="border-l-2 border-primaria pl-3">
+                  <dt className="text-xs font-semibold text-texto-suave">Mensagens recebidas</dt>
+                  <dd className="mt-1 text-sm font-medium text-tinta">{dados.resumo.preparacaoConsulta.mensagensRecebidas}</dd>
+                </div>
+                <div className="border-l-2 border-primaria pl-3">
+                  <dt className="text-xs font-semibold text-texto-suave">Trocas no plano vigente</dt>
+                  <dd className="mt-1 text-sm font-medium text-tinta">
+                    {permissoes.includes('planos_alimentares.ler')
+                      ? dados.resumo.preparacaoConsulta.escolhasSubstituicao ?? 'Nenhum plano publicado'
+                      : 'Acesso não disponível'}
+                  </dd>
+                </div>
+              </dl>
+            </section>
+          ) : null}
           <SecaoPrioridadeAcompanhamento
             pacienteId={pacienteId}
             prioridade={prioridadeAcompanhamento}
@@ -1252,6 +1407,13 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
           />
         ) : <EsqueletoPagina rotulo="Carregando evoluções clínicas" />
       ) : <>
+      {podeGerenciarPaciente ? <ModelosEvolucaoClinica
+        tipoAtual={() => formularioEvolucao.tipo}
+        conteudoAtual={() => formularioEvolucao.conteudo}
+        aoAplicar={(modelo) => setFormularioEvolucao((atual) => ({ ...atual, tipo: modelo.tipo, conteudo: modelo.conteudo }))}
+        desabilitado={salvandoEvolucao}
+      /> : null}
+
       {podeGerenciarPaciente ? <form onSubmit={registrarEvolucao} className="grid gap-3 rounded-md border border-linha bg-white p-4">
         <div>
           <h2 className="text-base font-semibold text-tinta">Nova evolução clínica</h2>
@@ -1284,6 +1446,11 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
         </div>
         <label className="grid gap-1 text-xs font-semibold text-texto-suave">
           Conteúdo da evolução
+          {avaliacaoAntropometricaHoje ? (
+            <p className="font-normal normal-case text-texto-suave">
+              Peso e IMC da avaliação de hoje já foram pré-preenchidos abaixo — edite ou remova livremente.
+            </p>
+          ) : null}
           <textarea
             className="min-h-[112px] rounded-md border border-linha px-3 py-2 text-sm font-normal text-tinta"
             value={formularioEvolucao.conteudo}

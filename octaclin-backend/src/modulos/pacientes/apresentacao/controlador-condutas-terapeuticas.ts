@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, ParseUUIDPipe, Post, Put, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, ParseUUIDPipe, Post, Put, Query, Req, UseGuards } from '@nestjs/common';
 import { Request } from 'express';
 import { ServicoAuditoria } from '../../../infraestrutura/auditoria/servico-auditoria';
 import { GuardaJwt } from '../../auth/apresentacao/guarda-jwt';
@@ -6,7 +6,13 @@ import { GuardaPapeis } from '../../auth/apresentacao/guarda-papeis';
 import { GuardaPermissoes } from '../../auth/apresentacao/guarda-permissoes';
 import { Papeis, Permissoes, UsuarioAtual } from '../../auth/apresentacao/decorators';
 import { UsuarioAutenticado } from '../../auth/dominio/usuario-autenticado';
-import { AtualizarRascunhoCondutaTerapeuticaDto, CriarCondutaTerapeuticaDto } from '../aplicacao/dtos';
+import {
+  AtualizarRascunhoCondutaTerapeuticaDto,
+  CriarBibliotecaCondutaDto,
+  CriarCondutaTerapeuticaDto,
+  ListarBibliotecaCondutasDto
+} from '../aplicacao/dtos';
+import { ServicoBibliotecaCondutas } from '../aplicacao/servico-biblioteca-condutas';
 import { ServicoCondutasTerapeuticas } from '../aplicacao/servico-condutas-terapeuticas';
 
 @Controller('pacientes')
@@ -66,5 +72,40 @@ export class ControladorCondutasTerapeuticas {
   private async auditar(usuario: UsuarioAutenticado, requisicao: Request, acao: string, pacienteId: string, metadados: Record<string, unknown>) {
     const userAgent = requisicao.headers['user-agent'];
     await this.auditoria.registrar({ tenantId: usuario.tenantId, usuarioId: usuario.usuarioId, acao, recursoTipo: 'paciente', recursoId: pacienteId, ip: requisicao.ip, userAgent: Array.isArray(userAgent) ? userAgent.join(', ') : userAgent, metadados });
+  }
+}
+
+// Item de biblioteca nao pertence a um paciente (e conhecimento da clinica,
+// compartilhado no tenant inteiro), entao a rota vive fora de
+// `/pacientes/:id` -- mesmo padrao de `evolucoes/modelos` (Fase 271) e do
+// nome literal de `biblioteca-perguntas`, a referencia do PB-23.
+@Controller('biblioteca-condutas')
+@UseGuards(GuardaJwt, GuardaPapeis, GuardaPermissoes)
+@Papeis('SuperAdmin', 'Professional')
+export class ControladorBibliotecaCondutas {
+  constructor(private readonly servico: ServicoBibliotecaCondutas) {}
+
+  @Get()
+  @Permissoes('pacientes.ler')
+  listar(@UsuarioAtual() usuario: UsuarioAutenticado, @Query() consulta: ListarBibliotecaCondutasDto) {
+    return this.servico.listar(usuario.tenantId, usuario, consulta);
+  }
+
+  @Post()
+  @Permissoes('pacientes.gerenciar')
+  criar(@UsuarioAtual() usuario: UsuarioAutenticado, @Body() dados: CriarBibliotecaCondutaDto) {
+    return this.servico.criar(usuario.tenantId, usuario, dados);
+  }
+
+  @Get(':itemId')
+  @Permissoes('pacientes.ler')
+  obter(@UsuarioAtual() usuario: UsuarioAutenticado, @Param('itemId', ParseUUIDPipe) itemId: string) {
+    return this.servico.obter(usuario.tenantId, itemId, usuario);
+  }
+
+  @Delete(':itemId')
+  @Permissoes('pacientes.gerenciar')
+  arquivar(@UsuarioAtual() usuario: UsuarioAutenticado, @Param('itemId', ParseUUIDPipe) itemId: string) {
+    return this.servico.arquivar(usuario.tenantId, itemId, usuario);
   }
 }

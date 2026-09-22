@@ -26,6 +26,10 @@ import type {
 } from '../infraestrutura/acompanhamento-tarefa.orm';
 import type { TipoEvolucaoClinica, VisibilidadeEvolucaoClinica } from '../infraestrutura/evolucao-clinica.orm';
 import type { TipoCondutaTerapeutica } from '../infraestrutura/conduta-terapeutica.orm';
+import {
+  ORIGENS_MODELO_EVOLUCAO_CLINICA,
+  type OrigemModeloEvolucaoClinica
+} from '../dominio/modelos-evolucao-clinica';
 import { PROTOCOLOS_COMPOSICAO } from '../dominio/antropometria';
 import { TIPOS_DOCUMENTO_CLINICO } from '../dominio/documentos-clinicos';
 import {
@@ -415,6 +419,36 @@ export interface ProntuarioPacienteRespostaDto {
       referenciaId?: string;
       dataReferencia?: Date;
     };
+    // PB-16 (Fase 273): "os primeiros 10 segundos" do prontuario -- delta
+    // antropometrico, objetivo do plano vigente e condutas vencendo. Sem
+    // "exames fora da faixa": depende do catalogo de marcadores (PB-17),
+    // ainda nao implementado (ver PLANO_FASE_273.md, secao 3). Adesao
+    // declarada recente continua so em `indicadoresRecentes`, sem campo
+    // duplicado aqui.
+    leituraClinica: {
+      deltaUltimaAvaliacao: DeltaAntropometrico[];
+      deltaDesdeInicio: DeltaAntropometrico[];
+      objetivoPlanoVigente?: string;
+      condutasVencendo: Array<{
+        condutaId: string;
+        tipo: TipoCondutaTerapeutica;
+        validadeFim: Date;
+      }>;
+    };
+    // PB-25 (Fase 274): "o que mudou desde o ultimo atendimento concluido"
+    // -- versao deterministica da preparacao pre-consulta (audit secao 6.C
+    // e 12). So presente quando ha um atendimento concluido para comparar;
+    // sem ele nao ha "desde quando". O delta de peso/IMC em si continua so
+    // em `leituraClinica`, sem duplicar; aqui so o booleano de "ha
+    // avaliacao nova".
+    preparacaoConsulta?: {
+      desdeAtendimentoEm: Date;
+      novaAvaliacaoAntropometrica: boolean;
+      checkinsRegistrados: number;
+      formulariosRespondidos: number;
+      mensagensRecebidas: number;
+      escolhasSubstituicao?: number;
+    };
   };
   linhaDoTempo: EventoProntuarioPacienteDto[];
 }
@@ -501,6 +535,62 @@ export interface EvolucaoClinicaRespostaDto {
   atualizadoEm: Date;
 }
 
+// Mesmo teto de paginacao dos modelos de plano alimentar (Fase 269); auto-
+// contido aqui para nao acoplar o modulo pacientes ao de planos alimentares.
+const PAGINA_MAXIMA_MODELOS_EVOLUCAO = 1_000;
+
+export class CriarModeloEvolucaoClinicaDto {
+  @IsString()
+  @MinLength(1)
+  @MaxLength(180)
+  nome: string;
+
+  @IsIn(ORIGENS_MODELO_EVOLUCAO_CLINICA)
+  origem: OrigemModeloEvolucaoClinica;
+
+  @IsOptional()
+  @IsIn(['consulta', 'retorno', 'observacao', 'ajuste_plano'])
+  tipo?: TipoEvolucaoClinica;
+
+  @IsString()
+  @MinLength(3)
+  @MaxLength(6000)
+  conteudo: string;
+}
+
+export class ListarModelosEvolucaoClinicaDto {
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(PAGINA_MAXIMA_MODELOS_EVOLUCAO)
+  pagina = 1;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(100)
+  limite = 25;
+
+  @IsOptional()
+  @IsIn(ORIGENS_MODELO_EVOLUCAO_CLINICA)
+  origem?: OrigemModeloEvolucaoClinica;
+}
+
+export interface ModeloEvolucaoClinicaResumoRespostaDto {
+  id: string;
+  nome: string;
+  origem: OrigemModeloEvolucaoClinica;
+  tipo: TipoEvolucaoClinica;
+  tamanhoConteudo: number;
+  atualizadoEm: Date;
+}
+
+export interface ModeloEvolucaoClinicaRespostaDto extends Omit<ModeloEvolucaoClinicaResumoRespostaDto, 'atualizadoEm'> {
+  conteudo: string;
+}
+
 export class CriarTarefaAcompanhamentoDto {
   @IsString()
   @MaxLength(180)
@@ -571,6 +661,57 @@ export class AtualizarRascunhoCondutaTerapeuticaDto {
   @IsOptional()
   @IsDateString()
   validadeFim?: string;
+}
+
+const TIPOS_CONDUTA_TERAPEUTICA = ['meta', 'orientacao', 'suplemento', 'produto', 'formula_manipulada'] as const;
+// Mesmo teto de paginacao dos modelos de plano alimentar/evolucao clinica.
+const PAGINA_MAXIMA_BIBLIOTECA_CONDUTAS = 1_000;
+
+export class CriarBibliotecaCondutaDto {
+  @IsString()
+  @MinLength(1)
+  @MaxLength(180)
+  nome: string;
+
+  @IsIn(TIPOS_CONDUTA_TERAPEUTICA)
+  tipo: TipoCondutaTerapeutica;
+
+  @IsString()
+  @MinLength(3)
+  @MaxLength(6000)
+  conteudo: string;
+}
+
+export class ListarBibliotecaCondutasDto {
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(PAGINA_MAXIMA_BIBLIOTECA_CONDUTAS)
+  pagina = 1;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(100)
+  limite = 25;
+
+  @IsOptional()
+  @IsIn(TIPOS_CONDUTA_TERAPEUTICA)
+  tipo?: TipoCondutaTerapeutica;
+}
+
+export interface BibliotecaCondutaResumoRespostaDto {
+  id: string;
+  nome: string;
+  tipo: TipoCondutaTerapeutica;
+  tamanhoConteudo: number;
+  atualizadoEm: Date;
+}
+
+export interface BibliotecaCondutaRespostaDto extends Omit<BibliotecaCondutaResumoRespostaDto, 'atualizadoEm'> {
+  conteudo: string;
 }
 
 export interface TarefaAcompanhamentoRespostaDto {
