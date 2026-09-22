@@ -118,6 +118,27 @@ updates:
           - "react-native"
           - "react-native-web"
           - "react-native-worklets"
+    # Pacotes presos a faixa que o Expo SDK instalado aceita, nao ao semver
+    # solto do pacote. `expo-doctor` reprova quando react/react-dom saem da
+    # versao exata esperada ou quando react-native-safe-area-context/
+    # react-native-screens saem da faixa `~` que o SDK 57 declara.
+    #
+    # Nao e hipotese: o PR #295 (grupo mobile-minor-patch) bumpou os quatro
+    # alem do aceito pelo SDK 57 e reprovou o job `Mobile Expo`
+    # (`Check that packages match versions required by installed Expo SDK`).
+    # `@types/react` segue a mesma trilha para nao destoar da versao real do
+    # `react`. A versao correta desses pacotes vem de `expo install --fix`
+    # quando o SDK e atualizado, nunca de um bump semver isolado do
+    # Dependabot -- por isso ficam fora do agrupamento e fora de update
+    # automatico, em `ignore`, e nao em `exclude-patterns` do grupo (esse
+    # campo e reservado para dependencias `0.x`; `pnpm test:grupos-dependabot`
+    # reprova exclusao que nao corresponda a uma dependencia `0.x`).
+    ignore:
+      - dependency-name: "react"
+      - dependency-name: "react-dom"
+      - dependency-name: "@types/react"
+      - dependency-name: "react-native-safe-area-context"
+      - dependency-name: "react-native-screens"
 
   - package-ecosystem: pip
     directory: /octaclin-ai-service
@@ -127,10 +148,34 @@ updates:
     cooldown:
       default-days: 7
     open-pull-requests-limit: 5
+    # `pydantic-core` e transitivo de `pydantic` em requirements.txt; nao
+    # aparece la como dependencia direta. O PR #282 deixou o Dependabot
+    # regenerar so o lock para subir pydantic-core isolado (2.46.5 -> 2.49.0)
+    # sem tocar pydantic (2.13.5), que exige pydantic-core==2.46.5 exato --
+    # `pip install --require-hashes` reprovou com ResolutionImpossible. A
+    # versao estavel de pydantic compativel com pydantic-core novo nao existia
+    # ainda (so pre-release). Atualizacao de pydantic-core so e segura junto
+    # com a de pydantic; ela fica de fora do Dependabot ate que uma atualizacao
+    # de `pydantic` (dependencia direta) volte a arrastar o transitivo junto,
+    # regenerando o lock pelo procedimento da secao 8 da
+    # docs/governance/POLITICA_SUPPLY_CHAIN_DEPENDENCIAS.md.
+    ignore:
+      - dependency-name: "pydantic-core"
 
   # PR 50: atualizacao rastreavel do digest das imagens base. Dependabot abre PR
   # com o novo digest; o merge segue o mesmo fluxo humano (scan -> build ->
   # harness -> SBOM -> review). Sem auto-merge.
+  # Major da imagem base do Node nao e bump de rotina: a secao 16 da
+  # docs/governance/POLITICA_SUPPLY_CHAIN_DEPENDENCIAS.md documenta que a
+  # versao do Node esta escrita em quatro lugares que precisam mover juntos
+  # (NODE_VERSION no CI, `FROM node:<major>` no Dockerfile, `engines.node` de
+  # cada package.json e `@types/node`) -- foi por isso que os PRs #180 e #181
+  # (node:26-alpine com o CI parado em 22) foram fechados. Os PRs #281 e #283
+  # repetiram o padrao trocando so o `FROM` para node:25-alpine, uma linha
+  # `Current` sem LTS, ja perto do fim do suporte -- regressao de manutencao,
+  # nao modernizacao. Major de runtime fica reservado para PR dedicado que
+  # move as quatro declaracoes e mira uma linha LTS; o Dependabot para de
+  # propor sozinho.
   - package-ecosystem: docker
     directory: /octaclin-backend
     schedule:
@@ -139,6 +184,9 @@ updates:
     cooldown:
       default-days: 7
     open-pull-requests-limit: 5
+    ignore:
+      - dependency-name: "node"
+        update-types: ["version-update:semver-major"]
 
   - package-ecosystem: docker
     directory: /octaclin-web
@@ -148,6 +196,9 @@ updates:
     cooldown:
       default-days: 7
     open-pull-requests-limit: 5
+    ignore:
+      - dependency-name: "node"
+        update-types: ["version-update:semver-major"]
 
   - package-ecosystem: docker
     directory: /octaclin-ai-service
