@@ -211,3 +211,21 @@ test('rejeita endpoint fora da allowlist antes de executar gh', () => {
     /endpoint nao permitido/,
   );
 });
+
+test('erro de transporte diz o endpoint e o motivo real, nao so "reautentique"', () => {
+  // No CI nao existe `gh auth login`: a falha tipica e permissao faltando no
+  // GITHUB_TOKEN. A mensagem antiga mandava reautenticar e escondia o 403, o
+  // que transforma um erro de permissao numa cacada. O stderr do gh e a unica
+  // pista de qual endpoint foi negado quando sao quatro.
+  assert.throws(
+    () =>
+      consultarPaginasGh('/repos/octanutri-clin/octaclin/dependabot/alerts?state=open&per_page=100', {
+        executar: () => ({ status: 1, stdout: '', stderr: 'gh: Resource not accessible by integration (HTTP 403)' }),
+      }),
+    (erro) => {
+      assert.match(erro.message, /dependabot\/alerts/, 'deve nomear o endpoint negado');
+      assert.match(erro.message, /403/, 'deve preservar o motivo devolvido pelo gh');
+      return true;
+    },
+  );
+});
