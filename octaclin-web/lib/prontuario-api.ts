@@ -96,6 +96,8 @@ export interface CriarEvolucaoClinicaEntrada {
   conteudo: string;
   tipo?: TipoEvolucaoClinicaApi;
   visibilidade?: 'privada';
+  /** PB-24 (Fase 275): consulta de origem, opcional. */
+  consultaId?: string;
 }
 
 export interface EvolucaoClinicaApi extends CriarEvolucaoClinicaEntrada {
@@ -107,6 +109,25 @@ export interface EvolucaoClinicaApi extends CriarEvolucaoClinicaEntrada {
   visibilidade: 'privada';
   criadoEm: string;
   atualizadoEm: string;
+}
+
+/** PB-24 (Fase 275): item do seletor opcional "Vincular a consulta". */
+export interface ConsultaRecenteApi {
+  id: string;
+  titulo: string;
+  inicioEm: string;
+  status: string;
+}
+
+export async function listarConsultasRecentes(pacienteId: string): Promise<ConsultaRecenteApi[]> {
+  const resposta = await fetch(`/api/pacientes/${encodeURIComponent(pacienteId)}/consultas-recentes`, {
+    cache: 'no-store'
+  });
+  if (!resposta.ok) {
+    await lancarErroApi(resposta);
+  }
+
+  return resposta.json() as Promise<ConsultaRecenteApi[]>;
 }
 
 export interface CriarTarefaAcompanhamentoEntrada {
@@ -412,6 +433,8 @@ export interface AvaliacaoAntropometricaApi {
   resultado: ResultadoAntropometricoApi;
   formulaAplicada?: string;
   observacoes?: string;
+  /** PB-24 (Fase 275): consulta de origem, opcional. */
+  consultaId?: string;
   criadoEm: string;
 }
 
@@ -437,6 +460,8 @@ export interface RegistrarAvaliacaoAntropometricaEntrada {
   circunferencias?: Record<string, number>;
   dobras?: Record<string, number>;
   observacoes?: string;
+  /** PB-24 (Fase 275): consulta de origem, opcional. */
+  consultaId?: string;
 }
 
 export async function listarAvaliacoesAntropometricas(

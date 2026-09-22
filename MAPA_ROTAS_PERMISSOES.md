@@ -166,6 +166,7 @@ navegacao principal.
 | `/api/notificacoes/lidas` | `/notificacoes/lidas` | POST exige `console.acessar`; marca as proprias notificacoes como lidas (todas quando o corpo nao traz ids); id de outro usuario nao e alcancado pelo update |
 | `/api/pacientes/[id]/prontuario` | `/pacientes/:id/prontuario` | GET exige sessao operacional com `pacientes.ler`; backend audita leitura sensivel do prontuario |
 | `/api/pacientes/[id]/evolucoes` | `/pacientes/:id/evolucoes` | GET exige `pacientes.ler`; POST exige `pacientes.gerenciar`; backend audita listagem e criacao de anotacoes privadas |
+| `/api/pacientes/[id]/consultas-recentes` | `/pacientes/:id/consultas-recentes` | GET exige `pacientes.ler`; PB-24 (Fase 275): alimenta o seletor opcional "Vincular a consulta" nas telas de evolucao, avaliacao antropometrica, conduta terapeutica e exame laboratorial; sem dado clinico, so titulo/data/status; backend audita a leitura |
 | `/api/pacientes/[id]/tarefas-acompanhamento` | `/pacientes/:id/tarefas-acompanhamento` | GET exige `pacientes.ler`; POST exige `pacientes.gerenciar`; backend audita listagem e prescricao de tarefas |
 | `/api/pacientes/[id]/tarefas-acompanhamento/[tarefaId]` | `/pacientes/:id/tarefas-acompanhamento/:tarefaId` | PATCH exige `pacientes.gerenciar`; backend audita alteracao de status da tarefa |
 | `/api/pacientes/[id]/planos-alimentares` | `/pacientes/:id/planos-alimentares` | GET exige `planos_alimentares.ler`; POST exige `planos_alimentares.gerenciar`; backend fixa tenant e escopo do profissional pelo JWT |

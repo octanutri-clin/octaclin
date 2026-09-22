@@ -1297,6 +1297,12 @@ async function prepararProntuarioMockado(page, {
     });
   });
 
+  // PB-24 (Fase 275): seletor opcional "Vincular a consulta" nas 4 telas de
+  // criacao; sem consultas recentes no cenario padrao dos mocks.
+  await page.route('**/api/pacientes/paciente-1/consultas-recentes', async (route) => {
+    await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([]) });
+  });
+
   await page.route('**/api/pacientes/paciente-1/condutas-terapeuticas**', async (route) => {
     const requisicao = route.request();
     const url = new URL(requisicao.url());

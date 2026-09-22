@@ -7,6 +7,7 @@ import { Cartao, CartaoCabecalho, CartaoConteudo, CartaoTitulo } from '@/compone
 import { BarraCarregamento } from '@/components/ui/feedback';
 import { GraficoEvolucao, PontoEvolucao } from '@/components/ui/grafico-evolucao';
 import { METRICAS_ANTROPOMETRICAS } from './metricas-antropometricas';
+import { SeletorConsultaRecente } from './seletor-consulta-recente';
 import { useRequisicaoCancelavel } from '@/lib/hooks';
 import { mensagemFalhaInterface } from '@/lib/erros-interface';
 import {
@@ -122,6 +123,8 @@ interface FormularioAvaliacao {
   cintura: string;
   quadril: string;
   dobras: Record<string, string>;
+  /** PB-24 (Fase 275): consulta de origem, opcional. */
+  consultaId: string;
 }
 
 function formularioInicial(): FormularioAvaliacao {
@@ -133,7 +136,8 @@ function formularioInicial(): FormularioAvaliacao {
     alturaCm: '',
     cintura: '',
     quadril: '',
-    dobras: {}
+    dobras: {},
+    consultaId: ''
   };
 }
 
@@ -235,7 +239,8 @@ export function AbaAntropometria({ pacienteId, podeGerenciar }: AbaAntropometria
         pesoKg: numero(formulario.pesoKg),
         alturaCm: numero(formulario.alturaCm),
         ...(Object.keys(circunferencias).length ? { circunferencias } : {}),
-        ...(Object.keys(dobras).length ? { dobras } : {})
+        ...(Object.keys(dobras).length ? { dobras } : {}),
+        consultaId: formulario.consultaId || undefined
       });
       setFormulario((atual) => ({ ...formularioInicial(), protocolo: atual.protocolo, sexo: atual.sexo }));
       setSucesso('Avaliação registrada.');
@@ -550,6 +555,13 @@ export function AbaAntropometria({ pacienteId, podeGerenciar }: AbaAntropometria
                   </div>
                 </fieldset>
               ) : null}
+
+              <SeletorConsultaRecente
+                pacienteId={pacienteId}
+                value={formulario.consultaId}
+                onChange={(consultaId) => setFormulario((atual) => ({ ...atual, consultaId }))}
+                disabled={salvando}
+              />
 
               <div className="flex justify-end">
                 <Botao type="submit" variante="primario" disabled={salvando}>
