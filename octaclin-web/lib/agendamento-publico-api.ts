@@ -42,6 +42,8 @@ export interface LinkAgendamentoPublicoApi {
   id: string;
   profissionalId: string;
   duracaoMinutos: number;
+  /** PB-18 (Fase 276): tipo de atendimento escolhido ao rotacionar, opcional. */
+  tipoAtendimentoId?: string;
   ativo: boolean;
   criadoEm: string;
   atualizadoEm: string;
@@ -49,6 +51,24 @@ export interface LinkAgendamentoPublicoApi {
   urlPublicaDisponivel: boolean;
   requerRotacaoConfirmada: boolean;
   mensagemUrlPublica: string;
+}
+
+/** PB-18 (Fase 276): tipo de atendimento por tenant, com duracao propria. */
+export interface TipoAtendimentoApi {
+  id: string;
+  nome: string;
+  duracaoMinutos: number;
+  ativo: boolean;
+  criadoEm: string;
+  atualizadoEm: string;
+}
+
+/** PB-18 (Fase 276): uma faixa de horario da jornada semanal de um profissional. */
+export interface FaixaExpedienteApi {
+  id: string;
+  diaSemana: number;
+  horaInicio: string;
+  horaFim: string;
 }
 
 export interface SolicitacaoAgendaPublicaApi {
@@ -131,9 +151,10 @@ export async function obterLinkAgendamentoPublico(): Promise<LinkAgendamentoPubl
   return requisitar<LinkAgendamentoPublicoApi | null>('/api/agenda/agendamento-publico');
 }
 
-export async function rotacionarLinkAgendamentoPublico(): Promise<LinkAgendamentoPublicoApi> {
+export async function rotacionarLinkAgendamentoPublico(tipoAtendimentoId?: string): Promise<LinkAgendamentoPublicoApi> {
   return requisitar<LinkAgendamentoPublicoApi>('/api/agenda/agendamento-publico/rotacionar', {
-    method: 'POST'
+    method: 'POST',
+    body: tipoAtendimentoId ? JSON.stringify({ tipoAtendimentoId }) : undefined
   });
 }
 
@@ -165,4 +186,40 @@ export async function recusarSolicitacaoAgendaPublica(
       body: JSON.stringify(motivo ? { motivo } : {})
     }
   );
+}
+
+// PB-18 (Fase 276): tipos de atendimento e expediente por profissional.
+
+export async function listarTiposAtendimento(): Promise<TipoAtendimentoApi[]> {
+  return requisitar<TipoAtendimentoApi[]>('/api/agenda/tipos-atendimento');
+}
+
+export async function criarTipoAtendimento(entrada: { nome: string; duracaoMinutos: number }): Promise<TipoAtendimentoApi> {
+  return requisitar<TipoAtendimentoApi>('/api/agenda/tipos-atendimento', {
+    method: 'POST',
+    body: JSON.stringify(entrada)
+  });
+}
+
+export async function arquivarTipoAtendimento(tipoId: string): Promise<{ id: string }> {
+  return requisitar<{ id: string }>(`/api/agenda/tipos-atendimento/${encodeURIComponent(tipoId)}`, {
+    method: 'DELETE'
+  });
+}
+
+export async function obterExpediente(profissionalId?: string): Promise<FaixaExpedienteApi[]> {
+  const parametros = new URLSearchParams();
+  if (profissionalId) parametros.set('profissionalId', profissionalId);
+  const query = parametros.toString();
+  return requisitar<FaixaExpedienteApi[]>(`/api/agenda/expediente${query ? `?${query}` : ''}`);
+}
+
+export async function salvarExpediente(entrada: {
+  profissionalId?: string;
+  faixas: Array<{ diaSemana: number; horaInicio: string; horaFim: string }>;
+}): Promise<FaixaExpedienteApi[]> {
+  return requisitar<FaixaExpedienteApi[]>('/api/agenda/expediente', {
+    method: 'PUT',
+    body: JSON.stringify(entrada)
+  });
 }

@@ -26,6 +26,7 @@ export async function GET(request: NextRequest) {
       id: string;
       profissionalId: string;
       duracaoMinutos: number;
+      tipoAtendimentoId?: string;
       ativo: boolean;
       criadoEm: string;
       atualizadoEm: string;

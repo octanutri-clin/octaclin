@@ -1,11 +1,18 @@
 import {
   aprovarSolicitacaoAgendaPublica,
+  arquivarTipoAtendimento,
+  criarTipoAtendimento,
+  FaixaExpedienteApi,
   LinkAgendamentoPublicoApi,
   listarSolicitacoesAgendaPublica,
+  listarTiposAtendimento,
+  obterExpediente,
   obterLinkAgendamentoPublico,
   recusarSolicitacaoAgendaPublica,
   rotacionarLinkAgendamentoPublico,
-  SolicitacaoAgendaPublicaApi
+  salvarExpediente,
+  SolicitacaoAgendaPublicaApi,
+  TipoAtendimentoApi
 } from './agendamento-publico-api';
 import { PacienteResumo, ProfissionalResumo, RespostaPaginada, listarPacientes, listarProfissionais } from './cadastros-api';
 import { lancarErroApi } from './erro-api';
@@ -435,8 +442,8 @@ export async function obterLinkPublicoAgenda(): Promise<LinkAgendamentoPublicoAp
   return obterLinkAgendamentoPublico();
 }
 
-export async function rotacionarLinkPublicoAgenda(): Promise<LinkAgendamentoPublicoApi> {
-  return rotacionarLinkAgendamentoPublico();
+export async function rotacionarLinkPublicoAgenda(tipoAtendimentoId?: string): Promise<LinkAgendamentoPublicoApi> {
+  return rotacionarLinkAgendamentoPublico(tipoAtendimentoId);
 }
 
 export async function listarSolicitacoesPublicasAgenda(): Promise<RespostaPaginada<SolicitacaoAgendaPublicaApi>> {
@@ -455,4 +462,30 @@ export async function recusarSolicitacaoPublicaAgenda(
   motivo?: string
 ): Promise<SolicitacaoAgendaPublicaApi> {
   return recusarSolicitacaoAgendaPublica(solicitacaoId, motivo);
+}
+
+// PB-18 (Fase 276): tipos de atendimento e expediente por profissional.
+export type { TipoAtendimentoApi, FaixaExpedienteApi };
+
+export async function listarTiposAtendimentoAgenda(): Promise<TipoAtendimentoApi[]> {
+  return listarTiposAtendimento();
+}
+
+export async function criarTipoAtendimentoAgenda(entrada: { nome: string; duracaoMinutos: number }): Promise<TipoAtendimentoApi> {
+  return criarTipoAtendimento(entrada);
+}
+
+export async function arquivarTipoAtendimentoAgenda(tipoId: string): Promise<{ id: string }> {
+  return arquivarTipoAtendimento(tipoId);
+}
+
+export async function obterExpedienteAgenda(profissionalId?: string): Promise<FaixaExpedienteApi[]> {
+  return obterExpediente(profissionalId);
+}
+
+export async function salvarExpedienteAgenda(entrada: {
+  profissionalId?: string;
+  faixas: Array<{ diaSemana: number; horaInicio: string; horaFim: string }>;
+}): Promise<FaixaExpedienteApi[]> {
+  return salvarExpediente(entrada);
 }

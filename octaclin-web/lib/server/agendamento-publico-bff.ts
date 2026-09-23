@@ -4,6 +4,8 @@ export interface LinkAgendaPublicaBackend {
   id: string;
   profissionalId: string;
   duracaoMinutos: number;
+  /** PB-18 (Fase 276): tipo de atendimento escolhido ao rotacionar, opcional. */
+  tipoAtendimentoId?: string;
   ativo: boolean;
   criadoEm: string;
   atualizadoEm: string;
