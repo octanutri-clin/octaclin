@@ -1,4 +1,5 @@
-import { IsBoolean, IsDateString, IsEmail, IsIn, IsInt, IsOptional, IsString, IsUrl, IsUUID, Matches, Max, MaxLength, Min, MinLength } from 'class-validator';
+import { ArrayMaxSize, IsArray, IsBoolean, IsDateString, IsEmail, IsIn, IsInt, IsOptional, IsString, IsUrl, IsUUID, Matches, Max, MaxLength, Min, MinLength, ValidateNested } from 'class-validator';
+import { Type } from 'class-transformer';
 import type { StatusAgendaConsulta } from '../infraestrutura/agenda-consulta.orm';
 import type { TipoBloqueioManualAgenda } from '../infraestrutura/agenda-bloqueio-manual.orm';
 import { MODALIDADES_CONSULTA, ModalidadeConsulta } from '../dominio/teleconsulta';
@@ -282,6 +283,70 @@ export class RecusarSolicitacaoAgendamentoDto {
   @IsString()
   @MaxLength(500)
   motivo?: string;
+}
+
+// PB-18 (Fase 276): expediente por profissional e tipos de atendimento.
+
+export class CriarTipoAtendimentoDto {
+  @IsString()
+  @MinLength(1)
+  @Matches(/\S/)
+  @MaxLength(120)
+  nome: string;
+
+  @IsInt()
+  @Min(5)
+  @Max(480)
+  duracaoMinutos: number;
+}
+
+export class RotacionarLinkPublicoAgendaDto {
+  @IsOptional()
+  @IsUUID()
+  tipoAtendimentoId?: string;
+}
+
+const PADRAO_HORA = /^([01]\d|2[0-3]):[0-5]\d$/;
+
+export class FaixaExpedienteDto {
+  @IsInt()
+  @Min(0)
+  @Max(6)
+  diaSemana: number;
+
+  @Matches(PADRAO_HORA, { message: 'horaInicio deve estar no formato HH:mm.' })
+  horaInicio: string;
+
+  @Matches(PADRAO_HORA, { message: 'horaFim deve estar no formato HH:mm.' })
+  horaFim: string;
+}
+
+export class SalvarExpedienteDto {
+  @IsOptional()
+  @IsUUID()
+  profissionalId?: string;
+
+  @IsArray()
+  @ArrayMaxSize(28)
+  @ValidateNested({ each: true })
+  @Type(() => FaixaExpedienteDto)
+  faixas: FaixaExpedienteDto[];
+}
+
+export interface TipoAtendimentoRespostaDto {
+  id: string;
+  nome: string;
+  duracaoMinutos: number;
+  ativo: boolean;
+  criadoEm: Date;
+  atualizadoEm: Date;
+}
+
+export interface FaixaExpedienteRespostaDto {
+  id: string;
+  diaSemana: number;
+  horaInicio: string;
+  horaFim: string;
 }
 
 export interface ConsultaAgendaRespostaDto {

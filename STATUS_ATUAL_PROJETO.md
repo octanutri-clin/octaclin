@@ -210,6 +210,39 @@ Atualizado em 2026-09-22.
   fase. Plano em
   `docs/history/phases/PLANO_FASE_275.md`. Proximo item: Fase 276 (PB-18),
   apos merge da Fase 275.
+- Reconciliacao de 2026-09-23: Fase 276 (PB-18) implementada na branch
+  `feat/fase276-expediente-tipos-atendimento` -- migration aditiva
+  reversivel (`1720000001052-CriarExpedientesETiposAtendimento`), duas
+  tabelas novas (`tipos_atendimento`, catalogo por tenant no molde de
+  `biblioteca_condutas`; `expedientes_profissionais`, jornada semanal sem
+  coluna `ativo` porque salvar substitui todas as faixas do profissional
+  numa transacao) e coluna opcional
+  `agenda_links_publicos.tipo_atendimento_id`. Duas decisoes do
+  proprietario via pergunta direta: tipo de atendimento com duracao
+  propria entrou nesta fase (opcao nao recomendada por mim, escolhida por
+  ele); a restricao de expediente vale so para o agendamento publico, sem
+  mudanca na criacao manual de consulta pela equipe interna. Backend:
+  `ServicoTiposAtendimento` e `ServicoExpedientes` novos,
+  `ServicoAgendamentoPublico.validarDisponibilidade` com parametro
+  opcional `contextoExpediente` usado so pelo fluxo publico, 5 rotas novas
+  sob `/agenda` (mesmo guard stack de `ControladorAgenda`). Frontend:
+  componente `ConfiguracaoExpediente` (resolve sozinho profissional
+  proprio vs. selecao de profissional por papel, replicando no cliente a
+  logica de `resolverProfissionalIdDoUsuario`), integrado a
+  `PainelAgenda`, com selecao opcional de tipo de atendimento ao
+  rotacionar o link publico. Validado: specs de backend (migration,
+  `ServicoTiposAtendimento`, `ServicoExpedientes`,
+  `ServicoAgendamentoPublico`, `ControladorAgenda`) e modulo `agenda`
+  completo (16 suites, 189 testes) verdes,
+  `pnpm --dir octaclin-backend typecheck`/`build` limpos,
+  `pnpm --dir octaclin-web typecheck`/`lint`/`build` limpos,
+  `pnpm --dir octaclin-web test:authz` verde (15 scripts), Playwright
+  `race-condition-agenda`, `console-regression -g agenda` e
+  `agendamento-publico` (desktop) sem regressao. Migration entra na PR;
+  aplicacao fora de banda em staging/producao continua com o
+  proprietario -- nao executada nesta fase. PR ainda nao aberta. Plano em
+  `docs/history/phases/PLANO_FASE_276.md`. Proximo item: Fase 277 (PB-19),
+  apos merge da Fase 276.
 - Reconciliacao de 2026-09-20: a Onda 3 do audit (devolver tempo ao
   profissional) comecou, com a ordem aprovada pelo proprietario:
   PB-13 -> PB-14 -> PB-15 -> PB-23 -> PB-16 -> PB-25 (este ultimo depende do

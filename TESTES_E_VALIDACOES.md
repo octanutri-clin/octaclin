@@ -41,6 +41,7 @@ pnpm --dir octaclin-backend test --runInBand servico-usuarios-cliente.spec.ts se
 pnpm --dir octaclin-backend test --runInBand servico-modelos-evolucao-clinica.spec.ts servico-biblioteca-condutas.spec.ts condutas-vencidas.spec.ts modelos-evolucao-clinica.spec.ts timezone-clinico.spec.ts servico-pacientes.spec.ts
 pnpm --dir octaclin-backend test --runInBand 1720000001049-CriarModelosEvolucaoClinica.spec.ts 1720000001050-CriarBibliotecaCondutas.spec.ts
 pnpm --dir octaclin-backend test --runInBand vinculo-consulta.spec.ts servico-pacientes.spec.ts servico-condutas-terapeuticas.spec.ts servico-exames-laboratoriais.spec.ts 1720000001051-AdicionarConsultaIdEntidadesClinicas.spec.ts
+pnpm --dir octaclin-backend test --runInBand servico-tipos-atendimento.spec.ts servico-expedientes.spec.ts servico-agendamento-publico.spec.ts controlador-agenda.spec.ts 1720000001052-CriarExpedientesETiposAtendimento.spec.ts
 ```
 
 No Windows/Codex, prefira o script `test` do pacote backend. O formato `pnpm --dir octaclin-backend exec jest ...` pode nao resolver o binario local do Jest corretamente em alguns shells.

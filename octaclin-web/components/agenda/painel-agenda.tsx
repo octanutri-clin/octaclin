@@ -25,9 +25,10 @@ import { Aviso, AvisoRegiao, BarraCarregamento, EsqueletoPagina, EstadoFalha, Es
 import { Modal, ModalConfirmacao } from '@/components/ui/modal';
 import { FaixaAcoes } from '@/components/ui/faixa-acoes';
 import { AgendaSemanal } from '@/components/agenda/agenda-semanal';
+import { ConfiguracaoExpediente } from '@/components/agenda/configuracao-expediente';
 import { PacotesSessao } from '@/components/agenda/pacotes-sessao';
 import { ResumoRecebimentos } from '@/components/cliente/recebimentos-cliente';
-import { LinkAgendamentoPublicoApi, SolicitacaoAgendaPublicaApi } from '@/lib/agendamento-publico-api';
+import { LinkAgendamentoPublicoApi, SolicitacaoAgendaPublicaApi, type TipoAtendimentoApi } from '@/lib/agendamento-publico-api';
 import { PacienteResumo, ProfissionalResumo, RespostaPaginada } from '@/lib/cadastros-api';
 import { INTERVALO_ATUALIZACAO_PAINEL_MS, useAtualizacaoPeriodica } from '@/lib/hooks';
 import { obterSessao } from '@/lib/auth-api';
@@ -53,6 +54,7 @@ import {
   PacoteSessaoApi,
   remarcarConsultaAgenda,
   rotacionarLinkPublicoAgenda,
+  listarTiposAtendimentoAgenda,
   centavosDeTexto,
   formatarValorBRL,
   FormaPagamentoConsulta,
@@ -275,6 +277,8 @@ export function PainelAgenda() {
   const [consultaSelecionadaId, setConsultaSelecionadaId] = useState<string | null>(null);
   const [desfechoPendente, setDesfechoPendente] = useState<{ consulta: ConsultaAgendaApi; status: DesfechoConsultaAgenda } | null>(null);
   const [rotacionarLinkPendente, setRotacionarLinkPendente] = useState(false);
+  const [tiposAtendimento, setTiposAtendimento] = useState<TipoAtendimentoApi[]>([]);
+  const [tipoAtendimentoParaRotacao, setTipoAtendimentoParaRotacao] = useState('');
   const [podeLerFinanceiro, setPodeLerFinanceiro] = useState(false);
   const [urlExportacaoAgenda, setUrlExportacaoAgenda] = useState<string | null>(null);
   const [apenasNaoConfirmadas, setApenasNaoConfirmadas] = useState(false);
@@ -369,6 +373,12 @@ export function PainelAgenda() {
     void obterStatusGoogleAgenda()
       .then(setStatusGoogleAgenda)
       .catch(() => setStatusGoogleAgenda({ conectado: false }));
+  }, []);
+
+  useEffect(() => {
+    void listarTiposAtendimentoAgenda()
+      .then((itens) => setTiposAtendimento(itens.filter((tipo) => tipo.ativo)))
+      .catch(() => setTiposAtendimento([]));
   }, []);
 
   useEffect(() => {
@@ -633,7 +643,7 @@ export function PainelAgenda() {
     setSucesso(null);
     setProcessandoSolicitacaoId('rotacionar-link');
     try {
-      const link = await rotacionarLinkPublicoAgenda();
+      const link = await rotacionarLinkPublicoAgenda(tipoAtendimentoParaRotacao || undefined);
       setLinkPublico(link);
       setSucesso('Link público rotacionado. Copie a nova URL antes de encerrar esta sessão.');
     } catch (erroAtual) {
@@ -979,6 +989,24 @@ export function PainelAgenda() {
               </div>
             ) : null}
 
+            {tiposAtendimento.length ? (
+              <div className="grid max-w-xs gap-1">
+                <Rotulo htmlFor="tipo-atendimento-rotacao">Duração ao rotacionar (opcional)</Rotulo>
+                <Selecao
+                  id="tipo-atendimento-rotacao"
+                  value={tipoAtendimentoParaRotacao}
+                  onChange={(evento) => setTipoAtendimentoParaRotacao(evento.target.value)}
+                >
+                  <option value="">Manter duração atual</option>
+                  {tiposAtendimento.map((tipo) => (
+                    <option key={tipo.id} value={tipo.id}>
+                      {tipo.nome} · {tipo.duracaoMinutos} min
+                    </option>
+                  ))}
+                </Selecao>
+              </div>
+            ) : null}
+
             <div className="flex flex-wrap items-center gap-2">
               <Botao
                 type="button"
@@ -996,6 +1024,8 @@ export function PainelAgenda() {
             </div>
           </CartaoConteudo>
         </Cartao>
+
+        <ConfiguracaoExpediente profissionais={profissionaisLista} />
 
         <Modal
           aberto={modalCriarAberto}

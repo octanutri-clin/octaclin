@@ -18,15 +18,17 @@ export async function POST(request: NextRequest) {
     const profissionalId = request.nextUrl.searchParams.get('profissionalId');
     const parametros = new URLSearchParams();
     if (profissionalId) parametros.set('profissionalId', profissionalId);
+    const corpo = await request.text();
 
     const resposta = await requisitarBackendAutenticado(
       `/agenda/agendamento-publico/rotacionar${parametros.size ? `?${parametros.toString()}` : ''}`,
-      { method: 'POST' }
+      { method: 'POST', ...(corpo ? { body: corpo } : {}) }
     );
     const link = (await resposta.json()) as {
       id: string;
       profissionalId: string;
       duracaoMinutos: number;
+      tipoAtendimentoId?: string;
       ativo: boolean;
       criadoEm: string;
       atualizadoEm: string;
@@ -40,6 +42,7 @@ export async function POST(request: NextRequest) {
           id: link.id,
           profissionalId: link.profissionalId,
           duracaoMinutos: link.duracaoMinutos,
+          tipoAtendimentoId: link.tipoAtendimentoId,
           ativo: link.ativo,
           criadoEm: link.criadoEm,
           atualizadoEm: link.atualizadoEm

@@ -9,6 +9,8 @@ import { AgendaBloqueioManualOrm } from '../infraestrutura/agenda-bloqueio-manua
 import { AgendaConsultaOrm } from '../infraestrutura/agenda-consulta.orm';
 import { AgendaLinkPublicoOrm } from '../infraestrutura/agenda-link-publico.orm';
 import { AgendaSolicitacaoOrm } from '../infraestrutura/agenda-solicitacao.orm';
+import { ExpedienteProfissionalOrm } from '../infraestrutura/expediente-profissional.orm';
+import { TipoAtendimentoOrm } from '../infraestrutura/tipo-atendimento.orm';
 import { CriarSolicitacaoAgendamentoPublicoDto } from './dtos';
 import { ServicoAgenda } from './servico-agenda';
 import { ServicoAgendamentoPublico, solicitacaoPendenteExpirou } from './servico-agendamento-publico';
@@ -30,6 +32,8 @@ interface EstadoFalso {
   falharAtualizacaoFinal?: boolean;
   configuracaoTenant?: TenantConfiguracaoOrm | null;
   tenant?: TenantOrm | null;
+  expedientes?: ExpedienteProfissionalOrm[];
+  tiposAtendimento?: TipoAtendimentoOrm[];
 }
 
 function coincideWhere<T extends object>(registro: T, where: Partial<T> = {}): boolean {
@@ -121,6 +125,20 @@ function criarRepositorioBloqueio(estado: EstadoFalso) {
   };
 }
 
+function criarRepositorioExpediente(estado: EstadoFalso) {
+  return {
+    find: jest.fn(async () => estado.expedientes ?? [])
+  };
+}
+
+function criarRepositorioTipoAtendimento(estado: EstadoFalso) {
+  return {
+    findOne: jest.fn(async ({ where }: { where: { id: string } }) =>
+      (estado.tiposAtendimento ?? []).find((tipo) => tipo.id === where.id) ?? null
+    )
+  };
+}
+
 function criarRepositorioBloqueioManual(estado: EstadoFalso) {
   return {
     find: jest.fn(async () => estado.bloqueiosManuais ?? [])
@@ -201,7 +219,9 @@ function criarServico(estado: EstadoFalso = {}) {
     bloqueioManual: criarRepositorioBloqueioManual(estado),
     solicitacao: criarRepositorioSolicitacao(estado),
     configuracaoTenant: criarRepositorioConfiguracaoTenant(estado),
-    tenant: criarRepositorioTenant(estado)
+    tenant: criarRepositorioTenant(estado),
+    expediente: criarRepositorioExpediente(estado),
+    tipoAtendimento: criarRepositorioTipoAtendimento(estado)
   };
   const gerenciador = {
     getRepository: jest.fn((entidade: { name: string }) => {
@@ -213,6 +233,8 @@ function criarServico(estado: EstadoFalso = {}) {
       if (entidade === AgendaSolicitacaoOrm) return repositorios.solicitacao;
       if (entidade === TenantConfiguracaoOrm) return repositorios.configuracaoTenant;
       if (entidade === TenantOrm) return repositorios.tenant;
+      if (entidade === ExpedienteProfissionalOrm) return repositorios.expediente;
+      if (entidade === TipoAtendimentoOrm) return repositorios.tipoAtendimento;
       // Tenant sem usuario ativo: a solicitacao nasce sem destinatario e o
       // publicador da Fase 210 sai antes de escrever. O fan-out em si esta
       // coberto em registrar-notificacao.spec.ts.
@@ -1038,5 +1060,131 @@ describe('ServicoAgendamentoPublico', () => {
     const solicitacoes = await servico.listarSolicitacoes('tenant-1', usuarioSuperAdmin);
 
     expect(solicitacoes.map((item) => item.id)).toEqual(['sol-1', 'sol-2']);
+  });
+
+  describe('PB-18 (Fase 276): expediente por profissional', () => {
+    // 2026-07-26T12:10:00Z (mockado no beforeEach externo) e domingo,
+    // 09:10 em America/Sao_Paulo (UTC-3, sem horario de verao).
+    const expedienteDomingoManha: ExpedienteProfissionalOrm = {
+      id: 'expediente-1',
+      tenantId: 'tenant-1',
+      profissionalId: 'profissional-1',
+      diaSemana: 0,
+      horaInicio: '09:00',
+      horaFim: '12:00',
+      criadoEm: new Date('2026-07-01T12:00:00.000Z'),
+      atualizadoEm: new Date('2026-07-01T12:00:00.000Z')
+    };
+
+    it('sem nenhuma faixa cadastrada, mantem o comportamento anterior a fase (24/7)', async () => {
+      const { servico } = criarServico({
+        link: criarLinkAtivo(),
+        profissional: criarProfissional(),
+        expedientes: []
+      });
+
+      const resumo = await servico.obterAgendaPublica('token-valido', '203.0.113.5');
+
+      // 16:00Z = 13:00 local de domingo, fora de qualquer jornada comercial
+      // usual -- prova que sem expediente configurado nao ha filtro algum.
+      expect(resumo.horariosLivres).toContain('2026-07-26T16:00:00.000Z');
+    });
+
+    it('com expediente cadastrado, so oferece horarios dentro da faixa do mesmo dia da semana', async () => {
+      const { servico } = criarServico({
+        link: criarLinkAtivo(),
+        profissional: criarProfissional(),
+        expedientes: [expedienteDomingoManha]
+      });
+
+      const resumo = await servico.obterAgendaPublica('token-valido', '203.0.113.5');
+
+      // 13:00Z-14:00Z = 10:00-11:00 local de domingo: cabe inteiro em 09:00-12:00.
+      expect(resumo.horariosLivres).toContain('2026-07-26T13:00:00.000Z');
+      // 15:00Z-16:00Z = 12:00-13:00 local: comeca exatamente no fechamento e
+      // extrapola a faixa, entao fica de fora.
+      expect(resumo.horariosLivres).not.toContain('2026-07-26T15:00:00.000Z');
+      // 2026-07-27 e segunda-feira: sem faixa cadastrada para esse dia.
+      expect(resumo.horariosLivres).not.toContain('2026-07-27T13:00:00.000Z');
+    });
+
+    it('rejeita solicitacao publica fora do expediente cadastrado', async () => {
+      const { servico } = criarServico({
+        link: criarLinkAtivo(),
+        profissional: criarProfissional(),
+        expedientes: [expedienteDomingoManha]
+      });
+
+      await expect(
+        servico.criarSolicitacaoPublica(
+          'token-valido',
+          {
+            nome: 'Paciente Teste',
+            email: 'paciente@example.com',
+            inicioEm: '2026-07-26T15:00:00.000Z'
+          },
+          '203.0.113.5'
+        )
+      ).rejects.toThrow('Horario indisponivel.');
+    });
+
+    it('aceita solicitacao publica dentro do expediente cadastrado', async () => {
+      const { servico, repositorios } = criarServico({
+        link: criarLinkAtivo(),
+        profissional: criarProfissional(),
+        expedientes: [expedienteDomingoManha]
+      });
+
+      const resultado = await servico.criarSolicitacaoPublica(
+        'token-valido',
+        {
+          nome: 'Paciente Teste',
+          email: 'paciente@example.com',
+          inicioEm: '2026-07-26T13:00:00.000Z'
+        },
+        '203.0.113.5'
+      );
+
+      expect(resultado).toEqual({ status: 'pendente' });
+      expect(repositorios.solicitacao.save).toHaveBeenCalled();
+    });
+
+    it('rotaciona o link com a duracao do tipo de atendimento escolhido', async () => {
+      const tipo: TipoAtendimentoOrm = {
+        id: 'tipo-1',
+        tenantId: 'tenant-1',
+        nome: 'Primeira consulta',
+        duracaoMinutos: 90,
+        ativo: true,
+        criadoEm: new Date('2026-07-01T12:00:00.000Z'),
+        atualizadoEm: new Date('2026-07-01T12:00:00.000Z')
+      };
+      const { servico } = criarServico({
+        profissional: criarProfissional(),
+        links: [],
+        tiposAtendimento: [tipo]
+      });
+
+      const link = await servico.rotacionarLinkPublico('tenant-1', usuarioProfissionalUm, undefined, {
+        tipoAtendimentoId: 'tipo-1'
+      });
+
+      expect(link.duracaoMinutos).toBe(90);
+      expect(link.tipoAtendimentoId).toBe('tipo-1');
+    });
+
+    it('rejeita rotacionar com tipo de atendimento de outro tenant ou inexistente', async () => {
+      const { servico } = criarServico({
+        profissional: criarProfissional(),
+        links: [],
+        tiposAtendimento: []
+      });
+
+      await expect(
+        servico.rotacionarLinkPublico('tenant-1', usuarioProfissionalUm, undefined, {
+          tipoAtendimentoId: 'tipo-inexistente'
+        })
+      ).rejects.toThrow('Tipo de atendimento nao encontrado.');
+    });
   });
 });

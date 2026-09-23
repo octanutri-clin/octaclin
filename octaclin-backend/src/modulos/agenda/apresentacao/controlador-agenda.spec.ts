@@ -5,6 +5,8 @@ import { UsuarioAutenticado } from '../../auth/dominio/usuario-autenticado';
 import { RegistrarDesfechoConsultaAgendaDto } from '../aplicacao/dtos';
 import { ServicoAgendamentoPublico } from '../aplicacao/servico-agendamento-publico';
 import { ServicoAgenda } from '../aplicacao/servico-agenda';
+import { ServicoExpedientes } from '../aplicacao/servico-expedientes';
+import { ServicoTiposAtendimento } from '../aplicacao/servico-tipos-atendimento';
 import { ControladorAgenda } from './controlador-agenda';
 
 describe('ControladorAgenda', () => {
@@ -27,6 +29,8 @@ describe('ControladorAgenda', () => {
     const controlador = new ControladorAgenda(
       { registrarDesfecho, cancelarConsulta } as unknown as ServicoAgenda,
       {} as ServicoAgendamentoPublico,
+      {} as ServicoExpedientes,
+      {} as ServicoTiposAtendimento,
       { registrar } as unknown as ServicoAuditoria
     );
     const requisicao = {

@@ -24,6 +24,10 @@ export class AgendaLinkPublicoOrm {
   @Column({ name: 'duracao_minutos', type: 'int', default: 30 })
   duracaoMinutos: number;
 
+  /** PB-18 (Fase 276): tipo de atendimento escolhido ao rotacionar, opcional. */
+  @Column({ name: 'tipo_atendimento_id', type: 'uuid', nullable: true })
+  tipoAtendimentoId?: string;
+
   @CreateDateColumn({ name: 'criado_em', type: 'timestamptz' })
   criadoEm: Date;
 
