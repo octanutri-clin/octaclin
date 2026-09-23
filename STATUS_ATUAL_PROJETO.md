@@ -290,6 +290,27 @@ Atualizado em 2026-09-22.
   o proprietario -- nao executada nesta fase. PR ainda nao aberta. Plano
   em `docs/history/phases/PLANO_FASE_277.md`. Proximo item: Fase ~278
   (PB-17), apos merge da Fase 277.
+  proprietario -- nao executada nesta fase. Plano em
+  `docs/history/phases/PLANO_FASE_276.md`.
+- Reconciliacao de 2026-09-23 (2): Fase 276 (PB-18) integrada pelo PR
+  `#307` (branch `feat/fase276-expediente-tipos-atendimento`, merge
+  `59a1cf6` em `main` em 2026-09-23). Checks do PR: Semgrep, CodeQL,
+  Trivy e Dependency Review verdes; o check agregado "OctaClin CI" ficou
+  vermelho so pelo job "Governanca de repositorio" (causa `SQ-2026-004`
+  do inventario de seguranca, `revisarEm` vencido por data civil --
+  reproduzido identicamente na `main` sem nenhuma mudanca desta PR, falha
+  pre-existente nao coberta por esta fase), merge humano confirmado via
+  GitHub aceitando essa falha pre-existente e sem relacao. Durante o
+  ciclo do PR, dois defeitos reais foram encontrados pelo proprio CI e
+  corrigidos antes do merge: (1) duas chaves novas de metadados de
+  auditoria (`tipoAtendimentoId`, `totalFaixas`) sem cobertura no gate de
+  redacao (`pnpm test:redacao-auditoria`); (2) `ConfiguracaoExpediente`
+  quebrava a arvore React inteira quando uma resposta de API chegava em
+  formato inesperado (`tipos.filter` sem guarda de `Array.isArray` num
+  `useMemo`), achado pelo job "Demo local smoke"
+  (`fase-252-navegacao-descoberta.spec.mjs`). Aplicacao fora de banda da
+  migration em staging/producao com role owner continua pendente com o
+  proprietario. Proximo item: Fase 277 (PB-19), terceiro item da Onda 4.
 - Reconciliacao de 2026-09-20: a Onda 3 do audit (devolver tempo ao
   profissional) comecou, com a ordem aprovada pelo proprietario:
   PB-13 -> PB-14 -> PB-15 -> PB-23 -> PB-16 -> PB-25 (este ultimo depende do
