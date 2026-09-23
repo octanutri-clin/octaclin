@@ -4286,19 +4286,25 @@ owner continua pendente com o proprietario. Ver
 `docs/history/phases/PLANO_FASE_275.md` para o detalhamento.
 
 PB-18 (Fase 276, expediente por profissional e tipos de atendimento),
-segundo item da Onda 4, foi implementado em 2026-09-23 na branch
-`feat/fase276-expediente-tipos-atendimento`: migration aditiva com duas
-tabelas novas (`tipos_atendimento`, `expedientes_profissionais`) e uma
-coluna opcional em `agenda_links_publicos`, seguindo as duas decisoes do
-proprietario -- tipo de atendimento com duracao propria entrou no escopo
-(fonte reutilizavel da duracao do link publico, sem tela nova de selecao
-pelo paciente, ja que continua existindo um unico link ativo por
-profissional); a restricao de horario vale so para o agendamento publico,
-sem mudanca na criacao manual de consulta pela equipe interna. Migration
-entra na PR; aplicacao fora de banda em staging/producao continua com o
-proprietario. PR ainda nao aberta/mergeada -- ver
-`docs/history/phases/PLANO_FASE_276.md` para o detalhamento e
-`STATUS_ATUAL_PROJETO.md` para o estado corrente do merge.
+segundo item da Onda 4, foi implementado em 2026-09-23: migration aditiva
+com duas tabelas novas (`tipos_atendimento`, `expedientes_profissionais`)
+e uma coluna opcional em `agenda_links_publicos`, seguindo as duas
+decisoes do proprietario -- tipo de atendimento com duracao propria
+entrou no escopo (fonte reutilizavel da duracao do link publico, sem
+tela nova de selecao pelo paciente, ja que continua existindo um unico
+link ativo por profissional); a restricao de horario vale so para o
+agendamento publico, sem mudanca na criacao manual de consulta pela
+equipe interna. Integrado pelo PR `#307` (branch
+`feat/fase276-expediente-tipos-atendimento`, merge `59a1cf6` em `main`
+em 2026-09-23; checks verdes: Semgrep, CodeQL, Trivy, Dependency Review;
+"OctaClin CI" agregado ficou vermelho so pelo job "Governanca de
+repositorio" -- causa `SQ-2026-004` do inventario de seguranca com
+`revisarEm` vencido por data civil, falha pre-existente reproduzida
+identicamente na `main` sem nenhuma mudanca desta PR, nao coberta por
+esta fase -- merge humano confirmado via GitHub aceitando essa falha
+pre-existente e sem relacao). Aplicacao fora de banda da migration em
+staging/producao com role owner continua pendente com o proprietario.
+Ver `docs/history/phases/PLANO_FASE_276.md` para o detalhamento.
 
 Proximo item apos a Fase 276 mergeada: PB-19 (Fase 277), terceiro item da
 Onda 4. O programa de hardening PR 36-56 permanece como trilha separada --

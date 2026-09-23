@@ -912,6 +912,26 @@ O OctaClin ja possui uma base SaaS multi-tenant com backend NestJS, frontend Nex
   2026-09-22, checks verdes). Aplicacao fora de banda da migration em
   staging/producao com role owner continua pendente com o proprietario. Ver
   `docs/history/phases/PLANO_FASE_275.md`.
+- Fase 276 - PB-18, segundo item da Onda 4: expediente semanal por
+  profissional (`expedientes_profissionais`) e catalogo de tipos de
+  atendimento com duracao propria (`tipos_atendimento`), fechando o gap
+  "nao existe modelo de expediente" -- o agendamento publico ofertava
+  qualquer horario 24/7 por 30 dias, descontando so ocupacoes existentes.
+  Duas decisoes do proprietario via pergunta direta: tipo de atendimento
+  entrou no escopo como fonte reutilizavel da duracao ao rotacionar o
+  link publico (sem tela nova de selecao pelo paciente); a restricao de
+  horario vale so para o agendamento publico, sem mudanca na criacao
+  manual de consulta pela equipe interna. Migration aditiva e reversivel
+  com RLS por tenant; `ServicoAgendamentoPublico.validarDisponibilidade`
+  ganhou um parametro opcional usado so pelo fluxo publico. Integrada
+  pelo PR `#307` (branch `feat/fase276-expediente-tipos-atendimento`,
+  merge `59a1cf6` em `main` em 2026-09-23; checks Semgrep/CodeQL/Trivy/
+  Dependency Review verdes -- o check agregado "OctaClin CI" ficou
+  vermelho so pela causa `SQ-2026-004` do inventario de seguranca,
+  pre-existente e sem relacao com o diff, merge humano confirmado
+  aceitando essa falha conhecida). Aplicacao fora de banda da migration
+  em staging/producao com role owner continua pendente com o
+  proprietario. Ver `docs/history/phases/PLANO_FASE_276.md`.
 - Fase 255 - Prontuario clinico orientado a linha de cuidado: o componente
   principal ganhou fronteiras tipadas para navegacao e timeline; Materiais,
   Anexos e profissionais passaram a carregar sob demanda com falhas locais;

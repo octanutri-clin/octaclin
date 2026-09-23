@@ -197,4 +197,26 @@ tela nova não quebra) — validado por typecheck/lint/build e pelas specs de se
 
 Aplicação fora de banda da migration em staging/produção **não executada** nesta fase — fica com o
 proprietário, conforme a política registrada na seção 2 e no `CHECKLIST_FASES_FUTURAS_PRODUCAO.md`.
-PR ainda não aberta.
+
+Integrado pelo PR `#307` (branch `feat/fase276-expediente-tipos-atendimento`, merge `59a1cf6` em
+`main` em 2026-09-23). Checks do PR: Semgrep, CodeQL, Trivy e Dependency Review verdes; o check
+agregado "OctaClin CI" ficou vermelho só pelo job "Governança de repositório" — causa `SQ-2026-004`
+do inventário de segurança (base Python do `ia-service`), com `revisarEm` vencido por data civil;
+reproduzido identicamente na `main` sem nenhuma mudança desta PR (run
+[35803029715](https://github.com/octanutri-clin/octaclin/actions/runs/35803029715), antes de
+qualquer commit desta fase existir), falha pré-existente e não coberta por esta fase, documentada
+como comentário na PR. Merge humano confirmado via GitHub, aceitando essa falha pré-existente e sem
+relação com o diff.
+
+Durante o ciclo do PR, o próprio CI encontrou e esta fase corrigiu dois defeitos reais antes do
+merge (evidência de que a suíte "Demo local smoke", que builda e sobe a stack real com Playwright
+completo, vale o custo — nenhum dos dois apareceu nas suítes visadas rodadas localmente):
+
+1. Duas chaves novas de metadados de auditoria (`tipoAtendimentoId` em
+   `ControladorAgenda.rotacionarLinkPublico`, `totalFaixas` em `ServicoExpedientes.salvar`) sem
+   cobertura no gate `pnpm test:redacao-auditoria` — nenhuma carrega conteúdo sensível; adicionadas
+   a `CHAVES_SEGURAS` em `scripts/validar-redacao-auditoria.mjs` com a justificativa exigida.
+2. `ConfiguracaoExpediente` derrubava a árvore React inteira (não só o card novo) quando uma
+   resposta de API chegava em formato inesperado: `tipos.filter(...)` num `useMemo` sem guarda de
+   `Array.isArray` estourava sempre que a resposta não era um array, corrigido validando o formato
+   antes de gravar o estado, com fallback para lista vazia.

@@ -664,7 +664,28 @@ de janelas operacionais.
   de escopo e o seletor nas quatro telas foram entregues conforme o escopo
   acima, sem desvio. Detalhe em `docs/history/phases/PLANO_FASE_275.md`.
   Aplicação fora de banda em
-  staging/produção segue com o proprietário. Próximo item da onda: PB-18.
+  staging/produção segue com o proprietário.
+- **Escopo confirmado do PB-18**: expediente semanal por profissional
+  (`expedientes_profissionais`) e catálogo de tipos de atendimento com
+  duração própria (`tipos_atendimento`), decisão do proprietário via
+  pergunta direta — tipo de atendimento entrou no escopo (fonte reutilizável
+  da duração ao rotacionar o link público, sem tela nova de seleção pelo
+  paciente); a restrição de horário vale só para o agendamento público, sem
+  mudança na criação manual de consulta pela equipe interna.
+- **PB-18 concluído em 2026-09-23** (PR `#307`, branch
+  `feat/fase276-expediente-tipos-atendimento`, merge `59a1cf6`): migration,
+  backend (`ServicoTiposAtendimento`, `ServicoExpedientes`, expediente
+  passa a restringir `calcularHorariosLivres`/`validarDisponibilidade` só no
+  fluxo público) e frontend (`ConfiguracaoExpediente`) entregues conforme o
+  escopo acima, sem desvio. Checks do PR: Semgrep, CodeQL, Trivy e
+  Dependency Review verdes; o check agregado "OctaClin CI" ficou vermelho
+  só pelo job "Governança de repositório" (causa `SQ-2026-004` do
+  inventário de segurança, com `revisarEm` vencido por data civil — falha
+  pré-existente e reproduzida identicamente na `main` sem nenhuma mudança
+  desta PR, não coberta por esta fase); merge humano confirmado via GitHub
+  aceitando essa falha pré-existente e não relacionada. Detalhe em
+  `docs/history/phases/PLANO_FASE_276.md`. Aplicação fora de banda em
+  staging/produção segue com o proprietário. Próximo item da onda: PB-19.
 
 **Onda 5 — projetos maiores** (PB-26, PB-27, PB-21, PB-29)
 Painel de operação depende de indicadores que as ondas anteriores já terão normalizado. Auditoria para a
