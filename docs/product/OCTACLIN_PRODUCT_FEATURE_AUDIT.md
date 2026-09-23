@@ -665,6 +665,22 @@ de janelas operacionais.
   acima, sem desvio. Detalhe em `docs/history/phases/PLANO_FASE_275.md`.
   Aplicação fora de banda em
   staging/produção segue com o proprietário. Próximo item da onda: PB-18.
+- **PB-18 implementado em 2026-09-23** (branch
+  `feat/fase276-expediente-tipos-atendimento`, PR ainda não mergeada nesta
+  base — ver `STATUS_ATUAL_PROJETO.md` para o estado corrente do merge):
+  duas tabelas novas (`tipos_atendimento`, `expedientes_profissionais`) e
+  coluna opcional em `agenda_links_publicos`; restrição de expediente vale
+  só para o agendamento público, sem mudança na criação manual pela
+  equipe interna. Detalhe em `docs/history/phases/PLANO_FASE_276.md`.
+- **PB-19 implementado em 2026-09-23** (branch
+  `feat/fase277-recorrencia-duplicacao-consulta`, PR ainda não aberta
+  nesta base — ver `STATUS_ATUAL_PROJETO.md` para o estado corrente do
+  merge): série recorrente semanal ou diária, encerrando por número de
+  ocorrências (2–52) ou por data-fim, criação best-effort (ocorrências com
+  conflito são puladas e reportadas, sem abortar a série); botão avulso
+  "Duplicar consulta"; sem checagem de expediente nas ocorrências da
+  série, mesmo comportamento da criação manual hoje. Detalhe em
+  `docs/history/phases/PLANO_FASE_277.md`. Próximo item da onda: PB-17.
 
 **Onda 5 — projetos maiores** (PB-26, PB-27, PB-21, PB-29)
 Painel de operação depende de indicadores que as ondas anteriores já terão normalizado. Auditoria para a

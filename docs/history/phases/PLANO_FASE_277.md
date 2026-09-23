@@ -222,3 +222,36 @@ export class DuplicarConsultaAgendaDto {
 - Playwright do painel de agenda cobrindo o checkbox de repetição e o botão de duplicar, sem
   regredir os cenários existentes de criação/remarcação de consulta.
 - `git diff --check`, `pnpm security:secrets`.
+
+## 7. Validações realizadas (2026-09-23)
+
+- `npx jest` (octaclin-backend): **PASS** — 2083 passados, 31 pulados (pré-existentes), 0 falhas,
+  217 de 220 suites (3 puladas, pré-existentes).
+- `pnpm test:migracoes-fora-de-banda`: **PASS** — 13/13.
+- `pnpm test:redacao-auditoria`: **PASS** — 24/24 (inclui as chaves novas `consultaOrigemId`,
+  `frequencia`, `totalCriadas`, `totalPuladas` adicionadas a `CHAVES_SEGURAS`).
+- `pnpm --dir octaclin-backend typecheck`: **PASS**.
+- `pnpm --dir octaclin-web typecheck`: **PASS**.
+- `pnpm --dir octaclin-web lint`: **PASS** (0 erros; avisos pré-existentes não relacionados a esta
+  fase, confirmados por número de linha antes da mudança).
+- `pnpm --dir octaclin-web build`: **PASS**, incluindo as duas rotas BFF novas
+  (`/api/agenda/consultas/recorrentes`, `/api/agenda/consultas/[consultaId]/duplicar`) na listagem
+  de build.
+- Playwright `tests/visual/jornadas-criticas.spec.mjs` (desktop-chromium + mobile-chromium):
+  **PASS** — 16/16, incluindo os 2 cenários novos desta fase (série recorrente com ocorrência
+  pulada reportada; duplicação avulsa) e sem regressão nos 6 cenários pré-existentes do arquivo.
+- `git diff --check`: **PASS** (sem espaço em branco inválido).
+- `pnpm security:secrets`: **PASS** (nenhum secret real identificado).
+- Descoberto durante a implementação (não estava no plano original): bug pré-existente da Fase 276
+  em `opcoes-typeorm.ts` — `ExpedienteProfissionalOrm` e `TipoAtendimentoOrm` registrados no módulo
+  Nest mas ausentes do `entities[]` do `DataSource` real, o que quebraria em produção no primeiro
+  acesso a expediente/tipos de atendimento (`EntityMetadataNotFoundError`). Corrigido no mesmo
+  branch por tocar o mesmo array que a entidade nova desta fase (`AgendaRecorrenciaOrm`) precisa;
+  adicionado teste de regressão genérico `opcoes-typeorm.entidades.spec.ts` (varre `**/*.orm.ts` e
+  confirma presença de cada `*Orm` exportado em `entities[]`) para essa classe de falha não se
+  repetir.
+- Divergência menor do plano: o nome da função cliente do frontend ficou
+  `criarConsultasRecorrentesAgenda` (o plano citava `criarSerieRecorrenteAgenda`) — sem impacto de
+  comportamento, só nomenclatura.
+- Aplicação fora de banda da migration em staging/produção com role owner **não executada nesta
+  fase** — continua responsabilidade do proprietário, fora do escopo deste agente.
