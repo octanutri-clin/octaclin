@@ -2,6 +2,7 @@ import { ArrayMaxSize, IsArray, IsBoolean, IsDateString, IsEmail, IsIn, IsInt, I
 import { Type } from 'class-transformer';
 import type { StatusAgendaConsulta } from '../infraestrutura/agenda-consulta.orm';
 import type { TipoBloqueioManualAgenda } from '../infraestrutura/agenda-bloqueio-manual.orm';
+import type { FrequenciaAgendaRecorrencia } from '../infraestrutura/agenda-recorrencia.orm';
 import { MODALIDADES_CONSULTA, ModalidadeConsulta } from '../dominio/teleconsulta';
 import {
   FORMAS_PAGAMENTO_CONSULTA,
@@ -99,6 +100,28 @@ export class CriarConsultaAgendaDto {
   @IsString()
   @MaxLength(180)
   referenciaExterna?: string;
+}
+
+/** PB-19 (Fase 277): cria uma serie de consultas recorrentes a partir da mesma base de campos de `CriarConsultaAgendaDto`. */
+export class CriarConsultaRecorrenteDto extends CriarConsultaAgendaDto {
+  @IsIn(['diaria', 'semanal'])
+  frequencia: FrequenciaAgendaRecorrencia;
+
+  @IsOptional()
+  @IsInt()
+  @Min(2)
+  @Max(52)
+  totalOcorrencias?: number;
+
+  @IsOptional()
+  @IsDateString()
+  terminaEm?: string;
+}
+
+/** PB-19 (Fase 277): repete uma consulta existente uma unica vez, numa nova data/hora. */
+export class DuplicarConsultaAgendaDto {
+  @IsDateString()
+  inicioEm: string;
 }
 
 export class RegistrarPagamentoConsultaDto {
@@ -374,11 +397,25 @@ export interface ConsultaAgendaRespostaDto {
   statusPagamento: StatusPagamentoConsulta;
   pagoEm?: Date;
   pacoteId?: string;
+  recorrenciaId?: string;
   notificacoes: NotificacoesConsultaAgenda;
   payload: Record<string, unknown>;
   motivoCancelamento?: string;
   criadoEm: Date;
   atualizadoEm: Date;
+}
+
+/** PB-19 (Fase 277): ocorrencia da serie que nao pode ser criada por conflito de horario. */
+export interface OcorrenciaPuladaRecorrenciaDto {
+  inicioEm: string;
+  motivo: string;
+}
+
+/** PB-19 (Fase 277): resultado da criacao de uma serie -- best-effort, nunca falha so por conflito pontual. */
+export interface ConsultaRecorrenteRespostaDto {
+  recorrenciaId: string;
+  criadas: ConsultaAgendaRespostaDto[];
+  puladas: OcorrenciaPuladaRecorrenciaDto[];
 }
 
 export interface PacoteSessaoRespostaDto {

@@ -12,7 +12,9 @@ import {
   ConsultarFeedAgendaDto,
   CriarBloqueioManualAgendaDto,
   CriarConsultaAgendaDto,
+  CriarConsultaRecorrenteDto,
   CriarTipoAtendimentoDto,
+  DuplicarConsultaAgendaDto,
   RecusarSolicitacaoAgendamentoDto,
   RegistrarDesfechoConsultaAgendaDto,
   RemarcarConsultaAgendaDto,
@@ -317,6 +319,58 @@ export class ControladorAgenda {
         profissionalId: dados.profissionalId,
         googleEventId: consulta.googleEventId,
         notificacoes: consulta.notificacoes
+      }
+    });
+    return consulta;
+  }
+
+  @Post('consultas/recorrentes')
+  @Permissoes('agenda.consultas.criar')
+  async criarConsultasRecorrentes(
+    @UsuarioAtual() usuario: UsuarioAutenticado,
+    @Req() requisicao: Request,
+    @Body() dados: CriarConsultaRecorrenteDto
+  ) {
+    const resultado = await this.servicoAgenda.criarConsultasRecorrentes(usuario.tenantId, dados, usuario);
+    await this.servicoAuditoria.registrar({
+      tenantId: usuario.tenantId,
+      usuarioId: usuario.usuarioId,
+      acao: 'agenda.consulta.criar_recorrente',
+      recursoTipo: 'agenda_recorrencia',
+      recursoId: resultado.recorrenciaId,
+      ip: requisicao.ip,
+      userAgent: this.obterUserAgent(requisicao),
+      metadados: {
+        pacienteId: dados.pacienteId,
+        profissionalId: dados.profissionalId,
+        frequencia: dados.frequencia,
+        totalCriadas: resultado.criadas.length,
+        totalPuladas: resultado.puladas.length
+      }
+    });
+    return resultado;
+  }
+
+  @Post('consultas/:consultaId/duplicar')
+  @Permissoes('agenda.consultas.criar')
+  async duplicarConsulta(
+    @UsuarioAtual() usuario: UsuarioAutenticado,
+    @Req() requisicao: Request,
+    @Param('consultaId', ParseUUIDPipe) consultaId: string,
+    @Body() dados: DuplicarConsultaAgendaDto
+  ) {
+    const consulta = await this.servicoAgenda.duplicarConsulta(usuario.tenantId, consultaId, dados, usuario);
+    await this.servicoAuditoria.registrar({
+      tenantId: usuario.tenantId,
+      usuarioId: usuario.usuarioId,
+      acao: 'agenda.consulta.duplicar',
+      recursoTipo: 'agenda_consulta',
+      recursoId: consulta.id,
+      ip: requisicao.ip,
+      userAgent: this.obterUserAgent(requisicao),
+      metadados: {
+        consultaOrigemId: consultaId,
+        googleEventId: consulta.googleEventId
       }
     });
     return consulta;

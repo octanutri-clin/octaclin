@@ -74,6 +74,10 @@ export class AgendaConsultaOrm {
   @Column({ name: 'pacote_id', type: 'uuid', nullable: true })
   pacoteId?: string;
 
+  /** PB-19 (Fase 277): serie de consulta recorrente que gerou esta ocorrencia, se houver. */
+  @Column({ name: 'recorrencia_id', type: 'uuid', nullable: true })
+  recorrenciaId?: string;
+
   @Column({ type: 'jsonb', default: {} })
   notificacoes: Record<string, unknown>;
 

@@ -35,6 +35,7 @@ import { AgendaLinkPublicoOrm } from './infraestrutura/agenda-link-publico.orm';
 import { AgendaSolicitacaoOrm } from './infraestrutura/agenda-solicitacao.orm';
 import { ExpedienteProfissionalOrm } from './infraestrutura/expediente-profissional.orm';
 import { TipoAtendimentoOrm } from './infraestrutura/tipo-atendimento.orm';
+import { AgendaRecorrenciaOrm } from './infraestrutura/agenda-recorrencia.orm';
 import { GoogleCanalWatchOrm } from './infraestrutura/google-canal-watch.orm';
 import { ProfissionalGoogleConexaoOrm } from './infraestrutura/profissional-google-conexao.orm';
 
@@ -57,6 +58,7 @@ const processadores = deveExecutarProcessadores()
       AgendaSolicitacaoOrm,
       ExpedienteProfissionalOrm,
       TipoAtendimentoOrm,
+      AgendaRecorrenciaOrm,
       PacoteSessaoOrm
     ]),
     BullModule.registerQueue({ name: FILA_SINCRONIZACAO_GOOGLE }),
