@@ -896,6 +896,22 @@ O OctaClin ja possui uma base SaaS multi-tenant com backend NestJS, frontend Nex
   ficam registradas em `CHECKLIST_FASES_FUTURAS_PRODUCAO.md` e
   `STATUS_ATUAL_PROJETO.md`, com o backfill aqui pendente para um proximo
   fechamento de fase.*
+- Fase 275 - PB-24, primeiro item da Onda 4 do audit de produto (estrutura):
+  vinculo opcional `consulta_id` entre a consulta de origem e as quatro
+  entidades clinicas (evolucao, avaliacao antropometrica, versao de conduta
+  terapeutica, coleta de exame laboratorial), fechando o gap "desde o ultimo
+  encontro" aproximado por data civil ja registrado nas Fases 271/273/274.
+  Migration aditiva e reversivel (coluna nullable + indice parcial por
+  tenant), validacao "mesmo tenant, mesmo paciente" isolada em
+  `resolverConsultaOpcional` (404, nao 403, mesmo padrao do precedente
+  `documentos_emitidos.consulta_id`), rota nova
+  `GET /pacientes/:id/consultas-recentes` e o seletor opcional "Vincular a
+  consulta" reutilizado nas quatro telas de criacao. Sem selecao, o registro
+  fica sem vinculo, como antes da fase. Integrada pelo PR `#305` (branch
+  `feat/fase275-vinculo-consulta-id`, merge `e92c0ec` em `main` em
+  2026-09-22, checks verdes). Aplicacao fora de banda da migration em
+  staging/producao com role owner continua pendente com o proprietario. Ver
+  `docs/history/phases/PLANO_FASE_275.md`.
 - Fase 255 - Prontuario clinico orientado a linha de cuidado: o componente
   principal ganhou fronteiras tipadas para navegacao e timeline; Materiais,
   Anexos e profissionais passaram a carregar sob demanda com falhas locais;
