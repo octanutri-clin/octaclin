@@ -87,7 +87,7 @@ export function ConfiguracaoExpediente({ profissionais }: ConfiguracaoExpediente
     setCarregandoTipos(true);
     listarTiposAtendimentoAgenda()
       .then((itens) => {
-        if (ativo) setTipos(itens);
+        if (ativo) setTipos(Array.isArray(itens) ? itens : []);
       })
       .catch((erro) => {
         if (ativo) setFalhaTipos(classificarFalhaInterface(erro, 'Não foi possível carregar os tipos de atendimento.').mensagem);
@@ -110,7 +110,7 @@ export function ConfiguracaoExpediente({ profissionais }: ConfiguracaoExpediente
     setFalhaExpediente(null);
     obterExpedienteAgenda(exigeSelecaoProfissional ? profissionalId : undefined)
       .then((itens) => {
-        if (ativo) setFaixas(itens.map(paraFaixaEditavel));
+        if (ativo) setFaixas(Array.isArray(itens) ? itens.map(paraFaixaEditavel) : []);
       })
       .catch((erro) => {
         if (ativo) setFalhaExpediente(classificarFalhaInterface(erro, 'Não foi possível carregar o expediente.').mensagem);
