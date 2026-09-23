@@ -65,6 +65,7 @@ import { AdicionarAutomacaoExecutadaNotificacoes1720000001048 } from './migracoe
 import { CriarModelosEvolucaoClinica1720000001049 } from './migracoes/1720000001049-CriarModelosEvolucaoClinica';
 import { CriarBibliotecaCondutas1720000001050 } from './migracoes/1720000001050-CriarBibliotecaCondutas';
 import { AdicionarConsultaIdEntidadesClinicas1720000001051 } from './migracoes/1720000001051-AdicionarConsultaIdEntidadesClinicas';
+import { CriarExpedientesETiposAtendimento1720000001052 } from './migracoes/1720000001052-CriarExpedientesETiposAtendimento';
 import { UserActionLogOrm } from '../auditoria/user-action-log.orm';
 import { ConsentimentoLgpdOrm } from '../lgpd/consentimento-lgpd.orm';
 import { TombstoneExclusaoLgpdOrm } from '../lgpd/tombstone-exclusao-lgpd.orm';
@@ -365,7 +366,8 @@ export function criarOpcoesTypeOrm(): TypeOrmModuleOptions & DataSourceOptions {
         AdicionarAutomacaoExecutadaNotificacoes1720000001048,
         CriarModelosEvolucaoClinica1720000001049,
         CriarBibliotecaCondutas1720000001050,
-        AdicionarConsultaIdEntidadesClinicas1720000001051
+        AdicionarConsultaIdEntidadesClinicas1720000001051,
+        CriarExpedientesETiposAtendimento1720000001052
       ],
     migrationsRun: executarMigracoesNoBoot(),
     synchronize: false,

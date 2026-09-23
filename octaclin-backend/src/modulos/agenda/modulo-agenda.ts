@@ -21,6 +21,8 @@ import { ControladorAgendamentoPublico } from './apresentacao/controlador-agenda
 import { ControladorGoogleAgenda } from './apresentacao/controlador-google-agenda';
 import { ServicoAgendamentoPublico } from './aplicacao/servico-agendamento-publico';
 import { ServicoAgenda } from './aplicacao/servico-agenda';
+import { ServicoExpedientes } from './aplicacao/servico-expedientes';
+import { ServicoTiposAtendimento } from './aplicacao/servico-tipos-atendimento';
 import { REDIS_OAUTH_STATE_GOOGLE, ServicoConexaoGoogleCalendar } from './aplicacao/servico-conexao-google-calendar';
 import { ServicoGoogleCalendar } from './aplicacao/servico-google-calendar';
 import { FILA_SINCRONIZACAO_GOOGLE, ServicoSincronizacaoGoogleCalendar } from './aplicacao/servico-sincronizacao-google-calendar';
@@ -31,6 +33,8 @@ import { AgendaBloqueioExternoOrm } from './infraestrutura/agenda-bloqueio-exter
 import { AgendaBloqueioManualOrm } from './infraestrutura/agenda-bloqueio-manual.orm';
 import { AgendaLinkPublicoOrm } from './infraestrutura/agenda-link-publico.orm';
 import { AgendaSolicitacaoOrm } from './infraestrutura/agenda-solicitacao.orm';
+import { ExpedienteProfissionalOrm } from './infraestrutura/expediente-profissional.orm';
+import { TipoAtendimentoOrm } from './infraestrutura/tipo-atendimento.orm';
 import { GoogleCanalWatchOrm } from './infraestrutura/google-canal-watch.orm';
 import { ProfissionalGoogleConexaoOrm } from './infraestrutura/profissional-google-conexao.orm';
 
@@ -51,6 +55,8 @@ const processadores = deveExecutarProcessadores()
       AgendaBloqueioManualOrm,
       AgendaLinkPublicoOrm,
       AgendaSolicitacaoOrm,
+      ExpedienteProfissionalOrm,
+      TipoAtendimentoOrm,
       PacoteSessaoOrm
     ]),
     BullModule.registerQueue({ name: FILA_SINCRONIZACAO_GOOGLE }),
@@ -68,6 +74,8 @@ const processadores = deveExecutarProcessadores()
     ServicoAgenda,
     ServicoFinanceiroAgenda,
     ServicoAgendamentoPublico,
+    ServicoExpedientes,
+    ServicoTiposAtendimento,
     ServicoGoogleCalendar,
     ServicoConexaoGoogleCalendar,
     ServicoSincronizacaoGoogleCalendar,

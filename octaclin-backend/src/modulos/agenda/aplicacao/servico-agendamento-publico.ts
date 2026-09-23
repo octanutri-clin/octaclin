@@ -15,10 +15,13 @@ import { AgendaBloqueioManualOrm } from '../infraestrutura/agenda-bloqueio-manua
 import { AgendaConsultaOrm } from '../infraestrutura/agenda-consulta.orm';
 import { AgendaLinkPublicoOrm } from '../infraestrutura/agenda-link-publico.orm';
 import { AgendaSolicitacaoOrm, StatusAgendaSolicitacao } from '../infraestrutura/agenda-solicitacao.orm';
+import { ExpedienteProfissionalOrm } from '../infraestrutura/expediente-profissional.orm';
+import { TipoAtendimentoOrm } from '../infraestrutura/tipo-atendimento.orm';
 import {
   AprovarSolicitacaoAgendamentoDto,
   CriarSolicitacaoAgendamentoPublicoDto,
-  RecusarSolicitacaoAgendamentoDto
+  RecusarSolicitacaoAgendamentoDto,
+  RotacionarLinkPublicoAgendaDto
 } from './dtos';
 import { ServicoAgenda } from './servico-agenda';
 
@@ -54,6 +57,12 @@ interface FaixaHorario {
   fimEm: Date;
 }
 
+interface FaixaExpediente {
+  diaSemana: number;
+  horaInicio: string;
+  horaFim: string;
+}
+
 interface ContatoSolicitacao {
   email?: string;
   whatsapp?: string;
@@ -84,6 +93,7 @@ export interface LinkAgendaPublicaAutenticado {
   id: string;
   profissionalId: string;
   duracaoMinutos: number;
+  tipoAtendimentoId?: string;
   ativo: boolean;
   criadoEm: Date;
   atualizadoEm: Date;
@@ -124,6 +134,45 @@ function textoOpcional(valor?: string): string | undefined {
 
 function sobrepoe(janela: FaixaHorario, intervalo: FaixaHorario): boolean {
   return intervalo.inicioEm < janela.fimEm && intervalo.fimEm > janela.inicioEm;
+}
+
+/** Dia da semana (0 = domingo) e minutos desde meia-noite, no timezone informado. */
+function diaEMinutosNoTimezone(data: Date, timezone: string): { diaSemana: number; minutos: number } {
+  const mapaDias: Record<string, number> = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 };
+  const partes = new Intl.DateTimeFormat('en-US', {
+    timeZone: timezone,
+    weekday: 'short',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false
+  }).formatToParts(data);
+  const weekday = partes.find((parte) => parte.type === 'weekday')?.value ?? 'Sun';
+  const hora = Number(partes.find((parte) => parte.type === 'hour')?.value ?? '0') % 24;
+  const minuto = Number(partes.find((parte) => parte.type === 'minute')?.value ?? '0');
+  return { diaSemana: mapaDias[weekday] ?? 0, minutos: hora * 60 + minuto };
+}
+
+/**
+ * PB-18 (Fase 276): sem nenhuma faixa cadastrada, nao ha restricao (mesmo
+ * comportamento de antes desta fase). Com faixas cadastradas, a janela
+ * inteira (inicio e fim) precisa caber dentro de uma unica faixa do mesmo
+ * dia da semana -- um expediente nunca atravessa a meia-noite.
+ */
+function dentroDoExpediente(janela: FaixaHorario, timezone: string, faixas: FaixaExpediente[]): boolean {
+  if (!faixas.length) return true;
+
+  const inicio = diaEMinutosNoTimezone(janela.inicioEm, timezone);
+  const fim = diaEMinutosNoTimezone(janela.fimEm, timezone);
+  if (inicio.diaSemana !== fim.diaSemana) return false;
+
+  return faixas.some((faixa) => {
+    if (faixa.diaSemana !== inicio.diaSemana) return false;
+    const [horaInicio, minutoInicio] = faixa.horaInicio.split(':').map(Number);
+    const [horaFim, minutoFim] = faixa.horaFim.split(':').map(Number);
+    const inicioFaixaMin = horaInicio * 60 + minutoInicio;
+    const fimFaixaMin = horaFim * 60 + minutoFim;
+    return inicio.minutos >= inicioFaixaMin && fim.minutos <= fimFaixaMin;
+  });
 }
 
 function timezoneValido(valor: string): boolean {
@@ -181,14 +230,24 @@ export class ServicoAgendamentoPublico {
       const identidade = normalizarIdentidadeAgendaPublica(configuracao?.valor ?? {}, tenant?.nome);
       const agora = new Date(Date.now());
       const fimJanela = new Date(agora.getTime() + JANELA_DISPONIBILIDADE_MS);
-      const ocupacoes = await this.listarOcupacoes(gerenciador, link.tenantId, link.profissionalId, agora, fimJanela);
+      const [ocupacoes, expediente] = await Promise.all([
+        this.listarOcupacoes(gerenciador, link.tenantId, link.profissionalId, agora, fimJanela),
+        this.listarExpediente(gerenciador, link.tenantId, link.profissionalId)
+      ]);
 
       return {
         profissionalNome: this.criptografia.descriptografar(profissional.nomeCriptografado),
         clinica: identidade.clinica,
         timezone: identidade.timezone,
         duracaoMinutos: link.duracaoMinutos,
-        horariosLivres: this.calcularHorariosLivres(agora, fimJanela, link.duracaoMinutos, ocupacoes)
+        horariosLivres: this.calcularHorariosLivres(
+          agora,
+          fimJanela,
+          link.duracaoMinutos,
+          ocupacoes,
+          identidade.timezone,
+          expediente
+        )
       };
     });
   }
@@ -209,12 +268,23 @@ export class ServicoAgendamentoPublico {
     }
 
     return this.executorTenant.executar(link.tenantId, async (gerenciador) => {
-      const profissional = await gerenciador.getRepository(ProfissionalOrm).findOne({
-        where: { id: link.profissionalId, tenantId: link.tenantId, arquivadoEm: IsNull() }
-      });
+      const [profissional, configuracao, tenant] = await Promise.all([
+        gerenciador.getRepository(ProfissionalOrm).findOne({
+          where: { id: link.profissionalId, tenantId: link.tenantId, arquivadoEm: IsNull() }
+        }),
+        gerenciador.getRepository(TenantConfiguracaoOrm).findOne({
+          where: { tenantId: link.tenantId, chave: 'conta_cliente' }
+        }),
+        gerenciador.getRepository(TenantOrm).findOne({ where: { id: link.tenantId } })
+      ]);
       if (!profissional) throw new NotFoundException(MENSAGEM_LINK_INDISPONIVEL);
 
-      await this.validarDisponibilidade(gerenciador, link.tenantId, link.profissionalId, { inicioEm, fimEm });
+      const identidade = normalizarIdentidadeAgendaPublica(configuracao?.valor ?? {}, tenant?.nome);
+      const expediente = await this.listarExpediente(gerenciador, link.tenantId, link.profissionalId);
+      await this.validarDisponibilidade(gerenciador, link.tenantId, link.profissionalId, { inicioEm, fimEm }, {
+        timezone: identidade.timezone,
+        expediente
+      });
 
       const repositorio = gerenciador.getRepository(AgendaSolicitacaoOrm);
       const observacao = textoOpcional(dados.observacao);
@@ -270,7 +340,8 @@ export class ServicoAgendamentoPublico {
   async rotacionarLinkPublico(
     tenantId: string,
     usuario: UsuarioAutenticado,
-    profissionalId?: string
+    profissionalId?: string,
+    dados?: RotacionarLinkPublicoAgendaDto
   ): Promise<LinkAgendaPublicaRotacionado> {
     return this.executorTenant.executar(tenantId, async (gerenciador) => {
       const profissional = await this.resolverProfissionalAlvo(gerenciador, tenantId, usuario, profissionalId);
@@ -284,16 +355,27 @@ export class ServicoAgendamentoPublico {
         await repositorio.save(link);
       }
 
+      let duracaoMinutos = ativos[0]?.duracaoMinutos ?? DURACAO_PADRAO_LINK_MINUTOS;
+      let tipoAtendimentoId: string | undefined;
+      if (dados?.tipoAtendimentoId) {
+        const tipo = await gerenciador
+          .getRepository(TipoAtendimentoOrm)
+          .findOne({ where: { id: dados.tipoAtendimentoId, tenantId, ativo: true } });
+        if (!tipo) throw new NotFoundException('Tipo de atendimento nao encontrado.');
+        duracaoMinutos = tipo.duracaoMinutos;
+        tipoAtendimentoId = tipo.id;
+      }
+
       const token = randomBytes(24).toString('hex');
       const tokenHash = createHash('sha256').update(token).digest('hex');
-      const duracaoMinutos = ativos[0]?.duracaoMinutos ?? DURACAO_PADRAO_LINK_MINUTOS;
       const criado = await repositorio.save(
         repositorio.create({
           tenantId,
           profissionalId: profissional.id,
           tokenHash,
           ativo: true,
-          duracaoMinutos
+          duracaoMinutos,
+          tipoAtendimentoId
         })
       );
 
@@ -493,11 +575,28 @@ export class ServicoAgendamentoPublico {
       .sort((a, b) => a.inicioEm.getTime() - b.inicioEm.getTime());
   }
 
+  private async listarExpediente(
+    gerenciador: EntityManager,
+    tenantId: string,
+    profissionalId: string
+  ): Promise<FaixaExpediente[]> {
+    const faixas = await gerenciador
+      .getRepository(ExpedienteProfissionalOrm)
+      .find({ where: { tenantId, profissionalId } });
+    return faixas.map((faixa) => ({
+      diaSemana: faixa.diaSemana,
+      horaInicio: faixa.horaInicio,
+      horaFim: faixa.horaFim
+    }));
+  }
+
   private calcularHorariosLivres(
     agora: Date,
     fimJanela: Date,
     duracaoMinutos: number,
-    ocupacoes: FaixaHorario[]
+    ocupacoes: FaixaHorario[],
+    timezone: string,
+    expediente: FaixaExpediente[]
   ): string[] {
     const horarios: string[] = [];
     const passoMs = duracaoMinutos * 60 * 1000;
@@ -509,7 +608,7 @@ export class ServicoAgendamentoPublico {
         fimEm: new Date(cursor.getTime() + passoMs)
       };
       const ocupado = ocupacoes.some((ocupacao) => sobrepoe(janela, ocupacao));
-      if (!ocupado) horarios.push(janela.inicioEm.toISOString());
+      if (!ocupado && dentroDoExpediente(janela, timezone, expediente)) horarios.push(janela.inicioEm.toISOString());
       cursor = new Date(cursor.getTime() + passoMs);
     }
 
@@ -520,10 +619,14 @@ export class ServicoAgendamentoPublico {
     gerenciador: EntityManager,
     tenantId: string,
     profissionalId: string,
-    janela: FaixaHorario
+    janela: FaixaHorario,
+    contextoExpediente?: { timezone: string; expediente: FaixaExpediente[] }
   ): Promise<void> {
     const ocupacoes = await this.listarOcupacoes(gerenciador, tenantId, profissionalId, janela.inicioEm, janela.fimEm);
     if (ocupacoes.some((ocupacao) => sobrepoe(janela, ocupacao))) {
+      throw new BadRequestException(MENSAGEM_HORARIO_INDISPONIVEL);
+    }
+    if (contextoExpediente && !dentroDoExpediente(janela, contextoExpediente.timezone, contextoExpediente.expediente)) {
       throw new BadRequestException(MENSAGEM_HORARIO_INDISPONIVEL);
     }
   }
@@ -706,6 +809,7 @@ export class ServicoAgendamentoPublico {
       id: link.id,
       profissionalId: link.profissionalId,
       duracaoMinutos: link.duracaoMinutos,
+      tipoAtendimentoId: link.tipoAtendimentoId,
       ativo: link.ativo,
       criadoEm: link.criadoEm,
       atualizadoEm: link.atualizadoEm

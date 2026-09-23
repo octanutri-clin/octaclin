@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Header, Param, ParseUUIDPipe, Patch, Post, Query, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Header, Param, ParseUUIDPipe, Patch, Post, Put, Query, Req, UseGuards } from '@nestjs/common';
 import { Request } from 'express';
 import { ServicoAuditoria } from '../../../infraestrutura/auditoria/servico-auditoria';
 import { Papeis, Permissoes, UsuarioAtual } from '../../auth/apresentacao/decorators';
@@ -12,12 +12,17 @@ import {
   ConsultarFeedAgendaDto,
   CriarBloqueioManualAgendaDto,
   CriarConsultaAgendaDto,
+  CriarTipoAtendimentoDto,
   RecusarSolicitacaoAgendamentoDto,
   RegistrarDesfechoConsultaAgendaDto,
-  RemarcarConsultaAgendaDto
+  RemarcarConsultaAgendaDto,
+  RotacionarLinkPublicoAgendaDto,
+  SalvarExpedienteDto
 } from '../aplicacao/dtos';
 import { ServicoAgendamentoPublico } from '../aplicacao/servico-agendamento-publico';
 import { ServicoAgenda } from '../aplicacao/servico-agenda';
+import { ServicoExpedientes } from '../aplicacao/servico-expedientes';
+import { ServicoTiposAtendimento } from '../aplicacao/servico-tipos-atendimento';
 
 @Controller('agenda')
 @UseGuards(GuardaJwt, GuardaPapeis, GuardaPermissoes)
@@ -27,6 +32,8 @@ export class ControladorAgenda {
   constructor(
     private readonly servicoAgenda: ServicoAgenda,
     private readonly servicoAgendamentoPublico: ServicoAgendamentoPublico,
+    private readonly servicoExpedientes: ServicoExpedientes,
+    private readonly servicoTiposAtendimento: ServicoTiposAtendimento,
     private readonly servicoAuditoria: ServicoAuditoria
   ) {}
 
@@ -120,9 +127,10 @@ export class ControladorAgenda {
   async rotacionarLinkPublico(
     @UsuarioAtual() usuario: UsuarioAutenticado,
     @Req() requisicao: Request,
-    @Query('profissionalId') profissionalId?: string
+    @Query('profissionalId') profissionalId?: string,
+    @Body() dados?: RotacionarLinkPublicoAgendaDto
   ) {
-    const link = await this.servicoAgendamentoPublico.rotacionarLinkPublico(usuario.tenantId, usuario, profissionalId);
+    const link = await this.servicoAgendamentoPublico.rotacionarLinkPublico(usuario.tenantId, usuario, profissionalId, dados);
     await this.servicoAuditoria.registrar({
       tenantId: usuario.tenantId,
       usuarioId: usuario.usuarioId,
@@ -133,10 +141,86 @@ export class ControladorAgenda {
       userAgent: this.obterUserAgent(requisicao),
       metadados: {
         profissionalId: link.profissionalId,
-        duracaoMinutos: link.duracaoMinutos
+        duracaoMinutos: link.duracaoMinutos,
+        tipoAtendimentoId: link.tipoAtendimentoId
       }
     });
     return link;
+  }
+
+  @Get('tipos-atendimento')
+  listarTiposAtendimento(@UsuarioAtual() usuario: UsuarioAutenticado) {
+    return this.servicoTiposAtendimento.listar(usuario.tenantId);
+  }
+
+  @Post('tipos-atendimento')
+  @Permissoes('agenda.consultas.criar')
+  async criarTipoAtendimento(
+    @UsuarioAtual() usuario: UsuarioAutenticado,
+    @Req() requisicao: Request,
+    @Body() dados: CriarTipoAtendimentoDto
+  ) {
+    const tipo = await this.servicoTiposAtendimento.criar(usuario.tenantId, dados, usuario);
+    await this.servicoAuditoria.registrar({
+      tenantId: usuario.tenantId,
+      usuarioId: usuario.usuarioId,
+      acao: 'agenda.tipo_atendimento.criar',
+      recursoTipo: 'tipo_atendimento',
+      recursoId: tipo.id,
+      ip: requisicao.ip,
+      userAgent: this.obterUserAgent(requisicao),
+      metadados: { nome: tipo.nome, duracaoMinutos: tipo.duracaoMinutos }
+    });
+    return tipo;
+  }
+
+  @Delete('tipos-atendimento/:tipoId')
+  @Permissoes('agenda.consultas.criar')
+  async arquivarTipoAtendimento(
+    @UsuarioAtual() usuario: UsuarioAutenticado,
+    @Req() requisicao: Request,
+    @Param('tipoId', ParseUUIDPipe) tipoId: string
+  ) {
+    const resultado = await this.servicoTiposAtendimento.arquivar(usuario.tenantId, tipoId, usuario);
+    await this.servicoAuditoria.registrar({
+      tenantId: usuario.tenantId,
+      usuarioId: usuario.usuarioId,
+      acao: 'agenda.tipo_atendimento.arquivar',
+      recursoTipo: 'tipo_atendimento',
+      recursoId: tipoId,
+      ip: requisicao.ip,
+      userAgent: this.obterUserAgent(requisicao),
+      metadados: {}
+    });
+    return resultado;
+  }
+
+  @Get('expediente')
+  listarExpediente(
+    @UsuarioAtual() usuario: UsuarioAutenticado,
+    @Query('profissionalId') profissionalId?: string
+  ) {
+    return this.servicoExpedientes.obter(usuario.tenantId, usuario, profissionalId);
+  }
+
+  @Put('expediente')
+  @Permissoes('agenda.consultas.criar')
+  async salvarExpediente(
+    @UsuarioAtual() usuario: UsuarioAutenticado,
+    @Req() requisicao: Request,
+    @Body() dados: SalvarExpedienteDto
+  ) {
+    const faixas = await this.servicoExpedientes.salvar(usuario.tenantId, dados, usuario);
+    await this.servicoAuditoria.registrar({
+      tenantId: usuario.tenantId,
+      usuarioId: usuario.usuarioId,
+      acao: 'agenda.expediente.salvar',
+      recursoTipo: 'expediente_profissional',
+      ip: requisicao.ip,
+      userAgent: this.obterUserAgent(requisicao),
+      metadados: { profissionalId: dados.profissionalId, totalFaixas: faixas.length }
+    });
+    return faixas;
   }
 
   @Get('solicitacoes')
