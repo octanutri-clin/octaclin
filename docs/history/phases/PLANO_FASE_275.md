@@ -130,4 +130,9 @@ typecheck/build/lint e pela spec de serviço (`servico-exames-laboratoriais.spec
 
 Aplicação fora de banda da migration em staging/produção **não executada** nesta fase — fica com o
 proprietário, conforme a política registrada nas seções 2 e no `CHECKLIST_FASES_FUTURAS_PRODUCAO.md`.
-PR ainda não aberta.
+
+Integrado pelo PR [`#305`](https://github.com/octanutri-clin/octaclin/pull/305) (branch
+`feat/fase275-vinculo-consulta-id`, merge `e92c0ec` em `main` em 2026-09-22, checks verdes: OctaClin
+CI, Semgrep, CodeQL, Trivy e Dependency Review; merge humano confirmado via GitHub). Um finding do
+Semgrep (`detect-non-literal-regexp`, `RegExp` dinâmico numa spec) foi corrigido no mesmo PR,
+commit `4d9bda3`, antes do merge.

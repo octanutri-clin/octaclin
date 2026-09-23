@@ -4272,17 +4272,18 @@ terapeutica, exame laboratorial), com seletor opcional "Vincular a
 consulta" nas telas de criacao, sem introduzir conceito novo de "consulta
 em andamento". Plano e limites em `docs/history/phases/PLANO_FASE_275.md`.
 
-PB-24 (Fase 275, vinculo `consulta_id`), primeiro item da Onda 4, foi
-implementado em 2026-09-22 na branch `feat/fase275-vinculo-consulta-id`:
-migration aditiva (coluna nullable + indice parcial por tenant) nas quatro
-tabelas, validacao "mesmo tenant, mesmo paciente" isolada em
-`resolverConsultaOpcional` (404, nao 403, para consulta fora do escopo),
-rota nova `GET /pacientes/:id/consultas-recentes` e o seletor opcional
-"Vincular a consulta" reutilizado nas quatro telas de criacao. Migration
-entra na PR; aplicacao fora de banda em staging/producao continua com o
-proprietario. PR ainda nao aberta/mergeada -- ver
-`docs/history/phases/PLANO_FASE_275.md` para o detalhamento e
-`STATUS_ATUAL_PROJETO.md` para o estado corrente do merge.
+PB-24 (Fase 275, vinculo `consulta_id`), primeiro item da Onda 4, esta
+**concluido**: migration aditiva (coluna nullable + indice parcial por
+tenant) nas quatro tabelas, validacao "mesmo tenant, mesmo paciente"
+isolada em `resolverConsultaOpcional` (404, nao 403, para consulta fora
+do escopo), rota nova `GET /pacientes/:id/consultas-recentes` e o
+seletor opcional "Vincular a consulta" reutilizado nas quatro telas de
+criacao. Integrado pelo PR `#305` (branch `feat/fase275-vinculo-consulta-id`,
+merge `e92c0ec` em `main` em 2026-09-22, checks verdes: OctaClin CI,
+Semgrep, CodeQL, Trivy e Dependency Review; merge humano confirmado via
+GitHub). Aplicacao fora de banda da migration em staging/producao com role
+owner continua pendente com o proprietario. Ver
+`docs/history/phases/PLANO_FASE_275.md` para o detalhamento.
 
 PB-18 (Fase 276, expediente por profissional e tipos de atendimento),
 segundo item da Onda 4, foi implementado em 2026-09-23 na branch

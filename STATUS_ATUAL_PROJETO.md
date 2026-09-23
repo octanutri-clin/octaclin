@@ -186,8 +186,7 @@ Atualizado em 2026-09-22.
   quatro telas de criacao, listando consultas recentes do paciente. Sem
   selecao, o registro fica sem vinculo, como hoje -- sem introduzir
   conceito novo de "consulta em andamento".
-- Reconciliacao de 2026-09-22 (2): Fase 275 (PB-24) implementada na branch
-  `feat/fase275-vinculo-consulta-id` -- migration aditiva reversivel
+- Reconciliacao de 2026-09-22 (2): Fase 275 (PB-24) **concluida** -- migration aditiva reversivel
   (`1720000001051-AdicionarConsultaIdEntidadesClinicas`), coluna
   `consulta_id` (uuid, nullable, `references agenda_consultas(id)`) nas
   quatro entidades, validacao "mesmo tenant, mesmo paciente" isolada em
@@ -203,9 +202,12 @@ Atualizado em 2026-09-22.
   verdes, `pnpm --dir octaclin-backend typecheck` limpo,
   `pnpm --dir octaclin-web typecheck`/`lint`/`build` limpos, suite
   Playwright "prontuario do paciente" (37 cenarios, desktop) sem
-  regressao. Migration entra na PR; aplicacao fora de banda em
-  staging/producao continua com o proprietario -- nao executada nesta
-  fase. PR ainda nao aberta. Plano em
+  regressao. Integrado pelo PR `#305` (branch `feat/fase275-vinculo-consulta-id`,
+  merge `e92c0ec` em `main` em 2026-09-22, checks verdes: OctaClin CI,
+  Semgrep, CodeQL, Trivy e Dependency Review; merge humano confirmado via
+  GitHub). Aplicacao fora de banda da migration em staging/producao com
+  role owner continua pendente com o proprietario -- nao executada nesta
+  fase. Plano em
   `docs/history/phases/PLANO_FASE_275.md`. Proximo item: Fase 276 (PB-18),
   apos merge da Fase 275.
 - Reconciliacao de 2026-09-23: Fase 276 (PB-18) implementada na branch
