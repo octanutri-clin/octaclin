@@ -131,3 +131,70 @@ mesmo mecanismo de fuso já usado no restante do agendamento público.
 - Playwright do agendamento público e do painel de agenda, cobrindo a tela nova de expediente e a
   restrição de horários, sem regredir os cenários existentes.
 - `git diff --check`, `pnpm security:secrets`.
+
+## 7. Entregue (2026-09-23)
+
+Escopo do plano implementado sem desvio, incluindo as duas decisões do proprietário (seção 3):
+tipo de atendimento com duração própria entrou na fase, e a restrição de expediente vale só para o
+agendamento público (nenhuma mudança na criação manual de consulta pela equipe interna).
+
+Desenho final coincide com o previsto na seção 4: `tipos_atendimento` como catálogo por tenant
+(molde de `biblioteca_condutas`), `expedientes_profissionais` como jornada semanal sem coluna
+`ativo` (salvar substitui todas as faixas do profissional numa transação), e
+`agenda_links_publicos.tipo_atendimento_id` opcional — sem tipo escolhido, a duração continua
+editável/herdada como antes desta fase. `validarDisponibilidade` ganhou um parâmetro opcional
+`contextoExpediente`, usado só pelo fluxo público (`criarSolicitacaoPublica`); o fluxo interno de
+aprovação de solicitação (`aprovarSolicitacao`) não passa esse parâmetro, preservando o
+comportamento atual, conforme a decisão registrada na seção 3.
+
+No frontend, o componente novo `ConfiguracaoExpediente` resolve sozinho se o usuário logado é
+`Professional` (jornada própria, sem seletor de profissional) ou um papel tenant-wide
+(`SuperAdmin`/`Collaborator`, que escolhe o profissional numa lista) — mesma lógica de
+`resolverProfissionalIdDoUsuario` já usada no backend (`bloqueios-manuais`), replicada no cliente
+via `obterSessao().papel` para decidir quando mostrar o seletor.
+
+Arquivos principais:
+
+- Backend: `1720000001052-CriarExpedientesETiposAtendimento.ts` (+ `.spec.ts`), 2 ORMs novos
+  (`tipo-atendimento.orm.ts`, `expediente-profissional.orm.ts`), coluna nova em
+  `agenda-link-publico.orm.ts`, `dtos.ts` (4 DTOs novos), `servico-tipos-atendimento.ts` (+
+  `.spec.ts`, novo), `servico-expedientes.ts` (+ `.spec.ts`, novo),
+  `servico-agendamento-publico.ts` (+ `.spec.ts`), `controlador-agenda.ts` (+ `.spec.ts`, 5 rotas
+  novas), `modulo-agenda.ts`, `opcoes-typeorm.ts`.
+- Frontend: `configuracao-expediente.tsx` (novo), `app/api/agenda/expediente/route.ts` (novo BFF),
+  `app/api/agenda/tipos-atendimento/route.ts` e `[tipoId]/route.ts` (novos BFF),
+  `agendamento-publico-api.ts`, `agenda-api.ts`, `agendamento-publico-bff.ts` (server), as duas
+  rotas BFF existentes de `agendamento-publico` (passam `tipoAtendimentoId`), `painel-agenda.tsx`.
+- Docs: `MAPA_ROTAS_PERMISSOES.md` (rotas novas), `TESTES_E_VALIDACOES.md` (specs recentes),
+  `CHECKLIST_FASES_FUTURAS_PRODUCAO.md`, `STATUS_ATUAL_PROJETO.md`.
+
+Validações executadas (evidência do mesmo ciclo, 2026-09-23):
+
+- `pnpm --dir octaclin-backend test src/modulos/agenda` — PASS (16 suítes, 189 testes).
+- `pnpm --dir octaclin-backend test:migracoes-fora-de-banda` — PASS (13/13, via script na raiz do
+  repositório).
+- `pnpm --dir octaclin-backend typecheck` — PASS.
+- `pnpm --dir octaclin-backend build` — PASS (`dist/main.js` validado).
+- `pnpm --dir octaclin-web typecheck` — PASS.
+- `pnpm --dir octaclin-web lint` — PASS (0 erros; warnings pré-existentes do mesmo padrão do
+  projeto — `set-state-in-effect` — presentes também no componente novo, não bloqueiam).
+- `pnpm --dir octaclin-web build` — PASS, rotas `/api/agenda/expediente`,
+  `/api/agenda/tipos-atendimento` e `/api/agenda/tipos-atendimento/[tipoId]` presentes no build.
+- `pnpm --dir octaclin-web test:authz` — PASS (15 scripts encadeados, exit 0), incluindo
+  `test-agendamento-publico-bff.mjs`, que cobre a rota de rotação de link alterada nesta fase.
+- Playwright (desktop-chromium): `race-condition-agenda.spec.mjs` (1/1),
+  `console-regression.spec.mjs -g "agenda"` (5/5, sem novo erro de console apesar dos fetches novos
+  do componente `ConfiguracaoExpediente` não mockados nesses cenários — falham silenciosamente com
+  aviso na tela, sem exceção não tratada), `agendamento-publico.spec.mjs` (3/3, incluindo o cenário
+  de rotação de link).
+- `git diff --check` — PASS.
+- `pnpm security:secrets` — PASS (nenhum secret identificado).
+
+Gap conhecido e não coberto nesta fase: não existe suíte Playwright dedicada à tela nova de
+configuração de expediente/tipos de atendimento em si (só a regressão dos fluxos existentes que a
+tela nova não quebra) — validado por typecheck/lint/build e pelas specs de serviço
+(`servico-expedientes.spec.ts`, `servico-tipos-atendimento.spec.ts`), não por E2E dedicado.
+
+Aplicação fora de banda da migration em staging/produção **não executada** nesta fase — fica com o
+proprietário, conforme a política registrada na seção 2 e no `CHECKLIST_FASES_FUTURAS_PRODUCAO.md`.
+PR ainda não aberta.
