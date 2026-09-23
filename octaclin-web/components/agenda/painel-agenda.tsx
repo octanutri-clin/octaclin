@@ -7,6 +7,7 @@ import {
   CheckCircle2,
   Clipboard,
   Clock,
+  Copy,
   Download,
   Link2,
   Mail,
@@ -41,6 +42,9 @@ import {
   ConsultaAgendaApi,
   ModalidadeConsulta,
   criarConsultaAgenda,
+  criarConsultasRecorrentesAgenda,
+  duplicarConsultaAgenda,
+  FrequenciaConsultaRecorrente,
   DesfechoConsultaAgenda,
   desconectarGoogleAgenda,
   sincronizarGoogleAgenda,
@@ -263,6 +267,14 @@ export function PainelAgenda() {
   const [carregando, setCarregando] = useState(true);
   const [salvando, setSalvando] = useState(false);
   const [processandoConsultaId, setProcessandoConsultaId] = useState<string | null>(null);
+  const [repetirConsulta, setRepetirConsulta] = useState(false);
+  const [frequenciaRecorrencia, setFrequenciaRecorrencia] = useState<FrequenciaConsultaRecorrente>('semanal');
+  const [criterioTerminoRecorrencia, setCriterioTerminoRecorrencia] = useState<'contagem' | 'data'>('contagem');
+  const [totalOcorrenciasRecorrencia, setTotalOcorrenciasRecorrencia] = useState(4);
+  const [terminaEmRecorrencia, setTerminaEmRecorrencia] = useState('');
+  const [consultaParaDuplicarId, setConsultaParaDuplicarId] = useState<string | null>(null);
+  const [novoInicioDuplicar, setNovoInicioDuplicar] = useState('');
+  const [duplicando, setDuplicando] = useState(false);
   const botaoAgendarRef = useRef<HTMLButtonElement>(null);
   const botaoRemarcarRef = useRef<HTMLButtonElement>(null);
   const restaurarFocoAgendaRef = useRef<'agendar' | 'remarcar' | null>(null);
@@ -310,6 +322,10 @@ export function PainelAgenda() {
   const consultaSelecionada = useMemo(
     () => consultas.find((consulta) => consulta.id === consultaSelecionadaId) ?? null,
     [consultaSelecionadaId, consultas]
+  );
+  const consultaParaDuplicar = useMemo(
+    () => consultas.find((consulta) => consulta.id === consultaParaDuplicarId) ?? null,
+    [consultaParaDuplicarId, consultas]
   );
 
   // `silencioso` e a atualizacao automatica da Fase 210: a fila de solicitacoes
@@ -472,29 +488,52 @@ export function PainelAgenda() {
       setFalha(classificarFalhaInterface('Informe data e hora da consulta.', 'Não foi possível agendar a consulta.'));
       return;
     }
+    if (repetirConsulta && criterioTerminoRecorrencia === 'data' && !terminaEmRecorrencia) {
+      setFalha(classificarFalhaInterface('Informe a data final da recorrência.', 'Não foi possível agendar a consulta.'));
+      return;
+    }
+
+    const dadosBase = {
+      pacienteId: formulario.pacienteId,
+      profissionalId: formulario.profissionalId || undefined,
+      inicioEm: new Date(formulario.inicioEm).toISOString(),
+      duracaoMinutos: formulario.duracaoMinutos,
+      modalidade: formulario.modalidade,
+      linkTeleconsulta:
+        formulario.modalidade === 'online' ? formulario.linkTeleconsulta.trim() || undefined : undefined,
+      local: formulario.modalidade === 'online' ? undefined : formulario.local || undefined,
+      emailContato: formulario.emailContato || undefined,
+      whatsappContato: formulario.whatsappContato || undefined,
+      observacoes: formulario.observacoes || undefined,
+      enviarNotificacoes: formulario.enviarNotificacoes,
+      // Consulta de pacote nao leva valor proprio: o backend recusa a combinacao.
+      valorCentavos: formulario.pacoteId ? undefined : centavosDeTexto(formulario.valor),
+      formaPagamento: formulario.pacoteId ? undefined : formulario.formaPagamento || undefined,
+      pacoteId: formulario.pacoteId || undefined
+    };
 
     setSalvando(true);
     try {
-      const criada = await criarConsultaAgenda({
-        pacienteId: formulario.pacienteId,
-        profissionalId: formulario.profissionalId || undefined,
-        inicioEm: new Date(formulario.inicioEm).toISOString(),
-        duracaoMinutos: formulario.duracaoMinutos,
-        modalidade: formulario.modalidade,
-        linkTeleconsulta:
-          formulario.modalidade === 'online' ? formulario.linkTeleconsulta.trim() || undefined : undefined,
-        local: formulario.modalidade === 'online' ? undefined : formulario.local || undefined,
-        emailContato: formulario.emailContato || undefined,
-        whatsappContato: formulario.whatsappContato || undefined,
-        observacoes: formulario.observacoes || undefined,
-        enviarNotificacoes: formulario.enviarNotificacoes,
-        // Consulta de pacote nao leva valor proprio: o backend recusa a combinacao.
-        valorCentavos: formulario.pacoteId ? undefined : centavosDeTexto(formulario.valor),
-        formaPagamento: formulario.pacoteId ? undefined : formulario.formaPagamento || undefined,
-        pacoteId: formulario.pacoteId || undefined
-      });
-      setConsultas((atuais) => [criada, ...atuais]);
-      if (criada.pacoteId) setVersaoPacotes((atual) => atual + 1);
+      if (repetirConsulta) {
+        const resultado = await criarConsultasRecorrentesAgenda({
+          ...dadosBase,
+          frequencia: frequenciaRecorrencia,
+          totalOcorrencias: criterioTerminoRecorrencia === 'contagem' ? totalOcorrenciasRecorrencia : undefined,
+          terminaEm: criterioTerminoRecorrencia === 'data' ? new Date(terminaEmRecorrencia).toISOString() : undefined
+        });
+        setConsultas((atuais) => [...resultado.criadas, ...atuais]);
+        if (resultado.criadas.some((criada) => criada.pacoteId)) setVersaoPacotes((atual) => atual + 1);
+        setSucesso(
+          resultado.puladas.length
+            ? `${resultado.criadas.length} consulta(s) da série agendada(s). ${resultado.puladas.length} ocorrência(s) pulada(s) por conflito de horário.`
+            : `${resultado.criadas.length} consulta(s) da série agendada(s) e horários bloqueados na agenda interna.`
+        );
+      } else {
+        const criada = await criarConsultaAgenda(dadosBase);
+        setConsultas((atuais) => [criada, ...atuais]);
+        if (criada.pacoteId) setVersaoPacotes((atual) => atual + 1);
+        setSucesso('Consulta agendada e horário bloqueado na agenda interna. Integrações processadas conforme configuração.');
+      }
       setFormulario((atual) => ({
         ...atual,
         inicioEm: proximoHorarioPadrao(),
@@ -502,11 +541,37 @@ export function PainelAgenda() {
         local: '',
         observacoes: ''
       }));
-      setSucesso('Consulta agendada e horário bloqueado na agenda interna. Integrações processadas conforme configuração.');
+      setRepetirConsulta(false);
+      setCriterioTerminoRecorrencia('contagem');
+      setTotalOcorrenciasRecorrencia(4);
+      setTerminaEmRecorrencia('');
     } catch (erroAtual) {
       setFalha(classificarFalhaInterface(erroAtual, 'Não foi possível agendar a consulta.'));
     } finally {
       setSalvando(false);
+    }
+  }
+
+  async function duplicarConsulta(evento: FormEvent<HTMLFormElement>) {
+    evento.preventDefault();
+    if (!consultaParaDuplicar) return;
+    if (!novoInicioDuplicar) {
+      setFalha(classificarFalhaInterface('Informe a nova data e hora da consulta.', 'Não foi possível duplicar a consulta.'));
+      return;
+    }
+    setFalha(null);
+    setSucesso(null);
+    setDuplicando(true);
+    try {
+      const criada = await duplicarConsultaAgenda(consultaParaDuplicar.id, new Date(novoInicioDuplicar).toISOString());
+      setConsultas((atuais) => [criada, ...atuais]);
+      setConsultaParaDuplicarId(null);
+      setNovoInicioDuplicar('');
+      setSucesso('Consulta duplicada e horário bloqueado na agenda interna.');
+    } catch (erroAtual) {
+      setFalha(classificarFalhaInterface(erroAtual, 'Não foi possível duplicar a consulta.'));
+    } finally {
+      setDuplicando(false);
     }
   }
 
@@ -818,6 +883,18 @@ export function PainelAgenda() {
                 </>
               ) : null}
             </div>
+            <div className="flex justify-end">
+              <Botao
+                type="button"
+                onClick={() => {
+                  setConsultaParaDuplicarId(consultaSelecionada.id);
+                  setNovoInicioDuplicar('');
+                }}
+              >
+                <Copy size={16} />
+                Duplicar
+              </Botao>
+            </div>
             {integracoesPrecisamAtencao(consultaSelecionada, statusGoogleAgenda?.conectado) ? (
               <div className="flex justify-end border-t border-linha pt-4">
                 <Botao
@@ -956,6 +1033,40 @@ export function PainelAgenda() {
         ) : null}
       </Modal>
 
+      <Modal
+        aberto={Boolean(consultaParaDuplicar)}
+        aoFechar={() => setConsultaParaDuplicarId(null)}
+        titulo="Duplicar consulta"
+        descricao={
+          consultaParaDuplicar
+            ? `Cria uma nova consulta com os mesmos dados de ${consultaParaDuplicar.pacienteNome ?? consultaParaDuplicar.titulo}, numa nova data.`
+            : undefined
+        }
+      >
+        {consultaParaDuplicar ? (
+          <form onSubmit={duplicarConsulta} className="grid gap-3">
+            <label className="grid gap-1">
+              <Rotulo>Nova data e hora</Rotulo>
+              <Campo
+                aria-label="Nova data e hora para duplicar"
+                type="datetime-local"
+                value={novoInicioDuplicar}
+                onChange={(evento) => setNovoInicioDuplicar(evento.target.value)}
+              />
+            </label>
+            <div className="flex justify-end gap-2">
+              <Botao type="button" onClick={() => setConsultaParaDuplicarId(null)} disabled={duplicando}>
+                Cancelar
+              </Botao>
+              <Botao type="submit" variante="primario" disabled={duplicando}>
+                <Copy size={16} />
+                Duplicar
+              </Botao>
+            </div>
+          </form>
+        ) : null}
+      </Modal>
+
       <div className="grid min-w-0 gap-4 xl:grid-cols-[minmax(320px,0.78fr)_minmax(0,1.6fr)]">
         <div className="grid min-w-0 gap-4">
         <PacotesSessao
@@ -1082,6 +1193,67 @@ export function PainelAgenda() {
                       }
                     />
                   </label>
+                </div>
+
+                <div className="grid gap-3 rounded-md border border-linha bg-superficie px-3 py-2">
+                  <label className="flex items-center gap-2 text-sm text-texto-suave">
+                    <input
+                      type="checkbox"
+                      checked={repetirConsulta}
+                      onChange={(evento) => setRepetirConsulta(evento.target.checked)}
+                      className="h-4 w-4 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primaria"
+                    />
+                    Repetir esta consulta
+                  </label>
+                  {repetirConsulta ? (
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      <label className="grid gap-1">
+                        <Rotulo>Frequência</Rotulo>
+                        <Selecao
+                          value={frequenciaRecorrencia}
+                          onChange={(evento) => setFrequenciaRecorrencia(evento.target.value as FrequenciaConsultaRecorrente)}
+                        >
+                          <option value="semanal">Semanal</option>
+                          <option value="diaria">Diária</option>
+                        </Selecao>
+                      </label>
+                      <label className="grid gap-1">
+                        <Rotulo>Repetir até</Rotulo>
+                        <Selecao
+                          value={criterioTerminoRecorrencia}
+                          onChange={(evento) => setCriterioTerminoRecorrencia(evento.target.value as 'contagem' | 'data')}
+                        >
+                          <option value="contagem">Número de ocorrências</option>
+                          <option value="data">Uma data final</option>
+                        </Selecao>
+                      </label>
+                      {criterioTerminoRecorrencia === 'contagem' ? (
+                        <label className="grid gap-1">
+                          <Rotulo>Número de ocorrências</Rotulo>
+                          <Campo
+                            type="number"
+                            min={2}
+                            max={52}
+                            value={totalOcorrenciasRecorrencia}
+                            onChange={(evento) => setTotalOcorrenciasRecorrencia(Number(evento.target.value) || 2)}
+                          />
+                        </label>
+                      ) : (
+                        <label className="grid gap-1">
+                          <Rotulo>Até uma data</Rotulo>
+                          <Campo
+                            type="date"
+                            value={terminaEmRecorrencia}
+                            onChange={(evento) => setTerminaEmRecorrencia(evento.target.value)}
+                          />
+                        </label>
+                      )}
+                    </div>
+                  ) : null}
+                  <p className="text-xs text-texto-suave">
+                    Cada ocorrência é criada de forma independente. Horários com conflito são pulados e reportados após
+                    o agendamento; no máximo 52 ocorrências por série.
+                  </p>
                 </div>
 
                 <label className="grid gap-1">
@@ -1221,7 +1393,7 @@ export function PainelAgenda() {
                   </Botao>
                   <Botao ref={botaoAgendarRef} type="submit" variante="primario" disabled={salvando || !pacientesLista.length}>
                     <Save size={16} />
-                    Agendar
+                    {repetirConsulta ? 'Agendar série' : 'Agendar'}
                   </Botao>
                 </div>
               </div>

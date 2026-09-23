@@ -109,6 +109,7 @@ export interface ConsultaAgendaApi {
   statusPagamento: StatusPagamentoConsulta;
   pagoEm?: string;
   pacoteId?: string;
+  recorrenciaId?: string;
   notificacoes: NotificacoesConsultaAgenda;
   payload: Record<string, unknown>;
   criadoEm: string;
@@ -163,6 +164,27 @@ export interface CriarConsultaAgendaEntrada {
   valorCentavos?: number;
   formaPagamento?: FormaPagamentoConsulta;
   pacoteId?: string;
+}
+
+/** PB-19 (Fase 277): frequencia de uma serie de consulta recorrente. */
+export type FrequenciaConsultaRecorrente = 'diaria' | 'semanal';
+
+export interface CriarConsultaRecorrenteAgendaEntrada extends CriarConsultaAgendaEntrada {
+  frequencia: FrequenciaConsultaRecorrente;
+  /** Exatamente um entre `totalOcorrencias` e `terminaEm` precisa ser informado. */
+  totalOcorrencias?: number;
+  terminaEm?: string;
+}
+
+export interface OcorrenciaPuladaRecorrenciaApi {
+  inicioEm: string;
+  motivo: string;
+}
+
+export interface ConsultaRecorrenteRespostaApi {
+  recorrenciaId: string;
+  criadas: ConsultaAgendaApi[];
+  puladas: OcorrenciaPuladaRecorrenciaApi[];
 }
 
 export interface RegistrarPagamentoConsultaEntrada {
@@ -322,6 +344,24 @@ export async function criarConsultaAgenda(entrada: CriarConsultaAgendaEntrada): 
   return requisitar<ConsultaAgendaApi>('/api/agenda/consultas', {
     method: 'POST',
     body: JSON.stringify(entrada)
+  });
+}
+
+/** PB-19 (Fase 277): cria uma serie recorrente; best-effort, nunca falha so por conflito pontual. */
+export async function criarConsultasRecorrentesAgenda(
+  entrada: CriarConsultaRecorrenteAgendaEntrada
+): Promise<ConsultaRecorrenteRespostaApi> {
+  return requisitar<ConsultaRecorrenteRespostaApi>('/api/agenda/consultas/recorrentes', {
+    method: 'POST',
+    body: JSON.stringify(entrada)
+  });
+}
+
+/** PB-19 (Fase 277): repete uma consulta existente uma unica vez, numa nova data/hora. */
+export async function duplicarConsultaAgenda(consultaId: string, inicioEm: string): Promise<ConsultaAgendaApi> {
+  return requisitar<ConsultaAgendaApi>(`/api/agenda/consultas/${encodeURIComponent(consultaId)}/duplicar`, {
+    method: 'POST',
+    body: JSON.stringify({ inicioEm })
   });
 }
 

@@ -66,6 +66,7 @@ import { CriarModelosEvolucaoClinica1720000001049 } from './migracoes/1720000001
 import { CriarBibliotecaCondutas1720000001050 } from './migracoes/1720000001050-CriarBibliotecaCondutas';
 import { AdicionarConsultaIdEntidadesClinicas1720000001051 } from './migracoes/1720000001051-AdicionarConsultaIdEntidadesClinicas';
 import { CriarExpedientesETiposAtendimento1720000001052 } from './migracoes/1720000001052-CriarExpedientesETiposAtendimento';
+import { CriarRecorrenciaConsulta1720000001053 } from './migracoes/1720000001053-CriarRecorrenciaConsulta';
 import { UserActionLogOrm } from '../auditoria/user-action-log.orm';
 import { ConsentimentoLgpdOrm } from '../lgpd/consentimento-lgpd.orm';
 import { TombstoneExclusaoLgpdOrm } from '../lgpd/tombstone-exclusao-lgpd.orm';
@@ -76,6 +77,9 @@ import { AgendaBloqueioExternoOrm } from '../../modulos/agenda/infraestrutura/ag
 import { AgendaBloqueioManualOrm } from '../../modulos/agenda/infraestrutura/agenda-bloqueio-manual.orm';
 import { AgendaLinkPublicoOrm } from '../../modulos/agenda/infraestrutura/agenda-link-publico.orm';
 import { AgendaSolicitacaoOrm } from '../../modulos/agenda/infraestrutura/agenda-solicitacao.orm';
+import { ExpedienteProfissionalOrm } from '../../modulos/agenda/infraestrutura/expediente-profissional.orm';
+import { TipoAtendimentoOrm } from '../../modulos/agenda/infraestrutura/tipo-atendimento.orm';
+import { AgendaRecorrenciaOrm } from '../../modulos/agenda/infraestrutura/agenda-recorrencia.orm';
 import { GoogleCanalWatchOrm } from '../../modulos/agenda/infraestrutura/google-canal-watch.orm';
 import { ProfissionalGoogleConexaoOrm } from '../../modulos/agenda/infraestrutura/profissional-google-conexao.orm';
 import { SessaoUsuarioOrm } from '../../modulos/auth/infraestrutura/sessao-usuario.orm';
@@ -265,6 +269,9 @@ export function criarOpcoesTypeOrm(): TypeOrmModuleOptions & DataSourceOptions {
       AgendaBloqueioManualOrm,
       AgendaLinkPublicoOrm,
       AgendaSolicitacaoOrm,
+      ExpedienteProfissionalOrm,
+      TipoAtendimentoOrm,
+      AgendaRecorrenciaOrm,
       RegraAutomacaoOrm,
       ExecucaoRegraOrm,
       AnaliseSentimentoOrm,
@@ -367,7 +374,8 @@ export function criarOpcoesTypeOrm(): TypeOrmModuleOptions & DataSourceOptions {
         CriarModelosEvolucaoClinica1720000001049,
         CriarBibliotecaCondutas1720000001050,
         AdicionarConsultaIdEntidadesClinicas1720000001051,
-        CriarExpedientesETiposAtendimento1720000001052
+        CriarExpedientesETiposAtendimento1720000001052,
+        CriarRecorrenciaConsulta1720000001053
       ],
     migrationsRun: executarMigracoesNoBoot(),
     synchronize: false,

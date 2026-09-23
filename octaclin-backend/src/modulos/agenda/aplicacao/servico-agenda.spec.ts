@@ -7,6 +7,7 @@ import { ProfissionalOrm } from '../../profissionais/infraestrutura/profissional
 import { WebhookAssinaturaOrm } from '../../integracoes/infraestrutura/webhook-assinatura.orm';
 import { AgendaBloqueioExternoOrm } from '../infraestrutura/agenda-bloqueio-externo.orm';
 import { AgendaConsultaOrm } from '../infraestrutura/agenda-consulta.orm';
+import { AgendaRecorrenciaOrm } from '../infraestrutura/agenda-recorrencia.orm';
 import { ServicoAgenda } from './servico-agenda';
 
 const usuarioColaborador: UsuarioAutenticado = {
@@ -129,7 +130,17 @@ function criarServico(dados: Record<string, unknown> = {}) {
     paciente: criarRepositorioFake('paciente', dados),
     profissional: criarRepositorioFake('profissional', dados),
     bloqueioExterno: criarRepositorioFake('bloqueioExterno', dados),
-    bloqueioManual: criarRepositorioFake('bloqueioManual', dados)
+    bloqueioManual: criarRepositorioFake('bloqueioManual', dados),
+    recorrencia: {
+      create: jest.fn((entrada: Record<string, unknown>) => entrada),
+      save: jest.fn(async (entrada: Record<string, unknown>) => ({
+        id: 'recorrencia-1',
+        criadoEm: new Date(),
+        atualizadoEm: new Date(),
+        ...entrada
+      })),
+      delete: jest.fn(async () => ({ affected: 1 }))
+    }
   };
   const gerenciador = {
     query: jest.fn(async () => []),
@@ -139,6 +150,7 @@ function criarServico(dados: Record<string, unknown> = {}) {
       if (entidade === ProfissionalOrm) return repositorios.profissional;
       if (entidade === AgendaBloqueioExternoOrm) return repositorios.bloqueioExterno;
       if (entidade.name === 'AgendaBloqueioManualOrm') return repositorios.bloqueioManual;
+      if (entidade === AgendaRecorrenciaOrm) return repositorios.recorrencia;
       if (entidade === WebhookAssinaturaOrm) return { find: jest.fn(async () => []) };
       throw new Error(`Repositorio nao mapeado: ${entidade.name}`);
     })
@@ -572,6 +584,280 @@ describe('ServicoAgenda', () => {
     expect(consulta.googleEventId).toBe('event-1');
     expect(consulta.notificacoes.email).toEqual(expect.objectContaining({ status: 'pendente' }));
     expect(consulta.notificacoes.whatsapp).toEqual(expect.objectContaining({ status: 'pendente' }));
+  });
+
+  describe('criarConsultasRecorrentes (PB-19, Fase 277)', () => {
+    const pacienteEProfissional = {
+      paciente: {
+        id: 'paciente-1',
+        tenantId: 'tenant-1',
+        profissionalResponsavelId: 'profissional-1',
+        nomeCriptografado: Buffer.from('cripto:Ana Paula')
+      },
+      profissional: {
+        id: 'profissional-1',
+        tenantId: 'tenant-1',
+        nomeCriptografado: Buffer.from('cripto:Dra Carla')
+      }
+    };
+
+    it('cria todas as ocorrencias semanais quando nao ha conflito, terminando por contagem', async () => {
+      const { servico, repositorios } = criarServico(pacienteEProfissional);
+
+      const resultado = await servico.criarConsultasRecorrentes(
+        'tenant-1',
+        {
+          pacienteId: 'paciente-1',
+          profissionalId: 'profissional-1',
+          inicioEm: '2026-07-22T12:00:00.000Z',
+          duracaoMinutos: 50,
+          frequencia: 'semanal',
+          totalOcorrencias: 3
+        },
+        usuarioColaborador
+      );
+
+      expect(resultado.criadas).toHaveLength(3);
+      expect(resultado.puladas).toHaveLength(0);
+      expect(resultado.recorrenciaId).toBe('recorrencia-1');
+      expect(repositorios.recorrencia.save).toHaveBeenCalledWith(
+        expect.objectContaining({
+          tenantId: 'tenant-1',
+          pacienteId: 'paciente-1',
+          profissionalId: 'profissional-1',
+          frequencia: 'semanal',
+          criterioTermino: 'contagem',
+          totalOcorrencias: 3,
+          terminaEm: undefined,
+          duracaoMinutos: 50
+        })
+      );
+      expect(repositorios.consulta.save).toHaveBeenCalledWith(
+        expect.objectContaining({ inicioEm: new Date('2026-07-22T12:00:00.000Z'), recorrenciaId: 'recorrencia-1' })
+      );
+      expect(repositorios.consulta.save).toHaveBeenCalledWith(
+        expect.objectContaining({ inicioEm: new Date('2026-07-29T12:00:00.000Z'), recorrenciaId: 'recorrencia-1' })
+      );
+      expect(repositorios.consulta.save).toHaveBeenCalledWith(
+        expect.objectContaining({ inicioEm: new Date('2026-08-05T12:00:00.000Z'), recorrenciaId: 'recorrencia-1' })
+      );
+    });
+
+    it('gera ocorrencias diarias terminando por data, sem ultrapassar terminaEm', async () => {
+      const { servico, repositorios } = criarServico(pacienteEProfissional);
+
+      await servico.criarConsultasRecorrentes(
+        'tenant-1',
+        {
+          pacienteId: 'paciente-1',
+          profissionalId: 'profissional-1',
+          inicioEm: '2026-07-22T12:00:00.000Z',
+          duracaoMinutos: 30,
+          frequencia: 'diaria',
+          terminaEm: '2026-07-24T23:59:59.000Z'
+        },
+        usuarioColaborador
+      );
+
+      expect(repositorios.consulta.save).toHaveBeenCalledTimes(6);
+      expect(repositorios.consulta.save).toHaveBeenCalledWith(
+        expect.objectContaining({ inicioEm: new Date('2026-07-24T12:00:00.000Z') })
+      );
+      expect(repositorios.consulta.save).not.toHaveBeenCalledWith(
+        expect.objectContaining({ inicioEm: new Date('2026-07-25T12:00:00.000Z') })
+      );
+    });
+
+    it('best-effort: pula so a ocorrencia em conflito e cria as demais', async () => {
+      const { servico } = criarServico({
+        ...pacienteEProfissional,
+        consultas: [
+          {
+            id: 'consulta-existente',
+            tenantId: 'tenant-1',
+            profissionalId: 'profissional-1',
+            status: 'agendada',
+            inicioEm: new Date('2026-07-29T12:00:00.000Z'),
+            fimEm: new Date('2026-07-29T13:00:00.000Z')
+          }
+        ]
+      });
+
+      const resultado = await servico.criarConsultasRecorrentes(
+        'tenant-1',
+        {
+          pacienteId: 'paciente-1',
+          profissionalId: 'profissional-1',
+          inicioEm: '2026-07-22T12:00:00.000Z',
+          duracaoMinutos: 50,
+          frequencia: 'semanal',
+          totalOcorrencias: 3
+        },
+        usuarioColaborador
+      );
+
+      expect(resultado.criadas).toHaveLength(2);
+      expect(resultado.puladas).toEqual([
+        { inicioEm: '2026-07-29T12:00:00.000Z', motivo: expect.stringContaining('Ja existe consulta agendada') }
+      ]);
+    });
+
+    it('quando todas as ocorrencias colidem, nao cria nada e remove a recorrencia orfa', async () => {
+      const { servico, repositorios } = criarServico({
+        ...pacienteEProfissional,
+        consultas: [
+          {
+            id: 'consulta-existente',
+            tenantId: 'tenant-1',
+            profissionalId: 'profissional-1',
+            status: 'agendada',
+            inicioEm: new Date('2026-07-22T12:00:00.000Z'),
+            fimEm: new Date('2026-07-22T13:00:00.000Z')
+          }
+        ]
+      });
+
+      await expect(
+        servico.criarConsultasRecorrentes(
+          'tenant-1',
+          {
+            pacienteId: 'paciente-1',
+            profissionalId: 'profissional-1',
+            inicioEm: '2026-07-22T12:00:00.000Z',
+            duracaoMinutos: 50,
+            frequencia: 'semanal',
+            totalOcorrencias: 1
+          },
+          usuarioColaborador
+        )
+      ).rejects.toBeInstanceOf(BadRequestException);
+
+      expect(repositorios.recorrencia.delete).toHaveBeenCalledWith({ id: 'recorrencia-1', tenantId: 'tenant-1' });
+    });
+
+    it('rejeita quando nenhum ou os dois criterios de termino sao informados', async () => {
+      const { servico } = criarServico(pacienteEProfissional);
+      const base = {
+        pacienteId: 'paciente-1',
+        profissionalId: 'profissional-1',
+        inicioEm: '2026-07-22T12:00:00.000Z',
+        duracaoMinutos: 50,
+        frequencia: 'semanal' as const
+      };
+
+      await expect(servico.criarConsultasRecorrentes('tenant-1', { ...base }, usuarioColaborador)).rejects.toBeInstanceOf(
+        BadRequestException
+      );
+      await expect(
+        servico.criarConsultasRecorrentes(
+          'tenant-1',
+          { ...base, totalOcorrencias: 3, terminaEm: '2026-08-01T00:00:00.000Z' },
+          usuarioColaborador
+        )
+      ).rejects.toBeInstanceOf(BadRequestException);
+    });
+
+    it('nao aborta so por causa de um conflito pontual, mas aborta a serie inteira se o paciente nao existir', async () => {
+      const { servico } = criarServico({ profissional: pacienteEProfissional.profissional });
+
+      await expect(
+        servico.criarConsultasRecorrentes(
+          'tenant-1',
+          {
+            pacienteId: 'paciente-inexistente',
+            profissionalId: 'profissional-1',
+            inicioEm: '2026-07-22T12:00:00.000Z',
+            duracaoMinutos: 50,
+            frequencia: 'semanal',
+            totalOcorrencias: 3
+          },
+          usuarioColaborador
+        )
+      ).rejects.toBeInstanceOf(NotFoundException);
+    });
+
+    it('respeita o teto de seguranca de 52 ocorrencias mesmo com terminaEm muito distante', async () => {
+      const { servico } = criarServico(pacienteEProfissional);
+
+      const resultado = await servico.criarConsultasRecorrentes(
+        'tenant-1',
+        {
+          pacienteId: 'paciente-1',
+          profissionalId: 'profissional-1',
+          inicioEm: '2026-01-01T12:00:00.000Z',
+          duracaoMinutos: 30,
+          frequencia: 'diaria',
+          terminaEm: '2030-01-01T00:00:00.000Z'
+        },
+        usuarioColaborador
+      );
+
+      expect(resultado.criadas).toHaveLength(52);
+    });
+  });
+
+  describe('duplicarConsulta (PB-19, Fase 277)', () => {
+    it('copia os campos da consulta de origem para a nova data, sem herdar referenciaExterna', async () => {
+      const origem = {
+        id: 'consulta-origem',
+        tenantId: 'tenant-1',
+        pacienteId: 'paciente-1',
+        profissionalId: 'profissional-1',
+        titulo: 'Consulta - Ana Paula',
+        inicioEm: new Date('2026-07-22T12:00:00.000Z'),
+        fimEm: new Date('2026-07-22T13:00:00.000Z'),
+        timezone: 'America/Sao_Paulo',
+        status: 'agendada',
+        modalidade: 'presencial',
+        local: 'Consultorio central',
+        observacoes: 'Trazer exames',
+        referenciaExterna: 'erp-77',
+        valorCentavos: 18000,
+        formaPagamento: 'pix',
+        notificacoes: {},
+        payload: {},
+        criadoEm: new Date(),
+        atualizadoEm: new Date()
+      };
+      const { servico, repositorios } = criarServico({
+        consulta: origem,
+        paciente: {
+          id: 'paciente-1',
+          tenantId: 'tenant-1',
+          profissionalResponsavelId: 'profissional-1',
+          nomeCriptografado: Buffer.from('cripto:Ana Paula')
+        },
+        profissional: {
+          id: 'profissional-1',
+          tenantId: 'tenant-1',
+          nomeCriptografado: Buffer.from('cripto:Dra Carla')
+        }
+      });
+
+      await servico.duplicarConsulta('tenant-1', 'consulta-origem', { inicioEm: '2026-07-29T12:00:00.000Z' }, usuarioColaborador);
+
+      expect(repositorios.consulta.save).toHaveBeenCalledWith(
+        expect.objectContaining({
+          pacienteId: 'paciente-1',
+          profissionalId: 'profissional-1',
+          inicioEm: new Date('2026-07-29T12:00:00.000Z'),
+          fimEm: new Date('2026-07-29T13:00:00.000Z'),
+          local: 'Consultorio central',
+          observacoes: 'Trazer exames',
+          valorCentavos: 18000,
+          formaPagamento: 'pix',
+          referenciaExterna: undefined
+        })
+      );
+    });
+
+    it('devolve 404 quando a consulta de origem nao existe ou e de outro profissional', async () => {
+      const { servico } = criarServico({ consulta: null });
+
+      await expect(
+        servico.duplicarConsulta('tenant-1', 'consulta-inexistente', { inicioEm: '2026-07-29T12:00:00.000Z' }, usuarioColaborador)
+      ).rejects.toBeInstanceOf(NotFoundException);
+    });
   });
 
   it('reprocessa uma notificacao falha reutilizando a mesma mensagem da fila', async () => {

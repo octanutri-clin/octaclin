@@ -244,6 +244,8 @@ async function prepararProfissional(page) {
   ];
   let pacienteCriado = null;
   let consultaCriada = null;
+  let recorrenciaCriada = null;
+  let duplicacaoCriada = null;
 
   await criarSessao(page, 'Professional', '/dashboard');
   await page.route('**/api/auth/session', async (route) => {
@@ -348,9 +350,82 @@ async function prepararProfissional(page) {
     await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([]) });
   });
 
+  await page.route('**/api/agenda/consultas/recorrentes', async (route) => {
+    const payload = await route.request().postDataJSON();
+    recorrenciaCriada = payload;
+    const total = payload.totalOcorrencias ?? 3;
+    const criadas = Array.from({ length: Math.max(total - 1, 0) }, (_valor, indice) => ({
+      id: `consulta-recorrencia-${indice + 1}`,
+      tenantId: 'tenant-1',
+      pacienteId: payload.pacienteId,
+      pacienteNome: 'Ana Jornada',
+      profissionalId: payload.profissionalId,
+      profissionalNome: 'Dra. Carla',
+      titulo: 'Consulta - Ana Jornada',
+      inicioEm: payload.inicioEm,
+      fimEm: payload.inicioEm,
+      timezone: 'America/Sao_Paulo',
+      status: 'agendada',
+      local: payload.local,
+      notificacoes: {
+        googleCalendar: { status: 'nao_configurado' },
+        email: { status: 'nao_enviado' },
+        whatsapp: { status: 'nao_enviado' },
+        lembrete24h: { status: 'pendente' },
+        confirmacaoPaciente: { status: 'aguardando' }
+      },
+      recorrenciaId: 'recorrencia-jornada',
+      criadoEm: '2026-07-23T12:00:00.000Z',
+      atualizadoEm: '2026-07-23T12:00:00.000Z'
+    }));
+    await route.fulfill({
+      status: 201,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        recorrenciaId: 'recorrencia-jornada',
+        criadas,
+        puladas: total > 0 ? [{ inicioEm: payload.inicioEm, motivo: 'Horário indisponível para o profissional.' }] : []
+      })
+    });
+  });
+
+  await page.route('**/api/agenda/consultas/*/duplicar', async (route) => {
+    const payload = await route.request().postDataJSON();
+    duplicacaoCriada = { consultaOrigemId: route.request().url().match(/consultas\/([^/]+)\/duplicar/)?.[1], ...payload };
+    await route.fulfill({
+      status: 201,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        id: 'consulta-duplicada',
+        tenantId: 'tenant-1',
+        pacienteId: 'paciente-jornada',
+        pacienteNome: 'Ana Jornada',
+        profissionalId: 'profissional-1',
+        profissionalNome: 'Dra. Carla',
+        titulo: 'Consulta - Ana Jornada',
+        inicioEm: payload.inicioEm,
+        fimEm: payload.inicioEm,
+        timezone: 'America/Sao_Paulo',
+        status: 'agendada',
+        local: 'Online',
+        notificacoes: {
+          googleCalendar: { status: 'nao_configurado' },
+          email: { status: 'nao_enviado' },
+          whatsapp: { status: 'nao_enviado' },
+          lembrete24h: { status: 'pendente' },
+          confirmacaoPaciente: { status: 'aguardando' }
+        },
+        criadoEm: '2026-07-23T12:00:00.000Z',
+        atualizadoEm: '2026-07-23T12:00:00.000Z'
+      })
+    });
+  });
+
   return {
     pacienteCriado: () => pacienteCriado,
-    consultaCriada: () => consultaCriada
+    consultaCriada: () => consultaCriada,
+    recorrenciaCriada: () => recorrenciaCriada,
+    duplicacaoCriada: () => duplicacaoCriada
   };
 }
 
@@ -944,6 +1019,62 @@ test.describe('jornadas criticas de producao', () => {
       modalidade: 'online',
       linkTeleconsulta: 'https://meet.google.com/abc-defg-hij'
     });
+  });
+
+  test('profissional cria consulta recorrente e ve conflitos pulados reportados (PB-19, Fase 277)', async ({ page }) => {
+    const profissionalFluxo = await prepararProfissional(page);
+
+    await page.goto('/agenda');
+    await page.getByRole('button', { name: 'Nova consulta' }).click();
+    const formularioAgenda = page.getByRole('dialog', { name: 'Nova consulta' });
+
+    await formularioAgenda.getByLabel('Paciente').selectOption('paciente-1');
+    await formularioAgenda.getByLabel('Profissional').selectOption('profissional-1');
+    await formularioAgenda.getByLabel('Data e hora').fill('2026-08-10T10:00');
+
+    await formularioAgenda.getByLabel('Repetir esta consulta').check();
+    await formularioAgenda.getByRole('combobox', { name: 'Frequência' }).selectOption('semanal');
+    await formularioAgenda.getByRole('combobox', { name: 'Repetir até' }).selectOption('contagem');
+    await formularioAgenda.getByRole('spinbutton', { name: 'Número de ocorrências' }).fill('3');
+    await formularioAgenda.getByRole('button', { name: 'Agendar série' }).click();
+
+    await expect.poll(() => profissionalFluxo.recorrenciaCriada()).toMatchObject({
+      pacienteId: 'paciente-1',
+      profissionalId: 'profissional-1',
+      frequencia: 'semanal',
+      totalOcorrencias: 3
+    });
+    await expect(page.getByText(/2 consulta\(s\) da série agendada\(s\)\. 1 ocorrência\(s\) pulada\(s\)/)).toBeVisible();
+  });
+
+  test('profissional duplica consulta existente para uma nova data (PB-19, Fase 277)', async ({ page }) => {
+    const profissionalFluxo = await prepararProfissional(page);
+
+    await page.goto('/agenda');
+    await page.getByRole('button', { name: 'Nova consulta' }).click();
+    const formularioAgenda = page.getByRole('dialog', { name: 'Nova consulta' });
+    await formularioAgenda.getByLabel('Paciente').selectOption('paciente-1');
+    await formularioAgenda.getByLabel('Profissional').selectOption('profissional-1');
+    await formularioAgenda.getByLabel('Data e hora').fill('2026-08-10T10:00');
+    await formularioAgenda.getByRole('button', { name: 'Agendar' }).click();
+    await expect.poll(() => profissionalFluxo.consultaCriada()).not.toBeNull();
+    await formularioAgenda.getByRole('button', { name: 'Fechar' }).click();
+    await expect(formularioAgenda).toBeHidden();
+
+    const consulta = page.locator('article').filter({ hasText: 'Ana Jornada' });
+    await consulta.getByRole('button', { name: 'Gerenciar consulta' }).click();
+
+    const modalDetalhes = page.getByRole('dialog', { name: 'Detalhes da consulta' });
+    await modalDetalhes.getByRole('button', { name: 'Duplicar' }).click();
+
+    const modalDuplicar = page.getByRole('dialog', { name: 'Duplicar consulta' });
+    await modalDuplicar.getByLabel('Nova data e hora').fill('2026-08-17T10:00');
+    await modalDuplicar.getByRole('button', { name: 'Duplicar' }).click();
+
+    await expect.poll(() => profissionalFluxo.duplicacaoCriada()).toMatchObject({
+      inicioEm: new Date('2026-08-17T10:00').toISOString()
+    });
+    await expect(page.getByText('Consulta duplicada e horário bloqueado na agenda interna.')).toBeVisible();
   });
 
   test('solicitacao publica segue para aprovacao manual antes de gerar consulta e notificacoes', async ({ page }) => {

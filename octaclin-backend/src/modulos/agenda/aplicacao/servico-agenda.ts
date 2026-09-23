@@ -14,6 +14,7 @@ import { ProfissionalOrm } from '../../profissionais/infraestrutura/profissional
 import { AgendaBloqueioExternoOrm } from '../infraestrutura/agenda-bloqueio-externo.orm';
 import { AgendaBloqueioManualOrm, TipoBloqueioManualAgenda } from '../infraestrutura/agenda-bloqueio-manual.orm';
 import { AgendaConsultaOrm, StatusAgendaConsulta } from '../infraestrutura/agenda-consulta.orm';
+import { AgendaRecorrenciaOrm } from '../infraestrutura/agenda-recorrencia.orm';
 import { PacoteSessaoOrm } from '../infraestrutura/pacote-sessao.orm';
 import { calcularConsumoPacote, pacoteVencido } from '../dominio/financeiro-consulta';
 import {
@@ -25,10 +26,14 @@ import {
   CancelarConsultaAgendaDto,
   ConsultarFeedAgendaDto,
   ConsultaAgendaRespostaDto,
+  ConsultaRecorrenteRespostaDto,
   CriarBloqueioManualAgendaDto,
   CriarConsultaAgendaDto,
+  CriarConsultaRecorrenteDto,
+  DuplicarConsultaAgendaDto,
   ItemFeedAgendaRespostaDto,
   NotificacoesConsultaAgenda,
+  OcorrenciaPuladaRecorrenciaDto,
   RegistrarDesfechoConsultaAgendaDto,
   RemarcarConsultaAgendaDto,
   ResultadoNotificacaoAgenda
@@ -44,6 +49,8 @@ const CONSTRAINT_SOBREPOSICAO_AGENDA = 'ex_agenda_consultas_profissional_horario
 const CONSTRAINT_REFERENCIA_EXTERNA_AGENDA = 'ux_agenda_consultas_referencia_externa';
 const MENSAGEM_CONFLITO_HORARIO = 'Ja existe consulta agendada neste horario para o profissional.';
 const STATUS_CONSULTA_ATIVOS: StatusAgendaConsulta[] = ['agendada', 'reagendada'];
+/** PB-19 (Fase 277): teto de ocorrencias por serie, independente do criterio de termino escolhido. */
+const MAX_OCORRENCIAS_RECORRENCIA = 52;
 const STATUS_CONSULTA_TERMINAIS: StatusAgendaConsulta[] = ['concluida', 'falta', 'cancelada'];
 
 interface ContextoConsultaCriada {
@@ -288,7 +295,12 @@ export class ServicoAgenda {
     });
   }
 
-  async criarConsulta(tenantId: string, dados: CriarConsultaAgendaDto, usuario: UsuarioAutenticado): Promise<ConsultaAgendaRespostaDto> {
+  async criarConsulta(
+    tenantId: string,
+    dados: CriarConsultaAgendaDto,
+    usuario: UsuarioAutenticado,
+    recorrenciaId?: string
+  ): Promise<ConsultaAgendaRespostaDto> {
     const referenciaExterna = dados.referenciaExterna?.trim();
     if (referenciaExterna) {
       const existente = await this.executorTenant.executar(tenantId, (gerenciador) =>
@@ -298,7 +310,7 @@ export class ServicoAgenda {
     }
     let contexto: ContextoConsultaCriada;
     try {
-      contexto = await this.criarRegistroInterno(tenantId, { ...dados, referenciaExterna }, usuario);
+      contexto = await this.criarRegistroInterno(tenantId, { ...dados, referenciaExterna }, usuario, recorrenciaId);
     } catch (erro) {
       if (!referenciaExterna || !this.ehConflitoReferenciaExterna(erro)) throw erro;
       const existente = await this.executorTenant.executar(tenantId, (gerenciador) =>
@@ -329,6 +341,147 @@ export class ServicoAgenda {
 
     const consultaAtualizada = await this.atualizarResultadoIntegracoes(tenantId, contexto.consulta.id, google, notificacoes);
     return this.mapearResposta(consultaAtualizada, contexto.pacienteNome, contexto.profissionalNome);
+  }
+
+  /**
+   * PB-19 (Fase 277): cria uma serie recorrente reutilizando `criarConsulta` uma vez por
+   * ocorrencia -- preserva de graca lock, constraint de exclusao, evento no Google e
+   * notificacao/webhook de cada ocorrencia, sem duplicar essa logica aqui.
+   *
+   * Best-effort: conflito de horario (`BadRequestException`) numa ocorrencia nao aborta a serie,
+   * so a pula e segue para a proxima. Qualquer outro erro (paciente/profissional invalido, por
+   * exemplo) e um erro de entrada genuino e aborta a serie inteira, sem criar nada.
+   */
+  async criarConsultasRecorrentes(
+    tenantId: string,
+    dados: CriarConsultaRecorrenteDto,
+    usuario: UsuarioAutenticado
+  ): Promise<ConsultaRecorrenteRespostaDto> {
+    const temContagem = typeof dados.totalOcorrencias === 'number';
+    const temData = typeof dados.terminaEm === 'string' && dados.terminaEm.trim().length > 0;
+    if (temContagem === temData) {
+      throw new BadRequestException('Informe totalOcorrencias ou terminaEm, exatamente um dos dois.');
+    }
+
+    const inicioPrimeiraOcorrencia = dataValida(dados.inicioEm);
+    const datas = this.gerarDatasOcorrencia(
+      inicioPrimeiraOcorrencia,
+      dados.frequencia,
+      temContagem ? { criterio: 'contagem', totalOcorrencias: dados.totalOcorrencias! } : { criterio: 'data', terminaEm: dataValida(dados.terminaEm!) }
+    );
+
+    const fimPrimeiraOcorrencia = this.calcularFim(inicioPrimeiraOcorrencia, dados);
+    const duracaoMinutos = Math.round((fimPrimeiraOcorrencia.getTime() - inicioPrimeiraOcorrencia.getTime()) / 60000);
+
+    const recorrencia = await this.executorTenant.executar(tenantId, async (gerenciador) => {
+      const repositorio = gerenciador.getRepository(AgendaRecorrenciaOrm);
+      return repositorio.save(
+        repositorio.create({
+          tenantId,
+          pacienteId: dados.pacienteId,
+          profissionalId: dados.profissionalId,
+          frequencia: dados.frequencia,
+          inicioPrimeiraOcorrencia,
+          duracaoMinutos,
+          criterioTermino: temContagem ? 'contagem' : 'data',
+          totalOcorrencias: temContagem ? dados.totalOcorrencias : undefined,
+          terminaEm: temData ? dataValida(dados.terminaEm!) : undefined
+        })
+      );
+    });
+
+    const criadas: ConsultaAgendaRespostaDto[] = [];
+    const puladas: OcorrenciaPuladaRecorrenciaDto[] = [];
+
+    for (const data of datas) {
+      try {
+        const consulta = await this.criarConsulta(
+          tenantId,
+          { ...dados, inicioEm: data.toISOString() },
+          usuario,
+          recorrencia.id
+        );
+        criadas.push(consulta);
+      } catch (erro) {
+        if (!(erro instanceof BadRequestException)) throw erro;
+        const resposta = erro.getResponse();
+        const motivo = typeof resposta === 'string' ? resposta : (resposta as { message?: string }).message ?? erro.message;
+        puladas.push({ inicioEm: data.toISOString(), motivo });
+      }
+    }
+
+    if (criadas.length === 0) {
+      await this.executorTenant.executar(tenantId, (gerenciador) =>
+        gerenciador.getRepository(AgendaRecorrenciaOrm).delete({ id: recorrencia.id, tenantId })
+      );
+      throw new BadRequestException('Nenhuma ocorrencia pode ser criada: todos os horarios da serie estao indisponiveis.');
+    }
+
+    return { recorrenciaId: recorrencia.id, criadas, puladas };
+  }
+
+  /**
+   * Datas de cada ocorrencia (incluindo a primeira), respeitando o teto de seguranca
+   * `MAX_OCORRENCIAS_RECORRENCIA` independente do criterio de termino escolhido.
+   */
+  private gerarDatasOcorrencia(
+    inicioPrimeiraOcorrencia: Date,
+    frequencia: 'diaria' | 'semanal',
+    termino: { criterio: 'contagem'; totalOcorrencias: number } | { criterio: 'data'; terminaEm: Date }
+  ): Date[] {
+    const passoDias = frequencia === 'semanal' ? 7 : 1;
+    const datas: Date[] = [];
+    let atual = inicioPrimeiraOcorrencia;
+
+    while (datas.length < MAX_OCORRENCIAS_RECORRENCIA) {
+      if (termino.criterio === 'data' && atual.getTime() > termino.terminaEm.getTime()) break;
+      datas.push(atual);
+      if (termino.criterio === 'contagem' && datas.length >= termino.totalOcorrencias) break;
+      atual = new Date(atual.getTime() + passoDias * 24 * 60 * 60 * 1000);
+    }
+
+    return datas;
+  }
+
+  /**
+   * PB-19 (Fase 277): repete uma consulta existente uma unica vez, numa nova data/hora,
+   * reutilizando `criarConsulta` com os campos copiados da consulta de origem.
+   * `referenciaExterna` nunca e copiada: e chave de idempotencia de um sistema externo, e
+   * colidiria com a origem ou herdaria identidade indevida de outro sistema.
+   */
+  async duplicarConsulta(
+    tenantId: string,
+    consultaId: string,
+    dados: DuplicarConsultaAgendaDto,
+    usuario: UsuarioAutenticado
+  ): Promise<ConsultaAgendaRespostaDto> {
+    const origem = await this.executorTenant.executar(tenantId, async (gerenciador) => {
+      const profissionalIdDoUsuario = await resolverProfissionalIdDoUsuario(gerenciador, tenantId, usuario);
+      return gerenciador.getRepository(AgendaConsultaOrm).findOne({
+        where: { id: consultaId, tenantId, ...(profissionalIdDoUsuario ? { profissionalId: profissionalIdDoUsuario } : {}) }
+      });
+    });
+    if (!origem) throw new NotFoundException('Consulta nao encontrada.');
+
+    const duracaoMinutos = Math.round((origem.fimEm.getTime() - origem.inicioEm.getTime()) / 60000);
+    return this.criarConsulta(
+      tenantId,
+      {
+        pacienteId: origem.pacienteId,
+        profissionalId: origem.profissionalId,
+        inicioEm: dataValida(dados.inicioEm).toISOString(),
+        duracaoMinutos,
+        modalidade: origem.modalidade,
+        linkTeleconsulta: origem.linkTeleconsulta,
+        local: origem.local,
+        observacoes: origem.observacoes,
+        enviarNotificacoes: true,
+        valorCentavos: origem.pacoteId ? undefined : origem.valorCentavos,
+        formaPagamento: origem.pacoteId ? undefined : origem.formaPagamento,
+        pacoteId: origem.pacoteId
+      },
+      usuario
+    );
   }
 
   async reprocessarIntegracoes(
@@ -740,7 +893,8 @@ export class ServicoAgenda {
   private async criarRegistroInterno(
     tenantId: string,
     dados: CriarConsultaAgendaDto,
-    usuario: UsuarioAutenticado
+    usuario: UsuarioAutenticado,
+    recorrenciaId?: string
   ): Promise<ContextoConsultaCriada> {
     const inicioEm = dataValida(dados.inicioEm);
     const fimEm = this.calcularFim(inicioEm, dados);
@@ -801,6 +955,7 @@ export class ServicoAgenda {
             local: textoOpcional(dados.local),
             observacoes: textoOpcional(dados.observacoes),
             referenciaExterna: dados.referenciaExterna?.trim(),
+            recorrenciaId,
             ...financeiro,
             notificacoes: {},
             payload: {
@@ -1426,6 +1581,7 @@ export class ServicoAgenda {
       statusPagamento: consulta.statusPagamento ?? 'pendente',
       pagoEm: consulta.pagoEm,
       pacoteId: consulta.pacoteId,
+      recorrenciaId: consulta.recorrenciaId,
       notificacoes: (consulta.notificacoes ?? {}) as NotificacoesConsultaAgenda,
       payload,
       motivoCancelamento: this.lerMotivoCancelamento(consulta),

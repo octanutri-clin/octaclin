@@ -4306,7 +4306,32 @@ pre-existente e sem relacao). Aplicacao fora de banda da migration em
 staging/producao com role owner continua pendente com o proprietario.
 Ver `docs/history/phases/PLANO_FASE_276.md` para o detalhamento.
 
-Proximo item apos a Fase 276 mergeada: PB-19 (Fase 277), terceiro item da
+PB-19 (Fase 277, recorrencia e duplicacao de consulta), terceiro item da
+Onda 4, foi implementado em 2026-09-23 na branch
+`feat/fase277-recorrencia-duplicacao-consulta`: migration aditiva com a
+tabela nova `agenda_recorrencias` e coluna opcional `recorrencia_id` em
+`agenda_consultas`, seguindo as quatro decisoes do proprietario -- serie
+semanal ou diaria, encerrando por numero de ocorrencias (2-52) ou por
+data-fim; criacao best-effort (ocorrencias com conflito de horario sao
+puladas e reportadas, sem abortar a serie inteira); botao avulso
+"Duplicar consulta" incluido no escopo; sem checagem de expediente nas
+ocorrencias da serie, mesmo comportamento da criacao manual hoje. O
+desenho reaproveita `ServicoAgenda.criarConsulta` como primitiva por
+ocorrencia, criada em loop sequencial (protegido pelo mesmo advisory
+lock por profissional ja existente), em vez de duplicar a logica de
+validacao/integracoes. Durante a implementacao foi descoberto e
+corrigido um bug pre-existente da Fase 276: `ExpedienteProfissionalOrm`
+e `TipoAtendimentoOrm` estavam registrados no modulo Nest mas ausentes
+do `entities[]` usado pelo DataSource real (`opcoes-typeorm.ts`), o que
+quebraria em producao no primeiro acesso a expediente ou tipos de
+atendimento; adicionado teste de regressao generico
+(`opcoes-typeorm.entidades.spec.ts`) para essa classe de falha. Migration
+entra na PR; aplicacao fora de banda em staging/producao continua com o
+proprietario. PR ainda nao aberta/mergeada -- ver
+`docs/history/phases/PLANO_FASE_277.md` para o detalhamento e
+`STATUS_ATUAL_PROJETO.md` para o estado corrente do merge.
+
+Proximo item apos a Fase 277 mergeada: PB-17, quarto item da
 Onda 4. O programa de hardening PR 36-56 permanece como trilha separada --
 PR 55 permanece adiado e pendente; PR 56 continua condicionado a decisao
 explicita de distribuir o Mobile.

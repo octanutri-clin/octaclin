@@ -240,6 +240,56 @@ Atualizado em 2026-09-22.
   `race-condition-agenda`, `console-regression -g agenda` e
   `agendamento-publico` (desktop) sem regressao. Migration entra na PR;
   aplicacao fora de banda em staging/producao continua com o
+  proprietario -- nao executada nesta fase. PR ainda nao aberta. Plano em
+  `docs/history/phases/PLANO_FASE_276.md`. Proximo item: Fase 277 (PB-19),
+  apos merge da Fase 276.
+- Reconciliacao de 2026-09-23: Fase 277 (PB-19, recorrencia e duplicacao
+  de consulta) implementada na branch
+  `feat/fase277-recorrencia-duplicacao-consulta` -- migration aditiva
+  reversivel (`1720000001053-CriarRecorrenciaConsulta`), tabela nova
+  `agenda_recorrencias` (frequencia diaria/semanal, criterio de termino
+  por contagem 2-52 ou por data-fim, exatamente um dos dois via check
+  constraint) e coluna opcional `agenda_consultas.recorrencia_id`.
+  Quatro decisoes do proprietario via pergunta direta: frequencia
+  semanal ou diaria, terminando por contagem ou por data (escopo mais
+  amplo que o recomendado por mim, que era so semanal por contagem);
+  conflito parcial tratado como best-effort (cria as ocorrencias sem
+  conflito, reporta as puladas, nao aborta a serie inteira); incluido
+  tambem um botao avulso "Duplicar consulta" (nao recomendado por mim
+  para esta fase, escolhido por ele); ocorrencias da serie sem checagem
+  de expediente, mesmo comportamento da criacao manual hoje. Desenho
+  reaproveita `ServicoAgenda.criarConsulta` como primitiva por
+  ocorrencia (loop sequencial, mesmo advisory lock por profissional ja
+  existente) em vez de duplicar validacao/integracoes; isso tambem
+  satisfaz a decisao de nao checar expediente, ja que `criarConsulta`
+  nunca fez essa checagem. Backend: `ServicoAgenda.criarConsultasRecorrentes`
+  e `duplicarConsulta` novos, 2 rotas novas sob `/agenda/consultas`
+  (mesmo guard stack de `ControladorAgenda`). Frontend: checkbox
+  "Repetir esta consulta" com frequencia e criterio de termino no modal
+  "Nova consulta", botao "Duplicar" no modal de detalhes da consulta.
+  Durante a implementacao foi descoberto e corrigido um bug
+  pre-existente da Fase 276 (nao reportado pelo usuario): `ExpedienteProfissionalOrm`
+  e `TipoAtendimentoOrm` estavam registrados no modulo Nest
+  (`TypeOrmModule.forFeature`) mas ausentes do `entities[]` usado pelo
+  `DataSource` real em `opcoes-typeorm.ts` -- o app sobe normalmente e
+  os testes unitarios passam (mockam `getRepository`), mas uma
+  requisicao real a `/agenda/tipos-atendimento` ou `/agenda/expediente`
+  contra Postgres quebraria com `EntityMetadataNotFoundError`. Corrigido
+  registrando as 3 entidades (as 2 pre-existentes mais
+  `AgendaRecorrenciaOrm`, nova) e adicionado teste de regressao generico
+  (`opcoes-typeorm.entidades.spec.ts`, varre `**/*.orm.ts` e confirma
+  presenca de cada `*Orm` exportado em `entities[]`) para essa classe de
+  falha nao se repetir. Validado: suite completa de backend (2083
+  testes, 217 suites) verde, `test:redacao-auditoria` (24/24) e
+  `test:migracoes-fora-de-banda` (13/13) verdes,
+  `pnpm --dir octaclin-backend typecheck`/`build` limpos,
+  `pnpm --dir octaclin-web typecheck`/`lint`/`build` limpos, Playwright
+  `jornadas-criticas` completo (16/16, desktop e mobile, incluindo os 2
+  cenarios novos de recorrencia e duplicacao) sem regressao. Migration
+  entra na PR; aplicacao fora de banda em staging/producao continua com
+  o proprietario -- nao executada nesta fase. PR ainda nao aberta. Plano
+  em `docs/history/phases/PLANO_FASE_277.md`. Proximo item: Fase ~278
+  (PB-17), apos merge da Fase 277.
   proprietario -- nao executada nesta fase. Plano em
   `docs/history/phases/PLANO_FASE_276.md`.
 - Reconciliacao de 2026-09-23 (2): Fase 276 (PB-18) integrada pelo PR

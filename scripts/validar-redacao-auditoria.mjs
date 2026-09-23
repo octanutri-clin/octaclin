@@ -58,6 +58,7 @@ const CHAVES_SEGURAS = new Map([
   ['substituicaoid', 'UUID da substituicao escolhida'],
   ['tarefaid', 'UUID da tarefa de acompanhamento'],
   ['tipoatendimentoid', 'UUID do tipo de atendimento escolhido ao rotacionar o link publico de agendamento; nome e duracao do catalogo ficam fora'],
+  ['consultaorigemid', 'UUID da consulta duplicada; nada do conteudo da consulta de origem e copiado para os metadados'],
   ['versaoid', 'UUID da versao do plano'],
   ['profissionalid', 'UUID de profissional; e conta interna, nao titular'],
   ['usuarioalvoid', 'UUID de usuario interno alvo da acao administrativa'],
@@ -122,6 +123,7 @@ const CHAVES_SEGURAS = new Map([
   ['variaveisvazias', 'nomes das variaveis do modelo de documento que ficaram sem valor (Object.keys), nao os valores'],
   ['versao', 'numero da versao do termo de consentimento aceito, evidencia do que foi aceito'],
   ['notificacoes', 'canais notificados na operacao de agenda, enum'],
+  ['frequencia', 'frequencia da serie de consulta recorrente (diaria, semanal), enum fechado no DTO'],
 
   // --- Contagens e medidas da operacao ---
   ['total', 'contagem'],
@@ -164,6 +166,8 @@ const CHAVES_SEGURAS = new Map([
   ['totalcondicoes', 'contagem de condicoes da regra de automacao'],
   ['totalexcluidos', 'contagem de candidatos descartados pela simulacao'],
   ['totalfaixas', 'contagem de faixas de expediente salvas para o profissional; dia da semana e horario ficam fora'],
+  ['totalcriadas', 'contagem de ocorrencias criadas de uma serie de consulta recorrente'],
+  ['totalpuladas', 'contagem de ocorrencias puladas por conflito de horario numa serie de consulta recorrente; o motivo textual de cada uma fica fora dos metadados'],
   ['totalitensvencidos', 'contagem de itens vencidos na programacao de retencao LGPD'],
   ['totalperguntas', 'contagem de perguntas reordenadas'],
   ['totalsincronizados', 'contagem de itens do lote de sincronizacao mobile'],
