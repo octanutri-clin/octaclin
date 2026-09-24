@@ -672,16 +672,22 @@ de janelas operacionais.
   coluna opcional em `agenda_links_publicos`; restrição de expediente vale
   só para o agendamento público, sem mudança na criação manual pela
   equipe interna. Detalhe em `docs/history/phases/PLANO_FASE_276.md`.
-- **PB-19 implementado em 2026-09-23** (branch
-  `feat/fase277-recorrencia-duplicacao-consulta`, PR ainda não aberta
-  nesta base — ver `STATUS_ATUAL_PROJETO.md` para o estado corrente do
-  merge): série recorrente semanal ou diária, encerrando por número de
+- **PB-19 concluído em 2026-09-23** (PR `#309`, branch
+  `feat/fase277-recorrencia-duplicacao-consulta`, merge `792fe400`): série
+  recorrente semanal ou diária, encerrando por número de
   ocorrências (2–52) ou por data-fim, criação best-effort (ocorrências com
   conflito são puladas e reportadas, sem abortar a série); botão avulso
   "Duplicar consulta"; sem checagem de expediente nas ocorrências da
-  série, mesmo comportamento da criação manual hoje. Detalhe em
-  `docs/history/phases/PLANO_FASE_277.md`. Próximo item da onda: PB-17.
-  staging/produção segue com o proprietário.
+  série, mesmo comportamento da criação manual hoje. Checks do PR: os jobs
+  de backend, web, mobile, IA, imagens, CodeQL, Semgrep, Trivy, Dependency
+  Review, Rollout seguro, Operação de lançamento e Demo local smoke passaram;
+  o check agregado `OctaClin CI` falhou somente pelo job
+  `Governança de repositório`, que falhou em
+  `pnpm test:inventario-security-quality` devido a `SQ-2026-004` com `revisarEm`
+  vencido; `Provenance do SBOM` ficou `SKIPPED`. Merge humano confirmado.
+  Detalhe em `docs/history/phases/PLANO_FASE_277.md`. A aplicação fora de
+  banda das migrations `1051` a `1053` em staging/produção segue com o
+  proprietário. Próximo item da onda: PB-17.
 - **Escopo confirmado do PB-18**: expediente semanal por profissional
   (`expedientes_profissionais`) e catálogo de tipos de atendimento com
   duração própria (`tipos_atendimento`), decisão do proprietário via

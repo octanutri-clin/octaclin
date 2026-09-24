@@ -932,6 +932,19 @@ O OctaClin ja possui uma base SaaS multi-tenant com backend NestJS, frontend Nex
   aceitando essa falha conhecida). Aplicacao fora de banda da migration
   em staging/producao com role owner continua pendente com o
   proprietario. Ver `docs/history/phases/PLANO_FASE_276.md`.
+- Fase 277 - PB-19, terceiro item da Onda 4: recorrencia de consulta
+  semanal ou diaria, com termino por quantidade ou data, criacao best-effort
+  diante de conflitos e duplicacao avulsa. Reutiliza
+  `ServicoAgenda.criarConsulta` por ocorrencia; a migration aditiva cria
+  `agenda_recorrencias` e vincula `agenda_consultas.recorrencia_id`. O PR
+  `#309` foi integrado em `main` pelo merge `792fe400` em 2026-09-23.
+  Os checks funcionais, de build e de seguranca passaram; o check agregado
+  `OctaClin CI` falhou somente pelo job `Governanca de repositorio`, que
+  falhou por `SQ-2026-004` com `revisarEm` vencida; `Provenance do SBOM` foi
+  `SKIPPED`. A aplicacao fora
+  de banda das migrations `1051` a `1053` em staging/producao continua sob
+  responsabilidade do proprietario. Ver
+  `docs/history/phases/PLANO_FASE_277.md`.
 - Fase 255 - Prontuario clinico orientado a linha de cuidado: o componente
   principal ganhou fronteiras tipadas para navegacao e timeline; Materiais,
   Anexos e profissionais passaram a carregar sob demanda com falhas locais;

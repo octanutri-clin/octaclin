@@ -255,3 +255,27 @@ export class DuplicarConsultaAgendaDto {
   comportamento, só nomenclatura.
 - Aplicação fora de banda da migration em staging/produção com role owner **não executada nesta
   fase** — continua responsabilidade do proprietário, fora do escopo deste agente.
+
+## 8. Resultado pós-merge (2026-09-24)
+
+Integrada pelo PR `#309`, branch `feat/fase277-recorrencia-duplicacao-consulta`,
+merge `792fe400` em `main` em 2026-09-23; merge humano confirmado pelo GitHub.
+
+Estado observado dos checks do PR:
+
+- **PASS** — Backend NestJS, Web Next.js, Mobile Expo, AI FastAPI, builds das
+  imagens, CodeQL, Semgrep, Trivy, Dependency Review, Rollout seguro, Operação
+  de lançamento e Demo local smoke.
+- **FAIL** — `Governança de repositório`, no comando
+  `pnpm test:inventario-security-quality`: `SQ-2026-004` estava com
+  `revisarEm` vencido. Essa falha é do inventário, não da mudança funcional da
+  Fase 277; o próximo passo de governança é reavaliar a causa com evidência,
+  conforme `docs/agents/LESSONS_LEARNED.md`, sem apenas renovar a data.
+- **SKIPPED** — `Provenance do SBOM`.
+
+A migration `1720000001053-CriarRecorrenciaConsulta` foi incluída na PR, mas a
+aplicação fora de banda em staging/produção **não foi executada** e continua
+sob responsabilidade do proprietário. Permanecem também pendentes as
+migrations `1051` e `1052` das fases anteriores.
+
+Próximo item da Onda 4: Fase 278 (PB-17, catálogo de marcadores de exames).
