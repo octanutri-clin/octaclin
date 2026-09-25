@@ -38,4 +38,16 @@ describe('CriptografiaDadosSensiveis - indice cego', () => {
 
     expect(criptografia.gerarHashesConsultaPii('tenant-1', 'de')).toEqual([]);
   });
+
+  it('gera indice exato de perfil com separacao por tenant e campo', () => {
+    const criptografia = new CriptografiaDadosSensiveis();
+    const hash = criptografia.gerarHashPerfilExato('tenant-1', 'categoria', '  Pré  Consulta ');
+
+    expect(hash).toBe(criptografia.gerarHashPerfilExato('tenant-1', 'categoria', 'pre consulta'));
+    expect(hash).not.toBe(criptografia.gerarHashPerfilExato('tenant-2', 'categoria', 'pre consulta'));
+    expect(hash).not.toBe(criptografia.gerarHashPerfilExato('tenant-1', 'tag', 'pre consulta'));
+    expect(hash).not.toBe(criptografia.gerarHashPerfilExato('tenant-1', 'categoria', 'pre'));
+    expect(hash).not.toContain('pre');
+    expect(() => criptografia.gerarHashPerfilExato('tenant-1', 'categoria', '  ')).toThrow();
+  });
 });

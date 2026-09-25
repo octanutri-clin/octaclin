@@ -301,6 +301,37 @@ describe('ServicoPacientes', () => {
     }));
   });
 
+  it('combina filtros exatos protegidos com tenant e escopo antes da paginacao', async () => {
+    const repositorio = { findAndCount: jest.fn(async () => [[], 0]) };
+    const criptografia = { gerarHashPerfilExato: jest.fn((_tenant: string, campo: string, valor: string) => `${campo}:${valor}`) };
+    const servico = new ServicoPacientes(
+      { executar: jest.fn((_tenantId: string, operacao: (gerenciador: unknown) => Promise<unknown>) =>
+        operacao(criarGerenciadorFake(repositorio))) } as never,
+      criptografia as never,
+      limitesPermitidos as never
+    );
+    await servico.listar('tenant-1', usuarioColaborador, 1, 25, {
+      pagina: 1, limite: 25, categoria: 'Ativo', origem: 'Indicação', tag: 'Retorno', risco: 'alto'
+    });
+    expect(criptografia.gerarHashPerfilExato).toHaveBeenCalledTimes(3);
+    const where = (repositorio.findAndCount as jest.Mock).mock.calls[0][0].where;
+    expect(where).toEqual(expect.arrayContaining([
+      expect.objectContaining({ tenantId: 'tenant-1', perfilFiltrosHashes: expect.objectContaining({
+        _type: 'arrayContains', _value: ['categoria:Ativo', 'origem:Indicação', 'tag:Retorno']
+      }) })
+    ]));
+    expect(where).toHaveLength(2);
+  });
+
+  it('nao consulta indices protegidos com tenant divergente da credencial', async () => {
+    const executar = jest.fn();
+    const servico = new ServicoPacientes({ executar } as never, {} as never, limitesPermitidos as never);
+    await expect(servico.listar('outro-tenant', usuarioColaborador, 1, 25, {
+      pagina: 1, limite: 25, tag: 'Retorno'
+    })).rejects.toThrow(ForbiddenException);
+    expect(executar).not.toHaveBeenCalled();
+  });
+
   it('deve incluir a ultima consulta concluida e a proxima consulta do proprio tenant', async () => {
     const agora = Date.now();
     const repositorioPacientes = {

@@ -14,6 +14,9 @@ interface FiltrosPacientesProps {
   profissional: string;
   status: string;
   semProximaConsulta: boolean;
+  categoria: string;
+  origem: string;
+  tag: string;
   profissionais: ProfissionalResumo[];
   total: number;
   podeGerenciar: boolean;
@@ -21,6 +24,9 @@ interface FiltrosPacientesProps {
   aoAlterarRisco: (valor: 'todos' | 'alto' | 'medio' | 'baixo') => void;
   aoAlterarProfissional: (valor: string) => void;
   aoAlterarStatus: (valor: string) => void;
+  aoAlterarCategoria: (valor: string) => void;
+  aoAlterarOrigem: (valor: string) => void;
+  aoAlterarTag: (valor: string) => void;
   aoAplicarVisao: (visao: 'todos' | 'prioridade' | 'sem-retorno') => void;
   aoAplicarFiltrosSalvos: (criterios: CriteriosFiltroSalvoPaciente) => void;
 }
@@ -54,6 +60,19 @@ export function FiltrosPacientes(props: FiltrosPacientesProps) {
             <option value="todos">Todas</option><option value="novo">Novo</option><option value="aderente">Aderente</option><option value="em_acompanhamento">Em acompanhamento</option><option value="risco">Risco</option>
           </Selecao>
         </div>
+        <div className="grid gap-1">
+          <Rotulo htmlFor="filtro-categoria-paciente">Categoria exata</Rotulo>
+          <Campo id="filtro-categoria-paciente" maxLength={80} value={props.categoria} onChange={(evento) => props.aoAlterarCategoria(evento.target.value)} autoComplete="off" />
+        </div>
+        <div className="grid gap-1">
+          <Rotulo htmlFor="filtro-origem-paciente">Origem exata</Rotulo>
+          <Campo id="filtro-origem-paciente" maxLength={100} value={props.origem} onChange={(evento) => props.aoAlterarOrigem(evento.target.value)} autoComplete="off" />
+        </div>
+        <div className="grid gap-1">
+          <Rotulo htmlFor="filtro-tag-paciente">Etiqueta exata</Rotulo>
+          <Campo id="filtro-tag-paciente" maxLength={40} value={props.tag} onChange={(evento) => props.aoAlterarTag(evento.target.value)} autoComplete="off" />
+        </div>
+        <p className="text-xs text-texto-suave lg:col-span-4">Categoria, origem e etiqueta usam igualdade do valor completo. Estes filtros não entram na URL, exportação ou visões salvas.</p>
         <div className="flex flex-wrap gap-2 lg:col-span-4" aria-label="Visões rápidas">
           <Botao type="button" variante="fantasma" aria-pressed={!props.semProximaConsulta && props.risco === 'todos' && props.status === 'todos' && props.profissional === 'todos' && !props.busca} onClick={() => props.aoAplicarVisao('todos')}>Todos</Botao>
           <Botao type="button" variante="fantasma" aria-pressed={props.risco === 'alto'} onClick={() => props.aoAplicarVisao('prioridade')}>Alta prioridade</Botao>
@@ -69,6 +88,7 @@ export function FiltrosPacientes(props: FiltrosPacientesProps) {
           }}
           profissionais={props.profissionais}
           podeGerenciar={props.podeGerenciar}
+          filtrosProtegidosAtivos={Boolean(props.categoria.trim() || props.origem.trim() || props.tag.trim())}
           aoAplicar={props.aoAplicarFiltrosSalvos}
         />
       </CartaoConteudo>

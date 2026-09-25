@@ -68,6 +68,7 @@ import { AdicionarConsultaIdEntidadesClinicas1720000001051 } from './migracoes/1
 import { CriarExpedientesETiposAtendimento1720000001052 } from './migracoes/1720000001052-CriarExpedientesETiposAtendimento';
 import { CriarRecorrenciaConsulta1720000001053 } from './migracoes/1720000001053-CriarRecorrenciaConsulta';
 import { CriarCatalogoMarcadoresExames1720000001054 } from './migracoes/1720000001054-CriarCatalogoMarcadoresExames';
+import { AdicionarIndicesPerfilPacientes1720000001055 } from './migracoes/1720000001055-AdicionarIndicesPerfilPacientes';
 import { UserActionLogOrm } from '../auditoria/user-action-log.orm';
 import { ConsentimentoLgpdOrm } from '../lgpd/consentimento-lgpd.orm';
 import { TombstoneExclusaoLgpdOrm } from '../lgpd/tombstone-exclusao-lgpd.orm';
@@ -379,7 +380,8 @@ export function criarOpcoesTypeOrm(): TypeOrmModuleOptions & DataSourceOptions {
         AdicionarConsultaIdEntidadesClinicas1720000001051,
         CriarExpedientesETiposAtendimento1720000001052,
         CriarRecorrenciaConsulta1720000001053,
-        CriarCatalogoMarcadoresExames1720000001054
+        CriarCatalogoMarcadoresExames1720000001054,
+        AdicionarIndicesPerfilPacientes1720000001055
       ],
     migrationsRun: executarMigracoesNoBoot(),
     synchronize: false,

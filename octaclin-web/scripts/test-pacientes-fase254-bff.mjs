@@ -19,6 +19,7 @@ writeFileSync(join(pasta, 'tsconfig.json'), JSON.stringify({
     'app/api/pacientes/filtros-salvos/route.ts',
     'app/api/pacientes/filtros-salvos/[filtroId]/route.ts',
     'app/api/pacientes/verificacao-duplicidade/route.ts',
+    'app/api/pacientes/buscar/route.ts',
     'app/api/profissionais/[id]/route.ts',
     'lib/server/sessao-bff.ts'
   ].map((arquivo) => join(raiz, arquivo))

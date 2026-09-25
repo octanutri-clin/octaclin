@@ -1,6 +1,6 @@
 # OctaClin - Status atual do projeto
 
-Atualizado em 2026-09-24.
+Atualizado em 2026-09-25.
 
 ## Snapshot
 
@@ -302,6 +302,13 @@ Atualizado em 2026-09-24.
   bancos nesta reconciliacao). Plano em
   `docs/history/phases/PLANO_FASE_277.md`. Proximo item da Onda 4:
   Fase 278 (PB-17).
+- Reconciliacao de 2026-09-25: PB-17 (Fase 278, catalogo de marcadores)
+  integrado em `main` pelo PR `#313` (merge `cb7c7bd`), conforme Git.
+  PB-10 (Fase 279) e o ultimo item da Onda 4 e esta em implementacao na
+  branch `feat/fase279-busca-protegida-perfil`; filtros exatos para tag,
+  origem e categoria foram confirmados pelo proprietario. Migration e
+  backfill seguem fora de banda, sem aplicacao em staging/producao nesta fase.
+  Contrato e procedimento em `docs/history/phases/PLANO_FASE_279.md`.
 - Reconciliacao de governanca (captura `2026-09-25T00:20:06.782Z` UTC, run
   [36077037819](https://github.com/octanutri-clin/octaclin/actions/runs/36077037819)):
   snapshot completo da `main` no commit `c5ebb7b` com 196 alertas Code

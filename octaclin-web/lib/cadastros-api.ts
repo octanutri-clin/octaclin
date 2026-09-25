@@ -80,6 +80,9 @@ export interface FiltrosPacientes {
   profissionalId?: string;
   status?: string;
   semProximaConsulta?: boolean;
+  categoria?: string;
+  origem?: string;
+  tag?: string;
 }
 
 export interface FiltrosPaginacao {
@@ -171,6 +174,19 @@ export async function importarPacientes(
 }
 
 export async function listarPacientes(filtros: FiltrosPacientes = {}): Promise<RespostaPaginada<PacienteResumo>> {
+  if (filtros.categoria?.trim() || filtros.origem?.trim() || filtros.tag?.trim()) {
+    return requisitar<RespostaPaginada<PacienteResumo>>('/api/pacientes/buscar', {
+      method: 'POST', cache: 'no-store',
+      body: JSON.stringify({
+        pagina: filtros.pagina ?? 1, limite: filtros.limite ?? 25,
+        busca: filtros.busca, risco: filtros.risco, profissionalId: filtros.profissionalId,
+        status: filtros.status, semProximaConsulta: filtros.semProximaConsulta,
+        categoria: filtros.categoria?.trim() || undefined,
+        origem: filtros.origem?.trim() || undefined,
+        tag: filtros.tag?.trim() || undefined
+      })
+    });
+  }
   const parametros = new URLSearchParams({
     pagina: String(filtros.pagina ?? 1),
     limite: String(filtros.limite ?? 25)

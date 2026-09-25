@@ -1,5 +1,5 @@
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
-import { EntityManager, IsNull } from 'typeorm';
+import { EntityManager, IsNull, Not } from 'typeorm';
 import { ExecutorTenant } from '../../../infraestrutura/banco-dados/executor-tenant';
 import { ConsentimentoLgpdOrm } from '../../../infraestrutura/lgpd/consentimento-lgpd.orm';
 import { CriptografiaDadosSensiveis } from '../../../infraestrutura/seguranca/criptografia-dados-sensiveis';
@@ -20,6 +20,7 @@ import { ConvitePacienteOrm } from '../infraestrutura/convite-paciente.orm';
 import { PacienteOrm } from '../infraestrutura/paciente.orm';
 import { PerfilCadastroPacienteOrm } from '../infraestrutura/perfil-cadastro-paciente.orm';
 import { ServicoDuplicidadePacientes } from './servico-duplicidade-pacientes';
+import { gerarIndicesPerfilPaciente } from './indices-perfil-paciente';
 
 type CampoCifrado =
   | 'identificacaoCriptografada'
@@ -139,12 +140,20 @@ export class ServicoPerfilCadastroPaciente {
     dados: T,
     usuario: UsuarioAutenticado
   ): Promise<T> {
+    if (tenantId !== usuario.tenantId) throw new ForbiddenException('Tenant invalido.');
     return this.executorTenant.executar(tenantId, async (gerenciador) => {
       await this.garantirPacienteAcessivel(gerenciador, tenantId, pacienteId, usuario);
       const repositorio = gerenciador.getRepository(PerfilCadastroPacienteOrm);
       const perfil = (await repositorio.findOne({ where: { tenantId, pacienteId } })) ?? repositorio.create({ tenantId, pacienteId });
       perfil[campo] = this.criptografia.criptografar(JSON.stringify(dados));
       await repositorio.save(perfil);
+      if (campo === 'operacaoCriptografada') {
+        const resultado = await gerenciador.getRepository(PacienteOrm).update(
+          { id: pacienteId, tenantId, statusCicloVida: Not('DELETED') },
+          { perfilFiltrosHashes: gerarIndicesPerfilPaciente(this.criptografia, tenantId, dados as AtualizarOperacaoCadastroPacienteDto) }
+        );
+        if (resultado.affected !== 1) throw new NotFoundException('Paciente nao encontrado.');
+      }
       return dados;
     });
   }
@@ -155,12 +164,14 @@ export class ServicoPerfilCadastroPaciente {
     pacienteId: string,
     usuario: UsuarioAutenticado
   ): Promise<PacienteOrm> {
+    if (tenantId !== usuario.tenantId) throw new ForbiddenException('Tenant invalido.');
     const profissionalResponsavelId = await resolverProfissionalIdDoUsuario(gerenciador, tenantId, usuario);
     const paciente = await gerenciador.getRepository(PacienteOrm).findOne({
       where: {
         id: pacienteId,
         tenantId,
         arquivadoEm: IsNull(),
+        statusCicloVida: Not('DELETED'),
         ...(profissionalResponsavelId ? { profissionalResponsavelId } : {})
       }
     });

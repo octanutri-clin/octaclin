@@ -93,11 +93,15 @@ export function ListaPacientes() {
   const [filtroRisco, setFiltroRisco] = useState<'todos' | 'alto' | 'medio' | 'baixo'>(() => (parametrosUrl.get('risco') as 'todos' | 'alto' | 'medio' | 'baixo') || 'todos');
   const [filtroProfissional, setFiltroProfissional] = useState(() => parametrosUrl.get('profissional') ?? 'todos');
   const [filtroStatus, setFiltroStatus] = useState(() => parametrosUrl.get('status') ?? 'todos');
+  const [filtroCategoria, setFiltroCategoria] = useState('');
+  const [filtroOrigem, setFiltroOrigem] = useState('');
+  const [filtroTag, setFiltroTag] = useState('');
   const [apenasSemProximaConsulta, setApenasSemProximaConsulta] = useState(() => parametrosUrl.get('semRetorno') === '1');
   const [pagina, setPagina] = useState(() => Math.max(1, Number(parametrosUrl.get('pagina') ?? 1) || 1));
   const [modalImportacaoAberto, setModalImportacaoAberto] = useState(false);
   const [podeGerenciar, setPodeGerenciar] = useState(false);
   const limite = 25;
+  const filtrosProtegidosAtivos = Boolean(filtroCategoria.trim() || filtroOrigem.trim() || filtroTag.trim());
 
   const urlExportacao = useMemo(() => {
     const parametros = new URLSearchParams();
@@ -131,7 +135,7 @@ export function ListaPacientes() {
     setFalhaCarregamento(null);
     try {
       const [pacientes, profissionaisResposta] = await Promise.all([
-        listarPacientes({ pagina, limite, busca: busca || undefined, risco: filtroRisco === 'todos' ? undefined : filtroRisco, profissionalId: filtroProfissional === 'todos' ? undefined : filtroProfissional, status: filtroStatus === 'todos' ? undefined : filtroStatus, semProximaConsulta: apenasSemProximaConsulta }),
+        listarPacientes({ pagina, limite, busca: busca || undefined, risco: filtroRisco === 'todos' ? undefined : filtroRisco, profissionalId: filtroProfissional === 'todos' ? undefined : filtroProfissional, status: filtroStatus === 'todos' ? undefined : filtroStatus, semProximaConsulta: apenasSemProximaConsulta, categoria: filtroCategoria, origem: filtroOrigem, tag: filtroTag }),
         listarProfissionais({ limite: 100 })
       ]);
       setDados(pacientes);
@@ -141,7 +145,7 @@ export function ListaPacientes() {
     } finally {
       setCarregando(false);
     }
-  }, [apenasSemProximaConsulta, busca, filtroProfissional, filtroRisco, filtroStatus, pagina]);
+  }, [apenasSemProximaConsulta, busca, filtroCategoria, filtroOrigem, filtroTag, filtroProfissional, filtroRisco, filtroStatus, pagina]);
 
   useEffect(() => {
     const atraso = window.setTimeout(() => void carregar(), 300);
@@ -150,6 +154,7 @@ export function ListaPacientes() {
 
   function aplicarVisao(visao: 'todos' | 'prioridade' | 'sem-retorno') {
     setBusca('');
+    setFiltroCategoria(''); setFiltroOrigem(''); setFiltroTag('');
     setFiltroRisco(visao === 'prioridade' ? 'alto' : 'todos');
     setFiltroStatus('todos');
     setFiltroProfissional('todos');
@@ -159,6 +164,7 @@ export function ListaPacientes() {
 
   function aplicarFiltrosSalvos(criterios: CriteriosFiltroSalvoPaciente) {
     setBusca('');
+    setFiltroCategoria(''); setFiltroOrigem(''); setFiltroTag('');
     setFiltroRisco(criterios.risco ?? 'todos');
     setFiltroProfissional(criterios.profissionalId ?? 'todos');
     setFiltroStatus(criterios.status ?? 'todos');
@@ -253,12 +259,14 @@ export function ListaPacientes() {
           <Botao onClick={carregar} disabled={carregando}><RefreshCcw size={16} />{carregando ? 'Atualizando' : 'Atualizar'}</Botao>
           {podeGerenciar ? <Botao type="button" onClick={() => setModalImportacaoAberto(true)}><Upload size={16} />Importar CSV</Botao> : null}
           <Botao type="button" onClick={() => void carregarLixeira()} disabled={carregandoLixeira}><ArchiveRestore size={16} />{carregandoLixeira ? 'Carregando' : 'Lixeira'}</Botao>
-          <a href={urlExportacao} className={classesBotao()}><Download size={16} />Exportar CSV</a>
+          {filtrosProtegidosAtivos
+            ? <Botao type="button" disabled title="Limpe os filtros protegidos para exportar"> <Download size={16} />Exportar CSV</Botao>
+            : <a href={urlExportacao} className={classesBotao()}><Download size={16} />Exportar CSV</a>}
           {podeGerenciar ? <Link href="/pacientes/novo" className={classesBotao({ variante: 'primario' })}><Plus size={16} />Novo paciente</Link> : null}
         </FaixaAcoes>
       </CartaoConteudo></Cartao>
 
-      <FiltrosPacientes busca={busca} risco={filtroRisco} profissional={filtroProfissional} status={filtroStatus} semProximaConsulta={apenasSemProximaConsulta} profissionais={profissionais} total={dados?.total ?? 0} podeGerenciar={podeGerenciar} aoAlterarBusca={(valor) => { setBusca(valor); setPagina(1); }} aoAlterarRisco={(valor) => { setFiltroRisco(valor); setApenasSemProximaConsulta(false); setPagina(1); }} aoAlterarProfissional={(valor) => { setFiltroProfissional(valor); setApenasSemProximaConsulta(false); setPagina(1); }} aoAlterarStatus={(valor) => { setFiltroStatus(valor); setApenasSemProximaConsulta(false); setPagina(1); }} aoAplicarVisao={aplicarVisao} aoAplicarFiltrosSalvos={aplicarFiltrosSalvos} />
+      <FiltrosPacientes busca={busca} risco={filtroRisco} profissional={filtroProfissional} status={filtroStatus} categoria={filtroCategoria} origem={filtroOrigem} tag={filtroTag} semProximaConsulta={apenasSemProximaConsulta} profissionais={profissionais} total={dados?.total ?? 0} podeGerenciar={podeGerenciar} aoAlterarBusca={(valor) => { setBusca(valor); setPagina(1); }} aoAlterarRisco={(valor) => { setFiltroRisco(valor); setApenasSemProximaConsulta(false); setPagina(1); }} aoAlterarProfissional={(valor) => { setFiltroProfissional(valor); setApenasSemProximaConsulta(false); setPagina(1); }} aoAlterarStatus={(valor) => { setFiltroStatus(valor); setApenasSemProximaConsulta(false); setPagina(1); }} aoAlterarCategoria={(valor) => { setFiltroCategoria(valor); setPagina(1); }} aoAlterarOrigem={(valor) => { setFiltroOrigem(valor); setPagina(1); }} aoAlterarTag={(valor) => { setFiltroTag(valor); setPagina(1); }} aoAplicarVisao={aplicarVisao} aoAplicarFiltrosSalvos={aplicarFiltrosSalvos} />
 
       {falhaVisivel ? <AvisoRegiao><Aviso variante="erro" mensagem={falhaVisivel.mensagem} aoFechar={() => { setFalhaAcao(null); setFalhaCarregamento(null); }} /></AvisoRegiao> : null}
       {sucesso ? <div className="flex flex-wrap items-center gap-2 rounded-lg border border-sucesso-borda bg-sucesso-suave px-4 py-3 text-sm text-sucesso-forte"><CheckCircle2 size={16} /><span className="flex-1">{sucesso}</span>{ultimoArquivado && podeGerenciar ? <Botao type="button" tamanho="sm" variante="fantasma" onClick={() => void restaurar(ultimoArquivado)} carregando={restaurandoId === ultimoArquivado.id}><ArchiveRestore size={14} />Desfazer</Botao> : null}</div> : null}
