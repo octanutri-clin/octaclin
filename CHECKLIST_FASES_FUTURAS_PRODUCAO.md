@@ -4306,7 +4306,7 @@ pre-existente e sem relacao). Aplicacao fora de banda da migration em
 staging/producao com role owner continua pendente com o proprietario.
 Ver `docs/history/phases/PLANO_FASE_276.md` para o detalhamento.
 
-PB-19 (Fase 277, recorrencia e duplicacao de consulta), terceiro item da
+- [x] PB-19 (Fase 277, recorrencia e duplicacao de consulta), terceiro item da
 Onda 4, foi implementado em 2026-09-23 na branch
 `feat/fase277-recorrencia-duplicacao-consulta`: migration aditiva com a
 tabela nova `agenda_recorrencias` e coluna opcional `recorrencia_id` em
@@ -4326,12 +4326,18 @@ do `entities[]` usado pelo DataSource real (`opcoes-typeorm.ts`), o que
 quebraria em producao no primeiro acesso a expediente ou tipos de
 atendimento; adicionado teste de regressao generico
 (`opcoes-typeorm.entidades.spec.ts`) para essa classe de falha. Migration
-entra na PR; aplicacao fora de banda em staging/producao continua com o
-proprietario. PR ainda nao aberta/mergeada -- ver
-`docs/history/phases/PLANO_FASE_277.md` para o detalhamento e
-`STATUS_ATUAL_PROJETO.md` para o estado corrente do merge.
+foi incluida na PR `#309`, integrada em `main` pelo merge `792fe400` em
+2026-09-23. Checks de backend, web, mobile, IA, imagens, CodeQL, Semgrep,
+Trivy, Dependency Review, Rollout seguro, Operacao de lancamento e Demo
+local smoke passaram; o check agregado `OctaClin CI` falhou somente pelo job
+`Governanca de repositorio`, que falhou em
+`pnpm test:inventario-security-quality` porque `SQ-2026-004` venceu
+`revisarEm`; `Provenance do SBOM` ficou `SKIPPED`. Merge humano confirmado.
+Aplicacao fora de banda das migrations `1051` a `1053` em staging/producao
+continua pendente com o proprietario. Ver
+`docs/history/phases/PLANO_FASE_277.md` para o detalhamento.
 
-Proximo item apos a Fase 277 mergeada: PB-17, quarto item da
-Onda 4. O programa de hardening PR 36-56 permanece como trilha separada --
+Proximo item planejado da Onda 4: PB-17, quarto item. O programa de hardening
+PR 36-56 permanece como trilha separada --
 PR 55 permanece adiado e pendente; PR 56 continua condicionado a decisao
 explicita de distribuir o Mobile.

@@ -1,6 +1,6 @@
 # OctaClin - Status atual do projeto
 
-Atualizado em 2026-09-22.
+Atualizado em 2026-09-24.
 
 ## Snapshot
 
@@ -287,11 +287,19 @@ Atualizado em 2026-09-22.
   `jornadas-criticas` completo (16/16, desktop e mobile, incluindo os 2
   cenarios novos de recorrencia e duplicacao) sem regressao. Migration
   entra na PR; aplicacao fora de banda em staging/producao continua com
-  o proprietario -- nao executada nesta fase. PR ainda nao aberta. Plano
-  em `docs/history/phases/PLANO_FASE_277.md`. Proximo item: Fase ~278
-  (PB-17), apos merge da Fase 277.
-  proprietario -- nao executada nesta fase. Plano em
-  `docs/history/phases/PLANO_FASE_276.md`.
+  o proprietario -- nao executada nesta fase. Integrada pelo PR `#309`
+  (branch `feat/fase277-recorrencia-duplicacao-consulta`, merge
+  `792fe400` em `main` em 2026-09-23). Checks do PR: backend, web, mobile,
+  IA, builds das imagens, CodeQL, Semgrep, Trivy, Dependency Review,
+  Rollout seguro, Operacao de lancamento e Demo local smoke passaram;
+  o check agregado `OctaClin CI` falhou pelo job `Governanca de repositorio`,
+  que falhou em
+  `pnpm test:inventario-security-quality` por `SQ-2026-004` com
+  `revisarEm` vencido; `Provenance do SBOM` ficou `SKIPPED`. Merge humano
+  confirmado via GitHub. Aplicacao fora de banda das migrations `1051` a
+  `1053` em staging/producao segue pendente com o proprietario. Plano em
+  `docs/history/phases/PLANO_FASE_277.md`. Proximo item da Onda 4:
+  Fase 278 (PB-17).
 - Reconciliacao de 2026-09-23 (2): Fase 276 (PB-18) integrada pelo PR
   `#307` (branch `feat/fase276-expediente-tipos-atendimento`, merge
   `59a1cf6` em `main` em 2026-09-23). Checks do PR: Semgrep, CodeQL,
