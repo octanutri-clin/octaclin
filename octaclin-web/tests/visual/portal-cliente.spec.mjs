@@ -94,6 +94,25 @@ async function prepararSessaoCliente(page, opcoes = {}) {
     });
   });
 
+  await page.route('**/api/cliente/painel-operacao**', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        mes: route.request().url().includes('mes=2026-08') ? '2026-08' : '2026-09',
+        timezone: 'America/Sao_Paulo',
+        pacientes: { novos: 2, ativos: 5, emRisco: 1 },
+        consultasSemProfissional: 0,
+        profissionais: [{
+          id: 'prof-1', nome: 'Profissional Exemplo', pacientesResponsaveis: 5,
+          consultas: 2, concluidas: 1, faltas: 1, taxaNoShow: 50,
+          minutosDisponiveis: 120, minutosOcupados: 120, ocupacaoPercentual: 100,
+          consultasForaExpediente: 0
+        }]
+      })
+    });
+  });
+
   await page.route('**/api/cliente/assinatura/interesse', async (route) => {
     const corpo = JSON.parse(route.request().postData() ?? '{}');
     expect(corpo).toEqual({
@@ -365,6 +384,20 @@ async function assertSemOverflowHorizontal(page) {
 }
 
 test.describe('portal do cliente', () => {
+  test('PB-26 mostra indicadores mensais e carga por profissional sem dados de paciente', async ({ page }) => {
+    await prepararSessaoCliente(page);
+    await page.goto('/cliente');
+    await page.getByRole('tab', { name: 'Operação' }).click();
+    const painel = page.getByRole('tabpanel', { name: 'Operação' });
+    await expect(painel.getByRole('heading', { name: 'Operação da clínica' })).toBeVisible();
+    await expect(painel.getByText('Pacientes em risco')).toBeVisible();
+    await expect(painel.getByRole('row', { name: /Profissional Exemplo/ })).toBeVisible();
+    await expect(painel.getByText('50%')).toBeVisible();
+    await expect(painel.getByText('tenant-1')).toHaveCount(0);
+    await painel.getByLabel('Mês', { exact: true }).fill('2026-08');
+    await expect(painel.getByText('2026-08 (America/Sao_Paulo)')).toBeVisible();
+  });
+
   test('divide a conta por tarefas e nao expoe identificadores internos', async ({ page }) => {
     await prepararSessaoCliente(page);
     await page.goto('/cliente');

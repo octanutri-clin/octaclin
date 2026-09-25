@@ -2,6 +2,27 @@
 
 Atualizado em 2026-09-25.
 
+## Reconciliacao da Onda 4 e inicio da Onda 5
+
+- Onda 4 concluida em `main`: PB-24, PB-18, PB-19, PB-17 e PB-10 foram
+  integrados pelos PRs `#305`, `#307`, `#309`, `#313` e `#314`. O merge de
+  PB-10 foi confirmado no Git em 2026-09-25 (`93ac0a8`). Migration e
+  backfill de PB-10 continuam procedimentos fora de banda; este registro nao
+  afirma sua aplicacao em staging ou producao.
+- Onda 5 segue PB-26 -> PB-27 -> PB-21 -> PB-29. PB-26 (Fase 280) esta em
+  implementacao na branch `feat/pb26-painel-operacao`. O escopo e painel de
+  indicadores agregados para o gestor da clinica. PB-27 (auditoria do tenant)
+  permanece condicionado a decisao juridica de acesso e retencao. Plano em
+  `docs/history/phases/PLANO_FASE_280.md`.
+- Entradas historicas abaixo descrevem o estado na data em que foram escritas;
+  a reconciliacao acima prevalece para o proximo passo atual.
+
+- Fase 279 concluida no codigo em `main` pelo PR `#314` (merge `93ac0a8`);
+  migration e backfill fora de banda sem evidencia de aplicacao neste ciclo.
+- Fase 280 em andamento na branch `feat/pb26-painel-operacao`; aguarda gates
+  da PR e merge humano. Proxima fase planejada: 281 (PB-27), sujeita a
+  decisao juridica de auditoria do tenant.
+
 ## Snapshot
 
 - Produto: OctaClin.

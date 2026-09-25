@@ -73,6 +73,11 @@ Este arquivo registra decisoes ja tomadas para evitar que outro agente reprojete
 
 - Decisao: `Client` gerencia a conta SaaS, nao rotinas clinicas.
 - Consequencia: portal do cliente deve mostrar conta, assinatura, usuarios, convites, configuracoes e billing; nao deve virar console clinico.
+- Excecao de produto aprovada no PB-26: o gestor da clinica pode consultar
+  indicadores agregados de operacao do proprio tenant (agenda e contagens de
+  pacientes), sem prontuario, lista de pacientes, dado clinico individual ou
+  poder de alterar atendimento. O endpoint exige `Client` e `cliente.acessar`,
+  resolve tenant pelo JWT e consulta dentro de transacao com RLS.
 
 ## ADR-014 - Portal do paciente
 

@@ -203,7 +203,8 @@ Critério: valor claro, esforço pequeno, risco baixo, sem migration pesada e se
 5. *(Reclassificado — **não** é quick win.)* Filtro por tag/origem/categoria: ver seção 3 e PB-10. `[F]` Os
    campos vivem dentro de `perfil_cadastro_paciente.operacao_criptografada`, um `bytea` único
    (`perfil-cadastro-paciente.orm.ts:17-18`), então não há como filtrar em SQL sem migration e sem uma decisão
-   sobre campo pesquisável protegido. Movido para a onda de estrutura.
+   sobre campo pesquisável protegido. Movido para a onda de estrutura e entregue
+   no PB-10 (PR `#314`) com índice cego por tenant e filtro exato.
 6. **Remover ou implementar o canal push.** `[F]` `adaptador-push-placeholder.ts:9-15` retorna sucesso sem
    enviar, e é o ramo default do roteador. Enquanto existir assim, a central de falhas mente.
 7. **Fila de consultas não confirmadas.** `[F]` A confirmação já é gravada em jsonb e exibida por consulta
@@ -318,9 +319,12 @@ Critério: valor claro, esforço pequeno, risco baixo, sem migration pesada e se
 - **Dependências**: backend, frontend; depende de 5.4 para a parte de exames.
 
 ### 5.4 Exames laboratoriais estruturados
-- **Atual** `[F]`: só listar e criar (`controlador-exames-laboratoriais.ts:18-32`); nome do marcador é texto
+- **Estado após a Onda 4**: PB-17 (Fase 278, PR `#313`) entregou catálogo de
+  marcadores, faixa de referência e série por marcador. Os itens abaixo
+  registram a lacuna encontrada no diagnóstico inicial, antes da entrega.
+- **Antes do PB-17** `[F]`: só listar e criar (`controlador-exames-laboratoriais.ts:18-32`); nome do marcador é texto
   livre por coleta; `referencia` e `metodo` viajam no payload cifrado e são exibidos como texto.
-- **Problema** `[F]`: o sistema nunca compara valor × faixa de referência, e "Vit D" e "Vitamina D" nunca se
+- **Problema inicial** `[F]`: o sistema nunca compara valor × faixa de referência, e "Vit D" e "Vitamina D" nunca se
   cruzam — não há série por marcador, só lista cronológica de coletas.
 - **Melhoria**: catálogo de marcadores por tenant (com unidade e faixa), vínculo do resultado ao marcador,
   destaque de alterado e série temporal por marcador.
@@ -328,18 +332,24 @@ Critério: valor claro, esforço pequeno, risco baixo, sem migration pesada e se
   faixa informada" — e nunca diagnóstico) · **Dependências**: backend, banco (migration), frontend, produto.
 
 ### 5.5 Painel de operação da clínica
-- **Atual** `[F]`: o dono vê assinatura, limites, uso e usuários (`servico-portal-cliente.ts:192-237`) e a tela
+- **Estado da Fase 280**: PB-26 está em implementação na PR de produto, com
+  indicadores agregados para `Client`; auditoria do tenant segue em PB-27.
+- **Antes do PB-26** `[F]`: o dono vê assinatura, limites, uso e usuários (`servico-portal-cliente.ts:192-237`) e a tela
   de recebimentos com performance por profissional (fase 263). Operações — auditoria, LGPD, falhas — é
   exclusivamente SuperAdmin (`controlador-operacoes.ts:62`).
-- **Problema** `[F]`: quem administra a clínica não tem visão de ocupação de agenda, no-show, novos pacientes,
+- **Problema inicial** `[F]`: quem administra a clínica não tem visão de ocupação de agenda, no-show, novos pacientes,
   retenção nem carga por profissional, embora todos esses dados existam em `agenda_consultas` e `pacientes`.
-- **Melhoria**: painel de operação com taxa de ocupação, no-show por profissional, pacientes novos × ativos ×
-  em risco, e trilha de auditoria **do próprio tenant** (hoje só o operador do SaaS enxerga).
+- **Melhoria**: PB-26 entrega painel de operação com taxa de ocupação, no-show por profissional, pacientes
+  novos × ativos × em risco e carga por profissional. A trilha de auditoria **do próprio tenant** é PB-27,
+  condicionada à decisão jurídica sobre acesso e retenção.
 - **Complexidade** média a grande · **Risco** médio (expor auditoria à clínica é decisão de produto e de LGPD:
   define quem pode ver ação de quem) · **Dependências**: backend, frontend, produto, jurídico.
 
 ### 5.6 Expediente e agenda inteligente
-- **Atual** `[F]`: sem modelo de disponibilidade; slots 24/7 por 30 dias menos ocupações; sem recorrência.
+- **Estado após a Onda 4**: PB-18 (PR `#307`) entregou expediente e tipos de
+  atendimento para agendamento público; PB-19 (PR `#309`) entregou recorrência
+  e duplicação. A descrição abaixo é o diagnóstico inicial.
+- **Antes do PB-18/19** `[F]`: sem modelo de disponibilidade; slots 24/7 por 30 dias menos ocupações; sem recorrência.
 - **Melhoria**: jornada por profissional (dias, faixas, intervalo), duração padrão por tipo de atendimento,
   recorrência ("toda quarta às 9 h por 8 semanas") e sugestão de retorno com base no intervalo praticado.
 - **Complexidade** média · **Risco** baixo a médio · **Dependências**: backend, banco, frontend.
@@ -641,12 +651,13 @@ de janelas operacionais.
   aditiva na própria PR (roda em CI/testcontainers), mas a aplicação fora
   de banda em staging/produção com role owner permanece com o
   proprietário, seguindo o runbook — não é aplicada pelo agente.
-- **Andamento da Onda 4**: PB-24 (Fase 275), PB-18 (Fase 276), PB-19
-  (Fase 277) e PB-17 (Fase 278) foram concluídos e integrados pelos PRs
-  `#305`, `#307`, `#309` e `#313`. Resta PB-10 (Fase 279). Em 2026-09-25,
-  o proprietário confirmou filtros exatos protegidos por índice cego por tenant
-  para tag, origem e categoria, sem busca parcial. A implementação e o
-  procedimento de backfill estão descritos em `docs/history/phases/PLANO_FASE_279.md`.
+- **Andamento da Onda 4**: concluída em `main`. PB-24 (Fase 275), PB-18
+  (Fase 276), PB-19 (Fase 277), PB-17 (Fase 278) e PB-10 (Fase 279)
+  foram integrados pelos PRs `#305`, `#307`, `#309`, `#313` e `#314`.
+  PB-10 usa filtros exatos protegidos por índice cego por tenant para tag,
+  origem e categoria, sem busca parcial. O procedimento de migration e
+  backfill fora de banda está em `docs/history/phases/PLANO_FASE_279.md`;
+  merge do código não comprova aplicação em staging ou produção.
 - **Escopo confirmado do PB-24**: vínculo `consulta_id` opcional (nullable)
   em `evolucoes_clinicas`, `avaliacoes_antropometricas`,
   `condutas_terapeuticas_versoes` e `exames_laboratoriais`, com um seletor
@@ -709,9 +720,10 @@ Painel de operação depende de indicadores que as ondas anteriores já terão n
 clínica exige decisão jurídica antes de qualquer código.
 
 - **Sequência confirmada pelo proprietário em 2026-09-25**: PB-26 → PB-27
-  → PB-21 → PB-29. Esta onda ainda não foi iniciada. Antes do PB-27, fechar
-  a decisão jurídica e os limites de acesso/retenção da auditoria do tenant;
-  para PB-26, confirmar quais indicadores anteriores já estão disponíveis.
+  → PB-21 → PB-29. PB-26 iniciou na Fase 280, com painel de ocupação,
+  no-show, pacientes novos/ativos/em risco e carga por profissional. Auditoria
+  do próprio tenant permanece no PB-27, condicionada à decisão jurídica e
+  aos limites de acesso/retenção. Ver `docs/history/phases/PLANO_FASE_280.md`.
 
 ### Seleção de modelo, skills e plugins por PB
 

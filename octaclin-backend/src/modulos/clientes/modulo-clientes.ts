@@ -15,6 +15,7 @@ import { TenantConfiguracaoOrm } from '../tenancy/infraestrutura/tenant-configur
 import { UsuarioOrm } from '../usuarios/infraestrutura/usuario.orm';
 import { ProfissionalOrm } from '../profissionais/infraestrutura/profissional.orm';
 import { ServicoPortalCliente } from './aplicacao/servico-portal-cliente';
+import { ServicoPainelOperacao } from './aplicacao/servico-painel-operacao';
 import { ServicoUsuariosCliente } from './aplicacao/servico-usuarios-cliente';
 import { ControladorPortalCliente } from './apresentacao/controlador-portal-cliente';
 
@@ -36,7 +37,7 @@ import { ControladorPortalCliente } from './apresentacao/controlador-portal-clie
     ModuloTenancy
   ],
   controllers: [ControladorPortalCliente],
-  providers: [ServicoPortalCliente, ServicoUsuariosCliente, ServicoAuditoria, AdaptadorEmailSmtp],
+  providers: [ServicoPortalCliente, ServicoPainelOperacao, ServicoUsuariosCliente, ServicoAuditoria, AdaptadorEmailSmtp],
   exports: [ServicoPortalCliente, ServicoUsuariosCliente]
 })
 export class ModuloClientes {}

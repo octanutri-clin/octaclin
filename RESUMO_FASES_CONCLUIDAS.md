@@ -932,6 +932,15 @@ O OctaClin ja possui uma base SaaS multi-tenant com backend NestJS, frontend Nex
   aceitando essa falha conhecida). Aplicacao fora de banda da migration
   em staging/producao com role owner continua pendente com o
   proprietario. Ver `docs/history/phases/PLANO_FASE_276.md`.
+- Fase 279 - PB-10, ultimo item da Onda 4: filtros exatos de tag, origem e
+  categoria com indices cegos tenant-aware; valores continuam cifrados.
+  Integrado pelo PR `#314`, merge `93ac0a8` em 2026-09-25. Aplicacao da
+  migration e backfill fora de banda nao foi verificada neste registro;
+  procedimento em `docs/history/phases/PLANO_FASE_279.md`.
+- Fase 278 - PB-17, catalogo de marcadores e faixas de referencia de exames,
+  com serie e classificacao factual quando faixa e unidade estao explicitas.
+  Integrado pelo PR `#313`, merge `cb7c7bd` em 2026-09-25. Ver
+  `docs/history/phases/PLANO_FASE_278.md`.
 - Fase 277 - PB-19, terceiro item da Onda 4: recorrencia de consulta
   semanal ou diaria, com termino por quantidade ou data, criacao best-effort
   diante de conflitos e duplicacao avulsa. Reutiliza

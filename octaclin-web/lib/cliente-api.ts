@@ -46,6 +46,33 @@ export interface ResumoPortalClienteApi {
   };
 }
 
+export interface PainelOperacaoClienteApi {
+  mes: string;
+  timezone: string;
+  pacientes: { novos: number; ativos: number; emRisco: number };
+  consultasSemProfissional: number;
+  profissionais: {
+    id: string;
+    nome: string;
+    pacientesResponsaveis: number;
+    consultas: number;
+    concluidas: number;
+    faltas: number;
+    taxaNoShow: number | null;
+    minutosDisponiveis: number | null;
+    minutosOcupados: number | null;
+    ocupacaoPercentual: number | null;
+    consultasForaExpediente: number | null;
+  }[];
+}
+
+export async function obterPainelOperacaoCliente(mes?: string): Promise<PainelOperacaoClienteApi> {
+  const caminho = mes ? `/api/cliente/painel-operacao?mes=${encodeURIComponent(mes)}` : '/api/cliente/painel-operacao';
+  const resposta = await fetch(caminho, { cache: 'no-store' });
+  if (!resposta.ok) throw new Error(await extrairMensagemErro(resposta));
+  return resposta.json() as Promise<PainelOperacaoClienteApi>;
+}
+
 export interface SolicitarAjusteAssinaturaClienteEntrada {
   acao: AcaoAjusteAssinaturaClienteApi;
   planoDesejado?: PlanoSaasIdApi;

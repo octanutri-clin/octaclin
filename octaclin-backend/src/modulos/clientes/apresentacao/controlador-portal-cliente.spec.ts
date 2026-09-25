@@ -1,12 +1,25 @@
 import { ControladorPortalCliente } from './controlador-portal-cliente';
+import { CHAVE_PAPEIS, CHAVE_PERMISSOES } from '../../auth/apresentacao/decorators';
 
 describe('ControladorPortalCliente', () => {
+  it('mantem o painel restrito ao papel Client e a permissao de acesso', () => {
+    expect(Reflect.getMetadata(CHAVE_PAPEIS, ControladorPortalCliente)).toEqual(['Client']);
+    expect(Reflect.getMetadata(CHAVE_PERMISSOES, ControladorPortalCliente)).toEqual(['cliente.acessar']);
+  });
+
+  it('obtem o painel apenas com tenant da credencial', async () => {
+    const painel = { obter: jest.fn(async () => ({ mes: '2026-09' })) };
+    const controlador = new ControladorPortalCliente({} as never, {} as never, {} as never, painel as never);
+    await controlador.obterPainelOperacao({ tenantId: 'tenant-autenticado' } as never, '2026-09');
+    expect(painel.obter).toHaveBeenCalledWith('tenant-autenticado', '2026-09');
+  });
+
   it('deve auditar a alteracao de papel sem registrar dados clinicos', async () => {
     const servicoUsuariosCliente = {
       atualizarPapel: jest.fn(async () => ({ id: 'usuario-2', role: 'Professional' }))
     };
     const servicoAuditoria = { registrar: jest.fn(async () => undefined) };
-    const controlador = new ControladorPortalCliente({} as never, servicoUsuariosCliente as never, servicoAuditoria as never);
+    const controlador = new ControladorPortalCliente({} as never, servicoUsuariosCliente as never, servicoAuditoria as never, {} as never);
 
     await controlador.atualizarPapelUsuario(
       { tenantId: 'tenant-1', usuarioId: 'cliente-1' } as never,
@@ -46,7 +59,7 @@ describe('ControladorPortalCliente', () => {
     const servicoAuditoria = {
       registrar: jest.fn(async () => undefined)
     };
-    const controlador = new ControladorPortalCliente(servicoPortalCliente as never, {} as never, servicoAuditoria as never);
+    const controlador = new ControladorPortalCliente(servicoPortalCliente as never, {} as never, servicoAuditoria as never, {} as never);
 
     const resultado = await controlador.atualizarPerfilEmpresa(
       { tenantId: 'tenant-1', usuarioId: 'cliente-1' } as never,
@@ -90,7 +103,7 @@ describe('ControladorPortalCliente', () => {
     const servicoAuditoria = {
       registrar: jest.fn(async () => undefined)
     };
-    const controlador = new ControladorPortalCliente(servicoPortalCliente as never, servicoUsuariosCliente as never, servicoAuditoria as never);
+    const controlador = new ControladorPortalCliente(servicoPortalCliente as never, servicoUsuariosCliente as never, servicoAuditoria as never, {} as never);
     const usuario = { tenantId: 'tenant-1', usuarioId: 'cliente-1' } as never;
     const requisicao = { ip: '127.0.0.1', headers: { 'user-agent': 'jest' } } as never;
 
@@ -150,7 +163,7 @@ describe('ControladorPortalCliente', () => {
     const servicoAuditoria = {
       registrar: jest.fn(async () => undefined)
     };
-    const controlador = new ControladorPortalCliente(servicoPortalCliente as never, {} as never, servicoAuditoria as never);
+    const controlador = new ControladorPortalCliente(servicoPortalCliente as never, {} as never, servicoAuditoria as never, {} as never);
 
     const resultado = await controlador.solicitarAjusteAssinatura(
       { tenantId: 'tenant-1', usuarioId: 'cliente-1' } as never,
@@ -189,7 +202,7 @@ describe('ControladorPortalCliente', () => {
     ].join('\n') + '\n';
     const servicoUsuariosCliente = { exportarHistoricoConvitesCsv: jest.fn(async () => csv) };
     const servicoAuditoria = { registrar: jest.fn(async () => undefined) };
-    const controlador = new ControladorPortalCliente({} as never, servicoUsuariosCliente as never, servicoAuditoria as never);
+    const controlador = new ControladorPortalCliente({} as never, servicoUsuariosCliente as never, servicoAuditoria as never, {} as never);
 
     await expect(
       controlador.exportarHistoricoConvites(
