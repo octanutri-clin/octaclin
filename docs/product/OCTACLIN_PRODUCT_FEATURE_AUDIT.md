@@ -613,26 +613,15 @@ Templates e duplicação primeiro, resumo clínico depois, preparação pré-con
 resumo. PB-14 entra aqui porque toca o mesmo fluxo de plano e exige decisão de produto antes do código.
 Nenhuma depende da Onda 2, podem correr em paralelo se houver capacidade.
 
-- **Estado da Onda 3**: ordem confirmada pelo proprietário em 2026-09-20
-  (PB-13 → PB-14 → PB-15 → PB-23 → PB-16 → PB-25). O **PB-13 foi entregue
-  pela Fase 269**. A leitura do código mostrou que metade dele já existia:
-  "salvar como modelo" e "aplicar modelo" já estavam prontos
-  (`ServicoModelosPlanoAlimentar` + componente `ModelosPlanoAlimentar`). A
-  Fase 269 fechou o que faltava — duplicar a partir do plano de **outro
-  paciente**, escolhido por busca de nome entre os próprios pacientes —
-  sem backend novo: os três passos já tinham rota existente e autorizada
-  por paciente. Copia somente a estrutura de refeições; avaliação
-  antropométrica, cálculo energético, objetivo clínico e confirmações
-  continuam sendo do paciente de destino. O **PB-14 foi entregue pela Fase
-  270**: a trava do cálculo automático **continua** (equação populacional
-  nesse paciente produz número que ninguém deveria usar), e o que passou a
-  existir é a saída que faltava. A decisão de produto do proprietário foi
-  entrada manual da meta, com o método dos macronutrientes escolhido **por
-  paciente** — percentual da meta energética ou g/kg de peso —, publicando
-  normalmente com justificativa clínica obrigatória. Confirmou-se que o beco
-  sem saída era pior do que o descrito nesta seção: o profissional não
-  conseguia nem salvar o rascunho. O próximo item da onda é o **PB-15**
-  (template de evolução clínica com pré-preenchimento).
+- **Estado da Onda 3 — concluída**: os seis itens foram entregues na ordem
+  confirmada pelo proprietário em 2026-09-20 (PB-13 → PB-14 → PB-15 → PB-23
+  → PB-16 → PB-25), pelas Fases 269 a 274. PB-13 e PB-14 foram concluídos
+  nas Fases 269 e 270, respectivamente; PB-15, PB-23, PB-16 e PB-25 foram
+  concluídos nas Fases 271, 272, 273 e 274 e integrados pelo PR `#303`
+  (merge `65459c8`, 2026-09-22). Detalhes e evidências permanecem no
+  `CHECKLIST_FASES_FUTURAS_PRODUCAO.md` e nos planos individuais em
+  `docs/history/phases/PLANO_FASE_269.md` a `PLANO_FASE_274.md`. Não há PB
+  pendente nesta onda.
 
 **Onda 4 — estrutura** (PB-10, PB-17, PB-18, PB-19, PB-24)
 Exige migration e, portanto, o procedimento fora de banda com role owner. Agrupar as migrations reduz o número
@@ -652,6 +641,10 @@ de janelas operacionais.
   aditiva na própria PR (roda em CI/testcontainers), mas a aplicação fora
   de banda em staging/produção com role owner permanece com o
   proprietário, seguindo o runbook — não é aplicada pelo agente.
+- **Andamento da Onda 4**: PB-24 (Fase 275), PB-18 (Fase 276) e PB-19
+  (Fase 277) foram concluídos e integrados pelos PRs `#305`, `#307` e `#309`.
+  Restam PB-17 e PB-10, nesta ordem; PB-10 continua condicionado à decisão
+  de produto/privacidade descrita acima.
 - **Escopo confirmado do PB-24**: vínculo `consulta_id` opcional (nullable)
   em `evolucoes_clinicas`, `avaliacoes_antropometricas`,
   `condutas_terapeuticas_versoes` e `exames_laboratoriais`, com um seletor
@@ -664,10 +657,9 @@ de janelas operacionais.
   de escopo e o seletor nas quatro telas foram entregues conforme o escopo
   acima, sem desvio. Detalhe em `docs/history/phases/PLANO_FASE_275.md`.
   Aplicação fora de banda em
-  staging/produção segue com o proprietário. Próximo item da onda: PB-18.
+  staging/produção segue com o proprietário.
 - **PB-18 implementado em 2026-09-23** (branch
-  `feat/fase276-expediente-tipos-atendimento`, PR ainda não mergeada nesta
-  base — ver `STATUS_ATUAL_PROJETO.md` para o estado corrente do merge):
+  `feat/fase276-expediente-tipos-atendimento`, PR `#307`, merge `59a1cf6`):
   duas tabelas novas (`tipos_atendimento`, `expedientes_profissionais`) e
   coluna opcional em `agenda_links_publicos`; restrição de expediente vale
   só para o agendamento público, sem mudança na criação manual pela
@@ -687,7 +679,7 @@ de janelas operacionais.
   vencido; `Provenance do SBOM` ficou `SKIPPED`. Merge humano confirmado.
   Detalhe em `docs/history/phases/PLANO_FASE_277.md`. A aplicação fora de
   banda das migrations `1051` a `1053` em staging/produção segue com o
-  proprietário. Próximo item da onda: PB-17.
+  proprietário.
 - **Escopo confirmado do PB-18**: expediente semanal por profissional
   (`expedientes_profissionais`) e catálogo de tipos de atendimento com
   duração própria (`tipos_atendimento`), decisão do proprietário via
@@ -708,11 +700,43 @@ de janelas operacionais.
   desta PR, não coberta por esta fase); merge humano confirmado via GitHub
   aceitando essa falha pré-existente e não relacionada. Detalhe em
   `docs/history/phases/PLANO_FASE_276.md`. Aplicação fora de banda em
-  staging/produção segue com o proprietário. Próximo item da onda: PB-19.
+  staging/produção segue com o proprietário.
 
 **Onda 5 — projetos maiores** (PB-26, PB-27, PB-21, PB-29)
 Painel de operação depende de indicadores que as ondas anteriores já terão normalizado. Auditoria para a
 clínica exige decisão jurídica antes de qualquer código.
+
+- **Sequência confirmada pelo proprietário em 2026-09-25**: PB-26 → PB-27
+  → PB-21 → PB-29. Esta onda ainda não foi iniciada. Antes do PB-27, fechar
+  a decisão jurídica e os limites de acesso/retenção da auditoria do tenant;
+  para PB-26, confirmar quais indicadores anteriores já estão disponíveis.
+
+### Seleção de modelo, skills e plugins por PB
+
+Esta matriz é o ponto de partida para cada PB. Ativar as skills somente quando
+aquele PB começar, relendo suas instruções e o código/documentação atual da
+área. As regras do `AGENTS.md` e as decisões arquiteturais do OctaClin
+prevalecem sobre orientações genéricas. Para PB já concluído, a indicação de
+modelo vale apenas para eventual manutenção.
+
+| PB | Modelo / esforço | Skills a ativar | Plugins e revisão aplicáveis |
+|---|---|---|---|
+| PB-10 | GPT-6 Astra / alto | `context-engineering`, `planning-and-task-breakdown`, `test-driven-development`, `database-migration`, `typeorm`, `postgresql-table-design`, `security-review`, `gdpr-compliance` | Skills locais OctaClin + pacote `agent-skills`; revisão `tenant-security-reviewer` se tocar serviços ou consultas com IDs relacionados. |
+| PB-17 | GPT-6 Sol / médio | `context-engineering`, `test-driven-development`, `database-migration`, `typeorm`, `postgresql-table-design`, `security-review`, `gdpr-compliance` | Skills locais OctaClin + pacote `agent-skills`; revisão `tenant-security-reviewer` para leituras/escritas com escopo de paciente/tenant. |
+| PB-18 | GPT-5.6 Terra / médio (concluído) | `context-engineering`, `test-driven-development`, `database-migration`, `typeorm`, `nestjs-best-practices`, `frontend-design`, `playwright-best-practices` | Skills locais OctaClin + pacote `agent-skills`; revisão `tenant-security-reviewer` se houver mudança em vínculos ou serviços tenant-aware. |
+| PB-19 | GPT-6 Sol / médio (concluído) | `context-engineering`, `test-driven-development`, `typeorm`, `nestjs-best-practices`, `playwright-best-practices` | Skills locais OctaClin + pacote `agent-skills`; revisão `tenant-security-reviewer` para criação/duplicação de consultas com IDs relacionados. |
+| PB-24 | GPT-5.6 Terra / médio (concluído) | `context-engineering`, `test-driven-development`, `database-migration`, `typeorm`, `postgresql-table-design`, `nestjs-best-practices` | Skills locais OctaClin + pacote `agent-skills`; revisão `tenant-security-reviewer` obrigatória para mudanças em serviços que recebem IDs relacionados. |
+| PB-26 | GPT-6 Sol / médio | `context-engineering`, `planning-and-task-breakdown`, `test-driven-development`, `nestjs-best-practices`, `typeorm`, `frontend-design`, `web-design-guidelines`, `playwright-best-practices` | Skills locais OctaClin + pacote `agent-skills`; revisão `tenant-security-reviewer` nas agregações e filtros por tenant. |
+| PB-27 | GPT-6 Astra / alto | `context-engineering`, `planning-and-task-breakdown`, `test-driven-development`, `security-review`, `gdpr-compliance`, `nestjs-best-practices`, `typeorm` | Skills locais OctaClin + pacote `agent-skills`; revisão `tenant-security-reviewer` obrigatória. Decisão jurídica e política de acesso/retenção precedem implementação. |
+| PB-21 | GPT-5.6 Terra / médio | `context-engineering`, `test-driven-development`, `nestjs-best-practices`, `typeorm`, `playwright-best-practices` | Skills locais OctaClin + pacote `agent-skills`; revisão `tenant-security-reviewer` para operações em lote com IDs de pacientes. |
+| PB-29 | GPT-6 Luna / médio | `context-engineering`, `test-driven-development`, `frontend-design`, `ui-ux-pro-max`, `vercel-react-best-practices`, `playwright-best-practices`; `nestjs-best-practices` se incluir backend | Skills locais OctaClin + pacote `agent-skills`; revisão `tenant-security-reviewer` se o fluxo criar ou alterar dados associados a tenant/usuário. |
+
+Não usar plugins externos para consultar dados clínicos, produção ou provedores
+durante essas entregas. `neon-postgres` só poderá apoiar leitura de documentação
+ou desenho local de migration; não autoriza conexão nem execução em banco.
+Manter esforço médio como padrão e elevar para alto somente nos PB-10 e PB-27,
+que envolvem dados protegidos e auditoria/privacidade. Reavaliar a matriz caso
+a investigação de um PB revele risco ou escopo diferente.
 
 **Explorações futuras** (PB-28, PB-30)
 Resposta do paciente exige decisão de produto sobre SLA e responsabilidade clínica. Extração de exame exige
