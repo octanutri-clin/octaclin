@@ -7,7 +7,7 @@ export async function GET(request: NextRequest) {
     const mes = request.nextUrl.searchParams.get('mes');
     if (mes && (!/^\d{4}-(0[1-9]|1[0-2])$/.test(mes)
       || Number(mes.slice(0, 4)) < 2000 || Number(mes.slice(0, 4)) > 2100)) {
-      return NextResponse.json({ mensagem: 'Informe o mes no formato AAAA-MM.' }, { status: 400 });
+      return NextResponse.json({ mensagem: 'Informe o mês no formato AAAA-MM.' }, { status: 400 });
     }
     const caminho = mes ? `/cliente/painel-operacao?mes=${encodeURIComponent(mes)}` : '/cliente/painel-operacao';
     const resposta = await requisitarBackendAutenticado(caminho);
