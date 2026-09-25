@@ -296,10 +296,24 @@ Atualizado em 2026-09-24.
   que falhou em
   `pnpm test:inventario-security-quality` por `SQ-2026-004` com
   `revisarEm` vencido; `Provenance do SBOM` ficou `SKIPPED`. Merge humano
-  confirmado via GitHub. Aplicacao fora de banda das migrations `1051` a
-  `1053` em staging/producao segue pendente com o proprietario. Plano em
+  confirmado via GitHub. A aplicacao fora de banda das migrations `1051` a
+  `1053` pendia na data do merge; o proprietario informou em 2026-09-24 que
+  as tres foram aplicadas em staging e producao (sem consulta direta aos
+  bancos nesta reconciliacao). Plano em
   `docs/history/phases/PLANO_FASE_277.md`. Proximo item da Onda 4:
   Fase 278 (PB-17).
+- Reconciliacao de governanca (captura `2026-09-25T00:20:06.782Z` UTC, run
+  [36077037819](https://github.com/octanutri-clin/octaclin/actions/runs/36077037819)):
+  snapshot completo da `main` no commit `c5ebb7b` com 196 alertas Code
+  Scanning, zero Dependabot e zero Secret Scanning. SQ-2026-004 agora cobre
+  156 alertas da imagem IA; 27 referencias antigas foram confirmadas como
+  `fixed` e 10 alertas novos foram triados na mesma causa. SQ-2026-139 manteve
+  40 alertas abertos; SQ-2026-239 ficou sem alertas abertos apos a API confirmar
+  #35 e #36 como `withdrawn`. A reconciliacao atualiza tambem `revisarEm` para
+  2026-10-08, dentro do SLA critical de 14 dias. O job separado de aviso
+  falhou ao sinalizar SQ-2026-004 vencida no estado antigo da `main`; isso nao
+  invalida a captura, e a nova data so entra em vigor apos o merge da
+  reconciliacao do inventario.
 - Reconciliacao de 2026-09-23 (2): Fase 276 (PB-18) integrada pelo PR
   `#307` (branch `feat/fase276-expediente-tipos-atendimento`, merge
   `59a1cf6` em `main` em 2026-09-23). Checks do PR: Semgrep, CodeQL,

@@ -88,8 +88,9 @@ jobs:
       # `code-scanning/alerts` -- mas devolve 403 em `dependabot/alerts`
       # ("Resource not accessible by integration"). Alertas do Dependabot ficam
       # fora do alcance do GITHUB_TOKEN, entao a captura completa precisa de um
-      # token proprio com "Dependabot alerts: read" e "Code scanning alerts:
-      # read", guardado em INVENTARIO_GITHUB_TOKEN.
+      # token proprio com "Dependabot alerts: read", "Code scanning alerts:
+      # read" e "Secret scanning alerts: read", guardado em
+      # INVENTARIO_GITHUB_TOKEN.
       #
       # A captura continua fail-closed quando o token nao alcanca algum dos
       # quatro endpoints: snapshot parcial que se apresenta como completo

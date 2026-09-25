@@ -229,7 +229,7 @@ const INVENTARIO_REAL = new URL('../docs/governance/inventario-security-quality.
 test('valida estrutura e cobertura do inventario real na data da captura', () => {
   const inventario = JSON.parse(readFileSync(INVENTARIO_REAL, 'utf8'));
   assert.equal(inventario.gateEncerramentoSq4, true);
-  assert.deepEqual(inventario.causas.map(({ alertas }) => alertas.length), [173, 40, 2]);
+  assert.deepEqual(inventario.causas.map(({ alertas }) => alertas.length), [156, 40, 0]);
   // SQ-2026-004 saiu de `aguardando_upstream` na revisao de 2026-09-21: o
   // upstream publicou a correcao e a base do ia-service foi reancorada nela.
   assert.deepEqual(inventario.causas.map(({ disposicao }) => disposicao), [
@@ -237,16 +237,16 @@ test('valida estrutura e cobertura do inventario real na data da captura', () =>
     'aguardando_upstream',
     'mitigado',
   ]);
-  assert.match(carregarEValidarInventario(undefined, { hoje: HOJE }), /215 alertas cobertos/);
+  assert.match(carregarEValidarInventario(undefined, { hoje: HOJE }), /196 alertas cobertos/);
 });
 
-// Fronteira ancorada no `revisarEm` vigente da SQ-2026-004 (2026-09-22): um
+// Fronteira ancorada no `revisarEm` vigente da SQ-2026-004 (2026-10-08): um
 // instante antes ainda vale, o primeiro instante depois reprova. Ao renovar a
 // data na causa, mova estas duas aqui junto -- os dois lados existem de
 // proposito, porque so o par prova que a CLI aplica mesmo o relogio corrente.
 for (const [data, status, mensagem] of [
-  ['2026-09-22T23:59:59.999Z', 0, /215 alertas cobertos/],
-  ['2026-09-23T00:00:00.000Z', 1, /SQ-2026-004 esta com revisao vencida/],
+  ['2026-10-08T23:59:59.999Z', 0, /196 alertas cobertos/],
+  ['2026-10-09T00:00:00.000Z', 1, /SQ-2026-004 esta com revisao vencida/],
 ]) {
   test(`CLI do gate de CI aplica o relogio corrente em ${data}`, () => {
     const pacote = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8'));
