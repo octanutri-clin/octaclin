@@ -176,6 +176,9 @@ export class MarcadorExameLaboratorialDto {
   @IsOptional() @IsString() @MaxLength(40) unidade?: string;
   @IsOptional() @IsString() @MaxLength(160) referencia?: string;
   @IsOptional() @IsString() @MaxLength(120) metodo?: string;
+  @IsOptional() @IsUUID() catalogoMarcadorId?: string;
+  @IsOptional() @IsString() @MaxLength(24) @Matches(/^-?\d+(?:[.,]\d+)?$/) limiteInferior?: string | null;
+  @IsOptional() @IsString() @MaxLength(24) @Matches(/^-?\d+(?:[.,]\d+)?$/) limiteSuperior?: string | null;
 }
 
 export class CriarColetaExameLaboratorialDto {
@@ -187,6 +190,18 @@ export class CriarColetaExameLaboratorialDto {
   marcadores: MarcadorExameLaboratorialDto[];
   /** PB-24 (Fase 275): consulta de origem, opcional. */
   @IsOptional() @IsUUID() consultaId?: string;
+}
+
+export class CriarCatalogoMarcadorExameDto {
+  @IsString() @MinLength(2) @MaxLength(120) nome: string;
+  @IsOptional() @IsString() @MaxLength(40) unidade?: string;
+  @IsOptional() @IsString() @MaxLength(24) @Matches(/^-?\d+(?:[.,]\d+)?$/) limiteInferior?: string;
+  @IsOptional() @IsString() @MaxLength(24) @Matches(/^-?\d+(?:[.,]\d+)?$/) limiteSuperior?: string;
+}
+
+export class ListarCatalogoMarcadoresExamesDto {
+  @IsOptional() @Type(() => Number) @IsInt() @Min(1) pagina?: number;
+  @IsOptional() @Type(() => Number) @IsInt() @Min(1) @Max(100) limite?: number;
 }
 
 export class RegistrarConsentimentoEvolucaoFotograficaDto {

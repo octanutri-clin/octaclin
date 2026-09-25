@@ -13,6 +13,9 @@ export class MarcadorExameLaboratorialOrm {
   @Column({ name: 'coleta_id', type: 'uuid' })
   coletaId: string;
 
+  @Column({ name: 'catalogo_marcador_id', type: 'uuid', nullable: true })
+  catalogoMarcadorId?: string;
+
   @Column({ name: 'resultado_criptografado', type: 'bytea' })
   resultadoCriptografado: Buffer;
 

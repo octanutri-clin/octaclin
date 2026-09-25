@@ -491,6 +491,43 @@ descrever('RLS e isolamento multi-tenant integral em Postgres real', () => {
     }
   });
 
+  it('PB-17: RLS do catalogo oculta outro tenant e FK composta recusa vinculo cruzado', async () => {
+    if (!cliente) throw new Error('Cliente da prova RLS nao foi inicializado.');
+    await comoTenant(tenantB);
+    const catalogoB = await cliente.query<{ id: string }>(
+      `insert into catalogo_marcadores_exames (tenant_id, criado_por_usuario_id, definicao_criptografada)
+       values ($1, $2, $3) returning id`,
+      [tenantB, usuarioIdTenantB, Buffer.from('definicao-sintetica-b')]
+    );
+
+    await comoTenant(tenantA);
+    const catalogoInvisivel = await cliente.query('select id from catalogo_marcadores_exames where id = $1', [catalogoB.rows[0].id]);
+    expect(catalogoInvisivel.rows).toHaveLength(0);
+    const usuarioA = await cliente.query<{ id: string }>('select id from usuarios where tenant_id = $1 limit 1', [tenantA]);
+    const pacienteA = await cliente.query<{ id: string }>('select id from pacientes where tenant_id = $1 limit 1', [tenantA]);
+    const coletaA = await cliente.query<{ id: string }>(
+      `insert into coletas_exames_laboratoriais (tenant_id, paciente_id, autor_usuario_id, coletada_em)
+       values ($1, $2, $3, current_date) returning id`,
+      [tenantA, pacienteA.rows[0].id, usuarioA.rows[0].id]
+    );
+    const catalogoA = await cliente.query<{ id: string }>(
+      `insert into catalogo_marcadores_exames (tenant_id, criado_por_usuario_id, definicao_criptografada)
+       values ($1, $2, $3) returning id`,
+      [tenantA, usuarioA.rows[0].id, Buffer.from('definicao-sintetica-a')]
+    );
+    const resultadoA = await cliente.query<{ id: string }>(
+      `insert into marcadores_exames_laboratoriais (tenant_id, coleta_id, catalogo_marcador_id, resultado_criptografado)
+       values ($1, $2, $3, $4) returning id`,
+      [tenantA, coletaA.rows[0].id, catalogoA.rows[0].id, Buffer.from('resultado-sintetico')]
+    );
+    expect(resultadoA.rows).toHaveLength(1);
+    await expect(cliente.query(
+      `insert into marcadores_exames_laboratoriais (tenant_id, coleta_id, catalogo_marcador_id, resultado_criptografado)
+       values ($1, $2, $3, $4)`,
+      [tenantA, coletaA.rows[0].id, catalogoB.rows[0].id, Buffer.from('resultado-sintetico')]
+    )).rejects.toMatchObject({ code: '23503' });
+  });
+
   it('WITH CHECK rejeita escrita que declara tenant diferente do contexto', async () => {
     await comoTenant(tenantA);
     if (!cliente) throw new Error('Cliente da prova RLS nao foi inicializado.');

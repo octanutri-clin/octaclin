@@ -67,6 +67,7 @@ import { CriarBibliotecaCondutas1720000001050 } from './migracoes/1720000001050-
 import { AdicionarConsultaIdEntidadesClinicas1720000001051 } from './migracoes/1720000001051-AdicionarConsultaIdEntidadesClinicas';
 import { CriarExpedientesETiposAtendimento1720000001052 } from './migracoes/1720000001052-CriarExpedientesETiposAtendimento';
 import { CriarRecorrenciaConsulta1720000001053 } from './migracoes/1720000001053-CriarRecorrenciaConsulta';
+import { CriarCatalogoMarcadoresExames1720000001054 } from './migracoes/1720000001054-CriarCatalogoMarcadoresExames';
 import { UserActionLogOrm } from '../auditoria/user-action-log.orm';
 import { ConsentimentoLgpdOrm } from '../lgpd/consentimento-lgpd.orm';
 import { TombstoneExclusaoLgpdOrm } from '../lgpd/tombstone-exclusao-lgpd.orm';
@@ -123,6 +124,7 @@ import { PacienteOrm } from '../../modulos/pacientes/infraestrutura/paciente.orm
 import { PerfilCadastroPacienteOrm } from '../../modulos/pacientes/infraestrutura/perfil-cadastro-paciente.orm';
 import { ColetaExameLaboratorialOrm } from '../../modulos/pacientes/infraestrutura/coleta-exame-laboratorial.orm';
 import { MarcadorExameLaboratorialOrm } from '../../modulos/pacientes/infraestrutura/marcador-exame-laboratorial.orm';
+import { CatalogoMarcadorExameOrm } from '../../modulos/pacientes/infraestrutura/catalogo-marcador-exame.orm';
 import { ConsentimentoEvolucaoFotograficaOrm } from '../../modulos/pacientes/infraestrutura/consentimento-evolucao-fotografica.orm';
 import { EvolucaoFotograficaOrm } from '../../modulos/pacientes/infraestrutura/evolucao-fotografica.orm';
 import { EvolucaoFotograficaArquivoOrm } from '../../modulos/pacientes/infraestrutura/evolucao-fotografica-arquivo.orm';
@@ -234,6 +236,7 @@ export function criarOpcoesTypeOrm(): TypeOrmModuleOptions & DataSourceOptions {
       PerfilCadastroPacienteOrm,
       ColetaExameLaboratorialOrm,
       MarcadorExameLaboratorialOrm,
+      CatalogoMarcadorExameOrm,
       ConsentimentoEvolucaoFotograficaOrm,
       EvolucaoFotograficaOrm,
       EvolucaoFotograficaArquivoOrm,
@@ -375,7 +378,8 @@ export function criarOpcoesTypeOrm(): TypeOrmModuleOptions & DataSourceOptions {
         CriarBibliotecaCondutas1720000001050,
         AdicionarConsultaIdEntidadesClinicas1720000001051,
         CriarExpedientesETiposAtendimento1720000001052,
-        CriarRecorrenciaConsulta1720000001053
+        CriarRecorrenciaConsulta1720000001053,
+        CriarCatalogoMarcadoresExames1720000001054
       ],
     migrationsRun: executarMigracoesNoBoot(),
     synchronize: false,
