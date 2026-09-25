@@ -48,6 +48,7 @@ import { ControladorDocumentosClinicos } from './apresentacao/controlador-docume
 import { ControladorModelosEvolucaoClinica, ControladorPacientes } from './apresentacao/controlador-pacientes';
 import { ControladorPerfilCadastroPaciente } from './apresentacao/controlador-perfil-cadastro-paciente';
 import { ControladorExamesLaboratoriais } from './apresentacao/controlador-exames-laboratoriais';
+import { ControladorCatalogoMarcadoresExames } from './apresentacao/controlador-catalogo-marcadores-exames';
 import { ControladorConsentimentosEvolucaoFotografica } from './apresentacao/controlador-consentimentos-evolucao-fotografica';
 import { ControladorEvolucoesFotograficas } from './apresentacao/controlador-evolucoes-fotograficas';
 import {
@@ -69,12 +70,14 @@ import { EvolucaoFotograficaOrm } from './infraestrutura/evolucao-fotografica.or
 import { EvolucaoFotograficaArquivoOrm } from './infraestrutura/evolucao-fotografica-arquivo.orm';
 import { CondutaTerapeuticaOrm } from './infraestrutura/conduta-terapeutica.orm';
 import { BibliotecaCondutaOrm } from './infraestrutura/biblioteca-conduta.orm';
+import { CatalogoMarcadorExameOrm } from './infraestrutura/catalogo-marcador-exame.orm';
 import { CondutaTerapeuticaVersaoOrm } from './infraestrutura/conduta-terapeutica-versao.orm';
 import { FiltroSalvoPacienteOrm } from './infraestrutura/filtro-salvo-paciente.orm';
 import { PrioridadeAcompanhamentoPacienteOrm } from './infraestrutura/prioridade-acompanhamento-paciente.orm';
 import { PrioridadeAcompanhamentoHistoricoOrm } from './infraestrutura/prioridade-acompanhamento-historico.orm';
 import { ServicoRecalculoPrioridadeAcompanhamento } from './aplicacao/servico-recalculo-prioridade-acompanhamento';
 import { ServicoModelosEvolucaoClinica } from './aplicacao/servico-modelos-evolucao-clinica';
+import { ServicoCatalogoMarcadoresExames } from './aplicacao/servico-catalogo-marcadores-exames';
 import { ProcessadorRecalculoPrioridadeAcompanhamento } from './aplicacao/processador-recalculo-prioridade-acompanhamento';
 import { deveExecutarProcessadores } from '../../infraestrutura/processamento/papel-processo';
 
@@ -115,6 +118,7 @@ const processadores = deveExecutarProcessadores() ? [ProcessadorRecalculoPriorid
       ArquivoMidiaOrm,
       CondutaTerapeuticaOrm,
       BibliotecaCondutaOrm,
+      CatalogoMarcadorExameOrm,
       CondutaTerapeuticaVersaoOrm,
       FiltroSalvoPacienteOrm,
       PrioridadeAcompanhamentoPacienteOrm,
@@ -135,6 +139,7 @@ const processadores = deveExecutarProcessadores() ? [ProcessadorRecalculoPriorid
     ControladorPacientes,
     ControladorPerfilCadastroPaciente,
     ControladorExamesLaboratoriais,
+    ControladorCatalogoMarcadoresExames,
     ControladorConsentimentosEvolucaoFotografica,
     ControladorEvolucoesFotograficas,
     ControladorCondutasTerapeuticas,
@@ -150,6 +155,7 @@ const processadores = deveExecutarProcessadores() ? [ProcessadorRecalculoPriorid
     ServicoDuplicidadePacientes,
     ServicoFiltrosSalvosPacientes,
     ServicoExamesLaboratoriais,
+    ServicoCatalogoMarcadoresExames,
     ServicoConsentimentosEvolucaoFotografica,
     ServicoEvolucoesFotograficas,
     ServicoCondutasTerapeuticas,

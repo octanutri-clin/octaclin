@@ -9,6 +9,9 @@ const temporaria = mkdtempSync(join(tmpdir(), 'octaclin-exames-bff-'));
 const arquivos = [
   'scripts/exames-laboratoriais-bff.spec.ts',
   'app/api/pacientes/[id]/exames-laboratoriais/route.ts',
+  'app/api/exames/marcadores/_proxy.ts',
+  'app/api/exames/marcadores/route.ts',
+  'app/api/exames/marcadores/[itemId]/route.ts',
   'lib/server/cold-start-bff.ts',
   'lib/server/permissoes-bff.ts',
   'lib/server/sessao-bff.ts'

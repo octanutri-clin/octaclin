@@ -1,10 +1,31 @@
 export interface MarcadorExameLaboratorialApi {
   id: string;
+  catalogoMarcadorId?: string;
   nome: string;
   valor: string;
   unidade?: string;
   referencia?: string;
   metodo?: string;
+  limiteInferior?: string;
+  limiteSuperior?: string;
+  situacaoFaixa?: 'dentro_da_faixa' | 'fora_da_faixa';
+}
+
+export interface CatalogoMarcadorExameApi {
+  id: string;
+  nome: string;
+  unidade?: string;
+  limiteInferior?: string;
+  limiteSuperior?: string;
+}
+
+export type CriarCatalogoMarcadorExameEntrada = Omit<CatalogoMarcadorExameApi, 'id'>;
+
+export interface PaginaCatalogoMarcadoresExamesApi {
+  itens: CatalogoMarcadorExameApi[];
+  total: number;
+  pagina: number;
+  limite: number;
 }
 
 export interface ColetaExameLaboratorialApi {
@@ -19,11 +40,14 @@ export interface ColetaExameLaboratorialApi {
 }
 
 export interface CriarMarcadorExameLaboratorialEntrada {
+  catalogoMarcadorId?: string;
   nome: string;
   valor: string;
   unidade?: string;
   referencia?: string;
   metodo?: string;
+  limiteInferior?: string | null;
+  limiteSuperior?: string | null;
 }
 
 export interface CriarColetaExameLaboratorialEntrada {
@@ -76,4 +100,21 @@ export async function criarColetaExameLaboratorial(
     body: JSON.stringify(entrada)
   });
   return lerResposta<ColetaExameLaboratorialApi>(resposta);
+}
+
+export async function listarCatalogoMarcadoresExames(pagina = 1): Promise<PaginaCatalogoMarcadoresExamesApi> {
+  const resposta = await fetch(`/api/exames/marcadores?pagina=${pagina}&limite=100`, { cache: 'no-store' });
+  return lerResposta<PaginaCatalogoMarcadoresExamesApi>(resposta);
+}
+
+export async function criarCatalogoMarcadorExame(entrada: CriarCatalogoMarcadorExameEntrada): Promise<CatalogoMarcadorExameApi> {
+  const resposta = await fetch('/api/exames/marcadores', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(entrada)
+  });
+  return lerResposta<CatalogoMarcadorExameApi>(resposta);
+}
+
+export async function arquivarCatalogoMarcadorExame(itemId: string): Promise<void> {
+  const resposta = await fetch(`/api/exames/marcadores/${encodeURIComponent(itemId)}`, { method: 'DELETE' });
+  await lerResposta<{ id: string }>(resposta);
 }

@@ -3275,6 +3275,49 @@ test.describe('prontuario do paciente', () => {
     await assertSemOverflowHorizontal(page);
   });
 
+  test('PB-17 mostra serie do marcador e permite ajustar a faixa na coleta', async ({ page }) => {
+    await prepararProntuarioMockado(page);
+    let coletaCriada = null;
+    await page.route('**/api/exames/marcadores*', async (route) => {
+      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({
+        itens: [{ id: 'catalogo-1', nome: 'Ferritina', unidade: 'ng/mL', limiteInferior: '10', limiteSuperior: '40' }],
+        total: 1, pagina: 1, limite: 100
+      }) });
+    });
+    await page.route('**/api/pacientes/paciente-1/exames-laboratoriais', async (route) => {
+      if (route.request().method() === 'POST') {
+        coletaCriada = route.request().postDataJSON();
+        await route.fulfill({ status: 201, contentType: 'application/json', body: JSON.stringify({ id: 'coleta-nova' }) });
+        return;
+      }
+      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([
+        { id: 'coleta-2', coletadaEm: '2026-08-11', marcadores: [{ id: 'resultado-2', catalogoMarcadorId: 'catalogo-1', nome: 'Ferritina', valor: '42', unidade: 'ng/mL', limiteInferior: '10', limiteSuperior: '40', situacaoFaixa: 'fora_da_faixa' }] },
+        { id: 'coleta-1', coletadaEm: '2026-07-11', marcadores: [{ id: 'resultado-1', catalogoMarcadorId: 'catalogo-1', nome: 'Ferritina', valor: '35', unidade: 'ng/mL', limiteInferior: '10', limiteSuperior: '40', situacaoFaixa: 'dentro_da_faixa' }] }
+      ]) });
+    });
+    await page.goto('/pacientes/paciente-1');
+    await page.getByRole('tablist', { name: 'Áreas principais do prontuário' }).getByRole('tab', { name: 'Avaliações' }).click();
+    await page.getByRole('tablist', { name: 'Subáreas de Avaliações' }).getByRole('tab', { name: 'Exames laboratoriais' }).click();
+
+    await expect(page.getByText('Fora da faixa informada', { exact: true })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Série por marcador' })).toBeVisible();
+    await expect(page.getByRole('table', { name: 'Série de Ferritina' }).getByRole('row')).toHaveCount(3);
+
+    await page.getByLabel('Marcador do catálogo').first().selectOption('catalogo-1');
+    await expect(page.getByLabel('Marcador', { exact: true })).toHaveValue('Ferritina');
+    await page.getByLabel('Unidade', { exact: true }).fill('mg/dL');
+    await expect(page.getByLabel('Limite inferior', { exact: true })).toHaveValue('');
+    await expect(page.getByLabel('Limite superior', { exact: true })).toHaveValue('');
+    await page.getByLabel('Marcador do catálogo').first().selectOption('');
+    await page.getByLabel('Marcador do catálogo').first().selectOption('catalogo-1');
+    await page.getByLabel('Limite superior', { exact: true }).fill('45');
+    await page.getByLabel('Valor', { exact: true }).fill('43');
+    await page.getByRole('button', { name: 'Registrar coleta' }).click();
+    await expect.poll(() => coletaCriada?.marcadores?.[0]).toEqual(expect.objectContaining({
+      catalogoMarcadorId: 'catalogo-1', limiteSuperior: '45', unidade: 'ng/mL', valor: '43'
+    }));
+  });
+
   test('mostra a preparação da próxima consulta com o que mudou desde o último atendimento (PB-25)', async ({ page }) => {
     await prepararProntuarioMockado(page, { permissoesExtras: ['planos_alimentares.ler'] });
     await page.goto('/pacientes/paciente-1');
