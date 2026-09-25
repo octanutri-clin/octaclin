@@ -43,6 +43,7 @@ describe('ServicoPainelOperacao', () => {
   it('rejeita mes invalido antes de consultar o banco', async () => {
     await expect(servico.obter(tenantId, '2026-13')).rejects.toBeInstanceOf(BadRequestException);
     await expect(servico.obter(tenantId, '0000-01')).rejects.toBeInstanceOf(BadRequestException);
+    await expect(servico.obter(tenantId, ['2026-09', '2026-08'])).rejects.toBeInstanceOf(BadRequestException);
     expect(executorTenant.executar).not.toHaveBeenCalled();
   });
 

@@ -38,4 +38,18 @@ real com dois tenants foi adicionada a suite RLS. A branch não executa
 migration, backfill ou ação de produção. Merge e aceite permanecem com o
 proprietário após os checks da PR.
 
+## Correcoes apos CI inicial do PR #315
+
+- CodeQL apontou duas instancias criticas de type confusion na leitura do
+  parametro `mes`: parametros repetidos podem chegar como array. O servico e
+  o controller agora rejeitam qualquer valor que nao seja string antes de
+  aplicar regex e limites de mes; teste unitario cobre o array repetido.
+- A prova RLS falhou porque o `DataSource` de teste usa queries SQL diretas e
+  inicia sem entidades TypeORM registradas, enquanto o novo servico tambem
+  consulta repositorios. O fixture agora registra `ProfissionalOrm` e
+  `TenantConfiguracaoOrm`, mantendo a role e as policies reais do teste.
+- Typecheck e testes focados passaram localmente apos as correcoes. A prova
+  RLS continua `SKIPPED` localmente sem banco configurado; o resultado novo
+  deve ser confirmado pelos checks do CI apos o push.
+
 Contrato, fórmulas, escopo e rollback: `docs/history/phases/PLANO_FASE_280.md`.

@@ -4,6 +4,8 @@ import { GenericContainer, StartedTestContainer, Wait } from 'testcontainers';
 import { DataSource, DataSourceOptions } from 'typeorm';
 import { ExecutorTenant } from './executor-tenant';
 import { ServicoPainelOperacao } from '../../modulos/clientes/aplicacao/servico-painel-operacao';
+import { ProfissionalOrm } from '../../modulos/profissionais/infraestrutura/profissional.orm';
+import { TenantConfiguracaoOrm } from '../../modulos/tenancy/infraestrutura/tenant-configuracao.orm';
 import { criarOpcoesTypeOrm } from './opcoes-typeorm';
 
 /**
@@ -169,7 +171,7 @@ descrever('RLS e isolamento multi-tenant integral em Postgres real', () => {
       ssl: false,
       synchronize: false,
       logging: false,
-      entities: [],
+      entities: [ProfissionalOrm, TenantConfiguracaoOrm],
       extra: { max: 2 }
     });
     await fonteDados.initialize();

@@ -88,9 +88,13 @@ export class ServicoPainelOperacao {
     private readonly criptografia: CriptografiaDadosSensiveis
   ) {}
 
-  async obter(tenantId: string, mesSolicitado?: string): Promise<PainelOperacaoCliente> {
-    if (mesSolicitado && (!/^\d{4}-(0[1-9]|1[0-2])$/.test(mesSolicitado)
-      || Number(mesSolicitado.slice(0, 4)) < 2000 || Number(mesSolicitado.slice(0, 4)) > 2100)) {
+  async obter(tenantId: string, mesSolicitado?: string | string[]): Promise<PainelOperacaoCliente> {
+    if (mesSolicitado !== undefined && (
+      typeof mesSolicitado !== 'string'
+      || !/^\d{4}-(0[1-9]|1[0-2])$/.test(mesSolicitado)
+      || Number(mesSolicitado.slice(0, 4)) < 2000
+      || Number(mesSolicitado.slice(0, 4)) > 2100
+    )) {
       throw new BadRequestException('Informe o mes no formato AAAA-MM.');
     }
 

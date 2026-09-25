@@ -38,7 +38,7 @@ export class ControladorPortalCliente {
 
   @Get('painel-operacao')
   @Header('Cache-Control', 'private, no-store')
-  obterPainelOperacao(@UsuarioAtual() usuario: UsuarioAutenticado, @Query('mes') mes?: string) {
+  obterPainelOperacao(@UsuarioAtual() usuario: UsuarioAutenticado, @Query('mes') mes?: string | string[]) {
     return this.servicoPainelOperacao.obter(usuario.tenantId, mes);
   }
 
