@@ -274,8 +274,9 @@ Estado observado dos checks do PR:
 - **SKIPPED** — `Provenance do SBOM`.
 
 A migration `1720000001053-CriarRecorrenciaConsulta` foi incluída na PR, mas a
-aplicação fora de banda em staging/produção **não foi executada** e continua
-sob responsabilidade do proprietário. Permanecem também pendentes as
-migrations `1051` e `1052` das fases anteriores.
+aplicação fora de banda em staging/produção **não havia sido executada na data
+do merge**. O proprietário informou em 2026-09-24 que as migrations `1051`,
+`1052` e `1053` foram aplicadas em staging e produção; não foi feita consulta
+direta aos bancos nesta reconciliação.
 
 Próximo item da Onda 4: Fase 278 (PB-17, catálogo de marcadores de exames).

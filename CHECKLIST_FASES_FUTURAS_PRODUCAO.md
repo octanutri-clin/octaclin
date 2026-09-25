@@ -4333,8 +4333,9 @@ local smoke passaram; o check agregado `OctaClin CI` falhou somente pelo job
 `Governanca de repositorio`, que falhou em
 `pnpm test:inventario-security-quality` porque `SQ-2026-004` venceu
 `revisarEm`; `Provenance do SBOM` ficou `SKIPPED`. Merge humano confirmado.
-Aplicacao fora de banda das migrations `1051` a `1053` em staging/producao
-continua pendente com o proprietario. Ver
+Aplicacao fora de banda das migrations `1051` a `1053` pendia na data do
+fechamento; o proprietario informou em 2026-09-24 que as tres foram aplicadas
+em staging e producao (sem consulta direta aos bancos nesta reconciliacao). Ver
 `docs/history/phases/PLANO_FASE_277.md` para o detalhamento.
 
 Proximo item planejado da Onda 4: PB-17, quarto item. O programa de hardening

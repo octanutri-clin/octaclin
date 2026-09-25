@@ -942,8 +942,9 @@ O OctaClin ja possui uma base SaaS multi-tenant com backend NestJS, frontend Nex
   `OctaClin CI` falhou somente pelo job `Governanca de repositorio`, que
   falhou por `SQ-2026-004` com `revisarEm` vencida; `Provenance do SBOM` foi
   `SKIPPED`. A aplicacao fora
-  de banda das migrations `1051` a `1053` em staging/producao continua sob
-  responsabilidade do proprietario. Ver
+  de banda das migrations `1051` a `1053` pendia na data do fechamento; o
+  proprietario informou em 2026-09-24 que as tres foram aplicadas em staging
+  e producao (sem consulta direta aos bancos nesta reconciliacao). Ver
   `docs/history/phases/PLANO_FASE_277.md`.
 - Fase 255 - Prontuario clinico orientado a linha de cuidado: o componente
   principal ganhou fronteiras tipadas para navegacao e timeline; Materiais,
