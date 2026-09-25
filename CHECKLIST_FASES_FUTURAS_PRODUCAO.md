@@ -1,6 +1,7 @@
 # OctaClin - Checklist vivo de fases futuras ate producao
 
-Atualizado em 2026-09-25. Fases 256 a 261, 263 a 274 concluidas; Fase 262
+Atualizado em 2026-09-25. Fases 256 a 261, 263 a 279 concluidas; Fase 280
+em andamento (PB-26, Onda 5). Fase 262
 permanece em andamento pelos gates externos do piloto. Com a Fase 268
 mergeada (PR `#275`, merge `306d2ed`), o PB-05 (alerta de check-in com
 adesao baixa) esta concluido e a Onda 2 do audit de produto (PB-01 ->
@@ -4343,6 +4344,31 @@ PB-10 (Fase 279) e o ultimo item da Onda 4 e esta em implementacao na branch
 `feat/fase279-busca-protegida-perfil`, com decisao confirmada de filtros exatos
 protegidos por tenant. Migration e backfill serao aplicados fora de banda apos
 confirmacao do alvo e da role owner; ver `docs/history/phases/PLANO_FASE_279.md`.
+
+Reconciliacao em 2026-09-25: PB-10 foi integrado em `main` pelo PR `#314`
+(merge `93ac0a8`), fechando a Onda 4 no codigo. A aplicacao fora de banda da
+migration e do backfill nao foi verificada neste ciclo. Onda 5 tem ordem
+aprovada PB-26 -> PB-27 -> PB-21 -> PB-29.
+
+- [x] Fase 275 - PB-24, vinculo opcional de consulta nas entidades clinicas;
+  integrado pelo PR `#305`. Aplicacao fora de banda segue seu runbook.
+- [x] Fase 276 - PB-18, expediente e tipos de atendimento;
+  integrado pelo PR `#307`.
+- [x] Fase 277 - PB-19, recorrencia e duplicacao de consultas;
+  integrado pelo PR `#309`.
+- [x] Fase 278 - PB-17, catalogo de marcadores laboratoriais;
+  integrado pelo PR `#313`.
+- [x] Fase 279 - PB-10, filtros exatos protegidos de perfil;
+  integrado pelo PR `#314`. Migration e backfill fora de banda nao foram
+  verificados nesta reconciliacao.
+- [ ] Fase 280 - PB-26, painel de operacao da clinica em PR; aguarda checks,
+  revisao e merge humano. Plano, formulas, rollback e gates em
+  `docs/history/phases/PLANO_FASE_280.md`.
+- [ ] PB-27: auditoria do proprio tenant; antes da implementacao, fechar
+  decisao juridica e politica de acesso/retencao.
+- [ ] PB-21: proximo apos PB-27.
+- [ ] PB-29: proximo apos PB-21.
+
 O programa de hardening
 PR 36-56 permanece como trilha separada --
 PR 55 permanece adiado e pendente; PR 56 continua condicionado a decisao

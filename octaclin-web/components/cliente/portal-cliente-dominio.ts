@@ -8,6 +8,7 @@ import {
 
 export type AreaPortalCliente =
   | 'ativacao'
+  | 'operacao'
   | 'assinatura'
   | 'consumo'
   | 'financeiro'

@@ -9,6 +9,7 @@ import { AreaPerfilCliente } from './area-perfil-cliente';
 import { AreasConfiguracaoCliente } from './areas-configuracao-cliente';
 import { AreaAssinaturaUsoCliente, AreaVisaoGeralCliente } from './areas-visao-assinatura';
 import { AreaPortalCliente } from './portal-cliente-dominio';
+import { AreaOperacaoCliente } from './area-operacao-cliente';
 import { usePortalCliente } from './use-portal-cliente';
 
 export function PortalCliente() {
@@ -70,6 +71,7 @@ export function PortalCliente() {
           rotulo="Áreas da conta"
           abas={[
             { id: 'ativacao', rotulo: 'Ativação' },
+            { id: 'operacao', rotulo: 'Operação' },
             { id: 'assinatura', rotulo: 'Assinatura' },
             { id: 'consumo', rotulo: 'Consumo' },
             ...(podeLerFinanceiro ? [{ id: 'financeiro', rotulo: 'Financeiro' }] : []),
@@ -85,6 +87,7 @@ export function PortalCliente() {
         />
 
         <AreaVisaoGeralCliente portal={portal} />
+        {areaAtiva === 'operacao' ? <AreaOperacaoCliente /> : null}
         <AreaAssinaturaUsoCliente portal={portal} />
         <AreaEquipeCliente portal={portal} />
         <AreasConfiguracaoCliente portal={portal} />

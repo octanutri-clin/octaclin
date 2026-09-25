@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Header, Param, ParseUUIDPipe, Patch, Post, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Header, Param, ParseUUIDPipe, Patch, Post, Query, Req, UseGuards } from '@nestjs/common';
 import { Request } from 'express';
 import { ServicoAuditoria } from '../../../infraestrutura/auditoria/servico-auditoria';
 import { contarLinhasCsv } from '../../../infraestrutura/exportacao/csv';
@@ -16,6 +16,7 @@ import {
   SolicitarAjusteAssinaturaClienteDto
 } from '../aplicacao/dtos';
 import { ServicoPortalCliente } from '../aplicacao/servico-portal-cliente';
+import { ServicoPainelOperacao } from '../aplicacao/servico-painel-operacao';
 import { ServicoUsuariosCliente } from '../aplicacao/servico-usuarios-cliente';
 
 @Controller('cliente')
@@ -26,12 +27,19 @@ export class ControladorPortalCliente {
   constructor(
     private readonly servicoPortalCliente: ServicoPortalCliente,
     private readonly servicoUsuariosCliente: ServicoUsuariosCliente,
-    private readonly servicoAuditoria: ServicoAuditoria
+    private readonly servicoAuditoria: ServicoAuditoria,
+    private readonly servicoPainelOperacao: ServicoPainelOperacao
   ) {}
 
   @Get('resumo')
   obterResumo(@UsuarioAtual() usuario: UsuarioAutenticado) {
     return this.servicoPortalCliente.obterResumo(usuario.tenantId, usuario.usuarioId);
+  }
+
+  @Get('painel-operacao')
+  @Header('Cache-Control', 'private, no-store')
+  obterPainelOperacao(@UsuarioAtual() usuario: UsuarioAutenticado, @Query('mes') mes?: string) {
+    return this.servicoPainelOperacao.obter(usuario.tenantId, mes);
   }
 
   @Post('assinatura/interesse')

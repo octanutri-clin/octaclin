@@ -3,6 +3,7 @@ import { Client } from 'pg';
 import { GenericContainer, StartedTestContainer, Wait } from 'testcontainers';
 import { DataSource, DataSourceOptions } from 'typeorm';
 import { ExecutorTenant } from './executor-tenant';
+import { ServicoPainelOperacao } from '../../modulos/clientes/aplicacao/servico-painel-operacao';
 import { criarOpcoesTypeOrm } from './opcoes-typeorm';
 
 /**
@@ -449,6 +450,23 @@ descrever('RLS e isolamento multi-tenant integral em Postgres real', () => {
         expect.objectContaining({ policyCompleta: true })
       );
     }
+  });
+
+  it('PB-26 agrega somente pacientes e profissionais do tenant corrente', async () => {
+    if (!executorTenant) throw new Error('Executor tenant da prova RLS nao foi inicializado.');
+    const criptografiaSintetica = { descriptografar: (valor: Buffer) => valor.toString('utf8') };
+    const painel = new ServicoPainelOperacao(executorTenant, criptografiaSintetica as never);
+    const mes = new Date().toISOString().slice(0, 7);
+
+    const resultadoA = await painel.obter(tenantA, mes);
+    const resultadoB = await painel.obter(tenantB, mes);
+
+    expect(resultadoA.pacientes.ativos).toBe(1);
+    expect(resultadoB.pacientes.ativos).toBe(1);
+    expect(resultadoA.profissionais).toHaveLength(1);
+    expect(resultadoB.profissionais).toHaveLength(1);
+    expect(resultadoA.profissionais[0].nome).toBe('profissional-a');
+    expect(resultadoB.profissionais[0].nome).toBe('profissional-b');
   });
 
   it('tenant ve os proprios registros em auditoria, jobs, storage e integracao', async () => {
