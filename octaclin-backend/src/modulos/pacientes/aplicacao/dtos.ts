@@ -119,6 +119,13 @@ export class ListarPacientesDto {
   semProximaConsulta?: boolean;
 }
 
+/** Somente para POST: valores de perfil nao devem aparecer em URL ou filtros salvos. */
+export class BuscarPacientesProtegidosDto extends ListarPacientesDto {
+  @IsOptional() @IsString() @MaxLength(80) @Matches(/\S/) categoria?: string;
+  @IsOptional() @IsString() @MaxLength(100) @Matches(/\S/) origem?: string;
+  @IsOptional() @IsString() @MaxLength(40) @Matches(/\S/) tag?: string;
+}
+
 export class ImportarPacientesDto {
   /**
    * Conteudo do CSV como texto. O teto de 1 MB e freio de abuso no corpo da

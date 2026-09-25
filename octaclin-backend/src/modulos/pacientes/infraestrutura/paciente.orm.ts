@@ -25,6 +25,9 @@ export class PacienteOrm {
   @Column({ name: 'busca_hashes', type: 'text', array: true, default: () => "'{}'::text[]" })
   buscaHashes: string[];
 
+  @Column({ name: 'perfil_filtros_hashes', type: 'text', array: true, default: () => "'{}'::text[]" })
+  perfilFiltrosHashes?: string[];
+
   @Column({ name: 'data_nascimento', type: 'date', nullable: true })
   dataNascimento?: string;
 

@@ -641,10 +641,12 @@ de janelas operacionais.
   aditiva na própria PR (roda em CI/testcontainers), mas a aplicação fora
   de banda em staging/produção com role owner permanece com o
   proprietário, seguindo o runbook — não é aplicada pelo agente.
-- **Andamento da Onda 4**: PB-24 (Fase 275), PB-18 (Fase 276) e PB-19
-  (Fase 277) foram concluídos e integrados pelos PRs `#305`, `#307` e `#309`.
-  Restam PB-17 e PB-10, nesta ordem; PB-10 continua condicionado à decisão
-  de produto/privacidade descrita acima.
+- **Andamento da Onda 4**: PB-24 (Fase 275), PB-18 (Fase 276), PB-19
+  (Fase 277) e PB-17 (Fase 278) foram concluídos e integrados pelos PRs
+  `#305`, `#307`, `#309` e `#313`. Resta PB-10 (Fase 279). Em 2026-09-25,
+  o proprietário confirmou filtros exatos protegidos por índice cego por tenant
+  para tag, origem e categoria, sem busca parcial. A implementação e o
+  procedimento de backfill estão descritos em `docs/history/phases/PLANO_FASE_279.md`.
 - **Escopo confirmado do PB-24**: vínculo `consulta_id` opcional (nullable)
   em `evolucoes_clinicas`, `avaliacoes_antropometricas`,
   `condutas_terapeuticas_versoes` e `exames_laboratoriais`, com um seletor

@@ -1,6 +1,6 @@
 # OctaClin - Checklist vivo de fases futuras ate producao
 
-Atualizado em 2026-09-22. Fases 256 a 261, 263 a 274 concluidas; Fase 262
+Atualizado em 2026-09-25. Fases 256 a 261, 263 a 274 concluidas; Fase 262
 permanece em andamento pelos gates externos do piloto. Com a Fase 268
 mergeada (PR `#275`, merge `306d2ed`), o PB-05 (alerta de check-in com
 adesao baixa) esta concluido e a Onda 2 do audit de produto (PB-01 ->
@@ -4338,7 +4338,12 @@ fechamento; o proprietario informou em 2026-09-24 que as tres foram aplicadas
 em staging e producao (sem consulta direta aos bancos nesta reconciliacao). Ver
 `docs/history/phases/PLANO_FASE_277.md` para o detalhamento.
 
-Proximo item planejado da Onda 4: PB-17, quarto item. O programa de hardening
+PB-17 (Fase 278) foi integrado em `main` pelo PR `#313` (merge `cb7c7bd`).
+PB-10 (Fase 279) e o ultimo item da Onda 4 e esta em implementacao na branch
+`feat/fase279-busca-protegida-perfil`, com decisao confirmada de filtros exatos
+protegidos por tenant. Migration e backfill serao aplicados fora de banda apos
+confirmacao do alvo e da role owner; ver `docs/history/phases/PLANO_FASE_279.md`.
+O programa de hardening
 PR 36-56 permanece como trilha separada --
 PR 55 permanece adiado e pendente; PR 56 continua condicionado a decisao
 explicita de distribuir o Mobile.

@@ -25,6 +25,7 @@
     "e2e:fase235:prontuario": "ts-node src/infraestrutura/e2e/validar-prontuario-fase235.ts",
     "criar-admin:producao": "ts-node src/infraestrutura/banco-dados/seeds/criar-admin-producao.ts",
     "backfill:indices-busca": "ts-node src/infraestrutura/banco-dados/backfills/backfill-indices-busca-pacientes.ts",
+    "backfill:indices-perfil": "ts-node src/infraestrutura/banco-dados/backfills/backfill-indices-perfil-pacientes.ts",
     "smoke:operacoes": "ts-node src/infraestrutura/smoke/smoke-operacoes.ts",
     "smoke:busca-pacientes": "ts-node src/infraestrutura/smoke/smoke-busca-pacientes.ts",
     "performance:backend": "ts-node src/infraestrutura/performance/benchmark-backend.ts",

@@ -21,10 +21,11 @@ interface VisoesSalvasPacientesProps {
   criteriosAtuais: CriteriosFiltroSalvoPaciente;
   profissionais: ProfissionalResumo[];
   podeGerenciar: boolean;
+  filtrosProtegidosAtivos?: boolean;
   aoAplicar: (criterios: CriteriosFiltroSalvoPaciente) => void;
 }
 
-export function VisoesSalvasPacientes({ criteriosAtuais, profissionais, podeGerenciar, aoAplicar }: VisoesSalvasPacientesProps) {
+export function VisoesSalvasPacientes({ criteriosAtuais, profissionais, podeGerenciar, filtrosProtegidosAtivos, aoAplicar }: VisoesSalvasPacientesProps) {
   const [filtros, setFiltros] = useState<FiltroSalvoPaciente[]>([]);
   const [selecionadoId, setSelecionadoId] = useState('');
   const [criando, setCriando] = useState(false);
@@ -93,7 +94,7 @@ export function VisoesSalvasPacientes({ criteriosAtuais, profissionais, podeGere
   }
 
   async function salvar() {
-    if (!nome.trim()) return;
+    if (!nome.trim() || filtrosProtegidosAtivos) return;
     setProcessando(true);
     setErro(null);
     try {
@@ -150,7 +151,7 @@ export function VisoesSalvasPacientes({ criteriosAtuais, profissionais, podeGere
         </div>
         <div className="flex flex-wrap gap-2">
           <Botao type="button" variante="secundario" onClick={() => aplicar(false)} disabled={!selecionado || profissionalDesatualizado || estadoProfissional === 'verificando' || processando}><Bookmark size={16} />Aplicar</Botao>
-          <Botao type="button" variante="fantasma" onClick={() => setCriando((atual) => !atual)} disabled={processando}><Save size={16} />Salvar visão</Botao>
+          <Botao type="button" variante="fantasma" onClick={() => setCriando((atual) => !atual)} disabled={processando || filtrosProtegidosAtivos}><Save size={16} />Salvar visão</Botao>
           {podeArquivar ? <Botao type="button" variante="fantasma" onClick={() => setConfirmandoArquivamento(true)} disabled={processando} aria-label="Remover visão salva" title="Remover visão salva"><Trash2 size={16} /></Botao> : null}
         </div>
       </div>
@@ -170,8 +171,8 @@ export function VisoesSalvasPacientes({ criteriosAtuais, profissionais, podeGere
         <div className="grid gap-3 rounded-md border border-linha bg-superficie-hover p-3 sm:grid-cols-[minmax(0,1fr)_180px_auto] sm:items-end">
           <div className="grid gap-1"><Rotulo htmlFor="nome-visao-paciente">Nome da visão</Rotulo><Campo id="nome-visao-paciente" maxLength={80} value={nome} onChange={(evento) => setNome(evento.target.value)} placeholder="Ex.: Risco alto sem retorno" /></div>
           <div className="grid gap-1"><Rotulo htmlFor="origem-visao-paciente">Disponibilidade</Rotulo><Selecao id="origem-visao-paciente" value={origem} onChange={(evento) => setOrigem(evento.target.value as OrigemFiltroSalvoPaciente)}><option value="pessoal">Somente para mim</option>{podeGerenciar ? <option value="clinica">Equipe da clínica</option> : null}</Selecao></div>
-          <Botao type="button" variante="primario" onClick={() => void salvar()} disabled={!nome.trim() || processando} carregando={processando}><Save size={16} />Salvar</Botao>
-          <p className="text-xs text-texto-suave sm:col-span-3">A busca por nome ou contato não é incluída na visão salva.</p>
+          <Botao type="button" variante="primario" onClick={() => void salvar()} disabled={!nome.trim() || processando || filtrosProtegidosAtivos} carregando={processando}><Save size={16} />Salvar</Botao>
+          <p className="text-xs text-texto-suave sm:col-span-3">Busca por nome, contato e filtros protegidos não entram em visões salvas.</p>
         </div>
       ) : null}
 

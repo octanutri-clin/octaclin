@@ -21,7 +21,7 @@ import { GuardaJwt } from '../../auth/apresentacao/guarda-jwt';
 import { GuardaPapeis } from '../../auth/apresentacao/guarda-papeis';
 import { GuardaPermissoes } from '../../auth/apresentacao/guarda-permissoes';
 import { UsuarioAutenticado } from '../../auth/dominio/usuario-autenticado';
-import { AtualizarPacienteDto, AtualizarTarefaAcompanhamentoDto, CriarAvaliacaoAntropometricaDto, CriarEvolucaoClinicaDto, CriarModeloEvolucaoClinicaDto, CriarPacienteDto, CriarTarefaAcompanhamentoDto, ImportarPacientesDto, ListarAvaliacoesAntropometricasDto, ListarLinhaTempoProntuarioDto, ListarModelosEvolucaoClinicaDto, ListarPacientesDto, SolicitarOverridePrioridadeAcompanhamentoDto, VerificarDuplicidadePacienteDto } from '../aplicacao/dtos';
+import { AtualizarPacienteDto, AtualizarTarefaAcompanhamentoDto, BuscarPacientesProtegidosDto, CriarAvaliacaoAntropometricaDto, CriarEvolucaoClinicaDto, CriarModeloEvolucaoClinicaDto, CriarPacienteDto, CriarTarefaAcompanhamentoDto, ImportarPacientesDto, ListarAvaliacoesAntropometricasDto, ListarLinhaTempoProntuarioDto, ListarModelosEvolucaoClinicaDto, ListarPacientesDto, SolicitarOverridePrioridadeAcompanhamentoDto, VerificarDuplicidadePacienteDto } from '../aplicacao/dtos';
 import { ServicoDuplicidadePacientes } from '../aplicacao/servico-duplicidade-pacientes';
 import { ServicoImportacaoPacientes } from '../aplicacao/servico-importacao-pacientes';
 import { ServicoModelosEvolucaoClinica } from '../aplicacao/servico-modelos-evolucao-clinica';
@@ -117,6 +117,26 @@ export class ControladorPacientes {
       filtros.limite,
       filtros
     );
+    await this.servicoAuditoria.registrar({
+      tenantId: usuario.tenantId,
+      usuarioId: usuario.usuarioId,
+      acao: 'pacientes.listar_dados_sensiveis',
+      recursoTipo: 'paciente',
+      ip: requisicao.ip,
+      userAgent: this.obterUserAgent(requisicao),
+      metadados: { pagina: filtros.pagina, limite: filtros.limite, total: resultado.total }
+    });
+    return resultado;
+  }
+
+  @Post('buscar')
+  @Permissoes('pacientes.listar')
+  async buscarProtegido(
+    @UsuarioAtual() usuario: UsuarioAutenticado,
+    @Req() requisicao: Request,
+    @Body() filtros: BuscarPacientesProtegidosDto
+  ) {
+    const resultado = await this.servicoPacientes.listar(usuario.tenantId, usuario, filtros.pagina, filtros.limite, filtros);
     await this.servicoAuditoria.registrar({
       tenantId: usuario.tenantId,
       usuarioId: usuario.usuarioId,

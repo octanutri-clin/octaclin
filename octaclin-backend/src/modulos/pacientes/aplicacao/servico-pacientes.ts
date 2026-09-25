@@ -46,6 +46,7 @@ import {
   ProntuarioPacienteRespostaDto,
   TarefaAcompanhamentoRespostaDto,
   ListarPacientesDto,
+  BuscarPacientesProtegidosDto,
   PrioridadeAcompanhamentoRespostaDto,
   ResultadoSolicitacaoEliminacaoLgpdDto,
   SolicitarOverridePrioridadeAcompanhamentoDto
@@ -183,8 +184,9 @@ export class ServicoPacientes {
     usuario: UsuarioAutenticado,
     pagina = 1,
     limite = 25,
-    filtros: ListarPacientesDto = new ListarPacientesDto()
+    filtros: ListarPacientesDto & Partial<BuscarPacientesProtegidosDto> = new ListarPacientesDto()
   ): Promise<{ itens: PacienteRespostaDto[]; total: number }> {
+    if (tenantId !== usuario.tenantId) throw new ForbiddenException('Tenant invalido.');
     const paginaNormalizada = Math.max(1, pagina);
     const limiteNormalizado = Math.min(100, Math.max(1, limite));
 
@@ -448,6 +450,7 @@ export class ServicoPacientes {
       paciente.nomeCriptografado = this.criptografia.criptografar('[dados eliminados por solicitacao LGPD]');
       paciente.contatoCriptografado = undefined;
       paciente.buscaHashes = [];
+      paciente.perfilFiltrosHashes = [];
       paciente.dataNascimento = undefined;
       paciente.referenciaExterna = undefined;
       await repositorio.save(paciente);
@@ -551,15 +554,19 @@ export class ServicoPacientes {
   private montarFiltrosListagem(
     tenantId: string,
     profissionalResponsavelId: string | undefined,
-    filtros: ListarPacientesDto,
+    filtros: ListarPacientesDto & Partial<BuscarPacientesProtegidosDto>,
     hashesBusca?: string[]
   ): FindOptionsWhere<PacienteOrm> | FindOptionsWhere<PacienteOrm>[] {
+    const perfilFiltrosHashes = (['categoria', 'origem', 'tag'] as const)
+      .filter((campo) => filtros[campo]?.trim())
+      .map((campo) => this.criptografia.gerarHashPerfilExato(tenantId, campo, filtros[campo]!));
     const base: FindOptionsWhere<PacienteOrm> = {
       tenantId,
       arquivadoEm: IsNull(),
       ...(profissionalResponsavelId ? { profissionalResponsavelId } : {}),
       ...(filtros.status ? { statusAdesao: filtros.status } : {}),
       ...(hashesBusca?.length ? { buscaHashes: ArrayContains(hashesBusca) } : {}),
+      ...(perfilFiltrosHashes.length ? { perfilFiltrosHashes: ArrayContains(perfilFiltrosHashes) } : {}),
       ...(filtros.semProximaConsulta
         ? {
             id: Raw(

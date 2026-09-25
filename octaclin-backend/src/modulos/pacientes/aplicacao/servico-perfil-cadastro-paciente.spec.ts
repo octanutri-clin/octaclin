@@ -27,6 +27,7 @@ describe('ServicoPerfilCadastroPaciente', () => {
       save: salvar
     };
     const paciente = {
+      update: jest.fn().mockResolvedValue({ affected: 1 }),
       findOne: jest.fn().mockResolvedValue(opcoes.paciente === undefined ? {
         id: 'paciente-1',
         tenantId: usuario.tenantId,
@@ -45,7 +46,8 @@ describe('ServicoPerfilCadastroPaciente', () => {
     const criptografia = {
       criptografar: jest.fn((valor: string) => Buffer.from(valor, 'utf8')),
       descriptografar: jest.fn((valor: Buffer) => valor.toString('utf8')),
-      gerarHashesBuscaPii: jest.fn(() => ['hash-fallback'])
+      gerarHashesBuscaPii: jest.fn(() => ['hash-fallback']),
+      gerarHashPerfilExato: jest.fn((tenantId: string, campo: string, valor: string) => `${tenantId}:${campo}:${valor.trim().toLowerCase()}`)
     };
     const duplicidade = new ServicoDuplicidadePacientes(
       executorTenant as never,
@@ -60,6 +62,73 @@ describe('ServicoPerfilCadastroPaciente', () => {
       criptografia
     };
   }
+
+  it('atualiza indices exatos junto ao bloco cifrado, sem guardar valor bruto no paciente', async () => {
+    const { servico, perfil, paciente } = criarCenario();
+    await servico.atualizarOperacao(usuario.tenantId, 'paciente-1', {
+      categoria: 'Ativo', origem: 'Indicação', tags: ['Retorno', 'retorno']
+    }, usuario);
+    expect(perfil.save).toHaveBeenCalledWith(expect.objectContaining({ operacaoCriptografada: expect.any(Buffer) }));
+    expect(paciente.update).toHaveBeenCalledWith(
+      { id: 'paciente-1', tenantId: usuario.tenantId, statusCicloVida: expect.objectContaining({ _type: 'not', _value: 'DELETED' }) },
+      { perfilFiltrosHashes: [
+        `${usuario.tenantId}:categoria:ativo`, `${usuario.tenantId}:origem:indicação`, `${usuario.tenantId}:tag:retorno`
+      ] }
+    );
+  });
+
+  it('limpa os indices quando os campos de operacao sao apagados', async () => {
+    const { servico, paciente } = criarCenario();
+    await servico.atualizarOperacao(usuario.tenantId, 'paciente-1', {}, usuario);
+    expect(paciente.update).toHaveBeenCalledWith(
+      { id: 'paciente-1', tenantId: usuario.tenantId, statusCicloVida: expect.objectContaining({ _type: 'not', _value: 'DELETED' }) }, { perfilFiltrosHashes: [] }
+    );
+  });
+
+  it('recusa tenant divergente antes de gravar perfil ou indices', async () => {
+    const { servico, perfil, paciente } = criarCenario();
+    await expect(servico.atualizarOperacao('outro-tenant', 'paciente-1', { categoria: 'Ativo' }, usuario))
+      .rejects.toThrow(ForbiddenException);
+    expect(perfil.save).not.toHaveBeenCalled();
+    expect(paciente.update).not.toHaveBeenCalled();
+  });
+
+  it('nao atualiza o perfil de paciente eliminado por LGPD', async () => {
+    const { servico, perfil, paciente } = criarCenario({ paciente: null });
+    await expect(servico.atualizarOperacao(usuario.tenantId, 'paciente-1', { tags: ['Retorno'] }, usuario))
+      .rejects.toThrow(NotFoundException);
+    expect(paciente.findOne).toHaveBeenCalledWith(expect.objectContaining({
+      where: expect.objectContaining({ statusCicloVida: expect.objectContaining({ _type: 'not', _value: 'DELETED' }) })
+    }));
+    expect(perfil.save).not.toHaveBeenCalled();
+    expect(paciente.update).not.toHaveBeenCalled();
+  });
+
+  it('nao le nem atualiza perfil de paciente existente em outro tenant', async () => {
+    const { servico, perfil, paciente } = criarCenario({ paciente: null });
+    paciente.findOne.mockImplementation(async ({ where }) => where.tenantId === 'outro-tenant'
+      ? { id: 'paciente-1', tenantId: 'outro-tenant' } : null);
+    await expect(servico.atualizarOperacao(usuario.tenantId, 'paciente-1', { tags: ['Retorno'] }, usuario))
+      .rejects.toThrow(NotFoundException);
+    expect(paciente.findOne).toHaveBeenCalledWith(expect.objectContaining({
+      where: expect.objectContaining({ id: 'paciente-1', tenantId: usuario.tenantId })
+    }));
+    expect(perfil.save).not.toHaveBeenCalled();
+    expect(paciente.update).not.toHaveBeenCalled();
+    await expect(servico.obter(usuario.tenantId, 'paciente-1', usuario)).rejects.toThrow(NotFoundException);
+    expect(perfil.findOne).not.toHaveBeenCalled();
+  });
+
+  it('reverte a atualizacao de perfil se o paciente for eliminado antes da gravacao do indice', async () => {
+    const { servico, paciente } = criarCenario();
+    paciente.update.mockResolvedValueOnce({ affected: 0 });
+    await expect(servico.atualizarOperacao(usuario.tenantId, 'paciente-1', { categoria: 'Ativo' }, usuario))
+      .rejects.toThrow(NotFoundException);
+    expect(paciente.update).toHaveBeenCalledWith(
+      expect.objectContaining({ statusCicloVida: expect.objectContaining({ _type: 'not', _value: 'DELETED' }) }),
+      expect.objectContaining({ perfilFiltrosHashes: expect.any(Array) })
+    );
+  });
 
   it('cria apenas o bloco de contato estruturado e o cifra', async () => {
     const { servico, perfil, criptografia } = criarCenario();

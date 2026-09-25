@@ -139,6 +139,17 @@ export class CriptografiaDadosSensiveis {
     )].sort();
   }
 
+  /** Indice cego para igualdade do valor inteiro, separado por tenant e campo. */
+  gerarHashPerfilExato(tenantId: string, campo: 'categoria' | 'origem' | 'tag', valor: string): string {
+    const normalizado = valor.normalize('NFKD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLocaleLowerCase('pt-BR')
+      .trim()
+      .replace(/\s+/g, ' ');
+    if (!normalizado) throw new Error('Valor de filtro vazio.');
+    return this.gerarHashIndicePii(this.obterChaveIndice(), tenantId, `perfil-v1\0${campo}\0${normalizado}`);
+  }
+
   private montarCabecalho(keyId: string): Buffer {
     const identificador = Buffer.from(keyId, 'utf8');
     return Buffer.concat([Buffer.from([VERSAO_ENVELOPE_V1, identificador.length]), identificador]);

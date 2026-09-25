@@ -6,6 +6,7 @@ import { GET as listarFiltros, POST as criarFiltro } from '../app/api/pacientes/
 import { DELETE as arquivarFiltro } from '../app/api/pacientes/filtros-salvos/[filtroId]/route';
 import { POST as verificarDuplicidade } from '../app/api/pacientes/verificacao-duplicidade/route';
 import { GET as obterProfissional } from '../app/api/profissionais/[id]/route';
+import { POST as buscarProtegido } from '../app/api/pacientes/buscar/route';
 
 const { __clearCookies, __setCookies } = nextHeaders as typeof nextHeaders & {
   __clearCookies: () => void;
@@ -66,5 +67,31 @@ test('BFF encaminha somente contratos permitidos e mantem PII fora da URL', asyn
     assert.doesNotMatch(chamadas[3].url, /Maria|maria%40example/);
     assert.equal(chamadas[3].corpo, JSON.stringify({ nome: 'Maria', contato: 'maria@example.com' }));
     assert.match(new URL(chamadas[4].url).pathname, /id%2Fforjado$/);
+  } finally { restaurarFetch(original); }
+});
+
+test('busca protegida exige permissao antes do corpo e envia filtros somente no POST', async () => {
+  const original = global.fetch;
+  const chamadas: Array<{ url: string; metodo?: string; corpo?: BodyInit | null }> = [];
+  global.fetch = (async (url: string | URL | Request, init?: RequestInit) => {
+    chamadas.push({ url: String(url), metodo: init?.method, corpo: init?.body });
+    return Response.json({ itens: [], total: 0 });
+  }) as typeof global.fetch;
+  try {
+    __clearCookies();
+    const corpoNaoLido = { text: () => { throw new Error('Corpo lido sem autorizacao'); } } as unknown as NextRequest;
+    assert.equal((await buscarProtegido(corpoNaoLido)).status, 401);
+    __setCookies({ ...cookiesSessao(), octaclin_permissoes: encodeURIComponent(JSON.stringify(['pacientes.ler'])) });
+    assert.equal((await buscarProtegido(corpoNaoLido)).status, 403);
+    assert.equal(chamadas.length, 0);
+
+    __setCookies(cookiesSessao());
+    const corpo = JSON.stringify({ categoria: 'Primeira consulta', origem: 'Indicação', tag: 'Retorno' });
+    const resposta = await buscarProtegido(new NextRequest('http://localhost/api/pacientes/buscar', { method: 'POST', body: corpo }));
+    assert.equal(resposta.status, 200);
+    assert.equal(resposta.headers.get('Cache-Control'), 'no-store');
+    assert.equal(chamadas[0].url, 'http://backend.octaclin.local/pacientes/buscar');
+    assert.equal(chamadas[0].metodo, 'POST');
+    assert.equal(chamadas[0].corpo, corpo);
   } finally { restaurarFetch(original); }
 });
