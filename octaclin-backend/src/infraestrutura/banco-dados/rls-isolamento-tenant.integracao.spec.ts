@@ -4,6 +4,7 @@ import { GenericContainer, StartedTestContainer, Wait } from 'testcontainers';
 import { DataSource, DataSourceOptions } from 'typeorm';
 import { ExecutorTenant } from './executor-tenant';
 import { ServicoPainelOperacao } from '../../modulos/clientes/aplicacao/servico-painel-operacao';
+import { ServicoAuditoriaCliente } from '../../modulos/clientes/aplicacao/servico-auditoria-cliente';
 import { ProfissionalOrm } from '../../modulos/profissionais/infraestrutura/profissional.orm';
 import { TenantConfiguracaoOrm } from '../../modulos/tenancy/infraestrutura/tenant-configuracao.orm';
 import { criarOpcoesTypeOrm } from './opcoes-typeorm';
@@ -132,6 +133,7 @@ descrever('RLS e isolamento multi-tenant integral em Postgres real', () => {
   let tabelasTenant: TabelaTenant[] = [];
   let tenantA: string;
   let tenantB: string;
+  let usuarioIdTenantA: string;
   let usuarioIdTenantB: string;
   let idsTenantA: IdentificadoresRepresentativos;
   let idsTenantB: IdentificadoresRepresentativos;
@@ -380,6 +382,7 @@ descrever('RLS e isolamento multi-tenant integral em Postgres real', () => {
       const dadosA = await prepararDadosRepresentativos(tenantA, 'a');
       const dadosB = await prepararDadosRepresentativos(tenantB, 'b');
       idsTenantA = dadosA.ids;
+      usuarioIdTenantA = dadosA.usuarioId;
       idsTenantB = dadosB.ids;
       usuarioIdTenantB = dadosB.usuarioId;
     } catch (erro) {
@@ -469,6 +472,27 @@ descrever('RLS e isolamento multi-tenant integral em Postgres real', () => {
     expect(resultadoB.profissionais).toHaveLength(1);
     expect(resultadoA.profissionais[0].nome).toBe('profissional-a');
     expect(resultadoB.profissionais[0].nome).toBe('profissional-b');
+  });
+
+  it('PB-27 projeta somente auditoria e identidades do tenant corrente', async () => {
+    if (!executorTenant) throw new Error('Executor tenant da prova RLS nao foi inicializado.');
+    const servico = new ServicoAuditoriaCliente(executorTenant);
+    const resultadoA = await servico.listar(tenantA, { acao: 'prova.rls' });
+    const resultadoB = await servico.listar(tenantB, { acao: 'prova.rls' });
+    expect(resultadoA.itens).toHaveLength(1);
+    expect(resultadoB.itens).toHaveLength(1);
+    expect(resultadoA.itens[0].usuarioId).toBe(usuarioIdTenantA);
+    expect(resultadoB.itens[0].usuarioId).toBe(usuarioIdTenantB);
+    expect(Object.keys(resultadoA.itens[0]).sort()).toEqual(['acao', 'criadoEm', 'recursoTipo', 'usuarioId']);
+    expect((await servico.listar(tenantA, { usuarioId: usuarioIdTenantB })).itens).toEqual([]);
+
+    await comoTenant(tenantA);
+    if (!cliente) throw new Error('Cliente da prova RLS nao foi inicializado.');
+    await cliente.query(`INSERT INTO user_action_logs (tenant_id, usuario_id, acao)
+      VALUES ($1, $2, 'prova.pb27.externo'), ($1, NULL, 'prova.pb27.sistema')`, [tenantA, usuarioIdTenantB]);
+    expect((await servico.listar(tenantA, { acao: 'prova.pb27.externo' })).itens[0].usuarioId).toBeNull();
+    expect((await servico.listar(tenantA, { acao: 'prova.pb27.sistema' })).itens[0].usuarioId).toBeNull();
+    expect((await servico.listar(tenantB, { acao: 'prova.pb27.externo' })).itens).toEqual([]);
   });
 
   it('tenant ve os proprios registros em auditoria, jobs, storage e integracao', async () => {

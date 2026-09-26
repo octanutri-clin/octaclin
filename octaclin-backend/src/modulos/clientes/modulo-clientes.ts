@@ -18,6 +18,8 @@ import { ServicoPortalCliente } from './aplicacao/servico-portal-cliente';
 import { ServicoPainelOperacao } from './aplicacao/servico-painel-operacao';
 import { ServicoUsuariosCliente } from './aplicacao/servico-usuarios-cliente';
 import { ControladorPortalCliente } from './apresentacao/controlador-portal-cliente';
+import { ControladorAuditoriaCliente } from './apresentacao/controlador-auditoria-cliente';
+import { ServicoAuditoriaCliente } from './aplicacao/servico-auditoria-cliente';
 
 @Module({
   imports: [
@@ -36,8 +38,8 @@ import { ControladorPortalCliente } from './apresentacao/controlador-portal-clie
     ModuloAuth,
     ModuloTenancy
   ],
-  controllers: [ControladorPortalCliente],
-  providers: [ServicoPortalCliente, ServicoPainelOperacao, ServicoUsuariosCliente, ServicoAuditoria, AdaptadorEmailSmtp],
+  controllers: [ControladorPortalCliente, ControladorAuditoriaCliente],
+  providers: [ServicoPortalCliente, ServicoAuditoriaCliente, ServicoPainelOperacao, ServicoUsuariosCliente, ServicoAuditoria, AdaptadorEmailSmtp],
   exports: [ServicoPortalCliente, ServicoUsuariosCliente]
 })
 export class ModuloClientes {}

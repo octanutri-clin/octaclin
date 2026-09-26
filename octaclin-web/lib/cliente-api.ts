@@ -1,4 +1,30 @@
 export type PlanoSaasIdApi = 'gratuito' | 'profissional' | 'clinica' | 'enterprise';
+
+export interface AuditoriaClienteApi {
+  itens: { criadoEm: string; usuarioId: string | null; acao: string; recursoTipo: string | null }[];
+  pagina: number;
+  limite: number;
+  temMais: boolean;
+}
+
+export interface FiltrosAuditoriaClienteApi {
+  pagina?: number;
+  usuarioId?: string;
+  acao?: string;
+  recursoTipo?: string;
+  inicio?: string;
+  fim?: string;
+}
+
+export async function obterAuditoriaCliente(filtros: FiltrosAuditoriaClienteApi, signal?: AbortSignal): Promise<AuditoriaClienteApi> {
+  const parametros = new URLSearchParams();
+  for (const [chave, valor] of Object.entries(filtros)) {
+    if (valor !== undefined && valor !== '') parametros.set(chave, String(valor));
+  }
+  const resposta = await fetch(`/api/cliente/auditoria?${parametros}`, { cache: 'no-store', signal });
+  if (!resposta.ok) throw new Error(await extrairMensagemErro(resposta));
+  return resposta.json() as Promise<AuditoriaClienteApi>;
+}
 export type RecursoLimitavelSaasApi =
   | 'usuariosAdministrativos'
   | 'pacientes'

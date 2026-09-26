@@ -2,6 +2,17 @@
 
 Este arquivo define quais comandos rodar antes de concluir fases. Use validacao proporcional ao risco, mas nunca conclua fase sem evidencia fresca.
 
+## Auditoria da clinica (PB-27)
+
+- Backend: `pnpm --dir octaclin-backend test --runInBand servico-auditoria-cliente.spec.ts controlador-auditoria-cliente.spec.ts`.
+- Isolamento real: `rls-isolamento-tenant.integracao.spec.ts` no PostgreSQL
+  descartavel do CI; sem infraestrutura configurada, registrar SKIPPED.
+- BFF: `pnpm --dir octaclin-web test:authz`, incluindo os casos PB-27 de
+  `painel-operacao-bff.spec.ts` no harness existente.
+- Browser: Playwright `tests/visual/portal-cliente.spec.mjs --grep PB-27`,
+  desktop/mobile, com axe na aba, paginacao, filtros, vazio e recuperacao.
+- Rodar tambem typechecks, builds, lint, linguagem, preflight e secrets.
+
 ## Setup de PATH no Windows
 
 Se `node` ou `pnpm` nao estiverem no PATH, use o runtime empacotado do Codex:

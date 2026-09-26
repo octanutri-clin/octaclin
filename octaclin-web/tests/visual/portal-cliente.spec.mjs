@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import AxeBuilder from '@axe-core/playwright';
 
 async function prepararSessaoCliente(page, opcoes = {}) {
   const statusAssinatura = opcoes.statusAssinatura ?? 'trial';
@@ -384,6 +385,58 @@ async function assertSemOverflowHorizontal(page) {
 }
 
 test.describe('portal do cliente', () => {
+  test('PB-27 consulta auditoria, filtra, pagina e mostra vazio sem overflow', async ({ page }) => {
+    await prepararSessaoCliente(page);
+    const chamadas = [];
+    await page.route('**/api/cliente/auditoria**', async (route) => {
+      const query = new URL(route.request().url()).searchParams;
+      chamadas.push(query.toString());
+      const pagina = Number(query.get('pagina') ?? 1);
+      await route.fulfill({ json: { itens: pagina === 2 || query.get('acao') === 'sem.resultados' ? [] : [
+        { criadoEm: '2026-09-01T12:00:00Z', usuarioId: '10000000-0000-4000-8000-000000000001', acao: 'pacientes.criar', recursoTipo: 'paciente' },
+        { criadoEm: '2026-09-01T11:00:00Z', usuarioId: null, acao: 'cliente.auditoria.consultar', recursoTipo: 'auditoria' }
+      ], pagina, limite: 25, temMais: pagina === 1 } });
+    });
+    await page.goto('/cliente');
+    await page.getByRole('tab', { name: 'Auditoria', exact: true }).click();
+    const painel = page.getByRole('tabpanel', { name: 'Auditoria', exact: true });
+    await expect(painel.getByText('pacientes.criar', { exact: true })).toBeVisible();
+    await expect(painel.getByText('Sistema ou usuário indisponível')).toBeVisible();
+    await expect(painel.getByRole('button', { name: 'Anterior', exact: true })).toBeDisabled();
+    expect((await new AxeBuilder({ page }).include('#conta-cliente-auditoria-painel').analyze()).violations).toEqual([]);
+    await assertSemOverflowHorizontal(page);
+    await painel.getByRole('button', { name: 'Próxima', exact: true }).click();
+    await expect(painel.getByText('Página 2')).toBeVisible();
+    await expect(painel.getByText('Nenhum registro encontrado para os filtros selecionados.')).toBeVisible();
+    await expect(painel.getByRole('button', { name: 'Próxima', exact: true })).toBeDisabled();
+    await painel.getByLabel('Ação', { exact: true }).fill('sem.resultados');
+    await painel.getByLabel('Data inicial', { exact: true }).fill('2026-09-01');
+    await painel.getByLabel('Data final', { exact: true }).fill('2026-09-02');
+    await painel.getByRole('button', { name: 'Filtrar', exact: true }).click();
+    await expect(painel.getByText('Página 1')).toBeVisible();
+    expect(chamadas.at(-1)).toContain('acao=sem.resultados');
+    expect(chamadas.at(-1)).toContain('inicio=2026-09-01');
+    await painel.getByRole('button', { name: 'Limpar filtros', exact: true }).click();
+    await expect(painel.getByText('pacientes.criar', { exact: true })).toBeVisible();
+    await expect(painel.getByLabel('Ação', { exact: true })).toHaveValue('');
+  });
+
+  test('PB-27 permite recuperar falha da auditoria sem mostrar erro interno', async ({ page }) => {
+    await prepararSessaoCliente(page);
+    let falhar = true;
+    await page.route('**/api/cliente/auditoria**', async (route) => {
+      await route.fulfill(falhar ? { status: 503, json: { mensagem: 'detalhe-interno-sintetico' } } : { json: { itens: [], pagina: 1, limite: 25, temMais: false } });
+    });
+    await page.goto('/cliente');
+    await page.getByRole('tab', { name: 'Auditoria', exact: true }).click();
+    const painel = page.getByRole('tabpanel', { name: 'Auditoria', exact: true });
+    await expect(painel.getByRole('alert')).toContainText('Não foi possível consultar a auditoria.');
+    await expect(page.getByText('detalhe-interno-sintetico')).toHaveCount(0);
+    falhar = false;
+    await painel.getByRole('button', { name: 'Tentar novamente', exact: true }).click();
+    await expect(painel.getByText('Nenhum registro encontrado para os filtros selecionados.')).toBeVisible();
+  });
+
   test('PB-26 mostra indicadores mensais e carga por profissional sem dados de paciente', async ({ page }) => {
     await prepararSessaoCliente(page);
     await page.goto('/cliente');
