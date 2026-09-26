@@ -724,8 +724,9 @@ clínica exige decisão jurídica antes de qualquer código.
 - **Sequência confirmada pelo proprietário em 2026-09-25**: PB-26 → PB-27
   → PB-21 → PB-29. PB-26 foi integrado pela PR #315 (Fase 280).
   PB-27 foi integrado na Fase 281 pelo PR #316 (merge `01817ae`, confirmado
-  no GitHub em 2026-09-26). PB-21 esta em implementacao na Fase 282;
-  contrato, limites e rollback em `docs/history/phases/PLANO_FASE_282.md`.
+  no GitHub em 2026-09-26). PB-21 foi integrado na Fase 282 pelo PR #317
+  (merge `a7274be`, 2026-09-26); o fluxo, limites e rollback estao descritos
+  em `docs/history/phases/PLANO_FASE_282.md`. Proximo PB da sequencia: PB-29.
 
 ### Seleção de modelo, skills e plugins por PB
 

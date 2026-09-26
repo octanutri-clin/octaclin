@@ -5,10 +5,15 @@
 - Fase 280 (PB-26): painel de operacao da clinica integrado pelo PR #315,
   merge `704adb0`. Indicadores agregados de pacientes e carga de agenda,
   ocupacao e no-show por profissional, sem migration.
-- Fase 281 (PB-27): consulta minima de auditoria implementada na branch
-  `feat/pb27-auditoria-clinica`, com politica confirmada pelo proprietario.
-  Ainda aguarda CI e merge; evidencia em `fase-281-auditoria-clinica.md`.
-- Ordem restante da Onda 5: concluir aceite PB-27, depois PB-21 e PB-29.
+- Fase 281 (PB-27): consulta minima de auditoria integrada pelo PR #316
+  (merge `01817ae`), com politica confirmada pelo proprietario; `Provenance do
+  SBOM` ficou `SKIPPED` no CI.
+- Fase 282 (PB-21): acoes em massa na lista de pacientes integradas pelo PR
+  #317 (merge `a7274be`). Registro em lote de material ou formulario para ate
+  25 pacientes selecionados, com verificacao de tenant e profissional. CI teve
+  19 checks `SUCCESS`; `Provenance do SBOM` ficou `SKIPPED`. Detalhes e limites
+  em `docs/history/phases/PLANO_FASE_282.md`.
+- Proximo PB da sequencia aprovada da Onda 5: PB-29.
 
 Atualizado em 2026-09-17 com a conclusao da Fase 264 e a reconciliacao da
 Fase 263. A Fase 262 permanece aberta por gates externos do piloto.

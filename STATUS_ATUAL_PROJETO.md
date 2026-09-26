@@ -12,10 +12,13 @@ Atualizado em 2026-09-26.
 - Onda 5 segue PB-26 -> PB-27 -> PB-21 -> PB-29. PB-26 (Fase 280) foi
   integrado pelo PR `#315` (merge `704adb0`, confirmado no GitHub).
   PB-27 (Fase 281) foi integrado pelo PR `#316` (merge `01817ae`,
-  confirmado no GitHub em 2026-09-26). PB-21 (Fase 282) esta em
-  implementacao na branch `feat/pb21-acoes-massa-fase282`: selecao na lista
-  e registro em lote de formulario ou material, com verificacao de tenant e
-  profissional. Plano em `docs/history/phases/PLANO_FASE_282.md`.
+  confirmado no GitHub em 2026-09-26). PB-21 (Fase 282) foi integrado pelo
+  PR `#317` (merge `a7274be`, confirmado no GitHub em 2026-09-26): selecao na
+  lista e registro em lote de formulario ou material, com verificacao de tenant
+  e profissional. CI teve 19 checks `SUCCESS` e `Provenance do SBOM`
+  `SKIPPED`. Proxima fase numerada: Fase 283 (PB-29), conforme a sequencia
+  aprovada. Plano e evidencias em
+  `docs/history/phases/PLANO_FASE_282.md`.
 - Entradas historicas abaixo descrevem o estado na data em que foram escritas;
   a reconciliacao acima prevalece para o proximo passo atual.
 
@@ -24,7 +27,10 @@ Atualizado em 2026-09-26.
 - Fase 280 concluida no codigo e integrada em `main` pelo PR #315.
 - Fase 281 integrada em `main` pelo PR #316; checks de CI concluidos, com
   `Provenance do SBOM` como `SKIPPED` na PR.
-- Fase 282 em andamento; proximo PB apos aceite e PB-29.
+- Fase 282 concluida no codigo e integrada em `main` pelo PR #317; PB-29 e o
+  proximo PB da Onda 5. Nenhuma aplicacao em staging/producao foi realizada ou
+  verificada nesta fase.
+- Fase 283 (PB-29) e a proxima fase da sequencia aprovada da Onda 5.
 
 ## Snapshot
 

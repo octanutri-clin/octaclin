@@ -36,3 +36,14 @@ tenant em operacoes com IDs relacionados e obrigatoria antes do merge.
 
 Rollback: reverter a PR remove rotas e interface. Envios ja gravados sao dados
 persistentes; nao apagar como rollback. Sem DDL e sem acao em staging/producao.
+
+## Fechamento
+
+- Integrado pelo PR #317 em 2026-09-26; merge commit `a7274be71d2fc8c42c19139ee25d9fe15cf39ab2`.
+- CI: 19 checks `SUCCESS`; `Provenance do SBOM` `SKIPPED`.
+- Validacoes locais da entrega: suite backend (224 suites, 2.141 testes),
+  typecheck backend/web, builds backend/web, authz do BFF, Playwright desktop e
+  mobile, ESLint dos arquivos alterados, `pnpm security:secrets` e
+  `git diff --check` passaram. A prova RLS com Testcontainers passou no CI.
+- Nenhuma migration ou acao em staging/producao foi executada/verificada.
+- Proximo PB da sequencia aprovada da Onda 5: PB-29.
