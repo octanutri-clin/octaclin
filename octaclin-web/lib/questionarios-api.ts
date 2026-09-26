@@ -380,6 +380,13 @@ export async function criarEnvioQuestionario(
   });
 }
 
+export function criarEnviosQuestionarioLote(questionarioId: string, pacienteIds: string[]): Promise<{ total: number }> {
+  return requisitar<{ total: number }>(`/api/questionarios/${encodeURIComponent(questionarioId)}/envios/lote`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ pacienteIds })
+  });
+}
+
 export async function revisarEnvioQuestionario(envioId: string): Promise<RevisaoEnvioQuestionarioApi> {
   return requisitar<RevisaoEnvioQuestionarioApi>(
     `/api/questionarios/envios/${encodeURIComponent(envioId)}/revisar`,

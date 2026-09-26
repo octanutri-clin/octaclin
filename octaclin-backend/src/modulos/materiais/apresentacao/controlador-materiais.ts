@@ -6,7 +6,7 @@ import { GuardaJwt } from '../../auth/apresentacao/guarda-jwt';
 import { GuardaPapeis } from '../../auth/apresentacao/guarda-papeis';
 import { GuardaPermissoes } from '../../auth/apresentacao/guarda-permissoes';
 import { UsuarioAutenticado } from '../../auth/dominio/usuario-autenticado';
-import { CriarMaterialEducativoDto, EnviarMaterialPacienteDto } from '../aplicacao/dtos';
+import { CriarMaterialEducativoDto, EnviarMaterialLoteDto, EnviarMaterialPacienteDto } from '../aplicacao/dtos';
 import { ServicoMateriais } from '../aplicacao/servico-materiais';
 
 @Controller('materiais')
@@ -39,6 +39,16 @@ export class ControladorMateriais {
   @Permissoes('materiais.ler', 'pacientes.ler')
   async listarPaciente(@UsuarioAtual() usuario: UsuarioAutenticado, @Param('pacienteId', ParseUUIDPipe) pacienteId: string) {
     return this.servicoMateriais.listarMateriaisPaciente(usuario.tenantId, pacienteId, usuario);
+  }
+
+  @Post('lote')
+  @Permissoes('materiais.gerenciar', 'pacientes.gerenciar')
+  async enviarLote(@UsuarioAtual() usuario: UsuarioAutenticado, @Req() requisicao: Request, @Body() dados: EnviarMaterialLoteDto) {
+    const resultado = await this.servicoMateriais.enviarMaterialLote(usuario.tenantId, usuario.usuarioId, dados, usuario);
+    await this.registrarAuditoria(usuario, requisicao, 'materiais.enviar_lote', 'material_educativo', dados.materialId, {
+      total: resultado.total
+    });
+    return resultado;
   }
 
   @Post('pacientes/:pacienteId')

@@ -11,19 +11,20 @@ Atualizado em 2026-09-26.
   afirma sua aplicacao em staging ou producao.
 - Onda 5 segue PB-26 -> PB-27 -> PB-21 -> PB-29. PB-26 (Fase 280) foi
   integrado pelo PR `#315` (merge `704adb0`, confirmado no GitHub).
-  PB-27 (Fase 281) esta em implementacao na branch
-  `feat/pb27-auditoria-clinica`: consulta minima da auditoria pelo Client,
-  com politica de acesso e retencao confirmada pelo proprietario em
-  2026-09-26. Plano em `docs/history/phases/PLANO_FASE_281.md`.
+  PB-27 (Fase 281) foi integrado pelo PR `#316` (merge `01817ae`,
+  confirmado no GitHub em 2026-09-26). PB-21 (Fase 282) esta em
+  implementacao na branch `feat/pb21-acoes-massa-fase282`: selecao na lista
+  e registro em lote de formulario ou material, com verificacao de tenant e
+  profissional. Plano em `docs/history/phases/PLANO_FASE_282.md`.
 - Entradas historicas abaixo descrevem o estado na data em que foram escritas;
   a reconciliacao acima prevalece para o proximo passo atual.
 
 - Fase 279 concluida no codigo em `main` pelo PR `#314` (merge `93ac0a8`);
   migration e backfill fora de banda sem evidencia de aplicacao neste ciclo.
 - Fase 280 concluida no codigo e integrada em `main` pelo PR #315.
-- Fase 281 em andamento; aguarda checks da PR e merge humano.
-  Proximo PB apos seu aceite: PB-21 (Fase 282), GPT-5.6 Terra / medio,
-  com as skills da matriz do audit de produto.
+- Fase 281 integrada em `main` pelo PR #316; checks de CI concluidos, com
+  `Provenance do SBOM` como `SKIPPED` na PR.
+- Fase 282 em andamento; proximo PB apos aceite e PB-29.
 
 ## Snapshot
 

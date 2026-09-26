@@ -7,6 +7,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ArchiveRestore, CheckCircle2, Download, Edit3, FileText, HeartPulse, KeyRound, Plus, RefreshCcw, Trash2, Upload } from 'lucide-react';
 import { Botao, classesBotao } from '@/components/ui/botao';
 import { ImportacaoPacientes } from '@/components/cadastros/importacao-pacientes';
+import { AcoesMassaPacientes } from '@/components/cadastros/acoes-massa-pacientes';
 import { FiltrosPacientes } from '@/components/cadastros/filtros-pacientes';
 import { LixeiraPacientes } from '@/components/cadastros/lixeira-pacientes';
 import { Cartao, CartaoConteudo } from '@/components/ui/cartao';
@@ -100,8 +101,19 @@ export function ListaPacientes() {
   const [pagina, setPagina] = useState(() => Math.max(1, Number(parametrosUrl.get('pagina') ?? 1) || 1));
   const [modalImportacaoAberto, setModalImportacaoAberto] = useState(false);
   const [podeGerenciar, setPodeGerenciar] = useState(false);
+  const [podeEnviarMaterial, setPodeEnviarMaterial] = useState(false);
+  const [podeEnviarFormulario, setPodeEnviarFormulario] = useState(false);
+  const [selecao, setSelecao] = useState<{ chave: string; ids: string[] }>({ chave: '', ids: [] });
   const limite = 25;
   const filtrosProtegidosAtivos = Boolean(filtroCategoria.trim() || filtroOrigem.trim() || filtroTag.trim());
+  const chaveFiltros = JSON.stringify([busca, filtroRisco, filtroProfissional, filtroStatus, filtroCategoria, filtroOrigem, filtroTag, apenasSemProximaConsulta, pagina]);
+  const selecionados = selecao.chave === chaveFiltros ? selecao.ids : [];
+  const setSelecionados = useCallback((proximo: string[] | ((atuais: string[]) => string[])) => {
+    setSelecao((atual) => {
+      const ids = atual.chave === chaveFiltros ? atual.ids : [];
+      return { chave: chaveFiltros, ids: typeof proximo === 'function' ? proximo(ids) : proximo };
+    });
+  }, [chaveFiltros]);
 
   const urlExportacao = useMemo(() => {
     const parametros = new URLSearchParams();
@@ -115,7 +127,12 @@ export function ListaPacientes() {
   }, [apenasSemProximaConsulta, busca, filtroProfissional, filtroRisco, filtroStatus]);
 
   useEffect(() => {
-    void obterSessao().then((sessao) => setPodeGerenciar(Boolean(sessao?.permissoes?.includes('pacientes.gerenciar')))).catch(() => setPodeGerenciar(false));
+    void obterSessao().then((sessao) => {
+      const podeGerenciarPacientes = Boolean(sessao?.permissoes?.includes('pacientes.gerenciar'));
+      setPodeGerenciar(podeGerenciarPacientes);
+      setPodeEnviarMaterial(podeGerenciarPacientes && Boolean(sessao?.permissoes?.includes('materiais.gerenciar')));
+      setPodeEnviarFormulario(podeGerenciarPacientes && Boolean(sessao?.permissoes?.includes('questionarios.gerenciar')));
+    }).catch(() => setPodeGerenciar(false));
   }, []);
 
   useEffect(() => {
@@ -139,13 +156,14 @@ export function ListaPacientes() {
         listarProfissionais({ limite: 100 })
       ]);
       setDados(pacientes);
+      setSelecionados((atuais) => atuais.filter((id) => pacientes.itens.some((paciente) => paciente.id === id)));
       setProfissionais(profissionaisResposta.itens);
     } catch (erroAtual) {
       setFalhaCarregamento(classificarFalhaInterface(erroAtual, 'Não foi possível carregar os pacientes.'));
     } finally {
       setCarregando(false);
     }
-  }, [apenasSemProximaConsulta, busca, filtroCategoria, filtroOrigem, filtroTag, filtroProfissional, filtroRisco, filtroStatus, pagina]);
+  }, [apenasSemProximaConsulta, busca, filtroCategoria, filtroOrigem, filtroTag, filtroProfissional, filtroRisco, filtroStatus, pagina, setSelecionados]);
 
   useEffect(() => {
     const atraso = window.setTimeout(() => void carregar(), 300);
@@ -268,6 +286,11 @@ export function ListaPacientes() {
 
       <FiltrosPacientes busca={busca} risco={filtroRisco} profissional={filtroProfissional} status={filtroStatus} categoria={filtroCategoria} origem={filtroOrigem} tag={filtroTag} semProximaConsulta={apenasSemProximaConsulta} profissionais={profissionais} total={dados?.total ?? 0} podeGerenciar={podeGerenciar} aoAlterarBusca={(valor) => { setBusca(valor); setPagina(1); }} aoAlterarRisco={(valor) => { setFiltroRisco(valor); setApenasSemProximaConsulta(false); setPagina(1); }} aoAlterarProfissional={(valor) => { setFiltroProfissional(valor); setApenasSemProximaConsulta(false); setPagina(1); }} aoAlterarStatus={(valor) => { setFiltroStatus(valor); setApenasSemProximaConsulta(false); setPagina(1); }} aoAlterarCategoria={(valor) => { setFiltroCategoria(valor); setPagina(1); }} aoAlterarOrigem={(valor) => { setFiltroOrigem(valor); setPagina(1); }} aoAlterarTag={(valor) => { setFiltroTag(valor); setPagina(1); }} aoAplicarVisao={aplicarVisao} aoAplicarFiltrosSalvos={aplicarFiltrosSalvos} />
 
+      {podeEnviarMaterial || podeEnviarFormulario ? <div className="grid gap-2">
+        <label className="flex items-center gap-2 text-sm"><input type="checkbox" aria-label="Selecionar todos os pacientes desta página" checked={pacientes.length > 0 && pacientes.every((paciente) => selecionados.includes(paciente.id))} onChange={(evento) => setSelecionados(evento.target.checked ? pacientes.map((paciente) => paciente.id) : [])} disabled={!pacientes.length} />Selecionar página atual</label>
+        <AcoesMassaPacientes pacienteIds={selecionados} podeEnviarMaterial={podeEnviarMaterial} podeEnviarFormulario={podeEnviarFormulario} aoConcluir={() => setSelecionados([])} />
+      </div> : null}
+
       {falhaVisivel ? <AvisoRegiao><Aviso variante="erro" mensagem={falhaVisivel.mensagem} aoFechar={() => { setFalhaAcao(null); setFalhaCarregamento(null); }} /></AvisoRegiao> : null}
       {sucesso ? <div className="flex flex-wrap items-center gap-2 rounded-lg border border-sucesso-borda bg-sucesso-suave px-4 py-3 text-sm text-sucesso-forte"><CheckCircle2 size={16} /><span className="flex-1">{sucesso}</span>{ultimoArquivado && podeGerenciar ? <Botao type="button" tamanho="sm" variante="fantasma" onClick={() => void restaurar(ultimoArquivado)} carregando={restaurandoId === ultimoArquivado.id}><ArchiveRestore size={14} />Desfazer</Botao> : null}</div> : null}
       {linkConvite ? <Cartao><CartaoConteudo className="text-sm text-texto-suave"><p className="font-medium text-tinta">Link de primeiro acesso</p><p className="mt-1 break-all">{linkConvite}</p></CartaoConteudo></Cartao> : null}
@@ -275,7 +298,7 @@ export function ListaPacientes() {
       <Tabela className="hidden lg:block"><TabelaConteudo larguraMinima="840px"><TabelaCabecalho densidade="compacta" className="grid-cols-[1.2fr_0.9fr_0.7fr_0.65fr_0.85fr_0.95fr_196px]"><span>Paciente</span><span>Responsável</span><span>Situação</span><span>Risco</span><span>Última consulta</span><span>Próxima ação</span><span>Ações</span></TabelaCabecalho><TabelaLinhas>
         {pacientes.length ? pacientes.map((paciente) => (
           <TabelaLinha data-testid="linha-paciente" densidade="compacta" key={paciente.id} className="grid-cols-[1.2fr_0.9fr_0.7fr_0.65fr_0.85fr_0.95fr_196px] items-center hover:bg-superficie-hover">
-            <div className="min-w-0"><div className="flex items-center gap-2"><HeartPulse size={16} className="shrink-0 text-primaria" /><Link href={`/pacientes/${paciente.id}` as Route} className="truncate font-semibold hover:underline">{paciente.nome}</Link></div><p className="mt-1 truncate text-xs text-texto-suave">{paciente.contato ?? paciente.id} · Nasc. {formatarData(paciente.dataNascimento)}</p></div>
+            <div className="min-w-0"><div className="flex items-center gap-2">{podeEnviarMaterial || podeEnviarFormulario ? <input type="checkbox" aria-label={`Selecionar ${paciente.nome}`} checked={selecionados.includes(paciente.id)} onChange={(evento) => setSelecionados((atuais) => evento.target.checked ? [...atuais, paciente.id] : atuais.filter((id) => id !== paciente.id))} /> : null}<HeartPulse size={16} className="shrink-0 text-primaria" /><Link href={`/pacientes/${paciente.id}` as Route} className="truncate font-semibold hover:underline">{paciente.nome}</Link></div><p className="mt-1 truncate text-xs text-texto-suave">{paciente.contato ?? paciente.id} · Nasc. {formatarData(paciente.dataNascimento)}</p></div>
             <span className="break-all text-xs text-texto-suave">{nomeProfissional(profissionais, paciente.profissionalResponsavelId)}</span>
             <Etiqueta className={statusClasse(paciente.statusAdesao)}>{statusRotulo(paciente.statusAdesao)}</Etiqueta>
             <Etiqueta variante={nivelRisco(paciente) === 'alto' ? 'perigo' : nivelRisco(paciente) === 'medio' ? 'alerta' : 'sucesso'}>{nivelRisco(paciente)} {Number(paciente.scoreRisco).toFixed(1)}</Etiqueta>
@@ -288,7 +311,7 @@ export function ListaPacientes() {
         )) : <TabelaVazia mensagem="Nenhum paciente encontrado com estes filtros." />}
       </TabelaLinhas></TabelaConteudo></Tabela>
 
-      <div className="grid gap-3 lg:hidden">{pacientes.map((paciente) => <Cartao key={paciente.id}><CartaoConteudo className="grid gap-3"><div className="flex items-start justify-between gap-3"><div className="min-w-0"><Link href={`/pacientes/${paciente.id}` as Route} className="font-semibold text-tinta hover:underline">{paciente.nome}</Link><p className="mt-1 truncate text-xs text-texto-suave">{paciente.contato ?? paciente.id}</p></div><Etiqueta variante={nivelRisco(paciente) === 'alto' ? 'perigo' : nivelRisco(paciente) === 'medio' ? 'alerta' : 'sucesso'}>{nivelRisco(paciente)} {Number(paciente.scoreRisco).toFixed(1)}</Etiqueta></div><div className="grid grid-cols-2 gap-2 text-xs text-texto-suave"><span>Responsável<br /><strong className="text-tinta">{nomeProfissional(profissionais, paciente.profissionalResponsavelId)}</strong></span><span>Última consulta<br /><strong className="text-tinta">{formatarData(paciente.ultimaConsultaConcluidaEm)}</strong></span><span className="col-span-2">Próxima ação<br /><strong className="text-tinta">{proximaAcao(paciente)}</strong></span></div><div className="flex flex-wrap gap-1"><Link href={`/pacientes/${paciente.id}` as Route} className="inline-flex min-h-11 items-center px-3 text-sm font-medium text-tinta hover:bg-superficie-hover">Abrir prontuário</Link>{podeGerenciar ? <><Link href={`/pacientes/${paciente.id}/editar` as Route} className={classesBotao({ variante: 'fantasma' })} aria-label={`Editar ${paciente.nome}`}><Edit3 size={16} /></Link><Botao type="button" variante="fantasma" onClick={() => setPacienteParaArquivar(paciente)} aria-label={`Arquivar ${paciente.nome}`}><Trash2 size={16} /></Botao></> : null}</div></CartaoConteudo></Cartao>)}{!pacientes.length ? <p className="px-1 py-6 text-sm text-texto-suave">Nenhum paciente encontrado com estes filtros.</p> : null}</div>
+      <div className="grid gap-3 lg:hidden">{pacientes.map((paciente) => <Cartao key={paciente.id}><CartaoConteudo className="grid gap-3"><div className="flex items-start justify-between gap-3"><div className="min-w-0">{podeEnviarMaterial || podeEnviarFormulario ? <label className="inline-flex items-center gap-2 text-sm"><input type="checkbox" checked={selecionados.includes(paciente.id)} onChange={(evento) => setSelecionados((atuais) => evento.target.checked ? [...atuais, paciente.id] : atuais.filter((id) => id !== paciente.id))} />Selecionar {paciente.nome}</label> : null}<Link href={`/pacientes/${paciente.id}` as Route} className="font-semibold text-tinta hover:underline">{paciente.nome}</Link><p className="mt-1 truncate text-xs text-texto-suave">{paciente.contato ?? paciente.id}</p></div><Etiqueta variante={nivelRisco(paciente) === 'alto' ? 'perigo' : nivelRisco(paciente) === 'medio' ? 'alerta' : 'sucesso'}>{nivelRisco(paciente)} {Number(paciente.scoreRisco).toFixed(1)}</Etiqueta></div><div className="grid grid-cols-2 gap-2 text-xs text-texto-suave"><span>Responsável<br /><strong className="text-tinta">{nomeProfissional(profissionais, paciente.profissionalResponsavelId)}</strong></span><span>Última consulta<br /><strong className="text-tinta">{formatarData(paciente.ultimaConsultaConcluidaEm)}</strong></span><span className="col-span-2">Próxima ação<br /><strong className="text-tinta">{proximaAcao(paciente)}</strong></span></div><div className="flex flex-wrap gap-1"><Link href={`/pacientes/${paciente.id}` as Route} className="inline-flex min-h-11 items-center px-3 text-sm font-medium text-tinta hover:bg-superficie-hover">Abrir prontuário</Link>{podeGerenciar ? <><Link href={`/pacientes/${paciente.id}/editar` as Route} className={classesBotao({ variante: 'fantasma' })} aria-label={`Editar ${paciente.nome}`}><Edit3 size={16} /></Link><Botao type="button" variante="fantasma" onClick={() => setPacienteParaArquivar(paciente)} aria-label={`Arquivar ${paciente.nome}`}><Trash2 size={16} /></Botao></> : null}</div></CartaoConteudo></Cartao>)}{!pacientes.length ? <p className="px-1 py-6 text-sm text-texto-suave">Nenhum paciente encontrado com estes filtros.</p> : null}</div>
 
       <nav className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between" aria-label="Paginação de pacientes"><p className="text-sm text-texto-suave" aria-live="polite">Página {pagina} de {totalPaginas} | {dados?.total ?? 0} pacientes</p><div className="flex gap-2"><Botao type="button" variante="secundario" onClick={() => setPagina((atual) => Math.max(1, atual - 1))} disabled={pagina <= 1 || carregando}>Anterior</Botao><Botao type="button" variante="secundario" onClick={() => setPagina((atual) => Math.min(totalPaginas, atual + 1))} disabled={pagina >= totalPaginas || carregando}>Próxima</Botao></div></nav>
 

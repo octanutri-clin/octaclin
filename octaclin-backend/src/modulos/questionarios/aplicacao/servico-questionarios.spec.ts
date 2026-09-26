@@ -1,3 +1,4 @@
+import { NotFoundException } from '@nestjs/common';
 import { UsuarioAutenticado } from '../../auth/dominio/usuario-autenticado';
 import { ProfissionalOrm } from '../../profissionais/infraestrutura/profissional.orm';
 import { ArquivoMidiaOrm } from '../../mobile/infraestrutura/arquivo-midia.orm';
@@ -228,6 +229,66 @@ function criarServico(dados: Record<string, any>) {
 }
 
 describe('ServicoQuestionarios', () => {
+  it('cria envios em lote para pacientes autorizados, mantendo o snapshot', async () => {
+    const dados = {
+      questionarios: [{ id: 'q1', tenantId: 'tenant-1', versao: 1, titulo: 'Check-in', status: 'publicado', profissionalId: 'profissional-1' }],
+      perguntas: [], opcaos: [], envios: [] as Record<string, any>[], respostaCheckins: [], respostaValors: [],
+      pacientes: [{ id: 'p1', tenantId: 'tenant-1' }, { id: 'p2', tenantId: 'tenant-1' }]
+    };
+    const { servico } = criarServico(dados);
+    const resultado = await servico.criarEnviosQuestionarioLote('tenant-1', 'q1', { pacienteIds: ['p1', 'p2'] }, usuarioColaborador);
+    expect(resultado).toEqual({ total: 2 });
+    expect(dados.envios).toHaveLength(2);
+    expect(dados.envios.map((envio: any) => envio.pacienteId)).toEqual(['p1', 'p2']);
+    expect(dados.envios[0].snapshotEstrutura).toEqual(expect.objectContaining({ titulo: 'Check-in' }));
+  });
+
+  it('recusa todo o lote se um paciente nao pertence ao tenant', async () => {
+    const dados = {
+      questionarios: [{ id: 'q1', tenantId: 'tenant-1', versao: 1, titulo: 'Check-in', status: 'publicado' }],
+      perguntas: [], opcaos: [], envios: [] as Record<string, any>[], respostaCheckins: [], respostaValors: [],
+      pacientes: [{ id: 'p1', tenantId: 'tenant-1' }, { id: 'p2', tenantId: 'tenant-2' }]
+    };
+    const { servico } = criarServico(dados);
+    await expect(servico.criarEnviosQuestionarioLote('tenant-1', 'q1', { pacienteIds: ['p1', 'p2'] }, usuarioColaborador)).rejects.toBeInstanceOf(NotFoundException);
+    expect(dados.envios).toHaveLength(0);
+  });
+
+  it('recusa formulario em rascunho no envio em lote', async () => {
+    const dados = {
+      questionarios: [{ id: 'q1', tenantId: 'tenant-1', versao: 1, titulo: 'Rascunho', status: 'rascunho' }],
+      perguntas: [], opcaos: [], envios: [] as Record<string, any>[], respostaCheckins: [], respostaValors: [],
+      pacientes: [{ id: 'p1', tenantId: 'tenant-1' }]
+    };
+    const { servico } = criarServico(dados);
+    await expect(servico.criarEnviosQuestionarioLote('tenant-1', 'q1', { pacienteIds: ['p1'] }, usuarioColaborador)).rejects.toThrow('Questionario nao publicado.');
+    expect(dados.envios).toHaveLength(0);
+  });
+
+  it('recusa paciente de outro profissional antes de gravar envios em lote', async () => {
+    const dados = {
+      questionarios: [{ id: 'q1', tenantId: 'tenant-1', versao: 1, titulo: 'Check-in', status: 'publicado', profissionalId: 'profissional-1' }],
+      perguntas: [], opcaos: [], envios: [] as Record<string, any>[], respostaCheckins: [], respostaValors: [],
+      pacientes: [{ id: 'p1', tenantId: 'tenant-1', profissionalResponsavelId: 'profissional-1' }, { id: 'p2', tenantId: 'tenant-1', profissionalResponsavelId: 'profissional-2' }],
+      profissionals: [{ id: 'profissional-1', tenantId: 'tenant-1', usuarioId: 'usuario-profissional-1' }]
+    };
+    const { servico } = criarServico(dados);
+    await expect(servico.criarEnviosQuestionarioLote('tenant-1', 'q1', { pacienteIds: ['p1', 'p2'] }, usuarioProfissional)).rejects.toBeInstanceOf(NotFoundException);
+    expect(dados.envios).toHaveLength(0);
+  });
+
+  it.each(['outro tenant', 'outro profissional'])('recusa questionario de %s no envio em lote', async (cenario) => {
+    const dados = {
+      questionarios: [{ id: 'q1', tenantId: cenario === 'outro tenant' ? 'tenant-2' : 'tenant-1', versao: 1, titulo: 'Check-in', status: 'publicado', profissionalId: 'profissional-2' }],
+      perguntas: [], opcaos: [], envios: [] as Record<string, any>[], respostaCheckins: [], respostaValors: [],
+      pacientes: [{ id: 'p1', tenantId: 'tenant-1', profissionalResponsavelId: 'profissional-1' }],
+      profissionals: [{ id: 'profissional-1', tenantId: 'tenant-1', usuarioId: 'usuario-profissional-1' }]
+    };
+    const { servico } = criarServico(dados);
+    const usuario = cenario === 'outro tenant' ? usuarioColaborador : usuarioProfissional;
+    await expect(servico.criarEnviosQuestionarioLote('tenant-1', 'q1', { pacienteIds: ['p1'] }, usuario)).rejects.toBeInstanceOf(NotFoundException);
+    expect(dados.envios).toHaveLength(0);
+  });
   beforeEach(() => {
     process.env.FORMULARIO_PUBLICO_SEGREDO = 'segredo-teste-formulario';
   });

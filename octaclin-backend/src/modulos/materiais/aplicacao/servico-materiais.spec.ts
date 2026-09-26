@@ -1,6 +1,7 @@
 import { NotFoundException } from '@nestjs/common';
 import { UsuarioAutenticado } from '../../auth/dominio/usuario-autenticado';
 import { PacienteOrm } from '../../pacientes/infraestrutura/paciente.orm';
+import { ProfissionalOrm } from '../../profissionais/infraestrutura/profissional.orm';
 import { EnvioMaterialPacienteOrm } from '../infraestrutura/envio-material-paciente.orm';
 import { MaterialEducativoOrm } from '../infraestrutura/material-educativo.orm';
 import { ServicoMateriais } from './servico-materiais';
@@ -14,6 +15,48 @@ const usuarioColaborador: UsuarioAutenticado = {
 };
 
 describe('ServicoMateriais', () => {
+  it.each(['material de outro tenant', 'paciente de outro tenant', 'paciente de outro profissional'])(
+    'recusa lote com %s e nao grava nenhum envio', async (cenario) => {
+      const usuario: UsuarioAutenticado = cenario === 'paciente de outro profissional'
+        ? { ...usuarioColaborador, usuarioId: 'usuario-profissional-1', papel: 'Professional' }
+        : usuarioColaborador;
+      const material = { id: 'm1', tenantId: cenario === 'material de outro tenant' ? 'tenant-2' : 'tenant-1', ativo: true };
+      const pacientes = [
+        { id: 'p1', tenantId: 'tenant-1', profissionalResponsavelId: 'profissional-1' },
+        { id: 'p2', tenantId: cenario === 'paciente de outro tenant' ? 'tenant-2' : 'tenant-1', profissionalResponsavelId: cenario === 'paciente de outro profissional' ? 'profissional-2' : 'profissional-1' }
+      ];
+      const envioRepo = { create: jest.fn((dados) => dados), save: jest.fn() };
+      const repositorios = new Map<unknown, unknown>([
+        [MaterialEducativoOrm, { findOne: jest.fn(async ({ where }: { where: { id: string; tenantId: string; ativo: boolean } }) =>
+          material.id === where.id && material.tenantId === where.tenantId && where.ativo ? material : null) }],
+        [PacienteOrm, { findOne: jest.fn(async ({ where }: { where: { id: string; tenantId: string; profissionalResponsavelId?: string } }) =>
+          pacientes.find((paciente) => paciente.id === where.id && paciente.tenantId === where.tenantId &&
+            (!where.profissionalResponsavelId || paciente.profissionalResponsavelId === where.profissionalResponsavelId)) ?? null) }],
+        [ProfissionalOrm, { findOne: jest.fn(async () => ({ id: 'profissional-1', tenantId: 'tenant-1' })) }],
+        [EnvioMaterialPacienteOrm, envioRepo]
+      ]);
+      const servico = new ServicoMateriais({ executar: jest.fn((_tenantId, fn) => fn({ getRepository: (entity: unknown) => repositorios.get(entity) })) } as never, {} as never);
+      await expect(servico.enviarMaterialLote('tenant-1', usuario.usuarioId, { materialId: 'm1', pacienteIds: ['p1', 'p2'] }, usuario)).rejects.toBeInstanceOf(NotFoundException);
+      expect(envioRepo.save).not.toHaveBeenCalled();
+    }
+  );
+  it('envia material em lote somente depois de validar todos os pacientes do tenant', async () => {
+    const salvos: Record<string, unknown>[] = [];
+    const pacienteRepo = { findOne: jest.fn(async ({ where }: { where: { id: string; tenantId: string } }) =>
+      where.id === 'p2' ? null : { id: where.id, tenantId: where.tenantId }) };
+    const envioRepo = { create: jest.fn((dados) => dados), save: jest.fn(async (dados) => { salvos.push(...dados); return dados; }) };
+    const repositorios = new Map<unknown, unknown>([
+      [PacienteOrm, pacienteRepo],
+      [MaterialEducativoOrm, { findOne: jest.fn(async () => ({ id: 'm1', tenantId: 'tenant-1', ativo: true })) }],
+      [EnvioMaterialPacienteOrm, envioRepo]
+    ]);
+    const servico = new ServicoMateriais({ executar: jest.fn((_tenantId, fn) => fn({ getRepository: (entity: unknown) => repositorios.get(entity) })) } as never, {} as never);
+    await expect(servico.enviarMaterialLote('tenant-1', usuarioColaborador.usuarioId, { materialId: 'm1', pacienteIds: ['p1', 'p2'] }, usuarioColaborador)).rejects.toBeInstanceOf(NotFoundException);
+    expect(envioRepo.save).not.toHaveBeenCalled();
+    pacienteRepo.findOne.mockImplementation(async ({ where }: { where: { id: string; tenantId: string } }) => ({ id: where.id, tenantId: where.tenantId }));
+    await expect(servico.enviarMaterialLote('tenant-1', usuarioColaborador.usuarioId, { materialId: 'm1', pacienteIds: ['p1', 'p2'] }, usuarioColaborador)).resolves.toEqual({ total: 2 });
+    expect(salvos.map((envio) => envio.pacienteId)).toEqual(['p1', 'p2']);
+  });
   it('deve criar material reutilizavel e enviar ao paciente no contexto do tenant', async () => {
     const materiaisSalvos: Record<string, unknown>[] = [];
     const enviosSalvos: Record<string, unknown>[] = [];

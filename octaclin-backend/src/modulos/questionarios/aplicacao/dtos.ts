@@ -18,6 +18,7 @@ import {
   ValidateIf,
   ValidateNested
 } from 'class-validator';
+import { SelecaoPacientesLoteDto } from '../../pacientes/aplicacao/selecao-pacientes-lote.dto';
 import { Type } from 'class-transformer';
 import { TIPOS_PERGUNTA_SUPORTADOS, TipoPergunta } from '../dominio/tipos-pergunta';
 
@@ -234,6 +235,8 @@ export class CriarEnvioQuestionarioManualDto {
   @IsISO8601()
   expiraEm?: string;
 }
+
+export class CriarEnviosQuestionarioLoteDto extends SelecaoPacientesLoteDto {}
 
 export class FiltrosMatrizLongitudinalDto {
   @IsOptional()
