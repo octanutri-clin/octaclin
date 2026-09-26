@@ -1,7 +1,7 @@
 # OctaClin - Checklist vivo de fases futuras ate producao
 
 Atualizado em 2026-09-26. Fases 256 a 261, 263 a 282 integradas; Fase 283
-(PB-29) e a proxima. Fase 262 permanece em andamento pelos gates externos do piloto. Com a Fase 268
+(PB-29) em andamento. Fase 262 permanece em andamento pelos gates externos do piloto. Com a Fase 268
 mergeada (PR `#275`, merge `306d2ed`), o PB-05 (alerta de check-in com
 adesao baixa) esta concluido e a Onda 2 do audit de produto (PB-01 ->
 PB-02 -> PB-03 -> PB-05) esta completa. A Onda 3 (devolver tempo ao
@@ -4369,8 +4369,10 @@ aprovada PB-26 -> PB-27 -> PB-21 -> PB-29.
   PR #317 (merge `a7274be`, 2026-09-26). CI: 19 checks `SUCCESS`;
   `Provenance do SBOM` `SKIPPED`. Validacoes locais e evidencias da entrega
   em `docs/history/phases/PLANO_FASE_282.md`.
-- [ ] Fase 283 - PB-29: onboarding guiado da clínica com conteúdo inicial,
-  conforme a sequência aprovada da Onda 5 e o escopo do audit do produto.
+- [~] Fase 283 - PB-29: guia profissional de configuração inicial baseado nos
+  dados existentes, com etapas opcionais persistentes e modelos iniciais nos
+  fluxos editáveis já disponíveis. Escopo e aceite em
+  `docs/history/phases/PLANO_FASE_283.md`.
 
 O programa de hardening
 PR 36-56 permanece como trilha separada --

@@ -1,6 +1,6 @@
 'use client';
 
-import { AlertTriangle, Ban, Building2, CheckCircle2, CreditCard, RefreshCcw, Send } from 'lucide-react';
+import { AlertTriangle, ArrowRight, Ban, Building2, CheckCircle2, CreditCard, RefreshCcw, Send, UsersRound } from 'lucide-react';
 import { Botao } from '@/components/ui/botao';
 import { Cartao, CartaoCabecalho, CartaoConteudo, CartaoTitulo } from '@/components/ui/cartao';
 import {
@@ -16,7 +16,7 @@ import { PortalClienteController } from './use-portal-cliente';
 type Props = { portal: PortalClienteController };
 
 export function AreaVisaoGeralCliente({ portal }: Props) {
-  const { areaAtiva, etapasAtivacao, etapasConcluidas, indicadores } = portal;
+  const { areaAtiva, etapasAtivacao, etapasConcluidas, indicadores, setAreaAtiva } = portal;
   if (areaAtiva !== 'ativacao') return null;
 
   return (
@@ -34,22 +34,61 @@ export function AreaVisaoGeralCliente({ portal }: Props) {
           <p className="text-sm text-texto-suave">
             {etapasConcluidas} de {etapasAtivacao.length} etapas concluidas
           </p>
-          <div className="mt-3 grid gap-2 md:grid-cols-2">
+          <div className="mt-3 grid gap-3 md:grid-cols-2">
             {etapasAtivacao.map((etapa) => (
-              <div
+              <article
                 key={etapa.rotulo}
-                className="flex min-h-11 items-center gap-2 rounded-md border border-linha bg-superficie px-3 text-sm"
+                aria-label={etapa.rotulo}
+                className="grid gap-3 rounded-lg border border-linha bg-superficie p-4"
               >
-                <CheckCircle2
-                  className={`h-4 w-4 shrink-0 ${etapa.concluida ? 'text-sucesso-forte' : 'text-texto-sutil'}`}
-                  aria-hidden="true"
-                />
-                <span>
-                  {etapa.rotulo}: {etapa.concluida ? 'concluido' : 'pendente'}
-                </span>
-              </div>
+                <div className="flex items-center gap-2">
+                  <CheckCircle2
+                    className={`h-4 w-4 shrink-0 ${etapa.concluida ? 'text-sucesso-forte' : 'text-texto-sutil'}`}
+                    aria-hidden="true"
+                  />
+                  <h3 className="text-sm font-semibold text-texto-forte">{etapa.rotulo}</h3>
+                  <span className="ml-auto text-xs text-texto-suave">
+                    {etapa.concluida ? 'Concluída' : 'Pendente'}
+                  </span>
+                </div>
+                <p className="text-sm text-texto-suave">{etapa.descricao}</p>
+                <Botao
+                  type="button"
+                  tamanho="sm"
+                  className="justify-self-start"
+                  onClick={() => setAreaAtiva(etapa.area)}
+                >
+                  {etapa.acao}
+                  <ArrowRight className="h-4 w-4" aria-hidden="true" />
+                </Botao>
+              </article>
             ))}
           </div>
+        </CartaoConteudo>
+      </Cartao>
+      <Cartao>
+        <CartaoCabecalho>
+          <CartaoTitulo icone={<UsersRound className="h-4 w-4" />}>
+            Prepare o conteúdo inicial da equipe clínica
+          </CartaoTitulo>
+        </CartaoCabecalho>
+        <CartaoConteudo className="grid gap-4">
+          <p className="max-w-3xl text-sm leading-6 text-texto-suave">
+            Depois de convidar um profissional, combine a criação e a revisão do primeiro modelo de plano,
+            catálogo de alimentos, mensagem de acompanhamento e material educativo. A equipe profissional
+            mantém a responsabilidade pelo conteúdo clínico.
+          </p>
+          <ul className="grid gap-2 text-sm text-texto-forte sm:grid-cols-2" aria-label="Conteúdo inicial sugerido">
+            {['Modelo de plano', 'Catálogo de alimentos', 'Mensagem de acompanhamento', 'Material educativo'].map((item) => (
+              <li key={item} className="rounded-md border border-linha bg-superficie px-3 py-2">
+                {item}
+              </li>
+            ))}
+          </ul>
+          <Botao type="button" className="justify-self-start" onClick={() => setAreaAtiva('equipe')}>
+            Convidar profissionais
+            <ArrowRight className="h-4 w-4" aria-hidden="true" />
+          </Botao>
         </CartaoConteudo>
       </Cartao>
       <Cartao id="conta" className="scroll-mt-4">

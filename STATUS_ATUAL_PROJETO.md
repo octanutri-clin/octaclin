@@ -30,7 +30,13 @@ Atualizado em 2026-09-26.
 - Fase 282 concluida no codigo e integrada em `main` pelo PR #317; PB-29 e o
   proximo PB da Onda 5. Nenhuma aplicacao em staging/producao foi realizada ou
   verificada nesta fase.
-- Fase 283 (PB-29) e a proxima fase da sequencia aprovada da Onda 5.
+- Fase 283 (PB-29) esta em andamento na branch `feat/pb29-onboarding-fase283`.
+  O corte atual adiciona ao painel profissional um guia nao bloqueante, com
+  estados baseados nas listagens existentes, etapas opcionais persistentes e
+  acesso de retorno. Modelos de formulário e plano usam apenas capacidades de
+  edição existentes; ampliar edição para mensagens/materiais fica fora do PB-29
+  e deverá ser avaliado em fase futura. Evidências em
+  `docs/history/phases/PLANO_FASE_283.md`.
 
 ## Snapshot
 

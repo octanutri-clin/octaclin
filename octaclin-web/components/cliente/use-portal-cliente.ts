@@ -526,13 +526,34 @@ export function usePortalCliente() {
   const planoRecomendado = resumo ? obterProximoPlano(resumo.assinatura.planoId) : null;
   const bloqueioAssinatura = assinaturaBloqueada(resumo?.assinatura.status);
   const etapasAtivacao = [
-    { rotulo: 'Dados da clínica', concluida: Boolean(resumo?.conta.nome) },
-    { rotulo: 'Equipe com acesso', concluida: Boolean(usuarios?.total) },
+    {
+      rotulo: 'Dados da clínica',
+      concluida: Boolean(resumo?.conta.nome),
+      descricao: 'Confirme o nome e as preferências básicas da conta.',
+      acao: 'Completar dados da clínica',
+      area: 'preferencias' as const
+    },
+    {
+      rotulo: 'Equipe com acesso',
+      concluida: Boolean(usuarios?.itens.some((usuario) => usuario.role === 'Professional' && usuario.ativo)),
+      descricao: 'Convide os profissionais que vão conduzir os atendimentos.',
+      acao: 'Gerenciar equipe',
+      area: 'equipe' as const
+    },
     {
       rotulo: 'Comunicações definidas',
-      concluida: Boolean(configuracoes && Object.values(configuracoes.canaisPadrao).some(Boolean))
+      concluida: Boolean(configuracoes && Object.values(configuracoes.canaisPadrao).some(Boolean)),
+      descricao: 'Escolha os canais disponíveis para contato com os pacientes.',
+      acao: 'Configurar comunicações',
+      area: 'preferencias' as const
     },
-    { rotulo: 'Dados fiscais', concluida: Boolean(perfilEmpresa?.nomeLegal) }
+    {
+      rotulo: 'Dados fiscais',
+      concluida: Boolean(perfilEmpresa?.nomeLegal),
+      descricao: 'Preencha os dados fiscais usados pela conta.',
+      acao: 'Completar dados fiscais',
+      area: 'fiscal' as const
+    }
   ];
   const etapasConcluidas = etapasAtivacao.filter((etapa) => etapa.concluida).length;
 

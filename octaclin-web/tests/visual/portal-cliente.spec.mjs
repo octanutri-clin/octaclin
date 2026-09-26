@@ -488,6 +488,36 @@ test.describe('portal do cliente', () => {
     await assertSemOverflowHorizontal(page);
   });
 
+  test('guia de ativacao leva para cada configuracao e orienta o conteudo inicial', async ({ page }) => {
+    await prepararSessaoCliente(page);
+    await page.goto('/cliente');
+
+    const areas = page.getByRole('tablist', { name: 'Áreas da conta' });
+    let ativacao = page.getByRole('tabpanel', { name: 'Ativação' });
+    await expect(ativacao.getByRole('heading', { name: 'Ativação da clínica' })).toBeVisible();
+    await expect(ativacao.getByText('Prepare o conteúdo inicial da equipe clínica')).toBeVisible();
+    await expect(ativacao.getByText(/modelo de plano, catálogo de alimentos, mensagem de acompanhamento e material educativo/)).toBeVisible();
+    await expect(ativacao.getByRole('article', { name: 'Equipe com acesso' }).getByText('Pendente')).toBeVisible();
+
+    await ativacao.getByRole('button', { name: 'Completar dados da clínica' }).click();
+    await expect(areas.getByRole('tab', { name: 'Preferências' })).toHaveAttribute('aria-selected', 'true');
+
+    await areas.getByRole('tab', { name: 'Ativação' }).click();
+    ativacao = page.getByRole('tabpanel', { name: 'Ativação' });
+    await ativacao.getByRole('button', { name: 'Gerenciar equipe' }).click();
+    await expect(areas.getByRole('tab', { name: 'Equipe' })).toHaveAttribute('aria-selected', 'true');
+
+    await areas.getByRole('tab', { name: 'Ativação' }).click();
+    ativacao = page.getByRole('tabpanel', { name: 'Ativação' });
+    await ativacao.getByRole('button', { name: 'Configurar comunicações' }).click();
+    await expect(areas.getByRole('tab', { name: 'Preferências' })).toHaveAttribute('aria-selected', 'true');
+
+    await areas.getByRole('tab', { name: 'Ativação' }).click();
+    ativacao = page.getByRole('tabpanel', { name: 'Ativação' });
+    await ativacao.getByRole('button', { name: 'Completar dados fiscais' }).click();
+    await expect(areas.getByRole('tab', { name: 'Dados fiscais' })).toHaveAttribute('aria-selected', 'true');
+  });
+
   test('renderiza base de conta sem expor console ou portal do paciente', async ({ page }, testInfo) => {
     await prepararSessaoCliente(page);
     await page.goto('/cliente', { waitUntil: 'domcontentloaded', timeout: 30000 });
