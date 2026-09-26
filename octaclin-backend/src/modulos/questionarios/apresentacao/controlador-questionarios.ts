@@ -25,6 +25,7 @@ import {
   CriarAgendamentoQuestionarioDto,
   CriarCategoriaPerguntaDto,
   CriarEnvioQuestionarioManualDto,
+  CriarEnviosQuestionarioLoteDto,
   CriarPerguntaDto,
   CriarQuestionarioAPartirModeloDto,
   CriarQuestionarioDto,
@@ -192,6 +193,21 @@ export class ControladorQuestionarios {
       expiraEm: envio.expiraEm
     });
     return envio;
+  }
+
+  @Post('questionarios/:id/envios/lote')
+  @Permissoes('questionarios.gerenciar', 'pacientes.gerenciar')
+  async criarEnviosLote(
+    @UsuarioAtual() usuario: UsuarioAutenticado,
+    @Req() requisicao: Request,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dados: CriarEnviosQuestionarioLoteDto
+  ) {
+    const resultado = await this.servicoQuestionarios.criarEnviosQuestionarioLote(usuario.tenantId, id, dados, usuario);
+    await this.registrarAuditoria(usuario, requisicao, 'questionarios.envio.criar_lote', 'questionario', id, {
+      total: resultado.total
+    });
+    return resultado;
   }
 
   @Post('questionarios/envios/:envioId/revisar')

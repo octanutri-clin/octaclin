@@ -1,6 +1,7 @@
 import { IsIn, IsOptional, IsString, IsUUID, IsUrl, MaxLength } from 'class-validator';
 import type { StatusEnvioMaterialPaciente } from '../infraestrutura/envio-material-paciente.orm';
 import type { TipoMaterialEducativo } from '../infraestrutura/material-educativo.orm';
+import { SelecaoPacientesLoteDto } from '../../pacientes/aplicacao/selecao-pacientes-lote.dto';
 
 export class CriarMaterialEducativoDto {
   @IsString()
@@ -39,6 +40,11 @@ export class EnviarMaterialPacienteDto {
   @IsString()
   @MaxLength(1000)
   observacao?: string;
+}
+
+export class EnviarMaterialLoteDto extends SelecaoPacientesLoteDto {
+  @IsUUID()
+  materialId: string;
 }
 
 export interface MaterialEducativoRespostaDto {

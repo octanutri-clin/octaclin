@@ -22,6 +22,7 @@ import {
   CriarAgendamentoQuestionarioDto,
   CriarCategoriaPerguntaDto,
   CriarEnvioQuestionarioManualDto,
+  CriarEnviosQuestionarioLoteDto,
   CriarPerguntaDto,
   CriarQuestionarioAPartirModeloDto,
   CriarQuestionarioDto,
@@ -689,6 +690,36 @@ export class ServicoQuestionarios {
     return Object.assign(envio, {
       tokenFormulario,
       linkFormulario: this.montarLinkFormulario(tokenFormulario)
+    });
+  }
+
+  async criarEnviosQuestionarioLote(
+    tenantId: string,
+    questionarioId: string,
+    dados: CriarEnviosQuestionarioLoteDto,
+    usuario: UsuarioAutenticado
+  ): Promise<{ total: number }> {
+    return this.executorTenant.executar(tenantId, async (gerenciador) => {
+      const questionario = await this.garantirQuestionarioDoProfissional(gerenciador, tenantId, questionarioId, usuario);
+      if (questionario.status !== 'publicado') throw new BadRequestException('Questionario nao publicado.');
+      const snapshotEstrutura = await this.capturarSnapshotEstruturaQuestionario(gerenciador, tenantId, questionario);
+      for (const pacienteId of dados.pacienteIds) {
+        await this.garantirPacienteAtivoDoProfissional(gerenciador, tenantId, pacienteId, usuario);
+      }
+      const repositorio = gerenciador.getRepository(EnvioQuestionarioOrm);
+      const agora = new Date();
+      const expiraEm = new Date(agora.getTime() + 7 * 24 * 60 * 60 * 1000);
+      const envios = dados.pacienteIds.map((pacienteId) => repositorio.create({
+        tenantId,
+        questionarioId,
+        pacienteId,
+        status: 'enviado',
+        enviadoEm: agora,
+        expiraEm,
+        snapshotEstrutura
+      }));
+      await repositorio.save(envios);
+      return { total: envios.length };
     });
   }
 

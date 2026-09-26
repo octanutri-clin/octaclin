@@ -5,7 +5,7 @@ import { CriptografiaDadosSensiveis } from '../../../infraestrutura/seguranca/cr
 import { resolverProfissionalIdDoUsuario } from '../../../infraestrutura/seguranca/escopo-profissional';
 import { UsuarioAutenticado } from '../../auth/dominio/usuario-autenticado';
 import { PacienteOrm } from '../../pacientes/infraestrutura/paciente.orm';
-import { CriarMaterialEducativoDto, EnviarMaterialPacienteDto, EnvioMaterialPacienteRespostaDto, MaterialEducativoRespostaDto } from './dtos';
+import { CriarMaterialEducativoDto, EnviarMaterialLoteDto, EnviarMaterialPacienteDto, EnvioMaterialPacienteRespostaDto, MaterialEducativoRespostaDto } from './dtos';
 import { EnvioMaterialPacienteOrm } from '../infraestrutura/envio-material-paciente.orm';
 import { MaterialEducativoOrm } from '../infraestrutura/material-educativo.orm';
 
@@ -82,6 +82,46 @@ export class ServicoMateriais {
       });
 
       return this.mapearEnvio(await gerenciador.getRepository(EnvioMaterialPacienteOrm).save(envio), material);
+    });
+  }
+
+  async enviarMaterialLote(
+    tenantId: string,
+    usuarioId: string,
+    dados: EnviarMaterialLoteDto,
+    usuario: UsuarioAutenticado
+  ): Promise<{ total: number }> {
+    return this.executorTenant.executar(tenantId, async (gerenciador) => {
+      const material = await gerenciador.getRepository(MaterialEducativoOrm).findOne({
+        where: { id: dados.materialId, tenantId, ativo: true }
+      });
+      if (!material) throw new NotFoundException('Material nao encontrado.');
+
+      const profissionalResponsavelId = await resolverProfissionalIdDoUsuario(gerenciador, tenantId, usuario);
+      for (const pacienteId of dados.pacienteIds) {
+        const paciente = await gerenciador.getRepository(PacienteOrm).findOne({
+          where: {
+            id: pacienteId,
+            tenantId,
+            arquivadoEm: IsNull(),
+            ...(profissionalResponsavelId ? { profissionalResponsavelId } : {})
+          }
+        });
+        if (!paciente) throw new NotFoundException('Paciente nao encontrado.');
+      }
+
+      const repositorioEnvios = gerenciador.getRepository(EnvioMaterialPacienteOrm);
+      const agora = new Date();
+      const envios = dados.pacienteIds.map((pacienteId) => repositorioEnvios.create({
+        tenantId,
+        pacienteId,
+        materialId: material.id,
+        enviadoPorUsuarioId: usuarioId,
+        status: 'enviado',
+        enviadoEm: agora
+      }));
+      await repositorioEnvios.save(envios);
+      return { total: envios.length };
     });
   }
 
