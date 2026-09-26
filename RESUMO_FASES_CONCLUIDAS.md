@@ -1,5 +1,15 @@
 # OctaClin - Resumo das fases concluidas
 
+## Reconciliacao de produto em 2026-09-26
+
+- Fase 280 (PB-26): painel de operacao da clinica integrado pelo PR #315,
+  merge `704adb0`. Indicadores agregados de pacientes e carga de agenda,
+  ocupacao e no-show por profissional, sem migration.
+- Fase 281 (PB-27): consulta minima de auditoria implementada na branch
+  `feat/pb27-auditoria-clinica`, com politica confirmada pelo proprietario.
+  Ainda aguarda CI e merge; evidencia em `fase-281-auditoria-clinica.md`.
+- Ordem restante da Onda 5: concluir aceite PB-27, depois PB-21 e PB-29.
+
 Atualizado em 2026-09-17 com a conclusao da Fase 264 e a reconciliacao da
 Fase 263. A Fase 262 permanece aberta por gates externos do piloto.
 

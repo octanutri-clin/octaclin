@@ -143,6 +143,7 @@ navegacao principal.
 | BFF | Backend | Observacao |
 | --- | --- | --- |
 | `/api/cliente/resumo` | `/cliente/resumo` | Resumo real da conta do cliente |
+| `/api/cliente/auditoria` | `/cliente/auditoria` | GET exige papel exato `Client` no backend e `cliente.acessar` nas duas bordas; tenant do JWT; somente data, usuario opaco do tenant, acao e tipo; filtros exatos/paginacao, sem exportacao ou metadados; `private, no-store` |
 | `/api/cliente/assinatura/interesse` | `/cliente/assinatura/interesse` | POST exige `cliente.assinatura.ler`; registra solicitacao comercial manual de upgrade/revisao |
 | `/api/cliente/configuracoes` | `/cliente/configuracoes` | GET/PATCH exigem `cliente.configuracoes.gerenciar` |
 | `/api/cliente/integracoes/*` | `/cliente/integracoes/*` | GET/POST/DELETE exigem `Client` e `cliente.configuracoes.gerenciar`; permite gerir chaves, webhooks e entregas sem devolver hashes ou segredos persistidos |

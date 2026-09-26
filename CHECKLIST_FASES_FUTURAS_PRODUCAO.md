@@ -1,7 +1,7 @@
 # OctaClin - Checklist vivo de fases futuras ate producao
 
-Atualizado em 2026-09-25. Fases 256 a 261, 263 a 279 concluidas; Fase 280
-em andamento (PB-26, Onda 5). Fase 262
+Atualizado em 2026-09-26. Fases 256 a 261, 263 a 280 concluidas; Fase 281
+em andamento (PB-27, Onda 5). Fase 262
 permanece em andamento pelos gates externos do piloto. Com a Fase 268
 mergeada (PR `#275`, merge `306d2ed`), o PB-05 (alerta de check-in com
 adesao baixa) esta concluido e a Onda 2 do audit de produto (PB-01 ->
@@ -4361,11 +4361,12 @@ aprovada PB-26 -> PB-27 -> PB-21 -> PB-29.
 - [x] Fase 279 - PB-10, filtros exatos protegidos de perfil;
   integrado pelo PR `#314`. Migration e backfill fora de banda nao foram
   verificados nesta reconciliacao.
-- [ ] Fase 280 - PB-26, painel de operacao da clinica em PR; aguarda checks,
-  revisao e merge humano. Plano, formulas, rollback e gates em
+- [x] Fase 280 - PB-26, painel de operacao da clinica integrado pelo PR #315
+  (merge `704adb0`, confirmado via GitHub). Plano, formulas, rollback e gates em
   `docs/history/phases/PLANO_FASE_280.md`.
-- [ ] PB-27: auditoria do proprio tenant; antes da implementacao, fechar
-  decisao juridica e politica de acesso/retencao.
+- [ ] Fase 281 - PB-27: auditoria do proprio tenant implementada em branch;
+  politica confirmada em 2026-09-26, revisao tenant independente e gates
+  registrados em `fase-281-auditoria-clinica.md`. Aguarda CI e merge humano.
 - [ ] PB-21: proximo apos PB-27.
 - [ ] PB-29: proximo apos PB-21.
 

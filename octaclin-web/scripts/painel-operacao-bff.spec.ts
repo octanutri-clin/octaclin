@@ -3,6 +3,7 @@ import test from 'node:test';
 import * as nextHeaders from 'next/headers';
 import { NextRequest } from 'next/server';
 import { GET } from '../app/api/cliente/painel-operacao/route';
+import { GET as obterAuditoria } from '../app/api/cliente/auditoria/route';
 
 const { __clearCookies, __setCookies } = nextHeaders as typeof nextHeaders & {
   __clearCookies: () => void;
@@ -20,6 +21,27 @@ function sessao(permissoes: string[]) {
     octaclin_permissoes: encodeURIComponent(JSON.stringify(permissoes))
   };
 }
+
+test('PB-27 protege auditoria, rejeita tenant e filtros repetidos, preserva query e no-store', async () => {
+  const anterior = global.fetch;
+  const chamadas: string[] = [];
+  global.fetch = (async (entrada) => { chamadas.push(String(entrada)); return Response.json({ itens: [] }); }) as typeof global.fetch;
+  try {
+    __clearCookies();
+    assert.equal((await obterAuditoria(new NextRequest('http://localhost/api/cliente/auditoria'))).status, 401);
+    __setCookies(sessao([]));
+    assert.equal((await obterAuditoria(new NextRequest('http://localhost/api/cliente/auditoria'))).status, 403);
+    __setCookies(sessao(['cliente.acessar']));
+    for (const query of ['tenantId=outro', 'pagina=1&pagina=2', 'acao=a&acao=b']) {
+      assert.equal((await obterAuditoria(new NextRequest(`http://localhost/api/cliente/auditoria?${query}`))).status, 400);
+    }
+    assert.equal(chamadas.length, 0);
+    const resposta = await obterAuditoria(new NextRequest('http://localhost/api/cliente/auditoria?acao=pacientes.criar&pagina=2'));
+    assert.equal(resposta.status, 200);
+    assert.equal(resposta.headers.get('cache-control'), 'private, no-store');
+    assert.deepEqual(chamadas, ['http://backend.octaclin.local/cliente/auditoria?acao=pacientes.criar&pagina=2']);
+  } finally { global.fetch = anterior; }
+});
 
 test('nega sessao ausente e permissao ausente sem consultar o backend', async () => {
   const anterior = global.fetch;

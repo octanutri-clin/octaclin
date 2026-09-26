@@ -332,8 +332,8 @@ Critério: valor claro, esforço pequeno, risco baixo, sem migration pesada e se
   faixa informada" — e nunca diagnóstico) · **Dependências**: backend, banco (migration), frontend, produto.
 
 ### 5.5 Painel de operação da clínica
-- **Estado da Fase 280**: PB-26 está em implementação na PR de produto, com
-  indicadores agregados para `Client`; auditoria do tenant segue em PB-27.
+- **Estado da Fase 280**: PB-26 integrado pela PR #315, com indicadores
+  agregados para `Client`; auditoria do tenant segue na Fase 281 (PB-27).
 - **Antes do PB-26** `[F]`: o dono vê assinatura, limites, uso e usuários (`servico-portal-cliente.ts:192-237`) e a tela
   de recebimentos com performance por profissional (fase 263). Operações — auditoria, LGPD, falhas — é
   exclusivamente SuperAdmin (`controlador-operacoes.ts:62`).
@@ -341,7 +341,9 @@ Critério: valor claro, esforço pequeno, risco baixo, sem migration pesada e se
   retenção nem carga por profissional, embora todos esses dados existam em `agenda_consultas` e `pacientes`.
 - **Melhoria**: PB-26 entrega painel de operação com taxa de ocupação, no-show por profissional, pacientes
   novos × ativos × em risco e carga por profissional. A trilha de auditoria **do próprio tenant** é PB-27,
-  condicionada à decisão jurídica sobre acesso e retenção.
+  com política de acesso e retenção confirmada pelo proprietário em 2026-09-26
+  para o escopo mínimo da Fase 281; o aceite jurídico externo do projeto segue
+  seus próprios gates.
 - **Complexidade** média a grande · **Risco** médio (expor auditoria à clínica é decisão de produto e de LGPD:
   define quem pode ver ação de quem) · **Dependências**: backend, frontend, produto, jurídico.
 
@@ -720,10 +722,12 @@ Painel de operação depende de indicadores que as ondas anteriores já terão n
 clínica exige decisão jurídica antes de qualquer código.
 
 - **Sequência confirmada pelo proprietário em 2026-09-25**: PB-26 → PB-27
-  → PB-21 → PB-29. PB-26 iniciou na Fase 280, com painel de ocupação,
-  no-show, pacientes novos/ativos/em risco e carga por profissional. Auditoria
-  do próprio tenant permanece no PB-27, condicionada à decisão jurídica e
-  aos limites de acesso/retenção. Ver `docs/history/phases/PLANO_FASE_280.md`.
+  → PB-21 → PB-29. PB-26 foi integrado pela PR #315 (Fase 280).
+  PB-27 está na Fase 281: política confirmada pelo proprietário em
+  2026-09-26, restrita a `Client`, campos mínimos, filtros/paginação e
+  preservação da retenção de 3.650 dias já configurada. Implementação em
+  branch, aguardando checks e merge humano. Ver
+  `docs/history/phases/PLANO_FASE_281.md`.
 
 ### Seleção de modelo, skills e plugins por PB
 

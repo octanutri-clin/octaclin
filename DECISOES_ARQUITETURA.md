@@ -222,3 +222,19 @@ Este arquivo registra decisoes ja tomadas para evitar que outro agente reprojete
   tenant, profissional e duracao. RLS e FORCE RLS da tabela permanecem ativos.
 - Consequencia: a migration `1720000001034` precisa ser aplicada fora de banda
   com role owner antes do deploy do codigo da Fase 253.
+
+## ADR-024 - Leitura minima da auditoria pela clinica
+
+- O portal administrativo oferece consulta da trilha somente ao papel exato
+  `Client` com `cliente.acessar`. Operacoes continua com sua fronteira propria
+  de SuperAdmin; o portal nao reutiliza a resposta ORM daquele modulo.
+- Tenant vem da credencial verificada. A leitura usa `ExecutorTenant`, RLS e
+  filtro SQL explicito; o usuario responsavel so e identificado quando pertence
+  ao mesmo tenant. Ator externo, removido ou ausente resulta em identificador nulo.
+- O DTO expoe apenas data, identificador opaco do usuario, codigo de acao e
+  tipo de recurso. IP, navegador, metadados, identificador do evento e alvo do
+  recurso nao sao selecionados ou enviados ao navegador.
+- Filtros exatos, datas UTC e paginacao limitada sao validados. A leitura e
+  auditada sem copiar filtros ou resultados; respostas usam `private, no-store`.
+- Esta superficie nao altera a politica de retencao nem fornece exclusao ou
+  exportacao. A decisao de produto e os gates da entrega estao no plano PB-27.
