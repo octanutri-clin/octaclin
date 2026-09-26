@@ -723,11 +723,9 @@ clínica exige decisão jurídica antes de qualquer código.
 
 - **Sequência confirmada pelo proprietário em 2026-09-25**: PB-26 → PB-27
   → PB-21 → PB-29. PB-26 foi integrado pela PR #315 (Fase 280).
-  PB-27 está na Fase 281: política confirmada pelo proprietário em
-  2026-09-26, restrita a `Client`, campos mínimos, filtros/paginação e
-  preservação da retenção de 3.650 dias já configurada. Implementação em
-  branch, aguardando checks e merge humano. Ver
-  `docs/history/phases/PLANO_FASE_281.md`.
+  PB-27 foi integrado na Fase 281 pelo PR #316 (merge `01817ae`, confirmado
+  no GitHub em 2026-09-26). PB-21 esta em implementacao na Fase 282;
+  contrato, limites e rollback em `docs/history/phases/PLANO_FASE_282.md`.
 
 ### Seleção de modelo, skills e plugins por PB
 

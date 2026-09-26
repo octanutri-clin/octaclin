@@ -86,3 +86,10 @@ export function enviarMaterialPaciente(pacienteId: string, entrada: EnviarMateri
     body: JSON.stringify(entrada)
   });
 }
+
+export function enviarMaterialLote(materialId: string, pacienteIds: string[]): Promise<{ total: number }> {
+  return requisitar('/api/materiais/lote', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ materialId, pacienteIds })
+  });
+}

@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test';
 
 const webUrl = process.env.E2E_WEB_URL ?? 'http://localhost:3000';
-const permissoes = ['console.acessar', 'pacientes.listar', 'pacientes.ler', 'pacientes.gerenciar', 'profissionais.ler'];
+const permissoes = ['console.acessar', 'pacientes.listar', 'pacientes.ler', 'pacientes.gerenciar', 'profissionais.ler', 'materiais.gerenciar', 'questionarios.gerenciar'];
 const profissional = { id: 'profissional-1', tenantId: 'tenant-1', usuarioId: 'usuario-1', nome: 'Dra. Sintética', criadoEm: '2026-08-22T10:00:00.000Z' };
 const paciente = { id: 'paciente-1', tenantId: 'tenant-1', profissionalResponsavelId: profissional.id, nome: 'Ana Sintética', contato: 'ana@example.com', dataNascimento: '1990-04-15', statusAdesao: 'em_acompanhamento', scoreRisco: '35', criadoEm: '2026-08-22T10:00:00.000Z' };
 const candidatoDuplicidadeId = '11111111-1111-4111-8111-111111111111';
@@ -21,6 +21,39 @@ async function preparar(page) {
 }
 
 test.describe('Fase 254 - rotas e formulario de pacientes', () => {
+  test('PB-21 seleciona pacientes da pagina e confirma envios em lote', async ({ page }) => {
+    await preparar(page);
+    const pacientes = [paciente, { ...paciente, id: 'paciente-2', nome: 'Bruno Sintético' }];
+    await page.route('**/api/pacientes?**', (route) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ itens: pacientes, total: 2 }) }));
+    await page.route('**/api/pacientes/filtros-salvos', (route) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ itens: [] }) }));
+    await page.route('**/api/materiais', (route) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([{ id: 'material-1', titulo: 'Guia sintético', ativo: true }]) }));
+    await page.route('**/api/questionarios?**', (route) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ itens: [{ id: 'questionario-1', titulo: 'Check-in sintético', status: 'publicado' }], total: 1 }) }));
+    const envios = [];
+    await page.route('**/api/materiais/lote', async (route) => {
+      envios.push({ tipo: 'material', corpo: route.request().postDataJSON() });
+      await route.fulfill({ status: 201, contentType: 'application/json', body: JSON.stringify({ total: 2 }) });
+    });
+    await page.route('**/api/questionarios/questionario-1/envios/lote', async (route) => {
+      envios.push({ tipo: 'formulario', corpo: route.request().postDataJSON() });
+      await route.fulfill({ status: 201, contentType: 'application/json', body: JSON.stringify({ total: 2 }) });
+    });
+    await page.goto('/pacientes');
+    await page.getByRole('checkbox', { name: 'Selecionar todos os pacientes desta página' }).check();
+    await page.getByLabel('Ação em massa').selectOption('material');
+    await page.getByLabel('Material para enviar').selectOption('material-1');
+    await page.getByRole('button', { name: 'Revisar envio' }).click();
+    expect(envios).toHaveLength(0);
+    await page.getByRole('button', { name: 'Confirmar envio' }).click();
+    await expect.poll(() => envios.length).toBe(1);
+    expect(envios[0].corpo).toEqual({ materialId: 'material-1', pacienteIds: ['paciente-1', 'paciente-2'] });
+    await page.getByRole('checkbox', { name: 'Selecionar todos os pacientes desta página' }).check();
+    await page.getByLabel('Ação em massa').selectOption('formulario');
+    await page.getByLabel('Formulário para enviar').selectOption('questionario-1');
+    await page.getByRole('button', { name: 'Revisar envio' }).click();
+    await page.getByRole('button', { name: 'Confirmar envio' }).click();
+    await expect.poll(() => envios.length).toBe(2);
+    expect(envios[1].corpo).toEqual({ pacienteIds: ['paciente-1', 'paciente-2'] });
+  });
   test('preserva rascunho de novo paciente apenas na sessao da aba e limpa apos sucesso', async ({ page }) => {
     await preparar(page);
     let criado;
