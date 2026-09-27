@@ -308,6 +308,7 @@ export async function listarEvolucoesClinicas(pacienteId: string): Promise<Evolu
 }
 
 export type OrigemModeloEvolucaoApi = 'pessoal' | 'clinica';
+export type TipoModeloTextoClinicoApi = TipoEvolucaoClinicaApi | 'observacao_antropometrica' | 'relatorio_alta';
 
 export interface ModeloEvolucaoClinicaResumoApi {
   id: string;
@@ -334,6 +335,42 @@ export async function listarModelosEvolucaoClinica(): Promise<{ itens: ModeloEvo
   }
 
   return resposta.json() as Promise<{ itens: ModeloEvolucaoClinicaResumoApi[]; total: number }>;
+}
+
+export interface ModeloTextoClinicoApi {
+  id: string;
+  nome: string;
+  origem: OrigemModeloEvolucaoApi;
+  tipo: TipoModeloTextoClinicoApi;
+  tamanhoConteudo: number;
+  atualizadoEm?: string;
+  conteudo?: string;
+}
+
+export async function listarModelosTextoClinico(tipo: 'observacao_antropometrica' | 'relatorio_alta'):
+  Promise<{ itens: ModeloTextoClinicoApi[]; total: number }> {
+  const resposta = await fetch(`${BASE_MODELOS_EVOLUCAO}?pagina=1&limite=100&tipo=${tipo}`, { cache: 'no-store' });
+  if (!resposta.ok) await lancarErroApi(resposta);
+  return resposta.json() as Promise<{ itens: ModeloTextoClinicoApi[]; total: number }>;
+}
+
+export async function criarModeloTextoClinico(entrada: {
+  nome: string;
+  origem: OrigemModeloEvolucaoApi;
+  tipo: 'observacao_antropometrica' | 'relatorio_alta';
+  conteudo: string;
+}): Promise<ModeloTextoClinicoApi> {
+  const resposta = await fetch(BASE_MODELOS_EVOLUCAO, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(entrada)
+  });
+  if (!resposta.ok) await lancarErroApi(resposta);
+  return resposta.json() as Promise<ModeloTextoClinicoApi>;
+}
+
+export async function obterModeloTextoClinico(modeloId: string): Promise<ModeloTextoClinicoApi & { conteudo: string }> {
+  const resposta = await fetch(`${BASE_MODELOS_EVOLUCAO}/${encodeURIComponent(modeloId)}`, { cache: 'no-store' });
+  if (!resposta.ok) await lancarErroApi(resposta);
+  return resposta.json() as Promise<ModeloTextoClinicoApi & { conteudo: string }>;
 }
 
 export async function obterModeloEvolucaoClinica(modeloId: string): Promise<ModeloEvolucaoClinicaApi> {

@@ -49,6 +49,7 @@ export interface EntradaCalculoAntropometrico {
   protocolo: ProtocoloComposicao;
   sexo?: SexoBiologico;
   idadeAnos?: number;
+  gestante?: boolean;
 }
 
 export type ClassificacaoImc =
@@ -314,9 +315,9 @@ function guedes(soma: number, sexo: SexoBiologico): EquacaoComposicao {
  * que depende das tabelas LMS por idade e sexo.
  */
 export function classificarImc(imc: number, idadeAnos?: number): ClassificacaoImc | undefined {
-  if (idadeAnos !== undefined && idadeAnos < 20) return undefined;
+  if (idadeAnos === undefined || idadeAnos < 20) return undefined;
 
-  if (idadeAnos !== undefined && idadeAnos >= 60) {
+  if (idadeAnos >= 60) {
     if (imc < 22) return 'baixo_peso';
     if (imc <= 27) return 'eutrofia';
     return 'sobrepeso';
@@ -377,10 +378,12 @@ export function calcularAntropometria(entrada: EntradaCalculoAntropometrico): Re
       resultado.imc = arredondar(imc, 2);
       // Classifica pelo valor bruto: arredondar antes joga a faixa [24,995; 25)
       // inteira para sobrepeso, justamente onde o corte importa.
-      resultado.classificacaoImc = classificarImc(imc, entrada.idadeAnos);
+      resultado.classificacaoImc = entrada.gestante ? undefined : classificarImc(imc, entrada.idadeAnos);
       if (resultado.classificacaoImc === undefined) {
         avisos.push(
-          entrada.idadeAnos === undefined
+          entrada.gestante
+            ? 'imc_sem_classificacao_gestante_exige_semana_gestacional'
+            : entrada.idadeAnos === undefined
             ? 'imc_sem_classificacao_idade_ausente'
             : 'imc_sem_classificacao_menor_de_20_exige_escore_z'
         );

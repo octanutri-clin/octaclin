@@ -58,6 +58,7 @@ import { CondutaTerapeuticaVersaoOrm } from '../infraestrutura/conduta-terapeuti
 import { condutaEstaVencida, resolverVersaoVigentePorConduta } from '../dominio/condutas-vencidas';
 import { EvolucaoClinicaOrm } from '../infraestrutura/evolucao-clinica.orm';
 import { PacienteOrm } from '../infraestrutura/paciente.orm';
+import { PerfilCadastroPacienteOrm } from '../infraestrutura/perfil-cadastro-paciente.orm';
 import { PrioridadeAcompanhamentoHistoricoOrm } from '../infraestrutura/prioridade-acompanhamento-historico.orm';
 import { PrioridadeAcompanhamentoPacienteOrm } from '../infraestrutura/prioridade-acompanhamento-paciente.orm';
 import { TombstoneExclusaoLgpdOrm } from '../../../infraestrutura/lgpd/tombstone-exclusao-lgpd.orm';
@@ -1615,13 +1616,22 @@ export class ServicoPacientes {
       const avaliadaEm = dados.avaliadaEm ?? dataCivil(new Date());
       const protocolo = dados.protocolo ?? 'nenhum';
       const idadeAnos = idadeNaData(paciente.dataNascimento, avaliadaEm);
+      const perfil = await gerenciador.getRepository(PerfilCadastroPacienteOrm).findOne({
+        where: { tenantId, pacienteId }
+      });
+      const identificacao = perfil?.identificacaoCriptografada
+        ? JSON.parse(this.criptografia.descriptografar(perfil.identificacaoCriptografada)) as { condicaoBiologica?: string }
+        : undefined;
       const medidas: MedidasAntropometricas = {
         pesoKg: dados.pesoKg,
         alturaCm: dados.alturaCm,
         circunferencias: dados.circunferencias,
         dobras: dados.dobras
       };
-      const resultado = calcularAntropometria({ medidas, protocolo, sexo: dados.sexo, idadeAnos });
+      const resultado = calcularAntropometria({
+        medidas, protocolo, sexo: dados.sexo, idadeAnos,
+        gestante: identificacao?.condicaoBiologica === 'gestante'
+      });
 
       const repositorio = gerenciador.getRepository(AvaliacaoAntropometricaOrm);
       const avaliacao = await repositorio.save(

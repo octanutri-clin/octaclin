@@ -28,7 +28,9 @@ import type { TipoEvolucaoClinica, VisibilidadeEvolucaoClinica } from '../infrae
 import type { TipoCondutaTerapeutica } from '../infraestrutura/conduta-terapeutica.orm';
 import {
   ORIGENS_MODELO_EVOLUCAO_CLINICA,
-  type OrigemModeloEvolucaoClinica
+  TIPOS_MODELO_TEXTO_CLINICO,
+  type OrigemModeloEvolucaoClinica,
+  type TipoModeloTextoClinico
 } from '../dominio/modelos-evolucao-clinica';
 import { PROTOCOLOS_COMPOSICAO } from '../dominio/antropometria';
 import { TIPOS_DOCUMENTO_CLINICO } from '../dominio/documentos-clinicos';
@@ -591,8 +593,8 @@ export class CriarModeloEvolucaoClinicaDto {
   origem: OrigemModeloEvolucaoClinica;
 
   @IsOptional()
-  @IsIn(['consulta', 'retorno', 'observacao', 'ajuste_plano'])
-  tipo?: TipoEvolucaoClinica;
+  @IsIn(TIPOS_MODELO_TEXTO_CLINICO)
+  tipo?: TipoModeloTextoClinico;
 
   @IsString()
   @MinLength(3)
@@ -618,13 +620,17 @@ export class ListarModelosEvolucaoClinicaDto {
   @IsOptional()
   @IsIn(ORIGENS_MODELO_EVOLUCAO_CLINICA)
   origem?: OrigemModeloEvolucaoClinica;
+
+  @IsOptional()
+  @IsIn(TIPOS_MODELO_TEXTO_CLINICO)
+  tipo?: TipoModeloTextoClinico;
 }
 
 export interface ModeloEvolucaoClinicaResumoRespostaDto {
   id: string;
   nome: string;
   origem: OrigemModeloEvolucaoClinica;
-  tipo: TipoEvolucaoClinica;
+  tipo: TipoModeloTextoClinico;
   tamanhoConteudo: number;
   atualizadoEm: Date;
 }

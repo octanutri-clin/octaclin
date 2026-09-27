@@ -19,8 +19,9 @@
   (merge `af839c5`), com instalação idempotente, edição e prévia fictícia.
   O CI teve 19 checks `SUCCESS`; `Provenance do SBOM` ficou `SKIPPED`.
   Limites em `docs/history/phases/PLANO_FASE_284.md`.
-- Fase 285 (PB-20) está em implementação; não consta como concluída até
-  checks aplicáveis e merge.
+- Fase 285 (PB-20): comparação fotográfica manual integrada pelo PR #321
+  (merge `01d6bf1`). A Fase 286 permanece em implementação; plano em
+  `docs/history/phases/PLANO_FASE_286.md`.
 
 Atualizado em 2026-09-17 com a conclusao da Fase 264 e a reconciliacao da
 Fase 263. A Fase 262 permanece aberta por gates externos do piloto.
