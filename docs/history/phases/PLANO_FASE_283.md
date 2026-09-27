@@ -54,3 +54,11 @@ somente preferências de apresentação e etapas puladas, identificadas pelo slu
 do tenant. A contagem de pacientes usa a resposta paginada da API com limite 1;
 nenhum item de paciente é persistido pelo guia. Reverter a mudança remove o
 componente sem alterar registros ou contratos existentes.
+
+## Fechamento de código em 2026-09-27
+
+PR #319 integrado em `main` (merge `19ade15`, confirmado no GitHub). O guia
+permanece não bloqueante e usa os fluxos de edição já existentes. A entrega não
+inclui uma biblioteca inicial de mensagens: esse gap foi tratado na Fase 284
+(PB-22), em branch própria. Este registro não comprova deploy nem dados de
+staging/produção.

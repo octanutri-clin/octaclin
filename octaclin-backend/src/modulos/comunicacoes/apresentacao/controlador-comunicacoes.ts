@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Post, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, ParseUUIDPipe, Post, Put, Req, UseGuards } from '@nestjs/common';
 import { Request } from 'express';
 import { ServicoAuditoria } from '../../../infraestrutura/auditoria/servico-auditoria';
 import { Papeis, Permissoes, UsuarioAtual } from '../../auth/apresentacao/decorators';
@@ -72,6 +72,33 @@ export class ControladorComunicacoes {
       conteudo,
       aprovado
     }));
+  }
+
+  @Post('templates/iniciais')
+  @Permissoes('comunicacoes.templates.gerenciar')
+  async instalarTemplatesIniciais(@UsuarioAtual() usuario: UsuarioAutenticado, @Req() requisicao: Request) {
+    const resultado = await this.servicoComunicacoes.instalarTemplatesIniciais(usuario.tenantId);
+    await this.registrarAuditoria(usuario, requisicao, 'comunicacoes.template.instalar_iniciais', 'template_mensagem', undefined, {
+      criouModelosIniciais: resultado.criados.length > 0
+    });
+    return { quantidadeCriada: resultado.criados.length };
+  }
+
+  @Put('templates/:id')
+  @Permissoes('comunicacoes.templates.gerenciar')
+  async atualizarTemplate(
+    @UsuarioAtual() usuario: UsuarioAutenticado,
+    @Req() requisicao: Request,
+    @Param('id', ParseUUIDPipe) templateId: string,
+    @Body() dados: CriarTemplateMensagemDto
+  ) {
+    const template = await this.servicoComunicacoes.atualizarTemplate(usuario.tenantId, templateId, dados);
+    await this.registrarAuditoria(usuario, requisicao, 'comunicacoes.template.editar', 'template_mensagem', template.id, {
+      canal: template.canal,
+      aprovado: template.aprovado
+    });
+    const { id, canal, codigoExterno, nome, conteudo, aprovado } = template;
+    return { id, canal, codigoExterno, nome, conteudo, aprovado };
   }
 
   @Get('mensagens')

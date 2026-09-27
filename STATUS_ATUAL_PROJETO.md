@@ -16,9 +16,11 @@ Atualizado em 2026-09-27.
   PR `#317` (merge `a7274be`, confirmado no GitHub em 2026-09-26): selecao na
   lista e registro em lote de formulario ou material, com verificacao de tenant
   e profissional. CI teve 19 checks `SUCCESS` e `Provenance do SBOM`
-  `SKIPPED`. Fase 283 (PB-29) está em andamento na PR `#319`; ela segue aberta,
-  sem conclusão até merge e aceite dos checks. Plano e evidencias em
-  `docs/history/phases/PLANO_FASE_282.md`.
+  `SKIPPED`. Fase 283 (PB-29) foi integrada pelo PR `#319` (merge `19ade15`,
+  confirmado no GitHub em 2026-09-27). O código do PB-22 está em preparação
+  na Fase 284, branch `feat/pb22-biblioteca-mensagens-fase284`; integração e
+  checks ainda dependem do PR. Planos em `docs/history/phases/PLANO_FASE_283.md`
+  e `docs/history/phases/PLANO_FASE_284.md`.
 - Entradas historicas abaixo descrevem o estado na data em que foram escritas;
   a reconciliacao acima prevalece para o proximo passo atual.
 
@@ -27,16 +29,15 @@ Atualizado em 2026-09-27.
 - Fase 280 concluida no codigo e integrada em `main` pelo PR #315.
 - Fase 281 integrada em `main` pelo PR #316; checks de CI concluidos, com
   `Provenance do SBOM` como `SKIPPED` na PR.
-- Fase 282 concluida no codigo e integrada em `main` pelo PR #317; PB-29 e o
-  proximo PB da Onda 5. Nenhuma aplicacao em staging/producao foi realizada ou
-  verificada nesta fase.
-- Fase 283 (PB-29) esta em andamento na branch `feat/pb29-onboarding-fase283`.
-  O corte atual adiciona ao painel profissional um guia nao bloqueante, com
-  estados baseados nas listagens existentes, etapas opcionais persistentes e
-  acesso de retorno. Modelos de formulário e plano usam apenas capacidades de
-  edição existentes; ampliar edição para mensagens/materiais fica fora do PB-29
-  e deverá ser avaliado em fase futura. Evidências em
-  `docs/history/phases/PLANO_FASE_283.md`.
+- Fase 282 concluida no codigo e integrada em `main` pelo PR #317. Nenhuma
+  aplicacao em staging/producao foi realizada ou verificada nesta fase.
+- Fase 283 (PB-29) concluida no codigo e integrada em `main` pelo PR #319.
+  O guia profissional e nao bloqueante e usa os fluxos de edicao existentes.
+  Evidencias em `docs/history/phases/PLANO_FASE_283.md`.
+- Fase 284 (PB-22) em preparacao na branch
+  `feat/pb22-biblioteca-mensagens-fase284`: modelos iniciais de e-mail,
+  instalacao idempotente, edicao e previa ficticia. PR, checks e merge
+  pendentes; ver `docs/history/phases/PLANO_FASE_284.md`.
 - A reconciliação integral da auditoria e a sequência proposta para todas as
   recomendações ainda pendentes estão em
   `docs/product/OCTACLIN_PRODUCT_FEATURE_AUDIT.md`, seção 15. Estados de PB

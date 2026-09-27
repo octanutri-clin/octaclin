@@ -1,7 +1,9 @@
 # OctaClin - Checklist vivo de fases futuras ate producao
 
-Atualizado em 2026-09-27. Fases 256 a 261, 263 a 282 integradas; Fase 283
-(PB-29, PR #319) em andamento, ainda sem aceite/merge. A reconciliação completa do backlog da auditoria e a
+Atualizado em 2026-09-27. Fases 256 a 261, 263 a 283 integradas; Fase 283
+(PB-29) foi integrada pelo PR #319 (merge `19ade15`). Fase 284 (PB-22) está
+em preparação na branch `feat/pb22-biblioteca-mensagens-fase284`, ainda sem
+merge ou aceite dos checks. A reconciliação completa do backlog da auditoria e a
 ordem proposta para recomendações pendentes estão em `docs/product/OCTACLIN_PRODUCT_FEATURE_AUDIT.md`,
 seção 15. Fase 262 permanece em andamento pelos gates externos do piloto. Com a Fase 268
 mergeada (PR `#275`, merge `306d2ed`), o PB-05 (alerta de check-in com
@@ -4349,8 +4351,9 @@ confirmacao do alvo e da role owner; ver `docs/history/phases/PLANO_FASE_279.md`
 Reconciliação em 2026-09-27: PB-10 foi integrado em `main` pelo PR `#314`
 (merge `93ac0a8`), fechando a Onda 4 no código; aplicação fora de banda da
 migration e do backfill não foi verificada nesta reconciliação. PB-26, PB-27
-e PB-21 foram integrados pelos PRs `#315`, `#316` e `#317`. PB-29 está em
-andamento na Fase 283 pela PR `#319`; os itens seguintes e os demais gaps da
+e PB-21 foram integrados pelos PRs `#315`, `#316` e `#317`. PB-29 foi
+integrado na Fase 283 pelo PR `#319`. PB-22 está em preparação na Fase 284;
+os itens seguintes e os demais gaps da
 auditoria estão ordenados na seção 15 de
 `docs/product/OCTACLIN_PRODUCT_FEATURE_AUDIT.md`.
 
@@ -4374,10 +4377,15 @@ auditoria estão ordenados na seção 15 de
   PR #317 (merge `a7274be`, 2026-09-26). CI: 19 checks `SUCCESS`;
   `Provenance do SBOM` `SKIPPED`. Validacoes locais e evidencias da entrega
   em `docs/history/phases/PLANO_FASE_282.md`.
-- [~] Fase 283 - PB-29: guia profissional de configuração inicial baseado nos
+- [x] Fase 283 - PB-29: guia profissional de configuração inicial baseado nos
   dados existentes, com etapas opcionais persistentes e modelos iniciais nos
-  fluxos editáveis já disponíveis. Escopo e aceite em
+  fluxos editáveis já disponíveis. Integrado pelo PR #319 (merge `19ade15`).
+  Escopo e aceite em
   `docs/history/phases/PLANO_FASE_283.md`.
+- [~] Fase 284 - PB-22: biblioteca inicial de e-mails genéricos no
+  provisionamento do tenant, instalação idempotente para clínicas existentes,
+  edição e prévia com dados fictícios. Implementação em branch; PR, checks e
+  merge pendentes. Escopo e gates em `docs/history/phases/PLANO_FASE_284.md`.
 
 O programa de hardening
 PR 36-56 permanece como trilha separada --

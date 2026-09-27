@@ -26,6 +26,7 @@ import { CanalNotificacaoOrm } from '../infraestrutura/canal-notificacao.orm';
 import { MensagemNotificacaoOrm } from '../infraestrutura/mensagem-notificacao.orm';
 import { aplicarConteudoMensagem, comPayloadCompleto } from './cripto-conteudo-mensagem';
 import { TemplateMensagemOrm } from '../infraestrutura/template-mensagem.orm';
+import { instalarTemplatesIniciaisNoTenant, TEMPLATES_INICIAIS_EMAIL } from './templates-iniciais';
 
 export const FILA_NOTIFICACOES = 'notificacoes';
 
@@ -100,6 +101,40 @@ export class ServicoComunicacoes {
     return this.executorTenant.executar(tenantId, (gerenciador) =>
       gerenciador.getRepository(TemplateMensagemOrm).find({ where: { tenantId }, order: { nome: 'ASC' } })
     );
+  }
+
+  async instalarTemplatesIniciais(tenantId: string): Promise<{ criados: TemplateMensagemOrm[] }> {
+    return this.executorTenant.executar(tenantId, (gerenciador) =>
+      instalarTemplatesIniciaisNoTenant(gerenciador, tenantId)
+    );
+  }
+
+  async atualizarTemplate(
+    tenantId: string,
+    templateId: string,
+    dados: CriarTemplateMensagemDto
+  ): Promise<TemplateMensagemOrm> {
+    return this.executorTenant.executar(tenantId, async (gerenciador) => {
+      const repositorio = gerenciador.getRepository(TemplateMensagemOrm);
+      const template = await repositorio.findOne({ where: { tenantId, id: templateId } });
+      if (!template) throw new NotFoundException('Template de mensagem nao encontrado.');
+      if (template.canal !== dados.canal) throw new BadRequestException('O canal do template nao pode ser alterado.');
+      if (template.canal === 'email'
+        && TEMPLATES_INICIAIS_EMAIL.some((inicial) => inicial.codigoExterno === template.codigoExterno)
+        && template.codigoExterno !== dados.codigoExterno) {
+        throw new BadRequestException('O codigo de um modelo inicial nao pode ser alterado.');
+      }
+
+      const mudouConteudoExterno = template.canal === 'whatsapp' && (
+        template.codigoExterno !== dados.codigoExterno ||
+        JSON.stringify(template.conteudo) !== JSON.stringify(dados.conteudo)
+      );
+      template.codigoExterno = dados.codigoExterno;
+      template.nome = dados.nome;
+      template.conteudo = dados.conteudo;
+      template.aprovado = mudouConteudoExterno ? false : (dados.aprovado ?? false);
+      return repositorio.save(template);
+    });
   }
 
   async listarMensagens(tenantId: string, usuario: UsuarioAutenticado): Promise<MensagemNotificacaoOrm[]> {

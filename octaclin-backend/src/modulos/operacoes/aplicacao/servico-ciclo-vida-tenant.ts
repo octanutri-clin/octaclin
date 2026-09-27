@@ -10,6 +10,7 @@ import {
 } from '../../auth/infraestrutura/token-redefinicao-senha.orm';
 import { resolverPlanoSaas } from '../../clientes/dominio/planos-saas';
 import { AdaptadorEmailSmtp } from '../../comunicacoes/infraestrutura/adaptadores/adaptador-email-smtp';
+import { instalarTemplatesIniciaisNoTenant } from '../../comunicacoes/aplicacao/templates-iniciais';
 import { TenantConfiguracaoOrm } from '../../tenancy/infraestrutura/tenant-configuracao.orm';
 import { TenantOrm } from '../../tenancy/infraestrutura/tenant.orm';
 import { UsuarioOrm } from '../../usuarios/infraestrutura/usuario.orm';
@@ -155,6 +156,7 @@ export class ServicoCicloVidaTenant {
         })
       );
         await this.aplicarContextoTenant(gerenciador, tenant.id);
+        await instalarTemplatesIniciaisNoTenant(gerenciador, tenant.id);
 
         const plano = resolverPlanoSaas(dados.planoId);
         const agora = new Date().toISOString();

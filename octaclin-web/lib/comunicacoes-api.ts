@@ -147,6 +147,17 @@ export async function criarTemplate(entrada: CriarTemplateEntrada): Promise<Temp
   });
 }
 
+export async function instalarTemplatesIniciais(): Promise<{ quantidadeCriada: number }> {
+  return requisitar<{ quantidadeCriada: number }>('/api/comunicacoes/templates/iniciais', { method: 'POST' });
+}
+
+export async function atualizarTemplate(id: string, entrada: CriarTemplateEntrada): Promise<TemplateMensagemApi> {
+  return requisitar<TemplateMensagemApi>(`/api/comunicacoes/templates/${encodeURIComponent(id)}`, {
+    method: 'PUT',
+    body: JSON.stringify(entrada)
+  });
+}
+
 export async function dispararMensagem(entrada: DispararMensagemEntrada): Promise<MensagemNotificacaoApi> {
   return requisitar<MensagemNotificacaoApi>('/api/comunicacoes/mensagens', {
     method: 'POST',

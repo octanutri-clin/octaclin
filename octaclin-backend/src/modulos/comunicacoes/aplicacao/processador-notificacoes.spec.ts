@@ -4,7 +4,7 @@ import { MensagemNotificacaoOrm } from '../infraestrutura/mensagem-notificacao.o
 import { TemplateMensagemOrm } from '../infraestrutura/template-mensagem.orm';
 import { UsuarioOrm } from '../../usuarios/infraestrutura/usuario.orm';
 
-function criarProcessador(adaptadorEmail: { enviar: jest.Mock }, tipoCanal: string = 'email') {
+function criarProcessador(adaptadorEmail: { enviar: jest.Mock }, tipoCanal: string = 'email', aprovado = true) {
   const mensagem = {
     id: 'mensagem-1',
     tenantId: 'tenant-1',
@@ -15,7 +15,7 @@ function criarProcessador(adaptadorEmail: { enviar: jest.Mock }, tipoCanal: stri
     payload: { destino: 'paciente@example.com' }
   };
   const canal = { id: 'canal-1', tenantId: 'tenant-1', tipo: tipoCanal };
-  const template = { id: 'template-1', tenantId: 'tenant-1', canal: 'email' };
+  const template = { id: 'template-1', tenantId: 'tenant-1', canal: tipoCanal, aprovado };
   const repositorioMensagens = {
     update: jest.fn(async () => ({ affected: 1 })),
     findOne: jest.fn(async () => mensagem),
@@ -100,6 +100,28 @@ describe('ProcessadorNotificacoes', () => {
     await processador.processarMensagem('tenant-1', 'mensagem-1');
 
     expect(adaptadorEmail.enviar).not.toHaveBeenCalled();
+  });
+
+  it('nao envia WhatsApp pendente quando o template perdeu aprovacao apos enfileirar', async () => {
+    const adaptador = { enviar: jest.fn(async () => ({ idExterno: 'wa-1' })) };
+    const { processador, mensagem, adaptadorPlaceholder } = criarProcessador(adaptador, 'whatsapp', false);
+
+    await expect(processador.processarMensagem('tenant-1', 'mensagem-1', { propagarErro: false })).resolves.toBeUndefined();
+
+    expect(mensagem.status).toBe('falhou');
+    expect(mensagem.erro).toContain('aprovado');
+    expect(adaptadorPlaceholder.enviar).not.toHaveBeenCalled();
+  });
+
+  it('envia WhatsApp pendente quando o template continua aprovado', async () => {
+    const adaptadorEmail = { enviar: jest.fn() };
+    const { processador, mensagem, adaptadorPlaceholder } = criarProcessador(adaptadorEmail, 'whatsapp', true);
+    adaptadorPlaceholder.enviar.mockResolvedValue({ idExterno: 'wa-1' });
+
+    await expect(processador.processarMensagem('tenant-1', 'mensagem-1')).resolves.toBeUndefined();
+
+    expect(mensagem.status).toBe('enviado');
+    expect(adaptadorPlaceholder.enviar).toHaveBeenCalledTimes(1);
   });
 
   it('canal push registra falha explicita em vez de sucesso silencioso', async () => {

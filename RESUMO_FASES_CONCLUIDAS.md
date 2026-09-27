@@ -1,6 +1,6 @@
 # OctaClin - Resumo das fases concluidas
 
-## Reconciliacao de produto em 2026-09-26
+## Reconciliacao de produto em 2026-09-27
 
 - Fase 280 (PB-26): painel de operacao da clinica integrado pelo PR #315,
   merge `704adb0`. Indicadores agregados de pacientes e carga de agenda,
@@ -13,7 +13,10 @@
   25 pacientes selecionados, com verificacao de tenant e profissional. CI teve
   19 checks `SUCCESS`; `Provenance do SBOM` ficou `SKIPPED`. Detalhes e limites
   em `docs/history/phases/PLANO_FASE_282.md`.
-- Proximo PB da sequencia aprovada da Onda 5: PB-29.
+- Fase 283 (PB-29): guia de onboarding integrado pelo PR #319 (merge
+  `19ade15`). Evidência e limites em `docs/history/phases/PLANO_FASE_283.md`.
+- A Fase 284 (PB-22) está em preparação em branch dedicada; não consta como
+  fase concluída até merge e aceite dos checks.
 
 Atualizado em 2026-09-17 com a conclusao da Fase 264 e a reconciliacao da
 Fase 263. A Fase 262 permanece aberta por gates externos do piloto.

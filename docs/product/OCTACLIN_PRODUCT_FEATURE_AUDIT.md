@@ -180,7 +180,7 @@ explícita e sem lacuna funcional evidente.
 | Evolução fotográfica | Uma foto por vez | Sem antes/depois | Comparação lado a lado por protocolo de pose | Médio | P | **P2** |
 | Perfil de cadastro | Tags/origem/categoria dentro de blob cifrado | Segmentação impossível sem migration | Campo pesquisável protegido + filtro | Médio | M | **P3** |
 | Notificações in-app | Sem preferência, por polling | Fadiga de notificação | Preferência por usuário + digest | Médio | M | **P2** |
-| Templates de mensagem | Sem biblioteca inicial | Clínica nova começa vazia | Conjunto inicial + edição + preview | Médio | P | **P2** |
+| Templates de mensagem | Sem biblioteca inicial na auditoria original | Clínica nova começa vazia | Conjunto inicial + edição + preview; implementação da Fase 284 em revisão | Médio | P | **P2** |
 | Modelos de plano | Sem edição | Corrigir exige recriar | `PUT` de modelo | Baixo | P | **P2** |
 | API pública | Só papel `Client` | Nutricionista não alcança | Rever papel/permissão | Baixo | P | **P3** |
 | Catálogo TACO | Carga manual por script | Ambiente novo nasce vazio | Carga versionada no provisionamento | Médio | M | **P3** |
@@ -214,8 +214,9 @@ Critério: valor claro, esforço pequeno, risco baixo, sem migration pesada e se
    gera a primeira automação com efeito real.
 10. **Comparação lado a lado na evolução fotográfica.** `[F]` `protocoloCriptografado` (a pose) existe
     exatamente para alinhar fotos equivalentes, e a UI mostra uma por vez.
-11. **Biblioteca inicial de templates de mensagem.** `[F]` Nenhum seed cria template fora de demo/staging;
-    toda clínica nova começa sem nenhum.
+11. **Biblioteca inicial de templates de mensagem.** `[F]` Na auditoria original,
+    nenhum seed criava template fora de demo/staging. A Fase 284 implementa
+    instalação no provisionamento e ação para clínicas existentes; merge pendente.
 12. **Ações em massa na lista de pacientes** (enviar formulário / material para os selecionados).
     `[F]` Hoje não há seleção múltipla.
 13. **Duplicar consulta / "repetir este agendamento".** `[F]` Não existe recorrência nem duplicação; criar
@@ -607,7 +608,7 @@ de esgotar a versão determinística de cada um.
 
 ### Estado do backlog verificado em 2026-09-27
 
-Os estados abaixo foram cruzados com PRs merged e, para itens sem PR identificável, com o código da branch da PR #319. Merge comprova a entrega de código, não a aplicação de migrations em ambientes externos.
+Os estados abaixo foram cruzados com PRs merged e, para itens sem PR identificável, com o código. PR #319 já foi integrado; PB-22 está implementado na branch da Fase 284, ainda sem merge. Merge comprova a entrega de código, não a aplicação de migrations em ambientes externos.
 
 | PB | Estado e evidência |
 |---|---|
@@ -627,15 +628,15 @@ Os estados abaixo foram cruzados com PRs merged e, para itens sem PR identificá
 | PB-19 | **Concluído** — Fase 277, PR #309. |
 | PB-20 | **Pendente** — não há PR de entrega nem evidência de comparação de fotos lado a lado no código consultado. |
 | PB-21 | **Concluído** — Fase 282, PR #317. |
-| PB-22 | **Pendente** — há gestão e envio de templates, mas não há evidência da biblioteca inicial de mensagens recomendada pela auditoria. |
+| PB-22 | **Implementado na branch, integração pendente** — Fase 284: três e-mails iniciais versionados no provisionamento, instalação idempotente para tenants existentes, edição e prévia fictícia. Aguardar PR, checks e merge antes de considerar concluído em `main`. |
 | PB-24 | **Concluído** — Fase 275, PR #305. |
 | PB-26 | **Concluído** — Fase 280, PR #315. |
 | PB-27 | **Concluído** — Fase 281, PR #316. |
 | PB-28 | **Pendente** — não há evidência de canal de resposta no portal com SLA para a clínica. |
-| PB-29 | **Em andamento** — Fase 283, PR #319 aberta; não contar como concluído até merge e aceite. |
+| PB-29 | **Concluído no código** — Fase 283, PR #319 integrado (merge `19ade15` em 2026-09-27). Não há evidência de produção nesta reconciliação. |
 | PB-30 | **Pendente** — extração assistida de exames não foi encontrada; PB-17 entrega a estrutura determinística e é dependência já concluída. |
 
-PB-22, PB-20, PB-28 e PB-30 não têm ordem aprovada na tabela original. A proposta de sequência abaixo inclui também as recomendações das seções 3–14 que não se esgotam nesses PBs.
+PB-20, PB-28 e PB-30 não têm ordem aprovada na tabela original. PB-22 foi iniciado por decisão do proprietário e aguarda integração. A proposta de sequência abaixo inclui também as recomendações das seções 3–14 que não se esgotam nesses PBs.
 
 ---
 
@@ -759,8 +760,8 @@ proposta abaixo.
   PB-27 foi integrado na Fase 281 pelo PR #316 (merge `01817ae`, confirmado
   no GitHub em 2026-09-26). PB-21 foi integrado na Fase 282 pelo PR #317
   (merge `a7274be`, 2026-09-26); o fluxo, limites e rollback estao descritos
-  em `docs/history/phases/PLANO_FASE_282.md`. PB-29 está em andamento na PR #319 (Fase 283); concluir
-  checks, revisão e merge antes de iniciar o próximo item.
+  em `docs/history/phases/PLANO_FASE_282.md`. PB-29 foi integrado pelo PR #319
+  (Fase 283, merge `19ade15`). PB-22 está em revisão na branch da Fase 284.
 
 ### Seleção de modelo, skills e plugins por PB
 
@@ -781,6 +782,7 @@ modelo vale apenas para eventual manutenção.
 | PB-27 | GPT-6 Astra / alto | `context-engineering`, `planning-and-task-breakdown`, `test-driven-development`, `security-review`, `gdpr-compliance`, `nestjs-best-practices`, `typeorm` | Skills locais OctaClin + pacote `agent-skills`; revisão `tenant-security-reviewer` obrigatória. Decisão jurídica e política de acesso/retenção precedem implementação. |
 | PB-21 | GPT-5.6 Terra / médio | `context-engineering`, `test-driven-development`, `nestjs-best-practices`, `typeorm`, `playwright-best-practices` | Skills locais OctaClin + pacote `agent-skills`; revisão `tenant-security-reviewer` para operações em lote com IDs de pacientes. |
 | PB-29 | GPT-6 Luna / médio | `context-engineering`, `test-driven-development`, `frontend-design`, `ui-ux-pro-max`, `vercel-react-best-practices`, `playwright-best-practices`; `nestjs-best-practices` se incluir backend | Skills locais OctaClin + pacote `agent-skills`; revisão `tenant-security-reviewer` se o fluxo criar ou alterar dados associados a tenant/usuário. |
+| PB-22 | GPT-6 Sol / médio | `planning-and-task-breakdown`, `test-driven-development`, `nestjs-best-practices`, `security-review`, `vercel-react-best-practices`, `playwright-best-practices` | Skills locais OctaClin + pacote `agent-skills`; revisão de escopo tenant e autorização na Fase 284. |
 
 Não usar plugins externos para consultar dados clínicos, produção ou provedores
 durante essas entregas. `neon-postgres` só poderá apoiar leitura de documentação
@@ -801,8 +803,8 @@ Esta ordem consolida os PBs pendentes e as recomendações das seções 3–14 q
 É uma proposta de execução completa do backlog ativo; itens dependentes de decisão clínica, jurídica ou de
 produto devem ter esse gate resolvido no plano da respectiva fase.
 
-1. **Concluir PB-29 (Fase 283, PR #319).** Fechar o onboarding já em andamento antes de abrir outro PB.
-2. **PB-22 — biblioteca inicial de mensagens.** Criar modelos curados, editáveis e seguros. Em tarefa
+1. **PB-29 (Fase 283, PR #319) concluído no código.** Guia integrado em `main`.
+2. **Integrar PB-22 (Fase 284).** Revisar e aceitar a biblioteca inicial de mensagens nesta branch. Em tarefa
    relacionada, mas separada do PB-22, avaliar um kit inicial de modelos de plano alimentar, catálogo de
    alimentos e materiais; o guia do PB-29 não comprova que esses conteúdos existam.
 3. **PB-20 — comparação de fotos lado a lado.** Definir acesso clínico, retenção e controles das imagens

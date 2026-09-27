@@ -1,6 +1,27 @@
 import { ControladorComunicacoes } from './controlador-comunicacoes';
+import { CHAVE_PERMISSOES } from '../../auth/apresentacao/decorators';
 
 describe('ControladorComunicacoes', () => {
+  it('exige gerenciar templates para instalar e editar, com tenant derivado da sessão', async () => {
+    const servico = {
+      instalarTemplatesIniciais: jest.fn(async () => ({ criados: [{ id: 'template-1' }] })),
+      atualizarTemplate: jest.fn(async () => ({ id: 'template-1', nome: 'Editado', canal: 'email', aprovado: true }))
+    };
+    const auditoria = { registrar: jest.fn(async () => undefined) };
+    const controlador = new ControladorComunicacoes(servico as never, auditoria as never);
+    const usuario = { tenantId: 'tenant-1', usuarioId: 'usuario-1' } as never;
+    const requisicao = { ip: '127.0.0.1', headers: {} } as never;
+
+    expect(Reflect.getMetadata(CHAVE_PERMISSOES, ControladorComunicacoes.prototype.instalarTemplatesIniciais)).toEqual(['comunicacoes.templates.gerenciar']);
+    expect(Reflect.getMetadata(CHAVE_PERMISSOES, ControladorComunicacoes.prototype.atualizarTemplate)).toEqual(['comunicacoes.templates.gerenciar']);
+    await controlador.instalarTemplatesIniciais(usuario, requisicao);
+    await controlador.atualizarTemplate(usuario, requisicao, 'template-1', {
+      canal: 'email', nome: 'Editado', conteudo: { corpo: 'Texto' }, aprovado: true
+    });
+    expect(servico.instalarTemplatesIniciais).toHaveBeenCalledWith('tenant-1');
+    expect(servico.atualizarTemplate).toHaveBeenCalledWith('tenant-1', 'template-1', expect.objectContaining({ nome: 'Editado' }));
+    expect(auditoria.registrar).toHaveBeenCalledWith(expect.objectContaining({ tenantId: 'tenant-1', acao: 'comunicacoes.template.editar' }));
+  });
   it('deve listar canais operacionais sem configuracao sensivel', async () => {
     const servico = {
       listarCanais: jest.fn(async () => [
