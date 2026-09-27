@@ -88,3 +88,12 @@ Node 24.19.0, fora do contrato `>=22 <23`; CI em Node 22 ainda pendente.
 Testes unitários e E2E SKIPPED neste ciclo, conforme limite da solicitação;
 checks do GitHub ainda pendentes. Não há evidência de deploy nem de alteração
 de ambiente externo.
+
+### Correção após a primeira execução do PR #321
+
+No primeiro CI, Web Next.js passou em Node 22. Backend NestJS falhou em uma
+asserção de `servico-mobile.spec.ts`: o bloqueio ao Patient funcionava, mas a
+mensagem da nova checagem antecipada divergia da mensagem do contrato anterior.
+A checagem agora reutiliza a mensagem anterior. O teste focado passou localmente
+(30 de 30); a suíte completa do backend no CI e o Demo local smoke aguardam a
+nova execução. Os outros checks da primeira execução não substituem esses gates.

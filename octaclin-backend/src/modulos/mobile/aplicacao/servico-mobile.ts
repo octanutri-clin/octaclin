@@ -347,7 +347,7 @@ export class ServicoMobile {
         });
         if (vinculoClinico || declarado?.tipo === 'evolucao_fotografica') {
           if (!usuario) throw new NotFoundException('Anexo nao encontrado.');
-          throw new ForbiddenException('Imagem clinica restrita a equipe clinica.');
+          throw new ForbiddenException('Paciente nao pode confirmar imagem de evolucao fotografica.');
         }
       }
       if (usuario && encontrado.status === 'confirmado') {
