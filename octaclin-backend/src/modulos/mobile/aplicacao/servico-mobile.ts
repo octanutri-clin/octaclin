@@ -138,7 +138,29 @@ export class ServicoMobile {
         order: { criadoEm: 'DESC' },
         take: 50
       });
-      return arquivos.map((arquivo) => this.resumirArquivo(arquivo));
+      const ids = arquivos.map((arquivo) => arquivo.id);
+      const vinculos = ids.length ? await gerenciador.getRepository(EvolucaoFotograficaArquivoOrm).find({
+        where: { tenantId, arquivoMidiaId: In(ids) }
+      }) : [];
+      const fotosClinicas = new Set(vinculos.map((vinculo) => vinculo.arquivoMidiaId));
+      const permitidos: ArquivoMidiaOrm[] = [];
+      for (const arquivo of arquivos) {
+        const clinico = fotosClinicas.has(arquivo.id)
+          || this.extrairVinculoClinico(arquivo.metadados?.vinculoClinico)?.tipo === 'evolucao_fotografica';
+        if (!clinico) {
+          permitidos.push(arquivo);
+          continue;
+        }
+        if (usuario.papel === 'Patient') continue;
+        try {
+          await this.garantirAcessoEvolucaoFotografica(gerenciador, tenantId, arquivo, usuario);
+          permitidos.push(arquivo);
+        } catch (erro) {
+          if (erro instanceof NotFoundException) continue;
+          throw erro;
+        }
+      }
+      return permitidos.map((arquivo) => this.resumirArquivo(arquivo));
     });
   }
 
@@ -311,13 +333,31 @@ export class ServicoMobile {
     obterArquivo: (gerenciador: EntityManager) => Promise<ArquivoMidiaOrm>,
     usuario?: UsuarioAutenticado
   ): Promise<ArquivoMidiaResumo> {
-    const arquivo = await this.executorTenant.executar(tenantId, obterArquivo);
+    let confirmadoPorOutraChamada = false;
+    const arquivo = await this.executorTenant.executar(tenantId, async (gerenciador) => {
+      const encontrado = await obterArquivo(gerenciador);
+      const vinculoArquivo = (encontrado.metadados?.vinculo ?? {}) as Record<string, string>;
+      if (Object.entries(vinculoEsperado).some(([chave, valor]) => vinculoArquivo[chave] !== valor)) {
+        throw new NotFoundException('Anexo nao encontrado.');
+      }
+      if (!usuario || usuario.papel === 'Patient') {
+        const declarado = this.extrairVinculoClinico(encontrado.metadados?.vinculoClinico);
+        const vinculoClinico = await gerenciador.getRepository(EvolucaoFotograficaArquivoOrm).findOne({
+          where: { tenantId, arquivoMidiaId: encontrado.id }
+        });
+        if (vinculoClinico || declarado?.tipo === 'evolucao_fotografica') {
+          if (!usuario) throw new NotFoundException('Anexo nao encontrado.');
+          throw new ForbiddenException('Paciente nao pode confirmar imagem de evolucao fotografica.');
+        }
+      }
+      if (usuario && encontrado.status === 'confirmado') {
+        await this.garantirAcessoEvolucaoFotografica(gerenciador, tenantId, encontrado, usuario);
+      }
+      return encontrado;
+    });
     if (arquivo.status === 'confirmado') return this.resumirArquivo(arquivo);
     if (arquivo.status !== 'pendente') throw new BadRequestException('Anexo nao pode ser confirmado.');
     const vinculo = (arquivo.metadados?.vinculo ?? {}) as Record<string, string>;
-    if (Object.entries(vinculoEsperado).some(([chave, valor]) => vinculo[chave] !== valor)) {
-      throw new NotFoundException('Anexo nao encontrado.');
-    }
 
     // Capturados antes de qualquer escrita: `atual`, adiante, pode ser a
     // mesma instancia de entidade que `arquivo` dependendo do ORM/mock, e o
@@ -376,7 +416,21 @@ export class ServicoMobile {
     try {
       const confirmado = await this.executorTenant.executar(tenantId, async (gerenciador) => {
         const atual = await obterArquivo(gerenciador);
-        if (atual.status === 'confirmado') return this.resumirArquivo(atual);
+        if (atual.status === 'confirmado') {
+          confirmadoPorOutraChamada = true;
+          if (usuario) {
+            await this.garantirAcessoEvolucaoFotografica(gerenciador, tenantId, atual, usuario);
+          } else {
+            const declarado = this.extrairVinculoClinico(atual.metadados?.vinculoClinico);
+            const vinculoClinico = await gerenciador.getRepository(EvolucaoFotograficaArquivoOrm).findOne({
+              where: { tenantId, arquivoMidiaId: atual.id }
+            });
+            if (vinculoClinico || declarado?.tipo === 'evolucao_fotografica') {
+              throw new NotFoundException('Anexo nao encontrado.');
+            }
+          }
+          return this.resumirArquivo(atual);
+        }
         if (atual.status !== 'pendente') throw new BadRequestException('Anexo nao pode ser confirmado.');
         Object.assign(atual, {
           tamanhoBytes: String(inspecao.tamanhoBytes),
@@ -393,17 +447,48 @@ export class ServicoMobile {
       await Promise.allSettled([this.armazenamento.excluirObjeto(bucket, chavePendente)]);
       return confirmado;
     } catch (erro) {
-      await Promise.allSettled([this.armazenamento.excluirObjeto(bucket, chaveConfirmada)]);
+      if (!confirmadoPorOutraChamada) {
+        await Promise.allSettled([this.armazenamento.excluirObjeto(bucket, chaveConfirmada)]);
+      }
       throw erro;
     }
   }
 
   async gerarAcessoArquivoMidia(tenantId: string, arquivoId: string, usuario: UsuarioAutenticado) {
-    const arquivo = await this.executorTenant.executar(tenantId, (gerenciador) =>
-      this.obterArquivoPermitido(gerenciador, tenantId, arquivoId, usuario)
-    );
+    const arquivo = await this.executorTenant.executar(tenantId, async (gerenciador) => {
+      const permitido = await this.obterArquivoPermitido(gerenciador, tenantId, arquivoId, usuario);
+      await this.garantirAcessoEvolucaoFotografica(gerenciador, tenantId, permitido, usuario);
+      return permitido;
+    });
     if (arquivo.status !== 'confirmado') throw new NotFoundException('Anexo nao encontrado.');
     return { url: await this.armazenamento.criarDownloadAssinado(arquivo.bucket, arquivo.chaveObjeto), expiraEmSegundos: 300 };
+  }
+
+  private async garantirAcessoEvolucaoFotografica(
+    gerenciador: EntityManager,
+    tenantId: string,
+    arquivo: ArquivoMidiaOrm,
+    usuario: UsuarioAutenticado
+  ): Promise<void> {
+    const vinculoDeclarado = this.extrairVinculoClinico(arquivo.metadados?.vinculoClinico);
+    const vinculo = await gerenciador.getRepository(EvolucaoFotograficaArquivoOrm).findOne({
+      where: { tenantId, arquivoMidiaId: arquivo.id }
+    });
+    if (!vinculo && vinculoDeclarado?.tipo !== 'evolucao_fotografica') return;
+    if (usuario.papel !== 'Professional' && usuario.papel !== 'SuperAdmin') {
+      throw new ForbiddenException('Imagem clinica restrita a equipe clinica.');
+    }
+    if (!vinculo) throw new NotFoundException('Imagem clinica nao encontrada.');
+    const evolucao = await gerenciador.getRepository(EvolucaoFotograficaOrm).findOne({
+      where: { id: vinculo.evolucaoFotograficaId, tenantId, pacienteId: arquivo.pacienteId, excluidaEm: IsNull() }
+    });
+    if (!evolucao) throw new NotFoundException('Serie fotografica nao encontrada.');
+    const consentimento = await gerenciador.getRepository(ConsentimentoEvolucaoFotograficaOrm).findOne({
+      where: { id: evolucao.consentimentoId, tenantId, pacienteId: arquivo.pacienteId }
+    });
+    if (!consentimento || consentimento.retencaoAte < new Date().toISOString().slice(0, 10)) {
+      throw new NotFoundException('Imagem clinica fora do prazo de acesso.');
+    }
   }
 
   async excluirArquivoMidia(tenantId: string, arquivoId: string, usuario: UsuarioAutenticado): Promise<void> {

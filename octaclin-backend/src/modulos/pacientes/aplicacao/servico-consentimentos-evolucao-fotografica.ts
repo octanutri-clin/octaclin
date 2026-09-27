@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { EntityManager, IsNull } from 'typeorm';
 import { ExecutorTenant } from '../../../infraestrutura/banco-dados/executor-tenant';
 import { CriptografiaDadosSensiveis } from '../../../infraestrutura/seguranca/criptografia-dados-sensiveis';
@@ -22,6 +22,7 @@ export class ServicoConsentimentosEvolucaoFotografica {
   constructor(private readonly executorTenant: ExecutorTenant, private readonly criptografia: CriptografiaDadosSensiveis) {}
 
   async listar(tenantId: string, pacienteId: string, usuario: UsuarioAutenticado): Promise<ConsentimentoEvolucaoFotograficaResposta[]> {
+    this.garantirPapelClinico(usuario);
     return this.executorTenant.executar(tenantId, async (gerenciador) => {
       await this.garantirPacienteAcessivel(gerenciador, tenantId, pacienteId, usuario);
       const itens = await gerenciador.getRepository(ConsentimentoEvolucaoFotograficaOrm).find({
@@ -32,6 +33,7 @@ export class ServicoConsentimentosEvolucaoFotografica {
   }
 
   async registrar(tenantId: string, pacienteId: string, dados: RegistrarConsentimentoEvolucaoFotograficaDto, usuario: UsuarioAutenticado): Promise<ConsentimentoEvolucaoFotograficaResposta> {
+    this.garantirPapelClinico(usuario);
     if (dados.retencaoAte < new Date().toISOString().slice(0, 10)) {
       throw new BadRequestException('A data de retencao deve ser atual ou futura.');
     }
@@ -52,6 +54,7 @@ export class ServicoConsentimentosEvolucaoFotografica {
   }
 
   async revogar(tenantId: string, pacienteId: string, consentimentoId: string, usuario: UsuarioAutenticado): Promise<ConsentimentoEvolucaoFotograficaResposta> {
+    this.garantirPapelClinico(usuario);
     return this.executorTenant.executar(tenantId, async (gerenciador) => {
       await this.garantirPacienteAcessivel(gerenciador, tenantId, pacienteId, usuario);
       const repositorio = gerenciador.getRepository(ConsentimentoEvolucaoFotograficaOrm);
@@ -79,5 +82,11 @@ export class ServicoConsentimentosEvolucaoFotografica {
       revogadoEm: registro.revogadoEm?.toISOString(),
       ativo: !registro.revogadoEm
     };
+  }
+
+  private garantirPapelClinico(usuario: UsuarioAutenticado): void {
+    if (usuario.papel !== 'Professional' && usuario.papel !== 'SuperAdmin') {
+      throw new ForbiddenException('Acesso a consentimento fotografico restrito a equipe clinica.');
+    }
   }
 }

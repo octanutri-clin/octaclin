@@ -11,7 +11,7 @@ import { ServicoEvolucoesFotograficas } from '../aplicacao/servico-evolucoes-fot
 
 @Controller('pacientes')
 @UseGuards(GuardaJwt, GuardaPapeis, GuardaPermissoes)
-@Papeis('SuperAdmin', 'Professional', 'Collaborator')
+@Papeis('SuperAdmin', 'Professional')
 export class ControladorEvolucoesFotograficas {
   constructor(private readonly servico: ServicoEvolucoesFotograficas, private readonly auditoria: ServicoAuditoria) {}
 

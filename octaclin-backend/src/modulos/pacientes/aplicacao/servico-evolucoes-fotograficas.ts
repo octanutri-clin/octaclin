@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { EntityManager, In, IsNull } from 'typeorm';
 import { ExecutorTenant } from '../../../infraestrutura/banco-dados/executor-tenant';
 import { ServicoArmazenamentoObjetos } from '../../../infraestrutura/armazenamento/servico-armazenamento-objetos';
@@ -32,6 +32,7 @@ export class ServicoEvolucoesFotograficas {
   ) {}
 
   async solicitarUpload(tenantId: string, pacienteId: string, dados: SolicitarUploadEvolucaoFotograficaDto, usuario: UsuarioAutenticado) {
+    this.garantirPapelClinico(usuario);
     const evolucaoId = await this.executorTenant.executar(tenantId, async (gerenciador) => {
       await this.garantirPacienteAcessivel(gerenciador, tenantId, pacienteId, usuario);
       await this.garantirConsentimentoAtivo(gerenciador, tenantId, pacienteId, dados.consentimentoId);
@@ -79,20 +80,30 @@ export class ServicoEvolucoesFotograficas {
   }
 
   async listar(tenantId: string, pacienteId: string, usuario: UsuarioAutenticado): Promise<EvolucaoFotograficaResposta[]> {
+    this.garantirPapelClinico(usuario);
     return this.executorTenant.executar(tenantId, async (gerenciador) => {
       await this.garantirPacienteAcessivel(gerenciador, tenantId, pacienteId, usuario);
       const evolucoes = await gerenciador.getRepository(EvolucaoFotograficaOrm).find({
         where: { tenantId, pacienteId, excluidaEm: IsNull() }, order: { capturadaEm: 'DESC', criadoEm: 'DESC' }
       });
       if (!evolucoes.length) return [];
+      const consentimentos = await gerenciador.getRepository(ConsentimentoEvolucaoFotograficaOrm).find({
+        where: { tenantId, pacienteId, id: In(evolucoes.map((item) => item.consentimentoId)) }
+      });
+      const hoje = new Date().toISOString().slice(0, 10);
+      const consentimentosDentroDoPrazo = new Set(consentimentos
+        .filter((item) => item.retencaoAte >= hoje)
+        .map((item) => item.id));
+      const visiveis = evolucoes.filter((item) => consentimentosDentroDoPrazo.has(item.consentimentoId));
+      if (!visiveis.length) return [];
       const vinculos = await gerenciador.getRepository(EvolucaoFotograficaArquivoOrm).find({
-        where: { tenantId, evolucaoFotograficaId: In(evolucoes.map((item) => item.id)) }
+        where: { tenantId, evolucaoFotograficaId: In(visiveis.map((item) => item.id)) }
       });
       const arquivoIds = vinculos.map((item) => item.arquivoMidiaId);
       const arquivos = arquivoIds.length
         ? await gerenciador.getRepository(ArquivoMidiaOrm).find({ where: { tenantId, id: In(arquivoIds), status: 'confirmado' } })
         : [];
-      return evolucoes.map((item) => ({
+      return visiveis.map((item) => ({
         id: item.id,
         consentimentoId: item.consentimentoId,
         protocolo: this.criptografia.descriptografar(item.protocoloCriptografado),
@@ -113,6 +124,7 @@ export class ServicoEvolucoesFotograficas {
   }
 
   async excluir(tenantId: string, pacienteId: string, evolucaoId: string, usuario: UsuarioAutenticado): Promise<{ arquivosRemovidos: number }> {
+    this.garantirPapelClinico(usuario);
     const arquivos = await this.executorTenant.executar(tenantId, async (gerenciador) => {
       await this.garantirPacienteAcessivel(gerenciador, tenantId, pacienteId, usuario);
       const evolucao = await gerenciador.getRepository(EvolucaoFotograficaOrm).findOne({
@@ -166,5 +178,11 @@ export class ServicoEvolucoesFotograficas {
       where: { id: pacienteId, tenantId, arquivadoEm: IsNull(), ...(profissionalResponsavelId ? { profissionalResponsavelId } : {}) }
     });
     if (!paciente) throw new NotFoundException('Paciente nao encontrado.');
+  }
+
+  private garantirPapelClinico(usuario: UsuarioAutenticado): void {
+    if (usuario.papel !== 'Professional' && usuario.papel !== 'SuperAdmin') {
+      throw new ForbiddenException('Acesso a evolucao fotografica restrito a equipe clinica.');
+    }
   }
 }

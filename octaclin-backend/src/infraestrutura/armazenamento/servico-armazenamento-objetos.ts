@@ -114,7 +114,11 @@ export class ServicoArmazenamentoObjetos {
 
   async criarDownloadAssinado(bucket: string, chaveObjeto: string): Promise<string> {
     const { cliente } = this.obterConfiguracao();
-    return getSignedUrl(cliente, new GetObjectCommand({ Bucket: bucket, Key: chaveObjeto }), { expiresIn: EXPIRACAO_URL_SEGUNDOS });
+    return getSignedUrl(cliente, new GetObjectCommand({
+      Bucket: bucket,
+      Key: chaveObjeto,
+      ResponseCacheControl: 'private, no-store, max-age=0'
+    }), { expiresIn: EXPIRACAO_URL_SEGUNDOS });
   }
 
   async promoverObjeto(bucket: string, chaveOrigem: string, chaveDestino: string): Promise<void> {

@@ -11,7 +11,7 @@ import { ServicoConsentimentosEvolucaoFotografica } from '../aplicacao/servico-c
 
 @Controller('pacientes')
 @UseGuards(GuardaJwt, GuardaPapeis, GuardaPermissoes)
-@Papeis('SuperAdmin', 'Professional', 'Collaborator')
+@Papeis('SuperAdmin', 'Professional')
 export class ControladorConsentimentosEvolucaoFotografica {
   constructor(private readonly servico: ServicoConsentimentosEvolucaoFotografica, private readonly auditoria: ServicoAuditoria) {}
 
