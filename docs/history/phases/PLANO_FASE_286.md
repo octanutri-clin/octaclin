@@ -69,6 +69,10 @@ registrados com PASS/FAIL/NA/SKIPPED. Os checks do PR são evidência separada.
   declara Node 22 como runtime suportado. O CI em Node 22 é o gate autoritativo.
 - Revisão independente: pendente de revisão humana na PR; não foi executada
   revisão cruzada por outro agente neste ciclo.
+- Correção após abertura do PR #322: Demo local smoke falhou no cenário visual
+  do PB-15 em desktop e mobile, pois ele ainda exigia copiar peso/IMC para o
+  texto livre da evolução por data civil. O cenário foi atualizado para exigir
+  vínculo com a consulta, contexto somente leitura e texto livre vazio.
 
 ## Referências clínicas
 
