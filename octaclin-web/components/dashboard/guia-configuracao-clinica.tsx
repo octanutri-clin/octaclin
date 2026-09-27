@@ -88,7 +88,7 @@ export function GuiaConfiguracaoClinica({ tenantSlug }: { tenantSlug: string }) 
       href: '/pacientes' as const, acao: 'Cadastrar paciente', total: totais.pacientes, concluida: totais.pacientes !== null && totais.pacientes > 0, opcional: false
     },
     {
-      id: 'formularios', titulo: 'Configurar formulários iniciais', descricao: 'Use Triagem de primeira consulta e Check-in semanal de adesao como ponto de partida. Cada modelo cria um formulário próprio que pode ser editado no editor.',
+      id: 'formularios', titulo: 'Configurar formulários iniciais', descricao: 'Use Triagem de primeira consulta e Check-in semanal de adesão como ponto de partida. Cada modelo cria um formulário próprio que pode ser editado no editor.',
       href: '/questionarios' as const, acao: 'Abrir modelos de formulários', total: totais.formularios, concluida: totais.formularios !== null && totais.formularios > 0, opcional: true
     },
     {
