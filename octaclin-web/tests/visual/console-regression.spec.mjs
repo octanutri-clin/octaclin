@@ -3192,11 +3192,17 @@ test.describe('prontuario do paciente', () => {
     await assertSemOverflowHorizontal(page);
   });
 
-  test('pré-preenche peso e IMC quando há avaliação antropométrica de hoje (PB-15)', async ({ page }) => {
+  test('mostra peso e IMC somente leitura da avaliação vinculada à consulta (Fase 286)', async ({ page }) => {
     await prepararProntuarioMockado(page);
-    // Data real do dia do teste: a pre-preenchimento correlaciona por data
-    // civil, nao por vinculo formal de consulta (ver PLANO_FASE_271.md).
-    const hoje = new Date().toLocaleDateString('en-CA');
+    await page.route('**/api/pacientes/paciente-1/consultas-recentes', async (route) => {
+      await route.fulfill({
+        status: 200, contentType: 'application/json',
+        body: JSON.stringify([
+          { id: 'consulta-sem-medidas', titulo: 'Consulta sem medidas', inicioEm: '2026-07-20T13:00:00.000Z', status: 'concluida' },
+          { id: 'consulta-com-medidas', titulo: 'Consulta com medidas', inicioEm: '2026-07-21T13:00:00.000Z', status: 'concluida' }
+        ])
+      });
+    });
     await page.route('**/api/pacientes/paciente-1/avaliacoes-antropometricas', async (route) => {
       await route.fulfill({
         status: 200,
@@ -3204,10 +3210,11 @@ test.describe('prontuario do paciente', () => {
         body: JSON.stringify({
           avaliacoes: [
             {
-              id: 'avaliacao-hoje', pacienteId: 'paciente-1', avaliadaEm: hoje, protocolo: 'nenhum',
+              id: 'avaliacao-vinculada', pacienteId: 'paciente-1', consultaId: 'consulta-com-medidas',
+              avaliadaEm: '2026-07-21', protocolo: 'nenhum',
               medidas: { pesoKg: 70, alturaCm: 165 },
               resultado: { imc: 24.5, protocoloAplicado: 'nenhum', avisos: [] },
-              criadoEm: `${hoje}T13:00:00.000Z`
+              criadoEm: '2026-07-21T13:00:00.000Z'
             },
             {
               id: 'avaliacao-1', pacienteId: 'paciente-1', avaliadaEm: '2026-06-21', protocolo: 'nenhum',
@@ -3223,10 +3230,15 @@ test.describe('prontuario do paciente', () => {
     await page.goto('/pacientes/paciente-1');
 
     await page.getByRole('tab', { name: 'Atendimentos' }).click();
-    await expect(
-      page.getByText('Peso e IMC da avaliação de hoje já foram pré-preenchidos abaixo — edite ou remova livremente.')
-    ).toBeVisible();
-    await expect(page.getByLabel('Conteúdo da evolução')).toHaveValue('Peso: 70,0 kg · IMC: 24,50 (avaliação de hoje)\n\n');
+    const consulta = page.getByLabel('Vincular a consulta (opcional)');
+    await expect(consulta).toBeEnabled();
+    await expect(page.getByText('Medidas registradas nesta consulta')).toHaveCount(0);
+    await consulta.selectOption('consulta-sem-medidas');
+    await expect(page.getByText('Medidas registradas nesta consulta')).toHaveCount(0);
+    await consulta.selectOption('consulta-com-medidas');
+    await expect(page.getByText('Medidas registradas nesta consulta')).toBeVisible();
+    await expect(page.getByText('Peso: 70,0 kg · IMC: 24,50')).toBeVisible();
+    await expect(page.getByLabel('Conteúdo da evolução')).toHaveValue('');
     await assertSemOverflowHorizontal(page);
   });
 

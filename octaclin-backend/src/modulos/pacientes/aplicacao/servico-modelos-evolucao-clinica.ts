@@ -1,12 +1,12 @@
-import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
-import { EntityManager, FindOptionsWhere, IsNull } from 'typeorm';
+import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { EntityManager, FindOptionsWhere, In, IsNull } from 'typeorm';
 import { registrarAuditoriaNaTransacao } from '../../../infraestrutura/auditoria/servico-auditoria';
 import { ExecutorTenant } from '../../../infraestrutura/banco-dados/executor-tenant';
 import { CriptografiaDadosSensiveis } from '../../../infraestrutura/seguranca/criptografia-dados-sensiveis';
 import { resolverProfissionalIdDoUsuario } from '../../../infraestrutura/seguranca/escopo-profissional';
 import type { PermissaoOctaClin } from '../../auth/dominio/permissoes';
 import { UsuarioAutenticado } from '../../auth/dominio/usuario-autenticado';
-import { podeAcessarModeloEvolucao, type OrigemModeloEvolucaoClinica } from '../dominio/modelos-evolucao-clinica';
+import { podeAcessarModeloEvolucao, TIPOS_MODELO_EVOLUCAO, type OrigemModeloEvolucaoClinica, type TipoModeloTextoClinico } from '../dominio/modelos-evolucao-clinica';
 import { ModeloEvolucaoClinicaOrm } from '../infraestrutura/modelo-evolucao-clinica.orm';
 import { CriarModeloEvolucaoClinicaDto, ListarModelosEvolucaoClinicaDto } from './dtos';
 
@@ -31,6 +31,10 @@ export class ServicoModelosEvolucaoClinica {
     this.garantirPermissao(usuario, 'pacientes.gerenciar');
     const conteudo = dados.conteudo.trim();
     const tipo = dados.tipo ?? 'observacao';
+    const limite = tipo === 'observacao_antropometrica' ? 2000 : tipo === 'relatorio_alta' ? 4000 : 6000;
+    if (conteudo.length > limite) {
+      throw new BadRequestException(`O texto do modelo excede o limite de ${limite} caracteres para esta finalidade.`);
+    }
 
     return this.executorTenant.executar(tenantId, async (gerenciador) => {
       const profissionalId = await this.resolverProfissional(gerenciador, tenantId, usuario);
@@ -75,7 +79,7 @@ export class ServicoModelosEvolucaoClinica {
     return this.executorTenant.executar(tenantId, async (gerenciador) => {
       const profissionalId = await this.resolverProfissional(gerenciador, tenantId, usuario);
       const [modelos, total] = await gerenciador.getRepository(ModeloEvolucaoClinicaOrm).findAndCount({
-        where: this.montarFiltroVisibilidade(tenantId, usuario, profissionalId, consulta.origem),
+        where: this.montarFiltroVisibilidade(tenantId, usuario, profissionalId, consulta.origem, consulta.tipo),
         // `id` desempata: `atualizado_em` usa default now() e empata entre
         // modelos salvos na mesma transacao, o que faria OFFSET repetir ou pular.
         order: { atualizadoEm: 'DESC', id: 'DESC' },
@@ -145,9 +149,14 @@ export class ServicoModelosEvolucaoClinica {
     tenantId: string,
     usuario: UsuarioAutenticado,
     profissionalId: string | undefined,
-    origem?: OrigemModeloEvolucaoClinica
+    origem?: OrigemModeloEvolucaoClinica,
+    tipo?: TipoModeloTextoClinico
   ): FindOptionsWhere<ModeloEvolucaoClinicaOrm>[] {
-    const base: FindOptionsWhere<ModeloEvolucaoClinicaOrm> = { tenantId, arquivadoEm: IsNull() };
+    // Sem tipo, preserva a biblioteca antiga de evolucoes e impede que um
+    // modelo de alta apareca por engano no formulario de evolucao.
+    const base: FindOptionsWhere<ModeloEvolucaoClinicaOrm> = {
+      tenantId, arquivadoEm: IsNull(), tipo: tipo ?? In([...TIPOS_MODELO_EVOLUCAO])
+    };
     if (usuario.papel === 'SuperAdmin') {
       return origem ? [{ ...base, origem }] : [base];
     }

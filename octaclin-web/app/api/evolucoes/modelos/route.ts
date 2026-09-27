@@ -1,7 +1,7 @@
 import { executarProxyModelosEvolucao, lerCorpo, montarConsultaPermitida } from './_proxy';
 
 export async function GET(request: Request) {
-  const consulta = montarConsultaPermitida(request, ['pagina', 'limite', 'origem']);
+  const consulta = montarConsultaPermitida(request, ['pagina', 'limite', 'origem', 'tipo']);
   return executarProxyModelosEvolucao(`/evolucoes/modelos${consulta}`, 'pacientes.ler');
 }
 

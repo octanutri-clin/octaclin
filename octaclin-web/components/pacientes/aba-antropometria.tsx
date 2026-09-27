@@ -2,14 +2,16 @@
 
 import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
 import { Botao } from '@/components/ui/botao';
-import { Campo, Rotulo, Selecao } from '@/components/ui/campo';
+import { AreaTexto, Campo, Rotulo, Selecao } from '@/components/ui/campo';
 import { Cartao, CartaoCabecalho, CartaoConteudo, CartaoTitulo } from '@/components/ui/cartao';
 import { BarraCarregamento } from '@/components/ui/feedback';
 import { GraficoEvolucao, PontoEvolucao } from '@/components/ui/grafico-evolucao';
 import { METRICAS_ANTROPOMETRICAS } from './metricas-antropometricas';
 import { SeletorConsultaRecente } from './seletor-consulta-recente';
+import { ModelosTextoClinico } from './modelos-texto-clinico';
 import { useRequisicaoCancelavel } from '@/lib/hooks';
 import { mensagemFalhaInterface } from '@/lib/erros-interface';
+import { obterPerfilCadastroPaciente } from '@/lib/perfil-cadastro-paciente-api';
 import {
   ProtocoloComposicao,
   SerieAntropometricaApi,
@@ -81,6 +83,8 @@ const ROTULO_AVISO: Record<string, string> = {
   imc_sem_classificacao_idade_ausente: 'IMC calculado, mas sem classificacao: falta a data de nascimento no cadastro.',
   imc_sem_classificacao_menor_de_20_exige_escore_z:
     'Menor de 20 anos: o IMC nao e classificado por corte de adulto, exige escore-z da OMS.',
+  imc_sem_classificacao_gestante_exige_semana_gestacional:
+    'Gestante: o IMC foi calculado, mas a classificação requer avaliação por semana gestacional.',
   rcq_sem_classificacao_sexo_ausente: 'RCQ calculado, mas sem classificacao: informe o sexo.',
   protocolo_exige_sexo: 'O protocolo escolhido precisa do sexo para calcular.',
   protocolo_exige_idade: 'O protocolo de Pollock precisa da idade (data de nascimento no cadastro).',
@@ -120,6 +124,7 @@ interface FormularioAvaliacao {
   sexo: SexoBiologico | '';
   pesoKg: string;
   alturaCm: string;
+  observacoes: string;
   cintura: string;
   quadril: string;
   dobras: Record<string, string>;
@@ -134,6 +139,7 @@ function formularioInicial(): FormularioAvaliacao {
     sexo: '',
     pesoKg: '',
     alturaCm: '',
+    observacoes: '',
     cintura: '',
     quadril: '',
     dobras: {},
@@ -160,15 +166,17 @@ function formatarData(data: string) {
 interface AbaAntropometriaProps {
   pacienteId: string;
   podeGerenciar: boolean;
+  dataNascimento?: string;
 }
 
-export function AbaAntropometria({ pacienteId, podeGerenciar }: AbaAntropometriaProps) {
+export function AbaAntropometria({ pacienteId, podeGerenciar, dataNascimento }: AbaAntropometriaProps) {
   const [serie, setSerie] = useState<SerieAntropometricaApi | null>(null);
   const [carregando, setCarregando] = useState(true);
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
   const [sucesso, setSucesso] = useState<string | null>(null);
   const [formulario, setFormulario] = useState<FormularioAvaliacao>(formularioInicial);
+  const [condicaoBiologica, setCondicaoBiologica] = useState<string | null>(null);
   const [metricaId, setMetricaId] = useState('peso');
   const [avaliacaoAnteriorId, setAvaliacaoAnteriorId] = useState('');
   const [avaliacaoAtualId, setAvaliacaoAtualId] = useState('');
@@ -195,6 +203,36 @@ export function AbaAntropometria({ pacienteId, podeGerenciar }: AbaAntropometria
   useEffect(() => {
     void carregar();
   }, [carregar]);
+
+  useEffect(() => {
+    let ativo = true;
+    void obterPerfilCadastroPaciente(pacienteId)
+      .then((perfil) => { if (ativo) setCondicaoBiologica(perfil.identificacao?.condicaoBiologica ?? 'nao_informada'); })
+      .catch(() => { if (ativo) setCondicaoBiologica(null); });
+    return () => { ativo = false; };
+  }, [pacienteId]);
+
+  const pesoPrevia = numero(formulario.pesoKg);
+  const alturaPrevia = numero(formulario.alturaCm);
+  const imcBruto = pesoPrevia !== undefined && alturaPrevia !== undefined &&
+    pesoPrevia >= 1 && pesoPrevia <= 500 && alturaPrevia >= 30 && alturaPrevia <= 250
+    ? pesoPrevia / (alturaPrevia / 100) ** 2 : undefined;
+  const imcPrevia = imcBruto !== undefined && imcBruto >= 8 && imcBruto <= 100 ? imcBruto : undefined;
+  const idadePrevia = (() => {
+    if (!dataNascimento || !/^\d{4}-\d{2}-\d{2}$/.test(formulario.avaliadaEm)) return undefined;
+    const [ano, mes, dia] = formulario.avaliadaEm.split('-').map(Number);
+    const [anoN, mesN, diaN] = dataNascimento.split('-').map(Number);
+    if (![ano, mes, dia, anoN, mesN, diaN].every(Number.isFinite)) return undefined;
+    return ano - anoN - (mes < mesN || (mes === mesN && dia < diaN) ? 1 : 0);
+  })();
+  const classePrevia = imcPrevia === undefined || condicaoBiologica === null ||
+    condicaoBiologica === 'gestante' || idadePrevia === undefined || idadePrevia < 20
+    ? undefined
+    : idadePrevia >= 60
+      ? imcPrevia < 22 ? 'baixo_peso' : imcPrevia <= 27 ? 'eutrofia' : 'sobrepeso'
+      : imcPrevia < 18.5 ? 'baixo_peso' : imcPrevia < 25 ? 'eutrofia'
+        : imcPrevia < 30 ? 'sobrepeso' : imcPrevia < 35 ? 'obesidade_grau_1'
+          : imcPrevia < 40 ? 'obesidade_grau_2' : 'obesidade_grau_3';
 
   const sitiosExigidos = useMemo(
     () => (formulario.sexo ? DOBRAS_POR_PROTOCOLO[formulario.protocolo][formulario.sexo] : []),
@@ -238,6 +276,7 @@ export function AbaAntropometria({ pacienteId, podeGerenciar }: AbaAntropometria
         sexo: formulario.sexo || undefined,
         pesoKg: numero(formulario.pesoKg),
         alturaCm: numero(formulario.alturaCm),
+        observacoes: formulario.observacoes.trim() || undefined,
         ...(Object.keys(circunferencias).length ? { circunferencias } : {}),
         ...(Object.keys(dobras).length ? { dobras } : {}),
         consultaId: formulario.consultaId || undefined
@@ -489,6 +528,20 @@ export function AbaAntropometria({ pacienteId, podeGerenciar }: AbaAntropometria
                 </label>
               </div>
 
+              <div className="rounded-md border border-linha bg-superficie p-3" aria-live="polite">
+                <p className="text-sm font-semibold text-tinta">IMC calculado automaticamente</p>
+                <p className="text-sm text-tinta">
+                  {imcPrevia === undefined ? 'Preencha peso e altura em centímetros dentro das faixas aceitas.' :
+                    `${formatar(imcPrevia, 2)} kg/m²${classePrevia ? ` · ${ROTULO_CLASSIFICACAO[classePrevia]}` : ''}`}
+                </p>
+                {imcPrevia !== undefined && !classePrevia ? <p className="text-xs text-texto-suave">
+                  {condicaoBiologica === 'gestante' ? 'Gestante: classificação depende da semana gestacional.' :
+                    idadePrevia !== undefined && idadePrevia < 20 ? 'Menor de 20 anos: classificação exige escore-z por idade e sexo.' :
+                      'Classificação disponível após confirmação dos dados cadastrais.'}
+                </p> : null}
+                <p className="text-xs text-texto-suave">Prévia. O registro definitivo é calculado pelo servidor ao salvar.</p>
+              </div>
+
               <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                 <label className="grid gap-1">
                   <Rotulo>Cintura (cm)</Rotulo>
@@ -562,6 +615,14 @@ export function AbaAntropometria({ pacienteId, podeGerenciar }: AbaAntropometria
                 onChange={(consultaId) => setFormulario((atual) => ({ ...atual, consultaId }))}
                 disabled={salvando}
               />
+
+              <label className="grid gap-1">
+                <Rotulo>Observações da avaliação</Rotulo>
+                <AreaTexto rows={4} value={formulario.observacoes} maxLength={2000}
+                  onChange={(evento) => setFormulario((atual) => ({ ...atual, observacoes: evento.target.value }))} />
+              </label>
+              <ModelosTextoClinico tipo="observacao_antropometrica" conteudoAtual={formulario.observacoes}
+                aoAplicar={(observacoes) => setFormulario((atual) => ({ ...atual, observacoes }))} desabilitado={salvando} />
 
               <div className="flex justify-end">
                 <Botao type="submit" variante="primario" disabled={salvando}>

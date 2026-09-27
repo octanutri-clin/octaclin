@@ -1,4 +1,9 @@
 import type { PapelUsuario } from '../../auth/dominio/usuario-autenticado';
+import type { TipoEvolucaoClinica } from '../infraestrutura/evolucao-clinica.orm';
+
+export const TIPOS_MODELO_EVOLUCAO = ['consulta', 'retorno', 'observacao', 'ajuste_plano'] as const;
+export const TIPOS_MODELO_TEXTO_CLINICO = [...TIPOS_MODELO_EVOLUCAO, 'observacao_antropometrica', 'relatorio_alta'] as const;
+export type TipoModeloTextoClinico = TipoEvolucaoClinica | 'observacao_antropometrica' | 'relatorio_alta';
 
 /**
  * Mesmo vocabulario de origem dos modelos de plano alimentar (Fase 269):

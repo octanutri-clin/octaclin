@@ -29,7 +29,7 @@ import { Botao, classesBotao } from '@/components/ui/botao';
 import { Abas } from '@/components/ui/abas';
 import { AbaAntropometria } from './aba-antropometria';
 import { ResumoAntropometrico } from './resumo-antropometrico';
-import { formatarMetricaAntropometrica, METRICAS_ANTROPOMETRICAS } from './metricas-antropometricas';
+import { formatarMetricaAntropometrica } from './metricas-antropometricas';
 import { ModelosEvolucaoClinica } from './modelos-evolucao-clinica';
 import { SeletorConsultaRecente } from './seletor-consulta-recente';
 import { AbaExamesLaboratoriais } from './aba-exames-laboratoriais';
@@ -277,9 +277,7 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
   const [carregandoEvolucoes, setCarregandoEvolucoes] = useState(false);
   const [evolucoesSolicitadas, setEvolucoesSolicitadas] = useState(false);
   const [evolucoesCarregadas, setEvolucoesCarregadas] = useState(false);
-  const [avaliacaoAntropometricaHoje, setAvaliacaoAntropometricaHoje] = useState<AvaliacaoAntropometricaApi | null>(
-    null
-  );
+  const [avaliacoesAntropometricas, setAvaliacoesAntropometricas] = useState<AvaliacaoAntropometricaApi[]>([]);
   const [carregandoTarefas, setCarregandoTarefas] = useState(false);
   const [tarefasSolicitadas, setTarefasSolicitadas] = useState(false);
   const [tarefasCarregadas, setTarefasCarregadas] = useState(false);
@@ -397,39 +395,18 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
     } finally {
       setCarregandoEvolucoes(false);
     }
-    // Recurso independente: uma falha aqui nunca derruba a tela de evolucoes,
-    // so deixa de pre-preencher peso/IMC (mesmo padrao ja usado para
-    // prioridade de acompanhamento nesta mesma tela).
+    // Recurso independente: exibe somente a medida vinculada a consulta selecionada.
     try {
       const serie = await listarAvaliacoesAntropometricas(pacienteId);
-      const hoje = new Date().toLocaleDateString('en-CA');
-      const maisRecenteHoje = serie.avaliacoes
-        .filter((avaliacao) => avaliacao.avaliadaEm === hoje)
-        .sort((a, b) => b.criadoEm.localeCompare(a.criadoEm))[0];
-      setAvaliacaoAntropometricaHoje(maisRecenteHoje ?? null);
+      setAvaliacoesAntropometricas(serie.avaliacoes);
     } catch {
-      setAvaliacaoAntropometricaHoje(null);
+      setAvaliacoesAntropometricas([]);
     }
   }, [pacienteId]);
 
-  // Pre-preenche peso/IMC quando ha avaliacao antropometrica de hoje, sem
-  // nunca sobrescrever conteudo que o profissional ja tenha digitado ou
-  // trazido de um modelo.
-  useEffect(() => {
-    if (!avaliacaoAntropometricaHoje) return;
-    setFormularioEvolucao((atual) => {
-      if (atual.conteudo.trim().length > 0) return atual;
-      const peso = METRICAS_ANTROPOMETRICAS.find((metrica) => metrica.id === 'peso')!;
-      const imc = METRICAS_ANTROPOMETRICAS.find((metrica) => metrica.id === 'imc')!;
-      const valorPeso = peso.ler(avaliacaoAntropometricaHoje);
-      const valorImc = imc.ler(avaliacaoAntropometricaHoje);
-      if (valorPeso === undefined && valorImc === undefined) return atual;
-      const partes: string[] = [];
-      if (valorPeso !== undefined) partes.push(`Peso: ${formatarMetricaAntropometrica(valorPeso, peso.casas)} kg`);
-      if (valorImc !== undefined) partes.push(`IMC: ${formatarMetricaAntropometrica(valorImc, imc.casas)}`);
-      return { ...atual, conteudo: `${partes.join(' · ')} (avaliação de hoje)\n\n` };
-    });
-  }, [avaliacaoAntropometricaHoje]);
+  const avaliacaoDaConsulta = formularioEvolucao.consultaId
+    ? avaliacoesAntropometricas.find((avaliacao) => avaliacao.consultaId === formularioEvolucao.consultaId)
+    : undefined;
 
   const carregarTarefas = useCallback(async () => {
     setCarregandoTarefas(true);
@@ -1451,11 +1428,6 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
         </div>
         <label className="grid gap-1 text-xs font-semibold text-texto-suave">
           Conteúdo da evolução
-          {avaliacaoAntropometricaHoje ? (
-            <p className="font-normal normal-case text-texto-suave">
-              Peso e IMC da avaliação de hoje já foram pré-preenchidos abaixo — edite ou remova livremente.
-            </p>
-          ) : null}
           <textarea
             className="min-h-[112px] rounded-md border border-linha px-3 py-2 text-sm font-normal text-tinta"
             value={formularioEvolucao.conteudo}
@@ -1465,6 +1437,12 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
             maxLength={6000}
           />
         </label>
+        {avaliacaoDaConsulta ? <div className="rounded-md border border-linha bg-superficie p-3 text-sm text-tinta">
+          <p className="font-semibold">Medidas registradas nesta consulta</p>
+          <p>Peso: {avaliacaoDaConsulta.medidas.pesoKg === undefined ? '-' : `${formatarMetricaAntropometrica(avaliacaoDaConsulta.medidas.pesoKg, 1)} kg`}
+            {' · '}IMC: {avaliacaoDaConsulta.resultado.imc === undefined ? '-' : formatarMetricaAntropometrica(avaliacaoDaConsulta.resultado.imc, 2)}</p>
+          <p className="text-xs text-texto-suave">Dados calculados na avaliação, somente leitura.</p>
+        </div> : null}
         <SeletorConsultaRecente
           pacienteId={pacienteId}
           value={formularioEvolucao.consultaId}
@@ -1722,7 +1700,7 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
         </div>
       </section> : null}
 
-      {abaAtiva === 'antropometria' ? <AbaAntropometria pacienteId={pacienteId} podeGerenciar={permissoes.includes('pacientes.gerenciar')} /> : null}
+      {abaAtiva === 'antropometria' ? <AbaAntropometria pacienteId={pacienteId} dataNascimento={dados.paciente.dataNascimento} podeGerenciar={permissoes.includes('pacientes.gerenciar')} /> : null}
 
       {abaAtiva === 'exames_laboratoriais' ? <AbaExamesLaboratoriais pacienteId={pacienteId} podeGerenciar={permissoes.includes('pacientes.gerenciar')} podeGerenciarCatalogo={permissoes.includes('pacientes.gerenciar') && (papel === 'SuperAdmin' || papel === 'Professional')} /> : null}
 

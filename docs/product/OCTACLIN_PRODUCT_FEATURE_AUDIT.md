@@ -177,7 +177,7 @@ explícita e sem lacuna funcional evidente.
 | Portal do paciente | Mensagem só leitura | Paciente não responde | Resposta assíncrona com SLA e trilha | Alto | M | **P2** |
 | Painel do cliente | Só assinatura | Dono não gerencia a operação | Painel de operação da clínica | Alto | M | **P2** |
 | Comparação antropométrica | Só as duas últimas | Não compara 1ª × atual | Comparação entre quaisquer duas avaliações + meta | Médio | P | **P2** |
-| Evolução fotográfica | Uma foto por vez na auditoria original | Sem antes/depois | Comparação lado a lado por protocolo de pose; Fase 285 em revisão | Médio | P | **P2** |
+| Evolução fotográfica | Uma foto por vez na auditoria original | Comparação manual do mesmo protocolo integrada no PR #321 | Comparação lado a lado por protocolo de pose | Médio | P | **P2** |
 | Perfil de cadastro | Tags/origem/categoria dentro de blob cifrado | Segmentação impossível sem migration | Campo pesquisável protegido + filtro | Médio | M | **P3** |
 | Notificações in-app | Sem preferência, por polling | Fadiga de notificação | Preferência por usuário + digest | Médio | M | **P2** |
 | Templates de mensagem | Sem biblioteca inicial na auditoria original | Clínica nova começa vazia | Conjunto inicial + edição + preview; implementação da Fase 284 em revisão | Médio | P | **P2** |
@@ -609,7 +609,7 @@ de esgotar a versão determinística de cada um.
 
 ### Estado do backlog verificado em 2026-09-27
 
-Os estados abaixo foram cruzados com PRs merged e, para itens sem PR identificável, com o código. PRs #319 e #320 já foram integrados; PB-20 está implementado na branch da Fase 285, ainda sem merge. Merge comprova a entrega de código, não a aplicação de migrations em ambientes externos.
+Os estados abaixo foram cruzados com PRs merged e, para itens sem PR identificável, com o código. PRs #319, #320 e #321 já foram integrados; a Fase 286 está em implementação, sem PR/merge. Merge comprova a entrega de código, não a aplicação de migrations em ambientes externos.
 
 | PB | Estado e evidência |
 |---|---|
@@ -627,7 +627,7 @@ Os estados abaixo foram cruzados com PRs merged e, para itens sem PR identificá
 | PB-17 | **Concluído no código** — Fase 278, PR #313. |
 | PB-18 | **Concluído** — Fase 276, PR #307. |
 | PB-19 | **Concluído** — Fase 277, PR #309. |
-| PB-20 | **Implementado na branch, integração pendente** — Fase 285: escolha manual de duas fotos do mesmo protocolo, URLs assinadas temporárias, proteção de papel/carteira/tenant e prazo de retenção. Aguardar PR, checks e merge antes de considerar concluído em `main`. |
+| PB-20 | **Concluído no código** — Fase 285, PR #321 integrado (merge `01d6bf1`): escolha manual de duas fotos do mesmo protocolo, URLs assinadas temporárias, proteção de papel/carteira/tenant e prazo de retenção. |
 | PB-21 | **Concluído** — Fase 282, PR #317. |
 | PB-22 | **Concluído no código** — Fase 284, PR #320 integrado (merge `af839c5` em 2026-09-27): três e-mails iniciais versionados, instalação idempotente, edição e prévia fictícia. `Provenance do SBOM` ficou `SKIPPED`; sem evidência de produção nesta reconciliação. |
 | PB-24 | **Concluído** — Fase 275, PR #305. |
@@ -637,7 +637,7 @@ Os estados abaixo foram cruzados com PRs merged e, para itens sem PR identificá
 | PB-29 | **Concluído no código** — Fase 283, PR #319 integrado (merge `19ade15` em 2026-09-27). Não há evidência de produção nesta reconciliação. |
 | PB-30 | **Pendente** — extração assistida de exames não foi encontrada; PB-17 entrega a estrutura determinística e é dependência já concluída. |
 
-PB-28 e PB-30 não têm ordem aprovada na tabela original. PB-20 foi iniciado por decisão do proprietário e aguarda integração. A proposta de sequência abaixo inclui também as recomendações das seções 3–14 que não se esgotam nesses PBs.
+PB-28 e PB-30 não têm ordem aprovada na tabela original. PB-20 foi integrado; a Fase 286 executa o item 4 da sequência abaixo, com PR/merge pendentes. A proposta de sequência inclui também as recomendações das seções 3–14 que não se esgotam nesses PBs.
 
 ---
 
@@ -763,7 +763,7 @@ proposta abaixo.
   (merge `a7274be`, 2026-09-26); o fluxo, limites e rollback estao descritos
   em `docs/history/phases/PLANO_FASE_282.md`. PB-29 foi integrado pelo PR #319
   (Fase 283, merge `19ade15`). PB-22 foi integrado pelo PR #320 (Fase 284,
-  merge `af839c5`). PB-20 está em revisão na branch da Fase 285.
+  merge `af839c5`). PB-20 foi integrado pelo PR #321 (Fase 285, merge `01d6bf1`).
 
 ### Seleção de modelo, skills e plugins por PB
 
@@ -810,12 +810,12 @@ produto devem ter esse gate resolvido no plano da respectiva fase.
 2. **PB-22 (Fase 284, PR #320) concluído no código.** A biblioteca inicial foi integrada em `main`. Em tarefa
    relacionada, mas separada do PB-22, avaliar um kit inicial de modelos de plano alimentar, catálogo de
    alimentos e materiais; o guia do PB-29 não comprova que esses conteúdos existam.
-3. **Integrar PB-20 (Fase 285).** A comparação manual, o acesso clínico e o prazo
-   de retenção estão implementados nesta branch; aceitar checks e merge antes de
-   marcar concluído em `main`.
-4. **Completar templates profissionais e consulta.** Cobrir observações antropométricas e relatórios de
-   alta; decidir necessidade de atestados/encaminhamentos; avaliar preenchimento de peso/IMC na mesma
-   consulta. O PB-24 já entrega vínculo opcional com consulta, não esses templates.
+3. **PB-20 integrado (Fase 285, PR #321).** A comparação manual, o acesso clínico e o prazo
+   de retenção foram integrados em `main` pelo PR #321.
+4. **Completar templates profissionais e consulta (Fase 286 em implementação).** Cobrir observações antropométricas e relatórios de
+   alta; exibir peso/IMC derivados da avaliação vinculada à mesma consulta sem campo estruturado editável.
+   Atestados/encaminhamentos ficam para decisão posterior; critérios de IMC para gestantes e menores de 20 anos
+   exigem fases próprias. O PB-24 já entrega vínculo opcional com consulta, não esses templates.
 5. **Automatizações residuais da seção 7**, em incrementos pequenos: tarefa na próxima revisão de perfil;
    sinalizar revisão de resposta de formulário; notificar paciente quando plano for publicado; lembrar
    material não visualizado; acompanhar consultas não confirmadas e faltas; sugerir retorno quando não

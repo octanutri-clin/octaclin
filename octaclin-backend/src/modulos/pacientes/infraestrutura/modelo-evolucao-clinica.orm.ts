@@ -1,6 +1,5 @@
 import { Column, CreateDateColumn, Entity, Index, PrimaryGeneratedColumn, UpdateDateColumn } from 'typeorm';
-import type { TipoEvolucaoClinica } from './evolucao-clinica.orm';
-import type { OrigemModeloEvolucaoClinica } from '../dominio/modelos-evolucao-clinica';
+import type { OrigemModeloEvolucaoClinica, TipoModeloTextoClinico } from '../dominio/modelos-evolucao-clinica';
 
 @Entity('modelos_evolucao_clinica')
 @Index('idx_modelos_evolucao_clinica_listagem', ['tenantId', 'origem', 'arquivadoEm', 'atualizadoEm'])
@@ -24,10 +23,9 @@ export class ModeloEvolucaoClinicaOrm {
   @Column({ name: 'nome_criptografado', type: 'bytea' })
   nomeCriptografado: Buffer;
 
-  // Mesmo enum de `evolucoes_clinicas.tipo`: metadado de classificacao, nao
-  // conteudo clinico, entao fica em claro para permitir filtro/listagem.
+  // Finalidade textual em claro para filtro; nome e conteudo seguem cifrados.
   @Column({ type: 'varchar', length: 40 })
-  tipo: TipoEvolucaoClinica;
+  tipo: TipoModeloTextoClinico;
 
   /** Corpo do texto do modelo, no mesmo formato aceito por `conteudo` da evolucao. */
   @Column({ name: 'conteudo_criptografado', type: 'bytea' })

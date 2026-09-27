@@ -1,9 +1,10 @@
 # OctaClin - Checklist vivo de fases futuras ate producao
 
-Atualizado em 2026-09-27. Fases 256 a 261, 263 a 284 integradas; Fase 284
+Atualizado em 2026-09-27. Fase 286 atual em implementação na branch
+`feat/fase286-templates-imc`, com PR, checks e merge pendentes. Fases 256 a 261, 263 a 285 integradas; Fase 284
 (PB-22) foi integrada pelo PR #320 (merge `af839c5`, 19 checks `SUCCESS` e
-`Provenance do SBOM` `SKIPPED`). Fase 285 (PB-20) está em implementação na
-branch `feat/pb20-comparacao-fotos-fase285`, ainda sem merge. A reconciliação completa do backlog da auditoria e a
+`Provenance do SBOM` `SKIPPED`). Fase 285 (PB-20) foi integrada pelo PR #321
+(merge `01d6bf1`). A reconciliação completa do backlog da auditoria e a
 ordem proposta para recomendações pendentes estão em `docs/product/OCTACLIN_PRODUCT_FEATURE_AUDIT.md`,
 seção 15. Fase 262 permanece em andamento pelos gates externos do piloto. Com a Fase 268
 mergeada (PR `#275`, merge `306d2ed`), o PB-05 (alerta de check-in com
@@ -4353,7 +4354,8 @@ Reconciliação em 2026-09-27: PB-10 foi integrado em `main` pelo PR `#314`
 migration e do backfill não foi verificada nesta reconciliação. PB-26, PB-27
 e PB-21 foram integrados pelos PRs `#315`, `#316` e `#317`. PB-29 foi
 integrado na Fase 283 pelo PR `#319`. PB-22 foi integrado na Fase 284 pelo
-PR `#320`; PB-20 está em implementação na Fase 285. Os demais gaps da
+PR `#320`; PB-20 foi integrado na Fase 285 pelo PR `#321`. A Fase 286 trata
+modelos clínicos para antropometria/alta e IMC calculado, ainda sem integração. Os demais gaps da
 auditoria estão ordenados na seção 15 de
 `docs/product/OCTACLIN_PRODUCT_FEATURE_AUDIT.md`.
 
@@ -4387,10 +4389,15 @@ auditoria estão ordenados na seção 15 de
   edição e prévia com dados fictícios. Integrado pelo PR #320 (merge
   `af839c5`); `Provenance do SBOM` `SKIPPED`. Escopo e gates em
   `docs/history/phases/PLANO_FASE_284.md`.
-- [~] Fase 285 - PB-20: comparação manual de duas imagens do mesmo protocolo,
-  com URL assinada curta, autorização clínica e prazo de retenção. Implementado
-  nesta branch; PR, checks e merge pendentes. Escopo e limites em
+- [x] Fase 285 - PB-20: comparação manual de duas imagens do mesmo protocolo,
+  com URL assinada curta, autorização clínica e prazo de retenção. Integrado
+  pelo PR #321 (merge `01d6bf1`). Escopo e limites em
   `docs/history/phases/PLANO_FASE_285.md`.
+- [~] Fase 286 - modelos clínicos para observações antropométricas e relatório
+  de alta; IMC derivado de peso/altura e contexto da mesma consulta.
+  Implementação na branch `feat/fase286-templates-imc`; PR e checks pendentes.
+  Gestantes e menores de 20 anos requerem critérios próprios em fases futuras.
+  Plano em `docs/history/phases/PLANO_FASE_286.md`.
 
 O programa de hardening
 PR 36-56 permanece como trilha separada --

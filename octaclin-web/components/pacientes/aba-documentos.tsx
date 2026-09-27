@@ -5,6 +5,7 @@ import { Botao } from '@/components/ui/botao';
 import { AreaTexto, Campo, Rotulo, Selecao } from '@/components/ui/campo';
 import { Cartao, CartaoCabecalho, CartaoConteudo, CartaoTitulo } from '@/components/ui/cartao';
 import { BarraCarregamento } from '@/components/ui/feedback';
+import { ModelosTextoClinico } from './modelos-texto-clinico';
 import { formatarValorBRL, listarConsultasAgenda } from '@/lib/agenda-api';
 import { useRequisicaoCancelavel } from '@/lib/hooks';
 import { mensagemFalhaInterface } from '@/lib/erros-interface';
@@ -233,15 +234,19 @@ export function AbaDocumentos({ pacienteId, podeGerenciar, consultasConcluidas }
                   </Selecao>
                 </label>
               ) : (
-                <label className="grid gap-1 sm:col-span-2">
-                  <Rotulo>Texto do relatório</Rotulo>
-                  <AreaTexto
-                    rows={5}
-                    value={conteudo}
-                    placeholder="Evolução, condutas e orientações de encerramento."
-                    onChange={(evento) => setConteudo(evento.target.value)}
-                  />
-                </label>
+                <div className="grid gap-3 sm:col-span-2">
+                  <label className="grid gap-1">
+                    <Rotulo>Texto do relatório</Rotulo>
+                    <AreaTexto
+                      rows={5}
+                      value={conteudo}
+                      maxLength={4000}
+                      placeholder="Evolução, condutas e orientações de encerramento."
+                      onChange={(evento) => setConteudo(evento.target.value)}
+                    />
+                  </label>
+                  <ModelosTextoClinico tipo="relatorio_alta" conteudoAtual={conteudo} aoAplicar={setConteudo} desabilitado={salvando} />
+                </div>
               )}
 
               <label className="grid gap-1">
