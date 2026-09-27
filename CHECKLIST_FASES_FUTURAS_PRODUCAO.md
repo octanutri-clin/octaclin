@@ -1,7 +1,9 @@
 # OctaClin - Checklist vivo de fases futuras ate producao
 
-Atualizado em 2026-09-26. Fases 256 a 261, 263 a 282 integradas; Fase 283
-(PB-29) e a proxima. Fase 262 permanece em andamento pelos gates externos do piloto. Com a Fase 268
+Atualizado em 2026-09-27. Fases 256 a 261, 263 a 282 integradas; Fase 283
+(PB-29, PR #319) em andamento, ainda sem aceite/merge. A reconciliação completa do backlog da auditoria e a
+ordem proposta para recomendações pendentes estão em `docs/product/OCTACLIN_PRODUCT_FEATURE_AUDIT.md`,
+seção 15. Fase 262 permanece em andamento pelos gates externos do piloto. Com a Fase 268
 mergeada (PR `#275`, merge `306d2ed`), o PB-05 (alerta de check-in com
 adesao baixa) esta concluido e a Onda 2 do audit de produto (PB-01 ->
 PB-02 -> PB-03 -> PB-05) esta completa. A Onda 3 (devolver tempo ao
@@ -4344,10 +4346,13 @@ PB-10 (Fase 279) e o ultimo item da Onda 4 e esta em implementacao na branch
 protegidos por tenant. Migration e backfill serao aplicados fora de banda apos
 confirmacao do alvo e da role owner; ver `docs/history/phases/PLANO_FASE_279.md`.
 
-Reconciliacao em 2026-09-25: PB-10 foi integrado em `main` pelo PR `#314`
-(merge `93ac0a8`), fechando a Onda 4 no codigo. A aplicacao fora de banda da
-migration e do backfill nao foi verificada neste ciclo. Onda 5 tem ordem
-aprovada PB-26 -> PB-27 -> PB-21 -> PB-29.
+Reconciliação em 2026-09-27: PB-10 foi integrado em `main` pelo PR `#314`
+(merge `93ac0a8`), fechando a Onda 4 no código; aplicação fora de banda da
+migration e do backfill não foi verificada nesta reconciliação. PB-26, PB-27
+e PB-21 foram integrados pelos PRs `#315`, `#316` e `#317`. PB-29 está em
+andamento na Fase 283 pela PR `#319`; os itens seguintes e os demais gaps da
+auditoria estão ordenados na seção 15 de
+`docs/product/OCTACLIN_PRODUCT_FEATURE_AUDIT.md`.
 
 - [x] Fase 275 - PB-24, vinculo opcional de consulta nas entidades clinicas;
   integrado pelo PR `#305`. Aplicacao fora de banda segue seu runbook.
@@ -4369,8 +4374,10 @@ aprovada PB-26 -> PB-27 -> PB-21 -> PB-29.
   PR #317 (merge `a7274be`, 2026-09-26). CI: 19 checks `SUCCESS`;
   `Provenance do SBOM` `SKIPPED`. Validacoes locais e evidencias da entrega
   em `docs/history/phases/PLANO_FASE_282.md`.
-- [ ] Fase 283 - PB-29: onboarding guiado da clínica com conteúdo inicial,
-  conforme a sequência aprovada da Onda 5 e o escopo do audit do produto.
+- [~] Fase 283 - PB-29: guia profissional de configuração inicial baseado nos
+  dados existentes, com etapas opcionais persistentes e modelos iniciais nos
+  fluxos editáveis já disponíveis. Escopo e aceite em
+  `docs/history/phases/PLANO_FASE_283.md`.
 
 O programa de hardening
 PR 36-56 permanece como trilha separada --

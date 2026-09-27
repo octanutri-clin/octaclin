@@ -605,6 +605,38 @@ de esgotar a versão determinística de cada um.
 | PB-29 | Onboarding guiado da clínica (conteúdo inicial) | Gestão | Alto | M | Baixo | backend, frontend, produto |
 | PB-30 | Extração assistida de exame laboratorial | IA | Alto | G | Alto | IA, backend, jurídico, PB-17 |
 
+### Estado do backlog verificado em 2026-09-27
+
+Os estados abaixo foram cruzados com PRs merged e, para itens sem PR identificável, com o código da branch da PR #319. Merge comprova a entrega de código, não a aplicação de migrations em ambientes externos.
+
+| PB | Estado e evidência |
+|---|---|
+| PB-01 | **Concluído** — Fase 265, entregas de código nos PRs #261–#263; fechamento documentado no PR #268. |
+| PB-02 | **Concluído** — Fase 266, PRs #269–#272. |
+| PB-03 | **Concluído** — Fase 267, PR #273. |
+| PB-04 | **Concluído** — Fase 264.7, PR #253. |
+| PB-05 | **Concluído** — Fase 268, PR #275. |
+| PB-06–PB-09 | **Concluídos** — Fases 264.1, 264.5, 264.4 e 264.3, respectivamente, PR #253. |
+| PB-10 | **Concluído no código** — Fase 279, PR #314. Aplicação da migration e backfill continuam sem evidência atual nesta reconciliação; ver `docs/history/phases/PLANO_FASE_279.md`. |
+| PB-11–PB-12 | **Concluídos** — Fases 264.6 e 264.2, respectivamente, PR #253. |
+| PB-13 | **Concluído** — Fase 269, PR #277. |
+| PB-14 | **Concluído** — Fase 270, PR #278. |
+| PB-15, PB-16, PB-23, PB-25 | **Concluídos** — Fases 271–274, PR #303. |
+| PB-17 | **Concluído no código** — Fase 278, PR #313. |
+| PB-18 | **Concluído** — Fase 276, PR #307. |
+| PB-19 | **Concluído** — Fase 277, PR #309. |
+| PB-20 | **Pendente** — não há PR de entrega nem evidência de comparação de fotos lado a lado no código consultado. |
+| PB-21 | **Concluído** — Fase 282, PR #317. |
+| PB-22 | **Pendente** — há gestão e envio de templates, mas não há evidência da biblioteca inicial de mensagens recomendada pela auditoria. |
+| PB-24 | **Concluído** — Fase 275, PR #305. |
+| PB-26 | **Concluído** — Fase 280, PR #315. |
+| PB-27 | **Concluído** — Fase 281, PR #316. |
+| PB-28 | **Pendente** — não há evidência de canal de resposta no portal com SLA para a clínica. |
+| PB-29 | **Em andamento** — Fase 283, PR #319 aberta; não contar como concluído até merge e aceite. |
+| PB-30 | **Pendente** — extração assistida de exames não foi encontrada; PB-17 entrega a estrutura determinística e é dependência já concluída. |
+
+PB-22, PB-20, PB-28 e PB-30 não têm ordem aprovada na tabela original. A proposta de sequência abaixo inclui também as recomendações das seções 3–14 que não se esgotam nesses PBs.
+
 ---
 
 ## 16. Suggested Roadmap
@@ -718,15 +750,17 @@ de janelas operacionais.
   staging/produção segue com o proprietário.
 
 **Onda 5 — projetos maiores** (PB-26, PB-27, PB-21, PB-29)
-Painel de operação depende de indicadores que as ondas anteriores já terão normalizado. Auditoria para a
-clínica exige decisão jurídica antes de qualquer código.
+Painel de operação depende de indicadores que as ondas anteriores já terão normalizado. A auditoria para a
+clínica foi entregue no PB-27 após definição de acesso e retenção; as recomendações restantes seguem a ordem
+proposta abaixo.
 
 - **Sequência confirmada pelo proprietário em 2026-09-25**: PB-26 → PB-27
   → PB-21 → PB-29. PB-26 foi integrado pela PR #315 (Fase 280).
   PB-27 foi integrado na Fase 281 pelo PR #316 (merge `01817ae`, confirmado
   no GitHub em 2026-09-26). PB-21 foi integrado na Fase 282 pelo PR #317
   (merge `a7274be`, 2026-09-26); o fluxo, limites e rollback estao descritos
-  em `docs/history/phases/PLANO_FASE_282.md`. Proximo PB da sequencia: PB-29.
+  em `docs/history/phases/PLANO_FASE_282.md`. PB-29 está em andamento na PR #319 (Fase 283); concluir
+  checks, revisão e merge antes de iniciar o próximo item.
 
 ### Seleção de modelo, skills e plugins por PB
 
@@ -761,6 +795,40 @@ provider real, decisão LGPD e o catálogo de marcadores (PB-17) pronto.
 
 ---
 
+### Ordem proposta para implementar as recomendações ainda pendentes
+
+Esta ordem consolida os PBs pendentes e as recomendações das seções 3–14 que não estão cobertas por eles.
+É uma proposta de execução completa do backlog ativo; itens dependentes de decisão clínica, jurídica ou de
+produto devem ter esse gate resolvido no plano da respectiva fase.
+
+1. **Concluir PB-29 (Fase 283, PR #319).** Fechar o onboarding já em andamento antes de abrir outro PB.
+2. **PB-22 — biblioteca inicial de mensagens.** Criar modelos curados, editáveis e seguros. Em tarefa
+   relacionada, mas separada do PB-22, avaliar um kit inicial de modelos de plano alimentar, catálogo de
+   alimentos e materiais; o guia do PB-29 não comprova que esses conteúdos existam.
+3. **PB-20 — comparação de fotos lado a lado.** Definir acesso clínico, retenção e controles das imagens
+   antes da implementação.
+4. **Completar templates profissionais e consulta.** Cobrir observações antropométricas e relatórios de
+   alta; decidir necessidade de atestados/encaminhamentos; avaliar preenchimento de peso/IMC na mesma
+   consulta. O PB-24 já entrega vínculo opcional com consulta, não esses templates.
+5. **Automatizações residuais da seção 7**, em incrementos pequenos: tarefa na próxima revisão de perfil;
+   sinalizar revisão de resposta de formulário; notificar paciente quando plano for publicado; lembrar
+   material não visualizado; acompanhar consultas não confirmadas e faltas; sugerir retorno quando não
+   houver consulta futura. Preservar preferências, idempotência, outbox e autorização por tenant.
+6. **PB-28 e melhorias da experiência do paciente.** Definir responsável, estados, prazo/SLA e escalonamento
+   da resposta bidirecional; depois incluir confirmação de check-in revisado pela clínica e lembretes de
+   plano/tarefas. Gamificação requer decisão de propósito separada.
+7. **Operação e inteligência da clínica.** Avaliar carga/ocupação/faltas/produtividade por profissional,
+   autosserviço LGPD da própria clínica, acesso profissional a APIs/integrações, e visões longitudinais de
+   adesão, substituições, questionários/antropometria, intervalo de retorno e evasão.
+8. **PB-30 — extração assistida de exames.** Com PB-17 concluído, definir antes o gate jurídico, privacidade,
+   retenção e fornecedor; entregar rascunho com revisão humana e fallback determinístico.
+9. **Busca semântica**, condicionada a volume de dados suficiente e a avaliação de privacidade/qualidade.
+   Manter cálculos, diagnóstico, prescrição e triagem clínica fora de decisão autônoma por IA.
+
+Itens que a própria auditoria rejeita ou exclui — wearables sem integração/valor, pagamento online já
+endereçado por outro roadmap, assinatura digital, chatbot aberto e cálculo/score/triagem nutricional por IA —
+não entram nesta fila sem nova decisão explícita do proprietário.
+
 ## Fatos que contrariam suposições comuns — registro explícito
 
 Para evitar retrabalho de quem ler este documento depois:
@@ -778,11 +846,11 @@ Para evitar retrabalho de quem ler este documento depois:
 
 ---
 
-## 17. Plano operacional — Fase 264 (pronto para execução)
+## 17. Plano operacional — Fase 264 (registro de entrega)
 
-Esta seção é o **handoff de engenharia**. Foi escrita para ser executada por outro modelo (Sonnet 5 ou
-Opus 4.8) sem precisar refazer a investigação: cada incremento traz o gap com evidência, os arquivos exatos,
-o contrato que muda, o teste que deve falhar primeiro e o critério de aceite.
+Esta seção preserva o **handoff de engenharia** e o registro da Fase 264, entregue pelos sete incrementos
+no PR #253. Os detalhes operacionais abaixo são históricos e servem para rastreabilidade, não como trabalho
+pendente.
 
 **Escopo da fase**: a Onda 1 do roteiro — sete incrementos que transformam dado que o sistema **já calcula ou
 já grava** em algo visível e acionável. Nenhum deles exige migration, nenhum altera contrato de autorização,

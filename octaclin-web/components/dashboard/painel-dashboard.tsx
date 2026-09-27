@@ -34,6 +34,7 @@ import { Selecao } from '@/components/ui/campo';
 import { AlertaOperacional, Aviso, AvisoRegiao, BarraCarregamento, EstadoVazio } from '@/components/ui/feedback';
 import { Metrica } from '@/components/ui/metrica';
 import { ModalConfirmacao } from '@/components/ui/modal';
+import { GuiaConfiguracaoClinica } from './guia-configuracao-clinica';
 
 const periodos: { valor: PeriodoDashboardClinico; rotulo: string }[] = [
   { valor: 'hoje', rotulo: 'Hoje' },
@@ -215,6 +216,8 @@ export function PainelDashboard() {
         {podeContexto ? <label className="grid min-w-52 gap-1 text-xs font-semibold text-texto-suave">Profissional em contexto<Selecao aria-label="Profissional em contexto" value={profissionalId} onChange={(evento) => trocarProfissional(evento.target.value)}><option value="">Selecionar profissional</option>{profissionais.map((item) => <option key={item.id} value={item.id}>{item.nome}</option>)}</Selecao></label> : null}
       </div>
     </section>
+
+    {profissional && sessao?.tenantSlug ? <GuiaConfiguracaoClinica tenantSlug={sessao.tenantSlug} /> : null}
 
     {superAdmin ? <AlertaOperacional mensagem={profissionalId ? `Voce esta acompanhando o painel de ${contextoSelecionado?.nome ?? dados?.contexto.profissionalNome ?? 'outro profissional'}. Acoes serao registradas em auditoria.` : 'Selecione um profissional para acessar o contexto clínico. Apenas SuperAdmin pode trocar este contexto.'} /> : null}
     {erro ? <div className="grid gap-3"><AlertaOperacional mensagem={erro} /><Botao type="button" onClick={() => void carregar()}><RefreshCcw size={16} />Tentar novamente</Botao></div> : null}

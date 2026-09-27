@@ -2134,6 +2134,55 @@ async function prepararProntuarioMockado(page, {
 }
 
 test.describe('painel clinico profissional', () => {
+  test('guia de configuração usa estados reais e direciona para os fluxos existentes', async ({ page }) => {
+    await prepararDashboardMockado(page);
+    let pacientes = { itens: [], total: 0 };
+    let questionarios = { itens: [], total: 0 };
+    let modelos = { itens: [], total: 0 };
+    let templates = [];
+    await page.route('**/api/pacientes?**', async (route) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(pacientes) }));
+    await page.route('**/api/questionarios?**', async (route) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(questionarios) }));
+    await page.route('**/api/planos-alimentares/modelos?**', async (route) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(modelos) }));
+    await page.route('**/api/comunicacoes/templates', async (route) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(templates) }));
+    await page.goto('/dashboard');
+
+    const guia = page.getByRole('region', { name: 'Guia de configuração inicial da clínica' });
+    const etapaPaciente = guia.getByRole('article', { name: 'Cadastrar primeiro paciente' });
+    await expect(guia).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Painel clínico' })).toBeVisible();
+    await expect(etapaPaciente.getByText('Pendente')).toBeVisible();
+    await expect(etapaPaciente.getByRole('link', { name: 'Cadastrar paciente' })).toHaveAttribute('href', '/pacientes');
+    await expect(guia.getByText('Triagem de primeira consulta')).toBeVisible();
+    await expect(guia.getByText(/Check-in semanal de ades[aã]o/)).toBeVisible();
+    await expect(guia.getByText(/pode ser editado/i)).toBeVisible();
+
+    pacientes = { itens: [{ id: 'paciente-sintetico' }], total: 1 };
+    await page.reload();
+    await expect(page.getByRole('region', { name: 'Guia de configuração inicial da clínica' }).getByRole('article', { name: 'Cadastrar primeiro paciente' }).getByText('Concluída')).toBeVisible();
+  });
+
+  test('etapas opcionais podem ser puladas, retomadas e o onboarding pode ser reaberto', async ({ page }) => {
+    await prepararDashboardMockado(page);
+    await page.route('**/api/pacientes?**', async (route) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ itens: [], total: 0 }) }));
+    await page.route('**/api/questionarios?**', async (route) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ itens: [], total: 0 }) }));
+    await page.route('**/api/planos-alimentares/modelos?**', async (route) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ itens: [], total: 0 }) }));
+    await page.route('**/api/comunicacoes/templates', async (route) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([]) }));
+    await page.goto('/dashboard');
+
+    let guia = page.getByRole('region', { name: 'Guia de configuração inicial da clínica' });
+    const etapaPaciente = guia.getByRole('article', { name: 'Cadastrar primeiro paciente' });
+    await expect(etapaPaciente.getByRole('button', { name: 'Pular etapa' })).toHaveCount(0);
+    await guia.getByRole('article', { name: 'Configurar formulários iniciais' }).getByRole('button', { name: 'Pular etapa' }).click();
+    await page.reload();
+    guia = page.getByRole('region', { name: 'Guia de configuração inicial da clínica' });
+    await expect(guia.getByRole('article', { name: 'Configurar formulários iniciais' }).getByText('Pulada')).toBeVisible();
+    await guia.getByRole('article', { name: 'Configurar formulários iniciais' }).getByRole('button', { name: 'Retomar etapa' }).click();
+    await expect(guia.getByRole('article', { name: 'Configurar formulários iniciais' }).getByText('Pendente')).toBeVisible();
+    await guia.getByRole('button', { name: 'Ocultar guia' }).click();
+    await page.getByRole('button', { name: 'Mostrar guia de configuração' }).click();
+    await expect(page.getByRole('region', { name: 'Guia de configuração inicial da clínica' })).toBeVisible();
+  });
+
   test('Professional conserva o proprio escopo e mostra filas clinicas', async ({ page }) => {
     await prepararDashboardMockado(page);
     await page.route('**/api/dashboard/clinico?*', async (route) => {
