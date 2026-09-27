@@ -20,6 +20,9 @@ import {
   carregarBootstrapComunicacoes,
   criarCanal,
   criarTemplate,
+  atualizarTemplate,
+  instalarTemplatesIniciais,
+  listarTemplates,
   dispararMensagem,
   registrarNotaWhatsapp
 } from '@/lib/comunicacoes-api';
@@ -145,6 +148,12 @@ function montarConteudo(formulario: FormularioTemplate): Record<string, unknown>
     ...(formulario.canal === 'whatsapp' ? { idioma: formulario.idioma.trim() || 'pt_BR' } : {}),
     ...(parametros.length ? { parametros } : {})
   };
+}
+
+function visualizarTextoTemplate(texto: string): string {
+  return texto.replace(/\{\{\s*([a-zA-Z0-9_.-]+)\s*\}\}/g, (_, chave: string) =>
+    chave === 'nome' ? 'Paciente exemplo' : 'valor de exemplo'
+  );
 }
 
 function pacientePorId(pacientes: PacienteResumo[], id: string) {
@@ -403,6 +412,8 @@ export function PainelComunicacoes() {
   const [profissionais, setProfissionais] = useState<ProfissionalResumo[]>([]);
   const [formularioCanal, setFormularioCanal] = useState<FormularioCanal>(canalInicial);
   const [formularioTemplate, setFormularioTemplate] = useState<FormularioTemplate>(templateInicial);
+  const [templateSelecionadoId, setTemplateSelecionadoId] = useState('');
+  const [editandoTemplateId, setEditandoTemplateId] = useState<string | null>(null);
   const [formularioMensagem, setFormularioMensagem] = useState<FormularioMensagem>(mensagemInicial);
   const [confirmacaoOptOut, setConfirmacaoOptOut] = useState<string | null>(null);
   const [erro, setErro] = useState<string | null>(null);
@@ -512,21 +523,63 @@ export function PainelComunicacoes() {
     setErro(null);
     setSucesso(null);
     try {
-      const criado = await criarTemplate({
+      const entrada = {
         canal: formularioTemplate.canal,
         codigoExterno: formularioTemplate.codigoExterno.trim() || undefined,
         nome: formularioTemplate.nome.trim(),
         conteudo: montarConteudo(formularioTemplate),
         aprovado: formularioTemplate.aprovado
-      });
-      setTemplates((atuais) => [criado, ...atuais]);
-      setFormularioMensagem((atual) => ({ ...atual, templateId: criado.id }));
-      setSucesso('Template criado.');
+      };
+      const salvo = editandoTemplateId
+        ? await atualizarTemplate(editandoTemplateId, entrada)
+        : await criarTemplate(entrada);
+      setTemplates((atuais) => editandoTemplateId
+        ? atuais.map((template) => template.id === salvo.id ? salvo : template)
+        : [salvo, ...atuais]);
+      setTemplateSelecionadoId(salvo.id);
+      setFormularioMensagem((atual) => ({ ...atual, templateId: salvo.id }));
+      setFormularioTemplate((atual) => ({ ...atual, aprovado: salvo.aprovado }));
+      setEditandoTemplateId(null);
+      setSucesso(editandoTemplateId ? 'Template atualizado.' : 'Template criado.');
     } catch (erroAtual) {
       setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao criar template.');
     } finally {
       setSalvando(false);
     }
+  }
+
+  async function adicionarTemplatesIniciais() {
+    setSalvando(true);
+    setErro(null);
+    setSucesso(null);
+    try {
+      const resultado = await instalarTemplatesIniciais();
+      const atualizados = await listarTemplates();
+      setTemplates(atualizados);
+      setSucesso(`${resultado.quantidadeCriada} modelo(s) inicial(is) adicionado(s).`);
+    } catch (erroAtual) {
+      setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao adicionar modelos iniciais.');
+    } finally {
+      setSalvando(false);
+    }
+  }
+
+  function editarTemplateSelecionado() {
+    const template = templates.find((item) => item.id === templateSelecionadoId);
+    if (!template) return;
+    setFormularioTemplate({
+      canal: template.canal,
+      codigoExterno: template.codigoExterno ?? '',
+      nome: template.nome,
+      eventoAutomacao: obterTextoTemplate(template, 'evento') ?? '',
+      idioma: obterTextoTemplate(template, 'idioma') ?? 'pt_BR',
+      parametros: Array.isArray(template.conteudo.parametros) ? template.conteudo.parametros.join(', ') : '',
+      assunto: obterTextoTemplate(template, 'assunto') ?? '',
+      corpo: obterTextoTemplate(template, 'corpo') ?? '',
+      aprovado: template.aprovado
+    });
+    setEditandoTemplateId(template.id);
+    setErro(null);
   }
 
   async function enviarMensagem(evento: FormEvent<HTMLFormElement>) {
@@ -661,6 +714,8 @@ export function PainelComunicacoes() {
     }
   }, [formularioMensagem.templateId, templatesCompativeis]);
 
+  const templateEmEdicao = templates.find((item) => item.id === editandoTemplateId);
+
   return (
     <section className="grid gap-4">
       <Cartao>
@@ -701,6 +756,25 @@ export function PainelComunicacoes() {
 
       {areaAtiva === 'configuracoes' ? (
       <section id="comunicacoes-configuracoes-painel" role="tabpanel" aria-labelledby="comunicacoes-configuracoes-aba" className="grid gap-4 xl:grid-cols-2">
+        <Cartao>
+          <CartaoCabecalho><CartaoTitulo>Modelos de mensagem</CartaoTitulo></CartaoCabecalho>
+          <CartaoConteudo className="grid gap-3">
+            <p className="text-sm text-texto-suave">Modelos genéricos de e-mail para revisar e adaptar à clínica. Adicioná-los não envia mensagens.</p>
+            <Botao type="button" variante="secundario" onClick={() => void adicionarTemplatesIniciais()} disabled={salvando}>
+              Adicionar modelos iniciais
+            </Botao>
+            <div className="grid gap-1">
+              <Rotulo htmlFor="template-para-editar">Template para editar</Rotulo>
+              <Selecao id="template-para-editar" value={templateSelecionadoId} onChange={(evento) => setTemplateSelecionadoId(evento.target.value)}>
+                <option value="">Selecione um template</option>
+                {templates.map((template) => <option key={template.id} value={template.id}>{template.nome} ({template.canal})</option>)}
+              </Selecao>
+            </div>
+            <Botao type="button" variante="secundario" onClick={editarTemplateSelecionado} disabled={!templateSelecionadoId || salvando}>
+              Editar template
+            </Botao>
+          </CartaoConteudo>
+        </Cartao>
         <Cartao>
         <form onSubmit={salvarCanal}>
           <CartaoCabecalho>
@@ -762,7 +836,7 @@ export function PainelComunicacoes() {
         <Cartao>
         <form onSubmit={salvarTemplate}>
           <CartaoCabecalho>
-            <CartaoTitulo icone={<Plus size={18} className="text-primaria" />}>Novo template</CartaoTitulo>
+            <CartaoTitulo icone={<Plus size={18} className="text-primaria" />}>{editandoTemplateId ? 'Editar template' : 'Novo template'}</CartaoTitulo>
           </CartaoCabecalho>
           <CartaoConteudo>
           <div className="grid gap-3 md:grid-cols-2">
@@ -771,6 +845,7 @@ export function PainelComunicacoes() {
               <Selecao
                 id="template-canal"
                 value={formularioTemplate.canal}
+                disabled={Boolean(editandoTemplateId)}
                 onChange={(evento) =>
                   setFormularioTemplate((atual) => ({ ...atual, canal: evento.target.value as TipoCanalNotificacao }))
                 }
@@ -784,6 +859,7 @@ export function PainelComunicacoes() {
               <Campo
                 id="template-codigo"
                 value={formularioTemplate.codigoExterno}
+                disabled={templateEmEdicao?.canal === 'email' && Boolean(templateEmEdicao.codigoExterno?.startsWith('octaclin_inicial_'))}
                 onChange={(evento) => setFormularioTemplate((atual) => ({ ...atual, codigoExterno: evento.target.value }))}
                 placeholder={formularioTemplate.canal === 'whatsapp' ? 'consulta_agendada' : undefined}
               />
@@ -850,6 +926,11 @@ export function PainelComunicacoes() {
                 required
               />
             </div>
+            <div role="region" aria-label="Prévia do template" className="space-y-1 rounded-md border border-linha bg-fundo p-3 text-sm md:col-span-2">
+              <p className="font-semibold">Prévia com dados fictícios</p>
+              {formularioTemplate.canal === 'email' ? <p>{visualizarTextoTemplate(formularioTemplate.assunto) || 'Sem assunto'}</p> : null}
+              <p className="whitespace-pre-wrap">{visualizarTextoTemplate(formularioTemplate.corpo) || 'Sem corpo'}</p>
+            </div>
           </div>
           <label className="mt-3 flex items-center justify-between rounded-md border border-linha bg-fundo px-3 py-2">
             <span className="text-sm font-medium text-tinta">Aprovado para envio</span>
@@ -861,9 +942,10 @@ export function PainelComunicacoes() {
             />
           </label>
           <div className="mt-3 flex justify-end">
+            {editandoTemplateId ? <Botao type="button" variante="fantasma" onClick={() => { setEditandoTemplateId(null); setFormularioTemplate(templateInicial); }}>Cancelar edição</Botao> : null}
             <Botao type="submit" variante="primario" disabled={salvando}>
               <Save size={16} />
-              Salvar template
+              {editandoTemplateId ? 'Salvar alterações' : 'Salvar template'}
             </Botao>
           </div>
           </CartaoConteudo>

@@ -71,6 +71,9 @@ export class ProcessadorNotificacoes extends WorkerHost {
           id: mensagem.templateId,
           tenantId
         });
+        if (canal.tipo === 'whatsapp' && !template.aprovado) {
+          throw new Error('Template WhatsApp nao aprovado para envio.');
+        }
         const adaptador = this.obterAdaptador(canal.tipo);
         // Payload remontado vai so para o adaptador; a entidade continua com o
         // conteudo cifrado a parte, entao o save abaixo nao o escreve em claro.

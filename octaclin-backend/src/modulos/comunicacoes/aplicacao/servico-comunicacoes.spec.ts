@@ -107,6 +107,67 @@ describe('ServicoComunicacoes', () => {
     process.env = ambienteOriginal;
   });
 
+  it('instala somente modelos iniciais ausentes no tenant e preserva os personalizados', async () => {
+    const { servico, repositorios, gerenciador } = criarServico({});
+    repositorios.template.find.mockResolvedValueOnce([
+      { id: 'existente-1', tenantId: 'tenant-1', codigoExterno: 'octaclin_inicial_boas_vindas', nome: 'Personalizado' }
+    ]);
+
+    const resultado = await servico.instalarTemplatesIniciais('tenant-1');
+
+    expect(repositorios.template.find).toHaveBeenCalledWith({ where: { tenantId: 'tenant-1' } });
+    expect(gerenciador.query).toHaveBeenCalledWith(expect.stringContaining('pg_advisory_xact_lock'), [expect.stringContaining('tenant-1')]);
+    expect(resultado.criados).toHaveLength(2);
+    expect(repositorios.template.save).toHaveBeenCalledTimes(2);
+    expect(repositorios.template.save).not.toHaveBeenCalledWith(expect.objectContaining({ codigoExterno: 'octaclin_inicial_boas_vindas' }));
+    expect(repositorios.template.save).toHaveBeenCalledWith(expect.objectContaining({ tenantId: 'tenant-1', canal: 'email', aprovado: false }));
+  });
+
+  it('edita template do tenant sem trocar o canal e recusa id de outro tenant', async () => {
+    const template = { id: 'template-1', tenantId: 'tenant-1', canal: 'email', nome: 'Antigo', conteudo: { corpo: 'Antigo' }, aprovado: false };
+    const { servico, repositorios } = criarServico({ template });
+    const dados = { canal: 'email' as const, nome: 'Novo', conteudo: { assunto: 'Novo', corpo: 'Olá' }, aprovado: true };
+
+    await expect(servico.atualizarTemplate('tenant-1', 'template-1', dados)).resolves.toMatchObject({ nome: 'Novo', conteudo: dados.conteudo });
+    expect(repositorios.template.findOne).toHaveBeenCalledWith({ where: { tenantId: 'tenant-1', id: 'template-1' } });
+    expect(repositorios.template.save).toHaveBeenCalledWith(expect.objectContaining({ tenantId: 'tenant-1', canal: 'email', nome: 'Novo' }));
+
+    const outro = criarServico({ template: null });
+    await expect(outro.servico.atualizarTemplate('tenant-1', 'template-de-outro-tenant', dados)).rejects.toThrow(NotFoundException);
+    expect(outro.repositorios.template.save).not.toHaveBeenCalled();
+  });
+
+  it('retira aprovação de template WhatsApp ao alterar conteúdo ou código externo', async () => {
+    const { servico } = criarServico({ template: {
+      id: 'template-1', tenantId: 'tenant-1', canal: 'whatsapp', codigoExterno: 'codigo_antigo',
+      nome: 'Antigo', conteudo: { corpo: 'Antigo' }, aprovado: true
+    } });
+    const atualizado = await servico.atualizarTemplate('tenant-1', 'template-1', {
+      canal: 'whatsapp', codigoExterno: 'codigo_novo', nome: 'Novo', conteudo: { corpo: 'Novo' }, aprovado: true
+    });
+    expect(atualizado.aprovado).toBe(false);
+    await expect(servico.atualizarTemplate('tenant-1', 'template-1', {
+      canal: 'email', nome: 'Troca', conteudo: { corpo: 'Troca' }
+    })).rejects.toThrow(BadRequestException);
+  });
+
+  it('preserva codigo estavel de modelo inicial ao editar o texto', async () => {
+    const { servico, repositorios } = criarServico({ template: {
+      id: 'template-1', tenantId: 'tenant-1', canal: 'email',
+      codigoExterno: 'octaclin_inicial_boas_vindas', nome: 'Original',
+      conteudo: { corpo: 'Original' }, aprovado: false
+    } });
+    await expect(servico.atualizarTemplate('tenant-1', 'template-1', {
+      canal: 'email', codigoExterno: 'codigo_alterado', nome: 'Editado', conteudo: { corpo: 'Editado' }
+    })).rejects.toThrow(BadRequestException);
+    expect(repositorios.template.save).not.toHaveBeenCalled();
+
+    await expect(servico.atualizarTemplate('tenant-1', 'template-1', {
+      canal: 'email', codigoExterno: 'octaclin_inicial_boas_vindas', nome: 'Editado',
+      conteudo: { corpo: 'Editado' }
+    })).resolves.toMatchObject({ nome: 'Editado' });
+  });
+
   it('deve criar mensagem pendente e evento outbox na mesma transacao', async () => {
     const { servico, fila, repositorios } = criarServico({
       canal: { id: 'canal-1', tenantId: 'tenant-1', tipo: 'email', ativo: true },

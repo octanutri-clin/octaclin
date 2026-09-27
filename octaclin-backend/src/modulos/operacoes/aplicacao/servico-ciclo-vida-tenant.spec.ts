@@ -119,6 +119,39 @@ describe('ServicoCicloVidaTenant.provisionar', () => {
     timezone: 'America/Sao_Paulo'
   };
 
+  it('inclui modelos iniciais na mesma transação do novo tenant', async () => {
+    const tenant = { id: 'tenant-novo', nome: dados.nome, slug: dados.slug, provisionamentoReferencia: dados.referencia };
+    const repositorioTemplates = {
+      find: jest.fn(async () => []),
+      create: jest.fn((entrada) => entrada),
+      save: jest.fn(async (entrada) => ({ id: 'template-criado', ...entrada }))
+    };
+    const repositorios = {
+      TenantOrm: { findOne: jest.fn(async () => null), create: jest.fn((entrada) => entrada), save: jest.fn(async () => tenant) },
+      TenantConfiguracaoOrm: { create: jest.fn((entrada) => entrada), save: jest.fn(async (entrada) => entrada) },
+      UsuarioOrm: { create: jest.fn((entrada) => entrada), save: jest.fn(async (entrada) => ({ id: 'usuario-novo', ...entrada })) },
+      TokenRedefinicaoSenhaOrm: { create: jest.fn((entrada) => entrada), save: jest.fn(async (entrada) => ({ id: 'token-novo', ...entrada })) },
+      TemplateMensagemOrm: repositorioTemplates
+    };
+    const gerenciador = {
+      getRepository: jest.fn((entidade: { name: keyof typeof repositorios }) => repositorios[entidade.name]),
+      query: jest.fn(async () => undefined)
+    };
+    const fonteDados = { transaction: jest.fn(async (operacao) => operacao(gerenciador)) };
+    const servico = new ServicoCicloVidaTenant(fonteDados as never, {
+      gerarHashBusca: jest.fn(() => 'hash-sintetico'),
+      criptografar: jest.fn(() => Buffer.from('cifrado'))
+    } as never, { gerarHash: jest.fn(() => 'hash-senha') } as never, {} as never);
+    jest.spyOn(servico as never, 'enviarConviteProprietario').mockResolvedValue(undefined as never);
+    jest.spyOn(servico as never, 'obterResumo').mockResolvedValue({ ...tenant, planoId: 'clinica', assinaturaStatus: 'ativa' } as never);
+
+    await servico.provisionar(dados, 'operador-1');
+
+    expect(repositorioTemplates.save).toHaveBeenCalledTimes(3);
+    expect(repositorioTemplates.save).toHaveBeenCalledWith(expect.objectContaining({ tenantId: tenant.id, canal: 'email', aprovado: false }));
+    expect(gerenciador.query).toHaveBeenCalledWith("select set_config('app.tenant_id', $1, true)", [tenant.id]);
+  });
+
   it('reutiliza o vencedor quando o slug da mesma referencia fica visivel entre as duas consultas', async () => {
     const { servico, repositorioTenants } = criarServicoComSlugVisivelDepoisDaReferencia('fase228-corrida');
 
