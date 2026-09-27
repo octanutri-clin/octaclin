@@ -1,9 +1,9 @@
 # OctaClin - Checklist vivo de fases futuras ate producao
 
-Atualizado em 2026-09-27. Fases 256 a 261, 263 a 283 integradas; Fase 283
-(PB-29) foi integrada pelo PR #319 (merge `19ade15`). Fase 284 (PB-22) está
-em preparação na branch `feat/pb22-biblioteca-mensagens-fase284`, ainda sem
-merge ou aceite dos checks. A reconciliação completa do backlog da auditoria e a
+Atualizado em 2026-09-27. Fases 256 a 261, 263 a 284 integradas; Fase 284
+(PB-22) foi integrada pelo PR #320 (merge `af839c5`, 19 checks `SUCCESS` e
+`Provenance do SBOM` `SKIPPED`). Fase 285 (PB-20) está em implementação na
+branch `feat/pb20-comparacao-fotos-fase285`, ainda sem merge. A reconciliação completa do backlog da auditoria e a
 ordem proposta para recomendações pendentes estão em `docs/product/OCTACLIN_PRODUCT_FEATURE_AUDIT.md`,
 seção 15. Fase 262 permanece em andamento pelos gates externos do piloto. Com a Fase 268
 mergeada (PR `#275`, merge `306d2ed`), o PB-05 (alerta de check-in com
@@ -4352,8 +4352,8 @@ Reconciliação em 2026-09-27: PB-10 foi integrado em `main` pelo PR `#314`
 (merge `93ac0a8`), fechando a Onda 4 no código; aplicação fora de banda da
 migration e do backfill não foi verificada nesta reconciliação. PB-26, PB-27
 e PB-21 foram integrados pelos PRs `#315`, `#316` e `#317`. PB-29 foi
-integrado na Fase 283 pelo PR `#319`. PB-22 está em preparação na Fase 284;
-os itens seguintes e os demais gaps da
+integrado na Fase 283 pelo PR `#319`. PB-22 foi integrado na Fase 284 pelo
+PR `#320`; PB-20 está em implementação na Fase 285. Os demais gaps da
 auditoria estão ordenados na seção 15 de
 `docs/product/OCTACLIN_PRODUCT_FEATURE_AUDIT.md`.
 
@@ -4382,10 +4382,15 @@ auditoria estão ordenados na seção 15 de
   fluxos editáveis já disponíveis. Integrado pelo PR #319 (merge `19ade15`).
   Escopo e aceite em
   `docs/history/phases/PLANO_FASE_283.md`.
-- [~] Fase 284 - PB-22: biblioteca inicial de e-mails genéricos no
+- [x] Fase 284 - PB-22: biblioteca inicial de e-mails genéricos no
   provisionamento do tenant, instalação idempotente para clínicas existentes,
-  edição e prévia com dados fictícios. Implementação em branch; PR, checks e
-  merge pendentes. Escopo e gates em `docs/history/phases/PLANO_FASE_284.md`.
+  edição e prévia com dados fictícios. Integrado pelo PR #320 (merge
+  `af839c5`); `Provenance do SBOM` `SKIPPED`. Escopo e gates em
+  `docs/history/phases/PLANO_FASE_284.md`.
+- [~] Fase 285 - PB-20: comparação manual de duas imagens do mesmo protocolo,
+  com URL assinada curta, autorização clínica e prazo de retenção. Implementado
+  nesta branch; PR, checks e merge pendentes. Escopo e limites em
+  `docs/history/phases/PLANO_FASE_285.md`.
 
 O programa de hardening
 PR 36-56 permanece como trilha separada --

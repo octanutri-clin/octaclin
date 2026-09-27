@@ -1726,7 +1726,7 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
 
       {abaAtiva === 'exames_laboratoriais' ? <AbaExamesLaboratoriais pacienteId={pacienteId} podeGerenciar={permissoes.includes('pacientes.gerenciar')} podeGerenciarCatalogo={permissoes.includes('pacientes.gerenciar') && (papel === 'SuperAdmin' || papel === 'Professional')} /> : null}
 
-      {abaAtiva === 'evolucao_fotografica' ? <AbaEvolucaoFotografica pacienteId={pacienteId} podeGerenciar={permissoes.includes('pacientes.gerenciar')} /> : null}
+      {abaAtiva === 'evolucao_fotografica' ? <AbaEvolucaoFotografica pacienteId={pacienteId} podeVisualizar={(papel === 'Professional' || papel === 'SuperAdmin') && permissoes.includes('pacientes.ler')} podeGerenciar={(papel === 'Professional' || papel === 'SuperAdmin') && permissoes.includes('pacientes.gerenciar')} /> : null}
 
       {abaAtiva === 'documentos' ? (
         <AbaDocumentos pacienteId={pacienteId} podeGerenciar={podeGerenciarPaciente} consultasConcluidas={consultasConcluidas} />

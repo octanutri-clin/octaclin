@@ -15,8 +15,12 @@
   em `docs/history/phases/PLANO_FASE_282.md`.
 - Fase 283 (PB-29): guia de onboarding integrado pelo PR #319 (merge
   `19ade15`). Evidência e limites em `docs/history/phases/PLANO_FASE_283.md`.
-- A Fase 284 (PB-22) está em preparação em branch dedicada; não consta como
-  fase concluída até merge e aceite dos checks.
+- Fase 284 (PB-22): biblioteca inicial de mensagens integrada pelo PR #320
+  (merge `af839c5`), com instalação idempotente, edição e prévia fictícia.
+  O CI teve 19 checks `SUCCESS`; `Provenance do SBOM` ficou `SKIPPED`.
+  Limites em `docs/history/phases/PLANO_FASE_284.md`.
+- Fase 285 (PB-20) está em implementação; não consta como concluída até
+  checks aplicáveis e merge.
 
 Atualizado em 2026-09-17 com a conclusao da Fase 264 e a reconciliacao da
 Fase 263. A Fase 262 permanece aberta por gates externos do piloto.

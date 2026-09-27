@@ -9,7 +9,7 @@ export async function POST(_request: Request, context: { params: Promise<{ arqui
     });
     return new NextResponse(await resposta.text(), {
       status: resposta.status,
-      headers: { 'Content-Type': resposta.headers.get('Content-Type') ?? 'application/json' }
+      headers: { 'Content-Type': resposta.headers.get('Content-Type') ?? 'application/json', 'Cache-Control': 'no-store' }
     });
   } catch (erro) {
     if (erro instanceof ErroSessaoAusente) return NextResponse.json({ mensagem: erro.message }, { status: 401 });

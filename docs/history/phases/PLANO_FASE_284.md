@@ -68,3 +68,10 @@ antes de o selecionar para envio. Não há envio automático nesta entrega.
 
 Este plano registra implementação pronta para revisão na branch; PB-22 só pode
 ser marcado integrado em `main` após checks aplicáveis e merge.
+
+## Fechamento de código em 2026-09-27
+
+PR #320 integrado em `main` (merge `af839c5`, confirmado no GitHub). O CI teve
+19 checks `SUCCESS`; `Provenance do SBOM` ficou `SKIPPED` e não é contado como
+aprovação. Esta evidência comprova integração de código, sem afirmar deploy ou
+aplicação em ambiente externo.

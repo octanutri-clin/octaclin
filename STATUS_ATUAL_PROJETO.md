@@ -17,10 +17,12 @@ Atualizado em 2026-09-27.
   lista e registro em lote de formulario ou material, com verificacao de tenant
   e profissional. CI teve 19 checks `SUCCESS` e `Provenance do SBOM`
   `SKIPPED`. Fase 283 (PB-29) foi integrada pelo PR `#319` (merge `19ade15`,
-  confirmado no GitHub em 2026-09-27). O código do PB-22 está em preparação
-  na Fase 284, branch `feat/pb22-biblioteca-mensagens-fase284`; integração e
-  checks ainda dependem do PR. Planos em `docs/history/phases/PLANO_FASE_283.md`
-  e `docs/history/phases/PLANO_FASE_284.md`.
+  confirmado no GitHub em 2026-09-27). PB-22 (Fase 284) foi integrado pelo
+  PR `#320` (merge `af839c5`, confirmado no GitHub em 2026-09-27): 19 checks
+  `SUCCESS`; `Provenance do SBOM` ficou `SKIPPED`. PB-20 (Fase 285) está em
+  implementação na branch `feat/pb20-comparacao-fotos-fase285`, sem merge.
+  Planos em `docs/history/phases/PLANO_FASE_284.md` e
+  `docs/history/phases/PLANO_FASE_285.md`.
 - Entradas historicas abaixo descrevem o estado na data em que foram escritas;
   a reconciliacao acima prevalece para o proximo passo atual.
 
@@ -34,10 +36,14 @@ Atualizado em 2026-09-27.
 - Fase 283 (PB-29) concluida no codigo e integrada em `main` pelo PR #319.
   O guia profissional e nao bloqueante e usa os fluxos de edicao existentes.
   Evidencias em `docs/history/phases/PLANO_FASE_283.md`.
-- Fase 284 (PB-22) em preparacao na branch
-  `feat/pb22-biblioteca-mensagens-fase284`: modelos iniciais de e-mail,
-  instalacao idempotente, edicao e previa ficticia. PR, checks e merge
-  pendentes; ver `docs/history/phases/PLANO_FASE_284.md`.
+- Fase 284 (PB-22) concluida no codigo e integrada em `main` pelo PR #320:
+  modelos iniciais de e-mail, instalacao idempotente, edicao e previa ficticia.
+  `Provenance do SBOM` ficou `SKIPPED`; ver
+  `docs/history/phases/PLANO_FASE_284.md`.
+- Fase 285 (PB-20) em implementacao na branch
+  `feat/pb20-comparacao-fotos-fase285`: comparacao manual de fotos do mesmo
+  protocolo e reforco do acesso clinico. PR, checks e merge pendentes; ver
+  `docs/history/phases/PLANO_FASE_285.md`.
 - A reconciliação integral da auditoria e a sequência proposta para todas as
   recomendações ainda pendentes estão em
   `docs/product/OCTACLIN_PRODUCT_FEATURE_AUDIT.md`, seção 15. Estados de PB
