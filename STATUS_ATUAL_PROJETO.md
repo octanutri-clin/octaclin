@@ -1,6 +1,6 @@
 # OctaClin - Status atual do projeto
 
-Atualizado em 2026-09-26.
+Atualizado em 2026-09-27.
 
 ## Reconciliacao da Onda 4 e inicio da Onda 5
 
@@ -16,8 +16,8 @@ Atualizado em 2026-09-26.
   PR `#317` (merge `a7274be`, confirmado no GitHub em 2026-09-26): selecao na
   lista e registro em lote de formulario ou material, com verificacao de tenant
   e profissional. CI teve 19 checks `SUCCESS` e `Provenance do SBOM`
-  `SKIPPED`. Proxima fase numerada: Fase 283 (PB-29), conforme a sequencia
-  aprovada. Plano e evidencias em
+  `SKIPPED`. Fase 283 (PB-29) está em andamento na PR `#319`; ela segue aberta,
+  sem conclusão até merge e aceite dos checks. Plano e evidencias em
   `docs/history/phases/PLANO_FASE_282.md`.
 - Entradas historicas abaixo descrevem o estado na data em que foram escritas;
   a reconciliacao acima prevalece para o proximo passo atual.
@@ -37,6 +37,11 @@ Atualizado em 2026-09-26.
   edição existentes; ampliar edição para mensagens/materiais fica fora do PB-29
   e deverá ser avaliado em fase futura. Evidências em
   `docs/history/phases/PLANO_FASE_283.md`.
+- A reconciliação integral da auditoria e a sequência proposta para todas as
+  recomendações ainda pendentes estão em
+  `docs/product/OCTACLIN_PRODUCT_FEATURE_AUDIT.md`, seção 15. Estados de PB
+  foram cruzados com PRs; PB-10 segue concluído no código, sem comprovação neste
+  ciclo de aplicação da migration/backfill em ambientes externos.
 
 ## Snapshot
 
