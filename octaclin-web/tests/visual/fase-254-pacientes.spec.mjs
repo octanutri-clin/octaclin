@@ -46,7 +46,14 @@ test.describe('Fase 254 - rotas e formulario de pacientes', () => {
     await page.getByRole('button', { name: 'Confirmar envio' }).click();
     await expect.poll(() => envios.length).toBe(1);
     expect(envios[0].corpo).toEqual({ materialId: 'material-1', pacienteIds: ['paciente-1', 'paciente-2'] });
-    await page.getByRole('checkbox', { name: 'Selecionar todos os pacientes desta página' }).check();
+    // O request mocked é registrado antes da resposta ser consumida pela UI.
+    // Aguarde a conclusão visual, que limpa a seleção e desmonta o formulário,
+    // antes de iniciar a segunda ação em lote.
+    await expect(page.getByText('2 envio(s) registrado(s). Formulários ficam disponíveis no portal do paciente; esta ação não envia mensagem externa.')).toBeVisible();
+    const selecionarPagina = page.getByRole('checkbox', { name: 'Selecionar todos os pacientes desta página' });
+    await expect(selecionarPagina).not.toBeChecked();
+    await selecionarPagina.check();
+    await expect(page.getByText('2 paciente(s) selecionado(s) nesta página')).toBeVisible();
     await page.getByLabel('Ação em massa').selectOption('formulario');
     await page.getByLabel('Formulário para enviar').selectOption('questionario-1');
     await page.getByRole('button', { name: 'Revisar envio' }).click();
