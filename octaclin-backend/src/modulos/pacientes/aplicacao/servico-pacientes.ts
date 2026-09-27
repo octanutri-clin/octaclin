@@ -59,6 +59,7 @@ import { condutaEstaVencida, resolverVersaoVigentePorConduta } from '../dominio/
 import { EvolucaoClinicaOrm } from '../infraestrutura/evolucao-clinica.orm';
 import { PacienteOrm } from '../infraestrutura/paciente.orm';
 import { PerfilCadastroPacienteOrm } from '../infraestrutura/perfil-cadastro-paciente.orm';
+import { cancelarTarefaRevisaoPerfil, lerDataRevisaoPerfil, reatribuirTarefaRevisaoPerfil } from './tarefa-revisao-perfil';
 import { PrioridadeAcompanhamentoHistoricoOrm } from '../infraestrutura/prioridade-acompanhamento-historico.orm';
 import { PrioridadeAcompanhamentoPacienteOrm } from '../infraestrutura/prioridade-acompanhamento-paciente.orm';
 import { TombstoneExclusaoLgpdOrm } from '../../../infraestrutura/lgpd/tombstone-exclusao-lgpd.orm';
@@ -355,6 +356,14 @@ export class ServicoPacientes {
       if (dados.statusAdesao) paciente.statusAdesao = dados.statusAdesao;
       if (dados.scoreRisco !== undefined) paciente.scoreRisco = String(dados.scoreRisco);
 
+      if (dados.profissionalResponsavelId) {
+        const perfil = await gerenciador.getRepository(PerfilCadastroPacienteOrm).findOne({ where: { tenantId, pacienteId } });
+        const dataRevisao = lerDataRevisaoPerfil(this.criptografia, perfil?.operacaoCriptografada);
+        if (dataRevisao) {
+          await reatribuirTarefaRevisaoPerfil(gerenciador, tenantId, pacienteId, dataRevisao, dados.profissionalResponsavelId);
+        }
+      }
+
       return this.mapearResposta(await repositorio.save(paciente));
     });
   }
@@ -375,6 +384,9 @@ export class ServicoPacientes {
       if (!resultado.affected) {
         throw new NotFoundException('Paciente nao encontrado.');
       }
+      const perfil = await gerenciador.getRepository(PerfilCadastroPacienteOrm).findOne({ where: { tenantId, pacienteId } });
+      const dataRevisao = lerDataRevisaoPerfil(this.criptografia, perfil?.operacaoCriptografada);
+      if (dataRevisao) await cancelarTarefaRevisaoPerfil(gerenciador, tenantId, pacienteId, dataRevisao);
     });
   }
 
