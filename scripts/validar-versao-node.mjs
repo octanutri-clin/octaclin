@@ -80,9 +80,9 @@ export function lerNodeDoCi(conteudo) {
   return Number(achado[1]);
 }
 
-/** Majors distintos de `FROM node:<major>-alpine` num Dockerfile. */
+/** Majors distintos de `FROM node:<major>[-<minor>[.<patch>]]-...` num Dockerfile. */
 export function lerNodeDoDockerfile(conteudo) {
-  const achados = [...conteudo.matchAll(/^FROM\s+node:(\d+)-/gm)].map((a) => Number(a[1]));
+  const achados = [...conteudo.matchAll(/^FROM\s+node:(\d+)(?:\.\d+(?:\.\d+)?)?-/gm)].map((a) => Number(a[1]));
   if (achados.length === 0) throw new Error('nenhum FROM node:<major> encontrado');
   return [...new Set(achados)];
 }

@@ -2271,12 +2271,15 @@ publicado antes de ampliar a superficie de mudancas visuais.
     `pnpm security:capturar-inventario`.
   - [x] Checks do Pull Request, revisao humana e merge `316165d` na `main`.
 - [~] SQ-1 - Corrigir alertas com versao corrigida, em PRs independentes. [ATIVA]
-  - [~] SQ-1A: atualizar o digest oficial da base Node 22 e eliminar os 40
+- [~] SQ-1A: atualizar o digest oficial da base Node 22 e eliminar os 40
     alertas corrigiveis de `libssl3`/`libcrypto3`, preservando o harness de
-    runtime e registrando o digest anterior para rollback. [AGUARDANDO UPSTREAM]
-    Em 2026-09-07, a API oficial do Docker Hub ainda devolveu o mesmo digest
-    `c610fcdf...a3aa32`, atualizado em 2026-07-29 e anterior ao pacote Alpine
-    corrigido; nenhum workaround de instalacao mutavel foi adotado.
+    runtime e registrando o digest anterior para rollback. [CORRECAO EM ANDAMENTO]
+    A verificacao de 2026-09-07 registrou que a imagem oficial ainda continha
+    OpenSSL antigo; em 2026-09-28, a imagem oficial Node 22.23.2 Alpine 3.24
+    passou a estar disponivel com `libcrypto3` e `libssl3` 3.5.8-r0 em
+    `linux/amd64` e `linux/arm64`. A adocao do digest esta em validacao; os
+    alertas permanecem abertos ate novo scan da `main`. Nenhum workaround de
+    instalacao mutavel foi adotado.
   - [x] SQ-1B: remover npm, npx, pnpm e corepack das imagens finais Node sem
     quebrar o boot, os artefatos, o healthcheck ou o smoke.
     - [x] Web integrado pelo PR `#211`, merge `05e81c4`: contrato, build,

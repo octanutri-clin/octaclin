@@ -102,6 +102,14 @@ test('aceita o repositorio coerente', () => {
   assert.equal(ci, 22);
 });
 
+test('imagem Node fixada em versao completa preserva a comparacao pelo major', () => {
+  const dockerfile = [
+    'FROM node:22.23.2-alpine3.24@sha256:abc AS deps',
+    'FROM node:22.23.2-alpine3.24@sha256:abc AS runtime',
+  ].join('\n');
+  assert.deepEqual(lerNodeDoDockerfile(dockerfile), [22]);
+});
+
 // A divergencia de tipos e aceita por ser declarada, e nao por ser tolerada: ela
 // tem data, e a data e o que a impede de virar permanente.
 test('aceita a divergencia declarada de @types/node dentro do prazo', () => {

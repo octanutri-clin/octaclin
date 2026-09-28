@@ -228,13 +228,14 @@ const INVENTARIO_REAL = new URL('../docs/governance/inventario-security-quality.
 
 test('valida estrutura e cobertura do inventario real na data da captura', () => {
   const inventario = JSON.parse(readFileSync(INVENTARIO_REAL, 'utf8'));
-  assert.equal(inventario.gateEncerramentoSq4, true);
+  // SQ-2026-139 saiu de `aguardando_upstream` em 2026-09-28: a imagem oficial
+  // Node 22 Alpine corrigida existe e o bump esta em validacao. Nao declarar
+  // encerrado o SQ-4 ate a integracao e o novo scan da main sem esses alertas.
+  assert.equal(inventario.gateEncerramentoSq4, undefined);
   assert.deepEqual(inventario.causas.map(({ alertas }) => alertas.length), [156, 40, 0]);
-  // SQ-2026-004 saiu de `aguardando_upstream` na revisao de 2026-09-21: o
-  // upstream publicou a correcao e a base do ia-service foi reancorada nela.
   assert.deepEqual(inventario.causas.map(({ disposicao }) => disposicao), [
     'mitigado',
-    'aguardando_upstream',
+    'corrigir',
     'mitigado',
   ]);
   assert.match(carregarEValidarInventario(undefined, { hoje: HOJE }), /196 alertas cobertos/);

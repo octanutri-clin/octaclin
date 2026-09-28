@@ -1,6 +1,18 @@
 # OctaClin - Status atual do projeto
 
-Atualizado em 2026-09-27.
+Atualizado em 2026-09-28.
+
+## Remediacao ativa de supply chain
+
+- `fast-uri` 3.1.7 e `multer` 2.4.0 estao sendo travados nos overrides e
+  lockfiles dos workspaces afetados para resolver os alertas Dependabot.
+- O registry oficial publicou a imagem multi-arch Node 22.23.2 Alpine 3.24;
+  a verificacao dos manifests `linux/amd64` e `linux/arm64` confirmou
+  `libcrypto3` e `libssl3` 3.5.8-r0. O digest novo esta em validacao nos builds
+  backend e web, com rollback pelo digest anterior.
+- SQ-1A voltou a ser corrigivel. O gate de encerramento SQ-4 fica sem declaracao
+  ate a integracao e a nova captura da `main` comprovarem a remocao dos 40
+  alertas; nenhum alerta foi dispensado ou suprimido.
 
 ## Reconciliacao da Onda 4 e inicio da Onda 5
 
