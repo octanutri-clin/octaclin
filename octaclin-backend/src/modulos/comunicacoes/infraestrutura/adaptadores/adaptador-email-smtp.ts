@@ -1,6 +1,6 @@
 import { BadRequestException, Injectable, InternalServerErrorException } from '@nestjs/common';
 import { createTransport } from 'nodemailer';
-import SMTPTransport = require('nodemailer/lib/smtp-transport');
+import type { SMTPTransportOptions } from 'nodemailer/lib/smtp-transport';
 import { ResultadoEnvioNotificacao } from '../../dominio/canal-notificacao';
 import { AdaptadorNotificacao, ContextoEnvioNotificacao } from './adaptador-notificacao';
 import {
@@ -9,7 +9,7 @@ import {
   permitirRedeInternaSmtp
 } from '../../../../infraestrutura/seguranca/seguranca-integracoes-externas';
 
-type OpcoesSmtpOctaClin = SMTPTransport.Options & {
+type OpcoesSmtpOctaClin = SMTPTransportOptions & {
   allowInternalNetworkInterfaces?: boolean;
   family?: 4 | 6;
 };
