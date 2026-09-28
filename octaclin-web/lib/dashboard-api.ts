@@ -155,9 +155,9 @@ export async function registrarDesfechoDashboardClinico(
   });
 }
 
-export async function revisarEnvioDashboardClinico(envioId: string): Promise<void> {
+export async function revisarEnvioDashboardClinico(envioId: string, comprovanteLeitura: string): Promise<void> {
   await requisitar(
     `/api/dashboard/clinico/questionarios/envios/${encodeURIComponent(envioId)}/revisar`,
-    { method: 'POST' }
+    { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ comprovanteLeitura }) }
   );
 }

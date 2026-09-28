@@ -57,6 +57,42 @@ export interface RevisaoEnvioQuestionarioApi {
   revisadoPorUsuarioId?: string;
 }
 
+export interface RevisaoFormularioPendenteApi {
+  id: string;
+  pacienteId: string;
+  pacienteNome: string;
+  respondidoEm?: string;
+}
+
+export interface PaginaRevisoesFormularioApi {
+  pagina: number;
+  tamanho: number;
+  total: number;
+  itens: RevisaoFormularioPendenteApi[];
+}
+
+export interface DetalheRevisaoFormularioApi {
+  id: string;
+  pacienteId: string;
+  pacienteNome: string;
+  titulo: string;
+  respondidoEm?: string;
+  finalizadoEm: string;
+  proximaConsultaEm?: string;
+  revisadoEm?: string;
+  versaoHistoricaDisponivel: boolean;
+  comprovanteLeitura?: string;
+  respostas: { perguntaId: string; enunciado: string; tipo: TipoPergunta; valor: unknown }[];
+}
+
+export function listarRevisoesFormulario(pagina: number): Promise<PaginaRevisoesFormularioApi> {
+  return requisitar<PaginaRevisoesFormularioApi>(`/api/questionarios/revisoes/pendentes?pagina=${pagina}`);
+}
+
+export function obterRevisaoFormulario(envioId: string): Promise<DetalheRevisaoFormularioApi> {
+  return requisitar<DetalheRevisaoFormularioApi>(`/api/questionarios/revisoes/${encodeURIComponent(envioId)}`);
+}
+
 export interface RespostaQuestionarioRecebidaApi {
   respostaId: string;
   envioId: string;
@@ -387,10 +423,10 @@ export function criarEnviosQuestionarioLote(questionarioId: string, pacienteIds:
   });
 }
 
-export async function revisarEnvioQuestionario(envioId: string): Promise<RevisaoEnvioQuestionarioApi> {
+export async function revisarEnvioQuestionario(envioId: string, comprovanteLeitura: string): Promise<RevisaoEnvioQuestionarioApi> {
   return requisitar<RevisaoEnvioQuestionarioApi>(
     `/api/questionarios/envios/${encodeURIComponent(envioId)}/revisar`,
-    { method: 'POST' }
+    { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ comprovanteLeitura }) }
   );
 }
 

@@ -3,6 +3,7 @@ import { ServicoAuditoria } from '../../../infraestrutura/auditoria/servico-audi
 import { CHAVE_PAPEIS, CHAVE_PERMISSOES } from '../../auth/apresentacao/decorators';
 import { UsuarioAutenticado } from '../../auth/dominio/usuario-autenticado';
 import { ServicoQuestionarios } from '../aplicacao/servico-questionarios';
+import { ServicoRevisaoFormularios } from '../aplicacao/servico-revisao-formularios';
 import { ControladorQuestionarios } from './controlador-questionarios';
 
 describe('ControladorQuestionarios', () => {
@@ -31,7 +32,8 @@ describe('ControladorQuestionarios', () => {
     const registrar = jest.fn().mockResolvedValue(undefined);
     const controlador = new ControladorQuestionarios(
       { marcarEnvioComoRevisado } as unknown as ServicoQuestionarios,
-      { registrar } as unknown as ServicoAuditoria
+      { registrar } as unknown as ServicoAuditoria,
+      { validarComprovante: jest.fn() } as unknown as ServicoRevisaoFormularios
     );
     const requisicao = {
       header: jest.fn((nome: string) => (nome === 'x-octaclin-origem' ? origemForjada : undefined)),
@@ -45,7 +47,7 @@ describe('ControladorQuestionarios', () => {
   it('ignora origem forjada no endpoint generico', async () => {
     const { controlador, registrar, requisicao } = criarCenario('dashboard_clinico');
 
-    await controlador.revisarEnvio(usuario, requisicao, 'envio-1');
+    await controlador.revisarEnvio(usuario, requisicao, 'envio-1', { comprovanteLeitura: 'comprovante-sintetico' });
 
     expect(registrar).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -68,12 +70,13 @@ describe('ControladorQuestionarios', () => {
         revisarEnvioDashboard(
           usuario: UsuarioAutenticado,
           requisicao: Request,
-          envioId: string
+          envioId: string,
+          dados: { comprovanteLeitura: string }
         ): Promise<unknown>;
       }
     ).revisarEnvioDashboard;
 
-    await revisarDashboard.call(controlador, usuario, requisicao, 'envio-1');
+    await revisarDashboard.call(controlador, usuario, requisicao, 'envio-1', { comprovanteLeitura: 'comprovante-sintetico' });
 
     expect(registrar).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -92,7 +95,7 @@ describe('ControladorQuestionarios', () => {
   it('retorna apenas os campos clinicos minimos da revisao', async () => {
     const { controlador, requisicao } = criarCenario();
 
-    const resposta = await controlador.revisarEnvio(usuario, requisicao, 'envio-1');
+    const resposta = await controlador.revisarEnvio(usuario, requisicao, 'envio-1', { comprovanteLeitura: 'comprovante-sintetico' });
 
     expect(resposta).toEqual({
       id: 'envio-1',

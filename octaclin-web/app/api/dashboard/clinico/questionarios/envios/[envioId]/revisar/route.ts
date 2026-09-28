@@ -10,13 +10,15 @@ interface Params {
   params: Promise<{ envioId: string }>;
 }
 
-export async function POST(_request: Request, props: Params) {
+export async function POST(request: Request, props: Params) {
   try {
     await exigirAcaoDashboardClinico('questionarios.gerenciar');
+    const dados = await request.json() as { comprovanteLeitura?: unknown };
+    if (typeof dados.comprovanteLeitura !== 'string') return NextResponse.json({ mensagem: 'Abra a resposta antes de concluir.' }, { status: 400 });
     const { envioId } = await props.params;
     const resposta = await requisitarBackendAutenticado(
       `/questionarios/dashboard/envios/${encodeURIComponent(envioId)}/revisar`,
-      { method: 'POST' }
+      { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ comprovanteLeitura: dados.comprovanteLeitura }) }
     );
     const texto = await resposta.text();
     if (!resposta.ok) {

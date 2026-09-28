@@ -8,7 +8,6 @@ import {
   AlertTriangle,
   CalendarDays,
   CheckCircle2,
-  ClipboardCheck,
   ClipboardList,
   EyeOff,
   MessageSquareWarning,
@@ -24,7 +23,6 @@ import {
   concluirTarefaDashboardClinico,
   ocultarAlertaDashboardClinico,
   registrarDesfechoDashboardClinico,
-  revisarEnvioDashboardClinico,
   type PeriodoDashboardClinico,
   type ResumoDashboardClinicoApi,
   type StatusConsultaClinica
@@ -247,7 +245,7 @@ export function PainelDashboard() {
         <h2 id="pendentes" className="text-lg font-semibold text-tinta">Pendentes</h2>
         <div className="grid gap-5 xl:grid-cols-2">
           <div className="min-w-0"><CabecalhoFila titulo="Tarefas vencidas" detalhe="Ações clínicas que exigem tratamento." />{dados.tarefasVencidas.length ? <div className="divide-y divide-linha border-y border-linha">{dados.tarefasVencidas.map((item) => <div key={item.id} className="flex min-w-0 items-center justify-between gap-3 py-3"><div className="min-w-0"><p className="truncate text-sm font-semibold text-tinta">{item.titulo}</p><p className="truncate text-xs text-texto-suave">{item.pacienteNome} · {item.prioridade} · Venceu em {formatarDataHora(item.vencimentoEm)}</p></div>{podeConcluirTarefa ? <Botao type="button" disabled={processando === `tarefa-${item.id}`} onClick={() => void executar(`tarefa-${item.id}`, 'Tarefa concluída.', () => concluirTarefaDashboardClinico(item.pacienteId, item.id), 'Concluir esta tarefa?')}><CheckCircle2 size={15} />Concluir tarefa</Botao> : null}</div>)}</div> : <EstadoVazio titulo="Nenhuma tarefa vencida" descricao="A rotina de acompanhamento está em dia." />}</div>
-          <div className="min-w-0"><CabecalhoFila titulo="Formulários pendentes" detalhe="Respostas que precisam de revisão clínica." />{dados.formulariosPendentes.length ? <div className="divide-y divide-linha border-y border-linha">{dados.formulariosPendentes.map((item) => <div key={item.id} className="flex min-w-0 items-center justify-between gap-3 py-3"><div className="min-w-0"><p className="truncate text-sm font-semibold text-tinta">Formulário de {item.pacienteNome}</p><p className="text-xs text-texto-suave">Respondido em {item.respondidoEm ? formatarDataHora(item.respondidoEm) : 'data indisponível'}</p></div>{podeRevisarFormulario ? <Botao type="button" disabled={processando === `formulario-${item.id}`} onClick={() => void executar(`formulario-${item.id}`, 'Formulário marcado como revisado.', () => revisarEnvioDashboardClinico(item.id), 'Marcar este formulário como revisado?')}><ClipboardCheck size={15} />Marcar revisado</Botao> : null}</div>)}</div> : <EstadoVazio titulo="Nenhum formulário pendente" descricao="Não há respostas aguardando revisão." />}</div>
+          <div className="min-w-0"><CabecalhoFila titulo="Formulários pendentes" detalhe="Respostas que precisam de revisão clínica.">{podeRevisarFormulario ? <LinkAcao href="/questionarios/revisoes">Ver fila completa</LinkAcao> : null}</CabecalhoFila>{dados.formulariosPendentes.length ? <div className="divide-y divide-linha border-y border-linha">{dados.formulariosPendentes.map((item) => <div key={item.id} className="flex min-w-0 items-center justify-between gap-3 py-3"><div className="min-w-0"><p className="truncate text-sm font-semibold text-tinta">Formulário de {item.pacienteNome}</p><p className="text-xs text-texto-suave">Respondido em {item.respondidoEm ? formatarDataHora(item.respondidoEm) : 'data indisponível'}</p></div>{podeRevisarFormulario ? <LinkAcao href={`/questionarios/revisoes?envio=${encodeURIComponent(item.id)}`}>Abrir resposta</LinkAcao> : null}</div>)}</div> : <EstadoVazio titulo="Nenhum formulário pendente" descricao="Não há respostas aguardando revisão." />}</div>
         </div>
         <div className="min-w-0"><CabecalhoFila titulo="Comunicações em alerta" detalhe="Somente o status operacional e exibido neste painel."><LinkAcao href="/comunicacoes">Abrir comunicações</LinkAcao></CabecalhoFila>{dados.comunicacoes.length ? <div className="divide-y divide-linha border-y border-linha">{dados.comunicacoes.map((item) => <div key={item.id} className="py-3"><p className="truncate text-sm font-semibold text-tinta">{item.pacienteNome}</p><p className="text-xs text-texto-suave">Situação {item.status} · {formatarDataHora(item.criadoEm)}</p></div>)}</div> : <EstadoVazio titulo="Comunicações em dia" descricao="Não há comunicações que demandem atenção." />}</div>
       </section>

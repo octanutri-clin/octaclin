@@ -35,6 +35,8 @@ import {
   ReordenarPerguntasDto
 } from '../aplicacao/dtos';
 import { ServicoQuestionarios } from '../aplicacao/servico-questionarios';
+import { ServicoRevisaoFormularios } from '../aplicacao/servico-revisao-formularios';
+import { ComprovanteLeituraDto } from '../aplicacao/dto-comprovante-leitura';
 
 @Controller()
 @UseGuards(GuardaJwt, GuardaPapeis, GuardaPermissoes)
@@ -43,7 +45,8 @@ import { ServicoQuestionarios } from '../aplicacao/servico-questionarios';
 export class ControladorQuestionarios {
   constructor(
     private readonly servicoQuestionarios: ServicoQuestionarios,
-    private readonly servicoAuditoria: ServicoAuditoria
+    private readonly servicoAuditoria: ServicoAuditoria,
+    private readonly servicoRevisaoFormularios: ServicoRevisaoFormularios
   ) {}
 
   @Post('categorias-pergunta')
@@ -211,13 +214,15 @@ export class ControladorQuestionarios {
   }
 
   @Post('questionarios/envios/:envioId/revisar')
+  @Papeis('SuperAdmin', 'Professional')
   @Permissoes('questionarios.gerenciar')
   async revisarEnvio(
     @UsuarioAtual() usuario: UsuarioAutenticado,
     @Req() requisicao: Request,
-    @Param('envioId', ParseUUIDPipe) envioId: string
+    @Param('envioId', ParseUUIDPipe) envioId: string,
+    @Body() dados: ComprovanteLeituraDto
   ) {
-    return this.revisarEnvioComOrigem(usuario, requisicao, envioId, 'questionarios');
+    return this.revisarEnvioComOrigem(usuario, requisicao, envioId, 'questionarios', dados);
   }
 
   @Post('questionarios/dashboard/envios/:envioId/revisar')
@@ -226,13 +231,15 @@ export class ControladorQuestionarios {
   async revisarEnvioDashboard(
     @UsuarioAtual() usuario: UsuarioAutenticado,
     @Req() requisicao: Request,
-    @Param('envioId', ParseUUIDPipe) envioId: string
+    @Param('envioId', ParseUUIDPipe) envioId: string,
+    @Body() dados: ComprovanteLeituraDto
   ) {
     return this.revisarEnvioComOrigem(
       usuario,
       requisicao,
       envioId,
-      'dashboard_clinico'
+      'dashboard_clinico',
+      dados
     );
   }
 
@@ -240,8 +247,10 @@ export class ControladorQuestionarios {
     usuario: UsuarioAutenticado,
     requisicao: Request,
     envioId: string,
-    origem: 'questionarios' | 'dashboard_clinico'
+    origem: 'questionarios' | 'dashboard_clinico',
+    dados: ComprovanteLeituraDto
   ) {
+    this.servicoRevisaoFormularios.validarComprovante(dados?.comprovanteLeitura, usuario.tenantId, envioId, usuario);
     const envio = await this.servicoQuestionarios.marcarEnvioComoRevisado(usuario.tenantId, envioId, usuario);
     await this.registrarAuditoria(
       usuario,
@@ -260,6 +269,24 @@ export class ControladorQuestionarios {
       revisadoEm: envio.revisadoEm,
       revisadoPorUsuarioId: envio.revisadoPorUsuarioId
     };
+  }
+
+  @Get('questionarios/revisoes/pendentes')
+  @Papeis('SuperAdmin', 'Professional')
+  @Permissoes('questionarios.gerenciar')
+  @Header('Cache-Control', 'private, no-store')
+  listarRevisoesPendentes(@UsuarioAtual() usuario: UsuarioAutenticado, @Query('pagina') pagina?: string) {
+    return this.servicoRevisaoFormularios.listarPendentes(usuario.tenantId, usuario, Number(pagina ?? '1'));
+  }
+
+  @Get('questionarios/revisoes/:envioId')
+  @Papeis('SuperAdmin', 'Professional')
+  @Permissoes('questionarios.gerenciar')
+  @Header('Cache-Control', 'private, no-store')
+  async obterRevisao(@UsuarioAtual() usuario: UsuarioAutenticado, @Req() requisicao: Request, @Param('envioId', ParseUUIDPipe) envioId: string) {
+    const detalhe = await this.servicoRevisaoFormularios.obterDetalhe(usuario.tenantId, envioId, usuario);
+    await this.registrarAuditoria(usuario, requisicao, 'questionarios.resposta.visualizar', 'envio_questionario', envioId, {});
+    return detalhe;
   }
 
   @Get('questionarios/:id/versoes')
