@@ -1,10 +1,10 @@
 # OctaClin - Checklist vivo de fases futuras ate producao
 
-Atualizado em 2026-09-27. Fase 286 atual em implementação na branch
-`feat/fase286-templates-imc`, com PR, checks e merge pendentes. Fases 256 a 261, 263 a 285 integradas; Fase 284
+Atualizado em 2026-09-27. Fase 287 atual em implementação na branch
+`feat/fase287-revisao-perfil`, com gates de CI e merge ainda não concluídos. Fases 256 a 261, 263 a 286 integradas; Fase 284
 (PB-22) foi integrada pelo PR #320 (merge `af839c5`, 19 checks `SUCCESS` e
 `Provenance do SBOM` `SKIPPED`). Fase 285 (PB-20) foi integrada pelo PR #321
-(merge `01d6bf1`). A reconciliação completa do backlog da auditoria e a
+(merge `01d6bf1`). Fase 286 concluida pelo PR #322 (merge `c92f246`). A reconciliação completa do backlog da auditoria e a
 ordem proposta para recomendações pendentes estão em `docs/product/OCTACLIN_PRODUCT_FEATURE_AUDIT.md`,
 seção 15. Fase 262 permanece em andamento pelos gates externos do piloto. Com a Fase 268
 mergeada (PR `#275`, merge `306d2ed`), o PB-05 (alerta de check-in com
@@ -4355,7 +4355,7 @@ migration e do backfill não foi verificada nesta reconciliação. PB-26, PB-27
 e PB-21 foram integrados pelos PRs `#315`, `#316` e `#317`. PB-29 foi
 integrado na Fase 283 pelo PR `#319`. PB-22 foi integrado na Fase 284 pelo
 PR `#320`; PB-20 foi integrado na Fase 285 pelo PR `#321`. A Fase 286 trata
-modelos clínicos para antropometria/alta e IMC calculado, ainda sem integração. Os demais gaps da
+modelos clínicos para antropometria/alta e IMC calculado, integrada pelo PR #322. A Fase 287 trata a tarefa de revisão de perfil. Os demais gaps da
 auditoria estão ordenados na seção 15 de
 `docs/product/OCTACLIN_PRODUCT_FEATURE_AUDIT.md`.
 
@@ -4393,11 +4393,16 @@ auditoria estão ordenados na seção 15 de
   com URL assinada curta, autorização clínica e prazo de retenção. Integrado
   pelo PR #321 (merge `01d6bf1`). Escopo e limites em
   `docs/history/phases/PLANO_FASE_285.md`.
-- [~] Fase 286 - modelos clínicos para observações antropométricas e relatório
+- [x] Fase 286 - modelos clínicos para observações antropométricas e relatório
   de alta; IMC derivado de peso/altura e contexto da mesma consulta.
-  Implementação na branch `feat/fase286-templates-imc`; PR e checks pendentes.
+  Integrada pelo PR #322 (merge `c92f246`).
   Gestantes e menores de 20 anos requerem critérios próprios em fases futuras.
   Plano em `docs/history/phases/PLANO_FASE_286.md`.
+- [~] Fase 287 - tarefa automática na próxima revisão do perfil, com
+  reconciliação idempotente e opt-in das datas preexistentes. Implementação na
+  branch `feat/fase287-revisao-perfil`; gates de CI e merge a confirmar. O backfill não
+  foi executado em staging ou produção. Plano em
+  `docs/history/phases/PLANO_FASE_287.md`.
 
 O programa de hardening
 PR 36-56 permanece como trilha separada --

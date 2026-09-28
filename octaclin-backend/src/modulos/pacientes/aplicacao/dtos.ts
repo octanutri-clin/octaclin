@@ -275,7 +275,7 @@ export class AtualizarOperacaoCadastroPacienteDto {
   @IsOptional() @IsString() @MaxLength(100) origem?: string;
   @IsOptional() @IsString() @MaxLength(80) categoria?: string;
   @IsOptional() @IsArray() @ArrayMaxSize(12) @IsString({ each: true }) @MaxLength(40, { each: true }) tags?: string[];
-  @IsOptional() @IsDateString() proximaRevisaoEm?: string;
+  @IsOptional() @Matches(/^\d{4}-\d{2}-\d{2}$/) @IsDateString() proximaRevisaoEm?: string;
   @IsOptional() @ValidateNested() @Type(() => ResponsavelCadastroPacienteDto) responsavel?: ResponsavelCadastroPacienteDto;
 }
 

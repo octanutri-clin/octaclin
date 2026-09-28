@@ -21,6 +21,7 @@ import { PacienteOrm } from '../infraestrutura/paciente.orm';
 import { PerfilCadastroPacienteOrm } from '../infraestrutura/perfil-cadastro-paciente.orm';
 import { ServicoDuplicidadePacientes } from './servico-duplicidade-pacientes';
 import { gerarIndicesPerfilPaciente } from './indices-perfil-paciente';
+import { cancelarTarefaRevisaoPerfil, criarTarefaRevisaoPerfil, dataCivilRevisaoValida, lerDataRevisaoPerfil } from './tarefa-revisao-perfil';
 
 type CampoCifrado =
   | 'identificacaoCriptografada'
@@ -142,9 +143,11 @@ export class ServicoPerfilCadastroPaciente {
   ): Promise<T> {
     if (tenantId !== usuario.tenantId) throw new ForbiddenException('Tenant invalido.');
     return this.executorTenant.executar(tenantId, async (gerenciador) => {
-      await this.garantirPacienteAcessivel(gerenciador, tenantId, pacienteId, usuario);
+      const paciente = await this.garantirPacienteAcessivel(gerenciador, tenantId, pacienteId, usuario, campo === 'operacaoCriptografada');
       const repositorio = gerenciador.getRepository(PerfilCadastroPacienteOrm);
       const perfil = (await repositorio.findOne({ where: { tenantId, pacienteId } })) ?? repositorio.create({ tenantId, pacienteId });
+      const dataAnterior = campo === 'operacaoCriptografada'
+        ? lerDataRevisaoPerfil(this.criptografia, perfil.operacaoCriptografada) : undefined;
       perfil[campo] = this.criptografia.criptografar(JSON.stringify(dados));
       await repositorio.save(perfil);
       if (campo === 'operacaoCriptografada') {
@@ -153,6 +156,14 @@ export class ServicoPerfilCadastroPaciente {
           { perfilFiltrosHashes: gerarIndicesPerfilPaciente(this.criptografia, tenantId, dados as AtualizarOperacaoCadastroPacienteDto) }
         );
         if (resultado.affected !== 1) throw new NotFoundException('Paciente nao encontrado.');
+        const dataNova = (dados as AtualizarOperacaoCadastroPacienteDto).proximaRevisaoEm;
+        if (dataNova && !dataCivilRevisaoValida(dataNova)) throw new BadRequestException('Data de proxima revisao invalida.');
+        if (dataAnterior && dataAnterior !== dataNova) {
+          await cancelarTarefaRevisaoPerfil(gerenciador, tenantId, pacienteId, dataAnterior);
+        }
+        if (dataNova) {
+          await criarTarefaRevisaoPerfil(gerenciador, this.criptografia, tenantId, pacienteId, paciente.profissionalResponsavelId, dataNova);
+        }
       }
       return dados;
     });
@@ -162,7 +173,8 @@ export class ServicoPerfilCadastroPaciente {
     gerenciador: EntityManager,
     tenantId: string,
     pacienteId: string,
-    usuario: UsuarioAutenticado
+    usuario: UsuarioAutenticado,
+    bloquear = false
   ): Promise<PacienteOrm> {
     if (tenantId !== usuario.tenantId) throw new ForbiddenException('Tenant invalido.');
     const profissionalResponsavelId = await resolverProfissionalIdDoUsuario(gerenciador, tenantId, usuario);
@@ -173,7 +185,8 @@ export class ServicoPerfilCadastroPaciente {
         arquivadoEm: IsNull(),
         statusCicloVida: Not('DELETED'),
         ...(profissionalResponsavelId ? { profissionalResponsavelId } : {})
-      }
+      },
+      ...(bloquear ? { lock: { mode: 'pessimistic_write' as const } } : {})
     });
     if (!paciente) throw new NotFoundException('Paciente nao encontrado.');
     return paciente;

@@ -21,9 +21,12 @@ Atualizado em 2026-09-27.
   PR `#320` (merge `af839c5`, confirmado no GitHub em 2026-09-27): 19 checks
   `SUCCESS`; `Provenance do SBOM` ficou `SKIPPED`. PB-20 (Fase 285) foi
   integrado pelo PR `#321` (merge `01d6bf1`, confirmado no GitHub em 2026-09-27).
-  A Fase 286 está em implementação na branch `feat/fase286-templates-imc`:
-  modelos para observações antropométricas e alta, IMC derivado e contexto da
-  mesma consulta. PR, checks e merge pendentes; ver `docs/history/phases/PLANO_FASE_286.md`.
+  A Fase 286 foi integrada pelo PR `#322` (merge `c92f246`): modelos para
+  observações antropométricas e alta, IMC derivado e contexto da mesma
+  consulta. A Fase 287 está em implementação na branch
+  `feat/fase287-revisao-perfil`: tarefa automática na revisão do perfil e
+  reconciliação opt-in das datas preexistentes; ver
+  `docs/history/phases/PLANO_FASE_287.md`.
   Planos em `docs/history/phases/PLANO_FASE_284.md` e
   `docs/history/phases/PLANO_FASE_285.md`.
 - Entradas historicas abaixo descrevem o estado na data em que foram escritas;
@@ -46,8 +49,11 @@ Atualizado em 2026-09-27.
 - Fase 285 (PB-20) concluida no codigo e integrada em `main` pelo PR #321: comparacao manual de
   fotos do mesmo protocolo e reforco do acesso clinico; ver
   `docs/history/phases/PLANO_FASE_285.md`.
-- Fase 286 em implementação na branch `feat/fase286-templates-imc`, com PR e
-  checks pendentes. Escopo e limites em `docs/history/phases/PLANO_FASE_286.md`.
+- Fase 286 concluída no código e integrada pelo PR #322 (merge `c92f246`).
+  Escopo e limites em `docs/history/phases/PLANO_FASE_286.md`.
+- Fase 287 em implementação na branch `feat/fase287-revisao-perfil`; gates de
+  CI e merge ainda não concluídos. Reconciliação histórica não executada em ambiente
+  externo. Plano em `docs/history/phases/PLANO_FASE_287.md`.
 - A reconciliação integral da auditoria e a sequência proposta para todas as
   recomendações ainda pendentes estão em
   `docs/product/OCTACLIN_PRODUCT_FEATURE_AUDIT.md`, seção 15. Estados de PB

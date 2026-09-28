@@ -20,8 +20,10 @@
   O CI teve 19 checks `SUCCESS`; `Provenance do SBOM` ficou `SKIPPED`.
   Limites em `docs/history/phases/PLANO_FASE_284.md`.
 - Fase 285 (PB-20): comparação fotográfica manual integrada pelo PR #321
-  (merge `01d6bf1`). A Fase 286 permanece em implementação; plano em
-  `docs/history/phases/PLANO_FASE_286.md`.
+  (merge `01d6bf1`).
+- Fase 286: modelos clínicos para antropometria e alta, IMC derivado na
+  avaliação e contexto da mesma consulta integrados pelo PR #322 (merge
+  `c92f246`). Plano em `docs/history/phases/PLANO_FASE_286.md`.
 
 Atualizado em 2026-09-17 com a conclusao da Fase 264 e a reconciliacao da
 Fase 263. A Fase 262 permanece aberta por gates externos do piloto.

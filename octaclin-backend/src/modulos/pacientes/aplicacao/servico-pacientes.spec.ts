@@ -18,6 +18,7 @@ import { CondutaTerapeuticaOrm } from '../infraestrutura/conduta-terapeutica.orm
 import { CondutaTerapeuticaVersaoOrm } from '../infraestrutura/conduta-terapeutica-versao.orm';
 import { EvolucaoClinicaOrm } from '../infraestrutura/evolucao-clinica.orm';
 import { PacienteOrm } from '../infraestrutura/paciente.orm';
+import { PerfilCadastroPacienteOrm } from '../infraestrutura/perfil-cadastro-paciente.orm';
 import { PrioridadeAcompanhamentoHistoricoOrm } from '../infraestrutura/prioridade-acompanhamento-historico.orm';
 import { PrioridadeAcompanhamentoPacienteOrm } from '../infraestrutura/prioridade-acompanhamento-paciente.orm';
 import { TombstoneExclusaoLgpdOrm } from '../../../infraestrutura/lgpd/tombstone-exclusao-lgpd.orm';
@@ -31,6 +32,7 @@ function criarGerenciadorFake(repositorio: Record<string, unknown>) {
     return {
       getRepository: jest.fn((entidade: unknown) => {
         if (entidade === WebhookAssinaturaOrm) return { find: jest.fn(async () => []) };
+        if (entidade === PerfilCadastroPacienteOrm) return { findOne: jest.fn(async () => null) };
         if (entidade === PacienteOrm) return repositorio.paciente;
         if (entidade === ProfissionalOrm) return repositorio.profissional;
         if (entidade === AgendaConsultaOrm) return repositorio.agenda ?? { find: jest.fn(async () => []) };
@@ -42,6 +44,7 @@ function criarGerenciadorFake(repositorio: Record<string, unknown>) {
   return {
     getRepository: jest.fn((entidade: unknown) => {
       if (entidade === WebhookAssinaturaOrm) return { find: jest.fn(async () => []) };
+      if (entidade === PerfilCadastroPacienteOrm) return { findOne: jest.fn(async () => null) };
       return entidade === AgendaConsultaOrm ? repositorio.agenda ?? { find: jest.fn(async () => []) } : repositorio;
     })
   };

@@ -4,6 +4,7 @@ import { UsuarioAutenticado } from '../../auth/dominio/usuario-autenticado';
 import { PacienteOrm } from '../infraestrutura/paciente.orm';
 import { ProfissionalOrm } from '../../profissionais/infraestrutura/profissional.orm';
 import { PerfilCadastroPacienteOrm } from '../infraestrutura/perfil-cadastro-paciente.orm';
+import { AcompanhamentoTarefaOrm } from '../infraestrutura/acompanhamento-tarefa.orm';
 import { ConvitePacienteOrm } from '../infraestrutura/convite-paciente.orm';
 import { UsuarioOrm } from '../../usuarios/infraestrutura/usuario.orm';
 import { ConsentimentoLgpdOrm } from '../../../infraestrutura/lgpd/consentimento-lgpd.orm';
@@ -252,5 +253,93 @@ describe('ServicoPerfilCadastroPaciente', () => {
     expect(resposta.acessoPortal).toEqual(expect.objectContaining({ status: 'acesso_ativo', ultimoAcessoEm: expect.any(Date), canalPreferido: 'email' }));
     expect(resposta.acessoPortal).not.toHaveProperty('token');
     expect(resposta.acessoPortal.aceites).toEqual([{ tipo: 'termos_uso', versao: '2026-07', aceitoEm: expect.any(Date) }]);
+  });
+});
+
+describe('sincronizacao da tarefa de revisao na operacao do cadastro', () => {
+  function criarCenarioRevisao(destinoAtivo = true) {
+    const tarefas = new Map<string, { id: string; tenantId: string; pacienteId: string; profissionalId: string; status: string }>();
+    let perfilAtual: Record<string, unknown> | null = null;
+    const perfil = {
+      findOne: jest.fn(async () => perfilAtual),
+      create: jest.fn((valor: Record<string, unknown>) => valor),
+      save: jest.fn(async (valor: Record<string, unknown>) => { perfilAtual = valor; return valor; })
+    };
+    const paciente = {
+      findOne: jest.fn(async ({ where }) => where.tenantId === usuario.tenantId
+        ? { id: 'paciente-1', tenantId: usuario.tenantId, profissionalResponsavelId: 'profissional-1' } : null),
+      update: jest.fn(async () => ({ affected: 1 }))
+    };
+    const profissional = {
+      findOne: jest.fn(async ({ where }) => where.tenantId === usuario.tenantId
+        ? { id: 'profissional-1', usuarioId: 'usuario-responsavel' } : null)
+    };
+    const usuarioResponsavel = {
+      findOne: jest.fn(async ({ where }) => destinoAtivo && where.tenantId === usuario.tenantId
+        ? { id: 'usuario-responsavel' } : null)
+    };
+    let novaTarefa: Record<string, unknown> | undefined;
+    const tarefa = {
+      findOne: jest.fn(async ({ where }) => tarefas.get(where.id) ?? null),
+      update: jest.fn(async (where, dados) => {
+        const atual = tarefas.get(where.id);
+        if (!atual || atual.tenantId !== where.tenantId || atual.pacienteId !== where.pacienteId || atual.status !== where.status) {
+          return { affected: 0 };
+        }
+        tarefas.set(where.id, { ...atual, ...dados });
+        return { affected: 1 };
+      }),
+      createQueryBuilder: jest.fn(() => ({ insert: () => ({ into: () => ({ values: (dados: Record<string, unknown>) => {
+        novaTarefa = dados;
+        return { orIgnore: () => ({ execute: async () => {
+          const atual = novaTarefa as { id: string; tenantId: string; pacienteId: string; profissionalId: string; status: string };
+          if (!tarefas.has(atual.id)) tarefas.set(atual.id, atual);
+        } }) };
+      } }) }) }))
+    };
+    const gerenciador = { getRepository: (entidade: unknown) => {
+      if (entidade === PacienteOrm) return paciente;
+      if (entidade === PerfilCadastroPacienteOrm) return perfil;
+      if (entidade === ProfissionalOrm) return profissional;
+      if (entidade === UsuarioOrm) return usuarioResponsavel;
+      if (entidade === AcompanhamentoTarefaOrm) return tarefa;
+      throw new Error('Repositorio inesperado.');
+    } } as unknown as EntityManager;
+    const executorTenant = { executar: jest.fn(async (_tenantId, executar) => executar(gerenciador)) };
+    const criptografia = {
+      criptografar: jest.fn((valor: string) => Buffer.from(valor)),
+      descriptografar: jest.fn((valor: Buffer) => valor.toString()),
+      gerarHashPerfilExato: jest.fn((tenantId: string, campo: string, valor: string) => `${tenantId}:${campo}:${valor}`)
+    };
+    const duplicidade = new ServicoDuplicidadePacientes(executorTenant as never, criptografia as never, { registrar: jest.fn() } as never);
+    return {
+      servico: new ServicoPerfilCadastroPaciente(executorTenant as never, criptografia as never, duplicidade),
+      tarefas, perfil, paciente, profissional, usuarioResponsavel, executorTenant
+    };
+  }
+
+  it('cria ao salvar, nao duplica na repeticao, cancela ao trocar e ao remover a data', async () => {
+    const c = criarCenarioRevisao();
+    const ator = { ...usuario, papel: 'Collaborator' as const };
+    await c.servico.atualizarOperacao(usuario.tenantId, 'paciente-1', { proximaRevisaoEm: '2026-10-01' }, ator);
+    expect(c.tarefas.size).toBe(1);
+    expect([...c.tarefas.values()][0]).toEqual(expect.objectContaining({ profissionalId: 'usuario-responsavel', status: 'pendente' }));
+    await c.servico.atualizarOperacao(usuario.tenantId, 'paciente-1', { proximaRevisaoEm: '2026-10-01' }, ator);
+    expect(c.tarefas.size).toBe(1);
+    await c.servico.atualizarOperacao(usuario.tenantId, 'paciente-1', { proximaRevisaoEm: '2026-10-02' }, ator);
+    expect([...c.tarefas.values()].map((item) => item.status).sort()).toEqual(['cancelada', 'pendente']);
+    await c.servico.atualizarOperacao(usuario.tenantId, 'paciente-1', {}, ator);
+    expect([...c.tarefas.values()].every((item) => item.status === 'cancelada')).toBe(true);
+    expect(c.paciente.findOne).toHaveBeenCalledWith(expect.objectContaining({ lock: { mode: 'pessimistic_write' } }));
+  });
+
+  it('recusa tenant divergente e nao cria tarefa sem destinatario ativo', async () => {
+    const c = criarCenarioRevisao(false);
+    await expect(c.servico.atualizarOperacao('outro-tenant', 'paciente-1', { proximaRevisaoEm: '2026-10-01' }, usuario))
+      .rejects.toThrow(ForbiddenException);
+    expect(c.executorTenant.executar).not.toHaveBeenCalled();
+    await expect(c.servico.atualizarOperacao(usuario.tenantId, 'paciente-1', { proximaRevisaoEm: '2026-10-01' }, usuario))
+      .rejects.toThrow(BadRequestException);
+    expect(c.tarefas.size).toBe(0);
   });
 });

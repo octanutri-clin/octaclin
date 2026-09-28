@@ -94,7 +94,7 @@ explícita e sem lacuna funcional evidente.
 | Exames laboratoriais | Parcial | Só listar/criar; marcador é texto livre; sem faixa de referência, sem série |
 | Evolução fotográfica | Parcial | Consentimento versionado robusto; sem comparação lado a lado; upload com UI inacabada |
 | Documentos clínicos emitidos | Robusto | Modelos por tenant, variáveis auto-preenchidas, append-only. Só 3 tipos |
-| Perfil de cadastro do paciente | Funcional, com dados órfãos | origem/categoria/tags/próxima revisão coletados e não usados |
+| Perfil de cadastro do paciente | Funcional, com automação de revisão em implementação | origem/categoria/tags continuam sem consumidor específico; tarefa da próxima revisão na Fase 287 |
 | Dashboard clínico | Robusto na agregação, subutilizado na exibição | 7 filas + alertas; métricas calculadas e nunca exibidas |
 | Filtros salvos / importação CSV / duplicidade | Funcionais, com UI | Filtros limitados a 4 critérios |
 
@@ -407,7 +407,7 @@ Ordenadas por "o dado já existe" → "o efeito não existe".
 | Confirmação de consulta (WhatsApp) | Gravada e exibida por consulta; sem efeito derivado | Fila de não confirmadas + follow-up automático |
 | Falta registrada | Registrada no desfecho | Reagendamento proativo; contagem no score de risco |
 | Conduta vencendo | Data gravada, sem consumidor | Alerta de revisão |
-| Próxima revisão do perfil (`proximaRevisaoEm`) | Coletada e nunca lida | Tarefa automática |
+| Próxima revisão do perfil (`proximaRevisaoEm`) | Tarefa automática em implementação na Fase 287; reconciliação histórica opt-in ainda sem execução externa | Confirmar CI, merge e backfill por tenant |
 | Plano publicado | Versão criada | Notificar paciente que há plano novo |
 | Material enviado e não visualizado | Não há registro de visualização | Lembrete após N dias |
 | Paciente sem consulta futura | Existe fila no dashboard | Sugestão de reagendamento em lote |
@@ -609,7 +609,7 @@ de esgotar a versão determinística de cada um.
 
 ### Estado do backlog verificado em 2026-09-27
 
-Os estados abaixo foram cruzados com PRs merged e, para itens sem PR identificável, com o código. PRs #319, #320 e #321 já foram integrados; a Fase 286 está em implementação, sem PR/merge. Merge comprova a entrega de código, não a aplicação de migrations em ambientes externos.
+Os estados abaixo foram cruzados com PRs merged e, para itens sem PR identificável, com o código. PRs #319, #320, #321 e #322 já foram integrados; a Fase 287 está em implementação, sem merge. Merge comprova a entrega de código, não a aplicação de migrations ou backfills em ambientes externos.
 
 | PB | Estado e evidência |
 |---|---|
@@ -637,7 +637,7 @@ Os estados abaixo foram cruzados com PRs merged e, para itens sem PR identificá
 | PB-29 | **Concluído no código** — Fase 283, PR #319 integrado (merge `19ade15` em 2026-09-27). Não há evidência de produção nesta reconciliação. |
 | PB-30 | **Pendente** — extração assistida de exames não foi encontrada; PB-17 entrega a estrutura determinística e é dependência já concluída. |
 
-PB-28 e PB-30 não têm ordem aprovada na tabela original. PB-20 foi integrado; a Fase 286 executa o item 4 da sequência abaixo, com PR/merge pendentes. A proposta de sequência inclui também as recomendações das seções 3–14 que não se esgotam nesses PBs.
+PB-28 e PB-30 não têm ordem aprovada na tabela original. PB-20 e Fase 286 foram integrados; a Fase 287 executa a primeira automação do item 5, com merge pendente. A proposta de sequência inclui também as recomendações das seções 3–14 que não se esgotam nesses PBs.
 
 ---
 
@@ -812,11 +812,12 @@ produto devem ter esse gate resolvido no plano da respectiva fase.
    alimentos e materiais; o guia do PB-29 não comprova que esses conteúdos existam.
 3. **PB-20 integrado (Fase 285, PR #321).** A comparação manual, o acesso clínico e o prazo
    de retenção foram integrados em `main` pelo PR #321.
-4. **Completar templates profissionais e consulta (Fase 286 em implementação).** Cobrir observações antropométricas e relatórios de
+4. **Completar templates profissionais e consulta (Fase 286, PR #322 integrado).** Cobrir observações antropométricas e relatórios de
    alta; exibir peso/IMC derivados da avaliação vinculada à mesma consulta sem campo estruturado editável.
    Atestados/encaminhamentos ficam para decisão posterior; critérios de IMC para gestantes e menores de 20 anos
    exigem fases próprias. O PB-24 já entrega vínculo opcional com consulta, não esses templates.
-5. **Automatizações residuais da seção 7**, em incrementos pequenos: tarefa na próxima revisão de perfil;
+5. **Automatizações residuais da seção 7**, em incrementos pequenos: tarefa na próxima revisão de perfil
+   (Fase 287 em implementação, com reconciliação histórica fora de banda);
    sinalizar revisão de resposta de formulário; notificar paciente quando plano for publicado; lembrar
    material não visualizado; acompanhar consultas não confirmadas e faltas; sugerir retorno quando não
    houver consulta futura. Preservar preferências, idempotência, outbox e autorização por tenant.
