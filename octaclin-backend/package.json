@@ -36,8 +36,8 @@
     "mock:api": "node scripts/api-demo-local.mjs"
   },
   "dependencies": {
-    "@aws-sdk/client-s3": "^3.1132.0",
-    "@aws-sdk/s3-request-presigner": "^3.1132.0",
+    "@aws-sdk/client-s3": "^3.1136.0",
+    "@aws-sdk/s3-request-presigner": "^3.1136.0",
     "@nestjs/bullmq": "^11.0.5",
     "@nestjs/common": "^11.2.5",
     "@nestjs/config": "^4.0.4",
@@ -65,12 +65,12 @@
     "@nestjs/testing": "^11.2.5",
     "@types/express": "^5.0.0",
     "@types/jest": "^30.0.0",
-    "@types/node": "^26.5.1",
+    "@types/node": "^26.6.2",
     "@types/nodemailer": "^8.0.2",
     "@types/pg": "^8.23.1",
     "jest": "^30.5.2",
     "testcontainers": "12.1.0",
-    "ts-jest": "^29.4.12",
+    "ts-jest": "^29.4.13",
     "ts-node": "^10.9.2",
     "typescript": "^6.0.3"
   },
