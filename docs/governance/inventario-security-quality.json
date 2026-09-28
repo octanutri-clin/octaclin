@@ -2372,7 +2372,6 @@
       "total": 0
     }
   },
-  "gateEncerramentoSq4": true,
   "causas": [
     {
       "id": "SQ-2026-004",
@@ -2565,7 +2564,7 @@
     },
     {
       "id": "SQ-2026-139",
-      "titulo": "OpenSSL corrigido no Alpine ainda ausente da imagem oficial Node 22",
+      "titulo": "OpenSSL corrigido disponivel na nova imagem oficial Node 22 Alpine",
       "alertas": [
         "code-scanning:295",
         "code-scanning:296",
@@ -2608,29 +2607,30 @@
         "code-scanning:351",
         "code-scanning:352"
       ],
-      "disposicao": "aguardando_upstream",
+      "disposicao": "corrigir",
       "severidadeContextual": "high",
       "owner": "octanutri-clin/octaclin (proprietario do repositorio)",
       "revisarEm": "2026-10-08",
       "ondaDestino": "SQ-1A",
-      "bloqueioUpstream": "O pacote Alpine 3.5.8-r0 existe, mas o artefato oficial e suportado node:22-alpine ainda resolve para o digest que contem 3.5.7-r0; o projeto nao aceita apk upgrade mutavel como substituto de uma nova imagem oficial.",
       "evidencia": [
         "Recaptura da main 98b6e5f em 2026-09-08: 20 alertas Trivy no backend e 20 no web, todos em libcrypto3/libssl3 3.5.7-r0 com versao corrigida 3.5.8-r0.",
         "Consulta autenticada ao registry-1.docker.io em 2026-09-08T17:41:35Z confirmou node:22-alpine no digest sha256:c610fcdfb1d5b4740dd70c284ed3cb16bb857e0f7166196e36a5501df7a3aa32, o mesmo fixado nos dois Dockerfiles.",
         "Nova consulta ao Docker Hub oficial em 2026-09-15 confirmou que node:22-alpine continua no mesmo digest sha256:c610fcdfb1d5b4740dd70c284ed3cb16bb857e0f7166196e36a5501df7a3aa32, publicado em 2026-07-29; ainda nao existe artefato oficial novo para adotar.",
         "Os 40 alertas permanecem abertos no Security tab; nao houve dismiss, supressao ou upgrade mutavel.",
-        "Recaptura completa da main em 2026-09-25T00:20:06.782Z confirmou os mesmos 40 alertas ainda abertos: 20 na imagem backend e 20 na imagem web; todos seguem com versao corrigida reportada pelo scanner, sem indicio no snapshot de que a imagem oficial fixada ja a incorpore."
+        "Recaptura completa da main em 2026-09-25T00:20:06.782Z confirmou os mesmos 40 alertas ainda abertos: 20 na imagem backend e 20 na imagem web; todos seguem com versao corrigida reportada pelo scanner, sem indicio no snapshot de que a imagem oficial fixada ja a incorpore.",
+        "Consulta ao registry oficial do Docker Hub em 2026-09-28 resolveu node:22.23.2-alpine3.24 para o indice OCI sha256:b6f26b36c8ff49624cfdac716b8ea1138d606df02586a77d364bb5536a634f85; os manifests linux/amd64 e linux/arm64 sao sha256:b64da1de5a51067ab8e75f0bc8dbd0905d8894baa22261f439a4572f41291e50 e sha256:451d2ebc48dd4484ae9c3b865e2ed1a5ce2dd7be03d4344b506e41ed948e105d.",
+        "Inspecao de /lib/apk/db/installed nos manifests oficiais amd64 e arm64 confirmou libcrypto3 e libssl3 em 3.5.8-r0. A atualizacao do digest e dos builds backend/web aguarda validacao por CI; os 40 alertas da main continuam abertos ate novo scan apos integracao."
       ],
       "preCondicoes": [
-        "A base oficial Node 22 Alpine precisa publicar novo indice OCI contendo libcrypto3 e libssl3 3.5.8-r0 ou superior para linux/amd64 e linux/arm64.",
-        "A troca deve preservar Node, artefatos, healthcheck e runtime minimo de backend e web."
+        "Adotar o indice OCI oficial Node 22 Alpine fixado por digest que contem libcrypto3 e libssl3 3.5.8-r0 ou superior em linux/amd64 e linux/arm64.",
+        "Preservar Node 22, artefatos, healthcheck e runtime minimo de backend e web; reconstruir, exercitar o harness e escanear as duas imagens."
       ],
       "mitigacoes": [
-        "Digest OCI imutavel e arquitetura suportada permanecem fixados; npm, npx, pnpm e corepack foram removidos dos runtimes finais.",
-        "CI reconstruiu e validou as duas imagens no run Trivy 34256077527; os alertas seguem visiveis ate o upstream produzir o artefato correto."
+        "A main permanece no digest oficial anterior ate a integracao; nao foi usado apk upgrade mutavel nem dismissal/supressao dos alertas.",
+        "O runtime continua sem npm, npx, pnpm e corepack; o novo digest sera validado por builds, healthcheck, harness, SBOM e Trivy antes do merge."
       ],
-      "impacto": "OpenSSL vulneravel permanece nas imagens Node; quatro alertas sao high, doze medium e vinte e quatro low. A versao de pacote corrigida existe, mas ainda nao esta disponivel no artefato oficial aceito.",
-      "condicaoSaida": "Atualizar somente para novo digest oficial Node 22 Alpine com OpenSSL corrigido, provar as duas arquiteturas, build, health e harness, e exigir novo scan da main sem os 40 alertas."
+      "impacto": "A imagem atual da main ainda contem OpenSSL vulneravel: quatro alertas high, doze medium e vinte e quatro low. A imagem oficial corrigida existe e esta em validacao, mas os alertas nao serao encerrados ate a integracao e o novo scan da main.",
+      "condicaoSaida": "Integrar o novo digest oficial Node 22 Alpine, provar linux/amd64 e linux/arm64, builds, health, harness, SBOM e Trivy, e exigir novo scan da main sem os 40 alertas."
     },
     {
       "id": "SQ-2026-239",
