@@ -70,13 +70,13 @@ Dependency Review permanece em workflow separado, com severidade high,
 licenças negadas e comparação base/head intactas. Ele continua rodando em
 todo PR; a flag do detector informa relevância, mas o `PR Gate` **não**
 atesta o resultado de outro workflow. CodeQL, Semgrep e Trivy mantêm seus
-gatilhos, políticas e comportamento atual para Dependabot. Esta etapa não
-altera o Ruleset remoto. Os required checks antigos continuam configurados;
-um job condicional `skipped` pode ser aceito pelo GitHub, portanto o `PR Gate`
-deve ser observado em PR real antes da migração. Até ele se tornar required,
-uma falha isolada dele ainda não bloqueia o merge pelo Ruleset.
+gatilhos, políticas e comportamento atual para Dependabot. O Ruleset alvo
+exige `PR Gate` e `Dependency Review (critical/high e licencas)` como checks
+independentes, com `strict` ativo e origem GitHub Actions. Consulte o Ruleset
+no GitHub antes de afirmar o estado remoto; este documento descreve o
+contrato e o procedimento, não substitui essa verificação.
 
-Para migrar o Ruleset em etapa posterior, siga esta ordem:
+Para implantar ou repetir a migração do Ruleset, siga esta ordem:
 
 1. Abra o PR de CI e confira no GitHub os nomes e conclusões dos sete checks
    atuais, de `PR Gate` e de `Dependency Review (critical/high e licencas)`.
@@ -93,12 +93,14 @@ Para migrar o Ruleset em etapa posterior, siga esta ordem:
 Adicionar os novos checks antes do merge evita a janela em que um job antigo
 condicional `skipped` satisfaz o Ruleset enquanto uma falha isolada de
 `PR Gate` não bloqueia o merge. Durante a transição, PRs anteriores podem
-precisar de novo run para produzir os checks adicionados. Se a política causar
-problemas, restaure o payload anterior e trate a exposição resultante antes
-de novos merges; para desabilitar temporariamente o roteamento por PR,
-introduza por PR uma regra versionada que force `full=true`, ou reverta o PR
-de CI, mantendo os checks antigos até o workflow anterior voltar a produzir
-todos os nomes.
+precisar de novo run para produzir os checks adicionados. Se a lista final de
+dois checks causar problemas, restaure primeiro o payload de transição com os
+**nove** checks; ele mantém `PR Gate` obrigatório enquanto os jobs forem
+condicionais. Não volte à lista de sete sem o gate com o roteamento seletivo
+ativo. Para desabilitar temporariamente o roteamento por PR, introduza por PR
+uma regra versionada que force `full=true`, ou reverta o PR de CI; só retire
+`PR Gate` do Ruleset depois que o workflow anterior voltar a produzir todos
+os checks antigos.
 Nenhuma mudança de produção ou migration integra este procedimento.
 
 Alterações no próprio workflow, detector ou gate ativam `full=true`. Como
