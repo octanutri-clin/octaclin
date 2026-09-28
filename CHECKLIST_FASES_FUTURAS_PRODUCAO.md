@@ -1,7 +1,7 @@
 # OctaClin - Checklist vivo de fases futuras ate producao
 
-Atualizado em 2026-09-27. Fase 287 atual em implementação na branch
-`feat/fase287-revisao-perfil`, com gates de CI e merge ainda não concluídos. Fases 256 a 261, 263 a 286 integradas; Fase 284
+Atualizado em 2026-09-27. Fase 287 integrada pelo PR #323; Fase 288 em implementação na branch
+`feat/fase288-revisao-formularios`, com gates de CI e merge ainda não concluídos. Fases 256 a 261, 263 a 287 integradas; Fase 284
 (PB-22) foi integrada pelo PR #320 (merge `af839c5`, 19 checks `SUCCESS` e
 `Provenance do SBOM` `SKIPPED`). Fase 285 (PB-20) foi integrada pelo PR #321
 (merge `01d6bf1`). Fase 286 concluida pelo PR #322 (merge `c92f246`). A reconciliação completa do backlog da auditoria e a
@@ -4398,11 +4398,14 @@ auditoria estão ordenados na seção 15 de
   Integrada pelo PR #322 (merge `c92f246`).
   Gestantes e menores de 20 anos requerem critérios próprios em fases futuras.
   Plano em `docs/history/phases/PLANO_FASE_286.md`.
-- [~] Fase 287 - tarefa automática na próxima revisão do perfil, com
-  reconciliação idempotente e opt-in das datas preexistentes. Implementação na
-  branch `feat/fase287-revisao-perfil`; gates de CI e merge a confirmar. O backfill não
-  foi executado em staging ou produção. Plano em
+- [x] Fase 287 - tarefa automática na próxima revisão do perfil, com
+  reconciliação idempotente e opt-in das datas preexistentes. Integrada pelo
+  PR #323 (merge `511ec37`). O backfill não tem evidência de execução em staging ou produção. Plano em
   `docs/history/phases/PLANO_FASE_287.md`.
+- [~] Fase 288 - fila paginada e leitura individual de resposta de formulário
+  antes da conclusão da revisão, com síntese factual sem IA e controle por tenant.
+  Implementação na branch `feat/fase288-revisao-formularios`; CI e merge pendentes.
+  Plano em `docs/history/phases/PLANO_FASE_288.md`.
 
 O programa de hardening
 PR 36-56 permanece como trilha separada --

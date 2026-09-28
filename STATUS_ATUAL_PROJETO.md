@@ -23,8 +23,7 @@ Atualizado em 2026-09-27.
   integrado pelo PR `#321` (merge `01d6bf1`, confirmado no GitHub em 2026-09-27).
   A Fase 286 foi integrada pelo PR `#322` (merge `c92f246`): modelos para
   observações antropométricas e alta, IMC derivado e contexto da mesma
-  consulta. A Fase 287 está em implementação na branch
-  `feat/fase287-revisao-perfil`: tarefa automática na revisão do perfil e
+  consulta. A Fase 287 foi integrada pelo PR #323 (merge `511ec37`): tarefa automática na revisão do perfil e
   reconciliação opt-in das datas preexistentes; ver
   `docs/history/phases/PLANO_FASE_287.md`.
   Planos em `docs/history/phases/PLANO_FASE_284.md` e
@@ -51,9 +50,11 @@ Atualizado em 2026-09-27.
   `docs/history/phases/PLANO_FASE_285.md`.
 - Fase 286 concluída no código e integrada pelo PR #322 (merge `c92f246`).
   Escopo e limites em `docs/history/phases/PLANO_FASE_286.md`.
-- Fase 287 em implementação na branch `feat/fase287-revisao-perfil`; gates de
-  CI e merge ainda não concluídos. Reconciliação histórica não executada em ambiente
+- Fase 287 integrada pelo PR #323 (merge `511ec37`). Reconciliação histórica sem evidência de execução em ambiente
   externo. Plano em `docs/history/phases/PLANO_FASE_287.md`.
+- Fase 288 em implementação na branch `feat/fase288-revisao-formularios`:
+  fila completa de revisão, resposta individual e síntese factual sem IA.
+  CI e merge pendentes. Plano em `docs/history/phases/PLANO_FASE_288.md`.
 - A reconciliação integral da auditoria e a sequência proposta para todas as
   recomendações ainda pendentes estão em
   `docs/product/OCTACLIN_PRODUCT_FEATURE_AUDIT.md`, seção 15. Estados de PB

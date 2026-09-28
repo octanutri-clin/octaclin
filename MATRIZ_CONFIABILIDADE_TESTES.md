@@ -75,7 +75,14 @@ smoke real de integracoes ou validacao manual de go-live.
 
 ## Execucao minima
 
+O roteamento de CI por diff e o resultado dos jobs sao cobertos por
+`scripts/classificar-impacto-pr.spec.mjs` e `scripts/validar-pr-gate.spec.mjs`.
+Arquivo desconhecido ativa suite completa; job necessario `SKIPPED` reprova o
+`PR Gate`. O procedimento e limites estao em
+`docs/governance/CI_IMPACT_AWARE.md`.
+
 ```powershell
+node --test scripts/classificar-impacto-pr.spec.mjs scripts/validar-pr-gate.spec.mjs
 pnpm test:confiabilidade
 pnpm test:redacao-auditoria
 pnpm test:resposta-auditoria

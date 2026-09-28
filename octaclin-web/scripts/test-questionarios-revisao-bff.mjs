@@ -10,6 +10,8 @@ const tsconfigTemporario = join(pastaTemporaria, 'tsconfig.json');
 const arquivos = [
   'scripts/questionarios-revisao-bff.spec.ts',
   'app/api/questionarios/envios/[envioId]/revisar/route.ts',
+  'app/api/questionarios/revisoes/pendentes/route.ts',
+  'app/api/questionarios/revisoes/[envioId]/route.ts',
   'lib/server/permissoes-bff.ts',
   'lib/server/sessao-bff.ts'
 ];

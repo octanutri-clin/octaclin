@@ -94,7 +94,7 @@ explícita e sem lacuna funcional evidente.
 | Exames laboratoriais | Parcial | Só listar/criar; marcador é texto livre; sem faixa de referência, sem série |
 | Evolução fotográfica | Parcial | Consentimento versionado robusto; sem comparação lado a lado; upload com UI inacabada |
 | Documentos clínicos emitidos | Robusto | Modelos por tenant, variáveis auto-preenchidas, append-only. Só 3 tipos |
-| Perfil de cadastro do paciente | Funcional, com automação de revisão em implementação | origem/categoria/tags continuam sem consumidor específico; tarefa da próxima revisão na Fase 287 |
+| Perfil de cadastro do paciente | Funcional, com tarefa de revisão integrada | origem/categoria/tags continuam sem consumidor específico; tarefa da próxima revisão entregue no código pela Fase 287 |
 | Dashboard clínico | Robusto na agregação, subutilizado na exibição | 7 filas + alertas; métricas calculadas e nunca exibidas |
 | Filtros salvos / importação CSV / duplicidade | Funcionais, com UI | Filtros limitados a 4 critérios |
 
@@ -403,11 +403,11 @@ Ordenadas por "o dado já existe" → "o efeito não existe".
 | --- | --- | --- |
 | Check-in respondido com adesão baixa | Nada | Tarefa + alerta no dashboard |
 | Check-in atrasado | Gatilho existe na UI, sem executor | Mensagem ao paciente + fila de atenção |
-| Formulário respondido | Notificação in-app + webhook | Resumo ao profissional; item de revisão pré-consulta |
+| Formulário respondido | Notificação in-app + webhook; dashboard exibe prévia limitada e Fase 288 implementa fila paginada e leitura individual, ainda sem merge | Confirmar CI e merge da síntese factual ao profissional e da revisão antes da consulta |
 | Confirmação de consulta (WhatsApp) | Gravada e exibida por consulta; sem efeito derivado | Fila de não confirmadas + follow-up automático |
 | Falta registrada | Registrada no desfecho | Reagendamento proativo; contagem no score de risco |
 | Conduta vencendo | Data gravada, sem consumidor | Alerta de revisão |
-| Próxima revisão do perfil (`proximaRevisaoEm`) | Tarefa automática em implementação na Fase 287; reconciliação histórica opt-in ainda sem execução externa | Confirmar CI, merge e backfill por tenant |
+| Próxima revisão do perfil (`proximaRevisaoEm`) | Tarefa automática integrada na Fase 287, PR #323; reconciliação histórica opt-in sem evidência de execução externa | Confirmar backfill por tenant em ambiente autorizado |
 | Plano publicado | Versão criada | Notificar paciente que há plano novo |
 | Material enviado e não visualizado | Não há registro de visualização | Lembrete após N dias |
 | Paciente sem consulta futura | Existe fila no dashboard | Sugestão de reagendamento em lote |
@@ -609,7 +609,7 @@ de esgotar a versão determinística de cada um.
 
 ### Estado do backlog verificado em 2026-09-27
 
-Os estados abaixo foram cruzados com PRs merged e, para itens sem PR identificável, com o código. PRs #319, #320, #321 e #322 já foram integrados; a Fase 287 está em implementação, sem merge. Merge comprova a entrega de código, não a aplicação de migrations ou backfills em ambientes externos.
+Os estados abaixo foram cruzados com PRs merged e, para itens sem PR identificável, com o código. PRs #319, #320, #321, #322 e #323 já foram integrados; a Fase 288 está em implementação, sem merge. Merge comprova a entrega de código, não a aplicação de migrations ou backfills em ambientes externos.
 
 | PB | Estado e evidência |
 |---|---|
@@ -637,7 +637,7 @@ Os estados abaixo foram cruzados com PRs merged e, para itens sem PR identificá
 | PB-29 | **Concluído no código** — Fase 283, PR #319 integrado (merge `19ade15` em 2026-09-27). Não há evidência de produção nesta reconciliação. |
 | PB-30 | **Pendente** — extração assistida de exames não foi encontrada; PB-17 entrega a estrutura determinística e é dependência já concluída. |
 
-PB-28 e PB-30 não têm ordem aprovada na tabela original. PB-20 e Fase 286 foram integrados; a Fase 287 executa a primeira automação do item 5, com merge pendente. A proposta de sequência inclui também as recomendações das seções 3–14 que não se esgotam nesses PBs.
+PB-28 e PB-30 não têm ordem aprovada na tabela original. PB-20 e Fase 286 foram integrados; a Fase 287 executou a primeira automação do item 5 (PR #323), com backfill externo pendente de evidência. A Fase 288 trata a revisão de respostas de formulário, ainda sem merge. A proposta de sequência inclui também as recomendações das seções 3–14 que não se esgotam nesses PBs.
 
 ---
 
@@ -817,8 +817,8 @@ produto devem ter esse gate resolvido no plano da respectiva fase.
    Atestados/encaminhamentos ficam para decisão posterior; critérios de IMC para gestantes e menores de 20 anos
    exigem fases próprias. O PB-24 já entrega vínculo opcional com consulta, não esses templates.
 5. **Automatizações residuais da seção 7**, em incrementos pequenos: tarefa na próxima revisão de perfil
-   (Fase 287 em implementação, com reconciliação histórica fora de banda);
-   sinalizar revisão de resposta de formulário; notificar paciente quando plano for publicado; lembrar
+   (Fase 287 integrada, com reconciliação histórica fora de banda pendente de evidência);
+   sinalizar revisão de resposta de formulário (Fase 288 em implementação); notificar paciente quando plano for publicado; lembrar
    material não visualizado; acompanhar consultas não confirmadas e faltas; sugerir retorno quando não
    houver consulta futura. Preservar preferências, idempotência, outbox e autorização por tenant.
 6. **PB-28 e melhorias da experiência do paciente.** Definir responsável, estados, prazo/SLA e escalonamento

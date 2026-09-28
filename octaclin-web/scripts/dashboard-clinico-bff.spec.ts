@@ -91,7 +91,8 @@ test('BFFs de acao clinica exigem papel clinico e usam endpoints backend dedicad
     await revisarEnvioDashboard(
       new Request('http://localhost/api/dashboard/clinico/questionarios/envios/envio-1/revisar', {
         method: 'POST',
-        headers: { 'x-octaclin-origem': 'origem_forjada' }
+        headers: { 'x-octaclin-origem': 'origem_forjada', 'Content-Type': 'application/json' },
+        body: JSON.stringify({ comprovanteLeitura: 'comprovante-sintetico' })
       }),
       { params: Promise.resolve({ envioId: 'envio-1' }) }
     );
@@ -116,7 +117,7 @@ test('BFFs de acao clinica exigem papel clinico e usam endpoints backend dedicad
         {
           caminho: '/questionarios/dashboard/envios/envio-1/revisar',
           origem: null,
-          corpo: undefined
+          corpo: JSON.stringify({ comprovanteLeitura: 'comprovante-sintetico' })
         }
       ]
     );
@@ -157,7 +158,8 @@ test('BFFs genericos nao encaminham origem fornecida pelo navegador', async () =
     await revisarEnvioQuestionarios(
       new Request('http://localhost/api/questionarios/envios/envio-1/revisar', {
         method: 'POST',
-        headers: { 'x-octaclin-origem': 'dashboard_clinico' }
+        headers: { 'x-octaclin-origem': 'dashboard_clinico', 'Content-Type': 'application/json' },
+        body: JSON.stringify({ comprovanteLeitura: 'comprovante-sintetico' })
       }),
       { params: Promise.resolve({ envioId: 'envio-1' }) }
     );
