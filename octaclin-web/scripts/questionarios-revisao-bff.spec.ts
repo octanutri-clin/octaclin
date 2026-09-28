@@ -2,6 +2,8 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import * as nextHeaders from 'next/headers';
 import { POST as revisarEnvio } from '../app/api/questionarios/envios/[envioId]/revisar/route';
+import { GET as listarPendentes } from '../app/api/questionarios/revisoes/pendentes/route';
+import { GET as abrirResposta } from '../app/api/questionarios/revisoes/[envioId]/route';
 
 const { __clearCookies, __setCookies } = nextHeaders as typeof nextHeaders & {
   __clearCookies: () => void;
@@ -96,7 +98,8 @@ test('BFF generico nao encaminha origem e remove token publico da resposta', asy
 
   try {
     const resposta = await revisarEnvio(new Request('http://localhost/api/revisar', {
-      headers: { 'x-octaclin-origem': 'dashboard_clinico' }
+      method: 'POST', headers: { 'x-octaclin-origem': 'dashboard_clinico', 'Content-Type': 'application/json' },
+      body: JSON.stringify({ comprovanteLeitura: 'comprovante-sintetico' })
     }), {
       params: Promise.resolve({ envioId: 'envio-1' })
     });
@@ -115,4 +118,35 @@ test('BFF generico nao encaminha origem e remove token publico da resposta', asy
   } finally {
     restaurarFetch(fetchOriginal);
   }
+});
+
+test('BFF da fila e detalhe exigem permissao antes de consultar o backend', async () => {
+  __setCookies(cookiesSessaoValida(['questionarios.ler']));
+  const original = global.fetch;
+  let chamadas = 0;
+  global.fetch = (async () => { chamadas += 1; throw new Error('backend nao deve ser consultado'); }) as typeof global.fetch;
+  try {
+    const lista = await listarPendentes(new Request('http://localhost/api/questionarios/revisoes/pendentes'));
+    const detalhe = await abrirResposta(new Request('http://localhost/api/questionarios/revisoes/envio-1'), { params: Promise.resolve({ envioId: 'envio-1' }) });
+    assert.equal(lista.status, 403);
+    assert.equal(detalhe.status, 403);
+    assert.equal(chamadas, 0);
+  } finally { restaurarFetch(original); }
+});
+
+test('BFF da fila e detalhe encaminham escopo mínimo sem cache', async () => {
+  __setCookies(cookiesSessaoValida(['questionarios.gerenciar']));
+  const original = global.fetch;
+  const caminhos: string[] = [];
+  global.fetch = (async (url: string | URL | Request) => {
+    caminhos.push(new URL(url instanceof Request ? url.url : url.toString()).pathname + new URL(url instanceof Request ? url.url : url.toString()).search);
+    return new Response(JSON.stringify({ itens: [], total: 0 }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+  }) as typeof global.fetch;
+  try {
+    const lista = await listarPendentes(new Request('http://localhost/api/questionarios/revisoes/pendentes?pagina=2'));
+    const detalhe = await abrirResposta(new Request('http://localhost/api/questionarios/revisoes/envio-1'), { params: Promise.resolve({ envioId: 'envio-1' }) });
+    assert.deepEqual(caminhos, ['/questionarios/revisoes/pendentes?pagina=2', '/questionarios/revisoes/envio-1']);
+    assert.equal(lista.headers.get('Cache-Control'), 'private, no-store');
+    assert.equal(detalhe.headers.get('Cache-Control'), 'private, no-store');
+  } finally { restaurarFetch(original); }
 });

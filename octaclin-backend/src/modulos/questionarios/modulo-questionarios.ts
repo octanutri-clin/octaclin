@@ -4,11 +4,14 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { ServicoAuditoria } from '../../infraestrutura/auditoria/servico-auditoria';
 import { UserActionLogOrm } from '../../infraestrutura/auditoria/user-action-log.orm';
 import { ModuloAuth } from '../auth/modulo-auth';
+import { AgendaConsultaOrm } from '../agenda/infraestrutura/agenda-consulta.orm';
 import { PacienteOrm } from '../pacientes/infraestrutura/paciente.orm';
 import { TenantOrm } from '../tenancy/infraestrutura/tenant.orm';
 import { ModuloTenancy } from '../tenancy/modulo-tenancy';
 import { ModuloMobile } from '../mobile/modulo-mobile';
 import { ServicoQuestionarios } from './aplicacao/servico-questionarios';
+import { ServicoRevisaoFormularios } from './aplicacao/servico-revisao-formularios';
+import { CriptografiaDadosSensiveis } from '../../infraestrutura/seguranca/criptografia-dados-sensiveis';
 import { ProcessadorAgendamentosQuestionario } from './aplicacao/processador-agendamentos';
 import { ControladorFormulariosPublicos } from './apresentacao/controlador-formularios-publicos';
 import { ControladorQuestionarios } from './apresentacao/controlador-questionarios';
@@ -26,6 +29,7 @@ import { RespostaValorOrm } from './infraestrutura/resposta-valor.orm';
     ScheduleModule.forRoot(),
     TypeOrmModule.forFeature([
       TenantOrm,
+      AgendaConsultaOrm,
       PacienteOrm,
       CategoriaPerguntaOrm,
       QuestionarioOrm,
@@ -42,7 +46,7 @@ import { RespostaValorOrm } from './infraestrutura/resposta-valor.orm';
     ModuloMobile
   ],
   controllers: [ControladorQuestionarios, ControladorFormulariosPublicos],
-  providers: [ServicoQuestionarios, ProcessadorAgendamentosQuestionario, ServicoAuditoria],
+  providers: [ServicoQuestionarios, ServicoRevisaoFormularios, CriptografiaDadosSensiveis, ProcessadorAgendamentosQuestionario, ServicoAuditoria],
   exports: [ServicoQuestionarios]
 })
 export class ModuloQuestionarios {}
