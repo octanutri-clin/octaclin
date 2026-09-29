@@ -59,7 +59,7 @@ export class ControladorAgenda {
   @Permissoes('automacoes.gerenciar')
   async salvarCalendarioPadrao(@UsuarioAtual() usuario: UsuarioAutenticado, @Req() requisicao: Request, @Body() dados: SalvarPoliticaFollowupAgendaDto) {
     const resultado = await this.followups.salvarPadrao(usuario.tenantId, dados);
-    await this.servicoAuditoria.registrar({ tenantId: usuario.tenantId, usuarioId: usuario.usuarioId, acao: 'agenda.followups.padrao_alterado', recursoTipo: 'politica_followup_agenda', ip: requisicao.ip, userAgent: this.obterUserAgent(requisicao), metadados: { ativo: resultado.ativo, quantidade: resultado.etapas.length, versao: resultado.versao } });
+    await this.servicoAuditoria.registrar({ tenantId: usuario.tenantId, usuarioId: usuario.usuarioId, acao: 'agenda.followups.padrao_alterado', recursoTipo: 'politica_followup_agenda', ip: requisicao.ip, userAgent: this.obterUserAgent(requisicao), metadados: { ativo: resultado.ativo, versao: resultado.versao } });
     return resultado;
   }
 
@@ -73,7 +73,7 @@ export class ControladorAgenda {
   @Permissoes('automacoes.gerenciar')
   async salvarCalendarioConsulta(@UsuarioAtual() usuario: UsuarioAutenticado, @Req() requisicao: Request, @Param('consultaId', ParseUUIDPipe) consultaId: string, @Body() dados: SalvarPoliticaFollowupAgendaDto) {
     const resultado = await this.followups.salvarExcecao(usuario.tenantId, consultaId, usuario, dados);
-    await this.servicoAuditoria.registrar({ tenantId: usuario.tenantId, usuarioId: usuario.usuarioId, acao: 'agenda.followups.consulta_alterada', recursoTipo: 'agenda_consulta', recursoId: consultaId, ip: requisicao.ip, userAgent: this.obterUserAgent(requisicao), metadados: { ativo: resultado.ativo, quantidade: resultado.etapas.length, versao: resultado.versao } });
+    await this.servicoAuditoria.registrar({ tenantId: usuario.tenantId, usuarioId: usuario.usuarioId, acao: 'agenda.followups.consulta_alterada', recursoTipo: 'agenda_consulta', recursoId: consultaId, ip: requisicao.ip, userAgent: this.obterUserAgent(requisicao), metadados: { ativo: resultado.ativo, versao: resultado.versao } });
     return resultado;
   }
 
