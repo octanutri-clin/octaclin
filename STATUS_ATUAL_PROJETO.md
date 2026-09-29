@@ -87,12 +87,18 @@ Atualizado em 2026-09-29.
   e que o sistema funcionou após rebuild no Render; esta reconciliação não
   executou prova direta nesses ambientes. Plano em
   `docs/history/phases/PLANO_FASE_291.md`.
-- Fase 292 em desenvolvimento na branch `feat/fase292-reagendamento`: decisão
-  humana em layer para contato após falta, envio condicionado a preferências,
-  janela e template específico, sem retroatividade; indicador de faltas dos
-  últimos 90 dias separado do score manual. Nenhuma migration nova planejada.
-  CI, deploy e envio externo ainda não comprovados. Plano em
+- Fase 292 integrada pelo PR #346 (merge `9ce6b4e4`): decisão humana em layer
+  para contato após falta, envio condicionado a preferências, janela e template
+  específico, sem retroatividade; indicador de faltas dos últimos 90 dias
+  separado do score manual. No PR, 19 checks `SUCCESS` e três `SKIPPED`
+  (`Provenance do SBOM`, `Mobile Expo`, `AI FastAPI`). Nenhuma migration nova.
+  Deploy e envio externo não foram verificados neste ciclo. Plano em
   `docs/history/phases/PLANO_FASE_292.md`.
+- Fase 293 em desenvolvimento na branch `feat/fase293-conduta-vencendo`:
+  aviso interno no dashboard para conduta publicada com validade entre hoje e
+  sete dias civis no fuso clínico. Reaproveita o escopo tenant/profissional e a
+  ocultação de 24h; sem migration ou envio externo. PR e CI pendentes. Plano em
+  `docs/history/phases/PLANO_FASE_293.md`.
 - A reconciliação integral da auditoria e a sequência proposta para todas as
   recomendações ainda pendentes estão em
   `docs/product/OCTACLIN_PRODUCT_FEATURE_AUDIT.md`, seção 15. Estados de PB

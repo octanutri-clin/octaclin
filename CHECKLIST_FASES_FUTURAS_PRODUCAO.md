@@ -1,6 +1,6 @@
 # OctaClin - Checklist vivo de fases futuras ate producao
 
-Atualizado em 2026-09-29. Fase 291 integrada pelo PR #345 (merge `78da9188`); checks aplicáveis passaram e `Provenance do SBOM` ficou `SKIPPED`. Fase 292 está em desenvolvimento. Fases 256 a 261, 263 a 291 integradas; Fase 284
+Atualizado em 2026-09-29. Fase 292 integrada pelo PR #346 (merge `9ce6b4e4`); 19 checks `SUCCESS` e três `SKIPPED`. Fase 293 está em desenvolvimento. Fases 256 a 261, 263 a 292 integradas; Fase 284
 (PB-22) foi integrada pelo PR #320 (merge `af839c5`, 19 checks `SUCCESS` e
 `Provenance do SBOM` `SKIPPED`). Fase 285 (PB-20) foi integrada pelo PR #321
 (merge `01d6bf1`). Fase 286 concluida pelo PR #322 (merge `c92f246`). A reconciliação completa do backlog da auditoria e a
@@ -4427,14 +4427,22 @@ auditoria estão ordenados na seção 15 de
   O proprietário relata aplicação das migrations em staging e produção e
   funcionamento após rebuild no Render; sem prova direta nesta reconciliação.
   Escopo e gates em `docs/history/phases/PLANO_FASE_291.md`.
-- [~] Fase 292 - reagendamento proativo após falta: decisão humana em modal
+- [x] Fase 292 - reagendamento proativo após falta: decisão humana em modal
   na agenda e no painel; uma mensagem em canal autorizado após aprovação,
   dentro da janela do paciente e até 7 dias do término da consulta perdida. A fila permanece
   disponível após fechar o modal. Faltas em 90 dias aparecem como indicador
   factual e ordenam a fila sem sobrescrever `score_risco`. Sem migration nova.
-  Branch `feat/fase292-reagendamento`; PR, checks e deploy pendentes.
-  Próximo incremento proposto: alerta de conduta vencendo, seguido de sugestão
-  de retorno sem consulta futura. Plano em `docs/history/phases/PLANO_FASE_292.md`.
+  Integrada pelo PR #346 (merge `9ce6b4e4`); 19 checks `SUCCESS` e três
+  `SKIPPED` (`Provenance do SBOM`, `Mobile Expo`, `AI FastAPI`). Deploy e envio
+  externo não verificados. Plano em `docs/history/phases/PLANO_FASE_292.md`.
+- [~] Fase 293 - alerta interno de conduta terapêutica vencendo: versão
+  publicada e não descartada, conduta e paciente ativos, validade de hoje até
+  sete dias civis no fuso clínico. Alerta vencido existente continua exclusivo
+  para datas anteriores a hoje. Ocultação por usuário por 24h, com revalidação
+  de tenant/profissional/versão; sem migration nem contato com paciente.
+  Branch `feat/fase293-conduta-vencendo`; PR e CI pendentes. Próximo incremento
+  proposto: sugestão de retorno para paciente sem consulta futura. Plano em
+  `docs/history/phases/PLANO_FASE_293.md`.
 
 O programa de hardening
 PR 36-56 permanece como trilha separada --
