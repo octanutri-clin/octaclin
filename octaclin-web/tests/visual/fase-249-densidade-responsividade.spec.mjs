@@ -97,6 +97,10 @@ async function prepararConsole(page) {
     if (caminho === '/api/agenda/solicitacoes') return responderJson(route, { itens: [], total: 0 });
     if (caminho === '/api/agenda/google/status') return responderJson(route, { conectado: false });
     if (caminho === '/api/agenda/feed') return responderJson(route, []);
+    if (caminho === '/api/agenda/followups/padrao') return responderJson(route, {
+      ativo: false, etapas: [{ unidade: 'hora', valor: 24, condicao: 'sempre' }],
+      versao: 0, configurado: false, consultasHerdando: 0
+    });
     if (caminho === '/api/agenda/pacotes') return responderJson(route, []);
     if (caminho === '/api/pacientes/filtros-salvos') return responderJson(route, { itens: [] });
     if (caminho === '/api/pacientes') return responderJson(route, { itens: [paciente], total: 1 });

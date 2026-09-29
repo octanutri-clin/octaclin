@@ -17,6 +17,13 @@ const UNIDADES: Array<{ valor: UnidadeFollowupAgenda; rotulo: string }> = [
   { valor: 'hora', rotulo: 'horas antes' }, { valor: 'minuto', rotulo: 'minutos antes' }
 ];
 
+function politicaValida(valor: unknown, consulta: boolean): valor is { ativo: boolean; etapas: EtapaFollowupAgenda[]; configurado: boolean; consultasHerdando?: number } {
+  if (!valor || typeof valor !== 'object') return false;
+  const politica = valor as Record<string, unknown>;
+  return typeof politica.ativo === 'boolean' && Array.isArray(politica.etapas) && typeof politica.configurado === 'boolean'
+    && (!consulta || (Array.isArray(politica.futuras) && Array.isArray(politica.historico)));
+}
+
 function dataFormatada(valor: string, timezone: string) {
   return new Intl.DateTimeFormat('pt-BR', { timeZone: timezone, dateStyle: 'short', timeStyle: 'short' }).format(new Date(valor));
 }
@@ -35,6 +42,7 @@ export function CalendarioFollowups({ consultaId, inicioEm, timezone = 'America/
 
   async function carregar() {
     const resultado = consultaId ? await obterFollowupsConsulta(consultaId) : await obterPadraoFollowupsAgenda();
+    if (!politicaValida(resultado, Boolean(consultaId))) throw new Error('Calendario de follow-ups invalido.');
     setDados({ ativo: resultado.ativo, etapas: resultado.etapas, configurado: resultado.configurado, consultasHerdando: resultado.consultasHerdando });
     setDetalhe(consultaId ? resultado as CalendarioConsultaAgenda : null);
     setPrevia(null);
@@ -45,6 +53,7 @@ export function CalendarioFollowups({ consultaId, inicioEm, timezone = 'America/
     Promise.all([consultaId ? obterFollowupsConsulta(consultaId) : obterPadraoFollowupsAgenda(), obterSessao()])
       .then(([resultado, sessao]) => {
         if (!ativo) return;
+        if (!politicaValida(resultado, Boolean(consultaId))) throw new Error('Calendario de follow-ups invalido.');
         setDados({ ativo: resultado.ativo, etapas: resultado.etapas, configurado: resultado.configurado, consultasHerdando: resultado.consultasHerdando });
         setDetalhe(consultaId ? resultado as CalendarioConsultaAgenda : null);
         setPodeEditar(Boolean(sessao?.permissoes?.includes('automacoes.gerenciar')));
@@ -108,7 +117,7 @@ export function CalendarioFollowups({ consultaId, inicioEm, timezone = 'America/
       </div>
       {erro ? <p role="alert" className="text-sm text-red-700">{erro}</p> : null}
       {sucesso ? <p role="status" className="text-sm text-green-700">{sucesso}</p> : null}
-      {!dados ? <p className="text-sm">Carregando calendário…</p> : (
+      {!dados ? <p className="text-sm">{erro ? 'Calendário indisponível.' : 'Carregando calendário…'}</p> : (
         <>
           <p className="text-sm">{dados.configurado ? `${dados.etapas.length} etapa(s) configurada(s)` : 'Padrão ainda não ativado'}{detalhe ? ` · saldo estimado: ${detalhe.saldo}` : ''}</p>
           {!consultaId && dados.consultasHerdando !== undefined ? <p className="text-sm text-texto-suave">Ao salvar, {dados.consultasHerdando} consulta(s) futura(s) que herdam este padrão serão replanejadas em lotes, sem envios retroativos.</p> : null}
