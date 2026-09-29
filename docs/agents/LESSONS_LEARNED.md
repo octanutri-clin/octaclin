@@ -173,3 +173,16 @@ Nenhum dos dois jobs escreve no inventario --
 `contents: read` sem excecao -- porque renovar `revisarEm` sozinho seria a
 maquina de falso verde; triar alerta em causa continua sendo julgamento com
 evidencia. Status do controle: implemented.
+
+## 2026-09-29 - Build web dependia de resposta externa de fonte
+
+Problema: o Demo Local Smoke do PR #346 falhou em `next/font/google` antes do
+smoke visual, com `Cannot read properties of null (reading '1')`. O job Web do
+mesmo PR passou; falha com a mesma assinatura ja havia ocorrido no PR #311.
+Causa exata da resposta externa nao foi observada, mas o build dependia do CSS
+fornecido pelo Google Fonts. Correcao: manter IBM Plex Sans e Mono em WOFF2
+locais, obtidos de revisao fixa do repositorio oficial da IBM, com integridade
+comparada aos Git blobs e licenca OFL incluida. Como nao repetir: nao depender
+de download de fonte em tempo de build. Controle: `next/font/local` no layout
+web; CI do PR #346 ainda precisa validar o controle. Status do controle:
+implemented locally, pending CI.

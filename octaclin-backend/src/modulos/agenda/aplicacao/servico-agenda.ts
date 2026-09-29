@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { EntityManager, In, IsNull, LessThan, MoreThan, MoreThanOrEqual, QueryFailedError } from 'typeorm';
 import { ExecutorTenant } from '../../../infraestrutura/banco-dados/executor-tenant';
 import { montarCsv } from '../../../infraestrutura/exportacao/csv';
@@ -42,6 +42,7 @@ import { ServicoConexaoGoogleCalendar } from './servico-conexao-google-calendar'
 import { ServicoFollowupsAgenda } from './servico-followups-agenda';
 import { ResultadoGoogleCalendar, ServicoGoogleCalendar } from './servico-google-calendar';
 import { registrarEventoWebhook } from '../../integracoes/aplicacao/registrar-evento-webhook';
+import { lerReagendamentoAposFalta, prazoReagendamentoVencido } from '../dominio/reagendamento-apos-falta';
 
 const EVENTO_CONSULTA_AGENDADA = 'agenda.consulta.agendada';
 const EVENTO_CONSULTA_CANCELADA = 'agenda.consulta.cancelada';
@@ -725,6 +726,9 @@ export class ServicoAgenda {
       if (STATUS_CONSULTA_TERMINAIS.includes(consulta.status)) {
         throw new BadRequestException('Consulta encerrada nao pode receber novo desfecho.');
       }
+      if (dados.status === 'falta' && consulta.fimEm > new Date()) {
+        throw new BadRequestException('A consulta ainda nao terminou.');
+      }
 
       consulta.status = dados.status;
       consulta.payload = this.adicionarHistorico(consulta.payload, {
@@ -732,9 +736,57 @@ export class ServicoAgenda {
         status: dados.status,
         registradoEm: new Date().toISOString()
       });
+      if (dados.status === 'falta') {
+        const estado = prazoReagendamentoVencido(consulta.fimEm, new Date()) ? 'expirado' : 'pendente';
+        consulta.payload = {
+          ...consulta.payload,
+          reagendamentoAposFalta: { estado, registradoEm: new Date().toISOString() }
+        };
+      }
       const salva = await repositorio.save(consulta);
       await this.followups.reconciliarConsultaNaTransacao(gerenciador, tenantId, salva);
       return this.mapearResposta(salva);
+    });
+  }
+
+  async decidirReagendamentoAposFalta(
+    tenantId: string,
+    consultaId: string,
+    decisao: 'aprovar' | 'reprovar',
+    usuario: UsuarioAutenticado
+  ): Promise<{ estado: string }> {
+    if (usuario.tenantId !== tenantId || !['Professional', 'SuperAdmin'].includes(usuario.papel)) {
+      throw new ForbiddenException('Decisao de contato restrita ao profissional ou administrador.');
+    }
+    return this.executorTenant.executar(tenantId, async (gerenciador) => {
+      const profissionalId = await resolverProfissionalIdDoUsuario(gerenciador, tenantId, usuario);
+      const repositorio = gerenciador.getRepository(AgendaConsultaOrm);
+      const consulta = await repositorio.findOne({
+        where: { id: consultaId, tenantId, ...(profissionalId ? { profissionalId } : {}) },
+        lock: { mode: 'pessimistic_write' }
+      });
+      if (!consulta || consulta.status !== 'falta') throw new NotFoundException('Falta nao encontrada.');
+      if (consulta.fimEm > new Date()) throw new ConflictException('A consulta ainda nao terminou.');
+      const atual = lerReagendamentoAposFalta(consulta.payload);
+      if (!atual) throw new NotFoundException('Pendencia de reagendamento nao encontrada.');
+      const esperado = decisao === 'aprovar' ? 'aprovado' : 'reprovado';
+      if (atual.estado === esperado) return { estado: atual.estado };
+      if (atual.estado !== 'pendente') throw new ConflictException('A decisao de reagendamento ja foi registrada.');
+      if (prazoReagendamentoVencido(consulta.fimEm, new Date())) {
+        throw new ConflictException('O prazo do contato automatico terminou.');
+      }
+      if (decisao === 'aprovar') {
+        const retorno = await repositorio.findOne({
+          where: { tenantId, pacienteId: consulta.pacienteId, status: In(STATUS_CONSULTA_ATIVOS), inicioEm: MoreThan(new Date()) }
+        });
+        if (retorno) throw new ConflictException('O paciente ja possui consulta futura.');
+      }
+      consulta.payload = {
+        ...consulta.payload,
+        reagendamentoAposFalta: { ...atual, estado: esperado, decididoEm: new Date().toISOString() }
+      };
+      await repositorio.save(consulta);
+      return { estado: esperado };
     });
   }
 

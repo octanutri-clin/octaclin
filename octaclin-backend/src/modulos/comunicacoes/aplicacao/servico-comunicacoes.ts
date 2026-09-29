@@ -8,6 +8,8 @@ import { CriptografiaDadosSensiveis } from '../../../infraestrutura/seguranca/cr
 import { resolverProfissionalIdDoUsuario } from '../../../infraestrutura/seguranca/escopo-profissional';
 import { UsuarioAutenticado } from '../../auth/dominio/usuario-autenticado';
 import { PacienteOrm } from '../../pacientes/infraestrutura/paciente.orm';
+import { AgendaConsultaOrm } from '../../agenda/infraestrutura/agenda-consulta.orm';
+import { lerReagendamentoAposFalta, prazoReagendamentoVencido } from '../../agenda/dominio/reagendamento-apos-falta';
 import { PlanoAlimentarOrm } from '../../planos-alimentares/infraestrutura/plano-alimentar.orm';
 import { EnvioMaterialPacienteOrm } from '../../materiais/infraestrutura/envio-material-paciente.orm';
 import {
@@ -606,6 +608,40 @@ export class ServicoComunicacoes {
         usuario
       );
 
+      // A decisao humana autoriza apenas o fluxo; preferencias e janela podem mudar
+      // entre a aprovacao e a gravacao atomica da mensagem/outbox.
+      let payload = dados.payload;
+      if (dados.payload.evento === 'agenda.consulta.reagendamento_proativo') {
+        const consultaId = dados.payload.consultaId;
+        const consulta = typeof consultaId === 'string'
+          ? await gerenciador.getRepository(AgendaConsultaOrm).findOne({
+              where: { id: consultaId, tenantId, pacienteId: dados.pacienteId, status: 'falta' }
+            }) : null;
+        const decisao = lerReagendamentoAposFalta(consulta?.payload);
+        if (!consulta || decisao?.estado !== 'aprovado' || prazoReagendamentoVencido(consulta.fimEm, new Date()) || consulta.fimEm > new Date()) {
+          throw new ConflictException('Contato para reagendamento sem aprovacao valida.');
+        }
+        const retorno = await gerenciador.getRepository(AgendaConsultaOrm).findOne({
+          where: { tenantId, pacienteId: dados.pacienteId, status: In(['agendada', 'reagendada']), inicioEm: MoreThanOrEqual(new Date()) }
+        });
+        if (retorno) throw new ConflictException('Paciente ja possui consulta futura.');
+        if ((canal.tipo !== 'email' && canal.tipo !== 'whatsapp') ||
+            template.conteudo?.evento !== dados.payload.evento ||
+            paciente.arquivadoEm ||
+            ['inativo', 'pausado', 'encerrado', 'fechado'].includes(paciente.statusAdesao)) {
+          throw new ConflictException('Contato para reagendamento indisponivel.');
+        }
+        const preferencias = paciente.contatoCriptografado
+          ? interpretarPreferenciasComunicacao(this.criptografia.descriptografar(paciente.contatoCriptografado))
+          : preferenciasComunicacaoPadrao();
+        const destino = preferencias.contatos[canal.tipo];
+        if (!canalAutorizado(preferencias, canal.tipo) || !destino ||
+            !dentroHorarioPermitido(new Date(), preferencias.horarioPermitido)) {
+          throw new ConflictException('Contato para reagendamento fora das preferencias do paciente.');
+        }
+        payload = { ...dados.payload, destino };
+      }
+
       // Opt-out so e checado no disparo manual (`usuario` presente): chamadas de
       // sistema (`dispararMensagemSistema`, lembretes/recall) ja consultam a
       // preferencia do paciente antes de chegar aqui, com sua propria logica de
@@ -628,7 +664,7 @@ export class ServicoComunicacoes {
         dados.pacienteId,
         canal,
         template,
-        dados.payload,
+        payload,
         chaveIdempotencia,
         dados.categoria ?? 'administrativo'
       );

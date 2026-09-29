@@ -29,6 +29,12 @@ import { ServicoAgenda } from '../aplicacao/servico-agenda';
 import { ServicoFollowupsAgenda } from '../aplicacao/servico-followups-agenda';
 import { ServicoExpedientes } from '../aplicacao/servico-expedientes';
 import { ServicoTiposAtendimento } from '../aplicacao/servico-tipos-atendimento';
+import { IsIn } from 'class-validator';
+
+class DecidirReagendamentoAposFaltaDto {
+  @IsIn(['aprovar', 'reprovar'])
+  decisao: 'aprovar' | 'reprovar';
+}
 
 @Controller('agenda')
 @UseGuards(GuardaJwt, GuardaPapeis, GuardaPermissoes)
@@ -500,6 +506,29 @@ export class ControladorAgenda {
       dados,
       'dashboard_clinico'
     );
+  }
+
+  @Post('consultas/:consultaId/reagendamento-apos-falta/decisao')
+  @Papeis('SuperAdmin', 'Professional')
+  @Permissoes('agenda.consultas.criar')
+  async decidirReagendamentoAposFalta(
+    @UsuarioAtual() usuario: UsuarioAutenticado,
+    @Req() requisicao: Request,
+    @Param('consultaId', ParseUUIDPipe) consultaId: string,
+    @Body() dados: DecidirReagendamentoAposFaltaDto
+  ) {
+    const resultado = await this.servicoAgenda.decidirReagendamentoAposFalta(usuario.tenantId, consultaId, dados.decisao, usuario);
+    await this.servicoAuditoria.registrar({
+      tenantId: usuario.tenantId,
+      usuarioId: usuario.usuarioId,
+      acao: `agenda.reagendamento_apos_falta.${dados.decisao}`,
+      recursoTipo: 'agenda_consulta',
+      recursoId: consultaId,
+      ip: requisicao.ip,
+      userAgent: this.obterUserAgent(requisicao),
+      metadados: {}
+    });
+    return resultado;
   }
 
   private async registrarDesfechoComOrigem(

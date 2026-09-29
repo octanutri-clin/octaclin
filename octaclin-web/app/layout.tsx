@@ -1,20 +1,27 @@
 import type { Metadata } from 'next';
 import type { ReactNode } from 'react';
-import { IBM_Plex_Sans, IBM_Plex_Mono } from 'next/font/google';
+import localFont from 'next/font/local';
 import { headers } from 'next/headers';
 import './globals.css';
 import { PwaRuntime } from '@/components/pwa/pwa-runtime';
 
-const plexSans = IBM_Plex_Sans({
-  subsets: ['latin'],
-  weight: ['400', '500', '600', '700'],
+const plexSans = localFont({
+  src: [
+    { path: './fonts/IBMPlexSans-Regular.woff2', weight: '400', style: 'normal' },
+    { path: './fonts/IBMPlexSans-Medium.woff2', weight: '500', style: 'normal' },
+    { path: './fonts/IBMPlexSans-SemiBold.woff2', weight: '600', style: 'normal' },
+    { path: './fonts/IBMPlexSans-Bold.woff2', weight: '700', style: 'normal' }
+  ],
   variable: '--font-plex-sans',
   display: 'swap'
 });
 
-const plexMono = IBM_Plex_Mono({
-  subsets: ['latin'],
-  weight: ['400', '500', '600'],
+const plexMono = localFont({
+  src: [
+    { path: './fonts/IBMPlexMono-Regular.woff2', weight: '400', style: 'normal' },
+    { path: './fonts/IBMPlexMono-Medium.woff2', weight: '500', style: 'normal' },
+    { path: './fonts/IBMPlexMono-SemiBold.woff2', weight: '600', style: 'normal' }
+  ],
   variable: '--font-plex-mono',
   display: 'swap'
 });

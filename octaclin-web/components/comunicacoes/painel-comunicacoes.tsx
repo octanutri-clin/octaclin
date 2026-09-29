@@ -104,7 +104,8 @@ const eventosTemplate = [
   { valor: 'agenda.consulta.lembrete', rotulo: 'Lembrete de consulta' },
   { valor: 'agenda.consulta.confirmacao', rotulo: 'Confirmação de consulta' },
   { valor: 'agenda.consulta.remarcada', rotulo: 'Consulta remarcada' },
-  { valor: 'agenda.consulta.cancelada', rotulo: 'Consulta cancelada' }
+  { valor: 'agenda.consulta.cancelada', rotulo: 'Consulta cancelada' },
+  { valor: 'agenda.consulta.reagendamento_proativo', rotulo: 'Contato após falta para reagendamento' }
 ];
 
 const mensagemInicial: FormularioMensagem = {

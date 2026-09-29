@@ -1,11 +1,12 @@
 import { Processor, WorkerHost } from '@nestjs/bullmq';
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { Job } from 'bullmq';
-import { EntityManager, In, IsNull } from 'typeorm';
+import { EntityManager, In, IsNull, MoreThanOrEqual } from 'typeorm';
 import { ExecutorTenant } from '../../../infraestrutura/banco-dados/executor-tenant';
 import { OPCOES_WORKER_BULLMQ } from '../../../infraestrutura/processamento/opcoes-worker-bullmq';
 import { CriptografiaDadosSensiveis } from '../../../infraestrutura/seguranca/criptografia-dados-sensiveis';
 import { AgendaConsultaOrm } from '../../agenda/infraestrutura/agenda-consulta.orm';
+import { lerReagendamentoAposFalta, prazoReagendamentoVencido } from '../../agenda/dominio/reagendamento-apos-falta';
 import { OcorrenciaFollowupAgendaOrm } from '../../agenda/infraestrutura/ocorrencia-followup-agenda.orm';
 import { PoliticaFollowupAgendaOrm } from '../../agenda/infraestrutura/politica-followup-agenda.orm';
 import { canalPermitido, dentroHorarioPermitido, interpretarPreferenciasComunicacao, preferenciasComunicacaoPadrao } from '../dominio/preferencias-comunicacao';
@@ -54,13 +55,13 @@ export class ProcessadorNotificacoes extends WorkerHost {
   ): Promise<void> {
     let erroProcessamento: unknown;
 
-    // A reserva do follow-up precisa estar COMMITADA antes do adaptador. Se o
-    // processo morrer apos a chamada externa, a proxima rodada nao reenvia.
+    // A reserva de contatos automaticos precisa estar COMMITADA antes do adaptador.
+    // Se o processo morrer apos a chamada externa, a proxima rodada nao reenvia.
     const reservaFollowup = await this.executorTenant.executar(tenantId, async (gerenciador) => {
       const repo = gerenciador.getRepository(MensagemNotificacaoOrm);
       const atual = await repo.findOne({ where: { id: mensagemId, tenantId } });
-      if (atual?.payload?.evento !== 'agenda.consulta.followup') return 'legado' as const;
-      if (atual.status !== 'pendente') return 'ignorar' as const;
+      if (!['agenda.consulta.followup', 'agenda.consulta.reagendamento_proativo'].includes(String(atual?.payload?.evento))) return 'legado' as const;
+      if (!atual || atual.status !== 'pendente') return 'ignorar' as const;
       const reivindicacao = await repo.update({ id: mensagemId, tenantId, status: 'pendente' }, { status: 'processando', tentativaExternaEm: new Date() });
       return reivindicacao.affected ? 'reservado' as const : 'ignorar' as const;
     });
@@ -106,6 +107,15 @@ export class ProcessadorNotificacoes extends WorkerHost {
           }
           if (typeof payload.followupOcorrenciaId === 'string') {
             await gerenciador.getRepository(OcorrenciaFollowupAgendaOrm).update({ id: payload.followupOcorrenciaId, tenantId }, { mensagemId: mensagem.id });
+          }
+        }
+        if (mensagem.payload.evento === 'agenda.consulta.reagendamento_proativo') {
+          const motivo = await this.motivoSupressaoReagendamento(gerenciador, tenantId, mensagem, canal, template, payload);
+          if (motivo) {
+            mensagem.status = 'cancelado';
+            mensagem.erro = motivo;
+            await repositorioMensagens.save(mensagem);
+            return;
           }
         }
         const adaptador = this.obterAdaptador(canal.tipo);
@@ -169,6 +179,42 @@ export class ProcessadorNotificacoes extends WorkerHost {
     } catch { return 'contato_ilegivel'; }
     if (canal.tipo !== 'email' && canal.tipo !== 'whatsapp') return 'canal_indisponivel';
     if (!canal.ativo || !canalPermitido(preferencias, canal.tipo) || !dentroHorarioPermitido(new Date(), preferencias.horarioPermitido) || preferencias.contatos[canal.tipo] !== payload.destino) return 'preferencia_alterada';
+    return undefined;
+  }
+
+  private async motivoSupressaoReagendamento(
+    gerenciador: EntityManager,
+    tenantId: string,
+    mensagem: MensagemNotificacaoOrm,
+    canal: CanalNotificacaoOrm,
+    template: TemplateMensagemOrm,
+    payload: Record<string, unknown>
+  ): Promise<string | undefined> {
+    if (typeof payload.consultaId !== 'string') return 'payload_invalido';
+    const agora = new Date();
+    const consulta = await gerenciador.getRepository(AgendaConsultaOrm).findOne({
+      where: { id: payload.consultaId, tenantId, pacienteId: mensagem.pacienteId, status: 'falta' },
+      lock: { mode: 'pessimistic_read' }
+    });
+    const decisao = lerReagendamentoAposFalta(consulta?.payload);
+    if (!consulta || !['aprovado', 'enfileirado'].includes(decisao?.estado ?? '') ||
+        consulta.fimEm > agora || prazoReagendamentoVencido(consulta.fimEm, agora)) return 'decisao_expirada';
+    const retorno = await gerenciador.getRepository(AgendaConsultaOrm).findOne({
+      where: { tenantId, pacienteId: mensagem.pacienteId, status: In(['agendada', 'reagendada']), inicioEm: MoreThanOrEqual(agora) }
+    });
+    if (retorno) return 'consulta_futura';
+    const paciente = await gerenciador.getRepository(PacienteOrm).findOne({ where: { id: mensagem.pacienteId, tenantId } });
+    if (!paciente || paciente.arquivadoEm || ['inativo', 'pausado', 'encerrado', 'fechado'].includes(paciente.statusAdesao)) return 'paciente_indisponivel';
+    if (!canal.ativo || (canal.tipo !== 'email' && canal.tipo !== 'whatsapp') ||
+        template.conteudo?.evento !== 'agenda.consulta.reagendamento_proativo') return 'canal_indisponivel';
+    let preferencias;
+    try {
+      preferencias = paciente.contatoCriptografado
+        ? interpretarPreferenciasComunicacao(this.criptografia.descriptografar(paciente.contatoCriptografado))
+        : preferenciasComunicacaoPadrao();
+    } catch { return 'contato_ilegivel'; }
+    if (!canalPermitido(preferencias, canal.tipo) || !dentroHorarioPermitido(agora, preferencias.horarioPermitido) ||
+        preferencias.contatos[canal.tipo] !== payload.destino) return 'preferencia_alterada';
     return undefined;
   }
 

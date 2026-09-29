@@ -77,14 +77,22 @@ Atualizado em 2026-09-29.
 - Fase 290 concluida no codigo e integrada pelo PR #344 (merge `dd70ca2`, confirmado no GitHub em
   2026-09-29): lembrete de material após 72 horas, recorrente até a
   visualização, sem retroatividade. Checks aplicáveis `SUCCESS` e `Provenance do
-  SBOM` `SKIPPED`. A migration 1056 não tem evidência de aplicação externa
-  nesta reconciliação. Plano em `docs/history/phases/PLANO_FASE_290.md`.
-- Fase 291 em desenvolvimento na branch `feat/fase291-followups-configuraveis`:
-  calendário de até 30 avisos por consulta, padrão da clínica e exceção por
-  consulta, com cadências e horários relativos configuráveis. Migration 1057
-  aditiva e RLS dependem de aplicação e prova fora de banda antes de ativar os
-  envios no ambiente alvo. CI e produção ainda sem evidência para esta fase.
-  Plano em `docs/history/phases/PLANO_FASE_291.md`.
+  SBOM` `SKIPPED`. O proprietário relatou aplicação das migrations em staging
+  e produção; não houve prova direta nesta reconciliação. Plano em
+  `docs/history/phases/PLANO_FASE_290.md`.
+- Fase 291 integrada pelo PR #345 (merge `78da9188` em 2026-09-29): calendário
+  de até 30 avisos por consulta, padrão da clínica e exceção por consulta.
+  Checks aplicáveis do PR passaram; `Provenance do SBOM` ficou `SKIPPED`.
+  O proprietário informou que as migrations foram aplicadas em staging e produção
+  e que o sistema funcionou após rebuild no Render; esta reconciliação não
+  executou prova direta nesses ambientes. Plano em
+  `docs/history/phases/PLANO_FASE_291.md`.
+- Fase 292 em desenvolvimento na branch `feat/fase292-reagendamento`: decisão
+  humana em layer para contato após falta, envio condicionado a preferências,
+  janela e template específico, sem retroatividade; indicador de faltas dos
+  últimos 90 dias separado do score manual. Nenhuma migration nova planejada.
+  CI, deploy e envio externo ainda não comprovados. Plano em
+  `docs/history/phases/PLANO_FASE_292.md`.
 - A reconciliação integral da auditoria e a sequência proposta para todas as
   recomendações ainda pendentes estão em
   `docs/product/OCTACLIN_PRODUCT_FEATURE_AUDIT.md`, seção 15. Estados de PB

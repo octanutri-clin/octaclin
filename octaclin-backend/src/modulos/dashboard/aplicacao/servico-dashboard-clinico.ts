@@ -5,6 +5,7 @@ import { PROFISSIONAL_SENTINELA_INEXISTENTE } from '../../../infraestrutura/segu
 import { CriptografiaDadosSensiveis } from '../../../infraestrutura/seguranca/criptografia-dados-sensiveis';
 import { UsuarioAutenticado } from '../../auth/dominio/usuario-autenticado';
 import { AgendaConsultaOrm } from '../../agenda/infraestrutura/agenda-consulta.orm';
+import { lerReagendamentoAposFalta, prazoReagendamentoVencido } from '../../agenda/dominio/reagendamento-apos-falta';
 import { AgendaSolicitacaoOrm } from '../../agenda/infraestrutura/agenda-solicitacao.orm';
 import { MensagemNotificacaoOrm } from '../../comunicacoes/infraestrutura/mensagem-notificacao.orm';
 import { AcompanhamentoTarefaOrm } from '../../pacientes/infraestrutura/acompanhamento-tarefa.orm';
@@ -24,6 +25,7 @@ import {
   FormularioPendenteDashboardClinicoDto,
   IndicadoresDashboardClinicoDto,
   NivelRiscoDashboard,
+  PendenciaReagendamentoDashboardClinicoDto,
   OcultacaoAlertaDashboardClinicoDto,
   OrigemCancelamentoAtendimentoDashboard,
   PeriodoDashboardClinico,
@@ -61,6 +63,7 @@ interface ContextoProfissionalResolvido {
 
 interface DadosAgregados {
   consultas: AgendaConsultaOrm[];
+  faltasRecentes: AgendaConsultaOrm[];
   pacientes: PacienteOrm[];
   consultasConcluidas: AgendaConsultaOrm[];
   tarefas: AcompanhamentoTarefaOrm[];
@@ -215,6 +218,7 @@ export class ServicoDashboardClinico {
       ]);
       return {
         consultas,
+        faltasRecentes: [],
         pacientes,
         consultasConcluidas: [],
         tarefas: [],
@@ -227,7 +231,7 @@ export class ServicoDashboardClinico {
       };
     }
 
-    const [consultas, consultasConcluidas, tarefas, envios, solicitacoes, mensagens, ocultacoes] =
+    const [consultas, consultasConcluidas, faltasRecentes, tarefas, envios, solicitacoes, mensagens, ocultacoes] =
       await Promise.all([
         gerenciador.getRepository(AgendaConsultaOrm).find({
           where: {
@@ -243,6 +247,19 @@ export class ServicoDashboardClinico {
             pacienteId: In(pacienteIds),
             status: 'concluida'
           },
+          order: { inicioEm: 'DESC' }
+        }),
+        gerenciador.getRepository(AgendaConsultaOrm).find({
+          where: [
+            {
+              tenantId, profissionalId: contexto.id, pacienteId: In(pacienteIds), status: 'falta',
+              inicioEm: MoreThan(new Date(Date.now() - 90 * 24 * 60 * 60 * 1000))
+            },
+            {
+              tenantId, profissionalId: contexto.id, pacienteId: In(pacienteIds), status: 'falta',
+              atualizadoEm: MoreThan(new Date(Date.now() - 7 * 24 * 60 * 60 * 1000))
+            }
+          ],
           order: { inicioEm: 'DESC' }
         }),
         gerenciador.getRepository(AcompanhamentoTarefaOrm).find({
@@ -303,6 +320,7 @@ export class ServicoDashboardClinico {
 
     return {
       consultas,
+      faltasRecentes,
       pacientes,
       consultasConcluidas,
       tarefas,
@@ -354,7 +372,35 @@ export class ServicoDashboardClinico {
       }
     }
 
-    const semRetorno = this.montarSemRetorno(pacientes, ultimaConcluidaPorPaciente, contexto.id);
+    const faltasPorPaciente = new Map<string, number>();
+    for (const falta of dados.faltasRecentes) {
+      if (falta.status === 'falta' && falta.tenantId === tenantId && falta.profissionalId === contexto.id && pacientesPorId.has(falta.pacienteId) && falta.inicioEm.getTime() > Date.now() - 90 * 24 * 60 * 60 * 1000) {
+        faltasPorPaciente.set(falta.pacienteId, (faltasPorPaciente.get(falta.pacienteId) ?? 0) + 1);
+      }
+    }
+    const semRetorno = this.montarSemRetorno(pacientes, ultimaConcluidaPorPaciente, contexto.id, faltasPorPaciente);
+    const pendenciasReagendamento = dados.faltasRecentes
+      .filter((falta) => falta.status === 'falta' && falta.tenantId === tenantId && falta.profissionalId === contexto.id && pacientesPorId.has(falta.pacienteId))
+      .map((falta) => ({ falta, decisao: lerReagendamentoAposFalta(falta.payload) }))
+      .filter((item): item is { falta: AgendaConsultaOrm; decisao: NonNullable<typeof item.decisao> } => Boolean(item.decisao))
+      .map((item): PendenciaReagendamentoDashboardClinicoDto => ({
+        consultaId: item.falta.id,
+        pacienteId: item.falta.pacienteId,
+        profissionalId: contexto.id,
+        pacienteNome: this.nomePaciente(pacientesPorId, item.falta.pacienteId),
+        faltaEm: item.falta.inicioEm,
+        faltasRecentes: faltasPorPaciente.get(item.falta.pacienteId) ?? 0,
+        estado: prazoReagendamentoVencido(item.falta.fimEm, new Date()) && (item.decisao.estado === 'pendente' || item.decisao.estado === 'aprovado')
+          ? 'expirado' : item.decisao.estado,
+        motivo: item.decisao.motivo
+      }))
+      .sort((a, b) => {
+        const prioridade = (estado: string) => estado === 'pendente' ? 0 : estado === 'aprovado' ? 1 : 2;
+        const diferenca = prioridade(a.estado) - prioridade(b.estado);
+        return diferenca || (prioridade(a.estado) < 2
+          ? a.faltaEm.getTime() - b.faltaEm.getTime()
+          : b.faltaEm.getTime() - a.faltaEm.getTime());
+      });
     const atendimentosCompletos = consultas
       .filter((consulta) => pacientesPorId.has(consulta.pacienteId))
       .map((consulta) =>
@@ -408,6 +454,7 @@ export class ServicoDashboardClinico {
       ),
       atendimentos: atendimentosCompletos.slice(0, LIMITE_FILA),
       semRetorno: semRetorno.slice(0, LIMITE_FILA),
+      pendenciasReagendamento: pendenciasReagendamento.slice(0, LIMITE_FILA),
       tarefasVencidas: tarefasVencidas.slice(0, LIMITE_FILA),
       formulariosPendentes: formulariosPendentes.slice(0, LIMITE_FILA),
       solicitacoesPendentes: solicitacoesPendentes.slice(0, LIMITE_FILA),
@@ -420,7 +467,8 @@ export class ServicoDashboardClinico {
   private montarSemRetorno(
     pacientes: PacienteOrm[],
     ultimaConcluidaPorPaciente: Map<string, Date>,
-    profissionalId: string
+    profissionalId: string,
+    faltasPorPaciente: Map<string, number>
   ): SemRetornoDashboardClinicoDto[] {
     return pacientes
       .map((paciente) => {
@@ -434,6 +482,7 @@ export class ServicoDashboardClinico {
           pacienteNome: this.criptografia.descriptografar(paciente.nomeCriptografado),
           nivelRisco: this.calcularNivelRisco(paciente.statusAdesao, scoreRisco),
           scoreRisco,
+          faltasRecentes: faltasPorPaciente.get(paciente.id) ?? 0,
           diasSemRetorno,
           faixa: this.calcularFaixaSemRetorno(diasSemRetorno),
           ultimaConsultaConcluidaEm
@@ -442,7 +491,7 @@ export class ServicoDashboardClinico {
       .filter((item) => item.diasSemRetorno >= 30)
       .sort((a, b) => {
         const risco = this.pesoRisco(b.nivelRisco) - this.pesoRisco(a.nivelRisco);
-        return risco || b.diasSemRetorno - a.diasSemRetorno;
+        return risco || b.faltasRecentes - a.faltasRecentes || b.diasSemRetorno - a.diasSemRetorno;
       });
   }
 
@@ -830,6 +879,7 @@ export class ServicoDashboardClinico {
       },
       atendimentos: [],
       semRetorno: [],
+      pendenciasReagendamento: [],
       tarefasVencidas: [],
       formulariosPendentes: [],
       solicitacoesPendentes: [],
