@@ -3,6 +3,60 @@ import { TenantOrm } from '../../tenancy/infraestrutura/tenant.orm';
 import { ProcessadorOutboxComunicacoes } from './processador-outbox-comunicacoes';
 
 describe('ProcessadorOutboxComunicacoes', () => {
+  it('encaminha o evento de plano publicado ao serviço de comunicações após reivindicar o outbox', async () => {
+    const evento = {
+      id: 'evento-plano-1',
+      tenantId: 'tenant-1',
+      tipo: 'plano_alimentar.publicado',
+      status: 'pendente',
+      tentativas: 0,
+      payload: { pacienteId: 'paciente-1', planoId: 'plano-1', versaoId: 'versao-1' },
+      criadoEm: new Date()
+    } as OutboxEventoOrm;
+    const repositorioOutbox = {
+      find: jest.fn(async () => [evento]),
+      update: jest.fn(async () => ({ affected: 1 })),
+      save: jest.fn(async (entrada: OutboxEventoOrm) => entrada)
+    };
+    const fonteDados = {
+      createQueryRunner: jest.fn(() => ({
+        connect: jest.fn(async () => undefined),
+        release: jest.fn(async () => undefined),
+        query: jest.fn(async (sql: string) => (sql.includes('pg_try_advisory_lock') ? [{ obtida: true }] : []))
+      })),
+      getRepository: (entidade: unknown) => {
+        if (entidade === TenantOrm) return { find: jest.fn(async () => [{ id: 'tenant-1', status: 'ativo' }]) };
+        throw new Error('Repositorio inesperado');
+      }
+    };
+    const executorTenant = {
+      executar: (_tenantId: string, operacao: (gerenciador: unknown) => Promise<unknown>) =>
+        operacao({ getRepository: () => repositorioOutbox })
+    };
+    const comunicacoes = {
+      publicarEventoNotificacao: jest.fn(async () => undefined),
+      processarAvisoPlanoPublicado: jest.fn(async () => undefined)
+    };
+    const notificacoes = { processarMensagem: jest.fn(async () => undefined) };
+
+    const processador = new ProcessadorOutboxComunicacoes(
+      fonteDados as never,
+      executorTenant as never,
+      comunicacoes as never,
+      notificacoes as never
+    );
+    await processador.processarPendentes();
+
+    expect(comunicacoes.processarAvisoPlanoPublicado).toHaveBeenCalledTimes(1);
+    expect(comunicacoes.processarAvisoPlanoPublicado).toHaveBeenCalledWith('tenant-1', {
+      pacienteId: 'paciente-1', planoId: 'plano-1', versaoId: 'versao-1'
+    });
+    expect(repositorioOutbox.save).toHaveBeenCalledWith(expect.objectContaining({
+      status: 'processado',
+      tipo: 'plano_alimentar.publicado'
+    }));
+  });
+
   it('publica um evento uma unica vez quando dois workers concorrentes o encontram', async () => {
     const evento = {
       id: 'evento-1',

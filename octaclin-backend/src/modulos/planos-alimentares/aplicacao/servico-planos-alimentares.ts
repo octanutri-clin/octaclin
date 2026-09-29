@@ -10,6 +10,7 @@ import { EntityManager, In, IsNull } from 'typeorm';
 import { registrarAuditoriaNaTransacao } from '../../../infraestrutura/auditoria/servico-auditoria';
 import { ExecutorTenant } from '../../../infraestrutura/banco-dados/executor-tenant';
 import { CriptografiaDadosSensiveis } from '../../../infraestrutura/seguranca/criptografia-dados-sensiveis';
+import { registrarAvisoPlanoPublicado } from '../../comunicacoes/aplicacao/registrar-aviso-plano-publicado';
 import { resolverProfissionalIdDoUsuario } from '../../../infraestrutura/seguranca/escopo-profissional';
 import { UsuarioAutenticado } from '../../auth/dominio/usuario-autenticado';
 import type { PermissaoOctaClin } from '../../auth/dominio/permissoes';
@@ -530,6 +531,12 @@ export class ServicoPlanosAlimentares {
           // qualquer forma, e gravar para ser redigido e so ruido.
           possuiHashConteudo: Boolean(rascunho.hashConteudo)
         }
+      });
+      await registrarAvisoPlanoPublicado(gerenciador, this.criptografia, {
+        tenantId,
+        pacienteId,
+        planoId: plano.id,
+        versaoId: rascunho.id
       });
       return this.montarPlano(gerenciador, plano);
     });

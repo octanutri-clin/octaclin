@@ -1,6 +1,6 @@
 import { Cron } from '@nestjs/schedule';
 import { Injectable, Logger } from '@nestjs/common';
-import { DataSource, IsNull, Repository } from 'typeorm';
+import { DataSource, In, IsNull, Repository } from 'typeorm';
 import { ExecutorTenant } from '../../../infraestrutura/banco-dados/executor-tenant';
 import { OutboxEventoOrm } from '../../../infraestrutura/outbox/outbox-evento.orm';
 import { executarPorTenantAtivo } from '../../../infraestrutura/processamento/rodada-por-tenant';
@@ -31,7 +31,12 @@ export class ProcessadorOutboxComunicacoes {
         await this.executorTenant.executar(tenantId, async (gerenciador) => {
           const repositorio = gerenciador.getRepository(OutboxEventoOrm);
           const eventos = await repositorio.find({
-            where: { tenantId, tipo: 'notificacao.enviar', status: 'pendente', processadoEm: IsNull() },
+            where: {
+              tenantId,
+              tipo: In(['notificacao.enviar', 'plano_alimentar.publicado']),
+              status: 'pendente',
+              processadoEm: IsNull()
+            },
             order: { criadoEm: 'ASC' },
             take: 100
           });
@@ -76,18 +81,35 @@ export class ProcessadorOutboxComunicacoes {
 
       evento.status = 'processando';
       evento.tentativas += 1;
-      const mensagemId = String(evento.payload.mensagemId);
-      if (this.deveProcessarDiretamente()) {
-        await this.processadorNotificacoes.processarMensagem(tenantId, mensagemId);
+      if (evento.tipo === 'plano_alimentar.publicado') {
+        const { pacienteId, planoId, versaoId } = evento.payload;
+        if (
+          typeof pacienteId !== 'string' ||
+          typeof planoId !== 'string' ||
+          typeof versaoId !== 'string'
+        ) {
+          throw new Error('Payload invalido no evento de plano publicado.');
+        }
+        await this.servicoComunicacoes.processarAvisoPlanoPublicado(tenantId, {
+          pacienteId,
+          planoId,
+          versaoId
+        });
       } else {
-        try {
-          await this.servicoComunicacoes.publicarEventoNotificacao(tenantId, mensagemId);
-        } catch (erroPublicacao) {
-          this.logger.warn(
-            `Fila de notificacoes indisponivel para outbox ${evento.id}; processando envio diretamente. ` +
-              `Causa: ${erroPublicacao instanceof Error ? erroPublicacao.message : 'falha desconhecida'}`
-          );
+        const mensagemId = evento.payload.mensagemId;
+        if (typeof mensagemId !== 'string') throw new Error('Payload invalido no evento de comunicacao.');
+        if (this.deveProcessarDiretamente()) {
           await this.processadorNotificacoes.processarMensagem(tenantId, mensagemId);
+        } else {
+          try {
+            await this.servicoComunicacoes.publicarEventoNotificacao(tenantId, mensagemId);
+          } catch (erroPublicacao) {
+            this.logger.warn(
+              `Fila de notificacoes indisponivel para outbox ${evento.id}; processando envio diretamente. ` +
+                `Causa: ${erroPublicacao instanceof Error ? erroPublicacao.message : 'falha desconhecida'}`
+            );
+            await this.processadorNotificacoes.processarMensagem(tenantId, mensagemId);
+          }
         }
       }
       evento.status = 'processado';

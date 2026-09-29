@@ -15,6 +15,7 @@ import { dispararGatilhoCheckinAdesaoBaixa } from '../../automacoes/aplicacao/di
 import { AvaliacaoAntropometricaOrm } from '../infraestrutura/avaliacao-antropometrica.orm';
 import type { MedidasAntropometricas } from '../dominio/antropometria';
 import { MensagemNotificacaoOrm } from '../../comunicacoes/infraestrutura/mensagem-notificacao.orm';
+import { lerPayloadMensagem } from '../../comunicacoes/aplicacao/cripto-conteudo-mensagem';
 import { EnvioMaterialPacienteOrm } from '../../materiais/infraestrutura/envio-material-paciente.orm';
 import { MaterialEducativoOrm } from '../../materiais/infraestrutura/material-educativo.orm';
 import { LogDiarioRapidoOrm } from '../../mobile/infraestrutura/log-diario-rapido.orm';
@@ -525,14 +526,17 @@ export class ServicoPortalPaciente {
           scoreFinal: resposta?.scoreFinal
         };
       });
-      const mensagensRecentes = mensagens.map((mensagem) => ({
-        id: mensagem.id,
-        titulo: this.textoPayload(mensagem.payload, 'assunto') ?? 'Mensagem OctaClin',
-        texto: this.textoPayload(mensagem.payload, 'texto') ?? this.textoPayload(mensagem.payload, 'observacao') ?? '',
-        status: mensagem.status,
-        criadoEm: mensagem.criadoEm,
-        enviadoEm: mensagem.enviadoEm
-      })).slice(0, 5);
+      const mensagensRecentes = mensagens.map((mensagem) => {
+        const notificacao = this.mapearNotificacaoPaciente(mensagem);
+        return {
+          id: notificacao.id,
+          titulo: notificacao.titulo,
+          texto: notificacao.texto,
+          status: notificacao.status,
+          criadoEm: notificacao.criadoEm,
+          enviadoEm: notificacao.enviadoEm
+        };
+      }).slice(0, 5);
       const notificacoesPaciente = mensagens.map((mensagem) => this.mapearNotificacaoPaciente(mensagem));
       const tarefasAcompanhamento = tarefas.map((tarefa) => this.mapearTarefaAcompanhamento(tarefa));
       const materiaisDisponiveis = enviosMateriais
@@ -1322,13 +1326,17 @@ export class ServicoPortalPaciente {
   }
 
   private mapearNotificacaoPaciente(mensagem: MensagemNotificacaoOrm): NotificacaoPortalPaciente {
+    const evento = this.textoPayload(mensagem.payload, 'evento') ?? this.textoPayload(mensagem.payload, 'templateEvento');
+    const payload = evento === 'plano_publicado_portal'
+      ? lerPayloadMensagem(mensagem, this.criptografia)
+      : mensagem.payload;
     return {
       id: mensagem.id,
-      canal: this.textoPayload(mensagem.payload, 'canal') ?? (mensagem.canalId ? 'canal_configurado' : 'indefinido'),
-      titulo: this.textoPayload(mensagem.payload, 'assunto') ?? 'Mensagem OctaClin',
-      texto: this.textoPayload(mensagem.payload, 'texto') ?? this.textoPayload(mensagem.payload, 'observacao') ?? '',
+      canal: evento === 'plano_publicado_portal' ? 'portal' : this.textoPayload(mensagem.payload, 'canal') ?? (mensagem.canalId ? 'canal_configurado' : 'indefinido'),
+      titulo: this.textoPayload(payload, 'assunto') ?? 'Mensagem OctaClin',
+      texto: this.textoPayload(payload, 'texto') ?? this.textoPayload(payload, 'observacao') ?? '',
       status: mensagem.status,
-      evento: this.textoPayload(mensagem.payload, 'evento') ?? this.textoPayload(mensagem.payload, 'templateEvento'),
+      evento,
       erro: mensagem.erro,
       criadoEm: mensagem.criadoEm,
       enviadoEm: mensagem.enviadoEm,

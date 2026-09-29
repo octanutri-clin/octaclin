@@ -403,12 +403,12 @@ Ordenadas por "o dado já existe" → "o efeito não existe".
 | --- | --- | --- |
 | Check-in respondido com adesão baixa | Nada | Tarefa + alerta no dashboard |
 | Check-in atrasado | Gatilho existe na UI, sem executor | Mensagem ao paciente + fila de atenção |
-| Formulário respondido | Notificação in-app + webhook; dashboard exibe prévia limitada e Fase 288 implementa fila paginada e leitura individual, ainda sem merge | Confirmar CI e merge da síntese factual ao profissional e da revisão antes da consulta |
+| Formulário respondido | Notificação in-app + webhook; Fase 288 integrada pelo PR #324: fila paginada, leitura individual e síntese factual sem IA | Acompanhar adoção da revisão antes da consulta; CI do PR teve `Provenance do SBOM` `SKIPPED` |
 | Confirmação de consulta (WhatsApp) | Gravada e exibida por consulta; sem efeito derivado | Fila de não confirmadas + follow-up automático |
 | Falta registrada | Registrada no desfecho | Reagendamento proativo; contagem no score de risco |
 | Conduta vencendo | Data gravada, sem consumidor | Alerta de revisão |
 | Próxima revisão do perfil (`proximaRevisaoEm`) | Tarefa automática integrada na Fase 287, PR #323; reconciliação histórica opt-in sem evidência de execução externa | Confirmar backfill por tenant em ambiente autorizado |
-| Plano publicado | Versão criada | Notificar paciente que há plano novo |
+| Plano publicado | Fase 289 registra aviso cifrado no portal na transação de publicação; outbox encaminha, no máximo, um canal externo consentido, respeitando horário e aprovação de template | Acompanhar PR/CI da Fase 289; confirmar depois se pacientes veem o aviso e se a clínica configura os canais |
 | Material enviado e não visualizado | Não há registro de visualização | Lembrete após N dias |
 | Paciente sem consulta futura | Existe fila no dashboard | Sugestão de reagendamento em lote |
 
@@ -607,9 +607,9 @@ de esgotar a versão determinística de cada um.
 | PB-29 | Onboarding guiado da clínica (conteúdo inicial) | Gestão | Alto | M | Baixo | backend, frontend, produto |
 | PB-30 | Extração assistida de exame laboratorial | IA | Alto | G | Alto | IA, backend, jurídico, PB-17 |
 
-### Estado do backlog verificado em 2026-09-27
+### Estado do backlog verificado em 2026-09-28
 
-Os estados abaixo foram cruzados com PRs merged e, para itens sem PR identificável, com o código. PRs #319, #320, #321, #322 e #323 já foram integrados; a Fase 288 está em implementação, sem merge. Merge comprova a entrega de código, não a aplicação de migrations ou backfills em ambientes externos.
+Os estados abaixo foram cruzados com PRs merged e, para itens sem PR identificável, com o código. PRs #319 a #324 foram integrados; a Fase 289 está implementada nesta branch, ainda sem PR/CI. Merge comprova a entrega de código, não a aplicação de migrations ou backfills em ambientes externos.
 
 | PB | Estado e evidência |
 |---|---|
@@ -637,7 +637,7 @@ Os estados abaixo foram cruzados com PRs merged e, para itens sem PR identificá
 | PB-29 | **Concluído no código** — Fase 283, PR #319 integrado (merge `19ade15` em 2026-09-27). Não há evidência de produção nesta reconciliação. |
 | PB-30 | **Pendente** — extração assistida de exames não foi encontrada; PB-17 entrega a estrutura determinística e é dependência já concluída. |
 
-PB-28 e PB-30 não têm ordem aprovada na tabela original. PB-20 e Fase 286 foram integrados; a Fase 287 executou a primeira automação do item 5 (PR #323), com backfill externo pendente de evidência. A Fase 288 trata a revisão de respostas de formulário, ainda sem merge. A proposta de sequência inclui também as recomendações das seções 3–14 que não se esgotam nesses PBs.
+PB-28 e PB-30 não têm ordem aprovada na tabela original. PB-20 e Fase 286 foram integrados; as Fases 287 e 288 também estão integradas (PRs #323 e #324). O backfill histórico da Fase 287 segue sem evidência de execução externa. A Fase 289 está implementada nesta branch e aguarda PR/CI. A proposta de sequência inclui também as recomendações das seções 3–14 que não se esgotam nesses PBs.
 
 ---
 
@@ -818,9 +818,12 @@ produto devem ter esse gate resolvido no plano da respectiva fase.
    exigem fases próprias. O PB-24 já entrega vínculo opcional com consulta, não esses templates.
 5. **Automatizações residuais da seção 7**, em incrementos pequenos: tarefa na próxima revisão de perfil
    (Fase 287 integrada, com reconciliação histórica fora de banda pendente de evidência);
-   sinalizar revisão de resposta de formulário (Fase 288 em implementação); notificar paciente quando plano for publicado; lembrar
-   material não visualizado; acompanhar consultas não confirmadas e faltas; sugerir retorno quando não
-   houver consulta futura. Preservar preferências, idempotência, outbox e autorização por tenant.
+   revisão de resposta de formulário (Fase 288 integrada pelo PR #324); aviso de plano publicado
+   (Fase 289 implementada nesta branch, PR/CI pendentes); lembrar material não visualizado;
+   acompanhar consultas não confirmadas e faltas; sugerir retorno quando não houver consulta futura.
+   Preservar preferências, idempotência, outbox e autorização por tenant.
+   Após a Fase 289, o próximo incremento desta fila pode ser o lembrete de material não visualizado;
+   antes do lembrete, registrar visualização de forma tenant-aware e definir prazo, opt-out e idempotência.
 6. **PB-28 e melhorias da experiência do paciente.** Definir responsável, estados, prazo/SLA e escalonamento
    da resposta bidirecional; depois incluir confirmação de check-in revisado pela clínica e lembretes de
    plano/tarefas. Gamificação requer decisão de propósito separada.

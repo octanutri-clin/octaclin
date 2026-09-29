@@ -333,6 +333,39 @@ async function assertSemOverflowHorizontal(page) {
 }
 
 test.describe('portal do paciente', () => {
+  test('aviso de plano publicado abre a seção do plano alimentar', async ({ page }) => {
+    await prepararPortal(page);
+    await page.route((url) => url.pathname === '/api/portal/paciente', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          ...portalPaciente,
+          planoAlimentar: {
+            id: 'plano-1', titulo: 'Plano vigente', numeroVersao: 1,
+            publicadoEm: '2026-09-28T12:00:00.000Z', refeicoes: []
+          },
+          notificacoesPaciente: [{
+            id: 'aviso-plano-1',
+            canal: 'portal',
+            titulo: 'Seu plano alimentar está disponível',
+            texto: 'Um novo plano alimentar está disponível no portal. Acesse a seção Plano alimentar para consultá-lo.',
+            status: 'enviado',
+            evento: 'plano_publicado_portal',
+            criadoEm: '2026-09-28T12:00:00.000Z'
+          }]
+        })
+      });
+    });
+
+    await page.goto('/portal/mensagens');
+    const aviso = page.getByRole('article').filter({ hasText: 'Seu plano alimentar está disponível' });
+    await expect(aviso.getByRole('link', { name: 'Consultar plano alimentar' })).toBeVisible();
+    await aviso.getByRole('link', { name: 'Consultar plano alimentar' }).click();
+    await expect(page).toHaveURL(/\/portal\/plano$/);
+    await expect(page.getByRole('heading', { name: 'Plano vigente' })).toBeVisible();
+  });
+
   test('mantem a pagina inicial focada nas tres prioridades e sem scores clinicos', async ({ page }) => {
     const portal = await prepararPortal(page);
     await page.goto('/portal');
