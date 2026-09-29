@@ -46,7 +46,7 @@ test('PR Gate CLI verifies Git diff and rejects missing SHA', () => {
 });
 
 test('PR Gate names and needs cover every CI job', () => {
-  const workflow = readFileSync(new URL('../.github/workflows/ci.yml', import.meta.url), 'utf8');
+  const workflow = readFileSync(new URL('../.github/workflows/ci.yml', import.meta.url), 'utf8').replace(/\r\n/g, '\n');
   const jobsBlock = workflow.split(/^jobs:\s*$/m)[1];
   assert.ok(jobsBlock);
   const jobs = [...jobsBlock.matchAll(/^  ([a-z0-9-]+):$/gm)].map((match) => match[1]);
