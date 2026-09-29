@@ -8,6 +8,7 @@ import { PacienteOrm } from '../../pacientes/infraestrutura/paciente.orm';
 import { CriarMaterialEducativoDto, EnviarMaterialLoteDto, EnviarMaterialPacienteDto, EnvioMaterialPacienteRespostaDto, MaterialEducativoRespostaDto } from './dtos';
 import { EnvioMaterialPacienteOrm } from '../infraestrutura/envio-material-paciente.orm';
 import { MaterialEducativoOrm } from '../infraestrutura/material-educativo.orm';
+import { INTERVALO_LEMBRETE_MATERIAL_MS } from '../dominio/lembrete-material';
 
 @Injectable()
 export class ServicoMateriais {
@@ -71,6 +72,7 @@ export class ServicoMateriais {
       });
       if (!material) throw new NotFoundException('Material nao encontrado.');
 
+      const enviadoEm = new Date();
       const envio = gerenciador.getRepository(EnvioMaterialPacienteOrm).create({
         tenantId,
         pacienteId,
@@ -78,7 +80,8 @@ export class ServicoMateriais {
         enviadoPorUsuarioId: usuarioId,
         observacaoCriptografada: dados.observacao?.trim() ? this.criptografia.criptografar(dados.observacao.trim()) : undefined,
         status: 'enviado',
-        enviadoEm: new Date()
+        enviadoEm,
+        proximoLembreteEm: new Date(enviadoEm.getTime() + INTERVALO_LEMBRETE_MATERIAL_MS)
       });
 
       return this.mapearEnvio(await gerenciador.getRepository(EnvioMaterialPacienteOrm).save(envio), material);
@@ -118,7 +121,8 @@ export class ServicoMateriais {
         materialId: material.id,
         enviadoPorUsuarioId: usuarioId,
         status: 'enviado',
-        enviadoEm: agora
+        enviadoEm: agora,
+        proximoLembreteEm: new Date(agora.getTime() + INTERVALO_LEMBRETE_MATERIAL_MS)
       }));
       await repositorioEnvios.save(envios);
       return { total: envios.length };

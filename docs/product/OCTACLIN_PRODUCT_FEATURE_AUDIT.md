@@ -408,8 +408,8 @@ Ordenadas por "o dado já existe" → "o efeito não existe".
 | Falta registrada | Registrada no desfecho | Reagendamento proativo; contagem no score de risco |
 | Conduta vencendo | Data gravada, sem consumidor | Alerta de revisão |
 | Próxima revisão do perfil (`proximaRevisaoEm`) | Tarefa automática integrada na Fase 287, PR #323; reconciliação histórica opt-in sem evidência de execução externa | Confirmar backfill por tenant em ambiente autorizado |
-| Plano publicado | Fase 289 registra aviso cifrado no portal na transação de publicação; outbox encaminha, no máximo, um canal externo consentido, respeitando horário e aprovação de template (PR #343 aberto) | Aguardar checks do PR #343; confirmar depois se pacientes veem o aviso e se a clínica configura os canais |
-| Material enviado e não visualizado | Não há registro de visualização | Lembrete após N dias |
+| Plano publicado | Fase 289 registra aviso cifrado no portal na transação de publicação; outbox encaminha, no máximo, um canal externo consentido, respeitando horário e aprovação de template (PR #343 integrado) | Acompanhar adoção e configuração de canais pela clínica |
+| Material enviado e não visualizado | Visualização registrada de forma idempotente e tenant-aware desde a Fase 264.3 (PB-07); Fase 290 agenda lembrete em 72h, recorrente a cada 72h, sem alcançar envios anteriores à ativação | Confirmar depois a experiência do paciente e a configuração dos canais, sem envio retroativo |
 | Paciente sem consulta futura | Existe fila no dashboard | Sugestão de reagendamento em lote |
 
 `[F]` A infraestrutura de execução já está pronta: outbox transacional com idempotência, fila com poller,
@@ -609,7 +609,7 @@ de esgotar a versão determinística de cada um.
 
 ### Estado do backlog verificado em 2026-09-28
 
-Os estados abaixo foram cruzados com PRs merged e, para itens sem PR identificável, com o código. PRs #319 a #324 foram integrados; a Fase 289 está no PR #343 aberto, com checks remotos pendentes no snapshot inicial. Merge comprova a entrega de código, não a aplicação de migrations ou backfills em ambientes externos.
+Os estados abaixo foram cruzados com PRs merged e, para itens sem PR identificável, com o código. PRs #319 a #324 e #343 foram integrados; no PR #343 os checks aplicáveis terminaram em `SUCCESS`, com `Provenance do SBOM` como `SKIPPED`. A Fase 290 está sendo implementada na branch `feat/fase290-lembrete-material`. Merge comprova a entrega de código, não a aplicação de migrations ou backfills em ambientes externos.
 
 | PB | Estado e evidência |
 |---|---|
@@ -637,7 +637,7 @@ Os estados abaixo foram cruzados com PRs merged e, para itens sem PR identificá
 | PB-29 | **Concluído no código** — Fase 283, PR #319 integrado (merge `19ade15` em 2026-09-27). Não há evidência de produção nesta reconciliação. |
 | PB-30 | **Pendente** — extração assistida de exames não foi encontrada; PB-17 entrega a estrutura determinística e é dependência já concluída. |
 
-PB-28 e PB-30 não têm ordem aprovada na tabela original. PB-20 e Fase 286 foram integrados; as Fases 287 e 288 também estão integradas (PRs #323 e #324). O backfill histórico da Fase 287 segue sem evidência de execução externa. A Fase 289 está no PR #343, com checks remotos pendentes no snapshot inicial. A proposta de sequência inclui também as recomendações das seções 3–14 que não se esgotam nesses PBs.
+PB-28 e PB-30 não têm ordem aprovada na tabela original. PB-20 e Fases 286 a 289 foram integrados; as Fases 287 e 288 também estão integradas (PRs #323 e #324). A Fase 289 foi integrada pelo PR #343 (merge `81247c7`); todos os checks aplicáveis passaram, exceto `Provenance do SBOM`, que ficou `SKIPPED`. O backfill histórico da Fase 287 segue sem evidência de execução externa. A Fase 290 implementa o próximo item de automação da seção 7. A proposta de sequência inclui também as recomendações das seções 3–14 que não se esgotam nesses PBs.
 
 ---
 
@@ -819,11 +819,14 @@ produto devem ter esse gate resolvido no plano da respectiva fase.
 5. **Automatizações residuais da seção 7**, em incrementos pequenos: tarefa na próxima revisão de perfil
    (Fase 287 integrada, com reconciliação histórica fora de banda pendente de evidência);
    revisão de resposta de formulário (Fase 288 integrada pelo PR #324); aviso de plano publicado
-   (Fase 289 no PR #343, checks pendentes); lembrar material não visualizado;
+   (Fase 289 integrada pelo PR #343); lembrar material não visualizado
+   (Fase 290: primeira ocorrência após 72 horas, repetição a cada 72 horas até
+   visualização, sem alcançar envios anteriores; PB-07/Fase 264.3 já registra a
+   leitura de forma idempotente e tenant-aware);
    acompanhar consultas não confirmadas e faltas; sugerir retorno quando não houver consulta futura.
    Preservar preferências, idempotência, outbox e autorização por tenant.
-   Após a Fase 289, o próximo incremento desta fila pode ser o lembrete de material não visualizado;
-   antes do lembrete, registrar visualização de forma tenant-aware e definir prazo, opt-out e idempotência.
+   A Fase 290 reutiliza a trilha de visualização existente e preserva preferências,
+   opt-out, janela, aprovação de template, limite de frequência, idempotência e outbox.
 6. **PB-28 e melhorias da experiência do paciente.** Definir responsável, estados, prazo/SLA e escalonamento
    da resposta bidirecional; depois incluir confirmação de check-in revisado pela clínica e lembretes de
    plano/tarefas. Gamificação requer decisão de propósito separada.

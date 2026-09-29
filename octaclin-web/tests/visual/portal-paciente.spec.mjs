@@ -366,6 +366,35 @@ test.describe('portal do paciente', () => {
     await expect(page.getByRole('heading', { name: 'Plano vigente' })).toBeVisible();
   });
 
+  test('aviso de material não visualizado leva de volta ao portal do paciente', async ({ page }) => {
+    await prepararPortal(page);
+    await page.route((url) => url.pathname === '/api/portal/paciente', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          ...portalPaciente,
+          notificacoesPaciente: [{
+            id: 'aviso-material-1',
+            canal: 'portal',
+            titulo: 'Material disponível no portal',
+            texto: 'Um material educativo enviado pela equipe continua disponível no portal.',
+            status: 'enviado',
+            evento: 'material_nao_visualizado_portal',
+            criadoEm: '2026-09-28T12:00:00.000Z'
+          }]
+        })
+      });
+    });
+
+    await page.goto('/portal/mensagens');
+    const aviso = page.getByRole('article').filter({ hasText: 'Material disponível no portal' });
+    await expect(aviso.getByRole('link', { name: 'Acessar materiais no portal' })).toBeVisible();
+    await aviso.getByRole('link', { name: 'Acessar materiais no portal' }).click();
+    await expect(page).toHaveURL(/\/portal$/);
+    await expect(page.getByRole('heading', { name: 'Portal do paciente' })).toBeVisible();
+  });
+
   test('mantem a pagina inicial focada nas tres prioridades e sem scores clinicos', async ({ page }) => {
     const portal = await prepararPortal(page);
     await page.goto('/portal');

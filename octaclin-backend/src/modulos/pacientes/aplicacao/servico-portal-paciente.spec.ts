@@ -583,6 +583,15 @@ describe('ServicoPortalPaciente', () => {
       ],
       mensagens: [
         {
+          id: 'aviso-material-1',
+          tenantId: 'tenant-1',
+          pacienteId: 'paciente-1',
+          status: 'enviado',
+          payload: { evento: 'material_nao_visualizado_portal' },
+          conteudoCriptografado: Buffer.from(JSON.stringify({ assunto: 'Material disponível no portal', texto: 'Um material educativo enviado pela equipe continua disponível no portal.' })),
+          criadoEm: new Date('2026-07-23T14:00:00.000Z')
+        },
+        {
           id: 'aviso-plano-1',
           tenantId: 'tenant-1',
           pacienteId: 'paciente-1',
@@ -761,12 +770,12 @@ describe('ServicoPortalPaciente', () => {
       consultasProximas: 1,
       formulariosPendentes: 1,
       formulariosRespondidos: 1,
-      mensagensRecentes: 3,
+      mensagensRecentes: 4,
       tarefasPendentes: 1,
       materiaisDisponiveis: 1,
       checkinsRecentes: 1,
       notificacoesPendentes: 1,
-      notificacoesHistorico: 3
+      notificacoesHistorico: 4
     });
     expect(portal.perfil).toEqual({
       contato: 'ana@example.com',
@@ -805,11 +814,17 @@ describe('ServicoPortalPaciente', () => {
       })
     ]);
     expect(portal.mensagensRecentes).toEqual([
+      expect.objectContaining({ id: 'aviso-material-1', titulo: 'Material disponível no portal', texto: 'Um material educativo enviado pela equipe continua disponível no portal.' }),
       expect.objectContaining({ id: 'aviso-plano-1', titulo: 'Seu plano alimentar está disponível', texto: 'Um novo plano alimentar está disponível no portal. Acesse a seção Plano alimentar para consultá-lo.' }),
       expect.objectContaining({ id: 'mensagem-pendente-1', titulo: 'Lembrete de consulta', texto: 'Sua consulta sera amanha.' }),
       expect.objectContaining({ id: 'mensagem-1', titulo: 'Consulta agendada', texto: 'Sua consulta foi agendada.' })
     ]);
     expect(portalComPlano.notificacoesPaciente).toEqual([
+      expect.objectContaining({
+        id: 'aviso-material-1', canal: 'portal', titulo: 'Material disponível no portal',
+        texto: 'Um material educativo enviado pela equipe continua disponível no portal.',
+        status: 'enviado', evento: 'material_nao_visualizado_portal'
+      }),
       expect.objectContaining({
         id: 'aviso-plano-1', canal: 'portal', titulo: 'Seu plano alimentar está disponível',
         texto: 'Um novo plano alimentar está disponível no portal. Acesse a seção Plano alimentar para consultá-lo.',

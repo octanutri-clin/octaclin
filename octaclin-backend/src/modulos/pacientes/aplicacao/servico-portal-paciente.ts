@@ -1327,12 +1327,14 @@ export class ServicoPortalPaciente {
 
   private mapearNotificacaoPaciente(mensagem: MensagemNotificacaoOrm): NotificacaoPortalPaciente {
     const evento = this.textoPayload(mensagem.payload, 'evento') ?? this.textoPayload(mensagem.payload, 'templateEvento');
-    const payload = evento === 'plano_publicado_portal'
+    const payload = evento === 'plano_publicado_portal' || evento === 'material_nao_visualizado_portal'
       ? lerPayloadMensagem(mensagem, this.criptografia)
       : mensagem.payload;
     return {
       id: mensagem.id,
-      canal: evento === 'plano_publicado_portal' ? 'portal' : this.textoPayload(mensagem.payload, 'canal') ?? (mensagem.canalId ? 'canal_configurado' : 'indefinido'),
+      canal: evento === 'plano_publicado_portal' || evento === 'material_nao_visualizado_portal'
+        ? 'portal'
+        : this.textoPayload(mensagem.payload, 'canal') ?? (mensagem.canalId ? 'canal_configurado' : 'indefinido'),
       titulo: this.textoPayload(payload, 'assunto') ?? 'Mensagem OctaClin',
       texto: this.textoPayload(payload, 'texto') ?? this.textoPayload(payload, 'observacao') ?? '',
       status: mensagem.status,

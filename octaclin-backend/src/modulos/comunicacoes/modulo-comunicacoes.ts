@@ -7,9 +7,11 @@ import { CriptografiaDadosSensiveis } from '../../infraestrutura/seguranca/cript
 import { ModuloAuth } from '../auth/modulo-auth';
 import { ModuloTenancy } from '../tenancy/modulo-tenancy';
 import { PacienteOrm } from '../pacientes/infraestrutura/paciente.orm';
+import { EnvioMaterialPacienteOrm } from '../materiais/infraestrutura/envio-material-paciente.orm';
 import { OutboxEventoOrm } from '../../infraestrutura/outbox/outbox-evento.orm';
 import { ProcessadorNotificacoes } from './aplicacao/processador-notificacoes';
 import { ProcessadorOutboxComunicacoes } from './aplicacao/processador-outbox-comunicacoes';
+import { ProcessadorLembretesMateriais } from './aplicacao/processador-lembretes-materiais';
 import { FILA_NOTIFICACOES, ServicoComunicacoes } from './aplicacao/servico-comunicacoes';
 import { ServicoWebhookWhatsapp } from './aplicacao/servico-webhook-whatsapp';
 import { ControladorComunicacoes } from './apresentacao/controlador-comunicacoes';
@@ -22,7 +24,9 @@ import { MensagemNotificacaoOrm } from './infraestrutura/mensagem-notificacao.or
 import { TemplateMensagemOrm } from './infraestrutura/template-mensagem.orm';
 import { deveExecutarProcessadores } from '../../infraestrutura/processamento/papel-processo';
 
-const processadores = deveExecutarProcessadores() ? [ProcessadorNotificacoes, ProcessadorOutboxComunicacoes] : [];
+const processadores = deveExecutarProcessadores()
+  ? [ProcessadorNotificacoes, ProcessadorOutboxComunicacoes, ProcessadorLembretesMateriais]
+  : [];
 
 @Module({
   imports: [
@@ -32,6 +36,7 @@ const processadores = deveExecutarProcessadores() ? [ProcessadorNotificacoes, Pr
       TemplateMensagemOrm,
       MensagemNotificacaoOrm,
       OutboxEventoOrm,
+      EnvioMaterialPacienteOrm,
       UserActionLogOrm,
       PacienteOrm
     ]),

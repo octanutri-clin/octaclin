@@ -34,6 +34,14 @@ export const TEMPLATES_INICIAIS_EMAIL = [
       assunto: 'Seu plano alimentar está disponível',
       corpo: 'Há um novo plano alimentar disponível no portal da sua clínica. Acesse o portal do paciente para consultá-lo.'
     }
+  },
+  {
+    codigoExterno: 'octaclin_inicial_material_nao_visualizado',
+    nome: 'Material educativo disponível',
+    conteudo: {
+      assunto: 'Há um material disponível no portal',
+      corpo: 'Um material educativo enviado pela equipe continua disponível no portal da sua clínica. Acesse o portal do paciente para consultá-lo. Se já o visualizou, você pode desconsiderar este aviso.'
+    }
   }
 ] as const;
 
@@ -41,6 +49,14 @@ export const TEMPLATES_INICIAIS_WHATSAPP = [
   {
     codigoExterno: 'octaclin_plano_publicado',
     nome: 'Plano alimentar disponível',
+    conteudo: {
+      idioma: 'pt_BR',
+      components: []
+    }
+  },
+  {
+    codigoExterno: 'octaclin_material_nao_visualizado',
+    nome: 'Material educativo disponível',
     conteudo: {
       idioma: 'pt_BR',
       components: []

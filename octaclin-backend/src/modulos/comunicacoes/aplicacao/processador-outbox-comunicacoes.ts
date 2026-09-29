@@ -33,7 +33,7 @@ export class ProcessadorOutboxComunicacoes {
           const eventos = await repositorio.find({
             where: {
               tenantId,
-              tipo: In(['notificacao.enviar', 'plano_alimentar.publicado']),
+              tipo: In(['notificacao.enviar', 'plano_alimentar.publicado', 'material.nao_visualizado.lembrete']),
               status: 'pendente',
               processadoEm: IsNull()
             },
@@ -94,6 +94,15 @@ export class ProcessadorOutboxComunicacoes {
           pacienteId,
           planoId,
           versaoId
+        });
+      } else if (evento.tipo === 'material.nao_visualizado.lembrete') {
+        const { envioId, chaveIdempotencia } = evento.payload;
+        if (typeof envioId !== 'string' || typeof chaveIdempotencia !== 'string') {
+          throw new Error('Payload invalido no evento de lembrete de material.');
+        }
+        await this.servicoComunicacoes.processarLembreteMaterialNaoVisualizado(tenantId, {
+          envioId,
+          chaveIdempotencia
         });
       } else {
         const mensagemId = evento.payload.mensagemId;

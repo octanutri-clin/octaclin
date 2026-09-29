@@ -57,6 +57,49 @@ describe('ProcessadorOutboxComunicacoes', () => {
     }));
   });
 
+  it('encaminha lembrete de material com tenant resolvido no ciclo e payload validado', async () => {
+    const evento = {
+      id: 'evento-material-1', tenantId: 'tenant-1', tipo: 'material.nao_visualizado.lembrete',
+      status: 'pendente', tentativas: 0,
+      payload: { envioId: 'envio-1', chaveIdempotencia: 'material-nao-visualizado:envio-1:1' },
+      criadoEm: new Date()
+    } as OutboxEventoOrm;
+    const repositorioOutbox = {
+      find: jest.fn(async () => [evento]),
+      update: jest.fn(async () => ({ affected: 1 })),
+      save: jest.fn(async (entrada: OutboxEventoOrm) => entrada)
+    };
+    const fonteDados = {
+      createQueryRunner: jest.fn(() => ({
+        connect: jest.fn(async () => undefined), release: jest.fn(async () => undefined),
+        query: jest.fn(async (sql: string) => sql.includes('pg_try_advisory_lock') ? [{ obtida: true }] : [])
+      })),
+      getRepository: (entidade: unknown) => entidade === TenantOrm
+        ? { find: jest.fn(async () => [{ id: 'tenant-1', status: 'ativo' }]) }
+        : undefined
+    };
+    const executorTenant = {
+      executar: jest.fn((_tenantId: string, operacao: (gerenciador: unknown) => Promise<unknown>) =>
+        operacao({ getRepository: () => repositorioOutbox })
+      )
+    };
+    const comunicacoes = {
+      publicarEventoNotificacao: jest.fn(async () => undefined),
+      processarAvisoPlanoPublicado: jest.fn(async () => undefined),
+      processarLembreteMaterialNaoVisualizado: jest.fn(async () => undefined)
+    };
+    const notificacoes = { processarMensagem: jest.fn(async () => undefined) };
+
+    await new ProcessadorOutboxComunicacoes(
+      fonteDados as never, executorTenant as never, comunicacoes as never, notificacoes as never
+    ).processarPendentes();
+
+    expect(comunicacoes.processarLembreteMaterialNaoVisualizado).toHaveBeenCalledWith('tenant-1', {
+      envioId: 'envio-1', chaveIdempotencia: 'material-nao-visualizado:envio-1:1'
+    });
+    expect(repositorioOutbox.save).toHaveBeenCalledWith(expect.objectContaining({ status: 'processado' }));
+  });
+
   it('publica um evento uma unica vez quando dois workers concorrentes o encontram', async () => {
     const evento = {
       id: 'evento-1',
