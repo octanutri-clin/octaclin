@@ -27,6 +27,7 @@ import { Modal, ModalConfirmacao } from '@/components/ui/modal';
 import { FaixaAcoes } from '@/components/ui/faixa-acoes';
 import { AgendaSemanal } from '@/components/agenda/agenda-semanal';
 import { ConfiguracaoExpediente } from '@/components/agenda/configuracao-expediente';
+import { CalendarioFollowups } from '@/components/agenda/calendario-followups';
 import { PacotesSessao } from '@/components/agenda/pacotes-sessao';
 import { ResumoRecebimentos } from '@/components/cliente/recebimentos-cliente';
 import { LinkAgendamentoPublicoApi, SolicitacaoAgendaPublicaApi, type TipoAtendimentoApi } from '@/lib/agendamento-publico-api';
@@ -883,6 +884,7 @@ export function PainelAgenda() {
                 </>
               ) : null}
             </div>
+            <CalendarioFollowups consultaId={consultaSelecionada.id} inicioEm={consultaSelecionada.inicioEm} timezone={consultaSelecionada.timezone} />
             <div className="flex justify-end">
               <Botao
                 type="button"
@@ -1137,6 +1139,7 @@ export function PainelAgenda() {
         </Cartao>
 
         <ConfiguracaoExpediente profissionais={profissionaisLista} />
+        <CalendarioFollowups />
 
         <Modal
           aberto={modalCriarAberto}

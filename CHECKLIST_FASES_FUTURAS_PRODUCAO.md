@@ -1,6 +1,6 @@
 # OctaClin - Checklist vivo de fases futuras ate producao
 
-Atualizado em 2026-09-28. Fase 289 integrada pelo PR #343 (merge `81247c7`); os checks aplicáveis passaram e `Provenance do SBOM` ficou `SKIPPED`. Fase 290 está em implementação. Fases 256 a 261, 263 a 289 integradas; Fase 284
+Atualizado em 2026-09-29. Fase 290 integrada pelo PR #344 (merge `dd70ca2`); os checks aplicáveis passaram e `Provenance do SBOM` ficou `SKIPPED`. Fase 291 está em desenvolvimento. Fases 256 a 261, 263 a 290 integradas; Fase 284
 (PB-22) foi integrada pelo PR #320 (merge `af839c5`, 19 checks `SUCCESS` e
 `Provenance do SBOM` `SKIPPED`). Fase 285 (PB-20) foi integrada pelo PR #321
 (merge `01d6bf1`). Fase 286 concluida pelo PR #322 (merge `c92f246`). A reconciliação completa do backlog da auditoria e a
@@ -4413,11 +4413,19 @@ auditoria estão ordenados na seção 15 de
   pelo PR #343 (merge `81247c7`); checks aplicáveis `SUCCESS`, `Provenance do
   SBOM` `SKIPPED`; sem execução externa. Plano em
   `docs/history/phases/PLANO_FASE_289.md`.
-- [~] Fase 290 - lembrar materiais educativos não visualizados após 72 horas e
+- [x] Fase 290 - lembrar materiais educativos não visualizados após 72 horas e
   repetir a cada 72 horas até a leitura, sem alcançar envios anteriores à
-  ativação. Implementação nesta branch; migration aditiva 1056 sem backfill;
-  não aplicada em staging ou produção. Plano em
+  ativação. Integrada pelo PR #344 (merge `dd70ca2`); migration aditiva 1056
+  sem backfill e sem evidência de aplicação em staging ou produção. Plano em
   `docs/history/phases/PLANO_FASE_290.md`.
+- [~] Fase 291 - calendário configurável de até 30 follow-ups por consulta,
+  com padrão por clínica, ajuste por consulta, cadências mensal/quinzenal/
+  semanal/diária e horários relativos em dias/horas/minutos. O lembrete de 24h
+  passa ao calendário no cutover por tenant. Código e migration aditiva 1057
+  nesta branch; aplicação externa, prova de RLS e checks do PR pendentes.
+  Próximo incremento sugerido: reagendamento proativo após falta, seguido de
+  alerta de conduta vencendo e retorno para pacientes sem consulta futura.
+  Escopo e gates em `docs/history/phases/PLANO_FASE_291.md`.
 
 O programa de hardening
 PR 36-56 permanece como trilha separada --

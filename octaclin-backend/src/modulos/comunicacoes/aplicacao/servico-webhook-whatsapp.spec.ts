@@ -295,6 +295,8 @@ describe('ServicoWebhookWhatsapp', () => {
     const consulta = {
       id: 'consulta-1',
       tenantId: 'tenant-1',
+      status: 'agendada',
+      inicioEm: new Date('2030-01-01T12:00:00Z'),
       notificacoes: { lembrete24h: { status: 'processado' } },
       payload: {}
     };
@@ -341,6 +343,16 @@ describe('ServicoWebhookWhatsapp', () => {
         })
       })
     );
+  });
+
+  it('nao confirma uma consulta remarcada por resposta a follow-up do horario antigo', async () => {
+    const { servico, repositorioConsultas } = criarServico(undefined, {
+      contatoPaciente: '5511888888888',
+      consulta: { id: 'consulta-1', tenantId: 'tenant-1', status: 'reagendada', inicioEm: new Date('2030-01-02T12:00:00Z'), notificacoes: {}, payload: {} },
+      mensagensRecentes: [{ pacienteId: 'paciente-1', payload: { destino: '5511999999999', consultaId: 'consulta-1', consultaInicioEm: '2030-01-01T12:00:00.000Z', evento: 'agenda.consulta.followup' } }]
+    });
+    await servico.registrarMensagensRecebidas([{ phoneNumberId: 'phone-1', mensagem: { id: 'wamid-in-antigo', from: '5511999999999', timestamp: '1780000002', type: 'text', text: { body: 'Confirmo' } } }]);
+    expect(repositorioConsultas.save).not.toHaveBeenCalled();
   });
 
   it('avisa o console sobre a mensagem recebida sem copiar o texto do paciente', async () => {

@@ -39,6 +39,7 @@ import {
   ResultadoNotificacaoAgenda
 } from './dtos';
 import { ServicoConexaoGoogleCalendar } from './servico-conexao-google-calendar';
+import { ServicoFollowupsAgenda } from './servico-followups-agenda';
 import { ResultadoGoogleCalendar, ServicoGoogleCalendar } from './servico-google-calendar';
 import { registrarEventoWebhook } from '../../integracoes/aplicacao/registrar-evento-webhook';
 
@@ -116,7 +117,8 @@ export class ServicoAgenda {
     private readonly criptografia: CriptografiaDadosSensiveis,
     private readonly googleCalendar: ServicoGoogleCalendar,
     private readonly comunicacoes: ServicoComunicacoes,
-    private readonly servicoConexao: ServicoConexaoGoogleCalendar
+    private readonly servicoConexao: ServicoConexaoGoogleCalendar,
+    private readonly followups: ServicoFollowupsAgenda
   ) {}
 
   async listarConsultas(tenantId: string, usuario: UsuarioAutenticado): Promise<ConsultaAgendaRespostaDto[]> {
@@ -652,7 +654,9 @@ export class ServicoAgenda {
         inicioNovoEm: inicioEm.toISOString(),
         fimNovoEm: fimEm.toISOString()
       });
-      return this.salvarConsultaProtegidaContraSobreposicao(() => repositorio.save(atual));
+      const salva = await this.salvarConsultaProtegidaContraSobreposicao(() => repositorio.save(atual));
+      await this.followups.reconciliarConsultaNaTransacao(gerenciador, tenantId, salva);
+      return salva;
     });
 
     if (!propagarParaGoogle) return this.mapearResposta(consulta);
@@ -728,7 +732,9 @@ export class ServicoAgenda {
         status: dados.status,
         registradoEm: new Date().toISOString()
       });
-      return this.mapearResposta(await repositorio.save(consulta));
+      const salva = await repositorio.save(consulta);
+      await this.followups.reconciliarConsultaNaTransacao(gerenciador, tenantId, salva);
+      return this.mapearResposta(salva);
     });
   }
 
@@ -820,6 +826,7 @@ export class ServicoAgenda {
       });
       atual.motivoCancelamentoCriptografado = motivo ? this.criptografia.criptografar(motivo) : undefined;
       const cancelada = await repositorio.save(atual);
+      await this.followups.reconciliarConsultaNaTransacao(gerenciador, tenantId, cancelada);
       await registrarEventoWebhook(gerenciador, tenantId, {
         evento: 'consulta.cancelada',
         recursoTipo: 'agenda_consulta',
@@ -968,6 +975,8 @@ export class ServicoAgenda {
           })
         )
       );
+
+      await this.followups.reconciliarConsultaNaTransacao(gerenciador, tenantId, consulta);
 
       await registrarEventoWebhook(gerenciador, tenantId, {
         evento: 'consulta.criada',

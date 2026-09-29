@@ -1,6 +1,6 @@
 # OctaClin - Resumo das fases concluidas
 
-## Reconciliacao em 2026-09-28
+## Reconciliacao em 2026-09-29
 
 - Fase 288 integrada pelo PR #324 (merge `8fc2ffe`): revisão paginada de
   respostas, leitura antes da conclusão e síntese factual sem IA. O gate
@@ -10,9 +10,11 @@
   às preferências do paciente. Checks aplicáveis `SUCCESS`; `Provenance do SBOM`
   `SKIPPED`. Sem migration ou execução em ambiente externo. Plano em
   `docs/history/phases/PLANO_FASE_289.md`.
-- Fase 290 em implementação na branch `feat/fase290-lembrete-material`:
-  lembretes de materiais não visualizados a cada 72 horas, sem alcance
-  retroativo. Plano em `docs/history/phases/PLANO_FASE_290.md`.
+- Fase 290 integrada pelo PR #344 (merge `dd70ca2`, 2026-09-29): lembretes
+  de materiais não visualizados a cada 72 horas, sem alcance retroativo.
+  Checks aplicáveis `SUCCESS`, `Provenance do SBOM` `SKIPPED`; migration 1056
+  sem evidência de aplicação externa nesta reconciliação. Plano em
+  `docs/history/phases/PLANO_FASE_290.md`.
 
 ## Reconciliacao de produto em 2026-09-27
 

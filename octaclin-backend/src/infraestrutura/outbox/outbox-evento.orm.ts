@@ -26,6 +26,9 @@ export class OutboxEventoOrm {
   @Column({ name: 'processado_em', type: 'timestamptz', nullable: true })
   processadoEm?: Date;
 
+  @Column({ name: 'reivindicado_em', type: 'timestamptz', nullable: true })
+  reivindicadoEm?: Date;
+
   @CreateDateColumn({ name: 'criado_em', type: 'timestamptz' })
   criadoEm: Date;
 }

@@ -425,6 +425,7 @@ descrever('RLS e isolamento multi-tenant integral em Postgres real', () => {
   it('inventaria toda tabela tenant-scoped com ENABLE, FORCE e policy completa', async () => {
     if (!cliente) throw new Error('Cliente da prova RLS nao foi inicializado.');
     const nomes = tabelasTenant.map((tabela) => tabela.tabela);
+    expect(nomes).toEqual(expect.arrayContaining(['politicas_followup_agenda', 'ocorrencias_followup_agenda']));
     for (const representativa of TABELAS_REPRESENTATIVAS) {
       expect(nomes).toContain(representativa.tabela);
     }

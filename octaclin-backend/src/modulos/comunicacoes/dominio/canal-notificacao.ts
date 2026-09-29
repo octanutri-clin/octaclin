@@ -1,6 +1,6 @@
 export type TipoCanalNotificacao = 'whatsapp' | 'email' | 'push';
 
-export type StatusMensagemNotificacao = 'pendente' | 'processando' | 'enviado' | 'falhou' | 'recebido' | 'nota';
+export type StatusMensagemNotificacao = 'pendente' | 'processando' | 'enviado' | 'falhou' | 'cancelado' | 'recebido' | 'nota';
 
 export interface ResultadoEnvioNotificacao {
   idExterno?: string;

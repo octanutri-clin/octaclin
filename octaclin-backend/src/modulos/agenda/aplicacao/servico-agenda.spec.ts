@@ -197,7 +197,8 @@ function criarServico(dados: Record<string, unknown> = {}) {
       criptografia,
       googleCalendar as never,
       comunicacoes as never,
-      servicoConexao as never
+      servicoConexao as never,
+      { reconciliarConsultaNaTransacao: jest.fn(async () => undefined) } as never
     ),
     gerenciador,
     repositorios,
@@ -2049,7 +2050,8 @@ describe('ServicoAgenda', () => {
         { descriptografar: jest.fn() } as never,
         {} as never,
         {} as never,
-        { obterConexaoAtiva: jest.fn(async () => undefined) } as never
+        { obterConexaoAtiva: jest.fn(async () => undefined) } as never,
+        { reconciliarConsultaNaTransacao: jest.fn(async () => undefined) } as never
       );
 
       await expect(
@@ -2097,7 +2099,8 @@ describe('ServicoAgenda', () => {
         { descriptografar: jest.fn() } as never,
         {} as never,
         {} as never,
-        { obterConexaoAtiva: jest.fn(async () => undefined) } as never
+        { obterConexaoAtiva: jest.fn(async () => undefined) } as never,
+        { reconciliarConsultaNaTransacao: jest.fn(async () => undefined) } as never
       );
 
       await expect(

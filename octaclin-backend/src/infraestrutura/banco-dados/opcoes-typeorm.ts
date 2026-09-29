@@ -70,11 +70,14 @@ import { CriarRecorrenciaConsulta1720000001053 } from './migracoes/1720000001053
 import { CriarCatalogoMarcadoresExames1720000001054 } from './migracoes/1720000001054-CriarCatalogoMarcadoresExames';
 import { AdicionarIndicesPerfilPacientes1720000001055 } from './migracoes/1720000001055-AdicionarIndicesPerfilPacientes';
 import { AgendarLembretesMaterial1720000001056 } from './migracoes/1720000001056-AgendarLembretesMaterial';
+import { CriarCalendarioFollowupsAgenda1720000001057 } from './migracoes/1720000001057-CriarCalendarioFollowupsAgenda';
 import { UserActionLogOrm } from '../auditoria/user-action-log.orm';
 import { ConsentimentoLgpdOrm } from '../lgpd/consentimento-lgpd.orm';
 import { TombstoneExclusaoLgpdOrm } from '../lgpd/tombstone-exclusao-lgpd.orm';
 import { OutboxEventoOrm } from '../outbox/outbox-evento.orm';
 import { AgendaConsultaOrm } from '../../modulos/agenda/infraestrutura/agenda-consulta.orm';
+import { PoliticaFollowupAgendaOrm } from '../../modulos/agenda/infraestrutura/politica-followup-agenda.orm';
+import { OcorrenciaFollowupAgendaOrm } from '../../modulos/agenda/infraestrutura/ocorrencia-followup-agenda.orm';
 import { PacoteSessaoOrm } from '../../modulos/agenda/infraestrutura/pacote-sessao.orm';
 import { AgendaBloqueioExternoOrm } from '../../modulos/agenda/infraestrutura/agenda-bloqueio-externo.orm';
 import { AgendaBloqueioManualOrm } from '../../modulos/agenda/infraestrutura/agenda-bloqueio-manual.orm';
@@ -267,6 +270,8 @@ export function criarOpcoesTypeOrm(): TypeOrmModuleOptions & DataSourceOptions {
       MensagemNotificacaoOrm,
       NotificacaoOrm,
       AgendaConsultaOrm,
+      PoliticaFollowupAgendaOrm,
+      OcorrenciaFollowupAgendaOrm,
       PacoteSessaoOrm,
       ProfissionalGoogleConexaoOrm,
       GoogleCanalWatchOrm,
@@ -383,7 +388,8 @@ export function criarOpcoesTypeOrm(): TypeOrmModuleOptions & DataSourceOptions {
         CriarRecorrenciaConsulta1720000001053,
         CriarCatalogoMarcadoresExames1720000001054,
       AdicionarIndicesPerfilPacientes1720000001055,
-      AgendarLembretesMaterial1720000001056
+      AgendarLembretesMaterial1720000001056,
+      CriarCalendarioFollowupsAgenda1720000001057
       ],
     migrationsRun: executarMigracoesNoBoot(),
     synchronize: false,

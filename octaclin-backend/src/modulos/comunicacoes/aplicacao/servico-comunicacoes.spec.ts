@@ -117,6 +117,17 @@ function criarServico(dados: Record<string, unknown>) {
 }
 
 describe('ServicoComunicacoes', () => {
+  it('bloqueia a mensagem do motor legado apos o cutover sob o mesmo lock da politica', async () => {
+    const { servico, gerenciador, repositorios } = criarServico({});
+    gerenciador.query.mockResolvedValueOnce([]).mockResolvedValueOnce([{ bloqueado: true }]);
+    await expect(servico.dispararMensagemSistema('tenant-1', {
+      pacienteId: 'paciente-1', canalId: 'canal-1', templateId: 'template-1',
+      chaveIdempotencia: 'agenda-followup:consulta-1:1:2',
+      payload: { evento: 'agenda.consulta.lembrete' }
+    })).rejects.toThrow('Calendario configuravel ja assumiu');
+    expect(gerenciador.query).toHaveBeenCalledWith(expect.stringContaining('pg_advisory_xact_lock'), ['followup-padrao:tenant-1']);
+    expect(repositorios.mensagem.save).not.toHaveBeenCalled();
+  });
   const ambienteOriginal = process.env;
 
   beforeEach(() => {

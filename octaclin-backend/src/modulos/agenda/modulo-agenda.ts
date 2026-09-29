@@ -21,6 +21,8 @@ import { ControladorAgendamentoPublico } from './apresentacao/controlador-agenda
 import { ControladorGoogleAgenda } from './apresentacao/controlador-google-agenda';
 import { ServicoAgendamentoPublico } from './aplicacao/servico-agendamento-publico';
 import { ServicoAgenda } from './aplicacao/servico-agenda';
+import { ServicoFollowupsAgenda } from './aplicacao/servico-followups-agenda';
+import { ProcessadorFollowupsAgenda } from './aplicacao/processador-followups-agenda';
 import { ServicoExpedientes } from './aplicacao/servico-expedientes';
 import { ServicoTiposAtendimento } from './aplicacao/servico-tipos-atendimento';
 import { REDIS_OAUTH_STATE_GOOGLE, ServicoConexaoGoogleCalendar } from './aplicacao/servico-conexao-google-calendar';
@@ -29,6 +31,8 @@ import { FILA_SINCRONIZACAO_GOOGLE, ServicoSincronizacaoGoogleCalendar } from '.
 import { ProcessadorSincronizacaoGoogleCalendar } from './aplicacao/processador-sincronizacao-google-calendar';
 import { ProcessadorRenovacaoGoogleCalendar } from './aplicacao/processador-renovacao-google-calendar';
 import { AgendaConsultaOrm } from './infraestrutura/agenda-consulta.orm';
+import { PoliticaFollowupAgendaOrm } from './infraestrutura/politica-followup-agenda.orm';
+import { OcorrenciaFollowupAgendaOrm } from './infraestrutura/ocorrencia-followup-agenda.orm';
 import { AgendaBloqueioExternoOrm } from './infraestrutura/agenda-bloqueio-externo.orm';
 import { AgendaBloqueioManualOrm } from './infraestrutura/agenda-bloqueio-manual.orm';
 import { AgendaLinkPublicoOrm } from './infraestrutura/agenda-link-publico.orm';
@@ -40,13 +44,15 @@ import { GoogleCanalWatchOrm } from './infraestrutura/google-canal-watch.orm';
 import { ProfissionalGoogleConexaoOrm } from './infraestrutura/profissional-google-conexao.orm';
 
 const processadores = deveExecutarProcessadores()
-  ? [ProcessadorSincronizacaoGoogleCalendar, ProcessadorRenovacaoGoogleCalendar]
+  ? [ProcessadorSincronizacaoGoogleCalendar, ProcessadorRenovacaoGoogleCalendar, ProcessadorFollowupsAgenda]
   : [];
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([
       AgendaConsultaOrm,
+      PoliticaFollowupAgendaOrm,
+      OcorrenciaFollowupAgendaOrm,
       PacienteOrm,
       ProfissionalOrm,
       UserActionLogOrm,
@@ -74,6 +80,7 @@ const processadores = deveExecutarProcessadores()
   ],
   providers: [
     ServicoAgenda,
+    ServicoFollowupsAgenda,
     ServicoFinanceiroAgenda,
     ServicoAgendamentoPublico,
     ServicoExpedientes,
