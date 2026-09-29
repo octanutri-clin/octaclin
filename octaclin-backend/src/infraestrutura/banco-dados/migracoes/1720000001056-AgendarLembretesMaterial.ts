@@ -1,6 +1,9 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
-/** Aditiva, sem backfill: envios existentes nao recebem notificacao retroativa. */
+/**
+ * @aplicacao fora-de-banda
+ * Aditiva, sem backfill: envios existentes nao recebem notificacao retroativa.
+ */
 export class AgendarLembretesMaterial1720000001056 implements MigrationInterface {
   name = 'AgendarLembretesMaterial1720000001056';
 

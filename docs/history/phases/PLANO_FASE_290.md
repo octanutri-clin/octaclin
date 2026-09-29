@@ -181,8 +181,8 @@ legados foi respondida pelo proprietário: não devem receber disparo retroativo
 - Typecheck e build do backend NestJS.
 - Typecheck, lint focado, testes de autorização e build Web Next.js.
 - Testes aplicáveis de tenancy e guardas de controladores.
-- `pnpm test:confiabilidade`, `pnpm validate:docs`, `git diff --check` e
-  `pnpm security:secrets`.
+- `pnpm test:confiabilidade`, `pnpm test:migracoes-fora-de-banda`,
+  `pnpm validate:docs`, `git diff --check` e `pnpm security:secrets`.
 - CI do PR será registrado como snapshot quando aberto; não inferir aprovação
   de gates `SKIPPED` ou não executados.
 
@@ -204,4 +204,7 @@ test:guardas-controladores`, `pnpm validate:docs` e `pnpm security:secrets`
 passaram. A suíte Web `test:authz` terminou com código 0. O ambiente local usa
 Node 24.19.0, fora da faixa
 autoritativa `>=22 <23`; a validação compatível cabe ao CI Node 22. A migration
-1056 não foi executada em banco externo.
+1056 passou pelo gate de classificação fora de banda (13 testes) e não foi
+executada em banco externo. No primeiro snapshot da PR, o gate de governança
+identificou a anotação ausente; após acrescentar `@aplicacao fora-de-banda`, a
+reprodução local do gate passou.
