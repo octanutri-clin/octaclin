@@ -374,13 +374,13 @@ export class ServicoDashboardClinico {
 
     const faltasPorPaciente = new Map<string, number>();
     for (const falta of dados.faltasRecentes) {
-      if (falta.tenantId === tenantId && falta.profissionalId === contexto.id && pacientesPorId.has(falta.pacienteId) && falta.inicioEm.getTime() > Date.now() - 90 * 24 * 60 * 60 * 1000) {
+      if (falta.status === 'falta' && falta.tenantId === tenantId && falta.profissionalId === contexto.id && pacientesPorId.has(falta.pacienteId) && falta.inicioEm.getTime() > Date.now() - 90 * 24 * 60 * 60 * 1000) {
         faltasPorPaciente.set(falta.pacienteId, (faltasPorPaciente.get(falta.pacienteId) ?? 0) + 1);
       }
     }
     const semRetorno = this.montarSemRetorno(pacientes, ultimaConcluidaPorPaciente, contexto.id, faltasPorPaciente);
     const pendenciasReagendamento = dados.faltasRecentes
-      .filter((falta) => falta.tenantId === tenantId && falta.profissionalId === contexto.id && pacientesPorId.has(falta.pacienteId))
+      .filter((falta) => falta.status === 'falta' && falta.tenantId === tenantId && falta.profissionalId === contexto.id && pacientesPorId.has(falta.pacienteId))
       .map((falta) => ({ falta, decisao: lerReagendamentoAposFalta(falta.payload) }))
       .filter((item): item is { falta: AgendaConsultaOrm; decisao: NonNullable<typeof item.decisao> } => Boolean(item.decisao))
       .map((item): PendenciaReagendamentoDashboardClinicoDto => ({
