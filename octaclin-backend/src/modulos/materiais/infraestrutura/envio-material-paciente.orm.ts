@@ -31,6 +31,9 @@ export class EnvioMaterialPacienteOrm {
   @Column({ name: 'visualizado_em', type: 'timestamptz', nullable: true })
   visualizadoEm?: Date;
 
+  @Column({ name: 'proximo_lembrete_em', type: 'timestamptz', nullable: true })
+  proximoLembreteEm?: Date;
+
   @CreateDateColumn({ name: 'criado_em', type: 'timestamptz' })
   criadoEm: Date;
 

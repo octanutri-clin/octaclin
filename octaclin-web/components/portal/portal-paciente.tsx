@@ -1084,6 +1084,11 @@ export function PortalPaciente({ secao }: { secao: SecaoPortal }) {
                             Consultar plano alimentar
                           </Link>
                         ) : null}
+                        {notificacao.evento === 'material_nao_visualizado_portal' ? (
+                          <Link href="/portal" className="mt-3 inline-flex text-sm font-medium text-primario underline">
+                            Acessar materiais no portal
+                          </Link>
+                        ) : null}
                         <dl className="mt-3 grid gap-2 text-xs text-texto-suave sm:grid-cols-2">
                           <div>
                             <dt className="font-medium text-texto-forte">Criada em</dt>

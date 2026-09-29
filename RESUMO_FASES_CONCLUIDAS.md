@@ -5,12 +5,14 @@
 - Fase 288 integrada pelo PR #324 (merge `8fc2ffe`): revisão paginada de
   respostas, leitura antes da conclusão e síntese factual sem IA. O gate
   `Provenance do SBOM` ficou `SKIPPED`; não há evidência de execução em produção.
-- Fase 289 está implementada nesta branch; PR #343 aberto, com checks remotos
-  pendentes no snapshot inicial:
-  aviso cifrado no portal ao publicar o plano e envio externo via outbox,
-  limitado a um canal permitido e às preferências do paciente. Sem migration
-  ou execução em ambiente externo. Plano em
+- Fase 289 integrada pelo PR #343 (merge `81247c7`): aviso cifrado no portal ao
+  publicar o plano e envio externo via outbox, limitado a um canal permitido e
+  às preferências do paciente. Checks aplicáveis `SUCCESS`; `Provenance do SBOM`
+  `SKIPPED`. Sem migration ou execução em ambiente externo. Plano em
   `docs/history/phases/PLANO_FASE_289.md`.
+- Fase 290 em implementação na branch `feat/fase290-lembrete-material`:
+  lembretes de materiais não visualizados a cada 72 horas, sem alcance
+  retroativo. Plano em `docs/history/phases/PLANO_FASE_290.md`.
 
 ## Reconciliacao de produto em 2026-09-27
 

@@ -68,12 +68,16 @@ Atualizado em 2026-09-28.
   leitura individual e síntese factual sem IA para revisão de respostas.
   `Provenance do SBOM` ficou `SKIPPED`; os demais checks do PR passaram.
   Plano em `docs/history/phases/PLANO_FASE_288.md`.
-- Fase 289 implementada nesta branch: aviso cifrado no portal na transação de
-  publicação e despacho externo idempotente via outbox, sujeito a preferências,
-  janela e aprovação de template WhatsApp. PR #343 aberto; checks remotos
-  pendentes no snapshot inicial; nenhuma
+- Fase 289 concluida no codigo e integrada pelo PR #343 (merge `81247c7`): aviso cifrado no portal na
+  transação de publicação e despacho externo idempotente via outbox, sujeito a
+  preferências, janela e aprovação de template WhatsApp. Os checks aplicáveis
+  terminaram em `SUCCESS`; `Provenance do SBOM` ficou `SKIPPED`. Nenhuma
   execução em ambiente externo foi realizada. Plano em
   `docs/history/phases/PLANO_FASE_289.md`.
+- Fase 290 em implementação nesta branch: lembrete de material após 72 horas,
+  recorrente até a visualização, com agenda tenant-aware e migration aditiva
+  sem backfill. Não houve aplicação em staging ou produção. Plano em
+  `docs/history/phases/PLANO_FASE_290.md`.
 - A reconciliação integral da auditoria e a sequência proposta para todas as
   recomendações ainda pendentes estão em
   `docs/product/OCTACLIN_PRODUCT_FEATURE_AUDIT.md`, seção 15. Estados de PB

@@ -9,6 +9,7 @@ import { resolverProfissionalIdDoUsuario } from '../../../infraestrutura/seguran
 import { UsuarioAutenticado } from '../../auth/dominio/usuario-autenticado';
 import { PacienteOrm } from '../../pacientes/infraestrutura/paciente.orm';
 import { PlanoAlimentarOrm } from '../../planos-alimentares/infraestrutura/plano-alimentar.orm';
+import { EnvioMaterialPacienteOrm } from '../../materiais/infraestrutura/envio-material-paciente.orm';
 import {
   AssociarContatoWhatsappDto,
   CriarCanalNotificacaoDto,
@@ -37,6 +38,7 @@ export const FILA_NOTIFICACOES = 'notificacoes';
 
 const CONSTRAINT_IDEMPOTENCIA_MENSAGEM = 'uq_mensagens_notificacao_tenant_chave_idempotencia';
 export const EVENTO_TEMPLATE_AUTOMACAO = 'automacao.regra.template';
+const INTERVALO_MINIMO_LEMBRETE_MATERIAL_HORAS = 72;
 
 export interface EntradaMensagemAutomacao {
   pacienteId: string;
@@ -174,6 +176,91 @@ export class ServicoComunicacoes {
       if (resultado.status === 'ignorada') return;
       if (resultado.motivo !== 'canal_indisponivel' && resultado.motivo !== 'template_indisponivel' &&
           resultado.motivo !== 'contato_ausente') return;
+    }
+  }
+
+  /** Revalida a leitura antes de gravar o aviso e seleciona no maximo um canal permitido. */
+  async processarLembreteMaterialNaoVisualizado(
+    tenantId: string,
+    dados: { envioId: string; chaveIdempotencia: string }
+  ): Promise<void> {
+    const candidatos = await this.executorTenant.executar(tenantId, async (gerenciador) => {
+      const envio = await gerenciador.getRepository(EnvioMaterialPacienteOrm).findOne({
+        where: { id: dados.envioId, tenantId, status: 'enviado', visualizadoEm: IsNull() }
+      });
+      if (!envio) return [];
+
+      const paciente = await gerenciador.getRepository(PacienteOrm).findOne({
+        where: { id: envio.pacienteId, tenantId }
+      });
+      if (!paciente || paciente.arquivadoEm) return [];
+
+      const repositorioMensagens = gerenciador.getRepository(MensagemNotificacaoOrm);
+      const chavePortal = `${dados.chaveIdempotencia}:portal`;
+      const avisoExistente = await repositorioMensagens.findOne({
+        select: { id: true }, where: { tenantId, chaveIdempotencia: chavePortal }
+      });
+      if (!avisoExistente) {
+        const aviso = repositorioMensagens.create({
+          tenantId,
+          pacienteId: paciente.id,
+          canalId: undefined,
+          templateId: undefined,
+          status: 'enviado',
+          categoria: 'administrativo',
+          chaveIdempotencia: chavePortal,
+          payload: {}
+        } as Partial<MensagemNotificacaoOrm>);
+        aplicarConteudoMensagem(aviso, {
+          canal: 'portal',
+          evento: 'material_nao_visualizado_portal',
+          assunto: 'Material disponível no portal',
+          texto: 'Um material educativo enviado pela equipe continua disponível no portal. Acesse a seção Materiais para consultá-lo. Se já o visualizou, você pode desconsiderar este aviso.'
+        }, this.criptografia);
+        await repositorioMensagens.save(aviso);
+      }
+
+      await instalarTemplatesIniciaisNoTenant(gerenciador, tenantId);
+      let preferencias;
+      try {
+        preferencias = paciente.contatoCriptografado
+          ? interpretarPreferenciasComunicacao(this.criptografia.descriptografar(paciente.contatoCriptografado))
+          : preferenciasComunicacaoPadrao();
+      } catch {
+        return [];
+      }
+      const tipos: Array<'email' | 'whatsapp'> = preferencias.canalPreferido === 'email'
+        ? ['email']
+        : preferencias.canalPreferido === 'whatsapp'
+          ? ['whatsapp']
+          : ['email', 'whatsapp'];
+      const [canais, templates] = await Promise.all([
+        gerenciador.getRepository(CanalNotificacaoOrm).find({ where: { tenantId, ativo: true } }),
+        gerenciador.getRepository(TemplateMensagemOrm).find({ where: { tenantId } })
+      ]);
+      return tipos.flatMap((tipo) => {
+        if (!canalAutorizado(preferencias, tipo) || !preferencias.contatos[tipo]) return [];
+        const canal = canais.find((item) => item.tipo === tipo);
+        const codigo = tipo === 'email'
+          ? 'octaclin_inicial_material_nao_visualizado'
+          : 'octaclin_material_nao_visualizado';
+        const template = templates.find((item) => item.canal === tipo && item.codigoExterno === codigo);
+        if (!canal || !template || (tipo === 'whatsapp' && !template.aprovado)) return [];
+        return [{ pacienteId: paciente.id, canal, template }];
+      });
+    });
+
+    for (const { pacienteId, canal, template } of candidatos) {
+      const resultado = await this.enfileirarMensagemAutomacao(tenantId, {
+        pacienteId,
+        canalId: canal.id,
+        templateId: template.id,
+        intervaloMinimoHoras: INTERVALO_MINIMO_LEMBRETE_MATERIAL_HORAS,
+        chaveIdempotencia: `${dados.chaveIdempotencia}:${canal.tipo}`
+      });
+      if (resultado.status === 'enfileirada' || resultado.status === 'ignorada') return;
+      if (resultado.motivo !== 'canal_indisponivel' && resultado.motivo !== 'template_indisponivel' &&
+          resultado.motivo !== 'contato_ausente' && resultado.motivo !== 'paciente_indisponivel') return;
     }
   }
 

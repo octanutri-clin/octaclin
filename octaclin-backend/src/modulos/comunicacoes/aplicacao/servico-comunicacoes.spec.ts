@@ -9,6 +9,7 @@ import { CanalNotificacaoOrm } from '../infraestrutura/canal-notificacao.orm';
 import { MensagemNotificacaoOrm } from '../infraestrutura/mensagem-notificacao.orm';
 import { TemplateMensagemOrm } from '../infraestrutura/template-mensagem.orm';
 import { PlanoAlimentarOrm } from '../../planos-alimentares/infraestrutura/plano-alimentar.orm';
+import { EnvioMaterialPacienteOrm } from '../../materiais/infraestrutura/envio-material-paciente.orm';
 
 const usuarioColaborador: UsuarioAutenticado = {
   usuarioId: 'usuario-colaborador-1',
@@ -36,12 +37,22 @@ function criarRepositorioFake(nome: string, dados: Record<string, unknown>) {
       if (nome === 'canal') return dados.canais ?? (dados.canal ? [dados.canal] : []);
       if (nome === 'template') return dados.templates ?? (dados.template ? [dados.template] : []);
       if (nome === 'plano') return dados.plano ? [dados.plano] : [];
+      if (nome === 'envio') return dados.envio ? [dados.envio] : [];
       return [];
     }),
     findOne: jest.fn(async (consulta: { where: Record<string, unknown> }) => {
       if (nome === 'canal') return dados.canal ?? (dados.canais as Record<string, unknown>[] | undefined)?.find((item) => item.id === consulta.where.id) ?? null;
       if (nome === 'template') return dados.template ?? (dados.templates as Record<string, unknown>[] | undefined)?.find((item) => item.id === consulta.where.id) ?? null;
       if (nome === 'plano') return dados.plano ?? null;
+      if (nome === 'envio') {
+        const envio = dados.envio as Record<string, unknown> | undefined;
+        if (!envio) return null;
+        if (consulta.where.id && consulta.where.id !== envio.id) return null;
+        if (consulta.where.tenantId && consulta.where.tenantId !== envio.tenantId) return null;
+        if (consulta.where.status && consulta.where.status !== envio.status) return null;
+        if ('visualizadoEm' in consulta.where && envio.visualizadoEm != null) return null;
+        return envio;
+      }
       if (nome === 'paciente') {
         const paciente = dados.paciente as Record<string, unknown> | undefined;
         if (!paciente) return null;
@@ -61,6 +72,7 @@ function criarServico(dados: Record<string, unknown>) {
     canal: criarRepositorioFake('canal', dados),
     template: criarRepositorioFake('template', dados),
     plano: criarRepositorioFake('plano', dados),
+    envio: criarRepositorioFake('envio', dados),
     mensagem: criarRepositorioFake('mensagem', dados),
     outbox: criarRepositorioFake('outbox', dados),
     paciente: criarRepositorioFake('paciente', dados),
@@ -71,6 +83,7 @@ function criarServico(dados: Record<string, unknown>) {
       if (entidade === CanalNotificacaoOrm) return repositorios.canal;
       if (entidade === TemplateMensagemOrm) return repositorios.template;
       if (entidade === PlanoAlimentarOrm) return repositorios.plano;
+      if (entidade === EnvioMaterialPacienteOrm) return repositorios.envio;
       if (entidade === MensagemNotificacaoOrm) return repositorios.mensagem;
       if (entidade === OutboxEventoOrm) return repositorios.outbox;
       if (entidade === PacienteOrm) return repositorios.paciente;
@@ -88,15 +101,18 @@ function criarServico(dados: Record<string, unknown>) {
     add: jest.fn(async () => undefined)
   };
 
-  return {
-    servico: new ServicoComunicacoes(executorTenant as never, fila as never, {
+  const criptografia = {
       criptografar: jest.fn((valor: string) => Buffer.from(`cripto:${valor}`)),
       descriptografar: jest.fn((valor: Buffer) => valor.toString('utf8').replace('cripto:', '')),
       gerarHashesBuscaPii: jest.fn(() => ['hash-busca'])
-    } as never),
+  };
+
+  return {
+    servico: new ServicoComunicacoes(executorTenant as never, fila as never, criptografia as never),
     fila,
     repositorios,
-    gerenciador
+    gerenciador,
+    criptografia
   };
 }
 
@@ -124,8 +140,8 @@ describe('ServicoComunicacoes', () => {
 
     expect(repositorios.template.find).toHaveBeenCalledWith({ where: { tenantId: 'tenant-1' } });
     expect(gerenciador.query).toHaveBeenCalledWith(expect.stringContaining('pg_advisory_xact_lock'), [expect.stringContaining('tenant-1')]);
-    expect(resultado.criados).toHaveLength(4);
-    expect(repositorios.template.save).toHaveBeenCalledTimes(4);
+    expect(resultado.criados).toHaveLength(6);
+    expect(repositorios.template.save).toHaveBeenCalledTimes(6);
     expect(repositorios.template.save).not.toHaveBeenCalledWith(expect.objectContaining({ codigoExterno: 'octaclin_inicial_boas_vindas' }));
     expect(repositorios.template.save).toHaveBeenCalledWith(expect.objectContaining({ tenantId: 'tenant-1', canal: 'email', aprovado: false }));
     expect(repositorios.template.save).toHaveBeenCalledWith(expect.objectContaining({ tenantId: 'tenant-1', canal: 'whatsapp', codigoExterno: 'octaclin_plano_publicado', aprovado: false }));
@@ -168,6 +184,132 @@ describe('ServicoComunicacoes', () => {
     });
     expect(repositorios.template.save).not.toHaveBeenCalled();
     expect(repositorios.mensagem.save).not.toHaveBeenCalled();
+  });
+
+  it('registra lembrete cifrado no portal e enfileira um canal externo permitido', async () => {
+    const { servico, repositorios } = criarServico({
+      envio: { id: 'envio-1', tenantId: 'tenant-1', pacienteId: 'paciente-1', status: 'enviado', visualizadoEm: null },
+      paciente: {
+        id: 'paciente-1', tenantId: 'tenant-1', arquivadoEm: null,
+        contatoCriptografado: Buffer.from('cripto:{"email":"paciente@example.com","preferencias":{"email":true,"whatsapp":true,"canalPreferido":"qualquer","horarioPermitido":{"inicio":"00:00","fim":"23:59","timezone":"UTC"}}}')
+      },
+      canais: [{ id: 'canal-email', tenantId: 'tenant-1', tipo: 'email', ativo: true }],
+      templates: [{ id: 'template-email', tenantId: 'tenant-1', canal: 'email', codigoExterno: 'octaclin_inicial_material_nao_visualizado', aprovado: false }]
+    });
+
+    await servico.processarLembreteMaterialNaoVisualizado('tenant-1', {
+      envioId: 'envio-1', chaveIdempotencia: 'material-nao-visualizado:envio-1:2026-10-01T00:00:00.000Z'
+    });
+
+    expect(repositorios.envio.findOne).toHaveBeenCalledWith({ where: {
+      id: 'envio-1', tenantId: 'tenant-1', status: 'enviado', visualizadoEm: expect.anything()
+    } });
+    expect(repositorios.mensagem.save).toHaveBeenCalledWith(expect.objectContaining({
+      tenantId: 'tenant-1', pacienteId: 'paciente-1', status: 'enviado',
+      chaveIdempotencia: 'material-nao-visualizado:envio-1:2026-10-01T00:00:00.000Z:portal',
+      payload: { evento: 'material_nao_visualizado_portal' }
+    }));
+    expect(repositorios.mensagem.save).toHaveBeenCalledWith(expect.objectContaining({
+      canalId: 'canal-email', templateId: 'template-email',
+      chaveIdempotencia: 'material-nao-visualizado:envio-1:2026-10-01T00:00:00.000Z:email'
+    }));
+  });
+
+  it('nao cria lembrete se o material ja foi visualizado', async () => {
+    const { servico, repositorios } = criarServico({
+      envio: { id: 'envio-1', tenantId: 'tenant-1', pacienteId: 'paciente-1', status: 'visualizado', visualizadoEm: new Date() }
+    });
+
+    await servico.processarLembreteMaterialNaoVisualizado('tenant-1', {
+      envioId: 'envio-1', chaveIdempotencia: 'material-nao-visualizado:envio-1:2026-10-01T00:00:00.000Z'
+    });
+
+    expect(repositorios.mensagem.save).not.toHaveBeenCalled();
+    expect(repositorios.template.save).not.toHaveBeenCalled();
+  });
+
+  it('nao atravessa tenant ao resolver um envio indicado pelo evento de outbox', async () => {
+    const { servico, repositorios } = criarServico({
+      envio: { id: 'envio-1', tenantId: 'tenant-2', pacienteId: 'paciente-2', status: 'enviado', visualizadoEm: null }
+    });
+
+    await servico.processarLembreteMaterialNaoVisualizado('tenant-1', {
+      envioId: 'envio-1', chaveIdempotencia: 'material-nao-visualizado:envio-1:4'
+    });
+
+    expect(repositorios.envio.findOne).toHaveBeenCalledWith({ where: {
+      id: 'envio-1', tenantId: 'tenant-1', status: 'enviado', visualizadoEm: expect.anything()
+    } });
+    expect(repositorios.mensagem.save).not.toHaveBeenCalled();
+  });
+
+  it('mantem o aviso no portal mesmo com opt-out de todos os canais externos', async () => {
+    const { servico, repositorios, criptografia } = criarServico({
+      envio: { id: 'envio-1', tenantId: 'tenant-1', pacienteId: 'paciente-1', status: 'enviado', visualizadoEm: null },
+      paciente: {
+        id: 'paciente-1', tenantId: 'tenant-1', arquivadoEm: null,
+        contatoCriptografado: Buffer.from('cripto:{"email":"paciente@example.com","whatsapp":"5511999999999","preferencias":{"email":false,"whatsapp":false,"canalPreferido":"qualquer"}}')
+      },
+      canais: [
+        { id: 'canal-email', tenantId: 'tenant-1', tipo: 'email', ativo: true },
+        { id: 'canal-whatsapp', tenantId: 'tenant-1', tipo: 'whatsapp', ativo: true }
+      ]
+    });
+
+    await servico.processarLembreteMaterialNaoVisualizado('tenant-1', {
+      envioId: 'envio-1', chaveIdempotencia: 'material-nao-visualizado:envio-1:1'
+    });
+
+    expect(repositorios.mensagem.save).toHaveBeenCalledTimes(1);
+    expect(criptografia.criptografar).toHaveBeenCalledWith(expect.stringContaining('Um material educativo'));
+    expect(criptografia.criptografar.mock.calls[0][0]).not.toContain('material-1');
+  });
+
+  it('usa o WhatsApp somente quando preferido e com template aprovado', async () => {
+    jest.useFakeTimers().setSystemTime(new Date('2026-10-01T12:00:00.000Z'));
+    try {
+      const { servico, repositorios } = criarServico({
+        envio: { id: 'envio-1', tenantId: 'tenant-1', pacienteId: 'paciente-1', status: 'enviado', visualizadoEm: null },
+        paciente: {
+          id: 'paciente-1', tenantId: 'tenant-1', arquivadoEm: null,
+          contatoCriptografado: Buffer.from('cripto:{"whatsapp":"5511999999999","preferencias":{"email":true,"whatsapp":true,"canalPreferido":"whatsapp","horarioPermitido":{"inicio":"00:00","fim":"23:59","timezone":"UTC"}}}')
+        },
+        canais: [{ id: 'canal-whatsapp', tenantId: 'tenant-1', tipo: 'whatsapp', ativo: true }],
+        templates: [{ id: 'template-whatsapp', tenantId: 'tenant-1', canal: 'whatsapp', codigoExterno: 'octaclin_material_nao_visualizado', aprovado: true }]
+      });
+
+      await servico.processarLembreteMaterialNaoVisualizado('tenant-1', {
+        envioId: 'envio-1', chaveIdempotencia: 'material-nao-visualizado:envio-1:2'
+      });
+
+      expect(repositorios.mensagem.save).toHaveBeenCalledWith(expect.objectContaining({
+        canalId: 'canal-whatsapp', templateId: 'template-whatsapp',
+        chaveIdempotencia: 'material-nao-visualizado:envio-1:2:whatsapp'
+      }));
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
+  it('nao encaminha WhatsApp quando o template ainda nao foi aprovado', async () => {
+    const { servico, repositorios } = criarServico({
+      envio: { id: 'envio-1', tenantId: 'tenant-1', pacienteId: 'paciente-1', status: 'enviado', visualizadoEm: null },
+      paciente: {
+        id: 'paciente-1', tenantId: 'tenant-1', arquivadoEm: null,
+        contatoCriptografado: Buffer.from('cripto:{"whatsapp":"5511999999999","preferencias":{"whatsapp":true,"canalPreferido":"whatsapp"}}')
+      },
+      canais: [{ id: 'canal-whatsapp', tenantId: 'tenant-1', tipo: 'whatsapp', ativo: true }],
+      templates: [{ id: 'template-whatsapp', tenantId: 'tenant-1', canal: 'whatsapp', codigoExterno: 'octaclin_material_nao_visualizado', aprovado: false }]
+    });
+
+    await servico.processarLembreteMaterialNaoVisualizado('tenant-1', {
+      envioId: 'envio-1', chaveIdempotencia: 'material-nao-visualizado:envio-1:3'
+    });
+
+    expect(repositorios.mensagem.save).toHaveBeenCalledTimes(1);
+    expect(repositorios.mensagem.save).toHaveBeenCalledWith(expect.objectContaining({
+      payload: { evento: 'material_nao_visualizado_portal' }
+    }));
   });
 
   it('edita template do tenant sem trocar o canal e recusa id de outro tenant', async () => {

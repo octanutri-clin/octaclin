@@ -56,6 +56,8 @@ describe('ServicoMateriais', () => {
     pacienteRepo.findOne.mockImplementation(async ({ where }: { where: { id: string; tenantId: string } }) => ({ id: where.id, tenantId: where.tenantId }));
     await expect(servico.enviarMaterialLote('tenant-1', usuarioColaborador.usuarioId, { materialId: 'm1', pacienteIds: ['p1', 'p2'] }, usuarioColaborador)).resolves.toEqual({ total: 2 });
     expect(salvos.map((envio) => envio.pacienteId)).toEqual(['p1', 'p2']);
+    expect(salvos.every((envio) => envio.proximoLembreteEm instanceof Date)).toBe(true);
+    expect(salvos.every((envio) => (envio.proximoLembreteEm as Date).getTime() - (envio.enviadoEm as Date).getTime() === 72 * 60 * 60 * 1000)).toBe(true);
   });
   it('deve criar material reutilizavel e enviar ao paciente no contexto do tenant', async () => {
     const materiaisSalvos: Record<string, unknown>[] = [];
@@ -142,6 +144,8 @@ describe('ServicoMateriais', () => {
     );
     expect(envios[0]).toEqual(expect.objectContaining({ titulo: 'Guia de hidratacao', observacao: 'Ler antes do retorno.' }));
     expect(enviosSalvos[0]).toEqual(expect.objectContaining({ observacaoCriptografada: Buffer.from('cripto:Ler antes do retorno.') }));
+    expect(enviosSalvos[0].proximoLembreteEm).toBeInstanceOf(Date);
+    expect((enviosSalvos[0].proximoLembreteEm as Date).getTime() - (enviosSalvos[0].enviadoEm as Date).getTime()).toBe(72 * 60 * 60 * 1000);
   });
 
   it('deve rejeitar envio de material inexistente', async () => {
