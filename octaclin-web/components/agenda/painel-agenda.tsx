@@ -24,6 +24,7 @@ import { Cartao, CartaoCabecalho, CartaoConteudo } from '@/components/ui/cartao'
 import { AreaTexto, Campo, Rotulo, Selecao } from '@/components/ui/campo';
 import { Aviso, AvisoRegiao, BarraCarregamento, EsqueletoPagina, EstadoFalha, EstadoPermissaoNegada, EstadoVazio } from '@/components/ui/feedback';
 import { Modal, ModalConfirmacao } from '@/components/ui/modal';
+import { DecisaoReagendamentoAposFalta } from '@/components/agenda/decisao-reagendamento-apos-falta';
 import { FaixaAcoes } from '@/components/ui/faixa-acoes';
 import { AgendaSemanal } from '@/components/agenda/agenda-semanal';
 import { ConfiguracaoExpediente } from '@/components/agenda/configuracao-expediente';
@@ -289,6 +290,8 @@ export function PainelAgenda() {
   const [modalCriarAberto, setModalCriarAberto] = useState(false);
   const [consultaSelecionadaId, setConsultaSelecionadaId] = useState<string | null>(null);
   const [desfechoPendente, setDesfechoPendente] = useState<{ consulta: ConsultaAgendaApi; status: DesfechoConsultaAgenda } | null>(null);
+  const [reagendamentoPendente, setReagendamentoPendente] = useState<{ consultaId: string; pacienteNome?: string } | null>(null);
+  const [podeDecidirReagendamento, setPodeDecidirReagendamento] = useState(false);
   const [rotacionarLinkPendente, setRotacionarLinkPendente] = useState(false);
   const [tiposAtendimento, setTiposAtendimento] = useState<TipoAtendimentoApi[]>([]);
   const [tipoAtendimentoParaRotacao, setTipoAtendimentoParaRotacao] = useState('');
@@ -374,7 +377,13 @@ export function PainelAgenda() {
     let ativo = true;
     void obterSessao()
       .then((sessao) => {
-        if (ativo) setPodeLerFinanceiro(Boolean(sessao?.permissoes?.includes('agenda.financeiro.ler')));
+        if (ativo) {
+          setPodeLerFinanceiro(Boolean(sessao?.permissoes?.includes('agenda.financeiro.ler')));
+          setPodeDecidirReagendamento(Boolean(
+            sessao?.permissoes?.includes('agenda.consultas.criar') &&
+            (sessao.papel === 'SuperAdmin' || sessao.papel === 'Professional')
+          ));
+        }
       })
       .catch(() => {
         if (ativo) setPodeLerFinanceiro(false);
@@ -635,15 +644,20 @@ export function PainelAgenda() {
     try {
       const atualizada = await registrarDesfechoConsulta(consulta.id, status);
       atualizarConsulta(atualizada);
+      const estadoReagendamento = (atualizada.payload.reagendamentoAposFalta as { estado?: string } | undefined)?.estado;
       setSucesso(
         status === 'cancelada'
           ? 'Consulta cancelada e horário liberado na agenda interna. Integrações processadas conforme configuração.'
+          : status === 'falta' && estadoReagendamento === 'expirado'
+            ? 'Falta registrada. O prazo para contato automático terminou; organize o reagendamento manualmente.'
+          : status === 'falta' && !podeDecidirReagendamento
+            ? 'Falta registrada. O contato para reagendamento aguarda decisão de um profissional no painel clínico.'
           : `Consulta registrada como ${rotulo}.`
       );
-      return true;
+      return atualizada;
     } catch (erroAtual) {
       setFalha(classificarFalhaInterface(erroAtual, 'Não foi possível registrar o desfecho da consulta.'));
-      return false;
+      return null;
     } finally {
       setProcessandoConsultaId(null);
     }
@@ -1695,9 +1709,24 @@ export function PainelAgenda() {
         aoCancelar={() => setDesfechoPendente(null)}
         aoConfirmar={() => {
           if (!desfechoPendente) return;
-          void registrarDesfecho(desfechoPendente.consulta, desfechoPendente.status).then((concluida) => {
-            if (concluida) setDesfechoPendente(null);
+          void registrarDesfecho(desfechoPendente.consulta, desfechoPendente.status).then((atualizada) => {
+            if (atualizada) {
+              setDesfechoPendente(null);
+              const estadoReagendamento = (atualizada.payload.reagendamentoAposFalta as { estado?: string } | undefined)?.estado;
+              if (desfechoPendente.status === 'falta' && podeDecidirReagendamento && estadoReagendamento === 'pendente') {
+                setReagendamentoPendente({ consultaId: desfechoPendente.consulta.id, pacienteNome: desfechoPendente.consulta.pacienteNome });
+              }
+            }
           });
+        }}
+      />
+      <DecisaoReagendamentoAposFalta
+        consultaId={reagendamentoPendente?.consultaId ?? null}
+        pacienteNome={reagendamentoPendente?.pacienteNome}
+        aoFechar={() => setReagendamentoPendente(null)}
+        aoConcluir={(decisao) => {
+          setReagendamentoPendente(null);
+          setSucesso(decisao === 'aprovar' ? 'Contato aprovado. O envio seguirá as preferências e a configuração da clínica.' : 'Contato reprovado. Nenhuma mensagem será enviada.');
         }}
       />
       <ModalConfirmacao

@@ -45,9 +45,20 @@ export interface ResumoDashboardClinicoApi {
     pacienteNome: string;
     nivelRisco: 'baixo' | 'medio' | 'alto';
     scoreRisco: number;
+    faltasRecentes: number;
     diasSemRetorno: number;
     faixa: '30' | '60' | '90+';
     ultimaConsultaConcluidaEm?: string;
+  }[];
+  pendenciasReagendamento: {
+    consultaId: string;
+    pacienteId: string;
+    profissionalId: string;
+    pacienteNome: string;
+    faltaEm: string;
+    faltasRecentes: number;
+    estado: 'pendente' | 'aprovado' | 'reprovado' | 'enfileirado' | 'suprimido' | 'expirado';
+    motivo?: string;
   }[];
   tarefasVencidas: {
     id: string;
@@ -147,8 +158,8 @@ export async function concluirTarefaDashboardClinico(pacienteId: string, tarefaI
 export async function registrarDesfechoDashboardClinico(
   consultaId: string,
   status: 'concluida' | 'falta' | 'cancelada'
-): Promise<void> {
-  await requisitar(`/api/dashboard/clinico/consultas/${encodeURIComponent(consultaId)}/desfecho`, {
+): Promise<{ payload: Record<string, unknown> }> {
+  return requisitar<{ payload: Record<string, unknown> }>(`/api/dashboard/clinico/consultas/${encodeURIComponent(consultaId)}/desfecho`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ status })

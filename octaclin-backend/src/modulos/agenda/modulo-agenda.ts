@@ -23,6 +23,7 @@ import { ServicoAgendamentoPublico } from './aplicacao/servico-agendamento-publi
 import { ServicoAgenda } from './aplicacao/servico-agenda';
 import { ServicoFollowupsAgenda } from './aplicacao/servico-followups-agenda';
 import { ProcessadorFollowupsAgenda } from './aplicacao/processador-followups-agenda';
+import { ProcessadorReagendamentoAposFalta } from './aplicacao/processador-reagendamento-apos-falta';
 import { ServicoExpedientes } from './aplicacao/servico-expedientes';
 import { ServicoTiposAtendimento } from './aplicacao/servico-tipos-atendimento';
 import { REDIS_OAUTH_STATE_GOOGLE, ServicoConexaoGoogleCalendar } from './aplicacao/servico-conexao-google-calendar';
@@ -44,7 +45,7 @@ import { GoogleCanalWatchOrm } from './infraestrutura/google-canal-watch.orm';
 import { ProfissionalGoogleConexaoOrm } from './infraestrutura/profissional-google-conexao.orm';
 
 const processadores = deveExecutarProcessadores()
-  ? [ProcessadorSincronizacaoGoogleCalendar, ProcessadorRenovacaoGoogleCalendar, ProcessadorFollowupsAgenda]
+  ? [ProcessadorSincronizacaoGoogleCalendar, ProcessadorRenovacaoGoogleCalendar, ProcessadorFollowupsAgenda, ProcessadorReagendamentoAposFalta]
   : [];
 
 @Module({

@@ -1,6 +1,6 @@
 # OctaClin - Checklist vivo de fases futuras ate producao
 
-Atualizado em 2026-09-29. Fase 290 integrada pelo PR #344 (merge `dd70ca2`); os checks aplicáveis passaram e `Provenance do SBOM` ficou `SKIPPED`. Fase 291 está em desenvolvimento. Fases 256 a 261, 263 a 290 integradas; Fase 284
+Atualizado em 2026-09-29. Fase 291 integrada pelo PR #345 (merge `78da9188`); checks aplicáveis passaram e `Provenance do SBOM` ficou `SKIPPED`. Fase 292 está em desenvolvimento. Fases 256 a 261, 263 a 291 integradas; Fase 284
 (PB-22) foi integrada pelo PR #320 (merge `af839c5`, 19 checks `SUCCESS` e
 `Provenance do SBOM` `SKIPPED`). Fase 285 (PB-20) foi integrada pelo PR #321
 (merge `01d6bf1`). Fase 286 concluida pelo PR #322 (merge `c92f246`). A reconciliação completa do backlog da auditoria e a
@@ -4416,16 +4416,25 @@ auditoria estão ordenados na seção 15 de
 - [x] Fase 290 - lembrar materiais educativos não visualizados após 72 horas e
   repetir a cada 72 horas até a leitura, sem alcançar envios anteriores à
   ativação. Integrada pelo PR #344 (merge `dd70ca2`); migration aditiva 1056
-  sem backfill e sem evidência de aplicação em staging ou produção. Plano em
+  sem backfill. O proprietário relatou aplicação em staging e produção; sem
+  prova direta nesta reconciliação. Plano em
   `docs/history/phases/PLANO_FASE_290.md`.
-- [~] Fase 291 - calendário configurável de até 30 follow-ups por consulta,
+- [x] Fase 291 - calendário configurável de até 30 follow-ups por consulta,
   com padrão por clínica, ajuste por consulta, cadências mensal/quinzenal/
   semanal/diária e horários relativos em dias/horas/minutos. O lembrete de 24h
-  passa ao calendário no cutover por tenant. Código e migration aditiva 1057
-  nesta branch; aplicação externa, prova de RLS e checks do PR pendentes.
-  Próximo incremento sugerido: reagendamento proativo após falta, seguido de
-  alerta de conduta vencendo e retorno para pacientes sem consulta futura.
+  passa ao calendário no cutover por tenant. Integrada pelo PR #345 (merge
+  `78da9188`); checks aplicáveis passaram, com `Provenance do SBOM` `SKIPPED`.
+  O proprietário relata aplicação das migrations em staging e produção e
+  funcionamento após rebuild no Render; sem prova direta nesta reconciliação.
   Escopo e gates em `docs/history/phases/PLANO_FASE_291.md`.
+- [~] Fase 292 - reagendamento proativo após falta: decisão humana em modal
+  na agenda e no painel; uma mensagem em canal autorizado após aprovação,
+  dentro da janela do paciente e até 7 dias do término da consulta perdida. A fila permanece
+  disponível após fechar o modal. Faltas em 90 dias aparecem como indicador
+  factual e ordenam a fila sem sobrescrever `score_risco`. Sem migration nova.
+  Branch `feat/fase292-reagendamento`; PR, checks e deploy pendentes.
+  Próximo incremento proposto: alerta de conduta vencendo, seguido de sugestão
+  de retorno sem consulta futura. Plano em `docs/history/phases/PLANO_FASE_292.md`.
 
 O programa de hardening
 PR 36-56 permanece como trilha separada --

@@ -71,9 +71,22 @@ export interface SemRetornoDashboardClinicoDto {
   pacienteNome: string;
   nivelRisco: NivelRiscoDashboard;
   scoreRisco: number;
+  /** Sinal factual, separado do score manual. */
+  faltasRecentes: number;
   diasSemRetorno: number;
   faixa: FaixaSemRetorno;
   ultimaConsultaConcluidaEm?: Date;
+}
+
+export interface PendenciaReagendamentoDashboardClinicoDto {
+  consultaId: string;
+  pacienteId: string;
+  profissionalId: string;
+  pacienteNome: string;
+  faltaEm: Date;
+  faltasRecentes: number;
+  estado: 'pendente' | 'aprovado' | 'reprovado' | 'enfileirado' | 'suprimido' | 'expirado';
+  motivo?: string;
 }
 
 export interface TarefaVencidaDashboardClinicoDto {
@@ -128,6 +141,7 @@ export interface ResumoDashboardClinicoDto {
   indicadores: IndicadoresDashboardClinicoDto;
   atendimentos: AtendimentoDashboardClinicoDto[];
   semRetorno: SemRetornoDashboardClinicoDto[];
+  pendenciasReagendamento: PendenciaReagendamentoDashboardClinicoDto[];
   tarefasVencidas: TarefaVencidaDashboardClinicoDto[];
   formulariosPendentes: FormularioPendenteDashboardClinicoDto[];
   solicitacoesPendentes: SolicitacaoPendenteDashboardClinicoDto[];

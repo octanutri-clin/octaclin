@@ -333,6 +333,16 @@ export interface CancelarConsultaAgendaEntrada {
 
 export type DesfechoConsultaAgenda = 'concluida' | 'falta' | 'cancelada';
 
+export async function decidirReagendamentoAposFalta(
+  consultaId: string,
+  decisao: 'aprovar' | 'reprovar'
+): Promise<{ estado: string }> {
+  return requisitar<{ estado: string }>(
+    `/api/agenda/consultas/${encodeURIComponent(consultaId)}/reagendamento-apos-falta/decisao`,
+    { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ decisao }) }
+  );
+}
+
 export interface BootstrapAgenda {
   consultas: ConsultaAgendaApi[];
   pacientes: RespostaPaginada<PacienteResumo>;
