@@ -70,7 +70,8 @@ Atualizado em 2026-09-28.
   Plano em `docs/history/phases/PLANO_FASE_288.md`.
 - Fase 289 implementada nesta branch: aviso cifrado no portal na transação de
   publicação e despacho externo idempotente via outbox, sujeito a preferências,
-  janela e aprovação de template WhatsApp. PR e CI ainda pendentes; nenhuma
+  janela e aprovação de template WhatsApp. PR #343 aberto; checks remotos
+  pendentes no snapshot inicial; nenhuma
   execução em ambiente externo foi realizada. Plano em
   `docs/history/phases/PLANO_FASE_289.md`.
 - A reconciliação integral da auditoria e a sequência proposta para todas as

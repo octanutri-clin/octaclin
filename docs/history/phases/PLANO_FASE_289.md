@@ -82,8 +82,8 @@ Rollback remove o evento/integração de comunicação e mantém o plano publica
 - PASS — Web `typecheck`, `build` e lint sem erros; lint geral apresentou 62 avisos no projeto. Build reportou avisos do Edge Runtime e da convenção `middleware`.
 - PASS — Playwright `portal-paciente.spec.mjs --grep "aviso de plano publicado"`: desktop Chromium e mobile Chromium.
 - PASS — `git diff --check` e `pnpm security:secrets`; nenhum segredo real encontrado pelos padrões locais.
-- PENDENTE — revisão final e publicação do PR.
+- PASS — revisão final e PR #343 aberto em `feat/fase289-notificar-plano`.
 - SKIPPED — revisão independente de tenancy: o agente `tenant-security-reviewer` não está disponível neste ambiente; provas locais de isolamento e revisão interna foram feitas.
-- PENDENTE — CI remoto; registrar resultado após abrir o PR, sem inferir PASS de execução local.
+- PENDENTE — checks remotos no snapshot inicial; sem monitoramento contínuo. Não inferir PASS de execução local.
 - NA — migrations/backfill/ambiente externo: nenhuma alteração de schema ou execução fora da worktree.
 - Risco residual: entrega por provider e eventual leitura do paciente dependem da configuração autorizada do canal e do template; não há prova de envio real nesta fase. WhatsApp permanece bloqueado até template aprovado.

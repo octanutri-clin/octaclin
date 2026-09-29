@@ -1,6 +1,6 @@
 # OctaClin - Checklist vivo de fases futuras ate producao
 
-Atualizado em 2026-09-28. Fase 288 integrada pelo PR #324 (merge `8fc2ffe`); Fase 289 implementada nesta branch, aguardando PR e CI. Fases 256 a 261, 263 a 288 integradas; Fase 284
+Atualizado em 2026-09-28. Fase 288 integrada pelo PR #324 (merge `8fc2ffe`); Fase 289 no PR #343, com checks remotos pendentes no snapshot inicial. Fases 256 a 261, 263 a 288 integradas; Fase 284
 (PB-22) foi integrada pelo PR #320 (merge `af839c5`, 19 checks `SUCCESS` e
 `Provenance do SBOM` `SKIPPED`). Fase 285 (PB-20) foi integrada pelo PR #321
 (merge `01d6bf1`). Fase 286 concluida pelo PR #322 (merge `c92f246`). A reconciliação completa do backlog da auditoria e a
@@ -4410,7 +4410,8 @@ auditoria estão ordenados na seção 15 de
   Plano em `docs/history/phases/PLANO_FASE_288.md`.
 - [~] Fase 289 - avisar o paciente no portal ao publicar um plano alimentar e
   encaminhar por um único canal externo permitido quando aplicável. Implementada
-  nesta branch; PR/CI pendentes, sem execução externa. Plano em
+  nesta branch; PR #343 aberto, checks remotos pendentes no snapshot inicial,
+  sem execução externa. Plano em
   `docs/history/phases/PLANO_FASE_289.md`.
 
 O programa de hardening

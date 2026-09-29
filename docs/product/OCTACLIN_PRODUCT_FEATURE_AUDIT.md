@@ -408,7 +408,7 @@ Ordenadas por "o dado já existe" → "o efeito não existe".
 | Falta registrada | Registrada no desfecho | Reagendamento proativo; contagem no score de risco |
 | Conduta vencendo | Data gravada, sem consumidor | Alerta de revisão |
 | Próxima revisão do perfil (`proximaRevisaoEm`) | Tarefa automática integrada na Fase 287, PR #323; reconciliação histórica opt-in sem evidência de execução externa | Confirmar backfill por tenant em ambiente autorizado |
-| Plano publicado | Fase 289 registra aviso cifrado no portal na transação de publicação; outbox encaminha, no máximo, um canal externo consentido, respeitando horário e aprovação de template | Acompanhar PR/CI da Fase 289; confirmar depois se pacientes veem o aviso e se a clínica configura os canais |
+| Plano publicado | Fase 289 registra aviso cifrado no portal na transação de publicação; outbox encaminha, no máximo, um canal externo consentido, respeitando horário e aprovação de template (PR #343 aberto) | Aguardar checks do PR #343; confirmar depois se pacientes veem o aviso e se a clínica configura os canais |
 | Material enviado e não visualizado | Não há registro de visualização | Lembrete após N dias |
 | Paciente sem consulta futura | Existe fila no dashboard | Sugestão de reagendamento em lote |
 
@@ -609,7 +609,7 @@ de esgotar a versão determinística de cada um.
 
 ### Estado do backlog verificado em 2026-09-28
 
-Os estados abaixo foram cruzados com PRs merged e, para itens sem PR identificável, com o código. PRs #319 a #324 foram integrados; a Fase 289 está implementada nesta branch, ainda sem PR/CI. Merge comprova a entrega de código, não a aplicação de migrations ou backfills em ambientes externos.
+Os estados abaixo foram cruzados com PRs merged e, para itens sem PR identificável, com o código. PRs #319 a #324 foram integrados; a Fase 289 está no PR #343 aberto, com checks remotos pendentes no snapshot inicial. Merge comprova a entrega de código, não a aplicação de migrations ou backfills em ambientes externos.
 
 | PB | Estado e evidência |
 |---|---|
@@ -637,7 +637,7 @@ Os estados abaixo foram cruzados com PRs merged e, para itens sem PR identificá
 | PB-29 | **Concluído no código** — Fase 283, PR #319 integrado (merge `19ade15` em 2026-09-27). Não há evidência de produção nesta reconciliação. |
 | PB-30 | **Pendente** — extração assistida de exames não foi encontrada; PB-17 entrega a estrutura determinística e é dependência já concluída. |
 
-PB-28 e PB-30 não têm ordem aprovada na tabela original. PB-20 e Fase 286 foram integrados; as Fases 287 e 288 também estão integradas (PRs #323 e #324). O backfill histórico da Fase 287 segue sem evidência de execução externa. A Fase 289 está implementada nesta branch e aguarda PR/CI. A proposta de sequência inclui também as recomendações das seções 3–14 que não se esgotam nesses PBs.
+PB-28 e PB-30 não têm ordem aprovada na tabela original. PB-20 e Fase 286 foram integrados; as Fases 287 e 288 também estão integradas (PRs #323 e #324). O backfill histórico da Fase 287 segue sem evidência de execução externa. A Fase 289 está no PR #343, com checks remotos pendentes no snapshot inicial. A proposta de sequência inclui também as recomendações das seções 3–14 que não se esgotam nesses PBs.
 
 ---
 
@@ -819,7 +819,7 @@ produto devem ter esse gate resolvido no plano da respectiva fase.
 5. **Automatizações residuais da seção 7**, em incrementos pequenos: tarefa na próxima revisão de perfil
    (Fase 287 integrada, com reconciliação histórica fora de banda pendente de evidência);
    revisão de resposta de formulário (Fase 288 integrada pelo PR #324); aviso de plano publicado
-   (Fase 289 implementada nesta branch, PR/CI pendentes); lembrar material não visualizado;
+   (Fase 289 no PR #343, checks pendentes); lembrar material não visualizado;
    acompanhar consultas não confirmadas e faltas; sugerir retorno quando não houver consulta futura.
    Preservar preferências, idempotência, outbox e autorização por tenant.
    Após a Fase 289, o próximo incremento desta fila pode ser o lembrete de material não visualizado;

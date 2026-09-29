@@ -5,7 +5,8 @@
 - Fase 288 integrada pelo PR #324 (merge `8fc2ffe`): revisão paginada de
   respostas, leitura antes da conclusão e síntese factual sem IA. O gate
   `Provenance do SBOM` ficou `SKIPPED`; não há evidência de execução em produção.
-- Fase 289 está implementada nesta branch e aguarda abertura do PR e CI:
+- Fase 289 está implementada nesta branch; PR #343 aberto, com checks remotos
+  pendentes no snapshot inicial:
   aviso cifrado no portal ao publicar o plano e envio externo via outbox,
   limitado a um canal permitido e às preferências do paciente. Sem migration
   ou execução em ambiente externo. Plano em
