@@ -31,7 +31,8 @@ describe('ControladorAgenda', () => {
       {} as ServicoAgendamentoPublico,
       {} as ServicoExpedientes,
       {} as ServicoTiposAtendimento,
-      { registrar } as unknown as ServicoAuditoria
+      { registrar } as unknown as ServicoAuditoria,
+      {} as never
     );
     const requisicao = {
       header: jest.fn().mockReturnValue('dashboard_clinico'),
@@ -117,5 +118,12 @@ describe('ControladorAgenda', () => {
     expect(registrar).toHaveBeenCalledWith(
       expect.objectContaining({ metadados: { possuiMotivo: false, googleEventId: 'evt-1' } })
     );
+  });
+
+  it('exige permissao privilegiada para alterar o calendario padrao e a excecao', () => {
+    for (const metodo of [ControladorAgenda.prototype.salvarCalendarioPadrao, ControladorAgenda.prototype.salvarCalendarioConsulta, ControladorAgenda.prototype.removerCalendarioConsulta]) {
+      expect(Reflect.getMetadata(CHAVE_PAPEIS, metodo)).toEqual(['SuperAdmin', 'Professional']);
+      expect(Reflect.getMetadata(CHAVE_PERMISSOES, metodo)).toEqual(['automacoes.gerenciar']);
+    }
   });
 });

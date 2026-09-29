@@ -1,9 +1,10 @@
 import { Injectable } from '@nestjs/common';
-import { Between } from 'typeorm';
+import { Between, IsNull } from 'typeorm';
 import { ExecutorTenant } from '../../../infraestrutura/banco-dados/executor-tenant';
 import { CriptografiaDadosSensiveis } from '../../../infraestrutura/seguranca/criptografia-dados-sensiveis';
 import { normalizarLinkTeleconsulta, normalizarModalidadeConsulta } from '../../agenda/dominio/teleconsulta';
 import { AgendaConsultaOrm } from '../../agenda/infraestrutura/agenda-consulta.orm';
+import { PoliticaFollowupAgendaOrm } from '../../agenda/infraestrutura/politica-followup-agenda.orm';
 import { ServicoComunicacoes } from '../../comunicacoes/aplicacao/servico-comunicacoes';
 import {
   PreferenciasComunicacaoPaciente,
@@ -42,6 +43,10 @@ export class ServicoLembretesAgenda {
   ) {}
 
   async processarLembretesConsulta(tenantId: string, agora = new Date()): Promise<ResultadoProcessamentoLembretes> {
+    const novoCalendario = await this.executorTenant.executar(tenantId, (gerenciador) =>
+      gerenciador.getRepository(PoliticaFollowupAgendaOrm).findOne({ where: { tenantId, consultaId: IsNull() }, select: { id: true } })
+    );
+    if (novoCalendario) return { consultasAvaliadas: 0, lembretesProcessados: 0, lembretesIgnorados: 0 };
     const consultas = await this.buscarConsultasParaLembrete(tenantId, agora);
     const [canais, templates] = await Promise.all([
       this.comunicacoes.listarCanais(tenantId),
@@ -67,8 +72,14 @@ export class ServicoLembretesAgenda {
         email = { status: 'ignorado', motivo };
         whatsapp = { status: 'ignorado', motivo };
       } else {
-        email = await this.enviarLembrete(tenantId, 'email', consulta, canais, templates, preferencias);
-        whatsapp = await this.enviarLembrete(tenantId, 'whatsapp', consulta, canais, templates, preferencias);
+        email = { status: 'ignorado', motivo: 'outro_canal_selecionado' };
+        whatsapp = { status: 'ignorado', motivo: 'outro_canal_selecionado' };
+        if (preferencias.canalPreferido !== 'whatsapp') {
+          email = await this.enviarLembrete(tenantId, 'email', consulta, canais, templates, preferencias);
+        }
+        if (email.status === 'ignorado' && preferencias.canalPreferido !== 'email') {
+          whatsapp = await this.enviarLembrete(tenantId, 'whatsapp', consulta, canais, templates, preferencias);
+        }
       }
 
       const status = email.status !== 'ignorado' || whatsapp.status !== 'ignorado' ? 'processado' : 'ignorado';
@@ -143,6 +154,7 @@ export class ServicoLembretesAgenda {
         pacienteId: consulta.pacienteId,
         canalId: canal.id,
         templateId: template.id,
+        chaveIdempotencia: `agenda-followup:${consulta.id}:${consulta.inicioEm.getTime()}:${consulta.inicioEm.getTime() - 86400000}`,
         payload: this.montarPayload(tipo, template, consulta, destino)
       });
       await this.comunicacoes.publicarEventoNotificacao(tenantId, mensagem.id);

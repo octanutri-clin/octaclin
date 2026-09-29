@@ -27,6 +27,39 @@ export interface NotificacoesConsultaAgenda {
   googleCalendar?: ResultadoGoogleCalendar;
 }
 
+export class EtapaFollowupAgendaDto {
+  @IsIn(['mes', 'quinzena', 'semana', 'dia', 'hora', 'minuto'])
+  unidade: 'mes' | 'quinzena' | 'semana' | 'dia' | 'hora' | 'minuto';
+
+  @IsInt() @Min(1) @Max(365)
+  valor: number;
+
+  @IsIn(['sempre', 'somente_se_nao_confirmada'])
+  condicao: 'sempre' | 'somente_se_nao_confirmada';
+
+  @IsOptional() @Matches(/^([01]\d|2[0-3]):[0-5]\d$/)
+  horarioLocal?: string;
+}
+
+export class SalvarPoliticaFollowupAgendaDto {
+  @IsBoolean()
+  ativo: boolean;
+
+  @IsArray() @ArrayMaxSize(30) @ValidateNested({ each: true }) @Type(() => EtapaFollowupAgendaDto)
+  etapas: EtapaFollowupAgendaDto[];
+}
+
+export class PreviaFollowupAgendaDto {
+  @IsDateString()
+  inicioEm: string;
+
+  @IsString() @MaxLength(80)
+  timezone: string;
+
+  @IsArray() @ArrayMaxSize(30) @ValidateNested({ each: true }) @Type(() => EtapaFollowupAgendaDto)
+  etapas: EtapaFollowupAgendaDto[];
+}
+
 export class CriarConsultaAgendaDto {
   @IsUUID()
   pacienteId: string;

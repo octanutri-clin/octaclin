@@ -1,6 +1,6 @@
 # OctaClin - Status atual do projeto
 
-Atualizado em 2026-09-28.
+Atualizado em 2026-09-29.
 
 ## Remediacao ativa de supply chain
 
@@ -74,10 +74,17 @@ Atualizado em 2026-09-28.
   terminaram em `SUCCESS`; `Provenance do SBOM` ficou `SKIPPED`. Nenhuma
   execução em ambiente externo foi realizada. Plano em
   `docs/history/phases/PLANO_FASE_289.md`.
-- Fase 290 em implementação nesta branch: lembrete de material após 72 horas,
-  recorrente até a visualização, com agenda tenant-aware e migration aditiva
-  sem backfill. Não houve aplicação em staging ou produção. Plano em
-  `docs/history/phases/PLANO_FASE_290.md`.
+- Fase 290 concluida no codigo e integrada pelo PR #344 (merge `dd70ca2`, confirmado no GitHub em
+  2026-09-29): lembrete de material após 72 horas, recorrente até a
+  visualização, sem retroatividade. Checks aplicáveis `SUCCESS` e `Provenance do
+  SBOM` `SKIPPED`. A migration 1056 não tem evidência de aplicação externa
+  nesta reconciliação. Plano em `docs/history/phases/PLANO_FASE_290.md`.
+- Fase 291 em desenvolvimento na branch `feat/fase291-followups-configuraveis`:
+  calendário de até 30 avisos por consulta, padrão da clínica e exceção por
+  consulta, com cadências e horários relativos configuráveis. Migration 1057
+  aditiva e RLS dependem de aplicação e prova fora de banda antes de ativar os
+  envios no ambiente alvo. CI e produção ainda sem evidência para esta fase.
+  Plano em `docs/history/phases/PLANO_FASE_291.md`.
 - A reconciliação integral da auditoria e a sequência proposta para todas as
   recomendações ainda pendentes estão em
   `docs/product/OCTACLIN_PRODUCT_FEATURE_AUDIT.md`, seção 15. Estados de PB

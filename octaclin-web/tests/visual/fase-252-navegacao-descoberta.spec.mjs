@@ -49,6 +49,10 @@ async function prepararSessao(page, papel) {
   }));
   await page.route('**/api/notificacoes**', (route) => responderJson(route, { naoLidas: 0, itens: [] }));
   await page.route('**/api/agenda/consultas', (route) => responderJson(route, []));
+  await page.route('**/api/agenda/followups/padrao', (route) => responderJson(route, {
+    ativo: false, etapas: [{ unidade: 'hora', valor: 24, condicao: 'sempre' }],
+    versao: 0, configurado: false, consultasHerdando: 0
+  }));
   await page.route('**/api/agenda/feed?**', (route) => responderJson(route, []));
   await page.route('**/api/agenda/solicitacoes**', (route) => responderJson(route, { itens: [], total: 0 }));
   await page.route('**/api/agenda/google/status', (route) => responderJson(route, { conectado: false }));

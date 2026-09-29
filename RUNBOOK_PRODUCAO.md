@@ -362,6 +362,51 @@ bancos. Se o `migration:show` da integracao listar qualquer coisa alem da
 migration da vez, parar e reconciliar primeiro: ensaiar sobre um schema
 diferente do de producao nao prova o que o ensaio diz provar.
 
+### Calendário de follow-ups de consulta (Fase 291, migration 1057)
+
+A migration `1720000001057-CriarCalendarioFollowupsAgenda` adiciona políticas
+e ocorrências com RLS forçada, vínculo composto com a consulta do mesmo tenant
+e colunas de reivindicação de outbox/mensagem. Ela não cria política ativa,
+não envia lembretes e não faz backfill. O lembrete legado de 24 horas continua
+até a primeira política ser salva para o tenant. A partir desse cutover, a
+presença da política desliga o caminho legado; política `ativo=false` pausa
+todos os follow-ups desse tenant.
+
+1. Identificar projeto, ambiente, branch, banco e role owner **na mesma sessão**
+   da conexão alvo; confirmar backup/branch de recuperação. Não usar a role
+   runtime para DDL. Manter `BANCO_EXECUTAR_MIGRACOES=false` no serviço.
+2. Com `DATABASE_URL` da role owner somente na sessão local, executar
+   `pnpm --dir octaclin-backend run typeorm -- migration:show`. Parar se houver
+   outra pendência além da 1057, em especial a 1056 da Fase 290. Ensaiar a
+   aplicação em banco descartável com dados sintéticos e depois em staging
+   confirmado, usando `pnpm --dir octaclin-backend migration:run`. Repetir
+   `migration:show` e remover `DATABASE_URL` da sessão ao terminar.
+3. Antes do deploy do backend, verificar em `pg_class` que
+   `politicas_followup_agenda` e `ocorrencias_followup_agenda` têm
+   `relrowsecurity=true` e `relforcerowsecurity=true`; em `pg_policies`,
+   verificar `USING` e `WITH CHECK` sobre `app.tenant_id`. Conferir FK composta
+   `(tenant_id, consulta_id)`, unicidade das chaves, a coluna `politica_id`
+   nas ocorrências e os privilégios efetivos de leitura/escrita da role runtime
+   sem `CREATE`/`BYPASSRLS`. Fazer prova de isolamento com dois tenants
+   sintéticos no ambiente de ensaio; `SKIPPED` não aprova esta prova.
+4. Após deploy, manter a política ausente até a clínica conferir uma prévia,
+   avisos já enviados e saldo de 30 na consulta. Salvar o padrão por clínica
+   com usuário autorizado e MFA; começar por sequência conservadora, conferir
+   um canal externo por etapa, opt-out, janela, cancelamento, confirmação,
+   remarcação, histórico e ausência de duplicata com o marcador legado.
+5. Observar ocorrências `pendente`, `enfileirada`, `enviada`, `suprimida` e
+   `falhou`, outbox `processando` há mais de cinco minutos e mensagens com
+   entrega incerta há mais de uma hora. Entrega incerta requer reconciliação
+   humana com o provedor; não reenviar cegamente.
+
+Rollback operacional após cutover: desativar a política do tenant ou parar o
+worker da fase e preservar as tabelas e o ledger. A política desativada mantém
+o legado desligado. Só reabilitar o lembrete legado após comparar o histórico
+de envios por consulta/horário para evitar duplicatas. Não executar
+`migration:revert` nem o `down` com dados de envio; uma reversão do schema
+exige plano e autorização específicos. Este runbook não é evidência de que a
+1057 foi aplicada em staging ou produção.
+
 ### Ciclo de vida de tenants (Fase 228)
 
 A migration aditiva `AdicionarCicloVidaTenants1720000001027` cria metadados

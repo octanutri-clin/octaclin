@@ -3,6 +3,10 @@ import { CanalNotificacaoOrm } from '../infraestrutura/canal-notificacao.orm';
 import { MensagemNotificacaoOrm } from '../infraestrutura/mensagem-notificacao.orm';
 import { TemplateMensagemOrm } from '../infraestrutura/template-mensagem.orm';
 import { UsuarioOrm } from '../../usuarios/infraestrutura/usuario.orm';
+import { AgendaConsultaOrm } from '../../agenda/infraestrutura/agenda-consulta.orm';
+import { OcorrenciaFollowupAgendaOrm } from '../../agenda/infraestrutura/ocorrencia-followup-agenda.orm';
+import { PoliticaFollowupAgendaOrm } from '../../agenda/infraestrutura/politica-followup-agenda.orm';
+import { PacienteOrm } from '../../pacientes/infraestrutura/paciente.orm';
 
 function criarProcessador(adaptadorEmail: { enviar: jest.Mock }, tipoCanal: string = 'email', aprovado = true) {
   const mensagem = {
@@ -11,10 +15,13 @@ function criarProcessador(adaptadorEmail: { enviar: jest.Mock }, tipoCanal: stri
     canalId: 'canal-1',
     templateId: 'template-1',
     status: 'pendente',
+    pacienteId: undefined as string | undefined,
+    chaveIdempotencia: undefined as string | undefined,
+    conteudoCriptografado: undefined as Buffer | undefined,
     erro: undefined as string | undefined,
-    payload: { destino: 'paciente@example.com' }
+    payload: { destino: 'paciente@example.com' } as Record<string, unknown>
   };
-  const canal = { id: 'canal-1', tenantId: 'tenant-1', tipo: tipoCanal };
+  const canal = { id: 'canal-1', tenantId: 'tenant-1', tipo: tipoCanal, ativo: true };
   const template = { id: 'template-1', tenantId: 'tenant-1', canal: tipoCanal, aprovado };
   const repositorioMensagens = {
     update: jest.fn(async () => ({ affected: 1 })),
@@ -31,12 +38,24 @@ function criarProcessador(adaptadorEmail: { enviar: jest.Mock }, tipoCanal: stri
   // publicador da Fase 210 sai antes de escrever. Quem cobre o fan-out em si e
   // registrar-notificacao.spec.ts.
   const repositorioUsuarios = { find: jest.fn(async () => []) };
+  const consulta = { id: 'consulta-1', tenantId: 'tenant-1', pacienteId: 'paciente-1', inicioEm: new Date(Date.now() + 86400000), status: 'agendada', followupPoliticaId: 'politica-1', notificacoes: {} };
+  const ocorrencia = { id: 'ocorrencia-1', tenantId: 'tenant-1', consultaId: 'consulta-1', politicaId: 'politica-1', status: 'enfileirada', chaveIdempotencia: 'chave-1', politicaVersao: 1, condicao: 'somente_se_nao_confirmada' };
+  const politica = { id: 'politica-1', tenantId: 'tenant-1', ativo: true, versao: 1 };
+  const paciente = { id: 'paciente-1', tenantId: 'tenant-1', contatoCriptografado: Buffer.from(JSON.stringify({ email: 'paciente@example.com', preferencias: { email: true, whatsapp: false } })) };
+  const repoConsulta = { findOne: jest.fn(async () => consulta) };
+  const repoOcorrencia = { findOne: jest.fn(async () => ocorrencia), update: jest.fn(async () => undefined) };
+  const repoPolitica = { findOne: jest.fn(async () => politica) };
+  const repoPaciente = { findOne: jest.fn(async () => paciente) };
   const gerenciador = {
     getRepository: jest.fn((entidade: { name: string }) => {
       if (entidade === MensagemNotificacaoOrm) return repositorioMensagens;
       if (entidade === CanalNotificacaoOrm) return repositorioCanais;
       if (entidade === TemplateMensagemOrm) return repositorioTemplates;
       if (entidade === UsuarioOrm) return repositorioUsuarios;
+      if (entidade === AgendaConsultaOrm) return repoConsulta;
+      if (entidade === OcorrenciaFollowupAgendaOrm) return repoOcorrencia;
+      if (entidade === PoliticaFollowupAgendaOrm) return repoPolitica;
+      if (entidade === PacienteOrm) return repoPaciente;
       throw new Error(`Repositorio nao mapeado: ${entidade.name}`);
     })
   };
@@ -58,10 +77,50 @@ function criarProcessador(adaptadorEmail: { enviar: jest.Mock }, tipoCanal: stri
     criptografia as never
   );
 
-  return { processador, mensagem, repositorioMensagens, adaptadorPlaceholder };
+  return { processador, mensagem, repositorioMensagens, adaptadorPlaceholder, consulta, ocorrencia, paciente, repoOcorrencia };
 }
 
 describe('ProcessadorNotificacoes', () => {
+  it('suprime follow-up depois de cancelamento antes de chamar o adaptador', async () => {
+    const email = { enviar: jest.fn() };
+    const { processador, mensagem, consulta, repoOcorrencia } = criarProcessador(email);
+    consulta.status = 'cancelada';
+    mensagem.pacienteId = 'paciente-1';
+    mensagem.chaveIdempotencia = 'chave-1';
+    mensagem.payload = { evento: 'agenda.consulta.followup', consultaId: 'consulta-1', consultaInicioEm: consulta.inicioEm.toISOString() };
+    mensagem.conteudoCriptografado = Buffer.from(JSON.stringify({ followupOcorrenciaId: 'ocorrencia-1' }));
+    await processador.processarMensagem('tenant-1', mensagem.id);
+    expect(email.enviar).not.toHaveBeenCalled();
+    expect(mensagem.status).toBe('cancelado');
+    expect(repoOcorrencia.update).toHaveBeenCalledWith({ id: 'ocorrencia-1', tenantId: 'tenant-1' }, expect.objectContaining({ status: 'suprimida' }));
+  });
+
+  it('respeita opt-out alterado depois do enfileiramento', async () => {
+    const email = { enviar: jest.fn() };
+    const { processador, mensagem, consulta, paciente } = criarProcessador(email);
+    mensagem.pacienteId = 'paciente-1';
+    mensagem.chaveIdempotencia = 'chave-1';
+    mensagem.payload = { evento: 'agenda.consulta.followup', consultaId: 'consulta-1', consultaInicioEm: consulta.inicioEm.toISOString(), destino: 'paciente@example.com' };
+    mensagem.conteudoCriptografado = Buffer.from(JSON.stringify({ followupOcorrenciaId: 'ocorrencia-1' }));
+    paciente.contatoCriptografado = Buffer.from(JSON.stringify({ email: 'paciente@example.com', preferencias: { email: false, whatsapp: false } }));
+    await processador.processarMensagem('tenant-1', mensagem.id);
+    expect(email.enviar).not.toHaveBeenCalled();
+    expect(mensagem.status).toBe('cancelado');
+    expect(mensagem.erro).toBe('preferencia_alterada');
+  });
+  it('nao envia mensagem de excecao removida com a mesma versao do padrao', async () => {
+    const email = { enviar: jest.fn() };
+    const { processador, mensagem, consulta, ocorrencia } = criarProcessador(email);
+    mensagem.pacienteId = 'paciente-1';
+    mensagem.chaveIdempotencia = 'chave-1';
+    mensagem.payload = { evento: 'agenda.consulta.followup', consultaId: 'consulta-1', consultaInicioEm: consulta.inicioEm.toISOString() };
+    mensagem.conteudoCriptografado = Buffer.from(JSON.stringify({ followupOcorrenciaId: 'ocorrencia-1' }));
+    ocorrencia.politicaId = 'excecao-removida';
+    await processador.processarMensagem('tenant-1', mensagem.id);
+    expect(email.enviar).not.toHaveBeenCalled();
+    expect(mensagem.status).toBe('cancelado');
+    expect(mensagem.erro).toBe('politica_alterada');
+  });
   it('deve persistir falha e nao propagar erro quando solicitado', async () => {
     const erro = new Error('SMTP indisponivel');
     const { processador, mensagem, repositorioMensagens } = criarProcessador({

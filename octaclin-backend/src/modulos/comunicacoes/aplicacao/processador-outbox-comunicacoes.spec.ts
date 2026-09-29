@@ -15,6 +15,7 @@ describe('ProcessadorOutboxComunicacoes', () => {
     } as OutboxEventoOrm;
     const repositorioOutbox = {
       find: jest.fn(async () => [evento]),
+      findOne: jest.fn(async () => evento),
       update: jest.fn(async () => ({ affected: 1 })),
       save: jest.fn(async (entrada: OutboxEventoOrm) => entrada)
     };
@@ -60,12 +61,14 @@ describe('ProcessadorOutboxComunicacoes', () => {
   it('encaminha lembrete de material com tenant resolvido no ciclo e payload validado', async () => {
     const evento = {
       id: 'evento-material-1', tenantId: 'tenant-1', tipo: 'material.nao_visualizado.lembrete',
-      status: 'pendente', tentativas: 0,
+      status: 'processando', tentativas: 1,
+      reivindicadoEm: new Date(Date.now() - 6 * 60000),
       payload: { envioId: 'envio-1', chaveIdempotencia: 'material-nao-visualizado:envio-1:1' },
       criadoEm: new Date()
     } as OutboxEventoOrm;
     const repositorioOutbox = {
       find: jest.fn(async () => [evento]),
+      findOne: jest.fn(async () => evento),
       update: jest.fn(async () => ({ affected: 1 })),
       save: jest.fn(async (entrada: OutboxEventoOrm) => entrada)
     };
@@ -97,6 +100,9 @@ describe('ProcessadorOutboxComunicacoes', () => {
     expect(comunicacoes.processarLembreteMaterialNaoVisualizado).toHaveBeenCalledWith('tenant-1', {
       envioId: 'envio-1', chaveIdempotencia: 'material-nao-visualizado:envio-1:1'
     });
+    expect(repositorioOutbox.find).toHaveBeenCalledWith(expect.objectContaining({
+      where: expect.arrayContaining([expect.objectContaining({ status: 'processando' })])
+    }));
     expect(repositorioOutbox.save).toHaveBeenCalledWith(expect.objectContaining({ status: 'processado' }));
   });
 
@@ -110,14 +116,10 @@ describe('ProcessadorOutboxComunicacoes', () => {
       payload: { mensagemId: 'mensagem-1' },
       criadoEm: new Date()
     } as OutboxEventoOrm;
-    let reivindicado = false;
     const repositorioOutbox = {
       find: jest.fn(async () => [evento]),
-      update: jest.fn(async () => {
-        if (reivindicado) return { affected: 0 };
-        reivindicado = true;
-        return { affected: 1 };
-      }),
+      findOne: jest.fn(async () => evento),
+      update: jest.fn(async () => ({ affected: 1 })),
       save: jest.fn(async (entrada: OutboxEventoOrm) => entrada)
     };
     const fonteDados = {

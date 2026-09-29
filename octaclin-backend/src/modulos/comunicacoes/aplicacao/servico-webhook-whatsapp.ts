@@ -304,6 +304,8 @@ export class ServicoWebhookWhatsapp {
 
     const consulta = await repositorioConsultas.findOne({ where: { id: consultaId, tenantId } });
     if (!consulta) return;
+    if (!['agendada', 'reagendada'].includes(consulta.status) || consulta.inicioEm <= confirmadaEm) return;
+    if (typeof envioAnterior?.payload.consultaInicioEm === 'string' && consulta.inicioEm.toISOString() !== envioAnterior.payload.consultaInicioEm) return;
 
     consulta.notificacoes = {
       ...(consulta.notificacoes ?? {}),

@@ -19,10 +19,14 @@ import {
   RegistrarDesfechoConsultaAgendaDto,
   RemarcarConsultaAgendaDto,
   RotacionarLinkPublicoAgendaDto,
-  SalvarExpedienteDto
+  SalvarExpedienteDto,
+  SalvarPoliticaFollowupAgendaDto,
+  PreviaFollowupAgendaDto
 } from '../aplicacao/dtos';
+import { calcularEtapas } from '../dominio/calendario-followups';
 import { ServicoAgendamentoPublico } from '../aplicacao/servico-agendamento-publico';
 import { ServicoAgenda } from '../aplicacao/servico-agenda';
+import { ServicoFollowupsAgenda } from '../aplicacao/servico-followups-agenda';
 import { ServicoExpedientes } from '../aplicacao/servico-expedientes';
 import { ServicoTiposAtendimento } from '../aplicacao/servico-tipos-atendimento';
 
@@ -36,8 +40,51 @@ export class ControladorAgenda {
     private readonly servicoAgendamentoPublico: ServicoAgendamentoPublico,
     private readonly servicoExpedientes: ServicoExpedientes,
     private readonly servicoTiposAtendimento: ServicoTiposAtendimento,
-    private readonly servicoAuditoria: ServicoAuditoria
+    private readonly servicoAuditoria: ServicoAuditoria,
+    private readonly followups: ServicoFollowupsAgenda
   ) {}
+
+  @Get('followups/padrao')
+  obterCalendarioPadrao(@UsuarioAtual() usuario: UsuarioAutenticado) {
+    return this.followups.obterPadrao(usuario.tenantId);
+  }
+
+  @Post('followups/previa')
+  previaCalendario(@Body() dados: PreviaFollowupAgendaDto) {
+    return calcularEtapas(new Date(dados.inicioEm), dados.timezone, dados.etapas).map(({ indice, envioEm, etapa }) => ({ indice, envioEm, condicao: etapa.condicao }));
+  }
+
+  @Put('followups/padrao')
+  @Papeis('SuperAdmin', 'Professional')
+  @Permissoes('automacoes.gerenciar')
+  async salvarCalendarioPadrao(@UsuarioAtual() usuario: UsuarioAutenticado, @Req() requisicao: Request, @Body() dados: SalvarPoliticaFollowupAgendaDto) {
+    const resultado = await this.followups.salvarPadrao(usuario.tenantId, dados);
+    await this.servicoAuditoria.registrar({ tenantId: usuario.tenantId, usuarioId: usuario.usuarioId, acao: 'agenda.followups.padrao_alterado', recursoTipo: 'politica_followup_agenda', ip: requisicao.ip, userAgent: this.obterUserAgent(requisicao), metadados: { ativo: resultado.ativo, versao: resultado.versao } });
+    return resultado;
+  }
+
+  @Get('consultas/:consultaId/followups')
+  obterCalendarioConsulta(@UsuarioAtual() usuario: UsuarioAutenticado, @Param('consultaId', ParseUUIDPipe) consultaId: string) {
+    return this.followups.obterConsulta(usuario.tenantId, consultaId, usuario);
+  }
+
+  @Put('consultas/:consultaId/followups')
+  @Papeis('SuperAdmin', 'Professional')
+  @Permissoes('automacoes.gerenciar')
+  async salvarCalendarioConsulta(@UsuarioAtual() usuario: UsuarioAutenticado, @Req() requisicao: Request, @Param('consultaId', ParseUUIDPipe) consultaId: string, @Body() dados: SalvarPoliticaFollowupAgendaDto) {
+    const resultado = await this.followups.salvarExcecao(usuario.tenantId, consultaId, usuario, dados);
+    await this.servicoAuditoria.registrar({ tenantId: usuario.tenantId, usuarioId: usuario.usuarioId, acao: 'agenda.followups.consulta_alterada', recursoTipo: 'agenda_consulta', recursoId: consultaId, ip: requisicao.ip, userAgent: this.obterUserAgent(requisicao), metadados: { ativo: resultado.ativo, versao: resultado.versao } });
+    return resultado;
+  }
+
+  @Delete('consultas/:consultaId/followups')
+  @Papeis('SuperAdmin', 'Professional')
+  @Permissoes('automacoes.gerenciar')
+  async removerCalendarioConsulta(@UsuarioAtual() usuario: UsuarioAutenticado, @Req() requisicao: Request, @Param('consultaId', ParseUUIDPipe) consultaId: string) {
+    const resultado = await this.followups.removerExcecao(usuario.tenantId, consultaId, usuario);
+    await this.servicoAuditoria.registrar({ tenantId: usuario.tenantId, usuarioId: usuario.usuarioId, acao: 'agenda.followups.consulta_herdada', recursoTipo: 'agenda_consulta', recursoId: consultaId, ip: requisicao.ip, userAgent: this.obterUserAgent(requisicao), metadados: {} });
+    return resultado;
+  }
 
   @Get('consultas')
   listarConsultas(@UsuarioAtual() usuario: UsuarioAutenticado) {

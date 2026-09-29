@@ -59,6 +59,10 @@ export class MensagemNotificacaoOrm {
   @Column({ name: 'enviado_em', type: 'timestamptz', nullable: true })
   enviadoEm?: Date;
 
+  /** Reserva duravel de tentativa externa dos follow-ups; recibo incerto nao e reenviado. */
+  @Column({ name: 'tentativa_externa_em', type: 'timestamptz', nullable: true })
+  tentativaExternaEm?: Date;
+
   /**
    * Status de entrega reportado pelo webhook de status da Meta (sent,
    * delivered, read, failed). Coluna de primeira classe: antes so existia

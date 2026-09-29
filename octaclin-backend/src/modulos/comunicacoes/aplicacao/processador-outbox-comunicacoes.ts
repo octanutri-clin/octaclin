@@ -1,6 +1,6 @@
 import { Cron } from '@nestjs/schedule';
 import { Injectable, Logger } from '@nestjs/common';
-import { DataSource, In, IsNull, Repository } from 'typeorm';
+import { DataSource, In, IsNull, LessThan } from 'typeorm';
 import { ExecutorTenant } from '../../../infraestrutura/banco-dados/executor-tenant';
 import { OutboxEventoOrm } from '../../../infraestrutura/outbox/outbox-evento.orm';
 import { executarPorTenantAtivo } from '../../../infraestrutura/processamento/rodada-por-tenant';
@@ -28,30 +28,27 @@ export class ProcessadorOutboxComunicacoes {
       this.logger,
       'Outbox de comunicacoes',
       async (tenantId) => {
-        await this.executorTenant.executar(tenantId, async (gerenciador) => {
+        const ids = await this.executorTenant.executar(tenantId, async (gerenciador) => {
           const repositorio = gerenciador.getRepository(OutboxEventoOrm);
           const eventos = await repositorio.find({
-            where: {
-              tenantId,
-              tipo: In(['notificacao.enviar', 'plano_alimentar.publicado', 'material.nao_visualizado.lembrete']),
-              status: 'pendente',
-              processadoEm: IsNull()
-            },
+            where: [
+              { tenantId, tipo: In(['notificacao.enviar', 'plano_alimentar.publicado', 'material.nao_visualizado.lembrete']), status: 'pendente', processadoEm: IsNull() },
+              { tenantId, tipo: In(['notificacao.enviar', 'plano_alimentar.publicado', 'material.nao_visualizado.lembrete']), status: 'processando', reivindicadoEm: LessThan(new Date(Date.now() - 5 * 60000)), processadoEm: IsNull() }
+            ],
             order: { criadoEm: 'ASC' },
             take: 100
           });
 
-          for (const evento of eventos) {
-            await this.processarEvento(tenantId, repositorio, evento);
-          }
+          return eventos.map((evento) => evento.id);
         });
+        for (const id of ids) await this.processarEvento(tenantId, id);
       },
       { timeoutMs: 25_000 }
     );
   }
 
   async processarMensagemPendente(tenantId: string, mensagemId: string): Promise<void> {
-    await this.executorTenant.executar(tenantId, async (gerenciador) => {
+    const id = await this.executorTenant.executar(tenantId, async (gerenciador) => {
       const repositorio = gerenciador.getRepository(OutboxEventoOrm);
       const eventos = await repositorio.find({
         where: { tenantId, tipo: 'notificacao.enviar', status: 'pendente', processadoEm: IsNull() },
@@ -59,28 +56,28 @@ export class ProcessadorOutboxComunicacoes {
         take: 100
       });
       const evento = eventos.find((eventoAtual) => String(eventoAtual.payload.mensagemId) === mensagemId);
-      if (evento) await this.processarEvento(tenantId, repositorio, evento);
+      return evento?.id;
     });
+    if (id) await this.processarEvento(tenantId, id);
   }
 
   private deveProcessarDiretamente(): boolean {
     return !redisConfigurado();
   }
 
-  private async processarEvento(
-    tenantId: string,
-    repositorio: Repository<OutboxEventoOrm>,
-    evento: OutboxEventoOrm
-  ): Promise<void> {
+  private async processarEvento(tenantId: string, id: string): Promise<void> {
+    const evento = await this.executorTenant.executar(tenantId, async (gerenciador) => {
+      const repositorio = gerenciador.getRepository(OutboxEventoOrm);
+      const atual = await repositorio.findOne({ where: { id, tenantId }, lock: { mode: 'pessimistic_write' } });
+      if (!atual || atual.processadoEm || (atual.status !== 'pendente' && !(atual.status === 'processando' && atual.reivindicadoEm && atual.reivindicadoEm < new Date(Date.now() - 5 * 60000)))) return undefined;
+      atual.status = 'processando';
+      atual.tentativas += 1;
+      atual.reivindicadoEm = new Date();
+      await repositorio.save(atual);
+      return atual;
+    });
+    if (!evento) return;
     try {
-      const reivindicacao = await repositorio.update(
-        { id: evento.id, tenantId, status: 'pendente', processadoEm: IsNull() },
-        { status: 'processando', tentativas: evento.tentativas + 1 }
-      );
-      if (!reivindicacao.affected) return;
-
-      evento.status = 'processando';
-      evento.tentativas += 1;
       if (evento.tipo === 'plano_alimentar.publicado') {
         const { pacienteId, planoId, versaoId } = evento.payload;
         if (
@@ -112,23 +109,31 @@ export class ProcessadorOutboxComunicacoes {
         } else {
           try {
             await this.servicoComunicacoes.publicarEventoNotificacao(tenantId, mensagemId);
-          } catch (erroPublicacao) {
+          } catch {
             this.logger.warn(
-              `Fila de notificacoes indisponivel para outbox ${evento.id}; processando envio diretamente. ` +
-                `Causa: ${erroPublicacao instanceof Error ? erroPublicacao.message : 'falha desconhecida'}`
+              'Fila de notificacoes indisponivel; processando envio diretamente.'
             );
             await this.processadorNotificacoes.processarMensagem(tenantId, mensagemId);
           }
         }
       }
-      evento.status = 'processado';
-      evento.processadoEm = new Date();
-      await repositorio.save(evento);
+      await this.finalizarReivindicacao(tenantId, evento, true);
     } catch (erro) {
-      evento.status = evento.tentativas >= 5 ? 'falhou' : 'pendente';
-      evento.erro = erro instanceof Error ? erro.message : 'Falha desconhecida no outbox.';
-      await repositorio.save(evento);
-      this.logger.warn(`Falha ao publicar outbox ${evento.id}: ${evento.erro}`);
+      await this.finalizarReivindicacao(tenantId, evento, false, erro);
+      this.logger.warn('Falha ao publicar evento de comunicacao; tentativa registrada no outbox.');
     }
+  }
+
+  private async finalizarReivindicacao(tenantId: string, evento: OutboxEventoOrm, sucesso: boolean, erro?: unknown): Promise<void> {
+    await this.executorTenant.executar(tenantId, async (gerenciador) => {
+      const repo = gerenciador.getRepository(OutboxEventoOrm);
+      const atual = await repo.findOne({ where: { id: evento.id, tenantId }, lock: { mode: 'pessimistic_write' } });
+      // Uma tentativa antiga nao pode sobrescrever a reivindicacao de outro worker.
+      if (!atual || atual.status !== 'processando' || atual.reivindicadoEm?.getTime() !== evento.reivindicadoEm?.getTime()) return;
+      atual.status = sucesso ? 'processado' : atual.tentativas >= 5 ? 'falhou' : 'pendente';
+      if (sucesso) atual.processadoEm = new Date();
+      else atual.erro = erro instanceof Error ? erro.message : 'Falha desconhecida no outbox.';
+      await repo.save(atual);
+    });
   }
 }

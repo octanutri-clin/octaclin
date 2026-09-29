@@ -116,6 +116,51 @@ export interface ConsultaAgendaApi {
   atualizadoEm: string;
 }
 
+export type UnidadeFollowupAgenda = 'mes' | 'quinzena' | 'semana' | 'dia' | 'hora' | 'minuto';
+export type CondicaoFollowupAgenda = 'sempre' | 'somente_se_nao_confirmada';
+export interface EtapaFollowupAgenda {
+  unidade: UnidadeFollowupAgenda;
+  valor: number;
+  condicao: CondicaoFollowupAgenda;
+  horarioLocal?: string;
+}
+export interface PoliticaFollowupAgenda {
+  ativo: boolean;
+  etapas: EtapaFollowupAgenda[];
+  versao: number;
+  configurado: boolean;
+  consultasHerdando?: number;
+}
+export interface CalendarioConsultaAgenda extends PoliticaFollowupAgenda {
+  consultaId: string;
+  inicioEm: string;
+  timezone: string;
+  origem: 'padrao' | 'personalizado';
+  quantidade: number;
+  saldo: number;
+  futuras: Array<{ indice: number; envioEm: string; efetivoEm?: string; condicao: CondicaoFollowupAgenda; elegivel: boolean; motivo?: string }>;
+  historico: Array<{ id: string; envioEm: string; status: string; motivo?: string; mensagemId?: string }>;
+}
+
+export function obterPadraoFollowupsAgenda(): Promise<PoliticaFollowupAgenda> {
+  return requisitar('/api/agenda/followups/padrao');
+}
+export function salvarPadraoFollowupsAgenda(entrada: Pick<PoliticaFollowupAgenda, 'ativo' | 'etapas'>): Promise<PoliticaFollowupAgenda> {
+  return requisitar('/api/agenda/followups/padrao', { method: 'PUT', body: JSON.stringify(entrada) });
+}
+export function obterFollowupsConsulta(consultaId: string): Promise<CalendarioConsultaAgenda> {
+  return requisitar(`/api/agenda/consultas/${encodeURIComponent(consultaId)}/followups`);
+}
+export function salvarFollowupsConsulta(consultaId: string, entrada: Pick<PoliticaFollowupAgenda, 'ativo' | 'etapas'>): Promise<PoliticaFollowupAgenda> {
+  return requisitar(`/api/agenda/consultas/${encodeURIComponent(consultaId)}/followups`, { method: 'PUT', body: JSON.stringify(entrada) });
+}
+export function removerFollowupsConsulta(consultaId: string): Promise<{ consultaId: string; origem: 'padrao' }> {
+  return requisitar(`/api/agenda/consultas/${encodeURIComponent(consultaId)}/followups`, { method: 'DELETE' });
+}
+export function simularFollowupsAgenda(entrada: { inicioEm: string; timezone: string; etapas: EtapaFollowupAgenda[] }): Promise<Array<{ indice: number; envioEm: string; condicao: CondicaoFollowupAgenda }>> {
+  return requisitar('/api/agenda/followups/previa', { method: 'POST', body: JSON.stringify(entrada) });
+}
+
 export type ItemFeedAgendaApi =
   | (ConsultaAgendaApi & { tipo: 'consulta' })
   | {

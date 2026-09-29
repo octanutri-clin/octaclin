@@ -580,6 +580,11 @@ export class ServicoComunicacoes {
     usuario?: UsuarioAutenticado
   ): Promise<MensagemNotificacaoOrm> {
     return this.executorTenant.executar(tenantId, async (gerenciador) => {
+      if (dados.payload.evento === 'agenda.consulta.lembrete' && chaveIdempotencia?.startsWith('agenda-followup:')) {
+        await gerenciador.query('select pg_advisory_xact_lock(hashtextextended($1, 0))', [`followup-padrao:${tenantId}`]);
+        const novoMotor = await gerenciador.query('select 1 from politicas_followup_agenda where tenant_id = $1 and consulta_id is null limit 1', [tenantId]);
+        if (novoMotor.length) throw new ConflictException('Calendario configuravel ja assumiu os lembretes desta clinica.');
+      }
       const canal = await gerenciador.getRepository(CanalNotificacaoOrm).findOne({
         where: { id: dados.canalId, tenantId, ativo: true }
       });

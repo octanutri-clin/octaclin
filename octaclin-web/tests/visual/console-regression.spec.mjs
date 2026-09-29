@@ -657,7 +657,7 @@ test.describe('console operacional', () => {
   }
 });
 
-async function prepararDashboardMockado(page, { googleConectado = true } = {}) {
+async function prepararDashboardMockado(page, { googleConectado = true, habilitarFollowups = false } = {}) {
   let remarcouConsulta = false;
   let cancelouConsulta = false;
   let liberouBloqueio = false;
@@ -720,6 +720,7 @@ async function prepararDashboardMockado(page, { googleConectado = true } = {}) {
           'dashboard.ler',
           'agenda.consultas.ler',
           'agenda.consultas.criar',
+          ...(habilitarFollowups ? ['automacoes.gerenciar'] : []),
           'agenda.financeiro.ler',
           'pacientes.listar',
           'pacientes.gerenciar',
@@ -759,6 +760,25 @@ async function prepararDashboardMockado(page, { googleConectado = true } = {}) {
       contentType: 'application/json',
       body: JSON.stringify(consultasAgenda)
     });
+  });
+
+  let politicaFollowups = { ativo: false, etapas: [{ unidade: 'hora', valor: 24, condicao: 'sempre' }], versao: 0, configurado: false, consultasHerdando: 2 };
+  await page.route('**/api/agenda/followups/padrao', async (route) => {
+    if (route.request().method() === 'PUT') {
+      politicaFollowups = { ...politicaFollowups, ...route.request().postDataJSON(), versao: politicaFollowups.versao + 1, configurado: true };
+    }
+    await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(politicaFollowups) });
+  });
+
+  await page.route('**/api/agenda/followups/previa', async (route) => {
+    const dados = route.request().postDataJSON();
+    await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(dados.etapas.map((etapa, indice) => ({ indice, envioEm: new Date(Date.parse(dados.inicioEm) - (indice + 1) * 86400000).toISOString(), condicao: etapa.condicao }))) });
+  });
+
+  await page.route('**/api/agenda/consultas/*/followups', async (route) => {
+    const consultaId = new URL(route.request().url()).pathname.split('/')[4];
+    const consulta = consultasAgenda.find((item) => item.id === consultaId);
+    await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ consultaId, inicioEm: consulta?.inicioEm, timezone: consulta?.timezone ?? 'America/Sao_Paulo', origem: 'padrao', ativo: false, etapas: [{ unidade: 'hora', valor: 24, condicao: 'sempre' }], versao: 0, configurado: false, quantidade: 1, saldo: 30, futuras: [], historico: [] }) });
   });
 
   await page.route('**/api/agenda/consultas/consulta-1', async (route) => {
@@ -2322,6 +2342,21 @@ test.describe('painel clinico profissional', () => {
 });
 
 test.describe('agenda de producao', () => {
+  test('permite gerar e salvar tres follow-ups diarios no padrao da clinica', async ({ page }) => {
+    await prepararDashboardMockado(page, { habilitarFollowups: true });
+    await page.goto('/agenda');
+    const calendario = page.getByRole('region', { name: 'Padrão de follow-ups da clínica' });
+    await expect(calendario.getByRole('button', { name: 'Gerar sequência' })).toBeVisible();
+    await calendario.getByLabel('Quantidade').fill('3');
+    await calendario.getByLabel('Primeira antecedência').fill('3');
+    await calendario.getByRole('button', { name: 'Gerar sequência' }).click();
+    await expect(calendario.getByLabel('Antecedência da etapa 3')).toHaveValue('1');
+    await calendario.getByRole('button', { name: 'Simular datas' }).click();
+    await expect(calendario.getByText('Prévia no fuso America/Sao_Paulo')).toBeVisible();
+    await calendario.getByRole('button', { name: 'Salvar calendário' }).click();
+    await expect(calendario.getByText('3 etapa(s) configurada(s)')).toBeVisible();
+  });
+
   test('Fase 253 libera bloqueio manual também pela visualização em lista', async ({ page }) => {
     const agenda = await prepararDashboardMockado(page, { googleConectado: false });
     await page.goto('/agenda');

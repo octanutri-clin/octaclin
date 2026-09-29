@@ -404,12 +404,12 @@ Ordenadas por "o dado já existe" → "o efeito não existe".
 | Check-in respondido com adesão baixa | Nada | Tarefa + alerta no dashboard |
 | Check-in atrasado | Gatilho existe na UI, sem executor | Mensagem ao paciente + fila de atenção |
 | Formulário respondido | Notificação in-app + webhook; Fase 288 integrada pelo PR #324: fila paginada, leitura individual e síntese factual sem IA | Acompanhar adoção da revisão antes da consulta; CI do PR teve `Provenance do SBOM` `SKIPPED` |
-| Confirmação de consulta (WhatsApp) | Gravada e exibida por consulta; sem efeito derivado | Fila de não confirmadas + follow-up automático |
+| Confirmação de consulta (WhatsApp) | Gravada e exibida por consulta; fila manual de não confirmadas existe. A Fase 291 adiciona calendário de follow-ups, inclusive etapas condicionadas à falta de confirmação, ainda sem evidência de ativação externa | Medir adoção do calendário e da fila; acompanhar faltas em incremento posterior |
 | Falta registrada | Registrada no desfecho | Reagendamento proativo; contagem no score de risco |
 | Conduta vencendo | Data gravada, sem consumidor | Alerta de revisão |
 | Próxima revisão do perfil (`proximaRevisaoEm`) | Tarefa automática integrada na Fase 287, PR #323; reconciliação histórica opt-in sem evidência de execução externa | Confirmar backfill por tenant em ambiente autorizado |
 | Plano publicado | Fase 289 registra aviso cifrado no portal na transação de publicação; outbox encaminha, no máximo, um canal externo consentido, respeitando horário e aprovação de template (PR #343 integrado) | Acompanhar adoção e configuração de canais pela clínica |
-| Material enviado e não visualizado | Visualização registrada de forma idempotente e tenant-aware desde a Fase 264.3 (PB-07); Fase 290 agenda lembrete em 72h, recorrente a cada 72h, sem alcançar envios anteriores à ativação | Confirmar depois a experiência do paciente e a configuração dos canais, sem envio retroativo |
+| Material enviado e não visualizado | Visualização registrada de forma idempotente e tenant-aware desde a Fase 264.3 (PB-07); Fase 290 integrada pelo PR #344 agenda lembrete em 72h, recorrente a cada 72h, sem alcançar envios anteriores à ativação | Confirmar depois a experiência do paciente e a configuração dos canais, sem envio retroativo |
 | Paciente sem consulta futura | Existe fila no dashboard | Sugestão de reagendamento em lote |
 
 `[F]` A infraestrutura de execução já está pronta: outbox transacional com idempotência, fila com poller,
@@ -428,7 +428,7 @@ Lacunas observadas:
 1. **Sem canal de resposta** `[F]` — o paciente lê e não escreve.
 2. **Progresso restrito a peso** `[F]` — nenhuma outra métrica, nenhuma meta, nenhum marco.
 3. **Registrar não gera retorno** `[F]` — check-in não produz nenhum sinal de que alguém viu.
-4. **Sem lembrete de plano/tarefa** `[F]` — só existe o lembrete de consulta de 24 h.
+4. **Sem lembrete próprio de plano/tarefa** `[F]` — há aviso de plano publicado (Fase 289) e lembrete de material não visualizado (Fase 290); ainda falta calendário específico de plano/tarefa. A Fase 291 amplia lembretes de consulta no código, sujeito à ativação externa.
 5. **Gamificação desligada** `[F]` — badges, desafios e círculos existem no banco e por padrão ninguém vê.
    `[H]` Ligar sem repensar o propósito clínico tende a gerar ruído; a decisão é de produto, não técnica.
 6. **Materiais sem confirmação de leitura** `[F]`.
@@ -607,9 +607,9 @@ de esgotar a versão determinística de cada um.
 | PB-29 | Onboarding guiado da clínica (conteúdo inicial) | Gestão | Alto | M | Baixo | backend, frontend, produto |
 | PB-30 | Extração assistida de exame laboratorial | IA | Alto | G | Alto | IA, backend, jurídico, PB-17 |
 
-### Estado do backlog verificado em 2026-09-28
+### Estado do backlog verificado em 2026-09-29
 
-Os estados abaixo foram cruzados com PRs merged e, para itens sem PR identificável, com o código. PRs #319 a #324 e #343 foram integrados; no PR #343 os checks aplicáveis terminaram em `SUCCESS`, com `Provenance do SBOM` como `SKIPPED`. A Fase 290 está sendo implementada na branch `feat/fase290-lembrete-material`. Merge comprova a entrega de código, não a aplicação de migrations ou backfills em ambientes externos.
+Os estados abaixo foram cruzados com PRs merged e, para itens sem PR identificável, com o código. PRs #319 a #324, #343 e #344 foram integrados; no PR #344 os checks aplicáveis terminaram em `SUCCESS`, com `Provenance do SBOM` como `SKIPPED`. A Fase 291 está em desenvolvimento na branch `feat/fase291-followups-configuraveis`. Merge comprova a entrega de código, não a aplicação de migrations ou backfills em ambientes externos.
 
 | PB | Estado e evidência |
 |---|---|
@@ -637,7 +637,7 @@ Os estados abaixo foram cruzados com PRs merged e, para itens sem PR identificá
 | PB-29 | **Concluído no código** — Fase 283, PR #319 integrado (merge `19ade15` em 2026-09-27). Não há evidência de produção nesta reconciliação. |
 | PB-30 | **Pendente** — extração assistida de exames não foi encontrada; PB-17 entrega a estrutura determinística e é dependência já concluída. |
 
-PB-28 e PB-30 não têm ordem aprovada na tabela original. PB-20 e Fases 286 a 289 foram integrados; as Fases 287 e 288 também estão integradas (PRs #323 e #324). A Fase 289 foi integrada pelo PR #343 (merge `81247c7`); todos os checks aplicáveis passaram, exceto `Provenance do SBOM`, que ficou `SKIPPED`. O backfill histórico da Fase 287 segue sem evidência de execução externa. A Fase 290 implementa o próximo item de automação da seção 7. A proposta de sequência inclui também as recomendações das seções 3–14 que não se esgotam nesses PBs.
+PB-28 e PB-30 não têm ordem aprovada na tabela original. PB-20 e Fases 286 a 290 foram integrados. A Fase 290 foi integrada pelo PR #344 (merge `dd70ca2`); todos os checks aplicáveis passaram, exceto `Provenance do SBOM`, que ficou `SKIPPED`. As migrations/backfills externos das Fases 287 e 290 seguem sem evidência de execução nesta reconciliação. A Fase 291 implementa o calendário da consulta ainda futura, sem fechar os demais itens de automação da seção 7. A proposta de sequência inclui também recomendações das seções 3–14 que não se esgotam nesses PBs.
 
 ---
 
@@ -820,13 +820,19 @@ produto devem ter esse gate resolvido no plano da respectiva fase.
    (Fase 287 integrada, com reconciliação histórica fora de banda pendente de evidência);
    revisão de resposta de formulário (Fase 288 integrada pelo PR #324); aviso de plano publicado
    (Fase 289 integrada pelo PR #343); lembrar material não visualizado
-   (Fase 290: primeira ocorrência após 72 horas, repetição a cada 72 horas até
-   visualização, sem alcançar envios anteriores; PB-07/Fase 264.3 já registra a
-   leitura de forma idempotente e tenant-aware);
-   acompanhar consultas não confirmadas e faltas; sugerir retorno quando não houver consulta futura.
+   (Fase 290 integrada pelo PR #344: primeira ocorrência após 72 horas,
+   repetição a cada 72 horas até visualização, sem alcançar envios anteriores;
+   PB-07/Fase 264.3 já registra a leitura de forma idempotente e tenant-aware);
+   acompanhar consultas não confirmadas (Fase 291 em desenvolvimento: calendário
+   configurável de até 30 etapas, com condição `somente_se_nao_confirmada`),
+   depois reagendamento proativo após falta, alerta de conduta vencendo e
+   sugestão de retorno quando não houver consulta futura.
    Preservar preferências, idempotência, outbox e autorização por tenant.
    A Fase 290 reutiliza a trilha de visualização existente e preserva preferências,
    opt-out, janela, aprovação de template, limite de frequência, idempotência e outbox.
+   A Fase 291 mantém o aviso imediato separado dos follow-ups e exige cutover
+   por tenant após migration 1057 e verificação de RLS. Não há evidência de
+   aplicação em staging/produção nesta reconciliação.
 6. **PB-28 e melhorias da experiência do paciente.** Definir responsável, estados, prazo/SLA e escalonamento
    da resposta bidirecional; depois incluir confirmação de check-in revisado pela clínica e lembretes de
    plano/tarefas. Gamificação requer decisão de propósito separada.

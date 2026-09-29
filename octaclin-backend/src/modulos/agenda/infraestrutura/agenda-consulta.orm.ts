@@ -81,6 +81,12 @@ export class AgendaConsultaOrm {
   @Column({ type: 'jsonb', default: {} })
   notificacoes: Record<string, unknown>;
 
+  @Column({ name: 'followup_politica_id', type: 'uuid', nullable: true })
+  followupPoliticaId?: string;
+
+  @Column({ name: 'followup_versao', type: 'integer', nullable: true })
+  followupVersao?: number;
+
   @Column({ type: 'jsonb', default: {} })
   payload: Record<string, unknown>;
 

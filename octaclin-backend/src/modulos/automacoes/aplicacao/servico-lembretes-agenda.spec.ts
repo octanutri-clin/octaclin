@@ -1,4 +1,5 @@
 import { AgendaConsultaOrm } from '../../agenda/infraestrutura/agenda-consulta.orm';
+import { PoliticaFollowupAgendaOrm } from '../../agenda/infraestrutura/politica-followup-agenda.orm';
 import { CanalNotificacaoOrm } from '../../comunicacoes/infraestrutura/canal-notificacao.orm';
 import { TemplateMensagemOrm } from '../../comunicacoes/infraestrutura/template-mensagem.orm';
 import { PacienteOrm } from '../../pacientes/infraestrutura/paciente.orm';
@@ -23,6 +24,7 @@ function criarServico(dados: Record<string, unknown> = {}) {
   const gerenciador = {
     getRepository: jest.fn((entidade: { name: string }) => {
       if (entidade === AgendaConsultaOrm) return repositorioConsultas;
+      if (entidade === PoliticaFollowupAgendaOrm) return { findOne: jest.fn(async () => dados.novoCalendario ?? null) };
       if (entidade === PacienteOrm) return repositorioPacientes;
       throw new Error(`Repositorio nao mapeado: ${entidade.name}`);
     })
@@ -80,7 +82,12 @@ function criarServico(dados: Record<string, unknown> = {}) {
 }
 
 describe('ServicoLembretesAgenda', () => {
-  it('deve enviar lembrete de consulta nas proximas 24h por email e WhatsApp com idempotencia registrada', async () => {
+  it('desliga o motor legado quando a clinica configura o novo calendario', async () => {
+    const { servico, comunicacoes } = criarServico({ novoCalendario: { id: 'politica-1' } });
+    await expect(servico.processarLembretesConsulta('tenant-1')).resolves.toEqual({ consultasAvaliadas: 0, lembretesProcessados: 0, lembretesIgnorados: 0 });
+    expect(comunicacoes.dispararMensagemSistema).not.toHaveBeenCalled();
+  });
+  it('deve enviar um unico lembrete de consulta com idempotencia compativel com o novo calendario', async () => {
     const consulta = {
       id: 'consulta-1',
       tenantId: 'tenant-1',
@@ -108,6 +115,7 @@ describe('ServicoLembretesAgenda', () => {
       expect.objectContaining({
         canalId: 'canal-email',
         templateId: 'template-email-lembrete',
+        chaveIdempotencia: `agenda-followup:consulta-1:${consulta.inicioEm.getTime()}:${consulta.inicioEm.getTime() - 86400000}`,
         payload: expect.objectContaining({
           destino: 'ana@example.com',
           evento: 'agenda.consulta.lembrete',
@@ -115,29 +123,8 @@ describe('ServicoLembretesAgenda', () => {
         })
       })
     );
-    expect(comunicacoes.dispararMensagemSistema).toHaveBeenCalledWith(
-      'tenant-1',
-      expect.objectContaining({
-        canalId: 'canal-whatsapp',
-        templateId: 'template-whatsapp-lembrete',
-        payload: expect.objectContaining({
-          destino: '5511992362080',
-          idioma: 'pt_BR',
-          components: [
-            {
-              type: 'body',
-              parameters: [
-                { type: 'text', text: 'Ana Paula' },
-                { type: 'text', text: '23/07/2026' },
-                { type: 'text', text: '09:00' }
-              ]
-            }
-          ]
-        })
-      })
-    );
+    expect(comunicacoes.dispararMensagemSistema).toHaveBeenCalledTimes(1);
     expect(comunicacoes.publicarEventoNotificacao).toHaveBeenCalledWith('tenant-1', 'mensagem-email');
-    expect(comunicacoes.publicarEventoNotificacao).toHaveBeenCalledWith('tenant-1', 'mensagem-whatsapp');
     expect(repositorioConsultas.save).toHaveBeenCalledWith(
       expect.objectContaining({
         id: 'consulta-1',
@@ -145,7 +132,7 @@ describe('ServicoLembretesAgenda', () => {
           lembrete24h: expect.objectContaining({
             status: 'processado',
             email: { status: 'pendente', mensagemId: 'mensagem-email' },
-            whatsapp: { status: 'pendente', mensagemId: 'mensagem-whatsapp' }
+            whatsapp: { status: 'ignorado', motivo: 'outro_canal_selecionado' }
           })
         })
       })
@@ -284,7 +271,7 @@ describe('ServicoLembretesAgenda', () => {
       expect.objectContaining({
         notificacoes: expect.objectContaining({
           lembrete24h: expect.objectContaining({
-            email: { status: 'ignorado', motivo: 'canal_nao_preferido' },
+            email: { status: 'ignorado', motivo: 'outro_canal_selecionado' },
             whatsapp: { status: 'pendente', mensagemId: 'mensagem-whatsapp' }
           })
         })
