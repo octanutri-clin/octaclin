@@ -35,3 +35,14 @@ export function condutaEstaVencida(
 ): boolean {
   return Boolean(versao.validadeFim) && versao.validadeFim! < hojeIso;
 }
+
+/** Janela preventiva inclusiva de sete dias civis no timezone clinico. */
+export function condutaEstaVencendo(
+  versao: Pick<VersaoCondutaTerapeuticaElegivel, 'validadeFim'>,
+  hojeIso: string
+): boolean {
+  if (!versao.validadeFim || versao.validadeFim < hojeIso) return false;
+  const limite = new Date(`${hojeIso}T00:00:00.000Z`);
+  limite.setUTCDate(limite.getUTCDate() + 7);
+  return versao.validadeFim <= limite.toISOString().slice(0, 10);
+}

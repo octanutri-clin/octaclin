@@ -11,7 +11,7 @@ import { MensagemNotificacaoOrm } from '../../comunicacoes/infraestrutura/mensag
 import { AcompanhamentoTarefaOrm } from '../../pacientes/infraestrutura/acompanhamento-tarefa.orm';
 import { CondutaTerapeuticaOrm } from '../../pacientes/infraestrutura/conduta-terapeutica.orm';
 import { CondutaTerapeuticaVersaoOrm } from '../../pacientes/infraestrutura/conduta-terapeutica-versao.orm';
-import { condutaEstaVencida, resolverVersaoVigentePorConduta } from '../../pacientes/dominio/condutas-vencidas';
+import { condutaEstaVencida, condutaEstaVencendo, resolverVersaoVigentePorConduta } from '../../pacientes/dominio/condutas-vencidas';
 import { PacienteOrm } from '../../pacientes/infraestrutura/paciente.orm';
 import { ProfissionalOrm } from '../../profissionais/infraestrutura/profissional.orm';
 import { EnvioQuestionarioOrm } from '../../questionarios/infraestrutura/envio-questionario.orm';
@@ -48,6 +48,7 @@ const UUID_VALIDO = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}
 const TIPOS_ALERTA_OCULTAVEIS = new Set([
   'tarefa_vencida',
   'conduta_vencida',
+  'conduta_vencendo',
   'desmarcacao_paciente',
   'atendimento_proximo',
   'formulario_pendente',
@@ -75,10 +76,12 @@ interface DadosAgregados {
   ocultacoes: DashboardAlertaOcultoOrm[];
 }
 
-interface CondutaVencidaResolvida {
+interface CondutaComValidadeResolvida {
   condutaId: string;
+  versaoId: string;
   pacienteId: string;
   validadeFim: Date;
+  vencida: boolean;
 }
 
 @Injectable()
@@ -424,7 +427,7 @@ export class ServicoDashboardClinico {
         )
         .map((ocultacao) => ocultacao.alertaId)
     );
-    const condutasVencidas = this.montarCondutasVencidas(dados.condutas, dados.condutasVersoes, pacientesPorId, tenantId, contexto.id);
+    const condutasComValidade = this.montarCondutasComValidade(dados.condutas, dados.condutasVersoes, pacientesPorId, tenantId, contexto.id);
     const alertas = this.montarAlertas(
       contexto.id,
       semRetorno,
@@ -433,7 +436,7 @@ export class ServicoDashboardClinico {
       formulariosPendentes,
       solicitacoesPendentes,
       comunicacoes,
-      condutasVencidas
+      condutasComValidade
     ).filter((alerta) => !alerta.ocultavel || !ocultas.has(alerta.id));
 
     return {
@@ -521,13 +524,13 @@ export class ServicoDashboardClinico {
       .sort((a, b) => a.vencimentoEm.getTime() - b.vencimentoEm.getTime());
   }
 
-  private montarCondutasVencidas(
+  private montarCondutasComValidade(
     condutas: CondutaTerapeuticaOrm[],
     versoes: CondutaTerapeuticaVersaoOrm[],
     pacientes: Map<string, PacienteOrm>,
     tenantId: string,
     profissionalId: string
-  ): CondutaVencidaResolvida[] {
+  ): CondutaComValidadeResolvida[] {
     const hojeIso = this.dataIsoNoTimezoneClinico();
     const condutasEscopo = new Map(
       condutas
@@ -545,16 +548,19 @@ export class ServicoDashboardClinico {
       (versao) => versao.tenantId === tenantId && condutasEscopo.has(versao.condutaTerapeuticaId)
     );
     const vigentePorConduta = resolverVersaoVigentePorConduta(versoesNoEscopo);
-    const vencidas: CondutaVencidaResolvida[] = [];
+    const comValidade: CondutaComValidadeResolvida[] = [];
     for (const [condutaId, versao] of vigentePorConduta) {
-      if (!condutaEstaVencida(versao, hojeIso)) continue;
-      vencidas.push({
+      const vencida = condutaEstaVencida(versao, hojeIso);
+      if (!vencida && !condutaEstaVencendo(versao, hojeIso)) continue;
+      comValidade.push({
         condutaId,
+        versaoId: versao.id,
         pacienteId: condutasEscopo.get(condutaId)!,
-        validadeFim: new Date(`${versao.validadeFim}T00:00:00.000Z`)
+        validadeFim: new Date(`${versao.validadeFim}T00:00:00.000Z`),
+        vencida
       });
     }
-    return vencidas;
+    return comValidade;
   }
 
   private dataIsoNoTimezoneClinico(): string {
@@ -639,7 +645,7 @@ export class ServicoDashboardClinico {
     formularios: FormularioPendenteDashboardClinicoDto[],
     solicitacoes: SolicitacaoPendenteDashboardClinicoDto[],
     comunicacoes: ComunicacaoDashboardClinicoDto[],
-    condutasVencidas: CondutaVencidaResolvida[]
+    condutasComValidade: CondutaComValidadeResolvida[]
   ): AlertaDashboardClinicoDto[] {
     const alertas: AlertaDashboardClinicoDto[] = [];
 
@@ -665,11 +671,13 @@ export class ServicoDashboardClinico {
         ocultavel: true
       });
     }
-    for (const item of condutasVencidas) {
+    for (const item of condutasComValidade) {
       alertas.push({
-        id: `conduta_vencida:${profissionalId}:${item.condutaId}`,
-        tipo: 'conduta_vencida',
-        prioridade: 2,
+        id: item.vencida
+          ? `conduta_vencida:${profissionalId}:${item.condutaId}`
+          : `conduta_vencendo:${profissionalId}:${item.versaoId}`,
+        tipo: item.vencida ? 'conduta_vencida' : 'conduta_vencendo',
+        prioridade: item.vencida ? 2 : 3,
         recursoId: item.condutaId,
         pacienteId: item.pacienteId,
         ocorridoEm: item.validadeFim,
@@ -998,10 +1006,15 @@ export class ServicoDashboardClinico {
         (tarefa.status === 'pendente' || tarefa.status === 'em_andamento') &&
         !!tarefa.vencimentoEm &&
         tarefa.vencimentoEm.getTime() < agora;
-    } else if (partes.tipo === 'conduta_vencida') {
+    } else if (partes.tipo === 'conduta_vencida' || partes.tipo === 'conduta_vencendo') {
+      const versaoDoAlerta = partes.tipo === 'conduta_vencendo'
+        ? await gerenciador.getRepository(CondutaTerapeuticaVersaoOrm).findOne({
+            where: { id: partes.recursoId, tenantId }
+          })
+        : null;
       const conduta = await gerenciador.getRepository(CondutaTerapeuticaOrm).findOne({
         where: {
-          id: partes.recursoId,
+          id: versaoDoAlerta?.condutaTerapeuticaId ?? partes.recursoId,
           tenantId,
           profissionalId: contexto.id
         }
@@ -1018,16 +1031,13 @@ export class ServicoDashboardClinico {
               descartadaEm: IsNull()
             }
           });
-        const versaoAtual = versoesPublicadas.find(
-          (versao) =>
-            versao.tenantId === tenantId &&
-            versao.condutaTerapeuticaId === conduta.id &&
-            !!versao.publicadaEm &&
-            !versao.descartadaEm
-        );
-        alertaAtual =
-          !!versaoAtual?.validadeFim &&
-          versaoAtual.validadeFim < this.dataIsoNoTimezoneClinico();
+        const versaoAtual = resolverVersaoVigentePorConduta(
+          versoesPublicadas.filter((versao) => versao.tenantId === tenantId && versao.condutaTerapeuticaId === conduta.id)
+        ).get(conduta.id);
+        const hojeIso = this.dataIsoNoTimezoneClinico();
+        alertaAtual = partes.tipo === 'conduta_vencida'
+          ? !!versaoAtual && condutaEstaVencida(versaoAtual, hojeIso)
+          : !!versaoDoAlerta && versaoAtual?.id === versaoDoAlerta.id && condutaEstaVencendo(versaoAtual, hojeIso);
       }
     } else if (partes.tipo === 'desmarcacao_paciente') {
       const consulta = await gerenciador.getRepository(AgendaConsultaOrm).findOne({
