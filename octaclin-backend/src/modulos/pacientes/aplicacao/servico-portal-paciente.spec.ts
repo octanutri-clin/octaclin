@@ -583,6 +583,15 @@ describe('ServicoPortalPaciente', () => {
       ],
       mensagens: [
         {
+          id: 'aviso-plano-1',
+          tenantId: 'tenant-1',
+          pacienteId: 'paciente-1',
+          status: 'enviado',
+          payload: { evento: 'plano_publicado_portal' },
+          conteudoCriptografado: Buffer.from(JSON.stringify({ assunto: 'Seu plano alimentar está disponível', texto: 'Um novo plano alimentar está disponível no portal. Acesse a seção Plano alimentar para consultá-lo.' })),
+          criadoEm: new Date('2026-07-22T14:00:00.000Z')
+        },
+        {
           id: 'mensagem-1',
           tenantId: 'tenant-1',
           pacienteId: 'paciente-1',
@@ -752,12 +761,12 @@ describe('ServicoPortalPaciente', () => {
       consultasProximas: 1,
       formulariosPendentes: 1,
       formulariosRespondidos: 1,
-      mensagensRecentes: 2,
+      mensagensRecentes: 3,
       tarefasPendentes: 1,
       materiaisDisponiveis: 1,
       checkinsRecentes: 1,
       notificacoesPendentes: 1,
-      notificacoesHistorico: 2
+      notificacoesHistorico: 3
     });
     expect(portal.perfil).toEqual({
       contato: 'ana@example.com',
@@ -796,10 +805,16 @@ describe('ServicoPortalPaciente', () => {
       })
     ]);
     expect(portal.mensagensRecentes).toEqual([
+      expect.objectContaining({ id: 'aviso-plano-1', titulo: 'Seu plano alimentar está disponível', texto: 'Um novo plano alimentar está disponível no portal. Acesse a seção Plano alimentar para consultá-lo.' }),
       expect.objectContaining({ id: 'mensagem-pendente-1', titulo: 'Lembrete de consulta', texto: 'Sua consulta sera amanha.' }),
       expect.objectContaining({ id: 'mensagem-1', titulo: 'Consulta agendada', texto: 'Sua consulta foi agendada.' })
     ]);
     expect(portalComPlano.notificacoesPaciente).toEqual([
+      expect.objectContaining({
+        id: 'aviso-plano-1', canal: 'portal', titulo: 'Seu plano alimentar está disponível',
+        texto: 'Um novo plano alimentar está disponível no portal. Acesse a seção Plano alimentar para consultá-lo.',
+        status: 'enviado', evento: 'plano_publicado_portal'
+      }),
       expect.objectContaining({
         id: 'mensagem-pendente-1',
         canal: 'whatsapp',

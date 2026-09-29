@@ -26,6 +26,25 @@ export const TEMPLATES_INICIAIS_EMAIL = [
       assunto: 'Seu check-in está disponível',
       corpo: 'Olá {{nome}}, há um check-in disponível no portal do paciente. Responda quando puder ou fale com a equipe da clínica.'
     }
+  },
+  {
+    codigoExterno: 'octaclin_inicial_plano_publicado',
+    nome: 'Plano alimentar disponível',
+    conteudo: {
+      assunto: 'Seu plano alimentar está disponível',
+      corpo: 'Há um novo plano alimentar disponível no portal da sua clínica. Acesse o portal do paciente para consultá-lo.'
+    }
+  }
+] as const;
+
+export const TEMPLATES_INICIAIS_WHATSAPP = [
+  {
+    codigoExterno: 'octaclin_plano_publicado',
+    nome: 'Plano alimentar disponível',
+    conteudo: {
+      idioma: 'pt_BR',
+      components: []
+    }
   }
 ] as const;
 
@@ -40,11 +59,14 @@ export async function instalarTemplatesIniciaisNoTenant(
   const codigosExistentes = new Set(existentes.map((template) => template.codigoExterno));
   const criados: TemplateMensagemOrm[] = [];
 
-  for (const sugestao of TEMPLATES_INICIAIS_EMAIL) {
+  for (const sugestao of [
+    ...TEMPLATES_INICIAIS_EMAIL.map((template) => ({ ...template, canal: 'email' as const })),
+    ...TEMPLATES_INICIAIS_WHATSAPP.map((template) => ({ ...template, canal: 'whatsapp' as const }))
+  ]) {
     if (codigosExistentes.has(sugestao.codigoExterno)) continue;
     criados.push(await repositorio.save(repositorio.create({
       tenantId,
-      canal: 'email',
+      canal: sugestao.canal,
       codigoExterno: sugestao.codigoExterno,
       nome: sugestao.nome,
       conteudo: { ...sugestao.conteudo },

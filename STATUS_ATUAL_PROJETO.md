@@ -64,9 +64,16 @@ Atualizado em 2026-09-28.
   Escopo e limites em `docs/history/phases/PLANO_FASE_286.md`.
 - Fase 287 integrada pelo PR #323 (merge `511ec37`). Reconciliação histórica sem evidência de execução em ambiente
   externo. Plano em `docs/history/phases/PLANO_FASE_287.md`.
-- Fase 288 em implementação na branch `feat/fase288-revisao-formularios`:
-  fila completa de revisão, resposta individual e síntese factual sem IA.
-  CI e merge pendentes. Plano em `docs/history/phases/PLANO_FASE_288.md`.
+- Fase 288 concluida no codigo e integrada pelo PR #324 (merge `8fc2ffe`): fila paginada,
+  leitura individual e síntese factual sem IA para revisão de respostas.
+  `Provenance do SBOM` ficou `SKIPPED`; os demais checks do PR passaram.
+  Plano em `docs/history/phases/PLANO_FASE_288.md`.
+- Fase 289 implementada nesta branch: aviso cifrado no portal na transação de
+  publicação e despacho externo idempotente via outbox, sujeito a preferências,
+  janela e aprovação de template WhatsApp. PR #343 aberto; checks remotos
+  pendentes no snapshot inicial; nenhuma
+  execução em ambiente externo foi realizada. Plano em
+  `docs/history/phases/PLANO_FASE_289.md`.
 - A reconciliação integral da auditoria e a sequência proposta para todas as
   recomendações ainda pendentes estão em
   `docs/product/OCTACLIN_PRODUCT_FEATURE_AUDIT.md`, seção 15. Estados de PB

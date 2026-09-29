@@ -1,13 +1,14 @@
 import { InjectQueue } from '@nestjs/bullmq';
 import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { Queue } from 'bullmq';
-import { EntityManager, In, JsonContains, MoreThanOrEqual, QueryFailedError } from 'typeorm';
+import { EntityManager, In, IsNull, JsonContains, MoreThanOrEqual, QueryFailedError } from 'typeorm';
 import { ExecutorTenant } from '../../../infraestrutura/banco-dados/executor-tenant';
 import { OutboxEventoOrm } from '../../../infraestrutura/outbox/outbox-evento.orm';
 import { CriptografiaDadosSensiveis } from '../../../infraestrutura/seguranca/criptografia-dados-sensiveis';
 import { resolverProfissionalIdDoUsuario } from '../../../infraestrutura/seguranca/escopo-profissional';
 import { UsuarioAutenticado } from '../../auth/dominio/usuario-autenticado';
 import { PacienteOrm } from '../../pacientes/infraestrutura/paciente.orm';
+import { PlanoAlimentarOrm } from '../../planos-alimentares/infraestrutura/plano-alimentar.orm';
 import {
   AssociarContatoWhatsappDto,
   CriarCanalNotificacaoDto,
@@ -26,7 +27,11 @@ import { CanalNotificacaoOrm } from '../infraestrutura/canal-notificacao.orm';
 import { MensagemNotificacaoOrm } from '../infraestrutura/mensagem-notificacao.orm';
 import { aplicarConteudoMensagem, comPayloadCompleto } from './cripto-conteudo-mensagem';
 import { TemplateMensagemOrm } from '../infraestrutura/template-mensagem.orm';
-import { instalarTemplatesIniciaisNoTenant, TEMPLATES_INICIAIS_EMAIL } from './templates-iniciais';
+import {
+  instalarTemplatesIniciaisNoTenant,
+  TEMPLATES_INICIAIS_EMAIL,
+  TEMPLATES_INICIAIS_WHATSAPP
+} from './templates-iniciais';
 
 export const FILA_NOTIFICACOES = 'notificacoes';
 
@@ -109,6 +114,69 @@ export class ServicoComunicacoes {
     );
   }
 
+  /** Envia aviso genérico após publicação, respeitando preferências e um canal externo por versão. */
+  async processarAvisoPlanoPublicado(
+    tenantId: string,
+    dados: { pacienteId: string; planoId: string; versaoId: string }
+  ): Promise<void> {
+    const candidatos = await this.executorTenant.executar(tenantId, async (gerenciador) => {
+      const planoVigente = await gerenciador.getRepository(PlanoAlimentarOrm).findOne({
+        where: {
+          id: dados.planoId,
+          tenantId,
+          pacienteId: dados.pacienteId,
+          versaoPublicadaAtualId: dados.versaoId,
+          arquivadoEm: IsNull()
+        }
+      });
+      if (!planoVigente) return [];
+      await instalarTemplatesIniciaisNoTenant(gerenciador, tenantId);
+      const paciente = await gerenciador.getRepository(PacienteOrm).findOne({
+        where: { id: dados.pacienteId, tenantId }
+      });
+      if (!paciente) return [];
+      let preferencias;
+      try {
+        preferencias = paciente.contatoCriptografado
+          ? interpretarPreferenciasComunicacao(this.criptografia.descriptografar(paciente.contatoCriptografado))
+          : preferenciasComunicacaoPadrao();
+      } catch {
+        return [];
+      }
+      const tipos: Array<'email' | 'whatsapp'> = preferencias.canalPreferido === 'email'
+        ? ['email']
+        : preferencias.canalPreferido === 'whatsapp'
+          ? ['whatsapp']
+          : ['email', 'whatsapp'];
+      const [canais, templates] = await Promise.all([
+        gerenciador.getRepository(CanalNotificacaoOrm).find({ where: { tenantId, ativo: true } }),
+        gerenciador.getRepository(TemplateMensagemOrm).find({ where: { tenantId } })
+      ]);
+      return tipos.flatMap((tipo) => {
+        if (!canalAutorizado(preferencias, tipo) || !preferencias.contatos[tipo]) return [];
+        const canal = canais.find((item) => item.tipo === tipo);
+        const codigo = tipo === 'email' ? 'octaclin_inicial_plano_publicado' : 'octaclin_plano_publicado';
+        const template = templates.find((item) => item.canal === tipo && item.codigoExterno === codigo);
+        if (!canal || !template || (tipo === 'whatsapp' && !template.aprovado)) return [];
+        return [{ canal, template }];
+      });
+    });
+
+    for (const { canal, template } of candidatos) {
+      const resultado = await this.enfileirarMensagemAutomacao(tenantId, {
+        pacienteId: dados.pacienteId,
+        canalId: canal.id,
+        templateId: template.id,
+        intervaloMinimoHoras: 0,
+        chaveIdempotencia: `plano-publicado:${dados.pacienteId}:${dados.versaoId}:${canal.tipo}`
+      });
+      if (resultado.status === 'enfileirada') return;
+      if (resultado.status === 'ignorada') return;
+      if (resultado.motivo !== 'canal_indisponivel' && resultado.motivo !== 'template_indisponivel' &&
+          resultado.motivo !== 'contato_ausente') return;
+    }
+  }
+
   async atualizarTemplate(
     tenantId: string,
     templateId: string,
@@ -119,8 +187,8 @@ export class ServicoComunicacoes {
       const template = await repositorio.findOne({ where: { tenantId, id: templateId } });
       if (!template) throw new NotFoundException('Template de mensagem nao encontrado.');
       if (template.canal !== dados.canal) throw new BadRequestException('O canal do template nao pode ser alterado.');
-      if (template.canal === 'email'
-        && TEMPLATES_INICIAIS_EMAIL.some((inicial) => inicial.codigoExterno === template.codigoExterno)
+      if ([...TEMPLATES_INICIAIS_EMAIL, ...TEMPLATES_INICIAIS_WHATSAPP]
+        .some((inicial) => inicial.codigoExterno === template.codigoExterno)
         && template.codigoExterno !== dados.codigoExterno) {
         throw new BadRequestException('O codigo de um modelo inicial nao pode ser alterado.');
       }

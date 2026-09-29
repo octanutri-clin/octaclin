@@ -134,6 +134,7 @@ function rotuloCanalNotificacao(canal: string) {
     whatsapp: 'WhatsApp',
     sms: 'SMS',
     canal_configurado: 'Canal configurado',
+    portal: 'Portal do paciente',
     indefinido: 'Canal indefinido'
   };
   return mapa[canal] ?? canal;
@@ -1078,6 +1079,11 @@ export function PortalPaciente({ secao }: { secao: SecaoPortal }) {
                         <p className="mt-2 line-clamp-2 break-words text-sm text-texto-suave">
                           {notificacao.texto || 'Notificacao registrada no acompanhamento.'}
                         </p>
+                        {notificacao.evento === 'plano_publicado_portal' && portal.planoAlimentar ? (
+                          <Link href="/portal/plano" className="mt-3 inline-flex text-sm font-medium text-primario underline">
+                            Consultar plano alimentar
+                          </Link>
+                        ) : null}
                         <dl className="mt-3 grid gap-2 text-xs text-texto-suave sm:grid-cols-2">
                           <div>
                             <dt className="font-medium text-texto-forte">Criada em</dt>

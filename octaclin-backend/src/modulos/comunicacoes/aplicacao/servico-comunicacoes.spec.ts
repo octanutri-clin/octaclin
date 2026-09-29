@@ -8,6 +8,7 @@ import { ProfissionalOrm } from '../../profissionais/infraestrutura/profissional
 import { CanalNotificacaoOrm } from '../infraestrutura/canal-notificacao.orm';
 import { MensagemNotificacaoOrm } from '../infraestrutura/mensagem-notificacao.orm';
 import { TemplateMensagemOrm } from '../infraestrutura/template-mensagem.orm';
+import { PlanoAlimentarOrm } from '../../planos-alimentares/infraestrutura/plano-alimentar.orm';
 
 const usuarioColaborador: UsuarioAutenticado = {
   usuarioId: 'usuario-colaborador-1',
@@ -32,11 +33,15 @@ function criarRepositorioFake(nome: string, dados: Record<string, unknown>) {
     find: jest.fn(async () => {
       if (nome === 'mensagem') return dados.mensagens ?? [];
       if (nome === 'paciente') return dados.pacientes ?? [];
+      if (nome === 'canal') return dados.canais ?? (dados.canal ? [dados.canal] : []);
+      if (nome === 'template') return dados.templates ?? (dados.template ? [dados.template] : []);
+      if (nome === 'plano') return dados.plano ? [dados.plano] : [];
       return [];
     }),
     findOne: jest.fn(async (consulta: { where: Record<string, unknown> }) => {
-      if (nome === 'canal') return dados.canal ?? null;
-      if (nome === 'template') return dados.template ?? null;
+      if (nome === 'canal') return dados.canal ?? (dados.canais as Record<string, unknown>[] | undefined)?.find((item) => item.id === consulta.where.id) ?? null;
+      if (nome === 'template') return dados.template ?? (dados.templates as Record<string, unknown>[] | undefined)?.find((item) => item.id === consulta.where.id) ?? null;
+      if (nome === 'plano') return dados.plano ?? null;
       if (nome === 'paciente') {
         const paciente = dados.paciente as Record<string, unknown> | undefined;
         if (!paciente) return null;
@@ -55,6 +60,7 @@ function criarServico(dados: Record<string, unknown>) {
   const repositorios = {
     canal: criarRepositorioFake('canal', dados),
     template: criarRepositorioFake('template', dados),
+    plano: criarRepositorioFake('plano', dados),
     mensagem: criarRepositorioFake('mensagem', dados),
     outbox: criarRepositorioFake('outbox', dados),
     paciente: criarRepositorioFake('paciente', dados),
@@ -64,6 +70,7 @@ function criarServico(dados: Record<string, unknown>) {
     getRepository: jest.fn((entidade: { name: string }) => {
       if (entidade === CanalNotificacaoOrm) return repositorios.canal;
       if (entidade === TemplateMensagemOrm) return repositorios.template;
+      if (entidade === PlanoAlimentarOrm) return repositorios.plano;
       if (entidade === MensagemNotificacaoOrm) return repositorios.mensagem;
       if (entidade === OutboxEventoOrm) return repositorios.outbox;
       if (entidade === PacienteOrm) return repositorios.paciente;
@@ -117,10 +124,50 @@ describe('ServicoComunicacoes', () => {
 
     expect(repositorios.template.find).toHaveBeenCalledWith({ where: { tenantId: 'tenant-1' } });
     expect(gerenciador.query).toHaveBeenCalledWith(expect.stringContaining('pg_advisory_xact_lock'), [expect.stringContaining('tenant-1')]);
-    expect(resultado.criados).toHaveLength(2);
-    expect(repositorios.template.save).toHaveBeenCalledTimes(2);
+    expect(resultado.criados).toHaveLength(4);
+    expect(repositorios.template.save).toHaveBeenCalledTimes(4);
     expect(repositorios.template.save).not.toHaveBeenCalledWith(expect.objectContaining({ codigoExterno: 'octaclin_inicial_boas_vindas' }));
     expect(repositorios.template.save).toHaveBeenCalledWith(expect.objectContaining({ tenantId: 'tenant-1', canal: 'email', aprovado: false }));
+    expect(repositorios.template.save).toHaveBeenCalledWith(expect.objectContaining({ tenantId: 'tenant-1', canal: 'whatsapp', codigoExterno: 'octaclin_plano_publicado', aprovado: false }));
+  });
+
+  it('seleciona só o e-mail quando a preferência é qualquer e nunca inclui dados do plano', async () => {
+    const { servico, repositorios } = criarServico({
+      canais: [{ id: 'canal-email', tenantId: 'tenant-1', tipo: 'email', ativo: true }],
+      templates: [{ id: 'template-email', tenantId: 'tenant-1', canal: 'email', codigoExterno: 'octaclin_inicial_plano_publicado', aprovado: false }],
+      plano: { id: 'plano-1', tenantId: 'tenant-1', pacienteId: 'paciente-1', versaoPublicadaAtualId: 'versao-1', arquivadoEm: null },
+      paciente: {
+        id: 'paciente-1', tenantId: 'tenant-1',
+        contatoCriptografado: Buffer.from('cripto:{"email":"paciente@example.com","preferencias":{"email":true,"whatsapp":true,"canalPreferido":"qualquer","horarioPermitido":{"inicio":"00:00","fim":"23:59","timezone":"UTC"}}}')
+      }
+    });
+
+    await servico.processarAvisoPlanoPublicado('tenant-1', {
+      pacienteId: 'paciente-1', planoId: 'plano-1', versaoId: 'versao-1'
+    });
+
+    expect(repositorios.mensagem.save).toHaveBeenCalledWith(expect.objectContaining({
+      canalId: 'canal-email', templateId: 'template-email',
+      chaveIdempotencia: 'plano-publicado:paciente-1:versao-1:email',
+      payload: { destino: 'paciente@example.com', evento: 'automacao.regra.template' }
+    }));
+  });
+
+  it('não encaminha canal externo quando a versão saiu de vigência ou o plano foi arquivado', async () => {
+    const { servico, repositorios } = criarServico({ plano: null });
+
+    await servico.processarAvisoPlanoPublicado('tenant-1', {
+      pacienteId: 'paciente-1', planoId: 'plano-1', versaoId: 'versao-1'
+    });
+
+    expect(repositorios.plano.findOne).toHaveBeenCalledWith({
+      where: expect.objectContaining({
+        id: 'plano-1', tenantId: 'tenant-1', pacienteId: 'paciente-1',
+        versaoPublicadaAtualId: 'versao-1', arquivadoEm: expect.anything()
+      })
+    });
+    expect(repositorios.template.save).not.toHaveBeenCalled();
+    expect(repositorios.mensagem.save).not.toHaveBeenCalled();
   });
 
   it('edita template do tenant sem trocar o canal e recusa id de outro tenant', async () => {
@@ -166,6 +213,24 @@ describe('ServicoComunicacoes', () => {
       canal: 'email', codigoExterno: 'octaclin_inicial_boas_vindas', nome: 'Editado',
       conteudo: { corpo: 'Editado' }
     })).resolves.toMatchObject({ nome: 'Editado' });
+  });
+
+  it('preserva o identificador do template WhatsApp de plano e remove aprovação ao editar conteúdo', async () => {
+    const { servico, repositorios } = criarServico({ template: {
+      id: 'template-plano-whatsapp', tenantId: 'tenant-1', canal: 'whatsapp',
+      codigoExterno: 'octaclin_plano_publicado', nome: 'Plano publicado',
+      conteudo: { idioma: 'pt_BR', components: [] }, aprovado: true
+    } });
+
+    await expect(servico.atualizarTemplate('tenant-1', 'template-plano-whatsapp', {
+      canal: 'whatsapp', codigoExterno: 'nome_meta_diferente', nome: 'Plano', conteudo: { idioma: 'pt_BR', components: [] }
+    })).rejects.toThrow(BadRequestException);
+    expect(repositorios.template.save).not.toHaveBeenCalled();
+
+    await expect(servico.atualizarTemplate('tenant-1', 'template-plano-whatsapp', {
+      canal: 'whatsapp', codigoExterno: 'octaclin_plano_publicado', nome: 'Plano',
+      conteudo: { idioma: 'pt_BR', components: [{ type: 'BODY' }] }, aprovado: true
+    })).resolves.toMatchObject({ aprovado: false });
   });
 
   it('deve criar mensagem pendente e evento outbox na mesma transacao', async () => {

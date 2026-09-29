@@ -2,6 +2,8 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { UserActionLogOrm } from '../../infraestrutura/auditoria/user-action-log.orm';
 import { CriptografiaDadosSensiveis } from '../../infraestrutura/seguranca/criptografia-dados-sensiveis';
+import { MensagemNotificacaoOrm } from '../comunicacoes/infraestrutura/mensagem-notificacao.orm';
+import { OutboxEventoOrm } from '../../infraestrutura/outbox/outbox-evento.orm';
 import { ModuloAuth } from '../auth/modulo-auth';
 import { AvaliacaoAntropometricaOrm } from '../pacientes/infraestrutura/avaliacao-antropometrica.orm';
 import { PacienteOrm } from '../pacientes/infraestrutura/paciente.orm';
@@ -45,7 +47,9 @@ import { ReceitaNutricionalOrm } from './infraestrutura/receita-nutricional.orm'
       PacienteOrm,
       AvaliacaoAntropometricaOrm,
       ProfissionalOrm,
-      UserActionLogOrm
+      UserActionLogOrm,
+      MensagemNotificacaoOrm,
+      OutboxEventoOrm
     ]),
     ModuloTenancy,
     ModuloAuth

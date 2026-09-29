@@ -1,11 +1,13 @@
 import { BadRequestException, ConflictException, ForbiddenException, NotFoundException } from '@nestjs/common';
 import { EntityManager } from 'typeorm';
 import { UserActionLogOrm } from '../../../infraestrutura/auditoria/user-action-log.orm';
+import { OutboxEventoOrm } from '../../../infraestrutura/outbox/outbox-evento.orm';
 import { ExecutorTenant } from '../../../infraestrutura/banco-dados/executor-tenant';
 import { CriptografiaDadosSensiveis } from '../../../infraestrutura/seguranca/criptografia-dados-sensiveis';
 import { UsuarioAutenticado } from '../../auth/dominio/usuario-autenticado';
 import { AvaliacaoAntropometricaOrm } from '../../pacientes/infraestrutura/avaliacao-antropometrica.orm';
 import { PacienteOrm } from '../../pacientes/infraestrutura/paciente.orm';
+import { MensagemNotificacaoOrm } from '../../comunicacoes/infraestrutura/mensagem-notificacao.orm';
 import { ProfissionalOrm } from '../../profissionais/infraestrutura/profissional.orm';
 import { AlimentoComposicaoOrm } from '../infraestrutura/alimento-composicao.orm';
 import { FonteComposicaoAlimentoOrm } from '../infraestrutura/fonte-composicao-alimento.orm';
@@ -271,6 +273,8 @@ describe('ServicoPlanosAlimentares', () => {
     registrar(AlimentoComposicaoOrm);
     registrar(FonteComposicaoAlimentoOrm);
     registrar(UserActionLogOrm);
+    registrar(MensagemNotificacaoOrm);
+    registrar(OutboxEventoOrm);
     gerenciador = {
       getRepository: jest.fn((entidade: Function) => repositorios.get(entidade))
     } as unknown as EntityManager;
@@ -688,6 +692,18 @@ describe('ServicoPlanosAlimentares', () => {
       possuiHashConteudo: true
     });
     expect(JSON.stringify(auditorias[0].metadados)).not.toContain(versao.hashConteudo);
+    expect(repositorios.get(MensagemNotificacaoOrm)!.save).toHaveBeenCalledWith(expect.objectContaining({
+      tenantId: TENANT_ID,
+      pacienteId: PACIENTE_ID,
+      status: 'enviado',
+      payload: { evento: 'plano_publicado_portal' },
+      chaveIdempotencia: `plano-publicado:${PACIENTE_ID}:${VERSAO_ID}:portal`
+    }));
+    expect(repositorios.get(OutboxEventoOrm)!.save).toHaveBeenCalledWith(expect.objectContaining({
+      tenantId: TENANT_ID,
+      tipo: 'plano_alimentar.publicado',
+      payload: { pacienteId: PACIENTE_ID, planoId: PLANO_ID, versaoId: VERSAO_ID }
+    }));
   });
 
   it('usa snapshot do catalogo e preserva fibra e sodio ausentes', async () => {
