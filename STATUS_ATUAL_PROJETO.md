@@ -108,14 +108,16 @@ Atualizado em 2026-09-30.
   instalado sob demanda pela clínica; sem migration. Não há prova de execução
   operacional externa nesta reconciliação. Plano em
   `docs/history/phases/PLANO_FASE_294.md`.
-- Fase 295 / PB-28 em desenvolvimento nesta branch: resposta bidirecional no
+- Fase 295 / PB-28 em desenvolvimento no PR #349: resposta bidirecional no
   portal seguro, atribuída ao profissional responsável, SLA em horas corridas
   configurável por clínica (24h padrão, 1–168h) e destaque interno de atraso na
   fila paginada de Comunicações com filtros de status/atraso, limite de cinco
   mensagens por dez minutos e sem envio externo. Typechecks e builds backend/web, Jest focado,
   Playwright de Comunicações/acessibilidade, gate estático de migration,
   `security:secrets` e `git diff --check` passaram localmente. A prova PostgreSQL/RLS
-  local está `SKIPPED`; CI e revisão cruzada R4 continuam pendentes. Nenhuma migration
+  local está `SKIPPED`. O primeiro CI falhou no smoke visual; a correção passou
+  em 12 cenários Playwright locais desktop/mobile. Nova rodada de CI e revisão
+  cruzada R4 continuam pendentes. Nenhuma migration
   foi executada em banco. Plano em
   `docs/history/phases/PLANO_FASE_295.md`.
 - A reconciliação integral da auditoria e a sequência proposta para todas as

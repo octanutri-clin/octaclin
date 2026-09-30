@@ -196,7 +196,16 @@ export async function listarConversasPortalPaciente(
 ): Promise<FilaConversaPortalEquipeApi> {
   const parametros = new URLSearchParams({ pagina: String(pagina), status });
   if (somenteAtrasadas) parametros.set('atrasadas', 'true');
-  return requisitar<FilaConversaPortalEquipeApi>(`/api/comunicacoes/portal-paciente?${parametros.toString()}`);
+  const resposta = await requisitar<unknown>(`/api/comunicacoes/portal-paciente?${parametros.toString()}`);
+  if (
+    typeof resposta !== 'object' || resposta === null ||
+    !('itens' in resposta) || !Array.isArray(resposta.itens) ||
+    !('pagina' in resposta) || !Number.isInteger(resposta.pagina) ||
+    !('temMais' in resposta) || typeof resposta.temMais !== 'boolean'
+  ) {
+    throw new Error('Resposta inválida da fila do portal.');
+  }
+  return resposta as FilaConversaPortalEquipeApi;
 }
 
 export async function obterConversaPortalEquipe(id: string): Promise<ConversaPortalEquipeApi> {

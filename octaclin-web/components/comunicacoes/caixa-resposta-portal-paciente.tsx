@@ -113,7 +113,7 @@ export function CaixaRespostaPortalPaciente() {
             <p className="mt-1 text-xs text-texto-suave">{conversas.filter((item) => item.atrasada).length} atrasadas carregadas</p>
           ) : null}
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex max-w-full flex-wrap items-center gap-2">
           <label className="flex items-center gap-2 text-sm">
             <span>Status</span>
             <select aria-label="Status das respostas do portal" value={statusFiltro} onChange={(evento) => {

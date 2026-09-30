@@ -106,6 +106,19 @@ async function prepararSessao(page) {
 test.describe('Fase 196 - comunicacoes e equipe', () => {
   test.beforeEach(async ({ page }) => prepararSessao(page));
 
+  test('mantem Comunicacoes acessivel quando a fila do portal retorna formato invalido', async ({ page }) => {
+    await page.route('**/api/comunicacoes/portal-paciente**', (route) => route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify([])
+    }));
+
+    await page.goto('/comunicacoes');
+    await expect(page.getByRole('heading', { name: 'Comunicações', level: 1 })).toBeVisible();
+    await expect(page.getByText('Resposta inválida da fila do portal.')).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Conversas' })).toBeVisible();
+  });
+
   test('prioriza conversas e leva resposta ou falha para a composicao', async ({ page }) => {
     await page.goto('/comunicacoes');
 

@@ -1,6 +1,6 @@
 # OctaClin - Checklist vivo de fases futuras ate producao
 
-Atualizado em 2026-09-30. Fase 294 integrada pelo PR #348 (merge `41873fe6`). Fase 295 / PB-28 está em desenvolvimento nesta branch; PR e CI pendentes. Fases 256 a 261, 263 a 294 integradas; Fase 284
+Atualizado em 2026-09-30. Fase 294 integrada pelo PR #348 (merge `41873fe6`). Fase 295 / PB-28 está em desenvolvimento no PR #349; smoke visual corrigido localmente e novo CI pendente. Fases 256 a 261, 263 a 294 integradas; Fase 284
 (PB-22) foi integrada pelo PR #320 (merge `af839c5`, 19 checks `SUCCESS` e
 `Provenance do SBOM` `SKIPPED`). Fase 285 (PB-20) foi integrada pelo PR #321
 (merge `01d6bf1`). Fase 286 concluida pelo PR #322 (merge `c92f246`). A reconciliação completa do backlog da auditoria e a
@@ -4454,7 +4454,7 @@ auditoria estão ordenados na seção 15 de
   responsável; SLA corrido com padrão de 24h e configuração por clínica de 1–168h; vencidas destacadas
   na fila interna paginada de Comunicações com filtros de status/atraso, sem contato externo. Limite de
   cinco mensagens por paciente a cada dez minutos. Inclui cifragem, tenant/RLS, exportação e retenção LGPD. Em desenvolvimento na branch
-  `feat/fase295-resposta-paciente-sla`; teste estático da migration PASS, sem DDL executado; PR, CI e prova PostgreSQL/RLS pendentes.
+  `feat/fase295-resposta-paciente-sla`, PR #349; teste estático da migration PASS, sem DDL executado; CI e prova PostgreSQL/RLS pendentes.
   Plano em `docs/history/phases/PLANO_FASE_295.md`.
 
 O programa de hardening

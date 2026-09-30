@@ -411,7 +411,7 @@ Ordenadas por "o dado já existe" → "o efeito não existe".
 | Plano publicado | Fase 289 registra aviso cifrado no portal na transação de publicação; outbox encaminha, no máximo, um canal externo consentido, respeitando horário e aprovação de template (PR #343 integrado) | Acompanhar adoção e configuração de canais pela clínica |
 | Material enviado e não visualizado | Visualização registrada de forma idempotente e tenant-aware desde a Fase 264.3 (PB-07); Fase 290 integrada pelo PR #344 agenda lembrete em 72h, recorrente a cada 72h, sem alcançar envios anteriores à ativação | Confirmar depois a experiência do paciente e a configuração dos canais, sem envio retroativo |
 | Paciente sem consulta futura | Fase 294 integrada pelo PR #348 (merge `41873fe6` em 2026-09-30): simulação, data factual interna e aprovação de contato em lote com trava de 30 dias compartilhada com recall | Acompanhar uso operacional; agendamento continua explícito na agenda |
-| Resposta do paciente no portal | Fase 295 / PB-28 em implementação nesta branch: conversa segura portal-clínica, profissional responsável, SLA corrido por clínica (24h padrão, 1–168h), limite de cinco mensagens por dez minutos e fila paginada com filtros de estado/atraso; destaque interno quando vencer, sem envio externo | Concluir CI/revisão e observar uso após integração; check-in revisado e gamificação seguem fora deste PB |
+| Resposta do paciente no portal | Fase 295 / PB-28 em implementação no PR #349: conversa segura portal-clínica, profissional responsável, SLA corrido por clínica (24h padrão, 1–168h), limite de cinco mensagens por dez minutos e fila paginada com filtros de estado/atraso; destaque interno quando vencer, sem envio externo | Concluir CI/revisão e observar uso após integração; check-in revisado e gamificação seguem fora deste PB |
 
 `[F]` A infraestrutura de execução já está pronta: outbox transacional com idempotência, fila com poller,
 preferências de canal e janela de horário do paciente respeitadas por todos os envios, e o padrão de
@@ -610,7 +610,7 @@ de esgotar a versão determinística de cada um.
 
 ### Estado do backlog verificado em 2026-09-30
 
-Os estados abaixo foram cruzados com PRs merged e, para itens sem PR identificável, com o código. PRs #319 a #324 e #343 a #348 foram integrados; a Fase 294 foi integrada pelo PR #348 (merge `41873fe6`, 2026-09-30). A Fase 295 / PB-28 está em implementação na branch `feat/fase295-resposta-paciente-sla`; ainda não há PR ou CI. Relatos do proprietário sobre ambientes externos não foram tratados como verificação direta nesta reconciliação.
+Os estados abaixo foram cruzados com PRs merged e, para itens sem PR identificável, com o código. PRs #319 a #324 e #343 a #348 foram integrados; a Fase 294 foi integrada pelo PR #348 (merge `41873fe6`, 2026-09-30). A Fase 295 / PB-28 está em implementação no PR #349; o primeiro CI falhou no smoke visual, corrigido e validado localmente, com nova rodada de CI pendente. Relatos do proprietário sobre ambientes externos não foram tratados como verificação direta nesta reconciliação.
 
 | PB | Estado e evidência |
 |---|---|
@@ -634,11 +634,11 @@ Os estados abaixo foram cruzados com PRs merged e, para itens sem PR identificá
 | PB-24 | **Concluído** — Fase 275, PR #305. |
 | PB-26 | **Concluído** — Fase 280, PR #315. |
 | PB-27 | **Concluído** — Fase 281, PR #316. |
-| PB-28 | **Em implementação** — Fase 295 nesta branch: portal seguro, profissional responsável, SLA corrido por clínica de 24h padrão configurável entre 1–168h, limite de cinco mensagens por janela móvel de dez minutos e fila paginada com filtros de status/atraso; destaque interno após vencimento, sem despacho externo. A conclusão depende do PR/CI. |
+| PB-28 | **Em implementação** — Fase 295 no PR #349: portal seguro, profissional responsável, SLA corrido por clínica de 24h padrão configurável entre 1–168h, limite de cinco mensagens por janela móvel de dez minutos e fila paginada com filtros de status/atraso; destaque interno após vencimento, sem despacho externo. A conclusão depende de CI e revisão R4. |
 | PB-29 | **Concluído no código** — Fase 283, PR #319 integrado (merge `19ade15` em 2026-09-27). Não há evidência de produção nesta reconciliação. |
 | PB-30 | **Pendente** — extração assistida de exames não foi encontrada; PB-17 entrega a estrutura determinística e é dependência já concluída. |
 
-PB-30 segue sem ordem aprovada na tabela original. PB-20 e Fases 286 a 294 foram integrados. A Fase 293 foi integrada pelo PR #347 (merge `464b281b`); 19 checks passaram e três ficaram `SKIPPED`. A Fase 294 foi integrada pelo PR #348. A Fase 295 implementa PB-28 nesta branch; PR/CI e uso operacional ainda não foram verificados. As demais automações da seção 7 e a fórmula geral do score continuam em aberto.
+PB-30 segue sem ordem aprovada na tabela original. PB-20 e Fases 286 a 294 foram integrados. A Fase 293 foi integrada pelo PR #347 (merge `464b281b`); 19 checks passaram e três ficaram `SKIPPED`. A Fase 294 foi integrada pelo PR #348. A Fase 295 implementa PB-28 no PR #349; CI após correção visual e uso operacional ainda não foram verificados. As demais automações da seção 7 e a fórmula geral do score continuam em aberto.
 
 ---
 
@@ -836,7 +836,7 @@ produto devem ter esse gate resolvido no plano da respectiva fase.
    A Fase 291 mantém o aviso imediato separado dos follow-ups e exige cutover
    por tenant após migration 1057 e verificação de RLS. O proprietário relata
    aplicação e funcionamento após rebuild, sem prova direta nesta reconciliação.
-6. **PB-28 (Fase 295 em implementação nesta branch).** O contrato aprovado e implementado nesta fase usa
+6. **PB-28 (Fase 295 em implementação no PR #349).** O contrato aprovado e implementado nesta fase usa
    portal seguro somente; atribui ao profissional responsável, com SLA corrido padrão de 24h configurável
    entre 1 e 168h por clínica; limita o paciente a cinco mensagens por janela móvel de dez minutos e
    permite filtrar estados e paginar a fila; atraso apenas destaca a fila interna de Comunicações, sem envio externo.

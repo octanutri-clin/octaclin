@@ -1158,7 +1158,7 @@ test.describe('gate de acessibilidade - portal do paciente (areas autenticadas)'
   test('mensagens', async ({ page }) => {
     await prepararSessaoPortalPaciente(page);
     await page.goto('/portal/mensagens');
-    await expect(page.getByRole('heading', { name: 'Mensagens recentes' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Conversa com a clínica' })).toBeVisible();
     await rodarChecagensDeAcessibilidade(page);
   });
 

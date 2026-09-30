@@ -85,7 +85,7 @@ Classificação **R4**: PHI, autenticação/autorização, isolamento por tenant
 
 ## Gates e rollback
 
-Gates planejados: specs focados de backend e web, typecheck/build relevantes, lint, testes de migration/RLS, testes de interface, `pnpm security:secrets`, `git diff --check` e CI do PR. Cada resultado será rotulado PASS/FAIL/NA/SKIPPED com motivo. CI e revisão externa ainda não ocorreram.
+Gates planejados: specs focados de backend e web, typecheck/build relevantes, lint, testes de migration/RLS, testes de interface, `pnpm security:secrets`, `git diff --check` e CI do PR. Cada resultado será rotulado PASS/FAIL/NA/SKIPPED com motivo. O primeiro CI do PR #349 encontrou falhas visuais; revisão externa ainda não ocorreu.
 
 ## Evidência local antes do PR — 2026-09-30
 
@@ -99,5 +99,13 @@ Gates planejados: specs focados de backend e web, typecheck/build relevantes, li
 - PASS: `pnpm security:secrets` e `git diff --check`.
 - SKIPPED: integração PostgreSQL/RLS local por falta de harness descartável; CI deve executar a prova real antes do merge.
 - PENDENTE: revisão cruzada independente R4 e CI do PR. Sem deploy, DDL, migration de provider ou verificação operacional externa.
+
+## Correção do smoke visual no PR #349 — 2026-09-30
+
+- FAIL observado no primeiro CI: `Demo local smoke` teve dez falhas visuais em desktop/mobile; `PR Gate` falhou em consequência. Backend NestJS e Web Next.js passaram. Os testes focados anteriores não cobriam todos os mocks e viewports do smoke completo.
+- Causa: teste do portal usava o título anterior; mock de configurações omitira `slaRespostaPacienteHoras`, deixando o campo obrigatório vazio; mock de reflow devolvia `[]` para a nova fila, provocando erro de renderização. Com contrato correto, o teste também revelou que o botão de atualização ultrapassava o viewport de 320 px a zoom 400%.
+- Correção: atualizar os mocks e a asserção, validar o formato da resposta da fila antes de alterar o estado da tela e permitir quebra de linha dos controles. Resposta inválida agora mostra erro local na fila sem derrubar Comunicações.
+- PASS local após a correção: 12 testes Playwright focados em desktop/mobile, incluindo os dez cenários que falharam e a regressão para resposta inválida; typecheck e lint direcionado sem erros.
+- PENDENTE: nova rodada de CI do PR #349, prova PostgreSQL/RLS no CI e revisão cruzada R4. A execução local não substitui o resultado do smoke remoto.
 
 Rollback antes de persistir conversa: reverter migration e código em conjunto. Depois de persistir mensagens: desligar temporariamente as rotas/UI e manter tabelas/cifras para preservação clínica; não remover dados via `down`. Reversão definitiva exige plano de retenção/eliminações aprovado e autorizado para o ambiente alvo.
