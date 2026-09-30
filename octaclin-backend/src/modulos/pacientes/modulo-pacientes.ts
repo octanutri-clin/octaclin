@@ -34,6 +34,7 @@ import { ServicoConvitesPaciente } from './aplicacao/servico-convites-paciente';
 import { ServicoDocumentosClinicos } from './aplicacao/servico-documentos-clinicos';
 import { ServicoImportacaoPacientes } from './aplicacao/servico-importacao-pacientes';
 import { ServicoPacientes } from './aplicacao/servico-pacientes';
+import { ServicoRetornosSemConsulta } from './aplicacao/servico-retornos-sem-consulta';
 import { ServicoPerfilCadastroPaciente } from './aplicacao/servico-perfil-cadastro-paciente';
 import { ServicoDuplicidadePacientes } from './aplicacao/servico-duplicidade-pacientes';
 import { ServicoExamesLaboratoriais } from './aplicacao/servico-exames-laboratoriais';
@@ -57,6 +58,7 @@ import {
 } from './apresentacao/controlador-condutas-terapeuticas';
 import { ControladorFiltrosSalvosPacientes } from './apresentacao/controlador-filtros-salvos-pacientes';
 import { ControladorPortalPaciente } from './apresentacao/controlador-portal-paciente';
+import { ControladorRetornosSemConsulta } from './apresentacao/controlador-retornos-sem-consulta';
 import { AcompanhamentoTarefaOrm } from './infraestrutura/acompanhamento-tarefa.orm';
 import { ConvitePacienteOrm } from './infraestrutura/convite-paciente.orm';
 import { EvolucaoClinicaOrm } from './infraestrutura/evolucao-clinica.orm';
@@ -132,6 +134,7 @@ const processadores = deveExecutarProcessadores() ? [ProcessadorRecalculoPriorid
     ModuloMobile
   ],
   controllers: [
+    ControladorRetornosSemConsulta,
     // ControladorFiltrosSalvosPacientes deve vir antes de ControladorPacientes:
     // ControladorPacientes declara @Get(':id') e o Express casaria
     // "filtros-salvos" com :id se este controlador viesse depois.
@@ -150,6 +153,7 @@ const processadores = deveExecutarProcessadores() ? [ProcessadorRecalculoPriorid
     ControladorModelosEvolucaoClinica
   ],
   providers: [
+    ServicoRetornosSemConsulta,
     ServicoPacientes,
     ServicoPerfilCadastroPaciente,
     ServicoDuplicidadePacientes,

@@ -151,10 +151,11 @@ describe('ServicoComunicacoes', () => {
 
     expect(repositorios.template.find).toHaveBeenCalledWith({ where: { tenantId: 'tenant-1' } });
     expect(gerenciador.query).toHaveBeenCalledWith(expect.stringContaining('pg_advisory_xact_lock'), [expect.stringContaining('tenant-1')]);
-    expect(resultado.criados).toHaveLength(6);
-    expect(repositorios.template.save).toHaveBeenCalledTimes(6);
+    expect(resultado.criados).toHaveLength(7);
+    expect(repositorios.template.save).toHaveBeenCalledTimes(7);
     expect(repositorios.template.save).not.toHaveBeenCalledWith(expect.objectContaining({ codigoExterno: 'octaclin_inicial_boas_vindas' }));
     expect(repositorios.template.save).toHaveBeenCalledWith(expect.objectContaining({ tenantId: 'tenant-1', canal: 'email', aprovado: false }));
+    expect(repositorios.template.save).toHaveBeenCalledWith(expect.objectContaining({ tenantId: 'tenant-1', canal: 'email', codigoExterno: 'octaclin_inicial_retorno', aprovado: false }));
     expect(repositorios.template.save).toHaveBeenCalledWith(expect.objectContaining({ tenantId: 'tenant-1', canal: 'whatsapp', codigoExterno: 'octaclin_plano_publicado', aprovado: false }));
   });
 

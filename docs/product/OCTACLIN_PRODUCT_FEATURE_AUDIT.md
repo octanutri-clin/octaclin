@@ -406,11 +406,11 @@ Ordenadas por "o dado já existe" → "o efeito não existe".
 | Formulário respondido | Notificação in-app + webhook; Fase 288 integrada pelo PR #324: fila paginada, leitura individual e síntese factual sem IA | Acompanhar adoção da revisão antes da consulta; CI do PR teve `Provenance do SBOM` `SKIPPED` |
 | Confirmação de consulta (WhatsApp) | Gravada e exibida por consulta; fila manual de não confirmadas existe. Fase 291 integrada pelo PR #345 adiciona calendário de follow-ups, inclusive etapas condicionadas à falta de confirmação. O proprietário relatou aplicação das migrations e funcionamento após rebuild; sem prova direta nesta reconciliação | Medir adoção do calendário e da fila |
 | Falta registrada | Fase 292 integrada pelo PR #346: decisão humana em layer, fila persistente e envio único sujeito a canal, template, janela e prazo de 7 dias; sem alcance retroativo. Indicador factual de faltas recentes separado do `score_risco` manual | Acompanhar uso; fórmula geral e pesos do score continuam pendentes de decisão de produto |
-| Conduta vencendo | Fase 264.4 já alerta quando vencida; Fase 293 em desenvolvimento acrescenta aviso de revisão nos sete dias civis anteriores e no próprio dia do vencimento | Confirmar CI e adoção do aviso preventivo; sem mensagem automática ao paciente |
+| Conduta vencendo | Fase 264.4 já alerta quando vencida; Fase 293 integrada pelo PR #347 acrescenta aviso de revisão nos sete dias civis anteriores e no próprio dia do vencimento | Acompanhar adoção do aviso preventivo; sem mensagem automática ao paciente |
 | Próxima revisão do perfil (`proximaRevisaoEm`) | Tarefa automática integrada na Fase 287, PR #323; reconciliação histórica opt-in sem evidência de execução externa | Confirmar backfill por tenant em ambiente autorizado |
 | Plano publicado | Fase 289 registra aviso cifrado no portal na transação de publicação; outbox encaminha, no máximo, um canal externo consentido, respeitando horário e aprovação de template (PR #343 integrado) | Acompanhar adoção e configuração de canais pela clínica |
 | Material enviado e não visualizado | Visualização registrada de forma idempotente e tenant-aware desde a Fase 264.3 (PB-07); Fase 290 integrada pelo PR #344 agenda lembrete em 72h, recorrente a cada 72h, sem alcançar envios anteriores à ativação | Confirmar depois a experiência do paciente e a configuração dos canais, sem envio retroativo |
-| Paciente sem consulta futura | Existe fila no dashboard | Sugestão de reagendamento em lote |
+| Paciente sem consulta futura | Filtro na lista de pacientes; Fase 294 em desenvolvimento: simulação, data factual interna e aprovação de contato em lote com trava de 30 dias compartilhada com recall | Validar CI e uso operacional após integração; agendamento continua explícito na agenda |
 
 `[F]` A infraestrutura de execução já está pronta: outbox transacional com idempotência, fila com poller,
 preferências de canal e janela de horário do paciente respeitadas por todos os envios, e o padrão de
@@ -609,7 +609,7 @@ de esgotar a versão determinística de cada um.
 
 ### Estado do backlog verificado em 2026-09-29
 
-Os estados abaixo foram cruzados com PRs merged e, para itens sem PR identificável, com o código. PRs #319 a #324 e #343 a #346 foram integrados; no PR #346, 19 checks terminaram em `SUCCESS` e três em `SKIPPED` (`Provenance do SBOM`, `Mobile Expo`, `AI FastAPI`). A Fase 293 está em desenvolvimento na branch `feat/fase293-conduta-vencendo`. O proprietário relata migrations aplicadas em staging e produção e funcionamento após rebuild no Render; não houve verificação direta dos ambientes nesta reconciliação.
+Os estados abaixo foram cruzados com PRs merged e, para itens sem PR identificável, com o código. PRs #319 a #324 e #343 a #347 foram integrados; no PR #347, 19 checks terminaram em `SUCCESS` e três em `SKIPPED`. A Fase 294 está em desenvolvimento na branch `feat/fase294-retorno-sem-consulta`; seu PR e CI ainda estão pendentes. O proprietário relata migrations aplicadas em staging e produção e funcionamento após rebuild no Render; não houve verificação direta dos ambientes nesta reconciliação.
 
 | PB | Estado e evidência |
 |---|---|
@@ -637,7 +637,7 @@ Os estados abaixo foram cruzados com PRs merged e, para itens sem PR identificá
 | PB-29 | **Concluído no código** — Fase 283, PR #319 integrado (merge `19ade15` em 2026-09-27). Não há evidência de produção nesta reconciliação. |
 | PB-30 | **Pendente** — extração assistida de exames não foi encontrada; PB-17 entrega a estrutura determinística e é dependência já concluída. |
 
-PB-28 e PB-30 não têm ordem aprovada na tabela original. PB-20 e Fases 286 a 292 foram integrados. A Fase 292 foi integrada pelo PR #346 (merge `9ce6b4e4`); 19 checks passaram e três ficaram `SKIPPED`. O relato do proprietário sobre migrations em staging e produção não substitui prova técnica direta nem confirma backfills específicos de fases anteriores. A Fase 293 implementa aviso preventivo de conduta na branch atual; as demais automações da seção 7 e a fórmula geral do score continuam em aberto.
+PB-28 e PB-30 não têm ordem aprovada na tabela original. PB-20 e Fases 286 a 293 foram integrados. A Fase 293 foi integrada pelo PR #347 (merge `464b281b`); 19 checks passaram e três ficaram `SKIPPED`. O relato do proprietário sobre migrations em staging e produção não substitui prova técnica direta nem confirma backfills específicos de fases anteriores. A Fase 294 implementa retorno em lote na branch atual; as demais automações da seção 7 e a fórmula geral do score continuam em aberto.
 
 ---
 
@@ -826,8 +826,9 @@ produto devem ter esse gate resolvido no plano da respectiva fase.
    acompanhar consultas não confirmadas (Fase 291 integrada pelo PR #345: calendário
    configurável de até 30 etapas, com condição `somente_se_nao_confirmada`),
    reagendamento proativo após falta (Fase 292 integrada pelo PR #346, com
-   decisão humana e contato opt-in), alerta de conduta vencendo (Fase 293 em
-   desenvolvimento), depois sugestão de retorno quando não houver consulta futura.
+   decisão humana e contato opt-in), alerta de conduta vencendo (Fase 293 integrada
+   pelo PR #347), depois sugestão de retorno quando não houver consulta futura
+   (Fase 294 em desenvolvimento).
    Preservar preferências, idempotência, outbox e autorização por tenant.
    A Fase 290 reutiliza a trilha de visualização existente e preserva preferências,
    opt-out, janela, aprovação de template, limite de frequência, idempotência e outbox.

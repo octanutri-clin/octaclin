@@ -94,11 +94,19 @@ Atualizado em 2026-09-29.
   (`Provenance do SBOM`, `Mobile Expo`, `AI FastAPI`). Nenhuma migration nova.
   Deploy e envio externo não foram verificados neste ciclo. Plano em
   `docs/history/phases/PLANO_FASE_292.md`.
-- Fase 293 em desenvolvimento na branch `feat/fase293-conduta-vencendo`:
+- Fase 293 integrada pelo PR #347 (merge `464b281b`):
   aviso interno no dashboard para conduta publicada com validade entre hoje e
   sete dias civis no fuso clínico. Reaproveita o escopo tenant/profissional e a
-  ocultação de 24h; sem migration ou envio externo. PR e CI pendentes. Plano em
+  ocultação de 24h; sem migration ou envio externo. 19 checks `SUCCESS` e três
+  `SKIPPED`; não há verificação direta de produção. Plano em
   `docs/history/phases/PLANO_FASE_293.md`.
+- Fase 294 em desenvolvimento na branch `feat/fase294-retorno-sem-consulta`:
+  simulação e aprovação humana de contatos de retorno para pacientes sem consulta
+  futura, mediana factual de até três intervalos e data apenas interna. A trava
+  de 30 dias entre lote e recall, a ausência de consulta futura e as preferências
+  do paciente são reavaliadas no envio. Modelo inicial de e-mail neutro,
+  instalado sob demanda pela clínica; sem migration. Plano em
+  `docs/history/phases/PLANO_FASE_294.md`; PR e CI ainda pendentes.
 - A reconciliação integral da auditoria e a sequência proposta para todas as
   recomendações ainda pendentes estão em
   `docs/product/OCTACLIN_PRODUCT_FEATURE_AUDIT.md`, seção 15. Estados de PB

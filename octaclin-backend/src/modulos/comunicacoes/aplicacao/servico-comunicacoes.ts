@@ -27,6 +27,7 @@ import {
   preferenciasComunicacaoPadrao
 } from '../dominio/preferencias-comunicacao';
 import { CanalNotificacaoOrm } from '../infraestrutura/canal-notificacao.orm';
+import { EVENTO_RETORNO, impedimentoRetorno } from '../dominio/politica-retorno';
 import { MensagemNotificacaoOrm } from '../infraestrutura/mensagem-notificacao.orm';
 import { aplicarConteudoMensagem, comPayloadCompleto } from './cripto-conteudo-mensagem';
 import { TemplateMensagemOrm } from '../infraestrutura/template-mensagem.orm';
@@ -611,6 +612,25 @@ export class ServicoComunicacoes {
       // A decisao humana autoriza apenas o fluxo; preferencias e janela podem mudar
       // entre a aprovacao e a gravacao atomica da mensagem/outbox.
       let payload = dados.payload;
+      if (dados.payload.evento === EVENTO_RETORNO) {
+        await gerenciador.query('select pg_advisory_xact_lock(hashtextextended($1, 0))', [`retorno:${tenantId}:${dados.pacienteId}`]);
+        const impedimento = await impedimentoRetorno(gerenciador, tenantId, dados.pacienteId);
+        if (impedimento) throw new ConflictException(impedimento);
+        if ((canal.tipo !== 'email' && canal.tipo !== 'whatsapp') ||
+            template.conteudo?.evento !== EVENTO_RETORNO || paciente.arquivadoEm ||
+            ['inativo', 'pausado', 'encerrado', 'fechado'].includes(paciente.statusAdesao)) {
+          throw new ConflictException('Contato de retorno indisponivel.');
+        }
+        const preferencias = paciente.contatoCriptografado
+          ? interpretarPreferenciasComunicacao(this.criptografia.descriptografar(paciente.contatoCriptografado))
+          : preferenciasComunicacaoPadrao();
+        const destino = preferencias.contatos[canal.tipo];
+        if (!canalAutorizado(preferencias, canal.tipo) || !destino ||
+            !dentroHorarioPermitido(new Date(), preferencias.horarioPermitido)) {
+          throw new ConflictException('Contato de retorno fora das preferencias do paciente.');
+        }
+        payload = { ...dados.payload, destino };
+      }
       if (dados.payload.evento === 'agenda.consulta.reagendamento_proativo') {
         const consultaId = dados.payload.consultaId;
         const consulta = typeof consultaId === 'string'

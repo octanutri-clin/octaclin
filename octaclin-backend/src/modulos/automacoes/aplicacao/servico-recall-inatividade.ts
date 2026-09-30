@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { EntityManager, IsNull, Not } from 'typeorm';
 import { ExecutorTenant } from '../../../infraestrutura/banco-dados/executor-tenant';
 import { CriptografiaDadosSensiveis } from '../../../infraestrutura/seguranca/criptografia-dados-sensiveis';
@@ -16,6 +16,8 @@ import {
   preferenciasComunicacaoPadrao
 } from '../../comunicacoes/dominio/preferencias-comunicacao';
 import { CanalNotificacaoOrm } from '../../comunicacoes/infraestrutura/canal-notificacao.orm';
+import { MensagemNotificacaoOrm } from '../../comunicacoes/infraestrutura/mensagem-notificacao.orm';
+import { EVENTO_RETORNO, INTERVALO_CONTATO_RETORNO_DIAS } from '../../comunicacoes/dominio/politica-retorno';
 import { TemplateMensagemOrm } from '../../comunicacoes/infraestrutura/template-mensagem.orm';
 import { PacienteOrm } from '../../pacientes/infraestrutura/paciente.orm';
 import { ExecucaoRegraOrm } from '../infraestrutura/execucao-regra.orm';
@@ -24,13 +26,14 @@ import {
   CandidatoRecall,
   ConfiguracaoRecallInatividade,
   ExclusaoRecall,
+  MotivoExclusaoRecall,
   PacienteParaRecall,
   ehGatilhoInatividade,
   normalizarConfiguracaoRecall,
   selecionarCandidatosRecall
 } from '../dominio/recall-inatividade';
 
-export const EVENTO_RECALL_INATIVIDADE = 'paciente.recall.inatividade';
+export const EVENTO_RECALL_INATIVIDADE = EVENTO_RETORNO;
 
 export interface ResultadoSimulacaoRecall {
   execucao: ExecucaoRegraOrm;
@@ -199,10 +202,27 @@ export class ServicoRecallInatividade {
     if (!pacientes.length) return { candidatos: [], excluidos: [] };
 
     const pacienteIds = pacientes.map((paciente) => paciente.id);
-    const [ultimasConsultas, ultimosRecalls] = await Promise.all([
+    const [ultimasConsultas, ultimosRecalls, futuras, contatosRecentes] = await Promise.all([
       this.mapearUltimaConsultaConcluida(gerenciador, tenantId, pacienteIds),
-      this.mapearUltimoRecall(gerenciador, tenantId, regra.id, pacienteIds)
+      this.mapearUltimoRecall(gerenciador, tenantId, regra.id, pacienteIds),
+      gerenciador.getRepository(AgendaConsultaOrm).createQueryBuilder('consulta')
+        .select('DISTINCT consulta.paciente_id', 'pacienteId')
+        .where('consulta.tenant_id = :tenantId AND consulta.paciente_id IN (:...pacienteIds)', { tenantId, pacienteIds })
+        .andWhere('consulta.status IN (:...status)', { status: ['agendada', 'reagendada'] })
+        .andWhere('consulta.inicio_em >= :agora', { agora }).getRawMany<{ pacienteId: string }>(),
+      gerenciador.getRepository(MensagemNotificacaoOrm).createQueryBuilder('mensagem')
+        .select('DISTINCT mensagem.paciente_id', 'pacienteId')
+        .where('mensagem.tenant_id = :tenantId AND mensagem.paciente_id IN (:...pacienteIds)', { tenantId, pacienteIds })
+        .andWhere(`(mensagem.status IN ('pendente', 'processando') OR
+          (mensagem.status IN ('enviado', 'recebido') AND COALESCE(mensagem.enviado_em, mensagem.criado_em) >= :desde) OR
+          (mensagem.status = 'falhou' AND mensagem.tentativa_externa_em >= :desde))`)
+        .andWhere("mensagem.payload->>'evento' = :evento", { evento: EVENTO_RETORNO })
+        .setParameter('desde', new Date(agora.getTime() - INTERVALO_CONTATO_RETORNO_DIAS * 86_400_000))
+        .getRawMany<{ pacienteId: string }>()
     ]);
+    const impedidos = new Map<string, MotivoExclusaoRecall>();
+    for (const item of contatosRecentes) impedidos.set(item.pacienteId, 'contato_recente');
+    for (const item of futuras) impedidos.set(item.pacienteId, 'consulta_futura');
 
     const entrada: PacienteParaRecall[] = pacientes.map((paciente) => {
       const { preferencias, ilegivel } = this.preferenciasDoPaciente(paciente);
@@ -217,7 +237,9 @@ export class ServicoRecallInatividade {
       };
     });
 
-    return selecionarCandidatosRecall(entrada, configuracao, agora);
+    const selecao = selecionarCandidatosRecall(entrada.filter((item) => !impedidos.has(item.pacienteId)), configuracao, agora);
+    const excluidos = selecao.excluidos.concat(entrada.filter((item) => impedidos.has(item.pacienteId)).map((item) => ({ pacienteId: item.pacienteId, motivo: impedidos.get(item.pacienteId)! })));
+    return { candidatos: selecao.candidatos, excluidos };
   }
 
   private async mapearUltimaConsultaConcluida(
@@ -332,6 +354,7 @@ export class ServicoRecallInatividade {
       });
       mensagemId = mensagem.id;
     } catch (erro) {
+      if (erro instanceof ConflictException) return { status: 'ignorado', motivo: 'condicao_alterada' };
       const mensagemErro = erro instanceof Error ? erro.message : 'Falha ao enviar recall.';
       this.logger.warn(`Recall da regra ${regra.id} falhou para o paciente ${candidato.pacienteId}: ${mensagemErro}`);
       return { status: 'falhou', erro: mensagemErro };

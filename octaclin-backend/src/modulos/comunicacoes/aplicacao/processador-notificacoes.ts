@@ -21,6 +21,7 @@ import { CanalNotificacaoOrm } from '../infraestrutura/canal-notificacao.orm';
 import { MensagemNotificacaoOrm } from '../infraestrutura/mensagem-notificacao.orm';
 import { TemplateMensagemOrm } from '../infraestrutura/template-mensagem.orm';
 import { lerPayloadMensagem } from './cripto-conteudo-mensagem';
+import { EVENTO_RETORNO } from '../dominio/politica-retorno';
 
 interface JobEnvioNotificacao {
   tenantId: string;
@@ -60,7 +61,7 @@ export class ProcessadorNotificacoes extends WorkerHost {
     const reservaFollowup = await this.executorTenant.executar(tenantId, async (gerenciador) => {
       const repo = gerenciador.getRepository(MensagemNotificacaoOrm);
       const atual = await repo.findOne({ where: { id: mensagemId, tenantId } });
-      if (!['agenda.consulta.followup', 'agenda.consulta.reagendamento_proativo'].includes(String(atual?.payload?.evento))) return 'legado' as const;
+      if (!['agenda.consulta.followup', 'agenda.consulta.reagendamento_proativo', EVENTO_RETORNO].includes(String(atual?.payload?.evento))) return 'legado' as const;
       if (!atual || atual.status !== 'pendente') return 'ignorar' as const;
       const reivindicacao = await repo.update({ id: mensagemId, tenantId, status: 'pendente' }, { status: 'processando', tentativaExternaEm: new Date() });
       return reivindicacao.affected ? 'reservado' as const : 'ignorar' as const;
@@ -111,6 +112,15 @@ export class ProcessadorNotificacoes extends WorkerHost {
         }
         if (mensagem.payload.evento === 'agenda.consulta.reagendamento_proativo') {
           const motivo = await this.motivoSupressaoReagendamento(gerenciador, tenantId, mensagem, canal, template, payload);
+          if (motivo) {
+            mensagem.status = 'cancelado';
+            mensagem.erro = motivo;
+            await repositorioMensagens.save(mensagem);
+            return;
+          }
+        }
+        if (mensagem.payload.evento === EVENTO_RETORNO) {
+          const motivo = await this.motivoSupressaoRetorno(gerenciador, tenantId, mensagem, canal, template, payload);
           if (motivo) {
             mensagem.status = 'cancelado';
             mensagem.erro = motivo;
@@ -214,6 +224,35 @@ export class ProcessadorNotificacoes extends WorkerHost {
         : preferenciasComunicacaoPadrao();
     } catch { return 'contato_ilegivel'; }
     if (!canalPermitido(preferencias, canal.tipo) || !dentroHorarioPermitido(agora, preferencias.horarioPermitido) ||
+        preferencias.contatos[canal.tipo] !== payload.destino) return 'preferencia_alterada';
+    return undefined;
+  }
+
+  private async motivoSupressaoRetorno(
+    gerenciador: EntityManager,
+    tenantId: string,
+    mensagem: MensagemNotificacaoOrm,
+    canal: CanalNotificacaoOrm,
+    template: TemplateMensagemOrm,
+    payload: Record<string, unknown>
+  ): Promise<string | undefined> {
+    if (!mensagem.pacienteId) return 'paciente_indisponivel';
+    const paciente = await gerenciador.getRepository(PacienteOrm).findOne({ where: { id: mensagem.pacienteId, tenantId } });
+    if (!paciente || paciente.arquivadoEm || ['inativo', 'pausado', 'encerrado', 'fechado'].includes(paciente.statusAdesao)) return 'paciente_indisponivel';
+    const consulta = await gerenciador.getRepository(AgendaConsultaOrm).findOne({
+      select: { id: true },
+      where: { tenantId, pacienteId: mensagem.pacienteId, status: In(['agendada', 'reagendada']), inicioEm: MoreThanOrEqual(new Date()) }
+    });
+    if (consulta) return 'consulta_futura';
+    if (!canal.ativo || (canal.tipo !== 'email' && canal.tipo !== 'whatsapp') ||
+        template.conteudo?.evento !== EVENTO_RETORNO || (canal.tipo === 'whatsapp' && !template.aprovado)) return 'canal_indisponivel';
+    let preferencias;
+    try {
+      preferencias = paciente.contatoCriptografado
+        ? interpretarPreferenciasComunicacao(this.criptografia.descriptografar(paciente.contatoCriptografado))
+        : preferenciasComunicacaoPadrao();
+    } catch { return 'contato_ilegivel'; }
+    if (!canalPermitido(preferencias, canal.tipo) || !dentroHorarioPermitido(new Date(), preferencias.horarioPermitido) ||
         preferencias.contatos[canal.tipo] !== payload.destino) return 'preferencia_alterada';
     return undefined;
   }

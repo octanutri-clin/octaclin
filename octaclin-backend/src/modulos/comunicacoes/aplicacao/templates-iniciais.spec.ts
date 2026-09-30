@@ -17,9 +17,9 @@ describe('instalarTemplatesIniciaisNoTenant', () => {
     };
     const gerenciador = { getRepository: jest.fn(() => repositorio), query: jest.fn(async () => undefined) };
 
-    expect((await instalarTemplatesIniciaisNoTenant(gerenciador as never, 'tenant-1')).criados).toHaveLength(6);
+    expect((await instalarTemplatesIniciaisNoTenant(gerenciador as never, 'tenant-1')).criados).toHaveLength(7);
     expect((await instalarTemplatesIniciaisNoTenant(gerenciador as never, 'tenant-1')).criados).toHaveLength(0);
-    expect((await instalarTemplatesIniciaisNoTenant(gerenciador as never, 'tenant-2')).criados).toHaveLength(7);
+    expect((await instalarTemplatesIniciaisNoTenant(gerenciador as never, 'tenant-2')).criados).toHaveLength(8);
     expect(gravados.find((template) => template.codigoExterno === 'octaclin_plano_publicado')?.canal).toBe('whatsapp');
     expect(gravados.find((template) => template.codigoExterno === 'octaclin_material_nao_visualizado')?.aprovado).toBe(false);
     expect(gravados.find((template) => template.id === 'modelo-customizado')?.nome).toBe('Texto da clínica');

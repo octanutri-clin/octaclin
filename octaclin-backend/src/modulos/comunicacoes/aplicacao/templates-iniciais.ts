@@ -42,6 +42,15 @@ export const TEMPLATES_INICIAIS_EMAIL = [
       assunto: 'Há um material disponível no portal',
       corpo: 'Um material educativo enviado pela equipe continua disponível no portal da sua clínica. Acesse o portal do paciente para consultá-lo. Se já o visualizou, você pode desconsiderar este aviso.'
     }
+  },
+  {
+    codigoExterno: 'octaclin_inicial_retorno',
+    nome: 'Contato para retorno',
+    conteudo: {
+      evento: 'paciente.recall.inatividade',
+      assunto: 'Acompanhamento com sua clínica',
+      corpo: 'Olá, a equipe da clínica gostaria de conversar sobre a continuidade do seu acompanhamento. Se desejar, entre em contato para verificar a disponibilidade de uma consulta.'
+    }
   }
 ] as const;
 

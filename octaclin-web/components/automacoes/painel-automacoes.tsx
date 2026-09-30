@@ -168,6 +168,8 @@ const MOTIVOS_EXCLUSAO_RECALL: Record<string, string> = {
   status_adesao_fora_do_filtro: 'fora do status de adesao filtrado',
   consulta_recente: 'teve consulta recente',
   recall_recente: 'ja recebeu recall dentro do intervalo minimo',
+  contato_recente: 'recebeu contato de retorno ou recall nos últimos 30 dias',
+  consulta_futura: 'já possui consulta futura',
   limite_por_execucao: 'ficou fora do limite desta rodada'
 };
 
@@ -851,7 +853,7 @@ export function PainelAutomacoes() {
           </div>
           <p className="mt-3 rounded-md border border-linha bg-fundo px-3 py-2 text-sm text-texto-suave">
             {gatilhoInatividadeSelecionado
-              ? 'O recall só alcanca pacientes deste profissional que aceitam receber mensagens. Simule para ver a lista exata antes de ativar.'
+              ? 'O recall só alcança pacientes deste profissional sem consulta futura e com canal autorizado. Contatos de retorno ou recall nos últimos 30 dias são excluídos, mesmo se a regra tiver intervalo menor. Simule antes de ativar.'
               : gatilhoQuestionarioSelecionado
                 ? 'Depois de ativada, esta regra dispara sozinha sempre que um paciente deste profissional responder um formulário — não é preciso solicitar avaliação. Simule o resultado antes de ativar.'
                 : gatilhoRiscoAltoSelecionado
