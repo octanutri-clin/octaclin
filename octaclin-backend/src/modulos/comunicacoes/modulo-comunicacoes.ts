@@ -12,6 +12,7 @@ import { OutboxEventoOrm } from '../../infraestrutura/outbox/outbox-evento.orm';
 import { ProcessadorNotificacoes } from './aplicacao/processador-notificacoes';
 import { ProcessadorOutboxComunicacoes } from './aplicacao/processador-outbox-comunicacoes';
 import { ProcessadorLembretesMateriais } from './aplicacao/processador-lembretes-materiais';
+import { ProcessadorLembretesAcompanhamento } from './aplicacao/processador-lembretes-acompanhamento';
 import { FILA_NOTIFICACOES, ServicoComunicacoes } from './aplicacao/servico-comunicacoes';
 import { ServicoWebhookWhatsapp } from './aplicacao/servico-webhook-whatsapp';
 import { ControladorComunicacoes } from './apresentacao/controlador-comunicacoes';
@@ -25,7 +26,7 @@ import { TemplateMensagemOrm } from './infraestrutura/template-mensagem.orm';
 import { deveExecutarProcessadores } from '../../infraestrutura/processamento/papel-processo';
 
 const processadores = deveExecutarProcessadores()
-  ? [ProcessadorNotificacoes, ProcessadorOutboxComunicacoes, ProcessadorLembretesMateriais]
+  ? [ProcessadorNotificacoes, ProcessadorOutboxComunicacoes, ProcessadorLembretesMateriais, ProcessadorLembretesAcompanhamento]
   : [];
 
 @Module({

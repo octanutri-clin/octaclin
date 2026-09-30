@@ -10,6 +10,7 @@ import { MensagemNotificacaoOrm } from '../infraestrutura/mensagem-notificacao.o
 import { TemplateMensagemOrm } from '../infraestrutura/template-mensagem.orm';
 import { PlanoAlimentarOrm } from '../../planos-alimentares/infraestrutura/plano-alimentar.orm';
 import { EnvioMaterialPacienteOrm } from '../../materiais/infraestrutura/envio-material-paciente.orm';
+import * as origemAcompanhamento from './validar-origem-lembrete-acompanhamento';
 
 const usuarioColaborador: UsuarioAutenticado = {
   usuarioId: 'usuario-colaborador-1',
@@ -117,6 +118,34 @@ function criarServico(dados: Record<string, unknown>) {
 }
 
 describe('ServicoComunicacoes', () => {
+  afterEach(() => jest.restoreAllMocks());
+
+  it('escolhe no máximo um canal permitido para lembrete de acompanhamento', async () => {
+    jest.spyOn(origemAcompanhamento, 'validarOrigemLembreteAcompanhamento')
+      .mockResolvedValue({ pacienteId: 'paciente-1' });
+    const { servico } = criarServico({
+      mensagem: { id: 'aviso-portal', tenantId: 'tenant-1', pacienteId: 'paciente-1' },
+      canais: [
+        { id: 'canal-email', tenantId: 'tenant-1', tipo: 'email', ativo: true },
+        { id: 'canal-whatsapp', tenantId: 'tenant-1', tipo: 'whatsapp', ativo: true }
+      ],
+      templates: [
+        { id: 'template-email', tenantId: 'tenant-1', canal: 'email', codigoExterno: 'octaclin_inicial_lembrete_tarefa', aprovado: false },
+        { id: 'template-whatsapp', tenantId: 'tenant-1', canal: 'whatsapp', codigoExterno: 'octaclin_lembrete_tarefa', aprovado: true }
+      ],
+      paciente: { id: 'paciente-1', tenantId: 'tenant-1',
+        contatoCriptografado: Buffer.from('cripto:{"email":"paciente@example.com","whatsapp":"5511999999999","preferencias":{"email":true,"whatsapp":true,"canalPreferido":"qualquer","horarioPermitido":{"inicio":"00:00","fim":"23:59","timezone":"UTC"}}}') }
+    });
+    const enviar = jest.spyOn(servico, 'enfileirarMensagemAutomacao')
+      .mockResolvedValue({ status: 'enfileirada', mensagemId: 'mensagem-a' });
+    const origem = { tipo: 'tarefa' as const, recursoId: 'tarefa-a',
+      chaveIdempotencia: 'tarefa-acompanhamento:tarefa-a:1' };
+    await servico.processarLembreteAcompanhamento('tenant-1', origem);
+    expect(enviar).toHaveBeenCalledTimes(1);
+    expect(enviar).toHaveBeenCalledWith('tenant-1', expect.objectContaining({
+      canalId: 'canal-email', origemAcompanhamento: origem
+    }));
+  });
   it('bloqueia a mensagem do motor legado apos o cutover sob o mesmo lock da politica', async () => {
     const { servico, gerenciador, repositorios } = criarServico({});
     gerenciador.query.mockResolvedValueOnce([]).mockResolvedValueOnce([{ bloqueado: true }]);
@@ -151,8 +180,8 @@ describe('ServicoComunicacoes', () => {
 
     expect(repositorios.template.find).toHaveBeenCalledWith({ where: { tenantId: 'tenant-1' } });
     expect(gerenciador.query).toHaveBeenCalledWith(expect.stringContaining('pg_advisory_xact_lock'), [expect.stringContaining('tenant-1')]);
-    expect(resultado.criados).toHaveLength(7);
-    expect(repositorios.template.save).toHaveBeenCalledTimes(7);
+    expect(resultado.criados).toHaveLength(11);
+    expect(repositorios.template.save).toHaveBeenCalledTimes(11);
     expect(repositorios.template.save).not.toHaveBeenCalledWith(expect.objectContaining({ codigoExterno: 'octaclin_inicial_boas_vindas' }));
     expect(repositorios.template.save).toHaveBeenCalledWith(expect.objectContaining({ tenantId: 'tenant-1', canal: 'email', aprovado: false }));
     expect(repositorios.template.save).toHaveBeenCalledWith(expect.objectContaining({ tenantId: 'tenant-1', canal: 'email', codigoExterno: 'octaclin_inicial_retorno', aprovado: false }));

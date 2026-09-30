@@ -22,6 +22,7 @@ import { MensagemNotificacaoOrm } from '../infraestrutura/mensagem-notificacao.o
 import { TemplateMensagemOrm } from '../infraestrutura/template-mensagem.orm';
 import { lerPayloadMensagem } from './cripto-conteudo-mensagem';
 import { EVENTO_RETORNO } from '../dominio/politica-retorno';
+import { validarOrigemLembreteAcompanhamento, OrigemLembreteAcompanhamento } from './validar-origem-lembrete-acompanhamento';
 
 interface JobEnvioNotificacao {
   tenantId: string;
@@ -61,7 +62,9 @@ export class ProcessadorNotificacoes extends WorkerHost {
     const reservaFollowup = await this.executorTenant.executar(tenantId, async (gerenciador) => {
       const repo = gerenciador.getRepository(MensagemNotificacaoOrm);
       const atual = await repo.findOne({ where: { id: mensagemId, tenantId } });
-      if (!['agenda.consulta.followup', 'agenda.consulta.reagendamento_proativo', EVENTO_RETORNO].includes(String(atual?.payload?.evento))) return 'legado' as const;
+      const lembreteAcompanhamento = atual?.chaveIdempotencia?.startsWith('plano-acompanhamento:') ||
+        atual?.chaveIdempotencia?.startsWith('tarefa-acompanhamento:');
+      if (!lembreteAcompanhamento && !['agenda.consulta.followup', 'agenda.consulta.reagendamento_proativo', EVENTO_RETORNO].includes(String(atual?.payload?.evento))) return 'legado' as const;
       if (!atual || atual.status !== 'pendente') return 'ignorar' as const;
       const reivindicacao = await repo.update({ id: mensagemId, tenantId, status: 'pendente' }, { status: 'processando', tentativaExternaEm: new Date() });
       return reivindicacao.affected ? 'reservado' as const : 'ignorar' as const;
@@ -96,6 +99,16 @@ export class ProcessadorNotificacoes extends WorkerHost {
           throw new Error('Template WhatsApp nao aprovado para envio.');
         }
         const payload = lerPayloadMensagem(mensagem, this.criptografia);
+        if (mensagem.chaveIdempotencia?.startsWith('plano-acompanhamento:') ||
+            mensagem.chaveIdempotencia?.startsWith('tarefa-acompanhamento:')) {
+          const motivo = await this.motivoSupressaoAcompanhamento(gerenciador, tenantId, mensagem, canal, template, payload);
+          if (motivo) {
+            mensagem.status = 'cancelado';
+            mensagem.erro = motivo;
+            await repositorioMensagens.save(mensagem);
+            return;
+          }
+        }
         if (mensagem.payload.evento === 'agenda.consulta.followup') {
           const motivo = await this.motivoSupressaoFollowup(gerenciador, tenantId, mensagem, canal, payload);
           if (motivo) {
@@ -168,6 +181,37 @@ export class ProcessadorNotificacoes extends WorkerHost {
     });
 
     if (erroProcessamento && opcoes.propagarErro !== false) throw erroProcessamento;
+  }
+
+  private async motivoSupressaoAcompanhamento(
+    gerenciador: EntityManager, tenantId: string, mensagem: MensagemNotificacaoOrm,
+    canal: CanalNotificacaoOrm, template: TemplateMensagemOrm, payload: Record<string, unknown>
+  ): Promise<string | undefined> {
+    const valor = payload.origemAcompanhamento;
+    if (!valor || typeof valor !== 'object' || Array.isArray(valor)) return 'origem_invalida';
+    const origem = valor as OrigemLembreteAcompanhamento;
+    if ((origem.tipo !== 'plano' && origem.tipo !== 'tarefa') || typeof origem.recursoId !== 'string' ||
+        typeof origem.chaveIdempotencia !== 'string' ||
+        mensagem.chaveIdempotencia !== `${origem.chaveIdempotencia}:${canal.tipo}`) return 'origem_invalida';
+    const codigoEsperado = canal.tipo === 'email'
+      ? origem.tipo === 'plano' ? 'octaclin_inicial_lembrete_plano' : 'octaclin_inicial_lembrete_tarefa'
+      : origem.tipo === 'plano' ? 'octaclin_lembrete_plano' : 'octaclin_lembrete_tarefa';
+    if (!canal.ativo || (canal.tipo !== 'email' && canal.tipo !== 'whatsapp') ||
+        template.codigoExterno !== codigoEsperado || template.canal !== canal.tipo) return 'canal_indisponivel';
+    const valido = await validarOrigemLembreteAcompanhamento(gerenciador, tenantId, origem);
+    if (!valido || valido.pacienteId !== mensagem.pacienteId) return 'origem_indisponivel';
+    const paciente = await gerenciador.getRepository(PacienteOrm).findOne({ where: { id: mensagem.pacienteId, tenantId } });
+    if (!paciente) return 'paciente_indisponivel';
+    let preferencias;
+    try {
+      preferencias = paciente.contatoCriptografado
+        ? interpretarPreferenciasComunicacao(this.criptografia.descriptografar(paciente.contatoCriptografado))
+        : preferenciasComunicacaoPadrao();
+    } catch { return 'contato_ilegivel'; }
+    if (!canalPermitido(preferencias, canal.tipo) ||
+        !dentroHorarioPermitido(new Date(), preferencias.horarioPermitido) ||
+        preferencias.contatos[canal.tipo] !== payload.destino) return 'preferencia_alterada';
+    return undefined;
   }
 
   private async motivoSupressaoFollowup(gerenciador: EntityManager, tenantId: string, mensagem: MensagemNotificacaoOrm, canal: CanalNotificacaoOrm, payload: Record<string, unknown>): Promise<string | undefined> {

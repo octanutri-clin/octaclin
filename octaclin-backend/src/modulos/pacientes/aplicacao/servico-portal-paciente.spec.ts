@@ -203,6 +203,16 @@ function criarServico(dados: Record<string, any>) {
 }
 
 describe('ServicoPortalPaciente', () => {
+  it('decifra os lembretes de acompanhamento como avisos do portal', () => {
+    const { servico } = criarServico({});
+    const mapear = (servico as unknown as { mapearNotificacaoPaciente: (mensagem: MensagemNotificacaoOrm) =>
+      { canal: string; titulo: string; texto: string; evento?: string } }).mapearNotificacaoPaciente.bind(servico);
+    const mensagem = { id: 'lembrete-a', tenantId: 'tenant-1', status: 'enviado', payload: { evento: 'lembrete_tarefa_portal' },
+      conteudoCriptografado: Buffer.from(JSON.stringify({ assunto: 'Tarefa no portal', texto: 'Consulte o portal.' })),
+      criadoEm: new Date() } as MensagemNotificacaoOrm;
+    expect(mapear(mensagem)).toEqual(expect.objectContaining({ canal: 'portal', evento: 'lembrete_tarefa_portal',
+      titulo: 'Tarefa no portal', texto: 'Consulte o portal.' }));
+  });
   beforeEach(() => {
     jest.useFakeTimers().setSystemTime(new Date('2026-08-01T12:00:00.000Z'));
     process.env.OCTACLIN_WEB_URL = 'https://app.octaclin.test';

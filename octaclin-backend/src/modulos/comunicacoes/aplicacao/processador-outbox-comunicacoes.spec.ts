@@ -3,6 +3,24 @@ import { TenantOrm } from '../../tenancy/infraestrutura/tenant.orm';
 import { ProcessadorOutboxComunicacoes } from './processador-outbox-comunicacoes';
 
 describe('ProcessadorOutboxComunicacoes', () => {
+  it('encaminha o lembrete de acompanhamento somente com tipo e origem válidos', async () => {
+    const evento = { id: 'evento-a', tenantId: 'tenant-1', tipo: 'acompanhamento.lembrete',
+      status: 'pendente', tentativas: 0, criadoEm: new Date(),
+      payload: { tipo: 'tarefa', recursoId: 'tarefa-a', chaveIdempotencia: 'tarefa-acompanhamento:tarefa-a:1' }
+    } as OutboxEventoOrm;
+    const repo = { find: jest.fn(async () => [evento]), findOne: jest.fn(async () => evento),
+      save: jest.fn(async (valor) => valor) };
+    const fonte = { createQueryRunner: () => ({ connect: async () => undefined,
+      release: async () => undefined, query: async () => [{ obtida: true }] }),
+      getRepository: () => ({ find: async () => [{ id: 'tenant-1', status: 'ativo' }] }) };
+    const executor = { executar: (_tenant: string, fn: (m: unknown) => Promise<unknown>) =>
+      fn({ getRepository: () => repo }) };
+    const servico = { processarLembreteAcompanhamento: jest.fn(async () => undefined) };
+    await new ProcessadorOutboxComunicacoes(fonte as never, executor as never, servico as never,
+      {} as never).processarPendentes();
+    expect(servico.processarLembreteAcompanhamento).toHaveBeenCalledWith('tenant-1', evento.payload);
+    expect(repo.save).toHaveBeenCalledWith(expect.objectContaining({ status: 'processado' }));
+  });
   it('encaminha o evento de plano publicado ao serviço de comunicações após reivindicar o outbox', async () => {
     const evento = {
       id: 'evento-plano-1',

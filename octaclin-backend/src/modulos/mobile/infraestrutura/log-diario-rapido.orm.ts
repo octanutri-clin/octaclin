@@ -27,4 +27,10 @@ export class LogDiarioRapidoOrm {
 
   @Column({ name: 'registrado_em', type: 'timestamptz' })
   registradoEm: Date;
+
+  @Column({ name: 'revisado_em', type: 'timestamptz', nullable: true })
+  revisadoEm?: Date | null;
+
+  @Column({ name: 'revisado_por_usuario_id', type: 'uuid', nullable: true })
+  revisadoPorUsuarioId?: string | null;
 }

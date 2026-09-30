@@ -213,6 +213,7 @@ export interface CheckinRapidoPacienteApi {
   sintomas?: string;
   observacoes?: string;
   registradoEm: string;
+  revisadoEm?: string;
 }
 
 export interface LgpdPortalPacienteApi {

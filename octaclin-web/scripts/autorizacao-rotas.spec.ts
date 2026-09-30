@@ -53,6 +53,17 @@ test('permissao isolada nao deve contornar restricao de papel', () => {
   });
 });
 
+test('revisao de habitos exige papel clinico e leitura de pacientes', () => {
+  assert.deepEqual(decidirAcessoRota('/checkins/revisoes', 'Professional', '/questionarios',
+    ['questionarios.ler', 'pacientes.ler']), { permitir: true });
+  assert.deepEqual(decidirAcessoRota('/checkins/revisoes', 'SuperAdmin', '/operacoes',
+    ['operacoes.auditoria.ler', 'pacientes.ler']), { permitir: true });
+  assert.deepEqual(decidirAcessoRota('/checkins/revisoes', 'Collaborator', '/questionarios',
+    ['questionarios.ler', 'pacientes.ler']), { permitir: false, redirecionarPara: '/questionarios' });
+  assert.deepEqual(decidirAcessoRota('/checkins/revisoes', 'Professional', '/questionarios',
+    ['questionarios.ler']), { permitir: false, redirecionarPara: '/questionarios' });
+});
+
 test('colaborador deve acessar apenas rotas operacionais autorizadas por permissao', () => {
   const permissoesColaborador = [
     'console.acessar',

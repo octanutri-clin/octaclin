@@ -18,6 +18,7 @@ const ROTAS_PROTEGIDAS = [
   '/agenda',
   '/operacoes',
   '/questionarios',
+  '/checkins',
   '/comunicacoes',
   '/automacoes',
   '/ia',

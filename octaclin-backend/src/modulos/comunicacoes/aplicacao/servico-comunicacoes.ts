@@ -12,6 +12,7 @@ import { AgendaConsultaOrm } from '../../agenda/infraestrutura/agenda-consulta.o
 import { lerReagendamentoAposFalta, prazoReagendamentoVencido } from '../../agenda/dominio/reagendamento-apos-falta';
 import { PlanoAlimentarOrm } from '../../planos-alimentares/infraestrutura/plano-alimentar.orm';
 import { EnvioMaterialPacienteOrm } from '../../materiais/infraestrutura/envio-material-paciente.orm';
+import { OrigemLembreteAcompanhamento, validarOrigemLembreteAcompanhamento } from './validar-origem-lembrete-acompanhamento';
 import {
   AssociarContatoWhatsappDto,
   CriarCanalNotificacaoDto,
@@ -49,11 +50,12 @@ export interface EntradaMensagemAutomacao {
   templateId: string;
   intervaloMinimoHoras: number;
   chaveIdempotencia: string;
+  origemAcompanhamento?: OrigemLembreteAcompanhamento;
 }
 
 export type ResultadoMensagemAutomacao =
   | { status: 'enfileirada'; mensagemId: string }
-  | { status: 'ignorada'; motivo: 'opt_out' | 'fora_horario_permitido' | 'limite_frequencia' }
+  | { status: 'ignorada'; motivo: 'opt_out' | 'fora_horario_permitido' | 'limite_frequencia' | 'origem_indisponivel' }
   | {
       status: 'indisponivel';
       motivo:
@@ -267,6 +269,55 @@ export class ServicoComunicacoes {
     }
   }
 
+  /** Revalida a origem e escolhe no máximo um canal externo permitido. */
+  async processarLembreteAcompanhamento(tenantId: string, origem: OrigemLembreteAcompanhamento): Promise<void> {
+    const candidatos = await this.executorTenant.executar(tenantId, async (gerenciador) => {
+      const valido = await validarOrigemLembreteAcompanhamento(gerenciador, tenantId, origem);
+      if (!valido) return [];
+      const aviso = await gerenciador.getRepository(MensagemNotificacaoOrm).findOne({
+        select: { id: true }, where: { tenantId, pacienteId: valido.pacienteId,
+          chaveIdempotencia: `${origem.chaveIdempotencia}:portal` }
+      });
+      if (!aviso) return [];
+      const paciente = await gerenciador.getRepository(PacienteOrm).findOne({
+        where: { id: valido.pacienteId, tenantId }
+      });
+      if (!paciente) return [];
+      let preferencias;
+      try {
+        preferencias = paciente.contatoCriptografado
+          ? interpretarPreferenciasComunicacao(this.criptografia.descriptografar(paciente.contatoCriptografado))
+          : preferenciasComunicacaoPadrao();
+      } catch { return []; }
+      await instalarTemplatesIniciaisNoTenant(gerenciador, tenantId);
+      const tipos: Array<'email' | 'whatsapp'> = preferencias.canalPreferido === 'email'
+        ? ['email'] : preferencias.canalPreferido === 'whatsapp' ? ['whatsapp'] : ['email', 'whatsapp'];
+      const [canais, templates] = await Promise.all([
+        gerenciador.getRepository(CanalNotificacaoOrm).find({ where: { tenantId, ativo: true } }),
+        gerenciador.getRepository(TemplateMensagemOrm).find({ where: { tenantId } })
+      ]);
+      return tipos.flatMap((tipo) => {
+        if (!canalAutorizado(preferencias, tipo) || !preferencias.contatos[tipo]) return [];
+        const codigo = tipo === 'email'
+          ? origem.tipo === 'plano' ? 'octaclin_inicial_lembrete_plano' : 'octaclin_inicial_lembrete_tarefa'
+          : origem.tipo === 'plano' ? 'octaclin_lembrete_plano' : 'octaclin_lembrete_tarefa';
+        const canal = canais.find((item) => item.tipo === tipo);
+        const template = templates.find((item) => item.canal === tipo && item.codigoExterno === codigo);
+        if (!canal || !template || (tipo === 'whatsapp' && !template.aprovado)) return [];
+        return [{ pacienteId: valido.pacienteId, canal, template }];
+      });
+    });
+    for (const { pacienteId, canal, template } of candidatos) {
+      const resultado = await this.enfileirarMensagemAutomacao(tenantId, {
+        pacienteId, canalId: canal.id, templateId: template.id, intervaloMinimoHoras: 24,
+        chaveIdempotencia: `${origem.chaveIdempotencia}:${canal.tipo}`, origemAcompanhamento: origem
+      });
+      if (resultado.status === 'enfileirada' || resultado.status === 'ignorada') return;
+      if (resultado.motivo !== 'canal_indisponivel' && resultado.motivo !== 'template_indisponivel' &&
+          resultado.motivo !== 'contato_ausente' && resultado.motivo !== 'paciente_indisponivel') return;
+    }
+  }
+
   async atualizarTemplate(
     tenantId: string,
     templateId: string,
@@ -469,6 +520,11 @@ export class ServicoComunicacoes {
       });
       if (existente) return { status: 'enfileirada', mensagemId: existente.id };
 
+      if (dados.origemAcompanhamento) {
+        const origem = await validarOrigemLembreteAcompanhamento(gerenciador, tenantId, dados.origemAcompanhamento, agora);
+        if (!origem || origem.pacienteId !== dados.pacienteId) return { status: 'ignorada', motivo: 'origem_indisponivel' };
+      }
+
       const [paciente, canal, template] = await Promise.all([
         gerenciador.getRepository(PacienteOrm).findOne({
           where: { id: dados.pacienteId, tenantId }
@@ -528,7 +584,8 @@ export class ServicoComunicacoes {
         dados.pacienteId,
         canal,
         template,
-        { destino, evento: EVENTO_TEMPLATE_AUTOMACAO },
+        { destino, evento: EVENTO_TEMPLATE_AUTOMACAO,
+          ...(dados.origemAcompanhamento ? { origemAcompanhamento: dados.origemAcompanhamento } : {}) },
         dados.chaveIdempotencia,
         'administrativo'
       );
