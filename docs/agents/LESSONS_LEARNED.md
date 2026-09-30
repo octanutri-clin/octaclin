@@ -186,3 +186,19 @@ comparada aos Git blobs e licenca OFL incluida. Como nao repetir: nao depender
 de download de fonte em tempo de build. Controle: `next/font/local` no layout
 web; CI do PR #346 ainda precisa validar o controle. Status do controle:
 implemented locally, pending CI.
+
+## 2026-09-30 - Nova fila quebrou mocks e reflow do smoke visual
+
+Problema: no PR #349, testes focados da Fase 295 passaram, mas o Demo Local
+Smoke encontrou dez falhas Playwright em outras telas e viewports. Causa: mocks
+do portal e de configurações não acompanharam o novo título/contrato; o mock
+genérico `[]` da fila derrubava Comunicações, e os controles da fila excediam
+320 px em zoom 400%. Correção: alinhar os mocks, validar o formato da resposta
+antes de atualizar o estado e permitir quebra de linha dos controles. Como não
+repetir: ao acrescentar API ou campo obrigatório em tela compartilhada, revisar
+os mocks de smoke globais e o reflow antes do PR. Controle: regressão de resposta
+inválida e 12 cenários Playwright desktop/mobile passaram localmente. O segundo
+CI do PR #349 apontou três rótulos “Status” no filtro novo; `test:linguagem`
+passou localmente após a correção. Como não repetir: rodar o gate de linguagem
+antes de enviar mudanças de microcopy ou seletores. Novo CI pendente. Status do
+controle: implemented locally, pending CI.

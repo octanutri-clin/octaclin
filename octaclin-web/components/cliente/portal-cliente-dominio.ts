@@ -130,6 +130,7 @@ export const formularioConfiguracoesInicial: AtualizarConfiguracoesClienteEntrad
   nome: '',
   timezone: 'America/Sao_Paulo',
   idioma: 'pt-BR',
+  slaRespostaPacienteHoras: 24,
   canaisPadrao: {
     email: true,
     whatsapp: true,

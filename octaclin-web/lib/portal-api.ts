@@ -3,6 +3,18 @@ import { criarIdOperacaoPwa, ehFalhaDeRede, enfileirarOperacaoPwa } from './pwa-
 export type CanalPreferidoComunicacaoPaciente = 'email' | 'whatsapp' | 'qualquer';
 export type HumorCheckinRapidoPaciente = 'muito_bem' | 'bem' | 'neutro' | 'mal' | 'muito_mal';
 
+export interface ConversaPortalPacienteApi {
+  id: string;
+  pacienteId?: string;
+  pacienteNome?: string;
+  profissionalResponsavelId?: string;
+  status: 'aguardando_clinica' | 'aguardando_paciente' | 'encerrada';
+  ultimaMensagemEm: string;
+  prazoRespostaEm?: string;
+  atrasada: boolean;
+  mensagens: Array<{ id: string; autor: 'paciente' | 'equipe'; texto: string; criadoEm: string }>;
+}
+
 export interface PreferenciasContatoPacienteApi {
   email: boolean;
   whatsapp: boolean;
@@ -375,6 +387,22 @@ export async function obterPortalPaciente(): Promise<PortalPacienteApi> {
     throw new ErroApiPortal(resposta.status, await extrairMensagemErro(resposta));
   }
   return resposta.json() as Promise<PortalPacienteApi>;
+}
+
+export async function obterConversaPortalPaciente(): Promise<ConversaPortalPacienteApi | null> {
+  const resposta = await fetch('/api/portal/paciente/conversa', { cache: 'no-store' });
+  if (!resposta.ok) throw new ErroApiPortal(resposta.status, await extrairMensagemErro(resposta));
+  return resposta.json() as Promise<ConversaPortalPacienteApi | null>;
+}
+
+export async function enviarMensagemPortalPaciente(texto: string): Promise<ConversaPortalPacienteApi> {
+  const resposta = await fetch('/api/portal/paciente/conversa/mensagens', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ texto })
+  });
+  if (!resposta.ok) throw new ErroApiPortal(resposta.status, await extrairMensagemErro(resposta));
+  return resposta.json() as Promise<ConversaPortalPacienteApi>;
 }
 
 export async function desmarcarConsultaPaciente(consultaId: string): Promise<void> {

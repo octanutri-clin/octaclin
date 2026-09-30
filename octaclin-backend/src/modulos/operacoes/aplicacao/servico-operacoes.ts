@@ -1335,6 +1335,16 @@ export class ServicoOperacoes {
           'Mensagem marcada categoria clinico herda os 20 anos de guarda do prontuario (Fase 261); nenhum remetente atual usa essa categoria.'
       },
       {
+        id: 'mensagens_portal_paciente',
+        rotulo: 'Respostas clínicas do portal do paciente',
+        entidade: 'mensagens_portal_paciente',
+        campoData: 'criadoEm',
+        diasRetencao: 7300,
+        acao: 'preservar',
+        baseLegal: 'Guarda de prontuario (CFM) e obrigacao legal',
+        descricao: 'Mensagens do portal vinculadas à assistência seguem a retenção clínica de 20 anos (Fase 295).'
+      },
+      {
         id: 'consentimentos_lgpd',
         rotulo: 'Consentimentos LGPD',
         entidade: 'consentimentos_lgpd',
@@ -1438,6 +1448,13 @@ export class ServicoOperacoes {
           criadoEm: LessThanOrEqual(corteEm)
         }
       });
+    }
+
+    if (politicaId === 'mensagens_portal_paciente') {
+      return gerenciador.query<Array<{ total: string }>>(
+        'select count(*)::text as total from mensagens_portal_paciente where tenant_id = $1 and criado_em <= $2',
+        [tenantId, corteEm]
+      ).then((linhas) => Number(linhas[0]?.total ?? 0));
     }
 
     if (politicaId === 'arquivos_midia_clinicos') {

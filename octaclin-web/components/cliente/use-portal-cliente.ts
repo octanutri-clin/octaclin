@@ -194,6 +194,7 @@ export function usePortalCliente() {
         nome: dados.nome,
         timezone: dados.timezone,
         idioma: dados.idioma,
+        slaRespostaPacienteHoras: dados.slaRespostaPacienteHoras,
         canaisPadrao: dados.canaisPadrao,
         marca: dados.marca
       });
@@ -391,6 +392,7 @@ export function usePortalCliente() {
         nome: atualizadas.nome,
         timezone: atualizadas.timezone,
         idioma: atualizadas.idioma,
+        slaRespostaPacienteHoras: atualizadas.slaRespostaPacienteHoras,
         canaisPadrao: atualizadas.canaisPadrao,
         marca: atualizadas.marca
       });

@@ -29,9 +29,9 @@
 
 R4: tenant, dados pessoais e comunicação externa. Não há DDL. Reverter o deploy desativa os novos fluxos; mensagens já enviadas são irreversíveis e mensagens já enfileiradas precisam ser avaliadas antes da reversão. Sem ação em produção nesta fase. Exigir revisão cruzada quando viável. A validação deve distinguir checagens locais de CI, staging e produção.
 
-## Evidência local antes do PR
+## Evidência após integração
 
-- PASS: typecheck e build de backend e web, lint web sem erros (62 avisos no conjunto do projeto), `pnpm security:secrets` e `git diff --check`.
-- SKIPPED: testes comportamentais novos e execução da suíte, por não terem sido solicitados neste ciclo. Mocks dos specs existentes de recall e do instalador de templates foram ajustados ao contrato novo; isso não constitui prova de execução.
-- SKIPPED: CI, PostgreSQL/RLS real, revisão independente, staging, produção e entrega externa. Dependem do PR e de ambiente autorizado.
-- NA: migration ou DDL. Os comandos locais usaram Node 24; o projeto exige Node 22, a verificar pelo CI.
+- PR #348 integrado em 2026-09-30, merge `41873fe60d4553de6bf8d4c57c985780a1288f9a`.
+- PASS: checks obrigatórios reportados pelo GitHub: Backend NestJS, Web Next.js, Demo Local Smoke, PR Gate, Governança, imagens backend/web/IA, CodeQL, Dependency Review, Trivy e demais verificações aplicáveis.
+- SKIPPED no PR: AI FastAPI, Mobile Expo e Provenance do SBOM; não são considerados aprovados nem alteram a conclusão dos gates exigidos para esse PR.
+- Sem migration/DDL nesta fase. A operação externa em staging/produção não foi verificada diretamente neste registro.

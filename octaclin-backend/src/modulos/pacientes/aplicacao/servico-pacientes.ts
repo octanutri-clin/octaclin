@@ -431,7 +431,8 @@ export class ServicoPacientes {
       const profissionalResponsavelId = await resolverProfissionalIdDoUsuario(gerenciador, tenantId, usuario);
       const repositorio = gerenciador.getRepository(PacienteOrm);
       const paciente = await repositorio.findOne({
-        where: { id: pacienteId, tenantId, ...(profissionalResponsavelId ? { profissionalResponsavelId } : {}) }
+        where: { id: pacienteId, tenantId, ...(profissionalResponsavelId ? { profissionalResponsavelId } : {}) },
+        lock: { mode: 'pessimistic_write' }
       });
       if (!paciente) throw new NotFoundException('Paciente nao encontrado.');
       if (paciente.statusCicloVida === 'DELETED') {
@@ -454,6 +455,14 @@ export class ServicoPacientes {
         await repositorio.save(paciente);
         return { status: 'RETENTION_HELD', retentionUntil, retentionReason: paciente.retentionReason };
       }
+
+      // Mensagens do portal integram o prontuario. Se nao houver prazo de
+      // guarda vigente, remova-as junto com a eliminacao do titular; nunca
+      // deixe conteudo clinico cifrado orfao apos gravar o tombstone.
+      await gerenciador.query(
+        'delete from conversas_portal_paciente where tenant_id = $1 and paciente_id = $2',
+        [tenantId, pacienteId]
+      );
 
       paciente.statusCicloVida = 'DELETED';
       paciente.deletedAt = agora;
@@ -532,6 +541,10 @@ export class ServicoPacientes {
           coalesce((select max(inicio_em) from agenda_consultas where tenant_id = $1 and paciente_id = $2 and status = 'concluida'), 'epoch'),
           coalesce((select max(coletada_em) from coletas_exames_laboratoriais where tenant_id = $1 and paciente_id = $2), 'epoch'),
           coalesce((select max(capturada_em) from evolucoes_fotograficas where tenant_id = $1 and paciente_id = $2), 'epoch')
+          ,coalesce((select max(mensagem.criado_em) from mensagens_portal_paciente mensagem
+            inner join conversas_portal_paciente conversa
+              on conversa.tenant_id = mensagem.tenant_id and conversa.id = mensagem.conversa_id
+            where conversa.tenant_id = $1 and conversa.paciente_id = $2), 'epoch')
         ) as ultimo
       `,
       [tenantId, pacienteId]

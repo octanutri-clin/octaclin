@@ -396,6 +396,7 @@ async function prepararConsoleSintetico(page) {
     if (caminho === '/api/questionarios/modelos') return responderJson(route, []);
     if (caminho === '/api/questionarios') return responderJson(route, { itens: [], total: 0 });
     if (caminho.startsWith('/api/biblioteca-perguntas')) return responderJson(route, []);
+    if (caminho === '/api/comunicacoes/portal-paciente') return responderJson(route, { itens: [], pagina: 0, temMais: false });
 
     naoMockadas.push(`${route.request().method()} ${caminho}`);
     return responderJson(route, []);

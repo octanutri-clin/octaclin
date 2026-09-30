@@ -81,6 +81,9 @@ import { ServicoRecalculoPrioridadeAcompanhamento } from './aplicacao/servico-re
 import { ServicoModelosEvolucaoClinica } from './aplicacao/servico-modelos-evolucao-clinica';
 import { ServicoCatalogoMarcadoresExames } from './aplicacao/servico-catalogo-marcadores-exames';
 import { ProcessadorRecalculoPrioridadeAcompanhamento } from './aplicacao/processador-recalculo-prioridade-acompanhamento';
+import { ServicoConversaPortalPaciente } from './aplicacao/servico-conversa-portal-paciente';
+import { ConversaPortalPacienteOrm, MensagemPortalPacienteOrm } from './infraestrutura/conversa-portal-paciente.orm';
+import { ControladorComunicacoesPortalPaciente } from './apresentacao/controlador-comunicacoes-portal-paciente';
 import { deveExecutarProcessadores } from '../../infraestrutura/processamento/papel-processo';
 
 const processadores = deveExecutarProcessadores() ? [ProcessadorRecalculoPrioridadeAcompanhamento] : [];
@@ -124,7 +127,9 @@ const processadores = deveExecutarProcessadores() ? [ProcessadorRecalculoPriorid
       CondutaTerapeuticaVersaoOrm,
       FiltroSalvoPacienteOrm,
       PrioridadeAcompanhamentoPacienteOrm,
-      PrioridadeAcompanhamentoHistoricoOrm
+      PrioridadeAcompanhamentoHistoricoOrm,
+      ConversaPortalPacienteOrm,
+      MensagemPortalPacienteOrm
     ]),
     ModuloTenancy,
     ModuloAuth,
@@ -150,7 +155,8 @@ const processadores = deveExecutarProcessadores() ? [ProcessadorRecalculoPriorid
     ControladorConvitesPaciente,
     ControladorPortalPaciente,
     ControladorDocumentosClinicos,
-    ControladorModelosEvolucaoClinica
+    ControladorModelosEvolucaoClinica,
+    ControladorComunicacoesPortalPaciente
   ],
   providers: [
     ServicoRetornosSemConsulta,
@@ -175,6 +181,7 @@ const processadores = deveExecutarProcessadores() ? [ProcessadorRecalculoPriorid
     ProcessadorOutboxAuditoria,
     ServicoRecalculoPrioridadeAcompanhamento,
     ServicoModelosEvolucaoClinica,
+    ServicoConversaPortalPaciente,
     ...processadores
   ],
   exports: [ServicoPacientes, ServicoConvitesPaciente, ServicoPortalPaciente, ServicoDocumentosClinicos]

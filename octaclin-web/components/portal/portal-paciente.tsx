@@ -16,6 +16,7 @@ import {
   HeartPulse,
   Menu,
   MessageCircle,
+  Send,
   RefreshCcw,
   Save,
   ShieldCheck,
@@ -33,6 +34,7 @@ import { ModalConfirmacao } from '@/components/ui/modal';
 import { PortalShell } from '@/components/app/portal-shell';
 import {
   atualizarPerfilPaciente,
+  ConversaPortalPacienteApi,
   CheckinRapidoPacienteApi,
   concluirTarefaPaciente,
   DetalheFormularioRespondidoApi,
@@ -40,12 +42,14 @@ import {
   exportarDadosLgpdPaciente,
   HumorCheckinRapidoPaciente,
   obterFormularioRespondidoPaciente,
+  obterConversaPortalPaciente,
   CanalPreferidoComunicacaoPaciente,
   PortalPacienteApi,
   registrarOuEnfileirarCheckinRapidoPaciente,
   registrarConsentimentoLgpdPaciente,
   registrarSolicitacaoLgpdPaciente,
-  marcarMaterialVisualizadoPaciente
+  marcarMaterialVisualizadoPaciente,
+  enviarMensagemPortalPaciente
 } from '@/lib/portal-api';
 import { usePortalPaciente } from '@/components/portal/portal-contexto';
 import { PlanoAlimentarPaciente } from '@/components/portal/plano-alimentar-paciente';
@@ -435,6 +439,45 @@ export function PortalPaciente({ secao }: { secao: SecaoPortal }) {
   const [concluindoTarefaId, setConcluindoTarefaId] = useState<string | null>(null);
   const [tarefaParaConcluir, setTarefaParaConcluir] = useState<string | null>(null);
   const [marcandoMaterialId, setMarcandoMaterialId] = useState<string | null>(null);
+  const [conversaPortal, setConversaPortal] = useState<ConversaPortalPacienteApi | null>(null);
+  const [textoConversa, setTextoConversa] = useState('');
+  const [carregandoConversa, setCarregandoConversa] = useState(false);
+  const [enviandoConversa, setEnviandoConversa] = useState(false);
+
+  useEffect(() => {
+    if (secao !== 'mensagens') return;
+    let ativa = true;
+    const inicioCarregamento = window.setTimeout(() => {
+      if (ativa) setCarregandoConversa(true);
+    }, 0);
+    void obterConversaPortalPaciente().then((conversa) => {
+      if (ativa) setConversaPortal(conversa);
+    }).catch((erroAtual) => {
+      if (ativa) setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao carregar a conversa.');
+    }).finally(() => {
+      if (ativa) setCarregandoConversa(false);
+    });
+    return () => {
+      ativa = false;
+      window.clearTimeout(inicioCarregamento);
+    };
+  }, [secao]);
+
+  async function enviarTextoConversa(evento: FormEvent<HTMLFormElement>) {
+    evento.preventDefault();
+    if (!textoConversa.trim()) return;
+    setEnviandoConversa(true);
+    setErro(null);
+    try {
+      setConversaPortal(await enviarMensagemPortalPaciente(textoConversa));
+      setTextoConversa('');
+      setSucesso('Mensagem enviada à equipe da clínica.');
+    } catch (erroAtual) {
+      setErro(erroAtual instanceof Error ? erroAtual.message : 'Falha ao enviar a mensagem.');
+    } finally {
+      setEnviandoConversa(false);
+    }
+  }
 
   useEffect(() => {
     if (portal) setFormularioPerfil(montarFormularioPerfil(portal));
@@ -1428,9 +1471,43 @@ export function PortalPaciente({ secao }: { secao: SecaoPortal }) {
 
               <Cartao id="mensagens" className={secao === 'mensagens' ? 'scroll-mt-4' : 'hidden'}>
                 <CartaoCabecalho>
-                  <CartaoTitulo icone={<MessageCircle className="h-4 w-4" />}>Mensagens recentes</CartaoTitulo>
+                  <CartaoTitulo icone={<MessageCircle className="h-4 w-4" />}>Conversa com a clínica</CartaoTitulo>
                 </CartaoCabecalho>
                 <CartaoConteudo>
+                  <section aria-label="Conversa segura com a clínica" className="mb-5 grid gap-3">
+                    <p className="text-sm text-texto-suave">Envie uma mensagem pelo portal seguro. A equipe responderá por aqui.</p>
+                    {carregandoConversa ? <p role="status" className="text-sm text-texto-suave">Carregando conversa…</p> : null}
+                    {conversaPortal ? (
+                      <div aria-live="polite" className="grid max-h-96 gap-2 overflow-y-auto rounded-md border border-linha bg-superficie p-3">
+                        {conversaPortal.mensagens.map((mensagem) => (
+                          <article key={mensagem.id} className={`max-w-[90%] rounded-md border border-linha bg-white p-3 ${mensagem.autor === 'paciente' ? 'ml-auto' : ''}`}>
+                            <p className="text-xs font-semibold">{mensagem.autor === 'paciente' ? 'Você' : 'Equipe da clínica'}</p>
+                            <p className="mt-1 whitespace-pre-wrap break-words text-sm">{mensagem.texto}</p>
+                            <time className="mt-2 block text-xs text-texto-suave" dateTime={mensagem.criadoEm}>{formatarDataHora(mensagem.criadoEm)}</time>
+                          </article>
+                        ))}
+                      </div>
+                    ) : null}
+                    {conversaPortal?.status === 'aguardando_clinica' ? (
+                      <p className="rounded-md border border-alerta-borda bg-alerta-suave p-3 text-sm">Sua mensagem está aguardando a resposta da clínica.</p>
+                    ) : null}
+                    <form onSubmit={enviarTextoConversa} className="grid gap-2">
+                      <label htmlFor="mensagem-portal-paciente" className="text-sm font-semibold">Nova mensagem</label>
+                      <textarea
+                        id="mensagem-portal-paciente"
+                        className={`${classeCampo} min-h-24 py-2`}
+                        maxLength={5000}
+                        required
+                        value={textoConversa}
+                        onChange={(evento) => setTextoConversa(evento.target.value)}
+                      />
+                      <div className="flex justify-end">
+                        <Botao type="submit" disabled={enviandoConversa || !textoConversa.trim()}>
+                          <Send className="mr-2 h-4 w-4" />{enviandoConversa ? 'Enviando' : 'Enviar mensagem'}
+                        </Botao>
+                      </div>
+                    </form>
+                  </section>
                   {portal.mensagensRecentes.length ? (
                     portal.mensagensRecentes.map((mensagem) => (
                       <article key={mensagem.id} className="rounded-md border border-linha bg-superficie p-3">

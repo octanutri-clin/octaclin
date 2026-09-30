@@ -302,6 +302,7 @@ async function prepararSessaoCliente(page, opcoes = {}) {
         status: 'ativo',
         timezone: 'America/Sao_Paulo',
         idioma: 'pt-BR',
+        slaRespostaPacienteHoras: 24,
         canaisPadrao: {
           email: true,
           whatsapp: true,
@@ -585,6 +586,7 @@ test.describe('portal do cliente', () => {
     await expect(configuracoes.getByLabel('Nome da clínica')).toHaveValue('Clínica Octa Real');
     await expect(configuracoes.getByLabel('Timezone')).toHaveValue('America/Sao_Paulo');
     await expect(configuracoes.getByLabel('Idioma')).toHaveValue('pt-BR');
+    await expect(configuracoes.getByLabel('Prazo de resposta ao paciente (horas corridas)')).toHaveValue('24');
     await configuracoes.getByRole('button', { name: 'Salvar configurações' }).click();
     await expect(configuracoes.getByText('Configurações salvas.')).toBeVisible();
 

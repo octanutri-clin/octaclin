@@ -1,6 +1,6 @@
 # OctaClin - Checklist vivo de fases futuras ate producao
 
-Atualizado em 2026-09-29. Fase 293 integrada pelo PR #347 (merge `464b281b`); 19 checks `SUCCESS` e três `SKIPPED`. Fase 294 está em desenvolvimento. Fases 256 a 261, 263 a 293 integradas; Fase 284
+Atualizado em 2026-09-30. Fase 294 integrada pelo PR #348 (merge `41873fe6`). Fase 295 / PB-28 está em desenvolvimento no PR #349; smoke visual e linguagem corrigidos localmente, novo CI pendente. Fases 256 a 261, 263 a 294 integradas; Fase 284
 (PB-22) foi integrada pelo PR #320 (merge `af839c5`, 19 checks `SUCCESS` e
 `Provenance do SBOM` `SKIPPED`). Fase 285 (PB-20) foi integrada pelo PR #321
 (merge `01d6bf1`). Fase 286 concluida pelo PR #322 (merge `c92f246`). A reconciliação completa do backlog da auditoria e a
@@ -4443,13 +4443,19 @@ auditoria estão ordenados na seção 15 de
   Integrada pelo PR #347 (merge `464b281b`): 19 checks `SUCCESS`, três
   `SKIPPED`; sem prova direta de produção. Plano em
   `docs/history/phases/PLANO_FASE_293.md`.
-- [~] Fase 294 - simulação de retorno para paciente sem consulta futura,
+- [x] Fase 294 - simulação de retorno para paciente sem consulta futura,
   sugestão factual pela mediana de até três intervalos concluídos, data ajustável
   somente na interface interna e contato em lote após aprovação humana. Reuso
   de canal/template de recall, com e-mail inicial instalável; trava comum de 30 dias, revalidação de consulta,
-  consentimento e janela antes da entrega. Branch `feat/fase294-retorno-sem-consulta`;
-  PR e CI pendentes. Sem migration. Plano em
-  `docs/history/phases/PLANO_FASE_294.md`.
+  consentimento e janela antes da entrega. Integrada pelo PR #348 (merge
+  `41873fe6`, 2026-09-30); sem prova de operação externa nesta reconciliação.
+  Sem migration. Plano em `docs/history/phases/PLANO_FASE_294.md`.
+- [~] Fase 295 / PB-28 - resposta bidirecional do paciente no portal seguro, atribuída ao profissional
+  responsável; SLA corrido com padrão de 24h e configuração por clínica de 1–168h; vencidas destacadas
+  na fila interna paginada de Comunicações com filtros de status/atraso, sem contato externo. Limite de
+  cinco mensagens por paciente a cada dez minutos. Inclui cifragem, tenant/RLS, exportação e retenção LGPD. Em desenvolvimento na branch
+  `feat/fase295-resposta-paciente-sla`, PR #349; teste estático da migration PASS, sem DDL executado; CI e prova PostgreSQL/RLS pendentes.
+  Plano em `docs/history/phases/PLANO_FASE_295.md`.
 
 O programa de hardening
 PR 36-56 permanece como trilha separada --

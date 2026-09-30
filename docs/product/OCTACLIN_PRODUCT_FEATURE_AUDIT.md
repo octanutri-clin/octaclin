@@ -410,7 +410,8 @@ Ordenadas por "o dado já existe" → "o efeito não existe".
 | Próxima revisão do perfil (`proximaRevisaoEm`) | Tarefa automática integrada na Fase 287, PR #323; reconciliação histórica opt-in sem evidência de execução externa | Confirmar backfill por tenant em ambiente autorizado |
 | Plano publicado | Fase 289 registra aviso cifrado no portal na transação de publicação; outbox encaminha, no máximo, um canal externo consentido, respeitando horário e aprovação de template (PR #343 integrado) | Acompanhar adoção e configuração de canais pela clínica |
 | Material enviado e não visualizado | Visualização registrada de forma idempotente e tenant-aware desde a Fase 264.3 (PB-07); Fase 290 integrada pelo PR #344 agenda lembrete em 72h, recorrente a cada 72h, sem alcançar envios anteriores à ativação | Confirmar depois a experiência do paciente e a configuração dos canais, sem envio retroativo |
-| Paciente sem consulta futura | Filtro na lista de pacientes; Fase 294 em desenvolvimento: simulação, data factual interna e aprovação de contato em lote com trava de 30 dias compartilhada com recall | Validar CI e uso operacional após integração; agendamento continua explícito na agenda |
+| Paciente sem consulta futura | Fase 294 integrada pelo PR #348 (merge `41873fe6` em 2026-09-30): simulação, data factual interna e aprovação de contato em lote com trava de 30 dias compartilhada com recall | Acompanhar uso operacional; agendamento continua explícito na agenda |
+| Resposta do paciente no portal | Fase 295 / PB-28 em implementação no PR #349: conversa segura portal-clínica, profissional responsável, SLA corrido por clínica (24h padrão, 1–168h), limite de cinco mensagens por dez minutos e fila paginada com filtros de estado/atraso; destaque interno quando vencer, sem envio externo | Concluir CI/revisão e observar uso após integração; check-in revisado e gamificação seguem fora deste PB |
 
 `[F]` A infraestrutura de execução já está pronta: outbox transacional com idempotência, fila com poller,
 preferências de canal e janela de horário do paciente respeitadas por todos os envios, e o padrão de
@@ -607,9 +608,9 @@ de esgotar a versão determinística de cada um.
 | PB-29 | Onboarding guiado da clínica (conteúdo inicial) | Gestão | Alto | M | Baixo | backend, frontend, produto |
 | PB-30 | Extração assistida de exame laboratorial | IA | Alto | G | Alto | IA, backend, jurídico, PB-17 |
 
-### Estado do backlog verificado em 2026-09-29
+### Estado do backlog verificado em 2026-09-30
 
-Os estados abaixo foram cruzados com PRs merged e, para itens sem PR identificável, com o código. PRs #319 a #324 e #343 a #347 foram integrados; no PR #347, 19 checks terminaram em `SUCCESS` e três em `SKIPPED`. A Fase 294 está em desenvolvimento na branch `feat/fase294-retorno-sem-consulta`; seu PR e CI ainda estão pendentes. O proprietário relata migrations aplicadas em staging e produção e funcionamento após rebuild no Render; não houve verificação direta dos ambientes nesta reconciliação.
+Os estados abaixo foram cruzados com PRs merged e, para itens sem PR identificável, com o código. PRs #319 a #324 e #343 a #348 foram integrados; a Fase 294 foi integrada pelo PR #348 (merge `41873fe6`, 2026-09-30). A Fase 295 / PB-28 está em implementação no PR #349; o primeiro CI falhou no smoke visual e o segundo em linguagem, ambos corrigidos e validados localmente, com nova rodada de CI pendente. Relatos do proprietário sobre ambientes externos não foram tratados como verificação direta nesta reconciliação.
 
 | PB | Estado e evidência |
 |---|---|
@@ -633,11 +634,11 @@ Os estados abaixo foram cruzados com PRs merged e, para itens sem PR identificá
 | PB-24 | **Concluído** — Fase 275, PR #305. |
 | PB-26 | **Concluído** — Fase 280, PR #315. |
 | PB-27 | **Concluído** — Fase 281, PR #316. |
-| PB-28 | **Pendente** — não há evidência de canal de resposta no portal com SLA para a clínica. |
+| PB-28 | **Em implementação** — Fase 295 no PR #349: portal seguro, profissional responsável, SLA corrido por clínica de 24h padrão configurável entre 1–168h, limite de cinco mensagens por janela móvel de dez minutos e fila paginada com filtros de status/atraso; destaque interno após vencimento, sem despacho externo. A conclusão depende de CI e revisão R4. |
 | PB-29 | **Concluído no código** — Fase 283, PR #319 integrado (merge `19ade15` em 2026-09-27). Não há evidência de produção nesta reconciliação. |
 | PB-30 | **Pendente** — extração assistida de exames não foi encontrada; PB-17 entrega a estrutura determinística e é dependência já concluída. |
 
-PB-28 e PB-30 não têm ordem aprovada na tabela original. PB-20 e Fases 286 a 293 foram integrados. A Fase 293 foi integrada pelo PR #347 (merge `464b281b`); 19 checks passaram e três ficaram `SKIPPED`. O relato do proprietário sobre migrations em staging e produção não substitui prova técnica direta nem confirma backfills específicos de fases anteriores. A Fase 294 implementa retorno em lote na branch atual; as demais automações da seção 7 e a fórmula geral do score continuam em aberto.
+PB-30 segue sem ordem aprovada na tabela original. PB-20 e Fases 286 a 294 foram integrados. A Fase 293 foi integrada pelo PR #347 (merge `464b281b`); 19 checks passaram e três ficaram `SKIPPED`. A Fase 294 foi integrada pelo PR #348. A Fase 295 implementa PB-28 no PR #349; CI após correções visual e de linguagem e uso operacional ainda não foram verificados. As demais automações da seção 7 e a fórmula geral do score continuam em aberto.
 
 ---
 
@@ -786,17 +787,17 @@ modelo vale apenas para eventual manutenção.
 | PB-29 | GPT-6 Luna / médio | `context-engineering`, `test-driven-development`, `frontend-design`, `ui-ux-pro-max`, `vercel-react-best-practices`, `playwright-best-practices`; `nestjs-best-practices` se incluir backend | Skills locais OctaClin + pacote `agent-skills`; revisão `tenant-security-reviewer` se o fluxo criar ou alterar dados associados a tenant/usuário. |
 | PB-22 | GPT-6 Sol / médio | `planning-and-task-breakdown`, `test-driven-development`, `nestjs-best-practices`, `security-review`, `vercel-react-best-practices`, `playwright-best-practices` | Skills locais OctaClin + pacote `agent-skills`; revisão de escopo tenant e autorização na Fase 284. |
 | PB-20 | GPT-6 Sol / alto | `planning-and-task-breakdown`, `vercel-react-best-practices`, `security-review`, `fechar-fase` | Fotos clínicas são PHI; revisar papel, carteira, URL assinada e retenção com `tenant-security-reviewer` na Fase 285. |
+| PB-28 | GPT-6 Sol / alto | `planning-and-task-breakdown`, `context-engineering`, `test-driven-development`, `nestjs-best-practices`, `typeorm`, `database-migration`, `postgresql-table-design`, `security-review`, `gdpr-compliance`, `frontend-design`, `vercel-react-best-practices`, `playwright-best-practices`, `fechar-fase` | Skill OctaClin + agent-skills; revisão cruzada tenant/security obrigatória. R4: autenticação, escopo paciente/profissional, RLS, conteúdo clínico cifrado, exportação e retenção LGPD. |
 
 Não usar plugins externos para consultar dados clínicos, produção ou provedores
 durante essas entregas. `neon-postgres` só poderá apoiar leitura de documentação
 ou desenho local de migration; não autoriza conexão nem execução em banco.
-Manter esforço médio como padrão e elevar para alto nos PB-10, PB-20 e PB-27,
-que envolvem dados protegidos, imagens clínicas ou auditoria/privacidade. Reavaliar a matriz caso
+Manter esforço médio como padrão e elevar para alto nos PB-10, PB-20, PB-27 e PB-28,
+que envolvem dados protegidos, imagens clínicas, auditoria/privacidade ou comunicação clínica. Reavaliar a matriz caso
 a investigação de um PB revele risco ou escopo diferente.
 
-**Explorações futuras** (PB-28, PB-30)
-Resposta do paciente exige decisão de produto sobre SLA e responsabilidade clínica. Extração de exame exige
-provider real, decisão LGPD e o catálogo de marcadores (PB-17) pronto.
+**Exploração futura** (PB-30)
+Extração de exame exige provider real, decisão LGPD e o catálogo de marcadores (PB-17) pronto.
 
 ---
 
@@ -828,16 +829,19 @@ produto devem ter esse gate resolvido no plano da respectiva fase.
    reagendamento proativo após falta (Fase 292 integrada pelo PR #346, com
    decisão humana e contato opt-in), alerta de conduta vencendo (Fase 293 integrada
    pelo PR #347), depois sugestão de retorno quando não houver consulta futura
-   (Fase 294 em desenvolvimento).
+   (Fase 294 integrada pelo PR #348, merge `41873fe6`, em 2026-09-30).
    Preservar preferências, idempotência, outbox e autorização por tenant.
    A Fase 290 reutiliza a trilha de visualização existente e preserva preferências,
    opt-out, janela, aprovação de template, limite de frequência, idempotência e outbox.
    A Fase 291 mantém o aviso imediato separado dos follow-ups e exige cutover
    por tenant após migration 1057 e verificação de RLS. O proprietário relata
    aplicação e funcionamento após rebuild, sem prova direta nesta reconciliação.
-6. **PB-28 e melhorias da experiência do paciente.** Definir responsável, estados, prazo/SLA e escalonamento
-   da resposta bidirecional; depois incluir confirmação de check-in revisado pela clínica e lembretes de
-   plano/tarefas. Gamificação requer decisão de propósito separada.
+6. **PB-28 (Fase 295 em implementação no PR #349).** O contrato aprovado e implementado nesta fase usa
+   portal seguro somente; atribui ao profissional responsável, com SLA corrido padrão de 24h configurável
+   entre 1 e 168h por clínica; limita o paciente a cinco mensagens por janela móvel de dez minutos e
+   permite filtrar estados e paginar a fila; atraso apenas destaca a fila interna de Comunicações, sem envio externo.
+   Check-in revisado pela clínica, lembretes de plano/tarefas e gamificação permanecem recomendações futuras
+   separadas; gamificação exige decisão de propósito própria.
 7. **Operação e inteligência da clínica.** Avaliar carga/ocupação/faltas/produtividade por profissional,
    autosserviço LGPD da própria clínica, acesso profissional a APIs/integrações, e visões longitudinais de
    adesão, substituições, questionários/antropometria, intervalo de retorno e evasão.

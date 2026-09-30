@@ -59,7 +59,8 @@ describe('ControladorPortalPaciente', () => {
         ...servicos
       } as unknown as ServicoPortalPaciente,
       {} as ServicoAgenda,
-      { registrar } as unknown as ServicoAuditoria
+      { registrar } as unknown as ServicoAuditoria,
+      {} as never
     );
 
     const requisicao = {

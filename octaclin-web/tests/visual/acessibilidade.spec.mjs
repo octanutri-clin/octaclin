@@ -1158,7 +1158,7 @@ test.describe('gate de acessibilidade - portal do paciente (areas autenticadas)'
   test('mensagens', async ({ page }) => {
     await prepararSessaoPortalPaciente(page);
     await page.goto('/portal/mensagens');
-    await expect(page.getByRole('heading', { name: 'Mensagens recentes' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Conversa com a clínica' })).toBeVisible();
     await rodarChecagensDeAcessibilidade(page);
   });
 
@@ -1712,6 +1712,12 @@ async function prepararSessaoComunicacoes(page) {
       permissoes: permissoesComunicacoes,
       destinoInicial: '/comunicacoes'
     })
+  }));
+
+  await page.route('**/api/comunicacoes/portal-paciente**', (route) => route.fulfill({
+    status: 200,
+    contentType: 'application/json',
+    body: JSON.stringify({ itens: [], pagina: 0, temMais: false })
   }));
 
   await page.route('**/api/pacientes**', (route) => route.fulfill({

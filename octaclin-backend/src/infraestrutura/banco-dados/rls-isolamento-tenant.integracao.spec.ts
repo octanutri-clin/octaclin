@@ -536,6 +536,53 @@ descrever('RLS e isolamento multi-tenant integral em Postgres real', () => {
     }
   });
 
+  it('Fase 295: RLS isola conversas e mensagens clínicas do portal por tenant', async () => {
+    if (!cliente) throw new Error('Cliente da prova RLS nao foi inicializado.');
+    await comoTenant(tenantB);
+    const pacienteB = await cliente.query<{ id: string }>(
+      'select id from pacientes where tenant_id = $1 limit 1', [tenantB]
+    );
+    const profissionalB = await cliente.query<{ id: string }>(
+      'select id from profissionais where tenant_id = $1 limit 1', [tenantB]
+    );
+    const usuarioB = await cliente.query<{ id: string }>(
+      'select id from usuarios where tenant_id = $1 limit 1', [tenantB]
+    );
+
+    await comoTenant(tenantA);
+    const paciente = await cliente.query<{ id: string }>(
+      'select id from pacientes where tenant_id = $1 limit 1', [tenantA]
+    );
+    await expect(cliente.query(
+      `insert into conversas_portal_paciente (tenant_id, paciente_id, status, ultima_mensagem_em)
+       values ($1, $2, 'aguardando_clinica', now())`, [tenantA, pacienteB.rows[0].id]
+    )).rejects.toMatchObject({ code: '23503' });
+    await expect(cliente.query(
+      `insert into conversas_portal_paciente (tenant_id, paciente_id, profissional_responsavel_id, status, ultima_mensagem_em)
+       values ($1, $2, $3, 'aguardando_clinica', now())`, [tenantA, paciente.rows[0].id, profissionalB.rows[0].id]
+    )).rejects.toMatchObject({ code: '23503' });
+    const conversa = await cliente.query<{ id: string }>(
+      `insert into conversas_portal_paciente (tenant_id, paciente_id, status, ultima_mensagem_em)
+       values ($1, $2, 'aguardando_clinica', now()) returning id`,
+      [tenantA, paciente.rows[0].id]
+    );
+    await expect(cliente.query(
+      `insert into mensagens_portal_paciente (tenant_id, conversa_id, autor_usuario_id, autor_tipo, conteudo_criptografado)
+       values ($1, $2, $3, 'paciente', $4)`,
+      [tenantA, conversa.rows[0].id, usuarioB.rows[0].id, Buffer.from('conteudo-cifrado-sintetico')]
+    )).rejects.toMatchObject({ code: '23503' });
+    const mensagem = await cliente.query<{ id: string }>(
+      `insert into mensagens_portal_paciente (tenant_id, conversa_id, autor_usuario_id, autor_tipo, conteudo_criptografado)
+       values ($1, $2, $3, 'paciente', $4) returning id`,
+      [tenantA, conversa.rows[0].id, usuarioIdTenantA, Buffer.from('conteudo-clinico-cifrado-sintetico')]
+    );
+
+    await comoTenant(tenantB);
+    expect((await cliente.query('select id from conversas_portal_paciente where id = $1', [conversa.rows[0].id])).rows).toHaveLength(0);
+    expect((await cliente.query('select id from mensagens_portal_paciente where id = $1', [mensagem.rows[0].id])).rows).toHaveLength(0);
+    expect((await cliente.query('update mensagens_portal_paciente set autor_tipo = autor_tipo where id = $1', [mensagem.rows[0].id])).rowCount).toBe(0);
+  });
+
   it('PB-17: RLS do catalogo oculta outro tenant e FK composta recusa vinculo cruzado', async () => {
     if (!cliente) throw new Error('Cliente da prova RLS nao foi inicializado.');
     await comoTenant(tenantB);

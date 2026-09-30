@@ -1,4 +1,4 @@
-import { IsBoolean, IsEmail, IsHexColor, IsIn, IsNotEmpty, IsObject, IsOptional, IsString, MaxLength, ValidateIf, ValidateNested } from 'class-validator';
+import { IsBoolean, IsEmail, IsHexColor, IsIn, IsInt, IsNotEmpty, IsObject, IsOptional, IsString, Max, MaxLength, Min, ValidateIf, ValidateNested } from 'class-validator';
 import { Type } from 'class-transformer';
 import type { PapelUsuario } from '../../auth/dominio/usuario-autenticado';
 import type { PlanoSaasId } from '../dominio/planos-saas';
@@ -131,6 +131,12 @@ export class MarcaClienteDto {
 }
 
 export class AtualizarConfiguracoesClienteDto {
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  @Max(168)
+  slaRespostaPacienteHoras?: number;
+
   @IsString()
   @IsNotEmpty()
   @MaxLength(160)

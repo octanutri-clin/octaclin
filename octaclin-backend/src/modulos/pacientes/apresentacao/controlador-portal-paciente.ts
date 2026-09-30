@@ -14,6 +14,8 @@ import {
   RegistrarSolicitacaoLgpdPortalDto
 } from '../aplicacao/dtos';
 import { ServicoPortalPaciente } from '../aplicacao/servico-portal-paciente';
+import { EnviarMensagemPortalPacienteDto } from '../aplicacao/dtos-conversa-portal-paciente';
+import { ServicoConversaPortalPaciente } from '../aplicacao/servico-conversa-portal-paciente';
 
 @Controller('portal')
 @UseGuards(GuardaJwt, GuardaPapeis)
@@ -22,12 +24,38 @@ export class ControladorPortalPaciente {
   constructor(
     private readonly servicoPortal: ServicoPortalPaciente,
     private readonly servicoAgenda: ServicoAgenda,
-    private readonly servicoAuditoria: ServicoAuditoria
+    private readonly servicoAuditoria: ServicoAuditoria,
+    private readonly servicoConversa: ServicoConversaPortalPaciente
   ) {}
 
   @Get('paciente')
   obterResumo(@UsuarioAtual() usuario: UsuarioAutenticado) {
     return this.servicoPortal.obterResumoPortal(usuario.tenantId, usuario.usuarioId);
+  }
+
+  @Get('paciente/conversa')
+  obterConversa(@UsuarioAtual() usuario: UsuarioAutenticado) {
+    return this.servicoConversa.obterConversaPaciente(usuario.tenantId, usuario.usuarioId);
+  }
+
+  @Post('paciente/conversa/mensagens')
+  async enviarMensagem(
+    @UsuarioAtual() usuario: UsuarioAutenticado,
+    @Req() requisicao: Request,
+    @Body() dados: EnviarMensagemPortalPacienteDto
+  ) {
+    const conversa = await this.servicoConversa.enviarMensagemPaciente(usuario.tenantId, usuario.usuarioId, dados.texto);
+    await this.servicoAuditoria.registrar({
+      tenantId: usuario.tenantId,
+      usuarioId: usuario.usuarioId,
+      acao: 'portal.paciente.conversa.mensagem_enviar',
+      recursoTipo: 'conversa_portal_paciente',
+      recursoId: conversa.id,
+      ip: requisicao.ip,
+      userAgent: this.obterUserAgent(requisicao),
+      metadados: { status: conversa.status }
+    });
+    return conversa;
   }
 
   @Post('paciente/checkins')

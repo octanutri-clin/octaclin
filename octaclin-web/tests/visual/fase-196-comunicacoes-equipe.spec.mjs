@@ -52,6 +52,44 @@ async function prepararSessao(page) {
       ])
     });
   });
+  await page.route('**/api/comunicacoes/portal-paciente**', async (route) => {
+    const url = new URL(route.request().url());
+    const pagina = Number(url.searchParams.get('pagina') ?? 0);
+    const status = url.searchParams.get('status') ?? 'aguardando_clinica';
+    if (status !== 'aguardando_clinica') {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          itens: [{
+            id: `conversa-${status}`, pacienteId: 'paciente-3', pacienteNome: 'Camila Respondida', status,
+            ultimaMensagemEm: '2026-09-30T10:00:00.000Z', atrasada: false, mensagens: []
+          }],
+          pagina,
+          temMais: false
+        })
+      });
+      return;
+    }
+    const pacienteNome = pagina === 0 ? 'Ana Resposta' : 'Bruno Resposta';
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        itens: pagina === 0 ? [{
+          id: 'conversa-1', pacienteId: 'paciente-1', pacienteNome, status: 'aguardando_clinica',
+          ultimaMensagemEm: '2026-09-30T12:00:00.000Z', prazoRespostaEm: '2026-10-01T12:00:00.000Z',
+          atrasada: false, mensagens: []
+        }] : [{
+          id: 'conversa-2', pacienteId: 'paciente-2', pacienteNome, status: 'aguardando_clinica',
+          ultimaMensagemEm: '2026-09-30T11:00:00.000Z', prazoRespostaEm: '2026-10-01T11:00:00.000Z',
+          atrasada: false, mensagens: []
+        }],
+        pagina,
+        temMais: pagina === 0
+      })
+    });
+  });
 
   await page.route('**/api/agenda/google/profissionais/status', (route) => route.fulfill({
     status: 200,
@@ -68,6 +106,19 @@ async function prepararSessao(page) {
 test.describe('Fase 196 - comunicacoes e equipe', () => {
   test.beforeEach(async ({ page }) => prepararSessao(page));
 
+  test('mantem Comunicacoes acessivel quando a fila do portal retorna formato invalido', async ({ page }) => {
+    await page.route('**/api/comunicacoes/portal-paciente**', (route) => route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify([])
+    }));
+
+    await page.goto('/comunicacoes');
+    await expect(page.getByRole('heading', { name: 'Comunicações', level: 1 })).toBeVisible();
+    await expect(page.getByText('Resposta inválida da fila do portal.')).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Conversas' })).toBeVisible();
+  });
+
   test('prioriza conversas e leva resposta ou falha para a composicao', async ({ page }) => {
     await page.goto('/comunicacoes');
 
@@ -78,6 +129,15 @@ test.describe('Fase 196 - comunicacoes e equipe', () => {
     await expect(page.getByRole('button', { name: 'Responder' })).toBeVisible();
     await expect(page.getByText('Falha de entrega')).toHaveCount(0);
     await expect(page.getByText('Não foi possível concluir o envio.').first()).toBeVisible();
+
+    await expect(page.getByRole('heading', { name: 'Respostas do portal' })).toBeVisible();
+    await expect(page.getByText('Ana Resposta')).toBeVisible();
+    await page.getByRole('button', { name: 'Carregar mais respostas' }).click();
+    await expect(page.getByText('Bruno Resposta')).toBeVisible();
+    await page.getByLabel('Situação das respostas do portal').selectOption('aguardando_paciente');
+    await expect(page.getByText('Camila Respondida')).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Carregar mais respostas' })).toHaveCount(0);
+    await expect(page.getByLabel('Somente atrasadas')).toBeDisabled();
 
     await page.getByRole('button', { name: 'Tentar novamente' }).click();
     await expect(areas.getByRole('tab', { name: 'Nova mensagem' })).toHaveAttribute('aria-selected', 'true');

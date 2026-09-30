@@ -118,6 +118,7 @@ export interface ConfiguracoesPortalCliente {
   status: string;
   timezone: string;
   idioma: 'pt-BR' | 'en-US' | 'es';
+  slaRespostaPacienteHoras: number;
   canaisPadrao: {
     email: boolean;
     whatsapp: boolean;
@@ -344,7 +345,18 @@ export class ServicoPortalCliente {
   }
 
   async atualizarConfiguracoes(tenantId: string, dados: AtualizarConfiguracoesClienteDto): Promise<ConfiguracoesPortalCliente> {
+    if (dados.slaRespostaPacienteHoras !== undefined &&
+        (!Number.isInteger(dados.slaRespostaPacienteHoras) || dados.slaRespostaPacienteHoras < 1 || dados.slaRespostaPacienteHoras > 168)) {
+      throw new BadRequestException('O prazo de resposta deve ser um número inteiro entre 1 e 168 horas.');
+    }
     const tenant = await this.obterTenantAtivo(tenantId);
+    const slaAnterior = await this.executorTenant.executar(tenantId, async (gerenciador) => {
+      const atual = await gerenciador.getRepository(TenantConfiguracaoOrm).findOne({
+        where: { tenantId, chave: CHAVE_CONFIGURACOES_CONTA }
+      });
+      const salvo = atual?.valor?.slaRespostaPacienteHoras;
+      return typeof salvo === 'number' && Number.isInteger(salvo) && salvo >= 1 && salvo <= 168 ? salvo : 24;
+    });
     const dadosNormalizados = this.normalizarConfiguracoes(dados);
     tenant.nome = dadosNormalizados.nome;
     tenant.atualizadoEm = new Date();
@@ -363,6 +375,7 @@ export class ServicoPortalCliente {
           valor: {
             timezone: dadosNormalizados.timezone,
             idioma: dadosNormalizados.idioma,
+            slaRespostaPacienteHoras: dados.slaRespostaPacienteHoras ?? slaAnterior,
             canaisPadrao: dadosNormalizados.canaisPadrao,
             marca: dadosNormalizados.marca
           },
@@ -641,6 +654,7 @@ export class ServicoPortalCliente {
       status: tenant.status,
       timezone: this.texto(configuracoes.timezone, 'America/Sao_Paulo'),
       idioma: this.idioma(configuracoes.idioma),
+      slaRespostaPacienteHoras: this.numeroInteiro(configuracoes.slaRespostaPacienteHoras, 24, 1, 168),
       canaisPadrao: {
         email: this.booleano(canais.email, true),
         whatsapp: this.booleano(canais.whatsapp, true),
@@ -653,6 +667,10 @@ export class ServicoPortalCliente {
       },
       atualizadoEm: tenant.atualizadoEm
     };
+  }
+
+  private numeroInteiro(valor: unknown, padrao: number, minimo: number, maximo: number): number {
+    return typeof valor === 'number' && Number.isInteger(valor) && valor >= minimo && valor <= maximo ? valor : padrao;
   }
 
   private mapearPerfilEmpresa(tenant: TenantOrm, valor?: Record<string, unknown>): PerfilEmpresaCliente {

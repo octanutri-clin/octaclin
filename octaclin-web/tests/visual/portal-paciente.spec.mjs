@@ -201,6 +201,7 @@ const portalPaciente = {
 async function prepararPortal(page) {
   let registrouCheckin = false;
   let carregamentos = 0;
+  let mensagemPortalEnviada = false;
 
   await page.context().addCookies([
     { name: 'octaclin_access_token', value: 'fake', domain: 'localhost', path: '/' },
@@ -212,6 +213,30 @@ async function prepararPortal(page) {
   await page.route((url) => url.pathname === '/api/portal/paciente', async (route) => {
     carregamentos += 1;
     await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(portalPaciente) });
+  });
+  await page.route((url) => url.pathname === '/api/portal/paciente/conversa', async (route) => {
+    await route.fulfill({ status: 200, contentType: 'application/json', body: 'null' });
+  });
+  await page.route((url) => url.pathname === '/api/portal/paciente/conversa/mensagens', async (route) => {
+    const payload = route.request().postDataJSON();
+    mensagemPortalEnviada = payload.texto === 'Preciso tirar uma dúvida sobre meu plano.';
+    await route.fulfill({
+      status: 201,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        id: 'conversa-1',
+        status: 'aguardando_clinica',
+        ultimaMensagemEm: '2026-09-30T15:00:00.000Z',
+        prazoRespostaEm: '2026-10-01T15:00:00.000Z',
+        atrasada: false,
+        mensagens: [{
+          id: 'mensagem-portal-1',
+          autor: 'paciente',
+          texto: payload.texto,
+          criadoEm: '2026-09-30T15:00:00.000Z'
+        }]
+      })
+    });
   });
   await page.route('**/api/portal/paciente/formularios-respondidos/**', async (route) => {
     await route.fulfill({
@@ -310,7 +335,8 @@ async function prepararPortal(page) {
 
   return {
     carregamentos: () => carregamentos,
-    registrouCheckin: () => registrouCheckin
+    registrouCheckin: () => registrouCheckin,
+    mensagemPortalEnviada: () => mensagemPortalEnviada
   };
 }
 
@@ -333,6 +359,19 @@ async function assertSemOverflowHorizontal(page) {
 }
 
 test.describe('portal do paciente', () => {
+  test('paciente inicia conversa segura e recebe confirmação de fila da clínica', async ({ page }) => {
+    const portal = await prepararPortal(page);
+    await page.goto('/portal/mensagens');
+
+    await page.getByLabel('Nova mensagem').fill('Preciso tirar uma dúvida sobre meu plano.');
+    await page.getByRole('button', { name: 'Enviar mensagem' }).click();
+
+    await expect(page.getByText('Mensagem enviada à equipe da clínica.')).toBeVisible();
+    await expect(page.getByText('Sua mensagem está aguardando a resposta da clínica.')).toBeVisible();
+    await expect(page.getByText('Preciso tirar uma dúvida sobre meu plano.')).toBeVisible();
+    expect(portal.mensagemPortalEnviada()).toBe(true);
+  });
+
   test('aviso de plano publicado abre a seção do plano alimentar', async ({ page }) => {
     await prepararPortal(page);
     await page.route((url) => url.pathname === '/api/portal/paciente', async (route) => {
