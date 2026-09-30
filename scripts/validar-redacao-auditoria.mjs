@@ -145,6 +145,8 @@ const CHAVES_SEGURAS = new Map([
   ['arquivosremovidos', 'contagem de arquivos apagados junto com a evolucao fotografica'],
   ['diassemconsulta', 'janela em dias da regra de recall; e parametro da regra, nao o historico de um paciente'],
   ['diassemcheckin', 'janela em dias da regra de checkin atrasado (Fase 267.3); e parametro da regra, nao o historico de um paciente'],
+  ['intervalodias', 'cadencia em dias do lembrete do plano configurada pela clinica (1 a 30); nao e dado de um paciente'],
+  ['antecedenciahoras', 'antecedencia em horas do lembrete de tarefa configurada pela clinica (0 a 168); nao e dado de um paciente'],
   ['duracaoms', 'duracao da chamada ao provedor de IA'],
   ['limitesolicitado', 'teto de linhas pedido na exportacao'],
   [
@@ -208,6 +210,8 @@ const CHAVES_SEGURAS = new Map([
   ['semfiltro', 'booleano: a exportacao da trilha saiu sem periodo e sem alvo, que e o formato da varredura'],
   ['metasbadgeshabilitados', 'booleano: o modulo de metas e badges esta habilitado no tenant'],
   ['comunidadehabilitada', 'booleano: a comunidade de pacientes esta habilitada no tenant'],
+  ['planoativo', 'booleano: a clinica habilitou lembretes periodicos do plano; nao revela dados de pacientes'],
+  ['tarefasativas', 'booleano: a clinica habilitou lembretes de tarefas; nao revela dados de pacientes'],
   ['rankinghabilitado', 'booleano: o ranking de desafios esta habilitado no tenant'],
   ['retornouaoprincipal', 'booleano: o paciente voltou ao item principal do plano'],
   [
