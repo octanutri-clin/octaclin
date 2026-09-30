@@ -115,8 +115,8 @@ export function CaixaRespostaPortalPaciente() {
         </div>
         <div className="flex max-w-full flex-wrap items-center gap-2">
           <label className="flex items-center gap-2 text-sm">
-            <span>Status</span>
-            <select aria-label="Status das respostas do portal" value={statusFiltro} onChange={(evento) => {
+            <span>Situação</span>
+            <select aria-label="Situação das respostas do portal" value={statusFiltro} onChange={(evento) => {
               setConversas([]);
               setPagina(0);
               setSomenteAtrasadas(false);

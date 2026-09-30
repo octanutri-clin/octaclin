@@ -116,7 +116,9 @@ Atualizado em 2026-09-30.
   Playwright de Comunicações/acessibilidade, gate estático de migration,
   `security:secrets` e `git diff --check` passaram localmente. A prova PostgreSQL/RLS
   local está `SKIPPED`. O primeiro CI falhou no smoke visual; a correção passou
-  em 12 cenários Playwright locais desktop/mobile. Nova rodada de CI e revisão
+  em 12 cenários Playwright locais desktop/mobile. O segundo CI falhou em três
+  ocorrências de linguagem no filtro novo; a correção passou no gate local de
+  linguagem e no cenário visual afetado. Nova rodada de CI e revisão
   cruzada R4 continuam pendentes. Nenhuma migration
   foi executada em banco. Plano em
   `docs/history/phases/PLANO_FASE_295.md`.

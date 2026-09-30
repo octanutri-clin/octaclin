@@ -134,7 +134,7 @@ test.describe('Fase 196 - comunicacoes e equipe', () => {
     await expect(page.getByText('Ana Resposta')).toBeVisible();
     await page.getByRole('button', { name: 'Carregar mais respostas' }).click();
     await expect(page.getByText('Bruno Resposta')).toBeVisible();
-    await page.getByLabel('Status das respostas do portal').selectOption('aguardando_paciente');
+    await page.getByLabel('Situação das respostas do portal').selectOption('aguardando_paciente');
     await expect(page.getByText('Camila Respondida')).toBeVisible();
     await expect(page.getByRole('button', { name: 'Carregar mais respostas' })).toHaveCount(0);
     await expect(page.getByLabel('Somente atrasadas')).toBeDisabled();

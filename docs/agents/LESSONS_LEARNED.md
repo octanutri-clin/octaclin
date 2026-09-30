@@ -197,5 +197,8 @@ genérico `[]` da fila derrubava Comunicações, e os controles da fila excediam
 antes de atualizar o estado e permitir quebra de linha dos controles. Como não
 repetir: ao acrescentar API ou campo obrigatório em tela compartilhada, revisar
 os mocks de smoke globais e o reflow antes do PR. Controle: regressão de resposta
-inválida e 12 cenários Playwright desktop/mobile passaram localmente; o novo CI
-do PR #349 continua pendente. Status do controle: implemented locally, pending CI.
+inválida e 12 cenários Playwright desktop/mobile passaram localmente. O segundo
+CI do PR #349 apontou três rótulos “Status” no filtro novo; `test:linguagem`
+passou localmente após a correção. Como não repetir: rodar o gate de linguagem
+antes de enviar mudanças de microcopy ou seletores. Novo CI pendente. Status do
+controle: implemented locally, pending CI.

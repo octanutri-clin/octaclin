@@ -1,6 +1,6 @@
 # OctaClin - Checklist vivo de fases futuras ate producao
 
-Atualizado em 2026-09-30. Fase 294 integrada pelo PR #348 (merge `41873fe6`). Fase 295 / PB-28 está em desenvolvimento no PR #349; smoke visual corrigido localmente e novo CI pendente. Fases 256 a 261, 263 a 294 integradas; Fase 284
+Atualizado em 2026-09-30. Fase 294 integrada pelo PR #348 (merge `41873fe6`). Fase 295 / PB-28 está em desenvolvimento no PR #349; smoke visual e linguagem corrigidos localmente, novo CI pendente. Fases 256 a 261, 263 a 294 integradas; Fase 284
 (PB-22) foi integrada pelo PR #320 (merge `af839c5`, 19 checks `SUCCESS` e
 `Provenance do SBOM` `SKIPPED`). Fase 285 (PB-20) foi integrada pelo PR #321
 (merge `01d6bf1`). Fase 286 concluida pelo PR #322 (merge `c92f246`). A reconciliação completa do backlog da auditoria e a

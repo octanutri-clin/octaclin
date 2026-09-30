@@ -610,7 +610,7 @@ de esgotar a versão determinística de cada um.
 
 ### Estado do backlog verificado em 2026-09-30
 
-Os estados abaixo foram cruzados com PRs merged e, para itens sem PR identificável, com o código. PRs #319 a #324 e #343 a #348 foram integrados; a Fase 294 foi integrada pelo PR #348 (merge `41873fe6`, 2026-09-30). A Fase 295 / PB-28 está em implementação no PR #349; o primeiro CI falhou no smoke visual, corrigido e validado localmente, com nova rodada de CI pendente. Relatos do proprietário sobre ambientes externos não foram tratados como verificação direta nesta reconciliação.
+Os estados abaixo foram cruzados com PRs merged e, para itens sem PR identificável, com o código. PRs #319 a #324 e #343 a #348 foram integrados; a Fase 294 foi integrada pelo PR #348 (merge `41873fe6`, 2026-09-30). A Fase 295 / PB-28 está em implementação no PR #349; o primeiro CI falhou no smoke visual e o segundo em linguagem, ambos corrigidos e validados localmente, com nova rodada de CI pendente. Relatos do proprietário sobre ambientes externos não foram tratados como verificação direta nesta reconciliação.
 
 | PB | Estado e evidência |
 |---|---|
@@ -638,7 +638,7 @@ Os estados abaixo foram cruzados com PRs merged e, para itens sem PR identificá
 | PB-29 | **Concluído no código** — Fase 283, PR #319 integrado (merge `19ade15` em 2026-09-27). Não há evidência de produção nesta reconciliação. |
 | PB-30 | **Pendente** — extração assistida de exames não foi encontrada; PB-17 entrega a estrutura determinística e é dependência já concluída. |
 
-PB-30 segue sem ordem aprovada na tabela original. PB-20 e Fases 286 a 294 foram integrados. A Fase 293 foi integrada pelo PR #347 (merge `464b281b`); 19 checks passaram e três ficaram `SKIPPED`. A Fase 294 foi integrada pelo PR #348. A Fase 295 implementa PB-28 no PR #349; CI após correção visual e uso operacional ainda não foram verificados. As demais automações da seção 7 e a fórmula geral do score continuam em aberto.
+PB-30 segue sem ordem aprovada na tabela original. PB-20 e Fases 286 a 294 foram integrados. A Fase 293 foi integrada pelo PR #347 (merge `464b281b`); 19 checks passaram e três ficaram `SKIPPED`. A Fase 294 foi integrada pelo PR #348. A Fase 295 implementa PB-28 no PR #349; CI após correções visual e de linguagem e uso operacional ainda não foram verificados. As demais automações da seção 7 e a fórmula geral do score continuam em aberto.
 
 ---
 

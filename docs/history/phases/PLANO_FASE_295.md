@@ -108,4 +108,11 @@ Gates planejados: specs focados de backend e web, typecheck/build relevantes, li
 - PASS local após a correção: 12 testes Playwright focados em desktop/mobile, incluindo os dez cenários que falharam e a regressão para resposta inválida; typecheck e lint direcionado sem erros.
 - PENDENTE: nova rodada de CI do PR #349, prova PostgreSQL/RLS no CI e revisão cruzada R4. A execução local não substitui o resultado do smoke remoto.
 
+## Correção de linguagem após o segundo CI — 2026-09-30
+
+- FAIL observado no segundo CI: `Demo local smoke` parou em Linguagem e microcopy por três ocorrências de “Status” no novo filtro de respostas do portal e no seletor Playwright; `PR Gate` falhou em consequência. Backend NestJS e Web Next.js passaram.
+- Correção: “Situação” na interface e no seletor do teste, sem alterar o valor técnico do filtro.
+- PASS local: `pnpm --dir octaclin-web test:linguagem` (8 testes internos e varredura sem inconsistências) e o cenário Playwright de Comunicações que usa o seletor novo (1 teste).
+- PENDENTE: nova rodada do CI no PR #349, inclusive o smoke completo, e revisão cruzada R4.
+
 Rollback antes de persistir conversa: reverter migration e código em conjunto. Depois de persistir mensagens: desligar temporariamente as rotas/UI e manter tabelas/cifras para preservação clínica; não remover dados via `down`. Reversão definitiva exige plano de retenção/eliminações aprovado e autorizado para o ambiente alvo.
