@@ -27,6 +27,7 @@ import {
   registrarNotaWhatsapp
 } from '@/lib/comunicacoes-api';
 import { PacienteResumo, ProfissionalResumo, RespostaPaginada } from '@/lib/cadastros-api';
+import { CaixaRespostaPortalPaciente } from './caixa-resposta-portal-paciente';
 
 interface UltimoStatusMeta {
   status?: string;
@@ -1095,6 +1096,7 @@ export function PainelComunicacoes() {
 
       {areaAtiva === 'conversas' ? (
       <div id="comunicacoes-conversas-painel" role="tabpanel" aria-labelledby="comunicacoes-conversas-aba" className="grid gap-4">
+      <CaixaRespostaPortalPaciente />
       <Cartao>
         <CartaoCabecalho className="flex-col items-start md:flex-row md:items-center">
           <div className="flex items-center gap-2">

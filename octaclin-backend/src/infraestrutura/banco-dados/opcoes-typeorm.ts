@@ -71,6 +71,7 @@ import { CriarCatalogoMarcadoresExames1720000001054 } from './migracoes/17200000
 import { AdicionarIndicesPerfilPacientes1720000001055 } from './migracoes/1720000001055-AdicionarIndicesPerfilPacientes';
 import { AgendarLembretesMaterial1720000001056 } from './migracoes/1720000001056-AgendarLembretesMaterial';
 import { CriarCalendarioFollowupsAgenda1720000001057 } from './migracoes/1720000001057-CriarCalendarioFollowupsAgenda';
+import { CriarRespostaPortalPaciente1720000001058 } from './migracoes/1720000001058-CriarRespostaPortalPaciente';
 import { UserActionLogOrm } from '../auditoria/user-action-log.orm';
 import { ConsentimentoLgpdOrm } from '../lgpd/consentimento-lgpd.orm';
 import { TombstoneExclusaoLgpdOrm } from '../lgpd/tombstone-exclusao-lgpd.orm';
@@ -78,6 +79,7 @@ import { OutboxEventoOrm } from '../outbox/outbox-evento.orm';
 import { AgendaConsultaOrm } from '../../modulos/agenda/infraestrutura/agenda-consulta.orm';
 import { PoliticaFollowupAgendaOrm } from '../../modulos/agenda/infraestrutura/politica-followup-agenda.orm';
 import { OcorrenciaFollowupAgendaOrm } from '../../modulos/agenda/infraestrutura/ocorrencia-followup-agenda.orm';
+import { ConversaPortalPacienteOrm, MensagemPortalPacienteOrm } from '../../modulos/pacientes/infraestrutura/conversa-portal-paciente.orm';
 import { PacoteSessaoOrm } from '../../modulos/agenda/infraestrutura/pacote-sessao.orm';
 import { AgendaBloqueioExternoOrm } from '../../modulos/agenda/infraestrutura/agenda-bloqueio-externo.orm';
 import { AgendaBloqueioManualOrm } from '../../modulos/agenda/infraestrutura/agenda-bloqueio-manual.orm';
@@ -272,6 +274,8 @@ export function criarOpcoesTypeOrm(): TypeOrmModuleOptions & DataSourceOptions {
       AgendaConsultaOrm,
       PoliticaFollowupAgendaOrm,
       OcorrenciaFollowupAgendaOrm,
+      ConversaPortalPacienteOrm,
+      MensagemPortalPacienteOrm,
       PacoteSessaoOrm,
       ProfissionalGoogleConexaoOrm,
       GoogleCanalWatchOrm,
@@ -389,7 +393,8 @@ export function criarOpcoesTypeOrm(): TypeOrmModuleOptions & DataSourceOptions {
         CriarCatalogoMarcadoresExames1720000001054,
       AdicionarIndicesPerfilPacientes1720000001055,
       AgendarLembretesMaterial1720000001056,
-      CriarCalendarioFollowupsAgenda1720000001057
+      CriarCalendarioFollowupsAgenda1720000001057,
+      CriarRespostaPortalPaciente1720000001058
       ],
     migrationsRun: executarMigracoesNoBoot(),
     synchronize: false,

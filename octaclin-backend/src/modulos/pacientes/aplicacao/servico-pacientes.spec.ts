@@ -3355,6 +3355,7 @@ describe('ServicoPacientes - LGPD retencao e eliminacao', () => {
 
     return {
       servico,
+      gerenciador,
       repositorioPaciente,
       repositorioTombstone,
       repositorioUsuario,
@@ -3366,7 +3367,7 @@ describe('ServicoPacientes - LGPD retencao e eliminacao', () => {
 
   it('fica RETENTION_HELD quando ha registro assistencial dentro dos 20 anos', async () => {
     const recente = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-    const { servico, repositorioPaciente } = montarServicoLgpd({
+    const { servico, repositorioPaciente, gerenciador } = montarServicoLgpd({
       paciente: { id: 'paciente-1', tenantId: 'tenant-1', statusCicloVida: 'ACTIVE' },
       ultimoRegistroClinico: recente
     });
@@ -3379,10 +3380,11 @@ describe('ServicoPacientes - LGPD retencao e eliminacao', () => {
     const salvo = await repositorioPaciente.save.mock.results[0].value;
     expect(salvo.statusCicloVida).toBe('RETENTION_HELD');
     expect(salvo.nomeCriptografado).toBeUndefined();
+    expect(gerenciador.query).toHaveBeenCalledTimes(1);
   });
 
   it('elimina de verdade quando nao ha registro assistencial nenhum', async () => {
-    const { servico, repositorioPaciente, repositorioTombstone, criptografia } = montarServicoLgpd({
+    const { servico, gerenciador, repositorioPaciente, repositorioTombstone, criptografia } = montarServicoLgpd({
       paciente: {
         id: 'paciente-1',
         tenantId: 'tenant-1',
@@ -3398,6 +3400,10 @@ describe('ServicoPacientes - LGPD retencao e eliminacao', () => {
     const resultado = await servico.solicitarEliminacaoDadosLgpd('tenant-1', 'paciente-1', usuarioColaborador);
 
     expect(resultado.status).toBe('DELETED');
+    expect(gerenciador.query).toHaveBeenNthCalledWith(2,
+      'delete from conversas_portal_paciente where tenant_id = $1 and paciente_id = $2',
+      ['tenant-1', 'paciente-1']
+    );
     expect(resultado.deletedAt).toBeInstanceOf(Date);
     const salvo = await repositorioPaciente.save.mock.results[0].value;
     expect(salvo.statusCicloVida).toBe('DELETED');

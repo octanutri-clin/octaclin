@@ -242,6 +242,7 @@ function criarServico(
     }
   };
   const gerenciador = {
+    query: jest.fn(async () => [{ total: '0' }]),
     getRepository: jest.fn((entidade: { name: string }) => {
       if (entidade === OutboxEventoOrm) return repositorios.outbox;
       if (entidade === MensagemNotificacaoOrm) return repositorios.mensagens;

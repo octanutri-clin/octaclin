@@ -25,6 +25,7 @@ import { AcompanhamentoTarefaOrm } from '../infraestrutura/acompanhamento-tarefa
 import { AvaliacaoAntropometricaOrm } from '../infraestrutura/avaliacao-antropometrica.orm';
 import { registrarNotificacao } from '../../notificacoes/aplicacao/registrar-notificacao';
 import { ServicoPortalPaciente } from './servico-portal-paciente';
+import { ConversaPortalPacienteOrm, MensagemPortalPacienteOrm } from '../infraestrutura/conversa-portal-paciente.orm';
 
 jest.mock('../../notificacoes/aplicacao/registrar-notificacao');
 const registrarNotificacaoMock = registrarNotificacao as jest.Mock;
@@ -110,6 +111,8 @@ function criarServico(dados: Record<string, any>) {
     material: criarRepositorioFake('material', dados),
     envioMaterial: criarRepositorioFake('envioMaterial', dados),
     diario: criarRepositorioFake('diario', dados),
+    conversaPortal: criarRepositorioFake('conversaPortal', { conversaPortals: dados.conversasPortal ?? [] }),
+    mensagemPortal: criarRepositorioFake('mensagemPortal', { mensagemPortals: dados.mensagensPortal ?? [] }),
     sincronizacao: criarRepositorioFake('sincronizacao', dados),
     planoAlimentar: criarRepositorioFake('planoAlimentar', dados),
     planoAlimentarVersao: criarRepositorioFake('planoAlimentarVersao', dados),
@@ -137,6 +140,8 @@ function criarServico(dados: Record<string, any>) {
       if (entidade === EnvioMaterialPacienteOrm) return repositorios.envioMaterial;
       if (entidade === LogDiarioRapidoOrm) return repositorios.diario;
       if (entidade === SincronizacaoMobileOrm) return repositorios.sincronizacao;
+      if (entidade === ConversaPortalPacienteOrm) return repositorios.conversaPortal;
+      if (entidade === MensagemPortalPacienteOrm) return repositorios.mensagemPortal;
       if (entidade === PlanoAlimentarOrm) return repositorios.planoAlimentar;
       if (entidade === PlanoAlimentarVersaoOrm) return repositorios.planoAlimentarVersao;
       if (entidade === PlanoAlimentarRefeicaoOrm) return repositorios.planoAlimentarRefeicao;

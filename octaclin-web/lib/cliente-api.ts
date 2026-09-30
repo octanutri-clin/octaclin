@@ -120,6 +120,7 @@ export interface ConfiguracoesPortalClienteApi {
   status: string;
   timezone: string;
   idioma: 'pt-BR' | 'en-US' | 'es';
+  slaRespostaPacienteHoras: number;
   canaisPadrao: {
     email: boolean;
     whatsapp: boolean;

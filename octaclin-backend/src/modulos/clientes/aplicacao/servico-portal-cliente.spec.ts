@@ -475,6 +475,7 @@ describe('ServicoPortalCliente', () => {
       status: 'ativo',
       timezone: 'America/Sao_Paulo',
       idioma: 'pt-BR',
+      slaRespostaPacienteHoras: 24,
       canaisPadrao: {
         email: true,
         whatsapp: true,
@@ -508,7 +509,8 @@ describe('ServicoPortalCliente', () => {
           chave: 'conta_cliente',
           valor: {
             timezone: 'America/Sao_Paulo',
-            idioma: 'pt-BR'
+            idioma: 'pt-BR',
+            slaRespostaPacienteHoras: 36
           },
           criadoEm: new Date('2026-07-20T10:00:00.000Z')
         }
@@ -545,6 +547,7 @@ describe('ServicoPortalCliente', () => {
         valor: {
           timezone: 'America/Fortaleza',
           idioma: 'pt-BR',
+          slaRespostaPacienteHoras: 36,
           canaisPadrao: {
             email: true,
             whatsapp: false,
@@ -561,6 +564,7 @@ describe('ServicoPortalCliente', () => {
     expect(configuracoes.nome).toBe('Clinica Octa Atualizada');
     expect(configuracoes.marca.nomeExibido).toBe('Octa Prime');
     expect(configuracoes.canaisPadrao.whatsapp).toBe(false);
+    expect(configuracoes.slaRespostaPacienteHoras).toBe(36);
   });
 
   it('deve retornar perfil da empresa com defaults para preparacao fiscal', async () => {

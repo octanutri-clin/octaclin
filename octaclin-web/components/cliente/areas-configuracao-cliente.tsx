@@ -130,6 +130,25 @@ export function AreasConfiguracaoCliente({ portal }: Props) {
                   </select>
                 </label>
               ) : null}
+              {areaAtiva === 'preferencias' ? (
+                <label className="grid gap-1 text-xs font-semibold text-texto-suave">
+                  Prazo de resposta ao paciente (horas corridas)
+                  <input
+                    className="h-10 rounded-md border border-linha bg-white px-3 text-sm font-normal text-tinta"
+                    type="number"
+                    min={1}
+                    max={168}
+                    step={1}
+                    required
+                    value={formularioConfiguracoes.slaRespostaPacienteHoras}
+                    onChange={(evento) => setFormularioConfiguracoes((atual) => ({
+                      ...atual,
+                      slaRespostaPacienteHoras: Number(evento.target.value)
+                    }))}
+                  />
+                  <span className="font-normal">Padrão: 24 horas. Aceita de 1 a 168 horas.</span>
+                </label>
+              ) : null}
               {areaAtiva === 'marca' ? (
                 <label className="grid gap-1 text-xs font-semibold text-texto-suave">
                   Email remetente

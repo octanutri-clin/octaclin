@@ -2,6 +2,26 @@ import { PacienteResumo, ProfissionalResumo, RespostaPaginada, listarPacientes, 
 
 export type TipoCanalNotificacao = 'whatsapp' | 'email' | 'push';
 
+export interface ConversaPortalEquipeApi {
+  id: string;
+  pacienteId: string;
+  pacienteNome?: string;
+  profissionalResponsavelId?: string;
+  status: 'aguardando_clinica' | 'aguardando_paciente' | 'encerrada';
+  ultimaMensagemEm: string;
+  prazoRespostaEm?: string;
+  atrasada: boolean;
+  mensagens: Array<{ id: string; autor: 'paciente' | 'equipe'; texto: string; criadoEm: string }>;
+}
+
+export interface FilaConversaPortalEquipeApi {
+  itens: ConversaPortalEquipeApi[];
+  pagina: number;
+  temMais: boolean;
+}
+
+export type FiltroStatusConversaPortalEquipe = 'aguardando_clinica' | 'aguardando_paciente' | 'encerrada' | 'todas';
+
 export interface CanalNotificacaoApi {
   id: string;
   tenantId: string;
@@ -167,6 +187,31 @@ export async function dispararMensagem(entrada: DispararMensagemEntrada): Promis
 
 export async function listarMensagens(): Promise<MensagemNotificacaoApi[]> {
   return requisitar<MensagemNotificacaoApi[]>('/api/comunicacoes/mensagens');
+}
+
+export async function listarConversasPortalPaciente(
+  pagina = 0,
+  somenteAtrasadas = false,
+  status: FiltroStatusConversaPortalEquipe = 'aguardando_clinica'
+): Promise<FilaConversaPortalEquipeApi> {
+  const parametros = new URLSearchParams({ pagina: String(pagina), status });
+  if (somenteAtrasadas) parametros.set('atrasadas', 'true');
+  return requisitar<FilaConversaPortalEquipeApi>(`/api/comunicacoes/portal-paciente?${parametros.toString()}`);
+}
+
+export async function obterConversaPortalEquipe(id: string): Promise<ConversaPortalEquipeApi> {
+  return requisitar<ConversaPortalEquipeApi>(`/api/comunicacoes/portal-paciente/${encodeURIComponent(id)}`);
+}
+
+export async function responderConversaPortalPaciente(id: string, texto: string): Promise<ConversaPortalEquipeApi> {
+  return requisitar<ConversaPortalEquipeApi>(`/api/comunicacoes/portal-paciente/${encodeURIComponent(id)}/respostas`, {
+    method: 'POST',
+    body: JSON.stringify({ texto })
+  });
+}
+
+export async function encerrarConversaPortalPaciente(id: string): Promise<void> {
+  await requisitar<{ encerrada: boolean }>(`/api/comunicacoes/portal-paciente/${encodeURIComponent(id)}/encerrar`, { method: 'POST' });
 }
 
 export async function associarContatoWhatsapp(

@@ -1714,6 +1714,12 @@ async function prepararSessaoComunicacoes(page) {
     })
   }));
 
+  await page.route('**/api/comunicacoes/portal-paciente**', (route) => route.fulfill({
+    status: 200,
+    contentType: 'application/json',
+    body: JSON.stringify({ itens: [], pagina: 0, temMais: false })
+  }));
+
   await page.route('**/api/pacientes**', (route) => route.fulfill({
     status: 200,
     contentType: 'application/json',

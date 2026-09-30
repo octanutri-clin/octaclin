@@ -238,3 +238,29 @@ Este arquivo registra decisoes ja tomadas para evitar que outro agente reprojete
   auditada sem copiar filtros ou resultados; respostas usam `private, no-store`.
 - Esta superficie nao altera a politica de retencao nem fornece exclusao ou
   exportacao. A decisao de produto e os gates da entrega estao no plano PB-27.
+
+## ADR-025 - Conversa segura entre paciente e clinica
+
+- O canal bidirecional desta entrega existe somente no portal autenticado do
+  paciente; mensagens e respostas nao acionam email, WhatsApp, outbox ou outro
+  transporte externo.
+- O backend resolve o titular pelo usuario e tenant autenticados. A equipe
+  precisa das permissoes de leitura/envio; profissionais ficam limitados ao
+  proprio escopo, enquanto colaboradores autorizados seguem o escopo permitido
+  da clinica.
+- Conversas e mensagens ficam em tabelas proprias, cifradas, com tenant em cada
+  linha, FKs compostas e RLS/ FORCE RLS. O texto so sai por DTO autorizado.
+- O SLA e contado em horas corridas: 24h por padrao, configuravel por tenant de
+  1 a 168 horas. O prazo ja iniciado nao muda com uma nova configuracao; ao
+  vencer, a resposta e destacada apenas na fila interna de Comunicacoes.
+- A fila interna permite consultar conversas aguardando a clinica, aguardando
+  o paciente, encerradas ou todas; filtro de atraso so vale para respostas
+  aguardando a clinica. Resultados sao paginados.
+- O paciente pode enviar cinco mensagens por janela movel de dez minutos. A
+  contagem acontece sob trava transacional por paciente para ser consistente
+  entre instancias; o excedente recebe HTTP 429 e nao e persistido.
+- Mensagens integram exportacao LGPD, retencao clinica vigente e fluxo de
+  eliminacao de paciente; migration `down` bloqueia perda se existirem mensagens
+  ou se RLS impedir uma contagem completa.
+- Contrato, gates, rollback e evidencia da Fase 295 ficam em
+  `docs/history/phases/PLANO_FASE_295.md`.

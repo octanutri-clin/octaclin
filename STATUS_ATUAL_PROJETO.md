@@ -1,6 +1,6 @@
 # OctaClin - Status atual do projeto
 
-Atualizado em 2026-09-29.
+Atualizado em 2026-09-30.
 
 ## Remediacao ativa de supply chain
 
@@ -100,13 +100,24 @@ Atualizado em 2026-09-29.
   ocultação de 24h; sem migration ou envio externo. 19 checks `SUCCESS` e três
   `SKIPPED`; não há verificação direta de produção. Plano em
   `docs/history/phases/PLANO_FASE_293.md`.
-- Fase 294 em desenvolvimento na branch `feat/fase294-retorno-sem-consulta`:
+- Fase 294 integrada pelo PR #348 (merge `41873fe6`, 2026-09-30):
   simulação e aprovação humana de contatos de retorno para pacientes sem consulta
   futura, mediana factual de até três intervalos e data apenas interna. A trava
   de 30 dias entre lote e recall, a ausência de consulta futura e as preferências
   do paciente são reavaliadas no envio. Modelo inicial de e-mail neutro,
-  instalado sob demanda pela clínica; sem migration. Plano em
-  `docs/history/phases/PLANO_FASE_294.md`; PR e CI ainda pendentes.
+  instalado sob demanda pela clínica; sem migration. Não há prova de execução
+  operacional externa nesta reconciliação. Plano em
+  `docs/history/phases/PLANO_FASE_294.md`.
+- Fase 295 / PB-28 em desenvolvimento nesta branch: resposta bidirecional no
+  portal seguro, atribuída ao profissional responsável, SLA em horas corridas
+  configurável por clínica (24h padrão, 1–168h) e destaque interno de atraso na
+  fila paginada de Comunicações com filtros de status/atraso, limite de cinco
+  mensagens por dez minutos e sem envio externo. Typechecks e builds backend/web, Jest focado,
+  Playwright de Comunicações/acessibilidade, gate estático de migration,
+  `security:secrets` e `git diff --check` passaram localmente. A prova PostgreSQL/RLS
+  local está `SKIPPED`; CI e revisão cruzada R4 continuam pendentes. Nenhuma migration
+  foi executada em banco. Plano em
+  `docs/history/phases/PLANO_FASE_295.md`.
 - A reconciliação integral da auditoria e a sequência proposta para todas as
   recomendações ainda pendentes estão em
   `docs/product/OCTACLIN_PRODUCT_FEATURE_AUDIT.md`, seção 15. Estados de PB

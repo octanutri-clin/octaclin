@@ -15,6 +15,7 @@ test('clínica instala modelos iniciais, visualiza prévia e edita a própria c�
   }) }));
   await page.route('**/api/comunicacoes/canais', (route) => route.fulfill({ status: 200, contentType: 'application/json', body: '[]' }));
   await page.route('**/api/comunicacoes/mensagens', (route) => route.fulfill({ status: 200, contentType: 'application/json', body: '[]' }));
+  await page.route('**/api/comunicacoes/portal-paciente**', (route) => route.fulfill({ status: 200, contentType: 'application/json', body: '{"itens":[],"pagina":0,"temMais":false}' }));
   await page.route('**/api/pacientes?**', (route) => route.fulfill({ status: 200, contentType: 'application/json', body: '{"itens":[],"total":0}' }));
   await page.route('**/api/profissionais?**', (route) => route.fulfill({ status: 200, contentType: 'application/json', body: '{"itens":[],"total":0}' }));
 

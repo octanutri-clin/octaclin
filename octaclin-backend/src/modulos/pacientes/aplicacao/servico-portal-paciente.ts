@@ -15,6 +15,7 @@ import { dispararGatilhoCheckinAdesaoBaixa } from '../../automacoes/aplicacao/di
 import { AvaliacaoAntropometricaOrm } from '../infraestrutura/avaliacao-antropometrica.orm';
 import type { MedidasAntropometricas } from '../dominio/antropometria';
 import { MensagemNotificacaoOrm } from '../../comunicacoes/infraestrutura/mensagem-notificacao.orm';
+import { ConversaPortalPacienteOrm, MensagemPortalPacienteOrm } from '../infraestrutura/conversa-portal-paciente.orm';
 import { lerPayloadMensagem } from '../../comunicacoes/aplicacao/cripto-conteudo-mensagem';
 import { EnvioMaterialPacienteOrm } from '../../materiais/infraestrutura/envio-material-paciente.orm';
 import { MaterialEducativoOrm } from '../../materiais/infraestrutura/material-educativo.orm';
@@ -364,6 +365,7 @@ export interface ExportacaoDadosLgpdPaciente {
     comunicacoes: {
       mensagens: ResumoPortalPaciente['mensagensRecentes'];
       notificacoes: ResumoPortalPaciente['notificacoesPaciente'];
+      respostasPortal: Array<{ autor: 'paciente' | 'equipe'; texto: string; criadoEm: Date }>;
     };
     acompanhamento: {
       tarefas: ResumoPortalPaciente['tarefasAcompanhamento'];
@@ -1093,6 +1095,21 @@ export class ServicoPortalPaciente {
     const formulariosRespondidos = await Promise.all(
       dados.formulariosRespondidos.map((formulario) => this.obterFormularioRespondido(tenantId, usuarioId, formulario.respostaId))
     );
+    const respostasPortal = await this.executorTenant.executar(tenantId, async (gerenciador) => {
+      const conversa = await gerenciador.getRepository(ConversaPortalPacienteOrm).findOne({
+        where: { tenantId, pacienteId: dados.paciente.id }
+      });
+      if (!conversa) return [];
+      const mensagens = await gerenciador.getRepository(MensagemPortalPacienteOrm).find({
+        where: { tenantId, conversaId: conversa.id },
+        order: { criadoEm: 'ASC', id: 'ASC' }
+      });
+      return mensagens.map((mensagem) => ({
+        autor: mensagem.autorTipo,
+        texto: this.criptografia.descriptografar(mensagem.conteudoCriptografado),
+        criadoEm: mensagem.criadoEm
+      }));
+    });
     const pacote: ExportacaoDadosLgpdPaciente['pacote'] = {
       perfil: {
         paciente: dados.paciente,
@@ -1105,7 +1122,8 @@ export class ServicoPortalPaciente {
       },
       comunicacoes: {
         mensagens: dados.mensagensRecentes,
-        notificacoes: dados.notificacoesPaciente
+        notificacoes: dados.notificacoesPaciente,
+        respostasPortal
       },
       acompanhamento: {
         tarefas: dados.tarefasAcompanhamento,
