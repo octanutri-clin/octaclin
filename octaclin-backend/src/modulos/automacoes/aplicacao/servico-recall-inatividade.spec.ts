@@ -1,4 +1,5 @@
 import { AgendaConsultaOrm } from '../../agenda/infraestrutura/agenda-consulta.orm';
+import { MensagemNotificacaoOrm } from '../../comunicacoes/infraestrutura/mensagem-notificacao.orm';
 import { PacienteOrm } from '../../pacientes/infraestrutura/paciente.orm';
 import { ExecucaoRegraOrm } from '../infraestrutura/execucao-regra.orm';
 import { RegraAutomacaoOrm } from '../infraestrutura/regra-automacao.orm';
@@ -45,6 +46,8 @@ interface DadosCenario {
   regras?: Record<string, unknown>[];
   pacientes?: Record<string, unknown>[];
   ultimasConsultas?: { pacienteId: string; ultimaEm: Date }[];
+  futuras?: { pacienteId: string }[];
+  contatosRecentes?: { pacienteId: string }[];
   execucoes?: Record<string, unknown>[];
   canais?: Record<string, unknown>[];
   templates?: Record<string, unknown>[];
@@ -80,13 +83,16 @@ function criarServico(dados: DadosCenario = {}) {
       return entrada;
     })
   };
-  const construtorConsultas: Record<string, jest.Mock> = {
-    getRawMany: jest.fn(async () => dados.ultimasConsultas ?? [])
-  };
-  for (const metodo of ['select', 'addSelect', 'where', 'andWhere', 'groupBy']) {
-    construtorConsultas[metodo] = jest.fn(() => construtorConsultas);
+  function construtor(consulta: 'historico' | 'futuras' | 'mensagens') {
+    const builder: Record<string, jest.Mock> = {
+      getRawMany: jest.fn(async () => consulta === 'historico' ? dados.ultimasConsultas ?? [] : consulta === 'futuras' ? dados.futuras ?? [] : dados.contatosRecentes ?? [])
+    };
+    for (const metodo of ['select', 'addSelect', 'where', 'andWhere', 'groupBy', 'setParameter']) builder[metodo] = jest.fn(() => builder);
+    return builder;
   }
-  const repositorioConsultas = { createQueryBuilder: jest.fn(() => construtorConsultas) };
+  let consultasCriadas = 0;
+  const repositorioConsultas = { createQueryBuilder: jest.fn(() => construtor(++consultasCriadas % 2 === 1 ? 'historico' : 'futuras')) };
+  const repositorioMensagens = { createQueryBuilder: jest.fn(() => construtor('mensagens')) };
 
   const gerenciador = {
     getRepository: jest.fn((entidade: { name: string }) => {
@@ -94,6 +100,7 @@ function criarServico(dados: DadosCenario = {}) {
       if (entidade === PacienteOrm) return repositorioPacientes;
       if (entidade === ExecucaoRegraOrm) return repositorioExecucoes;
       if (entidade === AgendaConsultaOrm) return repositorioConsultas;
+      if (entidade === MensagemNotificacaoOrm) return repositorioMensagens;
       throw new Error(`Repositorio nao mapeado: ${entidade.name}`);
     })
   };

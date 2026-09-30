@@ -40,6 +40,8 @@ export type MotivoExclusaoRecall =
   | 'status_adesao_fora_do_filtro'
   | 'consulta_recente'
   | 'recall_recente'
+  | 'contato_recente'
+  | 'consulta_futura'
   | 'limite_por_execucao';
 
 export interface CandidatoRecall {
