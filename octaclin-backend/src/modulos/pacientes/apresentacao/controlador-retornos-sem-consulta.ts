@@ -43,8 +43,7 @@ export class ControladorRetornosSemConsulta {
       acao: 'pacientes.retorno_lote.aprovar',
       recursoTipo: 'paciente',
       ip: requisicao.ip,
-      userAgent: requisicao.headers['user-agent'],
-      metadados: { selecionados: dados.pacienteIds.length, enfileirados: resultado.totalEnfileirado }
+      userAgent: requisicao.headers['user-agent']
     });
     return resultado;
   }
