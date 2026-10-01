@@ -1,4 +1,4 @@
-import { ForbiddenException, NotFoundException } from '@nestjs/common';
+import { ConflictException, ForbiddenException, NotFoundException } from '@nestjs/common';
 import { EntityManager } from 'typeorm';
 import { UserActionLogOrm } from '../../../infraestrutura/auditoria/user-action-log.orm';
 import { ExecutorTenant } from '../../../infraestrutura/banco-dados/executor-tenant';
@@ -9,9 +9,11 @@ import { TenantConfiguracaoOrm } from '../../tenancy/infraestrutura/tenant-confi
 import { AlimentoComposicaoOrm } from '../infraestrutura/alimento-composicao.orm';
 import { FonteComposicaoAlimentoOrm } from '../infraestrutura/fonte-composicao-alimento.orm';
 import { ModeloPlanoAlimentarOrm } from '../infraestrutura/modelo-plano-alimentar.orm';
+import { RevisaoModeloPlanoAlimentarOrm } from '../infraestrutura/revisao-modelo-plano-alimentar.orm';
 import { ServicoModelosPlanoAlimentar } from './servico-modelos-plano-alimentar';
 
 const TENANT_ID = '10000000-0000-4000-8000-000000000001';
+const OUTRO_TENANT_ID = '10000000-0000-4000-8000-000000000008';
 const USUARIO_ID = '10000000-0000-4000-8000-000000000002';
 const PROFISSIONAL_ID = '10000000-0000-4000-8000-000000000003';
 const OUTRO_PROFISSIONAL_ID = '10000000-0000-4000-8000-000000000004';
@@ -56,6 +58,7 @@ interface RepositorioMemoria {
 }
 
 function criarRepositorio(iniciais: any[] = []): RepositorioMemoria {
+  let proximoIdRevisao = 1;
   const repositorio: RepositorioMemoria = {
     registros: [...iniciais],
     find: jest.fn(async (opcoes: any = {}) => filtrar(repositorio.registros, opcoes)),
@@ -66,6 +69,7 @@ function criarRepositorio(iniciais: any[] = []): RepositorioMemoria {
     }),
     findOne: jest.fn(async (opcoes: any = {}) => filtrar(repositorio.registros, opcoes)[0] ?? null),
     save: jest.fn(async (registro: any) => {
+      registro.id ??= registro.numero ? `revisao-${proximoIdRevisao++}` : MODELO_ID;
       const existente = repositorio.registros.find((atual) => atual.id === registro.id);
       if (existente) Object.assign(existente, registro);
       else repositorio.registros.push({ ...registro, id: registro.id ?? MODELO_ID });
@@ -96,6 +100,7 @@ function filtrar(registros: any[], opcoes: any): any[] {
 describe('ServicoModelosPlanoAlimentar', () => {
   let criptografia: CriptografiaDadosSensiveis;
   let repositorios: Map<Function, RepositorioMemoria>;
+  let consultaSql: jest.Mock;
   let servico: ServicoModelosPlanoAlimentar;
 
   beforeEach(() => {
@@ -105,6 +110,7 @@ describe('ServicoModelosPlanoAlimentar', () => {
       { id: PROFISSIONAL_ID, tenantId: TENANT_ID, usuarioId: USUARIO_ID, arquivadoEm: undefined }
     ]));
     repositorios.set(ModeloPlanoAlimentarOrm, criarRepositorio());
+    repositorios.set(RevisaoModeloPlanoAlimentarOrm, criarRepositorio());
     repositorios.set(TenantConfiguracaoOrm, criarRepositorio());
     repositorios.set(AlimentoComposicaoOrm, criarRepositorio([
       { id: ALIMENTO_ID, fonteId: FONTE_ID, nome: 'Pao frances' }
@@ -114,7 +120,8 @@ describe('ServicoModelosPlanoAlimentar', () => {
     ]));
     repositorios.set(UserActionLogOrm, criarRepositorio());
     const gerenciador = {
-      getRepository: jest.fn((entidade: Function) => repositorios.get(entidade))
+      getRepository: jest.fn((entidade: Function) => repositorios.get(entidade)),
+      query: (consultaSql = jest.fn(async () => []))
     } as unknown as EntityManager;
     const executor = {
       executar: jest.fn(async (_tenantId: string, operacao: (manager: EntityManager) => Promise<unknown>) =>
@@ -139,6 +146,21 @@ describe('ServicoModelosPlanoAlimentar', () => {
     });
   }
 
+  function modeloDeOutroTenant() {
+    repositorios.get(ModeloPlanoAlimentarOrm)!.registros.push({
+      id: MODELO_ID,
+      tenantId: OUTRO_TENANT_ID,
+      origem: 'clinica',
+      nomeCriptografado: criptografia.criptografar('Modelo de outro tenant'),
+      conteudoCriptografado: criptografia.criptografar(JSON.stringify(refeicoesExemplo())),
+      totalRefeicoes: 1,
+      totalItens: 1,
+      versaoAtual: 1,
+      criadoPorUsuarioId: USUARIO_ID,
+      arquivadoEm: undefined
+    });
+  }
+
   describe('criar', () => {
     it('guarda nome e conteudo criptografados e conta a estrutura', async () => {
       await servico.criar(TENANT_ID, usuarioProfissional(), {
@@ -152,6 +174,10 @@ describe('ServicoModelosPlanoAlimentar', () => {
       expect(salvo.totalItens).toBe(1);
       // Nome e conteudo sao dado clinico do profissional: nunca em claro.
       expect(salvo.nome).toBeUndefined();
+      expect(salvo.versaoAtual).toBe(1);
+      expect(repositorios.get(RevisaoModeloPlanoAlimentarOrm)!.save).toHaveBeenCalledWith(
+        expect.objectContaining({ numero: 1, tenantId: TENANT_ID, modeloId: MODELO_ID })
+      );
     });
 
     it('vincula modelo pessoal ao profissional do usuario', async () => {
@@ -289,6 +315,11 @@ describe('ServicoModelosPlanoAlimentar', () => {
         NotFoundException
       );
     });
+
+    it('responde 404 para modelo existente em outro tenant', async () => {
+      modeloDeOutroTenant();
+      await expect(servico.obter(TENANT_ID, MODELO_ID, usuarioProfissional())).rejects.toBeInstanceOf(NotFoundException);
+    });
   });
 
   describe('arquivar', () => {
@@ -300,6 +331,13 @@ describe('ServicoModelosPlanoAlimentar', () => {
       });
       await servico.arquivar(TENANT_ID, MODELO_ID, usuarioProfissional());
       expect(repositorios.get(ModeloPlanoAlimentarOrm)!.registros[0].arquivadoEm).toBeInstanceOf(Date);
+      expect(consultaSql).toHaveBeenCalledWith(
+        'select id from modelos_plano_alimentar where tenant_id = $1 and id = $2 for update',
+        [TENANT_ID, MODELO_ID]
+      );
+      expect(consultaSql.mock.invocationCallOrder[0]).toBeLessThan(
+        repositorios.get(ModeloPlanoAlimentarOrm)!.findOne.mock.invocationCallOrder[0]
+      );
     });
 
     it('nega arquivar modelo pessoal de outro profissional', async () => {
@@ -307,6 +345,128 @@ describe('ServicoModelosPlanoAlimentar', () => {
       await expect(servico.arquivar(TENANT_ID, MODELO_ID, usuarioProfissional())).rejects.toBeInstanceOf(
         NotFoundException
       );
+    });
+
+    it('nao arquiva modelo existente em outro tenant', async () => {
+      modeloDeOutroTenant();
+      await expect(servico.arquivar(TENANT_ID, MODELO_ID, usuarioProfissional())).rejects.toBeInstanceOf(NotFoundException);
+      expect(repositorios.get(ModeloPlanoAlimentarOrm)!.save).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('versionamento', () => {
+    it('edita um modelo legado atomicamente criando snapshots cifrados v1 e v2', async () => {
+      const legado = {
+        id: MODELO_ID, tenantId: TENANT_ID, origem: 'clinica', profissionalId: undefined,
+        nomeCriptografado: criptografia.criptografar('Legado'),
+        conteudoCriptografado: criptografia.criptografar(JSON.stringify(refeicoesExemplo())),
+        totalRefeicoes: 1, totalItens: 1, versaoAtual: 1, criadoPorUsuarioId: USUARIO_ID,
+        arquivadoEm: undefined
+      };
+      repositorios.get(ModeloPlanoAlimentarOrm)!.registros.push(legado);
+      const refeicoes = [{ nome: 'Nova estrutura', itens: [{ quantidade: 2, unidade: 'porcao', porcaoGramas: 70 }] }];
+      const resultado = await servico.editar(TENANT_ID, MODELO_ID, usuarioProfissional(), {
+        versaoEsperada: 1, nome: 'Revisado', refeicoes: refeicoes as never
+      });
+      expect(resultado.versaoAtual).toBe(2);
+      const revisoes = repositorios.get(RevisaoModeloPlanoAlimentarOrm)!.registros;
+      expect(revisoes.map((revisao) => revisao.numero)).toEqual([1, 2]);
+      expect(criptografia.descriptografar(revisoes[0].nomeCriptografado)).toBe('Legado');
+      expect(criptografia.descriptografar(revisoes[1].nomeCriptografado)).toBe('Revisado');
+      expect(legado.versaoAtual).toBe(2);
+      expect(legado.criadoPorUsuarioId).toBe(USUARIO_ID);
+      expect(consultaSql).toHaveBeenCalledTimes(1);
+    });
+
+    it('recusa versão concorrente sem inserir revisão nem alterar modelo', async () => {
+      const legado = {
+        id: MODELO_ID, tenantId: TENANT_ID, origem: 'clinica', nomeCriptografado: Buffer.from('x'),
+        conteudoCriptografado: Buffer.from('x'), totalRefeicoes: 1, totalItens: 1, versaoAtual: 3,
+        criadoPorUsuarioId: USUARIO_ID, arquivadoEm: undefined
+      };
+      repositorios.get(ModeloPlanoAlimentarOrm)!.registros.push(legado);
+      await expect(servico.editar(TENANT_ID, MODELO_ID, usuarioProfissional(), {
+        versaoEsperada: 2, nome: 'Revisado', refeicoes: refeicoesExemplo() as never
+      })).rejects.toBeInstanceOf(ConflictException);
+      expect(legado.versaoAtual).toBe(3);
+      expect(repositorios.get(RevisaoModeloPlanoAlimentarOrm)!.save).not.toHaveBeenCalled();
+    });
+
+    it('valida propriedade pessoal depois do lock e responde 404 sem consultar revisões', async () => {
+      modeloPessoalDeOutro();
+      await expect(servico.editar(TENANT_ID, MODELO_ID, usuarioProfissional(), {
+        versaoEsperada: 1, nome: 'Alterado', refeicoes: refeicoesExemplo() as never
+      })).rejects.toBeInstanceOf(NotFoundException);
+      expect(consultaSql).toHaveBeenCalledTimes(1);
+      expect(consultaSql.mock.invocationCallOrder[0]).toBeLessThan(
+        repositorios.get(ModeloPlanoAlimentarOrm)!.findOne.mock.invocationCallOrder[0]
+      );
+      expect(repositorios.get(RevisaoModeloPlanoAlimentarOrm)!.findOne).not.toHaveBeenCalled();
+    });
+
+    it('nao edita modelo existente em outro tenant nem consulta revisoes', async () => {
+      modeloDeOutroTenant();
+      await expect(servico.editar(TENANT_ID, MODELO_ID, usuarioProfissional(), {
+        versaoEsperada: 1, nome: 'Alterado', refeicoes: refeicoesExemplo() as never
+      })).rejects.toBeInstanceOf(NotFoundException);
+      expect(repositorios.get(ModeloPlanoAlimentarOrm)!.save).not.toHaveBeenCalled();
+      expect(repositorios.get(RevisaoModeloPlanoAlimentarOrm)!.findOne).not.toHaveBeenCalled();
+    });
+
+    it('nega ler histórico sem permissão de leitura', async () => {
+      await expect(servico.listarVersoes(TENANT_ID, MODELO_ID,
+        { ...usuarioProfissional(), permissoes: [] }, { pagina: 1, limite: 10 }
+      )).rejects.toBeInstanceOf(ForbiddenException);
+    });
+
+    it('não revela histórico de modelo pessoal de outro profissional', async () => {
+      modeloPessoalDeOutro();
+      await expect(servico.listarVersoes(TENANT_ID, MODELO_ID, usuarioProfissional(), { pagina: 1, limite: 10 }))
+        .rejects.toBeInstanceOf(NotFoundException);
+      expect(repositorios.get(RevisaoModeloPlanoAlimentarOrm)!.findAndCount).not.toHaveBeenCalled();
+    });
+
+    it('nao consulta revisoes de modelo existente em outro tenant', async () => {
+      modeloDeOutroTenant();
+      await expect(servico.listarVersoes(TENANT_ID, MODELO_ID, usuarioProfissional(), { pagina: 1, limite: 10 }))
+        .rejects.toBeInstanceOf(NotFoundException);
+      expect(repositorios.get(RevisaoModeloPlanoAlimentarOrm)!.findAndCount).not.toHaveBeenCalled();
+    });
+
+    it('nao abre snapshot de modelo existente em outro tenant', async () => {
+      modeloDeOutroTenant();
+      await expect(servico.obterVersao(TENANT_ID, MODELO_ID, 1, usuarioProfissional()))
+        .rejects.toBeInstanceOf(NotFoundException);
+      expect(repositorios.get(RevisaoModeloPlanoAlimentarOrm)!.findOne).not.toHaveBeenCalled();
+    });
+
+    it('restaura snapshot como nova versão sem sobrescrever revisões', async () => {
+      const modelo = {
+        id: MODELO_ID, tenantId: TENANT_ID, origem: 'clinica', nomeCriptografado: criptografia.criptografar('Atual'),
+        conteudoCriptografado: criptografia.criptografar(JSON.stringify(refeicoesExemplo())),
+        totalRefeicoes: 1, totalItens: 1, versaoAtual: 2, criadoPorUsuarioId: USUARIO_ID, arquivadoEm: undefined
+      };
+      const historico = {
+        id: '10000000-0000-4000-8000-000000000008', tenantId: TENANT_ID, modeloId: MODELO_ID, numero: 1,
+        nomeCriptografado: criptografia.criptografar('Antigo'),
+        conteudoCriptografado: criptografia.criptografar(JSON.stringify(refeicoesExemplo())),
+        totalRefeicoes: 1, totalItens: 1, autorUsuarioId: USUARIO_ID, criadoEm: new Date()
+      };
+      repositorios.get(ModeloPlanoAlimentarOrm)!.registros.push(modelo);
+      repositorios.get(RevisaoModeloPlanoAlimentarOrm)!.registros.push(historico);
+      const resultado = await servico.restaurarVersao(TENANT_ID, MODELO_ID, 1, usuarioProfissional(), 2);
+      expect(resultado.versaoAtual).toBe(3);
+      expect(historico.numero).toBe(1);
+      expect(repositorios.get(RevisaoModeloPlanoAlimentarOrm)!.registros.map((r) => r.numero)).toEqual([1, 3]);
+      expect(repositorios.get(RevisaoModeloPlanoAlimentarOrm)!.save.mock.calls[0][0].numero).toBe(3);
+    });
+
+    it('nao restaura modelo existente em outro tenant nem consulta seu historico', async () => {
+      modeloDeOutroTenant();
+      await expect(servico.restaurarVersao(TENANT_ID, MODELO_ID, 1, usuarioProfissional(), 1))
+        .rejects.toBeInstanceOf(NotFoundException);
+      expect(repositorios.get(ModeloPlanoAlimentarOrm)!.save).not.toHaveBeenCalled();
+      expect(repositorios.get(RevisaoModeloPlanoAlimentarOrm)!.findOne).not.toHaveBeenCalled();
     });
   });
 });

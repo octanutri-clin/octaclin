@@ -1,4 +1,4 @@
-import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { EntityManager, FindOptionsWhere, In, IsNull } from 'typeorm';
 import { registrarAuditoriaNaTransacao } from '../../../infraestrutura/auditoria/servico-auditoria';
 import { ExecutorTenant } from '../../../infraestrutura/banco-dados/executor-tenant';
@@ -19,7 +19,14 @@ import {
 import { AlimentoComposicaoOrm } from '../infraestrutura/alimento-composicao.orm';
 import { FonteComposicaoAlimentoOrm } from '../infraestrutura/fonte-composicao-alimento.orm';
 import { ModeloPlanoAlimentarOrm } from '../infraestrutura/modelo-plano-alimentar.orm';
-import { CriarModeloPlanoAlimentarDto, ListarModelosPlanoAlimentarDto, PAGINA_MAXIMA } from './dtos';
+import {
+  CriarModeloPlanoAlimentarDto,
+  EditarModeloPlanoAlimentarDto,
+  ListarModelosPlanoAlimentarDto,
+  ListarVersoesModeloPlanoAlimentarDto,
+  PAGINA_MAXIMA
+} from './dtos';
+import { RevisaoModeloPlanoAlimentarOrm } from '../infraestrutura/revisao-modelo-plano-alimentar.orm';
 
 /**
  * Modelos reutilizaveis de plano alimentar.
@@ -59,9 +66,11 @@ export class ServicoModelosPlanoAlimentar {
         conteudoCriptografado: this.criptografia.criptografar(JSON.stringify(refeicoes)),
         totalRefeicoes,
         totalItens,
+        versaoAtual: 1,
         criadoPorUsuarioId: usuario.usuarioId
       });
       await repositorio.save(modelo);
+      await this.persistirRevisao(gerenciador, modelo, 1, usuario.usuarioId);
       await this.registrarAuditoria(gerenciador, {
         tenantId,
         usuario,
@@ -69,7 +78,7 @@ export class ServicoModelosPlanoAlimentar {
         modeloId: modelo.id,
         metadados: { origem: dados.origem, totalRefeicoes, totalItens }
       });
-      return { id: modelo.id, nome: dados.nome.trim(), origem: dados.origem, totalRefeicoes, totalItens };
+      return { id: modelo.id, nome: dados.nome.trim(), origem: dados.origem, totalRefeicoes, totalItens, versaoAtual: 1 };
     });
   }
 
@@ -105,6 +114,7 @@ export class ServicoModelosPlanoAlimentar {
           origem: modelo.origem,
           totalRefeicoes: modelo.totalRefeicoes,
           totalItens: modelo.totalItens,
+          versaoAtual: modelo.versaoAtual ?? 1,
           atualizadoEm: modelo.atualizadoEm
         })),
         total,
@@ -132,6 +142,7 @@ export class ServicoModelosPlanoAlimentar {
         origem: modelo.origem,
         totalRefeicoes: modelo.totalRefeicoes,
         totalItens: modelo.totalItens,
+        versaoAtual: modelo.versaoAtual ?? 1,
         refeicoes,
         // Avisa antes de aplicar. Sem isso o profissional so descobriria o
         // problema no salvamento, num erro que nao diz qual item quebrou.
@@ -140,11 +151,148 @@ export class ServicoModelosPlanoAlimentar {
     });
   }
 
+  async editar(
+    tenantId: string,
+    modeloId: string,
+    usuario: UsuarioAutenticado,
+    dados: EditarModeloPlanoAlimentarDto
+  ) {
+    this.garantirPapelProfissional(usuario);
+    this.garantirPermissao(usuario, 'planos_alimentares.gerenciar');
+    const refeicoes = dados.refeicoes as unknown as RefeicaoModeloPlanoAlimentar[];
+    const { totalRefeicoes, totalItens } = contarEstruturaModelo(refeicoes);
+
+    return this.executorTenant.executar(tenantId, async (gerenciador) => {
+      await this.bloquearModelo(gerenciador, tenantId, modeloId);
+      const modelo = await this.obterNoEscopo(gerenciador, tenantId, modeloId, usuario);
+      const versaoAtual = modelo.versaoAtual ?? 1;
+      if (dados.versaoEsperada !== versaoAtual) {
+        throw new ConflictException('O modelo foi alterado. Recarregue o historico antes de salvar.');
+      }
+
+      const revisoes = gerenciador.getRepository(RevisaoModeloPlanoAlimentarOrm);
+      const revisaoAtual = await revisoes.findOne({ where: { tenantId, modeloId, numero: versaoAtual } });
+      if (!revisaoAtual) await this.persistirRevisao(gerenciador, modelo, versaoAtual, usuario.usuarioId);
+
+      modelo.nomeCriptografado = this.criptografia.criptografar(dados.nome.trim());
+      modelo.conteudoCriptografado = this.criptografia.criptografar(JSON.stringify(refeicoes));
+      modelo.totalRefeicoes = totalRefeicoes;
+      modelo.totalItens = totalItens;
+      modelo.versaoAtual = versaoAtual + 1;
+      await gerenciador.getRepository(ModeloPlanoAlimentarOrm).save(modelo);
+      await this.persistirRevisao(gerenciador, modelo, modelo.versaoAtual, usuario.usuarioId);
+      await this.registrarAuditoria(gerenciador, {
+        tenantId, usuario, acao: 'planos_alimentares.modelo_editar', modeloId,
+        metadados: { versao: modelo.versaoAtual, totalRefeicoes, totalItens }
+      });
+      return { id: modelo.id, versaoAtual: modelo.versaoAtual, totalRefeicoes, totalItens };
+    });
+  }
+
+  async listarVersoes(
+    tenantId: string,
+    modeloId: string,
+    usuario: UsuarioAutenticado,
+    consulta: ListarVersoesModeloPlanoAlimentarDto
+  ) {
+    this.garantirPapelProfissional(usuario);
+    this.garantirPermissao(usuario, 'planos_alimentares.ler');
+    const pagina = Math.min(PAGINA_MAXIMA, Math.max(1, Math.trunc(consulta.pagina ?? 1)));
+    const limite = Math.min(100, Math.max(1, Math.trunc(consulta.limite ?? 25)));
+
+    return this.executorTenant.executar(tenantId, async (gerenciador) => {
+      const modelo = await this.obterNoEscopo(gerenciador, tenantId, modeloId, usuario);
+      const repositorio = gerenciador.getRepository(RevisaoModeloPlanoAlimentarOrm);
+      const [revisoes, quantidade] = await repositorio.findAndCount({
+        where: { tenantId, modeloId }, order: { numero: 'DESC' }, skip: (pagina - 1) * limite, take: limite
+      });
+      if (quantidade === 0 && (modelo.versaoAtual ?? 1) === 1) {
+        const legado = {
+          id: `${modelo.id}:1`, numero: 1,
+          nome: this.criptografia.descriptografar(modelo.nomeCriptografado),
+          totalRefeicoes: modelo.totalRefeicoes, totalItens: modelo.totalItens,
+          criadoEm: modelo.atualizadoEm
+        };
+        return { itens: pagina === 1 ? [legado] : [], total: 1, pagina, limite };
+      }
+      return {
+        itens: revisoes.map((revisao) => ({
+          id: revisao.id, numero: revisao.numero,
+          nome: this.criptografia.descriptografar(revisao.nomeCriptografado),
+          totalRefeicoes: revisao.totalRefeicoes, totalItens: revisao.totalItens, criadoEm: revisao.criadoEm
+        })),
+        total: quantidade, pagina, limite
+      };
+    });
+  }
+
+  async obterVersao(tenantId: string, modeloId: string, numero: number, usuario: UsuarioAutenticado) {
+    this.garantirPapelProfissional(usuario);
+    this.garantirPermissao(usuario, 'planos_alimentares.ler');
+    return this.executorTenant.executar(tenantId, async (gerenciador) => {
+      const modelo = await this.obterNoEscopo(gerenciador, tenantId, modeloId, usuario);
+      const revisao = await gerenciador.getRepository(RevisaoModeloPlanoAlimentarOrm).findOne({
+        where: { tenantId, modeloId, numero }
+      });
+      const snapshot = revisao ?? ((numero === 1 && (modelo.versaoAtual ?? 1) === 1)
+        ? modelo
+        : undefined);
+      if (!snapshot) throw new NotFoundException('Versao do modelo nao encontrada.');
+      const refeicoes = JSON.parse(this.criptografia.descriptografar(snapshot.conteudoCriptografado)) as RefeicaoModeloPlanoAlimentar[];
+      return {
+        id: revisao?.id ?? `${modelo.id}:1`, numero,
+        nome: this.criptografia.descriptografar(snapshot.nomeCriptografado),
+        totalRefeicoes: snapshot.totalRefeicoes, totalItens: snapshot.totalItens,
+        criadoEm: revisao?.criadoEm ?? modelo.atualizadoEm,
+        refeicoes,
+        alimentosIndisponiveis: await this.detectarAlimentosIndisponiveis(gerenciador, refeicoes)
+      };
+    });
+  }
+
+  async restaurarVersao(
+    tenantId: string,
+    modeloId: string,
+    numero: number,
+    usuario: UsuarioAutenticado,
+    versaoEsperada: number
+  ) {
+    this.garantirPapelProfissional(usuario);
+    this.garantirPermissao(usuario, 'planos_alimentares.gerenciar');
+    return this.executorTenant.executar(tenantId, async (gerenciador) => {
+      await this.bloquearModelo(gerenciador, tenantId, modeloId);
+      const modelo = await this.obterNoEscopo(gerenciador, tenantId, modeloId, usuario);
+      const versaoAtual = modelo.versaoAtual ?? 1;
+      if (versaoEsperada !== versaoAtual) {
+        throw new ConflictException('O modelo foi alterado. Recarregue o historico antes de restaurar.');
+      }
+      const revisoes = gerenciador.getRepository(RevisaoModeloPlanoAlimentarOrm);
+      const origem = await revisoes.findOne({ where: { tenantId, modeloId, numero } });
+      const snapshot = origem ?? ((numero === 1 && versaoAtual === 1) ? modelo : undefined);
+      if (!snapshot) throw new NotFoundException('Versao do modelo nao encontrada.');
+      if (!origem) await this.persistirRevisao(gerenciador, modelo, 1, usuario.usuarioId);
+
+      modelo.nomeCriptografado = Buffer.from(snapshot.nomeCriptografado);
+      modelo.conteudoCriptografado = Buffer.from(snapshot.conteudoCriptografado);
+      modelo.totalRefeicoes = snapshot.totalRefeicoes;
+      modelo.totalItens = snapshot.totalItens;
+      modelo.versaoAtual = versaoAtual + 1;
+      await gerenciador.getRepository(ModeloPlanoAlimentarOrm).save(modelo);
+      await this.persistirRevisao(gerenciador, modelo, modelo.versaoAtual, usuario.usuarioId);
+      await this.registrarAuditoria(gerenciador, {
+        tenantId, usuario, acao: 'planos_alimentares.modelo_restaurar', modeloId,
+        metadados: { versao: modelo.versaoAtual, totalRefeicoes: modelo.totalRefeicoes, totalItens: modelo.totalItens }
+      });
+      return { id: modelo.id, versaoAtual: modelo.versaoAtual, totalRefeicoes: modelo.totalRefeicoes, totalItens: modelo.totalItens };
+    });
+  }
+
   async arquivar(tenantId: string, modeloId: string, usuario: UsuarioAutenticado) {
     this.garantirPapelProfissional(usuario);
     this.garantirPermissao(usuario, 'planos_alimentares.gerenciar');
 
     return this.executorTenant.executar(tenantId, async (gerenciador) => {
+      await this.bloquearModelo(gerenciador, tenantId, modeloId);
       const modelo = await this.obterNoEscopo(gerenciador, tenantId, modeloId, usuario);
       modelo.arquivadoEm = new Date();
       await gerenciador.getRepository(ModeloPlanoAlimentarOrm).save(modelo);
@@ -157,6 +305,35 @@ export class ServicoModelosPlanoAlimentar {
       });
       return { id: modelo.id, arquivadoEm: modelo.arquivadoEm };
     });
+  }
+
+  private async bloquearModelo(gerenciador: EntityManager, tenantId: string, modeloId: string): Promise<void> {
+    // A checagem de versao ocorre depois do lock e na mesma transacao tenant,
+    // serializando edicoes/restauracoes concorrentes do mesmo modelo.
+    await gerenciador.query(
+      'select id from modelos_plano_alimentar where tenant_id = $1 and id = $2 for update',
+      [tenantId, modeloId]
+    );
+  }
+
+  private async persistirRevisao(
+    gerenciador: EntityManager,
+    modelo: ModeloPlanoAlimentarOrm,
+    numero: number,
+    autorUsuarioId: string
+  ): Promise<void> {
+    const repositorio = gerenciador.getRepository(RevisaoModeloPlanoAlimentarOrm);
+    const revisao = repositorio.create({
+      tenantId: modelo.tenantId,
+      modeloId: modelo.id,
+      numero,
+      nomeCriptografado: Buffer.from(modelo.nomeCriptografado),
+      conteudoCriptografado: Buffer.from(modelo.conteudoCriptografado),
+      totalRefeicoes: modelo.totalRefeicoes,
+      totalItens: modelo.totalItens,
+      autorUsuarioId
+    });
+    await repositorio.save(revisao);
   }
 
   /**

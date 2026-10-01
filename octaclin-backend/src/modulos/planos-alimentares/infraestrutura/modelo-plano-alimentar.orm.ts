@@ -35,6 +35,9 @@ export class ModeloPlanoAlimentarOrm {
   @Column({ name: 'total_itens', type: 'integer' })
   totalItens: number;
 
+  @Column({ name: 'versao_atual', type: 'integer', default: 1 })
+  versaoAtual: number;
+
   @Column({ name: 'criado_por_usuario_id', type: 'uuid' })
   criadoPorUsuarioId: string;
 

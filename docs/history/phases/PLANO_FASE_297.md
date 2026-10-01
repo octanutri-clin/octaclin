@@ -1,5 +1,10 @@
 # Fase 297 — kit inicial para clínicas novas
 
+> Estado reconciliado: integrada em `main` pelo PR #355 (merge `4f51b0ac`,
+> confirmado no GitHub). As menções abaixo à branch, revisão e checks pendentes
+> registram o momento anterior ao merge. Integração não comprova operação em
+> produção; esta reconciliação não consultou o ambiente externo.
+
 ## Objetivo e decisões
 
 Completar o onboarding do PB-29 com conteúdo inicial útil para uma clínica recém-provisionada. O proprietário definiu instalação automática **somente em clínicas novas**. O kit inclui estruturas editáveis de refeições e materiais genéricos; não inclui carga de catálogo de alimentos, quantidades, metas nutricionais nem prescrição pronta. Nenhum material é enviado automaticamente ao paciente.

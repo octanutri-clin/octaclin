@@ -455,12 +455,35 @@ export interface ModeloPlanoAlimentarResumoApi {
   origem: OrigemModeloApi;
   totalRefeicoes: number;
   totalItens: number;
+  versaoAtual: number;
   atualizadoEm: string;
+}
+
+/** Busca o catálogo global para editar modelos sem depender de um paciente. */
+export function buscarAlimentosParaModelo(consulta: ConsultaAlimentos, signal?: AbortSignal) {
+  return requisitar<PaginaAlimentosApi>(
+    `/api/planos-alimentares/alimentos${montarConsulta({ ...consulta })}`,
+    { signal }
+  );
 }
 
 export interface ModeloPlanoAlimentarApi extends Omit<ModeloPlanoAlimentarResumoApi, 'atualizadoEm'> {
   refeicoes: RefeicaoPlanoAlimentarEntrada[];
   /** Ids de catalogo do modelo cuja fonte deixou de estar ativa. */
+  alimentosIndisponiveis: string[];
+}
+
+export interface VersaoModeloPlanoAlimentarResumoApi {
+  id: string;
+  numero: number;
+  nome: string;
+  totalRefeicoes: number;
+  totalItens: number;
+  criadoEm: string;
+}
+
+export interface VersaoModeloPlanoAlimentarApi extends VersaoModeloPlanoAlimentarResumoApi {
+  refeicoes: RefeicaoPlanoAlimentarEntrada[];
   alimentosIndisponiveis: string[];
 }
 
@@ -477,6 +500,8 @@ export interface EstruturaInicialPlanoApi {
 export interface PaginaModelosPlanoApi extends PaginaApi<ModeloPlanoAlimentarResumoApi> {
   estruturasIniciais?: EstruturaInicialPlanoApi[];
 }
+
+export type PaginaVersoesModeloPlanoApi = PaginaApi<VersaoModeloPlanoAlimentarResumoApi>;
 
 // Modelos nao pertencem a um paciente: a rota vive fora de `/pacientes/:id`.
 const BASE_MODELOS = '/api/planos-alimentares/modelos';
@@ -502,6 +527,38 @@ export function criarModeloPlanoAlimentar(entrada: {
   refeicoes: RefeicaoPlanoAlimentarEntrada[];
 }) {
   return requisitar<ModeloPlanoAlimentarResumoApi>(BASE_MODELOS, { method: 'POST', ...corpoJson(entrada) });
+}
+
+export function editarModeloPlanoAlimentar(modeloId: string, entrada: {
+  versaoEsperada: number;
+  nome: string;
+  refeicoes: RefeicaoPlanoAlimentarEntrada[];
+}) {
+  return requisitar<{ id: string; versaoAtual: number; totalRefeicoes: number; totalItens: number }>(
+    `${BASE_MODELOS}/${encodeURIComponent(modeloId)}`,
+    { method: 'PUT', ...corpoJson(entrada) }
+  );
+}
+
+export function listarVersoesModeloPlanoAlimentar(modeloId: string, consulta: ConsultaPaginadaPlanos = {}, signal?: AbortSignal) {
+  return requisitar<PaginaVersoesModeloPlanoApi>(
+    `${BASE_MODELOS}/${encodeURIComponent(modeloId)}/versoes${montarConsulta({ pagina: consulta.pagina, limite: consulta.limite })}`,
+    { signal }
+  );
+}
+
+export function obterVersaoModeloPlanoAlimentar(modeloId: string, numero: number, signal?: AbortSignal) {
+  return requisitar<VersaoModeloPlanoAlimentarApi>(
+    `${BASE_MODELOS}/${encodeURIComponent(modeloId)}/versoes/${numero}`,
+    { signal }
+  );
+}
+
+export function restaurarVersaoModeloPlanoAlimentar(modeloId: string, numero: number, versaoEsperada: number) {
+  return requisitar<{ id: string; versaoAtual: number; totalRefeicoes: number; totalItens: number }>(
+    `${BASE_MODELOS}/${encodeURIComponent(modeloId)}/versoes/${numero}/restaurar`,
+    { method: 'POST', ...corpoJson({ versaoEsperada }) }
+  );
 }
 
 export function arquivarModeloPlanoAlimentar(modeloId: string) {

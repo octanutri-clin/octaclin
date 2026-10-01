@@ -1,11 +1,25 @@
 # OctaClin - Resumo das fases concluidas
 
+## Implementação preparada para PR em 2026-10-01
+
+- Fase 298 implementada na branch `feat/fase298-edicao-modelos-plano`, ainda
+  não integrada: edição estruturada de modelos, histórico cifrado imutável,
+  consulta e restauração como nova revisão. A migration 1060 foi testada, não
+  aplicada externamente; PostgreSQL/RLS integrado depende do CI. Próxima proposta
+  após a integração: Fase 299, expansão validada do catálogo alimentar. Detalhes e
+  limites em `docs/history/phases/PLANO_FASE_298.md`.
+
 ## Reconciliacao em 2026-09-30
 
+- Fase 297 integrada pelo PR #355 (merge `4f51b0ac`): estruturas de refeições
+  sem alimentos e materiais genéricos para clínicas novas. Sem catálogo novo,
+  envio automático ou migration; produção não verificada neste ciclo.
+- Fase 296 integrada pelo PR #353 (merge `ccd1c0bb`): revisão humana de hábitos
+  e lembretes configuráveis, desligados por padrão. A aplicação da migration
+  1059 foi relatada pelo proprietário, sem verificação direta de ambiente.
 - Fase 295 / PB-28 integrada pelo PR #349 (merge `a54e52c9`, confirmado no
   GitHub em 2026-09-30): resposta segura no portal, fila interna e SLA
-  configurável por clínica. A Fase 296 está em desenvolvimento e por isso não
-  figura entre as fases concluídas. Não houve prova direta de produção neste ciclo.
+  configurável por clínica. Não houve prova direta de produção neste ciclo.
 
 - Fase 288 integrada pelo PR #324 (merge `8fc2ffe`): revisão paginada de
   respostas, leitura antes da conclusão e síntese factual sem IA. O gate
