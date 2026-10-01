@@ -2,6 +2,17 @@
 
 Atualizado em 2026-09-30.
 
+## Fase ativa
+
+- Fase 295 / PB-28 integrada pelo PR #349 (merge `a54e52c9`, confirmado no GitHub em 2026-09-30).
+  Conversa segura no portal e fila interna com SLA por clínica. O proprietário informou que as
+  migrations anteriores foram aplicadas; este ciclo não verificou produção diretamente.
+- Fase 296 em desenvolvimento na branch `feat/fase296-revisao-checkin-lembretes`:
+  revisão humana dos registros de hábitos, com leitura individual antes do carimbo,
+  e lembretes de plano e tarefa configuráveis pela clínica, desligados por padrão.
+  Migration 1059, CI, revisão R4 e prova PostgreSQL/RLS ainda pendentes. A migration
+  1059 não foi aplicada em staging nem produção neste ciclo.
+
 ## Remediacao ativa de supply chain
 
 - `fast-uri` 3.1.7 e `multer` 2.4.0 estao sendo travados nos overrides e
@@ -108,20 +119,10 @@ Atualizado em 2026-09-30.
   instalado sob demanda pela clínica; sem migration. Não há prova de execução
   operacional externa nesta reconciliação. Plano em
   `docs/history/phases/PLANO_FASE_294.md`.
-- Fase 295 / PB-28 em desenvolvimento no PR #349: resposta bidirecional no
-  portal seguro, atribuída ao profissional responsável, SLA em horas corridas
-  configurável por clínica (24h padrão, 1–168h) e destaque interno de atraso na
-  fila paginada de Comunicações com filtros de status/atraso, limite de cinco
-  mensagens por dez minutos e sem envio externo. Typechecks e builds backend/web, Jest focado,
-  Playwright de Comunicações/acessibilidade, gate estático de migration,
-  `security:secrets` e `git diff --check` passaram localmente. A prova PostgreSQL/RLS
-  local está `SKIPPED`. O primeiro CI falhou no smoke visual; a correção passou
-  em 12 cenários Playwright locais desktop/mobile. O segundo CI falhou em três
-  ocorrências de linguagem no filtro novo; a correção passou no gate local de
-  linguagem e no cenário visual afetado. Nova rodada de CI e revisão
-  cruzada R4 continuam pendentes. Nenhuma migration
-  foi executada em banco. Plano em
-  `docs/history/phases/PLANO_FASE_295.md`.
+- Fase 295 / PB-28 integrada pelo PR #349 (merge `a54e52c9`): resposta
+  bidirecional no portal seguro, SLA configurável por clínica e destaque interno
+  de atraso. Este ciclo não verificou operação externa nem aplicou migrations.
+  Plano em `docs/history/phases/PLANO_FASE_295.md`.
 - A reconciliação integral da auditoria e a sequência proposta para todas as
   recomendações ainda pendentes estão em
   `docs/product/OCTACLIN_PRODUCT_FEATURE_AUDIT.md`, seção 15. Estados de PB

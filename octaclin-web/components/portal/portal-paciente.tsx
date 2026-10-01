@@ -950,6 +950,9 @@ export function PortalPaciente({ secao }: { secao: SecaoPortal }) {
                         </div>
                         {diario.sintomas ? <p className="mt-3 break-words text-sm text-texto-suave">{diario.sintomas}</p> : null}
                         {diario.observacoes ? <p className="mt-2 break-words text-sm text-texto-forte">{diario.observacoes}</p> : null}
+                        <p className="mt-2 text-xs text-texto-suave">{diario.revisadoEm
+                          ? `Visto pela equipe em ${formatarDataHora(diario.revisadoEm)}. A avaliação clínica acontece no atendimento.`
+                          : 'Aguardando revisão pela equipe.'}</p>
                       </article>
                     ))
                   ) : (
@@ -1122,7 +1125,7 @@ export function PortalPaciente({ secao }: { secao: SecaoPortal }) {
                         <p className="mt-2 line-clamp-2 break-words text-sm text-texto-suave">
                           {notificacao.texto || 'Notificacao registrada no acompanhamento.'}
                         </p>
-                        {notificacao.evento === 'plano_publicado_portal' && portal.planoAlimentar ? (
+                        {(notificacao.evento === 'plano_publicado_portal' || notificacao.evento === 'lembrete_plano_portal') && portal.planoAlimentar ? (
                           <Link href="/portal/plano" className="mt-3 inline-flex text-sm font-medium text-primario underline">
                             Consultar plano alimentar
                           </Link>
@@ -1130,6 +1133,11 @@ export function PortalPaciente({ secao }: { secao: SecaoPortal }) {
                         {notificacao.evento === 'material_nao_visualizado_portal' ? (
                           <Link href="/portal" className="mt-3 inline-flex text-sm font-medium text-primario underline">
                             Acessar materiais no portal
+                          </Link>
+                        ) : null}
+                        {notificacao.evento === 'lembrete_tarefa_portal' ? (
+                          <Link href="/portal/plano" className="mt-3 inline-flex text-sm font-medium text-primario underline">
+                            Consultar tarefas
                           </Link>
                         ) : null}
                         <dl className="mt-3 grid gap-2 text-xs text-texto-suave sm:grid-cols-2">

@@ -386,6 +386,30 @@ async function assertSemOverflowHorizontal(page) {
 }
 
 test.describe('portal do cliente', () => {
+  test('configura lembretes desligados por padrão sem retroagir', async ({ page }) => {
+    await prepararSessaoCliente(page);
+    let salvo;
+    await page.route('**/api/cliente/lembretes-acompanhamento', async (route) => {
+      if (route.request().method() === 'PATCH') {
+        salvo = await route.request().postDataJSON();
+        return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ...salvo,
+          plano: { ...salvo.plano, ativadoEm: '2026-09-30T12:00:00Z' } }) });
+      }
+      return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({
+        plano: { ativo: false, intervaloDias: 7 }, tarefas: { ativo: false, antecedenciaHoras: 24 }
+      }) });
+    });
+    await page.goto('/cliente');
+    await page.getByRole('tab', { name: 'Preferências' }).click();
+    const secao = page.getByRole('heading', { name: 'Lembretes de acompanhamento' }).locator('..');
+    await expect(secao.getByText(/Desligados por padrão/)).toBeVisible();
+    await secao.getByRole('checkbox', { name: 'Enviar lembretes do plano' }).check();
+    await secao.getByRole('spinbutton', { name: 'Intervalo em dias' }).fill('10');
+    await secao.getByRole('button', { name: 'Salvar lembretes' }).click();
+    await expect(secao.getByText(/Lembretes atualizados/)).toBeVisible();
+    expect(salvo).toEqual({ plano: { ativo: true, intervaloDias: 10 },
+      tarefas: { ativo: false, antecedenciaHoras: 24 } });
+  });
   test('PB-27 consulta auditoria, filtra, pagina e mostra vazio sem overflow', async ({ page }) => {
     await prepararSessaoCliente(page);
     const chamadas = [];

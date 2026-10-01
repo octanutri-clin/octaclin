@@ -58,6 +58,13 @@ export function decidirAcessoRota(pathname: string, papel?: string, destinoInici
 
   const destino = resolverDestinoPermitido(papel, destinoInicial, permissoes);
 
+  if (pertenceARota(pathname, ['/checkins'])) {
+    return (papel === 'Professional' || papel === 'SuperAdmin') &&
+      (!Array.isArray(permissoes) || permissoes.includes('pacientes.ler'))
+      ? { permitir: true }
+      : { permitir: false, redirecionarPara: destino };
+  }
+
   if (pertenceARota(pathname, ROTAS_PORTAL) || pertenceARota(pathname, ROTAS_CLIENTE)) {
     return { permitir: false, redirecionarPara: destino };
   }

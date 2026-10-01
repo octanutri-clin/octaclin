@@ -148,7 +148,7 @@ describe('ServicoCicloVidaTenant.provisionar', () => {
 
     await servico.provisionar(dados, 'operador-1');
 
-    expect(repositorioTemplates.save).toHaveBeenCalledTimes(8);
+    expect(repositorioTemplates.save).toHaveBeenCalledTimes(12);
     expect(repositorioTemplates.save).toHaveBeenCalledWith(expect.objectContaining({ tenantId: tenant.id, canal: 'email', aprovado: false }));
     expect(repositorioTemplates.save).toHaveBeenCalledWith(expect.objectContaining({ tenantId: tenant.id, canal: 'email', codigoExterno: 'octaclin_inicial_retorno', aprovado: false }));
     expect(repositorioTemplates.save).toHaveBeenCalledWith(expect.objectContaining({ tenantId: tenant.id, canal: 'whatsapp', codigoExterno: 'octaclin_plano_publicado', aprovado: false }));
