@@ -3,8 +3,8 @@
 Data: 2026-09-17 · Base: `main` em `84e9104` · Escopo: produto e funcionalidades (não é auditoria de segurança).
 
 **Convenção de evidência.** `[F]` = fato observado no código, com arquivo e linha. `[H]` = hipótese de produto,
-derivada dos fatos mas não provada por eles. Nenhuma recomendação aqui foi implementada — este documento é
-diagnóstico e priorização, não autorização de execução.
+derivada dos fatos mas não provada por eles. Na data-base original, nenhuma recomendação aqui havia sido implementada — este documento é
+diagnóstico e priorização, não autorização de execução. A seção 15 reconcilia as entregas posteriores.
 
 **Método.** Mapa estrutural levantado diretamente (módulos, controladores, entidades, rotas BFF, jobs), leitura
 em primeira mão das superfícies críticas (dashboard clínico, prontuário, agendamento público, portal do
@@ -412,7 +412,7 @@ Ordenadas por "o dado já existe" → "o efeito não existe".
 | Material enviado e não visualizado | Visualização registrada de forma idempotente e tenant-aware desde a Fase 264.3 (PB-07); Fase 290 integrada pelo PR #344 agenda lembrete em 72h, recorrente a cada 72h, sem alcançar envios anteriores à ativação | Confirmar depois a experiência do paciente e a configuração dos canais, sem envio retroativo |
 | Paciente sem consulta futura | Fase 294 integrada pelo PR #348 (merge `41873fe6` em 2026-09-30): simulação, data factual interna e aprovação de contato em lote com trava de 30 dias compartilhada com recall | Acompanhar uso operacional; agendamento continua explícito na agenda |
 | Resposta do paciente no portal | Fase 295 / PB-28 integrada no PR #349 (merge `a54e52c9`): conversa segura portal-clínica, profissional responsável, SLA corrido por clínica (24h padrão, 1–168h), limite de cinco mensagens por dez minutos e fila paginada; destaque interno quando vencer, sem envio externo | Observar uso operacional; sem prova direta de produção nesta reconciliação |
-| Registro de hábitos revisado e lembretes de plano/tarefa | Fase 296 em desenvolvimento nesta branch: leitura e carimbo humano, configuração por clínica desligada por padrão, aviso cifrado no portal e até um canal externo consentido | Migration 1059, CI/revisão R4 e prova PostgreSQL/RLS pendentes; sem envio retroativo |
+| Registro de hábitos revisado e lembretes de plano/tarefa | Fase 296 integrada pelo PR #353 (merge `ccd1c0bb`): leitura e carimbo humano, configuração por clínica desligada por padrão, aviso cifrado no portal e até um canal externo consentido | Aplicação da migration 1059 relatada pelo proprietário; ambiente e prova PostgreSQL/RLS não verificados nesta reconciliação; sem envio retroativo |
 
 `[F]` A infraestrutura de execução já está pronta: outbox transacional com idempotência, fila com poller,
 preferências de canal e janela de horário do paciente respeitadas por todos os envios, e o padrão de
@@ -429,8 +429,8 @@ janela de horário) — respeitadas por todos os fluxos de envio; exportação L
 Lacunas observadas:
 1. **Canal de resposta** — lacuna do inventário original resolvida no código pela Fase 295 / PR #349; observar uso operacional.
 2. **Progresso restrito a peso** `[F]` — nenhuma outra métrica, nenhuma meta, nenhum marco.
-3. **Registrar não gera retorno** — Fase 296 em desenvolvimento acrescenta leitura e carimbo da equipe ao registro de hábitos; avaliar o efeito no uso após integração.
-4. **Sem lembrete próprio de plano/tarefa** — Fase 296 em desenvolvimento acrescenta configuração por clínica e avisos sem retroatividade; integração, CI e operação externa ainda pendentes.
+3. **Registrar não gera retorno** — Fase 296 integrada pelo PR #353 acrescenta leitura e carimbo da equipe ao registro de hábitos; avaliar o efeito no uso.
+4. **Sem lembrete próprio de plano/tarefa** — Fase 296 integrada pelo PR #353 acrescenta configuração por clínica e avisos sem retroatividade; operação externa não verificada nesta reconciliação.
 5. **Gamificação desligada** `[F]` — badges, desafios e círculos existem no banco e por padrão ninguém vê.
    `[H]` Ligar sem repensar o propósito clínico tende a gerar ruído; a decisão é de produto, não técnica.
 6. **Materiais sem confirmação de leitura** `[F]`.
@@ -475,6 +475,7 @@ do paciente, linha do tempo paginada, recall com simulação, central de falhas,
 5. **Onboarding sem trilho** `[F]` — não há wizard nem checklist; uma clínica nova sobe sem templates de
    mensagem, sem modelos de plano, sem catálogo de alimentos carregado e sem materiais.
    `[H]` Esse é provavelmente o maior risco de ativação no piloto: o produto vazio parece menos capaz do que é.
+   Reconciliação: PB-29 entregou o guia, PB-22 entregou e-mails iniciais e a Fase 297 entrega materiais genéricos e estruturas de refeições sem alimentos apenas para clínicas novas. A Fase 297 ainda está na branch, sem PR integrado; carga de catálogo alimentar e modelos clínicos prontos continuam fora de seu escopo.
 6. **Integrações fora do alcance do nutricionista** `[F]` — chave de API e webhook exigem papel `Client`.
 
 ---
@@ -611,7 +612,7 @@ de esgotar a versão determinística de cada um.
 
 ### Estado do backlog verificado em 2026-09-30
 
-Os estados abaixo foram cruzados com PRs merged e, para itens sem PR identificável, com o código. PRs #319 a #324 e #343 a #349 foram integrados; a Fase 295 / PB-28 foi integrada pelo PR #349 (merge `a54e52c9`, 2026-09-30). A Fase 296 está em desenvolvimento nesta branch. Relatos do proprietário sobre ambientes externos não foram tratados como verificação direta nesta reconciliação.
+Os estados abaixo foram cruzados com PRs merged e, para itens sem PR identificável, com o código. PRs #319 a #324, #343 a #349 e #353 foram integrados; a Fase 296 foi integrada pelo PR #353 (merge `ccd1c0bb`). A Fase 297 está em desenvolvimento nesta branch. Relatos do proprietário sobre ambientes externos não foram tratados como verificação direta nesta reconciliação.
 
 | PB | Estado e evidência |
 |---|---|
@@ -639,7 +640,7 @@ Os estados abaixo foram cruzados com PRs merged e, para itens sem PR identificá
 | PB-29 | **Concluído no código** — Fase 283, PR #319 integrado (merge `19ade15` em 2026-09-27). Não há evidência de produção nesta reconciliação. |
 | PB-30 | **Pendente** — extração assistida de exames não foi encontrada; PB-17 entrega a estrutura determinística e é dependência já concluída. |
 
-PB-30 segue sem ordem aprovada na tabela original. PB-20 e Fases 286 a 295 foram integrados. A Fase 296 cobre revisão do registro de hábitos e lembretes de plano/tarefas, mas depende de PR, CI, migration 1059 e prova externa. As demais automações da seção 7 e a fórmula geral do score continuam em aberto.
+PB-30 segue sem ordem aprovada na tabela original. PB-20 e Fases 286 a 296 foram integrados. A aplicação da migration 1059 foi relatada pelo proprietário, sem prova direta ou ambiente identificado neste ciclo. A Fase 297 cobre parte do kit inicial sem catálogo alimentar; as demais automações da seção 7 e a fórmula geral do score continuam em aberto.
 
 ---
 
@@ -810,8 +811,9 @@ produto devem ter esse gate resolvido no plano da respectiva fase.
 
 1. **PB-29 (Fase 283, PR #319) concluído no código.** Guia integrado em `main`.
 2. **PB-22 (Fase 284, PR #320) concluído no código.** A biblioteca inicial foi integrada em `main`. Em tarefa
-   relacionada, mas separada do PB-22, avaliar um kit inicial de modelos de plano alimentar, catálogo de
-   alimentos e materiais; o guia do PB-29 não comprova que esses conteúdos existam.
+   relacionada, a Fase 297 implementa nesta branch materiais genéricos e estruturas
+   de refeições sem alimentos, editáveis antes de salvar; sem catálogo alimentar
+   carregado, modelos clínicos prontos ou instalação retroativa em clínicas existentes.
 3. **PB-20 integrado (Fase 285, PR #321).** A comparação manual, o acesso clínico e o prazo
    de retenção foram integrados em `main` pelo PR #321.
 4. **Completar templates profissionais e consulta (Fase 286, PR #322 integrado).** Cobrir observações antropométricas e relatórios de
@@ -841,7 +843,8 @@ produto devem ter esse gate resolvido no plano da respectiva fase.
    portal seguro somente; atribui ao profissional responsável, com SLA corrido padrão de 24h configurável
    entre 1 e 168h por clínica; limita o paciente a cinco mensagens por janela móvel de dez minutos e
    permite filtrar estados e paginar a fila; atraso apenas destaca a fila interna de Comunicações, sem envio externo.
-   Revisão do registro de hábitos e lembretes de plano/tarefas seguem na Fase 296 em desenvolvimento.
+   Revisão do registro de hábitos e lembretes de plano/tarefas foram integrados
+   na Fase 296 pelo PR #353; aplicação da 1059 relatada, sem prova direta do banco.
    Gamificação permanece recomendação futura e exige decisão de propósito própria.
 7. **Operação e inteligência da clínica.** Avaliar carga/ocupação/faltas/produtividade por profissional,
    autosserviço LGPD da própria clínica, acesso profissional a APIs/integrações, e visões longitudinais de

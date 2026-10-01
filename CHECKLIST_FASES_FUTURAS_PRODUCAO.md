@@ -1,6 +1,6 @@
 # OctaClin - Checklist vivo de fases futuras ate producao
 
-Atualizado em 2026-09-30. Fase 295 / PB-28 integrada pelo PR #349 (merge `a54e52c9`). Fase 296 em desenvolvimento nesta branch, com migration 1059 ainda não aplicada; Fases 256 a 261, 263 a 295 integradas; Fase 284
+Atualizado em 2026-09-30. Fase 296 integrada pelo PR #353 (merge `ccd1c0bb`); o proprietário informou aplicação da migration 1059, sem confirmação direta de ambiente/banco. Fase 297 em desenvolvimento nesta branch; Fases 256 a 261, 263 a 296 integradas; Fase 284
 (PB-22) foi integrada pelo PR #320 (merge `af839c5`, 19 checks `SUCCESS` e
 `Provenance do SBOM` `SKIPPED`). Fase 285 (PB-20) foi integrada pelo PR #321
 (merge `01d6bf1`). Fase 286 concluida pelo PR #322 (merge `c92f246`). A reconciliação completa do backlog da auditoria e a
@@ -4456,12 +4456,21 @@ auditoria estão ordenados na seção 15 de
   cinco mensagens por paciente a cada dez minutos. Inclui cifragem, tenant/RLS, exportação e retenção LGPD. Integrada pelo PR #349
   (merge `a54e52c9`). Não há prova direta de produção nesta reconciliação.
   Plano em `docs/history/phases/PLANO_FASE_295.md`.
-- [~] Fase 296 - revisão humana do registro de hábitos e lembretes próprios de plano e tarefa.
+- [x] Fase 296 - revisão humana do registro de hábitos e lembretes próprios de plano e tarefa.
   A clínica ativa e configura a cadência; padrão desligado, sem recuperação retroativa. Aviso genérico
   cifrado no portal e, quando permitido, um canal externo com revalidação da origem e preferências.
-  Branch `feat/fase296-revisao-checkin-lembretes`; migration aditiva 1059 exige aplicação deliberada
-  fora de banda e prova RLS. CI, revisão R4 e operação externa pendentes.
+  Integrada pelo PR #353 (merge `ccd1c0bb`). O proprietário informou que a
+  migration aditiva 1059 foi aplicada; ambiente, role e prova PostgreSQL/RLS
+  não foram verificados nesta reconciliação.
   Plano em `docs/history/phases/PLANO_FASE_296.md`.
+- [~] Fase 297 - kit inicial para clínicas novas: estruturas de refeições sem
+  alimentos no editor e materiais genéricos na biblioteca, instalados na mesma
+  transação do provisionamento. Cópias editáveis preservam materiais enviados.
+  O editor exige alimentos para salvar; o profissional completa e revisa o
+  conteúdo antes de criar um modelo ou plano.
+  Sem carga de alimentos, envio automático ou migration nova. Branch
+  `feat/fase297-kit-inicial-clinica`; integração depende de PR, CI e revisão R4.
+  Plano em `docs/history/phases/PLANO_FASE_297.md`.
 
 O programa de hardening
 PR 36-56 permanece como trilha separada --

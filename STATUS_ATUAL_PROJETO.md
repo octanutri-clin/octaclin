@@ -7,11 +7,16 @@ Atualizado em 2026-09-30.
 - Fase 295 / PB-28 integrada pelo PR #349 (merge `a54e52c9`, confirmado no GitHub em 2026-09-30).
   Conversa segura no portal e fila interna com SLA por clínica. O proprietário informou que as
   migrations anteriores foram aplicadas; este ciclo não verificou produção diretamente.
-- Fase 296 em desenvolvimento na branch `feat/fase296-revisao-checkin-lembretes`:
-  revisão humana dos registros de hábitos, com leitura individual antes do carimbo,
-  e lembretes de plano e tarefa configuráveis pela clínica, desligados por padrão.
-  Migration 1059, CI, revisão R4 e prova PostgreSQL/RLS ainda pendentes. A migration
-  1059 não foi aplicada em staging nem produção neste ciclo.
+- Fase 296 concluida no codigo e integrada pelo PR #353 (merge `ccd1c0bb`, confirmado no GitHub em
+  2026-09-30 no fuso clínico): revisão humana dos registros de hábitos e lembretes
+  de plano/tarefa configuráveis, desligados por padrão. O proprietário informou
+  que aplicou a migration 1059; esta reconciliação não identificou o ambiente
+  da aplicação nem consultou o banco. Ver `docs/history/phases/PLANO_FASE_296.md`.
+- Fase 297 em desenvolvimento na branch `feat/fase297-kit-inicial-clinica`:
+  estruturas de refeições sem alimentos no editor e materiais genéricos instalados
+  automaticamente apenas ao provisionar clínicas novas. O profissional completa
+  e revisa as refeições antes de salvar. Sem catálogo alimentar novo, envio
+  automático ou migration. Plano em `docs/history/phases/PLANO_FASE_297.md`.
 
 ## Remediacao ativa de supply chain
 
@@ -123,6 +128,9 @@ Atualizado em 2026-09-30.
   bidirecional no portal seguro, SLA configurável por clínica e destaque interno
   de atraso. Este ciclo não verificou operação externa nem aplicou migrations.
   Plano em `docs/history/phases/PLANO_FASE_295.md`.
+- Fase 296 integrada pelo PR #353 (merge `ccd1c0bb`). A aplicação da migration
+  1059 foi informada pelo proprietário, sem verificação direta de ambiente.
+  Fase 297 permanece em revisão nesta branch; testes locais não provam produção.
 - A reconciliação integral da auditoria e a sequência proposta para todas as
   recomendações ainda pendentes estão em
   `docs/product/OCTACLIN_PRODUCT_FEATURE_AUDIT.md`, seção 15. Estados de PB

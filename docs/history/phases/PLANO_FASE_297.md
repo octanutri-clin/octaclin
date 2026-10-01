@@ -4,7 +4,9 @@
 
 Completar o onboarding do PB-29 com conteúdo inicial útil para uma clínica recém-provisionada. O proprietário definiu instalação automática **somente em clínicas novas**. O kit inclui estruturas editáveis de refeições e materiais genéricos; não inclui carga de catálogo de alimentos, quantidades, metas nutricionais nem prescrição pronta. Nenhum material é enviado automaticamente ao paciente.
 
-O trabalho permanece na branch `feat/fase297-kit-inicial-clinica`. O PR só será aberto após confirmação do proprietário, nesta execução, do merge da Fase 296 e da aplicação da migration 1059.
+Modelo de trabalho: Sol, esforço alto. Skills usadas: `agent-skills:planning-and-task-breakdown`, `test-driven-development` e `security-review`, além das regras locais do repositório.
+
+O trabalho permanece na branch `feat/fase297-kit-inicial-clinica`. O proprietário confirmou o merge da Fase 296 e a aplicação da migration 1059; o PR #353 consta como mergeado no GitHub (`ccd1c0bb`). O ambiente da aplicação não foi identificado nesta confirmação nem verificado diretamente nesta fase.
 
 ## Diagnóstico do código e limites
 
@@ -44,10 +46,12 @@ R4 pelo provisionamento e isolamento de tenant. Não há DDL. Rollback de códig
 ## Evidência local e pendências de integração
 
 - `PASS` — testes focados do provisionamento e da listagem de modelos: 31 testes, incluindo autorização negativa, marcador de outro tenant e reuso do provisionamento.
-- `PASS` — suíte completa NestJS: 236 suítes e 2.220 testes aprovados. Quatro suítes e 41 testes foram `SKIPPED` pela configuração da própria suíte.
+- `PASS` — suíte completa NestJS após integrar `main`: 242 suítes e 2.245 testes aprovados. Quatro suítes e 41 testes foram `SKIPPED` pela configuração da própria suíte.
 - `PASS` — Playwright desktop e mobile: aplicar estrutura sem alimentos bloqueia salvar modelo; copiar material gera novo registro sem alterar o original.
 - `PASS` — `typecheck` e build de backend e Web, gate de linguagem e scanner local de segredos.
+- `PASS` — preflight documental e Playwright desktop/mobile executados novamente sobre a `main` integrada (quatro cenários focados aprovados).
 - `PASS` — ESLint dos arquivos Web tocados, sem erros; seis avisos de hooks em fluxos existentes.
-- `SKIPPED` — prova PostgreSQL/RLS real e CI remoto: não há banco descartável confirmado nesta worktree; os checks remotos dependem de PR.
+- `SKIPPED` — prova PostgreSQL/RLS real: não há banco descartável confirmado nesta worktree.
+- `PENDING` — checks remotos e revisão cruzada R4 dependem do PR.
 - O Node local é 24.19.0, enquanto a engine do repositório exige Node 22. A compatibilidade autoritativa depende dos checks em Node 22.
-- A reconciliação de `STATUS_ATUAL_PROJETO.md`, `CHECKLIST_FASES_FUTURAS_PRODUCAO.md` e auditoria do produto fica nesta mesma branch, depois do merge da Fase 296 e da confirmação da migration 1059. Nenhum estado de produção é inferido destes testes.
+- A reconciliação de `STATUS_ATUAL_PROJETO.md`, `CHECKLIST_FASES_FUTURAS_PRODUCAO.md` e auditoria do produto integra esta mesma branch. Nenhum estado de produção é inferido destes testes.
