@@ -274,6 +274,46 @@ export class CriarModeloPlanoAlimentarDto {
   refeicoes: RefeicaoPlanoAlimentarDto[];
 }
 
+export class EditarModeloPlanoAlimentarDto {
+  @IsInt()
+  @Min(1)
+  versaoEsperada: number;
+
+  @IsString()
+  @MinLength(1)
+  @MaxLength(180)
+  nome: string;
+
+  @IsArray()
+  @ArrayMinSize(1)
+  @ArrayMaxSize(50)
+  @ValidateNested({ each: true })
+  @Type(() => RefeicaoPlanoAlimentarDto)
+  refeicoes: RefeicaoPlanoAlimentarDto[];
+}
+
+export class ListarVersoesModeloPlanoAlimentarDto {
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(PAGINA_MAXIMA)
+  pagina = 1;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(100)
+  limite = 25;
+}
+
+export class RestaurarVersaoModeloPlanoAlimentarDto {
+  @IsInt()
+  @Min(1)
+  versaoEsperada: number;
+}
+
 export class ListarReceitasNutricionaisDto {
   @IsOptional()
   @Type(() => Number)

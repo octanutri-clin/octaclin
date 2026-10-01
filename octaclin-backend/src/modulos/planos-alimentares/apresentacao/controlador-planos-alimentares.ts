@@ -10,11 +10,14 @@ import {
   CriarModeloPlanoAlimentarDto,
   CriarReceitaNutricionalDto,
   CriarPlanoAlimentarDto,
+  EditarModeloPlanoAlimentarDto,
   AtualizarReceitaNutricionalDto,
   ListarEscolhasPlanoAlimentarDto,
   ListarModelosPlanoAlimentarDto,
+  ListarVersoesModeloPlanoAlimentarDto,
   ListarPlanosAlimentaresDto,
-  ListarReceitasNutricionaisDto
+  ListarReceitasNutricionaisDto,
+  RestaurarVersaoModeloPlanoAlimentarDto
 } from '../aplicacao/dtos';
 import { ServicoModelosPlanoAlimentar } from '../aplicacao/servico-modelos-plano-alimentar';
 import { ServicoPlanosAlimentares } from '../aplicacao/servico-planos-alimentares';
@@ -178,6 +181,47 @@ export class ControladorModelosPlanoAlimentar {
     @Body() dados: CriarModeloPlanoAlimentarDto
   ) {
     return this.servico.criar(usuario.tenantId, usuario, dados);
+  }
+
+  @Put(':modeloId')
+  @Permissoes('planos_alimentares.gerenciar')
+  editar(
+    @UsuarioAtual() usuario: UsuarioAutenticado,
+    @Param('modeloId', ParseUUIDPipe) modeloId: string,
+    @Body() dados: EditarModeloPlanoAlimentarDto
+  ) {
+    return this.servico.editar(usuario.tenantId, modeloId, usuario, dados);
+  }
+
+  @Get(':modeloId/versoes')
+  @Permissoes('planos_alimentares.ler')
+  listarVersoes(
+    @UsuarioAtual() usuario: UsuarioAutenticado,
+    @Param('modeloId', ParseUUIDPipe) modeloId: string,
+    @Query() consulta: ListarVersoesModeloPlanoAlimentarDto
+  ) {
+    return this.servico.listarVersoes(usuario.tenantId, modeloId, usuario, consulta);
+  }
+
+  @Get(':modeloId/versoes/:numero')
+  @Permissoes('planos_alimentares.ler')
+  obterVersao(
+    @UsuarioAtual() usuario: UsuarioAutenticado,
+    @Param('modeloId', ParseUUIDPipe) modeloId: string,
+    @Param('numero', ParseIntPipe) numero: number
+  ) {
+    return this.servico.obterVersao(usuario.tenantId, modeloId, numero, usuario);
+  }
+
+  @Post(':modeloId/versoes/:numero/restaurar')
+  @Permissoes('planos_alimentares.gerenciar')
+  restaurarVersao(
+    @UsuarioAtual() usuario: UsuarioAutenticado,
+    @Param('modeloId', ParseUUIDPipe) modeloId: string,
+    @Param('numero', ParseIntPipe) numero: number,
+    @Body() dados: RestaurarVersaoModeloPlanoAlimentarDto
+  ) {
+    return this.servico.restaurarVersao(usuario.tenantId, modeloId, numero, usuario, dados.versaoEsperada);
   }
 
   @Get(':modeloId')

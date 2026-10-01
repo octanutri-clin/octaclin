@@ -5,6 +5,7 @@ import { GET as listarPlanos, POST as criarPlano } from '../app/api/pacientes/[i
 import { GET as obterPlano } from '../app/api/pacientes/[id]/planos-alimentares/[planoId]/route';
 import { GET as listarEscolhasPaciente } from '../app/api/pacientes/[id]/planos-alimentares/[planoId]/escolhas-paciente/route';
 import { GET as buscarAlimentos } from '../app/api/pacientes/[id]/planos-alimentares/alimentos/route';
+import { GET as buscarAlimentosModelo } from '../app/api/planos-alimentares/alimentos/route';
 import { GET as obterVersao } from '../app/api/pacientes/[id]/planos-alimentares/[planoId]/versoes/[numero]/route';
 import { PUT as salvarRascunho } from '../app/api/pacientes/[id]/planos-alimentares/[planoId]/rascunho/route';
 import { POST as publicarPlano } from '../app/api/pacientes/[id]/planos-alimentares/[planoId]/publicacao/route';
@@ -12,7 +13,10 @@ import { POST as revisarPlano } from '../app/api/pacientes/[id]/planos-alimentar
 import { POST as criarNovaVersao } from '../app/api/pacientes/[id]/planos-alimentares/[planoId]/nova-versao/route';
 import { POST as arquivarPlano } from '../app/api/pacientes/[id]/planos-alimentares/[planoId]/arquivamento/route';
 import { GET as listarModelos, POST as criarModelo } from '../app/api/planos-alimentares/modelos/route';
-import { GET as obterModelo, DELETE as arquivarModelo } from '../app/api/planos-alimentares/modelos/[modeloId]/route';
+import { GET as obterModelo, DELETE as arquivarModelo, PUT as editarModelo } from '../app/api/planos-alimentares/modelos/[modeloId]/route';
+import { GET as listarVersoesModelo } from '../app/api/planos-alimentares/modelos/[modeloId]/versoes/route';
+import { GET as obterVersaoModelo } from '../app/api/planos-alimentares/modelos/[modeloId]/versoes/[numero]/route';
+import { POST as restaurarVersaoModelo } from '../app/api/planos-alimentares/modelos/[modeloId]/versoes/[numero]/restaurar/route';
 import { GET as listarReceitas, POST as criarReceita } from '../app/api/planos-alimentares/receitas/route';
 import { GET as obterReceita, PUT as atualizarReceita, DELETE as arquivarReceita } from '../app/api/planos-alimentares/receitas/[receitaId]/route';
 
@@ -419,6 +423,72 @@ test('BFF recusa arquivar modelo sem permissao de gerenciar', async () => {
     });
     assert.equal(resposta.status, 403);
     assert.equal(chamou, false);
+  } finally {
+    restaurarFetch(original);
+  }
+});
+
+test('BFF permite buscar catálogo para modelos sem aceitar parâmetros de escopo do cliente', async () => {
+  __setCookies(cookiesSessaoValida(['planos_alimentares.ler']));
+  const original = global.fetch;
+  let url = '';
+  global.fetch = (async (entrada: string | URL | Request) => {
+    url = String(entrada);
+    return Response.json({ itens: [], total: 0, pagina: 1, limite: 10 });
+  }) as typeof global.fetch;
+  try {
+    const resposta = await buscarAlimentosModelo(new Request(
+      'http://localhost/api/planos-alimentares/alimentos?busca=aveia&pagina=2&limite=10&tenantId=outro'
+    ));
+    assert.equal(resposta.status, 200);
+    assert.equal(url, 'http://backend.octaclin.local/planos-alimentares/alimentos?busca=aveia&pagina=2&limite=10');
+  } finally {
+    restaurarFetch(original);
+  }
+});
+
+test('BFF encaminha edição e restauração com permissão de gerenciar e corpo intacto', async () => {
+  __setCookies(cookiesSessaoValida(['planos_alimentares.ler', 'planos_alimentares.gerenciar']));
+  const original = global.fetch;
+  const chamadas: Array<{ url: string; metodo: string; corpo?: string }> = [];
+  global.fetch = (async (entrada: string | URL | Request, init?: RequestInit) => {
+    chamadas.push({ url: String(entrada), metodo: init?.method ?? 'GET', corpo: init?.body?.toString() });
+    return Response.json({ versaoAtual: 2 });
+  }) as typeof global.fetch;
+  const parametros = { params: Promise.resolve({ modeloId: 'modelo/1', numero: '1' }) };
+  try {
+    const corpoEdicao = JSON.stringify({ versaoEsperada: 1, nome: 'Cópia revisada', refeicoes: [] });
+    const corpoRestauracao = JSON.stringify({ versaoEsperada: 1 });
+    const respostas = await Promise.all([
+      editarModelo(new Request('http://localhost/modelo', { method: 'PUT', body: corpoEdicao }), parametros),
+      restaurarVersaoModelo(new Request('http://localhost/restaurar', { method: 'POST', body: corpoRestauracao }), parametros)
+    ]);
+    assert.deepEqual(respostas.map((resposta) => resposta.status), [200, 200]);
+    assert.deepEqual(chamadas, [
+      { url: 'http://backend.octaclin.local/planos-alimentares/modelos/modelo%2F1', metodo: 'PUT', corpo: corpoEdicao },
+      { url: 'http://backend.octaclin.local/planos-alimentares/modelos/modelo%2F1/versoes/1/restaurar', metodo: 'POST', corpo: corpoRestauracao }
+    ]);
+  } finally {
+    restaurarFetch(original);
+  }
+});
+
+test('BFF protege leitura paginada e snapshot sob demanda com permissão de ler', async () => {
+  __setCookies(cookiesSessaoValida(['planos_alimentares.ler']));
+  const original = global.fetch;
+  const urls: string[] = [];
+  global.fetch = (async (entrada: string | URL | Request) => {
+    urls.push(String(entrada));
+    return Response.json({ itens: [], total: 0 });
+  }) as typeof global.fetch;
+  const parametros = { params: Promise.resolve({ modeloId: 'modelo/1', numero: '2' }) };
+  try {
+    await listarVersoesModelo(new Request('http://localhost/versoes?pagina=2&limite=10&tenantId=alheio'), parametros);
+    await obterVersaoModelo(new Request('http://localhost/versao'), parametros);
+    assert.deepEqual(urls, [
+      'http://backend.octaclin.local/planos-alimentares/modelos/modelo%2F1/versoes?pagina=2&limite=10',
+      'http://backend.octaclin.local/planos-alimentares/modelos/modelo%2F1/versoes/2'
+    ]);
   } finally {
     restaurarFetch(original);
   }

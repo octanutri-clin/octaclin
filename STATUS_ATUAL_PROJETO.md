@@ -1,6 +1,6 @@
 # OctaClin - Status atual do projeto
 
-Atualizado em 2026-09-30.
+Atualizado em 2026-10-01.
 
 ## Fase ativa
 
@@ -12,11 +12,17 @@ Atualizado em 2026-09-30.
   de plano/tarefa configuráveis, desligados por padrão. O proprietário informou
   que aplicou a migration 1059; esta reconciliação não identificou o ambiente
   da aplicação nem consultou o banco. Ver `docs/history/phases/PLANO_FASE_296.md`.
-- Fase 297 em desenvolvimento na branch `feat/fase297-kit-inicial-clinica`:
+- Fase 297 concluida no codigo e integrada pelo PR #355 (merge `4f51b0ac`, confirmado no GitHub):
   estruturas de refeições sem alimentos no editor e materiais genéricos instalados
   automaticamente apenas ao provisionar clínicas novas. O profissional completa
   e revisa as refeições antes de salvar. Sem catálogo alimentar novo, envio
   automático ou migration. Plano em `docs/history/phases/PLANO_FASE_297.md`.
+- Fase 298 implementada na branch `feat/fase298-edicao-modelos-plano`, aguardando integração:
+  edição estruturada de modelos, histórico cifrado imutável, consulta e restauração
+  como nova revisão. Migration 1060 testada localmente, sem aplicação externa neste
+  ciclo; RLS PostgreSQL depende do CI. A próxima proposta após integração é a Fase
+  299 para expansão validada dos catálogos alimentares. Plano e resultados em
+  `docs/history/phases/PLANO_FASE_298.md`.
 
 ## Remediacao ativa de supply chain
 
@@ -130,7 +136,7 @@ Atualizado em 2026-09-30.
   Plano em `docs/history/phases/PLANO_FASE_295.md`.
 - Fase 296 integrada pelo PR #353 (merge `ccd1c0bb`). A aplicação da migration
   1059 foi informada pelo proprietário, sem verificação direta de ambiente.
-  Fase 297 permanece em revisão nesta branch; testes locais não provam produção.
+  Fase 297 integrada pelo PR #355; testes locais não provam produção.
 - A reconciliação integral da auditoria e a sequência proposta para todas as
   recomendações ainda pendentes estão em
   `docs/product/OCTACLIN_PRODUCT_FEATURE_AUDIT.md`, seção 15. Estados de PB

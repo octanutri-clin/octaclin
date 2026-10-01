@@ -116,7 +116,7 @@ explícita e sem lacuna funcional evidente.
 | --- | --- | --- |
 | Plano alimentar versionado | Robusto no domínio, básico na ergonomia | 3 fórmulas versionadas, hash de conteúdo, alerta de divergência |
 | Substituições + escolha do paciente | **Robusto ponta a ponta** | Opt-in explícito, trilha append-only, profissional vê as escolhas |
-| Modelos de plano | Funcional, básico | Sem edição; sem seed inicial |
+| Modelos de plano | Funcional, básico | Sem edição; Fase 297 oferece estruturas iniciais sem alimentos para clínicas novas, sem modelo prescritivo pronto |
 | Receitas nutricionais | Funcional, básico | CRUD completo; sem categorias; não chega como receita ao paciente |
 | Base de composição (TACO, 583 alimentos) | Robusto na governança, parcial na cobertura | Carga por script ops manual, não por migration |
 
@@ -181,7 +181,7 @@ explícita e sem lacuna funcional evidente.
 | Perfil de cadastro | Tags/origem/categoria dentro de blob cifrado | Segmentação impossível sem migration | Campo pesquisável protegido + filtro | Médio | M | **P3** |
 | Notificações in-app | Sem preferência, por polling | Fadiga de notificação | Preferência por usuário + digest | Médio | M | **P2** |
 | Templates de mensagem | Sem biblioteca inicial na auditoria original | Clínica nova começa vazia | Conjunto inicial + edição + preview; implementação da Fase 284 em revisão | Médio | P | **P2** |
-| Modelos de plano | Sem edição | Corrigir exige recriar | `PUT` de modelo | Baixo | P | **P2** |
+| Modelos de plano | **Edição versionada implementada na Fase 298 nesta branch; integração e migration 1060 pendentes** | Corrigir exigia recriar | `PUT` com histórico cifrado imutável, conflito otimista e restauração como nova revisão | Baixo | P | **P2** |
 | API pública | Só papel `Client` | Nutricionista não alcança | Rever papel/permissão | Baixo | P | **P3** |
 | Catálogo TACO | Carga manual por script | Ambiente novo nasce vazio | Carga versionada no provisionamento | Médio | M | **P3** |
 
@@ -475,7 +475,7 @@ do paciente, linha do tempo paginada, recall com simulação, central de falhas,
 5. **Onboarding sem trilho** `[F]` — não há wizard nem checklist; uma clínica nova sobe sem templates de
    mensagem, sem modelos de plano, sem catálogo de alimentos carregado e sem materiais.
    `[H]` Esse é provavelmente o maior risco de ativação no piloto: o produto vazio parece menos capaz do que é.
-   Reconciliação: PB-29 entregou o guia, PB-22 entregou e-mails iniciais e a Fase 297 entrega materiais genéricos e estruturas de refeições sem alimentos apenas para clínicas novas. A Fase 297 ainda está na branch, sem PR integrado; carga de catálogo alimentar e modelos clínicos prontos continuam fora de seu escopo.
+   Reconciliação: PB-29 entregou o guia, PB-22 entregou e-mails iniciais e a Fase 297 (PR #355 integrado) entregou materiais genéricos e estruturas de refeições sem alimentos apenas para clínicas novas. Carga de catálogo alimentar e modelos clínicos prontos continuam fora de seu escopo.
 6. **Integrações fora do alcance do nutricionista** `[F]` — chave de API e webhook exigem papel `Client`.
 
 ---
@@ -610,9 +610,9 @@ de esgotar a versão determinística de cada um.
 | PB-29 | Onboarding guiado da clínica (conteúdo inicial) | Gestão | Alto | M | Baixo | backend, frontend, produto |
 | PB-30 | Extração assistida de exame laboratorial | IA | Alto | G | Alto | IA, backend, jurídico, PB-17 |
 
-### Estado do backlog verificado em 2026-09-30
+### Estado do backlog verificado em 2026-10-01
 
-Os estados abaixo foram cruzados com PRs merged e, para itens sem PR identificável, com o código. PRs #319 a #324, #343 a #349 e #353 foram integrados; a Fase 296 foi integrada pelo PR #353 (merge `ccd1c0bb`). A Fase 297 está em desenvolvimento nesta branch. Relatos do proprietário sobre ambientes externos não foram tratados como verificação direta nesta reconciliação.
+Os estados abaixo foram cruzados com PRs merged e, para itens sem PR identificável, com o código. PRs #319 a #324, #343 a #349, #353 e #355 foram integrados; a Fase 296 foi integrada pelo PR #353 (merge `ccd1c0bb`) e a Fase 297 pelo PR #355 (merge `4f51b0ac`). A Fase 298 está implementada nesta branch e aguarda integração; migration 1060 não aplicada externamente neste ciclo. Relatos do proprietário sobre ambientes externos não foram tratados como verificação direta nesta reconciliação.
 
 | PB | Estado e evidência |
 |---|---|
@@ -640,7 +640,7 @@ Os estados abaixo foram cruzados com PRs merged e, para itens sem PR identificá
 | PB-29 | **Concluído no código** — Fase 283, PR #319 integrado (merge `19ade15` em 2026-09-27). Não há evidência de produção nesta reconciliação. |
 | PB-30 | **Pendente** — extração assistida de exames não foi encontrada; PB-17 entrega a estrutura determinística e é dependência já concluída. |
 
-PB-30 segue sem ordem aprovada na tabela original. PB-20 e Fases 286 a 296 foram integrados. A aplicação da migration 1059 foi relatada pelo proprietário, sem prova direta ou ambiente identificado neste ciclo. A Fase 297 cobre parte do kit inicial sem catálogo alimentar; as demais automações da seção 7 e a fórmula geral do score continuam em aberto.
+PB-30 segue sem ordem aprovada na tabela original. PB-20 e Fases 286 a 297 foram integrados. A aplicação da migration 1059 foi relatada pelo proprietário, sem prova direta ou ambiente identificado neste ciclo. A Fase 297 cobre parte do kit inicial sem catálogo alimentar; a Fase 298 implementa a edição versionada dos modelos nesta branch, sem PR mergeado nem aplicação externa da migration 1060. A próxima proposta é a Fase 299 para ampliar o catálogo alimentar após validar origem, licença, versão, unidades, equivalências, atualização e disponibilidade por ambiente. As demais automações da seção 7 e a fórmula geral do score continuam em aberto.
 
 ---
 
@@ -811,7 +811,7 @@ produto devem ter esse gate resolvido no plano da respectiva fase.
 
 1. **PB-29 (Fase 283, PR #319) concluído no código.** Guia integrado em `main`.
 2. **PB-22 (Fase 284, PR #320) concluído no código.** A biblioteca inicial foi integrada em `main`. Em tarefa
-   relacionada, a Fase 297 implementa nesta branch materiais genéricos e estruturas
+   relacionada, a Fase 297 integrada pelo PR #355 entrega materiais genéricos e estruturas
    de refeições sem alimentos, editáveis antes de salvar; sem catálogo alimentar
    carregado, modelos clínicos prontos ou instalação retroativa em clínicas existentes.
 3. **PB-20 integrado (Fase 285, PR #321).** A comparação manual, o acesso clínico e o prazo
@@ -846,12 +846,19 @@ produto devem ter esse gate resolvido no plano da respectiva fase.
    Revisão do registro de hábitos e lembretes de plano/tarefas foram integrados
    na Fase 296 pelo PR #353; aplicação da 1059 relatada, sem prova direta do banco.
    Gamificação permanece recomendação futura e exige decisão de propósito própria.
-7. **Operação e inteligência da clínica.** Avaliar carga/ocupação/faltas/produtividade por profissional,
+7. **Modelos de plano (Fase 298 implementada nesta branch).** Edição com histórico
+   cifrado e imutável, consulta de versões e restauração como nova versão. A integração
+   via PR e a migration 1060 permanecem pendentes; não houve aplicação externa nem prova
+   PostgreSQL/RLS neste ciclo. Próxima proposta: **Fase 299 — catálogo alimentar** para
+   ampliar cobertura com USDA, TACO, IBGE e TBCA, confirmando origem, direito de uso,
+   versão, unidades, equivalências, atualização e disponibilidade por ambiente antes
+   de qualquer carga.
+8. **Operação e inteligência da clínica.** Avaliar carga/ocupação/faltas/produtividade por profissional,
    autosserviço LGPD da própria clínica, acesso profissional a APIs/integrações, e visões longitudinais de
    adesão, substituições, questionários/antropometria, intervalo de retorno e evasão.
-8. **PB-30 — extração assistida de exames.** Com PB-17 concluído, definir antes o gate jurídico, privacidade,
+9. **PB-30 — extração assistida de exames.** Com PB-17 concluído, definir antes o gate jurídico, privacidade,
    retenção e fornecedor; entregar rascunho com revisão humana e fallback determinístico.
-9. **Busca semântica**, condicionada a volume de dados suficiente e a avaliação de privacidade/qualidade.
+10. **Busca semântica**, condicionada a volume de dados suficiente e a avaliação de privacidade/qualidade.
    Manter cálculos, diagnóstico, prescrição e triagem clínica fora de decisão autônoma por IA.
 
 Itens que a própria auditoria rejeita ou exclui — wearables sem integração/valor, pagamento online já

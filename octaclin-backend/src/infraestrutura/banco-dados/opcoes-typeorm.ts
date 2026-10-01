@@ -73,6 +73,7 @@ import { AgendarLembretesMaterial1720000001056 } from './migracoes/1720000001056
 import { CriarCalendarioFollowupsAgenda1720000001057 } from './migracoes/1720000001057-CriarCalendarioFollowupsAgenda';
 import { CriarRespostaPortalPaciente1720000001058 } from './migracoes/1720000001058-CriarRespostaPortalPaciente';
 import { AdicionarRevisaoDiarioRapido1720000001059 } from './migracoes/1720000001059-AdicionarRevisaoDiarioRapido';
+import { VersionarModelosPlanoAlimentar1720000001060 } from './migracoes/1720000001060-VersionarModelosPlanoAlimentar';
 import { UserActionLogOrm } from '../auditoria/user-action-log.orm';
 import { ConsentimentoLgpdOrm } from '../lgpd/consentimento-lgpd.orm';
 import { TombstoneExclusaoLgpdOrm } from '../lgpd/tombstone-exclusao-lgpd.orm';
@@ -166,6 +167,7 @@ import { PlanoAlimentarSubstituicaoOrm } from '../../modulos/planos-alimentares/
 import { PlanoAlimentarVersaoOrm } from '../../modulos/planos-alimentares/infraestrutura/plano-alimentar-versao.orm';
 import { PlanoAlimentarOrm } from '../../modulos/planos-alimentares/infraestrutura/plano-alimentar.orm';
 import { ModeloPlanoAlimentarOrm } from '../../modulos/planos-alimentares/infraestrutura/modelo-plano-alimentar.orm';
+import { RevisaoModeloPlanoAlimentarOrm } from '../../modulos/planos-alimentares/infraestrutura/revisao-modelo-plano-alimentar.orm';
 import { ReceitaNutricionalOrm } from '../../modulos/planos-alimentares/infraestrutura/receita-nutricional.orm';
 
 function criarConexaoBanco() {
@@ -314,6 +316,7 @@ export function criarOpcoesTypeOrm(): TypeOrmModuleOptions & DataSourceOptions {
       PlanoAlimentarSubstituicaoOrm,
       PlanoAlimentarEscolhaPacienteOrm,
       ModeloPlanoAlimentarOrm,
+      RevisaoModeloPlanoAlimentarOrm,
       ReceitaNutricionalOrm,
       CatalogoComposicaoAlimentoOrm,
       FonteComposicaoAlimentoOrm,
@@ -396,7 +399,8 @@ export function criarOpcoesTypeOrm(): TypeOrmModuleOptions & DataSourceOptions {
       AgendarLembretesMaterial1720000001056,
       CriarCalendarioFollowupsAgenda1720000001057,
       CriarRespostaPortalPaciente1720000001058,
-      AdicionarRevisaoDiarioRapido1720000001059
+      AdicionarRevisaoDiarioRapido1720000001059,
+      VersionarModelosPlanoAlimentar1720000001060
       ],
     migrationsRun: executarMigracoesNoBoot(),
     synchronize: false,

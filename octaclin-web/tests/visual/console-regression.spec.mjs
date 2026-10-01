@@ -2897,6 +2897,105 @@ test.describe('prontuario do paciente', () => {
     await assertSemOverflowHorizontal(page);
   });
 
+  test('edita o modelo em cópia isolada e restaura versão como nova revisão', async ({ page }) => {
+    await prepararProntuarioMockado(page, {
+      permissoesExtras: ['planos_alimentares.ler', 'planos_alimentares.gerenciar']
+    });
+    const refeicaoRascunho = {
+      id: 'rascunho-refeicao-1', ordem: 0, nome: 'Lanche', horarioLocal: '15:00', orientacoes: '',
+      itens: [{
+        id: 'rascunho-item-1', ordem: 0, descricao: 'Iogurte natural', quantidade: 1, unidade: 'pote', porcaoGramas: 170,
+        composicaoSnapshot: { nutrientesPor100g: { energiaKcal: 60, proteinasG: 4, carboidratosG: 5, gordurasG: 2 } },
+        substituicoes: []
+      }]
+    };
+    const versaoRascunho = {
+      id: 'plano-versao-rascunho-1', numero: 2, status: 'rascunho', criadoEm: '2026-09-30T12:00:00.000Z',
+      atualizadoEm: '2026-09-30T12:00:00.000Z', refeicoes: [refeicaoRascunho]
+    };
+    await page.route('**/api/pacientes/paciente-1/planos-alimentares?**', async (route) => route.fulfill({
+      status: 200, contentType: 'application/json', body: JSON.stringify({
+        itens: [{ id: 'plano-alimentar-1', pacienteId: 'paciente-1', profissionalId: 'profissional-1', titulo: 'Plano alimentar',
+          criadoEm: '2026-09-29T12:00:00.000Z', atualizadoEm: '2026-09-30T12:00:00.000Z',
+          current: { id: 'plano-versao-publicada-1', numero: 1, status: 'publicada', criadoEm: '2026-09-29T12:00:00.000Z', atualizadoEm: '2026-09-29T12:00:00.000Z' },
+          draft: { id: versaoRascunho.id, numero: versaoRascunho.numero, status: versaoRascunho.status }, historicoQuantidade: 2 }],
+        total: 1, pagina: 1, limite: 100
+      })
+    }));
+    await page.route('**/api/pacientes/paciente-1/planos-alimentares/plano-alimentar-1', async (route) => route.fulfill({
+      status: 200, contentType: 'application/json', body: JSON.stringify({
+        id: 'plano-alimentar-1', pacienteId: 'paciente-1', profissionalId: 'profissional-1', titulo: 'Plano alimentar',
+        criadoEm: '2026-09-29T12:00:00.000Z', atualizadoEm: '2026-09-30T12:00:00.000Z',
+        current: { id: 'plano-versao-publicada-1', numero: 1, status: 'publicada', criadoEm: '2026-09-29T12:00:00.000Z', atualizadoEm: '2026-09-29T12:00:00.000Z', refeicoes: [] },
+        draft: versaoRascunho, historico: []
+      })
+    }));
+    let versaoAtual = 1;
+    let corpoEdicao;
+    let corpoRestauracao;
+    let modeloAtual = {
+      id: 'modelo-teste-1', nome: 'Modelo clínico', origem: 'clinica', totalRefeicoes: 1, totalItens: 1,
+      versaoAtual: 1, atualizadoEm: '2026-09-30T12:00:00.000Z', refeicoes: [{
+        nome: 'Lanche', horarioLocal: '15:00', itens: [{ alimentoComposicaoId: 'alimento-1', descricao: 'Iogurte natural',
+          quantidade: 1, unidade: 'pote', porcaoGramas: 170, nutrientesPor100g: { energiaKcal: 60, proteinasG: 4, carboidratosG: 5, gordurasG: 2 },
+          substituicoes: [{ descricao: 'Coalhada', quantidade: 1, unidade: 'pote', porcaoGramas: 150, liberadaParaPaciente: true, preferida: false }] }]
+      }], alimentosIndisponiveis: []
+    };
+    await page.route('**/api/planos-alimentares/modelos?**', async (route) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ itens: [{ ...modeloAtual, refeicoes: undefined, alimentosIndisponiveis: undefined }], total: 1, pagina: 1, limite: 100 }) }));
+    await page.route('**/api/planos-alimentares/modelos/modelo-teste-1', async (route) => {
+      if (route.request().method() === 'PUT') {
+        corpoEdicao = route.request().postDataJSON();
+        versaoAtual += 1;
+        modeloAtual = { ...modeloAtual, ...corpoEdicao, versaoAtual };
+        await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ id: modeloAtual.id, versaoAtual, totalRefeicoes: modeloAtual.refeicoes.length, totalItens: 1 }) });
+        return;
+      }
+      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(modeloAtual) });
+    });
+    await page.route('**/api/planos-alimentares/modelos/modelo-teste-1/versoes?**', async (route) => route.fulfill({
+      status: 200, contentType: 'application/json', body: JSON.stringify({ itens: [
+        { id: 'versao-2', numero: 2, nome: modeloAtual.nome, totalRefeicoes: 1, totalItens: 1, criadoEm: '2026-09-30T12:01:00.000Z' },
+        { id: 'versao-1', numero: 1, nome: 'Modelo clínico', totalRefeicoes: 1, totalItens: 1, criadoEm: '2026-09-30T12:00:00.000Z' }
+      ], total: 2, pagina: 1, limite: 10 })
+    }));
+    await page.route('**/api/planos-alimentares/modelos/modelo-teste-1/versoes/1', async (route) => route.fulfill({
+      status: 200, contentType: 'application/json', body: JSON.stringify({ id: 'versao-1', numero: 1, nome: 'Modelo clínico',
+        totalRefeicoes: 1, totalItens: 1, criadoEm: '2026-09-30T12:00:00.000Z', refeicoes: [{ nome: 'Lanche', itens: [] }], alimentosIndisponiveis: [] })
+    }));
+    await page.route('**/api/planos-alimentares/modelos/modelo-teste-1/versoes/1/restaurar', async (route) => {
+      corpoRestauracao = route.request().postDataJSON();
+      versaoAtual += 1;
+      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ id: modeloAtual.id, versaoAtual }) });
+    });
+    await page.goto('/pacientes/paciente-1');
+    await page.getByRole('tab', { name: 'Plano', exact: true }).click();
+    await page.getByRole('tab', { name: 'Plano alimentar', exact: true }).click();
+    await page.getByLabel('Aplicar modelo ao rascunho').selectOption('modelo-teste-1');
+    await page.getByRole('button', { name: 'Editar modelo' }).click();
+    await expect(page.getByRole('heading', { name: /Editar cópia do modelo/ })).toBeVisible();
+    await page.getByLabel('Nome do modelo').fill('Modelo de lanche revisado');
+    await page.locator('input[id$="-refeicao-0-nome"]').fill('Lanche da tarde');
+    await page.locator('input[id$="-alternativa-0-0-0-descricao"]').fill('Coalhada sem açúcar');
+    await page.getByRole('button', { name: 'Revisar e confirmar nova versão' }).click();
+    const confirmar = page.getByRole('dialog', { name: 'Salvar nova versão do modelo' });
+    await confirmar.getByRole('button', { name: 'Salvar nova versão' }).click();
+    await expect.poll(() => corpoEdicao?.versaoEsperada).toBe(1);
+    expect(corpoEdicao.nome).toBe('Modelo de lanche revisado');
+    expect(corpoEdicao.refeicoes[0].nome).toBe('Lanche da tarde');
+    expect(corpoEdicao.refeicoes[0].itens[0].substituicoes[0].descricao).toBe('Coalhada sem açúcar');
+
+    await page.getByRole('button', { name: 'Histórico' }).click();
+    await expect(page.getByRole('heading', { name: /Histórico do modelo/ })).toBeVisible();
+    await page.getByRole('button', { name: 'Ver snapshot' }).last().click();
+    await expect(page.getByRole('heading', { name: 'Snapshot v1 · Modelo clínico' })).toBeVisible();
+    await page.getByRole('button', { name: 'Restaurar…' }).last().click();
+    const confirmarRestauracao = page.getByRole('dialog', { name: 'Restaurar versão do modelo' });
+    await confirmarRestauracao.getByRole('button', { name: 'Criar nova versão' }).click();
+    await expect.poll(() => corpoRestauracao?.versaoEsperada).toBe(2);
+    await expect(page.getByText(/restaurada como nova versão/)).toBeVisible();
+    await assertSemOverflowHorizontal(page);
+  });
+
   test('oferece atalhos seguros para as acoes frequentes do paciente', async ({ page }) => {
     await prepararProntuarioMockado(page);
     await page.goto('/pacientes/paciente-1');

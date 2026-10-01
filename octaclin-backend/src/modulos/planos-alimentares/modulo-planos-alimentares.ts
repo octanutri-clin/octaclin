@@ -27,6 +27,7 @@ import { PlanoAlimentarEscolhaPacienteOrm } from './infraestrutura/plano-aliment
 import { PlanoAlimentarSubstituicaoOrm } from './infraestrutura/plano-alimentar-substituicao.orm';
 import { PlanoAlimentarVersaoOrm } from './infraestrutura/plano-alimentar-versao.orm';
 import { ModeloPlanoAlimentarOrm } from './infraestrutura/modelo-plano-alimentar.orm';
+import { RevisaoModeloPlanoAlimentarOrm } from './infraestrutura/revisao-modelo-plano-alimentar.orm';
 import { PlanoAlimentarOrm } from './infraestrutura/plano-alimentar.orm';
 import { ReceitaNutricionalOrm } from './infraestrutura/receita-nutricional.orm';
 
@@ -40,6 +41,7 @@ import { ReceitaNutricionalOrm } from './infraestrutura/receita-nutricional.orm'
       PlanoAlimentarSubstituicaoOrm,
       PlanoAlimentarEscolhaPacienteOrm,
       ModeloPlanoAlimentarOrm,
+      RevisaoModeloPlanoAlimentarOrm,
       ReceitaNutricionalOrm,
       CatalogoComposicaoAlimentoOrm,
       FonteComposicaoAlimentoOrm,
