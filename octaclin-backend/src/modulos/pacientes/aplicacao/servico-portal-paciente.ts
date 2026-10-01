@@ -253,6 +253,7 @@ export interface CheckinRapidoPortalPaciente {
   sintomas?: string;
   observacoes?: string;
   registradoEm: Date;
+  revisadoEm?: Date | null;
 }
 
 export interface NotificacaoPortalPaciente {
@@ -1345,12 +1346,14 @@ export class ServicoPortalPaciente {
 
   private mapearNotificacaoPaciente(mensagem: MensagemNotificacaoOrm): NotificacaoPortalPaciente {
     const evento = this.textoPayload(mensagem.payload, 'evento') ?? this.textoPayload(mensagem.payload, 'templateEvento');
-    const payload = evento === 'plano_publicado_portal' || evento === 'material_nao_visualizado_portal'
+    const avisoPortal = evento === 'plano_publicado_portal' || evento === 'material_nao_visualizado_portal' ||
+      evento === 'lembrete_plano_portal' || evento === 'lembrete_tarefa_portal';
+    const payload = avisoPortal
       ? lerPayloadMensagem(mensagem, this.criptografia)
       : mensagem.payload;
     return {
       id: mensagem.id,
-      canal: evento === 'plano_publicado_portal' || evento === 'material_nao_visualizado_portal'
+      canal: avisoPortal
         ? 'portal'
         : this.textoPayload(mensagem.payload, 'canal') ?? (mensagem.canalId ? 'canal_configurado' : 'indefinido'),
       titulo: this.textoPayload(payload, 'assunto') ?? 'Mensagem OctaClin',
@@ -1394,7 +1397,8 @@ export class ServicoPortalPaciente {
       adesaoPlano: this.valorNumeroDiario(valor, 'adesaoPlano', 0),
       sintomas: this.valorTextoDiario(valor, 'sintomas'),
       observacoes: this.valorTextoDiario(valor, 'observacoes'),
-      registradoEm: diario.registradoEm
+      registradoEm: diario.registradoEm,
+      revisadoEm: diario.revisadoEm
     };
   }
 

@@ -15,9 +15,11 @@ import { TenantConfiguracaoOrm } from '../tenancy/infraestrutura/tenant-configur
 import { UsuarioOrm } from '../usuarios/infraestrutura/usuario.orm';
 import { ProfissionalOrm } from '../profissionais/infraestrutura/profissional.orm';
 import { ServicoPortalCliente } from './aplicacao/servico-portal-cliente';
+import { ServicoLembretesAcompanhamento } from './aplicacao/servico-lembretes-acompanhamento';
 import { ServicoPainelOperacao } from './aplicacao/servico-painel-operacao';
 import { ServicoUsuariosCliente } from './aplicacao/servico-usuarios-cliente';
 import { ControladorPortalCliente } from './apresentacao/controlador-portal-cliente';
+import { ControladorLembretesAcompanhamento } from './apresentacao/controlador-lembretes-acompanhamento';
 import { ControladorAuditoriaCliente } from './apresentacao/controlador-auditoria-cliente';
 import { ServicoAuditoriaCliente } from './aplicacao/servico-auditoria-cliente';
 
@@ -38,8 +40,8 @@ import { ServicoAuditoriaCliente } from './aplicacao/servico-auditoria-cliente';
     ModuloAuth,
     ModuloTenancy
   ],
-  controllers: [ControladorPortalCliente, ControladorAuditoriaCliente],
-  providers: [ServicoPortalCliente, ServicoAuditoriaCliente, ServicoPainelOperacao, ServicoUsuariosCliente, ServicoAuditoria, AdaptadorEmailSmtp],
-  exports: [ServicoPortalCliente, ServicoUsuariosCliente]
+  controllers: [ControladorPortalCliente, ControladorAuditoriaCliente, ControladorLembretesAcompanhamento],
+  providers: [ServicoPortalCliente, ServicoLembretesAcompanhamento, ServicoAuditoriaCliente, ServicoPainelOperacao, ServicoUsuariosCliente, ServicoAuditoria, AdaptadorEmailSmtp],
+  exports: [ServicoPortalCliente, ServicoLembretesAcompanhamento, ServicoUsuariosCliente]
 })
 export class ModuloClientes {}

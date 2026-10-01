@@ -51,6 +51,16 @@ export const TEMPLATES_INICIAIS_EMAIL = [
       assunto: 'Acompanhamento com sua clínica',
       corpo: 'Olá, a equipe da clínica gostaria de conversar sobre a continuidade do seu acompanhamento. Se desejar, entre em contato para verificar a disponibilidade de uma consulta.'
     }
+  },
+  {
+    codigoExterno: 'octaclin_inicial_lembrete_plano',
+    nome: 'Lembrete de plano alimentar',
+    conteudo: { assunto: 'Plano alimentar no portal', corpo: 'Seu plano alimentar continua disponível no portal da clínica. Acesse o portal para consultá-lo.' }
+  },
+  {
+    codigoExterno: 'octaclin_inicial_lembrete_tarefa',
+    nome: 'Lembrete de tarefa',
+    conteudo: { assunto: 'Tarefa no portal', corpo: 'Há uma tarefa de acompanhamento próxima do vencimento. Acesse o portal da clínica para consultar os detalhes.' }
   }
 ] as const;
 
@@ -70,6 +80,16 @@ export const TEMPLATES_INICIAIS_WHATSAPP = [
       idioma: 'pt_BR',
       components: []
     }
+  },
+  {
+    codigoExterno: 'octaclin_lembrete_plano',
+    nome: 'Lembrete de plano alimentar',
+    conteudo: { idioma: 'pt_BR', components: [] }
+  },
+  {
+    codigoExterno: 'octaclin_lembrete_tarefa',
+    nome: 'Lembrete de tarefa',
+    conteudo: { idioma: 'pt_BR', components: [] }
   }
 ] as const;
 

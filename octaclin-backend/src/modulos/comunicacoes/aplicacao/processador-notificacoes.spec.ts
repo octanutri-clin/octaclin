@@ -7,6 +7,7 @@ import { AgendaConsultaOrm } from '../../agenda/infraestrutura/agenda-consulta.o
 import { OcorrenciaFollowupAgendaOrm } from '../../agenda/infraestrutura/ocorrencia-followup-agenda.orm';
 import { PoliticaFollowupAgendaOrm } from '../../agenda/infraestrutura/politica-followup-agenda.orm';
 import { PacienteOrm } from '../../pacientes/infraestrutura/paciente.orm';
+import * as origemAcompanhamento from './validar-origem-lembrete-acompanhamento';
 
 function criarProcessador(adaptadorEmail: { enviar: jest.Mock }, tipoCanal: string = 'email', aprovado = true) {
   const mensagem = {
@@ -22,7 +23,8 @@ function criarProcessador(adaptadorEmail: { enviar: jest.Mock }, tipoCanal: stri
     payload: { destino: 'paciente@example.com' } as Record<string, unknown>
   };
   const canal = { id: 'canal-1', tenantId: 'tenant-1', tipo: tipoCanal, ativo: true };
-  const template = { id: 'template-1', tenantId: 'tenant-1', canal: tipoCanal, aprovado };
+  const template = { id: 'template-1', tenantId: 'tenant-1', canal: tipoCanal, aprovado,
+    codigoExterno: 'octaclin_inicial_lembrete_tarefa' };
   const repositorioMensagens = {
     update: jest.fn(async () => ({ affected: 1 })),
     findOne: jest.fn(async () => mensagem),
@@ -81,6 +83,36 @@ function criarProcessador(adaptadorEmail: { enviar: jest.Mock }, tipoCanal: stri
 }
 
 describe('ProcessadorNotificacoes', () => {
+  afterEach(() => jest.restoreAllMocks());
+
+  it('cancela lembrete de acompanhamento quando a origem mudou antes da entrega', async () => {
+    jest.spyOn(origemAcompanhamento, 'validarOrigemLembreteAcompanhamento').mockResolvedValue(null);
+    const email = { enviar: jest.fn() };
+    const { processador, mensagem } = criarProcessador(email);
+    mensagem.pacienteId = 'paciente-1';
+    mensagem.chaveIdempotencia = 'tarefa-acompanhamento:tarefa-a:1:email';
+    mensagem.payload = { evento: 'automacao.regra.template', destino: 'paciente@example.com' };
+    mensagem.conteudoCriptografado = Buffer.from(JSON.stringify({ origemAcompanhamento: {
+      tipo: 'tarefa', recursoId: 'tarefa-a', chaveIdempotencia: 'tarefa-acompanhamento:tarefa-a:1'
+    } }));
+    await processador.processarMensagem('tenant-1', mensagem.id);
+    expect(email.enviar).not.toHaveBeenCalled();
+    expect(mensagem.status).toBe('cancelado');
+    expect(mensagem.erro).toBe('origem_indisponivel');
+  });
+
+  it('cancela lembrete cifrado ilegível sem chamar o provedor', async () => {
+    const email = { enviar: jest.fn() };
+    const { processador, mensagem } = criarProcessador(email);
+    mensagem.pacienteId = 'paciente-1';
+    mensagem.chaveIdempotencia = 'tarefa-acompanhamento:tarefa-a:1:email';
+    mensagem.payload = { evento: 'automacao.regra.template', destino: 'paciente@example.com' };
+    mensagem.conteudoCriptografado = Buffer.from('payload invalido');
+    await processador.processarMensagem('tenant-1', mensagem.id);
+    expect(email.enviar).not.toHaveBeenCalled();
+    expect(mensagem.status).toBe('cancelado');
+    expect(mensagem.erro).toBe('origem_invalida');
+  });
   it('suprime follow-up depois de cancelamento antes de chamar o adaptador', async () => {
     const email = { enviar: jest.fn() };
     const { processador, mensagem, consulta, repoOcorrencia } = criarProcessador(email);

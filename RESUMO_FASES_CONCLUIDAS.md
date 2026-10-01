@@ -1,6 +1,11 @@
 # OctaClin - Resumo das fases concluidas
 
-## Reconciliacao em 2026-09-29
+## Reconciliacao em 2026-09-30
+
+- Fase 295 / PB-28 integrada pelo PR #349 (merge `a54e52c9`, confirmado no
+  GitHub em 2026-09-30): resposta segura no portal, fila interna e SLA
+  configurável por clínica. A Fase 296 está em desenvolvimento e por isso não
+  figura entre as fases concluídas. Não houve prova direta de produção neste ciclo.
 
 - Fase 288 integrada pelo PR #324 (merge `8fc2ffe`): revisão paginada de
   respostas, leitura antes da conclusão e síntese factual sem IA. O gate

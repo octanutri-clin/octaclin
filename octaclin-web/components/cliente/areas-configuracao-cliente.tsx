@@ -9,6 +9,7 @@ import { formatarData } from './portal-cliente-dominio';
 import { RecebimentosCliente } from './recebimentos-cliente';
 import { PortalClienteController } from './use-portal-cliente';
 import { IntegracoesApiCliente } from './integracoes-api-cliente';
+import { LembretesAcompanhamentoCliente } from './lembretes-acompanhamento-cliente';
 
 type Props = { portal: PortalClienteController };
 
@@ -227,6 +228,8 @@ export function AreasConfiguracaoCliente({ portal }: Props) {
           </form>
         </Cartao>
       ) : null}
+
+      {podeGerenciarConfiguracoes && areaAtiva === 'preferencias' ? <LembretesAcompanhamentoCliente /> : null}
 
       {podeLerFinanceiro && areaAtiva === 'financeiro' ? (
         <div

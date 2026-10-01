@@ -72,6 +72,7 @@ import { AdicionarIndicesPerfilPacientes1720000001055 } from './migracoes/172000
 import { AgendarLembretesMaterial1720000001056 } from './migracoes/1720000001056-AgendarLembretesMaterial';
 import { CriarCalendarioFollowupsAgenda1720000001057 } from './migracoes/1720000001057-CriarCalendarioFollowupsAgenda';
 import { CriarRespostaPortalPaciente1720000001058 } from './migracoes/1720000001058-CriarRespostaPortalPaciente';
+import { AdicionarRevisaoDiarioRapido1720000001059 } from './migracoes/1720000001059-AdicionarRevisaoDiarioRapido';
 import { UserActionLogOrm } from '../auditoria/user-action-log.orm';
 import { ConsentimentoLgpdOrm } from '../lgpd/consentimento-lgpd.orm';
 import { TombstoneExclusaoLgpdOrm } from '../lgpd/tombstone-exclusao-lgpd.orm';
@@ -394,7 +395,8 @@ export function criarOpcoesTypeOrm(): TypeOrmModuleOptions & DataSourceOptions {
       AdicionarIndicesPerfilPacientes1720000001055,
       AgendarLembretesMaterial1720000001056,
       CriarCalendarioFollowupsAgenda1720000001057,
-      CriarRespostaPortalPaciente1720000001058
+      CriarRespostaPortalPaciente1720000001058,
+      AdicionarRevisaoDiarioRapido1720000001059
       ],
     migrationsRun: executarMigracoesNoBoot(),
     synchronize: false,

@@ -32,8 +32,8 @@ export class ProcessadorOutboxComunicacoes {
           const repositorio = gerenciador.getRepository(OutboxEventoOrm);
           const eventos = await repositorio.find({
             where: [
-              { tenantId, tipo: In(['notificacao.enviar', 'plano_alimentar.publicado', 'material.nao_visualizado.lembrete']), status: 'pendente', processadoEm: IsNull() },
-              { tenantId, tipo: In(['notificacao.enviar', 'plano_alimentar.publicado', 'material.nao_visualizado.lembrete']), status: 'processando', reivindicadoEm: LessThan(new Date(Date.now() - 5 * 60000)), processadoEm: IsNull() }
+              { tenantId, tipo: In(['notificacao.enviar', 'plano_alimentar.publicado', 'material.nao_visualizado.lembrete', 'acompanhamento.lembrete']), status: 'pendente', processadoEm: IsNull() },
+              { tenantId, tipo: In(['notificacao.enviar', 'plano_alimentar.publicado', 'material.nao_visualizado.lembrete', 'acompanhamento.lembrete']), status: 'processando', reivindicadoEm: LessThan(new Date(Date.now() - 5 * 60000)), processadoEm: IsNull() }
             ],
             order: { criadoEm: 'ASC' },
             take: 100
@@ -101,6 +101,12 @@ export class ProcessadorOutboxComunicacoes {
           envioId,
           chaveIdempotencia
         });
+      } else if (evento.tipo === 'acompanhamento.lembrete') {
+        const { tipo, recursoId, chaveIdempotencia } = evento.payload;
+        if ((tipo !== 'plano' && tipo !== 'tarefa') || typeof recursoId !== 'string' || typeof chaveIdempotencia !== 'string') {
+          throw new Error('Payload invalido no evento de acompanhamento.');
+        }
+        await this.servicoComunicacoes.processarLembreteAcompanhamento(tenantId, { tipo, recursoId, chaveIdempotencia });
       } else {
         const mensagemId = evento.payload.mensagemId;
         if (typeof mensagemId !== 'string') throw new Error('Payload invalido no evento de comunicacao.');
