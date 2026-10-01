@@ -1,6 +1,6 @@
 # OctaClin - Checklist vivo de fases futuras ate producao
 
-Atualizado em 2026-10-01. Fase 296 integrada pelo PR #353 (merge `ccd1c0bb`); o proprietário informou aplicação da migration 1059, sem confirmação direta de ambiente/banco. Fase 297 integrada pelo PR #355 (merge `4f51b0ac`); Fase 298 integrada pelo PR #356 (merge `b00151ae`), com aplicação da 1060 informada pelo proprietário; Fase 299 integrada pelo PR #357 (merge `9052b8ba`), com aplicação da 1061 e cargas em staging e produção informadas pelo proprietário, sem consulta direta aos bancos neste ciclo; Fase 300 em desenvolvimento nesta branch; Fases 256 a 261, 263 a 299 integradas; Fase 284
+Atualizado em 2026-10-01. Fase 296 integrada pelo PR #353 (merge `ccd1c0bb`); o proprietário informou aplicação da migration 1059, sem confirmação direta de ambiente/banco. Fase 297 integrada pelo PR #355 (merge `4f51b0ac`); Fase 298 integrada pelo PR #356 (merge `b00151ae`), com aplicação da 1060 informada pelo proprietário; Fase 299 integrada pelo PR #357 (merge `9052b8ba`), com aplicação da 1061 e cargas em staging e produção informadas pelo proprietário, sem consulta direta aos bancos neste ciclo; Fase 300 integrada pelo PR #358 (merge `c60c82ed`); Fase 301 em desenvolvimento nesta branch; Fases 256 a 261, 263 a 300 integradas; Fase 284
 (PB-22) foi integrada pelo PR #320 (merge `af839c5`, 19 checks `SUCCESS` e
 `Provenance do SBOM` `SKIPPED`). Fase 285 (PB-20) foi integrada pelo PR #321
 (merge `01d6bf1`). Fase 286 concluida pelo PR #322 (merge `c92f246`). A reconciliação completa do backlog da auditoria e a
@@ -4484,12 +4484,17 @@ auditoria estão ordenados na seção 15 de
   da migration 1061 e das cargas em staging e produção; sem verificação direta
   dos bancos nesta reconciliação.
   Plano em `docs/history/phases/PLANO_FASE_299.md`.
-- [~] Fase 300 - prioridade de acompanhamento calculada nas filas, filtros e
+- [x] Fase 300 - prioridade de acompanhamento calculada nas filas, filtros e
   painel da clínica, com estado explícito de apuração pendente no prontuário.
   O campo manual permanece somente no contrato legado de paciente e deixa de
   orientar decisões operacionais. API pública sem prioridade. Sem migration;
-  branch `feat/fase300-prioridade-calculada`, CI e integração pendentes.
+  integrada pelo PR #358 (merge `c60c82ed`, confirmado no GitHub em 2026-10-01).
   Plano em `docs/history/phases/PLANO_FASE_300.md`.
+- [~] Fase 301 - indicadores factuais de consultas concluídas, taxa de conclusão,
+  faltas, cancelamentos, carga e ocupação por profissional no painel do cliente.
+  Sem ranking ou inferência de qualidade clínica; escopo tenant existente.
+  Branch `feat/fase301-operacao-inteligencia`, PR/CI/integração pendentes.
+  Plano em `docs/history/phases/PLANO_FASE_301.md`.
 
 O programa de hardening
 PR 36-56 permanece como trilha separada --

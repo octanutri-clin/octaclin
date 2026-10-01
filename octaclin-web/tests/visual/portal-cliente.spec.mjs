@@ -106,8 +106,14 @@ async function prepararSessaoCliente(page, opcoes = {}) {
         consultasSemProfissional: 0,
         profissionais: [{
           id: 'prof-1', nome: 'Profissional Exemplo', pacientesResponsaveis: 5,
-          consultas: 2, concluidas: 1, faltas: 1, taxaNoShow: 50,
+          consultas: 2, concluidas: 1, faltas: 1, canceladas: 1, taxaConclusao: 50, taxaNoShow: 50, arquivado: true,
           minutosDisponiveis: 120, minutosOcupados: 120, ocupacaoPercentual: 100,
+          consultasForaExpediente: 0
+        }, {
+          id: 'prof-2', nome: 'Profissional Sem Desfecho', pacientesResponsaveis: 0,
+          consultas: 1, concluidas: 0, faltas: 0, canceladas: 0,
+          taxaConclusao: null, taxaNoShow: null, arquivado: false,
+          minutosDisponiveis: 60, minutosOcupados: 0, ocupacaoPercentual: 0,
           consultasForaExpediente: 0
         }]
       })
@@ -462,7 +468,7 @@ test.describe('portal do cliente', () => {
     await expect(painel.getByText('Nenhum registro encontrado para os filtros selecionados.')).toBeVisible();
   });
 
-  test('PB-26 mostra indicadores mensais e carga por profissional sem dados de paciente', async ({ page }) => {
+  test('Fase 301 mostra indicadores mensais e conclusão por profissional sem dados de paciente', async ({ page }) => {
     await prepararSessaoCliente(page);
     await page.goto('/cliente');
     await page.getByRole('tab', { name: 'Operação' }).click();
@@ -470,7 +476,11 @@ test.describe('portal do cliente', () => {
     await expect(painel.getByRole('heading', { name: 'Operação da clínica' })).toBeVisible();
     await expect(painel.getByText('Alta prioridade de acompanhamento')).toBeVisible();
     await expect(painel.getByRole('row', { name: /Profissional Exemplo/ })).toBeVisible();
-    await expect(painel.getByText('50%')).toBeVisible();
+    await expect(painel.getByRole('columnheader', { name: 'Conclusão' })).toBeVisible();
+    await expect(painel.getByRole('columnheader', { name: 'Canceladas' })).toBeVisible();
+    await expect(painel.getByRole('row', { name: /Profissional Exemplo/ }).getByText('(Arquivado)')).toBeVisible();
+    await expect(painel.getByRole('row', { name: /Profissional Exemplo/ }).getByText('50%')).toHaveCount(2);
+    await expect(painel.getByRole('row', { name: /Profissional Sem Desfecho/ }).getByText('Sem dados')).toHaveCount(2);
     await expect(painel.getByText('tenant-1')).toHaveCount(0);
     await painel.getByLabel('Mês', { exact: true }).fill('2026-08');
     await expect(painel.getByText('2026-08 (America/Sao_Paulo)')).toBeVisible();

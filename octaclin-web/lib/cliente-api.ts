@@ -84,7 +84,10 @@ export interface PainelOperacaoClienteApi {
     consultas: number;
     concluidas: number;
     faltas: number;
+    canceladas: number;
+    taxaConclusao: number | null;
     taxaNoShow: number | null;
+    arquivado: boolean;
     minutosDisponiveis: number | null;
     minutosOcupados: number | null;
     ocupacaoPercentual: number | null;

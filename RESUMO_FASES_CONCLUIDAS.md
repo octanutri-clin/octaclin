@@ -10,8 +10,12 @@
   Aplicação da migration 1061 e das cargas em staging e produção foi informada
   pelo proprietário; banco não consultado neste ciclo. Detalhes em
   `docs/history/phases/PLANO_FASE_299.md`.
-- Fase 300 em desenvolvimento; não consta como concluída. Plano em
-  `docs/history/phases/PLANO_FASE_300.md`.
+- Fase 300 integrada pelo PR #358 (merge `c60c82ed`, confirmado no GitHub):
+  consumidores operacionais usam prioridade calculada; o campo manual legado
+  permanece por compatibilidade, sem exposição de prioridade na API pública.
+  Plano em `docs/history/phases/PLANO_FASE_300.md`.
+- Fase 301 em desenvolvimento; não consta como concluída. Plano em
+  `docs/history/phases/PLANO_FASE_301.md`.
 
 ## Reconciliacao em 2026-09-30
 
