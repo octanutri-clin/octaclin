@@ -20,14 +20,14 @@ código antes de entrar aqui; onde a conferência corrigiu o achado, o texto reg
    209 rotas BFF, 31 páginas, 9 jobs. O prontuário tem 6 áreas e 15 abas (`octaclin-web/components/pacientes/estrutura-prontuario.ts:20-35`).
    Há capacidade construída e paga que não chega ao usuário final.
 
-2. **Achado original, superado em parte pelas Fases 265 e 300.** Na fotografia inicial, `score_risco`
+2. **Achado original, superado nas decisões operacionais pelas Fases 265 e 300.** Na fotografia inicial, `score_risco`
    nasce `'0'` (`servico-pacientes.ts:131`), só muda por digitação manual num campo numérico do formulário
    (`octaclin-web/components/cadastros/formulario-paciente.tsx:279`) e **não existe nenhuma rotina de cálculo no
    repositório**. Ainda assim ele decide o nível de risco do dashboard (`servico-dashboard-clinico.ts:394-400,955-957`),
    os filtros da lista de pacientes (`servico-pacientes.ts:563-571`), o alvo do recall
    (`automacoes/dominio/recall-inatividade.ts:124`) e o status exposto na API pública (`servico-api-publica.ts:83`).
    Era o achado de maior alavancagem da auditoria. A Fase 265 implementou a
-   prioridade operacional calculada; a Fase 300, nesta branch, migra lista,
+   prioridade operacional calculada; a Fase 300, integrada pelo PR #358, migrou lista,
    filtros, dashboard e painel para essa prioridade. O recall atual seleciona
    por inatividade e situação de adesão, sem ler `score_risco`. A API pública atual não expõe `scoreRisco` nem passará a expor a
    prioridade, por decisão do proprietário. O campo legado segue armazenado
@@ -341,6 +341,10 @@ Critério: valor claro, esforço pequeno, risco baixo, sem migration pesada e se
 ### 5.5 Painel de operação da clínica
 - **Estado da Fase 280**: PB-26 integrado pela PR #315, com indicadores
   agregados para `Client`; auditoria do tenant segue na Fase 281 (PB-27).
+- **Estado da Fase 301**: incremento em desenvolvimento no mesmo painel:
+  concluídas, taxa de conclusão, faltas e cancelamentos explícitos por
+  profissional, ocupação sem contagem dupla e histórico de arquivados com
+  atividade. Integração/CI pendentes; demais frentes do item 8 continuam abertas.
 - **Antes do PB-26** `[F]`: o dono vê assinatura, limites, uso e usuários (`servico-portal-cliente.ts:192-237`) e a tela
   de recebimentos com performance por profissional (fase 263). Operações — auditoria, LGPD, falhas — é
   exclusivamente SuperAdmin (`controlador-operacoes.ts:62`).
@@ -617,11 +621,11 @@ de esgotar a versão determinística de cada um.
 
 ### Estado do backlog verificado em 2026-10-01
 
-Os estados abaixo foram cruzados com PRs merged e, para itens sem PR identificável, com o código. PRs #319 a #324, #343 a #349, #353, #355, #356 e #357 foram integrados; a Fase 299 foi integrada pelo PR #357 (merge `9052b8ba`, confirmado no GitHub em 2026-10-01). O proprietário informou aplicação das migrations 1060/1061 e das cargas de catálogo em staging e produção; esta reconciliação não consultou os bancos. A Fase 300 está em desenvolvimento nesta branch e ainda depende de PR/CI.
+Os estados abaixo foram cruzados com PRs merged e, para itens sem PR identificável, com o código. PRs #319 a #324, #343 a #349, #353, #355 a #358 foram integrados; a Fase 300 foi integrada pelo PR #358 (merge `c60c82ed`, confirmado no GitHub em 2026-10-01). O proprietário informou aplicação das migrations 1060/1061 e das cargas de catálogo em staging e produção; esta reconciliação não consultou os bancos. A Fase 301 está em desenvolvimento nesta branch e ainda depende de PR/CI.
 
 | PB | Estado e evidência |
 |---|---|
-| PB-01 | **Núcleo concluído** — Fase 265, entregas de código nos PRs #261–#263; fechamento documentado no PR #268. Migração dos consumidores manuais remanescentes em execução na Fase 300. |
+| PB-01 | **Concluído no uso operacional** — Fase 265, entregas de código nos PRs #261–#263; fechamento documentado no PR #268; consumidores manuais migrados na Fase 300, PR #358. Campo legado permanece por compatibilidade. |
 | PB-02 | **Concluído** — Fase 266, PRs #269–#272. |
 | PB-03 | **Concluído** — Fase 267, PR #273. |
 | PB-04 | **Concluído** — Fase 264.7, PR #253. |
@@ -645,7 +649,7 @@ Os estados abaixo foram cruzados com PRs merged e, para itens sem PR identificá
 | PB-29 | **Concluído no código** — Fase 283, PR #319 integrado (merge `19ade15` em 2026-09-27). Não há evidência de produção nesta reconciliação. |
 | PB-30 | **Pendente** — extração assistida de exames não foi encontrada; PB-17 entrega a estrutura determinística e é dependência já concluída. |
 
-PB-30 segue sem ordem aprovada na tabela original. PB-20 e Fases 286 a 299 foram integrados. A Fase 299 entregou TACO, USDA offline e IBGE POF 2008–2009 como fontes independentes, sem mesclagem automática. O proprietário informou aplicação da 1061 e das cargas em staging e produção; sem prova direta dos bancos neste ciclo. TBCA permanece fora do escopo. A Fase 300 fecha o uso residual do `score_risco` manual nas filas e filtros; o campo legado permanece no contrato de paciente para compatibilidade. A prioridade calculada é operacional, não um score de risco clínico. As recomendações de automação e produto ainda não cobertas pelas fases citadas permanecem abertas.
+PB-30 segue sem ordem aprovada na tabela original. PB-20 e Fases 286 a 300 foram integrados. A Fase 299 entregou TACO, USDA offline e IBGE POF 2008–2009 como fontes independentes, sem mesclagem automática. O proprietário informou aplicação da 1061 e das cargas em staging e produção; sem prova direta dos bancos neste ciclo. TBCA permanece fora do escopo. A Fase 300 fechou o uso residual do `score_risco` manual nas filas e filtros; o campo legado permanece no contrato de paciente para compatibilidade. A prioridade calculada é operacional, não um score de risco clínico. A Fase 301 trata a primeira frente do item 8 (indicadores por profissional); autosserviço LGPD, APIs profissionais e visões longitudinais permanecem pendentes. As demais recomendações de automação e produto não cobertas pelas fases citadas continuam abertas.
 
 ---
 
@@ -857,9 +861,12 @@ produto devem ter esse gate resolvido no plano da respectiva fase.
    separada e origem/versionamento explícitos. Migrações e cargas foram informadas
    pelo proprietário, sem verificação direta dos bancos neste ciclo. TBCA exige
    decisão própria sobre direitos e ingestão; não há carga nesta fase.
-8. **Operação e inteligência da clínica.** Avaliar carga/ocupação/faltas/produtividade por profissional,
-   autosserviço LGPD da própria clínica, acesso profissional a APIs/integrações, e visões longitudinais de
-   adesão, substituições, questionários/antropometria, intervalo de retorno e evasão.
+8. **Operação e inteligência da clínica.** PB-26 entregou carga, ocupação e faltas;
+   a Fase 301 em desenvolvimento acrescenta concluídas e taxa factual de conclusão,
+   explicita cancelamentos e corrige sobreposição e histórico de arquivados. PR/CI
+   pendentes. Permanecem: autosserviço LGPD da própria clínica, acesso profissional
+   a APIs/integrações e visões longitudinais de adesão, substituições,
+   questionários/antropometria, intervalo de retorno e evasão.
 9. **PB-30 — extração assistida de exames.** Com PB-17 concluído, definir antes o gate jurídico, privacidade,
    retenção e fornecedor; entregar rascunho com revisão humana e fallback determinístico.
 10. **Busca semântica**, condicionada a volume de dados suficiente e a avaliação de privacidade/qualidade.

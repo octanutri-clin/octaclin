@@ -12,10 +12,14 @@ Atualizado em 2026-10-01.
   IBGE POF 2008–2009 por importadores independentes. O proprietário informou
   que a migration 1061 e as cargas foram aplicadas em staging e produção; este
   ciclo não consultou os bancos. Plano em `docs/history/phases/PLANO_FASE_299.md`.
-- Fase 300 em desenvolvimento na branch `feat/fase300-prioridade-calculada`:
-  substituir o score manual pela prioridade operacional calculada na lista,
-  filtros, dashboard e painel da clínica; manter API pública sem prioridade.
-  Plano e aceite em `docs/history/phases/PLANO_FASE_300.md`.
+- Fase 300 concluida e integrada pelo PR #358 (merge `c60c82ed`, confirmado no GitHub
+  em 2026-10-01): lista, filtros, dashboard e painel usam prioridade operacional
+  calculada; API pública sem prioridade. O campo manual segue legado.
+  Plano em `docs/history/phases/PLANO_FASE_300.md`.
+- Fase 301 em desenvolvimento na branch `feat/fase301-operacao-inteligencia`:
+  concluir indicadores factuais por profissional no painel de operação,
+  primeira frente do item 8 da auditoria. PR, CI e integração pendentes.
+  Plano em `docs/history/phases/PLANO_FASE_301.md`.
 
 - Fase 295 / PB-28 integrada pelo PR #349 (merge `a54e52c9`, confirmado no GitHub em 2026-09-30).
   Conversa segura no portal e fila interna com SLA por clínica. O proprietário informou que as

@@ -38,7 +38,7 @@ export function AreaOperacaoCliente() {
             <CalendarDays className="h-4 w-4" aria-hidden="true" /> Mês de referência
           </div>
           <h2 className="mt-2 text-xl font-semibold text-texto-forte">Operação da clínica</h2>
-          <p className="mt-1 text-sm text-texto-suave">Indicadores do mês civil no fuso da clínica. Pacientes ativos e em risco refletem o cadastro atual.</p>
+          <p className="mt-1 text-sm text-texto-suave">Indicadores do mês civil no fuso da clínica. Pacientes ativos e prioridade de acompanhamento refletem o cadastro atual.</p>
         </div>
         <div className="flex items-end gap-2">
           <label className="grid gap-1 text-sm font-medium text-texto-forte">
@@ -83,32 +83,41 @@ export function AreaOperacaoCliente() {
 
           <div className="rounded-lg border border-linha bg-white p-5">
             <h3 className="text-lg font-semibold text-texto-forte">Carga por profissional</h3>
-            <p className="mt-1 text-sm text-texto-suave">Ocupação = minutos reservados dentro do expediente ÷ minutos disponíveis. Falta mantém o horário ocupado; cancelamento não ocupa.</p>
-            <p className="mt-1 text-sm text-texto-suave">No-show = faltas ÷ (faltas + consultas concluídas). Sem desfecho, a taxa fica sem dados.</p>
+            <p className="mt-1 text-sm text-texto-suave">Ocupação = minutos reservados dentro do expediente ÷ minutos disponíveis, sem contar horários sobrepostos duas vezes. Falta mantém o horário ocupado; cancelamento não ocupa.</p>
+            <p className="mt-1 text-sm text-texto-suave">Conclusão = concluídas ÷ (concluídas + faltas). No-show = faltas ÷ (concluídas + faltas). Canceladas ficam fora dessas taxas; sem desfecho, ambas ficam sem dados. Essas medidas descrevem a agenda, não a qualidade clínica.</p>
+            <p className="mt-1 text-sm text-texto-suave">Consultas e desfechos são contados pelo início no mês e pelo estado atual do agendamento. Profissionais arquivados com atividade no período permanecem visíveis.</p>
             {painel.profissionais.length ? (
               <div className="mt-4 overflow-x-auto">
-                <table className="w-full min-w-[760px] text-left text-sm">
+                <table className="w-full min-w-[1080px] text-left text-sm">
                   <thead className="border-b border-linha text-xs text-texto-suave"><tr>
                     <th scope="col" className="py-3 pr-4 font-medium">Profissional</th>
                     <th scope="col" className="px-3 py-3 font-medium">Pacientes</th>
                     <th scope="col" className="px-3 py-3 font-medium">Consultas</th>
+                    <th scope="col" className="px-3 py-3 font-medium">Concluídas</th>
+                    <th scope="col" className="px-3 py-3 font-medium">Conclusão</th>
+                    <th scope="col" className="px-3 py-3 font-medium">Faltas</th>
+                    <th scope="col" className="px-3 py-3 font-medium">Canceladas</th>
                     <th scope="col" className="px-3 py-3 font-medium">Ocupação</th>
                     <th scope="col" className="px-3 py-3 font-medium">No-show</th>
                     <th scope="col" className="px-3 py-3 font-medium">Fora do expediente</th>
                   </tr></thead>
                   <tbody>{painel.profissionais.map((profissional) => (
                     <tr key={profissional.id} className="border-b border-linha last:border-0">
-                      <th scope="row" className="break-words py-3 pr-4 font-medium text-texto-forte">{profissional.nome}</th>
+                      <th scope="row" className="break-words py-3 pr-4 font-medium text-texto-forte">{profissional.nome}{profissional.arquivado ? <span className="ml-2 text-xs font-normal text-texto-suave">(Arquivado)</span> : null}</th>
                       <td className="px-3 py-3 tabular-nums">{profissional.pacientesResponsaveis}</td>
                       <td className="px-3 py-3 tabular-nums">{profissional.consultas}</td>
+                      <td className="px-3 py-3 tabular-nums">{profissional.concluidas}</td>
+                      <td className="px-3 py-3 tabular-nums">{percentual(profissional.taxaConclusao)}</td>
+                      <td className="px-3 py-3 tabular-nums">{profissional.faltas}</td>
+                      <td className="px-3 py-3 tabular-nums">{profissional.canceladas}</td>
                       <td className="px-3 py-3 tabular-nums">{percentual(profissional.ocupacaoPercentual)}</td>
-                      <td className="px-3 py-3 tabular-nums">{percentual(profissional.taxaNoShow)} <span className="text-xs text-texto-suave">({profissional.faltas}/{profissional.faltas + profissional.concluidas})</span></td>
+                      <td className="px-3 py-3 tabular-nums">{percentual(profissional.taxaNoShow)}</td>
                       <td className="px-3 py-3 tabular-nums">{profissional.consultasForaExpediente ?? 'Sem dados'}</td>
                     </tr>
                   ))}</tbody>
                 </table>
               </div>
-            ) : <p className="mt-4 text-sm text-texto-suave">Ainda não há profissionais ativos para apresentar.</p>}
+            ) : <p className="mt-4 text-sm text-texto-suave">Ainda não há profissionais com dados para apresentar.</p>}
             {painel.consultasSemProfissional > 0 ? <p className="mt-3 text-xs text-texto-suave">{painel.consultasSemProfissional} consultas sem profissional atribuído neste mês.</p> : null}
           </div>
           <p className="text-xs text-texto-suave">Consultas e pacientes novos: {painel.mes} ({painel.timezone}). Sem expediente cadastrado, a ocupação e as consultas fora do expediente ficam sem dados.</p>
