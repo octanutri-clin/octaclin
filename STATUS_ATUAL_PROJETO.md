@@ -16,10 +16,15 @@ Atualizado em 2026-10-01.
   em 2026-10-01): lista, filtros, dashboard e painel usam prioridade operacional
   calculada; API pública sem prioridade. O campo manual segue legado.
   Plano em `docs/history/phases/PLANO_FASE_300.md`.
-- Fase 301 em desenvolvimento na branch `feat/fase301-operacao-inteligencia`:
-  concluir indicadores factuais por profissional no painel de operação,
-  primeira frente do item 8 da auditoria. PR, CI e integração pendentes.
-  Plano em `docs/history/phases/PLANO_FASE_301.md`.
+- Fase 301 concluida e integrada pelo PR #359 (merge `bd0f1d6b`, confirmado
+  no GitHub em 2026-10-01): indicadores factuais por profissional, taxa de
+  conclusão e ocupação sem dupla contagem no painel da clínica. Plano em
+  `docs/history/phases/PLANO_FASE_301.md`.
+- Fase 302 proxima, ainda nao iniciada: autosserviço LGPD da clínica com
+  política de acesso/decisão e isolamento por tenant. Sequência completa e
+  gates das Fases 302–320 em
+  `docs/product/ROADMAP_POS_AUDITORIA_FASES_302_320.md`. O PB-30 está
+  planejado na Fase 316, condicionado a privacidade, jurídico e operação.
 
 - Fase 295 / PB-28 integrada pelo PR #349 (merge `a54e52c9`, confirmado no GitHub em 2026-09-30).
   Conversa segura no portal e fila interna com SLA por clínica. O proprietário informou que as

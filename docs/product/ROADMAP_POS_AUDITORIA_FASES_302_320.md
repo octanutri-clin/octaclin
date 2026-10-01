@@ -1,0 +1,105 @@
+# Roadmap de produto após a Fase 301
+
+Atualizado em 2026-10-01. A Fase 301 foi integrada pelo PR #359 (`bd0f1d6b`).
+Este é o plano **vigente** para as recomendações ainda abertas de
+`OCTACLIN_PRODUCT_FEATURE_AUDIT.md`. O diagnóstico de 2026-09-17 permanece
+histórico; uma descrição antiga de lacuna não desfaz uma entrega posterior.
+
+## Como executar e manter
+
+- Seguir a ordem numérica, salvo nova decisão explícita do proprietário. A fase
+  seguinte é a **302**. Cada fase recebe plano de execução e revisão de gaps
+  antes do código; concluir uma não implica iniciar a próxima sem reconciliar
+  código, PRs e evidência operacional.
+- Implementar cada fatia funcional em sua branch/PR com a documentação
+  necessária no mesmo PR. Não abrir PR isolado só para atualizar o estado do
+  roadmap após cada merge. Atualizar checklist, status, resumo e esta matriz
+  junto da próxima entrega; não declarar produção validada sem prova direta.
+- `Planejada` significa escopo priorizado, não código entregue. `Condicional`
+  exige decisão explícita e evidência do gate descrito; se o gate negar a
+  função, registrar a decisão e avançar sem simular uma implementação.
+- Em toda fase com dados clínicos, PII, autorização, tenant, migration ou
+  provider, aplicar R4 ou superior: testes positivos e negativos, isolamento
+  por tenant e papel, RLS quando couber, rollback, revisão cruzada quando
+  viável e execução de migrations somente fora de banda. Usar dados sintéticos.
+- A sugestão de modelo/skills é ponto de partida, não substitui a releitura
+  das skills, `AGENTS.md`, ADRs e contratos vigentes no início da fase.
+
+## Sequência aprovada para planejamento
+
+| Fase | Entrega e escopo mínimo | Dependência e critério de aceite | Estado |
+| --- | --- | --- | --- |
+| 302 | **LGPD da própria clínica.** Visão e tratamento das solicitações do seu tenant no portal do cliente, com papéis/ações mínimos, trilha e supervisão SaaS. | PB-27 e fluxo LGPD existentes. Solicitações de outros tenants e dados clínicos fora da permissão não aparecem; retenção e eliminação continuam sujeitos à política aprovada. Política jurídica de quem decide cada operação antes do código. | Planejada, próxima |
+| 303 | **Integrações para profissionais autorizados.** Delegar acesso à gestão de chave de API/webhook por permissão granular e aprovação administrativa da clínica, com revogação e auditoria. | Não conceder o papel `Client` inteiro ao profissional. Testar criação, uso, revogação, negações por papel e tenant; payloads externos mantêm o contrato e a minimização atuais. | Planejada |
+| 304 | **Adesão longitudinal factual e substituições.** Mostrar ao profissional check-ins declarados, respostas ausentes e escolhas de troca junto da versão publicada do plano; expor na UI a consulta à versão histórica já disponível na API interna. | Não inferir consumo real a partir de uma troca ou ausência de resposta. Restringir por carteira/tenant, distinguir versões e dados faltantes; evitar duplicar a linha do tempo. | Planejada |
+| 305 | **Questionários e antropometria na mesma leitura longitudinal.** Cruzar visualmente datas de respostas, métricas antropométricas e consultas, reutilizando a matriz longitudinal e séries existentes. | Sem causalidade ou diagnóstico automático; filtros de período, unidades, origem e lacunas explícitos. Permissões clínicas e versão do formulário preservadas. | Planejada |
+| 306 | **Retorno e evasão factuais.** Indicadores de intervalo observado entre consultas, pacientes sem próxima consulta, faltas por horário e tempo de resposta a formulários, para equipe/clínica. Reusar a mediana de até três intervalos da Fase 294. | Definir denominadores, janela e população elegível; marcar histórico insuficiente. Não chamar ausência de retorno de diagnóstico nem disparar contato novo; preservar a trava de contato de 30 dias. | Planejada |
+| 307 | **Progresso do paciente além do peso.** Exibir no portal apenas métricas autorizadas e metas/marcos que o profissional escolheu compartilhar, com unidade, data e origem. | Consentimento e acesso do próprio paciente; sem revelar anotações internas ou meta implícita. Ausência de meta aparece como tal; nenhuma comparação clínica automática. | Planejada |
+| 308 | **Completar o resumo clínico com exames fora da faixa.** Consumir PB-17 no resumo PB-16, com resultado, unidade, referência e data, limitado à carteira/aba permitida. | Factual, sem interpretação nem alerta novo; faixas dependem da referência registrada e itens sem referência não são classificados. Regressão negativa de tenant/papel. | Planejada |
+| 309 | **Preferências individuais de notificações internas e digest.** Configurar classes opcionais, frequência e resumo sem conteúdo clínico sensível. | Alertas críticos/obrigatórios continuam visíveis; preferências por usuário, deduplicação, fuso e autorização. Não confundir com opt-out de canais externos do paciente. | Planejada |
+| 310 | **Receitas nutricionais organizadas e compartilháveis.** Categorias pesquisáveis e entrega explícita ao paciente de uma versão revisada da receita, no portal seguro. | Não publicar automaticamente todo o acervo; profissional escolhe o conteúdo e o paciente. Cópia/versionamento, permissão, retirada e trilha de leitura sem PHI em notificação externa. | Planejada |
+| 311 | **Ativação de conteúdo em clínicas existentes.** Instalação opt-in, idempotente, do kit genérico da Fase 297, sem sobrescrever materiais ou planos; conferência de disponibilidade das cargas TACO/USDA/IBGE no onboarding de ambiente. | Modelos de refeição continuam estruturas sem alimentos até revisão profissional. Carga global de catálogo segue procedimento versionado separado por fonte, não seed por tenant; erros de catálogo são visíveis. Não carregar TBCA. | Planejada |
+| 312 | **Documentos clínicos adicionais.** Desenhar e entregar encaminhamento no motor existente; avaliar atestado apenas após validação jurídica do tipo, competência profissional e assinatura exigida. | Sem afirmar que qualquer nutricionista pode emitir atestado médico. Variáveis permitidas, versão imutável, autorização e trilha; se o gate jurídico de atestado negar, registrar exclusão fundamentada e concluir apenas encaminhamento. | Condicional para atestado |
+| 313 | **Avaliação antropométrica de gestantes.** Regra específica baseada em referência clínica validada, idade gestacional e dados necessários; exibir classificação somente quando o protocolo for aplicável. | Revisão clínica da fonte, limites e ausência de dados; classificação adulta permanece bloqueada para gestantes. Nenhuma inferência a partir apenas do IMC atual. | Condicional à validação clínica |
+| 314 | **Avaliação antropométrica de crianças e adolescentes.** Referência etária e por sexo aplicável, percentil/escore quando cabível, com proveniência e cálculo reproduzível. | Revisão clínica/legal do protocolo e dados exigidos; menores de 20 anos não recebem faixas adultas. Casos fora da faixa ou incompletos ficam sem classificação. | Condicional à validação clínica |
+| 315 | **Retirada controlada do `score_risco` legado.** Inventariar consumidores, migrar contrato/formulários/fixtures remanescentes e planejar eventual remoção da coluna. | A prioridade calculada da Fase 300 segue **operacional** e fora da API pública. Compatibilidade de clientes e dados históricos verificada antes de migration destrutiva; rollback/limite de não reversão explícito. | Planejada |
+| 316 | **PB-30, extração assistida de exames.** PDF/imagem para rascunho estruturado de marcador, valor, unidade e faixa, com confirmação item a item pelo profissional antes de persistir. | PB-17 pronto; antes do código, fechar finalidade/base legal, provider, retenção, local de processamento, custo e antimalware/arquivo seguro. Falha do serviço mantém digitação manual; nunca persistir extração como exame confirmado sem aceite humano. | Condicional aos gates jurídico, privacidade e operação |
+| 317 | **Gamificação e comunidade: decisão de propósito e piloto controlado.** Avaliar se badges/desafios existentes ajudam acompanhamento sem pressionar ou expor paciente; implementar apenas desenho aprovado. | Padrão desligado até decisão explícita, opt-in/saída e métricas de dano/benefício; sem ranking clínico ou exposição entre pacientes. Se não houver propósito validado, registrar NO-GO. | Condicional à decisão de produto/clínica |
+| 318 | **IA de pré-consulta e rascunho clínico: avaliação de valor.** Comparar preparação determinística PB-25 e templates PB-15/PB-23 com pilotos de síntese pré-consulta e rascunho de evolução/orientação, apenas se houver ganho mensurável. | Gate de PHI/provider e critérios de qualidade/omissão antes de qualquer envio externo; revisão e assinatura humana; sem prescrição ou conduta autônoma. Se a versão determinística bastar, registrar NO-GO. | Condicional |
+| 319 | **Busca semântica no prontuário: avaliação e possível piloto.** Medir necessidade frente à busca/linha do tempo existentes; só então desenhar índice isolado por tenant e permissão. | Volume, relevância, minimização de PHI, retenção e custo aprovados; testes de vazamento entre tenant/carteira. Sem evidência de valor/privacidade, registrar NO-GO. | Condicional |
+| 320 | **TBCA: decisão de direitos e ingestão.** Obter licença/autorização de redistribuição e referência de versão; se aprovada, adicionar importador próprio à arquitetura multifonte da Fase 299. | Sem carga ou exposição TBCA até comprovação dos direitos. Preservar `source + externalId`, origem e metadados, sem mesclar com TACO/USDA/IBGE; importação versionada, reproduzível e idempotente. Se não autorizada, registrar NO-GO. | Condicional à licença |
+
+## Cobertura das recomendações e limites
+
+| Origem na auditoria | Encaminhamento |
+| --- | --- |
+| Item 8 da ordem e seção 10: LGPD, API profissional, carga/produtividade | Carga, concluídas e taxa factual: Fase 301 integrada; LGPD 302; API 303. |
+| Seções 6, 8 e 11: adesão, substituições, questionários, antropometria, retorno, evasão, progresso | Fases 304–307. Dados factuais, sem score ou diagnóstico novo. |
+| Seção 5.3: últimos exames alterados no resumo | Fase 308; PB-17 já entrega faixas e série, mas o resumo ainda não as consome. |
+| Seções 2–3: preferências/digest, receitas sem categoria e sem entrega | Fases 309–310. |
+| Seções 2 e 10: onboarding parcial; versões de plano disponíveis sem tela | Kit para clínicas existentes na 311; versão do plano na 304. Catálogos TACO/USDA/IBGE já integrados, com cargas externas relatadas pelo proprietário, não verificadas neste ciclo. |
+| Seções 6 e 9 e Fase 286: documentos, IMC gestantes/menores | Fases 312–314, com gates jurídicos/clínicos explícitos. |
+| Seções 3, 5.1 e 14: campo de risco manual | Uso operacional resolvido nas Fases 265/300; retirada técnica do legado na 315. Fórmula de **risco clínico** não está autorizada; só reabrir por nova decisão. |
+| PB-30, seção 12 e item 9 da ordem | Fase 316. |
+| Seções 8, 12 e item 10: gamificação, pré-consulta/rascunho IA e busca semântica | Fases condicionais 317–319. |
+| Seção 16: TBCA adiada | Fase condicional 320; sem implementação antes de licença. |
+
+**Já coberto, sem recriar:** ações e gatilhos da automação (PB-02/03/05),
+expediente e duplicação de consulta (PB-18/19), comparação de fotos (PB-20),
+trilha de auditoria do tenant (PB-27), conversa do paciente (PB-28),
+notificações de plano/tarefa (Fases 289/296), materiais visualizados (PB-07),
+catálogos TACO/USDA/IBGE (Fase 299) e indicadores por profissional (Fase 301).
+Wearables, pagamentos online, assinatura digital, chatbot aberto, push real e
+decisão clínica autônoma por IA não entram neste backlog sem nova decisão.
+O uso e os limites do plano já aparecem no portal do cliente; um novo painel
+comercial não é uma lacuna comprovada por esta auditoria. Modelos prescritivos
+prontos também não foram aprovados: a Fase 297 adotou estruturas genéricas que
+o profissional completa antes de salvar.
+
+## Comprovações operacionais separadas de novas funções
+
+Estas pendências não são novas fases de produto nem prova de que o código falha:
+
+1. Confirmar, por ambiente identificado e role autorizada, aplicação e resultado
+   dos procedimentos fora de banda de PB-10 e do backfill opt-in da Fase 287,
+   se ainda necessários. As cargas 1060/1061 e catálogos foram relatadas pelo
+   proprietário; esta revisão documental não consultou staging/produção.
+2. Antes da Fase 316, verificar health, quarentena e disponibilidade real do
+   serviço antimalware e o fluxo seguro de upload. A infraestrutura externa
+   não é comprovada pela existência do código ou pelo status de uma issue.
+3. Manter os gates externos de piloto, segurança e distribuição mobile em suas
+   trilhas próprias. `SKIPPED`, relato de aplicação e merge não provam
+   operação em produção.
+
+## Handoff da Fase 302
+
+**Modelo sugerido:** GPT-6 Sol, esforço alto. **Skills:**
+`planning-and-task-breakdown`, `gdpr-compliance`, `security-review`,
+`nestjs-best-practices`, `typeorm`, `database-migration` se houver schema,
+`vercel-react-best-practices`, `playwright-best-practices` e `fechar-fase`.
+Antes de implementar, ler controladores LGPD atuais, matriz de papéis,
+`DECISOES_ARQUITETURA.md` e política de retenção; decidir com o proprietário
+quem pode deferir, executar ou apenas acompanhar pedidos da clínica. Começar
+por regressões de tenant, papel, solicitação alheia e tentativa de eliminar
+dado sem autorização. Sem essa decisão, avançar no desenho e nos testes
+independentes, mas não abrir uma rota de eliminação permissiva.
