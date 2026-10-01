@@ -17,6 +17,7 @@ export interface AlimentoComposicaoApi {
   codigoOrigem: string;
   nome: string;
   preparacao?: string;
+  metadadosOrigem?: Record<string, unknown>;
   nutrientesPor100g?: NutrientesPor100gApi;
   disponivelParaCalculo: boolean;
   fonte?: {
