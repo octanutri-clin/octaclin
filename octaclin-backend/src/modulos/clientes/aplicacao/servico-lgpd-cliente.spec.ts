@@ -92,11 +92,13 @@ describe('ServicoLgpdCliente', () => {
     const { servico, consultas, executorTenant } = criarCenario();
     await expect(servico.obterDetalhe('tenant-a', 'LGPD-B')).rejects.toBeInstanceOf(NotFoundException);
     await expect(servico.assumirTratativa('tenant-a', 'gestor-a', 'LGPD-B')).rejects.toBeInstanceOf(NotFoundException);
+    await expect(servico.prepararResposta('tenant-a', 'LGPD-B')).rejects.toBeInstanceOf(NotFoundException);
     await expect(servico.listar('tenant-a')).resolves.toEqual(expect.objectContaining({
       itens: [expect.objectContaining({ protocolo: 'LGPD-A' })]
     }));
     expect(executorTenant.executar).toHaveBeenCalledWith('tenant-a', expect.any(Function));
     expect(consultas.every((consulta) => consulta.parametros[0] === 'tenant-a')).toBe(true);
+    expect(consultas.every((consulta) => /tenant_id\s*=\s*\$1/.test(consulta.sql))).toBe(true);
   });
 
   it('rejeita filtros e protocolo invalidos antes de consultar dados', async () => {
@@ -117,6 +119,19 @@ describe('ServicoLgpdCliente', () => {
     expect(eventos.filter((evento) => evento.tipo === 'tratativa_lgpd')).toHaveLength(1);
     expect(consultas.filter((consulta) => consulta.sql.includes('for update'))).toHaveLength(2);
     expect(JSON.stringify(primeira)).not.toContain('paciente-a');
+  });
+
+  it('ordena a nova tratativa depois da anterior mesmo no mesmo milissegundo', async () => {
+    const { servico, eventos } = criarCenario();
+    const instante = eventos[0].aceitoEm.getTime();
+    const relogio = jest.spyOn(Date, 'now').mockReturnValue(instante);
+    try {
+      await servico.assumirTratativa('tenant-a', 'gestor-a', 'LGPD-A');
+      const tratamento = eventos.find((evento) => evento.tipo === 'tratativa_lgpd');
+      expect(tratamento?.aceitoEm.getTime()).toBe(instante + 1);
+    } finally {
+      relogio.mockRestore();
+    }
   });
 
   it('impede triagem de pedido com decisao final e nao envia o rascunho', async () => {

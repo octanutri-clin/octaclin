@@ -1535,11 +1535,10 @@ export class ServicoPortalPaciente {
 
         const solicitacao = solicitacoes.get(protocolo);
         if (!solicitacao) return;
-
+        // Rascunho preparado permanece interno: nao altera nem o estado nem a data do paciente.
+        if (evento.tipo !== 'tratativa_lgpd') return;
         solicitacao.status = this.normalizarStatusLgpd(this.metadadoTexto(evento.metadados, 'status'));
         solicitacao.atualizadoEm = evento.aceitoEm;
-
-        // Notas internas e respostas apenas preparadas nao sao comunicacoes ao paciente.
       });
 
     return Array.from(solicitacoes.values()).sort((a, b) => this.timestampData(b.atualizadoEm) - this.timestampData(a.atualizadoEm));

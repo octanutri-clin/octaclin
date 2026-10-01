@@ -5,6 +5,10 @@ import { DataSource, DataSourceOptions } from 'typeorm';
 import { ExecutorTenant } from './executor-tenant';
 import { ServicoPainelOperacao } from '../../modulos/clientes/aplicacao/servico-painel-operacao';
 import { ServicoAuditoriaCliente } from '../../modulos/clientes/aplicacao/servico-auditoria-cliente';
+import { ServicoLgpdCliente } from '../../modulos/clientes/aplicacao/servico-lgpd-cliente';
+import { ServicoOperacoes } from '../../modulos/operacoes/aplicacao/servico-operacoes';
+import { ConsentimentoLgpdOrm } from '../lgpd/consentimento-lgpd.orm';
+import { CriptografiaDadosSensiveis } from '../seguranca/criptografia-dados-sensiveis';
 import { ProfissionalOrm } from '../../modulos/profissionais/infraestrutura/profissional.orm';
 import { TenantConfiguracaoOrm } from '../../modulos/tenancy/infraestrutura/tenant-configuracao.orm';
 import { criarOpcoesTypeOrm } from './opcoes-typeorm';
@@ -173,7 +177,7 @@ descrever('RLS e isolamento multi-tenant integral em Postgres real', () => {
       ssl: false,
       synchronize: false,
       logging: false,
-      entities: [ProfissionalOrm, TenantConfiguracaoOrm],
+      entities: [ProfissionalOrm, TenantConfiguracaoOrm, ConsentimentoLgpdOrm],
       extra: { max: 2 }
     });
     await fonteDados.initialize();
@@ -494,6 +498,52 @@ descrever('RLS e isolamento multi-tenant integral em Postgres real', () => {
     expect((await servico.listar(tenantA, { acao: 'prova.pb27.externo' })).itens[0].usuarioId).toBeNull();
     expect((await servico.listar(tenantA, { acao: 'prova.pb27.sistema' })).itens[0].usuarioId).toBeNull();
     expect((await servico.listar(tenantB, { acao: 'prova.pb27.externo' })).itens).toEqual([]);
+  });
+
+  it('Fase 302 isola pedidos LGPD com RLS real e serializa triagem com decisao operacional', async () => {
+    if (!executorTenant) throw new Error('Executor tenant da prova RLS nao foi inicializado.');
+    const criptografia = new CriptografiaDadosSensiveis();
+    const servico = new ServicoLgpdCliente(executorTenant, criptografia);
+    const operacoes = new ServicoOperacoes(
+      executorTenant, {} as never, {} as never, {} as never, {} as never, criptografia
+    );
+    const protocoloA = `LGPD-${randomUUID()}`;
+    const protocoloB = `LGPD-${randomUUID()}`;
+    for (const [tenantId, usuarioId, protocolo] of [
+      [tenantA, usuarioIdTenantA, protocoloA], [tenantB, usuarioIdTenantB, protocoloB]
+    ]) {
+      await executorTenant.executar(tenantId, async (gerenciador) => {
+        await gerenciador.query(`
+          insert into consentimentos_lgpd
+            (tenant_id, usuario_id, tipo, versao, aceito_em, metadados, detalhes_criptografados)
+          values ($1, $2, 'solicitacao_lgpd_retificacao', 'prova-rls', '2025-01-01T10:00:00Z', $3::jsonb, $4)
+        `, [tenantId, usuarioId, JSON.stringify({ protocolo, pacienteId: usuarioId, status: 'recebida' }),
+          criptografia.criptografar('Descricao sintetica.')]);
+      });
+    }
+
+    expect((await servico.listar(tenantA)).itens.map((item) => item.protocolo)).toContain(protocoloA);
+    expect((await servico.listar(tenantA)).itens.map((item) => item.protocolo)).not.toContain(protocoloB);
+    await expect(servico.obterDetalhe(tenantA, protocoloB)).rejects.toThrow('não encontrada');
+    await expect(servico.prepararResposta(tenantA, protocoloB)).rejects.toThrow('não encontrada');
+    await expect(servico.assumirTratativa(tenantA, usuarioIdTenantA, protocoloB)).rejects.toThrow('não encontrada');
+    const linhasOutroTenant = await executorTenant.executar(tenantA, (gerenciador) =>
+      gerenciador.query('select id from consentimentos_lgpd where tenant_id = $1 and metadados->>\'protocolo\' = $2',
+        [tenantB, protocoloB]));
+    expect(linhasOutroTenant).toEqual([]);
+
+    const concorrentes = await Promise.allSettled([
+      servico.assumirTratativa(tenantA, usuarioIdTenantA, protocoloA),
+      operacoes.atualizarSolicitacaoLgpd(tenantA, usuarioIdTenantA, protocoloA,
+        { status: 'concluida', detalhes: 'Validacao sintetica.' })
+    ]);
+    expect(concorrentes[1].status).toBe('fulfilled');
+    expect((await servico.obterDetalhe(tenantA, protocoloA)).status).toBe('concluida');
+    const totalDecisoes = await executorTenant.executar(tenantA, (gerenciador) =>
+      gerenciador.query(`select count(*)::int as total from consentimentos_lgpd
+        where tenant_id = $1 and metadados->>'protocolo' = $2 and tipo = 'tratativa_lgpd'
+          and metadados->>'status' = 'concluida'`, [tenantA, protocoloA]));
+    expect(totalDecisoes[0].total).toBe(1);
   });
 
   it('tenant ve os proprios registros em auditoria, jobs, storage e integracao', async () => {

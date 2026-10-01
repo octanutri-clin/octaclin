@@ -137,9 +137,10 @@ export class ServicoLgpdCliente {
       }
       if (detalhe.status !== 'recebida') throw new ConflictException('Esta solicitação já recebeu decisão final.');
 
+      const aceitoEm = new Date(Math.max(Date.now(), detalhe.atualizadoEm.getTime() + 1));
       const repositorio = gerenciador.getRepository(ConsentimentoLgpdOrm);
       await repositorio.save(repositorio.create({
-        tenantId, usuarioId, tipo: 'tratativa_lgpd', versao: '2026-10', aceitoEm: new Date(),
+        tenantId, usuarioId, tipo: 'tratativa_lgpd', versao: '2026-10', aceitoEm,
         metadados: {
           pacienteId: detalhe.pacienteId,
           protocolo,

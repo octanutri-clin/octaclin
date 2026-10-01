@@ -578,7 +578,7 @@ export class ServicoOperacoes {
       const solicitacao = this.consolidarSolicitacoesLgpd(eventos).find((item) => item.protocolo === protocolo);
       if (!solicitacao) throw new NotFoundException('Solicitacao LGPD nao encontrada.');
 
-      const agora = new Date();
+      const agora = new Date(Math.max(Date.now(), solicitacao.atualizadoEm.getTime() + 1));
       const repositorio = gerenciador.getRepository(ConsentimentoLgpdOrm);
       await repositorio.save(
         repositorio.create({

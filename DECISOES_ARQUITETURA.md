@@ -279,11 +279,14 @@ Este arquivo registra decisoes ja tomadas para evitar que outro agente reprojete
   exigem backfill fora de banda depois da migration 1062 e do deploy
   compatível; cifra e remoção do JSON ocorrem na mesma transação por lote.
 - A solicitação original é travada na transação para serializar a triagem com
-  decisões operacionais. O rascunho não cria mensagem nem outbox. Auditoria
+  decisões operacionais. Cada tratativa recebe instante posterior ao último
+  evento de estado, inclusive quando ambas ocorrem no mesmo milissegundo.
+  O rascunho não cria mensagem nem outbox. Auditoria
   registra apenas a ação, sem texto, paciente ou protocolo.
 - O portal do paciente projeta o estado do pedido e a descrição enviada por
   ele. Nota de tratativa interna e resposta apenas preparada não são
-  comunicação entregue e não aparecem nessa projeção.
+  comunicação entregue e não aparecem nessa projeção, nem alteram a data
+  de atualização exibida ao paciente.
 - O `down` da 1062 recusa perda de dados. Depois do backfill, o runtime
   anterior não lê descrições cifradas; o rollback operacional é desativar a
   nova superfície ou corrigir para frente, preservando os dados.

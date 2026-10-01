@@ -63,12 +63,13 @@ dados, não expõe a rota operacional e não replica entidade ORM para o cliente
   comunicação efetiva permanecem fora da automação.
 - **Portal do paciente exibia nota interna e resposta só preparada:** o resumo
   do paciente deixa de projetar esses textos; permanece o estado do pedido e a
-  descrição que ele próprio enviou. Resposta visível exige comunicação efetiva,
+  descrição que ele próprio enviou. O rascunho também não altera a data de
+  atualização do pedido. Resposta visível exige comunicação efetiva,
   que não faz parte desta fase.
 - **Dados derivados de evento e concorrência:** leitura atual reconstrói a
   situação de eventos. Assumir a tratativa usa lock por tenant/protocolo e
-  revalidação do estado, sem criar transições duplicadas ou sobrescrever
-  decisão final de operador.
+  revalidação do estado e instante monotônico, sem criar transições duplicadas
+  ou sobrescrever decisão final de operador.
 - **Rollout aditivo com coluna nova:** migration 1062 precede o deploy; o
   backfill é repetível e o JSON legado é apagado somente após cifra verificada.
   Depois do backfill, o runtime antigo não lê a descrição; rollback passa a

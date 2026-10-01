@@ -1294,7 +1294,7 @@ describe('ServicoPortalPaciente', () => {
         status: 'em_tratamento',
         detalhes: 'Atualizar telefone cadastrado.',
         abertoEm: new Date('2026-07-22T10:00:00.000Z'),
-        atualizadoEm: new Date('2026-07-22T12:00:00.000Z')
+        atualizadoEm: new Date('2026-07-22T11:00:00.000Z')
       }
     ]);
     expect(JSON.stringify(portal.lgpd.solicitacoes)).not.toContain('LGPD-OUTRO');
