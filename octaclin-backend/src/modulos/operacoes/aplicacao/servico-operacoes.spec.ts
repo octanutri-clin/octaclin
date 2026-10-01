@@ -714,10 +714,12 @@ describe('ServicoOperacoes', () => {
           protocolo: 'LGPD-123',
           status: 'concluida',
           responsavelId: 'usuario-admin-1',
-          detalhes: 'Dados corrigidos.'
         })
       })
     );
+    const salvo = repositorios.consentimentos.save.mock.calls.at(-1)?.[0];
+    expect(salvo.metadados).not.toHaveProperty('detalhes');
+    expect(Buffer.isBuffer(salvo.detalhesCriptografados)).toBe(true);
   });
 
   it('deve detalhar protocolo LGPD com linha do tempo operacional', async () => {

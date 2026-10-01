@@ -1294,12 +1294,12 @@ describe('ServicoPortalPaciente', () => {
         status: 'em_tratamento',
         detalhes: 'Atualizar telefone cadastrado.',
         abertoEm: new Date('2026-07-22T10:00:00.000Z'),
-        atualizadoEm: new Date('2026-07-22T12:00:00.000Z'),
-        ultimaTratativa: 'Validando cadastro.',
-        ultimaResposta: 'Atualizacao da solicitacao LGPD LGPD-123'
+        atualizadoEm: new Date('2026-07-22T12:00:00.000Z')
       }
     ]);
     expect(JSON.stringify(portal.lgpd.solicitacoes)).not.toContain('LGPD-OUTRO');
+    expect(JSON.stringify(portal.lgpd.solicitacoes)).not.toContain('Validando cadastro.');
+    expect(JSON.stringify(portal.lgpd.solicitacoes)).not.toContain('Atualizacao da solicitacao LGPD LGPD-123');
   });
 
   it('deve detalhar formulario respondido do paciente logado com perguntas e respostas', async () => {
@@ -1897,11 +1897,13 @@ describe('ServicoPortalPaciente', () => {
         metadados: expect.objectContaining({
           pacienteId: 'paciente-1',
           protocolo: solicitacao.protocolo,
-          status: 'recebida',
-          detalhes: 'Atualizar telefone cadastrado.'
+          status: 'recebida'
         })
       })
     );
+    const eventoSalvo = repositorios.consentimento.save.mock.calls.at(-1)?.[0];
+    expect(eventoSalvo?.metadados).not.toHaveProperty('detalhes');
+    expect(Buffer.isBuffer(eventoSalvo?.detalhesCriptografados)).toBe(true);
   });
 
   describe('concluirTarefa', () => {

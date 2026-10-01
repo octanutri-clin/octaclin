@@ -3,6 +3,7 @@ import { BadRequestException, ConflictException, ForbiddenException, Injectable,
 import { EntityManager, In, IsNull } from 'typeorm';
 import { ExecutorTenant } from '../../../infraestrutura/banco-dados/executor-tenant';
 import { ConsentimentoLgpdOrm } from '../../../infraestrutura/lgpd/consentimento-lgpd.orm';
+import { cifrarDetalhesSolicitacaoLgpd, lerDetalhesSolicitacaoLgpd } from '../../../infraestrutura/lgpd/detalhes-solicitacao-lgpd';
 import { CriptografiaDadosSensiveis } from '../../../infraestrutura/seguranca/criptografia-dados-sensiveis';
 import { obterSegredoFormularioPublico } from '../../../infraestrutura/seguranca/segredo-formulario-publico';
 import {
@@ -399,8 +400,6 @@ export interface SolicitacaoLgpdPortalPaciente {
   detalhes?: string;
   abertoEm: Date;
   atualizadoEm: Date;
-  ultimaTratativa?: string;
-  ultimaResposta?: string;
 }
 
 @Injectable()
@@ -1175,12 +1174,12 @@ export class ServicoPortalPaciente {
           tipo: `solicitacao_lgpd_${dados.tipo}`,
           versao: this.versaoLgpdAtual(),
           aceitoEm: criadoEm,
+          detalhesCriptografados: cifrarDetalhesSolicitacaoLgpd(dados.detalhes, this.criptografia),
           metadados: {
             pacienteId: paciente.id,
             protocolo,
             status: 'recebida',
-            canal: 'portal_paciente',
-            detalhes: dados.detalhes?.trim() || undefined
+            canal: 'portal_paciente'
           }
         })
       );
@@ -1527,7 +1526,7 @@ export class ServicoPortalPaciente {
             pacienteId: this.metadadoTexto(evento.metadados, 'pacienteId') ?? pacienteId,
             tipo,
             status: this.normalizarStatusLgpd(this.metadadoTexto(evento.metadados, 'status')),
-            detalhes: this.metadadoTexto(evento.metadados, 'detalhes'),
+            detalhes: lerDetalhesSolicitacaoLgpd(evento, this.criptografia),
             abertoEm: evento.aceitoEm,
             atualizadoEm: evento.aceitoEm
           });
@@ -1540,17 +1539,7 @@ export class ServicoPortalPaciente {
         solicitacao.status = this.normalizarStatusLgpd(this.metadadoTexto(evento.metadados, 'status'));
         solicitacao.atualizadoEm = evento.aceitoEm;
 
-        if (evento.tipo === 'tratativa_lgpd') {
-          solicitacao.ultimaTratativa = this.metadadoTexto(evento.metadados, 'detalhes') ?? solicitacao.ultimaTratativa;
-          return;
-        }
-
-        if (evento.tipo === 'resposta_lgpd_preparada') {
-          solicitacao.ultimaResposta =
-            this.metadadoTexto(evento.metadados, 'assuntoEmail') ??
-            this.metadadoTexto(evento.metadados, 'detalhes') ??
-            solicitacao.ultimaResposta;
-        }
+        // Notas internas e respostas apenas preparadas nao sao comunicacoes ao paciente.
       });
 
     return Array.from(solicitacoes.values()).sort((a, b) => this.timestampData(b.atualizadoEm) - this.timestampData(a.atualizadoEm));

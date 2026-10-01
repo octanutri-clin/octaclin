@@ -2,6 +2,8 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ServicoAuditoria } from '../../infraestrutura/auditoria/servico-auditoria';
 import { UserActionLogOrm } from '../../infraestrutura/auditoria/user-action-log.orm';
+import { ConsentimentoLgpdOrm } from '../../infraestrutura/lgpd/consentimento-lgpd.orm';
+import { CriptografiaDadosSensiveis } from '../../infraestrutura/seguranca/criptografia-dados-sensiveis';
 import { ModuloAuth } from '../auth/modulo-auth';
 import { TokenRedefinicaoSenhaOrm } from '../auth/infraestrutura/token-redefinicao-senha.orm';
 import { MensagemNotificacaoOrm } from '../comunicacoes/infraestrutura/mensagem-notificacao.orm';
@@ -22,6 +24,8 @@ import { ControladorPortalCliente } from './apresentacao/controlador-portal-clie
 import { ControladorLembretesAcompanhamento } from './apresentacao/controlador-lembretes-acompanhamento';
 import { ControladorAuditoriaCliente } from './apresentacao/controlador-auditoria-cliente';
 import { ServicoAuditoriaCliente } from './aplicacao/servico-auditoria-cliente';
+import { ServicoLgpdCliente } from './aplicacao/servico-lgpd-cliente';
+import { ControladorLgpdCliente } from './apresentacao/controlador-lgpd-cliente';
 
 @Module({
   imports: [
@@ -32,6 +36,7 @@ import { ServicoAuditoriaCliente } from './aplicacao/servico-auditoria-cliente';
       ProfissionalOrm,
       TokenRedefinicaoSenhaOrm,
       UserActionLogOrm,
+      ConsentimentoLgpdOrm,
       PacienteOrm,
       MensagemNotificacaoOrm,
       QuestionarioOrm,
@@ -40,8 +45,8 @@ import { ServicoAuditoriaCliente } from './aplicacao/servico-auditoria-cliente';
     ModuloAuth,
     ModuloTenancy
   ],
-  controllers: [ControladorPortalCliente, ControladorAuditoriaCliente, ControladorLembretesAcompanhamento],
-  providers: [ServicoPortalCliente, ServicoLembretesAcompanhamento, ServicoAuditoriaCliente, ServicoPainelOperacao, ServicoUsuariosCliente, ServicoAuditoria, AdaptadorEmailSmtp],
+  controllers: [ControladorPortalCliente, ControladorAuditoriaCliente, ControladorLembretesAcompanhamento, ControladorLgpdCliente],
+  providers: [ServicoPortalCliente, ServicoLembretesAcompanhamento, ServicoAuditoriaCliente, ServicoLgpdCliente, ServicoPainelOperacao, ServicoUsuariosCliente, ServicoAuditoria, AdaptadorEmailSmtp, CriptografiaDadosSensiveis],
   exports: [ServicoPortalCliente, ServicoLembretesAcompanhamento, ServicoUsuariosCliente]
 })
 export class ModuloClientes {}

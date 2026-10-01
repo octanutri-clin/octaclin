@@ -27,6 +27,7 @@
     "backfill:indices-busca": "ts-node src/infraestrutura/banco-dados/backfills/backfill-indices-busca-pacientes.ts",
     "backfill:indices-perfil": "ts-node src/infraestrutura/banco-dados/backfills/backfill-indices-perfil-pacientes.ts",
     "backfill:revisao-perfil": "ts-node src/infraestrutura/banco-dados/backfills/reconciliar-tarefas-revisao-perfil.ts",
+    "backfill:lgpd:detalhes": "ts-node src/infraestrutura/banco-dados/backfills/cifrar-detalhes-solicitacoes-lgpd.ts",
     "smoke:operacoes": "ts-node src/infraestrutura/smoke/smoke-operacoes.ts",
     "smoke:busca-pacientes": "ts-node src/infraestrutura/smoke/smoke-busca-pacientes.ts",
     "performance:backend": "ts-node src/infraestrutura/performance/benchmark-backend.ts",

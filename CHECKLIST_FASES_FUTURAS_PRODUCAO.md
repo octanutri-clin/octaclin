@@ -1,6 +1,6 @@
 # OctaClin - Checklist vivo de fases futuras ate producao
 
-Atualizado em 2026-10-01. Fase 296 integrada pelo PR #353 (merge `ccd1c0bb`); o proprietário informou aplicação da migration 1059, sem confirmação direta de ambiente/banco. Fase 297 integrada pelo PR #355 (merge `4f51b0ac`); Fase 298 integrada pelo PR #356 (merge `b00151ae`), com aplicação da 1060 informada pelo proprietário; Fase 299 integrada pelo PR #357 (merge `9052b8ba`), com aplicação da 1061 e cargas em staging e produção informadas pelo proprietário, sem consulta direta aos bancos neste ciclo; Fase 300 integrada pelo PR #358 (merge `c60c82ed`); Fase 301 integrada pelo PR #359 (merge `bd0f1d6b`); Fase 302 proxima; Fases 256 a 261, 263 a 301 integradas; Fase 284
+Atualizado em 2026-10-01. Fase 296 integrada pelo PR #353 (merge `ccd1c0bb`); o proprietário informou aplicação da migration 1059, sem confirmação direta de ambiente/banco. Fase 297 integrada pelo PR #355 (merge `4f51b0ac`); Fase 298 integrada pelo PR #356 (merge `b00151ae`), com aplicação da 1060 informada pelo proprietário; Fase 299 integrada pelo PR #357 (merge `9052b8ba`), com aplicação da 1061 e cargas em staging e produção informadas pelo proprietário, sem consulta direta aos bancos neste ciclo; Fase 300 integrada pelo PR #358 (merge `c60c82ed`); Fase 301 integrada pelo PR #359 (merge `bd0f1d6b`); Fase 302 em desenvolvimento na branch `docs/roadmap-pos-301`; Fases 256 a 261, 263 a 301 integradas; Fase 284
 (PB-22) foi integrada pelo PR #320 (merge `af839c5`, 19 checks `SUCCESS` e
 `Provenance do SBOM` `SKIPPED`). Fase 285 (PB-20) foi integrada pelo PR #321
 (merge `01d6bf1`). Fase 286 concluida pelo PR #322 (merge `c92f246`). A reconciliação completa do backlog da auditoria e a
@@ -4496,8 +4496,11 @@ auditoria estão ordenados na seção 15 de
   Sem ranking ou inferência de qualidade clínica; escopo tenant existente.
   Integrada pelo PR #359 (merge `bd0f1d6b`, confirmado no GitHub em
   2026-10-01). Plano em `docs/history/phases/PLANO_FASE_301.md`.
-- [ ] Fase 302 - autosserviço LGPD da própria clínica, com política de acesso,
-  decisão, trilha e isolamento por tenant; próxima fase, ainda não iniciada.
+- [~] Fase 302 - autosserviço LGPD da própria clínica, com triagem pelo
+  gestor `Client`, decisão final pelo SuperAdmin, descrição cifrada e
+  isolamento por tenant. Em desenvolvimento; migration/backfill 1062 fora de
+  banda, PR/CI e prova PostgreSQL/RLS pendentes. Plano em
+  `docs/history/phases/PLANO_FASE_302.md`.
 - [ ] Fase 303 - integrações e API para profissionais autorizados, com permissão
   granular, aprovação administrativa, revogação e auditoria.
 - [ ] Fase 304 - leitura longitudinal factual de adesão e substituições, com

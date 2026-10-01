@@ -653,6 +653,12 @@ PB-30 segue sem implementação; agora está planejado como Fase 316, sujeita ao
 
 ---
 
+**Atualização da Fase 302 em 2026-10-01:** desenvolvimento iniciado na mesma
+branch do roadmap. O gestor da clínica fará triagem e rascunho do próprio
+tenant; a decisão final permanece com SuperAdmin. A descrição livre de pedidos
+e tratativas passará a ser cifrada, com migration 1062 e backfill fora de
+banda. PR, CI e verificação de bancos externos ainda pendentes.
+
 ## 16. Suggested Roadmap
 
 Sequência por dependência técnica, não por valor aparente.

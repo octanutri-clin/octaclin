@@ -1,5 +1,57 @@
 export type PlanoSaasIdApi = 'gratuito' | 'profissional' | 'clinica' | 'enterprise';
 
+export type StatusPedidoLgpdCliente = 'recebida' | 'em_tratamento' | 'concluida' | 'indeferida';
+export type TipoPedidoLgpdCliente = 'retificacao' | 'exclusao';
+
+export interface PedidoLgpdCliente {
+  protocolo: string;
+  tipo: TipoPedidoLgpdCliente;
+  status: StatusPedidoLgpdCliente;
+  abertoEm: string;
+  atualizadoEm: string;
+  possuiDetalhes?: boolean;
+}
+
+export interface DetalhePedidoLgpdCliente extends PedidoLgpdCliente {
+  detalhes?: string;
+  historico: { tipo: string; status: StatusPedidoLgpdCliente; criadoEm: string }[];
+  jaEmTratamento?: boolean;
+}
+
+export interface FiltrosPedidoLgpdCliente {
+  pagina?: number;
+  status?: StatusPedidoLgpdCliente;
+  tipo?: TipoPedidoLgpdCliente;
+}
+
+export async function listarPedidosLgpdCliente(filtros: FiltrosPedidoLgpdCliente, signal?: AbortSignal) {
+  const parametros = new URLSearchParams();
+  for (const [chave, valor] of Object.entries(filtros)) {
+    if (valor !== undefined) parametros.set(chave, String(valor));
+  }
+  const resposta = await fetch(`/api/cliente/lgpd/solicitacoes?${parametros}`, { cache: 'no-store', signal });
+  if (!resposta.ok) throw new Error(await extrairMensagemErro(resposta));
+  return resposta.json() as Promise<{ itens: PedidoLgpdCliente[]; pagina: number; limite: number; temMais: boolean }>;
+}
+
+export async function obterPedidoLgpdCliente(protocolo: string) {
+  const resposta = await fetch(`/api/cliente/lgpd/solicitacoes/${encodeURIComponent(protocolo)}`, { cache: 'no-store' });
+  if (!resposta.ok) throw new Error(await extrairMensagemErro(resposta));
+  return resposta.json() as Promise<DetalhePedidoLgpdCliente>;
+}
+
+export async function assumirPedidoLgpdCliente(protocolo: string) {
+  const resposta = await fetch(`/api/cliente/lgpd/solicitacoes/${encodeURIComponent(protocolo)}/assumir`, { method: 'POST', cache: 'no-store' });
+  if (!resposta.ok) throw new Error(await extrairMensagemErro(resposta));
+  return resposta.json() as Promise<DetalhePedidoLgpdCliente>;
+}
+
+export async function prepararRascunhoLgpdCliente(protocolo: string) {
+  const resposta = await fetch(`/api/cliente/lgpd/solicitacoes/${encodeURIComponent(protocolo)}/rascunho`, { method: 'POST', cache: 'no-store' });
+  if (!resposta.ok) throw new Error(await extrairMensagemErro(resposta));
+  return resposta.json() as Promise<{ rascunho: string; envioAutomatico: false }>;
+}
+
 export interface AuditoriaClienteApi {
   itens: { criadoEm: string; usuarioId: string | null; acao: string; recursoTipo: string | null }[];
   pagina: number;

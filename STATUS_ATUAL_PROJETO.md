@@ -20,9 +20,12 @@ Atualizado em 2026-10-01.
   no GitHub em 2026-10-01): indicadores factuais por profissional, taxa de
   conclusão e ocupação sem dupla contagem no painel da clínica. Plano em
   `docs/history/phases/PLANO_FASE_301.md`.
-- Fase 302 proxima, ainda nao iniciada: autosserviço LGPD da clínica com
-  política de acesso/decisão e isolamento por tenant. Sequência completa e
-  gates das Fases 302–320 em
+- Fase 302 em desenvolvimento na branch `docs/roadmap-pos-301`:
+  autosserviço LGPD da clínica para triagem e rascunho, com decisões finais
+  exclusivas do SuperAdmin, descrição cifrada e migration/backfill 1062 fora
+  de banda. PR, CI, revisão cruzada e prova PostgreSQL/RLS pendentes; nenhum
+  banco externo foi alterado neste ciclo. Plano em
+  `docs/history/phases/PLANO_FASE_302.md`. Sequência das Fases 302–320 em
   `docs/product/ROADMAP_POS_AUDITORIA_FASES_302_320.md`. O PB-30 está
   planejado na Fase 316, condicionado a privacidade, jurídico e operação.
 

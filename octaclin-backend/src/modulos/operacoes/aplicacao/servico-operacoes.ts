@@ -6,6 +6,8 @@ import { obterTotalFalhasAuditoria } from '../../../infraestrutura/auditoria/ser
 import { UserActionLogOrm } from '../../../infraestrutura/auditoria/user-action-log.orm';
 import { obterTotalNegativasAutorizacao } from '../../auth/apresentacao/auditoria-autorizacao';
 import { ConsentimentoLgpdOrm } from '../../../infraestrutura/lgpd/consentimento-lgpd.orm';
+import { cifrarDetalhesSolicitacaoLgpd, lerDetalhesSolicitacaoLgpd } from '../../../infraestrutura/lgpd/detalhes-solicitacao-lgpd';
+import { CriptografiaDadosSensiveis } from '../../../infraestrutura/seguranca/criptografia-dados-sensiveis';
 import { OutboxEventoOrm } from '../../../infraestrutura/outbox/outbox-evento.orm';
 import { ExecutorTenant } from '../../../infraestrutura/banco-dados/executor-tenant';
 import { ServicoConexaoGoogleCalendar } from '../../agenda/aplicacao/servico-conexao-google-calendar';
@@ -345,7 +347,8 @@ export class ServicoOperacoes {
     private readonly comunicacoes: ServicoComunicacoes,
     private readonly googleCalendar: ServicoGoogleCalendar,
     private readonly servicoConexaoGoogle: ServicoConexaoGoogleCalendar,
-    private readonly servicoSaude: ServicoSaude
+    private readonly servicoSaude: ServicoSaude,
+    private readonly criptografia: CriptografiaDadosSensiveis = new CriptografiaDadosSensiveis()
   ) {}
 
   async obterResumo(tenantId: string): Promise<ResumoOperacional> {
@@ -563,6 +566,14 @@ export class ServicoOperacoes {
     dados: AtualizarSolicitacaoLgpdOperacional
   ): Promise<SolicitacaoLgpdOperacional> {
     return this.executorTenant.executar(tenantId, async (gerenciador) => {
+      // Serializa a decisao operacional com a triagem da clinica no mesmo pedido.
+      const [original] = await gerenciador.query(`
+        select id from consentimentos_lgpd
+        where tenant_id = $1 and metadados->>'protocolo' = $2
+          and tipo in ('solicitacao_lgpd_retificacao', 'solicitacao_lgpd_exclusao')
+        order by aceito_em asc, id asc limit 1 for update
+      `, [tenantId, protocolo]);
+      if (!original) throw new NotFoundException('Solicitacao LGPD nao encontrada.');
       const eventos = await this.carregarEventosSolicitacoesLgpd(gerenciador, tenantId);
       const solicitacao = this.consolidarSolicitacoesLgpd(eventos).find((item) => item.protocolo === protocolo);
       if (!solicitacao) throw new NotFoundException('Solicitacao LGPD nao encontrada.');
@@ -576,12 +587,12 @@ export class ServicoOperacoes {
           tipo: 'tratativa_lgpd',
           versao: '2026-09',
           aceitoEm: agora,
+          detalhesCriptografados: cifrarDetalhesSolicitacaoLgpd(dados.detalhes, this.criptografia),
           metadados: {
             pacienteId: solicitacao.pacienteId,
             protocolo,
             status: dados.status,
-            responsavelId: usuarioId,
-            detalhes: dados.detalhes?.trim() || undefined
+            responsavelId: usuarioId
           }
         })
       );
@@ -1534,7 +1545,7 @@ export class ServicoOperacoes {
             usuarioPacienteId: evento.usuarioId,
             tipo,
             status: this.normalizarStatusLgpd(this.metadadoTexto(evento.metadados, 'status')),
-            detalhes: this.metadadoTexto(evento.metadados, 'detalhes'),
+            detalhes: lerDetalhesSolicitacaoLgpd(evento, this.criptografia),
             abertoEm: evento.aceitoEm,
             atualizadoEm: evento.aceitoEm
           });
@@ -1548,7 +1559,7 @@ export class ServicoOperacoes {
         solicitacao.status = this.normalizarStatusLgpd(this.metadadoTexto(evento.metadados, 'status'));
         solicitacao.atualizadoEm = evento.aceitoEm;
         solicitacao.responsavelId = this.metadadoTexto(evento.metadados, 'responsavelId') ?? evento.usuarioId;
-        solicitacao.ultimaTratativa = this.metadadoTexto(evento.metadados, 'detalhes') ?? solicitacao.ultimaTratativa;
+        solicitacao.ultimaTratativa = lerDetalhesSolicitacaoLgpd(evento, this.criptografia) ?? solicitacao.ultimaTratativa;
       });
 
     return Array.from(solicitacoes.values());
@@ -1565,7 +1576,7 @@ export class ServicoOperacoes {
         id: evento.id,
         tipo: evento.tipo,
         status: this.normalizarStatusLgpd(this.metadadoTexto(evento.metadados, 'status')),
-        detalhes: this.metadadoTexto(evento.metadados, 'detalhes'),
+        detalhes: lerDetalhesSolicitacaoLgpd(evento, this.criptografia),
         responsavelId: this.metadadoTexto(evento.metadados, 'responsavelId'),
         criadoEm: evento.aceitoEm
       }));
