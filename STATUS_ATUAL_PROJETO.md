@@ -17,7 +17,7 @@ Atualizado em 2026-10-01.
   automaticamente apenas ao provisionar clínicas novas. O profissional completa
   e revisa as refeições antes de salvar. Sem catálogo alimentar novo, envio
   automático ou migration. Plano em `docs/history/phases/PLANO_FASE_297.md`.
-- Fase 298 implementada na branch `feat/fase298-edicao-modelos-plano`, aguardando PR:
+- Fase 298 implementada na branch `feat/fase298-edicao-modelos-plano`, aguardando integração:
   edição estruturada de modelos, histórico cifrado imutável, consulta e restauração
   como nova revisão. Migration 1060 testada localmente, sem aplicação externa neste
   ciclo; RLS PostgreSQL depende do CI. A próxima proposta após integração é a Fase

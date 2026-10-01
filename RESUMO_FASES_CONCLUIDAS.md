@@ -1,6 +1,6 @@
 # OctaClin - Resumo das fases concluidas
 
-## Implementação preparada para PR em 2026-10-01
+## Fase 298 na branch (ainda não integrada) — 2026-10-01
 
 - Fase 298 implementada na branch `feat/fase298-edicao-modelos-plano`, ainda
   não integrada: edição estruturada de modelos, histórico cifrado imutável,

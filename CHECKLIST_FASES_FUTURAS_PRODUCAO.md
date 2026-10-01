@@ -1,6 +1,6 @@
 # OctaClin - Checklist vivo de fases futuras ate producao
 
-Atualizado em 2026-10-01. Fase 296 integrada pelo PR #353 (merge `ccd1c0bb`); o proprietário informou aplicação da migration 1059, sem confirmação direta de ambiente/banco. Fase 297 integrada pelo PR #355 (merge `4f51b0ac`); Fase 298 implementada nesta branch, aguardando PR; Fases 256 a 261, 263 a 297 integradas; Fase 284
+Atualizado em 2026-10-01. Fase 296 integrada pelo PR #353 (merge `ccd1c0bb`); o proprietário informou aplicação da migration 1059, sem confirmação direta de ambiente/banco. Fase 297 integrada pelo PR #355 (merge `4f51b0ac`); Fase 298 implementada nesta branch, aguardando integração; Fases 256 a 261, 263 a 297 integradas; Fase 284
 (PB-22) foi integrada pelo PR #320 (merge `af839c5`, 19 checks `SUCCESS` e
 `Provenance do SBOM` `SKIPPED`). Fase 285 (PB-20) foi integrada pelo PR #321
 (merge `01d6bf1`). Fase 286 concluida pelo PR #322 (merge `c92f246`). A reconciliação completa do backlog da auditoria e a
@@ -4473,7 +4473,7 @@ auditoria estão ordenados na seção 15 de
   Plano em `docs/history/phases/PLANO_FASE_297.md`.
 - [~] Fase 298 - edição de modelos de plano com histórico cifrado imutável,
   consulta e restauração como nova revisão. Implementação concluída nesta branch;
-  PR ainda não integrado. Migration aditiva 1060 criada e testada localmente, sem
+  Commit de implementação `84b3030b`; aguardando integração. Migration aditiva 1060 criada e testada localmente, sem
   aplicação externa neste ciclo; prova PostgreSQL/RLS depende do CI. A edição inclui
   nome, refeições, alimentos, alternativas, porções e decisões de liberação/preferência,
   com busca no catálogo existente. Catálogos USDA, TACO, IBGE e TBCA ficam para a

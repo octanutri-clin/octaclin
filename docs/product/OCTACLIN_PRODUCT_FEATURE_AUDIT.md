@@ -612,7 +612,7 @@ de esgotar a versão determinística de cada um.
 
 ### Estado do backlog verificado em 2026-10-01
 
-Os estados abaixo foram cruzados com PRs merged e, para itens sem PR identificável, com o código. PRs #319 a #324, #343 a #349, #353 e #355 foram integrados; a Fase 296 foi integrada pelo PR #353 (merge `ccd1c0bb`) e a Fase 297 pelo PR #355 (merge `4f51b0ac`). A Fase 298 está implementada nesta branch, aguardando PR e integração; migration 1060 não aplicada externamente neste ciclo. Relatos do proprietário sobre ambientes externos não foram tratados como verificação direta nesta reconciliação.
+Os estados abaixo foram cruzados com PRs merged e, para itens sem PR identificável, com o código. PRs #319 a #324, #343 a #349, #353 e #355 foram integrados; a Fase 296 foi integrada pelo PR #353 (merge `ccd1c0bb`) e a Fase 297 pelo PR #355 (merge `4f51b0ac`). A Fase 298 está implementada nesta branch e aguarda integração; migration 1060 não aplicada externamente neste ciclo. Relatos do proprietário sobre ambientes externos não foram tratados como verificação direta nesta reconciliação.
 
 | PB | Estado e evidência |
 |---|---|
