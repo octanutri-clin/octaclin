@@ -13,6 +13,7 @@ import {
   criarModeloPlanoAlimentar,
   listarModelosPlanoAlimentar,
   obterModeloPlanoAlimentar,
+  type EstruturaInicialPlanoApi,
   type ModeloPlanoAlimentarResumoApi,
   type OrigemModeloApi,
   type RefeicaoPlanoAlimentarEntrada
@@ -34,6 +35,8 @@ export interface ModelosPlanoAlimentarProps {
 export function ModelosPlanoAlimentar({ refeicoesAtuais, aoAplicar, desabilitado = false }: ModelosPlanoAlimentarProps) {
   const id = useId();
   const [modelos, setModelos] = useState<ModeloPlanoAlimentarResumoApi[]>([]);
+  const [estruturasIniciais, setEstruturasIniciais] = useState<EstruturaInicialPlanoApi[]>([]);
+  const [estruturaSelecionada, setEstruturaSelecionada] = useState('');
   const [selecionado, setSelecionado] = useState('');
   const [nome, setNome] = useState('');
   const [origem, setOrigem] = useState<OrigemModeloApi>('pessoal');
@@ -50,6 +53,7 @@ export function ModelosPlanoAlimentar({ refeicoesAtuais, aoAplicar, desabilitado
       // modelo do profissional seria pior que a consulta extra.
       const pagina = await listarModelosPlanoAlimentar({ pagina: 1, limite: 100 });
       setModelos(pagina.itens);
+      setEstruturasIniciais(pagina.estruturasIniciais ?? []);
     } catch (falha) {
       setErro(mensagemFalhaInterface(falha, 'Não foi possível carregar os modelos.'));
     } finally {
@@ -85,6 +89,10 @@ export function ModelosPlanoAlimentar({ refeicoesAtuais, aoAplicar, desabilitado
     const refeicoes = refeicoesAtuais();
     if (!nome.trim() || !refeicoes.length) {
       setErro('Informe um nome e tenha ao menos uma refeição no rascunho.');
+      return;
+    }
+    if (refeicoes.some((refeicao) => refeicao.itens.length === 0)) {
+      setErro('Adicione ao menos um alimento em cada refeição antes de salvar o modelo.');
       return;
     }
     setOcupado('salvando');
@@ -133,6 +141,26 @@ export function ModelosPlanoAlimentar({ refeicoesAtuais, aoAplicar, desabilitado
         <p role="status" className="rounded-md bg-superficie px-3 py-2 text-sm text-tinta">
           {aviso}
         </p>
+      ) : null}
+
+      {estruturasIniciais.length ? (
+        <div className="grid gap-2 border-b border-linha pb-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end">
+          <div className="grid gap-1">
+            <Rotulo htmlFor={`${id}-estrutura`}>Estrutura inicial de refeições</Rotulo>
+            <Selecao id={`${id}-estrutura`} value={estruturaSelecionada} onChange={(evento) => setEstruturaSelecionada(evento.target.value)} disabled={desabilitado || Boolean(ocupado)}>
+              <option value="">Escolha uma estrutura</option>
+              {estruturasIniciais.map((estrutura) => <option key={estrutura.id} value={estrutura.id}>{estrutura.nome}</option>)}
+            </Selecao>
+          </div>
+          <Botao type="button" onClick={() => {
+            const estrutura = estruturasIniciais.find((item) => item.id === estruturaSelecionada);
+            if (!estrutura) return;
+            aoAplicar(estrutura.refeicoes.map((refeicao) => ({ ...refeicao, itens: [] })));
+            setErro(null);
+            setAviso('Estrutura aplicada ao rascunho. Adicione alimentos e revise cada refeição antes de salvar.');
+          }} disabled={desabilitado || !estruturaSelecionada || Boolean(ocupado)}>Usar estrutura</Botao>
+          <p className="text-xs text-texto-suave sm:col-span-2">A estrutura substitui as refeições do rascunho. Ela não contém alimentos, quantidades nem orientação clínica.</p>
+        </div>
       ) : null}
 
       <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto_auto] sm:items-end">

@@ -92,7 +92,7 @@ export function GuiaConfiguracaoClinica({ tenantSlug }: { tenantSlug: string }) 
       href: '/questionarios' as const, acao: 'Abrir modelos de formulários', total: totais.formularios, concluida: totais.formularios !== null && totais.formularios > 0, opcional: true
     },
     {
-      id: 'modelo-plano', titulo: 'Criar ou revisar modelo de plano', descricao: 'Crie um modelo pessoal a partir de um plano no prontuário. Os modelos pessoais podem ser editados pelos recursos já disponíveis.',
+      id: 'modelo-plano', titulo: 'Criar ou revisar modelo de plano', descricao: 'No editor do prontuário, use uma estrutura inicial de refeições, acrescente alimentos e revise o plano antes de salvar um modelo pessoal. A estrutura vazia não conta como modelo criado.',
       href: '/pacientes' as const, acao: 'Abrir pacientes e prontuários', total: totais.modelosPlano, concluida: totais.modelosPlano !== null && totais.modelosPlano > 0, opcional: true
     },
     {
@@ -164,7 +164,7 @@ export function GuiaConfiguracaoClinica({ tenantSlug }: { tenantSlug: string }) 
             })}
           </div>
           <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
-            <p className="max-w-3xl text-xs leading-5 text-texto-suave">Convites de pacientes e materiais são acessados pelos fluxos do prontuário. Mensagens de boas-vindas e lembretes seguem os recursos atuais de comunicação; as opções de edição variam por área.</p>
+            <p className="max-w-3xl text-xs leading-5 text-texto-suave">Clínicas novas recebem materiais genéricos na biblioteca do prontuário. Copie e adapte antes de enviar. Convites, mensagens de boas-vindas e lembretes seguem os fluxos atuais de comunicação.</p>
             <Link href="/pacientes" className={classesBotao({ tamanho: 'sm', variante: 'fantasma' })}>Abrir prontuários para convites e materiais<ArrowRight size={15} aria-hidden="true" /></Link>
           </div>
         </CartaoConteudo>

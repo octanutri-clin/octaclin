@@ -325,3 +325,27 @@ test.describe('Fase 269 - duplicar plano de outro paciente (PB-13)', () => {
     await expect(blocoDuplicar(page).getByLabel('Paciente', { exact: true })).toHaveCount(0);
   });
 });
+
+test('Fase 297 - estrutura inicial exige alimento antes de salvar modelo', async ({ page }) => {
+  await prepararSessao(page);
+  await prepararPlanos(page);
+  await prepararBuscaPacientes(page, { itens: [pacienteDestino] });
+  await page.route((url) => url.pathname === '/api/planos-alimentares/modelos', (route) => route.fulfill({
+    status: 200,
+    contentType: 'application/json',
+    body: JSON.stringify({
+      itens: [], total: 0, pagina: 1, limite: 100,
+      estruturasIniciais: [{ id: 'tres-refeicoes', nome: 'Três refeições', refeicoes: [
+        { nome: 'Refeição 1', itens: [] }, { nome: 'Refeição 2', itens: [] }, { nome: 'Refeição 3', itens: [] }
+      ] }]
+    })
+  }));
+  await abrirEditorDePlano(page);
+  await page.getByLabel('Estrutura inicial de refeições').selectOption('tres-refeicoes');
+  await page.getByRole('button', { name: 'Usar estrutura' }).click();
+  await expect(page.getByRole('textbox', { name: 'Nome da refeição' })).toHaveCount(3);
+  await expect(page.getByRole('textbox', { name: 'Alimento' })).toHaveCount(0);
+  await page.getByPlaceholder('Nome do modelo').fill('Meu modelo');
+  await page.getByRole('button', { name: 'Salvar modelo' }).click();
+  await expect(page.getByText('Adicione ao menos um alimento em cada refeição antes de salvar o modelo.')).toBeVisible();
+});

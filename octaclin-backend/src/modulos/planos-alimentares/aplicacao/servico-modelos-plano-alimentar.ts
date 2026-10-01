@@ -6,6 +6,9 @@ import { CriptografiaDadosSensiveis } from '../../../infraestrutura/seguranca/cr
 import { resolverProfissionalIdDoUsuario } from '../../../infraestrutura/seguranca/escopo-profissional';
 import type { PermissaoOctaClin } from '../../auth/dominio/permissoes';
 import { UsuarioAutenticado } from '../../auth/dominio/usuario-autenticado';
+import { TenantConfiguracaoOrm } from '../../tenancy/infraestrutura/tenant-configuracao.orm';
+import { CHAVE_KIT_INICIAL_CLINICA, VERSAO_KIT_INICIAL_CLINICA } from '../../tenancy/kit-inicial-clinica';
+import { listarEstruturasIniciaisPlano } from '../dominio/estruturas-iniciais-plano';
 import {
   contarEstruturaModelo,
   podeAcessarModelo,
@@ -90,6 +93,9 @@ export class ServicoModelosPlanoAlimentar {
         skip: (pagina - 1) * limite,
         take: limite
       });
+      const kit = await gerenciador.getRepository(TenantConfiguracaoOrm).findOne({
+        where: { tenantId, chave: CHAVE_KIT_INICIAL_CLINICA }
+      });
       return {
         itens: modelos.map((modelo) => ({
           id: modelo.id,
@@ -103,7 +109,10 @@ export class ServicoModelosPlanoAlimentar {
         })),
         total,
         pagina,
-        limite
+        limite,
+        estruturasIniciais: kit?.valor?.versao === VERSAO_KIT_INICIAL_CLINICA
+          ? listarEstruturasIniciaisPlano()
+          : []
       };
     });
   }
