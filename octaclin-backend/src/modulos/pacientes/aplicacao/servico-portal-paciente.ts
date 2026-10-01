@@ -147,9 +147,8 @@ export interface ResumoPortalPaciente {
     nome: string;
     statusAdesao: string;
     /**
-     * `scoreRisco` NAO entra aqui. E triagem interna da clinica; devolver ao
-     * proprio paciente um numero de risco clinico sem leitura profissional junto
-     * e a regra que a Fase 161 fechou. Estava vazando neste payload ate a Fase 207.
+     * `scoreRisco` NAO entra aqui. E um campo legado interno, sem funcao de
+     * prioridade operacional; estava vazando neste payload ate a Fase 207.
      */
     ultimoCheckinEm?: Date;
   };

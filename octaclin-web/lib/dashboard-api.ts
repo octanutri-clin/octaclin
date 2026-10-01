@@ -43,8 +43,12 @@ export interface ResumoDashboardClinicoApi {
     pacienteId: string;
     profissionalId: string;
     pacienteNome: string;
-    nivelRisco: 'baixo' | 'medio' | 'alto';
-    scoreRisco: number;
+    prioridadeAcompanhamento?: {
+      faixa: 'baixa' | 'media' | 'alta';
+      origem: 'calculado' | 'override';
+      scoreCalculado: number | null;
+      calculadoEm: string | null;
+    } | null;
     faltasRecentes: number;
     diasSemRetorno: number;
     faixa: '30' | '60' | '90+';

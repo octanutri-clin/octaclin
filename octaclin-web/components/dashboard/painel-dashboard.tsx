@@ -70,7 +70,7 @@ function estadoContatoAposFalta(estado: string, motivo?: string) {
 
 function nomeAlerta(tipo: string) {
   return {
-    sem_retorno_risco_alto: 'Paciente de risco sem retorno',
+    sem_retorno_risco_alto: 'Paciente de alta prioridade sem retorno',
     tarefa_vencida: 'Tarefa vencida',
     conduta_vencida: 'Conduta terapêutica vencida',
     conduta_vencendo: 'Conduta terapêutica próxima do vencimento',
@@ -257,7 +257,7 @@ export function PainelDashboard() {
       <section aria-labelledby="proximos" className="grid gap-4">
         <h2 id="proximos" className="text-lg font-semibold text-tinta">Próximos</h2>
         <div className="grid gap-5 xl:grid-cols-2">
-          <div className="min-w-0"><CabecalhoFila titulo="Pacientes sem retorno" detalhe="30 dias sem consulta concluída, priorizados por risco e faltas recentes." /><div className="divide-y divide-linha border-y border-linha">{dados.semRetorno.length ? dados.semRetorno.map((item) => <div key={item.pacienteId} className="flex min-w-0 items-center justify-between gap-3 py-3"><div className="min-w-0"><p className="truncate text-sm font-semibold text-tinta">{item.pacienteNome}</p><p className="text-xs text-texto-suave">{item.faixa} dias · Risco {item.nivelRisco} · Score manual {item.scoreRisco} · {item.faltasRecentes ?? 0} faltas em 90 dias</p></div><LinkAcao href={retornoUrl(item.pacienteId, item.profissionalId)}>Criar retorno</LinkAcao></div>) : <EstadoVazio titulo="Retornos em dia" descricao="Nenhum paciente ativo excedeu 30 dias sem consulta concluída." />}</div></div>
+          <div className="min-w-0"><CabecalhoFila titulo="Pacientes sem retorno" detalhe="30 dias sem consulta concluída, ordenados pela prioridade de acompanhamento e faltas recentes." /><div className="divide-y divide-linha border-y border-linha">{dados.semRetorno.length ? dados.semRetorno.map((item) => <div key={item.pacienteId} className="flex min-w-0 items-center justify-between gap-3 py-3"><div className="min-w-0"><p className="truncate text-sm font-semibold text-tinta">{item.pacienteNome}</p><p className="text-xs text-texto-suave">{item.faixa} dias · {item.prioridadeAcompanhamento ? `Prioridade ${item.prioridadeAcompanhamento.faixa}${item.prioridadeAcompanhamento.origem === 'override' ? ' (ajuste humano)' : ''}${item.prioridadeAcompanhamento.calculadoEm ? ` · calculada em ${formatarDataHora(item.prioridadeAcompanhamento.calculadoEm)}` : ''}` : 'Prioridade aguardando apuração'} · {item.faltasRecentes ?? 0} faltas em 90 dias</p></div><LinkAcao href={retornoUrl(item.pacienteId, item.profissionalId)}>Criar retorno</LinkAcao></div>) : <EstadoVazio titulo="Retornos em dia" descricao="Nenhum paciente ativo excedeu 30 dias sem consulta concluída." />}</div></div>
           <div className="min-w-0"><CabecalhoFila titulo="Solicitações de agendamento" detalhe="Pedidos aguardando aprovação manual."><LinkAcao href="/agenda">Abrir agenda</LinkAcao></CabecalhoFila>{dados.solicitacoesPendentes.length ? <div className="divide-y divide-linha border-y border-linha">{dados.solicitacoesPendentes.map((item) => <div key={item.id} className="py-3"><p className="text-sm font-semibold text-tinta">{item.solicitanteNome}</p><p className="text-xs text-texto-suave">{formatarDataHora(item.inicioEm)} · expira em {formatarDataHora(item.expiraEm)}</p></div>)}</div> : <EstadoVazio titulo="Nenhuma solicitação pendente" descricao="Novos pedidos aparecerão aqui." />}</div>
         </div>
       </section>
@@ -283,7 +283,7 @@ export function PainelDashboard() {
         <Metrica rotulo="Sem retorno" valor={dados.indicadores.semRetorno30} delta={{ valor: `${dados.indicadores.semRetorno60} em 60d, ${dados.indicadores.semRetorno90Mais} em 90+d`, tipo: 'neutro' }} icone={<UserRoundPlus size={18} />} />
         <Metrica rotulo="Pendências" valor={dados.indicadores.tarefasVencidas + dados.indicadores.formulariosPendentes} delta={{ valor: `${dados.indicadores.tarefasVencidas} tarefas, ${dados.indicadores.formulariosPendentes} formularios`, tipo: 'neutro' }} icone={<ClipboardList size={18} />} />
         <Metrica rotulo="Comunicações" valor={dados.indicadores.comunicacoesEmAlerta} delta={{ valor: `${dados.indicadores.solicitacoesPendentes} solicitacoes pendentes`, tipo: 'neutro' }} icone={<MessageSquareWarning size={18} />} />
-        <Metrica rotulo="Risco alto" valor={dados.indicadores.pacientesRiscoAlto} delta={{ valor: 'Priorizar retorno clinico', tipo: 'neutro' }} icone={<AlertTriangle size={18} />} />
+        <Metrica rotulo="Alta prioridade" valor={dados.indicadores.pacientesRiscoAlto} delta={{ valor: 'Revisar acompanhamento', tipo: 'neutro' }} icone={<AlertTriangle size={18} />} />
         </div>
       </section>
     </> : null}

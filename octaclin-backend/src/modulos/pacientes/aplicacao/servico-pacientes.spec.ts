@@ -30,6 +30,7 @@ import { LIMITE_LINHAS_EXPORTACAO, ServicoPacientes } from './servico-pacientes'
 function criarGerenciadorFake(repositorio: Record<string, unknown>) {
   if ('paciente' in repositorio || 'profissional' in repositorio) {
     return {
+      query: jest.fn(async () => []),
       getRepository: jest.fn((entidade: unknown) => {
         if (entidade === WebhookAssinaturaOrm) return { find: jest.fn(async () => []) };
         if (entidade === PerfilCadastroPacienteOrm) return { findOne: jest.fn(async () => null) };
@@ -42,6 +43,7 @@ function criarGerenciadorFake(repositorio: Record<string, unknown>) {
   }
 
   return {
+    query: jest.fn(async () => []),
     getRepository: jest.fn((entidade: unknown) => {
       if (entidade === WebhookAssinaturaOrm) return { find: jest.fn(async () => []) };
       if (entidade === PerfilCadastroPacienteOrm) return { findOne: jest.fn(async () => null) };
@@ -318,12 +320,35 @@ describe('ServicoPacientes', () => {
     });
     expect(criptografia.gerarHashPerfilExato).toHaveBeenCalledTimes(3);
     const where = (repositorio.findAndCount as jest.Mock).mock.calls[0][0].where;
-    expect(where).toEqual(expect.arrayContaining([
-      expect.objectContaining({ tenantId: 'tenant-1', perfilFiltrosHashes: expect.objectContaining({
+    expect(where).toEqual(expect.objectContaining({
+      tenantId: 'tenant-1',
+      perfilFiltrosHashes: expect.objectContaining({
         _type: 'arrayContains', _value: ['categoria:Ativo', 'origem:Indicação', 'tag:Retorno']
+      }),
+      id: expect.objectContaining({ _type: 'raw', _objectLiteralParameters: expect.objectContaining({
+        tenantPrioridade: 'tenant-1', faixaPrioridade: 'alta'
       }) })
-    ]));
-    expect(where).toHaveLength(2);
+    }));
+  });
+
+  it('combina prioridade efetiva e ausencia de consulta futura no mesmo filtro paginado', async () => {
+    const repositorio = { findAndCount: jest.fn(async (_opcoes: unknown) => [[], 0]) };
+    const servico = new ServicoPacientes(
+      { executar: jest.fn((_tenantId: string, operacao: (gerenciador: unknown) => Promise<unknown>) =>
+        operacao(criarGerenciadorFake(repositorio))) } as never,
+      {} as never,
+      limitesPermitidos as never
+    );
+    await servico.listar('tenant-1', usuarioColaborador, 2, 25, { pagina: 2, limite: 25, risco: 'medio', semProximaConsulta: true });
+    const where = (repositorio.findAndCount as jest.Mock).mock.calls[0][0].where;
+    const sql = where.id._getSql('paciente.id');
+    expect(sql).toContain('agenda_consultas consulta');
+    expect(sql).toContain('prioridades_acompanhamento_paciente prioridade');
+    expect(sql).toContain(' AND ');
+    expect(where.id._objectLiteralParameters).toEqual(expect.objectContaining({
+      tenantBusca: 'tenant-1', tenantPrioridade: 'tenant-1', faixaPrioridade: 'media'
+    }));
+    expect(repositorio.findAndCount).toHaveBeenCalledWith(expect.objectContaining({ skip: 25, take: 25 }));
   });
 
   it('nao consulta indices protegidos com tenant divergente da credencial', async () => {
@@ -3032,6 +3057,7 @@ describe('ServicoPacientes - prioridade de acompanhamento (Fase 265.4)', () => {
   function montarServicoPrioridade(opcoes: {
     prioridadeAtual?: Record<string, unknown> | null;
     paciente?: Record<string, unknown> | null;
+    apurado?: boolean;
   }) {
     let prioridadeAtual = opcoes.prioridadeAtual ?? null;
     const historicoSalvo: Record<string, unknown>[] = [];
@@ -3050,6 +3076,7 @@ describe('ServicoPacientes - prioridade de acompanhamento (Fase 265.4)', () => {
       })
     };
     const repositorioHistorico = {
+      exists: jest.fn(async () => opcoes.apurado ?? Boolean(opcoes.prioridadeAtual)),
       create: jest.fn((dados: Record<string, unknown>) => ({ criadoEm: AGORA, ...dados })),
       save: jest.fn(async (registro: Record<string, unknown>) => {
         historicoSalvo.push(registro);
@@ -3082,6 +3109,7 @@ describe('ServicoPacientes - prioridade de acompanhamento (Fase 265.4)', () => {
     const resposta = await servico.obterPrioridadeAcompanhamento('tenant-1', 'paciente-1', usuarioColaborador);
 
     expect(resposta.valorCalculado).toEqual({ score: 0, faixa: 'baixa', fatores: [] });
+    expect(resposta.apurado).toBe(false);
     expect(resposta.valorEfetivo).toEqual({ faixa: 'baixa', origem: 'calculado' });
     expect(resposta.override).toBeUndefined();
   });
@@ -3102,6 +3130,7 @@ describe('ServicoPacientes - prioridade de acompanhamento (Fase 265.4)', () => {
     const resposta = await servico.obterPrioridadeAcompanhamento('tenant-1', 'paciente-1', usuarioColaborador);
 
     expect(resposta.valorEfetivo).toEqual({ faixa: 'media', origem: 'calculado' });
+    expect(resposta.apurado).toBe(true);
     expect(resposta.override).toBeUndefined();
   });
 
@@ -3131,6 +3160,25 @@ describe('ServicoPacientes - prioridade de acompanhamento (Fase 265.4)', () => {
     expect(resposta.override).toEqual(
       expect.objectContaining({ faixa: 'alta', codigoMotivo: 'acompanhamento_intensificado', atorUsuarioId: 'usuario-profissional-1' })
     );
+  });
+
+  it('override antes do primeiro calculo informa que a faixa calculada ainda nao foi apurada', async () => {
+    const { servico, repositorioHistorico } = montarServicoPrioridade({
+      prioridadeAtual: {
+        pacienteId: 'paciente-1', tenantId: 'tenant-1', score: 0, faixa: 'baixa', fatores: [],
+        versaoFormula: '1.1.0', calculadoEm: AGORA, overrideFaixa: 'alta',
+        overrideCodigoMotivo: 'acompanhamento_intensificado',
+        overrideExpiraEm: new Date(AGORA.getTime() + DIA_MS),
+        overrideAtorUsuarioId: 'usuario-profissional-1', overrideCriadoEm: AGORA
+      },
+      apurado: false
+    });
+    const resposta = await servico.obterPrioridadeAcompanhamento('tenant-1', 'paciente-1', usuarioColaborador);
+    expect(resposta.apurado).toBe(false);
+    expect(resposta.valorEfetivo).toEqual({ faixa: 'alta', origem: 'override' });
+    expect(repositorioHistorico.exists).toHaveBeenCalledWith({
+      where: { tenantId: 'tenant-1', pacienteId: 'paciente-1', tipoEvento: 'calculo' }
+    });
   });
 
   it('com override expirado, expira sozinho na leitura: volta ao calculado e registra o evento no historico', async () => {

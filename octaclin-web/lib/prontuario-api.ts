@@ -156,6 +156,7 @@ export type FaixaPrioridadeAcompanhamentoApi = 'baixa' | 'media' | 'alta';
 
 export interface PrioridadeAcompanhamentoApi {
   pacienteId: string;
+  apurado?: boolean;
   versaoFormula?: string;
   calculadoEm?: string;
   valorCalculado: {

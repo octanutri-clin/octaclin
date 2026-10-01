@@ -55,15 +55,21 @@ function statusRotulo(status: string) {
   return rotulos[status] ?? status;
 }
 
-function nivelRisco(paciente: PacienteResumo) {
-  const score = Number(paciente.scoreRisco);
-  if (paciente.statusAdesao === 'risco' || score >= 70) return 'alto';
-  if (score >= 40) return 'medio';
-  return 'baixo';
+function variantePrioridade(paciente: PacienteResumo): 'perigo' | 'alerta' | 'sucesso' | 'neutra' {
+  const faixa = paciente.prioridadeAcompanhamento?.faixa;
+  return faixa === 'alta' ? 'perigo' : faixa === 'media' ? 'alerta' : faixa === 'baixa' ? 'sucesso' : 'neutra';
+}
+
+function rotuloPrioridade(paciente: PacienteResumo): string {
+  const prioridade = paciente.prioridadeAcompanhamento;
+  if (!prioridade) return 'Aguardando apuração';
+  const faixa = prioridade.faixa === 'alta' ? 'Alta' : prioridade.faixa === 'media' ? 'Média' : 'Baixa';
+  const origem = prioridade.origem === 'override' ? ' · ajuste humano' : '';
+  return `${faixa}${origem}`;
 }
 
 function proximaAcao(paciente: PacienteResumo) {
-  if (nivelRisco(paciente) === 'alto') return 'Revisar risco';
+  if (paciente.prioridadeAcompanhamento?.faixa === 'alta') return 'Revisar acompanhamento';
   if (!paciente.proximaConsultaEm) return 'Agendar retorno';
   return `Consulta em ${formatarData(paciente.proximaConsultaEm)}`;
 }
@@ -300,13 +306,13 @@ export function ListaPacientes() {
       {sucesso ? <div className="flex flex-wrap items-center gap-2 rounded-lg border border-sucesso-borda bg-sucesso-suave px-4 py-3 text-sm text-sucesso-forte"><CheckCircle2 size={16} /><span className="flex-1">{sucesso}</span>{ultimoArquivado && podeGerenciar ? <Botao type="button" tamanho="sm" variante="fantasma" onClick={() => void restaurar(ultimoArquivado)} carregando={restaurandoId === ultimoArquivado.id}><ArchiveRestore size={14} />Desfazer</Botao> : null}</div> : null}
       {linkConvite ? <Cartao><CartaoConteudo className="text-sm text-texto-suave"><p className="font-medium text-tinta">Link de primeiro acesso</p><p className="mt-1 break-all">{linkConvite}</p></CartaoConteudo></Cartao> : null}
 
-      <Tabela className="hidden lg:block"><TabelaConteudo larguraMinima="840px"><TabelaCabecalho densidade="compacta" className="grid-cols-[1.2fr_0.9fr_0.7fr_0.65fr_0.85fr_0.95fr_196px]"><span>Paciente</span><span>Responsável</span><span>Situação</span><span>Risco</span><span>Última consulta</span><span>Próxima ação</span><span>Ações</span></TabelaCabecalho><TabelaLinhas>
+      <Tabela className="hidden lg:block"><TabelaConteudo larguraMinima="840px"><TabelaCabecalho densidade="compacta" className="grid-cols-[1.2fr_0.9fr_0.7fr_0.65fr_0.85fr_0.95fr_196px]"><span>Paciente</span><span>Responsável</span><span>Situação</span><span>Prioridade</span><span>Última consulta</span><span>Próxima ação</span><span>Ações</span></TabelaCabecalho><TabelaLinhas>
         {pacientes.length ? pacientes.map((paciente) => (
           <TabelaLinha data-testid="linha-paciente" densidade="compacta" key={paciente.id} className="grid-cols-[1.2fr_0.9fr_0.7fr_0.65fr_0.85fr_0.95fr_196px] items-center hover:bg-superficie-hover">
             <div className="min-w-0"><div className="flex items-center gap-2">{podeSelecionar ? <input type="checkbox" aria-label={`Selecionar ${paciente.nome}`} checked={selecionados.includes(paciente.id)} onChange={(evento) => setSelecionados((atuais) => evento.target.checked ? [...atuais, paciente.id] : atuais.filter((id) => id !== paciente.id))} /> : null}<HeartPulse size={16} className="shrink-0 text-primaria" /><Link href={`/pacientes/${paciente.id}` as Route} className="truncate font-semibold hover:underline">{paciente.nome}</Link></div><p className="mt-1 truncate text-xs text-texto-suave">{paciente.contato ?? paciente.id} · Nasc. {formatarData(paciente.dataNascimento)}</p></div>
             <span className="break-all text-xs text-texto-suave">{nomeProfissional(profissionais, paciente.profissionalResponsavelId)}</span>
             <Etiqueta className={statusClasse(paciente.statusAdesao)}>{statusRotulo(paciente.statusAdesao)}</Etiqueta>
-            <Etiqueta variante={nivelRisco(paciente) === 'alto' ? 'perigo' : nivelRisco(paciente) === 'medio' ? 'alerta' : 'sucesso'}>{nivelRisco(paciente)} {Number(paciente.scoreRisco).toFixed(1)}</Etiqueta>
+            <Etiqueta variante={variantePrioridade(paciente)}>{rotuloPrioridade(paciente)}</Etiqueta>
             <span className="text-xs text-texto-suave">{formatarData(paciente.ultimaConsultaConcluidaEm)}</span><span className="text-xs font-medium text-tinta">{proximaAcao(paciente)}</span>
             <div data-testid="acoes-paciente" className="flex justify-end gap-1">
               <Link href={`/pacientes/${paciente.id}` as Route} className={classesBotao({ variante: 'fantasma', className: 'w-11 px-0' })} aria-label="Abrir prontuário" title="Abrir prontuário"><FileText size={16} /></Link>
@@ -316,7 +322,7 @@ export function ListaPacientes() {
         )) : <TabelaVazia mensagem="Nenhum paciente encontrado com estes filtros." />}
       </TabelaLinhas></TabelaConteudo></Tabela>
 
-      <div className="grid gap-3 lg:hidden">{pacientes.map((paciente) => <Cartao key={paciente.id}><CartaoConteudo className="grid gap-3"><div className="flex items-start justify-between gap-3"><div className="min-w-0">{podeSelecionar ? <label className="inline-flex items-center gap-2 text-sm"><input type="checkbox" checked={selecionados.includes(paciente.id)} onChange={(evento) => setSelecionados((atuais) => evento.target.checked ? [...atuais, paciente.id] : atuais.filter((id) => id !== paciente.id))} />Selecionar {paciente.nome}</label> : null}<Link href={`/pacientes/${paciente.id}` as Route} className="font-semibold text-tinta hover:underline">{paciente.nome}</Link><p className="mt-1 truncate text-xs text-texto-suave">{paciente.contato ?? paciente.id}</p></div><Etiqueta variante={nivelRisco(paciente) === 'alto' ? 'perigo' : nivelRisco(paciente) === 'medio' ? 'alerta' : 'sucesso'}>{nivelRisco(paciente)} {Number(paciente.scoreRisco).toFixed(1)}</Etiqueta></div><div className="grid grid-cols-2 gap-2 text-xs text-texto-suave"><span>Responsável<br /><strong className="text-tinta">{nomeProfissional(profissionais, paciente.profissionalResponsavelId)}</strong></span><span>Última consulta<br /><strong className="text-tinta">{formatarData(paciente.ultimaConsultaConcluidaEm)}</strong></span><span className="col-span-2">Próxima ação<br /><strong className="text-tinta">{proximaAcao(paciente)}</strong></span></div><div className="flex flex-wrap gap-1"><Link href={`/pacientes/${paciente.id}` as Route} className="inline-flex min-h-11 items-center px-3 text-sm font-medium text-tinta hover:bg-superficie-hover">Abrir prontuário</Link>{podeGerenciar ? <><Link href={`/pacientes/${paciente.id}/editar` as Route} className={classesBotao({ variante: 'fantasma' })} aria-label={`Editar ${paciente.nome}`}><Edit3 size={16} /></Link><Botao type="button" variante="fantasma" onClick={() => setPacienteParaArquivar(paciente)} aria-label={`Arquivar ${paciente.nome}`}><Trash2 size={16} /></Botao></> : null}</div></CartaoConteudo></Cartao>)}{!pacientes.length ? <p className="px-1 py-6 text-sm text-texto-suave">Nenhum paciente encontrado com estes filtros.</p> : null}</div>
+      <div className="grid gap-3 lg:hidden">{pacientes.map((paciente) => <Cartao key={paciente.id}><CartaoConteudo className="grid gap-3"><div className="flex items-start justify-between gap-3"><div className="min-w-0">{podeSelecionar ? <label className="inline-flex items-center gap-2 text-sm"><input type="checkbox" checked={selecionados.includes(paciente.id)} onChange={(evento) => setSelecionados((atuais) => evento.target.checked ? [...atuais, paciente.id] : atuais.filter((id) => id !== paciente.id))} />Selecionar {paciente.nome}</label> : null}<Link href={`/pacientes/${paciente.id}` as Route} className="font-semibold text-tinta hover:underline">{paciente.nome}</Link><p className="mt-1 truncate text-xs text-texto-suave">{paciente.contato ?? paciente.id}</p></div><Etiqueta variante={variantePrioridade(paciente)}>{rotuloPrioridade(paciente)}</Etiqueta></div><div className="grid grid-cols-2 gap-2 text-xs text-texto-suave"><span>Responsável<br /><strong className="text-tinta">{nomeProfissional(profissionais, paciente.profissionalResponsavelId)}</strong></span><span>Última consulta<br /><strong className="text-tinta">{formatarData(paciente.ultimaConsultaConcluidaEm)}</strong></span><span className="col-span-2">Próxima ação<br /><strong className="text-tinta">{proximaAcao(paciente)}</strong></span></div><div className="flex flex-wrap gap-1"><Link href={`/pacientes/${paciente.id}` as Route} className="inline-flex min-h-11 items-center px-3 text-sm font-medium text-tinta hover:bg-superficie-hover">Abrir prontuário</Link>{podeGerenciar ? <><Link href={`/pacientes/${paciente.id}/editar` as Route} className={classesBotao({ variante: 'fantasma' })} aria-label={`Editar ${paciente.nome}`}><Edit3 size={16} /></Link><Botao type="button" variante="fantasma" onClick={() => setPacienteParaArquivar(paciente)} aria-label={`Arquivar ${paciente.nome}`}><Trash2 size={16} /></Botao></> : null}</div></CartaoConteudo></Cartao>)}{!pacientes.length ? <p className="px-1 py-6 text-sm text-texto-suave">Nenhum paciente encontrado com estes filtros.</p> : null}</div>
 
       <nav className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between" aria-label="Paginação de pacientes"><p className="text-sm text-texto-suave" aria-live="polite">Página {pagina} de {totalPaginas} | {dados?.total ?? 0} pacientes</p><div className="flex gap-2"><Botao type="button" variante="secundario" onClick={() => setPagina((atual) => Math.max(1, atual - 1))} disabled={pagina <= 1 || carregando}>Anterior</Botao><Botao type="button" variante="secundario" onClick={() => setPagina((atual) => Math.min(totalPaginas, atual + 1))} disabled={pagina >= totalPaginas || carregando}>Próxima</Botao></div></nav>
 

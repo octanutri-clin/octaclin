@@ -1040,7 +1040,9 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
               <h2 className="break-words text-lg font-semibold text-tinta">{dados.paciente.nome}</h2>
               <p className="mt-1 text-sm text-texto-suave">
                 Prioridade de acompanhamento:{' '}
-                {prioridadeAcompanhamento?.valorEfetivo
+                {prioridadeAcompanhamento && prioridadeAcompanhamento.apurado === false && prioridadeAcompanhamento.valorEfetivo.origem !== 'override'
+                  ? 'Aguardando apuração'
+                  : prioridadeAcompanhamento?.valorEfetivo
                   ? rotuloFaixaPrioridadeAcompanhamento(prioridadeAcompanhamento.valorEfetivo.faixa)
                   : '-'}
                 {prioridadeAcompanhamento?.valorEfetivo?.origem === 'override' ? ' (ajustada manualmente)' : ''} -{' '}

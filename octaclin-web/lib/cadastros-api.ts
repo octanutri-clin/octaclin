@@ -13,6 +13,12 @@ export interface PacienteResumo {
   dataNascimento?: string;
   statusAdesao: string;
   scoreRisco: string;
+  prioridadeAcompanhamento?: {
+    faixa: 'baixa' | 'media' | 'alta';
+    origem: 'calculado' | 'override';
+    scoreCalculado: number | null;
+    calculadoEm: string | null;
+  } | null;
   ultimoCheckinEm?: string;
   ultimaConsultaConcluidaEm?: string;
   proximaConsultaEm?: string;

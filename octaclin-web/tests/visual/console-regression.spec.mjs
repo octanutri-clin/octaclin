@@ -84,7 +84,7 @@ async function login(page) {
         contexto: { periodo: 'hoje', inicioEm: '2026-07-22T00:00:00.000Z', fimEm: '2026-07-22T23:59:59.999Z', profissionalId: 'profissional-1', profissionalNome: 'Dra. Carla' },
         indicadores: { consultasHoje: 1, proximas: 1, concluidas: 0, reagendadas: 0, canceladas: 0, faltas: 0, semRetorno30: 1, semRetorno60: 0, semRetorno90Mais: 0, formulariosPendentes: 1, tarefasVencidas: 1, solicitacoesPendentes: 1, comunicacoesEmAlerta: 1, pacientesRiscoAlto: 1 },
         atendimentos: [{ id: 'consulta-1', pacienteId: 'paciente-1', profissionalId: 'profissional-1', pacienteNome: 'Ana Souza', inicioEm: '2026-07-22T13:00:00.000Z', fimEm: '2026-07-22T14:00:00.000Z', status: 'agendada' }],
-        semRetorno: [{ pacienteId: 'paciente-2', profissionalId: 'profissional-1', pacienteNome: 'Bruno Lima', nivelRisco: 'alto', scoreRisco: 82, diasSemRetorno: 31, faixa: '30' }],
+        semRetorno: [{ pacienteId: 'paciente-2', profissionalId: 'profissional-1', pacienteNome: 'Bruno Lima', nivelRisco: 'alto', scoreRisco: 82, prioridadeAcompanhamento: { faixa: 'alta', origem: 'calculado', scoreCalculado: 82, calculadoEm: '2026-07-21T10:00:00.000Z' }, diasSemRetorno: 31, faixa: '30' }],
         tarefasVencidas: [{ id: 'tarefa-1', pacienteId: 'paciente-1', profissionalId: 'profissional-1', pacienteNome: 'Ana Souza', titulo: 'Revisar plano alimentar', prioridade: 'alta', vencimentoEm: '2026-07-21T12:00:00.000Z' }],
         formulariosPendentes: [{ id: 'envio-1', pacienteId: 'paciente-1', profissionalId: 'profissional-1', pacienteNome: 'Ana Souza', questionarioId: 'questionario-1', respondidoEm: '2026-07-21T10:00:00.000Z' }],
         solicitacoesPendentes: [{ id: 'solicitacao-1', profissionalId: 'profissional-1', solicitanteNome: 'Marina Reis', inicioEm: '2026-07-23T14:00:00.000Z', fimEm: '2026-07-23T14:30:00.000Z', expiraEm: '2026-07-23T12:00:00.000Z' }],
@@ -950,6 +950,7 @@ async function prepararDashboardMockado(page, { googleConectado = true, habilita
         contato: '11999990000',
         statusAdesao: 'risco',
         scoreRisco: '82',
+        prioridadeAcompanhamento: { faixa: 'alta', origem: 'calculado', scoreCalculado: 82, calculadoEm: '2026-07-21T10:00:00.000Z' },
         ultimoCheckinEm: '2026-07-21T12:00:00.000Z',
         ultimaConsultaConcluidaEm: '2026-07-10T12:00:00.000Z',
         proximaConsultaEm: '2026-07-31T12:00:00.000Z',
@@ -963,10 +964,11 @@ async function prepararDashboardMockado(page, { googleConectado = true, habilita
         contato: '11988880000',
         statusAdesao: 'em_acompanhamento',
         scoreRisco: '34',
+        prioridadeAcompanhamento: { faixa: 'baixa', origem: 'calculado', scoreCalculado: 34, calculadoEm: '2026-07-21T10:00:00.000Z' },
         criadoEm: '2026-07-18T10:00:00.000Z'
       }
     ].filter((paciente) => {
-      if (parametros.get('risco') === 'alto' && Number(paciente.scoreRisco) < 70) return false;
+      if (parametros.get('risco') === 'alto' && paciente.prioridadeAcompanhamento?.faixa !== 'alta') return false;
       if (parametros.get('semProximaConsulta') === 'true' && paciente.proximaConsultaEm) return false;
       return true;
     });
@@ -2210,7 +2212,7 @@ test.describe('painel clinico profissional', () => {
         contexto: { periodo: 'hoje', inicioEm: '2026-07-22T00:00:00.000Z', fimEm: '2026-07-22T23:59:59.999Z', profissionalId: 'profissional-1', profissionalNome: 'Dra. Carla' },
         indicadores: { consultasHoje: 1, proximas: 1, concluidas: 3, reagendadas: 2, canceladas: 1, faltas: 4, semRetorno30: 1, semRetorno60: 0, semRetorno90Mais: 0, formulariosPendentes: 1, tarefasVencidas: 1, solicitacoesPendentes: 1, comunicacoesEmAlerta: 1, pacientesRiscoAlto: 1 },
         atendimentos: [{ id: 'consulta-1', pacienteId: 'paciente-1', profissionalId: 'profissional-1', pacienteNome: 'Ana Souza', inicioEm: '2026-07-22T13:00:00.000Z', fimEm: '2026-07-22T14:00:00.000Z', status: 'agendada' }],
-        semRetorno: [{ pacienteId: 'paciente-2', profissionalId: 'profissional-1', pacienteNome: 'Bruno Lima', nivelRisco: 'alto', scoreRisco: 82, diasSemRetorno: 31, faixa: '30' }],
+        semRetorno: [{ pacienteId: 'paciente-2', profissionalId: 'profissional-1', pacienteNome: 'Bruno Lima', nivelRisco: 'alto', scoreRisco: 82, prioridadeAcompanhamento: { faixa: 'alta', origem: 'calculado', scoreCalculado: 82, calculadoEm: '2026-07-21T10:00:00.000Z' }, diasSemRetorno: 31, faixa: '30' }],
         tarefasVencidas: [{ id: 'tarefa-1', pacienteId: 'paciente-1', profissionalId: 'profissional-1', pacienteNome: 'Ana Souza', titulo: 'Revisar plano alimentar', prioridade: 'alta', vencimentoEm: '2026-07-21T12:00:00.000Z' }],
         formulariosPendentes: [{ id: 'envio-1', pacienteId: 'paciente-1', profissionalId: 'profissional-1', pacienteNome: 'Ana Souza', questionarioId: 'questionario-1', respondidoEm: '2026-07-21T10:00:00.000Z' }],
         solicitacoesPendentes: [{ id: 'solicitacao-1', profissionalId: 'profissional-1', solicitanteNome: 'Marina Reis', inicioEm: '2026-07-23T14:00:00.000Z', fimEm: '2026-07-23T14:30:00.000Z', expiraEm: '2026-07-23T12:00:00.000Z' }],
@@ -2595,7 +2597,7 @@ test.describe('lista de pacientes operacional', () => {
 
     await expect(page.getByRole('heading', { name: 'Pacientes', exact: true })).toBeVisible();
     await expect(page.locator('body')).toContainText('Última consulta');
-    await expect(page.locator('body')).toContainText('Revisar risco');
+    await expect(page.locator('body')).toContainText('Revisar acompanhamento');
     await page.getByRole('button', { name: 'Alta prioridade' }).click();
     await expect(page.locator('body')).toContainText('Ana Souza');
     await expect(page.locator('body')).not.toContainText('Bruno Lima');
@@ -3639,6 +3641,25 @@ test.describe('prontuario do paciente', () => {
     await expect(secao.getByText('Baixa — ajustada manualmente')).toBeVisible();
     await expect(secao.getByText('Alta · 82 pontos')).toBeVisible();
     await assertSemOverflowHorizontal(page);
+  });
+
+  test('mostra apuração pendente no prontuário sem atribuir baixa automaticamente', async ({ page }) => {
+    await prepararProntuarioMockado(page);
+    await page.route('**/api/pacientes/paciente-1/prioridade-acompanhamento', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          pacienteId: 'paciente-1', apurado: false,
+          valorCalculado: { score: 0, faixa: 'baixa', fatores: [] },
+          valorEfetivo: { faixa: 'baixa', origem: 'calculado' }
+        })
+      });
+    });
+    await page.goto('/pacientes/paciente-1');
+    const secao = page.locator('section', { has: page.getByRole('heading', { name: 'Prioridade de acompanhamento' }) });
+    await expect(secao.getByText('Aguardando apuração').first()).toBeVisible();
+    await expect(secao.getByText('Baixa · 0 pontos')).toHaveCount(0);
   });
 
   test('permite alterar um ajuste manual ja ativo', async ({ page }) => {

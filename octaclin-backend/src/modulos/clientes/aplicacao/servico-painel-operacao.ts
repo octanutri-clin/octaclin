@@ -39,12 +39,25 @@ export interface PainelOperacaoCliente {
 }
 
 const SQL_PACIENTES = `/* pb26-pacientes */ select
-  count(*) filter (where criado_em >= ($2::date::timestamp at time zone $4)
-    and criado_em < ($3::date::timestamp at time zone $4)) as novos,
+  count(*) filter (where paciente.criado_em >= ($2::date::timestamp at time zone $4)
+    and paciente.criado_em < ($3::date::timestamp at time zone $4)) as novos,
   count(*) as ativos,
-  count(*) filter (where status_adesao = 'risco' or score_risco >= 70) as em_risco
-from pacientes
-where tenant_id = $1 and arquivado_em is null and deleted_at is null and status_ciclo_vida = 'ACTIVE'`;
+  count(*) filter (where (
+    (prioridade.override_faixa = 'alta' and prioridade.override_expira_em > now())
+    or (prioridade.faixa = 'alta'
+      and (prioridade.override_expira_em is null or prioridade.override_expira_em <= now())
+      and exists (
+        select 1 from prioridades_acompanhamento_historico historico
+        where historico.tenant_id = paciente.tenant_id
+          and historico.paciente_id = paciente.id
+          and historico.tipo_evento = 'calculo'
+      ))
+  )) as em_risco
+from pacientes paciente
+left join prioridades_acompanhamento_paciente prioridade
+  on prioridade.tenant_id = paciente.tenant_id and prioridade.paciente_id = paciente.id
+where paciente.tenant_id = $1 and paciente.arquivado_em is null and paciente.deleted_at is null
+  and paciente.status_ciclo_vida = 'ACTIVE'`;
 
 const SQL_CONSULTAS = `/* pb26-consultas */ select profissional_id, status, inicio_em, fim_em
 from agenda_consultas
