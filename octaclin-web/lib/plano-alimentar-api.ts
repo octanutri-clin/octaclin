@@ -468,11 +468,21 @@ export interface ConsultaModelos extends ConsultaPaginadaPlanos {
   origem?: OrigemModeloApi;
 }
 
+export interface EstruturaInicialPlanoApi {
+  id: string;
+  nome: string;
+  refeicoes: RefeicaoPlanoAlimentarEntrada[];
+}
+
+export interface PaginaModelosPlanoApi extends PaginaApi<ModeloPlanoAlimentarResumoApi> {
+  estruturasIniciais?: EstruturaInicialPlanoApi[];
+}
+
 // Modelos nao pertencem a um paciente: a rota vive fora de `/pacientes/:id`.
 const BASE_MODELOS = '/api/planos-alimentares/modelos';
 
 export function listarModelosPlanoAlimentar(consulta: ConsultaModelos = {}, signal?: AbortSignal) {
-  return requisitar<PaginaApi<ModeloPlanoAlimentarResumoApi>>(
+  return requisitar<PaginaModelosPlanoApi>(
     `${BASE_MODELOS}${montarConsulta({
       pagina: consulta.pagina,
       limite: consulta.limite,

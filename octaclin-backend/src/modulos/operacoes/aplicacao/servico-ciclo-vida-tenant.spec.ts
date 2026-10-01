@@ -131,7 +131,8 @@ describe('ServicoCicloVidaTenant.provisionar', () => {
       TenantConfiguracaoOrm: { create: jest.fn((entrada) => entrada), save: jest.fn(async (entrada) => entrada) },
       UsuarioOrm: { create: jest.fn((entrada) => entrada), save: jest.fn(async (entrada) => ({ id: 'usuario-novo', ...entrada })) },
       TokenRedefinicaoSenhaOrm: { create: jest.fn((entrada) => entrada), save: jest.fn(async (entrada) => ({ id: 'token-novo', ...entrada })) },
-      TemplateMensagemOrm: repositorioTemplates
+      TemplateMensagemOrm: repositorioTemplates,
+      MaterialEducativoOrm: { create: jest.fn((entrada) => entrada), save: jest.fn(async (entrada) => entrada) }
     };
     const gerenciador = {
       getRepository: jest.fn((entidade: { name: keyof typeof repositorios }) => repositorios[entidade.name]),
@@ -153,6 +154,47 @@ describe('ServicoCicloVidaTenant.provisionar', () => {
     expect(repositorioTemplates.save).toHaveBeenCalledWith(expect.objectContaining({ tenantId: tenant.id, canal: 'whatsapp', codigoExterno: 'octaclin_plano_publicado', aprovado: false }));
     expect(repositorioTemplates.save).toHaveBeenCalledWith(expect.objectContaining({ tenantId: tenant.id, canal: 'email', codigoExterno: 'octaclin_inicial_material_nao_visualizado', aprovado: false }));
     expect(repositorioTemplates.save).toHaveBeenCalledWith(expect.objectContaining({ tenantId: tenant.id, canal: 'whatsapp', codigoExterno: 'octaclin_material_nao_visualizado', aprovado: false }));
+    expect(gerenciador.query).toHaveBeenCalledWith("select set_config('app.tenant_id', $1, true)", [tenant.id]);
+  });
+
+  it('instala materiais genericos e marcador do kit apenas ao criar a clinica', async () => {
+    const tenant = { id: 'tenant-kit', nome: dados.nome, slug: dados.slug, provisionamentoReferencia: dados.referencia };
+    const repositorioMateriais = {
+      create: jest.fn((entrada) => entrada),
+      save: jest.fn(async (entrada) => entrada)
+    };
+    const repositorioConfiguracoes = {
+      create: jest.fn((entrada) => entrada),
+      save: jest.fn(async (entrada) => entrada)
+    };
+    const repositorios = {
+      TenantOrm: { findOne: jest.fn(async () => null), create: jest.fn((entrada) => entrada), save: jest.fn(async () => tenant) },
+      TenantConfiguracaoOrm: repositorioConfiguracoes,
+      UsuarioOrm: { create: jest.fn((entrada) => entrada), save: jest.fn(async (entrada) => ({ id: 'usuario-kit', ...entrada })) },
+      TokenRedefinicaoSenhaOrm: { create: jest.fn((entrada) => entrada), save: jest.fn(async (entrada) => ({ id: 'token-kit', ...entrada })) },
+      TemplateMensagemOrm: { find: jest.fn(async () => []), create: jest.fn((entrada) => entrada), save: jest.fn(async (entrada) => entrada) },
+      MaterialEducativoOrm: repositorioMateriais
+    };
+    const gerenciador = {
+      getRepository: jest.fn((entidade: { name: keyof typeof repositorios }) => repositorios[entidade.name]),
+      query: jest.fn(async () => undefined)
+    };
+    const fonteDados = { transaction: jest.fn(async (operacao) => operacao(gerenciador)) };
+    const servico = new ServicoCicloVidaTenant(fonteDados as never, {
+      gerarHashBusca: jest.fn(() => 'hash-sintetico'),
+      criptografar: jest.fn(() => Buffer.from('cifrado'))
+    } as never, { gerarHash: jest.fn(() => 'hash-senha') } as never, {} as never);
+    jest.spyOn(servico as never, 'enviarConviteProprietario').mockResolvedValue(undefined as never);
+    jest.spyOn(servico as never, 'obterResumo').mockResolvedValue({ ...tenant, planoId: 'clinica', assinaturaStatus: 'ativa' } as never);
+
+    await servico.provisionar(dados, 'operador-1');
+
+    expect(repositorioMateriais.save).toHaveBeenCalledWith(expect.arrayContaining([
+      expect.objectContaining({ tenantId: tenant.id, criadoPorUsuarioId: 'usuario-kit', tipo: 'orientacao', ativo: true })
+    ]));
+    expect(repositorioConfiguracoes.save).toHaveBeenCalledWith(expect.objectContaining({
+      tenantId: tenant.id, chave: 'kit_inicial_clinica', valor: { versao: 1 }
+    }));
     expect(gerenciador.query).toHaveBeenCalledWith("select set_config('app.tenant_id', $1, true)", [tenant.id]);
   });
 

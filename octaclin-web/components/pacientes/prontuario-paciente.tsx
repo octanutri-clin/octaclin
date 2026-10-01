@@ -306,6 +306,7 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
   const [formularioEvolucao, setFormularioEvolucao] = useState<FormularioEvolucao>(formularioEvolucaoInicial);
   const [formularioTarefa, setFormularioTarefa] = useState<FormularioTarefa>(formularioTarefaInicial);
   const [formularioMaterial, setFormularioMaterial] = useState<FormularioMaterial>(formularioMaterialInicial);
+  const [materialBaseId, setMaterialBaseId] = useState('');
   const [formularioEnvioMaterial, setFormularioEnvioMaterial] = useState<FormularioEnvioMaterial>(formularioEnvioMaterialInicial);
   const [abaAtiva, setAbaAtiva] = useState<AbaProntuario>('resumo');
   const [historicoSolicitado, setHistoricoSolicitado] = useState(false);
@@ -558,6 +559,7 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
         conteudo: formularioMaterial.conteudo.trim() || undefined
       });
       setFormularioMaterial(formularioMaterialInicial);
+      setMaterialBaseId('');
       setFormularioEnvioMaterial((atual) => ({ ...atual, materialId: material.id }));
       setSucesso('Material salvo na biblioteca.');
       setMateriais(await listarMateriais());
@@ -1579,6 +1581,32 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
         </div>
 
         {podeCriarMaterial ? <form onSubmit={registrarMaterial} className="grid gap-3">
+          <label className="grid gap-1 text-xs font-semibold text-texto-suave">
+            Copiar material da biblioteca
+            <select
+              className="h-10 rounded-md border border-linha bg-white px-3 text-sm font-normal text-tinta"
+              value={materialBaseId}
+              onChange={(evento) => {
+                const material = materiais.find((item) => item.id === evento.target.value);
+                setMaterialBaseId(evento.target.value);
+                if (!material) {
+                  setFormularioMaterial(formularioMaterialInicial);
+                } else setFormularioMaterial({
+                  titulo: material.titulo,
+                  tipo: material.tipo,
+                  categoria: material.categoria ?? '',
+                  url: material.url ?? '',
+                  resumo: material.resumo ?? '',
+                  conteudo: material.conteudo ?? ''
+                });
+              }}
+              disabled={!materiais.length || salvandoMaterial}
+            >
+              <option value="">Começar um material novo</option>
+              {materiais.map((material) => <option key={material.id} value={material.id}>{material.titulo}</option>)}
+            </select>
+            <span className="font-normal normal-case">Ao salvar, será criado outro material. O original e os envios anteriores não mudam.</span>
+          </label>
           <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_160px_180px]">
             <label className="grid gap-1 text-xs font-semibold text-texto-suave">
               Título do material
@@ -1595,7 +1623,12 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
               <select
                 className="h-10 rounded-md border border-linha bg-white px-3 text-sm font-normal text-tinta"
                 value={formularioMaterial.tipo}
-                onChange={(evento) => setFormularioMaterial((atual) => ({ ...atual, tipo: evento.target.value as TipoMaterialEducativoApi }))}
+                onChange={(evento) => setFormularioMaterial((atual) => ({
+                  ...atual,
+                  tipo: evento.target.value as TipoMaterialEducativoApi,
+                  url: evento.target.value === 'orientacao' ? '' : atual.url,
+                  conteudo: evento.target.value === 'orientacao' ? atual.conteudo : ''
+                }))}
               >
                 <option value="link">Link</option>
                 <option value="pdf_url">PDF por URL</option>
@@ -1612,7 +1645,7 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
               />
             </label>
           </div>
-          <label className="grid gap-1 text-xs font-semibold text-texto-suave">
+          {formularioMaterial.tipo !== 'orientacao' ? <label className="grid gap-1 text-xs font-semibold text-texto-suave">
             URL do material
             <input
               className="h-10 rounded-md border border-linha px-3 text-sm font-normal text-tinta"
@@ -1620,7 +1653,16 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
               onChange={(evento) => setFormularioMaterial((atual) => ({ ...atual, url: evento.target.value }))}
               maxLength={1000}
             />
-          </label>
+          </label> : <label className="grid gap-1 text-xs font-semibold text-texto-suave">
+            Conteúdo da orientação
+            <textarea
+              className="min-h-[120px] rounded-md border border-linha px-3 py-2 text-sm font-normal text-tinta"
+              value={formularioMaterial.conteudo}
+              onChange={(evento) => setFormularioMaterial((atual) => ({ ...atual, conteudo: evento.target.value }))}
+              maxLength={6000}
+              required
+            />
+          </label>}
           <label className="grid gap-1 text-xs font-semibold text-texto-suave">
             Resumo do material
             <textarea

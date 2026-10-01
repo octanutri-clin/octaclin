@@ -3458,6 +3458,40 @@ test.describe('prontuario do paciente', () => {
     await assertSemOverflowHorizontal(page);
   });
 
+  test('copia material inicial para editar sem alterar o material original', async ({ page }) => {
+    await prepararProntuarioMockado(page);
+    const original = {
+      id: 'material-inicial-1', tenantId: 'tenant-1', criadoPorUsuarioId: 'cliente-1',
+      titulo: 'Como usar o portal', tipo: 'orientacao', categoria: 'Uso do portal',
+      resumo: 'Orientação inicial.', conteudo: 'Texto original.', ativo: true,
+      criadoEm: '2026-09-01T00:00:00.000Z', atualizadoEm: '2026-09-01T00:00:00.000Z'
+    };
+    let criado = null;
+    await page.route('**/api/materiais', async (route) => {
+      if (route.request().method() === 'POST') {
+        criado = route.request().postDataJSON();
+        await route.fulfill({ status: 201, contentType: 'application/json', body: JSON.stringify({
+          ...criado, id: 'material-copia-1', tenantId: 'tenant-1', criadoPorUsuarioId: 'profissional-1', ativo: true
+        }) });
+        return;
+      }
+      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([
+        original, ...(criado ? [{ ...criado, id: 'material-copia-1' }] : [])
+      ]) });
+    });
+
+    await page.goto('/pacientes/paciente-1?area=plano&aba=materiais');
+    await page.getByLabel('Copiar material da biblioteca').selectOption(original.id);
+    await expect(page.getByLabel('Título do material')).toHaveValue(original.titulo);
+    await expect(page.getByLabel('Conteúdo da orientação')).toHaveValue(original.conteudo);
+    await page.getByLabel('Título do material').fill('Como usar o portal da clínica');
+    await page.getByLabel('Conteúdo da orientação').fill('Texto adaptado pela clínica.');
+    await page.getByRole('button', { name: 'Salvar material' }).click();
+    await expect.poll(() => criado?.conteudo).toBe('Texto adaptado pela clínica.');
+    expect(original.conteudo).toBe('Texto original.');
+    await expect(page.getByText('Material salvo na biblioteca.')).toBeVisible();
+  });
+
   test('envia, confirma e exclui anexo clinico', async ({ page }) => {
     await prepararProntuarioMockado(page);
     await page.goto('/pacientes/paciente-1');

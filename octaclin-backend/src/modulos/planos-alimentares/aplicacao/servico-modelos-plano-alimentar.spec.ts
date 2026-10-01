@@ -5,6 +5,7 @@ import { ExecutorTenant } from '../../../infraestrutura/banco-dados/executor-ten
 import { CriptografiaDadosSensiveis } from '../../../infraestrutura/seguranca/criptografia-dados-sensiveis';
 import { UsuarioAutenticado } from '../../auth/dominio/usuario-autenticado';
 import { ProfissionalOrm } from '../../profissionais/infraestrutura/profissional.orm';
+import { TenantConfiguracaoOrm } from '../../tenancy/infraestrutura/tenant-configuracao.orm';
 import { AlimentoComposicaoOrm } from '../infraestrutura/alimento-composicao.orm';
 import { FonteComposicaoAlimentoOrm } from '../infraestrutura/fonte-composicao-alimento.orm';
 import { ModeloPlanoAlimentarOrm } from '../infraestrutura/modelo-plano-alimentar.orm';
@@ -104,6 +105,7 @@ describe('ServicoModelosPlanoAlimentar', () => {
       { id: PROFISSIONAL_ID, tenantId: TENANT_ID, usuarioId: USUARIO_ID, arquivadoEm: undefined }
     ]));
     repositorios.set(ModeloPlanoAlimentarOrm, criarRepositorio());
+    repositorios.set(TenantConfiguracaoOrm, criarRepositorio());
     repositorios.set(AlimentoComposicaoOrm, criarRepositorio([
       { id: ALIMENTO_ID, fonteId: FONTE_ID, nome: 'Pao frances' }
     ]));
@@ -190,6 +192,37 @@ describe('ServicoModelosPlanoAlimentar', () => {
   });
 
   describe('listar', () => {
+    it('oferece estruturas vazias apenas ao tenant que recebeu o kit, sem contá-las como modelos', async () => {
+      repositorios.get(TenantConfiguracaoOrm)!.registros.push({
+        tenantId: TENANT_ID, chave: 'kit_inicial_clinica', valor: { versao: 1 }
+      });
+      const pagina = await servico.listar(TENANT_ID, usuarioProfissional());
+      expect(pagina.total).toBe(0);
+      expect(pagina.itens).toEqual([]);
+      expect(pagina.estruturasIniciais.length).toBeGreaterThan(0);
+      for (const estrutura of pagina.estruturasIniciais) {
+        expect(estrutura.refeicoes.length).toBeGreaterThan(0);
+        expect(estrutura.refeicoes.every((refeicao) => refeicao.itens.length === 0)).toBe(true);
+        expect(JSON.stringify(estrutura)).not.toMatch(/alimentoComposicaoId|quantidade|porcaoGramas/);
+      }
+    });
+
+    it('nao mostra estruturas a tenant antigo ou com marcador de outro tenant', async () => {
+      repositorios.get(TenantConfiguracaoOrm)!.registros.push({
+        tenantId: '20000000-0000-4000-8000-000000000001', chave: 'kit_inicial_clinica', valor: { versao: 1 }
+      });
+      expect((await servico.listar(TENANT_ID, usuarioProfissional())).estruturasIniciais).toEqual([]);
+    });
+
+    it('nega o kit a usuario sem permissao de ler planos', async () => {
+      repositorios.get(TenantConfiguracaoOrm)!.registros.push({
+        tenantId: TENANT_ID, chave: 'kit_inicial_clinica', valor: { versao: 1 }
+      });
+      await expect(servico.listar(TENANT_ID, { ...usuarioProfissional(), permissoes: [] }))
+        .rejects.toBeInstanceOf(ForbiddenException);
+      expect(repositorios.get(TenantConfiguracaoOrm)!.findOne).not.toHaveBeenCalled();
+    });
+
     it('pagina e devolve resumo sem descriptografar o conteudo', async () => {
       await servico.criar(TENANT_ID, usuarioProfissional(), {
         nome: 'Plano padrao',

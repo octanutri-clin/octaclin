@@ -15,6 +15,7 @@ import { TenantConfiguracaoOrm } from '../../tenancy/infraestrutura/tenant-confi
 import { TenantOrm } from '../../tenancy/infraestrutura/tenant.orm';
 import { UsuarioOrm } from '../../usuarios/infraestrutura/usuario.orm';
 import { AtualizarCicloVidaTenantDto, ProvisionarTenantDto } from './dtos-ciclo-vida-tenant';
+import { instalarKitInicialClinica } from './kit-inicial-clinica';
 
 const CHAVE_CONTA_CLIENTE = 'conta_cliente';
 const CHAVE_PLANO_SAAS = 'plano_saas';
@@ -199,6 +200,7 @@ export class ServicoCicloVidaTenant {
           ativo: true
         })
         );
+        await instalarKitInicialClinica(gerenciador, tenant.id, usuario.id);
 
         const tokenBruto = `${tenant.id}.${randomBytes(32).toString('base64url')}`;
         const expiraEm = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
