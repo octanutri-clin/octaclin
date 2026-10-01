@@ -32,6 +32,11 @@
     "performance:backend": "ts-node src/infraestrutura/performance/benchmark-backend.ts",
     "catalogo:taco:gerar": "ts-node scripts/importar-catalogo-taco.ts",
     "catalogo:taco:carregar": "ts-node scripts/carregar-catalogo-taco.ts",
+    "catalogo:usda:gerar": "ts-node scripts/gerar-catalogo-usda-fdc.ts",
+    "catalogo:usda:carregar": "ts-node scripts/carregar-catalogo-usda-fdc.ts",
+    "catalogo:ibge:pof:converter": "python scripts/gerar-catalogo-ibge-pof.py",
+    "catalogo:ibge:pof:gerar": "ts-node scripts/gerar-catalogo-ibge-pof.ts",
+    "catalogo:ibge:pof:carregar": "ts-node scripts/carregar-catalogo-ibge-pof.ts",
     "gmail:oauth-token": "node scripts/gmail-oauth-token.mjs",
     "mock:api": "node scripts/api-demo-local.mjs"
   },

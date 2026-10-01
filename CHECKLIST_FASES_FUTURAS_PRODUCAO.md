@@ -1,6 +1,6 @@
 # OctaClin - Checklist vivo de fases futuras ate producao
 
-Atualizado em 2026-10-01. Fase 296 integrada pelo PR #353 (merge `ccd1c0bb`); o proprietário informou aplicação da migration 1059, sem confirmação direta de ambiente/banco. Fase 297 integrada pelo PR #355 (merge `4f51b0ac`); Fase 298 implementada nesta branch, aguardando integração; Fases 256 a 261, 263 a 297 integradas; Fase 284
+Atualizado em 2026-10-01. Fase 296 integrada pelo PR #353 (merge `ccd1c0bb`); o proprietário informou aplicação da migration 1059, sem confirmação direta de ambiente/banco. Fase 297 integrada pelo PR #355 (merge `4f51b0ac`); Fase 298 integrada pelo PR #356 (merge `b00151ae`), e o proprietário informou aplicação da migration 1060; Fase 299 em implementação nesta branch, com migration 1061 pendente; Fases 256 a 261, 263 a 298 integradas; Fase 284
 (PB-22) foi integrada pelo PR #320 (merge `af839c5`, 19 checks `SUCCESS` e
 `Provenance do SBOM` `SKIPPED`). Fase 285 (PB-20) foi integrada pelo PR #321
 (merge `01d6bf1`). Fase 286 concluida pelo PR #322 (merge `c92f246`). A reconciliação completa do backlog da auditoria e a
@@ -4471,14 +4471,18 @@ auditoria estão ordenados na seção 15 de
   Sem carga de alimentos, envio automático ou migration nova. Integrada pelo
   PR #355 (merge `4f51b0ac`); sem verificação direta de produção neste ciclo.
   Plano em `docs/history/phases/PLANO_FASE_297.md`.
-- [~] Fase 298 - edição de modelos de plano com histórico cifrado imutável,
-  consulta e restauração como nova revisão. Implementação concluída nesta branch;
-  Commit de implementação `84b3030b`; aguardando integração. Migration aditiva 1060 criada e testada localmente, sem
-  aplicação externa neste ciclo; prova PostgreSQL/RLS depende do CI. A edição inclui
-  nome, refeições, alimentos, alternativas, porções e decisões de liberação/preferência,
-  com busca no catálogo existente. Catálogos USDA, TACO, IBGE e TBCA ficam para a
-  proposta de Fase 299, após validar origem e direitos de uso.
-  Plano em `docs/history/phases/PLANO_FASE_298.md`.
+- [x] Fase 298 - edição de modelos com histórico cifrado imutável, consulta e
+  restauração como nova revisão. Integrada pelo PR #356 (merge `b00151ae`);
+  o proprietário informou a aplicação da migration 1060, sem confirmação direta
+  do ambiente/banco nesta reconciliação. Plano em
+  `docs/history/phases/PLANO_FASE_298.md`.
+- [~] Fase 299 - implementação local concluída nesta branch: catálogo multifonte USDA FoodData Central offline e IBGE POF
+  2008–2009 local, mantendo TACO e sem TBCA. Conversores independentes, busca com
+  origem/versionamento visíveis, dados originais/metadados preservados, cargas
+  versionadas/idempotentes e migration 1061 para oito casas decimais.
+  Testes focados, typechecks, lint, conversor Python, scan de secrets e diff check
+  concluídos localmente. A migration 1061, CI e cargas externas continuam pendentes.
+  Plano em `docs/history/phases/PLANO_FASE_299.md`.
 
 O programa de hardening
 PR 36-56 permanece como trilha separada --

@@ -971,6 +971,54 @@ describe('ServicoPlanosAlimentares', () => {
     ]);
   });
 
+  it('expõe a identificação IBGE, código externo e metadados de origem no resultado de busca', async () => {
+    const FONTE_IBGE = '10000000-0000-4000-8000-000000000045';
+    repositorios.get(FonteComposicaoAlimentoOrm)!.registros.push({
+      id: FONTE_IBGE,
+      codigo: 'ibge_pof_2008_2009',
+      nome: 'IBGE — POF 2008–2009: Tabelas de Composição Nutricional',
+      versao: 'pof-2008-2009-2011-v1',
+      baseCodigo: 'pof-2008-2009-composicao',
+      situacao: 'ativa'
+    });
+    repositorios.get(AlimentoComposicaoOrm)!.registros.push({
+      id: '10000000-0000-4000-8000-000000000046',
+      fonteId: FONTE_IBGE,
+      codigoOrigem: '6300701:2',
+      nome: 'MILHO (EM GRAO)',
+      preparacao: 'COZIDO(A)',
+      baseGramas: '100',
+      energiaKcal: '160.141',
+      proteinasG: '3.32',
+      carboidratosG: '25.11',
+      lipidiosG: '7.178',
+      micronutrientes: {
+        metadadosOrigem: {
+          codigoAlimento: '6300701',
+          codigoPreparacao: '2',
+          referenciaCodigo: '1',
+          referenciaDescricao: 'Fonte de referência sintetizada'
+        }
+      }
+    });
+
+    const resultado = await servico.buscarAlimentos(TENANT_ID, usuarioProfissional(), {
+      busca: 'milho', pagina: 1, limite: 20, fonteCodigo: 'ibge_pof_2008_2009'
+    });
+
+    expect(resultado.fontes).toContainEqual(expect.objectContaining({
+      codigo: 'ibge_pof_2008_2009',
+      versao: 'pof-2008-2009-2011-v1',
+      baseCodigo: 'pof-2008-2009-composicao'
+    }));
+    expect(resultado.itens).toEqual([expect.objectContaining({
+      codigoOrigem: '6300701:2',
+      preparacao: 'COZIDO(A)',
+      metadadosOrigem: expect.objectContaining({ codigoAlimento: '6300701', codigoPreparacao: '2' }),
+      fonte: expect.objectContaining({ codigo: 'ibge_pof_2008_2009', nome: expect.stringContaining('IBGE'), versao: 'pof-2008-2009-2011-v1' })
+    })]);
+  });
+
   it('escapa curinga do like para o termo do profissional nao virar busca ampla', async () => {
     repositorios.get(FonteComposicaoAlimentoOrm)!.registros.push({
       id: '10000000-0000-4000-8000-000000000051',

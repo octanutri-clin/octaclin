@@ -4,6 +4,16 @@ Atualizado em 2026-10-01.
 
 ## Fase ativa
 
+- Fase 298 concluida e integrada pelo PR #356 (merge `b00151ae`, confirmado no GitHub em
+  2026-10-01); o proprietário informou que aplicou a migration 1060. Esta
+  reconciliação não consultou banco externo.
+- Fase 299 implementada nesta branch `feat/fase299-catalogos-alimentares`:
+  catálogo multifonte com TACO existente, USDA FoodData Central offline e IBGE
+  POF 2008–2009 por conversores/importadores separados. Migration 1061 amplia a
+  precisão numérica; não foi aplicada. Nenhuma carga foi executada em banco.
+  Testes/gates locais e PR ainda precisam ser concluídos. Plano em
+  `docs/history/phases/PLANO_FASE_299.md`.
+
 - Fase 295 / PB-28 integrada pelo PR #349 (merge `a54e52c9`, confirmado no GitHub em 2026-09-30).
   Conversa segura no portal e fila interna com SLA por clínica. O proprietário informou que as
   migrations anteriores foram aplicadas; este ciclo não verificou produção diretamente.
@@ -17,12 +27,10 @@ Atualizado em 2026-10-01.
   automaticamente apenas ao provisionar clínicas novas. O profissional completa
   e revisa as refeições antes de salvar. Sem catálogo alimentar novo, envio
   automático ou migration. Plano em `docs/history/phases/PLANO_FASE_297.md`.
-- Fase 298 implementada na branch `feat/fase298-edicao-modelos-plano`, aguardando integração:
-  edição estruturada de modelos, histórico cifrado imutável, consulta e restauração
-  como nova revisão. Migration 1060 testada localmente, sem aplicação externa neste
-  ciclo; RLS PostgreSQL depende do CI. A próxima proposta após integração é a Fase
-  299 para expansão validada dos catálogos alimentares. Plano e resultados em
-  `docs/history/phases/PLANO_FASE_298.md`.
+- Fase 298: edição estruturada de modelos, histórico cifrado imutável, consulta e
+  restauração como nova revisão. Migration 1060 integrada no PR #356 e aplicação
+  relatada pelo proprietário; RLS PostgreSQL depende dos gates integrados. Plano
+  em `docs/history/phases/PLANO_FASE_298.md`.
 
 ## Remediacao ativa de supply chain
 

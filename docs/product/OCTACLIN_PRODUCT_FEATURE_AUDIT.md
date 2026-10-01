@@ -612,7 +612,7 @@ de esgotar a versão determinística de cada um.
 
 ### Estado do backlog verificado em 2026-10-01
 
-Os estados abaixo foram cruzados com PRs merged e, para itens sem PR identificável, com o código. PRs #319 a #324, #343 a #349, #353 e #355 foram integrados; a Fase 296 foi integrada pelo PR #353 (merge `ccd1c0bb`) e a Fase 297 pelo PR #355 (merge `4f51b0ac`). A Fase 298 está implementada nesta branch e aguarda integração; migration 1060 não aplicada externamente neste ciclo. Relatos do proprietário sobre ambientes externos não foram tratados como verificação direta nesta reconciliação.
+Os estados abaixo foram cruzados com PRs merged e, para itens sem PR identificável, com o código. PRs #319 a #324, #343 a #349, #353, #355 e #356 foram integrados; a Fase 296 foi integrada pelo PR #353, a Fase 297 pelo PR #355 e a Fase 298 pelo PR #356 (merge `b00151ae`, em 2026-10-01). O proprietário informou a aplicação da migration 1060; esta reconciliação não identificou o ambiente nem consultou o banco. A Fase 299 está implementada nesta branch, sem PR aberto: migration 1061 e carga dos catálogos não foram executadas externamente.
 
 | PB | Estado e evidência |
 |---|---|
@@ -640,7 +640,7 @@ Os estados abaixo foram cruzados com PRs merged e, para itens sem PR identificá
 | PB-29 | **Concluído no código** — Fase 283, PR #319 integrado (merge `19ade15` em 2026-09-27). Não há evidência de produção nesta reconciliação. |
 | PB-30 | **Pendente** — extração assistida de exames não foi encontrada; PB-17 entrega a estrutura determinística e é dependência já concluída. |
 
-PB-30 segue sem ordem aprovada na tabela original. PB-20 e Fases 286 a 297 foram integrados. A aplicação da migration 1059 foi relatada pelo proprietário, sem prova direta ou ambiente identificado neste ciclo. A Fase 297 cobre parte do kit inicial sem catálogo alimentar; a Fase 298 implementa a edição versionada dos modelos nesta branch, sem PR mergeado nem aplicação externa da migration 1060. A próxima proposta é a Fase 299 para ampliar o catálogo alimentar após validar origem, licença, versão, unidades, equivalências, atualização e disponibilidade por ambiente. As demais automações da seção 7 e a fórmula geral do score continuam em aberto.
+PB-30 segue sem ordem aprovada na tabela original. PB-20 e Fases 286 a 298 foram integrados. O proprietário informou aplicação das migrations 1059 e 1060, sem prova direta de ambiente nesta reconciliação. A Fase 297 cobre parte do kit inicial sem catálogo alimentar; a Fase 298 implementou edição versionada dos modelos. A Fase 299 nesta branch prepara TACO existente, USDA FoodData Central offline e IBGE POF 2008–2009 como fontes independentes, com importações versionadas e sem mesclagem automática; migration 1061, carga externa e CI ainda não foram concluídas. TBCA permanece fora do escopo, e a ativação do IBGE depende de referência operacional para a autorização documentada confirmada pelo proprietário. As demais automações da seção 7 e a fórmula geral do score continuam em aberto.
 
 ---
 

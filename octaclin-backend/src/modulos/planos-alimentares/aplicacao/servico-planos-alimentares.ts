@@ -657,6 +657,7 @@ export class ServicoPlanosAlimentares {
         codigoOrigem: alimento.codigoOrigem,
         nome: alimento.nome,
         preparacao: alimento.preparacao,
+        metadadosOrigem: alimento.micronutrientes?.metadadosOrigem ?? {},
         nutrientesPor100g: this.obterNutrientesCatalogo(alimento, false),
         disponivelParaCalculo: this.composicaoEssencialCatalogoCompleta(alimento),
         fonte: fontePorId.has(alimento.fonteId)

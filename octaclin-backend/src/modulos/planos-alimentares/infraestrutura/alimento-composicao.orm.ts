@@ -28,22 +28,22 @@ export class AlimentoComposicaoOrm {
   @Column({ name: 'base_gramas', type: 'numeric', precision: 12, scale: 3, default: 100 })
   baseGramas: string;
 
-  @Column({ name: 'energia_kcal', type: 'numeric', precision: 12, scale: 4, nullable: true })
+  @Column({ name: 'energia_kcal', type: 'numeric', precision: 16, scale: 8, nullable: true })
   energiaKcal?: string;
 
-  @Column({ name: 'proteinas_g', type: 'numeric', precision: 12, scale: 4, nullable: true })
+  @Column({ name: 'proteinas_g', type: 'numeric', precision: 16, scale: 8, nullable: true })
   proteinasG?: string;
 
-  @Column({ name: 'carboidratos_g', type: 'numeric', precision: 12, scale: 4, nullable: true })
+  @Column({ name: 'carboidratos_g', type: 'numeric', precision: 16, scale: 8, nullable: true })
   carboidratosG?: string;
 
-  @Column({ name: 'lipidios_g', type: 'numeric', precision: 12, scale: 4, nullable: true })
+  @Column({ name: 'lipidios_g', type: 'numeric', precision: 16, scale: 8, nullable: true })
   lipidiosG?: string;
 
-  @Column({ name: 'fibras_g', type: 'numeric', precision: 12, scale: 4, nullable: true })
+  @Column({ name: 'fibras_g', type: 'numeric', precision: 16, scale: 8, nullable: true })
   fibrasG?: string;
 
-  @Column({ name: 'sodio_mg', type: 'numeric', precision: 12, scale: 4, nullable: true })
+  @Column({ name: 'sodio_mg', type: 'numeric', precision: 16, scale: 8, nullable: true })
   sodioMg?: string;
 
   @Column({ type: 'jsonb', default: {} })
