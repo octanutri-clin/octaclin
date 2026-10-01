@@ -32,7 +32,6 @@ interface FormularioPacienteEstado {
   contato: string;
   dataNascimento: string;
   statusAdesao: StatusPaciente;
-  scoreRisco: string;
 }
 
 const formularioInicial: FormularioPacienteEstado = {
@@ -41,7 +40,6 @@ const formularioInicial: FormularioPacienteEstado = {
   contato: '',
   dataNascimento: '',
   statusAdesao: 'novo',
-  scoreRisco: '0'
 };
 
 function estadoDoPaciente(paciente: PacienteResumo): FormularioPacienteEstado {
@@ -50,8 +48,7 @@ function estadoDoPaciente(paciente: PacienteResumo): FormularioPacienteEstado {
     nome: paciente.nome,
     contato: paciente.contato ?? '',
     dataNascimento: paciente.dataNascimento ?? '',
-    statusAdesao: paciente.statusAdesao as StatusPaciente,
-    scoreRisco: String(Number(paciente.scoreRisco).toFixed(1))
+    statusAdesao: paciente.statusAdesao as StatusPaciente
   };
 }
 
@@ -64,7 +61,6 @@ function montarPayload(formulario: FormularioPacienteEstado, editando: boolean):
   };
   if (editando) {
     payload.statusAdesao = formulario.statusAdesao;
-    payload.scoreRisco = Number(formulario.scoreRisco || 0);
   }
   return payload;
 }
@@ -255,7 +251,7 @@ export function FormularioPaciente({ pacienteId }: FormularioPacienteProps) {
             <section aria-labelledby="paciente-operacao" className="grid gap-3 border-t border-linha pt-5">
               <div>
                 <h2 id="paciente-operacao" className="text-base font-semibold text-tinta">Responsável e acompanhamento</h2>
-                <p className="mt-1 text-sm text-texto-suave">Defina quem acompanha o paciente. Situação e risco ficam disponíveis na edição.</p>
+                <p className="mt-1 text-sm text-texto-suave">Defina quem acompanha o paciente. A prioridade é calculada pelo sistema e pode ser ajustada no prontuário.</p>
               </div>
               <div className="grid gap-3 md:grid-cols-2">
                 <div className="grid gap-1">
@@ -271,12 +267,6 @@ export function FormularioPaciente({ pacienteId }: FormularioPacienteProps) {
                     <Selecao id="paciente-situacao" value={formulario.statusAdesao} onChange={(evento) => setFormulario((atual) => ({ ...atual, statusAdesao: evento.target.value as StatusPaciente }))}>
                       <option value="novo">Novo</option><option value="aderente">Aderente</option><option value="em_acompanhamento">Em acompanhamento</option><option value="risco">Requer atenção</option><option value="inativo">Inativo</option>
                     </Selecao>
-                  </div>
-                ) : null}
-                {editando ? (
-                  <div className="grid gap-1">
-                    <Rotulo htmlFor="paciente-risco">Indicador de risco (0 a 100)</Rotulo>
-                    <Campo id="paciente-risco" type="number" min={0} max={100} step={0.1} value={formulario.scoreRisco} onChange={(evento) => setFormulario((atual) => ({ ...atual, scoreRisco: evento.target.value }))} />
                   </div>
                 ) : null}
               </div>

@@ -314,6 +314,15 @@ describe('ServicoDashboardClinico', () => {
     ]);
 
     const gerenciador = {
+      query: jest.fn(async (_sql: string, parametros: [string, string[]]) =>
+        parametros[1].includes('paciente-risco')
+          ? [{
+              paciente_id: 'paciente-risco', score: 75, faixa: 'alta',
+              override_faixa: null, override_expira_em: null,
+              calculado_em: diasAntes(1), possui_calculo: true
+            }]
+          : []
+      ),
       getRepository: jest.fn((entidade: Function) => {
         const dados = registros.get(entidade) ?? [];
         return {
@@ -399,6 +408,20 @@ describe('ServicoDashboardClinico', () => {
     );
     expect(resumo.alertas.map((item) => item.tipo)).not.toContain('tarefa_vencida');
     expect(resumo.alertas.map((item) => item.tipo)).toContain('formulario_pendente');
+  });
+
+  it('nao promove score e situacao manuais quando falta apuracao da prioridade', async () => {
+    const semCalculo = (registros.get(PacienteOrm) as PacienteOrm[]).find((item) => item.id === 'paciente-60')!;
+    semCalculo.scoreRisco = '99';
+    semCalculo.statusAdesao = 'risco';
+
+    const resumo = await servico.obterResumo('tenant-1', { periodo: 'hoje' }, profissionalUm);
+
+    expect(resumo.semRetorno.find((item) => item.pacienteId === 'paciente-60')?.prioridadeAcompanhamento).toBeNull();
+    expect(resumo.semRetorno[0]).not.toHaveProperty('scoreRisco');
+    expect(resumo.semRetorno[0]).not.toHaveProperty('nivelRisco');
+    expect(resumo.indicadores.pacientesRiscoAlto).toBe(1);
+    expect(resumo.alertas.filter((item) => item.tipo === 'sem_retorno_risco_alto')).toHaveLength(1);
   });
 
   it('recusa papeis nao autorizados mesmo se a guarda HTTP for contornada', async () => {

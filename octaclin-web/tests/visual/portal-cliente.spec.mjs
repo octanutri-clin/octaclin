@@ -468,7 +468,7 @@ test.describe('portal do cliente', () => {
     await page.getByRole('tab', { name: 'Operação' }).click();
     const painel = page.getByRole('tabpanel', { name: 'Operação' });
     await expect(painel.getByRole('heading', { name: 'Operação da clínica' })).toBeVisible();
-    await expect(painel.getByText('Pacientes em risco')).toBeVisible();
+    await expect(painel.getByText('Alta prioridade de acompanhamento')).toBeVisible();
     await expect(painel.getByRole('row', { name: /Profissional Exemplo/ })).toBeVisible();
     await expect(painel.getByText('50%')).toBeVisible();
     await expect(painel.getByText('tenant-1')).toHaveCount(0);

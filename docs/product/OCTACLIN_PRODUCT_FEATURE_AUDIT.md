@@ -20,13 +20,18 @@ código antes de entrar aqui; onde a conferência corrigiu o achado, o texto reg
    209 rotas BFF, 31 páginas, 9 jobs. O prontuário tem 6 áreas e 15 abas (`octaclin-web/components/pacientes/estrutura-prontuario.ts:20-35`).
    Há capacidade construída e paga que não chega ao usuário final.
 
-2. **Toda a priorização clínica do produto roda sobre um número que ninguém calcula.** `[F]` `score_risco`
+2. **Achado original, superado em parte pelas Fases 265 e 300.** Na fotografia inicial, `score_risco`
    nasce `'0'` (`servico-pacientes.ts:131`), só muda por digitação manual num campo numérico do formulário
    (`octaclin-web/components/cadastros/formulario-paciente.tsx:279`) e **não existe nenhuma rotina de cálculo no
    repositório**. Ainda assim ele decide o nível de risco do dashboard (`servico-dashboard-clinico.ts:394-400,955-957`),
    os filtros da lista de pacientes (`servico-pacientes.ts:563-571`), o alvo do recall
    (`automacoes/dominio/recall-inatividade.ts:124`) e o status exposto na API pública (`servico-api-publica.ts:83`).
-   É o achado de maior alavancagem da auditoria.
+   Era o achado de maior alavancagem da auditoria. A Fase 265 implementou a
+   prioridade operacional calculada; a Fase 300, nesta branch, migra lista,
+   filtros, dashboard e painel para essa prioridade. O recall atual seleciona
+   por inatividade e situação de adesão, sem ler `score_risco`. A API pública atual não expõe `scoreRisco` nem passará a expor a
+   prioridade, por decisão do proprietário. O campo legado segue armazenado
+   somente para compatibilidade e retirada posterior.
 
 3. **O motor de automações é uma vitrine.** `[F]` A interface oferece 4 gatilhos e 3 ações
    (`painel-automacoes.tsx:384-387,477-479`); só `paciente.inativo` tem executor, e o worker **apenas grava as
@@ -181,7 +186,7 @@ explícita e sem lacuna funcional evidente.
 | Perfil de cadastro | Tags/origem/categoria dentro de blob cifrado | Segmentação impossível sem migration | Campo pesquisável protegido + filtro | Médio | M | **P3** |
 | Notificações in-app | Sem preferência, por polling | Fadiga de notificação | Preferência por usuário + digest | Médio | M | **P2** |
 | Templates de mensagem | Sem biblioteca inicial na auditoria original | Clínica nova começa vazia | Conjunto inicial + edição + preview; implementação da Fase 284 em revisão | Médio | P | **P2** |
-| Modelos de plano | **Edição versionada implementada na Fase 298 nesta branch; integração e migration 1060 pendentes** | Corrigir exigia recriar | `PUT` com histórico cifrado imutável, conflito otimista e restauração como nova revisão | Baixo | P | **P2** |
+| Modelos de plano | **Edição versionada integrada pelo PR #356; aplicação da 1060 informada pelo proprietário** | Corrigir exigia recriar | `PUT` com histórico cifrado imutável, conflito otimista e restauração como nova revisão | Baixo | P | **P2** |
 | API pública | Só papel `Client` | Nutricionista não alcança | Rever papel/permissão | Baixo | P | **P3** |
 | Catálogo TACO | Carga manual por script | Ambiente novo nasce vazio | Carga versionada no provisionamento | Médio | M | **P3** |
 
@@ -612,11 +617,11 @@ de esgotar a versão determinística de cada um.
 
 ### Estado do backlog verificado em 2026-10-01
 
-Os estados abaixo foram cruzados com PRs merged e, para itens sem PR identificável, com o código. PRs #319 a #324, #343 a #349, #353, #355 e #356 foram integrados; a Fase 296 foi integrada pelo PR #353, a Fase 297 pelo PR #355 e a Fase 298 pelo PR #356 (merge `b00151ae`, em 2026-10-01). O proprietário informou a aplicação da migration 1060; esta reconciliação não identificou o ambiente nem consultou o banco. A Fase 299 está implementada nesta branch, sem PR aberto: migration 1061 e carga dos catálogos não foram executadas externamente.
+Os estados abaixo foram cruzados com PRs merged e, para itens sem PR identificável, com o código. PRs #319 a #324, #343 a #349, #353, #355, #356 e #357 foram integrados; a Fase 299 foi integrada pelo PR #357 (merge `9052b8ba`, confirmado no GitHub em 2026-10-01). O proprietário informou aplicação das migrations 1060/1061 e das cargas de catálogo em staging e produção; esta reconciliação não consultou os bancos. A Fase 300 está em desenvolvimento nesta branch e ainda depende de PR/CI.
 
 | PB | Estado e evidência |
 |---|---|
-| PB-01 | **Concluído** — Fase 265, entregas de código nos PRs #261–#263; fechamento documentado no PR #268. |
+| PB-01 | **Núcleo concluído** — Fase 265, entregas de código nos PRs #261–#263; fechamento documentado no PR #268. Migração dos consumidores manuais remanescentes em execução na Fase 300. |
 | PB-02 | **Concluído** — Fase 266, PRs #269–#272. |
 | PB-03 | **Concluído** — Fase 267, PR #273. |
 | PB-04 | **Concluído** — Fase 264.7, PR #253. |
@@ -640,7 +645,7 @@ Os estados abaixo foram cruzados com PRs merged e, para itens sem PR identificá
 | PB-29 | **Concluído no código** — Fase 283, PR #319 integrado (merge `19ade15` em 2026-09-27). Não há evidência de produção nesta reconciliação. |
 | PB-30 | **Pendente** — extração assistida de exames não foi encontrada; PB-17 entrega a estrutura determinística e é dependência já concluída. |
 
-PB-30 segue sem ordem aprovada na tabela original. PB-20 e Fases 286 a 298 foram integrados. O proprietário informou aplicação das migrations 1059 e 1060, sem prova direta de ambiente nesta reconciliação. A Fase 297 cobre parte do kit inicial sem catálogo alimentar; a Fase 298 implementou edição versionada dos modelos. A Fase 299 nesta branch prepara TACO existente, USDA FoodData Central offline e IBGE POF 2008–2009 como fontes independentes, com importações versionadas e sem mesclagem automática; migration 1061, carga externa e CI ainda não foram concluídas. TBCA permanece fora do escopo, e a ativação do IBGE depende de referência operacional para a autorização documentada confirmada pelo proprietário. As demais automações da seção 7 e a fórmula geral do score continuam em aberto.
+PB-30 segue sem ordem aprovada na tabela original. PB-20 e Fases 286 a 299 foram integrados. A Fase 299 entregou TACO, USDA offline e IBGE POF 2008–2009 como fontes independentes, sem mesclagem automática. O proprietário informou aplicação da 1061 e das cargas em staging e produção; sem prova direta dos bancos neste ciclo. TBCA permanece fora do escopo. A Fase 300 fecha o uso residual do `score_risco` manual nas filas e filtros; o campo legado permanece no contrato de paciente para compatibilidade. A prioridade calculada é operacional, não um score de risco clínico. As recomendações de automação e produto ainda não cobertas pelas fases citadas permanecem abertas.
 
 ---
 
@@ -846,13 +851,12 @@ produto devem ter esse gate resolvido no plano da respectiva fase.
    Revisão do registro de hábitos e lembretes de plano/tarefas foram integrados
    na Fase 296 pelo PR #353; aplicação da 1059 relatada, sem prova direta do banco.
    Gamificação permanece recomendação futura e exige decisão de propósito própria.
-7. **Modelos de plano (Fase 298 implementada nesta branch).** Edição com histórico
-   cifrado e imutável, consulta de versões e restauração como nova versão. A integração
-   via PR e a migration 1060 permanecem pendentes; não houve aplicação externa nem prova
-   PostgreSQL/RLS neste ciclo. Próxima proposta: **Fase 299 — catálogo alimentar** para
-   ampliar cobertura com USDA, TACO, IBGE e TBCA, confirmando origem, direito de uso,
-   versão, unidades, equivalências, atualização e disponibilidade por ambiente antes
-   de qualquer carga.
+7. **Modelos e catálogo alimentares (Fases 298–299 integradas).** Edição com histórico
+   cifrado e imutável, consulta e restauração como nova versão no PR #356. Catálogo
+   multifonte TACO, USDA offline e IBGE POF integrado no PR #357, com ingestão
+   separada e origem/versionamento explícitos. Migrações e cargas foram informadas
+   pelo proprietário, sem verificação direta dos bancos neste ciclo. TBCA exige
+   decisão própria sobre direitos e ingestão; não há carga nesta fase.
 8. **Operação e inteligência da clínica.** Avaliar carga/ocupação/faltas/produtividade por profissional,
    autosserviço LGPD da própria clínica, acesso profissional a APIs/integrações, e visões longitudinais de
    adesão, substituições, questionários/antropometria, intervalo de retorno e evasão.

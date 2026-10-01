@@ -1,13 +1,17 @@
 # OctaClin - Resumo das fases concluidas
 
-## Fase 298 na branch (ainda não integrada) — 2026-10-01
+## Reconciliação em 2026-10-01
 
-- Fase 298 implementada na branch `feat/fase298-edicao-modelos-plano`, ainda
-  não integrada: edição estruturada de modelos, histórico cifrado imutável,
-  consulta e restauração como nova revisão. A migration 1060 foi testada, não
-  aplicada externamente; PostgreSQL/RLS integrado depende do CI. Próxima proposta
-  após a integração: Fase 299, expansão validada do catálogo alimentar. Detalhes e
-  limites em `docs/history/phases/PLANO_FASE_298.md`.
+- Fase 298 integrada pelo PR #356 (merge `b00151ae`): edição estruturada de
+  modelos, histórico cifrado imutável e restauração como nova revisão. O
+  proprietário informou aplicação da migration 1060; banco não consultado neste ciclo.
+- Fase 299 integrada pelo PR #357 (merge `9052b8ba`): catálogo multifonte
+  TACO, USDA offline e IBGE POF com origem/versionamento e cargas separadas.
+  Aplicação da migration 1061 e das cargas em staging e produção foi informada
+  pelo proprietário; banco não consultado neste ciclo. Detalhes em
+  `docs/history/phases/PLANO_FASE_299.md`.
+- Fase 300 em desenvolvimento; não consta como concluída. Plano em
+  `docs/history/phases/PLANO_FASE_300.md`.
 
 ## Reconciliacao em 2026-09-30
 

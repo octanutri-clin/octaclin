@@ -13,6 +13,7 @@ import { CondutaTerapeuticaOrm } from '../../pacientes/infraestrutura/conduta-te
 import { CondutaTerapeuticaVersaoOrm } from '../../pacientes/infraestrutura/conduta-terapeutica-versao.orm';
 import { condutaEstaVencida, condutaEstaVencendo, resolverVersaoVigentePorConduta } from '../../pacientes/dominio/condutas-vencidas';
 import { PacienteOrm } from '../../pacientes/infraestrutura/paciente.orm';
+import { consultarPrioridadesOperacionais, PrioridadeOperacional } from '../../pacientes/aplicacao/projecao-prioridade-acompanhamento';
 import { ProfissionalOrm } from '../../profissionais/infraestrutura/profissional.orm';
 import { EnvioQuestionarioOrm } from '../../questionarios/infraestrutura/envio-questionario.orm';
 import {
@@ -24,7 +25,6 @@ import {
   FiltrosDashboardClinicoDto,
   FormularioPendenteDashboardClinicoDto,
   IndicadoresDashboardClinicoDto,
-  NivelRiscoDashboard,
   PendenciaReagendamentoDashboardClinicoDto,
   OcultacaoAlertaDashboardClinicoDto,
   OrigemCancelamentoAtendimentoDashboard,
@@ -66,6 +66,7 @@ interface DadosAgregados {
   consultas: AgendaConsultaOrm[];
   faltasRecentes: AgendaConsultaOrm[];
   pacientes: PacienteOrm[];
+  prioridades: Map<string, PrioridadeOperacional>;
   consultasConcluidas: AgendaConsultaOrm[];
   tarefas: AcompanhamentoTarefaOrm[];
   condutas: CondutaTerapeuticaOrm[];
@@ -223,6 +224,7 @@ export class ServicoDashboardClinico {
         consultas,
         faltasRecentes: [],
         pacientes,
+        prioridades: new Map(),
         consultasConcluidas: [],
         tarefas: [],
         condutas: [],
@@ -321,10 +323,12 @@ export class ServicoDashboardClinico {
         })
       : [];
 
+    const prioridades = await consultarPrioridadesOperacionais(gerenciador, tenantId, pacienteIds);
     return {
       consultas,
       faltasRecentes,
       pacientes,
+      prioridades,
       consultasConcluidas,
       tarefas,
       condutas,
@@ -381,7 +385,7 @@ export class ServicoDashboardClinico {
         faltasPorPaciente.set(falta.pacienteId, (faltasPorPaciente.get(falta.pacienteId) ?? 0) + 1);
       }
     }
-    const semRetorno = this.montarSemRetorno(pacientes, ultimaConcluidaPorPaciente, contexto.id, faltasPorPaciente);
+    const semRetorno = this.montarSemRetorno(pacientes, ultimaConcluidaPorPaciente, contexto.id, faltasPorPaciente, dados.prioridades);
     const pendenciasReagendamento = dados.faltasRecentes
       .filter((falta) => falta.status === 'falta' && falta.tenantId === tenantId && falta.profissionalId === contexto.id && pacientesPorId.has(falta.pacienteId))
       .map((falta) => ({ falta, decisao: lerReagendamentoAposFalta(falta.payload) }))
@@ -471,20 +475,20 @@ export class ServicoDashboardClinico {
     pacientes: PacienteOrm[],
     ultimaConcluidaPorPaciente: Map<string, Date>,
     profissionalId: string,
-    faltasPorPaciente: Map<string, number>
+    faltasPorPaciente: Map<string, number>,
+    prioridades: Map<string, PrioridadeOperacional>
   ): SemRetornoDashboardClinicoDto[] {
     return pacientes
       .map((paciente) => {
         const ultimaConsultaConcluidaEm = ultimaConcluidaPorPaciente.get(paciente.id);
         const referencia = ultimaConsultaConcluidaEm ?? paciente.criadoEm;
         const diasSemRetorno = Math.floor((Date.now() - referencia.getTime()) / (24 * 60 * 60 * 1000));
-        const scoreRisco = Number(paciente.scoreRisco);
+        const prioridadeAcompanhamento = prioridades.get(paciente.id) ?? null;
         return {
           pacienteId: paciente.id,
           profissionalId,
           pacienteNome: this.criptografia.descriptografar(paciente.nomeCriptografado),
-          nivelRisco: this.calcularNivelRisco(paciente.statusAdesao, scoreRisco),
-          scoreRisco,
+          prioridadeAcompanhamento,
           faltasRecentes: faltasPorPaciente.get(paciente.id) ?? 0,
           diasSemRetorno,
           faixa: this.calcularFaixaSemRetorno(diasSemRetorno),
@@ -493,8 +497,8 @@ export class ServicoDashboardClinico {
       })
       .filter((item) => item.diasSemRetorno >= 30)
       .sort((a, b) => {
-        const risco = this.pesoRisco(b.nivelRisco) - this.pesoRisco(a.nivelRisco);
-        return risco || b.faltasRecentes - a.faltasRecentes || b.diasSemRetorno - a.diasSemRetorno;
+        const prioridade = this.pesoPrioridade(b.prioridadeAcompanhamento?.faixa) - this.pesoPrioridade(a.prioridadeAcompanhamento?.faixa);
+        return prioridade || b.faltasRecentes - a.faltasRecentes || b.diasSemRetorno - a.diasSemRetorno;
       });
   }
 
@@ -649,7 +653,7 @@ export class ServicoDashboardClinico {
   ): AlertaDashboardClinicoDto[] {
     const alertas: AlertaDashboardClinicoDto[] = [];
 
-    for (const item of semRetorno.filter((paciente) => paciente.nivelRisco === 'alto')) {
+    for (const item of semRetorno.filter((paciente) => paciente.prioridadeAcompanhamento?.faixa === 'alta')) {
       alertas.push({
         id: `sem_retorno_risco_alto:${profissionalId}:${item.pacienteId}`,
         tipo: 'sem_retorno_risco_alto',
@@ -776,7 +780,7 @@ export class ServicoDashboardClinico {
       tarefasVencidas: tarefas.length,
       solicitacoesPendentes: solicitacoes.length,
       comunicacoesEmAlerta: comunicacoes.length,
-      pacientesRiscoAlto: semRetorno.filter((paciente) => paciente.nivelRisco === 'alto').length
+      pacientesRiscoAlto: semRetorno.filter((paciente) => paciente.prioridadeAcompanhamento?.faixa === 'alta').length
     };
   }
 
@@ -1125,20 +1129,14 @@ export class ServicoDashboardClinico {
     );
   }
 
-  private calcularNivelRisco(statusAdesao: string, scoreRisco: number): NivelRiscoDashboard {
-    if (statusAdesao === 'risco' || scoreRisco >= 70) return 'alto';
-    if (scoreRisco >= 40) return 'medio';
-    return 'baixo';
-  }
-
   private calcularFaixaSemRetorno(dias: number): FaixaSemRetorno {
     if (dias >= 90) return '90+';
     if (dias >= 60) return '60';
     return '30';
   }
 
-  private pesoRisco(nivel: NivelRiscoDashboard): number {
-    return nivel === 'alto' ? 3 : nivel === 'medio' ? 2 : 1;
+  private pesoPrioridade(faixa?: PrioridadeOperacional['faixa']): number {
+    return faixa === 'alta' ? 3 : faixa === 'media' ? 2 : faixa === 'baixa' ? 1 : 0;
   }
 
   private nomePaciente(pacientes: Map<string, PacienteOrm>, pacienteId: string): string {

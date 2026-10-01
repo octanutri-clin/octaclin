@@ -5,7 +5,6 @@ import { PrioridadeTarefaAcompanhamento } from '../../pacientes/infraestrutura/a
 export const PERIODOS_DASHBOARD_CLINICO = ['hoje', 'sete_dias', 'trinta_dias'] as const;
 export type PeriodoDashboardClinico = (typeof PERIODOS_DASHBOARD_CLINICO)[number];
 export type FaixaSemRetorno = '30' | '60' | '90+';
-export type NivelRiscoDashboard = 'baixo' | 'medio' | 'alto';
 export type TipoAlertaDashboardClinico =
   | 'sem_retorno_risco_alto'
   | 'tarefa_vencida'
@@ -70,8 +69,13 @@ export interface SemRetornoDashboardClinicoDto {
   pacienteId: string;
   profissionalId: string;
   pacienteNome: string;
-  nivelRisco: NivelRiscoDashboard;
-  scoreRisco: number;
+  /** Fonte operacional da ordenacao; null quando nao ha apuracao nem override vigente. */
+  prioridadeAcompanhamento: {
+    faixa: 'baixa' | 'media' | 'alta';
+    origem: 'calculado' | 'override';
+    scoreCalculado: number | null;
+    calculadoEm: Date | null;
+  } | null;
   /** Sinal factual, separado do score manual. */
   faltasRecentes: number;
   diasSemRetorno: number;

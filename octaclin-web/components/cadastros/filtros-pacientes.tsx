@@ -43,9 +43,9 @@ export function FiltrosPacientes(props: FiltrosPacientesProps) {
           </span>
         </div>
         <div className="grid gap-1">
-          <Rotulo htmlFor="filtro-risco">Risco</Rotulo>
+          <Rotulo htmlFor="filtro-risco">Prioridade de acompanhamento</Rotulo>
           <Selecao id="filtro-risco" value={props.risco} onChange={(evento) => props.aoAlterarRisco(evento.target.value as FiltrosPacientesProps['risco'])}>
-            <option value="todos">Todos os riscos</option><option value="alto">Alto</option><option value="medio">Médio</option><option value="baixo">Baixo</option>
+            <option value="todos">Todas as prioridades</option><option value="alto">Alta</option><option value="medio">Média</option><option value="baixo">Baixa</option>
           </Selecao>
         </div>
         <div className="grid gap-1">

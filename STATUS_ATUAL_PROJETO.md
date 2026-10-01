@@ -7,12 +7,15 @@ Atualizado em 2026-10-01.
 - Fase 298 concluida e integrada pelo PR #356 (merge `b00151ae`, confirmado no GitHub em
   2026-10-01); o proprietário informou que aplicou a migration 1060. Esta
   reconciliação não consultou banco externo.
-- Fase 299 implementada nesta branch `feat/fase299-catalogos-alimentares`:
-  catálogo multifonte com TACO existente, USDA FoodData Central offline e IBGE
-  POF 2008–2009 por conversores/importadores separados. Migration 1061 amplia a
-  precisão numérica; não foi aplicada. Nenhuma carga foi executada em banco.
-  Testes/gates locais e PR ainda precisam ser concluídos. Plano em
-  `docs/history/phases/PLANO_FASE_299.md`.
+- Fase 299 concluida e integrada pelo PR #357 (merge `9052b8ba`, confirmado no GitHub em
+  2026-10-01): catálogo multifonte com TACO, USDA FoodData Central offline e
+  IBGE POF 2008–2009 por importadores independentes. O proprietário informou
+  que a migration 1061 e as cargas foram aplicadas em staging e produção; este
+  ciclo não consultou os bancos. Plano em `docs/history/phases/PLANO_FASE_299.md`.
+- Fase 300 em desenvolvimento na branch `feat/fase300-prioridade-calculada`:
+  substituir o score manual pela prioridade operacional calculada na lista,
+  filtros, dashboard e painel da clínica; manter API pública sem prioridade.
+  Plano e aceite em `docs/history/phases/PLANO_FASE_300.md`.
 
 - Fase 295 / PB-28 integrada pelo PR #349 (merge `a54e52c9`, confirmado no GitHub em 2026-09-30).
   Conversa segura no portal e fila interna com SLA por clínica. O proprietário informou que as

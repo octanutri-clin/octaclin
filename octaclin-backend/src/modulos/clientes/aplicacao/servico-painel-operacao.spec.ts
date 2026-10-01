@@ -11,7 +11,13 @@ describe('ServicoPainelOperacao', () => {
   const query = jest.fn(async (sql: string, parametros: unknown[]) => {
     expect(parametros[0]).toBe(tenantId);
     expect(sql).toContain('tenant_id = $1');
-    if (sql.includes('/* pb26-pacientes */')) return [{ novos: '2', ativos: '5', em_risco: '1' }];
+    if (sql.includes('/* pb26-pacientes */')) {
+      expect(sql).toContain('prioridades_acompanhamento_paciente');
+      expect(sql).toContain('paciente.criado_em');
+      expect(sql).toContain("historico.tipo_evento = 'calculo'");
+      expect(sql).not.toContain('score_risco');
+      return [{ novos: '2', ativos: '5', em_risco: '1' }];
+    }
     if (sql.includes('/* pb26-consultas */')) return consultas;
     if (sql.includes('/* pb26-expedientes */')) return [{ profissional_id: 'prof-a', inicio_em: new Date('2026-09-07T12:00:00Z'), fim_em: new Date('2026-09-07T14:00:00Z') }];
     if (sql.includes('/* pb26-carga */')) return [{ profissional_responsavel_id: 'prof-a', total: '5' }];

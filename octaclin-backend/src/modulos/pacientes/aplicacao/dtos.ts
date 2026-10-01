@@ -349,7 +349,14 @@ export interface PacienteRespostaDto {
   dataNascimento?: string;
   referenciaExterna?: string;
   statusAdesao: string;
+  /** Campo legado preservado para compatibilidade; nao define a prioridade operacional. */
   scoreRisco: string;
+  prioridadeAcompanhamento: {
+    faixa: 'baixa' | 'media' | 'alta';
+    origem: 'calculado' | 'override';
+    scoreCalculado: number | null;
+    calculadoEm: Date | null;
+  } | null;
   ultimoCheckinEm?: Date;
   ultimaConsultaConcluidaEm?: Date;
   proximaConsultaEm?: Date;
@@ -1151,6 +1158,7 @@ export class SolicitarOverridePrioridadeAcompanhamentoDto {
 
 export interface PrioridadeAcompanhamentoRespostaDto {
   pacienteId: string;
+  apurado: boolean;
   versaoFormula?: string;
   calculadoEm?: Date;
   valorCalculado: {

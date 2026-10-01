@@ -58,7 +58,7 @@ export function SecaoPrioridadeAcompanhamento({ pacienteId, prioridade, podeGere
 
   function abrirAjuste() {
     setErro(null);
-    setFaixa(overrideAtivo?.faixa ?? prioridade?.valorCalculado.faixa ?? 'media');
+    setFaixa(overrideAtivo?.faixa ?? (prioridade?.apurado === false ? undefined : prioridade?.valorCalculado.faixa) ?? 'media');
     setCodigoMotivo(CODIGO_MOTIVO_PADRAO);
     setJustificativa('');
     setExpiraEm(dataIsoParaCampo(30));
@@ -121,6 +121,7 @@ export function SecaoPrioridadeAcompanhamento({ pacienteId, prioridade, podeGere
   const scoreCalculado = prioridade?.valorCalculado.score ?? 0;
   const fatores = prioridade?.valorCalculado.fatores ?? [];
   const faixaEfetiva = prioridade?.valorEfetivo.faixa ?? faixaCalculada;
+  const aguardandoApuracao = !prioridade || prioridade.apurado === false;
 
   return (
     <section aria-labelledby="prioridade-acompanhamento-titulo" className="grid gap-4 rounded-md border border-linha bg-white p-4">
@@ -141,8 +142,8 @@ export function SecaoPrioridadeAcompanhamento({ pacienteId, prioridade, podeGere
       <div className="grid gap-3 sm:grid-cols-2">
         <div className="rounded-md border border-linha bg-superficie-hover p-3">
           <p className="text-xs font-semibold uppercase text-texto-suave">Prioridade calculada</p>
-          <p className="mt-1 text-sm font-medium text-tinta">{rotuloFaixa(faixaCalculada)} · {scoreCalculado} pontos</p>
-          {fatores.length ? (
+          <p className="mt-1 text-sm font-medium text-tinta">{aguardandoApuracao ? 'Aguardando apuração' : `${rotuloFaixa(faixaCalculada)} · ${scoreCalculado} pontos`}</p>
+          {!aguardandoApuracao && fatores.length ? (
             <ul className="mt-2 grid gap-1 text-xs text-texto-suave">
               {fatores.map((fator) => (
                 <li key={fator.codigo}>
@@ -150,9 +151,9 @@ export function SecaoPrioridadeAcompanhamento({ pacienteId, prioridade, podeGere
                 </li>
               ))}
             </ul>
-          ) : (
+          ) : !aguardandoApuracao ? (
             <p className="mt-2 text-xs text-texto-suave">Nenhum fator pontuado no último cálculo.</p>
-          )}
+          ) : null}
         </div>
         <div
           className={
@@ -165,7 +166,7 @@ export function SecaoPrioridadeAcompanhamento({ pacienteId, prioridade, podeGere
             Prioridade efetiva
           </p>
           <p className={overrideAtivo ? 'mt-1 text-sm font-medium text-alerta-forte' : 'mt-1 text-sm font-medium text-tinta'}>
-            {rotuloFaixa(faixaEfetiva)}{overrideAtivo ? ' — ajustada manualmente' : ' — calculada automaticamente'}
+            {aguardandoApuracao && !overrideAtivo ? 'Aguardando apuração' : `${rotuloFaixa(faixaEfetiva)}${overrideAtivo ? ' — ajustada manualmente' : ' — calculada automaticamente'}`}
           </p>
           {overrideAtivo ? (
             <p className="mt-2 text-xs text-alerta-forte">Ajuste válido até {formatarData(overrideAtivo.expiraEm)}.</p>

@@ -71,7 +71,7 @@ export function AreaOperacaoCliente() {
             {[
               { rotulo: 'Pacientes novos', valor: painel.pacientes.novos, detalhe: 'Cadastrados neste mês e ativos hoje' },
               { rotulo: 'Pacientes ativos', valor: painel.pacientes.ativos, detalhe: 'Ciclo ACTIVE, não arquivados' },
-              { rotulo: 'Pacientes em risco', valor: painel.pacientes.emRisco, detalhe: 'Situação risco ou score ≥ 70, entre ativos' }
+              { rotulo: 'Alta prioridade de acompanhamento', valor: painel.pacientes.emRisco, detalhe: 'Faixa efetiva alta entre pacientes ativos' }
             ].map((indicador) => (
               <article key={indicador.rotulo} className="rounded-lg border border-linha bg-white p-5">
                 <h3 className="text-sm font-medium text-texto-suave">{indicador.rotulo}</h3>

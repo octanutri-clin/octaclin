@@ -1,5 +1,5 @@
 import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
-import { And, ArrayContains, EntityManager, FindOptionsWhere, In, IsNull, LessThan, MoreThan, MoreThanOrEqual, Not, QueryFailedError, Raw } from 'typeorm';
+import { ArrayContains, EntityManager, FindOptionsWhere, In, IsNull, LessThan, MoreThan, Not, QueryFailedError, Raw } from 'typeorm';
 import { ExecutorTenant } from '../../../infraestrutura/banco-dados/executor-tenant';
 import { montarCsv } from '../../../infraestrutura/exportacao/csv';
 import { dataIsoNoTimezoneClinico, obterTimezoneClinico } from '../../../infraestrutura/tempo/timezone-clinico';
@@ -62,6 +62,7 @@ import { PerfilCadastroPacienteOrm } from '../infraestrutura/perfil-cadastro-pac
 import { cancelarTarefaRevisaoPerfil, lerDataRevisaoPerfil, reatribuirTarefaRevisaoPerfil } from './tarefa-revisao-perfil';
 import { PrioridadeAcompanhamentoHistoricoOrm } from '../infraestrutura/prioridade-acompanhamento-historico.orm';
 import { PrioridadeAcompanhamentoPacienteOrm } from '../infraestrutura/prioridade-acompanhamento-paciente.orm';
+import { condicaoFaixaEfetivaPrioridade, consultarPrioridadesOperacionais, PrioridadeOperacional } from './projecao-prioridade-acompanhamento';
 import { TombstoneExclusaoLgpdOrm } from '../../../infraestrutura/lgpd/tombstone-exclusao-lgpd.orm';
 import { UsuarioOrm } from '../../usuarios/infraestrutura/usuario.orm';
 import { RefreshTokenOrm } from '../../auth/infraestrutura/refresh-token.orm';
@@ -220,9 +221,10 @@ export class ServicoPacientes {
           })
         : [];
       const resumoConsultas = this.resumirConsultasPorPaciente(consultas);
+      const prioridades = await consultarPrioridadesOperacionais(gerenciador, tenantId, pacientesIds);
 
       return {
-        itens: itens.map((paciente) => this.mapearResposta(paciente, resumoConsultas.get(paciente.id))),
+        itens: itens.map((paciente) => this.mapearResposta(paciente, resumoConsultas.get(paciente.id), prioridades.get(paciente.id))),
         total
       };
     });
@@ -317,7 +319,8 @@ export class ServicoPacientes {
   async obterPorId(tenantId: string, pacienteId: string, usuario: UsuarioAutenticado): Promise<PacienteRespostaDto> {
     return this.executorTenant.executar(tenantId, async (gerenciador) => {
       const paciente = await this.garantirPacienteExiste(gerenciador, tenantId, pacienteId, usuario);
-      return this.mapearResposta(paciente);
+      const prioridades = await consultarPrioridadesOperacionais(gerenciador, tenantId, [pacienteId]);
+      return this.mapearResposta(paciente, undefined, prioridades.get(pacienteId));
     });
   }
 
@@ -555,7 +558,8 @@ export class ServicoPacientes {
 
   private mapearResposta(
     paciente: PacienteOrm,
-    resumoConsultas?: { ultimaConsultaConcluidaEm?: Date; proximaConsultaEm?: Date }
+    resumoConsultas?: { ultimaConsultaConcluidaEm?: Date; proximaConsultaEm?: Date },
+    prioridade?: PrioridadeOperacional
   ): PacienteRespostaDto {
     return {
       id: paciente.id,
@@ -568,6 +572,7 @@ export class ServicoPacientes {
       referenciaExterna: paciente.referenciaExterna,
       statusAdesao: paciente.statusAdesao,
       scoreRisco: paciente.scoreRisco,
+      prioridadeAcompanhamento: prioridade ?? null,
       ultimoCheckinEm: paciente.ultimoCheckinEm,
       ultimaConsultaConcluidaEm: resumoConsultas?.ultimaConsultaConcluidaEm,
       proximaConsultaEm: resumoConsultas?.proximaConsultaEm,
@@ -586,6 +591,17 @@ export class ServicoPacientes {
     const perfilFiltrosHashes = (['categoria', 'origem', 'tag'] as const)
       .filter((campo) => filtros[campo]?.trim())
       .map((campo) => this.criptografia.gerarHashPerfilExato(tenantId, campo, filtros[campo]!));
+    const condicoesId: Array<(alias: string) => string> = [];
+    if (filtros.semProximaConsulta) {
+      condicoesId.push((alias) => `NOT EXISTS (
+        SELECT 1 FROM agenda_consultas consulta
+        WHERE consulta.paciente_id = ${alias}
+          AND consulta.tenant_id = :tenantBusca
+          AND consulta.status IN ('agendada', 'reagendada')
+          AND consulta.inicio_em >= NOW()
+      )`);
+    }
+    if (filtros.risco) condicoesId.push(condicaoFaixaEfetivaPrioridade);
     const base: FindOptionsWhere<PacienteOrm> = {
       tenantId,
       arquivadoEm: IsNull(),
@@ -593,34 +609,14 @@ export class ServicoPacientes {
       ...(filtros.status ? { statusAdesao: filtros.status } : {}),
       ...(hashesBusca?.length ? { buscaHashes: ArrayContains(hashesBusca) } : {}),
       ...(perfilFiltrosHashes.length ? { perfilFiltrosHashes: ArrayContains(perfilFiltrosHashes) } : {}),
-      ...(filtros.semProximaConsulta
-        ? {
-            id: Raw(
-              (alias) => `NOT EXISTS (
-                SELECT 1 FROM agenda_consultas consulta
-                WHERE consulta.paciente_id = ${alias}
-                  AND consulta.tenant_id = :tenantBusca
-                  AND consulta.status IN ('agendada', 'reagendada')
-                  AND consulta.inicio_em >= NOW()
-              )`,
-              { tenantBusca: tenantId }
-            )
-          }
-        : {})
+      ...(condicoesId.length ? {
+        id: Raw((alias) => condicoesId.map((condicao) => condicao(alias)).join(' AND '), {
+          tenantBusca: tenantId,
+          tenantPrioridade: tenantId,
+          faixaPrioridade: filtros.risco === 'alto' ? 'alta' : filtros.risco === 'medio' ? 'media' : 'baixa'
+        })
+      } : {})
     };
-
-    if (filtros.risco === 'alto') {
-      if (filtros.status) {
-        return filtros.status === 'risco' ? base : { ...base, scoreRisco: MoreThanOrEqual('70') };
-      }
-      return [{ ...base, statusAdesao: 'risco' }, { ...base, scoreRisco: MoreThanOrEqual('70') }];
-    }
-    if (filtros.risco === 'medio') {
-      return { ...base, statusAdesao: filtros.status ?? Not('risco'), scoreRisco: And(MoreThanOrEqual('40'), LessThan('70')) };
-    }
-    if (filtros.risco === 'baixo') {
-      return { ...base, statusAdesao: filtros.status ?? Not('risco'), scoreRisco: LessThan('40') };
-    }
     return base;
   }
 
@@ -789,10 +785,8 @@ export class ServicoPacientes {
   /**
    * Fase 265.4: leitura do valor efetivo da prioridade de acompanhamento
    * (265.1-265.3), com override humano quando presente. Nunca calcula --
-   * so le o que o job (265.3) ja persistiu. Sem linha ainda (job nao rodou
-   * para este paciente) devolve o mesmo default que o calculador produz na
-   * ausencia de sinais (`score 0`, `baixa`), em vez de 404: a ausencia de
-   * calculo nao e um erro, e um estado valido de paciente novo.
+   * so le o que o job (265.3) ja persistiu. O default legado permanece no
+   * contrato, mas `apurado=false` impede apresenta-lo como calculo real.
    */
   async obterPrioridadeAcompanhamento(
     tenantId: string,
@@ -807,6 +801,7 @@ export class ServicoPacientes {
       if (!atual) {
         return {
           pacienteId,
+          apurado: false,
           valorCalculado: { score: 0, faixa: 'baixa', fatores: [] },
           valorEfetivo: { faixa: 'baixa', origem: 'calculado' }
         };
@@ -828,7 +823,7 @@ export class ServicoPacientes {
         }
       }
 
-      return this.montarRespostaPrioridade(atual);
+      return this.montarRespostaPrioridade(atual, await this.prioridadeFoiApurada(gerenciador, tenantId, pacienteId));
     });
   }
 
@@ -892,7 +887,7 @@ export class ServicoPacientes {
         atorUsuarioId
       );
 
-      return this.montarRespostaPrioridade(atual);
+      return this.montarRespostaPrioridade(atual, await this.prioridadeFoiApurada(gerenciador, tenantId, pacienteId));
     });
   }
 
@@ -918,7 +913,7 @@ export class ServicoPacientes {
       this.limparOverridePrioridade(atual);
       await repositorio.save(atual);
 
-      return this.montarRespostaPrioridade(atual);
+      return this.montarRespostaPrioridade(atual, await this.prioridadeFoiApurada(gerenciador, tenantId, pacienteId));
     });
   }
 
@@ -961,10 +956,17 @@ export class ServicoPacientes {
     );
   }
 
-  private montarRespostaPrioridade(atual: PrioridadeAcompanhamentoPacienteOrm): PrioridadeAcompanhamentoRespostaDto {
+  private async prioridadeFoiApurada(gerenciador: EntityManager, tenantId: string, pacienteId: string): Promise<boolean> {
+    return gerenciador.getRepository(PrioridadeAcompanhamentoHistoricoOrm).exists({
+      where: { tenantId, pacienteId, tipoEvento: 'calculo' }
+    });
+  }
+
+  private montarRespostaPrioridade(atual: PrioridadeAcompanhamentoPacienteOrm, apurado: boolean): PrioridadeAcompanhamentoRespostaDto {
     const overrideAtivo = atual.overrideFaixa && atual.overrideExpiraEm && atual.overrideExpiraEm > new Date();
     return {
       pacienteId: atual.pacienteId,
+      apurado,
       versaoFormula: atual.versaoFormula,
       calculadoEm: atual.calculadoEm,
       valorCalculado: { score: atual.score, faixa: atual.faixa, fatores: atual.fatores ?? [] },

@@ -1,6 +1,6 @@
 # OctaClin - Checklist vivo de fases futuras ate producao
 
-Atualizado em 2026-10-01. Fase 296 integrada pelo PR #353 (merge `ccd1c0bb`); o proprietário informou aplicação da migration 1059, sem confirmação direta de ambiente/banco. Fase 297 integrada pelo PR #355 (merge `4f51b0ac`); Fase 298 integrada pelo PR #356 (merge `b00151ae`), e o proprietário informou aplicação da migration 1060; Fase 299 em implementação nesta branch, com migration 1061 pendente; Fases 256 a 261, 263 a 298 integradas; Fase 284
+Atualizado em 2026-10-01. Fase 296 integrada pelo PR #353 (merge `ccd1c0bb`); o proprietário informou aplicação da migration 1059, sem confirmação direta de ambiente/banco. Fase 297 integrada pelo PR #355 (merge `4f51b0ac`); Fase 298 integrada pelo PR #356 (merge `b00151ae`), com aplicação da 1060 informada pelo proprietário; Fase 299 integrada pelo PR #357 (merge `9052b8ba`), com aplicação da 1061 e cargas em staging e produção informadas pelo proprietário, sem consulta direta aos bancos neste ciclo; Fase 300 em desenvolvimento nesta branch; Fases 256 a 261, 263 a 299 integradas; Fase 284
 (PB-22) foi integrada pelo PR #320 (merge `af839c5`, 19 checks `SUCCESS` e
 `Provenance do SBOM` `SKIPPED`). Fase 285 (PB-20) foi integrada pelo PR #321
 (merge `01d6bf1`). Fase 286 concluida pelo PR #322 (merge `c92f246`). A reconciliação completa do backlog da auditoria e a
@@ -4476,13 +4476,20 @@ auditoria estão ordenados na seção 15 de
   o proprietário informou a aplicação da migration 1060, sem confirmação direta
   do ambiente/banco nesta reconciliação. Plano em
   `docs/history/phases/PLANO_FASE_298.md`.
-- [~] Fase 299 - implementação local concluída nesta branch: catálogo multifonte USDA FoodData Central offline e IBGE POF
+- [x] Fase 299 - catálogo multifonte USDA FoodData Central offline e IBGE POF
   2008–2009 local, mantendo TACO e sem TBCA. Conversores independentes, busca com
   origem/versionamento visíveis, dados originais/metadados preservados, cargas
   versionadas/idempotentes e migration 1061 para oito casas decimais.
-  Testes focados, typechecks, lint, conversor Python, scan de secrets e diff check
-  concluídos localmente. A migration 1061, CI e cargas externas continuam pendentes.
+  Integrada pelo PR #357 (merge `9052b8ba`). O proprietário informou aplicação
+  da migration 1061 e das cargas em staging e produção; sem verificação direta
+  dos bancos nesta reconciliação.
   Plano em `docs/history/phases/PLANO_FASE_299.md`.
+- [~] Fase 300 - prioridade de acompanhamento calculada nas filas, filtros e
+  painel da clínica, com estado explícito de apuração pendente no prontuário.
+  O campo manual permanece somente no contrato legado de paciente e deixa de
+  orientar decisões operacionais. API pública sem prioridade. Sem migration;
+  branch `feat/fase300-prioridade-calculada`, CI e integração pendentes.
+  Plano em `docs/history/phases/PLANO_FASE_300.md`.
 
 O programa de hardening
 PR 36-56 permanece como trilha separada --
