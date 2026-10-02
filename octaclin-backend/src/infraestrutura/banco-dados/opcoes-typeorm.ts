@@ -75,6 +75,7 @@ import { CriarRespostaPortalPaciente1720000001058 } from './migracoes/1720000001
 import { AdicionarRevisaoDiarioRapido1720000001059 } from './migracoes/1720000001059-AdicionarRevisaoDiarioRapido';
 import { VersionarModelosPlanoAlimentar1720000001060 } from './migracoes/1720000001060-VersionarModelosPlanoAlimentar';
 import { AumentarPrecisaoComposicaoAlimentar1720000001061 } from './migracoes/1720000001061-AumentarPrecisaoComposicaoAlimentar';
+import { CifrarDetalhesSolicitacoesLgpd1720000001062 } from './migracoes/1720000001062-CifrarDetalhesSolicitacoesLgpd';
 import { UserActionLogOrm } from '../auditoria/user-action-log.orm';
 import { ConsentimentoLgpdOrm } from '../lgpd/consentimento-lgpd.orm';
 import { TombstoneExclusaoLgpdOrm } from '../lgpd/tombstone-exclusao-lgpd.orm';
@@ -402,7 +403,8 @@ export function criarOpcoesTypeOrm(): TypeOrmModuleOptions & DataSourceOptions {
       CriarRespostaPortalPaciente1720000001058,
       AdicionarRevisaoDiarioRapido1720000001059,
       VersionarModelosPlanoAlimentar1720000001060,
-      AumentarPrecisaoComposicaoAlimentar1720000001061
+      AumentarPrecisaoComposicaoAlimentar1720000001061,
+      CifrarDetalhesSolicitacoesLgpd1720000001062
       ],
     migrationsRun: executarMigracoesNoBoot(),
     synchronize: false,
