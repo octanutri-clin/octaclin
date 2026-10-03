@@ -43,7 +43,8 @@ export type PermissaoOctaClin =
   | 'cliente.usuarios.desativar'
   | 'cliente.usuarios.gerenciar'
   | 'cliente.convites.gerenciar'
-  | 'cliente.configuracoes.gerenciar';
+  | 'cliente.configuracoes.gerenciar'
+  | 'integracoes.acessar';
 
 const permissoesPaciente = [
   'portal.acessar',
@@ -95,7 +96,8 @@ const permissoesProfissional = [
   'ia.executar',
   'mobile.operar',
   'gamificacao.gerenciar',
-  'agenda.financeiro.ler'
+  'agenda.financeiro.ler',
+  'integracoes.acessar'
 ] as const satisfies readonly PermissaoOctaClin[];
 
 const permissoesSuperAdmin = [

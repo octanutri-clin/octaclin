@@ -1,6 +1,6 @@
 # OctaClin - Status atual do projeto
 
-Atualizado em 2026-10-01.
+Atualizado em 2026-10-03.
 
 ## Fase ativa
 
@@ -20,14 +20,22 @@ Atualizado em 2026-10-01.
   no GitHub em 2026-10-01): indicadores factuais por profissional, taxa de
   conclusão e ocupação sem dupla contagem no painel da clínica. Plano em
   `docs/history/phases/PLANO_FASE_301.md`.
-- Fase 302 em desenvolvimento na branch `docs/roadmap-pos-301`:
-  autosserviço LGPD da clínica para triagem e rascunho, com decisões finais
-  exclusivas do SuperAdmin, descrição cifrada e migration/backfill 1062 fora
-  de banda. PR, CI, revisão cruzada e prova PostgreSQL/RLS pendentes; nenhum
-  banco externo foi alterado neste ciclo. Plano em
-  `docs/history/phases/PLANO_FASE_302.md`. Sequência das Fases 302–320 em
-  `docs/product/ROADMAP_POS_AUDITORIA_FASES_302_320.md`. O PB-30 está
-  planejado na Fase 316, condicionado a privacidade, jurídico e operação.
+- Fase 302 concluida e integrada pelo PR #360 (merge commit `2aec88f2`, confirmado no
+  GitHub em 2026-10-03): autosserviço LGPD da clínica para triagem e rascunho,
+  com decisões finais exclusivas do SuperAdmin e descrição cifrada. O
+  proprietário informou que a migration 1062 foi aplicada e validada em
+  staging e produção; este ciclo não consultou os bancos. Plano em
+  `docs/history/phases/PLANO_FASE_302.md`.
+- Fase 303 em implementação na branch `feat/fase303-integracoes-profissional`:
+  concessões diretas do gestor para escopos API e eventos webhook, autorização
+  backend por operação, credenciais vinculadas à carteira, interface do
+  profissional e migration 1063. Merge/CI e
+  prova PostgreSQL/RLS pendentes; a migration não foi aplicada neste ciclo.
+  Plano e revisão de gaps em `docs/history/phases/PLANO_FASE_303.md`.
+- Sequência das Fases 302–320 em
+  `docs/product/ROADMAP_POS_AUDITORIA_FASES_302_320.md`. Após a Fase 303, a
+  próxima é a 304. O PB-30 está planejado na Fase 316, condicionado a
+  privacidade, jurídico e operação.
 
 - Fase 295 / PB-28 integrada pelo PR #349 (merge `a54e52c9`, confirmado no GitHub em 2026-09-30).
   Conversa segura no portal e fila interna com SLA por clínica. O proprietário informou que as

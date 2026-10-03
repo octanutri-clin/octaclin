@@ -76,6 +76,7 @@ import { AdicionarRevisaoDiarioRapido1720000001059 } from './migracoes/172000000
 import { VersionarModelosPlanoAlimentar1720000001060 } from './migracoes/1720000001060-VersionarModelosPlanoAlimentar';
 import { AumentarPrecisaoComposicaoAlimentar1720000001061 } from './migracoes/1720000001061-AumentarPrecisaoComposicaoAlimentar';
 import { CifrarDetalhesSolicitacoesLgpd1720000001062 } from './migracoes/1720000001062-CifrarDetalhesSolicitacoesLgpd';
+import { CriarPermissoesIntegracaoProfissional1720000001063 } from './migracoes/1720000001063-CriarPermissoesIntegracaoProfissional';
 import { UserActionLogOrm } from '../auditoria/user-action-log.orm';
 import { ConsentimentoLgpdOrm } from '../lgpd/consentimento-lgpd.orm';
 import { TombstoneExclusaoLgpdOrm } from '../lgpd/tombstone-exclusao-lgpd.orm';
@@ -161,6 +162,7 @@ import { CatalogoComposicaoAlimentoOrm } from '../../modulos/planos-alimentares/
 import { ApiChaveOrm } from '../../modulos/integracoes/infraestrutura/api-chave.orm';
 import { WebhookAssinaturaOrm } from '../../modulos/integracoes/infraestrutura/webhook-assinatura.orm';
 import { WebhookEntregaOrm } from '../../modulos/integracoes/infraestrutura/webhook-entrega.orm';
+import { PermissaoIntegracaoProfissionalOrm } from '../../modulos/integracoes/infraestrutura/permissao-integracao-profissional.orm';
 import { FonteComposicaoAlimentoOrm } from '../../modulos/planos-alimentares/infraestrutura/fonte-composicao-alimento.orm';
 import { PlanoAlimentarItemOrm } from '../../modulos/planos-alimentares/infraestrutura/plano-alimentar-item.orm';
 import { PlanoAlimentarRefeicaoOrm } from '../../modulos/planos-alimentares/infraestrutura/plano-alimentar-refeicao.orm';
@@ -327,7 +329,8 @@ export function criarOpcoesTypeOrm(): TypeOrmModuleOptions & DataSourceOptions {
       OutboxEventoOrm,
       ApiChaveOrm,
       WebhookAssinaturaOrm,
-      WebhookEntregaOrm
+      WebhookEntregaOrm,
+      PermissaoIntegracaoProfissionalOrm
     ],
     migrations: [
       CriarFundacaoOctaClin1720000000000,
@@ -404,7 +407,8 @@ export function criarOpcoesTypeOrm(): TypeOrmModuleOptions & DataSourceOptions {
       AdicionarRevisaoDiarioRapido1720000001059,
       VersionarModelosPlanoAlimentar1720000001060,
       AumentarPrecisaoComposicaoAlimentar1720000001061,
-      CifrarDetalhesSolicitacoesLgpd1720000001062
+      CifrarDetalhesSolicitacoesLgpd1720000001062,
+      CriarPermissoesIntegracaoProfissional1720000001063
       ],
     migrationsRun: executarMigracoesNoBoot(),
     synchronize: false,

@@ -22,6 +22,7 @@ test('catalogo cobre exatamente as paginas operacionais publicadas', () => {
     '/automacoes',
     '/gamificacao',
     '/profissionais',
+    '/integracoes',
     '/operacoes'
   ];
 

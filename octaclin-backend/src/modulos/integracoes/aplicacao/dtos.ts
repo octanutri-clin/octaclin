@@ -1,4 +1,4 @@
-import { ArrayMaxSize, ArrayMinSize, IsArray, IsDateString, IsIn, IsInt, IsOptional, IsString, IsUrl, Matches, Max, MaxLength, Min, MinLength } from 'class-validator';
+import { ArrayMaxSize, ArrayMinSize, ArrayUnique, IsArray, IsDateString, IsIn, IsInt, IsOptional, IsString, IsUrl, Matches, Max, MaxLength, Min, MinLength } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ESCOPOS_API_PUBLICA, EVENTOS_WEBHOOK, EscopoApiPublica, EventoWebhook } from '../dominio/contratos-integracao';
 import { CriarConsultaAgendaDto } from '../../agenda/aplicacao/dtos';
@@ -38,6 +38,20 @@ export class CriarWebhookDto {
   @ArrayMaxSize(4)
   @IsIn(EVENTOS_WEBHOOK, { each: true })
   eventos: EventoWebhook[];
+}
+
+export class AtualizarPermissoesIntegracaoDto {
+  @IsArray()
+  @ArrayMaxSize(ESCOPOS_API_PUBLICA.length)
+  @ArrayUnique()
+  @IsIn(ESCOPOS_API_PUBLICA, { each: true })
+  escoposApi: EscopoApiPublica[];
+
+  @IsArray()
+  @ArrayMaxSize(EVENTOS_WEBHOOK.length)
+  @ArrayUnique()
+  @IsIn(EVENTOS_WEBHOOK, { each: true })
+  eventosWebhook: EventoWebhook[];
 }
 
 export class ListarApiPublicaDto {

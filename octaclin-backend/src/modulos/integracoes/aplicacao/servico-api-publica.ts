@@ -1,9 +1,13 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
+import { In, IsNull } from 'typeorm';
 import { ServicoAuditoria } from '../../../infraestrutura/auditoria/servico-auditoria';
+import { ExecutorTenant } from '../../../infraestrutura/banco-dados/executor-tenant';
+import { resolverProfissionalIdDoUsuario } from '../../../infraestrutura/seguranca/escopo-profissional';
 import { UsuarioAutenticado } from '../../auth/dominio/usuario-autenticado';
 import { ServicoAgenda } from '../../agenda/aplicacao/servico-agenda';
 import type { ConsultaAgendaRespostaDto } from '../../agenda/aplicacao/dtos';
 import { ServicoPacientes } from '../../pacientes/aplicacao/servico-pacientes';
+import { PacienteOrm } from '../../pacientes/infraestrutura/paciente.orm';
 import type { ContextoApiPublica } from '../dominio/contratos-integracao';
 import { CriarConsultaApiPublicaDto, CriarPacienteApiPublicaDto, ListarApiPublicaDto, ListarConsultasApiPublicaDto } from './dtos';
 
@@ -12,7 +16,8 @@ export class ServicoApiPublica {
   constructor(
     private readonly pacientes: ServicoPacientes,
     private readonly agenda: ServicoAgenda,
-    private readonly auditoria: ServicoAuditoria
+    private readonly auditoria: ServicoAuditoria,
+    private readonly executorTenant: ExecutorTenant
   ) {}
 
   async listarPacientes(contexto: ContextoApiPublica, filtros: ListarApiPublicaDto) {
@@ -40,7 +45,29 @@ export class ServicoApiPublica {
       throw new BadRequestException('O periodo da agenda deve ser positivo e ter no maximo 366 dias.');
     }
     const itens = await this.agenda.listarFeed(contexto.tenantId, { inicioEm, fimEm }, this.usuarioIntegracao(contexto));
-    const consultas = itens.filter((item) => item.tipo === 'consulta').map((item) => this.mapearConsulta(item));
+    const consultasDoProfissional = itens.filter((item) => item.tipo === 'consulta');
+    let consultasPermitidas = consultasDoProfissional;
+    if (contexto.profissionalUsuarioId && consultasDoProfissional.length) {
+      const pacientesIds = [...new Set(consultasDoProfissional.map((consulta) => consulta.pacienteId))];
+      const carteira = await this.executorTenant.executar(contexto.tenantId, async (gerenciador) => {
+        const profissionalId = await resolverProfissionalIdDoUsuario(
+          gerenciador, contexto.tenantId, this.usuarioIntegracao(contexto)
+        );
+        if (!profissionalId) return new Set<string>();
+        const pacientes = await gerenciador.getRepository(PacienteOrm).find({
+          where: {
+            tenantId: contexto.tenantId,
+            id: In(pacientesIds),
+            profissionalResponsavelId: profissionalId,
+            arquivadoEm: IsNull()
+          },
+          select: { id: true }
+        });
+        return new Set(pacientes.map(({ id }) => id));
+      });
+      consultasPermitidas = consultasDoProfissional.filter((consulta) => carteira.has(consulta.pacienteId));
+    }
+    const consultas = consultasPermitidas.map((item) => this.mapearConsulta(item));
     const deslocamento = (filtros.pagina - 1) * filtros.limite;
     return this.paginar(consultas.slice(deslocamento, deslocamento + filtros.limite), consultas.length, filtros);
   }
@@ -65,8 +92,8 @@ export class ServicoApiPublica {
   private usuarioIntegracao(contexto: ContextoApiPublica): UsuarioAutenticado {
     return {
       tenantId: contexto.tenantId,
-      usuarioId: contexto.criadoPorUsuarioId ?? contexto.chaveId,
-      papel: 'Client',
+      usuarioId: contexto.profissionalUsuarioId ?? contexto.criadoPorUsuarioId ?? contexto.chaveId,
+      papel: contexto.profissionalUsuarioId ? 'Professional' : 'Client',
       emailHash: `api:${contexto.chaveId}`,
       permissoes: []
     };

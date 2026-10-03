@@ -1,84 +1,75 @@
-import { Body, Controller, Delete, Get, Param, ParseUUIDPipe, Patch, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, ParseUUIDPipe, Post, UseGuards } from '@nestjs/common';
 import { Papeis, Permissoes, UsuarioAtual } from '../../auth/apresentacao/decorators';
 import { GuardaJwt } from '../../auth/apresentacao/guarda-jwt';
 import { GuardaPapeis } from '../../auth/apresentacao/guarda-papeis';
 import { GuardaPermissoes } from '../../auth/apresentacao/guarda-permissoes';
 import type { UsuarioAutenticado } from '../../auth/dominio/usuario-autenticado';
-import { AtualizarPermissoesIntegracaoDto, CriarChaveApiDto, CriarWebhookDto } from '../aplicacao/dtos';
+import { CriarChaveApiDto, CriarWebhookDto } from '../aplicacao/dtos';
 import { ServicoGestaoIntegracoes } from '../aplicacao/servico-gestao-integracoes';
 import { ServicoPermissoesIntegracao } from '../aplicacao/servico-permissoes-integracao';
 
-@Controller('cliente/integracoes')
+@Controller('profissional/integracoes')
 @UseGuards(GuardaJwt, GuardaPapeis, GuardaPermissoes)
-@Papeis('Client')
-@Permissoes('cliente.configuracoes.gerenciar')
-export class ControladorGestaoIntegracoes {
+@Papeis('Professional')
+@Permissoes('integracoes.acessar')
+export class ControladorIntegracoesProfissional {
   constructor(
-    private readonly servico: ServicoGestaoIntegracoes,
-    private readonly permissoesIntegracao: ServicoPermissoesIntegracao
+    private readonly integracoes: ServicoGestaoIntegracoes,
+    private readonly permissoes: ServicoPermissoesIntegracao
   ) {}
 
-  @Get('permissoes-profissionais')
-  listarPermissoesProfissionais(@UsuarioAtual() usuario: UsuarioAutenticado) {
-    return this.permissoesIntegracao.listarParaGestor(usuario.tenantId);
-  }
-
-  @Patch('profissionais/:usuarioId/permissoes')
-  atualizarPermissoesProfissional(
-    @UsuarioAtual() usuario: UsuarioAutenticado,
-    @Param('usuarioId', ParseUUIDPipe) usuarioId: string,
-    @Body() dados: AtualizarPermissoesIntegracaoDto
-  ) {
-    return this.permissoesIntegracao.atualizar(usuario.tenantId, usuario.usuarioId, usuarioId, dados);
+  @Get('acesso')
+  obterAcesso(@UsuarioAtual() usuario: UsuarioAutenticado) {
+    return this.permissoes.obterAcessoAtual(usuario.tenantId, usuario.usuarioId);
   }
 
   @Get('chaves')
   listarChaves(@UsuarioAtual() usuario: UsuarioAutenticado) {
-    return this.servico.listarChaves(usuario.tenantId);
+    return this.integracoes.listarChaves(usuario.tenantId, { usuarioId: usuario.usuarioId });
   }
 
   @Post('chaves')
   criarChave(@UsuarioAtual() usuario: UsuarioAutenticado, @Body() dados: CriarChaveApiDto) {
-    return this.servico.criarChave(usuario.tenantId, usuario.usuarioId, dados);
+    return this.integracoes.criarChave(usuario.tenantId, usuario.usuarioId, dados, { usuarioId: usuario.usuarioId });
   }
 
   @Post('chaves/:id/rotacao')
   rotacionarChave(@UsuarioAtual() usuario: UsuarioAutenticado, @Param('id', ParseUUIDPipe) id: string) {
-    return this.servico.rotacionarChave(usuario.tenantId, usuario.usuarioId, id);
+    return this.integracoes.rotacionarChave(usuario.tenantId, usuario.usuarioId, id, { usuarioId: usuario.usuarioId });
   }
 
   @Delete('chaves/:id')
   revogarChave(@UsuarioAtual() usuario: UsuarioAutenticado, @Param('id', ParseUUIDPipe) id: string) {
-    return this.servico.revogarChave(usuario.tenantId, usuario.usuarioId, id);
+    return this.integracoes.revogarChave(usuario.tenantId, usuario.usuarioId, id, { usuarioId: usuario.usuarioId });
   }
 
   @Get('webhooks')
   listarWebhooks(@UsuarioAtual() usuario: UsuarioAutenticado) {
-    return this.servico.listarWebhooks(usuario.tenantId);
+    return this.integracoes.listarWebhooks(usuario.tenantId, { usuarioId: usuario.usuarioId });
   }
 
   @Post('webhooks')
   criarWebhook(@UsuarioAtual() usuario: UsuarioAutenticado, @Body() dados: CriarWebhookDto) {
-    return this.servico.criarWebhook(usuario.tenantId, usuario.usuarioId, dados);
+    return this.integracoes.criarWebhook(usuario.tenantId, usuario.usuarioId, dados, { usuarioId: usuario.usuarioId });
   }
 
   @Post('webhooks/:id/rotacao')
   rotacionarSegredo(@UsuarioAtual() usuario: UsuarioAutenticado, @Param('id', ParseUUIDPipe) id: string) {
-    return this.servico.rotacionarSegredoWebhook(usuario.tenantId, usuario.usuarioId, id);
+    return this.integracoes.rotacionarSegredoWebhook(usuario.tenantId, usuario.usuarioId, id, { usuarioId: usuario.usuarioId });
   }
 
   @Delete('webhooks/:id')
   desativarWebhook(@UsuarioAtual() usuario: UsuarioAutenticado, @Param('id', ParseUUIDPipe) id: string) {
-    return this.servico.desativarWebhook(usuario.tenantId, usuario.usuarioId, id);
+    return this.integracoes.desativarWebhook(usuario.tenantId, usuario.usuarioId, id, { usuarioId: usuario.usuarioId });
   }
 
   @Get('webhooks/entregas')
   listarEntregas(@UsuarioAtual() usuario: UsuarioAutenticado) {
-    return this.servico.listarEntregas(usuario.tenantId);
+    return this.integracoes.listarEntregas(usuario.tenantId, { usuarioId: usuario.usuarioId });
   }
 
   @Post('webhooks/entregas/:id/reprocessamento')
   reprocessarEntrega(@UsuarioAtual() usuario: UsuarioAutenticado, @Param('id', ParseUUIDPipe) id: string) {
-    return this.servico.reprocessarEntrega(usuario.tenantId, usuario.usuarioId, id);
+    return this.integracoes.reprocessarEntrega(usuario.tenantId, usuario.usuarioId, id, { usuarioId: usuario.usuarioId });
   }
 }

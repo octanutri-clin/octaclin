@@ -1859,6 +1859,11 @@ describe('ServicoAgenda', () => {
       atualizadoEm: new Date()
     };
     const { servico } = criarServico({
+      paciente: {
+        id: 'paciente-1',
+        tenantId: 'tenant-1',
+        profissionalResponsavelId: 'profissional-1'
+      },
       profissional: {
         id: 'profissional-1',
         tenantId: 'tenant-1',
@@ -1975,7 +1980,53 @@ describe('ServicoAgenda', () => {
   });
 
   describe('escopo pacientes_responsaveis para Professional', () => {
-    it('deve forcar profissionalId para o proprio profissional ao criar consulta como Professional', async () => {
+    it('nega cancelamento de consulta cujo paciente saiu da carteira', async () => {
+      const consulta = {
+        id: 'consulta-1',
+        tenantId: 'tenant-1',
+        pacienteId: 'paciente-2',
+        profissionalId: 'profissional-1',
+        status: 'agendada'
+      };
+      const { servico, repositorios } = criarServico({
+        paciente: {
+          id: 'paciente-2',
+          tenantId: 'tenant-1',
+          profissionalResponsavelId: 'profissional-2'
+        },
+        profissional: { id: 'profissional-1', tenantId: 'tenant-1', usuarioId: 'usuario-profissional-1' },
+        consultas: [consulta]
+      });
+      await expect(servico.cancelarConsulta('tenant-1', 'consulta-1', {}, usuarioProfissional))
+        .rejects.toThrow('Consulta nao encontrada.');
+      expect(repositorios.consulta.save).not.toHaveBeenCalled();
+    });
+
+    it('nega reutilizacao de consulta por referencia externa fora da carteira', async () => {
+      const { servico, repositorios } = criarServico({
+        paciente: {
+          id: 'paciente-2',
+          tenantId: 'tenant-1',
+          profissionalResponsavelId: 'profissional-2'
+        },
+        profissional: { id: 'profissional-1', tenantId: 'tenant-1', usuarioId: 'usuario-profissional-1' },
+        consultas: [{
+          id: 'consulta-alheia',
+          tenantId: 'tenant-1',
+          pacienteId: 'paciente-2',
+          profissionalId: 'profissional-1',
+          referenciaExterna: 'referencia-existente'
+        }]
+      });
+      await expect(servico.criarConsulta('tenant-1', {
+        pacienteId: 'paciente-2',
+        referenciaExterna: 'referencia-existente',
+        inicioEm: '2026-07-22T12:00:00.000Z'
+      }, usuarioProfissional)).rejects.toThrow('Consulta nao encontrada.');
+      expect(repositorios.consulta.save).not.toHaveBeenCalled();
+    });
+
+    it('nega criar consulta para paciente de outra carteira', async () => {
       const { servico, repositorios } = criarServico({
         paciente: {
           id: 'paciente-1',
@@ -1991,7 +2042,7 @@ describe('ServicoAgenda', () => {
         }
       });
 
-      await servico.criarConsulta(
+      await expect(servico.criarConsulta(
         'tenant-1',
         {
           pacienteId: 'paciente-1',
@@ -2001,10 +2052,35 @@ describe('ServicoAgenda', () => {
           enviarNotificacoes: false
         },
         usuarioProfissional
-      );
+      )).rejects.toThrow('Paciente nao encontrado.');
 
+      expect(repositorios.consulta.save).not.toHaveBeenCalled();
+    });
+
+    it('usa o proprio profissional para paciente da carteira', async () => {
+      const { servico, repositorios } = criarServico({
+        paciente: {
+          id: 'paciente-1',
+          tenantId: 'tenant-1',
+          profissionalResponsavelId: 'profissional-1',
+          nomeCriptografado: Buffer.from('cripto:Paciente')
+        },
+        profissional: {
+          id: 'profissional-1',
+          tenantId: 'tenant-1',
+          usuarioId: 'usuario-profissional-1',
+          nomeCriptografado: Buffer.from('cripto:Profissional')
+        }
+      });
+      await servico.criarConsulta('tenant-1', {
+        pacienteId: 'paciente-1',
+        profissionalId: 'profissional-outro-2',
+        inicioEm: '2026-07-22T12:00:00.000Z',
+        duracaoMinutos: 60,
+        enviarNotificacoes: false
+      }, usuarioProfissional);
       expect(repositorios.consulta.save).toHaveBeenCalledWith(
-        expect.objectContaining({ profissionalId: 'profissional-1' })
+        expect.objectContaining({ profissionalId: 'profissional-1', pacienteId: 'paciente-1' })
       );
     });
 

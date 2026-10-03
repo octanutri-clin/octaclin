@@ -1,4 +1,4 @@
-import { CanActivate, ExecutionContext, Injectable, ServiceUnavailableException, UnauthorizedException } from '@nestjs/common';
+import { CanActivate, ExecutionContext, ForbiddenException, Injectable, NotFoundException, ServiceUnavailableException, UnauthorizedException } from '@nestjs/common';
 import { createHash, timingSafeEqual } from 'crypto';
 import { Request } from 'express';
 import { IsNull } from 'typeorm';
@@ -6,6 +6,8 @@ import { ExecutorTenant } from '../../../infraestrutura/banco-dados/executor-ten
 import { PoliticaProtecaoAbuso, ServicoProtecaoAbuso } from '../../auth/aplicacao/servico-protecao-abuso';
 import type { ContextoApiPublica } from '../dominio/contratos-integracao';
 import { ApiChaveOrm } from '../infraestrutura/api-chave.orm';
+import { ServicoPermissoesIntegracao } from '../aplicacao/servico-permissoes-integracao';
+import { estaDentroDaConcessao } from '../dominio/politica-permissoes-integracoes';
 
 const POLITICA_API_PUBLICA: PoliticaProtecaoAbuso = {
   maxTentativas: 120,
@@ -27,7 +29,8 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 export class GuardaChaveApi implements CanActivate {
   constructor(
     private readonly executorTenant: ExecutorTenant,
-    private readonly protecaoAbuso: ServicoProtecaoAbuso
+    private readonly protecaoAbuso: ServicoProtecaoAbuso,
+    private readonly permissoesIntegracao: ServicoPermissoesIntegracao
   ) {}
 
   async canActivate(contexto: ExecutionContext): Promise<boolean> {
@@ -58,6 +61,17 @@ export class GuardaChaveApi implements CanActivate {
       if (!encontrada || (encontrada.expiraEm && encontrada.expiraEm <= new Date())) return null;
       const hashEsperado = Buffer.from(encontrada.segredoHash, 'hex');
       if (hashEsperado.length !== hashRecebido.length || !timingSafeEqual(hashEsperado, hashRecebido)) return null;
+      if (encontrada.profissionalUsuarioId) {
+        try {
+          const concessao = await this.permissoesIntegracao.obterConcessaoNoGerenciador(
+            gerenciador, tenantId, encontrada.profissionalUsuarioId, 'api'
+          );
+          if (!estaDentroDaConcessao(encontrada.escopos, concessao.escoposApi)) return null;
+        } catch (erro) {
+          if (erro instanceof ForbiddenException || erro instanceof NotFoundException) return null;
+          throw erro;
+        }
+      }
       return encontrada;
     });
     if (!chave) throw new UnauthorizedException('Chave de API invalida, expirada ou revogada.');
@@ -76,6 +90,7 @@ export class GuardaChaveApi implements CanActivate {
       tenantId,
       chaveId,
       criadoPorUsuarioId: chave.criadoPorUsuarioId,
+      profissionalUsuarioId: chave.profissionalUsuarioId,
       escopos: chave.escopos
     };
     return true;

@@ -1,8 +1,61 @@
 import { WebhookAssinaturaOrm } from '../infraestrutura/webhook-assinatura.orm';
 import { WebhookEntregaOrm } from '../infraestrutura/webhook-entrega.orm';
+import { PacienteOrm } from '../../pacientes/infraestrutura/paciente.orm';
+import { ProfissionalOrm } from '../../profissionais/infraestrutura/profissional.orm';
+import { UsuarioOrm } from '../../usuarios/infraestrutura/usuario.orm';
+import { PermissaoIntegracaoProfissionalOrm } from '../infraestrutura/permissao-integracao-profissional.orm';
 import { registrarEventoWebhook } from './registrar-evento-webhook';
 
 describe('registrarEventoWebhook', () => {
+  it('enfileira para a clinica e apenas para o profissional responsavel pelo paciente', async () => {
+    let valores: Array<{ assinaturaId: string }> = [];
+    const gerenciador = {
+      getRepository: jest.fn((entidade: unknown) => {
+        if (entidade === WebhookAssinaturaOrm) return { find: jest.fn(async () => [
+          { id: 'clinica' },
+          { id: 'profissional-1', profissionalUsuarioId: 'usuario-1' },
+          { id: 'profissional-2', profissionalUsuarioId: 'usuario-2' }
+        ]) };
+        if (entidade === UsuarioOrm) return {
+          findOne: jest.fn(async ({ where }: { where: { id: string } }) => ({ id: where.id }))
+        };
+        if (entidade === PermissaoIntegracaoProfissionalOrm) return {
+          findOne: jest.fn(async () => ({ eventosWebhook: ['paciente.criado'] }))
+        };
+        if (entidade === ProfissionalOrm) return {
+          findOne: jest.fn(async ({ where }: { where: { usuarioId: string } }) => ({
+            id: where.usuarioId === 'usuario-1' ? 'profissional-1' : 'profissional-2'
+          }))
+        };
+        if (entidade === PacienteOrm) return {
+          findOne: jest.fn(async ({ where }: { where: { profissionalResponsavelId: string } }) =>
+            where.profissionalResponsavelId === 'profissional-1' ? { id: 'paciente-1' } : null
+          )
+        };
+        if (entidade === WebhookEntregaOrm) return {
+          createQueryBuilder: () => ({
+            insert: () => ({
+              values: (entrada: Array<{ assinaturaId: string }>) => {
+                valores = entrada;
+                return { orIgnore: () => ({ execute: jest.fn(async () => undefined) }) };
+              }
+            })
+          })
+        };
+        throw new Error('Repositorio inesperado');
+      })
+    };
+
+    await registrarEventoWebhook(gerenciador as never, 'tenant-1', {
+      evento: 'paciente.criado',
+      recursoTipo: 'paciente',
+      recursoId: 'paciente-1',
+      dados: { pacienteId: 'paciente-1' }
+    });
+
+    expect(valores.map(({ assinaturaId }) => assinaturaId)).toEqual(['clinica', 'profissional-1']);
+  });
+
   it('faz fan-out por assinatura com payload minimo e deduplicacao', async () => {
     const execute = jest.fn(async () => undefined);
     let valoresCapturados: unknown;

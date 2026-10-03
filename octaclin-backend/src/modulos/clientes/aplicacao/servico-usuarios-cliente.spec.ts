@@ -6,7 +6,14 @@ import { SessaoUsuarioOrm } from '../../auth/infraestrutura/sessao-usuario.orm';
 import { ProfissionalOrm } from '../../profissionais/infraestrutura/profissional.orm';
 import { PacienteOrm } from '../../pacientes/infraestrutura/paciente.orm';
 import { AgendaConsultaOrm } from '../../agenda/infraestrutura/agenda-consulta.orm';
+import { PermissaoIntegracaoProfissionalOrm } from '../../integracoes/infraestrutura/permissao-integracao-profissional.orm';
+import { ApiChaveOrm } from '../../integracoes/infraestrutura/api-chave.orm';
+import { WebhookAssinaturaOrm } from '../../integracoes/infraestrutura/webhook-assinatura.orm';
 import { ServicoUsuariosCliente } from './servico-usuarios-cliente';
+
+jest.mock('../../../infraestrutura/auditoria/servico-auditoria', () => ({
+  registrarAuditoriaNaTransacao: jest.fn(async () => undefined)
+}));
 
 function criarRepositorioFake(usuarios: Record<string, any>[]) {
   return {
@@ -55,13 +62,23 @@ function criarServico(
   protecaoAbuso = {
     consumirTentativa: jest.fn()
   },
-  profissionais: Record<string, any>[] = []
+  profissionais: Record<string, any>[] = [],
+  permissoesIntegracao: Record<string, any>[] = []
 ) {
   const repositorioUsuarios = criarRepositorioFake(usuarios);
   const repositorioTokens = criarRepositorioFake(tokens);
   const repositorioProfissionais = criarRepositorioFake(profissionais);
   const repositorioRefreshTokens = criarRepositorioFake([]);
   const repositorioSessoes = criarRepositorioFake([]);
+  const repositorioPermissoesIntegracao = criarRepositorioFake(permissoesIntegracao);
+  const repositorioChaves = {
+    find: jest.fn(async () => [] as Array<{ id: string }>),
+    update: jest.fn(async () => ({ affected: 1 }))
+  };
+  const repositorioWebhooks = {
+    find: jest.fn(async () => [] as Array<{ id: string }>),
+    update: jest.fn(async () => ({ affected: 1 }))
+  };
   const executorTenant = {
     executar: jest.fn((_tenantId: string, callback: any) =>
       callback({
@@ -71,6 +88,9 @@ function criarServico(
           if (entidade === ProfissionalOrm) return repositorioProfissionais;
           if (entidade === RefreshTokenOrm) return repositorioRefreshTokens;
           if (entidade === SessaoUsuarioOrm) return repositorioSessoes;
+          if (entidade === PermissaoIntegracaoProfissionalOrm) return repositorioPermissoesIntegracao;
+          if (entidade === ApiChaveOrm) return repositorioChaves;
+          if (entidade === WebhookAssinaturaOrm) return repositorioWebhooks;
           throw new Error(`Repositorio nao mapeado: ${entidade.name}`);
         }
       })
@@ -98,6 +118,9 @@ function criarServico(
     repositorioProfissionais,
     repositorioRefreshTokens,
     repositorioSessoes,
+    repositorioPermissoesIntegracao,
+    repositorioChaves,
+    repositorioWebhooks,
     executorTenant,
     criptografia,
     senhas,
@@ -782,6 +805,36 @@ describe('ServicoUsuariosCliente', () => {
     expect(repositorioSessoes.update).toHaveBeenCalledWith(
       { tenantId: 'tenant-1', usuarioId: 'colaborador-1', revogadoEm: expect.anything() },
       { revogadoEm: expect.any(Date), motivoRevogacao: 'acesso_alterado' }
+    );
+  });
+
+  it('revoga concessoes de integracao e audita ao desativar profissional', async () => {
+    const concessao = {
+      id: 'concessao-1', tenantId: 'tenant-1', usuarioId: 'profissional-1', tipo: 'api',
+      escoposApi: ['pacientes:ler'], eventosWebhook: [], revogadaEm: null
+    };
+    const { servico, repositorioPermissoesIntegracao, repositorioChaves, repositorioWebhooks } = criarServico(
+      [{ id: 'profissional-1', tenantId: 'tenant-1', role: 'Professional', ativo: true }],
+      [], undefined, undefined, [], [concessao]
+    );
+    repositorioChaves.find.mockResolvedValueOnce([{ id: 'chave-profissional' }]);
+    repositorioWebhooks.find.mockResolvedValueOnce([{ id: 'webhook-profissional' }]);
+
+    await servico.desativar('tenant-1', 'cliente-1', 'profissional-1');
+
+    expect(repositorioPermissoesIntegracao.save).toHaveBeenCalledWith(expect.objectContaining({
+      id: 'concessao-1', revogadaEm: expect.any(Date), revogadaPorUsuarioId: 'cliente-1'
+    }));
+    expect(repositorioChaves.find).toHaveBeenCalledWith(expect.objectContaining({
+      where: expect.objectContaining({ tenantId: 'tenant-1', profissionalUsuarioId: 'profissional-1' })
+    }));
+    expect(repositorioChaves.update).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 'chave-profissional', tenantId: 'tenant-1' }),
+      { revogadaEm: expect.any(Date) }
+    );
+    expect(repositorioWebhooks.update).toHaveBeenCalledWith(
+      { id: 'webhook-profissional', tenantId: 'tenant-1', ativo: true },
+      { ativo: false }
     );
   });
 });

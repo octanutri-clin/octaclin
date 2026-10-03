@@ -13,6 +13,7 @@ export type IconeModuloConsole =
   | 'ia'
   | 'gamificacao'
   | 'profissionais'
+  | 'integracoes'
   | 'operacoes';
 
 export interface ModuloConsole {
@@ -145,6 +146,18 @@ export const MODULOS_CONSOLE: readonly ModuloConsole[] = [
     atalho: 'G E',
     termos: ['equipe', 'profissional', 'acesso'],
     icone: 'profissionais'
+  },
+  {
+    id: 'integracoes',
+    href: '/integracoes',
+    rotulo: 'Integrações',
+    descricao: 'Chaves de API e webhooks autorizados pela clínica',
+    grupo: 'Administração',
+    permissao: 'integracoes.acessar',
+    papeisPermitidos: ['Professional'],
+    atalho: 'G N',
+    termos: ['api', 'webhook', 'integração', 'chave'],
+    icone: 'integracoes'
   },
   {
     id: 'operacoes',

@@ -92,6 +92,9 @@ describe('Matriz de permissoes OctaClin', () => {
   });
 
   it('deve separar acesso operacional por perfil profissional', () => {
+    expect(possuiPermissao('Professional', 'integracoes.acessar')).toBe(true);
+    expect(possuiPermissao('Professional', 'cliente.configuracoes.gerenciar')).toBe(false);
+    expect(possuiPermissao('Collaborator', 'integracoes.acessar')).toBe(false);
     expect(possuiPermissao('SuperAdmin', 'operacoes.auditoria.ler')).toBe(true);
     expect(possuiPermissao('Professional', 'operacoes.auditoria.ler')).toBe(false);
     expect(possuiPermissao('Professional', 'dashboard.ler')).toBe(true);

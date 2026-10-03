@@ -6,6 +6,7 @@ import { ExecutorTenant } from './executor-tenant';
 import { ServicoPainelOperacao } from '../../modulos/clientes/aplicacao/servico-painel-operacao';
 import { ServicoAuditoriaCliente } from '../../modulos/clientes/aplicacao/servico-auditoria-cliente';
 import { ServicoLgpdCliente } from '../../modulos/clientes/aplicacao/servico-lgpd-cliente';
+import { ServicoPermissoesIntegracao } from '../../modulos/integracoes/aplicacao/servico-permissoes-integracao';
 import { ServicoOperacoes } from '../../modulos/operacoes/aplicacao/servico-operacoes';
 import { ConsentimentoLgpdOrm } from '../lgpd/consentimento-lgpd.orm';
 import { CriptografiaDadosSensiveis } from '../seguranca/criptografia-dados-sensiveis';
@@ -84,7 +85,8 @@ const TABELAS_REPRESENTATIVAS = [
   { tabela: 'user_action_logs', colunaId: 'id', fronteira: 'auditoria' },
   { tabela: 'outbox_eventos', colunaId: 'id', fronteira: 'job assincrono' },
   { tabela: 'arquivos_midia', colunaId: 'id', fronteira: 'storage metadata' },
-  { tabela: 'google_canais_watch', colunaId: 'canal_watch_id', fronteira: 'integracao' }
+  { tabela: 'google_canais_watch', colunaId: 'canal_watch_id', fronteira: 'integracao' },
+  { tabela: 'permissoes_integracao_profissional', colunaId: 'id', fronteira: 'autorizacao de integracao' }
 ] as const;
 
 type TabelaRepresentativa = (typeof TABELAS_REPRESENTATIVAS)[number]['tabela'];
@@ -344,6 +346,12 @@ descrever('RLS e isolamento multi-tenant integral em Postgres real', () => {
        values ($1, $2, $3, now() + interval '1 hour', $4)`,
       [canalWatchId, tenantId, profissionalId, `token-sintetico-${rotulo}`]
     );
+    const permissao = await cliente.query<{ id: string }>(
+      `insert into permissoes_integracao_profissional
+         (tenant_id, usuario_id, tipo, escopos_api, eventos_webhook, concedida_por_usuario_id)
+       values ($1, $2, 'api', array['pacientes:ler']::text[], array[]::text[], $2) returning id`,
+      [tenantId, usuarioId]
+    );
 
     return {
       usuarioId,
@@ -351,7 +359,8 @@ descrever('RLS e isolamento multi-tenant integral em Postgres real', () => {
         user_action_logs: auditoria.rows[0].id,
         outbox_eventos: outbox.rows[0].id,
         arquivos_midia: arquivo.rows[0].id,
-        google_canais_watch: canalWatchId
+        google_canais_watch: canalWatchId,
+        permissoes_integracao_profissional: permissao.rows[0].id
       }
     };
   }
@@ -544,6 +553,55 @@ descrever('RLS e isolamento multi-tenant integral em Postgres real', () => {
         where tenant_id = $1 and metadados->>'protocolo' = $2 and tipo = 'tratativa_lgpd'
           and metadados->>'status' = 'concluida'`, [tenantA, protocoloA]));
     expect(totalDecisoes[0].total).toBe(1);
+  });
+
+  it('Fase 303 isola concessoes de integração e faz revogação prevalecer em operações seguintes', async () => {
+    if (!cliente || !executorTenant) throw new Error('Clientes da prova RLS nao foram inicializados.');
+    await comoTenant(tenantA);
+    const gestor = await cliente.query<{ id: string }>(
+      `insert into usuarios (tenant_id, email_hash, email_criptografado, senha_hash, role)
+       values ($1, $2, $3, 'prova-rls-gestor', 'Client') returning id`,
+      [tenantA, `prova-rls-gestor-${randomUUID()}`, Buffer.from('gestor-a')]
+    );
+    const servico = new ServicoPermissoesIntegracao(executorTenant);
+
+    await servico.atualizar(tenantA, gestor.rows[0].id, usuarioIdTenantA, {
+      escoposApi: ['agenda:ler'], eventosWebhook: ['consulta.criada']
+    });
+    expect(await servico.obterAcessoAtual(tenantA, usuarioIdTenantA)).toEqual({
+      escoposApi: ['agenda:ler'], eventosWebhook: ['consulta.criada']
+    });
+    expect(await servico.obterAcessoAtual(tenantB, usuarioIdTenantB)).toEqual({ escoposApi: [], eventosWebhook: [] });
+    await expect(servico.exigirAcesso(tenantA, usuarioIdTenantB, 'api')).rejects.toThrow('Profissional ativo deste tenant');
+
+    await cliente.query(
+      'insert into api_chaves (tenant_id, nome, prefixo, segredo_hash, escopos, criado_por_usuario_id, profissional_usuario_id) values ($1, $2, $3, $4, $5, $6, $6)',
+      [tenantA, 'Prova vinculacao profissional', `rls-${randomUUID().slice(0, 12)}`, 'a'.repeat(64), ['agenda:ler'], usuarioIdTenantA]
+    );
+    await cliente.query(
+      'insert into webhook_assinaturas (tenant_id, nome, url, eventos, segredo_criptografado, criado_por_usuario_id, profissional_usuario_id) values ($1, $2, $3, $4, $5, $6, $6)',
+      [tenantA, 'Prova vinculacao profissional', 'https://example.invalid/hook', ['consulta.criada'], Buffer.from('sintetico'), usuarioIdTenantA]
+    );
+    await expect(cliente.query(
+      'insert into api_chaves (tenant_id, nome, prefixo, segredo_hash, escopos, profissional_usuario_id) values ($1, $2, $3, $4, $5, $6)',
+      [tenantA, 'Vinculo cruzado', `rls-${randomUUID().slice(0, 12)}`, 'b'.repeat(64), ['agenda:ler'], usuarioIdTenantB]
+    )).rejects.toMatchObject({ code: '23503' });
+    await expect(cliente.query(
+      'insert into webhook_assinaturas (tenant_id, nome, url, eventos, segredo_criptografado, profissional_usuario_id) values ($1, $2, $3, $4, $5, $6)',
+      [tenantA, 'Vinculo cruzado', 'https://example.invalid/hook', ['consulta.criada'], Buffer.from('sintetico'), usuarioIdTenantB]
+    )).rejects.toMatchObject({ code: '23503' });
+
+    const concorrentes = await Promise.allSettled([
+      servico.exigirAcesso(tenantA, usuarioIdTenantA, 'api'),
+      servico.atualizar(tenantA, gestor.rows[0].id, usuarioIdTenantA, { escoposApi: [], eventosWebhook: [] })
+    ]);
+    expect(concorrentes[1].status).toBe('fulfilled');
+    await expect(servico.exigirAcesso(tenantA, usuarioIdTenantA, 'api')).rejects.toThrow('ainda não concedeu');
+    const historico = await executorTenant.executar(tenantA, (gerenciador) =>
+      gerenciador.query(`select tipo, revogada_em from permissoes_integracao_profissional
+        where tenant_id = $1 and usuario_id = $2 order by concedida_em`, [tenantA, usuarioIdTenantA]));
+    expect(historico).toHaveLength(4);
+    expect(historico.every((item: { revogada_em: Date | null }) => item.revogada_em instanceof Date)).toBe(true);
   });
 
   it('tenant ve os proprios registros em auditoria, jobs, storage e integracao', async () => {

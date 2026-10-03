@@ -27,6 +27,9 @@ export class WebhookAssinaturaOrm {
   @Column({ name: 'criado_por_usuario_id', type: 'uuid', nullable: true })
   criadoPorUsuarioId?: string;
 
+  @Column({ name: 'profissional_usuario_id', type: 'uuid', nullable: true })
+  profissionalUsuarioId?: string;
+
   @CreateDateColumn({ name: 'criado_em', type: 'timestamptz' })
   criadoEm: Date;
 

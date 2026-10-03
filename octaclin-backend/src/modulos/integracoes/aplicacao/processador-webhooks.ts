@@ -10,6 +10,7 @@ import { CriptografiaDadosSensiveis } from '../../../infraestrutura/seguranca/cr
 import { validarDestinoWebhook } from './seguranca-destino-webhook';
 import { WebhookAssinaturaOrm } from '../infraestrutura/webhook-assinatura.orm';
 import { WebhookEntregaOrm } from '../infraestrutura/webhook-entrega.orm';
+import { podeEntregarWebhook } from './escopo-webhook-profissional';
 
 const MAXIMO_TENTATIVAS = 6;
 const ATRASOS_MS = [60_000, 5 * 60_000, 30 * 60_000, 2 * 3_600_000, 8 * 3_600_000, 24 * 3_600_000];
@@ -111,6 +112,14 @@ export class ProcessadorWebhooks {
       if (!assinatura) {
         entrega.status = 'falhou';
         entrega.ultimoErro = 'Assinatura de webhook desativada.';
+        await repositorio.save(entrega);
+        return null;
+      }
+      if (!await podeEntregarWebhook(
+        gerenciador, tenantId, assinatura, entrega.evento, entrega.payload['dados']
+      )) {
+        entrega.status = 'falhou';
+        entrega.ultimoErro = 'A entrega perdeu autorização ou o paciente saiu da carteira.';
         await repositorio.save(entrega);
         return null;
       }

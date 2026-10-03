@@ -30,6 +30,33 @@ um cofre de secrets no servidor consumidor.
 | `agenda:ler` | Listar consultas |
 | `agenda:escrever` | Criar e cancelar consultas |
 
+## Gestão de credenciais por profissionais
+
+Além do gestor `Client`, um `Professional` pode administrar integrações somente
+quando o gestor lhe concede acesso na área **Equipe**. As permissões são
+independentes por profissional e tenant:
+
+- Para API, o gestor escolhe os escopos permitidos. Cada chave criada pelo
+  profissional precisa usar um subconjunto desses escopos.
+- Para webhooks, o gestor escolhe os eventos permitidos. Cada assinatura criada
+  pelo profissional precisa usar um subconjunto desses eventos.
+- O profissional lista, gira e revoga somente as próprias credenciais cujos
+  conjuntos inteiros estejam dentro da concessão atual; as entregas visíveis
+  também são limitadas aos eventos autorizados.
+- Uma chave criada pelo profissional consulta e altera somente pacientes da
+  carteira sob sua responsabilidade atual. Consultas e referências externas
+  seguem a mesma restrição. Assinaturas profissionais só recebem eventos de
+  pacientes dessa carteira, verificados ao enfileirar e antes de enviar.
+- A concessão é revalidada no uso da chave e da assinatura. Reduzi-la ou
+  removê-la interrompe credenciais profissionais que excedam a nova concessão;
+  elas permanecem cadastradas e podem voltar a operar se o gestor restaurar a
+  concessão. O gestor pode revogá-las definitivamente em **Integrações**.
+  Credenciais criadas pelo gestor continuam com escopo da clínica.
+
+Essa gestão usa sessão autenticada nas rotas `/profissional/integracoes` e não
+altera os endpoints nem o contrato de bearer keys em `/v1`. Profissionais não
+recebem permissões de conta do papel `Client`.
+
 A autenticacao e limitada a 300 tentativas por IP/minuto antes da validacao. Uma
 chave valida e limitada a 120 requisicoes/minuto. Se o controle Redis estiver
 indisponivel, a API falha fechada com HTTP 503.

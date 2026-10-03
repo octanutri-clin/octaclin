@@ -10,6 +10,7 @@ import {
   BrainCircuit,
   ClipboardList,
   HeartPulse,
+  KeyRound,
   LayoutDashboard,
   Send,
   Settings,
@@ -37,6 +38,7 @@ const ICONES_MODULOS: Record<IconeModuloConsole, typeof LayoutDashboard> = {
   ia: BrainCircuit,
   gamificacao: Trophy,
   profissionais: Stethoscope,
+  integracoes: KeyRound,
   operacoes: Settings
 };
 

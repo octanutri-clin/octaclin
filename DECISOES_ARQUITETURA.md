@@ -292,3 +292,36 @@ Este arquivo registra decisoes ja tomadas para evitar que outro agente reprojete
   nova superfície ou corrigir para frente, preservando os dados.
 - Plano, gates e procedimento em `docs/history/phases/PLANO_FASE_302.md` e
   `docs/governance/ROLLOUT_LGPD_FASE_302.md`.
+
+## ADR-027 - Concessões de integração para profissionais
+
+- O gestor `Client` concede diretamente a profissionais ativos do próprio
+  tenant listas independentes de escopos API e eventos webhook. O profissional
+  mantém o papel `Professional`; não recebe permissões de conta `Client`.
+- Concessões versionadas ficam em tabela tenant-scoped com RLS forçada e
+  histórico. A identidade e o tenant vêm da sessão validada; o backend lê a
+  concessão ativa a cada operação, para que a revogação não dependa de novo
+  login ou expiração do JWT.
+- Chaves e assinaturas profissionais guardam o titular de forma imutável. O
+  profissional só administra as próprias credenciais quando o conjunto está
+  integralmente contido na concessão corrente. A chave executa a API pública
+  com o papel Professional e escopo da carteira; webhooks profissionais
+  verificam responsabilidade atual pelo paciente ao criar a entrega e antes
+  do envio. Entregas são projetadas sem payload interno nem erro bruto.
+- Reduzir uma concessão impede o uso das credenciais profissionais que excedem
+  o novo conjunto; remover a concessão impede todas as daquele domínio.
+  Credenciais permanecem cadastradas para possível restauração da concessão;
+  o gestor pode revogar chave ou desativar assinatura definitivamente. As
+  credenciais criadas pelo gestor permanecem no escopo da clínica.
+- Concessões e linhas de auditoria de concessão/revogação são gravadas na mesma
+  transação. Mudança do profissional para outro papel ou sua desativação encerra
+  concessões e credenciais profissionais ativas na mesma transação que revoga
+  sessões; uma aprovação posterior exige novas credenciais.
+- A migration 1063 é aplicada fora de banda antes de ativar o runtime que lê
+  as novas colunas. Se houver rollback para o runtime anterior após emissão de
+  credenciais profissionais, revogar essas chaves e desativar assinaturas
+  profissionais antes da troca; o código antigo trataria as chaves como
+  credenciais de clínica. Prova PostgreSQL/RLS é requisito para concluir a
+  fase; testes unitários e status `SKIPPED` não provam isolamento.
+- Plano, gaps, decisões e testes em
+  `docs/history/phases/PLANO_FASE_303.md`.
