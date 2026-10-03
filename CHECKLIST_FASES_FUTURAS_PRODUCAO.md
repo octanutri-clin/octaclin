@@ -1,11 +1,12 @@
 # OctaClin - Checklist vivo de fases futuras ate producao
 
-Atualizado em 2026-10-01. Fase 296 integrada pelo PR #353 (merge `ccd1c0bb`); o proprietário informou aplicação da migration 1059, sem confirmação direta de ambiente/banco. Fase 297 integrada pelo PR #355 (merge `4f51b0ac`); Fase 298 integrada pelo PR #356 (merge `b00151ae`), com aplicação da 1060 informada pelo proprietário; Fase 299 integrada pelo PR #357 (merge `9052b8ba`), com aplicação da 1061 e cargas em staging e produção informadas pelo proprietário, sem consulta direta aos bancos neste ciclo; Fase 300 integrada pelo PR #358 (merge `c60c82ed`); Fase 301 em desenvolvimento nesta branch; Fases 256 a 261, 263 a 300 integradas; Fase 284
+Atualizado em 2026-10-01. Fase 296 integrada pelo PR #353 (merge `ccd1c0bb`); o proprietário informou aplicação da migration 1059, sem confirmação direta de ambiente/banco. Fase 297 integrada pelo PR #355 (merge `4f51b0ac`); Fase 298 integrada pelo PR #356 (merge `b00151ae`), com aplicação da 1060 informada pelo proprietário; Fase 299 integrada pelo PR #357 (merge `9052b8ba`), com aplicação da 1061 e cargas em staging e produção informadas pelo proprietário, sem consulta direta aos bancos neste ciclo; Fase 300 integrada pelo PR #358 (merge `c60c82ed`); Fase 301 integrada pelo PR #359 (merge `bd0f1d6b`); Fase 302 em desenvolvimento na branch `docs/roadmap-pos-301`; Fases 256 a 261, 263 a 301 integradas; Fase 284
 (PB-22) foi integrada pelo PR #320 (merge `af839c5`, 19 checks `SUCCESS` e
 `Provenance do SBOM` `SKIPPED`). Fase 285 (PB-20) foi integrada pelo PR #321
 (merge `01d6bf1`). Fase 286 concluida pelo PR #322 (merge `c92f246`). A reconciliação completa do backlog da auditoria e a
-ordem proposta para recomendações pendentes estão em `docs/product/OCTACLIN_PRODUCT_FEATURE_AUDIT.md`,
-seção 15. Fase 262 permanece em andamento pelos gates externos do piloto. Com a Fase 268
+ordem das recomendações pendentes está em
+`docs/product/ROADMAP_POS_AUDITORIA_FASES_302_320.md`, vinculada à seção 15 de
+`docs/product/OCTACLIN_PRODUCT_FEATURE_AUDIT.md`. Fase 262 permanece em andamento pelos gates externos do piloto. Com a Fase 268
 mergeada (PR `#275`, merge `306d2ed`), o PB-05 (alerta de check-in com
 adesao baixa) esta concluido e a Onda 2 do audit de produto (PB-01 ->
 PB-02 -> PB-03 -> PB-05) esta completa. A Onda 3 (devolver tempo ao
@@ -4490,11 +4491,54 @@ auditoria estão ordenados na seção 15 de
   orientar decisões operacionais. API pública sem prioridade. Sem migration;
   integrada pelo PR #358 (merge `c60c82ed`, confirmado no GitHub em 2026-10-01).
   Plano em `docs/history/phases/PLANO_FASE_300.md`.
-- [~] Fase 301 - indicadores factuais de consultas concluídas, taxa de conclusão,
+- [x] Fase 301 - indicadores factuais de consultas concluídas, taxa de conclusão,
   faltas, cancelamentos, carga e ocupação por profissional no painel do cliente.
   Sem ranking ou inferência de qualidade clínica; escopo tenant existente.
-  Branch `feat/fase301-operacao-inteligencia`, PR/CI/integração pendentes.
-  Plano em `docs/history/phases/PLANO_FASE_301.md`.
+  Integrada pelo PR #359 (merge `bd0f1d6b`, confirmado no GitHub em
+  2026-10-01). Plano em `docs/history/phases/PLANO_FASE_301.md`.
+- [~] Fase 302 - autosserviço LGPD da própria clínica, com triagem pelo
+  gestor `Client`, decisão final pelo SuperAdmin, descrição cifrada e
+  isolamento por tenant. Em desenvolvimento; migration/backfill 1062 fora de
+  banda, PR/CI e prova PostgreSQL/RLS pendentes. Plano em
+  `docs/history/phases/PLANO_FASE_302.md`.
+- [ ] Fase 303 - integrações e API para profissionais autorizados, com permissão
+  granular, aprovação administrativa, revogação e auditoria.
+- [ ] Fase 304 - leitura longitudinal factual de adesão e substituições, com
+  consulta à versão histórica do plano no fluxo profissional.
+- [ ] Fase 305 - visão conjunta de questionários e antropometria, com datas,
+  unidades, versões e dados ausentes explícitos.
+- [ ] Fase 306 - intervalo de retorno, ausência de próxima consulta, faltas
+  por horário e tempo de resposta a formulários, sem previsão clínica automática.
+- [ ] Fase 307 - progresso do paciente além do peso, com métricas/metas
+  compartilhadas explicitamente pelo profissional.
+- [ ] Fase 308 - exames fora da faixa no resumo clínico, consumindo PB-17.
+- [ ] Fase 309 - preferências individuais de notificação interna e digest.
+- [ ] Fase 310 - categorias e entrega explícita de receitas nutricionais ao
+  paciente, com versão revisada.
+- [ ] Fase 311 - instalação opt-in do kit genérico em clínicas existentes e
+  checagem de catálogo no onboarding de ambiente.
+- [ ] Fase 312 - encaminhamento no motor de documentos; atestado condicionado
+  à avaliação jurídica e competência profissional.
+- [ ] Fase 313 - avaliação antropométrica de gestantes, após validação clínica.
+- [ ] Fase 314 - avaliação antropométrica de menores de 20 anos, após validação
+  clínica da referência etária e por sexo.
+- [ ] Fase 315 - retirada controlada do campo `score_risco` legado, com
+  compatibilidade e plano de migration/rollback.
+- [ ] Fase 316 - PB-30: extração assistida de exame com revisão humana,
+  condicionada aos gates jurídico, privacidade, provider e antimalware.
+- [ ] Fase 317 - decisão de propósito e possível piloto controlado de
+  gamificação; padrão permanece desligado até aprovação.
+- [ ] Fase 318 - avaliação de valor e possível piloto de síntese pré-consulta
+  e rascunho de evolução/orientação, com assinatura humana.
+- [ ] Fase 319 - avaliação de volume, privacidade e possível piloto de busca
+  semântica no prontuário.
+- [ ] Fase 320 - avaliação de direitos da TBCA e possível importador próprio;
+  nenhuma carga sem licença comprovada.
+
+O escopo, dependências, critérios de aceite, limites e gates destas fases estão
+em `docs/product/ROADMAP_POS_AUDITORIA_FASES_302_320.md`. Fases condicionais
+podem terminar em NO-GO documentado após a decisão correspondente; a ordem
+permanece explícita até revisão do proprietário.
 
 O programa de hardening
 PR 36-56 permanece como trilha separada --

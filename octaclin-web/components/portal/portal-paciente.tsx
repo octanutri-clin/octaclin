@@ -1638,16 +1638,6 @@ export function PortalPaciente({ secao }: { secao: SecaoPortal }) {
                               <dd>{formatarDataHora(solicitacao.atualizadoEm)}</dd>
                             </div>
                           </dl>
-                          {solicitacao.ultimaTratativa ? (
-                            <p className="mt-3 break-words text-xs text-texto-suave">
-                              Última tratativa: <span className="font-medium text-texto-forte">{solicitacao.ultimaTratativa}</span>
-                            </p>
-                          ) : null}
-                          {solicitacao.ultimaResposta ? (
-                            <p className="mt-2 break-words text-xs text-texto-suave">
-                              Última resposta: <span className="font-medium text-texto-forte">{solicitacao.ultimaResposta}</span>
-                            </p>
-                          ) : null}
                         </article>
                       ))
                     ) : (

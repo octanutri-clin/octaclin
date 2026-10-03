@@ -392,6 +392,56 @@ async function assertSemOverflowHorizontal(page) {
 }
 
 test.describe('portal do cliente', () => {
+  test('Fase 302 permite triagem LGPD e rascunho sem decisão final ou envio', async ({ page }) => {
+    await prepararSessaoCliente(page);
+    let estado = 'recebida';
+    let triagens = 0;
+    await page.route('**/api/cliente/lgpd/solicitacoes**', async (route) => {
+      const url = new URL(route.request().url());
+      const metodo = route.request().method();
+      const pedido = {
+        protocolo: 'LGPD-EXEMPLO', tipo: 'retificacao', status: estado,
+        detalhes: 'Corrigir um dado cadastral de exemplo.',
+        abertoEm: '2026-10-01T10:00:00.000Z', atualizadoEm: '2026-10-01T10:00:00.000Z',
+        historico: [{ tipo: 'solicitacao', status: 'recebida', criadoEm: '2026-10-01T10:00:00.000Z' }]
+      };
+      if (metodo === 'POST' && url.pathname.endsWith('/assumir')) {
+        estado = 'em_tratamento';
+        triagens += 1;
+        await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ...pedido, status: estado }) });
+        return;
+      }
+      if (metodo === 'POST' && url.pathname.endsWith('/rascunho')) {
+        await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({
+          protocolo: pedido.protocolo, status: estado,
+          rascunho: 'Recebemos seu pedido. Esta resposta será revisada antes do envio.', envioAutomatico: false
+        }) });
+        return;
+      }
+      if (url.pathname.endsWith('/LGPD-EXEMPLO')) {
+        await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(pedido) });
+        return;
+      }
+      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({
+        itens: [{ ...pedido, possuiDetalhes: true }], pagina: 1, limite: 20, temMais: false
+      }) });
+    });
+    await page.goto('/cliente');
+    await page.getByRole('tablist', { name: 'Áreas da conta' }).getByRole('tab', { name: 'Privacidade' }).click();
+    const painel = page.getByRole('tabpanel', { name: 'Privacidade' });
+    await expect(painel.getByText('LGPD-EXEMPLO')).toBeVisible();
+    await painel.getByRole('button', { name: 'Ver pedido' }).click();
+    await expect(painel.getByText('Corrigir um dado cadastral de exemplo.')).toBeVisible();
+    await painel.getByRole('button', { name: 'Iniciar tratativa' }).click();
+    await expect(painel.getByRole('button', { name: 'Iniciar tratativa' })).toHaveCount(0);
+    expect(triagens).toBe(1);
+    await painel.getByRole('button', { name: 'Preparar rascunho' }).click();
+    await expect(painel.getByText('Esta mensagem não foi enviada ao paciente.')).toBeVisible();
+    await expect(painel.getByRole('textbox', { name: 'Rascunho para revisão' })).toHaveValue(/Esta resposta será revisada/);
+    await expect(painel.getByRole('button', { name: /concluir|indeferir|excluir|enviar/i })).toHaveCount(0);
+    await assertSemOverflowHorizontal(page);
+  });
+
   test('configura lembretes desligados por padrão sem retroagir', async ({ page }) => {
     await prepararSessaoCliente(page);
     let salvo;

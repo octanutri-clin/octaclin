@@ -11,6 +11,7 @@ import { AreaAssinaturaUsoCliente, AreaVisaoGeralCliente } from './areas-visao-a
 import { AreaPortalCliente } from './portal-cliente-dominio';
 import { AreaOperacaoCliente } from './area-operacao-cliente';
 import { AreaAuditoriaCliente } from './area-auditoria-cliente';
+import { AreaLgpdCliente } from './area-lgpd-cliente';
 import { usePortalCliente } from './use-portal-cliente';
 
 export function PortalCliente() {
@@ -74,6 +75,7 @@ export function PortalCliente() {
             { id: 'ativacao', rotulo: 'Ativação' },
             { id: 'operacao', rotulo: 'Operação' },
             { id: 'auditoria', rotulo: 'Auditoria' },
+            { id: 'lgpd', rotulo: 'Privacidade' },
             { id: 'assinatura', rotulo: 'Assinatura' },
             { id: 'consumo', rotulo: 'Consumo' },
             ...(podeLerFinanceiro ? [{ id: 'financeiro', rotulo: 'Financeiro' }] : []),
@@ -91,6 +93,7 @@ export function PortalCliente() {
         <AreaVisaoGeralCliente portal={portal} />
         {areaAtiva === 'operacao' ? <AreaOperacaoCliente /> : null}
         {areaAtiva === 'auditoria' ? <AreaAuditoriaCliente /> : null}
+        {areaAtiva === 'lgpd' ? <AreaLgpdCliente /> : null}
         <AreaAssinaturaUsoCliente portal={portal} />
         <AreaEquipeCliente portal={portal} />
         <AreasConfiguracaoCliente portal={portal} />

@@ -8,7 +8,12 @@ const raiz = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const temporaria = mkdtempSync(join(tmpdir(), 'octaclin-painel-operacao-bff-'));
 const arquivos = [
   'scripts/painel-operacao-bff.spec.ts',
+  'scripts/lgpd-cliente-bff.spec.ts',
   'app/api/cliente/painel-operacao/route.ts',
+  'app/api/cliente/lgpd/solicitacoes/route.ts',
+  'app/api/cliente/lgpd/solicitacoes/[protocolo]/route.ts',
+  'app/api/cliente/lgpd/solicitacoes/[protocolo]/assumir/route.ts',
+  'app/api/cliente/lgpd/solicitacoes/[protocolo]/rascunho/route.ts',
   'lib/server/cold-start-bff.ts',
   'lib/server/permissoes-bff.ts',
   'lib/server/sessao-bff.ts'
@@ -45,7 +50,11 @@ module.exports = { cookies, headers, __setCookies, __clearCookies };
   const alias = join(temporaria, 'node_modules', '@', 'lib');
   mkdirSync(dirname(alias), { recursive: true });
   cpSync(join(temporaria, 'lib'), alias, { recursive: true });
-  executar(process.execPath, ['--test', join(temporaria, 'scripts', 'painel-operacao-bff.spec.js')], temporaria);
+  executar(process.execPath, [
+    '--test',
+    join(temporaria, 'scripts', 'painel-operacao-bff.spec.js'),
+    join(temporaria, 'scripts', 'lgpd-cliente-bff.spec.js')
+  ], temporaria);
 } finally {
   rmSync(temporaria, { recursive: true, force: true });
 }

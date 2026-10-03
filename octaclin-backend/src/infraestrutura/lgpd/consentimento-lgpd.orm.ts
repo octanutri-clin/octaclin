@@ -25,4 +25,7 @@ export class ConsentimentoLgpdOrm {
 
   @Column({ type: 'jsonb', default: {} })
   metadados: Record<string, unknown>;
+
+  @Column({ name: 'detalhes_criptografados', type: 'bytea', nullable: true })
+  detalhesCriptografados?: Buffer;
 }

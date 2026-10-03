@@ -17,7 +17,7 @@
     "audit:raw": "pnpm audit --audit-level moderate",
     "audit:security": "node scripts/audit-seguranca.mjs",
     "audit:a11y": "node scripts/auditoria-acessibilidade.mjs",
-    "test:security": "node --test scripts/audit-seguranca.spec.mjs",
+    "test:security": "node --test scripts/audit-seguranca.spec.mjs scripts/backports-seguranca.spec.mjs",
     "test:a11y": "node --test scripts/auditoria-acessibilidade.spec.mjs",
     "build:validate": "expo export --platform all --output-dir .expo/export-smoke"
   },

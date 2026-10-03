@@ -244,8 +244,6 @@ export interface LgpdPortalPacienteApi {
     detalhes?: string;
     abertoEm: string;
     atualizadoEm: string;
-    ultimaTratativa?: string;
-    ultimaResposta?: string;
   }[];
 }
 

@@ -10,6 +10,7 @@ export type AreaPortalCliente =
   | 'ativacao'
   | 'operacao'
   | 'auditoria'
+  | 'lgpd'
   | 'assinatura'
   | 'consumo'
   | 'financeiro'

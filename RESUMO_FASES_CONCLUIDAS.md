@@ -14,7 +14,10 @@
   consumidores operacionais usam prioridade calculada; o campo manual legado
   permanece por compatibilidade, sem exposição de prioridade na API pública.
   Plano em `docs/history/phases/PLANO_FASE_300.md`.
-- Fase 301 em desenvolvimento; não consta como concluída. Plano em
+- Fase 301 integrada pelo PR #359 (merge `bd0f1d6b`, confirmado no GitHub
+  em 2026-10-01): consultas concluídas, taxa factual de conclusão, faltas,
+  cancelamentos e ocupação por profissional no painel da clínica, sem ranking
+  ou inferência de qualidade clínica. Plano em
   `docs/history/phases/PLANO_FASE_301.md`.
 
 ## Reconciliacao em 2026-09-30

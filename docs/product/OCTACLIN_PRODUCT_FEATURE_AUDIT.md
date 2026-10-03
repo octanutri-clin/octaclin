@@ -341,10 +341,10 @@ Critério: valor claro, esforço pequeno, risco baixo, sem migration pesada e se
 ### 5.5 Painel de operação da clínica
 - **Estado da Fase 280**: PB-26 integrado pela PR #315, com indicadores
   agregados para `Client`; auditoria do tenant segue na Fase 281 (PB-27).
-- **Estado da Fase 301**: incremento em desenvolvimento no mesmo painel:
+- **Estado da Fase 301**: incremento integrado no PR #359 no mesmo painel:
   concluídas, taxa de conclusão, faltas e cancelamentos explícitos por
   profissional, ocupação sem contagem dupla e histórico de arquivados com
-  atividade. Integração/CI pendentes; demais frentes do item 8 continuam abertas.
+  atividade. Demais frentes do item 8 seguem nas Fases 302–306 do roadmap vigente.
 - **Antes do PB-26** `[F]`: o dono vê assinatura, limites, uso e usuários (`servico-portal-cliente.ts:192-237`) e a tela
   de recebimentos com performance por profissional (fase 263). Operações — auditoria, LGPD, falhas — é
   exclusivamente SuperAdmin (`controlador-operacoes.ts:62`).
@@ -621,7 +621,7 @@ de esgotar a versão determinística de cada um.
 
 ### Estado do backlog verificado em 2026-10-01
 
-Os estados abaixo foram cruzados com PRs merged e, para itens sem PR identificável, com o código. PRs #319 a #324, #343 a #349, #353, #355 a #358 foram integrados; a Fase 300 foi integrada pelo PR #358 (merge `c60c82ed`, confirmado no GitHub em 2026-10-01). O proprietário informou aplicação das migrations 1060/1061 e das cargas de catálogo em staging e produção; esta reconciliação não consultou os bancos. A Fase 301 está em desenvolvimento nesta branch e ainda depende de PR/CI.
+Os estados abaixo foram cruzados com PRs merged e, para itens sem PR identificável, com o código. PRs #319 a #324, #343 a #349, #353, #355 a #359 foram integrados; a Fase 300 foi integrada pelo PR #358 (merge `c60c82ed`) e a Fase 301 pelo PR #359 (merge `bd0f1d6b`), confirmados no GitHub em 2026-10-01. O proprietário informou aplicação das migrations 1060/1061 e das cargas de catálogo em staging e produção; esta reconciliação não consultou os bancos.
 
 | PB | Estado e evidência |
 |---|---|
@@ -649,9 +649,15 @@ Os estados abaixo foram cruzados com PRs merged e, para itens sem PR identificá
 | PB-29 | **Concluído no código** — Fase 283, PR #319 integrado (merge `19ade15` em 2026-09-27). Não há evidência de produção nesta reconciliação. |
 | PB-30 | **Pendente** — extração assistida de exames não foi encontrada; PB-17 entrega a estrutura determinística e é dependência já concluída. |
 
-PB-30 segue sem ordem aprovada na tabela original. PB-20 e Fases 286 a 300 foram integrados. A Fase 299 entregou TACO, USDA offline e IBGE POF 2008–2009 como fontes independentes, sem mesclagem automática. O proprietário informou aplicação da 1061 e das cargas em staging e produção; sem prova direta dos bancos neste ciclo. TBCA permanece fora do escopo. A Fase 300 fechou o uso residual do `score_risco` manual nas filas e filtros; o campo legado permanece no contrato de paciente para compatibilidade. A prioridade calculada é operacional, não um score de risco clínico. A Fase 301 trata a primeira frente do item 8 (indicadores por profissional); autosserviço LGPD, APIs profissionais e visões longitudinais permanecem pendentes. As demais recomendações de automação e produto não cobertas pelas fases citadas continuam abertas.
+PB-30 segue sem implementação; agora está planejado como Fase 316, sujeita aos gates jurídico, de privacidade e operação. PB-20 e Fases 286 a 301 foram integrados. A Fase 299 entregou TACO, USDA offline e IBGE POF 2008–2009 como fontes independentes, sem mesclagem automática. O proprietário informou aplicação da 1061 e das cargas em staging e produção; sem prova direta dos bancos neste ciclo. TBCA permanece sem carga e depende de licença. A Fase 300 fechou o uso residual do `score_risco` manual nas filas e filtros; o campo legado permanece no contrato de paciente para compatibilidade. A prioridade calculada é operacional, não um score de risco clínico. A Fase 301 concluiu a primeira frente do item 8 (indicadores por profissional). Autosserviço LGPD, APIs profissionais, visões longitudinais e os demais pontos abertos têm destino explícito nas Fases 302–320 de `ROADMAP_POS_AUDITORIA_FASES_302_320.md`. O documento separa lacuna de produto de comprovação operacional pendente.
 
 ---
+
+**Atualização da Fase 302 em 2026-10-01:** desenvolvimento iniciado na mesma
+branch do roadmap. O gestor da clínica fará triagem e rascunho do próprio
+tenant; a decisão final permanece com SuperAdmin. A descrição livre de pedidos
+e tratativas passará a ser cifrada, com migration 1062 e backfill fora de
+banda. PR, CI e verificação de bancos externos ainda pendentes.
 
 ## 16. Suggested Roadmap
 
@@ -862,15 +868,30 @@ produto devem ter esse gate resolvido no plano da respectiva fase.
    pelo proprietário, sem verificação direta dos bancos neste ciclo. TBCA exige
    decisão própria sobre direitos e ingestão; não há carga nesta fase.
 8. **Operação e inteligência da clínica.** PB-26 entregou carga, ocupação e faltas;
-   a Fase 301 em desenvolvimento acrescenta concluídas e taxa factual de conclusão,
-   explicita cancelamentos e corrige sobreposição e histórico de arquivados. PR/CI
-   pendentes. Permanecem: autosserviço LGPD da própria clínica, acesso profissional
-   a APIs/integrações e visões longitudinais de adesão, substituições,
-   questionários/antropometria, intervalo de retorno e evasão.
-9. **PB-30 — extração assistida de exames.** Com PB-17 concluído, definir antes o gate jurídico, privacidade,
-   retenção e fornecedor; entregar rascunho com revisão humana e fallback determinístico.
-10. **Busca semântica**, condicionada a volume de dados suficiente e a avaliação de privacidade/qualidade.
-   Manter cálculos, diagnóstico, prescrição e triagem clínica fora de decisão autônoma por IA.
+   a Fase 301 integrada pelo PR #359 acrescentou concluídas e taxa factual de
+   conclusão, explicitou cancelamentos e corrigiu sobreposição e histórico de
+   arquivados. Seguem autosserviço LGPD da clínica (302), acesso profissional
+   a APIs/integrações (303), visões longitudinais de adesão e substituições
+   (304), questionários/antropometria (305), intervalo de retorno e evasão
+   factual (306).
+9. **Lacunas clínicas e de experiência restantes.** Progresso do paciente
+   além do peso (307), exames fora da faixa no resumo PB-16 (308), preferências
+   e digest de notificações (309), receitas categorizadas e compartilhadas
+   (310), kit genérico para clínicas existentes (311), documentos adicionais
+   (312), critérios próprios de IMC para gestantes e menores de 20 anos
+   (313–314) e retirada controlada do `score_risco` legado (315).
+10. **PB-30 — extração assistida de exames (316).** Com PB-17 concluído,
+    resolver gates jurídico, privacidade, retenção, fornecedor e antimalware;
+    entregar rascunho item a item com revisão humana e digitação manual como fallback.
+11. **Avaliações condicionais (317–320).** Propósito da gamificação, valor da
+    síntese pré-consulta e do rascunho assistido de evolução, busca semântica com volume/privacidade
+    suficientes e direitos da TBCA. Cada fase pode terminar em NO-GO documentado;
+    cálculos, diagnóstico, prescrição e triagem clínica não viram decisão
+    autônoma por IA.
+
+Escopo, dependências, aceite, gates e evidências pendentes de **todas** as
+Fases 302–320 estão consolidados no
+[`ROADMAP_POS_AUDITORIA_FASES_302_320.md`](ROADMAP_POS_AUDITORIA_FASES_302_320.md).
 
 Itens que a própria auditoria rejeita ou exclui — wearables sem integração/valor, pagamento online já
 endereçado por outro roadmap, assinatura digital, chatbot aberto e cálculo/score/triagem nutricional por IA —

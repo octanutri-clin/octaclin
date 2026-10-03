@@ -264,3 +264,31 @@ Este arquivo registra decisoes ja tomadas para evitar que outro agente reprojete
   ou se RLS impedir uma contagem completa.
 - Contrato, gates, rollback e evidencia da Fase 295 ficam em
   `docs/history/phases/PLANO_FASE_295.md`.
+
+## ADR-026 - Triagem LGPD pelo gestor da clínica
+
+- O papel exato `Client` com `cliente.acessar` consulta os pedidos LGPD do
+  próprio tenant, inicia a tratativa e prepara rascunho não enviado. O tenant
+  vem da credencial; a leitura usa `ExecutorTenant`, filtro SQL por tenant,
+  paginação e DTO mínimo. O BFF e o backend respondem `private, no-store`.
+- Conclusão, indeferimento, eliminação, CSV operacional e programação de
+  retenção permanecem na superfície `SuperAdmin`. A triagem da clínica não
+  amplia o alcance da rota de Operações nem equivale a deferimento jurídico.
+- A descrição livre do pedido e das tratativas passa a ser cifrada em coluna
+  própria, mantendo metadados de estado sem conteúdo. Registros anteriores
+  exigem backfill fora de banda depois da migration 1062 e do deploy
+  compatível; cifra e remoção do JSON ocorrem na mesma transação por lote.
+- A solicitação original é travada na transação para serializar a triagem com
+  decisões operacionais. Cada tratativa recebe instante posterior ao último
+  evento de estado, inclusive quando ambas ocorrem no mesmo milissegundo.
+  O rascunho não cria mensagem nem outbox. Auditoria
+  registra apenas a ação, sem texto, paciente ou protocolo.
+- O portal do paciente projeta o estado do pedido e a descrição enviada por
+  ele. Nota de tratativa interna e resposta apenas preparada não são
+  comunicação entregue e não aparecem nessa projeção, nem alteram a data
+  de atualização exibida ao paciente.
+- O `down` da 1062 recusa perda de dados. Depois do backfill, o runtime
+  anterior não lê descrições cifradas; o rollback operacional é desativar a
+  nova superfície ou corrigir para frente, preservando os dados.
+- Plano, gates e procedimento em `docs/history/phases/PLANO_FASE_302.md` e
+  `docs/governance/ROLLOUT_LGPD_FASE_302.md`.
