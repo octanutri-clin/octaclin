@@ -64,3 +64,84 @@ test('reprova avisos silenciados mesmo com contadores zerados', () => {
   assert.equal(resultado.aprovado, false);
   assert.match(resultado.mensagem, /avisos silenciados/);
 });
+
+test('so aceita os advisories com backport local validado e escopo exato', () => {
+  const resultado = avaliarAuditoria(
+    {
+      advisories: {
+        nodeForge: {
+          github_advisory_id: 'GHSA-86w9-cpqp-85rv',
+          module_name: 'node-forge',
+          severity: 'high',
+          vulnerable_versions: '<=1.4.0',
+        },
+        braces: {
+          github_advisory_id: 'GHSA-vfj7-8cjw-p6xm',
+          module_name: 'braces',
+          severity: 'high',
+          vulnerable_versions: '<=3.0.3',
+        },
+      },
+      muted: [],
+      metadata: { vulnerabilities: { ...totaisZerados, high: 2 } },
+    },
+    { backportsValidados: true },
+  );
+
+  assert.equal(resultado.aprovado, true);
+  assert.match(resultado.mensagem, /backports locais verificados/i);
+  assert.match(resultado.mensagem, /aguardando correcoes upstream/i);
+});
+
+test('reprova qualquer advisory fora dos backports locais mesmo quando validados', () => {
+  const resultado = avaliarAuditoria(
+    {
+      advisories: {
+        nodeForge: {
+          github_advisory_id: 'GHSA-86w9-cpqp-85rv',
+          module_name: 'node-forge',
+          severity: 'high',
+          vulnerable_versions: '<=1.4.0',
+        },
+        naoMitigado: {
+          github_advisory_id: 'GHSA-unknown-unknown-unknown',
+          module_name: 'pacote-exemplo',
+          severity: 'high',
+          vulnerable_versions: '*',
+        },
+      },
+      muted: [],
+      metadata: { vulnerabilities: { ...totaisZerados, high: 2 } },
+    },
+    { backportsValidados: true },
+  );
+
+  assert.equal(resultado.aprovado, false);
+  assert.match(resultado.mensagem, /GHSA-unknown-unknown-unknown/);
+});
+
+test('reprova contadores criticos adicionais junto dos backports locais', () => {
+  const resultado = avaliarAuditoria(
+    {
+      advisories: {
+        nodeForge: {
+          github_advisory_id: 'GHSA-86w9-cpqp-85rv',
+          module_name: 'node-forge',
+          severity: 'high',
+          vulnerable_versions: '<=1.4.0',
+        },
+        braces: {
+          github_advisory_id: 'GHSA-vfj7-8cjw-p6xm',
+          module_name: 'braces',
+          severity: 'high',
+          vulnerable_versions: '<=3.0.3',
+        },
+      },
+      muted: [],
+      metadata: { vulnerabilities: { ...totaisZerados, high: 2, critical: 1 } },
+    },
+    { backportsValidados: true },
+  );
+
+  assert.equal(resultado.aprovado, false);
+});
