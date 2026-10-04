@@ -7,11 +7,13 @@ import { ServicoPainelOperacao } from '../../modulos/clientes/aplicacao/servico-
 import { ServicoAuditoriaCliente } from '../../modulos/clientes/aplicacao/servico-auditoria-cliente';
 import { ServicoLgpdCliente } from '../../modulos/clientes/aplicacao/servico-lgpd-cliente';
 import { ServicoPermissoesIntegracao } from '../../modulos/integracoes/aplicacao/servico-permissoes-integracao';
+import { PermissaoIntegracaoProfissionalOrm } from '../../modulos/integracoes/infraestrutura/permissao-integracao-profissional.orm';
 import { ServicoOperacoes } from '../../modulos/operacoes/aplicacao/servico-operacoes';
 import { ConsentimentoLgpdOrm } from '../lgpd/consentimento-lgpd.orm';
 import { CriptografiaDadosSensiveis } from '../seguranca/criptografia-dados-sensiveis';
 import { ProfissionalOrm } from '../../modulos/profissionais/infraestrutura/profissional.orm';
 import { TenantConfiguracaoOrm } from '../../modulos/tenancy/infraestrutura/tenant-configuracao.orm';
+import { UsuarioOrm } from '../../modulos/usuarios/infraestrutura/usuario.orm';
 import { criarOpcoesTypeOrm } from './opcoes-typeorm';
 
 /**
@@ -179,7 +181,13 @@ descrever('RLS e isolamento multi-tenant integral em Postgres real', () => {
       ssl: false,
       synchronize: false,
       logging: false,
-      entities: [ProfissionalOrm, TenantConfiguracaoOrm, ConsentimentoLgpdOrm],
+      entities: [
+        ProfissionalOrm,
+        TenantConfiguracaoOrm,
+        ConsentimentoLgpdOrm,
+        UsuarioOrm,
+        PermissaoIntegracaoProfissionalOrm
+      ],
       extra: { max: 2 }
     });
     await fonteDados.initialize();
