@@ -85,6 +85,36 @@ export class ListarEscolhasPlanoAlimentarDto {
   limite = 25;
 }
 
+export class ListarAcompanhamentoVersaoPlanoDto {
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(PAGINA_MAXIMA)
+  paginaCheckins = 1;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(PAGINA_MAXIMA)
+  paginaQuestionarios = 1;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(PAGINA_MAXIMA)
+  paginaEscolhas = 1;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(100)
+  limite = 25;
+}
+
 export class BuscarAlimentosDto {
   @IsString()
   @MinLength(2)

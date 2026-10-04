@@ -7,6 +7,7 @@ import { GET as listarEscolhasPaciente } from '../app/api/pacientes/[id]/planos-
 import { GET as buscarAlimentos } from '../app/api/pacientes/[id]/planos-alimentares/alimentos/route';
 import { GET as buscarAlimentosModelo } from '../app/api/planos-alimentares/alimentos/route';
 import { GET as obterVersao } from '../app/api/pacientes/[id]/planos-alimentares/[planoId]/versoes/[numero]/route';
+import { GET as obterAcompanhamentoVersao } from '../app/api/pacientes/[id]/planos-alimentares/[planoId]/versoes/[numero]/acompanhamento/route';
 import { PUT as salvarRascunho } from '../app/api/pacientes/[id]/planos-alimentares/[planoId]/rascunho/route';
 import { POST as publicarPlano } from '../app/api/pacientes/[id]/planos-alimentares/[planoId]/publicacao/route';
 import { POST as revisarPlano } from '../app/api/pacientes/[id]/planos-alimentares/[planoId]/revisao/route';
@@ -19,6 +20,7 @@ import { GET as obterVersaoModelo } from '../app/api/planos-alimentares/modelos/
 import { POST as restaurarVersaoModelo } from '../app/api/planos-alimentares/modelos/[modeloId]/versoes/[numero]/restaurar/route';
 import { GET as listarReceitas, POST as criarReceita } from '../app/api/planos-alimentares/receitas/route';
 import { GET as obterReceita, PUT as atualizarReceita, DELETE as arquivarReceita } from '../app/api/planos-alimentares/receitas/[receitaId]/route';
+import { obterAcompanhamentoVersaoPlanoAlimentar } from '../lib/plano-alimentar-api';
 
 const { __clearCookies, __setCookies } = nextHeaders as typeof nextHeaders & {
   __clearCookies: () => void;
@@ -337,6 +339,78 @@ test('BFF recusa versao historica sem permissao de leitura antes do backend', as
     });
     assert.equal(resposta.status, 403);
     assert.equal(chamado, false);
+  } finally {
+    restaurarFetch(original);
+  }
+});
+
+test('BFF encaminha acompanhamento da versao com allowlist, leitura e no-store', async () => {
+  __setCookies(cookiesSessaoValida(['planos_alimentares.ler']));
+  const original = global.fetch;
+  let url = '';
+  global.fetch = (async (entrada: string | URL | Request) => {
+    url = String(entrada);
+    return Response.json({ versao: { numero: 2 } });
+  }) as typeof global.fetch;
+
+  try {
+    const resposta = await obterAcompanhamentoVersao(
+      new Request('http://localhost/api/acompanhamento?paginaCheckins=2&paginaQuestionarios=3&paginaEscolhas=4&limite=10&tenantId=alheio'),
+      { params: Promise.resolve({ id: 'paciente/1', planoId: 'plano/1', numero: '2' }) }
+    );
+    assert.equal(resposta.status, 200);
+    assert.equal(resposta.headers.get('Cache-Control'), 'no-store');
+    assert.equal(
+      url,
+      'http://backend.octaclin.local/pacientes/paciente%2F1/planos-alimentares/plano%2F1/versoes/2/acompanhamento?paginaCheckins=2&paginaQuestionarios=3&paginaEscolhas=4&limite=10'
+    );
+  } finally {
+    restaurarFetch(original);
+  }
+});
+
+test('BFF recusa acompanhamento da versao sem permissao antes do backend', async () => {
+  __setCookies(cookiesSessaoValida(['planos_alimentares.gerenciar']));
+  const original = global.fetch;
+  let chamado = false;
+  global.fetch = (async () => {
+    chamado = true;
+    throw new Error('nao deveria consultar o backend');
+  }) as typeof global.fetch;
+
+  try {
+    const resposta = await obterAcompanhamentoVersao(new Request('http://localhost/api/acompanhamento'), {
+      params: Promise.resolve({ id: 'paciente-1', planoId: 'plano-1', numero: '2' })
+    });
+    assert.equal(resposta.status, 403);
+    assert.equal(chamado, false);
+  } finally {
+    restaurarFetch(original);
+  }
+});
+
+test('cliente web consulta acompanhamento sem cache e com paginacao explicita', async () => {
+  const original = global.fetch;
+  let entrada = '';
+  let init: RequestInit | undefined;
+  global.fetch = (async (recurso: string | URL | Request, opcoes?: RequestInit) => {
+    entrada = String(recurso);
+    init = opcoes;
+    return Response.json({ versao: { numero: 3 } });
+  }) as typeof global.fetch;
+
+  try {
+    await obterAcompanhamentoVersaoPlanoAlimentar('paciente/1', 'plano/1', 3, {
+      paginaCheckins: 2,
+      paginaQuestionarios: 3,
+      paginaEscolhas: 4,
+      limite: 10
+    });
+    assert.equal(
+      entrada,
+      '/api/pacientes/paciente%2F1/planos-alimentares/plano%2F1/versoes/3/acompanhamento?paginaCheckins=2&paginaQuestionarios=3&paginaEscolhas=4&limite=10'
+    );
+    assert.equal(init?.cache, 'no-store');
   } finally {
     restaurarFetch(original);
   }

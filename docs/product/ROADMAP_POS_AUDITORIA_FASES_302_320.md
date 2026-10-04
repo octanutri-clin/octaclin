@@ -1,6 +1,9 @@
 # Roadmap de produto após a Fase 302
 
-Atualizado em 2026-10-03. A Fase 302 foi integrada pelo PR #360; aplicação e validação da migration 1062 em staging e produção foram informadas pelo proprietário, sem consulta aos bancos neste ciclo. A Fase 303 está em implementação nesta branch.
+Atualizado em 2026-10-04. A Fase 303 foi integrada pelo PR #361 (merge
+`02acd66c`); a migration 1063 permanece sem confirmação de aplicação em
+staging e produção. A Fase 304 está em desenvolvimento na branch
+`feat/fase304-adesao-longitudinal`, sem migration nova.
 Este é o plano **vigente** para as recomendações ainda abertas de
 `OCTACLIN_PRODUCT_FEATURE_AUDIT.md`. O diagnóstico de 2026-09-17 permanece
 histórico; uma descrição antiga de lacuna não desfaz uma entrega posterior.
@@ -8,7 +11,7 @@ histórico; uma descrição antiga de lacuna não desfaz uma entrega posterior.
 ## Como executar e manter
 
 - Seguir a ordem numérica, salvo nova decisão explícita do proprietário. A fase
-  em andamento é a **303**; depois dela, a próxima fase é a **304**. Cada fase recebe plano de execução e revisão de gaps
+  em andamento é a **304**; depois dela, a próxima fase é a **305**. Cada fase recebe plano de execução e revisão de gaps
   antes do código; concluir uma não implica iniciar a próxima sem reconciliar
   código, PRs e evidência operacional.
 - Implementar cada fatia funcional em sua branch/PR com a documentação
@@ -30,8 +33,8 @@ histórico; uma descrição antiga de lacuna não desfaz uma entrega posterior.
 | Fase | Entrega e escopo mínimo | Dependência e critério de aceite | Estado |
 | --- | --- | --- | --- |
 | 302 | **LGPD da própria clínica.** Gestor do tenant lê os pedidos, assume a tratativa e prepara rascunho; SuperAdmin valida estados finais, eliminação e retenção. A descrição livre passa a ser cifrada. | PB-27 e fluxo LGPD existentes. Tenant/papel validados no backend e BFF; migration 1062 e backfill fora de banda antes do aceite operacional. Plano e decisões em `docs/history/phases/PLANO_FASE_302.md`. | Integrada pelo PR #360; aplicação/validação da 1062 relatadas pelo proprietário |
-| 303 | **Integrações para profissionais autorizados.** O gestor concede e revoga diretamente escopos de API e eventos de webhook, cada conjunto de forma independente. | Credenciais profissionais ficam vinculadas ao titular e só alcançam pacientes de sua carteira atual; API, idempotência e entregas de webhook devem provar essa restrição. Não conceder papel `Client`. Testar criação, uso, revogação, negações por papel e tenant; payloads externos mantêm o contrato atual. Plano em `docs/history/phases/PLANO_FASE_303.md`; migration 1063 fora de banda. | Em desenvolvimento na branch `feat/fase303-integracoes-profissional` |
-| 304 | **Adesão longitudinal factual e substituições.** Mostrar ao profissional check-ins declarados, respostas ausentes e escolhas de troca junto da versão publicada do plano; expor na UI a consulta à versão histórica já disponível na API interna. | Não inferir consumo real a partir de uma troca ou ausência de resposta. Restringir por carteira/tenant, distinguir versões e dados faltantes; evitar duplicar a linha do tempo. | Planejada |
+| 303 | **Integrações para profissionais autorizados.** O gestor concede e revoga diretamente escopos de API e eventos de webhook, cada conjunto de forma independente. | Credenciais profissionais ficam vinculadas ao titular e só alcançam pacientes de sua carteira atual; API, idempotência e entregas de webhook devem provar essa restrição. Não conceder papel `Client`. Testar criação, uso, revogação, negações por papel e tenant; payloads externos mantêm o contrato atual. Plano em `docs/history/phases/PLANO_FASE_303.md`; migration 1063 fora de banda. | Integrada pelo PR #361; migration 1063 ainda não confirmada em staging/produção |
+| 304 | **Adesão longitudinal factual e substituições.** Mostrar ao profissional check-ins declarados, respostas ausentes e escolhas de troca junto da versão publicada do plano; expor na UI a consulta à versão histórica já disponível na API interna. | Não inferir consumo real a partir de uma troca ou ausência de resposta. Restringir por carteira/tenant, distinguir versões e dados faltantes; evitar duplicar a linha do tempo. | Em desenvolvimento na branch `feat/fase304-adesao-longitudinal` |
 | 305 | **Questionários e antropometria na mesma leitura longitudinal.** Cruzar visualmente datas de respostas, métricas antropométricas e consultas, reutilizando a matriz longitudinal e séries existentes. | Sem causalidade ou diagnóstico automático; filtros de período, unidades, origem e lacunas explícitos. Permissões clínicas e versão do formulário preservadas. | Planejada |
 | 306 | **Retorno e evasão factuais.** Indicadores de intervalo observado entre consultas, pacientes sem próxima consulta, faltas por horário e tempo de resposta a formulários, para equipe/clínica. Reusar a mediana de até três intervalos da Fase 294. | Definir denominadores, janela e população elegível; marcar histórico insuficiente. Não chamar ausência de retorno de diagnóstico nem disparar contato novo; preservar a trava de contato de 30 dias. | Planejada |
 | 307 | **Progresso do paciente além do peso.** Exibir no portal apenas métricas autorizadas e metas/marcos que o profissional escolheu compartilhar, com unidade, data e origem. | Consentimento e acesso do próprio paciente; sem revelar anotações internas ou meta implícita. Ausência de meta aparece como tal; nenhuma comparação clínica automática. | Planejada |
@@ -91,17 +94,17 @@ Estas pendências não são novas fases de produto nem prova de que o código fa
    trilhas próprias. `SKIPPED`, relato de aplicação e merge não provam
    operação em produção.
 
-## Handoff da Fase 303
+## Handoff da Fase 304
 
-**Decisões confirmadas:** o gestor concede e revoga diretamente; define listas
-independentes de escopos API e eventos webhook; uma redução não desativa
-automaticamente credenciais de máquina existentes, que permanecem sob gestão
-explícita da clínica. A implementação exige grant consultado pelo backend,
-RLS, auditoria e payloads mínimos. O plano completo e sua revisão de gaps estão
-em `docs/history/phases/PLANO_FASE_303.md`.
+**Decisões confirmadas:** a unidade de leitura é a versão publicada do plano,
+com janela inclusiva na publicação e exclusiva na publicação seguinte.
+Check-ins permanecem declarações do paciente; questionários ausentes são
+envios `pendente`, `enviado` ou `expirado`, nunca campos opcionais vazios em
+formulário concluído. Envio sem `enviado_em` não é atribuído a uma versão.
+Trocas permanecem fatos append-only e não comprovam consumo. O plano completo
+e a revisão de gaps estão em `docs/history/phases/PLANO_FASE_304.md`.
 
-**Próxima fase:** 304, adesão longitudinal factual e substituições, com modelo
-GPT-6 Sol em esforço alto. Reutilizar as skills de planejamento, TDD, NestJS,
-TypeORM, segurança, React e fechamento da fase; confirmar a matriz de skills
-vigente antes do desenvolvimento e manter dados de adesão estritamente
-factuais, sem inferir consumo ou comportamento clínico.
+**Próxima fase após integração da 304:** 305, questionários e antropometria na
+mesma leitura longitudinal. Não iniciar antes de reconciliar o merge e os
+gates da 304; preservar datas, unidades, versões, origem e lacunas explícitas,
+sem causalidade ou diagnóstico automático.

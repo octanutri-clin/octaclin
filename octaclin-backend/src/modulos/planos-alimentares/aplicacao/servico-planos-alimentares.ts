@@ -6,7 +6,7 @@ import {
   Injectable,
   NotFoundException
 } from '@nestjs/common';
-import { EntityManager, In, IsNull } from 'typeorm';
+import { And, EntityManager, In, IsNull, LessThan, MoreThan, MoreThanOrEqual } from 'typeorm';
 import { registrarAuditoriaNaTransacao } from '../../../infraestrutura/auditoria/servico-auditoria';
 import { ExecutorTenant } from '../../../infraestrutura/banco-dados/executor-tenant';
 import { CriptografiaDadosSensiveis } from '../../../infraestrutura/seguranca/criptografia-dados-sensiveis';
@@ -16,6 +16,8 @@ import { UsuarioAutenticado } from '../../auth/dominio/usuario-autenticado';
 import type { PermissaoOctaClin } from '../../auth/dominio/permissoes';
 import { AvaliacaoAntropometricaOrm } from '../../pacientes/infraestrutura/avaliacao-antropometrica.orm';
 import { PacienteOrm } from '../../pacientes/infraestrutura/paciente.orm';
+import { LogDiarioRapidoOrm } from '../../mobile/infraestrutura/log-diario-rapido.orm';
+import { EnvioQuestionarioOrm } from '../../questionarios/infraestrutura/envio-questionario.orm';
 import {
   calcularEnergiaDasMetas,
   calcularEstimativaEnergetica,
@@ -47,6 +49,7 @@ import {
   AtualizarRascunhoPlanoAlimentarDto,
   BuscarAlimentosDto,
   CriarPlanoAlimentarDto,
+  ListarAcompanhamentoVersaoPlanoDto,
   ListarEscolhasPlanoAlimentarDto,
   ListarPlanosAlimentaresDto,
   PAGINA_MAXIMA,
@@ -252,6 +255,155 @@ export class ServicoPlanosAlimentares {
       });
       if (!versao) throw new NotFoundException('Versao do plano alimentar nao encontrada.');
       return this.montarVersao(gerenciador, versao);
+    });
+  }
+
+  async obterAcompanhamentoVersao(
+    tenantId: string,
+    pacienteId: string,
+    planoId: string,
+    numero: number,
+    usuario: UsuarioAutenticado,
+    consulta: ListarAcompanhamentoVersaoPlanoDto = new ListarAcompanhamentoVersaoPlanoDto()
+  ) {
+    this.garantirPapelProfissional(usuario);
+    this.garantirPermissao(usuario, 'planos_alimentares.ler');
+    const limite = Math.min(100, Math.max(1, Math.trunc(consulta.limite ?? 25)));
+    const paginaCheckins = Math.min(PAGINA_MAXIMA, Math.max(1, Math.trunc(consulta.paginaCheckins ?? 1)));
+    const paginaQuestionarios = Math.min(
+      PAGINA_MAXIMA,
+      Math.max(1, Math.trunc(consulta.paginaQuestionarios ?? 1))
+    );
+    const paginaEscolhas = Math.min(PAGINA_MAXIMA, Math.max(1, Math.trunc(consulta.paginaEscolhas ?? 1)));
+
+    return this.executorTenant.executar(tenantId, async (gerenciador) => {
+      await this.obterPlanoNoEscopo(gerenciador, tenantId, pacienteId, planoId, usuario);
+      const repositorioVersoes = gerenciador.getRepository(PlanoAlimentarVersaoOrm);
+      const versao = await repositorioVersoes.findOne({ where: { tenantId, planoId, numero } });
+      if (!versao) throw new NotFoundException('Versao do plano alimentar nao encontrada.');
+      if (!versao.publicadaEm) {
+        throw new BadRequestException('Acompanhamento disponivel somente para versao publicada.');
+      }
+
+      const proximaVersaoPublicada = await repositorioVersoes.findOne({
+        select: { publicadaEm: true },
+        where: { tenantId, planoId, publicadaEm: MoreThan(versao.publicadaEm) },
+        order: { publicadaEm: 'ASC' }
+      });
+      const proximaPublicacao = proximaVersaoPublicada?.publicadaEm;
+      const intervalo = proximaPublicacao
+        ? And(MoreThanOrEqual(versao.publicadaEm), LessThan(proximaPublicacao))
+        : MoreThanOrEqual(versao.publicadaEm);
+
+      const [checkins, totalCheckins] = await gerenciador.getRepository(LogDiarioRapidoOrm).findAndCount({
+        where: { tenantId, pacienteId, tipo: 'humor', registradoEm: intervalo },
+        order: { registradoEm: 'DESC', id: 'DESC' },
+        skip: (paginaCheckins - 1) * limite,
+        take: limite
+      });
+      const estadosSemResposta: EnvioQuestionarioOrm['status'][] = ['pendente', 'enviado', 'expirado'];
+      const repositorioEnvios = gerenciador.getRepository(EnvioQuestionarioOrm);
+      const [envios, totalEnvios] = await repositorioEnvios.findAndCount({
+        where: { tenantId, pacienteId, status: In(estadosSemResposta), enviadoEm: intervalo },
+        order: { enviadoEm: 'DESC', id: 'DESC' },
+        skip: (paginaQuestionarios - 1) * limite,
+        take: limite
+      });
+      const semReferenciaTemporal = await repositorioEnvios.count({
+        where: { tenantId, pacienteId, status: In(estadosSemResposta), enviadoEm: IsNull() }
+      });
+
+      const repositorioEscolhas = gerenciador.getRepository(PlanoAlimentarEscolhaPacienteOrm);
+      const [escolhas, totalEscolhas] = await repositorioEscolhas.findAndCount({
+        where: { tenantId, versaoId: versao.id },
+        order: { criadoEm: 'DESC', id: 'DESC' },
+        skip: (paginaEscolhas - 1) * limite,
+        take: limite
+      });
+      const itemIds = [...new Set(escolhas.map((escolha) => escolha.itemId))];
+      const itens = itemIds.length
+        ? await gerenciador.getRepository(PlanoAlimentarItemOrm).find({ where: { tenantId, id: In(itemIds) } })
+        : [];
+      const refeicaoIds = [...new Set(itens.map((item) => item.refeicaoId))];
+      const refeicoes = refeicaoIds.length
+        ? await gerenciador.getRepository(PlanoAlimentarRefeicaoOrm).find({
+            where: { tenantId, versaoId: versao.id, id: In(refeicaoIds) }
+          })
+        : [];
+      const refeicaoPorId = new Map(refeicoes.map((refeicao) => [refeicao.id, refeicao]));
+      const itensDaVersao = itens.filter((item) => refeicaoPorId.has(item.refeicaoId));
+      const itemPorId = new Map(itensDaVersao.map((item) => [item.id, item]));
+      const itemIdsDaVersao = itensDaVersao.map((item) => item.id);
+      const substituicaoIds = [...new Set(escolhas.flatMap((escolha) => escolha.substituicaoId ? [escolha.substituicaoId] : []))];
+      const substituicoes = substituicaoIds.length && itemIdsDaVersao.length
+        ? await gerenciador.getRepository(PlanoAlimentarSubstituicaoOrm).find({
+            where: { tenantId, itemId: In(itemIdsDaVersao), id: In(substituicaoIds) }
+          })
+        : [];
+      const substituicaoPorId = new Map(substituicoes.map((substituicao) => [substituicao.id, substituicao]));
+
+      return {
+        versao: { id: versao.id, numero: versao.numero },
+        periodo: { inicioEm: versao.publicadaEm, ...(proximaPublicacao ? { fimExclusivoEm: proximaPublicacao } : {}) },
+        checkins: {
+          itens: checkins.map((diario) => {
+            const { valor, dadoIndisponivel } = this.lerValorDiario(diario);
+            return {
+              id: diario.id,
+              adesaoPlano: typeof valor.adesaoPlano === 'number' ? valor.adesaoPlano : undefined,
+              ...(dadoIndisponivel ? { dadoIndisponivel: true } : {}),
+              registradoEm: diario.registradoEm,
+              fonte: 'declaracao_paciente' as const
+            };
+          }),
+          total: totalCheckins,
+          pagina: paginaCheckins,
+          limite
+        },
+        questionariosSemResposta: {
+          itens: envios.map((envio) => ({
+            id: envio.id,
+            status: envio.status,
+            titulo: envio.snapshotEstrutura?.titulo,
+            enviadoEm: envio.enviadoEm,
+            expiraEm: envio.expiraEm
+          })),
+          total: totalEnvios,
+          semReferenciaTemporal,
+          pagina: paginaQuestionarios,
+          limite
+        },
+        escolhas: {
+          itens: escolhas.map((escolha) => {
+            const item = itemPorId.get(escolha.itemId);
+            const refeicao = item ? refeicaoPorId.get(item.refeicaoId) : undefined;
+            const substituicao = escolha.substituicaoId
+              ? substituicaoPorId.get(escolha.substituicaoId)
+              : undefined;
+            return {
+              id: escolha.id,
+              versaoId: escolha.versaoId,
+              versaoNumero: versao.numero,
+              itemId: escolha.itemId,
+              refeicaoNome: refeicao
+                ? this.criptografia.descriptografar(refeicao.nomeCriptografado)
+                : 'Refeicao indisponivel',
+              itemDescricao: item
+                ? this.criptografia.descriptografar(item.descricaoCriptografada)
+                : 'Item indisponivel',
+              ...(escolha.substituicaoId ? { substituicaoId: escolha.substituicaoId } : {}),
+              ...(substituicao ? {
+                substituicaoDescricao: this.criptografia.descriptografar(substituicao.descricaoCriptografada)
+              } : {}),
+              retornouAoPrincipal: !escolha.substituicaoId,
+              criadoEm: escolha.criadoEm
+            };
+          }),
+          total: totalEscolhas,
+          pagina: paginaEscolhas,
+          limite
+        }
+      };
     });
   }
 
@@ -1223,6 +1375,21 @@ export class ServicoPlanosAlimentares {
       criadoEm: versao.criadoEm,
       atualizadoEm: versao.atualizadoEm
     };
+  }
+
+  private lerValorDiario(diario: LogDiarioRapidoOrm): {
+    valor: Record<string, unknown>;
+    dadoIndisponivel: boolean;
+  } {
+    if (!diario.valorCriptografado) return { valor: diario.valor ?? {}, dadoIndisponivel: false };
+    try {
+      return {
+        valor: JSON.parse(this.criptografia.descriptografar(diario.valorCriptografado)) as Record<string, unknown>,
+        dadoIndisponivel: false
+      };
+    } catch {
+      return { valor: {}, dadoIndisponivel: true };
+    }
   }
 
   private async montarVersao(gerenciador: EntityManager, versao: PlanoAlimentarVersaoOrm) {
