@@ -573,44 +573,64 @@ descrever('RLS e isolamento multi-tenant integral em Postgres real', () => {
        values ($1, $2, $3, 'prova-rls-gestor', 'Client') returning id`,
       [tenantA, `prova-rls-gestor-${randomUUID()}`, Buffer.from('gestor-a')]
     );
+    const profissionalTenantA = await cliente.query<{ id: string }>(
+      `insert into usuarios (tenant_id, email_hash, email_criptografado, senha_hash, role)
+       values ($1, $2, $3, 'prova-rls-profissional', 'Professional') returning id`,
+      [tenantA, `prova-rls-profissional-a-${randomUUID()}`, Buffer.from('profissional-a')]
+    );
+    const usuarioProfissionalTenantAId = profissionalTenantA.rows[0].id;
+    await comoTenant(tenantB);
+    const profissionalSemConcessaoOutroTenant = await cliente.query<{ id: string }>(
+      `insert into usuarios (tenant_id, email_hash, email_criptografado, senha_hash, role)
+       values ($1, $2, $3, 'prova-rls-profissional', 'Professional') returning id`,
+      [tenantB, `prova-rls-sem-concessao-${randomUUID()}`, Buffer.from('profissional-b')]
+    );
+    const usuarioSemConcessaoOutroTenantId = profissionalSemConcessaoOutroTenant.rows[0].id;
+    await comoTenant(tenantA);
     const servico = new ServicoPermissoesIntegracao(executorTenant);
 
-    await servico.atualizar(tenantA, gestor.rows[0].id, usuarioIdTenantA, {
+    await servico.atualizar(tenantA, gestor.rows[0].id, usuarioProfissionalTenantAId, {
       escoposApi: ['agenda:ler'], eventosWebhook: ['consulta.criada']
     });
-    expect(await servico.obterAcessoAtual(tenantA, usuarioIdTenantA)).toEqual({
+    expect(await servico.obterAcessoAtual(tenantA, usuarioProfissionalTenantAId)).toEqual({
       escoposApi: ['agenda:ler'], eventosWebhook: ['consulta.criada']
     });
-    expect(await servico.obterAcessoAtual(tenantB, usuarioIdTenantB)).toEqual({ escoposApi: [], eventosWebhook: [] });
-    await expect(servico.exigirAcesso(tenantA, usuarioIdTenantB, 'api')).rejects.toThrow('Profissional ativo deste tenant');
+    expect(await servico.obterAcessoAtual(tenantB, usuarioSemConcessaoOutroTenantId)).toEqual({
+      escoposApi: [], eventosWebhook: []
+    });
+    await expect(
+      servico.exigirAcesso(tenantA, usuarioSemConcessaoOutroTenantId, 'api')
+    ).rejects.toThrow('Profissional ativo deste tenant');
 
     await cliente.query(
       'insert into api_chaves (tenant_id, nome, prefixo, segredo_hash, escopos, criado_por_usuario_id, profissional_usuario_id) values ($1, $2, $3, $4, $5, $6, $6)',
-      [tenantA, 'Prova vinculacao profissional', `rls-${randomUUID().slice(0, 12)}`, 'a'.repeat(64), ['agenda:ler'], usuarioIdTenantA]
+      [tenantA, 'Prova vinculacao profissional', `rls-${randomUUID().slice(0, 12)}`, 'a'.repeat(64), ['agenda:ler'], usuarioProfissionalTenantAId]
     );
     await cliente.query(
       'insert into webhook_assinaturas (tenant_id, nome, url, eventos, segredo_criptografado, criado_por_usuario_id, profissional_usuario_id) values ($1, $2, $3, $4, $5, $6, $6)',
-      [tenantA, 'Prova vinculacao profissional', 'https://example.invalid/hook', ['consulta.criada'], Buffer.from('sintetico'), usuarioIdTenantA]
+      [tenantA, 'Prova vinculacao profissional', 'https://example.invalid/hook', ['consulta.criada'], Buffer.from('sintetico'), usuarioProfissionalTenantAId]
     );
     await expect(cliente.query(
       'insert into api_chaves (tenant_id, nome, prefixo, segredo_hash, escopos, profissional_usuario_id) values ($1, $2, $3, $4, $5, $6)',
-      [tenantA, 'Vinculo cruzado', `rls-${randomUUID().slice(0, 12)}`, 'b'.repeat(64), ['agenda:ler'], usuarioIdTenantB]
+      [tenantA, 'Vinculo cruzado', `rls-${randomUUID().slice(0, 12)}`, 'b'.repeat(64), ['agenda:ler'], usuarioSemConcessaoOutroTenantId]
     )).rejects.toMatchObject({ code: '23503' });
     await expect(cliente.query(
       'insert into webhook_assinaturas (tenant_id, nome, url, eventos, segredo_criptografado, profissional_usuario_id) values ($1, $2, $3, $4, $5, $6)',
-      [tenantA, 'Vinculo cruzado', 'https://example.invalid/hook', ['consulta.criada'], Buffer.from('sintetico'), usuarioIdTenantB]
+      [tenantA, 'Vinculo cruzado', 'https://example.invalid/hook', ['consulta.criada'], Buffer.from('sintetico'), usuarioSemConcessaoOutroTenantId]
     )).rejects.toMatchObject({ code: '23503' });
 
     const concorrentes = await Promise.allSettled([
-      servico.exigirAcesso(tenantA, usuarioIdTenantA, 'api'),
-      servico.atualizar(tenantA, gestor.rows[0].id, usuarioIdTenantA, { escoposApi: [], eventosWebhook: [] })
+      servico.exigirAcesso(tenantA, usuarioProfissionalTenantAId, 'api'),
+      servico.atualizar(tenantA, gestor.rows[0].id, usuarioProfissionalTenantAId, {
+        escoposApi: [], eventosWebhook: []
+      })
     ]);
     expect(concorrentes[1].status).toBe('fulfilled');
-    await expect(servico.exigirAcesso(tenantA, usuarioIdTenantA, 'api')).rejects.toThrow('ainda não concedeu');
+    await expect(servico.exigirAcesso(tenantA, usuarioProfissionalTenantAId, 'api')).rejects.toThrow('ainda não concedeu');
     const historico = await executorTenant.executar(tenantA, (gerenciador) =>
       gerenciador.query(`select tipo, revogada_em from permissoes_integracao_profissional
-        where tenant_id = $1 and usuario_id = $2 order by concedida_em`, [tenantA, usuarioIdTenantA]));
-    expect(historico).toHaveLength(4);
+        where tenant_id = $1 and usuario_id = $2 order by concedida_em`, [tenantA, usuarioProfissionalTenantAId]));
+    expect(historico.map((item: { tipo: string }) => item.tipo).sort()).toEqual(['api', 'webhook']);
     expect(historico.every((item: { revogada_em: Date | null }) => item.revogada_em instanceof Date)).toBe(true);
   });
 
