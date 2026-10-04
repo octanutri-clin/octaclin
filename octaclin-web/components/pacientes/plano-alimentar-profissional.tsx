@@ -28,14 +28,15 @@ import {
   buscarAlimentosPlanoAlimentar,
   criarNovaVersaoPlanoAlimentar,
   criarPlanoAlimentar,
-  listarEscolhasPlanoAlimentar,
   listarPlanosAlimentares,
+  obterAcompanhamentoVersaoPlanoAlimentar,
   obterPlanoAlimentar,
+  obterVersaoPlanoAlimentar,
   publicarPlanoAlimentar,
   revisarPlanoAlimentar,
   type AlimentoComposicaoApi,
   type AtualizarRascunhoPlanoAlimentarEntrada,
-  type EscolhaPlanoAlimentarProfissionalApi,
+  type AcompanhamentoVersaoPlanoApi,
   type FonteCatalogoApi,
   type FormulaEnergeticaApi,
   type ItemPlanoAlimentarEntrada,
@@ -922,6 +923,167 @@ function ResumoVersao({ plano, versao }: { plano: PlanoAlimentarApi; versao: Ver
   );
 }
 
+type GrupoPaginacaoAcompanhamento = 'checkins' | 'questionarios' | 'escolhas';
+
+interface PaginasAcompanhamento {
+  checkins: number;
+  questionarios: number;
+  escolhas: number;
+}
+
+const paginasIniciaisAcompanhamento: PaginasAcompanhamento = {
+  checkins: 1,
+  questionarios: 1,
+  escolhas: 1
+};
+
+function ControlesPaginacaoAcompanhamento({
+  rotulo,
+  pagina,
+  limite,
+  total,
+  aoMudarPagina
+}: {
+  rotulo: string;
+  pagina: number;
+  limite: number;
+  total: number;
+  aoMudarPagina: (pagina: number) => void;
+}) {
+  if (total <= limite) return null;
+  const temProxima = pagina * limite < total;
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-2">
+      <Botao
+        type="button"
+        variante="fantasma"
+        tamanho="sm"
+        aria-label={`Página anterior de ${rotulo}`}
+        disabled={pagina <= 1}
+        onClick={() => aoMudarPagina(pagina - 1)}
+      >
+        Anterior
+      </Botao>
+      <span className="text-xs text-texto-suave">Página {pagina}</span>
+      <Botao
+        type="button"
+        variante="fantasma"
+        tamanho="sm"
+        aria-label={`Próxima página de ${rotulo}`}
+        disabled={!temProxima}
+        onClick={() => aoMudarPagina(pagina + 1)}
+      >
+        Próxima
+      </Botao>
+    </div>
+  );
+}
+
+function PainelAcompanhamentoVersao({
+  acompanhamento,
+  aoMudarPagina
+}: {
+  acompanhamento: AcompanhamentoVersaoPlanoApi;
+  aoMudarPagina: (grupo: GrupoPaginacaoAcompanhamento, pagina: number) => void;
+}) {
+  const { checkins, questionariosSemResposta, escolhas, periodo, versao } = acompanhamento;
+  return (
+    <section className="grid gap-4 rounded-md border border-linha bg-white p-4" aria-labelledby={`acompanhamento-versao-${versao.numero}`}>
+      <div>
+        <h3 id={`acompanhamento-versao-${versao.numero}`} className="text-base font-semibold text-tinta">
+          Acompanhamento factual da versão {versao.numero}
+        </h3>
+        <p className="mt-1 text-sm text-texto-suave">
+          Registros entre {formatarData(periodo.inicioEm)} e {periodo.fimExclusivoEm ? formatarData(periodo.fimExclusivoEm) : 'o momento da consulta'} enquanto esta versão estava publicada.
+        </p>
+        <p className="mt-2 rounded-md border border-alerta-borda bg-alerta-suave p-3 text-sm text-alerta-forte">
+          Check-ins, ausências de resposta e trocas são fatos registrados; não comprovam consumo real, cumprimento do plano ou relação de causa com esta versão.
+        </p>
+      </div>
+
+      <section className="grid gap-2 border-t border-linha pt-3">
+        <h4 className="text-sm font-semibold text-tinta">Check-ins declarados</h4>
+        {!checkins.itens.length ? <p className="text-sm text-texto-suave">Nenhum check-in registrado nesta janela.</p> : (
+          <ul className="grid gap-2">
+            {checkins.itens.map((checkin) => (
+              <li key={checkin.id} className="flex flex-wrap items-center justify-between gap-2 text-sm">
+                <span className="text-tinta">
+                  {checkin.dadoIndisponivel
+                    ? 'Registro indisponível para leitura'
+                    : typeof checkin.adesaoPlano === 'number'
+                    ? `${formatarNumero(checkin.adesaoPlano)}% declarado pelo paciente`
+                    : 'Percentual não informado'}
+                </span>
+                <span className="text-xs text-texto-suave">{formatarData(checkin.registradoEm)}</span>
+              </li>
+            ))}
+          </ul>
+        )}
+        <p className="text-xs text-texto-suave">Mostrando {checkins.itens.length} de {checkins.total} registros.</p>
+        <ControlesPaginacaoAcompanhamento
+          rotulo="check-ins"
+          pagina={checkins.pagina}
+          limite={checkins.limite}
+          total={checkins.total}
+          aoMudarPagina={(pagina) => aoMudarPagina('checkins', pagina)}
+        />
+      </section>
+
+      <section className="grid gap-2 border-t border-linha pt-3">
+        <h4 className="text-sm font-semibold text-tinta">Questionários sem resposta finalizada</h4>
+        {!questionariosSemResposta.itens.length ? <p className="text-sm text-texto-suave">Nenhum envio com data registrado nesta janela.</p> : (
+          <ul className="grid gap-2">
+            {questionariosSemResposta.itens.map((envio) => (
+              <li key={envio.id} className="flex flex-wrap items-center justify-between gap-2 text-sm">
+                <span className="text-tinta">{envio.titulo ?? 'Questionário sem título'} — {envio.status}</span>
+                <span className="text-xs text-texto-suave">{envio.enviadoEm ? formatarData(envio.enviadoEm) : 'Data de envio não informada'}</span>
+              </li>
+            ))}
+          </ul>
+        )}
+        {questionariosSemResposta.semReferenciaTemporal > 0 ? (
+          <p className="text-sm text-texto-suave">
+            {questionariosSemResposta.semReferenciaTemporal} {questionariosSemResposta.semReferenciaTemporal === 1 ? 'envio sem data de envio não foi atribuído' : 'envios sem data de envio não foram atribuídos'} a esta versão.
+          </p>
+        ) : null}
+        <p className="text-xs text-texto-suave">Mostrando {questionariosSemResposta.itens.length} de {questionariosSemResposta.total} envios datados.</p>
+        <ControlesPaginacaoAcompanhamento
+          rotulo="questionários"
+          pagina={questionariosSemResposta.pagina}
+          limite={questionariosSemResposta.limite}
+          total={questionariosSemResposta.total}
+          aoMudarPagina={(pagina) => aoMudarPagina('questionarios', pagina)}
+        />
+      </section>
+
+      <section className="grid gap-2 border-t border-linha pt-3">
+        <h4 className="text-sm font-semibold text-tinta">Trocas registradas pelo paciente</h4>
+        {!escolhas.itens.length ? <p className="text-sm text-texto-suave">Nenhuma troca foi registrada para esta versão.</p> : (
+          <ol className="grid gap-2">
+            {escolhas.itens.map((escolha) => (
+              <li key={escolha.id} className="grid gap-1 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center sm:gap-3">
+                <div className="min-w-0">
+                  <p className="text-sm text-tinta"><span className="font-medium">{escolha.refeicaoNome}:</span> {escolha.itemDescricao}</p>
+                  <p className="text-sm text-texto-suave">{escolha.retornouAoPrincipal ? 'Voltou ao alimento principal.' : `Escolheu ${escolha.substituicaoDescricao ?? 'uma substituição indisponível'}.`}</p>
+                </div>
+                <p className="text-xs text-texto-suave">{formatarData(escolha.criadoEm)}</p>
+              </li>
+            ))}
+          </ol>
+        )}
+        <p className="text-xs text-texto-suave">Mostrando {escolhas.itens.length} de {escolhas.total} escolhas.</p>
+        <ControlesPaginacaoAcompanhamento
+          rotulo="trocas"
+          pagina={escolhas.pagina}
+          limite={escolhas.limite}
+          total={escolhas.total}
+          aoMudarPagina={(pagina) => aoMudarPagina('escolhas', pagina)}
+        />
+      </section>
+    </section>
+  );
+}
+
 interface PlanoAlimentarProfissionalProps {
   pacienteId: string;
   podeGerenciar: boolean;
@@ -932,9 +1094,12 @@ export function PlanoAlimentarProfissional({ pacienteId, podeGerenciar, aoAltera
   const [planos, setPlanos] = useState<PlanoAlimentarResumoApi[]>([]);
   const [plano, setPlano] = useState<PlanoAlimentarApi | null>(null);
   const [avaliacoes, setAvaliacoes] = useState<AvaliacaoAntropometricaApi[]>([]);
-  const [escolhasPaciente, setEscolhasPaciente] = useState<EscolhaPlanoAlimentarProfissionalApi[]>([]);
-  const [carregandoEscolhas, setCarregandoEscolhas] = useState(false);
-  const [erroEscolhas, setErroEscolhas] = useState<string | null>(null);
+  const [numeroVersaoConsultada, setNumeroVersaoConsultada] = useState<number | null>(null);
+  const [paginasAcompanhamento, setPaginasAcompanhamento] = useState<PaginasAcompanhamento>(paginasIniciaisAcompanhamento);
+  const [versaoConsultada, setVersaoConsultada] = useState<VersaoPlanoAlimentarApi | null>(null);
+  const [acompanhamento, setAcompanhamento] = useState<AcompanhamentoVersaoPlanoApi | null>(null);
+  const [carregandoAcompanhamento, setCarregandoAcompanhamento] = useState(false);
+  const [erroAcompanhamento, setErroAcompanhamento] = useState<string | null>(null);
   const [planoId, setPlanoId] = useState('');
   const [formulario, setFormulario] = useState<FormularioPlano>(() => formularioInicial());
   const [tituloNovo, setTituloNovo] = useState('Plano alimentar');
@@ -947,6 +1112,7 @@ export function PlanoAlimentarProfissional({ pacienteId, podeGerenciar, aoAltera
   const [confirmarArquivo, setConfirmarArquivo] = useState(false);
   const [confirmarCriacao, setConfirmarCriacao] = useState(false);
   const sequenciaCarregamento = useRef(0);
+  const sequenciaAcompanhamento = useRef(0);
 
   const somaMacros = formulario.carboidratosBasisPoints + formulario.proteinasBasisPoints + formulario.gordurasBasisPoints;
   // Condicao especial implica meta manual: e a saida que substitui a recusa.
@@ -978,6 +1144,11 @@ export function PlanoAlimentarProfissional({ pacienteId, podeGerenciar, aoAltera
     setPlanoId(detalhe?.id ?? '');
     const avaliacaoPadrao = avaliacoesAtuais[0]?.id ?? '';
     setFormulario(detalhe?.draft ? formularioDaVersao(detalhe.draft, avaliacaoPadrao) : formularioInicial(avaliacaoPadrao));
+    setNumeroVersaoConsultada(detalhe?.current?.numero ?? null);
+    setPaginasAcompanhamento(paginasIniciaisAcompanhamento);
+    setVersaoConsultada(detalhe?.current ?? null);
+    setAcompanhamento(null);
+    setErroAcompanhamento(null);
     setAlterado(false);
     setErrosFormulario([]);
   }, []);
@@ -1016,26 +1187,58 @@ export function PlanoAlimentarProfissional({ pacienteId, podeGerenciar, aoAltera
   }, [carregar]);
 
   useEffect(() => {
-    if (!planoId) {
-      setEscolhasPaciente([]);
-      setErroEscolhas(null);
-      return;
-    }
+    if (!plano || numeroVersaoConsultada === null) return;
+    const resumo = plano.historico.find((versao) => versao.numero === numeroVersaoConsultada);
+    const versaoPublicada = resumo?.status === 'publicada' || plano.current?.numero === numeroVersaoConsultada;
+    const sequencia = ++sequenciaAcompanhamento.current;
     const controlador = new AbortController();
-    setCarregandoEscolhas(true);
-    setErroEscolhas(null);
-    void listarEscolhasPlanoAlimentar(pacienteId, planoId, { pagina: 1, limite: 25 }, controlador.signal)
-      .then((pagina) => setEscolhasPaciente(pagina.itens))
-      .catch((erroAtual: unknown) => {
-        if (controlador.signal.aborted) return;
-        setEscolhasPaciente([]);
-        setErroEscolhas(mensagemFalhaInterface(erroAtual, 'Não foi possível carregar a trilha de trocas.'));
-      })
-      .finally(() => {
-        if (!controlador.signal.aborted) setCarregandoEscolhas(false);
-      });
+    setCarregandoAcompanhamento(true);
+    setErroAcompanhamento(null);
+    setAcompanhamento(null);
+    setVersaoConsultada(plano.current?.numero === numeroVersaoConsultada ? plano.current : null);
+    const detalhe = plano.current?.numero === numeroVersaoConsultada
+      ? Promise.resolve(plano.current)
+      : obterVersaoPlanoAlimentar(pacienteId, plano.id, numeroVersaoConsultada, controlador.signal);
+    void Promise.all([
+      detalhe,
+      versaoPublicada
+        ? obterAcompanhamentoVersaoPlanoAlimentar(
+            pacienteId,
+            plano.id,
+            numeroVersaoConsultada,
+            {
+              paginaCheckins: paginasAcompanhamento.checkins,
+              paginaQuestionarios: paginasAcompanhamento.questionarios,
+              paginaEscolhas: paginasAcompanhamento.escolhas,
+              limite: 25
+            },
+            controlador.signal
+          )
+        : Promise.resolve(null)
+    ]).then(([versao, fatos]) => {
+      if (controlador.signal.aborted || sequencia !== sequenciaAcompanhamento.current) return;
+      setVersaoConsultada(versao);
+      setAcompanhamento(fatos);
+    }).catch((erroAtual: unknown) => {
+      if (controlador.signal.aborted || sequencia !== sequenciaAcompanhamento.current) return;
+      setAcompanhamento(null);
+      setErroAcompanhamento(mensagemFalhaInterface(erroAtual, 'Não foi possível consultar o acompanhamento desta versão.'));
+    }).finally(() => {
+      if (!controlador.signal.aborted && sequencia === sequenciaAcompanhamento.current) {
+        setCarregandoAcompanhamento(false);
+      }
+    });
     return () => controlador.abort();
-  }, [pacienteId, planoId]);
+  }, [numeroVersaoConsultada, pacienteId, paginasAcompanhamento, plano]);
+
+  function consultarVersao(numero: number | null) {
+    setPaginasAcompanhamento(paginasIniciaisAcompanhamento);
+    setNumeroVersaoConsultada(numero);
+  }
+
+  function mudarPaginaAcompanhamento(grupo: GrupoPaginacaoAcompanhamento, pagina: number) {
+    setPaginasAcompanhamento((atual) => ({ ...atual, [grupo]: pagina }));
+  }
 
   useEffect(() => {
     aoAlterarRascunho?.(alterado);
@@ -1460,29 +1663,54 @@ export function PlanoAlimentarProfissional({ pacienteId, podeGerenciar, aoAltera
                 <section className="grid gap-3 rounded-md border border-linha bg-white p-4">
                   <div className="flex items-center gap-2"><History size={17} className="text-primaria" /><h3 className="text-sm font-semibold text-tinta">Histórico de versões</h3></div>
                   <div className="grid gap-2">
-                    {plano.historico.map((versao) => <div key={versao.id} className="flex flex-wrap items-center justify-between gap-2 border-t border-linha pt-2 first:border-t-0 first:pt-0"><div><p className="text-sm font-medium text-tinta">Versão {versao.numero}</p><p className="text-xs text-texto-suave">{versao.status === 'publicada' ? `Publicada em ${formatarData(versao.publicadaEm)}` : `Descartada em ${formatarData(versao.descartadaEm)}`}</p></div>{versao.hashConteudo ? <span className="max-w-48 truncate font-mono text-xs text-texto-suave" title={versao.hashConteudo}>{versao.hashConteudo}</span> : null}</div>)}
+                    {plano.historico.map((versao) => (
+                      <div key={versao.id} className="flex flex-wrap items-center justify-between gap-2 border-t border-linha pt-2 first:border-t-0 first:pt-0">
+                        <div>
+                          <p className="text-sm font-medium text-tinta">Versão {versao.numero}</p>
+                          <p className="text-xs text-texto-suave">{versao.status === 'publicada' ? `Publicada em ${formatarData(versao.publicadaEm)}` : `Descartada em ${formatarData(versao.descartadaEm)}`}</p>
+                        </div>
+                        <div className="flex flex-wrap items-center gap-2">
+                          {versao.hashConteudo ? <span className="max-w-48 truncate font-mono text-xs text-texto-suave" title={versao.hashConteudo}>{versao.hashConteudo}</span> : null}
+                          <Botao
+                            type="button"
+                            variante={numeroVersaoConsultada === versao.numero ? 'primario' : 'fantasma'}
+                            tamanho="sm"
+                            onClick={() => consultarVersao(versao.numero)}
+                            disabled={carregandoAcompanhamento && numeroVersaoConsultada === versao.numero}
+                          >
+                            Consultar versão {versao.numero}
+                          </Botao>
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 </section>
               ) : null}
 
-              <section className="grid gap-3 rounded-md border border-linha bg-white p-4">
-                <div>
-                  <div className="flex items-center gap-2"><History size={17} className="text-primaria" /><h3 className="text-sm font-semibold text-tinta">Trocas registradas pelo paciente</h3></div>
-                  <p className="mt-1 text-sm text-texto-suave">Histórico auditavel das escolhas feitas no portal. O plano publicado permanece inalterado.</p>
-                </div>
-                {carregandoEscolhas ? <BarraCarregamento visivel rotulo="Carregando trocas registradas" /> : null}
-                {erroEscolhas ? <AlertaOperacional mensagem={erroEscolhas} /> : null}
-                {!carregandoEscolhas && !erroEscolhas && !escolhasPaciente.length ? <p className="text-sm text-texto-suave">Nenhuma troca foi registrada neste plano.</p> : null}
-                {escolhasPaciente.length ? <ol className="grid gap-2">
-                  {escolhasPaciente.map((escolha) => <li key={escolha.id} className="grid gap-1 border-t border-linha pt-2 first:border-t-0 first:pt-0 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center sm:gap-3">
-                    <div className="min-w-0">
-                      <p className="text-sm text-tinta"><span className="font-medium">{escolha.refeicaoNome}:</span> {escolha.itemDescricao}</p>
-                      <p className="text-sm text-texto-suave">{escolha.retornouAoPrincipal ? 'Voltou ao alimento principal.' : `Escolheu ${escolha.substituicaoDescricao ?? 'uma substituicao indisponivel'}.`}</p>
-                    </div>
-                    <p className="text-xs text-texto-suave">v{escolha.versaoNumero} - {formatarData(escolha.criadoEm)}</p>
-                  </li>)}
-                </ol> : null}
-              </section>
+              {carregandoAcompanhamento ? <BarraCarregamento visivel rotulo="Carregando acompanhamento da versão" /> : null}
+              {erroAcompanhamento ? <AlertaOperacional mensagem={erroAcompanhamento} /> : null}
+              {versaoConsultada && plano.current?.numero !== versaoConsultada.numero ? (
+                <section className="grid gap-3" aria-label={`Conteúdo histórico da versão ${versaoConsultada.numero}`}>
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <p className="text-sm font-semibold text-tinta">Conteúdo congelado da versão {versaoConsultada.numero}</p>
+                    <Botao type="button" variante="fantasma" tamanho="sm" onClick={() => consultarVersao(plano.current?.numero ?? null)}>
+                      Voltar à versão atual
+                    </Botao>
+                  </div>
+                  <ResumoVersao plano={plano} versao={versaoConsultada} />
+                  {versaoConsultada.status !== 'publicada' ? (
+                    <p className="rounded-md border border-linha bg-superficie p-3 text-sm text-texto-suave">
+                      Esta versão não foi publicada; não existe janela factual de acompanhamento.
+                    </p>
+                  ) : null}
+                </section>
+              ) : null}
+              {acompanhamento ? (
+                <PainelAcompanhamentoVersao
+                  acompanhamento={acompanhamento}
+                  aoMudarPagina={mudarPaginaAcompanhamento}
+                />
+              ) : null}
             </>
           ) : null}
         </main>

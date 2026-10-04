@@ -1,6 +1,6 @@
 # OctaClin - Status atual do projeto
 
-Atualizado em 2026-10-03.
+Atualizado em 2026-10-04.
 
 ## Fase ativa
 
@@ -26,15 +26,22 @@ Atualizado em 2026-10-03.
   proprietário informou que a migration 1062 foi aplicada e validada em
   staging e produção; este ciclo não consultou os bancos. Plano em
   `docs/history/phases/PLANO_FASE_302.md`.
-- Fase 303 em implementação na branch `feat/fase303-integracoes-profissional`:
-  concessões diretas do gestor para escopos API e eventos webhook, autorização
-  backend por operação, credenciais vinculadas à carteira, interface do
-  profissional e migration 1063. Merge/CI e
-  prova PostgreSQL/RLS pendentes; a migration não foi aplicada neste ciclo.
-  Plano e revisão de gaps em `docs/history/phases/PLANO_FASE_303.md`.
+- Fase 303 concluida e integrada pelo PR #361 (merge commit `02acd66c`, confirmado no
+  GitHub em 2026-10-04): concessões diretas do gestor para escopos API e
+  eventos webhook, autorização backend por operação, credenciais vinculadas à
+  carteira e interface do profissional. A aplicação da migration 1063 em
+  staging e produção permanece não confirmada e deve ocorrer fora de banda
+  antes de ativar o runtime que depende dela. Plano e revisão de gaps em
+  `docs/history/phases/PLANO_FASE_303.md`.
+- Fase 304 com implementação e validação local concluídas na branch
+  `feat/fase304-adesao-longitudinal`, ainda aguardando PR, CI e merge:
+  leitura factual de check-ins declarados, questionários sem resposta e trocas
+  por janela de versão publicada, além da consulta do conteúdo histórico no
+  fluxo profissional. Sem migration nova e sem alteração do contrato `/v1`.
+  Plano e revisão de gaps em `docs/history/phases/PLANO_FASE_304.md`.
 - Sequência das Fases 302–320 em
-  `docs/product/ROADMAP_POS_AUDITORIA_FASES_302_320.md`. Após a Fase 303, a
-  próxima é a 304. O PB-30 está planejado na Fase 316, condicionado a
+  `docs/product/ROADMAP_POS_AUDITORIA_FASES_302_320.md`. Após a Fase 304, a
+  próxima é a 305. O PB-30 está planejado na Fase 316, condicionado a
   privacidade, jurídico e operação.
 
 - Fase 295 / PB-28 integrada pelo PR #349 (merge `a54e52c9`, confirmado no GitHub em 2026-09-30).

@@ -6,8 +6,10 @@ import { MensagemNotificacaoOrm } from '../comunicacoes/infraestrutura/mensagem-
 import { OutboxEventoOrm } from '../../infraestrutura/outbox/outbox-evento.orm';
 import { ModuloAuth } from '../auth/modulo-auth';
 import { AvaliacaoAntropometricaOrm } from '../pacientes/infraestrutura/avaliacao-antropometrica.orm';
+import { LogDiarioRapidoOrm } from '../mobile/infraestrutura/log-diario-rapido.orm';
 import { PacienteOrm } from '../pacientes/infraestrutura/paciente.orm';
 import { ProfissionalOrm } from '../profissionais/infraestrutura/profissional.orm';
+import { EnvioQuestionarioOrm } from '../questionarios/infraestrutura/envio-questionario.orm';
 import { ModuloTenancy } from '../tenancy/modulo-tenancy';
 import { ServicoModelosPlanoAlimentar } from './aplicacao/servico-modelos-plano-alimentar';
 import { ServicoPlanosAlimentares } from './aplicacao/servico-planos-alimentares';
@@ -48,6 +50,8 @@ import { ReceitaNutricionalOrm } from './infraestrutura/receita-nutricional.orm'
       AlimentoComposicaoOrm,
       PacienteOrm,
       AvaliacaoAntropometricaOrm,
+      LogDiarioRapidoOrm,
+      EnvioQuestionarioOrm,
       ProfissionalOrm,
       UserActionLogOrm,
       MensagemNotificacaoOrm,

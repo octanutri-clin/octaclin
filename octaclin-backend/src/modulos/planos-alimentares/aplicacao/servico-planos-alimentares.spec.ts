@@ -8,7 +8,9 @@ import { UsuarioAutenticado } from '../../auth/dominio/usuario-autenticado';
 import { AvaliacaoAntropometricaOrm } from '../../pacientes/infraestrutura/avaliacao-antropometrica.orm';
 import { PacienteOrm } from '../../pacientes/infraestrutura/paciente.orm';
 import { MensagemNotificacaoOrm } from '../../comunicacoes/infraestrutura/mensagem-notificacao.orm';
+import { LogDiarioRapidoOrm } from '../../mobile/infraestrutura/log-diario-rapido.orm';
 import { ProfissionalOrm } from '../../profissionais/infraestrutura/profissional.orm';
+import { EnvioQuestionarioOrm } from '../../questionarios/infraestrutura/envio-questionario.orm';
 import { AlimentoComposicaoOrm } from '../infraestrutura/alimento-composicao.orm';
 import { FonteComposicaoAlimentoOrm } from '../infraestrutura/fonte-composicao-alimento.orm';
 import { PlanoAlimentarItemOrm } from '../infraestrutura/plano-alimentar-item.orm';
@@ -38,6 +40,7 @@ interface RepositorioMemoria<T extends { id?: string }> {
   findOne: jest.Mock;
   find: jest.Mock;
   findAndCount: jest.Mock;
+  count: jest.Mock;
   delete: jest.Mock;
   createQueryBuilder: jest.Mock;
 }
@@ -53,6 +56,20 @@ function corresponde(registro: Record<string, unknown>, criterio: Record<string,
     const operador = valorDoOperador(esperado);
     if (operador.tipo === 'isNull') return atual === undefined || atual === null;
     if (operador.tipo === 'in') return (operador.valor as unknown[]).includes(atual);
+    if (operador.tipo === 'moreThanOrEqual') {
+      return atual instanceof Date && operador.valor instanceof Date && atual >= operador.valor;
+    }
+    if (operador.tipo === 'moreThan') {
+      return atual instanceof Date && operador.valor instanceof Date && atual > operador.valor;
+    }
+    if (operador.tipo === 'lessThan') {
+      return atual instanceof Date && operador.valor instanceof Date && atual < operador.valor;
+    }
+    if (operador.tipo === 'and') {
+      return (operador.valor as unknown[]).every((parte) =>
+        corresponde({ valor: atual }, { valor: parte })
+      );
+    }
     return atual === esperado;
   });
 }
@@ -105,14 +122,17 @@ function criarRepositorio<T extends { id?: string }>(iniciais: T[] = []): Reposi
       };
       return Array.isArray(entrada) ? entrada.map(salvarUm) : salvarUm(entrada);
     }),
-    findOne: jest.fn(async (opcoes: { where?: Record<string, unknown> }) =>
-      repositorio.registros.find((registro) => corresponde(registro as Record<string, unknown>, opcoes.where ?? {})) ?? null
+    findOne: jest.fn(async (opcoes: OpcoesConsultaMemoria = {}) =>
+      paginarMemoria(repositorio.registros, { ...opcoes, take: 1 }).pagina[0] ?? null
     ),
     find: jest.fn(async (opcoes: OpcoesConsultaMemoria = {}) => paginarMemoria(repositorio.registros, opcoes).pagina),
     findAndCount: jest.fn(async (opcoes: OpcoesConsultaMemoria = {}) => {
       const { pagina, total } = paginarMemoria(repositorio.registros, opcoes);
       return [pagina, total] as [unknown[], number];
     }),
+    count: jest.fn(async (opcoes: OpcoesConsultaMemoria = {}) =>
+      paginarMemoria(repositorio.registros, opcoes).total
+    ),
     delete: jest.fn(async (criterio: Record<string, unknown>) => {
       const preservados = repositorio.registros.filter(
         (registro) => !corresponde(registro as Record<string, unknown>, criterio)
@@ -270,6 +290,8 @@ describe('ServicoPlanosAlimentares', () => {
     registrar(PlanoAlimentarItemOrm);
     registrar(PlanoAlimentarSubstituicaoOrm);
     registrar(PlanoAlimentarEscolhaPacienteOrm);
+    registrar(LogDiarioRapidoOrm);
+    registrar(EnvioQuestionarioOrm);
     registrar(AlimentoComposicaoOrm);
     registrar(FonteComposicaoAlimentoOrm);
     registrar(UserActionLogOrm);
@@ -1134,6 +1156,199 @@ describe('ServicoPlanosAlimentares', () => {
     await expect(
       servico.obterVersao(TENANT_ID, PACIENTE_ID, PLANO_ID, 99, usuarioProfissional())
     ).rejects.toBeInstanceOf(NotFoundException);
+  });
+
+  it('projeta fatos da janela publicada sem inferir adesao nem atribuir envio sem data', async () => {
+    const publicadaEm = new Date('2026-08-01T12:00:00Z');
+    const proximaPublicacao = new Date('2026-09-01T12:00:00Z');
+    const proximaVersaoId = '10000000-0000-4000-8000-000000000063';
+    const itemId = '10000000-0000-4000-8000-000000000064';
+    const refeicaoId = '10000000-0000-4000-8000-000000000065';
+    const substituicaoId = '10000000-0000-4000-8000-000000000066';
+    const itemOutraVersaoId = '10000000-0000-4000-8000-000000000075';
+    const refeicaoOutraVersaoId = '10000000-0000-4000-8000-000000000076';
+    const substituicaoOutraVersaoId = '10000000-0000-4000-8000-000000000077';
+    Object.assign(repositorios.get(PlanoAlimentarVersaoOrm)!.registros[0], { publicadaEm });
+    repositorios.get(PlanoAlimentarVersaoOrm)!.registros.push({
+      id: proximaVersaoId,
+      tenantId: TENANT_ID,
+      planoId: PLANO_ID,
+      numero: 2,
+      criadoPorUsuarioId: USUARIO_ID,
+      publicadaEm: proximaPublicacao
+    });
+    repositorios.get(PlanoAlimentarRefeicaoOrm)!.registros.push({
+      id: refeicaoId,
+      tenantId: TENANT_ID,
+      versaoId: VERSAO_ID,
+      ordem: 0,
+      nomeCriptografado: criptografia.criptografar('Cafe da manha')
+    }, {
+      id: refeicaoOutraVersaoId,
+      tenantId: TENANT_ID,
+      versaoId: proximaVersaoId,
+      ordem: 0,
+      nomeCriptografado: criptografia.criptografar('Conteudo de outra versao')
+    });
+    repositorios.get(PlanoAlimentarItemOrm)!.registros.push({
+      id: itemId,
+      tenantId: TENANT_ID,
+      refeicaoId,
+      ordem: 0,
+      descricaoCriptografada: criptografia.criptografar('Pao integral')
+    }, {
+      id: itemOutraVersaoId,
+      tenantId: TENANT_ID,
+      refeicaoId: refeicaoOutraVersaoId,
+      ordem: 0,
+      descricaoCriptografada: criptografia.criptografar('Item de outra versao')
+    });
+    repositorios.get(PlanoAlimentarSubstituicaoOrm)!.registros.push({
+      id: substituicaoId,
+      tenantId: TENANT_ID,
+      itemId,
+      ordem: 0,
+      descricaoCriptografada: criptografia.criptografar('Tapioca')
+    }, {
+      id: substituicaoOutraVersaoId,
+      tenantId: TENANT_ID,
+      itemId: itemOutraVersaoId,
+      ordem: 0,
+      descricaoCriptografada: criptografia.criptografar('Substituicao de outra versao')
+    });
+    repositorios.get(PlanoAlimentarEscolhaPacienteOrm)!.registros.push({
+      id: '10000000-0000-4000-8000-000000000067',
+      tenantId: TENANT_ID,
+      versaoId: VERSAO_ID,
+      itemId,
+      substituicaoId,
+      escolhidoPorUsuarioId: USUARIO_ID,
+      criadoEm: new Date('2026-08-20T12:00:00Z')
+    }, {
+      id: '10000000-0000-4000-8000-000000000078',
+      tenantId: TENANT_ID,
+      versaoId: VERSAO_ID,
+      itemId: itemOutraVersaoId,
+      substituicaoId: substituicaoOutraVersaoId,
+      escolhidoPorUsuarioId: USUARIO_ID,
+      criadoEm: new Date('2026-08-21T12:00:00Z')
+    });
+    repositorios.get(LogDiarioRapidoOrm)!.registros.push(
+      {
+        id: '10000000-0000-4000-8000-000000000068', tenantId: TENANT_ID,
+        pacienteId: PACIENTE_ID, tipo: 'humor', registradoEm: publicadaEm,
+        valorCriptografado: criptografia.criptografar(JSON.stringify({ adesaoPlano: 80 }))
+      },
+      {
+        id: '10000000-0000-4000-8000-000000000069', tenantId: TENANT_ID,
+        pacienteId: PACIENTE_ID, tipo: 'humor', registradoEm: new Date('2026-08-15T12:00:00Z'),
+        valorCriptografado: criptografia.criptografar(JSON.stringify({ humor: 'bem' }))
+      },
+      {
+        id: '10000000-0000-4000-8000-000000000074', tenantId: TENANT_ID,
+        pacienteId: PACIENTE_ID, tipo: 'humor', registradoEm: new Date('2026-08-16T12:00:00Z'),
+        valorCriptografado: Buffer.from('cifra-invalida')
+      },
+      {
+        id: '10000000-0000-4000-8000-000000000070', tenantId: TENANT_ID,
+        pacienteId: PACIENTE_ID, tipo: 'humor', registradoEm: proximaPublicacao,
+        valorCriptografado: criptografia.criptografar(JSON.stringify({ adesaoPlano: 20 }))
+      }
+    );
+    repositorios.get(EnvioQuestionarioOrm)!.registros.push(
+      {
+        id: '10000000-0000-4000-8000-000000000071', tenantId: TENANT_ID,
+        pacienteId: PACIENTE_ID, questionarioId: '10000000-0000-4000-8000-000000000081',
+        status: 'enviado', enviadoEm: new Date('2026-08-10T12:00:00Z'),
+        snapshotEstrutura: { versaoQuestionario: 1, titulo: 'Check-in semanal', perguntas: [] }
+      },
+      {
+        id: '10000000-0000-4000-8000-000000000072', tenantId: TENANT_ID,
+        pacienteId: PACIENTE_ID, questionarioId: '10000000-0000-4000-8000-000000000082',
+        status: 'pendente'
+      },
+      {
+        id: '10000000-0000-4000-8000-000000000073', tenantId: TENANT_ID,
+        pacienteId: PACIENTE_ID, questionarioId: '10000000-0000-4000-8000-000000000083',
+        status: 'respondido', enviadoEm: new Date('2026-08-12T12:00:00Z'),
+        respondidoEm: new Date('2026-08-13T12:00:00Z')
+      }
+    );
+
+    const resultado = await servico.obterAcompanhamentoVersao(
+      TENANT_ID, PACIENTE_ID, PLANO_ID, 1, usuarioProfissional(),
+      { paginaCheckins: 1, paginaQuestionarios: 1, paginaEscolhas: 1, limite: 25 }
+    );
+
+    expect(resultado.periodo).toEqual({ inicioEm: publicadaEm, fimExclusivoEm: proximaPublicacao });
+    expect(resultado.checkins.itens).toEqual([
+      expect.objectContaining({ id: '10000000-0000-4000-8000-000000000074', dadoIndisponivel: true }),
+      expect.objectContaining({ id: '10000000-0000-4000-8000-000000000069', adesaoPlano: undefined }),
+      expect.objectContaining({ id: '10000000-0000-4000-8000-000000000068', adesaoPlano: 80 })
+    ]);
+    expect(resultado.checkins.itens).not.toContainEqual(expect.objectContaining({ adesaoPlano: 20 }));
+    expect(resultado.questionariosSemResposta).toEqual(expect.objectContaining({
+      total: 1,
+      semReferenciaTemporal: 1,
+      itens: [expect.objectContaining({ status: 'enviado', titulo: 'Check-in semanal' })]
+    }));
+    expect(resultado.escolhas.itens).toEqual([
+      expect.objectContaining({
+        id: '10000000-0000-4000-8000-000000000078',
+        refeicaoNome: 'Refeicao indisponivel',
+        itemDescricao: 'Item indisponivel'
+      }),
+      expect.objectContaining({ versaoId: VERSAO_ID, substituicaoDescricao: 'Tapioca' })
+    ]);
+    expect(resultado.escolhas.itens[0]).not.toHaveProperty('substituicaoDescricao');
+    expect(JSON.stringify(resultado.escolhas.itens)).not.toContain('outra versao');
+  });
+
+  it('nao consulta fatos quando a versao nao foi publicada ou o paciente saiu da carteira', async () => {
+    await expect(
+      servico.obterAcompanhamentoVersao(TENANT_ID, PACIENTE_ID, PLANO_ID, 1, usuarioProfissional())
+    ).rejects.toBeInstanceOf(BadRequestException);
+
+    Object.assign(repositorios.get(PlanoAlimentarVersaoOrm)!.registros[0], {
+      publicadaEm: new Date('2026-08-01T12:00:00Z')
+    });
+    repositorios.get(PacienteOrm)!.registros[0].profissionalResponsavelId =
+      '10000000-0000-4000-8000-000000000099';
+
+    await expect(
+      servico.obterAcompanhamentoVersao(TENANT_ID, PACIENTE_ID, PLANO_ID, 1, usuarioProfissional())
+    ).rejects.toBeInstanceOf(NotFoundException);
+    expect(repositorios.get(LogDiarioRapidoOrm)!.findAndCount).not.toHaveBeenCalled();
+    expect(repositorios.get(EnvioQuestionarioOrm)!.findAndCount).not.toHaveBeenCalled();
+  });
+
+  it('nega papel, permissao e plano de outro tenant antes de consultar fatos clinicos', async () => {
+    const semPermissao: UsuarioAutenticado = { ...usuarioProfissional(), permissoes: [] };
+    const gestor: UsuarioAutenticado = {
+      ...usuarioProfissional(),
+      papel: 'Client',
+      permissoes: ['planos_alimentares.ler']
+    };
+
+    await expect(
+      servico.obterAcompanhamentoVersao(TENANT_ID, PACIENTE_ID, PLANO_ID, 1, semPermissao)
+    ).rejects.toBeInstanceOf(ForbiddenException);
+    await expect(
+      servico.obterAcompanhamentoVersao(TENANT_ID, PACIENTE_ID, PLANO_ID, 1, gestor)
+    ).rejects.toBeInstanceOf(ForbiddenException);
+    expect(executor.executar).not.toHaveBeenCalled();
+
+    Object.assign(repositorios.get(PlanoAlimentarVersaoOrm)!.registros[0], {
+      publicadaEm: new Date('2026-08-01T12:00:00Z')
+    });
+    repositorios.get(PlanoAlimentarOrm)!.registros[0].tenantId =
+      '10000000-0000-4000-8000-000000000099';
+
+    await expect(
+      servico.obterAcompanhamentoVersao(TENANT_ID, PACIENTE_ID, PLANO_ID, 1, usuarioProfissional())
+    ).rejects.toBeInstanceOf(NotFoundException);
+    expect(repositorios.get(LogDiarioRapidoOrm)!.findAndCount).not.toHaveBeenCalled();
+    expect(repositorios.get(EnvioQuestionarioOrm)!.findAndCount).not.toHaveBeenCalled();
   });
 
 

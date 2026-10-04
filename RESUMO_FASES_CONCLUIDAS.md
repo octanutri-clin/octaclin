@@ -1,14 +1,20 @@
 # OctaClin - Resumo das fases concluidas
 
-## Atualização de estado em 2026-10-03
+## Atualização de estado em 2026-10-04
 
 - Fase 302 integrada pelo PR #360 (merge `2aec88f2`). O proprietário informou
   aplicação e validação da migration 1062 em staging e produção; os bancos não
   foram consultados neste ciclo.
-- Fase 303 está em implementação na branch
-  `feat/fase303-integracoes-profissional`; ainda não marcar como concluída até
-  merge, CI e prova PostgreSQL/RLS. Plano e revisão de gaps em
+- Fase 303 integrada pelo PR #361 (merge `02acd66c`). A migration 1063 ainda
+  não teve aplicação confirmada em staging ou produção e permanece pendência
+  operacional fora de banda. Plano e revisão de gaps em
   `docs/history/phases/PLANO_FASE_303.md`.
+- Fase 304 em desenvolvimento na branch `feat/fase304-adesao-longitudinal`:
+  consulta somente leitura do conteúdo histórico e dos fatos de check-in,
+  questionário sem resposta e troca na janela de cada versão publicada, sem
+  score ou inferência de consumo. Sem migration nova; ainda não marcar como
+  integrada antes do merge e dos gates remotos. Plano em
+  `docs/history/phases/PLANO_FASE_304.md`.
 
 ## Reconciliação em 2026-10-01
 

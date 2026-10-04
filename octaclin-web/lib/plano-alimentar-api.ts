@@ -262,6 +262,32 @@ export interface EscolhaPlanoAlimentarProfissionalApi {
   criadoEm: string;
 }
 
+export interface CheckinAcompanhamentoPlanoApi {
+  id: string;
+  adesaoPlano?: number;
+  dadoIndisponivel?: boolean;
+  registradoEm: string;
+  fonte: 'declaracao_paciente';
+}
+
+export interface QuestionarioSemRespostaPlanoApi {
+  id: string;
+  status: 'pendente' | 'enviado' | 'expirado';
+  titulo?: string;
+  enviadoEm?: string;
+  expiraEm?: string;
+}
+
+export interface AcompanhamentoVersaoPlanoApi {
+  versao: { id: string; numero: number };
+  periodo: { inicioEm: string; fimExclusivoEm?: string };
+  checkins: PaginaApi<CheckinAcompanhamentoPlanoApi>;
+  questionariosSemResposta: PaginaApi<QuestionarioSemRespostaPlanoApi> & {
+    semReferenciaTemporal: number;
+  };
+  escolhas: PaginaApi<EscolhaPlanoAlimentarProfissionalApi>;
+}
+
 export interface PaginaApi<T> {
   itens: T[];
   total: number;
@@ -282,6 +308,13 @@ export interface PaginaAlimentosApi extends PaginaApi<AlimentoComposicaoApi> {
 
 export interface ConsultaPaginadaPlanos {
   pagina?: number;
+  limite?: number;
+}
+
+export interface ConsultaAcompanhamentoVersaoPlano {
+  paginaCheckins?: number;
+  paginaQuestionarios?: number;
+  paginaEscolhas?: number;
   limite?: number;
 }
 
@@ -358,6 +391,24 @@ export function obterVersaoPlanoAlimentar(
 ) {
   return requisitar<VersaoPlanoAlimentarApi>(
     `${basePaciente(pacienteId)}/${encodeURIComponent(planoId)}/versoes/${encodeURIComponent(String(numero))}`,
+    { signal }
+  );
+}
+
+export function obterAcompanhamentoVersaoPlanoAlimentar(
+  pacienteId: string,
+  planoId: string,
+  numero: number,
+  consulta: ConsultaAcompanhamentoVersaoPlano = {},
+  signal?: AbortSignal
+) {
+  return requisitar<AcompanhamentoVersaoPlanoApi>(
+    `${basePaciente(pacienteId)}/${encodeURIComponent(planoId)}/versoes/${encodeURIComponent(String(numero))}/acompanhamento${montarConsulta({
+      paginaCheckins: consulta.paginaCheckins,
+      paginaQuestionarios: consulta.paginaQuestionarios,
+      paginaEscolhas: consulta.paginaEscolhas,
+      limite: consulta.limite
+    })}`,
     { signal }
   );
 }

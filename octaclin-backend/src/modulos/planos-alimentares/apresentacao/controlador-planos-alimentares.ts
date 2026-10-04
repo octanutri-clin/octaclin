@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, ParseIntPipe, ParseUUIDPipe, Post, Put, Query, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Header, Param, ParseIntPipe, ParseUUIDPipe, Post, Put, Query, UseGuards } from '@nestjs/common';
 import { Papeis, Permissoes, UsuarioAtual } from '../../auth/apresentacao/decorators';
 import { GuardaJwt } from '../../auth/apresentacao/guarda-jwt';
 import { GuardaPapeis } from '../../auth/apresentacao/guarda-papeis';
@@ -13,6 +13,7 @@ import {
   EditarModeloPlanoAlimentarDto,
   AtualizarReceitaNutricionalDto,
   ListarEscolhasPlanoAlimentarDto,
+  ListarAcompanhamentoVersaoPlanoDto,
   ListarModelosPlanoAlimentarDto,
   ListarVersoesModeloPlanoAlimentarDto,
   ListarPlanosAlimentaresDto,
@@ -72,6 +73,7 @@ export class ControladorPlanosAlimentares {
 
   @Get(':planoId/versoes/:numero')
   @Permissoes('planos_alimentares.ler')
+  @Header('Cache-Control', 'private, no-store')
   obterVersao(
     @UsuarioAtual() usuario: UsuarioAutenticado,
     @Param('pacienteId', ParseUUIDPipe) pacienteId: string,
@@ -79,6 +81,26 @@ export class ControladorPlanosAlimentares {
     @Param('numero', ParseIntPipe) numero: number
   ) {
     return this.servico.obterVersao(usuario.tenantId, pacienteId, planoId, numero, usuario);
+  }
+
+  @Get(':planoId/versoes/:numero/acompanhamento')
+  @Permissoes('planos_alimentares.ler')
+  @Header('Cache-Control', 'private, no-store')
+  obterAcompanhamentoVersao(
+    @UsuarioAtual() usuario: UsuarioAutenticado,
+    @Param('pacienteId', ParseUUIDPipe) pacienteId: string,
+    @Param('planoId', ParseUUIDPipe) planoId: string,
+    @Param('numero', ParseIntPipe) numero: number,
+    @Query() consulta: ListarAcompanhamentoVersaoPlanoDto
+  ) {
+    return this.servico.obterAcompanhamentoVersao(
+      usuario.tenantId,
+      pacienteId,
+      planoId,
+      numero,
+      usuario,
+      consulta
+    );
   }
 
   @Get(':planoId/rascunho')

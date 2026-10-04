@@ -1,3 +1,4 @@
+import AxeBuilder from '@axe-core/playwright';
 import { expect, test } from '@playwright/test';
 
 const credenciais = {
@@ -1074,6 +1075,7 @@ async function prepararProntuarioMockado(page, {
   profissionalResponsavelId = 'profissional-1',
   falhaMateriais = false,
   falhaEvolucoes = false,
+  atrasoVersaoHistoricaMs = 0,
   statusPortalInicial = 'convite_pendente'
 } = {}) {
   let criouEvolucao = false;
@@ -2044,7 +2046,8 @@ async function prepararProntuarioMockado(page, {
   });
 
   await page.route('**/api/pacientes/paciente-1/planos-alimentares**', async (route) => {
-    const caminho = new URL(route.request().url()).pathname;
+    const urlPlano = new URL(route.request().url());
+    const caminho = urlPlano.pathname;
     const versaoResumo = {
       id: 'plano-versao-publicada-1',
       numero: 1,
@@ -2052,6 +2055,22 @@ async function prepararProntuarioMockado(page, {
       publicadaEm: '2026-08-10T12:00:00.000Z',
       criadoEm: '2026-08-09T12:00:00.000Z',
       atualizadoEm: '2026-08-10T12:00:00.000Z'
+    };
+    const versaoHistoricaResumo = {
+      id: 'plano-versao-publicada-0',
+      numero: 0,
+      status: 'publicada',
+      publicadaEm: '2026-07-10T12:00:00.000Z',
+      criadoEm: '2026-07-09T12:00:00.000Z',
+      atualizadoEm: '2026-07-10T12:00:00.000Z'
+    };
+    const versaoDescartadaResumo = {
+      id: 'plano-versao-descartada-2',
+      numero: 2,
+      status: 'descartada',
+      descartadaEm: '2026-08-12T12:00:00.000Z',
+      criadoEm: '2026-08-11T12:00:00.000Z',
+      atualizadoEm: '2026-08-12T12:00:00.000Z'
     };
     const resumo = {
       id: 'plano-alimentar-1',
@@ -2099,6 +2118,97 @@ async function prepararProntuarioMockado(page, {
       });
       return;
     }
+    if (route.request().method() === 'GET' && caminho.endsWith('/versoes/0')) {
+      if (atrasoVersaoHistoricaMs > 0) {
+        await new Promise((resolve) => setTimeout(resolve, atrasoVersaoHistoricaMs));
+      }
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          ...versaoHistoricaResumo,
+          objetivos: 'Objetivo preservado da versão histórica.',
+          refeicoes: [{
+            id: 'refeicao-historica-1',
+            ordem: 0,
+            nome: 'Jantar histórico',
+            itens: [{
+              id: 'item-historico-1', ordem: 0, descricao: 'Sopa de legumes',
+              quantidade: 1, unidade: 'prato', porcaoGramas: 300,
+              composicaoSnapshot: {}, substituicoes: []
+            }]
+          }]
+        })
+      });
+      return;
+    }
+    if (route.request().method() === 'GET' && caminho.endsWith('/versoes/2')) {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          ...versaoDescartadaResumo,
+          objetivos: 'Rascunho descartado preservado.',
+          refeicoes: []
+        })
+      });
+      return;
+    }
+    if (route.request().method() === 'GET' && caminho.endsWith('/versoes/0/acompanhamento')) {
+      const paginaCheckins = Number(urlPlano.searchParams.get('paginaCheckins') ?? '1');
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          versao: { id: versaoHistoricaResumo.id, numero: 0 },
+          periodo: { inicioEm: '2026-07-10T12:00:00.000Z', fimExclusivoEm: '2026-08-10T12:00:00.000Z' },
+          checkins: {
+            itens: paginaCheckins === 2 ? [
+              { id: 'checkin-26', adesaoPlano: 60, registradoEm: '2026-07-11T12:00:00.000Z', fonte: 'declaracao_paciente' }
+            ] : [
+              { id: 'checkin-1', adesaoPlano: 75, registradoEm: '2026-07-20T12:00:00.000Z', fonte: 'declaracao_paciente' },
+              { id: 'checkin-2', registradoEm: '2026-07-18T12:00:00.000Z', fonte: 'declaracao_paciente' }
+            ],
+            total: 26, pagina: paginaCheckins, limite: 25
+          },
+          questionariosSemResposta: {
+            itens: [{ id: 'envio-1', status: 'expirado', titulo: 'Check-in semanal', enviadoEm: '2026-07-15T12:00:00.000Z' }],
+            total: 1, semReferenciaTemporal: 1, pagina: 1, limite: 25
+          },
+          escolhas: {
+            itens: [{
+              id: 'escolha-historica-1', versaoId: versaoHistoricaResumo.id, versaoNumero: 0,
+              itemId: 'item-historico-1', refeicaoNome: 'Jantar histórico', itemDescricao: 'Sopa de legumes',
+              retornouAoPrincipal: true, criadoEm: '2026-07-22T12:00:00.000Z'
+            }],
+            total: 1, pagina: 1, limite: 25
+          }
+        })
+      });
+      return;
+    }
+    if (route.request().method() === 'GET' && caminho.endsWith('/versoes/1/acompanhamento')) {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          versao: { id: versaoResumo.id, numero: 1 },
+          periodo: { inicioEm: versaoResumo.publicadaEm },
+          checkins: { itens: [], total: 0, pagina: 1, limite: 25 },
+          questionariosSemResposta: { itens: [], total: 0, semReferenciaTemporal: 0, pagina: 1, limite: 25 },
+          escolhas: {
+            itens: [{
+              id: 'escolha-1', versaoId: versaoResumo.id, versaoNumero: 1, itemId: 'item-1',
+              refeicaoNome: 'Cafe da manha', itemDescricao: 'Aveia em flocos',
+              substituicaoId: 'substituicao-1', substituicaoDescricao: 'Pao integral',
+              retornouAoPrincipal: false, criadoEm: '2026-08-20T12:00:00.000Z'
+            }],
+            total: 1, pagina: 1, limite: 25
+          }
+        })
+      });
+      return;
+    }
     if (route.request().method() === 'GET' && caminho.endsWith('/planos-alimentares/plano-alimentar-1')) {
       await route.fulfill({
         status: 200,
@@ -2125,7 +2235,7 @@ async function prepararProntuarioMockado(page, {
               }]
             }]
           },
-          historico: [versaoResumo]
+          historico: [versaoResumo, versaoDescartadaResumo, versaoHistoricaResumo]
         })
       });
       return;
@@ -2875,12 +2985,55 @@ test.describe('prontuario do paciente', () => {
     await expect(page.getByText('Aveia em flocos', { exact: true })).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Trocas registradas pelo paciente' })).toBeVisible();
     await expect(page.getByText('Escolheu Pao integral.')).toBeVisible();
+    const consultarHistorica = page.getByRole('button', { name: 'Consultar versão 0' });
+    await consultarHistorica.focus();
+    await consultarHistorica.press('Enter');
+    await expect(page.getByText('Objetivo preservado da versão histórica.')).toBeVisible();
+    await expect(page.getByText('Sopa de legumes', { exact: true })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Acompanhamento factual da versão 0' })).toBeVisible();
+    await expect(page.getByText('75% declarado pelo paciente')).toBeVisible();
+    await expect(page.getByText('Percentual não informado')).toBeVisible();
+    await expect(page.getByText('Check-in semanal')).toBeVisible();
+    await expect(page.getByText('1 envio sem data de envio não foi atribuído a esta versão.')).toBeVisible();
+    await expect(page.getByText('Voltou ao alimento principal.')).toBeVisible();
+    await expect(page.getByText(/não comprovam consumo real/)).toBeVisible();
+    const acessibilidade = await new AxeBuilder({ page })
+      .include('section[aria-labelledby="acompanhamento-versao-0"]')
+      .analyze();
+    expect(acessibilidade.violations).toEqual([]);
+    await page.getByRole('button', { name: 'Próxima página de check-ins' }).click();
+    await expect(page.getByText('60% declarado pelo paciente')).toBeVisible();
+    await expect(page.getByText('75% declarado pelo paciente')).toHaveCount(0);
+    await page.getByRole('button', { name: 'Página anterior de check-ins' }).click();
+    await expect(page.getByText('75% declarado pelo paciente')).toBeVisible();
+    await page.getByRole('button', { name: 'Consultar versão 2' }).click();
+    await expect(page.getByText('Rascunho descartado preservado.')).toBeVisible();
+    await expect(page.getByText('Esta versão não foi publicada; não existe janela factual de acompanhamento.')).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Acompanhamento factual da versão 2' })).toHaveCount(0);
     await expect(page.getByRole('button', { name: 'Criar plano', exact: true })).toHaveCount(0);
     await expect(page.getByRole('button', { name: 'Arquivar', exact: true })).toHaveCount(0);
     await expect(page.getByRole('button', { name: 'Salvar rascunho', exact: true })).toHaveCount(0);
     await expect(page.getByRole('button', { name: 'Revisar', exact: true })).toHaveCount(0);
     await expect(page.getByRole('button', { name: 'Publicar', exact: true })).toHaveCount(0);
     await assertSemOverflowHorizontal(page);
+  });
+
+  test('ignora resposta historica atrasada depois de voltar para a versao atual', async ({ page }) => {
+    await prepararProntuarioMockado(page, {
+      permissoesExtras: ['planos_alimentares.ler'],
+      atrasoVersaoHistoricaMs: 600
+    });
+    await page.goto('/pacientes/paciente-1');
+    await page.getByRole('tab', { name: 'Plano', exact: true }).click();
+    await page.getByRole('tab', { name: 'Plano alimentar', exact: true }).click();
+
+    await page.getByRole('button', { name: 'Consultar versão 0' }).click();
+    await page.getByRole('button', { name: 'Consultar versão 1' }).click();
+
+    await expect(page.getByRole('heading', { name: 'Acompanhamento factual da versão 1' })).toBeVisible();
+    await page.waitForTimeout(800);
+    await expect(page.getByText('Objetivo preservado da versão histórica.')).toHaveCount(0);
+    await expect(page.getByRole('heading', { name: 'Acompanhamento factual da versão 1' })).toBeVisible();
   });
 
   test('mantem editor disponivel para profissional com permissao de gestao', async ({ page }) => {

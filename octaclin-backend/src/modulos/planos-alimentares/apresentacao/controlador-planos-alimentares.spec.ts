@@ -1,4 +1,5 @@
 import { CHAVE_PAPEIS, CHAVE_PERMISSOES } from '../../auth/apresentacao/decorators';
+import { HEADERS_METADATA } from '@nestjs/common/constants';
 import { UsuarioAutenticado } from '../../auth/dominio/usuario-autenticado';
 import { ServicoPlanosAlimentares } from '../aplicacao/servico-planos-alimentares';
 import { ControladorCatalogoAlimentos, ControladorPlanosAlimentares } from './controlador-planos-alimentares';
@@ -23,6 +24,7 @@ describe('ControladorPlanosAlimentares', () => {
       listarEscolhasPaciente: jest.fn().mockResolvedValue({ itens: [], total: 0 }),
       obter: jest.fn().mockResolvedValue({ id: planoId }),
       obterVersao: jest.fn().mockResolvedValue({ numero: 0 }),
+      obterAcompanhamentoVersao: jest.fn().mockResolvedValue({ versao: { numero: 0 } }),
       criar: jest.fn().mockResolvedValue({ id: planoId }),
       obterRascunho: jest.fn().mockResolvedValue({ id: planoId }),
       atualizarRascunho: jest.fn().mockResolvedValue({ id: planoId }),
@@ -41,7 +43,7 @@ describe('ControladorPlanosAlimentares', () => {
     ]);
   });
 
-  it.each(['listar', 'listarEscolhasPaciente', 'obter', 'obterRascunho', 'obterVersao'] as const)('usa somente planos_alimentares.ler em %s', (metodo) => {
+  it.each(['listar', 'listarEscolhasPaciente', 'obter', 'obterRascunho', 'obterVersao', 'obterAcompanhamentoVersao'] as const)('usa somente planos_alimentares.ler em %s', (metodo) => {
     expect(Reflect.getMetadata(CHAVE_PERMISSOES, ControladorPlanosAlimentares.prototype[metodo])).toEqual([
       'planos_alimentares.ler'
     ]);
@@ -53,6 +55,16 @@ describe('ControladorPlanosAlimentares', () => {
       expect(Reflect.getMetadata(CHAVE_PERMISSOES, ControladorPlanosAlimentares.prototype[metodo])).toEqual([
         'planos_alimentares.gerenciar'
       ]);
+    }
+  );
+
+  it.each(['obterVersao', 'obterAcompanhamentoVersao'] as const)(
+    'marca %s como resposta clinica privada sem cache',
+    (metodo) => {
+      expect(Reflect.getMetadata(HEADERS_METADATA, ControladorPlanosAlimentares.prototype[metodo])).toContainEqual({
+        name: 'Cache-Control',
+        value: 'private, no-store'
+      });
     }
   );
 
@@ -77,6 +89,17 @@ describe('ControladorPlanosAlimentares', () => {
 
     await controlador.obterVersao(usuario, pacienteId, planoId, 0);
     expect(servico.obterVersao).toHaveBeenCalledWith(usuario.tenantId, pacienteId, planoId, 0, usuario);
+
+    const consulta = { paginaCheckins: 1, paginaQuestionarios: 1, paginaEscolhas: 1, limite: 25 };
+    await controlador.obterAcompanhamentoVersao(usuario, pacienteId, planoId, 0, consulta);
+    expect(servico.obterAcompanhamentoVersao).toHaveBeenCalledWith(
+      usuario.tenantId,
+      pacienteId,
+      planoId,
+      0,
+      usuario,
+      consulta
+    );
   });
 });
 
