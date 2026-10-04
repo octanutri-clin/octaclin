@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { Client } from 'pg';
 import { GenericContainer, StartedTestContainer, Wait } from 'testcontainers';
 import { DataSource, DataSourceOptions } from 'typeorm';
+import { UserActionLogOrm } from '../auditoria/user-action-log.orm';
 import { ExecutorTenant } from './executor-tenant';
 import { ServicoPainelOperacao } from '../../modulos/clientes/aplicacao/servico-painel-operacao';
 import { ServicoAuditoriaCliente } from '../../modulos/clientes/aplicacao/servico-auditoria-cliente';
@@ -186,7 +187,8 @@ descrever('RLS e isolamento multi-tenant integral em Postgres real', () => {
         TenantConfiguracaoOrm,
         ConsentimentoLgpdOrm,
         UsuarioOrm,
-        PermissaoIntegracaoProfissionalOrm
+        PermissaoIntegracaoProfissionalOrm,
+        UserActionLogOrm
       ],
       extra: { max: 2 }
     });
