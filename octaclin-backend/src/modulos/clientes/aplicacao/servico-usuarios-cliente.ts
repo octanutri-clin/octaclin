@@ -1,6 +1,7 @@
 import { createHash, randomBytes } from 'crypto';
 import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { EntityManager, In, IsNull } from 'typeorm';
+import { registrarAuditoriaNaTransacao } from '../../../infraestrutura/auditoria/servico-auditoria';
 import { montarCsv } from '../../../infraestrutura/exportacao/csv';
 import { ExecutorTenant } from '../../../infraestrutura/banco-dados/executor-tenant';
 import { CriptografiaDadosSensiveis } from '../../../infraestrutura/seguranca/criptografia-dados-sensiveis';
@@ -18,6 +19,9 @@ import { UsuarioOrm } from '../../usuarios/infraestrutura/usuario.orm';
 import { ProfissionalOrm } from '../../profissionais/infraestrutura/profissional.orm';
 import { PacienteOrm } from '../../pacientes/infraestrutura/paciente.orm';
 import { AgendaConsultaOrm } from '../../agenda/infraestrutura/agenda-consulta.orm';
+import { PermissaoIntegracaoProfissionalOrm } from '../../integracoes/infraestrutura/permissao-integracao-profissional.orm';
+import { ApiChaveOrm } from '../../integracoes/infraestrutura/api-chave.orm';
+import { WebhookAssinaturaOrm } from '../../integracoes/infraestrutura/webhook-assinatura.orm';
 import {
   ConviteUsuarioClienteRespostaDto,
   AtualizarPapelUsuarioClienteDto,
@@ -254,7 +258,7 @@ export class ServicoUsuariosCliente {
       await this.obterUsuarioConvidavel(gerenciador, tenantId, usuarioId);
       await this.revogarTokensPendentes(gerenciador, tenantId, usuarioId, usuarioExecutorId, 'revogado');
       await gerenciador.getRepository(UsuarioOrm).update({ id: usuarioId, tenantId }, { ativo: false });
-      await this.revogarAcessosAtivos(gerenciador, tenantId, usuarioId);
+      await this.revogarAcessosAtivos(gerenciador, tenantId, usuarioId, usuarioExecutorId);
     });
   }
 
@@ -271,7 +275,7 @@ export class ServicoUsuariosCliente {
       }
 
       await repositorio.update({ id: usuarioId, tenantId }, { ativo: false });
-      await this.revogarAcessosAtivos(gerenciador, tenantId, usuarioId);
+      await this.revogarAcessosAtivos(gerenciador, tenantId, usuarioId, usuarioAtualId);
     });
   }
 
@@ -335,7 +339,7 @@ export class ServicoUsuariosCliente {
 
       usuario.role = dados.role;
       const atualizado = await repositorioUsuarios.save(usuario);
-      await this.revogarAcessosAtivos(gerenciador, tenantId, usuarioId);
+      await this.revogarAcessosAtivos(gerenciador, tenantId, usuarioId, usuarioAtualId);
       return this.mapearResposta(atualizado);
     });
   }
@@ -347,7 +351,8 @@ export class ServicoUsuariosCliente {
   private async revogarAcessosAtivos(
     gerenciador: EntityManager,
     tenantId: string,
-    usuarioId: string
+    usuarioId: string,
+    revogadorUsuarioId: string
   ): Promise<void> {
     const agora = new Date();
     await gerenciador.getRepository(RefreshTokenOrm).update(
@@ -358,6 +363,53 @@ export class ServicoUsuariosCliente {
       { tenantId, usuarioId, revogadoEm: IsNull() },
       { revogadoEm: agora, motivoRevogacao: 'acesso_alterado' }
     );
+    const permissoes = gerenciador.getRepository(PermissaoIntegracaoProfissionalOrm);
+    const concessoes = await permissoes.find({ where: { tenantId, usuarioId, revogadaEm: IsNull() } });
+    for (const concessao of concessoes) {
+      concessao.revogadaEm = agora;
+      concessao.revogadaPorUsuarioId = revogadorUsuarioId;
+      await permissoes.save(concessao);
+      await registrarAuditoriaNaTransacao(gerenciador, {
+        tenantId,
+        usuarioId: revogadorUsuarioId,
+        acao: 'integracoes.permissao.revogar_por_alteracao_acesso',
+        recursoTipo: 'permissao_integracao_profissional',
+        recursoId: concessao.id,
+        metadados: { tipo: concessao.tipo }
+      });
+    }
+    const chaves = gerenciador.getRepository(ApiChaveOrm);
+    const chavesProfissionais = await chaves.find({
+      where: { tenantId, profissionalUsuarioId: usuarioId, revogadaEm: IsNull() },
+      select: { id: true }
+    });
+    for (const chave of chavesProfissionais) {
+      const resultado = await chaves.update({ id: chave.id, tenantId, revogadaEm: IsNull() }, { revogadaEm: agora });
+      if (!resultado.affected) continue;
+      await registrarAuditoriaNaTransacao(gerenciador, {
+        tenantId,
+        usuarioId: revogadorUsuarioId,
+        acao: 'integracoes.chave.revogar_por_alteracao_acesso',
+        recursoTipo: 'api_chave',
+        recursoId: chave.id
+      });
+    }
+    const assinaturas = gerenciador.getRepository(WebhookAssinaturaOrm);
+    const webhooksProfissionais = await assinaturas.find({
+      where: { tenantId, profissionalUsuarioId: usuarioId, ativo: true },
+      select: { id: true }
+    });
+    for (const webhook of webhooksProfissionais) {
+      const resultado = await assinaturas.update({ id: webhook.id, tenantId, ativo: true }, { ativo: false });
+      if (!resultado.affected) continue;
+      await registrarAuditoriaNaTransacao(gerenciador, {
+        tenantId,
+        usuarioId: revogadorUsuarioId,
+        acao: 'integracoes.webhook.desativar_por_alteracao_acesso',
+        recursoTipo: 'webhook_assinatura',
+        recursoId: webhook.id
+      });
+    }
   }
 
   private async garantirLimitePermitido(tenantId: string, recurso: 'usuariosAdministrativos') {

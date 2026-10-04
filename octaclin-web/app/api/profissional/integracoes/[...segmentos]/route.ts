@@ -9,9 +9,8 @@ import {
 type Contexto = { params: Promise<{ segmentos: string[] }> };
 
 const rotasPermitidas = [
+  /^acesso$/,
   /^chaves$/,
-  /^permissoes-profissionais$/,
-  /^profissionais\/[0-9a-f-]+\/permissoes$/i,
   /^chaves\/[0-9a-f-]+$/i,
   /^chaves\/[0-9a-f-]+\/rotacao$/i,
   /^webhooks$/,
@@ -21,22 +20,25 @@ const rotasPermitidas = [
   /^webhooks\/entregas\/[0-9a-f-]+\/reprocessamento$/i
 ];
 
-function tratarErro(erro: unknown) {
-  if (erro instanceof ErroSessaoAusente) return NextResponse.json({ mensagem: erro.message }, { status: 401 });
-  if (erro instanceof ErroPermissaoAusente) return NextResponse.json({ mensagem: erro.message }, { status: 403 });
-  throw erro;
-}
-
-async function encaminhar(request: NextRequest, contexto: Contexto, metodo: 'GET' | 'POST' | 'PATCH' | 'DELETE') {
+async function encaminhar(request: NextRequest, contexto: Contexto, metodo: 'GET' | 'POST' | 'DELETE') {
   try {
-    await exigirPermissaoBff('cliente.configuracoes.gerenciar');
+    await exigirPermissaoBff('integracoes.acessar');
     const { segmentos } = await contexto.params;
     const caminho = segmentos.join('/');
     if (!rotasPermitidas.some((padrao) => padrao.test(caminho))) {
       return NextResponse.json({ mensagem: 'Rota de integração não permitida.' }, { status: 404 });
     }
+    if (metodo === 'GET' && caminho !== 'acesso' && caminho !== 'chaves' && caminho !== 'webhooks' && caminho !== 'webhooks/entregas') {
+      return NextResponse.json({ mensagem: 'Método não permitido.' }, { status: 405 });
+    }
+    if (metodo === 'POST' && !/^(chaves|chaves\/[0-9a-f-]+\/rotacao|webhooks|webhooks\/[0-9a-f-]+\/rotacao|webhooks\/entregas\/[0-9a-f-]+\/reprocessamento)$/i.test(caminho)) {
+      return NextResponse.json({ mensagem: 'Método não permitido.' }, { status: 405 });
+    }
+    if (metodo === 'DELETE' && !/^(chaves\/[0-9a-f-]+|webhooks\/[0-9a-f-]+)$/i.test(caminho)) {
+      return NextResponse.json({ mensagem: 'Método não permitido.' }, { status: 405 });
+    }
     const corpo = metodo === 'POST' ? await request.text() : undefined;
-    const resposta = await requisitarBackendAutenticado(`/cliente/integracoes/${caminho}`, {
+    const resposta = await requisitarBackendAutenticado(`/profissional/integracoes/${caminho}`, {
       method: metodo,
       ...(corpo ? { body: corpo } : {})
     });
@@ -48,11 +50,12 @@ async function encaminhar(request: NextRequest, contexto: Contexto, metodo: 'GET
       }
     });
   } catch (erro) {
-    return tratarErro(erro);
+    if (erro instanceof ErroSessaoAusente) return NextResponse.json({ mensagem: erro.message }, { status: 401 });
+    if (erro instanceof ErroPermissaoAusente) return NextResponse.json({ mensagem: erro.message }, { status: 403 });
+    throw erro;
   }
 }
 
 export const GET = (request: NextRequest, contexto: Contexto) => encaminhar(request, contexto, 'GET');
 export const POST = (request: NextRequest, contexto: Contexto) => encaminhar(request, contexto, 'POST');
-export const PATCH = (request: NextRequest, contexto: Contexto) => encaminhar(request, contexto, 'PATCH');
 export const DELETE = (request: NextRequest, contexto: Contexto) => encaminhar(request, contexto, 'DELETE');

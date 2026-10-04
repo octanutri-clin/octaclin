@@ -24,6 +24,7 @@ import {
   rotuloPapel
 } from './portal-cliente-dominio';
 import { PortalClienteController } from './use-portal-cliente';
+import { PermissoesIntegracaoEquipe } from './permissoes-integracao-equipe';
 
 type Props = { portal: PortalClienteController };
 
@@ -432,6 +433,7 @@ export function AreaEquipeCliente({ portal }: Props) {
           </div>
         </Cartao>
       ) : null}
+      {podeAjustarUsuarios && usuarios ? <PermissoesIntegracaoEquipe usuarios={usuarios.itens} /> : null}
     </>
   );
 }

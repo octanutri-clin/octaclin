@@ -121,10 +121,11 @@ export class ServicoPacientes {
   async criar(tenantId: string, dados: CriarPacienteDto, usuario: UsuarioAutenticado): Promise<PacienteRespostaDto> {
     const referenciaExterna = dados.referenciaExterna?.trim();
     if (referenciaExterna) {
-      const existente = await this.executorTenant.executar(tenantId, (gerenciador) =>
-        gerenciador.getRepository(PacienteOrm).findOne({ where: { tenantId, referenciaExterna } })
-      );
-      if (existente) return this.mapearResposta(existente);
+      const existente = await this.executorTenant.executar(tenantId, async (gerenciador) => {
+        const paciente = await gerenciador.getRepository(PacienteOrm).findOne({ where: { tenantId, referenciaExterna } });
+        return paciente ? this.mapearPacienteExistenteDaCarteira(gerenciador, tenantId, usuario, paciente) : null;
+      });
+      if (existente) return existente;
     }
     await this.garantirLimitePermitido(tenantId, 'pacientes');
 
@@ -133,7 +134,7 @@ export class ServicoPacientes {
         const repositorio = gerenciador.getRepository(PacienteOrm);
         if (referenciaExterna) {
           const existente = await repositorio.findOne({ where: { tenantId, referenciaExterna } });
-          if (existente) return this.mapearResposta(existente);
+          if (existente) return this.mapearPacienteExistenteDaCarteira(gerenciador, tenantId, usuario, existente);
         }
         const profissionalResponsavelId =
           usuario.papel === 'Professional'
@@ -168,12 +169,35 @@ export class ServicoPacientes {
       });
     } catch (erro) {
       if (!referenciaExterna || !this.ehConflitoReferenciaExterna(erro)) throw erro;
-      const existente = await this.executorTenant.executar(tenantId, (gerenciador) =>
-        gerenciador.getRepository(PacienteOrm).findOne({ where: { tenantId, referenciaExterna } })
-      );
+      const existente = await this.executorTenant.executar(tenantId, async (gerenciador) => {
+        const paciente = await gerenciador.getRepository(PacienteOrm).findOne({ where: { tenantId, referenciaExterna } });
+        return paciente ? this.mapearPacienteExistenteDaCarteira(gerenciador, tenantId, usuario, paciente) : null;
+      });
       if (!existente) throw erro;
-      return this.mapearResposta(existente);
+      return existente;
     }
+  }
+
+  private async mapearPacienteExistenteDaCarteira(
+    gerenciador: EntityManager,
+    tenantId: string,
+    usuario: UsuarioAutenticado,
+    paciente: PacienteOrm
+  ): Promise<PacienteRespostaDto> {
+    const profissionalId = await resolverProfissionalIdDoUsuario(gerenciador, tenantId, usuario);
+    if (profissionalId) {
+      const visivel = await gerenciador.getRepository(PacienteOrm).findOne({
+        where: {
+          id: paciente.id,
+          tenantId,
+          profissionalResponsavelId: profissionalId,
+          arquivadoEm: IsNull()
+        }
+      });
+      if (!visivel) throw new NotFoundException('Paciente nao encontrado.');
+      return this.mapearResposta(visivel);
+    }
+    return this.mapearResposta(paciente);
   }
 
   private ehConflitoReferenciaExterna(erro: unknown): boolean {

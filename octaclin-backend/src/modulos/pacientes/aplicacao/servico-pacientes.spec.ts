@@ -73,6 +73,30 @@ const usuarioProfissional: UsuarioAutenticado = {
 };
 
 describe('ServicoPacientes', () => {
+  it('nao reutiliza referencia externa de paciente fora da carteira profissional', async () => {
+    const repositorioPacientes = {
+      findOne: jest.fn()
+        .mockResolvedValueOnce({ id: 'paciente-alheio', tenantId: 'tenant-1', profissionalResponsavelId: 'profissional-2' })
+        .mockResolvedValueOnce(null),
+      save: jest.fn()
+    };
+    const gerenciador = criarGerenciadorFake({
+      paciente: repositorioPacientes,
+      profissional: { findOne: jest.fn(async () => ({ id: 'profissional-1' })) }
+    });
+    const executor = {
+      executar: jest.fn((_tenant: string, operacao: (manager: unknown) => Promise<unknown>) => operacao(gerenciador))
+    };
+    const servico = new ServicoPacientes(executor as never, {} as never, limitesPermitidos as never);
+
+    await expect(servico.criar(
+      'tenant-1', {
+        nome: 'Paciente', referenciaExterna: 'referencia-existente', profissionalResponsavelId: 'profissional-2'
+      }, usuarioProfissional
+    )).rejects.toThrow('Paciente nao encontrado.');
+    expect(repositorioPacientes.save).not.toHaveBeenCalled();
+  });
+
   it('reutiliza o paciente vencedor quando duas criacoes usam a mesma referencia externa', async () => {
     const existente = {
       id: 'paciente-existente',

@@ -20,5 +20,6 @@ export interface ContextoApiPublica {
   tenantId: string;
   chaveId: string;
   criadoPorUsuarioId?: string;
+  profissionalUsuarioId?: string;
   escopos: EscopoApiPublica[];
 }

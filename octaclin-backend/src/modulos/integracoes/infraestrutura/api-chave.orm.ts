@@ -24,6 +24,9 @@ export class ApiChaveOrm {
   @Column({ name: 'criado_por_usuario_id', type: 'uuid', nullable: true })
   criadoPorUsuarioId?: string;
 
+  @Column({ name: 'profissional_usuario_id', type: 'uuid', nullable: true })
+  profissionalUsuarioId?: string;
+
   @Column({ name: 'expira_em', type: 'timestamptz', nullable: true })
   expiraEm?: Date;
 

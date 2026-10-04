@@ -306,9 +306,11 @@ export class ServicoAgenda {
   ): Promise<ConsultaAgendaRespostaDto> {
     const referenciaExterna = dados.referenciaExterna?.trim();
     if (referenciaExterna) {
-      const existente = await this.executorTenant.executar(tenantId, (gerenciador) =>
-        gerenciador.getRepository(AgendaConsultaOrm).findOne({ where: { tenantId, referenciaExterna } })
-      );
+      const existente = await this.executorTenant.executar(tenantId, async (gerenciador) => {
+        const consulta = await gerenciador.getRepository(AgendaConsultaOrm).findOne({ where: { tenantId, referenciaExterna } });
+        if (consulta) await this.exigirConsultaNaCarteira(gerenciador, tenantId, usuario, consulta);
+        return consulta;
+      });
       if (existente) return this.mapearResposta(existente);
     }
     let contexto: ContextoConsultaCriada;
@@ -316,9 +318,11 @@ export class ServicoAgenda {
       contexto = await this.criarRegistroInterno(tenantId, { ...dados, referenciaExterna }, usuario, recorrenciaId);
     } catch (erro) {
       if (!referenciaExterna || !this.ehConflitoReferenciaExterna(erro)) throw erro;
-      const existente = await this.executorTenant.executar(tenantId, (gerenciador) =>
-        gerenciador.getRepository(AgendaConsultaOrm).findOne({ where: { tenantId, referenciaExterna } })
-      );
+      const existente = await this.executorTenant.executar(tenantId, async (gerenciador) => {
+        const consulta = await gerenciador.getRepository(AgendaConsultaOrm).findOne({ where: { tenantId, referenciaExterna } });
+        if (consulta) await this.exigirConsultaNaCarteira(gerenciador, tenantId, usuario, consulta);
+        return consulta;
+      });
       if (!existente) throw erro;
       return this.mapearResposta(existente);
     }
@@ -344,6 +348,26 @@ export class ServicoAgenda {
 
     const consultaAtualizada = await this.atualizarResultadoIntegracoes(tenantId, contexto.consulta.id, google, notificacoes);
     return this.mapearResposta(consultaAtualizada, contexto.pacienteNome, contexto.profissionalNome);
+  }
+
+  private async exigirConsultaNaCarteira(
+    gerenciador: EntityManager,
+    tenantId: string,
+    usuario: UsuarioAutenticado,
+    consulta: AgendaConsultaOrm
+  ): Promise<void> {
+    const profissionalId = await resolverProfissionalIdDoUsuario(gerenciador, tenantId, usuario);
+    if (!profissionalId) return;
+    if (consulta.profissionalId !== profissionalId) throw new NotFoundException('Consulta nao encontrada.');
+    const paciente = await gerenciador.getRepository(PacienteOrm).findOne({
+      where: {
+        id: consulta.pacienteId,
+        tenantId,
+        profissionalResponsavelId: profissionalId,
+        arquivadoEm: IsNull()
+      }
+    });
+    if (!paciente) throw new NotFoundException('Consulta nao encontrada.');
   }
 
   /**
@@ -803,7 +827,10 @@ export class ServicoAgenda {
       tenantId,
       consultaId,
       dados,
-      { profissionalId: profissionalIdDoUsuario },
+      {
+        profissionalId: profissionalIdDoUsuario,
+        pacienteResponsavelId: usuario.papel === 'Professional' ? profissionalIdDoUsuario : undefined
+      },
       'profissional',
       true
     );
@@ -840,7 +867,7 @@ export class ServicoAgenda {
     tenantId: string,
     consultaId: string,
     dados: CancelarConsultaAgendaDto,
-    escopo: { profissionalId?: string; pacienteId?: string; googleEventId?: string },
+    escopo: { profissionalId?: string; pacienteId?: string; googleEventId?: string; pacienteResponsavelId?: string },
     origem: OrigemCancelamentoConsulta,
     propagarParaGoogle: boolean,
     permitirCancelamentoIdempotente = true
@@ -858,6 +885,18 @@ export class ServicoAgenda {
         lock: { mode: 'pessimistic_write' }
       });
       if (!atual) throw new NotFoundException('Consulta nao encontrada.');
+      if (escopo.pacienteResponsavelId) {
+        const paciente = await gerenciador.getRepository(PacienteOrm).findOne({
+          where: {
+            id: atual.pacienteId,
+            tenantId,
+            profissionalResponsavelId: escopo.pacienteResponsavelId,
+            arquivadoEm: IsNull()
+          },
+          lock: { mode: 'pessimistic_read' }
+        });
+        if (!paciente) throw new NotFoundException('Consulta nao encontrada.');
+      }
       await this.bloquearAgendaProfissional(gerenciador, tenantId, atual.profissionalId);
       if (atual.status === 'cancelada' && permitirCancelamentoIdempotente) return atual;
       if (STATUS_CONSULTA_TERMINAIS.includes(atual.status)) {
@@ -960,12 +999,17 @@ export class ServicoAgenda {
     if (fimEm <= inicioEm) throw new BadRequestException('Horario final deve ser posterior ao inicio da consulta.');
 
     return this.executorTenant.executar(tenantId, async (gerenciador) => {
+      const profissionalIdDoUsuario = await resolverProfissionalIdDoUsuario(gerenciador, tenantId, usuario);
       const paciente = await gerenciador.getRepository(PacienteOrm).findOne({
-        where: { id: dados.pacienteId, tenantId, arquivadoEm: IsNull() }
+        where: {
+          id: dados.pacienteId,
+          tenantId,
+          arquivadoEm: IsNull(),
+          ...(profissionalIdDoUsuario ? { profissionalResponsavelId: profissionalIdDoUsuario } : {})
+        }
       });
       if (!paciente) throw new NotFoundException('Paciente nao encontrado.');
 
-      const profissionalIdDoUsuario = await resolverProfissionalIdDoUsuario(gerenciador, tenantId, usuario);
       const profissionalId = profissionalIdDoUsuario ?? dados.profissionalId ?? paciente.profissionalResponsavelId;
       const profissional = profissionalId
         ? await gerenciador.getRepository(ProfissionalOrm).findOne({
@@ -987,6 +1031,7 @@ export class ServicoAgenda {
       if (dados.referenciaExterna) {
         const existente = await repositorio.findOne({ where: { tenantId, referenciaExterna: dados.referenciaExterna } });
         if (existente) {
+          await this.exigirConsultaNaCarteira(gerenciador, tenantId, usuario, existente);
           return {
             consulta: existente,
             pacienteNome: this.nomePacientePayload(existente),

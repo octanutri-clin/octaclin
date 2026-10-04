@@ -2,8 +2,55 @@ import { createHmac, randomBytes } from 'crypto';
 import { WebhookAssinaturaOrm } from '../infraestrutura/webhook-assinatura.orm';
 import { WebhookEntregaOrm } from '../infraestrutura/webhook-entrega.orm';
 import { ProcessadorWebhooks } from './processador-webhooks';
+import { UsuarioOrm } from '../../usuarios/infraestrutura/usuario.orm';
+import { PermissaoIntegracaoProfissionalOrm } from '../infraestrutura/permissao-integracao-profissional.orm';
 
 describe('ProcessadorWebhooks', () => {
+  it('cancela entrega pendente quando a concessao do profissional foi retirada', async () => {
+    const entrega = {
+      id: 'entrega-1',
+      tenantId: 'tenant-1',
+      assinaturaId: 'assinatura-1',
+      evento: 'paciente.criado',
+      recursoTipo: 'paciente',
+      payload: { dados: { pacienteId: 'paciente-1' } },
+      status: 'pendente',
+      tentativas: 0,
+      proximaTentativaEm: new Date(0),
+      criadoEm: new Date(),
+      atualizadoEm: new Date()
+    } as WebhookEntregaOrm;
+    const repositorioEntregas = {
+      findOne: jest.fn(async () => entrega),
+      update: jest.fn(async () => ({ affected: 1 })),
+      save: jest.fn(async (valor: WebhookEntregaOrm) => valor)
+    };
+    const gerenciador = {
+      getRepository: jest.fn((entidade: unknown) => {
+        if (entidade === WebhookEntregaOrm) return repositorioEntregas;
+        if (entidade === WebhookAssinaturaOrm) return {
+          findOne: jest.fn(async () => ({
+            id: 'assinatura-1', ativo: true, profissionalUsuarioId: 'usuario-1'
+          }))
+        };
+        if (entidade === UsuarioOrm) return { findOne: jest.fn(async () => ({ id: 'usuario-1' })) };
+        if (entidade === PermissaoIntegracaoProfissionalOrm) return { findOne: jest.fn(async () => null) };
+        throw new Error('Repositorio inesperado');
+      })
+    };
+    const executor = {
+      executar: jest.fn((_tenant: string, operacao: (manager: unknown) => Promise<unknown>) => operacao(gerenciador))
+    };
+    const servico = new ProcessadorWebhooks({} as never, executor as never, {} as never);
+    const enviar = jest.spyOn(servico as never, 'enviar' as never).mockResolvedValue(204 as never);
+
+    await servico.processarUma('tenant-1', 'entrega-1');
+
+    expect(entrega.status).toBe('falhou');
+    expect(repositorioEntregas.save).toHaveBeenCalled();
+    expect(enviar).not.toHaveBeenCalled();
+  });
+
   it('devolve para a fila entregas cujo lease de processamento expirou', async () => {
     const repositorioEntregas = {
       update: jest.fn(async () => ({ affected: 1 })),

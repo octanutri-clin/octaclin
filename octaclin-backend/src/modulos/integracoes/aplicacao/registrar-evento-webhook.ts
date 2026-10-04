@@ -2,6 +2,7 @@ import { ArrayContains, EntityManager } from 'typeorm';
 import type { EventoWebhook } from '../dominio/contratos-integracao';
 import { WebhookAssinaturaOrm } from '../infraestrutura/webhook-assinatura.orm';
 import { WebhookEntregaOrm } from '../infraestrutura/webhook-entrega.orm';
+import { podeEntregarWebhook } from './escopo-webhook-profissional';
 
 export async function registrarEventoWebhook(
   gerenciador: EntityManager,
@@ -19,13 +20,21 @@ export async function registrarEventoWebhook(
   });
   if (!assinaturas.length) return;
 
+  const assinaturasPermitidas: WebhookAssinaturaOrm[] = [];
+  for (const assinatura of assinaturas) {
+    if (await podeEntregarWebhook(gerenciador, tenantId, assinatura, entrada.evento, entrada.dados)) {
+      assinaturasPermitidas.push(assinatura);
+    }
+  }
+  if (!assinaturasPermitidas.length) return;
+
   const ocorridoEm = (entrada.ocorridoEm ?? new Date()).toISOString();
   const repositorio = gerenciador.getRepository(WebhookEntregaOrm);
   await repositorio
     .createQueryBuilder()
     .insert()
     .values(
-      assinaturas.map((assinatura) => ({
+      assinaturasPermitidas.map((assinatura) => ({
         tenantId,
         assinaturaId: assinatura.id,
         evento: entrada.evento,

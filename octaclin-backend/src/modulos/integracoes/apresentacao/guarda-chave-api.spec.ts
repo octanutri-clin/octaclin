@@ -18,13 +18,19 @@ describe('GuardaChaveApi', () => {
       )
     };
     const protecao = { consumirTentativa: jest.fn(async () => undefined) };
+    const permissoes = {
+      obterConcessaoNoGerenciador: jest.fn(async () => ({ escoposApi: ['pacientes:ler'] }))
+    };
     const requisicao: Record<string, unknown> = {
       headers: { authorization: `Bearer octa_live.${tenantId}.${chaveId}.${segredo}` }
     };
     const contexto = {
       switchToHttp: () => ({ getRequest: () => requisicao })
     } as unknown as ExecutionContext;
-    return { guarda: new GuardaChaveApi(executor as never, protecao as never), executor, protecao, repositorio, requisicao, contexto };
+    return {
+      guarda: new GuardaChaveApi(executor as never, protecao as never, permissoes as never),
+      executor, protecao, permissoes, repositorio, requisicao, contexto
+    };
   }
 
   it('estabelece tenant e escopos somente depois de comparar o hash', async () => {
@@ -64,5 +70,29 @@ describe('GuardaChaveApi', () => {
       'api-publica-auth:ip-desconhecido',
       expect.objectContaining({ maxTentativas: 300 })
     );
+  });
+
+  it('vincula chave profissional ao titular e bloqueia escopo retirado', async () => {
+    const profissionalUsuarioId = '44444444-4444-4444-8444-444444444444';
+    const cenario = montar({
+      id: chaveId,
+      tenantId,
+      segredoHash: createHash('sha256').update(segredo).digest('hex'),
+      escopos: ['pacientes:ler'],
+      profissionalUsuarioId
+    });
+    await expect(cenario.guarda.canActivate(cenario.contexto)).resolves.toBe(true);
+    expect(cenario.requisicao.integracaoAutenticada).toEqual(expect.objectContaining({ profissionalUsuarioId }));
+
+    const revogada = montar({
+      id: chaveId,
+      tenantId,
+      segredoHash: createHash('sha256').update(segredo).digest('hex'),
+      escopos: ['pacientes:ler'],
+      profissionalUsuarioId
+    });
+    revogada.permissoes.obterConcessaoNoGerenciador.mockResolvedValue({ escoposApi: [] });
+    await expect(revogada.guarda.canActivate(revogada.contexto)).rejects.toBeInstanceOf(UnauthorizedException);
+    expect(revogada.requisicao.integracaoAutenticada).toBeUndefined();
   });
 });
