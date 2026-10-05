@@ -486,6 +486,46 @@ export interface ProntuarioPacienteRespostaDto {
   linhaDoTempo: EventoProntuarioPacienteDto[];
 }
 
+export interface EventoLeituraLongitudinalDto {
+  id: string;
+  tipo: 'questionario' | 'antropometria';
+  /** Timestamp ISO de resposta; avaliações mantêm data civil YYYY-MM-DD. */
+  data: string;
+  origem: string;
+  titulo?: string;
+  versaoQuestionario?: number;
+  estruturaIndisponivel?: boolean;
+  respostasIndisponiveisPorLimite?: boolean;
+  respostas?: Array<{
+    perguntaId: string;
+    enunciado: string;
+    unidade?: string;
+    estado: 'informada' | 'nao_informada';
+    valor?: string | number | boolean | Array<string | number | boolean>;
+  }>;
+  protocolo?: string;
+  formulaAplicada?: string;
+  medidas?: {
+    pesoKg?: number;
+    alturaCm?: number;
+    circunferencias?: Record<string, number>;
+    dobras?: Record<string, number>;
+  };
+  resultado?: {
+    imc?: number;
+    rcq?: number;
+    circunferenciaCinturaCm?: number;
+    percentualGordura?: number;
+    massaGordaKg?: number;
+    massaMagraKg?: number;
+  };
+}
+
+export interface LeituraLongitudinalPacienteDto {
+  eventos: EventoLeituraLongitudinalDto[];
+  truncado: { questionarios: boolean; antropometria: boolean };
+}
+
 export interface PaginaLinhaTempoProntuarioDto {
   itens: EventoProntuarioPacienteDto[];
   proximoCursor?: string;

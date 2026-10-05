@@ -30,6 +30,7 @@ writeFileSync(join(pastaTemporaria, 'tsconfig.json'), JSON.stringify({
   files: [
     'scripts/prontuario-timeline-bff.spec.ts',
     'app/api/pacientes/[id]/prontuario/timeline/route.ts',
+    'app/api/pacientes/[id]/leitura-longitudinal/route.ts',
     'lib/server/sessao-bff.ts'
   ].map((arquivo) => join(raiz, arquivo))
 }, null, 2), 'utf8');

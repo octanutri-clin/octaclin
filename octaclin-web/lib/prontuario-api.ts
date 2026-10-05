@@ -489,6 +489,52 @@ export interface SerieAntropometricaApi {
   deltaSelecionado?: DeltaAntropometricoApi[];
 }
 
+export interface LeituraLongitudinalPacienteApi {
+  eventos: Array<{
+    id: string;
+    tipo: 'questionario' | 'antropometria';
+    data: string;
+    origem: string;
+    titulo?: string;
+    versaoQuestionario?: number;
+    estruturaIndisponivel?: boolean;
+    respostasIndisponiveisPorLimite?: boolean;
+    respostas?: Array<{
+      perguntaId: string;
+      enunciado: string;
+      unidade?: string;
+      estado: 'informada' | 'nao_informada';
+      valor?: string | number | boolean | Array<string | number | boolean>;
+    }>;
+    protocolo?: string;
+    formulaAplicada?: string;
+    medidas?: {
+      pesoKg?: number;
+      alturaCm?: number;
+      circunferencias?: Record<string, number>;
+      dobras?: Record<string, number>;
+    };
+    resultado?: {
+      imc?: number;
+      rcq?: number;
+      circunferenciaCinturaCm?: number;
+      percentualGordura?: number;
+      massaGordaKg?: number;
+      massaMagraKg?: number;
+    };
+  }>;
+  truncado: { questionarios: boolean; antropometria: boolean };
+}
+
+export async function obterLeituraLongitudinalPaciente(pacienteId: string, signal?: AbortSignal): Promise<LeituraLongitudinalPacienteApi> {
+  const resposta = await fetch(`/api/pacientes/${encodeURIComponent(pacienteId)}/leitura-longitudinal`, {
+    cache: 'no-store',
+    signal
+  });
+  if (!resposta.ok) await lancarErroApi(resposta);
+  return resposta.json() as Promise<LeituraLongitudinalPacienteApi>;
+}
+
 export interface RegistrarAvaliacaoAntropometricaEntrada {
   avaliadaEm?: string;
   protocolo?: ProtocoloComposicao;

@@ -29,6 +29,7 @@ import { Botao, classesBotao } from '@/components/ui/botao';
 import { Abas } from '@/components/ui/abas';
 import { AbaAntropometria } from './aba-antropometria';
 import { ResumoAntropometrico } from './resumo-antropometrico';
+import { LeituraLongitudinal } from './leitura-longitudinal';
 import { formatarMetricaAntropometrica } from './metricas-antropometricas';
 import { ModelosEvolucaoClinica } from './modelos-evolucao-clinica';
 import { SeletorConsultaRecente } from './seletor-consulta-recente';
@@ -1375,6 +1376,11 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
             </section>
           ) : null}
           <ResumoAntropometrico pacienteId={pacienteId} aoAbrirDetalhes={() => solicitarTrocaAba('antropometria')} />
+          <LeituraLongitudinal
+            pacienteId={pacienteId}
+            consultas={eventos.filter((evento) => evento.tipo === 'consulta')}
+            habilitada={permissoes.includes('pacientes.ler') && podeLerQuestionarios}
+          />
           <section className="grid gap-3">
             <div className="rounded-md border border-linha bg-white p-4"><h2 className="text-base font-semibold text-tinta">Linha de cuidado</h2><p className="mt-1 text-sm text-texto-suave">Ultimos eventos que orientam a próxima conduta.</p></div>
             <LinhaDoTempo eventos={eventos.slice(0, 4)} profissionais={profissionais} />

@@ -1075,6 +1075,7 @@ async function prepararProntuarioMockado(page, {
   profissionalResponsavelId = 'profissional-1',
   falhaMateriais = false,
   falhaEvolucoes = false,
+  falhaLeituraLongitudinal = false,
   atrasoVersaoHistoricaMs = 0,
   statusPortalInicial = 'convite_pendente'
 } = {}) {
@@ -1097,6 +1098,7 @@ async function prepararProntuarioMockado(page, {
   let leiturasProfissionais = 0;
   let leiturasEvolucoes = 0;
   let leiturasTarefas = 0;
+  let leiturasLongitudinais = 0;
   await page.context().addCookies([
     { name: 'octaclin_access_token', value: 'fake', domain: 'localhost', path: '/' },
     { name: 'octaclin_refresh_token', value: 'fake', domain: 'localhost', path: '/' },
@@ -1684,6 +1686,30 @@ async function prepararProntuarioMockado(page, {
     });
   });
 
+  await page.route('**/api/pacientes/paciente-1/leitura-longitudinal', async (route) => {
+    leiturasLongitudinais += 1;
+    if (falhaLeituraLongitudinal) {
+      await route.fulfill({ status: 503, contentType: 'application/json', body: JSON.stringify({ mensagem: 'Leitura temporariamente indisponível.' }) });
+      return;
+    }
+    await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({
+      eventos: [
+        {
+          id: 'envio-historico-1', tipo: 'questionario', data: '2026-07-20T12:00:00.000Z',
+          origem: 'Resposta de formulário', titulo: 'Questionário semanal v2', versaoQuestionario: 2,
+          estruturaIndisponivel: false,
+          respostas: [{ perguntaId: 'pergunta-sintese', enunciado: 'Como você relata sua disposição?', valor: 'Boa', estado: 'informada' }]
+        },
+        {
+          id: 'avaliacao-longitudinal-1', tipo: 'antropometria', data: '2026-07-21',
+          origem: 'Avaliação antropométrica', protocolo: 'nenhum',
+          medidas: { pesoKg: 68.2, alturaCm: 165 }, resultado: { imc: 25.05 }
+        }
+      ],
+      truncado: { questionarios: false, antropometria: false }
+    }) });
+  });
+
   // Modelos de evolucao (PB-15): um modelo da clinica ja existente por
   // padrao, para os testes de "aplicar" nao dependerem de round-trip de
   // criacao; testes que exercitam "salvar como modelo" capturam o corpo
@@ -2260,6 +2286,8 @@ async function prepararProntuarioMockado(page, {
     leiturasProfissionais: () => leiturasProfissionais,
     leiturasEvolucoes: () => leiturasEvolucoes,
     leiturasTarefas: () => leiturasTarefas,
+    leiturasLongitudinais: () => leiturasLongitudinais,
+    definirFalhaLeituraLongitudinal: (valor) => { falhaLeituraLongitudinal = valor; },
     definirOverridePrioridade: (valor) => { overridePrioridade = valor; },
     definirFalhaOverridePrioridade: (valor) => { falhaOverridePrioridade = valor; }
   };
@@ -2726,6 +2754,46 @@ test.describe('lista de pacientes operacional', () => {
 });
 
 test.describe('prontuario do paciente', () => {
+  test('combina respostas históricas e medidas com data, origem e unidades no resumo', async ({ page }) => {
+    const prontuario = await prepararProntuarioMockado(page);
+    await page.goto('/pacientes/paciente-1');
+
+    await expect(page.getByRole('heading', { name: 'Questionários e medidas ao longo do tempo' })).toBeVisible();
+    await expect(page.getByText('Questionário semanal v2')).toBeVisible();
+    await expect(page.getByText('Versão 2')).toBeVisible();
+    await expect(page.getByText('Como você relata sua disposição?')).toBeVisible();
+    await expect(page.getByText('Boa', { exact: true })).toBeVisible();
+    await expect(page.getByText('68.2 kg')).toBeVisible();
+    await expect(page.getByText('165 cm')).toBeVisible();
+    await expect(page.getByText('IMC registrado')).toBeVisible();
+    await expect(page.getByText(/não indica causa, diagnóstico ou evolução clínica/)).toBeVisible();
+    await expect.poll(() => prontuario.leiturasLongitudinais()).toBe(1);
+
+    await page.getByLabel('Data inicial da leitura longitudinal').fill('2026-07-21');
+    await expect(page.getByText('Questionário semanal v2')).toHaveCount(0);
+    await expect(page.getByText('IMC registrado')).toBeVisible();
+  });
+
+  test('não solicita a leitura clínica quando falta permissão de questionários', async ({ page }) => {
+    const prontuario = await prepararProntuarioMockado(page, { permissoesRemovidas: ['questionarios.ler'] });
+    await page.goto('/pacientes/paciente-1');
+
+    await expect(page.getByRole('heading', { name: 'Linha de cuidado' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Questionários e medidas ao longo do tempo' })).toHaveCount(0);
+    expect(prontuario.leiturasLongitudinais()).toBe(0);
+  });
+
+  test('permite tentar novamente se a leitura longitudinal falhar', async ({ page }) => {
+    const prontuario = await prepararProntuarioMockado(page, { falhaLeituraLongitudinal: true });
+    await page.goto('/pacientes/paciente-1');
+    await expect(page.getByRole('alert').getByText('Não foi possível carregar a leitura longitudinal.')).toBeVisible();
+
+    prontuario.definirFalhaLeituraLongitudinal(false);
+    await page.getByRole('button', { name: 'Tentar novamente' }).click();
+    await expect(page.getByText('Questionário semanal v2')).toBeVisible();
+    expect(prontuario.leiturasLongitudinais()).toBe(2);
+  });
+
   test('orcamento de performance: resumo inicial nao excede o teto de endpoints distintos', async ({ page }) => {
     await prepararProntuarioMockado(page, { permissoesExtras: ['profissionais.ler'] });
     const caminhos = rastrearCaminhosApi(page);
@@ -2735,13 +2803,15 @@ test.describe('prontuario do paciente', () => {
     await expect.poll(() => caminhos.has('/api/pacientes/paciente-1/prontuario')).toBe(true);
 
     // Teto documentado, nao arbitrario: hoje a aba "Resumo" atinge
-    // /api/auth/session, /api/pacientes/paciente-1/prontuario e
-    // /api/pacientes/paciente-1/avaliacoes-antropometricas (3 endpoints).
+    // /api/auth/session, /api/pacientes/paciente-1/prontuario,
+    // /api/pacientes/paciente-1/avaliacoes-antropometricas,
+    // /api/pacientes/paciente-1/prioridade-acompanhamento e a rota clínica
+    // protegida da leitura longitudinal (5 endpoints).
     // Materiais, anexos, profissionais, evolucoes e tarefas ja sao lazy
     // (ver o teste seguinte) e nao devem aparecer aqui. Subir esse numero
     // exige decisao deliberada, e nao regressao silenciosa de uma cascata
     // nova na tela mais visitada do prontuario.
-    expect(caminhos.size).toBeLessThanOrEqual(4);
+    expect(caminhos.size).toBeLessThanOrEqual(5);
     expect(caminhos.has('/api/pacientes/paciente-1/evolucoes')).toBe(false);
     expect(caminhos.has('/api/pacientes/paciente-1/tarefas-acompanhamento')).toBe(false);
     expect([...caminhos].some((caminho) => caminho.includes('/materiais'))).toBe(false);

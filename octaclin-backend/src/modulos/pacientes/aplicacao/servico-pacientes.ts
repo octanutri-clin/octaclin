@@ -17,6 +17,7 @@ import { ProfissionalOrm } from '../../profissionais/infraestrutura/profissional
 import { EnvioQuestionarioOrm } from '../../questionarios/infraestrutura/envio-questionario.orm';
 import { QuestionarioOrm } from '../../questionarios/infraestrutura/questionario.orm';
 import { RespostaCheckinOrm } from '../../questionarios/infraestrutura/resposta-checkin.orm';
+import { RespostaValorOrm } from '../../questionarios/infraestrutura/resposta-valor.orm';
 import { registrarEventoWebhook } from '../../integracoes/aplicacao/registrar-evento-webhook';
 import { resolverConsultaOpcional } from './vinculo-consulta';
 import {
@@ -44,6 +45,7 @@ import {
   PacienteRespostaDto,
   PaginaLinhaTempoProntuarioDto,
   ProntuarioPacienteRespostaDto,
+  LeituraLongitudinalPacienteDto,
   TarefaAcompanhamentoRespostaDto,
   ListarPacientesDto,
   BuscarPacientesProtegidosDto,
@@ -51,6 +53,7 @@ import {
   ResultadoSolicitacaoEliminacaoLgpdDto,
   SolicitarOverridePrioridadeAcompanhamentoDto
 } from './dtos';
+import { projetarRespostasQuestionario } from './projecao-leitura-longitudinal';
 import { AcompanhamentoTarefaOrm } from '../infraestrutura/acompanhamento-tarefa.orm';
 import { AvaliacaoAntropometricaOrm } from '../infraestrutura/avaliacao-antropometrica.orm';
 import { CondutaTerapeuticaOrm } from '../infraestrutura/conduta-terapeutica.orm';
@@ -82,6 +85,7 @@ const LIMITE_DIAS_OVERRIDE_PRIORIDADE = 90;
 const PAGINA_EXPORTACAO = 100;
 const LIMITE_PADRAO_TIMELINE = 20;
 const LIMITE_MAXIMO_TIMELINE = 50;
+const LIMITE_RESPOSTAS_POR_FORMULARIO_LEITURA_LONGITUDINAL = 100;
 const CONSTRAINT_REFERENCIA_EXTERNA_PACIENTE = 'ux_pacientes_referencia_externa';
 /**
  * Prazo de guarda do prontuario (Fase 261, decisao de produto LGPD): 20 anos
@@ -1306,6 +1310,150 @@ export class ServicoPacientes {
           preparacaoConsulta
         },
         linhaDoTempo
+      };
+    });
+  }
+
+  async obterLeituraLongitudinal(
+    tenantId: string,
+    pacienteId: string,
+    usuario: UsuarioAutenticado
+  ): Promise<LeituraLongitudinalPacienteDto> {
+    if (
+      tenantId !== usuario.tenantId
+      || !usuario.permissoes.includes('pacientes.ler')
+      || !usuario.permissoes.includes('questionarios.ler')
+    ) {
+      throw new ForbiddenException('Permissao insuficiente para leitura longitudinal.');
+    }
+
+    return this.executorTenant.executar(tenantId, async (gerenciador) => {
+      await this.garantirPacienteExiste(gerenciador, tenantId, pacienteId, usuario);
+      const [enviosLimitados, avaliacoesLimitadas] = await Promise.all([
+        gerenciador.getRepository(EnvioQuestionarioOrm).find({
+          where: { tenantId, pacienteId, status: 'respondido' },
+          order: { respondidoEm: 'DESC', id: 'DESC' },
+          take: 101
+        }),
+        gerenciador.getRepository(AvaliacaoAntropometricaOrm).find({
+          where: { tenantId, pacienteId, excluidaEm: IsNull() },
+          order: { avaliadaEm: 'DESC', criadoEm: 'DESC', id: 'DESC' },
+          take: 101
+        })
+      ]);
+      const envios = enviosLimitados.slice(0, 100);
+      const avaliacoes = avaliacoesLimitadas.slice(0, 100);
+      const idsEnvios = envios.map((envio) => envio.id);
+      const respostas = idsEnvios.length
+        ? await gerenciador.getRepository(RespostaCheckinOrm).find({
+            where: { tenantId, pacienteId, envioQuestionarioId: In(idsEnvios), finalizadoEm: Not(IsNull()) },
+            order: { finalizadoEm: 'DESC', id: 'DESC' },
+            take: 101
+          })
+        : [];
+      const respostasPorEnvio = new Map<string, RespostaCheckinOrm>();
+      for (const resposta of respostas) {
+        if (!respostasPorEnvio.has(resposta.envioQuestionarioId)) respostasPorEnvio.set(resposta.envioQuestionarioId, resposta);
+      }
+      const enviosPorId = new Map(envios.map((envio) => [envio.id, envio]));
+      const respostasComEstruturaLimitada = new Set(respostas.filter((resposta) => {
+        const totalPerguntas = enviosPorId.get(resposta.envioQuestionarioId)?.snapshotEstrutura?.perguntas.length;
+        return totalPerguntas !== undefined && totalPerguntas > LIMITE_RESPOSTAS_POR_FORMULARIO_LEITURA_LONGITUDINAL;
+      }).map((resposta) => resposta.id));
+      const respostasContaveis = respostas.filter((resposta) =>
+        !respostasComEstruturaLimitada.has(resposta.id)
+        && Boolean(enviosPorId.get(resposta.envioQuestionarioId)?.snapshotEstrutura)
+      );
+      const idsRespostasContaveis = respostasContaveis.map((resposta) => resposta.id);
+      const contagensValores: Array<{ respostaCheckinId: string; total: number | string }> = idsRespostasContaveis.length
+        ? await gerenciador.query(
+            `SELECT resposta_checkin_id AS "respostaCheckinId", COUNT(*)::int AS total
+               FROM resposta_valores
+              WHERE tenant_id = $1 AND resposta_checkin_id = ANY($2::uuid[])
+              GROUP BY resposta_checkin_id`,
+            [tenantId, idsRespostasContaveis]
+          )
+        : [];
+      const respostasComValoresLimitados = new Set(contagensValores
+        .filter((item) => Number(item.total) > LIMITE_RESPOSTAS_POR_FORMULARIO_LEITURA_LONGITUDINAL)
+        .map((item) => item.respostaCheckinId));
+      const respostasIndisponiveisPorLimite = new Set([
+        ...respostasComEstruturaLimitada,
+        ...respostasComValoresLimitados
+      ]);
+      const idsRespostas = respostasContaveis
+        .filter((resposta) => !respostasComValoresLimitados.has(resposta.id))
+        .map((resposta) => resposta.id);
+      const valores = idsRespostas.length
+        ? await gerenciador.getRepository(RespostaValorOrm).find({
+            where: { tenantId, respostaCheckinId: In(idsRespostas) }
+          })
+        : [];
+      const valoresPorResposta = new Map<string, RespostaValorOrm[]>();
+      for (const valor of valores) {
+        const atuais = valoresPorResposta.get(valor.respostaCheckinId) ?? [];
+        atuais.push(valor);
+        valoresPorResposta.set(valor.respostaCheckinId, atuais);
+      }
+
+      const eventos: LeituraLongitudinalPacienteDto['eventos'] = [];
+      for (const envio of envios) {
+        const resposta = respostasPorEnvio.get(envio.id);
+        if (!resposta?.finalizadoEm) continue;
+        const respostasLimitadas = respostasIndisponiveisPorLimite.has(resposta.id);
+        const leitura = projetarRespostasQuestionario(
+          envio.snapshotEstrutura,
+          respostasLimitadas ? [] : (valoresPorResposta.get(resposta.id) ?? []).map(({ perguntaId, valor }) => ({ perguntaId, valor }))
+        );
+        eventos.push({
+          id: envio.id,
+          tipo: 'questionario',
+          data: resposta.finalizadoEm.toISOString(),
+          origem: 'Resposta de formulário',
+          ...(leitura.titulo ? { titulo: leitura.titulo } : {}),
+          ...(leitura.versao !== undefined ? { versaoQuestionario: leitura.versao } : {}),
+          estruturaIndisponivel: leitura.estruturaIndisponivel,
+          ...(respostasLimitadas ? { respostasIndisponiveisPorLimite: true, respostas: [] } : { respostas: leitura.respostas })
+        });
+      }
+
+      for (const avaliacao of avaliacoes) {
+        const medidas = this.lerJsonCriptografado<MedidasAntropometricas>(avaliacao.medidasCriptografadas, {});
+        const resultado = this.lerJsonCriptografado<ResultadoAntropometrico>(avaliacao.resultadoCriptografado, {
+          protocoloAplicado: 'nenhum', avisos: ['registro_ilegivel']
+        });
+        eventos.push({
+          id: avaliacao.id,
+          tipo: 'antropometria',
+          data: avaliacao.avaliadaEm,
+          origem: 'Avaliação antropométrica',
+          protocolo: avaliacao.protocolo,
+          ...(avaliacao.formulaAplicada ? { formulaAplicada: avaliacao.formulaAplicada } : {}),
+          medidas: {
+            ...(typeof medidas.pesoKg === 'number' ? { pesoKg: medidas.pesoKg } : {}),
+            ...(typeof medidas.alturaCm === 'number' ? { alturaCm: medidas.alturaCm } : {}),
+            ...(medidas.circunferencias ? { circunferencias: medidas.circunferencias } : {}),
+            ...(medidas.dobras ? { dobras: medidas.dobras } : {})
+          },
+          resultado: {
+            ...(typeof resultado.imc === 'number' ? { imc: resultado.imc } : {}),
+            ...(typeof resultado.rcq === 'number' ? { rcq: resultado.rcq } : {}),
+            ...(typeof resultado.circunferenciaCinturaCm === 'number'
+              ? { circunferenciaCinturaCm: resultado.circunferenciaCinturaCm } : {}),
+            ...(typeof resultado.percentualGordura === 'number' ? { percentualGordura: resultado.percentualGordura } : {}),
+            ...(typeof resultado.massaGordaKg === 'number' ? { massaGordaKg: resultado.massaGordaKg } : {}),
+            ...(typeof resultado.massaMagraKg === 'number' ? { massaMagraKg: resultado.massaMagraKg } : {})
+          }
+        });
+      }
+
+      eventos.sort((a, b) => b.data.localeCompare(a.data) || a.id.localeCompare(b.id));
+      return {
+        eventos,
+        truncado: {
+          questionarios: enviosLimitados.length > 100 || respostas.length > 100 || respostasIndisponiveisPorLimite.size > 0,
+          antropometria: avaliacoesLimitadas.length > 100
+        }
       };
     });
   }

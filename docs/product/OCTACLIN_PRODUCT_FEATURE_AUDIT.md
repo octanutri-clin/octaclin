@@ -659,6 +659,24 @@ tenant; a decisão final permanece com SuperAdmin. A descrição livre de pedido
 e tratativas passará a ser cifrada, com migration 1062 e backfill fora de
 banda. PR, CI e verificação de bancos externos ainda pendentes.
 
+### Reconciliação posterior da seção 15 em 2026-10-05
+
+- **Fase 304:** integrada pelo PR #362 (merge `13a250c8`, confirmado no
+  GitHub). Entregou adesão declarada, respostas ausentes e substituições por
+  versão publicada do plano, preservando a leitura histórica. Plano em
+  `docs/history/phases/PLANO_FASE_304.md`.
+- **Migration 1063:** o proprietário confirmou aplicação e validação em
+  staging e produção. Não consultamos diretamente os bancos neste ciclo.
+- **Fase 305:** em desenvolvimento na branch
+  `feat/fase305-visao-questionarios-antropometria`. O plano e a revisão de
+  gaps antecederam o código e estão em
+  `docs/history/phases/PLANO_FASE_305.md`. A fase não está concluída; PR, CI e
+  revisão permanecem pendentes.
+- **Sugestões da seção 15:** PB-30 permanece pendente, agora planejado como
+  Fase 316, condicionado aos gates jurídico, de privacidade e operação. As
+  outras recomendações e condições continuam no backlog ordenado das Fases
+  302–320; esta reconciliação não as marca como concluídas sem evidência.
+
 ## 16. Suggested Roadmap
 
 Sequência por dependência técnica, não por valor aparente.
