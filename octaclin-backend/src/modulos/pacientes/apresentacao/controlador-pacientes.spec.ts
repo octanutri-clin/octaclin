@@ -76,6 +76,25 @@ describe('ControladorPacientes', () => {
     );
   });
 
+  it('protege a leitura longitudinal com as permissões de paciente e questionário sem metadados clínicos na auditoria', async () => {
+    const leitura = { eventos: [{ tipo: 'questionario' }, { tipo: 'antropometria' }], truncado: { questionarios: false, antropometria: false } };
+    const obterLeituraLongitudinal = jest.fn().mockResolvedValue(leitura);
+    const { controlador, registrar, requisicao } = criarCenario({ obterLeituraLongitudinal });
+    const handler = ControladorPacientes.prototype.obterLeituraLongitudinal;
+
+    expect(Reflect.getMetadata(CHAVE_PERMISSOES, handler)).toEqual(['pacientes.ler', 'questionarios.ler']);
+    await controlador.obterLeituraLongitudinal(
+      { ...usuario, permissoes: ['pacientes.ler', 'questionarios.ler'] }, requisicao, 'paciente-1'
+    );
+
+    expect(obterLeituraLongitudinal).toHaveBeenCalledWith('tenant-1', 'paciente-1', expect.objectContaining({ tenantId: 'tenant-1' }));
+    const auditoriaDaLeitura = registrar.mock.calls.find(
+      ([entrada]) => entrada.acao === 'pacientes.leitura_longitudinal.ler'
+    )?.[0];
+    expect(auditoriaDaLeitura).toBeDefined();
+    expect(auditoriaDaLeitura).not.toHaveProperty('metadados');
+  });
+
   it('rejeita UUIDs dispensados que nao pertencem ao resultado autorizado', async () => {
     const criar = jest.fn().mockResolvedValue({ id: 'paciente-novo' });
     const { controlador, registrarDispensa, verificarDuplicidade, requisicao } = criarCenario({ criar });

@@ -879,7 +879,7 @@ test.describe('gate de acessibilidade - rotas criticas', () => {
   test('dashboard', async ({ page }) => {
     await prepararDashboardMockado(page);
     await page.goto('/dashboard');
-    await expect(page.getByRole('heading', { name: 'Hoje' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Hoje', exact: true })).toBeVisible();
     await expect(page).toHaveTitle('Hoje | OctaClin');
     // O sino da Fase 210 precisa estar em tela para as checagens abaixo o
     // cobrirem. Sem esta linha, uma permissao faltando no mock faria o gate

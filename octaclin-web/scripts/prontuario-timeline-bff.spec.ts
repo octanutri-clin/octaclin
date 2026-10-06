@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import * as nextHeaders from 'next/headers';
 import { GET as obterTimeline } from '../app/api/pacientes/[id]/prontuario/timeline/route';
+import { GET as obterLeituraLongitudinal } from '../app/api/pacientes/[id]/leitura-longitudinal/route';
 
 const { __clearCookies, __setCookies } = nextHeaders as typeof nextHeaders & {
   __clearCookies: () => void;
@@ -41,6 +42,11 @@ test('BFF da timeline recusa sessao ausente antes de chamar o backend', async ()
       { params: Promise.resolve({ id: 'paciente-1' }) }
     );
     assert.equal(resposta.status, 401);
+    const leitura = await obterLeituraLongitudinal(
+      new Request('http://localhost/api/pacientes/paciente-1/leitura-longitudinal'),
+      { params: Promise.resolve({ id: 'paciente-1' }) }
+    );
+    assert.equal(leitura.status, 401);
     assert.equal(chamadas, 0);
   } finally {
     restaurarFetch(original);
@@ -80,6 +86,31 @@ test('BFF da timeline encaminha filtros permitidos e codifica o paciente', async
       assert.equal(destino.searchParams.get(nome), consulta.get(nome));
     }
     assert.equal(destino.searchParams.has('ignorado'), false);
+  } finally {
+    restaurarFetch(original);
+  }
+});
+
+test('BFF da leitura longitudinal encaminha somente a rota autenticada e impede cache', async () => {
+  const original = global.fetch;
+  let urlBackend = '';
+  global.fetch = (async (url: string | URL | Request) => {
+    urlBackend = String(url);
+    return new Response(JSON.stringify({ eventos: [], truncado: { questionarios: false, antropometria: false } }), {
+      headers: { 'Content-Type': 'application/json' }
+    });
+  }) as typeof global.fetch;
+
+  try {
+    __setCookies(cookiesSessao());
+    const resposta = await obterLeituraLongitudinal(
+      new Request('http://localhost/api/pacientes/paciente-1/leitura-longitudinal'),
+      { params: Promise.resolve({ id: 'paciente-1' }) }
+    );
+    assert.equal(resposta.status, 200);
+    assert.equal(new URL(urlBackend).pathname, '/pacientes/paciente-1/leitura-longitudinal');
+    assert.equal(resposta.headers.get('Cache-Control'), 'private, no-store');
+    assert.equal(resposta.headers.get('Vary'), 'Cookie');
   } finally {
     restaurarFetch(original);
   }

@@ -11,6 +11,7 @@ import { ProfissionalOrm } from '../../profissionais/infraestrutura/profissional
 import { EnvioQuestionarioOrm } from '../../questionarios/infraestrutura/envio-questionario.orm';
 import { QuestionarioOrm } from '../../questionarios/infraestrutura/questionario.orm';
 import { RespostaCheckinOrm } from '../../questionarios/infraestrutura/resposta-checkin.orm';
+import { RespostaValorOrm } from '../../questionarios/infraestrutura/resposta-valor.orm';
 import { WebhookAssinaturaOrm } from '../../integracoes/infraestrutura/webhook-assinatura.orm';
 import { AcompanhamentoTarefaOrm } from '../infraestrutura/acompanhamento-tarefa.orm';
 import { AvaliacaoAntropometricaOrm } from '../infraestrutura/avaliacao-antropometrica.orm';
@@ -73,6 +74,103 @@ const usuarioProfissional: UsuarioAutenticado = {
 };
 
 describe('ServicoPacientes', () => {
+  it('projeta leitura longitudinal factual apenas depois de validar paciente e permissões', async () => {
+    const paciente = { id: 'paciente-1' };
+    const envio = {
+      id: 'envio-1', tenantId: 'tenant-1', pacienteId: 'paciente-1', status: 'respondido',
+      respondidoEm: new Date('2026-09-01T12:00:00.000Z'),
+      snapshotEstrutura: {
+        versaoQuestionario: 2, titulo: 'Questionário histórico', perguntas: [{
+          id: 'pergunta-1', categoriaId: 'categoria-1', tipo: 'multipla_escolha', enunciado: 'Como se sentiu?',
+          peso: '100', obrigatoria: false, configuracao: {}, ordem: 1,
+          opcoes: [{ id: 'opcao-1', valor: 'bem', rotulo: 'Bem', ordem: 1 }]
+        }]
+      }
+    };
+    const resposta = { id: 'resposta-1', tenantId: 'tenant-1', pacienteId: 'paciente-1', envioQuestionarioId: 'envio-1', finalizadoEm: envio.respondidoEm, scoreFinal: '99' };
+    const avaliacao = {
+      id: 'avaliacao-1', tenantId: 'tenant-1', pacienteId: 'paciente-1', avaliadaEm: '2026-09-02',
+      protocolo: 'nenhum', formulaAplicada: 'IMC = kg/m²', medidasCriptografadas: Buffer.from('{"pesoKg":70,"alturaCm":170}'),
+      resultadoCriptografado: Buffer.from('{"imc":24.22,"classificacaoImc":"eutrofia","avisos":[]}'),
+      observacoesCriptografadas: Buffer.from('nao retornar')
+    };
+    let totalRespostasValores: Array<{ respostaCheckinId: string; total: number }> = [];
+    const valoresFind = jest.fn(async () => [{ tenantId: 'tenant-1', respostaCheckinId: 'resposta-1', perguntaId: 'pergunta-1', valor: 'bem', scorePonderado: '100' }]);
+    const repositorios = new Map<unknown, unknown>([
+      [PacienteOrm, { findOne: jest.fn(async () => paciente) }],
+      [EnvioQuestionarioOrm, { find: jest.fn(async () => [envio]) }],
+      [RespostaCheckinOrm, { find: jest.fn(async () => [resposta]) }],
+      [RespostaValorOrm, { find: valoresFind }],
+      [AvaliacaoAntropometricaOrm, { find: jest.fn(async () => [avaliacao]) }]
+    ]);
+    const gerenciador = {
+      query: jest.fn(async () => totalRespostasValores),
+      getRepository: jest.fn((entidade: unknown) => repositorios.get(entidade))
+    };
+    const executor = { executar: jest.fn((_tenant: string, operacao: (manager: unknown) => Promise<unknown>) => operacao(gerenciador)) };
+    const criptografia = { descriptografar: jest.fn((valor: Buffer) => valor.toString()) };
+    const usuario: UsuarioAutenticado = {
+      usuarioId: 'superadmin-1', tenantId: 'tenant-1', papel: 'SuperAdmin', emailHash: 'hash',
+      permissoes: ['pacientes.ler', 'questionarios.ler']
+    };
+    const servico = new ServicoPacientes(executor as never, criptografia as never, limitesPermitidos as never);
+
+    const leitura = await servico.obterLeituraLongitudinal('tenant-1', 'paciente-1', usuario);
+
+    expect(leitura.eventos.map(({ tipo }) => tipo)).toEqual(['antropometria', 'questionario']);
+    expect(leitura.eventos[1]).toMatchObject({ titulo: 'Questionário histórico', versaoQuestionario: 2 });
+    expect(leitura.eventos[0]).toMatchObject({ medidas: { pesoKg: 70, alturaCm: 170 }, resultado: { imc: 24.22 } });
+    const serializado = JSON.stringify(leitura);
+    expect(serializado).not.toContain('scoreFinal');
+    expect(serializado).not.toContain('scorePonderado');
+    expect(serializado).not.toContain('classificacaoImc');
+    expect(serializado).not.toContain('nao retornar');
+
+    totalRespostasValores = [{ respostaCheckinId: 'resposta-1', total: 101 }];
+    const leituraLimitada = await servico.obterLeituraLongitudinal('tenant-1', 'paciente-1', usuario);
+    expect(leituraLimitada.eventos.find((evento) => evento.tipo === 'questionario')).toMatchObject({
+      respostasIndisponiveisPorLimite: true,
+      respostas: []
+    });
+    expect(leituraLimitada.truncado.questionarios).toBe(true);
+    expect(valoresFind).toHaveBeenCalledTimes(1);
+  });
+
+  it('nega leitura longitudinal antes de abrir o contexto de tenant sem as duas permissões', async () => {
+    const executar = jest.fn();
+    const servico = new ServicoPacientes({ executar } as never, {} as never, limitesPermitidos as never);
+    await expect(servico.obterLeituraLongitudinal('tenant-1', 'paciente-1', usuarioColaborador))
+      .rejects.toThrow('Permissao insuficiente');
+    await expect(servico.obterLeituraLongitudinal('tenant-forjado', 'paciente-1', {
+      ...usuarioColaborador, permissoes: ['pacientes.ler', 'questionarios.ler']
+    })).rejects.toThrow('Permissao insuficiente');
+    expect(executar).not.toHaveBeenCalled();
+  });
+
+  it('para um profissional, interrompe antes de consultar registros clínicos quando o paciente não pertence à carteira', async () => {
+    const pacienteFindOne = jest.fn(async () => null);
+    const profissionaisFindOne = jest.fn(async () => ({ id: 'profissional-1' }));
+    const getRepository = jest.fn((entidade: unknown) => {
+      if (entidade === ProfissionalOrm) return { findOne: profissionaisFindOne };
+      if (entidade === PacienteOrm) return { findOne: pacienteFindOne };
+      throw new Error('A consulta clínica não deve ocorrer.');
+    });
+    const gerenciador = { getRepository };
+    const servico = new ServicoPacientes({
+      executar: jest.fn((_tenant: string, operacao: (manager: unknown) => Promise<unknown>) => operacao(gerenciador))
+    } as never, {} as never, limitesPermitidos as never);
+    const usuario: UsuarioAutenticado = {
+      ...usuarioProfissional, permissoes: ['pacientes.ler', 'questionarios.ler']
+    };
+
+    await expect(servico.obterLeituraLongitudinal('tenant-1', 'paciente-alheio', usuario))
+      .rejects.toThrow('Paciente nao encontrado.');
+    expect(pacienteFindOne).toHaveBeenCalledWith(expect.objectContaining({ where: expect.objectContaining({
+      id: 'paciente-alheio', tenantId: 'tenant-1', profissionalResponsavelId: 'profissional-1'
+    }) }));
+    expect(getRepository).toHaveBeenCalledTimes(2);
+  });
+
   it('nao reutiliza referencia externa de paciente fora da carteira profissional', async () => {
     const repositorioPacientes = {
       findOne: jest.fn()

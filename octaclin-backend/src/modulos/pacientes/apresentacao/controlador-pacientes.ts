@@ -311,6 +311,27 @@ export class ControladorPacientes {
     return prontuario;
   }
 
+  @Get(':id/leitura-longitudinal')
+  @Permissoes('pacientes.ler', 'questionarios.ler')
+  async obterLeituraLongitudinal(
+    @UsuarioAtual() usuario: UsuarioAutenticado,
+    @Req() requisicao: Request,
+    @Param('id', ParseUUIDPipe) id: string
+  ) {
+    const leitura = await this.servicoPacientes.obterLeituraLongitudinal(usuario.tenantId, id, usuario);
+    await this.servicoAuditoria.registrar({
+      tenantId: usuario.tenantId,
+      usuarioId: usuario.usuarioId,
+      acao: 'pacientes.leitura_longitudinal.ler',
+      recursoTipo: 'paciente',
+      recursoId: id,
+      ip: requisicao.ip,
+      userAgent: this.obterUserAgent(requisicao),
+      garantirRetentativa: true
+    });
+    return leitura;
+  }
+
   @Get(':id/consultas-recentes')
   async listarConsultasRecentes(
     @UsuarioAtual() usuario: UsuarioAutenticado,
