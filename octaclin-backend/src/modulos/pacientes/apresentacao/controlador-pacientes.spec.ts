@@ -76,7 +76,7 @@ describe('ControladorPacientes', () => {
     );
   });
 
-  it('protege a leitura longitudinal com as permissões de paciente e questionário e audita somente contagens', async () => {
+  it('protege a leitura longitudinal com as permissões de paciente e questionário sem metadados clínicos na auditoria', async () => {
     const leitura = { eventos: [{ tipo: 'questionario' }, { tipo: 'antropometria' }], truncado: { questionarios: false, antropometria: false } };
     const obterLeituraLongitudinal = jest.fn().mockResolvedValue(leitura);
     const { controlador, registrar, requisicao } = criarCenario({ obterLeituraLongitudinal });
@@ -88,10 +88,11 @@ describe('ControladorPacientes', () => {
     );
 
     expect(obterLeituraLongitudinal).toHaveBeenCalledWith('tenant-1', 'paciente-1', expect.objectContaining({ tenantId: 'tenant-1' }));
-    expect(registrar).toHaveBeenCalledWith(expect.objectContaining({
-      acao: 'pacientes.leitura_longitudinal.ler',
-      metadados: { questionarios: 1, antropometria: 1 }
-    }));
+    const auditoriaDaLeitura = registrar.mock.calls.find(
+      ([entrada]) => entrada.acao === 'pacientes.leitura_longitudinal.ler'
+    )?.[0];
+    expect(auditoriaDaLeitura).toBeDefined();
+    expect(auditoriaDaLeitura).not.toHaveProperty('metadados');
   });
 
   it('rejeita UUIDs dispensados que nao pertencem ao resultado autorizado', async () => {

@@ -105,6 +105,9 @@ async function prepararConsole(page) {
     if (caminho === '/api/pacientes/filtros-salvos') return responderJson(route, { itens: [] });
     if (caminho === '/api/pacientes') return responderJson(route, { itens: [paciente], total: 1 });
     if (caminho === '/api/profissionais') return responderJson(route, { itens: [profissional], total: 1 });
+    if (caminho === `/api/pacientes/${paciente.id}/leitura-longitudinal`) {
+      return responderJson(route, { eventos: [], truncado: { questionarios: false, antropometria: false } });
+    }
     if (caminho === `/api/pacientes/${paciente.id}/prontuario`) {
       return responderJson(route, {
         paciente,

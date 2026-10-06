@@ -22,6 +22,21 @@ function apresentarValor(valor: NonNullable<NonNullable<LeituraLongitudinalPacie
   return Array.isArray(valor) ? valor.join(', ') : typeof valor === 'boolean' ? (valor ? 'Sim' : 'Não') : String(valor);
 }
 
+function respostaLongitudinalValida(valor: unknown): valor is LeituraLongitudinalPacienteApi {
+  if (typeof valor !== 'object' || valor === null) return false;
+  const leitura = valor as { eventos?: unknown; truncado?: unknown };
+  if (!Array.isArray(leitura.eventos) || typeof leitura.truncado !== 'object' || leitura.truncado === null) return false;
+  const truncado = leitura.truncado as { questionarios?: unknown; antropometria?: unknown };
+  if (typeof truncado.questionarios !== 'boolean' || typeof truncado.antropometria !== 'boolean') return false;
+  return leitura.eventos.every((evento) => (
+    typeof evento === 'object' && evento !== null &&
+    typeof evento.id === 'string' &&
+    (evento.tipo === 'questionario' || evento.tipo === 'antropometria') &&
+    typeof evento.data === 'string' &&
+    typeof evento.origem === 'string'
+  ));
+}
+
 export function LeituraLongitudinal({
   pacienteId,
   consultas,
@@ -40,7 +55,10 @@ export function LeituraLongitudinal({
     if (!habilitada) return;
     const controller = new AbortController();
     void obterLeituraLongitudinalPaciente(pacienteId, controller.signal)
-      .then((leitura) => setResultado({ pacienteId, leitura }))
+      .then((leitura) => {
+        if (!respostaLongitudinalValida(leitura)) throw new Error('Resposta da leitura longitudinal fora do contrato.');
+        setResultado({ pacienteId, leitura });
+      })
       .catch(() => { if (!controller.signal.aborted) setResultado({ pacienteId, erro: true }); });
     return () => controller.abort();
   }, [pacienteId, habilitada, tentativa]);

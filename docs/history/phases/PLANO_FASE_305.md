@@ -31,6 +31,8 @@ inferência causal, classificação nova, alerta ou decisão automatizada.
 - Cada evento terá data registrada, categoria, origem explícita e unidade
   quando aplicável. Valores nulos/ausentes serão omitidos ou apresentados como
   não registrados, nunca convertidos para zero ou resposta negativa.
+- A trilha de auditoria registra o evento sem metadados clínicos, contagens ou
+  conteúdo da leitura.
 - Sem classificação antropométrica nova: IMC e resultado já gravados podem ser
   mostrados como valores factuais do registro, com protocolo/fórmula e data.
   Este incremento não classifica gestantes, menores ou faixas clínicas.
@@ -175,7 +177,7 @@ exigiria revisão do plano; nenhum foi necessário.
 | Web typecheck e build | PASS | Build incluiu a nova rota BFF; avisos preexistentes do Next registrados no log local. |
 | Web lint completo | PASS | 0 erros; 65 avisos. Arquivos alterados da Fase 305 passaram lint focado sem avisos. |
 | Testes de autorização/BFF | PASS | `pnpm test:authz` terminou com exit code 0; contrato da rota nova: 3 testes. |
-| Playwright visual | PASS | 6 testes desktop/mobile passaram; execução anterior também cobriu o orçamento de requisições desktop. |
+| Playwright visual | PASS | 10 testes desktop/mobile focados na entrega e nas regressões reportadas passaram; a suíte CI completa ainda será reexecutada. |
 | Verificação de linguagem | PASS | 8 verificações passaram. |
 | `pnpm security:secrets` | PASS | Scanner local não identificou secrets reais. |
 | `git diff --check` e preflight documental | PASS | `validar-preflight.ps1 -DocsOnly` validou documentos canônicos e diff. |
@@ -183,8 +185,15 @@ exigiria revisão do plano; nenhum foi necessário.
 | Node 22 local | SKIPPED | Ambiente local disponível é Node 24.19.0; requisito do repositório é Node 22. CI Node 22 continua autoritativo. |
 | Migration/deploy | NA | Não há mudança de schema; nenhum ambiente foi alterado. |
 | Revisão independente | SKIPPED | Não havia revisor independente disponível neste ciclo; revisão própria do diff não equivale a revisão independente. |
-| CI/GitHub | PENDENTE | Deve ser observado após abrir a PR; nenhum resultado remoto é declarado aqui. |
+| CI/GitHub | PENDENTE | A execução inicial da PR falhou em smoke visual e governança. Os mocks/seletores e a auditoria foram corrigidos e validados localmente; aguarda-se nova execução na PR. |
 
-O trabalho local da Fase 305 está concluído e reconciliado. O merge, a
-validação RLS em CI e qualquer deploy permanecem etapas posteriores, sem
-declaração antecipada de aprovação.
+O trabalho local da Fase 305 está concluído e reconciliado. Na primeira execução
+remota, os contadores por tipo da auditoria foram rejeitados pela cobertura de
+redação; um mock retornou formato inválido para a nova rota e derrubou a tela do
+prontuário; dois seletores visuais ficaram ambíguos após a inclusão de conteúdo
+com o mesmo texto. A correção remove metadados da auditoria, valida o contrato
+da resposta antes de renderizar, fornece payload válido nos mocks e especifica
+os seletores. A suíte de 10 testes visuais focados, o teste de cobertura de
+redação e o teste do controlador passaram localmente depois da correção. O
+merge, a validação RLS em CI e qualquer deploy permanecem etapas posteriores,
+sem declaração antecipada de aprovação.

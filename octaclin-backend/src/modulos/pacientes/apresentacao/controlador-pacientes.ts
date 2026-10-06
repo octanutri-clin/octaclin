@@ -327,10 +327,6 @@ export class ControladorPacientes {
       recursoId: id,
       ip: requisicao.ip,
       userAgent: this.obterUserAgent(requisicao),
-      metadados: {
-        questionarios: leitura.eventos.filter((evento) => evento.tipo === 'questionario').length,
-        antropometria: leitura.eventos.filter((evento) => evento.tipo === 'antropometria').length
-      },
       garantirRetentativa: true
     });
     return leitura;

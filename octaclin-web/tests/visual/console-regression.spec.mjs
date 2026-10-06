@@ -2794,6 +2794,17 @@ test.describe('prontuario do paciente', () => {
     expect(prontuario.leiturasLongitudinais()).toBe(2);
   });
 
+  test('trata resposta fora do contrato como erro sem derrubar o prontuario', async ({ page }) => {
+    await prepararProntuarioMockado(page);
+    await page.route('**/api/pacientes/paciente-1/leitura-longitudinal', async (route) => {
+      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify([]) });
+    });
+    await page.goto('/pacientes/paciente-1');
+
+    await expect(page.getByRole('heading', { name: 'Linha de cuidado' })).toBeVisible();
+    await expect(page.getByRole('alert').getByText('Não foi possível carregar a leitura longitudinal.')).toBeVisible();
+  });
+
   test('orcamento de performance: resumo inicial nao excede o teto de endpoints distintos', async ({ page }) => {
     await prepararProntuarioMockado(page, { permissoesExtras: ['profissionais.ler'] });
     const caminhos = rastrearCaminhosApi(page);
@@ -3337,7 +3348,7 @@ test.describe('prontuario do paciente', () => {
 
     await expect(page.getByRole('heading', { name: 'Revisar falha de comunicação' })).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Contexto operacional' })).toBeVisible();
-    await expect(page.getByText('Versão 2')).toBeVisible();
+    await expect(page.getByText('Versão 2', { exact: true }).last()).toBeVisible();
     await expect(page.getByText('Revisar exames pendentes')).toBeVisible();
     await expect(page.getByText('85%')).toBeVisible();
     await expect(page.getByText(/Fonte: Registro de habitos em/).first()).toBeVisible();
