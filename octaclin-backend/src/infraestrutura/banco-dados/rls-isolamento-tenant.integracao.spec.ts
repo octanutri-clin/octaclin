@@ -144,6 +144,10 @@ descrever('RLS e isolamento multi-tenant integral em Postgres real', () => {
   let tenantB: string;
   let usuarioIdTenantA: string;
   let usuarioIdTenantB: string;
+  let pacienteIdTenantA: string;
+  let pacienteIdTenantB: string;
+  let profissionalIdTenantA: string;
+  let profissionalIdTenantB: string;
   let idsTenantA: IdentificadoresRepresentativos;
   let idsTenantB: IdentificadoresRepresentativos;
 
@@ -308,7 +312,7 @@ descrever('RLS e isolamento multi-tenant integral em Postgres real', () => {
   async function prepararDadosRepresentativos(
     tenantId: string,
     rotulo: string
-  ): Promise<{ usuarioId: string; ids: IdentificadoresRepresentativos }> {
+  ): Promise<{ usuarioId: string; pacienteId: string; profissionalId: string; ids: IdentificadoresRepresentativos }> {
     await comoTenant(tenantId);
     if (!cliente) throw new Error('Cliente da prova RLS nao foi inicializado.');
 
@@ -365,6 +369,8 @@ descrever('RLS e isolamento multi-tenant integral em Postgres real', () => {
 
     return {
       usuarioId,
+      pacienteId,
+      profissionalId,
       ids: {
         user_action_logs: auditoria.rows[0].id,
         outbox_eventos: outbox.rows[0].id,
@@ -406,8 +412,12 @@ descrever('RLS e isolamento multi-tenant integral em Postgres real', () => {
       const dadosB = await prepararDadosRepresentativos(tenantB, 'b');
       idsTenantA = dadosA.ids;
       usuarioIdTenantA = dadosA.usuarioId;
+      pacienteIdTenantA = dadosA.pacienteId;
+      profissionalIdTenantA = dadosA.profissionalId;
       idsTenantB = dadosB.ids;
       usuarioIdTenantB = dadosB.usuarioId;
+      pacienteIdTenantB = dadosB.pacienteId;
+      profissionalIdTenantB = dadosB.profissionalId;
     } catch (erro) {
       await encerrarRecursos(true);
       throw erro;
@@ -496,6 +506,80 @@ descrever('RLS e isolamento multi-tenant integral em Postgres real', () => {
     expect(resultadoB.profissionais).toHaveLength(1);
     expect(resultadoA.profissionais[0].nome).toBe('profissional-a');
     expect(resultadoB.profissionais[0].nome).toBe('profissional-b');
+  });
+
+  it('Fase 306 agrega somente eventos do tenant em indicadores de retorno e formulários', async () => {
+    if (!cliente || !executorTenant) throw new Error('Prova RLS nao foi inicializada.');
+
+    const mesAnterior = await cliente.query<{ mes: string }>(`
+      select to_char((now() at time zone 'America/Sao_Paulo') - interval '1 month', 'YYYY-MM') as mes
+    `);
+    const periodoLocal = `((date_trunc('month', now() at time zone 'America/Sao_Paulo') - interval '1 month')::date + interval '10 hours')`;
+
+    const inserirEventos = async (tenantId: string, pacienteId: string, profissionalId: string, versao: 'a' | 'b') => {
+      await comoTenant(tenantId);
+      const base = periodoLocal;
+      if (versao === 'a') {
+        await cliente!.query(`
+          insert into agenda_consultas (tenant_id, paciente_id, profissional_id, titulo, inicio_em, fim_em, status)
+          values
+            ($1, $2, $3, 'Consulta de prova RLS', (${base}) at time zone 'America/Sao_Paulo', (${base} + interval '30 minutes') at time zone 'America/Sao_Paulo', 'concluida'),
+            ($1, $2, $3, 'Consulta de prova RLS', (${base} + interval '10 days') at time zone 'America/Sao_Paulo', (${base} + interval '10 days 30 minutes') at time zone 'America/Sao_Paulo', 'concluida'),
+            ($1, $2, $3, 'Consulta de prova RLS', (${base} + interval '20 days') at time zone 'America/Sao_Paulo', (${base} + interval '20 days 30 minutes') at time zone 'America/Sao_Paulo', 'concluida'),
+            ($1, $2, $3, 'Consulta de prova RLS', (${base} + interval '20 days 30 minutes') at time zone 'America/Sao_Paulo', (${base} + interval '20 days 60 minutes') at time zone 'America/Sao_Paulo', 'falta'),
+            ($1, $2, $3, 'Consulta de prova RLS', (${base} + interval '20 days 60 minutes') at time zone 'America/Sao_Paulo', (${base} + interval '20 days 90 minutes') at time zone 'America/Sao_Paulo', 'falta'),
+            ($1, $2, $3, 'Consulta de prova RLS', now() + interval '5 days', now() + interval '5 days 30 minutes', 'agendada')
+        `, [tenantId, pacienteId, profissionalId]);
+      } else {
+        await cliente!.query(`
+          insert into agenda_consultas (tenant_id, paciente_id, profissional_id, titulo, inicio_em, fim_em, status)
+          values
+            ($1, $2, $3, 'Consulta de prova RLS', (${base}) at time zone 'America/Sao_Paulo', (${base} + interval '30 minutes') at time zone 'America/Sao_Paulo', 'concluida'),
+            ($1, $2, $3, 'Consulta de prova RLS', (${base} + interval '7 days') at time zone 'America/Sao_Paulo', (${base} + interval '7 days 30 minutes') at time zone 'America/Sao_Paulo', 'concluida'),
+            ($1, $2, $3, 'Consulta de prova RLS', (${base} + interval '10 days 30 minutes') at time zone 'America/Sao_Paulo', (${base} + interval '10 days 60 minutes') at time zone 'America/Sao_Paulo', 'falta')
+        `, [tenantId, pacienteId, profissionalId]);
+      }
+
+      const questionario = await cliente!.query<{ id: string }>(
+        `insert into questionarios (tenant_id, profissional_id, titulo) values ($1, $2, 'Questionário de prova RLS') returning id`,
+        [tenantId, profissionalId]
+      );
+      const envio = `((date_trunc('month', now() at time zone 'America/Sao_Paulo') - interval '1 month')::date + interval '20 days 08 hours')`;
+      const duracao = versao === 'a' ? '2 hours' : '48 hours';
+      await cliente!.query(`
+        insert into envios_questionario (tenant_id, questionario_id, paciente_id, status, enviado_em, respondido_em)
+        values ($1, $2, $3, 'respondido', (${envio}) at time zone 'America/Sao_Paulo', ((${envio}) + $4::interval) at time zone 'America/Sao_Paulo')
+      `, [tenantId, questionario.rows[0].id, pacienteId, duracao]);
+    };
+
+    await inserirEventos(tenantA, pacienteIdTenantA, profissionalIdTenantA, 'a');
+    await inserirEventos(tenantB, pacienteIdTenantB, profissionalIdTenantB, 'b');
+
+    const painel = new ServicoPainelOperacao(executorTenant, { descriptografar: (valor: Buffer) => valor.toString('utf8') } as never);
+    const resultadoA = await painel.obter(tenantA, mesAnterior.rows[0].mes);
+    const resultadoB = await painel.obter(tenantB, mesAnterior.rows[0].mes);
+
+    expect(resultadoA.retorno).toEqual(expect.objectContaining({
+      pacientesElegiveis: 1,
+      pacientesSemProximaConsulta: 0,
+      percentualSemProximaConsulta: 0,
+      pacientesComHistorico: 1,
+      intervaloMedianoDias: 10
+    }));
+    expect(resultadoB.retorno).toEqual(expect.objectContaining({
+      pacientesElegiveis: 1,
+      pacientesSemProximaConsulta: 1,
+      percentualSemProximaConsulta: 100,
+      pacientesComHistorico: 1,
+      intervaloMedianoDias: 7
+    }));
+    expect(resultadoA.faltasPorHorario).toEqual(expect.objectContaining({ desfechos: 5, faltas: 2, faixas: expect.any(Array) }));
+    expect(resultadoA.faltasPorHorario.faixas).toHaveLength(1);
+    expect(resultadoB.faltasPorHorario).toEqual(expect.objectContaining({ desfechos: 3, faltas: 1, faixas: [] }));
+    expect(resultadoA.respostaFormularios).toEqual({ respostasValidas: 1, medianaSegundos: 7200 });
+    expect(resultadoB.respostaFormularios).toEqual({ respostasValidas: 1, medianaSegundos: 172800 });
+    expect(JSON.stringify(resultadoA)).not.toContain(pacienteIdTenantA);
+    expect(JSON.stringify(resultadoA)).not.toContain(pacienteIdTenantB);
   });
 
   it('PB-27 projeta somente auditoria e identidades do tenant corrente', async () => {

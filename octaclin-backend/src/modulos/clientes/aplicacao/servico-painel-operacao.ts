@@ -2,6 +2,7 @@ import { BadRequestException, Injectable } from '@nestjs/common';
 import { ExecutorTenant } from '../../../infraestrutura/banco-dados/executor-tenant';
 import { CriptografiaDadosSensiveis } from '../../../infraestrutura/seguranca/criptografia-dados-sensiveis';
 import { ProfissionalOrm } from '../../profissionais/infraestrutura/profissional.orm';
+import { medianaIntervalosConsultaDias } from '../../pacientes/dominio/mediana-intervalo-consultas';
 import { TenantConfiguracaoOrm } from '../../tenancy/infraestrutura/tenant-configuracao.orm';
 
 interface LinhaConsulta {
@@ -21,6 +22,21 @@ export interface PainelOperacaoCliente {
   mes: string;
   timezone: string;
   pacientes: { novos: number; ativos: number; emRisco: number };
+  retorno: {
+    pacientesElegiveis: number;
+    pacientesSemProximaConsulta: number;
+    percentualSemProximaConsulta: number | null;
+    pacientesComHistorico: number;
+    intervaloMedianoDias: number | null;
+  };
+  faltasPorHorario: {
+    desfechos: number;
+    faltas: number;
+    taxaFalta: number | null;
+    faixas: { inicioHora: number; fimHora: number; desfechos: number; faltas: number; taxaFalta: number }[];
+    possuiFaixasSuprimidas: boolean;
+  };
+  respostaFormularios: { respostasValidas: number; medianaSegundos: number | null };
   consultasSemProfissional: number;
   profissionais: {
     id: string;
@@ -81,6 +97,72 @@ const SQL_CARGA = `/* pb26-carga */ select profissional_responsavel_id, count(*)
 from pacientes where tenant_id = $1 and arquivado_em is null and deleted_at is null
   and status_ciclo_vida = 'ACTIVE' group by profissional_responsavel_id`;
 
+const SQL_INTERVALO_RETORNO = `/* fase306-intervalo-retorno */
+with pacientes_coorte as (
+  select distinct consulta.paciente_id
+  from agenda_consultas consulta
+  join pacientes paciente on paciente.tenant_id = consulta.tenant_id and paciente.id = consulta.paciente_id
+  where consulta.tenant_id = $1 and consulta.status = 'concluida'
+    and consulta.inicio_em >= ($2::date::timestamp at time zone $4)
+    and consulta.inicio_em < ($3::date::timestamp at time zone $4)
+    and paciente.status_ciclo_vida = 'ACTIVE' and paciente.arquivado_em is null
+    and paciente.deleted_at is null and paciente.profissional_responsavel_id is not null
+), historico as (
+  select coorte.paciente_id, consultas.fim_em,
+    row_number() over (partition by coorte.paciente_id order by consultas.fim_em desc) as posicao
+  from pacientes_coorte coorte
+  join lateral (
+    select consulta.fim_em from agenda_consultas consulta
+    where consulta.tenant_id = $1 and consulta.paciente_id = coorte.paciente_id
+      and consulta.status = 'concluida'
+      and consulta.fim_em < ($3::date::timestamp at time zone $4)
+    order by consulta.fim_em desc limit 4
+  ) consultas on true
+)
+select paciente_id, fim_em from historico order by paciente_id, posicao`;
+
+const SQL_SEM_PROXIMA_CONSULTA = `/* fase306-sem-proxima-consulta */
+with pacientes_elegiveis as (
+  select paciente.id,
+    exists (
+      select 1 from agenda_consultas futura
+      where futura.tenant_id = paciente.tenant_id and futura.paciente_id = paciente.id
+        and futura.status in ('agendada', 'reagendada') and futura.inicio_em >= now()
+    ) as possui_proxima
+  from pacientes paciente
+  where paciente.tenant_id = $1 and paciente.status_ciclo_vida = 'ACTIVE'
+    and paciente.arquivado_em is null and paciente.deleted_at is null
+    and paciente.profissional_responsavel_id is not null
+    and exists (
+      select 1 from agenda_consultas anterior
+      where anterior.tenant_id = paciente.tenant_id and anterior.paciente_id = paciente.id
+        and anterior.status = 'concluida'
+        and anterior.inicio_em >= now() - interval '90 days' and anterior.inicio_em <= now()
+    )
+)
+select count(*)::int as pacientes_elegiveis,
+  count(*) filter (where not possui_proxima)::int as sem_proxima_consulta
+from pacientes_elegiveis`;
+
+const SQL_FALTAS_HORARIO = `/* fase306-faltas-horario */
+select (floor(extract(hour from (consulta.inicio_em at time zone $4)) / 2) * 2)::int as hora_inicio,
+  count(*)::int as desfechos,
+  count(*) filter (where consulta.status = 'falta')::int as faltas
+from agenda_consultas consulta
+where consulta.tenant_id = $1 and consulta.inicio_em >= ($2::date::timestamp at time zone $4)
+  and consulta.inicio_em < ($3::date::timestamp at time zone $4)
+  and consulta.status in ('concluida', 'falta')
+group by hora_inicio order by hora_inicio`;
+
+const SQL_RESPOSTA_FORMULARIOS = `/* fase306-resposta-formulario */
+select count(*)::int as respostas_validas,
+  percentile_cont(0.5) within group (order by extract(epoch from (envio.respondido_em - envio.enviado_em))) as mediana_segundos
+from envios_questionario envio
+where envio.tenant_id = $1 and envio.status = 'respondido'
+  and envio.enviado_em >= ($2::date::timestamp at time zone $4)
+  and envio.enviado_em < ($3::date::timestamp at time zone $4)
+  and envio.respondido_em >= envio.enviado_em`;
+
 function mesAtual(timezone: string): string {
   const partes = new Intl.DateTimeFormat('en-US', { timeZone: timezone, year: 'numeric', month: '2-digit' }).formatToParts(new Date());
   return `${partes.find((parte) => parte.type === 'year')?.value}-${partes.find((parte) => parte.type === 'month')?.value}`;
@@ -116,6 +198,15 @@ function limitarIntervalo(inicio: Date, fim: Date, periodo: Intervalo): Interval
 
 function duracao(intervalos: Intervalo[]): number {
   return intervalos.reduce((total, [inicio, fim]) => total + fim - inicio, 0);
+}
+
+function medianaValores(valores: number[]): number | null {
+  if (!valores.length) return null;
+  const ordenados = [...valores].sort((a, b) => a - b);
+  const meio = Math.floor(ordenados.length / 2);
+  return Math.round(ordenados.length % 2
+    ? ordenados[meio]
+    : (ordenados[meio - 1] + ordenados[meio]) / 2);
 }
 
 function intersecoes(a: Intervalo[], b: Intervalo[]): Intervalo[] {
@@ -159,7 +250,7 @@ export class ServicoPainelOperacao {
       const inicio = `${mes}-01`;
       const fim = new Date(Date.UTC(ano, numeroMes, 1)).toISOString().slice(0, 10);
       const parametros = [tenantId, inicio, fim, timezone];
-      const [pacientes, consultas, expedientes, carga, profissionais, periodos] = await Promise.all([
+      const [pacientes, consultas, expedientes, carga, profissionais, periodos, intervalos, semProximaConsulta, faltasHorario, respostasFormulario] = await Promise.all([
         gerenciador.query(SQL_PACIENTES, parametros) as Promise<{ novos: string; ativos: string; em_risco: string }[]>,
         gerenciador.query(SQL_CONSULTAS, parametros) as Promise<LinhaConsulta[]>,
         gerenciador.query(SQL_EXPEDIENTES, parametros) as Promise<LinhaExpediente[]>,
@@ -169,9 +260,27 @@ export class ServicoPainelOperacao {
           where: { tenantId },
           order: { criadoEm: 'ASC' }
         }),
-        gerenciador.query(SQL_PERIODO, [inicio, fim, timezone]) as Promise<{ inicio_em: Date; fim_em: Date }[]>
+        gerenciador.query(SQL_PERIODO, [inicio, fim, timezone]) as Promise<{ inicio_em: Date; fim_em: Date }[]>,
+        gerenciador.query(SQL_INTERVALO_RETORNO, parametros) as Promise<{ paciente_id: string; fim_em: Date | string }[]>,
+        gerenciador.query(SQL_SEM_PROXIMA_CONSULTA, [tenantId]) as Promise<{ pacientes_elegiveis: string | number; sem_proxima_consulta: string | number }[]>,
+        gerenciador.query(SQL_FALTAS_HORARIO, parametros) as Promise<{ hora_inicio: string | number; desfechos: string | number; faltas: string | number }[]>,
+        gerenciador.query(SQL_RESPOSTA_FORMULARIOS, [tenantId, inicio, fim, timezone]) as Promise<{ respostas_validas: string | number; mediana_segundos: string | number | null }[]>
       ]);
+      const pacientesElegiveis = Number(semProximaConsulta[0]?.pacientes_elegiveis ?? 0);
+      const pacientesSemProximaConsulta = Number(semProximaConsulta[0]?.sem_proxima_consulta ?? 0);
+      const desfechosHorario = faltasHorario.reduce((total, faixa) => total + Number(faixa.desfechos), 0);
+      const faltasNoPeriodo = faltasHorario.reduce((total, faixa) => total + Number(faixa.faltas), 0);
       const periodo: Intervalo = [new Date(periodos[0].inicio_em).getTime(), new Date(periodos[0].fim_em).getTime()];
+      const intervalosPorPaciente = new Map<string, Date[]>();
+      for (const consulta of intervalos) {
+        intervalosPorPaciente.set(consulta.paciente_id, [
+          ...(intervalosPorPaciente.get(consulta.paciente_id) ?? []),
+          new Date(consulta.fim_em)
+        ]);
+      }
+      const medianasIndividuais = [...intervalosPorPaciente.values()]
+        .map((historico) => medianaIntervalosConsultaDias(historico, timezone))
+        .filter((mediana): mediana is number => mediana !== null);
       const iniciouNoMes = (consulta: LinhaConsulta) => {
         const inicioConsulta = new Date(consulta.inicio_em).getTime();
         return inicioConsulta >= periodo[0] && inicioConsulta < periodo[1];
@@ -235,6 +344,33 @@ export class ServicoPainelOperacao {
           novos: Number(pacientes[0]?.novos ?? 0),
           ativos: Number(pacientes[0]?.ativos ?? 0),
           emRisco: Number(pacientes[0]?.em_risco ?? 0)
+        },
+        retorno: {
+          pacientesElegiveis,
+          pacientesSemProximaConsulta,
+          percentualSemProximaConsulta: pacientesElegiveis
+            ? Math.round((pacientesSemProximaConsulta / pacientesElegiveis) * 100)
+            : null,
+          pacientesComHistorico: medianasIndividuais.length,
+          intervaloMedianoDias: medianaValores(medianasIndividuais)
+        },
+        faltasPorHorario: {
+          desfechos: desfechosHorario,
+          faltas: faltasNoPeriodo,
+          taxaFalta: desfechosHorario ? Math.round((faltasNoPeriodo / desfechosHorario) * 100) : null,
+          faixas: faltasHorario.filter((faixa) => Number(faixa.desfechos) >= 5).map((faixa) => {
+            const inicioHora = Number(faixa.hora_inicio);
+            const desfechos = Number(faixa.desfechos);
+            const faltas = Number(faixa.faltas);
+            return { inicioHora, fimHora: inicioHora + 2, desfechos, faltas, taxaFalta: Math.round((faltas / desfechos) * 100) };
+          }),
+          possuiFaixasSuprimidas: faltasHorario.some((faixa) => Number(faixa.desfechos) < 5)
+        },
+        respostaFormularios: {
+          respostasValidas: Number(respostasFormulario[0]?.respostas_validas ?? 0),
+          medianaSegundos: respostasFormulario[0]?.mediana_segundos == null
+            ? null
+            : Math.round(Number(respostasFormulario[0].mediana_segundos))
         },
         consultasSemProfissional: consultas.filter((consulta) => iniciouNoMes(consulta) && !consulta.profissional_id && consulta.status !== 'cancelada').length,
         profissionais: dadosProfissionais

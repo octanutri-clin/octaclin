@@ -8,7 +8,7 @@ describe('ServicoPainelOperacao', () => {
     { profissional_id: 'prof-a', status: 'falta', inicio_em: new Date('2026-09-07T13:00:00Z'), fim_em: new Date('2026-09-07T14:00:00Z') },
     { profissional_id: 'prof-a', status: 'cancelada', inicio_em: new Date('2026-09-07T14:00:00Z'), fim_em: new Date('2026-09-07T15:00:00Z') }
   ];
-  const query = jest.fn(async (sql: string, parametros: unknown[]) => {
+  const query = jest.fn(async (sql: string, parametros: unknown[]): Promise<unknown[]> => {
     if (sql.includes('/* fase301-periodo */')) expect(parametros).toEqual(['2026-09-01', '2026-10-01', 'America/Sao_Paulo']);
     else {
       expect(parametros[0]).toBe(tenantId);
@@ -25,6 +25,10 @@ describe('ServicoPainelOperacao', () => {
     if (sql.includes('/* pb26-consultas */')) return consultas;
     if (sql.includes('/* pb26-expedientes */')) return [{ profissional_id: 'prof-a', inicio_em: new Date('2026-09-07T12:00:00Z'), fim_em: new Date('2026-09-07T14:00:00Z') }];
     if (sql.includes('/* pb26-carga */')) return [{ profissional_responsavel_id: 'prof-a', total: '5' }];
+    if (sql.includes('/* fase306-intervalo-retorno */')) return [];
+    if (sql.includes('/* fase306-sem-proxima-consulta */')) return [{ pacientes_elegiveis: '0', sem_proxima_consulta: '0' }];
+    if (sql.includes('/* fase306-faltas-horario */')) return [];
+    if (sql.includes('/* fase306-resposta-formulario */')) return [{ respostas_validas: '0', mediana_segundos: null }];
     throw new Error('Consulta nao prevista');
   });
   const gerenciador = {
@@ -142,5 +146,89 @@ describe('ServicoPainelOperacao', () => {
       arquivado: true, consultas: 1, concluidas: 1, minutosDisponiveis: 30,
       minutosOcupados: 30, ocupacaoPercentual: 100, consultasForaExpediente: 1
     }));
+  });
+
+  it('agrega retorno, próxima consulta, faltas por faixa e tempo de resposta no tenant', async () => {
+    const original = query.getMockImplementation();
+    query.mockImplementation((async (sql: string, parametros: unknown[]) => {
+      if (sql.includes('/* fase301-periodo */')) {
+        expect(parametros).toEqual(['2026-09-01', '2026-10-01', 'America/Sao_Paulo']);
+      } else {
+        expect(parametros[0]).toBe(tenantId);
+        expect(sql).toContain('tenant_id = $1');
+      }
+      if (sql.includes('/* fase301-periodo */')) return [{ inicio_em: new Date('2026-09-01T03:00:00Z'), fim_em: new Date('2026-10-01T03:00:00Z') }];
+      if (sql.includes('/* pb26-pacientes */')) return [{ novos: '0', ativos: '0', em_risco: '0' }];
+      if (sql.includes('/* fase306-intervalo-retorno */')) return [
+        { paciente_id: 'paciente-1', fim_em: new Date('2026-09-07T15:00:00Z') },
+        { paciente_id: 'paciente-1', fim_em: new Date('2026-08-17T15:00:00Z') },
+        { paciente_id: 'paciente-1', fim_em: new Date('2026-07-28T15:00:00Z') },
+        { paciente_id: 'paciente-1', fim_em: new Date('2026-07-08T15:00:00Z') },
+        { paciente_id: 'paciente-2', fim_em: new Date('2026-09-10T15:00:00Z') },
+        { paciente_id: 'paciente-2', fim_em: new Date('2026-08-20T15:00:00Z') },
+        { paciente_id: 'paciente-3', fim_em: new Date('2026-09-25T15:00:00Z') },
+        { paciente_id: 'paciente-3', fim_em: new Date('2026-09-04T15:00:00Z') },
+        { paciente_id: 'paciente-3', fim_em: new Date('2026-08-14T15:00:00Z') }
+      ];
+      if (sql.includes('/* fase306-sem-proxima-consulta */')) return [{ pacientes_elegiveis: '10', sem_proxima_consulta: '4' }];
+      if (sql.includes('/* fase306-faltas-horario */')) return [
+        { hora_inicio: '8', desfechos: '4', faltas: '2' },
+        { hora_inicio: '10', desfechos: '6', faltas: '3' }
+      ];
+      if (sql.includes('/* fase306-resposta-formulario */')) return [{ respostas_validas: '4', mediana_segundos: '43200' }];
+      if (sql.includes('/* pb26-consultas */')) return [];
+      if (sql.includes('/* pb26-expedientes */')) return [];
+      if (sql.includes('/* pb26-carga */')) return [];
+      throw new Error('Consulta nao prevista');
+    }) as never);
+
+    const resultado = await servico.obter(tenantId, '2026-09');
+
+    expect(resultado.retorno).toEqual({
+      pacientesElegiveis: 10,
+      pacientesSemProximaConsulta: 4,
+      percentualSemProximaConsulta: 40,
+      pacientesComHistorico: 3,
+      intervaloMedianoDias: 21
+    });
+    expect(resultado.faltasPorHorario).toEqual({
+      desfechos: 10,
+      faltas: 5,
+      taxaFalta: 50,
+      faixas: [{ inicioHora: 10, fimHora: 12, desfechos: 6, faltas: 3, taxaFalta: 50 }],
+      possuiFaixasSuprimidas: true
+    });
+    expect(resultado.respostaFormularios).toEqual({ respostasValidas: 4, medianaSegundos: 43200 });
+    query.mockImplementation(original!);
+  });
+
+  it('representa histórico insuficiente e denominadores vazios sem convertê-los em zero clínico', async () => {
+    const original = query.getMockImplementation();
+    query.mockImplementation((async (sql: string, parametros: unknown[]) => {
+      if (!sql.includes('/* fase301-periodo */')) expect(parametros[0]).toBe(tenantId);
+      if (sql.includes('/* fase301-periodo */')) return [{ inicio_em: new Date('2026-09-01T03:00:00Z'), fim_em: new Date('2026-10-01T03:00:00Z') }];
+      if (sql.includes('/* pb26-pacientes */')) return [{ novos: '0', ativos: '0', em_risco: '0' }];
+      if (sql.includes('/* fase306-intervalo-retorno */')) return [];
+      if (sql.includes('/* fase306-sem-proxima-consulta */')) return [{ pacientes_elegiveis: '0', sem_proxima_consulta: '0' }];
+      if (sql.includes('/* fase306-faltas-horario */')) return [];
+      if (sql.includes('/* fase306-resposta-formulario */')) return [{ respostas_validas: '0', mediana_segundos: null }];
+      if (sql.includes('/* pb26-consultas */') || sql.includes('/* pb26-expedientes */') || sql.includes('/* pb26-carga */')) return [];
+      throw new Error('Consulta nao prevista');
+    }) as never);
+
+    const resultado = await servico.obter(tenantId, '2026-09');
+
+    expect(resultado.retorno).toEqual({
+      pacientesElegiveis: 0,
+      pacientesSemProximaConsulta: 0,
+      percentualSemProximaConsulta: null,
+      pacientesComHistorico: 0,
+      intervaloMedianoDias: null
+    });
+    expect(resultado.faltasPorHorario).toEqual({
+      desfechos: 0, faltas: 0, taxaFalta: null, faixas: [], possuiFaixasSuprimidas: false
+    });
+    expect(resultado.respostaFormularios).toEqual({ respostasValidas: 0, medianaSegundos: null });
+    query.mockImplementation(original!);
   });
 });

@@ -70,3 +70,24 @@ test('valida mes e encaminha apenas o filtro permitido', async () => {
     assert.deepEqual(chamadas, ['http://backend.octaclin.local/cliente/painel-operacao?mes=2026-09']);
   } finally { global.fetch = anterior; }
 });
+
+test('preserva indicadores agregados da Fase 306 e mantém a resposta no-store', async () => {
+  const anterior = global.fetch;
+  const payload = {
+    mes: '2026-09',
+    retorno: { pacientesElegiveis: 10, pacientesSemProximaConsulta: 4, percentualSemProximaConsulta: 40, pacientesComHistorico: 3, intervaloMedianoDias: 21 },
+    faltasPorHorario: {
+      desfechos: 10, faltas: 5, taxaFalta: 50,
+      faixas: [{ inicioHora: 10, fimHora: 12, desfechos: 6, faltas: 3, taxaFalta: 50 }],
+      possuiFaixasSuprimidas: true
+    },
+    respostaFormularios: { respostasValidas: 4, medianaSegundos: 43200 }
+  };
+  global.fetch = (async () => Response.json(payload)) as typeof global.fetch;
+  try {
+    __setCookies(sessao(['cliente.acessar']));
+    const resposta = await GET(new NextRequest('http://localhost/api/cliente/painel-operacao?mes=2026-09'));
+    assert.equal(resposta.headers.get('cache-control'), 'private, no-store');
+    assert.deepEqual(await resposta.json(), payload);
+  } finally { global.fetch = anterior; }
+});

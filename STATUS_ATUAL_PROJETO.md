@@ -1,6 +1,6 @@
 # OctaClin - Status atual do projeto
 
-Atualizado em 2026-10-05.
+Atualizado em 2026-10-06.
 
 ## Fase ativa
 
@@ -38,16 +38,22 @@ Atualizado em 2026-10-05.
   sem resposta e trocas por janela de versão publicada, além da consulta do
   conteúdo histórico no fluxo profissional. Sem migration nova nem alteração
   do contrato `/v1`. Plano em `docs/history/phases/PLANO_FASE_304.md`.
-- Fase 305 em desenvolvimento na branch
-  `feat/fase305-visao-questionarios-antropometria`: leitura clínica combinada
-  de respostas históricas, medidas antropométricas e marcadores de consulta,
-  com rota dedicada, permissões, tenant/carteira, unidades e lacunas explícitas.
-  Não há migration prevista; PR, CI e revisão humana pendentes. Plano e análise
-  de gaps em `docs/history/phases/PLANO_FASE_305.md`.
+- Fase 305 concluida e integrada pelo PR #379 (merge `32c2aa5b`, confirmado no GitHub em
+  2026-10-06): leitura conjunta de respostas históricas e antropometria, com
+  permissões de pacientes/questionários, tenant/carteira, unidades e lacunas
+  explícitas. Checks obrigatórios passaram; `Provenance do SBOM` ficou
+  `SKIPPED`. Sem migration. Plano em
+  `docs/history/phases/PLANO_FASE_305.md`.
+- Fase 306 em desenvolvimento na branch
+  `feat/fase306-retorno-evasao-factual`: indicadores agregados de intervalo
+  entre consultas, sem consulta futura, faltas por horário e tempo de resposta
+  a formulários. Escopo somente leitura no Painel de Operação do `Client`, sem
+  contato novo ou migration. Plano e análise de gaps em
+  `docs/history/phases/PLANO_FASE_306.md`.
 - Sequência das Fases 302–320 em
   `docs/product/ROADMAP_POS_AUDITORIA_FASES_302_320.md`. A próxima fase após a
-  305 é a 306. O PB-30 está planejado na Fase 316, condicionado a
-  privacidade, jurídico e operação.
+  306 é a 307. O PB-30 está planejado na Fase 316, condicionado a privacidade,
+  jurídico e operação.
 
 - Fase 295 / PB-28 integrada pelo PR #349 (merge `a54e52c9`, confirmado no GitHub em 2026-09-30).
   Conversa segura no portal e fila interna com SLA por clínica. O proprietário informou que as

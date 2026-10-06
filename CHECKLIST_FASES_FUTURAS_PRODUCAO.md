@@ -1,16 +1,16 @@
 # OctaClin - Checklist vivo de fases futuras ate producao
 
-## Estado reconciliado em 2026-10-05
+## Estado reconciliado em 2026-10-06
 
-A Fase 304 foi integrada pelo PR #362 (`13a250c8`). A migration 1063 foi
-aplicada e validada em staging e produção conforme confirmação do proprietário;
-este ciclo não consultou os bancos. A Fase 305 está em desenvolvimento na
-branch `feat/fase305-visao-questionarios-antropometria`; PR e CI pendentes.
-O parágrafo de resumo histórico logo abaixo foi atualizado na data anterior;
-para o estado vigente, prevalecem este bloco, os itens 303–305 ao final e o
-roadmap `docs/product/ROADMAP_POS_AUDITORIA_FASES_302_320.md`.
+A Fase 305 foi integrada pelo PR #379 (`32c2aa5b`); checks obrigatórios
+passaram e `Provenance do SBOM` ficou `SKIPPED`. A Fase 306 está em
+implementação local na branch `feat/fase306-retorno-evasao-factual`; PR e
+gates remotos ainda não executados. Sem migration prevista. O parágrafo de
+resumo histórico logo abaixo permanece histórico; para o estado vigente,
+prevalecem este bloco, os itens 303–306 ao final e o roadmap
+`docs/product/ROADMAP_POS_AUDITORIA_FASES_302_320.md`.
 
-Atualizado em 2026-10-05. Fase 296 integrada pelo PR #353 (merge `ccd1c0bb`); o proprietário informou aplicação da migration 1059, sem confirmação direta de ambiente/banco. Fase 297 integrada pelo PR #355 (merge `4f51b0ac`); Fase 298 integrada pelo PR #356 (merge `b00151ae`), com aplicação da 1060 informada pelo proprietário; Fase 299 integrada pelo PR #357 (merge `9052b8ba`), com aplicação da 1061 e cargas em staging e produção informadas pelo proprietário, sem consulta direta aos bancos neste ciclo; Fase 300 integrada pelo PR #358 (merge `c60c82ed`); Fase 301 integrada pelo PR #359 (merge `bd0f1d6b`); Fase 302 integrada pelo PR #360 (migration 1062 aplicada e validada em staging e produção conforme relato do proprietário, sem consulta direta aos bancos neste ciclo); Fase 303 integrada pelo PR #361 (merge `02acd66c`), migration 1063 aplicada e validada em staging e produção conforme relato do proprietário, sem consulta direta neste ciclo; Fase 304 integrada pelo PR #362 (merge `13a250c8`); Fase 305 em desenvolvimento na branch `feat/fase305-visao-questionarios-antropometria`, com PR e CI pendentes; Fases 256 a 261, 263 a 304 integradas; Fase 284
+Atualizado em 2026-10-06. Fase 306 em implementação nesta branch; PR e CI pendentes. Fase 296 integrada pelo PR #353 (merge `ccd1c0bb`); o proprietário informou aplicação da migration 1059, sem confirmação direta de ambiente/banco. Fase 297 integrada pelo PR #355 (merge `4f51b0ac`); Fase 298 integrada pelo PR #356 (merge `b00151ae`), com aplicação da 1060 informada pelo proprietário; Fase 299 integrada pelo PR #357 (merge `9052b8ba`), com aplicação da 1061 e cargas em staging e produção informadas pelo proprietário, sem consulta direta aos bancos neste ciclo; Fase 300 integrada pelo PR #358 (merge `c60c82ed`); Fase 301 integrada pelo PR #359 (merge `bd0f1d6b`); Fase 302 integrada pelo PR #360 (migration 1062 aplicada e validada em staging e produção conforme relato do proprietário, sem consulta direta aos bancos neste ciclo); Fase 303 integrada pelo PR #361 (merge `02acd66c`), migration 1063 aplicada e validada em staging e produção conforme relato do proprietário, sem consulta direta neste ciclo; Fase 304 integrada pelo PR #362 (merge `13a250c8`); Fase 305 integrada pelo PR #379 (merge `32c2aa5b`); Fases 256 a 261, 263 a 304 integradas; Fase 284
 (PB-22) foi integrada pelo PR #320 (merge `af839c5`, 19 checks `SUCCESS` e
 `Provenance do SBOM` `SKIPPED`). Fase 285 (PB-20) foi integrada pelo PR #321
 (merge `01d6bf1`). Fase 286 concluida pelo PR #322 (merge `c92f246`). A reconciliação completa do backlog da auditoria e a
@@ -4523,13 +4523,15 @@ auditoria estão ordenados na seção 15 de
   consulta à versão histórica do plano no fluxo profissional. Integrada pelo
   PR #362 (merge `13a250c8`); sem migration nova. Plano em
   `docs/history/phases/PLANO_FASE_304.md`.
-- [~] Fase 305 - visão conjunta de questionários e antropometria, com datas,
-  unidades, versões e dados ausentes explícitos. Implementação e validações
-  locais na branch `feat/fase305-visao-questionarios-antropometria`; PR, CI e
-  revisão humana pendentes. Sem migration prevista. Plano em
+- [x] Fase 305 - visão conjunta de questionários e antropometria, com datas,
+  unidades, versões e dados ausentes explícitos. Integrada pelo PR #379
+  (merge `32c2aa5b`); checks obrigatórios passaram e `Provenance do SBOM`
+  ficou `SKIPPED`. Sem migration. Plano em
   `docs/history/phases/PLANO_FASE_305.md`.
-- [ ] Fase 306 - intervalo de retorno, ausência de próxima consulta, faltas
+- [~] Fase 306 - intervalo de retorno, ausência de próxima consulta, faltas
   por horário e tempo de resposta a formulários, sem previsão clínica automática.
+  Implementação local e verificações focadas concluídas; PR/CI pendentes.
+  Sem migration. Plano em `docs/history/phases/PLANO_FASE_306.md`.
 - [ ] Fase 307 - progresso do paciente além do peso, com métricas/metas
   compartilhadas explicitamente pelo profissional.
 - [ ] Fase 308 - exames fora da faixa no resumo clínico, consumindo PB-17.

@@ -659,7 +659,7 @@ tenant; a decisão final permanece com SuperAdmin. A descrição livre de pedido
 e tratativas passará a ser cifrada, com migration 1062 e backfill fora de
 banda. PR, CI e verificação de bancos externos ainda pendentes.
 
-### Reconciliação posterior da seção 15 em 2026-10-05
+### Reconciliação posterior da seção 15 em 2026-10-06
 
 - **Fase 304:** integrada pelo PR #362 (merge `13a250c8`, confirmado no
   GitHub). Entregou adesão declarada, respostas ausentes e substituições por
@@ -667,15 +667,22 @@ banda. PR, CI e verificação de bancos externos ainda pendentes.
   `docs/history/phases/PLANO_FASE_304.md`.
 - **Migration 1063:** o proprietário confirmou aplicação e validação em
   staging e produção. Não consultamos diretamente os bancos neste ciclo.
-- **Fase 305:** em desenvolvimento na branch
-  `feat/fase305-visao-questionarios-antropometria`. O plano e a revisão de
-  gaps antecederam o código e estão em
-  `docs/history/phases/PLANO_FASE_305.md`. A fase não está concluída; PR, CI e
-  revisão permanecem pendentes.
+- **Fase 305:** integrada pelo PR #379 (merge `32c2aa5b`, confirmado no
+  GitHub em 2026-10-06). Checks obrigatórios passaram e `Provenance do SBOM`
+  ficou `SKIPPED`; sem migration. Plano e resultado em
+  `docs/history/phases/PLANO_FASE_305.md`.
+- **Fase 306:** em implementação na branch
+  `feat/fase306-retorno-evasao-factual`. Os indicadores operacionais
+  agregados para retorno, ausência de próxima consulta, faltas por horário e
+  resposta a formulários não concluem abandono nem iniciam contato. Plano,
+  contrato, revisão de gaps e verificações locais em
+  `docs/history/phases/PLANO_FASE_306.md`; PR e CI continuam pendentes.
 - **Sugestões da seção 15:** PB-30 permanece pendente, agora planejado como
   Fase 316, condicionado aos gates jurídico, de privacidade e operação. As
   outras recomendações e condições continuam no backlog ordenado das Fases
-  302–320; esta reconciliação não as marca como concluídas sem evidência.
+  302–320. As entregas posteriores confirmadas estão mapeadas a essas fases;
+  itens condicionais permanecem condicionais e esta atualização não marca
+  sugestão como concluída sem evidência de PR/código ou do gate correspondente.
 
 ## 16. Suggested Roadmap
 

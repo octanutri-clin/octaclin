@@ -8,6 +8,22 @@ function percentual(valor: number | null): string {
   return valor === null ? 'Sem dados' : `${valor}%`;
 }
 
+function duracaoResposta(segundos: number | null): string {
+  if (segundos === null) return 'Sem dados';
+  if (segundos >= 86_400) {
+    const dias = Math.floor(segundos / 86_400);
+    const horas = Math.floor((segundos % 86_400) / 3_600);
+    return horas ? `${dias} d ${horas} h` : `${dias} d`;
+  }
+  if (segundos >= 3_600) {
+    const horas = Math.floor(segundos / 3_600);
+    const minutos = Math.floor((segundos % 3_600) / 60);
+    return minutos ? `${horas} h ${minutos} min` : `${horas} h`;
+  }
+  if (segundos >= 60) return `${Math.floor(segundos / 60)} min`;
+  return `${segundos} s`;
+}
+
 export function AreaOperacaoCliente() {
   const [mes, setMes] = useState('');
   const [painel, setPainel] = useState<PainelOperacaoClienteApi | null>(null);
@@ -120,6 +136,65 @@ export function AreaOperacaoCliente() {
             ) : <p className="mt-4 text-sm text-texto-suave">Ainda não há profissionais com dados para apresentar.</p>}
             {painel.consultasSemProfissional > 0 ? <p className="mt-3 text-xs text-texto-suave">{painel.consultasSemProfissional} consultas sem profissional atribuído neste mês.</p> : null}
           </div>
+
+          <section className="grid gap-4 lg:grid-cols-2" aria-label="Indicadores agregados de retorno e formulários">
+            <section className="rounded-lg border border-linha bg-white p-5" aria-labelledby="fase306-retorno-titulo">
+              <h3 id="fase306-retorno-titulo" className="text-lg font-semibold text-texto-forte">Retorno de consultas</h3>
+              <p className="mt-1 text-sm text-texto-suave">Resumo agregado da clínica. Não indica abandono nem gera contato com pacientes.</p>
+              <dl className="mt-4 grid gap-4 sm:grid-cols-2">
+                <div>
+                  <dt className="text-sm text-texto-suave">Intervalo mediano observado</dt>
+                  <dd className="mt-1 text-2xl font-semibold tabular-nums text-texto-forte">
+                    {painel.retorno.intervaloMedianoDias === null ? 'Histórico insuficiente' : `${painel.retorno.intervaloMedianoDias} dias`}
+                  </dd>
+                  <dd className="text-xs text-texto-suave">Mediana de até três intervalos recentes por paciente; base com {painel.retorno.pacientesComHistorico} pacientes.</dd>
+                </div>
+                <div>
+                  <dt className="text-sm text-texto-suave">Sem consulta futura</dt>
+                  <dd className="mt-1 text-2xl font-semibold tabular-nums text-texto-forte">{painel.retorno.pacientesSemProximaConsulta}</dd>
+                  <dd className="text-xs text-texto-suave">
+                    {percentual(painel.retorno.percentualSemProximaConsulta)} entre {painel.retorno.pacientesElegiveis} pacientes ativos com consulta concluída nos últimos 90 dias.
+                  </dd>
+                </div>
+              </dl>
+            </section>
+
+            <section className="rounded-lg border border-linha bg-white p-5" aria-labelledby="fase306-formularios-titulo">
+              <h3 id="fase306-formularios-titulo" className="text-lg font-semibold text-texto-forte">Tempo de resposta a formulários</h3>
+              <p className="mt-1 text-sm text-texto-suave">Mediana entre envio e resposta dos formulários enviados no mês de referência.</p>
+              <p className="mt-4 text-2xl font-semibold tabular-nums text-texto-forte">{duracaoResposta(painel.respostaFormularios.medianaSegundos)}</p>
+              <p className="mt-1 text-xs text-texto-suave">Base: {painel.respostaFormularios.respostasValidas} respostas válidas. Respostas recebidas depois do mês entram quando já registradas.</p>
+            </section>
+          </section>
+
+          <section className="rounded-lg border border-linha bg-white p-5" aria-labelledby="fase306-faltas-titulo">
+            <h3 id="fase306-faltas-titulo" className="text-lg font-semibold text-texto-forte">Faltas por horário</h3>
+            <p className="mt-1 text-sm text-texto-suave">
+              No mês de referência e no fuso {painel.timezone}: {painel.faltasPorHorario.faltas} faltas em {painel.faltasPorHorario.desfechos} consultas com desfecho ({percentual(painel.faltasPorHorario.taxaFalta)}). Cancelamentos não entram na base.
+            </p>
+            <p id="fase306-faixas-ajuda" className="mt-1 text-xs text-texto-suave">Faixas locais de duas horas. Grupos com menos de cinco consultas com desfecho são ocultados.</p>
+            {painel.faltasPorHorario.faixas.length ? (
+              <div className="mt-3 overflow-x-auto">
+                <table className="w-full min-w-[460px] text-left text-sm" aria-describedby="fase306-faixas-ajuda">
+                  <thead className="border-b border-linha text-xs text-texto-suave"><tr>
+                    <th scope="col" className="py-2 pr-4 font-medium">Horário local</th>
+                    <th scope="col" className="px-3 py-2 font-medium">Consultas com desfecho</th>
+                    <th scope="col" className="px-3 py-2 font-medium">Faltas</th>
+                    <th scope="col" className="px-3 py-2 font-medium">Taxa de falta</th>
+                  </tr></thead>
+                  <tbody>{painel.faltasPorHorario.faixas.map((faixa) => (
+                    <tr key={faixa.inicioHora} className="border-b border-linha last:border-0">
+                      <th scope="row" className="py-2 pr-4 font-medium text-texto-forte">{String(faixa.inicioHora).padStart(2, '0')}:00–{String(faixa.fimHora).padStart(2, '0')}:00</th>
+                      <td className="px-3 py-2 tabular-nums">{faixa.desfechos}</td>
+                      <td className="px-3 py-2 tabular-nums">{faixa.faltas}</td>
+                      <td className="px-3 py-2 tabular-nums">{faixa.taxaFalta}%</td>
+                    </tr>
+                  ))}</tbody>
+                </table>
+              </div>
+            ) : <p className="mt-3 text-sm text-texto-suave">Sem faixas com volume suficiente para exibição.</p>}
+            {painel.faltasPorHorario.possuiFaixasSuprimidas ? <p className="mt-2 text-xs text-texto-suave">Algumas faixas foram ocultadas por terem menos de cinco consultas com desfecho.</p> : null}
+          </section>
           <p className="text-xs text-texto-suave">Consultas e pacientes novos: {painel.mes} ({painel.timezone}). Sem expediente cadastrado, a ocupação e as consultas fora do expediente ficam sem dados.</p>
         </>
       ) : null}
