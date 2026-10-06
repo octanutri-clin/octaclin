@@ -179,13 +179,15 @@ exigiria revisão do plano; nenhum foi necessário.
 | Testes de autorização/BFF | PASS | `pnpm test:authz` terminou com exit code 0; contrato da rota nova: 3 testes. |
 | Playwright visual | PASS | 10 testes desktop/mobile focados na entrega e nas regressões reportadas passaram; a suíte CI completa ainda será reexecutada. |
 | Verificação de linguagem | PASS | 8 verificações passaram. |
+| Mobile Expo e supply chain | PASS | Frozen install, typecheck, auditoria Expo offline 21/21, testes de segurança 10/10, acessibilidade 15/15, auditoria de dependências e export Android/iOS/web passaram. Três advisories transitivos foram corrigidos por overrides limitados às faixas vulneráveis; os dois backports locais existentes continuam verificados. |
+| Licenças Mobile em Windows | SKIPPED | O scanner local inclui `lightningcss-win32-x64-msvc` (MPL-2.0), opcional e específico de Windows, que não está na alteração do lockfile. O gate de licenças passou no CI Linux antes da atualização; deve ser confirmado de novo no CI atualizado. |
 | `pnpm security:secrets` | PASS | Scanner local não identificou secrets reais. |
 | `git diff --check` e preflight documental | PASS | `validar-preflight.ps1 -DocsOnly` validou documentos canônicos e diff. |
 | PostgreSQL/RLS local | SKIPPED | Docker não está disponível; a prova real depende dos gates de CI. |
 | Node 22 local | SKIPPED | Ambiente local disponível é Node 24.19.0; requisito do repositório é Node 22. CI Node 22 continua autoritativo. |
 | Migration/deploy | NA | Não há mudança de schema; nenhum ambiente foi alterado. |
 | Revisão independente | SKIPPED | Não havia revisor independente disponível neste ciclo; revisão própria do diff não equivale a revisão independente. |
-| CI/GitHub | PENDENTE | A execução inicial da PR falhou em smoke visual e governança. Os mocks/seletores e a auditoria foram corrigidos e validados localmente; aguarda-se nova execução na PR. |
+| CI/GitHub | PENDENTE | Smoke visual, governança e PR Gate precisam concluir no commit atual. A auditoria dinâmica do Mobile detectou três advisories transitivos novos, corrigidos localmente por overrides. Gate de licenças atualizado ainda precisa confirmar-se no CI Linux. |
 
 O trabalho local da Fase 305 está concluído e reconciliado. Na primeira execução
 remota, os contadores por tipo da auditoria foram rejeitados pela cobertura de
@@ -194,6 +196,10 @@ prontuário; dois seletores visuais ficaram ambíguos após a inclusão de conte
 com o mesmo texto. A correção remove metadados da auditoria, valida o contrato
 da resposta antes de renderizar, fornece payload válido nos mocks e especifica
 os seletores. A suíte de 10 testes visuais focados, o teste de cobertura de
-redação e o teste do controlador passaram localmente depois da correção. O
-merge, a validação RLS em CI e qualquer deploy permanecem etapas posteriores,
-sem declaração antecipada de aprovação.
+redação e o teste do controlador passaram localmente depois da correção. Uma
+execução seguinte detectou três advisories transitivos adicionais no Mobile,
+divulgados depois da execução anterior. Overrides limitados às faixas
+vulneráveis e o lockfile foram atualizados; auditoria, testes de
+segurança/acessibilidade, SDK, typecheck e export local passaram. O merge, a
+validação RLS em CI e qualquer deploy permanecem etapas posteriores, sem
+declaração antecipada de aprovação.
