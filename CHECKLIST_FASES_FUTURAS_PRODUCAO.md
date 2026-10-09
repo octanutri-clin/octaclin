@@ -5,10 +5,12 @@
 A Fase 306 foi integrada pelo PR #383 (`104a1546`) e a 307 pelo PR #384
 (`04e66efc`), confirmados no GitHub. CI principal da main `37971450248`
 aprovado, incluindo Governança e Demo local smoke; aplicação da migration
-1064 não verificada neste ciclo. Fase 308 implementada no commit `537665ce` e
-aberta na PR #385; CI obrigatório aprovado, revisão humana pendente. Sem
-migration nova ou aceite de produção. Plano em
-`docs/history/phases/PLANO_FASE_308.md`, tarefas/handoff em `tasks/`.
+1064 não verificada neste ciclo. Fase 308 integrada pelo PR #385 (`1dec202f`),
+confirmada no GitHub; sem migration nova. CI pós-merge `37987983251` ainda em
+andamento (Demo local smoke pendente). Sem aceite de produção. Fase 309 em
+planejamento na branch `feature/fase-309-preferencias-notificacoes`, com decisões
+finais de e-mail pendentes. Plano em `docs/history/phases/PLANO_FASE_309.md`;
+handoff em `tasks/plan.md` e checklist em `tasks/todo.md`.
 O parágrafo abaixo registra a atualização histórica anterior; para o estado
 vigente prevalecem este bloco, itens 303–308 ao final e o roadmap.
 
@@ -4540,11 +4542,13 @@ auditoria estão ordenados na seção 15 de
   (`04e66efc`), CI principal `37971450248` aprovado. Migration 1064 integrada;
   aplicação operacional não verificada neste ciclo.
   Plano e gaps em `docs/history/phases/PLANO_FASE_307.md`.
-- [ ] Fase 308 - exames fora da faixa no resumo clínico, consumindo PB-17.
-  Implementada no commit `537665ce`; PR #385 aberta e CI obrigatório aprovado.
-  Revisão humana pendente. Sem migration nova e sem aceite de produção. Plano
-  em `docs/history/phases/PLANO_FASE_308.md`; checklist `tasks/todo.md`.
+- [x] Fase 308 - exames fora da faixa no resumo clínico, consumindo PB-17.
+  Integrada pelo PR #385 (`1dec202f`), confirmado no GitHub. Sem migration nova
+  ou aceite de produção; CI pós-merge em andamento nesta consulta. Plano e
+  evidências históricas em `docs/history/phases/PLANO_FASE_308.md`.
 - [ ] Fase 309 - preferências individuais de notificação interna e digest.
+  Planejamento/gaps em `docs/history/phases/PLANO_FASE_309.md`; decisões finais
+  de e-mail pendentes, implementação com GPT-6 Luna alto após troca manual.
 - [ ] Fase 310 - categorias e entrega explícita de receitas nutricionais ao
   paciente, com versão revisada.
 - [ ] Fase 311 - instalação opt-in do kit genérico em clínicas existentes e

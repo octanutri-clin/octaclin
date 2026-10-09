@@ -1,79 +1,64 @@
-# Handoff — Fase 308 pronta para revisão humana
+# Handoff — Fase 309: planejamento e análise de gaps
 
-## Estado
+## Branch / objetivo
 
-Implementação pronta para revisão na branch `feature/fase-308-resumo-exames`,
-base `04e66efc` (PR #384/Fase 307), commit `537665ce`. PR #385 está aberta:
-https://github.com/octanutri-clin/octaclin/pull/385. Worktree:
-`/workspace/octaclin/.worktrees/feature-fase-308-resumo-exames`.
-CI obrigatório passou; revisão humana ainda pendente. Não houve migration,
-merge, deploy ou consulta a dados clínicos reais.
+Branch `feature/fase-309-preferencias-notificacoes`, base `1dec202f` (PR #385,
+Fase 308 MERGED, confirmado no GitHub em 2026-10-09). Worktree:
+`/workspace/octaclin/.worktrees/feature-fase-309-preferencias-notificacoes`.
+Uma branch e uma PR para planejamento + implementação. Ainda sem PR da 309.
 
-Escopo e decisões aprovadas pelo proprietário estão em
-[`PLANO_FASE_308.md`](../docs/history/phases/PLANO_FASE_308.md); status
-executável em [`todo.md`](todo.md). Não reabrir decisões nem refazer auditoria.
+Implementar preferências próprias para classes opcionais, digest interno e
+e-mail opt-in, preservando avisos obrigatórios, destinatários e isolamento.
+Plano completo e decisões: [PLANO_FASE_309.md](../docs/history/phases/PLANO_FASE_309.md).
+Sequência executável: [todo.md](todo.md).
 
-## Implementado
+## Concluído
 
-- Regra única de faixa compartilhada por PB-17 e pelo resumo; rejeita limites
-  inválidos/invertidos, admite limites unilaterais e vírgula decimal.
-- Leitor no mesmo `EntityManager`, com tenant/paciente/soft-delete explícitos,
-  seleção mínima, 100 coletas e teto de 10.000 resultados; falhas de dados
-  cifrados/malformados/overflow retornam indisponível sem parcial.
-- Último resultado por grupo antes da classificação; catálogo por ID e nomes
-  livres por nome + unidade + método; duplicidade sinalizada sem escolha ou
-  recuperação do resultado anterior; até 10 destaques.
-- DTO allowlist, autorização de papel/tenant/`pacientes.ler`, BFF
-  `private, no-store`, cartão acessível na Leitura clínica com retry, limites,
-  origem e navegação para Exames.
-- Fixtures e regressões da fase em backend, BFF, desktop, mobile e axe.
+- Merge 308 reconfirmado e documentação de estado reconciliada nesta branch.
+- Mapeados writer transacional, destinatários, índice dedup, RLS, serviço,
+  controlador, sino, BFFs, transporte SMTP/Gmail e gates web/worker.
+- Fixados snapshots prospectivos, geração transacional por usuário,
+  contratos, migration aditiva prevista 1065, DTO mínimo, rollback e testes.
+- Definidos checkpoints para o Luna executar uma etapa por vez sem refazer gaps.
+- Nenhum código funcional, migration, e-mail real ou deploy executado.
 
-## Evidências locais
+## Decisões ainda pendentes
 
-- Backend Jest integral: PASS — 263 suítes e 2.379 testes; 3 suítes/38 testes
-  ignorados pela configuração existente.
-- Backend typecheck e build: PASS. Web typecheck e build: PASS.
-- Web lint: PASS, 0 erros e 63 avisos de lint existentes (incluem regras de
-  efeitos React no prontuário e em outros módulos).
-- Playwright Fase 308: PASS — 6 testes em desktop/mobile.
-- Acessibilidade focada do prontuário: PASS — 2 testes desktop/mobile com axe.
-- Harness BFF do prontuário: PASS — 4/4; `pnpm security:secrets`: PASS.
-- `git diff --check` da revisão final: PASS.
+Respostas solicitadas ao proprietário para momento de envio por e-mail,
+tentativa externa incerta e cancelamento de e-mail ao desligar opt-in.
+Manter planejamento ativo no Sol até registrar essas respostas no plano.
+Não iniciar partes dependentes nem tratar sugestão como aprovação.
 
-## Evidência da PR
+## Validações deste ciclo
 
-- OctaClin CI `37982409232`: PASS, incluindo Backend NestJS, Web Next.js,
-  Demo local smoke (16m12s), Governança, Mobile Expo, PR Gate, Operação de
-  lançamento e Rollout seguro.
-- Imagens `37982409141`: backend, ia-service e web PASS; Trivy warning PASS;
-  `Provenance do SBOM` SKIPPED (condição do workflow).
-- CodeQL `37982409220`: Python e JavaScript/TypeScript PASS.
-- Dependency Review `37982409219`: PASS.
-- Semgrep `37982409360`: warning PASS; Semgrep OSS PASS.
-- Nenhum check obrigatório da PR ficou pendente ou falhou.
-- PostgreSQL/RLS local permaneceu SKIPPED; não registrar prova local de RLS.
-  A CI passou, sem comprovar aplicação em produção.
+- PASS: `git diff --check`, `pnpm security:secrets`, matriz de confiabilidade,
+  allowlist/tooling de agentes, redação de auditoria (24 testes).
+- Ambiente dos checks editoriais: Node 24.19.0/pnpm 11.19.0; o repositório
+  requer Node 22/pnpm 11.25.0. Não usar estes resultados como build/runtime
+  validado. Sucessor configura as versões declaradas antes dos checks de código.
+- NA: testes/build de comportamento da 309, pois só há planejamento/documentos.
+- SKIPPED: PostgreSQL, provider, staging/produção e envio real; nenhum alvo
+  autorizado/consultado. Migration 1065 prevista, não criada nem aplicada.
+- CI pós-merge 308 `37987983251`: em andamento, Demo local smoke pendente;
+  demais jobs observados PASS. Semgrep `37987983322`, Trivy `37987983323`,
+  CodeQL `37987983326` PASS sobre `1dec202f`. Reconsultar antes de implementar.
+- Monitor produção `37977323201`: FAIL em saúde externa; causa não diagnosticada
+  e sem vínculo demonstrado com a fase. Não declarar aceite de produção.
 
-## Pendências/gates sem falsa aprovação
+## Arquivos e commits
 
-- `pnpm --dir octaclin-web test:authz` foi iniciado, mas interrompido após os
-  harnesses de correlação, origem, autorização, sessões, profissionais,
-  pacientes, agendamento, questionários e dashboard passarem. O comando
-  compila 19 harnesses TypeScript isolados em série; o BFF específico da fase
-  também passou diretamente. Registrar esse comando como parcial/interrompido,
-  não PASS.
-- A suíte a11y completa (272 testes) foi interrompida após três testes gerais;
-  o teste específico do detalhe do prontuário passou em desktop/mobile.
-- PostgreSQL/RLS local: SKIPPED. CI completo, Demo local smoke e Governança
-  passaram. Revisão humana/independente ainda aguarda na PR #385. Não declarar
-  produção validada.
-- Monitor de produção separado `37977323201` falhou em “Saude externa”; causa
-  ainda não diagnosticada, sem relação estabelecida com esta fase. Migration
-  1064 da fase anterior não foi verificada operacionalmente neste ciclo.
+Planejamento: `docs/history/phases/PLANO_FASE_309.md`, `tasks/plan.md`,
+`tasks/todo.md`. Reconciliação: status, checklist, resumo, roadmap e adendo ao
+plano histórico 308. Código integrado de referência: merge `1dec202f`.
+Rascunho salvo no commit de planejamento da branch (consultar `git log -1`).
+Ainda há decisões pendentes; não considerar handoff liberado para implementação.
+Sucessor confere `git status`, `git log`, diff e PR antes de escrever.
 
-## Próxima ação
+## Próxima ação exata e troca de modelo
 
-Solicitar revisão humana R4 da PR #385 e resolver os comentários recebidos. O
-diff foi revisado, scanner e `git diff --check` passaram, commit e PR estão na
-mesma branch, e os checks foram registrados acima. Não editar inventário para
-mascarar validade. Merge, migration e deploy permanecem fora deste handoff.
+Registrar respostas pendentes, revisar plano e confirmar estado do CI.
+Só então avisar e pausar para troca manual a **GPT-6 Luna alto**.
+O Luna começa pelos testes de política e calendário do item 1 do checklist;
+implementa até a PR/checks/revisão, seguindo os checkpoints. Não refaz a auditoria
+nem reabre decisões aprovadas. R4: revisão independente e aplicação de migration
+fora de banda são gates separados; não aprovar produção por mocks ou CI.

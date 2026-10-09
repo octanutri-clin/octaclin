@@ -55,13 +55,17 @@ Atualizado em 2026-10-09.
   Demo local smoke. Aplicação da migration aditiva 1064 não verificada neste
   ciclo; merge/CI não comprovam produção. Plano em
   `docs/history/phases/PLANO_FASE_307.md`.
-- Fase 308 implementada no commit `537665ce` e aberta para revisão na PR #385
-  (CI obrigatório aprovado). O resumo do prontuário consome PB-17 com leitura
-  autorizada por tenant/carteira, classificação compartilhada, nomes livres
-  agrupados conservadoramente e limites explícitos de 100 coletas/10 destaques.
-  Sem migration nova; revisão humana pendente e nenhum aceite de produção.
-  Plano, handoff e checklist em `docs/history/phases/PLANO_FASE_308.md` e
-  `tasks/`.
+- Fase 308 integrada pelo PR #385 (merge `1dec202f`, confirmado no GitHub
+  em 2026-10-09): resumo factual de exames por último resultado, incluindo
+  nomes livres e limites explícitos. Sem migration nova. CI pós-merge
+  `37987983251` em andamento nesta consulta; Web/backend/Governança aprovados,
+  Demo local smoke pendente. Sem aceite de produção. Histórico em
+  `docs/history/phases/PLANO_FASE_308.md`.
+- Fase 309 em planejamento e análise de gaps na branch
+  `feature/fase-309-preferencias-notificacoes`: preferências por usuário,
+  resumo interno e e-mail opt-in. Código ainda não implementado; decisões
+  finais de e-mail pendentes. Plano em `docs/history/phases/PLANO_FASE_309.md`,
+  handoff/checklist em `tasks/`. Migration aditiva prevista; não executada.
 - Sequência das Fases 302–320 em
   `docs/product/ROADMAP_POS_AUDITORIA_FASES_302_320.md`. O PB-30 está planejado na Fase 316, condicionado a privacidade,
   jurídico e operação.
