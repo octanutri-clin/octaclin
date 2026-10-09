@@ -3,9 +3,15 @@
 ## Reconciliação em 2026-10-09
 
 - Fase 306 integrada pelo PR #383 (merge `104a1546`, confirmado no GitHub).
-  Checks ainda em reconciliação nesta atualização; sem declaração de CI verde.
-- Fase 307 em implementação na branch `feature-fase-307-progresso-paciente`;
-  plano e gaps em `docs/history/phases/PLANO_FASE_307.md`. PR e CI pendentes.
+  Código coberto pelo CI principal aprovado da integração 307, sem alterar
+  o resultado do run histórico da 306.
+- Fase 307 integrada pelo PR #384 (merge `04e66efc`, confirmado no GitHub).
+  CI principal da main `37971450248` aprovado, incluindo Demo local smoke e
+  Governança. Aplicação da migration 1064 não verificada neste ciclo.
+  Plano em `docs/history/phases/PLANO_FASE_307.md`.
+- Fase 308 tem planejamento/gaps preparados, sem implementação ou aceite:
+  `docs/history/phases/PLANO_FASE_308.md` e `tasks/plan.md`. Código fica para
+  GPT-6 Luna Alto após troca manual e instrução do proprietário.
 
 ## Atualização de estado em 2026-10-05
 
