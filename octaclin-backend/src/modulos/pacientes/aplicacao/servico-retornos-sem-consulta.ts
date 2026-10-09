@@ -4,6 +4,7 @@ import { ExecutorTenant } from '../../../infraestrutura/banco-dados/executor-ten
 import { CriptografiaDadosSensiveis } from '../../../infraestrutura/seguranca/criptografia-dados-sensiveis';
 import { resolverProfissionalIdDoUsuario } from '../../../infraestrutura/seguranca/escopo-profissional';
 import { UsuarioAutenticado } from '../../auth/dominio/usuario-autenticado';
+import { dataCivilConsulta, medianaIntervalosConsultaDias } from '../dominio/mediana-intervalo-consultas';
 import { ServicoComunicacoes } from '../../comunicacoes/aplicacao/servico-comunicacoes';
 import { EVENTO_RETORNO, impedimentoRetorno } from '../../comunicacoes/dominio/politica-retorno';
 import { TipoCanalDireto, canalPermitido, dentroHorarioPermitido, interpretarPreferenciasComunicacao, preferenciasComunicacaoPadrao } from '../../comunicacoes/dominio/preferencias-comunicacao';
@@ -128,17 +129,9 @@ export class ServicoRetornosSemConsulta {
   }
 
   private sugerirData(consultas: Date[]): Pick<ItemRetorno, 'intervaloDias' | 'dataSugerida'> {
-    if (consultas.length < 2) return {};
-    const diaClinico = (data: Date) => {
-      const partes = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo', year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(data);
-      const valor = (tipo: string) => partes.find((parte) => parte.type === tipo)?.value ?? '0';
-      return `${valor('year')}-${valor('month')}-${valor('day')}`;
-    };
-    const dias = consultas.map((data) => Date.parse(`${diaClinico(data)}T00:00:00Z`) / 86_400_000);
-    const intervalos = dias.slice(0, 3).map((dia, indice) => dia - dias[indice + 1]).filter((valor) => valor > 0).sort((a, b) => a - b);
-    if (!intervalos.length) return {};
-    const meio = Math.floor(intervalos.length / 2);
-    const mediana = Math.round(intervalos.length % 2 ? intervalos[meio] : (intervalos[meio - 1] + intervalos[meio]) / 2);
-    return { intervaloDias: mediana, dataSugerida: new Date((dias[0] + mediana) * 86_400_000).toISOString().slice(0, 10) };
+    const mediana = medianaIntervalosConsultaDias(consultas);
+    if (mediana === null || !consultas.length) return {};
+    const ultimoDia = Date.parse(`${dataCivilConsulta(consultas[0])}T00:00:00Z`) / 86_400_000;
+    return { intervaloDias: mediana, dataSugerida: new Date((ultimoDia + mediana) * 86_400_000).toISOString().slice(0, 10) };
   }
 }

@@ -128,6 +128,21 @@ export interface PainelOperacaoClienteApi {
   mes: string;
   timezone: string;
   pacientes: { novos: number; ativos: number; emRisco: number };
+  retorno: {
+    pacientesElegiveis: number;
+    pacientesSemProximaConsulta: number;
+    percentualSemProximaConsulta: number | null;
+    pacientesComHistorico: number;
+    intervaloMedianoDias: number | null;
+  };
+  faltasPorHorario: {
+    desfechos: number;
+    faltas: number;
+    taxaFalta: number | null;
+    faixas: { inicioHora: number; fimHora: number; desfechos: number; faltas: number; taxaFalta: number }[];
+    possuiFaixasSuprimidas: boolean;
+  };
+  respostaFormularios: { respostasValidas: number; medianaSegundos: number | null };
   consultasSemProfissional: number;
   profissionais: {
     id: string;

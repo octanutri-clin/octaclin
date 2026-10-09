@@ -1,10 +1,10 @@
 # Roadmap de produto após a Fase 302
 
-Atualizado em 2026-10-05. A Fase 304 foi integrada pelo PR #362 (merge
-`13a250c8`). O proprietário informou que a migration 1063 foi aplicada e
-validada em staging e produção; não houve consulta direta aos bancos neste
-ciclo. A Fase 305 está em desenvolvimento na branch
-`feat/fase305-visao-questionarios-antropometria`, sem migration prevista.
+Atualizado em 2026-10-06. A Fase 305 foi integrada pelo PR #379 (merge
+`32c2aa5b`, confirmado no GitHub); checks obrigatórios passaram e
+`Provenance do SBOM` ficou `SKIPPED`. Sem migration. A Fase 306 está em
+desenvolvimento na branch `feat/fase306-retorno-evasao-factual`, sem migration
+prevista.
 Este é o plano **vigente** para as recomendações ainda abertas de
 `OCTACLIN_PRODUCT_FEATURE_AUDIT.md`. O diagnóstico de 2026-09-17 permanece
 histórico; uma descrição antiga de lacuna não desfaz uma entrega posterior.
@@ -12,7 +12,7 @@ histórico; uma descrição antiga de lacuna não desfaz uma entrega posterior.
 ## Como executar e manter
 
 - Seguir a ordem numérica, salvo nova decisão explícita do proprietário. A fase
-  em andamento é a **305**; depois dela, a próxima fase é a **306**. Cada fase recebe plano de execução e revisão de gaps
+  em andamento é a **306**; depois dela, a próxima fase é a **307**. Cada fase recebe plano de execução e revisão de gaps
   antes do código; concluir uma não implica iniciar a próxima sem reconciliar
   código, PRs e evidência operacional.
 - Implementar cada fatia funcional em sua branch/PR com a documentação
@@ -36,8 +36,8 @@ histórico; uma descrição antiga de lacuna não desfaz uma entrega posterior.
 | 302 | **LGPD da própria clínica.** Gestor do tenant lê os pedidos, assume a tratativa e prepara rascunho; SuperAdmin valida estados finais, eliminação e retenção. A descrição livre passa a ser cifrada. | PB-27 e fluxo LGPD existentes. Tenant/papel validados no backend e BFF; migration 1062 e backfill fora de banda antes do aceite operacional. Plano e decisões em `docs/history/phases/PLANO_FASE_302.md`. | Integrada pelo PR #360; aplicação/validação da 1062 relatadas pelo proprietário |
 | 303 | **Integrações para profissionais autorizados.** O gestor concede e revoga diretamente escopos de API e eventos de webhook, cada conjunto de forma independente. | Credenciais profissionais ficam vinculadas ao titular e só alcançam pacientes de sua carteira atual; API, idempotência e entregas de webhook devem provar essa restrição. Não conceder papel `Client`. Testar criação, uso, revogação, negações por papel e tenant; payloads externos mantêm o contrato atual. Plano em `docs/history/phases/PLANO_FASE_303.md`; migration 1063 fora de banda. | Integrada pelo PR #361; migration 1063 aplicada e validada em staging/produção conforme relato do proprietário, sem consulta direta neste ciclo |
 | 304 | **Adesão longitudinal factual e substituições.** Mostrar ao profissional check-ins declarados, respostas ausentes e escolhas de troca junto da versão publicada do plano; expor na UI a consulta à versão histórica já disponível na API interna. | Não inferir consumo real a partir de uma troca ou ausência de resposta. Restringir por carteira/tenant, distinguir versões e dados faltantes; evitar duplicar a linha do tempo. | Integrada pelo PR #362; sem migration nova |
-| 305 | **Questionários e antropometria na mesma leitura longitudinal.** Cruzar visualmente datas de respostas, métricas antropométricas e consultas, reutilizando a matriz longitudinal e séries existentes. | Sem causalidade ou diagnóstico automático; filtros de período, unidades, origem e lacunas explícitos. Permissões clínicas e versão do formulário preservadas. | Em desenvolvimento na branch `feat/fase305-visao-questionarios-antropometria`; plano e revisão de gaps em `docs/history/phases/PLANO_FASE_305.md` |
-| 306 | **Retorno e evasão factuais.** Indicadores de intervalo observado entre consultas, pacientes sem próxima consulta, faltas por horário e tempo de resposta a formulários, para equipe/clínica. Reusar a mediana de até três intervalos da Fase 294. | Definir denominadores, janela e população elegível; marcar histórico insuficiente. Não chamar ausência de retorno de diagnóstico nem disparar contato novo; preservar a trava de contato de 30 dias. | Planejada |
+| 305 | **Questionários e antropometria na mesma leitura longitudinal.** Cruzar visualmente datas de respostas, métricas antropométricas e consultas, reutilizando a matriz longitudinal e séries existentes. | Sem causalidade ou diagnóstico automático; filtros de período, unidades, origem e lacunas explícitos. Permissões clínicas e versão do formulário preservadas. | Integrada pelo PR #379 (`32c2aa5b`); checks obrigatórios passaram e `Provenance do SBOM` `SKIPPED`; sem migration. Plano em `docs/history/phases/PLANO_FASE_305.md` |
+| 306 | **Retorno e evasão factuais.** Indicadores agregados de intervalo observado entre consultas, pacientes sem próxima consulta, faltas por horário e tempo de resposta a formulários, para o Painel de Operação do `Client`. Reusar a mediana de até três intervalos da Fase 294. | Denominadores, janela e população explícitos; histórico insuficiente sinalizado; contagens sem pacientes identificáveis; sem diagnóstico nem contato novo. Preserva a trava de contato de 30 dias; sem migration. | Em desenvolvimento na branch `feat/fase306-retorno-evasao-factual`; plano e revisão de gaps em `docs/history/phases/PLANO_FASE_306.md` |
 | 307 | **Progresso do paciente além do peso.** Exibir no portal apenas métricas autorizadas e metas/marcos que o profissional escolheu compartilhar, com unidade, data e origem. | Consentimento e acesso do próprio paciente; sem revelar anotações internas ou meta implícita. Ausência de meta aparece como tal; nenhuma comparação clínica automática. | Planejada |
 | 308 | **Completar o resumo clínico com exames fora da faixa.** Consumir PB-17 no resumo PB-16, com resultado, unidade, referência e data, limitado à carteira/aba permitida. | Factual, sem interpretação nem alerta novo; faixas dependem da referência registrada e itens sem referência não são classificados. Regressão negativa de tenant/papel. | Planejada |
 | 309 | **Preferências individuais de notificações internas e digest.** Configurar classes opcionais, frequência e resumo sem conteúdo clínico sensível. | Alertas críticos/obrigatórios continuam visíveis; preferências por usuário, deduplicação, fuso e autorização. Não confundir com opt-out de canais externos do paciente. | Planejada |
@@ -108,13 +108,17 @@ e a revisão de gaps estão em `docs/history/phases/PLANO_FASE_304.md`.
 **Fase 304:** integrada pelo PR #362, confirmado no GitHub. O plano e os gates
 históricos permanecem em `docs/history/phases/PLANO_FASE_304.md`.
 
-**Fase 305 em andamento:** leitura factual de respostas e antropometria com
-versão histórica do formulário, unidade, data, origem, lacunas e limite
-explícitos. A rota dedicada exige `pacientes.ler` e `questionarios.ler`, além
-de revalidar tenant e carteira. Não infere causalidade, diagnóstico ou
-classificação antropométrica nova. O plano/revisão precedeu a implementação em
-`docs/history/phases/PLANO_FASE_305.md`; PR, CI e revisão humana ainda pendentes.
+**Fase 305:** integrada pelo PR #379 (merge `32c2aa5b`, confirmado no GitHub).
+Checks obrigatórios passaram; `Provenance do SBOM` ficou `SKIPPED`. Sem
+migration ou prova de produção. Plano e evidências em
+`docs/history/phases/PLANO_FASE_305.md`.
 
-**Próxima fase após integração da 305:** 306, retorno e evasão factuais,
-respeitando denominadores e histórico insuficiente, sem previsão clínica nem
-contato automático novo.
+**Fase 306 em andamento:** indicadores agregados de retorno, ausência de
+consulta futura, faltas por horário e resposta a formulários. O contrato define
+populações, denominadores, janelas, timezone e supressão de grupos pequenos;
+mantém o endpoint e a autorização do Painel de Operação, sem expor pacientes,
+sem prever evasão clínica e sem enviar contato. Plano e revisão de gaps em
+`docs/history/phases/PLANO_FASE_306.md`.
+
+**Próxima fase após integração da 306:** 307, progresso do paciente além do
+peso, limitado a métricas e metas explicitamente compartilhadas.

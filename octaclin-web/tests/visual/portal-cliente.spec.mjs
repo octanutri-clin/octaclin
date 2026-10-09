@@ -103,6 +103,21 @@ async function prepararSessaoCliente(page, opcoes = {}) {
         mes: route.request().url().includes('mes=2026-08') ? '2026-08' : '2026-09',
         timezone: 'America/Sao_Paulo',
         pacientes: { novos: 2, ativos: 5, emRisco: 1 },
+        retorno: {
+          pacientesElegiveis: 10,
+          pacientesSemProximaConsulta: 4,
+          percentualSemProximaConsulta: 40,
+          pacientesComHistorico: 3,
+          intervaloMedianoDias: 21
+        },
+        faltasPorHorario: {
+          desfechos: 10,
+          faltas: 5,
+          taxaFalta: 50,
+          faixas: [{ inicioHora: 10, fimHora: 12, desfechos: 6, faltas: 3, taxaFalta: 50 }],
+          possuiFaixasSuprimidas: true
+        },
+        respostaFormularios: { respostasValidas: 4, medianaSegundos: 43200 },
         consultasSemProfissional: 0,
         profissionais: [{
           id: 'prof-1', nome: 'Profissional Exemplo', pacientesResponsaveis: 5,
@@ -534,6 +549,23 @@ test.describe('portal do cliente', () => {
     await expect(painel.getByText('tenant-1')).toHaveCount(0);
     await painel.getByLabel('Mês', { exact: true }).fill('2026-08');
     await expect(painel.getByText('2026-08 (America/Sao_Paulo)')).toBeVisible();
+  });
+
+  test('Fase 306 mostra somente indicadores agregados com janelas, bases e supressão explicadas', async ({ page }) => {
+    await prepararSessaoCliente(page);
+    await page.goto('/cliente');
+    await page.getByRole('tab', { name: 'Operação' }).click();
+    const painel = page.getByRole('tabpanel', { name: 'Operação' });
+    const retorno = painel.getByRole('region', { name: 'Indicadores agregados de retorno e formulários' });
+    await expect(retorno.getByText('21 dias')).toBeVisible();
+    await expect(retorno.getByText(/base com 3 pacientes/)).toBeVisible();
+    await expect(retorno.getByText(/40% entre 10 pacientes ativos com consulta concluída nos últimos 90 dias/)).toBeVisible();
+    await expect(retorno.getByText('12 h')).toBeVisible();
+    await expect(painel.getByRole('heading', { name: 'Faltas por horário' })).toBeVisible();
+    await expect(painel.getByRole('row', { name: /10:00–12:00/ })).toContainText('50%');
+    await expect(painel.getByText(/Algumas faixas foram ocultadas/)).toBeVisible();
+    await expect(painel.getByText('paciente-1')).toHaveCount(0);
+    await expect(painel.getByText('tenant-1')).toHaveCount(0);
   });
 
   test('divide a conta por tarefas e nao expoe identificadores internos', async ({ page }) => {
