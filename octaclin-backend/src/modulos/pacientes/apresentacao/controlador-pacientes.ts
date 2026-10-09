@@ -498,7 +498,10 @@ export class ControladorPacientes {
       recursoId: id,
       ip: requisicao.ip,
       userAgent: this.obterUserAgent(requisicao),
-      metadados: { avaliacaoId, metricasCompartilhadas: avaliacao.metricasCompartilhadasPortal }
+      metadados: {
+        avaliacaoId,
+        possuiCompartilhamento: avaliacao.metricasCompartilhadasPortal.length > 0
+      }
     });
     return avaliacao;
   }

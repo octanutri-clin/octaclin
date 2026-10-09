@@ -198,6 +198,7 @@ const CHAVES_SEGURAS = new Map([
   ['houvetextolivre', 'booleano de presenca de texto livre'],
   ['conteudoeditadoinformado', 'booleano de presenca de edicao do conteudo sugerido pela IA'],
   ['possuicontato', 'booleano de presenca do contato do acompanhante; o telefone em si nunca entra'],
+  ['possuicompartilhamento', 'booleano de presenca de metricas compartilhadas; valores clinicos e identificadores de metrica nunca entram'],
   ['crioumodelosiniciais', 'booleano operacional: a instalacao de modelos genericos criou ao menos uma copia; nao revela conteudo ou dado clinico'],
   ['aprovado', 'booleano: o template foi aprovado pelo provedor de mensageria'],
   ['ativa', 'booleano: a regra de automacao esta habilitada'],
