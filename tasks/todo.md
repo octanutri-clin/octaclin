@@ -44,8 +44,8 @@ Branch/worktree e evidências: `tasks/plan.md`.
   aberto somente pelo gate PostgreSQL real de RLS/concorrência.
 - [x] 9. Atualizar matriz de confiabilidade, plano/handoff e documentos de estado
   para implementação/PR. Procedimento de rollout/rollback aditivo registrado no plano.
-- [ ] 10. Commit/push e uma PR com R4, evidências, gates pendentes e revisão humana.
-  Aguardar CI aplicável, resolver falhas; não mudar inventário para mascará-las.
+- [x] 10. Commit `835b5c46`, push da branch e PR #386 em draft, com evidências
+  e gates R4/PostgreSQL pendentes explícitos. Não mergear até revisão e CI/gates.
 
 ## Evidências locais observadas neste ciclo
 

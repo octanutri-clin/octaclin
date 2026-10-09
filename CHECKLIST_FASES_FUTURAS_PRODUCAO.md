@@ -9,7 +9,7 @@ aprovado, incluindo Governança e Demo local smoke; aplicação da migration
 confirmada no GitHub; sem migration nova. CI `37987983251` e scanners Semgrep
 `37987983322`, Trivy `37987983323` e CodeQL `37987983326` concluídos com
 sucesso. Sem aceite de produção. Fase 309 implementada na branch
-`feature/fase-309-preferencias-notificacoes`; PR pendente. Migration 1065
+`feature/fase-309-preferencias-notificacoes`; PR #386 em draft. Migration 1065
 registrada no código, não aplicada fora de banco descartável. Plano em
 `docs/history/phases/PLANO_FASE_309.md`; handoff em `tasks/plan.md` e checklist
 em `tasks/todo.md`.
@@ -4549,8 +4549,8 @@ auditoria estão ordenados na seção 15 de
   ou aceite de produção; CI e scanners pós-merge concluídos com sucesso. Plano e
   evidências históricas em `docs/history/phases/PLANO_FASE_308.md`.
 - [ ] Fase 309 - preferências individuais de notificação interna e digest.
-  Implementação na branch `feature/fase-309-preferencias-notificacoes`, PR
-  pendente; migration 1065 não aplicada fora de banco descartável. Consulte o
+  Implementação na branch `feature/fase-309-preferencias-notificacoes`, PR #386
+  em draft; migration 1065 não aplicada fora de banco descartável. Consulte o
   handoff em `tasks/plan.md` e os resultados em `tasks/todo.md`.
 - [ ] Fase 310 - categorias e entrega explícita de receitas nutricionais ao
   paciente, com versão revisada.

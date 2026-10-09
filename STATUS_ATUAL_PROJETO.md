@@ -63,7 +63,7 @@ Atualizado em 2026-10-09.
   aceite de produção. Histórico em
   `docs/history/phases/PLANO_FASE_308.md`.
 - Fase 309 implementada na branch `feature/fase-309-preferencias-notificacoes`;
-  PR pendente de abertura. Preferências por usuário, resumo interno e e-mail
+  PR #386 em draft, sem merge. Preferências por usuário, resumo interno e e-mail
   opt-in. Migration aditiva 1065 registrada no código; não aplicada fora de
   banco descartável. Testes focados, build e navegadores registrados no handoff.
   Não representa deploy nem aceite de produção. Plano em

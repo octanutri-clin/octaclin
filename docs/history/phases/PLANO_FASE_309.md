@@ -7,7 +7,7 @@ Base: `1dec202f`, merge da
 Fase 308/PR #385 confirmado no GitHub. Branch única:
 `feature/fase-309-preferencias-notificacoes`; worktree:
 `/workspace/octaclin/.worktrees/feature-fase-309-preferencias-notificacoes`.
-Plano e implementação seguem na mesma PR, ainda não aberta. Código funcional e
+Plano e implementação seguem na PR #386, aberta como draft e ainda não mergeada. Código funcional e
 migration 1065 registrados; nenhum envio real, migration operacional ou ação
 de produção executados. Handoff/evidências atuais: `tasks/plan.md` e
 `tasks/todo.md`.
@@ -388,7 +388,7 @@ Lockfiles observados: Next 16.3.8, React 19.3.0, TypeORM 1.1.1 e cron-parser
 
 ## Estado de implementação e evidências
 
-Implementação registrada nesta branch; PR ainda pendente. A migration 1065 é
+Implementação registrada nesta branch; PR #386 aberta em draft. A migration 1065 é
 aditiva e o rollback preserva os dados por recusa explícita. Nenhuma aplicação
 operacional da migration ou envio real foi feito.
 

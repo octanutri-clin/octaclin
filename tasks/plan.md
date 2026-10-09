@@ -5,8 +5,8 @@
 Branch `feature/fase-309-preferencias-notificacoes`, base `1dec202f` (PR #385,
 Fase 308 MERGED, confirmado no GitHub em 2026-10-09). Worktree:
 `/workspace/octaclin/.worktrees/feature-fase-309-preferencias-notificacoes`.
-Uma branch contém planejamento + implementação. PR da 309 ainda pendente de
-abertura; não houve merge.
+Planejamento e implementação estão na mesma branch. PR #386 aberta em draft;
+aguarda revisão e não foi mergeada.
 
 Implementar preferências próprias para classes opcionais, digest interno e
 e-mail opt-in, preservando avisos obrigatórios, destinatários e isolamento.
@@ -65,13 +65,12 @@ Contrato, estados, riscos e rollback detalhados em
 Planejamento: `docs/history/phases/PLANO_FASE_309.md`, `tasks/plan.md`,
 `tasks/todo.md`. Reconciliação: status, checklist, resumo, roadmap e adendo ao
 plano histórico 308. Código integrado de referência: merge `1dec202f`.
-Commits de planejamento: `4682e964` e `c9f700d2`. Os arquivos de implementação
-estão no working tree até a criação do commit final e PR; conferir `git status`,
-diff, testes finais e estado remoto antes de atualizar esta seção.
+Commits de planejamento: `4682e964` e `c9f700d2`; implementação:
+`835b5c46`. PR #386 em draft: https://github.com/octanutri-clin/octaclin/pull/386.
 
 ## Próxima ação
 
-Concluir os checks pendentes, revisar o diff, atualizar evidências, commitar,
-fazer push da branch e abrir uma PR. Não mesclar. R4: revisão independente e
-aplicação da migration fora de banda são gates separados; produção não é
-aprovada por mocks ou CI.
+Aguardar revisão R4 independente e evidência de PostgreSQL real para migration,
+RLS e concorrência. Manter a PR #386 em draft até os gates obrigatórios passarem.
+Não mesclar nem aplicar migration fora de banda sem confirmar alvo/role owner;
+nenhuma aprovação de produção decorre de mocks ou CI.
