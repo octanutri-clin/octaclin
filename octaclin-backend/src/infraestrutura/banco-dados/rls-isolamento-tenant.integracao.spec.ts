@@ -910,6 +910,16 @@ descrever('RLS e isolamento multi-tenant integral em Postgres real', () => {
   it('Fase 309 gera um unico resumo sob dois POST concorrentes no mesmo usuario', async () => {
     if (!cliente || !executorTenant || !fonteDadosRuntime) throw new Error('Prova Postgres da Fase 309 indisponivel.');
     await comoTenant(tenantA);
+    const inicioLock = Date.now();
+    await Promise.all(Array.from({ length: 2 }, () => executorTenant!.executar(tenantA, async (gerenciador) => {
+      await gerenciador.query(
+        "select pg_advisory_xact_lock(hashtextextended($1::text || ':' || $2::text, 0))",
+        [tenantA, usuarioIdTenantA]
+      );
+      await gerenciador.query('select pg_sleep(0.5)');
+    })));
+    expect(Date.now() - inicioLock).toBeGreaterThanOrEqual(900);
+
     const notificacaoId = randomUUID();
     const recursoId = randomUUID();
     await cliente.query(

@@ -129,6 +129,12 @@ export class ServicoNotificacoes {
 
   async gerarResumoPendente(usuario: UsuarioAutenticado): Promise<{ gerado: boolean }> {
     return this.executorTenant.executar(usuario.tenantId, async (gerenciador) => {
+      // Serializa também quando ainda não existe resumo/linha de digest para
+      // travar. O advisory lock é por tenant+usuário e vive até o commit.
+      await gerenciador.query(
+        "select pg_advisory_xact_lock(hashtextextended($1::text || ':' || $2::text, 0))",
+        [usuario.tenantId, usuario.usuarioId]
+      );
       const usuarioAtual = await gerenciador.getRepository(UsuarioOrm).findOne({
         select: { id: true, ativo: true, role: true },
         where: { id: usuario.usuarioId, tenantId: usuario.tenantId },
@@ -142,64 +148,76 @@ export class ServicoNotificacoes {
       const preferencias = await gerenciador.getRepository(PreferenciaNotificacaoUsuarioOrm).findOne({
         where: { tenantId: usuario.tenantId, usuarioId: usuario.usuarioId }
       });
-      const filas = await gerenciador.query(`
-        with pendentes as materialized (
-          select id, tenant_id, usuario_id, tipo, criado_em, email_resumo, email_cancelado_em
-          from notificacoes
-          where tenant_id = $1 and usuario_id = $2
-            and modo_entrega in ('diario', 'semanal')
-            and resumo_previsto_em <= transaction_timestamp()
-            and resumo_id is null
-          order by resumo_previsto_em, criado_em, id
-          for update
-        ),
-        resumo_novo as (
-          insert into resumos_notificacao_usuario
-            (tenant_id, usuario_id, periodo_inicio_em, periodo_fim_em)
-          select $1, $2, min(criado_em), max(criado_em)
-          from pendentes
-          having count(*) > 0
-          returning id
-        ),
-        vinculadas as (
-          update notificacoes n
-          set resumo_id = (select id from resumo_novo)
-          from pendentes p
-          where n.id = p.id and n.tenant_id = $1 and n.usuario_id = $2
-          returning n.tipo, n.criado_em, n.email_resumo, n.email_cancelado_em
-        ),
-        agregado as (
-          select
-            (select id from resumo_novo) as resumo_id,
-            jsonb_build_object(
-              'formulario_respondido', count(*) filter (where tipo = 'formulario_respondido'),
-              'tarefa_concluida', count(*) filter (where tipo = 'tarefa_concluida'),
-              'automacao_executada', count(*) filter (where tipo = 'automacao_executada')
-            ) as contagens,
-            jsonb_build_object(
-              'formulario_respondido', count(*) filter (where tipo = 'formulario_respondido' and email_resumo and email_cancelado_em is null),
-              'tarefa_concluida', count(*) filter (where tipo = 'tarefa_concluida' and email_resumo and email_cancelado_em is null),
-              'automacao_executada', count(*) filter (where tipo = 'automacao_executada' and email_resumo and email_cancelado_em is null)
-            ) as contagens_email,
-            bool_or(email_resumo) as algum_optin_email
-          from vinculadas
-        )
-        update resumos_notificacao_usuario r
-        set contagens = a.contagens,
-            contagens_email = a.contagens_email,
-            estado_email = case
-              when (a.contagens_email->>'formulario_respondido')::numeric
-                 + (a.contagens_email->>'tarefa_concluida')::numeric
-                 + (a.contagens_email->>'automacao_executada')::numeric > 0 and $3::boolean then 'pendente'
-              when a.algum_optin_email then 'cancelado'
-              else 'nao_solicitado'
-            end
-        from agregado a
-        where a.resumo_id is not null and r.id = a.resumo_id
-          and r.tenant_id = $1 and r.usuario_id = $2
-        returning r.id
-      `, [usuario.tenantId, usuario.usuarioId, preferencias?.emailResumo === true]);
-      return { gerado: filas.length > 0 };
+      const pendentes = await gerenciador.query(`
+        select id, tipo, criado_em, email_resumo, email_cancelado_em
+        from notificacoes
+        where tenant_id = $1 and usuario_id = $2
+          and modo_entrega in ('diario', 'semanal')
+          and resumo_previsto_em <= transaction_timestamp()
+          and resumo_id is null
+        order by resumo_previsto_em, criado_em, id
+        for update
+      `, [usuario.tenantId, usuario.usuarioId]) as Array<{
+        id: string;
+        tipo: NotificacaoOrm['tipo'];
+        criado_em: Date;
+        email_resumo: boolean;
+        email_cancelado_em: Date | null;
+      }>;
+      if (!pendentes.length) return { gerado: false };
+
+      const resumos = await gerenciador.query(`
+        insert into resumos_notificacao_usuario
+          (tenant_id, usuario_id, periodo_inicio_em, periodo_fim_em)
+        values ($1, $2, $3, $4)
+        returning id
+      `, [
+        usuario.tenantId,
+        usuario.usuarioId,
+        pendentes.reduce((menor, notificacao) => notificacao.criado_em < menor ? notificacao.criado_em : menor, pendentes[0].criado_em),
+        pendentes.reduce((maior, notificacao) => notificacao.criado_em > maior ? notificacao.criado_em : maior, pendentes[0].criado_em)
+      ]) as Array<{ id: string }>;
+      const resumoId = resumos[0]?.id;
+      if (!resumoId) throw new Error('Não foi possível criar o resumo de notificações.');
+
+      const resultadoVinculacao = await gerenciador.query(`
+        update notificacoes
+        set resumo_id = $3
+        where tenant_id = $1 and usuario_id = $2 and resumo_id is null
+          and id = any($4::uuid[])
+        returning tipo, email_resumo, email_cancelado_em
+      `, [usuario.tenantId, usuario.usuarioId, resumoId, pendentes.map(({ id }) => id)]) as [Array<{
+        tipo: NotificacaoOrm['tipo'];
+        email_resumo: boolean;
+        email_cancelado_em: Date | null;
+      }>, number];
+      const vinculadas = resultadoVinculacao[0] ?? [];
+      if (!vinculadas.length) {
+        await gerenciador.query(
+          'delete from resumos_notificacao_usuario where tenant_id = $1 and usuario_id = $2 and id = $3',
+          [usuario.tenantId, usuario.usuarioId, resumoId]
+        );
+        return { gerado: false };
+      }
+
+      const tipos = ['formulario_respondido', 'tarefa_concluida', 'automacao_executada'] as const;
+      const contagens = Object.fromEntries(tipos.map((tipo) => [tipo, vinculadas.filter((notificacao) => notificacao.tipo === tipo).length]));
+      const contagensEmail = Object.fromEntries(tipos.map((tipo) => [
+        tipo,
+        vinculadas.filter((notificacao) => notificacao.tipo === tipo && notificacao.email_resumo && notificacao.email_cancelado_em === null).length
+      ]));
+      const totalEmail = Object.values(contagensEmail).reduce((total, quantidade) => total + quantidade, 0);
+      const algumOptinEmail = vinculadas.some((notificacao) => notificacao.email_resumo);
+      const estadoEmail = totalEmail > 0 && preferencias?.emailResumo === true
+        ? 'pendente'
+        : algumOptinEmail ? 'cancelado' : 'nao_solicitado';
+
+      await gerenciador.query(`
+        update resumos_notificacao_usuario
+        set contagens = $4::jsonb, contagens_email = $5::jsonb, estado_email = $6
+        where tenant_id = $1 and usuario_id = $2 and id = $3
+      `, [usuario.tenantId, usuario.usuarioId, resumoId, JSON.stringify(contagens), JSON.stringify(contagensEmail), estadoEmail]);
+      return { gerado: true };
     });
   }
 
