@@ -3,9 +3,9 @@
 Atualizado em 2026-10-09. Fase 306 integrada pelo PR #383 (`104a1546`) e
 Fase 307 pelo PR #384 (`04e66efc`), confirmados no GitHub. CI principal da
 main `37971450248` aprovado; aplicação da migration 1064 não verificada neste
-ciclo. Fase 308 implementada localmente em
-`feature/fase-308-resumo-exames`; revisão/PR e CI pendentes. Sem migration
-nova ou aceite de produção. Plano em `docs/history/phases/PLANO_FASE_308.md`.
+ciclo. Fase 308 implementada no commit `537665ce` e aberta na PR #385;
+CI obrigatório aprovado, revisão humana pendente. Sem migration nova ou aceite
+de produção. Plano em `docs/history/phases/PLANO_FASE_308.md`.
 Este é o plano **vigente** para as recomendações ainda abertas de
 `OCTACLIN_PRODUCT_FEATURE_AUDIT.md`. O diagnóstico de 2026-09-17 permanece
 histórico; uma descrição antiga de lacuna não desfaz uma entrega posterior.
@@ -40,7 +40,7 @@ histórico; uma descrição antiga de lacuna não desfaz uma entrega posterior.
 | 305 | **Questionários e antropometria na mesma leitura longitudinal.** Cruzar visualmente datas de respostas, métricas antropométricas e consultas, reutilizando a matriz longitudinal e séries existentes. | Sem causalidade ou diagnóstico automático; filtros de período, unidades, origem e lacunas explícitos. Permissões clínicas e versão do formulário preservadas. | Integrada pelo PR #379 (`32c2aa5b`); checks obrigatórios passaram e `Provenance do SBOM` `SKIPPED`; sem migration. Plano em `docs/history/phases/PLANO_FASE_305.md` |
 | 306 | **Retorno e evasão factuais.** Indicadores agregados de intervalo observado entre consultas, pacientes sem próxima consulta, faltas por horário e tempo de resposta a formulários, para o Painel de Operação do `Client`. Reusar a mediana de até três intervalos da Fase 294. | Denominadores, janela e população explícitos; histórico insuficiente sinalizado; contagens sem pacientes identificáveis; sem diagnóstico nem contato novo. Preserva a trava de contato de 30 dias; sem migration. | Integrada pelo PR #383 (`104a1546`); código coberto pelo CI principal aprovado da integração 307 |
 | 307 | **Progresso do paciente além do peso.** Exibir no portal apenas métricas autorizadas e metas/marcos que o profissional escolheu compartilhar, com unidade, data e origem. | Consentimento e acesso do próprio paciente; sem revelar anotações internas ou meta implícita. Ausência de meta aparece como tal; nenhuma comparação clínica automática. | Integrada pelo PR #384 (`04e66efc`); CI principal aprovado, aplicação da 1064 não verificada neste ciclo. Plano em `docs/history/phases/PLANO_FASE_307.md` |
-| 308 | **Completar o resumo clínico com exames fora da faixa.** Consumir PB-17 no resumo PB-16, com resultado, unidade, referência e data, limitado à carteira/aba permitida. | Factual, sem interpretação/alerta; último resultado por grupo, livre por nome/unidade/método, 100 coletas/10 destaques com limites explícitos; sem referência válida não classificar, duplicado sem escolha. Regressão negativa de tenant/papel. | Implementada localmente na branch; revisão/PR e CI pendentes. Sem migration nova ou aceite de produção. Plano e gaps em `docs/history/phases/PLANO_FASE_308.md` |
+| 308 | **Completar o resumo clínico com exames fora da faixa.** Consumir PB-17 no resumo PB-16, com resultado, unidade, referência e data, limitado à carteira/aba permitida. | Factual, sem interpretação/alerta; último resultado por grupo, livre por nome/unidade/método, 100 coletas/10 destaques com limites explícitos; sem referência válida não classificar, duplicado sem escolha. Regressão negativa de tenant/papel. | PR #385 aberta no commit `537665ce`; CI obrigatório aprovado, revisão humana pendente. Sem migration nova ou aceite de produção. Plano e gaps em `docs/history/phases/PLANO_FASE_308.md` |
 | 309 | **Preferências individuais de notificações internas e digest.** Configurar classes opcionais, frequência e resumo sem conteúdo clínico sensível. | Alertas críticos/obrigatórios continuam visíveis; preferências por usuário, deduplicação, fuso e autorização. Não confundir com opt-out de canais externos do paciente. | Planejada |
 | 310 | **Receitas nutricionais organizadas e compartilháveis.** Categorias pesquisáveis e entrega explícita ao paciente de uma versão revisada da receita, no portal seguro. | Não publicar automaticamente todo o acervo; profissional escolhe o conteúdo e o paciente. Cópia/versionamento, permissão, retirada e trilha de leitura sem PHI em notificação externa. | Planejada |
 | 311 | **Ativação de conteúdo em clínicas existentes.** Instalação opt-in, idempotente, do kit genérico da Fase 297, sem sobrescrever materiais ou planos; conferência de disponibilidade das cargas TACO/USDA/IBGE no onboarding de ambiente. | Modelos de refeição continuam estruturas sem alimentos até revisão profissional. Carga global de catálogo segue procedimento versionado separado por fonte, não seed por tenant; erros de catálogo são visíveis. Não carregar TBCA. | Planejada |
@@ -122,7 +122,6 @@ pelo CI principal aprovado da integração 307; run histórico da 306 inalterado
 limitado a métricas e metas explicitamente compartilhadas. CI principal
 `37971450248` aprovado; aplicação da 1064 não verificada neste ciclo.
 
-**Fase 308 em implementação:** código local na branch
-`feature/fase-308-resumo-exames`; PR/CI pendentes. Sem aceite operacional ou de
-produção. Monitor produção `37977323201` falhou em “Saude externa”; causa não
+**Fase 308 em revisão:** código na PR #385 (`537665ce`); CI obrigatório passou.
+Sem aceite operacional ou de produção. Monitor produção `37977323201` falhou em “Saude externa”; causa não
 diagnosticada nesta fase e independente desta implementação.

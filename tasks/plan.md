@@ -1,12 +1,13 @@
-# Handoff — Fase 308 implementada
+# Handoff — Fase 308 pronta para revisão humana
 
 ## Estado
 
 Implementação pronta para revisão na branch `feature/fase-308-resumo-exames`,
-base `04e66efc` (PR #384/Fase 307). Worktree:
+base `04e66efc` (PR #384/Fase 307), commit `537665ce`. PR #385 está aberta:
+https://github.com/octanutri-clin/octaclin/pull/385. Worktree:
 `/workspace/octaclin/.worktrees/feature-fase-308-resumo-exames`.
-PR ainda não aberta; preparar um único PR com código, testes e documentação.
-Não houve migration, merge, deploy ou consulta a dados clínicos reais.
+CI obrigatório passou; revisão humana ainda pendente. Não houve migration,
+merge, deploy ou consulta a dados clínicos reais.
 
 Escopo e decisões aprovadas pelo proprietário estão em
 [`PLANO_FASE_308.md`](../docs/history/phases/PLANO_FASE_308.md); status
@@ -37,8 +38,21 @@ executável em [`todo.md`](todo.md). Não reabrir decisões nem refazer auditori
 - Playwright Fase 308: PASS — 6 testes em desktop/mobile.
 - Acessibilidade focada do prontuário: PASS — 2 testes desktop/mobile com axe.
 - Harness BFF do prontuário: PASS — 4/4; `pnpm security:secrets`: PASS.
-- `git diff --check`: repetir após as últimas edições documentais, antes do
-  commit/push.
+- `git diff --check` da revisão final: PASS.
+
+## Evidência da PR
+
+- OctaClin CI `37982409232`: PASS, incluindo Backend NestJS, Web Next.js,
+  Demo local smoke (16m12s), Governança, Mobile Expo, PR Gate, Operação de
+  lançamento e Rollout seguro.
+- Imagens `37982409141`: backend, ia-service e web PASS; Trivy warning PASS;
+  `Provenance do SBOM` SKIPPED (condição do workflow).
+- CodeQL `37982409220`: Python e JavaScript/TypeScript PASS.
+- Dependency Review `37982409219`: PASS.
+- Semgrep `37982409360`: warning PASS; Semgrep OSS PASS.
+- Nenhum check obrigatório da PR ficou pendente ou falhou.
+- PostgreSQL/RLS local permaneceu SKIPPED; não registrar prova local de RLS.
+  A CI passou, sem comprovar aplicação em produção.
 
 ## Pendências/gates sem falsa aprovação
 
@@ -50,16 +64,16 @@ executável em [`todo.md`](todo.md). Não reabrir decisões nem refazer auditori
   não PASS.
 - A suíte a11y completa (272 testes) foi interrompida após três testes gerais;
   o teste específico do detalhe do prontuário passou em desktop/mobile.
-- PostgreSQL/RLS local: SKIPPED. CI completo, Demo local smoke, Governança e
-  revisão humana/independente aguardam PR. Não declarar produção validada.
+- PostgreSQL/RLS local: SKIPPED. CI completo, Demo local smoke e Governança
+  passaram. Revisão humana/independente ainda aguarda na PR #385. Não declarar
+  produção validada.
 - Monitor de produção separado `37977323201` falhou em “Saude externa”; causa
   ainda não diagnosticada, sem relação estabelecida com esta fase. Migration
   1064 da fase anterior não foi verificada operacionalmente neste ciclo.
 
 ## Próxima ação
 
-Revisar o diff final, confirmar scanner e `git diff --check`, commitar, abrir a
-PR nesta branch e acompanhar cada check pelo run ID. Tratar qualquer falha de
-Governança/Smoke com evidência do job; não editar inventário para mascarar
-validade. Solicitar revisão R4 humana. Merge, migration e deploy permanecem
-fora deste handoff.
+Solicitar revisão humana R4 da PR #385 e resolver os comentários recebidos. O
+diff foi revisado, scanner e `git diff --check` passaram, commit e PR estão na
+mesma branch, e os checks foram registrados acima. Não editar inventário para
+mascarar validade. Merge, migration e deploy permanecem fora deste handoff.

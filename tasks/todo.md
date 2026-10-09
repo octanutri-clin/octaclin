@@ -99,8 +99,9 @@ e `pnpm --dir octaclin-web test:authz`, em sequência.
 
 - [x] Testes positivos/negativos do backend e BFF aprovados.
 - [x] Payload/auditoria sem campos excedentes ou logs clínicos.
-- [ ] RLS existente mantida; registrar gate real do CI. SQL/alteração de RLS
-  exigem adicionalmente PostgreSQL descartável, sem inferir a prova de mocks.
+- [x] RLS/schema existentes mantidos sem migration. PostgreSQL/RLS local ficou
+  SKIPPED; Backend NestJS CI PASS não é registrado como prova explícita de RLS.
+  SQL/alteração de RLS exigem adicionalmente PostgreSQL descartável.
 
 ## Tarefa 5 — Bloco de exames na Leitura clínica (M)
 
@@ -143,12 +144,12 @@ garantir que a nova seção é visitada com dados no teste de a11y.
 
 ## Checkpoint C — Fluxo pronto para revisão
 
-- [ ] Checkpoints A/B + browser/a11y/lint/typecheck/build aprovados. Teste
-  focado de acessibilidade passou; suíte ampla foi interrompida e CI ainda
-  pendente.
+- [x] Checkpoints A/B + browser, axe focado, lint/typecheck/build e CI
+  obrigatório aprovados. Teste focado de acessibilidade passou; suíte a11y
+  ampla foi interrompida e não é registrada como PASS.
 - [x] Backend full Jest uma vez após a integração: 263 suítes/2.379 testes
   passaram; 3 suítes/38 testes ignorados pela configuração.
-- [ ] Revisar diff contra decisões e contrato, inclusive antes de classificar.
+- [x] Revisar diff contra decisões e contrato, inclusive antes de classificar.
 
 ## Tarefa 7 — Documentação de estado e risco (M)
 
@@ -176,11 +177,12 @@ branch com plano e código. Modelo segue Luna Alto se escopo fechado.
 `tasks/todo.md`; PR como artefato remoto.
 
 **Aceite:**
-- [ ] Documentos de transferência apontam execução, pendências e próxima ação.
-- [ ] `git diff --check` e `pnpm security:secrets` PASS antes de push;
+- [x] Documentos de transferência apontam execução, pendências e próxima ação.
+- [x] `git diff --check` e `pnpm security:secrets` PASS antes de push;
   dependências/lockfiles sem alteração alheia; PR da mesma branch.
-- [ ] Checks por run ID acompanhados, PASS/FAIL/NA/SKIPPED explícitos; revisão
-  independente solicitada quando viável, sem declarar autorrevisão independente.
+- [x] Checks por run ID acompanhados, PASS/FAIL/NA/SKIPPED explícitos; PR #385
+  aberta para revisão humana. A revisão continua pendente; não declarar
+  autorrevisão independente.
 
 **Verificação:** comandos do plano e CI aplicável. Demo local smoke e
 Governança devem passar; inventário vencido requer captura nova e triagem real,
@@ -189,6 +191,7 @@ erro da fase. Registrar PR, SHA, evidência e próxima ação no handoff.
 
 ## Encerramento
 
-- [ ] Entrega revisável ao proprietário, sem pendência técnica ocultada.
+- [x] Entrega revisável ao proprietário, sem pendência técnica ocultada;
+  pendências operacionais e de revisão estão explícitas no handoff.
 - [x] Nenhuma troca de modelo necessária para este escopo fechado.
 - [ ] Merge, migration e deploy ficam para autorização/ambiente identificados.

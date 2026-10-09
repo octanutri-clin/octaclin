@@ -33,19 +33,23 @@ suítes/38 testes ignorados pela configuração existente); typecheck/build do
 backend PASS; typecheck/lint do Web PASS (63 avisos de lint, nenhum erro);
 Playwright da Fase 308 PASS (6 testes em desktop/mobile); acessibilidade focada
 do detalhe PASS (2 testes em desktop/mobile); teste BFF focado PASS (4/4);
-scanner local de secrets PASS; `git diff --check` precisa ser repetido após a
-atualização final dos documentos.
+scanner local de secrets PASS; `git diff --check` PASS após a revisão final.
 O comando geral `test:authz` foi interrompido após os harnesses relevantes e
 alguns harnesses gerais passarem, pois executa 19 compilações TypeScript
 isoladas em série; o harness do prontuário passou diretamente. A suíte a11y
 completa foi interrompida após três testes de áreas não relacionadas; o teste
-focado do prontuário passou. Web/backend builds passaram; revisão final do diff
-ainda deve ser registrada antes de abrir a PR.
+focado do prontuário passou. Web/backend builds passaram e o diff foi revisado.
 
-R4: revisão/PR e CI permanecem pendentes. PostgreSQL/RLS local não foi
-executado; não declarar prova de isolamento além dos testes disponíveis. Sem
-aceite de produção. Próximo passo: concluir revisão do diff, atualizar
-evidências, abrir PR e acompanhar os checks obrigatórios.
+**PR #385:** https://github.com/octanutri-clin/octaclin/pull/385, commit
+`537665ce`, aberta na mesma branch. CI obrigatório passou: OctaClin CI
+`37982409232` (inclui Demo local smoke em 16m12s e Governança); imagens
+`37982409141` (backend/ia-service/web e Trivy warning PASS; `Provenance do
+SBOM` SKIPPED); CodeQL `37982409220` PASS; Dependency Review `37982409219`
+PASS; Semgrep `37982409360` e Semgrep OSS PASS. PostgreSQL/RLS local não foi
+executado. Não declarar prova de isolamento além dos testes disponíveis.
+R4: revisão humana ainda pendente na PR. Sem aceite de produção. Próximo passo:
+revisão humana e resolução de comentários; merge, migration e deploy seguem
+fora do escopo.
 
 ## Objetivo, risco e limites
 
