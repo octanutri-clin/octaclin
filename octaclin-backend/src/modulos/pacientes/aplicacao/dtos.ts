@@ -409,6 +409,34 @@ export interface EventoProntuarioPacienteDto {
   metadados?: Record<string, unknown>;
 }
 
+export type ExamesForaFaixaResumoDto =
+  | { status: 'indisponivel' }
+  | {
+      status: 'disponivel';
+      coletasAnalisadas: number;
+      limiteColetas: 100;
+      historicoTruncado: boolean;
+      gruposAnalisados: number;
+      gruposNomeLivre: number;
+      semClassificacao: number;
+      duplicadosNaUltimaColeta: number;
+      totalForaFaixa: number;
+      itensLimitados: boolean;
+      itens: Array<{
+        resultadoId: string;
+        coletaId: string;
+        origemAgrupamento: 'catalogo' | 'nome_livre';
+        nome: string;
+        valor: string;
+        unidade: string;
+        coletadaEm: string;
+        limiteInferior?: string;
+        limiteSuperior?: string;
+        referencia?: string;
+        metodo?: string;
+      }>;
+    };
+
 export interface ProntuarioPacienteRespostaDto {
   paciente: PacienteRespostaDto;
   resumo: {
@@ -454,16 +482,14 @@ export interface ProntuarioPacienteRespostaDto {
       referenciaId?: string;
       dataReferencia?: Date;
     };
-    // PB-16 (Fase 273): "os primeiros 10 segundos" do prontuario -- delta
-    // antropometrico, objetivo do plano vigente e condutas vencendo. Sem
-    // "exames fora da faixa": depende do catalogo de marcadores (PB-17),
-    // ainda nao implementado (ver PLANO_FASE_273.md, secao 3). Adesao
-    // declarada recente continua so em `indicadoresRecentes`, sem campo
-    // duplicado aqui.
+    // PB-16 (Fases 273/308): leitura deterministica sem diagnostico. Exames
+    // somente estao presentes quando a identidade/escopo/papel permite ler;
+    // estado indisponivel nao representa ausencia de resultados.
     leituraClinica: {
       deltaUltimaAvaliacao: DeltaAntropometrico[];
       deltaDesdeInicio: DeltaAntropometrico[];
       objetivoPlanoVigente?: string;
+      examesForaFaixa?: ExamesForaFaixaResumoDto;
       condutasVencendo: Array<{
         condutaId: string;
         tipo: TipoCondutaTerapeutica;

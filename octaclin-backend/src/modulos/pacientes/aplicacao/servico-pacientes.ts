@@ -13,6 +13,8 @@ import { PlanoAlimentarVersaoOrm } from '../../planos-alimentares/infraestrutura
 import { PlanoAlimentarEscolhaPacienteOrm } from '../../planos-alimentares/infraestrutura/plano-alimentar-escolha-paciente.orm';
 import { UsuarioAutenticado } from '../../auth/dominio/usuario-autenticado';
 import { resolverProfissionalIdDoUsuario } from '../../../infraestrutura/seguranca/escopo-profissional';
+import { podeLerResumoExames } from './autorizacao-resumo-exames';
+import { obterLeituraExamesResumo } from './leitura-exames-resumo';
 import { ProfissionalOrm } from '../../profissionais/infraestrutura/profissional.orm';
 import { EnvioQuestionarioOrm } from '../../questionarios/infraestrutura/envio-questionario.orm';
 import { QuestionarioOrm } from '../../questionarios/infraestrutura/questionario.orm';
@@ -1037,6 +1039,7 @@ export class ServicoPacientes {
 
       const podeLerPlanos = usuario.permissoes.includes('planos_alimentares.ler');
       const podeLerComunicacoes = usuario.permissoes.includes('comunicacoes.mensagens.ler');
+      const podeLerExames = podeLerResumoExames(tenantId, usuario);
       const [
         consultas,
         envios,
@@ -1048,7 +1051,8 @@ export class ServicoPacientes {
         planoAtual,
         avaliacoesRecentes,
         primeiraAvaliacao,
-        condutasPaciente
+        condutasPaciente,
+        examesForaFaixa
       ] = await Promise.all([
         gerenciador.getRepository(AgendaConsultaOrm).find({
           where: { tenantId, pacienteId },
@@ -1108,7 +1112,10 @@ export class ServicoPacientes {
         }),
         gerenciador.getRepository(CondutaTerapeuticaOrm).find({
           where: { tenantId, pacienteId, arquivadaEm: IsNull() }
-        })
+        }),
+        podeLerExames
+          ? obterLeituraExamesResumo(gerenciador, this.criptografia, tenantId, pacienteId)
+          : Promise.resolve(undefined)
       ]);
 
       const ultimoAtendimento = consultas.find((consulta) => consulta.status === 'concluida');
@@ -1319,7 +1326,8 @@ export class ServicoPacientes {
             deltaUltimaAvaliacao,
             deltaDesdeInicio,
             objetivoPlanoVigente,
-            condutasVencendo
+            condutasVencendo,
+            ...(examesForaFaixa ? { examesForaFaixa } : {})
           },
           preparacaoConsulta
         },

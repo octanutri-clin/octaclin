@@ -2,8 +2,9 @@
 
 ## Estado e entrada para implementação
 
-Planejamento preparado em 2026-10-09, a pedido do proprietário. Código de
-produção e testes da fase ainda não foram alterados. Base observada:
+Planejamento preparado em 2026-10-09, a pedido do proprietário. Este registro
+preserva a base observada no planejamento; a execução da fase está registrada
+na seção “Resultado da implementação” abaixo. Base observada:
 `04e66efc1dcd5d193db82c1da9feafc271f28170`, merge do PR #384/Fase 307.
 Branch: `feature/fase-308-resumo-exames`. Worktree local:
 `/workspace/octaclin/.worktrees/feature-fase-308-resumo-exames`.
@@ -15,6 +16,36 @@ planejamento encerra antes do código. Modelo recomendado para implementar:
 **GPT-6 Luna, esforço Alto**, com uma tarefa por vez e os checkpoints abaixo.
 Não repetir a auditoria completa. Reconfirmar Git, instruções e contratos
 indicados; escalar fato novo de segurança ou incompatibilidade ao usuário.
+
+## Resultado da implementação (2026-10-09)
+
+Implementação realizada na branch `feature/fase-308-resumo-exames` a partir da
+base planejada. O resumo consome PB-17 por leitura mínima tenant-scoped,
+compartilha a classificação de faixa com o writer, e apresenta resultados
+recentes por grupo na seção “Leitura clínica”. Inclui nomes livres agrupados
+conservadoramente, cobertura de 100 coletas, até 10 destaques, duplicidade sem
+escolha e estado indisponível sem payload parcial. O BFF usa
+`Cache-Control: private, no-store`. Nenhuma migration/deploy ou consulta a
+dados reais foi executada.
+
+**Gates locais:** backend Jest integral PASS (263 suítes, 2.379 testes; 3
+suítes/38 testes ignorados pela configuração existente); typecheck/build do
+backend PASS; typecheck/lint do Web PASS (63 avisos de lint, nenhum erro);
+Playwright da Fase 308 PASS (6 testes em desktop/mobile); acessibilidade focada
+do detalhe PASS (2 testes em desktop/mobile); teste BFF focado PASS (4/4);
+scanner local de secrets PASS; `git diff --check` precisa ser repetido após a
+atualização final dos documentos.
+O comando geral `test:authz` foi interrompido após os harnesses relevantes e
+alguns harnesses gerais passarem, pois executa 19 compilações TypeScript
+isoladas em série; o harness do prontuário passou diretamente. A suíte a11y
+completa foi interrompida após três testes de áreas não relacionadas; o teste
+focado do prontuário passou. Web/backend builds passaram; revisão final do diff
+ainda deve ser registrada antes de abrir a PR.
+
+R4: revisão/PR e CI permanecem pendentes. PostgreSQL/RLS local não foi
+executado; não declarar prova de isolamento além dos testes disponíveis. Sem
+aceite de produção. Próximo passo: concluir revisão do diff, atualizar
+evidências, abrir PR e acompanhar os checks obrigatórios.
 
 ## Objetivo, risco e limites
 

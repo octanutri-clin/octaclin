@@ -9,9 +9,10 @@
   CI principal da main `37971450248` aprovado, incluindo Demo local smoke e
   Governança. Aplicação da migration 1064 não verificada neste ciclo.
   Plano em `docs/history/phases/PLANO_FASE_307.md`.
-- Fase 308 tem planejamento/gaps preparados, sem implementação ou aceite:
-  `docs/history/phases/PLANO_FASE_308.md` e `tasks/plan.md`. Código fica para
-  GPT-6 Luna Alto após troca manual e instrução do proprietário.
+- Fase 308 implementada na branch `feature/fase-308-resumo-exames`;
+  revisão/PR e CI pendentes. Não está integrada nem aceita em produção. Sem
+  migration nova. Plano e evidências em `docs/history/phases/PLANO_FASE_308.md`
+  e `tasks/plan.md`.
 
 ## Atualização de estado em 2026-10-05
 

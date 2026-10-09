@@ -5,10 +5,10 @@
 A Fase 306 foi integrada pelo PR #383 (`104a1546`) e a 307 pelo PR #384
 (`04e66efc`), confirmados no GitHub. CI principal da main `37971450248`
 aprovado, incluindo Governança e Demo local smoke; aplicação da migration
-1064 não verificada neste ciclo. Fase 308 tem planejamento e gaps preparados
-na branch `feature/fase-308-resumo-exames`, aguardando troca manual para Luna
-Alto e instrução de implementação. Plano em
-`docs/history/phases/PLANO_FASE_308.md`, tarefas/handoff em `tasks/`.
+1064 não verificada neste ciclo. Fase 308 implementada localmente na branch
+`feature/fase-308-resumo-exames`; revisão/PR e CI pendentes. Sem migration nova
+ou aceite de produção. Plano em `docs/history/phases/PLANO_FASE_308.md`,
+tarefas/handoff em `tasks/`.
 O parágrafo abaixo registra a atualização histórica anterior; para o estado
 vigente prevalecem este bloco, itens 303–308 ao final e o roadmap.
 
@@ -4541,8 +4541,9 @@ auditoria estão ordenados na seção 15 de
   aplicação operacional não verificada neste ciclo.
   Plano e gaps em `docs/history/phases/PLANO_FASE_307.md`.
 - [ ] Fase 308 - exames fora da faixa no resumo clínico, consumindo PB-17.
-  Planejamento/gaps preparados; implementação aguarda troca manual para Luna
-  Alto. Plano em `docs/history/phases/PLANO_FASE_308.md`; checklist `tasks/todo.md`.
+  Implementada na branch; revisão/PR, CI e gates finais pendentes. Sem migration
+  nova e sem aceite de produção. Plano em `docs/history/phases/PLANO_FASE_308.md`;
+  checklist `tasks/todo.md`.
 - [ ] Fase 309 - preferências individuais de notificação interna e digest.
 - [ ] Fase 310 - categorias e entrega explícita de receitas nutricionais ao
   paciente, com versão revisada.

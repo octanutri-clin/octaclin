@@ -1,62 +1,65 @@
-# Handoff — Fase 308 para GPT-6 Luna Alto
+# Handoff — Fase 308 implementada
 
-## Objetivo e contexto suficiente
+## Estado
 
-Implementar exames fora da faixa informada na Leitura clínica do Resumo do
-prontuário, consumindo PB-17. Planejamento e gaps estão fechados em
-[`PLANO_FASE_308.md`](../docs/history/phases/PLANO_FASE_308.md); é a fonte
-completa de algoritmo, DTO, segurança, estados e matriz de testes.
-Lista executável: [`todo.md`](todo.md). Não refazer auditoria ou planejamento.
+Implementação pronta para revisão na branch `feature/fase-308-resumo-exames`,
+base `04e66efc` (PR #384/Fase 307). Worktree:
+`/workspace/octaclin/.worktrees/feature-fase-308-resumo-exames`.
+PR ainda não aberta; preparar um único PR com código, testes e documentação.
+Não houve migration, merge, deploy ou consulta a dados clínicos reais.
 
-Branch `feature/fase-308-resumo-exames`, base `04e66efc` (PR #384 mergeada).
-Worktree: `/workspace/octaclin/.worktrees/feature-fase-308-resumo-exames`.
-Nenhuma PR 308 aberta; plano deve entrar na mesma PR da implementação.
-Reconfirmar `git status`, log, diff e main antes de editar. Um escritor ativo.
+Escopo e decisões aprovadas pelo proprietário estão em
+[`PLANO_FASE_308.md`](../docs/history/phases/PLANO_FASE_308.md); status
+executável em [`todo.md`](todo.md). Não reabrir decisões nem refazer auditoria.
 
-## Decisões que não precisam ser perguntadas novamente
+## Implementado
 
-- Último resultado por grupo, antes de filtrar fora da faixa; novo resultado
-  normal ou não classificável substitui o antigo.
-- Catálogo por ID. Nomes livres por nome + unidade + método, ignorando caixa e
-  whitespace apenas no nome/método. Grupos livres e catálogo separados.
-- 100 coletas recentes, até 10 destaques e avisos dos limites.
-- Duplicidade na última coleta impede escolher/classificar o grupo.
-- Sem migration, provider, portal, `/v1`, alerta ou inferência clínica.
+- Regra única de faixa compartilhada por PB-17 e pelo resumo; rejeita limites
+  inválidos/invertidos, admite limites unilaterais e vírgula decimal.
+- Leitor no mesmo `EntityManager`, com tenant/paciente/soft-delete explícitos,
+  seleção mínima, 100 coletas e teto de 10.000 resultados; falhas de dados
+  cifrados/malformados/overflow retornam indisponível sem parcial.
+- Último resultado por grupo antes da classificação; catálogo por ID e nomes
+  livres por nome + unidade + método; duplicidade sinalizada sem escolha ou
+  recuperação do resultado anterior; até 10 destaques.
+- DTO allowlist, autorização de papel/tenant/`pacientes.ler`, BFF
+  `private, no-store`, cartão acessível na Leitura clínica com retry, limites,
+  origem e navegação para Exames.
+- Fixtures e regressões da fase em backend, BFF, desktop, mobile e axe.
 
-## Pendências e primeira ação
+## Evidências locais
 
-Somente documentos e ambiente preparados. Tarefas 1–8 pendentes. Node 22.23.2
-e pnpm 11.25.0 conferidos; install congelado de backend/Web PASS, sem diff de
-lockfile. O shell padrão continua Node 24.19.0/pnpm 11.19.0; envolver cada
-comando na raiz do worktree com:
+- Backend Jest integral: PASS — 263 suítes e 2.379 testes; 3 suítes/38 testes
+  ignorados pela configuração existente.
+- Backend typecheck e build: PASS. Web typecheck e build: PASS.
+- Web lint: PASS, 0 erros e 63 avisos de lint existentes (incluem regras de
+  efeitos React no prontuário e em outros módulos).
+- Playwright Fase 308: PASS — 6 testes em desktop/mobile.
+- Acessibilidade focada do prontuário: PASS — 2 testes desktop/mobile com axe.
+- Harness BFF do prontuário: PASS — 4/4; `pnpm security:secrets`: PASS.
+- `git diff --check`: repetir após as últimas edições documentais, antes do
+  commit/push.
 
-```bash
-npm exec --yes --package=node@22.23.2 --package=pnpm@11.25.0 -- sh -c 'COMANDO_AQUI'
-```
+## Pendências/gates sem falsa aprovação
 
-Ler regras e começar Tarefa 1 em TDD. Não compartilhar `.next`/node_modules
-com 307. Executar gates de cada checkpoint sequencialmente. Binário Chromium
-existe; lançamento não foi testado. Revalidar se o ambiente for recriado.
+- `pnpm --dir octaclin-web test:authz` foi iniciado, mas interrompido após os
+  harnesses de correlação, origem, autorização, sessões, profissionais,
+  pacientes, agendamento, questionários e dashboard passarem. O comando
+  compila 19 harnesses TypeScript isolados em série; o BFF específico da fase
+  também passou diretamente. Registrar esse comando como parcial/interrompido,
+  não PASS.
+- A suíte a11y completa (272 testes) foi interrompida após três testes gerais;
+  o teste específico do detalhe do prontuário passou em desktop/mobile.
+- PostgreSQL/RLS local: SKIPPED. CI completo, Demo local smoke, Governança e
+  revisão humana/independente aguardam PR. Não declarar produção validada.
+- Monitor de produção separado `37977323201` falhou em “Saude externa”; causa
+  ainda não diagnosticada, sem relação estabelecida com esta fase. Migration
+  1064 da fase anterior não foi verificada operacionalmente neste ciclo.
 
-## Risco e modelo
+## Próxima ação
 
-R4: tenant/carteira/papel/permissão, projeção mínima e PHI fora de logs/cache.
-O plano deve permitir implementar com GPT-6 Luna Alto. Se surgir decisão
-arquitetural nova ou falha de segurança não coberta, avisar o usuário e pedir
-troca manual para GPT-6.1 Sol Alto, pausando o item afetado.
-O proprietário autoriza planejamento neste turno; iniciar código somente
-depois da troca manual e da instrução de implementação.
-
-## Evidências e limites
-
-- PASS: decisões, base/PR/CI, runtime, installs congelados, links locais,
-  `git diff --check` e scanner de secrets conferidos no ciclo.
-- SKIPPED: código, testes funcionais, build e revisão independente, pois ainda
-  é planejamento; banco/deploy não acessados.
-- Main base: CI principal `SUCCESS` (run 37971450248).
-- Monitor produção separado `FAIL` (run 37977323201); causa não diagnosticada.
-- Migration 1064 integrada na 307; aplicação operacional não verificada.
-
-Commits/documentos e gates editoriais: consultar histórico desta branch e
-registro final da transferência na conversa. Ao terminar implementação,
-atualizar esse handoff com PASS/FAIL/NA/SKIPPED, PR, commit e próxima ação.
+Revisar o diff final, confirmar scanner e `git diff --check`, commitar, abrir a
+PR nesta branch e acompanhar cada check pelo run ID. Tratar qualquer falha de
+Governança/Smoke com evidência do job; não editar inventário para mascarar
+validade. Solicitar revisão R4 humana. Merge, migration e deploy permanecem
+fora deste handoff.

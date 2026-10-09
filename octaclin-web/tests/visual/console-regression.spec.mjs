@@ -1076,6 +1076,11 @@ async function prepararProntuarioMockado(page, {
   falhaMateriais = false,
   falhaEvolucoes = false,
   falhaLeituraLongitudinal = false,
+  resumoExamesInicial = {
+    status: 'disponivel', coletasAnalisadas: 0, limiteColetas: 100, historicoTruncado: false,
+    gruposAnalisados: 0, gruposNomeLivre: 0, semClassificacao: 0,
+    duplicadosNaUltimaColeta: 0, totalForaFaixa: 0, itensLimitados: false, itens: []
+  },
   atrasoVersaoHistoricaMs = 0,
   statusPortalInicial = 'convite_pendente'
 } = {}) {
@@ -1099,6 +1104,7 @@ async function prepararProntuarioMockado(page, {
   let leiturasEvolucoes = 0;
   let leiturasTarefas = 0;
   let leiturasLongitudinais = 0;
+  let resumoExames = resumoExamesInicial;
   await page.context().addCookies([
     { name: 'octaclin_access_token', value: 'fake', domain: 'localhost', path: '/' },
     { name: 'octaclin_refresh_token', value: 'fake', domain: 'localhost', path: '/' },
@@ -1646,6 +1652,7 @@ async function prepararProntuarioMockado(page, {
           leituraClinica: {
             deltaUltimaAvaliacao: [],
             deltaDesdeInicio: [],
+            examesForaFaixa: resumoExames,
             condutasVencendo: []
           },
           preparacaoConsulta: {
@@ -2288,6 +2295,7 @@ async function prepararProntuarioMockado(page, {
     leiturasTarefas: () => leiturasTarefas,
     leiturasLongitudinais: () => leiturasLongitudinais,
     definirFalhaLeituraLongitudinal: (valor) => { falhaLeituraLongitudinal = valor; },
+    definirResumoExames: (valor) => { resumoExames = valor; },
     definirOverridePrioridade: (valor) => { overridePrioridade = valor; },
     definirFalhaOverridePrioridade: (valor) => { falhaOverridePrioridade = valor; }
   };
@@ -3747,6 +3755,66 @@ test.describe('prontuario do paciente', () => {
     await expect.poll(() => coletaCriada?.marcadores?.[0]).toEqual(expect.objectContaining({
       catalogoMarcadorId: 'catalogo-1', limiteSuperior: '45', unidade: 'ng/mL', valor: '43'
     }));
+  });
+
+  test('Fase 308 mostra o resultado fora da faixa e abre Exames laboratoriais', async ({ page }) => {
+    await prepararProntuarioMockado(page, {
+      resumoExamesInicial: {
+        status: 'disponivel', coletasAnalisadas: 4, limiteColetas: 100, historicoTruncado: false,
+        gruposAnalisados: 1, gruposNomeLivre: 1, semClassificacao: 0,
+        duplicadosNaUltimaColeta: 0, totalForaFaixa: 1, itensLimitados: false,
+        itens: [{ resultadoId: 'resultado-ferritina', coletaId: 'coleta-4', origemAgrupamento: 'nome_livre',
+          nome: 'Ferritina', valor: '42', unidade: 'ng/mL', coletadaEm: '2026-08-11',
+          limiteInferior: '10', limiteSuperior: '40', referencia: 'Adultos', metodo: 'Quimioluminescência' }]
+      }
+    });
+    await page.goto('/pacientes/paciente-1');
+    const secao = page.getByRole('region', { name: 'Exames fora da faixa informada' });
+    await expect(secao).toBeVisible();
+    await expect(secao.getByText('Último resultado por grupo entre 4 coletas analisadas.')).toBeVisible();
+    await expect(secao.getByText('Ferritina', { exact: true })).toBeVisible();
+    await expect(secao.getByText('42 ng/mL', { exact: true })).toBeVisible();
+    await expect(secao.getByText('Nome livre', { exact: true })).toBeVisible();
+    await expect(secao.getByText('11 de ago. de 2026')).toBeVisible();
+    await secao.getByRole('button', { name: 'Ver exames laboratoriais' }).click();
+    await expect(page.getByRole('tablist', { name: 'Subáreas de Avaliações' }).getByRole('tab', { name: 'Exames laboratoriais' })).toHaveAttribute('aria-selected', 'true');
+    await assertSemOverflowHorizontal(page);
+  });
+
+  test('Fase 308 informa duplicidade, grupos sem classificação e limites de cobertura', async ({ page }) => {
+    await prepararProntuarioMockado(page, {
+      resumoExamesInicial: {
+        status: 'disponivel', coletasAnalisadas: 100, limiteColetas: 100, historicoTruncado: true,
+        gruposAnalisados: 12, gruposNomeLivre: 3, semClassificacao: 2,
+        duplicadosNaUltimaColeta: 1, totalForaFaixa: 12, itensLimitados: true,
+        itens: Array.from({ length: 10 }, (_, indice) => ({ resultadoId: `resultado-${indice}`, coletaId: 'coleta-100',
+          origemAgrupamento: 'catalogo', nome: `Marcador ${indice}`, valor: '9', unidade: 'mg/L',
+          coletadaEm: '2026-08-11', limiteSuperior: '5' }))
+      }
+    });
+    await page.goto('/pacientes/paciente-1');
+    const secao = page.getByRole('region', { name: 'Exames fora da faixa informada' });
+    await expect(secao.getByText(/grupo com resultado duplicado na coleta — consultar Exames/)).toBeVisible();
+    await expect(secao.getByText(/grupos sem classificação/)).toBeVisible();
+    await expect(secao.getByText(/limitado às 100 coletas mais recentes/)).toBeVisible();
+    await expect(secao.getByText('Mostrando 10 de 12 resultados fora da faixa nas coletas analisadas.')).toBeVisible();
+    await assertSemOverflowHorizontal(page);
+  });
+
+  test('Fase 308 permite tentar novamente após resumo indisponível e respeita acesso', async ({ page }) => {
+    const prontuario = await prepararProntuarioMockado(page, { resumoExamesInicial: { status: 'indisponivel' } });
+    await page.goto('/pacientes/paciente-1');
+    const secao = page.getByRole('region', { name: 'Exames fora da faixa informada' });
+    await expect(secao.getByText('Resumo dos exames indisponível.')).toBeVisible();
+    prontuario.definirResumoExames({ status: 'disponivel', coletasAnalisadas: 0, limiteColetas: 100,
+      historicoTruncado: false, gruposAnalisados: 0, gruposNomeLivre: 0, semClassificacao: 0,
+      duplicadosNaUltimaColeta: 0, totalForaFaixa: 0, itensLimitados: false, itens: [] });
+    await secao.getByRole('button', { name: 'Tentar novamente' }).click();
+    await expect(secao.getByText('Nenhum exame registrado.')).toBeVisible();
+
+    await prepararProntuarioMockado(page, { permissoesRemovidas: ['pacientes.ler'] });
+    await page.goto('/pacientes/paciente-1');
+    await expect(page.getByRole('region', { name: 'Exames fora da faixa informada' }).getByText('Acesso não disponível.')).toBeVisible();
   });
 
   test('mostra a preparação da próxima consulta com o que mudou desde o último atendimento (PB-25)', async ({ page }) => {

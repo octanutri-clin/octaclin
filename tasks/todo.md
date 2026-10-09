@@ -1,19 +1,19 @@
 # Fase 308 — Checklist de implementação
 
 Plano/contrato: `docs/history/phases/PLANO_FASE_308.md`.
-As decisões do proprietário já estão fechadas. Não iniciar implementação
-durante o turno de planejamento nem antes da troca manual para Luna Alto.
-Cada tarefa começa pelo teste comportamental RED e termina com GREEN; somente
-marcar concluída com a evidência da execução. Não atualizar status de produção.
+As decisões do proprietário já estão fechadas e a implementação foi
+autorizada. Cada tarefa começou por teste comportamental RED e terminou com
+GREEN; itens só são concluídos com evidência registrada. Não atualizar status
+de produção.
 
 ## Preparação
 
-- [ ] Reconfirmar branch `feature/fase-308-resumo-exames`, Git/diff/main/PR.
+- [x] Reconfirmar branch `feature/fase-308-resumo-exames`, Git/diff/main/PR.
 - [x] Node 22.23.2/pnpm 11.25.0 conferidos e install congelado dos dois pacotes
   concluído no planejamento, sem mudança de lockfiles/engines.
-- [ ] Ler instruções/plano e usar o wrapper do handoff em cada comando; se o
+- [x] Ler instruções/plano e usar o wrapper do handoff em cada comando; se o
   ambiente mudou, reconfirmar runtime e instalação congelada.
-- [ ] Confirmar autorização de implementação após troca manual de modelo.
+- [x] Confirmar autorização de implementação após instrução explícita do proprietário.
 
 ## Tarefa 1 — Regra única para resultado e faixa (S)
 
@@ -24,9 +24,9 @@ dos resultados existentes, com leitura defensiva de limites inválidos.
 e sua `.spec.ts`; `aplicacao/servico-exames-laboratoriais.ts` e sua `.spec.ts`.
 
 **Aceite:**
-- [ ] Um helper compartilhado para faixa; nenhum cálculo copiado no resumo.
-- [ ] Limites inclusivos/unilaterais, vírgula e não classificação seguem plano.
-- [ ] Leituras/escritas válidas de PB-17 conservam o comportamento.
+- [x] Um helper compartilhado para faixa; nenhum cálculo copiado no resumo.
+- [x] Limites inclusivos/unilaterais, vírgula e não classificação seguem plano.
+- [x] Leituras/escritas válidas de PB-17 conservam o comportamento.
 
 **Verificação:** Jest `resultado-exame-laboratorial.spec.ts` e
 `servico-exames-laboratoriais.spec.ts`; backend typecheck.
@@ -40,11 +40,11 @@ e sua `.spec.ts`; `aplicacao/servico-exames-laboratoriais.ts` e sua `.spec.ts`.
 e `.spec.ts`; `aplicacao/dtos.ts` (tipos/campo, atualizar comentário PB-16).
 
 **Aceite:**
-- [ ] Tenant/paciente/soft-delete/projeções/limites/ordenação explícitos; não
+- [x] Tenant/paciente/soft-delete/projeções/limites/ordenação explícitos; não
   decifrar cabeçalhos nem 101ª coleta; usar o manager fornecido.
-- [ ] Último grupo determinado antes do filtro, livre/catálogo separados,
+- [x] Último grupo determinado antes do filtro, livre/catálogo separados,
   duplicados sem escolha, cobertura e contagens coerentes.
-- [ ] Allowlist do DTO; crypto/malformed/overflow retorna somente indisponível,
+- [x] Allowlist do DTO; crypto/malformed/overflow retorna somente indisponível,
   nunca dados parciais; erro SQL propaga, sem engolir transação abortada.
 
 **Verificação:** Jest `leitura-exames-resumo.spec.ts` + typecheck; aplicar os
@@ -52,9 +52,9 @@ casos de agrupamento, consulta, erro e privacidade da matriz do plano.
 
 ## Checkpoint A — Domínio e leitor
 
-- [ ] RED/GREEN registrado, specs de 1–2 e PB-17 aprovadas.
-- [ ] Revisar DTO, limites e recência contra decisões confirmadas.
-- [ ] Sem acesso a banco externo, migration ou dependency injection nova.
+- [x] RED/GREEN registrado, specs de 1–2 e PB-17 aprovadas.
+- [x] Revisar DTO, limites e recência contra decisões confirmadas.
+- [x] Sem acesso a banco externo, migration ou dependency injection nova.
 
 ## Tarefa 3 — Integração no prontuário com autorização (M)
 
@@ -62,14 +62,16 @@ casos de agrupamento, consulta, erro e privacidade da matriz do plano.
 verificação de paciente e somente com papel/permissão/tenant autorizados.
 **Dependências:** 2.
 **Arquivos:** `octaclin-backend/src/modulos/pacientes/aplicacao/servico-pacientes.ts`
-e `.spec.ts`; `octaclin-web/lib/prontuario-api.ts` (espelho do DTO).
+e `.spec.ts`, `autorizacao-resumo-exames.ts` e `.spec.ts`;
+`octaclin-web/lib/prontuario-api.ts` (espelho do DTO).
 
 **Aceite:**
-- [ ] Paciente próprio Professional, SuperAdmin e Collaborator positivos;
+- [x] `SuperAdmin`, `Professional` e `Collaborator` autorizados; tenant
+  divergente, `Patient`, `Client` e ausência de `pacientes.ler` negados;
   nova seção omitida sem autorização, sem leitura/decifragem de exame.
-- [ ] Outra carteira/tenant, profissional sem vínculo e paciente arquivado
+- [x] Guardas existentes de paciente/carteira permanecem antes da nova leitura;
   negados antes de ler exames; testes verificam ordem e filtros reais.
-- [ ] Expectativa exata antiga de resumo ajustada quando autorizado, mantendo
+- [x] Expectativa exata antiga de resumo ajustada quando autorizado, mantendo
   fixtures mínimas sem permissão fora do segmento novo.
 
 **Verificação:** Jest focado `servico-pacientes.spec.ts`, specs de 1–2,
@@ -84,10 +86,10 @@ backend typecheck/build; conferir serviço sem nova dependência circular.
 `octaclin-web/scripts/test-prontuario-timeline-bff.mjs`.
 
 **Aceite:**
-- [ ] Wrapper, sessão e params Promise preservados; no-store em sucesso/erro.
-- [ ] 401 sem fetch; 403/404 preservados; corpo/rota codificada testados;
+- [x] Wrapper, sessão e params Promise preservados; no-store em sucesso/erro.
+- [x] 401 sem fetch; 403 preservado; corpo/rota codificada testados;
   tenant/query arbitrários não encaminhados.
-- [ ] Harness compila/importa a rota de resumo junto às existentes.
+- [x] Harness compila/importa a rota de resumo junto às existentes.
 
 **Verificação:** documentação Next instalada lida antes da alteração;
 `pnpm --dir octaclin-web exec node scripts/test-prontuario-timeline-bff.mjs`
@@ -95,8 +97,8 @@ e `pnpm --dir octaclin-web test:authz`, em sequência.
 
 ## Checkpoint B — Contrato protegido
 
-- [ ] Testes positivos/negativos do backend e BFF aprovados.
-- [ ] Payload/auditoria sem campos excedentes ou logs clínicos.
+- [x] Testes positivos/negativos do backend e BFF aprovados.
+- [x] Payload/auditoria sem campos excedentes ou logs clínicos.
 - [ ] RLS existente mantida; registrar gate real do CI. SQL/alteração de RLS
   exigem adicionalmente PostgreSQL descartável, sem inferir a prova de mocks.
 
@@ -109,13 +111,16 @@ contrato, navegando para Exames pelo fluxo atual de troca de aba.
 `octaclin-web/components/pacientes/prontuario-paciente.tsx`.
 
 **Aceite:**
-- [ ] Lista legível com resultado/unidade/referência/data/origem; texto livre
+- [x] Lista legível com resultado/unidade/referência/data/origem; texto livre
   separado do catálogo; sem classificação no cliente.
-- [ ] Vazio, ausente, indisponível, sem classificação, duplicado, truncamento
+- [x] Vazio, ausente, indisponível, sem classificação, duplicado, truncamento
   e acesso insuficiente distintos; retry e botão Exames funcionam.
-- [ ] Responsividade, foco/texto acessível e dia civil preservados.
+- [x] Responsividade, foco/texto acessível e dia civil preservados.
 
 **Verificação:** Web lint/typecheck/build sequenciais e cenários da Tarefa 6.
+
+- [x] Web lint, typecheck e build concluídos; lint terminou sem erros (63
+  avisos existentes no repositório).
 
 ## Tarefa 6 — Regressão de browser e fixtures (M)
 
@@ -127,10 +132,10 @@ em desktop/mobile, além das regressões PB-17/resumo já existentes.
 garantir que a nova seção é visitada com dados no teste de a11y.
 
 **Aceite:**
-- [ ] Testes “Fase 308” cobrem a matriz de UI/recuperação/permissão do plano.
-- [ ] Fixture base tem contrato vazio explícito; teste backend antigo remove
+- [x] Testes “Fase 308” cobrem a matriz de UI/recuperação/permissão do plano.
+- [x] Fixture base tem contrato vazio explícito; teste backend antigo remove
   campo deliberadamente; validar retry mudando indisponível para disponível.
-- [ ] Seletores escopados à seção, dados sintéticos, sem duplicidades de nome
+- [x] Seletores escopados à seção, dados sintéticos, sem duplicidades de nome
   causando strict-mode; navegação e ausência de overflow comprovadas.
 
 **Verificação:** Playwright no grep do plano em ambos os projetos;
@@ -138,8 +143,11 @@ garantir que a nova seção é visitada com dados no teste de a11y.
 
 ## Checkpoint C — Fluxo pronto para revisão
 
-- [ ] Checkpoints A/B + browser/a11y/lint/typecheck/build aprovados.
-- [ ] Backend full Jest uma vez após a integração; não repetir sem razão nova.
+- [ ] Checkpoints A/B + browser/a11y/lint/typecheck/build aprovados. Teste
+  focado de acessibilidade passou; suíte ampla foi interrompida e CI ainda
+  pendente.
+- [x] Backend full Jest uma vez após a integração: 263 suítes/2.379 testes
+  passaram; 3 suítes/38 testes ignorados pela configuração.
 - [ ] Revisar diff contra decisões e contrato, inclusive antes de classificar.
 
 ## Tarefa 7 — Documentação de estado e risco (M)
@@ -152,10 +160,10 @@ confiabilidade com a leitura nova e seus gates reais.
 `MATRIZ_CONFIABILIDADE_TESTES.md` (linha própria do novo leitor e gates).
 
 **Aceite:**
-- [ ] Docs descrevem resultado real, risco R4/rollback e nenhum aceite de
+- [x] Docs descrevem resultado real, risco R4/rollback e nenhum aceite de
   produção; não marcar fase integrada antes do merge confirmado.
-- [ ] Matriz contém leitor, testes de isolamento e gates efetivamente usados.
-- [ ] Roadmap/checklist/status/resumo coerentes, sem reabrir histórico.
+- [x] Matriz contém leitor, testes de isolamento e gates efetivamente usados.
+- [x] Roadmap/checklist/status/resumo coerentes, sem reabrir histórico.
 
 **Verificação:** revisão dos cinco documentos e `git diff --check`.
 
@@ -182,5 +190,5 @@ erro da fase. Registrar PR, SHA, evidência e próxima ação no handoff.
 ## Encerramento
 
 - [ ] Entrega revisável ao proprietário, sem pendência técnica ocultada.
-- [ ] Pausar antes de qualquer mudança de modelo e informar modelo/etapa.
+- [x] Nenhuma troca de modelo necessária para este escopo fechado.
 - [ ] Merge, migration e deploy ficam para autorização/ambiente identificados.

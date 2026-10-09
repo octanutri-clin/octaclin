@@ -35,6 +35,34 @@ export interface EventoProntuarioPacienteApi {
   metadados?: Record<string, unknown>;
 }
 
+export type ExamesForaFaixaResumoApi =
+  | { status: 'indisponivel' }
+  | {
+      status: 'disponivel';
+      coletasAnalisadas: number;
+      limiteColetas: 100;
+      historicoTruncado: boolean;
+      gruposAnalisados: number;
+      gruposNomeLivre: number;
+      semClassificacao: number;
+      duplicadosNaUltimaColeta: number;
+      totalForaFaixa: number;
+      itensLimitados: boolean;
+      itens: Array<{
+        resultadoId: string;
+        coletaId: string;
+        origemAgrupamento: 'catalogo' | 'nome_livre';
+        nome: string;
+        valor: string;
+        unidade: string;
+        coletadaEm: string;
+        limiteInferior?: string;
+        limiteSuperior?: string;
+        referencia?: string;
+        metodo?: string;
+      }>;
+    };
+
 export interface ProntuarioPacienteApi {
   paciente: PacienteResumo;
   resumo: {
@@ -68,6 +96,7 @@ export interface ProntuarioPacienteApi {
       deltaUltimaAvaliacao: DeltaAntropometricoApi[];
       deltaDesdeInicio: DeltaAntropometricoApi[];
       objetivoPlanoVigente?: string;
+      examesForaFaixa?: ExamesForaFaixaResumoApi;
       condutasVencendo: Array<{
         condutaId: string;
         tipo: 'meta' | 'orientacao' | 'suplemento' | 'produto' | 'formula_manipulada';

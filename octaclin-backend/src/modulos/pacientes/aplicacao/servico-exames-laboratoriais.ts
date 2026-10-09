@@ -3,6 +3,7 @@ import { EntityManager, In, IsNull } from 'typeorm';
 import { ExecutorTenant } from '../../../infraestrutura/banco-dados/executor-tenant';
 import { CriptografiaDadosSensiveis } from '../../../infraestrutura/seguranca/criptografia-dados-sensiveis';
 import { resolverProfissionalIdDoUsuario } from '../../../infraestrutura/seguranca/escopo-profissional';
+import { numeroDecimal, situacaoFaixa, type ResultadoMarcador, type SituacaoFaixa } from '../dominio/resultado-exame-laboratorial';
 import { UsuarioAutenticado } from '../../auth/dominio/usuario-autenticado';
 import { CriarColetaExameLaboratorialDto } from './dtos';
 import { resolverConsultaOpcional } from './vinculo-consulta';
@@ -11,32 +12,11 @@ import { MarcadorExameLaboratorialOrm } from '../infraestrutura/marcador-exame-l
 import { CatalogoMarcadorExameOrm } from '../infraestrutura/catalogo-marcador-exame.orm';
 import { PacienteOrm } from '../infraestrutura/paciente.orm';
 
-type ResultadoMarcador = {
-  nome: string; valor: string; unidade?: string; referencia?: string; metodo?: string;
-  limiteInferior?: string; limiteSuperior?: string;
-};
 type DefinicaoCatalogo = { nome: string; unidade?: string; limiteInferior?: string; limiteSuperior?: string };
-type SituacaoFaixa = 'dentro_da_faixa' | 'fora_da_faixa';
 export type ColetaExameLaboratorialResposta = {
   id: string; coletadaEm: string; recebidaEm?: string; laboratorio?: string; observacoes?: string; consultaId?: string;
   marcadores: Array<ResultadoMarcador & { id: string; catalogoMarcadorId?: string; situacaoFaixa?: SituacaoFaixa }>;
 };
-
-function numeroDecimal(valor: string | undefined): number | undefined {
-  if (!valor || !/^-?\d+(?:[.,]\d+)?$/.test(valor.trim())) return undefined;
-  const numero = Number(valor.trim().replace(',', '.'));
-  return Number.isFinite(numero) ? numero : undefined;
-}
-
-function situacaoFaixa(resultado: ResultadoMarcador): SituacaoFaixa | undefined {
-  if (!resultado.unidade?.trim()) return undefined;
-  const valor = numeroDecimal(resultado.valor);
-  const inferior = numeroDecimal(resultado.limiteInferior);
-  const superior = numeroDecimal(resultado.limiteSuperior);
-  if (valor === undefined || (inferior === undefined && superior === undefined)) return undefined;
-  return (inferior !== undefined && valor < inferior) || (superior !== undefined && valor > superior)
-    ? 'fora_da_faixa' : 'dentro_da_faixa';
-}
 
 @Injectable()
 export class ServicoExamesLaboratoriais {

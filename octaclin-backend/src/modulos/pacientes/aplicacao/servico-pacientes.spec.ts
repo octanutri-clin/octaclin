@@ -15,6 +15,8 @@ import { RespostaValorOrm } from '../../questionarios/infraestrutura/resposta-va
 import { WebhookAssinaturaOrm } from '../../integracoes/infraestrutura/webhook-assinatura.orm';
 import { AcompanhamentoTarefaOrm } from '../infraestrutura/acompanhamento-tarefa.orm';
 import { AvaliacaoAntropometricaOrm } from '../infraestrutura/avaliacao-antropometrica.orm';
+import { ColetaExameLaboratorialOrm } from '../infraestrutura/coleta-exame-laboratorial.orm';
+import { MarcadorExameLaboratorialOrm } from '../infraestrutura/marcador-exame-laboratorial.orm';
 import { CondutaTerapeuticaOrm } from '../infraestrutura/conduta-terapeutica.orm';
 import { CondutaTerapeuticaVersaoOrm } from '../infraestrutura/conduta-terapeutica-versao.orm';
 import { EvolucaoClinicaOrm } from '../infraestrutura/evolucao-clinica.orm';
@@ -817,6 +819,8 @@ describe('ServicoPacientes', () => {
       criadoEm: new Date('2026-07-01T10:00:00.000Z'),
       atualizadoEm: new Date('2026-07-21T10:00:00.000Z')
     };
+    const coletasFind = jest.fn(async () => []);
+    const marcadoresFind = jest.fn(async () => []);
     const repositorios = new Map<unknown, Record<string, unknown>>([
       [
         PacienteOrm,
@@ -841,6 +845,8 @@ describe('ServicoPacientes', () => {
           ])
         }
       ],
+      [ColetaExameLaboratorialOrm, { find: coletasFind }],
+      [MarcadorExameLaboratorialOrm, { find: marcadoresFind }],
       [
         EnvioQuestionarioOrm,
         {
@@ -1020,6 +1026,9 @@ describe('ServicoPacientes', () => {
         condutasVencendo: []
       }
     });
+    expect(prontuario.resumo.leituraClinica.examesForaFaixa).toBeUndefined();
+    expect(coletasFind).not.toHaveBeenCalled();
+    expect(marcadoresFind).not.toHaveBeenCalled();
     expect(prontuario.linhaDoTempo.map((evento: { tipo: string }) => evento.tipo)).toEqual([
       'mensagem',
       'consulta',
@@ -1567,6 +1576,8 @@ describe('ServicoPacientes', () => {
       criadoEm: new Date('2026-01-01T10:00:00.000Z'),
       atualizadoEm: new Date('2026-01-01T10:00:00.000Z')
     };
+    const coletasFind = jest.fn(async () => []);
+    const marcadoresFind = jest.fn(async () => []);
     const avaliacaoAtual = {
       id: 'avaliacao-atual',
       pacienteId: 'paciente-1',
@@ -1626,6 +1637,8 @@ describe('ServicoPacientes', () => {
       [MensagemNotificacaoOrm, { find: jest.fn(async () => []) }],
       [EvolucaoClinicaOrm, { find: jest.fn(async () => []) }],
       [AcompanhamentoTarefaOrm, { find: jest.fn(async () => []) }],
+      [ColetaExameLaboratorialOrm, { find: coletasFind }],
+      [MarcadorExameLaboratorialOrm, { find: marcadoresFind }],
       [
         PlanoAlimentarOrm,
         {
@@ -1698,8 +1711,16 @@ describe('ServicoPacientes', () => {
 
     const prontuario = await servico.obterProntuario('tenant-1', 'paciente-1', {
       ...usuarioColaborador,
-      permissoes: ['planos_alimentares.ler']
+      permissoes: ['pacientes.ler', 'planos_alimentares.ler']
     });
+
+    expect(prontuario.resumo.leituraClinica.examesForaFaixa).toEqual({
+      status: 'disponivel', coletasAnalisadas: 0, limiteColetas: 100, historicoTruncado: false,
+      gruposAnalisados: 0, gruposNomeLivre: 0, semClassificacao: 0, duplicadosNaUltimaColeta: 0,
+      totalForaFaixa: 0, itensLimitados: false, itens: []
+    });
+    expect(coletasFind).toHaveBeenCalledTimes(1);
+    expect(marcadoresFind).not.toHaveBeenCalled();
 
     expect(prontuario.resumo.leituraClinica.deltaUltimaAvaliacao).toEqual([
       { campo: 'pesoKg', anterior: 80, atual: 78, variacao: -2 },

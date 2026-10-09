@@ -55,14 +55,12 @@ Atualizado em 2026-10-09.
   Demo local smoke. Aplicação da migration aditiva 1064 não verificada neste
   ciclo; merge/CI não comprovam produção. Plano em
   `docs/history/phases/PLANO_FASE_307.md`.
-- Fase 308 com planejamento e análise de gaps preparados, na branch
-  `feature/fase-308-resumo-exames`; implementação aguarda troca manual para
-  GPT-6 Luna Alto e instrução do proprietário. Plano em
-  `docs/history/phases/PLANO_FASE_308.md`; handoff em `tasks/plan.md` e
-  tarefas em `tasks/todo.md`. Último resultado por grupo, nomes livres
-  conservadores, 100 coletas e até 10 destaques, duplicidades explícitas.
-  Sem migration nova. Monitor produção `37977323201` falhou em “Saude externa”;
-  causa não diagnosticada neste planejamento, sem declaração de health.
+- Fase 308 implementada localmente na branch `feature/fase-308-resumo-exames`;
+  revisão/PR e CI pendentes. O resumo do prontuário consome PB-17 com leitura
+  autorizada por tenant/carteira, classificação compartilhada, nomes livres
+  agrupados conservadoramente e limites explícitos de 100 coletas/10 destaques.
+  Sem migration nova; nenhum aceite de produção. Plano, handoff e checklist em
+  `docs/history/phases/PLANO_FASE_308.md` e `tasks/`.
 - Sequência das Fases 302–320 em
   `docs/product/ROADMAP_POS_AUDITORIA_FASES_302_320.md`. O PB-30 está planejado na Fase 316, condicionado a privacidade,
   jurídico e operação.

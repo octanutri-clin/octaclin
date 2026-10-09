@@ -6,6 +6,7 @@ import { ServicoPacientes } from '../../modulos/pacientes/aplicacao/servico-paci
 import { AcompanhamentoTarefaOrm } from '../../modulos/pacientes/infraestrutura/acompanhamento-tarefa.orm';
 import { AvaliacaoAntropometricaOrm } from '../../modulos/pacientes/infraestrutura/avaliacao-antropometrica.orm';
 import { CondutaTerapeuticaOrm } from '../../modulos/pacientes/infraestrutura/conduta-terapeutica.orm';
+import { ColetaExameLaboratorialOrm } from '../../modulos/pacientes/infraestrutura/coleta-exame-laboratorial.orm';
 import { EvolucaoClinicaOrm } from '../../modulos/pacientes/infraestrutura/evolucao-clinica.orm';
 import { PacienteOrm } from '../../modulos/pacientes/infraestrutura/paciente.orm';
 import { PlanoAlimentarOrm } from '../../modulos/planos-alimentares/infraestrutura/plano-alimentar.orm';
@@ -177,6 +178,7 @@ function montarResumoSintetico(quantidadePorFonte: number) {
     })],
     [QuestionarioOrm, repositorioCom('find', questionarios)],
     [AvaliacaoAntropometricaOrm, repositorioCom('find', [])],
+    [ColetaExameLaboratorialOrm, repositorioCom('find', [])],
     [CondutaTerapeuticaOrm, repositorioCom('find', [])],
     [PlanoAlimentarEscolhaPacienteOrm, repositorioCom('count', 0)]
   ]);
@@ -210,9 +212,9 @@ describe('benchmark sintetico do prontuario', () => {
     const resumoPequeno = await pequeno.servico.obterProntuario('tenant-1', 'paciente-1', usuarioSuperAdmin);
     const resumoCarregado = await carregado.servico.obterProntuario('tenant-1', 'paciente-1', usuarioSuperAdmin);
 
-    expect(totalOperacoes(pequeno.repositorios)).toBe(15);
-    expect(totalOperacoes(carregado.repositorios)).toBe(15);
-    expect(carregado.gerenciador.getRepository).toHaveBeenCalledTimes(15);
+    expect(totalOperacoes(pequeno.repositorios)).toBe(16);
+    expect(totalOperacoes(carregado.repositorios)).toBe(16);
+    expect(carregado.gerenciador.getRepository).toHaveBeenCalledTimes(16);
     expect(carregado.repositorios.get(QuestionarioOrm)?.find).toHaveBeenCalledTimes(1);
     expect(resumoPequeno.linhaDoTempo).toHaveLength(7);
     expect(resumoCarregado.linhaDoTempo).toHaveLength(80);
