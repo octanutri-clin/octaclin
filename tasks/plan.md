@@ -1,28 +1,34 @@
-# Handoff — Fase 309: planejamento e análise de gaps
+# Handoff — Fase 309: implementação e validações
 
 ## Branch / objetivo
 
 Branch `feature/fase-309-preferencias-notificacoes`, base `1dec202f` (PR #385,
 Fase 308 MERGED, confirmado no GitHub em 2026-10-09). Worktree:
 `/workspace/octaclin/.worktrees/feature-fase-309-preferencias-notificacoes`.
-Uma branch e uma PR para planejamento + implementação. Ainda sem PR da 309.
+Uma branch contém planejamento + implementação. PR da 309 ainda pendente de
+abertura; não houve merge.
 
 Implementar preferências próprias para classes opcionais, digest interno e
 e-mail opt-in, preservando avisos obrigatórios, destinatários e isolamento.
 Plano completo e decisões: [PLANO_FASE_309.md](../docs/history/phases/PLANO_FASE_309.md).
 Sequência executável: [todo.md](todo.md).
 
-## Concluído
+## Implementado
 
 - Merge 308 reconfirmado e documentação de estado reconciliada nesta branch.
 - Mapeados writer transacional, destinatários, índice dedup, RLS, serviço,
   controlador, sino, BFFs, transporte SMTP/Gmail e gates web/worker.
-- Fixados snapshots prospectivos, geração transacional por usuário,
-  contratos, migration aditiva prevista 1065, DTO mínimo, rollback e testes.
-- Definidos checkpoints para o Luna executar uma etapa por vez sem refazer gaps.
-- Nenhum código funcional, migration, e-mail real ou deploy executado.
+- Snapshots prospectivos, geração transacional com lock do usuário, agregação,
+  DTO mínimo, marcação de resumos, preferências protegidas e cancelamento.
+- Migration aditiva 1065, entidades, constraints/FKs compostas, índices e FORCE
+  RLS registrados no TypeORM. `down` recusa rollback destrutivo.
+- Processador gated por worker/all usa o AdaptadorEmailSmtp; claim persistido,
+  opt-in e destinatário resolvidos no backend, sem retry incerto.
+- BFFs no-store, página protegida, API/UI, mock da demo local, harness BFF,
+  Playwright desktop/mobile + axe e prova concorrente Postgres incluídos.
+- Nenhuma migration fora do banco descartável, e-mail real ou deploy executado.
 
-## Decisões fechadas e implementação pendente
+## Decisões implementadas
 
 - Obrigatórios: mensagens, solicitações de agendamento e falhas de envio.
 - Opcionais: formulários respondidos, tarefas concluídas e automações executadas;
@@ -33,22 +39,24 @@ Sequência executável: [todo.md](todo.md).
 - Desligar e-mail cancela envios não iniciados e eventos ainda não resumidos;
   reativar vale só para novos eventos. Modos/fusos/resumos internos preservados.
 
-Contrato detalhado, estados e testes no plano. Não há perguntas pendentes.
-Código aguardando troca manual para GPT-6 Luna alto.
+Contrato, estados, riscos e rollback detalhados em
+`docs/history/phases/PLANO_FASE_309.md`. Não há perguntas pendentes.
 
 ## Validações deste ciclo
 
-- PASS: `git diff --check`, `pnpm security:secrets`, matriz de confiabilidade,
-  allowlist/tooling de agentes, redação de auditoria (24 testes).
-- Ambiente dos checks editoriais: Node 24.19.0/pnpm 11.19.0; o repositório
-  requer Node 22/pnpm 11.25.0. Não usar estes resultados como build/runtime
-  validado. Sucessor configura as versões declaradas antes dos checks de código.
-- NA: testes/build de comportamento da 309, pois só há planejamento/documentos.
-- SKIPPED: PostgreSQL, provider, staging/produção e envio real; nenhum alvo
-  autorizado/consultado. Migration 1065 prevista, não criada nem aplicada.
-- CI pós-merge 308 `37987983251`: em andamento, Demo local smoke pendente;
-  demais jobs observados PASS. Semgrep `37987983322`, Trivy `37987983323`,
-  CodeQL `37987983326` PASS sobre `1dec202f`. Reconsultar antes de implementar.
+- PASS: Node 22.23.3/pnpm 11.25.0; backend typecheck/build; Jest integral: 267
+  suítes e 2.416 testes passaram (3 suítes/40 testes ignorados). Playwright
+  Fase 309: 6/6 desktop/mobile, incluindo axe; Web lint/typecheck/build;
+  harness BFF, scanner secrets, inventário, confiabilidade, guardas, migration
+  governance e tooling de agentes.
+- PASS: CI pós-merge 308 `37987983251`, Semgrep `37987983322`, Trivy
+  `37987983323` e CodeQL `37987983326`, todos `success` sobre base `1dec202f`.
+- PASS: `test:authz` integral, incluindo o harness BFF da Fase 309.
+- FAIL (ambiente): PostgreSQL Testcontainers excedeu 180s no hook `beforeAll`
+  sem iniciar container. RLS, migration em PostgreSQL real e concorrência não
+  foram validados; o teste não conta como PASS.
+- SKIPPED/NA: provider, staging/produção, envio real e aplicação fora de banda;
+  migration 1065 não foi aplicada a banco operacional. Nenhum alvo consultado.
 - Monitor produção `37977323201`: FAIL em saúde externa; causa não diagnosticada
   e sem vínculo demonstrado com a fase. Não declarar aceite de produção.
 
@@ -57,17 +65,13 @@ Código aguardando troca manual para GPT-6 Luna alto.
 Planejamento: `docs/history/phases/PLANO_FASE_309.md`, `tasks/plan.md`,
 `tasks/todo.md`. Reconciliação: status, checklist, resumo, roadmap e adendo ao
 plano histórico 308. Código integrado de referência: merge `1dec202f`.
-Rascunho inicial `4682e964`; decisões fechadas no follow-up de planejamento
-(consultar `git log -1`).
-Sucessor confere `git status`, `git log`, diff e PR antes de escrever.
+Commits de planejamento: `4682e964` e `c9f700d2`. Os arquivos de implementação
+estão no working tree até a criação do commit final e PR; conferir `git status`,
+diff, testes finais e estado remoto antes de atualizar esta seção.
 
-## Próxima ação exata e troca de modelo
+## Próxima ação
 
-Trocar manualmente para **GPT-6 Luna alto** e instruir: “Implemente a Fase 309
-seguindo o handoff em tasks/plan.md”. Antes do código, o Luna reconfirma Git,
-instruções, runtime declarado e CI pós-merge. Não refaz a auditoria nem reabre
-as decisões aprovadas. Começa pelos testes de política/calendário do item 1.
-Uma etapa por vez e uma PR com plano+código. R4: revisão independente e
+Concluir os checks pendentes, revisar o diff, atualizar evidências, commitar,
+fazer push da branch e abrir uma PR. Não mesclar. R4: revisão independente e
 aplicação da migration fora de banda são gates separados; produção não é
-aprovada por mocks ou CI. Não iniciar implementação enquanto o usuário não
-concluir a troca e solicitar execução.
+aprovada por mocks ou CI.

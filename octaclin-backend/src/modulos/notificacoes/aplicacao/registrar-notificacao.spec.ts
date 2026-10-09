@@ -3,9 +3,11 @@ import { PacienteOrm } from '../../pacientes/infraestrutura/paciente.orm';
 import { ProfissionalOrm } from '../../profissionais/infraestrutura/profissional.orm';
 import { UsuarioOrm } from '../../usuarios/infraestrutura/usuario.orm';
 import { registrarNotificacao } from './registrar-notificacao';
+import { PreferenciaNotificacaoUsuarioOrm } from '../infraestrutura/preferencia-notificacao-usuario.orm';
 
 function criarGerenciador(opcoes?: {
   usuarios?: Array<{ id: string; role: string }>;
+  preferencias?: Array<Partial<PreferenciaNotificacaoUsuarioOrm>>;
   profissionalDoPaciente?: string;
   usuarioDoProfissional?: string | null;
 }) {
@@ -34,18 +36,22 @@ function criarGerenciador(opcoes?: {
   const repositorioUsuarios = {
     find: jest.fn(async () => opcoes?.usuarios ?? [{ id: 'usuario-admin', role: 'SuperAdmin' }])
   };
+  const repositorioPreferencias = {
+    find: jest.fn(async (_criterio: Record<string, unknown>) => opcoes?.preferencias ?? [])
+  };
 
   const gerenciador = {
     getRepository: jest.fn((entidade: { name: string }) => {
       if (entidade === PacienteOrm) return repositorioPacientes;
       if (entidade === ProfissionalOrm) return repositorioProfissionais;
       if (entidade === UsuarioOrm) return repositorioUsuarios;
+      if (entidade === PreferenciaNotificacaoUsuarioOrm) return repositorioPreferencias;
       throw new Error(`Repositorio nao mapeado: ${entidade.name}`);
     }),
     createQueryBuilder: jest.fn(() => construtor)
   } as unknown as EntityManager;
 
-  return { gerenciador, linhas, construtor, repositorioPacientes, repositorioProfissionais };
+  return { gerenciador, linhas, construtor, repositorioPacientes, repositorioProfissionais, repositorioPreferencias };
 }
 
 const evento = {
@@ -128,6 +134,52 @@ describe('registrarNotificacao', () => {
     await registrarNotificacao(gerenciador, 'tenant-1', evento);
 
     expect(construtor.orIgnore).toHaveBeenCalled();
+  });
+
+  it('congela modo diario e opt-in de email no snapshot por destinatario', async () => {
+    const { gerenciador, linhas, repositorioPreferencias } = criarGerenciador({
+      usuarios: [{ id: 'usuario-admin', role: 'SuperAdmin' }],
+      preferencias: [{
+        usuarioId: 'usuario-admin',
+        modoTarefaConcluida: 'diario',
+        timezone: 'UTC',
+        emailResumo: true
+      }]
+    });
+
+    await registrarNotificacao(gerenciador, 'tenant-1', { ...evento, tipo: 'tarefa_concluida' });
+
+    expect(repositorioPreferencias.find).toHaveBeenCalledTimes(1);
+    expect(repositorioPreferencias.find.mock.calls[0][0].where).toMatchObject({ tenantId: 'tenant-1' });
+    expect(linhas[0]).toMatchObject({
+      usuarioId: 'usuario-admin',
+      modoEntrega: 'diario',
+      timezoneResumo: 'UTC',
+      emailResumo: true,
+      emailCanceladoEm: null
+    });
+    expect(linhas[0].resumoPrevistoEm).toBeInstanceOf(Date);
+  });
+
+  it('mantem avisos obrigatorios imediatos mesmo com preferencia legada', async () => {
+    const { gerenciador, linhas } = criarGerenciador({
+      usuarios: [{ id: 'usuario-admin', role: 'SuperAdmin' }],
+      preferencias: [{
+        usuarioId: 'usuario-admin',
+        modoFormularioRespondido: 'silenciado',
+        timezone: 'UTC',
+        emailResumo: true
+      }]
+    });
+
+    await registrarNotificacao(gerenciador, 'tenant-1', evento);
+
+    expect(linhas[0]).toMatchObject({
+      modoEntrega: 'imediato',
+      timezoneResumo: null,
+      resumoPrevistoEm: null,
+      emailResumo: false
+    });
   });
 
   it('ignora profissional arquivado sem usuario vinculado', async () => {

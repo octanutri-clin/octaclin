@@ -126,7 +126,14 @@ const estado = {
       recursoId: pacienteId,
       criadoEm: new Date().toISOString()
     }
-  ]
+  ],
+  preferenciasNotificacoes: {
+    modos: { formulario_respondido: 'imediato', tarefa_concluida: 'imediato', automacao_executada: 'imediato' },
+    timezone: 'America/Sao_Paulo', emailResumo: false,
+    classesElegiveis: ['formulario_respondido', 'tarefa_concluida', 'automacao_executada'],
+    tiposObrigatorios: ['mensagem_recebida', 'solicitacao_agendamento', 'falha_envio']
+  },
+  resumosNotificacoes: []
 };
 
 function json(resposta, status, corpo) {
@@ -134,7 +141,7 @@ function json(resposta, status, corpo) {
     'Content-Type': 'application/json',
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-    'Access-Control-Allow-Methods': 'GET, POST, PATCH, DELETE, OPTIONS'
+    'Access-Control-Allow-Methods': 'GET, POST, PUT, PATCH, DELETE, OPTIONS'
   });
   resposta.end(JSON.stringify(corpo));
 }
@@ -281,6 +288,34 @@ const servidor = http.createServer(async (requisicao, resposta) => {
 
     if (requisicao.method === 'POST' && url.pathname === '/auth/renovar') return json(resposta, 200, criarTokens());
     if (requisicao.method === 'POST' && url.pathname === '/auth/sair') return json(resposta, 204, {});
+
+    if (requisicao.method === 'GET' && url.pathname === '/notificacoes/preferencias') {
+      return json(resposta, 200, estado.preferenciasNotificacoes);
+    }
+    if (requisicao.method === 'PUT' && url.pathname === '/notificacoes/preferencias') {
+      const body = await lerJson(requisicao);
+      estado.preferenciasNotificacoes = {
+        ...estado.preferenciasNotificacoes,
+        modos: body.modos,
+        timezone: body.timezone,
+        emailResumo: body.emailResumo
+      };
+      return json(resposta, 200, estado.preferenciasNotificacoes);
+    }
+    if (requisicao.method === 'GET' && url.pathname === '/notificacoes') {
+      return json(resposta, 200, { naoLidas: estado.resumosNotificacoes.filter((item) => !item.lidoEm).length, itens: [], resumos: estado.resumosNotificacoes.slice(0, 10) });
+    }
+    if (requisicao.method === 'POST' && url.pathname === '/notificacoes/resumos/gerar') {
+      return json(resposta, 200, { gerado: false });
+    }
+    if (requisicao.method === 'POST' && url.pathname === '/notificacoes/lidas') {
+      const body = await lerJson(requisicao);
+      const ids = new Set(body.idsResumos ?? []);
+      for (const resumo of estado.resumosNotificacoes) {
+        if (!body.idsResumos || ids.has(resumo.id)) resumo.lidoEm ??= new Date().toISOString();
+      }
+      return json(resposta, 200, { marcadas: 0, resumosMarcados: ids.size });
+    }
 
     if (requisicao.method === 'GET' && url.pathname === '/pacientes') {
       registrarAuditoria('pacientes.listar_dados_sensiveis', 'paciente', undefined, { total: estado.pacientes.length });

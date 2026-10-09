@@ -58,14 +58,16 @@ Atualizado em 2026-10-09.
 - Fase 308 integrada pelo PR #385 (merge `1dec202f`, confirmado no GitHub
   em 2026-10-09): resumo factual de exames por último resultado, incluindo
   nomes livres e limites explícitos. Sem migration nova. CI pós-merge
-  `37987983251` em andamento nesta consulta; Web/backend/Governança aprovados,
-  Demo local smoke pendente. Sem aceite de produção. Histórico em
+  `37987983251` concluído com sucesso; Semgrep `37987983322`, Trivy
+  `37987983323` e CodeQL `37987983326` também concluídos com sucesso. Sem
+  aceite de produção. Histórico em
   `docs/history/phases/PLANO_FASE_308.md`.
-- Fase 309 em planejamento e análise de gaps na branch
-  `feature/fase-309-preferencias-notificacoes`: preferências por usuário,
-  resumo interno e e-mail opt-in. Código ainda não implementado; decisões de produto
-  fechadas e handoff pronto para Luna alto. Plano em `docs/history/phases/PLANO_FASE_309.md`,
-  handoff/checklist em `tasks/`. Migration aditiva prevista; não executada.
+- Fase 309 implementada na branch `feature/fase-309-preferencias-notificacoes`;
+  PR pendente de abertura. Preferências por usuário, resumo interno e e-mail
+  opt-in. Migration aditiva 1065 registrada no código; não aplicada fora de
+  banco descartável. Testes focados, build e navegadores registrados no handoff.
+  Não representa deploy nem aceite de produção. Plano em
+  `docs/history/phases/PLANO_FASE_309.md`, handoff/checklist em `tasks/`.
 - Sequência das Fases 302–320 em
   `docs/product/ROADMAP_POS_AUDITORIA_FASES_302_320.md`. O PB-30 está planejado na Fase 316, condicionado a privacidade,
   jurídico e operação.

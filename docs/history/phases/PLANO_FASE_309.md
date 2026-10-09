@@ -2,19 +2,20 @@
 
 ## Estado e handoff
 
-Planejamento e análise de gaps em 2026-10-09. Base: `1dec202f`, merge da
+Planejamento e análise de gaps em 2026-10-09; implementação nesta branch.
+Base: `1dec202f`, merge da
 Fase 308/PR #385 confirmado no GitHub. Branch única:
 `feature/fase-309-preferencias-notificacoes`; worktree:
 `/workspace/octaclin/.worktrees/feature-fase-309-preferencias-notificacoes`.
-Esta branch receberá plano e implementação na mesma PR. Código ainda não
-implementado; nenhuma migration, envio real ou ação de produção executados.
-Entrada do sucessor: `tasks/plan.md`; execução: `tasks/todo.md`.
+Plano e implementação seguem na mesma PR, ainda não aberta. Código funcional e
+migration 1065 registrados; nenhum envio real, migration operacional ou ação
+de produção executados. Handoff/evidências atuais: `tasks/plan.md` e
+`tasks/todo.md`.
 
-Planejamento: GPT-6.1 Sol médio. Implementação prevista: GPT-6 Luna alto,
-uma etapa por vez, sem refazer a auditoria. A troca é manual e exige aviso e
-pausa. Se surgir incompatibilidade nos contratos, ou alteração de autorização,
-crypto, transporte externo ou rollback que exceda este plano, registrar o fato
-e solicitar retorno ao Sol; não resolver enfraquecendo controles.
+Planejamento: GPT-6.1 Sol médio. Implementação executada após a troca manual
+para GPT-6 Luna alto. Se surgir incompatibilidade nos contratos, ou alteração
+de autorização, crypto, transporte externo ou rollback que exceda este plano,
+registrar o fato e solicitar retorno ao Sol; não resolver enfraquecendo controles.
 
 ## Decisões do proprietário
 
@@ -37,8 +38,8 @@ Confirmadas neste ciclo:
 - Desligar e-mail cancela tudo ainda não iniciado, inclusive elegibilidade de
   eventos antigos sem resumo. Resumos internos e modos/fusos ficam intactos.
 
-Todas as decisões de produto estão fechadas. Implementação aguarda a troca
-manual para GPT-6 Luna alto; nenhuma pergunta de produto permanece pendente.
+Todas as decisões de produto estão fechadas e implementadas. Nenhuma pergunta
+de produto permanece pendente.
 
 ## Escopo e risco
 
@@ -100,7 +101,7 @@ Configuração concorrente: o snapshot usado é o lido na transação que regist
 o evento. Uma troca de preferência não reclassifica snapshots existentes.
 Reentrega do mesmo evento preserva a linha original pelo índice único.
 
-## Persistência proposta — migration 1065
+## Persistência implementada — migration 1065
 
 Reconfirmar que 1065 está livre antes de escrever; nunca renumerar migration
 já integrada. Uma migration aditiva, com comentário `@aplicacao fora-de-banda`,
@@ -378,16 +379,29 @@ Lockfiles observados: Next 16.3.8, React 19.3.0, TypeORM 1.1.1 e cron-parser
 
 - Guia oficial Next instalado na worktree 308:
   `octaclin-web/node_modules/next/dist/docs/01-app/01-getting-started/15-route-handlers.md`
-  (lido neste ciclo): métodos mutáveis separados de GET, Route Handlers em app.
-  Sucessor lê guia da própria instalação antes de implementar.
+  (lido no planejamento): métodos mutáveis separados de GET, Route Handlers em app.
 - https://raw.githubusercontent.com/harrisiirak/cron-parser/v5.10.1/README.md
   (consultado): `currentDate`, `tz` e DST; usar dependência existente.
-- TypeORM: `ExecutorTenant` observado usa `DataSource.transaction` e o mesmo
-  EntityManager; locks já usados por serviços existentes. Documentação remota
-  de transactions indisponível nesta consulta; verificar API instalada e guia
-  oficial antes de escrever trava/CTE. Não declarar verificação remota concluída.
+- TypeORM: `ExecutorTenant` usa `DataSource.transaction` com o mesmo
+  EntityManager; lock pessimistico está exercitado no teste Postgres abaixo se
+  o Testcontainers concluir. Não declarar prova real se o container não iniciar.
 
-Planejamento não executa teste de comportamento novo. Checks editoriais e
-estado final do CI serão registrados no handoff. Produção, provider e banco
-externo não foram consultados. Monitor produção `37977323201` tem FAIL em saúde
-externa, sem causa diagnosticada ou vínculo demonstrado com esta fase.
+## Estado de implementação e evidências
+
+Implementação registrada nesta branch; PR ainda pendente. A migration 1065 é
+aditiva e o rollback preserva os dados por recusa explícita. Nenhuma aplicação
+operacional da migration ou envio real foi feito.
+
+- PASS: Node 22.23.3/pnpm 11.25.0; backend typecheck/build; Jest integral: 267 suítes/2.416 testes passaram (3 suítes/40 testes ignorados);
+  Playwright 6/6 desktop/mobile + axe; Web/backend checks e harnesses conforme
+  `tasks/plan.md`; scanner de secrets, migration governance, guardas, tooling e matriz.
+- PASS: pós-merge 308 `37987983251`, Semgrep `37987983322`, Trivy `37987983323`
+  e CodeQL `37987983326` concluídos com sucesso sobre `1dec202f`.
+- PASS: Web lint/typecheck/build; lint sem erros, com 63 avisos preexistentes.
+- PASS: `test:authz` integral, incluindo o harness BFF da Fase 309.
+- FAIL (ambiente): PostgreSQL Testcontainers excedeu 180s no `beforeAll` sem
+  iniciar container. Migration, FORCE RLS e concorrência continuam sem prova real;
+  testes marcados `skip` não são evidência.
+- SKIPPED/NA: provider, staging/produção, envio real e migration fora de banda;
+  nenhum alvo operacional foi consultado. Monitor produção `37977323201` segue
+  com FAIL de saúde externa sem causa diagnosticada ou vínculo demonstrado.

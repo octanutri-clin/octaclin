@@ -78,6 +78,7 @@ import { AumentarPrecisaoComposicaoAlimentar1720000001061 } from './migracoes/17
 import { CifrarDetalhesSolicitacoesLgpd1720000001062 } from './migracoes/1720000001062-CifrarDetalhesSolicitacoesLgpd';
 import { CriarPermissoesIntegracaoProfissional1720000001063 } from './migracoes/1720000001063-CriarPermissoesIntegracaoProfissional';
 import { AutorizarCompartilhamentoProgressoPortal1720000001064 } from './migracoes/1720000001064-AutorizarCompartilhamentoProgressoPortal';
+import { ConfigurarResumosNotificacoes1720000001065 } from './migracoes/1720000001065-ConfigurarResumosNotificacoes';
 import { UserActionLogOrm } from '../auditoria/user-action-log.orm';
 import { ConsentimentoLgpdOrm } from '../lgpd/consentimento-lgpd.orm';
 import { TombstoneExclusaoLgpdOrm } from '../lgpd/tombstone-exclusao-lgpd.orm';
@@ -105,6 +106,8 @@ import { MfaDesafioOrm } from '../../modulos/auth/infraestrutura/mfa-desafio.orm
 import { CanalNotificacaoOrm } from '../../modulos/comunicacoes/infraestrutura/canal-notificacao.orm';
 import { MensagemNotificacaoOrm } from '../../modulos/comunicacoes/infraestrutura/mensagem-notificacao.orm';
 import { NotificacaoOrm } from '../../modulos/notificacoes/infraestrutura/notificacao.orm';
+import { PreferenciaNotificacaoUsuarioOrm } from '../../modulos/notificacoes/infraestrutura/preferencia-notificacao-usuario.orm';
+import { ResumoNotificacaoUsuarioOrm } from '../../modulos/notificacoes/infraestrutura/resumo-notificacao-usuario.orm';
 import { TemplateMensagemOrm } from '../../modulos/comunicacoes/infraestrutura/template-mensagem.orm';
 import { ExecucaoRegraOrm } from '../../modulos/automacoes/infraestrutura/execucao-regra.orm';
 import { RegraAutomacaoOrm } from '../../modulos/automacoes/infraestrutura/regra-automacao.orm';
@@ -279,6 +282,8 @@ export function criarOpcoesTypeOrm(): TypeOrmModuleOptions & DataSourceOptions {
       TemplateMensagemOrm,
       MensagemNotificacaoOrm,
       NotificacaoOrm,
+      PreferenciaNotificacaoUsuarioOrm,
+      ResumoNotificacaoUsuarioOrm,
       AgendaConsultaOrm,
       PoliticaFollowupAgendaOrm,
       OcorrenciaFollowupAgendaOrm,
@@ -401,16 +406,17 @@ export function criarOpcoesTypeOrm(): TypeOrmModuleOptions & DataSourceOptions {
         CriarExpedientesETiposAtendimento1720000001052,
         CriarRecorrenciaConsulta1720000001053,
         CriarCatalogoMarcadoresExames1720000001054,
-      AdicionarIndicesPerfilPacientes1720000001055,
-      AgendarLembretesMaterial1720000001056,
-      CriarCalendarioFollowupsAgenda1720000001057,
-      CriarRespostaPortalPaciente1720000001058,
-      AdicionarRevisaoDiarioRapido1720000001059,
-      VersionarModelosPlanoAlimentar1720000001060,
-      AumentarPrecisaoComposicaoAlimentar1720000001061,
-      CifrarDetalhesSolicitacoesLgpd1720000001062,
-      CriarPermissoesIntegracaoProfissional1720000001063,
-      AutorizarCompartilhamentoProgressoPortal1720000001064
+        AdicionarIndicesPerfilPacientes1720000001055,
+        AgendarLembretesMaterial1720000001056,
+        CriarCalendarioFollowupsAgenda1720000001057,
+        CriarRespostaPortalPaciente1720000001058,
+        AdicionarRevisaoDiarioRapido1720000001059,
+        VersionarModelosPlanoAlimentar1720000001060,
+        AumentarPrecisaoComposicaoAlimentar1720000001061,
+        CifrarDetalhesSolicitacoesLgpd1720000001062,
+        CriarPermissoesIntegracaoProfissional1720000001063,
+        AutorizarCompartilhamentoProgressoPortal1720000001064,
+        ConfigurarResumosNotificacoes1720000001065
       ],
     migrationsRun: executarMigracoesNoBoot(),
     synchronize: false,

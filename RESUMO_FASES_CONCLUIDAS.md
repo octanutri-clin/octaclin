@@ -11,8 +11,9 @@
   Plano em `docs/history/phases/PLANO_FASE_307.md`.
 - Fase 308 integrada pelo PR #385 (merge `1dec202f`, confirmado no GitHub):
   resumo factual de exames, nomes livres e limites explícitos. Sem migration
-  nova. CI pós-merge `37987983251` em andamento (Demo local smoke pendente),
-  sem aceite de produção. Plano/evidências em
+  nova. CI `37987983251` e scanners Semgrep `37987983322`, Trivy `37987983323`
+  e CodeQL `37987983326` concluídos com sucesso; sem aceite de produção.
+  Plano/evidências em
   `docs/history/phases/PLANO_FASE_308.md`.
 
 ## Atualização de estado em 2026-10-05

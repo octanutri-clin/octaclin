@@ -6,10 +6,13 @@ A Fase 306 foi integrada pelo PR #383 (`104a1546`) e a 307 pelo PR #384
 (`04e66efc`), confirmados no GitHub. CI principal da main `37971450248`
 aprovado, incluindo Governança e Demo local smoke; aplicação da migration
 1064 não verificada neste ciclo. Fase 308 integrada pelo PR #385 (`1dec202f`),
-confirmada no GitHub; sem migration nova. CI pós-merge `37987983251` ainda em
-andamento (Demo local smoke pendente). Sem aceite de produção. Fase 309 em
-planejamento na branch `feature/fase-309-preferencias-notificacoes`, com decisões de produto fechadas. Plano em `docs/history/phases/PLANO_FASE_309.md`;
-handoff em `tasks/plan.md` e checklist em `tasks/todo.md`.
+confirmada no GitHub; sem migration nova. CI `37987983251` e scanners Semgrep
+`37987983322`, Trivy `37987983323` e CodeQL `37987983326` concluídos com
+sucesso. Sem aceite de produção. Fase 309 implementada na branch
+`feature/fase-309-preferencias-notificacoes`; PR pendente. Migration 1065
+registrada no código, não aplicada fora de banco descartável. Plano em
+`docs/history/phases/PLANO_FASE_309.md`; handoff em `tasks/plan.md` e checklist
+em `tasks/todo.md`.
 O parágrafo abaixo registra a atualização histórica anterior; para o estado
 vigente prevalecem este bloco, itens 303–309 ao final e o roadmap.
 
@@ -4543,10 +4546,12 @@ auditoria estão ordenados na seção 15 de
   Plano e gaps em `docs/history/phases/PLANO_FASE_307.md`.
 - [x] Fase 308 - exames fora da faixa no resumo clínico, consumindo PB-17.
   Integrada pelo PR #385 (`1dec202f`), confirmado no GitHub. Sem migration nova
-  ou aceite de produção; CI pós-merge em andamento nesta consulta. Plano e
+  ou aceite de produção; CI e scanners pós-merge concluídos com sucesso. Plano e
   evidências históricas em `docs/history/phases/PLANO_FASE_308.md`.
 - [ ] Fase 309 - preferências individuais de notificação interna e digest.
-  Planejamento/gaps em `docs/history/phases/PLANO_FASE_309.md`; decisões fechadas, implementação com GPT-6 Luna alto após troca manual.
+  Implementação na branch `feature/fase-309-preferencias-notificacoes`, PR
+  pendente; migration 1065 não aplicada fora de banco descartável. Consulte o
+  handoff em `tasks/plan.md` e os resultados em `tasks/todo.md`.
 - [ ] Fase 310 - categorias e entrega explícita de receitas nutricionais ao
   paciente, com versão revisada.
 - [ ] Fase 311 - instalação opt-in do kit genérico em clínicas existentes e

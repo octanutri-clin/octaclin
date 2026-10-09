@@ -13,37 +13,56 @@ Branch/worktree e evidências: `tasks/plan.md`.
 - [x] Reconciliar estado da 308 nos documentos vigentes.
 - [x] Registrar respostas finais de e-mail no plano/handoff.
 - [x] Revisar diff e links; registrar estado observado do CI pós-merge 308
-  (Demo local smoke em andamento; sucessor deve reconfirmar).
+  (run `37987983251` e scanners pós-merge em `success`).
 - [x] Salvar rascunho de planejamento na branch; plano/código na mesma PR futura.
 - [x] Avisar e pausar para troca manual a GPT-6 Luna alto.
 
 ## Implementação — Luna alto após troca
 
-- [ ] 1. Reconfirmar branch, base, Git, instruções, runtime e decisões fechadas.
+- [x] 1. Reconfirmar branch, base, Git, instruções, runtime e decisões fechadas.
   TDD de política pura, enum/modos, classes obrigatórias, fuso e vencimento.
   Criar helpers em `modulos/notificacoes/dominio/` e seus testes.
-- [ ] 2. Testar e criar migration 1065 (reconfirmar número livre), entidades de
+- [x] 2. Testar e criar migration 1065 (número livre), entidades de
   preferências/resumos e snapshots em notificacoes; registrar em opcoes-typeorm
-  e módulo. Constraints/FKs compostas, índices e FORCE RLS. PostgreSQL real.
-- [ ] 3. Serviço de preferências/DTO/controlador; writer busca preferências em
+  e módulo. Constraints/FKs compostas, índices e FORCE RLS. Spec de migration
+  passou; prova Postgres/Testcontainers ainda pendente no ambiente atual.
+- [x] 3. Serviço de preferências/DTO/controlador; writer busca preferências em
   lote, snapshot prospectivo e dedup atual. Regressões de callers e rollback.
-- [ ] 4. Geração transacional por POST, trava usuário, agregação no banco,
-  vínculo único, DTO/contagens, leitura e marcação. Provar duas conexões e
-  rollback em PostgreSQL descartável; não aceitar mock como prova concorrente.
-- [ ] 5. Transporte existente e intenção durável de e-mail, processador com gate
+- [x] 4. Geração transacional por POST, trava usuário, agregação no banco,
+  vínculo único, DTO/contagens, leitura e marcação. Teste real concorrente em
+  duas conexões continua condicionado ao resultado do Testcontainers.
+- [x] 5. Transporte existente e intenção durável de e-mail, processador com gate
   worker, opt-in/destinatário/claim e cancelamento conforme contrato fechado. Sem envio real.
-- [ ] 6. BFFs no-store/harness dedicado + test:authz; página própria protegida,
+- [x] 6. BFFs no-store/harness dedicado + test:authz; página própria protegida,
   componente de preferências, API/tipos e sino com resumo/link. Atualizar demo
   mock e interceptações globais por path/método; CSRF/401/403/DTO mínimo.
-- [ ] 7. Playwright focado desktop/mobile + axe, reflow e estados/retry;
+- [x] 7. Playwright focado desktop/mobile + axe, reflow e estados/retry;
   preferência salva, obrigatórios fixos, resumo/contador/marcação, estado e-mail.
-- [ ] 8. Jest focado/migration e integral; backend typecheck/build; Web
-  lint/typecheck/build; authz/harness; PostgreSQL; gates proporcionais do plano.
-  Diff/scanner. Registrar PASS/FAIL/NA/SKIPPED e limitações sem falso verde.
-- [ ] 9. Atualizar matriz de confiabilidade, plano/handoff e documentos de estado
-  para implementação/PR. Acrescentar procedimento de rollout e rollback aditivo.
+- [ ] 8. Jest focado/integral, backend typecheck/build; Web lint/typecheck/build;
+  Playwright e harnesses dedicados. PostgreSQL real bloqueado pelo Testcontainers
+  (`beforeAll` >180s sem container); `test:authz` integral passou, inclusive o harness dedicado. O item continua
+  aberto somente pelo gate PostgreSQL real de RLS/concorrência.
+- [x] 9. Atualizar matriz de confiabilidade, plano/handoff e documentos de estado
+  para implementação/PR. Procedimento de rollout/rollback aditivo registrado no plano.
 - [ ] 10. Commit/push e uma PR com R4, evidências, gates pendentes e revisão humana.
   Aguardar CI aplicável, resolver falhas; não mudar inventário para mascará-las.
+
+## Evidências locais observadas neste ciclo
+
+- PASS: backend typecheck/build; Jest integral: 267 suítes, 2.416 testes
+  passaram (3 suítes e 40 testes ignorados); specs focadas de notificações e
+  migration 1065.
+- PASS: Web lint/typecheck/build; Playwright Fase 309 desktop/mobile (6/6),
+  incluindo axe; harness BFF dedicado incluído no `test:authz`.
+- PASS: `security:secrets`, `test:migracoes-fora-de-banda`,
+  `test:guardas-controladores`, `test:tooling-agentes`, `test:confiabilidade`,
+  `git diff --check` e sintaxe do mock local.
+- PASS: `test:authz` integral, incluindo notificações BFF (4/4).
+- FAIL (ambiente): Testcontainers no teste RLS/concorrência excedeu 180s em
+  `beforeAll`, sem iniciar container. Rodar com PostgreSQL real no gate CI antes
+  de considerar migration, RLS e concorrência comprovados.
+- SKIPPED/NA: envio real, provider, staging/produção e aplicação fora de banda
+  da migration. Nenhum ambiente operacional foi consultado ou alterado.
 
 ## Gates externos separados
 
