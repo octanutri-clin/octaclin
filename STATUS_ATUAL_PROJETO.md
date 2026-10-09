@@ -63,8 +63,8 @@ Atualizado em 2026-10-09.
   `docs/history/phases/PLANO_FASE_308.md`.
 - Fase 309 em planejamento e análise de gaps na branch
   `feature/fase-309-preferencias-notificacoes`: preferências por usuário,
-  resumo interno e e-mail opt-in. Código ainda não implementado; decisões
-  finais de e-mail pendentes. Plano em `docs/history/phases/PLANO_FASE_309.md`,
+  resumo interno e e-mail opt-in. Código ainda não implementado; decisões de produto
+  fechadas e handoff pronto para Luna alto. Plano em `docs/history/phases/PLANO_FASE_309.md`,
   handoff/checklist em `tasks/`. Migration aditiva prevista; não executada.
 - Sequência das Fases 302–320 em
   `docs/product/ROADMAP_POS_AUDITORIA_FASES_302_320.md`. O PB-30 está planejado na Fase 316, condicionado a privacidade,

@@ -22,12 +22,19 @@ Sequência executável: [todo.md](todo.md).
 - Definidos checkpoints para o Luna executar uma etapa por vez sem refazer gaps.
 - Nenhum código funcional, migration, e-mail real ou deploy executado.
 
-## Decisões ainda pendentes
+## Decisões fechadas e implementação pendente
 
-Respostas solicitadas ao proprietário para momento de envio por e-mail,
-tentativa externa incerta e cancelamento de e-mail ao desligar opt-in.
-Manter planejamento ativo no Sol até registrar essas respostas no plano.
-Não iniciar partes dependentes nem tratar sugestão como aprovação.
+- Obrigatórios: mensagens, solicitações de agendamento e falhas de envio.
+- Opcionais: formulários respondidos, tarefas concluídas e automações executadas;
+  imediato/diário/semanal/silenciado. Padrão imediato; alterações prospectivas.
+- Resumo gerado no próximo acesso após 09h diária ou segunda 09h, no fuso escolhido;
+  junta períodos vencidos com datas reais. E-mail opt-in enviado após essa geração.
+- Uma tentativa externa; entrega incerta não é reenviada.
+- Desligar e-mail cancela envios não iniciados e eventos ainda não resumidos;
+  reativar vale só para novos eventos. Modos/fusos/resumos internos preservados.
+
+Contrato detalhado, estados e testes no plano. Não há perguntas pendentes.
+Código aguardando troca manual para GPT-6 Luna alto.
 
 ## Validações deste ciclo
 
@@ -50,15 +57,17 @@ Não iniciar partes dependentes nem tratar sugestão como aprovação.
 Planejamento: `docs/history/phases/PLANO_FASE_309.md`, `tasks/plan.md`,
 `tasks/todo.md`. Reconciliação: status, checklist, resumo, roadmap e adendo ao
 plano histórico 308. Código integrado de referência: merge `1dec202f`.
-Rascunho salvo no commit de planejamento da branch (consultar `git log -1`).
-Ainda há decisões pendentes; não considerar handoff liberado para implementação.
+Rascunho inicial `4682e964`; decisões fechadas no follow-up de planejamento
+(consultar `git log -1`).
 Sucessor confere `git status`, `git log`, diff e PR antes de escrever.
 
 ## Próxima ação exata e troca de modelo
 
-Registrar respostas pendentes, revisar plano e confirmar estado do CI.
-Só então avisar e pausar para troca manual a **GPT-6 Luna alto**.
-O Luna começa pelos testes de política e calendário do item 1 do checklist;
-implementa até a PR/checks/revisão, seguindo os checkpoints. Não refaz a auditoria
-nem reabre decisões aprovadas. R4: revisão independente e aplicação de migration
-fora de banda são gates separados; não aprovar produção por mocks ou CI.
+Trocar manualmente para **GPT-6 Luna alto** e instruir: “Implemente a Fase 309
+seguindo o handoff em tasks/plan.md”. Antes do código, o Luna reconfirma Git,
+instruções, runtime declarado e CI pós-merge. Não refaz a auditoria nem reabre
+as decisões aprovadas. Começa pelos testes de política/calendário do item 1.
+Uma etapa por vez e uma PR com plano+código. R4: revisão independente e
+aplicação da migration fora de banda são gates separados; produção não é
+aprovada por mocks ou CI. Não iniciar implementação enquanto o usuário não
+concluir a troca e solicitar execução.

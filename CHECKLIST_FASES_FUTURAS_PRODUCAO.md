@@ -8,11 +8,10 @@ aprovado, incluindo Governança e Demo local smoke; aplicação da migration
 1064 não verificada neste ciclo. Fase 308 integrada pelo PR #385 (`1dec202f`),
 confirmada no GitHub; sem migration nova. CI pós-merge `37987983251` ainda em
 andamento (Demo local smoke pendente). Sem aceite de produção. Fase 309 em
-planejamento na branch `feature/fase-309-preferencias-notificacoes`, com decisões
-finais de e-mail pendentes. Plano em `docs/history/phases/PLANO_FASE_309.md`;
+planejamento na branch `feature/fase-309-preferencias-notificacoes`, com decisões de produto fechadas. Plano em `docs/history/phases/PLANO_FASE_309.md`;
 handoff em `tasks/plan.md` e checklist em `tasks/todo.md`.
 O parágrafo abaixo registra a atualização histórica anterior; para o estado
-vigente prevalecem este bloco, itens 303–308 ao final e o roadmap.
+vigente prevalecem este bloco, itens 303–309 ao final e o roadmap.
 
 Atualizado em 2026-10-09. Fase 307 em implementação nesta branch; PR e CI pendentes. Fase 296 integrada pelo PR #353 (merge `ccd1c0bb`); o proprietário informou aplicação da migration 1059, sem confirmação direta de ambiente/banco. Fase 297 integrada pelo PR #355 (merge `4f51b0ac`); Fase 298 integrada pelo PR #356 (merge `b00151ae`), com aplicação da 1060 informada pelo proprietário; Fase 299 integrada pelo PR #357 (merge `9052b8ba`), com aplicação da 1061 e cargas em staging e produção informadas pelo proprietário, sem consulta direta aos bancos neste ciclo; Fase 300 integrada pelo PR #358 (merge `c60c82ed`); Fase 301 integrada pelo PR #359 (merge `bd0f1d6b`); Fase 302 integrada pelo PR #360 (migration 1062 aplicada e validada em staging e produção conforme relato do proprietário, sem consulta direta aos bancos neste ciclo); Fase 303 integrada pelo PR #361 (merge `02acd66c`), migration 1063 aplicada e validada em staging e produção conforme relato do proprietário, sem consulta direta neste ciclo; Fase 304 integrada pelo PR #362 (merge `13a250c8`); Fase 305 integrada pelo PR #379 (merge `32c2aa5b`); Fases 256 a 261, 263 a 304 integradas; Fase 284
 (PB-22) foi integrada pelo PR #320 (merge `af839c5`, 19 checks `SUCCESS` e
@@ -4547,8 +4546,7 @@ auditoria estão ordenados na seção 15 de
   ou aceite de produção; CI pós-merge em andamento nesta consulta. Plano e
   evidências históricas em `docs/history/phases/PLANO_FASE_308.md`.
 - [ ] Fase 309 - preferências individuais de notificação interna e digest.
-  Planejamento/gaps em `docs/history/phases/PLANO_FASE_309.md`; decisões finais
-  de e-mail pendentes, implementação com GPT-6 Luna alto após troca manual.
+  Planejamento/gaps em `docs/history/phases/PLANO_FASE_309.md`; decisões fechadas, implementação com GPT-6 Luna alto após troca manual.
 - [ ] Fase 310 - categorias e entrega explícita de receitas nutricionais ao
   paciente, com versão revisada.
 - [ ] Fase 311 - instalação opt-in do kit genérico em clínicas existentes e

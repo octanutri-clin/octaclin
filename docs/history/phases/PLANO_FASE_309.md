@@ -30,9 +30,15 @@ Confirmadas neste ciclo:
 - Configurações afetam eventos novos. Pendentes preservam a decisão original.
   Padrão imediato para todas as classes; resumo/silenciamento exigem opção.
 
-Ainda aguardando resposta: momento do e-mail (junto da geração no próximo
-acesso ou agendado offline) e política para tentativa externa incerta.
-Não implementar itens dependentes antes de registrar as respostas aqui.
+- E-mail disponibilizado para envio junto da geração no próximo acesso;
+  opt-in individual desligado por padrão. Não há geração de digest offline.
+- Uma tentativa externa por resumo; entrega incerta não é reenviada. Mostrar
+  “envio não confirmado”; resumo interno permanece disponível.
+- Desligar e-mail cancela tudo ainda não iniciado, inclusive elegibilidade de
+  eventos antigos sem resumo. Resumos internos e modos/fusos ficam intactos.
+
+Todas as decisões de produto estão fechadas. Implementação aguarda a troca
+manual para GPT-6 Luna alto; nenhuma pergunta de produto permanece pendente.
 
 ## Escopo e risco
 
@@ -62,8 +68,9 @@ Client; Collaborator continua recebendo somente os três tipos operacionais.
 | `infraestrutura/processamento/papel-processo.ts`, `rodada-por-tenant.ts` | Gate web/worker e isolamento de rodadas | Usar gate existente para processar e-mail pendente; geração interna permanece por acesso |
 | `rls-isolamento-tenant.integracao.spec.ts` e CI | Prova real PostgreSQL com runtime sem BYPASSRLS | Incluir tabelas/constraints novas e concorrência real, além de mocks |
 
-Todos os paths backend acima são relativos a `octaclin-backend/src/`, salvo
-os paths Web. Auditoria de produto: `docs/product/OCTACLIN_PRODUCT_FEATURE_AUDIT.md`
+Paths de domínio/aplicação/apresentação sem prefixo de módulo são relativos
+a `octaclin-backend/src/modulos/notificacoes/`; os demais paths backend partem
+de `octaclin-backend/src/`. Paths Web partem de `octaclin-web/`. Auditoria de produto: `docs/product/OCTACLIN_PRODUCT_FEATURE_AUDIT.md`
 seções 2/10; roadmap vigente 309. Não reabrir fases já integradas.
 
 ## Contrato de produto
@@ -107,18 +114,22 @@ registrada em `opcoes-typeorm.ts`, junto das entidades:
    periodo_fim_em (instantes reais dos eventos incluídos), gerado_em, lido_em,
    contagens JSONB de allowlist, contagens_email JSONB separadas, estado_email,
    tentativa_email_em, finalizado_email_em. Não persistir destinatário, texto,
-   erro bruto, payload clínico ou resposta do provider. Estados do envio serão
-   fixados após decisão pendente. Limites não negativos e tipos opcionais.
-Adicionar UNIQUE `(tenant_id,id)` às tabelas referenciadas que ainda não
-tenham essa chave composta; testar o vínculo composto, não apenas FK por UUID.
-Preservar todas as constraints existentes.
-
+   erro bruto, payload clínico ou resposta do provider. Estados de envio:
+   `nao_solicitado`, `pendente`, `reservado`, `enviado`, `incerto`, `falhou`,
+   `cancelado`. CHECK de estados, limites não negativos e tipos opcionais.
 3. `notificacoes`: modo_entrega default `imediato` NOT NULL, timezone_resumo
    nullable, resumo_previsto_em nullable, email_resumo default false,
    resumo_id nullable. CHECK coerente (datas/fuso apenas diário/semanal,
    obrigatórios sempre imediatos; vínculo resumo somente modo digest).
-   FK composta resumo/tenant/usuário para impedir vínculo cruzado.
+   FK composta resumo/tenant/usuário para impedir vínculo cruzado;
+   ON DELETE RESTRICT preserva vínculo e deduplicação.
    Nenhum backfill de digest: linhas antigas ficam imediatas.
+
+A chave `(tenant_id,id)` de usuários já existe pelo índice
+`ux_usuarios_tenant_id_id` da migration 1021. Reutilizá-la; não criar índice
+redundante nem removê-la no down da 1065. Criar UNIQUE `(tenant_id,usuario_id,id)`
+na tabela de resumos para suportar a FK composta de notificações. Testar essa
+FK negativa explicitamente. Preservar todas as constraints existentes.
 
 Novas tabelas: ENABLE + FORCE RLS com USING/WITH CHECK tenant de `app.tenant_id`,
 seguindo migration 1020. RLS é por tenant; filtro por usuário é obrigatório em
@@ -126,8 +137,8 @@ toda operação da aplicação. Configurar remoção em cascade de preferências
 quando o usuário for eliminado; remover resumos/vínculos na ordem correta em
 procedimentos de exclusão existentes, sem apagar dados clínicos por cascata.
 Não criar nova política legal de retenção; mapear o procedimento administrativo
-atual e registrar qualquer lacuna encontrada antes do rollout. Índices para pendentes `(tenant_id,usuario_id,
-resumo_previsto_em)` WHERE resumo_id IS NULL AND modo digest; resumo por
+atual e registrar qualquer lacuna encontrada antes do rollout.
+Índices para pendentes `(tenant_id,usuario_id,resumo_previsto_em)` WHERE resumo_id IS NULL AND modo digest; resumo por
 tenant/usuário/data e e-mail pendente. Evitar índices redundantes existentes.
 Constraints e JSONB devem concordar com DTO/política; testar dados inválidos.
 
@@ -189,7 +200,7 @@ lista fornecida, marcar somente IDs explícitos; lista vazia não vira marcar
 tudo. Tenant/usuário/lidoEm null sempre no UPDATE. Nunca marcar pendentes ou
 silenciadas como efeito de “marcar todas”.
 
-### E-mail — fundação independente das respostas pendentes
+### E-mail — contrato fechado
 
 Destinatário exclusivamente do usuário vinculado ao resumo, ativo e com papel
 de console; resolver e-mail cifrado na tentativa. Não aceitar endereço, URL,
@@ -208,6 +219,43 @@ Persistir intenção no resumo na mesma transação da geração; processador do
 módulo notificações consome estado durável respeitando papel worker/all,
 `executarPorTenantAtivo`, limite 50 resumos por rodada e timeout do transporte.
 Rede fora de transação; reivindicação durável antes do efeito externo.
+Máquina de estados e cancelamento:
+
+1. Na geração, e-mail só vira `pendente` se houver contagens_email > 0 e a
+   preferência atual ainda estiver ligada. Sem snapshot opt-in fica
+   `nao_solicitado`; opção desligada com snapshot antigo fica `cancelado`.
+   A geração nunca chama rede; o worker faz o envio após commit.
+2. PUT de preferências trava o usuário, na mesma ordem usada por geração e
+   claim. Ao desligar, atualizar eventos digest ainda sem resumo para
+   email_resumo=false e mudar resumos `pendente` para `cancelado`, na mesma
+   transação. Essa revogação é a exceção aprovada à imutabilidade do snapshot;
+   não altera modo/fuso nem notificação interna. Reativar não ressuscita nada
+   cancelado; somente eventos novos tornam-se elegíveis.
+3. Worker faz preparação sem efeito externo: usuário ativo, papel/permissão
+   atuais, opt-in vigente, e-mail decifrável e origem Web válida. Falha certa
+   de preparação fica `falhou`, mensagem genérica, sem chamada ao adapter.
+   Opt-out/desativação/perda de papel antes do claim fica `cancelado`.
+4. Claim transacional: travar usuário primeiro, verificar elegibilidade de novo,
+   depois resumo tenant/usuário/id e `estado_email=pendente`; atualizar para
+   `reservado` + tentativa_email_em e COMMIT. Destinatário só em memória.
+   Concorrência/duas instâncias podem produzir no máximo uma chamada ao adapter.
+5. Fora de transação, chamar adapter uma vez. Sucesso confirmado vira
+   `enviado`; erro após começar chamada vira `incerto`, independentemente do
+   texto do erro. Não deduzir “não enviado” de timeout/HTTP/erro do transporte.
+   Finalização condicional ao mesmo claim e estado reservado.
+6. Reserva antiga (>10 minutos) sem conclusão vira `incerto`, nunca volta a
+   pendente. Se o processo morrer antes de chamar rede, pode perder o e-mail:
+   é a limitação explícita escolhida para impedir duplicatas. Não oferecer
+   botão de reenviar nem retry automático de reservado/incerto/falhou.
+7. Desligar opção após claim não promete cancelar envio já iniciado.
+   `enviado` significa aceite confirmado pelo transporte, não leitura nem
+   chegada na caixa de entrada. UI rotula `incerto` como “envio não confirmado”.
+
+Testar desativar antes de geração, após geração/antes de claim, após claim;
+reativar sem ressuscitar; queda após commit do claim; sucesso externo seguido
+por falha de persistência; duas instâncias, reserva vencida e isolamento por
+usuário/tenant. Erros do provider nunca vão para banco, resposta ou log.
+
 E-mail real, habilitação de provider ou envio para pessoas dependem de ambiente
 e autorização próprios; testes usam adaptador fake e destinatários sintéticos.
 
@@ -248,9 +296,37 @@ existentes que interceptam `**/api/notificacoes**` para distinguir paths/método
 compatibilidade na Web com `resumos` ausente durante rollout/fixtures antigas.
 Não registrar erro bruto nem usar localStorage/Cache Storage para estado.
 
+## Mapa de arquivos para implementação
+
+No backend, dentro de `src/modulos/notificacoes/`, usar esta divisão:
+
+- Novos `dominio/politica-notificacoes.ts` e `calendario-resumo.ts`, com testes;
+  manter `tipo-notificacao.ts` e `destinatarios-notificacao.ts` como contratos.
+- Novos `infraestrutura/preferencia-notificacao-usuario.orm.ts` e
+  `resumo-notificacao-usuario.orm.ts`; ampliar `notificacao.orm.ts`.
+- Novos `aplicacao/servico-preferencias-notificacoes.ts`,
+  `servico-resumos-notificacoes.ts` e `processador-email-resumos.ts`, com testes;
+  ampliar `dtos.ts`, writer, serviço de leitura e controlador existentes.
+- Registrar no `modulo-notificacoes.ts`, em `opcoes-typeorm.ts` e na migration
+  `1720000001065-ConfigurarResumosNotificacoes.ts`, com spec. Nomes podem mudar
+  por convenção local sem mudar a divisão/contrato.
+
+Na Web, criar página `app/conta/notificacoes/page.tsx` e componente
+`components/conta/preferencias-notificacoes.tsx`; ampliar API/sino existentes.
+BFFs novos: `app/api/notificacoes/preferencias/route.ts` (GET/PUT) e
+`app/api/notificacoes/resumos/gerar/route.ts` (POST). Harness dedicado:
+`scripts/notificacoes-bff.spec.ts`, runner `test-notificacoes-bff.mjs`, script
+`test:notificacoes:bff` em package.json e integração a `test:authz`.
+Playwright: `tests/visual/fase-309-notificacoes.spec.mjs`, incluindo axe;
+reutilizar fixtures de sessão e projetos desktop/mobile existentes.
+Ajustar demo mock e interceptações globais; não copiar credenciais/fixture real.
+
+Não usar novas dependências. Helpers puros primeiro; entidades e SQL depois;
+serviços transacionais antes de UI. Controles de rede vêm do adapter existente.
+
 ## Sequência e checkpoints
 
-1. Reconfirmar Git/base/instruções e fechar respostas pendentes; começar pelos
+1. Reconfirmar Git/base/instruções e decisões fechadas; começar pelos
    testes de política pura, fuso, vencimento e snapshots. Implementar helpers.
 2. Testar migration, registro e entidades. Criar 1065 aditiva, constraints e
    RLS; ampliar integração PostgreSQL. Checkpoint: nenhuma persistência de PII.
@@ -258,7 +334,7 @@ Não registrar erro bruto nem usar localStorage/Cache Storage para estado.
    destinatários/callers e rollback da transação de origem.
 4. Testar geração concorrente, agregação, leitura e marcação. Checkpoint:
    cenário de dois POSTs produz um resumo e nenhuma contagem duplicada.
-5. Testar e implementar e-mail conforme respostas, transporte fake e limites.
+5. Testar e implementar e-mail pelo contrato fechado, transporte fake e limites.
    Checkpoint: opt-in, usuário ativo, claim durável e falha sem falso enviado.
 6. BFFs, página protegida, tipos/API/sino, demo mock e harness; testes negativos.
 7. Desktop/mobile/axe, checks aplicáveis, diff e scanner. Atualizar evidências
@@ -280,7 +356,7 @@ Não registrar erro bruto nem usar localStorage/Cache Storage para estado.
 | Banco | FORCE RLS sem BYPASSRLS, USING/WITH CHECK, FK tenant/usuário cruzada negada, CHECKs e índice dedup preservado |
 | Leitura | Contador misto, limite 10 resumos, ordenação determinística, DTO sem PII/IDs clínicos |
 | Marcação | Um/todos, listas vazias explícitas, IDs cruzados, pendentes/silenciadas intactos |
-| E-mail | Conforme decisão de tentativas; snapshot opt-in, destino JWT, desativado, provider falso, erro sanitizado |
+| E-mail | Uma tentativa externa, claim durável, incerto sem retry, cancelamento e reativação sem ressurreição; destino do titular, provider falso |
 | BFF/UI | 401/403/CSRF, no-store, defaults, guardar/retry, obrigatório fixo, digest, desktop/mobile/axe |
 | Demo/CI | Mock novos endpoints e smoke; Governança; migration fora de banda; PR Gate |
 

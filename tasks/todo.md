@@ -11,10 +11,11 @@ Branch/worktree e evidências: `tasks/plan.md`.
   acesso e preferências prospectivas com proprietário.
 - [x] Especificar contratos, algoritmo, migration, rollback e matriz de testes.
 - [x] Reconciliar estado da 308 nos documentos vigentes.
-- [ ] Registrar respostas finais de e-mail no plano/handoff.
-- [ ] Revisar diff e links; registrar estado final do CI pós-merge 308.
+- [x] Registrar respostas finais de e-mail no plano/handoff.
+- [x] Revisar diff e links; registrar estado observado do CI pós-merge 308
+  (Demo local smoke em andamento; sucessor deve reconfirmar).
 - [x] Salvar rascunho de planejamento na branch; plano/código na mesma PR futura.
-- [ ] Avisar e pausar para troca manual a GPT-6 Luna alto.
+- [x] Avisar e pausar para troca manual a GPT-6 Luna alto.
 
 ## Implementação — Luna alto após troca
 
@@ -30,7 +31,7 @@ Branch/worktree e evidências: `tasks/plan.md`.
   vínculo único, DTO/contagens, leitura e marcação. Provar duas conexões e
   rollback em PostgreSQL descartável; não aceitar mock como prova concorrente.
 - [ ] 5. Transporte existente e intenção durável de e-mail, processador com gate
-  worker, opt-in/destinatário/claim conforme contrato fechado. Sem envio real.
+  worker, opt-in/destinatário/claim e cancelamento conforme contrato fechado. Sem envio real.
 - [ ] 6. BFFs no-store/harness dedicado + test:authz; página própria protegida,
   componente de preferências, API/tipos e sino com resumo/link. Atualizar demo
   mock e interceptações globais por path/método; CSRF/401/403/DTO mínimo.
