@@ -46,12 +46,22 @@ Atualizado em 2026-10-09.
   `docs/history/phases/PLANO_FASE_305.md`.
 - Fase 306 integrada pelo PR #383 (merge `104a1546`, confirmado no GitHub em
   2026-10-09): indicadores agregados de retorno e evasão factual no Painel de
-  Operação. Checks do merge estavam em execução na última consulta; não afirmar
-  CI verde até reconciliação. Plano em `docs/history/phases/PLANO_FASE_306.md`.
-- Fase 307 em implementação na branch `feature-fase-307-progresso-paciente`:
-  métricas antropométricas e metas escolhidas explicitamente pelo profissional
-  no portal do próprio paciente. Migration 1064 aditiva, não aplicada nesta
-  fase. Plano e gaps em `docs/history/phases/PLANO_FASE_307.md`.
+  Operação. Código incluído no CI principal aprovado da integração 307;
+  isso não altera o resultado do run histórico da 306. Plano em
+  `docs/history/phases/PLANO_FASE_306.md`.
+- Fase 307 integrada pelo PR #384 (merge `04e66efc`, confirmado no GitHub
+  em 2026-10-09): métricas e metas compartilhadas explicitamente no portal.
+  CI principal da main aprovado, run `37971450248`, incluindo Governança e
+  Demo local smoke. Aplicação da migration aditiva 1064 não verificada neste
+  ciclo; merge/CI não comprovam produção. Plano em
+  `docs/history/phases/PLANO_FASE_307.md`.
+- Fase 308 implementada no commit `537665ce` e aberta para revisão na PR #385
+  (CI obrigatório aprovado). O resumo do prontuário consome PB-17 com leitura
+  autorizada por tenant/carteira, classificação compartilhada, nomes livres
+  agrupados conservadoramente e limites explícitos de 100 coletas/10 destaques.
+  Sem migration nova; revisão humana pendente e nenhum aceite de produção.
+  Plano, handoff e checklist em `docs/history/phases/PLANO_FASE_308.md` e
+  `tasks/`.
 - Sequência das Fases 302–320 em
   `docs/product/ROADMAP_POS_AUDITORIA_FASES_302_320.md`. O PB-30 está planejado na Fase 316, condicionado a privacidade,
   jurídico e operação.

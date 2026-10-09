@@ -1,5 +1,12 @@
 # Fase 307 - Progresso do paciente além do peso
 
+Reconciliação em 2026-10-09 para o handoff da Fase 308: PR #384 mergeada
+(`04e66efc`), confirmada no GitHub; CI principal da main `37971450248`
+aprovado, incluindo Governança e Demo local smoke. O checklist de execução
+abaixo registra o estado anterior ao merge. Aplicação da migration 1064 e
+produção não foram verificadas neste ciclo. Próxima fase preparada em
+`PLANO_FASE_308.md`.
+
 ## Objetivo
 
 Completar a área de progresso do portal do paciente com métricas

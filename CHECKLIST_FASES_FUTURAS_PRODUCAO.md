@@ -2,12 +2,15 @@
 
 ## Estado reconciliado em 2026-10-09
 
-A Fase 306 foi integrada pelo PR #383 (`104a1546`); checks ainda em
-reconciliação. A Fase 307 está em implementação local na branch
-`feature-fase-307-progresso-paciente`; PR/CI pendentes e migration 1064 ainda
-não aplicada. O parágrafo de resumo histórico logo abaixo permanece histórico;
-para o estado vigente, prevalecem este bloco, os itens 303–307 ao final e o
-roadmap `docs/product/ROADMAP_POS_AUDITORIA_FASES_302_320.md`.
+A Fase 306 foi integrada pelo PR #383 (`104a1546`) e a 307 pelo PR #384
+(`04e66efc`), confirmados no GitHub. CI principal da main `37971450248`
+aprovado, incluindo Governança e Demo local smoke; aplicação da migration
+1064 não verificada neste ciclo. Fase 308 implementada no commit `537665ce` e
+aberta na PR #385; CI obrigatório aprovado, revisão humana pendente. Sem
+migration nova ou aceite de produção. Plano em
+`docs/history/phases/PLANO_FASE_308.md`, tarefas/handoff em `tasks/`.
+O parágrafo abaixo registra a atualização histórica anterior; para o estado
+vigente prevalecem este bloco, itens 303–308 ao final e o roadmap.
 
 Atualizado em 2026-10-09. Fase 307 em implementação nesta branch; PR e CI pendentes. Fase 296 integrada pelo PR #353 (merge `ccd1c0bb`); o proprietário informou aplicação da migration 1059, sem confirmação direta de ambiente/banco. Fase 297 integrada pelo PR #355 (merge `4f51b0ac`); Fase 298 integrada pelo PR #356 (merge `b00151ae`), com aplicação da 1060 informada pelo proprietário; Fase 299 integrada pelo PR #357 (merge `9052b8ba`), com aplicação da 1061 e cargas em staging e produção informadas pelo proprietário, sem consulta direta aos bancos neste ciclo; Fase 300 integrada pelo PR #358 (merge `c60c82ed`); Fase 301 integrada pelo PR #359 (merge `bd0f1d6b`); Fase 302 integrada pelo PR #360 (migration 1062 aplicada e validada em staging e produção conforme relato do proprietário, sem consulta direta aos bancos neste ciclo); Fase 303 integrada pelo PR #361 (merge `02acd66c`), migration 1063 aplicada e validada em staging e produção conforme relato do proprietário, sem consulta direta neste ciclo; Fase 304 integrada pelo PR #362 (merge `13a250c8`); Fase 305 integrada pelo PR #379 (merge `32c2aa5b`); Fases 256 a 261, 263 a 304 integradas; Fase 284
 (PB-22) foi integrada pelo PR #320 (merge `af839c5`, 19 checks `SUCCESS` e
@@ -4529,13 +4532,18 @@ auditoria estão ordenados na seção 15 de
   `docs/history/phases/PLANO_FASE_305.md`.
 - [x] Fase 306 - intervalo de retorno, ausência de próxima consulta, faltas
   por horário e tempo de resposta a formulários, sem previsão clínica automática.
-  Integrada pelo PR #383 (merge `104a1546`); CI em reconciliação.
+  Integrada pelo PR #383 (merge `104a1546`); código incluído no CI principal
+  aprovado da integração 307, sem alterar o run histórico da 306.
   Plano em `docs/history/phases/PLANO_FASE_306.md`.
-- [~] Fase 307 - progresso do paciente além do peso, com métricas/metas
-  compartilhadas explicitamente pelo profissional. Implementação e verificações
-  locais em andamento; PR/CI pendentes. Migration 1064 proposta, não aplicada.
+- [x] Fase 307 - progresso do paciente além do peso, com métricas/metas
+  compartilhadas explicitamente pelo profissional. Integrada pelo PR #384
+  (`04e66efc`), CI principal `37971450248` aprovado. Migration 1064 integrada;
+  aplicação operacional não verificada neste ciclo.
   Plano e gaps em `docs/history/phases/PLANO_FASE_307.md`.
 - [ ] Fase 308 - exames fora da faixa no resumo clínico, consumindo PB-17.
+  Implementada no commit `537665ce`; PR #385 aberta e CI obrigatório aprovado.
+  Revisão humana pendente. Sem migration nova e sem aceite de produção. Plano
+  em `docs/history/phases/PLANO_FASE_308.md`; checklist `tasks/todo.md`.
 - [ ] Fase 309 - preferências individuais de notificação interna e digest.
 - [ ] Fase 310 - categorias e entrega explícita de receitas nutricionais ao
   paciente, com versão revisada.

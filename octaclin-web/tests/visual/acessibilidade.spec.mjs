@@ -1348,6 +1348,14 @@ function prepararProntuarioPaciente(page, paciente = pacienteFixture) {
           leituraClinica: {
             deltaUltimaAvaliacao: [],
             deltaDesdeInicio: [],
+            examesForaFaixa: {
+              status: 'disponivel', coletasAnalisadas: 1, limiteColetas: 100, historicoTruncado: false,
+              gruposAnalisados: 1, gruposNomeLivre: 0, semClassificacao: 0,
+              duplicadosNaUltimaColeta: 0, totalForaFaixa: 1, itensLimitados: false,
+              itens: [{ resultadoId: 'resultado-ferritina', coletaId: 'coleta-1', origemAgrupamento: 'catalogo',
+                nome: 'Ferritina', valor: '42', unidade: 'ng/mL', coletadaEm: '2026-08-11',
+                limiteInferior: '10', limiteSuperior: '40', referencia: 'Adultos' }]
+            },
             condutasVencendo: []
           }
         },
@@ -1434,6 +1442,8 @@ test.describe('gate de acessibilidade - pacientes (PR 19)', () => {
     await page.goto('/pacientes/paciente-1');
     await expect(page.getByRole('heading', { name: 'Prontuário do paciente' })).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Contexto operacional' })).toBeVisible();
+    const exames = page.getByRole('region', { name: 'Exames fora da faixa informada' });
+    await expect(exames.getByText('Ferritina', { exact: true })).toBeVisible();
     await rodarChecagensDeAcessibilidade(page);
   });
 

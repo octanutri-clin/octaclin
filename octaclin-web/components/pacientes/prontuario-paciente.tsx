@@ -29,6 +29,7 @@ import { Botao, classesBotao } from '@/components/ui/botao';
 import { Abas } from '@/components/ui/abas';
 import { AbaAntropometria } from './aba-antropometria';
 import { ResumoAntropometrico } from './resumo-antropometrico';
+import { ResumoExamesForaFaixa } from './resumo-exames-fora-faixa';
 import { LeituraLongitudinal } from './leitura-longitudinal';
 import { formatarMetricaAntropometrica } from './metricas-antropometricas';
 import { ModelosEvolucaoClinica } from './modelos-evolucao-clinica';
@@ -1297,6 +1298,13 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
                 )}
               </div>
             </dl>
+            <ResumoExamesForaFaixa
+              dados={dados.resumo.leituraClinica.examesForaFaixa}
+              carregando={carregando}
+              podeLer={permissoes.includes('pacientes.ler')}
+              aoTentarNovamente={() => void carregar()}
+              aoAbrirExames={() => solicitarTrocaAba('exames_laboratoriais')}
+            />
           </section>
           {proximaConsulta && dados.resumo.preparacaoConsulta ? (
             <section aria-labelledby="preparacao-consulta-titulo" className="grid gap-4 rounded-md border border-linha bg-white p-4">

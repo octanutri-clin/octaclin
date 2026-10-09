@@ -31,6 +31,7 @@ writeFileSync(join(pastaTemporaria, 'tsconfig.json'), JSON.stringify({
     'scripts/prontuario-timeline-bff.spec.ts',
     'app/api/pacientes/[id]/prontuario/timeline/route.ts',
     'app/api/pacientes/[id]/leitura-longitudinal/route.ts',
+    'app/api/pacientes/[id]/prontuario/route.ts',
     'lib/server/sessao-bff.ts'
   ].map((arquivo) => join(raiz, arquivo))
 }, null, 2), 'utf8');
@@ -47,7 +48,8 @@ const armazenamento = new Map();
 function cookies() { return { get(nome) { const valor = armazenamento.get(nome); return valor === undefined ? undefined : { name: nome, value: valor }; }, set(nome, valor) { armazenamento.set(nome, String(valor)); }, delete(nome) { armazenamento.delete(nome); } }; }
 function __setCookies(entrada) { armazenamento.clear(); for (const [nome, valor] of Object.entries(entrada)) armazenamento.set(nome, String(valor)); }
 function __clearCookies() { armazenamento.clear(); }
-module.exports = { cookies, __setCookies, __clearCookies };
+function headers() { return new Headers(); }
+module.exports = { cookies, headers, __setCookies, __clearCookies };
 `, 'utf8');
 const destinoAlias = join(pastaTemporaria, 'node_modules', '@', 'lib');
 mkdirSync(dirname(destinoAlias), { recursive: true });

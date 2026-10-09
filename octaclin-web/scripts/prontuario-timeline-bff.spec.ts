@@ -3,6 +3,7 @@ import test from 'node:test';
 import * as nextHeaders from 'next/headers';
 import { GET as obterTimeline } from '../app/api/pacientes/[id]/prontuario/timeline/route';
 import { GET as obterLeituraLongitudinal } from '../app/api/pacientes/[id]/leitura-longitudinal/route';
+import { GET as obterProntuario } from '../app/api/pacientes/[id]/prontuario/route';
 
 const { __clearCookies, __setCookies } = nextHeaders as typeof nextHeaders & {
   __clearCookies: () => void;
@@ -47,7 +48,40 @@ test('BFF da timeline recusa sessao ausente antes de chamar o backend', async ()
       { params: Promise.resolve({ id: 'paciente-1' }) }
     );
     assert.equal(leitura.status, 401);
+    const prontuario = await obterProntuario(
+      new Request('http://localhost/api/pacientes/paciente-1/prontuario'),
+      { params: Promise.resolve({ id: 'paciente-1' }) }
+    );
+    assert.equal(prontuario.status, 401);
+    assert.equal(prontuario.headers.get('Cache-Control'), 'private, no-store');
     assert.equal(chamadas, 0);
+  } finally {
+    restaurarFetch(original);
+  }
+});
+
+test('BFF do prontuario codifica o paciente e impede cache do resumo clinico', async () => {
+  const original = global.fetch;
+  let urlBackend = '';
+  global.fetch = (async (url: string | URL | Request) => {
+    urlBackend = String(url);
+    return new Response(JSON.stringify({ resumo: { leituraClinica: { examesForaFaixa: { status: 'indisponivel' } } } }), {
+      status: 403,
+      headers: { 'Content-Type': 'application/json' }
+    });
+  }) as typeof global.fetch;
+
+  try {
+    __setCookies(cookiesSessao());
+    const resposta = await obterProntuario(
+      new Request('http://localhost/api/pacientes/paciente%2F1/prontuario'),
+      { params: Promise.resolve({ id: 'paciente/1' }) }
+    );
+    assert.equal(resposta.status, 403);
+    assert.equal(new URL(urlBackend).pathname, '/pacientes/paciente%2F1/prontuario');
+    assert.equal(resposta.headers.get('Cache-Control'), 'private, no-store');
+    assert.equal(resposta.headers.get('Vary'), 'Cookie');
+    assert.match(await resposta.text(), /indisponivel/);
   } finally {
     restaurarFetch(original);
   }

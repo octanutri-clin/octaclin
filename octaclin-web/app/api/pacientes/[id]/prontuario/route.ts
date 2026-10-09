@@ -7,15 +7,19 @@ interface Params {
 
 export async function GET(_request: Request, props: Params) {
   const params = await props.params;
+  const headers = { 'Cache-Control': 'private, no-store', Vary: 'Cookie' };
   try {
     const resposta = await requisitarBackendAutenticado(`/pacientes/${encodeURIComponent(params.id)}/prontuario`);
     return new NextResponse(await resposta.text(), {
       status: resposta.status,
-      headers: { 'Content-Type': resposta.headers.get('Content-Type') ?? 'application/json' }
+      headers: {
+        'Content-Type': resposta.headers.get('Content-Type') ?? 'application/json',
+        ...headers
+      }
     });
   } catch (erro) {
     if (erro instanceof ErroSessaoAusente) {
-      return NextResponse.json({ mensagem: erro.message }, { status: 401 });
+      return NextResponse.json({ mensagem: erro.message }, { status: 401, headers });
     }
     throw erro;
   }
