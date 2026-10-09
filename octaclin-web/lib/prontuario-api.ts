@@ -136,6 +136,7 @@ export interface CriarTarefaAcompanhamentoEntrada {
   categoria?: CategoriaTarefaAcompanhamentoApi;
   prioridade?: PrioridadeTarefaAcompanhamentoApi;
   vencimentoEm?: string;
+  exibirNoProgresso?: boolean;
 }
 
 export interface TarefaAcompanhamentoApi extends CriarTarefaAcompanhamentoEntrada {
@@ -435,6 +436,18 @@ export async function listarTarefasAcompanhamento(pacienteId: string): Promise<T
   return resposta.json() as Promise<TarefaAcompanhamentoApi[]>;
 }
 
+export async function atualizarTarefaAcompanhamento(
+  pacienteId: string,
+  tarefaId: string,
+  dados: { exibirNoProgresso?: boolean; status?: StatusTarefaAcompanhamentoApi }
+): Promise<TarefaAcompanhamentoApi> {
+  const resposta = await fetch(`/api/pacientes/${encodeURIComponent(pacienteId)}/tarefas-acompanhamento/${encodeURIComponent(tarefaId)}`, {
+    method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(dados)
+  });
+  if (!resposta.ok) await lancarErroApi(resposta);
+  return resposta.json() as Promise<TarefaAcompanhamentoApi>;
+}
+
 export type ProtocoloComposicao = 'nenhum' | 'pollock_3' | 'pollock_7' | 'faulkner' | 'guedes';
 export type SexoBiologico = 'masculino' | 'feminino';
 
@@ -469,6 +482,7 @@ export interface AvaliacaoAntropometricaApi {
   idadeAnos?: number;
   medidas: MedidasAntropometricasApi;
   resultado: ResultadoAntropometricoApi;
+  metricasCompartilhadasPortal: ('imc' | 'percentualGordura' | 'massaMagraKg')[];
   formulaAplicada?: string;
   observacoes?: string;
   /** PB-24 (Fase 275): consulta de origem, opcional. */
@@ -544,8 +558,22 @@ export interface RegistrarAvaliacaoAntropometricaEntrada {
   circunferencias?: Record<string, number>;
   dobras?: Record<string, number>;
   observacoes?: string;
+  metricasCompartilhadasPortal?: ('imc' | 'percentualGordura' | 'massaMagraKg')[];
   /** PB-24 (Fase 275): consulta de origem, opcional. */
   consultaId?: string;
+}
+
+export async function atualizarCompartilhamentoProgresso(
+  pacienteId: string,
+  avaliacaoId: string,
+  metricasCompartilhadasPortal: ('imc' | 'percentualGordura' | 'massaMagraKg')[]
+): Promise<AvaliacaoAntropometricaApi> {
+  const resposta = await fetch(
+    `/api/pacientes/${encodeURIComponent(pacienteId)}/avaliacoes-antropometricas/${encodeURIComponent(avaliacaoId)}/compartilhamento-progresso`,
+    { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ metricasCompartilhadasPortal }) }
+  );
+  if (!resposta.ok) await lancarErroApi(resposta);
+  return resposta.json() as Promise<AvaliacaoAntropometricaApi>;
 }
 
 export async function listarAvaliacoesAntropometricas(

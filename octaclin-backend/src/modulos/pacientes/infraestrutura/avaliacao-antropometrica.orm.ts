@@ -1,11 +1,13 @@
 import { Column, CreateDateColumn, Entity, Index, PrimaryGeneratedColumn, UpdateDateColumn } from 'typeorm';
 import type { ProtocoloComposicao, SexoBiologico } from '../dominio/antropometria';
+import type { MetricaCompartilhavelPortal } from '../dominio/progresso-paciente';
 
 /**
- * Avaliacao antropometrica seriada. Registro append-only: nao ha edicao, so
- * nova avaliacao ou exclusao logica. Medida corrigida depois de gravada deixaria
- * de bater com a formula e o protocolo carimbados no proprio registro, e o
- * historico clinico perderia a reprodutibilidade que justifica guardar tudo isso.
+ * Avaliacao antropometrica seriada. Medidas e resultados clinicos sao append-only:
+ * nao ha edicao, so nova avaliacao ou exclusao logica. Medida corrigida depois
+ * de gravada deixaria de bater com a formula e o protocolo carimbados e o
+ * historico perderia reprodutibilidade. A selecao de compartilhamento do portal
+ * e metadado separado, que pode ser revogado sem alterar o registro clinico.
  */
 @Entity('avaliacoes_antropometricas')
 @Index('idx_avaliacoes_antropometricas_serie', ['tenantId', 'pacienteId', 'avaliadaEm'])
@@ -47,6 +49,10 @@ export class AvaliacaoAntropometricaOrm {
   /** JSON com IMC, RCQ, composicao, classificacoes e avisos. */
   @Column({ name: 'resultado_criptografado', type: 'bytea' })
   resultadoCriptografado: Buffer;
+
+  /** Selecao de exibicao no portal, separada do historico clinico imutavel. */
+  @Column({ name: 'metricas_compartilhadas_portal', type: 'jsonb', default: () => "'[]'::jsonb" })
+  metricasCompartilhadasPortal: MetricaCompartilhavelPortal[];
 
   /**
    * Equacao aplicada, em texto. Fica em claro de proposito: descreve o metodo,

@@ -21,7 +21,7 @@ import { GuardaJwt } from '../../auth/apresentacao/guarda-jwt';
 import { GuardaPapeis } from '../../auth/apresentacao/guarda-papeis';
 import { GuardaPermissoes } from '../../auth/apresentacao/guarda-permissoes';
 import { UsuarioAutenticado } from '../../auth/dominio/usuario-autenticado';
-import { AtualizarPacienteDto, AtualizarTarefaAcompanhamentoDto, BuscarPacientesProtegidosDto, CriarAvaliacaoAntropometricaDto, CriarEvolucaoClinicaDto, CriarModeloEvolucaoClinicaDto, CriarPacienteDto, CriarTarefaAcompanhamentoDto, ImportarPacientesDto, ListarAvaliacoesAntropometricasDto, ListarLinhaTempoProntuarioDto, ListarModelosEvolucaoClinicaDto, ListarPacientesDto, SolicitarOverridePrioridadeAcompanhamentoDto, VerificarDuplicidadePacienteDto } from '../aplicacao/dtos';
+import { AtualizarCompartilhamentoProgressoDto, AtualizarPacienteDto, AtualizarTarefaAcompanhamentoDto, BuscarPacientesProtegidosDto, CriarAvaliacaoAntropometricaDto, CriarEvolucaoClinicaDto, CriarModeloEvolucaoClinicaDto, CriarPacienteDto, CriarTarefaAcompanhamentoDto, ImportarPacientesDto, ListarAvaliacoesAntropometricasDto, ListarLinhaTempoProntuarioDto, ListarModelosEvolucaoClinicaDto, ListarPacientesDto, SolicitarOverridePrioridadeAcompanhamentoDto, VerificarDuplicidadePacienteDto } from '../aplicacao/dtos';
 import { ServicoDuplicidadePacientes } from '../aplicacao/servico-duplicidade-pacientes';
 import { ServicoImportacaoPacientes } from '../aplicacao/servico-importacao-pacientes';
 import { ServicoModelosEvolucaoClinica } from '../aplicacao/servico-modelos-evolucao-clinica';
@@ -476,6 +476,31 @@ export class ControladorPacientes {
       metadados: { avaliacaoId: excluida.id }
     });
     return excluida;
+  }
+
+  @Patch(':id/avaliacoes-antropometricas/:avaliacaoId/compartilhamento-progresso')
+  @Permissoes('pacientes.gerenciar')
+  async atualizarCompartilhamentoProgresso(
+    @UsuarioAtual() usuario: UsuarioAutenticado,
+    @Req() requisicao: Request,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Param('avaliacaoId', ParseUUIDPipe) avaliacaoId: string,
+    @Body() dados: AtualizarCompartilhamentoProgressoDto
+  ) {
+    const avaliacao = await this.servicoPacientes.atualizarCompartilhamentoProgresso(
+      usuario.tenantId, id, avaliacaoId, dados, usuario
+    );
+    await this.servicoAuditoria.registrar({
+      tenantId: usuario.tenantId,
+      usuarioId: usuario.usuarioId,
+      acao: 'pacientes.antropometria.compartilhamento_progresso.atualizar',
+      recursoTipo: 'paciente',
+      recursoId: id,
+      ip: requisicao.ip,
+      userAgent: this.obterUserAgent(requisicao),
+      metadados: { avaliacaoId, metricasCompartilhadas: avaliacao.metricasCompartilhadasPortal }
+    });
+    return avaliacao;
   }
 
   @Get(':id/tarefas-acompanhamento')

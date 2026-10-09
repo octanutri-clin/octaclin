@@ -31,7 +31,7 @@ jest.mock('../../notificacoes/aplicacao/registrar-notificacao');
 const registrarNotificacaoMock = registrarNotificacao as jest.Mock;
 
 function criarRepositorioFake(nome: string, dados: Record<string, any>) {
-  const chaveColecao = nome === 'mensagem' ? 'mensagens' : nome === 'material' ? 'materiais' : `${nome}s`;
+  const chaveColecao = nome === 'mensagem' ? 'mensagens' : nome === 'material' ? 'materiais' : nome === 'avaliacao' ? 'avaliacoes' : `${nome}s`;
   const itens: Record<string, any>[] = dados[chaveColecao] ?? [];
 
   function corresponde(valorItem: unknown, valorConsulta: unknown) {
@@ -120,6 +120,7 @@ function criarServico(dados: Record<string, any>) {
     planoAlimentarItem: criarRepositorioFake('planoAlimentarItem', dados),
     planoAlimentarSubstituicao: criarRepositorioFake('planoAlimentarSubstituicao', dados),
     planoAlimentarEscolha: criarRepositorioFake('planoAlimentarEscolha', dados),
+    avaliacao: criarRepositorioFake('avaliacao', dados),
     regraAutomacao: criarRepositorioFake('regraAutomacao', { regraAutomacaos: dados.regrasAutomacao ?? [] })
   };
   const execucoesRegra = (dados.execucoesRegra ?? (dados.execucoesRegra = [])) as Record<string, any>[];
@@ -149,7 +150,7 @@ function criarServico(dados: Record<string, any>) {
       if (entidade === PlanoAlimentarSubstituicaoOrm) return repositorios.planoAlimentarSubstituicao;
       if (entidade === PlanoAlimentarEscolhaPacienteOrm) return repositorios.planoAlimentarEscolha;
       if (entidade === RegraAutomacaoOrm) return repositorios.regraAutomacao;
-      if (entidade === AvaliacaoAntropometricaOrm) return { find: jest.fn(async () => []) };
+      if (entidade === AvaliacaoAntropometricaOrm) return repositorios.avaliacao;
       throw new Error(`Repositorio nao mapeado: ${entidade.name}`);
     }),
     // Suporta os inserts idempotentes de `dispararGatilhoCheckinAdesaoBaixa`
@@ -941,6 +942,72 @@ describe('ServicoPortalPaciente', () => {
       ],
       solicitacoes: []
     });
+  });
+
+  it('expõe apenas métricas autorizadas e metas explicitamente destacadas no progresso', async () => {
+    const { servico } = criarServico({
+      pacientes: [{ id: 'paciente-1', tenantId: 'tenant-1', usuarioId: 'usuario-paciente-1', nomeCriptografado: Buffer.from('cripto:Ana') }],
+      avaliacoes: [
+        {
+          id: 'avaliacao-compartilhada', tenantId: 'tenant-1', pacienteId: 'paciente-1', excluidaEm: null,
+          avaliadaEm: '2026-07-20', metricasCompartilhadasPortal: ['imc', 'percentualGordura', 'massaMagraKg'],
+          medidasCriptografadas: Buffer.from('cripto:{"pesoKg":80}'),
+          resultadoCriptografado: Buffer.from('cripto:{"imc":24.2,"massaMagraKg":58.4,"classificacaoImc":"eutrofia"}'),
+          formulaAplicada: 'formula interna'
+        },
+        {
+          id: 'avaliacao-nao-compartilhada', tenantId: 'tenant-1', pacienteId: 'paciente-1', excluidaEm: null,
+          avaliadaEm: '2026-07-21', metricasCompartilhadasPortal: [],
+          medidasCriptografadas: Buffer.from('cripto:{"pesoKg":79}'),
+          resultadoCriptografado: Buffer.from('cripto:{"imc":23.9}')
+        },
+        {
+          id: 'avaliacao-outro-paciente', tenantId: 'tenant-1', pacienteId: 'paciente-2', excluidaEm: null,
+          avaliadaEm: '2026-07-22', metricasCompartilhadasPortal: ['imc'],
+          medidasCriptografadas: Buffer.from('cripto:{"pesoKg":99}'),
+          resultadoCriptografado: Buffer.from('cripto:{"imc":31}')
+        }
+      ],
+      tarefas: [
+        {
+          id: 'meta-compartilhada', tenantId: 'tenant-1', pacienteId: 'paciente-1', categoria: 'meta',
+          tituloCriptografado: Buffer.from('cripto:Caminhar no parque'), descricaoCriptografada: Buffer.from('cripto:detalhe interno'),
+          exibirNoProgresso: true, status: 'concluida', criadoEm: new Date('2026-07-18T12:00:00.000Z'),
+          concluidoEm: new Date('2026-07-20T12:00:00.000Z')
+        },
+        {
+          id: 'meta-privada', tenantId: 'tenant-1', pacienteId: 'paciente-1', categoria: 'meta',
+          tituloCriptografado: Buffer.from('cripto:Meta interna'), exibirNoProgresso: false, status: 'pendente',
+          criadoEm: new Date('2026-07-19T12:00:00.000Z')
+        },
+        {
+          id: 'tarefa-outro-paciente', tenantId: 'tenant-1', pacienteId: 'paciente-2', categoria: 'meta',
+          tituloCriptografado: Buffer.from('cripto:Outro paciente'), exibirNoProgresso: true, status: 'pendente',
+          criadoEm: new Date('2026-07-19T12:00:00.000Z')
+        }
+      ]
+    });
+
+    const portal = await servico.obterResumoPortal('tenant-1', 'usuario-paciente-1');
+    const progresso = (portal as unknown as { progresso: { metricas: unknown[]; marcos: unknown[] } }).progresso;
+
+    expect(progresso.metricas).toEqual([
+      {
+        id: 'imc', rotulo: 'IMC', unidade: 'kg/m²',
+        pontos: [{ data: '2026-07-20', valor: 24.2, origem: 'Avaliação antropométrica' }]
+      },
+      {
+        id: 'massaMagraKg', rotulo: 'Massa magra', unidade: 'kg',
+        pontos: [{ data: '2026-07-20', valor: 58.4, origem: 'Avaliação antropométrica' }]
+      }
+    ]);
+    expect(progresso.marcos).toEqual([
+      expect.objectContaining({ titulo: 'Caminhar no parque', status: 'concluida' })
+    ]);
+    expect(JSON.stringify(progresso)).not.toContain('Meta interna');
+    expect(JSON.stringify(progresso)).not.toContain('detalhe interno');
+    expect(JSON.stringify(progresso)).not.toContain('eutrofia');
+    expect(JSON.stringify(progresso)).not.toContain('Outro paciente');
   });
 
   it('deve rejeitar usuario sem paciente vinculado', async () => {

@@ -852,6 +852,45 @@ export function PortalPaciente({ secao }: { secao: SecaoPortal }) {
               </Cartao>
             </section>
 
+            {portal.progresso ? (
+              <Cartao className={secao === 'checkins' ? 'scroll-mt-4' : 'hidden'}>
+                <CartaoCabecalho>
+                  <CartaoTitulo icone={<Target className="h-4 w-4" />}>Seu progresso compartilhado</CartaoTitulo>
+                </CartaoCabecalho>
+                <CartaoConteudo className="grid gap-5">
+                  {!portal.progresso.metricas.length ? (
+                    <p className="text-sm text-texto-suave">Nenhuma métrica adicional foi compartilhada até agora.</p>
+                  ) : null}
+                  {portal.progresso.metricas.map((metrica) => (
+                    <section key={metrica.id} aria-label={`${metrica.rotulo} compartilhado`}>
+                      <GraficoEvolucao pontos={metrica.pontos} rotulo={metrica.rotulo} unidade={metrica.unidade}
+                        descricao={`Registros compartilhados pela sua nutricionista. Origem: ${metrica.pontos[0]?.origem ?? 'avaliação profissional'}.`} />
+                    </section>
+                  ))}
+                  {portal.progresso.marcos.length ? (
+                    <section aria-labelledby="marcos-progresso-titulo">
+                      <h3 id="marcos-progresso-titulo" className="text-sm font-semibold text-tinta">Metas destacadas</h3>
+                      <ul className="mt-2 grid gap-2">
+                        {portal.progresso.marcos.map((marco, indice) => (
+                          <li key={`${marco.titulo}-${indice}`} className="rounded-md border border-linha p-3 text-sm">
+                            <p className="font-medium text-tinta">{marco.titulo}</p>
+                            <p className="mt-1 text-xs text-texto-suave">
+                              Meta definida pela equipe em {formatarDataHora(marco.criadoEm)} ·{' '}
+                              {marco.status === 'concluida' ? 'Concluída' : marco.status === 'em_andamento' ? 'Em andamento' : 'Pendente'}
+                              {marco.vencimentoEm ? ` · até ${formatarDataHora(marco.vencimentoEm)}` : ''}
+                            </p>
+                          </li>
+                        ))}
+                      </ul>
+                    </section>
+                  ) : null}
+                  {!portal.progresso.marcos.length ? (
+                    <p className="text-sm text-texto-suave">Nenhuma meta foi destacada para aparecer aqui.</p>
+                  ) : null}
+                </CartaoConteudo>
+              </Cartao>
+            ) : null}
+
             {portal.evolucaoPeso?.length ? (
               <Cartao className={secao === 'checkins' ? 'scroll-mt-4' : 'hidden'}>
                 <CartaoCabecalho>

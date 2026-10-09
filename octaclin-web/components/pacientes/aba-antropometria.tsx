@@ -17,6 +17,7 @@ import {
   SerieAntropometricaApi,
   SexoBiologico,
   excluirAvaliacaoAntropometrica,
+  atualizarCompartilhamentoProgresso,
   listarAvaliacoesAntropometricas,
   registrarAvaliacaoAntropometrica
 } from '@/lib/prontuario-api';
@@ -130,7 +131,15 @@ interface FormularioAvaliacao {
   dobras: Record<string, string>;
   /** PB-24 (Fase 275): consulta de origem, opcional. */
   consultaId: string;
+  metricasCompartilhadasPortal: MetricaPortal[];
 }
+
+type MetricaPortal = 'imc' | 'percentualGordura' | 'massaMagraKg';
+const OPCOES_METRICAS_PORTAL: { id: MetricaPortal; rotulo: string }[] = [
+  { id: 'imc', rotulo: 'IMC' },
+  { id: 'percentualGordura', rotulo: 'Gordura corporal' },
+  { id: 'massaMagraKg', rotulo: 'Massa magra' }
+];
 
 function formularioInicial(): FormularioAvaliacao {
   return {
@@ -143,7 +152,8 @@ function formularioInicial(): FormularioAvaliacao {
     cintura: '',
     quadril: '',
     dobras: {},
-    consultaId: ''
+    consultaId: '',
+    metricasCompartilhadasPortal: []
   };
 }
 
@@ -279,7 +289,8 @@ export function AbaAntropometria({ pacienteId, podeGerenciar, dataNascimento }: 
         observacoes: formulario.observacoes.trim() || undefined,
         ...(Object.keys(circunferencias).length ? { circunferencias } : {}),
         ...(Object.keys(dobras).length ? { dobras } : {}),
-        consultaId: formulario.consultaId || undefined
+        consultaId: formulario.consultaId || undefined,
+        metricasCompartilhadasPortal: formulario.metricasCompartilhadasPortal
       });
       setFormulario((atual) => ({ ...formularioInicial(), protocolo: atual.protocolo, sexo: atual.sexo }));
       setSucesso('Avaliação registrada.');
@@ -300,6 +311,17 @@ export function AbaAntropometria({ pacienteId, podeGerenciar, dataNascimento }: 
       await carregar();
     } catch (erroAtual) {
       setErro(mensagemFalhaInterface(erroAtual, 'Não foi possível remover a avaliação.'));
+    }
+  }
+
+  async function alterarCompartilhamento(avaliacaoId: string, metricas: MetricaPortal[]) {
+    setErro(null);
+    try {
+      await atualizarCompartilhamentoProgresso(pacienteId, avaliacaoId, metricas);
+      setSucesso('Compartilhamento do progresso atualizado.');
+      await carregar();
+    } catch (erroAtual) {
+      setErro(mensagemFalhaInterface(erroAtual, 'Não foi possível atualizar o compartilhamento.'));
     }
   }
 
@@ -624,6 +646,23 @@ export function AbaAntropometria({ pacienteId, podeGerenciar, dataNascimento }: 
               <ModelosTextoClinico tipo="observacao_antropometrica" conteudoAtual={formulario.observacoes}
                 aoAplicar={(observacoes) => setFormulario((atual) => ({ ...atual, observacoes }))} desabilitado={salvando} />
 
+              <fieldset className="grid gap-2 rounded-md border border-linha p-3">
+                <legend className="px-1 text-sm font-medium text-tinta">Compartilhar no progresso do paciente</legend>
+                <p className="text-xs text-texto-suave">Serão exibidos apenas os valores calculados e selecionados, com data e origem.</p>
+                {OPCOES_METRICAS_PORTAL.map((metrica) => (
+                  <label key={metrica.id} className="flex items-center gap-2 text-sm text-texto-suave">
+                    <input type="checkbox" checked={formulario.metricasCompartilhadasPortal.includes(metrica.id)}
+                      onChange={(evento) => setFormulario((atual) => ({
+                        ...atual,
+                        metricasCompartilhadasPortal: evento.target.checked
+                          ? [...atual.metricasCompartilhadasPortal, metrica.id]
+                          : atual.metricasCompartilhadasPortal.filter((id) => id !== metrica.id)
+                      }))} />
+                    {metrica.rotulo}
+                  </label>
+                ))}
+              </fieldset>
+
               <div className="flex justify-end">
                 <Botao type="submit" variante="primario" disabled={salvando}>
                   {salvando ? 'Registrando' : 'Registrar avaliação'}
@@ -665,6 +704,22 @@ export function AbaAntropometria({ pacienteId, podeGerenciar, dataNascimento }: 
                       </Botao>
                     ) : null}
                   </div>
+                  {podeGerenciar ? (
+                    <fieldset className="mt-3 grid gap-2 rounded-md border border-linha p-3">
+                      <legend className="px-1 text-xs font-medium text-tinta">Compartilhamento no progresso</legend>
+                      {OPCOES_METRICAS_PORTAL.map((metrica) => (
+                        <label key={metrica.id} className="flex items-center gap-2 text-xs text-texto-suave">
+                          <input type="checkbox" checked={(avaliacao.metricasCompartilhadasPortal ?? []).includes(metrica.id)}
+                            onChange={(evento) => {
+                              const atuais = avaliacao.metricasCompartilhadasPortal ?? [];
+                              const novas = evento.target.checked ? [...atuais, metrica.id] : atuais.filter((id) => id !== metrica.id);
+                              void alterarCompartilhamento(avaliacao.id, novas);
+                            }} />
+                          {metrica.rotulo}
+                        </label>
+                      ))}
+                    </fieldset>
+                  ) : null}
 
                   <dl className="mt-2 grid gap-2 text-sm sm:grid-cols-3 lg:grid-cols-4">
                     <div>
