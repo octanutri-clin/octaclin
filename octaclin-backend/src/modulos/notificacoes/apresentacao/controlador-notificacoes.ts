@@ -1,10 +1,11 @@
-import { Body, Controller, Get, Post, Query, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Post, Put, Query, UseGuards } from '@nestjs/common';
 import { Papeis, Permissoes, UsuarioAtual } from '../../auth/apresentacao/decorators';
 import { GuardaJwt } from '../../auth/apresentacao/guarda-jwt';
 import { GuardaPapeis } from '../../auth/apresentacao/guarda-papeis';
 import { GuardaPermissoes } from '../../auth/apresentacao/guarda-permissoes';
 import { UsuarioAutenticado } from '../../auth/dominio/usuario-autenticado';
-import { ListarNotificacoesDto, MarcarNotificacoesLidasDto } from '../aplicacao/dtos';
+import { ListarNotificacoesDto, MarcarNotificacoesComResumosLidasDto, PreferenciasNotificacaoDto } from '../aplicacao/dtos';
+import { ServicoPreferenciasNotificacoes } from '../aplicacao/servico-preferencias-notificacoes';
 import { ServicoNotificacoes } from '../aplicacao/servico-notificacoes';
 
 /**
@@ -18,7 +19,10 @@ import { ServicoNotificacoes } from '../aplicacao/servico-notificacoes';
 @Papeis('SuperAdmin', 'Professional', 'Collaborator')
 @Permissoes('console.acessar')
 export class ControladorNotificacoes {
-  constructor(private readonly servicoNotificacoes: ServicoNotificacoes) {}
+  constructor(
+    private readonly servicoNotificacoes: ServicoNotificacoes,
+    private readonly servicoPreferencias: ServicoPreferenciasNotificacoes
+  ) {}
 
   @Get()
   listar(@UsuarioAtual() usuario: UsuarioAutenticado, @Query() filtro: ListarNotificacoesDto) {
@@ -26,7 +30,22 @@ export class ControladorNotificacoes {
   }
 
   @Post('lidas')
-  marcarLidas(@UsuarioAtual() usuario: UsuarioAutenticado, @Body() dados: MarcarNotificacoesLidasDto) {
-    return this.servicoNotificacoes.marcarLidas(usuario, dados.ids);
+  marcarLidas(@UsuarioAtual() usuario: UsuarioAutenticado, @Body() dados: MarcarNotificacoesComResumosLidasDto) {
+    return this.servicoNotificacoes.marcarLidas(usuario, dados.ids, dados.idsResumos);
+  }
+
+  @Get('preferencias')
+  obterPreferencias(@UsuarioAtual() usuario: UsuarioAutenticado) {
+    return this.servicoPreferencias.obter(usuario);
+  }
+
+  @Put('preferencias')
+  salvarPreferencias(@UsuarioAtual() usuario: UsuarioAutenticado, @Body() dados: PreferenciasNotificacaoDto) {
+    return this.servicoPreferencias.salvar(usuario, dados);
+  }
+
+  @Post('resumos/gerar')
+  gerarResumos(@UsuarioAtual() usuario: UsuarioAutenticado) {
+    return this.servicoNotificacoes.gerarResumoPendente(usuario);
   }
 }

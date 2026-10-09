@@ -5,12 +5,16 @@
 A Fase 306 foi integrada pelo PR #383 (`104a1546`) e a 307 pelo PR #384
 (`04e66efc`), confirmados no GitHub. CI principal da main `37971450248`
 aprovado, incluindo Governança e Demo local smoke; aplicação da migration
-1064 não verificada neste ciclo. Fase 308 implementada no commit `537665ce` e
-aberta na PR #385; CI obrigatório aprovado, revisão humana pendente. Sem
-migration nova ou aceite de produção. Plano em
-`docs/history/phases/PLANO_FASE_308.md`, tarefas/handoff em `tasks/`.
+1064 não verificada neste ciclo. Fase 308 integrada pelo PR #385 (`1dec202f`),
+confirmada no GitHub; sem migration nova. CI `37987983251` e scanners Semgrep
+`37987983322`, Trivy `37987983323` e CodeQL `37987983326` concluídos com
+sucesso. Sem aceite de produção. Fase 309 implementada na branch
+`feature/fase-309-preferencias-notificacoes`; PR #386 em draft. Migration 1065
+registrada no código, não aplicada fora de banco descartável. Plano em
+`docs/history/phases/PLANO_FASE_309.md`; handoff em `tasks/plan.md` e checklist
+em `tasks/todo.md`.
 O parágrafo abaixo registra a atualização histórica anterior; para o estado
-vigente prevalecem este bloco, itens 303–308 ao final e o roadmap.
+vigente prevalecem este bloco, itens 303–309 ao final e o roadmap.
 
 Atualizado em 2026-10-09. Fase 307 em implementação nesta branch; PR e CI pendentes. Fase 296 integrada pelo PR #353 (merge `ccd1c0bb`); o proprietário informou aplicação da migration 1059, sem confirmação direta de ambiente/banco. Fase 297 integrada pelo PR #355 (merge `4f51b0ac`); Fase 298 integrada pelo PR #356 (merge `b00151ae`), com aplicação da 1060 informada pelo proprietário; Fase 299 integrada pelo PR #357 (merge `9052b8ba`), com aplicação da 1061 e cargas em staging e produção informadas pelo proprietário, sem consulta direta aos bancos neste ciclo; Fase 300 integrada pelo PR #358 (merge `c60c82ed`); Fase 301 integrada pelo PR #359 (merge `bd0f1d6b`); Fase 302 integrada pelo PR #360 (migration 1062 aplicada e validada em staging e produção conforme relato do proprietário, sem consulta direta aos bancos neste ciclo); Fase 303 integrada pelo PR #361 (merge `02acd66c`), migration 1063 aplicada e validada em staging e produção conforme relato do proprietário, sem consulta direta neste ciclo; Fase 304 integrada pelo PR #362 (merge `13a250c8`); Fase 305 integrada pelo PR #379 (merge `32c2aa5b`); Fases 256 a 261, 263 a 304 integradas; Fase 284
 (PB-22) foi integrada pelo PR #320 (merge `af839c5`, 19 checks `SUCCESS` e
@@ -4540,11 +4544,14 @@ auditoria estão ordenados na seção 15 de
   (`04e66efc`), CI principal `37971450248` aprovado. Migration 1064 integrada;
   aplicação operacional não verificada neste ciclo.
   Plano e gaps em `docs/history/phases/PLANO_FASE_307.md`.
-- [ ] Fase 308 - exames fora da faixa no resumo clínico, consumindo PB-17.
-  Implementada no commit `537665ce`; PR #385 aberta e CI obrigatório aprovado.
-  Revisão humana pendente. Sem migration nova e sem aceite de produção. Plano
-  em `docs/history/phases/PLANO_FASE_308.md`; checklist `tasks/todo.md`.
+- [x] Fase 308 - exames fora da faixa no resumo clínico, consumindo PB-17.
+  Integrada pelo PR #385 (`1dec202f`), confirmado no GitHub. Sem migration nova
+  ou aceite de produção; CI e scanners pós-merge concluídos com sucesso. Plano e
+  evidências históricas em `docs/history/phases/PLANO_FASE_308.md`.
 - [ ] Fase 309 - preferências individuais de notificação interna e digest.
+  Implementação na branch `feature/fase-309-preferencias-notificacoes`, PR #386
+  em draft; migration 1065 não aplicada fora de banco descartável. Consulte o
+  handoff em `tasks/plan.md` e os resultados em `tasks/todo.md`.
 - [ ] Fase 310 - categorias e entrega explícita de receitas nutricionais ao
   paciente, com versão revisada.
 - [ ] Fase 311 - instalação opt-in do kit genérico em clínicas existentes e

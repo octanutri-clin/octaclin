@@ -1,5 +1,6 @@
 import { Column, CreateDateColumn, Entity, PrimaryGeneratedColumn } from 'typeorm';
 import type { TipoNotificacao } from '../dominio/tipo-notificacao';
+import type { ModoEntregaNotificacao } from '../dominio/politica-notificacoes';
 
 export type { TipoNotificacao } from '../dominio/tipo-notificacao';
 
@@ -31,6 +32,24 @@ export class NotificacaoOrm {
 
   @Column({ name: 'recurso_id', type: 'uuid' })
   recursoId: string;
+
+  @Column({ name: 'modo_entrega', type: 'varchar', length: 20, default: 'imediato' })
+  modoEntrega: ModoEntregaNotificacao;
+
+  @Column({ name: 'timezone_resumo', type: 'varchar', length: 80, nullable: true })
+  timezoneResumo?: string | null;
+
+  @Column({ name: 'resumo_previsto_em', type: 'timestamptz', nullable: true })
+  resumoPrevistoEm?: Date | null;
+
+  @Column({ name: 'email_resumo', type: 'boolean', default: false })
+  emailResumo: boolean;
+
+  @Column({ name: 'email_cancelado_em', type: 'timestamptz', nullable: true })
+  emailCanceladoEm?: Date | null;
+
+  @Column({ name: 'resumo_id', type: 'uuid', nullable: true })
+  resumoId?: string | null;
 
   @Column({ name: 'lido_em', type: 'timestamptz', nullable: true })
   lidoEm?: Date | null;

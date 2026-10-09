@@ -9,10 +9,12 @@
   CI principal da main `37971450248` aprovado, incluindo Demo local smoke e
   Governança. Aplicação da migration 1064 não verificada neste ciclo.
   Plano em `docs/history/phases/PLANO_FASE_307.md`.
-- Fase 308 implementada no commit `537665ce` e aberta para revisão na PR #385;
-  CI obrigatório aprovado. Ainda não está integrada nem aceita em produção.
-  Sem migration nova. Plano e evidências em
-  `docs/history/phases/PLANO_FASE_308.md` e `tasks/plan.md`.
+- Fase 308 integrada pelo PR #385 (merge `1dec202f`, confirmado no GitHub):
+  resumo factual de exames, nomes livres e limites explícitos. Sem migration
+  nova. CI `37987983251` e scanners Semgrep `37987983322`, Trivy `37987983323`
+  e CodeQL `37987983326` concluídos com sucesso; sem aceite de produção.
+  Plano/evidências em
+  `docs/history/phases/PLANO_FASE_308.md`.
 
 ## Atualização de estado em 2026-10-05
 

@@ -1,9 +1,11 @@
-import { EntityManager, IsNull } from 'typeorm';
+import { EntityManager, In, IsNull } from 'typeorm';
 import { PacienteOrm } from '../../pacientes/infraestrutura/paciente.orm';
 import { ProfissionalOrm } from '../../profissionais/infraestrutura/profissional.orm';
 import { UsuarioOrm } from '../../usuarios/infraestrutura/usuario.orm';
 import { destinatariosDaNotificacao } from '../dominio/destinatarios-notificacao';
 import { NotificacaoOrm, TipoNotificacao } from '../infraestrutura/notificacao.orm';
+import { PreferenciaNotificacaoUsuarioOrm } from '../infraestrutura/preferencia-notificacao-usuario.orm';
+import { criarSnapshotEntregaNotificacao } from '../dominio/snapshot-entrega-notificacao';
 
 export interface EventoNotificavel {
   tipo: TipoNotificacao;
@@ -43,6 +45,12 @@ export async function registrarNotificacao(
   const destinatarios = destinatariosDaNotificacao(usuarios, usuarioIdResponsavel, evento.tipo);
   if (!destinatarios.length) return 0;
 
+  const preferencias = await gerenciador.getRepository(PreferenciaNotificacaoUsuarioOrm).find({
+    where: { tenantId, usuarioId: In(destinatarios) }
+  });
+  const preferenciasPorUsuario = new Map(preferencias.map((preferencia) => [preferencia.usuarioId, preferencia]));
+  const eventoEm = new Date();
+
   // `orIgnore` casa com o indice unico (tenant, usuario, tipo, recurso): webhook
   // reentregue ou outbox reprocessado nao vira contador inflado.
   const resultado = await gerenciador
@@ -56,7 +64,8 @@ export async function registrarNotificacao(
         tipo: evento.tipo,
         pacienteId: evento.pacienteId ?? null,
         recursoTipo: evento.recursoTipo,
-        recursoId: evento.recursoId
+        recursoId: evento.recursoId,
+        ...criarSnapshotEntregaNotificacao(evento.tipo, preferenciasPorUsuario.get(usuarioId), eventoEm)
       }))
     )
     .orIgnore()

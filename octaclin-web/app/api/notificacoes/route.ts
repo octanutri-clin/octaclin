@@ -13,11 +13,11 @@ export async function GET(request: NextRequest) {
     const resposta = await requisitarBackendAutenticado(`/notificacoes${parametros ? `?${parametros}` : ''}`);
     return new NextResponse(resposta.body, {
       status: resposta.status,
-      headers: { 'Content-Type': resposta.headers.get('Content-Type') ?? 'application/json' }
+      headers: { 'Content-Type': resposta.headers.get('Content-Type') ?? 'application/json', 'Cache-Control': 'no-store' }
     });
   } catch (erro) {
-    if (erro instanceof ErroSessaoAusente) return NextResponse.json({ mensagem: erro.message }, { status: 401 });
-    if (erro instanceof ErroPermissaoAusente) return NextResponse.json({ mensagem: erro.message }, { status: 403 });
-    throw erro;
+    if (erro instanceof ErroSessaoAusente) return NextResponse.json({ mensagem: erro.message }, { status: 401, headers: { 'Cache-Control': 'no-store' } });
+    if (erro instanceof ErroPermissaoAusente) return NextResponse.json({ mensagem: erro.message }, { status: 403, headers: { 'Cache-Control': 'no-store' } });
+    return NextResponse.json({ mensagem: 'Serviço de notificações indisponível.' }, { status: 502, headers: { 'Cache-Control': 'no-store' } });
   }
 }

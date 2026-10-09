@@ -15,6 +15,10 @@ import { CriptografiaDadosSensiveis } from '../seguranca/criptografia-dados-sens
 import { ProfissionalOrm } from '../../modulos/profissionais/infraestrutura/profissional.orm';
 import { TenantConfiguracaoOrm } from '../../modulos/tenancy/infraestrutura/tenant-configuracao.orm';
 import { UsuarioOrm } from '../../modulos/usuarios/infraestrutura/usuario.orm';
+import { NotificacaoOrm } from '../../modulos/notificacoes/infraestrutura/notificacao.orm';
+import { PreferenciaNotificacaoUsuarioOrm } from '../../modulos/notificacoes/infraestrutura/preferencia-notificacao-usuario.orm';
+import { ResumoNotificacaoUsuarioOrm } from '../../modulos/notificacoes/infraestrutura/resumo-notificacao-usuario.orm';
+import { ServicoNotificacoes } from '../../modulos/notificacoes/aplicacao/servico-notificacoes';
 import { criarOpcoesTypeOrm } from './opcoes-typeorm';
 
 /**
@@ -192,7 +196,10 @@ descrever('RLS e isolamento multi-tenant integral em Postgres real', () => {
         ConsentimentoLgpdOrm,
         UsuarioOrm,
         PermissaoIntegracaoProfissionalOrm,
-        UserActionLogOrm
+        UserActionLogOrm,
+        NotificacaoOrm,
+        PreferenciaNotificacaoUsuarioOrm,
+        ResumoNotificacaoUsuarioOrm
       ],
       extra: { max: 2 }
     });
@@ -867,6 +874,83 @@ descrever('RLS e isolamento multi-tenant integral em Postgres real', () => {
         total: 0
       });
     }
+  });
+
+  it('Fase 309 isola preferencias/resumos e recusa escrita fora do tenant', async () => {
+    if (!cliente) throw new Error('Cliente da prova RLS nao foi inicializado.');
+    await comoTenant(tenantA);
+    await cliente.query(
+      `insert into preferencias_notificacao_usuario (tenant_id, usuario_id, modo_tarefa_concluida)
+       values ($1, $2, 'diario')`, [tenantA, usuarioIdTenantA]
+    );
+    const resumo = await cliente.query<{ id: string }>(
+      `insert into resumos_notificacao_usuario (tenant_id, usuario_id, periodo_inicio_em, periodo_fim_em, contagens)
+       values ($1, $2, now() - interval '1 day', now(), '{"tarefa_concluida":1}'::jsonb) returning id`,
+      [tenantA, usuarioIdTenantA]
+    );
+    expect(resumo.rows).toHaveLength(1);
+
+    await comoTenant(tenantB);
+    const preferenciasVisiveis = await cliente.query(
+      'select 1 from preferencias_notificacao_usuario where tenant_id = $1 and usuario_id = $2',
+      [tenantA, usuarioIdTenantA]
+    );
+    const resumosVisiveis = await cliente.query(
+      'select 1 from resumos_notificacao_usuario where tenant_id = $1 and usuario_id = $2',
+      [tenantA, usuarioIdTenantA]
+    );
+    expect(preferenciasVisiveis.rows).toHaveLength(0);
+    expect(resumosVisiveis.rows).toHaveLength(0);
+    await expect(cliente.query(
+      `insert into preferencias_notificacao_usuario (tenant_id, usuario_id) values ($1, $2)`,
+      [tenantA, usuarioIdTenantA]
+    )).rejects.toMatchObject({ code: '42501' });
+  });
+
+  it('Fase 309 gera um unico resumo sob dois POST concorrentes no mesmo usuario', async () => {
+    if (!cliente || !executorTenant || !fonteDadosRuntime) throw new Error('Prova Postgres da Fase 309 indisponivel.');
+    await comoTenant(tenantA);
+    const inicioLock = Date.now();
+    await Promise.all(Array.from({ length: 2 }, () => executorTenant!.executar(tenantA, async (gerenciador) => {
+      await gerenciador.query(
+        "select pg_advisory_xact_lock(hashtextextended($1::text || ':' || $2::text, 0))",
+        [tenantA, usuarioIdTenantA]
+      );
+      await gerenciador.query('select pg_sleep(0.5)');
+    })));
+    expect(Date.now() - inicioLock).toBeGreaterThanOrEqual(900);
+
+    const notificacaoId = randomUUID();
+    const recursoId = randomUUID();
+    await cliente.query(
+      `insert into notificacoes (id, tenant_id, usuario_id, tipo, recurso_tipo, recurso_id, modo_entrega,
+        timezone_resumo, resumo_previsto_em, email_resumo, criado_em)
+       values ($1, $2, $3, 'tarefa_concluida', 'tarefa', $4, 'diario', 'America/Sao_Paulo', now() - interval '1 hour', false, now() - interval '1 day')`,
+      [notificacaoId, tenantA, usuarioIdTenantA, recursoId]
+    );
+    const servico = new ServicoNotificacoes(executorTenant, { descriptografar: () => '' } as never);
+    const usuarioAutenticado = {
+      tenantId: tenantA,
+      usuarioId: usuarioIdTenantA,
+      papel: 'Professional' as const,
+      emailHash: 'hash-sintetico',
+      permissoes: ['console.acessar' as const]
+    };
+    const resultados = await Promise.all([
+      servico.gerarResumoPendente(usuarioAutenticado),
+      servico.gerarResumoPendente(usuarioAutenticado)
+    ]);
+    expect(resultados.filter(({ gerado }) => gerado)).toHaveLength(1);
+    const vinculacao = await executorTenant.executar(tenantA, (manager) => manager.query(
+      `select n.resumo_id, r.contagens from notificacoes n join resumos_notificacao_usuario r
+       on r.tenant_id = n.tenant_id and r.usuario_id = n.usuario_id and r.id = n.resumo_id
+       where n.tenant_id = $1 and n.usuario_id = $2 and n.id = $3`,
+      [tenantA, usuarioIdTenantA, notificacaoId]
+    ));
+    expect(vinculacao).toHaveLength(1);
+    expect(vinculacao[0].contagens).toMatchObject({ tarefa_concluida: 1 });
+    await cliente.query('delete from notificacoes where tenant_id = $1 and id = $2', [tenantA, notificacaoId]);
+    await cliente.query('delete from resumos_notificacao_usuario where tenant_id = $1 and usuario_id = $2', [tenantA, usuarioIdTenantA]);
   });
 
   it('pool e jobs concorrentes nao vazam contexto entre tenants nem apos a transacao', async () => {

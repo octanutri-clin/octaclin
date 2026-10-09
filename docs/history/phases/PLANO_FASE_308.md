@@ -17,6 +17,17 @@ planejamento encerra antes do código. Modelo recomendado para implementar:
 Não repetir a auditoria completa. Reconfirmar Git, instruções e contratos
 indicados; escalar fato novo de segurança ou incompatibilidade ao usuário.
 
+## Reconciliação após merge (2026-10-09)
+
+PR #385 MERGED, merge `1dec202f324cf09b738a874ec4080506a666171b`,
+confirmado no GitHub; integra o código `537665ce` e o follow-up documental
+`c577b8ed`. CI pós-merge `37987983251` em andamento nesta consulta: Web,
+backend e Governança PASS; Demo local smoke pendente. CodeQL `37987983326`,
+Semgrep `37987983322` e Trivy `37987983323` PASS nesse merge. Sem migration
+nova, envio real ou aceite de produção. O registro anterior de PR aberta e
+revisão pendente abaixo é histórico. Próxima fase: 309, plano/gaps em
+`PLANO_FASE_309.md`; handoff ativo em `tasks/plan.md`.
+
 ## Resultado da implementação (2026-10-09)
 
 Implementação realizada na branch `feature/fase-308-resumo-exames` a partir da
