@@ -1,10 +1,9 @@
 # Roadmap de produto após a Fase 302
 
-Atualizado em 2026-10-06. A Fase 305 foi integrada pelo PR #379 (merge
-`32c2aa5b`, confirmado no GitHub); checks obrigatórios passaram e
-`Provenance do SBOM` ficou `SKIPPED`. Sem migration. A Fase 306 está em
-desenvolvimento na branch `feat/fase306-retorno-evasao-factual`, sem migration
-prevista.
+Atualizado em 2026-10-09. A Fase 306 foi integrada pelo PR #383 (merge
+`104a1546`, confirmado no GitHub); checks ainda estavam em execução na última
+consulta. A Fase 307 está em implementação na branch
+`feature-fase-307-progresso-paciente`, com migration aditiva 1064 proposta.
 Este é o plano **vigente** para as recomendações ainda abertas de
 `OCTACLIN_PRODUCT_FEATURE_AUDIT.md`. O diagnóstico de 2026-09-17 permanece
 histórico; uma descrição antiga de lacuna não desfaz uma entrega posterior.
@@ -12,7 +11,7 @@ histórico; uma descrição antiga de lacuna não desfaz uma entrega posterior.
 ## Como executar e manter
 
 - Seguir a ordem numérica, salvo nova decisão explícita do proprietário. A fase
-  em andamento é a **306**; depois dela, a próxima fase é a **307**. Cada fase recebe plano de execução e revisão de gaps
+  em andamento é a **307**; depois dela, a próxima fase é a **308**. Cada fase recebe plano de execução e revisão de gaps
   antes do código; concluir uma não implica iniciar a próxima sem reconciliar
   código, PRs e evidência operacional.
 - Implementar cada fatia funcional em sua branch/PR com a documentação
@@ -37,8 +36,8 @@ histórico; uma descrição antiga de lacuna não desfaz uma entrega posterior.
 | 303 | **Integrações para profissionais autorizados.** O gestor concede e revoga diretamente escopos de API e eventos de webhook, cada conjunto de forma independente. | Credenciais profissionais ficam vinculadas ao titular e só alcançam pacientes de sua carteira atual; API, idempotência e entregas de webhook devem provar essa restrição. Não conceder papel `Client`. Testar criação, uso, revogação, negações por papel e tenant; payloads externos mantêm o contrato atual. Plano em `docs/history/phases/PLANO_FASE_303.md`; migration 1063 fora de banda. | Integrada pelo PR #361; migration 1063 aplicada e validada em staging/produção conforme relato do proprietário, sem consulta direta neste ciclo |
 | 304 | **Adesão longitudinal factual e substituições.** Mostrar ao profissional check-ins declarados, respostas ausentes e escolhas de troca junto da versão publicada do plano; expor na UI a consulta à versão histórica já disponível na API interna. | Não inferir consumo real a partir de uma troca ou ausência de resposta. Restringir por carteira/tenant, distinguir versões e dados faltantes; evitar duplicar a linha do tempo. | Integrada pelo PR #362; sem migration nova |
 | 305 | **Questionários e antropometria na mesma leitura longitudinal.** Cruzar visualmente datas de respostas, métricas antropométricas e consultas, reutilizando a matriz longitudinal e séries existentes. | Sem causalidade ou diagnóstico automático; filtros de período, unidades, origem e lacunas explícitos. Permissões clínicas e versão do formulário preservadas. | Integrada pelo PR #379 (`32c2aa5b`); checks obrigatórios passaram e `Provenance do SBOM` `SKIPPED`; sem migration. Plano em `docs/history/phases/PLANO_FASE_305.md` |
-| 306 | **Retorno e evasão factuais.** Indicadores agregados de intervalo observado entre consultas, pacientes sem próxima consulta, faltas por horário e tempo de resposta a formulários, para o Painel de Operação do `Client`. Reusar a mediana de até três intervalos da Fase 294. | Denominadores, janela e população explícitos; histórico insuficiente sinalizado; contagens sem pacientes identificáveis; sem diagnóstico nem contato novo. Preserva a trava de contato de 30 dias; sem migration. | Em desenvolvimento na branch `feat/fase306-retorno-evasao-factual`; plano e revisão de gaps em `docs/history/phases/PLANO_FASE_306.md` |
-| 307 | **Progresso do paciente além do peso.** Exibir no portal apenas métricas autorizadas e metas/marcos que o profissional escolheu compartilhar, com unidade, data e origem. | Consentimento e acesso do próprio paciente; sem revelar anotações internas ou meta implícita. Ausência de meta aparece como tal; nenhuma comparação clínica automática. | Planejada |
+| 306 | **Retorno e evasão factuais.** Indicadores agregados de intervalo observado entre consultas, pacientes sem próxima consulta, faltas por horário e tempo de resposta a formulários, para o Painel de Operação do `Client`. Reusar a mediana de até três intervalos da Fase 294. | Denominadores, janela e população explícitos; histórico insuficiente sinalizado; contagens sem pacientes identificáveis; sem diagnóstico nem contato novo. Preserva a trava de contato de 30 dias; sem migration. | Integrada pelo PR #383 (merge `104a1546`); checks em reconciliação |
+| 307 | **Progresso do paciente além do peso.** Exibir no portal apenas métricas autorizadas e metas/marcos que o profissional escolheu compartilhar, com unidade, data e origem. | Consentimento e acesso do próprio paciente; sem revelar anotações internas ou meta implícita. Ausência de meta aparece como tal; nenhuma comparação clínica automática. | Em implementação na branch `feature-fase-307-progresso-paciente`; plano e revisão de gaps em `docs/history/phases/PLANO_FASE_307.md` |
 | 308 | **Completar o resumo clínico com exames fora da faixa.** Consumir PB-17 no resumo PB-16, com resultado, unidade, referência e data, limitado à carteira/aba permitida. | Factual, sem interpretação nem alerta novo; faixas dependem da referência registrada e itens sem referência não são classificados. Regressão negativa de tenant/papel. | Planejada |
 | 309 | **Preferências individuais de notificações internas e digest.** Configurar classes opcionais, frequência e resumo sem conteúdo clínico sensível. | Alertas críticos/obrigatórios continuam visíveis; preferências por usuário, deduplicação, fuso e autorização. Não confundir com opt-out de canais externos do paciente. | Planejada |
 | 310 | **Receitas nutricionais organizadas e compartilháveis.** Categorias pesquisáveis e entrega explícita ao paciente de uma versão revisada da receita, no portal seguro. | Não publicar automaticamente todo o acervo; profissional escolhe o conteúdo e o paciente. Cópia/versionamento, permissão, retirada e trilha de leitura sem PHI em notificação externa. | Planejada |
@@ -113,12 +112,9 @@ Checks obrigatórios passaram; `Provenance do SBOM` ficou `SKIPPED`. Sem
 migration ou prova de produção. Plano e evidências em
 `docs/history/phases/PLANO_FASE_305.md`.
 
-**Fase 306 em andamento:** indicadores agregados de retorno, ausência de
-consulta futura, faltas por horário e resposta a formulários. O contrato define
-populações, denominadores, janelas, timezone e supressão de grupos pequenos;
-mantém o endpoint e a autorização do Painel de Operação, sem expor pacientes,
-sem prever evasão clínica e sem enviar contato. Plano e revisão de gaps em
-`docs/history/phases/PLANO_FASE_306.md`.
+**Fase 306 integrada pelo PR #383:** indicadores agregados de retorno, ausência
+de consulta futura, faltas por horário e resposta a formulários. Checks ainda
+em reconciliação; não declarar CI verde sem evidência.
 
-**Próxima fase após integração da 306:** 307, progresso do paciente além do
-peso, limitado a métricas e metas explicitamente compartilhadas.
+**Fase 307 em andamento:** progresso do paciente além do peso, limitado a
+métricas e metas explicitamente compartilhadas.

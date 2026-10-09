@@ -10,6 +10,7 @@ import {
   IsOptional,
   IsString,
   IsUUID,
+  ArrayUnique,
   ArrayMaxSize,
   Matches,
   Max,
@@ -46,6 +47,7 @@ import type {
   ResultadoAntropometrico,
   SexoBiologico
 } from '../dominio/antropometria';
+import { METRICAS_COMPARTILHAVEIS_PORTAL, type MetricaCompartilhavelPortal } from '../dominio/progresso-paciente';
 
 export class RegistrarEscolhaSubstituicaoPortalDto {
   // Nulo e ausente registram o retorno ao alimento principal, que tambem e uma
@@ -707,12 +709,20 @@ export class CriarTarefaAcompanhamentoDto {
   @IsOptional()
   @IsDateString()
   vencimentoEm?: string;
+
+  @IsOptional()
+  @IsBoolean()
+  exibirNoProgresso?: boolean;
 }
 
 export class AtualizarTarefaAcompanhamentoDto {
   @IsOptional()
   @IsIn(['pendente', 'em_andamento', 'concluida', 'cancelada'])
   status?: StatusTarefaAcompanhamento;
+
+  @IsOptional()
+  @IsBoolean()
+  exibirNoProgresso?: boolean;
 }
 
 export class CriarCondutaTerapeuticaDto {
@@ -831,6 +841,7 @@ export interface TarefaAcompanhamentoRespostaDto {
   categoria: CategoriaTarefaAcompanhamento;
   prioridade: PrioridadeTarefaAcompanhamento;
   status: StatusTarefaAcompanhamento;
+  exibirNoProgresso: boolean;
   vencimentoEm?: Date;
   concluidoEm?: Date;
   criadoEm: Date;
@@ -1057,6 +1068,13 @@ export class CriarAvaliacaoAntropometricaDto {
   @MaxLength(2000)
   observacoes?: string;
 
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(METRICAS_COMPARTILHAVEIS_PORTAL.length)
+  @ArrayUnique()
+  @IsIn(METRICAS_COMPARTILHAVEIS_PORTAL, { each: true })
+  metricasCompartilhadasPortal?: MetricaCompartilhavelPortal[];
+
   /** PB-24 (Fase 275): consulta de origem, opcional. */
   @IsOptional()
   @IsUUID()
@@ -1072,10 +1090,19 @@ export interface AvaliacaoAntropometricaRespostaDto {
   idadeAnos?: number;
   medidas: MedidasAntropometricas;
   resultado: ResultadoAntropometrico;
+  metricasCompartilhadasPortal: MetricaCompartilhavelPortal[];
   formulaAplicada?: string;
   observacoes?: string;
   consultaId?: string;
   criadoEm: Date;
+}
+
+export class AtualizarCompartilhamentoProgressoDto {
+  @IsArray()
+  @ArrayMaxSize(METRICAS_COMPARTILHAVEIS_PORTAL.length)
+  @ArrayUnique()
+  @IsIn(METRICAS_COMPARTILHAVEIS_PORTAL, { each: true })
+  metricasCompartilhadasPortal: MetricaCompartilhavelPortal[];
 }
 
 export class ListarAvaliacoesAntropometricasDto {

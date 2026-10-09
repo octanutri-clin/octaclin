@@ -1,6 +1,6 @@
 # OctaClin - Status atual do projeto
 
-Atualizado em 2026-10-06.
+Atualizado em 2026-10-09.
 
 ## Fase ativa
 
@@ -44,15 +44,16 @@ Atualizado em 2026-10-06.
   explícitas. Checks obrigatórios passaram; `Provenance do SBOM` ficou
   `SKIPPED`. Sem migration. Plano em
   `docs/history/phases/PLANO_FASE_305.md`.
-- Fase 306 em desenvolvimento na branch
-  `feat/fase306-retorno-evasao-factual`: indicadores agregados de intervalo
-  entre consultas, sem consulta futura, faltas por horário e tempo de resposta
-  a formulários. Escopo somente leitura no Painel de Operação do `Client`, sem
-  contato novo ou migration. Plano e análise de gaps em
-  `docs/history/phases/PLANO_FASE_306.md`.
+- Fase 306 integrada pelo PR #383 (merge `104a1546`, confirmado no GitHub em
+  2026-10-09): indicadores agregados de retorno e evasão factual no Painel de
+  Operação. Checks do merge estavam em execução na última consulta; não afirmar
+  CI verde até reconciliação. Plano em `docs/history/phases/PLANO_FASE_306.md`.
+- Fase 307 em implementação na branch `feature-fase-307-progresso-paciente`:
+  métricas antropométricas e metas escolhidas explicitamente pelo profissional
+  no portal do próprio paciente. Migration 1064 aditiva, não aplicada nesta
+  fase. Plano e gaps em `docs/history/phases/PLANO_FASE_307.md`.
 - Sequência das Fases 302–320 em
-  `docs/product/ROADMAP_POS_AUDITORIA_FASES_302_320.md`. A próxima fase após a
-  306 é a 307. O PB-30 está planejado na Fase 316, condicionado a privacidade,
+  `docs/product/ROADMAP_POS_AUDITORIA_FASES_302_320.md`. O PB-30 está planejado na Fase 316, condicionado a privacidade,
   jurídico e operação.
 
 - Fase 295 / PB-28 integrada pelo PR #349 (merge `a54e52c9`, confirmado no GitHub em 2026-09-30).

@@ -1513,7 +1513,8 @@ describe('ServicoPacientes', () => {
         descricao: 'Meta diaria de 1 litro entre 13h e 18h.',
         categoria: 'meta',
         prioridade: 'media',
-        vencimentoEm: '2026-07-29T18:00:00.000Z'
+        vencimentoEm: '2026-07-29T18:00:00.000Z',
+        exibirNoProgresso: true
       },
       usuarioColaborador
     );
@@ -1527,12 +1528,14 @@ describe('ServicoPacientes', () => {
         descricao: 'Meta diaria de 1 litro entre 13h e 18h.',
         categoria: 'meta',
         prioridade: 'media',
-        status: 'pendente'
+        status: 'pendente',
+        exibirNoProgresso: true
       })
     );
     expect(tarefasSalvas[0]).toEqual(
       expect.objectContaining({
         tenantId: 'tenant-1',
+        exibirNoProgresso: true,
         descricaoCriptografada: Buffer.from('cripto:Meta diaria de 1 litro entre 13h e 18h.')
       })
     );
@@ -1545,6 +1548,12 @@ describe('ServicoPacientes', () => {
       })
     );
     expect(prontuario.linhaDoTempo[0]).not.toHaveProperty('descricao');
+    await expect(servico.criarTarefaAcompanhamento(
+      'tenant-1', 'paciente-1', 'usuario-profissional-1',
+      { titulo: 'Tarefa comum', categoria: 'tarefa', exibirNoProgresso: true },
+      usuarioColaborador
+    )).rejects.toThrow('Somente metas podem ser destacadas');
+    expect(tarefasSalvas).toHaveLength(1);
   });
 
   it('monta leituraClinica no resumo: deltas antropometricos, objetivo do plano vigente e condutas vencendo (PB-16)', async () => {
@@ -2430,7 +2439,8 @@ describe('ServicoPacientes - avaliacao antropometrica', () => {
         sexo: 'masculino',
         pesoKg: 80,
         alturaCm: 180,
-        dobras: { peitoral: 10, abdominal: 20, coxa: 15 }
+        dobras: { peitoral: 10, abdominal: 20, coxa: 15 },
+        metricasCompartilhadasPortal: ['imc', 'percentualGordura']
       },
       usuarioColaborador
     );
@@ -2442,6 +2452,8 @@ describe('ServicoPacientes - avaliacao antropometrica', () => {
     expect(avaliacao.formulaAplicada).toContain('Jackson & Pollock 1978');
 
     const gravado = repositorioAvaliacoes.save.mock.calls[0][0] as Record<string, unknown>;
+    expect(avaliacao.metricasCompartilhadasPortal).toEqual(['imc', 'percentualGordura']);
+    expect(gravado.metricasCompartilhadasPortal).toEqual(['imc', 'percentualGordura']);
     expect(Buffer.isBuffer(gravado.medidasCriptografadas)).toBe(true);
     expect(Buffer.isBuffer(gravado.resultadoCriptografado)).toBe(true);
     // A formula fica em claro: descreve o metodo, nao o paciente.

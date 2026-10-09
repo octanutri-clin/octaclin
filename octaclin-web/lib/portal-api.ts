@@ -49,6 +49,10 @@ export interface PortalPacienteApi {
   };
   /** Peso e data, so. Sem IMC, sem percentual de gordura, sem classificacao. */
   evolucaoPeso?: { data: string; pesoKg: number }[];
+  progresso?: {
+    metricas: Array<{ id: string; rotulo: string; unidade: string; pontos: Array<{ data: string; valor: number; origem: string }> }>;
+    marcos: Array<{ titulo: string; status: string; criadoEm: string; vencimentoEm?: string; concluidoEm?: string }>;
+  };
   perfil: {
     contato?: string;
     email?: string;

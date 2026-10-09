@@ -1,5 +1,12 @@
 # OctaClin - Resumo das fases concluidas
 
+## Reconciliação em 2026-10-09
+
+- Fase 306 integrada pelo PR #383 (merge `104a1546`, confirmado no GitHub).
+  Checks ainda em reconciliação nesta atualização; sem declaração de CI verde.
+- Fase 307 em implementação na branch `feature-fase-307-progresso-paciente`;
+  plano e gaps em `docs/history/phases/PLANO_FASE_307.md`. PR e CI pendentes.
+
 ## Atualização de estado em 2026-10-05
 
 - Fase 302 integrada pelo PR #360 (merge `2aec88f2`). O proprietário informou

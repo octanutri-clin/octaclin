@@ -33,6 +33,16 @@ const portalPaciente = {
     { data: '2026-06-14', pesoKg: 80.1 },
     { data: '2026-07-19', pesoKg: 78.6 }
   ],
+  progresso: {
+    metricas: [{
+      id: 'imc', rotulo: 'IMC', unidade: 'kg/m²',
+      pontos: [
+        { data: '2026-06-14', valor: 25.2, origem: 'Avaliação antropométrica' },
+        { data: '2026-07-19', valor: 24.8, origem: 'Avaliação antropométrica' }
+      ]
+    }],
+    marcos: [{ titulo: 'Registrar água diariamente', status: 'em_andamento', criadoEm: '2026-07-22T12:00:00.000Z' }]
+  },
   consultasProximas: [
     {
       id: 'consulta-1',
@@ -580,15 +590,48 @@ test.describe('portal do paciente', () => {
     await expect(curva).toBeVisible();
 
     // A alternativa textual e obrigatoria: o grafico nao pode ser o unico caminho.
-    await page.getByText('Ver valores em tabela').click();
+    await page.locator('figure').filter({ has: page.getByRole('img', { name: /Evolucao de Peso em kg/ }) })
+      .getByText('Ver valores em tabela').click();
     await expect(page.getByRole('cell', { name: '82,4' })).toBeVisible();
     await expect(page.getByRole('cell', { name: '78,6' })).toBeVisible();
 
     // Regra da Fase 161: peso e do paciente, leitura clinica derivada nao.
-    for (const proibido of ['IMC', 'Gordura corporal', 'Massa magra', 'Eutrofia', 'Sobrepeso', 'Risco']) {
+    for (const proibido of ['Eutrofia', 'Sobrepeso', 'Risco']) {
       await expect(page.getByText(proibido, { exact: false })).toHaveCount(0);
     }
     await assertSemOverflowHorizontal(page);
+  });
+
+  test('mostra apenas metricas e metas compartilhadas no progresso', async ({ page }) => {
+    await prepararPortal(page);
+    await page.goto('/portal/checkins');
+
+    await expect(page.getByRole('heading', { name: 'Seu progresso compartilhado' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Metas destacadas' })).toBeVisible();
+    await expect(page.getByText('Registrar água diariamente')).toBeVisible();
+    const marco = page.getByRole('listitem').filter({ hasText: 'Registrar água diariamente' });
+    await expect(marco.getByText(/Em andamento/)).toBeVisible();
+    await expect(marco.getByText(/Meta definida pela equipe/)).toBeVisible();
+    await expect(page.getByText('Avaliação antropométrica')).toBeVisible();
+    for (const proibido of ['detalhe interno', 'Eutrofia', 'fórmula aplicada']) {
+      await expect(page.getByText(proibido, { exact: false })).toHaveCount(0);
+    }
+    await assertSemOverflowHorizontal(page);
+  });
+
+  test('explicita quando nenhuma metrica ou meta foi compartilhada', async ({ page }) => {
+    await prepararPortal(page);
+    await page.route((url) => url.pathname === '/api/portal/paciente', async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ ...portalPaciente, progresso: { metricas: [], marcos: [] } })
+      });
+    });
+    await page.goto('/portal/checkins');
+
+    await expect(page.getByText('Nenhuma métrica adicional foi compartilhada até agora.')).toBeVisible();
+    await expect(page.getByText('Nenhuma meta foi destacada para aparecer aqui.')).toBeVisible();
   });
 
   test('navega por rotas reais com um unico carregamento do portal', async ({ page }, testInfo) => {

@@ -3626,7 +3626,7 @@ test.describe('prontuario do paciente', () => {
 
     await expect.poll(() => prontuario.criouTarefa()).toBe(true);
     await expect(page.getByText('Tarefa de acompanhamento prescrita.')).toBeVisible();
-    await expect(page.getByText('Beber agua no período da tarde')).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Beber agua no período da tarde' })).toBeVisible();
     await expect(page.getByText('Meta diária de 1 litro entre 13h e 18h.')).toBeVisible();
     await page.getByRole('tab', { name: 'Resumo' }).click();
     const atividade = page.getByRole('region', { name: 'Atividade do prontuário' });

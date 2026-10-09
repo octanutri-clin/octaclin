@@ -77,6 +77,7 @@ import { VersionarModelosPlanoAlimentar1720000001060 } from './migracoes/1720000
 import { AumentarPrecisaoComposicaoAlimentar1720000001061 } from './migracoes/1720000001061-AumentarPrecisaoComposicaoAlimentar';
 import { CifrarDetalhesSolicitacoesLgpd1720000001062 } from './migracoes/1720000001062-CifrarDetalhesSolicitacoesLgpd';
 import { CriarPermissoesIntegracaoProfissional1720000001063 } from './migracoes/1720000001063-CriarPermissoesIntegracaoProfissional';
+import { AutorizarCompartilhamentoProgressoPortal1720000001064 } from './migracoes/1720000001064-AutorizarCompartilhamentoProgressoPortal';
 import { UserActionLogOrm } from '../auditoria/user-action-log.orm';
 import { ConsentimentoLgpdOrm } from '../lgpd/consentimento-lgpd.orm';
 import { TombstoneExclusaoLgpdOrm } from '../lgpd/tombstone-exclusao-lgpd.orm';
@@ -408,7 +409,8 @@ export function criarOpcoesTypeOrm(): TypeOrmModuleOptions & DataSourceOptions {
       VersionarModelosPlanoAlimentar1720000001060,
       AumentarPrecisaoComposicaoAlimentar1720000001061,
       CifrarDetalhesSolicitacoesLgpd1720000001062,
-      CriarPermissoesIntegracaoProfissional1720000001063
+      CriarPermissoesIntegracaoProfissional1720000001063,
+      AutorizarCompartilhamentoProgressoPortal1720000001064
       ],
     migrationsRun: executarMigracoesNoBoot(),
     synchronize: false,

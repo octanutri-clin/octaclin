@@ -228,26 +228,33 @@ const INVENTARIO_REAL = new URL('../docs/governance/inventario-security-quality.
 
 test('valida estrutura e cobertura do inventario real na data da captura', () => {
   const inventario = JSON.parse(readFileSync(INVENTARIO_REAL, 'utf8'));
-  // SQ-2026-139 saiu de `aguardando_upstream` em 2026-09-28: a imagem oficial
-  // Node 22 Alpine corrigida existe e o bump esta em validacao. Nao declarar
-  // encerrado o SQ-4 ate a integracao e o novo scan da main sem esses alertas.
+  // A captura completa da main de 2026-10-09 fechou os 40 alertas OpenSSL e
+  // revelou alertas novos, triados por pacote junto a SQ-2026-004 e SQ-2026-240..247.
   assert.equal(inventario.gateEncerramentoSq4, undefined);
-  assert.deepEqual(inventario.causas.map(({ alertas }) => alertas.length), [156, 40, 0]);
+  assert.deepEqual(inventario.causas.map(({ alertas }) => alertas.length), [206, 0, 0, 3, 3, 3, 2, 2, 1, 1, 2]);
   assert.deepEqual(inventario.causas.map(({ disposicao }) => disposicao), [
-    'mitigado',
     'corrigir',
     'mitigado',
+    'mitigado',
+    'corrigir',
+    'corrigir',
+    'corrigir',
+    'aguardando_upstream',
+    'aguardando_upstream',
+    'aguardando_upstream',
+    'corrigir',
+    'corrigir',
   ]);
-  assert.match(carregarEValidarInventario(undefined, { hoje: HOJE }), /196 alertas cobertos/);
+  assert.match(carregarEValidarInventario(undefined, { hoje: HOJE }), /223 alertas cobertos/);
 });
 
-// Fronteira ancorada no `revisarEm` vigente da SQ-2026-004 (2026-10-08): um
-// instante antes ainda vale, o primeiro instante depois reprova. Ao renovar a
-// data na causa, mova estas duas aqui junto -- os dois lados existem de
-// proposito, porque so o par prova que a CLI aplica mesmo o relogio corrente.
+// Fronteira ancorada no `revisarEm` vigente da SQ-2026-004 (2026-10-23): a data
+// de revisao ainda vale durante todo o dia; no dia seguinte reprova. Ao renovar
+// a data na causa, mova estes casos junto para provar que a CLI aplica o relogio.
 for (const [data, status, mensagem] of [
-  ['2026-10-08T23:59:59.999Z', 0, /196 alertas cobertos/],
-  ['2026-10-09T00:00:00.000Z', 1, /SQ-2026-004 esta com revisao vencida/],
+  ['2026-10-22T23:59:59.999Z', 0, /223 alertas cobertos/],
+  ['2026-10-23T00:00:00.000Z', 0, /223 alertas cobertos/],
+  ['2026-10-24T00:00:00.000Z', 1, /SQ-2026-004 esta com revisao vencida/],
 ]) {
   test(`CLI do gate de CI aplica o relogio corrente em ${data}`, () => {
     const pacote = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8'));

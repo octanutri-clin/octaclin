@@ -44,6 +44,7 @@ import { listarDocumentosLegaisPaciente } from '../../../infraestrutura/lgpd/doc
 import { AcompanhamentoTarefaOrm, CategoriaTarefaAcompanhamento } from '../infraestrutura/acompanhamento-tarefa.orm';
 import { PacienteOrm } from '../infraestrutura/paciente.orm';
 import { registrarNotificacao } from '../../notificacoes/aplicacao/registrar-notificacao';
+import { DEFINICOES_METRICAS_COMPARTILHAVEIS_PORTAL } from '../dominio/progresso-paciente';
 
 /**
  * Fase 257, Incremento 3: decisao de produto confirmada com o dono do
@@ -183,6 +184,15 @@ export interface ResumoPortalPaciente {
    * paciente ve a propria curva, e a leitura clinica continua sendo da consulta.
    */
   evolucaoPeso: { data: string; pesoKg: number }[];
+  progresso: {
+    metricas: {
+      id: string;
+      rotulo: string;
+      unidade: string;
+      pontos: { data: string; valor: number; origem: string }[];
+    }[];
+    marcos: { titulo: string; status: string; criadoEm: Date; vencimentoEm?: Date; concluidoEm?: Date }[];
+  };
   consultasProximas: {
     id: string;
     titulo: string;
@@ -494,6 +504,42 @@ export class ServicoPortalPaciente {
         })
         .filter((ponto): ponto is { data: string; pesoKg: number } => ponto !== null)
         .reverse();
+      const metricas = DEFINICOES_METRICAS_COMPARTILHAVEIS_PORTAL.map((definicao) => ({
+        ...definicao,
+        pontos: avaliacoes
+          .filter((avaliacao) => Array.isArray(avaliacao.metricasCompartilhadasPortal)
+            && avaliacao.metricasCompartilhadasPortal.includes(definicao.id))
+          .map((avaliacao) => {
+            try {
+              const resultado = JSON.parse(this.criptografia.descriptografar(avaliacao.resultadoCriptografado)) as Record<string, unknown>;
+              const valor = resultado[definicao.id];
+              return typeof valor === 'number' && Number.isFinite(valor)
+                ? { data: avaliacao.avaliadaEm, valor, origem: 'Avaliação antropométrica' }
+                : null;
+            } catch {
+              return null;
+            }
+          })
+          .filter((ponto): ponto is { data: string; valor: number; origem: string } => ponto !== null)
+          .reverse()
+      })).filter((metrica) => metrica.pontos.length > 0);
+      const marcos = (await gerenciador.getRepository(AcompanhamentoTarefaOrm).find({
+        where: {
+          tenantId,
+          pacienteId: paciente.id,
+          categoria: 'meta',
+          exibirNoProgresso: true,
+          status: In(['pendente', 'em_andamento', 'concluida'])
+        },
+        order: { criadoEm: 'DESC' },
+        take: 20
+      })).map((tarefa) => ({
+        titulo: this.lerTituloTarefa(tarefa),
+        status: tarefa.status,
+        criadoEm: tarefa.criadoEm,
+        vencimentoEm: tarefa.vencimentoEm,
+        concluidoEm: tarefa.concluidoEm
+      }));
 
       const consultasProximas = consultas.map((consulta) => ({
         id: consulta.id,
@@ -594,6 +640,7 @@ export class ServicoPortalPaciente {
           notificacoesHistorico: notificacoesPaciente.length
         },
         evolucaoPeso,
+        progresso: { metricas, marcos },
         consultasProximas,
         formulariosPendentes,
         formulariosRespondidos,

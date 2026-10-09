@@ -38,6 +38,7 @@ import {
   SerieAntropometricaRespostaDto,
   CriarPacienteDto,
   CriarTarefaAcompanhamentoDto,
+  AtualizarCompartilhamentoProgressoDto,
   EventoProntuarioPacienteDto,
   ListarLinhaTempoProntuarioDto,
   TipoEventoProntuarioPaciente,
@@ -751,6 +752,11 @@ export class ServicoPacientes {
     return this.executorTenant.executar(tenantId, async (gerenciador) => {
       await this.garantirPacienteExiste(gerenciador, tenantId, pacienteId, usuario);
 
+      const categoria = dados.categoria ?? 'tarefa';
+      if (dados.exibirNoProgresso && categoria !== 'meta') {
+        throw new BadRequestException('Somente metas podem ser destacadas no progresso do paciente.');
+      }
+
       const repositorio = gerenciador.getRepository(AcompanhamentoTarefaOrm);
       const tarefa = repositorio.create({
         tenantId,
@@ -758,9 +764,10 @@ export class ServicoPacientes {
         profissionalId,
         tituloCriptografado: this.criptografia.criptografar(dados.titulo.trim()),
         descricaoCriptografada: dados.descricao?.trim() ? this.criptografia.criptografar(dados.descricao.trim()) : undefined,
-        categoria: dados.categoria ?? 'tarefa',
+        categoria,
         prioridade: dados.prioridade ?? 'media',
         status: 'pendente',
+        exibirNoProgresso: dados.exibirNoProgresso ?? false,
         vencimentoEm: dados.vencimentoEm ? new Date(dados.vencimentoEm) : undefined
       });
 
@@ -804,6 +811,13 @@ export class ServicoPacientes {
       if (dados.status) {
         tarefa.status = dados.status;
         tarefa.concluidoEm = dados.status === 'concluida' ? new Date() : undefined;
+      }
+
+      if (dados.exibirNoProgresso !== undefined) {
+        if (dados.exibirNoProgresso && tarefa.categoria !== 'meta') {
+          throw new BadRequestException('Somente metas podem ser destacadas no progresso do paciente.');
+        }
+        tarefa.exibirNoProgresso = dados.exibirNoProgresso;
       }
 
       return this.mapearTarefa(await repositorio.save(tarefa));
@@ -1796,10 +1810,11 @@ export class ServicoPacientes {
   }
 
   /**
-   * Avaliacao antropometrica. Append-only: o calculo e feito uma vez, na hora,
+   * Avaliacao antropometrica. Medidas e resultados sao append-only: o calculo e feito uma vez, na hora,
    * e gravado junto com o protocolo, a formula, o sexo e a idade usados. Ler o
    * historico nunca recalcula — se o dominio mudar amanha, o registro antigo
-   * continua mostrando o numero que o profissional viu e assinou.
+   * continua mostrando o numero que o profissional viu e assinou. A selecao de
+   * compartilhamento e metadado separado e pode ser revogada.
    */
   async registrarAvaliacaoAntropometrica(
     tenantId: string,
@@ -1844,6 +1859,7 @@ export class ServicoPacientes {
           idadeAnos,
           medidasCriptografadas: this.criptografia.criptografar(JSON.stringify(medidas)),
           resultadoCriptografado: this.criptografia.criptografar(JSON.stringify(resultado)),
+          metricasCompartilhadasPortal: dados.metricasCompartilhadasPortal ?? [],
           formulaAplicada: resultado.formulaAplicada,
           observacoesCriptografadas: dados.observacoes?.trim()
             ? this.criptografia.criptografar(dados.observacoes.trim())
@@ -1918,6 +1934,25 @@ export class ServicoPacientes {
     });
   }
 
+  async atualizarCompartilhamentoProgresso(
+    tenantId: string,
+    pacienteId: string,
+    avaliacaoId: string,
+    dados: AtualizarCompartilhamentoProgressoDto,
+    usuario: UsuarioAutenticado
+  ): Promise<AvaliacaoAntropometricaRespostaDto> {
+    return this.executorTenant.executar(tenantId, async (gerenciador) => {
+      await this.garantirPacienteExiste(gerenciador, tenantId, pacienteId, usuario);
+      const repositorio = gerenciador.getRepository(AvaliacaoAntropometricaOrm);
+      const avaliacao = await repositorio.findOne({
+        where: { id: avaliacaoId, tenantId, pacienteId, excluidaEm: IsNull() }
+      });
+      if (!avaliacao) throw new NotFoundException('Avaliacao antropometrica nao encontrada.');
+      avaliacao.metricasCompartilhadasPortal = dados.metricasCompartilhadasPortal;
+      return this.mapearAvaliacaoAntropometrica(await repositorio.save(avaliacao));
+    });
+  }
+
   private mapearAvaliacaoAntropometrica(
     avaliacao: AvaliacaoAntropometricaOrm
   ): AvaliacaoAntropometricaRespostaDto {
@@ -1933,6 +1968,7 @@ export class ServicoPacientes {
         protocoloAplicado: 'nenhum',
         avisos: ['registro_ilegivel']
       }),
+      metricasCompartilhadasPortal: avaliacao.metricasCompartilhadasPortal ?? [],
       formulaAplicada: avaliacao.formulaAplicada,
       observacoes: avaliacao.observacoesCriptografadas
         ? this.criptografia.descriptografar(avaliacao.observacoesCriptografadas)
@@ -2022,6 +2058,7 @@ export class ServicoPacientes {
       categoria: tarefa.categoria,
       prioridade: tarefa.prioridade,
       status: tarefa.status,
+      exibirNoProgresso: tarefa.exibirNoProgresso ?? false,
       vencimentoEm: tarefa.vencimentoEm,
       concluidoEm: tarefa.concluidoEm,
       criadoEm: tarefa.criadoEm,

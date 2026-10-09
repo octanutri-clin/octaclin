@@ -41,6 +41,9 @@ export class AcompanhamentoTarefaOrm {
   @Column({ type: 'varchar', length: 40, default: 'pendente' })
   status: StatusTarefaAcompanhamento;
 
+  @Column({ name: 'exibir_no_progresso', type: 'boolean', default: false })
+  exibirNoProgresso?: boolean;
+
   @Column({ name: 'vencimento_em', type: 'timestamptz', nullable: true })
   vencimentoEm?: Date;
 

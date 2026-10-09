@@ -76,6 +76,7 @@ import {
 import {
   criarEvolucaoClinica,
   criarTarefaAcompanhamento,
+  atualizarTarefaAcompanhamento,
   listarAvaliacoesAntropometricas,
   listarEvolucoesClinicas,
   listarLinhaDoTempoPaginada,
@@ -110,6 +111,7 @@ interface FormularioTarefa {
   prioridade: PrioridadeTarefaAcompanhamentoApi;
   vencimentoEm: string;
   descricao: string;
+  exibirNoProgresso: boolean;
 }
 
 interface FormularioMaterial {
@@ -145,7 +147,8 @@ const formularioTarefaInicial: FormularioTarefa = {
   categoria: 'tarefa',
   prioridade: 'media',
   vencimentoEm: '',
-  descricao: ''
+  descricao: '',
+  exibirNoProgresso: false
 };
 
 const formularioMaterialInicial: FormularioMaterial = {
@@ -531,6 +534,7 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
         descricao: formularioTarefa.descricao.trim() || undefined,
         categoria: formularioTarefa.categoria,
         prioridade: formularioTarefa.prioridade,
+        exibirNoProgresso: formularioTarefa.categoria === 'meta' && formularioTarefa.exibirNoProgresso,
         vencimentoEm: formularioTarefa.vencimentoEm ? new Date(formularioTarefa.vencimentoEm).toISOString() : undefined
       });
       setFormularioTarefa(formularioTarefaInicial);
@@ -1545,6 +1549,13 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
             maxLength={2000}
           />
         </label>
+        {formularioTarefa.categoria === 'meta' ? (
+          <label className="flex items-start gap-2 text-sm text-texto-suave">
+            <input type="checkbox" checked={formularioTarefa.exibirNoProgresso}
+              onChange={(evento) => setFormularioTarefa((atual) => ({ ...atual, exibirNoProgresso: evento.target.checked }))} />
+            Destacar esta meta no progresso do paciente
+          </label>
+        ) : null}
         <div className="flex justify-end">
           <Botao type="submit" variante="primario" disabled={salvandoTarefa}>
             <CheckSquare size={16} />
@@ -1553,7 +1564,29 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
         </div>
       </form> : null}
 
-      <section className="grid gap-3"><div className="rounded-md border border-linha bg-white p-4"><h2 className="text-base font-semibold text-tinta">Plano em acompanhamento</h2></div><LinhaDoTempo eventos={tarefas} profissionais={profissionais} /></section>
+      <section className="grid gap-3">
+        <div className="rounded-md border border-linha bg-white p-4"><h2 className="text-base font-semibold text-tinta">Plano em acompanhamento</h2></div>
+        {podeGerenciarPaciente && tarefasAcompanhamento.some((tarefa) => tarefa.categoria === 'meta' && tarefa.status !== 'cancelada') ? (
+          <div className="grid gap-2 rounded-md border border-linha bg-white p-4">
+            <h3 className="text-sm font-semibold text-tinta">Metas no progresso do paciente</h3>
+            {tarefasAcompanhamento.filter((tarefa) => tarefa.categoria === 'meta' && tarefa.status !== 'cancelada').map((tarefa) => (
+              <label key={tarefa.id} className="flex items-start gap-2 text-sm text-texto-suave">
+                <input type="checkbox" checked={Boolean(tarefa.exibirNoProgresso)}
+                  onChange={async (evento) => {
+                    try {
+                      await atualizarTarefaAcompanhamento(pacienteId, tarefa.id, { exibirNoProgresso: evento.target.checked });
+                      await Promise.all([carregarTarefas(), carregar()]);
+                    } catch (erroAtual) {
+                      setFalhaAcao(classificarFalhaInterface(erroAtual, 'Não foi possível atualizar o destaque da meta.'));
+                    }
+                  }} />
+                Destacar “{tarefa.titulo}” no progresso do paciente
+              </label>
+            ))}
+          </div>
+        ) : null}
+        <LinhaDoTempo eventos={tarefas} profissionais={profissionais} />
+      </section>
       </> : null}
 
       {abaAtiva === 'plano_alimentar' ? (
