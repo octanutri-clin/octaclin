@@ -68,6 +68,12 @@ Atualizado em 2026-10-09.
   banco descartável. Testes focados, build e navegadores registrados no handoff.
   Não representa deploy nem aceite de produção. Plano em
   `docs/history/phases/PLANO_FASE_309.md`, handoff/checklist em `tasks/`.
+- Fase 310 em implementação na branch `feature/fase-310-receitas-compartilhadas`.
+  Código atual inclui migration 1066 (fora de banda, ainda não aplicada),
+  categorias internas, snapshots cifrados, opt-in por canal, compartilhamento
+  em lote/agendado, portal autenticado e aviso genérico com adaptador push web
+  próprio. A branch ainda requer conclusão dos gates R4, integração e revisão;
+  não representa merge, aplicação de migration ou deploy.
 - Sequência das Fases 302–320 em
   `docs/product/ROADMAP_POS_AUDITORIA_FASES_302_320.md`. O PB-30 está planejado na Fase 316, condicionado a privacidade,
   jurídico e operação.

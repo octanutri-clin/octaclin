@@ -23,6 +23,8 @@ import {
 import { ServicoModelosPlanoAlimentar } from '../aplicacao/servico-modelos-plano-alimentar';
 import { ServicoPlanosAlimentares } from '../aplicacao/servico-planos-alimentares';
 import { ServicoReceitasNutricionais } from '../aplicacao/servico-receitas-nutricionais';
+import { ServicoCompartilhamentoReceitas } from '../aplicacao/servico-compartilhamento-receitas';
+import { CompartilharReceitasNutricionaisDto } from '../aplicacao/dtos-compartilhamento-receita';
 
 @Controller('pacientes/:pacienteId/planos-alimentares')
 @UseGuards(GuardaJwt, GuardaPapeis, GuardaPermissoes)
@@ -269,7 +271,34 @@ export class ControladorModelosPlanoAlimentar {
 @UseGuards(GuardaJwt, GuardaPapeis, GuardaPermissoes)
 @Papeis('SuperAdmin', 'Professional')
 export class ControladorReceitasNutricionais {
-  constructor(private readonly servico: ServicoReceitasNutricionais) {}
+  constructor(
+    private readonly servico: ServicoReceitasNutricionais,
+    private readonly compartilhamentos: ServicoCompartilhamentoReceitas
+  ) {}
+
+  @Post('compartilhamentos')
+  @Permissoes('planos_alimentares.gerenciar')
+  compartilhar(@UsuarioAtual() usuario: UsuarioAutenticado, @Body() dados: CompartilharReceitasNutricionaisDto) {
+    return this.compartilhamentos.compartilhar(usuario.tenantId, usuario, dados);
+  }
+
+  @Get('compartilhamentos/pacientes/:pacienteId/preferencias')
+  @Permissoes('planos_alimentares.ler')
+  obterPreferenciasPaciente(@UsuarioAtual() usuario: UsuarioAutenticado, @Param('pacienteId', ParseUUIDPipe) pacienteId: string) {
+    return this.compartilhamentos.obterConsentimentoParaEnvio(usuario.tenantId, usuario, pacienteId);
+  }
+
+  @Get('compartilhamentos/pacientes/:pacienteId')
+  @Permissoes('planos_alimentares.ler')
+  listarEnviosPaciente(@UsuarioAtual() usuario: UsuarioAutenticado, @Param('pacienteId', ParseUUIDPipe) pacienteId: string) {
+    return this.compartilhamentos.listarEnviosProfissional(usuario.tenantId, usuario, pacienteId);
+  }
+
+  @Delete('compartilhamentos/:compartilhamentoId')
+  @Permissoes('planos_alimentares.gerenciar')
+  retirarCompartilhamento(@UsuarioAtual() usuario: UsuarioAutenticado, @Param('compartilhamentoId', ParseUUIDPipe) compartilhamentoId: string) {
+    return this.compartilhamentos.retirar(usuario.tenantId, usuario, compartilhamentoId);
+  }
 
   @Get()
   @Permissoes('planos_alimentares.ler')

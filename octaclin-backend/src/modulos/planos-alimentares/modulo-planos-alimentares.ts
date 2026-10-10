@@ -14,6 +14,7 @@ import { ModuloTenancy } from '../tenancy/modulo-tenancy';
 import { ServicoModelosPlanoAlimentar } from './aplicacao/servico-modelos-plano-alimentar';
 import { ServicoPlanosAlimentares } from './aplicacao/servico-planos-alimentares';
 import { ServicoReceitasNutricionais } from './aplicacao/servico-receitas-nutricionais';
+import { ServicoCompartilhamentoReceitas } from './aplicacao/servico-compartilhamento-receitas';
 import {
   ControladorCatalogoAlimentos,
   ControladorModelosPlanoAlimentar,
@@ -32,6 +33,15 @@ import { ModeloPlanoAlimentarOrm } from './infraestrutura/modelo-plano-alimentar
 import { RevisaoModeloPlanoAlimentarOrm } from './infraestrutura/revisao-modelo-plano-alimentar.orm';
 import { PlanoAlimentarOrm } from './infraestrutura/plano-alimentar.orm';
 import { ReceitaNutricionalOrm } from './infraestrutura/receita-nutricional.orm';
+import { CompartilhamentoReceitaNutricionalOrm } from './infraestrutura/compartilhamento-receita-nutricional.orm';
+import { EntregaCompartilhamentoReceitaOrm } from './infraestrutura/entrega-compartilhamento-receita.orm';
+import { PreferenciaCompartilhamentoReceitaOrm } from './infraestrutura/preferencia-compartilhamento-receita.orm';
+import { SubscriptionPushPacienteOrm } from './infraestrutura/subscription-push-paciente.orm';
+import { ModuloComunicacoes } from '../comunicacoes/modulo-comunicacoes';
+import { ProcessadorCompartilhamentoReceitas } from './aplicacao/processador-compartilhamento-receitas';
+import { deveExecutarProcessadores } from '../../infraestrutura/processamento/papel-processo';
+
+const processadoresCompartilhamento = deveExecutarProcessadores() ? [ProcessadorCompartilhamentoReceitas] : [];
 
 @Module({
   imports: [
@@ -45,6 +55,10 @@ import { ReceitaNutricionalOrm } from './infraestrutura/receita-nutricional.orm'
       ModeloPlanoAlimentarOrm,
       RevisaoModeloPlanoAlimentarOrm,
       ReceitaNutricionalOrm,
+      CompartilhamentoReceitaNutricionalOrm,
+      EntregaCompartilhamentoReceitaOrm,
+      PreferenciaCompartilhamentoReceitaOrm,
+      SubscriptionPushPacienteOrm,
       CatalogoComposicaoAlimentoOrm,
       FonteComposicaoAlimentoOrm,
       AlimentoComposicaoOrm,
@@ -55,10 +69,15 @@ import { ReceitaNutricionalOrm } from './infraestrutura/receita-nutricional.orm'
       ProfissionalOrm,
       UserActionLogOrm,
       MensagemNotificacaoOrm,
-      OutboxEventoOrm
+      OutboxEventoOrm,
+      CompartilhamentoReceitaNutricionalOrm,
+      EntregaCompartilhamentoReceitaOrm,
+      PreferenciaCompartilhamentoReceitaOrm,
+      SubscriptionPushPacienteOrm
     ]),
     ModuloTenancy,
-    ModuloAuth
+    ModuloAuth,
+    ModuloComunicacoes
   ],
   controllers: [
     ControladorPlanosAlimentares,
@@ -70,7 +89,9 @@ import { ReceitaNutricionalOrm } from './infraestrutura/receita-nutricional.orm'
     ServicoPlanosAlimentares,
     ServicoModelosPlanoAlimentar,
     ServicoReceitasNutricionais,
-    CriptografiaDadosSensiveis
+    ServicoCompartilhamentoReceitas,
+    CriptografiaDadosSensiveis,
+    ...processadoresCompartilhamento
   ],
   exports: [ServicoPlanosAlimentares, ServicoModelosPlanoAlimentar, ServicoReceitasNutricionais]
 })

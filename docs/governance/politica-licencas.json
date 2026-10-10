@@ -57,6 +57,15 @@
       "condicaoDeReabertura": "Reabrir se algum destes pacotes for forkado, corrigido localmente via patch ou redistribuido com alteracao."
     },
     {
+      "licenca": "MPL-2.0",
+      "pacotes": ["web-push"],
+      "decisao": "permitida-sem-modificacao",
+      "justificativa": "web-push 3.6.7 e consumido sem fork ou patch local para envio do protocolo Web Push; o serviço OctaClin não redistribui arquivo modificado da dependência.",
+      "owner": "octanutri-clin/octaclin (proprietario do repositorio)",
+      "revisadoEm": "2026-10-09",
+      "condicaoDeReabertura": "Reabrir se web-push for forkado, corrigido localmente via patch ou redistribuido com alteracao."
+    },
+    {
       "licenca": "LGPL-3.0-or-later",
       "pacotes": ["@img/sharp-libvips-linux-x64", "@img/sharp-libvips-linuxmusl-x64"],
       "decisao": "permitida-sem-modificacao",

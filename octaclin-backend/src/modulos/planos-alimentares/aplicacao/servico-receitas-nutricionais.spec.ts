@@ -1,4 +1,4 @@
-import { ForbiddenException, NotFoundException } from '@nestjs/common';
+import { ConflictException, ForbiddenException, NotFoundException } from '@nestjs/common';
 import { EntityManager } from 'typeorm';
 import { UserActionLogOrm } from '../../../infraestrutura/auditoria/user-action-log.orm';
 import { ExecutorTenant } from '../../../infraestrutura/banco-dados/executor-tenant';
@@ -87,7 +87,10 @@ describe('ServicoReceitasNutricionais', () => {
     repositorios.set(AlimentoComposicaoOrm, criarRepositorio([{ id: ALIMENTO_ID, fonteId: FONTE_ID }]));
     repositorios.set(FonteComposicaoAlimentoOrm, criarRepositorio([{ id: FONTE_ID, situacao: 'ativa' }]));
     repositorios.set(UserActionLogOrm, criarRepositorio());
-    const gerenciador = { getRepository: jest.fn((entidade: Function) => repositorios.get(entidade)) } as unknown as EntityManager;
+    const gerenciador = {
+      getRepository: jest.fn((entidade: Function) => repositorios.get(entidade)),
+      query: jest.fn(async () => [])
+    } as unknown as EntityManager;
     const executor = { executar: jest.fn(async (_tenant: string, operacao: (manager: EntityManager) => Promise<unknown>) => operacao(gerenciador)) };
     servico = new ServicoReceitasNutricionais(executor as unknown as ExecutorTenant, criptografia);
   });
@@ -108,12 +111,22 @@ describe('ServicoReceitasNutricionais', () => {
   }
 
   it('cifra conteudo, vincula receita pessoal e registra auditoria', async () => {
-    await servico.criar(TENANT_ID, usuarioProfissional(), { nome: 'Cafe rapido', origem: 'pessoal', tipo: 'receita', itens: itensExemplo() as never });
+    await servico.criar(TENANT_ID, usuarioProfissional(), { nome: 'Cafe rapido', origem: 'pessoal', tipo: 'receita', categoria: 'Café', itens: itensExemplo() as never });
     const salvo = repositorios.get(ReceitaNutricionalOrm)!.save.mock.calls[0][0];
     expect(criptografia.descriptografar(salvo.nomeCriptografado)).toBe('Cafe rapido');
     expect(JSON.parse(criptografia.descriptografar(salvo.conteudoCriptografado)).itens).toHaveLength(1);
     expect(salvo.profissionalId).toBe(PROFISSIONAL_ID);
     expect(repositorios.get(UserActionLogOrm)!.save).toHaveBeenCalled();
+  });
+
+  it('normaliza e persiste categoria livre da clínica', async () => {
+    await servico.criar(TENANT_ID, usuarioProfissional(), {
+      nome: 'Receita de teste', origem: 'clinica', tipo: 'receita', categoria: '  Lanche   da tarde  ',
+      itens: itensExemplo() as never
+    } as never);
+    const salvo = repositorios.get(ReceitaNutricionalOrm)!.save.mock.calls[0][0];
+    expect(salvo.categoria).toBe('Lanche da tarde');
+    expect(salvo.versaoAtual).toBe(1);
   });
 
   it('lista somente receitas pessoais do dono e as da clinica', async () => {
@@ -130,31 +143,42 @@ describe('ServicoReceitasNutricionais', () => {
     receitaPessoalDeOutro();
     await expect(servico.obter(TENANT_ID, RECEITA_ID, usuarioProfissional())).rejects.toBeInstanceOf(NotFoundException);
     await expect(servico.atualizar(TENANT_ID, RECEITA_ID, usuarioProfissional(), {
-      nome: 'Alterar', origem: 'pessoal', tipo: 'receita', itens: itensExemplo() as never
+      nome: 'Alterar', origem: 'pessoal', tipo: 'receita', categoria: 'Lanche', versaoEsperada: 1, itens: itensExemplo() as never
     })).rejects.toBeInstanceOf(NotFoundException);
   });
 
   it('atualiza snapshot e arquiva sem tocar plano publicado', async () => {
-    await servico.criar(TENANT_ID, usuarioProfissional(), { nome: 'Antes', origem: 'clinica', tipo: 'receita', itens: itensExemplo() as never });
+    await servico.criar(TENANT_ID, usuarioProfissional(), { nome: 'Antes', origem: 'clinica', tipo: 'receita', categoria: 'Almoço', itens: itensExemplo() as never });
     await servico.atualizar(TENANT_ID, RECEITA_ID, usuarioProfissional(), {
-      nome: 'Depois', origem: 'clinica', tipo: 'refeicao_pronta', instrucoes: 'Misture.', itens: itensExemplo() as never
+      nome: 'Depois', origem: 'clinica', tipo: 'refeicao_pronta', categoria: 'Jantar', versaoEsperada: 1, instrucoes: 'Misture.', itens: itensExemplo() as never
     });
     const atual = repositorios.get(ReceitaNutricionalOrm)!.registros[0];
     expect(criptografia.descriptografar(atual.nomeCriptografado)).toBe('Depois');
     expect(atual.tipo).toBe('refeicao_pronta');
+    expect(atual.versaoAtual).toBe(2);
     await servico.arquivar(TENANT_ID, RECEITA_ID, usuarioProfissional());
     expect(atual.arquivadoEm).toBeInstanceOf(Date);
   });
 
+  it('recusa edição quando a versão esperada está desatualizada', async () => {
+    await servico.criar(TENANT_ID, usuarioProfissional(), {
+      nome: 'Antes', origem: 'clinica', tipo: 'receita', categoria: 'Almoço', itens: itensExemplo() as never
+    });
+    await expect(servico.atualizar(TENANT_ID, RECEITA_ID, usuarioProfissional(), {
+      nome: 'Depois', origem: 'clinica', tipo: 'receita', categoria: 'Almoço', versaoEsperada: 2,
+      itens: itensExemplo() as never
+    })).rejects.toBeInstanceOf(ConflictException);
+  });
+
   it('avisa item cuja fonte saiu do catalogo antes de aplicar', async () => {
     repositorios.get(FonteComposicaoAlimentoOrm)!.registros[0].situacao = 'suspensa';
-    await servico.criar(TENANT_ID, usuarioProfissional(), { nome: 'Cafe', origem: 'clinica', tipo: 'receita', itens: itensExemplo() as never });
+    await servico.criar(TENANT_ID, usuarioProfissional(), { nome: 'Cafe', origem: 'clinica', tipo: 'receita', categoria: 'Café', itens: itensExemplo() as never });
     const receita = await servico.obter(TENANT_ID, RECEITA_ID, usuarioProfissional());
     expect(receita.alimentosIndisponiveis).toEqual([ALIMENTO_ID]);
   });
 
   it('exige permissao de gerenciar para escrita', async () => {
     const usuario = { ...usuarioProfissional(), permissoes: ['planos_alimentares.ler' as const] };
-    await expect(servico.criar(TENANT_ID, usuario, { nome: 'X', origem: 'pessoal', tipo: 'receita', itens: itensExemplo() as never })).rejects.toBeInstanceOf(ForbiddenException);
+    await expect(servico.criar(TENANT_ID, usuario, { nome: 'X', origem: 'pessoal', tipo: 'receita', categoria: 'Lanche', itens: itensExemplo() as never })).rejects.toBeInstanceOf(ForbiddenException);
   });
 });

@@ -60,6 +60,7 @@ describe('ControladorPortalPaciente', () => {
       } as unknown as ServicoPortalPaciente,
       {} as ServicoAgenda,
       { registrar } as unknown as ServicoAuditoria,
+      {} as never,
       {} as never
     );
 

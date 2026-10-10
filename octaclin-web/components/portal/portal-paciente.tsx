@@ -53,6 +53,7 @@ import {
 } from '@/lib/portal-api';
 import { usePortalPaciente } from '@/components/portal/portal-contexto';
 import { PlanoAlimentarPaciente } from '@/components/portal/plano-alimentar-paciente';
+import { ReceitasCompartilhadasPortal } from '@/components/portal/receitas-compartilhadas-portal';
 import { StatusPwaPortal } from '@/components/pwa/status-pwa-portal';
 import { assinarOperacoesSincronizadas } from '@/lib/pwa-private-queue';
 
@@ -350,6 +351,7 @@ const linksPortal = [
   { href: '/portal/agenda', rotulo: 'Agenda' },
   { href: '/portal/checkins', rotulo: 'Registro de hábitos' },
   { href: '/portal/plano', rotulo: 'Plano' },
+  { href: '/portal/receitas', rotulo: 'Receitas' },
   { href: '/portal/formularios', rotulo: 'Formulários' },
   { href: '/portal/mensagens', rotulo: 'Mensagens' },
   { href: '/portal/perfil', rotulo: 'Perfil' },
@@ -414,7 +416,7 @@ function PortalCarregando() {
   );
 }
 
-type SecaoPortal = 'inicio' | 'agenda' | 'checkins' | 'plano' | 'formularios' | 'mensagens' | 'perfil' | 'privacidade' | 'mais';
+type SecaoPortal = 'inicio' | 'agenda' | 'checkins' | 'plano' | 'receitas' | 'formularios' | 'mensagens' | 'perfil' | 'privacidade' | 'mais';
 
 export function PortalPaciente({ secao }: { secao: SecaoPortal }) {
   const { portal, setPortal, carregando, erroCarregamento, carregar } = usePortalPaciente();
@@ -480,7 +482,9 @@ export function PortalPaciente({ secao }: { secao: SecaoPortal }) {
   }
 
   useEffect(() => {
-    if (portal) setFormularioPerfil(montarFormularioPerfil(portal));
+    if (!portal) return;
+    const agendamento = window.setTimeout(() => setFormularioPerfil(montarFormularioPerfil(portal)), 0);
+    return () => window.clearTimeout(agendamento);
   }, [portal]);
 
   useEffect(() => assinarOperacoesSincronizadas((tipo) => {
@@ -775,6 +779,9 @@ export function PortalPaciente({ secao }: { secao: SecaoPortal }) {
 
         {portal ? (
           <>
+            <section aria-label="Receitas compartilhadas" className={secao === 'receitas' ? 'scroll-mt-4' : 'hidden'}>
+              <ReceitasCompartilhadasPortal />
+            </section>
             <section id="resumo" className={secao === 'inicio' ? 'scroll-mt-4 grid gap-4 lg:grid-cols-[minmax(0,1.2fr)_repeat(3,minmax(0,1fr))]' : 'hidden'}>
               <div className="self-center">
                 <p className="text-sm text-texto-suave">Ola, {portal.paciente.nome}</p>
@@ -1205,7 +1212,7 @@ export function PortalPaciente({ secao }: { secao: SecaoPortal }) {
                   <CartaoTitulo icone={<Menu className="h-4 w-4" />}>Mais opções</CartaoTitulo>
                 </CartaoCabecalho>
                 <CartaoConteudo className="grid gap-3 sm:grid-cols-2">
-                  {linksPortal.slice(4, 8).map((item) => (
+                  {linksPortal.slice(5, 9).map((item) => (
                     <Link
                       key={item.href}
                       href={item.href as Route}
@@ -1214,6 +1221,7 @@ export function PortalPaciente({ secao }: { secao: SecaoPortal }) {
                       {item.rotulo}
                     </Link>
                   ))}
+                  <Link href="/portal/receitas" className={classesBotao({ className: 'justify-between' })}>Receitas compartilhadas</Link>
                 </CartaoConteudo>
               </Cartao>
             ) : null}

@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, ParseUUIDPipe, Patch, Post, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Header, Param, ParseUUIDPipe, Patch, Post, Put, Req, UseGuards } from '@nestjs/common';
 import { Request } from 'express';
 import { ServicoAuditoria } from '../../../infraestrutura/auditoria/servico-auditoria';
 import { Papeis, UsuarioAtual } from '../../auth/apresentacao/decorators';
@@ -16,6 +16,8 @@ import {
 import { ServicoPortalPaciente } from '../aplicacao/servico-portal-paciente';
 import { EnviarMensagemPortalPacienteDto } from '../aplicacao/dtos-conversa-portal-paciente';
 import { ServicoConversaPortalPaciente } from '../aplicacao/servico-conversa-portal-paciente';
+import { ServicoCompartilhamentoReceitas } from '../../planos-alimentares/aplicacao/servico-compartilhamento-receitas';
+import { AtualizarConsentimentoReceitasDto, CriarSubscriptionPushDto, RevogarSubscriptionPushDto } from '../../planos-alimentares/aplicacao/dtos-compartilhamento-receita';
 
 @Controller('portal')
 @UseGuards(GuardaJwt, GuardaPapeis)
@@ -25,12 +27,53 @@ export class ControladorPortalPaciente {
     private readonly servicoPortal: ServicoPortalPaciente,
     private readonly servicoAgenda: ServicoAgenda,
     private readonly servicoAuditoria: ServicoAuditoria,
-    private readonly servicoConversa: ServicoConversaPortalPaciente
+    private readonly servicoConversa: ServicoConversaPortalPaciente,
+    private readonly servicoCompartilhamento: ServicoCompartilhamentoReceitas
   ) {}
 
   @Get('paciente')
   obterResumo(@UsuarioAtual() usuario: UsuarioAutenticado) {
     return this.servicoPortal.obterResumoPortal(usuario.tenantId, usuario.usuarioId);
+  }
+
+  @Get('paciente/receitas')
+  @Header('Cache-Control', 'private, no-store')
+  listarReceitasCompartilhadas(@UsuarioAtual() usuario: UsuarioAutenticado) {
+    return this.servicoCompartilhamento.listarPortal(usuario.tenantId, usuario);
+  }
+
+  @Get('paciente/receitas/:compartilhamentoId')
+  @Header('Cache-Control', 'private, no-store')
+  obterReceitaCompartilhada(
+    @UsuarioAtual() usuario: UsuarioAutenticado,
+    @Param('compartilhamentoId', ParseUUIDPipe) compartilhamentoId: string
+  ) {
+    return this.servicoCompartilhamento.obterPortal(usuario.tenantId, usuario, compartilhamentoId);
+  }
+
+  @Get('paciente/preferencias/receitas')
+  obterConsentimentoReceitas(@UsuarioAtual() usuario: UsuarioAutenticado) {
+    return this.servicoCompartilhamento.obterConsentimento(usuario.tenantId, usuario);
+  }
+
+  @Get('paciente/preferencias/receitas/push-public-key')
+  obterChavePublicaPushReceitas() {
+    return this.servicoCompartilhamento.chavePublicaPush();
+  }
+
+  @Put('paciente/preferencias/receitas')
+  atualizarConsentimentoReceitas(@UsuarioAtual() usuario: UsuarioAutenticado, @Body() dados: AtualizarConsentimentoReceitasDto) {
+    return this.servicoCompartilhamento.atualizarConsentimento(usuario.tenantId, usuario, dados);
+  }
+
+  @Post('paciente/preferencias/receitas/push-subscription')
+  registrarPushReceitas(@UsuarioAtual() usuario: UsuarioAutenticado, @Body() dados: CriarSubscriptionPushDto) {
+    return this.servicoCompartilhamento.registrarSubscriptionPush(usuario.tenantId, usuario, dados);
+  }
+
+  @Post('paciente/preferencias/receitas/push-subscription/revogar')
+  revogarPushReceitas(@UsuarioAtual() usuario: UsuarioAutenticado, @Body() dados: RevogarSubscriptionPushDto) {
+    return this.servicoCompartilhamento.revogarSubscriptionPush(usuario.tenantId, usuario, dados);
   }
 
   @Get('paciente/conversa')

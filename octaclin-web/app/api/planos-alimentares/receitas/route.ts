@@ -5,7 +5,7 @@ import {
 } from '../../pacientes/[id]/planos-alimentares/_proxy';
 
 export async function GET(request: Request) {
-  const consulta = montarConsultaPermitida(request, ['pagina', 'limite', 'origem', 'tipo']);
+  const consulta = montarConsultaPermitida(request, ['pagina', 'limite', 'origem', 'tipo', 'categoria']);
   return executarProxyPlanoAlimentar(`/planos-alimentares/receitas${consulta}`, 'planos_alimentares.ler');
 }
 

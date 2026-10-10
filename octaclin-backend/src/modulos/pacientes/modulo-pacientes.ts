@@ -12,6 +12,7 @@ import { ModuloTenancy } from '../tenancy/modulo-tenancy';
 import { ModuloAgenda } from '../agenda/modulo-agenda';
 import { ModuloComunicacoes } from '../comunicacoes/modulo-comunicacoes';
 import { ModuloMobile } from '../mobile/modulo-mobile';
+import { ModuloPlanosAlimentares } from '../planos-alimentares/modulo-planos-alimentares';
 import { AgendaConsultaOrm } from '../agenda/infraestrutura/agenda-consulta.orm';
 import { MensagemNotificacaoOrm } from '../comunicacoes/infraestrutura/mensagem-notificacao.orm';
 import { LogDiarioRapidoOrm } from '../mobile/infraestrutura/log-diario-rapido.orm';
@@ -138,7 +139,8 @@ const processadores = deveExecutarProcessadores() ? [ProcessadorRecalculoPriorid
     ModuloClientes,
     ModuloAgenda,
     ModuloComunicacoes,
-    ModuloMobile
+    ModuloMobile,
+    ModuloPlanosAlimentares
   ],
   controllers: [
     ControladorRevisaoCheckins,

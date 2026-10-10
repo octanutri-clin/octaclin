@@ -186,9 +186,14 @@ Este arquivo registra decisoes ja tomadas para evitar que outro agente reprojete
 - Mobile: `octaclin-mobile` existe e continua como cliente nativo separado. O
   PWA usa os endpoints do portal, nao `/mobile`, para preservar autorizacao,
   projecao segura e auditoria; apenas o padrao de idempotencia e compartilhado.
+- Excecao aprovada na Fase 310: push web real somente para avisos genéricos de
+  novas receitas compartilhadas, com opt-in específico por canal, subscription
+  cifrada e abertura autenticada do portal. O push genérico para outros eventos
+  continua indisponível enquanto não houver implementação própria. O payload
+  clínico permanece fora do push e do Cache Storage.
 - Consequencia: fechar ou recarregar a pagina elimina uma fila cuja chave foi
-  perdida. Persistencia clinica offline entre reinicios e push exigem fase
-  propria e nao podem reutilizar Web Storage.
+  perdida. Persistencia clinica offline entre reinicios continua exigindo fase
+  propria e nao pode reutilizar Web Storage.
 
 ## ADR-022 - Telemetria interna e feature flags
 

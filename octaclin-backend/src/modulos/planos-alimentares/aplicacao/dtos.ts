@@ -366,6 +366,12 @@ export class ListarReceitasNutricionaisDto {
   @IsOptional()
   @IsIn(TIPOS_RECEITA_NUTRICIONAL)
   tipo?: TipoReceitaNutricional;
+
+  @IsOptional()
+  @IsString()
+  @MinLength(1)
+  @MaxLength(80)
+  categoria?: string;
 }
 
 export class CriarReceitaNutricionalDto {
@@ -380,6 +386,11 @@ export class CriarReceitaNutricionalDto {
   @IsIn(TIPOS_RECEITA_NUTRICIONAL)
   tipo: TipoReceitaNutricional;
 
+  @IsString()
+  @MinLength(1)
+  @MaxLength(80)
+  categoria: string;
+
   @IsOptional()
   @IsString()
   @MaxLength(4_000)
@@ -393,7 +404,11 @@ export class CriarReceitaNutricionalDto {
   itens: ItemPlanoAlimentarDto[];
 }
 
-export class AtualizarReceitaNutricionalDto extends CriarReceitaNutricionalDto {}
+export class AtualizarReceitaNutricionalDto extends CriarReceitaNutricionalDto {
+  @IsInt()
+  @Min(1)
+  versaoEsperada: number;
+}
 
 export class DistribuicaoMacrosDto {
   @IsInt()
