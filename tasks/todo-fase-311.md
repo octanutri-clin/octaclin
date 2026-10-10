@@ -1,14 +1,22 @@
 # Fase 311 — checklist de implementação
 
+## Reconciliação após integração (2026-10-10)
+
+PR #389 MERGED (`f5f9ba84`); CI final da PR `38022212900` e principal
+pós-merge `38042089805` SUCCESS. Revisão formal independente não comprovada;
+Provenance do SBOM SKIPPED. Os estados de execução abaixo são históricos;
+itens sem prova específica não ganham aceite automático pelo merge.
+Handoff anterior preservado em `tasks/plan-fase-311.md`; fase ativa: 312.
+
 Plano autoritativo: `docs/history/phases/PLANO_FASE_311.md`.
-Handoff corrente: `tasks/plan.md`. Branch `feature/fase-311-ativacao-conteudo`.
+Handoff corrente: `tasks/plan-fase-311.md`. Branch `feature/fase-311-ativacao-conteudo`.
 
 ## Estado atual da execução (2026-10-10)
 
 - Implementação dos passos 1–5 concluída; sem migration nova.
 - PASS: backend Jest integral, PostgreSQL/Testcontainers/RLS 25/25, BFF novo
   5/5, Playwright da Fase 311 em Client/Operações desktop/mobile 4/4, scanner
-  de secrets e governança descritos em `tasks/plan.md`.
+  de secrets e governança descritos em `tasks/plan-fase-311.md`.
 - PASS: CI principal pós-merge da Fase 310 `38016413569`.
 - PASS: backend build/typecheck, Web typecheck/build e demo local smoke
   (`smoke-e2e-bff-ok`, API demo sintética).
@@ -19,7 +27,7 @@ Handoff corrente: `tasks/plan.md`. Branch `feature/fase-311-ativacao-conteudo`.
   ação de produção executada.
 
 As seções abaixo preservam os critérios detalhados de aceite da implementação;
-o estado corrente acima e em `tasks/plan.md` prevalece sobre os checkboxes do
+o estado corrente acima e em `tasks/plan-fase-311.md` prevalece sobre os checkboxes do
 plano inicial.
 
 ## 0. Assumir a tarefa

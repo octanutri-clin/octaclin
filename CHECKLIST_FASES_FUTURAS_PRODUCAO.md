@@ -8,9 +8,10 @@ aprovados, incluindo Demo local smoke; step PostgreSQL/Testcontainers da
 PR 310 aprovado. CI principal pós-merge 310 `38016413569` concluído com sucesso;
 scanners pós-merge aprovados. `Provenance do SBOM` na PR 310 foi `SKIPPED`;
 não é PASS. Aplicação operacional das 1065/1066 não consultada. Fase 311
-implementada e publicada no PR #389; CI próprio em execução. Handoff em
-`tasks/plan.md`, checklist em `tasks/todo-fase-311.md`. Próxima fase após
-integração: 312.
+integrada pelo PR #389 (`f5f9ba84`); CI final `38022212900` e principal
+pós-merge `38042089805` SUCCESS. Handoff histórico em `tasks/plan-fase-311.md`.
+Fase 312 com planejamento fechado, sem código; handoff em `tasks/plan.md`
+e checklist em `tasks/todo-fase-312.md`, aguardando troca manual para Luna alto.
 
 O parágrafo abaixo registra a atualização histórica anterior; para o estado
 vigente prevalecem este bloco, itens ao final e o roadmap.
@@ -4555,13 +4556,13 @@ auditoria estão ordenados na seção 15 de
   avisos genéricos e opt-in específico. Integrada pelo PR #388 (`eb7f2aad`);
   CI de PR aprovado, incluindo Demo local smoke/Testcontainers; CI principal
   pós-merge concluído com sucesso. Aplicação operacional da 1066 não consultada.
-- [~] Fase 311 - instalação selecionável/incremental do kit por Client/SuperAdmin
+- [x] Fase 311 - instalação selecionável/incremental do kit por Client/SuperAdmin
   e conferência somente leitura de quatro bases do catálogo no onboarding.
-  Implementação no PR #389; CI ainda pendente. Plano
-  `docs/history/phases/PLANO_FASE_311.md`, handoff
-  `tasks/plan.md`, checklist `tasks/todo-fase-311.md`.
-- [ ] Fase 312 - encaminhamento no motor de documentos; atestado condicionado
-  à avaliação jurídica e competência profissional.
+  PR #389 integrado (`f5f9ba84`), CI de PR e principal pós-merge SUCCESS.
+  Plano `docs/history/phases/PLANO_FASE_311.md`; revisão R4 não comprovada.
+- [~] Fase 312 - encaminhamento: planejamento/gaps e decisões fechados;
+  implementação não iniciada. Atestados aguardam validação jurídica específica.
+  Handoff `tasks/plan.md`; checklist `tasks/todo-fase-312.md`.
 - [ ] Fase 313 - avaliação antropométrica de gestantes, após validação clínica.
 - [ ] Fase 314 - avaliação antropométrica de menores de 20 anos, após validação
   clínica da referência etária e por sexo.
