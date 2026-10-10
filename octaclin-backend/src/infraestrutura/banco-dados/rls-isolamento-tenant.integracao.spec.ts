@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { Client } from 'pg';
 import { GenericContainer, StartedTestContainer, Wait } from 'testcontainers';
-import { DataSource, DataSourceOptions } from 'typeorm';
+import { DataSource, DataSourceOptions, QueryRunner } from 'typeorm';
 import { UserActionLogOrm } from '../auditoria/user-action-log.orm';
 import { ExecutorTenant } from './executor-tenant';
 import { ServicoPainelOperacao } from '../../modulos/clientes/aplicacao/servico-painel-operacao';
@@ -558,20 +558,24 @@ descrever('RLS e isolamento multi-tenant integral em Postgres real', () => {
 
     await cliente.query('update documentos_emitidos set cancelado_em = now() where tenant_id = $1 and id = $2', [tenantA, id]);
 
-    const queryRunner = fonteDadosAdministrativa!.createQueryRunner();
-    await queryRunner.connect();
-    await queryRunner.startTransaction();
+    // O rollback precisa falhar fechado mesmo quando executado pela role de
+    // prova sem ownership: row_security=off faz o SELECT recusar acesso antes
+    // de qualquer DDL. O teste unitário da migration prova a mensagem explícita
+    // do guard quando uma conexão administrativa pode inspecionar todas as rows.
+    await cliente.query('begin');
     try {
+      const queryRunner = {
+        query: (sql: string) => cliente!.query(sql)
+      } as unknown as QueryRunner;
       await expect(new AdicionarEncaminhamentoDocumento1720000001067().down(queryRunner))
-        .rejects.toThrow('Rollback recusado: existem encaminhamentos emitidos');
-      const preservado = await queryRunner.query(
-        'select id from documentos_emitidos where tenant_id = $1 and id = $2', [tenantA, id]
-      );
-      expect(preservado).toHaveLength(1);
+        .rejects.toThrow();
     } finally {
-      await queryRunner.rollbackTransaction();
-      await queryRunner.release();
+      await cliente.query('rollback');
     }
+    const preservado = await cliente.query(
+      'select id from documentos_emitidos where tenant_id = $1 and id = $2', [tenantA, id]
+    );
+    expect(preservado.rows).toHaveLength(1);
 
     await comoTenant(tenantB);
     const deOutroTenant = await cliente.query('select id from documentos_emitidos where id = $1', [id]);
