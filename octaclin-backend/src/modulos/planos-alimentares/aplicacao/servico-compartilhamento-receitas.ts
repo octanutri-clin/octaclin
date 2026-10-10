@@ -150,7 +150,11 @@ export class ServicoCompartilhamentoReceitas {
         await repositorioEntregas.save(entregas);
         shares.push(salvo);
       }
-      await this.registrarAuditoria(gerenciador, usuario, tenantId, 'planos_alimentares.receita_compartilhar', paciente.id, { quantidade: shares.length, canais: dados.canais, agendado: Boolean(dados.agendadoPara) });
+      await registrarAuditoriaNaTransacao(gerenciador, {
+        tenantId, usuarioId: usuario.usuarioId, acao: 'planos_alimentares.receita_compartilhar',
+        recursoTipo: 'compartilhamento_receita', recursoId: paciente.id,
+        metadados: { quantidade: shares.length, canais: dados.canais, agendado: Boolean(dados.agendadoPara) }
+      });
       return { quantidade: shares.length, agendadoPara: dados.agendadoPara ? agendadoPara : null, itens: shares.map((share) => ({ id: share.id, receitaId: share.receitaId, status: share.status })) };
     });
   }
@@ -335,7 +339,10 @@ export class ServicoCompartilhamentoReceitas {
         { tenantId, compartilhamentoId: share.id, status: 'pendente' },
         { status: 'cancelado' }
       );
-      await this.registrarAuditoria(gerenciador, usuario, tenantId, 'planos_alimentares.receita_retirar_compartilhamento', paciente!.id, { quantidade: 1 });
+      await registrarAuditoriaNaTransacao(gerenciador, {
+        tenantId, usuarioId: usuario.usuarioId, acao: 'planos_alimentares.receita_retirar_compartilhamento',
+        recursoTipo: 'compartilhamento_receita', recursoId: paciente!.id, metadados: { quantidade: 1 }
+      });
       return { id: share.id, status: share.status, retiradoEm: share.retiradoEm };
     });
   }
@@ -380,7 +387,4 @@ export class ServicoCompartilhamentoReceitas {
     if (usuario.papel !== 'Patient') throw new ForbiddenException('Acesso exclusivo ao portal do paciente.');
   }
 
-  private async registrarAuditoria(gerenciador: EntityManager, usuario: UsuarioAutenticado, tenantId: string, acao: string, pacienteId: string, metadados: Record<string, unknown>) {
-    await registrarAuditoriaNaTransacao(gerenciador, { tenantId, usuarioId: usuario.usuarioId, acao, recursoTipo: 'compartilhamento_receita', recursoId: pacienteId, metadados });
-  }
 }

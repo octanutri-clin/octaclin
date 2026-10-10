@@ -68,6 +68,16 @@ export class CriarSubscriptionPushDto {
   subscription: { endpoint: string; keys: { p256dh: string; auth: string } };
 }
 
+export class WebPushKeysDto {
+  @IsString()
+  @MaxLength(256)
+  p256dh: string;
+
+  @IsString()
+  @MaxLength(256)
+  auth: string;
+}
+
 export class WebPushSubscriptionDto {
   @IsString()
   @MaxLength(2048)
@@ -78,16 +88,6 @@ export class WebPushSubscriptionDto {
   @ValidateNested()
   @Type(() => WebPushKeysDto)
   keys: WebPushKeysDto;
-}
-
-export class WebPushKeysDto {
-  @IsString()
-  @MaxLength(256)
-  p256dh: string;
-
-  @IsString()
-  @MaxLength(256)
-  auth: string;
 }
 
 export class RevogarSubscriptionPushDto {
