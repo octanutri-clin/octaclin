@@ -44,7 +44,8 @@ administrativa; serviço pela role runtime não owner, sem DDL/BYPASSRLS. O test
 | Demo BFF sobre build de produção local | PASS, incluindo episódio/replay/referência/encerramento; smoke UI PASS, nove rotas |
 | test:authz completo | PASS, incluindo harness da 313 |
 | Governança: confiabilidade/a11y/migrations/guardas/redação auditoria | PASS nas execuções locais; matrizes finais revalidadas |
-| CI da PR | SKIPPED, checks em execução na PR #391; resultados finais serão registrados no GitHub |
+| Linguagem e microcopy | PASS local após corrigir oito mensagens com acentuação ausente |
+| CI da PR | Execução 38080893167: Backend, Web, Governança, segurança e 752 testes visuais PASS; Demo/PR Gate FAIL por oito mensagens sem acentuação. Textos corrigidos; revalidação do novo commit em acompanhamento na PR #391, resultado final registrado no GitHub |
 | Revisão R4 independente | SKIPPED, sem segundo revisor neste ciclo |
 | Migration 1068 em staging/produção | SKIPPED, não autorizada/executada neste ciclo |
 
@@ -53,6 +54,11 @@ exibição do IMC com artefato binário; fixture de transferência tentou respon
 nulo (o schema exige vínculo válido); seletor de subaba/combobox no teste; tabela
 com rolagem sem foco pelo teclado no mobile. A última foi defeito real do
 componente compartilhado, corrigido com região nomeada e foco acessível. Uma reexecução PG excedeu 180s no hook de preparação enquanto builds/checks pesados estavam simultâneos; sem aumentar timeouts, a repetição após concluir os builds passou (29 testes). A prova adicional com 102 avaliações reproduziu perda de registros na segunda página, por truncar microssegundos em JS Date. O cursor agora compara a âncora diretamente no PostgreSQL; execução final PASS (29 testes).
+
+O primeiro CI também encontrou oito mensagens novas sem acentuação no gate de
+linguagem. Corrigidas nos três BFFs e na confirmação da condição da avaliação;
+`test:linguagem` local PASS. Não houve alteração de regras clínicas ou autorização
+nessa correção.
 
 ## Operação e limites
 

@@ -29,7 +29,7 @@ export async function GET(request: NextRequest, props: Params) {
       return NextResponse.json({ mensagem: erro.message }, { status: 401, headers });
     }
     if (erro instanceof ErroPermissaoAusente) return NextResponse.json({ mensagem: erro.message }, { status: 403, headers });
-    return NextResponse.json({ mensagem: 'Nao foi possivel acessar as avaliacoes.' }, { status: 502, headers });
+    return NextResponse.json({ mensagem: 'Não foi possível acessar as avaliações.' }, { status: 502, headers });
   }
 }
 
@@ -38,7 +38,7 @@ export async function POST(request: NextRequest, props: Params) {
   try {
     await exigirPermissaoBff('pacientes.gerenciar');
     const corpo = await request.text();
-    if (new TextEncoder().encode(corpo).byteLength > 24000) return NextResponse.json({ mensagem: 'Solicitacao acima do limite.' }, { status: 413, headers });
+    if (new TextEncoder().encode(corpo).byteLength > 24000) return NextResponse.json({ mensagem: 'Solicitação acima do limite.' }, { status: 413, headers });
     const resposta = await requisitarBackendAutenticado(
       `/pacientes/${encodeURIComponent(params.id)}/avaliacoes-antropometricas`,
       { method: 'POST', body: corpo }
@@ -52,6 +52,6 @@ export async function POST(request: NextRequest, props: Params) {
       return NextResponse.json({ mensagem: erro.message }, { status: 401, headers });
     }
     if (erro instanceof ErroPermissaoAusente) return NextResponse.json({ mensagem: erro.message }, { status: 403, headers });
-    return NextResponse.json({ mensagem: 'Nao foi possivel acessar as avaliacoes.' }, { status: 502, headers });
+    return NextResponse.json({ mensagem: 'Não foi possível acessar as avaliações.' }, { status: 502, headers });
   }
 }

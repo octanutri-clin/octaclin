@@ -279,7 +279,7 @@ function AbaAntropometriaConteudo({ pacienteId, podeGerenciar, dataNascimento }:
     setErro(null);
     setSucesso(null);
 
-    if (!condicaoAvaliacao || !confirmouCondicao) {setErro('Confirme a condicao na data da avaliacao.');return;}
+    if (!condicaoAvaliacao || !confirmouCondicao) {setErro('Confirme a condição na data da avaliação.');return;}
     if (condicaoAvaliacao !== 'gestante' && formulario.protocolo !== 'nenhum' && !formulario.sexo) {
       setErro('Informe o sexo: os protocolos de composição corporal usam equações diferentes por sexo.');
       return;
