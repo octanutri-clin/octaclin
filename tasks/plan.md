@@ -1,16 +1,18 @@
-# Handoff — Fase 312: planejamento → implementação
+# Handoff — Fase 312: implementação → revisão/merge
 
 ## Estado e próxima ação
 
-Planejamento/decisões fechados; implementação não iniciada. O proprietário
-solicitou planejamento após merge da 311. Próxima ação: trocar manualmente para
-**GPT-6 Luna alto** e implementar a sequência em `tasks/todo-fase-312.md`, na
-mesma branch/worktree abaixo. Pausar antes do código para essa troca.
+Implementação concluída no worktree abaixo; aguarda criação/CI da PR única.
+Próximo passo: abrir a PR para `main`, acompanhar os gates e corrigir falhas,
+sem merge automático. Se CI revelar uma decisão arquitetural ou risco R4 novo,
+usar GPT-6.1 Sol médio para analisar e avisar o proprietário antes de qualquer
+troca de modelo; correções localizadas continuam adequadas para GPT-6 Luna alto.
 
 - Branch: `feature/fase-312-documentos-clinicos`.
 - Worktree: `/workspace/octaclin/.worktrees/feature-fase-312-documentos-clinicos`.
 - Base: `cd345a5e`, main com 311 e Handlebars PR #387.
-- PR da 312: ainda não aberta; uma única PR de implementação, sem PR documental.
+- PR da 312: será uma única PR de implementação, sem PR documental; CI GitHub
+  ainda pendente. Execução local e limitações estão em `PLANO_FASE_312.md`.
 - Contrato/gaps/rollback: [PLANO_FASE_312.md](../docs/history/phases/PLANO_FASE_312.md).
 - Sequência com arquivos, testes e aceites: [todo-fase-312.md](todo-fase-312.md).
 - Handoff anterior preservado em [plan-fase-311.md](plan-fase-311.md).
@@ -63,34 +65,33 @@ assinatura digital/portal/canais novos não integram a entrega aprovada.
 - Rollback mantém leitura do novo tipo e schema; down recusa se há dados novos.
   Não apagar encaminhamentos para reverter. Revisão R4 independente quando viável.
 
-## Validação e limites deste ciclo
+## Validação local e limites
 
-- PASS: base/branch, merge 311 e CI da PR/pós-merge consultados no GitHub;
-  código do motor/DTO/ORM/Client/BFF/impressão/timeline/migrations e testes lidos.
-- PASS: seis decisões de produto recebidas; nenhum código de feature escrito.
-- PASS: `git diff --check`, scanner local de secrets e verificador da matriz
-  de confiabilidade (40 referências críticas); sem testes de feature neste ciclo.
-- SKIPPED: testes de implementação, PostgreSQL externo, assinatura/provider,
-  migração/deploy/produção; não executados neste planejamento.
-- CI da base `cd345a5e`, run `38044362697`, ainda em andamento na consulta;
-  reconfirmar antes de código/PR. CI do merge 311 foi SUCCESS, não inferir o atual.
-- Ambiente local Node 24.19.0/pnpm 11.19.0; manifests exigem Node 22/pnpm
-  11.25.0. Usar versões declaradas na implementação, sem reescrever lockfiles.
-  PowerShell não disponível; preflight PowerShell completo não executado.
-- PR 389 sem revisão formal registrada; Provenance do SBOM SKIPPED. Merge/CI
-  não comprovam validação jurídica ou operação em produção.
+- PASS: backend/Web typecheck e build; backend Jest 2474 PASS/45 SKIPPED; RLS
+  Testcontainers 26/26; teste visual da fase 2/2 em desktop/mobile com axe na
+  prévia; smoke BFF `smoke-e2e-bff-ok`; scanner de secrets, redaction,
+  migrations, guardas, matriz de confiabilidade/acessibilidade.
+- PASS: suíte completa `test:authz` (todos os harnesses na cadeia terminaram
+  com exit 0, incluindo a prova BFF da 312: 2/2).
+- PostgreSQL provou isolamento, índice, trigger, cancelamento e recusa de
+  rollback com encaminhamentos. Replay concorrente do serviço e rollback sem
+  linhas ainda não têm prova integrada específica.
+- Ambiente local Node 24.19.0/pnpm 11.19.0; manifests pedem Node 22/pnpm
+  11.25.0. O `pnpm` tentou substituir módulos e abortou com segurança sem TTY;
+  o suite `test:authz` é executado por Node diretamente. CI com versões
+  declaradas continua sendo gate. Nenhum lockfile foi alterado.
+- Migration 1067 não aplicada fora do Postgres descartável. Deploy/produção,
+  assinatura/provider e validação jurídica de atestados SKIPPED. Revisão R4
+  independente e Provenance do SBOM também não estão comprovadas.
 
-## Ordem de execução e atualização do estado
+## Próxima execução
 
-Reconfirmar status/base/diff e ler AGENTS. Seguir as nove fatias/checkpoints do
-checklist: domínio/DTO → migration → preparação/prévia → confirmação/replay →
-modelos → BFF → UI → demo/Playwright → PostgreSQL/gates/documentação/PR.
-Leia o guia Next instalado antes de alterar código Web. Começar pelos testes
-significativos de contrato/autoria; executar gates proporcionais e completos
-indicados no checklist. Se fato novo bloquear um item, registrar evidência e
-continuar itens independentes; decisão de produto nova deve voltar ao usuário.
+1. Rodar `git diff --check`, scanner de secrets e revisão do diff; remover os
+   symlinks temporários de `node_modules` antes de `git add`.
+2. Commit e push desta branch; abrir uma PR para `main`, descrever os testes e
+   gates pendentes e não fazer merge.
+3. Acompanhar Backend, Web, Governança, Demo local smoke e PR Gate; corrigir
+   falhas nesta branch e registrar PASS/FAIL/SKIPPED sem inferir produção.
 
-Atualizar evidências no mesmo PR da implementação; publicar e acompanhar CI,
-sem merge automático. Não voltar a declarar planejadas fases já integradas.
-Este handoff foi preparado para Luna alto implementar sozinho dentro do escopo
-fechado; não trocar modelo automaticamente nem delegar sem autorização.
+Não há perguntas de produto abertas. Não aplicar migration/deploy nem simular
+revisão R4 independente. Não trocar o modelo automaticamente.

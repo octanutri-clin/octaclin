@@ -9,6 +9,7 @@ import {
   IsNumber,
   IsOptional,
   IsString,
+  IsObject,
   IsUUID,
   ArrayUnique,
   ArrayMaxSize,
@@ -1149,6 +1150,55 @@ export interface SerieAntropometricaRespostaDto {
   deltaSelecionado?: DeltaAntropometrico[];
 }
 
+export class EncaminhamentoDocumentoDto {
+  @Transform(({ value }) => typeof value === 'string' ? value.replace(/\r\n?/g, '\n').trim() : value)
+  @IsString()
+  @MinLength(1)
+  @MaxLength(180)
+  @Matches(/\S/)
+  destinoServico: string;
+
+  @Transform(({ value }) => typeof value === 'string' ? value.replace(/\r\n?/g, '\n').trim() : value)
+  @IsString()
+  @MinLength(1)
+  @MaxLength(2000)
+  @Matches(/\S/)
+  motivoEncaminhamento: string;
+
+  @IsOptional()
+  @Transform(({ value }) => typeof value === 'string' ? value.replace(/\r\n?/g, '\n').trim() : value)
+  @IsString()
+  @MaxLength(180)
+  destinatarioNome?: string;
+
+  @IsOptional()
+  @Transform(({ value }) => typeof value === 'string' ? value.replace(/\r\n?/g, '\n').trim() : value)
+  @IsString()
+  @MaxLength(180)
+  instituicaoDestino?: string;
+
+  @IsOptional()
+  @Transform(({ value }) => typeof value === 'string' ? value.replace(/\r\n?/g, '\n').trim() : value)
+  @IsString()
+  @MaxLength(4000)
+  contextoClinico?: string;
+}
+
+export class PreviaDocumentoClinicoDto {
+  @IsIn(['encaminhamento'])
+  tipo: 'encaminhamento';
+
+  @IsObject()
+  @ValidateNested()
+  @Type(() => EncaminhamentoDocumentoDto)
+  encaminhamento: EncaminhamentoDocumentoDto;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(120)
+  cidadeEmissao?: string;
+}
+
 export class EmitirDocumentoClinicoDto {
   @IsIn(TIPOS_DOCUMENTO_CLINICO as unknown as string[])
   tipo: TipoDocumentoClinico;
@@ -1163,6 +1213,25 @@ export class EmitirDocumentoClinicoDto {
   @IsString()
   @MaxLength(4000)
   conteudo?: string;
+
+  @IsOptional()
+  @IsObject()
+  @ValidateNested()
+  @Type(() => EncaminhamentoDocumentoDto)
+  encaminhamento?: EncaminhamentoDocumentoDto;
+
+  @IsOptional()
+  @IsString()
+  @Matches(/^[a-f0-9]{64}$/i)
+  hashPrevia?: string;
+
+  @IsOptional()
+  @IsUUID('4')
+  chaveEmissao?: string;
+
+  @IsOptional()
+  @IsBoolean()
+  confirmacao?: boolean;
 
   @IsOptional()
   @IsString()
@@ -1199,6 +1268,16 @@ export interface DocumentoClinicoRespostaDto {
   podeEnviarPorEmail: boolean;
   /** Variaveis do modelo que nao encontraram valor; a interface avisa quem emitiu. */
   variaveisVazias: string[];
+}
+
+export interface PreviaDocumentoClinicoRespostaDto {
+  tipo: 'encaminhamento';
+  titulo: string;
+  corpo: string;
+  paragrafos: string[];
+  cabecalho: DocumentoClinicoRespostaDto['cabecalho'];
+  variaveisVazias: string[];
+  hashPrevia: string;
 }
 
 export interface ResultadoEnvioDocumentoDto {

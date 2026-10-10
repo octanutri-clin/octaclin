@@ -81,12 +81,14 @@ Atualizado em 2026-10-10.
   Plano histórico em `docs/history/phases/PLANO_FASE_311.md`; handoff preservado
   em `tasks/plan-fase-311.md`. Revisão formal independente não comprovada;
   Provenance do SBOM SKIPPED. Integração não representa aceite de produção.
-- Fase 312 com planejamento/gaps e seis decisões fechados; sem implementação.
-  Encaminhamento pelo responsável atual, sem consulta obrigatória, prévia e
-  confirmação, snapshot imutável e impressão/PDF do navegador. Atestados
-  aguardam validação jurídica específica. Migration 1067 proposta, não aplicada.
-  Plano em `docs/history/phases/PLANO_FASE_312.md`, handoff em `tasks/plan.md`
-  e checklist em `tasks/todo-fase-312.md`. Pausa para troca manual a Luna alto.
+- Fase 312 implementada nesta branch; PR e gates do GitHub pendentes.
+  Encaminhamento pelo responsável atual, prévia/confirmar, idempotência,
+  snapshot cifrado, impressão/PDF e cancelamento preservado no histórico.
+  Backend/Web build, suítes focadas e completa do backend, PostgreSQL real,
+  demo BFF e Playwright desktop/mobile passaram localmente. Atestados aguardam
+  validação específica. Migration 1067 registrada no código, não aplicada em
+  ambiente externo. Execução e limites em `docs/history/phases/PLANO_FASE_312.md`,
+  handoff em `tasks/plan.md` e critérios em `tasks/todo-fase-312.md`.
 - Sequência das Fases 302–320 em
   `docs/product/ROADMAP_POS_AUDITORIA_FASES_302_320.md`. O PB-30 está planejado na Fase 316, condicionado a privacidade,
   jurídico e operação.

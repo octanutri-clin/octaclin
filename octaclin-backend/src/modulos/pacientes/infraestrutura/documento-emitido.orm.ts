@@ -31,6 +31,9 @@ export class DocumentoEmitidoOrm {
   @Column({ type: 'varchar', length: 40 })
   tipo: TipoDocumentoClinico;
 
+  @Column({ name: 'chave_emissao', type: 'uuid', nullable: true })
+  chaveEmissao?: string;
+
   /** Consulta de origem. Obrigatoria para declaracao de comparecimento. */
   @Column({ name: 'consulta_id', type: 'uuid', nullable: true })
   consultaId?: string;

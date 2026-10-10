@@ -5,6 +5,7 @@ import {
   Injectable,
   NotFoundException
 } from '@nestjs/common';
+import { createHash } from 'node:crypto';
 import { EntityManager, IsNull } from 'typeorm';
 import { ExecutorTenant } from '../../../infraestrutura/banco-dados/executor-tenant';
 import { CriptografiaDadosSensiveis } from '../../../infraestrutura/seguranca/criptografia-dados-sensiveis';
@@ -19,7 +20,10 @@ import {
   enderecoEmLinha,
   paragrafosDocumento,
   renderizarDocumento,
-  resolverModelo
+  resolverModelo,
+  resolverModeloDocumento,
+  TAMANHO_MAXIMO_CORPO_RENDERIZADO_ENCAMINHAMENTO,
+  validarModelo
 } from '../dominio/documentos-clinicos';
 import type { TipoDocumentoClinico } from '../dominio/documentos-clinicos';
 import { AcompanhamentoTarefaOrm } from '../infraestrutura/acompanhamento-tarefa.orm';
@@ -29,6 +33,9 @@ import {
   CancelarDocumentoClinicoDto,
   DocumentoClinicoRespostaDto,
   EmitirDocumentoClinicoDto,
+  EncaminhamentoDocumentoDto,
+  PreviaDocumentoClinicoDto,
+  PreviaDocumentoClinicoRespostaDto,
   ResultadoEnvioDocumentoDto
 } from './dtos';
 
@@ -75,6 +82,10 @@ export class ServicoDocumentosClinicos {
     usuario: UsuarioAutenticado,
     dados: EmitirDocumentoClinicoDto
   ): Promise<DocumentoClinicoRespostaDto> {
+    if (dados.tipo === 'encaminhamento') {
+      return this.emitirEncaminhamento(tenantId, pacienteId, usuario, dados);
+    }
+
     const [configuracoes, perfil, modelos] = await Promise.all([
       this.portalCliente.obterConfiguracoes(tenantId),
       this.portalCliente.obterPerfilEmpresa(tenantId),
@@ -146,6 +157,259 @@ export class ServicoDocumentosClinicos {
 
       return this.mapear(documento, renderizado.variaveisVazias);
     });
+  }
+
+  async preverEncaminhamento(
+    tenantId: string,
+    pacienteId: string,
+    usuario: UsuarioAutenticado,
+    dados: PreviaDocumentoClinicoDto
+  ): Promise<PreviaDocumentoClinicoRespostaDto> {
+    this.garantirEntradaEncaminhamento(dados.encaminhamento);
+    const [configuracoes, perfil, modelos] = await Promise.all([
+      this.portalCliente.obterConfiguracoes(tenantId),
+      this.portalCliente.obterPerfilEmpresa(tenantId),
+      this.portalCliente.obterModelosDocumento(tenantId)
+    ]);
+
+    return this.executorTenant.executar(tenantId, async (gerenciador) => {
+      const paciente = await this.garantirPacienteNoEscopo(gerenciador, tenantId, pacienteId, usuario);
+      const profissional = await this.resolverProfissional(gerenciador, tenantId, paciente);
+      this.garantirEmissorEncaminhamento(usuario, profissional, paciente);
+      const preparado = this.prepararEncaminhamento({
+        tenantId, paciente, profissional, dados: dados.encaminhamento, cidadeEmissao: dados.cidadeEmissao,
+        autorUsuarioId: usuario.usuarioId, perfil, configuracoes, modelos
+      });
+      return {
+        tipo: 'encaminhamento',
+        titulo: preparado.renderizado.titulo,
+        corpo: preparado.renderizado.corpo,
+        paragrafos: paragrafosDocumento(preparado.renderizado.corpo),
+        cabecalho: {
+          clinicaNome: preparado.cabecalho.clinicaNome,
+          clinicaDocumento: preparado.cabecalho.clinicaDocumento,
+          clinicaEndereco: preparado.cabecalho.clinicaEndereco,
+          profissionalNome: preparado.cabecalho.profissionalNome,
+          profissionalRegistro: preparado.cabecalho.profissionalRegistro,
+          profissionalEspecialidade: preparado.cabecalho.profissionalEspecialidade
+        },
+        variaveisVazias: preparado.renderizado.variaveisVazias,
+        hashPrevia: preparado.hashPrevia
+      };
+    });
+  }
+
+  private async emitirEncaminhamento(
+    tenantId: string,
+    pacienteId: string,
+    usuario: UsuarioAutenticado,
+    dados: EmitirDocumentoClinicoDto
+  ): Promise<DocumentoClinicoRespostaDto> {
+    if (dados.confirmacao !== true || !dados.hashPrevia || !dados.chaveEmissao) {
+      throw new BadRequestException('Confirme a previa atual para emitir o encaminhamento.');
+    }
+    if (!/^[a-f0-9]{64}$/i.test(dados.hashPrevia) ||
+      !/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(dados.chaveEmissao)) {
+      throw new BadRequestException('Chave ou previa do encaminhamento invalida.');
+    }
+    const hashPreviaConfirmada = dados.hashPrevia.toLowerCase();
+    if (dados.consultaId || dados.conteudo !== undefined || !dados.encaminhamento) {
+      throw new BadRequestException('Dados de encaminhamento invalidos.');
+    }
+    this.garantirEntradaEncaminhamento(dados.encaminhamento);
+    if (usuario.papel !== 'Professional') {
+      throw new ForbiddenException('Somente o profissional responsavel pode emitir encaminhamento.');
+    }
+
+    const fingerprint = this.hashEstavel({
+      pacienteId,
+      tipo: 'encaminhamento',
+      encaminhamento: this.normalizarEncaminhamento(dados.encaminhamento),
+      cidadeEmissao: dados.cidadeEmissao?.trim() ?? '',
+      hashPrevia: hashPreviaConfirmada
+    });
+
+    return this.executorTenant.executar(tenantId, async (gerenciador) => {
+      const paciente = await gerenciador.getRepository(PacienteOrm).createQueryBuilder('paciente')
+        .setLock('pessimistic_read')
+        .where('paciente.id = :pacienteId and paciente.tenant_id = :tenantId and paciente.arquivado_em is null',
+          { pacienteId, tenantId })
+        .getOne();
+      if (!paciente || paciente.profissionalResponsavelId !== await resolverProfissionalIdDoUsuario(gerenciador, tenantId, usuario)) {
+        throw new NotFoundException('Paciente nao encontrado.');
+      }
+
+      const profissional = await gerenciador.getRepository(ProfissionalOrm).createQueryBuilder('profissional')
+        .setLock('pessimistic_read')
+        .where('profissional.usuario_id = :usuarioId and profissional.tenant_id = :tenantId and profissional.arquivado_em is null',
+          { usuarioId: usuario.usuarioId, tenantId })
+        .getOne();
+      this.garantirEmissorEncaminhamento(usuario, profissional, paciente);
+
+      const chaveLock = `documento-encaminhamento:${tenantId}:${usuario.usuarioId}:${dados.chaveEmissao}`;
+      await gerenciador.query('select pg_advisory_xact_lock(hashtextextended($1, 0))', [chaveLock]);
+      const repositorio = gerenciador.getRepository(DocumentoEmitidoOrm);
+      const existente = await repositorio.findOne({
+        where: { tenantId, autorUsuarioId: usuario.usuarioId, chaveEmissao: dados.chaveEmissao, tipo: 'encaminhamento' }
+      });
+      if (existente) {
+        const existenteFingerprint = this.fingerprintDoCabecalho(existente);
+        if (existente.pacienteId !== pacienteId || existenteFingerprint !== fingerprint) {
+          throw new ConflictException('A chave de emissao ja foi usada em outro pedido.');
+        }
+        return this.mapear(existente);
+      }
+
+      const [configuracoes, perfil, modelos] = await Promise.all([
+        this.portalCliente.obterConfiguracoes(tenantId),
+        this.portalCliente.obterPerfilEmpresa(tenantId),
+        this.portalCliente.obterModelosDocumento(tenantId)
+      ]);
+      const preparado = this.prepararEncaminhamento({
+        tenantId, paciente, profissional, dados: dados.encaminhamento!, cidadeEmissao: dados.cidadeEmissao,
+        autorUsuarioId: usuario.usuarioId, perfil, configuracoes, modelos
+      });
+      if (preparado.hashPrevia !== hashPreviaConfirmada) {
+        throw new ConflictException('Os dados mudaram desde a previa. Confira o encaminhamento novamente.');
+      }
+
+      const cabecalhoPersistido = {
+        ...preparado.cabecalho,
+        controleIdempotencia: { fingerprint, hashPrevia: preparado.hashPrevia }
+      };
+      const documento = await repositorio.save(repositorio.create({
+        tenantId,
+        pacienteId,
+        profissionalId: profissional.id,
+        autorUsuarioId: usuario.usuarioId,
+        tipo: 'encaminhamento',
+        chaveEmissao: dados.chaveEmissao,
+        titulo: preparado.renderizado.titulo,
+        corpoCriptografado: this.criptografia.criptografar(preparado.renderizado.corpo),
+        cabecalhoCriptografado: this.criptografia.criptografar(JSON.stringify(cabecalhoPersistido)),
+        emitidoEm: preparado.emitidoEm
+      }));
+      return this.mapear(documento, preparado.renderizado.variaveisVazias);
+    });
+  }
+
+  private prepararEncaminhamento(args: {
+    tenantId: string;
+    paciente: PacienteOrm;
+    profissional: ProfissionalOrm;
+    dados: EncaminhamentoDocumentoDto;
+    cidadeEmissao?: string;
+    autorUsuarioId: string;
+    perfil: Awaited<ReturnType<ServicoPortalCliente['obterPerfilEmpresa']>>;
+    configuracoes: Awaited<ReturnType<ServicoPortalCliente['obterConfiguracoes']>>;
+    modelos: Awaited<ReturnType<ServicoPortalCliente['obterModelosDocumento']>>;
+  }) {
+    const emitidoEm = new Date();
+    const timezone = args.configuracoes.timezone || 'America/Sao_Paulo';
+    const cabecalho: CabecalhoDocumento = {
+      clinicaNome: args.configuracoes.marca.nomeExibido || args.perfil.nomeFantasia || args.perfil.nomeLegal,
+      clinicaDocumento: args.perfil.documento,
+      clinicaEndereco: enderecoEmLinha(args.perfil.endereco),
+      profissionalNome: this.criptografia.descriptografar(args.profissional.nomeCriptografado),
+      profissionalRegistro: args.profissional.registroProfissional?.trim() ?? '',
+      profissionalEspecialidade: args.profissional.especialidade ?? '',
+      emitidoPor: args.autorUsuarioId
+    };
+    const nomePaciente = this.criptografia.descriptografar(args.paciente.nomeCriptografado).trim();
+    if (!nomePaciente || !cabecalho.profissionalNome || !cabecalho.profissionalRegistro) {
+      throw new BadRequestException('Paciente ou profissional sem identificacao/registro cadastrado.');
+    }
+    const entrada = this.normalizarEncaminhamento(args.dados);
+    const opcionais = (valor: string) => valor || 'Não informado';
+    const variaveis = {
+      ...cabecalho,
+      pacienteNome: nomePaciente,
+      dataEmissao: this.dataExtenso(emitidoEm, timezone),
+      cidadeEmissao: args.cidadeEmissao?.trim() || args.perfil.endereco.cidade,
+      destinoServico: entrada.destinoServico,
+      motivoEncaminhamento: entrada.motivoEncaminhamento,
+      destinatarioNome: opcionais(entrada.destinatarioNome),
+      instituicaoDestino: opcionais(entrada.instituicaoDestino),
+      contextoClinico: opcionais(entrada.contextoClinico)
+    };
+    const salvo = args.modelos.modelos.find((item) => item.tipo === 'encaminhamento');
+    const modelo = resolverModeloDocumento('encaminhamento', salvo && { titulo: salvo.titulo, corpo: salvo.corpo });
+    const erros = validarModelo('encaminhamento', modelo);
+    if (erros.length) throw new BadRequestException('Modelo de encaminhamento invalido.');
+    const renderizado = renderizarDocumento(modelo, variaveis);
+    if (renderizado.corpo.length > TAMANHO_MAXIMO_CORPO_RENDERIZADO_ENCAMINHAMENTO) {
+      throw new BadRequestException('O encaminhamento ultrapassa o tamanho permitido.');
+    }
+    const hashPrevia = this.hashEstavel({
+      tenantId: args.tenantId,
+      pacienteId: args.paciente.id,
+      autorUsuarioId: args.autorUsuarioId,
+      profissionalId: args.profissional.id,
+      tipo: 'encaminhamento',
+      entrada,
+      titulo: renderizado.titulo,
+      corpo: renderizado.corpo,
+      cabecalho: {
+        clinicaNome: cabecalho.clinicaNome,
+        clinicaDocumento: cabecalho.clinicaDocumento,
+        clinicaEndereco: cabecalho.clinicaEndereco,
+        profissionalNome: cabecalho.profissionalNome,
+        profissionalRegistro: cabecalho.profissionalRegistro,
+        profissionalEspecialidade: cabecalho.profissionalEspecialidade
+      },
+      variaveisVazias: renderizado.variaveisVazias
+    });
+    return { renderizado, cabecalho, hashPrevia, emitidoEm };
+  }
+
+  private garantirEntradaEncaminhamento(dados: EncaminhamentoDocumentoDto): void {
+    if (!dados || typeof dados !== 'object') throw new BadRequestException('Informe os dados do encaminhamento.');
+    const normalizados = this.normalizarEncaminhamento(dados);
+    if (!normalizados.destinoServico || normalizados.destinoServico.length > 180 ||
+      !normalizados.motivoEncaminhamento || normalizados.motivoEncaminhamento.length > 2000 ||
+      normalizados.destinatarioNome.length > 180 || normalizados.instituicaoDestino.length > 180 ||
+      normalizados.contextoClinico.length > 4000) {
+      throw new BadRequestException('Revise os campos obrigatorios e seus limites.');
+    }
+  }
+
+  private normalizarEncaminhamento(dados: EncaminhamentoDocumentoDto) {
+    const texto = (valor?: string) => typeof valor === 'string' ? valor.replace(/\r\n?/g, '\n').trim() : '';
+    return {
+      destinoServico: texto(dados.destinoServico),
+      destinatarioNome: texto(dados.destinatarioNome),
+      instituicaoDestino: texto(dados.instituicaoDestino),
+      motivoEncaminhamento: texto(dados.motivoEncaminhamento),
+      contextoClinico: texto(dados.contextoClinico)
+    };
+  }
+
+  private garantirEmissorEncaminhamento(
+    usuario: UsuarioAutenticado,
+    profissional: ProfissionalOrm | null,
+    paciente: PacienteOrm
+  ): asserts profissional is ProfissionalOrm {
+    if (usuario.papel !== 'Professional' || !profissional || profissional.usuarioId !== usuario.usuarioId ||
+      profissional.tenantId !== usuario.tenantId || paciente.profissionalResponsavelId !== profissional.id) {
+      throw new ForbiddenException('Somente o profissional responsavel atual pode emitir encaminhamento.');
+    }
+  }
+
+  private hashEstavel(valor: unknown): string {
+    return createHash('sha256').update(JSON.stringify(valor)).digest('hex');
+  }
+
+  private fingerprintDoCabecalho(documento: DocumentoEmitidoOrm): string | undefined {
+    try {
+      const cabecalho = JSON.parse(this.criptografia.descriptografar(documento.cabecalhoCriptografado)) as {
+        controleIdempotencia?: { fingerprint?: unknown };
+      };
+      return typeof cabecalho.controleIdempotencia?.fingerprint === 'string'
+        ? cabecalho.controleIdempotencia.fingerprint
+        : undefined;
+    } catch {
+      return undefined;
+    }
   }
 
   async listar(

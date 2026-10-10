@@ -127,6 +127,39 @@ function criarServico(dados: {
 describe('ServicoPortalCliente', () => {
   afterEach(() => jest.useRealTimers());
 
+  it('preserva overrides omitidos ao salvar PATCH antigo de tres modelos', async () => {
+    const corpoEncaminhamento = [
+      '{{pacienteNome}}', '{{profissionalNome}}', '{{profissionalRegistro}}', '{{dataEmissao}}',
+      '{{destinoServico}}', '{{destinatarioNome}}', '{{instituicaoDestino}}',
+      '{{motivoEncaminhamento}}', '{{contextoClinico}}'
+    ].join(' ');
+    const { servico, repositorioConfiguracoes, gerenciador } = criarServico({
+      tenants: [{ id: 'tenant-1', status: 'ativo' }], usuarios: [],
+      configuracoes: [{
+        id: 'modelos-1', tenantId: 'tenant-1', chave: 'modelos_documento',
+        valor: {
+          recibo_consulta: { titulo: 'Recibo', corpo: 'Recibo personalizado {{pacienteNome}}' },
+          encaminhamento: { titulo: 'Encaminhamento', corpo: corpoEncaminhamento }
+        }
+      }]
+    });
+
+    await servico.atualizarModelosDocumento('tenant-1', {
+      declaracao_comparecimento: { titulo: 'Declaração', corpo: 'Paciente {{pacienteNome}}' },
+      relatorio_alta: { titulo: 'Alta', corpo: '{{pacienteNome}} {{conteudo}}' },
+      recibo_consulta: { titulo: 'Recibo atualizado', corpo: '{{pacienteNome}}' }
+    });
+
+    const valor = repositorioConfiguracoes.save.mock.calls.at(-1)?.[0].valor;
+    expect(valor).toEqual(expect.objectContaining({
+      encaminhamento: { titulo: 'Encaminhamento', corpo: corpoEncaminhamento },
+      recibo_consulta: { titulo: 'Recibo atualizado', corpo: '{{pacienteNome}}' }
+    }));
+    expect(gerenciador.query).toHaveBeenCalledWith(
+      expect.stringContaining('pg_advisory_xact_lock'), ['modelos-documento-cliente:tenant-1']
+    );
+  });
+
   it('deve montar resumo real da conta do cliente pelo tenant autenticado', async () => {
     const { servico, repositorioTenants, repositorioUsuarios, gerenciador, executorTenant } = criarServico({
       tenants: [

@@ -1,8 +1,9 @@
 # Fase 312 — encaminhamento no motor de documentos
 
-Planejamento em 2026-10-10. Implementação não iniciada. Risco de implementação:
-R4 (PHI, autorização, tenancy, criptografia e migration). Alterações deste
-planejamento são documentais. Handoff corrente: `tasks/plan.md`.
+Planejamento e decisões aprovados em 2026-10-10; implementação concluída na
+branch `feature/fase-312-documentos-clinicos`, aguardando PR/CI. Risco da fase:
+R4 (PHI, autorização, tenancy, criptografia e migration). Execução, limites e
+testes registrados ao final. Handoff corrente: `tasks/plan.md`.
 
 ## Base e escopo aprovado
 
@@ -231,15 +232,15 @@ restringir CHECK/remover trigger/índice/coluna. Nenhum DELETE/backfill para rev
 Revisão R4 cruzada quando viável; registrar se não independente. Merge/CI não
 equivalem a assinatura legal, aplicação da migration ou aceite de produção.
 
-## Evidência deste planejamento
+## Evidência do planejamento
 
 - PASS: branch/base e merge 311 conferidos; contratos/consumidores/migrations,
   testes existentes, autorização, criptografia, BFF e impressão inspecionados.
 - PASS: seis decisões recebidas do proprietário; contrato fechado.
-- PASS: `git diff --check`, `node scripts/scan-secrets.mjs` e
+- PASS no planejamento: `git diff --check`, `node scripts/scan-secrets.mjs` e
   `node scripts/test-matriz-confiabilidade.mjs` (40 referências críticas).
-- SKIPPED: testes de implementação, banco externo, provider e produção;
-  este ciclo ainda não escreveu código nem executou efeitos operacionais.
+- Na etapa de planejamento: testes de implementação, banco externo, provider e
+  produção ficaram SKIPPED; veja a evidência de execução abaixo.
 - Ambiente observado: Node 24.19.0/pnpm 11.19.0; manifests exigem Node 22/
   pnpm 11.25.0. Antes de implementação, usar versões declaradas; avisos de
   engine não comprovam compatibilidade. PowerShell indisponível neste shell.
@@ -248,5 +249,33 @@ equivalem a assinatura legal, aplicação da migration ou aceite de produção.
 
 Planejamento recomendado: GPT-6.1 Sol médio. Implementação, depois do contrato
 fechado: GPT-6 Luna alto, uma tarefa/controle por vez no mesmo worktree/PR.
-Não iniciar código neste ciclo. Ao fechar planejamento, avisar e pausar para
-a troca manual solicitada pelo proprietário.
+O proprietário autorizou a implementação após o handoff. A fase foi executada
+com GPT-6 Luna alto no worktree indicado. Não houve troca automática de modelo.
+
+## Evidência da implementação
+
+- PASS: backend typecheck/build; Web typecheck/build; ESLint alterados sem erros
+  (avisos `setState` preexistentes permanecem); domínio/serviço/migration/TypeORM/
+  Client, 52 testes focados passaram. Suíte backend completa: 2474 PASS,
+  45 SKIPPED; três suites de integração ficam fora dela e RLS foi rodado à parte.
+- PASS: PostgreSQL real via Testcontainers, migrations aplicadas em banco
+  descartável e role runtime sem owner/BYPASSRLS: 26/26; RLS por tenant,
+  unicidade da chave, trigger UPDATE, cancelamento permitido e `down()` recusado
+  quando há encaminhamento. Concorrência de replay do serviço e `down()` sem
+  linhas permanecem sem prova real neste ciclo.
+- PASS: BFF dedicado 2/2, regressão Playwright da Fase 312 em desktop/mobile
+  2/2 com axe na prévia, smoke local `smoke-e2e-bff-ok`, redaction audit,
+  guardas, auditoria de migrations, matriz de acessibilidade/confiabilidade e
+  scanner de secrets. A suíte ampla `test:authz` terminou com exit 0, incluindo
+  todos os harnesses encadeados e o BFF da 312 (2/2).
+- SKIPPED: deploy, aplicação operacional da migration 1067, assinatura/provider,
+  validação jurídica de atestados, revisão R4 independente e Provenance do SBOM.
+  Não inferir aceite jurídico ou de produção a partir de builds/testes.
+- Ambiente executou Node 24.19/pnpm 11.19 contra manifests Node 22/pnpm 11.25.
+  Build/testes locais passaram, mas CI com as versões declaradas continua sendo
+  gate. O `pnpm test:authz` tentou auto-instalar a versão declarada e abortou ao
+  proteger `node_modules` sem TTY; o mesmo script terminou com exit 0 pelo Node
+  diretamente, sem modificar dependências ou lockfiles.
+- Migration 1067 está registrada no código, não aplicada fora do container
+  descartável. PR única de implementação será aberta; CI e revisão do PR ficam
+  pendentes. Não houve merge automático.

@@ -10,8 +10,11 @@ scanners pós-merge aprovados. `Provenance do SBOM` na PR 310 foi `SKIPPED`;
 não é PASS. Aplicação operacional das 1065/1066 não consultada. Fase 311
 integrada pelo PR #389 (`f5f9ba84`); CI final `38022212900` e principal
 pós-merge `38042089805` SUCCESS. Handoff histórico em `tasks/plan-fase-311.md`.
-Fase 312 com planejamento fechado, sem código; handoff em `tasks/plan.md`
-e checklist em `tasks/todo-fase-312.md`, aguardando troca manual para Luna alto.
+Fase 312 implementada na branch `feature/fase-312-documentos-clinicos`; PR e CI
+pendentes. Builds, suíte backend, PostgreSQL/Testcontainers, smoke BFF e
+Playwright específico desktop/mobile passaram localmente. Migration 1067 não
+foi aplicada externamente. Handoff atualizado em `tasks/plan.md` e evidências
+em `docs/history/phases/PLANO_FASE_312.md`/`tasks/todo-fase-312.md`.
 
 O parágrafo abaixo registra a atualização histórica anterior; para o estado
 vigente prevalecem este bloco, itens ao final e o roadmap.
@@ -4560,9 +4563,10 @@ auditoria estão ordenados na seção 15 de
   e conferência somente leitura de quatro bases do catálogo no onboarding.
   PR #389 integrado (`f5f9ba84`), CI de PR e principal pós-merge SUCCESS.
   Plano `docs/history/phases/PLANO_FASE_311.md`; revisão R4 não comprovada.
-- [~] Fase 312 - encaminhamento: planejamento/gaps e decisões fechados;
-  implementação não iniciada. Atestados aguardam validação jurídica específica.
-  Handoff `tasks/plan.md`; checklist `tasks/todo-fase-312.md`.
+- [~] Fase 312 - encaminhamento: implementação pronta, aguardando PR/CI/revisão;
+  autoria pelo responsável atual, prévia/confirmação, snapshot cifrado e
+  impressão/PDF. Atestados aguardam validação jurídica específica. Migration
+  1067 não aplicada externamente. Evidências `docs/history/phases/PLANO_FASE_312.md`.
 - [ ] Fase 313 - avaliação antropométrica de gestantes, após validação clínica.
 - [ ] Fase 314 - avaliação antropométrica de menores de 20 anos, após validação
   clínica da referência etária e por sexo.

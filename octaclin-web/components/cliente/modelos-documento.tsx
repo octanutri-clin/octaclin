@@ -16,7 +16,8 @@ import {
 const ROTULO_TIPO: Record<string, string> = {
   declaracao_comparecimento: 'Declaração de comparecimento',
   relatorio_alta: 'Relatorio de alta',
-  recibo_consulta: 'Recibo'
+  recibo_consulta: 'Recibo',
+  encaminhamento: 'Encaminhamento'
 };
 
 export function ModelosDocumentoCliente() {
@@ -106,6 +107,8 @@ export function ModelosDocumentoCliente() {
                 <Rotulo>Título</Rotulo>
                 <Campo
                   value={rascunho[modelo.tipo]?.titulo ?? ''}
+                  readOnly={modelo.tipo === 'encaminhamento'}
+                  aria-describedby={modelo.tipo === 'encaminhamento' ? 'titulo-fixo-encaminhamento' : undefined}
                   onChange={(evento) =>
                     setRascunho((atual) => ({
                       ...atual,
@@ -114,6 +117,11 @@ export function ModelosDocumentoCliente() {
                   }
                 />
               </label>
+              {modelo.tipo === 'encaminhamento' ? (
+                <p id="titulo-fixo-encaminhamento" className="text-xs text-texto-suave">
+                  O título é fixo para manter a lista de documentos sem conteúdo clínico.
+                </p>
+              ) : null}
 
               <label className="grid gap-1">
                 <Rotulo>Corpo</Rotulo>

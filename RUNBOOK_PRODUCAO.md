@@ -2043,6 +2043,29 @@ Cinco condicoes. Todas verdadeiras, ou o incidente continua aberto:
 3. Conferir resposta da API Google.
 4. Recriar evento de teste.
 
+### Encaminhamentos clínicos (Fase 312)
+
+A emissão é exclusiva do profissional autenticado que continua como responsável
+atual e tem cadastro/registro ativo. O profissional precisa revisar a prévia e
+confirmar a emissão; uma alteração de cadastro, modelo ou campos exige nova
+prévia. O encaminhamento salvo é um snapshot cifrado. Correção requer cancelar
+com motivo e emitir outro documento; o registro cancelado permanece no histórico.
+
+A entrega é por impressão ou PDF no navegador. Esta fase não habilita envio por
+e-mail/WhatsApp, portal do paciente ou assinatura digital. O papel impresso deve
+ser assinado manualmente pelo profissional. Atestados permanecem fora do fluxo
+até existir validação específica documentada para finalidade, profissão,
+competência, jurisdição e assinatura.
+
+A migration `AdicionarEncaminhamentoDocumento1720000001067` é aditiva e pertence
+à execução fora de banda. Ela não foi aplicada em ambiente externo nesta fase.
+Se houver aprovação posterior de deploy, seguir o procedimento de migration
+owner deste runbook, confirmar projeto/branch/banco/role e manter as aplicações
+de runtime sem credencial owner. `down()` recusa rollback enquanto houver
+encaminhamentos; não apagar linhas nem executar rollback direto com documentos
+emitidos. Qualquer rollback da aplicação deve preservar leitura/impressão dos
+snapshots existentes.
+
 ## Antes de ativar clientes reais
 
 Ler e executar `CHECKLIST_GO_LIVE.md`.

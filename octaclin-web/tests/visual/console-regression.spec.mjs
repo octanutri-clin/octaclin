@@ -1092,6 +1092,8 @@ async function prepararProntuarioMockado(page, {
   let anexos = [];
   let documentos = [];
   let corpoDocumentoEmitido = null;
+  let previaDocumento = null;
+  let leiturasPreviasDocumento = 0;
   let modeloEvolucaoCriado = null;
   let itemBibliotecaCondutaCriado = null;
   let statusPortal = statusPortalInicial;
@@ -2047,9 +2049,36 @@ async function prepararProntuarioMockado(page, {
     await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(anexos) });
   });
 
+  await page.route('**/api/pacientes/paciente-1/documentos/previa', async (route) => {
+    const body = route.request().postDataJSON();
+    leiturasPreviasDocumento += 1;
+    const valores = body.encaminhamento;
+    const corpo = [
+      'ENCAMINHAMENTO', '', 'Paciente: Ana Souza', `Destino: ${valores.destinoServico}`,
+      'Destinatário: Não informado', 'Instituição: Não informado', '',
+      `Motivo: ${valores.motivoEncaminhamento}`, '', 'Contexto clínico: Não informado', '',
+      'Recife, 10 de outubro de 2026.', '', 'Dra. Carla', 'CRN-6 1234'
+    ].join('\n');
+    previaDocumento = {
+      tipo: 'encaminhamento', titulo: 'Encaminhamento', corpo,
+      paragrafos: corpo.split(/\n{2,}/),
+      cabecalho: { clinicaNome: 'Clínica Carla', clinicaDocumento: '12.345.678/0001-90', clinicaEndereco: 'Rua A - Recife/PE', profissionalNome: 'Dra. Carla', profissionalRegistro: 'CRN-6 1234', profissionalEspecialidade: 'Nutrição clínica' },
+      variaveisVazias: [], hashPrevia: `fase312-hash-${leiturasPreviasDocumento}`.padEnd(64, 'a')
+    };
+    await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(previaDocumento) });
+  });
+
   await page.route('**/api/pacientes/paciente-1/documentos', async (route) => {
     if (route.request().method() === 'POST') {
       corpoDocumentoEmitido = route.request().postDataJSON();
+      if (corpoDocumentoEmitido.tipo === 'encaminhamento') {
+        documentos = [{
+          ...previaDocumento, id: 'documento-encaminhamento-1',
+          emitidoEm: '2026-10-10T12:00:00.000Z', podeEnviarPorEmail: false
+        }];
+        await route.fulfill({ status: 201, contentType: 'application/json', body: JSON.stringify(documentos[0]) });
+        return;
+      }
       documentos = [
         {
           id: 'documento-1',
@@ -2076,6 +2105,21 @@ async function prepararProntuarioMockado(page, {
     }
 
     await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(documentos) });
+  });
+
+  await page.route('**/api/pacientes/paciente-1/documentos/documento-encaminhamento-1/cancelamento', async (route) => {
+    if (route.request().method() !== 'POST') {
+      await route.fulfill({ status: 405, contentType: 'application/json', body: JSON.stringify({ message: 'Método não suportado.' }) });
+      return;
+    }
+    const documento = documentos.find((item) => item.id === 'documento-encaminhamento-1');
+    if (!documento) {
+      await route.fulfill({ status: 404, contentType: 'application/json', body: JSON.stringify({ mensagem: 'Documento não encontrado.' }) });
+      return;
+    }
+    documento.canceladoEm = '2026-10-10T12:05:00.000Z';
+    documento.motivoCancelamento = route.request().postDataJSON()?.motivo;
+    await route.fulfill({ status: 201, contentType: 'application/json', body: JSON.stringify(documento) });
   });
 
   await page.route('**/api/pacientes/paciente-1/planos-alimentares**', async (route) => {
@@ -2278,6 +2322,7 @@ async function prepararProntuarioMockado(page, {
 
   return {
     corpoDocumentoEmitido: () => corpoDocumentoEmitido,
+    leiturasPreviasDocumento: () => leiturasPreviasDocumento,
     modeloEvolucaoCriado: () => modeloEvolucaoCriado,
     itemBibliotecaCondutaCriado: () => itemBibliotecaCondutaCriado,
     criouEvolucao: () => criouEvolucao,
@@ -2973,6 +3018,49 @@ test.describe('prontuario do paciente', () => {
 
     await page.getByRole('tab', { name: 'Documentos', exact: true }).first().click();
     await expect(page.getByRole('heading', { name: 'Emitir documento' })).toHaveCount(0);
+  });
+
+  test('Fase 312 exige prévia, invalida ao editar e confirma uma única emissão', async ({ page }) => {
+    const prontuario = await prepararProntuarioMockado(page);
+    await page.goto('/pacientes/paciente-1');
+    await page.getByRole('tab', { name: 'Documentos', exact: true }).first().click();
+
+    await page.getByLabel('Tipo').selectOption('encaminhamento');
+    await page.getByLabel('Destino ou serviço *').fill('Cardiologia');
+    await page.getByLabel('Motivo do encaminhamento *').fill('Avaliação solicitada para continuidade do cuidado.');
+    await page.getByRole('button', { name: 'Gerar prévia completa' }).click();
+    await expect(page.getByRole('heading', { name: 'Prévia completa do encaminhamento' })).toBeVisible();
+    await expect(page.getByText('Destino: Cardiologia')).toBeVisible();
+    const acessibilidadePrevia = await new AxeBuilder({ page })
+      .include('section[aria-labelledby="previa-encaminhamento"]')
+      .withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'])
+      .analyze();
+    expect(acessibilidadePrevia.violations).toEqual([]);
+    await expect(page.getByRole('button', { name: 'Confirmar emissão' })).toBeDisabled();
+    await expect.poll(() => prontuario.leiturasPreviasDocumento()).toBe(1);
+
+    await page.getByLabel('Destino ou serviço *').fill('Neurologia');
+    await expect(page.getByRole('heading', { name: 'Prévia completa do encaminhamento' })).toHaveCount(0);
+    await page.getByRole('button', { name: 'Gerar prévia completa' }).click();
+    await expect(page.getByText('Destino: Neurologia')).toBeVisible();
+    await page.getByLabel(/Conferi a prévia completa/).check();
+    await page.getByRole('button', { name: 'Confirmar emissão' }).click();
+
+    await expect(page.getByText('Encaminhamento emitido. Confira o documento antes de imprimir.')).toBeVisible();
+    await expect.poll(() => prontuario.corpoDocumentoEmitido()).toEqual(expect.objectContaining({
+      tipo: 'encaminhamento', confirmacao: true, hashPrevia: expect.any(String), chaveEmissao: expect.any(String),
+      encaminhamento: expect.objectContaining({ destinoServico: 'Neurologia' })
+    }));
+    await expect(page.getByRole('button', { name: 'Enviar por e-mail' })).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Imprimir / salvar PDF' })).toBeVisible();
+    await expect(page.getByText(/Destino: Neurologia/)).toBeVisible();
+    page.once('dialog', (dialog) => dialog.accept('Correção do conteúdo solicitado.'));
+    await page.getByRole('button', { name: 'Cancelar' }).click();
+    await expect(page.getByText('Documento cancelado. O registro continua no histórico.')).toBeVisible();
+    await expect(page.getByText('Encaminhamento (cancelado)')).toBeVisible();
+    await page.getByRole('button', { name: 'Ver' }).click();
+    await expect(page.getByText(/CANCELADO\./)).toBeVisible();
+    await expect(page.getByText('Motivo: Correção do conteúdo solicitado.')).toBeVisible();
   });
 
   test('preserva foco e tarefa em edicao quando a troca por teclado e cancelada', async ({ page }) => {

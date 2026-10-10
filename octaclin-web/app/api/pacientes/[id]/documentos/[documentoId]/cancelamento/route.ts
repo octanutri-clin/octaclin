@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { ErroSessaoAusente, requisitarBackendAutenticado } from '@/lib/server/sessao-bff';
+import { ErroPermissaoAusente, ErroSessaoAusente, exigirPermissaoBff, requisitarBackendAutenticado } from '@/lib/server/sessao-bff';
+
+const headers = { 'Content-Type': 'application/json', 'Cache-Control': 'private, no-store', Vary: 'Cookie' };
 
 interface Params {
   params: Promise<{ id: string; documentoId: string }>;
@@ -8,6 +10,7 @@ interface Params {
 export async function POST(request: NextRequest, props: Params) {
   const params = await props.params;
   try {
+    await exigirPermissaoBff('pacientes.gerenciar');
     const corpo = await request.text();
     const resposta = await requisitarBackendAutenticado(
       `/pacientes/${encodeURIComponent(params.id)}/documentos/${encodeURIComponent(params.documentoId)}/cancelamento`,
@@ -15,12 +18,13 @@ export async function POST(request: NextRequest, props: Params) {
     );
     return new NextResponse(await resposta.text(), {
       status: resposta.status,
-      headers: { 'Content-Type': resposta.headers.get('Content-Type') ?? 'application/json' }
+      headers: { ...headers, 'Content-Type': resposta.headers.get('Content-Type') ?? 'application/json' }
     });
   } catch (erro) {
     if (erro instanceof ErroSessaoAusente) {
-      return NextResponse.json({ mensagem: erro.message }, { status: 401 });
+      return NextResponse.json({ mensagem: erro.message }, { status: 401, headers });
     }
-    throw erro;
+    if (erro instanceof ErroPermissaoAusente) return NextResponse.json({ mensagem: erro.message }, { status: 403, headers });
+    return NextResponse.json({ mensagem: 'Não foi possível cancelar o documento.' }, { status: 502, headers });
   }
 }

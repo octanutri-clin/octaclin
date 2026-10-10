@@ -7,9 +7,11 @@ PostgreSQL/Testcontainers da PR 310 aprovado. CI principal pós-merge 310
 `38016413569` SUCCESS; scanners pós-merge aprovados.
 Migrations 1065/1066 integradas no código, sem prova de aplicação operacional
 neste ciclo. Fase 311 integrada pelo PR #389 (`f5f9ba84`), CI final da PR
-`38022212900` e principal pós-merge `38042089805` SUCCESS. Fase 312 com
-planejamento/decisões fechados, sem implementação. Plano e handoff em
-`docs/history/phases/PLANO_FASE_312.md` e `tasks/plan.md`.
+`38022212900` e principal pós-merge `38042089805` SUCCESS. Fase 312 implementada
+na branch `feature/fase-312-documentos-clinicos`; PR e CI pendentes. Builds,
+suíte backend, PostgreSQL/Testcontainers, demo BFF e teste Playwright específico
+desktop/mobile aprovados localmente. Migration 1067 não aplicada externamente.
+Plano e handoff em `docs/history/phases/PLANO_FASE_312.md` e `tasks/plan.md`.
 Este é o plano **vigente** para as recomendações ainda abertas de
 `OCTACLIN_PRODUCT_FEATURE_AUDIT.md`. O diagnóstico de 2026-09-17 permanece
 histórico; uma descrição antiga de lacuna não desfaz uma entrega posterior.
@@ -146,8 +148,8 @@ do SBOM` `SKIPPED`; aplicação da 1066 e envio real não consultados.
 **Fase 311 integrada:** PR #389 (`f5f9ba84`), CI da PR `38022212900` e
 principal pós-merge `38042089805` SUCCESS. Revisão independente não comprovada.
 
-**Fase 312 planejada:** seis decisões fechadas para encaminhamento;
-responsável atual, prévia/confirmar, snapshot e impressão/PDF do navegador.
-Sem código; migration 1067 proposta. Atestados aguardam validação específica.
-Plano/gaps em `docs/history/phases/PLANO_FASE_312.md`; handoff em `tasks/plan.md`.
-Pausa antes do código para troca manual de Sol médio para Luna alto.
+**Fase 312 implementada, aguardando PR/CI:** encaminhamento pelo responsável
+atual, prévia completa e confirmação, snapshot cifrado e impressão/PDF do
+navegador. Atestados aguardam validação específica. Migration 1067 está no
+código; aplicação operacional não verificada. Evidências em
+`docs/history/phases/PLANO_FASE_312.md` e `tasks/todo-fase-312.md`.

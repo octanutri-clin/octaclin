@@ -6,7 +6,7 @@ import { TenantOrm } from '../../tenancy/infraestrutura/tenant.orm';
 import { contextoAcessoPorPapel } from '../../auth/dominio/permissoes';
 import {
   TIPOS_DOCUMENTO_CLINICO,
-  resolverModelo,
+  resolverModeloDocumento,
   validarModelo,
   variaveisDoTipo
 } from '../../pacientes/dominio/documentos-clinicos';
@@ -445,27 +445,32 @@ export class ServicoPortalCliente {
 
     const erros = TIPOS_DOCUMENTO_CLINICO.flatMap((tipo) => {
       const modelo = dados[tipo];
-      return modelo ? validarModelo(tipo, modelo).map((erro) => `${tipo}:${erro}`) : [];
+      if (!modelo) return [];
+      const efetivo = resolverModeloDocumento(tipo, modelo);
+      return validarModelo(tipo, efetivo).map((erro) => `${tipo}:${erro}`);
     });
     if (erros.length) {
       throw new BadRequestException(`Modelo de documento invalido. ${erros.join(', ')}`);
     }
 
-    const valor: Record<string, unknown> = {};
-    for (const tipo of TIPOS_DOCUMENTO_CLINICO) {
-      const modelo = dados[tipo];
-      if (!modelo) continue;
-      valor[tipo] = {
-        titulo: this.texto(modelo.titulo, ''),
-        corpo: this.texto(modelo.corpo, '')
-      };
-    }
-
     await this.executorTenant.executar(tenantId, async (gerenciador) => {
+      await gerenciador.query('select pg_advisory_xact_lock(hashtextextended($1, 0))', [
+        `modelos-documento-cliente:${tenantId}`
+      ]);
       const repositorio = gerenciador.getRepository(TenantConfiguracaoOrm);
       const atual = await repositorio.findOne({
         where: { tenantId, chave: CHAVE_MODELOS_DOCUMENTO }
       });
+      const salvos = this.objeto(atual?.valor);
+      const valor: Record<string, unknown> = { ...salvos };
+      for (const tipo of TIPOS_DOCUMENTO_CLINICO) {
+        const modelo = dados[tipo];
+        if (!modelo) continue;
+        valor[tipo] = {
+          titulo: tipo === 'encaminhamento' ? 'Encaminhamento' : this.texto(modelo.titulo, ''),
+          corpo: this.texto(modelo.corpo, '')
+        };
+      }
       await repositorio.save(
         repositorio.create({
           id: atual?.id,
@@ -487,7 +492,7 @@ export class ServicoPortalCliente {
       tenantId,
       modelos: TIPOS_DOCUMENTO_CLINICO.map((tipo) => {
         const salvo = this.objeto(salvos[tipo]);
-        const efetivo = resolverModelo(tipo, {
+        const efetivo = resolverModeloDocumento(tipo, {
           titulo: this.texto(salvo.titulo, ''),
           corpo: this.texto(salvo.corpo, '')
         });

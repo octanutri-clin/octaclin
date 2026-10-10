@@ -26,6 +26,7 @@ import { instalarKitInicialClinica } from '../../modulos/tenancy/aplicacao/kit-i
 import { ServicoKitInicialClinica } from '../../modulos/tenancy/aplicacao/servico-kit-inicial-clinica';
 import { CONSULTA_DISPONIBILIDADE_CATALOGOS, ServicoDisponibilidadeCatalogos } from '../../modulos/operacoes/aplicacao/servico-disponibilidade-catalogos';
 import { criarOpcoesTypeOrm } from './opcoes-typeorm';
+import { AdicionarEncaminhamentoDocumento1720000001067 } from './migracoes/1720000001067-AdicionarEncaminhamentoDocumento';
 
 /**
  * Prova integral de isolamento por tenant em Postgres real (PR 43).
@@ -522,6 +523,59 @@ descrever('RLS e isolamento multi-tenant integral em Postgres real', () => {
     ]);
     expect(tabelasTenant).not.toHaveLength(0);
     expect(tabelasTenant.filter((tabela) => tabela.dono === configuracaoRuntime!.usuario)).toEqual([]);
+  });
+
+  it('Fase 312 isola encaminhamentos, deduplica chave e protege o snapshot no Postgres', async () => {
+    if (!cliente) throw new Error('Cliente da prova RLS nao foi inicializado.');
+    const id = randomUUID();
+    const chave = randomUUID();
+    const campos = [id, tenantA, pacienteIdTenantA, profissionalIdTenantA, usuarioIdTenantA, chave];
+    await comoTenant(tenantA);
+    await cliente.query(`
+      insert into documentos_emitidos
+        (id, tenant_id, paciente_id, profissional_id, autor_usuario_id, tipo, consulta_id,
+         chave_emissao, titulo, corpo_criptografado, cabecalho_criptografado, emitido_em)
+      values ($1, $2, $3, $4, $5, 'encaminhamento', null, $6, 'Encaminhamento', $7, $8, now())
+    `, [...campos, Buffer.from('corpo sintetico cifrado'), Buffer.from('cabecalho sintetico cifrado')]);
+
+    await expect(cliente.query(`
+      insert into documentos_emitidos
+        (tenant_id, paciente_id, profissional_id, autor_usuario_id, tipo, chave_emissao,
+         titulo, corpo_criptografado, cabecalho_criptografado, emitido_em)
+      values ($1, $2, $3, $4, 'encaminhamento', $5, 'Encaminhamento', $6, $7, now())
+    `, [tenantA, pacienteIdTenantA, profissionalIdTenantA, usuarioIdTenantA, chave,
+      Buffer.from('outro corpo sintetico'), Buffer.from('outro cabecalho sintetico')]))
+      .rejects.toMatchObject({ code: '23505' });
+
+    await expect(cliente.query(
+      'update documentos_emitidos set corpo_criptografado = $2 where tenant_id = $1 and id = $3',
+      [tenantA, Buffer.from('corpo alterado'), id]
+    )).rejects.toMatchObject({ code: 'P0001' });
+    await expect(cliente.query(
+      "update documentos_emitidos set tipo = 'recibo_consulta' where tenant_id = $1 and id = $2",
+      [tenantA, id]
+    )).rejects.toMatchObject({ code: 'P0001' });
+
+    await cliente.query('update documentos_emitidos set cancelado_em = now() where tenant_id = $1 and id = $2', [tenantA, id]);
+
+    const queryRunner = fonteDadosAdministrativa!.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+    try {
+      await expect(new AdicionarEncaminhamentoDocumento1720000001067().down(queryRunner))
+        .rejects.toThrow('Rollback recusado: existem encaminhamentos emitidos');
+      const preservado = await queryRunner.query(
+        'select id from documentos_emitidos where tenant_id = $1 and id = $2', [tenantA, id]
+      );
+      expect(preservado).toHaveLength(1);
+    } finally {
+      await queryRunner.rollbackTransaction();
+      await queryRunner.release();
+    }
+
+    await comoTenant(tenantB);
+    const deOutroTenant = await cliente.query('select id from documentos_emitidos where id = $1', [id]);
+    expect(deOutroTenant.rows).toHaveLength(0);
   });
 
   it('Fase 311 une seleções concorrentes por tenant sob lock e mantém tenants independentes', async () => {

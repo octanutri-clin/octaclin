@@ -432,7 +432,7 @@ export async function revogarConviteUsuarioCliente(usuarioId: string): Promise<v
   if (!resposta.ok) throw new Error(await extrairMensagemErro(resposta));
 }
 
-export type TipoDocumentoClinicoClienteApi = 'declaracao_comparecimento' | 'relatorio_alta' | 'recibo_consulta';
+export type TipoDocumentoClinicoClienteApi = 'declaracao_comparecimento' | 'relatorio_alta' | 'recibo_consulta' | 'encaminhamento';
 
 export interface ModeloDocumentoClienteApi {
   tipo: TipoDocumentoClinicoClienteApi;

@@ -1,6 +1,6 @@
 'use client';
 
-import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
+import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Botao } from '@/components/ui/botao';
 import { AreaTexto, Campo, Rotulo, Selecao } from '@/components/ui/campo';
 import { Cartao, CartaoCabecalho, CartaoConteudo, CartaoTitulo } from '@/components/ui/cartao';
@@ -15,8 +15,12 @@ import {
   cancelarDocumentoClinico,
   emitirDocumentoClinico,
   enviarDocumentoClinicoPorEmail,
-  listarDocumentosClinicos
+  listarDocumentosClinicos,
+  preverDocumentoClinico,
+  PreviaDocumentoClinicoApi,
+  EncaminhamentoDocumentoEntradaApi
 } from '@/lib/prontuario-api';
+import { ErroApi } from '@/lib/erro-api';
 
 export interface ConsultaConcluidaOpcao {
   id: string;
@@ -26,6 +30,7 @@ export interface ConsultaConcluidaOpcao {
 interface AbaDocumentosProps {
   pacienteId: string;
   podeGerenciar: boolean;
+  podeEmitirEncaminhamento: boolean;
   /** Vem do prontuario ja carregado: nao ha chamada extra so para o seletor. */
   consultasConcluidas: ConsultaConcluidaOpcao[];
 }
@@ -33,7 +38,8 @@ interface AbaDocumentosProps {
 const ROTULO_TIPO: Record<TipoDocumentoClinicoApi, string> = {
   declaracao_comparecimento: 'Declaração de comparecimento',
   relatorio_alta: 'Relatorio de alta',
-  recibo_consulta: 'Recibo'
+  recibo_consulta: 'Recibo',
+  encaminhamento: 'Encaminhamento'
 };
 
 /** Tipos que saem de uma consulta especifica e por isso exigem o seletor. */
@@ -58,7 +64,7 @@ function formatarInstante(valor: string) {
   return new Date(valor).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
 }
 
-export function AbaDocumentos({ pacienteId, podeGerenciar, consultasConcluidas }: AbaDocumentosProps) {
+export function AbaDocumentos({ pacienteId, podeGerenciar, podeEmitirEncaminhamento, consultasConcluidas }: AbaDocumentosProps) {
   const [documentos, setDocumentos] = useState<DocumentoClinicoApi[]>([]);
   const [carregando, setCarregando] = useState(true);
   const [salvando, setSalvando] = useState(false);
@@ -70,6 +76,16 @@ export function AbaDocumentos({ pacienteId, podeGerenciar, consultasConcluidas }
   const [cidadeEmissao, setCidadeEmissao] = useState('');
   const [documentoAbertoId, setDocumentoAbertoId] = useState<string | null>(null);
   const [consultasPagas, setConsultasPagas] = useState<ConsultaConcluidaOpcao[]>([]);
+  const [encaminhamento, setEncaminhamento] = useState<EncaminhamentoDocumentoEntradaApi>({
+    destinoServico: '', motivoEncaminhamento: ''
+  });
+  const [previa, setPrevia] = useState<PreviaDocumentoClinicoApi | null>(null);
+  const [chaveEmissao, setChaveEmissao] = useState<string | null>(null);
+  const [gerandoPrevia, setGerandoPrevia] = useState(false);
+  const requisicaoPrevia = useRef(0);
+  const requisicaoEmissao = useRef(0);
+  const emissaoAtiva = useRef(false);
+  const pacienteAtual = useRef(pacienteId);
   const iniciarRequisicao = useRequisicaoCancelavel();
 
   const carregar = useCallback(async () => {
@@ -90,6 +106,75 @@ export function AbaDocumentos({ pacienteId, podeGerenciar, consultasConcluidas }
   useEffect(() => {
     void carregar();
   }, [carregar]);
+
+  function invalidarPrevia() {
+    requisicaoPrevia.current += 1;
+    setPrevia(null);
+    setChaveEmissao(null);
+  }
+
+  async function gerarPrevia() {
+    if (!podeEmitirEncaminhamento || salvando || gerandoPrevia) return;
+    setErro(null);
+    setSucesso(null);
+    setGerandoPrevia(true);
+    const numero = ++requisicaoPrevia.current;
+    const pacienteRequisicao = pacienteId;
+    try {
+      const resultado = await preverDocumentoClinico(pacienteRequisicao, {
+        tipo: 'encaminhamento', encaminhamento,
+        ...(cidadeEmissao.trim() ? { cidadeEmissao: cidadeEmissao.trim() } : {})
+      });
+      if (numero !== requisicaoPrevia.current || pacienteAtual.current !== pacienteRequisicao) return;
+      setPrevia(resultado);
+      setChaveEmissao(null);
+    } catch (erroAtual) {
+      if (numero !== requisicaoPrevia.current || pacienteAtual.current !== pacienteRequisicao) return;
+      setErro(mensagemFalhaInterface(erroAtual, 'Não foi possível preparar a prévia.'));
+    } finally {
+      if (numero === requisicaoPrevia.current) setGerandoPrevia(false);
+    }
+  }
+
+  async function confirmarEncaminhamento() {
+    if (!previa || !podeEmitirEncaminhamento || salvando || emissaoAtiva.current) return;
+    emissaoAtiva.current = true;
+    const numero = ++requisicaoEmissao.current;
+    const pacienteRequisicao = pacienteId;
+    const chave = chaveEmissao ?? crypto.randomUUID();
+    setChaveEmissao(chave);
+    setErro(null);
+    setSucesso(null);
+    setSalvando(true);
+    try {
+      const documento = await emitirDocumentoClinico(pacienteId, {
+        tipo: 'encaminhamento', encaminhamento, hashPrevia: previa.hashPrevia,
+        chaveEmissao: chave, confirmacao: true,
+        ...(cidadeEmissao.trim() ? { cidadeEmissao: cidadeEmissao.trim() } : {})
+      });
+      if (numero !== requisicaoEmissao.current || pacienteAtual.current !== pacienteRequisicao) return;
+      setSucesso('Encaminhamento emitido. Confira o documento antes de imprimir.');
+      setPrevia(null);
+      setChaveEmissao(null);
+      setEncaminhamento({ destinoServico: '', motivoEncaminhamento: '' });
+      setDocumentoAbertoId(documento.id);
+      await carregar();
+    } catch (erroAtual) {
+      if (numero !== requisicaoEmissao.current || pacienteAtual.current !== pacienteRequisicao) return;
+      if (erroAtual instanceof ErroApi && erroAtual.status === 409) {
+        invalidarPrevia();
+        setErro('Os dados ou o modelo mudaram. Gere uma nova prévia antes de confirmar.');
+      } else {
+        // Falha incerta conserva prévia e chave para que o retry seja idempotente.
+        setErro(mensagemFalhaInterface(erroAtual, 'Não foi possível confirmar a emissão. Tente novamente.'));
+      }
+    } finally {
+      if (numero === requisicaoEmissao.current) {
+        emissaoAtiva.current = false;
+        setSalvando(false);
+      }
+    }
+  }
 
   /**
    * Recibo sai de consulta **paga**, nao de consulta concluida: a lista da linha
@@ -129,6 +214,10 @@ export function AbaDocumentos({ pacienteId, podeGerenciar, consultasConcluidas }
 
   async function emitir(evento: FormEvent<HTMLFormElement>) {
     evento.preventDefault();
+    if (tipo === 'encaminhamento') {
+      await gerarPrevia();
+      return;
+    }
     setErro(null);
     setSucesso(null);
     setSalvando(true);
@@ -207,11 +296,17 @@ export function AbaDocumentos({ pacienteId, podeGerenciar, consultasConcluidas }
                 <Rotulo>Tipo</Rotulo>
                 <Selecao
                   value={tipo}
-                  onChange={(evento) => setTipo(evento.target.value as TipoDocumentoClinicoApi)}
+                  disabled={salvando}
+                  onChange={(evento) => {
+                    invalidarPrevia();
+                    setTipo(evento.target.value as TipoDocumentoClinicoApi);
+                    setErro(null);
+                  }}
                 >
                   <option value="declaracao_comparecimento">Declaração de comparecimento</option>
                   <option value="relatorio_alta">Relatório de alta</option>
                   <option value="recibo_consulta">Recibo</option>
+                  {podeEmitirEncaminhamento ? <option value="encaminhamento">Encaminhamento</option> : null}
                 </Selecao>
               </label>
 
@@ -233,7 +328,7 @@ export function AbaDocumentos({ pacienteId, podeGerenciar, consultasConcluidas }
                     ))}
                   </Selecao>
                 </label>
-              ) : (
+              ) : tipo === 'relatorio_alta' ? (
                 <div className="grid gap-3 sm:col-span-2">
                   <label className="grid gap-1">
                     <Rotulo>Texto do relatório</Rotulo>
@@ -247,14 +342,54 @@ export function AbaDocumentos({ pacienteId, podeGerenciar, consultasConcluidas }
                   </label>
                   <ModelosTextoClinico tipo="relatorio_alta" conteudoAtual={conteudo} aoAplicar={setConteudo} desabilitado={salvando} />
                 </div>
+              ) : (
+                <div className="grid gap-3 sm:col-span-2">
+                  <label className="grid gap-1">
+                    <Rotulo>Destino ou serviço *</Rotulo>
+                    <Campo required maxLength={180} disabled={salvando} value={encaminhamento.destinoServico} onChange={(evento) => {
+                      invalidarPrevia(); setEncaminhamento((atual) => ({ ...atual, destinoServico: evento.target.value }));
+                    }} />
+                  </label>
+                  <label className="grid gap-1">
+                    <Rotulo>Motivo do encaminhamento *</Rotulo>
+                    <AreaTexto required rows={4} maxLength={2000} disabled={salvando} value={encaminhamento.motivoEncaminhamento} onChange={(evento) => {
+                      invalidarPrevia(); setEncaminhamento((atual) => ({ ...atual, motivoEncaminhamento: evento.target.value }));
+                    }} />
+                  </label>
+                  <label className="grid gap-1">
+                    <Rotulo>Nome do destinatário (opcional)</Rotulo>
+                    <Campo maxLength={180} disabled={salvando} value={encaminhamento.destinatarioNome ?? ''} onChange={(evento) => {
+                      invalidarPrevia(); setEncaminhamento((atual) => ({ ...atual, destinatarioNome: evento.target.value }));
+                    }} />
+                  </label>
+                  <label className="grid gap-1">
+                    <Rotulo>Instituição de destino (opcional)</Rotulo>
+                    <Campo maxLength={180} disabled={salvando} value={encaminhamento.instituicaoDestino ?? ''} onChange={(evento) => {
+                      invalidarPrevia(); setEncaminhamento((atual) => ({ ...atual, instituicaoDestino: evento.target.value }));
+                    }} />
+                  </label>
+                  <label className="grid gap-1 sm:col-span-2">
+                    <Rotulo>Contexto clínico informado pelo profissional (opcional)</Rotulo>
+                    <AreaTexto rows={4} maxLength={4000} disabled={salvando} value={encaminhamento.contextoClinico ?? ''} onChange={(evento) => {
+                      invalidarPrevia(); setEncaminhamento((atual) => ({ ...atual, contextoClinico: evento.target.value }));
+                    }} />
+                  </label>
+                  <p className="text-xs text-texto-suave sm:col-span-2">
+                    O texto não inclui consulta automaticamente. Confira a prévia completa antes de emitir.
+                  </p>
+                </div>
               )}
 
               <label className="grid gap-1">
                 <Rotulo>Cidade de emissao</Rotulo>
                 <Campo
                   value={cidadeEmissao}
+                  disabled={salvando}
                   placeholder="Usa a cidade do perfil da empresa"
-                  onChange={(evento) => setCidadeEmissao(evento.target.value)}
+                  onChange={(evento) => {
+                    if (tipo === 'encaminhamento') invalidarPrevia();
+                    setCidadeEmissao(evento.target.value);
+                  }}
                 />
               </label>
 
@@ -262,10 +397,10 @@ export function AbaDocumentos({ pacienteId, podeGerenciar, consultasConcluidas }
                 <Botao
                   type="submit"
                   variante="primario"
-                  carregando={salvando}
-                  disabled={salvando || (TIPOS_COM_CONSULTA.includes(tipo) && opcoesConsulta.length === 0)}
+                  carregando={tipo === 'encaminhamento' ? gerandoPrevia : salvando}
+                  disabled={salvando || gerandoPrevia || (TIPOS_COM_CONSULTA.includes(tipo) && opcoesConsulta.length === 0)}
                 >
-                  Emitir documento
+                  {tipo === 'encaminhamento' ? (previa ? 'Gerar nova prévia' : 'Gerar prévia completa') : 'Emitir documento'}
                 </Botao>
               </div>
 
@@ -281,6 +416,32 @@ export function AbaDocumentos({ pacienteId, podeGerenciar, consultasConcluidas }
                 </p>
               ) : null}
             </form>
+            {previa ? (
+              <section aria-labelledby="previa-encaminhamento" className="mt-5 grid gap-3 rounded-md border border-primaria p-4">
+                <h3 id="previa-encaminhamento" className="text-base font-semibold">Prévia completa do encaminhamento</h3>
+                <p className="text-sm">Confira todos os dados e o texto antes de confirmar a emissão.</p>
+                <article className="grid gap-3 rounded-md border border-linha bg-white p-5 text-sm leading-6">
+                  <header className="border-b border-linha pb-3">
+                    <p className="font-semibold">{previa.cabecalho?.clinicaNome}</p>
+                    {previa.cabecalho?.clinicaDocumento ? <p>{previa.cabecalho.clinicaDocumento}</p> : null}
+                    {previa.cabecalho?.clinicaEndereco ? <p>{previa.cabecalho.clinicaEndereco}</p> : null}
+                  </header>
+                  <h4 className="text-center font-semibold">{previa.titulo}</h4>
+                  {previa.paragrafos.map((paragrafo, indice) => <p key={indice} className="whitespace-pre-line">{paragrafo}</p>)}
+                </article>
+                <label className="flex items-start gap-2 text-sm">
+                  <input type="checkbox" checked={Boolean(chaveEmissao)} disabled={salvando} onChange={(evento) => {
+                    if (evento.target.checked) setChaveEmissao(crypto.randomUUID());
+                    else setChaveEmissao(null);
+                  }} />
+                  <span>Conferi a prévia completa e confirmo a emissão deste encaminhamento.</span>
+                </label>
+                <Botao type="button" variante="primario" carregando={salvando} disabled={salvando || !chaveEmissao}
+                  onClick={() => void confirmarEncaminhamento()}>
+                  Confirmar emissão
+                </Botao>
+              </section>
+            ) : null}
           </CartaoConteudo>
         </Cartao>
       ) : null}

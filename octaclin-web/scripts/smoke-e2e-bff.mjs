@@ -215,6 +215,43 @@ async function main() {
   assert(typeof pacientes.corpo.itens[0].nome === 'string', 'paciente precisa retornar nome descriptografado.');
   assert(typeof pacientes.corpo.itens[0].contato === 'string', 'paciente precisa retornar contato descriptografado.');
 
+  const pacienteDocumentoId = pacientes.corpo.itens[0].id;
+  const entradaEncaminhamento = {
+    tipo: 'encaminhamento',
+    encaminhamento: { destinoServico: 'Serviço sintético', motivoEncaminhamento: 'Avaliação de rotina sintética.' },
+    cidadeEmissao: 'Recife'
+  };
+  const previaEncaminhamento = await requisitarJson(`/api/pacientes/${encodeURIComponent(pacienteDocumentoId)}/documentos/previa`, {
+    method: 'POST', body: JSON.stringify(entradaEncaminhamento)
+  });
+  assertStatus(previaEncaminhamento.resposta, 200, 'prévia BFF de encaminhamento');
+  assert(previaEncaminhamento.resposta.headers.get('cache-control')?.includes('no-store'), 'prévia clínica precisa ser no-store.');
+  assert(previaEncaminhamento.corpo?.titulo === 'Encaminhamento' && previaEncaminhamento.corpo?.corpo.includes('Serviço sintético'), 'prévia deve renderizar os campos sintéticos.');
+
+  const pedidoEncaminhamento = {
+    ...entradaEncaminhamento,
+    hashPrevia: previaEncaminhamento.corpo.hashPrevia,
+    chaveEmissao: 'a1111111-1111-4111-8111-111111111111',
+    confirmacao: true
+  };
+  const emitidoEncaminhamento = await requisitarJson(`/api/pacientes/${encodeURIComponent(pacienteDocumentoId)}/documentos`, {
+    method: 'POST', body: JSON.stringify(pedidoEncaminhamento)
+  });
+  assertStatus(emitidoEncaminhamento.resposta, 201, 'confirmação BFF de encaminhamento');
+  assert(emitidoEncaminhamento.resposta.headers.get('cache-control')?.includes('no-store'), 'documento clínico precisa ser no-store.');
+  assert(emitidoEncaminhamento.corpo?.corpo === previaEncaminhamento.corpo.corpo, 'documento emitido deve preservar o texto conferido.');
+  assert(emitidoEncaminhamento.corpo?.podeEnviarPorEmail === false, 'encaminhamento não pode ser enviado por e-mail.');
+
+  const retryEncaminhamento = await requisitarJson(`/api/pacientes/${encodeURIComponent(pacienteDocumentoId)}/documentos`, {
+    method: 'POST', body: JSON.stringify(pedidoEncaminhamento)
+  });
+  assertStatus(retryEncaminhamento.resposta, 200, 'retry idempotente de encaminhamento');
+  assert(retryEncaminhamento.corpo?.id === emitidoEncaminhamento.corpo.id, 'retry deve devolver o mesmo documento.');
+
+  const listaDocumentos = await requisitarJson(`/api/pacientes/${encodeURIComponent(pacienteDocumentoId)}/documentos`);
+  assertStatus(listaDocumentos.resposta, 200, 'histórico BFF de encaminhamento');
+  assert(listaDocumentos.corpo?.some((item) => item.id === emitidoEncaminhamento.corpo.id), 'histórico deve conter o encaminhamento emitido.');
+
   const profissionais = await requisitarJson('/api/profissionais?pagina=1&limite=5');
   assertStatus(profissionais.resposta, 200, 'listagem de profissionais');
   assertListaPaginada(profissionais.corpo, 'listagem de profissionais');

@@ -341,4 +341,10 @@ export class AtualizarModelosDocumentoClienteDto {
   @ValidateNested()
   @Type(() => ModeloDocumentoClienteDto)
   recibo_consulta?: ModeloDocumentoClienteDto;
+
+  @IsOptional()
+  @IsObject()
+  @ValidateNested()
+  @Type(() => ModeloDocumentoClienteDto)
+  encaminhamento?: ModeloDocumentoClienteDto;
 }
