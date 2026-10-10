@@ -134,8 +134,8 @@ com edição da fonte e desaparece imediatamente após retirada/substituição.
   agendamento/fuso, mudança de preferência, lote parcial e limite 10.
 - [ ] `git diff --check`; revisão independente R4; atualizar matriz de
   confiabilidade e documentos de estado junto da implementação.
-- [ ] PR de produto contém plano, implementação e reconciliação factual da
-  Fase 309. PR draft até os gates obrigatórios passarem.
+- [x] PR #388 em rascunho contém plano, implementação e reconciliação factual
+  da Fase 309; manter draft até os gates obrigatórios passarem.
 
 ## Gates externos separados
 

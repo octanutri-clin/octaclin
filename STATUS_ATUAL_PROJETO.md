@@ -69,6 +69,8 @@ Atualizado em 2026-10-09.
   Não representa deploy nem aceite de produção. Plano em
   `docs/history/phases/PLANO_FASE_309.md`, handoff/checklist em `tasks/`.
 - Fase 310 em implementação na branch `feature/fase-310-receitas-compartilhadas`.
+  PR #388 aberta em rascunho para CI e revisão; não promover até fechar os
+  gates de R4, PostgreSQL/RLS, BFF/PWA e execução sob Node 22.
   Código atual inclui migration 1066 (fora de banda, ainda não aplicada),
   categorias internas, snapshots cifrados, opt-in por canal, compartilhamento
   em lote/agendado, portal autenticado e aviso genérico com adaptador push web

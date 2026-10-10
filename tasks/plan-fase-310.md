@@ -5,8 +5,8 @@
 - Branch: `feature/fase-310-receitas-compartilhadas`, criada de `origin/main`
   no merge `34d186ec` da Fase 309.
 - Worktree: `/workspace/octaclin/.worktrees/feature-fase-310-receitas-compartilhadas`.
-- PR ainda não criada. Implementação em andamento; sem commit, aplicação de
-  migration ou deploy.
+- PR #388 aberta em rascunho. Commit inicial `ad03225a`; implementação em
+  revisão, sem aplicação de migration ou deploy.
 - Plano funcional/gaps: `docs/history/phases/PLANO_FASE_310.md`.
 - Checklist da implementação: `tasks/todo-fase-310.md`.
 
@@ -52,7 +52,7 @@ subscription autenticada, worker e adaptador reais.
 
 1. Executar os testes focados de compartilhamento, contratos BFF e PWA, além
    de PostgreSQL Testcontainers/RLS e governance da migration, antes de
-   considerar pronta para PR.
+   considerar pronta para sair do modo draft.
 2. Repetir typecheck/build no runtime suportado Node 22 (a validação deste
    ciclo rodou em Node 24.19.0) e realizar revisão R4 independente.
 3. Não aplicar migration fora de banda sem banco/branch/role owner confirmados.
@@ -75,6 +75,8 @@ subscription autenticada, worker e adaptador reais.
 - Push restringe endpoints aos provedores conhecidos; compartilhamento envia
   a versão revisada e revalida sob lock; repetição idempotente com canais,
   horário ou versões diferentes retorna conflito.
+- PR #388 está em rascunho para receber CI, revisão e os gates pendentes antes
+  de sair do modo draft.
 - AI DevKit lint da Fase 310 falhou por ausência dos README de configuração
   `docs/ai/*` e convenção de branch incompatível; `init` foi evitado para não
   criar scaffolding paralelo às regras do OctaClin.
