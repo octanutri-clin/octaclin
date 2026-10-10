@@ -340,7 +340,8 @@ CI da PR e revisão R4 independente ainda não foram comprovados.
 - PASS: demo local smoke pós-build `smoke-e2e-bff-ok`, usando API demo sintética.
 - PASS: suíte Web ampla `test:authz`, incluindo harness dedicado Fase 311 5/5;
   `git diff --check` final.
-- PENDENTE: publicar branch/PR e aguardar CI completo.
+- PASS: branch publicada e PR #389 aberta; CI remoto em execução.
+- PENDENTE: CI completo e revisão R4 independente.
 - SKIPPED: instalação/carga de catálogos, migrations operacionais, envio externo,
   deploy/produção; nenhum acesso ou mudança a ambiente operacional foi feito.
 - R4 formal independente não concluída nesta execução. A evidência local não

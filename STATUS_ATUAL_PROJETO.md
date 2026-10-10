@@ -75,7 +75,7 @@ Atualizado em 2026-10-10.
   envio real e produção não consultados. Plano histórico em
   `docs/history/phases/PLANO_FASE_310.md`.
 - Fase 311 implementada na branch `feature/fase-311-ativacao-conteudo`, base
-  `eb7f2aad`; aguardando build/smoke final, publicação da PR e CI próprio.
+  `eb7f2aad`; PR #389 aberta, CI próprio em execução.
   Decisões confirmadas: Client/SuperAdmin podem instalar por clínica;
   seleção de itens e complementação posterior, sem recriação de instalados;
   confirmação do SuperAdmin basta para opt-in; catálogos ausentes não bloqueiam
@@ -83,7 +83,7 @@ Atualizado em 2026-10-10.
   plano/gaps/evidências em `docs/history/phases/PLANO_FASE_311.md`, handoff em
   `tasks/plan.md`, checklist em `tasks/todo-fase-311.md`. Backend Jest,
   PostgreSQL/Testcontainers/RLS e Playwright desktop/mobile locais passaram;
-  os demais gates finais estão discriminados no handoff.
+  gates locais passaram; checks remotos estão em execução.
   Nenhuma migration nova prevista. Próxima fase após integração da 311: 312.
 - Sequência das Fases 302–320 em
   `docs/product/ROADMAP_POS_AUDITORIA_FASES_302_320.md`. O PB-30 está planejado na Fase 316, condicionado a privacidade,

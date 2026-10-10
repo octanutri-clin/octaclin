@@ -10,8 +10,7 @@
   `38016413569` concluídos com sucesso; `Provenance do SBOM` foi `SKIPPED`.
 - Aplicação das migrations 1065/1066, envio real e operação em produção não
   foram consultados. Merge/CI não representam aceite de produção.
-- Fase 311 implementada na branch `feature/fase-311-ativacao-conteudo`;
-  gates locais em fechamento, PR/CI ainda pendentes. Plano/evidências em
+- Fase 311 implementada e publicada no PR #389; CI remoto pendente. Plano/evidências em
   `docs/history/phases/PLANO_FASE_311.md` e `tasks/plan.md`. Próxima entrega
   após integração: Fase 312.
 

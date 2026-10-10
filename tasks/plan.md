@@ -5,7 +5,7 @@
 - Branch: `feature/fase-311-ativacao-conteudo`.
 - Worktree: `/workspace/octaclin/.worktrees/feature-fase-311-ativacao-conteudo`.
 - Base: `eb7f2aad`, Fase 310/PR #388 MERGED, confirmada no GitHub em 2026-10-10.
-- Implementação em andamento/concluída localmente; PR ainda não aberta.
+- Implementação publicada no PR #389; CI remoto em execução.
 - Objetivo: kit genérico selecionável/incremental para clínicas existentes e
   diagnóstico somente leitura das cargas globais TACO/USDA/IBGE.
 - Plano completo e contratos: [PLANO_FASE_311.md](../docs/history/phases/PLANO_FASE_311.md).
@@ -107,7 +107,7 @@ critérios e casos positivos/negativos por entrega.
 - PASS — suíte ampla Web `test:authz`, incluindo o harness BFF da Fase 311
   (5/5); Playwright da Fase 311 Client/Operações desktop/mobile 4/4.
 - PASS — `git diff --check` após os documentos finais.
-- PENDENTE — publicar branch/PR e aguardar o CI completo da PR.
+- PENDENTE — aguardar CI completo do PR #389 e revisão R4 independente.
 - SKIPPED — banco operacional, migrations 1065/1066, configuração de canais,
   envios reais, deploy/produção; não foram consultados/executados.
 - Revisão R4 formal GitHub: nenhuma entrada encontrada nas PRs 386/388;
@@ -122,7 +122,7 @@ critérios e casos positivos/negativos por entrega.
 - [x] Validação documental proporcional; evidências e limites da implementação
   estão acima e em `docs/history/phases/PLANO_FASE_311.md`.
 - [x] Implementação e testes locais da Fase 311 nesta branch dedicada.
-- [ ] Atualizar documentos, rever diff final, commit/push e abrir PR.
+- [x] Atualizar documentos, rever diff final, commit/push e abrir PR #389.
 
 Alterados: plano 311, `tasks/plan.md`, `tasks/todo.md`, checklist 311,
 status/checklist/roadmap/resumo/matriz e notas de integração dos históricos

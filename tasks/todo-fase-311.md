@@ -14,8 +14,9 @@ Handoff corrente: `tasks/plan.md`. Branch `feature/fase-311-ativacao-conteudo`.
   (`smoke-e2e-bff-ok`, API demo sintética).
 - PASS: suíte ampla Web `test:authz`, harness BFF dedicado da Fase 311 5/5 e
   validação final dos documentos/diff.
-- Ainda abertos: publicar a branch e a PR, aguardar CI da PR, registrar a
-  revisão independente R4 quando viável. Nenhuma ação de produção executada.
+- PASS: branch publicada e PR #389 aberta; CI começou a executar.
+- Ainda abertos: CI da PR e revisão independente R4 quando viável. Nenhuma
+  ação de produção executada.
 
 As seções abaixo preservam os critérios detalhados de aceite da implementação;
 o estado corrente acima e em `tasks/plan.md` prevalece sobre os checkboxes do

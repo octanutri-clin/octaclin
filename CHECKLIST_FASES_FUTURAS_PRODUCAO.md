@@ -8,9 +8,9 @@ aprovados, incluindo Demo local smoke; step PostgreSQL/Testcontainers da
 PR 310 aprovado. CI principal pós-merge 310 `38016413569` concluído com sucesso;
 scanners pós-merge aprovados. `Provenance do SBOM` na PR 310 foi `SKIPPED`;
 não é PASS. Aplicação operacional das 1065/1066 não consultada. Fase 311
-implementada na branch `feature/fase-311-ativacao-conteudo`, aguardando gates
-finais, publicação da PR e CI próprio. Handoff em `tasks/plan.md`, checklist em
-`tasks/todo-fase-311.md`. Próxima fase após integração: 312.
+implementada e publicada no PR #389; CI próprio em execução. Handoff em
+`tasks/plan.md`, checklist em `tasks/todo-fase-311.md`. Próxima fase após
+integração: 312.
 
 O parágrafo abaixo registra a atualização histórica anterior; para o estado
 vigente prevalecem este bloco, itens ao final e o roadmap.
@@ -4557,7 +4557,7 @@ auditoria estão ordenados na seção 15 de
   pós-merge concluído com sucesso. Aplicação operacional da 1066 não consultada.
 - [~] Fase 311 - instalação selecionável/incremental do kit por Client/SuperAdmin
   e conferência somente leitura de quatro bases do catálogo no onboarding.
-  Implementação concluída localmente, PR/CI ainda pendentes. Plano
+  Implementação no PR #389; CI ainda pendente. Plano
   `docs/history/phases/PLANO_FASE_311.md`, handoff
   `tasks/plan.md`, checklist `tasks/todo-fase-311.md`.
 - [ ] Fase 312 - encaminhamento no motor de documentos; atestado condicionado
