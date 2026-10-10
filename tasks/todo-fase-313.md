@@ -186,7 +186,8 @@ para comportamento/contrato/schema; não marcar PASS sem executar.
 
 - [x] Atualizar status/checklist/roadmap/handoff com PASS/FAIL/NA/SKIPPED.
 - [ ] Revisão R4 independente quando viável; registrar limite se ausente.
-- [ ] PR única de implementação; acompanhar CI e corrigir falhas antes do merge.
+- [x] PR única de implementação aberta: #391.
+- [ ] Acompanhar CI e corrigir falhas antes do merge.
 - [x] Planejar rollout fora de banda, com alvo/role/owner explícitos. Migration
   externa e saúde de produção só com autorização/evidência própria.
 
@@ -229,6 +230,6 @@ PASS: 180 testes focados backend, oito cenários desktop/mobile (incluindo duas
 regressões da comparação) e axe sem violações. A prova PG final passou
 29 testes, incluindo vínculo ambíguo e recuperação de 102 avaliações sem perda
 por precisão do cursor. Build/typecheck/authz/demo e governança locais PASS.
-Abertura e checks da PR pendentes. Revisão R4 independente SKIPPED: sem
+PR #391 aberta; checks em acompanhamento. Revisão R4 independente SKIPPED: sem
 segundo revisor neste ciclo. Migration 1068 externa pendente. Não houve aplicação
 em staging/produção. Fonte de resultados: `docs/history/phases/EXECUCAO_FASE_313.md`.

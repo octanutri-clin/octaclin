@@ -2,13 +2,13 @@
 
 ## Estado
 
-Implementação concluída no código; validações locais PASS; PR/checks em preparação. Regras clínicas ratificadas pelo proprietário/equipe.
+Implementação concluída no código; validações locais PASS; PR #391 aberta; checks em acompanhamento. Regras clínicas ratificadas pelo proprietário/equipe.
 Risco R4 (dados clínicos, migration, RLS e consentimento).
 
 - Branch: `feature/fase-313-antropometria-gestantes`.
 - Worktree: `/workspace/octaclin/.worktrees/feature-fase-313-antropometria-gestantes`.
 - Base: `774cf34fab2e9cd26e888e57fbaabfe14295930e`, PR #390 mergeado.
-- PR da 313: implementação na branch acima, com evidências em preparação para abertura.
+- PR da 313: [#391](https://github.com/octanutri-clin/octaclin/pull/391), aberta; integração pendente.
 - [Plano/contratos/gaps/rollback](../docs/history/phases/PLANO_FASE_313.md).
 - [Ficha para revisão clínica](../docs/product/FICHA_VALIDACAO_CLINICA_FASE_313.md).
 - [Parecer recebido, preservado](../docs/product/PARECER_REVISAO_FASE_313.md).
@@ -23,7 +23,7 @@ Implementação autorizada pelo proprietário em GPT-6.1 Sol médio. Em 2026-10-
 respondeu “Ficha revisada; equipe/responsável ratifica todas as regras” à ficha
 atualizada, incluindo peso habitual, 8s0d, bordas e plausibilidade técnica.
 Registrar como confirmação humana relatada, sem afirmar nova revisão clínica
-independente deste agente. Concluir abertura/checks da PR nesta branch, conforme T17–T18 e o relatório de execução.
+independente deste agente. Acompanhar/corrigir checks da PR #391 nesta branch, conforme T17–T18 e o relatório de execução.
 
 ## Escopo fechado
 

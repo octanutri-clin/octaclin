@@ -1,6 +1,7 @@
 # Execução — Fase 313
 
 2026-10-10. Branch `feature/fase-313-antropometria-gestantes`, base `774cf34f`.
+PR [#391](https://github.com/octanutri-clin/octaclin/pull/391), integração pendente.
 R4. Implementação autorizada em GPT-6.1 Sol médio; sem troca de modelo.
 Regras da ficha atualizada ratificadas pelo proprietário/equipe nesta conversa.
 O parecer documental permanece preservado, com seu escopo original distinto.
@@ -43,7 +44,7 @@ administrativa; serviço pela role runtime não owner, sem DDL/BYPASSRLS. O test
 | Demo BFF sobre build de produção local | PASS, incluindo episódio/replay/referência/encerramento; smoke UI PASS, nove rotas |
 | test:authz completo | PASS, incluindo harness da 313 |
 | Governança: confiabilidade/a11y/migrations/guardas/redação auditoria | PASS nas execuções locais; matrizes finais revalidadas |
-| CI da PR | SKIPPED, aguardando abertura/checks da branch |
+| CI da PR | SKIPPED, checks em execução na PR #391; resultados finais serão registrados no GitHub |
 | Revisão R4 independente | SKIPPED, sem segundo revisor neste ciclo |
 | Migration 1068 em staging/produção | SKIPPED, não autorizada/executada neste ciclo |
 
