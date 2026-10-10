@@ -14,10 +14,12 @@
   `38022212900` e principal pós-merge `38042089805` SUCCESS. Plano/evidências
   em `docs/history/phases/PLANO_FASE_311.md` e `tasks/plan-fase-311.md`.
   Revisão independente não comprovada; Provenance do SBOM SKIPPED.
-- Fase 312: PR #390 aberta; CI final `38048342326` PASS, incluindo Backend, Web,
-  Governança, Demo local smoke e PR Gate. Provenance do SBOM SKIPPED. Migration
-  1067 não foi aplicada externamente; atestados aguardam validação específica.
-  Evidências em `docs/history/phases/PLANO_FASE_312.md`.
+- Fase 312 integrada pelo PR #390 (`774cf34f`); CI final `38049949959` e
+  pós-merge `38052856367` SUCCESS. Migration 1067 aplicada/validada em staging
+  e produção conforme relato do proprietário, sem consulta direta aos bancos.
+  Atestados aguardam validação específica; limites históricos em
+  `docs/history/phases/PLANO_FASE_312.md` e `tasks/plan-fase-312.md`.
+  Provenance do SBOM SKIPPED. Fase 313 em planejamento, não concluída.
 
 ## Reconciliação em 2026-10-09
 

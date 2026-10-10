@@ -7,11 +7,13 @@ PostgreSQL/Testcontainers da PR 310 aprovado. CI principal pós-merge 310
 `38016413569` SUCCESS; scanners pós-merge aprovados.
 Migrations 1065/1066 integradas no código, sem prova de aplicação operacional
 neste ciclo. Fase 311 integrada pelo PR #389 (`f5f9ba84`), CI final da PR
-`38022212900` e principal pós-merge `38042089805` SUCCESS. Fase 312 implementada
-na branch `feature/fase-312-documentos-clinicos`; PR #390 aberta e CI final
-`38048342326` PASS, incluindo Backend, Web, Governança e Demo local smoke.
-Provenance do SBOM SKIPPED. Migration 1067 não aplicada externamente.
-Plano e handoff em `docs/history/phases/PLANO_FASE_312.md` e `tasks/plan.md`.
+`38022212900` e principal pós-merge `38042089805` SUCCESS. Fase 312 integrada pelo PR #390
+(`774cf34f`); CI final `38049949959` e
+pós-merge `38052856367` SUCCESS. 1067 aplicada/validada em staging/produção
+conforme proprietário, sem consulta direta. Handoff histórico em
+`tasks/plan-fase-312.md`; Provenance do SBOM permanece SKIPPED.
+Fase 313 planejada; ficha clínica aguarda revisão específica. Contratos/gaps
+em `docs/history/phases/PLANO_FASE_313.md`, handoff em `tasks/plan.md`.
 Este é o plano **vigente** para as recomendações ainda abertas de
 `OCTACLIN_PRODUCT_FEATURE_AUDIT.md`. O diagnóstico de 2026-09-17 permanece
 histórico; uma descrição antiga de lacuna não desfaz uma entrega posterior.
@@ -19,7 +21,7 @@ histórico; uma descrição antiga de lacuna não desfaz uma entrega posterior.
 ## Como executar e manter
 
 - Seguir a ordem numérica, salvo nova decisão explícita do proprietário. A fase
-  ativa em planejamento é a **312**; depois de sua integração, a próxima fase é a **313**. Cada fase recebe plano de execução e revisão de gaps
+  ativa em planejamento é a **313**; depois de sua integração, a próxima fase é a **314**. Cada fase recebe plano de execução e revisão de gaps
   antes do código; concluir uma não implica iniciar a próxima sem reconciliar
   código, PRs e evidência operacional.
 - Implementar cada fatia funcional em sua branch/PR com a documentação
@@ -50,8 +52,8 @@ histórico; uma descrição antiga de lacuna não desfaz uma entrega posterior.
 | 309 | **Preferências individuais de notificações internas e digest.** Configurar classes opcionais, frequência e resumo sem conteúdo clínico sensível. | Alertas críticos/obrigatórios continuam visíveis; preferências por usuário, deduplicação, fuso e autorização. Não confundir com opt-out de canais externos do paciente. | Integrada pelo PR #386 (`34d186ec`); CI pós-merge `38000687212` aprovado. Aplicação operacional da 1065 não consultada |
 | 310 | **Receitas nutricionais organizadas e compartilháveis.** Categorias livres internas e entrega explícita ao paciente de uma versão revisada da receita, no portal seguro; avisos genéricos opcionais por e-mail/WhatsApp/push com consentimento específico. | Não publicar automaticamente todo o acervo; profissional escolhe até 10 itens por paciente e confirma. Cópia/versionamento, permissão, retirada e trilha de leitura sem conteúdo clínico em aviso externo. | Integrada pelo PR #388 (`eb7f2aad`); CI da PR/Testcontainers aprovados; CI principal pós-merge SUCCESS. Aplicação operacional da 1066 não consultada |
 | 311 | **Ativação de conteúdo em clínicas existentes.** Client/SuperAdmin instalam itens escolhidos do kit genérico 297 e podem complementar depois; conferência global das quatro bases TACO/USDA/IBGE no onboarding do ambiente. | Opt-in/seleção por clínica; SuperAdmin confirma em nome do alvo; itens instalados não são recriados nem sobrescritos; legado 1 completo e marcador 2 seletivo. Estruturas sem alimentos/revisão profissional; catálogos somente leitura e cargas separadas; pendências não bloqueiam kit. Sem TBCA. | Integrada pelo PR #389 (`f5f9ba84`); CI final e pós-merge SUCCESS. Plano histórico em `docs/history/phases/PLANO_FASE_311.md` |
-| 312 | **Documentos clínicos adicionais.** Desenhar e entregar encaminhamento no motor existente; avaliar atestado apenas após validação jurídica do tipo, competência profissional e assinatura exigida. | Sem afirmar que qualquer nutricionista pode emitir atestado médico. Variáveis permitidas, versão imutável, autorização e trilha; se o gate jurídico de atestado negar, registrar exclusão fundamentada e concluir apenas encaminhamento. | Encaminhamento: planejamento fechado, aguardando implementação. Prévia/confirmar pelo responsável atual, snapshot imutável, impressão/PDF do navegador. Atestado aguarda validação específica. Plano `docs/history/phases/PLANO_FASE_312.md` |
-| 313 | **Avaliação antropométrica de gestantes.** Regra específica baseada em referência clínica validada, idade gestacional e dados necessários; exibir classificação somente quando o protocolo for aplicável. | Revisão clínica da fonte, limites e ausência de dados; classificação adulta permanece bloqueada para gestantes. Nenhuma inferência a partir apenas do IMC atual. | Condicional à validação clínica |
+| 312 | **Documentos clínicos adicionais.** Desenhar e entregar encaminhamento no motor existente; avaliar atestado apenas após validação jurídica do tipo, competência profissional e assinatura exigida. | Sem afirmar que qualquer nutricionista pode emitir atestado médico. Variáveis permitidas, versão imutável, autorização e trilha; se o gate jurídico de atestado negar, registrar exclusão fundamentada e concluir apenas encaminhamento. | Encaminhamento integrado pelo PR #390 (`774cf34f`); CI final/pós-merge SUCCESS. 1067 aplicada/validada conforme proprietário, sem consulta direta. Atestado aguarda validação específica. Plano `docs/history/phases/PLANO_FASE_312.md` |
+| 313 | **Acompanhamento gestacional.** Curvas brasileiras MS: IMC de referência e ganho acumulado semanal; episódios explícitos, referências imutáveis/versionadas, avaliação/histórico, gráfico por versão e portal. | Fonte/tabela/dias validados clinicamente; >=18 anos, feto único e risco habitual; bloqueios adultos; portal com liberação profissional e aceite específico revogável; migration/RLS/concorrência R4. | Planejamento pronto; ficha clínica aguarda confirmação; implementação não iniciada |
 | 314 | **Avaliação antropométrica de crianças e adolescentes.** Referência etária e por sexo aplicável, percentil/escore quando cabível, com proveniência e cálculo reproduzível. | Revisão clínica/legal do protocolo e dados exigidos; menores de 20 anos não recebem faixas adultas. Casos fora da faixa ou incompletos ficam sem classificação. | Condicional à validação clínica |
 | 315 | **Retirada controlada do `score_risco` legado.** Inventariar consumidores, migrar contrato/formulários/fixtures remanescentes e planejar eventual remoção da coluna. | A prioridade calculada da Fase 300 segue **operacional** e fora da API pública. Compatibilidade de clientes e dados históricos verificada antes de migration destrutiva; rollback/limite de não reversão explícito. | Planejada |
 | 316 | **PB-30, extração assistida de exames.** PDF/imagem para rascunho estruturado de marcador, valor, unidade e faixa, com confirmação item a item pelo profissional antes de persistir. | PB-17 pronto; antes do código, fechar finalidade/base legal, provider, retenção, local de processamento, custo e antimalware/arquivo seguro. Falha do serviço mantém digitação manual; nunca persistir extração como exame confirmado sem aceite humano. | Condicional aos gates jurídico, privacidade e operação |
