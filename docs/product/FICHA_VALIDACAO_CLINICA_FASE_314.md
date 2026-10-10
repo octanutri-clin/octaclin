@@ -193,3 +193,54 @@ adicional baseado apenas em idade durante uma avaliação gestacional.
 - [ ] Responsável, data, versão e resultado da revisão registrados.
 
 Nenhum item marcado por inferência a partir das respostas de produto.
+
+## 9. Consolidação rev2 — matriz CL-01 a CL-10
+
+Integração técnica dos anexos rev1 em 2026-10-10. **Todas as ratificações
+CL permanecem BLOCKED**; envio de parecer não é aceite clínico. Decisões de
+produto da seção 1 permanecem válidas. Fontes abaixo estão no manifesto;
+`anthro`/`anthroplus` foram apenas lidos, não executados nem incorporados.
+
+Tipos de afirmação: **F** fato documental/código; **P** produto aprovado;
+**T** recomendação técnica; **C** decisão clínica pendente. Recomendações
+abaixo não autorizam alteração do classificador nem de usuários/permissões.
+
+| ID | Evidência e proposta fundamentada | Impacto técnico e risco | Decisão formal necessária / prova prevista |
+| --- | --- | --- | --- |
+| CL-01 | F: `anthro` usa dias/30,4375 e idade <60 meses; `anthroplus` interpola L/M/S mensal, intervalo [60,229), WFA [60,121); XLSX e dados TXT têm grades distintas. P: adaptação SISVAN de IMC aos 19 anos. T: separar idade civil, idade estatística e idade efetiva SISVAN; usar interpolação oficial com âncoras verificadas. | T03/T04/T05/T10; lookup inteiro muda escores; calendário civil e idade estatística podem mudar referência em dias diferentes. Não escolher 1857 dias como transição só por fim do XLSX. | C: ratificar edição/método, transição (60 meses estatísticos versus aniversário), inclusão da fração de 120/228 meses e adaptação aos 19. Tabela de verdade com 29/02, 730/731, 1826/1827, 1856/1857, 60/61, 120/121, 228/229 e 20 anos. |
+| CL-02 | F: código OMS ajusta +0,7 antes de 731 dias para em pé, −0,7 depois para deitado; marca técnica em pé com idade <9 meses como inconsistente. P: técnica explícita e original preservado. T: exigir reconferência, suspender indicadores lineares afetados e conservar WFA quando aplicável. | T03/T05/T06/T07; ajuste duplo altera IMC; suprimir todos os indicadores lineares é política clínica conservadora adicional, não reprodução literal completa do pacote. Sem técnica explícita não usar inferência OMS por idade/87 cm. | C: aprovar tratamento <9 meses, idade cronológica/corrigida para técnica, unidade/precisão, indicadores suprimidos e reconferência por novo snapshot. Bordas 9 meses e 730/731, ajuste único. |
+| CL-03 | F: helpers OMS ajustam caudas de indicadores de peso; HFA usa LMS simples; percentil ±3 consta do documento OMS 2007. `anthroplus` interpola parâmetros e arredonda z a 2 casas antes de flags. T: conservar z bruto e z de exibição separados; classificar SISVAN pelo bruto, comparar referência na precisão que ela publica. | T04/T05/T07/T08/T09; igualar flags brutas às flags arredondadas sem declarar a política cria discrepância na borda. L=0/log é robustez matemática, não evidência de ocorrência nas tabelas. | C: ratificar caudas por indicador/edição, erro numérico/tolerância, flags bruto versus arredondado, percentil em `abs(z)=3` e caudas. Confrontar exemplos oficiais por sexo e indicador; sem validação por mediana apenas. |
+| CL-04 | F: MS 2011 quadros 5–9/13 e MS 2008 usam algumas desigualdades diferentes/imprecisas; peso elevado não diagnostica obesidade. T: usar terminologia completa e intervalos sem sobreposição; documento 2011 como candidato principal, divergências explícitas. | T05/T07/T08; z exato −2/+1/+2/+3 pode mudar rótulo; percentil arredondado não substitui escore. | C: ratificar fonte prioritária e cortes da seção 4, inclusive igualdade. Rótulos: “Muito baixo peso/Baixo peso/Peso adequado/Peso elevado para a idade”; “Muito baixa estatura/Baixa estatura/Estatura adequada para a idade”. Confirmar grupos <5, 5–<10 e adolescentes. |
+| CL-05 | F: Villar 2015/SBP 2017, população selecionada, menor representação <33 semanas; início da grade em PMA 27 semanas não define sozinho IG elegível ao nascer. P: equipe define elegibilidade, fora dela medidas sem classificação. T: condições explícitas e desconhecido impede afirmar elegibilidade. | T03/T06/T09/T10; IG isolada não decide múltiplos/RCIU/morbidade; transportar critérios do estudo literalmente pode excluir cuidados sem fundamento clínico. | C: definir IG/população, múltiplos, malformações, RCIU e morbidade grave; critérios/origem e campos mínimos. Não criar corte automático de 33 semanas sem ratificação. |
+| CL-06 | F: quatro PDFs semanais arredondados/CSV de entradas não constituem modelo neonatal diário; novos links oficiais não fecharam a lacuna. T: obter algoritmo/coeficientes ou grade diária oficial com termos e oráculo independente. | T01/T04/T09; escore aparentemente plausível por interpolação inventada compromete validade clínica. Não usar LMS/caudas OMS por analogia. | C/T: aprovar fonte/método comprovado, precisão e termos após obtenção. Enquanto ausente, G01 BLOCKED. Se inviável, renegociar escopo expressamente; não substituir a entrega aprovada por curva aproximada ou retirar prematuros em silêncio. |
+| CL-07 | F: manuais INTERGROWTH divergem 448/454 dias; SBP propõe transição perto de 64 semanas. P: levar 64s0d inclusive à revisão. T: PMA=IG+dias; corrigida=cronológica−(280−IG), sem clamp. Prazo AAP de 3 anos alegado no anexo não foi confirmado diretamente (403). | T03/T06/T09/T10/T15; prazo/base ou técnica indefinidos alteram série; elegibilidade OMS após etapa neonatal também precisa ser definida. | C: ratificar transição 64s0d/64s1d, começo/fim e prazo da correção, limite cronológico ou corrigido, variação por IG, critério para OMS após a transição e tratamento dos casos inicialmente não elegíveis. Não assumir 2/3 anos. |
+| CL-08 | F: código declara Pollock 3/7 18–61, Faulkner 18–60, Guedes 18–30 e ainda calcula com avisos; não prova amostra por sexo/população. P: bloquear <18, discutir 18–19; gestação já bloqueia interpretações adultas. T: elegibilidade por fórmula, sem idade desconhecida autorizar composição. | T06/T11; bloquear tudo <20 contrariaria decisão de produto; permitir automaticamente aos 18 trataria faixa do código como revisão clínica. Preservar idoso/histórico e RCQ factual. | C: decisão individual para Pollock 3, Pollock 7, Faulkner, Guedes, cintura e RCQ nos 18–19, com fonte/amostra/sexo e precedência gestacional. Faixas gerais adultas mantidas salvo novo fato ratificado. |
+| CL-09 | F: flags oficiais estritas HFA <−6/>+6; WFA <−6/>+5; WFL/H e BFA <−5/>+5; arredondamento antes das flags no código consultado. Edema declarado suprime z ligados a peso; regras de prevalência não são diagnóstico individual. T: medida preservada, flag/motivo por indicador e reconferência. | T05/T06/T07/T08; “fora de faixa” pode ser erro técnico, extrema medida ou referência inadequada. Flag não apaga dado, não diagnostica; edema não deve virar escore <−3 individual por regra de survey. | C: aprovar flags e precisão, visibilidade de z/rótulo flagado, edema sim/não/desconhecido e indicadores afetados. Definir limites técnicos pediátricos, sem impor 1 kg/30 cm/IMC8–100. |
+| CL-10 | F: controlador atual aceita Professional, Collaborator e SuperAdmin autorizados; somente Professional é filtrado por carteira. Responsável cadastral não concede acesso autenticado. P: console, sem novo portal. T: reutilizar guardas/ExecutorTenant/RLS e DTO mínimo; não copiar exclusividade de emissão da Fase 312. | T06/T12/T13/T16; “só o responsável” sem decisão seria mudança de papel; endpoint legado projeta resultado cifrado inteiro, então novos campos exigem inventário de consumidores e allowlist. Dados de menores requerem finalidade/sigilo e minimização. | C/governança: ratificar adequação dos papéis atuais à finalidade clínica; eventual restrição exige decisão explícita e revisão de contrato. Confirmar responsáveis internos, retenção/retificação e sigilo sem novo opt-in/portal/fluxo legal inventado. |
+
+### 9.1 Detalhes que corrigem simplificações do parecer
+
+- O código oficial recente `anthro` troca `cmeasure` por NA em pé <9 meses,
+  mas não transforma automaticamente a medida linear inteira em NA antes de
+  calcular HFA/BMI. Portanto, a supressão seletiva proposta para OctaClin precisa
+  de decisão CL-02, não de afirmação de equivalência literal ao software OMS.
+- Regra vigente do produto exige técnica explícita. Não incorporar fallbacks
+  de posição/edema desconhecido do software estatístico sem decisão clínica.
+- Grade diária até 1856 e XLSX mensal a partir de 61 descrevem arquivos;
+  pacote recente usa corte 60 meses. As três coisas permanecem distintas.
+- Comparação matemática documental com os dois exemplos sintéticos oficiais
+  femininos: 60,32 meses/113,8 cm/18,7 kg → WFA 0,21, HFA 0,96, BFA −0,58;
+  60,911701 meses/113,6 cm/20,5 kg → 0,79/0,85/0,42. Valores coincidem a
+  duas casas. Lookup inteiro daria WFA 0,23/0,86 e HFA 1,00/0,96.
+  Evidência de interpolação, não teste do OctaClin nem validação clínica completa.
+- Propostas da tabela SISVAN acima continuam pendentes; nomes completos aqui
+  corrigem apresentação, não aprovam cortes novos. Usar peso elevado para a idade
+  como obesidade é proibido pela própria nota MS 2011.
+
+### 9.2 Registro de ratificação consolidada
+
+Responsável/competência e evidências clínicas devem ser registrados em canal
+interno protegido, sem PII real na documentação pública. Publicar apenas status,
+versão/hash da ficha pública, data e referência opaca ao aceite interno.
+Cada CL requer resposta explícita/evidência; T02 não deve usar um “sim” genérico
+como confirmação de regras ainda ausentes. G01/G02 permanecem BLOCKED.

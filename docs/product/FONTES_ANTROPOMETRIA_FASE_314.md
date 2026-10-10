@@ -90,3 +90,102 @@ mudança silenciosa. Os downloads temporários não são dependência do handoff
 
 Ver [ficha clínica](FICHA_VALIDACAO_CLINICA_FASE_314.md) e
 [plano](../history/phases/PLANO_FASE_314.md).
+
+## Reconferência técnica rev2 — 2026-10-10
+
+PASS local: os 16 XLSX preservados da pesquisa anterior foram reabertos com
+openpyxl (read-only/data-only): 14.338 linhas, abas/grades e L/M/S numéricos,
+M/S positivos, SHA-256 iguais ao manifesto. Isso comprova os bytes locais,
+não atualidade clínica nem direitos de redistribuição. As 16 novas tentativas
+pelas URLs CDN foram bloqueadas (HTTP 403); não afirmar re-download aprovado.
+
+### Implementações OMS consultadas, sem execução nem incorporação
+
+Repositórios oficiais `WorldHealthOrganization/anthro` e `anthroplus`.
+Commits consultados: `b776d8a12b1c97369c748b561159fd2ec4f4db58` e
+`7cfcdb39026e9a55de55732bc3cf14c82261bcf7`. DESCRIPTION: versão de
+trabalho `1.1.0.9000`, não release escolhido para produção. Licenças declaradas
+GPL-3 / GPL (>=3). A leitura serve de evidência; não copiar código/dados
+GPL ou adicionar pacote ao runtime sem avaliar obrigações e compatibilidade.
+Termos de cada planilha externa não são estabelecidos pela licença do pacote.
+
+| Artefato oficial | Fonte fixa | SHA-256 |
+| --- | --- | --- |
+| oms2007_zscores.R | [fonte](https://raw.githubusercontent.com/WorldHealthOrganization/anthroplus/7cfcdb39026e9a55de55732bc3cf14c82261bcf7/R/zscores.R) | `43bfdb016455c057b0ee986c0d4fb0b2a7733e19f0e74821aee9d3d0aece0c41` |
+| oms2007_description | [fonte](https://raw.githubusercontent.com/WorldHealthOrganization/anthroplus/7cfcdb39026e9a55de55732bc3cf14c82261bcf7/DESCRIPTION) | `e65923b9ce67b118e29c28077161ed47f557a2c04cc62543daa4c39a63f906c5` |
+| oms2006_helper.R | [fonte](https://raw.githubusercontent.com/WorldHealthOrganization/anthro/b776d8a12b1c97369c748b561159fd2ec4f4db58/R/z-score-helper.R) | `a5c9889721d1194552c9a07f84aeb01ad2cbf748082320fcdbbec17d96cebd67` |
+| oms2006_zscore.R | [fonte](https://raw.githubusercontent.com/WorldHealthOrganization/anthro/b776d8a12b1c97369c748b561159fd2ec4f4db58/R/z-score.R) | `4547b068083e276db3799679b9e488fcc8a8da89e4142ae9f45a7ba75354155c` |
+| oms2006_api.R | [fonte](https://raw.githubusercontent.com/WorldHealthOrganization/anthro/b776d8a12b1c97369c748b561159fd2ec4f4db58/R/api.R) | `181f9e9d4ab886f496c1e516c606c406ffadac1794a335b61b85089ebf5d0be1` |
+| oms2006_utils.R | [fonte](https://raw.githubusercontent.com/WorldHealthOrganization/anthro/b776d8a12b1c97369c748b561159fd2ec4f4db58/R/utils.R) | `deb236da3fb7f8445febad61b61a04def980d4b92452d597274025311a6ae249` |
+| oms2006_wfl.R | [fonte](https://raw.githubusercontent.com/WorldHealthOrganization/anthro/b776d8a12b1c97369c748b561159fd2ec4f4db58/R/z-score-weight-for-lenhei.R) | `10bcca5384aaf51ffc43fd5286984ce81c129f2582f91f98f15d91fb8110d4cb` |
+| oms2006_description | [fonte](https://raw.githubusercontent.com/WorldHealthOrganization/anthro/b776d8a12b1c97369c748b561159fd2ec4f4db58/DESCRIPTION) | `a2f8289d628e2a2754cb9528c526a8569a7d226eec8dab97fe94bca47d7a14a5` |
+| data-raw/growthstandards/bfawho2007.txt | [fonte](https://raw.githubusercontent.com/WorldHealthOrganization/anthroplus/7cfcdb39026e9a55de55732bc3cf14c82261bcf7/data-raw/growthstandards/bfawho2007.txt) | `70ef3260df08e48ce560c28cff4e733db78fb952cbd881eba63c9d3a15f38a6a` |
+| data-raw/growthstandards/hfawho2007.txt | [fonte](https://raw.githubusercontent.com/WorldHealthOrganization/anthroplus/7cfcdb39026e9a55de55732bc3cf14c82261bcf7/data-raw/growthstandards/hfawho2007.txt) | `9ac02aa4908f8ec3c6ba2362a4c7e1356043408b2873548ca22eedc016c235ad` |
+| data-raw/growthstandards/wfawho2007.txt | [fonte](https://raw.githubusercontent.com/WorldHealthOrganization/anthroplus/7cfcdb39026e9a55de55732bc3cf14c82261bcf7/data-raw/growthstandards/wfawho2007.txt) | `9234dc640ba54001a9afd42ef15ab675b211a721c8f3c0a07c3431fd9cea0e1c` |
+| tests/testthat/test-zscores.R | [fonte](https://raw.githubusercontent.com/WorldHealthOrganization/anthroplus/7cfcdb39026e9a55de55732bc3cf14c82261bcf7/tests/testthat/test-zscores.R) | `5a2d3f424645f9f1cbe9cd9ad66c60df9437b644f9edd000dcd57be5e0ea7821` |
+| data-raw/survey_who2007_z.csv | [fonte](https://raw.githubusercontent.com/WorldHealthOrganization/anthroplus/7cfcdb39026e9a55de55732bc3cf14c82261bcf7/data-raw/survey_who2007_z.csv) | `404377020c89f734881e8a2e3004f7ad616bdfdec616935a596f64d60191371c` |
+| data-raw/Survey_WHO2007.csv | [fonte](https://raw.githubusercontent.com/WorldHealthOrganization/anthroplus/7cfcdb39026e9a55de55732bc3cf14c82261bcf7/data-raw/Survey_WHO2007.csv) | `af956354d12b1c5666e91c36e87f34caf839d7bb4e199c9e3058b49d63378eab` |
+
+Os três TXT computacionais têm ambos os sexos: BFA/HFA 340 linhas cada
+(meses 60–229), WFA 124 (60–121). Incluem âncoras 60 e finais 229/121;
+as últimas repetem L/M/S de 228/120. As seis planilhas OMS 2007 iniciais
+não incluem essas âncoras: **não são suficientes para reproduzir sozinhas o
+pacote nos intervalos fracionários de borda**. T01/T04 deverão resolver origem,
+termos e dados complementares sem extrapolar/inventar linhas.
+
+Código consultado interpola L, M e S entre meses adjacentes e entre grades
+lineares de 0,1 cm; não interpola z/percentis. `anthro` recente restringe
+idade <60 meses apesar de sua grade diária chegar a 1856. `anthroplus`
+aceita idade >=60 e <229 (<121 para WFA). Não confundir grade de arquivo,
+população da referência e faixa clínica escolhida (CL-01).
+
+Os CSV de survey oficiais foram inspecionados como artefatos públicos, sem
+imprimir casos nem adotá-los como fixtures. Sua origem não está certificada
+como sintética. Ensaios OctaClin devem usar apenas exemplos sintéticos
+explícitos, como os casos numéricos em `tests/testthat/test-zscores.R`.
+
+### Documentos complementares e limites de acesso
+
+- ig_artigo.html: [fonte](https://intergrowth21.tghn.org/articles/intergrowth-21st-postnatal-growth-standards-and-z-scores-preterm-infants/), SHA-256 `6ce2525c72526acef646a2f4db38a6c3f5c189a3f2ca802f4d1500b62a160ff8`.
+- ig_oficial.html: [fonte](https://intergrowth21.com/tools-resources/postnatal-growth-preterm-infants), SHA-256 `d93cd32c49b6213127b7fc30024fd4adccbba186b9152a5142613ae75b7d7c5f`.
+- protocolo.pdf: [fonte](https://www.gov.br/saude/pt-br/composicao/saps/vigilancia-alimentar-e-nutricional/arquivos/protocolos-do-sistema-de-vigilancia-alimentar-e-nutricional-sisvan/@@download/file), SHA-256 `0b0cda906af20adf1160741874a124b30ab9b8c9ae7fceed0b585a8634ffd453`.
+- ig_termos.html: [fonte](https://intergrowth21.com/privacy-policy), SHA-256 `f84c8caae3422a559e7f6f9a299a0cf99bd98307cab658b5448897c6b726b830`.
+
+Protocolos SISVAN 2008 e orientações 2011 não são intercambiáveis: os
+quadros têm desigualdades/terminologia diferentes em bordas. A ficha deve
+ratificar a precedência e a tabela de verdade, sem copiar condutas automáticas.
+Página de privacidade INTERGROWTH não concede licença de redistribuição.
+Reabertura das páginas confirma disponibilidade; não fecha termos/modelo diário.
+
+AnthroPlus manual, Survey Analyser quickguide e página AAP responderam 403
+neste ciclo, inclusive os dois manuais tentados pelo CDN. Suas alegações no
+parecer são propostas com evidência complementar no código consultado;
+**AAP “até três anos” não foi confirmado diretamente**. Recuperar edição
+verificável antes de ratificar duração. Busca bibliográfica Europe PMC pelo DOI
+não retornou resultado; isso não prova ausência de suplemento/coeficientes.
+
+### Estado por família de referência
+
+| Família | Integridade/proveniência | Direitos/população/método | Estado para incorporação |
+| --- | --- | --- | --- |
+| OMS 2006 XLSX | PASS local, download atual 403 | Modelo/documentação conhecidos; técnica/idade/flags e termos precisam de fechamento | BLOCKED G01/G02 |
+| OMS 2007 XLSX/TXT | PASS local XLSX; TXT oficial obtido e hash registrado | Interpolação e âncoras confirmadas; escolha de edição/termos/routing pendentes | BLOCKED G01/G02 |
+| MS/SISVAN 2011 + 2008 | 2011 hash do manifesto; 2008 obtido no portal oficial | Precedência/igualdades/nomes e revisão clínica pendentes | BLOCKED G02 |
+| INTERGROWTH 2015/2017 | Tabelas/manuais públicos identificados; não constituem modelo diário | Licença, elegibilidade, algoritmo diário e duração de correção pendentes | BLOCKED G01/G02 |
+
+Nenhum runtime/dependência alterado. A conferência documental não certifica
+clinicamente o conjunto completo nem encerra G01/G02.
+
+### Condição de uso MS que não pode ficar implícita
+
+Os dois PDFs MS consultados (2008 e 2011) permitem reprodução com atribuição,
+mas a declaração limita reprodução para venda/finalidade comercial. Isso não
+é prova de proibição de usar fatos científicos ou métodos no produto; tampouco
+é licença irrestrita de copiar textos, imagens, quadros ou distribuir os PDFs.
+Registrar análise jurídica/de direitos para a forma concreta de incorporação
+comercial antes do runtime. Não embutir obras nem copiar tabelas gráficas por
+inferência de que a fonte é governamental. O gate de direitos fica aberto.
+
+PASS nesta reconferência: quatro PDFs INTERGROWTH e dois manuais foram
+baixados novamente; todos os seis hashes iguais ao manifesto. As 38 linhas
+semanais não se transformaram em dados diários por essa verificação.

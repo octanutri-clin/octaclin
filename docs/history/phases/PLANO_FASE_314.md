@@ -99,6 +99,12 @@ classificador nem inserir dados clínicos da curva em runtime antes do gate.
 
 ### 5.1 Gravação — endpoint atual
 
+**Rev2:** papéis atuais SuperAdmin/Professional/Collaborator e permissões
+`pacientes.ler`/`pacientes.gerenciar`; Professional limitado à carteira pelo
+resolvedor atual, demais com visão tenant. Não copiar a exclusividade de
+emissão do encaminhamento 312 nem afirmar acesso exclusivo do responsável.
+CL-10 deve ratificar adequação; eventual restrição exige decisão explícita.
+
 Estender `POST /pacientes/:id/avaliacoes-antropometricas`, preservando o
 contrato legado. Acrescentar `pediatrico?: ContextoPediatricoDto` validado,
 UUID `chaveCriacao` obrigatório para novas avaliações com contexto pediátrico:
@@ -159,8 +165,14 @@ ser distinguíveis; não substituir o primeiro silenciosamente. Campos novos
 ficam dentro dos blobs cifrados, sem DOB/IG/prematuridade/sexo novo em metadata
 de auditoria ou índices. `idadeAnos` e `sexo` existentes mantêm o contrato.
 
-Sem nova entidade/migration prevista: 1068 já fornece replay/imutabilidade para
-avaliações com chave. Não modificar snapshots antigos nem realizar backfill.
+Sem nova entidade/migration clínica prevista: 1016 admite idade zero e já
+protege por FORCE RLS; 1068 fornece chave/unique/replay e trigger de UPDATE
+para avaliações com chave. A imutabilidade não é absoluta: o trigger permite
+soft delete/compartilhamento e não cobre DELETE físico. Provar grants/ausência
+ou bloqueio de DELETE no runtime; se for necessário endurecimento estrutural,
+reabrir a decisão de schema, sem editar a 1068 integrada ou criar migration
+nesta etapa. Não declarar proteção de DELETE com base no trigger de UPDATE.
+Não modificar snapshots antigos nem realizar backfill.
 Se surgir necessidade real de schema, voltar ao plano antes de criar 1069.
 Obrigar chave para contexto novo e provar trigger em PostgreSQL real.
 Fingerprint cifrado normaliza o payload efetivamente aceito; mesma chave e
@@ -178,8 +190,21 @@ ampliação de acesso. Revalidar paciente/carteira em cada página.
 Retornar somente snapshots pediátricos/proveniência necessários à superfície,
 cursor e cobertura. Ordenação total por data civil, timestamp e UUID;
 comparação da âncora no SQL para conservar microssegundos. Cursor precisa
-pertencer ao mesmo tenant/paciente/população; soft delete não vira vazamento.
-Usar `take(limite+1)`, não prometer histórico completo a partir de 100 linhas.
+pertencer ao mesmo tenant/paciente; pode ancorar registro legado sem contexto
+pediátrico, pois o scan é do histórico geral. A âncora excluída logicamente
+continua válida só para posicionamento, nunca para exposição clínica.
+**Rev2 — sem índice clínico novo:** varrer até `limite` avaliações gerais +1
+lookahead por chamada (máximo 100+1), descriptografar apenas o lote autorizado,
+projetar somente indicadores pediátricos pertinentes. O cursor de continuação
+é o último registro **examinado**, não o último resultado pediátrico exibido.
+Página pode ser vazia com continuação; UI deve permitir avançar e jamais
+interpretar vazio como fim. Retornar `registrosExaminados`, `itensExibidos`,
+`temMaisHistorico` e `proximoCursor`; não prometer página com 100 pontos
+pediátricos nem total completo antes de consumir a série. Query `indicador`
+filtra projeção; mudanças de filtro reiniciam o cursor. Não usar JSON SQL em
+blob cifrado, scan ilimitado ou flag pediátrica em claro para otimizar.
+Provar >100 registros mistos, blocos vazios, ciphertext ilegível e exclusão
+da âncora; snapshot ilegível dá motivo técnico neutro e não vira medida zero.
 Avaliações legadas permanecem no histórico geral sem classificação retroativa.
 
 BFF específico com sessão, permissão, UUID, whitelist de query e respostas
@@ -212,7 +237,7 @@ Tarefas pequenas com arquivos, dependências e aceite em
 2. Vertical OMS: idade exata + IMC/idade + snapshot + resultado/histórico.
 3. Estatura/idade + peso/idade + peso/comprimento-estatura; técnicas e caudas.
 4. Vertical neonatal: elegibilidade + PMA + INTERGROWTH + transição/correção.
-5. Proteções adultas por política etária ratificada, sem alterar históricos.
+5. Proteções adultas T11 antes da primeira gravação pediátrica T06, sem alterar históricos.
 6. Projeção paginada + BFF + gráfico/tabela + regressões/demo/governança.
 
 Checkpoints após cada 2–3 tarefas. Contrato/fixtures fechados antes das telas;
@@ -272,3 +297,64 @@ schema/runtime/grants pelo runbook; planejamento não autoriza deploy.
   planejamento; revisão clínica final e computação neonatal completa pendentes.
 - SKIPPED: aplicação de migration, acesso a bancos externos, deploy,
   diagnóstico de produção e revisão R4 independente da implementação.
+
+
+## 10. Consolidação técnica rev2 e gates G00–G05
+
+[Relatório completo de revisão](REVISAO_PLANEJAMENTO_FASE_314.md), com
+anexos preservados, hashes, divergências, comandos e prontidão. A ficha contém
+CL-01–CL-10 com fonte/impacto/risco/decisão; T01–T18 continuam não iniciadas
+como implementação. T01 documental avançou, mas seu gate não está concluído.
+
+| Gate | Estado | Evidência / condição de saída |
+| --- | --- | --- |
+| G00 — base, fontes, direitos e dependência operacional | BLOCKED (partes PASS) | Branch/diff/base/PR reconfirmados; hashes locais OMS PASS. Termos e aplicação externa da 1068 não confirmados. Sem acesso a bancos. Bloqueio operacional da 1068 aplica-se ao rollout; não impede pesquisa documental. |
+| G01 — método computacional | BLOCKED | Interpolação OMS confirmada em fonte oficial; âncoras identificadas. Neonatal diário/termos, edição/método de idade e provas completas ainda faltam. |
+| G02 — ratificação CL | BLOCKED | CL-01–CL-10 sem aceite humano específico desta versão. |
+| G03 — implementação/testes | BLOCKED | Proprietário autorizou somente revisão/documentação e proibiu T03–T18 neste ciclo. |
+| G04 — implementação/R4/regressões | SKIPPED | Não implementado; nenhum teste do software executado. Provas previstas nas tarefas e matriz. |
+| G05 — entrega/rollout | BLOCKED | Sem implementação/CI314/revisão R4 final; ambiente/1068/saúde não comprovados. Deploy/migration/merge não autorizados. |
+
+Esta tabela é a fonte do estado consolidado. SKIPPED é não executado;
+BLOCKED identifica condição necessária aberta; partes PASS não fecham um gate.
+G01/G02/G03 são necessários antes de T03–T18. G00 operacional e G05 exigem
+prova externa futura específica antes de produção, sem acoplar consulta de
+produção à autorização de pesquisa. Uma PR documental não foi aberta.
+
+### 10.1 Correções arquiteturais adicionais
+
+- Reutilizar `ExecutorTenant`, escopo/carteira, locks e cifra existentes. Não
+  criar segundo registro clínico, tabela de prematuros ou pipeline de auth.
+- DTO atual rejeita <1 kg/<30 cm; domínio também. T06 deve validar ambos os
+  caminhos explicitamente, com discriminante pediátrico validado, sem deixar
+  o cliente omitir contexto e obter faixa adulta. Testar idade desconhecida,
+  cadastro alterado entre conferência/gravação e permissão revogada.
+- Contexto inclui `edema: sim|nao|nao_informado` e dados mínimos de elegibilidade
+  **somente após CL-05/CL-09**, dentro da cifra; nada inferido do peso.
+- Snapshot/projeção têm estado por indicador `classificado`, `nao_aplicavel`,
+  `insuficiente` ou `inconsistente`, motivo enum fechado e flag separada; escore
+  disponível sem classe SISVAN (etapa INTERGROWTH) deve ser representável.
+- Normalização/técnica/flags do IMC pertencem a T03/T05, antes da gravação T06,
+  não esperar T07/T08. T11 protege o primeiro caminho de gravação; T16-A
+  prova snapshot/RLS/replay antes de UI; T16-B prova paginação em T12.
+- Fingerprint atual abrange `dados`; estender normalização canônica sem mudar
+  semântica do replay de registros 313. Revalidar autorização antes do replay;
+  chave excluída não cria registro novo. Mesma chave, corpo e ator: snapshot
+  original; payload divergente: 409; mesma chave em outro ator tem escopo
+  separado, como o índice atual. Falha de auditoria após commit não justifica
+  gerar nova chave/duplicar avaliação. Locks na ordem existente paciente → key.
+- Transferência/cadastro concorrentes devem usar lock compatível; verificar
+  caminhos que editam perfil/DOB antes de afirmar que um único lock resolve
+  toda corrida. Em leitura, autorização/carteira precisam continuar válidas
+  no instante da projeção, sem misturar páginas de pacientes.
+- `mapearAvaliacaoAntropometrica` hoje devolve todo o JSON `resultado`.
+  Não adicionar campos internos e presumir que tipos TS ocultam dados. Nova
+  projeção e consumidores legados requerem allowlist; portal mantém métricas
+  explicitamente autorizadas e não recebe contexto/flags/classe pediátrica.
+- Retificação referenciada por novo evento/supersessor é hipótese dos anexos,
+  não contrato existente. Nesta fase manter nova avaliação com snapshot e
+  exclusão lógica autorizada já existente; não inventar vínculo de retificação,
+  migration ou tratamento de ponto antigo sem nova decisão de produto.
+- Rollback conserva leitura de snapshots, fontes/versões e proteções. Pode
+  desabilitar novos cálculos/gravações; não desabilitar toda leitura histórica
+  nem usar down da 1016/1068 com dados para reverter esta fase.
