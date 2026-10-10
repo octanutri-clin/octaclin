@@ -6,6 +6,19 @@ export type OrigemReceitaNutricional = (typeof ORIGENS_RECEITA_NUTRICIONAL)[numb
 
 export const TIPOS_RECEITA_NUTRICIONAL = ['receita', 'refeicao_pronta'] as const;
 export type TipoReceitaNutricional = (typeof TIPOS_RECEITA_NUTRICIONAL)[number];
+export const CATEGORIA_RECEITA_MAX = 80;
+
+export function normalizarCategoriaReceita(valor: string): string {
+  if (typeof valor !== 'string') throw new Error('Categoria da receita invalida.');
+  const categoria = valor.trim().replace(/\s+/g, ' ');
+  if (!categoria || categoria.length > CATEGORIA_RECEITA_MAX || /[\u0000-\u001f\u007f]/.test(categoria) ||
+      /[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i.test(categoria) ||
+      /\b\d{8,}\b/.test(categoria) ||
+      /\b[0-9a-f]{8}-[0-9a-f-]{27,}\b/i.test(categoria)) {
+    throw new Error('Categoria da receita invalida.');
+  }
+  return categoria;
+}
 
 /**
  * Uma receita e aplicada expandindo estes itens em uma refeicao do rascunho.

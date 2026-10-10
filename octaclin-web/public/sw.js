@@ -52,3 +52,28 @@ self.addEventListener('message', (evento) => {
     ))
   );
 });
+
+// Pushes carry no recipe, patient, category, or other clinical content. Keep
+// the displayed copy fixed even if a provider sends unexpected payload fields.
+self.addEventListener('push', (evento) => {
+  evento.waitUntil(self.registration.showNotification('Nova receita disponível', {
+    body: 'Acesse o portal OctaClin para consultar.',
+    icon: '/icons/octaclin-192.png',
+    badge: '/icons/octaclin-192.png',
+    data: { url: '/portal/receitas' }
+  }));
+});
+
+self.addEventListener('notificationclick', (evento) => {
+  evento.notification.close();
+  evento.waitUntil((async () => {
+    const destino = new URL('/portal/receitas', self.location.origin).href;
+    const clientes = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+    const existente = clientes.find((cliente) => new URL(cliente.url).origin === self.location.origin);
+    if (existente) {
+      await existente.navigate(destino);
+      return existente.focus();
+    }
+    return self.clients.openWindow(destino);
+  })());
+});

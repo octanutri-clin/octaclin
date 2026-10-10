@@ -627,6 +627,8 @@ export interface ReceitaNutricionalResumoApi {
   nome: string;
   origem: OrigemReceitaNutricionalApi;
   tipo: TipoReceitaNutricionalApi;
+  categoria: string | null;
+  versaoAtual: number;
   totalItens: number;
   atualizadoEm: string;
 }
@@ -640,21 +642,27 @@ export interface ReceitaNutricionalApi extends ReceitaNutricionalResumoApi {
 export interface ConsultaReceitasNutricionais extends ConsultaPaginadaPlanos {
   origem?: OrigemReceitaNutricionalApi;
   tipo?: TipoReceitaNutricionalApi;
+  categoria?: string;
 }
 
 export interface EntradaReceitaNutricional {
   nome: string;
   origem: OrigemReceitaNutricionalApi;
   tipo: TipoReceitaNutricionalApi;
+  categoria: string;
   instrucoes?: string;
   itens: ItemPlanoAlimentarEntrada[];
+}
+
+export interface AtualizarReceitaNutricionalEntrada extends EntradaReceitaNutricional {
+  versaoEsperada: number;
 }
 
 const BASE_RECEITAS = '/api/planos-alimentares/receitas';
 
 export function listarReceitasNutricionais(consulta: ConsultaReceitasNutricionais = {}, signal?: AbortSignal) {
   return requisitar<PaginaApi<ReceitaNutricionalResumoApi>>(
-    `${BASE_RECEITAS}${montarConsulta({ pagina: consulta.pagina, limite: consulta.limite, origem: consulta.origem, tipo: consulta.tipo })}`,
+    `${BASE_RECEITAS}${montarConsulta({ pagina: consulta.pagina, limite: consulta.limite, origem: consulta.origem, tipo: consulta.tipo, categoria: consulta.categoria })}`,
     { signal }
   );
 }
@@ -667,7 +675,7 @@ export function criarReceitaNutricional(entrada: EntradaReceitaNutricional) {
   return requisitar<ReceitaNutricionalResumoApi>(BASE_RECEITAS, { method: 'POST', ...corpoJson(entrada) });
 }
 
-export function atualizarReceitaNutricional(receitaId: string, entrada: EntradaReceitaNutricional) {
+export function atualizarReceitaNutricional(receitaId: string, entrada: AtualizarReceitaNutricionalEntrada) {
   return requisitar<ReceitaNutricionalResumoApi>(`${BASE_RECEITAS}/${encodeURIComponent(receitaId)}`, {
     method: 'PUT',
     ...corpoJson(entrada)
@@ -677,5 +685,89 @@ export function atualizarReceitaNutricional(receitaId: string, entrada: EntradaR
 export function arquivarReceitaNutricional(receitaId: string) {
   return requisitar<{ id: string; arquivadoEm: string }>(`${BASE_RECEITAS}/${encodeURIComponent(receitaId)}`, {
     method: 'DELETE'
+  });
+}
+
+export interface CompartilharReceitasEntradaApi {
+  pacienteId: string;
+  chaveIdempotencia: string;
+  receitaIds: string[];
+  versoesEsperadas: Array<{ receitaId: string; versao: number }>;
+  canais: Array<'portal' | 'email' | 'whatsapp' | 'push'>;
+  agendadoPara?: string;
+  confirmacaoRevisaoManual?: boolean;
+}
+
+export interface EnvioReceitaClinicaApi {
+  id: string; receitaId: string; nome: string; versao: number;
+  status: 'agendado' | 'ativo' | 'substituido' | 'retirado';
+  agendadoPara: string | null; enviadoEm: string | null; retiradoEm: string | null; visualizadoEm: string | null;
+  entregas: Array<{ canal: 'portal' | 'email' | 'whatsapp' | 'push'; status: string; agendadoPara: string; confirmadoEm: string | null }>;
+}
+
+export function listarEnviosReceitaPaciente(pacienteId: string, signal?: AbortSignal) {
+  return requisitar<EnvioReceitaClinicaApi[]>(
+    `${BASE_RECEITAS}/compartilhamentos/pacientes/${encodeURIComponent(pacienteId)}`, { signal, cache: 'no-store' }
+  );
+}
+
+export function compartilharReceitasNutricionais(entrada: CompartilharReceitasEntradaApi) {
+  return requisitar<{ quantidade: number; agendadoPara: string | null; itens: Array<{ id: string; receitaId: string; status: string }> }>(
+    `${BASE_RECEITAS}/compartilhamentos`, { method: 'POST', ...corpoJson(entrada) }
+  );
+}
+
+export function obterConsentimentoPacienteReceitas(pacienteId: string, signal?: AbortSignal) {
+  return requisitar<ConsentimentoReceitaApi>(
+    `${BASE_RECEITAS}/compartilhamentos/pacientes/${encodeURIComponent(pacienteId)}/preferencias`, { signal }
+  );
+}
+
+export function retirarCompartilhamentoReceita(compartilhamentoId: string) {
+  return requisitar<{ id: string; status: string; retiradoEm: string }>(
+    `${BASE_RECEITAS}/compartilhamentos/${encodeURIComponent(compartilhamentoId)}`, { method: 'DELETE' }
+  );
+}
+
+export interface ReceitaCompartilhadaPortalApi {
+  id: string;
+  nome: string;
+  enviadoEm?: string;
+  visualizadoEm?: string | null;
+}
+
+export function listarReceitasCompartilhadasPortal(signal?: AbortSignal) {
+  return requisitar<ReceitaCompartilhadaPortalApi[]>('/api/portal/paciente/receitas', { signal, cache: 'no-store' });
+}
+
+export function obterReceitaCompartilhadaPortal(id: string) {
+  return requisitar<{ id: string; enviadoEm?: string; receita: { nome: string; conteudo: { instrucoes?: string; itens: ItemPlanoAlimentarEntrada[] }; versao: number } }>(
+    `/api/portal/paciente/receitas/${encodeURIComponent(id)}`, { cache: 'no-store' }
+  );
+}
+
+export interface ConsentimentoReceitaApi { email: boolean; whatsapp: boolean; push: boolean }
+
+export function obterConsentimentoReceitasPortal() {
+  return requisitar<ConsentimentoReceitaApi>('/api/portal/paciente/preferencias/receitas', { cache: 'no-store' });
+}
+
+export function atualizarConsentimentoReceitasPortal(entrada: ConsentimentoReceitaApi) {
+  return requisitar<ConsentimentoReceitaApi>('/api/portal/paciente/preferencias/receitas', { method: 'PUT', ...corpoJson(entrada) });
+}
+
+export function registrarPushReceitasPortal(pacienteId: string, subscription: PushSubscription) {
+  return requisitar<{ id: string }>('/api/portal/paciente/preferencias/receitas/push-subscription', {
+    method: 'POST', ...corpoJson({ pacienteId, subscription: subscription.toJSON() })
+  });
+}
+
+export async function obterChavePublicaPushReceitasPortal() {
+  return requisitar<{ chavePublica: string | null }>('/api/portal/paciente/preferencias/receitas/push-public-key', { cache: 'no-store' });
+}
+
+export function revogarPushReceitasPortal(endpoint?: string) {
+  return requisitar<{ revogado: boolean }>('/api/portal/paciente/preferencias/receitas/push-subscription', {
+    method: 'DELETE', ...corpoJson(endpoint ? { endpoint } : {})
   });
 }

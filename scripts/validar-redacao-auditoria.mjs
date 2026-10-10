@@ -124,9 +124,12 @@ const CHAVES_SEGURAS = new Map([
   ['versao', 'numero da versao do termo de consentimento aceito, evidencia do que foi aceito'],
   ['notificacoes', 'canais notificados na operacao de agenda, enum'],
   ['frequencia', 'frequencia da serie de consulta recorrente (diaria, semanal), enum fechado no DTO'],
+  ['canais', 'canais escolhidos para envio da receita (portal, email, whatsapp, push), enum fechado no DTO; nenhum endereco ou conteudo e gravado'],
+  ['agendado', 'booleano que indica se o compartilhamento de receitas foi agendado; o horario fica no registro do envio'],
 
   // --- Contagens e medidas da operacao ---
   ['total', 'contagem'],
+  ['quantidade', 'contagem de receitas compartilhadas na acao'],
   ['totalitens', 'contagem de itens do modelo ou da receita'],
   ['totallinhas', 'contagem de linhas do arquivo'],
   ['linhas', 'contagem de linhas exportadas'],
@@ -196,6 +199,7 @@ const CHAVES_SEGURAS = new Map([
   ['possuimotivo', 'booleano de presenca do motivo de cancelamento ou recusa'],
   ['possuidetalhes', 'booleano de presenca de detalhe da solicitacao LGPD'],
   ['houvetextolivre', 'booleano de presenca de texto livre'],
+  ['primeiraleitura', 'booleano que registra somente que esta foi a primeira leitura da receita compartilhada; o conteudo acessado fica fora'],
   ['conteudoeditadoinformado', 'booleano de presenca de edicao do conteudo sugerido pela IA'],
   ['possuicontato', 'booleano de presenca do contato do acompanhante; o telefone em si nunca entra'],
   ['possuicompartilhamento', 'booleano de presenca de metricas compartilhadas; valores clinicos e identificadores de metrica nunca entram'],
@@ -203,6 +207,7 @@ const CHAVES_SEGURAS = new Map([
   ['aprovado', 'booleano: o template foi aprovado pelo provedor de mensageria'],
   ['ativa', 'booleano: a regra de automacao esta habilitada'],
   ['ativo', 'booleano: o canal de notificacao esta habilitado'],
+  ['push', 'booleano de consentimento opt-in para avisos push; nao registra endpoint nem conteudo da notificacao'],
   ['executar', 'booleano: a avaliacao da regra roda em modo simulacao (false) ou execucao (true)'],
   ['obrigatoria', 'booleano: a pergunta e de resposta obrigatoria'],
   ['privado', 'booleano: o circulo de pacientes e fechado'],

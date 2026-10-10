@@ -177,6 +177,11 @@ import { PlanoAlimentarOrm } from '../../modulos/planos-alimentares/infraestrutu
 import { ModeloPlanoAlimentarOrm } from '../../modulos/planos-alimentares/infraestrutura/modelo-plano-alimentar.orm';
 import { RevisaoModeloPlanoAlimentarOrm } from '../../modulos/planos-alimentares/infraestrutura/revisao-modelo-plano-alimentar.orm';
 import { ReceitaNutricionalOrm } from '../../modulos/planos-alimentares/infraestrutura/receita-nutricional.orm';
+import { CompartilhamentoReceitaNutricionalOrm } from '../../modulos/planos-alimentares/infraestrutura/compartilhamento-receita-nutricional.orm';
+import { EntregaCompartilhamentoReceitaOrm } from '../../modulos/planos-alimentares/infraestrutura/entrega-compartilhamento-receita.orm';
+import { PreferenciaCompartilhamentoReceitaOrm } from '../../modulos/planos-alimentares/infraestrutura/preferencia-compartilhamento-receita.orm';
+import { SubscriptionPushPacienteOrm } from '../../modulos/planos-alimentares/infraestrutura/subscription-push-paciente.orm';
+import { CompartilharReceitasNutricionais1720000001066 } from './migracoes/1720000001066-CompartilharReceitasNutricionais';
 
 function criarConexaoBanco() {
   if (process.env.DATABASE_URL) {
@@ -328,6 +333,10 @@ export function criarOpcoesTypeOrm(): TypeOrmModuleOptions & DataSourceOptions {
       ModeloPlanoAlimentarOrm,
       RevisaoModeloPlanoAlimentarOrm,
       ReceitaNutricionalOrm,
+      CompartilhamentoReceitaNutricionalOrm,
+      EntregaCompartilhamentoReceitaOrm,
+      PreferenciaCompartilhamentoReceitaOrm,
+      SubscriptionPushPacienteOrm,
       CatalogoComposicaoAlimentoOrm,
       FonteComposicaoAlimentoOrm,
       AlimentoComposicaoOrm,
@@ -416,7 +425,8 @@ export function criarOpcoesTypeOrm(): TypeOrmModuleOptions & DataSourceOptions {
         CifrarDetalhesSolicitacoesLgpd1720000001062,
         CriarPermissoesIntegracaoProfissional1720000001063,
         AutorizarCompartilhamentoProgressoPortal1720000001064,
-        ConfigurarResumosNotificacoes1720000001065
+        ConfigurarResumosNotificacoes1720000001065,
+        CompartilharReceitasNutricionais1720000001066
       ],
     migrationsRun: executarMigracoesNoBoot(),
     synchronize: false,

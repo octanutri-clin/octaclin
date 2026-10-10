@@ -1,4 +1,4 @@
-import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { EntityManager, FindOptionsWhere, In, IsNull } from 'typeorm';
 import { registrarAuditoriaNaTransacao } from '../../../infraestrutura/auditoria/servico-auditoria';
 import { ExecutorTenant } from '../../../infraestrutura/banco-dados/executor-tenant';
@@ -9,6 +9,7 @@ import { UsuarioAutenticado } from '../../auth/dominio/usuario-autenticado';
 import { ItemModeloPlanoAlimentar } from '../dominio/modelos-plano-alimentar';
 import {
   contarItensReceita,
+  normalizarCategoriaReceita,
   podeAcessarReceita,
   resumirAlimentosDaReceita,
   type ConteudoReceitaNutricional,
@@ -46,6 +47,8 @@ export class ServicoReceitasNutricionais {
         tenantId,
         origem: dados.origem,
         tipo: dados.tipo,
+        categoria: this.categoriaValida(dados.categoria),
+        versaoAtual: 1,
         profissionalId: dados.origem === 'pessoal' ? profissionalId : undefined,
         nomeCriptografado: this.criptografia.criptografar(dados.nome.trim()),
         conteudoCriptografado: this.criptografia.criptografar(JSON.stringify(conteudo)),
@@ -75,7 +78,7 @@ export class ServicoReceitasNutricionais {
     return this.executorTenant.executar(tenantId, async (gerenciador) => {
       const profissionalId = await this.resolverProfissional(gerenciador, tenantId, usuario);
       const [receitas, total] = await gerenciador.getRepository(ReceitaNutricionalOrm).findAndCount({
-        where: this.montarFiltroVisibilidade(tenantId, usuario, profissionalId, consulta.origem, consulta.tipo),
+        where: this.montarFiltroVisibilidade(tenantId, usuario, profissionalId, consulta.origem, consulta.tipo, consulta.categoria),
         order: { atualizadoEm: 'DESC', id: 'DESC' },
         skip: (pagina - 1) * limite,
         take: limite
@@ -113,11 +116,21 @@ export class ServicoReceitasNutricionais {
     const conteudo = this.conteudoDe(dados);
     const totalItens = contarItensReceita(conteudo);
     return this.executorTenant.executar(tenantId, async (gerenciador) => {
+      await gerenciador.query(
+        'select id from receitas_nutricionais where tenant_id = $1 and id = $2 for update',
+        [tenantId, receitaId]
+      );
       const receita = await this.obterNoEscopo(gerenciador, tenantId, receitaId, usuario);
+      const versaoAtual = receita.versaoAtual ?? 1;
+      if (dados.versaoEsperada !== versaoAtual) {
+        throw new ConflictException('A receita foi alterada. Recarregue antes de salvar.');
+      }
       const profissionalId = await this.resolverProfissional(gerenciador, tenantId, usuario);
       this.garantirDonoPessoal(dados.origem, profissionalId);
       receita.origem = dados.origem;
       receita.tipo = dados.tipo;
+      receita.categoria = this.categoriaValida(dados.categoria);
+      receita.versaoAtual = versaoAtual + 1;
       receita.profissionalId = dados.origem === 'pessoal' ? profissionalId : undefined;
       receita.nomeCriptografado = this.criptografia.criptografar(dados.nome.trim());
       receita.conteudoCriptografado = this.criptografia.criptografar(JSON.stringify(conteudo));
@@ -158,12 +171,22 @@ export class ServicoReceitasNutricionais {
     };
   }
 
+  private categoriaValida(valor: string): string {
+    try {
+      return normalizarCategoriaReceita(valor);
+    } catch {
+      throw new BadRequestException('Categoria da receita invalida.');
+    }
+  }
+
   private resumo(receita: ReceitaNutricionalOrm, nome: string) {
     return {
       id: receita.id,
       nome,
       origem: receita.origem,
       tipo: receita.tipo,
+      categoria: receita.categoria ?? null,
+      versaoAtual: receita.versaoAtual ?? 1,
       totalItens: receita.totalItens,
       atualizadoEm: receita.atualizadoEm
     };
@@ -174,14 +197,16 @@ export class ServicoReceitasNutricionais {
     usuario: UsuarioAutenticado,
     profissionalId: string | undefined,
     origem?: OrigemReceitaNutricional,
-    tipo?: TipoReceitaNutricional
+    tipo?: TipoReceitaNutricional,
+    categoria?: string
   ): FindOptionsWhere<ReceitaNutricionalOrm>[] {
     const base: FindOptionsWhere<ReceitaNutricionalOrm> = { tenantId, arquivadoEm: IsNull() };
-    if (usuario.papel === 'SuperAdmin') return [{ ...base, ...(origem ? { origem } : {}), ...(tipo ? { tipo } : {}) }];
+    const filtrosCategoria = categoria ? { categoria: this.categoriaValida(categoria) } : {};
+    if (usuario.papel === 'SuperAdmin') return [{ ...base, ...(origem ? { origem } : {}), ...(tipo ? { tipo } : {}), ...filtrosCategoria }];
     const filtros: FindOptionsWhere<ReceitaNutricionalOrm>[] = [
-      { ...base, origem: 'clinica', ...(tipo ? { tipo } : {}) }
+      { ...base, origem: 'clinica', ...(tipo ? { tipo } : {}), ...filtrosCategoria }
     ];
-    if (profissionalId) filtros.push({ ...base, origem: 'pessoal', profissionalId, ...(tipo ? { tipo } : {}) });
+    if (profissionalId) filtros.push({ ...base, origem: 'pessoal', profissionalId, ...(tipo ? { tipo } : {}), ...filtrosCategoria });
     return origem ? filtros.filter((filtro) => filtro.origem === origem) : filtros;
   }
 

@@ -19,6 +19,12 @@ export class ReceitaNutricionalOrm {
   @Column({ type: 'varchar', length: 20 })
   tipo: TipoReceitaNutricional;
 
+  @Column({ type: 'varchar', length: 80, nullable: true })
+  categoria?: string | null;
+
+  @Column({ name: 'versao_atual', type: 'integer', default: 1 })
+  versaoAtual: number;
+
   @Column({ name: 'profissional_id', type: 'uuid', nullable: true })
   profissionalId?: string;
 

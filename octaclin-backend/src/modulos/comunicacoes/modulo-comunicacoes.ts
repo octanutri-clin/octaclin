@@ -55,6 +55,6 @@ const processadores = deveExecutarProcessadores()
     AdaptadorEmailSmtp,
     AdaptadorPushPlaceholder
   ],
-  exports: [ServicoComunicacoes]
+  exports: [ServicoComunicacoes, AdaptadorWhatsAppMeta, AdaptadorEmailSmtp]
 })
 export class ModuloComunicacoes {}

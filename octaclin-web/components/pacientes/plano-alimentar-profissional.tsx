@@ -1528,6 +1528,7 @@ export function PlanoAlimentarProfissional({ pacienteId, podeGerenciar, aoAltera
                   />
 
                   <BibliotecaReceitasNutricionais
+                    pacienteId={pacienteId}
                     refeicoes={() => formulario.refeicoes.map((refeicao) => ({
                       chave: refeicao.chaveCliente,
                       nome: refeicao.nome,
