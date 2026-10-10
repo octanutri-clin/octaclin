@@ -19,7 +19,7 @@
   e produção conforme relato do proprietário, sem consulta direta aos bancos.
   Atestados aguardam validação específica; limites históricos em
   `docs/history/phases/PLANO_FASE_312.md` e `tasks/plan-fase-312.md`.
-  Provenance do SBOM SKIPPED. Fase 313 em planejamento, não concluída.
+  Provenance do SBOM SKIPPED. Fase 313 em implementação, não concluída.
 
 ## Reconciliação em 2026-10-09
 

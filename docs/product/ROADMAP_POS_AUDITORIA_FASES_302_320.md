@@ -12,7 +12,7 @@ neste ciclo. Fase 311 integrada pelo PR #389 (`f5f9ba84`), CI final da PR
 pós-merge `38052856367` SUCCESS. 1067 aplicada/validada em staging/produção
 conforme proprietário, sem consulta direta. Handoff histórico em
 `tasks/plan-fase-312.md`; Provenance do SBOM permanece SKIPPED.
-Fase 313 planejada; ficha clínica aguarda revisão específica. Contratos/gaps
+Fase 313 em implementação; ficha clínica atualizada ratificada pelo proprietário/equipe. Contratos/gaps
 em `docs/history/phases/PLANO_FASE_313.md`, handoff em `tasks/plan.md`.
 Este é o plano **vigente** para as recomendações ainda abertas de
 `OCTACLIN_PRODUCT_FEATURE_AUDIT.md`. O diagnóstico de 2026-09-17 permanece
@@ -21,7 +21,7 @@ histórico; uma descrição antiga de lacuna não desfaz uma entrega posterior.
 ## Como executar e manter
 
 - Seguir a ordem numérica, salvo nova decisão explícita do proprietário. A fase
-  ativa em planejamento é a **313**; depois de sua integração, a próxima fase é a **314**. Cada fase recebe plano de execução e revisão de gaps
+  ativa em implementação é a **313**; depois de sua integração, a próxima fase é a **314**. Cada fase recebe plano de execução e revisão de gaps
   antes do código; concluir uma não implica iniciar a próxima sem reconciliar
   código, PRs e evidência operacional.
 - Implementar cada fatia funcional em sua branch/PR com a documentação

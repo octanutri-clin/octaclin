@@ -1,13 +1,13 @@
 # Ficha para validação clínica — Fase 313
 
-Status: **aguarda revisão e confirmação do proprietário/equipe clínica**.
-Preparada em 2026-10-10. Não é protocolo já validado nem autorização de implantação.
+Status: **regras ratificadas pela equipe/responsável, conforme confirmação do proprietário nesta conversa em 2026-10-10**.
+Preparada e ratificada em 2026-10-10. A ratificação das regras não constitui autorização de implantação em ambiente externo.
 O [parecer recebido](PARECER_REVISAO_FASE_313.md), datado de 10/10/2026,
 relata conferência sem divergências das 31 linhas/124 faixas/248 valores.
 Isso constitui conferência documental relatada, não aprovação clínica final.
-A ratificação das regras continua pendente. Não há dados de pacientes nesta ficha.
+Ratificação recebida: “Ficha revisada; equipe/responsável ratifica todas as regras”. Não há dados de pacientes nesta ficha.
 
-## 1. Fonte e versão propostas
+## 1. Fonte e versão ratificadas
 
 - Tabela numérica: [Guia MS/UFS 2022, anexo, p. impressa 50 / PDF 51](https://docs.bvsalud.org/biblioref/2022/12/1401909/livro_saps_guia_organizacao_vigilancia_alimentar_nutricional_2022.pdf).
 - Regras de dias/população: [Caderneta Brasileira das Gestantes 2026, p. impressa 87 / página 88 do arquivo (índice 87)](https://www.gov.br/saude/pt-br/assuntos/saude-de-a-a-z/s/saude-da-mulher/publicacoes/caderneta-brasileira-das-gestantes.pdf), consultada em 2026-10-10.
@@ -18,12 +18,12 @@ A ratificação das regras continua pendente. Não há dados de pacientes nesta 
   dos números. O download/checksum observado no planejamento anterior está
   registrado no plano; não equivale à validação desse dataset pelo parecer.
 
-Identificador proposto: `ms_ufs_2022_semanal_v1`, algoritmo
+Identificador: `ms_ufs_2022_semanal_v1`, algoritmo
 `ganho_gestacional_v1`. Preservar fonte/versão no resultado; mudança posterior
 cria outra versão, sem recalcular avaliações antigas. Curvas de faixa, sem
 calcular percentil individual, escore Z ou previsão de peso.
 
-## 2. Regras que precisam ser aprovadas em conjunto
+## 2. Regras ratificadas em conjunto
 
 1. Idade >=18 na data da avaliação, feto único, risco habitual confirmado.
    Tipo/risco desconhecidos não classificam; idade sem nascimento disponível
@@ -41,7 +41,7 @@ calcular percentil individual, escore Z ou previsão de peso.
    Não estimar pelo peso atual nem converter a origem para pré-gestacional medido.
    Usar esta alternativa quando não houver peso pré-gestacional conhecido;
    não escolher ou substituir uma referência silenciosamente. Sem confirmação
-   dessa base, registrar medidas sem classificação. Regra aguarda ratificação clínica.
+   dessa base, registrar medidas sem classificação. Regra ratificada na confirmação acima.
 3. IMC de referência = peso de referência / altura em metros ao quadrado.
    Cortes brutos: <18,5 baixo peso; [18,5;25) eutrofia; [25;30) sobrepeso;
    >=30 obesidade. Não arredondar antes de selecionar grupo.
@@ -69,7 +69,7 @@ calcular percentil individual, escore Z ou previsão de peso.
    Proposta: manter essa proteção para a referência, guardar medidas e mostrar
    motivo `referencia_fora_plausibilidade_tecnica` fora do intervalo, sem faixa.
    Não corrigir, truncar ou substituir valores. A aplicação à referência gestacional
-   exige ratificação nesta ficha; testar limites e distinguir o motivo na UI.
+   foi ratificada nesta ficha; testar limites e distinguir o motivo na UI.
 8. Gestante não recebe interpretações adultas de IMC atual, cintura/RCQ nem
    equações de gordura/massas. RCQ factual pode ser mostrado como razão numérica,
    sem classificação, alerta de risco ou gatilho automatizado derivado. Medidas
@@ -169,17 +169,17 @@ Casos adicionais obrigatórios:
 ## 6. Registro de revisão
 
 - [x] Conferência documental da transcrição relatada no parecer de 10/10/2026; não é validação clínica final.
-- [ ] Aprovar o tratamento das divergências da semana 13.
-- [ ] Confirmar idade >=18 na avaliação, feto único e risco habitual.
-- [ ] Confirmar origem e limite de medida substituta até 8s0d.
+- [x] Aprovar o tratamento das divergências da semana 13.
+- [x] Confirmar idade >=18 na avaliação, feto único e risco habitual.
+- [x] Confirmar origem e limite de medida substituta até 8s0d.
 - [x] Proprietário decidiu incluir peso habitual como origem própria nesta conversa.
-- [ ] Ratificar uso de peso habitual anterior à gestação, confirmação do
+- [x] Ratificar uso de peso habitual anterior à gestação, confirmação do
       profissional, rastreabilidade e exemplos; inclusão não é aprovação clínica.
-- [ ] Ratificar origem da IG por avaliação, tratamento de inconsistência e
+- [x] Ratificar origem da IG por avaliação, tratamento de inconsistência e
       heurística técnica de plausibilidade distinta de limite clínico.
-- [ ] Confirmar arredondamento dos dias e bordas 9s4d/40s3d/40s4d.
-- [ ] Confirmar inclusividade, precisão, exemplos e textos sem prescrição.
-- [ ] Registrar confirmação clínica no handoff (data e resposta documental,
+- [x] Confirmar arredondamento dos dias e bordas 9s4d/40s3d/40s4d.
+- [x] Confirmar inclusividade, precisão, exemplos e textos sem prescrição.
+- [x] Registrar confirmação clínica no handoff (data e resposta documental,
       sem publicar dados pessoais da equipe).
 
 Se qualquer item divergir, alterar esta ficha e seus exemplos antes do

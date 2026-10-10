@@ -2066,6 +2066,33 @@ encaminhamentos; não apagar linhas nem executar rollback direto com documentos
 emitidos. Qualquer rollback da aplicação deve preservar leitura/impressão dos
 snapshots existentes.
 
+## Migration da Fase 313 — acompanhamento gestacional
+
+`AcompanhamentoGestacional1720000001068` cria episódios, referências imutáveis e
+consentimentos específicos; adiciona vínculos opcionais e replay às avaliações.
+**Aplicação externa pendente:** este ciclo aplica `up/down` somente em PostgreSQL
+Testecontainers descartável. A ratificação clínica não comprova aplicação em
+staging/produção.
+
+Antes do merge/deploy, o operador autorizado deve conferir o commit, alvo,
+projeto/branch/banco e role owner, usando o procedimento fora de banda deste
+runbook. Runtime continua sem credencial owner, DDL ou BYPASSRLS. Conferir grants
+DML na role de aplicação para `gestacoes_pacientes`, `referencias_gestacao` e
+`consentimentos_gestacao`, políticas e FORCE RLS, registro 1068 e três colunas de
+`avaliacoes_antropometricas`. Não habilitar migrations no boot para suprir grants.
+
+Não há backfill ou vínculo automático de avaliações antigas. Compartilhamento e
+aceite específico começam desligados. Verificar com fixtures autorizadas em
+staging: episódio, avaliação, referência nova, compartilhamento+aceite, retirada,
+revogação e leitura de snapshots. Nenhum peso ou contexto clínico em logs.
+
+`down()` recusa se houver episódios, referências, consentimentos ou avaliações
+com vínculo/chave nova. `row_security=off` impede que um filtro RLS esconda dados
+no preflight: uma role que não puder conferir globalmente deve falhar. Nunca
+apagar linhas para permitir downgrade. Depois de gravar dados, manter schema e
+histórico; rollback da aplicação deve preservar leitura e bloqueio das
+interpretações adultas em gestantes. Corrigir schema com migration futura.
+
 ## Antes de ativar clientes reais
 
 Ler e executar `CHECKLIST_GO_LIVE.md`.

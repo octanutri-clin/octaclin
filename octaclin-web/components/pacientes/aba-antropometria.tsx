@@ -1,6 +1,11 @@
 'use client';
 
-import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
+import { motivoGestacional, fonteGestacional } from '@/lib/linguagem-gestacional';
+
+import { FormularioContextoGestacional } from './formulario-contexto-gestacional';
+import type { ContextoGestacaoApi } from '@/lib/gestacoes-paciente-api';
+import { GestacoesPaciente } from './gestacoes-paciente';
+import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Botao } from '@/components/ui/botao';
 import { AreaTexto, Campo, Rotulo, Selecao } from '@/components/ui/campo';
 import { Cartao, CartaoCabecalho, CartaoConteudo, CartaoTitulo } from '@/components/ui/cartao';
@@ -78,6 +83,7 @@ const ROTULO_CLASSIFICACAO: Record<string, string> = {
 
 /** Aviso do dominio traduzido. O generico com prefixo cobre `dobra_ausente:coxa`. */
 const ROTULO_AVISO: Record<string, string> = {
+  gestante_sem_interpretacao_adulta_cintura_rcq_composicao: 'Gestante: medidas preservadas, sem interpretação adulta de cintura/RCQ ou estimativa de composição corporal.',
   peso_fora_da_faixa: 'Peso fora da faixa aceita.',
   altura_fora_da_faixa: 'Altura fora da faixa aceita.',
   imc_fora_da_faixa_plausivel: 'Peso e altura juntos dao um IMC impossivel. Confira os dois.',
@@ -179,7 +185,18 @@ interface AbaAntropometriaProps {
   dataNascimento?: string;
 }
 
-export function AbaAntropometria({ pacienteId, podeGerenciar, dataNascimento }: AbaAntropometriaProps) {
+export function AbaAntropometria(props: AbaAntropometriaProps) {
+  return <AbaAntropometriaConteudo key={props.pacienteId} {...props}/>;
+}
+function AbaAntropometriaConteudo({ pacienteId, podeGerenciar, dataNascimento }: AbaAntropometriaProps) {
+  const [condicaoAvaliacao,setCondicaoAvaliacao] = useState<'gestante'|'nao_gestante'|''>('');
+  const [confirmouCondicao,setConfirmouCondicao] = useState(false);
+  const [confirmouDivergencia,setConfirmouDivergencia] = useState(false);
+  const [contextoGestacao,setContextoGestacao] = useState<ContextoGestacaoApi>({});
+  const vivo = useRef(false);
+  const chaveAvaliacao = useRef<{ body: string; id: string }|null>(null);
+  useEffect(() => {vivo.current = true;return () => {vivo.current = false;};},[]);
+
   const [serie, setSerie] = useState<SerieAntropometricaApi | null>(null);
   const [carregando, setCarregando] = useState(true);
   const [salvando, setSalvando] = useState(false);
@@ -236,7 +253,7 @@ export function AbaAntropometria({ pacienteId, podeGerenciar, dataNascimento }: 
     return ano - anoN - (mes < mesN || (mes === mesN && dia < diaN) ? 1 : 0);
   })();
   const classePrevia = imcPrevia === undefined || condicaoBiologica === null ||
-    condicaoBiologica === 'gestante' || idadePrevia === undefined || idadePrevia < 20
+    (condicaoAvaliacao === 'gestante' || !confirmouCondicao) || idadePrevia === undefined || idadePrevia < 20
     ? undefined
     : idadePrevia >= 60
       ? imcPrevia < 22 ? 'baixo_peso' : imcPrevia <= 27 ? 'eutrofia' : 'sobrepeso'
@@ -262,7 +279,8 @@ export function AbaAntropometria({ pacienteId, podeGerenciar, dataNascimento }: 
     setErro(null);
     setSucesso(null);
 
-    if (formulario.protocolo !== 'nenhum' && !formulario.sexo) {
+    if (!condicaoAvaliacao || !confirmouCondicao) {setErro('Confirme a condicao na data da avaliacao.');return;}
+    if (condicaoAvaliacao !== 'gestante' && formulario.protocolo !== 'nenhum' && !formulario.sexo) {
       setErro('Informe o sexo: os protocolos de composição corporal usam equações diferentes por sexo.');
       return;
     }
@@ -280,7 +298,10 @@ export function AbaAntropometria({ pacienteId, podeGerenciar, dataNascimento }: 
       if (cintura !== undefined) circunferencias.cintura = cintura;
       if (quadril !== undefined) circunferencias.quadril = quadril;
 
-      await registrarAvaliacaoAntropometrica(pacienteId, {
+      const corpoAvaliacao = {
+        condicaoGestacional: condicaoAvaliacao,
+        confirmarDivergenciaPerfil: confirmouDivergencia,
+        ...(condicaoAvaliacao === 'gestante' ? { gestacao: contextoGestacao } : {}),
         avaliadaEm: formulario.avaliadaEm,
         protocolo: formulario.protocolo,
         sexo: formulario.sexo || undefined,
@@ -291,14 +312,20 @@ export function AbaAntropometria({ pacienteId, podeGerenciar, dataNascimento }: 
         ...(Object.keys(dobras).length ? { dobras } : {}),
         consultaId: formulario.consultaId || undefined,
         metricasCompartilhadasPortal: formulario.metricasCompartilhadasPortal
-      });
+      };
+      const body = JSON.stringify(corpoAvaliacao);
+      if (!chaveAvaliacao.current || chaveAvaliacao.current.body !== body) chaveAvaliacao.current = { body,id: crypto.randomUUID() };
+      await registrarAvaliacaoAntropometrica(pacienteId,{ ...corpoAvaliacao,chaveCriacao: chaveAvaliacao.current.id });
+      if (!vivo.current) return;
+      chaveAvaliacao.current = null;setConfirmouCondicao(false);setConfirmouDivergencia(false);setContextoGestacao({});
       setFormulario((atual) => ({ ...formularioInicial(), protocolo: atual.protocolo, sexo: atual.sexo }));
       setSucesso('Avaliação registrada.');
       await carregar();
     } catch (erroAtual) {
+      if (!vivo.current) return;
       setErro(mensagemFalhaInterface(erroAtual, 'Não foi possível registrar a avaliação.'));
     } finally {
-      setSalvando(false);
+      if (vivo.current) setSalvando(false);
     }
   }
 
@@ -307,9 +334,11 @@ export function AbaAntropometria({ pacienteId, podeGerenciar, dataNascimento }: 
     setSucesso(null);
     try {
       await excluirAvaliacaoAntropometrica(pacienteId, avaliacaoId);
+      if (!vivo.current) return;
       setSucesso('Avaliação removida da série.');
       await carregar();
     } catch (erroAtual) {
+      if (!vivo.current) return;
       setErro(mensagemFalhaInterface(erroAtual, 'Não foi possível remover a avaliação.'));
     }
   }
@@ -318,9 +347,11 @@ export function AbaAntropometria({ pacienteId, podeGerenciar, dataNascimento }: 
     setErro(null);
     try {
       await atualizarCompartilhamentoProgresso(pacienteId, avaliacaoId, metricas);
+      if (!vivo.current) return;
       setSucesso('Compartilhamento do progresso atualizado.');
       await carregar();
     } catch (erroAtual) {
+      if (!vivo.current) return;
       setErro(mensagemFalhaInterface(erroAtual, 'Não foi possível atualizar o compartilhamento.'));
     }
   }
@@ -332,11 +363,13 @@ export function AbaAntropometria({ pacienteId, podeGerenciar, dataNascimento }: 
     setComparando(true);
     try {
       const dados = await listarAvaliacoesAntropometricas(pacienteId, { avaliacaoAnteriorId, avaliacaoAtualId });
+      if (!vivo.current) return;
       setDeltaSelecionado(dados.deltaSelecionado ?? []);
     } catch (erroAtual) {
+      if (!vivo.current) return;
       setErroComparacao(mensagemFalhaInterface(erroAtual, 'Não foi possível comparar as avaliações.'));
     } finally {
-      setComparando(false);
+      if (vivo.current) setComparando(false);
     }
   }
 
@@ -344,6 +377,7 @@ export function AbaAntropometria({ pacienteId, podeGerenciar, dataNascimento }: 
 
   return (
     <div className="grid gap-4">
+      <GestacoesPaciente key={pacienteId} pacienteId={pacienteId} podeGerenciar={podeGerenciar}/>
       {erro ? (
         <p role="alert" className="rounded-md border border-perigo-borda bg-perigo-suave p-3 text-sm text-perigo-forte">
           {erro}
@@ -510,13 +544,22 @@ export function AbaAntropometria({ pacienteId, podeGerenciar, dataNascimento }: 
           </CartaoCabecalho>
           <CartaoConteudo>
             <form onSubmit={salvar} className="grid gap-3">
+          <fieldset className="grid gap-3 sm:col-span-2">
+            <legend className="font-semibold">Condição na data da avaliação</legend>
+            <p className="text-sm">Cadastro atual: {condicaoBiologica?.replaceAll('_',' ') ?? 'indisponível'}. Confirme a condição para a data registrada.</p>
+            <label>Condição<Selecao required value={condicaoAvaliacao} onChange={e => {setCondicaoAvaliacao(e.target.value as 'gestante'|'nao_gestante');setConfirmouCondicao(false);setConfirmouDivergencia(false);setContextoGestacao({});}}><option value="">Confirme a condição</option><option value="nao_gestante">Não gestante</option><option value="gestante">Gestante</option></Selecao></label>
+            <label><input type="checkbox" required checked={confirmouCondicao} onChange={e => setConfirmouCondicao(e.target.checked)}/> Confirmo a condição e a idade gestacional informadas para a data desta avaliação.</label>
+            {condicaoBiologica && condicaoBiologica !== 'nao_informada' && condicaoAvaliacao && (condicaoAvaliacao === 'gestante') !== (condicaoBiologica === 'gestante') ? <label><input type="checkbox" required checked={confirmouDivergencia} onChange={e => setConfirmouDivergencia(e.target.checked)}/> Confirmo a divergência com o cadastro atual; o cadastro não será alterado.</label> : null}
+            {condicaoAvaliacao === 'gestante' ? <FormularioContextoGestacional key={pacienteId} pacienteId={pacienteId} contexto={contextoGestacao} alterar={c => {setContextoGestacao(c);setConfirmouCondicao(false);}}/> : null}
+          </fieldset>
+
               <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                 <label className="grid gap-1">
                   <Rotulo>Data</Rotulo>
                   <Campo
                     type="date"
                     value={formulario.avaliadaEm}
-                    onChange={(evento) => setFormulario((atual) => ({ ...atual, avaliadaEm: evento.target.value }))}
+                    onChange={(evento) => { setFormulario((atual) => ({ ...atual, avaliadaEm: evento.target.value })); setContextoGestacao({}); setConfirmouCondicao(false); }}
                   />
                 </label>
                 <label className="grid gap-1">
@@ -557,7 +600,7 @@ export function AbaAntropometria({ pacienteId, podeGerenciar, dataNascimento }: 
                     `${formatar(imcPrevia, 2)} kg/m²${classePrevia ? ` · ${ROTULO_CLASSIFICACAO[classePrevia]}` : ''}`}
                 </p>
                 {imcPrevia !== undefined && !classePrevia ? <p className="text-xs text-texto-suave">
-                  {condicaoBiologica === 'gestante' ? 'Gestante: classificação depende da semana gestacional.' :
+                  {condicaoAvaliacao === 'gestante' ? 'Gestante: classificação depende da semana gestacional e do peso de referência.' :
                     idadePrevia !== undefined && idadePrevia < 20 ? 'Menor de 20 anos: classificação exige escore-z por idade e sexo.' :
                       'Classificação disponível após confirmação dos dados cadastrais.'}
                 </p> : null}
@@ -704,6 +747,12 @@ export function AbaAntropometria({ pacienteId, podeGerenciar, dataNascimento }: 
                       </Botao>
                     ) : null}
                   </div>
+                  {avaliacao.resultado.gestacional?.condicao === 'gestante' ? <div className="mt-3 text-sm">
+                    <p>IMC de referência: {avaliacao.resultado.gestacional.imcReferencia?.toFixed(2) ?? '—'}. Ganho acumulado: {avaliacao.resultado.gestacional.ganhoKg?.toLocaleString('pt-BR') ?? '—'} kg. Referência {avaliacao.resultado.gestacional.referenciaNumero ?? 'sem vínculo'}.</p>
+                    <p>{avaliacao.resultado.gestacional.classificacao ? `${avaliacao.resultado.gestacional.classificacao} da faixa da semana ${avaliacao.resultado.gestacional.semanaCurva}` : 'Sem classificação gestacional'}.</p>
+                    {avaliacao.resultado.gestacional.motivos.map(m => <p key={m}>{motivoGestacional(m)}</p>)}
+                    <p>Fonte: {fonteGestacional(avaliacao.resultado.gestacional.source_id)}. Idade gestacional: {avaliacao.resultado.gestacional.contexto?.semanas ?? '—'}s {avaliacao.resultado.gestacional.contexto?.dias ?? 0}d.</p>
+                  </div> : null}
                   {podeGerenciar ? (
                     <fieldset className="mt-3 grid gap-2 rounded-md border border-linha p-3">
                       <legend className="px-1 text-xs font-medium text-tinta">Compartilhamento no progresso</legend>

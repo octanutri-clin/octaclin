@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 const configuracao = {
   webUrl: process.env.E2E_WEB_URL ?? 'http://localhost:3000',
   apiUrl: process.env.E2E_API_URL ?? 'http://localhost:3001',
@@ -216,6 +217,21 @@ async function main() {
   assert(typeof pacientes.corpo.itens[0].contato === 'string', 'paciente precisa retornar contato descriptografado.');
 
   const pacienteDocumentoId = pacientes.corpo.itens[0].id;
+  // Fase 313: contratos sintéticos de episódio; o cálculo clínico é provado no backend.
+  const raizGestacoes = `/api/pacientes/${encodeURIComponent(pacienteDocumentoId)}/gestacoes`;
+  const entradaGestacao = { confirmar: true, chaveCriacao: randomUUID(), referencia: { pesoKg: 60, alturaCm: 160, origem: 'peso_habitual_informado', pesoHabitualAnteriorConfirmado: true } };
+  const criadaGestacao = await requisitarJsonStatus(raizGestacoes, 201, 'abrir gestacao sintetica', { method: 'POST', body: JSON.stringify(entradaGestacao) });
+  const replayGestacao = await requisitarJson(raizGestacoes, { method: 'POST', body: JSON.stringify(entradaGestacao) });
+  assert([200, 201].includes(replayGestacao.resposta.status) && replayGestacao.corpo.id === criadaGestacao.id, 'replay da gestacao preserva identidade');
+  assert(criadaGestacao.compartilhada === false, 'gestacao começa sem liberação no portal');
+  const detalheGestacao = await requisitarJsonStatus(`${raizGestacoes}/${criadaGestacao.id}`, 200, 'detalhe da gestacao sintetica');
+  assert(Array.isArray(detalheGestacao.avaliacoes) && detalheGestacao.proximoCursor === null, 'contrato de cobertura por episodio');
+  const referenciaGestacao = await requisitarJsonStatus(`${raizGestacoes}/${criadaGestacao.id}/referencias`, 201, 'nova referencia gestacional', { method: 'POST', body: JSON.stringify({ confirmar: true, versao: criadaGestacao.versao, referencia: { ...entradaGestacao.referencia, pesoKg: 61 } }) });
+  assert(referenciaGestacao.numero === 2, 'referencia corrigida cria versao nova');
+  const encerradaGestacao = await requisitarJsonStatus(`${raizGestacoes}/${criadaGestacao.id}/encerrar`, 201, 'encerrar gestacao sintetica', { method: 'POST', body: JSON.stringify({ confirmar: true, versao: referenciaGestacao.versao }) });
+  assert(encerradaGestacao.status === 'encerrada', 'episodio encerrado permanece legivel');
+  const bloqueadaGestacao = await requisitarJson(`${raizGestacoes}/${criadaGestacao.id}/referencias`, { method: 'POST', body: JSON.stringify({ confirmar: true, versao: encerradaGestacao.versao, referencia: {} }) });
+  assertStatus(bloqueadaGestacao.resposta, 409, 'encerramento bloqueia nova referencia');
   const entradaEncaminhamento = {
     tipo: 'encaminhamento',
     encaminhamento: { destinoServico: 'Serviço sintético', motivoEncaminhamento: 'Avaliação de rotina sintética.' },

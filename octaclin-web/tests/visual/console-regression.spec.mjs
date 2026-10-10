@@ -1,4 +1,5 @@
 import AxeBuilder from '@axe-core/playwright';
+import { detalheGestacao, episodioId } from './fixtures-gestacoes.mjs';
 import { expect, test } from '@playwright/test';
 
 const credenciais = {
@@ -1192,6 +1193,10 @@ async function prepararProntuarioMockado(page, {
       return;
     }
     await route.fulfill({ status: 405, contentType: 'application/json', body: JSON.stringify({ mensagem: 'Método inesperado.' }) });
+  });
+
+  await page.route('**/api/pacientes/paciente-1/gestacoes**', async route => {
+    await route.fulfill({ status: 200,contentType: 'application/json',body: JSON.stringify({ itens: [],proximoCursor: null }) });
   });
 
   await page.route('**/api/pacientes/paciente-1/perfil-cadastro', async (route) => {
@@ -4220,4 +4225,74 @@ test.describe('operacoes rollout seguro', () => {
     await expect(page.getByText('Funcionalidades atualizadas para a clínica selecionada e registradas na auditoria.')).toBeVisible();
     await assertSemOverflowHorizontal(page);
   });
+});
+
+
+test.describe('acompanhamento gestacional - Fase 313', () => {
+
+test('Fase 313: episodios, series separadas, duplicatas e cobertura acessivel', async ({ page }) => {
+  await prepararProntuarioMockado(page);
+  let g = detalheGestacao();
+  let confirmouCompartilhamento = false;
+  await page.route('**/api/pacientes/paciente-1/gestacoes**', async route => {
+    const url = new URL(route.request().url());
+    if (route.request().method() === 'PUT') {
+      const body = route.request().postDataJSON();
+      confirmouCompartilhamento = body.confirmar && body.compartilhada;
+      g = { ...g, compartilhada: true, versao: 2 };
+      return route.fulfill({ json: g });
+    }
+    if (url.pathname.endsWith('/gestacoes')) return route.fulfill({ json: { itens: [g], proximoCursor: null } });
+    return route.fulfill({ json: url.searchParams.has('cursor') ? { ...g, avaliacoes: [], proximoCursor: null } : g });
+  });
+  page.on('dialog', dialog => dialog.accept());
+  await page.goto('/pacientes/paciente-1');
+  await page.getByRole('tab', { name: 'Avaliações', exact: true }).click();
+  await page.getByRole('tab', { name: 'Antropometria', exact: true }).click();
+  await page.getByRole('combobox', { name: 'Gestação', exact: true }).selectOption(episodioId);
+  const table = page.getByRole('table', { name: 'Avaliações da referência 1' });
+  await expect(table.getByRole('row')).toHaveCount(3);
+  await expect(page.getByText(/Cobertura parcial: carregue mais/)).toBeVisible();
+  await page.getByRole('combobox', { name: 'Versão da referência', exact: true }).selectOption('2');
+  await expect(page.getByRole('table', { name: 'Avaliações da referência 2' }).getByRole('row')).toHaveCount(2);
+  await page.getByRole('button', { name: 'Liberar no portal' }).click();
+  await expect.poll(() => confirmouCompartilhamento).toBe(true);
+  await page.getByRole('button', { name: 'Carregar mais avaliações', exact: true }).click();
+  await expect(page.getByText('Todas as avaliações disponíveis desta gestação foram carregadas. Cada versão usa sua própria base de peso e altura.')).toBeVisible();
+  expect((await new AxeBuilder({ page }).include('main').withTags(['wcag2a', 'wcag2aa', 'wcag21aa']).analyze()).violations).toEqual([]);
+  await assertSemOverflowHorizontal(page);
+});
+
+test('Fase 313: confirma condicao, divergencia e IG na data antes de registrar', async ({ page }) => {
+  await prepararProntuarioMockado(page);
+  let entrada;
+  await page.route('**/api/pacientes/paciente-1/gestacoes', route => route.fulfill({ json: { itens: [detalheGestacao()], proximoCursor: null } }));
+  await page.route('**/api/pacientes/paciente-1/avaliacoes-antropometricas', async route => {
+    if (route.request().method() === 'POST') {entrada = route.request().postDataJSON();return route.fulfill({ status: 201, json: { id: 'avaliacao-313' } });}
+    return route.fulfill({ json: { avaliacoes: [], deltaUltimas: [] } });
+  });
+  await page.goto('/pacientes/paciente-1');
+  await page.getByRole('tab', { name: 'Avaliações', exact: true }).click();
+  await page.getByRole('tab', { name: 'Antropometria', exact: true }).click();
+  await page.getByRole('combobox', { name: 'Condição', exact: true }).selectOption('gestante');
+  await page.getByRole('combobox', { name: 'Gestação vinculada', exact: true }).selectOption(episodioId);
+  await page.getByLabel('Semanas completas na avaliação').fill('22');
+  await page.getByLabel('Dias adicionais').fill('4');
+  await page.getByRole('combobox', { name: 'Origem da idade gestacional', exact: true }).selectOption('pre_natal');
+  await page.getByRole('combobox', { name: 'Tipo da gestação', exact: true }).selectOption('unica');
+  await page.getByRole('combobox', { name: 'Risco confirmado', exact: true }).selectOption('habitual');
+  await page.getByLabel('Peso (kg)', { exact: true }).fill('61,2');
+  await page.getByLabel('Altura (cm)', { exact: true }).fill('160');
+  const confirmar = page.getByRole('checkbox', { name: /Confirmo a condição e a idade/ });
+  await confirmar.check();
+  await page.getByLabel('Dias adicionais').fill('0');
+  await expect(confirmar).not.toBeChecked();
+  await confirmar.check();
+  await page.getByRole('checkbox', { name: /Confirmo a divergência/ }).check();
+  await page.getByRole('button', { name: 'Registrar avaliação' }).click();
+  await expect.poll(() => entrada).toMatchObject({ condicaoGestacional: 'gestante', confirmarDivergenciaPerfil: true, pesoKg: 61.2, gestacao: { gestacaoId: episodioId, referenciaNumero: 2, semanas: 22, dias: 0, origemIdadeGestacional: 'pre_natal' } });
+  expect(entrada.chaveCriacao).toMatch(/^[0-9a-f-]{36}$/);
+  await expect(page.getByText('Avaliação registrada.', { exact: true })).toBeVisible();
+});
+
 });

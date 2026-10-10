@@ -87,13 +87,13 @@ Atualizado em 2026-10-10.
   e produção; não houve consulta direta aos bancos. Atestados seguem pendentes.
   Limites históricos preservados em `tasks/todo-fase-312.md`; handoff arquivado
   em `tasks/plan-fase-312.md`. Provenance do SBOM permanece SKIPPED.
-- Fase 313 em planejamento, implementação não iniciada: acompanhamento
+- Fase 313 em implementação, com ficha ratificada: acompanhamento
   gestacional MS, episódios explícitos, referência versionada, gráfico e portal
   com liberação profissional e aceite específico/revogável do paciente.
   Contratos/gaps em `docs/history/phases/PLANO_FASE_313.md`, sequência em
   `tasks/todo-fase-313.md`, handoff atual em `tasks/plan.md`. Ficha clínica em
-  `docs/product/FICHA_VALIDACAO_CLINICA_FASE_313.md` aguarda confirmação da equipe;
-  esse gate bloqueia classificador. Modelo recomendado: GPT-6.1 Sol médio.
+  `docs/product/FICHA_VALIDACAO_CLINICA_FASE_313.md` ratificada pelo proprietário/equipe em 2026-10-10;
+  testes e gates em conclusão. Modelo recomendado: GPT-6.1 Sol médio.
 - Pendência operacional observada: Monitor de produção `38065380981` FAIL,
   HTTP 503 após três tentativas em 2026-10-10. Causa/endpoint não identificados;
   não atribuir ao PR #390 nem declarar saúde de produção a partir de CI.

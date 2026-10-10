@@ -1,3 +1,15 @@
+import { PerfilCadastroPacienteOrm } from '../../modulos/pacientes/infraestrutura/perfil-cadastro-paciente.orm';
+import { PacienteOrm } from '../../modulos/pacientes/infraestrutura/paciente.orm';
+import { AvaliacaoAntropometricaOrm } from '../../modulos/pacientes/infraestrutura/avaliacao-antropometrica.orm';
+import { ConsentimentoGestacaoOrm } from '../../modulos/pacientes/infraestrutura/consentimento-gestacao.orm';
+import { ReferenciaGestacaoOrm } from '../../modulos/pacientes/infraestrutura/referencia-gestacao.orm';
+import { GestacaoPacienteOrm } from '../../modulos/pacientes/infraestrutura/gestacao-paciente.orm';
+import { AcompanhamentoGestacional1720000001068 } from './migracoes/1720000001068-AcompanhamentoGestacional';
+import { ServicoGestacoesPaciente } from '../../modulos/pacientes/aplicacao/servico-gestacoes-paciente';
+import { ServicoPacientes } from '../../modulos/pacientes/aplicacao/servico-pacientes';
+import { ServicoPortalCliente } from '../../modulos/clientes/aplicacao/servico-portal-cliente';
+import { UsuarioAutenticado } from '../../modulos/auth/dominio/usuario-autenticado';
+import { TERMO_GESTACAO } from '../../modulos/pacientes/dominio/contexto-gestacional';
 import { randomUUID } from 'node:crypto';
 import { Client } from 'pg';
 import { GenericContainer, StartedTestContainer, Wait } from 'testcontainers';
@@ -201,6 +213,12 @@ descrever('RLS e isolamento multi-tenant integral em Postgres real', () => {
       synchronize: false,
       logging: false,
       entities: [
+        PerfilCadastroPacienteOrm,
+        PacienteOrm,
+        AvaliacaoAntropometricaOrm,
+        ConsentimentoGestacaoOrm,
+        ReferenciaGestacaoOrm,
+        GestacaoPacienteOrm,
         ProfissionalOrm,
         TenantOrm,
         TenantConfiguracaoOrm,
@@ -1317,4 +1335,135 @@ descrever('RLS e isolamento multi-tenant integral em Postgres real', () => {
     );
     expect(conferencia.rows).toEqual([{ acao: 'prova.append' }]);
   });
+  it('Fase 313 reverte migration vazia no PostgreSQL sem apagar registros legados', async () => {
+    if (!fonteDadosAdministrativa) throw new Error('Conexao administrativa descartavel indisponivel.');
+    const runner = fonteDadosAdministrativa.createQueryRunner();
+    await runner.connect();await runner.startTransaction();
+    try {
+      const antes = await runner.query('select count(*)::int as total from avaliacoes_antropometricas');
+      await new AcompanhamentoGestacional1720000001068().down(runner);
+      expect((await runner.query("select to_regclass('public.gestacoes_pacientes') as tabela"))[0].tabela).toBeNull();
+      expect(await runner.query('select count(*)::int as total from avaliacoes_antropometricas')).toEqual(antes);
+    } finally {await runner.rollbackTransaction();await runner.release();}
+  });
+
+  it('Fase 313 prova replay, referencias imutaveis, FKs e concorrencia no servico real', async () => {
+    if (!executorTenant || !cliente || !fonteDadosRuntime) throw new Error('Banco da prova indisponivel.');
+    const cripto = new CriptografiaDadosSensiveis();
+    const servico = new ServicoGestacoesPaciente(executorTenant,cripto);
+    const pacientes = new ServicoPacientes(executorTenant,cripto,{} as ServicoPortalCliente,servico);
+    const u: UsuarioAutenticado = { tenantId: tenantA,usuarioId: usuarioIdTenantA,papel: 'Professional',permissoes: ['pacientes.ler','pacientes.gerenciar'],emailHash: 'sintetico' };
+    await comoTenant(tenantA);
+    await cliente.query("update pacientes set data_nascimento = '1990-01-01' where id = $1",[pacienteIdTenantA]);
+    const pedido = { confirmar: true,chaveCriacao: randomUUID(),referencia: { pesoKg: 60,alturaCm: 160,origem: 'pre_gestacional_informado' as const } };
+    const criadas = await Promise.all([servico.criar(tenantA,pacienteIdTenantA,u,pedido),servico.criar(tenantA,pacienteIdTenantA,u,pedido)]);
+    expect(criadas[0].id).toBe(criadas[1].id);
+    const g = criadas[0];
+    await expect(servico.criar(tenantA,pacienteIdTenantA,u,{ ...pedido,referencia: { ...pedido.referencia,pesoKg: 61 } })).rejects.toThrow('Chave usada');
+    await expect(servico.detalhe(tenantA,pacienteIdTenantB,g.id,u)).rejects.toThrow();
+    const novos = await Promise.allSettled([servico.mudar(tenantA,pacienteIdTenantA,g.id,u,{ confirmar: true,versao: 1,referencia: { ...pedido.referencia,pesoKg: 62 } } as import('../../modulos/pacientes/aplicacao/dtos-gestacoes').NovaReferenciaGestacaoDto,'referencia'),servico.mudar(tenantA,pacienteIdTenantA,g.id,u,{ confirmar: true,versao: 1,referencia: { ...pedido.referencia,pesoKg: 63 } } as import('../../modulos/pacientes/aplicacao/dtos-gestacoes').NovaReferenciaGestacaoDto,'referencia')]);
+    expect(novos.filter(r => r.status === 'fulfilled')).toHaveLength(1);expect(novos.filter(r => r.status === 'rejected')).toHaveLength(1);
+    const atual = await servico.detalhe(tenantA,pacienteIdTenantA,g.id,u);
+    expect(atual.numero).toBe(2);
+    await expect(cliente.query('update referencias_gestacao set contexto_criptografado = $1 where gestacao_id = $2',[Buffer.from('sintetico'),g.id])).rejects.toMatchObject({ code: 'P0001' });
+    await expect(cliente.query('delete from referencias_gestacao where gestacao_id = $1',[g.id])).rejects.toMatchObject({ code: 'P0001' });
+    await expect(cliente.query('insert into referencias_gestacao(tenant_id,paciente_id,gestacao_id,numero,autor_usuario_id,contexto_criptografado) values ($1,$2,$3,9,$4,$5)',[tenantA,pacienteIdTenantB,g.id,usuarioIdTenantA,Buffer.from('sintetico')])).rejects.toMatchObject({ code: '23503' });
+    const outroPaciente = await cliente.query<{ id: string }>('insert into pacientes(tenant_id,profissional_responsavel_id,nome_criptografado) values ($1,$2,$3) returning id',[tenantA,profissionalIdTenantA,Buffer.from('outro-paciente-sintetico')]);
+    await expect(cliente.query('insert into referencias_gestacao(tenant_id,paciente_id,gestacao_id,numero,autor_usuario_id,contexto_criptografado) values ($1,$2,$3,9,$4,$5)',[tenantA,outroPaciente.rows[0].id,g.id,usuarioIdTenantA,Buffer.from('sintetico')])).rejects.toMatchObject({ code: '23503' });
+    await expect(servico.detalhe(tenantA,outroPaciente.rows[0].id,g.id,u)).rejects.toThrow();
+    const avaliacao = { condicaoGestacional: 'gestante' as const,chaveCriacao: randomUUID(),avaliadaEm: '2026-10-10',pesoKg: 65,alturaCm: 160,observacoes: 'Nota interna sintetica.',gestacao: { gestacaoId: g.id,referenciaNumero: 2,semanas: 22,dias: 0,tipo: 'unica' as const,risco: 'habitual' as const,origemIdadeGestacional: 'pre_natal' as const } };
+    const registros = await Promise.all([pacientes.registrarAvaliacaoAntropometrica(tenantA,pacienteIdTenantA,usuarioIdTenantA,avaliacao,u),pacientes.registrarAvaliacaoAntropometrica(tenantA,pacienteIdTenantA,usuarioIdTenantA,avaliacao,u)]);
+    expect(registros[0].id).toBe(registros[1].id);expect(registros[0].resultado.gestacional?.referencia?.pesoKg).toBe(atual.referencia.pesoKg);
+    expect(JSON.stringify(registros[0].medidas)).not.toContain('_fingerprint');
+    await expect(cliente.query('update avaliacoes_antropometricas set medidas_criptografadas = $1 where id = $2',[Buffer.from('sintetico'),registros[0].id])).rejects.toMatchObject({ code: 'P0001' });
+    await cliente.query('update avaliacoes_antropometricas set metricas_compartilhadas_portal = $1 where id = $2',[JSON.stringify([]),registros[0].id]);
+    // A reference revision racing an assessment must either preserve v2 or reject.
+    const corrida = await Promise.allSettled([servico.mudar(tenantA,pacienteIdTenantA,g.id,u,{ confirmar: true,versao: atual.versao,referencia: { ...pedido.referencia,pesoKg: 64 } } as import('../../modulos/pacientes/aplicacao/dtos-gestacoes').NovaReferenciaGestacaoDto,'referencia'),pacientes.registrarAvaliacaoAntropometrica(tenantA,pacienteIdTenantA,usuarioIdTenantA,{ ...avaliacao,chaveCriacao: randomUUID() },u)]);
+    expect(corrida[0].status).toBe('fulfilled');
+    if (corrida[1].status === 'fulfilled') expect(corrida[1].value.resultado.gestacional?.referenciaNumero).toBe(2);
+    else expect(corrida[1].reason.getStatus()).toBe(409);
+    const apos = await servico.detalhe(tenantA,pacienteIdTenantA,g.id,u);
+    expect(apos.numero).toBe(3);expect(apos.avaliacoes.find(a => a.id === registros[0].id)?.gestacional?.referenciaNumero).toBe(2);
+    const fechamento = await Promise.allSettled([
+      servico.mudar(tenantA,pacienteIdTenantA,g.id,u,{ confirmar: true,versao: apos.versao },'encerrar'),
+      pacientes.registrarAvaliacaoAntropometrica(tenantA,pacienteIdTenantA,usuarioIdTenantA,{ ...avaliacao,chaveCriacao: randomUUID(),gestacao: { ...avaliacao.gestacao,referenciaNumero: 3 } },u)
+    ]);
+    expect(fechamento[0].status).toBe('fulfilled');
+    if (fechamento[1].status === 'rejected') expect(fechamento[1].reason.getStatus()).toBe(409);
+    await expect(pacientes.registrarAvaliacaoAntropometrica(tenantA,pacienteIdTenantA,usuarioIdTenantA,{ ...avaliacao,chaveCriacao: randomUUID(),gestacao: { ...avaliacao.gestacao,referenciaNumero: 3 } },u)).rejects.toThrow('encerrada');
+    const novoResponsavel = await prepararDadosRepresentativos(tenantA,'transferencia-313');
+    const transferencia = await Promise.allSettled([
+      executorTenant.executar(tenantA,m => m.query('update pacientes set profissional_responsavel_id = $1 where id = $2',[novoResponsavel.profissionalId,pacienteIdTenantA])),
+      servico.criar(tenantA,pacienteIdTenantA,u,{ ...pedido,chaveCriacao: randomUUID() })
+    ]);
+    expect(transferencia[0].status).toBe('fulfilled');
+    if (transferencia[1].status === 'rejected') expect(transferencia[1].reason.getStatus()).toBe(404);
+    await expect(servico.criar(tenantA,pacienteIdTenantA,u,pedido)).rejects.toThrow('Paciente nao encontrado');
+    await cliente.query('update pacientes set profissional_responsavel_id = $1 where id = $2',[profissionalIdTenantA,pacienteIdTenantA]);
+    await comoTenant(tenantB);
+    expect((await cliente.query('select id from gestacoes_pacientes where id = $1',[g.id])).rows).toHaveLength(0);
+    expect((await cliente.query('select id from referencias_gestacao where gestacao_id = $1',[g.id])).rows).toHaveLength(0);
+    await comoTenant(tenantA);
+    if (fonteDadosAdministrativa) {
+      const runner = fonteDadosAdministrativa.createQueryRunner();await runner.connect();await runner.startTransaction();
+      try {await expect(new AcompanhamentoGestacional1720000001068().down(runner)).rejects.toThrow('Rollback recusado');}
+      finally {await runner.rollbackTransaction();await runner.release();}
+    }
+  },60000);
+
+  it('Fase 313 exige dupla autorizacao, revoga leitura e preserva snapshots no encerramento',async () => {
+    if (!executorTenant || !cliente) throw new Error('Banco da prova indisponivel.');
+    await comoTenant(tenantA);
+    const user = await cliente.query<{ id: string }>("insert into usuarios(tenant_id,email_hash,email_criptografado,senha_hash,role) values ($1,$2,$3,'sintetica','Patient') returning id",[tenantA,`gestacao-${randomUUID()}`,Buffer.from('usuario-sintetico')]);
+    await cliente.query('update pacientes set usuario_id = $1 where id = $2',[user.rows[0].id,pacienteIdTenantA]);
+    const u: UsuarioAutenticado = { tenantId: tenantA,usuarioId: usuarioIdTenantA,papel: 'Professional',permissoes: ['pacientes.ler','pacientes.gerenciar'],emailHash: 'sintetico' };
+    const patient: UsuarioAutenticado = { ...u,usuarioId: user.rows[0].id,papel: 'Patient',permissoes: [] };
+    const cripto = new CriptografiaDadosSensiveis(),servico = new ServicoGestacoesPaciente(executorTenant,cripto);
+    let g = await servico.criar(tenantA,pacienteIdTenantA,u,{ confirmar: true,chaveCriacao: randomUUID(),referencia: { pesoKg: 60,alturaCm: 160,origem: 'peso_habitual_informado',pesoHabitualAnteriorConfirmado: true } });
+    await expect(servico.detalhePortal(tenantA,g.id,patient)).rejects.toThrow();
+    g = await servico.mudar(tenantA,pacienteIdTenantA,g.id,u,{ confirmar: true,versao: g.versao,compartilhada: true } as import('../../modulos/pacientes/aplicacao/dtos-gestacoes').CompartilharGestacaoDto,'compartilhar');
+    const convite = (await servico.listarPortal(tenantA,patient)).itens.find(i => i.id === g.id)!;
+    expect(convite.aceito).toBe(false);expect(JSON.stringify(convite)).not.toContain('pesoKg');
+    await expect(servico.detalhePortal(tenantA,g.id,patient)).rejects.toThrow();
+    const c = await servico.consentir(tenantA,g.id,patient,{ confirmar: true,aceitar: true,geracao: convite.geracao,versao: 0,termoVersao: TERMO_GESTACAO });
+    expect(c.aceito).toBe(true);
+    const pacientes = new ServicoPacientes(executorTenant,cripto,{} as ServicoPortalCliente,servico);
+    const primeiraAvaliacao = await pacientes.registrarAvaliacaoAntropometrica(tenantA,pacienteIdTenantA,usuarioIdTenantA,{ condicaoGestacional: 'gestante',chaveCriacao: randomUUID(),avaliadaEm: '2026-10-10',pesoKg: 61.2,alturaCm: 160,observacoes: 'NOTA_INTERNA_NAO_COMPARTILHAR',gestacao: { gestacaoId: g.id,referenciaNumero: 1,semanas: 22,dias: 0,tipo: 'unica',risco: 'habitual',origemIdadeGestacional: 'pre_natal' } },u);
+    // Exercise stable pagination at PostgreSQL's microsecond precision and duplicate dates.
+    await cliente.query(`insert into avaliacoes_antropometricas
+      (tenant_id,paciente_id,autor_usuario_id,gestacao_id,gestacao_referencia_numero,avaliada_em,
+       protocolo,medidas_criptografadas,resultado_criptografado,criado_em)
+      select tenant_id,paciente_id,autor_usuario_id,gestacao_id,gestacao_referencia_numero,avaliada_em,
+       protocolo,medidas_criptografadas,resultado_criptografado,'2026-10-10T12:00:00.123456Z'::timestamptz
+      from avaliacoes_antropometricas cross join generate_series(1,101) where id = $1`,[primeiraAvaliacao.id]);
+    const leitura = await servico.detalhePortal(tenantA,g.id,patient);
+    expect(leitura.avaliacoes).toHaveLength(100);
+    expect(leitura.proximoCursor).not.toBeNull();
+    const seguinte = await servico.detalhePortal(tenantA,g.id,patient,leitura.proximoCursor!);
+    expect(seguinte.avaliacoes).toHaveLength(2);expect(seguinte.proximoCursor).toBeNull();
+    expect(new Set([...leitura.avaliacoes,...seguinte.avaliacoes].map(a => a.id)).size).toBe(102);
+    const profissional = await servico.detalhe(tenantA,pacienteIdTenantA,g.id,u,leitura.proximoCursor!);
+    expect(profissional.avaliacoes.map(a => a.id)).toEqual(seguinte.avaliacoes.map(a => a.id));
+    expect(leitura.avaliacoes[0].gestacional?.referencia).toMatchObject({ origem: 'peso_habitual_informado' });
+    expect(JSON.stringify(leitura)).not.toMatch(/NOTA_INTERNA|observacoes|_fingerprint|criptografad/i);
+
+    const resultados = await Promise.allSettled([servico.detalhePortal(tenantA,g.id,patient),servico.consentir(tenantA,g.id,patient,{ confirmar: true,aceitar: false,geracao: convite.geracao,versao: c.versao,termoVersao: TERMO_GESTACAO })]);
+    expect(resultados[1].status).toBe('fulfilled');
+    await expect(servico.detalhePortal(tenantA,g.id,patient)).rejects.toThrow();
+    g = await servico.mudar(tenantA,pacienteIdTenantA,g.id,u,{ confirmar: true,versao: g.versao,compartilhada: false } as import('../../modulos/pacientes/aplicacao/dtos-gestacoes').CompartilharGestacaoDto,'compartilhar');
+    g = await servico.mudar(tenantA,pacienteIdTenantA,g.id,u,{ confirmar: true,versao: g.versao,compartilhada: true } as import('../../modulos/pacientes/aplicacao/dtos-gestacoes').CompartilharGestacaoDto,'compartilhar');
+    expect(g.geracaoCompartilhamento).toBe(2);await expect(servico.detalhePortal(tenantA,g.id,patient)).rejects.toThrow();
+    await servico.consentir(tenantA,g.id,patient,{ confirmar: true,aceitar: true,geracao: g.geracaoCompartilhamento,versao: 0,termoVersao: TERMO_GESTACAO });
+    g = await servico.mudar(tenantA,pacienteIdTenantA,g.id,u,{ confirmar: true,versao: g.versao },'encerrar');
+    expect((await servico.detalhePortal(tenantA,g.id,patient)).avaliacoes).toHaveLength(100);
+    expect(g.compartilhada).toBe(true);expect(g.status).toBe('encerrada');
+    await expect(servico.mudar(tenantA,pacienteIdTenantA,g.id,u,{ confirmar: true,versao: g.versao,referencia: {} } as import('../../modulos/pacientes/aplicacao/dtos-gestacoes').NovaReferenciaGestacaoDto,'referencia')).rejects.toThrow('Reabra');
+    const desvinculado = { ...patient,usuarioId: usuarioIdTenantB };
+    await expect(servico.detalhePortal(tenantA,g.id,desvinculado)).rejects.toThrow();
+    const ambiguo = await cliente.query<{ id: string }>('insert into pacientes(tenant_id,usuario_id,profissional_responsavel_id,nome_criptografado) values ($1,$2,$3,$4) returning id',[tenantA,patient.usuarioId,profissionalIdTenantA,Buffer.from('vinculo-ambiguo-sintetico')]);
+    await expect(servico.listarPortal(tenantA,patient)).rejects.toThrow('Vinculo do paciente indisponivel');
+    await cliente.query('update pacientes set arquivado_em = now() where id = $1',[ambiguo.rows[0].id]);
+    await comoTenant(tenantB);expect((await cliente.query('select id from consentimentos_gestacao where gestacao_id = $1',[g.id])).rows).toHaveLength(0);
+  },60000);
+
 });

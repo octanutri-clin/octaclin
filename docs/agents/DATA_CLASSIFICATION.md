@@ -26,3 +26,14 @@ Regras praticas:
 - Se dado protegido entrar em Git, issue, log ou prompt, trate como incidente:
   interrompa o compartilhamento, revogue ou rotacione o que for segredo e siga
   `SECURITY.md` e o runbook aplicavel.
+
+## Acompanhamento gestacional (Fase 313)
+
+Condição gestacional, episódio, origem da referência, peso/altura, IG, risco e
+classificação são PHI. Referências e snapshots ficam cifrados no banco; não vão
+para auditoria, GitHub, telemetria ou providers externos. IDs de episódios,
+referências e consentimentos são derivados protegidos, mesmo sem texto clínico.
+As APIs usam sessão e `private, no-store`, sem Cache Storage clínico. O portal
+recebe somente a projeção autorizada após liberação e aceite específico atuais;
+notas internas e fingerprints não são projetados. Termo público e tabela MS/UFS
+não contêm dados de pacientes. Testes/demo usam exclusivamente fixtures sintéticas.

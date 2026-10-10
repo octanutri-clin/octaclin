@@ -1,6 +1,6 @@
 # Plano e análise de gaps — Fase 313: acompanhamento gestacional
 
-Planejamento em 2026-10-10; implementação não iniciada. Risco da implementação: R4.
+Planejamento e execução em 2026-10-10; implementação em validação. Risco da implementação: R4.
 Branch: `feature/fase-313-antropometria-gestantes`.
 Base: `774cf34fab2e9cd26e888e57fbaabfe14295930e` (PR #390).
 Handoff: [tasks/plan.md](../../../tasks/plan.md).
@@ -31,17 +31,12 @@ Ficha clínica: [FICHA_VALIDACAO_CLINICA_FASE_313.md](../../product/FICHA_VALIDA
     registros. Avaliações preservam a cópia original; gráfico separa séries.
 11. Encerramento bloqueia novas avaliações/referências no episódio, preserva
     histórico e compartilhamento autorizado. Reabertura explícita, confirmada e auditada.
-12. Proprietário/equipe clínica revisarão a ficha e confirmarão sua validação.
+12. Proprietário/equipe clínica ratificaram a ficha atualizada em 2026-10-10: “Ficha revisada; equipe/responsável ratifica todas as regras”.
 
 Parecer recebido e preservado em [PARECER_REVISAO_FASE_313.md](../../product/PARECER_REVISAO_FASE_313.md),
 SHA-256 do anexo original `73e2c7a28e74b1a38c3a9bd87afa80ae696b62c0f55daa29427949fc7cb27b3c`.
 Cópia no repositório tem apenas espaços finais normalizados para o gate de diff.
-Relata transcrição conferida sem divergências, mas mantém aprovação clínica final
-pendente. Após o parecer, proprietário confirmou inclusão de peso habitual como
-origem própria. Sua regra de uso também aguarda ratificação clínica detalhada,
-que permanece
-SKIPPED (aguarda revisão), bloqueando implementação do classificador/tabela.
-Não interpretar escolha de protocolo ou autorização de planejamento como essa validação.
+O parecer relata transcrição conferida sem divergências e, naquele momento, aprovação clínica pendente. Depois, o proprietário aprovou peso habitual como origem própria e ratificou a ficha atualizada, incluindo essa origem e todas as bordas técnicas. G01/G02 concluídos; implementação autorizada no GPT-6.1 Sol médio. A ratificação veio do proprietário/equipe; este agente não realizou revisão clínica independente.
 
 ## 2. Reconciliação da fase anterior
 
@@ -187,7 +182,7 @@ origem/data cifradas. Nenhuma derivação automática por DUM/USG ou relógio at
 Data da fonte futura/semana ou dia inválido rejeitados; falta/origem desconhecida/
 inconsistência permite medidas sem classificação. Alterar data do formulário
 invalida a confirmação e exige nova IG correspondente. Não inferir inconsistência
-entre gestações diferentes. Estes detalhes são propostos para ratificação na ficha.
+entre gestações diferentes. Estes detalhes foram ratificados na ficha.
 
 Plausibilidade de IMC 8–100 é proteção técnica herdada de `LIMITES.imc`, não
 corte clínico publicado; motivo próprio `referencia_fora_plausibilidade_tecnica`.
@@ -297,9 +292,7 @@ referências, consentimentos ou avaliações vinculadas. Não apagar dados clín
 para permitir downgrade; correção por migration futura se necessário. Provar
 rollback vazio e recusa com linhas em PG descartável.
 
-Planejamento: leitura de contratos/Git/CI PASS; implementação, testes de feature,
-build, PG/migration e revisão independente SKIPPED (não iniciados). Revisão
-clínica SKIPPED (aguarda aceite da ficha). Monitor de produção FAIL observado
+Leitura de contratos/Git/CI PASS; regras clínicas ratificadas; implementação e evidências em andamento. Resultados executados serão consolidados no relatório de execução da fase. Revisão R4 independente SKIPPED: não há segundo revisor neste ciclo. Monitor de produção FAIL observado
 na seção 2 é pendência operacional separada; não declarar saúde produtiva.
 
 ## 9. Modelo e próxima ação
@@ -314,3 +307,17 @@ Próxima ação exata: proprietário/equipe clínica revisar a ficha e confirmar
 fonte semanal, divergências e regras de dias; após esse aceite e autorização
 para implementar, iniciar T01 no checklist, na mesma branch. Sem PR documental
 isolada. Preservar gates residuais da 312 em seu checklist histórico.
+
+
+## 10. Organização efetiva da implementação
+
+O serviço de episódios também concentra as projeções e o consentimento, mantendo
+uma única ordem de locks paciente/episódio. Não foram criados os arquivos
+hipotéticos `acompanhamento-gestacional.ts` ou `servico-portal-gestacoes.ts`.
+Contratos/guardas/DTOs estão em `gestacoes-contratos.spec.ts`; provas reais de
+serviços, FKs, replay e concorrência entram no harness RLS já registrado no CI.
+O portal usa o prefixo existente `/portal/paciente/gestacoes`. O teste profissional
+reusa os mocks de prontuário em `console-regression.spec.mjs`; o spec dedicado da
+313 cobre o portal. Ambos entram em `smoke:visual`, nos dois projects.
+
+Evidência consolidada: [EXECUCAO_FASE_313.md](EXECUCAO_FASE_313.md).

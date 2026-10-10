@@ -1,3 +1,9 @@
+import { ServicoGestacoesPaciente } from './aplicacao/servico-gestacoes-paciente';
+import { ControladorGestacoesPaciente } from './apresentacao/controlador-gestacoes-paciente';
+import { ControladorPortalGestacoes } from './apresentacao/controlador-portal-gestacoes';
+import { ConsentimentoGestacaoOrm } from './infraestrutura/consentimento-gestacao.orm';
+import { ReferenciaGestacaoOrm } from './infraestrutura/referencia-gestacao.orm';
+import { GestacaoPacienteOrm } from './infraestrutura/gestacao-paciente.orm';
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ProcessadorOutboxAuditoria } from '../../infraestrutura/auditoria/processador-outbox-auditoria';
@@ -101,6 +107,9 @@ const processadores = deveExecutarProcessadores() ? [ProcessadorRecalculoPriorid
       AcompanhamentoTarefaOrm,
       EvolucaoClinicaOrm,
       ModeloEvolucaoClinicaOrm,
+      GestacaoPacienteOrm,
+      ReferenciaGestacaoOrm,
+      ConsentimentoGestacaoOrm,
       AvaliacaoAntropometricaOrm,
       DocumentoEmitidoOrm,
       UsuarioOrm,
@@ -143,6 +152,8 @@ const processadores = deveExecutarProcessadores() ? [ProcessadorRecalculoPriorid
     ModuloPlanosAlimentares
   ],
   controllers: [
+    ControladorGestacoesPaciente,
+    ControladorPortalGestacoes,
     ControladorRevisaoCheckins,
     ControladorRetornosSemConsulta,
     // ControladorFiltrosSalvosPacientes deve vir antes de ControladorPacientes:
@@ -164,6 +175,7 @@ const processadores = deveExecutarProcessadores() ? [ProcessadorRecalculoPriorid
     ControladorComunicacoesPortalPaciente
   ],
   providers: [
+    ServicoGestacoesPaciente,
     ServicoRetornosSemConsulta,
     ServicoPacientes,
     ServicoPerfilCadastroPaciente,

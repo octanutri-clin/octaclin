@@ -210,3 +210,27 @@ navegacao principal.
 ## Regra de atualizacao
 
 Sempre que uma rota, permissao ou papel mudar, atualizar este arquivo no mesmo commit da fase.
+
+## Fase 313 — acompanhamento gestacional
+
+Todas as rotas são privadas, sem cache. Tenant vem da sessão. Profissional usa
+carteira atual; SuperAdmin/Collaborator seguem o escopo existente, com a permissão
+específica. Client não acessa essas APIs clínicas.
+
+| BFF | Backend | Método e autorização |
+| --- | --- | --- |
+| `/api/pacientes/[id]/gestacoes` | `/pacientes/:id/gestacoes` | GET `pacientes.ler`; POST `pacientes.gerenciar`, confirmação e UUID de replay |
+| `/api/pacientes/[id]/gestacoes/[gestacaoId]` | `/pacientes/:id/gestacoes/:gestacaoId` | GET `pacientes.ler`, cursor por episódio |
+| `/api/pacientes/[id]/gestacoes/[gestacaoId]/referencias` | `/pacientes/:id/gestacoes/:gestacaoId/referencias` | POST `pacientes.gerenciar`, confirmação/versão atual; referência imutável |
+| `/api/pacientes/[id]/gestacoes/[gestacaoId]/encerrar` | `/pacientes/:id/gestacoes/:gestacaoId/encerrar` | POST `pacientes.gerenciar`, confirmação/versão |
+| `/api/pacientes/[id]/gestacoes/[gestacaoId]/reabrir` | `/pacientes/:id/gestacoes/:gestacaoId/reabrir` | POST `pacientes.gerenciar`, confirmação/versão |
+| `/api/pacientes/[id]/gestacoes/[gestacaoId]/compartilhamento` | `/pacientes/:id/gestacoes/:gestacaoId/compartilhamento` | PUT `pacientes.gerenciar`, confirmação de avaliações atuais/futuras e versão |
+| `/api/portal/paciente/gestacoes` | `/portal/paciente/gestacoes` | GET Patient, vínculo único atual; convites genéricos sem conteúdo clínico |
+| `/api/portal/paciente/gestacoes/[gestacaoId]` | `/portal/paciente/gestacoes/:gestacaoId` | GET Patient, vínculo + liberação + aceite vigente, revalidados em toda página |
+| `/api/portal/paciente/gestacoes/[gestacaoId]/consentimento` | `/portal/paciente/gestacoes/:gestacaoId/consentimento` | PUT Patient, confirmação, termo, geração e versão; somente próprio aceite |
+
+Avaliações continuam no endpoint existente. Novos fluxos enviam condição
+explícita, UUID de replay e contexto gestacional; o backend preserva o snapshot
+cifrado, confere divergência e bloqueia episódio encerrado/referência desatualizada.
+Nenhum parâmetro do browser escolhe o paciente no portal. Vínculo ausente ou
+ambíguo nega acesso.

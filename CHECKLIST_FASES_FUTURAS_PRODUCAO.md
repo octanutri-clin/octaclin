@@ -14,9 +14,8 @@ Fase 312 integrada pelo PR #390 (`774cf34f`); CI final `38049949959` e
 pós-merge `38052856367` SUCCESS. Proprietário informou 1067 aplicada/validada
 em staging e produção, sem consulta direta aos bancos. Handoff preservado em
 `tasks/plan-fase-312.md`; gates residuais históricos não encerrados por inferência.
-Fase 313 planejada, sem implementação: episódios gestacionais, referências
-versionadas, gráfico e portal com aceite específico. Ficha clínica aguarda
-validação; contratos e checklist em `tasks/plan.md`. Monitor de produção
+Fase 313 em implementação: episódios gestacionais, referências
+versionadas, gráfico e portal com aceite específico. Ficha clínica ratificada; contratos e checklist em `tasks/plan.md`. Monitor de produção
 `38065380981` FAIL com HTTP 503; causa não identificada.
 
 O parágrafo abaixo registra a atualização histórica anterior; para o estado
@@ -4570,7 +4569,7 @@ auditoria estão ordenados na seção 15 de
   e pós-merge SUCCESS. Aplicação/validação da 1067 informada pelo proprietário
   em staging/produção, sem consulta direta. Atestados aguardam validação jurídica.
   Gates residuais em `tasks/todo-fase-312.md`, handoff `tasks/plan-fase-312.md`.
-- [~] Fase 313 - planejamento/gaps preparados; implementação não iniciada.
+- [~] Fase 313 - implementação e evidências em andamento; ficha clínica ratificada.
   Curvas brasileiras MS, episódios/referências versionadas, gráfico e portal
   com dupla autorização. Ficha clínica aguarda revisão detalhada em
   `docs/product/FICHA_VALIDACAO_CLINICA_FASE_313.md`; execução `tasks/todo-fase-313.md`.
