@@ -10,11 +10,12 @@ scanners pós-merge aprovados. `Provenance do SBOM` na PR 310 foi `SKIPPED`;
 não é PASS. Aplicação operacional das 1065/1066 não consultada. Fase 311
 integrada pelo PR #389 (`f5f9ba84`); CI final `38022212900` e principal
 pós-merge `38042089805` SUCCESS. Handoff histórico em `tasks/plan-fase-311.md`.
-Fase 312 implementada na branch `feature/fase-312-documentos-clinicos`; PR e CI
-pendentes. Builds, suíte backend, PostgreSQL/Testcontainers, smoke BFF e
-Playwright específico desktop/mobile passaram localmente. Migration 1067 não
-foi aplicada externamente. Handoff atualizado em `tasks/plan.md` e evidências
-em `docs/history/phases/PLANO_FASE_312.md`/`tasks/todo-fase-312.md`.
+Fase 312 implementada na branch `feature/fase-312-documentos-clinicos`; PR #390
+aberta, CI final `38048342326` aprovado, incluindo Backend, Web, Demo local
+smoke, Governança e PR Gate. Provenance do SBOM SKIPPED. Aguardando revisão
+humana/merge. Migration 1067 não foi aplicada externamente. Handoff atualizado
+em `tasks/plan.md` e evidências em `docs/history/phases/PLANO_FASE_312.md` e
+`tasks/todo-fase-312.md`.
 
 O parágrafo abaixo registra a atualização histórica anterior; para o estado
 vigente prevalecem este bloco, itens ao final e o roadmap.

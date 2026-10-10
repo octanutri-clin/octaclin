@@ -261,7 +261,8 @@ com GPT-6 Luna alto no worktree indicado. Não houve troca automática de modelo
 - PASS: PostgreSQL real via Testcontainers, migrations aplicadas em banco
   descartável e role runtime sem owner/BYPASSRLS: 26/26; RLS por tenant,
   unicidade da chave, trigger UPDATE, cancelamento permitido e `down()` recusado
-  quando há encaminhamento. Concorrência de replay do serviço e `down()` sem
+  quando há encaminhamento. A prova de rollback roda pela role RLS restrita tanto
+  no Testcontainers como no CI. Concorrência de replay do serviço e `down()` sem
   linhas permanecem sem prova real neste ciclo.
 - PASS: BFF dedicado 2/2, regressão Playwright da Fase 312 em desktop/mobile
   2/2 com axe na prévia, smoke local `smoke-e2e-bff-ok`, redaction audit,
@@ -271,11 +272,15 @@ com GPT-6 Luna alto no worktree indicado. Não houve troca automática de modelo
 - SKIPPED: deploy, aplicação operacional da migration 1067, assinatura/provider,
   validação jurídica de atestados, revisão R4 independente e Provenance do SBOM.
   Não inferir aceite jurídico ou de produção a partir de builds/testes.
+- PASS: CI final da PR #390, run `38048342326`: Backend NestJS, Web Next.js,
+  Mobile Expo, AI FastAPI, Demo local smoke, Governança, Operação, Rollout e PR
+  Gate; CodeQL, Dependency Review, Semgrep e Trivy passaram. Provenance do SBOM
+  ficou SKIPPED conforme configuração do workflow.
 - Ambiente executou Node 24.19/pnpm 11.19 contra manifests Node 22/pnpm 11.25.
   Build/testes locais passaram, mas CI com as versões declaradas continua sendo
   gate. O `pnpm test:authz` tentou auto-instalar a versão declarada e abortou ao
   proteger `node_modules` sem TTY; o mesmo script terminou com exit 0 pelo Node
   diretamente, sem modificar dependências ou lockfiles.
 - Migration 1067 está registrada no código, não aplicada fora do container
-  descartável. PR única de implementação será aberta; CI e revisão do PR ficam
-  pendentes. Não houve merge automático.
+  descartável. PR única #390 foi aberta e os checks listados acima passaram;
+  revisão humana/merge continuam pendentes. Não houve merge automático.

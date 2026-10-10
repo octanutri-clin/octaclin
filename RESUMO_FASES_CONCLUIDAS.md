@@ -14,10 +14,9 @@
   `38022212900` e principal pós-merge `38042089805` SUCCESS. Plano/evidências
   em `docs/history/phases/PLANO_FASE_311.md` e `tasks/plan-fase-311.md`.
   Revisão independente não comprovada; Provenance do SBOM SKIPPED.
-- Fase 312: implementação pronta na branch `feature/fase-312-documentos-clinicos`,
-  PR/CI pendentes. Backend/Web builds, suíte backend, PostgreSQL/Testcontainers,
-  demo BFF e Playwright focado desktop/mobile passaram localmente. Migration 1067
-  não foi aplicada externamente; atestados aguardam validação específica.
+- Fase 312: PR #390 aberta; CI final `38048342326` PASS, incluindo Backend, Web,
+  Governança, Demo local smoke e PR Gate. Provenance do SBOM SKIPPED. Migration
+  1067 não foi aplicada externamente; atestados aguardam validação específica.
   Evidências em `docs/history/phases/PLANO_FASE_312.md`.
 
 ## Reconciliação em 2026-10-09

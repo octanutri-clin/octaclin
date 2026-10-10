@@ -1,6 +1,6 @@
 # Fase 312 — sequência de implementação
 
-Decisões fechadas; implementação local concluída e PR/CI pendentes. Evidências
+Decisões fechadas; implementação e CI final da PR #390 concluídas. Evidências
 em `docs/history/phases/PLANO_FASE_312.md`, handoff em `tasks/plan.md`.
 Autoria/consulta/prévia confirmadas pelo proprietário.
 Um escritor, mesma branch/PR. Cada checkpoint deve deixar contratos coerentes.
@@ -160,9 +160,9 @@ existentes; documentos citados abaixo; inventário de auditoria/acessibilidade.
 - [x] Atualizar `tasks/plan.md`, plano/checklist 312, status/roadmap/resumo,
   `CHECKLIST_FASES_FUTURAS_PRODUCAO.md`, matriz de confiabilidade e runbook;
   registrar lição proporcional de mocks/preview/idempotência quando aplicável.
-- [ ] Diff revisado; secrets/diff-check; commit/push e uma PR única na branch;
-  acompanhar CI completo: Backend, Web, Governança, Demo smoke e PR Gate.
-  Corrigir causa de falha; Provenance SKIPPED explícito; sem merge automático.
+- [x] Diff revisado; secrets/diff-check; commit/push e uma PR única aberta.
+  Backend, Web, Governança, Demo smoke e PR Gate passaram no CI final
+  `38048342326`; Provenance SKIPPED explícito; sem merge automático.
 
 ## Comandos e evidência esperada
 

@@ -1,18 +1,22 @@
-# Handoff — Fase 312: implementação → revisão/merge
+# Handoff — Fase 312: revisão/merge
 
 ## Estado e próxima ação
 
-Implementação concluída no worktree abaixo; aguarda criação/CI da PR única.
-Próximo passo: abrir a PR para `main`, acompanhar os gates e corrigir falhas,
-sem merge automático. Se CI revelar uma decisão arquitetural ou risco R4 novo,
-usar GPT-6.1 Sol médio para analisar e avisar o proprietário antes de qualquer
-troca de modelo; correções localizadas continuam adequadas para GPT-6 Luna alto.
+Implementação concluída e PR única aberta; todos os checks obrigatórios da
+rodada final passaram. Próximo passo: revisão humana e merge pelo proprietário.
+Não houve merge automático. Se a revisão revelar uma decisão arquitetural ou
+risco R4 novo, usar GPT-6.1 Sol médio para analisar e avisar o proprietário
+antes de qualquer troca de modelo; correções localizadas continuam adequadas
+para GPT-6 Luna alto.
 
 - Branch: `feature/fase-312-documentos-clinicos`.
 - Worktree: `/workspace/octaclin/.worktrees/feature-fase-312-documentos-clinicos`.
 - Base: `cd345a5e`, main com 311 e Handlebars PR #387.
-- PR da 312: será uma única PR de implementação, sem PR documental; CI GitHub
-  ainda pendente. Execução local e limitações estão em `PLANO_FASE_312.md`.
+- PR da 312: [#390](https://github.com/octanutri-clin/octaclin/pull/390), uma
+  PR de implementação, sem PR documental. CI final `38048342326`: Backend,
+  Web, Mobile, AI FastAPI, Demo local smoke, Governança, Operação, Rollout e
+  PR Gate PASS; CodeQL/Dependency Review/Semgrep/Trivy PASS. Provenance do
+  SBOM SKIPPED. Execução local e limitações estão em `PLANO_FASE_312.md`.
 - Contrato/gaps/rollback: [PLANO_FASE_312.md](../docs/history/phases/PLANO_FASE_312.md).
 - Sequência com arquivos, testes e aceites: [todo-fase-312.md](todo-fase-312.md).
 - Handoff anterior preservado em [plan-fase-311.md](plan-fase-311.md).
@@ -72,7 +76,7 @@ assinatura digital/portal/canais novos não integram a entrega aprovada.
   prévia; smoke BFF `smoke-e2e-bff-ok`; scanner de secrets, redaction,
   migrations, guardas, matriz de confiabilidade/acessibilidade.
 - PASS: suíte completa `test:authz` (todos os harnesses na cadeia terminaram
-  com exit 0, incluindo a prova BFF da 312: 2/2).
+  com exit 0, incluindo a prova BFF da 312: 2/2); cadeia validada também no CI.
 - PostgreSQL provou isolamento, índice, trigger, cancelamento e recusa de
   rollback com encaminhamentos. Replay concorrente do serviço e rollback sem
   linhas ainda não têm prova integrada específica.
@@ -86,12 +90,8 @@ assinatura digital/portal/canais novos não integram a entrega aprovada.
 
 ## Próxima execução
 
-1. Rodar `git diff --check`, scanner de secrets e revisão do diff; remover os
-   symlinks temporários de `node_modules` antes de `git add`.
-2. Commit e push desta branch; abrir uma PR para `main`, descrever os testes e
-   gates pendentes e não fazer merge.
-3. Acompanhar Backend, Web, Governança, Demo local smoke e PR Gate; corrigir
-   falhas nesta branch e registrar PASS/FAIL/SKIPPED sem inferir produção.
+1. Revisão humana do PR #390; decidir merge após examinar os limites registrados.
+2. Não aplicar migration nem inferir aceite jurídico/produção a partir do CI.
 
 Não há perguntas de produto abertas. Não aplicar migration/deploy nem simular
 revisão R4 independente. Não trocar o modelo automaticamente.

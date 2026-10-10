@@ -81,7 +81,10 @@ Atualizado em 2026-10-10.
   Plano histórico em `docs/history/phases/PLANO_FASE_311.md`; handoff preservado
   em `tasks/plan-fase-311.md`. Revisão formal independente não comprovada;
   Provenance do SBOM SKIPPED. Integração não representa aceite de produção.
-- Fase 312 implementada nesta branch; PR e gates do GitHub pendentes.
+- Fase 312 implementada na branch `feature/fase-312-documentos-clinicos`, PR
+  #390 aberta. CI final `38048342326` passou (Backend, Web, Demo local smoke,
+  Governança, PR Gate e verificações de segurança); Provenance do SBOM SKIPPED.
+  Aguardando revisão humana/merge, sem merge automático.
   Encaminhamento pelo responsável atual, prévia/confirmar, idempotência,
   snapshot cifrado, impressão/PDF e cancelamento preservado no histórico.
   Backend/Web build, suítes focadas e completa do backend, PostgreSQL real,
