@@ -1,3 +1,4 @@
+import type { ContextoGestacaoApi, ResultadoGestacionalApi } from './gestacoes-paciente-api';
 import type { PacienteResumo } from './cadastros-api';
 import { lancarErroApi } from './erro-api';
 
@@ -488,6 +489,7 @@ export interface MedidasAntropometricasApi {
 }
 
 export interface ResultadoAntropometricoApi {
+  gestacional?: ResultadoGestacionalApi;
   imc?: number;
   classificacaoImc?: string;
   rcq?: number;
@@ -579,6 +581,9 @@ export async function obterLeituraLongitudinalPaciente(pacienteId: string, signa
 }
 
 export interface RegistrarAvaliacaoAntropometricaEntrada {
+  condicaoGestacional?: 'gestante'|'nao_gestante'; confirmarDivergenciaPerfil?: boolean;
+  chaveCriacao?: string; gestacao?: ContextoGestacaoApi;
+
   avaliadaEm?: string;
   protocolo?: ProtocoloComposicao;
   sexo?: SexoBiologico;

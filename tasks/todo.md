@@ -1,12 +1,17 @@
-# Tarefa corrente — Fase 312
+# Tarefa corrente — Fase 313
 
-Planejamento e decisões fechados; implementação ainda não iniciada.
+Planejamento/gaps preparados; implementação não iniciada.
 
 - Handoff: [plan.md](plan.md).
-- Contrato e gaps: [PLANO_FASE_312.md](../docs/history/phases/PLANO_FASE_312.md).
-- Sequência única da implementação: [todo-fase-312.md](todo-fase-312.md).
-- Handoff 311 preservado: [plan-fase-311.md](plan-fase-311.md).
+- Contratos: [PLANO_FASE_313.md](../docs/history/phases/PLANO_FASE_313.md).
+- Ficha aguardando revisão: [FICHA_VALIDACAO_CLINICA_FASE_313.md](../docs/product/FICHA_VALIDACAO_CLINICA_FASE_313.md).
+- Checklist de execução: [todo-fase-313.md](todo-fase-313.md).
+- Handoff 312 preservado: [plan-fase-312.md](plan-fase-312.md).
 
-Aguardar a troca manual do proprietário para GPT-6 Luna alto antes de código.
-Atestados aguardam validação jurídica em escopo futuro; encaminhamento tem
-seis decisões confirmadas. Nenhum teste de feature foi executado no planejamento.
+Próximo passo: revisão/aceite específico da ficha pelo proprietário/equipe
+clínica; autorização para implementação ainda não dada neste ciclo.
+Parecer documental incorporado; tabela sem erro de transcrição relatado,
+ratificação clínica final pendente. Peso habitual incluído como origem própria
+por decisão adicional do proprietário; regras de uso detalhadas na ficha.
+Modelo recomendado para implementação completa: GPT-6.1 Sol médio.
+Não trocar automaticamente. Não há perguntas de produto pendentes.

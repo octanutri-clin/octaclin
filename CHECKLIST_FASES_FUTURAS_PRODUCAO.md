@@ -10,12 +10,13 @@ scanners pós-merge aprovados. `Provenance do SBOM` na PR 310 foi `SKIPPED`;
 não é PASS. Aplicação operacional das 1065/1066 não consultada. Fase 311
 integrada pelo PR #389 (`f5f9ba84`); CI final `38022212900` e principal
 pós-merge `38042089805` SUCCESS. Handoff histórico em `tasks/plan-fase-311.md`.
-Fase 312 implementada na branch `feature/fase-312-documentos-clinicos`; PR #390
-aberta, CI final `38048342326` aprovado, incluindo Backend, Web, Demo local
-smoke, Governança e PR Gate. Provenance do SBOM SKIPPED. Aguardando revisão
-humana/merge. Migration 1067 não foi aplicada externamente. Handoff atualizado
-em `tasks/plan.md` e evidências em `docs/history/phases/PLANO_FASE_312.md` e
-`tasks/todo-fase-312.md`.
+Fase 312 integrada pelo PR #390 (`774cf34f`); CI final `38049949959` e
+pós-merge `38052856367` SUCCESS. Proprietário informou 1067 aplicada/validada
+em staging e produção, sem consulta direta aos bancos. Handoff preservado em
+`tasks/plan-fase-312.md`; gates residuais históricos não encerrados por inferência.
+Fase 313 em implementação: episódios gestacionais, referências
+versionadas, gráfico e portal com aceite específico. Ficha clínica ratificada; contratos e checklist em `tasks/plan.md`. Monitor de produção
+`38065380981` FAIL com HTTP 503; causa não identificada.
 
 O parágrafo abaixo registra a atualização histórica anterior; para o estado
 vigente prevalecem este bloco, itens ao final e o roadmap.
@@ -4564,11 +4565,15 @@ auditoria estão ordenados na seção 15 de
   e conferência somente leitura de quatro bases do catálogo no onboarding.
   PR #389 integrado (`f5f9ba84`), CI de PR e principal pós-merge SUCCESS.
   Plano `docs/history/phases/PLANO_FASE_311.md`; revisão R4 não comprovada.
-- [~] Fase 312 - encaminhamento: implementação pronta, aguardando PR/CI/revisão;
-  autoria pelo responsável atual, prévia/confirmação, snapshot cifrado e
-  impressão/PDF. Atestados aguardam validação jurídica específica. Migration
-  1067 não aplicada externamente. Evidências `docs/history/phases/PLANO_FASE_312.md`.
-- [ ] Fase 313 - avaliação antropométrica de gestantes, após validação clínica.
+- [x] Fase 312 - encaminhamento integrado pelo PR #390 (`774cf34f`); CI final
+  e pós-merge SUCCESS. Aplicação/validação da 1067 informada pelo proprietário
+  em staging/produção, sem consulta direta. Atestados aguardam validação jurídica.
+  Gates residuais em `tasks/todo-fase-312.md`, handoff `tasks/plan-fase-312.md`.
+- [~] Fase 313 - implementação e evidências em andamento; ficha clínica ratificada.
+  Curvas brasileiras MS, episódios/referências versionadas, gráfico e portal
+  com dupla autorização. Ficha clínica ratificada pelo proprietário/equipe em
+  `docs/product/FICHA_VALIDACAO_CLINICA_FASE_313.md`; PR #391, checks em acompanhamento
+  e migration 1068 externa pendente. Execução `tasks/todo-fase-313.md`.
 - [ ] Fase 314 - avaliação antropométrica de menores de 20 anos, após validação
   clínica da referência etária e por sexo.
 - [ ] Fase 315 - retirada controlada do campo `score_risco` legado, com

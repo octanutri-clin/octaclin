@@ -81,17 +81,22 @@ Atualizado em 2026-10-10.
   Plano histórico em `docs/history/phases/PLANO_FASE_311.md`; handoff preservado
   em `tasks/plan-fase-311.md`. Revisão formal independente não comprovada;
   Provenance do SBOM SKIPPED. Integração não representa aceite de produção.
-- Fase 312 implementada na branch `feature/fase-312-documentos-clinicos`, PR
-  #390 aberta. CI final `38048342326` passou (Backend, Web, Demo local smoke,
-  Governança, PR Gate e verificações de segurança); Provenance do SBOM SKIPPED.
-  Aguardando revisão humana/merge, sem merge automático.
-  Encaminhamento pelo responsável atual, prévia/confirmar, idempotência,
-  snapshot cifrado, impressão/PDF e cancelamento preservado no histórico.
-  Backend/Web build, suítes focadas e completa do backend, PostgreSQL real,
-  demo BFF e Playwright desktop/mobile passaram localmente. Atestados aguardam
-  validação específica. Migration 1067 registrada no código, não aplicada em
-  ambiente externo. Execução e limites em `docs/history/phases/PLANO_FASE_312.md`,
-  handoff em `tasks/plan.md` e critérios em `tasks/todo-fase-312.md`.
+- Fase 312 integrada pelo PR #390, merge `774cf34f`, confirmado neste ciclo.
+  CI final `38049949959` e pós-merge `38052856367` SUCCESS, scanners pós-merge
+  SUCCESS. Proprietário informou migration 1067 aplicada/validada em staging
+  e produção; não houve consulta direta aos bancos. Atestados seguem pendentes.
+  Limites históricos preservados em `tasks/todo-fase-312.md`; handoff arquivado
+  em `tasks/plan-fase-312.md`. Provenance do SBOM permanece SKIPPED.
+- Fase 313 em implementação, com ficha ratificada: acompanhamento
+  gestacional MS, episódios explícitos, referência versionada, gráfico e portal
+  com liberação profissional e aceite específico/revogável do paciente.
+  Contratos/gaps em `docs/history/phases/PLANO_FASE_313.md`, sequência em
+  `tasks/todo-fase-313.md`, handoff atual em `tasks/plan.md`. Ficha clínica em
+  `docs/product/FICHA_VALIDACAO_CLINICA_FASE_313.md` ratificada pelo proprietário/equipe em 2026-10-10;
+  testes e gates em conclusão. Modelo recomendado: GPT-6.1 Sol médio.
+- Pendência operacional observada: Monitor de produção `38065380981` FAIL,
+  HTTP 503 após três tentativas em 2026-10-10. Causa/endpoint não identificados;
+  não atribuir ao PR #390 nem declarar saúde de produção a partir de CI.
 - Sequência das Fases 302–320 em
   `docs/product/ROADMAP_POS_AUDITORIA_FASES_302_320.md`. O PB-30 está planejado na Fase 316, condicionado a privacidade,
   jurídico e operação.

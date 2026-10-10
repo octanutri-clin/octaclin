@@ -12,6 +12,10 @@ import type { MetricaCompartilhavelPortal } from '../dominio/progresso-paciente'
 @Entity('avaliacoes_antropometricas')
 @Index('idx_avaliacoes_antropometricas_serie', ['tenantId', 'pacienteId', 'avaliadaEm'])
 export class AvaliacaoAntropometricaOrm {
+  @Column({ name: 'gestacao_id', type: 'uuid', nullable: true }) gestacaoId?: string;
+  @Column({ name: 'gestacao_referencia_numero', type: 'int', nullable: true }) gestacaoReferenciaNumero?: number;
+  @Column({ name: 'chave_criacao', type: 'uuid', nullable: true }) chaveCriacao?: string;
+
   @PrimaryGeneratedColumn('uuid')
   id: string;
 

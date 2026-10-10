@@ -1,97 +1,86 @@
-# Handoff — Fase 312: revisão/merge
+# Handoff — Fase 313: implementação e evidências
 
-## Estado e próxima ação
+## Estado
 
-Implementação concluída e PR única aberta; todos os checks obrigatórios da
-rodada final passaram. Próximo passo: revisão humana e merge pelo proprietário.
-Não houve merge automático. Se a revisão revelar uma decisão arquitetural ou
-risco R4 novo, usar GPT-6.1 Sol médio para analisar e avisar o proprietário
-antes de qualquer troca de modelo; correções localizadas continuam adequadas
-para GPT-6 Luna alto.
+Implementação concluída no código; validações locais PASS; PR #391 aberta; checks em acompanhamento. Regras clínicas ratificadas pelo proprietário/equipe.
+Risco R4 (dados clínicos, migration, RLS e consentimento).
 
-- Branch: `feature/fase-312-documentos-clinicos`.
-- Worktree: `/workspace/octaclin/.worktrees/feature-fase-312-documentos-clinicos`.
-- Base: `cd345a5e`, main com 311 e Handlebars PR #387.
-- PR da 312: [#390](https://github.com/octanutri-clin/octaclin/pull/390), uma
-  PR de implementação, sem PR documental. CI final `38048342326`: Backend,
-  Web, Mobile, AI FastAPI, Demo local smoke, Governança, Operação, Rollout e
-  PR Gate PASS; CodeQL/Dependency Review/Semgrep/Trivy PASS. Provenance do
-  SBOM SKIPPED. Execução local e limitações estão em `PLANO_FASE_312.md`.
-- Contrato/gaps/rollback: [PLANO_FASE_312.md](../docs/history/phases/PLANO_FASE_312.md).
-- Sequência com arquivos, testes e aceites: [todo-fase-312.md](todo-fase-312.md).
-- Handoff anterior preservado em [plan-fase-311.md](plan-fase-311.md).
+- Branch: `feature/fase-313-antropometria-gestantes`.
+- Worktree: `/workspace/octaclin/.worktrees/feature-fase-313-antropometria-gestantes`.
+- Base: `774cf34fab2e9cd26e888e57fbaabfe14295930e`, PR #390 mergeado.
+- PR da 313: [#391](https://github.com/octanutri-clin/octaclin/pull/391), aberta; integração pendente.
+- [Plano/contratos/gaps/rollback](../docs/history/phases/PLANO_FASE_313.md).
+- [Ficha para revisão clínica](../docs/product/FICHA_VALIDACAO_CLINICA_FASE_313.md).
+- [Parecer recebido, preservado](../docs/product/PARECER_REVISAO_FASE_313.md).
+- [Sequência executável T01–T18](todo-fase-313.md).
+- [Execução, resultados e limites](../docs/history/phases/EXECUCAO_FASE_313.md).
+- [Handoff 312 preservado](plan-fase-312.md); gates residuais em todo-fase-312.md
+  permanecem históricos, sem fechamento por inferência de merge.
 
-## Decisões confirmadas pelo proprietário
+## Próxima ação exata
 
-1. Entregar encaminhamento; atestados aguardam validação jurídica específica.
-2. Destino/serviço e motivo obrigatórios; destinatário, instituição e contexto
-   clínico opcionais, preenchidos pelo profissional.
-3. Entrega nesta fase por impressão/PDF do navegador no motor atual.
-4. Emissão apenas pelo próprio profissional responsável atual, com identidade
-   autenticada e registro; sem delegação a colaboradores/SuperAdmin.
-5. Não exigir consulta de origem/concluída para encaminhamento.
-6. Prévia completa e confirmação; mudanças relevantes pedem nova conferência.
+Implementação autorizada pelo proprietário em GPT-6.1 Sol médio. Em 2026-10-10,
+respondeu “Ficha revisada; equipe/responsável ratifica todas as regras” à ficha
+atualizada, incluindo peso habitual, 8s0d, bordas e plausibilidade técnica.
+Registrar como confirmação humana relatada, sem afirmar nova revisão clínica
+independente deste agente. Acompanhar/corrigir checks da PR #391 nesta branch, conforme T17–T18 e o relatório de execução.
 
-Nenhuma pergunta de produto permanece aberta. Atestado é gate futuro pendente,
-não ausência de resposta para o encaminhamento. Assinatura manual no papel;
-assinatura digital/portal/canais novos não integram a entrega aprovada.
+## Escopo fechado
 
-## Contratos essenciais para o Luna
+Curvas brasileiras, IMC de referência+ganho semanal; adulta >=18 na avaliação,
+feto único e risco habitual confirmado. Medidas sem faixa se fora da população
+ou incompletas. Peso pré-gestacional medido/informado, medido até oito semanas
+ou habitual como origem própria, conforme decisão adicional nesta conversa.
+Condição confirmada por avaliação, snapshot cifrado; bloqueio das interpretações
+adultas em novos registros gestantes, preservando medidas/histórico.
 
-- Um quarto tipo `encaminhamento` no motor existente. Título fixo; texto puro
-  cifrado em snapshot. Usar DTO aninhado com campos/limites definidos no plano;
-  não reutilizar texto da alta nem carregar conteúdo do prontuário automaticamente.
-- Validar diretamente paciente, nome/registro do emissor ativo e vínculo do
-  próprio responsável em `ExecutorTenant`; regras do modelo não substituem
-  validação. Bloquear papel, tenant/carteira, profissional ausente/arquivado.
-- Rota de prévia só para novo tipo, autenticada/gerenciar, sem persistir
-  documento/draft. Preparação compartilhada produz corpo/cabeçalho e SHA-256
-  determinístico; emissão exige hash da prévia + confirmação e salva exatamente
-  o snapshot comparado. Divergência →409/refazer prévia. Hash não é assinatura.
-- Chave UUID por confirmação; replay durável sob lock/índice retorna mesmo
-  ID, inclusive cancelado. Pedido diferente com mesma key →409. Fingerprint
-  guardado no cabeçalho cifrado e omitido do DTO. Identidade verificada antes
-  do replay; não fazer consulta depois de `23505` em transação abortada.
-- Migration proposta 1067: CHECK novo tipo, chave nullable/obrigatória apenas
-  no novo tipo, unique parcial e trigger de snapshot. Registrar TypeORM e
-  confirmar número livre; nenhuma migration externa sem alvo/autorização.
-- Modelos: quarto tipo/corpo personalizável/título fixo; tokens essenciais
-  exigidos; PATCH preserva tipos omitidos sob lock/merge para clientes antigos.
-- UI usa papel/permissão já carregados no prontuário. Ramo específico para
-  encaminhamento, prévia antes de persistir; editar invalida; falha incerta
-  preserva UUID/body. Limpar e ignorar requests antigos ao mudar paciente.
-- BFF: wrappers existentes, permissões por método e `private, no-store`
-  inclusive erros. Origem de mutação protegida. Backend revalida autoria.
-- Emitido é imutável; corrigir cancela e emite outro. Novo tipo nunca enviado
-  por e-mail. Três tipos existentes e documentos já emitidos continuam legíveis.
-- PostgreSQL real deve provar índice/replay concorrente, trigger, RLS e
-  transferência concorrente. Testes mockados não encerram essas propriedades.
-- Rollback mantém leitura do novo tipo e schema; down recusa se há dados novos.
-  Não apagar encaminhamentos para reverter. Revisão R4 independente quando viável.
+Gestações explícitas com abrir/encerrar/reabrir; referência corrigida cria nova
+versão, séries separadas; avaliação/histórico+gráfico+portal. Profissional libera
+cada gestação desligada por padrão, confirmando registros atuais e futuros;
+paciente aceita especificamente, pode revogar. Sem notas internas no portal.
+Encerrar bloqueia novos registros/referências, conserva histórico/liberação.
+Retirada e nova liberação requerem novo aceite. Escopo de produto fechado;
+ratificação detalhada da ficha, incluindo peso habitual, recebida nesta conversa.
 
-## Validação local e limites
+## Invariantes para execução
 
-- PASS: backend/Web typecheck e build; backend Jest 2474 PASS/45 SKIPPED; RLS
-  Testcontainers 26/26; teste visual da fase 2/2 em desktop/mobile com axe na
-  prévia; smoke BFF `smoke-e2e-bff-ok`; scanner de secrets, redaction,
-  migrations, guardas, matriz de confiabilidade/acessibilidade.
-- PASS: suíte completa `test:authz` (todos os harnesses na cadeia terminaram
-  com exit 0, incluindo a prova BFF da 312: 2/2); cadeia validada também no CI.
-- PostgreSQL provou isolamento, índice, trigger, cancelamento e recusa de
-  rollback com encaminhamentos. Replay concorrente do serviço e rollback sem
-  linhas ainda não têm prova integrada específica.
-- Ambiente local Node 24.19.0/pnpm 11.19.0; manifests pedem Node 22/pnpm
-  11.25.0. O `pnpm` tentou substituir módulos e abortou com segurança sem TTY;
-  o suite `test:authz` é executado por Node diretamente. CI com versões
-  declaradas continua sendo gate. Nenhum lockfile foi alterado.
-- Migration 1067 não aplicada fora do Postgres descartável. Deploy/produção,
-  assinatura/provider e validação jurídica de atestados SKIPPED. Revisão R4
-  independente e Provenance do SBOM também não estão comprovadas.
+- Revalidar Git/branch/diff e números livres antes de editar; um escritor ativo.
+- Fonte offline e autoridade clínica no backend; não duplicar tabela na Web.
+- Migration proposta 1068: três tabelas (episódio/referência/consentimento),
+  FKs compostas tenant/paciente, FORCE RLS, snapshots/versões imutáveis.
+  Contexto clínico cifrado. Nada de vínculo automático de registros antigos.
+- Reusar ExecutorTenant/carteira/permissões atuais; não copiar exclusividade
+  do encaminhamento. Portal deriva paciente da identidade atual.
+- Concorrência: locks em ordem consistente, versão esperada/409, criação com
+  UUID/replay durável; referência e condição efetivas preservadas por avaliação.
+- Gráfico por episódio+versão; 100 avaliações/página, cursor estável, cobertura
+  parcial visível. Não usar janela global das últimas 100/24 avaliações.
+- Portal só com liberação+aceite atual por geração/usuário; allowlist sem notas,
+  no-store e origem nas mutações. Retirada/revogação revalidadas em cada leitura.
+- Reset paciente/episódio e respostas atrasadas em todos os fluxos Web.
+- PG real prova RLS, FKs, imutabilidade e corridas no serviço, não mocks.
+- Down recusa com dados novos; rollback conserva histórico/schema e bloqueios.
+- Nenhuma migration/deploy externo autorizado neste planejamento.
 
-## Próxima execução
+## Evidência e fatos operacionais
 
-1. Revisão humana do PR #390; decidir merge após examinar os limites registrados.
-2. Não aplicar migration nem inferir aceite jurídico/produção a partir do CI.
+CI final PR 312 `38049949959` e pós-merge `38052856367` SUCCESS; scanners
+pós-merge SUCCESS. Proprietário informou 1067 aplicada/validada em staging e
+produção; não houve consulta direta aos bancos. Não atribuir relato às 1065/1066.
+Monitor de produção `38065380981` FAIL: HTTP 503 após três tentativas; endpoint/
+causa não identificados. Não atribuir à 312 nem afirmar produção saudável.
 
-Não há perguntas de produto abertas. Não aplicar migration/deploy nem simular
-revisão R4 independente. Não trocar o modelo automaticamente.
+Implementação/tests/build/PG locais PASS; revisão R4 independente SKIPPED (sem segundo revisor neste ciclo). Clínica: ratificação recebida do proprietário nesta conversa. Parecer de 10/10/2026 relata
+conferência das 31 linhas sem erro de transcrição e declara aprovação final
+pendente; não é prova independente executada por este agente nem aceite clínico.
+O parecer não conferiu integralmente dataset UFRJ V3; download/checksum da
+análise anterior continuam evidência distinta, sem atribuir essa prova ao parecer.
+PASS: revisão do diff, `git diff --check` e scanner local de secrets
+(`node scripts/scan-secrets.mjs`, nenhum secret identificado pelos padrões). Sem teste de feature no planejamento.
+
+## Modelo
+
+GPT-6.1 Sol médio suficiente e recomendado para implementação completa.
+Luna alto suficiente para tarefas delimitadas de UI/fixtures/textos após fechar
+contratos R4. Priorizar tokens com tarefas pequenas e testes focados antes da
+suíte ampla. Avisar e pausar para qualquer troca manual; nenhuma troca feita.

@@ -1,3 +1,7 @@
+import { calcularAntropometriaGestacional } from '../dominio/antropometria-gestacional';
+import { ServicoGestacoesPaciente, dataGestacionalValida, fingerprintGestacional } from './servico-gestacoes-paciente';
+import { ReferenciaGestacional } from '../dominio/contexto-gestacional';
+import { garantirEscopoPaciente } from './escopo-paciente';
 import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { ArrayContains, EntityManager, FindOptionsWhere, In, IsNull, LessThan, MoreThan, Not, QueryFailedError, Raw } from 'typeorm';
 import { ExecutorTenant } from '../../../infraestrutura/banco-dados/executor-tenant';
@@ -122,7 +126,8 @@ export class ServicoPacientes {
   constructor(
     private readonly executorTenant: ExecutorTenant,
     private readonly criptografia: CriptografiaDadosSensiveis,
-    private readonly portalCliente: ServicoPortalCliente
+    private readonly portalCliente: ServicoPortalCliente,
+    private readonly gestacoes: ServicoGestacoesPaciente = new ServicoGestacoesPaciente(executorTenant, criptografia)
   ) {}
 
   async criar(tenantId: string, dados: CriarPacienteDto, usuario: UsuarioAutenticado): Promise<PacienteRespostaDto> {
@@ -1832,18 +1837,48 @@ export class ServicoPacientes {
     usuario: UsuarioAutenticado
   ): Promise<AvaliacaoAntropometricaRespostaDto> {
     return this.executorTenant.executar(tenantId, async (gerenciador) => {
-      const paciente = await this.garantirPacienteExiste(gerenciador, tenantId, pacienteId, usuario);
+      const paciente = await this.garantirPacienteExiste(gerenciador, tenantId, pacienteId, usuario, true);
+      if ((dados.condicaoGestacional || dados.gestacao) && !dados.chaveCriacao) throw new BadRequestException('Chave de confirmacao obrigatoria.');
+      const repositorio = gerenciador.getRepository(AvaliacaoAntropometricaOrm);
+      const fingerprint = fingerprintGestacional({ pacienteId,dados });
+      if (dados.chaveCriacao) {
+        await gerenciador.query('select pg_advisory_xact_lock(hashtextextended($1,0))',[`${tenantId}:${autorUsuarioId}:${dados.chaveCriacao}`]);
+        const anterior = await repositorio.findOne({ where: { tenantId,autorUsuarioId,chaveCriacao: dados.chaveCriacao } });
+        if (anterior) {
+          const salvo = this.lerJsonCriptografado<{ _fingerprint?: string }>(anterior.medidasCriptografadas,{});
+          if (anterior.pacienteId !== pacienteId || salvo._fingerprint !== fingerprint) throw new ConflictException('Chave usada para outro pedido.');
+          return this.mapearAvaliacaoAntropometrica(anterior);
+        }
+      }
       const consultaId = await resolverConsultaOpcional(gerenciador, tenantId, pacienteId, dados.consultaId);
 
       const avaliadaEm = dados.avaliadaEm ?? dataCivil(new Date());
+      if (!dataGestacionalValida(avaliadaEm) || avaliadaEm > dataCivil(new Date())) throw new BadRequestException('Data da avaliacao invalida ou futura.');
       const protocolo = dados.protocolo ?? 'nenhum';
       const idadeAnos = idadeNaData(paciente.dataNascimento, avaliadaEm);
       const perfil = await gerenciador.getRepository(PerfilCadastroPacienteOrm).findOne({
         where: { tenantId, pacienteId }
       });
-      const identificacao = perfil?.identificacaoCriptografada
-        ? JSON.parse(this.criptografia.descriptografar(perfil.identificacaoCriptografada)) as { condicaoBiologica?: string }
-        : undefined;
+      let identificacao: { condicaoBiologica?: string } | undefined;
+      try { identificacao = perfil?.identificacaoCriptografada ? JSON.parse(this.criptografia.descriptografar(perfil.identificacaoCriptografada)) as { condicaoBiologica?: string } : undefined; }
+      catch { throw new ConflictException('Perfil indisponivel. Confira o cadastro antes de registrar.'); }
+      const perfilGestante = identificacao?.condicaoBiologica === 'gestante';
+      const condicao = dados.condicaoGestacional ?? (perfilGestante ? 'gestante' : identificacao?.condicaoBiologica && identificacao.condicaoBiologica !== 'nao_informada' ? 'nao_gestante' : 'nao_informada');
+      if (dados.condicaoGestacional && identificacao?.condicaoBiologica && identificacao.condicaoBiologica !== 'nao_informada' && (dados.condicaoGestacional === 'gestante') !== perfilGestante && dados.confirmarDivergenciaPerfil !== true) throw new ConflictException('Confirme a divergencia com a condicao do cadastro.');
+      if (dados.gestacao && condicao !== 'gestante') throw new BadRequestException('Contexto gestacional exige condicao gestante.');
+      const contexto = dados.gestacao;
+      if (contexto?.dias !== undefined && contexto.semanas === undefined) throw new BadRequestException('Dias exigem semanas gestacionais.');
+      if (contexto?.dataFonteIdadeGestacional && (!dataGestacionalValida(contexto.dataFonteIdadeGestacional) || contexto.dataFonteIdadeGestacional > avaliadaEm)) throw new BadRequestException('Data da fonte gestacional invalida.');
+      if (!!contexto?.gestacaoId !== !!contexto?.referenciaNumero) throw new BadRequestException('Gestacao e referencia devem ser informadas juntas.');
+      let referencia: ReferenciaGestacional | undefined;
+      if (contexto?.gestacaoId) {
+        const episodio = await this.gestacoes.episodio(gerenciador,tenantId,pacienteId,contexto.gestacaoId,true);
+        if (episodio.status !== 'ativa') throw new ConflictException('Gestacao encerrada. Reabra antes de registrar.');
+        const atual = await this.gestacoes.referenciaAtual(gerenciador,episodio);
+        if (atual.numero !== contexto.referenciaNumero) throw new ConflictException('Referencia mudou. Atualize e confira novamente.');
+        referencia = atual.referencia;
+        if (referencia.dataPeso && referencia.dataPeso > avaliadaEm) throw new BadRequestException('Peso de referencia posterior a avaliacao.');
+      }
       const medidas: MedidasAntropometricas = {
         pesoKg: dados.pesoKg,
         alturaCm: dados.alturaCm,
@@ -1852,20 +1887,23 @@ export class ServicoPacientes {
       };
       const resultado = calcularAntropometria({
         medidas, protocolo, sexo: dados.sexo, idadeAnos,
-        gestante: identificacao?.condicaoBiologica === 'gestante'
+        gestante: condicao === 'gestante'
       });
 
-      const repositorio = gerenciador.getRepository(AvaliacaoAntropometricaOrm);
+      resultado.gestacional = calcularAntropometriaGestacional({ condicao,origemCondicao: dados.condicaoGestacional ? 'confirmada' : 'perfil_legado',idadeAnos,pesoKg: dados.pesoKg,contexto,referencia });
       const avaliacao = await repositorio.save(
         repositorio.create({
           tenantId,
           pacienteId,
           autorUsuarioId,
+          gestacaoId: contexto?.gestacaoId,
+          gestacaoReferenciaNumero: contexto?.referenciaNumero,
+          chaveCriacao: dados.chaveCriacao,
           avaliadaEm,
           protocolo: resultado.protocoloAplicado,
           sexo: dados.sexo,
           idadeAnos,
-          medidasCriptografadas: this.criptografia.criptografar(JSON.stringify(medidas)),
+          medidasCriptografadas: this.criptografia.criptografar(JSON.stringify({ ...medidas,...(dados.chaveCriacao ? { _fingerprint: fingerprint } : {}) })),
           resultadoCriptografado: this.criptografia.criptografar(JSON.stringify(resultado)),
           metricasCompartilhadasPortal: dados.metricasCompartilhadasPortal ?? [],
           formulaAplicada: resultado.formulaAplicada,
@@ -1971,7 +2009,10 @@ export class ServicoPacientes {
       protocolo: avaliacao.protocolo,
       sexo: avaliacao.sexo,
       idadeAnos: avaliacao.idadeAnos,
-      medidas: this.lerJsonCriptografado<MedidasAntropometricas>(avaliacao.medidasCriptografadas, {}),
+      medidas: (() => {
+        const m = this.lerJsonCriptografado<MedidasAntropometricas>(avaliacao.medidasCriptografadas, {});
+        return { pesoKg: m.pesoKg,alturaCm: m.alturaCm,circunferencias: m.circunferencias,dobras: m.dobras };
+      })(),
       resultado: this.lerJsonCriptografado<ResultadoAntropometrico>(avaliacao.resultadoCriptografado, {
         protocoloAplicado: 'nenhum',
         avisos: ['registro_ilegivel']
@@ -2005,22 +2046,7 @@ export class ServicoPacientes {
     usuario: UsuarioAutenticado,
     bloquear = false
   ) {
-    const profissionalResponsavelId = await resolverProfissionalIdDoUsuario(gerenciador, tenantId, usuario);
-    const paciente = await gerenciador.getRepository(PacienteOrm).findOne({
-      where: {
-        id: pacienteId,
-        tenantId,
-        arquivadoEm: IsNull(),
-        ...(profissionalResponsavelId ? { profissionalResponsavelId } : {})
-      },
-      ...(bloquear ? { lock: { mode: 'pessimistic_write' as const } } : {})
-    });
-
-    if (!paciente) {
-      throw new NotFoundException('Paciente nao encontrado.');
-    }
-
-    return paciente;
+    return garantirEscopoPaciente(gerenciador, tenantId, pacienteId, usuario, bloquear);
   }
 
   private async garantirProfissionalResponsavelExiste(

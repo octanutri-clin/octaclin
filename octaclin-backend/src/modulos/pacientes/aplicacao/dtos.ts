@@ -1,3 +1,4 @@
+import { ContextoGestacionalDto } from './dtos-gestacoes';
 import {
   IsBoolean,
   IsArray,
@@ -1055,6 +1056,11 @@ export class DobrasCutaneasDto {
 }
 
 export class CriarAvaliacaoAntropometricaDto {
+  @IsOptional() @IsIn(['gestante','nao_gestante']) condicaoGestacional?: 'gestante'|'nao_gestante';
+  @IsOptional() @IsBoolean() confirmarDivergenciaPerfil?: boolean;
+  @IsOptional() @IsUUID() chaveCriacao?: string;
+  @IsOptional() @ValidateNested() @Type(() => ContextoGestacionalDto) gestacao?: ContextoGestacionalDto;
+
   /** Data civil da avaliacao. Ausente, o servico usa a data de hoje na clinica. */
   @IsOptional()
   @Matches(/^\d{4}-\d{2}-\d{2}$/, { message: 'avaliadaEm deve estar no formato AAAA-MM-DD.' })

@@ -53,6 +53,7 @@ import {
 } from '@/lib/portal-api';
 import { usePortalPaciente } from '@/components/portal/portal-contexto';
 import { PlanoAlimentarPaciente } from '@/components/portal/plano-alimentar-paciente';
+import { AcompanhamentoGestacionalPortal } from '@/components/portal/acompanhamento-gestacional-portal';
 import { ReceitasCompartilhadasPortal } from '@/components/portal/receitas-compartilhadas-portal';
 import { StatusPwaPortal } from '@/components/pwa/status-pwa-portal';
 import { assinarOperacoesSincronizadas } from '@/lib/pwa-private-queue';
@@ -779,6 +780,7 @@ export function PortalPaciente({ secao }: { secao: SecaoPortal }) {
 
         {portal ? (
           <>
+            {secao === 'inicio' ? <AcompanhamentoGestacionalPortal/> : null}
             {secao === 'receitas' ? (
               <section aria-label="Receitas compartilhadas" className="scroll-mt-4">
                 <ReceitasCompartilhadasPortal />

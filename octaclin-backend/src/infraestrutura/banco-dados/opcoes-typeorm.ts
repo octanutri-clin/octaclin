@@ -1,3 +1,7 @@
+import { ConsentimentoGestacaoOrm } from '../../modulos/pacientes/infraestrutura/consentimento-gestacao.orm';
+import { ReferenciaGestacaoOrm } from '../../modulos/pacientes/infraestrutura/referencia-gestacao.orm';
+import { GestacaoPacienteOrm } from '../../modulos/pacientes/infraestrutura/gestacao-paciente.orm';
+import { AcompanhamentoGestacional1720000001068 } from './migracoes/1720000001068-AcompanhamentoGestacional';
 import { TypeOrmModuleOptions } from '@nestjs/typeorm';
 import { DataSourceOptions } from 'typeorm';
 import { criarConfiguracaoSslPostgres } from './ssl-postgres';
@@ -273,6 +277,9 @@ export function criarOpcoesTypeOrm(): TypeOrmModuleOptions & DataSourceOptions {
       PrioridadeAcompanhamentoHistoricoOrm,
       EvolucaoClinicaOrm,
       ModeloEvolucaoClinicaOrm,
+      GestacaoPacienteOrm,
+      ReferenciaGestacaoOrm,
+      ConsentimentoGestacaoOrm,
       AvaliacaoAntropometricaOrm,
       DocumentoEmitidoOrm,
       FiltroSalvoPacienteOrm,
@@ -428,7 +435,8 @@ export function criarOpcoesTypeOrm(): TypeOrmModuleOptions & DataSourceOptions {
         AutorizarCompartilhamentoProgressoPortal1720000001064,
         ConfigurarResumosNotificacoes1720000001065,
         CompartilharReceitasNutricionais1720000001066,
-        AdicionarEncaminhamentoDocumento1720000001067
+        AdicionarEncaminhamentoDocumento1720000001067,
+        AcompanhamentoGestacional1720000001068
       ],
     migrationsRun: executarMigracoesNoBoot(),
     synchronize: false,

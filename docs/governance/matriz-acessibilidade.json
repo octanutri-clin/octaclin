@@ -1,7 +1,7 @@
 {
   "descricao": "Matriz definitiva de acessibilidade do OctaClin. Fonte unica de verdade da cobertura, das excecoes e dos riscos residuais. Validada por scripts/test-matriz-acessibilidade.mjs, que confronta cada linha com o codigo, a configuracao do Playwright e o workflow de CI.",
   "pr": "PR 34 da governanca de acessibilidade",
-  "atualizadoEm": "2026-08-27",
+  "atualizadoEm": "2026-10-10",
   "configuracaoPlaywright": "octaclin-web/playwright.config.mjs",
   "politicaDeFlakes": {
     "retriesMaximoCi": 1,
@@ -145,6 +145,16 @@
         "job": "governanca",
         "run": "pnpm security:secrets"
       }
+    },
+    {
+      "id": "web-gestacional-313",
+      "comando": "test:fase313",
+      "diretorio": "octaclin-web",
+      "descricao": "Gestação e consentimento específico: desktop/mobile, tabela por versão e axe.",
+      "especificacao": "octaclin-web/tests/visual/fase-313-gestacoes.spec.mjs",
+      "bloqueante": true,
+      "cobertoPor": "web-suite-visual",
+      "motivoDaCobertura": "smoke:visual executa todos os specs, incluindo a Fase 313, nos dois projects."
     }
   ],
   "linhas": [
@@ -779,6 +789,50 @@
       "justificativa": "Exige dispositivo ou emulador com a preferencia do sistema ativada. O equivalente web (prefers-reduced-motion) e coberto pelo gate de reflow, mas nao vale para o aplicativo nativo.",
       "condicaoDeFechamento": "Ativar a reducao de movimento no sistema e confirmar que nenhuma transicao essencial depende de animacao.",
       "risco": "Usuario sensivel a movimento pode encontrar transicao nao reduzida no aplicativo."
+    },
+    {
+      "superficie": "acompanhamento gestacional no console",
+      "rota": "/pacientes/paciente-1",
+      "rotas": [
+        "/pacientes/paciente-1"
+      ],
+      "estado": "episódio, séries por referência, confirmação e cobertura parcial",
+      "interacao": "seleção e leitura da tabela, consentimento explícito e axe",
+      "plataforma": [
+        "desktop-chromium",
+        "mobile-chromium"
+      ],
+      "mecanismo": "automatizado",
+      "resultado": "PASS",
+      "evidencia": {
+        "gate": "web-suite-visual",
+        "blocos": [
+          "acompanhamento gestacional - Fase 313"
+        ]
+      },
+      "risco": "Leitor de tela real não foi observado; a prova automatizada não o substitui."
+    },
+    {
+      "superficie": "acompanhamento gestacional no portal",
+      "rota": "/portal",
+      "rotas": [
+        "/portal"
+      ],
+      "estado": "convite, aceite, gráfico, revogação e acesso negado",
+      "interacao": "seleção e leitura da tabela, consentimento explícito e axe",
+      "plataforma": [
+        "desktop-chromium",
+        "mobile-chromium"
+      ],
+      "mecanismo": "automatizado",
+      "resultado": "PASS",
+      "evidencia": {
+        "gate": "web-gestacional-313",
+        "blocos": [
+          "portal gestacional - Fase 313"
+        ]
+      },
+      "risco": "Leitor de tela real não foi observado; a prova automatizada não o substitui."
     }
   ]
 }

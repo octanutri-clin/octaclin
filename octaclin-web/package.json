@@ -16,7 +16,7 @@
     "test:base-visual": "node scripts/test-base-visual-navegacao.mjs",
     "test:correlacao:bff": "node scripts/test-correlacao-bff.mjs",
     "test:origem-backend:bff": "node scripts/test-origem-backend-bff.mjs",
-    "test:authz": "node scripts/test-correlacao-bff.mjs && node scripts/test-origem-backend-bff.mjs && node scripts/test-autorizacao-rotas.mjs && node scripts/test-sessoes-bff.mjs && node scripts/test-integracoes-profissionais-bff.mjs && node scripts/test-pacientes-fase254-bff.mjs && node scripts/test-agendamento-publico-bff.mjs && node scripts/test-questionarios-revisao-bff.mjs && node scripts/test-dashboard-clinico-bff.mjs && node scripts/test-prontuario-timeline-bff.mjs && node scripts/test-prioridade-acompanhamento-bff.mjs && node scripts/test-override-prioridade-acompanhamento-bff.mjs && node scripts/test-planos-alimentares-bff.mjs && node scripts/test-evolucoes-modelos-bff.mjs && node scripts/test-biblioteca-condutas-bff.mjs && node scripts/test-comunicacoes-templates-bff.mjs && node scripts/test-exames-laboratoriais-bff.mjs && node scripts/test-painel-operacao-bff.mjs && node scripts/test-nutricao-plano.mjs && node scripts/test-notificacoes-bff.mjs && node scripts/test-fase-311-bff.mjs && node scripts/test-fase-312-bff.mjs",
+    "test:authz": "node scripts/test-correlacao-bff.mjs && node scripts/test-origem-backend-bff.mjs && node scripts/test-autorizacao-rotas.mjs && node scripts/test-sessoes-bff.mjs && node scripts/test-integracoes-profissionais-bff.mjs && node scripts/test-pacientes-fase254-bff.mjs && node scripts/test-agendamento-publico-bff.mjs && node scripts/test-questionarios-revisao-bff.mjs && node scripts/test-dashboard-clinico-bff.mjs && node scripts/test-prontuario-timeline-bff.mjs && node scripts/test-prioridade-acompanhamento-bff.mjs && node scripts/test-override-prioridade-acompanhamento-bff.mjs && node scripts/test-planos-alimentares-bff.mjs && node scripts/test-evolucoes-modelos-bff.mjs && node scripts/test-biblioteca-condutas-bff.mjs && node scripts/test-comunicacoes-templates-bff.mjs && node scripts/test-exames-laboratoriais-bff.mjs && node scripts/test-painel-operacao-bff.mjs && node scripts/test-nutricao-plano.mjs && node scripts/test-notificacoes-bff.mjs && node scripts/test-fase-311-bff.mjs && node scripts/test-fase-312-bff.mjs && node scripts/test-fase-313-bff.mjs",
     "test:painel-operacao:bff": "node scripts/test-painel-operacao-bff.mjs",
     "test:seguranca-operacional": "node scripts/test-seguranca-operacional.mjs",
     "test:seguranca-runtime": "node scripts/validar-seguranca-runtime.mjs",
@@ -58,6 +58,7 @@
     "test:fase311:bff": "node scripts/test-fase-311-bff.mjs",
     "test:fase312:bff": "node scripts/test-fase-312-bff.mjs",
     "test:sessoes": "playwright test tests/visual/sessoes-conta.spec.mjs --project=desktop-chromium --reporter=list",
+    "test:fase313": "playwright test tests/visual/console-regression.spec.mjs tests/visual/fase-313-gestacoes.spec.mjs --grep \"Fase 313\" --reporter=list",
     "test:fase309": "playwright test tests/visual/fase-309-notificacoes.spec.mjs --reporter=list"
   },
   "dependencies": {

@@ -7,6 +7,8 @@ function lerPorta() {
   return Number(process.env.PORTA_HTTP ?? 3001);
 }
 
+const gestacoesDemo = new Map();
+const chavesGestacoesDemo = new Map();
 const porta = lerPorta();
 const tenantId = '11111111-1111-4111-8111-111111111111';
 const tenantLegadoId = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
@@ -1187,6 +1189,35 @@ const servidor = http.createServer(async (requisicao, resposta) => {
       return json(resposta, 200, itens.slice(0, normalizarLimite(url.searchParams.get('limite'))));
     }
 
+
+    const rotaGestacao = url.pathname.match(/^\/pacientes\/([^/]+)\/gestacoes(?:\/([^/]+)(?:\/(referencias|encerrar|reabrir|compartilhamento))?)?$/);
+    if (rotaGestacao) {
+      const alvoPaciente = rotaGestacao[1],id = rotaGestacao[2],acao = rotaGestacao[3];
+      if (!estado.pacientes.some(p => p.id === alvoPaciente)) return json(resposta,404,{ mensagem: 'Paciente não encontrado.' });
+      if (requisicao.method === 'GET' && !id) return json(resposta,200,{ itens: [...gestacoesDemo.values()].filter(g => g.pacienteId === alvoPaciente).map(({ pacienteId,...g }) => g),proximoCursor: null });
+      if (requisicao.method === 'POST' && !id) {
+        const body = await lerJson(requisicao);
+        if (!body.confirmar || !body.chaveCriacao || !body.referencia) return json(resposta,400,{ mensagem: 'Confira a gestação e referência.' });
+        const fingerprint = JSON.stringify({ alvoPaciente,referencia: body.referencia });
+        const anterior = chavesGestacoesDemo.get(body.chaveCriacao);
+        if (anterior) return json(resposta,anterior.fingerprint === fingerprint ? 200 : 409,anterior.fingerprint === fingerprint ? anterior.g : { mensagem: 'Chave usada para outro pedido.' });
+        const g = { id: randomUUID(),pacienteId: alvoPaciente,status: 'ativa',versao: 1,numero: 1,referencia: body.referencia,compartilhada: false,geracaoCompartilhamento: 0,criadoEm: new Date().toISOString() };
+        gestacoesDemo.set(g.id,g);chavesGestacoesDemo.set(body.chaveCriacao,{ fingerprint,g });return json(resposta,201,g);
+      }
+      const g = gestacoesDemo.get(id);
+      if (!g || g.pacienteId !== alvoPaciente) return json(resposta,404,{ mensagem: 'Gestação não encontrada.' });
+      if (requisicao.method === 'GET') return json(resposta,200,{ ...g,avaliacoes: [],seriesReferencia: [],proximoCursor: null });
+      const body = await lerJson(requisicao);
+      if (!body.confirmar || body.versao !== g.versao) return json(resposta,409,{ mensagem: 'Confira a versão atual.' });
+      if (acao === 'referencias' && g.status !== 'ativa') return json(resposta,409,{ mensagem: 'Gestação encerrada.' });
+      if (acao === 'referencias') {g.numero++;g.referencia = body.referencia;}
+      if (acao === 'encerrar') g.status = 'encerrada';
+      if (acao === 'reabrir') g.status = 'ativa';
+      if (acao === 'compartilhamento') {if (body.compartilhada && !g.compartilhada) g.geracaoCompartilhamento++;g.compartilhada = !!body.compartilhada;}
+      g.versao++;return json(resposta,requisicao.method === 'POST' ? 201 : 200,g);
+    }
+    // Demo intentionally has no automatically shared clinical records.
+    if (url.pathname === '/portal/paciente/gestacoes' && requisicao.method === 'GET') return json(resposta,200,{ itens: [],proximoCursor: null });
     const rotaDocumentos = url.pathname.match(/^\/pacientes\/([^/]+)\/documentos(?:\/(previa))?$/);
     if (rotaDocumentos) {
       const alvoPaciente = rotaDocumentos[1];

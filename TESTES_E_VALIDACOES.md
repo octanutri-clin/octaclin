@@ -707,3 +707,16 @@ Aceite de producao em 2026-08-21: migration `1034` aplicada com 47/47 no
 TypeORM; PR `#91` integrado em `ea6ed129`; CI `32507735771`, health detalhado,
 BFF protegido, erro publico controlado e monitor `32508654126` aprovados. O
 smoke nao deve mutar dado clinico real.
+
+
+## Fase 313 — acompanhamento gestacional
+
+Evidências e limites: `docs/history/phases/EXECUCAO_FASE_313.md`.
+Testes novos e regressões focadas foram autorizados pelo proprietário.
+`pnpm --dir octaclin-backend test --runInBand antropometria-gestacional referencia-gestacional-ms gestacoes-contratos 1720000001068 antropometria.spec servico-pacientes.spec`:
+PASS, seis suites / 180 testes. PostgreSQL real usa `test:rls:testcontainers` e o
+harness já registrado na CI; não conectar testes mutáveis à produção.
+Visual: `pnpm --dir octaclin-web test:fase313`, ambos os projects. O gate completo
+`smoke:visual` também inclui os specs. BFF: `scripts/test-fase-313-bff.mjs`, incluído
+em `test:authz`. Novos episódios/replay/ref/encerramento integram o smoke BFF da
+demo. Ficha clínica ratificada, sem confundir ratificação com evidência de deploy.

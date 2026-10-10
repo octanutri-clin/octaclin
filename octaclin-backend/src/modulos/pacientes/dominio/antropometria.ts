@@ -1,3 +1,4 @@
+import type { ResultadoGestacional } from './antropometria-gestacional';
 /**
  * Calculo antropometrico. Formula errada aqui e erro clinico, nao bug: cada
  * protocolo traz a referencia publicada no comentario, e o texto da formula
@@ -71,6 +72,7 @@ export type ClassificacaoRcq = 'abaixo_do_corte' | 'elevado';
 export type ClassificacaoCircunferenciaCintura = 'baixo' | 'aumentado' | 'muito_aumentado';
 
 export interface ResultadoAntropometrico {
+  gestacional?: ResultadoGestacional;
   imc?: number;
   classificacaoImc?: ClassificacaoImc;
   rcq?: number;
@@ -398,11 +400,11 @@ export function calcularAntropometria(entrada: EntradaCalculoAntropometrico): Re
   if (cinturaValida && quadril !== undefined && dentroDaFaixa(quadril, LIMITES.circunferenciaCm)) {
     const rcq = (cintura as number) / quadril;
     resultado.rcq = arredondar(rcq, 2);
-    if (entrada.sexo) resultado.classificacaoRcq = classificarRcq(rcq, entrada.sexo);
-    else avisos.push('rcq_sem_classificacao_sexo_ausente');
+    if (entrada.sexo && !entrada.gestante) resultado.classificacaoRcq = classificarRcq(rcq, entrada.sexo);
+    else if (!entrada.gestante) avisos.push('rcq_sem_classificacao_sexo_ausente');
   }
 
-  if (cinturaValida && entrada.sexo) {
+  if (cinturaValida && entrada.sexo && !entrada.gestante) {
     // A propria OMS 2008 conclui que a cintura isolada prediz risco
     // cardiometabolico melhor que a RCQ, e o dado ja esta na mao.
     resultado.circunferenciaCinturaCm = arredondar(cintura as number, 1);
@@ -412,6 +414,11 @@ export function calcularAntropometria(entrada: EntradaCalculoAntropometrico): Re
     );
   }
 
+  if (entrada.gestante) {
+    if (cinturaValida) resultado.circunferenciaCinturaCm = arredondar(cintura as number, 1);
+    avisos.push('gestante_sem_interpretacao_adulta_cintura_rcq_composicao');
+    return resultado;
+  }
   const equacao = aplicarProtocolo(entrada, avisos);
   if (!equacao) return resultado;
 
