@@ -4571,8 +4571,9 @@ auditoria estão ordenados na seção 15 de
   Gates residuais em `tasks/todo-fase-312.md`, handoff `tasks/plan-fase-312.md`.
 - [~] Fase 313 - implementação e evidências em andamento; ficha clínica ratificada.
   Curvas brasileiras MS, episódios/referências versionadas, gráfico e portal
-  com dupla autorização. Ficha clínica aguarda revisão detalhada em
-  `docs/product/FICHA_VALIDACAO_CLINICA_FASE_313.md`; execução `tasks/todo-fase-313.md`.
+  com dupla autorização. Ficha clínica ratificada pelo proprietário/equipe em
+  `docs/product/FICHA_VALIDACAO_CLINICA_FASE_313.md`; PR #391, checks em acompanhamento
+  e migration 1068 externa pendente. Execução `tasks/todo-fase-313.md`.
 - [ ] Fase 314 - avaliação antropométrica de menores de 20 anos, após validação
   clínica da referência etária e por sexo.
 - [ ] Fase 315 - retirada controlada do campo `score_risco` legado, com
