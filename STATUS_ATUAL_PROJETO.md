@@ -87,13 +87,16 @@ Atualizado em 2026-10-10.
   e produção; não houve consulta direta aos bancos. Atestados seguem pendentes.
   Limites históricos preservados em `tasks/todo-fase-312.md`; handoff arquivado
   em `tasks/plan-fase-312.md`. Provenance do SBOM permanece SKIPPED.
-- Fase 313 em implementação, com ficha ratificada: acompanhamento
-  gestacional MS, episódios explícitos, referência versionada, gráfico e portal
-  com liberação profissional e aceite específico/revogável do paciente.
-  Contratos/gaps em `docs/history/phases/PLANO_FASE_313.md`, sequência em
-  `tasks/todo-fase-313.md`, handoff atual em `tasks/plan.md`. Ficha clínica em
-  `docs/product/FICHA_VALIDACAO_CLINICA_FASE_313.md` ratificada pelo proprietário/equipe em 2026-10-10;
-  testes e gates em conclusão. Modelo recomendado: GPT-6.1 Sol médio.
+- Fase 313 integrada pelo PR #391 (merge `f8c5ab66`, 2026-10-10).
+  CI final da PR `38082785780` e principal pós-merge `38084523466` SUCCESS;
+  scanners pós-merge SUCCESS. Migration 1068 integrada; aplicação operacional
+  não confirmada neste ciclo. Revisão independente não comprovada.
+  Ficha ratificada e limites históricos em `tasks/plan.md`/`tasks/todo-fase-313.md`.
+- Fase 314 em planejamento/análise de gaps: quatro indicadores OMS/SISVAN,
+  gráfico no console, prematuros INTERGROWTH → OMS com idade corrigida.
+  Plano em `docs/history/phases/PLANO_FASE_314.md`; rascunho de handoff em
+  `tasks/plan-fase-314.md`. Referência neonatal computacional e ratificação
+  clínica pendentes; não há implementação. Modelo: GPT-6.1 Sol médio.
 - Pendência operacional observada: Monitor de produção `38065380981` FAIL,
   HTTP 503 após três tentativas em 2026-10-10. Causa/endpoint não identificados;
   não atribuir ao PR #390 nem declarar saúde de produção a partir de CI.
