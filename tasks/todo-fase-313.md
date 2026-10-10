@@ -8,7 +8,10 @@ Handoff: [plan.md](plan.md). Arquivos novos abaixo são **planejados**.
 
 - [x] Reconciliar merge 312/Git/CI e preservar seus gates residuais.
 - [x] Inspecionar contratos backend, Web, portal, autorização e histórico.
-- [x] Fechar perguntas de produto com o proprietário.
+- [x] Fechar escopo principal com o proprietário.
+- [x] Incorporar parecer documental recebido, preservando aprovação clínica pendente.
+- [x] Proprietário confirmou peso habitual como origem própria.
+- [ ] Ratificar na ficha regra de uso dessa alternativa, sem inferência/substituição.
 - [x] Preparar fonte, tabela, exemplos e ficha clínica para revisão.
 - [ ] G01: obter confirmação detalhada da [ficha clínica](../docs/product/FICHA_VALIDACAO_CLINICA_FASE_313.md).
 - [ ] G02: autorização para implementação (autorização atual é planejamento).
@@ -40,7 +43,12 @@ para comportamento/contrato/schema; não marcar PASS sem executar.
 - Aceite: aplicabilidade e todos os motivos; condição não depende de sexo;
   negativos válidos; precisão decimal; adulto não gestante sem regressão;
   gestante preserva medidas e não recebe interpretações/composição adulta.
-- Não arredondar IMC/ganho antes de decidir; fonte/dados efetivos no resultado.
+- Não arredondar IMC/ganho antes de decidir; `source_id`/`algorithm_version`,
+  IG original/arredondada, faixa ou motivo e unidades/precisão no resultado.
+- Testar plausibilidade como proteção técnica local, separada da população
+  clínica; RCQ numérica sem classificação/alertas/gatilhos. Peso habitual como
+  origem própria aprovada pelo proprietário, com regra clínica ratificada;
+  testar confirmação ausente, versão e manutenção da origem no histórico/portal.
 
 ### T03 — Migration aditiva e registro (depende G02)
 
@@ -81,8 +89,11 @@ para comportamento/contrato/schema; não marcar PASS sem executar.
 - [ ] Alterar B/aplicacao/dtos.ts, servico-pacientes.ts e .spec.ts;
   B/infraestrutura/avaliacao-antropometrica.orm.ts somente se integração exigir.
 - Aceite: condição explícita/legado, confirmação da divergência, data civil,
-  idade servidor, contexto cifrado, chave replay, referência esperada/409,
-  lock do episódio e vínculo. Sem episódio salva factual sem faixa; com
+  idade servidor, origem/data da IG para a avaliação, inconsistência, contexto
+  cifrado, chave replay, referência esperada/409,
+  lock do episódio e vínculo. Testar IG antiga contra hoje, data inválida/futura,
+  ausência de origem do peso/IG, alteração da altura e associação de gestação
+  diferente; nunca completar snapshot com cadastro atual. Sem episódio salva factual sem faixa; com
   episódio encerrado nega. Nenhuma recalculação retroativa.
 
 ### T08 — Leitura por episódio e séries (depende T07)

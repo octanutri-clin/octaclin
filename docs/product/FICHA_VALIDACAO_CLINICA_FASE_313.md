@@ -2,16 +2,21 @@
 
 Status: **aguarda revisão e confirmação do proprietário/equipe clínica**.
 Preparada em 2026-10-10. Não é protocolo já validado nem autorização de implantação.
-As escolhas de produto foram confirmadas; esta ficha exige conferência clínica
-específica das regras e da transcrição. Não há dados de pacientes nesta ficha.
+O [parecer recebido](PARECER_REVISAO_FASE_313.md), datado de 10/10/2026,
+relata conferência sem divergências das 31 linhas/124 faixas/248 valores.
+Isso constitui conferência documental relatada, não aprovação clínica final.
+A ratificação das regras continua pendente. Não há dados de pacientes nesta ficha.
 
 ## 1. Fonte e versão propostas
 
 - Tabela numérica: [Guia MS/UFS 2022, anexo, p. impressa 50 / PDF 51](https://docs.bvsalud.org/biblioref/2022/12/1401909/livro_saps_guia_organizacao_vigilancia_alimentar_nutricional_2022.pdf).
-- Regras de dias/população: [Caderneta Brasileira das Gestantes, seção p. 87](https://www.gov.br/saude/pt-br/assuntos/saude-de-a-a-z/s/saude-da-mulher/publicacoes/caderneta-brasileira-das-gestantes.pdf), consultada em 2026-10-10.
+- Regras de dias/população: [Caderneta Brasileira das Gestantes 2026, p. impressa 87 / página 88 do arquivo (índice 87)](https://www.gov.br/saude/pt-br/assuntos/saude-de-a-a-z/s/saude-da-mulher/publicacoes/caderneta-brasileira-das-gestantes.pdf), consultada em 2026-10-10.
 - Referência científica: Kac et al., 2021, [DOI 10.1093/ajcn/nqaa402](https://doi.org/10.1093/ajcn/nqaa402).
 - Origem do peso e aplicabilidade: [FEBRASGO 2023, DOI 10.1055/s-0043-1766109](https://www.scielo.br/j/rbgo/a/Tz7zqByTjv9WYwwcjWCKMRH/?lang=en).
-- Proveniência gráfica: [UFRJ, dataset V3](https://dataverse.nutricao.ufrj.br/dataset.xhtml?persistentId=hdl:20.500.12783/170).
+- Referência gráfica adicional: [UFRJ, dataset V3](https://dataverse.nutricao.ufrj.br/dataset.xhtml?persistentId=hdl:20.500.12783/170).
+  Não conferida integralmente pelo parecer recebido e não usada como fonte
+  dos números. O download/checksum observado no planejamento anterior está
+  registrado no plano; não equivale à validação desse dataset pelo parecer.
 
 Identificador proposto: `ms_ufs_2022_semanal_v1`, algoritmo
 `ganho_gestacional_v1`. Preservar fonte/versão no resultado; mudança posterior
@@ -25,39 +30,68 @@ calcular percentil individual, escore Z ou previsão de peso.
    não é inferida. Sexo do cadastro não substitui condição gestacional.
 2. Peso pré-gestacional medido ou informado. Alternativa proposta: medida
    feita **até 8 semanas e 0 dias**, com semana/dias e origem registrados.
-   Este limite conservador precisa de aceite: “até 8 semanas” também pode ser
+   Este limite é uma decisão conservadora local, não citação literal da fonte, e precisa de aceite: “até 8 semanas” também pode ser
    lido como toda a oitava semana. Não adotar 8s6d sem decisão clínica.
+   Origem em enum próprio; data do peso quando conhecida, ausência explícita
+   quando não conhecida; vínculo à gestação e versão preservados. Peso inicial
+   exige idade gestacional da medida substituta. O proprietário aprovou incluir
+   “peso habitual” como origem própria: `peso_habitual_informado`. Proposta de
+   uso: profissional confirma que representa o peso habitual anterior à gestação,
+   informando valor, origem e data quando conhecida (ou ausência explícita).
+   Não estimar pelo peso atual nem converter a origem para pré-gestacional medido.
+   Usar esta alternativa quando não houver peso pré-gestacional conhecido;
+   não escolher ou substituir uma referência silenciosamente. Sem confirmação
+   dessa base, registrar medidas sem classificação. Regra aguarda ratificação clínica.
 3. IMC de referência = peso de referência / altura em metros ao quadrado.
    Cortes brutos: <18,5 baixo peso; [18,5;25) eutrofia; [25;30) sobrepeso;
-   >=30 obesidade. Não arredondar antes de selecionar grupo; sem Lipschitz.
+   >=30 obesidade. Não arredondar antes de selecionar grupo.
 4. Ganho acumulado = peso atual - referência. Negativo é válido, não zero.
    Não substituir por ganho desde primeiro atendimento ou por IMC atual.
 5. Semana da curva: dias 0–3 mantêm semanas completas; dias 4–6 usam semana
    seguinte. Preservar também semanas/dias originais. Aplicabilidade proposta
    depende da **semana arredondada entre 10 e 40**, inclusive: 9s4d usa 10;
    40s3d usa 40; 40s4d fica sem faixa. Confirmar explicitamente essas bordas.
+   Idade gestacional é confirmada pelo profissional para a data da avaliação,
+   com origem `pre_natal|ultrassonografia|dum|nao_informada`, preservada cifrada.
+   Não calcular a IG automaticamente pela DUM/USG nem transportar IG de hoje
+   para avaliação antiga. Se a fonte tem outra data, o profissional informa
+   a IG correspondente à avaliação; guardar a data da fonte quando disponível.
+   Sem IG ou com origem desconhecida, salvar medidas sem classificação e com
+   motivo. Semanas/dias inválidos ou data da fonte posterior à avaliação são
+   rejeitados; inconsistência declarada pelo profissional impede classificação.
+   Não deduzir inconsistência clínica comparando registros de gestações distintas.
 6. Comparar ganho sem arredondamento de exibição; limites inclusivos. Usar
    aritmética decimal ou escala inteira compatível com precisão aceita dos
    pesos; não aplicar tolerância clínica arbitrária para resolver float.
-7. Peso/altura devem ser positivos e plausíveis conforme validações existentes;
-   baseline com IMC fora de 8–100 fica sem classificação, sem normalizar valor.
-   Faltas/impossibilidade preservam medidas e mostram motivos claros.
+7. Qualidade dos dados é uma checagem técnica separada da aplicabilidade clínica.
+   Peso/altura positivos e plausíveis; IMC 8–100 é heurística técnica local já
+   usada pelo domínio adulto (`LIMITES.imc`), não limite das curvas MS/FEBRASGO.
+   Proposta: manter essa proteção para a referência, guardar medidas e mostrar
+   motivo `referencia_fora_plausibilidade_tecnica` fora do intervalo, sem faixa.
+   Não corrigir, truncar ou substituir valores. A aplicação à referência gestacional
+   exige ratificação nesta ficha; testar limites e distinguir o motivo na UI.
 8. Gestante não recebe interpretações adultas de IMC atual, cintura/RCQ nem
-   equações de gordura/massas. Medidas brutas permanecem, histórico não muda.
+   equações de gordura/massas. RCQ factual pode ser mostrado como razão numérica,
+   sem classificação, alerta de risco ou gatilho automatizado derivado. Medidas
+   brutas permanecem; protocolos de gordura ficam sem resultado novo calculado.
+   Resultados históricos são exibidos como históricos, sem recalcular ou usá-los
+   para gerar interpretação atual da gestante.
 9. Classificação textual: abaixo/dentro/acima da faixa da referência. Não
    equivale a diagnóstico, prescrição ou recomendação de perder peso. Portal
    orienta discutir o acompanhamento com o profissional, sem alarmismo.
 
 ## 3. Divergência editorial que exige aceite explícito
 
-Na semana 13, a tabela semanal fornece sobrepeso **[-1,6;-0,5]** e obesidade
-**[-1,7;-0,5] kg**. O quadro resumido do guia e o
-[cartaz cumulativo MS 2024](https://bvsms.saude.gov.br/bvs/cartazes/ganho_peso_gestacional.pdf)
-apresentam valores diferentes para esses grupos (incluindo -0,05/+0,05).
-Proposta: usar exclusivamente a tabela semanal abaixo; não combinar com o
-quadro trimestral nem deduzir casas decimais. A revisão deve conferir esse
-ponto e todas as linhas na fonte. A escolha aqui não afirma que houve errata
-oficial. Se a equipe discordar, anexar fonte validada e revisar ficha/testes.
+| Fonte | Sobrepeso na/até semana 13 (kg) | Obesidade na/até semana 13 (kg) |
+| --- | --- | --- |
+| Anexo semanal MS/UFS 2022 | [-1,6;-0,5] | [-1,7;-0,5] |
+| Resumo trimestral MS/UFS 2022 e FEBRASGO 2023, conforme parecer | [-1,6;-0,05] | [-1,6;-0,05] |
+| [Cartaz cumulativo MS 2024](https://bvsms.saude.gov.br/bvs/cartazes/ganho_peso_gestacional.pdf) | [-1,6;-0,05] | [-1,6;+0,05] |
+
+Proposta: usar exclusivamente a tabela semanal abaixo; não combinar fontes nem
+deduzir casas decimais. Escolha é convenção explícita do produto, não errata
+oficial nem prova de superioridade clínica. Documentar o impacto e obter aceite.
+Se a equipe discordar, indicar fonte validada e revisar ficha/testes.
 
 ## 4. Faixas semanais propostas (kg, extremos inclusivos)
 
@@ -110,18 +144,39 @@ runtime. Cada grupo corresponde ao IMC da referência, nunca ao IMC da avaliaç�
 | IMC bruto 18,4999 / 18,5 / 24,9999 / 25 / 29,9999 / 30 | Baixo / eutrofia / eutrofia / sobrepeso / sobrepeso / obesidade |
 | 12s3d / 12s4d | Curva da semana 12 / 13; idade original preservada |
 | 9s3d / 9s4d / 40s3d / 40s4d | Sem faixa / semana 10 / semana 40 / sem faixa, conforme proposta |
-| Origem medida inicial, 8s0d / 8s1d | Referência aceita / não aplicável, conforme limite conservador proposto |
+| Origem medida inicial, 8s0d / 8s1d | Elegível / não elegível como medida substituta; outro peso pré-gestacional legítimo pode permitir classificação |
 | Idade 17 na avaliação / exatamente 18 | Sem classificação / elegível se demais critérios atendidos |
 | Múltipla / alto risco / risco desconhecido / referência ausente | Medidas preservadas, sem classificação, motivo específico |
 | Alterar perfil atual ou criar referência v2 | Resultado v1 permanece igual; série v2 separada |
 | Gestante com cintura, quadril e dobras | Medidas/RCQ factual preservados; sem interpretações adultas/composição |
 
+Casos adicionais obrigatórios:
+
+| Caso | Resultado esperado após aprovação |
+| --- | --- |
+| IG ausente / origem não informada / inconsistência declarada | Medidas preservadas, sem faixa, motivo distinto |
+| Dias 7, semanas fracionárias, data inexistente ou fonte posterior à avaliação | Erro de validação seguro; não gravar contexto inválido |
+| Avaliação antiga, IG atual carregada no formulário | Exigir confirmação da IG para a data antiga; não reutilizar automaticamente |
+| Referência pertencente a outra gestação/tenant/paciente | Rejeitar associação, sem exposição de dados |
+| Peso presente sem origem | Referência incompleta; sem classificação, sem inferir origem |
+| Peso habitual com confirmação de uso anterior à gestação | Origem própria no snapshot/portal; base usada e versão explícitas, sem converter para medido |
+| Peso habitual sem confirmação / derivado do peso atual | Sem classificação / não estimar nem aceitar derivação automática |
+| Alterar altura do cadastro após registro ou criar baseline v2 | Altura/resultados antigos intactos; série v2 separada |
+| IMC de referência 7,99 / 8 / 100 / 100,01 | Fora / dentro / dentro / fora da heurística técnica local, não da população clínica |
+| Peso decimal e limites 1,19 / 1,2 / 4,1 / 4,11 kg | Abaixo / dentro / dentro / acima, sem erro de ponto flutuante |
+| Transparência do resultado | `source_id`, `algorithm_version`, IG original, semana da curva, intervalo ou motivos, versão/origem/unidade/precisão preservados |
+
 ## 6. Registro de revisão
 
-- [ ] Conferir fonte semanal e transcrição das 31 linhas/quatro grupos.
+- [x] Conferência documental da transcrição relatada no parecer de 10/10/2026; não é validação clínica final.
 - [ ] Aprovar o tratamento das divergências da semana 13.
 - [ ] Confirmar idade >=18 na avaliação, feto único e risco habitual.
 - [ ] Confirmar origem e limite de medida substituta até 8s0d.
+- [x] Proprietário decidiu incluir peso habitual como origem própria nesta conversa.
+- [ ] Ratificar uso de peso habitual anterior à gestação, confirmação do
+      profissional, rastreabilidade e exemplos; inclusão não é aprovação clínica.
+- [ ] Ratificar origem da IG por avaliação, tratamento de inconsistência e
+      heurística técnica de plausibilidade distinta de limite clínico.
 - [ ] Confirmar arredondamento dos dias e bordas 9s4d/40s3d/40s4d.
 - [ ] Confirmar inclusividade, precisão, exemplos e textos sem prescrição.
 - [ ] Registrar confirmação clínica no handoff (data e resposta documental,

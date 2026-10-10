@@ -10,5 +10,8 @@ Planejamento/gaps preparados; implementação não iniciada.
 
 Próximo passo: revisão/aceite específico da ficha pelo proprietário/equipe
 clínica; autorização para implementação ainda não dada neste ciclo.
+Parecer documental incorporado; tabela sem erro de transcrição relatado,
+ratificação clínica final pendente. Peso habitual incluído como origem própria
+por decisão adicional do proprietário; regras de uso detalhadas na ficha.
 Modelo recomendado para implementação completa: GPT-6.1 Sol médio.
 Não trocar automaticamente. Não há perguntas de produto pendentes.

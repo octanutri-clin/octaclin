@@ -18,7 +18,8 @@ Ficha clínica: [FICHA_VALIDACAO_CLINICA_FASE_313.md](../../product/FICHA_VALIDA
    cintura/RCQ nem estimativas de gordura/massa gorda/massa magra. Medidas
    brutas e RCQ factual podem permanecer; resultados antigos são preservados.
 4. Peso de referência pré-gestacional medido ou informado; se ausente, aceitar
-   medida até oito semanas, com origem explícita. Limite exato de dias na ficha.
+   medida até oito semanas, com origem explícita. Após o parecer, proprietário
+   incluiu também peso habitual como origem própria. Limites/uso na ficha.
 5. Confirmar condição por avaliação, sugerida pelo cadastro; divergência pede
    confirmação. Não alterar o cadastro por efeito colateral.
 6. Entregar avaliação e histórico profissional, gráfico por gestação e portal.
@@ -32,7 +33,13 @@ Ficha clínica: [FICHA_VALIDACAO_CLINICA_FASE_313.md](../../product/FICHA_VALIDA
     histórico e compartilhamento autorizado. Reabertura explícita, confirmada e auditada.
 12. Proprietário/equipe clínica revisarão a ficha e confirmarão sua validação.
 
-Não há pergunta de produto pendente. Validação clínica detalhada permanece
+Parecer recebido e preservado em [PARECER_REVISAO_FASE_313.md](../../product/PARECER_REVISAO_FASE_313.md),
+SHA-256 do anexo original `73e2c7a28e74b1a38c3a9bd87afa80ae696b62c0f55daa29427949fc7cb27b3c`.
+Cópia no repositório tem apenas espaços finais normalizados para o gate de diff.
+Relata transcrição conferida sem divergências, mas mantém aprovação clínica final
+pendente. Após o parecer, proprietário confirmou inclusão de peso habitual como
+origem própria. Sua regra de uso também aguarda ratificação clínica detalhada,
+que permanece
 SKIPPED (aguarda revisão), bloqueando implementação do classificador/tabela.
 Não interpretar escolha de protocolo ou autorização de planejamento como essa validação.
 
@@ -115,7 +122,11 @@ procedimento fora de banda. Nenhuma execução de migration nesta tarefa.
   compartilhamento. Datas/observações clínicas, quando necessárias, cifradas.
 - `referencias_gestacao`: UUID, tenant/paciente/gestação, número sequencial,
   autoria/timestamp, contexto cifrado (peso, altura, origem, idade da medida
-  substituta). Uma versão pode ser incompleta; isso impede classificação,
+  substituta, data do peso quando conhecida ou ausência explícita, unidade e
+  precisão). Origens: `pre_gestacional_medido|pre_gestacional_informado|inicio_gestacao_medido|peso_habitual_informado`.
+  Peso habitual exige confirmação do profissional de que representa valor
+  anterior à gestação, sem inferência pelo peso atual nem substituição automática
+  de baseline conhecido. Confirmar uso na ficha. Uma versão pode ser incompleta; isso impede classificação,
   não o registro factual. Não herdar silenciosamente peso de avaliação atual.
 - `consentimentos_gestacao`: UUID, tenant/paciente/gestação/usuário vinculado,
   geração da liberação, versão do termo, aceite/revogação e timestamps.
@@ -169,6 +180,20 @@ positivo, semanas inteiras 0–45, dias 0–6, `tipo: unica|multipla|nao_informa
 `risco: habitual|alto|nao_informado`. Dias sem semanas são inválidos. Intervalo
 aceito de captura não é intervalo de aplicabilidade da curva.
 
+Adicionar `origemIdadeGestacional: pre_natal|ultrassonografia|dum|nao_informada`,
+`dataFonteIdadeGestacional` opcional e `idadeGestacionalInconsistente` booleano
+confirmado pelo profissional. IG sempre referente a `dataAvaliacao`; preservar
+origem/data cifradas. Nenhuma derivação automática por DUM/USG ou relógio atual.
+Data da fonte futura/semana ou dia inválido rejeitados; falta/origem desconhecida/
+inconsistência permite medidas sem classificação. Alterar data do formulário
+invalida a confirmação e exige nova IG correspondente. Não inferir inconsistência
+entre gestações diferentes. Estes detalhes são propostos para ratificação na ficha.
+
+Plausibilidade de IMC 8–100 é proteção técnica herdada de `LIMITES.imc`, não
+corte clínico publicado; motivo próprio `referencia_fora_plausibilidade_tecnica`.
+Ratificar seu uso na referência. Capturar unidade/precisão sem arredondar para
+comparar; não alterar retroativamente valores antigos nem limites não gestantes.
+
 Avaliação gestante pode salvar medidas sem episódio/dados completos, com motivo
 visível; não recebe classificação gestacional e não é incluída automaticamente
 no gráfico/portal. Para acompanhamento completo, UI exige escolha explícita do
@@ -181,7 +206,9 @@ origem `perfil_legado` registrada nos novos snapshots. Perfil desconhecido não
 vira não gestante explicitamente confirmada. História anterior sem contexto
 permanece `legado`, sem reclassificação ou vínculo automático.
 
-Resultado cifrado adiciona `gestacional` com condição/origem, dados efetivamente
+Resultado cifrado adiciona `gestacional` com `source_id` e `algorithm_version`
+(com nomes equivalentes nos tipos TypeScript, mapeamento explícito), condição/origem,
+unidade/precisão, origem/data da IG, consistência e dados efetivamente
 usados, fonte/versão de algoritmo, versão da referência, IMC de referência/grupo,
 ganho, semana informada e semana da curva, faixa, classificação e motivos de
 não classificação. Não usar `protocolo` de composição como versão gestacional.
@@ -239,6 +266,8 @@ excluídas ficam fora. JSON ilegível não vira zero nem classificação, indica
 - UI desktop/mobile, teclado, foco, tabela equivalente ao gráfico, texto além
   de cores, estados de erro/sem dados/não aplicável e paginação visível.
 - Preservar medidas brutas de cintura/dobras, mesmo com cálculo adulto bloqueado.
+  RCQ factual visível como razão sem faixa/risco; nenhuma interpretação, alerta
+  automatizado ou gatilho derivado de gordura/RCQ adulto em novos registros gestantes.
   Limpar formulário, referência, perfil e séries ao mudar paciente/episódio;
   resposta atrasada não publica conteúdo do contexto anterior.
 
