@@ -1,11 +1,11 @@
-# Handoff — Fase 311: planejamento concluído → implementação
+# Handoff — Fase 311: implementação → revisão e integração
 
 ## Branch, base e objetivo
 
 - Branch: `feature/fase-311-ativacao-conteudo`.
 - Worktree: `/workspace/octaclin/.worktrees/feature-fase-311-ativacao-conteudo`.
 - Base: `eb7f2aad`, Fase 310/PR #388 MERGED, confirmada no GitHub em 2026-10-10.
-- PR da Fase 311 ainda não aberta; o próximo PR reúne este plano e implementação.
+- Implementação em andamento/concluída localmente; PR ainda não aberta.
 - Objetivo: kit genérico selecionável/incremental para clínicas existentes e
   diagnóstico somente leitura das cargas globais TACO/USDA/IBGE.
 - Plano completo e contratos: [PLANO_FASE_311.md](../docs/history/phases/PLANO_FASE_311.md).
@@ -54,7 +54,7 @@ Não há pergunta de produto pendente.
 - Nenhuma migration nova prevista. Rollback preserva dados: versão antiga oculta
   estruturas de marcador 2; nunca converter marcador 2 para1 para contornar o limite.
 
-## Mapa inicial de arquivos
+## Mapa da implementação
 
 Existentes a reler/modificar:
 - Backend: `tenancy/kit-inicial-clinica.ts`, helper de `operacoes/aplicacao`,
@@ -68,10 +68,10 @@ Existentes a reler/modificar:
 - Provas: harness RLS/Testcontainers existente, `test:authz`, Playwright
   `portal-cliente.spec.mjs`, mock `octaclin-backend/scripts/api-demo-local.mjs`.
 
-Novos previstos (ainda não existem): helper/parser/DTO/serviço compartilhados
-sob Tenancy, serviço de disponibilidade sob Operacoes, três rotas BFF,
-componente selecionável, harnesses de testes e Playwright da Fase 311.
-O checklist contém dependências e cenários positivos/negativos por entrega.
+Implementados: helper/parser/DTO/serviço compartilhados sob Tenancy, serviço
+de disponibilidade sob Operacoes, três rotas BFF, componente selecionável,
+harnesses de testes e cenários visuais da Fase 311. O checklist contém os
+critérios e casos positivos/negativos por entrega.
 
 ## Estado observado e validações
 
@@ -80,49 +80,58 @@ O checklist contém dependências e cenários positivos/negativos por entrega.
   Demo local smoke e PR Gate; step de RLS/Testcontainers do Backend aprovado.
 - PASS — CI principal pós-merge 309 `38000687212`; scanners pós-merge 310
   Semgrep `38016413577`, Trivy `38016413549`, CodeQL `38016413585` aprovados.
-- PENDENTE — CI principal pós-merge 310 `38016413569` estava em andamento,
-  com Demo local smoke ainda rodando. Consultar esse ID antes de implementar.
+- PASS — CI principal pós-merge 310 `38016413569`, confirmado em 2026-10-10.
 - SKIPPED — Provenance do SBOM na PR 388. Não contar como PASS.
-- PASS — `git diff --check`, `pnpm security:secrets` e verificador documental
-  da matriz (`node scripts/test-matriz-confiabilidade.mjs`, 40 referências).
-  Links relativos, blocos Markdown, cinco chaves e versão 2 revisados;
-  todas as alterações deste planejamento são Markdown.
+- PASS — validação do planejamento original: `git diff --check`,
+  `pnpm security:secrets`, matriz documental com 40 referências. Os documentos
+  agora incluem a implementação; repetir `git diff --check` no fechamento.
 - SKIPPED — preflight documental em PowerShell: `pwsh` não está disponível.
   As verificações proporcionais acima passaram, sem equivaler ao preflight completo.
-- Ambiente observado: Node 24.19.0/pnpm 11.19.0; usar Node 22/pnpm 11.25.0
-  na implementação, conforme os manifests. O scanner de segredos passou com aviso.
+- Ambiente observado: Node 24.19.0/pnpm 11.19.0, incompatível com o range
+  Node 22/pnpm 11.25.0 do manifest; builds/testes locais passaram com aviso.
 - FAIL de integração do tooling — AI DevKit lint/lint da feature assume
   `docs/ai/*` ausente e outra convenção de branch. Não executar init;
   documentos OctaClin acima são canônicos. Sem bloqueio de produto por isso.
-- SKIPPED — testes/build da implementação 311 e prova PostgreSQL; nenhum
-  código executável da 311 foi escrito durante o planejamento.
+- PASS — helper/parser, serviços/controladores, provisionamento e modelos:
+  Jest focado 100/100; backend integral 2464 passed, 44 skipped; build
+  validado após o ajuste final do diagnóstico numérico.
+- PASS — PostgreSQL/Testcontainers/RLS: 25/25, incluindo concorrência por
+  tenant, isolamento, autoria SuperAdmin, rollback e papel SELECT-only.
+- PASS — BFF novo 5/5; visual Fase 311 Client e Operações desktop/mobile,
+  axe/foco: 4/4; Web typecheck e build de produção passaram.
+- PASS — governança local: guardas 11/11, confiabilidade 40/40, matriz de
+  acessibilidade 20/20, redação de auditoria 24/24 + inventário, scanner de
+  secrets e lint sem erros. Três chaves seguras de contagem/enumeração têm
+  justificativas específicas.
+- PASS — demo local smoke após build: `smoke-e2e-bff-ok`, com API demo sintética.
+- PASS — suíte ampla Web `test:authz`, incluindo o harness BFF da Fase 311
+  (5/5); Playwright da Fase 311 Client/Operações desktop/mobile 4/4.
+- PASS — `git diff --check` após os documentos finais.
+- PENDENTE — publicar branch/PR e aguardar o CI completo da PR.
 - SKIPPED — banco operacional, migrations 1065/1066, configuração de canais,
   envios reais, deploy/produção; não foram consultados/executados.
 - Revisão R4 formal GitHub: nenhuma entrada encontrada nas PRs 386/388;
   isso não comprova revisão externa independente. Requerir revisão específica
   da 311 quando viável e não declarar rollout baseado apenas no merge.
 
-## Concluído e arquivos deste planejamento
+## Decisões e entregáveis desta fase
 
 - [x] Análise de gaps/código, decisões, contrato de seleção/legado/catálogos.
-- [x] Branch/worktree dedicada e plano/checklist para implementação Luna.
+- [x] Branch/worktree dedicada, plano, implementação e checklist desta fase.
 - [x] Reconciliação factual dos documentos 309/310 e preservação do handoff 309.
-- [x] Validação documental proporcional final; evidências e limites acima.
-- [x] Planejamento preparado para commit na branch dedicada; consultar o
-  histórico Git para o identificador, sem iniciar implementação nesta etapa.
+- [x] Validação documental proporcional; evidências e limites da implementação
+  estão acima e em `docs/history/phases/PLANO_FASE_311.md`.
+- [x] Implementação e testes locais da Fase 311 nesta branch dedicada.
+- [ ] Atualizar documentos, rever diff final, commit/push e abrir PR.
 
 Alterados: plano 311, `tasks/plan.md`, `tasks/todo.md`, checklist 311,
 status/checklist/roadmap/resumo/matriz e notas de integração dos históricos
 309/310. Handoff antigo 309 preservado em `tasks/plan-fase-309.md` e
 `tasks/todo-fase-309.md`; tarefas históricas não são reabertas por estes textos.
 
-## Próxima ação exata / troca de modelo
+## Implementação entregue e próximo passo
 
-Planejamento com GPT-6.1 Sol médio; implementação recomendada com GPT-6 Luna
-alto para economizar tokens com o contrato fechado. O usuário exige aviso e
-pausa na troca manual. Não começar código neste turno de planejamento.
-
-Depois de o usuário trocar: entrar nesta worktree, reconfirmar Git/CI e ler
-este handoff + plano/checklist; começar pelo passo 1 do checklist, em TDD,
-no runtime suportado. Manter a branch e uma futura PR única para a fase.
-Handoff antigo de 309/310 não define a tarefa corrente.
+Implementação feita com GPT-6 Luna alto, suficiente para o escopo fechado e
+mais econômico em tokens. Não houve troca de modelo durante este turno.
+Próximo passo: fechar build/smoke/governança, abrir PR única desta fase e
+acompanhar o CI. Não fazer merge nem ações operacionais de produção.

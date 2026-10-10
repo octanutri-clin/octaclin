@@ -240,6 +240,25 @@ describe('ServicoModelosPlanoAlimentar', () => {
       expect((await servico.listar(TENANT_ID, usuarioProfissional())).estruturasIniciais).toEqual([]);
     });
 
+    it('libera somente estruturas selecionadas pelo marcador v2', async () => {
+      repositorios.get(TenantConfiguracaoOrm)!.registros.push({
+        tenantId: TENANT_ID,
+        chave: 'kit_inicial_clinica',
+        valor: { versao: 2, itens: ['estrutura:cinco-refeicoes'] }
+      });
+      const pagina = await servico.listar(TENANT_ID, usuarioProfissional());
+      expect(pagina.estruturasIniciais.map((estrutura) => estrutura.id)).toEqual(['cinco-refeicoes']);
+    });
+
+    it('não libera estruturas se o marcador for inválido ou incompatível', async () => {
+      repositorios.get(TenantConfiguracaoOrm)!.registros.push({
+        tenantId: TENANT_ID,
+        chave: 'kit_inicial_clinica',
+        valor: { versao: 2, itens: [] }
+      });
+      expect((await servico.listar(TENANT_ID, usuarioProfissional())).estruturasIniciais).toEqual([]);
+    });
+
     it('nega o kit a usuario sem permissao de ler planos', async () => {
       repositorios.get(TenantConfiguracaoOrm)!.registros.push({
         tenantId: TENANT_ID, chave: 'kit_inicial_clinica', valor: { versao: 1 }

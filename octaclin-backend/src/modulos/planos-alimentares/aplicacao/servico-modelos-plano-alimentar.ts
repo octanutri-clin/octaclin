@@ -7,7 +7,7 @@ import { resolverProfissionalIdDoUsuario } from '../../../infraestrutura/seguran
 import type { PermissaoOctaClin } from '../../auth/dominio/permissoes';
 import { UsuarioAutenticado } from '../../auth/dominio/usuario-autenticado';
 import { TenantConfiguracaoOrm } from '../../tenancy/infraestrutura/tenant-configuracao.orm';
-import { CHAVE_KIT_INICIAL_CLINICA, VERSAO_KIT_INICIAL_CLINICA } from '../../tenancy/kit-inicial-clinica';
+import { CHAVE_KIT_INICIAL_CLINICA, interpretarMarcadorKitInicial } from '../../tenancy/kit-inicial-clinica';
 import { listarEstruturasIniciaisPlano } from '../dominio/estruturas-iniciais-plano';
 import {
   contarEstruturaModelo,
@@ -105,6 +105,8 @@ export class ServicoModelosPlanoAlimentar {
       const kit = await gerenciador.getRepository(TenantConfiguracaoOrm).findOne({
         where: { tenantId, chave: CHAVE_KIT_INICIAL_CLINICA }
       });
+      const marcadorKit = interpretarMarcadorKitInicial(kit?.valor);
+      const itensKit = new Set(marcadorKit.itensInstalados);
       return {
         itens: modelos.map((modelo) => ({
           id: modelo.id,
@@ -120,9 +122,11 @@ export class ServicoModelosPlanoAlimentar {
         total,
         pagina,
         limite,
-        estruturasIniciais: kit?.valor?.versao === VERSAO_KIT_INICIAL_CLINICA
-          ? listarEstruturasIniciaisPlano()
-          : []
+        estruturasIniciais: listarEstruturasIniciaisPlano().filter((estrutura) =>
+          itensKit.has(estrutura.id === 'tres-refeicoes'
+            ? 'estrutura:tres-refeicoes'
+            : 'estrutura:cinco-refeicoes')
+        )
       };
     });
   }

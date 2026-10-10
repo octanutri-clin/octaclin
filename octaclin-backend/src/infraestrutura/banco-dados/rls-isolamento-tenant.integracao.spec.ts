@@ -14,11 +14,17 @@ import { ConsentimentoLgpdOrm } from '../lgpd/consentimento-lgpd.orm';
 import { CriptografiaDadosSensiveis } from '../seguranca/criptografia-dados-sensiveis';
 import { ProfissionalOrm } from '../../modulos/profissionais/infraestrutura/profissional.orm';
 import { TenantConfiguracaoOrm } from '../../modulos/tenancy/infraestrutura/tenant-configuracao.orm';
+import { TenantOrm } from '../../modulos/tenancy/infraestrutura/tenant.orm';
 import { UsuarioOrm } from '../../modulos/usuarios/infraestrutura/usuario.orm';
 import { NotificacaoOrm } from '../../modulos/notificacoes/infraestrutura/notificacao.orm';
 import { PreferenciaNotificacaoUsuarioOrm } from '../../modulos/notificacoes/infraestrutura/preferencia-notificacao-usuario.orm';
 import { ResumoNotificacaoUsuarioOrm } from '../../modulos/notificacoes/infraestrutura/resumo-notificacao-usuario.orm';
 import { ServicoNotificacoes } from '../../modulos/notificacoes/aplicacao/servico-notificacoes';
+import { MaterialEducativoOrm } from '../../modulos/materiais/infraestrutura/material-educativo.orm';
+import { CHAVE_KIT_INICIAL_CLINICA } from '../../modulos/tenancy/kit-inicial-clinica';
+import { instalarKitInicialClinica } from '../../modulos/tenancy/aplicacao/kit-inicial-clinica';
+import { ServicoKitInicialClinica } from '../../modulos/tenancy/aplicacao/servico-kit-inicial-clinica';
+import { CONSULTA_DISPONIBILIDADE_CATALOGOS, ServicoDisponibilidadeCatalogos } from '../../modulos/operacoes/aplicacao/servico-disponibilidade-catalogos';
 import { criarOpcoesTypeOrm } from './opcoes-typeorm';
 
 /**
@@ -140,6 +146,7 @@ descrever('RLS e isolamento multi-tenant integral em Postgres real', () => {
   let container: StartedTestContainer | undefined;
   let fonteDadosAdministrativa: DataSource | undefined;
   let fonteDadosRuntime: DataSource | undefined;
+  let fonteDadosCatalogos: DataSource | undefined;
   let executorTenant: ExecutorTenant | undefined;
   let snapshotAmbiente: Map<string, string | undefined> | undefined;
   let configuracaoRuntime: ConfiguracaoConexao | undefined;
@@ -147,6 +154,8 @@ descrever('RLS e isolamento multi-tenant integral em Postgres real', () => {
   let tenantA: string;
   let tenantB: string;
   let usuarioIdTenantA: string;
+  let superAdminIdTenantA: string;
+  let clientIdTenantA: string;
   let usuarioIdTenantB: string;
   let pacienteIdTenantA: string;
   let pacienteIdTenantB: string;
@@ -192,6 +201,7 @@ descrever('RLS e isolamento multi-tenant integral em Postgres real', () => {
       logging: false,
       entities: [
         ProfissionalOrm,
+        TenantOrm,
         TenantConfiguracaoOrm,
         ConsentimentoLgpdOrm,
         UsuarioOrm,
@@ -199,7 +209,8 @@ descrever('RLS e isolamento multi-tenant integral em Postgres real', () => {
         UserActionLogOrm,
         NotificacaoOrm,
         PreferenciaNotificacaoUsuarioOrm,
-        ResumoNotificacaoUsuarioOrm
+        ResumoNotificacaoUsuarioOrm,
+        MaterialEducativoOrm
       ],
       extra: { max: 2 }
     });
@@ -209,6 +220,16 @@ descrever('RLS e isolamento multi-tenant integral em Postgres real', () => {
 
   async function encerrarRecursos(suprimirErros = false) {
     const erros: unknown[] = [];
+
+    if (fonteDadosCatalogos?.isInitialized) {
+      try {
+        await fonteDadosCatalogos.destroy();
+      } catch (erro) {
+        erros.push(erro);
+      } finally {
+        fonteDadosCatalogos = undefined;
+      }
+    }
 
     if (fonteDadosRuntime?.isInitialized) {
       try {
@@ -307,6 +328,15 @@ descrever('RLS e isolamento multi-tenant integral em Postgres real', () => {
       grant usage on schema public to octaclin_rls_prova;
       grant select, insert, update, delete on all tables in schema public to octaclin_rls_prova;
       grant usage, select on all sequences in schema public to octaclin_rls_prova;
+      create role octaclin_catalogos_leitura
+        with login password 'octaclin_catalogos_leitura_testcontainers'
+        nosuperuser nocreatedb nocreaterole nobypassrls;
+      grant connect on database octaclin to octaclin_catalogos_leitura;
+      grant usage on schema public to octaclin_catalogos_leitura;
+      grant select on catalogos_composicao_alimentos, fontes_composicao_alimentos,
+        alimentos_composicao, importacoes_catalogo_composicao,
+        eventos_governanca_fontes, tentativas_importacao_catalogo
+        to octaclin_catalogos_leitura;
     `);
 
     return {
@@ -314,6 +344,24 @@ descrever('RLS e isolamento multi-tenant integral em Postgres real', () => {
       usuario: 'octaclin_rls_prova',
       senha: 'octaclin_rls_prova_testcontainers'
     };
+  }
+
+  async function criarFonteDadosCatalogos(configuracao: ConfiguracaoConexao): Promise<DataSource> {
+    const fonteDados = new DataSource({
+      type: 'postgres',
+      host: configuracao.host,
+      port: configuracao.porta,
+      username: 'octaclin_catalogos_leitura',
+      password: 'octaclin_catalogos_leitura_testcontainers',
+      database: configuracao.banco,
+      ssl: false,
+      synchronize: false,
+      logging: false,
+      entities: [],
+      extra: { max: 1 }
+    });
+    await fonteDados.initialize();
+    return fonteDados;
   }
 
   async function prepararDadosRepresentativos(
@@ -402,6 +450,7 @@ descrever('RLS e isolamento multi-tenant integral em Postgres real', () => {
 
       fonteDadosRuntime = await criarFonteDadosRuntime(configuracaoRuntime);
       executorTenant = new ExecutorTenant(fonteDadosRuntime);
+      if (usarTestcontainers) fonteDadosCatalogos = await criarFonteDadosCatalogos(configuracaoRuntime);
 
       tabelasTenant = await inventariarTabelasTenant();
       tenantA = randomUUID();
@@ -425,6 +474,19 @@ descrever('RLS e isolamento multi-tenant integral em Postgres real', () => {
       usuarioIdTenantB = dadosB.usuarioId;
       pacienteIdTenantB = dadosB.pacienteId;
       profissionalIdTenantB = dadosB.profissionalId;
+      await comoTenant(tenantA);
+      const superAdmin = await cliente.query<{ id: string }>(
+        `insert into usuarios (tenant_id, email_hash, email_criptografado, senha_hash, role)
+         values ($1, $2, $3, 'prova-rls-senha-superadmin', 'SuperAdmin') returning id`,
+        [tenantA, `prova-rls-superadmin-${randomUUID()}`, Buffer.from('superadmin-sintetico')]
+      );
+      superAdminIdTenantA = superAdmin.rows[0].id;
+      const client = await cliente.query<{ id: string }>(
+        `insert into usuarios (tenant_id, email_hash, email_criptografado, senha_hash, role)
+         values ($1, $2, $3, 'prova-rls-senha-client', 'Client') returning id`,
+        [tenantA, `prova-rls-client-${randomUUID()}`, Buffer.from('client-sintetico')]
+      );
+      clientIdTenantA = client.rows[0].id;
     } catch (erro) {
       await encerrarRecursos(true);
       throw erro;
@@ -460,6 +522,119 @@ descrever('RLS e isolamento multi-tenant integral em Postgres real', () => {
     ]);
     expect(tabelasTenant).not.toHaveLength(0);
     expect(tabelasTenant.filter((tabela) => tabela.dono === configuracaoRuntime!.usuario)).toEqual([]);
+  });
+
+  it('Fase 311 une seleções concorrentes por tenant sob lock e mantém tenants independentes', async () => {
+    if (!executorTenant) throw new Error('ExecutorTenant da prova RLS nao foi inicializado.');
+    const instalar = (tenantId: string, usuarioId: string, itens: Array<'material:registro-habitos' | 'material:duvidas-consulta' | 'estrutura:tres-refeicoes' | 'estrutura:cinco-refeicoes'>) =>
+      executorTenant!.executar(tenantId, (manager) => instalarKitInicialClinica(manager, tenantId, usuarioId, itens, 'opt_in_superadmin'));
+
+    await Promise.all([
+      instalar(tenantA, usuarioIdTenantA, ['material:registro-habitos', 'estrutura:tres-refeicoes']),
+      instalar(tenantA, usuarioIdTenantA, ['material:duvidas-consulta', 'estrutura:tres-refeicoes']),
+      instalar(tenantB, usuarioIdTenantB, ['estrutura:cinco-refeicoes'])
+    ]);
+
+    const estadoA = await executorTenant.executar(tenantA, (manager) => manager.getRepository(TenantConfiguracaoOrm)
+      .findOne({ where: { tenantId: tenantA, chave: CHAVE_KIT_INICIAL_CLINICA } }));
+    const estadoB = await executorTenant.executar(tenantB, (manager) => manager.getRepository(TenantConfiguracaoOrm)
+      .findOne({ where: { tenantId: tenantB, chave: CHAVE_KIT_INICIAL_CLINICA } }));
+    expect(estadoA?.valor.itens).toEqual(['material:registro-habitos', 'material:duvidas-consulta', 'estrutura:tres-refeicoes']);
+    expect(estadoB?.valor.itens).toEqual(['estrutura:cinco-refeicoes']);
+
+    const materiaisA = await executorTenant.executar(tenantA, (manager) => manager.getRepository(MaterialEducativoOrm)
+      .find({ where: { tenantId: tenantA } }));
+    const materiaisB = await executorTenant.executar(tenantB, (manager) => manager.getRepository(MaterialEducativoOrm)
+      .find({ where: { tenantId: tenantB } }));
+    expect(materiaisA.map((item) => item.titulo).sort()).toEqual(['Como registrar hábitos', 'Prepare suas dúvidas para a consulta'].sort());
+    expect(materiaisB).toHaveLength(0);
+
+    await executorTenant.executar(tenantA, async (manager) => {
+      await manager.getRepository(TenantConfiguracaoOrm).delete({ tenantId: tenantA, chave: CHAVE_KIT_INICIAL_CLINICA });
+      await manager.getRepository(MaterialEducativoOrm).delete({ tenantId: tenantA });
+    });
+    await executorTenant.executar(tenantB, async (manager) => {
+      await manager.getRepository(TenantConfiguracaoOrm).delete({ tenantId: tenantB, chave: CHAVE_KIT_INICIAL_CLINICA });
+    });
+  });
+
+  it('Fase 311 desfaz materiais e marcador se a transação falha após a instalação', async () => {
+    if (!executorTenant) throw new Error('ExecutorTenant da prova RLS nao foi inicializado.');
+    await expect(executorTenant.executar(tenantB, async (manager) => {
+      await instalarKitInicialClinica(manager, tenantB, usuarioIdTenantB, ['material:registro-habitos'], 'opt_in_cliente');
+      throw new Error('rollback sintetico');
+    })).rejects.toThrow('rollback sintetico');
+    const marcador = await executorTenant.executar(tenantB, (manager) => manager.getRepository(TenantConfiguracaoOrm)
+      .findOne({ where: { tenantId: tenantB, chave: CHAVE_KIT_INICIAL_CLINICA } }));
+    const materiais = await executorTenant.executar(tenantB, (manager) => manager.getRepository(MaterialEducativoOrm)
+      .find({ where: { tenantId: tenantB } }));
+    expect(marcador).toBeNull();
+    expect(materiais).toHaveLength(0);
+  });
+
+  it('Fase 311 nega Client cruzado e audita SuperAdmin real no tenant de destino', async () => {
+    if (!executorTenant || !fonteDadosRuntime) throw new Error('ExecutorTenant da prova RLS nao foi inicializado.');
+    const servico = new ServicoKitInicialClinica(executorTenant);
+    const dto = { confirmacao: true as const, versao: 2 as const, itens: ['material:registro-habitos' as const] };
+    await expect(servico.instalar(tenantB, {
+      tenantId: tenantA,
+      usuarioId: clientIdTenantA,
+      papel: 'Client',
+      emailHash: 'hash-sintetico',
+      permissoes: ['cliente.configuracoes.gerenciar']
+    }, dto)).rejects.toThrow(/própria clínica/);
+
+    const resultado = await servico.instalar(tenantB, {
+      tenantId: tenantA,
+      usuarioId: superAdminIdTenantA,
+      papel: 'SuperAdmin',
+      emailHash: 'hash-sintetico',
+      permissoes: ['operacoes.tenants.gerenciar']
+    }, dto);
+    expect(resultado.instalacao.itensAdicionados).toEqual(['material:registro-habitos']);
+
+    const prova = await executorTenant.executar(tenantB, async (manager) => ({
+      materiais: await manager.getRepository(MaterialEducativoOrm).find({ where: { tenantId: tenantB } }),
+      trilha: await manager.getRepository(UserActionLogOrm).find({ where: { tenantId: tenantB, recursoId: tenantB } })
+    }));
+    expect(prova.materiais).toEqual([expect.objectContaining({ criadoPorUsuarioId: superAdminIdTenantA })]);
+    expect(prova.trilha).toEqual([expect.objectContaining({
+      usuarioId: superAdminIdTenantA,
+      acao: 'operacoes.tenant.kit_inicial.instalar',
+      recursoId: tenantB
+    })]);
+
+    await executorTenant.executar(tenantB, async (manager) => {
+      await manager.getRepository(TenantConfiguracaoOrm).delete({ tenantId: tenantB, chave: CHAVE_KIT_INICIAL_CLINICA });
+      await manager.getRepository(MaterialEducativoOrm).delete({ tenantId: tenantB });
+    });
+  });
+
+  (usarTestcontainers ? it : it.skip)('Fase 311 consulta catálogos com role somente leitura', async () => {
+    if (!executorTenant || !fonteDadosCatalogos || !superAdminIdTenantA) throw new Error('Role de catálogo SELECT-only nao foi inicializada.');
+    const papeis = await fonteDadosCatalogos.query(`
+      select r.rolsuper, r.rolbypassrls,
+             has_table_privilege(current_user, 'catalogos_composicao_alimentos', 'SELECT') as pode_ler,
+             (has_table_privilege(current_user, 'catalogos_composicao_alimentos', 'INSERT')
+              or has_table_privilege(current_user, 'catalogos_composicao_alimentos', 'UPDATE')
+              or has_table_privilege(current_user, 'catalogos_composicao_alimentos', 'DELETE')) as pode_escrever
+        from pg_roles r where r.rolname = current_user
+    `);
+    expect(papeis).toEqual([{ rolsuper: false, rolbypassrls: false, pode_ler: true, pode_escrever: false }]);
+    await fonteDadosCatalogos.query(CONSULTA_DISPONIBILIDADE_CATALOGOS);
+
+    const servico = new ServicoDisponibilidadeCatalogos(executorTenant, fonteDadosCatalogos);
+    const resultado = await servico.obter({
+      tenantId: tenantA,
+      usuarioId: superAdminIdTenantA,
+      papel: 'SuperAdmin',
+      emailHash: 'hash-sintetico',
+      permissoes: ['operacoes.tenants.gerenciar']
+    });
+    expect(resultado.itens).toHaveLength(4);
+    expect(resultado.itens.every((item) => item.estado === 'ausente')).toBe(true);
+    await expect(fonteDadosCatalogos.query("update catalogos_composicao_alimentos set codigo = codigo"))
+      .rejects.toThrow(/permission denied/i);
   });
 
   it('inventaria toda tabela tenant-scoped com ENABLE, FORCE e policy completa', async () => {

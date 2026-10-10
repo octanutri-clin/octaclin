@@ -2,7 +2,24 @@
 
 Plano autoritativo: `docs/history/phases/PLANO_FASE_311.md`.
 Handoff corrente: `tasks/plan.md`. Branch `feature/fase-311-ativacao-conteudo`.
-Todos os itens de implementação abaixo permanecem não executados.
+
+## Estado atual da execução (2026-10-10)
+
+- Implementação dos passos 1–5 concluída; sem migration nova.
+- PASS: backend Jest integral, PostgreSQL/Testcontainers/RLS 25/25, BFF novo
+  5/5, Playwright da Fase 311 em Client/Operações desktop/mobile 4/4, scanner
+  de secrets e governança descritos em `tasks/plan.md`.
+- PASS: CI principal pós-merge da Fase 310 `38016413569`.
+- PASS: backend build/typecheck, Web typecheck/build e demo local smoke
+  (`smoke-e2e-bff-ok`, API demo sintética).
+- PASS: suíte ampla Web `test:authz`, harness BFF dedicado da Fase 311 5/5 e
+  validação final dos documentos/diff.
+- Ainda abertos: publicar a branch e a PR, aguardar CI da PR, registrar a
+  revisão independente R4 quando viável. Nenhuma ação de produção executada.
+
+As seções abaixo preservam os critérios detalhados de aceite da implementação;
+o estado corrente acima e em `tasks/plan.md` prevalece sobre os checkboxes do
+plano inicial.
 
 ## 0. Assumir a tarefa
 

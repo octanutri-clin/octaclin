@@ -128,7 +128,7 @@ describe('ServicoCicloVidaTenant.provisionar', () => {
     };
     const repositorios = {
       TenantOrm: { findOne: jest.fn(async () => null), create: jest.fn((entrada) => entrada), save: jest.fn(async () => tenant) },
-      TenantConfiguracaoOrm: { create: jest.fn((entrada) => entrada), save: jest.fn(async (entrada) => entrada) },
+      TenantConfiguracaoOrm: { findOne: jest.fn(async () => null), create: jest.fn((entrada) => entrada), save: jest.fn(async (entrada) => entrada) },
       UsuarioOrm: { create: jest.fn((entrada) => entrada), save: jest.fn(async (entrada) => ({ id: 'usuario-novo', ...entrada })) },
       TokenRedefinicaoSenhaOrm: { create: jest.fn((entrada) => entrada), save: jest.fn(async (entrada) => ({ id: 'token-novo', ...entrada })) },
       TemplateMensagemOrm: repositorioTemplates,
@@ -164,6 +164,7 @@ describe('ServicoCicloVidaTenant.provisionar', () => {
       save: jest.fn(async (entrada) => entrada)
     };
     const repositorioConfiguracoes = {
+      findOne: jest.fn(async () => null),
       create: jest.fn((entrada) => entrada),
       save: jest.fn(async (entrada) => entrada)
     };
@@ -193,7 +194,19 @@ describe('ServicoCicloVidaTenant.provisionar', () => {
       expect.objectContaining({ tenantId: tenant.id, criadoPorUsuarioId: 'usuario-kit', tipo: 'orientacao', ativo: true })
     ]));
     expect(repositorioConfiguracoes.save).toHaveBeenCalledWith(expect.objectContaining({
-      tenantId: tenant.id, chave: 'kit_inicial_clinica', valor: { versao: 1 }
+      tenantId: tenant.id,
+      chave: 'kit_inicial_clinica',
+      valor: expect.objectContaining({
+        versao: 2,
+        itens: expect.arrayContaining([
+          'material:plano-no-portal',
+          'material:registro-habitos',
+          'material:duvidas-consulta',
+          'estrutura:tres-refeicoes',
+          'estrutura:cinco-refeicoes'
+        ]),
+        origem: 'provisionamento_assistido'
+      })
     }));
     expect(gerenciador.query).toHaveBeenCalledWith("select set_config('app.tenant_id', $1, true)", [tenant.id]);
   });

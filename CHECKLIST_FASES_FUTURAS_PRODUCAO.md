@@ -5,12 +5,12 @@
 Fases 309/310 integradas pelos PRs #386/#388 (`34d186ec`/`eb7f2aad`),
 confirmadas no GitHub neste ciclo. CI principal pós-merge 309 e CI da PR 310
 aprovados, incluindo Demo local smoke; step PostgreSQL/Testcontainers da
-PR 310 aprovado. CI principal pós-merge 310 `38016413569` em andamento na
-consulta; scanners pós-merge aprovados. `Provenance do SBOM` na PR 310 foi
-`SKIPPED`; não é PASS. Aplicação operacional das 1065/1066 não consultada.
-Fase 311 com plano/gaps e decisões fechados, sem implementação. Handoff em
-`tasks/plan.md`, checklist em `tasks/todo-fase-311.md`. Próxima ação: troca
-manual para GPT-6 Luna alto e implementação; próxima fase após integração: 312.
+PR 310 aprovado. CI principal pós-merge 310 `38016413569` concluído com sucesso;
+scanners pós-merge aprovados. `Provenance do SBOM` na PR 310 foi `SKIPPED`;
+não é PASS. Aplicação operacional das 1065/1066 não consultada. Fase 311
+implementada na branch `feature/fase-311-ativacao-conteudo`, aguardando gates
+finais, publicação da PR e CI próprio. Handoff em `tasks/plan.md`, checklist em
+`tasks/todo-fase-311.md`. Próxima fase após integração: 312.
 
 O parágrafo abaixo registra a atualização histórica anterior; para o estado
 vigente prevalecem este bloco, itens ao final e o roadmap.
@@ -4554,11 +4554,11 @@ auditoria estão ordenados na seção 15 de
 - [x] Fase 310 - categorias e entrega explícita de receitas revisadas no portal,
   avisos genéricos e opt-in específico. Integrada pelo PR #388 (`eb7f2aad`);
   CI de PR aprovado, incluindo Demo local smoke/Testcontainers; CI principal
-  pós-merge em andamento na consulta. Aplicação operacional da 1066 não consultada.
-- [ ] Fase 311 - instalação selecionável/incremental do kit por Client/SuperAdmin
+  pós-merge concluído com sucesso. Aplicação operacional da 1066 não consultada.
+- [~] Fase 311 - instalação selecionável/incremental do kit por Client/SuperAdmin
   e conferência somente leitura de quatro bases do catálogo no onboarding.
-  Planejamento e decisões concluídos; implementação após troca manual para
-  Luna alto. Plano `docs/history/phases/PLANO_FASE_311.md`, handoff
+  Implementação concluída localmente, PR/CI ainda pendentes. Plano
+  `docs/history/phases/PLANO_FASE_311.md`, handoff
   `tasks/plan.md`, checklist `tasks/todo-fase-311.md`.
 - [ ] Fase 312 - encaminhamento no motor de documentos; atestado condicionado
   à avaliação jurídica e competência profissional.

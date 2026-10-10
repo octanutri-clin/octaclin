@@ -69,20 +69,21 @@ Atualizado em 2026-10-10.
 - Fase 310 integrada pelo PR #388 (`eb7f2aad`), merge confirmado em
   2026-10-10. CI da PR `38014957842` aprovado, incluindo Governança, Backend,
   Web, Demo local smoke e PR Gate; PostgreSQL/Testcontainers aprovado no Backend.
-  `Provenance do SBOM` ficou `SKIPPED`. Scanners pós-merge aprovados;
-  CI principal pós-merge `38016413569` ainda em andamento na consulta.
+  `Provenance do SBOM` ficou `SKIPPED`. Scanners e CI principal pós-merge
+  `38016413569` concluídos com sucesso em 2026-10-10.
   Migration 1066 integrada; aplicação operacional, configuração de canais,
   envio real e produção não consultados. Plano histórico em
   `docs/history/phases/PLANO_FASE_310.md`.
-- Fase 311 com planejamento concluído na branch
-  `feature/fase-311-ativacao-conteudo`, base `eb7f2aad`; sem código novo.
+- Fase 311 implementada na branch `feature/fase-311-ativacao-conteudo`, base
+  `eb7f2aad`; aguardando build/smoke final, publicação da PR e CI próprio.
   Decisões confirmadas: Client/SuperAdmin podem instalar por clínica;
   seleção de itens e complementação posterior, sem recriação de instalados;
   confirmação do SuperAdmin basta para opt-in; catálogos ausentes não bloqueiam
   kit. Contrato usa marcador 2 seletivo e compatibilidade do legado 1 completo.
-  Plano/gaps em `docs/history/phases/PLANO_FASE_311.md`, handoff em
-  `tasks/plan.md`, checklist em `tasks/todo-fase-311.md`.
-  Próxima ação: troca manual para GPT-6 Luna alto e implementação nesta branch.
+  plano/gaps/evidências em `docs/history/phases/PLANO_FASE_311.md`, handoff em
+  `tasks/plan.md`, checklist em `tasks/todo-fase-311.md`. Backend Jest,
+  PostgreSQL/Testcontainers/RLS e Playwright desktop/mobile locais passaram;
+  os demais gates finais estão discriminados no handoff.
   Nenhuma migration nova prevista. Próxima fase após integração da 311: 312.
 - Sequência das Fases 302–320 em
   `docs/product/ROADMAP_POS_AUDITORIA_FASES_302_320.md`. O PB-30 está planejado na Fase 316, condicionado a privacidade,

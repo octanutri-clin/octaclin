@@ -9,6 +9,7 @@ function lerPorta() {
 
 const porta = lerPorta();
 const tenantId = '11111111-1111-4111-8111-111111111111';
+const tenantLegadoId = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
 const usuarioAdminId = '22222222-2222-4222-8222-222222222222';
 const profissionalId = '44444444-4444-4444-8444-444444444444';
 const pacienteId = '66666666-6666-4666-8666-666666666666';
@@ -17,6 +18,11 @@ const templateEmailId = '88888888-8888-4888-8888-888888888888';
 const regraAutomacaoId = '99999999-9999-4999-8999-999999999998';
 
 const estado = {
+  tenantsDemo: [
+    { id: tenantId, nome: 'Clínica Carla (sintética)', slug: 'clinica-carla', status: 'ativo', cicloVidaStatus: 'ativo', planoId: 'profissional', assinaturaStatus: 'ativa' },
+    { id: tenantLegadoId, nome: 'Clínica Aurora (sintética)', slug: 'clinica-aurora-demo', status: 'ativo', cicloVidaStatus: 'ativo_assistido', planoId: 'clinica', assinaturaStatus: 'ativa' }
+  ],
+  kitsIniciais: new Map([[tenantLegadoId, { versao: 1 }]]),
   profissionais: [
     {
       id: profissionalId,
@@ -162,10 +168,10 @@ function paginar(itens) {
   return { itens, total: itens.length };
 }
 
-function registrarAuditoria(acao, recursoTipo, recursoId, metadados = {}) {
+function registrarAuditoria(acao, recursoTipo, recursoId, metadados = {}, tenantAlvoId = tenantId) {
   estado.auditoria.unshift({
     id: randomUUID(),
-    tenantId,
+    tenantId: tenantAlvoId,
     usuarioId: usuarioAdminId,
     acao,
     recursoTipo,
@@ -254,6 +260,8 @@ function criarTokens() {
       'mobile.operar',
       'gamificacao.gerenciar',
       'operacoes.auditoria.ler',
+      'operacoes.tenants.gerenciar',
+      'cliente.configuracoes.gerenciar',
       'pacientes.listar',
       'pacientes.gerenciar',
       'profissionais.ler'
@@ -288,6 +296,54 @@ const servidor = http.createServer(async (requisicao, resposta) => {
 
     if (requisicao.method === 'POST' && url.pathname === '/auth/renovar') return json(resposta, 200, criarTokens());
     if (requisicao.method === 'POST' && url.pathname === '/auth/sair') return json(resposta, 204, {});
+
+    if ((url.pathname === '/cliente/kit-inicial' || /^\/operacoes\/tenants\/[^/]+\/kit-inicial$/.test(url.pathname)) && ['GET', 'POST'].includes(requisicao.method ?? '')) {
+      const partesKit = url.pathname.split('/').filter(Boolean);
+      const alvoId = partesKit[0] === 'cliente' ? tenantId : partesKit[2];
+      const tenant = estado.tenantsDemo.find((item) => item.id === alvoId);
+      if (!tenant) return json(resposta, 404, { message: 'Tenant não encontrado.' });
+      const itensKit = [
+        { chave: 'material:plano-no-portal', tipo: 'material', titulo: 'Como acompanhar seu plano no portal', resumo: 'Encontre a versão publicada do plano e as orientações da equipe.', conteudo: 'Quando a equipe publicar um plano alimentar, ele aparecerá no portal. Leia as orientações registradas pelo profissional e use a conversa segura do portal para enviar dúvidas sobre o acompanhamento.' },
+        { chave: 'material:registro-habitos', tipo: 'material', titulo: 'Como registrar hábitos', resumo: 'Registre seu acompanhamento para a equipe revisar.', conteudo: 'O Registro de hábitos permite informar como foi o acompanhamento do plano. A equipe poderá ler o registro; ele não substitui uma consulta ou resposta profissional.' },
+        { chave: 'material:duvidas-consulta', tipo: 'material', titulo: 'Prepare suas dúvidas para a consulta', resumo: 'Organize perguntas para conversar com a equipe.', conteudo: 'Antes da consulta, anote suas dúvidas sobre o plano e os registros recentes. Compartilhe essas perguntas com a equipe pelo portal ou durante o atendimento.' },
+        { chave: 'estrutura:tres-refeicoes', tipo: 'estrutura', titulo: 'Três refeições', resumo: 'Estrutura vazia para o profissional revisar e completar.', refeicoes: [{ nome: 'Refeição 1', itens: [] }, { nome: 'Refeição 2', itens: [] }, { nome: 'Refeição 3', itens: [] }] },
+        { chave: 'estrutura:cinco-refeicoes', tipo: 'estrutura', titulo: 'Cinco refeições', resumo: 'Estrutura vazia para o profissional revisar e completar.', refeicoes: [{ nome: 'Refeição 1', itens: [] }, { nome: 'Refeição 2', itens: [] }, { nome: 'Refeição 3', itens: [] }, { nome: 'Refeição 4', itens: [] }, { nome: 'Refeição 5', itens: [] }] }
+      ];
+      let marcador = estado.kitsIniciais.get(alvoId);
+      let instalados = marcador?.versao === 1 ? itensKit.map((item) => item.chave) : (marcador?.itens ?? []);
+      let instalacao;
+      if (requisicao.method === 'POST') {
+        const body = await lerJson(requisicao);
+        const chavesValidas = new Set(itensKit.map((item) => item.chave));
+        if (body.confirmacao !== true || body.versao !== 2 || !Array.isArray(body.itens) || body.itens.length < 1 || body.itens.length > 5 || new Set(body.itens).size !== body.itens.length || body.itens.some((item) => !chavesValidas.has(item)) || Object.keys(body).some((key) => !['confirmacao', 'versao', 'itens'].includes(key))) {
+          return json(resposta, 400, { message: 'Confirmação e seleção do kit inicial inválidas.' });
+        }
+        const novos = body.itens.filter((item) => !instalados.includes(item));
+        instalados = [...new Set([...instalados, ...body.itens])];
+        if (novos.length) {
+          marcador = { versao: 2, itens: instalados, instaladoEm: marcador?.instaladoEm ?? new Date().toISOString(), atualizadoEm: new Date().toISOString(), origem: partesKit[0] === 'cliente' ? 'opt_in_cliente' : 'opt_in_superadmin' };
+          estado.kitsIniciais.set(alvoId, marcador);
+          registrarAuditoria(partesKit[0] === 'cliente' ? 'cliente.kit_inicial.instalar' : 'operacoes.tenant.kit_inicial.instalar', 'tenant', alvoId, { versao: 2, itens: novos, totalItens: novos.length }, alvoId);
+        }
+        instalacao = { reutilizado: novos.length === 0, itensAdicionados: novos, materiaisCriados: novos.filter((item) => item.startsWith('material:')).length, estruturasHabilitadas: novos.filter((item) => item.startsWith('estrutura:')) };
+      }
+      const legados = marcador?.versao === 1;
+      const estadoInstalacao = legados || instalados.length === 5 ? 'completo' : instalados.length ? 'parcial' : 'nao_instalado';
+      const corpo = { tenantId: alvoId, tenantNome: tenant.nome, versaoDisponivel: 2, ...(marcador ? { versaoInstalada: marcador.versao } : {}), estado: estadoInstalacao, podeInstalar: !legados && estadoInstalacao !== 'completo', itens: itensKit.map((item) => ({ ...item, instalado: instalados.includes(item.chave) })) };
+      return json(resposta, 200, instalacao ? { ...corpo, instalacao } : corpo);
+    }
+    if (requisicao.method === 'GET' && url.pathname === '/operacoes/catalogos-alimentares/disponibilidade') {
+      const agora = new Date().toISOString();
+      return json(resposta, 200, { verificadoEm: agora, completo: false, itens: [
+        { codigo: 'taco_nepa_unicamp', baseCodigo: 'cmvcol_taco3', rotulo: 'TACO', estado: 'disponivel', totalEdicoes: 1, edicoesLimitadas: false, edicoes: [{ versao: 'TACO 4ª edição', situacao: 'ativa', direitoUsoStatus: 'aprovado', importadaEm: agora, importacaoStatus: 'concluida', totalDeclarado: 10, totalAlimentos: 10, alimentosUtilizaveis: 9, disponivel: true, motivos: [] }] },
+        { codigo: 'usda_fdc_foundation', baseCodigo: 'foundation-foods', rotulo: 'USDA Foundation Foods', estado: 'ausente', totalEdicoes: 0, edicoesLimitadas: false, edicoes: [] },
+        { codigo: 'usda_fdc_sr_legacy', baseCodigo: 'sr-legacy', rotulo: 'USDA SR Legacy', estado: 'indisponivel', totalEdicoes: 1, edicoesLimitadas: false, edicoes: [{ versao: 'demo', situacao: 'suspensa', direitoUsoStatus: 'aprovado', importadaEm: agora, importacaoStatus: 'falhou', totalDeclarado: 0, totalAlimentos: 0, alimentosUtilizaveis: 0, disponivel: false, motivos: ['fonte_inativa', 'importacao_nao_concluida', 'sem_alimentos'] }], ultimaTentativa: { status: 'falhou', iniciadaEm: agora } },
+        { codigo: 'ibge_pof_2008_2009', baseCodigo: 'pof-2008-2009-composicao', rotulo: 'IBGE POF 2008–2009', estado: 'ausente', totalEdicoes: 0, edicoesLimitadas: false, edicoes: [] }
+      ] });
+    }
+    if (requisicao.method === 'GET' && url.pathname === '/operacoes/tenants') {
+      return json(resposta, 200, { itens: estado.tenantsDemo.map((tenant) => ({ ...tenant, criadoEm: new Date().toISOString(), atualizadoEm: new Date().toISOString() })), total: estado.tenantsDemo.length });
+    }
 
     if (requisicao.method === 'GET' && url.pathname === '/notificacoes/preferencias') {
       return json(resposta, 200, estado.preferenciasNotificacoes);

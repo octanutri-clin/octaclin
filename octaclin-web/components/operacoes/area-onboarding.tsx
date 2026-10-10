@@ -17,6 +17,8 @@ import {
   listarTenantsOnboarding,
   provisionarTenant
 } from '@/lib/onboarding-operacoes-api';
+import { KitInicialTenantAdmin } from './kit-inicial-tenant-admin';
+import { DisponibilidadeCatalogosAlimentares } from './disponibilidade-catalogos-alimentares';
 
 const estados: Record<StatusCicloVidaTenant, StatusEtiquetaConfig> = {
   ativo_assistido: { rotulo: 'Ativação assistida', variante: 'primaria' },
@@ -183,6 +185,9 @@ export function AreaOnboarding({ ativa }: { ativa: boolean }) {
           </Cartao>
         ))}
       </div>
+
+      <DisponibilidadeCatalogosAlimentares ativa={ativa} />
+      <KitInicialTenantAdmin ativa={ativa} tenants={tenants} />
 
       <Cartao>
         <CartaoCabecalho>

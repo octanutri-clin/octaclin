@@ -1,11 +1,9 @@
 # Fase 311 — ativação de conteúdo em clínicas existentes
 
-Planejamento e análise de gaps em 2026-10-10. Branch
+Planejamento, análise de gaps e implementação em 2026-10-10. Branch
 `feature/fase-311-ativacao-conteudo`, base `eb7f2aad` de `origin/main`
-(Fase 310, PR #388 MERGED). Nenhuma implementação nesta fase de planejamento.
-O proprietário autorizou planejar o escopo da Fase 311 do roadmap vigente.
-As cinco decisões de produto abaixo foram confirmadas pelo proprietário neste
-ciclo. O contrato está fechado para implementação após a troca manual de modelo.
+(Fase 310, PR #388 MERGED). Implementação autorizada pelo proprietário; cinco
+decisões de produto abaixo foram confirmadas antes do início do código.
 
 ## Objetivo e decisões de produto
 
@@ -36,7 +34,7 @@ ao paciente nem representa revisão ou conclusão de um modelo clínico.
   passou, inclusive Backend NestJS, Governança, Web, Demo local smoke e PR Gate.
   O step PostgreSQL/Testcontainers do Backend passou. `Provenance do SBOM`
   ficou `SKIPPED`; não é aprovação. CI principal pós-merge `38016413569`
-  estava em andamento na consulta; reconfirmar antes do handoff final.
+  confirmado SUCCESS em 2026-10-10.
 - Migrations 1065/1066 integradas no código; aplicação operacional, configuração
   de push/WhatsApp, envios reais e produção não foram consultados. As listas
   de reviews GitHub das PRs 386/388 estavam vazias; isso não prova ausência
@@ -321,27 +319,31 @@ documentação e PR da implementação na mesma branch. Não abrir PR isolada s�
 para reconciliação de estado. Sem DDL, catálogo remoto, envio externo ou deploy
 como efeito do planejamento/implementação.
 
-Planejamento com GPT-6.1 Sol médio; implementação recomendada com GPT-6 Luna
-alto, com as decisões fechadas. O usuário exige aviso e pausa para troca
-manual: terminar o planejamento antes de iniciar código. Se surgir incompatibilidade
-nova, Luna registra o fato e continua itens independentes, sem redesenhar o produto.
+Implementação executada com GPT-6 Luna alto, suficiente para o escopo fechado
+e priorizando custo de tokens. As tarefas abaixo foram concluídas localmente;
+CI da PR e revisão R4 independente ainda não foram comprovados.
 
-## Evidência do planejamento
+## Evidência da implementação
 
-- PASS: Git/PRs, código, migrations e contratos citados consultados neste ciclo;
-  worktree criada sobre o merge 310 e sem código alterado.
-- FAIL (integração de tooling): `npx ai-devkit@latest lint` e lint da feature
-  não encontram `docs/ai/*`/configuração e usam convenção de branch diferente.
-  Usar os caminhos canônicos OctaClin; não criar scaffolding paralelo por `init`.
-- SKIPPED: testes/build de implementação, PostgreSQL, provider e produção;
-  não existem mudanças executáveis desta fase a validar ainda.
-- PASS: cinco decisões confirmadas; contrato de seleção, papéis, legado e
-  rollback fechado.
-- PASS: `git diff --check`, `pnpm security:secrets` e
-  `node scripts/test-matriz-confiabilidade.mjs` (40 referências críticas).
-  Links relativos, blocos Markdown e contrato das cinco chaves/versão 2 revisados;
-  alterações restritas a Markdown.
-- SKIPPED: preflight documental PowerShell, pois `pwsh` não está instalado.
-  Verificações proporcionais acima não comprovam o preflight completo.
-- Ambiente observado Node 24.19.0/pnpm 11.19.0; scanner passou com aviso.
-  Implementação deve usar Node 22/pnpm 11.25.0 conforme manifests.
+- PASS: helper/parser compartilhados, instalação incremental e compatibilidade
+  legado, rotas Client/SuperAdmin, auditoria transacional, política de modelos,
+  consulta somente leitura de catálogos, três BFFs, interfaces, mock demo e
+  runbook. Nenhuma migration nova.
+- PASS: backend Jest integral (2464 passed, 44 skipped), build/typecheck e
+  testes focados; PostgreSQL/Testcontainers/RLS 25/25; BFF Fase 311 5/5;
+  Playwright da Fase 311 em desktop/mobile 4/4 com axe/foco; Web typecheck e
+  build de produção passaram.
+- PASS: guardas de controladores 11/11; matriz de confiabilidade 40 referências;
+  matriz de acessibilidade 20/20; cobertura de redação (24/24 e inventário);
+  scanner local de secrets sem secret real identificado.
+- PASS: Fase 310 CI principal pós-merge `38016413569` confirmou SUCCESS.
+- PASS: demo local smoke pós-build `smoke-e2e-bff-ok`, usando API demo sintética.
+- PASS: suíte Web ampla `test:authz`, incluindo harness dedicado Fase 311 5/5;
+  `git diff --check` final.
+- PENDENTE: publicar branch/PR e aguardar CI completo.
+- SKIPPED: instalação/carga de catálogos, migrations operacionais, envio externo,
+  deploy/produção; nenhum acesso ou mudança a ambiente operacional foi feito.
+- R4 formal independente não concluída nesta execução. A evidência local não
+  substitui revisão GitHub nem CI da PR; registrar essa limitação na PR.
+- Ambiente disponível Node 24.19.0/pnpm 11.19.0, fora do range do manifest
+  (Node 22/pnpm 11.25.0); comandos locais exibiram aviso de engine.

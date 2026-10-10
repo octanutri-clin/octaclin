@@ -14,6 +14,9 @@ import { ServicoRolloutOperacional } from '../aplicacao/servico-rollout-operacio
 import { ServicoFeatureFlags } from '../../../infraestrutura/feature-flags/servico-feature-flags';
 import { ServicoMenorPrivilegioProviders } from '../../../infraestrutura/seguranca/servico-menor-privilegio-providers';
 import { contarLinhasCsv } from '../../../infraestrutura/exportacao/csv';
+import { ServicoKitInicialClinica } from '../../tenancy/aplicacao/servico-kit-inicial-clinica';
+import { InstalarKitInicialClinicaRequestDto } from '../../tenancy/apresentacao/instalar-kit-inicial-clinica.dto';
+import { ServicoDisponibilidadeCatalogos } from '../aplicacao/servico-disponibilidade-catalogos';
 
 class AtualizarSolicitacaoLgpdOperacionalDto {
   @IsIn(['em_tratamento', 'concluida', 'indeferida'])
@@ -68,12 +71,42 @@ export class ControladorOperacoes {
     private readonly auditoria: ServicoAuditoria,
     private readonly rollout: ServicoRolloutOperacional,
     private readonly featureFlags: ServicoFeatureFlags,
-    private readonly menorPrivilegio: ServicoMenorPrivilegioProviders
+    private readonly menorPrivilegio: ServicoMenorPrivilegioProviders,
+    private readonly kitInicial: ServicoKitInicialClinica,
+    private readonly disponibilidadeCatalogos: ServicoDisponibilidadeCatalogos
   ) {}
 
   @Get('resumo')
   obterResumo(@UsuarioAtual() usuario: UsuarioAutenticado) {
     return this.servicoOperacoes.obterResumo(usuario.tenantId);
+  }
+
+  @Get('tenants/:id/kit-inicial')
+  @Header('Cache-Control', 'private, no-store')
+  @Permissoes('operacoes.tenants.gerenciar')
+  obterKitInicialTenant(
+    @UsuarioAtual() usuario: UsuarioAutenticado,
+    @Param('id', ParseUUIDPipe) tenantId: string
+  ) {
+    return this.kitInicial.obter(tenantId, usuario);
+  }
+
+  @Post('tenants/:id/kit-inicial')
+  @Header('Cache-Control', 'private, no-store')
+  @Permissoes('operacoes.tenants.gerenciar')
+  instalarKitInicialTenant(
+    @UsuarioAtual() usuario: UsuarioAutenticado,
+    @Param('id', ParseUUIDPipe) tenantId: string,
+    @Body() dados: InstalarKitInicialClinicaRequestDto
+  ) {
+    return this.kitInicial.instalar(tenantId, usuario, dados);
+  }
+
+  @Get('catalogos-alimentares/disponibilidade')
+  @Header('Cache-Control', 'private, no-store')
+  @Permissoes('operacoes.tenants.gerenciar')
+  obterDisponibilidadeCatalogos(@UsuarioAtual() usuario: UsuarioAutenticado) {
+    return this.disponibilidadeCatalogos.obter(usuario);
   }
 
   /**
