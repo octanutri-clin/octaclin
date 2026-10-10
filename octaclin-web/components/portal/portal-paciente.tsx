@@ -779,9 +779,11 @@ export function PortalPaciente({ secao }: { secao: SecaoPortal }) {
 
         {portal ? (
           <>
-            <section aria-label="Receitas compartilhadas" className={secao === 'receitas' ? 'scroll-mt-4' : 'hidden'}>
-              <ReceitasCompartilhadasPortal />
-            </section>
+            {secao === 'receitas' ? (
+              <section aria-label="Receitas compartilhadas" className="scroll-mt-4">
+                <ReceitasCompartilhadasPortal />
+              </section>
+            ) : null}
             <section id="resumo" className={secao === 'inicio' ? 'scroll-mt-4 grid gap-4 lg:grid-cols-[minmax(0,1.2fr)_repeat(3,minmax(0,1fr))]' : 'hidden'}>
               <div className="self-center">
                 <p className="text-sm text-texto-suave">Ola, {portal.paciente.nome}</p>

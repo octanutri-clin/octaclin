@@ -318,7 +318,7 @@ export function BibliotecaReceitasNutricionais({
           </label>
           <label className="grid gap-1 text-xs font-semibold uppercase text-texto-suave" htmlFor={`${id}-categoria`}>
             Categoria interna
-            <Campo id={`${id}-categoria`} value={categoria} onChange={(evento) => setCategoria(evento.target.value)} maxLength={80} required aria-describedby={`${id}-categoria-ajuda`} disabled={desabilitado || ocupado !== null} />
+            <Campo id={`${id}-categoria`} value={categoria} onChange={(evento) => setCategoria(evento.target.value)} maxLength={80} aria-describedby={`${id}-categoria-ajuda`} disabled={desabilitado || ocupado !== null} />
             <span id={`${id}-categoria-ajuda`} className="font-normal normal-case">Usada somente pela clínica; não aparece ao paciente.</span>
           </label>
           <label className="grid gap-1 text-xs font-semibold uppercase text-texto-suave" htmlFor={`${id}-origem`}>
