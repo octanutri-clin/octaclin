@@ -1,5 +1,11 @@
 # Fase 309 — Preferências individuais e resumos de notificações
 
+> Reconciliação em 2026-10-10: Fase 309 integrada pelo PR #386 (`34d186ec`),
+> confirmada no GitHub neste ciclo. CI principal pós-merge `38000687212` aprovado;
+> step PostgreSQL/Testcontainers da PR 310, que inclui a 309, aprovado.
+> Aplicação operacional da 1065 não consultada. O conteúdo anterior abaixo
+> registra o ciclo anterior ao merge; handoff corrente: `tasks/plan.md` (311).
+
 ## Estado e handoff
 
 Planejamento e análise de gaps em 2026-10-09; implementação nesta branch.

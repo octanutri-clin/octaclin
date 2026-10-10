@@ -18,6 +18,8 @@ import {
 import { ServicoPortalCliente } from '../aplicacao/servico-portal-cliente';
 import { ServicoPainelOperacao } from '../aplicacao/servico-painel-operacao';
 import { ServicoUsuariosCliente } from '../aplicacao/servico-usuarios-cliente';
+import { ServicoKitInicialClinica } from '../../tenancy/aplicacao/servico-kit-inicial-clinica';
+import { InstalarKitInicialClinicaRequestDto } from '../../tenancy/apresentacao/instalar-kit-inicial-clinica.dto';
 
 @Controller('cliente')
 @UseGuards(GuardaJwt, GuardaPapeis, GuardaPermissoes)
@@ -28,12 +30,30 @@ export class ControladorPortalCliente {
     private readonly servicoPortalCliente: ServicoPortalCliente,
     private readonly servicoUsuariosCliente: ServicoUsuariosCliente,
     private readonly servicoAuditoria: ServicoAuditoria,
-    private readonly servicoPainelOperacao: ServicoPainelOperacao
+    private readonly servicoPainelOperacao: ServicoPainelOperacao,
+    private readonly kitInicial: ServicoKitInicialClinica
   ) {}
 
   @Get('resumo')
   obterResumo(@UsuarioAtual() usuario: UsuarioAutenticado) {
     return this.servicoPortalCliente.obterResumo(usuario.tenantId, usuario.usuarioId);
+  }
+
+  @Get('kit-inicial')
+  @Header('Cache-Control', 'private, no-store')
+  @Permissoes('cliente.configuracoes.gerenciar')
+  obterKitInicial(@UsuarioAtual() usuario: UsuarioAutenticado) {
+    return this.kitInicial.obter(usuario.tenantId, usuario);
+  }
+
+  @Post('kit-inicial')
+  @Header('Cache-Control', 'private, no-store')
+  @Permissoes('cliente.configuracoes.gerenciar')
+  instalarKitInicial(
+    @UsuarioAtual() usuario: UsuarioAutenticado,
+    @Body() dados: InstalarKitInicialClinicaRequestDto
+  ) {
+    return this.kitInicial.instalar(usuario.tenantId, usuario, dados);
   }
 
   @Get('painel-operacao')

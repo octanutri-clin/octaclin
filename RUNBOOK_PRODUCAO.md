@@ -626,6 +626,37 @@ salvar, revisar, publicar e conferir o portal. Condicao especial deve ser
 recusada. O portal nao pode exibir formula, metabolismo, antropometria, hash ou
 fonte interna.
 
+### Diagnostico de catalogos alimentares (Fase 311)
+
+O onboarding de Operações consulta `GET /operacoes/catalogos-alimentares/disponibilidade`
+para o ambiente atualmente conectado. A resposta e somente leitura e cobre
+separadamente TACO (`taco_nepa_unicamp` / `cmvcol_taco3`), USDA Foundation
+(`usda_fdc_foundation` / `foundation-foods`), USDA SR Legacy
+(`usda_fdc_sr_legacy` / `sr-legacy`) e IBGE POF
+(`ibge_pof_2008_2009` / `pof-2008-2009-composicao`). Ausencia, pendencia e falha
+de consulta sao estados diferentes. O painel mostra ate dez edicoes por base;
+confirme a contagem total e o estado resumido antes de diagnosticar historico.
+
+Uma edicao so aparece como disponivel quando identidade/base, situacao ativa,
+direito aprovado, importacao concluida e contagens/importacao de alimentos
+utilizaveis estao consistentes. Uma tentativa nova com falha nao invalida uma
+edicao anterior utilizavel. O painel nao valida autorizacao juridica, hash de
+artefato de forma nova nem qualidade clinica. Uma falha de consulta deve ser
+investigada como indisponibilidade operacional; nunca registrar como fonte
+ausente ou responder repetidamente como se o catalogo estivesse vazio.
+
+A tela nao carrega, ativa, reativa ou corrige fontes. Cargas continuam sendo
+procedimentos separados e deliberados, com banco e role confirmados pelo
+runbook aplicavel. Antes de qualquer carga TACO, conferir manualmente
+`current_database()` e `current_user` com o proprietario da operacao: o
+carregador TACO atual verifica o banco esperado e a confirmacao literal, mas
+nao compara automaticamente `current_user` com uma role esperada. As cargas
+USDA/IBGE tem verificacoes proprias; nao reutilizar credenciais do runtime.
+
+As clinicas ainda podem instalar o kit generico enquanto uma ou mais bases
+estiverem pendentes. Estruturas sao criadas vazias; nenhuma carga, material ou
+plano autoriza envio ao paciente ou substitui revisao profissional.
+
 ### Notificacoes in-app (Fase 210)
 
 Com `BANCO_EXECUTAR_MIGRACOES=false`, aplicar a migration `1720000001020` com

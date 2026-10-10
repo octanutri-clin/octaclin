@@ -1,6 +1,6 @@
 # OctaClin - Status atual do projeto
 
-Atualizado em 2026-10-09.
+Atualizado em 2026-10-10.
 
 ## Fase ativa
 
@@ -62,20 +62,29 @@ Atualizado em 2026-10-09.
   `37987983323` e CodeQL `37987983326` também concluídos com sucesso. Sem
   aceite de produção. Histórico em
   `docs/history/phases/PLANO_FASE_308.md`.
-- Fase 309 implementada na branch `feature/fase-309-preferencias-notificacoes`;
-  PR #386 em draft, sem merge. Preferências por usuário, resumo interno e e-mail
-  opt-in. Migration aditiva 1065 registrada no código; não aplicada fora de
-  banco descartável. Testes focados, build e navegadores registrados no handoff.
-  Não representa deploy nem aceite de produção. Plano em
-  `docs/history/phases/PLANO_FASE_309.md`, handoff/checklist em `tasks/`.
-- Fase 310 em implementação na branch `feature/fase-310-receitas-compartilhadas`.
-  PR #388 aberta em rascunho para CI e revisão; não promover até fechar os
-  gates de R4, PostgreSQL/RLS, BFF/PWA e execução sob Node 22.
-  Código atual inclui migration 1066 (fora de banda, ainda não aplicada),
-  categorias internas, snapshots cifrados, opt-in por canal, compartilhamento
-  em lote/agendado, portal autenticado e aviso genérico com adaptador push web
-  próprio. A branch ainda requer conclusão dos gates R4, integração e revisão;
-  não representa merge, aplicação de migration ou deploy.
+- Fase 309 integrada pelo PR #386 (`34d186ec`), confirmado no GitHub neste
+  ciclo. CI principal pós-merge `38000687212` concluído com sucesso.
+  Migration 1065 integrada; aplicação operacional não consultada.
+  Plano histórico em `docs/history/phases/PLANO_FASE_309.md`.
+- Fase 310 integrada pelo PR #388 (`eb7f2aad`), merge confirmado em
+  2026-10-10. CI da PR `38014957842` aprovado, incluindo Governança, Backend,
+  Web, Demo local smoke e PR Gate; PostgreSQL/Testcontainers aprovado no Backend.
+  `Provenance do SBOM` ficou `SKIPPED`. Scanners e CI principal pós-merge
+  `38016413569` concluídos com sucesso em 2026-10-10.
+  Migration 1066 integrada; aplicação operacional, configuração de canais,
+  envio real e produção não consultados. Plano histórico em
+  `docs/history/phases/PLANO_FASE_310.md`.
+- Fase 311 implementada na branch `feature/fase-311-ativacao-conteudo`, base
+  `eb7f2aad`; PR #389 aberta, CI próprio em execução.
+  Decisões confirmadas: Client/SuperAdmin podem instalar por clínica;
+  seleção de itens e complementação posterior, sem recriação de instalados;
+  confirmação do SuperAdmin basta para opt-in; catálogos ausentes não bloqueiam
+  kit. Contrato usa marcador 2 seletivo e compatibilidade do legado 1 completo.
+  plano/gaps/evidências em `docs/history/phases/PLANO_FASE_311.md`, handoff em
+  `tasks/plan.md`, checklist em `tasks/todo-fase-311.md`. Backend Jest,
+  PostgreSQL/Testcontainers/RLS e Playwright desktop/mobile locais passaram;
+  gates locais passaram; checks remotos estão em execução.
+  Nenhuma migration nova prevista. Próxima fase após integração da 311: 312.
 - Sequência das Fases 302–320 em
   `docs/product/ROADMAP_POS_AUDITORIA_FASES_302_320.md`. O PB-30 está planejado na Fase 316, condicionado a privacidade,
   jurídico e operação.

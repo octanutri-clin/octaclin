@@ -7,7 +7,7 @@ describe('ControladorOperacoes', () => {
     const servicoOperacoes = {
       listarAlertasOperacionais: jest.fn(async () => ({ status: 'atencao', itens: [] }))
     };
-    const controlador = new ControladorOperacoes(servicoOperacoes as never, {} as never, {} as never, {} as never, {} as never, {} as never);
+    const controlador = new ControladorOperacoes(servicoOperacoes as never, {} as never, {} as never, {} as never, {} as never, {} as never, {} as never, {} as never);
 
     await expect(
       controlador.listarAlertasOperacionais({
@@ -44,7 +44,7 @@ describe('ControladorOperacoes', () => {
       atualizar: jest.fn(async () => ({ configuracaoValida: true, flags: [] }))
     };
     const auditoria = { registrar: jest.fn(async () => undefined) };
-    const controlador = new ControladorOperacoes({} as never, {} as never, auditoria as never, rollout as never, flags as never, {} as never);
+    const controlador = new ControladorOperacoes({} as never, {} as never, auditoria as never, rollout as never, flags as never, {} as never, {} as never, {} as never);
     const usuario = {
       tenantId: '00000000-0000-4000-8000-000000000001',
       usuarioId: 'admin-1',
@@ -85,8 +85,7 @@ describe('ControladorOperacoes', () => {
       {} as never,
       {} as never,
       {} as never,
-      menorPrivilegio as never
-    );
+      menorPrivilegio as never, {} as never, {} as never);
 
     await expect(controlador.obterMenorPrivilegioProviders()).resolves.toEqual({ veredicto: 'conforme' });
     expect(menorPrivilegio.avaliar).toHaveBeenCalledTimes(1);
@@ -111,8 +110,7 @@ describe('ControladorOperacoes', () => {
         auditoria as never,
         {} as never,
         {} as never,
-        {} as never
-      );
+        {} as never, {} as never, {} as never);
       return { controlador, auditoria };
     };
 
@@ -366,8 +364,7 @@ describe('ControladorOperacoes', () => {
         auditoria,
         {} as never,
         {} as never,
-        {} as never
-      );
+        {} as never, {} as never, {} as never);
 
       await expect(controlador.exportarAuditoriaCsv(usuario, requisicao)).resolves.toBe(csv);
       await expect(controlador.reprocessarOutbox(usuario, requisicao, 'evento-1')).resolves.toMatchObject({

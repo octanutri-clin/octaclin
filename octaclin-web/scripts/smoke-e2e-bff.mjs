@@ -170,6 +170,35 @@ async function main() {
     'sessao apos login precisa retornar Cache-Control no-store.'
   );
 
+  const tenantsOnboarding = await requisitarJson('/api/operacoes/tenants');
+  assertStatus(tenantsOnboarding.resposta, 200, 'tenants sintéticos para kit inicial');
+  const tenantKit = tenantsOnboarding.corpo?.itens?.find((item) => item.slug === 'clinica-carla');
+  const tenantLegado = tenantsOnboarding.corpo?.itens?.find((item) => item.slug === 'clinica-aurora-demo');
+  assert(tenantKit?.id && tenantLegado?.id, 'demo precisa expor clínicas sintéticas para instalação nova e legado.');
+
+  const estadoLegado = await requisitarJson(`/api/operacoes/tenants/${tenantLegado.id}/kit-inicial`);
+  assertStatus(estadoLegado.resposta, 200, 'estado do kit legado');
+  assert(estadoLegado.resposta.headers.get('cache-control')?.includes('no-store'), 'kit legado precisa ser no-store.');
+  assert(estadoLegado.corpo?.versaoInstalada === 1 && estadoLegado.corpo?.estado === 'completo', 'marcador legado precisa continuar completo sem backfill.');
+
+  const instalarEstrutura = await requisitarJson(`/api/operacoes/tenants/${tenantKit.id}/kit-inicial`, {
+    method: 'POST', body: JSON.stringify({ confirmacao: true, versao: 2, itens: ['estrutura:tres-refeicoes'] })
+  });
+  assertStatus(instalarEstrutura.resposta, 200, 'instalação seletiva de estrutura');
+  assert(instalarEstrutura.corpo?.estado === 'parcial' && instalarEstrutura.corpo?.instalacao?.materiaisCriados === 0, 'instalação de estrutura não pode criar material.');
+  assert(instalarEstrutura.resposta.headers.get('cache-control')?.includes('no-store'), 'instalação do kit precisa ser no-store.');
+
+  const completarKit = await requisitarJson(`/api/operacoes/tenants/${tenantKit.id}/kit-inicial`, {
+    method: 'POST', body: JSON.stringify({ confirmacao: true, versao: 2, itens: ['material:registro-habitos'] })
+  });
+  assertStatus(completarKit.resposta, 200, 'complemento incremental do kit');
+  assert(completarKit.corpo?.estado === 'parcial' && completarKit.corpo?.instalacao?.materiaisCriados === 1, 'complemento deve instalar somente o material selecionado.');
+
+  const catalogos = await requisitarJson('/api/operacoes/catalogos-alimentares/disponibilidade');
+  assertStatus(catalogos.resposta, 200, 'disponibilidade sintética dos catálogos');
+  assert(catalogos.resposta.headers.get('cache-control')?.includes('no-store'), 'disponibilidade de catálogo precisa ser no-store.');
+  assert(catalogos.corpo?.itens?.length === 4 && catalogos.corpo?.itens.some((item) => item.estado === 'ausente'), 'demo precisa mostrar quatro bases e pendências sem bloquear o kit.');
+
   await assertPaginaProtegida('/operacoes', 'Confiabilidade OctaClin');
   await assertPaginaProtegida('/pacientes', 'Pacientes');
   await assertPaginaProtegida('/profissionais', 'Profissionais');

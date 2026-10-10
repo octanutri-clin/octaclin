@@ -1,5 +1,13 @@
 # Fase 310 — receitas categorizadas e compartilhadas
 
+> Reconciliação em 2026-10-10: Fase 310 integrada pelo PR #388 (`eb7f2aad`),
+> confirmado no GitHub neste ciclo. CI da PR `38014957842`, incluindo Demo local
+> smoke/Governança/Backend/Web e step Testcontainers, aprovado. Scanners
+> pós-merge aprovados; CI principal `38016413569` em andamento na consulta.
+> Aplicação operacional da 1066 e envio real não consultados. O conteúdo
+> anterior abaixo é histórico, não checklist de pendências atuais.
+> Handoff corrente: `tasks/plan.md` (Fase 311).
+
 Estado em 2026-10-09: implementação em andamento na branch
 `feature/fase-310-receitas-compartilhadas`; migration 1066 registrada no código,
 sem aplicação externa. Permanecem pendentes os gates R4/PostgreSQL, testes

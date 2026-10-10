@@ -1,12 +1,13 @@
 # Roadmap de produto após a Fase 302
 
-Atualizado em 2026-10-09. Fase 308 integrada pelo PR #385 (`1dec202f`),
-confirmada no GitHub. CI `37987983251` e Semgrep `37987983322`, Trivy
-`37987983323`, CodeQL `37987983326` concluídos com sucesso; sem migration nova
-ou aceite de produção. Fase 309 implementada na branch
-`feature/fase-309-preferencias-notificacoes`; PR #386 em draft, migration 1065 não
-aplicada fora de banco descartável. Plano/evidências em
-`docs/history/phases/PLANO_FASE_309.md` e `tasks/plan.md`.
+Atualizado em 2026-10-10. Fases 309/310 integradas pelos PRs #386/#388
+(`34d186ec`/`eb7f2aad`), confirmadas no GitHub neste ciclo. CI principal
+pós-merge 309 e CI de PR 310 aprovados, incluindo Demo local smoke;
+PostgreSQL/Testcontainers da PR 310 aprovado. CI principal pós-merge 310
+`38016413569` em andamento na consulta; scanners pós-merge aprovados.
+Migrations 1065/1066 integradas no código, sem prova de aplicação operacional
+neste ciclo. Fase 311 com planejamento/decisões fechados, sem implementação.
+Plano e handoff em `docs/history/phases/PLANO_FASE_311.md` e `tasks/plan.md`.
 Este é o plano **vigente** para as recomendações ainda abertas de
 `OCTACLIN_PRODUCT_FEATURE_AUDIT.md`. O diagnóstico de 2026-09-17 permanece
 histórico; uma descrição antiga de lacuna não desfaz uma entrega posterior.
@@ -14,7 +15,7 @@ histórico; uma descrição antiga de lacuna não desfaz uma entrega posterior.
 ## Como executar e manter
 
 - Seguir a ordem numérica, salvo nova decisão explícita do proprietário. A fase
-  ativa em implementação/PR é a **309**; depois dela, a próxima fase é a **310**. Cada fase recebe plano de execução e revisão de gaps
+  ativa em planejamento é a **311**; depois de sua integração, a próxima fase é a **312**. Cada fase recebe plano de execução e revisão de gaps
   antes do código; concluir uma não implica iniciar a próxima sem reconciliar
   código, PRs e evidência operacional.
 - Implementar cada fatia funcional em sua branch/PR com a documentação
@@ -42,9 +43,9 @@ histórico; uma descrição antiga de lacuna não desfaz uma entrega posterior.
 | 306 | **Retorno e evasão factuais.** Indicadores agregados de intervalo observado entre consultas, pacientes sem próxima consulta, faltas por horário e tempo de resposta a formulários, para o Painel de Operação do `Client`. Reusar a mediana de até três intervalos da Fase 294. | Denominadores, janela e população explícitos; histórico insuficiente sinalizado; contagens sem pacientes identificáveis; sem diagnóstico nem contato novo. Preserva a trava de contato de 30 dias; sem migration. | Integrada pelo PR #383 (`104a1546`); código coberto pelo CI principal aprovado da integração 307 |
 | 307 | **Progresso do paciente além do peso.** Exibir no portal apenas métricas autorizadas e metas/marcos que o profissional escolheu compartilhar, com unidade, data e origem. | Consentimento e acesso do próprio paciente; sem revelar anotações internas ou meta implícita. Ausência de meta aparece como tal; nenhuma comparação clínica automática. | Integrada pelo PR #384 (`04e66efc`); CI principal aprovado, aplicação da 1064 não verificada neste ciclo. Plano em `docs/history/phases/PLANO_FASE_307.md` |
 | 308 | **Completar o resumo clínico com exames fora da faixa.** Consumir PB-17 no resumo PB-16, com resultado, unidade, referência e data, limitado à carteira/aba permitida. | Factual, sem interpretação/alerta; último resultado por grupo, livre por nome/unidade/método, 100 coletas/10 destaques com limites explícitos; sem referência válida não classificar, duplicado sem escolha. Regressão negativa de tenant/papel. | Integrada pelo PR #385 (`1dec202f`); CI pós-merge em andamento. Sem migration nova ou aceite de produção. Plano e gaps em `docs/history/phases/PLANO_FASE_308.md` |
-| 309 | **Preferências individuais de notificações internas e digest.** Configurar classes opcionais, frequência e resumo sem conteúdo clínico sensível. | Alertas críticos/obrigatórios continuam visíveis; preferências por usuário, deduplicação, fuso e autorização. Não confundir com opt-out de canais externos do paciente. | Implementação na branch `feature/fase-309-preferencias-notificacoes`; PR #386 em draft; migration 1065 requer rollout fora de banda e RLS/PostgreSQL real ainda sem prova |
-| 310 | **Receitas nutricionais organizadas e compartilháveis.** Categorias livres internas e entrega explícita ao paciente de uma versão revisada da receita, no portal seguro; avisos genéricos opcionais por e-mail/WhatsApp/push com consentimento específico. | Não publicar automaticamente todo o acervo; profissional escolhe até 10 itens por paciente e confirma. Cópia/versionamento, permissão, retirada e trilha de leitura sem conteúdo clínico em aviso externo. | Em implementação na branch `feature/fase-310-receitas-compartilhadas`; migration 1066 adicionada ao código, sem aplicação externa. |
-| 311 | **Ativação de conteúdo em clínicas existentes.** Instalação opt-in, idempotente, do kit genérico da Fase 297, sem sobrescrever materiais ou planos; conferência de disponibilidade das cargas TACO/USDA/IBGE no onboarding de ambiente. | Modelos de refeição continuam estruturas sem alimentos até revisão profissional. Carga global de catálogo segue procedimento versionado separado por fonte, não seed por tenant; erros de catálogo são visíveis. Não carregar TBCA. | Planejada |
+| 309 | **Preferências individuais de notificações internas e digest.** Configurar classes opcionais, frequência e resumo sem conteúdo clínico sensível. | Alertas críticos/obrigatórios continuam visíveis; preferências por usuário, deduplicação, fuso e autorização. Não confundir com opt-out de canais externos do paciente. | Integrada pelo PR #386 (`34d186ec`); CI pós-merge `38000687212` aprovado. Aplicação operacional da 1065 não consultada |
+| 310 | **Receitas nutricionais organizadas e compartilháveis.** Categorias livres internas e entrega explícita ao paciente de uma versão revisada da receita, no portal seguro; avisos genéricos opcionais por e-mail/WhatsApp/push com consentimento específico. | Não publicar automaticamente todo o acervo; profissional escolhe até 10 itens por paciente e confirma. Cópia/versionamento, permissão, retirada e trilha de leitura sem conteúdo clínico em aviso externo. | Integrada pelo PR #388 (`eb7f2aad`); CI da PR/Testcontainers aprovados; CI principal pós-merge em andamento. Aplicação operacional da 1066 não consultada |
+| 311 | **Ativação de conteúdo em clínicas existentes.** Client/SuperAdmin instalam itens escolhidos do kit genérico 297 e podem complementar depois; conferência global das quatro bases TACO/USDA/IBGE no onboarding do ambiente. | Opt-in/seleção por clínica; SuperAdmin confirma em nome do alvo; itens instalados não são recriados nem sobrescritos; legado 1 completo e marcador 2 seletivo. Estruturas sem alimentos/revisão profissional; catálogos somente leitura e cargas separadas; pendências não bloqueiam kit. Sem TBCA. | Planejamento/decisões concluídos; sem implementação. Plano em `docs/history/phases/PLANO_FASE_311.md`; handoff `tasks/plan.md` |
 | 312 | **Documentos clínicos adicionais.** Desenhar e entregar encaminhamento no motor existente; avaliar atestado apenas após validação jurídica do tipo, competência profissional e assinatura exigida. | Sem afirmar que qualquer nutricionista pode emitir atestado médico. Variáveis permitidas, versão imutável, autorização e trilha; se o gate jurídico de atestado negar, registrar exclusão fundamentada e concluir apenas encaminhamento. | Condicional para atestado |
 | 313 | **Avaliação antropométrica de gestantes.** Regra específica baseada em referência clínica validada, idade gestacional e dados necessários; exibir classificação somente quando o protocolo for aplicável. | Revisão clínica da fonte, limites e ausência de dados; classificação adulta permanece bloqueada para gestantes. Nenhuma inferência a partir apenas do IMC atual. | Condicional à validação clínica |
 | 314 | **Avaliação antropométrica de crianças e adolescentes.** Referência etária e por sexo aplicável, percentil/escore quando cabível, com proveniência e cálculo reproduzível. | Revisão clínica/legal do protocolo e dados exigidos; menores de 20 anos não recebem faixas adultas. Casos fora da faixa ou incompletos ficam sem classificação. | Condicional à validação clínica |
@@ -61,8 +62,8 @@ histórico; uma descrição antiga de lacuna não desfaz uma entrega posterior.
 | --- | --- |
 | Item 8 da ordem e seção 10: LGPD, API profissional, carga/produtividade | Carga, concluídas e taxa factual: Fase 301 integrada; LGPD 302; API 303. |
 | Seções 6, 8 e 11: adesão, substituições, questionários, antropometria, retorno, evasão, progresso | Fases 304–307. Dados factuais, sem score ou diagnóstico novo. |
-| Seção 5.3: últimos exames alterados no resumo | Fase 308; PB-17 já entrega faixas e série, mas o resumo ainda não as consome. |
-| Seções 2–3: preferências/digest, receitas sem categoria e sem entrega | Fases 309–310. |
+| Seção 5.3: últimos exames alterados no resumo | Fase 308 integrada: resumo consome PB-17 com agrupamento e limites explícitos. |
+| Seções 2–3: preferências/digest, receitas sem categoria e sem entrega | Fases 309–310 integradas; comprovação operacional separada. |
 | Seções 2 e 10: onboarding parcial; versões de plano disponíveis sem tela | Kit para clínicas existentes na 311; versão do plano na 304. Catálogos TACO/USDA/IBGE já integrados, com cargas externas relatadas pelo proprietário, não verificadas neste ciclo. |
 | Seções 6 e 9 e Fase 286: documentos, IMC gestantes/menores | Fases 312–314, com gates jurídicos/clínicos explícitos. |
 | Seções 3, 5.1 e 14: campo de risco manual | Uso operacional resolvido nas Fases 265/300; retirada técnica do legado na 315. Fórmula de **risco clínico** não está autorizada; só reabrir por nova decisão. |
@@ -130,8 +131,18 @@ nova ou aceite de produção. Monitor produção
 `37977323201` falhou em “Saude externa”; causa não diagnosticada e sem vínculo
 demonstrado com esta implementação.
 
-**Fase 309 implementada, não integrada:** preferências individuais, resumo
-interno e e-mail opt-in. PR ainda pendente; migration 1065 não aplicada fora de
-banco descartável, sem envio real ou aceite de produção. Plano e contrato em
-`docs/history/phases/PLANO_FASE_309.md`. Próxima fase após integração: 310,
-receitas organizadas e compartilháveis.
+**Fase 309 integrada:** PR #386 (`34d186ec`), merge confirmado neste ciclo;
+CI principal pós-merge `38000687212` aprovado. Aplicação operacional da
+migration 1065 não consultada. Plano em `docs/history/phases/PLANO_FASE_309.md`.
+
+**Fase 310 integrada:** PR #388 (`eb7f2aad`), merge confirmado em 2026-10-10.
+CI da PR `38014957842` aprovado, incluindo Governança, Backend, Web e Demo
+local smoke; step de PostgreSQL/Testcontainers aprovado. Scanners pós-merge
+aprovados; CI principal `38016413569` em andamento na consulta. `Provenance
+do SBOM` `SKIPPED`; aplicação da 1066 e envio real não consultados.
+
+**Fase 311 planejada:** decisões fechadas para seleção/complementação,
+Client/SuperAdmin e conferência de catálogo sem bloqueio de kit. Não há
+código novo nem migration prevista; implementar após troca manual para Luna
+alto. Plano/gaps em `docs/history/phases/PLANO_FASE_311.md`. Próxima fase
+após integração: 312, documentos clínicos, com gate jurídico para atestado.

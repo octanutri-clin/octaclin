@@ -195,7 +195,8 @@ test.describe('Fase 197 - modulos avancados', () => {
     await page.route('**/api/operacoes/**', (route) => {
       const url = route.request().url();
       let corpo;
-      if (url.includes('/tenants')) corpo = { itens: [], total: 0 };
+      if (url.includes('/catalogos-alimentares/disponibilidade')) corpo = { verificadoEm: agora, completo: true, itens: [] };
+      else if (url.includes('/tenants')) corpo = { itens: [], total: 0 };
       else if (url.includes('/alertas')) corpo = { status: 'ok', geradoEm: agora, resumo: { total: 0, criticos: 0, atencao: 0, informativos: 0 }, itens: [] };
       else if (url.includes('/resumo')) corpo = { outbox: { pendente: 0, processando: 0, processado: 0, falhou: 0 }, mobile: { sincronizado: 1, erro: 0 } };
       else if (url.includes('/mobile/sincronizacoes')) corpo = [{ id: 'sync-1', tenantId: 'tenant-1', idLocal: 'local-1', tipo: 'checkin', status: 'sincronizado', criadoEm: agora }];

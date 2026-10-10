@@ -27,6 +27,7 @@ import { AdaptadorEmailSmtp } from '../comunicacoes/infraestrutura/adaptadores/a
 import { ModuloTenancy } from '../tenancy/modulo-tenancy';
 import { ServicoOperacoes } from './aplicacao/servico-operacoes';
 import { ServicoCicloVidaTenant } from './aplicacao/servico-ciclo-vida-tenant';
+import { ServicoDisponibilidadeCatalogos } from './aplicacao/servico-disponibilidade-catalogos';
 import { ControladorOperacoes } from './apresentacao/controlador-operacoes';
 import { ServicoRolloutOperacional } from './aplicacao/servico-rollout-operacional';
 import { FILA_NOTIFICACOES } from '../comunicacoes/aplicacao/servico-comunicacoes';
@@ -64,6 +65,7 @@ import { FILA_AUTOMACOES } from '../automacoes/aplicacao/servico-automacoes';
     ServicoOperacoes,
     ServicoRolloutOperacional,
     ServicoCicloVidaTenant,
+    ServicoDisponibilidadeCatalogos,
     ServicoAuditoria,
     AdaptadorEmailSmtp,
     ServicoGoogleCalendar,
