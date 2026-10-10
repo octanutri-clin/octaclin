@@ -19,6 +19,7 @@ import { CriarAvaliacoesAntropometricas1720000001016 } from './migracoes/1720000
 import { CriarDocumentosEmitidos1720000001017 } from './migracoes/1720000001017-CriarDocumentosEmitidos';
 import { CriptografarConteudoNotificacoes1720000001018 } from './migracoes/1720000001018-CriptografarConteudoNotificacoes';
 import { AdicionarFinanceiroConsulta1720000001019 } from './migracoes/1720000001019-AdicionarFinanceiroConsulta';
+import { AdicionarEncaminhamentoDocumento1720000001067 } from './migracoes/1720000001067-AdicionarEncaminhamentoDocumento';
 import { CriarNotificacoesUsuario1720000001020 } from './migracoes/1720000001020-CriarNotificacoesUsuario';
 import { DashboardAlertaOcultoOrm } from '../../modulos/dashboard/infraestrutura/dashboard-alerta-oculto.orm';
 import { AgendaBloqueioManualOrm } from '../../modulos/agenda/infraestrutura/agenda-bloqueio-manual.orm';
@@ -173,6 +174,7 @@ describe('criarOpcoesTypeOrm', () => {
         CriarDocumentosEmitidos1720000001017,
         CriptografarConteudoNotificacoes1720000001018,
         AdicionarFinanceiroConsulta1720000001019,
+        AdicionarEncaminhamentoDocumento1720000001067,
         CriarNotificacoesUsuario1720000001020
       ])
     );

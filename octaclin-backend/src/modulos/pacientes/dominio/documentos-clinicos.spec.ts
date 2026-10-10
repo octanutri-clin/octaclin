@@ -5,6 +5,7 @@ import {
   paragrafosDocumento,
   renderizarDocumento,
   resolverModelo,
+  resolverModeloDocumento,
   validarModelo,
   variaveisDoTipo
 } from './documentos-clinicos';
@@ -27,7 +28,7 @@ describe('documentos clinicos - modelos', () => {
   });
 
   it('todo modelo padrao so usa variaveis que o proprio tipo resolve', () => {
-    for (const tipo of ['declaracao_comparecimento', 'relatorio_alta'] as const) {
+    for (const tipo of ['declaracao_comparecimento', 'relatorio_alta', 'recibo_consulta', 'encaminhamento'] as const) {
       expect(validarModelo(tipo, MODELOS_PADRAO[tipo])).toEqual([]);
     }
   });
@@ -61,6 +62,28 @@ describe('documentos clinicos - validacao de modelo', () => {
       corpo: '{{conteudo}}\n\n{{profissionalNome}}'
     });
     expect(erros).toEqual([]);
+  });
+
+  it('exige os tokens de identificacao e os cinco dados do encaminhamento', () => {
+    const erros = validarModelo('encaminhamento', { corpo: 'Paciente {{pacienteNome}} e motivo {{motivoEncaminhamento}}' });
+    expect(erros).toContain('variavel_obrigatoria_ausente:profissionalRegistro');
+    expect(erros).toContain('variavel_obrigatoria_ausente:destinoServico');
+    expect(erros).toContain('variavel_obrigatoria_ausente:contextoClinico');
+  });
+
+  it('usa título fixo e restaura corpo padrão para override vazio', () => {
+    expect(resolverModeloDocumento('encaminhamento', { titulo: 'Livre', corpo: '  ' })).toEqual(
+      MODELOS_PADRAO.encaminhamento
+    );
+    expect(validarModelo('encaminhamento', resolverModeloDocumento('encaminhamento', { corpo: 'texto' })))
+      .toContain('variavel_obrigatoria_ausente:destinoServico');
+  });
+
+  it('recusa personalizar o título do encaminhamento', () => {
+    expect(validarModelo('encaminhamento', {
+      titulo: 'Encaminhamento de {{pacienteNome}}',
+      corpo: MODELOS_PADRAO.encaminhamento.corpo
+    })).toContain('titulo_fixo');
   });
 });
 
@@ -124,5 +147,12 @@ describe('documentos clinicos - apresentacao', () => {
     expect(variaveis).toContain('pacienteNome');
     expect(variaveis).toContain('horaInicio');
     expect(variaveis).not.toContain('conteudo');
+  });
+
+  it('inclui apenas variaveis permitidas para o encaminhamento', () => {
+    expect(variaveisDoTipo('encaminhamento')).toEqual(expect.arrayContaining([
+      'pacienteNome', 'profissionalRegistro', 'destinoServico', 'motivoEncaminhamento', 'contextoClinico'
+    ]));
+    expect(variaveisDoTipo('encaminhamento')).not.toContain('conteudo');
   });
 });

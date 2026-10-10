@@ -1,137 +1,97 @@
-# Handoff — Fase 311: implementação → revisão e integração
+# Handoff — Fase 312: revisão/merge
 
-## Branch, base e objetivo
+## Estado e próxima ação
 
-- Branch: `feature/fase-311-ativacao-conteudo`.
-- Worktree: `/workspace/octaclin/.worktrees/feature-fase-311-ativacao-conteudo`.
-- Base: `eb7f2aad`, Fase 310/PR #388 MERGED, confirmada no GitHub em 2026-10-10.
-- Implementação publicada no PR #389; CI remoto em execução.
-- Objetivo: kit genérico selecionável/incremental para clínicas existentes e
-  diagnóstico somente leitura das cargas globais TACO/USDA/IBGE.
-- Plano completo e contratos: [PLANO_FASE_311.md](../docs/history/phases/PLANO_FASE_311.md).
-- Sequência executável: [todo-fase-311.md](todo-fase-311.md).
+Implementação concluída e PR única aberta; todos os checks obrigatórios da
+rodada final passaram. Próximo passo: revisão humana e merge pelo proprietário.
+Não houve merge automático. Se a revisão revelar uma decisão arquitetural ou
+risco R4 novo, usar GPT-6.1 Sol médio para analisar e avisar o proprietário
+antes de qualquer troca de modelo; correções localizadas continuam adequadas
+para GPT-6 Luna alto.
+
+- Branch: `feature/fase-312-documentos-clinicos`.
+- Worktree: `/workspace/octaclin/.worktrees/feature-fase-312-documentos-clinicos`.
+- Base: `cd345a5e`, main com 311 e Handlebars PR #387.
+- PR da 312: [#390](https://github.com/octanutri-clin/octaclin/pull/390), uma
+  PR de implementação, sem PR documental. CI final `38048342326`: Backend,
+  Web, Mobile, AI FastAPI, Demo local smoke, Governança, Operação, Rollout e
+  PR Gate PASS; CodeQL/Dependency Review/Semgrep/Trivy PASS. Provenance do
+  SBOM SKIPPED. Execução local e limitações estão em `PLANO_FASE_312.md`.
+- Contrato/gaps/rollback: [PLANO_FASE_312.md](../docs/history/phases/PLANO_FASE_312.md).
+- Sequência com arquivos, testes e aceites: [todo-fase-312.md](todo-fase-312.md).
+- Handoff anterior preservado em [plan-fase-311.md](plan-fase-311.md).
 
 ## Decisões confirmadas pelo proprietário
 
-1. Client instala na própria clínica; SuperAdmin pode instalar em uma clínica
-   escolhida, com confirmação que basta para opt-in, sem aprovação do gestor.
-2. Selecionar materiais e estruturas; permitir complementar depois.
-3. Itens instalados não são recriados, reativados ou removidos pelo instalador,
-   mesmo se o material foi adaptado ou desativado.
-4. Catálogos ausentes/indisponíveis são visíveis ao SuperAdmin e não bloqueiam kit.
-5. Estruturas seguem sem alimentos; nenhum envio ao paciente decorre da instalação.
+1. Entregar encaminhamento; atestados aguardam validação jurídica específica.
+2. Destino/serviço e motivo obrigatórios; destinatário, instituição e contexto
+   clínico opcionais, preenchidos pelo profissional.
+3. Entrega nesta fase por impressão/PDF do navegador no motor atual.
+4. Emissão apenas pelo próprio profissional responsável atual, com identidade
+   autenticada e registro; sem delegação a colaboradores/SuperAdmin.
+5. Não exigir consulta de origem/concluída para encaminhamento.
+6. Prévia completa e confirmação; mudanças relevantes pedem nova conferência.
 
-Não há pergunta de produto pendente.
+Nenhuma pergunta de produto permanece aberta. Atestado é gate futuro pendente,
+não ausência de resposta para o encaminhamento. Assinatura manual no papel;
+assinatura digital/portal/canais novos não integram a entrega aprovada.
 
-## Contrato que o implementador deve preservar
+## Contratos essenciais para o Luna
 
-- Cinco chaves estáveis: `material:plano-no-portal`, `material:registro-habitos`,
-  `material:duvidas-consulta`, `estrutura:tres-refeicoes`, `estrutura:cinco-refeicoes`.
-- POST: `{ confirmacao: true, versao: 2, itens: [chaves...] }`, de 1–5 únicas.
-  Nenhum conteúdo/autor/tenant no body. Client usa `/cliente/kit-inicial`;
-  SuperAdmin usa `/operacoes/tenants/:id/kit-inicial`; ambos também têm GET.
-- Marcador 1 legado = kit completo, sem escrita/backfill. Marcador 2 = união
-  incremental das chaves; formatos desconhecidos/inválidos bloqueiam instalação.
-- Um parser e um helper em Tenancy, usados por provisionamento/Client/SuperAdmin.
-  Lock advisory por tenant antes da leitura; criar só a diferença; materiais,
-  marcador e auditoria na mesma transação. Retry puro não escreve nem reaudita.
-- Validar autor no tenant da identidade; Client não troca alvo. SuperAdmin
-  autorizado troca contexto RLS no manager transacional e usa sua própria autoria.
-  Não dar BYPASSRLS/owner ao runtime nem atribuir ação ao Client por procuração.
-- ModuloTenancy exporta serviço compartilhado; ModuloClientes/Operacoes já o usam.
-  Não criar dependência Operacoes → Clientes ou import circular de módulos.
-- Listagem de modelos: legado1 libera ambas estruturas; marcador 2 somente as
-  escolhidas; inválido nenhuma. Total de modelos pessoais continua factual.
-- UI Client na aba Ativação de `/cliente`; UI SuperAdmin no onboarding de
-  Operações para um alvo por ação. Mesma seleção, confirmação e estados.
-- Quatro bases de catálogo verificadas separadamente: TACO, USDA Foundation,
-  USDA SR Legacy e IBGE POF. Estado depende de edição ativa/direito/importação
-  consistente nas identidades e contagens/alimento utilizável; erro SQL não é ausência.
-- API global `/operacoes/catalogos-alimentares/disponibilidade`, SuperAdmin com
-  `operacoes.tenants.gerenciar`, SELECT-only, DTO sanitizado/no-store. Dez edições
-  por base na projeção; resumo considera todas; falha de atualização não invalida
-  edição anterior válida. Nenhuma carga, seed ou reativação de fonte pela tela.
-- Nenhuma migration nova prevista. Rollback preserva dados: versão antiga oculta
-  estruturas de marcador 2; nunca converter marcador 2 para1 para contornar o limite.
+- Um quarto tipo `encaminhamento` no motor existente. Título fixo; texto puro
+  cifrado em snapshot. Usar DTO aninhado com campos/limites definidos no plano;
+  não reutilizar texto da alta nem carregar conteúdo do prontuário automaticamente.
+- Validar diretamente paciente, nome/registro do emissor ativo e vínculo do
+  próprio responsável em `ExecutorTenant`; regras do modelo não substituem
+  validação. Bloquear papel, tenant/carteira, profissional ausente/arquivado.
+- Rota de prévia só para novo tipo, autenticada/gerenciar, sem persistir
+  documento/draft. Preparação compartilhada produz corpo/cabeçalho e SHA-256
+  determinístico; emissão exige hash da prévia + confirmação e salva exatamente
+  o snapshot comparado. Divergência →409/refazer prévia. Hash não é assinatura.
+- Chave UUID por confirmação; replay durável sob lock/índice retorna mesmo
+  ID, inclusive cancelado. Pedido diferente com mesma key →409. Fingerprint
+  guardado no cabeçalho cifrado e omitido do DTO. Identidade verificada antes
+  do replay; não fazer consulta depois de `23505` em transação abortada.
+- Migration proposta 1067: CHECK novo tipo, chave nullable/obrigatória apenas
+  no novo tipo, unique parcial e trigger de snapshot. Registrar TypeORM e
+  confirmar número livre; nenhuma migration externa sem alvo/autorização.
+- Modelos: quarto tipo/corpo personalizável/título fixo; tokens essenciais
+  exigidos; PATCH preserva tipos omitidos sob lock/merge para clientes antigos.
+- UI usa papel/permissão já carregados no prontuário. Ramo específico para
+  encaminhamento, prévia antes de persistir; editar invalida; falha incerta
+  preserva UUID/body. Limpar e ignorar requests antigos ao mudar paciente.
+- BFF: wrappers existentes, permissões por método e `private, no-store`
+  inclusive erros. Origem de mutação protegida. Backend revalida autoria.
+- Emitido é imutável; corrigir cancela e emite outro. Novo tipo nunca enviado
+  por e-mail. Três tipos existentes e documentos já emitidos continuam legíveis.
+- PostgreSQL real deve provar índice/replay concorrente, trigger, RLS e
+  transferência concorrente. Testes mockados não encerram essas propriedades.
+- Rollback mantém leitura do novo tipo e schema; down recusa se há dados novos.
+  Não apagar encaminhamentos para reverter. Revisão R4 independente quando viável.
 
-## Mapa da implementação
+## Validação local e limites
 
-Existentes a reler/modificar:
-- Backend: `tenancy/kit-inicial-clinica.ts`, helper de `operacoes/aplicacao`,
-  `servico-ciclo-vida-tenant`, `servico-modelos-plano-alimentar` e respectivos
-  specs; `modulo-tenancy`, controladores Client/Operacoes e DI.
-- Catálogos: entidades globais, migrations 1028–1030, importadores 299 e
-  `ServicoPlanosAlimentares.buscarAlimentos`; não utilizar busca como diagnóstico.
-- Web: `components/cliente/areas-visao-assinatura.tsx`,
-  `components/operacoes/area-onboarding.tsx`, lib/cliente-api e
-  lib/onboarding-operacoes-api; wrappers de sessão/BFF e segurança de origem.
-- Provas: harness RLS/Testcontainers existente, `test:authz`, Playwright
-  `portal-cliente.spec.mjs`, mock `octaclin-backend/scripts/api-demo-local.mjs`.
+- PASS: backend/Web typecheck e build; backend Jest 2474 PASS/45 SKIPPED; RLS
+  Testcontainers 26/26; teste visual da fase 2/2 em desktop/mobile com axe na
+  prévia; smoke BFF `smoke-e2e-bff-ok`; scanner de secrets, redaction,
+  migrations, guardas, matriz de confiabilidade/acessibilidade.
+- PASS: suíte completa `test:authz` (todos os harnesses na cadeia terminaram
+  com exit 0, incluindo a prova BFF da 312: 2/2); cadeia validada também no CI.
+- PostgreSQL provou isolamento, índice, trigger, cancelamento e recusa de
+  rollback com encaminhamentos. Replay concorrente do serviço e rollback sem
+  linhas ainda não têm prova integrada específica.
+- Ambiente local Node 24.19.0/pnpm 11.19.0; manifests pedem Node 22/pnpm
+  11.25.0. O `pnpm` tentou substituir módulos e abortou com segurança sem TTY;
+  o suite `test:authz` é executado por Node diretamente. CI com versões
+  declaradas continua sendo gate. Nenhum lockfile foi alterado.
+- Migration 1067 não aplicada fora do Postgres descartável. Deploy/produção,
+  assinatura/provider e validação jurídica de atestados SKIPPED. Revisão R4
+  independente e Provenance do SBOM também não estão comprovadas.
 
-Implementados: helper/parser/DTO/serviço compartilhados sob Tenancy, serviço
-de disponibilidade sob Operacoes, três rotas BFF, componente selecionável,
-harnesses de testes e cenários visuais da Fase 311. O checklist contém os
-critérios e casos positivos/negativos por entrega.
+## Próxima execução
 
-## Estado observado e validações
+1. Revisão humana do PR #390; decidir merge após examinar os limites registrados.
+2. Não aplicar migration nem inferir aceite jurídico/produção a partir do CI.
 
-- PASS — PRs 386/388 MERGED (`34d186ec`/`eb7f2aad`), consultadas neste ciclo.
-- PASS — CI da PR 388 `38014957842`, incluindo Governança, Backend, Web,
-  Demo local smoke e PR Gate; step de RLS/Testcontainers do Backend aprovado.
-- PASS — CI principal pós-merge 309 `38000687212`; scanners pós-merge 310
-  Semgrep `38016413577`, Trivy `38016413549`, CodeQL `38016413585` aprovados.
-- PASS — CI principal pós-merge 310 `38016413569`, confirmado em 2026-10-10.
-- SKIPPED — Provenance do SBOM na PR 388. Não contar como PASS.
-- PASS — validação do planejamento original: `git diff --check`,
-  `pnpm security:secrets`, matriz documental com 40 referências. Os documentos
-  agora incluem a implementação; repetir `git diff --check` no fechamento.
-- SKIPPED — preflight documental em PowerShell: `pwsh` não está disponível.
-  As verificações proporcionais acima passaram, sem equivaler ao preflight completo.
-- Ambiente observado: Node 24.19.0/pnpm 11.19.0, incompatível com o range
-  Node 22/pnpm 11.25.0 do manifest; builds/testes locais passaram com aviso.
-- FAIL de integração do tooling — AI DevKit lint/lint da feature assume
-  `docs/ai/*` ausente e outra convenção de branch. Não executar init;
-  documentos OctaClin acima são canônicos. Sem bloqueio de produto por isso.
-- PASS — helper/parser, serviços/controladores, provisionamento e modelos:
-  Jest focado 100/100; backend integral 2464 passed, 44 skipped; build
-  validado após o ajuste final do diagnóstico numérico.
-- PASS — PostgreSQL/Testcontainers/RLS: 25/25, incluindo concorrência por
-  tenant, isolamento, autoria SuperAdmin, rollback e papel SELECT-only.
-- PASS — BFF novo 5/5; visual Fase 311 Client e Operações desktop/mobile,
-  axe/foco: 4/4; Web typecheck e build de produção passaram.
-- PASS — governança local: guardas 11/11, confiabilidade 40/40, matriz de
-  acessibilidade 20/20, redação de auditoria 24/24 + inventário, scanner de
-  secrets e lint sem erros. Três chaves seguras de contagem/enumeração têm
-  justificativas específicas.
-- PASS — demo local smoke após build: `smoke-e2e-bff-ok`, com API demo sintética.
-- PASS — suíte ampla Web `test:authz`, incluindo o harness BFF da Fase 311
-  (5/5); Playwright da Fase 311 Client/Operações desktop/mobile 4/4.
-- PASS — `git diff --check` após os documentos finais.
-- PENDENTE — aguardar CI completo do PR #389 e revisão R4 independente.
-- SKIPPED — banco operacional, migrations 1065/1066, configuração de canais,
-  envios reais, deploy/produção; não foram consultados/executados.
-- Revisão R4 formal GitHub: nenhuma entrada encontrada nas PRs 386/388;
-  isso não comprova revisão externa independente. Requerir revisão específica
-  da 311 quando viável e não declarar rollout baseado apenas no merge.
-
-## Decisões e entregáveis desta fase
-
-- [x] Análise de gaps/código, decisões, contrato de seleção/legado/catálogos.
-- [x] Branch/worktree dedicada, plano, implementação e checklist desta fase.
-- [x] Reconciliação factual dos documentos 309/310 e preservação do handoff 309.
-- [x] Validação documental proporcional; evidências e limites da implementação
-  estão acima e em `docs/history/phases/PLANO_FASE_311.md`.
-- [x] Implementação e testes locais da Fase 311 nesta branch dedicada.
-- [x] Atualizar documentos, rever diff final, commit/push e abrir PR #389.
-
-Alterados: plano 311, `tasks/plan.md`, `tasks/todo.md`, checklist 311,
-status/checklist/roadmap/resumo/matriz e notas de integração dos históricos
-309/310. Handoff antigo 309 preservado em `tasks/plan-fase-309.md` e
-`tasks/todo-fase-309.md`; tarefas históricas não são reabertas por estes textos.
-
-## Implementação entregue e próximo passo
-
-Implementação feita com GPT-6 Luna alto, suficiente para o escopo fechado e
-mais econômico em tokens. Não houve troca de modelo durante este turno.
-Próximo passo: fechar build/smoke/governança, abrir PR única desta fase e
-acompanhar o CI. Não fazer merge nem ações operacionais de produção.
+Não há perguntas de produto abertas. Não aplicar migration/deploy nem simular
+revisão R4 independente. Não trocar o modelo automaticamente.

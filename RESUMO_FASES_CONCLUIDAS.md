@@ -10,9 +10,14 @@
   `38016413569` concluídos com sucesso; `Provenance do SBOM` foi `SKIPPED`.
 - Aplicação das migrations 1065/1066, envio real e operação em produção não
   foram consultados. Merge/CI não representam aceite de produção.
-- Fase 311 implementada e publicada no PR #389; CI remoto pendente. Plano/evidências em
-  `docs/history/phases/PLANO_FASE_311.md` e `tasks/plan.md`. Próxima entrega
-  após integração: Fase 312.
+- Fase 311 integrada pelo PR #389 (`f5f9ba84`); CI final da PR
+  `38022212900` e principal pós-merge `38042089805` SUCCESS. Plano/evidências
+  em `docs/history/phases/PLANO_FASE_311.md` e `tasks/plan-fase-311.md`.
+  Revisão independente não comprovada; Provenance do SBOM SKIPPED.
+- Fase 312: PR #390 aberta; CI final `38048342326` PASS, incluindo Backend, Web,
+  Governança, Demo local smoke e PR Gate. Provenance do SBOM SKIPPED. Migration
+  1067 não foi aplicada externamente; atestados aguardam validação específica.
+  Evidências em `docs/history/phases/PLANO_FASE_312.md`.
 
 ## Reconciliação em 2026-10-09
 

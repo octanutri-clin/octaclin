@@ -1,23 +1,22 @@
 /**
  * Documentos clinicos gerados a partir de dados que ja existem no prontuario.
  *
- * Dois tipos nesta fase:
+ * Tipos atualmente disponíveis:
  * - `declaracao_comparecimento`: prova de presenca, sai de consulta concluida.
  * - `relatorio_alta`: fecha o ciclo de acompanhamento.
  *
- * **Atestado ficou de fora de proposito.** Atestado medico e ato privativo de
- * medico (CFM) e o produto atende tambem nutricionista, psicologo e educador
- * fisico. Gerar "atestado" para qualquer profissional cadastrado colocaria o
- * usuario a emitir documento que ele nao pode emitir. Declaracao de
- * comparecimento nao tem essa restricao: atesta presenca, nao condicao de saude.
+ * Atestados permanecem fora do catálogo até que finalidade, profissão,
+ * competência, jurisdição e assinatura sejam validadas especificamente.
+ * Encaminhamentos têm autorização própria; os demais tipos mantêm suas regras.
  */
 
-export type TipoDocumentoClinico = 'declaracao_comparecimento' | 'relatorio_alta' | 'recibo_consulta';
+export type TipoDocumentoClinico = 'declaracao_comparecimento' | 'relatorio_alta' | 'recibo_consulta' | 'encaminhamento';
 
 export const TIPOS_DOCUMENTO_CLINICO: readonly TipoDocumentoClinico[] = [
   'declaracao_comparecimento',
   'relatorio_alta',
-  'recibo_consulta'
+  'recibo_consulta',
+  'encaminhamento'
 ];
 
 export interface ModeloDocumento {
@@ -60,6 +59,13 @@ const VARIAVEIS_ESPECIFICAS: Record<TipoDocumentoClinico, readonly string[]> = {
     'valor',
     'formaPagamento',
     'dataPagamento'
+  ],
+  encaminhamento: [
+    'destinoServico',
+    'destinatarioNome',
+    'instituicaoDestino',
+    'motivoEncaminhamento',
+    'contextoClinico'
   ]
 };
 
@@ -120,8 +126,42 @@ export const MODELOS_PADRAO: Record<TipoDocumentoClinico, ModeloDocumento> = {
       '{{profissionalNome}}',
       '{{profissionalEspecialidade}} - {{profissionalRegistro}}'
     ].join('\n')
+  },
+  encaminhamento: {
+    titulo: 'Encaminhamento',
+    corpo: [
+      'ENCAMINHAMENTO',
+      '',
+      'Paciente: {{pacienteNome}}',
+      'Destino/serviço: {{destinoServico}}',
+      'Destinatário: {{destinatarioNome}}',
+      'Instituição: {{instituicaoDestino}}',
+      '',
+      'Motivo do encaminhamento:',
+      '{{motivoEncaminhamento}}',
+      '',
+      'Contexto clínico informado pelo profissional:',
+      '{{contextoClinico}}',
+      '',
+      '{{cidadeEmissao}}, {{dataEmissao}}.',
+      '',
+      '{{profissionalNome}}',
+      '{{profissionalEspecialidade}} — {{profissionalRegistro}}',
+      '',
+      'Assinatura: ____________________________________'
+    ].join('\n')
   }
 };
+
+export const VARIAVEIS_OBRIGATORIAS_MODELO_ENCAMINHAMENTO = [
+  'pacienteNome',
+  'profissionalNome',
+  'profissionalRegistro',
+  'dataEmissao',
+  ...VARIAVEIS_ESPECIFICAS.encaminhamento
+] as const;
+
+export const TAMANHO_MAXIMO_CORPO_RENDERIZADO_ENCAMINHAMENTO = 16000;
 
 const PADRAO_VARIAVEL = /\{\{\s*([a-zA-Z0-9_]+)\s*\}\}/g;
 
@@ -156,7 +196,27 @@ export function validarModelo(tipo: TipoDocumentoClinico, modelo: Partial<Modelo
     if (!conhecidas.has(usada)) erros.push(`variavel_desconhecida:${usada}`);
   }
 
+  if (tipo === 'encaminhamento') {
+    const tokens = new Set(extrairVariaveis(corpo));
+    for (const obrigatoria of VARIAVEIS_OBRIGATORIAS_MODELO_ENCAMINHAMENTO) {
+      if (!tokens.has(obrigatoria)) erros.push(`variavel_obrigatoria_ausente:${obrigatoria}`);
+    }
+    // O título deste documento é uma constante pública, nunca texto livre.
+    if (titulo && titulo !== MODELOS_PADRAO.encaminhamento.titulo) erros.push('titulo_fixo');
+  }
+
   return erros;
+}
+
+/** Título não configurável: títulos aparecem em timelines sem descriptografar. */
+export function resolverModeloDocumento(
+  tipo: TipoDocumentoClinico,
+  override?: Partial<ModeloDocumento>
+): ModeloDocumento {
+  if (tipo !== 'encaminhamento') return resolverModelo(tipo, override);
+  const padrao = MODELOS_PADRAO.encaminhamento;
+  const corpo = override?.corpo?.trim();
+  return { titulo: padrao.titulo, corpo: corpo || padrao.corpo };
 }
 
 export function extrairVariaveis(texto: string): string[] {

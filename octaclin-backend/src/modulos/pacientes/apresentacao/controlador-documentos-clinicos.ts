@@ -6,7 +6,7 @@ import { GuardaJwt } from '../../auth/apresentacao/guarda-jwt';
 import { GuardaPapeis } from '../../auth/apresentacao/guarda-papeis';
 import { GuardaPermissoes } from '../../auth/apresentacao/guarda-permissoes';
 import { UsuarioAutenticado } from '../../auth/dominio/usuario-autenticado';
-import { CancelarDocumentoClinicoDto, EmitirDocumentoClinicoDto } from '../aplicacao/dtos';
+import { CancelarDocumentoClinicoDto, EmitirDocumentoClinicoDto, PreviaDocumentoClinicoDto } from '../aplicacao/dtos';
 import { ServicoDocumentosClinicos } from '../aplicacao/servico-documentos-clinicos';
 
 /**
@@ -68,6 +68,23 @@ export class ControladorDocumentosClinicos {
       variaveisVazias: documento.variaveisVazias
     });
     return documento;
+  }
+
+  @Post('previa')
+  @Permissoes('pacientes.gerenciar')
+  async prever(
+    @UsuarioAtual() usuario: UsuarioAutenticado,
+    @Req() requisicao: Request,
+    @Param('pacienteId', ParseUUIDPipe) pacienteId: string,
+    @Body() dados: PreviaDocumentoClinicoDto
+  ) {
+    const previa = await this.servicoDocumentos.preverEncaminhamento(
+      usuario.tenantId, pacienteId, usuario, dados
+    );
+    await this.registrar(usuario, requisicao, 'pacientes.documentos.previa', pacienteId, {
+      tipo: previa.tipo
+    });
+    return previa;
   }
 
   @Post(':documentoId/cancelamento')

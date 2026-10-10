@@ -74,17 +74,24 @@ Atualizado em 2026-10-10.
   Migration 1066 integrada; aplicação operacional, configuração de canais,
   envio real e produção não consultados. Plano histórico em
   `docs/history/phases/PLANO_FASE_310.md`.
-- Fase 311 implementada na branch `feature/fase-311-ativacao-conteudo`, base
-  `eb7f2aad`; PR #389 aberta, CI próprio em execução.
-  Decisões confirmadas: Client/SuperAdmin podem instalar por clínica;
-  seleção de itens e complementação posterior, sem recriação de instalados;
-  confirmação do SuperAdmin basta para opt-in; catálogos ausentes não bloqueiam
-  kit. Contrato usa marcador 2 seletivo e compatibilidade do legado 1 completo.
-  plano/gaps/evidências em `docs/history/phases/PLANO_FASE_311.md`, handoff em
-  `tasks/plan.md`, checklist em `tasks/todo-fase-311.md`. Backend Jest,
-  PostgreSQL/Testcontainers/RLS e Playwright desktop/mobile locais passaram;
-  gates locais passaram; checks remotos estão em execução.
-  Nenhuma migration nova prevista. Próxima fase após integração da 311: 312.
+- Fase 311 integrada pelo PR #389 (merge `f5f9ba84`, 2026-10-10).
+  CI final da PR `38022212900` e principal pós-merge `38042089805` SUCCESS,
+  incluindo Backend, Web, Governança e Demo local smoke. Sem migration nova.
+  Kit selecionável/incremental Client/SuperAdmin e catálogos somente leitura.
+  Plano histórico em `docs/history/phases/PLANO_FASE_311.md`; handoff preservado
+  em `tasks/plan-fase-311.md`. Revisão formal independente não comprovada;
+  Provenance do SBOM SKIPPED. Integração não representa aceite de produção.
+- Fase 312 implementada na branch `feature/fase-312-documentos-clinicos`, PR
+  #390 aberta. CI final `38048342326` passou (Backend, Web, Demo local smoke,
+  Governança, PR Gate e verificações de segurança); Provenance do SBOM SKIPPED.
+  Aguardando revisão humana/merge, sem merge automático.
+  Encaminhamento pelo responsável atual, prévia/confirmar, idempotência,
+  snapshot cifrado, impressão/PDF e cancelamento preservado no histórico.
+  Backend/Web build, suítes focadas e completa do backend, PostgreSQL real,
+  demo BFF e Playwright desktop/mobile passaram localmente. Atestados aguardam
+  validação específica. Migration 1067 registrada no código, não aplicada em
+  ambiente externo. Execução e limites em `docs/history/phases/PLANO_FASE_312.md`,
+  handoff em `tasks/plan.md` e critérios em `tasks/todo-fase-312.md`.
 - Sequência das Fases 302–320 em
   `docs/product/ROADMAP_POS_AUDITORIA_FASES_302_320.md`. O PB-30 está planejado na Fase 316, condicionado a privacidade,
   jurídico e operação.

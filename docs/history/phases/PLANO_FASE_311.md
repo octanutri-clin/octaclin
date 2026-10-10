@@ -1,5 +1,13 @@
 # Fase 311 — ativação de conteúdo em clínicas existentes
 
+## Reconciliação após integração (2026-10-10)
+
+PR #389 MERGED (`f5f9ba84`); CI final da PR `38022212900` e principal
+pós-merge `38042089805` SUCCESS. Revisão formal independente não comprovada;
+Provenance do SBOM SKIPPED. Os estados de execução abaixo são históricos;
+itens sem prova específica não ganham aceite automático pelo merge.
+Handoff anterior preservado em `tasks/plan-fase-311.md`; fase ativa: 312.
+
 Planejamento, análise de gaps e implementação em 2026-10-10. Branch
 `feature/fase-311-ativacao-conteudo`, base `eb7f2aad` de `origin/main`
 (Fase 310, PR #388 MERGED). Implementação autorizada pelo proprietário; cinco
@@ -278,7 +286,7 @@ feedback `aria-live`, desktop/mobile e recuperação.
 | Histórico de tentativa inclui falha posterior | Atualização falha desabilita carga anterior válida no painel | Aviso separado de disponibilidade da edição ativa |
 | Erro de consulta confundido com ausência | Falso estado ausente ou verde | Erro sanitizado, HTTP de falha e retry, sem fallback de sucesso |
 | Catálogos são globais e somente leitura | Seed por tenant ou privilégio de owner no runtime | Consulta global autorizada, carregadores fora do fluxo |
-| Documentos 309/310 e `tasks/plan.md` estão antigos | Sucessor usa branch/validações erradas | Reconciliação factual e arquivo histórico do handoff 309 |
+| Documentos 309/310 e `tasks/plan-fase-311.md` estão antigos | Sucessor usa branch/validações erradas | Reconciliação factual e arquivo histórico do handoff 309 |
 | Gates 310 tiveram falhas repetidas de smoke/governança | Teste de demo não representa nova UI | Atualizar mock/demo e cobertura BFF/Playwright antes do CI |
 
 ## Validação planejada e rollback
@@ -307,7 +315,7 @@ Revisão independente R4 quando viável, com evidência e limitações registrad
 
 ## Arquivos, ordem e handoff
 
-Plano autoritativo: este documento. Handoff corrente: `tasks/plan.md`.
+Plano autoritativo: este documento. Handoff corrente: `tasks/plan-fase-311.md`.
 Checklist executável: `tasks/todo-fase-311.md`; `tasks/todo.md` aponta para ele.
 Handoff anterior 309 preservado em `tasks/plan-fase-309.md` e
 `tasks/todo-fase-309.md`; 310 mantém seus arquivos próprios como histórico.

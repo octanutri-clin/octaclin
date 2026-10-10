@@ -655,7 +655,25 @@ export async function excluirAvaliacaoAntropometrica(
   return resposta.json() as Promise<{ id: string }>;
 }
 
-export type TipoDocumentoClinicoApi = 'declaracao_comparecimento' | 'relatorio_alta' | 'recibo_consulta';
+export type TipoDocumentoClinicoApi = 'declaracao_comparecimento' | 'relatorio_alta' | 'recibo_consulta' | 'encaminhamento';
+
+export interface EncaminhamentoDocumentoEntradaApi {
+  destinoServico: string;
+  motivoEncaminhamento: string;
+  destinatarioNome?: string;
+  instituicaoDestino?: string;
+  contextoClinico?: string;
+}
+
+export interface PreviaDocumentoClinicoApi {
+  tipo: 'encaminhamento';
+  titulo: string;
+  corpo: string;
+  paragrafos: string[];
+  cabecalho?: DocumentoClinicoApi['cabecalho'];
+  variaveisVazias: string[];
+  hashPrevia: string;
+}
 
 export interface DocumentoClinicoApi {
   id: string;
@@ -685,6 +703,30 @@ export interface EmitirDocumentoClinicoEntrada {
   consultaId?: string;
   conteudo?: string;
   cidadeEmissao?: string;
+  encaminhamento?: EncaminhamentoDocumentoEntradaApi;
+  hashPrevia?: string;
+  chaveEmissao?: string;
+  confirmacao?: boolean;
+}
+
+export interface PreviaDocumentoClinicoEntrada {
+  tipo: 'encaminhamento';
+  encaminhamento: EncaminhamentoDocumentoEntradaApi;
+  cidadeEmissao?: string;
+}
+
+export async function preverDocumentoClinico(
+  pacienteId: string,
+  entrada: PreviaDocumentoClinicoEntrada
+): Promise<PreviaDocumentoClinicoApi> {
+  const resposta = await fetch(`/api/pacientes/${encodeURIComponent(pacienteId)}/documentos/previa`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(entrada),
+    cache: 'no-store'
+  });
+  if (!resposta.ok) await lancarErroApi(resposta);
+  return resposta.json() as Promise<PreviaDocumentoClinicoApi>;
 }
 
 export interface ResultadoEnvioDocumentoApi {

@@ -182,6 +182,7 @@ import { EntregaCompartilhamentoReceitaOrm } from '../../modulos/planos-alimenta
 import { PreferenciaCompartilhamentoReceitaOrm } from '../../modulos/planos-alimentares/infraestrutura/preferencia-compartilhamento-receita.orm';
 import { SubscriptionPushPacienteOrm } from '../../modulos/planos-alimentares/infraestrutura/subscription-push-paciente.orm';
 import { CompartilharReceitasNutricionais1720000001066 } from './migracoes/1720000001066-CompartilharReceitasNutricionais';
+import { AdicionarEncaminhamentoDocumento1720000001067 } from './migracoes/1720000001067-AdicionarEncaminhamentoDocumento';
 
 function criarConexaoBanco() {
   if (process.env.DATABASE_URL) {
@@ -426,7 +427,8 @@ export function criarOpcoesTypeOrm(): TypeOrmModuleOptions & DataSourceOptions {
         CriarPermissoesIntegracaoProfissional1720000001063,
         AutorizarCompartilhamentoProgressoPortal1720000001064,
         ConfigurarResumosNotificacoes1720000001065,
-        CompartilharReceitasNutricionais1720000001066
+        CompartilharReceitasNutricionais1720000001066,
+        AdicionarEncaminhamentoDocumento1720000001067
       ],
     migrationsRun: executarMigracoesNoBoot(),
     synchronize: false,

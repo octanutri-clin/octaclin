@@ -1,5 +1,5 @@
 import http from 'node:http';
-import { randomUUID } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 
 function lerPorta() {
   const indice = process.argv.indexOf('--port');
@@ -139,7 +139,10 @@ const estado = {
     classesElegiveis: ['formulario_respondido', 'tarefa_concluida', 'automacao_executada'],
     tiposObrigatorios: ['mensagem_recebida', 'solicitacao_agendamento', 'falha_envio']
   },
-  resumosNotificacoes: []
+  resumosNotificacoes: [],
+  documentosEmitidos: [],
+  chavesDocumentos: new Map(),
+  hashPreviaDocumentos: new Map()
 };
 
 function json(resposta, status, corpo) {
@@ -263,6 +266,7 @@ function criarTokens() {
       'operacoes.tenants.gerenciar',
       'cliente.configuracoes.gerenciar',
       'pacientes.listar',
+      'pacientes.ler',
       'pacientes.gerenciar',
       'profissionais.ler'
     ],
@@ -1181,6 +1185,64 @@ const servidor = http.createServer(async (requisicao, resposta) => {
     if (requisicao.method === 'GET' && url.pathname === '/operacoes/auditoria') {
       const itens = filtrarAuditoriaDemo(url);
       return json(resposta, 200, itens.slice(0, normalizarLimite(url.searchParams.get('limite'))));
+    }
+
+    const rotaDocumentos = url.pathname.match(/^\/pacientes\/([^/]+)\/documentos(?:\/(previa))?$/);
+    if (rotaDocumentos) {
+      const alvoPaciente = rotaDocumentos[1];
+      if (alvoPaciente !== pacienteId) return json(resposta, 404, { mensagem: 'Paciente nao encontrado.' });
+      if (requisicao.method === 'GET' && !rotaDocumentos[2]) {
+        return json(resposta, 200, estado.documentosEmitidos.filter((item) => item.pacienteId === alvoPaciente));
+      }
+      const body = await lerJson(requisicao);
+      if (requisicao.method === 'POST' && rotaDocumentos[2] === 'previa' && body.tipo === 'encaminhamento') {
+        const valores = body.encaminhamento ?? {};
+        if (!String(valores.destinoServico ?? '').trim() || !String(valores.motivoEncaminhamento ?? '').trim()) {
+          return json(resposta, 400, { mensagem: 'Destino e motivo sao obrigatorios.' });
+        }
+        const cabecalho = {
+          clinicaNome: 'Clínica Carla (sintética)', clinicaDocumento: '', clinicaEndereco: 'Recife',
+          profissionalNome: 'Dra. Carla Monteiro', profissionalRegistro: 'CRN-0000-DEMO', profissionalEspecialidade: 'Nutricao clinica'
+        };
+        const dataEmissao = new Intl.DateTimeFormat('pt-BR', { timeZone: 'America/Sao_Paulo', day: '2-digit', month: 'long', year: 'numeric' }).format(new Date());
+        const corpo = [
+          'ENCAMINHAMENTO', '', 'Paciente: Paciente Demo', `Destino/serviço: ${String(valores.destinoServico).trim()}`,
+          `Destinatário: ${String(valores.destinatarioNome ?? '').trim() || 'Não informado'}`,
+          `Instituição: ${String(valores.instituicaoDestino ?? '').trim() || 'Não informado'}`, '',
+          'Motivo do encaminhamento:', String(valores.motivoEncaminhamento).trim(), '',
+          'Contexto clínico informado pelo profissional:', String(valores.contextoClinico ?? '').trim() || 'Não informado', '',
+          `${String(body.cidadeEmissao ?? 'Recife').trim() || 'Recife'}, ${dataEmissao}.`, '',
+          cabecalho.profissionalNome, `${cabecalho.profissionalEspecialidade} — ${cabecalho.profissionalRegistro}`,
+          '', 'Assinatura: ____________________________________'
+        ].join('\n');
+        const hashPrevia = createHash('sha256').update(JSON.stringify({ alvoPaciente, body, cabecalho, corpo })).digest('hex');
+        estado.hashPreviaDocumentos.set(hashPrevia, { alvoPaciente, body: JSON.stringify(body), corpo, cabecalho });
+        return json(resposta, 200, { tipo: 'encaminhamento', titulo: 'Encaminhamento', corpo, paragrafos: corpo.split(/\n{2,}/), cabecalho, variaveisVazias: [], hashPrevia });
+      }
+      if (requisicao.method === 'POST' && !rotaDocumentos[2] && body.tipo === 'encaminhamento') {
+        const pedidoAnterior = estado.chavesDocumentos.get(`${alvoPaciente}:${body.chaveEmissao}`);
+        const fingerprint = JSON.stringify({ body: body.encaminhamento, cidadeEmissao: body.cidadeEmissao, hashPrevia: body.hashPrevia });
+        if (pedidoAnterior) {
+          if (pedidoAnterior.fingerprint !== fingerprint) return json(resposta, 409, { mensagem: 'Chave de emissao conflitante.' });
+          return json(resposta, 200, pedidoAnterior.documento);
+        }
+        const preparado = estado.hashPreviaDocumentos.get(body.hashPrevia);
+        if (body.confirmacao !== true || !preparado || preparado.alvoPaciente !== alvoPaciente || preparado.body !== JSON.stringify({ tipo: 'encaminhamento', encaminhamento: body.encaminhamento, cidadeEmissao: body.cidadeEmissao })) {
+          return json(resposta, 409, { mensagem: 'A previa mudou. Gere outra previa.' });
+        }
+        const previaOriginal = estado.hashPreviaDocumentos.get(body.hashPrevia);
+        const documento = {
+          id: randomUUID(), tipo: 'encaminhamento', titulo: 'Encaminhamento',
+          corpo: previaOriginal.corpo,
+          paragrafos: previaOriginal.corpo.split(/\n{2,}/),
+          cabecalho: previaOriginal.cabecalho,
+          emitidoEm: new Date().toISOString(), podeEnviarPorEmail: false, variaveisVazias: []
+        };
+        estado.documentosEmitidos.unshift({ ...documento, pacienteId: alvoPaciente });
+        estado.chavesDocumentos.set(`${alvoPaciente}:${body.chaveEmissao}`, { fingerprint, documento });
+        return json(resposta, 201, documento);
+      }
+      return json(resposta, 400, { mensagem: 'Operacao de documento nao suportada na demo.' });
     }
 
     return json(resposta, 404, { mensagem: `Rota demo nao encontrada: ${requisicao.method} ${url.pathname}` });

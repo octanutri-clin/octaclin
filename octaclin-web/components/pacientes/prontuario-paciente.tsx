@@ -1798,7 +1798,13 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
       {abaAtiva === 'evolucao_fotografica' ? <AbaEvolucaoFotografica pacienteId={pacienteId} podeVisualizar={(papel === 'Professional' || papel === 'SuperAdmin') && permissoes.includes('pacientes.ler')} podeGerenciar={(papel === 'Professional' || papel === 'SuperAdmin') && permissoes.includes('pacientes.gerenciar')} /> : null}
 
       {abaAtiva === 'documentos' ? (
-        <AbaDocumentos pacienteId={pacienteId} podeGerenciar={podeGerenciarPaciente} consultasConcluidas={consultasConcluidas} />
+        <AbaDocumentos
+          key={pacienteId}
+          pacienteId={pacienteId}
+          podeGerenciar={podeGerenciarPaciente}
+          podeEmitirEncaminhamento={papel === 'Professional' && podeGerenciarPaciente}
+          consultasConcluidas={consultasConcluidas}
+        />
       ) : null}
 
       {abaAtiva === 'anexos' ? !anexosCarregados ? (

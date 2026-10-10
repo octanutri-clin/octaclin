@@ -24,6 +24,7 @@
       "comando": "smoke:visual",
       "diretorio": "octaclin-web",
       "descricao": "Suite Playwright completa (testDir tests/visual, sem testMatch/testIgnore) nos projects desktop-chromium e mobile-chromium.",
+      "especificacao": "octaclin-web/tests/visual/console-regression.spec.mjs",
       "bloqueante": true,
       "ci": {
         "workflow": ".github/workflows/ci.yml",
@@ -342,6 +343,28 @@
         ]
       },
       "risco": "Nenhum conhecido."
+    },
+    {
+      "superficie": "console profissional e administrativo",
+      "rota": "/pacientes/paciente-1 - documentos (Fase 312)",
+      "rotas": [
+        "/pacientes/paciente-1"
+      ],
+      "estado": "prévia completa, edição invalida prévia, confirmação explícita, impressão e cancelamento com histórico",
+      "interacao": "conferir conteúdo e rótulos, confirmar uma emissão, imprimir, cancelar e reabrir snapshot cancelado",
+      "plataforma": [
+        "desktop-chromium",
+        "mobile-chromium"
+      ],
+      "mecanismo": "automatizado",
+      "resultado": "PASS",
+      "evidencia": {
+        "gate": "web-suite-visual",
+        "blocos": [
+          "prontuario do paciente"
+        ]
+      },
+      "risco": "Axe validou o painel de prévia; leitor de tela nativo não foi avaliado neste ciclo."
     },
     {
       "superficie": "console profissional e administrativo",
