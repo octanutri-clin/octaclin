@@ -12,6 +12,7 @@ import {
   rotuloStatusAssinatura
 } from './portal-cliente-dominio';
 import { PortalClienteController } from './use-portal-cliente';
+import { KitInicialClinicaCliente } from './kit-inicial-clinica';
 
 type Props = { portal: PortalClienteController };
 
@@ -91,6 +92,7 @@ export function AreaVisaoGeralCliente({ portal }: Props) {
           </Botao>
         </CartaoConteudo>
       </Cartao>
+      <KitInicialClinicaCliente podeGerenciar={portal.podeGerenciarConfiguracoes} />
       <Cartao id="conta" className="scroll-mt-4">
         <CartaoCabecalho>
           <CartaoTitulo icone={<Building2 className="h-4 w-4" />}>Resumo da conta</CartaoTitulo>

@@ -3740,6 +3740,19 @@ async function prepararOperacoes(page, opcoes = {}) {
     responderJson(route, { corpo: tenantsOperacoesFixture, ...tenants })
   );
 
+  // A area Onboarding consulta o estado dos catalogos alimentares em modo
+  // somente leitura. Mantenha essa dependencia dentro da fixture compartilhada
+  // para que os gates de operacoes nao alcancem a rede de seguranca (599).
+  await page.route('**/api/operacoes/catalogos-alimentares/disponibilidade', (route) =>
+    responderJson(route, {
+      corpo: {
+        verificadoEm: '2026-10-10T09:00:00.000Z',
+        completo: true,
+        itens: []
+      }
+    })
+  );
+
   await page.route('**/api/operacoes/tenants/*/ciclo-vida', (route) => {
     chamadas.mutacoes.push(`POST ${new URL(route.request().url()).pathname}`);
     return responderJson(route, { corpo: tenantsOperacoesFixture.itens[0] });
@@ -3912,14 +3925,90 @@ test.describe('gate de acessibilidade - operacoes (PR 26)', () => {
     await expect(painel.getByLabel('Nome da clínica')).toBeVisible();
     await expect(painel.getByLabel('E-mail do proprietario')).toBeVisible();
     await expect(painel.getByRole('button', { name: 'Provisionar e convidar' })).toBeVisible();
-    await expect(painel.getByText('Clínica Sintética Um')).toBeVisible();
-    await expect(painel.getByText('Clínica Sintética Dois')).toBeVisible();
+    await expect(painel.getByText('Clínica Sintética Um', { exact: true })).toBeVisible();
+    await expect(painel.getByText('Clínica Sintética Dois', { exact: true })).toBeVisible();
     await expect(painel.getByRole('button', { name: 'Encerrar definitivamente' })).toBeVisible();
 
     await rodarChecagensDeAcessibilidadeSemNavegacaoPorTeclado(page);
     await assertFocoVisivelNaArea(page, painel);
     expect(chamadas.naoMockadas).toEqual([]);
     expect(chamadas.mutacoes).toEqual([]);
+  });
+
+  test('Fase 311 oferece kit incremental por clínica e mostra catálogos pendentes sem bloquear', async ({ page }) => {
+    const chamadas = await prepararOperacoes(page);
+    const idAtivo = tenantsOperacoesFixture.itens[0].id;
+    const idLegado = tenantsOperacoesFixture.itens[1].id;
+    const chaves = [
+      'material:plano-no-portal', 'material:registro-habitos', 'material:duvidas-consulta',
+      'estrutura:tres-refeicoes', 'estrutura:cinco-refeicoes'
+    ];
+    const instalados = new Map([[idAtivo, []], [idLegado, chaves]]);
+    const criarEstado = (id) => ({
+      tenantId: id,
+      tenantNome: id === idAtivo ? 'Clínica Sintética Um' : 'Clínica Sintética Dois',
+      versaoDisponivel: 2,
+      ...(id === idLegado ? { versaoInstalada: 1 } : instalados.get(id)?.length ? { versaoInstalada: 2 } : {}),
+      estado: id === idLegado || instalados.get(id)?.length === 5 ? 'completo' : instalados.get(id)?.length ? 'parcial' : 'nao_instalado',
+      podeInstalar: id !== idLegado && instalados.get(id)?.length < 5,
+      itens: chaves.map((chave) => ({
+        chave, tipo: chave.startsWith('material:') ? 'material' : 'estrutura',
+        instalado: instalados.get(id)?.includes(chave) ?? false,
+        titulo: chave === 'estrutura:tres-refeicoes' ? 'Três refeições' : chave === 'estrutura:cinco-refeicoes' ? 'Cinco refeições' : chave,
+        resumo: 'Conteúdo sintético.',
+        refeicoes: chave.startsWith('estrutura:') ? [{ nome: 'Refeição 1', itens: [] }] : undefined
+      }))
+    });
+    await page.route('**/api/operacoes/catalogos-alimentares/disponibilidade', (route) => responderJson(route, {
+      corpo: { verificadoEm: '2026-10-10T09:00:00.000Z', completo: false, itens: [
+        { codigo: 'taco_nepa_unicamp', baseCodigo: 'cmvcol_taco3', rotulo: 'TACO', estado: 'disponivel', totalEdicoes: 1, edicoesLimitadas: false, edicoes: [] },
+        { codigo: 'usda_fdc_foundation', baseCodigo: 'foundation-foods', rotulo: 'USDA Foundation Foods', estado: 'ausente', totalEdicoes: 0, edicoesLimitadas: false, edicoes: [] },
+        { codigo: 'usda_fdc_sr_legacy', baseCodigo: 'sr-legacy', rotulo: 'USDA SR Legacy', estado: 'indisponivel', totalEdicoes: 1, edicoesLimitadas: false, edicoes: [], ultimaTentativa: { status: 'falhou', iniciadaEm: '2026-10-10T08:00:00.000Z' } },
+        { codigo: 'ibge_pof_2008_2009', baseCodigo: 'pof-2008-2009-composicao', rotulo: 'IBGE POF 2008–2009', estado: 'ausente', totalEdicoes: 0, edicoesLimitadas: false, edicoes: [] }
+      ] }
+    }));
+    await page.route('**/api/operacoes/tenants/*/kit-inicial', async (route) => {
+      const id = new URL(route.request().url()).pathname.split('/')[4];
+      if (route.request().method() === 'POST') {
+        const body = route.request().postDataJSON();
+        expect(body).toEqual({ confirmacao: true, versao: 2, itens: ['estrutura:tres-refeicoes'] });
+        instalados.set(id, [...new Set([...instalados.get(id), ...body.itens])]);
+        chamadas.mutacoes.push(`POST kit ${id}`);
+        return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({
+          ...criarEstado(id), instalacao: { reutilizado: false, itensAdicionados: body.itens, materiaisCriados: 0, estruturasHabilitadas: body.itens }
+        }) });
+      }
+      return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(criarEstado(id)) });
+    });
+
+    await abrirPainelOperacoes(page, chamadas);
+    const painel = await abrirAreaOperacoes(page, 'Onboarding');
+    await expect(painel.getByRole('heading', { name: 'Catálogos alimentares deste ambiente' })).toBeVisible();
+    await expect(painel.getByText('Fonte ausente', { exact: true })).toHaveCount(2);
+    await expect(painel.getByRole('heading', { name: 'Kit inicial para clínica existente' })).toBeVisible();
+    const alvo = painel.getByLabel('Clínica de destino');
+    await alvo.selectOption(idAtivo);
+    let checkbox = painel.getByRole('checkbox', { name: 'Selecionar: Três refeições' });
+    await expect(checkbox).toBeVisible();
+    await checkbox.check();
+    await expect(painel.getByRole('button', { name: 'Confirmar instalação (1)' })).toBeEnabled();
+    await alvo.selectOption(idLegado);
+    await expect(painel.getByText('Kit completo.')).toBeVisible();
+    await expect(painel.getByRole('button', { name: /Confirmar instalação/ })).toBeDisabled();
+
+    await alvo.selectOption(idAtivo);
+    checkbox = painel.getByRole('checkbox', { name: 'Selecionar: Três refeições' });
+    await checkbox.check();
+    await painel.getByRole('button', { name: 'Confirmar instalação (1)' }).click();
+    // Modal is portaled to document.body, outside the Operations panel subtree.
+    await page.getByRole('dialog', { name: 'Confirmar instalação do kit' }).getByRole('button', { name: 'Confirmar' }).click();
+    await expect(painel.getByText('Kit parcialmente instalado. Você pode completar os itens restantes.')).toBeVisible();
+    await expect(painel.getByRole('checkbox', { name: 'Instalado: Três refeições' })).toBeChecked();
+    expect(chamadas.mutacoes).toContain(`POST kit ${idAtivo}`);
+    await assertFocoVisivelNaArea(page, painel);
+    const axe = await new AxeBuilder({ page }).analyze();
+    expect(axe.violations).toEqual([]);
+    expect(chamadas.naoMockadas).toEqual([]);
   });
 
   test('area Rollout com telemetria sanitizada e liberacao controlada', async ({ page }) => {

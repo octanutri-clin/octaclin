@@ -15,7 +15,7 @@ import { TenantConfiguracaoOrm } from '../../tenancy/infraestrutura/tenant-confi
 import { TenantOrm } from '../../tenancy/infraestrutura/tenant.orm';
 import { UsuarioOrm } from '../../usuarios/infraestrutura/usuario.orm';
 import { AtualizarCicloVidaTenantDto, ProvisionarTenantDto } from './dtos-ciclo-vida-tenant';
-import { instalarKitInicialClinica } from './kit-inicial-clinica';
+import { instalarKitInicialClinica } from '../../tenancy/aplicacao/kit-inicial-clinica';
 
 const CHAVE_CONTA_CLIENTE = 'conta_cliente';
 const CHAVE_PLANO_SAAS = 'plano_saas';

@@ -126,6 +126,7 @@ const CHAVES_SEGURAS = new Map([
   ['frequencia', 'frequencia da serie de consulta recorrente (diaria, semanal), enum fechado no DTO'],
   ['canais', 'canais escolhidos para envio da receita (portal, email, whatsapp, push), enum fechado no DTO; nenhum endereco ou conteudo e gravado'],
   ['agendado', 'booleano que indica se o compartilhamento de receitas foi agendado; o horario fica no registro do envio'],
+  ['itens', 'chaves estaveis do catalogo fechado do kit inicial (cinco valores de codigo); nao sao titulos, conteudo nem dados da clinica ou de paciente'],
 
   // --- Contagens e medidas da operacao ---
   ['total', 'contagem'],
@@ -136,6 +137,8 @@ const CHAVES_SEGURAS = new Map([
   ['eventos', 'contagem de eventos devolvidos na timeline'],
   ['avisos', 'contagem de avisos do calculo antropometrico, nao o texto deles'],
   ['criados', 'contagem'],
+  ['materiaiscriados', 'contagem de materiais genericos criados pelo instalador do kit inicial'],
+  ['estruturashabilitadas', 'contagem de estruturas vazias habilitadas pelo instalador; nenhum alimento ou plano e gravado'],
   ['duplicados', 'contagem'],
   ['invalidos', 'contagem'],
   ['convitescriados', 'contagem'],

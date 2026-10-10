@@ -772,4 +772,57 @@ test.describe('portal do cliente', () => {
     ).toBeVisible();
     await assertSemOverflowHorizontal(page);
   });
+
+  test('Fase 311 instala seletivamente e mantém a confirmação cancelável', async ({ page }) => {
+    await prepararSessaoCliente(page);
+    const chaves = [
+      'material:plano-no-portal', 'material:registro-habitos', 'material:duvidas-consulta',
+      'estrutura:tres-refeicoes', 'estrutura:cinco-refeicoes'
+    ];
+    let instalados = [];
+    let chamadasPost = 0;
+    const estado = () => ({
+      tenantId: 'tenant-1', tenantNome: 'Clínica Sintética', versaoDisponivel: 2,
+      ...(instalados.length ? { versaoInstalada: 2 } : {}),
+      estado: instalados.length === 5 ? 'completo' : instalados.length ? 'parcial' : 'nao_instalado',
+      podeInstalar: instalados.length < 5,
+      itens: chaves.map((chave) => ({
+        chave,
+        tipo: chave.startsWith('material:') ? 'material' : 'estrutura',
+        instalado: instalados.includes(chave),
+        titulo: chave === 'estrutura:tres-refeicoes' ? 'Três refeições' : chave === 'estrutura:cinco-refeicoes' ? 'Cinco refeições' : chave,
+        resumo: 'Conteúdo sintético para teste visual.',
+        refeicoes: chave === 'estrutura:tres-refeicoes' ? [{ nome: 'Refeição 1', itens: [] }] : []
+      }))
+    });
+    await page.route('**/api/cliente/kit-inicial', async (route) => {
+      if (route.request().method() === 'POST') {
+        chamadasPost += 1;
+        const body = route.request().postDataJSON();
+        expect(body).toEqual({ confirmacao: true, versao: 2, itens: ['estrutura:tres-refeicoes'] });
+        instalados = [...new Set([...instalados, ...body.itens])];
+        await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({
+          ...estado(), instalacao: { reutilizado: false, itensAdicionados: body.itens, materiaisCriados: 0, estruturasHabilitadas: body.itens }
+        }) });
+      } else await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(estado()) });
+    });
+    await page.goto('/cliente');
+    await page.getByRole('tablist', { name: 'Áreas da conta' }).getByRole('tab', { name: 'Ativação' }).click();
+
+    const checkbox = page.getByRole('checkbox', { name: 'Selecionar: Três refeições' });
+    await expect(checkbox).toBeVisible();
+    await checkbox.check();
+    await page.getByRole('button', { name: 'Confirmar instalação (1)' }).click();
+    await expect(page.getByRole('dialog', { name: 'Confirmar instalação do kit' })).toBeVisible();
+    await page.getByRole('button', { name: 'Cancelar' }).click();
+    expect(chamadasPost).toBe(0);
+    await page.getByRole('button', { name: 'Confirmar instalação (1)' }).click();
+    await page.getByRole('dialog', { name: 'Confirmar instalação do kit' }).getByRole('button', { name: 'Confirmar' }).click();
+    await expect(page.getByText('Kit parcialmente instalado. Você pode completar os itens restantes.')).toBeVisible();
+    await expect(page.getByRole('checkbox', { name: 'Instalado: Três refeições' })).toBeChecked();
+    expect(chamadasPost).toBe(1);
+    await assertSemOverflowHorizontal(page);
+    const axe = await new AxeBuilder({ page }).analyze();
+    expect(axe.violations).toEqual([]);
+  });
 });

@@ -1,5 +1,13 @@
 # Handoff — Fase 310: planejar → implementar
 
+> Reconciliação em 2026-10-10: Fase 310 integrada pelo PR #388 (`eb7f2aad`),
+> confirmado no GitHub neste ciclo. CI da PR `38014957842`, incluindo Demo local
+> smoke/Governança/Backend/Web e step Testcontainers, aprovado. Scanners
+> pós-merge aprovados; CI principal `38016413569` em andamento na consulta.
+> Aplicação operacional da 1066 e envio real não consultados. O conteúdo
+> anterior abaixo é histórico, não checklist de pendências atuais.
+> Handoff corrente: `tasks/plan.md` (Fase 311).
+
 ## Branch e estado
 
 - Branch: `feature/fase-310-receitas-compartilhadas`, criada de `origin/main`
