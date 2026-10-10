@@ -1,20 +1,19 @@
 # OctaClin - Checklist vivo de fases futuras ate producao
 
-## Estado reconciliado em 2026-10-09
+## Estado reconciliado em 2026-10-10
 
-A Fase 306 foi integrada pelo PR #383 (`104a1546`) e a 307 pelo PR #384
-(`04e66efc`), confirmados no GitHub. CI principal da main `37971450248`
-aprovado, incluindo Governança e Demo local smoke; aplicação da migration
-1064 não verificada neste ciclo. Fase 308 integrada pelo PR #385 (`1dec202f`),
-confirmada no GitHub; sem migration nova. CI `37987983251` e scanners Semgrep
-`37987983322`, Trivy `37987983323` e CodeQL `37987983326` concluídos com
-sucesso. Sem aceite de produção. Fase 309 implementada na branch
-`feature/fase-309-preferencias-notificacoes`; PR #386 em draft. Migration 1065
-registrada no código, não aplicada fora de banco descartável. Plano em
-`docs/history/phases/PLANO_FASE_309.md`; handoff em `tasks/plan.md` e checklist
-em `tasks/todo.md`.
+Fases 309/310 integradas pelos PRs #386/#388 (`34d186ec`/`eb7f2aad`),
+confirmadas no GitHub neste ciclo. CI principal pós-merge 309 e CI da PR 310
+aprovados, incluindo Demo local smoke; step PostgreSQL/Testcontainers da
+PR 310 aprovado. CI principal pós-merge 310 `38016413569` em andamento na
+consulta; scanners pós-merge aprovados. `Provenance do SBOM` na PR 310 foi
+`SKIPPED`; não é PASS. Aplicação operacional das 1065/1066 não consultada.
+Fase 311 com plano/gaps e decisões fechados, sem implementação. Handoff em
+`tasks/plan.md`, checklist em `tasks/todo-fase-311.md`. Próxima ação: troca
+manual para GPT-6 Luna alto e implementação; próxima fase após integração: 312.
+
 O parágrafo abaixo registra a atualização histórica anterior; para o estado
-vigente prevalecem este bloco, itens 303–309 ao final e o roadmap.
+vigente prevalecem este bloco, itens ao final e o roadmap.
 
 Atualizado em 2026-10-09. Fase 307 em implementação nesta branch; PR e CI pendentes. Fase 296 integrada pelo PR #353 (merge `ccd1c0bb`); o proprietário informou aplicação da migration 1059, sem confirmação direta de ambiente/banco. Fase 297 integrada pelo PR #355 (merge `4f51b0ac`); Fase 298 integrada pelo PR #356 (merge `b00151ae`), com aplicação da 1060 informada pelo proprietário; Fase 299 integrada pelo PR #357 (merge `9052b8ba`), com aplicação da 1061 e cargas em staging e produção informadas pelo proprietário, sem consulta direta aos bancos neste ciclo; Fase 300 integrada pelo PR #358 (merge `c60c82ed`); Fase 301 integrada pelo PR #359 (merge `bd0f1d6b`); Fase 302 integrada pelo PR #360 (migration 1062 aplicada e validada em staging e produção conforme relato do proprietário, sem consulta direta aos bancos neste ciclo); Fase 303 integrada pelo PR #361 (merge `02acd66c`), migration 1063 aplicada e validada em staging e produção conforme relato do proprietário, sem consulta direta neste ciclo; Fase 304 integrada pelo PR #362 (merge `13a250c8`); Fase 305 integrada pelo PR #379 (merge `32c2aa5b`); Fases 256 a 261, 263 a 304 integradas; Fase 284
 (PB-22) foi integrada pelo PR #320 (merge `af839c5`, 19 checks `SUCCESS` e
@@ -4548,14 +4547,19 @@ auditoria estão ordenados na seção 15 de
   Integrada pelo PR #385 (`1dec202f`), confirmado no GitHub. Sem migration nova
   ou aceite de produção; CI e scanners pós-merge concluídos com sucesso. Plano e
   evidências históricas em `docs/history/phases/PLANO_FASE_308.md`.
-- [ ] Fase 309 - preferências individuais de notificação interna e digest.
-  Implementação na branch `feature/fase-309-preferencias-notificacoes`, PR #386
-  em draft; migration 1065 não aplicada fora de banco descartável. Consulte o
-  handoff em `tasks/plan.md` e os resultados em `tasks/todo.md`.
-- [ ] Fase 310 - categorias e entrega explícita de receitas nutricionais ao
-  paciente, com versão revisada.
-- [ ] Fase 311 - instalação opt-in do kit genérico em clínicas existentes e
-  checagem de catálogo no onboarding de ambiente.
+- [x] Fase 309 - preferências individuais de notificação interna e digest.
+  Integrada pelo PR #386 (`34d186ec`), CI principal pós-merge aprovado.
+  Migration 1065 integrada; aplicação operacional não consultada neste ciclo.
+  Plano histórico em `docs/history/phases/PLANO_FASE_309.md`.
+- [x] Fase 310 - categorias e entrega explícita de receitas revisadas no portal,
+  avisos genéricos e opt-in específico. Integrada pelo PR #388 (`eb7f2aad`);
+  CI de PR aprovado, incluindo Demo local smoke/Testcontainers; CI principal
+  pós-merge em andamento na consulta. Aplicação operacional da 1066 não consultada.
+- [ ] Fase 311 - instalação selecionável/incremental do kit por Client/SuperAdmin
+  e conferência somente leitura de quatro bases do catálogo no onboarding.
+  Planejamento e decisões concluídos; implementação após troca manual para
+  Luna alto. Plano `docs/history/phases/PLANO_FASE_311.md`, handoff
+  `tasks/plan.md`, checklist `tasks/todo-fase-311.md`.
 - [ ] Fase 312 - encaminhamento no motor de documentos; atestado condicionado
   à avaliação jurídica e competência profissional.
 - [ ] Fase 313 - avaliação antropométrica de gestantes, após validação clínica.

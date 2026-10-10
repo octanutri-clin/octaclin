@@ -1,5 +1,19 @@
 # OctaClin - Resumo das fases concluidas
 
+## Reconciliação em 2026-10-10
+
+- Fase 309 integrada pelo PR #386 (`34d186ec`), merge confirmado no GitHub
+  neste ciclo; CI principal pós-merge `38000687212` aprovado.
+- Fase 310 integrada pelo PR #388 (`eb7f2aad`), merge confirmado em 2026-10-10;
+  CI da PR `38014957842` aprovado, incluindo Demo local smoke e step de
+  PostgreSQL/Testcontainers. Scanners pós-merge aprovados; CI principal
+  `38016413569` em andamento na consulta; `Provenance do SBOM` foi `SKIPPED`.
+- Aplicação das migrations 1065/1066, envio real e operação em produção não
+  foram consultados. Merge/CI não representam aceite de produção.
+- Fase 311 é o planejamento corrente, com decisões fechadas e sem código;
+  plano em `docs/history/phases/PLANO_FASE_311.md` e handoff `tasks/plan.md`.
+  Próxima entrega após sua integração: Fase 312.
+
 ## Reconciliação em 2026-10-09
 
 - Fase 306 integrada pelo PR #383 (merge `104a1546`, confirmado no GitHub).
