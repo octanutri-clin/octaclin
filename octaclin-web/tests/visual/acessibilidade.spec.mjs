@@ -3740,6 +3740,19 @@ async function prepararOperacoes(page, opcoes = {}) {
     responderJson(route, { corpo: tenantsOperacoesFixture, ...tenants })
   );
 
+  // A area Onboarding consulta o estado dos catalogos alimentares em modo
+  // somente leitura. Mantenha essa dependencia dentro da fixture compartilhada
+  // para que os gates de operacoes nao alcancem a rede de seguranca (599).
+  await page.route('**/api/operacoes/catalogos-alimentares/disponibilidade', (route) =>
+    responderJson(route, {
+      corpo: {
+        verificadoEm: '2026-10-10T09:00:00.000Z',
+        completo: true,
+        itens: []
+      }
+    })
+  );
+
   await page.route('**/api/operacoes/tenants/*/ciclo-vida', (route) => {
     chamadas.mutacoes.push(`POST ${new URL(route.request().url()).pathname}`);
     return responderJson(route, { corpo: tenantsOperacoesFixture.itens[0] });
@@ -3912,8 +3925,8 @@ test.describe('gate de acessibilidade - operacoes (PR 26)', () => {
     await expect(painel.getByLabel('Nome da clínica')).toBeVisible();
     await expect(painel.getByLabel('E-mail do proprietario')).toBeVisible();
     await expect(painel.getByRole('button', { name: 'Provisionar e convidar' })).toBeVisible();
-    await expect(painel.getByText('Clínica Sintética Um')).toBeVisible();
-    await expect(painel.getByText('Clínica Sintética Dois')).toBeVisible();
+    await expect(painel.getByText('Clínica Sintética Um', { exact: true })).toBeVisible();
+    await expect(painel.getByText('Clínica Sintética Dois', { exact: true })).toBeVisible();
     await expect(painel.getByRole('button', { name: 'Encerrar definitivamente' })).toBeVisible();
 
     await rodarChecagensDeAcessibilidadeSemNavegacaoPorTeclado(page);
