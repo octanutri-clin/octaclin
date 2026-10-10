@@ -71,6 +71,8 @@ const podeRodarExterno = Boolean(
 );
 const podeRodar = usarTestcontainers || podeRodarExterno;
 const descrever = podeRodar ? describe : describe.skip;
+// DDL rollback is proved only in the disposable container; runtime stays DML-only.
+const testarComOwnerDescartavel = usarTestcontainers ? it : it.skip;
 
 type ConfiguracaoConexao = {
   host: string;
@@ -1335,7 +1337,7 @@ descrever('RLS e isolamento multi-tenant integral em Postgres real', () => {
     );
     expect(conferencia.rows).toEqual([{ acao: 'prova.append' }]);
   });
-  it('Fase 313 reverte migration vazia no PostgreSQL sem apagar registros legados', async () => {
+  testarComOwnerDescartavel('Fase 313 reverte migration vazia no PostgreSQL sem apagar registros legados', async () => {
     if (!fonteDadosAdministrativa) throw new Error('Conexao administrativa descartavel indisponivel.');
     const runner = fonteDadosAdministrativa.createQueryRunner();
     await runner.connect();await runner.startTransaction();

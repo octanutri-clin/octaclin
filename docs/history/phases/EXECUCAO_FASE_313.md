@@ -26,7 +26,7 @@ O parecer documental permanece preservado, com seu escopo original distinto.
 Ambiente: Node 24.19.0/pnpm 11.19.0. O projeto/CI declara Node 22/pnpm 11.25.0;
 PASS local não substitui os gates na configuração declarada da PR.
 PostgreSQL: Timescale/PG15 em Testcontainers descartável; migrations pela conexão
-administrativa; serviço pela role runtime não owner, sem DDL/BYPASSRLS.
+administrativa; serviço pela role runtime não owner, sem DDL/BYPASSRLS. O teste de rollback com owner só roda em Testcontainers: SKIPPED na suite que usa a conexão runtime externa de CI; executado no gate Testcontainers obrigatório do mesmo job.
 
 | Gate | Resultado observado |
 | --- | --- |
