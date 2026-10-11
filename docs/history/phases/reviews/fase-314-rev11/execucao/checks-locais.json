@@ -51,5 +51,19 @@
     "comparacoes": 129378,
     "linhas": 14338,
     "planilhas": 16
+  },
+  "web_authz": {
+    "estado": "PASS",
+    "subprogramas": 23,
+    "testes": 215,
+    "exit": 0,
+    "comandos": 24
+  },
+  "git_diff_check": "PASS, atributos restritos a evid\u00eancias imut\u00e1veis",
+  "secrets": "PASS ap\u00f3s staging",
+  "pr": {
+    "numero": 394,
+    "draft": true,
+    "url": "https://github.com/octanutri-clin/octaclin/pull/394"
   }
 }

@@ -37,7 +37,7 @@ A ratificação já recebida substitui os checkboxes clínicos históricos abaix
 | T15 gráfico/tabela | PASS factual | Separação de bases/versões, teclado e mobile; sem gráficos clínicos experimentais |
 | T16 PG/regressões | PASS local |31 testes PG real descartável; tenant/carteira/RLS/replay/concorrência/retirada e retenção |
 | T17 governança | Ver relatório REV11 | Checks reais separados de CI e provas clínicas, nenhuma migration externa |
-| T18 PR/revisão | PENDENTE nesta branch | Uma PR Draft de continuação após #392 mergeada; revisão humana independente e ativação não presumidas |
+| T18 PR/revisão | PR DRAFT #394 aberta | Continuação após #392 mergeada; CI do HEAD final e revisão humana independente pendentes, ativação não autorizada |
 
 Dependências clínicas G01/direitos continuam bloqueando ativação de T04–T10;
 G02 não deve ser reaberto por propostas antigas. G03 desenvolvimento autorizado.

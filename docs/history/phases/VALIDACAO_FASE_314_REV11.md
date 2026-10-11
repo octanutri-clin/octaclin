@@ -121,7 +121,7 @@ análise jurídica específica; não basta aprovação do proprietário ou dispo
 | G02-formalização | PENDENTE | Processo institucional em canal protegido; não bloquear desenvolvimento por inferência |
 | G03-desenvolvimento | PASS | Autorização vigente para trabalho local/testes/PR |
 | G03-ativação | BLOCKED | G01, direitos e autorização de ativação específica |
-| G04-local | PARTIAL até término BFF completo (checks abaixo) | Não equivale a validação clínica/CI ou liberação assistencial |
+| G04-local | PASS (checks abaixo) | Não equivale a validação clínica/CI ou liberação assistencial |
 | G05 | BLOCKED | Revisão humana independente, CI/ambiente e autorizações operacionais |
 
 ## Rollback e revisão
@@ -145,9 +145,11 @@ Revisão deste agente não é revisão humana independente R4.
 | Governança raiz |23 comandos PASS; um precisou repetir com PowerShell no PATH |
 | Preflight documental |PASS, usando `/tmp/f314-tools/powershell/pwsh -NoProfile -File ./validar-preflight.ps1 -DocsOnly` |
 | Secrets / diff whitespace |PASS; repetir após staging final |
-| Web BFF/authz completo |Execução corrente; não declarar PASS até terminar |
-| CI / revisão humana independente |PENDENTE na PR Draft; revisão do próprio agente não é independente |
+| Web BFF/authz completo |PASS,24 comandos,23 relatórios TAP/215 testes; exit0, incluindo BFF314 e regressões312/313 |
+| CI / revisão humana independente |PENDENTE na PR Draft #394; revisão do próprio agente não é independente |
 | Staging/produção/migrations externas |SKIPPED, não autorizado |
+
+PR de continuação: https://github.com/octanutri-clin/octaclin/pull/394, Draft.
 
 Comandos principais: Node22 Jest `--runInBand` com variáveis G01 locais conforme
 README de pesquisa; TypeScript `--noEmit`; pnpm backend build/guard, web
