@@ -12,8 +12,16 @@ Na raiz do repositório, com Python3 e Node22:
 ```sh
 python3 scripts/research/fase314/reproduzir-pacote-rev11.py --output /tmp/rev11-evidencias
 python3 scripts/research/fase314/baixar-fontes-oms.py --output /tmp/rev11-fontes
-python3 -m unittest discover -s scripts/research/fase314 -p test_references_security.py -v
+python3 -m unittest discover -s scripts/research/fase314 -p 'test_*.py' -v
 ```
+
+O transporte de ambos os scripts aceita somente HTTPS/443, sem credenciais,
+fragmentos ou redirecionamentos; downloader limitado a cdn.who.int e
+raw.githubusercontent.com, coletor limitado a intergrowth21.ndog.ox.ac.uk.
+TLS usa a validação padrão da biblioteca Python. Mudança de host/redirect exige
+revisão explícita da fonte; não ampliar allowlist para contornar falha de download.
+Testes locais verificam rejeição antes da rede, fechamento de conexão, preservação
+dos hashes e uso do transporte pelos dois scripts; executados na governança CI.
 
 O segundo comando falha se houver downloads indisponíveis/hash divergente.
 Nesta execução,403 do CDN foi resolvido com User-Agent explícito; os16 XLSX

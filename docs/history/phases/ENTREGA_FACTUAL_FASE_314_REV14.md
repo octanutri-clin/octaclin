@@ -78,3 +78,28 @@ Usada ferramenta Node22/pnpm11.25 existente, sem alterar lockfiles:
 
 São testes/artefatos locais ou checks GitHub, não prova de produção nem aprovação
 humana independente. Sem uso de pacientes reais ou mensagem enviada a terceiros.
+
+## Correção dos achados GitHub Advanced Security da PR394
+
+Rodada2026-10-11, riscoR2: somente scripts de pesquisa pública opt-in e seu
+controle CI, fora do runtime clínico. Nenhuma dependência nova ou alteração de
+cálculo, tolerância, fonte/hashes, snapshot, banco ou ativação assistencial.
+
+- Alerta505 CodeQL (regex hostname): expressão atual já tem pontos escapados;
+  três testes reais do padrão comprovam host exato, HTTPS e rejeição de similares.
+- Alertas506/507 Semgrep (urllib dinâmico): ambos callsites substituídos por
+  transporte stdlib HTTPS restrito com allowlist por chamador, porta443,
+  proibição de credenciais/fragmentos/controles e redirecionamentos. TLS padrão;
+  sem supressão/dismissal de alertas. Downloader importável sem efeitos de CLI,
+  para testar a função real sem rede. Hash divergente continua impedindo gravação.
+- TDD: cinco erros antes de criar o transporte; depois11 testes offline PASS
+  (segurança do regex/transporte/callsites/download/hash),15 testes dos contratos
+  de workflows PASS, ambos CLI --help PASS. Novos testes incluídos na governança CI.
+- Não executada nova coleta externa ou validação matemática integral nesta
+  correção. G01 e demais gates científicos/operacionais preservados.
+- API de detalhes code-scanning retorna403 para a integração; comentários do bot
+  foram lidos na PR. Não declarar alertas fechados sem evidência do novo scan.
+  Estado dos scanners/CI do commit corrigido deve ser conferido na PR394.
+
+Rollback técnico: reverter o commit de scripts/CI; não há estado persistente do
+produto afetado. Reversão reintroduz os callsites inseguros e exige nova análise.

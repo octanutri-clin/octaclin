@@ -3,7 +3,8 @@ Saída numérica allowlisted; HTML/código remoto não é executado/incorporado.
 Tolerâncias declaradas antes da coleta: z 1e-8, percentil 1e-6 pp.
 Uso: python coletar-oraculo-oxford.py --output /tmp/pasta
 """
-import argparse, hashlib, importlib.util, json, math, pathlib, re, urllib.parse, urllib.request
+import argparse, hashlib, importlib.util, json, math, pathlib, re, urllib.parse
+from https_research import fetch_https
 ROOT = pathlib.Path(__file__).resolve().parents[3]
 ENGINE = ROOT/'docs/history/phases/reviews/fase-314-rev11/g01_engine_rev11.py'
 spec = importlib.util.spec_from_file_location('pesquisa', ENGINE)
@@ -25,8 +26,8 @@ def coletar(entradas, sexo, output, lote):
         for nome,valor in {'GestationalWeek':c['pma_dias']//7,'GestationalDay':c['pma_dias']%7,
                            'Weight':format(c['peso_kg'],'.17g'),'Length':format(c['comprimento_cm'],'.17g'),'Visible':'true'}.items():
             payload[f'Biometry[{i}].{nome}']=str(valor)
-    with urllib.request.urlopen(urllib.request.Request(URL,data=urllib.parse.urlencode(payload).encode()),timeout=45) as r:
-        raw=r.read();status=r.status
+    raw, status = fetch_https(URL, allowed_hosts=frozenset({'intergrowth21.ndog.ox.ac.uk'}),
+                              data=urllib.parse.urlencode(payload).encode(), timeout=45)
     (output/f'{sexo}-{lote}.html').write_bytes(raw) # só diretório temporário de pesquisa
     txt=raw.decode()
     arrays={}

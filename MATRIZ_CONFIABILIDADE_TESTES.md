@@ -132,3 +132,12 @@ pnpm --dir octaclin-web test:authz
 Antes de producao, executar tambem `pnpm test:e2e:criticas`, validar
 `/health/detalhado` e realizar uma acao real controlada para cada integracao
 habilitada.
+
+## Transporte dos scripts de pesquisa Fase 314
+
+Scripts opt-in fora do runtime: transporte HTTPS com allowlist explícita por
+chamador, porta443/TLS padrão, rejeição de credenciais/fragmentos/controles e
+nenhum redirecionamento. Fontes OMS conservam SHA256; coletor Oxford conserva
+entradas sintéticas, validações e tolerâncias. Testes offline:
+`scripts/research/fase314/test_https_research.py` e `test_references_security.py`,
+executados na governança CI. Não comprova direitos de uso ou G01.
