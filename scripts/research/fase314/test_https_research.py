@@ -59,6 +59,7 @@ class ResearchHTTPS(unittest.TestCase):
             self.assertEqual(events, ['connect', 'tls', 'http'])
             self.assertEqual(context.verify_mode, ssl.CERT_REQUIRED)
             self.assertTrue(context.check_hostname)
+            self.assertEqual(context.minimum_version, ssl.TLSVersion.TLSv1_2)
             connection.request.assert_called_once_with('GET', '/path?version=1',
                 body=None, headers={'User-Agent': 'synthetic test'})
             connection.close.assert_called_once()

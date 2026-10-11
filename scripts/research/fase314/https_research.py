@@ -24,6 +24,7 @@ def fetch_https(url, *, allowed_hosts, data=None, headers=None, timeout=30):
     context = ssl.create_default_context()
     context.verify_mode = ssl.CERT_REQUIRED
     context.check_hostname = True
+    context.minimum_version = ssl.TLSVersion.TLSv1_2
     connection = http.client.HTTPConnection(parsed.hostname, port=443, timeout=timeout)
     try:
         # Handshake e validação do nome ocorrem antes de qualquer byte HTTP.

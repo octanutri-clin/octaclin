@@ -176,3 +176,13 @@ de validação, nenhum pedido HTTP após falha TLS, allowlist, redirects, hashes
 fechamento. O scan do commit anterior ainda reporta509, gerado antes desta mudança;
 aguardar Semgrep/CodeQL no HEAD atualizado para confirmar o resultado. Nenhum
 alerta foi descartado manualmente. Mudança restrita ao transporte de pesquisa.
+
+
+### Achado CodeQL high: protocolo TLS mínimo
+
+O Semgrep do commit a217c4a8 reportou0 findings; o CodeQL encontrou um alerta
+real high: `ssl.create_default_context` ainda aceitava TLS1/TLS1.1. Corrigir com
+`context.minimum_version = ssl.TLSVersion.TLSv1_2`; reforçar o teste para validar
+o limite mínimo junto de certificado e hostname. Não classificar como falso positivo.
+Executar12 testes locais e aguardar CodeQL/Semgrep no próximo HEAD; manter o alerta
+aberto até análise nova sem findings. Transporte permanece exclusivo à pesquisa.
