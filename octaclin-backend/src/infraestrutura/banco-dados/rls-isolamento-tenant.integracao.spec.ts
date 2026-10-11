@@ -1437,6 +1437,23 @@ descrever('RLS e isolamento multi-tenant integral em Postgres real', () => {
     expect(criadas[0].resultado.pediatrico?.idade?.dias).toBe(31);
     await expect(servico.registrarAvaliacaoAntropometrica(tenantA,id,usuarioIdTenantA,{ ...pedido,pesoKg: 0.9 },u)).rejects.toThrow('Chave usada');
     expect((await servico.listarAcompanhamentoPediatrico(tenantA,id,u)).itens).toHaveLength(1);
+    // Two filtered legacy rows one microsecond apart must not skip the snapshot.
+    const legadoCifrado = new CriptografiaDadosSensiveis().criptografar('{}');
+    const legados = await cliente.query<{ id: string }>(`insert into avaliacoes_antropometricas
+      (tenant_id,paciente_id,autor_usuario_id,avaliada_em,medidas_criptografadas,resultado_criptografado,criado_em)
+      select tenant_id,paciente_id,autor_usuario_id,avaliada_em,medidas_criptografadas,$2,
+        criado_em + n * interval '1 microsecond'
+      from avaliacoes_antropometricas cross join generate_series(1,2) n where id=$1
+      returning id`,[criadas[0].id,legadoCifrado]);
+    const primeira = await servico.listarAcompanhamentoPediatrico(tenantA,id,u,{ limite: 1 });
+    expect(primeira.itens).toHaveLength(0);expect(primeira.temMaisHistorico).toBe(true);
+    expect(legados.rows.map(r => r.id)).toContain(primeira.proximoCursor);
+    const segunda = await servico.listarAcompanhamentoPediatrico(tenantA,id,u,{ limite: 1,cursor: primeira.proximoCursor });
+    expect(segunda.itens).toHaveLength(0);expect(segunda.proximoCursor).not.toBe(primeira.proximoCursor);
+    const terceira = await servico.listarAcompanhamentoPediatrico(tenantA,id,u,{ limite: 1,cursor: segunda.proximoCursor });
+    expect(terceira.itens.map(i => i.id)).toEqual([criadas[0].id]);
+    expect(terceira.temMaisHistorico).toBe(false);expect(terceira.proximoCursor).toBeUndefined();
+
     await expect(servico.listarAcompanhamentoPediatrico(tenantB,id,{ ...u,tenantId: tenantB })).rejects.toThrow();
     await cliente.query("update pacientes set data_nascimento='2024-01-02' where id=$1",[id]);
     expect(await servico.registrarAvaliacaoAntropometrica(tenantA,id,usuarioIdTenantA,pedido,u)).toEqual(criadas[0]);
