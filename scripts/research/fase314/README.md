@@ -18,7 +18,7 @@ python3 -m unittest discover -s scripts/research/fase314 -p 'test_*.py' -v
 O transporte de ambos os scripts aceita somente HTTPS/443, sem credenciais,
 fragmentos ou redirecionamentos; downloader limitado a cdn.who.int e
 raw.githubusercontent.com, coletor limitado a intergrowth21.ndog.ox.ac.uk.
-TLS usa a validação padrão da biblioteca Python. Mudança de host/redirect exige
+TLS usa ssl.create_default_context com CERT_REQUIRED e check_hostname explícitos. Mudança de host/redirect exige
 revisão explícita da fonte; não ampliar allowlist para contornar falha de download.
 Testes locais verificam rejeição antes da rede, fechamento de conexão, preservação
 dos hashes e uso do transporte pelos dois scripts; executados na governança CI.

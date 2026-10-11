@@ -4,6 +4,7 @@ Hosts explícitos, TLS padrão e nenhum redirecionamento automático. Uma fonte 
 mudar de endereço exige revisão do manifesto; nunca seguir destino arbitrário.
 """
 import http.client
+import ssl
 import urllib.parse
 
 
@@ -19,7 +20,11 @@ def fetch_https(url, *, allowed_hosts, data=None, headers=None, timeout=30):
     request_headers = dict(headers or {})
     if data is not None:
         request_headers.setdefault('Content-Type', 'application/x-www-form-urlencoded')
-    connection = http.client.HTTPSConnection(parsed.hostname, timeout=timeout)
+    # CERT_REQUIRED + check_hostname explícitos: não depender de defaults históricos.
+    context = ssl.create_default_context()
+    context.verify_mode = ssl.CERT_REQUIRED
+    context.check_hostname = True
+    connection = http.client.HTTPSConnection(parsed.hostname, timeout=timeout, context=context)
     try:
         connection.request('POST' if data is not None else 'GET', target,
                            body=data, headers=request_headers)

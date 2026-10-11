@@ -4,6 +4,7 @@ import hashlib
 import importlib
 import pathlib
 import sys
+import ssl
 import unittest
 import tempfile
 from unittest.mock import Mock, patch
@@ -43,7 +44,12 @@ class ResearchHTTPS(unittest.TestCase):
                 'https://cdn.who.int:443/path?version=1', allowed_hosts=self.hosts,
                 headers={'User-Agent': 'synthetic test'}, timeout=30)
             self.assertEqual((raw, status), (b'synthetic reference', 200))
-            factory.assert_called_once_with('cdn.who.int', timeout=30)
+            factory.assert_called_once()
+            self.assertEqual(factory.call_args.args, ('cdn.who.int',))
+            self.assertEqual(factory.call_args.kwargs['timeout'], 30)
+            context = factory.call_args.kwargs['context']
+            self.assertEqual(context.verify_mode, ssl.CERT_REQUIRED)
+            self.assertTrue(context.check_hostname)
             connection.request.assert_called_once_with('GET', '/path?version=1',
                 body=None, headers={'User-Agent': 'synthetic test'})
             connection.close.assert_called_once()

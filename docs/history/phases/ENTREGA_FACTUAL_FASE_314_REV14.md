@@ -103,3 +103,17 @@ cálculo, tolerância, fonte/hashes, snapshot, banco ou ativação assistencial.
 
 Rollback técnico: reverter o commit de scripts/CI; não há estado persistente do
 produto afetado. Reversão reintroduz os callsites inseguros e exige nova análise.
+
+### Aviso adicional de auditoria TLS508
+
+No scan do commit849ad83d, CodeQL não apresenta novas anotações; os comentários
+506/507 não apontam mais linhas atuais. Semgrep aponta somente a regra de
+`httpsconnection-detected` no novo transporte. A regra pública é incondicional
+para HTTPSConnection: pede auditar compatibilidade em Python anterior a3.4.3,
+não inspeciona os parâmetros de contexto. Não contornar por alias/supressão.
+
+Correção adicional: ssl.create_default_context com CERT_REQUIRED e check_hostname
+explícitos; teste verifica o contexto realmente passado à conexão. O aviso508
+permanece sujeito à triagem do scanner/revisor; não declarar fechamento automático.
+Regra consultada apenas como texto público, sem execução de conteúdo remoto.
+O produto não depende deste script e nenhuma chamada clínica usa essa conexão.
