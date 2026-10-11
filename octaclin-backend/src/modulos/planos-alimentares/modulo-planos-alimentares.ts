@@ -93,6 +93,11 @@ const processadoresCompartilhamento = deveExecutarProcessadores() ? [Processador
     CriptografiaDadosSensiveis,
     ...processadoresCompartilhamento
   ],
-  exports: [ServicoPlanosAlimentares, ServicoModelosPlanoAlimentar, ServicoReceitasNutricionais]
+  exports: [
+    ServicoPlanosAlimentares,
+    ServicoModelosPlanoAlimentar,
+    ServicoReceitasNutricionais,
+    ServicoCompartilhamentoReceitas
+  ]
 })
 export class ModuloPlanosAlimentares {}
