@@ -1,6 +1,6 @@
 import { registrarContextoPediatrico, projetarPediatrico } from './antropometria-pediatrica';
 
-describe('snapshot pediátrico bloqueado até ratificação', () => {
+describe('snapshot factual pediátrico sem ativação dos classificadores', () => {
   const contexto = { confirmado: true as const, nascimento: '2024-01-01', sexoCurva: 'nao_informado' as const, tecnica: 'deitado' as const, edema: 'desconhecido' as const, nascimentoTipo: 'prematuro' as const, semanasNascimento: 30, diasNascimento: 0, origemGestacional: 'documentada' as const, tipoMedida: 'pos_natal' as const };
   it('preserva valores originais, idade e quatro estados sem z/classificação', () => {
     const r = registrarContextoPediatrico(contexto, '2024-02-01', { pesoKg: 0.8, alturaCm: 28 });

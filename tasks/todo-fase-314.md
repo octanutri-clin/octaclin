@@ -1,5 +1,14 @@
 # Sequência futura — Fase 314
 
+## Estado vigente — liberação parcial REV14
+
+[Contrato e gates canônicos](../docs/product/LIBERACAO_FACTUAL_FASE_314_REV14.md): entrega factual A independente de G01;
+classificadores B bloqueados. G02 ratificado REV9. PR Draft #394 ainda aberta;
+main não contém os ajustes REV11. A liberação factual depende de R4 independente,
+CI do HEAD final, migrations/RLS por ambiente e autorização operacional. Fases
+seguintes independentes podem ser desenvolvidas com seus próprios gates.
+T01–T18 e evidências históricas abaixo preservados, sem bloqueio global por G01.
+
 ## Estado vigente — REV11 e G02 REV9
 
 Ratificação integral pelo proprietário recebida em 2026-10-11. Protocolo vigente:

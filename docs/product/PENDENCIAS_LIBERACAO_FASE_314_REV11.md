@@ -1,5 +1,12 @@
 # Pendências para liberação — Fase314 REV11
 
+## Separação vigente REV14
+
+Direitos e precisão IG/G01 bloqueiam apenas classificadores B. Não bloqueiam a
+entrega factual A nem desenvolvimento de fases independentes. Gates operacionais
+A, separados de G01, em [liberação factual](LIBERACAO_FACTUAL_FASE_314_REV14.md).
+CL01–10/G02 já ratificados; autorização de ativação não recebida.
+
 ## CL01–10: ratificadas, sem nova rodada genérica
 
 Autoridade: pedido do proprietário em2026-10-11 e protocolo REV9, SHA256
@@ -40,8 +47,9 @@ Não inventar assinatura, registro profissional ou revisão institucional.
    conforme processo interno. G02 já ratificado pelo usuário; não declarar uma
    segunda aprovação especializada ou assinatura inexistente.
 5. **Operação/ativação:** revisão humana independente R4, CI do HEAD final e prova
-   da aplicação1068/1069 em cada ambiente. Somente depois dos gates/direitos,
-   autorização específica para implementar a conexão assistencial e ativar.
+   da aplicação1068/1069 em cada ambiente. A entrega factual requer seus gates operacionais, sem direitos de curvas;
+   classificadores exigem também G01/direitos e autorização específica para a
+   conexão assistencial.
    Merge/deploy/migrations externas não estão autorizados nesta execução.
 
 ## Minutas para obtenção de direitos — não enviadas

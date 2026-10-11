@@ -4,7 +4,7 @@ Atualizado em 2026-10-11.
 
 ## Fase ativa
 
-- Fase 314: entrega técnica integrada pela PR #392 (`3f448dea`) e correção posterior #393 na base desta rodada. Continuação na branch `feat/fase-314-validacao-rev11`: pacote REV11 íntegro, G02 REV9 ratificado integralmente pelo proprietário. G01/direitos pendentes e ativação clínica não autorizada; classificadores pediátricos bloqueados. Evidência atual em `docs/history/phases/VALIDACAO_FASE_314_REV11.md`. Migrations 1068/1069 externas não consultadas; merge não comprova aplicação.
+- Fase 314 separada em entrega factual candidata à liberação e classificadores bloqueados por G01. G02/CL01–10 ratificados REV9; seis métodos adultos desde18 na PR Draft #394 ainda aberta, fora da main consultada. Contrato/gates em `docs/product/LIBERACAO_FACTUAL_FASE_314_REV14.md`. R4 independente, CI do HEAD candidato, migrations1068/1069/RLS por ambiente e autorização operacional exigidos para a entrega factual; direitos/55s não são gates factuais. Fases315+ independentes podem avançar com seus próprios gates. Nenhum merge/deploy/migration externa/ativação autorizados nesta rodada.
 - Fase 298 concluida e integrada pelo PR #356 (merge `b00151ae`, confirmado no GitHub em
   2026-10-01); o proprietário informou que aplicou a migration 1060. Esta
   reconciliação não consultou banco externo.

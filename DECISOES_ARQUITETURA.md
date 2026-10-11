@@ -370,3 +370,12 @@ alterar1068 ou criar dados clínicos em claro. Exclusão lógica mantém snapsho
 Rollback de aplicação preserva dados; down1069 recusa enfraquecer proteção com
 snapshots confirmados. Procedimentos de retenção/retificação autorizados e
 aplicação por ambiente permanecem sujeitos aos gates de governança/operador.
+
+## Fase314 REV14 — separar dependências factuais e de referências
+
+Registro factual e CL08 dos seis métodos adultos desde18 não dependem de novos
+artefatos OMS/SISVAN/INTERGROWTH. Classificadores experimentais continuam sem
+consumidores assistenciais ou flag de ativação. G01/direitos bloqueiam esses
+classificadores; revisão R4 independente, CI, provas de banco/ambiente e aceite
+operacional bloqueiam a liberação factual. Fases seguintes independentes mantêm
+seus próprios gates. Rollback preserva projeção v1/v2 e dados, sem remover1069.
