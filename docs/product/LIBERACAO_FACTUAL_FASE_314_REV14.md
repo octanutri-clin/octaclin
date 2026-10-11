@@ -50,7 +50,7 @@ Provas e scripts sintéticos existentes preservados. G01 não concluído.
 | A02 CI | Conferir checks do HEAD na PR394 | Todos checks exigidos no commit candidato; CI anterior38161961023 PASS é histórico, não aprova novo HEAD |
 | A03 R4 independente | BLOCKED | Revisor humano independente identificado; comentário/registro da revisão e resolução de achados. Auto-revisão, CodeQL, Semgrep, Trivy e testes não substituem |
 | A04 banco local | PASS local,31 testes | PostgreSQL descartável: tenant/carteira, FORCE RLS/runtime sem BYPASSRLS/ownership, concorrência/replay, retenção e rollback |
-| A05 ambientes-alvo | PARTIAL / BLOCKED | Produção: diário1068/1069, FORCE RLS/policies, triggers e role prevista conferidos somente por leitura; vínculo efetivo da aplicação, branch staging e teste integrado continuam pendentes |
+| A05 ambientes-alvo | PARTIAL / BLOCKED | Produção e staging: diário1068/1069, FORCE RLS/policies, triggers e roles previstas conferidos somente por leitura; vínculo efetivo de cada aplicação e teste integrado continuam pendentes |
 | A06 autorização operacional | BLOCKED | Aceite explícito do proprietário antes de merge/migrations externas/deploy/liberação de usuários |
 
 A é `FASE_314_ENTREGA_FACTUAL_APTA_APOS_GATES_OPERACIONAIS`, condição de
@@ -95,9 +95,26 @@ linhas de pacientes, escrita, migration, mudança de role ou infraestrutura.
   ownership das quatro tabelas, grants efetivos SELECT/INSERT/UPDATE/DELETE.
   Não comprova que o backend está conectado usando essa role; binding efetivo e
   composição das policies/funções seguem sujeitos à revisão operacional/R4.
-- Staging: usuário confirmou banco neondb, mas ainda falta confirmar qual branch
-  do projeto octaclin-staging: production ou Produção-real. Não consultar alvo
-  ambíguo nem inferir aplicação de migrations a partir de produção.
+### Conferência de staging — 2026-10-11
+
+Alvo confirmado pelo usuário: projeto octaclin-staging, branch production,
+banco neondb. A branch Produção-real não foi consultada. Consultas SELECT
+exclusivamente de metadados; nenhum acesso a pacientes ou alteração externa.
+
+- Diário registra AcompanhamentoGestacional1720000001068 e
+  ProtegerRetencaoAvaliacoes1720000001069.
+- As mesmas quatro tabelas têm RLS/FORCE RLS ativos e uma policy ALL cada;
+  USING inclui tenant_id/contexto app.tenant_id, WITH CHECK inclui esse contexto.
+- Os mesmos três triggers estão habilitados.
+- Role encontrada `octaclin_app_staging`: LOGIN, sem SUPERUSER/BYPASSRLS ou
+  ownership das quatro tabelas, grants efetivos SELECT/INSERT/UPDATE/DELETE.
+  As roles octaclin_app_producao/octaclin_runtime_integracao não existem nesse alvo;
+  isso não é falha de staging, cuja role própria foi conferida separadamente.
+- O catálogo não comprova que o backend efetivamente conecta com essa role nem
+  substitui teste integrado, inspeção semântica completa das policies/funções ou R4.
+
+Não inferir equivalência entre ambientes: as consultas foram executadas
+separadamente em cada alvo identificado.
 
 A05 permanece incompleto. Para reproduzir, consultar somente public.migrations,
 pg_class/pg_namespace, pg_policy/pg_get_expr, pg_trigger e pg_roles com
