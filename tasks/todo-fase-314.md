@@ -1,7 +1,10 @@
 # Sequência futura — Fase 314
 
-Estado: planejamento. Tarefas de implementação **não iniciadas**. G01/G02 do
-[plano](../docs/history/phases/PLANO_FASE_314.md) devem preceder algoritmos.
+Estado: **execução técnica controlada autorizada**, sem ativação assistencial.
+G01/G02 continuam bloqueantes para uso clínico. Critérios clínicos originais
+abaixo são preservados; notas anteriores de T03–T18 bloqueadas são históricas.
+[Entrega técnica](../docs/history/phases/ENTREGA_TECNICA_FASE_314.md) e
+[dossiê](../docs/product/DOSSIE_RATIFICACAO_FASE_314.md) registram evidências e pendências.
 R4; um escritor ativo, uma PR de entrega. Nenhuma troca de modelo automática.
 
 ## T01 — Fechar referência computacional (G01)
@@ -369,3 +372,30 @@ G01/G02/G03BLOCKED, G04SKIPPED, G05BLOCKED. Somente pesquisa documental avançou
 Ordem T03→T04→T05→T11→T06→T16-A→T07→T08→T09→T10→T12→T16-B→T13→T14→T15→T16-C→T17→T18
 preservada; em T10 cobrir31s6d/32s0d,limites24/36 corrigidos edia seguinte,
 base clínica versus estatística, motivo parcial e série/versionamento separados.
+
+## Rastreamento da execução controlada (2026-10-11)
+
+A autorização posterior permite subfatias técnicas independentes em T03–T18;
+os critérios originais completos continuam abertos quando exigem ratificação/direitos.
+Não há runtime habilitando protocolos provisórios, client flag ou variável de ambiente.
+
+| Tarefa | Subfatia técnica executada / em curso | Critério completo ainda necessário |
+| --- | --- | --- |
+| T01 | Investigação matemática sintética arquivada reproduzida,26/28 reconciliado | Método/fonte/precisão/direitos/OMS completos; G01 BLOCKED |
+| T02 | REV5 e dossiê individual CL01–10 integrados | Aceite humano específico; G02 BLOCKED |
+| T03 | Datas/contexto/estado por indicador, medidas parciais e idade factual | Roteamento/idade efetiva/técnica clínicos ratificados |
+| T04 | Matemática LMS genérica e interpolação de parâmetros, sem datasets | Direitos e tabelas/âncoras normalizadas oficiais |
+| T05 | IMC candidato com LMS sintético, caudas/flags/edema | Tabelas/edição/SISVAN/validação clínica independentes |
+| T06 | Snapshot cifrado v1 e replay no serviço existente | PostgreSQL pediátrico final/imutabilidade e G01/G02 para resultados clínicos |
+| T07 | Estatura candidata/normalização proposta com dados sintéticos | Referência completa e regra técnica ratificada |
+| T08 | Peso e peso/estatura candidatos parciais com dados sintéticos | Referências/cobertura/SISVAN ratificados |
+| T09 | Lognormal genérico; coeficientes somente no teste de investigação | Fonte primária/55s/direitos e população ratificados |
+| T10 | Proposta CL07 versionada e testada, sem consumo assistencial | Neonatologia/pediatria ratifica estratos/transição/prazos |
+| T11 | Proteções etárias e preservação de legados/fatos | Seis decisões18–19 individuais, evidências amostrais |
+| T12 | Endpoint SQL paginado por tenant/paciente, cursor por último examinado | Prova PostgreSQL/consumidores final |
+| T13 | BFF privado/tipado e testes negativos | Authz completo/HEAD final |
+| T14 | Formulário confirmado, resultado de bloqueio e contexto | Playwright final/recuperação/permissões |
+| T15 | Gráfico bruto por contexto separado e tabela equivalente | Desktop/mobile/axe final; sem curvas licenciadas pendentes |
+| T16 | Suites e banco real descartável em execução | Novos testes PostgreSQL/transferência/retencao e regressões finais |
+| T17 | Documentação/linguagem/gates em atualização | Demo/gates finais verdadeiros |
+| T18 | Dossiê/relatório; PR Draft única a preparar | RevisãoR4 independente/CI/PR; não implica merge/produção |

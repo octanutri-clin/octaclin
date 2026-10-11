@@ -69,8 +69,8 @@ Não considerar anexos recebidos aprovação clínica nem autorização de códi
 | G00 | BLOCKED, partes PASS | Direitos/artefatos e prova operacional1068 externa futura |
 | G01 | BLOCKED | Modelo neonatal diário/oráculo/termos e fechamento computacional OMS |
 | G02 | BLOCKED | CL01–10 ratificadas para versão/hash da ficha |
-| G03 | BLOCKED | Autorização expressa de implementação e escopo de testes |
-| G04 | SKIPPED | Implementação e provas futuras positivas/negativas/PG/consumidores |
+| G03 | PASS técnico / BLOCKED assistencial | Desenvolvimento e testes autorizados; ativação depende de G01/G02 |
+| G04 | IN_PROGRESS | Implementação protegida e provas em execução; sem aceite clínico |
 | G05 | BLOCKED | RevisãoR4/CI314 final e ambiente/1068; autorizações operacionais separadas |
 
 A tabela completa/evidências está na seção10 do plano. Prova de ambiente não
@@ -187,3 +187,7 @@ Risco R4: snapshots clínicos cifrados, projeções autorizadas, RLS/carteira/re
 Algoritmos científicos sem artefatos/direitos ratificados usam fornecedor vazio
 no caminho assistencial; cálculo experimental só em testes locais sintéticos.
 Sem opção de cliente/variável de ambiente capaz de habilitar protocolo pendente.
+
+## REV5 recebida — desenvolvimento técnico autorizado
+
+A [REV5](../docs/product/DECISOES_RATIFICACAO_FASE_314_REV5.md) foi recebida e preservada com hash e arquivo original. CL-01–CL-10 permanecem propostas sem aceite humano. A autorização posterior permite executar T03–T18 tecnicamente, inclusive endpoints e persistência protegidos; substitui a limitação P0 documental. G03-desenvolvimento PASS; G03-ativação, G01 e G02 BLOCKED. Não há permissão de merge/deploy nem prova externa de migration 1068. Artefatos de referência sem direitos comprovados não serão incorporados ao runtime.
