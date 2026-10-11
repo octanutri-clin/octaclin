@@ -4,7 +4,9 @@ Atualizado em 2026-10-11.
 
 ## Fase ativa
 
-- Fase 314 separada em entrega factual candidata à liberação e classificadores bloqueados por G01. G02/CL01–10 ratificados REV9; seis métodos adultos desde18 na PR Draft #394 ainda aberta, fora da main consultada. Contrato/gates em `docs/product/LIBERACAO_FACTUAL_FASE_314_REV14.md`. R4 independente, CI do HEAD candidato, migrations1068/1069/RLS por ambiente e autorização operacional exigidos para a entrega factual; direitos/55s não são gates factuais. Fases315+ independentes podem avançar com seus próprios gates. Nenhum merge/deploy/migration externa/ativação autorizados nesta rodada.
+- Fase 315 em planejamento concluído: retirada controlada do `score_risco` legado. D01 confirmada: aceitar PATCH legado validado sem gravar; retirar respostas internas/CSV; preservar coluna/histórico. Implementação ainda não iniciada. Handoff `tasks/plan-fase-315.md`, plano `docs/history/phases/PLANO_FASE_315.md`; independente do G01 da 314.
+- Fase 314 factual integrada pela PR #394 (`c77c4520`, merge confirmado em 2026-10-11); CI pós-merge `38179801575` SUCCESS, SBOM provenance da PR SKIPPED. G02/CL01–10 ratificados REV9; seis métodos adultos desde18 integrados. Classificadores bloqueados por G01/direitos. R4 independente, vínculo/teste dos ambientes e autorização de liberação continuam exigidos; não inferir aplicação de migrations ou deploy do merge. Contrato `docs/product/LIBERACAO_FACTUAL_FASE_314_REV14.md`.
+- Monitor produção `38183397104` FAIL em saúde externa, etapa “Verificar backend, dependencias e web”, observado nesta rodada; causa não investigada. Planejamento 315 pode avançar; liberação operacional exige tratar essa pendência.
 - Fase 298 concluida e integrada pelo PR #356 (merge `b00151ae`, confirmado no GitHub em
   2026-10-01); o proprietário informou que aplicou a migration 1060. Esta
   reconciliação não consultou banco externo.
