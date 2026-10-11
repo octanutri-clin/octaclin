@@ -9,7 +9,7 @@ describe('snapshot pediátrico bloqueado até ratificação', () => {
     expect(r.idadeCorrigidaDias).toBe(-39);
     expect(r.medidas).toEqual({ pesoKg: 0.8, alturaCm: 28 });
     expect(r.indicadores).toHaveLength(4);
-    r.indicadores.forEach(i => expect(i).toEqual(expect.objectContaining({ estado: 'bloqueado', motivo: 'protocolo_nao_ratificado' })));
+    r.indicadores.forEach(i => expect(i).toEqual(expect.objectContaining({ estado: 'bloqueado', motivo: 'validacao_computacional_e_direitos_pendentes' })));
     expect(JSON.stringify(r)).not.toMatch(/escoreZ|percentil|classificacao/);
   });
   it('permite medidas parciais; não fabrica técnica ou edema', () => {
@@ -33,4 +33,14 @@ describe('snapshot pediátrico bloqueado até ratificação', () => {
     expect(projetarPediatrico({ ...r, contexto: { ...r.contexto, semanasNascimento: undefined, diasNascimento: undefined, origemGestacional: { segredo: 'sintetico' } } })).toBeUndefined();
   });
 
+});
+
+it('REV9 cria v2, registra ratificação e preserva projeção do legado v1', () => {
+  const c = { confirmado: true as const,nascimento: '2024-01-01',sexoCurva: 'masculino' as const,tecnica: 'deitado' as const,edema: 'nao' as const,nascimentoTipo: 'a_termo' as const,tipoMedida: 'pos_natal' as const };
+  const atual = registrarContextoPediatrico(c,'2024-02-01',{ pesoKg: 4 });
+  expect(atual.versao).toBe('pediatrico-medidas-v2');
+  expect(atual.indicadores.find(i => i.indicador==='peso_idade')?.motivo).toBe('validacao_computacional_e_direitos_pendentes');
+  const legado={ ...atual,versao: 'pediatrico-medidas-v1',indicadores: atual.indicadores.map(i => ({ ...i,motivo: i.motivo==='medida_ausente' ? i.motivo : 'protocolo_nao_ratificado' })) };
+  expect(projetarPediatrico(legado)?.versao).toBe('pediatrico-medidas-v1');
+  expect(projetarPediatrico(legado)?.indicadores.find(i => i.indicador==='peso_idade')?.motivo).toBe('protocolo_nao_ratificado');
 });

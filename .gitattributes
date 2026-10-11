@@ -1,0 +1,8 @@
+# Pacote recebido imutável: hashes são dos bytes originais (CSV CRLF/Markdown).
+# A exceção de whitespace é limitada ao arquivo de evidências, sem relaxar runtime.
+docs/history/phases/reviews/fase-314-rev11/** -text whitespace=-blank-at-eol,cr-at-eol
+docs/product/FASE_314_G02_PROTOCOLO_DECIDIDO_REV9.md -text whitespace=-blank-at-eol
+docs/product/FASE_314_ACEITE_CLINICO_G02_REV9_2026-10-11.md -text whitespace=-blank-at-eol
+# Oráculos sintéticos derivados: GitHub colapsa a grade; metadados/hashes seguem revisáveis.
+docs/history/phases/reviews/fase-314-rev11/execucao/*.csv linguist-generated=true
+docs/history/phases/reviews/fase-314-rev11/execucao/oraculo-oxford-rev11.json linguist-generated=true

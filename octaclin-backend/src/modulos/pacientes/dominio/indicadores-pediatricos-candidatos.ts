@@ -4,6 +4,7 @@ import { IndicadorPediatrico, INDICADORES_PEDIATRICOS } from './antropometria-pe
 interface ReferenciaSintetica extends ParametrosLms { id: string; minimo: number; maximo: number; caudas: boolean }
 interface EntradaCandidata { meses: number; pesoKg?: number; alturaCm?: number; tecnica: 'deitado'|'em_pe'|'nao_informada'; edema: 'sim'|'nao'|'desconhecido' }
 interface ResultadoCandidato { estado: 'experimental'|'bloqueado'|'reconferir'; motivo?: string; referencia?: string; zBruto?: number; percentil?: PercentilNormal }
+/** @deprecated Contrato pré-REV9 mantido para fixtures antigas. REV9 usa normalizarMedidaOmsRev9 em dias efetivos. */
 export function normalizarMedidaCandidata(originalCm: number, tecnica: EntradaCandidata['tecnica'], meses: number) {
   if (!Number.isFinite(originalCm) || originalCm <= 0 || !Number.isFinite(meses) || meses < 0) throw new Error('medida_invalida');
   if (tecnica === 'nao_informada') throw new Error('tecnica_nao_informada');
@@ -21,6 +22,7 @@ export function escoreComCaudas(valor: number, p: ParametrosLms, ajustar: boolea
   if (!(delta > 0)) throw new Error('cauda_invalida');
   return sinal*3 + (valor-sd3)/delta;
 }
+/** @deprecated Fixtures pré-REV9, sem consumo assistencial. Motor vigente isolado: classificarPediatriaIsolada. */
 export function calcularIndicadoresCandidatos(e: EntradaCandidata, referencias: Partial<Record<IndicadorPediatrico,ReferenciaSintetica>>): Record<IndicadorPediatrico,ResultadoCandidato> {
   let altura: number | undefined, motivoAltura: string | undefined;
   if (e.alturaCm !== undefined) {

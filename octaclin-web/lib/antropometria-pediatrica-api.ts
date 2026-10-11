@@ -9,14 +9,19 @@ export interface ContextoPediatricoApi {
   semanasNascimento?: number; diasNascimento?: number;
   origemGestacional?: 'documentada'|'informada'|'nao_informada';
   tipoMedida: 'nascimento'|'pos_natal'|'nao_informado';
+  gestacaoUnica?: 'sim'|'nao'|'desconhecido';
+  malformacaoImportante?: 'sim'|'nao'|'desconhecido';
+  restricaoCrescimentoFetal?: 'sim'|'nao'|'desconhecido';
+  morbidadePosNatalGrave?: 'sim'|'nao'|'desconhecido';
+  origemElegibilidade?: 'documentada'|'informada'|'nao_informada';
 }
 export interface SnapshotPediatricoApi {
-  versao: 'pediatrico-medidas-v1'; estado: 'protocolos_bloqueados'; avaliadaEm: string;
+  versao: 'pediatrico-medidas-v1'|'pediatrico-medidas-v2'; protocoloG02?: 'g02-rev9-3dd197df'; estado: 'protocolos_bloqueados'; avaliadaEm: string;
   contexto: ContextoPediatricoApi;
   idade?: { dias: number; mesesEstatisticos: number; anosCompletos: number };
   idadePosMenstrualDias?: number; idadeCorrigidaDias?: number;
   medidas: { pesoKg?: number; alturaCm?: number };
-  indicadores: Array<{ indicador: 'imc_idade'|'estatura_idade'|'peso_idade'|'peso_estatura'; estado: 'bloqueado'; motivo: 'protocolo_nao_ratificado'|'medida_ausente' }>;
+  indicadores: Array<{ indicador: 'imc_idade'|'estatura_idade'|'peso_idade'|'peso_estatura'; estado: 'bloqueado'; motivo: 'protocolo_nao_ratificado'|'validacao_computacional_e_direitos_pendentes'|'medida_ausente' }>;
 }
 export interface PaginaPediatricaApi { itens: Array<{ id: string; snapshot: SnapshotPediatricoApi }>; registrosExaminados: number; itensExibidos: number; temMaisHistorico: boolean; proximoCursor?: string }
 export function listarPediatria(pacienteId: string, cursor?: string, signal?: AbortSignal) {

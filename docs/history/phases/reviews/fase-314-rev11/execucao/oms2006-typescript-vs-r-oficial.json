@@ -1,0 +1,8 @@
+{
+  "comparacoes": 33652,
+  "foraDominio": 16,
+  "maxErro": 0.0033588044657875127,
+  "tolerancia": 0.0050000001,
+  "falhas": [],
+  "prova": "WHO anthro original: ajuste, lookup interpolado, caudas; saída oficial arredondada 2 casas, não prova direitos"
+}

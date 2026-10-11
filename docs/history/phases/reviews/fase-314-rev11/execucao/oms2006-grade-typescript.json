@@ -1,0 +1,7 @@
+{
+  "comparacoes": 121914,
+  "maxErro": 0.0005000000000023874,
+  "tolerancia": 0.0005000001,
+  "falhas": [],
+  "prova": "quantis publicados oficiais; inclui LMS/caudas; não valida interpolação entre grades ou política clínica"
+}

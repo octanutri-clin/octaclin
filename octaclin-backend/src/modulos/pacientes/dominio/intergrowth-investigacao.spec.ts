@@ -47,3 +47,18 @@ describe('INTERGROWTH candidato de pesquisa, oráculo oficial arquivado sintéti
     expect(() => candidato(449,true,'weight')).toThrow();
   });
 });
+
+describe('REV11 ampliação independente: oráculo Oxford sintético diário', () => {
+  it('556 casos/1112 resultados cobrindo todos os dias/sexos/indicadores e caudas', () => {
+    const d=JSON.parse(readFileSync(resolve(pasta,'../fase-314-rev11/execucao/oraculo-oxford-rev11.json'),'utf8'));
+    expect(d.casos_sinteticos).toHaveLength(556);
+    expect(d.casos_sinteticos.reduce((n: number,c: any) => n+c.resultados.length,0)).toBe(1112);
+    for (const sexo of ['male','female']) expect(new Set(d.casos_sinteticos.filter((c: any) => c.sexo===sexo).map((c: any) => c.pma_dias)).size).toBe(260);
+    for (const c of d.casos_sinteticos) for (const r of c.resultados) {
+      const p=candidato(c.pma_dias,c.sexo==='male',r.indicador);
+      const z=escoreLognormal(r.indicador==='weight' ? c.peso_kg : c.comprimento_cm,p.mu,p.sigma);
+      expect(Math.abs(z-r.z_oficial)).toBeLessThanOrEqual(TOL_Z);
+      expect(Math.abs(percentilNormal(z).valor!-r.percentil_oficial)).toBeLessThanOrEqual(TOL_PERCENTIL_PP);
+    }
+  });
+});

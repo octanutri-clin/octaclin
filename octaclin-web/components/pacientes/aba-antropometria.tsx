@@ -186,13 +186,14 @@ function formatarData(data: string) {
 interface AbaAntropometriaProps {
   pacienteId: string;
   podeGerenciar: boolean;
+  podeGerenciarPediatria?: boolean;
   dataNascimento?: string;
 }
 
 export function AbaAntropometria(props: AbaAntropometriaProps) {
   return <AbaAntropometriaConteudo key={props.pacienteId} {...props}/>;
 }
-function AbaAntropometriaConteudo({ pacienteId, podeGerenciar, dataNascimento }: AbaAntropometriaProps) {
+function AbaAntropometriaConteudo({ pacienteId, podeGerenciar, podeGerenciarPediatria = false, dataNascimento }: AbaAntropometriaProps) {
   const [condicaoAvaliacao,setCondicaoAvaliacao] = useState<'gestante'|'nao_gestante'|''>('');
   const [confirmouCondicao,setConfirmouCondicao] = useState(false);
   const [confirmouDivergencia,setConfirmouDivergencia] = useState(false);
@@ -381,7 +382,7 @@ function AbaAntropometriaConteudo({ pacienteId, podeGerenciar, dataNascimento }:
 
   return (
     <div className="grid gap-4">
-      <AcompanhamentoPediatrico key={`pediatrico-${pacienteId}`} pacienteId={pacienteId} podeGerenciar={podeGerenciar} dataNascimento={dataNascimento}/>
+      <AcompanhamentoPediatrico key={`pediatrico-${pacienteId}`} pacienteId={pacienteId} podeGerenciar={podeGerenciarPediatria} dataNascimento={dataNascimento}/>
       <GestacoesPaciente key={pacienteId} pacienteId={pacienteId} podeGerenciar={podeGerenciar}/>
       {erro ? (
         <p role="alert" className="rounded-md border border-perigo-borda bg-perigo-suave p-3 text-sm text-perigo-forte">

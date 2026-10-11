@@ -1,18 +1,19 @@
 import { ServicoPacientes } from './servico-pacientes';
 import { PacienteOrm } from '../infraestrutura/paciente.orm';
+import { ProfissionalOrm } from '../../profissionais/infraestrutura/profissional.orm';
 import { AvaliacaoAntropometricaOrm } from '../infraestrutura/avaliacao-antropometrica.orm';
-import { ConflictException, BadRequestException, NotFoundException } from '@nestjs/common';
+import { ConflictException, BadRequestException, NotFoundException, ForbiddenException } from '@nestjs/common';
 import type { UsuarioAutenticado } from '../../auth/dominio/usuario-autenticado';
-const usuario: UsuarioAutenticado = { usuarioId: 'autor', tenantId: 'tenant', papel: 'Collaborator', emailHash: 'sintetico', permissoes: [] };
+const usuario: UsuarioAutenticado = { usuarioId: 'autor', tenantId: 'tenant', papel: 'Professional', emailHash: 'sintetico', permissoes: ['pacientes.gerenciar','pacientes.ler'] };
 const dados = { chaveCriacao: '00000000-0000-4000-8000-000000000001', avaliadaEm: '2024-02-01', pesoKg: 0.8, alturaCm: 28, pediatrico: { confirmado: true as const, nascimento: '2024-01-01', sexoCurva: 'nao_informado' as const, tecnica: 'deitado' as const, edema: 'desconhecido' as const, nascimentoTipo: 'nao_informado' as const, tipoMedida: 'pos_natal' as const } };
 function montar() {
-  const paciente = { id: 'paciente', tenantId: 'tenant', dataNascimento: '2024-01-01', arquivadoEm: null };
+  const paciente = { id: 'paciente', tenantId: 'tenant', dataNascimento: '2024-01-01', profissionalResponsavelId: 'profissional', arquivadoEm: null };
   let registro: any;
   const qb: any = {};
   for (const metodo of ['where','andWhere','orderBy','addOrderBy','take']) qb[metodo] = jest.fn(() => qb);
   qb.getMany = jest.fn(async () => []);
   const repo = { createQueryBuilder: jest.fn(() => qb), findOne: jest.fn(async () => registro ?? null), create: (r: any) => r, save: jest.fn(async (r: any) => registro = { ...r, id: 'registro', criadoEm: new Date('2024-02-01') }) };
-  const gerente = { query: jest.fn(async () => []), getRepository: (tipo: unknown) => tipo === PacienteOrm ? { findOne: async (q: any) => q.where.tenantId === paciente.tenantId ? paciente : null } : tipo === AvaliacaoAntropometricaOrm ? repo : { findOne: async () => null } };
+  const gerente = { query: jest.fn(async () => []), getRepository: (tipo: unknown) => tipo === ProfissionalOrm ? { findOne: async () => ({ id: 'profissional' }) } : tipo === PacienteOrm ? { findOne: async (q: any) => q.where.tenantId === paciente.tenantId ? paciente : null } : tipo === AvaliacaoAntropometricaOrm ? repo : { findOne: async () => null } };
   const executor = { executar: async (_: string, f: any) => f(gerente) };
   const crypto = { criptografar: (v: string) => Buffer.from(v), descriptografar: (v: Buffer) => v.toString() };
   return { servico: new ServicoPacientes(executor as never, crypto as never, {} as never), repo, paciente, qb };
@@ -66,4 +67,30 @@ describe('integração de serviço com snapshot pediátrico', () => {
     expect(a.medidas.alturaCm).toBe(1e-152);
   });
 
+});
+
+ describe('CL10 REV9: restrição de escrita antes de replay', () => {
+  it.each(['Collaborator','SuperAdmin'] as const)('recusa escrita por %s mesmo com permissão de gerenciamento', async papel => {
+    const { servico, repo } = montar();
+    await expect(servico.registrarAvaliacaoAntropometrica('tenant','paciente','autor',dados,{ ...usuario,papel,permissoes: ['pacientes.gerenciar'] })).rejects.toBeInstanceOf(ForbiddenException);
+    expect(repo.save).not.toHaveBeenCalled();
+  });
+  it('não permite contornar o papel omitindo contexto pediátrico', async () => {
+    const { servico } = montar();
+    await expect(servico.registrarAvaliacaoAntropometrica('tenant','paciente','autor',{ ...dados,pediatrico: undefined },{ ...usuario,papel: 'Collaborator',permissoes: ['pacientes.gerenciar'] })).rejects.toBeInstanceOf(ForbiddenException);
+  });
+});
+
+it('CL08 mantém composição aos18 com contexto pediátrico sem trocar IMC por corte adulto', async () => {
+  const { servico,paciente }=montar();paciente.dataNascimento='2006-01-01';
+  const a=await servico.registrarAvaliacaoAntropometrica('tenant','paciente','autor',{ ...dados,sexo: 'masculino',protocolo: 'pollock_3',pesoKg: 70,alturaCm: 175,dobras: { peitoral: 10,abdominal: 20,coxa: 15 },pediatrico: { ...dados.pediatrico,nascimento: '2006-01-01' } },usuario);
+  expect(a.resultado.percentualGordura).toBeDefined();
+  expect(a.resultado.classificacaoImc).toBeUndefined();
+  expect(a.resultado.pediatrico?.estado).toBe('protocolos_bloqueados');
+});
+it('CL10 revalida papel antes de replay e preserva leitura colaboradora', async () => {
+  const { servico }=montar();
+  await servico.registrarAvaliacaoAntropometrica('tenant','paciente','autor',dados,usuario);
+  await expect(servico.registrarAvaliacaoAntropometrica('tenant','paciente','autor',dados,{ ...usuario,papel: 'Collaborator' })).rejects.toBeInstanceOf(ForbiddenException);
+  await expect(servico.listarAcompanhamentoPediatrico('tenant','paciente',{ ...usuario,papel: 'Collaborator',permissoes: ['pacientes.ler'] })).resolves.toBeDefined();
 });

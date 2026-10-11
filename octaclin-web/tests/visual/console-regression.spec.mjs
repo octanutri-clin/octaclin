@@ -4342,3 +4342,16 @@ test.describe('acompanhamento pediátrico - Fase 314', () => {
     await expect(page.getByRole('alert').filter({ hasText: 'Não foi possível carregar o acompanhamento' })).toBeVisible();
   });
 });
+
+for (const papel of ['Collaborator','SuperAdmin']) {
+  test(`Fase 314 REV9: ${papel} consulta sem formulário de escrita pediátrica`, async ({ page }) => {
+    await prepararProntuarioMockado(page,{ papel });
+    await page.route('**/api/pacientes/paciente-1/acompanhamento-pediatrico**',route=>route.fulfill({json:{itens:[],registrosExaminados:0,itensExibidos:0,temMaisHistorico:false}}));
+    await page.goto('/pacientes/paciente-1');
+    await page.getByRole('tab',{name:'Avaliações',exact:true}).click();
+    await page.getByRole('tab',{name:'Antropometria',exact:true}).click();
+    await expect(page.getByRole('heading',{name:'Acompanhamento pediátrico'})).toBeVisible();
+    await expect(page.getByText('Registrar avaliação pediátrica',{exact:true})).toHaveCount(0);
+    await expect(page.getByRole('table',{name:'Histórico das medidas originais e contexto preservado'})).toBeVisible();
+  });
+}

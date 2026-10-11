@@ -331,7 +331,21 @@ Este arquivo registra decisoes ja tomadas para evitar que outro agente reprojete
 - Plano, gaps, decisões e testes em
   `docs/history/phases/PLANO_FASE_303.md`.
 
-## Fase 314 — snapshots pediátricos e protocolos pendentes
+## Fase 314 — snapshots pediátricos e validação computacional pendente
+
+REV11/REV9 (2026-10-11): G02 foi ratificado integralmente pelo proprietário,
+com registro e hash em `docs/product/FASE_314_ACEITE_CLINICO_G02_REV9_2026-10-11.md`.
+Isso substitui propostas clínicas conflitantes, sem comprovar direitos, G01 ou
+formalização institucional. As seis fórmulas adultas e interpretações próprias
+passam a ser elegíveis desde18 anos completos, mantendo domínios individuais e
+proteções gestacionais; classificação adulta de IMC continua desde20.
+
+Escrita pediátrica exige Professional, carteira ativa e `pacientes.gerenciar`,
+antes de idempotência/replay; Collaborator com leitura autorizada não escreve,
+nem SuperAdmin. Snapshot novo `pediatrico-medidas-v2` identifica o protocolo
+`g02-rev9-3dd197df` e G01/direitos pendentes. Leitor aceita v1/v2 sem recálculo;
+rollback conserva ambos. Elegibilidade neonatal é explícita e cifrada, com origem,
+sem deduzir ausência de contraindicações. Não há alteração de grants ou schema.
 
 Contexto pediátrico confirmado e resultados usados ficam no JSON cifrado das
 avaliações antropométricas existentes, com versão explícita e chave de criação.
@@ -344,7 +358,7 @@ snapshots cifrados. O cursor avança pelo último examinado, incluindo páginas
 sem pediatria; não filtrar PHI no SQL nem usar timestamp JavaScript como âncora.
 Sem notas internas/fingerprint e sem novo portal para menores.
 
-Enquanto G01/G02 estiverem bloqueados, nenhum serviço retorna escores, percentis
+Enquanto G01/direitos estiverem bloqueados, nenhum serviço retorna escores, percentis
 ou rótulos pediátricos. Não há client flag nem env para liberação. Candidatos
 matemáticos isolados aceitam referências sintéticas, sem datasets de direitos
 pendentes; os coeficientes INTERGROWTH estão apenas no teste de investigação,

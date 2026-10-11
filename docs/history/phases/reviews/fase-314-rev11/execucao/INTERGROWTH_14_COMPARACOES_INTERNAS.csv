@@ -1,0 +1,15 @@
+pma_dias,sexo,indicador,medida,z_fixture_anterior,z_calculado_rev11,erro_z,tipo_prova
+189,male,weight,1.0,1.9139229445820707,1.9139229445820707,0.0,consistencia interna; nao e oraculo independente
+189,male,length,35.0,0.9777325957485582,0.9777325957485582,0.0,consistencia interna; nao e oraculo independente
+190,female,weight,1.05,2.4549494753988848,2.4549494753988848,0.0,consistencia interna; nao e oraculo independente
+190,female,length,35.5,1.5380203719600583,1.5380203719600583,0.0,consistencia interna; nao e oraculo independente
+255,male,weight,2.65,0.14070816748856857,0.14070816748856857,0.0,consistencia interna; nao e oraculo independente
+255,male,length,47.2,0.09645172112773255,0.09645172112773255,0.0,consistencia interna; nao e oraculo independente
+280,female,weight,3.2,0.1495743410126397,0.1495743410126397,0.0,consistencia interna; nao e oraculo independente
+280,female,length,50.0,0.36341327160229003,0.36341327160229003,0.0,consistencia interna; nao e oraculo independente
+385,male,weight,4.4,-3.00886892191424,-3.00886892191424,0.0,consistencia interna; nao e oraculo independente
+385,male,length,55.0,-3.6382703580680995,-3.6382703580680995,0.0,consistencia interna; nao e oraculo independente
+447,female,weight,6.5,-0.6798587268889155,-0.6798587268889155,0.0,consistencia interna; nao e oraculo independente
+447,female,length,65.5,0.38787648250639395,0.38787648250639395,0.0,consistencia interna; nao e oraculo independente
+448,male,weight,7.0,-0.8306811573285726,-0.8306811573285726,0.0,consistencia interna; nao e oraculo independente
+448,male,length,66.5,-0.1095537708648267,-0.1095537708648267,0.0,consistencia interna; nao e oraculo independente

@@ -1,5 +1,29 @@
 # Dossiê único para ratificação — Fase 314
 
+## Estado vigente — integração REV11 / ratificação G02 REV9 (2026-10-11)
+
+O proprietário ratificou integralmente CL-01–CL-10 no pedido de integração da REV11.
+O protocolo normativo vigente é [G02 REV9](FASE_314_G02_PROTOCOLO_DECIDIDO_REV9.md),
+SHA-256 `3dd197dfa16dd235bda1573020cf0af04b3ae8699c2c21388a90d2bf670a201a`;
+registro não identificável em [aceite](FASE_314_ACEITE_CLINICO_G02_REV9_2026-10-11.md).
+**G02-PROTOCOLO: RATIFICADO_PELO_USUARIO.** Formalização institucional pendente e
+revisão especializada não alegada; são estados separados. Não exigir novo aceite
+para a mesma versão. **G01 BLOCKED**, direitos não comprovados; ativação não autorizada.
+
+Regras anteriores conflitantes abaixo são histórico, não contratos de implementação:
+roteamento local 1856/1857 dias; técnica pela idade efetiva e limiar731 dias;
+correção por DPP+meses civis; fórmulas adultas desde18 anos, com domínios individuais;
+escrita pediátrica somente Professional autorizado e leitura autorizada/auditada.
+Cálculos pediátricos continuam isolados do serviço assistencial; snapshots v1 não
+são recalculados. Os novos snapshots v2 preservam a ratificação e identificam
+validação computacional/direitos pendentes. A autorização de desenvolvimento segue
+vigente; não abrange merge, deploy, migrations externas ou ativação clínica.
+
+Dossiê operativo vigente: [pendências de liberação](PENDENCIAS_LIBERACAO_FASE_314_REV11.md),
+com CL01–10 ratificadas e separação entre pendências técnicas, direitos e operação.
+
+## Histórico documental anterior à ratificação REV9
+
 **Estado:** propostas REV5; nenhuma ratificação clínica/jurídica presumida. Desenvolvimento técnico autorizado separadamente. Respostas e identificação do responsável competente devem ser registradas em canal protegido, referenciando versão/hash dos documentos. Não incluir assinaturas, nomes ou registros profissionais em Git público.
 
 As regras implementadas experimentalmente não são usadas pelo backend assistencial. Os snapshots do console contêm medidas e relações aritméticas, com quatro indicadores bloqueados. Fontes primárias e limitações completas: [manifesto](FONTES_ANTROPOMETRIA_FASE_314.md), [ficha](FICHA_VALIDACAO_CLINICA_FASE_314.md), [REV5](DECISOES_RATIFICACAO_FASE_314_REV5.md) e [investigação](../history/phases/INVESTIGACAO_INTERGROWTH_FASE_314_REV3.md).

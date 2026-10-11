@@ -12,6 +12,11 @@ export class ContextoPediatricoDto implements ContextoPediatrico {
   @IsOptional() @IsInt() @Min(0) @Max(6) diasNascimento?: number;
   @IsOptional() @IsIn(['documentada','informada','nao_informada']) origemGestacional?: ContextoPediatrico['origemGestacional'];
   @IsIn(['nascimento','pos_natal','nao_informado']) tipoMedida: ContextoPediatrico['tipoMedida'];
+  @IsOptional() @IsIn(['sim','nao','desconhecido']) gestacaoUnica?: ContextoPediatrico['gestacaoUnica'];
+  @IsOptional() @IsIn(['sim','nao','desconhecido']) malformacaoImportante?: ContextoPediatrico['malformacaoImportante'];
+  @IsOptional() @IsIn(['sim','nao','desconhecido']) restricaoCrescimentoFetal?: ContextoPediatrico['restricaoCrescimentoFetal'];
+  @IsOptional() @IsIn(['sim','nao','desconhecido']) morbidadePosNatalGrave?: ContextoPediatrico['morbidadePosNatalGrave'];
+  @IsOptional() @IsIn(['documentada','informada','nao_informada']) origemElegibilidade?: ContextoPediatrico['origemElegibilidade'];
 }
 @ValidatorConstraint({ name: 'MedidaContextual', async: false })
 export class MedidaContextual implements ValidatorConstraintInterface {

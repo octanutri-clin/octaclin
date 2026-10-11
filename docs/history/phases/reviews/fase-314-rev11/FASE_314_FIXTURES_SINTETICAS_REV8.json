@@ -1,0 +1,112 @@
+{
+  "schema": "octaclin-phase314-g01-rev8-research-not-runtime",
+  "verified_local_utc_date": "2026-10-11",
+  "not_for_clinical_use": true,
+  "evidence_limitation": "Calculated from candidate equations transcribed in project investigation REV3. NOT an independent official oracle and NOT evidence of copyright permissions. 28 Oxford synthetic outcomes are reported separately by Codex and were not replayed here.",
+  "ig_candidate_cases": [
+    {
+      "pma_weeks": 27,
+      "pma_days": 0,
+      "sex": "male",
+      "weight_kg": 1.0,
+      "length_cm": 35.0,
+      "z_weight": 1.9139229445820707,
+      "z_length": 0.9777325957485582,
+      "centile_weight": 97.2184998907881,
+      "centile_length": 83.58967020535533,
+      "kind": "synthetic_calculation_only_not_independent_oracle"
+    },
+    {
+      "pma_weeks": 27,
+      "pma_days": 1,
+      "sex": "female",
+      "weight_kg": 1.05,
+      "length_cm": 35.5,
+      "z_weight": 2.4549494753988848,
+      "z_length": 1.5380203719600583,
+      "centile_weight": 99.29547804608544,
+      "centile_length": 93.79781831078897,
+      "kind": "synthetic_calculation_only_not_independent_oracle"
+    },
+    {
+      "pma_weeks": 36,
+      "pma_days": 3,
+      "sex": "male",
+      "weight_kg": 2.65,
+      "length_cm": 47.2,
+      "z_weight": 0.14070816748856857,
+      "z_length": 0.09645172112773255,
+      "centile_weight": 55.594975371382006,
+      "centile_length": 53.84190919790671,
+      "kind": "synthetic_calculation_only_not_independent_oracle"
+    },
+    {
+      "pma_weeks": 40,
+      "pma_days": 0,
+      "sex": "female",
+      "weight_kg": 3.2,
+      "length_cm": 50.0,
+      "z_weight": 0.1495743410126397,
+      "z_length": 0.36341327160229003,
+      "centile_weight": 55.94497733421231,
+      "centile_length": 64.18519053952946,
+      "kind": "synthetic_calculation_only_not_independent_oracle"
+    },
+    {
+      "pma_weeks": 55,
+      "pma_days": 0,
+      "sex": "male",
+      "weight_kg": 4.4,
+      "length_cm": 55.0,
+      "z_weight": -3.00886892191424,
+      "z_length": -3.6382703580680995,
+      "centile_weight": 0.13111111113749963,
+      "centile_length": 0.013723760645073524,
+      "kind": "synthetic_calculation_only_not_independent_oracle"
+    },
+    {
+      "pma_weeks": 63,
+      "pma_days": 6,
+      "sex": "female",
+      "weight_kg": 6.5,
+      "length_cm": 65.5,
+      "z_weight": -0.6798587268889155,
+      "z_length": 0.38787648250639395,
+      "centile_weight": 24.82969586668309,
+      "centile_length": 65.09462787231054,
+      "kind": "synthetic_calculation_only_not_independent_oracle"
+    },
+    {
+      "pma_weeks": 64,
+      "pma_days": 0,
+      "sex": "male",
+      "weight_kg": 7.0,
+      "length_cm": 66.5,
+      "z_weight": -0.8306811573285726,
+      "z_length": -0.1095537708648267,
+      "centile_weight": 20.307688684724994,
+      "centile_length": 45.63816376957884,
+      "kind": "synthetic_calculation_only_not_independent_oracle"
+    }
+  ],
+  "who2007_example": {
+    "indication": "BMI-for-age example 11-year-old boy as transcribed from uploaded Ficha REV4",
+    "bmi": 30,
+    "L": -1.7862,
+    "M": 16.9392,
+    "S": 0.1107,
+    "z_LMS_unadjusted": 3.2353902101095855,
+    "z_upper_tail_adjusted": 3.35390255606726,
+    "kind": "local_arithmetic_check_not_oracle"
+  },
+  "55week_discrepancy": {
+    "sex": "male",
+    "pma_weeks": 55,
+    "target_z": -3,
+    "equation_weight_kg": 4.405026478034957,
+    "rounded_official_pdf_reported_kg": 4.4,
+    "difference_kg": 0.005026478034956483,
+    "z_at_4_4kg": -3.00886892191424,
+    "status": "UNRESOLVED_source_pdf_discrepancy"
+  }
+}

@@ -1,0 +1,118 @@
+[
+  {
+    "comando": "pnpm test:a11y:matriz",
+    "exit": 0,
+    "estado": "PASS"
+  },
+  {
+    "comando": "pnpm test:confiabilidade",
+    "exit": 0,
+    "estado": "PASS"
+  },
+  {
+    "comando": "pnpm test:redacao-auditoria",
+    "exit": 0,
+    "estado": "PASS"
+  },
+  {
+    "comando": "pnpm test:resposta-auditoria",
+    "exit": 0,
+    "estado": "PASS"
+  },
+  {
+    "comando": "pnpm test:migracoes-fora-de-banda",
+    "exit": 0,
+    "estado": "PASS"
+  },
+  {
+    "comando": "pnpm test:actions-imutaveis",
+    "exit": 0,
+    "estado": "PASS"
+  },
+  {
+    "comando": "pnpm test:guardas-controladores",
+    "exit": 0,
+    "estado": "PASS"
+  },
+  {
+    "comando": "pnpm test:workflows-seguros",
+    "exit": 0,
+    "estado": "PASS",
+    "primeira_execucao": "FAIL: PowerShell fora do PATH; repetido com /tmp/f314-tools/powershell, sem alterar testes"
+  },
+  {
+    "comando": "pnpm test:seguranca-dinamica",
+    "exit": 0,
+    "estado": "PASS"
+  },
+  {
+    "comando": "pnpm test:triagem-seguranca",
+    "exit": 0,
+    "estado": "PASS"
+  },
+  {
+    "comando": "pnpm test:inventario-security-quality",
+    "exit": 0,
+    "estado": "PASS"
+  },
+  {
+    "comando": "pnpm test:tooling-agentes",
+    "exit": 0,
+    "estado": "PASS"
+  },
+  {
+    "comando": "pnpm test:versao-pnpm",
+    "exit": 0,
+    "estado": "PASS"
+  },
+  {
+    "comando": "pnpm test:excecoes-supply-chain",
+    "exit": 0,
+    "estado": "PASS"
+  },
+  {
+    "comando": "pnpm test:grupos-dependabot",
+    "exit": 0,
+    "estado": "PASS"
+  },
+  {
+    "comando": "pnpm test:versao-node",
+    "exit": 0,
+    "estado": "PASS"
+  },
+  {
+    "comando": "pnpm test:dockerfiles-runtime",
+    "exit": 0,
+    "estado": "PASS"
+  },
+  {
+    "comando": "pnpm test:licencas",
+    "exit": 0,
+    "estado": "PASS"
+  },
+  {
+    "comando": "pnpm test:lock-python",
+    "exit": 0,
+    "estado": "PASS"
+  },
+  {
+    "comando": "pnpm test:sbom",
+    "exit": 0,
+    "estado": "PASS"
+  },
+  {
+    "comando": "pnpm test:instalacao-congelada",
+    "exit": 0,
+    "estado": "PASS"
+  },
+  {
+    "comando": "node --test scripts/classificar-impacto-pr.spec.mjs scripts/validar-pr-gate.spec.mjs",
+    "exit": 0,
+    "estado": "PASS"
+  },
+  {
+    "comando": "pnpm security:secrets",
+    "exit": 0,
+    "estado": "PASS"
+  }
+]

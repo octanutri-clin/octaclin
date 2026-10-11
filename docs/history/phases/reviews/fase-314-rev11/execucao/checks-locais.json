@@ -1,0 +1,55 @@
+{
+  "data": "2026-10-11",
+  "node": "22.23.3",
+  "pnpm": "11.25.0",
+  "dados": "exclusivamente sint\u00e9ticos",
+  "postgres": {
+    "estado": "PASS",
+    "testes": 31,
+    "ambiente": "Testcontainers local descart\u00e1vel",
+    "externo": false
+  },
+  "python": {
+    "estado": "PASS",
+    "testes": 13,
+    "hashes": 20
+  },
+  "playwright": {
+    "estado": "PASS",
+    "testes": 10,
+    "escopo": "314/313,desktop/mobile,axe,Professional/Collaborator/SuperAdmin"
+  },
+  "typecheck_backend": "PASS",
+  "build_backend_guard": "PASS",
+  "typecheck_web": "PASS",
+  "lint_web": {
+    "estado": "PASS",
+    "erros": 0,
+    "warnings_preexistentes": 65
+  },
+  "build_web": "PASS",
+  "governanca": {
+    "estado": "PASS",
+    "comandos": 23,
+    "repeticao": "PowerShell no PATH"
+  },
+  "migrations_externas": "SKIPPED_NAO_AUTORIZADO",
+  "revisao_humana_independente": "PENDENTE",
+  "CI": "PENDENTE",
+  "G01": "BLOCKED",
+  "G02": "RATIFICADO_PELO_USUARIO",
+  "jest_backend": {
+    "estado": "PASS",
+    "suites": 294,
+    "testes": 2648,
+    "skipped": 50,
+    "oraculos_locais": true,
+    "nota": "RED de novo contrato HFA e timeout ClamAV pr\u00e9vios registrados no relat\u00f3rio; reexecu\u00e7\u00e3o final GREEN"
+  },
+  "quantis_oms_integral": {
+    "estado": "PASS",
+    "comparacoes": 129378,
+    "linhas": 14338,
+    "planilhas": 16
+  }
+}

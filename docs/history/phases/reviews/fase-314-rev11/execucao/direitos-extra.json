@@ -1,0 +1,37 @@
+[
+  {
+    "arquivo": "ig-site.html",
+    "url": "https://intergrowth21.com/",
+    "sha256": "5b27316e178b2d3d1717f606d51e1939b85b3be7f01a00201da1bb4a244badc9",
+    "status": 200,
+    "termos_links": [
+      "/privacy-policy"
+    ]
+  },
+  {
+    "arquivo": "tghn-terms.html",
+    "url": "https://tghn.org/about/terms-and-conditions/",
+    "erro": "HTTP Error 404: Not Found"
+  },
+  {
+    "arquivo": "ig-paper-metadata.json",
+    "url": "https://www.ebi.ac.uk/europepmc/webservices/rest/search?query=EXT_ID:26475015&resultType=core&format=json",
+    "sha256": "d6f2e3c8f47ccac3de14db450aaf1653d06e4ac97304a13a0839ae5a89ad5d77",
+    "status": 200,
+    "acesso": {
+      "pmcid": null,
+      "isOpenAccess": "N",
+      "fullTextUrlList": {
+        "fullTextUrl": [
+          {
+            "availability": "Subscription required",
+            "availabilityCode": "S",
+            "documentStyle": "doi",
+            "site": "DOI",
+            "url": "https://doi.org/10.1016/S2214-109X(15)00163-1"
+          }
+        ]
+      }
+    }
+  }
+]

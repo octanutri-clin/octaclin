@@ -1,5 +1,28 @@
 # Plano e análise de gaps — Fase 314
 
+## Estado vigente — REV11 e G02 REV9
+
+Ratificação integral pelo proprietário recebida em 2026-10-11. Protocolo vigente:
+`docs/product/FASE_314_G02_PROTOCOLO_DECIDIDO_REV9.md`, hash
+`3dd197dfa16dd235bda1573020cf0af04b3ae8699c2c21388a90d2bf670a201a`.
+G02-PROTOCOLO RATIFICADO_PELO_USUARIO; formalização institucional separadamente
+pendente. G01 e direitos BLOCKED, ativação não autorizada. A execução técnica
+continua autorizada. As limitações documentais antigas abaixo foram substituídas
+pela autorização de desenvolvimento e pelo protocolo ratificado; preservar como
+histórico. A main inclui a entrega técnica #392 e a correção #393.
+Evidências recebidas imutáveis em `docs/history/phases/reviews/fase-314-rev11`;
+scripts novos em `scripts/research/fase314`. Sem migrations novas/externas.
+
+## T01–T18 — situação vigente
+
+O estado técnico, critérios restantes e dependências estão no
+[checklist canônico](../../../tasks/todo-fase-314.md#t01t18--situação-vigente-desta-continuação),
+para evitar três tabelas concorrentes. G02 ratificado; G01/direitos e ativação
+continuam bloqueados. Evidências e comandos em
+`docs/history/phases/VALIDACAO_FASE_314_REV11.md`.
+
+## Histórico das etapas anteriores
+
 Preparado em 2026-10-10; atualizado para execução controlada em 2026-10-11.
 **Desenvolvimento técnico autorizado; ativação assistencial bloqueada.** Risco **R4**,
 por dados clínicos, autorização, isolamento e persistência. Registros históricos

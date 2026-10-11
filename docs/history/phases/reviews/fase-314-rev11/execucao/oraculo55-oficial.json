@@ -1,0 +1,20 @@
+{
+  "fonte": "https://intergrowth21.ndog.ox.ac.uk/preterm/en/ManualEntry/Compute",
+  "sexo": "Male",
+  "pma_dias": 385,
+  "entrada": "sintetica",
+  "sha256_html": "334a7722be60018bd646583c97152328df14bf5ddc6f448523b66ae324b467c5",
+  "resultados": {
+    "length": {
+      "values": 58,
+      "scores": -2.066581835202912,
+      "centiles": 1.9386786951693769
+    },
+    "weight": {
+      "values": 4.4,
+      "scores": -3.0088689219142397,
+      "centiles": 0.13111111113750518
+    }
+  },
+  "limite": "concordancia continua nao corrige quantil semanal PDF"
+}

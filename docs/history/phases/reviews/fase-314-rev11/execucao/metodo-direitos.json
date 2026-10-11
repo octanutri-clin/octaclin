@@ -1,0 +1,33 @@
+[
+  {
+    "arquivo": "who2007-instrucoes.pdf",
+    "url": "https://cdn.who.int/media/docs/default-source/child-growth/growth-reference-5-19-years/readme-who2007-exp.pdf?sfvrsn=ffaf2d06_4",
+    "erro": "HTTP Error 403: Forbidden"
+  },
+  {
+    "arquivo": "who2007-calculo.pdf",
+    "url": "https://cdn.who.int/media/docs/default-source/child-growth/growth-reference-5-19-years/computation.pdf?sfvrsn=c2ff6a95_4",
+    "erro": "HTTP Error 403: Forbidden"
+  },
+  {
+    "arquivo": "ig-supp.pdf",
+    "url": "https://ars.els-cdn.com/content/image/1-s2.0-S2214109X15001631-mmc1.pdf",
+    "erro": "HTTP Error 403: Forbidden"
+  },
+  {
+    "arquivo": "ig-png.R",
+    "url": "https://raw.githubusercontent.com/ropensci/gigs/fb58fe6596d4b289d5362c5efe00f882984d3186/R/ig_png.R",
+    "sha256": "609d37f02dd8ed6532a40313c8790a28fedf4b32491596aa15e603340bdc42cb",
+    "status": 200
+  },
+  {
+    "arquivo": "ig-license.html",
+    "url": "https://intergrowth21.tghn.org/about/licensing-and-copyright/",
+    "erro": "HTTP Error 404: Not Found"
+  },
+  {
+    "arquivo": "rcpch-terms.html",
+    "url": "https://growth.rcpch.ac.uk/developer/licensing/",
+    "erro": "HTTP Error 404: Not Found"
+  }
+]
