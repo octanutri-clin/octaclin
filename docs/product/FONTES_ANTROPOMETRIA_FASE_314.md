@@ -262,3 +262,17 @@ e [preservação/hashes](../history/phases/reviews/fase-314-rev4/arquivos-preser
 Recontagem:14 casos únicos/28 resultados de indicadores; cada resultado contém
 z epercentil (não contar como56resultados). Lote12/24, inicial1/2,55semanas1/2.
 Não houve nova consulta ao oráculo nestaREV4 nem mudança em JSON original.
+
+## Incorporação técnica controlada — 2026-10-11
+
+Os artefatos científicos sem direitos comprovados continuam fora do runtime.
+A investigação INTERGROWTH foi reproduzida localmente em teste excluído do build,
+com os JSONs originais: 14 casos/28 resultados, tolerâncias prospectivas
+z≤1e−8 e percentil≤1e−6 pontos percentuais. Varredura matemática local de
+27s0d–64s0d não substitui exemplos oficiais ou validação populacional.
+O teste de regressão preserva a divergência semanal55s: diferença0,005026478kg
+excede0,005kg+1e−12; não declara concordância semanal PASS.
+Candidatos LMS/quatro indicadores usam apenas parâmetros sintéticos e não são
+consumidos pelos serviços. Nenhum algoritmo consulta calculadora externa no runtime.
+G01 permanece BLOCKED; origem/precisão primária, edição/âncoras completas e
+direitos comerciais exigem comprovação. Ver [dossiê](DOSSIE_RATIFICACAO_FASE_314.md).

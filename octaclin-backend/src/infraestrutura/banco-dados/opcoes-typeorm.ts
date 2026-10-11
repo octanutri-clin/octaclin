@@ -1,3 +1,4 @@
+import { ProtegerRetencaoAvaliacoes1720000001069 } from './migracoes/1720000001069-ProtegerRetencaoAvaliacoes';
 import { ConsentimentoGestacaoOrm } from '../../modulos/pacientes/infraestrutura/consentimento-gestacao.orm';
 import { ReferenciaGestacaoOrm } from '../../modulos/pacientes/infraestrutura/referencia-gestacao.orm';
 import { GestacaoPacienteOrm } from '../../modulos/pacientes/infraestrutura/gestacao-paciente.orm';
@@ -436,7 +437,8 @@ export function criarOpcoesTypeOrm(): TypeOrmModuleOptions & DataSourceOptions {
         ConfigurarResumosNotificacoes1720000001065,
         CompartilharReceitasNutricionais1720000001066,
         AdicionarEncaminhamentoDocumento1720000001067,
-        AcompanhamentoGestacional1720000001068
+        AcompanhamentoGestacional1720000001068,
+        ProtegerRetencaoAvaliacoes1720000001069
       ],
     migrationsRun: executarMigracoesNoBoot(),
     synchronize: false,

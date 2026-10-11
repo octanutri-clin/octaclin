@@ -1,9 +1,13 @@
 # Ficha para revisão clínica — Fase 314
 
-Versão de trabalho 2026-10-10. **NÃO RATIFICADA. Não implementar o
+Versão de trabalho 2026-10-11, integrada à [REV5](DECISOES_RATIFICACAO_FASE_314_REV5.md). **NÃO RATIFICADA. Não implementar o
 classificador com base apenas nesta ficha.** Decisões de produto foram
 recebidas; a revisão clínica numérica completa e a referência computacional
 neonatal permanecem abertas. Somente console; nenhum novo portal pediátrico.
+
+A implementação técnica isolada foi autorizada posteriormente pelo proprietário;
+isso não ratifica esta ficha. Os indicadores assistenciais permanecem bloqueados.
+Respostas necessárias, alternativas e riscos: [dossiê único](DOSSIE_RATIFICACAO_FASE_314.md).
 
 ## 1. Revisão necessária
 
