@@ -386,16 +386,16 @@ Não há runtime habilitando protocolos provisórios, client flag ou variável d
 | T03 | Datas/contexto/estado por indicador, medidas parciais e idade factual | Roteamento/idade efetiva/técnica clínicos ratificados |
 | T04 | Matemática LMS genérica e interpolação de parâmetros, sem datasets | Direitos e tabelas/âncoras normalizadas oficiais |
 | T05 | IMC candidato com LMS sintético, caudas/flags/edema | Tabelas/edição/SISVAN/validação clínica independentes |
-| T06 | Snapshot cifrado v1 e replay no serviço existente | PostgreSQL pediátrico final/imutabilidade e G01/G02 para resultados clínicos |
+| T06 | Snapshot cifrado v1 e replay no serviço existente; PostgreSQL 31 PASS | G01/G02 para resultados clínicos |
 | T07 | Estatura candidata/normalização proposta com dados sintéticos | Referência completa e regra técnica ratificada |
 | T08 | Peso e peso/estatura candidatos parciais com dados sintéticos | Referências/cobertura/SISVAN ratificados |
 | T09 | Lognormal genérico; coeficientes somente no teste de investigação | Fonte primária/55s/direitos e população ratificados |
 | T10 | Proposta CL07 versionada e testada, sem consumo assistencial | Neonatologia/pediatria ratifica estratos/transição/prazos |
 | T11 | Proteções etárias e preservação de legados/fatos | Seis decisões18–19 individuais, evidências amostrais |
-| T12 | Endpoint SQL paginado por tenant/paciente, cursor por último examinado | Prova PostgreSQL/consumidores final |
+| T12 | Endpoint SQL paginado por tenant/paciente, cursor por último examinado | PostgreSQL 31 PASS incluindo duas páginas filtradas e cursor por microssegundo; ativação clínica depende de G01/G02 |
 | T13 | BFF privado/tipado e testes negativos | Authz completo/HEAD final |
-| T14 | Formulário confirmado, resultado de bloqueio e contexto | Playwright final/recuperação/permissões |
-| T15 | Gráfico bruto por contexto separado e tabela equivalente | Desktop/mobile/axe final; sem curvas licenciadas pendentes |
-| T16 | Suites e banco real descartável em execução | Novos testes PostgreSQL/transferência/retencao e regressões finais |
+| T14 | Formulário confirmado, resultado de bloqueio e contexto | Playwright desktop/mobile/axe 6 PASS; habilitação clínica permanece bloqueada |
+| T15 | Gráfico bruto por contexto separado e tabela equivalente | Desktop/mobile/axe 6 PASS; curvas clínicas dependem de direitos/ratificação |
+| T16 | Jest 2614 PASS/50 SKIPPED; PG 31 PASS; transferência/replay/retencao | CI final e critérios científicos/clínicos pendentes |
 | T17 | Documentação/linguagem/gates em atualização | Demo/gates finais verdadeiros |
-| T18 | Dossiê/relatório; PR Draft única a preparar | RevisãoR4 independente/CI/PR; não implica merge/produção |
+| T18 | Dossiê/relatório; PR Draft única #392 aberta | RevisãoR4 independente/CI/PR; não implica merge/produção |

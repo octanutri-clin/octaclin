@@ -88,7 +88,7 @@ Atualizado em 2026-10-10.
   e produção; não houve consulta direta aos bancos. Atestados seguem pendentes.
   Limites históricos preservados em `tasks/todo-fase-312.md`; handoff arquivado
   em `tasks/plan-fase-312.md`. Provenance do SBOM permanece SKIPPED.
-- Fase 313 integrada pelo PR #391 (merge `f8c5ab66`, 2026-10-10).
+- Fase 313 concluida no código e integrada pelo PR #391 (merge `f8c5ab66`, 2026-10-10).
   CI final da PR `38082785780` e principal pós-merge `38084523466` SUCCESS;
   scanners pós-merge SUCCESS. Migration 1068 integrada; aplicação operacional
   não confirmada neste ciclo. Revisão independente não comprovada.
