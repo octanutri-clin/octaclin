@@ -71,7 +71,7 @@ describe('antropometria - IMC e RCQ', () => {
     const homem = calcularAntropometria({
       medidas: { circunferencias: { cintura: 90, quadril: 100 } },
       protocolo: 'nenhum',
-      sexo: 'masculino'
+      idadeAnos: 25, sexo: 'masculino'
     });
     expect(homem.rcq).toBe(0.9);
     expect(homem.classificacaoRcq).toBe('elevado');
@@ -79,7 +79,7 @@ describe('antropometria - IMC e RCQ', () => {
     const mulher = calcularAntropometria({
       medidas: { circunferencias: { cintura: 85, quadril: 100 } },
       protocolo: 'nenhum',
-      sexo: 'feminino'
+      idadeAnos: 25, sexo: 'feminino'
     });
     expect(mulher.rcq).toBe(0.85);
     expect(mulher.classificacaoRcq).toBe('elevado');
@@ -95,7 +95,7 @@ describe('antropometria - IMC e RCQ', () => {
     const resultado = calcularAntropometria({
       medidas: { circunferencias: { cintura: 89.5, quadril: 100 } },
       protocolo: 'nenhum',
-      sexo: 'masculino'
+      idadeAnos: 25, sexo: 'masculino'
     });
 
     expect(resultado.rcq).toBe(0.9);
@@ -215,8 +215,8 @@ describe('antropometria - protocolos de composicao corporal', () => {
   it('Faulkner 1968 usa a mesma equacao para os dois sexos', () => {
     const dobras = { triceps: 15, subescapular: 15, suprailiaca: 15, abdominal: 15 };
 
-    const homem = calcularAntropometria({ medidas: { dobras }, protocolo: 'faulkner', sexo: 'masculino' });
-    const mulher = calcularAntropometria({ medidas: { dobras }, protocolo: 'faulkner', sexo: 'feminino' });
+    const homem = calcularAntropometria({ medidas: { dobras }, protocolo: 'faulkner', idadeAnos: 25, sexo: 'masculino' });
+    const mulher = calcularAntropometria({ medidas: { dobras }, protocolo: 'faulkner', idadeAnos: 25, sexo: 'feminino' });
 
     expect(homem.percentualGordura).toBe(14.96);
     expect(mulher.percentualGordura).toBe(14.96);
@@ -230,14 +230,14 @@ describe('antropometria - protocolos de composicao corporal', () => {
     const homem = calcularAntropometria({
       medidas: { dobras: { triceps: 12, suprailiaca: 16, abdominal: 22 } },
       protocolo: 'guedes',
-      sexo: 'masculino'
+      idadeAnos: 25, sexo: 'masculino'
     });
     expect(homem.percentualGordura).toBe(18.12);
 
     const mulher = calcularAntropometria({
       medidas: { dobras: { coxa: 25, suprailiaca: 18, subescapular: 15 } },
       protocolo: 'guedes',
-      sexo: 'feminino'
+      idadeAnos: 25, sexo: 'feminino'
     });
     expect(mulher.percentualGordura).toBe(25.07);
   });
@@ -271,7 +271,7 @@ describe('antropometria - recusa de calculo', () => {
     });
 
     expect(resultado.percentualGordura).toBeUndefined();
-    expect(resultado.avisos).toContain('protocolo_exige_idade');
+    expect(resultado.avisos).toContain('interpretacao_adulta_exige_idade');
   });
 
   it('deve dizer QUAL dobra faltou ou saiu da faixa', () => {
@@ -324,7 +324,8 @@ describe('antropometria - recusa de calculo', () => {
       sexo: 'masculino',
       idadeAnos: 10
     });
-    expect(crianca.avisos).toContain('equacao_de_adulto_aplicada_a_menor_de_idade');
+    expect(crianca.percentualGordura).toBeUndefined();
+    expect(crianca.avisos).toContain('interpretacao_adulta_bloqueada_menor_de_18');
   });
 
   it('deve gravar padronizacao de sitios e faixa de validacao junto da formula', () => {
@@ -344,7 +345,7 @@ describe('antropometria - recusa de calculo', () => {
     const resultado = calcularAntropometria({
       medidas: { dobras: { coxa: 5, suprailiaca: 4, subescapular: 3 } },
       protocolo: 'guedes',
-      sexo: 'feminino'
+      idadeAnos: 25, sexo: 'feminino'
     });
 
     expect(resultado.percentualGordura).toBeDefined();
@@ -357,7 +358,7 @@ describe('antropometria - recusa de calculo', () => {
     const resultado = calcularAntropometria({
       medidas: { dobras: { triceps: 2, suprailiaca: 2, abdominal: 2 } },
       protocolo: 'guedes',
-      sexo: 'masculino'
+      idadeAnos: 25, sexo: 'masculino'
     });
 
     expect(resultado.percentualGordura).toBeUndefined();
@@ -383,7 +384,7 @@ describe('antropometria - recusa de calculo', () => {
     const resultado = calcularAntropometria({
       medidas: { dobras: { triceps: 15, subescapular: 15, suprailiaca: 15, abdominal: 15 } },
       protocolo: 'faulkner',
-      sexo: 'masculino'
+      idadeAnos: 25, sexo: 'masculino'
     });
 
     expect(resultado.percentualGordura).toBe(14.96);

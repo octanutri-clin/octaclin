@@ -4,6 +4,7 @@ import { motivoGestacional, fonteGestacional } from '@/lib/linguagem-gestacional
 
 import { FormularioContextoGestacional } from './formulario-contexto-gestacional';
 import type { ContextoGestacaoApi } from '@/lib/gestacoes-paciente-api';
+import { AcompanhamentoPediatrico } from './acompanhamento-pediatrico';
 import { GestacoesPaciente } from './gestacoes-paciente';
 import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Botao } from '@/components/ui/botao';
@@ -377,6 +378,7 @@ function AbaAntropometriaConteudo({ pacienteId, podeGerenciar, dataNascimento }:
 
   return (
     <div className="grid gap-4">
+      <AcompanhamentoPediatrico key={`pediatrico-${pacienteId}`} pacienteId={pacienteId} podeGerenciar={podeGerenciar} dataNascimento={dataNascimento}/>
       <GestacoesPaciente key={pacienteId} pacienteId={pacienteId} podeGerenciar={podeGerenciar}/>
       {erro ? (
         <p role="alert" className="rounded-md border border-perigo-borda bg-perigo-suave p-3 text-sm text-perigo-forte">

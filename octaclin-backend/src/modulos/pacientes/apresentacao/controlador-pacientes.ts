@@ -1,3 +1,4 @@
+import { PaginaPediatricaDto } from '../aplicacao/dtos-pediatricos';
 import {
   BadRequestException,
   Body,
@@ -394,6 +395,18 @@ export class ControladorPacientes {
       metadados: { evolucaoId: evolucao.id, tipo: evolucao.tipo, visibilidade: evolucao.visibilidade }
     });
     return evolucao;
+  }
+
+  @Get(':id/acompanhamento-pediatrico')
+  async listarAcompanhamentoPediatrico(
+    @UsuarioAtual() usuario: UsuarioAutenticado,
+    @Req() requisicao: Request,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Query() pagina: PaginaPediatricaDto
+  ) {
+    const resultado = await this.servicoPacientes.listarAcompanhamentoPediatrico(usuario.tenantId, id, usuario, pagina);
+    await this.servicoAuditoria.registrar({ tenantId: usuario.tenantId, usuarioId: usuario.usuarioId, acao: 'pacientes.antropometria.listar', recursoTipo: 'paciente', recursoId: id, ip: requisicao.ip, userAgent: this.obterUserAgent(requisicao), metadados: { total: resultado.itensExibidos } });
+    return resultado;
   }
 
   @Get(':id/avaliacoes-antropometricas')
