@@ -1435,6 +1435,10 @@ descrever('RLS e isolamento multi-tenant integral em Postgres real', () => {
     const criadas = await Promise.all([servico.registrarAvaliacaoAntropometrica(tenantA,id,usuarioIdTenantA,pedido,u),servico.registrarAvaliacaoAntropometrica(tenantA,id,usuarioIdTenantA,pedido,u)]);
     expect(criadas[0].id).toBe(criadas[1].id);
     expect(criadas[0].resultado.pediatrico?.idade?.dias).toBe(31);
+    // CL10: revalida papel e permissão inclusive antes do replay salvo.
+    for (const papel of ['Collaborator','SuperAdmin'] as const) await expect(servico.registrarAvaliacaoAntropometrica(tenantA,id,usuarioIdTenantA,pedido,{ ...u,papel })).rejects.toThrow('Escrita pediatrica');
+    await expect(servico.registrarAvaliacaoAntropometrica(tenantA,id,usuarioIdTenantA,pedido,{ ...u,permissoes: ['pacientes.ler'] })).rejects.toThrow('Escrita pediatrica');
+    expect((await servico.listarAcompanhamentoPediatrico(tenantA,id,{ ...u,papel: 'Collaborator' })).itens).toHaveLength(1);
     await expect(servico.registrarAvaliacaoAntropometrica(tenantA,id,usuarioIdTenantA,{ ...pedido,pesoKg: 0.9 },u)).rejects.toThrow('Chave usada');
     expect((await servico.listarAcompanhamentoPediatrico(tenantA,id,u)).itens).toHaveLength(1);
     // Two filtered legacy rows one microsecond apart must not skip the snapshot.

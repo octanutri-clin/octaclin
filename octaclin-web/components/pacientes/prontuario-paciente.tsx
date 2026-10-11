@@ -1791,7 +1791,7 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
         </div>
       </section> : null}
 
-      {abaAtiva === 'antropometria' ? <AbaAntropometria pacienteId={pacienteId} dataNascimento={dados.paciente.dataNascimento} podeGerenciar={permissoes.includes('pacientes.gerenciar')} /> : null}
+      {abaAtiva === 'antropometria' ? <AbaAntropometria podeGerenciarPediatria={papel === 'Professional' && permissoes.includes('pacientes.gerenciar')} pacienteId={pacienteId} dataNascimento={dados.paciente.dataNascimento} podeGerenciar={permissoes.includes('pacientes.gerenciar')} /> : null}
 
       {abaAtiva === 'exames_laboratoriais' ? <AbaExamesLaboratoriais pacienteId={pacienteId} podeGerenciar={permissoes.includes('pacientes.gerenciar')} podeGerenciarCatalogo={permissoes.includes('pacientes.gerenciar') && (papel === 'SuperAdmin' || papel === 'Professional')} /> : null}
 

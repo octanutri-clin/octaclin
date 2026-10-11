@@ -4298,11 +4298,12 @@ test('Fase 313: confirma condicao, divergencia e IG na data antes de registrar',
 });
 
 test.describe('acompanhamento pediátrico - Fase 314', () => {
-  test('Fase 314: registro confirmado, histórico paginado, bloqueio clínico e acessibilidade', async ({ page }) => {
+  for (const versao of ['pediatrico-medidas-v1','pediatrico-medidas-v2']) {
+  test(`Fase 314: registro confirmado, histórico paginado, bloqueio clínico e acessibilidade (${versao})`, async ({ page }) => {
     await prepararProntuarioMockado(page);
     let entrada, chamadas = 0, negar = false;
     const contexto = { confirmado: true, nascimento: '2024-01-01', sexoCurva: 'nao_informado', tecnica: 'deitado', edema: 'desconhecido', nascimentoTipo: 'nao_informado', tipoMedida: 'pos_natal' };
-    const snapshot = { versao: 'pediatrico-medidas-v1', estado: 'protocolos_bloqueados', avaliadaEm: '2024-02-01', contexto, idade: { dias: 31,mesesEstatisticos: 31/30.4375,anosCompletos: 0 }, medidas: { pesoKg: 0.8,alturaCm: 28 }, indicadores: ['imc_idade','estatura_idade','peso_idade','peso_estatura'].map(indicador => ({ indicador,estado: 'bloqueado',motivo: 'protocolo_nao_ratificado' })) };
+    const snapshot = { versao, ...(versao === 'pediatrico-medidas-v2' ? { protocoloG02: 'g02-rev9-3dd197df' } : {}), estado: 'protocolos_bloqueados', avaliadaEm: '2024-02-01', contexto, idade: { dias: 31,mesesEstatisticos: 31/30.4375,anosCompletos: 0 }, medidas: { pesoKg: 0.8,alturaCm: 28 }, indicadores: ['imc_idade','estatura_idade','peso_idade','peso_estatura'].map(indicador => ({ indicador,estado: 'bloqueado',motivo: versao === 'pediatrico-medidas-v1' ? 'protocolo_nao_ratificado' : 'validacao_computacional_e_direitos_pendentes' })) };
     await page.route('**/api/pacientes/paciente-1/acompanhamento-pediatrico**',route => {
       chamadas++;
       if (negar) return route.fulfill({ status: 403,json: { message: 'Acesso revogado.' } });
@@ -4318,6 +4319,10 @@ test.describe('acompanhamento pediátrico - Fase 314', () => {
     await page.getByRole('tab',{ name: 'Antropometria',exact: true }).click();
     const tabela = page.getByRole('table',{ name: 'Histórico das medidas originais e contexto preservado' });
     await expect(tabela.getByRole('row')).toHaveCount(2);
+    await expect(page.getByText('Protocolo clínico ratificado. Referências e classificações pediátricas ainda não habilitadas.')).toBeVisible();
+    await expect(tabela.getByText(/protocolo não ratificado/)).toHaveCount(0);
+    await expect(tabela.getByText(versao === 'pediatrico-medidas-v1' ? /referências e classificações não habilitadas na data do registro/ : /validação computacional e direitos pendentes/)).toHaveCount(4);
+
     await expect(page.getByText('Nenhuma avaliação pediátrica nesta cobertura do histórico.')).toHaveCount(0);
     await page.getByRole('button',{ name: 'Consultar mais histórico' }).click();
     await expect(page.getByText(/Fim da cobertura consultada/)).toBeVisible();
@@ -4341,4 +4346,18 @@ test.describe('acompanhamento pediátrico - Fase 314', () => {
     await expect(tabela.getByRole('row')).toHaveCount(1);
     await expect(page.getByRole('alert').filter({ hasText: 'Não foi possível carregar o acompanhamento' })).toBeVisible();
   });
+  }
 });
+
+for (const papel of ['Collaborator','SuperAdmin']) {
+  test(`Fase 314 REV9: ${papel} consulta sem formulário de escrita pediátrica`, async ({ page }) => {
+    await prepararProntuarioMockado(page,{ papel });
+    await page.route('**/api/pacientes/paciente-1/acompanhamento-pediatrico**',route=>route.fulfill({json:{itens:[],registrosExaminados:0,itensExibidos:0,temMaisHistorico:false}}));
+    await page.goto('/pacientes/paciente-1');
+    await page.getByRole('tab',{name:'Avaliações',exact:true}).click();
+    await page.getByRole('tab',{name:'Antropometria',exact:true}).click();
+    await expect(page.getByRole('heading',{name:'Acompanhamento pediátrico'})).toBeVisible();
+    await expect(page.getByText('Registrar avaliação pediátrica',{exact:true})).toHaveCount(0);
+    await expect(page.getByRole('table',{name:'Histórico das medidas originais e contexto preservado'})).toBeVisible();
+  });
+}

@@ -1,10 +1,10 @@
 # OctaClin - Status atual do projeto
 
-Atualizado em 2026-10-10.
+Atualizado em 2026-10-11.
 
 ## Fase ativa
 
-- Fase 314 em desenvolvimento técnico controlado na branch `feat/fase-314-antropometria-pediatrica`: medidas/contexto e acompanhamento no console, classificadores assistenciais bloqueados. G01 (método/direitos) e G02 (ratificação CL01–10) pendentes; sem merge/deploy/migrations externas. Estado e provas em `docs/history/phases/ENTREGA_TECNICA_FASE_314.md`; decisões em `docs/product/DOSSIE_RATIFICACAO_FASE_314.md`.
+- Fase 314 separada em entrega factual candidata à liberação e classificadores bloqueados por G01. G02/CL01–10 ratificados REV9; seis métodos adultos desde18 na PR Draft #394 ainda aberta, fora da main consultada. Contrato/gates em `docs/product/LIBERACAO_FACTUAL_FASE_314_REV14.md`. R4 independente, CI do HEAD candidato, migrations1068/1069/RLS por ambiente e autorização operacional exigidos para a entrega factual; direitos/55s não são gates factuais. Fases315+ independentes podem avançar com seus próprios gates. Nenhum merge/deploy/migration externa/ativação autorizados nesta rodada.
 - Fase 298 concluida e integrada pelo PR #356 (merge `b00151ae`, confirmado no GitHub em
   2026-10-01); o proprietário informou que aplicou a migration 1060. Esta
   reconciliação não consultou banco externo.
@@ -93,11 +93,7 @@ Atualizado em 2026-10-10.
   scanners pós-merge SUCCESS. Migration 1068 integrada; aplicação operacional
   não confirmada neste ciclo. Revisão independente não comprovada.
   Ficha ratificada e limites históricos em `tasks/plan.md`/`tasks/todo-fase-313.md`.
-- Fase 314 em planejamento/análise de gaps: quatro indicadores OMS/SISVAN,
-  gráfico no console, prematuros INTERGROWTH → OMS com idade corrigida.
-  Plano em `docs/history/phases/PLANO_FASE_314.md`; rascunho de handoff em
-  `tasks/plan-fase-314.md`. Referência neonatal computacional e ratificação
-  clínica pendentes; não há implementação. Modelo: GPT-6.1 Sol médio.
+
 - Pendência operacional observada: Monitor de produção `38065380981` FAIL,
   HTTP 503 após três tentativas em 2026-10-10. Causa/endpoint não identificados;
   não atribuir ao PR #390 nem declarar saúde de produção a partir de CI.

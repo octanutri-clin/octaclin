@@ -1,0 +1,101 @@
+{
+  "schema": "octaclin-fase314-g01-rev11-research-only",
+  "run_date_utc": "2026-10-11T16:39:59.783417+00:00",
+  "no_patient_data": true,
+  "independent_source": "RCPCH who_under2_gold_192.csv generated WHO anthro_measurements; subset for BMI, length/height and weight; original data of 0-731 days",
+  "source_commit_rcpch": "d70093121c073997e352976398264bc3301f0c8d",
+  "source_url_gold": "https://github.com/rcpch/rcpchgrowth-python/blob/d70093121c073997e352976398264bc3301f0c8d/rcpchgrowth/tests/who_test_data/who_under2_gold_192.csv",
+  "source_url_who_lms": "https://github.com/rcpch/rcpchgrowth-python/tree/d70093121c073997e352976398264bc3301f0c8d/rcpchgrowth/data_tables/who",
+  "who2006_first_party_coefficients_match_RCPCH": {
+    "n_triples": 48,
+    "pass": true,
+    "source": "WHO/anthro first-party TXT vs RCPCH daily LMS; checked by unittest"
+  },
+  "who2006_gold": {
+    "num_sex": 2,
+    "num_indicators": 3,
+    "num_day_points": 8,
+    "n_comparisons": 144,
+    "max_abs_error_z": 1.098029041912696e-06,
+    "mean_abs_error_z": 1.2317600822190725e-07,
+    "PASS_if_delta_less_equal": 5e-05,
+    "pass": true
+  },
+  "who2006_12_WHO_official_publication": {
+    "count": 12,
+    "max_abs_error_z": 0.004691860907505507,
+    "tolerance_rounding_2_decimals": 0.005,
+    "pass": true
+  },
+  "who2006_4_WFH_WHO_official": {
+    "count": 4,
+    "max_abs_error_z": 0.003913582919102154,
+    "tolerance_rounding_2_decimals": 0.005,
+    "pass": true
+  },
+  "who2007": {
+    "published_sample_11yo_boy_bmi30_z_tail": 3.35390255606726,
+    "source_anchor_132_months_present": true,
+    "anchors_integral_unverified": true
+  },
+  "who_1856_1857": {
+    "local_routing_1856": "OMS2006",
+    "local_routing_1857": "OMS2007",
+    "comparison_same_bmi_15_2_male": {
+      "z_1856": 0.01204559305715191,
+      "z_1857": -0.050214273051486076,
+      "difference": -0.062259866108637985
+    },
+    "methodological_note": "transition is a local policy; source references differ, not numerical continuity"
+  },
+  "intergrowth": {
+    "cases_previous_fixture": 7,
+    "component_z_comparisons": 14,
+    "max_abs_error_z": 0.0,
+    "daily_points": 260,
+    "sexes": 2,
+    "indicators": 2,
+    "seven_z_values": 7,
+    "internal_roundtrip_checks": 7280,
+    "is_independent_oxford_comparison": false,
+    "pma_domain_days": [
+      189,
+      448
+    ],
+    "weight_55weeks_pdf_quantile_difference_kg": 0.005026478034956483
+  },
+  "unittest": {
+    "command": "python -m unittest -v test_g01_rev11.py",
+    "returncode": 0,
+    "tests_total": 13,
+    "PASS": true
+  },
+  "G01_status": "PARTIAL_NOT_PASS",
+  "licensing_verification": "NOT_PERFORMED",
+  "octaclin_runtime_verified": false,
+  "full_16_WHO_files_downloaded_and_verified": false,
+  "original_oxford_28_outputs_replayed": false,
+  "local_artifact_sha256": {
+    "WHO2006_AMOSTRA_GOLD_RCPCH.csv": "509f9ad495d73230970a5e02aa3ad1f7d43ae262e5b9db1536fdb34d7476ffd4",
+    "WHO2006_48_COEFICIENTES_OFICIAIS_ANTHRO.csv": "15baa8320ba12aff309e9eb76f1d1cb02be4edbec240cefcd0671a0136cd558f",
+    "WHO2006_EXEMPLOS_DOCUMENTADOS_ANTHRO.csv": "49d0adfe2fc9d1dc038f5937755729637f012928aef4339c74c53d8ad35d6865",
+    "WHO2006_WFH_WFL_AMOSTRA_OFICIAL.csv": "29b4c224b347322767595f8177720d30ca7769e01aae86477d00771d8fc0b687",
+    "OMS2006_4_WFH_COMPARACOES_OFICIAIS.csv": "3d9e3c3e416fa76f1baef5028df915dc99a40583400ea06c342844b2f69687bb",
+    "WHO2007_AMOSTRA_LMS_RCPCH.csv": "be9d3ddea5da6ce7416dcf7317e321a29209c24908c189d7e50ba33d1701b4c9",
+    "OMS2006_12_COMPARACOES_DIRETAS_WHO.csv": "2111a2ad7b7989ef9f4476706d29a08a1f48d22de823aeb96c73bf37fb6d9556",
+    "OMS2006_144_COMPARACOES.csv": "2eb3edd47cc702011ca3c813cef658ca86ee92d20964087435a772c3038cc940",
+    "INTERGROWTH_14_COMPARACOES_INTERNAS.csv": "b566e5acf12b1509d6858440dc831cbb5e7ad3438ed1987b61999f5701dbf765",
+    "g01_engine_rev11.py": "750409917c673efa594fd404ba2ae512ccac034e4936274d7cf93c279bcd8396",
+    "test_g01_rev11.py": "702add817de9701cc472f8415a456f65213f1c23e37ee1ff8c13669682f1544e",
+    "execucao_unittest.txt": "c92cbba97fe3d9783539108783d170f55aef148f54fcced4ff16aa1972328929"
+  },
+  "correcao_contador": {
+    "valor_gerador_original": 10,
+    "valor_verificado": 7,
+    "causa": "variavel expected sobrescrita pela coluna z_wfa_publ no loop de exemplos WHO; nao altera numeros/oraculos"
+  },
+  "integridade_manifesto": {
+    "arquivos": 20,
+    "PASS": true
+  }
+}

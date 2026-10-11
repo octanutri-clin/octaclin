@@ -1,0 +1,8 @@
+{
+  "comparacoes": 11184,
+  "foraDominio": 18,
+  "maxErro": 6.572520305780927e-14,
+  "tolerancia": 1e-8,
+  "falhas": [],
+  "prova": "implementação original R OMS, não valida direitos nem equivalência com todos os XLSX"
+}

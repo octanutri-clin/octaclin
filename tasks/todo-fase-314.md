@@ -1,5 +1,60 @@
 # Sequência futura — Fase 314
 
+## Estado vigente — liberação parcial REV14
+
+[Contrato e gates canônicos](../docs/product/LIBERACAO_FACTUAL_FASE_314_REV14.md): entrega factual A independente de G01;
+classificadores B bloqueados. G02 ratificado REV9. PR Draft #394 ainda aberta;
+main não contém os ajustes REV11. A liberação factual depende de R4 independente,
+CI do HEAD final, migrations/RLS por ambiente e autorização operacional. Fases
+seguintes independentes podem ser desenvolvidas com seus próprios gates.
+T01–T18 e evidências históricas abaixo preservados, sem bloqueio global por G01.
+
+## Estado vigente — REV11 e G02 REV9
+
+Ratificação integral pelo proprietário recebida em 2026-10-11. Protocolo vigente:
+`docs/product/FASE_314_G02_PROTOCOLO_DECIDIDO_REV9.md`, hash
+`3dd197dfa16dd235bda1573020cf0af04b3ae8699c2c21388a90d2bf670a201a`.
+G02-PROTOCOLO RATIFICADO_PELO_USUARIO; formalização institucional separadamente
+pendente. G01 e direitos BLOCKED, ativação não autorizada. A execução técnica
+continua autorizada. As limitações documentais antigas abaixo foram substituídas
+pela autorização de desenvolvimento e pelo protocolo ratificado; preservar como
+histórico. A main inclui a entrega técnica #392 e a correção #393.
+Evidências recebidas imutáveis em `docs/history/phases/reviews/fase-314-rev11`;
+scripts novos em `scripts/research/fase314`. Sem migrations novas/externas.
+
+## T01–T18 — situação vigente desta continuação
+
+A ratificação já recebida substitui os checkboxes clínicos históricos abaixo.
+“Entregue tecnicamente” não equivale a classificação assistencial liberada.
+
+| Tarefa | Estado técnico | Critério restante / evidência |
+| --- | --- | --- |
+| T01 fontes/G01 | PARTIAL / BLOCKED | OMS2006/2007 e Oxford comparados; direitos, precisão primária IG e55s ainda bloqueiam fechamento |
+| T02 G02 | RATIFICADO_PELO_USUARIO | CL01–10 REV9/hash registrados; formalização institucional separada |
+| T03 idade/roteamento | PASS local isolado | Fronteiras, civil/efetiva,731,1856/1857 e adaptação228 testadas; ativação depende G01 |
+| T04 referências offline | PARTIAL / BLOCKED | Providers sem dependência externa; dados completos apenas pesquisa temporária enquanto direitos pendem |
+| T05 IMC/idade | PASS técnico isolado | LMS,caudas,flags,SISVAN; sem uso assistencial |
+| T06 persistência | PASS factual | v2 preserva protocolo/medidas/contexto; leitor v1/v2, sem recalcular histórico ou salvar resultados experimentais como clínicos |
+| T07 comprimento/estatura | PASS técnico isolado | Técnica e resultados parciais; R oficial testado, sem uso assistencial |
+| T08 peso/idade e peso/estatura | PASS técnico isolado | Edema/independência de medida; grade e interpolação contra R oficial |
+| T09 INTERGROWTH | PARTIAL / BLOCKED |1.112 resultados Oxford concordantes; coeficientes só pesquisa, procedência/55s/direitos pendentes |
+| T10 correção/transição | PASS local isolado | DPP+24/36 meses e pós64s0d; não ativado clinicamente |
+| T11 proteções adultas | PASS local | Seis métodos desde18, domínios e gravidez preservados, IMC adulto desde20 |
+| T12 projeção paginada | PASS factual | Allowlist, último examinado, histórico legado e transferência preservados |
+| T13 BFF/contratos | PASS técnico; checks no relatório | v1/v2 e contexto neonatal explícito, authz/no-store existentes |
+| T14 formulário/resultado | PASS factual | Professional escreve; outros papéis só leitura autorizada; sem Z/rótulos provisórios |
+| T15 gráfico/tabela | PASS factual | Separação de bases/versões, teclado e mobile; sem gráficos clínicos experimentais |
+| T16 PG/regressões | PASS local |31 testes PG real descartável; tenant/carteira/RLS/replay/concorrência/retirada e retenção |
+| T17 governança | Ver relatório REV11 | Checks reais separados de CI e provas clínicas, nenhuma migration externa |
+| T18 PR/revisão | PR DRAFT #394 aberta | Continuação após #392 mergeada; CI do HEAD final e revisão humana independente pendentes, ativação não autorizada |
+
+Dependências clínicas G01/direitos continuam bloqueando ativação de T04–T10;
+G02 não deve ser reaberto por propostas antigas. G03 desenvolvimento autorizado.
+Gate operacional externo1068/1069 continua sem prova. Detalhes e comandos em
+`docs/history/phases/VALIDACAO_FASE_314_REV11.md`.
+
+## Histórico das etapas anteriores
+
 Estado: **execução técnica controlada autorizada**, sem ativação assistencial.
 G01/G02 continuam bloqueantes para uso clínico. Critérios clínicos originais
 abaixo são preservados; notas anteriores de T03–T18 bloqueadas são históricas.

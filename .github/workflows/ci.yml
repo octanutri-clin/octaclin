@@ -118,6 +118,8 @@ jobs:
       - run: pnpm test:triagem-seguranca
       - run: pnpm test:inventario-security-quality
       - run: pnpm test:tooling-agentes
+      - name: Testar transporte HTTPS dos scripts de pesquisa (sem rede)
+        run: python3 -m unittest discover -s scripts/research/fase314 -p 'test_*.py' -v
       # Gates de supply chain do PR 49: versao unica do package manager,
       # ledger de excecoes com owner/prazo e politica de licencas.
       - run: pnpm test:versao-pnpm

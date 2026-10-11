@@ -1840,6 +1840,13 @@ export class ServicoPacientes {
   ): Promise<AvaliacaoAntropometricaRespostaDto> {
     return this.executorTenant.executar(tenantId, async (gerenciador) => {
       const paciente = await this.garantirPacienteExiste(gerenciador, tenantId, pacienteId, usuario, true);
+      // CL10 REV9: o contexto opcional não pode servir de bypass; autorização antecede replay.
+      const idadeParaAutorizacao = idadeNaData(paciente.dataNascimento, dados.avaliadaEm ?? dataCivil(new Date()));
+      if (dados.pediatrico || (idadeParaAutorizacao !== undefined && idadeParaAutorizacao < 20)) {
+        if (usuario.papel !== 'Professional' || !usuario.permissoes.includes('pacientes.gerenciar') || usuario.tenantId !== tenantId || usuario.usuarioId !== autorUsuarioId) {
+          throw new ForbiddenException('Escrita pediatrica exige profissional autorizado.');
+        }
+      }
       if ((dados.condicaoGestacional || dados.gestacao || dados.pediatrico) && !dados.chaveCriacao) throw new BadRequestException('Chave de confirmacao obrigatoria.');
       const repositorio = gerenciador.getRepository(AvaliacaoAntropometricaOrm);
       const fingerprint = fingerprintGestacional({ pacienteId,dados });
@@ -1896,7 +1903,7 @@ export class ServicoPacientes {
         dobras: dados.dobras
       };
       const resultado = calcularAntropometria({
-        medidas, protocolo: pediatrico ? 'nenhum' : protocolo, sexo: dados.sexo, idadeAnos,
+        medidas, protocolo: pediatrico && (idadeAnos === undefined || idadeAnos < 18) ? 'nenhum' : protocolo, sexo: dados.sexo, idadeAnos,
         gestante: condicao === 'gestante'
       });
 

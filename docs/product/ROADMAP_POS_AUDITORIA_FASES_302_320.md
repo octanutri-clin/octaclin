@@ -1,5 +1,13 @@
 # Roadmap de produto após a Fase 302
 
+## Atualização vigente REV14 — continuidade independente
+
+Fase314 separa entrega factual A e classificadores B. G02 ratificado REV9;
+G01/direitos de B não bloqueiam315+ independentes. Aplicam-se os gates próprios
+de cada fase e os gates operacionais de A, sem antecipar autorização de ativação.
+Contrato em [liberação factual](LIBERACAO_FACTUAL_FASE_314_REV14.md).
+As notas anteriores de planejamento/ratificação abaixo são histórico.
+
 Atualizado em 2026-10-10. Fases 309/310 integradas pelos PRs #386/#388
 (`34d186ec`/`eb7f2aad`), confirmadas no GitHub neste ciclo. CI principal
 pós-merge 309 e CI de PR 310 aprovados, incluindo Demo local smoke;
@@ -14,8 +22,9 @@ conforme proprietário, sem consulta direta. Handoff histórico em
 `tasks/plan-fase-312.md`; Provenance do SBOM permanece SKIPPED.
 Fase 313 integrada pelo PR #391 (`f8c5ab66`); CI final `38082785780` e
 pós-merge `38084523466` SUCCESS. Aplicação externa da 1068 e revisão
-independente não comprovadas. Fase 314 em planejamento/gaps, com rascunho
-em `tasks/plan-fase-314.md`; ficha clínica ainda não ratificada.
+independente não comprovadas. Fase 314 integrada inicialmente pela PR392, com continuação na PR Draft394.
+G02 ratificado REV9; entrega factual separada dos classificadores bloqueados por
+G01. Plano em `tasks/plan-fase-314.md`, gates REV14 independentes.
 Este é o plano **vigente** para as recomendações ainda abertas de
 `OCTACLIN_PRODUCT_FEATURE_AUDIT.md`. O diagnóstico de 2026-09-17 permanece
 histórico; uma descrição antiga de lacuna não desfaz uma entrega posterior.
@@ -56,7 +65,7 @@ histórico; uma descrição antiga de lacuna não desfaz uma entrega posterior.
 | 311 | **Ativação de conteúdo em clínicas existentes.** Client/SuperAdmin instalam itens escolhidos do kit genérico 297 e podem complementar depois; conferência global das quatro bases TACO/USDA/IBGE no onboarding do ambiente. | Opt-in/seleção por clínica; SuperAdmin confirma em nome do alvo; itens instalados não são recriados nem sobrescritos; legado 1 completo e marcador 2 seletivo. Estruturas sem alimentos/revisão profissional; catálogos somente leitura e cargas separadas; pendências não bloqueiam kit. Sem TBCA. | Integrada pelo PR #389 (`f5f9ba84`); CI final e pós-merge SUCCESS. Plano histórico em `docs/history/phases/PLANO_FASE_311.md` |
 | 312 | **Documentos clínicos adicionais.** Desenhar e entregar encaminhamento no motor existente; avaliar atestado apenas após validação jurídica do tipo, competência profissional e assinatura exigida. | Sem afirmar que qualquer nutricionista pode emitir atestado médico. Variáveis permitidas, versão imutável, autorização e trilha; se o gate jurídico de atestado negar, registrar exclusão fundamentada e concluir apenas encaminhamento. | Encaminhamento integrado pelo PR #390 (`774cf34f`); CI final/pós-merge SUCCESS. 1067 aplicada/validada conforme proprietário, sem consulta direta. Atestado aguarda validação específica. Plano `docs/history/phases/PLANO_FASE_312.md` |
 | 313 | **Acompanhamento gestacional.** Curvas brasileiras MS: IMC de referência e ganho acumulado semanal; episódios explícitos, referências imutáveis/versionadas, avaliação/histórico, gráfico por versão e portal. | Fonte/tabela/dias validados clinicamente; >=18 anos, feto único e risco habitual; bloqueios adultos; portal com liberação profissional e aceite específico revogável; migration/RLS/concorrência R4. | Integrada pelo PR #391; CI final/pós-merge SUCCESS; aplicação externa da 1068 e revisão independente não confirmadas |
-| 314 | **Antropometria pediátrica.** Quatro indicadores OMS/SISVAN, avaliação/histórico/gráfico no console; prematuros INTERGROWTH → OMS com idade corrigida, contexto confirmado e snapshot. | Ficha clínica e referência computacional ratificadas, elegibilidade/idade corrigida/transição explícitas; bloquear interpretações adultas <18, revisar 18–19 por fórmula; limites por indicador, casos incompletos sem classificação. | Planejamento em `PLANO_FASE_314.md` e `tasks/plan-fase-314.md`; sem implementação |
+| 314 | **Antropometria pediátrica.** Quatro indicadores OMS/SISVAN, avaliação/histórico/gráfico no console; prematuros INTERGROWTH → OMS com idade corrigida, contexto confirmado e snapshot. | Ficha clínica ratificada REV9; referência computacional G01 pendente, elegibilidade/idade corrigida/transição explícitas; bloquear interpretações adultas <18; seis métodos desde18 ratificados REV9, IMC adulto20. Entrega factual com gates operacionais próprios; classificadores bloqueados por G01. | Entrega inicial PR392 integrada; continuação PR Draft394. Contrato `LIBERACAO_FACTUAL_FASE_314_REV14.md`; G01 não bloqueia fases independentes |
 | 315 | **Retirada controlada do `score_risco` legado.** Inventariar consumidores, migrar contrato/formulários/fixtures remanescentes e planejar eventual remoção da coluna. | A prioridade calculada da Fase 300 segue **operacional** e fora da API pública. Compatibilidade de clientes e dados históricos verificada antes de migration destrutiva; rollback/limite de não reversão explícito. | Planejada |
 | 316 | **PB-30, extração assistida de exames.** PDF/imagem para rascunho estruturado de marcador, valor, unidade e faixa, com confirmação item a item pelo profissional antes de persistir. | PB-17 pronto; antes do código, fechar finalidade/base legal, provider, retenção, local de processamento, custo e antimalware/arquivo seguro. Falha do serviço mantém digitação manual; nunca persistir extração como exame confirmado sem aceite humano. | Condicional aos gates jurídico, privacidade e operação |
 | 317 | **Gamificação e comunidade: decisão de propósito e piloto controlado.** Avaliar se badges/desafios existentes ajudam acompanhamento sem pressionar ou expor paciente; implementar apenas desenho aprovado. | Padrão desligado até decisão explícita, opt-in/saída e métricas de dano/benefício; sem ranking clínico ou exposição entre pacientes. Se não houver propósito validado, registrar NO-GO. | Condicional à decisão de produto/clínica |

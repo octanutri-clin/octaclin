@@ -1,0 +1,89 @@
+{
+  "data": "2026-10-11",
+  "node": "22.23.3",
+  "pnpm": "11.25.0",
+  "dados": "exclusivamente sint\u00e9ticos",
+  "postgres": {
+    "estado": "PASS",
+    "testes": 31,
+    "ambiente": "Testcontainers local descart\u00e1vel",
+    "externo": false
+  },
+  "python": {
+    "estado": "PASS",
+    "testes": 13,
+    "hashes": 20
+  },
+  "playwright": {
+    "estado": "PASS",
+    "testes": 10,
+    "escopo": "314/313,desktop/mobile,axe,Professional/Collaborator/SuperAdmin"
+  },
+  "typecheck_backend": "PASS",
+  "build_backend_guard": "PASS",
+  "typecheck_web": "PASS",
+  "lint_web": {
+    "estado": "PASS",
+    "erros": 0,
+    "warnings_preexistentes": 65
+  },
+  "build_web": "PASS",
+  "governanca": {
+    "estado": "PASS",
+    "comandos": 23,
+    "repeticao": "PowerShell no PATH"
+  },
+  "migrations_externas": "SKIPPED_NAO_AUTORIZADO",
+  "revisao_humana_independente": "PENDENTE",
+  "CI": "PENDENTE",
+  "G01": "BLOCKED",
+  "G02": "RATIFICADO_PELO_USUARIO",
+  "jest_backend": {
+    "estado": "PASS",
+    "suites": 294,
+    "testes": 2648,
+    "skipped": 50,
+    "oraculos_locais": true,
+    "nota": "RED de novo contrato HFA e timeout ClamAV pr\u00e9vios registrados no relat\u00f3rio; reexecu\u00e7\u00e3o final GREEN"
+  },
+  "quantis_oms_integral": {
+    "estado": "PASS",
+    "comparacoes": 129378,
+    "linhas": 14338,
+    "planilhas": 16
+  },
+  "web_authz": {
+    "estado": "PASS",
+    "subprogramas": 23,
+    "testes": 215,
+    "exit": 0,
+    "comandos": 24
+  },
+  "git_diff_check": "PASS, atributos restritos a evid\u00eancias imut\u00e1veis",
+  "secrets": "PASS ap\u00f3s staging",
+  "pr": {
+    "numero": 394,
+    "draft": true,
+    "url": "https://github.com/octanutri-clin/octaclin/pull/394"
+  },
+  "seguranca_downloader": {
+    "estado": "PASS",
+    "testes": 3,
+    "prova": "RED/GREEN dom\u00ednio prim\u00e1rio exato, rejei\u00e7\u00e3o HTTP/semelhantes; 24 downloads/hashes novamente PASS ap\u00f3s corre\u00e7\u00e3o CodeQL"
+  },
+  "fase254_sincronizacao": {
+    "estado": "PASS_LOCAL",
+    "testes": 10,
+    "repeticoes_por_viewport": 5,
+    "runtime_alterado": false,
+    "CI_anterior": {
+      "run": 38159606874,
+      "head": "8b004d42",
+      "passed": 756,
+      "skipped": 2,
+      "flaky": 1,
+      "failed": 1
+    },
+    "CI_novo_HEAD": "PENDENTE"
+  }
+}

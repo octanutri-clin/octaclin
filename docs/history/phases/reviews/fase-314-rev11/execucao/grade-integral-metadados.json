@@ -1,0 +1,135 @@
+{
+  "tolerancia_medida": 0.0005000001,
+  "openpyxl": "3.1.5",
+  "arquivos": [
+    {
+      "arquivo": 0,
+      "sha256": "d3817262a383cdd02553b004f1c6110527d30b729c70501d032e71caadc17529",
+      "sheet": "BFA_girls_z_exp",
+      "linhas": 1857,
+      "minimo": 0,
+      "maximo": 1856
+    },
+    {
+      "arquivo": 1,
+      "sha256": "58dcb2abea0e04b1c4f8ad3511d05ec1bea03741f230ac127b93f929e4cc6fc8",
+      "sheet": "BFA_boys_z_exp",
+      "linhas": 1857,
+      "minimo": 0,
+      "maximo": 1856
+    },
+    {
+      "arquivo": 2,
+      "sha256": "6aa2876319449a6b1f4d825848128902114ff53c67b92b86a0c5140846013059",
+      "sheet": "LFA_girls_z_exp",
+      "linhas": 1857,
+      "minimo": 0,
+      "maximo": 1856
+    },
+    {
+      "arquivo": 3,
+      "sha256": "c4b1c9029ab9751a5f0888e32f35c7c0287a16d361885cf911ecf23b3f7f6b4f",
+      "sheet": "LFA_boys_z_exp",
+      "linhas": 1857,
+      "minimo": 0,
+      "maximo": 1856
+    },
+    {
+      "arquivo": 4,
+      "sha256": "ee3ae12cb96c6c5541cdf43665c03ce6c984f877859a183a5f6104eb06a49a6e",
+      "sheet": "WFA_girls_z_exp",
+      "linhas": 1857,
+      "minimo": 0,
+      "maximo": 1856
+    },
+    {
+      "arquivo": 5,
+      "sha256": "b5b4748c6bfa5230e2eddafa1767629c349178b08d457f400b59422b8bfef86c",
+      "sheet": "WFA_boys_z_exp",
+      "linhas": 1857,
+      "minimo": 0,
+      "maximo": 1856
+    },
+    {
+      "arquivo": 6,
+      "sha256": "ec116b8e618ad311d34a87231346badf16c75f5c4f82222ec846e05c582bf16a",
+      "sheet": "WFL_girls_z_exp",
+      "linhas": 651,
+      "minimo": 45,
+      "maximo": 110
+    },
+    {
+      "arquivo": 7,
+      "sha256": "1a6e9a002d2692d038161bc6572a10f8b9fa0657163808141d2981a2132c59cc",
+      "sheet": "WFL_boys_z_exp",
+      "linhas": 651,
+      "minimo": 45,
+      "maximo": 110
+    },
+    {
+      "arquivo": 8,
+      "sha256": "fca340d5f04aa1556ac410b176b65b290e1b9ff467fc854a97f9b54ad94c9b8a",
+      "sheet": "WFH_girls_z_exp",
+      "linhas": 551,
+      "minimo": 65,
+      "maximo": 120
+    },
+    {
+      "arquivo": 9,
+      "sha256": "ed3b590f9c65937a138408b13618f33684bb6406a0c56d6a2ce3fd9053a3f59f",
+      "sheet": "WFH_boys_z_exp",
+      "linhas": 551,
+      "minimo": 65,
+      "maximo": 120
+    },
+    {
+      "arquivo": 10,
+      "sha256": "66f5c6284b44579ad6135fc639f22c09e36fe5a695b04390377113f6a00deb72",
+      "sheet": "bmi_girls_z_WHO 2007_exp",
+      "linhas": 168,
+      "minimo": 61,
+      "maximo": 228
+    },
+    {
+      "arquivo": 11,
+      "sha256": "0a60849673f34a06b8e2fe4defe5d00348de687b6c9fce0278f1525fff89eb6d",
+      "sheet": "bmi_boys_z_WHO 2007_exp",
+      "linhas": 168,
+      "minimo": 61,
+      "maximo": 228
+    },
+    {
+      "arquivo": 12,
+      "sha256": "df07ee16d3d2916569f1d869b7c874d7b880a41321d871215ed0254cb16679b3",
+      "sheet": "hfa_girls_z_WHO 2007_exp",
+      "linhas": 168,
+      "minimo": 61,
+      "maximo": 228
+    },
+    {
+      "arquivo": 13,
+      "sha256": "d78fa8cafcab77dcb5f03d71506d92bdcb28f89c642816b6bb0eef466b007466",
+      "sheet": "hfa_boys_z_WHO 2007_exp",
+      "linhas": 168,
+      "minimo": 61,
+      "maximo": 228
+    },
+    {
+      "arquivo": 14,
+      "sha256": "d747e068fcef4238cbaf1c201dd7788f266d9903685f4495360614eed0153562",
+      "sheet": "wfa_girls_z_WHO 2007_exp",
+      "linhas": 60,
+      "minimo": 61,
+      "maximo": 120
+    },
+    {
+      "arquivo": 15,
+      "sha256": "a6ed0d9f3cfa209747afe49f7503b7cc24a1be6b6a8e7222e85a36b7850cb99f",
+      "sheet": "wfa_boys_z_WHO 2007_exp",
+      "linhas": 60,
+      "minimo": 61,
+      "maximo": 120
+    }
+  ],
+  "linhas_total": 14338
+}

@@ -1,6 +1,6 @@
 # OctaClin - Checklist vivo de fases futuras ate producao
 
-Atualizado em 2026-10-11. Fase 314 em desenvolvimento técnico controlado; PR Draft #392. G01/G02 e ativação assistencial bloqueados; sem migração externa ou deploy. Histórico anterior preservado abaixo.
+Atualizado em 2026-10-11. Fase 314: entrega factual separada dos classificadores G01, G02 ratificado REV9; PR Draft #394 ainda aberta. Gates canônicos em `docs/product/LIBERACAO_FACTUAL_FASE_314_REV14.md`. Fases seguintes independentes não aguardam G01; liberação factual depende de gates operacionais e autorização.
 
 ## Estado reconciliado em 2026-10-10
 
@@ -19,7 +19,7 @@ em staging e produção, sem consulta direta aos bancos. Handoff preservado em
 Fase 313 integrada pelo PR #391 (`f8c5ab66`); CI final `38082785780`
 e principal pós-merge `38084523466` SUCCESS. Aplicação da 1068 e revisão
 independente não confirmadas. Fase 314 agora em desenvolvimento técnico controlado;
-handoff em `tasks/plan-fase-314.md`, ficha clínica pendente. Monitor de produção
+handoff em `tasks/plan-fase-314.md`, G02 ratificado REV9 e entrega factual separada por REV14. Monitor de produção
 `38065380981` FAIL com HTTP 503; causa não identificada.
 
 O parágrafo abaixo registra a atualização histórica anterior; para o estado
@@ -4576,11 +4576,11 @@ auditoria estão ordenados na seção 15 de
 - [x] Fase 313 - integrada pelo PR #391 (`f8c5ab66`); CI final e pós-merge
   SUCCESS. Aplicação/validação externa da 1068 e revisão independente não
   confirmadas; não representam aceite operacional. `tasks/todo-fase-313.md`.
-- [~] Fase 314 - desenvolvimento técnico controlado de quatro indicadores OMS/SISVAN,
-  gráfico no console e prematuros INTERGROWTH → OMS com idade corrigida.
-  Handoff em `tasks/plan-fase-314.md`; ficha clínica e referência computacional
-  neonatal pendentes. PR Draft #392 inclui medidas/contexto, histórico e candidatos
-  isolados testados; classificadores assistenciais continuam bloqueados.
+- [~] Fase 314 - entrega factual candidata à liberação após gates operacionais;
+  classificadores/curvas mantidos bloqueados por G01/direitos. G02 ratificado REV9.
+  PR Draft #394, contrato em `docs/product/LIBERACAO_FACTUAL_FASE_314_REV14.md`.
+  R4 independente, CI do HEAD, migrations/RLS por alvo e aceite pendentes; não
+  bloquear fases seguintes independentes das curvas/classificações.
 - [ ] Fase 315 - retirada controlada do campo `score_risco` legado, com
   compatibilidade e plano de migration/rollback.
 - [ ] Fase 316 - PB-30: extração assistida de exame com revisão humana,

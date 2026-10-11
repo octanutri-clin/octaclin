@@ -1,0 +1,21 @@
+test_12_who_anthro_directly_published_examples (test_g01_rev11.ReferenceValidation.test_12_who_anthro_directly_published_examples)
+WHO anthro README: four synthetic records x BFA/HFA/WFA. ... ok
+test_2007_anchors_interpolation_not_clamping (test_g01_rev11.ReferenceValidation.test_2007_anchors_interpolation_not_clamping) ... ok
+test_48_who_first_party_coefficients_match_gold_source (test_g01_rev11.ReferenceValidation.test_48_who_first_party_coefficients_match_gold_source)
+Compara OMS/anthro oficial vs WHO LMS da derivação RCPCH. ... ok
+test_first_party_wfl_wfh_median_and_boundaries (test_g01_rev11.ReferenceValidation.test_first_party_wfl_wfh_median_and_boundaries) ... ok
+test_ig_55week_discrepancy_is_not_hidden (test_g01_rev11.ReferenceValidation.test_ig_55week_discrepancy_is_not_hidden) ... ok
+test_ig_agrees_with_previous_synthetic_fixture_not_independent (test_g01_rev11.ReferenceValidation.test_ig_agrees_with_previous_synthetic_fixture_not_independent) ... ok
+test_ig_all_days_sexes_two_measures_and_seven_z_levels (test_g01_rev11.ReferenceValidation.test_ig_all_days_sexes_two_measures_and_seven_z_levels) ... ok
+test_sisvan_cut_points (test_g01_rev11.ReferenceValidation.test_sisvan_cut_points) ... ok
+test_sisvan_other_indicators_and_flags (test_g01_rev11.ReferenceValidation.test_sisvan_other_indicators_and_flags) ... ok
+test_wfh_four_direct_official_WHO_anthro_outputs (test_g01_rev11.ReferenceValidation.test_wfh_four_direct_official_WHO_anthro_outputs)
+OMS 'anthro' README: quatro casos WFH, incluindo caudas -5/+4. ... ok
+test_who2006_gold_from_separate_anthro_execution (test_g01_rev11.ReferenceValidation.test_who2006_gold_from_separate_anthro_execution) ... ok
+test_who2007_published_11yo_bmi_tail (test_g01_rev11.ReferenceValidation.test_who2007_published_11yo_bmi_tail) ... ok
+test_who_bmi_policy_boundary_1856_1857 (test_g01_rev11.ReferenceValidation.test_who_bmi_policy_boundary_1856_1857) ... ok
+
+----------------------------------------------------------------------
+Ran 13 tests in 0.010s
+
+OK

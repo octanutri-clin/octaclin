@@ -397,7 +397,7 @@ export function calcularAntropometria(entrada: EntradaCalculoAntropometrico): Re
   }
 
   const interpretacaoAdultaElegivel = metodoAdultoElegivel('cintura', entrada.idadeAnos);
-  if (!entrada.gestante && !interpretacaoAdultaElegivel) avisos.push(entrada.idadeAnos === undefined ? 'interpretacao_adulta_exige_idade' : entrada.idadeAnos < 18 ? 'interpretacao_adulta_bloqueada_menor_de_18' : 'metodos_18_19_aguardam_ratificacao_individual');
+  if (!entrada.gestante && !interpretacaoAdultaElegivel) avisos.push(entrada.idadeAnos === undefined ? 'interpretacao_adulta_exige_idade' : entrada.idadeAnos < 18 ? 'interpretacao_adulta_bloqueada_menor_de_18' : 'interpretacao_adulta_idade_fora_do_dominio');
   const cintura = numeroFinito(entrada.medidas.circunferencias?.cintura);
   const quadril = numeroFinito(entrada.medidas.circunferencias?.quadril);
   const cinturaValida = cintura !== undefined && dentroDaFaixa(cintura, LIMITES.circunferenciaCm);

@@ -1,0 +1,144 @@
+[
+  {
+    "arquivo": "oms-planilha-00.xlsx",
+    "url": "https://cdn.who.int/media/docs/default-source/child-growth/child-growth-standards/indicators/body-mass-index-for-age/expanded-tables/bfa-girls-zscore-expanded-tables.xlsx?sfvrsn=ae4cb8d1_12",
+    "sha256": "d3817262a383cdd02553b004f1c6110527d30b729c70501d032e71caadc17529",
+    "expected": "d3817262a383cdd02553b004f1c6110527d30b729c70501d032e71caadc17529",
+    "pass": true,
+    "bytes": 177923
+  },
+  {
+    "arquivo": "oms-planilha-01.xlsx",
+    "url": "https://cdn.who.int/media/docs/default-source/child-growth/child-growth-standards/indicators/body-mass-index-for-age/expanded-tables/bfa-boys-zscore-expanded-tables.xlsx?sfvrsn=f8e1fbe2_10",
+    "sha256": "58dcb2abea0e04b1c4f8ad3511d05ec1bea03741f230ac127b93f929e4cc6fc8",
+    "expected": "58dcb2abea0e04b1c4f8ad3511d05ec1bea03741f230ac127b93f929e4cc6fc8",
+    "pass": true,
+    "bytes": 185753
+  },
+  {
+    "arquivo": "oms-planilha-02.xlsx",
+    "url": "https://cdn.who.int/media/docs/default-source/child-growth/child-growth-standards/indicators/length-height-for-age/expandable-tables/lhfa-girls-zscore-expanded-tables.xlsx?sfvrsn=27f1e2cb_10",
+    "sha256": "6aa2876319449a6b1f4d825848128902114ff53c67b92b86a0c5140846013059",
+    "expected": "6aa2876319449a6b1f4d825848128902114ff53c67b92b86a0c5140846013059",
+    "pass": true,
+    "bytes": 199890
+  },
+  {
+    "arquivo": "oms-planilha-03.xlsx",
+    "url": "https://cdn.who.int/media/docs/default-source/child-growth/child-growth-standards/indicators/length-height-for-age/expandable-tables/lhfa-boys-zscore-expanded-tables.xlsx?sfvrsn=7b4a3428_12",
+    "sha256": "c4b1c9029ab9751a5f0888e32f35c7c0287a16d361885cf911ecf23b3f7f6b4f",
+    "expected": "c4b1c9029ab9751a5f0888e32f35c7c0287a16d361885cf911ecf23b3f7f6b4f",
+    "pass": true,
+    "bytes": 200151
+  },
+  {
+    "arquivo": "oms-planilha-04.xlsx",
+    "url": "https://cdn.who.int/media/docs/default-source/child-growth/child-growth-standards/indicators/weight-for-age/expanded-tables/wfa-girls-zscore-expanded-tables.xlsx?sfvrsn=f01bc813_10",
+    "sha256": "ee3ae12cb96c6c5541cdf43665c03ce6c984f877859a183a5f6104eb06a49a6e",
+    "expected": "ee3ae12cb96c6c5541cdf43665c03ce6c984f877859a183a5f6104eb06a49a6e",
+    "pass": true,
+    "bytes": 197671
+  },
+  {
+    "arquivo": "oms-planilha-05.xlsx",
+    "url": "https://cdn.who.int/media/docs/default-source/child-growth/child-growth-standards/indicators/weight-for-age/expanded-tables/wfa-boys-zscore-expanded-tables.xlsx?sfvrsn=65cce121_10",
+    "sha256": "b5b4748c6bfa5230e2eddafa1767629c349178b08d457f400b59422b8bfef86c",
+    "expected": "b5b4748c6bfa5230e2eddafa1767629c349178b08d457f400b59422b8bfef86c",
+    "pass": true,
+    "bytes": 198984
+  },
+  {
+    "arquivo": "oms-planilha-06.xlsx",
+    "url": "https://cdn.who.int/media/docs/default-source/child-growth/child-growth-standards/indicators/weight-for-length-height/expanded-tables/wfl-girls-zscore-expanded-table.xlsx?sfvrsn=db7b5d6b_8",
+    "sha256": "ec116b8e618ad311d34a87231346badf16c75f5c4f82222ec846e05c582bf16a",
+    "expected": "ec116b8e618ad311d34a87231346badf16c75f5c4f82222ec846e05c582bf16a",
+    "pass": true,
+    "bytes": 73863
+  },
+  {
+    "arquivo": "oms-planilha-07.xlsx",
+    "url": "https://cdn.who.int/media/docs/default-source/child-growth/child-growth-standards/indicators/weight-for-length-height/expanded-tables/wfl-boys-zscore-expanded-table.xlsx?sfvrsn=d307434f_8",
+    "sha256": "1a6e9a002d2692d038161bc6572a10f8b9fa0657163808141d2981a2132c59cc",
+    "expected": "1a6e9a002d2692d038161bc6572a10f8b9fa0657163808141d2981a2132c59cc",
+    "pass": true,
+    "bytes": 74264
+  },
+  {
+    "arquivo": "oms-planilha-08.xlsx",
+    "url": "https://cdn.who.int/media/docs/default-source/child-growth/child-growth-standards/indicators/weight-for-length-height/expanded-tables/wfh-girls-zscore-expanded-tables.xlsx?sfvrsn=daac732c_8",
+    "sha256": "fca340d5f04aa1556ac410b176b65b290e1b9ff467fc854a97f9b54ad94c9b8a",
+    "expected": "fca340d5f04aa1556ac410b176b65b290e1b9ff467fc854a97f9b54ad94c9b8a",
+    "pass": true,
+    "bytes": 64884
+  },
+  {
+    "arquivo": "oms-planilha-09.xlsx",
+    "url": "https://cdn.who.int/media/docs/default-source/child-growth/child-growth-standards/indicators/weight-for-length-height/expanded-tables/wfh-boys-zscore-expanded-tables.xlsx?sfvrsn=ac60cb13_8",
+    "sha256": "ed3b590f9c65937a138408b13618f33684bb6406a0c56d6a2ce3fd9053a3f59f",
+    "expected": "ed3b590f9c65937a138408b13618f33684bb6406a0c56d6a2ce3fd9053a3f59f",
+    "pass": true,
+    "bytes": 64812
+  },
+  {
+    "arquivo": "oms-planilha-10.xlsx",
+    "url": "https://cdn.who.int/media/docs/default-source/child-growth/growth-reference-5-19-years/bmi-for-age-(5-19-years)/bmi-girls-z-who-2007-exp.xlsx?sfvrsn=79222875_2",
+    "erro": "HTTP Error 403: Forbidden"
+  },
+  {
+    "arquivo": "oms-planilha-11.xlsx",
+    "url": "https://cdn.who.int/media/docs/default-source/child-growth/growth-reference-5-19-years/bmi-for-age-(5-19-years)/bmi-boys-z-who-2007-exp.xlsx?sfvrsn=a84bca93_2",
+    "erro": "HTTP Error 403: Forbidden"
+  },
+  {
+    "arquivo": "oms-planilha-12.xlsx",
+    "url": "https://cdn.who.int/media/docs/default-source/child-growth/growth-reference-5-19-years/height-for-age-(5-19-years)/hfa-girls-z-who-2007-exp.xlsx?sfvrsn=79d310ee_2",
+    "erro": "HTTP Error 403: Forbidden"
+  },
+  {
+    "arquivo": "oms-planilha-13.xlsx",
+    "url": "https://cdn.who.int/media/docs/default-source/child-growth/growth-reference-5-19-years/height-for-age-(5-19-years)/hfa-boys-z-who-2007-exp.xlsx?sfvrsn=7fa263d_2",
+    "erro": "HTTP Error 403: Forbidden"
+  },
+  {
+    "arquivo": "oms-planilha-14.xlsx",
+    "url": "https://cdn.who.int/media/docs/default-source/child-growth/growth-reference-5-19-years/weight-for-age-(5-10-years)/hfa-girls-z-who-2007-exp_7ea58763-36a2-436d-bef0-7fcfbadd2820.xlsx?sfvrsn=6ede55a4_4",
+    "erro": "HTTP Error 403: Forbidden"
+  },
+  {
+    "arquivo": "oms-planilha-15.xlsx",
+    "url": "https://cdn.who.int/media/docs/default-source/child-growth/growth-reference-5-19-years/weight-for-age-(5-10-years)/hfa-boys-z-who-2007-exp_0ff9c43c-8cc0-4c23-9fc6-81290675e08b.xlsx?sfvrsn=b3ca0d6f_4",
+    "erro": "HTTP Error 403: Forbidden"
+  },
+  {
+    "arquivo": "oxford-manual.html",
+    "url": "https://intergrowth21.ndog.ox.ac.uk/preterm/en/ManualEntry",
+    "sha256": "2576edf4a310e7593ff4015e49b37d12bcb27ee45757408805b0db3d5378c38f",
+    "expected": null,
+    "pass": true,
+    "bytes": 20157
+  },
+  {
+    "arquivo": "who2007-bfa.txt",
+    "url": "https://raw.githubusercontent.com/WorldHealthOrganization/anthroplus/7cfcdb39026e9a55de55732bc3cf14c82261bcf7/data-raw/growthstandards/bfawho2007.txt",
+    "sha256": "70ef3260df08e48ce560c28cff4e733db78fb952cbd881eba63c9d3a15f38a6a",
+    "expected": null,
+    "pass": true,
+    "bytes": 10475
+  },
+  {
+    "arquivo": "who2007-hfa.txt",
+    "url": "https://raw.githubusercontent.com/WorldHealthOrganization/anthroplus/7cfcdb39026e9a55de55732bc3cf14c82261bcf7/data-raw/growthstandards/hfawho2007.txt",
+    "sha256": "9ac02aa4908f8ec3c6ba2362a4c7e1356043408b2873548ca22eedc016c235ad",
+    "expected": null,
+    "pass": true,
+    "bytes": 8775
+  },
+  {
+    "arquivo": "who2007-wfa.txt",
+    "url": "https://raw.githubusercontent.com/WorldHealthOrganization/anthroplus/7cfcdb39026e9a55de55732bc3cf14c82261bcf7/data-raw/growthstandards/wfawho2007.txt",
+    "sha256": "9234dc640ba54001a9afd42ef15ab675b211a721c8f3c0a07c3431fd9cea0e1c",
+    "expected": null,
+    "pass": true,
+    "bytes": 3779
+  }
+]

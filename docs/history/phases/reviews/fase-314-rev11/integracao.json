@@ -1,0 +1,29 @@
+{
+  "zip_sha256": "f4f31cc5d0ca8716c418c0abb3591d61c25ab4adf5885f9e49e6dd4e71b92c9b",
+  "arquivos": {
+    "test_g01_rev11.py": "docs/history/phases/reviews/fase-314-rev11/test_g01_rev11.py",
+    "resultado_resumo_G01_REV11.json": "docs/history/phases/reviews/fase-314-rev11/resultado_resumo_G01_REV11.json",
+    "gerar_evidencias_rev11.py": "docs/history/phases/reviews/fase-314-rev11/gerar_evidencias_rev11.py",
+    "g01_engine_rev11.py": "docs/history/phases/reviews/fase-314-rev11/g01_engine_rev11.py",
+    "execucao_unittest.txt": "docs/history/phases/reviews/fase-314-rev11/execucao_unittest.txt",
+    "WHO2007_AMOSTRA_LMS_RCPCH.csv": "docs/history/phases/reviews/fase-314-rev11/WHO2007_AMOSTRA_LMS_RCPCH.csv",
+    "WHO2006_WFH_WFL_AMOSTRA_OFICIAL.csv": "docs/history/phases/reviews/fase-314-rev11/WHO2006_WFH_WFL_AMOSTRA_OFICIAL.csv",
+    "WHO2006_EXEMPLOS_DOCUMENTADOS_ANTHRO.csv": "docs/history/phases/reviews/fase-314-rev11/WHO2006_EXEMPLOS_DOCUMENTADOS_ANTHRO.csv",
+    "WHO2006_AMOSTRA_GOLD_RCPCH.csv": "docs/history/phases/reviews/fase-314-rev11/WHO2006_AMOSTRA_GOLD_RCPCH.csv",
+    "WHO2006_48_COEFICIENTES_OFICIAIS_ANTHRO.csv": "docs/history/phases/reviews/fase-314-rev11/WHO2006_48_COEFICIENTES_OFICIAIS_ANTHRO.csv",
+    "README_PRIMEIRO.md": "docs/history/phases/reviews/fase-314-rev11/README_PRIMEIRO.md",
+    "PARECER_VALIDACAO_G01_REV11.md": "docs/history/phases/reviews/fase-314-rev11/PARECER_VALIDACAO_G01_REV11.md",
+    "OMS2006_4_WFH_COMPARACOES_OFICIAIS.csv": "docs/history/phases/reviews/fase-314-rev11/OMS2006_4_WFH_COMPARACOES_OFICIAIS.csv",
+    "OMS2006_144_COMPARACOES.csv": "docs/history/phases/reviews/fase-314-rev11/OMS2006_144_COMPARACOES.csv",
+    "OMS2006_12_COMPARACOES_DIRETAS_WHO.csv": "docs/history/phases/reviews/fase-314-rev11/OMS2006_12_COMPARACOES_DIRETAS_WHO.csv",
+    "MENSAGEM_CODEX_G01_REV11.md": "docs/history/phases/reviews/fase-314-rev11/MENSAGEM_CODEX_G01_REV11.md",
+    "MANIFEST_SHA256.txt": "docs/history/phases/reviews/fase-314-rev11/MANIFEST_SHA256.txt",
+    "INTERGROWTH_14_COMPARACOES_INTERNAS.csv": "docs/history/phases/reviews/fase-314-rev11/INTERGROWTH_14_COMPARACOES_INTERNAS.csv",
+    "FASE_314_G02_PROTOCOLO_DECIDIDO_REV9.md": "docs/product/FASE_314_G02_PROTOCOLO_DECIDIDO_REV9.md",
+    "FASE_314_FIXTURES_SINTETICAS_REV8.json": "docs/history/phases/reviews/fase-314-rev11/FASE_314_FIXTURES_SINTETICAS_REV8.json",
+    "FASE_314_ACEITE_CLINICO_G02_REV9_2026-10-11.md": "docs/product/FASE_314_ACEITE_CLINICO_G02_REV9_2026-10-11.md"
+  },
+  "integridade": "20/20 SHA256 conferidos antes de qualquer execucao",
+  "g02": "RATIFICADO_PELO_USUARIO",
+  "ativacao": "NAO_AUTORIZADA"
+}

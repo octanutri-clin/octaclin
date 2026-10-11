@@ -1,5 +1,42 @@
 # Fontes e manifesto — antropometria Fase 314
 
+## Estado vigente — integração REV11 / ratificação G02 REV9 (2026-10-11)
+
+O proprietário ratificou integralmente CL-01–CL-10 no pedido de integração da REV11.
+O protocolo normativo vigente é [G02 REV9](FASE_314_G02_PROTOCOLO_DECIDIDO_REV9.md),
+SHA-256 `3dd197dfa16dd235bda1573020cf0af04b3ae8699c2c21388a90d2bf670a201a`;
+registro não identificável em [aceite](FASE_314_ACEITE_CLINICO_G02_REV9_2026-10-11.md).
+**G02-PROTOCOLO: RATIFICADO_PELO_USUARIO.** Formalização institucional pendente e
+revisão especializada não alegada; são estados separados. Não exigir novo aceite
+para a mesma versão. **G01 BLOCKED**, direitos não comprovados; ativação não autorizada.
+
+Regras anteriores conflitantes abaixo são histórico, não contratos de implementação:
+roteamento local 1856/1857 dias; técnica pela idade efetiva e limiar731 dias;
+correção por DPP+meses civis; fórmulas adultas desde18 anos, com domínios individuais;
+escrita pediátrica somente Professional autorizado e leitura autorizada/auditada.
+Cálculos pediátricos continuam isolados do serviço assistencial; snapshots v1 não
+são recalculados. Os novos snapshots v2 preservam a ratificação e identificam
+validação computacional/direitos pendentes. A autorização de desenvolvimento segue
+vigente; não abrange merge, deploy, migrations externas ou ativação clínica.
+
+## Reconferência primária REV11 — 2026-10-11
+
+As16 planilhas (14.338 linhas),3 TXT e5 fontes R foram baixadas e conferidas
+contra hashes fixados. Cabeçalho HTTP explícito resolveu403 do CDN; tentativa
+anterior é preservada como histórico, não pendência atual. Nenhum coeficiente
+completo foi incorporado ao runtime/Git. Metadados e evidências:
+`docs/history/phases/reviews/fase-314-rev11/execucao/downloads-repro-final.json`.
+Fonte adicional auxiliar WHO anthro: `R/assertions.R`, commit
+`b776d8a12b1c97369c748b561159fd2ec4f4db58`, SHA256
+`e09b9a0133578adec07e1bf841f9ea3b657bfad1f55fa443f90cea78738a78ab`.
+Foi usada somente na ferramenta R de pesquisa; não foi copiada ao produto.
+WHO2007 HFA inclui coluna `StDev` e quantil−5 adicional: importador de pesquisa
+seleciona quantis pelo nome SD, evitando interpretar StDev como quantil.
+As792 triplas dos XLSX são comparadas às804 dos TXT;12 âncoras de borda adicionais
+estão nos TXT. Direitos comerciais são investigação distinta e seguem pendentes.
+
+## Histórico documental anterior à ratificação REV9
+
 Conferência documental em 2026-10-10. Dados públicos oficiais; nenhum dado de paciente.
 Este manifesto registra os artefatos inspecionados, sem incorporá-los ao runtime.
 A ficha clínica e o método computacional ainda precisam de revisão/ratificação.
