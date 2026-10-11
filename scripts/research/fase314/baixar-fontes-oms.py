@@ -9,7 +9,7 @@ manifest=(ROOT/'docs/product/FONTES_ANTROPOMETRIA_FASE_314.md').read_text()
 items=[]
 for i,line in enumerate(l for l in manifest.splitlines() if '[planilha]' in l):
     items.append((f'oms-planilha-{i:02}.xlsx',re.search(r'\[planilha\]\((.*)\) \|',line).group(1),re.findall(r'`([a-f0-9]{64})`',line)[0]))
-for filename,url,expected in re.findall(r'\| (?:data-raw/growthstandards/)?([^|]+) \| \[fonte\]\((https://raw.githubusercontent.com/[^)]+)\) \| `([a-f0-9]{64})`',manifest):
+for filename,url,expected in re.findall(r'\| (?:data-raw/growthstandards/)?([^|]+) \| \[fonte\]\((https://raw\.githubusercontent\.com/[^)]+)\) \| `([a-f0-9]{64})`',manifest):
     if filename.strip() in ['bfawho2007.txt','hfawho2007.txt','wfawho2007.txt']:
         name={'bfawho2007.txt':'who2007-bfa.txt','hfawho2007.txt':'who2007-hfa.txt','wfawho2007.txt':'who2007-wfa.txt'}[filename.strip()]
         items.append((name,url,expected))

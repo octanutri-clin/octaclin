@@ -169,3 +169,11 @@ Primeira governança:22 comandos PASS/1 FAIL por PowerShell fora do PATH;
 repetição de `test:workflows-seguros` com ferramenta já disponível PASS.
 Downloads anteriores403 preservados; coleta final24 artefatos PASS com cabeçalho
 HTTP explícito e hashes iguais. Não ajustar tolerâncias após testes.
+
+O CodeQL automático da PR identificou expressão incompleta de hostname no
+downloader de pesquisa (`.` como curinga). Teste novo RED confirmou aceitação de
+domínios semelhantes; pontos escapados corrigem o filtro. Três testes de segurança
+PASS (host primário exato, rejeição de semelhantes e de HTTP), sem rede/runtime.
+Checks GitHub finais devem ser consultados na PR #394 no HEAD vigente; resultado
+da execução anterior não concede aprovação ao novo commit. Scanner automático
+não substitui revisão humana independente R4.

@@ -65,5 +65,10 @@
     "numero": 394,
     "draft": true,
     "url": "https://github.com/octanutri-clin/octaclin/pull/394"
+  },
+  "seguranca_downloader": {
+    "estado": "PASS",
+    "testes": 3,
+    "prova": "RED/GREEN dom\u00ednio prim\u00e1rio exato, rejei\u00e7\u00e3o HTTP/semelhantes; 24 downloads/hashes novamente PASS ap\u00f3s corre\u00e7\u00e3o CodeQL"
   }
 }

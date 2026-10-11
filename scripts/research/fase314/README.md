@@ -12,6 +12,7 @@ Na raiz do repositório, com Python3 e Node22:
 ```sh
 python3 scripts/research/fase314/reproduzir-pacote-rev11.py --output /tmp/rev11-evidencias
 python3 scripts/research/fase314/baixar-fontes-oms.py --output /tmp/rev11-fontes
+python3 -m unittest discover -s scripts/research/fase314 -p test_references_security.py -v
 ```
 
 O segundo comando falha se houver downloads indisponíveis/hash divergente.
