@@ -70,5 +70,20 @@
     "estado": "PASS",
     "testes": 3,
     "prova": "RED/GREEN dom\u00ednio prim\u00e1rio exato, rejei\u00e7\u00e3o HTTP/semelhantes; 24 downloads/hashes novamente PASS ap\u00f3s corre\u00e7\u00e3o CodeQL"
+  },
+  "fase254_sincronizacao": {
+    "estado": "PASS_LOCAL",
+    "testes": 10,
+    "repeticoes_por_viewport": 5,
+    "runtime_alterado": false,
+    "CI_anterior": {
+      "run": 38159606874,
+      "head": "8b004d42",
+      "passed": 756,
+      "skipped": 2,
+      "flaky": 1,
+      "failed": 1
+    },
+    "CI_novo_HEAD": "PENDENTE"
   }
 }

@@ -114,7 +114,7 @@ análise jurídica específica; não basta aprovação do proprietário ou dispo
 | Gate | Estado | Condição restante |
 | --- | --- | --- |
 | G00-local | PASS | Base/ZIP/contratos conferidos |
-| G00-fontes/direitos | BLOCKED | Permissões comerciais concretas OMS/IG; fontes OMS reconferidas |
+| G00-fontes/direitos | BLOCKED | Permissões comerciais concretas OMS/MS/IG; fontes OMS reconferidas |
 | G00-operacional | BLOCKED / consulta SKIPPED | Aplicação externa1068/1069 não verificada |
 | G01 | BLOCKED, provas computacionais ampliadas PASS | Precisão/procedência primária IG, diferença55s e direitos comerciais |
 | G02-protocolo | RATIFICADO_PELO_USUARIO | Nenhuma nova decisão CL genérica solicitada |
@@ -177,3 +177,19 @@ PASS (host primário exato, rejeição de semelhantes e de HTTP), sem rede/runti
 Checks GitHub finais devem ser consultados na PR #394 no HEAD vigente; resultado
 da execução anterior não concede aprovação ao novo commit. Scanner automático
 não substitui revisão humana independente R4.
+
+## Correção da regressão visual encontrada no CI
+
+CI38159606874 no HEAD8b004d42: Backend/Web/Governança aprovados, smoke visual
+com756 PASS/2 SKIPPED/1 flaky/1 FAIL. A falha foi o cenário Fase254 de visões
+salvas em mobile (desktop passou em retry): o mock registrava DELETE antes de
+204 ser consumido, permitindo selecionar outra visão antes de a UI limpar a
+seleção. A resposta de arquivamento então limpava a nova seleção, impedindo o
+aviso de responsável removido. Isso é evidência concreta que justifica tocar
+somente esse teste de outra fase, preservando seu runtime e trabalhos existentes.
+
+Fixture agora retém204 até confirmação do request; teste libera a resposta e
+aguarda opção removida, seleção vazia e diálogo fechado antes da próxima ação.
+Mantém o aviso original e assertions de privacidade. Sem sleep fixo, aumento
+artificial de timeout, skip ou remoção da verificação. Repetição local desktop/
+mobile5 vezes cada:10 PASS. CI do novo HEAD é exigido e registrado na PR #394.

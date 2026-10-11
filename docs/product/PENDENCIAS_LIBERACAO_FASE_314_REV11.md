@@ -30,6 +30,9 @@ Não inventar assinatura, registro profissional ou revisão institucional.
 2. **Direitos comerciais OMS:** permissão/licença específica ou análise jurídica
    documentada para os XLSX/TXT concretos e sua incorporação no SaaS. Software GPL
    de pesquisa e disponibilidade pública não concedem esses direitos ao produto.
+   O manifesto também registra restrições dos materiais MS/SISVAN2008/2011:
+   analisar a forma concreta de uso comercial, distinguindo métodos/fatos de
+   reprodução de textos/quadros/imagens; não presumir licença por origem governamental.
 3. **Direitos comerciais IG:** confirmação escrita ou análise jurídica específica
    distinguindo equações/fatos científicos, publicação/suplemento, dataset e código.
    Licença MIT/GPL de implementações alternativas não resolve os direitos da fonte.

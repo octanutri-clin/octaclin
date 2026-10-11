@@ -143,6 +143,10 @@ test.describe('Fase 254 - rotas e formulario de pacientes', () => {
     const consultas = [];
     let filtroCriado;
     let filtroArquivado;
+    // O registro do request não significa que a UI já consumiu a resposta.
+    // Retenha a resposta para exercitar explicitamente essa fronteira assíncrona.
+    let liberarArquivamento;
+    const respostaArquivamento = new Promise((resolve) => { liberarArquivamento = resolve; });
     await page.route('**/api/pacientes?**', (route) => {
       consultas.push(new URL(route.request().url()).searchParams);
       return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ itens: [paciente], total: 1 }) });
@@ -159,6 +163,7 @@ test.describe('Fase 254 - rotas e formulario de pacientes', () => {
     });
     await page.route(/\/api\/pacientes\/filtros-salvos\/([^/?]+)$/, async (route) => {
       filtroArquivado = route.request().url().split('/').at(-1);
+      await respostaArquivamento;
       await route.fulfill({ status: 204 });
     });
     await page.route(`**/api/profissionais/${profissionalRemovidoId}`, (route) => route.fulfill({ status: 404, contentType: 'application/json', body: JSON.stringify({ message: 'não encontrado' }) }));
@@ -171,7 +176,14 @@ test.describe('Fase 254 - rotas e formulario de pacientes', () => {
     await page.getByRole('button', { name: 'Remover visão', exact: true }).click();
     await expect.poll(() => filtroArquivado).toBe('filtro-1');
 
-    await page.getByLabel('Visão salva', { exact: true }).selectOption({ label: 'Carteira antiga' });
+    const visaoSalva = page.getByLabel('Visão salva', { exact: true });
+    await expect(visaoSalva).toHaveValue('filtro-1');
+    liberarArquivamento();
+    await expect(visaoSalva.locator('option[value="filtro-1"]')).toHaveCount(0);
+    await expect(visaoSalva).toHaveValue('');
+    await expect(page.getByRole('dialog', { name: 'Remover visão salva', exact: true })).toBeHidden();
+
+    await visaoSalva.selectOption({ label: 'Carteira antiga' });
     await expect(page.getByText('Esta visão referencia um profissional que não está mais disponível.')).toBeVisible();
     const consultasAntes = consultas.length;
     await page.getByRole('button', { name: 'Aplicar sem responsável' }).click();
