@@ -497,7 +497,13 @@ export class ServicoPortalPaciente {
         order: { avaliadaEm: 'DESC' },
         take: 24
       });
-      const evolucaoPeso = avaliacoes
+      const avaliacoesPortal = avaliacoes.filter(avaliacao => {
+        try {
+          const r: unknown = JSON.parse(this.criptografia.descriptografar(avaliacao.resultadoCriptografado));
+          return !!r && typeof r === 'object' && !Array.isArray(r) && !Object.hasOwn(r,'pediatrico');
+        } catch { return false; }
+      });
+      const evolucaoPeso = avaliacoesPortal
         .map((avaliacao) => {
           const medidas = this.lerMedidasAvaliacao(avaliacao.medidasCriptografadas);
           return typeof medidas.pesoKg === 'number' ? { data: avaliacao.avaliadaEm, pesoKg: medidas.pesoKg } : null;
@@ -506,7 +512,7 @@ export class ServicoPortalPaciente {
         .reverse();
       const metricas = DEFINICOES_METRICAS_COMPARTILHAVEIS_PORTAL.map((definicao) => ({
         ...definicao,
-        pontos: avaliacoes
+        pontos: avaliacoesPortal
           .filter((avaliacao) => Array.isArray(avaliacao.metricasCompartilhadasPortal)
             && avaliacao.metricasCompartilhadasPortal.includes(definicao.id))
           .map((avaliacao) => {

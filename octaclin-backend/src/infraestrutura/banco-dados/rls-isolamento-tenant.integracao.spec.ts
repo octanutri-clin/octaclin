@@ -1,3 +1,4 @@
+import { ProtegerRetencaoAvaliacoes1720000001069 } from './migracoes/1720000001069-ProtegerRetencaoAvaliacoes';
 import { PerfilCadastroPacienteOrm } from '../../modulos/pacientes/infraestrutura/perfil-cadastro-paciente.orm';
 import { PacienteOrm } from '../../modulos/pacientes/infraestrutura/paciente.orm';
 import { AvaliacaoAntropometricaOrm } from '../../modulos/pacientes/infraestrutura/avaliacao-antropometrica.orm';
@@ -1337,6 +1338,16 @@ descrever('RLS e isolamento multi-tenant integral em Postgres real', () => {
     );
     expect(conferencia.rows).toEqual([{ acao: 'prova.append' }]);
   });
+  testarComOwnerDescartavel('Fase 314 rollback vazio preserva historico legado', async () => {
+    if (!fonteDadosAdministrativa) throw new Error('Owner descartavel indisponivel.');
+    const runner = fonteDadosAdministrativa.createQueryRunner(); await runner.connect(); await runner.startTransaction();
+    try {
+      const antes = await runner.query('select count(*)::int total from avaliacoes_antropometricas');
+      await new ProtegerRetencaoAvaliacoes1720000001069().down(runner);
+      expect(await runner.query('select count(*)::int total from avaliacoes_antropometricas')).toEqual(antes);
+    } finally { await runner.rollbackTransaction(); await runner.release(); }
+  });
+
   testarComOwnerDescartavel('Fase 313 reverte migration vazia no PostgreSQL sem apagar registros legados', async () => {
     if (!fonteDadosAdministrativa) throw new Error('Conexao administrativa descartavel indisponivel.');
     const runner = fonteDadosAdministrativa.createQueryRunner();
@@ -1411,6 +1422,40 @@ descrever('RLS e isolamento multi-tenant integral em Postgres real', () => {
       try {await expect(new AcompanhamentoGestacional1720000001068().down(runner)).rejects.toThrow('Rollback recusado');}
       finally {await runner.rollbackTransaction();await runner.release();}
     }
+  },60000);
+
+  it('Fase 314 preserva snapshot, concorrencia, RLS e recusa DELETE fisico', async () => {
+    if (!executorTenant || !cliente) throw new Error('Banco descartavel indisponivel.');
+    await comoTenant(tenantA);
+    const novo = await cliente.query<{ id: string }>("insert into pacientes(tenant_id,profissional_responsavel_id,nome_criptografado,data_nascimento) values ($1,$2,$3,'2024-01-01') returning id",[tenantA,profissionalIdTenantA,Buffer.from('paciente-sintetico-pediatrico')]);
+    const id = novo.rows[0].id;
+    const u: UsuarioAutenticado = { tenantId: tenantA,usuarioId: usuarioIdTenantA,papel: 'Professional',permissoes: ['pacientes.ler','pacientes.gerenciar'],emailHash: 'sintetico' };
+    const servico = new ServicoPacientes(executorTenant,new CriptografiaDadosSensiveis(),{} as ServicoPortalCliente);
+    const pedido = { chaveCriacao: randomUUID(),avaliadaEm: '2024-02-01',pesoKg: 0.8,alturaCm: 28,pediatrico: { confirmado: true as const,nascimento: '2024-01-01',sexoCurva: 'nao_informado' as const,tecnica: 'deitado' as const,edema: 'desconhecido' as const,nascimentoTipo: 'prematuro' as const,tipoMedida: 'pos_natal' as const,semanasNascimento: 30,diasNascimento: 0,origemGestacional: 'documentada' as const } };
+    const criadas = await Promise.all([servico.registrarAvaliacaoAntropometrica(tenantA,id,usuarioIdTenantA,pedido,u),servico.registrarAvaliacaoAntropometrica(tenantA,id,usuarioIdTenantA,pedido,u)]);
+    expect(criadas[0].id).toBe(criadas[1].id);
+    expect(criadas[0].resultado.pediatrico?.idade?.dias).toBe(31);
+    await expect(servico.registrarAvaliacaoAntropometrica(tenantA,id,usuarioIdTenantA,{ ...pedido,pesoKg: 0.9 },u)).rejects.toThrow('Chave usada');
+    expect((await servico.listarAcompanhamentoPediatrico(tenantA,id,u)).itens).toHaveLength(1);
+    await expect(servico.listarAcompanhamentoPediatrico(tenantB,id,{ ...u,tenantId: tenantB })).rejects.toThrow();
+    await cliente.query("update pacientes set data_nascimento='2024-01-02' where id=$1",[id]);
+    expect(await servico.registrarAvaliacaoAntropometrica(tenantA,id,usuarioIdTenantA,pedido,u)).toEqual(criadas[0]);
+    await expect(cliente.query('update avaliacoes_antropometricas set resultado_criptografado=$1 where id=$2',[Buffer.from('{}'),criadas[0].id])).rejects.toMatchObject({ code: 'P0001' });
+    await comoTenant(tenantB);
+    expect((await cliente.query('select id from avaliacoes_antropometricas where id=$1',[criadas[0].id])).rows).toHaveLength(0);
+    await comoTenant(tenantA);
+    await expect(cliente.query('delete from avaliacoes_antropometricas where id=$1',[criadas[0].id])).rejects.toMatchObject({ code: 'P0001' });
+    const outro = await prepararDadosRepresentativos(tenantA,'transferencia-314');
+    await cliente.query('update pacientes set profissional_responsavel_id=$1 where id=$2',[outro.profissionalId,id]);
+    await expect(servico.registrarAvaliacaoAntropometrica(tenantA,id,usuarioIdTenantA,pedido,u)).rejects.toThrow('Paciente nao encontrado');
+    await expect(servico.listarAcompanhamentoPediatrico(tenantA,id,u)).rejects.toThrow('Paciente nao encontrado');
+    await cliente.query('update pacientes set profissional_responsavel_id=$1 where id=$2',[profissionalIdTenantA,id]);
+    if (fonteDadosAdministrativa) {
+      const runner = fonteDadosAdministrativa.createQueryRunner(); await runner.connect(); await runner.startTransaction();
+      try { await expect(new ProtegerRetencaoAvaliacoes1720000001069().down(runner)).rejects.toThrow('Rollback recusado'); }
+      finally { await runner.rollbackTransaction(); await runner.release(); }
+    }
+
   },60000);
 
   it('Fase 313 exige dupla autorizacao, revoga leitura e preserva snapshots no encerramento',async () => {

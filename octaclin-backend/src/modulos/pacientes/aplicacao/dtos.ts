@@ -1,3 +1,4 @@
+import { ContextoPediatricoDto, MedidaContextual } from './dtos-pediatricos';
 import { ContextoGestacionalDto } from './dtos-gestacoes';
 import {
   IsBoolean,
@@ -19,7 +20,8 @@ import {
   MaxLength,
   Min,
   MinLength,
-  ValidateNested
+  ValidateNested,
+  Validate
 } from 'class-validator';
 import { Transform, Type } from 'class-transformer';
 import type {
@@ -1056,6 +1058,7 @@ export class DobrasCutaneasDto {
 }
 
 export class CriarAvaliacaoAntropometricaDto {
+  @IsOptional() @ValidateNested() @Type(() => ContextoPediatricoDto) pediatrico?: ContextoPediatricoDto;
   @IsOptional() @IsIn(['gestante','nao_gestante']) condicaoGestacional?: 'gestante'|'nao_gestante';
   @IsOptional() @IsBoolean() confirmarDivergenciaPerfil?: boolean;
   @IsOptional() @IsUUID() chaveCriacao?: string;
@@ -1076,14 +1079,12 @@ export class CriarAvaliacaoAntropometricaDto {
 
   @IsOptional()
   @IsNumber()
-  @Min(1)
-  @Max(500)
+  @Validate(MedidaContextual)
   pesoKg?: number;
 
   @IsOptional()
   @IsNumber()
-  @Min(30)
-  @Max(250)
+  @Validate(MedidaContextual)
   alturaCm?: number;
 
   @IsOptional()
