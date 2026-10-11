@@ -416,6 +416,10 @@ async function prepararPortalSintetico(page) {
   await page.route('**/api/**', async (route) => {
     const caminho = new URL(route.request().url()).pathname;
 
+    if (caminho === '/api/portal/paciente/gestacoes') {
+      return responderJson(route, { itens: [], proximoCursor: null });
+    }
+
     if (caminho === '/api/portal/paciente') {
       return responderJson(route, {
         paciente: { id: 'paciente-reflow-1', nome: 'Participante Sintético', statusAdesao: 'aderente' },
