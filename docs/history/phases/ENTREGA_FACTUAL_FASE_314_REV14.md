@@ -142,3 +142,22 @@ Comandos: git fetch origin pull/382/head; git cherry-pick -x 25776976212a762d137
 pnpm install --frozen-lockfile na web; node scripts/validar-licencas.mjs
 octaclin-web/node_modules; pnpm build na web; inspeção package.json instalado.
 Rollback limitado à atualização do lockfile, sem dados persistentes afetados.
+
+## Segundo Dependabot integrado — PR381
+
+Autorização posterior do usuário para incorporar mais uma atualização à mesma
+PR394. PR381: sharp0.35.4→0.35.5 e binários/libvips correspondentes. Cherry-pick
+com origemf9a1c6be3910a72b4b1a3b06083fc7ca90d0593f e autor Dependabot preservados;
+119 substituições no lockfile, sem conflito e sem alterar source-map-js1.2.2.
+
+SHA512 sharp conferido no registro npm; Apache-2.0 e Node>=20.9.0 compatíveis com
+Node22. PASS instalação congelada/políticas450 entradas e licenças395 pacotes.
+PASS local: criação, conversão, resize explícito16x12 e rotação em segundo pipeline
+12x16 para PNG/JPEG/WebP/AVIF, somente buffers sintéticos. sharp0.35.5/libvips8.18.7.
+Primeiro teste assumiu incorretamente a ordem de resize/rotate no mesmo pipeline
+e falhou; repetição com operações separadas/fit explícito PASS. Comparação local
+com0.35.4 SKIPPED: pacote anterior não está instalado. Não atribuir a esse teste
+uma prova de equivalência entre versões nem cobertura das outras arquiteturas.
+PASS build Next/TypeScript/177 páginas e preflight/secrets/diff-check locais.
+CI do HEAD integrado deve passar novamente antes de liberação; checks da
+PR381 passaram, mas são históricos para PR394. Nenhum merge/deploy/migration.
