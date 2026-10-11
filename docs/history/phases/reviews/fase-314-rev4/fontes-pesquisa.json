@@ -1,0 +1,52 @@
+[
+  {
+    "file": "elmrayed.html",
+    "url": "https://www.nature.com/articles/s41372-024-02202-z",
+    "sha256": "9713b9fdb59fe8bf7656b2b1d7199ba116b75ed1d14fdf495e2b129de449ae96",
+    "bytes": 358480
+  },
+  {
+    "file": "sbp2023.html",
+    "url": "https://www.sbp.com.br/pediatria-para-familias/primeira-infancia/a-crianca-prematura-suas-peculiaridades-e-o-papel-da-familia/",
+    "error": "HTTP Error 403: Forbidden"
+  },
+  {
+    "file": "rcpch.html",
+    "url": "https://www.rcpch.ac.uk/resources/uk-who-growth-charts-neonatal-infant-close-monitoring-nicm",
+    "sha256": "769637b51940f88d66d8cda077ee0fcbeef0f1381d577c53f6cfde7bd30f45ff",
+    "bytes": 316280
+  },
+  {
+    "file": "epmc.json",
+    "url": "https://www.ebi.ac.uk/europepmc/webservices/rest/search?query=DOI:10.1038/s41372-024-02202-z&resultType=core&format=json",
+    "sha256": "60f51ffee7235f8dd0a49b36841c81cbcbd4c719a0d43013ccb17ccef29d4a86",
+    "bytes": 6855
+  },
+  {
+    "file": "sbp2023_alt.html",
+    "url": "https://sbp.com.br/pediatria-para-familias/primeira-infancia/a-crianca-prematura-suas-peculiaridades-e-o-papel-da-familia/",
+    "error": "HTTP Error 403: Forbidden"
+  },
+  {
+    "file": "sbp2017.pdf",
+    "url": "https://www.sbp.com.br/fileadmin/user_upload/2017/03/Neonatologia-Monitoramento-do-cresc-do-RN-pt-270117.pdf",
+    "error": "HTTP Error 403: Forbidden"
+  },
+  {
+    "file": "villar_page.html",
+    "url": "https://www.sciencedirect.com/science/article/pii/S2214109X15001631",
+    "error": "<urlopen error Tunnel connection failed: 403 Forbidden>"
+  },
+  {
+    "file": "ig_resources.html",
+    "url": "https://intergrowth21.tghn.org/standards-tools/",
+    "sha256": "865b94c874d014aad6b154848519644c87ef6fbecb8296952f4781d842ea4204",
+    "bytes": 113661
+  },
+  {
+    "file": "villar_crossref.json",
+    "url": "https://api.crossref.org/works/10.1016/S2214-109X(15)00163-1",
+    "sha256": "5ec685520c6789b8a7f3e6c56e5f42308805b3613afde6c7ed1512b39c8d8197",
+    "bytes": 21445
+  }
+]

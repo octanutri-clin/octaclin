@@ -720,3 +720,24 @@ Visual: `pnpm --dir octaclin-web test:fase313`, ambos os projects. O gate comple
 `smoke:visual` também inclui os specs. BFF: `scripts/test-fase-313-bff.mjs`, incluído
 em `test:authz`. Novos episódios/replay/ref/encerramento integram o smoke BFF da
 demo. Ficha clínica ratificada, sem confundir ratificação com evidência de deploy.
+
+
+## Fase 314 — entrega técnica controlada
+
+Reprodução com dados exclusivamente sintéticos: backend Jest completo
+`pnpm --dir octaclin-backend test --runInBand` (2614 PASS/50 SKIPPED),
+PostgreSQL local descartável `pnpm --dir octaclin-backend test:rls:testcontainers`
+(31 PASS, incluindo carteira/transferência/replay/RLS/retencao e cursor em
+microssegundos), BFF `node octaclin-web/scripts/test-fase-314-bff.mjs` (1 teste
+composto PASS), visual `pnpm --dir octaclin-web exec playwright test
+console-regression.spec.mjs --grep 'Fase 31[34]'` (6 PASS desktop/mobile/axe).
+
+Typechecks/builds, lint Web, linguagem, smokes UI/BFF e governança passaram;
+log de contagens/estados sanitizados e limitações em
+`docs/history/phases/ENTREGA_TECNICA_FASE_314.md`. A suíte BFF completa e o
+CI são gates do HEAD vigente da PR Draft #392. Não inferir aplicação externa
+de 1068/1069 nem ratificação clínica de testes locais.
+
+Os quatro indicadores assistenciais permanecem bloqueados. Candidatos
+LMS/SISVAN/prematuridade e investigação INTERGROWTH não fecham G01/G02.
+Nenhum dado real, dependência nova, staging, produção, merge ou deploy.

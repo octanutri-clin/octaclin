@@ -1,0 +1,188 @@
+{
+  "dataUTC": "2026-10-11",
+  "pr": "https://github.com/octanutri-clin/octaclin/pull/392",
+  "base": "f8c5ab66f2708d4a73fc31d460f929a665bd6f08",
+  "codigoRuntime": "c3744333ca21198bca396e28d823125b2a275812",
+  "populacao": "fixtures exclusivamente sintéticas",
+  "ambientesExternos": "SKIPPED; sem acesso/autorização operacional",
+  "ratificacaoClinica": "BLOCKED CL01–10",
+  "direitosMetodo": "BLOCKED G01",
+  "revisaoIndependente": "SKIPPED; autor único",
+  "comandos": [
+    {
+      "comando": "pnpm --dir octaclin-backend test --runInBand",
+      "estado": "PASS",
+      "testesAprovados": 2614,
+      "testesIgnorados": 50,
+      "sha256LogLocal": "fd1d15389427785ad7b60032227876f91aab2179d7e649f1e26705a8d596754c"
+    },
+    {
+      "comando": "pnpm --dir octaclin-backend test:rls:testcontainers",
+      "estado": "PASS",
+      "testesAprovados": 31,
+      "testesIgnorados": 0,
+      "sha256LogLocal": "97e630b0d78972e8fa105e98b539a2a2a10cb20ac2cd6ebbddb49d506c340d9f"
+    },
+    {
+      "comando": "pnpm --dir octaclin-backend typecheck",
+      "estado": "PASS",
+      "testesAprovados": null,
+      "testesIgnorados": null,
+      "sha256LogLocal": "8366207267355d3e3d5bf3bf6e8c94c5f93f6078c34f08973fa2b38cdda6cc92"
+    },
+    {
+      "comando": "pnpm --dir octaclin-backend build",
+      "estado": "PASS",
+      "testesAprovados": null,
+      "testesIgnorados": null,
+      "sha256LogLocal": "896d2097b15ff9f70ab32342fae89da07998e11eaf88140746e8d3de0deef6c5"
+    },
+    {
+      "comando": "pnpm --dir octaclin-web build",
+      "estado": "PASS",
+      "testesAprovados": null,
+      "testesIgnorados": null,
+      "sha256LogLocal": "ccbe85dfff08664d8f5a2b03f310f56ade4b9ac61ed5f0ef309c275709d120e2"
+    },
+    {
+      "comando": "pnpm --dir octaclin-web lint",
+      "estado": "PASS",
+      "testesAprovados": null,
+      "testesIgnorados": null,
+      "sha256LogLocal": "8d465f9562050ce708223851a7d11659a0151fc560b55cf2f09782afe7075e8c"
+    },
+    {
+      "comando": "node scripts/test-fase-314-bff.mjs",
+      "estado": "PASS",
+      "testesAprovados": 1,
+      "testesIgnorados": 0,
+      "sha256LogLocal": "eac31d6a2ce7415a68541cf1e7c53988d49f853dacc8bbb36b49de54187d69c7"
+    },
+    {
+      "comando": "playwright test console-regression.spec.mjs --grep 'Fase 31[34]'",
+      "estado": "PASS",
+      "testesAprovados": 6,
+      "testesIgnorados": 0,
+      "sha256LogLocal": "f957f9d0b695e6f73852992204816976e78c793d7b01a4cbcd6fed88528b89f8"
+    },
+    {
+      "comando": "node scripts/smoke-ui-regression.mjs",
+      "estado": "PASS",
+      "testesAprovados": null,
+      "testesIgnorados": null,
+      "sha256LogLocal": "ea2573c11cf311e621def1dedef3b21f4ef65816c2263faa31e64dfd578220f0"
+    },
+    {
+      "comando": "node scripts/smoke-e2e-bff.mjs",
+      "estado": "PASS",
+      "testesAprovados": null,
+      "testesIgnorados": null,
+      "sha256LogLocal": "658f94496946f9b65c7f59b49ec7f2358d09a2ed0f16fcb628ebe1b67d27d663"
+    },
+    {
+      "comando": "pnpm --dir octaclin-web test:linguagem",
+      "estado": "PASS",
+      "testesAprovados": 8,
+      "testesIgnorados": 0,
+      "sha256LogLocal": "3cabca791b2f6cbc0ca7bba3d71444948c8d051e718165e50a0d769db4fbbfec"
+    },
+    {
+      "comando": "pwsh -NoProfile -File validar-preflight.ps1 -DocsOnly",
+      "estado": "PASS",
+      "testesAprovados": null,
+      "testesIgnorados": null,
+      "sha256LogLocal": "de4cfa69c38664bf91df1fd147e893b059471a999861914211111c878dc433c5"
+    }
+  ],
+  "governanca": [
+    {
+      "comando": "pnpm test:a11y:matriz",
+      "exitCode": 0
+    },
+    {
+      "comando": "pnpm test:confiabilidade",
+      "exitCode": 0
+    },
+    {
+      "comando": "pnpm test:redacao-auditoria",
+      "exitCode": 0
+    },
+    {
+      "comando": "pnpm test:resposta-auditoria",
+      "exitCode": 0
+    },
+    {
+      "comando": "pnpm test:migracoes-fora-de-banda",
+      "exitCode": 0
+    },
+    {
+      "comando": "pnpm test:actions-imutaveis",
+      "exitCode": 0
+    },
+    {
+      "comando": "pnpm test:guardas-controladores",
+      "exitCode": 0
+    },
+    {
+      "comando": "pnpm test:seguranca-dinamica",
+      "exitCode": 0
+    },
+    {
+      "comando": "pnpm test:triagem-seguranca",
+      "exitCode": 0
+    },
+    {
+      "comando": "pnpm test:inventario-security-quality",
+      "exitCode": 0
+    },
+    {
+      "comando": "pnpm test:tooling-agentes",
+      "exitCode": 0
+    },
+    {
+      "comando": "pnpm test:versao-pnpm",
+      "exitCode": 0
+    },
+    {
+      "comando": "pnpm test:excecoes-supply-chain",
+      "exitCode": 0
+    },
+    {
+      "comando": "pnpm test:grupos-dependabot",
+      "exitCode": 0
+    },
+    {
+      "comando": "pnpm test:versao-node",
+      "exitCode": 0
+    },
+    {
+      "comando": "pnpm test:dockerfiles-runtime",
+      "exitCode": 0
+    },
+    {
+      "comando": "pnpm test:licencas",
+      "exitCode": 0
+    },
+    {
+      "comando": "pnpm test:lock-python",
+      "exitCode": 0
+    },
+    {
+      "comando": "pnpm test:sbom",
+      "exitCode": 0
+    },
+    {
+      "comando": "pnpm test:instalacao-congelada",
+      "exitCode": 0
+    },
+    {
+      "comando": "pnpm security:secrets",
+      "exitCode": 0
+    },
+    {
+      "comando": "pnpm test:security",
+      "exitCode": 0
+    }
+  ],
+  "ci": "Consultar checks do HEAD vigente; estado dinâmico não presumido"
+}

@@ -4296,3 +4296,49 @@ test('Fase 313: confirma condicao, divergencia e IG na data antes de registrar',
 });
 
 });
+
+test.describe('acompanhamento pediátrico - Fase 314', () => {
+  test('Fase 314: registro confirmado, histórico paginado, bloqueio clínico e acessibilidade', async ({ page }) => {
+    await prepararProntuarioMockado(page);
+    let entrada, chamadas = 0, negar = false;
+    const contexto = { confirmado: true, nascimento: '2024-01-01', sexoCurva: 'nao_informado', tecnica: 'deitado', edema: 'desconhecido', nascimentoTipo: 'nao_informado', tipoMedida: 'pos_natal' };
+    const snapshot = { versao: 'pediatrico-medidas-v1', estado: 'protocolos_bloqueados', avaliadaEm: '2024-02-01', contexto, idade: { dias: 31,mesesEstatisticos: 31/30.4375,anosCompletos: 0 }, medidas: { pesoKg: 0.8,alturaCm: 28 }, indicadores: ['imc_idade','estatura_idade','peso_idade','peso_estatura'].map(indicador => ({ indicador,estado: 'bloqueado',motivo: 'protocolo_nao_ratificado' })) };
+    await page.route('**/api/pacientes/paciente-1/acompanhamento-pediatrico**',route => {
+      chamadas++;
+      if (negar) return route.fulfill({ status: 403,json: { message: 'Acesso revogado.' } });
+      const mais = new URL(route.request().url()).searchParams.has('cursor');
+      return route.fulfill({ json: { itens: mais ? [] : [{ id: 'ped-1',snapshot }],registrosExaminados: mais ? 1 : 50,itensExibidos: mais ? 0 : 1,temMaisHistorico: !mais,proximoCursor: mais ? undefined : '10000000-0000-4000-8000-000000000001' } });
+    });
+    await page.route('**/api/pacientes/paciente-1/avaliacoes-antropometricas',route => {
+      if (route.request().method() === 'POST') { entrada = route.request().postDataJSON(); return route.fulfill({ status: 201,json: { id: 'ped-2' } }); }
+      return route.fulfill({ json: { avaliacoes: [],deltaUltimas: [] } });
+    });
+    await page.goto('/pacientes/paciente-1');
+    await page.getByRole('tab',{ name: 'Avaliações',exact: true }).click();
+    await page.getByRole('tab',{ name: 'Antropometria',exact: true }).click();
+    const tabela = page.getByRole('table',{ name: 'Histórico das medidas originais e contexto preservado' });
+    await expect(tabela.getByRole('row')).toHaveCount(2);
+    await expect(page.getByText('Nenhuma avaliação pediátrica nesta cobertura do histórico.')).toHaveCount(0);
+    await page.getByRole('button',{ name: 'Consultar mais histórico' }).click();
+    await expect(page.getByText(/Fim da cobertura consultada/)).toBeVisible();
+    await expect(tabela.getByRole('row')).toHaveCount(2);
+    await page.getByText('Registrar avaliação pediátrica',{ exact: true }).click();
+    await page.getByLabel('Data da avaliação',{ exact: true }).fill('2024-02-01');
+    await page.getByLabel('Nascimento conferido').fill('2024-01-01');
+    await page.getByLabel('Peso original (kg)').fill('0.8');
+    await page.getByLabel('Comprimento/estatura original (cm)').fill('28');
+    await page.getByRole('checkbox',{ name: /Conferi o contexto/ }).check();
+    await page.getByRole('button',{ name: 'Confirmar registro',exact: true }).click();
+    await expect.poll(() => entrada).toMatchObject({ pesoKg: 0.8,alturaCm: 28,pediatrico: { confirmado: true,nascimento: '2024-01-01',sexoCurva: 'nao_informado',edema: 'desconhecido' } });
+    expect(entrada.chaveCriacao).toMatch(/^[0-9a-f-]{36}$/);
+    expect(entrada).not.toHaveProperty('metricasCompartilhadasPortal');
+    await expect(page.getByRole('status').filter({ hasText: 'Avaliação registrada. Medidas preservadas' })).toBeVisible();
+    expect(chamadas).toBeGreaterThanOrEqual(3);
+    expect((await new AxeBuilder({ page }).include('main').withTags(['wcag2a','wcag2aa','wcag21aa']).analyze()).violations).toEqual([]);
+    await assertSemOverflowHorizontal(page);
+    negar = true;
+    await page.getByRole('button',{ name: 'Atualizar histórico',exact: true }).click();
+    await expect(tabela.getByRole('row')).toHaveCount(1);
+    await expect(page.getByRole('alert').filter({ hasText: 'Não foi possível carregar o acompanhamento' })).toBeVisible();
+  });
+});

@@ -1,3 +1,5 @@
+import { projetarResultadoAntropometrico, projetarMedidasAntropometricas } from '../dominio/projecao-antropometria';
+import { registrarContextoPediatrico, projetarPediatrico } from '../dominio/antropometria-pediatrica';
 import { calcularAntropometriaGestacional } from '../dominio/antropometria-gestacional';
 import { ServicoGestacoesPaciente, dataGestacionalValida, fingerprintGestacional } from './servico-gestacoes-paciente';
 import { ReferenciaGestacional } from '../dominio/contexto-gestacional';
@@ -1838,7 +1840,7 @@ export class ServicoPacientes {
   ): Promise<AvaliacaoAntropometricaRespostaDto> {
     return this.executorTenant.executar(tenantId, async (gerenciador) => {
       const paciente = await this.garantirPacienteExiste(gerenciador, tenantId, pacienteId, usuario, true);
-      if ((dados.condicaoGestacional || dados.gestacao) && !dados.chaveCriacao) throw new BadRequestException('Chave de confirmacao obrigatoria.');
+      if ((dados.condicaoGestacional || dados.gestacao || dados.pediatrico) && !dados.chaveCriacao) throw new BadRequestException('Chave de confirmacao obrigatoria.');
       const repositorio = gerenciador.getRepository(AvaliacaoAntropometricaOrm);
       const fingerprint = fingerprintGestacional({ pacienteId,dados });
       if (dados.chaveCriacao) {
@@ -1855,7 +1857,7 @@ export class ServicoPacientes {
       const avaliadaEm = dados.avaliadaEm ?? dataCivil(new Date());
       if (!dataGestacionalValida(avaliadaEm) || avaliadaEm > dataCivil(new Date())) throw new BadRequestException('Data da avaliacao invalida ou futura.');
       const protocolo = dados.protocolo ?? 'nenhum';
-      const idadeAnos = idadeNaData(paciente.dataNascimento, avaliadaEm);
+      const idadeAnos = idadeNaData(dados.pediatrico?.nascimento ?? paciente.dataNascimento, avaliadaEm);
       const perfil = await gerenciador.getRepository(PerfilCadastroPacienteOrm).findOne({
         where: { tenantId, pacienteId }
       });
@@ -1879,6 +1881,14 @@ export class ServicoPacientes {
         referencia = atual.referencia;
         if (referencia.dataPeso && referencia.dataPeso > avaliadaEm) throw new BadRequestException('Peso de referencia posterior a avaliacao.');
       }
+      if (dados.pediatrico && idadeAnos !== undefined && idadeAnos >= 20) throw new BadRequestException('Contexto pediatrico exige idade inferior a 20 anos.');
+      if (dados.pediatrico?.nascimento && paciente.dataNascimento && dados.pediatrico.nascimento !== paciente.dataNascimento) throw new ConflictException('Nascimento diverge do cadastro. Confira antes de registrar.');
+      if (dados.pediatrico && (dados.metricasCompartilhadasPortal?.length ?? 0) > 0) throw new BadRequestException('Acompanhamento pediatrico disponivel somente no console.');
+      let pediatrico;
+      if (dados.pediatrico) {
+        try { pediatrico = registrarContextoPediatrico(dados.pediatrico, avaliadaEm, { pesoKg: dados.pesoKg, alturaCm: dados.alturaCm }); }
+        catch { throw new BadRequestException('Contexto ou medidas pediatricas invalidos.'); }
+      }
       const medidas: MedidasAntropometricas = {
         pesoKg: dados.pesoKg,
         alturaCm: dados.alturaCm,
@@ -1886,10 +1896,17 @@ export class ServicoPacientes {
         dobras: dados.dobras
       };
       const resultado = calcularAntropometria({
-        medidas, protocolo, sexo: dados.sexo, idadeAnos,
+        medidas, protocolo: pediatrico ? 'nenhum' : protocolo, sexo: dados.sexo, idadeAnos,
         gestante: condicao === 'gestante'
       });
 
+      resultado.pediatrico = pediatrico;
+      if (pediatrico) resultado.avisos = resultado.avisos.filter(a => !['peso_fora_da_faixa','altura_fora_da_faixa','imc_fora_da_faixa_plausivel'].includes(a));
+      if (pediatrico && dados.pesoKg !== undefined && dados.alturaCm !== undefined) {
+        const imcFactual = dados.pesoKg / (dados.alturaCm / 100) ** 2;
+        const imcArredondado = Math.round(imcFactual * 100) / 100;
+        if (Number.isFinite(imcFactual) && Number.isFinite(imcArredondado)) resultado.imc = imcArredondado;
+      }
       resultado.gestacional = calcularAntropometriaGestacional({ condicao,origemCondicao: dados.condicaoGestacional ? 'confirmada' : 'perfil_legado',idadeAnos,pesoKg: dados.pesoKg,contexto,referencia });
       const avaliacao = await repositorio.save(
         repositorio.create({
@@ -1915,6 +1932,29 @@ export class ServicoPacientes {
       );
 
       return this.mapearAvaliacaoAntropometrica(avaliacao);
+    });
+  }
+
+  async listarAcompanhamentoPediatrico(tenantId: string, pacienteId: string, usuario: UsuarioAutenticado, pagina: { cursor?: string; limite?: number } = {}) {
+    return this.executorTenant.executar(tenantId, async m => {
+      await this.garantirPacienteExiste(m, tenantId, pacienteId, usuario);
+      const limite = pagina.limite ?? 50;
+      if (!Number.isInteger(limite) || limite < 1 || limite > 100) throw new BadRequestException('Limite invalido.');
+      const repo = m.getRepository(AvaliacaoAntropometricaOrm);
+      const qb = repo.createQueryBuilder('a').where('a.tenant_id = :tenantId and a.paciente_id = :pacienteId and a.excluida_em is null', { tenantId, pacienteId });
+      if (pagina.cursor) {
+        const ancora = await repo.findOne({ where: { id: pagina.cursor, tenantId, pacienteId } });
+        if (!ancora) throw new BadRequestException('Cursor invalido.');
+        qb.andWhere(`(a.avaliada_em,a.criado_em,a.id) < (select c.avaliada_em,c.criado_em,c.id from avaliacoes_antropometricas c where c.tenant_id = :tenantId and c.paciente_id = :pacienteId and c.id = :cursor)`, { cursor: pagina.cursor });
+      }
+      const linhas = await qb.orderBy('a.avaliada_em','DESC').addOrderBy('a.criado_em','DESC').addOrderBy('a.id','DESC').take(limite + 1).getMany();
+      const examinadas = linhas.slice(0, limite);
+      const itens = examinadas.flatMap(a => {
+        const r = this.lerJsonCriptografado<{ pediatrico?: unknown } | null>(a.resultadoCriptografado, {}) ?? {};
+        const snapshot = projetarPediatrico(r.pediatrico);
+        return snapshot ? [{ id: a.id, snapshot }] : [];
+      });
+      return { itens, registrosExaminados: examinadas.length, itensExibidos: itens.length, temMaisHistorico: linhas.length > limite, proximoCursor: linhas.length > limite ? examinadas[examinadas.length - 1].id : undefined };
     });
   }
 
@@ -1994,6 +2034,8 @@ export class ServicoPacientes {
         where: { id: avaliacaoId, tenantId, pacienteId, excluidaEm: IsNull() }
       });
       if (!avaliacao) throw new NotFoundException('Avaliacao antropometrica nao encontrada.');
+      const resultadoSalvo = this.lerJsonCriptografado<{ pediatrico?: unknown } | null>(avaliacao.resultadoCriptografado, null);
+      if (dados.metricasCompartilhadasPortal.length && (!resultadoSalvo || resultadoSalvo.pediatrico !== undefined)) throw new BadRequestException('Avaliacao pediatrica ou indisponivel nao pode ser compartilhada neste fluxo.');
       avaliacao.metricasCompartilhadasPortal = dados.metricasCompartilhadasPortal;
       return this.mapearAvaliacaoAntropometrica(await repositorio.save(avaliacao));
     });
@@ -2011,12 +2053,9 @@ export class ServicoPacientes {
       idadeAnos: avaliacao.idadeAnos,
       medidas: (() => {
         const m = this.lerJsonCriptografado<MedidasAntropometricas>(avaliacao.medidasCriptografadas, {});
-        return { pesoKg: m.pesoKg,alturaCm: m.alturaCm,circunferencias: m.circunferencias,dobras: m.dobras };
+        return projetarMedidasAntropometricas(m);
       })(),
-      resultado: this.lerJsonCriptografado<ResultadoAntropometrico>(avaliacao.resultadoCriptografado, {
-        protocoloAplicado: 'nenhum',
-        avisos: ['registro_ilegivel']
-      }),
+      resultado: projetarResultadoAntropometrico(this.lerJsonCriptografado(avaliacao.resultadoCriptografado, undefined)),
       metricasCompartilhadasPortal: avaliacao.metricasCompartilhadasPortal ?? [],
       formulaAplicada: avaliacao.formulaAplicada,
       observacoes: avaliacao.observacoesCriptografadas

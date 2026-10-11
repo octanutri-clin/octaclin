@@ -1,3 +1,5 @@
+import { metodoAdultoElegivel } from './elegibilidade-adulta';
+import type { SnapshotPediatrico } from './antropometria-pediatrica';
 import type { ResultadoGestacional } from './antropometria-gestacional';
 /**
  * Calculo antropometrico. Formula errada aqui e erro clinico, nao bug: cada
@@ -72,6 +74,7 @@ export type ClassificacaoRcq = 'abaixo_do_corte' | 'elevado';
 export type ClassificacaoCircunferenciaCintura = 'baixo' | 'aumentado' | 'muito_aumentado';
 
 export interface ResultadoAntropometrico {
+  pediatrico?: SnapshotPediatrico;
   gestacional?: ResultadoGestacional;
   imc?: number;
   classificacaoImc?: ClassificacaoImc;
@@ -393,6 +396,8 @@ export function calcularAntropometria(entrada: EntradaCalculoAntropometrico): Re
     }
   }
 
+  const interpretacaoAdultaElegivel = metodoAdultoElegivel('cintura', entrada.idadeAnos);
+  if (!entrada.gestante && !interpretacaoAdultaElegivel) avisos.push(entrada.idadeAnos === undefined ? 'interpretacao_adulta_exige_idade' : entrada.idadeAnos < 18 ? 'interpretacao_adulta_bloqueada_menor_de_18' : 'metodos_18_19_aguardam_ratificacao_individual');
   const cintura = numeroFinito(entrada.medidas.circunferencias?.cintura);
   const quadril = numeroFinito(entrada.medidas.circunferencias?.quadril);
   const cinturaValida = cintura !== undefined && dentroDaFaixa(cintura, LIMITES.circunferenciaCm);
@@ -400,11 +405,12 @@ export function calcularAntropometria(entrada: EntradaCalculoAntropometrico): Re
   if (cinturaValida && quadril !== undefined && dentroDaFaixa(quadril, LIMITES.circunferenciaCm)) {
     const rcq = (cintura as number) / quadril;
     resultado.rcq = arredondar(rcq, 2);
-    if (entrada.sexo && !entrada.gestante) resultado.classificacaoRcq = classificarRcq(rcq, entrada.sexo);
-    else if (!entrada.gestante) avisos.push('rcq_sem_classificacao_sexo_ausente');
+    if (entrada.sexo && !entrada.gestante && metodoAdultoElegivel('rcq', entrada.idadeAnos)) resultado.classificacaoRcq = classificarRcq(rcq, entrada.sexo);
+    else if (!entrada.gestante && !entrada.sexo) avisos.push('rcq_sem_classificacao_sexo_ausente');
   }
 
-  if (cinturaValida && entrada.sexo && !entrada.gestante) {
+  if (cinturaValida) resultado.circunferenciaCinturaCm = arredondar(cintura as number, 1);
+  if (cinturaValida && entrada.sexo && !entrada.gestante && interpretacaoAdultaElegivel) {
     // A propria OMS 2008 conclui que a cintura isolada prediz risco
     // cardiometabolico melhor que a RCQ, e o dado ja esta na mao.
     resultado.circunferenciaCinturaCm = arredondar(cintura as number, 1);
@@ -419,6 +425,7 @@ export function calcularAntropometria(entrada: EntradaCalculoAntropometrico): Re
     avisos.push('gestante_sem_interpretacao_adulta_cintura_rcq_composicao');
     return resultado;
   }
+  if (entrada.protocolo !== 'nenhum' && !metodoAdultoElegivel(entrada.protocolo, entrada.idadeAnos)) return resultado;
   const equacao = aplicarProtocolo(entrada, avisos);
   if (!equacao) return resultado;
 

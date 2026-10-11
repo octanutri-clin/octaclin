@@ -962,6 +962,12 @@ describe('ServicoPortalPaciente', () => {
           resultadoCriptografado: Buffer.from('cripto:{"imc":23.9}')
         },
         {
+          id: 'avaliacao-pediatrica', tenantId: 'tenant-1', pacienteId: 'paciente-1', excluidaEm: null,
+          avaliadaEm: '2026-07-22', metricasCompartilhadasPortal: ['imc'],
+          medidasCriptografadas: Buffer.from('cripto:{"pesoKg":0.8}'),
+          resultadoCriptografado: Buffer.from('cripto:{"imc":10,"pediatrico":{"estado":"protocolos_bloqueados"}}')
+        },
+        {
           id: 'avaliacao-outro-paciente', tenantId: 'tenant-1', pacienteId: 'paciente-2', excluidaEm: null,
           avaliadaEm: '2026-07-22', metricasCompartilhadasPortal: ['imc'],
           medidasCriptografadas: Buffer.from('cripto:{"pesoKg":99}'),

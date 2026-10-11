@@ -19,7 +19,11 @@
   e produção conforme relato do proprietário, sem consulta direta aos bancos.
   Atestados aguardam validação específica; limites históricos em
   `docs/history/phases/PLANO_FASE_312.md` e `tasks/plan-fase-312.md`.
-  Provenance do SBOM SKIPPED. Fase 313 em implementação, não concluída.
+  Provenance do SBOM SKIPPED.
+- Fase 313 integrada pelo PR #391 (`f8c5ab66`); CI final `38082785780`
+  e pós-merge `38084523466` SUCCESS. Migration 1068 integrada, aplicação
+  operacional não confirmada; revisão independente não comprovada.
+  Fase 314 somente em planejamento: `tasks/plan-fase-314.md`.
 
 ## Reconciliação em 2026-10-09
 

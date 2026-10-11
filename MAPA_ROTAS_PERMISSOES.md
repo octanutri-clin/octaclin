@@ -234,3 +234,15 @@ explícita, UUID de replay e contexto gestacional; o backend preserva o snapshot
 cifrado, confere divergência e bloqueia episódio encerrado/referência desatualizada.
 Nenhum parâmetro do browser escolhe o paciente no portal. Vínculo ausente ou
 ambíguo nega acesso.
+
+## Fase 314 — acompanhamento pediátrico no console
+
+| BFF | Backend | Contrato |
+| --- | --- | --- |
+| `/api/pacientes/[id]/acompanhamento-pediatrico` | `/pacientes/:id/acompanhamento-pediatrico` | GET `pacientes.ler`; UUID de paciente/cursor, limite 1–100, tenant da sessão e carteira atual revalidados; `private, no-store`; projeção de snapshots factuais e cursor por último registro examinado |
+| `/api/pacientes/[id]/avaliacoes-antropometricas` (existente) | `/pacientes/:id/avaliacoes-antropometricas` (existente) | POST `pacientes.gerenciar`; contexto pediátrico confirmado e UUID de replay obrigatórios; resultado cifrado com quatro indicadores bloqueados; autorização antecede replay |
+
+Reutiliza os papéis e guardas atuais de pacientes. Não adiciona permissões ou
+rotas ao portal. Compartilhamento pediátrico é rejeitado no backend e excluído
+das projeções legadas do portal. Protocolos clínicos não ratificados não são
+ativáveis por payload, papel ou variável de ambiente.

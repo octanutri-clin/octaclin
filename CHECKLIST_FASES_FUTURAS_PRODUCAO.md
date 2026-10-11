@@ -1,5 +1,7 @@
 # OctaClin - Checklist vivo de fases futuras ate producao
 
+Atualizado em 2026-10-11. Fase 314 em desenvolvimento técnico controlado; PR Draft #392. G01/G02 e ativação assistencial bloqueados; sem migração externa ou deploy. Histórico anterior preservado abaixo.
+
 ## Estado reconciliado em 2026-10-10
 
 Fases 309/310 integradas pelos PRs #386/#388 (`34d186ec`/`eb7f2aad`),
@@ -14,8 +16,10 @@ Fase 312 integrada pelo PR #390 (`774cf34f`); CI final `38049949959` e
 pós-merge `38052856367` SUCCESS. Proprietário informou 1067 aplicada/validada
 em staging e produção, sem consulta direta aos bancos. Handoff preservado em
 `tasks/plan-fase-312.md`; gates residuais históricos não encerrados por inferência.
-Fase 313 em implementação: episódios gestacionais, referências
-versionadas, gráfico e portal com aceite específico. Ficha clínica ratificada; contratos e checklist em `tasks/plan.md`. Monitor de produção
+Fase 313 integrada pelo PR #391 (`f8c5ab66`); CI final `38082785780`
+e principal pós-merge `38084523466` SUCCESS. Aplicação da 1068 e revisão
+independente não confirmadas. Fase 314 agora em desenvolvimento técnico controlado;
+handoff em `tasks/plan-fase-314.md`, ficha clínica pendente. Monitor de produção
 `38065380981` FAIL com HTTP 503; causa não identificada.
 
 O parágrafo abaixo registra a atualização histórica anterior; para o estado
@@ -4569,13 +4573,14 @@ auditoria estão ordenados na seção 15 de
   e pós-merge SUCCESS. Aplicação/validação da 1067 informada pelo proprietário
   em staging/produção, sem consulta direta. Atestados aguardam validação jurídica.
   Gates residuais em `tasks/todo-fase-312.md`, handoff `tasks/plan-fase-312.md`.
-- [~] Fase 313 - implementação e evidências em andamento; ficha clínica ratificada.
-  Curvas brasileiras MS, episódios/referências versionadas, gráfico e portal
-  com dupla autorização. Ficha clínica ratificada pelo proprietário/equipe em
-  `docs/product/FICHA_VALIDACAO_CLINICA_FASE_313.md`; PR #391, checks em acompanhamento
-  e migration 1068 externa pendente. Execução `tasks/todo-fase-313.md`.
-- [ ] Fase 314 - avaliação antropométrica de menores de 20 anos, após validação
-  clínica da referência etária e por sexo.
+- [x] Fase 313 - integrada pelo PR #391 (`f8c5ab66`); CI final e pós-merge
+  SUCCESS. Aplicação/validação externa da 1068 e revisão independente não
+  confirmadas; não representam aceite operacional. `tasks/todo-fase-313.md`.
+- [~] Fase 314 - desenvolvimento técnico controlado de quatro indicadores OMS/SISVAN,
+  gráfico no console e prematuros INTERGROWTH → OMS com idade corrigida.
+  Handoff em `tasks/plan-fase-314.md`; ficha clínica e referência computacional
+  neonatal pendentes. PR Draft #392 inclui medidas/contexto, histórico e candidatos
+  isolados testados; classificadores assistenciais continuam bloqueados.
 - [ ] Fase 315 - retirada controlada do campo `score_risco` legado, com
   compatibilidade e plano de migration/rollback.
 - [ ] Fase 316 - PB-30: extração assistida de exame com revisão humana,

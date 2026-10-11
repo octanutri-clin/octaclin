@@ -1,0 +1,168 @@
+[
+  {
+    "repo": "ropensci/gigs",
+    "commit": "fb58fe6596d4b289d5362c5efe00f882984d3186",
+    "file": "R/ig_png.R",
+    "url": "https://raw.githubusercontent.com/ropensci/gigs/fb58fe6596d4b289d5362c5efe00f882984d3186/R/ig_png.R",
+    "sha256": "609d37f02dd8ed6532a40313c8790a28fedf4b32491596aa15e603340bdc42cb",
+    "bytes": 5033
+  },
+  {
+    "repo": "ropensci/gigs",
+    "commit": "fb58fe6596d4b289d5362c5efe00f882984d3186",
+    "file": "R/gigs_zscoring.R",
+    "url": "https://raw.githubusercontent.com/ropensci/gigs/fb58fe6596d4b289d5362c5efe00f882984d3186/R/gigs_zscoring.R",
+    "sha256": "67ef9f58f6e4c78bcaee71ff3a8d0609f7581eff034beb5d13afda3e0d933022",
+    "bytes": 22468
+  },
+  {
+    "repo": "ropensci/gigs",
+    "commit": "fb58fe6596d4b289d5362c5efe00f882984d3186",
+    "file": "DESCRIPTION",
+    "url": "https://raw.githubusercontent.com/ropensci/gigs/fb58fe6596d4b289d5362c5efe00f882984d3186/DESCRIPTION",
+    "sha256": "11f256967f9283fad4d5e9c7644aeb127712ca1614dfabd732c930c2e9aa099c",
+    "bytes": 2110
+  },
+  {
+    "url": "https://raw.githubusercontent.com/ropensci/gigs/fb58fe6596d4b289d5362c5efe00f882984d3186/LICENSE",
+    "error": "HTTP Error 404: Not Found"
+  },
+  {
+    "repo": "ropensci/gigs",
+    "commit": "fb58fe6596d4b289d5362c5efe00f882984d3186",
+    "file": "README.md",
+    "url": "https://raw.githubusercontent.com/ropensci/gigs/fb58fe6596d4b289d5362c5efe00f882984d3186/README.md",
+    "sha256": "7606fe02dd135e162b15fd50a0385bbbe479fb6da7b52a017e9e5913dfe95f3d",
+    "bytes": 30663
+  },
+  {
+    "repo": "ki-tools/growthstandards",
+    "commit": "d06a4898c286a3ab9111a5e3525c3b9d0e9ae8aa",
+    "file": "R/standard_igprepost.R",
+    "url": "https://raw.githubusercontent.com/ki-tools/growthstandards/d06a4898c286a3ab9111a5e3525c3b9d0e9ae8aa/R/standard_igprepost.R",
+    "sha256": "b03eccfe2181043e1cc7e09f8ec30d7ab3cceec2ce6887be9ba4c1751fd2ce64",
+    "bytes": 9044
+  },
+  {
+    "repo": "ki-tools/growthstandards",
+    "commit": "d06a4898c286a3ab9111a5e3525c3b9d0e9ae8aa",
+    "file": "DESCRIPTION",
+    "url": "https://raw.githubusercontent.com/ki-tools/growthstandards/d06a4898c286a3ab9111a5e3525c3b9d0e9ae8aa/DESCRIPTION",
+    "sha256": "d31212c905c154dc5d16c00fb6c35a485778fe964f8e822d7a6f4670ea685aab",
+    "bytes": 877
+  },
+  {
+    "repo": "ki-tools/growthstandards",
+    "commit": "d06a4898c286a3ab9111a5e3525c3b9d0e9ae8aa",
+    "file": "LICENSE",
+    "url": "https://raw.githubusercontent.com/ki-tools/growthstandards/d06a4898c286a3ab9111a5e3525c3b9d0e9ae8aa/LICENSE",
+    "sha256": "319b7ccf4f47f5137e8f97d46f290d19c8f37beb218f186eb210cfd4e7c16eab",
+    "bytes": 53
+  },
+  {
+    "repo": "ki-tools/growthstandards",
+    "commit": "d06a4898c286a3ab9111a5e3525c3b9d0e9ae8aa",
+    "file": "README.md",
+    "url": "https://raw.githubusercontent.com/ki-tools/growthstandards/d06a4898c286a3ab9111a5e3525c3b9d0e9ae8aa/README.md",
+    "sha256": "ae6d4613e0be9143f9e92c94cb2d4e4d99bb83c7e9048e022cab325b4d6b19f9",
+    "bytes": 2125
+  },
+  {
+    "file": "epmc.json",
+    "url": "https://www.ebi.ac.uk/europepmc/webservices/rest/search?query=TITLE:%22Postnatal%20growth%20standards%20for%20preterm%20infants%22&format=json",
+    "sha256": "4d80f492ea036cc2643fb4c7160c7d93086a036b93882eeb7fe562961c91daf9",
+    "bytes": 1254
+  },
+  {
+    "file": "gigs_docs.html",
+    "url": "https://docs.ropensci.org/gigs/reference/gigs_zscoring.html",
+    "sha256": "fdfa28dd4ff33710d547974c5374a405800bfbd83662dccae3b8c5211bcd4404",
+    "bytes": 30263
+  },
+  {
+    "file": "official_apps.html",
+    "url": "https://intergrowth21.tghn.org/fetal-preterm-and-newborn-applications/",
+    "sha256": "e7a246ed4b6d7910eef77a9c36a30d7d290c2725010117bbfa32b087942d19d2",
+    "bytes": 95201
+  },
+  {
+    "file": "gigs_LICENSE.md",
+    "url": "https://raw.githubusercontent.com/ropensci/gigs/fb58fe6596d4b289d5362c5efe00f882984d3186/LICENSE.md",
+    "sha256": "2e593e33a53b2a63bd702bd2710dccb2fef31473fd0506c2683a7f9d538d35e0",
+    "bytes": 33012
+  },
+  {
+    "file": "growthstandards_LICENSE.md",
+    "url": "https://raw.githubusercontent.com/ki-tools/growthstandards/d06a4898c286a3ab9111a5e3525c3b9d0e9ae8aa/LICENSE.md",
+    "sha256": "ae07cb54fa6e8466ed9615d8950de48fcc4aaa2804a9e183c43c204d2187eb0a",
+    "bytes": 1082
+  },
+  {
+    "file": "gigs_test_png.R",
+    "url": "https://raw.githubusercontent.com/ropensci/gigs/fb58fe6596d4b289d5362c5efe00f882984d3186/tests/testthat/test-ig_png.R",
+    "sha256": "0516e621eb1ee7f76d34362e7a45c932256c787dbf6b7ea8b266602ca3d2e1c7",
+    "bytes": 4196
+  },
+  {
+    "file": "epmc_core.json",
+    "url": "https://www.ebi.ac.uk/europepmc/webservices/rest/search?query=EXT_ID:26475015&resultType=core&format=json",
+    "sha256": "d6f2e3c8f47ccac3de14db450aaf1653d06e4ac97304a13a0839ae5a89ad5d77",
+    "bytes": 31733
+  },
+  {
+    "file": "official_preterm.html",
+    "url": "https://intergrowth21.ndog.ox.ac.uk/preterm",
+    "sha256": "6dc6164a0478e9e0c571d7b631fd21f6bd33f704c62953231d5a1235e8732fa3",
+    "bytes": 8367
+  },
+  {
+    "file": "lancet_supp.pdf",
+    "url": "https://www.thelancet.com/cms/10.1016/S2214-109X(15)00163-1/attachment/78f0dfc3-9884-46de-9d63-d3f3828b37b3/mmc1.pdf",
+    "error": "<urlopen error Tunnel connection failed: 403 Forbidden>"
+  },
+  {
+    "file": "healthychildren.html",
+    "url": "https://www.healthychildren.org/English/ages-stages/baby/preemie/Pages/Preemie-Adjusted-Age.aspx",
+    "error": "HTTP Error 403: Forbidden"
+  },
+  {
+    "file": "AAP_tools.html",
+    "url": "https://www.aap.org/en/patient-care/newborn-and-infant-nutrition/newborn-and-infant-nutrition-assessment-tools/preterm-infant-growth-tools/",
+    "error": "HTTP Error 403: Forbidden"
+  },
+  {
+    "file": "ig_primary_page.html",
+    "url": "https://intergrowth21.com/node/142",
+    "sha256": "d383cfd473100e62e6d06e42f505356c442fa65ea6852e03cd55b80feb94b840",
+    "bytes": 24992
+  },
+  {
+    "file": "ig_paper_api.json",
+    "url": "https://api.elsevier.com/content/article/pii/S2214109X15001631?httpAccept=text/xml",
+    "error": "<urlopen error Tunnel connection failed: 403 Forbidden>"
+  },
+  {
+    "file": "grow_preterm-zs-boys_bw_table.pdf",
+    "url": "https://intergrowth21.com/sites/default/files/2023-02/grow_preterm-zs-boys_bw_table.pdf",
+    "sha256": "9092b6b5409c01e40fae424ed489053e707f31a465b646f157ef3d6b324d5d54",
+    "equals_cached": true
+  },
+  {
+    "file": "grow_preterm-zs-girls_bw_table.pdf",
+    "url": "https://intergrowth21.com/sites/default/files/2023-02/grow_preterm-zs-girls_bw_table.pdf",
+    "sha256": "c651faf16caf61c68dc54c000897f106066289db2bdfa0c139965aa4d1b178dc",
+    "equals_cached": true
+  },
+  {
+    "file": "grow_preterm-zs-boys_lt_table.pdf",
+    "url": "https://intergrowth21.com/sites/default/files/2023-02/grow_preterm-zs-boys_lt_table.pdf",
+    "sha256": "e56115d43d5a27728229b4c2515777e72b43e7c0696feeeb1dbed7a7099cd9d2",
+    "equals_cached": true
+  },
+  {
+    "file": "grow_preterm-zs-girls_lt_table.pdf",
+    "url": "https://intergrowth21.com/sites/default/files/2023-02/grow_preterm-zs-girls_lt_table.pdf",
+    "sha256": "9a8c482e20578a2b92b0158f3a3bbb81f555dabbd275cc6185653869e9dc19a8",
+    "equals_cached": true
+  }
+]

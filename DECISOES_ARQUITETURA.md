@@ -330,3 +330,29 @@ Este arquivo registra decisoes ja tomadas para evitar que outro agente reprojete
   fase; testes unitários e status `SKIPPED` não provam isolamento.
 - Plano, gaps, decisões e testes em
   `docs/history/phases/PLANO_FASE_303.md`.
+
+## Fase 314 — snapshots pediátricos e protocolos pendentes
+
+Contexto pediátrico confirmado e resultados usados ficam no JSON cifrado das
+avaliações antropométricas existentes, com versão explícita e chave de criação.
+Reutilizar transação tenant, carteira, lock do paciente e idempotência da Fase313;
+revalidar acesso antes de replay e não recalcular avaliações anteriores.
+
+O acompanhamento usa projeção permitida executável e paginação SQL por
+`avaliada_em/criado_em/id`; primeiro limita registros examinados, depois filtra
+snapshots cifrados. O cursor avança pelo último examinado, incluindo páginas
+sem pediatria; não filtrar PHI no SQL nem usar timestamp JavaScript como âncora.
+Sem notas internas/fingerprint e sem novo portal para menores.
+
+Enquanto G01/G02 estiverem bloqueados, nenhum serviço retorna escores, percentis
+ou rótulos pediátricos. Não há client flag nem env para liberação. Candidatos
+matemáticos isolados aceitam referências sintéticas, sem datasets de direitos
+pendentes; os coeficientes INTERGROWTH estão apenas no teste de investigação,
+excluído e verificado no build. Ativação futura requer artefatos/métodos/direitos,
+ratificação humana e revisão de código, não mudança de configuração.
+
+A migration1069 acrescenta proteção de retenção a avaliações confirmadas, sem
+alterar1068 ou criar dados clínicos em claro. Exclusão lógica mantém snapshots.
+Rollback de aplicação preserva dados; down1069 recusa enfraquecer proteção com
+snapshots confirmados. Procedimentos de retenção/retificação autorizados e
+aplicação por ambiente permanecem sujeitos aos gates de governança/operador.

@@ -379,6 +379,8 @@ const servidor = http.createServer(async (requisicao, resposta) => {
       return json(resposta, 200, { marcadas: 0, resumosMarcados: ids.size });
     }
 
+    if (requisicao.method === 'GET' && /^\/pacientes\/[^/]+\/acompanhamento-pediatrico$/.test(url.pathname)) return json(resposta, 200, { itens: [], registrosExaminados: 0, itensExibidos: 0, temMaisHistorico: false });
+
     if (requisicao.method === 'GET' && url.pathname === '/pacientes') {
       registrarAuditoria('pacientes.listar_dados_sensiveis', 'paciente', undefined, { total: estado.pacientes.length });
       return json(resposta, 200, paginar(estado.pacientes));
