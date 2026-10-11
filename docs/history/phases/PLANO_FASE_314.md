@@ -358,3 +358,74 @@ produção à autorização de pesquisa. Uma PR documental não foi aberta.
 - Rollback conserva leitura de snapshots, fontes/versões e proteções. Pode
   desabilitar novos cálculos/gravações; não desabilitar toda leitura histórica
   nem usar down da 1016/1068 com dados para reverter esta fase.
+
+## 11. Integração REV3 — foco G01 e pendências clínicas
+
+Proprietário aprovou revisão documental **com ressalvas**, autorizando pesquisa
+sem implementação. [Investigação detalhada](INVESTIGACAO_INTERGROWTH_FASE_314_REV3.md)
+e [propostas CL-01–CL-10](../../product/FICHA_VALIDACAO_CLINICA_FASE_314.md#10-propostas-para-ratificação--integração-rev3)
+refinam os seis documentos. Relatório rev2 é histórico, não deletado.
+
+Candidato contínuo INTERGROWTH identificado nos dois projetos; oráculo oficial
+concordou em14 casos únicos/28 resultados (lote12/24 + inicial1/2 +55semanas1/2).
+Coeficientes detalhados primários/direitos/políticas continuam pendentes.
+G01 não muda paraPASS por concordância entre bibliotecas ou amostra sintética.
+
+| Subgate G00 | Estado | Limite |
+| --- | --- | --- |
+| G00-fonte/direitos | BLOCKED (integridade parcialPASS) | Hashes/commits/licenças de código identificados; direitos de dados/equações/incorporação ainda abertos |
+| G00-operação1068 | BLOCKED (consultaSKIPPED) | Aplicação em staging/produção,role/grants/RLS sem prova externa; necessário para rollout, não para pesquisa |
+
+G00 global BLOCKED; G01/G02/G03 BLOCKED; G04 SKIPPED; G05 BLOCKED.
+Tabela seção10 preserva histórico; esta seção refina evidência, sem fechar gate.
+Não executar T03–T18 nem entregar apenasOMS por descoberta de biblioteca.
+
+Refinamentos de contrato **propostos, não aprovados**: contexto explícito
+nascimento versus pós-natal e janela0–2 dias (CL-05); não adicionar Newborn Size,
+hora do nascimento ou nova entidade por inferência. Política única versionada
+para correção/transição (CL-07), sem copiar WHO cronológica de gigs e sem
+assumir24/36 meses. Normalização neonatal não herda±0,7OMS automaticamente.
+Campos mínimos elegibilidade/técnica/edema/política permanecem cifrados,
+confirmados por avaliação; nenhum novo índice clínico ou papel foi autorizado.
+
+T01-C passa a exigir procedência científica dos coeficientes, oráculo diário,
+limites/extremos e termos por camada, com ressalva55semanas preservada.
+T02 recebe propostas explícitas e alternativas de todos osCL. Ordem T01–T18
+rev2 permanece: nenhum algoritmo novo iniciado. Preservar proteção gestacional,
+replay/carteira/RLS/cifra/allowlists/paginação e rollback do plano existente.
+
+Prontidão: planejamento aprovado documentalmente com ressalvas e atualizado;
+clínicaBLOCKED, implementaçãoBLOCKED, produçãoBLOCKED. Sol 6.1 médio continua
+adequado à pesquisa/núcleo; Luna alto somenteUI delimitada após contratos/gates,
+com aviso e pausa para troca manual.
+
+## 12. Decisões finais REV4 e prova finita
+
+[Matriz finalCL-01–CL-10](../../product/FICHA_VALIDACAO_CLINICA_FASE_314.md#11-matriz-final-de-decisão-cl-01cl-10--rev4)
+é o formulário vigente para respostas, com fonte/proposta/alternativa/impacto.
+CL-07 incorporaElmrayed2025:36 meses **corrigidos** em IG<32, sem incluir32–36.
+Opção24corrigidos para32–<37 é proposta local provisória a ratificar, não
+conclusãoSBP ou evidência universal. RCPCHNICM24corrigidos é alcance deinstrumento;
+SBP 2023 refere desenvolvimento segundo REV4, acesso direto403. Base/igualdade
+no limite/indicadores/técnica eexceções devem ser aprovadas explicitamente.
+
+Contagem reconciliada nosJSONs:14 casos únicos/28 resultados, lote12/24 + inicial1/2
++55s1/2; z epercentil compõem umresultado de indicador. Nenhuma consulta nova
+Oxford nestaREV4. [Protocolo prospectivo finito e direitos](INVESTIGACAO_INTERGROWTH_FASE_314_REV3.md#8-fechamento-objetivo-rev4--evidência-contagens-e-direitos):
+14 casos existentes +até 8 manuais novos, provas locais diáriasoffline, tolerâncias
+propostas a aprovar antes das novas comparações. Não usar todos osdias contra
+site nem incluir rede em CI. Caso55semanas não justifica aumentar tolerância.
+
+Encerrar discussão genérica: faltam respostasCL, fonte/precisão científica,
+aceite/explicação55, dados/ediçãoOMS e decisão de direitos da incorporação.
+VillarCCBY-NC-ND é obra; pacotesGPL/MIT e dados/métodos têm análise distinta.
+Roteiro de consulta preparado,sem envio a terceiros autorizado. Não fazer
+novo módulo/tabela/protocolo paralelo nem adicionar recursoNewbornSize.
+
+G00-fonte/direitosBLOCKED e G00-operação1068BLOCKED/consultaSKIPPED separados;
+G01/G02/G03BLOCKED, G04SKIPPED, G05BLOCKED. ContratosRLS/cifra/carteira/replay,
+snapshots/versionamento, paginação por examinados/âncoraSQL, portal/gestação,
+retenção e rollback da seção5 continuam integralmente preservados.
+T03–T18 não iniciadas. Ficha ratificada+evidênciasG01+autorizaçãoG03 requeridas;
+nenhuma aprovação documental substitui esses gates. ModeloSol6.1médio suficiente,
+sem necessidade de troca para concluir esta etapa.

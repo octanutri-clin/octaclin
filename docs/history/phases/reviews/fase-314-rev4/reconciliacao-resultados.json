@@ -1,0 +1,26 @@
+{
+  "artifacts": [
+    {
+      "file": "comparacao-sintetica.json",
+      "sha256": "d1186ce5e4f3854c90777cbb64a089c9b5211d59d28b74b6c06c073e4f17e079",
+      "cases": 12,
+      "results": 24
+    },
+    {
+      "file": "consulta-inicial-sintetica.json",
+      "sha256": "efb49305df26300b574b79a5570c7f56e663de7027f2d125ad4bc67ee3c2c277",
+      "cases": 1,
+      "results": 2
+    },
+    {
+      "file": "quantil55-oraculo-sintetico.json",
+      "sha256": "7fd97fec7e89ea68774dc1277d8d293cf177b84060f224835c6e95dd7306a9d7",
+      "cases": 1,
+      "results": 2
+    }
+  ],
+  "total_cases": 14,
+  "total_results": 28,
+  "new_oracle_requests": 0,
+  "scope": "Recontagem dos JSONs REV3; nenhum resultado original alterado"
+}

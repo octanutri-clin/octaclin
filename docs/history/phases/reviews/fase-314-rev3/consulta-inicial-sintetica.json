@@ -1,0 +1,28 @@
+{
+  "sex": "Male",
+  "week": 36,
+  "day": 3,
+  "weight": 2.65,
+  "length": 47.2,
+  "sha256": "f069a5efe007c48da077da2cb8ed1181081d549f8b1808205ce8dab992d32415",
+  "comparison": [
+    {
+      "indicator": "length",
+      "official_z": 0.09645172112773262,
+      "calculated_z": 0.09645172112773255,
+      "official_percentile": 53.84190919790672,
+      "calculated_percentile": 53.84190919790671,
+      "error_z": 6.938893903907228e-17,
+      "error_percentile": 1.4210854715202004e-14
+    },
+    {
+      "indicator": "weight",
+      "official_z": 0.14070816748856857,
+      "calculated_z": 0.14070816748856857,
+      "official_percentile": 55.594975371382006,
+      "calculated_percentile": 55.594975371382006,
+      "error_z": 0.0,
+      "error_percentile": 0.0
+    }
+  ]
+}

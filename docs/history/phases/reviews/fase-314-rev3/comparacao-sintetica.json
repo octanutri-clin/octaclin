@@ -1,0 +1,374 @@
+{
+  "weekly": [
+    {
+      "sex": "Male",
+      "indicator": "weight",
+      "n": 266,
+      "max_error": 0.005026478034956483,
+      "rounding_half_unit": 0.005,
+      "pass_within_rounding": false
+    },
+    {
+      "sex": "Male",
+      "indicator": "length",
+      "n": 266,
+      "max_error": 0.04984015635761807,
+      "rounding_half_unit": 0.05,
+      "pass_within_rounding": true
+    },
+    {
+      "sex": "Female",
+      "indicator": "weight",
+      "n": 266,
+      "max_error": 0.004966365262131234,
+      "rounding_half_unit": 0.005,
+      "pass_within_rounding": true
+    },
+    {
+      "sex": "Female",
+      "indicator": "length",
+      "n": 266,
+      "max_error": 0.0499110416082047,
+      "rounding_half_unit": 0.05,
+      "pass_within_rounding": true
+    }
+  ],
+  "daily": [
+    {
+      "sex": "Male",
+      "week": 27,
+      "day": 0,
+      "weight": 0.36,
+      "length": 26.6,
+      "sha256": "20e16fb3ad4a4248ed857041dcb891710c482d441db4520c6710d5f72cf1b4fb",
+      "comparison": [
+        {
+          "indicator": "length",
+          "official_z": -2.9930434273271582,
+          "calculated_z": -2.993043427327156,
+          "official_percentile": 0.13810522159936056,
+          "calculated_percentile": 0.13810522159936056,
+          "error_z": 2.220446049250313e-15,
+          "error_percentile": 0.0
+        },
+        {
+          "indicator": "weight",
+          "official_z": -3.0021821414274967,
+          "calculated_z": -3.0021821414274945,
+          "official_percentile": 0.13402587052576131,
+          "calculated_percentile": 0.13402587052576131,
+          "error_z": 2.220446049250313e-15,
+          "error_percentile": 0.0
+        }
+      ]
+    },
+    {
+      "sex": "Male",
+      "week": 27,
+      "day": 1,
+      "weight": 0.459,
+      "length": 28.8,
+      "sha256": "469a9556cef2fb9ad363f941bf81d9e302fed6c1de37b7e52e76cdd0c1fb0f2d",
+      "comparison": [
+        {
+          "indicator": "length",
+          "official_z": -1.9868263014262912,
+          "calculated_z": -1.9868263014262912,
+          "official_percentile": 2.3470824453995953,
+          "calculated_percentile": 2.3470824453995953,
+          "error_z": 0.0,
+          "error_percentile": 0.0
+        },
+        {
+          "indicator": "weight",
+          "official_z": -2.0007586961388557,
+          "calculated_z": -2.000758696138854,
+          "official_percentile": 2.2709200276835597,
+          "calculated_percentile": 2.2709200276835704,
+          "error_z": 1.7763568394002505e-15,
+          "error_percentile": 1.0658141036401503e-14
+        }
+      ]
+    },
+    {
+      "sex": "Male",
+      "week": 36,
+      "day": 3,
+      "weight": 2.595,
+      "length": 47.0,
+      "sha256": "f2724c84f731165c728489247a7a75719a4cede74330a130f345c4cb1ec10e9f",
+      "comparison": [
+        {
+          "indicator": "length",
+          "official_z": -0.008678914388361459,
+          "calculated_z": -0.008678914388361453,
+          "official_percentile": 49.65376575685429,
+          "calculated_percentile": 49.65376575685429,
+          "error_z": 5.204170427930421e-18,
+          "error_percentile": 0.0
+        },
+        {
+          "indicator": "weight",
+          "official_z": -0.0002310090225548209,
+          "calculated_z": -0.0002310090225548209,
+          "official_percentile": 49.99078407345684,
+          "calculated_percentile": 49.99078407345684,
+          "error_z": 0.0,
+          "error_percentile": 0.0
+        }
+      ]
+    },
+    {
+      "sex": "Male",
+      "week": 40,
+      "day": 0,
+      "weight": 3.95,
+      "length": 52.8,
+      "sha256": "39b3a59d1f295d05cf44dfad78d6bdcf7c2567d0556f48bff32507e4576712d0",
+      "comparison": [
+        {
+          "indicator": "length",
+          "official_z": 0.9873806789005344,
+          "calculated_z": 0.9873806789005223,
+          "official_percentile": 83.82719737237603,
+          "calculated_percentile": 83.82719737237572,
+          "error_z": 1.2101430968414206e-14,
+          "error_percentile": 3.126388037344441e-13
+        },
+        {
+          "indicator": "weight",
+          "official_z": 1.0005017674285066,
+          "calculated_z": 1.0005017674285053,
+          "official_percentile": 84.14661286362086,
+          "calculated_percentile": 84.14661286362083,
+          "error_z": 1.3322676295501878e-15,
+          "error_percentile": 2.842170943040401e-14
+        }
+      ]
+    },
+    {
+      "sex": "Male",
+      "week": 63,
+      "day": 6,
+      "weight": 10.043,
+      "length": 71.5,
+      "sha256": "43b4597101a94bfcc9654d538dc1075c0a584c5dc381eb07813aca973a0dd7dd",
+      "comparison": [
+        {
+          "indicator": "length",
+          "official_z": 2.001230389233951,
+          "calculated_z": 2.001230389233951,
+          "official_percentile": 97.7316216271383,
+          "calculated_percentile": 97.7316216271383,
+          "error_z": 0.0,
+          "error_percentile": 0.0
+        },
+        {
+          "indicator": "weight",
+          "official_z": 2.000077432416998,
+          "calculated_z": 2.000077432416998,
+          "official_percentile": 97.72540483791485,
+          "calculated_percentile": 97.72540483791485,
+          "error_z": 0.0,
+          "error_percentile": 0.0
+        }
+      ]
+    },
+    {
+      "sex": "Male",
+      "week": 64,
+      "day": 0,
+      "weight": 11.445,
+      "length": 74.1,
+      "sha256": "267433833e89b4998e6f06909d7fdf1352624bf7f620eadbdb47cdccc733f270",
+      "comparison": [
+        {
+          "indicator": "length",
+          "official_z": 2.9978152245161263,
+          "calculated_z": 2.9978152245161263,
+          "official_percentile": 99.86403875814722,
+          "calculated_percentile": 99.86403875814722,
+          "error_z": 0.0,
+          "error_percentile": 0.0
+        },
+        {
+          "indicator": "weight",
+          "official_z": 3.0002645641046897,
+          "calculated_z": 3.0002645641046897,
+          "official_percentile": 99.86512740111813,
+          "calculated_percentile": 99.86512740111813,
+          "error_z": 0.0,
+          "error_percentile": 0.0
+        }
+      ]
+    },
+    {
+      "sex": "Female",
+      "week": 27,
+      "day": 0,
+      "weight": 0.329,
+      "length": 25.8,
+      "sha256": "bee3804706d48f43be6a85bf3349f873d97c50f12698fa1350ab1de11c44977b",
+      "comparison": [
+        {
+          "indicator": "length",
+          "official_z": -2.9791623911865583,
+          "calculated_z": -2.979162391186556,
+          "official_percentile": 0.14451877532714041,
+          "calculated_percentile": 0.14451877532714597,
+          "error_z": 2.220446049250313e-15,
+          "error_percentile": 5.551115123125783e-15
+        },
+        {
+          "indicator": "weight",
+          "official_z": -2.996804245581894,
+          "calculated_z": -2.9968042455818917,
+          "official_percentile": 0.13641292166607366,
+          "calculated_percentile": 0.13641292166607366,
+          "error_z": 2.220446049250313e-15,
+          "error_percentile": 0.0
+        }
+      ]
+    },
+    {
+      "sex": "Female",
+      "week": 27,
+      "day": 1,
+      "weight": 0.419,
+      "length": 27.9,
+      "sha256": "352c7d80d049a073120a44d05c0251620e1fc15b363e04f6e9a42daa314a2b05",
+      "comparison": [
+        {
+          "indicator": "length",
+          "official_z": -1.9905261049374694,
+          "calculated_z": -1.9905261049374694,
+          "official_percentile": 2.326650563263283,
+          "calculated_percentile": 2.326650563263283,
+          "error_z": 0.0,
+          "error_percentile": 0.0
+        },
+        {
+          "indicator": "weight",
+          "official_z": -2.000833341851279,
+          "calculated_z": -2.0008333418512767,
+          "official_percentile": 2.2705176495065316,
+          "calculated_percentile": 2.2705176495065427,
+          "error_z": 2.220446049250313e-15,
+          "error_percentile": 1.1102230246251565e-14
+        }
+      ]
+    },
+    {
+      "sex": "Female",
+      "week": 36,
+      "day": 3,
+      "weight": 2.369,
+      "length": 45.6,
+      "sha256": "2d19de218cd79d2de3c83d6224f0c68eb3a48841d238429c1e724c5bae1c9657",
+      "comparison": [
+        {
+          "indicator": "length",
+          "official_z": 0.022422737626716698,
+          "calculated_z": 0.022422737626716684,
+          "official_percentile": 50.894462854655686,
+          "calculated_percentile": 50.894462854655686,
+          "error_z": 1.3877787807814457e-17,
+          "error_percentile": 0.0
+        },
+        {
+          "indicator": "weight",
+          "official_z": 7.346403326506762e-05,
+          "calculated_z": 7.346403326506762e-05,
+          "official_percentile": 50.00293079089319,
+          "calculated_percentile": 50.00293079089319,
+          "error_z": 0.0,
+          "error_percentile": 0.0
+        }
+      ]
+    },
+    {
+      "sex": "Female",
+      "week": 40,
+      "day": 0,
+      "weight": 3.606,
+      "length": 51.2,
+      "sha256": "728514663199df3054a5bf3e55a74275b4150b9fbd4fa51f3b163b1454b55ea4",
+      "comparison": [
+        {
+          "indicator": "length",
+          "official_z": 1.0070408260712036,
+          "calculated_z": 1.0070408260711916,
+          "official_percentile": 84.30424222682855,
+          "calculated_percentile": 84.30424222682826,
+          "error_z": 1.199040866595169e-14,
+          "error_percentile": 2.8421709430404007e-13
+        },
+        {
+          "indicator": "weight",
+          "official_z": 1.0008398972154486,
+          "calculated_z": 1.0008398972154475,
+          "official_percentile": 84.15478912599154,
+          "calculated_percentile": 84.1547891259915,
+          "error_z": 1.1102230246251565e-15,
+          "error_percentile": 4.263256414560601e-14
+        }
+      ]
+    },
+    {
+      "sex": "Female",
+      "week": 63,
+      "day": 6,
+      "weight": 9.168,
+      "length": 69.3,
+      "sha256": "7b8cf16f7b48d964580ebc9a89dccebc606c3ce66e9b7bf3098f5ec34390f317",
+      "comparison": [
+        {
+          "indicator": "length",
+          "official_z": 2.0082283300573995,
+          "calculated_z": 2.0082283300573995,
+          "official_percentile": 97.76904830821287,
+          "calculated_percentile": 97.76904830821287,
+          "error_z": 0.0,
+          "error_percentile": 0.0
+        },
+        {
+          "indicator": "weight",
+          "official_z": 2.0001334263007884,
+          "calculated_z": 2.0001334263007884,
+          "official_percentile": 97.72570709056444,
+          "calculated_percentile": 97.72570709056444,
+          "error_z": 0.0,
+          "error_percentile": 0.0
+        }
+      ]
+    },
+    {
+      "sex": "Female",
+      "week": 64,
+      "day": 0,
+      "weight": 10.447,
+      "length": 71.8,
+      "sha256": "93ad523dc712e93cfccefd2707fc48f580ac9cb42e8d9d6741f30e362c05b6ae",
+      "comparison": [
+        {
+          "indicator": "length",
+          "official_z": 2.9968114507185315,
+          "calculated_z": 2.9968114507185315,
+          "official_percentile": 99.86359030225134,
+          "calculated_percentile": 99.86359030225134,
+          "error_z": 0.0,
+          "error_percentile": 0.0
+        },
+        {
+          "indicator": "weight",
+          "official_z": 2.999686406993517,
+          "calculated_z": 2.999686406993517,
+          "official_percentile": 99.86487115177741,
+          "calculated_percentile": 99.86487115177741,
+          "error_z": 0.0,
+          "error_percentile": 0.0
+        }
+      ]
+    }
+  ]
+}

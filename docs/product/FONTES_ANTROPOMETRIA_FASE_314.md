@@ -189,3 +189,76 @@ inferência de que a fonte é governamental. O gate de direitos fica aberto.
 PASS nesta reconferência: quatro PDFs INTERGROWTH e dois manuais foram
 baixados novamente; todos os seis hashes iguais ao manifesto. As 38 linhas
 semanais não se transformaram em dados diários por essa verificação.
+
+## Investigação REV3 — candidato contínuo e oráculo oficial
+
+[Relatório científico-computacional e direitos](../history/phases/INVESTIGACAO_INTERGROWTH_FASE_314_REV3.md).
+[Manifesto de pesquisa fixo](../history/phases/reviews/fase-314-rev3/fontes-pesquisa.json)
+registra URLs, commits, hashes, bytes, erros e licenças consultadas; não é
+artefato autorizado de runtime. [Resultados exclusivamente sintéticos](../history/phases/reviews/fase-314-rev3/comparacao-sintetica.json).
+
+- gigs: commit `fb58fe6596d4b289d5362c5efe00f882984d3186`, DESCRIPTION0.5.2.9000,
+  GPL>=3. `ig_png.R` SHA256 `609d37f02dd8ed6532a40313c8790a28fedf4b32491596aa15e603340bdc42cb`.
+- growthstandards: commit `d06a4898c286a3ab9111a5e3525c3b9d0e9ae8aa`,
+  DESCRIPTION0.1.7, MIT+LICENSE confirmado também pelo texto LICENSE.md.
+  `standard_igprepost.R` SHA256 `b03eccfe2181043e1cc7e09f8ec30d7ab3cceec2ce6887be9ba4c1751fd2ce64`.
+- Mesmas equações lognormais para peso/comprimento por PMA, atribuídas a
+  Villar 2015. Resumo primário PMID26475015 confirma polinômios fracionários
+  de segundo grau multinível; **coeficientes detalhados ainda não conferidos
+  em artigo/suplemento**. Interpolação dos PDFs continua proibida.
+- Oráculo Oxford encontrado pela página oficial de aplicações. 12 casos/24
+  resultados diários sintéticos concordantes: erro z máximo1,21e−14.
+  Serviço sem versão pública do motor; não é prova de todos os dias/caudas.
+- Quatro PDFs rebaixados/hashPASS. 1.064 quantis comparados, uma ressalva:
+  peso masculino55semanas,z−3, PDF4,40 kg versus equação 4,405026478 kg.
+  Não declarar todos dentro de meia unidade nem ajustar coeficientes silenciosamente.
+- `gigs` [27,64]semanas; growthstandards [24s0d,64s6d]; limite permissivo
+  não valida população. gigs usa Newborn Size para primeira medida<3 dias,
+  e idade **cronológica** OMS após 64; nenhum desses defaults é contrato OctaClin.
+
+Direitos do código, equações, PDFs, dados/coleções, redistribuição/atribuição
+são camadas distintas. Código MIT não licencia dados IG; código GPL não torna
+os fatos científicos GPL por inferência. G00-fonte/direitos e G01 BLOCKED;
+comparação interna não é autorização para incorporação comercial.
+
+Anexo REV3 SHA256 `205fb10f80bc3cd4ebfe8bc5cbefd30e6ecf16ab487830089b1dd0b7ea12012e`;
+ZIP byte a byte SHA256 `b88e0fc5cec70acb5d22005892e8ac5d218b633deb18d8218ea395dfb6954120`.
+
+## Fontes e limites confirmados REV4
+
+[Manifesto das novas consultas e erros](../history/phases/reviews/fase-314-rev4/fontes-pesquisa.json),
+[recontagem dos JSONs originais](../history/phases/reviews/fase-314-rev4/reconciliacao-resultados.json)
+e [preservação/hashes](../history/phases/reviews/fase-314-rev4/arquivos-preservados.json).
+
+- **Elmrayed et al.2025**, *Preterm growth assessment: the latest findings on age
+  correction*, DOI10.1038/s41372-024-02202-z, PMID39820765, PMC12221983.
+  Nature texto integral obtido: SHA256
+  `9713b9fdb59fe8bf7656b2b1d7199ba116b75ed1d14fdf495e2b129de449ae96`.
+  Licença **CC BY4.0** expressa na seçãoRights and permissions; não confundir
+  com a licença deVillar. PopulaçãoIG<32,1.416 crianças; finalidade crescimento
+  OMS,36 meses corrigidos, sem moderados/tardios. Não usar dados individuais
+  do estudo em testes; consulta foi apenas documental/agregada.
+- **RCPCH UK-WHO NICM**: página oficial obtida, SHA256
+  `769637b51940f88d66d8cda077ee0fcbeef0f1381d577c53f6cfde7bd30f45ff`;
+  instrumento23semanas–2 anos corrigidos para muito prematuros/problemasiniciais.
+  Não incorporado gráfico/programa/dados; alcance do instrumento não valida
+  universalmente encerrar correção aos 24nem estrato32–36.
+- **SBP 2023**: URL indicada peloREV4 respondeu403 com/semwww. Alegação de
+  primeiros2anos/desenvolvimento permanece secundária, atribuída ao parecer;
+  fornecer documento acessível para ratificação. SBP 2017 local hash revalidado
+  `445a0c09a390d12fdc3abd9c813fa544335f4ca584a7126a0a93afe066576289`;
+  novo download403, sem afirmar atualidade/re-download. Transição64PMA e
+  ressalva<33 não determinam duração24/36apósOMS.
+- **Villar 2015 obra publicada:** API Crossref `works/10.1016/S2214-109X(15)00163-1`
+  registra `content-version:vor`, licença **CC BY-NC-ND4.0**. SHA256JSON
+  `5ec685520c6789b8a7f3e6c56e5f42308805b3613afde6c7ed1512b39c8d8197`.
+  PáginaScienceDirect403; metadado primário de editor confirma licença
+  declarada, não obtenção de suplemento nem permissão comercial de dados.
+  TDMtem licença distinta; nenhuma autoriza automaticamente copiarR/datasets.
+- Recursos oficiaisINTERGROWTH acessíveis, URL/hash no manifesto; contato
+  documental não enviado. Procedência detalhada/precisão e direitos da forma
+  concreta de incorporação continuamG00-fonte/G01BLOCKED.
+
+Recontagem:14 casos únicos/28 resultados de indicadores; cada resultado contém
+z epercentil (não contar como56resultados). Lote12/24, inicial1/2,55semanas1/2.
+Não houve nova consulta ao oráculo nestaREV4 nem mudança em JSON original.

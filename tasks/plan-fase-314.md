@@ -99,3 +99,91 @@ Downloads/inspeção documental não são ratificação clínica. Testes da 314 
 executados, sem código implementado. Nenhum PHI/PII real enviado a fontes,
 GitHub ou providers; somente dados públicos e fixtures futuras sintéticas.
 Não fechar revisão independente/saúde de produção pelo CI da fase anterior.
+
+## Handoff vigente — integração REV3
+
+Revisão documental aprovada **com ressalvas** pelo proprietário, pesquisaG01
+realizada sem implementar. [Relatório](../docs/history/phases/INVESTIGACAO_INTERGROWTH_FASE_314_REV3.md)
+e ficha seção10 apresentam propostas de todos osCL e fontes/alternativas.
+
+- Equações contínuas candidatas identificadas; 12 casos/24 resultados sintéticos
+  contra calculadoraOxford mais caso55s/2 resultados, concordância amostral.
+- Quatro PDFs rebaixados/hashPASS;1.064 quantis com ressalva55s,z−3.
+- Origem detalhada primária/direitos/edição/completudeOMS continuam abertos.
+- Nascimento versus pós-natal, janela0–2 dias e divergência WHO cronológica
+  gigs versus proposta corrigidaOctaClin exigemCL-05/06/07; prazo não presumido.
+- G00-fonte/direitosBLOCKED; G00-operação1068BLOCKED,consultaSKIPPED;
+  G01/G02/G03BLOCKED; G04SKIPPED; G05BLOCKED. NenhumT03–T18iniciado.
+
+**Próxima ação exata:** resolver procedência/direitos e política clínica com
+respostasCL específicas para versão/hash da ficha; completarG01, registrarG02
+somente com aceite humano, obterG03 e escopo de testes. Não iniciar implementação.
+Documentos/runtimes312/313,tenant/cifra/snapshots/portal/migrations preservados.
+ModeloSol 6.1 médio adequado; Luna alto sóUI com contrato fechado e troca manual
+avisada/pausada. SemPR/push/merge/deploy nesta execução.
+
+## Verificações da consolidação REV3
+
+PASS: `git diff --check`; Python stdlib conferiu links locais/âncoras e
+colunas Markdown, CL-01–CL-10/IDs T01–T18 e ZIP byte a byte. PASS:
+`pnpm security:secrets`, sem segredo real; aviso Node24/pnpm11 fora da faixa
+do projeto registrado, sem afirmar compatibilidade do software.
+PASS documental: integridade das fontes, amostras sintéticas contra oráculo;
+ressalva semanal55s permanece explícita. Nenhuma dessas provas é teste do
+runtime OctaClin. SKIPPED: Jest/PG/authz/Playwright/builds/CI314 e qualquer
+banco/migration/staging/produção/merge/deploy. Diff limitado à documentação314.
+
+## Handoff REV4 — somente decisões objetivas pendentes
+
+Fonte vigente: [matriz final da ficha](../docs/product/FICHA_VALIDACAO_CLINICA_FASE_314.md#11-matriz-final-de-decisão-cl-01cl-10--rev4)
+e [evidências/metodologia](../docs/history/phases/INVESTIGACAO_INTERGROWTH_FASE_314_REV3.md#8-fechamento-objetivo-rev4--evidência-contagens-e-direitos).
+
+CL-07 atualizada:Elmrayed 2025 sustenta36corrigidos em IG<32, não em>=32;
+RCPCHNICM vai a24corrigidos, instrumento e não política universal; SBP 2023
+403, orientação de desenvolvimento atribuída aoREV4; SBP2017local revalidado.
+Propostas de36<32 e24>=32provisória aguardam ratificação porfaixa/indicador.
+Contagem corrigida:14 casos únicos/28 resultados dos JSONs, sem nova consulta.
+VillarobraCCBY-NC-ND, direitos/incorporação abertos. Testes futuros finitos e
+offline com tolerâncias prospectivas;55 semanas continua ressalva, sem clamp/ajuste.
+
+Próxima ação: receber respostasCL e fonte/precisão/direitos, fechar requisitos
+objetivosG01; registrarG02 específico e obterG03/testes. Não repetir rodada
+genérica, não iniciarT03–T18. Segurança/histórico/runtime/migrations/313preservados.
+G00fonte/1068separadosBLOCKED, G01/G02/G03BLOCKED,G04SKIPPED,G05BLOCKED.
+Nenhum contato enviado/ambiente externo alterado. Sol6.1médio continua suficiente.
+
+### Verificações efetivamente executadas na REV4
+
+PASS: leitura do parecer/documentos e inspeção Git; consultas públicas Nature,
+RCPCH, EuropePMC, Crossref e recursosINTERGROWTH; leitura científica sem dados
+individuais; hashes dos downloads/documentos e preservação do parecer.
+PASS: recontagem dos trêsJSONs originais,14casos únicos/28resultados e hashes
+intactos; nenhuma consulta nova ao oráculo e nenhuma saída recalculada como
+novo resultado oficial.
+PASS: conferência Python de55links locais/âncoras, colunas Markdown, dezCL e
+IDs T01–T18; `git diff --check` e `pnpm security:secrets` sem segredo real.
+Aviso Node24/pnpm11fora da faixa do projeto é limite do ambiente; não houve
+teste de compatibilidade do runtime.
+BLOCKED403: SBP2023 com/semwww, novoSBP2017 eScienceDirect; SBP2017 local
+revalidado não equivale are-downloadPASS.
+SKIPPED: testes de implementação/Jest/PG/BFF/UI/builds/CI314, migrations/DDL,
+staging/produção, contato a terceiros, push/PR/merge/deploy. Escopo apenas
+documentos314; contratos/migrations/runtime deoutras fases preservados.
+
+## Autorização controlada de desenvolvimento — 2026-10-11
+
+O proprietário autorizou desenvolvimento T01–T18, testes locais descartáveis,
+commits e uma PR Draft, mantendo protocolos não ratificados/direitos não
+comprovados bloqueados no backend. Esta autorização substitui a proibição
+operacional anterior de implementar. G03-desenvolvimento PASS por autorização
+expressa; ativação assistencial/merge/deploy continuam não autorizados.
+G01/G02 permanecem BLOCKED. Implementação não equivale a validação clínica.
+REV5 não localizada na worktree nem nos anexos; solicitada ao proprietário.
+Nenhum protocolo ou direito presumido pelo título desse documento ausente.
+Base remota reconferida f8c5ab66; HEAD documental a8db3308, alterações REV3/REV4
+preexistentes preservadas. Migration1068 registrada, sem evidência de aplicação
+externa; provas exclusivamente em PostgreSQL descartável/Testcontainers.
+Risco R4: snapshots clínicos cifrados, projeções autorizadas, RLS/carteira/replay.
+Algoritmos científicos sem artefatos/direitos ratificados usam fornecedor vazio
+no caminho assistencial; cálculo experimental só em testes locais sintéticos.
+Sem opção de cliente/variável de ambiente capaz de habilitar protocolo pendente.

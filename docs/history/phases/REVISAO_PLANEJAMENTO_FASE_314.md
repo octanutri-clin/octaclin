@@ -240,3 +240,31 @@ Ordem recomendada:
 
 A etapa termina com documentos consolidados e bloqueios explícitos. Não iniciar
 implementação automaticamente após publicar esta revisão.
+
+## 10. Adendo de integração REV3
+
+A revisão externa REV3 e a aprovação documental com ressalvas do proprietário
+foram recebidas após este relatório rev2. Histórico acima preservado.
+[Investigação vigente](INVESTIGACAO_INTERGROWTH_FASE_314_REV3.md) acrescenta:
+coeficientes contínuos candidatos, oráculo oficial sintético, discrepância
+semanal55s, limites/licenças distintos, nascimento versus pós-natal e WHO
+cronológica no gigs. Nenhuma evidência anterior de lacuna é apagada.
+
+Manifesto/ficha/plano/handoff/checklist incorporam conclusões comprovadas e
+propostas separadas. TodosCL continuam pendentes de ratificação específica;
+G01/G02/G03BLOCKED. G00 decomposto em fonte/direitos e operação1068; gate
+operacional aplica-se a rollout. Runtime/DB/testes de implementaçãoSKIPPED.
+
+## 11. Adendo REV4 — decisões objetivas
+
+ParecerREV4 recebido favorável comressalvas, sem ratificação clínica.
+Fonte científicaElmrayed2025 diretamente lida eRCPCHNICM verificado; SBP 2023
+indisponível403, SBP2017revalidado localmente. FichaCL-07 passou a distinguir
+36corrigidosIG<32 de24corrigidos/opção local>=32, sempolítica universal.
+ContagemJSON14/28 corrigiu menções26; dados originais preservados.
+Crossref confirmaVillarCCBY-NC-ND; direitos/procedência ainda abertos.
+Protocolo de prova externa finito22casos máximos eCIoffline substitui consulta
+externa exaustiva. Ressalva55não recebeu tolerância ampliada nemcoeficiente novo.
+[Matriz final de respostas](../../product/FICHA_VALIDACAO_CLINICA_FASE_314.md#11-matriz-final-de-decisão-cl-01cl-10--rev4)
+e investigação seção8 registram fontes, alternativas/implicações ependências.
+G01/G02/G03BLOCKED, T03–T18nãoiniciadas;nenhum runtime/DB/ambiente alterado.

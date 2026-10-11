@@ -285,3 +285,87 @@ Não renumerar IDs nem marcar implementação concluída por esta revisão.
   confirmar nomes reais de scripts antes de executar, sem suite órfã.
 - Registro de software: resultado SKIPPED agora; autorizar escopo de testes
   junto da implementação, sem confundir conferência de arquivo com Jest.
+
+## Refinamentos REV3 — critérios adicionais sem iniciar tarefas
+
+[Pesquisa e provas](../docs/history/phases/INVESTIGACAO_INTERGROWTH_FASE_314_REV3.md)
+complementam IDs existentes; não substituem aceites rev2. Ordem/checkpoints e
+T03–T18 bloqueadas preservados. Biblioteca encontrada não autoriza entrega
+parcialOMS nem remoção de prematuros; eventual decomposição exige decisão.
+
+### T01-C — Fechamento do candidato contínuo
+
+- [x] Identificar commits/hashes/licenças declaradas e equações dos dois projetos.
+- [x] Distinguir μ/σ no log de peso/comprimento, domínio e políticas dos pacotes.
+- [x] Consultar oráculo oficial apenas sintético em dias intermediários/bordas,
+  14 casos únicos/28 resultados (lote12/24 + inicial1/2 +55semanas1/2); comparação amostral concordante.
+- [x] Rebaixar quatro PDFs oficiais e documentar1.064comparações e ressalva55s.
+- [ ] Obter publicação/suplemento ou confirmação primária verificável da origem,
+  precisão dos coeficientes; resolver diferença do quantil semanal55s,z−3.
+- [ ] Resolver direitos por camada: código, equação, dados/coleções/PDFs,
+  atribuição/incorporação/redistribuição; não presumir MIT/GPL dos dados IG.
+- [ ] Definir tolerâncias a priori e completar provas diárias/extremos/bordas;
+  serviço sem edição do motor pública requer evidência/versionamento suficiente.
+- [ ] Fechar OMS/âncoras/edição/precisão restantes deT01-B; G01 continua BLOCKED.
+
+### T02 — Ratificação específica refinada
+
+- [ ] Responder CL-01–CL-10 com fontes/alternativas da seção10 da ficha.
+- [ ] CL-05: nascimento/day0/0–2 dias, população e critérios desconhecidos;
+  não inferir nascimento da primeira avaliação cadastrada.
+- [ ] CL-06: candidato contínuo, domínio27–64, percentis/caudas/direitos;
+  sem Newborn Size/HC/WFLneonatal nem faixa24–64s6d transportada.
+- [ ] CL-07: confirmar corrigida versus cronológica após 64, prazo/base/exceções
+  com diretriz recuperada; não assumir24/36 meses ou copiar default gigs.
+- [ ] Registro interno protegido de aceite com versão/hash, sem PII no Git;
+  aprovação documental com ressalvas não ratifica clínica nem autorizaT03.
+
+### T09/T10 — Futuras provas obrigatórias
+
+- [ ] T09: núcleo direto(log−μ)/σ, não inversa depercentil saturado;
+  indicadores neonatais elegíveis apenas, sem LMS/caudasOMS por analogia.
+- [ ] T09: distinguir ao nascer/seguimento, day0/0–2 dias conformeCL ratificada;
+  PMA27/27+1/64/64+1 e ambos os sexos, ausência de contexto/medidas, extremos.
+- [ ] T10: comparar roteamento escolhido ao default gigs WHO cronológica;
+  teste sintéticoIG32s0d/64s1d=225 dias cronológicos/169 corrigidos, série distinta.
+- [ ] T10: fim da correção/política versionada, técnica e elegibilidadeOMS
+  próprios; referência inaplicável preserva medidas, sem fallback adulto.
+
+G00-fonte/direitosBLOCKED; G00-operação1068BLOCKED/consultaSKIPPED.
+G01/G02/G03BLOCKED, G04SKIPPED, G05BLOCKED. Somente pesquisa documental avançou.
+
+## Critérios finais REV4 — manter IDs e não iniciar execução
+
+### T01-A/C — Direitos e provas independentes com término definido
+
+- [x] ReconciliarJSONs anteriores:14 casos distintos/28 resultados (12/24+1/2+1/2),
+  hashes originais intactos; nenhuma nova consultaOxford nestaREV4.
+- [x] Obter texto integralElmrayed2025 e páginaRCPCH; registrar SBP 2023 403,
+  SBP2017hash localPASS/re-download403, licençaVillarCCBY-NC-ND via Crossref.
+- [ ] Fonte primária dos coeficientes/precisão ou confirmação técnica documentada,
+  edição/limites eexplicação/decisão explícita sobre55semanas,z−3.
+- [ ] Parecer concreto/permissões de incorporação por artefato, distinçãoR/obra/
+  dados/equações, atribuição; mensagem a fornecedor somente com autorização.
+- [ ] Aprovar protocolo e tolerâncias prospectivas da investigação seção8.2:
+ 14 casos congelados +até 8novos manuais sintéticos; saídas oficiais preservadas;
+ nenhum site em CI/runtime. Provas locais189–448 dias,sem centenas de consultas.
+- [ ] Concluir âncoras/ediçãoOMS restantes; não fecharG01 só pelo candidatoIG.
+
+### T02/T10 — Respostas clínicas específicas, sem inventário repetido
+
+- [ ] Equipe responde matriz finalCL-01–CL-10, aprovando ou alterando com fonte,
+  versão/hash eexceções em registro interno protegido.
+- [ ] CL-07: prazo/base para<28,28–<32,32–<37, IG desconhecida;36 corrigidos<32
+  preferencial e24corrigidos>=32 opção provisória, sem extrapolação implícita;
+  borda civil/inclusiva, técnica/indicadores,64s0d/64s1d efim da janela ratificados.
+- [ ] CL-05: nascimento/0–2 dias é política local pendente, fonte/contexto por
+  avaliação, nunca primeira no cadastro=ao nascer. Elegibilidade separada de CL-07.
+- [ ] CL-08: seis decisões por fórmula/cintura/RCQ18–19 com fontes/população,
+  bloqueio<18/precedênciagestacional e valoresfactuais preservados.
+- [ ] G02ratificação eG03autorização expressa/testes antesT03–T18; nenhum novo
+  gatePASS por aprovação documental. ProvasPG/RLS/ciphertext/cursor/DELETE
+  mantidas nas tarefas originais, sem executar nesteplanejamento.
+
+Ordem T03→T04→T05→T11→T06→T16-A→T07→T08→T09→T10→T12→T16-B→T13→T14→T15→T16-C→T17→T18
+preservada; em T10 cobrir31s6d/32s0d,limites24/36 corrigidos edia seguinte,
+base clínica versus estatística, motivo parcial e série/versionamento separados.
