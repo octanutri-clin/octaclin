@@ -24,8 +24,11 @@ def fetch_https(url, *, allowed_hosts, data=None, headers=None, timeout=30):
     context = ssl.create_default_context()
     context.verify_mode = ssl.CERT_REQUIRED
     context.check_hostname = True
-    connection = http.client.HTTPSConnection(parsed.hostname, timeout=timeout, context=context)
+    connection = http.client.HTTPConnection(parsed.hostname, port=443, timeout=timeout)
     try:
+        # Handshake e validação do nome ocorrem antes de qualquer byte HTTP.
+        connection.connect()
+        connection.sock = context.wrap_socket(connection.sock, server_hostname=parsed.hostname)
         connection.request('POST' if data is not None else 'GET', target,
                            body=data, headers=request_headers)
         response = connection.getresponse()

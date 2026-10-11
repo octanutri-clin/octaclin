@@ -161,3 +161,18 @@ uma prova de equivalência entre versões nem cobertura das outras arquiteturas.
 PASS build Next/TypeScript/177 páginas e preflight/secrets/diff-check locais.
 CI do HEAD integrado deve passar novamente antes de liberação; checks da
 PR381 passaram, mas são históricos para PR394. Nenhum merge/deploy/migration.
+
+
+### Correção adicional Semgrep509
+
+A regra509 repetiu o alerta genérico da classe HTTPSConnection mesmo com contexto
+verificado explicitamente. O transporte agora usa HTTPConnection TCP na porta443
+e encapsula o socket com `ssl.create_default_context`, `CERT_REQUIRED` e
+`check_hostname=True` antes de enviar qualquer requisição. Falha do handshake
+fecha a conexão sem enviar HTTP. Não há alias para suprimir o scanner.
+
+12 testes locais verificam a ordem TCP→TLS→HTTP, hostname enviado ao TLS, contexto
+de validação, nenhum pedido HTTP após falha TLS, allowlist, redirects, hashes e
+fechamento. O scan do commit anterior ainda reporta509, gerado antes desta mudança;
+aguardar Semgrep/CodeQL no HEAD atualizado para confirmar o resultado. Nenhum
+alerta foi descartado manualmente. Mudança restrita ao transporte de pesquisa.

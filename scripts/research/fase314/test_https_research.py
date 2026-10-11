@@ -28,7 +28,7 @@ class ResearchHTTPS(unittest.TestCase):
             'https://cdn.who.int:8443/file', 'https://cdn.who.int/file#fragment',
             'https://cdn.who.int/\nfile', 'https://cdn.who.int\\@evil.example/file',
         ]
-        with patch('http.client.HTTPSConnection') as connection:
+        with patch('http.client.HTTPConnection') as connection:
             for url in urls:
                 with self.subTest(url=url), self.assertRaises(ValueError):
                     self.transport.fetch_https(url, allowed_hosts=self.hosts)
@@ -37,17 +37,26 @@ class ResearchHTTPS(unittest.TestCase):
     def test_get_allowed_host(self):
         response = Mock(status=200)
         response.read.return_value = b'synthetic reference'
-        with patch('http.client.HTTPSConnection') as factory:
+        events = []
+        plain_socket, tls_socket = object(), object()
+        with patch('http.client.HTTPConnection') as factory, patch('ssl.create_default_context') as create_context:
             connection = factory.return_value
+            connection.connect.side_effect = lambda: (events.append('connect'), setattr(connection, 'sock', plain_socket))
+            context = create_context.return_value
+            context.verify_mode = ssl.CERT_REQUIRED
+            context.check_hostname = True
+            context.wrap_socket.side_effect = lambda sock, server_hostname: (
+                events.append('tls'), tls_socket if sock is plain_socket and server_hostname == 'cdn.who.int' else None)[1]
+            connection.request.side_effect = lambda *args, **kwargs: events.append('http')
             connection.getresponse.return_value = response
             raw, status = self.transport.fetch_https(
                 'https://cdn.who.int:443/path?version=1', allowed_hosts=self.hosts,
                 headers={'User-Agent': 'synthetic test'}, timeout=30)
             self.assertEqual((raw, status), (b'synthetic reference', 200))
-            factory.assert_called_once()
-            self.assertEqual(factory.call_args.args, ('cdn.who.int',))
-            self.assertEqual(factory.call_args.kwargs['timeout'], 30)
-            context = factory.call_args.kwargs['context']
+            factory.assert_called_once_with('cdn.who.int', port=443, timeout=30)
+            context.wrap_socket.assert_called_once_with(plain_socket, server_hostname='cdn.who.int')
+            self.assertIs(connection.sock, tls_socket)
+            self.assertEqual(events, ['connect', 'tls', 'http'])
             self.assertEqual(context.verify_mode, ssl.CERT_REQUIRED)
             self.assertTrue(context.check_hostname)
             connection.request.assert_called_once_with('GET', '/path?version=1',
@@ -57,32 +66,56 @@ class ResearchHTTPS(unittest.TestCase):
     def test_post_synthetic_payload(self):
         response = Mock(status=200)
         response.read.return_value = b'synthetic result'
-        with patch('http.client.HTTPSConnection') as factory:
-            factory.return_value.getresponse.return_value = response
+        with patch('http.client.HTTPConnection') as factory, patch('ssl.create_default_context') as create_context:
+            connection = factory.return_value
+            connection.sock = object()
+            create_context.return_value.wrap_socket.return_value = object()
+            connection.getresponse.return_value = response
             self.transport.fetch_https('https://intergrowth21.ndog.ox.ac.uk/preterm/en/ManualEntry/Compute',
                 allowed_hosts=frozenset({'intergrowth21.ndog.ox.ac.uk'}), data=b'Sex=Male')
-            args = factory.return_value.request.call_args
+            args = connection.request.call_args
             self.assertEqual(args.args, ('POST', '/preterm/en/ManualEntry/Compute'))
             self.assertEqual(args.kwargs['body'], b'Sex=Male')
             self.assertEqual(args.kwargs['headers']['Content-Type'], 'application/x-www-form-urlencoded')
+            self.assertEqual(create_context.return_value.wrap_socket.call_args.kwargs,
+                {'server_hostname': 'intergrowth21.ndog.ox.ac.uk'})
 
     def test_redirects_and_errors_are_not_followed(self):
-        with patch('http.client.HTTPSConnection') as factory:
+        with patch('http.client.HTTPConnection') as factory, patch('ssl.create_default_context') as create_context:
+            connection = factory.return_value
+            connection.sock = object()
+            create_context.return_value.wrap_socket.return_value = object()
             for status in (301, 302, 307, 308, 404, 500):
                 factory.reset_mock()
-                factory.return_value.getresponse.return_value = Mock(status=status)
+                connection.getresponse.return_value = Mock(status=status)
                 with self.subTest(status=status), self.assertRaises(ValueError):
                     self.transport.fetch_https('https://cdn.who.int/file', allowed_hosts=self.hosts)
                 factory.assert_called_once()
-                factory.return_value.close.assert_called_once()
-                factory.return_value.getresponse.return_value.read.assert_not_called()
+                connection.close.assert_called_once()
+                connection.getresponse.return_value.read.assert_not_called()
+                factory.reset_mock()
+
+    def test_tls_failure_sends_no_http_request(self):
+        with patch('http.client.HTTPConnection') as factory, patch('ssl.create_default_context') as create_context:
+            connection = factory.return_value
+            connection.sock = object()
+            create_context.return_value.wrap_socket.side_effect = ssl.SSLError('synthetic TLS failure')
+            with self.assertRaises(ssl.SSLError):
+                self.transport.fetch_https('https://cdn.who.int/file', allowed_hosts=self.hosts)
+            connection.request.assert_not_called()
+            connection.close.assert_called_once()
 
     def test_closes_connection_on_transport_error(self):
-        with patch('http.client.HTTPSConnection') as factory:
-            factory.return_value.request.side_effect = OSError('synthetic failure')
+        with patch('http.client.HTTPConnection') as factory, patch('ssl.create_default_context'):
+            connection = factory.return_value
+            connection.connect.side_effect = OSError('synthetic failure')
             with self.assertRaises(OSError):
                 self.transport.fetch_https('https://cdn.who.int/file', allowed_hosts=self.hosts)
-            factory.return_value.close.assert_called_once()
+            connection.request.assert_not_called()
+            connection.close.assert_called_once()
+
+
+
 
 
 class ResearchCallSites(unittest.TestCase):
@@ -113,19 +146,28 @@ class ResearchCallSites(unittest.TestCase):
         self.assertEqual(files, [])
 
     def run_downloader(self, url, response_bytes):
-        transport = importlib.import_module('https_research')
         source = pathlib.Path(__file__).with_name('baixar-fontes-oms.py')
         spec = importlib.util.spec_from_file_location('research_downloader', source)
         downloader = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(downloader)
-        with tempfile.TemporaryDirectory() as directory, patch('http.client.HTTPSConnection') as factory:
-            factory.return_value.getresponse.return_value = Mock(status=200)
-            factory.return_value.getresponse.return_value.read.return_value = response_bytes
-            result = downloader.fetch(('reference.xlsx', url, hashlib.sha256(b'synthetic').hexdigest()),
-                                      pathlib.Path(directory))
+        with tempfile.TemporaryDirectory() as directory, \
+                patch('http.client.HTTPConnection') as factory, \
+                patch('ssl.create_default_context') as create_context:
+            connection = factory.return_value
+            plain_socket = object()
+            connection.connect.side_effect = lambda: setattr(connection, 'sock', plain_socket)
+            create_context.return_value.wrap_socket.return_value = object()
+            response = Mock(status=200)
+            response.read.return_value = response_bytes
+            connection.getresponse.return_value = response
+            result = downloader.fetch(('reference.xlsx', url,
+                hashlib.sha256(b'synthetic').hexdigest()), pathlib.Path(directory))
             files = [path.name for path in pathlib.Path(directory).iterdir()]
             if url.startswith('file:'):
                 factory.assert_not_called()
+            else:
+                create_context.return_value.wrap_socket.assert_called_once_with(
+                    plain_socket, server_hostname='cdn.who.int')
             return result, files
 
 
