@@ -50,7 +50,7 @@ Provas e scripts sintéticos existentes preservados. G01 não concluído.
 | A02 CI | Conferir checks do HEAD na PR394 | Todos checks exigidos no commit candidato; CI anterior38161961023 PASS é histórico, não aprova novo HEAD |
 | A03 R4 independente | BLOCKED | Revisor humano independente identificado; comentário/registro da revisão e resolução de achados. Auto-revisão, CodeQL, Semgrep, Trivy e testes não substituem |
 | A04 banco local | PASS local,31 testes | PostgreSQL descartável: tenant/carteira, FORCE RLS/runtime sem BYPASSRLS/ownership, concorrência/replay, retenção e rollback |
-| A05 ambientes-alvo | SKIPPED / BLOCKED | Sem consulta externa autorizada: verificar1068/1069 reais, roles/grants/policies/trigger e teste integrado por ambiente |
+| A05 ambientes-alvo | PARTIAL / BLOCKED | Produção: diário1068/1069, FORCE RLS/policies, triggers e role prevista conferidos somente por leitura; vínculo efetivo da aplicação, branch staging e teste integrado continuam pendentes |
 | A06 autorização operacional | BLOCKED | Aceite explícito do proprietário antes de merge/migrations externas/deploy/liberação de usuários |
 
 A é `FASE_314_ENTREGA_FACTUAL_APTA_APOS_GATES_OPERACIONAIS`, condição de
@@ -75,7 +75,34 @@ portal sem projeção pediátrica e cache `private, no-store`. Confirmar ausênc
 PHI em logs/auditoria/URLs/cache, role sem bypass e retenção1069. Registrar
 artefatos sanitizados em canal apropriado; não publicar dados clínicos reais.
 
-## Banco e rollback — preparação, não execução externa
+## Banco e rollback — leitura de metadados, sem alteração externa
+
+### Conferência de produção — 2026-10-11
+
+Alvo confirmado pelo usuário: projeto Octaclin-produção, branch production,
+banco Octaclin-db-producao. Consultas SELECT via conector Neon; nenhum acesso a
+linhas de pacientes, escrita, migration, mudança de role ou infraestrutura.
+
+- Diário `public.migrations`: AcompanhamentoGestacional1720000001068 e
+  ProtegerRetencaoAvaliacoes1720000001069 presentes.
+- `avaliacoes_antropometricas`, `gestacoes_pacientes`, `referencias_gestacao` e
+  `consentimentos_gestacao`: RLS e FORCE RLS ativos; uma policy ALL por tabela,
+  USING com coluna tenant_id/contexto app.tenant_id e WITH CHECK com esse contexto.
+  Essas verificações de catálogo não substituem testes comportamentais das policies.
+- Triggers trg_avaliacao_confirmada_retencao, trg_avaliacao_gestacional_imutavel e
+  trg_referencia_gestacao_imutavel habilitados no catálogo.
+- Role prevista `octaclin_app_producao`: LOGIN, sem SUPERUSER/BYPASSRLS, sem
+  ownership das quatro tabelas, grants efetivos SELECT/INSERT/UPDATE/DELETE.
+  Não comprova que o backend está conectado usando essa role; binding efetivo e
+  composição das policies/funções seguem sujeitos à revisão operacional/R4.
+- Staging: usuário confirmou banco neondb, mas ainda falta confirmar qual branch
+  do projeto octaclin-staging: production ou Produção-real. Não consultar alvo
+  ambíguo nem inferir aplicação de migrations a partir de produção.
+
+A05 permanece incompleto. Para reproduzir, consultar somente public.migrations,
+pg_class/pg_namespace, pg_policy/pg_get_expr, pg_trigger e pg_roles com
+has_table_privilege, restringindo aos nomes acima. Não versionar credenciais,
+IDs de infraestrutura ou registros clínicos.
 
 Em cada alvo autorizado, obter leitura de migrations reais (1068: acompanhamento
 gestacional;1069: retenção de avaliações), catálogo de tabelas/policies FORCE RLS,

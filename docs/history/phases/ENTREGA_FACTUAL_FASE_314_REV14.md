@@ -27,8 +27,10 @@ Auto-revisão técnica do diff, contratos e testes, não revisão R4 independent
 Nenhuma nova entidade/migration/dependência/alteração de RLS/criptografia/portal.
 A prova existente PostgreSQL real descartável voltou a passar, incluindo runtime
 restrito, FORCE RLS, carteira/tenant, replay e concorrência, retenção/rollback.
-As migrations1068/1069 estão registradas na configuração. Nenhum banco externo
-foi consultado; registros em main/CI não comprovam a aplicação operacional.
+As migrations1068/1069 estão registradas na configuração. Na etapa inicial nenhum banco externo foi consultado. Após identificação do alvo
+pelo usuário, a leitura de metadados de produção confirmou1068/1069, FORCE RLS,
+policies, triggers e flags/grants da role prevista; binding efetivo da aplicação e
+staging continuam pendentes. Evidência sanitizada no contrato REV14; nenhuma escrita.
 Checklist do revisor humano e condições dos alvos estão no contrato REV14.
 
 ## Verificações desta rodada
@@ -47,10 +49,10 @@ Checklist do revisor humano e condições dos alvos estão no contrato REV14.
 | Preflight DocsOnly | PrimeiroFAIL pelo cabeçalho “Fase314” sem espaço; corrigido documento, repetiçãoPASS sem enfraquecer validador |
 | Buildweb | PASS |
 | Backend completo | 2.650 PASS/54 SKIPPED;295 suítes PASS/3 SKIPPED. Sem variáveis de oráculos integrais nesta rodada factual;4 verificações extras de pesquisa não executadas, não considerar G01 aprovado |
-| Test:authz | Execução completa local iniciada, em andamento na redação deste registro; não declarar PASS antes do exit0. Resultado final/CI vinculados por HEAD na PR394 |
+| Test:authz | PASS local:24 comandos, exit0; resultado CI deve ser conferido por HEAD na PR394 |
 | CI | db4f317a/run38161961023PASS é anterior; CI do novo HEAD deve ser consultado na PR394 |
 | R4 independente | BLOCKED: revisor independente/evidência ainda não disponíveis |
-| Migrations/roles por alvo | SKIPPED/BLOCKED: sem consulta/execução externas nesta autorização |
+| Migrations/roles por alvo | PARTIAL/BLOCKED: produção conferida por SELECT de metadados; staging/binding/teste integrado pendentes; nenhuma execução externa de migrations |
 | G01/direitos/55s | BLOCKED somente classificadores, não gate factual |
 | G02CL01–10 | RATIFICADO_PELO_USUARIO REV9, nenhuma reabertura |
 | Merge/deploy/ativação | BLOCKED: autorização expressa necessária |
@@ -71,6 +73,8 @@ Usada ferramenta Node22/pnpm11.25 existente, sem alterar lockfiles:
   scripts/validar-migracoes-fora-de-banda.spec.mjs
   scripts/validar-guardas-controladores.spec.mjs`.
 - `pwsh -NoProfile -File validar-preflight.ps1 -DocsOnly`, `git diff --check`.
+- Conector Neon `run_sql`, alvo produção explicitamente identificado: SELECT restritos
+  ao diário de migrations e catálogos RLS/policies/triggers/roles/grants; sem linhas clínicas.
 
 São testes/artefatos locais ou checks GitHub, não prova de produção nem aprovação
 humana independente. Sem uso de pacientes reais ou mensagem enviada a terceiros.
