@@ -172,10 +172,13 @@ e encapsula o socket com `ssl.create_default_context`, `CERT_REQUIRED` e
 fecha a conexão sem enviar HTTP. Não há alias para suprimir o scanner.
 
 12 testes locais verificam a ordem TCP→TLS→HTTP, hostname enviado ao TLS, contexto
-de validação, nenhum pedido HTTP após falha TLS, allowlist, redirects, hashes e
-fechamento. O scan do commit anterior ainda reporta509, gerado antes desta mudança;
-aguardar Semgrep/CodeQL no HEAD atualizado para confirmar o resultado. Nenhum
-alerta foi descartado manualmente. Mudança restrita ao transporte de pesquisa.
+de validação e mínimo TLS1.2, nenhum pedido HTTP após falha TLS, allowlist, redirects,
+hashes e fechamento. No HEAD be764396: CodeQL concluiu sem novas anotações; Semgrep
+completo rodou500 regras/2726 arquivos e reportou0; gate bloqueante rodou172 regras/
+101 arquivos e reportou0. O #509 não se repetiu no scan atual. Os comentários antigos
+permanecem como histórico; API para dispensar/consultar alertas individuais não
+disponível (403), portanto nenhuma dispensa manual foi feita. Demais checks CI ainda
+em execução nesta atualização. Mudança restrita ao transporte de pesquisa.
 
 
 ### Achado CodeQL high: protocolo TLS mínimo
