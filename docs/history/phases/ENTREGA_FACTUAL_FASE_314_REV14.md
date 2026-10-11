@@ -117,3 +117,28 @@ explícitos; teste verifica o contexto realmente passado à conexão. O aviso508
 permanece sujeito à triagem do scanner/revisor; não declarar fechamento automático.
 Regra consultada apenas como texto público, sem execução de conteúdo remoto.
 O produto não depende deste script e nenhuma chamada clínica usa essa conexão.
+
+## Dependabot incorporado por autorização posterior
+
+Rodada2026-10-11: usuário solicitou integrar uma PR Dependabot à PR394. Selecionada
+PR382: source-map-js1.2.1→1.2.2, dependência transitiva PostCSS da web. Cherry-pick
+com rastreabilidade25776976212a762d13765471a21c4d53b1a36556, autor Dependabot
+preservado; apenas cinco substituições no lockfile, sem conflitos. Não há mudança
+nos contratos clínicos, migrations, portal ou autorizações da Fase314.
+
+Registro npm confirma versão, engineNode>=0.10.0, BSD-3-Clause e SHA512 idêntico ao
+lockfile. Sem scripts de install/postinstall no metadata da versão; política de
+builds/idade mínima/integridade permanece intacta. Changelog upstream informa
+correções CSP e DoS em mapas indexados; essa indicação não prova o encerramento
+dos seis alertas de dependências existentes na main.
+
+PASS: pnpm11.25.0 install --frozen-lockfile (450 entradas nas políticas), pacote
+instalado1.2.2/BSD-3-Clause, auditoria de licenças392 pacotes, build Next com etapa
+TypeScript e geração177 páginas, sem mudanças geradas na worktree. Os checks da
+PR382 foram conferidos, mas não aprovam por si o novo HEAD da PR394; CI da PR394
+deve passar novamente após o push. Não fechar PR382 antes de integração à main.
+
+Comandos: git fetch origin pull/382/head; git cherry-pick -x 25776976212a762d13765471a21c4d53b1a36556;
+pnpm install --frozen-lockfile na web; node scripts/validar-licencas.mjs
+octaclin-web/node_modules; pnpm build na web; inspeção package.json instalado.
+Rollback limitado à atualização do lockfile, sem dados persistentes afetados.
