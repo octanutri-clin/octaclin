@@ -2096,3 +2096,33 @@ interpretações adultas em gestantes. Corrigir schema com migration futura.
 ## Antes de ativar clientes reais
 
 Ler e executar `CHECKLIST_GO_LIVE.md`.
+
+
+## Fase 314 — retenção de avaliações confirmadas (1069)
+
+A migration `1720000001069-ProtegerRetencaoAvaliacoes` acrescenta proteção
+BEFORE DELETE somente às avaliações com `chave_criacao` preenchida, incluindo
+avaliações gestacionais previamente confirmadas. Não altera 1068, cifras, RLS,
+roles ou avaliações legadas sem chave. Exclusão lógica permanece disponível.
+
+Antes de qualquer execução externa: identificar ambiente/banco/branch, role
+owner e autorização operacional; comprovar 1068 aplicada e conferir grants,
+FORCE RLS e role runtime não owner. Executar pelo procedimento fora de banda
+existente; runtime não recebe privilégios administrativos. Merge ou CI não
+comprovam aplicação. Nesta entrega somente PostgreSQL local descartável está
+autorizado; staging/produção permanecem não verificados.
+
+Verificar o registro de 1069 e a existência da função/trigger no alvo confirmado,
+sem copiar dados clínicos. A prova de comportamento utiliza fixtures sintéticas
+em banco descartável: DELETE confirmado rejeitado, legado preservado,
+soft-delete permitido, leitura/replay isolados por tenant e carteira.
+
+`down()` recusa execução se existir avaliação confirmada; não apagar dados para
+contornar a proteção. Rollback de aplicação deve desativar entradas novas e
+manter snapshots/histórico legível. Se o aplicativo anterior depender de DELETE
+físico, ele não é rollback compatível sem revisão de retenção. Eliminação legal
+de registros confirmados exige procedimento específico de retenção/LGPD,
+autorização e auditoria, nunca desativação automática deste trigger.
+
+Protocolos clínicos pediátricos permanecem bloqueados independentemente da
+aplicação da migration; não existe flag operacional que substitua G01/G02.

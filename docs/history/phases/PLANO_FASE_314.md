@@ -1,8 +1,13 @@
 # Plano e análise de gaps — Fase 314
 
-Preparado em 2026-10-10. **Planejamento; implementação não autorizada nesta
-fase.** Risco da implementação: **R4**, por dados clínicos, autorização,
-isolamento e persistência. Documentação desta branch: R0.
+Preparado em 2026-10-10; atualizado para execução controlada em 2026-10-11.
+**Desenvolvimento técnico autorizado; ativação assistencial bloqueada.** Risco **R4**,
+por dados clínicos, autorização, isolamento e persistência. Registros históricos
+de proibição abaixo descrevem a etapa anterior e foram substituídos pela autorização
+expressa de desenvolvimento. G01/G02 permanecem BLOCKED.
+
+Estado e evidências: [entrega técnica](ENTREGA_TECNICA_FASE_314.md). Decisões humanas
+concentradas no [dossiê](../../product/DOSSIE_RATIFICACAO_FASE_314.md).
 
 ## 1. Base observada e reconciliação
 

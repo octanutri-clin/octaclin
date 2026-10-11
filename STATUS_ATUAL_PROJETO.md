@@ -4,6 +4,7 @@ Atualizado em 2026-10-10.
 
 ## Fase ativa
 
+- Fase 314 em desenvolvimento técnico controlado na branch `feat/fase-314-antropometria-pediatrica`: medidas/contexto e acompanhamento no console, classificadores assistenciais bloqueados. G01 (método/direitos) e G02 (ratificação CL01–10) pendentes; sem merge/deploy/migrations externas. Estado e provas em `docs/history/phases/ENTREGA_TECNICA_FASE_314.md`; decisões em `docs/product/DOSSIE_RATIFICACAO_FASE_314.md`.
 - Fase 298 concluida e integrada pelo PR #356 (merge `b00151ae`, confirmado no GitHub em
   2026-10-01); o proprietário informou que aplicou a migration 1060. Esta
   reconciliação não consultou banco externo.
