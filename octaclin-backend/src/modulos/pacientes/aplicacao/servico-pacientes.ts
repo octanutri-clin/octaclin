@@ -1904,7 +1904,8 @@ export class ServicoPacientes {
       if (pediatrico) resultado.avisos = resultado.avisos.filter(a => !['peso_fora_da_faixa','altura_fora_da_faixa','imc_fora_da_faixa_plausivel'].includes(a));
       if (pediatrico && dados.pesoKg !== undefined && dados.alturaCm !== undefined) {
         const imcFactual = dados.pesoKg / (dados.alturaCm / 100) ** 2;
-        if (Number.isFinite(imcFactual)) resultado.imc = Math.round(imcFactual * 100) / 100;
+        const imcArredondado = Math.round(imcFactual * 100) / 100;
+        if (Number.isFinite(imcFactual) && Number.isFinite(imcArredondado)) resultado.imc = imcArredondado;
       }
       resultado.gestacional = calcularAntropometriaGestacional({ condicao,origemCondicao: dados.condicaoGestacional ? 'confirmada' : 'perfil_legado',idadeAnos,pesoKg: dados.pesoKg,contexto,referencia });
       const avaliacao = await repositorio.save(

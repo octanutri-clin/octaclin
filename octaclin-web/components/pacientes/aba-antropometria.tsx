@@ -84,6 +84,9 @@ const ROTULO_CLASSIFICACAO: Record<string, string> = {
 
 /** Aviso do dominio traduzido. O generico com prefixo cobre `dobra_ausente:coxa`. */
 const ROTULO_AVISO: Record<string, string> = {
+  interpretacao_adulta_exige_idade: 'Confirme a data de nascimento para verificar a aplicação das interpretações adultas.',
+  interpretacao_adulta_bloqueada_menor_de_18: 'Menor de 18 anos: cintura, RCQ e composição corporal preservam medidas, sem interpretação por métodos adultos.',
+  metodos_18_19_aguardam_ratificacao_individual: 'Entre 18 e 19 anos, cada método adulto aguarda validação clínica específica. Medidas e cálculos factuais foram preservados.',
   gestante_sem_interpretacao_adulta_cintura_rcq_composicao: 'Gestante: medidas preservadas, sem interpretação adulta de cintura/RCQ ou estimativa de composição corporal.',
   peso_fora_da_faixa: 'Peso fora da faixa aceita.',
   altura_fora_da_faixa: 'Altura fora da faixa aceita.',

@@ -59,4 +59,11 @@ describe('integração de serviço com snapshot pediátrico', () => {
     await expect(servico.atualizarCompartilhamentoProgresso('tenant','paciente',a.id,{ metricasCompartilhadasPortal: ['imc'] },usuario)).rejects.toBeInstanceOf(BadRequestException);
   });
 
+  it('não publica IMC não finito após arredondamento de medidas extremas', async () => {
+    const { servico } = montar();
+    const a = await servico.registrarAvaliacaoAntropometrica('tenant','paciente','autor',{ ...dados,alturaCm: 1e-152 },usuario);
+    expect(a.resultado.imc).toBeUndefined();
+    expect(a.medidas.alturaCm).toBe(1e-152);
+  });
+
 });

@@ -28,6 +28,8 @@ export interface SnapshotPediatrico {
 const falhar = () => { throw new Error('contexto_pediatrico_invalido'); };
 function contextoPermitido(c: ContextoPediatrico): ContextoPediatrico {
   if (!c || c.confirmado !== true || !['masculino', 'feminino', 'nao_informado'].includes(c.sexoCurva) || !['deitado', 'em_pe', 'nao_informada'].includes(c.tecnica) || !['sim', 'nao', 'desconhecido'].includes(c.edema) || !['a_termo', 'prematuro', 'nao_informado'].includes(c.nascimentoTipo) || !['nascimento', 'pos_natal', 'nao_informado'].includes(c.tipoMedida)) falhar();
+  if (c.nascimento !== undefined) { if (typeof c.nascimento !== 'string') falhar(); instanteCivil(c.nascimento); }
+  if (c.origemGestacional !== undefined && !['documentada', 'informada', 'nao_informada'].includes(c.origemGestacional)) falhar();
   const temIg = c.semanasNascimento !== undefined || c.diasNascimento !== undefined;
   if (temIg && (!Number.isInteger(c.semanasNascimento) || c.semanasNascimento! < 20 || c.semanasNascimento! > 45 || !Number.isInteger(c.diasNascimento) || c.diasNascimento! < 0 || c.diasNascimento! > 6 || !['documentada', 'informada', 'nao_informada'].includes(c.origemGestacional!))) falhar();
   return { confirmado: true, nascimento: c.nascimento, sexoCurva: c.sexoCurva, tecnica: c.tecnica, edema: c.edema, nascimentoTipo: c.nascimentoTipo, semanasNascimento: c.semanasNascimento, diasNascimento: c.diasNascimento, origemGestacional: c.origemGestacional, tipoMedida: c.tipoMedida };

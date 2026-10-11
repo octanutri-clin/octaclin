@@ -27,4 +27,10 @@ describe('snapshot pediátrico bloqueado até ratificação', () => {
     expect(() => registrarContextoPediatrico(contexto, '2024-02-01', { pesoKg: NaN })).toThrow();
     expect(() => registrarContextoPediatrico({ ...contexto, diasNascimento: undefined }, '2024-02-01', {})).toThrow();
   });
+  it('rejeita conteúdo não escalar em campos conhecidos da projeção', () => {
+    const r = registrarContextoPediatrico(contexto, '2024-02-01', { pesoKg: 1 });
+    expect(projetarPediatrico({ ...r, contexto: { ...r.contexto, nascimento: { segredo: 'sintetico' } } })).toBeUndefined();
+    expect(projetarPediatrico({ ...r, contexto: { ...r.contexto, semanasNascimento: undefined, diasNascimento: undefined, origemGestacional: { segredo: 'sintetico' } } })).toBeUndefined();
+  });
+
 });
