@@ -5,7 +5,6 @@ const portalPaciente = {
     id: 'paciente-1',
     nome: 'Ana Paula',
     statusAdesao: 'aderente',
-    scoreRisco: '12.50',
     ultimoCheckinEm: '2026-07-20T12:00:00.000Z'
   },
   perfil: {

@@ -76,6 +76,82 @@ const usuarioProfissional: UsuarioAutenticado = {
 };
 
 describe('ServicoPacientes', () => {
+  it('aceita o score legado no PATCH sem persistir nem expor seu valor', async () => {
+    const paciente = {
+      id: 'paciente-1',
+      tenantId: 'tenant-1',
+      profissionalResponsavelId: 'profissional-1',
+      nomeCriptografado: Buffer.from('cripto:Maria'),
+      statusAdesao: 'novo',
+      scoreRisco: '82.50',
+      atualizadoEm: new Date('2026-09-01T10:00:00.000Z')
+    };
+    const repositorio = {
+      findOne: jest.fn(async () => paciente),
+      save: jest.fn(async (atualizado: Record<string, unknown>) => atualizado)
+    };
+    const gerenciador = criarGerenciadorFake({ paciente: repositorio });
+    const executor = {
+      executar: jest.fn(async (_tenantId: string, operacao: (gerenciador: unknown) => Promise<unknown>) =>
+        operacao(gerenciador)
+      )
+    };
+    const servico = new ServicoPacientes(
+      executor as never,
+      { descriptografar: jest.fn((valor: Buffer) => valor.toString().replace('cripto:', '')) } as never,
+      limitesPermitidos as never
+    );
+
+    const resposta = await servico.atualizar('tenant-1', 'paciente-1', { scoreRisco: 4 }, usuarioColaborador);
+
+    expect(repositorio.save).not.toHaveBeenCalled();
+    expect(paciente.scoreRisco).toBe('82.50');
+    expect(paciente.atualizadoEm).toEqual(new Date('2026-09-01T10:00:00.000Z'));
+    expect(resposta).not.toHaveProperty('scoreRisco');
+    expect(executor.executar).toHaveBeenCalledWith('tenant-1', expect.any(Function));
+  });
+
+  it('ignora score legado em PATCH misto e preserva o valor histórico', async () => {
+    const paciente = {
+      id: 'paciente-1',
+      tenantId: 'tenant-1',
+      profissionalResponsavelId: 'profissional-1',
+      nomeCriptografado: Buffer.from('cripto:Maria'),
+      statusAdesao: 'novo',
+      scoreRisco: '82.50'
+    };
+    const repositorio = {
+      findOne: jest.fn(async () => paciente),
+      save: jest.fn(async (atualizado: Record<string, unknown>) => atualizado)
+    };
+    const gerenciador = criarGerenciadorFake({ paciente: repositorio });
+    const servico = new ServicoPacientes(
+      {
+        executar: jest.fn(async (_tenantId: string, operacao: (gerenciador: unknown) => Promise<unknown>) =>
+          operacao(gerenciador)
+        )
+      } as never,
+      {
+        criptografar: jest.fn((valor: string) => Buffer.from(`cripto:${valor}`)),
+        descriptografar: jest.fn((valor: Buffer) => valor.toString().replace('cripto:', '')),
+        gerarHashesBuscaPii: jest.fn(() => ['hash-busca'])
+      } as never,
+      limitesPermitidos as never
+    );
+
+    const resposta = await servico.atualizar(
+      'tenant-1',
+      'paciente-1',
+      { nome: 'Maria Atualizada', scoreRisco: 4 },
+      usuarioColaborador
+    );
+
+    expect(repositorio.save).toHaveBeenCalledTimes(1);
+    expect(paciente.scoreRisco).toBe('82.50');
+    expect(resposta.nome).toBe('Maria Atualizada');
+    expect(resposta).not.toHaveProperty('scoreRisco');
+  });
+
   it('projeta leitura longitudinal factual apenas depois de validar paciente e permissões', async () => {
     const paciente = { id: 'paciente-1' };
     const envio = {
@@ -349,8 +425,10 @@ describe('ServicoPacientes', () => {
       const csv = await servico.exportarCsv('tenant-1', usuarioColaborador);
 
       const [cabecalho, primeira] = csv.trim().split('\n');
-      expect(cabecalho).toContain('nome');
+      expect(cabecalho).toBe('id,nome,contato,dataNascimento,statusAdesao,profissionalResponsavelId,ultimaConsultaConcluidaEm,proximaConsultaEm,ultimoCheckinEm,criadoEm');
+      expect(cabecalho).not.toContain('scoreRisco');
       expect(primeira).toContain('Maria Souza');
+      expect(primeira.split(',')).toHaveLength(cabecalho.split(',').length);
     });
 
     it('neutraliza nome com formula, que chega do proprio cadastro', async () => {
@@ -663,7 +741,7 @@ describe('ServicoPacientes', () => {
             nomeCriptografado: Buffer.from('cripto:Maria'),
             contatoCriptografado: Buffer.from('cripto:maria@example.com'),
             statusAdesao: 'novo',
-            scoreRisco: '0',
+            scoreRisco: '58.75',
             criadoEm: new Date('2026-01-01T00:00:00Z'),
             atualizadoEm: new Date('2026-01-01T00:00:00Z')
           }
@@ -687,6 +765,7 @@ describe('ServicoPacientes', () => {
     const resposta = await servico.listar('tenant-1', usuarioColaborador);
 
     expect(resposta.itens[0]).toEqual(expect.objectContaining({ nome: 'Maria', contato: 'maria@example.com' }));
+    expect(resposta.itens[0]).not.toHaveProperty('scoreRisco');
   });
 
   it('deve exibir contato principal quando paciente possui contato estruturado pelo portal', async () => {

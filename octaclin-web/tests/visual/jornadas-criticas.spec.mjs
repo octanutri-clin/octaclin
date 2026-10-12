@@ -238,7 +238,6 @@ async function prepararProfissional(page) {
       nome: 'Ana Souza',
       contato: '5511999999999',
       statusAdesao: 'em_acompanhamento',
-      scoreRisco: '25',
       criadoEm: '2026-07-20T10:00:00.000Z'
     }
   ];
@@ -298,7 +297,6 @@ async function prepararProfissional(page) {
         id: 'paciente-jornada',
         tenantId: 'tenant-1',
         statusAdesao: 'novo',
-        scoreRisco: '0',
         criadoEm: '2026-07-23T12:00:00.000Z',
         ...payload
       };
@@ -454,7 +452,7 @@ async function prepararPaciente(page) {
       status: 200,
       contentType: 'application/json',
       body: JSON.stringify({
-        paciente: { id: 'paciente-jornada', nome: 'Ana Jornada', statusAdesao: 'novo', scoreRisco: '0' },
+        paciente: { id: 'paciente-jornada', nome: 'Ana Jornada', statusAdesao: 'novo' },
         perfil: {
           contato: 'ana.jornada@example.com',
           email: 'ana.jornada@example.com',
@@ -600,7 +598,6 @@ async function prepararJornadaSolicitacaoPublica(page) {
     nome: 'Ana Souza',
     contato: 'ana.silva@example.com',
     statusAdesao: 'em_acompanhamento',
-    scoreRisco: '15',
     criadoEm: '2026-07-20T10:00:00.000Z'
   };
   const horarioSolicitado = {
@@ -881,7 +878,7 @@ async function prepararJornadaSolicitacaoPublica(page) {
       status: 200,
       contentType: 'application/json',
       body: JSON.stringify({
-        paciente: { id: pacienteAprovacao.id, nome: pacienteAprovacao.nome, statusAdesao: 'em_acompanhamento', scoreRisco: '15' },
+        paciente: { id: pacienteAprovacao.id, nome: pacienteAprovacao.nome, statusAdesao: 'em_acompanhamento' },
         perfil: {
           contato: 'ana.silva@example.com',
           email: 'ana.silva@example.com',

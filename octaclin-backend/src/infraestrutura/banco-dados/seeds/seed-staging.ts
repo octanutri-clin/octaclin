@@ -30,7 +30,6 @@ interface FixtureStaging {
     contato?: string;
     dataNascimento?: string;
     statusAdesao: string;
-    scoreRisco: string;
     ultimoCheckinEm?: string;
   }>;
   canais: Array<{ id: string; tipo: 'email' | 'whatsapp'; nome: string; configuracao: Record<string, unknown> }>;
@@ -161,7 +160,6 @@ async function executarSeed() {
           contatoCriptografado: paciente.contato ? criptografia.criptografar(paciente.contato) : undefined,
           dataNascimento: paciente.dataNascimento,
           statusAdesao: paciente.statusAdesao,
-          scoreRisco: paciente.scoreRisco,
           ultimoCheckinEm: dataOpcional(paciente.ultimoCheckinEm)
         })
       )

@@ -10,7 +10,6 @@ const paciente = {
   contato: 'marina.sintetica@example.com',
   dataNascimento: '1991-05-18',
   statusAdesao: 'em_acompanhamento',
-  scoreRisco: '28',
   criadoEm: '2026-08-20T10:00:00.000Z'
 };
 

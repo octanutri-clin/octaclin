@@ -47,7 +47,6 @@ const estado = {
       contato: '+55 11 90000-0000',
       dataNascimento: '1992-04-18',
       statusAdesao: 'em_acompanhamento',
-      scoreRisco: '12.50',
       ultimoCheckinEm: new Date().toISOString(),
       criadoEm: new Date().toISOString(),
       atualizadoEm: new Date().toISOString()
@@ -281,6 +280,11 @@ function normalizarStatusPaciente(status) {
   return status === 'aderente' ? 'aderente' : status;
 }
 
+function projetarPaciente(paciente) {
+  const { scoreRisco: _scoreRisco, ...resposta } = paciente;
+  return resposta;
+}
+
 const servidor = http.createServer(async (requisicao, resposta) => {
   if (requisicao.method === 'OPTIONS') return json(resposta, 204, {});
 
@@ -383,7 +387,7 @@ const servidor = http.createServer(async (requisicao, resposta) => {
 
     if (requisicao.method === 'GET' && url.pathname === '/pacientes') {
       registrarAuditoria('pacientes.listar_dados_sensiveis', 'paciente', undefined, { total: estado.pacientes.length });
-      return json(resposta, 200, paginar(estado.pacientes));
+      return json(resposta, 200, paginar(estado.pacientes.map(projetarPaciente)));
     }
 
     if (requisicao.method === 'POST' && url.pathname === '/pacientes') {
@@ -397,7 +401,6 @@ const servidor = http.createServer(async (requisicao, resposta) => {
         contato: body.contato,
         dataNascimento: body.dataNascimento,
         statusAdesao: 'novo',
-        scoreRisco: '0',
         criadoEm: new Date().toISOString(),
         atualizadoEm: new Date().toISOString()
       };
@@ -408,7 +411,7 @@ const servidor = http.createServer(async (requisicao, resposta) => {
           candidatosDispensados: body.candidatosDuplicidadeDispensados
         });
       }
-      return json(resposta, 201, paciente);
+      return json(resposta, 201, projetarPaciente(paciente));
     }
 
     if (requisicao.method === 'POST' && url.pathname === '/pacientes/verificacao-duplicidade') {
@@ -446,21 +449,31 @@ const servidor = http.createServer(async (requisicao, resposta) => {
 
     if (partes[0] === 'pacientes' && partes[1] && partes.length === 2 && requisicao.method === 'GET') {
       const paciente = estado.pacientes.find((item) => item.id === partes[1]);
-      return paciente ? json(resposta, 200, paciente) : json(resposta, 404, { mensagem: 'Paciente nao encontrado.' });
+      return paciente ? json(resposta, 200, projetarPaciente(paciente)) : json(resposta, 404, { mensagem: 'Paciente nao encontrado.' });
     }
 
     if (partes[0] === 'pacientes' && partes[1] && partes.length === 2 && requisicao.method === 'PATCH') {
       const body = await lerJson(requisicao);
       const paciente = estado.pacientes.find((item) => item.id === partes[1]);
       if (!paciente) return json(resposta, 404, { mensagem: 'Paciente nao encontrado.' });
+      if (
+        body.scoreRisco !== undefined &&
+        body.scoreRisco !== null &&
+        (typeof body.scoreRisco !== 'number' || !Number.isFinite(body.scoreRisco) || body.scoreRisco < 0 || body.scoreRisco > 100)
+      ) {
+        return json(resposta, 400, { mensagem: 'scoreRisco legado deve ser um numero entre 0 e 100.' });
+      }
+      const { scoreRisco: _scoreRisco, ...camposAtualizados } = body;
+      if (body.scoreRisco !== undefined && Object.keys(camposAtualizados).length === 0) {
+        return json(resposta, 200, projetarPaciente(paciente));
+      }
       Object.assign(paciente, {
-        ...body,
+        ...camposAtualizados,
         statusAdesao: body.statusAdesao ? normalizarStatusPaciente(body.statusAdesao) : paciente.statusAdesao,
-        scoreRisco: body.scoreRisco !== undefined ? String(body.scoreRisco) : paciente.scoreRisco,
         atualizadoEm: new Date().toISOString()
       });
       registrarAuditoria('pacientes.atualizar', 'paciente', paciente.id, { statusAdesao: body.statusAdesao });
-      return json(resposta, 200, paciente);
+      return json(resposta, 200, projetarPaciente(paciente));
     }
 
     if (partes[0] === 'pacientes' && partes[1] && partes.length === 2 && requisicao.method === 'DELETE') {

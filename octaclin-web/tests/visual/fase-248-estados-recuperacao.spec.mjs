@@ -15,7 +15,6 @@ const paciente = {
   contato: 'ana.sintetica@example.com',
   dataNascimento: '1990-04-12',
   statusAdesao: 'em_acompanhamento',
-  scoreRisco: '32',
   criadoEm: '2026-08-20T10:00:00.000Z'
 };
 

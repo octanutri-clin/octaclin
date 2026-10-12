@@ -4578,11 +4578,16 @@ auditoria estão ordenados na seção 15 de
   confirmadas; não representam aceite operacional. `tasks/todo-fase-313.md`.
 - [~] Fase 314 - entrega factual candidata à liberação após gates operacionais;
   classificadores/curvas mantidos bloqueados por G01/direitos. G02 ratificado REV9.
-  PR Draft #394, contrato em `docs/product/LIBERACAO_FACTUAL_FASE_314_REV14.md`.
-  R4 independente, CI do HEAD, migrations/RLS por alvo e aceite pendentes; não
+  PR #394 integrada (`c77c4520`); CI pós-merge `38179801575` SUCCESS. Contrato
+  em `docs/product/LIBERACAO_FACTUAL_FASE_314_REV14.md`. R4 independente,
+  vínculo/teste de ambientes e aceite de liberação pendentes; não
   bloquear fases seguintes independentes das curvas/classificações.
-- [ ] Fase 315 - retirada controlada do campo `score_risco` legado, com
-  compatibilidade e plano de migration/rollback.
+- [~] Fase 315 - implementação local D01 concluída: PATCH legado validado e
+  ignorado sem persistência; respostas/CSV omitem o campo; coluna/histórico
+  preservados. Backend, RLS descartável, smoke local e regressões focadas
+  passaram; suíte Web `test:authz` parcial/cancelada, CI da PR e revisão R4
+  independente pendentes. Sem migration ou ambiente externo. Handoff
+  `tasks/plan-fase-315.md`, checklist `tasks/todo-fase-315.md`.
 - [ ] Fase 316 - PB-30: extração assistida de exame com revisão humana,
   condicionada aos gates jurídico, privacidade, provider e antimalware.
 - [ ] Fase 317 - decisão de propósito e possível piloto controlado de

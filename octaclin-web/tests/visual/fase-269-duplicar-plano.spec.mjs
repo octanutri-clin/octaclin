@@ -22,7 +22,6 @@ const pacienteDestino = {
   profissionalResponsavelId: 'profissional-1',
   nome: 'Ana Sintética',
   statusAdesao: 'aderente',
-  scoreRisco: '10.00',
   criadoEm: '2026-07-01T10:00:00.000Z'
 };
 

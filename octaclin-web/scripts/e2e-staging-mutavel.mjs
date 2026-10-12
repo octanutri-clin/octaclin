@@ -165,7 +165,7 @@ async function executar() {
 
   const pacienteEditado = await bff(`/api/pacientes/${paciente.id}`, {
     method: 'PATCH',
-    body: JSON.stringify({ statusAdesao: 'em_acompanhamento', scoreRisco: 27.5 })
+    body: JSON.stringify({ statusAdesao: 'em_acompanhamento' })
   });
   assert(pacienteEditado?.statusAdesao === 'em_acompanhamento', 'Edicao do paciente nao persistiu.');
 

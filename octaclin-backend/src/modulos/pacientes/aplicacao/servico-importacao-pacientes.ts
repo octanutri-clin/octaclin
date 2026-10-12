@@ -172,7 +172,6 @@ export class ServicoImportacaoPacientes {
                 buscaHashes: this.criptografia.gerarHashesBuscaPii(tenantId, [item.nome, item.contato]),
                 dataNascimento: item.dataNascimento,
                 statusAdesao: 'novo',
-                scoreRisco: '0'
               })
             );
             item.pacienteId = paciente.id;

@@ -50,4 +50,14 @@ describe('Pipe de validacao HTTP contra mass assignment', () => {
       )
     ).resolves.toBeInstanceOf(AtualizarPacienteDto);
   });
+
+  it('mantem o scoreRisco legado validado no PATCH durante a transicao', async () => {
+    await expect(
+      criarPipeValidacaoHttp().transform({ scoreRisco: 42 }, corpo(AtualizarPacienteDto))
+    ).resolves.toMatchObject({ scoreRisco: 42 });
+
+    await expect(
+      criarPipeValidacaoHttp().transform({ scoreRisco: 101 }, corpo(AtualizarPacienteDto))
+    ).rejects.toMatchObject({ status: 400 });
+  });
 });

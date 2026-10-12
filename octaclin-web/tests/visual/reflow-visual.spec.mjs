@@ -310,7 +310,6 @@ const pacienteSintetico = {
   contato: 'participante.sintetico@octaclin.test',
   dataNascimento: '1990-03-12',
   statusAdesao: 'em_acompanhamento',
-  scoreRisco: '31',
   criadoEm: '2026-08-20T10:00:00.000Z'
 };
 

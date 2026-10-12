@@ -6,14 +6,26 @@ Decisão do proprietário em 2026-10-11; anexo original preservado com SHA256 em
 `../history/phases/reviews/fase-314-rev14/`. Este contrato atualiza a REV11 sem
 substituir seus originais ou reabrir CL01–10/G02 REV9 já ratificados.
 
-Main consultada nesta rodada: `2e06bcded890826d04a61cbbb8835c5f0b6af9b6`.
+Registro histórico da rodada REV14 — main consultada: `2e06bcded890826d04a61cbbb8835c5f0b6af9b6`.
 PR #392 mergeada; PR Draft #394 OPEN, não integrada. Worktree inicial
 `feat/fase-314-validacao-rev11`, HEAD `db4f317a0c28466aec37c8f002c14f049e902079`, limpa.
 A entrega factual usa a PR394 existente, com escopo e gates A explicitados,
 sem criar uma segunda PR concorrente. Candidatos B e evidências existentes são
 preservados isolados, sem conexão assistencial.
-A divergência CL08 da main é explicada pela PR394 ainda aberta: os seis métodos
+Naquela rodada, a divergência CL08 da main era explicada pela PR394 ainda aberta: os seis métodos
 já estão ratificados/implementados na branch. Não presumir deploy/migrations.
+
+## Reconciliação após integração — 2026-10-11
+
+PR #394 MERGED, commit `c77c45204fb67a8ca64287052690b99ad20e8314`;
+CI pós-merge `38179801575` SUCCESS. Checks da PR SUCCESS salvo Provenance
+SBOM SKIPPED. A02 comprovado para esse HEAD; merge autorizado/executado
+pelo proprietário, sem autorização inferida para migrations/deploy/ativação.
+A03, parte integrada de A05 e liberação A06 continuam pendentes. Não houve
+consulta de banco externo neste planejamento. Monitor produção `38183397104`
+FAIL na etapa de saúde externa, causa não investigada nesta rodada.
+Registros REV14 acima/abaixo preservam sua fotografia original; não são
+estado atual da PR. G01 permanece BLOCKED; a Fase 315 independe dele.
 
 ## Trilha A — candidata à liberação factual
 
