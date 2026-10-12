@@ -96,3 +96,78 @@ Toolchain local confirmado: Node22.23.3/pnpm11.25.0 em
 `/tmp/fase316-toolchain/node_modules/node/bin` e `/tmp/fase316-toolchain/node_modules/.bin`.
 Não alterar engines/locks para usar o Node24 do host. Novos arquivos/commits devem
 ser verificados e incluídos explicitamente; root next-env.d.ts não pertence à317.
+
+## Retomada integrada — 2026-10-12
+
+Esta seção substitui as pendências T07/T13/T14 e a próxima ação para Luna acima.
+Worktree: `/workspace/octaclin/.worktrees/docs-fase-317-planejamento`; branch
+`feature/fase-317-gamificacao`, base `a84921fb`; HEAD preservado nos três commits
+existentes. Checkout principal e alterações de outras fases não foram tocados.
+
+### Implementação acrescentada nesta retomada
+
+- Fechada a lacuna de administração de exceções legais: endpoint Client-only e
+  paginado lista apenas id, versão, prazo ordinário e hold registrado. O cursor tem
+  validação estrita; backend executa no tenant próprio sob executor/RLS.
+- Criada rota administrativa `/cliente/gamificacao-piloto` e link no portal do
+  gestor. `/gamificacao/piloto` continua com configuração para SuperAdmin e fluxo
+  clínico profissional, sem misturar os acessos do Client.
+- BFF de retenção com sessão/permissão, origem mutável, body limitado a 8 KiB,
+  allowlist de campos, UUID/ISO estritos, respostas `no-store` e projeção mínima.
+  Texto da denúncia/justificativa nunca é retornado nessa listagem. Justificativa
+  submetida é cifrada no backend; auditoria registra metadados sem o texto.
+- Chave de idempotência do formulário permanece estável em tentativa incerta e
+  só é descartada ao confirmar ou editar a intenção. O piloto não foi habilitado.
+
+### Verificações executadas nesta retomada
+
+- PASS: `octaclin-backend pnpm typecheck`.
+- PASS: `octaclin-backend pnpm build` e verificador do artefato `dist/main.js`.
+- PASS: `RLS_TESTCONTAINERS=true pnpm exec jest --runInBand
+  src/modulos/gamificacao/aplicacao/piloto-gamificacao.integracao.spec.ts`
+  (19/19, PostgreSQL em container descartável; warning conhecido de queries
+  concorrentes no pg permanece no output).
+- PASS: spec unitária da exceção (4/4), incluindo projeção sem evidência,
+  cursor adulterado/tenant-bound e limite de 100 itens.
+- PASS: `octaclin-web pnpm typecheck` e ESLint focado dos arquivos novos/alterados.
+- PASS: `octaclin-web pnpm lint` (0 erros, 65 warnings preexistentes; nenhum nos
+  arquivos alterados desta fase).
+- PASS: `octaclin-web pnpm test:fase317:bff` (5/5) e Playwright/axe da fase
+  em Chromium desktop/mobile (6/6), somente fixtures sintéticas; após a alteração
+  final do texto do hold, o formulário do gestor foi repetido em desktop/mobile
+  (2/2).
+- PASS: `pnpm security:secrets` (nenhum segredo real identificado pelos padrões
+  locais) e `git diff --check` preliminar.
+- PASS: `octaclin-web pnpm build`; compilou todas as rotas, incluindo
+  `/cliente/gamificacao-piloto`, com avisos existentes de middleware/Edge Runtime.
+- PASS: `pnpm test:authz` abrangente, repetido após remover somente o cache
+  ignorado `.next/dev` que continha arquivos de tipo truncados. A execução limpa
+  completou a cadeia, incluindo os cinco testes BFF desta fase.
+- SKIPPED/PARCIAL: suite global `pnpm test:a11y` executada anteriormente foi
+  interrompida após 25 de 274 casos; a cobertura dedicada nova inclui axe em seis
+  cenários desktop/mobile, mas não substitui esse conjunto global.
+
+Suite backend ampla anterior: 308 suites/2.703 testes PASS; PG amplo anterior:
+50 testes PASS (31 gerais e 19 da Fase 317). A rodada atual adiciona os testes
+focados listados acima; não declarar resultados de CI remota ou revisão R4.
+
+### Estado de entrega/gates
+
+T00–T14: PASS local. T15: IN_PROGRESS somente para CI remoto e revisão R4
+independente; gates locais concluídos. T16: IN_PROGRESS até abrir a PR Draft
+única e acompanhar CI.
+
+G00 PASS; G01 BLOCKED pela revisão humana final do termo e da operação de denúncia/
+moderação; G02 BLOCKED por revisão R4 independente; G03 PASS somente em banco
+descartável; G04 IN_PROGRESS até CI remoto; G05 BLOCKED sem autorização de
+operação/ativação.
+Migration1070 não foi aplicada em staging/produção. Sem merge, deploy, push ou
+ativação. Não usar dados reais.
+
+### Próxima ação
+
+Reconferir diff/status, finalizar os documentos e abrir uma única PR Draft sem
+merge/deploy. Em seguida, pausar antes da revisão R4 independente para solicitar
+troca manual para **GPT‑6.1 Sol médio**. A CI da PR pode ser acompanhada em modo
+somente leitura. Corrigir eventuais achados R4/CI e repetir gates afetados após a
+troca de modelo. Nenhum merge ou deploy está autorizado.

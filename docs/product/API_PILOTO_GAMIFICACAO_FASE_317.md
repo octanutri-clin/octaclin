@@ -94,6 +94,12 @@ Saída/revogação não usa essas quotas. Nova adesão não republica conteúdo 
 ## Configuração administrativa
 
 - Client próprio: GET/PATCH `cliente/configuracoes/gamificacao-piloto`.
+- Portal do Client: `/cliente/gamificacao-piloto`, acessível apenas dentro da
+  área administrativa da conta. Lista GET
+  `cliente/configuracoes/gamificacao-piloto/denuncias-retencao` é exclusiva do
+  Client da própria clínica, paginada por cursor cifrado e vinculado ao tenant,
+  `no-store`, e projeta somente id/versão/prazo ordinário/data do hold registrado; nunca
+  evidência, texto, autor ou justificativa.
 - SuperAdmin: GET/PATCH `operacoes/tenants/:tenantId/gamificacao-piloto`.
 - PATCH: conquistas/comunidade booleans e versaoEsperada. Resposta:
   conquistas/comunidade/versao/operacaoAprovada. Operação não aprovada impede

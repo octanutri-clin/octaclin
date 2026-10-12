@@ -356,6 +356,7 @@ const linksPortal = [
   { href: '/portal/formularios', rotulo: 'Formulários' },
   { href: '/portal/mensagens', rotulo: 'Mensagens' },
   { href: '/portal/perfil', rotulo: 'Perfil' },
+  { href: '/portal/gamificacao', rotulo: 'Conquistas e círculos' },
   { href: '/portal/privacidade', rotulo: 'Privacidade' },
   { href: '/portal/mais', rotulo: 'Mais' }
 ];
@@ -365,6 +366,7 @@ const linksPortalMobile = [
   { href: '/portal/agenda', rotulo: 'Agenda', icone: CalendarDays },
   { href: '/portal/plano', rotulo: 'Plano', icone: Target },
   { href: '/portal/checkins', rotulo: 'Registro de hábitos', icone: SmilePlus },
+  { href: '/portal/gamificacao', rotulo: 'Conquistas', icone: HeartPulse },
   { href: '/portal/mais', rotulo: 'Mais', icone: Menu }
 ];
 

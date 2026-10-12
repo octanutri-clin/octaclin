@@ -187,9 +187,49 @@ Independência: não depende do OCR/scanner/provisão316 ou das referências cie
 bloqueadas314. Não declara prontidão dessas fases. Segurança da comunidade e idade
 adulta são requisitos próprios, não validação clínica de curva/classificador.
 
-Verificações nesta etapa: leitura/busca/fetch/hash/diff/links/segredos documentais.
-Não adicionar/executar testes de implementação enquanto só planejamento estiver
-solicitado. Testes futuros no checklist são **previstos**, não PASS existente.
+## Atualização integrada T00–T16 — 2026-10-12
+
+O proprietário autorizou a implementação técnica, testes locais sintéticos,
+correções, commits e uma PR; essa autorização não cobre merge, deploy, migrations
+fora de bancos descartáveis ou ativação assistencial. O piloto segue default-off e
+o bloqueio de operação continua exigido.
+
+T00–T14 foram implementadas no branch `feature/fase-317-gamificacao`: BFFs
+específicos com allowlists/projeções, experiência de console profissional e portal
+adulto, compartilhamento/aceite revogáveis, círculo privado, publicações,
+comentários, curtidas e denúncia/moderação. O gestor tem rota administrativa
+separada em `/cliente/gamificacao-piloto`; o console profissional continua em
+`/gamificacao/piloto`. A consulta administrativa de retenção retorna somente id,
+versão e prazos, incluindo a data do hold registrado; a justificativa da exceção
+legal permanece cifrada, sem expor conteúdo da denúncia ao gestor. A rota de
+exceção continua exclusiva do Client da própria clínica.
+
+Evidências adicionadas nesta retomada: 19/19 testes de integração PostgreSQL
+descartável da Fase 317; 4/4 focused specs da exceção; 5/5 testes BFF específicos;
+6/6 Playwright em Chromium desktop/mobile com axe nas páginas novas; typecheck
+backend/web; build backend; secrets scanner sem segredos reais. O `pnpm lint` web
+terminou com zero erros e 65 warnings preexistentes fora dos arquivos da fase.
+O build web terminou sem falhas. O `pnpm test:authz` final segue em execução. A
+suite ampla `test:a11y` foi parcialmente executada anteriormente
+(25/274; interrompida), portanto não representa um gate global aprovado.
+
+| Gate | Estado de entrega local | Restrição para liberação |
+| --- | --- | --- |
+| G00 | PASS | Base/contratos/escopo conferidos |
+| G01 | BLOCKED | Revisão humana final do termo e operação de denúncia/moderação permanece necessária |
+| G02 | BLOCKED | Revisão R4 independente ainda não realizada |
+| G03 | PASS local | PostgreSQL descartável; nenhuma migration foi aplicada externamente |
+| G04 | IN_PROGRESS | Build web/local PASS; aguardar `test:authz` e checks remotos da PR |
+| G05 | BLOCKED | Sem autorização de ativação; flags e gate operacional permanecem desligados |
+
+T15/T16 continuam em andamento até concluir os checks locais/CI, atualizar handoff,
+realizar revisão R4 independente e abrir uma única PR Draft. Não houve push, PR,
+merge, consulta ou alteração de staging/produção nesta retomada.
+
+Nota histórica do planejamento: naquela etapa só ocorreram verificações
+documentais. A autorização posterior, a implementação e as verificações atuais
+estão registradas na Atualização Integrada acima; o checklist distingue evidência
+local de CI, revisão independente e liberação operacional.
 
 ## Handoff e modelos
 

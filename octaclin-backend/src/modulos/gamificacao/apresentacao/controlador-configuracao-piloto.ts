@@ -1,6 +1,6 @@
 import { ExcecaoRetencaoDto } from '../aplicacao/dtos-piloto';
 import { ServicoExcecaoRetencaoPiloto } from '../aplicacao/servico-excecao-retencao-piloto';
-import { Body, Controller, Get, Header, Param, ParseUUIDPipe, Patch, Post, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Header, Param, ParseUUIDPipe, Patch, Post, Query, Req, UseGuards } from '@nestjs/common';
 import { IsBoolean, IsInt, Max, Min } from 'class-validator';
 import { Request } from 'express';
 import { ServicoAuditoria } from '../../../infraestrutura/auditoria/servico-auditoria';
@@ -10,6 +10,7 @@ import { GuardaPapeis } from '../../auth/apresentacao/guarda-papeis';
 import { GuardaPermissoes } from '../../auth/apresentacao/guarda-permissoes';
 import { UsuarioAutenticado } from '../../auth/dominio/usuario-autenticado';
 import { ServicoConfiguracaoPiloto } from '../aplicacao/servico-configuracao-piloto';
+import { PaginaPilotoDto } from '../aplicacao/dtos-piloto';
 
 export class ConfiguracaoPilotoDto {
   @IsBoolean() conquistas: boolean;
@@ -33,6 +34,8 @@ export class ControladorConfiguracaoPiloto {
     await this.auditoria.registrar({ tenantId: u.tenantId, usuarioId: u.usuarioId, acao: 'gamificacao.piloto.configurar', recursoTipo: 'tenant_configuracao', ip: req.ip, metadados: { conquistasHabilitadas: result.conquistas, comunidadeHabilitada: result.comunidade, versao: result.versao } });
     return result;
   }
+  @Get('denuncias-retencao') @Header('Cache-Control','private, no-store')
+  listarRetencao(@UsuarioAtual() u:UsuarioAutenticado,@Query() p:PaginaPilotoDto) { return this.retencao.listar(u,p.cursor); }
   @Post('denuncias/:denunciaId/excecao-retencao') @Header('Cache-Control','private, no-store')
   async excecao(@UsuarioAtual() u:UsuarioAutenticado,@Param('denunciaId',ParseUUIDPipe) id:string,@Body() d:ExcecaoRetencaoDto,@Req() req:Request) {
     const result=await this.retencao.registrar(u.tenantId,u,id,d);
