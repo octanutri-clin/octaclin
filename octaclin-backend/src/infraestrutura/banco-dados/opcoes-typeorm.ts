@@ -1,3 +1,10 @@
+import { ComandoGamificacaoOrm } from '../../modulos/gamificacao/infraestrutura/comando-gamificacao.orm';
+import { RevisaoPublicacaoOrm } from '../../modulos/gamificacao/infraestrutura/revisao-publicacao.orm';
+import { DenunciaComunidadeOrm } from '../../modulos/gamificacao/infraestrutura/denuncia-comunidade.orm';
+import { CurtidaComunidadeOrm } from '../../modulos/gamificacao/infraestrutura/curtida-comunidade.orm';
+import { ComentarioComunidadeOrm } from '../../modulos/gamificacao/infraestrutura/comentario-comunidade.orm';
+import { ConsentimentoConquistaOrm } from '../../modulos/gamificacao/infraestrutura/consentimento-conquista.orm';
+import { PilotoGamificacao1720000001070 } from './migracoes/1720000001070-PilotoGamificacao';
 import { ProtegerRetencaoAvaliacoes1720000001069 } from './migracoes/1720000001069-ProtegerRetencaoAvaliacoes';
 import { ConsentimentoGestacaoOrm } from '../../modulos/pacientes/infraestrutura/consentimento-gestacao.orm';
 import { ReferenciaGestacaoOrm } from '../../modulos/pacientes/infraestrutura/referencia-gestacao.orm';
@@ -328,6 +335,12 @@ export function criarOpcoesTypeOrm(): TypeOrmModuleOptions & DataSourceOptions {
       ParticipacaoDesafioOrm,
       BadgeOrm,
       PacienteBadgeOrm,
+      ConsentimentoConquistaOrm,
+      ComentarioComunidadeOrm,
+      CurtidaComunidadeOrm,
+      DenunciaComunidadeOrm,
+      RevisaoPublicacaoOrm,
+      ComandoGamificacaoOrm,
       LogDiarioRapidoOrm,
       ArquivoMidiaOrm,
       AcompanhanteOrm,
@@ -438,7 +451,8 @@ export function criarOpcoesTypeOrm(): TypeOrmModuleOptions & DataSourceOptions {
         CompartilharReceitasNutricionais1720000001066,
         AdicionarEncaminhamentoDocumento1720000001067,
         AcompanhamentoGestacional1720000001068,
-        ProtegerRetencaoAvaliacoes1720000001069
+        ProtegerRetencaoAvaliacoes1720000001069,
+        PilotoGamificacao1720000001070
       ],
     migrationsRun: executarMigracoesNoBoot(),
     synchronize: false,

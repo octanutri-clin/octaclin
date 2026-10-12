@@ -1,6 +1,6 @@
 # Contrato proposto do piloto — Fase 317
 
-**DRAFT de planejamento**, sem runtime autorizado. Decisões/contexto no
+**DRAFT do termo operacional**; desenvolvimento técnico autorizado, ativação não autorizada. Decisões/contexto no
 [plano](../history/phases/PLANO_FASE_317.md). D01–11 confirmadas; D12 técnica fechada. Não misturar conquistas privadas com autorização para leitura em grupo.
 
 ## Regras recebidas
@@ -221,3 +221,11 @@ participação de imediato; não deixar espaço ativo sem moderador. Revisar cas
 abertos dentro do prazoD11; conservar além dele somente mediante hold explícito
 com processo LGPD, sem mensagens externas novas neste escopo. Procedimento de
 resposta/capacidade deve ser aceito pela equipe antes da liberação do piloto.
+
+## Contrato observado após implementação do núcleo
+
+O termo continua sujeito à revisão operacional; autorização técnica não o ratifica.
+Rotas/DTOs/projeções e handoff de UI em [API317](API_PILOTO_GAMIFICACAO_FASE_317.md).
+Evidência/segurança em [incremento backend](../history/phases/reviews/fase-317/IMPLEMENTACAO_BACKEND.md).
+Prazos do worker não dependem de flags; exceção legal não restaura dado vencido.
+Rollback funcional mantém isolamento legado, revogação, retenção e ledger da1070.

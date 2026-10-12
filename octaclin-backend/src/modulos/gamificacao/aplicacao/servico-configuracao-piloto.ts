@@ -1,4 +1,4 @@
-import { ConflictException, ForbiddenException, Injectable } from '@nestjs/common';
+import { ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { EntityManager } from 'typeorm';
 import { ExecutorTenant } from '../../../infraestrutura/banco-dados/executor-tenant';
 import { UsuarioAutenticado } from '../../auth/dominio/usuario-autenticado';
@@ -33,13 +33,13 @@ export class ServicoConfiguracaoPiloto {
 
   async obter(tenantId: string, u: UsuarioAutenticado) {
     this.autorizar(tenantId, u);
-    return this.executor.executar(tenantId, m => this.ler(m, tenantId));
+    return this.executarAdministrativo(tenantId,u,m => this.ler(m,tenantId));
   }
 
   async atualizar(tenantId: string, u: UsuarioAutenticado, d: MutacaoConfiguracaoPiloto) {
     this.autorizar(tenantId, u);
     if ((d.conquistas || d.comunidade) && !this.operacaoAprovada()) throw new ForbiddenException('Piloto aguarda liberacao operacional.');
-    return this.executor.executar(tenantId, async m => {
+    return this.executarAdministrativo(tenantId,u, async m => {
       await m.query('select pg_advisory_xact_lock(hashtextextended($1,0))', [`gamificacao317:${tenantId}`]);
       const config = await this.ler(m, tenantId);
       if (config.versao !== d.versaoEsperada) throw new ConflictException('Configuracao mudou. Confira novamente.');
@@ -50,4 +50,22 @@ export class ServicoConfiguracaoPiloto {
       return { ...valor, operacaoAprovada: this.operacaoAprovada() };
     });
   }
+  async executarAdministrativo<T>(tenantId:string,u:UsuarioAutenticado,op:(m:EntityManager)=>Promise<T>):Promise<T> {
+    this.autorizar(tenantId,u);
+    return this.executor.executar(u.tenantId,async ator=>{
+      const [usuario]=await ator.query('select id from usuarios where tenant_id=$1 and id=$2 and role=$3 and ativo=true for share',[u.tenantId,u.usuarioId,u.papel]);
+      if(!usuario) throw new ForbiddenException('Acesso nao autorizado.');
+      if(u.sessaoId) {
+        const [sessao]=await ator.query('select id from sessoes_usuario where tenant_id=$1 and usuario_id=$2 and id=$3 and revogado_em is null and expira_em>now() for share',[u.tenantId,u.usuarioId,u.sessaoId]);
+        if(!sessao) throw new ForbiddenException('Sessao indisponivel.');
+      }
+      const executar=async (m:EntityManager)=>{
+        const [tenant]=await m.query('select id from tenants where id=$1 for share',[tenantId]);
+        if(!tenant) throw new NotFoundException('Clinica nao encontrada.');
+        return op(m);
+      };
+      return tenantId===u.tenantId ? executar(ator) : this.executor.executar(tenantId,executar);
+    });
+  }
+
 }

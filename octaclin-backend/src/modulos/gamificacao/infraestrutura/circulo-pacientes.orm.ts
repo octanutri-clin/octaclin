@@ -22,4 +22,17 @@ export class CirculoPacientesOrm {
 
   @CreateDateColumn({ name: 'criado_em', type: 'timestamptz' })
   criadoEm: Date;
+
+  // Piloto317: excluded from legacy ORM reads/serialization.
+  @Column({ name: 'eliminar_em', type: 'timestamptz', select: false, nullable: true })
+  eliminarEm: Date | null;
+
+  @Column({ name: 'modelo_versao', type: 'integer', select: false, nullable: false })
+  modeloVersao: number;
+  @Column({ name: 'estado_piloto', type: 'varchar', select: false, nullable: false })
+  estadoPiloto: string;
+  @Column({ name: 'versao_piloto', type: 'integer', select: false, nullable: false })
+  versaoPiloto: number;
+  @Column({ name: 'snapshot_criptografado', type: 'bytea', select: false, nullable: true })
+  snapshotCriptografado?: Buffer | null;
 }

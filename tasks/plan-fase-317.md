@@ -1,73 +1,98 @@
-# Handoff — Fase 317
+# Handoff de implementação — Fase 317
 
-## Branch/base/worktree
+## Estado e autorização
 
-`feature/fase-317-gamificacao`, base `origin/main a84921fb`, worktree
-`/workspace/octaclin/.worktrees/docs-fase-317-planejamento`. Main com alteração
-preexistente `octaclin-web/next-env.d.ts` preservada.316 pausada em worktree própria,
-branch `research/fase-316-motores`, último commit de pausa `9b638613`; não herdar
-código experimental nem retomar pesquisa daquela fase automaticamente.
+Branch `feature/fase-317-gamificacao`, base `origin/main a84921fb` reconferida por
+fetch em2026-10-12. Worktree `/workspace/octaclin/.worktrees/docs-fase-317-planejamento`.
+Planejamento commit52a9ba96 e primeiro incremento caafebc1; núcleo em commit
+posterior verificável por git log (não presumir SHA/PR). Reconferir HEAD/status/diff.
 
-## Objetivo autorizado
+Proprietário autorizou implementação, testes novos/regressões/PG descartável e
+gates. Nenhum merge/deploy/migration externa/ativação autorizados. Piloto default
+false e gate operacional desativado fora dos testes. A316 continua em stand-by
+na worktree `research/fase-316-motores`; não herdar seu runtime/commits. Alteração
+preexistente `octaclin-web/next-env.d.ts` no checkout principal preservada.
 
-Planejar/analisar conquistas privadas **e comunidade** no console/portal para
-adultos>=18. Implementação técnica autorizada pelo proprietário após o planejamento; piloto
-continua desligado. Testes novos/regressões/banco descartável/gates autorizados.
-Sem merge/deploy/migrations externas ou ativação.
-[Plano/gaps/contratos](../docs/history/phases/PLANO_FASE_317.md),
-[T00–T16](todo-fase-317.md),
-[contrato draft](../docs/product/CONTRATO_PILOTO_GAMIFICACAO_FASE_317.md),
-[inventário](../docs/history/phases/reviews/fase-317/source-inventory.json).
-`tasks/plan.md`/`todo.md` históricos de outra fase ficam intactos.
+## Fontes de verdade para continuar
 
-## Concluído
+- [Plano/gates/gaps](../docs/history/phases/PLANO_FASE_317.md).
+- [Contrato de produto/termo proposto](../docs/product/CONTRATO_PILOTO_GAMIFICACAO_FASE_317.md).
+- [API/versões/projeções e execução da UI](../docs/product/API_PILOTO_GAMIFICACAO_FASE_317.md).
+- [Checklist T00–T16](todo-fase-317.md).
+- [Evidência e segurança do núcleo](../docs/history/phases/reviews/fase-317/IMPLEMENTACAO_BACKEND.md).
+- [Manifesto de verificações](../docs/history/phases/reviews/fase-317/backend-verification.json).
 
-- [x] Base fetch/módulo/API/UI/SQL/guards/cifra/padrões do portal inventariados.
-- [x] D01 conquistas+comunidade, D02 console/portal/manual/aceite/sem avisos externos,
-  D03>=18 confirmadas; respostas repetidas deduplicadas.
-- [x] D04–11 adicionais incorporadas; D12 técnica de compatibilidade.
-- [x]14 gaps estáticos, contrato/matriz de atores/rotas/estados/retenção e texto
-  proposto do aceite, tarefas com dependências/aceites/verificações.
+D01–11 confirmadas: conquistas e comunidade; console/portal; adulto>=18;
+nomes de exibição confirmados; publicação imediata/moderação posterior;
+comentários/curtidas com nomes; gestor/SuperAdmin configuram/profissional conduz;
+saída oculta tudo próprio; novo convite/aceite;90dias e exceção legal explícita.
+D12 técnica: novo modelo317 e API separados, sem conversão implícita do legado.
+Não reabrir essas decisões por preferência nem confundi-las com revisão do termo.
 
-## Decisões e limites
+## Concluído no núcleo
 
-D04 nomes visíveis em círculos privados;D05 publicação imediata e moderação após
-denúncia;D06 comentários/curtidas;D07 gestor/SuperAdmin habilitam, profissional
-conduz;D08 saída oculta conteúdo, novo convite requer aceite: CONFIRMADAS.
-D09 nome de exibição confirmado/D10 identificar quem curtiu/D11 até90dias
-com exceção legal: CONFIRMADAS. D12: piloto versionado, legado não escreve em
-recursos317 nem expõe registros no portal; histórico preservado. Contrato e
-limites técnicos documentados; falta autorização de implementação e revisão
-operacional de termo/apoio à moderação antes de ativar.
+- Flags317 e gate operacional literal; permissões do gestor/SuperAdmin sem acesso
+  clínico novo; identidade/sessão/alvo revalidados no banco.
+- Domínio adulto, contexto/carteira, cifra vinculada ao recurso, versões/nonce,
+  locks e quotas; configuração administrativa usa CAS sem ledger clínico.
+-1070 aditiva/entidades registradas; seis tabelas FORCE RLS, FKs/índices/triggers.
+  Down sempre recusa: não apagar schema/registro/histórico por rollback automático.
+- Conquistas/snapshot/compartilhamento/aceite/revogação; vínculos por geração.
+- Círculo/convite/aceite/nome/saída/revogação/encerramento; nenhuma impersonação.
+- Posts imediatos/comentários/edição/revisões/retirada/curtidas e nomes paginados.
+- Denúncias privadas/moderação da carteira; evidência/decisão cifradas.
+- Feed/cursors/projeções; APIs próprias de revogação disponíveis com flags off,
+  sem nomes/textos. Consentimentos antigos também revogáveis.
+- Retenção e worker/all (tenants inativos incluídos), purga efetiva de conteúdo e
+  relações de identidade quando sem hold/FK necessário; tombstones contra replay.
+- Client próprio pode registrar exceção legal cifrada/com prazo, não ler conteúdo;
+  não recuperar registros vencidos. Imagem de rollback mantém essas proteções.
+- Legacy APIs filtram modelo1/catálogo piloto; shared ORMs select:false para campos novos.
 
-## Pontos técnicos para o próximo executor
+## Validações realmente executadas
 
-- Flags atuais são tenant-wide, false por ausência; Professional pode alterá-las.
-  Client não possui `gamificacao.gerenciar`. Não ampliar acesso clínico para ativar.
-- API atual é console; portal resolve próprio Patient, não recebe pacienteId livre.
-- Concessão atual referencia badge mutável; novo compartilhamento exige snapshot.
-- Ranking retorna participação crua e não revalida carteira de cada paciente.
-- Moderador por4 palavras não é proteção de identidade/PHI; publicação nova é imediata por D05. Não chamar conteúdo de aprovado clinicamente
-  nem publicar pendências do legado por mudança automática de status.
-- Fundação já tem ENABLE/FORCE RLS por tenant; isso não é isolamento de carteira,
-  garantia de FK composta ou evidência de que migration está aplicada no alvo.
-- Ícones internos/escape/projeções explícitas; campos JSON/DTO TS não ocultam dado.
-- Não tocar demais fases nem escolher migration1070 enquanto main não reconferida.
-- Demo/global/a11y têm post, pontos e ranking legados; adaptar contratos/fixtures
-  quando runtime autorizado. Não declarar smoke aprovado só por unitários novos.
+PASS: suíte backend308 suites/2703 testes;73 condicionais SKIPPED. PG separado:
+50 testes (31 gerais+19 piloto), container sintético/role nãoowner sem bypass.
+PASS: testes de HTTP com identidade/serviços simulados, guards/validação reais;
+typecheck; build/artefato; secrets; guardas45 controladores; cobertura de redação
+de auditoria24 testes; matriz de confiabilidade; matriz a11y20 testes; migrations
+fora de banda13 testes. Não equivalem a teste de UI ou revisão independente.
 
-## Validações
+Aviso de depreciação pg em queries concorrentes de testes permanece documentado.
+Uma seleção de fixture de revisão falhou e foi corrigida; rodada50 passou depois.
+Rota no DTO e nomes de metadata de auditoria também corrigidos/testados.
+Rollback vazio agora recusa com teste novo; up do banco não mudou nessa correção.
 
-PASS: fetch/base, leitura,11 hashes do inventário,11 links locais e consistência
-D01–12/T00–16; diff sem whitespace. Scanner de segredos confirmado ao finalizar. SKIPPED: runtime/testes/builds/CI/bancos/produção,
-por escopo restrito a planejamento. Revisão independente não executada.
+## Pendências de entrega
 
-## Próxima ação exata
+T07/T13/T14: BFF/UI/admin/portal e moderação, seguindo API317. T15: demo, fixtures,
+Playwright/axe desktop/mobile/teclado, regressões, lint/typecheck/build web.
+T16: documentação final/gates/revisão R4 e uma única PR com toda a fase. PR não
+aberta neste checkpoint; CI remoto não consultado/executado para este incremento.
+Não declarar fase concluída/GO antes disso. Não fazer push/merge de main.
 
-Apresentar contrato consolidado e obter autorização de implementação técnica.
-Não iniciar T02–T16 automaticamente; adequação do termo, capacidade de moderação
-e ativação são gates operacionais separados. Manter Sol6.1 médio no core R4.
+G00 PASS; G01 termo/moderação BLOCKED para liberação; G02 revisão independente R4
+BLOCKED; G03 PASS local; G04 IN_PROGRESS; G05 operação/piloto BLOCKED. Nenhuma
+migration aplicada fora do container. NOT VALID/grants/RLS/owner/worker/alertas e
+exclusão física precisam de preflight externo e autorização antes da ativação.
 
-Modelos: GPT‑6.1Sol médio para core R4/planejamento/revisão; Luna alto para slices
-bem fechados de UI/DTO/BFF. Comunidade amplia risco, não prometer Luna sozinho
-para todo core. Na troca, avisar destino e pausar para mudança manual.
+## Próxima ação exata — após a troca manual
+
+**GPT‑6 Luna alto**, BFF/UI sob contratos fechados. Antes de continuar, reconferir
+Git e ler API317. Reusar `octaclin-web/lib/server/sessao-bff.ts`, rotas de receitas
+como referência de portal/no-store e os componentes existentes. BFFs específicos,
+sem proxy genérico, com allowlists reais de entrada/saída e testes de origem/papel.
+
+Implementar jornadas completas de conquistas e comunidade, incluindo painel
+próprio de revogação mesmo com feed desligado, moderação e administração. Não
+usar endpoints antigos para317, não publicar HTML/SVG, não incluir rankings ou
+notificações. Adaptar demo/fixtures sem habilitar ambiente externo.
+
+Ao terminar, executar gates e preparar PR única. Se surgir incompatibilidade do
+núcleo/R4 ou for necessária a revisão final, solicitar retorno a **GPT‑6.1 Sol médio**
+e pausar para a troca manual. Não iniciar outra fase ou retomar316.
+
+Toolchain local confirmado: Node22.23.3/pnpm11.25.0 em
+`/tmp/fase316-toolchain/node_modules/node/bin` e `/tmp/fase316-toolchain/node_modules/.bin`.
+Não alterar engines/locks para usar o Node24 do host. Novos arquivos/commits devem
+ser verificados e incluídos explicitamente; root next-env.d.ts não pertence à317.

@@ -217,6 +217,7 @@ const CHAVES_SEGURAS = new Map([
   ['detalhesinformados', 'booleano de presenca de detalhe na solicitacao LGPD'],
   ['mfaverificado', 'booleano: a sessao nasceu com MFA ja verificado'],
   ['semfiltro', 'booleano: a exportacao da trilha saiu sem periodo e sem alvo, que e o formato da varredura'],
+  ['conquistashabilitadas', 'booleano operacional: piloto317 de conquistas habilitado no tenant; nao registra titulo, conteudo, paciente ou aceite individual'],
   ['metasbadgeshabilitados', 'booleano: o modulo de metas e badges esta habilitado no tenant'],
   ['comunidadehabilitada', 'booleano: a comunidade de pacientes esta habilitada no tenant'],
   ['planoativo', 'booleano: a clinica habilitou lembretes periodicos do plano; nao revela dados de pacientes'],

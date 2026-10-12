@@ -2,7 +2,7 @@
 
 ## Autorização, base e estado
 
-Planejamento/análise de gaps autorizados em 2026-10-12. Implementação técnica autorizada em2026-10-12 após consolidação do plano;
+Planejamento/análise de gaps autorizados em 2026-10-12. Implementação técnica autorizada em 2026-10-12 após consolidação do plano;
 testes novos, regressões, banco descartável e gates autorizados pelo proprietário.
 Ativação, merge, deploy e migrations externas permanecem não autorizados. `origin/main` conferida por fetch: `a84921fb`,
 merge da Fase315/PR395. Worktree `docs-fase-317-planejamento`, branch
@@ -12,7 +12,7 @@ A316 permanece em stand-by por decisão do proprietário; não retomar automatic
 
 Risco documental R0; implementação envolve R4: consentimento, exposição entre
 pacientes, escopo profissional, RLS, cifragem e histórico. Não usar pacientes reais.
-Fonte de código congelada em [inventário](reviews/fase-317/source-inventory.json).
+Inventário histórico da análise inicial em [inventário](reviews/fase-317/source-inventory.json).
 Não foi consultado banco externo, CI, uso real ou estado das flags por clínica.
 
 ## Decisões recebidas e pendências
@@ -176,11 +176,11 @@ Gates desta seção pertencem exclusivamente à317; não alteram G01/G02 da314.
 
 | Gate | Agora | Saída objetiva |
 | --- | --- | --- |
-| G00 Base/planejamento | PASS documental | Base/inventário/decisões e contrato proposto conferidos; não é autorização de runtime |
+| G00 Base/planejamento | PASS | Base/decisões conferidas; implementação e testes autorizados, ativação separada |
 | G01 Produto/consentimento/moderação | BLOCKED | D01–11 confirmadas/D12 técnica; termo final e plano operacional de moderação ainda precisam de revisão para piloto |
-| G02 Autorização/privacidade | SKIPPED | Projeções, cifra, carteira, revogação e revisão R4 independente |
-| G03 Banco/concorrência | SKIPPED | PG descartável real, FORCE RLS/role/FKs/locks/replay testados |
-| G04 UX/regressões/CI | SKIPPED | Backend/BFF/web, demo/global, Playwright/axe/builds e checks do HEAD |
+| G02 Autorização/privacidade | BLOCKED para liberação | Controles e testes do backend implementados; revisão R4 independente pendente |
+| G03 Banco/concorrência | PASS local | PG descartável real:50 testes (31 gerais+19 piloto), role sem bypass/FORCE RLS/snapshot/replay/retencao; não prova banco externo |
+| G04 UX/regressões/CI | IN_PROGRESS | Backend local validado; BFF/web/demo/Playwright/axe e CI do HEAD final pendentes |
 | G05 Operação/piloto | BLOCKED | Migration/alvo, moderação/denúncias, plano de piloto e autorização de liberação |
 
 Independência: não depende do OCR/scanner/provisão316 ou das referências científicas
@@ -202,3 +202,12 @@ Luna alto para slices de UI/DTO/BFF com contrato fechado e sem decidir regras de
 consentimento/moderação. Com comunidade incluída, não prometer implementação
 integral independente por Luna antes de fechar R4. Alertar e pausar na troca
 manual; nenhuma troca ou implementação automática nesta etapa.
+
+## Incremento técnico autorizado — backend
+
+A autorização posterior do proprietário permite implementação e testes locais;
+limites anteriores de planejamento não limitam esta etapa. A ativação do piloto
+permanece separada. Ver [contrato de APIs/interface](../../product/API_PILOTO_GAMIFICACAO_FASE_317.md)
+e [evidência/segurança do núcleo](reviews/fase-317/IMPLEMENTACAO_BACKEND.md).
+Migration1070 não foi aplicada fora do container. O inventário inicial permanece
+histórico; o manifesto de verificação do backend registra fontes atuais.

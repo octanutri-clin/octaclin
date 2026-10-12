@@ -3,10 +3,10 @@ import { ExecutorTenant } from '../../../infraestrutura/banco-dados/executor-ten
 import { ServicoConfiguracaoPiloto } from './servico-configuracao-piloto';
 import { UsuarioAutenticado } from '../../auth/dominio/usuario-autenticado';
 const gestor: UsuarioAutenticado = { tenantId: 'tenant-sintetico', usuarioId: 'gestor-sintetico', emailHash: '', papel: 'Client', permissoes: ['cliente.configuracoes.gerenciar'] };
-function preparar() {
+function preparar(ativo=true) {
   let registro: any = null;
   const repo = { findOne: async () => registro, create: (v: any) => v, save: async (v: any) => { registro = v; return v; } };
-  const m = { query: async () => [], getRepository: () => repo } as unknown as EntityManager;
+  const m = { query: async (sql:string) => sql.includes("from usuarios") ? (ativo ? [{id:gestor.usuarioId}] : []) : (sql.includes("from tenants") ? [{id:gestor.tenantId}] : []), getRepository: () => repo } as unknown as EntityManager;
   const executor = { executar: async (_t: string, f: (m: EntityManager) => unknown) => f(m) } as ExecutorTenant;
   return new ServicoConfiguracaoPiloto(executor);
 }
@@ -32,4 +32,8 @@ describe('configuracao administrativa317', () => {
     expect(await servico.atualizar(gestor.tenantId, gestor, { conquistas: true, comunidade: false, versaoEsperada: 0 })).toEqual({ conquistas: true, comunidade: false, versao: 1, operacaoAprovada: true });
     await expect(servico.atualizar(gestor.tenantId, gestor, { conquistas: false, comunidade: false, versaoEsperada: 0 })).rejects.toThrow('Configuracao mudou');
   });
+  it('revalida gestor ativo no banco antes de ler configuracao',async()=>{
+    await expect(preparar(false).obter(gestor.tenantId,gestor)).rejects.toThrow('Acesso nao autorizado');
+  });
+
 });

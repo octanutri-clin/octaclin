@@ -4592,10 +4592,11 @@ auditoria estão ordenados na seção 15 de
   pesquisa local preservada em worktree própria, sem incluir artefatos nesta branch.
   PB-30: extração assistida de exame com revisão humana,
   condicionada aos gates jurídico, privacidade, provider e antimalware.
-- [~] Fase317 - planejamento/gaps autorizado: conquistas e comunidade identificada
-  privada para adultos, console/portal, publicação imediata, comentários/curtidas
-  e denúncias. D01–11 confirmadas/D12 técnica: nome de exibição confirmado, quem curtiu identificado,90 dias com exceção legal. Implementação/ativação pendentes.
-  Padrão desligado, sem implementação/ativação; handoff `tasks/plan-fase-317.md`.
+- [~] Fase317 - núcleo backend implementado: conquistas privadas e comunidade
+  identificada para adultos, consentimentos separados, comentários/curtidas,
+  denúncias/moderação e retenção.2703 testes backend/50 PG-RLS e typecheck/build
+  locais passaram. BFF/UI/demo/CI/revisão R4 independente e liberação pendentes.
+  Piloto desligado;1070 não aplicada externamente. Handoff `tasks/plan-fase-317.md`.
 - [ ] Fase 318 - avaliação de valor e possível piloto de síntese pré-consulta
   e rascunho de evolução/orientação, com assinatura humana.
 - [ ] Fase 319 - avaliação de volume, privacidade e possível piloto de busca

@@ -1,0 +1,331 @@
+{
+  "phase": 317,
+  "scope": "incremento_backend_local_piloto_desativado",
+  "recorded_utc": "2026-10-12T16:33:22.793967+00:00",
+  "base": "a84921fbb4ec98ac267ef262362080698d03e03e",
+  "head_before_increment": "caafebc1538f39284304a16b3a0397c765cf1e0a",
+  "branch": "feature/fase-317-gamificacao",
+  "data": "exclusivamente_sinteticos",
+  "sources": [
+    {
+      "path": "octaclin-backend/scripts/test-rls-testcontainers.mjs",
+      "sha256": "60ce40475f7bd48b5b88eb3cfa36b33e96c0cd719af7dc936cfa8e57b269e671"
+    },
+    {
+      "path": "octaclin-backend/src/infraestrutura/banco-dados/migracoes/1720000001070-PilotoGamificacao.spec.ts",
+      "sha256": "092af9785ed2339767dfd30e68d0a83763ff2d6ffe3e77af8304e7716a178ea2"
+    },
+    {
+      "path": "octaclin-backend/src/infraestrutura/banco-dados/migracoes/1720000001070-PilotoGamificacao.ts",
+      "sha256": "feec7a6c17434ae264f138e3efe5efff20614d27137523b858d2639e544c71c9"
+    },
+    {
+      "path": "octaclin-backend/src/infraestrutura/banco-dados/opcoes-typeorm.ts",
+      "sha256": "6caeabf965b282a062a45601c9b36f27c2e44f617c2fc6a220ae20785642724f"
+    },
+    {
+      "path": "octaclin-backend/src/modulos/gamificacao/aplicacao/contexto-piloto.spec.ts",
+      "sha256": "7acd856884b1c6a6c43bf220b70f332caee7863220cf569cacf5c0cde91ed117"
+    },
+    {
+      "path": "octaclin-backend/src/modulos/gamificacao/aplicacao/contexto-piloto.ts",
+      "sha256": "50d37c8075a1d0309c485ce0c4366ccead35e6f7a9635ddc06a4df96867dcc62"
+    },
+    {
+      "path": "octaclin-backend/src/modulos/gamificacao/aplicacao/dtos-piloto.ts",
+      "sha256": "eb6e4205f61c75f0889045ae9e3a24a56c85753e2839c4af6a24a5b0c1baa163"
+    },
+    {
+      "path": "octaclin-backend/src/modulos/gamificacao/aplicacao/dtos.ts",
+      "sha256": "b85965ada2379bdd98c4fec135f1673af72a516e3f8fda671cc2f5cac9015133"
+    },
+    {
+      "path": "octaclin-backend/src/modulos/gamificacao/aplicacao/piloto-gamificacao.integracao.spec.ts",
+      "sha256": "238b9d339c42931efeffa4a6af3b06a27f994d2af87c5045de3e595243f3db93"
+    },
+    {
+      "path": "octaclin-backend/src/modulos/gamificacao/aplicacao/processador-retencao-piloto.spec.ts",
+      "sha256": "278b46b8034368eb96eb2f4e9c0f57e7d4f805f637c94600be2f2145bee56fb3"
+    },
+    {
+      "path": "octaclin-backend/src/modulos/gamificacao/aplicacao/processador-retencao-piloto.ts",
+      "sha256": "9cf32f8e76e1ba576865a9ed973abc218eddac3d1fb7649ff42bdba1320ec4b8"
+    },
+    {
+      "path": "octaclin-backend/src/modulos/gamificacao/aplicacao/servico-circulos-piloto.spec.ts",
+      "sha256": "031b5fe7ceaa3c67fcfe68bd98baa753f52ce068a270b8474f79acbf686c804e"
+    },
+    {
+      "path": "octaclin-backend/src/modulos/gamificacao/aplicacao/servico-circulos-piloto.ts",
+      "sha256": "a9764d9449ba651afbfec4a4fd9535dd69afa7cf95a5bcf02b1751b613afebe3"
+    },
+    {
+      "path": "octaclin-backend/src/modulos/gamificacao/aplicacao/servico-configuracao-piloto.spec.ts",
+      "sha256": "193e51148f5a313dbdab8068591aa92e815f9855fa31329f589f476fc3d25658"
+    },
+    {
+      "path": "octaclin-backend/src/modulos/gamificacao/aplicacao/servico-configuracao-piloto.ts",
+      "sha256": "ee4c2b02fa8628431396f4925376fc754bceb339ba573a5aecb03d80f1b363b2"
+    },
+    {
+      "path": "octaclin-backend/src/modulos/gamificacao/aplicacao/servico-conquistas-piloto.spec.ts",
+      "sha256": "a56c7d49a046016c8834d1a641213ad9bbc97fc537d336ba9c0578e6739d9b73"
+    },
+    {
+      "path": "octaclin-backend/src/modulos/gamificacao/aplicacao/servico-conquistas-piloto.ts",
+      "sha256": "09bfe4ed5e2bd152a54983531e38003f40fafc93687e867eafc460cbf73ac5dd"
+    },
+    {
+      "path": "octaclin-backend/src/modulos/gamificacao/aplicacao/servico-excecao-retencao-piloto.spec.ts",
+      "sha256": "e6577cc60a360a4ae859ac469f8f46a66ab481c37b50aa32ec4b6249a7fda401"
+    },
+    {
+      "path": "octaclin-backend/src/modulos/gamificacao/aplicacao/servico-excecao-retencao-piloto.ts",
+      "sha256": "b4d52c85dd46cb882f75cbf8eaa278e1cb113d72acc7f667da084123f52c7e13"
+    },
+    {
+      "path": "octaclin-backend/src/modulos/gamificacao/aplicacao/servico-gamificacao.spec.ts",
+      "sha256": "1fbf06bc9786a1723ecc65190bb9671ea9a406af1b1fc8923311ad6aae3ea27c"
+    },
+    {
+      "path": "octaclin-backend/src/modulos/gamificacao/aplicacao/servico-gamificacao.ts",
+      "sha256": "80f3ac62cb769da9e840d1cd4fd66ca409b65b6ff5b4670686760370f7f3096e"
+    },
+    {
+      "path": "octaclin-backend/src/modulos/gamificacao/aplicacao/servico-moderacao-piloto.spec.ts",
+      "sha256": "b1e3155477fe0e3a6a53a4618b1326d01de893e3b3a6980fac746094d37dba7e"
+    },
+    {
+      "path": "octaclin-backend/src/modulos/gamificacao/aplicacao/servico-moderacao-piloto.ts",
+      "sha256": "497a90b2e2ebf306eb58ce689165967ed64906559cbf94c9ff0c52184ebd361b"
+    },
+    {
+      "path": "octaclin-backend/src/modulos/gamificacao/aplicacao/servico-publicacoes-piloto.spec.ts",
+      "sha256": "6c52dc673c5213584a41de4ea85cdbfb04e8051373a26ff4dac8073cf9e5af46"
+    },
+    {
+      "path": "octaclin-backend/src/modulos/gamificacao/aplicacao/servico-publicacoes-piloto.ts",
+      "sha256": "00885222d464ca23af61d915c493b574f76f896d7ebb6903e76e1c52b7c566b5"
+    },
+    {
+      "path": "octaclin-backend/src/modulos/gamificacao/aplicacao/servico-retencao-piloto.spec.ts",
+      "sha256": "388f74d0bafbbba013da1568ca36289e1b64c40b770d795d551d5dd798d8d322"
+    },
+    {
+      "path": "octaclin-backend/src/modulos/gamificacao/aplicacao/servico-retencao-piloto.ts",
+      "sha256": "93920969ea7c96fdf609ea614f890bd19dac2e8ca5a82bc39961e2130cd35f88"
+    },
+    {
+      "path": "octaclin-backend/src/modulos/gamificacao/apresentacao/controlador-configuracao-piloto.ts",
+      "sha256": "deb47d1d5676f953b06018bdfab7eb86c6f8ef4a5ae51ca904041d7f6d0cd4d2"
+    },
+    {
+      "path": "octaclin-backend/src/modulos/gamificacao/apresentacao/controlador-gamificacao.spec.ts",
+      "sha256": "be30f16e1dfc4784a30690ddbd712962ce04c5f4951b2a7c6aa355b9eb841f67"
+    },
+    {
+      "path": "octaclin-backend/src/modulos/gamificacao/apresentacao/controlador-gamificacao.ts",
+      "sha256": "6f24929f96f55f38355c0704eae09fe92de41524ff25e155aaf17ca1b7d5433c"
+    },
+    {
+      "path": "octaclin-backend/src/modulos/gamificacao/apresentacao/controladores-piloto.http.spec.ts",
+      "sha256": "17cbb010ebaf4d4d02be56c821c3b5f07cbb6e3d229b3e054c52b82799cabc0c"
+    },
+    {
+      "path": "octaclin-backend/src/modulos/gamificacao/apresentacao/controladores-piloto.spec.ts",
+      "sha256": "b749bca57ce961428d68d9f85d35706e8b6bf4ec30b6689ec818f1a3442972c3"
+    },
+    {
+      "path": "octaclin-backend/src/modulos/gamificacao/apresentacao/controladores-piloto.ts",
+      "sha256": "81206de1249d322ccae87c13d533533847be1c38b6786881f17f1b20659382ec"
+    },
+    {
+      "path": "octaclin-backend/src/modulos/gamificacao/dominio/moderacao.spec.ts",
+      "sha256": "2a2b604ee3eb29e8cb1e1cd78f91a215c32a426662d46bc6d26cf9546c489e1c"
+    },
+    {
+      "path": "octaclin-backend/src/modulos/gamificacao/dominio/moderacao.ts",
+      "sha256": "66c9b3f21c3fa8835e361b9063bc09b34ecb7387e71f46794d36873b4fccb47b"
+    },
+    {
+      "path": "octaclin-backend/src/modulos/gamificacao/dominio/piloto-gamificacao.spec.ts",
+      "sha256": "766cf8104af2b990df21223dc28548dab184d37e88a73e5c79eb3cd1fe95cc5f"
+    },
+    {
+      "path": "octaclin-backend/src/modulos/gamificacao/dominio/piloto-gamificacao.ts",
+      "sha256": "f46a097780050a985b55655cc27ba6deba9813f534d8c8611953aa2c47ca20ce"
+    },
+    {
+      "path": "octaclin-backend/src/modulos/gamificacao/infraestrutura/badge.orm.ts",
+      "sha256": "326c3dcf7f842fbc1ccd49471b13d05c3b665a7f7ae855d2d0a47cd16d65d7dd"
+    },
+    {
+      "path": "octaclin-backend/src/modulos/gamificacao/infraestrutura/circulo-pacientes.orm.ts",
+      "sha256": "31389787ff59e1dcdb6cc2aaa1f09b749e937dff893cd304fb2945851961605d"
+    },
+    {
+      "path": "octaclin-backend/src/modulos/gamificacao/infraestrutura/comando-gamificacao.orm.ts",
+      "sha256": "dcc4f24557e90eafe35f03b93026dbd9fa62bbfab87c7e1c0cd30e3c81d24509"
+    },
+    {
+      "path": "octaclin-backend/src/modulos/gamificacao/infraestrutura/comentario-comunidade.orm.ts",
+      "sha256": "08313e3aba96900b1fe851ee69cf491242e40bedd8f494973bef5ba72d1a5d00"
+    },
+    {
+      "path": "octaclin-backend/src/modulos/gamificacao/infraestrutura/consentimento-conquista.orm.ts",
+      "sha256": "befc171e98c7f032b89bf5287416481c9413ad4e1354b5965772caf8f0cc6f92"
+    },
+    {
+      "path": "octaclin-backend/src/modulos/gamificacao/infraestrutura/curtida-comunidade.orm.ts",
+      "sha256": "7d3a7ce3ae61bc8e3356b48c03fa4d44bfc98ee65f92face155c9869e9d3108a"
+    },
+    {
+      "path": "octaclin-backend/src/modulos/gamificacao/infraestrutura/denuncia-comunidade.orm.ts",
+      "sha256": "5270c641c7586979bddabf02fcfdddba69f1e58c7617a618d74a75865bd0d551"
+    },
+    {
+      "path": "octaclin-backend/src/modulos/gamificacao/infraestrutura/desafio.orm.ts",
+      "sha256": "e2b78304804513b2ee143f6fa6f759a22bf99bf74cc724dcd1c75e6a976d7b5a"
+    },
+    {
+      "path": "octaclin-backend/src/modulos/gamificacao/infraestrutura/membro-circulo.orm.ts",
+      "sha256": "4e4615cf28e201c643176422dc3273ed49ad5807a49086e2817e7487ada95eca"
+    },
+    {
+      "path": "octaclin-backend/src/modulos/gamificacao/infraestrutura/moderacao-post.orm.ts",
+      "sha256": "ebfc95f75b5cd8ad7ee2a8072e27d17f434223cfed0a16a41004f100e748f876"
+    },
+    {
+      "path": "octaclin-backend/src/modulos/gamificacao/infraestrutura/paciente-badge.orm.ts",
+      "sha256": "b563c1c3fd092a375a2c01274bd9fc4bb72370f7f9cc0a7b99bf540f3521c4d0"
+    },
+    {
+      "path": "octaclin-backend/src/modulos/gamificacao/infraestrutura/participacao-desafio.orm.ts",
+      "sha256": "cdbc38e1aad0195749838f2594beadc02e284a9c4840fe5b701edc1f8c2b65b0"
+    },
+    {
+      "path": "octaclin-backend/src/modulos/gamificacao/infraestrutura/post-comunidade.orm.ts",
+      "sha256": "053e4c386c07c9f523e6433cbc1bf223d37517577f0a6220ae41537bba3392db"
+    },
+    {
+      "path": "octaclin-backend/src/modulos/gamificacao/infraestrutura/revisao-publicacao.orm.ts",
+      "sha256": "cf4ba0600ca7a8a9f33cb7d6b18f1bab2fedca408813d6898d1a5d8569e3c2d2"
+    },
+    {
+      "path": "octaclin-backend/src/modulos/gamificacao/modulo-gamificacao.ts",
+      "sha256": "caba33b4c9711f0763ec74e9fbf10ce2bd38f2b0206483ada607f356faa38569"
+    },
+    {
+      "path": "scripts/validar-redacao-auditoria.mjs",
+      "sha256": "18f4a6a21af68abd2cc8c234c4d6a2eb3c18313e6f329ecad668eda375eeed20"
+    }
+  ],
+  "checks": [
+    {
+      "check": "backend",
+      "command": "pnpm --dir octaclin-backend test --runInBand",
+      "status": "PASS",
+      "result": "308 suites,2703 testes PASS;4 suites/73 testes condicionais SKIPPED",
+      "local_stdout_sha256": "c90f66faf262a06a7af670353fbd6c87d2c5480573f0812536743e9a60b8dbbd",
+      "local_stdout_path": "/tmp/fase317-backend-commit.log"
+    },
+    {
+      "check": "rls",
+      "command": "pnpm --dir octaclin-backend test:rls:testcontainers",
+      "status": "PASS",
+      "result": "50 testes:31 gerais+19 piloto; PG15 descartavel; role sem owner/bypass",
+      "local_stdout_sha256": "625fd81431db2005e90048038de9bb3d4b047755ecd42c77488c6d92fd87a8b1",
+      "local_stdout_path": "/tmp/fase317-rls-freeze.log"
+    },
+    {
+      "check": "typecheck",
+      "command": "pnpm --dir octaclin-backend typecheck",
+      "status": "PASS",
+      "result": "exit0",
+      "local_stdout_sha256": "8366207267355d3e3d5bf3bf6e8c94c5f93f6078c34f08973fa2b38cdda6cc92",
+      "local_stdout_path": "/tmp/fase317-typecheck-commit.log"
+    },
+    {
+      "check": "build",
+      "command": "pnpm --dir octaclin-backend build",
+      "status": "PASS",
+      "result": "dist/main.js validado",
+      "local_stdout_sha256": "896d2097b15ff9f70ab32342fae89da07998e11eaf88140746e8d3de0deef6c5",
+      "local_stdout_path": "/tmp/fase317-build-commit.log"
+    },
+    {
+      "check": "http",
+      "command": "pnpm --dir octaclin-backend test --runInBand controladores-piloto.http.spec.ts",
+      "status": "PASS",
+      "result": "3 testes HTTP; JWT/servicos simulados, papeis/validacao reais",
+      "local_stdout_sha256": "ee5abb71dee2750a5490c22c4ca8f6b747bbc4e3a472bdad552da35a2fae58db",
+      "local_stdout_path": "/tmp/fase317-http-real.log"
+    },
+    {
+      "check": "guardas",
+      "command": "node scripts/validar-guardas-controladores.mjs",
+      "status": "PASS",
+      "result": "45 controladores",
+      "local_stdout_sha256": "d14f3e5af555ac974ae777b6be6f553f2e473d31c84c0a4644b0c89b22cc48ef",
+      "local_stdout_path": "/tmp/fase317-guards.log"
+    },
+    {
+      "check": "auditoria",
+      "command": "pnpm test:redacao-auditoria",
+      "status": "PASS",
+      "result": "24 testes",
+      "local_stdout_sha256": "3df1b21eaed2b7fc674bd5d9c749596fd34348dd5f7f19ce2127d05206bae6c7",
+      "local_stdout_path": "/tmp/fase317-audit-redaction-green.log"
+    },
+    {
+      "check": "confiabilidade",
+      "command": "pnpm test:confiabilidade",
+      "status": "PASS",
+      "result": "40 referencias criticas",
+      "local_stdout_sha256": "b00382aea3e6ee2c4f54352236264194811f82d19c24b688657273512a1cf819",
+      "local_stdout_path": "/tmp/fase317-reliability.log"
+    },
+    {
+      "check": "a11y_matriz",
+      "command": "pnpm test:a11y:matriz",
+      "status": "PASS",
+      "result": "20 testes da matriz, nao prova UI317",
+      "local_stdout_sha256": "b0358a6df1c317b0d37469aed5f6ea6a0de833cfc67f8cc17e0df985351f4c7b",
+      "local_stdout_path": "/tmp/fase317-a11y-matrix.log"
+    },
+    {
+      "check": "migrations_procedimento",
+      "command": "pnpm test:migracoes-fora-de-banda",
+      "status": "PASS",
+      "result": "13 testes do procedimento, nao aplica migration externa",
+      "local_stdout_sha256": "b39fc0e943c4992a63dd9321a47c6daaac450aa657a7f967881f7c4f6ca543cb",
+      "local_stdout_path": "/tmp/fase317-outofband.log"
+    },
+    {
+      "check": "secrets",
+      "command": "pnpm security:secrets",
+      "status": "PASS",
+      "result": "scanner local precommit PASS; nenhum secret real identificado",
+      "local_stdout_sha256": "110e14858346bc6636bb5760769ce8d753cc1bf899e52d85ff8a8deb1be3bb11",
+      "local_stdout_path": "/tmp/fase317-secrets-precommit.log"
+    }
+  ],
+  "rls_source_note": "Up/esquema testado; ultima mudanca posterior no down recusa rollback tambem sem dados, comprovada na suite2703. Nenhum DDL externo.",
+  "gates": {
+    "G00": "PASS",
+    "G01": "BLOCKED_TERMO_OPERACAO",
+    "G02": "BLOCKED_REVISAO_R4_INDEPENDENTE",
+    "G03": "PASS_LOCAL",
+    "G04": "IN_PROGRESS_UI_BFF_CI",
+    "G05": "BLOCKED_OPERACAO_ATIVACAO"
+  },
+  "not_executed": [
+    "revisao_R4_independente",
+    "cobertura_percentual",
+    "BFF_UI317_Playwright_axe",
+    "CI_remoto",
+    "migrations_externas",
+    "merge_deploy_ativacao"
+  ],
+  "source_scope": "modulo gamificacao completo + registro/migration/script RLS e auditoria alterados neste incremento"
+}
