@@ -4588,10 +4588,14 @@ auditoria estão ordenados na seção 15 de
   passaram; suíte Web `test:authz` parcial/cancelada, CI da PR e revisão R4
   independente pendentes. Sem migration ou ambiente externo. Handoff
   `tasks/plan-fase-315.md`, checklist `tasks/todo-fase-315.md`.
-- [ ] Fase 316 - PB-30: extração assistida de exame com revisão humana,
+- [~] Fase316 - **stand-by** por decisão do proprietário em2026-10-12;
+  pesquisa local preservada em worktree própria, sem incluir artefatos nesta branch.
+  PB-30: extração assistida de exame com revisão humana,
   condicionada aos gates jurídico, privacidade, provider e antimalware.
-- [ ] Fase 317 - decisão de propósito e possível piloto controlado de
-  gamificação; padrão permanece desligado até aprovação.
+- [~] Fase317 - planejamento/gaps autorizado: conquistas e comunidade identificada
+  privada para adultos, console/portal, publicação imediata, comentários/curtidas
+  e denúncias. D01–11 confirmadas/D12 técnica: nome de exibição confirmado, quem curtiu identificado,90 dias com exceção legal. Implementação/ativação pendentes.
+  Padrão desligado, sem implementação/ativação; handoff `tasks/plan-fase-317.md`.
 - [ ] Fase 318 - avaliação de valor e possível piloto de síntese pré-consulta
   e rascunho de evolução/orientação, com assinatura humana.
 - [ ] Fase 319 - avaliação de volume, privacidade e possível piloto de busca
