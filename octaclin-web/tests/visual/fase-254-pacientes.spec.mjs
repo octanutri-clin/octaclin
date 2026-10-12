@@ -3,7 +3,7 @@ import { expect, test } from '@playwright/test';
 const webUrl = process.env.E2E_WEB_URL ?? 'http://localhost:3000';
 const permissoes = ['console.acessar', 'pacientes.listar', 'pacientes.ler', 'pacientes.gerenciar', 'profissionais.ler', 'materiais.gerenciar', 'questionarios.gerenciar'];
 const profissional = { id: 'profissional-1', tenantId: 'tenant-1', usuarioId: 'usuario-1', nome: 'Dra. Sintética', criadoEm: '2026-08-22T10:00:00.000Z' };
-const paciente = { id: 'paciente-1', tenantId: 'tenant-1', profissionalResponsavelId: profissional.id, nome: 'Ana Sintética', contato: 'ana@example.com', dataNascimento: '1990-04-15', statusAdesao: 'em_acompanhamento', scoreRisco: '35', criadoEm: '2026-08-22T10:00:00.000Z' };
+const paciente = { id: 'paciente-1', tenantId: 'tenant-1', profissionalResponsavelId: profissional.id, nome: 'Ana Sintética', contato: 'ana@example.com', dataNascimento: '1990-04-15', statusAdesao: 'em_acompanhamento', criadoEm: '2026-08-22T10:00:00.000Z' };
 const candidatoDuplicidadeId = '11111111-1111-4111-8111-111111111111';
 const profissionalRemovidoId = '22222222-2222-4222-8222-222222222222';
 
@@ -67,7 +67,7 @@ test.describe('Fase 254 - rotas e formulario de pacientes', () => {
     await page.route(/\/api\/pacientes(?:\?.*)?$/, async (route) => {
       if (route.request().method() !== 'POST') return route.fallback();
       criado = await route.request().postDataJSON();
-      await route.fulfill({ status: 201, contentType: 'application/json', body: JSON.stringify({ ...paciente, ...criado, id: 'paciente-novo', statusAdesao: 'novo', scoreRisco: '0' }) });
+      await route.fulfill({ status: 201, contentType: 'application/json', body: JSON.stringify({ ...paciente, ...criado, id: 'paciente-novo', statusAdesao: 'novo' }) });
     });
 
     await page.goto('/pacientes/novo');

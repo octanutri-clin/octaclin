@@ -4582,9 +4582,11 @@ auditoria estão ordenados na seção 15 de
   em `docs/product/LIBERACAO_FACTUAL_FASE_314_REV14.md`. R4 independente,
   vínculo/teste de ambientes e aceite de liberação pendentes; não
   bloquear fases seguintes independentes das curvas/classificações.
-- [~] Fase 315 - planejamento/gaps concluídos; D01 confirmada: PATCH legado
-  validado sem gravar, retirar das respostas/CSV e preservar coluna/histórico.
-  Sem migration destrutiva. Implementação não iniciada; handoff
+- [~] Fase 315 - implementação local D01 concluída: PATCH legado validado e
+  ignorado sem persistência; respostas/CSV omitem o campo; coluna/histórico
+  preservados. Backend, RLS descartável, smoke local e regressões focadas
+  passaram; suíte Web `test:authz` parcial/cancelada, CI da PR e revisão R4
+  independente pendentes. Sem migration ou ambiente externo. Handoff
   `tasks/plan-fase-315.md`, checklist `tasks/todo-fase-315.md`.
 - [ ] Fase 316 - PB-30: extração assistida de exame com revisão humana,
   condicionada aos gates jurídico, privacidade, provider e antimalware.

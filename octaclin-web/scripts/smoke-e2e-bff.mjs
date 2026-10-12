@@ -311,6 +311,7 @@ async function main() {
     })
   });
   assert(pacienteCriado.id, 'criacao de paciente: id ausente.');
+  assert(!Object.hasOwn(pacienteCriado, 'scoreRisco'), 'criacao ainda retorna score legado.');
 
   const pacienteAtualizado = await requisitarJsonStatus(`/api/pacientes/${pacienteCriado.id}`, 200, 'edicao de paciente', {
     method: 'PATCH',
@@ -324,6 +325,29 @@ async function main() {
     })
   });
   assert(String(pacienteAtualizado.statusAdesao) === 'risco', 'edicao de paciente nao persistiu status.');
+  assert(!Object.hasOwn(pacienteAtualizado, 'scoreRisco'), 'PATCH ainda retorna score legado.');
+
+  const pacienteLidoNovamente = await requisitarJsonStatus(`/api/pacientes/${pacienteCriado.id}`, 200, 'leitura apos PATCH legado');
+  assert(!Object.hasOwn(pacienteLidoNovamente, 'scoreRisco'), 'leitura ainda retorna score legado.');
+  const pacienteAtualizadoSomenteComLegado = await requisitarJsonStatus(
+    `/api/pacientes/${pacienteCriado.id}`,
+    200,
+    'PATCH somente com score legado',
+    { method: 'PATCH', body: JSON.stringify({ scoreRisco: 73 }) }
+  );
+  assert(
+    pacienteAtualizadoSomenteComLegado.atualizadoEm === pacienteLidoNovamente.atualizadoEm,
+    'PATCH somente com score legado alterou atualizadoEm.'
+  );
+  assert(
+    !Object.hasOwn(pacienteAtualizadoSomenteComLegado, 'scoreRisco'),
+    'PATCH somente com score legado expôs o campo.'
+  );
+  const scoreLegadoInvalido = await requisitarJson(`/api/pacientes/${pacienteCriado.id}`, {
+    method: 'PATCH',
+    body: JSON.stringify({ scoreRisco: 101 })
+  });
+  assertStatus(scoreLegadoInvalido.resposta, 400, 'PATCH com score legado invalido');
 
   const canais = await requisitarJsonStatus('/api/comunicacoes/canais', 200, 'listagem de canais');
   assert(Array.isArray(canais), 'listagem de canais precisa ser lista.');

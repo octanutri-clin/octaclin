@@ -12,7 +12,6 @@ export interface PacienteResumo {
   contato?: string;
   dataNascimento?: string;
   statusAdesao: string;
-  scoreRisco: string;
   prioridadeAcompanhamento?: {
     faixa: 'baixa' | 'media' | 'alta';
     origem: 'calculado' | 'override';
@@ -43,7 +42,6 @@ export interface SalvarPacienteEntrada {
   contato?: string;
   dataNascimento?: string;
   statusAdesao?: 'novo' | 'aderente' | 'em_acompanhamento' | 'risco' | 'inativo';
-  scoreRisco?: number;
   candidatosDuplicidadeDispensados?: string[];
 }
 

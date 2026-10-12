@@ -1,6 +1,8 @@
 # Fase 315 — inventário do legado score_risco
 
-Levantamento estático em 2026-10-11, base `c77c4520`. Reproduzir com
+Levantamento estático em 2026-10-11, base `c77c4520`. A tabela é o inventário
+pré-implementação; reproduzir a busca no HEAD da branch para conferir resíduos
+com
 `rg -n 'score_risco|scoreRisco' --glob '!pnpm-lock.yaml' --glob '!package-lock.json' .`.
 As linhas abaixo localizam referências; não provam consumo externo.
 Documentos históricos excluídos da tabela devem ser preservados.
@@ -53,9 +55,32 @@ Documentos históricos excluídos da tabela devem ser preservados.
 - BFF `octaclin-web/app/api/pacientes/[id]/route.ts` encaminha corpo/resposta; tipos não ocultam campos. Conferir listagem, busca, arquivados e prontuário.
 - `integracoes/aplicacao/servico-api-publica.ts::mapearPaciente`: allowlist sem legado nem prioridade. Não ampliar `/v1` ou webhooks.
 - `projecao-prioridade-acompanhamento.ts` lê tabela própria. Filtros `risco`, status `risco`, override e gatilho `paciente.risco_alto` são contratos distintos.
-- Formulário atual não possui campo score; tipos e mocks ainda o exigem.
+- Formulário atual não possui campo score. Na base, tipos e mocks de resposta
+  ainda o exigiam; foram ajustados nesta implementação.
 - Nenhuma ocorrência literal encontrada em `octaclin-mobile`, `scripts` e `.github`; não comprova ausência de cliente antigo fora do repositório.
 
 ## Exclusões
 
 Não substituir globalmente `risco`, `score`, `scoreCalculado` ou `frustracaoScore`. Preservar prioridades, questionários, avaliações, proteções gestacionais/pediátricas e snapshots. Fixtures ORM com valor legado são necessárias para provar preservação histórica.
+
+## Resultado da implementação local
+
+- PATCH legado continua aceito apenas como entrada validada e depreciada; não
+  é persistido, inclusive em PATCH misto. PATCH contendo somente o campo
+  legado executa lookup e autorização normais, responde com a projeção sem o
+  campo e não chama `save`.
+- Respostas de paciente e CSV omitem o valor. O cabeçalho CSV e a largura da
+  linha têm asserções exatas.
+- O campo foi removido de DTO de saída, tipo Web e domínio sem consumidor
+  encontrado; o mapeamento ORM e a migration fundacional foram preservados
+  para leitura do histórico.
+- O cliente demo exclui a propriedade em PATCH, criação, leitura e projeção.
+  Smoke BFF envia o valor legado como teste de compatibilidade e confirma que
+  ele não reaparece na resposta.
+- Seeds/importação não criam novos valores manuais. Fixtures de resposta Web
+  foram limpas; valores históricos permanecem em fixtures ORM e verificações
+  negativas explícitas.
+- Resíduos intencionais esperados: entrada DTO depreciada, ORM/migration,
+  fixtures ORM históricas, testes de compatibilidade e comentários de
+  proteção. Outras ocorrências precisam de triagem antes de encerrar a PR.
+- Sem migration, DDL, alteração de autorização/RLS ou consulta a dados externos.

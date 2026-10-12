@@ -124,7 +124,6 @@ async function executarSeed() {
         contatoCriptografado: criptografia.criptografar('+55 11 90000-0000'),
         dataNascimento: '1992-04-18',
         statusAdesao: 'em_acompanhamento',
-        scoreRisco: '12.50',
         ultimoCheckinEm: new Date()
       })
     );

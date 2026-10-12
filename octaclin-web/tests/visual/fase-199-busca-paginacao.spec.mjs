@@ -32,7 +32,7 @@ async function preparar(page) {
       status: 200,
       contentType: 'application/json',
       body: JSON.stringify({
-        itens: [{ id: `paciente-${pagina}`, tenantId: 'tenant-1', profissionalResponsavelId: 'prof-1', nome, statusAdesao: 'em_acompanhamento', scoreRisco: '20', criadoEm: '2026-08-01T10:00:00.000Z' }],
+        itens: [{ id: `paciente-${pagina}`, tenantId: 'tenant-1', profissionalResponsavelId: 'prof-1', nome, statusAdesao: 'em_acompanhamento', criadoEm: '2026-08-01T10:00:00.000Z' }],
         total: busca ? 1 : 26
       })
     });

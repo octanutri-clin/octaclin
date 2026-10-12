@@ -287,7 +287,6 @@ async function prepararDashboardMockado(page) {
             nome: 'Ana Souza',
             contato: '11999990000',
             statusAdesao: 'risco',
-            scoreRisco: '82',
             ultimoCheckinEm: '2026-07-21T12:00:00.000Z',
             criadoEm: '2026-07-21T10:00:00.000Z'
           },
@@ -298,7 +297,6 @@ async function prepararDashboardMockado(page) {
             nome: 'Bruno Lima',
             contato: '11988880000',
             statusAdesao: 'em_acompanhamento',
-            scoreRisco: '34',
             criadoEm: '2026-07-18T10:00:00.000Z'
           }
         ],
@@ -530,7 +528,6 @@ const portalPacienteFixture = {
     id: 'paciente-1',
     nome: 'Ana Paula',
     statusAdesao: 'aderente',
-    scoreRisco: '12.50',
     ultimoCheckinEm: '2026-07-20T12:00:00.000Z'
   },
   perfil: {
@@ -1257,7 +1254,6 @@ const pacienteFixture = {
   contato: 'ana@example.com',
   dataNascimento: '1990-04-15',
   statusAdesao: 'em_acompanhamento',
-  scoreRisco: '35',
   criadoEm: '2026-08-22T10:00:00.000Z'
 };
 
@@ -1271,7 +1267,6 @@ const pacientesListaFixture = [
     contato: '11988880000',
     dataNascimento: '1985-02-10',
     statusAdesao: 'risco',
-    scoreRisco: '82',
     criadoEm: '2026-07-18T10:00:00.000Z'
   }
 ];
@@ -4340,7 +4335,6 @@ const pacientesGamificacaoFixture = Array.from({ length: 10 }, (_, indice) => ({
   profissionalResponsavelId: 'profissional-gamificacao-1',
   nome: `Participante Sintético ${indice + 1}`,
   statusAdesao: 'ativo',
-  scoreRisco: '0.10',
   criadoEm: '2026-08-01T12:00:00.000Z'
 }));
 
@@ -5698,7 +5692,6 @@ test.describe('jornadas completas por teclado (PR 30)', () => {
       contato: 'paciente.teclado@example.com',
       dataNascimento: '1992-05-18',
       statusAdesao: 'novo',
-      scoreRisco: '0'
     };
     const mutacoes = [];
     let primeiraTentativa = true;

@@ -1,10 +1,10 @@
 # OctaClin - Status atual do projeto
 
-Atualizado em 2026-10-11.
+Atualizado em 2026-10-12.
 
 ## Fase ativa
 
-- Fase 315 em planejamento concluído: retirada controlada do `score_risco` legado. D01 confirmada: aceitar PATCH legado validado sem gravar; retirar respostas internas/CSV; preservar coluna/histórico. Implementação ainda não iniciada. Handoff `tasks/plan-fase-315.md`, plano `docs/history/phases/PLANO_FASE_315.md`; independente do G01 da 314.
+- Fase 315: implementação local da retirada compatível de `score_risco` concluída na branch `feature/fase-315-score-risco`, baseada em `c77c4520`. D01: PATCH legado é validado, ignorado e não persistido; respostas internas/CSV omitem o campo; coluna e histórico preservados. Backend completo, typecheck/build, RLS descartável, smoke BFF e Playwright focado passaram. A suíte Web `test:authz` foi parcial/cancelada; CI da PR e revisão R4 independente pendentes. Nenhuma migration ou ambiente externo alterado. Handoff `tasks/plan-fase-315.md`, plano `docs/history/phases/PLANO_FASE_315.md`.
 - Fase 314 factual integrada pela PR #394 (`c77c4520`, merge confirmado em 2026-10-11); CI pós-merge `38179801575` SUCCESS, SBOM provenance da PR SKIPPED. G02/CL01–10 ratificados REV9; seis métodos adultos desde18 integrados. Classificadores bloqueados por G01/direitos. R4 independente, vínculo/teste dos ambientes e autorização de liberação continuam exigidos; não inferir aplicação de migrations ou deploy do merge. Contrato `docs/product/LIBERACAO_FACTUAL_FASE_314_REV14.md`.
 - Monitor produção `38183397104` FAIL em saúde externa, etapa “Verificar backend, dependencias e web”, observado nesta rodada; causa não investigada. Planejamento 315 pode avançar; liberação operacional exige tratar essa pendência.
 - Fase 298 concluida e integrada pelo PR #356 (merge `b00151ae`, confirmado no GitHub em

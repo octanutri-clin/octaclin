@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test';
 
 const portalPacienteVazio = {
-  paciente: { id: 'paciente-1', nome: 'Ana Paula', statusAdesao: 'novo', scoreRisco: '0', ultimoCheckinEm: null },
+  paciente: { id: 'paciente-1', nome: 'Ana Paula', statusAdesao: 'novo', ultimoCheckinEm: null },
   perfil: {
     contato: 'ana@example.com',
     email: 'ana@example.com',

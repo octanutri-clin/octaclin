@@ -1,8 +1,9 @@
-# Handoff — Fase 315: planejamento e gaps
+# Handoff — Fase 315: retirada compatível do score legado
 
-Autorização atual: planejar/analisar gaps. Implementação não iniciada.
-Branch `docs/fase-315-planejamento`, worktree
-`/workspace/octaclin/.worktrees/docs-fase-315-planejamento`, base `c77c4520`.
+Autorização de desenvolvimento recebida (“Pode seguir”). Implementação local
+concluída e validada; PR Draft a preparar. Branch `feature/fase-315-score-risco`,
+worktree `/workspace/octaclin/.worktrees/docs-fase-315-planejamento`, base
+`c77c4520` (PR #394 já integrada).
 Alteração preexistente `octaclin-web/next-env.d.ts` na checkout principal
 preservada. Handoffs/checklists anteriores não sobrescritos.
 
@@ -10,11 +11,13 @@ preservada. Handoffs/checklists anteriores não sobrescritos.
 - [Inventário de arquivos e linhas](../docs/product/INVENTARIO_SCORE_RISCO_FASE_315.md).
 - [Tarefas executáveis](todo-fase-315.md).
 
-## Próxima ação exata
+## Estado e próxima ação exata
 
 D01 confirmada: PATCH legado validado sem gravar; retirar das respostas e CSV;
-coluna/histórico preservados. Próxima etapa: implementar T01 após autorização
-expressa de desenvolvimento da Fase 315. Planejamento solicitado concluído.
+coluna/histórico preservados. T01–T05 concluídas; T06 concluída quanto à prova
+RLS descartável, mas `test:authz` ficou parcial/cancelada; T07 parcial, T08 em
+andamento. Próxima ação: scanner de segredos/diff final, commit da
+implementação e abertura de uma PR Draft; acompanhar CI.
 
 Não substituir `tasks/plan.md` ou `tasks/todo.md`: contêm handoff anterior e
 pendências históricas. Nesta rodada o alvo é o par por fase já usado no projeto.
@@ -34,17 +37,20 @@ continuam sem score legado; pública também sem prioridade operacional.
 
 ## Verificações
 
-PASS: base Git/PR394 MERGED, CI base pós-merge SUCCESS; leitura e inventário.
-SKIPPED: testes de implementação, PG, builds e CI315; não houve código.
-FAIL observado: monitor produção `38183397104`, saúde externa; não atribuir
-à 314/315 nem declarar produção saudável. SBOM provenance da base SKIPPED.
-PASS: `git diff --check`, `node scripts/scan-secrets.mjs` (padrões locais),
-verificação documental dos links locais, dez gaps, T00–T08 e linhas do roadmap.
-Primeira tentativa de inventário via subprocesso rg sem path retornou exit 1;
-reexecutada com path explícito `.` com sucesso. Sem inferir testes runtime.
+PASS: base Git/PR394 MERGED; backend completo (2652 testes, 54 ignorados; três
+suítes ignoradas) e foco atualizado 98/98; backend/Web typecheck e builds,
+lint Web sem erros (65 avisos do repositório), RLS em PostgreSQL descartável
+31/31, smoke BFF local e
+Playwright focado. `test:authz` PARCIAL/CANCELADO manualmente após execução
+prolongada; grupos pertinentes já executados passaram, mas isso não substitui
+a suíte completa. Um teste Playwright de timeout passou isoladamente.
+CI da PR pendente; R4 independente SKIPPED.
+
+FAIL observado na base: monitor produção `38183397104`, saúde externa; causa
+não investigada, sem relação estabelecida com esta mudança. SBOM provenance da
+base SKIPPED. Não houve consulta a bancos externos, migration, merge ou deploy.
 
 ## Modelo
 
-Sol 6.1 médio suficiente para contratos e execução inteira; Luna alto suficiente
-para tarefas delimitadas após D01. Avisar modelo pretendido e pausar antes
-de troca manual. Nenhuma troca feita, nenhuma implementação autorizada aqui.
+GPT-6.1 Sol médio usado para contratos e execução. Nenhuma troca de modelo
+foi feita nesta etapa.

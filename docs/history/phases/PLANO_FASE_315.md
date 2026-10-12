@@ -2,12 +2,14 @@
 
 ## Escopo e evidência
 
-Planejamento autorizado pelo proprietário em 2026-10-11. Base consultada:
+Planejamento autorizado pelo proprietário em 2026-10-11; implementação
+autorizada posteriormente (“Pode seguir”) e realizada na branch da fase.
+Base consultada:
 `origin/main` em `c77c45204fb67a8ca64287052690b99ad20e8314`, PR #394
-MERGED, conferida no GitHub neste ciclo. Branch `docs/fase-315-planejamento`.
-Nenhuma implementação, migration ou alteração de ambiente nesta etapa.
-Risco documental R0; execução prevista R4 por contrato de paciente e projeção
-de dados, apesar de não propor DDL nem mudança de autorização.
+MERGED. Branch `feature/fase-315-score-risco`, worktree isolada. Implementação
+local concluída; PR Draft/CI ainda pendentes. Nenhuma migration ou alteração de
+ambiente foi realizada. Risco da mudança contratual R4 por superfície de
+paciente, apesar de não propor DDL nem mudança de autorização.
 
 Fontes: roadmap 302–320, `PLANO_FASE_300.md`, código de pacientes, integrações,
 portal, projeção de prioridade, DTOs, pipe HTTP e fixtures. Inventário detalhado:
@@ -27,9 +29,9 @@ preservar coluna/histórico. A resposta explícita foi recebida na conversa.
 Clientes que dependem da resposta/coluna CSV exigem adaptação; aceitar o PATCH
 não resolve essa dependência. Documentar a mudança de contrato na PR.
 
-O handoff está fechado para implementação após autorização dessa etapa.
-Nenhum prazo fictício de descontinuação: a remoção final da entrada e da coluna
-será outro gate, com inventário de consumidores e aceite explícito.
+O handoff foi liberado para implementação pelo proprietário (“Pode seguir”).
+Nenhum prazo fictício de descontinuação: a remoção final da entrada e da
+coluna será outro gate, com inventário de consumidores e aceite explícito.
 
 ## Matriz de gaps e decisões técnicas
 
@@ -92,13 +94,13 @@ sem leitura de pacientes reais ou migrations externas.
 
 | Gate | Estado neste planejamento | Evidência de saída |
 | --- | --- | --- |
-| P00 Base/isolamento/inventário | PASS | Main/PR/HEAD conferidos, worktree própria, arquivos preexistentes preservados |
+| P00 Base/isolamento/inventário | PASS | Main/PR/HEAD conferidos, worktree própria; diff preexistente na checkout principal preservado |
 | P01 Compatibilidade D01 | PASS | Resposta explícita recebida e contrato atualizado |
-| P02 Planejamento documental | PASS | Gaps, inventário, tarefas, testes e rollback escritos |
-| I01 Contratos/serviços/demo | SKIPPED | Testes novos positivos/negativos + pipe HTTP + BFF/smoke local |
-| I02 Histórico/isolamento | SKIPPED | PG descartável prova preservação não-zero, carteira/tenant e updates; RLS existente regressão |
-| I03 Regressões/CI | SKIPPED | Builds/typecheck/lint disponíveis, prioridade/portal/API/antropometria, Demo smoke e checks obrigatórios do HEAD |
-| I04 Revisão R4 | SKIPPED | Revisor independente identificado quando viável; indisponibilidade registrada, nunca autoprovada |
+| P02 Planejamento documental | PASS | Gaps, inventário, tarefas, testes e rollback escritos; execução atualizada |
+| I01 Contratos/serviços/demo | PASS | Testes focados 98/98; smoke local BFF; projeções/CSV e compatibilidade testadas |
+| I02 Histórico/isolamento | PARTIAL | PostgreSQL descartável RLS 31/31; backend completo passou; suíte Web `test:authz` cancelada parcial após execução prolongada |
+| I03 Regressões/CI | PARTIAL | Typecheck/build/lint e testes focados passaram; Playwright focado passou após retestar timeouts; CI de PR ainda pendente |
+| I04 Revisão R4 | SKIPPED | Revisão independente não realizada; autor não se declara independente |
 | O01 Produção | BLOCKED | Autorização operacional e investigação de saúde externa; evidência do alvo |
 
 Sem DDL, rollback por código mantém a coluna e os dados. Voltar ao código
@@ -109,7 +111,7 @@ reset de score ou transformação em prioridade. Remoção física futura exige
 comprovar consumidores inativos, retenção/recuperação, compatibilidade das
 versões ainda suportadas e limite de não reversão, em nova autorização.
 
-## Evidências e limites desta rodada
+## Evidências de implementação e limites
 
 PASS: Git/branch/status/log, inventário e leitura dos contratos. PR #394
 MERGED em 2026-10-11; checks de PR SUCCESS salvo Provenance SBOM SKIPPED;
@@ -117,8 +119,24 @@ CI pós-merge `38179801575` SUCCESS no mesmo SHA. São evidências da base,
 não testes da Fase 315. Monitor produção `38183397104` FAIL em
 “Verificar backend, dependencias e web”; causa não investigada aqui.
 
-Nenhum teste de implementação, build, banco externo, migration, merge ou
-deploy executado. Verificações documentais ficam registradas no handoff.
+Backend completo na execução integral: 2652 testes passaram; 54 foram
+ignorados e três suítes ignoradas. Em seguida, a suíte focada passou 98/98,
+incluindo o novo teste de PATCH misto. RLS/PostgreSQL descartável: 31/31. Typecheck e
+builds de backend/Web PASS; lint Web PASS sem erros, com 65 avisos existentes.
+Smoke BFF sintético PASS no `next start` local configurado com variáveis
+explícitas; cobre PATCH misto, PATCH só legado sem alterar timestamp e rejeição
+de valor legado fora de faixa. Uma execução anterior no `next dev`
+atingiu timeout posterior em revisão de IA, fora do fluxo alterado. Playwright
+das superfícies alteradas passou; duas falhas por timeout em execuções amplas
+passaram ao repetir isoladamente.
+`test:authz` ficou PARCIAL/CANCELADO manualmente após execução prolongada; não
+se declara a suíte completa aprovada. Node local 24.19.0/pnpm 11.19.0 difere
+dos manifestos (Node 22/pnpm 11.25.0).
+
+Não houve consulta a banco externo, migration, merge ou deploy. CI da PR e R4
+independente continuam pendentes. Monitor de produção `38183397104` já estava
+FAIL na base em verificação de saúde externa; causa não investigada e sem
+relação estabelecida com esta alteração.
 
 ## Modelo suficiente e uso de tokens
 

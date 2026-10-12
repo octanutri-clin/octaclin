@@ -86,7 +86,7 @@ async function login(page) {
         contexto: { periodo: 'hoje', inicioEm: '2026-07-22T00:00:00.000Z', fimEm: '2026-07-22T23:59:59.999Z', profissionalId: 'profissional-1', profissionalNome: 'Dra. Carla' },
         indicadores: { consultasHoje: 1, proximas: 1, concluidas: 0, reagendadas: 0, canceladas: 0, faltas: 0, semRetorno30: 1, semRetorno60: 0, semRetorno90Mais: 0, formulariosPendentes: 1, tarefasVencidas: 1, solicitacoesPendentes: 1, comunicacoesEmAlerta: 1, pacientesRiscoAlto: 1 },
         atendimentos: [{ id: 'consulta-1', pacienteId: 'paciente-1', profissionalId: 'profissional-1', pacienteNome: 'Ana Souza', inicioEm: '2026-07-22T13:00:00.000Z', fimEm: '2026-07-22T14:00:00.000Z', status: 'agendada' }],
-        semRetorno: [{ pacienteId: 'paciente-2', profissionalId: 'profissional-1', pacienteNome: 'Bruno Lima', nivelRisco: 'alto', scoreRisco: 82, prioridadeAcompanhamento: { faixa: 'alta', origem: 'calculado', scoreCalculado: 82, calculadoEm: '2026-07-21T10:00:00.000Z' }, diasSemRetorno: 31, faixa: '30' }],
+        semRetorno: [{ pacienteId: 'paciente-2', profissionalId: 'profissional-1', pacienteNome: 'Bruno Lima', nivelRisco: 'alto', prioridadeAcompanhamento: { faixa: 'alta', origem: 'calculado', scoreCalculado: 82, calculadoEm: '2026-07-21T10:00:00.000Z' }, diasSemRetorno: 31, faixa: '30' }],
         tarefasVencidas: [{ id: 'tarefa-1', pacienteId: 'paciente-1', profissionalId: 'profissional-1', pacienteNome: 'Ana Souza', titulo: 'Revisar plano alimentar', prioridade: 'alta', vencimentoEm: '2026-07-21T12:00:00.000Z' }],
         formulariosPendentes: [{ id: 'envio-1', pacienteId: 'paciente-1', profissionalId: 'profissional-1', pacienteNome: 'Ana Souza', questionarioId: 'questionario-1', respondidoEm: '2026-07-21T10:00:00.000Z' }],
         solicitacoesPendentes: [{ id: 'solicitacao-1', profissionalId: 'profissional-1', solicitanteNome: 'Marina Reis', inicioEm: '2026-07-23T14:00:00.000Z', fimEm: '2026-07-23T14:30:00.000Z', expiraEm: '2026-07-23T12:00:00.000Z' }],
@@ -951,7 +951,6 @@ async function prepararDashboardMockado(page, { googleConectado = true, habilita
         nome: 'Ana Souza',
         contato: '11999990000',
         statusAdesao: 'risco',
-        scoreRisco: '82',
         prioridadeAcompanhamento: { faixa: 'alta', origem: 'calculado', scoreCalculado: 82, calculadoEm: '2026-07-21T10:00:00.000Z' },
         ultimoCheckinEm: '2026-07-21T12:00:00.000Z',
         ultimaConsultaConcluidaEm: '2026-07-10T12:00:00.000Z',
@@ -965,7 +964,6 @@ async function prepararDashboardMockado(page, { googleConectado = true, habilita
         nome: 'Bruno Lima',
         contato: '11988880000',
         statusAdesao: 'em_acompanhamento',
-        scoreRisco: '34',
         prioridadeAcompanhamento: { faixa: 'baixa', origem: 'calculado', scoreCalculado: 34, calculadoEm: '2026-07-21T10:00:00.000Z' },
         criadoEm: '2026-07-18T10:00:00.000Z'
       }
@@ -1606,7 +1604,6 @@ async function prepararProntuarioMockado(page, {
           contato: 'ana@example.com',
           dataNascimento: '1990-04-12',
           statusAdesao: 'risco',
-          scoreRisco: '82',
           ultimoCheckinEm: '2026-07-21T10:00:00.000Z',
           criadoEm: '2026-07-01T10:00:00.000Z',
           atualizadoEm: '2026-07-21T10:00:00.000Z'
@@ -2408,7 +2405,7 @@ test.describe('painel clinico profissional', () => {
         contexto: { periodo: 'hoje', inicioEm: '2026-07-22T00:00:00.000Z', fimEm: '2026-07-22T23:59:59.999Z', profissionalId: 'profissional-1', profissionalNome: 'Dra. Carla' },
         indicadores: { consultasHoje: 1, proximas: 1, concluidas: 3, reagendadas: 2, canceladas: 1, faltas: 4, semRetorno30: 1, semRetorno60: 0, semRetorno90Mais: 0, formulariosPendentes: 1, tarefasVencidas: 1, solicitacoesPendentes: 1, comunicacoesEmAlerta: 1, pacientesRiscoAlto: 1 },
         atendimentos: [{ id: 'consulta-1', pacienteId: 'paciente-1', profissionalId: 'profissional-1', pacienteNome: 'Ana Souza', inicioEm: '2026-07-22T13:00:00.000Z', fimEm: '2026-07-22T14:00:00.000Z', status: 'agendada' }],
-        semRetorno: [{ pacienteId: 'paciente-2', profissionalId: 'profissional-1', pacienteNome: 'Bruno Lima', nivelRisco: 'alto', scoreRisco: 82, prioridadeAcompanhamento: { faixa: 'alta', origem: 'calculado', scoreCalculado: 82, calculadoEm: '2026-07-21T10:00:00.000Z' }, diasSemRetorno: 31, faixa: '30' }],
+        semRetorno: [{ pacienteId: 'paciente-2', profissionalId: 'profissional-1', pacienteNome: 'Bruno Lima', nivelRisco: 'alto', prioridadeAcompanhamento: { faixa: 'alta', origem: 'calculado', scoreCalculado: 82, calculadoEm: '2026-07-21T10:00:00.000Z' }, diasSemRetorno: 31, faixa: '30' }],
         tarefasVencidas: [{ id: 'tarefa-1', pacienteId: 'paciente-1', profissionalId: 'profissional-1', pacienteNome: 'Ana Souza', titulo: 'Revisar plano alimentar', prioridade: 'alta', vencimentoEm: '2026-07-21T12:00:00.000Z' }],
         formulariosPendentes: [{ id: 'envio-1', pacienteId: 'paciente-1', profissionalId: 'profissional-1', pacienteNome: 'Ana Souza', questionarioId: 'questionario-1', respondidoEm: '2026-07-21T10:00:00.000Z' }],
         solicitacoesPendentes: [{ id: 'solicitacao-1', profissionalId: 'profissional-1', solicitanteNome: 'Marina Reis', inicioEm: '2026-07-23T14:00:00.000Z', fimEm: '2026-07-23T14:30:00.000Z', expiraEm: '2026-07-23T12:00:00.000Z' }],

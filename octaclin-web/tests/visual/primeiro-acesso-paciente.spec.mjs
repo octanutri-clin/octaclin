@@ -9,7 +9,6 @@ const portalPaciente = {
     id: 'paciente-1',
     nome: 'Ana Paula',
     statusAdesao: 'novo',
-    scoreRisco: '0',
     ultimoCheckinEm: null
   },
   perfil: {

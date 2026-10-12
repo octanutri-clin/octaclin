@@ -164,8 +164,7 @@ export class ServicoPacientes {
           buscaHashes: this.criptografia.gerarHashesBuscaPii(tenantId, [dados.nome, dados.contato]),
           dataNascimento: dados.dataNascimento,
           referenciaExterna,
-          statusAdesao: 'novo',
-          scoreRisco: '0'
+          statusAdesao: 'novo'
         });
 
         const salvo = await repositorio.save(paciente);
@@ -320,7 +319,6 @@ export class ServicoPacientes {
           paciente.contato ?? '',
           paciente.dataNascimento ?? '',
           paciente.statusAdesao,
-          paciente.scoreRisco,
           paciente.profissionalResponsavelId,
           this.serializarData(paciente.ultimaConsultaConcluidaEm),
           this.serializarData(paciente.proximaConsultaEm),
@@ -338,7 +336,6 @@ export class ServicoPacientes {
         'contato',
         'dataNascimento',
         'statusAdesao',
-        'scoreRisco',
         'profissionalResponsavelId',
         'ultimaConsultaConcluidaEm',
         'proximaConsultaEm',
@@ -378,6 +375,16 @@ export class ServicoPacientes {
       );
       const repositorio = gerenciador.getRepository(PacienteOrm);
 
+      const possuiAtualizacaoDeCadastro = dados.profissionalResponsavelId !== undefined ||
+        dados.nome !== undefined ||
+        dados.contato !== undefined ||
+        dados.dataNascimento !== undefined ||
+        dados.statusAdesao !== undefined;
+
+      if (!possuiAtualizacaoDeCadastro && dados.scoreRisco !== undefined) {
+        return this.mapearResposta(paciente);
+      }
+
       if (dados.profissionalResponsavelId) {
         if (usuario.papel === 'Professional') {
           throw new ForbiddenException('Profissional nao pode reatribuir o paciente para outro profissional.');
@@ -395,7 +402,6 @@ export class ServicoPacientes {
       }
       if (dados.dataNascimento) paciente.dataNascimento = dados.dataNascimento;
       if (dados.statusAdesao) paciente.statusAdesao = dados.statusAdesao;
-      if (dados.scoreRisco !== undefined) paciente.scoreRisco = String(dados.scoreRisco);
 
       if (dados.profissionalResponsavelId) {
         const perfil = await gerenciador.getRepository(PerfilCadastroPacienteOrm).findOne({ where: { tenantId, pacienteId } });
@@ -609,7 +615,6 @@ export class ServicoPacientes {
       dataNascimento: paciente.dataNascimento,
       referenciaExterna: paciente.referenciaExterna,
       statusAdesao: paciente.statusAdesao,
-      scoreRisco: paciente.scoreRisco,
       prioridadeAcompanhamento: prioridade ?? null,
       ultimoCheckinEm: paciente.ultimoCheckinEm,
       ultimaConsultaConcluidaEm: resumoConsultas?.ultimaConsultaConcluidaEm,

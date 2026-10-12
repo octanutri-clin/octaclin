@@ -8,7 +8,6 @@ export class Paciente {
     readonly nomeCriptografado: Buffer,
     readonly contatoCriptografado: Buffer | null,
     readonly dataNascimento: Date | null,
-    readonly statusAdesao: StatusAdesaoPaciente,
-    readonly scoreRisco: number
+    readonly statusAdesao: StatusAdesaoPaciente
   ) {}
 }

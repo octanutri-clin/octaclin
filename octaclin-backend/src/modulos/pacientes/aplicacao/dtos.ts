@@ -178,6 +178,7 @@ export class AtualizarPacienteDto {
   @IsString()
   statusAdesao?: 'novo' | 'aderente' | 'em_acompanhamento' | 'risco' | 'inativo';
 
+  /** Entrada legada aceita durante a transição, validada e ignorada pelo serviço. */
   @IsOptional()
   @IsNumber()
   @Min(0)
@@ -355,8 +356,6 @@ export interface PacienteRespostaDto {
   dataNascimento?: string;
   referenciaExterna?: string;
   statusAdesao: string;
-  /** Campo legado preservado para compatibilidade; nao define a prioridade operacional. */
-  scoreRisco: string;
   prioridadeAcompanhamento: {
     faixa: 'baixa' | 'media' | 'alta';
     origem: 'calculado' | 'override';

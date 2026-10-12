@@ -64,7 +64,6 @@ async function preparar(page) {
         profissionalResponsavelId: 'profissional-1',
         nome: 'Ana Sintetica',
         statusAdesao: 'novo',
-        scoreRisco: '0',
         criadoEm: '2026-08-01T10:00:00.000Z'
       }],
       total: 1

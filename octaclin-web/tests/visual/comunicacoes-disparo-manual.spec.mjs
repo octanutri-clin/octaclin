@@ -99,7 +99,7 @@ async function prepararConsoleComunicacoes(page, { pacienteOptOutWhatsapp = fals
       contentType: 'application/json',
       body: JSON.stringify({
         itens: [
-          { id: 'paciente-1', tenantId: 'tenant-1', nome: 'Ana Souza', statusAdesao: 'aderente', scoreRisco: '10', criadoEm: '2026-07-01T10:00:00.000Z' }
+          { id: 'paciente-1', tenantId: 'tenant-1', nome: 'Ana Souza', statusAdesao: 'aderente', criadoEm: '2026-07-01T10:00:00.000Z' }
         ],
         total: 1
       })

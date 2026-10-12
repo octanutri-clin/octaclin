@@ -11,9 +11,9 @@ const templatesFixture = [
 ];
 
 const pacientesFixture = [
-  { id: 'paciente-ana', tenantId: 'tenant-1', nome: 'Ana Souza', profissionalResponsavelId: 'profissional-carla', contato: '5511999999999', statusAdesao: 'aderente', scoreRisco: '10', criadoEm: '2026-07-01T10:00:00.000Z' },
-  { id: 'paciente-bruno', tenantId: 'tenant-1', nome: 'Bruno Lima', profissionalResponsavelId: 'profissional-paulo', contato: '5511988887777', statusAdesao: 'aderente', scoreRisco: '10', criadoEm: '2026-07-01T10:00:00.000Z' },
-  { id: 'paciente-carla', tenantId: 'tenant-1', nome: 'Carla Dias', profissionalResponsavelId: 'profissional-carla', contato: 'carla.dias@example.com', statusAdesao: 'aderente', scoreRisco: '10', criadoEm: '2026-07-01T10:00:00.000Z' }
+  { id: 'paciente-ana', tenantId: 'tenant-1', nome: 'Ana Souza', profissionalResponsavelId: 'profissional-carla', contato: '5511999999999', statusAdesao: 'aderente', criadoEm: '2026-07-01T10:00:00.000Z' },
+  { id: 'paciente-bruno', tenantId: 'tenant-1', nome: 'Bruno Lima', profissionalResponsavelId: 'profissional-paulo', contato: '5511988887777', statusAdesao: 'aderente', criadoEm: '2026-07-01T10:00:00.000Z' },
+  { id: 'paciente-carla', tenantId: 'tenant-1', nome: 'Carla Dias', profissionalResponsavelId: 'profissional-carla', contato: 'carla.dias@example.com', statusAdesao: 'aderente', criadoEm: '2026-07-01T10:00:00.000Z' }
 ];
 
 const profissionaisFixture = [
