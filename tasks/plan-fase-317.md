@@ -166,8 +166,9 @@ ativação. Não usar dados reais.
 
 ### Próxima ação
 
-Reconferir diff/status, finalizar os documentos e abrir uma única PR Draft sem
-merge/deploy. Em seguida, pausar antes da revisão R4 independente para solicitar
-troca manual para **GPT‑6.1 Sol médio**. A CI da PR pode ser acompanhada em modo
-somente leitura. Corrigir eventuais achados R4/CI e repetir gates afetados após a
-troca de modelo. Nenhum merge ou deploy está autorizado.
+PR Draft #405 aberta para `main`, head `57fdee0c4b4ae114c037a732a00c6a5e9f352277`.
+No primeiro polling, checks CodeQL, Dependency Review, OctaClin CI, Semgrep e
+Trivy estavam `QUEUED`. Acompanhar somente leitura; não fazer merge/deploy.
+Antes da revisão R4 independente, solicitar troca manual para **GPT‑6.1 Sol
+médio**. Corrigir eventuais achados R4/CI e repetir gates afetados após a troca.
+G01/G02/G05 permanecem bloqueados.

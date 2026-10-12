@@ -331,3 +331,8 @@ que foi removido sem alteração de fonte antes da repetição aprovada.
   a aprovação global de acessibilidade. A cobertura específica da fase passou.
 - Não houve acesso a banco externo, migration externa, paciente real, ativação,
   merge ou deploy. R4 independente ainda não foi realizado.
+- Uma PR Draft única foi aberta em https://github.com/octanutri-clin/octaclin/pull/405
+  (base `main`, commit `57fdee0c`). Checks remotos estavam `QUEUED` no primeiro
+  polling: CodeQL, Dependency Review, OctaClin CI, Semgrep e Trivy. T16 segue
+  IN_PROGRESS até CI/R4; G04 depende da CI. Push da branch da própria PR foi
+  autorizado para revisão; nenhum merge/deploy foi feito.
