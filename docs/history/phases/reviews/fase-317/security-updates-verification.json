@@ -1,0 +1,232 @@
+{
+  "schemaVersion": 1,
+  "receivedHead": "9e3948817f9173c9dee515e04e5a6d6c2c36119e",
+  "dependabotPr": 401,
+  "excludedOptionalPr": 403,
+  "trivyVersion": "0.75.0",
+  "nodeVersion": "22.23.3",
+  "pnpmVersion": "11.25.0",
+  "localContainerBuild": "CA bundle supplied through transient BuildKit mount; original Node Dockerfiles blocked locally by proxy/registry connectivity; exact builds require CI",
+  "logs": {
+    "css.log": {
+      "sha256": "101aa8d89e46438d05d5ff27013818ad588333edfa106371dc93253a166701de"
+    },
+    "governance-final.log": {
+      "sha256": "38472e21ec618e8d6a0c2b62acb5926329f472826ac6c2a9bcff227e0345ea5e"
+    },
+    "bff.log": {
+      "sha256": "5690f9a662291541b1a9aa64ccd40a02a1758e0cbdeb01d084797816aad32f7a"
+    },
+    "web-build.log": {
+      "sha256": "07543da28f3fa082e371c6542aafd6e31465d67f2edcddf17715233f5e72363f"
+    },
+    "typecheck.log": {
+      "sha256": "8366207267355d3e3d5bf3bf6e8c94c5f93f6078c34f08973fa2b38cdda6cc92"
+    },
+    "license-inventory.log": {
+      "sha256": "55312794853a948660218cdf87534508055bd8bd3e847190c1a9022cdb0cb9ed"
+    },
+    "playwright.log": {
+      "sha256": "3f2387b8ae278071a4601c3a941e71f4b6f0ca93eddfee0513b803d5fa58daba"
+    },
+    "docker-tests-red.log": {
+      "sha256": "6174a235e8c34884b3382f4078f85d5113dab304b8ffe74491504e206995d20f"
+    },
+    "trivy-fs.json": {
+      "sha256": "0c9537ea7a04ad4a451c1e0cde80129467e6cb6cbdc9f61421c72d46a36e875b"
+    },
+    "trivy-ia.json": {
+      "sha256": "528f148f3a0bce6a2a575ff75260d930be2b42838fe8975105a34ba241c4c29a"
+    },
+    "trivy-zlib-after.json": {
+      "sha256": "152097d2e6405211908f4ccc1e3bb226704f58a760e4b2f7e563c58a9bdb905b"
+    },
+    "trivy-python-before.json": {
+      "sha256": "12fa4ad117fce593d57877b21cf24a13c8cf66f5606ca28d2dd816dadbc921a1"
+    },
+    "web-lint.log": {
+      "sha256": "6186d390b5a6ea5a3a95ee5856266c65d07e8072a065f363e5d6d5ed43dbc6f2"
+    },
+    "pnpm-audit.json": {
+      "sha256": "9ced7c1d321d3881a9691cab140db389fc0a2688f9d3edf4d4ffee091de9908a"
+    },
+    "secrets.log": {
+      "sha256": "110e14858346bc6636bb5760769ce8d753cc1bf899e52d85ff8a8deb1be3bb11"
+    },
+    "frozen-install.log": {
+      "sha256": "8f41576d3a3b6fce8f90d26e1677c7c1e7d45c3ea62d4c3468778eb3eac9917b"
+    }
+  },
+  "scans": {
+    "trivy-fs.json": {
+      "findings": 0,
+      "severity": {},
+      "requestedPackagesFindings": []
+    },
+    "trivy-ia.json": {
+      "findings": 166,
+      "severity": {
+        "LOW": 61,
+        "HIGH": 44,
+        "MEDIUM": 58,
+        "UNKNOWN": 3
+      },
+      "requestedPackagesFindings": []
+    },
+    "trivy-zlib-after.json": {
+      "findings": 21,
+      "severity": {
+        "MEDIUM": 9,
+        "HIGH": 11,
+        "LOW": 1
+      },
+      "requestedPackagesFindings": [
+        {
+          "PkgName": "postcss-selector-parser",
+          "InstalledVersion": "7.1.1",
+          "FixedVersion": "7.1.6",
+          "VulnerabilityID": "CVE-2026-104844",
+          "Severity": "MEDIUM"
+        },
+        {
+          "PkgName": "postcss-selector-parser",
+          "InstalledVersion": "7.1.1",
+          "FixedVersion": "6.1.3, 7.1.3",
+          "VulnerabilityID": "CVE-2026-9358",
+          "Severity": "LOW"
+        }
+      ]
+    },
+    "trivy-python-before.json": {
+      "findings": 212,
+      "severity": {
+        "LOW": 67,
+        "HIGH": 52,
+        "MEDIUM": 90,
+        "UNKNOWN": 3
+      },
+      "requestedPackagesFindings": [
+        {
+          "PkgName": "libpcre2-8-0",
+          "InstalledVersion": "10.46-1~deb13u2",
+          "FixedVersion": "10.46-1~deb13u3",
+          "VulnerabilityID": "CVE-2026-103111",
+          "Severity": "HIGH"
+        },
+        {
+          "PkgName": "openssl-provider-legacy",
+          "InstalledVersion": "3.5.7-1~deb13u2",
+          "FixedVersion": "3.5.7-1~deb13u3",
+          "VulnerabilityID": "CVE-2026-84782",
+          "Severity": "HIGH"
+        },
+        {
+          "PkgName": "openssl-provider-legacy",
+          "InstalledVersion": "3.5.7-1~deb13u2",
+          "FixedVersion": "3.5.7-1~deb13u3",
+          "VulnerabilityID": "CVE-2026-42772",
+          "Severity": "MEDIUM"
+        },
+        {
+          "PkgName": "openssl-provider-legacy",
+          "InstalledVersion": "3.5.7-1~deb13u2",
+          "FixedVersion": "3.5.7-1~deb13u3",
+          "VulnerabilityID": "CVE-2026-54872",
+          "Severity": "MEDIUM"
+        },
+        {
+          "PkgName": "openssl-provider-legacy",
+          "InstalledVersion": "3.5.7-1~deb13u2",
+          "FixedVersion": "3.5.7-1~deb13u3",
+          "VulnerabilityID": "CVE-2026-54873",
+          "Severity": "MEDIUM"
+        },
+        {
+          "PkgName": "openssl-provider-legacy",
+          "InstalledVersion": "3.5.7-1~deb13u2",
+          "FixedVersion": "3.5.7-1~deb13u3",
+          "VulnerabilityID": "CVE-2026-54875",
+          "Severity": "MEDIUM"
+        },
+        {
+          "PkgName": "openssl-provider-legacy",
+          "InstalledVersion": "3.5.7-1~deb13u2",
+          "FixedVersion": "3.5.7-1~deb13u3",
+          "VulnerabilityID": "CVE-2026-72897",
+          "Severity": "MEDIUM"
+        },
+        {
+          "PkgName": "openssl-provider-legacy",
+          "InstalledVersion": "3.5.7-1~deb13u2",
+          "FixedVersion": "3.5.7-1~deb13u3",
+          "VulnerabilityID": "CVE-2026-75804",
+          "Severity": "MEDIUM"
+        },
+        {
+          "PkgName": "openssl-provider-legacy",
+          "InstalledVersion": "3.5.7-1~deb13u2",
+          "FixedVersion": "3.5.7-1~deb13u3",
+          "VulnerabilityID": "CVE-2026-75805",
+          "Severity": "MEDIUM"
+        },
+        {
+          "PkgName": "openssl-provider-legacy",
+          "InstalledVersion": "3.5.7-1~deb13u2",
+          "FixedVersion": "3.5.7-1~deb13u3",
+          "VulnerabilityID": "CVE-2026-75806",
+          "Severity": "MEDIUM"
+        },
+        {
+          "PkgName": "openssl-provider-legacy",
+          "InstalledVersion": "3.5.7-1~deb13u2",
+          "FixedVersion": "3.5.7-1~deb13u3",
+          "VulnerabilityID": "CVE-2026-77696",
+          "Severity": "MEDIUM"
+        },
+        {
+          "PkgName": "openssl-provider-legacy",
+          "InstalledVersion": "3.5.7-1~deb13u2",
+          "FixedVersion": "3.5.7-1~deb13u3",
+          "VulnerabilityID": "CVE-2026-84784",
+          "Severity": "MEDIUM"
+        },
+        {
+          "PkgName": "openssl-provider-legacy",
+          "InstalledVersion": "3.5.7-1~deb13u2",
+          "FixedVersion": "3.5.7-1~deb13u3",
+          "VulnerabilityID": "CVE-2026-35189",
+          "Severity": "LOW"
+        },
+        {
+          "PkgName": "openssl-provider-legacy",
+          "InstalledVersion": "3.5.7-1~deb13u2",
+          "FixedVersion": "3.5.7-1~deb13u3",
+          "VulnerabilityID": "CVE-2026-35191",
+          "Severity": "LOW"
+        }
+      ]
+    }
+  },
+  "pnpmAudit": {
+    "status": "FAIL",
+    "package": "braces",
+    "version": "3.0.3",
+    "advisory": "GHSA-vfj7-8cjw-p6xm",
+    "patchedVersion": null,
+    "changedInIncrement": false
+  },
+  "checks": {
+    "css": "PASS 4/4",
+    "governance": "PASS 41/41",
+    "bff": "PASS 8/8",
+    "playwright": "PASS 14/14",
+    "webBuild": "PASS",
+    "webTypecheck": "PASS",
+    "webLint": "PASS 0 errors, 65 existing warnings",
+    "licenses": "PASS 395 packages",
+    "frozenInstall": "PASS",
+    "secrets": "PASS",
+    "remoteCi": "PENDING new HEAD",
+    "exactLocalNodeImages": "BLOCKED proxy/registry"
+  }
+}

@@ -209,3 +209,21 @@ Fechamento local: build final do menu PASS (exit0). Authz integral, lint focal,
 PG21, Jest76, BFF8, Playwright12 e regressão de navegação2 PASS. G04 aguarda somente
 CI do HEAD que será enviado; G01/G02/G05 continuam BLOCKED. Próximo passo:
 commit/push na PR405 e conferir os checks desse HEAD, sem merge/ativação.
+
+## Atualizações de segurança e Dependabot na mesma PR405
+
+Autorizadas pelo proprietário após o CI verde do HEAD `9e394881` (provenance
+SBOM SKIPPED pela condição do workflow). Integrada PR401; PR403 era opcional e
+permaneceu fora. Correções: parser7.1.6 com testes novos de CSS, zlib1.3.2-r1 em
+base Node compartilhada e digest Python com PCRE/OpenSSL deb13u3.
+
+[Relatório do incremento](../docs/governance/ATUALIZACOES_SEGURANCA_PR405_2026-10-12.md).
+PASS local: CSS4, governança41, BFF8, Playwright14, typecheck/build web e licenças.
+Imagem IA validada com CA local temporária; builds Node integrais locais BLOCKED
+por proxy/registry, exigindo prova CI. Trivy não aponta os pacotes solicitados
+nas superfícies locais corrigidas; outros166 achados OS da IA permanecem.
+Não declarar encerramento dos alertas GitHub (API403) ou scan integral limpo.
+
+Próxima ação: commit/push na mesma PR Draft e observar o CI do HEAD novo, incluindo
+os três builds/scan/SBOM e Demo local smoke. G04 volta a IN_PROGRESS para o
+incremento; G01/G02/G05 continuam BLOCKED. Sem merge/deploy/migration externa.
