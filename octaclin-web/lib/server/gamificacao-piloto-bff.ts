@@ -25,6 +25,8 @@ const operations: Record<string, Operation> = {
   'console-comentarios': op(false,'GET','page-feed',['acao','circuloId','postId','cursor'],['acao','circuloId','postId'],b=>{const c=p(b.circuloId),post=p(b.postId);return c&&post&&noCursor(b)?`/gamificacao/piloto/circulos/${c}/publicacoes/${post}/comentarios${cursor(b.cursor)}`:null}),
   'console-curtidas': op(false,'GET','page-likes',['acao','circuloId','postId','comentarioId','cursor'],['acao','circuloId','postId'],b=>{const c=p(b.circuloId),post=p(b.postId),comment=b.comentarioId===undefined?null:p(b.comentarioId);return c&&post&&(b.comentarioId===undefined||comment)&&noCursor(b)?`/gamificacao/piloto/circulos/${c}/publicacoes/${post}${comment?`/comentarios/${comment}`:''}/curtidas${cursor(b.cursor)}`:null}),
   'console-denuncias': op(false,'GET','page-reports',['acao','circuloId','cursor'],['acao','circuloId'],b=>{const c=p(b.circuloId);return c&&noCursor(b)?`/gamificacao/piloto/circulos/${c}/denuncias${cursor(b.cursor)}`:null}),
+  'console-retirar-post': op(false,'POST','mutation',[...cmd,'circuloId','postId'],[...cmd,'circuloId','postId'],b=>{const c=p(b.circuloId),post=p(b.postId);return c&&post?`/gamificacao/piloto/circulos/${c}/publicacoes/${post}/retirada`:null}),
+  'console-retirar-comentario': op(false,'POST','mutation',[...cmd,'circuloId','postId','comentarioId'],[...cmd,'circuloId','postId','comentarioId'],b=>{const c=p(b.circuloId),post=p(b.postId),m=p(b.comentarioId);return c&&post&&m?`/gamificacao/piloto/circulos/${c}/publicacoes/${post}/comentarios/${m}/retirada`:null}),
   'portal-conquistas': op(true,'GET','page-achievements',['acao','cursor'],['acao'],b=>noCursor(b)?`/portal/paciente/gamificacao-piloto/conquistas${cursor(b.cursor)}`:null),
   'portal-circulos': op(true,'GET','page-circles',['acao','cursor'],['acao'],b=>noCursor(b)?`/portal/paciente/gamificacao-piloto/circulos${cursor(b.cursor)}`:null),
   'portal-privacidade-conquistas': op(true,'GET','page-privacy',['acao','cursor'],['acao'],b=>noCursor(b)?`/portal/paciente/gamificacao-piloto/privacidade/conquistas${cursor(b.cursor)}`:null),
@@ -61,27 +63,46 @@ const outputFields: Record<PilotoProjection, readonly string[]> = {
 };
 const itemFields: Record<string, readonly string[]> = {
   'page-achievements':['id','titulo','descricao','icone','criadoEm','origem','versao','compartilhado','geracao','aceito','termoVersao','consentimentoVersao'],
-  'page-circles':['id','nome','objetivo','estado','versao','participacao','participacaoVersao','geracao','conviteExpiraEm','termoVersao'],
+  'page-circles':['id','nome','objetivo','estado','versao','destinatarios','participacao','participacaoVersao','geracao','conviteExpiraEm','termoVersao'],
   'page-feed':['id','texto','autor','criadoEm','versao','proprio','reacoes'], 'page-likes':['nome'],
   'page-privacy':['id','geracao','consentimentoVersao','termoVersao','aceito','versao','estado'],
   'page-reports':['id','postId','comentarioId','versao','estado','criadoEm','eliminarEm','evidencia']
 };
 
 function pick(source: RecordInput, keys: readonly string[]) { return Object.fromEntries(keys.filter(key => Object.hasOwn(source,key)).map(key=>[key,source[key]])); }
+const numberFields=new Set(['versao','geracao','consentimentoVersao','participacaoVersao','versaoConteudo','total']);
+const booleanFields=new Set(['compartilhado','aceito','proprio','curti']);
+function scalarFieldsValid(source:RecordInput) {
+  return Object.entries(source).every(([key,value])=>{
+    if(key==='reacoes'||key==='evidencia'||key==='destinatarios')return true;
+    if(value===null)return ['conviteExpiraEm','expiraEm','participacao','participacaoVersao','geracao'].includes(key);
+    if(numberFields.has(key))return Number.isSafeInteger(value)&&Number(value)>=0;
+    if(booleanFields.has(key))return typeof value==='boolean';
+    return typeof value==='string'&&value.length<=8192;
+  });
+}
 export function projectPilotoResponse(value: unknown, shape: PilotoProjection): unknown {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
   const source=value as RecordInput;
   if (shape.startsWith('page-')) {
-    if (!Array.isArray(source.itens) || typeof source.temMais!=='boolean') return null;
-    const itens=source.itens.filter((item): item is RecordInput => !!item && typeof item==='object' && !Array.isArray(item)).map(item=>{
-      const result=pick(item,itemFields[shape]);
-      if (shape==='page-feed' && result.reacoes && typeof result.reacoes==='object') result.reacoes=pick(result.reacoes as RecordInput,['total','curti']);
-      if (shape==='page-reports' && result.evidencia && typeof result.evidencia==='object') result.evidencia=pick(result.evidencia as RecordInput,['texto','autor','criadoEm','motivo','versaoConteudo']);
-      return result;
-    });
-    return {itens,temMais:source.temMais,...(typeof source.proximoCursor==='string'?{proximoCursor:source.proximoCursor.slice(0,1024)}:{})};
+    if (!Array.isArray(source.itens) || source.itens.length>50 || typeof source.temMais!=='boolean' || (source.proximoCursor!==undefined&&(typeof source.proximoCursor!=='string'||source.proximoCursor.length>1024))) return null;
+    const itens:RecordInput[]=[];
+    for(const item of source.itens){
+      if(!item||typeof item!=='object'||Array.isArray(item))return null;
+      const result=pick(item as RecordInput,itemFields[shape]);
+      if(!scalarFieldsValid(result))return null;
+      for(const [field,keys] of [['reacoes',['total','curti']],['evidencia',['texto','autor','criadoEm','motivo','versaoConteudo']],['destinatarios',['clinica','profissional']]] as const){
+        if(!Object.hasOwn(result,field))continue;
+        const nested=result[field];if(!nested||typeof nested!=='object'||Array.isArray(nested))return null;
+        const safe=pick(nested as RecordInput,keys);if(!scalarFieldsValid(safe))return null;
+        if(field==='destinatarios'&&(!safe.clinica||!safe.profissional))return null;
+        result[field]=safe;
+      }
+      itens.push(result);
+    }
+    return {itens,temMais:source.temMais,...(typeof source.proximoCursor==='string'?{proximoCursor:source.proximoCursor}:{})};
   }
-  return pick(source,outputFields[shape]);
+  const result=pick(source,outputFields[shape]);return scalarFieldsValid(result)?result:null;
 }
 function json(status:number,body:unknown){return NextResponse.json(body,{status,headers:HEADERS});}
 function errorText(){return 'Não foi possível concluir esta ação. Confira os dados e tente novamente.';}
@@ -131,7 +152,7 @@ function validate(body: RecordInput, operation: Operation) {
 export function validatePilotoOperation(value: unknown) {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
   const body=value as RecordInput;
-  const operation=typeof body.acao==='string'?operations[body.acao]:undefined;
+  const operation=typeof body.acao==='string'&&Object.hasOwn(operations,body.acao)?operations[body.acao]:undefined;
   return !!operation && validate(body,operation) && operation.path(body)!==null;
 }
 
@@ -151,7 +172,7 @@ export async function tratarOperacaoPiloto(request:NextRequest,portal:boolean){
   let body:unknown;try{body=JSON.parse(raw);}catch{return json(400,{mensagem:'Confira a solicitação.'});}
   if(!body||typeof body!=='object'||Array.isArray(body))return json(400,{mensagem:'Confira a solicitação.'});
   const input=body as RecordInput, action=typeof input.acao==='string'?input.acao:'';
-  const operation=operations[action];
+  const operation=Object.hasOwn(operations,action)?operations[action]:undefined;
   if(!operation||operation.portal!==portal)return json(404,{mensagem:'Ação não encontrada.'});
   if(!validate(input,operation))return json(400,{mensagem:'Campos inválidos ou acima dos limites.'});
   const path=operation.path(input);if(!path)return json(400,{mensagem:'Identificador ou cursor inválido.'});

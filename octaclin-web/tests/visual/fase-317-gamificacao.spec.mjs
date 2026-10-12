@@ -128,3 +128,88 @@ test('Fase 317: gestor registra exceção com projeção sem evidência clínica
   const accessibility = await new AxeBuilder({ page }).withTags(['wcag2a','wcag2aa','wcag21a','wcag21aa']).analyze();
   expect(accessibility.violations.map(({ id, impact }) => ({ id, impact }))).toEqual([]);
 });
+
+test('Fase 317: retirada elimina comentários e curtidas em memória e ignora resposta antiga', async ({ page }) => {
+  await preparar(page,'Patient',[]);
+  let retirado=false,comentarios=0,liberar;
+  const commentId='70000000-0000-4000-8000-000000000007';
+  const post={id:postId,texto:'Publicação sintética ativa',autor:'Nome A',versao:1,proprio:false,reacoes:{total:1,curti:false}};
+  const comment={id:commentId,texto:'Comentário sintético retirado',autor:'Nome B',versao:1,proprio:true,reacoes:{total:0,curti:false}};
+  await page.route('**/api/gamificacao-piloto/portal',async route=>{
+    const {acao}=route.request().postDataJSON();let payload=pagina([]);
+    if(acao==='portal-circulos')payload=pagina([{id:circleId,nome:'Círculo Sintético',estado:'ativo',participacao:'ativo',participacaoVersao:1,geracao:1}]);
+    if(acao==='portal-feed')payload=pagina([post]);
+    if(acao==='portal-comentarios'){
+      comentarios++;
+      if(comentarios===2)await new Promise(resolve=>{liberar=resolve;});
+      payload=pagina([comment]);
+    }
+    if(acao==='portal-curtidas')payload=pagina([{nome:'Pessoa sintética que curtiu'}]);
+    if(acao==='retirar-comentario'){retirado=true;payload={id:commentId,estado:'retirado',versao:2};}
+    await route.fulfill({status:200,contentType:'application/json',body:JSON.stringify(payload)});
+  });
+  page.on('dialog',dialog=>dialog.accept());
+  await page.goto('/portal/gamificacao');
+  await expect(page.getByText(post.texto,{exact:true})).toBeVisible();
+  await page.getByRole('button',{name:'Comentários',exact:true}).click();
+  await expect(page.getByText(comment.texto,{exact:true})).toBeVisible();
+  await page.getByRole('button',{name:'Quem curtiu',exact:true}).first().click();
+  await expect(page.getByText(/Pessoa sintética que curtiu/)).toBeVisible();
+  await page.getByRole('button',{name:'Comentários',exact:true}).click();
+  await expect.poll(()=>typeof liberar).toBe('function');
+  await page.getByRole('button',{name:'Retirar',exact:true}).click();
+  await expect.poll(()=>retirado).toBe(true);
+  await expect(page.getByText('Solicitação registrada.',{exact:false})).toBeVisible();
+  const respostaAntiga=page.waitForResponse(response=>response.url().includes('/api/gamificacao-piloto/portal')&&response.request().postDataJSON().acao==='portal-comentarios');
+  liberar();await (await respostaAntiga).finished();
+  await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
+  await expect(page.getByText(comment.texto,{exact:true})).toHaveCount(0);
+  await expect(page.getByText(/Pessoa sintética que curtiu/)).toHaveCount(0);
+});
+
+test('Fase 317: moderador retira comentário e publicação sem denúncia',async({page})=>{
+  await preparar(page,'Professional',['console.acessar','gamificacao.gerenciar','pacientes.gerenciar']);
+  const commentId='70000000-0000-4000-8000-000000000007';let commentRemoved=false,postRemoved=false;
+  const post={id:postId,texto:'Publicação sintética sem denúncia',autor:'Nome A',criadoEm:'2026-01-01T12:00:00Z',versao:1,reacoes:{total:0,curti:false}};
+  await page.route('**/api/pacientes/buscar',route=>route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({itens:[],total:0})}));
+  await page.route('**/api/gamificacao-piloto/console',async route=>{
+    const {acao}=route.request().postDataJSON();let payload=pagina([]);
+    if(acao==='console-circulos')payload=pagina([{id:circleId,nome:'Círculo Sintético',estado:'ativo',versao:1}]);
+    if(acao==='console-feed')payload=pagina(postRemoved?[]:[post]);
+    if(acao==='console-comentarios')payload=pagina(commentRemoved?[]:[{...post,id:commentId,texto:'Comentário sintético sem denúncia'}]);
+    if(acao==='console-retirar-comentario'){commentRemoved=true;payload={id:commentId,estado:'retirado',versao:2};}
+    if(acao==='console-retirar-post'){postRemoved=true;payload={id:postId,estado:'retirado',versao:2};}
+    await route.fulfill({status:200,contentType:'application/json',body:JSON.stringify(payload)});
+  });
+  page.on('dialog',dialog=>dialog.accept());
+  await page.goto('/gamificacao/piloto');
+  await expect(page.getByText(post.texto,{exact:true})).toBeVisible();
+  await page.getByRole('button',{name:'Ver comentários',exact:true}).click();
+  await expect(page.getByText('Comentário sintético sem denúncia',{exact:true})).toBeVisible();
+  await page.getByRole('button',{name:'Retirar comentário',exact:true}).click();
+  await expect.poll(()=>commentRemoved).toBe(true);
+  await expect(page.getByText('Comentário sintético sem denúncia',{exact:true})).toHaveCount(0);
+  await page.getByRole('button',{name:'Retirar publicação',exact:true}).click();
+  await expect.poll(()=>postRemoved).toBe(true);await expect(page.getByText(post.texto,{exact:true})).toHaveCount(0);
+});
+
+test('Fase 317: termo integral e novo convite exigem checkbox novo',async({page})=>{
+  await preparar(page,'Patient',[]);let geracao=1,ativo=false;
+  await page.route('**/api/gamificacao-piloto/portal',async route=>{
+    const {acao}=route.request().postDataJSON();let payload=pagina([]);
+    if(acao==='aceitar-circulo')ativo=true;
+    if(acao==='sair-circulo'){geracao=2;ativo=false;}
+    if(acao==='portal-circulos')payload=pagina([{id:circleId,nome:'Convite Sintético',destinatarios:{clinica:'Clínica sintética',profissional:'Profissional sintético'},estado:'ativo',participacao:ativo?'ativo':'convidado',participacaoVersao:geracao,geracao,termoVersao:'317-comunidade-v1'}]);
+    await route.fulfill({status:200,contentType:'application/json',body:JSON.stringify(payload)});
+  });
+  page.on('dialog',dialog=>dialog.accept());await page.goto('/portal/gamificacao');
+  await expect(page.getByText(/Clínica: Clínica sintética · Profissional responsável: Profissional sintético/)).toBeVisible();
+  await expect(page.getByText(/pela necessidade legal específica registrada/)).toBeVisible();
+  await expect(page.getByText(/Para retornar, precisarei de novo convite e aceite/)).toBeVisible();
+  await page.getByLabel('Nome de exibição',{exact:true}).fill('Nome confirmado');
+  const aceite=page.getByLabel('Li o termo proposto e quero participar deste círculo.');
+  await aceite.check();await page.getByRole('button',{name:'Aceitar convite',exact:true}).click();
+  const sairDoCirculo=page.locator('#conteudo-principal').getByRole('button',{name:'Sair',exact:true});
+  await expect(sairDoCirculo).toBeVisible();await sairDoCirculo.click();
+  await expect(aceite).not.toBeChecked();await expect(page.getByRole('button',{name:'Aceitar convite',exact:true})).toBeDisabled();
+});

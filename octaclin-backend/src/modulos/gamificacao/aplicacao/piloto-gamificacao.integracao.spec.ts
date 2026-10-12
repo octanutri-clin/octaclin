@@ -43,7 +43,7 @@ const executar = process.env.RLS_TESTCONTAINERS === 'true';
     };
     prof=await makeUser('Professional',['gamificacao.gerenciar','pacientes.gerenciar']);
     patient=await makeUser('Patient',[]);gestor=await makeUser('Client',['cliente.configuracoes.gerenciar']);
-    const [pr]=await owner.query(`insert into profissionais(tenant_id,usuario_id,nome_criptografado) values($1,$2,$3) returning id`,[tenant.id,prof.usuarioId,Buffer.from('profissional-sintetico')]);profId=pr.id;
+    const [pr]=await owner.query(`insert into profissionais(tenant_id,usuario_id,nome_criptografado) values($1,$2,$3) returning id`,[tenant.id,prof.usuarioId,new CriptografiaDadosSensiveis().criptografar('Profissional sintetico')]);profId=pr.id;
     const [p]=await owner.query(`insert into pacientes(tenant_id,usuario_id,profissional_responsavel_id,nome_criptografado,data_nascimento) values($1,$2,$3,$4,'1990-01-01') returning id`,[tenant.id,patient.usuarioId,profId,Buffer.from('paciente-sintetico')]);pacienteId=p.id;
     await config.atualizar(tenant.id,gestor,{conquistas:true,comunidade:true,versaoEsperada:0});
   });
@@ -90,6 +90,9 @@ const executar = process.env.RLS_TESTCONTAINERS === 'true';
     const r=await circulos.criar(prof,{chave:randomUUID(),versaoEsperada:0,nome:'Circulo sintetico',objetivo:'Convivencia sintetica'});
     await expect(publicacoes.publicar(patient,r.id,{chave:randomUUID(),versaoEsperada:0,texto:'Sem convite'})).rejects.toThrow('Participacao indisponivel');
     const convite=await circulos.convidar(prof,r.id,pacienteId,{chave:randomUUID(),versaoEsperada:0});
+    const preview=(await circulos.listar(patient,{})).itens.find(item=>item.id===r.id);
+    expect(preview).toMatchObject({destinatarios:{clinica:'Clinica sintetica',profissional:'Profissional sintetico'}});
+    expect(preview).not.toHaveProperty('profissional_id');
     await circulos.aceitar(patient,r.id,{chave:randomUUID(),versaoEsperada:convite.versao,geracao:convite.geracao,termoVersao:TERMO_COMUNIDADE,nomeExibicao:'Participante sintetico'});
     const p=await publicacoes.publicar(patient,r.id,{chave:randomUUID(),versaoEsperada:0,texto:'Publicacao sintetica'});
     const c=await publicacoes.comentar(patient,r.id,p.id,{chave:randomUUID(),versaoEsperada:0,texto:'Comentario sintetico'});
@@ -139,6 +142,17 @@ const executar = process.env.RLS_TESTCONTAINERS === 'true';
     expect(rows).toHaveLength(6);for(const row of rows) expect(row).toMatchObject({relrowsecurity:true,relforcerowsecurity:true});
     const other=randomUUID();
     for(const table of tables) expect(await executor.executar(other,m=>m.query(`select id from ${table} where tenant_id=$1`,[prof.tenantId]))).toEqual([]);
+    const comandosDeOutroTenant=[
+      ['consentimentos_conquistas','paciente_id,conquista_id,usuario_id,geracao,termo_versao','$2,$3,$4,1,\'sintetico\''],
+      ['comentarios_comunidade','circulo_id,post_id,paciente_id,autor_usuario_id,geracao_membro','$3,$3,$2,$4,1'],
+      ['curtidas_comunidade','circulo_id,post_id,paciente_id,geracao_membro','$3,$3,$2,1'],
+      ['denuncias_comunidade','circulo_id,post_id,paciente_id','$3,$3,$2'],
+      ['revisoes_publicacao','circulo_id,post_id,versao','$3,$3,1'],
+      ['comandos_gamificacao','usuario_id,chave,acao,fingerprint_criptografado,resultado_criptografado',"$4,$3,'sintetico','\\x01'::bytea,'\\x01'::bytea"]
+    ];
+    for(const [table,colunas,valores] of comandosDeOutroTenant) {
+      await expect(executor.executar(prof.tenantId,m=>m.query(`with entradas as (select $1::uuid,$2::uuid,$3::uuid,$4::uuid) insert into ${table}(tenant_id,${colunas}) values($1,${valores})`,[other,pacienteId,randomUUID(),prof.usuarioId]))).rejects.toThrow('row-level security');
+    }
   });
 
   it('retencao remove corpos vencidos e preserva tombstone contra replay',async()=>{
@@ -258,6 +272,30 @@ const executar = process.env.RLS_TESTCONTAINERS === 'true';
       const consents=await conquistas.listarConsentimentos(patient,{});expect(consents.itens.every(r=>!('titulo' in r))).toBe(true);
       await expect(publicacoes.feed(patient,circles.itens[0].id,{})).rejects.toThrow('Piloto indisponivel');
     } finally { await config.atualizar(prof.tenantId,gestor,{conquistas:true,comunidade:true,versaoEsperada:4}); }
+  });
+
+  it('retirada sem denuncia preserva replay e nao inventa nova versao ao repetir',async()=>{
+    const r=await circulos.criar(prof,{chave:randomUUID(),versaoEsperada:0,nome:'Retirada sintetica',objetivo:'Prova sem denuncia'});
+    const invite=await circulos.convidar(prof,r.id,pacienteId,{chave:randomUUID(),versaoEsperada:0});
+    await circulos.aceitar(patient,r.id,{chave:randomUUID(),versaoEsperada:invite.versao,geracao:invite.geracao,termoVersao:TERMO_COMUNIDADE,nomeExibicao:'Nome sintetico'});
+    const post=await publicacoes.publicar(patient,r.id,{chave:randomUUID(),versaoEsperada:0,texto:'Texto retirado sem denuncia'});
+    const command={chave:randomUUID(),versaoEsperada:1};
+    expect(await publicacoes.retirar(prof,r.id,post.id,undefined,command)).toMatchObject({versao:2,estado:'retirado'});
+    expect(await publicacoes.retirar(prof,r.id,post.id,undefined,command)).toMatchObject({versao:2,estado:'retirado'});
+    await expect(publicacoes.retirar(prof,r.id,post.id,undefined,{chave:randomUUID(),versaoEsperada:2})).rejects.toThrow('Publicacao ja retirada');
+    const [stored]=await owner!.query('select versao_piloto from posts_comunidade where id=$1',[post.id]);expect(stored.versao_piloto).toBe(2);
+  });
+
+  it('publicacao concorrente com saida nunca permanece visivel apos a saida confirmada',async()=>{
+    const r=await circulos.criar(prof,{chave:randomUUID(),versaoEsperada:0,nome:'Corrida sintetica',objetivo:'Prova de revogacao'});
+    const invite=await circulos.convidar(prof,r.id,pacienteId,{chave:randomUUID(),versaoEsperada:0});
+    const accepted=await circulos.aceitar(patient,r.id,{chave:randomUUID(),versaoEsperada:invite.versao,geracao:invite.geracao,termoVersao:TERMO_COMUNIDADE,nomeExibicao:'Nome sintetico'});
+    const [,saida]=await Promise.allSettled([
+      publicacoes.publicar(patient,r.id,{chave:randomUUID(),versaoEsperada:0,texto:'Texto sintetico em corrida'}),
+      circulos.sair(patient,r.id,{chave:randomUUID(),versaoEsperada:accepted.versao})
+    ]);
+    expect(saida.status).toBe('fulfilled');expect((await publicacoes.feed(prof,r.id,{})).itens).toEqual([]);
+    await expect(publicacoes.publicar(patient,r.id,{chave:randomUUID(),versaoEsperada:0,texto:'Texto apos saida'})).rejects.toThrow('Participacao indisponivel');
   });
 
 });

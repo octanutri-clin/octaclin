@@ -172,3 +172,40 @@ Trivy estavam `QUEUED`. Acompanhar somente leitura; não fazer merge/deploy.
 Antes da revisão R4 independente, solicitar troca manual para **GPT‑6.1 Sol
 médio**. Corrigir eventuais achados R4/CI e repetir gates afetados após a troca.
 G01/G02/G05 permanecem bloqueados.
+
+## Retomada em Sol médio e revisão assistida R4 — 2026-10-12
+
+Modelo trocado manualmente pelo proprietário; não solicitar nova troca para os
+itens desta rodada. PR única Draft #405, HEAD recebido `68d34203`; base `a84921fb`.
+Worktree limpa ao assumir; checkout principal e a316 em stand-by preservados.
+
+Correções: BFF limita tipos/subobjetos/páginas; portal invalida dados/respostas
+antigas e checkbox; console mostra comentários e permite retirada sem denúncia;
+aceite tem texto integral e destinatários atuais mínimos; backend recusa retirada
+nova já concluída sem inventar versão e preserva replay pela chave original.
+
+PASS nesta rodada: PG real descartável21/21, Jest focal76 (21 condicionais pulados
+nessa invocação e executados à parte), BFF8/8, Playwright12/12 desktop/mobile,
+backend typecheck/build e lint focal sem warnings. Build web final/authz integral
+em execução; registrar resultado antes de concluir. Testes globais anteriores e
+CI do HEAD recebido não aprovam automaticamente os fixes desta rodada.
+
+[Relatório R4](../docs/history/phases/reviews/fase-317/REVISAO_R4.md).
+Não houve revisão independente plena: o histórico desta conversa inclui autoria
+do núcleo. G02 segue BLOCKED. G01 termo/moderação e G05 operação seguem BLOCKED.
+Nenhuma autorização inferida para migration externa, merge/deploy ou ativação.
+
+Próxima ação exata: concluir authz, revisar diff/secrets/manifesto, commit/push das
+correções na mesma PR e acompanhar CI do HEAD novo. Depois, encaminhar a um
+revisor sem autoria para G02 e à equipe para termo/moderação; rollout somente
+após autorização específica. Não abrir outra PR ou retomar316.
+
+Smoke CI do HEAD recebido FAIL em mobile (seis atalhos vs cinco). R4-06 corrigido
+sem afrouxar teste; retirada de atalho extra, Mais preserva conquistas/privacidade.
+Reteste Playwright antigo desktop/mobile2/2 PASS. Authz completo final PASS por
+logs TAP/textual sem falhas; último build com menu corrigido em execução.
+
+Fechamento local: build final do menu PASS (exit0). Authz integral, lint focal,
+PG21, Jest76, BFF8, Playwright12 e regressão de navegação2 PASS. G04 aguarda somente
+CI do HEAD que será enviado; G01/G02/G05 continuam BLOCKED. Próximo passo:
+commit/push na PR405 e conferir os checks desse HEAD, sem merge/ativação.

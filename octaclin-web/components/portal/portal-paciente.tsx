@@ -366,7 +366,6 @@ const linksPortalMobile = [
   { href: '/portal/agenda', rotulo: 'Agenda', icone: CalendarDays },
   { href: '/portal/plano', rotulo: 'Plano', icone: Target },
   { href: '/portal/checkins', rotulo: 'Registro de hábitos', icone: SmilePlus },
-  { href: '/portal/gamificacao', rotulo: 'Conquistas', icone: HeartPulse },
   { href: '/portal/mais', rotulo: 'Mais', icone: Menu }
 ];
 
@@ -1218,7 +1217,7 @@ export function PortalPaciente({ secao }: { secao: SecaoPortal }) {
                   <CartaoTitulo icone={<Menu className="h-4 w-4" />}>Mais opções</CartaoTitulo>
                 </CartaoCabecalho>
                 <CartaoConteudo className="grid gap-3 sm:grid-cols-2">
-                  {linksPortal.slice(5, 9).map((item) => (
+                  {linksPortal.slice(5).filter((item) => item.href !== '/portal/mais').map((item) => (
                     <Link
                       key={item.href}
                       href={item.href as Route}

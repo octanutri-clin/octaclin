@@ -1,4 +1,4 @@
-import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { randomUUID } from 'crypto';
 import { UsuarioAutenticado } from '../../auth/dominio/usuario-autenticado';
 import { ComandoPiloto, ContextoGamificacaoPiloto, ContextoPiloto } from './contexto-piloto';
@@ -153,6 +153,7 @@ export class ServicoPublicacoesPiloto {
       const a=await this.ambiente(c,id),row=comentarioId ? await this.comentario(a,postId,comentarioId,true) : await this.post(a,postId,true);
       if(c.paciente && (row.paciente_id!==c.paciente.id || row.autor_usuario_id!==u.usuarioId)) throw new ForbiddenException('Somente o autor pode retirar.');
       return this.base.comando(c,'conteudo.retirar',`${id}:${row.id}`,d,{},async()=>{
+        if(('estado' in row ? row.estado : row.status)!=='publicado') throw new ConflictException('Publicacao ja retirada. Confira novamente.');
         const versao='versao' in row ? row.versao : row.versao_piloto;
         this.base.versao(versao,d.versaoEsperada);await this.ocultarAlvo(c,id,postId,comentarioId);
         return {id:row.id,estado:'retirado',versao:versao+1};

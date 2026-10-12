@@ -1,5 +1,8 @@
 # Incremento backend da Fase 317 — evidência e segurança
 
+Registro histórico do incremento anterior à interface. O estado posterior e as
+correções estão em [segunda revisão R4](REVISAO_R4.md) e no handoff da fase.
+
 Implementação técnica autorizada; nenhum ambiente externo alterado e nenhum
 piloto habilitado. Esta evidência não é revisão independente nem liberação.
 A worktree/branch e a próxima ação estão em `tasks/plan-fase-317.md`.

@@ -665,6 +665,8 @@ test.describe('portal do paciente', () => {
 
     await navegacao.getByRole('link', { name: 'Mais', exact: true }).click();
     await expect(page).toHaveURL(/\/portal\/mais$/);
+    await expect(page.locator('#conteudo-principal').getByRole('link', { name: 'Conquistas e círculos', exact: true })).toHaveAttribute('href', '/portal/gamificacao');
+    await expect(page.locator('#conteudo-principal').getByRole('link', { name: 'Privacidade', exact: true })).toHaveAttribute('href', '/portal/privacidade');
     await page.locator('#conteudo-principal').getByRole('link', { name: 'Formulários', exact: true }).click();
     await expect(page).toHaveURL(/\/portal\/formularios$/);
     await expect(page.getByRole('heading', { name: 'Formulários pendentes' })).toBeVisible();

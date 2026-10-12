@@ -6,6 +6,7 @@ export interface ConquistaPilotoApi {
 }
 export interface CirculoPilotoApi {
   id: string; nome?: string; objetivo?: string; estado: string; versao?: number; participacao?: string;
+  destinatarios?:{clinica:string;profissional:string};
   participacaoVersao?: number; geracao?: number; conviteExpiraEm?: string | null; termoVersao?: string;
 }
 export interface PublicacaoPilotoApi {

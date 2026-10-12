@@ -124,3 +124,46 @@ test('Fase317 retenção expõe metadados mínimos só ao gestor e valida exceç
     assert.equal(calls,2);
   }finally{global.fetch=original;__clearCookies();}
 });
+
+test('Fase317 BFF rejeita objetos em campos escalares e páginas acima do limite',async()=>{
+  const original=global.fetch;await login('Patient',[]);
+  const item={id:circleId,texto:'Texto sintético',autor:'Nome sintético',versao:1,reacoes:{total:0,curti:false}};
+  try{
+    for(const invalid of [
+      {...item,texto:{pacienteId:patientId}},
+      {...item,autor:['nome protegido']},
+      {...item,reacoes:{total:{usuarioId:patientId},curti:false}}
+    ]){
+      global.fetch=(async()=>Response.json({itens:[invalid],temMais:false})) as typeof fetch;
+      const response=await tratarOperacaoPiloto(request({acao:'portal-feed',circuloId:circleId}),true);
+      assert.equal(response.status,502);assert(!JSON.stringify(await response.json()).includes(patientId));
+    }
+    global.fetch=(async()=>Response.json({itens:Array.from({length:51},()=>item),temMais:false})) as typeof fetch;
+    assert.equal((await tratarOperacaoPiloto(request({acao:'portal-feed',circuloId:circleId}),true)).status,502);
+  }finally{global.fetch=original;__clearCookies();}
+});
+
+test('Fase317 moderador pode retirar post e comentário sem denúncia pelo BFF',async()=>{
+  const original=global.fetch;const urls:string[]=[];await login('Professional',['gamificacao.gerenciar','pacientes.gerenciar']);
+  global.fetch=(async(input)=>{urls.push(String(input));return Response.json({id:patientId,versao:2,estado:'retirado'});}) as typeof fetch;
+  const command={circuloId:circleId,postId:patientId,chave:circleId,versaoEsperada:1};
+  try{
+    assert.equal((await tratarOperacaoPiloto(request({acao:'console-retirar-post',...command}),false)).status,200);
+    assert.equal((await tratarOperacaoPiloto(request({acao:'console-retirar-comentario',...command,comentarioId:circleId}),false)).status,200);
+    assert(urls[0].endsWith(`/publicacoes/${patientId}/retirada`));
+    assert(urls[1].endsWith(`/publicacoes/${patientId}/comentarios/${circleId}/retirada`));
+    await login('Client',['gamificacao.gerenciar','pacientes.gerenciar']);
+    assert.equal((await tratarOperacaoPiloto(request({acao:'console-retirar-post',...command}),false)).status,403);assert.equal(urls.length,2);
+  }finally{global.fetch=original;__clearCookies();}
+});
+
+test('Fase317 convite projeta clínica e profissional confirmados sem IDs internos',async()=>{
+  const original=global.fetch;await login('Patient',[]);
+  global.fetch=(async()=>Response.json({itens:[{id:circleId,nome:'Círculo sintético',estado:'ativo',destinatarios:{clinica:'Clínica sintética',profissional:'Profissional sintético',usuarioId:patientId}}],temMais:false})) as typeof fetch;
+  try{
+    const response=await tratarOperacaoPiloto(request({acao:'portal-circulos'}),true);assert.equal(response.status,200);
+    const body=await response.json() as {itens:Array<Record<string,unknown>>};
+    assert.deepEqual(body.itens[0].destinatarios,{clinica:'Clínica sintética',profissional:'Profissional sintético'});
+    assert(!JSON.stringify(body).includes(patientId));
+  }finally{global.fetch=original;__clearCookies();}
+});

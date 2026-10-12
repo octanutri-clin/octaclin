@@ -336,3 +336,29 @@ que foi removido sem alteração de fonte antes da repetição aprovada.
   polling: CodeQL, Dependency Review, OctaClin CI, Semgrep e Trivy. T16 segue
   IN_PROGRESS até CI/R4; G04 depende da CI. Push da branch da própria PR foi
   autorizado para revisão; nenhum merge/deploy foi feito.
+
+### Segunda revisão assistida R4 — 2026-10-12
+
+Substitui o estado de próxima troca manual acima: Sol médio confirmado e a revisão
+assistida foi executada. A autoria anterior no mesmo histórico impede declarar
+independência plena; G02 continua BLOCKED, com relatório específico da rodada.
+
+- T00–T14 PASS local após correções de projeção, estado/concorrência de leituras,
+  moderação sem denúncia, termo/contexto do aceite e versões de retirada.
+- T15 IN_PROGRESS: PG21/21, Jest focal76, BFF8/8, Playwright12/12, backend
+  typecheck/build e lint focal PASS. Authz integral final em execução; CI dos
+  fixes ainda pendente. A11y global permanece PARCIAL histórico.
+- T16 IN_PROGRESS: uma PR Draft #405 existente. Atualizar a mesma PR com fixes
+  e relatório; nenhuma autorização de merge/deploy/migration externa/ativação.
+- G00 PASS; G01 BLOCKED humano-operacional; G02 BLOCKED independente; G03 PASS
+  local; G04 IN_PROGRESS até gates finais/CI; G05 BLOCKED operação.
+
+Relatório: `docs/history/phases/reviews/fase-317/REVISAO_R4.md`.
+
+R4-06: navegação mobile corrigida e teste legado mantido (5 links); Mais expõe
+conquistas/privacidade. Reteste2/2 PASS. Authz completo após BFF PASS por logs
+TAP/textuais; build final do menu e CI das correções ainda pendentes.
+
+Gates locais finais PASS, inclusive build do menu exit0 e authz completo.
+T15/T16 ainda IN_PROGRESS para CI do HEAD enviado e revisão independente.
+G01/G02/G05 mantidos BLOCKED. Esta atualização supersede pendências locais acima.

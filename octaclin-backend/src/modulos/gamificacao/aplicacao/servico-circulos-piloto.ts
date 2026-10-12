@@ -133,6 +133,13 @@ export class ServicoCirculosPiloto {
   }
   async listar(u:UsuarioAutenticado,pagina:PaginaPiloto) {
     return this.base.executar(u,'comunidade',async c=>{
+      let destinatarios:{clinica:string;profissional:string}|undefined;
+      if(c.paciente){
+        const [responsavel]=await c.m.query(`select t.nome as clinica,pr.nome_criptografado from tenants t join profissionais pr on pr.tenant_id=t.id
+          where t.id=$1 and pr.id=$2 and pr.arquivado_em is null for share of t,pr`,[u.tenantId,c.paciente.profissional_responsavel_id]);
+        if(!responsavel)throw new ForbiddenException('Contexto do aceite indisponivel.');
+        destinatarios={clinica:responsavel.clinica,profissional:this.base.conteudo.lerNomeCadastral(responsavel.nome_criptografado)};
+      }
       const escopo=`${u.tenantId}:circulos:${u.usuarioId}`;
       const cursor=pagina.cursor ? this.base.conteudo.abrirCursor<{data:string;id:string}>(escopo,pagina.cursor) : undefined;
       const rows: CirculoListagem[]=await c.m.query(`select r.*,r.criado_em::text as criado_texto,m.estado_piloto as estado_membro,m.versao_piloto as membro_versao,m.geracao,m.convite_expira_em from circulos_pacientes r
@@ -142,7 +149,7 @@ export class ServicoCirculosPiloto {
       const slice=rows.slice(0,20),last=slice.at(-1);
       return {itens:slice.map(r=>{
         const body=this.base.conteudo.ler<{nome:string;objetivo:string}>(`${u.tenantId}:circulo:${r.id}`,r.snapshot_criptografado);
-        return {id:r.id,nome:body.nome,objetivo:body.objetivo,estado:r.estado_piloto,versao:r.versao_piloto,...(c.paciente ? {participacao:r.estado_membro,participacaoVersao:r.membro_versao,geracao:r.geracao,conviteExpiraEm:r.convite_expira_em,termoVersao:TERMO_COMUNIDADE} : {})};
+        return {id:r.id,nome:body.nome,objetivo:body.objetivo,estado:r.estado_piloto,versao:r.versao_piloto,...(c.paciente ? {destinatarios,participacao:r.estado_membro,participacaoVersao:r.membro_versao,geracao:r.geracao,conviteExpiraEm:r.convite_expira_em,termoVersao:TERMO_COMUNIDADE} : {})};
       }),temMais:rows.length>20,...(rows.length>20 && last ? {proximoCursor:this.base.conteudo.cursor(escopo,{data:last.criado_texto,id:last.id})} : {})};
     });
   }

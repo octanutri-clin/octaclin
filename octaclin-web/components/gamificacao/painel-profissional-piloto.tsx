@@ -33,6 +33,8 @@ export function PainelProfissionalPiloto() {
   const [aviso, setAviso] = useState<string | null>(null);
   const [ocupado, setOcupado] = useState(false);
   const pendingKeys = useRef(new Map<string, string>());
+  const leituraAtual=useRef(0);
+  const [comentarios,setComentarios]=useState<Record<string,{itens:ItemFeed[];temMais:boolean;cursor?:string}>>({});
   const conquistas = conquistasState?.pacienteId === pacienteId ? conquistasState.itens : [];
   const feed = atividadeState?.circuloId === circuloId ? atividadeState.posts : [];
   const denuncias = atividadeState?.circuloId === circuloId ? atividadeState.denuncias : [];
@@ -73,11 +75,12 @@ export function PainelProfissionalPiloto() {
   }, [podeUsar, pacienteId]);
   useEffect(() => {
     if (!podeUsar || !circuloId) return;
+    const leitura=++leituraAtual.current;
     let ativo = true;
     void Promise.all([
       consultarConsole<PaginaPiloto<ItemFeed>>('console-feed', { circuloId }),
       consultarConsole<PaginaPiloto<Relato>>('console-denuncias', { circuloId })
-    ]).then(([posts, reports]) => { if (ativo) setAtividadeState({ circuloId, posts: posts.itens, denuncias: reports.itens, postsTemMais: posts.temMais, postsCursor: posts.proximoCursor, denunciasTemMais: reports.temMais, denunciasCursor: reports.proximoCursor }); }).catch((e: unknown) => { if (ativo) setErro(e instanceof Error ? e.message : 'Este círculo não está disponível.'); });
+    ]).then(([posts, reports]) => { if (ativo&&leitura===leituraAtual.current) setAtividadeState({ circuloId, posts: posts.itens, denuncias: reports.itens, postsTemMais: posts.temMais, postsCursor: posts.proximoCursor, denunciasTemMais: reports.temMais, denunciasCursor: reports.proximoCursor }); }).catch((e: unknown) => { if (ativo&&leitura===leituraAtual.current){setAtividadeState(null);setComentarios({});setErro(e instanceof Error ? e.message : 'Este círculo não está disponível.');} });
     return () => { ativo = false; };
   }, [podeUsar, circuloId]);
 
@@ -97,12 +100,13 @@ export function PainelProfissionalPiloto() {
       if (['criar-circulo','encerrar-circulo'].includes(acao)) {
         const page = await consultarConsole<PaginaPiloto<CirculoPilotoApi>>('console-circulos'); setCirculos(page.itens); setCirculosTemMais(page.temMais); setCirculosCursor(page.proximoCursor);
       }
-      if (circuloId && ['decidir-denuncia','encerrar-circulo'].includes(acao)) {
+      if (circuloId && ['decidir-denuncia','encerrar-circulo','convidar','revogar-convite','console-retirar-post','console-retirar-comentario'].includes(acao)) {
+        const leitura=++leituraAtual.current;setAtividadeState(null);setComentarios({});
         const [reports, posts] = await Promise.all([
           consultarConsole<PaginaPiloto<Relato>>('console-denuncias', { circuloId }),
           consultarConsole<PaginaPiloto<ItemFeed>>('console-feed', { circuloId })
         ]);
-        setAtividadeState({ circuloId, posts: posts.itens, denuncias: reports.itens, postsTemMais: posts.temMais, postsCursor: posts.proximoCursor, denunciasTemMais: reports.temMais, denunciasCursor: reports.proximoCursor });
+        if(leitura===leituraAtual.current)setAtividadeState({ circuloId, posts: posts.itens, denuncias: reports.itens, postsTemMais: posts.temMais, postsCursor: posts.proximoCursor, denunciasTemMais: reports.temMais, denunciasCursor: reports.proximoCursor });
       }
       setAviso('Alteração registrada e lista atualizada.');
       return true;
@@ -125,18 +129,30 @@ export function PainelProfissionalPiloto() {
 
   async function carregarMaisAtividade(tipo:'feed'|'denuncias') {
     if (!circuloId || atividadeState?.circuloId!==circuloId) return;
+    const leitura=leituraAtual.current;
     const cursor=tipo==='feed'?atividadeState.postsCursor:atividadeState.denunciasCursor;
     if (!cursor) return;
     setOcupado(true);
     try {
       if(tipo==='feed'){
         const page=await consultarConsole<PaginaPiloto<ItemFeed>>('console-feed',{circuloId,cursor});
+        if(leitura!==leituraAtual.current)return;
         setAtividadeState(current=>current?.circuloId===circuloId?{...current,posts:[...current.posts,...page.itens],postsTemMais:page.temMais,postsCursor:page.proximoCursor}:current);
       }else{
         const page=await consultarConsole<PaginaPiloto<Relato>>('console-denuncias',{circuloId,cursor});
+        if(leitura!==leituraAtual.current)return;
         setAtividadeState(current=>current?.circuloId===circuloId?{...current,denuncias:[...current.denuncias,...page.itens],denunciasTemMais:page.temMais,denunciasCursor:page.proximoCursor}:current);
       }
     } catch(e) { setErro(e instanceof Error?e.message:'Não foi possível carregar mais atividade.'); }finally{setOcupado(false);}
+  }
+
+  async function carregarComentarios(postId:string,cursor?:string) {
+    const leitura=leituraAtual.current;
+    try {
+      const page=await consultarConsole<PaginaPiloto<ItemFeed>>('console-comentarios',{circuloId,postId,...(cursor?{cursor}:{})});
+      if(leitura!==leituraAtual.current)return;
+      setComentarios(v=>({...v,[postId]:{itens:cursor?[...(v[postId]?.itens??[]),...page.itens]:page.itens,temMais:page.temMais,cursor:page.proximoCursor}}));
+    }catch(e){if(leitura===leituraAtual.current){setComentarios(v=>({...v,[postId]:{itens:[],temMais:false}}));setErro(e instanceof Error?e.message:'Comentários indisponíveis.');}}
   }
 
   async function conceder(e: FormEvent<HTMLFormElement>) { e.preventDefault(); if (!pacienteId) return; if(await executar('conceder-conquista',{pacienteId,titulo,descricao:descricao||undefined,icone:'award'})){setTitulo('');setDescricao('');} }
@@ -178,13 +194,19 @@ export function PainelProfissionalPiloto() {
     </CartaoConteudo></Cartao>
     <Cartao><CartaoCabecalho><CartaoTitulo>Círculos e convites</CartaoTitulo></CartaoCabecalho><CartaoConteudo className="grid gap-4">
       <form onSubmit={criar} className="grid gap-3 sm:grid-cols-2"><div><Rotulo htmlFor="nome-circulo">Nome do círculo</Rotulo><Campo id="nome-circulo" required maxLength={160} value={nomeCirculo} onChange={e=>setNomeCirculo(e.target.value)}/></div><div><Rotulo htmlFor="objetivo-circulo">Objetivo</Rotulo><Campo id="objetivo-circulo" required maxLength={160} value={objetivo} onChange={e=>setObjetivo(e.target.value)}/></div><div className="sm:col-span-2"><Botao type="submit" disabled={ocupado}>Criar círculo privado</Botao></div></form>
-      <div><Rotulo htmlFor="circulo-piloto">Círculo</Rotulo><Selecao id="circulo-piloto" value={circuloId} onChange={e=>setCirculoId(e.target.value)}><option value="">Selecione</option>{circulos.map(c=><option key={c.id} value={c.id}>{c.nome} · {c.estado}</option>)}</Selecao></div>
+      <div><Rotulo htmlFor="circulo-piloto">Círculo</Rotulo><Selecao id="circulo-piloto" value={circuloId} onChange={e=>{if(e.target.value!==circuloId){leituraAtual.current++;setComentarios({});setAtividadeState(null);setCirculoId(e.target.value);}}}><option value="">Selecione</option>{circulos.map(c=><option key={c.id} value={c.id}>{c.nome} · {c.estado}</option>)}</Selecao></div>
       {circulosTemMais?<Botao type="button" disabled={ocupado} onClick={()=>void carregarMaisCirculos()}>{ocupado?'Carregando…':'Carregar mais círculos'}</Botao>:null}
       <p className="text-sm text-texto-suave">Convide uma pessoa por vez. A lista de participantes não é exposta no console.</p><div className="flex flex-wrap gap-2"><Botao type="button" disabled={ocupado||!pacienteId||!circuloId} onClick={()=>void convidar()}>Convidar paciente selecionado</Botao><Botao type="button" variante="perigo" disabled={ocupado||!pacienteId||!circuloId} onClick={()=>void revogarParticipacao()}>Revogar convite/participação</Botao><Botao type="button" variante="perigo" disabled={ocupado||!circuloId} onClick={()=>{if(window.confirm('Encerrar este círculo? Novas publicações serão bloqueadas e o conteúdo ficará oculto.')) void executar('encerrar-circulo',{circuloId,versaoEsperada:circulos.find(c=>c.id===circuloId)?.versao??0});}}>Encerrar círculo</Botao></div>
       {circulos.length===0?<EstadoVazio titulo="Piloto indisponível ou sem círculos" descricao="A disponibilidade depende da configuração e da autorização operacional da clínica."/>:null}
     </CartaoConteudo></Cartao>
     <Cartao><CartaoCabecalho><CartaoTitulo>Publicações do círculo</CartaoTitulo></CartaoCabecalho><CartaoConteudo className="grid gap-3">
-      {feed.length ? feed.map((post) => <article key={post.id} className="rounded-md border border-linha p-3"><p className="text-sm font-semibold">{post.autor} · <time dateTime={post.criadoEm}>{new Date(post.criadoEm).toLocaleString('pt-BR')}</time></p><p className="mt-2 whitespace-pre-wrap break-words text-sm">{post.texto}</p></article>) : <p className="text-sm text-texto-suave">Selecione um círculo ativo para ver publicações visíveis à moderação.</p>}
+      {feed.length ? feed.map((post) => <article key={post.id} className="rounded-md border border-linha p-3">
+        <p className="text-sm font-semibold">{post.autor} · <time dateTime={post.criadoEm}>{new Date(post.criadoEm).toLocaleString('pt-BR')}</time></p>
+        <p className="mt-2 whitespace-pre-wrap break-words text-sm">{post.texto}</p>
+        <div className="mt-3 flex flex-wrap gap-2"><Botao type="button" disabled={ocupado} onClick={()=>void carregarComentarios(post.id)}>Ver comentários</Botao><Botao type="button" variante="perigo" disabled={ocupado} onClick={()=>{if(window.confirm('Retirar esta publicação e ocultar suas interações?'))void executar('console-retirar-post',{circuloId,postId:post.id,versaoEsperada:post.versao});}}>Retirar publicação</Botao></div>
+        {comentarios[post.id]?.itens.map(comment=><div key={comment.id} className="mt-3 rounded-md border border-linha p-3"><p className="text-sm font-semibold">{comment.autor}</p><p className="mt-1 whitespace-pre-wrap break-words text-sm">{comment.texto}</p><Botao type="button" variante="perigo" disabled={ocupado} onClick={()=>{if(window.confirm('Retirar este comentário?'))void executar('console-retirar-comentario',{circuloId,postId:post.id,comentarioId:comment.id,versaoEsperada:comment.versao});}}>Retirar comentário</Botao></div>)}
+        {comentarios[post.id]?.temMais?<Botao type="button" disabled={ocupado} onClick={()=>void carregarComentarios(post.id,comentarios[post.id].cursor)}>Carregar mais comentários</Botao>:null}
+      </article>) : <p className="text-sm text-texto-suave">Selecione um círculo ativo para ver publicações visíveis à moderação.</p>}
       {atividadeState?.circuloId===circuloId&&atividadeState.postsTemMais?<Botao type="button" disabled={ocupado} onClick={()=>void carregarMaisAtividade('feed')}>{ocupado?'Carregando…':'Carregar mais publicações'}</Botao>:null}
       <p className="text-xs text-texto-suave">O conteúdo é apresentado como texto simples aos profissionais autorizados do círculo.</p>
     </CartaoConteudo></Cartao>

@@ -65,7 +65,7 @@ compartilhar, reinvitar/revogar ou encerrar. Ícones: award, heart, book, calend
 | --- | --- | --- |
 | GET conquistas | cursor | compartilhamentos atuais; sem título/descrição antes do aceite |
 | POST conquistas/:conquistaId/consentimento | comando; aceitar, geração>=1, termoVersao317-conquistas-v1; versão do consentimento,0 se ausente | id/aceito/geração/consentimentoVersao |
-| GET circulos | cursor | próprios convites válidos/participações; metadados e versão da participação |
+| GET circulos | cursor | próprios convites válidos/participações; versão e destinatarios{clinica,profissional} atuais, sem IDs internos |
 | POST circulos/:circuloId/aceite | comando; geração, termoVersao317-comunidade-v1, nomeExibicao1–80; versão da participação | estado ativo/versão/geração |
 | POST circulos/:circuloId/saida | comando; versão da participação | saída; publicações/interações ocultadas |
 | GET privacidade/conquistas | cursor | IDs/gerações/versões/estado dos próprios aceites; nunca texto |
@@ -83,7 +83,7 @@ compartilhar, reinvitar/revogar ou encerrar. Ícones: award, heart, book, calend
 | POST .../:postId/denuncias ou .../:postId/comentarios/:comentarioId/denuncias | comando; motivo1–1000; versão do alvo | protocolo privado sem evidência na resposta |
 
 Consentimento específico, nome confirmado e advertência de identificação antes
-DO aceite. Mostrar o texto proposto do contrato, sujeito ao gate operacional de
+DO aceite. Mostrar clínica/profissional atuais e bloquear confirmação se o contexto faltar. O texto é integral e cada nova geração exige checkbox novo. Mostrar o texto proposto do contrato, sujeito ao gate operacional de
 revisão. Denúncia não retira automaticamente por contagem; profissional revisa.
 Privacidade/revogação funciona com flags desligadas e mudança de DOB/vínculo,
 respeitando a autenticação/tenant existentes. Não esconder o painel de revogação
@@ -131,3 +131,11 @@ Saída/revogação não usa essas quotas. Nova adesão não republica conteúdo 
 Bloqueios de liberação: termo/moderação operacional, revisão independente R4,
 CI do HEAD final, preflight/migration externa autorizada e autorização de piloto.
 A316 continua em stand-by. Não há novos módulos clínicos ou notificações externas.
+
+## Correções da revisão assistida R4
+
+BFF valida tipos escalares e subobjetos permitidos; página limitada a50. Console
+permite retirada direta de post/comentário sem denúncia. Portal limpa projeções
+e confirmações ao recarregar, descartando respostas antigas. Retry de retirada
+com chave original mantém resultado; nova chave para item já retirado dá409.
+Evidência e limites em [revisão R4](../history/phases/reviews/fase-317/REVISAO_R4.md).

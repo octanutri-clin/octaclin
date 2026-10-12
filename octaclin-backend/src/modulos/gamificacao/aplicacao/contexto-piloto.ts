@@ -10,6 +10,13 @@ import { ServicoConfiguracaoPiloto } from './servico-configuracao-piloto';
 @Injectable()
 export class ConteudoPiloto {
   constructor(private readonly cripto: CriptografiaDadosSensiveis) {}
+  lerNomeCadastral(bytes:Buffer):string {
+    try {
+      const valor=this.cripto.descriptografar(bytes);
+      if(!valor.trim()||valor.length>1000)throw new Error();
+      return valor;
+    }catch{throw new ConflictException('Contexto do aceite indisponivel.');}
+  }
   cifrar(escopo: string, dados: unknown): Buffer { return this.cripto.criptografar(JSON.stringify({ escopo, dados })); }
   ler<T>(escopo: string, bytes: Buffer): T {
     try {
