@@ -2,6 +2,30 @@ import { dataCivilHoje, exigirAdulto, exigirAutorProfissional, exigirGestorPilot
 import { UsuarioAutenticado } from '../../auth/dominio/usuario-autenticado';
 const usuario = (papel: UsuarioAutenticado['papel']): UsuarioAutenticado => ({ tenantId: 'sintetico', usuarioId: 'sintetico', papel, emailHash: '', permissoes: [] });
 describe('contratos do piloto317', () => {
+  it.each([undefined, '', 'fuso/invalido'])('usa fallback para configuracao %s', timezone => {
+    const anterior=process.env.GOOGLE_CALENDAR_TIMEZONE;
+    try {
+      if(timezone===undefined) delete process.env.GOOGLE_CALENDAR_TIMEZONE;
+      else process.env.GOOGLE_CALENDAR_TIMEZONE=timezone;
+      expect(dataCivilHoje(new Date('2026-10-12T01:00:00Z'))).toBe('2026-10-11');
+    } finally {
+      if(anterior===undefined) delete process.env.GOOGLE_CALENDAR_TIMEZONE;
+      else process.env.GOOGLE_CALENDAR_TIMEZONE=anterior;
+    }
+  });
+  it('respeita o aniversario no fuso clinico configurado', () => {
+    const anterior = process.env.GOOGLE_CALENDAR_TIMEZONE;
+    try {
+      process.env.GOOGLE_CALENDAR_TIMEZONE = 'America/Rio_Branco';
+      const hoje = dataCivilHoje(new Date('2026-10-13T03:30:00Z'));
+      expect(hoje).toBe('2026-10-12');
+      expect(() => exigirAdulto('2008-10-13', hoje)).toThrow();
+      expect(dataCivilHoje(new Date('2026-10-13T05:00:00Z'))).toBe('2026-10-13');
+    } finally {
+      if (anterior === undefined) delete process.env.GOOGLE_CALENDAR_TIMEZONE;
+      else process.env.GOOGLE_CALENDAR_TIMEZONE = anterior;
+    }
+  });
   it('usa data civil brasileira e nao o dia UTC', () => expect(dataCivilHoje(new Date('2026-10-12T01:00:00Z'))).toBe('2026-10-11'));
   it('aceita apenas a partir do aniversario18', () => {
     expect(() => exigirAdulto('2008-10-12', '2026-10-12')).not.toThrow();

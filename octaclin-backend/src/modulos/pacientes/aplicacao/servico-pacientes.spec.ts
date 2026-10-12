@@ -3611,7 +3611,7 @@ describe('ServicoPacientes - LGPD retencao e eliminacao', () => {
     const repositorioUsuario = { update: jest.fn(async () => undefined) };
     const repositorioRefreshToken = { update: jest.fn(async () => undefined) };
     const repositorioSessao = { update: jest.fn(async () => undefined) };
-    const query = jest.fn(async () => [{ ultimo: opcoes.ultimoRegistroClinico ?? 'epoch' }]);
+    const query = jest.fn(async (sql: string) => sql.includes('as ultimo') ? [{ ultimo: opcoes.ultimoRegistroClinico ?? 'epoch' }] : []);
 
     const gerenciador = {
       query,
@@ -3662,7 +3662,7 @@ describe('ServicoPacientes - LGPD retencao e eliminacao', () => {
     const salvo = await repositorioPaciente.save.mock.results[0].value;
     expect(salvo.statusCicloVida).toBe('RETENTION_HELD');
     expect(salvo.nomeCriptografado).toBeUndefined();
-    expect(gerenciador.query).toHaveBeenCalledTimes(1);
+    expect(gerenciador.query.mock.calls.filter(([sql]) => String(sql).includes('as ultimo'))).toHaveLength(1);
   });
 
   it('elimina de verdade quando nao ha registro assistencial nenhum', async () => {
@@ -3682,7 +3682,7 @@ describe('ServicoPacientes - LGPD retencao e eliminacao', () => {
     const resultado = await servico.solicitarEliminacaoDadosLgpd('tenant-1', 'paciente-1', usuarioColaborador);
 
     expect(resultado.status).toBe('DELETED');
-    expect(gerenciador.query).toHaveBeenNthCalledWith(2,
+    expect(gerenciador.query).toHaveBeenCalledWith(
       'delete from conversas_portal_paciente where tenant_id = $1 and paciente_id = $2',
       ['tenant-1', 'paciente-1']
     );

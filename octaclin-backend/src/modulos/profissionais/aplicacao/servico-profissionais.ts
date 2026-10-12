@@ -1,3 +1,4 @@
+import { bloquearContextoPiloto317, invalidarContextoPiloto317 } from '../../gamificacao/aplicacao/invalidar-contexto-piloto';
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { IsNull, Not } from 'typeorm';
 import { ExecutorTenant } from '../../../infraestrutura/banco-dados/executor-tenant';
@@ -126,10 +127,12 @@ export class ServicoProfissionais {
 
   async arquivar(tenantId: string, profissionalId: string): Promise<void> {
     await this.executorTenant.executar(tenantId, async (gerenciador) => {
+      await bloquearContextoPiloto317(gerenciador, tenantId);
       const repositorio = gerenciador.getRepository(ProfissionalOrm);
       const profissional = await repositorio.findOne({ where: { id: profissionalId, tenantId, arquivadoEm: IsNull() } });
       if (!profissional) throw new NotFoundException('Profissional nao encontrado.');
 
+      await invalidarContextoPiloto317(gerenciador, tenantId, { profissionalId });
       const resultado = await repositorio.update(
         { id: profissionalId, tenantId, arquivadoEm: IsNull() },
         { arquivadoEm: new Date() }

@@ -1,5 +1,6 @@
 import { BadRequestException, ForbiddenException } from '@nestjs/common';
 import { UsuarioAutenticado } from '../../auth/dominio/usuario-autenticado';
+import { obterTimezoneClinico } from '../../../infraestrutura/tempo/timezone-clinico';
 
 export const CHAVE_PILOTO = 'gamificacao_piloto_317';
 export const TERMO_CONQUISTAS = '317-conquistas-v1';
@@ -8,7 +9,7 @@ export const MAX_MEMBROS = 50;
 export const MAX_CIRCULOS = 5;
 
 export function dataCivilHoje(agora = new Date()): string {
-  return new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Sao_Paulo', year: 'numeric', month: '2-digit', day: '2-digit' }).format(agora);
+  return new Intl.DateTimeFormat('en-CA', { timeZone: obterTimezoneClinico(), year: 'numeric', month: '2-digit', day: '2-digit' }).format(agora);
 }
 
 export function exigirAdulto(nascimento: string | undefined, hoje = dataCivilHoje()): void {

@@ -126,6 +126,7 @@ function criarServico(dados: Record<string, any>) {
   const execucoesRegra = (dados.execucoesRegra ?? (dados.execucoesRegra = [])) as Record<string, any>[];
   const outboxEventos = (dados.outboxEventos ?? (dados.outboxEventos = [])) as Record<string, any>[];
   const gerenciador = {
+    query: jest.fn(async () => []),
     getRepository: jest.fn((entidade: { name: string }) => {
       if (entidade === PacienteOrm) return repositorios.paciente;
       if (entidade === AgendaConsultaOrm) return repositorios.consulta;

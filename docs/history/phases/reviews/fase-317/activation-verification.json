@@ -1,0 +1,31 @@
+{
+  "base": "315dd35c24d527298faf383c6dd2aad74adc5f43",
+  "activationScope": "global control only; tenant flags and patient consents unchanged",
+  "independentReviewer": "/root/review_317_activation, no authorship",
+  "review": "static favorable; PG/checks pending",
+  "postgresLocal": "BLOCKED no space left on device; no defect RED claimed",
+  "sources": {
+    "octaclin-backend/src/modulos/gamificacao/aplicacao/piloto-gamificacao.integracao.spec.ts": "6cbd713edc0c211e9ba357c5199df48be7e8e1fe784382e7c3c78e042bf919af",
+    "octaclin-backend/src/modulos/gamificacao/aplicacao/servico-circulos-piloto.ts": "b8bef70857f40e3d52521f910f48900a16d0ee1e519d5a732fc6a55d21fc46df",
+    "octaclin-backend/src/modulos/gamificacao/dominio/piloto-gamificacao.spec.ts": "5ccd0dbfb789f30a90c9dbed96b0805f3c0f4434b472d43b99c1b1de2c213f81",
+    "octaclin-backend/src/modulos/gamificacao/dominio/piloto-gamificacao.ts": "335bc144ef7f0a57447ce5b1fef0c4c39a1115a391de851c53c9379cc1e71a02",
+    "octaclin-backend/src/modulos/pacientes/aplicacao/servico-pacientes.spec.ts": "39ef35b7f55c4af074f3e3beb00632ed9ea829935c02a3794ca4906ca55c81d7",
+    "octaclin-backend/src/modulos/pacientes/aplicacao/servico-pacientes.ts": "88bd2a542c58d2c5b165de7287aa019af33aad9c973a0509ff66f09a49e78d0a",
+    "octaclin-backend/src/modulos/pacientes/aplicacao/servico-portal-paciente.spec.ts": "db23c1d3f33f3915c2f9df311e53403da2c89ca4ed9a92f0189c3d009f761d24",
+    "octaclin-backend/src/modulos/pacientes/aplicacao/servico-portal-paciente.ts": "3833ff3f1a1664e70011e9e498e473b6d7f1fe72034277b19d8db96e0eb90dd8",
+    "octaclin-backend/src/modulos/profissionais/aplicacao/servico-profissionais.spec.ts": "61a11ac6c0e48debf6dfb38aabd26bf07af7b0ea54c909fcb3eaa8c023455726",
+    "octaclin-backend/src/modulos/profissionais/aplicacao/servico-profissionais.ts": "5cf497cf13ced3393f57a8225c7294aac1e09b4bc08e45112d405b119bd951d0",
+    "octaclin-backend/src/modulos/gamificacao/aplicacao/invalidar-contexto-piloto.ts": "9c0b7aaee85b2c1cf0e57d3e337d528a665a2746b5f72b4671c64c4d6e1fa6a0",
+    "octaclin-backend/src/modulos/gamificacao/aplicacao/invalidar-contexto-piloto.spec.ts": "00f0a142097095e7f78f3429c2344f25603c731becd0787002a10d6b2a8d81eb"
+  },
+  "logs": {
+    "f317-activation-timezone-red.log": "96129dfee5d8c95e5c9b33d636cac03c0402176eab681f6d78299d63c8881e5b",
+    "f317-activation-transfer-red.log": "ca44f15e819585b872c897744181eb4382ff7a5e43ff07b88908a89bcbc9205b",
+    "f317-activation-backend-last.log": "76f103b3db7e32790bb7cb4c2a3eae7e0218c9e1ad047b5b770a8b7194efc263",
+    "f317-activation-focused-final.log": "09dd0e9ffd773afad1d57e55c2f8422774835cbb0685c237ad712b9ecd41220d",
+    "f317-activation-typecheck-last.log": "8366207267355d3e3d5bf3bf6e8c94c5f93f6078c34f08973fa2b38cdda6cc92",
+    "f317-activation-build-final.log": "896d2097b15ff9f70ab32342fae89da07998e11eaf88140746e8d3de0deef6c5",
+    "f317-activation-secrets.log": "110e14858346bc6636bb5760769ce8d753cc1bf899e52d85ff8a8deb1be3bb11",
+    "f317-activation-audit.log": "350ca8df5df3d0e0693ecb6627f8c69c1cbb82970b4a722ddab0ba2dc389ce71"
+  }
+}
