@@ -1,0 +1,59 @@
+{
+  "base": "315dd35c24d527298faf383c6dd2aad74adc5f43",
+  "redPostgreSQL": {
+    "run": 38320130301,
+    "job": 115046057491,
+    "sha": "6bc0fa0e92ce87171072c16f3bd01e7052189760",
+    "failed": 7,
+    "passed": 53,
+    "reason": "Conteudo reaparece e membro permanece ativo apos ida/retorno em codigo original"
+  },
+  "artifacts": [
+    {
+      "path": "/tmp/f317-baseline-red-job-tool.log",
+      "sha256": "f9c4700aa62b3c02509e8bdd3c0d83be22aba7ee49e11607d09596645d49a04b"
+    },
+    {
+      "path": "/tmp/f317-activation-timezone-red.log",
+      "sha256": "96129dfee5d8c95e5c9b33d636cac03c0402176eab681f6d78299d63c8881e5b"
+    },
+    {
+      "path": "/tmp/f317-tenant-timezone-red.log",
+      "sha256": "cd299161532470a7dad1e873d674330ca2a1e1a0961af169902d43661efa7352"
+    },
+    {
+      "path": "/tmp/f317-admin-red.log",
+      "sha256": "5b7346b6616762bef221792fb177c1fd1b74db1ffcc17b854e4c2dd5ab9e215f"
+    },
+    {
+      "path": "/tmp/f317-admin-green2.log",
+      "sha256": "5a843d0e82d3befd07acca8aca0d43eedfbbe9f03c36b8df0a940105be20c0ac"
+    },
+    {
+      "path": "/tmp/f317-final-backend.log",
+      "sha256": "52b43b620a17690de0c1273d9a0bdb0ad4fa254327be3736ce1eca1d1695e668"
+    },
+    {
+      "path": "/tmp/f317-final-typecheck.log",
+      "sha256": "8366207267355d3e3d5bf3bf6e8c94c5f93f6078c34f08973fa2b38cdda6cc92"
+    },
+    {
+      "path": "/tmp/f317-final-build.log",
+      "sha256": "896d2097b15ff9f70ab32342fae89da07998e11eaf88140746e8d3de0deef6c5"
+    },
+    {
+      "path": "/tmp/f317-final-bff.log",
+      "sha256": "47f5197b372e03a25956ac3485097c6de426c4c31f04bc52c9a95ddb0ab506f1"
+    },
+    {
+      "path": "/tmp/f317-final-secrets.log",
+      "sha256": "110e14858346bc6636bb5760769ce8d753cc1bf899e52d85ff8a8deb1be3bb11"
+    },
+    {
+      "path": "/tmp/f317-final-audit.log",
+      "sha256": "350ca8df5df3d0e0693ecb6627f8c69c1cbb82970b4a722ddab0ba2dc389ce71"
+    }
+  ],
+  "externalChanges": false,
+  "independentReview": "Previous diff only; additional review waived by owner"
+}

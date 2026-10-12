@@ -43,6 +43,7 @@ describe('ServicoProfissionais', () => {
       {
         executar: jest.fn((_tenantId: string, operacao: (gerenciador: unknown) => Promise<unknown>) =>
           operacao({
+            query: jest.fn(async () => []),
             getRepository: jest.fn((entidade: unknown) => {
               if (entidade === ProfissionalOrm) return repositorioProfissionais;
               if (entidade === UsuarioOrm) return repositorioUsuarios;

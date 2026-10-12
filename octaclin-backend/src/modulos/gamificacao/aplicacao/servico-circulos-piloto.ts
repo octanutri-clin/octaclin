@@ -1,3 +1,6 @@
+import { dataCivilHoje } from '../dominio/piloto-gamificacao';
+import { obterTimezoneClinicoDoTenant } from '../../../infraestrutura/tempo/timezone-clinico';
+import { ocultarAutorPiloto317 } from './invalidar-contexto-piloto';
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { randomUUID } from 'crypto';
 import { UsuarioAutenticado } from '../../auth/dominio/usuario-autenticado';
@@ -32,9 +35,10 @@ export class ServicoCirculosPiloto {
         and p.arquivado_em is null and p.status_ciclo_vida='ACTIVE' and u.ativo=true and u.role='Patient'
         and pr.arquivado_em is null and pu.ativo=true and pu.role='Professional' and t.status='ativo'
       order by m.id limit 50 for share of p,u,pr,pu,t`,[c.u.tenantId,r.id,TERMO_COMUNIDADE,r.profissional_id]);
+    const hoje=c.hoje ?? dataCivilHoje(new Date(),await obterTimezoneClinicoDoTenant(c.m,c.u.tenantId));
     const result=new Map<string,PerfilMembro>();
     for (const row of rows) {
-      try { exigirAdulto(row.data_nascimento); } catch { continue; }
+      try { exigirAdulto(row.data_nascimento,hoje); } catch { continue; }
       let snapshot:SnapshotNome;
       try { snapshot=this.base.conteudo.ler<SnapshotNome>(`${c.u.tenantId}:membro:${row.id}:nome`,row.nome_criptografado); } catch { continue; }
       if (snapshot.dataNascimento!==row.data_nascimento || snapshot.profissionalId!==r.profissional_id || snapshot.usuarioId!==row.usuario_id) continue;
@@ -97,13 +101,7 @@ export class ServicoCirculosPiloto {
     });
   }
   async ocultarAutor(c:ContextoPiloto,id:string,pacienteId?:string) {
-    const filtro=pacienteId ?? null;
-    await c.m.query(`update posts_comunidade set status='oculto',retirado_em=coalesce(retirado_em,now()),eliminar_em=least(coalesce(eliminar_em,now()+interval '90 days'),now()+interval '90 days'),versao_piloto=versao_piloto+1
-      where tenant_id=$1 and circulo_id=$2 and modelo_versao=317 and ($3::uuid is null or paciente_id=$3) and status='publicado'`,[c.u.tenantId,id,filtro]);
-    await c.m.query(`update comentarios_comunidade cm set estado='oculto',retirado_em=coalesce(cm.retirado_em,now()),eliminar_em=least(coalesce(cm.eliminar_em,now()+interval '90 days'),now()+interval '90 days'),versao=versao+1
-      where cm.tenant_id=$1 and cm.circulo_id=$2 and estado='publicado' and ($3::uuid is null or cm.paciente_id=$3 or exists(select 1 from posts_comunidade p where p.tenant_id=cm.tenant_id and p.circulo_id=cm.circulo_id and p.id=cm.post_id and p.paciente_id=$3 and p.status<>'publicado'))`,[c.u.tenantId,id,filtro]);
-    await c.m.query(`update revisoes_publicacao rv set eliminar_em=least(coalesce(rv.eliminar_em,now()+interval '90 days'),now()+interval '90 days') where rv.tenant_id=$1 and rv.circulo_id=$2 and exists(select 1 from posts_comunidade p where p.tenant_id=rv.tenant_id and p.id=rv.post_id and ($3::uuid is null or p.paciente_id=$3 or exists(select 1 from comentarios_comunidade cm where cm.tenant_id=rv.tenant_id and cm.id=rv.comentario_id and cm.paciente_id=$3)))`,[c.u.tenantId,id,filtro]);
-    await c.m.query(`delete from curtidas_comunidade where tenant_id=$1 and circulo_id=$2 and ($3::uuid is null or paciente_id=$3)`,[c.u.tenantId,id,filtro]);
+    await ocultarAutorPiloto317(c.m,c.u.tenantId,id,pacienteId);
   }
   async sair(u:UsuarioAutenticado,id:string,d:ComandoPiloto) {
     if (u.papel!=='Patient') throw new ForbiddenException('Acesso exclusivo do paciente.');

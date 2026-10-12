@@ -1,4 +1,5 @@
-import { dataIsoNoTimezoneClinico, obterTimezoneClinico } from './timezone-clinico';
+import { dataIsoNoTimezoneClinico, obterTimezoneClinico, obterTimezoneClinicoDoTenant } from './timezone-clinico';
+import type { EntityManager } from 'typeorm';
 
 describe('timezone-clinico', () => {
   const original = process.env.GOOGLE_CALENDAR_TIMEZONE;
@@ -32,5 +33,17 @@ describe('timezone-clinico', () => {
       const resultado = dataIsoNoTimezoneClinico('America/Sao_Paulo');
       expect(resultado).toMatch(/^\d{4}-\d{2}-\d{2}$/);
     });
+  });
+  it('le somente a configuracao do tenant verificado e prioriza seu fuso',async()=>{
+    process.env.GOOGLE_CALENDAR_TIMEZONE='America/Sao_Paulo';
+    const query=jest.fn(async()=>[{timezone:'America/Rio_Branco'}]);
+    expect(await obterTimezoneClinicoDoTenant({query} as unknown as EntityManager,'tenant-sintetico')).toBe('America/Rio_Branco');
+    expect(query).toHaveBeenCalledWith(expect.stringContaining("chave='conta_cliente'"),['tenant-sintetico']);
+    expect(query).toHaveBeenCalledWith(expect.stringContaining('tenant_id=$1'),['tenant-sintetico']);
+  });
+  it('mantem o resolvedor canonico quando nao ha configuracao da clinica',async()=>{
+    process.env.GOOGLE_CALENDAR_TIMEZONE='America/New_York';
+    const query=jest.fn(async()=>[]);
+    expect(await obterTimezoneClinicoDoTenant({query} as unknown as EntityManager,'tenant-sintetico')).toBe('America/New_York');
   });
 });

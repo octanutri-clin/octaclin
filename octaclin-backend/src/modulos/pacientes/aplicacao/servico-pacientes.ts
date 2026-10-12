@@ -1,3 +1,4 @@
+import { bloquearContextoPiloto317, invalidarContextoPiloto317 } from '../../gamificacao/aplicacao/invalidar-contexto-piloto';
 import { projetarResultadoAntropometrico, projetarMedidasAntropometricas } from '../dominio/projecao-antropometria';
 import { registrarContextoPediatrico, projetarPediatrico } from '../dominio/antropometria-pediatrica';
 import { calcularAntropometriaGestacional } from '../dominio/antropometria-gestacional';
@@ -366,6 +367,7 @@ export class ServicoPacientes {
     usuario: UsuarioAutenticado
   ): Promise<PacienteRespostaDto> {
     return this.executorTenant.executar(tenantId, async (gerenciador) => {
+      await bloquearContextoPiloto317(gerenciador, tenantId);
       const paciente = await this.garantirPacienteExiste(
         gerenciador,
         tenantId,
@@ -373,6 +375,8 @@ export class ServicoPacientes {
         usuario,
         dados.profissionalResponsavelId !== undefined
       );
+      const responsavelAnterior = paciente.profissionalResponsavelId;
+      const nascimentoAnterior = paciente.dataNascimento;
       const repositorio = gerenciador.getRepository(PacienteOrm);
 
       const possuiAtualizacaoDeCadastro = dados.profissionalResponsavelId !== undefined ||
@@ -411,12 +415,16 @@ export class ServicoPacientes {
         }
       }
 
+      if (paciente.profissionalResponsavelId !== responsavelAnterior || paciente.dataNascimento !== nascimentoAnterior) {
+        await invalidarContextoPiloto317(gerenciador, tenantId, { pacienteId });
+      }
       return this.mapearResposta(await repositorio.save(paciente));
     });
   }
 
   async arquivar(tenantId: string, pacienteId: string, usuario: UsuarioAutenticado): Promise<void> {
     await this.executorTenant.executar(tenantId, async (gerenciador) => {
+      await bloquearContextoPiloto317(gerenciador, tenantId);
       const profissionalResponsavelId = await resolverProfissionalIdDoUsuario(gerenciador, tenantId, usuario);
       const resultado = await gerenciador.getRepository(PacienteOrm).update(
         {
@@ -431,6 +439,7 @@ export class ServicoPacientes {
       if (!resultado.affected) {
         throw new NotFoundException('Paciente nao encontrado.');
       }
+      await invalidarContextoPiloto317(gerenciador, tenantId, { pacienteId });
       const perfil = await gerenciador.getRepository(PerfilCadastroPacienteOrm).findOne({ where: { tenantId, pacienteId } });
       const dataRevisao = lerDataRevisaoPerfil(this.criptografia, perfil?.operacaoCriptografada);
       if (dataRevisao) await cancelarTarefaRevisaoPerfil(gerenciador, tenantId, pacienteId, dataRevisao);
@@ -475,6 +484,7 @@ export class ServicoPacientes {
     usuario: UsuarioAutenticado
   ): Promise<ResultadoSolicitacaoEliminacaoLgpdDto> {
     return this.executorTenant.executar(tenantId, async (gerenciador) => {
+      await bloquearContextoPiloto317(gerenciador, tenantId);
       const profissionalResponsavelId = await resolverProfissionalIdDoUsuario(gerenciador, tenantId, usuario);
       const repositorio = gerenciador.getRepository(PacienteOrm);
       const paciente = await repositorio.findOne({
@@ -482,6 +492,7 @@ export class ServicoPacientes {
         lock: { mode: 'pessimistic_write' }
       });
       if (!paciente) throw new NotFoundException('Paciente nao encontrado.');
+      await invalidarContextoPiloto317(gerenciador, tenantId, { pacienteId });
       if (paciente.statusCicloVida === 'DELETED') {
         throw new ConflictException('Os dados deste paciente ja foram eliminados.');
       }
@@ -546,6 +557,7 @@ export class ServicoPacientes {
    */
   async desativarContaAcesso(tenantId: string, pacienteId: string, usuario: UsuarioAutenticado): Promise<void> {
     await this.executorTenant.executar(tenantId, async (gerenciador) => {
+      await bloquearContextoPiloto317(gerenciador, tenantId);
       const profissionalResponsavelId = await resolverProfissionalIdDoUsuario(gerenciador, tenantId, usuario);
       const paciente = await gerenciador.getRepository(PacienteOrm).findOne({
         where: { id: pacienteId, tenantId, ...(profissionalResponsavelId ? { profissionalResponsavelId } : {}) }
@@ -553,6 +565,7 @@ export class ServicoPacientes {
       if (!paciente) throw new NotFoundException('Paciente nao encontrado.');
       if (!paciente.usuarioId) throw new BadRequestException('Paciente nao possui conta de acesso.');
 
+      await invalidarContextoPiloto317(gerenciador, tenantId, { pacienteId });
       const agora = new Date();
       await gerenciador.getRepository(UsuarioOrm).update(
         { id: paciente.usuarioId, tenantId },

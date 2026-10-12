@@ -82,6 +82,7 @@ function criarServico(
   const executorTenant = {
     executar: jest.fn((_tenantId: string, callback: any) =>
       callback({
+        query: jest.fn(async()=>[]),
         getRepository: (entidade: any) => {
           if (entidade === UsuarioOrm) return repositorioUsuarios;
           if (entidade === TokenRedefinicaoSenhaOrm) return repositorioTokens;
@@ -215,6 +216,7 @@ describe('ServicoUsuariosCliente', () => {
     const executorTenant = {
       executar: jest.fn((_tenantId: string, operacao: (gerenciador: unknown) => Promise<unknown>) =>
         operacao({
+          query: jest.fn(async()=>[]),
           getRepository: jest.fn((entidade: unknown) => {
             if (entidade === UsuarioOrm) return repositorioUsuarios;
             if (entidade === ProfissionalOrm) return repositorioProfissionais;

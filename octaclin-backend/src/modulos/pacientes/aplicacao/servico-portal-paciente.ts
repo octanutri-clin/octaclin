@@ -1,3 +1,4 @@
+import { bloquearContextoPiloto317, invalidarContextoPiloto317 } from '../../gamificacao/aplicacao/invalidar-contexto-piloto';
 import { createHash, createHmac, randomUUID } from 'crypto';
 import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { EntityManager, In, IsNull } from 'typeorm';
@@ -1007,6 +1008,7 @@ export class ServicoPortalPaciente {
     if (!camposRecebidos) throw new BadRequestException('Informe ao menos um dado para atualizar.');
 
     return this.executorTenant.executar(tenantId, async (gerenciador) => {
+      await bloquearContextoPiloto317(gerenciador, tenantId);
       const repositorio = gerenciador.getRepository(PacienteOrm);
       const paciente = await repositorio.findOne({
         where: { tenantId, usuarioId, arquivadoEm: IsNull() }
@@ -1014,6 +1016,7 @@ export class ServicoPortalPaciente {
       if (!paciente) throw new ForbiddenException('Usuario nao possui paciente vinculado.');
 
       if (dados.nome?.trim()) paciente.nomeCriptografado = this.criptografia.criptografar(dados.nome.trim());
+      const nascimentoAnterior = paciente.dataNascimento;
       if (dados.dataNascimento) paciente.dataNascimento = dados.dataNascimento;
 
       const contatoAtual = this.obterContatoPaciente(paciente);
@@ -1052,6 +1055,9 @@ export class ServicoPortalPaciente {
         ]);
       }
 
+      if (paciente.dataNascimento !== nascimentoAnterior) {
+        await invalidarContextoPiloto317(gerenciador, tenantId, { pacienteId: paciente.id });
+      }
       return this.mapearPerfilPaciente(await repositorio.save(paciente));
     });
   }
