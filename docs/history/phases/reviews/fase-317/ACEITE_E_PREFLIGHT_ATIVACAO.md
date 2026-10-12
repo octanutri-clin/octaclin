@@ -173,3 +173,25 @@ Checklist antes de disponibilizar: CI completo do HEAD corretivo; merge pelo
 proprietário; confirmação do SHA servido, role efetiva e processo de retenção;
 preflight em staging; liberação somente do gate global autorizado. Nenhuma flag,
 migration externa, deploy ou merge foi executado nesta correção.
+
+### Evidência RED/GREEN complementar
+
+Logs obtidos via GitHub connector confirmam RED no PostgreSQL descartável:
+run38320130301/job115046057491, baseline6bc0fa0e:7 FAIL/53 PASS.
+As seis idas/retornos (transferência, DOB console/portal, arquivamento de paciente,
+acesso de paciente e arquivamento de profissional) voltavam a expor o post;
+a corrida de cadastro mantinha membro ativo. Não houve falha de quota nesses7.
+
+Outro escritor relacionado é ServicoUsuariosCliente: desativação administrativa,
+revogação de convite e mudança de papel profissional. O teste novo reproduziu
+RED (primeira operação era update, sem serialização/revogação317). Os três caminhos
+agora adquirem o mesmo lock antes das linhas e invalidam o perfil do mesmo tenant
+na transação de revogação. Nova fixture PostgreSQL prova desativação administrativa
+seguida de reativação; o conjunto final contém32 casos317.
+
+Complemento local: backend309 suites/2725 PASS (85 condicionais SKIPPED), BFF8
+PASS, typecheck/build PASS, secrets e redacao PASS. Contagens correspondem à
+execução728fcd59, anterior ao complemento administrativo; este exige nova suite
+ampla e CI do HEAD final. Manifesto complementar preserva hashes dos logs,
+sem reescrever evidências/revisão anteriores. O relatório da PR registra a
+conclusão dos checks posteriores e links reproduzíveis.

@@ -1,3 +1,4 @@
+import { ServicoUsuariosCliente } from '../../clientes/aplicacao/servico-usuarios-cliente';
 import { randomUUID } from 'crypto';
 import { DataSource, DataSourceOptions } from 'typeorm';
 import { GenericContainer, StartedTestContainer, Wait } from 'testcontainers';
@@ -331,7 +332,7 @@ const executar = process.env.RLS_TESTCONTAINERS === 'true';
 
     }
   });
-  it.each(['nascimento-console','nascimento-portal','arquivamento-paciente','acesso-paciente','arquivamento-profissional'] as const)(
+  it.each(['nascimento-console','nascimento-portal','arquivamento-paciente','acesso-paciente','arquivamento-profissional','acesso-profissional-administrativo'] as const)(
     'ida e retorno de %s exigem novo aceite sem depender do cron', async caminho => {
       const cripto = new CriptografiaDadosSensiveis();
       const servico = new ServicoPacientes(executor,cripto,{checarLimite:async()=>({permitido:true})} as unknown as ServicoPortalCliente);
@@ -359,6 +360,10 @@ const executar = process.env.RLS_TESTCONTAINERS === 'true';
         } else if(caminho==='acesso-paciente') {
           await servico.desativarContaAcesso(prof.tenantId,pacienteId,gestor);
           await owner!.query('update usuarios set ativo=true where tenant_id=$1 and id=$2',[prof.tenantId,patient.usuarioId]);
+        } else if(caminho==='acesso-profissional-administrativo') {
+          const usuarios=new ServicoUsuariosCliente(executor,cripto,{} as never,{} as never,{} as never,{} as never);
+          await usuarios.desativar(prof.tenantId,gestor.usuarioId,prof.usuarioId);
+          await owner!.query('update usuarios set ativo=true where tenant_id=$1 and id=$2',[prof.tenantId,prof.usuarioId]);
         } else {
           await profissionais.arquivar(prof.tenantId,profId);
           await profissionais.restaurar(prof.tenantId,profId);

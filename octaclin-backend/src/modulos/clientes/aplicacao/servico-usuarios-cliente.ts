@@ -1,3 +1,4 @@
+import { bloquearContextoPiloto317, invalidarContextoPiloto317 } from '../../gamificacao/aplicacao/invalidar-contexto-piloto';
 import { createHash, randomBytes } from 'crypto';
 import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { EntityManager, In, IsNull } from 'typeorm';
@@ -255,6 +256,7 @@ export class ServicoUsuariosCliente {
     }
 
     await this.executorTenant.executar(tenantId, async (gerenciador) => {
+      await bloquearContextoPiloto317(gerenciador, tenantId);
       await this.obterUsuarioConvidavel(gerenciador, tenantId, usuarioId);
       await this.revogarTokensPendentes(gerenciador, tenantId, usuarioId, usuarioExecutorId, 'revogado');
       await gerenciador.getRepository(UsuarioOrm).update({ id: usuarioId, tenantId }, { ativo: false });
@@ -268,6 +270,7 @@ export class ServicoUsuariosCliente {
     }
 
     await this.executorTenant.executar(tenantId, async (gerenciador) => {
+      await bloquearContextoPiloto317(gerenciador, tenantId);
       const repositorio = gerenciador.getRepository(UsuarioOrm);
       const usuario = await repositorio.findOne({ where: { id: usuarioId, tenantId } });
       if (!usuario || !this.ehPapelAdministrativo(usuario.role)) {
@@ -290,6 +293,7 @@ export class ServicoUsuariosCliente {
     }
 
     return this.executorTenant.executar(tenantId, async (gerenciador) => {
+      await bloquearContextoPiloto317(gerenciador, tenantId);
       const repositorioUsuarios = gerenciador.getRepository(UsuarioOrm);
       const usuario = await repositorioUsuarios.findOne({ where: { id: usuarioId, tenantId } });
       if (!usuario || !this.ehPapelAdministrativo(usuario.role) || usuario.role === 'Client') {
@@ -354,6 +358,8 @@ export class ServicoUsuariosCliente {
     usuarioId: string,
     revogadorUsuarioId: string
   ): Promise<void> {
+    const perfis: {id:string}[] = await gerenciador.query('select id from profissionais where tenant_id=$1 and usuario_id=$2', [tenantId,usuarioId]);
+    for (const perfil of perfis) await invalidarContextoPiloto317(gerenciador,tenantId,{profissionalId:perfil.id});
     const agora = new Date();
     await gerenciador.getRepository(RefreshTokenOrm).update(
       { tenantId, usuarioId },
