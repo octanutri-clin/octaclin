@@ -15,6 +15,10 @@ import { ServicoGamificacao } from './servico-gamificacao';
 import { ServicoCirculosPiloto } from './servico-circulos-piloto';
 import { ServicoPublicacoesPiloto } from './servico-publicacoes-piloto';
 import { TERMO_COMUNIDADE, TERMO_CONQUISTAS } from '../dominio/piloto-gamificacao';
+import { ServicoPacientes } from '../../pacientes/aplicacao/servico-pacientes';
+import { ServicoPortalCliente } from '../../clientes/aplicacao/servico-portal-cliente';
+import { ServicoPortalPaciente } from '../../pacientes/aplicacao/servico-portal-paciente';
+import { ServicoProfissionais } from '../../profissionais/aplicacao/servico-profissionais';
 
 const executar = process.env.RLS_TESTCONTAINERS === 'true';
 (executar ? describe : describe.skip)('piloto317 PostgreSQL descartavel real', () => {
@@ -46,6 +50,10 @@ const executar = process.env.RLS_TESTCONTAINERS === 'true';
     const [pr]=await owner.query(`insert into profissionais(tenant_id,usuario_id,nome_criptografado) values($1,$2,$3) returning id`,[tenant.id,prof.usuarioId,new CriptografiaDadosSensiveis().criptografar('Profissional sintetico')]);profId=pr.id;
     const [p]=await owner.query(`insert into pacientes(tenant_id,usuario_id,profissional_responsavel_id,nome_criptografado,data_nascimento) values($1,$2,$3,$4,'1990-01-01') returning id`,[tenant.id,patient.usuarioId,profId,Buffer.from('paciente-sintetico')]);pacienteId=p.id;
     await config.atualizar(tenant.id,gestor,{conquistas:true,comunidade:true,versaoEsperada:0});
+  });
+  beforeEach(async () => {
+    // Isolate the quota window between cases; keep the ledger/tombstones intact.
+    await owner!.query("update comandos_gamificacao set criado_em=now()-interval '2 minutes' where tenant_id=$1 and usuario_id=$2 and acao like 'conteudo.%' and criado_em>now()-interval '1 minute'",[prof.tenantId,patient.usuarioId]);
   });
   afterAll(async () => {
     try { await runtime?.destroy(); } finally { try { await owner?.destroy(); } finally { await container?.stop(); process.env=envAntes; } }
@@ -298,4 +306,110 @@ const executar = process.env.RLS_TESTCONTAINERS === 'true';
     await expect(publicacoes.publicar(patient,r.id,{chave:randomUUID(),versaoEsperada:0,texto:'Texto apos saida'})).rejects.toThrow('Participacao indisponivel');
   });
 
+  it('transferencia e retorno antes do cron nao restauram consentimento nem conteudo', async () => {
+    const cripto = new CriptografiaDadosSensiveis();
+    await owner!.query('update pacientes set nome_criptografado=$2 where id=$1',[pacienteId,cripto.criptografar('Paciente sintetico')]);
+    const servico = new ServicoPacientes(executor,cripto,{} as ServicoPortalCliente);
+    const r = (await circulos.listar(prof,{})).itens.find(item=>item.estado==='ativo') ?? await circulos.criar(prof,{chave:randomUUID(),versaoEsperada:0,nome:'Ida e retorno sinteticos',objetivo:'Revogacao persistente'});
+    const anterior = await circulos.obterConvite(prof,r.id,pacienteId);
+    const convite = await circulos.convidar(prof,r.id,pacienteId,{chave:randomUUID(),versaoEsperada:anterior.versao});
+    await circulos.aceitar(patient,r.id,{chave:randomUUID(),versaoEsperada:convite.versao,geracao:convite.geracao,termoVersao:TERMO_COMUNIDADE,nomeExibicao:'Pessoa sintetica'});
+    const post = await publicacoes.publicar(patient,r.id,{chave:randomUUID(),versaoEsperada:0,texto:'Texto sintetico de ida e retorno'});
+    const [u] = await owner!.query(`insert into usuarios(tenant_id,email_hash,email_criptografado,senha_hash,role) values($1,$2,$3,'sintetica','Professional') returning id`,[prof.tenantId,randomUUID(),Buffer.from('sintetica')]);
+    const [pr] = await owner!.query('insert into profissionais(tenant_id,usuario_id,nome_criptografado) values($1,$2,$3) returning id',[prof.tenantId,u.id,cripto.criptografar('Profissional sintetico B')]);
+    try {
+      await servico.atualizar(prof.tenantId,pacienteId,{profissionalResponsavelId:pr.id},gestor);
+      await servico.atualizar(prof.tenantId,pacienteId,{profissionalResponsavelId:profId},gestor);
+      expect((await publicacoes.feed(prof,r.id,{})).itens.some(p=>p.id===post.id)).toBe(false);
+      await expect(publicacoes.publicar(patient,r.id,{chave:randomUUID(),versaoEsperada:0,texto:'Retorno sem novo aceite'})).rejects.toThrow();
+      const [m] = await owner!.query('select estado_piloto,revogado_em,eliminar_em from membros_circulo where tenant_id=$1 and circulo_id=$2 and paciente_id=$3',[prof.tenantId,r.id,pacienteId]);
+      expect(m.estado_piloto).toBe('revogado');
+      expect(m.revogado_em).not.toBeNull();
+      expect(m.eliminar_em).not.toBeNull();
+    } finally {
+      await owner!.query('update pacientes set profissional_responsavel_id=$2 where id=$1',[pacienteId,profId]);
+
+    }
+  });
+  it.each(['nascimento-console','nascimento-portal','arquivamento-paciente','acesso-paciente','arquivamento-profissional'] as const)(
+    'ida e retorno de %s exigem novo aceite sem depender do cron', async caminho => {
+      const cripto = new CriptografiaDadosSensiveis();
+      const servico = new ServicoPacientes(executor,cripto,{checarLimite:async()=>({permitido:true})} as unknown as ServicoPortalCliente);
+      const portal = new ServicoPortalPaciente(executor,cripto);
+      const profissionais = new ServicoProfissionais(executor,cripto,{} as never);
+      const r = (await circulos.listar(prof,{})).itens.find(item=>item.estado==='ativo')!;
+      expect(r).toBeDefined();
+      const anterior = await circulos.obterConvite(prof,r.id,pacienteId);
+      const convite = await circulos.convidar(prof,r.id,pacienteId,{chave:randomUUID(),versaoEsperada:anterior.versao});
+      await circulos.aceitar(patient,r.id,{chave:randomUUID(),versaoEsperada:convite.versao,geracao:convite.geracao,termoVersao:TERMO_COMUNIDADE,nomeExibicao:'Pessoa sintetica'});
+      const post = await publicacoes.publicar(patient,r.id,{chave:randomUUID(),versaoEsperada:0,texto:'Historico sintetico de retorno'});
+      const grant = await criar();
+      const share = await conquistas.compartilhar(prof,pacienteId,grant.id,{chave:randomUUID(),versaoEsperada:1,compartilhado:true});
+      await conquistas.consentir(patient,grant.id,{chave:randomUUID(),versaoEsperada:0,aceitar:true,geracao:share.geracao,termoVersao:TERMO_CONQUISTAS});
+      try {
+        if(caminho==='nascimento-console') {
+          await servico.atualizar(prof.tenantId,pacienteId,{dataNascimento:'1991-01-01'},gestor);
+          await servico.atualizar(prof.tenantId,pacienteId,{dataNascimento:'1990-01-01'},gestor);
+        } else if(caminho==='nascimento-portal') {
+          await portal.atualizarPerfil(prof.tenantId,patient.usuarioId,{dataNascimento:'1991-01-01'});
+          await portal.atualizarPerfil(prof.tenantId,patient.usuarioId,{dataNascimento:'1990-01-01'});
+        } else if(caminho==='arquivamento-paciente') {
+          await servico.arquivar(prof.tenantId,pacienteId,gestor);
+          await servico.restaurar(prof.tenantId,pacienteId,gestor);
+        } else if(caminho==='acesso-paciente') {
+          await servico.desativarContaAcesso(prof.tenantId,pacienteId,gestor);
+          await owner!.query('update usuarios set ativo=true where tenant_id=$1 and id=$2',[prof.tenantId,patient.usuarioId]);
+        } else {
+          await profissionais.arquivar(prof.tenantId,profId);
+          await profissionais.restaurar(prof.tenantId,profId);
+        }
+        expect((await publicacoes.feed(prof,r.id,{})).itens.some(p=>p.id===post.id)).toBe(false);
+        await expect(publicacoes.publicar(patient,r.id,{chave:randomUUID(),versaoEsperada:0,texto:'Sem renovacao'})).rejects.toThrow();
+        const [m] = await owner!.query('select estado_piloto,revogado_em,eliminar_em from membros_circulo where tenant_id=$1 and circulo_id=$2 and paciente_id=$3',[prof.tenantId,r.id,pacienteId]);
+        expect(m.estado_piloto).toBe('revogado');
+        expect(m.revogado_em).not.toBeNull();expect(m.eliminar_em).not.toBeNull();
+        expect((await conquistas.listarPortal(patient,{})).itens.some(g=>g.id===grant.id)).toBe(false);
+      } finally {
+        await owner!.query("update pacientes set data_nascimento='1990-01-01',arquivado_em=null where id=$1",[pacienteId]);
+        await owner!.query('update profissionais set arquivado_em=null where id=$1',[profId]);
+        await owner!.query('update usuarios set ativo=true where id in ($1,$2)',[patient.usuarioId,prof.usuarioId]);
+      }
+    });
+  it('arquivar autor historico nao revoga conquista compartilhada pelo responsavel atual',async()=>{
+    const cripto=new CriptografiaDadosSensiveis();
+    const servico=new ServicoPacientes(executor,cripto,{} as ServicoPortalCliente);
+    const profissionais=new ServicoProfissionais(executor,cripto,{} as never);
+    const grant=await criar();
+    const [u]=await owner!.query(`insert into usuarios(tenant_id,email_hash,email_criptografado,senha_hash,role) values($1,$2,$3,'sintetica','Professional') returning id`,[prof.tenantId,randomUUID(),Buffer.from('sintetica')]);
+    const [pr]=await owner!.query('insert into profissionais(tenant_id,usuario_id,nome_criptografado) values($1,$2,$3) returning id',[prof.tenantId,u.id,cripto.criptografar('Profissional atual sintetico')]);
+    const atual={...prof,usuarioId:u.id};
+    try {
+      await servico.atualizar(prof.tenantId,pacienteId,{profissionalResponsavelId:pr.id},gestor);
+      const share=await conquistas.compartilhar(atual,pacienteId,grant.id,{chave:randomUUID(),versaoEsperada:1,compartilhado:true});
+      await conquistas.consentir(patient,grant.id,{chave:randomUUID(),versaoEsperada:0,aceitar:true,geracao:share.geracao,termoVersao:TERMO_CONQUISTAS});
+      await profissionais.arquivar(prof.tenantId,profId);
+      expect((await conquistas.listarPortal(patient,{})).itens.some(g=>g.id===grant.id)).toBe(true);
+    } finally {
+      await owner!.query('update profissionais set arquivado_em=null where id=$1',[profId]);
+      await owner!.query('update usuarios set ativo=true where id=$1',[prof.usuarioId]);
+      await servico.atualizar(prof.tenantId,pacienteId,{profissionalResponsavelId:profId},gestor);
+    }
+  });
+  it('mudanca de cadastro concorrente com publicacao conserva revogacao apos retorno',async()=>{
+    const cripto=new CriptografiaDadosSensiveis();
+    const servico=new ServicoPacientes(executor,cripto,{} as ServicoPortalCliente);
+    const r=(await circulos.listar(prof,{})).itens.find(item=>item.estado==='ativo')!;
+    const anterior=await circulos.obterConvite(prof,r.id,pacienteId);
+    const invite=await circulos.convidar(prof,r.id,pacienteId,{chave:randomUUID(),versaoEsperada:anterior.versao});
+    await circulos.aceitar(patient,r.id,{chave:randomUUID(),versaoEsperada:invite.versao,geracao:invite.geracao,termoVersao:TERMO_COMUNIDADE,nomeExibicao:'Pessoa sintetica'});
+    const results=await Promise.allSettled([
+      publicacoes.publicar(patient,r.id,{chave:randomUUID(),versaoEsperada:0,texto:'Corrida sintetica de cadastro'}),
+      servico.atualizar(prof.tenantId,pacienteId,{dataNascimento:'1991-01-01'},gestor),
+    ]);
+    expect(results[1].status).toBe('fulfilled');
+    await servico.atualizar(prof.tenantId,pacienteId,{dataNascimento:'1990-01-01'},gestor);
+    expect((await publicacoes.feed(prof,r.id,{})).itens).toEqual([]);
+    const [m]=await owner!.query('select estado_piloto from membros_circulo where tenant_id=$1 and circulo_id=$2 and paciente_id=$3',[prof.tenantId,r.id,pacienteId]);
+    expect(m.estado_piloto).toBe('revogado');
+  });
 });
