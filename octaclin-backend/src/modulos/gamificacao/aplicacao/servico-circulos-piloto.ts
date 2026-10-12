@@ -1,3 +1,5 @@
+import { dataCivilHoje } from '../dominio/piloto-gamificacao';
+import { obterTimezoneClinicoDoTenant } from '../../../infraestrutura/tempo/timezone-clinico';
 import { ocultarAutorPiloto317 } from './invalidar-contexto-piloto';
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { randomUUID } from 'crypto';
@@ -33,9 +35,10 @@ export class ServicoCirculosPiloto {
         and p.arquivado_em is null and p.status_ciclo_vida='ACTIVE' and u.ativo=true and u.role='Patient'
         and pr.arquivado_em is null and pu.ativo=true and pu.role='Professional' and t.status='ativo'
       order by m.id limit 50 for share of p,u,pr,pu,t`,[c.u.tenantId,r.id,TERMO_COMUNIDADE,r.profissional_id]);
+    const hoje=c.hoje ?? dataCivilHoje(new Date(),await obterTimezoneClinicoDoTenant(c.m,c.u.tenantId));
     const result=new Map<string,PerfilMembro>();
     for (const row of rows) {
-      try { exigirAdulto(row.data_nascimento); } catch { continue; }
+      try { exigirAdulto(row.data_nascimento,hoje); } catch { continue; }
       let snapshot:SnapshotNome;
       try { snapshot=this.base.conteudo.ler<SnapshotNome>(`${c.u.tenantId}:membro:${row.id}:nome`,row.nome_criptografado); } catch { continue; }
       if (snapshot.dataNascimento!==row.data_nascimento || snapshot.profissionalId!==r.profissional_id || snapshot.usuarioId!==row.usuario_id) continue;

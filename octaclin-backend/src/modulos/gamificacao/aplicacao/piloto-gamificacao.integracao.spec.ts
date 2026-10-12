@@ -51,6 +51,10 @@ const executar = process.env.RLS_TESTCONTAINERS === 'true';
     const [p]=await owner.query(`insert into pacientes(tenant_id,usuario_id,profissional_responsavel_id,nome_criptografado,data_nascimento) values($1,$2,$3,$4,'1990-01-01') returning id`,[tenant.id,patient.usuarioId,profId,Buffer.from('paciente-sintetico')]);pacienteId=p.id;
     await config.atualizar(tenant.id,gestor,{conquistas:true,comunidade:true,versaoEsperada:0});
   });
+  beforeEach(async () => {
+    // Isolate the quota window between cases; keep the ledger/tombstones intact.
+    await owner!.query("update comandos_gamificacao set criado_em=now()-interval '2 minutes' where tenant_id=$1 and usuario_id=$2 and acao like 'conteudo.%' and criado_em>now()-interval '1 minute'",[prof.tenantId,patient.usuarioId]);
+  });
   afterAll(async () => {
     try { await runtime?.destroy(); } finally { try { await owner?.destroy(); } finally { await container?.stop(); process.env=envAntes; } }
   });
@@ -408,4 +412,64 @@ const executar = process.env.RLS_TESTCONTAINERS === 'true';
     const [m]=await owner!.query('select estado_piloto from membros_circulo where tenant_id=$1 and circulo_id=$2 and paciente_id=$3',[prof.tenantId,r.id,pacienteId]);
     expect(m.estado_piloto).toBe('revogado');
   });
+  it('novo convite e aceite nao republicam posts, filhos, reacoes ou comandos da geracao antiga',async()=>{
+    const cripto=new CriptografiaDadosSensiveis();
+    const servico=new ServicoPacientes(executor,cripto,{} as ServicoPortalCliente);
+    const r=(await circulos.listar(prof,{})).itens.find(item=>item.estado==='ativo')!;
+    const anterior=await circulos.obterConvite(prof,r.id,pacienteId);
+    const convite=await circulos.convidar(prof,r.id,pacienteId,{chave:randomUUID(),versaoEsperada:anterior.versao});
+    await circulos.aceitar(patient,r.id,{chave:randomUUID(),versaoEsperada:convite.versao,geracao:convite.geracao,termoVersao:TERMO_COMUNIDADE,nomeExibicao:'Pessoa sintetica'});
+    const comando={chave:randomUUID(),versaoEsperada:0,texto:'Post sintetico de geracao anterior'};
+    const post=await publicacoes.publicar(patient,r.id,comando);
+    const comentario=await publicacoes.comentar(patient,r.id,post.id,{chave:randomUUID(),versaoEsperada:0,texto:'Comentario sintetico anterior'});
+    await publicacoes.curtir(patient,r.id,post.id,undefined,{chave:randomUUID(),versaoEsperada:1,curti:true});
+    const cursor=publicacoes.base.conteudo.cursor(`${prof.tenantId}:${patient.usuarioId}:feed:${r.id}`,{data:new Date().toISOString(),id:post.id});
+    await servico.atualizar(prof.tenantId,pacienteId,{dataNascimento:'1991-01-01'},gestor);
+    await servico.atualizar(prof.tenantId,pacienteId,{dataNascimento:'1990-01-01'},gestor);
+    const revoked=await circulos.obterConvite(prof,r.id,pacienteId);
+    const novo=await circulos.convidar(prof,r.id,pacienteId,{chave:randomUUID(),versaoEsperada:revoked.versao});
+    expect(novo.geracao).toBeGreaterThan(convite.geracao);
+    await expect(publicacoes.feed(patient,r.id,{})).rejects.toThrow();
+    await circulos.aceitar(patient,r.id,{chave:randomUUID(),versaoEsperada:novo.versao,geracao:novo.geracao,termoVersao:TERMO_COMUNIDADE,nomeExibicao:'Pessoa sintetica'});
+    expect((await publicacoes.feed(patient,r.id,{})).itens).toEqual([]);
+    expect((await publicacoes.feed(patient,r.id,{cursor})).itens).toEqual([]);
+    await expect(publicacoes.publicar(patient,r.id,comando)).rejects.toThrow();
+    await expect(publicacoes.comentarios(patient,r.id,post.id,{})).rejects.toThrow();
+    await expect(publicacoes.curtir(patient,r.id,post.id,undefined,{chave:randomUUID(),versaoEsperada:1,curti:true})).rejects.toThrow();
+    const [p]=await owner!.query('select status from posts_comunidade where id=$1',[post.id]);
+    const [cm]=await owner!.query('select estado from comentarios_comunidade where id=$1',[comentario.id]);
+    expect(p.status).toBe('oculto');expect(cm.estado).toBe('oculto');
+    expect(await owner!.query('select id from curtidas_comunidade where post_id=$1',[post.id])).toEqual([]);
+    expect(await publicacoes.publicar(patient,r.id,{chave:randomUUID(),versaoEsperada:0,texto:'Nova autorizacao sintetica'})).toMatchObject({estado:'publicado'});
+  });
+  it('timezone efetivo do tenant revalida leituras e acoes na fronteira dos 18 anos',async()=>{
+    const [anterior]=await owner!.query("select valor from tenant_configuracoes where tenant_id=$1 and chave='conta_cliente'",[prof.tenantId]);
+    const globalAntes=process.env.GOOGLE_CALENDAR_TIMEZONE;
+    try {
+      await owner!.query("insert into tenant_configuracoes(tenant_id,chave,valor) values($1,'conta_cliente',$2) on conflict(tenant_id,chave) do update set valor=excluded.valor",[prof.tenantId,{timezone:'America/Rio_Branco'}]);
+      await owner!.query("update pacientes set data_nascimento='2008-10-13' where id=$1",[pacienteId]);
+      process.env.GOOGLE_CALENDAR_TIMEZONE='America/Sao_Paulo';
+      // Only Date is virtual: PG sockets, timeout and microtasks remain real.
+      jest.useFakeTimers({doNotFake:['nextTick','queueMicrotask','performance','hrtime','setTimeout','clearTimeout','setInterval','clearInterval','setImmediate','clearImmediate']});
+      jest.setSystemTime(new Date('2026-10-13T04:59:59.999Z'));
+      await expect(conquistas.listarPortal(patient,{})).rejects.toThrow();
+      await expect(circulos.listar(patient,{})).rejects.toThrow();
+      await expect(criar()).rejects.toThrow();
+      jest.setSystemTime(new Date('2026-10-13T05:00:00.000Z'));
+      await expect(conquistas.listarPortal(patient,{})).resolves.toHaveProperty('itens');
+      await expect(circulos.listar(patient,{})).resolves.toHaveProperty('itens');
+      await expect(criar()).resolves.toHaveProperty('id');
+      // A subsequent request resolves the tenant configuration again.
+      await owner!.query("update tenant_configuracoes set valor=$2 where tenant_id=$1 and chave='conta_cliente'",[prof.tenantId,{timezone:'Pacific/Honolulu'}]);
+      await expect(conquistas.listarPortal(patient,{})).rejects.toThrow();
+      await expect(criar()).rejects.toThrow();
+    } finally {
+      jest.useRealTimers();
+      if(globalAntes===undefined) delete process.env.GOOGLE_CALENDAR_TIMEZONE;else process.env.GOOGLE_CALENDAR_TIMEZONE=globalAntes;
+      await owner!.query("update pacientes set data_nascimento='1990-01-01' where id=$1",[pacienteId]);
+      if(anterior) await owner!.query("update tenant_configuracoes set valor=$2 where tenant_id=$1 and chave='conta_cliente'",[prof.tenantId,anterior.valor]);
+      else await owner!.query("delete from tenant_configuracoes where tenant_id=$1 and chave='conta_cliente'",[prof.tenantId]);
+    }
+  });
+
 });

@@ -8,8 +8,8 @@ export const TERMO_COMUNIDADE = '317-comunidade-v1';
 export const MAX_MEMBROS = 50;
 export const MAX_CIRCULOS = 5;
 
-export function dataCivilHoje(agora = new Date()): string {
-  return new Intl.DateTimeFormat('en-CA', { timeZone: obterTimezoneClinico(), year: 'numeric', month: '2-digit', day: '2-digit' }).format(agora);
+export function dataCivilHoje(agora = new Date(), timezone = obterTimezoneClinico()): string {
+  return new Intl.DateTimeFormat('en-CA', { timeZone: timezone, year: 'numeric', month: '2-digit', day: '2-digit' }).format(agora);
 }
 
 export function exigirAdulto(nascimento: string | undefined, hoje = dataCivilHoje()): void {

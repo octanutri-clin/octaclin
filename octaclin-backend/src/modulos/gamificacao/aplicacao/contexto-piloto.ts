@@ -1,10 +1,11 @@
+import { obterTimezoneClinicoDoTenant } from '../../../infraestrutura/tempo/timezone-clinico';
 import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException, HttpException } from '@nestjs/common';
 import { createHash } from 'crypto';
 import { EntityManager } from 'typeorm';
 import { ExecutorTenant } from '../../../infraestrutura/banco-dados/executor-tenant';
 import { CriptografiaDadosSensiveis } from '../../../infraestrutura/seguranca/criptografia-dados-sensiveis';
 import { UsuarioAutenticado } from '../../auth/dominio/usuario-autenticado';
-import { exigirAdulto, exigirAutorProfissional } from '../dominio/piloto-gamificacao';
+import { dataCivilHoje, exigirAdulto, exigirAutorProfissional } from '../dominio/piloto-gamificacao';
 import { ServicoConfiguracaoPiloto } from './servico-configuracao-piloto';
 
 @Injectable()
@@ -33,7 +34,7 @@ export class ConteudoPiloto {
 }
 
 export interface PacientePiloto { id: string; profissional_responsavel_id: string; usuario_id: string | null; data_nascimento: string }
-export interface ContextoPiloto { m: EntityManager; u: UsuarioAutenticado; paciente?: PacientePiloto; profissionalId?: string }
+export interface ContextoPiloto { m: EntityManager; u: UsuarioAutenticado; paciente?: PacientePiloto; profissionalId?: string; hoje?: string }
 export interface ComandoPiloto { chave: string; versaoEsperada: number }
 
 function normalizar(v: unknown): unknown {
@@ -61,7 +62,7 @@ export class ContextoGamificacaoPiloto {
         const [session] = await m.query('select id from sessoes_usuario where tenant_id=$1 and usuario_id=$2 and id=$3 and revogado_em is null and expira_em>now() for share', [u.tenantId,u.usuarioId,u.sessaoId]);
         if (!session) throw new ForbiddenException('Sessao indisponivel.');
       }
-      const c: ContextoPiloto = { m, u };
+      const c: ContextoPiloto = { m, u, hoje: dataCivilHoje(new Date(), await obterTimezoneClinicoDoTenant(m,u.tenantId)) };
       if (u.papel === 'Professional') {
         const profissionais = await m.query(`select id from profissionais where tenant_id=$1 and usuario_id=$2 and arquivado_em is null for share`, [u.tenantId,u.usuarioId]);
         if (profissionais.length!==1) throw new ForbiddenException('Acesso nao autorizado.');
@@ -77,7 +78,7 @@ export class ContextoGamificacaoPiloto {
         const pacientes = await m.query(sql, [u.tenantId,u.usuarioId]);
         const p = pacientes.length===1 ? pacientes[0] : undefined;
         if (!p) throw new ForbiddenException('Participacao indisponivel.');
-        if (!privacidade) exigirAdulto(p.data_nascimento); c.paciente=p;
+        if (!privacidade) exigirAdulto(p.data_nascimento,c.hoje); c.paciente=p;
       }
       return operacao(c);
     });
@@ -88,7 +89,7 @@ export class ContextoGamificacaoPiloto {
     const [p] = await c.m.query(`select id,usuario_id,profissional_responsavel_id,data_nascimento::text from pacientes
       where tenant_id=$1 and id=$2 and profissional_responsavel_id=$3 and arquivado_em is null and status_ciclo_vida='ACTIVE' for update`, [c.u.tenantId,id,c.profissionalId]);
     if (!p) throw new NotFoundException('Paciente nao encontrado no escopo.');
-    exigirAdulto(p.data_nascimento); return p;
+    exigirAdulto(p.data_nascimento,c.hoje); return p;
   }
 
   async comando<T>(c: ContextoPiloto, acao: string, alvo: string, d: ComandoPiloto, corpo: unknown, executar: () => Promise<T>, quota?: 'conteudo' | 'reacao' | 'denuncia'): Promise<T> {

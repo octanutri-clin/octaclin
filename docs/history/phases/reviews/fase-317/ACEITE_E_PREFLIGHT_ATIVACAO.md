@@ -130,3 +130,46 @@ do SHA final. G05 permanece pendente até as correções serem integradas e serv
 preflight do processo/retencão e atualização do gate global literal true. A
 confirmação atual autoriza essa atualização após os requisitos; não repetir aceite.
 Merge de PR corretiva não foi autorizado e continua sob decisão do proprietário.
+
+## Complemento: timezone efetivo e geração de comandos
+
+A configuração canônica por clínica é `tenant_configuracoes`, chave
+`conta_cliente`, campo `timezone` (contrato de ServicoPortalCliente). O contexto317
+agora resolve essa configuração no servidor, com tenant autenticado e leitura
+transacional; na ausência utiliza o resolvedor clínico legado validado. Cada
+requisição recalcula a data civil efetiva; browser/UTC não substituem o fuso.
+A mesma data é utilizada para autor, paciente alvo e participantes projetados.
+Revogação/saída continuam disponíveis pelo caminho restrito de privacidade.
+
+Publicação e comentário incluem a geração vigente no fingerprint do comando.
+Repetição na mesma geração permanece idempotente. Nonces anteriores à mudança
+ou de participação revogada são recusados com conflito; não recriam conteúdo nem
+retornam sucesso de uma geração antiga. Clientes devem conferir e gerar nova
+chave. Tombstones, conteúdo ocultado e prazos anteriores são preservados.
+
+Novas provas sintéticas: fronteiras dos18 anos em Rio Branco, São Paulo e
+Kiritimati; nascimento29/02 e datas inválidas; PostgreSQL com configuração
+persistida divergente do fuso global, alteração de timezone entre requisições;
+novo convite/aceite, post/comentário/curtida antigos, cursor anterior e replay.
+A suite PG prevê31 casos317, além das regressões gerais de RLS.
+
+O primeiro CI da407 (38319696104) falhou em4 fixtures novas por quota429,
+com56 testes PG passando. A correção isola apenas a janela temporal dos comandos
+entre casos; preserva ledger e limites do produto, incluindo quota dentro de
+cada caso. Não é evidência RED da vulnerabilidade.
+
+Para provar RED no banco real, o branch de testes `test/fase-317-red-baseline`
+(6bc0fa0e) contém somente testes sobre a main315dd35c, sem runtime corretivo.
+O backend do dispatch38320130301 falhou; o diagnóstico será registrado após
+obtenção dos logs. Localmente, os REDs de fuso original e ausência do override
+explícito estão preservados. A prova PG local permanece impedida por disco.
+
+O proprietário dispensou uma nova revisão independente. A revisão favorável
+anterior cobre exclusivamente o diff examinado naquela rodada; não se atribui
+revisão independente ao complemento de timezone/fingerprint. O aceite e a
+autorização global permanecem registrados, sem nova solicitação.
+
+Checklist antes de disponibilizar: CI completo do HEAD corretivo; merge pelo
+proprietário; confirmação do SHA servido, role efetiva e processo de retenção;
+preflight em staging; liberação somente do gate global autorizado. Nenhuma flag,
+migration externa, deploy ou merge foi executado nesta correção.

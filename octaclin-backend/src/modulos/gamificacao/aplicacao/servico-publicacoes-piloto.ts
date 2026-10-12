@@ -38,7 +38,7 @@ export class ServicoPublicacoesPiloto {
     this.paciente(u);const texto=this.texto(d.texto,2000);
     return this.base.executar(u,'comunidade',async c=>{
       const a=await this.ambiente(c,id),m=a.perfis.get(c.paciente!.id)!;
-      return this.base.comando(c,'conteudo.post.publicar',id,d,{texto},async()=>{
+      return this.base.comando(c,'conteudo.post.publicar',id,d,{texto,geracao:m.geracao},async()=>{
         if(d.versaoEsperada!==0) throw new BadRequestException('Versao inicial invalida.');
         const postId=randomUUID(),bytes=this.base.conteudo.cifrar(`${u.tenantId}:post:${postId}:1`,texto);
         await c.m.query(`insert into posts_comunidade(id,tenant_id,circulo_id,paciente_id,conteudo,status,modelo_versao,autor_usuario_id,geracao_membro,conteudo_criptografado)
@@ -52,7 +52,7 @@ export class ServicoPublicacoesPiloto {
     this.paciente(u);const texto=this.texto(d.texto,500);
     return this.base.executar(u,'comunidade',async c=>{
       const a=await this.ambiente(c,id);await this.post(a,postId);const m=a.perfis.get(c.paciente!.id)!;
-      return this.base.comando(c,'conteudo.comentario.publicar',`${id}:${postId}`,d,{texto},async()=>{
+      return this.base.comando(c,'conteudo.comentario.publicar',`${id}:${postId}`,d,{texto,geracao:m.geracao},async()=>{
         if(d.versaoEsperada!==0) throw new BadRequestException('Versao inicial invalida.');
         const commentId=randomUUID(),bytes=this.base.conteudo.cifrar(`${u.tenantId}:comentario:${commentId}:1`,texto);
         await c.m.query(`insert into comentarios_comunidade(id,tenant_id,circulo_id,post_id,paciente_id,autor_usuario_id,geracao_membro,conteudo_criptografado)
