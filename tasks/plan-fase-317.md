@@ -2,7 +2,7 @@
 
 ## Branch/base/worktree
 
-`docs/fase-317-planejamento`, base `origin/main a84921fb`, worktree
+`feature/fase-317-gamificacao`, base `origin/main a84921fb`, worktree
 `/workspace/octaclin/.worktrees/docs-fase-317-planejamento`. Main com alteração
 preexistente `octaclin-web/next-env.d.ts` preservada.316 pausada em worktree própria,
 branch `research/fase-316-motores`, último commit de pausa `9b638613`; não herdar
@@ -11,7 +11,9 @@ código experimental nem retomar pesquisa daquela fase automaticamente.
 ## Objetivo autorizado
 
 Planejar/analisar conquistas privadas **e comunidade** no console/portal para
-adultos>=18. Implementação/ativação não autorizadas nesta etapa.
+adultos>=18. Implementação técnica autorizada pelo proprietário após o planejamento; piloto
+continua desligado. Testes novos/regressões/banco descartável/gates autorizados.
+Sem merge/deploy/migrations externas ou ativação.
 [Plano/gaps/contratos](../docs/history/phases/PLANO_FASE_317.md),
 [T00–T16](todo-fase-317.md),
 [contrato draft](../docs/product/CONTRATO_PILOTO_GAMIFICACAO_FASE_317.md),

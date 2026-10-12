@@ -1,6 +1,7 @@
 # Checklist — Fase 317
 
-Autorizado: planejamento/gaps. Execução futura NÃO INICIADA.
+Implementação técnica e testes autorizados pelo proprietário em2026-10-12.
+Piloto desativado; sem migrations externas, merge, deploy ou ativação.
 [Plano](../docs/history/phases/PLANO_FASE_317.md), [handoff](plan-fase-317.md).
 Escopo recebido: conquistas e comunidade, console/portal, adultos>=18, aceite.
 D01–11 confirmadas; D12 técnica, contrato detalhado; autorização de implementação
@@ -31,7 +32,7 @@ links/diff; sem tratar perguntas aprovadas como release operacional.
 Checkpoint C01: nenhuma tarefa de runtime começa sem T01. Pode resultar em
 adiar comunidade se moderação/privacidade não forem viáveis; D01 não é NO-GO atual.
 
-## T02 — Definir gates de clínica e elegibilidade (NOT_STARTED)
+## T02 — Definir gates de clínica e elegibilidade (IN_PROGRESS)
 
 Dependências: C01. Scope M por slice; `dtos-piloto.ts`, serviço/configuração,
 controller e specs no módulo atual; BFF de ativação em slice separado.
@@ -234,3 +235,11 @@ Autorização de implementação/revisão operacional de termos e moderação PE
 Código/migrations/testes de implementação/builds/CI/banco externo NOT_RUN.
 Somente validações documentais ao finalizar esta rodada; registrar resultados reais
 no handoff. Nenhuma autorização de implementação inferida da seleção de escopo.
+
+### Execução inicial
+
+T02: domínio e configuração administrativa implementados;20 testes novos PASS
+após RED por módulos ausentes. Node22.23.3/pnpm11.25.0, instalação congelada.
+Build PASS; restantes registros de execução serão atualizados após cada slice.
+T03: teste da migration1070 escrito, RED; código da migration ainda não adicionado.
+Gate operacional ausente mantém piloto indisponível, sem alterar flags antigas.

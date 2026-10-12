@@ -1,3 +1,5 @@
+import { ServicoConfiguracaoPiloto } from './aplicacao/servico-configuracao-piloto';
+import { ControladorConfiguracaoPiloto, ControladorOperacoesPiloto } from './apresentacao/controlador-configuracao-piloto';
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ServicoAuditoria } from '../../infraestrutura/auditoria/servico-auditoria';
@@ -37,8 +39,8 @@ import { PostComunidadeOrm } from './infraestrutura/post-comunidade.orm';
     ModuloAuth,
     ModuloTenancy
   ],
-  controllers: [ControladorGamificacao],
-  providers: [ServicoGamificacao, ServicoAuditoria],
+  controllers: [ControladorGamificacao, ControladorConfiguracaoPiloto, ControladorOperacoesPiloto],
+  providers: [ServicoGamificacao, ServicoConfiguracaoPiloto, ServicoAuditoria],
   exports: [ServicoGamificacao]
 })
 export class ModuloGamificacao {}

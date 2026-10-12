@@ -2,10 +2,11 @@
 
 ## Autorização, base e estado
 
-Planejamento/análise de gaps autorizados em 2026-10-12. Implementação ainda não
-iniciada nem autorizada por esta etapa. `origin/main` conferida por fetch: `a84921fb`,
+Planejamento/análise de gaps autorizados em 2026-10-12. Implementação técnica autorizada em2026-10-12 após consolidação do plano;
+testes novos, regressões, banco descartável e gates autorizados pelo proprietário.
+Ativação, merge, deploy e migrations externas permanecem não autorizados. `origin/main` conferida por fetch: `a84921fb`,
 merge da Fase315/PR395. Worktree `docs-fase-317-planejamento`, branch
-`docs/fase-317-planejamento`, criada diretamente dessa base, sem carregar commits
+`feature/fase-317-gamificacao`, criada diretamente dessa base, sem carregar commits
 experimentais da316. Checkout principal e seus arquivos preexistentes preservados.
 A316 permanece em stand-by por decisão do proprietário; não retomar automaticamente.
 
