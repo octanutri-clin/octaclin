@@ -2,7 +2,7 @@
 #
 # Base fixada por digest imutavel (indice OCI multi-arch linux/amd64+arm64),
 # resolvido em 2026-09-28 no Docker Hub oficial
-# (library/node:22.23.2-alpine3.24). A tag humana permanece para legibilidade;
+# (library/node:22.23.3-alpine3.24). A tag humana permanece para legibilidade;
 # o digest e a ancora real. Atualizacao do
 # digest segue o processo em docs/governance/RELATORIO_SEGURANCA_PR50_2026-09-01.md
 # (Dependabot/humano -> scan -> build -> harness -> SBOM -> review -> merge).
@@ -11,7 +11,12 @@
 # partir do ambiente, e build sensivel nao deve baixar package manager implicito.
 # A versao precisa continuar igual a de package.json e do CI; o gate
 # `pnpm test:versao-pnpm` falha se divergirem.
-FROM node:22.23.3-alpine3.24@sha256:0a7108bf6c7bf5de370ffb1a3ed6be93d405b43ff159f681a8d18c0e2bc2e402 AS deps
+# A base compartilhada corrige zlib tambem nos estagios de build. O runtime
+# herda o artefato pronto e continua sem instalacao de pacotes no estagio final.
+FROM node:22.23.3-alpine3.24@sha256:0a7108bf6c7bf5de370ffb1a3ed6be93d405b43ff159f681a8d18c0e2bc2e402 AS base
+RUN apk add --no-cache --upgrade zlib=1.3.2-r1
+
+FROM base AS deps
 WORKDIR /app
 RUN corepack enable && corepack prepare pnpm@11.25.0 --activate
 # Sem glob: o lockfile e obrigatorio. `pnpm-lock.yaml*` deixava o build seguir
@@ -20,7 +25,7 @@ RUN corepack enable && corepack prepare pnpm@11.25.0 --activate
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 RUN pnpm install --frozen-lockfile
 
-FROM node:22.23.3-alpine3.24@sha256:0a7108bf6c7bf5de370ffb1a3ed6be93d405b43ff159f681a8d18c0e2bc2e402 AS build
+FROM base AS build
 WORKDIR /app
 RUN corepack enable && corepack prepare pnpm@11.25.0 --activate
 COPY --from=deps /app/node_modules ./node_modules
@@ -29,13 +34,13 @@ RUN pnpm build
 
 # Dependencias de producao resolvidas aqui, ainda no modo congelado. O estagio
 # final so recebe artefatos: sem corepack, sem pnpm, sem instalacao no runtime.
-FROM node:22.23.3-alpine3.24@sha256:0a7108bf6c7bf5de370ffb1a3ed6be93d405b43ff159f681a8d18c0e2bc2e402 AS deps-prod
+FROM base AS deps-prod
 WORKDIR /app
 RUN corepack enable && corepack prepare pnpm@11.25.0 --activate
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 RUN pnpm install --prod --frozen-lockfile
 
-FROM node:22.23.3-alpine3.24@sha256:0a7108bf6c7bf5de370ffb1a3ed6be93d405b43ff159f681a8d18c0e2bc2e402 AS runtime
+FROM base AS runtime
 WORKDIR /app
 ENV NODE_ENV=production
 # SQ-1B: o backend inicia diretamente por Node e nao instala pacotes no

@@ -365,3 +365,12 @@ Depois da rotacao:
 3. Validar `/health`.
 4. Validar login.
 5. Validar integracao afetada.
+
+## Fase317 — gate operacional da gamificação
+
+`GAMIFICACAO_PILOTO_OPERACAO_APROVADA`: somente o literal `true` autoriza o gate
+operacional do backend; ausente/qualquer outro valor mantém o piloto indisponível.
+Além disso, cada clínica precisa habilitar explicitamente suas flags novas de
+conquistas/comunidade. Flags legadas e aceite da clínica não autorizam pacientes.
+Não configurar em staging/produção sem aprovação operacional expressa, termos,
+moderação e gates da317 comprovados. Esta implementação não altera ambientes.

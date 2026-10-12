@@ -1,0 +1,22 @@
+{
+  "date": "2026-10-12",
+  "base": "a84921fbb4ec98ac267ef262362080698d03e03e",
+  "branch": "docs/fase-317-planejamento",
+  "scope": "Read-only source inspection and planning; no runtime or implementation tests",
+  "sha256": {
+    "octaclin-backend/src/modulos/gamificacao/aplicacao/servico-gamificacao.ts": "615c1e70b8d807ddca4e84ae19bcfdbff193b90de842e5795fe6893816a40ac4",
+    "octaclin-backend/src/modulos/gamificacao/aplicacao/dtos.ts": "b85965ada2379bdd98c4fec135f1673af72a516e3f8fda671cc2f5cac9015133",
+    "octaclin-backend/src/modulos/gamificacao/apresentacao/controlador-gamificacao.ts": "6f24929f96f55f38355c0704eae09fe92de41524ff25e155aaf17ca1b7d5433c",
+    "octaclin-backend/src/modulos/gamificacao/dominio/moderacao.ts": "66c9b3f21c3fa8835e361b9063bc09b34ecb7387e71f46794d36873b4fccb47b",
+    "octaclin-backend/src/infraestrutura/banco-dados/migracoes/1720000000000-CriarFundacaoOctaClin.ts": "29414c36ed78731d1736bf301b0182062e16b64c769ae7b0f01ae32d8f541841",
+    "octaclin-backend/src/infraestrutura/seguranca/escopo-profissional.ts": "dd95ea81f8d06b4c889dbb7acfe6424858cfd96ace2cbc19fe64ffc8add434a7",
+    "octaclin-backend/src/modulos/pacientes/aplicacao/servico-gestacoes-paciente.ts": "854beb0e396f6e0e3103d738bc45ab0777ff81e0aee0a9798e11f741f8c35cf6",
+    "octaclin-backend/src/modulos/auth/dominio/permissoes.ts": "5d96ddd03bad5c42a57b7e095747185b8ef597e959bbe92d29354327d5dce0cd",
+    "octaclin-web/components/gamificacao/painel-gamificacao.tsx": "d9f3e6c2c67b97d67f1cbd2440ae9a154a7cddf807319d82fb4d450e986be6c8",
+    "octaclin-web/lib/gamificacao-api.ts": "8e4b2375a9d5d22e8ade59930cdaf14cc174dcc4b76c55038da9667d52b0dc7e",
+    "octaclin-web/tests/visual/acessibilidade.spec.mjs": "b6ddca554b1173053ffc6fecd7baeed304abf333b25408d7321e0d5cebb1ca94"
+  },
+  "external_databases": "NOT_QUERIED",
+  "ci": "NOT_QUERIED",
+  "phase316": "STAND_BY; no code or research commits carried into this branch"
+}

@@ -1,0 +1,257 @@
+{
+  "base": "a84921fbb4ec98ac267ef262362080698d03e03e",
+  "receivedHead": "68d34203e9499ea5178bde6c410ebb974bf9cb88",
+  "scope": "diff da Fase 317, incluindo correções locais desta rodada",
+  "reviewType": "manual-assisted-second-pass",
+  "independent": false,
+  "sources": [
+    {
+      "path": "octaclin-backend/scripts/test-rls-testcontainers.mjs",
+      "sha256": "60ce40475f7bd48b5b88eb3cfa36b33e96c0cd719af7dc936cfa8e57b269e671"
+    },
+    {
+      "path": "octaclin-backend/src/infraestrutura/banco-dados/migracoes/1720000001070-PilotoGamificacao.spec.ts",
+      "sha256": "092af9785ed2339767dfd30e68d0a83763ff2d6ffe3e77af8304e7716a178ea2"
+    },
+    {
+      "path": "octaclin-backend/src/infraestrutura/banco-dados/migracoes/1720000001070-PilotoGamificacao.ts",
+      "sha256": "feec7a6c17434ae264f138e3efe5efff20614d27137523b858d2639e544c71c9"
+    },
+    {
+      "path": "octaclin-backend/src/infraestrutura/banco-dados/opcoes-typeorm.ts",
+      "sha256": "6caeabf965b282a062a45601c9b36f27c2e44f617c2fc6a220ae20785642724f"
+    },
+    {
+      "path": "octaclin-backend/src/modulos/gamificacao/aplicacao/contexto-piloto.spec.ts",
+      "sha256": "7acd856884b1c6a6c43bf220b70f332caee7863220cf569cacf5c0cde91ed117"
+    },
+    {
+      "path": "octaclin-backend/src/modulos/gamificacao/aplicacao/contexto-piloto.ts",
+      "sha256": "e7130f24ac082672abec2078f3671043020c1a1c43948282012de86152e4e5f2"
+    },
+    {
+      "path": "octaclin-backend/src/modulos/gamificacao/aplicacao/dtos-piloto.ts",
+      "sha256": "eb6e4205f61c75f0889045ae9e3a24a56c85753e2839c4af6a24a5b0c1baa163"
+    },
+    {
+      "path": "octaclin-backend/src/modulos/gamificacao/aplicacao/piloto-gamificacao.integracao.spec.ts",
+      "sha256": "b0ff10e1a515d65fc10615ef5addf1aee1c418c1eef51293e3d70875ebb12222"
+    },
+    {
+      "path": "octaclin-backend/src/modulos/gamificacao/aplicacao/processador-retencao-piloto.spec.ts",
+      "sha256": "278b46b8034368eb96eb2f4e9c0f57e7d4f805f637c94600be2f2145bee56fb3"
+    },
+    {
+      "path": "octaclin-backend/src/modulos/gamificacao/aplicacao/processador-retencao-piloto.ts",
+      "sha256": "9cf32f8e76e1ba576865a9ed973abc218eddac3d1fb7649ff42bdba1320ec4b8"
+    },
+    {
+      "path": "octaclin-backend/src/modulos/gamificacao/aplicacao/servico-circulos-piloto.spec.ts",
+      "sha256": "031b5fe7ceaa3c67fcfe68bd98baa753f52ce068a270b8474f79acbf686c804e"
+    },
+    {
+      "path": "octaclin-backend/src/modulos/gamificacao/aplicacao/servico-circulos-piloto.ts",
+      "sha256": "dd69da34f5f5e68efe9a5afd1ec77d8a4539afabcfe94e1e00c7fd7e93571a4b"
+    },
+    {
+      "path": "octaclin-backend/src/modulos/gamificacao/aplicacao/servico-configuracao-piloto.spec.ts",
+      "sha256": "193e51148f5a313dbdab8068591aa92e815f9855fa31329f589f476fc3d25658"
+    },
+    {
+      "path": "octaclin-backend/src/modulos/gamificacao/aplicacao/servico-configuracao-piloto.ts",
+      "sha256": "ee4c2b02fa8628431396f4925376fc754bceb339ba573a5aecb03d80f1b363b2"
+    },
+    {
+      "path": "octaclin-backend/src/modulos/gamificacao/aplicacao/servico-conquistas-piloto.spec.ts",
+      "sha256": "a56c7d49a046016c8834d1a641213ad9bbc97fc537d336ba9c0578e6739d9b73"
+    },
+    {
+      "path": "octaclin-backend/src/modulos/gamificacao/aplicacao/servico-conquistas-piloto.ts",
+      "sha256": "09bfe4ed5e2bd152a54983531e38003f40fafc93687e867eafc460cbf73ac5dd"
+    },
+    {
+      "path": "octaclin-backend/src/modulos/gamificacao/aplicacao/servico-excecao-retencao-piloto.spec.ts",
+      "sha256": "fdc04b888278b7f8e0507d711c129282ec92285c1056102b68efa9b42e660cd0"
+    },
+    {
+      "path": "octaclin-backend/src/modulos/gamificacao/aplicacao/servico-excecao-retencao-piloto.ts",
+      "sha256": "1daae005a7378bb6a4a2d27fd18254c470fe167d017fccdaf164798cbd06fc37"
+    },
+    {
+      "path": "octaclin-backend/src/modulos/gamificacao/aplicacao/servico-gamificacao.ts",
+      "sha256": "80f3ac62cb769da9e840d1cd4fd66ca409b65b6ff5b4670686760370f7f3096e"
+    },
+    {
+      "path": "octaclin-backend/src/modulos/gamificacao/aplicacao/servico-moderacao-piloto.spec.ts",
+      "sha256": "b1e3155477fe0e3a6a53a4618b1326d01de893e3b3a6980fac746094d37dba7e"
+    },
+    {
+      "path": "octaclin-backend/src/modulos/gamificacao/aplicacao/servico-moderacao-piloto.ts",
+      "sha256": "497a90b2e2ebf306eb58ce689165967ed64906559cbf94c9ff0c52184ebd361b"
+    },
+    {
+      "path": "octaclin-backend/src/modulos/gamificacao/aplicacao/servico-publicacoes-piloto.spec.ts",
+      "sha256": "6c52dc673c5213584a41de4ea85cdbfb04e8051373a26ff4dac8073cf9e5af46"
+    },
+    {
+      "path": "octaclin-backend/src/modulos/gamificacao/aplicacao/servico-publicacoes-piloto.ts",
+      "sha256": "ba1f0a1e1662a98877db1bbbdd946f6ff3546aedd3055b2f6248ca73f4fbb8de"
+    },
+    {
+      "path": "octaclin-backend/src/modulos/gamificacao/aplicacao/servico-retencao-piloto.spec.ts",
+      "sha256": "388f74d0bafbbba013da1568ca36289e1b64c40b770d795d551d5dd798d8d322"
+    },
+    {
+      "path": "octaclin-backend/src/modulos/gamificacao/aplicacao/servico-retencao-piloto.ts",
+      "sha256": "93920969ea7c96fdf609ea614f890bd19dac2e8ca5a82bc39961e2130cd35f88"
+    },
+    {
+      "path": "octaclin-backend/src/modulos/gamificacao/apresentacao/controlador-configuracao-piloto.ts",
+      "sha256": "8b7a64788b5f869bd400ab6fcc3045d64333d874bc2cc7694ddc00f969ee4fdc"
+    },
+    {
+      "path": "octaclin-backend/src/modulos/gamificacao/apresentacao/controladores-piloto.http.spec.ts",
+      "sha256": "17cbb010ebaf4d4d02be56c821c3b5f07cbb6e3d229b3e054c52b82799cabc0c"
+    },
+    {
+      "path": "octaclin-backend/src/modulos/gamificacao/apresentacao/controladores-piloto.spec.ts",
+      "sha256": "b749bca57ce961428d68d9f85d35706e8b6bf4ec30b6689ec818f1a3442972c3"
+    },
+    {
+      "path": "octaclin-backend/src/modulos/gamificacao/apresentacao/controladores-piloto.ts",
+      "sha256": "81206de1249d322ccae87c13d533533847be1c38b6786881f17f1b20659382ec"
+    },
+    {
+      "path": "octaclin-backend/src/modulos/gamificacao/dominio/piloto-gamificacao.spec.ts",
+      "sha256": "766cf8104af2b990df21223dc28548dab184d37e88a73e5c79eb3cd1fe95cc5f"
+    },
+    {
+      "path": "octaclin-backend/src/modulos/gamificacao/dominio/piloto-gamificacao.ts",
+      "sha256": "f46a097780050a985b55655cc27ba6deba9813f534d8c8611953aa2c47ca20ce"
+    },
+    {
+      "path": "octaclin-backend/src/modulos/gamificacao/infraestrutura/circulo-pacientes.orm.ts",
+      "sha256": "31389787ff59e1dcdb6cc2aaa1f09b749e937dff893cd304fb2945851961605d"
+    },
+    {
+      "path": "octaclin-backend/src/modulos/gamificacao/infraestrutura/comando-gamificacao.orm.ts",
+      "sha256": "dcc4f24557e90eafe35f03b93026dbd9fa62bbfab87c7e1c0cd30e3c81d24509"
+    },
+    {
+      "path": "octaclin-backend/src/modulos/gamificacao/infraestrutura/comentario-comunidade.orm.ts",
+      "sha256": "08313e3aba96900b1fe851ee69cf491242e40bedd8f494973bef5ba72d1a5d00"
+    },
+    {
+      "path": "octaclin-backend/src/modulos/gamificacao/infraestrutura/consentimento-conquista.orm.ts",
+      "sha256": "befc171e98c7f032b89bf5287416481c9413ad4e1354b5965772caf8f0cc6f92"
+    },
+    {
+      "path": "octaclin-backend/src/modulos/gamificacao/infraestrutura/curtida-comunidade.orm.ts",
+      "sha256": "7d3a7ce3ae61bc8e3356b48c03fa4d44bfc98ee65f92face155c9869e9d3108a"
+    },
+    {
+      "path": "octaclin-backend/src/modulos/gamificacao/infraestrutura/denuncia-comunidade.orm.ts",
+      "sha256": "5270c641c7586979bddabf02fcfdddba69f1e58c7617a618d74a75865bd0d551"
+    },
+    {
+      "path": "octaclin-backend/src/modulos/gamificacao/infraestrutura/membro-circulo.orm.ts",
+      "sha256": "4e4615cf28e201c643176422dc3273ed49ad5807a49086e2817e7487ada95eca"
+    },
+    {
+      "path": "octaclin-backend/src/modulos/gamificacao/infraestrutura/paciente-badge.orm.ts",
+      "sha256": "b563c1c3fd092a375a2c01274bd9fc4bb72370f7f9cc0a7b99bf540f3521c4d0"
+    },
+    {
+      "path": "octaclin-backend/src/modulos/gamificacao/infraestrutura/post-comunidade.orm.ts",
+      "sha256": "053e4c386c07c9f523e6433cbc1bf223d37517577f0a6220ae41537bba3392db"
+    },
+    {
+      "path": "octaclin-backend/src/modulos/gamificacao/infraestrutura/revisao-publicacao.orm.ts",
+      "sha256": "cf4ba0600ca7a8a9f33cb7d6b18f1bab2fedca408813d6898d1a5d8569e3c2d2"
+    },
+    {
+      "path": "octaclin-backend/src/modulos/gamificacao/modulo-gamificacao.ts",
+      "sha256": "caba33b4c9711f0763ec74e9fbf10ce2bd38f2b0206483ada607f356faa38569"
+    },
+    {
+      "path": "octaclin-web/app/api/gamificacao-piloto/configuracao/retencao/route.ts",
+      "sha256": "e46d7d150bf4e7e0f2f760a16aea2bfeb2df8f0117e44416e5bb980ea4a0d1dc"
+    },
+    {
+      "path": "octaclin-web/app/api/gamificacao-piloto/configuracao/route.ts",
+      "sha256": "73f9bc42ea6e198b1c9482425850924173582d1bd6edfe62486215f94067afe5"
+    },
+    {
+      "path": "octaclin-web/app/api/gamificacao-piloto/console/route.ts",
+      "sha256": "5a5a2da90c81cd39cae6c294a4d7a59e35987d8b4bb9728712036a24b4832c19"
+    },
+    {
+      "path": "octaclin-web/app/api/gamificacao-piloto/portal/route.ts",
+      "sha256": "37ff9aa4557295d1cba0d890e3e73393a8eb00bf993b09fb06f60b37bf726d68"
+    },
+    {
+      "path": "octaclin-web/app/cliente/gamificacao-piloto/page.tsx",
+      "sha256": "8f9f4634a98b533fc2a04af6ff949832f3028ca09d30ddf59f620015e3131aec"
+    },
+    {
+      "path": "octaclin-web/app/gamificacao/piloto/page.tsx",
+      "sha256": "410a87736c49dd9f642e525c6634385bebd1ae022d4ca76d8fbb2e0a0dea2e5c"
+    },
+    {
+      "path": "octaclin-web/app/portal/gamificacao/page.tsx",
+      "sha256": "bb09ad629700156d42e5dca2c1214044dbfb2651c722b1ea94368d5ec095fd94"
+    },
+    {
+      "path": "octaclin-web/components/cliente/portal-cliente.tsx",
+      "sha256": "f1cada48c19d8a6a3e61d86525c4f9c86775a5fa11fb1f12de1d741f4a270cd2"
+    },
+    {
+      "path": "octaclin-web/components/gamificacao/configuracao-piloto.tsx",
+      "sha256": "a6f5ab32395b49f0b01e752c973f03ca37ea178ac1633702521a6d839304933f"
+    },
+    {
+      "path": "octaclin-web/components/gamificacao/painel-profissional-piloto.tsx",
+      "sha256": "204772ace31036436c62127118627f16b0af4ecc44f05209ca5f3e2a0f923107"
+    },
+    {
+      "path": "octaclin-web/components/portal/gamificacao-piloto-portal.tsx",
+      "sha256": "8e6390604edf64bb6b9e2fcb9a15ce72e6ccb0675331b2c51f310576a50f8153"
+    },
+    {
+      "path": "octaclin-web/components/portal/portal-paciente.tsx",
+      "sha256": "d24ada4267c07efd495682fa2754faa806141a1f77d1ce0c71027c0a74dfd617"
+    },
+    {
+      "path": "octaclin-web/lib/gamificacao-piloto-api.ts",
+      "sha256": "1fc9257687a723a42b2286ca360a1cc8f2efeb8bd4c8a5d73d48fd05cd1ef381"
+    },
+    {
+      "path": "octaclin-web/lib/server/gamificacao-piloto-bff.ts",
+      "sha256": "1ce8fdc7c513dd112d1de7be3266ed3b72331f580dea6ae4a14c38078bfef42d"
+    },
+    {
+      "path": "octaclin-web/package.json",
+      "sha256": "ddadcbd0701e07de066ca3ed9220512d8b7ac542ecd9efa5aed1a3c03cd28af1"
+    },
+    {
+      "path": "octaclin-web/scripts/fase-317-bff.spec.ts",
+      "sha256": "57da0800eda75fb83ece0182576e5c3f4dc1629c76fa866d3f00b33b8fd8d7fd"
+    },
+    {
+      "path": "octaclin-web/scripts/test-fase-317-bff.mjs",
+      "sha256": "98dc50658454d62fae5be45aa1a7489550a7aee9dc7936633cecd332d2cc7a0f"
+    },
+    {
+      "path": "octaclin-web/tests/visual/fase-317-gamificacao.spec.mjs",
+      "sha256": "dbcf723e06067bc22c6d17ff44f515f77e08314e3cbfb1788ee7f8fa7ffcd2c5"
+    },
+    {
+      "path": "octaclin-web/tests/visual/portal-paciente.spec.mjs",
+      "sha256": "ecf203874a1d1b465b25d2410d4fa77c9203bfd63a377c9570c140e432821c3e"
+    },
+    {
+      "path": "scripts/validar-redacao-auditoria.mjs",
+      "sha256": "18f4a6a21af68abd2cc8c234c4d6a2eb3c18313e6f329ecad668eda375eeed20"
+    }
+  ]
+}

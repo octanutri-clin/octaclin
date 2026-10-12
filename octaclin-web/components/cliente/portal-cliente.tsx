@@ -1,6 +1,8 @@
 'use client';
 
 import { AlertTriangle, ShieldCheck } from 'lucide-react';
+import Link from 'next/link';
+import type { Route } from 'next';
 import { PortalShell } from '@/components/app/portal-shell';
 import { Abas } from '@/components/ui/abas';
 import { ModalConfirmacao } from '@/components/ui/modal';
@@ -31,9 +33,12 @@ export function PortalCliente() {
   } = portal;
 
   const acoesCabecalho = (
-    <div className="inline-flex w-fit items-center gap-2 rounded-md border border-linha bg-superficie px-3 py-2 text-sm font-medium text-texto-forte">
-      <ShieldCheck className="h-4 w-4 text-primaria" />
-      Acesso profissional separado
+    <div className="flex flex-wrap items-center gap-3">
+      <div className="inline-flex w-fit items-center gap-2 rounded-md border border-linha bg-superficie px-3 py-2 text-sm font-medium text-texto-forte">
+        <ShieldCheck className="h-4 w-4 text-primaria" />
+        Acesso profissional separado
+      </div>
+      <Link className="text-sm font-semibold text-primaria underline" href={'/cliente/gamificacao-piloto' as Route}>Disponibilidade do piloto</Link>
     </div>
   );
 

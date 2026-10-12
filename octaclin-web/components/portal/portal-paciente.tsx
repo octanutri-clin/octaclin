@@ -356,6 +356,7 @@ const linksPortal = [
   { href: '/portal/formularios', rotulo: 'Formulários' },
   { href: '/portal/mensagens', rotulo: 'Mensagens' },
   { href: '/portal/perfil', rotulo: 'Perfil' },
+  { href: '/portal/gamificacao', rotulo: 'Conquistas e círculos' },
   { href: '/portal/privacidade', rotulo: 'Privacidade' },
   { href: '/portal/mais', rotulo: 'Mais' }
 ];
@@ -1216,7 +1217,7 @@ export function PortalPaciente({ secao }: { secao: SecaoPortal }) {
                   <CartaoTitulo icone={<Menu className="h-4 w-4" />}>Mais opções</CartaoTitulo>
                 </CartaoCabecalho>
                 <CartaoConteudo className="grid gap-3 sm:grid-cols-2">
-                  {linksPortal.slice(5, 9).map((item) => (
+                  {linksPortal.slice(5).filter((item) => item.href !== '/portal/mais').map((item) => (
                     <Link
                       key={item.href}
                       href={item.href as Route}

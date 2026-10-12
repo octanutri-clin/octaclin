@@ -1,0 +1,107 @@
+{
+  "base": "a84921fbb4ec98ac267ef262362080698d03e03e",
+  "receivedHead": "68d34203e9499ea5178bde6c410ebb974bf9cb88",
+  "independent": false,
+  "externalMigrations": false,
+  "activation": false,
+  "merge": false,
+  "deploy": false,
+  "checks": [
+    {
+      "name": "PG piloto",
+      "command": "RLS_TESTCONTAINERS=true pnpm exec jest --runInBand src/modulos/gamificacao/aplicacao/piloto-gamificacao.integracao.spec.ts",
+      "status": "PASS",
+      "detail": "21/21, migrations/role sem bypass em container descartável",
+      "logLocal": "/tmp/f317-r4-pg-final.log",
+      "sha256": "0b733ca85f180ae674449010d67a41620b885883f2804912e2170819694e7632"
+    },
+    {
+      "name": "Jest focal",
+      "command": "pnpm exec jest --runInBand src/modulos/gamificacao src/infraestrutura/banco-dados/migracoes/1720000001070-PilotoGamificacao.spec.ts",
+      "status": "PASS",
+      "detail": "16 suites/76 testes; 21 PG skipped nessa invocação e executados separadamente",
+      "logLocal": "/tmp/f317-r4-unit.log",
+      "sha256": "ebeb37724553c3d7bd77aee581b81702f3fae71fcd4de0a1fe062842fdc71188"
+    },
+    {
+      "name": "BFF",
+      "command": "pnpm test:fase317:bff",
+      "status": "PASS",
+      "detail": "8/8"
+    },
+    {
+      "name": "Playwright",
+      "command": "E2E_REUSE_EXISTING_SERVER=true pnpm exec playwright test tests/visual/fase-317-gamificacao.spec.mjs --project=desktop-chromium --project=mobile-chromium",
+      "status": "PASS",
+      "detail": "12/12; seis cenários originais também executam axe"
+    },
+    {
+      "name": "Backend typecheck/build",
+      "command": "pnpm typecheck && pnpm build",
+      "status": "PASS",
+      "detail": "tsc e artefato dist/main.js validados"
+    },
+    {
+      "name": "Web build final",
+      "command": "pnpm build",
+      "status": "PASS",
+      "detail": "build final concluído, servidor dev encerrado",
+      "logLocal": "/tmp/f317-r4-web-build-final.log",
+      "sha256": "d7b0729b95a70e381075426abec9f08971eeb825790b8153f8824632408ee98c"
+    },
+    {
+      "name": "Web lint focal",
+      "command": "pnpm exec eslint <arquivos modificados da fase>",
+      "status": "PASS",
+      "detail": "0 errors/0 warnings"
+    },
+    {
+      "name": "Web authz",
+      "command": "pnpm test:authz",
+      "status": "PASS",
+      "detail": "24 resumos TAP completos sem falhas; script restante usa resumo textual. Última suite Fase317 8/8.",
+      "logLocal": "/tmp/f317-r4-authz.log",
+      "sha256": "1c321f93c46e9f35693acae7975455b3736527b6a755db1b35a06332902c5bc2"
+    },
+    {
+      "name": "Auditoria de migrations",
+      "command": "pnpm audit:migracoes-fora-de-banda",
+      "status": "PASS",
+      "detail": "83 declaradas, 81 fora de banda; não executa DDL"
+    },
+    {
+      "name": "Redação da auditoria",
+      "command": "pnpm audit:redacao-auditoria",
+      "status": "PASS",
+      "detail": "209 chaves/201 call sites",
+      "logLocal": "/tmp/f317-r4-audit.log",
+      "sha256": "350ca8df5df3d0e0693ecb6627f8c69c1cbb82970b4a722ddab0ba2dc389ce71"
+    },
+    {
+      "name": "Segredos",
+      "command": "pnpm security:secrets",
+      "status": "PASS",
+      "detail": "nenhum secret real identificado pelos padrões locais"
+    },
+    {
+      "name": "Whitespace",
+      "command": "git diff --check",
+      "status": "PASS",
+      "detail": "sem erros"
+    },
+    {
+      "name": "Regressão do smoke mobile",
+      "command": "E2E_REUSE_EXISTING_SERVER=true pnpm exec playwright test tests/visual/portal-paciente.spec.mjs --project=desktop-chromium --project=mobile-chromium --grep='navega por rotas reais com um unico carregamento'",
+      "status": "PASS",
+      "detail": "2/2. Cinco atalhos mantidos; conquistas e privacidade em Mais; um carregamento do portal."
+    },
+    {
+      "name": "Build web após menu",
+      "command": "pnpm build",
+      "status": "PASS",
+      "detail": "exit0; build final após R4-06.",
+      "logLocal": "/tmp/f317-r4-web-build-menu.log",
+      "sha256": "908bc8cb15cc62dc0d6a872a97f2c31faa3f69061f701cd8320b542c37340123"
+    }
+  ]
+}

@@ -257,6 +257,7 @@ jobs:
       # Rodam antes do build: sao rapidos e falham cedo quando um contrato muda.
       - run: pnpm test:authz
       - run: pnpm test:apis-dinamicas
+      - run: pnpm test:css-security
       - run: pnpm build
       - run: pnpm test:seguranca-runtime
 

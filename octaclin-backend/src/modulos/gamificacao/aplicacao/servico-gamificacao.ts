@@ -1,5 +1,5 @@
 import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
-import { EntityManager, IsNull } from 'typeorm';
+import { EntityManager, IsNull, Raw } from 'typeorm';
 import { ExecutorTenant } from '../../../infraestrutura/banco-dados/executor-tenant';
 import { resolverProfissionalIdDoUsuario } from '../../../infraestrutura/seguranca/escopo-profissional';
 import { UsuarioAutenticado } from '../../auth/dominio/usuario-autenticado';
@@ -75,7 +75,7 @@ export class ServicoGamificacao {
       await this.exigirRecurso(gerenciador, tenantId, 'comunidade');
       const profissionalId = await resolverProfissionalIdDoUsuario(gerenciador, tenantId, usuario);
       return gerenciador.getRepository(CirculoPacientesOrm).find({
-        where: { tenantId, ...(profissionalId ? { profissionalId } : {}) },
+        where: { tenantId, modeloVersao: 1, ...(profissionalId ? { profissionalId } : {}) },
         order: { criadoEm: 'DESC' },
         take: 100
       });
@@ -218,7 +218,7 @@ export class ServicoGamificacao {
     return this.executorTenant.executar(tenantId, async (gerenciador) => {
       await this.exigirRecurso(gerenciador, tenantId, 'metasBadges');
       return gerenciador.getRepository(BadgeOrm).find({
-        where: { tenantId },
+        where: { tenantId, regraConquista: Raw(alias => `coalesce(${alias}->>'modelo','')<>'317'`) },
         order: { nome: 'ASC' },
         take: 100
       });
@@ -248,7 +248,7 @@ export class ServicoGamificacao {
     return this.executorTenant.executar(tenantId, async (gerenciador) => {
       await this.exigirRecurso(gerenciador, tenantId, 'metasBadges');
       const badge = await gerenciador.getRepository(BadgeOrm).findOne({ where: { id: dados.badgeId, tenantId } });
-      if (!badge) throw new NotFoundException('Badge nao encontrado no escopo da gamificacao.');
+      if (!badge || badge.regraConquista?.modelo===317) throw new NotFoundException('Badge nao encontrado no escopo da gamificacao.');
       const profissionalId = await resolverProfissionalIdDoUsuario(gerenciador, tenantId, usuario);
       await this.validarPaciente(gerenciador, tenantId, dados.pacienteId, profissionalId);
       return gerenciador.getRepository(PacienteBadgeOrm).save(
@@ -328,7 +328,7 @@ export class ServicoGamificacao {
   ): Promise<CirculoPacientesOrm> {
     const profissionalId = await resolverProfissionalIdDoUsuario(gerenciador, tenantId, usuario);
     const circulo = await gerenciador.getRepository(CirculoPacientesOrm).findOne({
-      where: { id: circuloId, tenantId, ...(profissionalId ? { profissionalId } : {}) }
+      where: { id: circuloId, tenantId, modeloVersao: 1, ...(profissionalId ? { profissionalId } : {}) }
     });
     if (!circulo) throw new NotFoundException('Circulo nao encontrado no escopo da gamificacao.');
     return circulo;
