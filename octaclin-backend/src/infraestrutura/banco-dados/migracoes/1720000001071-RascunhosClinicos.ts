@@ -61,7 +61,7 @@ export class RascunhosClinicos1720000001071 implements MigrationInterface {
       "proveniencias_ia318",
     ])
       await q.query(`alter table ${table} enable row level security;alter table ${table} force row level security;
-      create policy tenant_isolation on ${table} using(tenant_id=current_setting('app.tenant_id',true)::uuid) with check(tenant_id=current_setting('app.tenant_id',true)::uuid);`);
+      create policy tenant_isolation on ${table} using(tenant_id=nullif(current_setting('app.tenant_id',true),'')::uuid) with check(tenant_id=nullif(current_setting('app.tenant_id',true),'')::uuid);`);
   }
   async down(q: QueryRunner): Promise<void> {
     if (!q.isTransactionActive)

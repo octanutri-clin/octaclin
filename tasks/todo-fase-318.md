@@ -91,6 +91,7 @@ clínico depende de contrato/finalidade/base legal. Não herdar consentimento317
 - [ ] Revisão efetiva da equipe, rubrica congelada e modelo/custo aprovados antes do ensaio.
 - [x] T04–T06/T08–T09 implementadas tecnicamente; validações finais em andamento.
 - [ ] T01–T03: harness/corpus técnico preparado; rubrica humana e comparação real pendentes.
-- [ ] T07/T10/T11: provas PostgreSQL do CI, UI e revisão final pendentes.
+- [x] T10: Playwright/axe desktop/mobile8PASS; builds/typechecks/lint locais PASS.
+- [ ] T07/T11: PR Draft408 aberta; revisão de sessão concluída; doze provasPG e CI final pendentes.
 - [ ] T12: BLOCKED — nenhuma liberação operacional.
 - [x] Runtime técnico isolado e migration1071 nova; sem alteração de ambientes externos.

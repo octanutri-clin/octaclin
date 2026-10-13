@@ -155,6 +155,27 @@ const executar =
       conteudo: "Texto sintético revisado.",
       confirmado: true,
     });
+    it("tenant vazio depois de reset nao expoe linhas nem causa cast UUID", async () => {
+      const q = runtime.createQueryRunner();
+      await q.connect();
+      await q.startTransaction();
+      try {
+        await q.query("select set_config('app.tenant_id','',true)");
+        for (const tabela of [
+          "credenciais_ia318",
+          "comandos_ia318",
+          "proveniencias_ia318",
+        ]) {
+          const [row] = await q.query(
+            `select count(*)::int total from ${tabela}`,
+          );
+          expect(row.total).toBe(0);
+        }
+      } finally {
+        await q.rollbackTransaction();
+        await q.release();
+      }
+    });
     it("marcador antigo bloqueia fontes geracao e configuracao antes de gravar", async () => {
       provider.gerar.mockClear();
       const nonce = randomUUID();

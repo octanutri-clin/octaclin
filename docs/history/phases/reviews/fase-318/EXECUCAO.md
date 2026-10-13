@@ -127,3 +127,21 @@ Governança local passou confiabilidade/redação/migrations/guardas/actions;
 preflight PowerShell BLOCKED por ausência de pwsh no ambiente, sem afrouxar teste.
 CI precisa confirmar esse gate. Secrets/diff-check PASS após as correções.
 G01/G02/G05 continuam BLOCKED; G03/G04 aguardam revisão corrigida e CI.
+
+## CI408 — primeira execução e correção focal
+
+PR única Draft: https://github.com/octanutri-clin/octaclin/pull/408.
+HEAD48d9e8ba/run38431988071: governança/mobile/AI/CodeQL/Semgrep/Trivy e imagens
+PASS. Backend2842PASS/41SKIPPED/2FAIL: inventário RLS e tenant vazio; os onze testes
+PG318 PASS. A policy1071 faltava NULLIF para app.tenant_id vazio. Corrigida na
+migration nova ainda não integrada/aplicada externamente, preservando1070.
+Teste estático RED1FAIL/3PASS, GREEN4PASS; adicionada provaPG de leitura vazia
+nas três tabelas318 (doze testes). Não afrouxados os testes gerais de RLS.
+Web FAIL pelo any do novo teste318; substituído por Record<string,unknown>.
+BFF final5PASS, lint local65warnings/0erros, builds/typechecks web/backend PASS.
+PR Gate apenas agregou falhas backend/web; smoke não executado nessa rodada.
+Rechecagem estática das duas correções de sessão no48d9e8ba: sem P1/P2 residual
+concreto, limitada aos dois achados; não ratificação clínica/humana.
+Inventário Code Scanning via REST BLOCKED403 (integração sem permissão); execução
+CodeQL PASS não significa ausência comprovada de alertas no repositório.
+CI do próximo HEAD obrigatório antes de concluir G03/G04.

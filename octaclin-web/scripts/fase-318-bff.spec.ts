@@ -175,7 +175,7 @@ test("318 limita leitura do corpo antes de alocar todo o stream", async () => {
 test("318 encaminha marcador no corpo das fontes e da geracao, sem URL", async () => {
   const old = global.fetch;
   await login();
-  const calls: { url: string; method: string; body: any }[] = [];
+  const calls: { url: string; method: string; body: Record<string, unknown> }[] = [];
   global.fetch = (async (url, init) => {
     calls.push({
       url: String(url),
