@@ -186,7 +186,8 @@ export class ContextoRascunhos318 {
       this.gravarCredencial(c, d.versaoEsperada, null, d.contextoSessao),
     );
   }
-  private async gravarCredencial(
+  /** Escrita compartilhada: caller deve autorizar finalidade e executar no contexto verificado. */
+  async gravarCredencial(
     c: Contexto318,
     esperada: number,
     chave: string | null,

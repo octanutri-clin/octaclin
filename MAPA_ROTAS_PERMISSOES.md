@@ -246,3 +246,18 @@ Reutiliza os papéis e guardas atuais de pacientes. Não adiciona permissões ou
 rotas ao portal. Compartilhamento pediátrico é rejeitado no backend e excluído
 das projeções legadas do portal. Protocolos clínicos não ratificados não são
 ativáveis por payload, papel ou variável de ambiente.
+
+## Piloto sintético318
+
+Tela existente `/integracoes`: área explícita de revisão sintética. Não cria
+rota pública nem usa contexto de paciente. BFF existente `POST /api/ia/rascunhos`
+aceita ações fechadas piloto-catalogo/piloto-previa/piloto-gerar/piloto-definir-credencial;
+exige Professional, ia.executar, pacientes.gerenciar, sessão e origem de mutação.
+
+Backend autenticado `/ia/rascunhos/piloto`: GETcatalogo, POSTprevia, POSTgerar,
+PUTcredencial. Os mesmos guards e revalidação interna318, SID vigente, flag
+sintética e grant atual por tenant/ator/profissional. Nenhuma seleção de tenant,
+pacienteId, texto livre, URL de provider ou fonte enviada pelo navegador.
+Sem endpoint de confirmar/salvar em prontuário; remoção de chave mantém o caminho
+individual318existente, disponível mesmo com gates desabilitados. Cadastro/chamada
+sintéticos também exigem direitos próprios, desativados por padrão.

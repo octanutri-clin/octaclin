@@ -384,3 +384,17 @@ Não habilitar antes de G01/G02/G03/G04 e autorização operacional. Não cadast
 chaves individuais nos envs; a cópia autorizada futura usa cifra e escopo próprio.
 `IA318_PG_DESCARTAVEL=true` é exclusivo do jobCI com PostgreSQL sintético local,
 sem caminho para DATABASE_URL de staging/produção. Não é flag do produto.
+
+## Piloto sintético318 — controle separado
+
+`IA318_PILOTO_SINTETICO_ATIVO`: default ausente/false; somente literal `true`
+permite consultar o grant específico por tenant/usuário/profissional. A flag
+não aprova direitos, não permite dados clínicos e não altera o gate318clínico.
+Não inclui IDs em variáveis públicas/NEXT_PUBLIC nem aceita target do navegador.
+Configuração externa exige autorização operacional, ambiente/role identificados
+e checklist em `docs/history/phases/reviews/fase-318/PILOTO_SINTETICO_EXECUCAO.md`.
+Grant interno `ia318_piloto_sintetico`: habilitada, usuarioId, profissionalId,
+versao positiva e monotônica; escrita somente pela operação autorizada sob lock.
+Direitos sintéticosfalse permanecem constantes de código com aprovação revisada;
+nenhuma env/chave/checkbox pode ratificar o contrato. Direitos clínicosfalse e
+catálogo clínico vazio continuam independentes. Sem nova migration.

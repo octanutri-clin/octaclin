@@ -1,3 +1,4 @@
+import { PilotoSintetico318 } from '@/components/ia/piloto-sintetico318';
 import { CredencialIa318 } from '@/components/ia/credencial-ia318';
 import type { Metadata } from 'next';
 import { ConsoleShell } from '@/components/app/console-shell';
@@ -10,6 +11,7 @@ export default function IntegracoesProfissionalPage() {
     <ConsoleShell titulo="Integrações" subtitulo="Acesse somente os escopos e eventos liberados pelo gestor da clínica.">
       <IntegracoesApiCliente modo="profissional" />
       <CredencialIa318 />
+      <PilotoSintetico318 />
     </ConsoleShell>
   );
 }
