@@ -297,3 +297,37 @@ continua dependente de chave por canal seguro e orçamento autorizado; não envi
 chave nesta conversa. Nenhuma dessas autorizações foi inferida de “continue”
 no planejamento. Próxima entrega prevista: implementação técnica única/Draft,
 Sol6.1 médio suficiente; sem transição de modelo necessária para o núcleoR4.
+
+## 10. Implementação técnica autorizada — 2026-10-13
+
+Esta seção atualiza o estado operacional e os nomes de endpoints propostos nas
+seções anteriores, preservadas como histórico. Autorizados desenvolvimento,
+testes sintéticos e uma PR Draft. Não autorizados chamadas pagas, dados reais,
+DDL externo, merge/deploy/ativação. As revisões humanas continuam pendentes.
+
+Implementação: `/ia/rascunhos/modelos`, `/credencial` (GET/PUT/DELETE),
+`/pacientes/:id/fontes`, `/pacientes/:id/pre-consulta`, `/pacientes/:id/evolucao`,
+`/pacientes/:id/confirmar`, `/configuracao` (Client). SuperAdmin somente em
+`/operacoes/tenants/:tenantId/ia-rascunhos`, usando o escopo administrativo
+verificado existente; nunca fontes, rascunhos ou chaves de terceiros.
+BFF único POST `/api/ia/rascunhos`, ações fechadas e projeções explícitas.
+
+Migration1071 nova/aditiva; nenhum DDL externo. Não existe tabela de rascunhos.
+Persistem credencial cifrada, ledger sem texto e proveniência cifrada da evolução
+aceita. Prova de revisão cifrada/15min apenas na tela; confirmação revalida antes
+de replay. Uma geração cria no máximo uma evolução mesmo com nonces diferentes.
+Fontes identificadas como F1… no fornecedor, sem UUIDs clínicos externos.
+Contagens de preparação cobrem toda a janela desde a última consulta concluída;
+não reutilizam a truncagem dos arrays do resumo legado. Não alteram esse resumo.
+
+Limites server-side: contexto12000 caracteres/20fontes, nota6000,3evoluções e
+3medidas; resposta512KiB/6000 caracteres. Clínica pode reduzir de5chamadas/15min e
+2048tokens de saída (mínimo256); modelo pode impor teto inferior. Valores inválidos
+na configuração não habilitam a integração. Tarifas datadas são informativas, não
+garantia de fatura. Sem retries pagos automáticos; timeout não implica estorno.
+
+Catálogo clínico vazio e aprovação contratual `false` em código. Variáveis ou
+configuração da clínica isoladamente não podem liberar geração/custódia BYOK.
+Mudar esses bloqueios exige evidências G01/G02 e autorização correspondente.
+G03/G04 permanecem BLOCKED até provas finais, R4 e CI; ledger informa estado real.
+T01 contém corpus/harness offline propostos; não é benchmark de qualidade clínica.

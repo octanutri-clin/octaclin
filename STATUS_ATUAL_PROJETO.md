@@ -4,16 +4,16 @@ Atualizado em 2026-10-13.
 
 ## Fase ativa
 
-- **Fase318 em planejamento/análise de gaps**, autorizados em2026-10-13,
-  sem implementação ou PoC. D01–03 confirmadas: pré-consulta/rascunho de evolução,
+- **Fase318 em implementação técnica isolada**, autorizada em2026-10-13,
+  sem chamada real ou ativação. D01–03 confirmadas: pré-consulta/rascunho de evolução,
   somente responsável atual no console. D02 foi revisada depois para API externa
   com chave própria OpenAI individual/habilitação pela clínica confirmados.
   Sem chamadas pagas ou dados reais autorizados nesta pesquisa.
   Seleção mínima de fontes e revisão jurídica pela equipe confirmadas; rascunho só na tela, catálogo aprovado e proprietário/equipe revisora confirmados.
-  Revisões efetivas/autorização de implementação ainda pendentes.
+  Revisões clínica/contratual efetivas pendentes; desenvolvimento técnico autorizado.
   Plano `docs/history/phases/PLANO_FASE_318.md`, handoff `tasks/plan.md`,
   checklist `tasks/todo-fase-318.md`. G00PASS inspeção; G01/G02/G05BLOCKED;
-  G03/G04SKIPPED. Sol6.1 médio suficiente; não trocar modelo sem aviso/pausa.
+  G03/G04BLOCKED até provas finais/CI; ledger318 registra os testes. Sol6.1 médio suficiente; não trocar modelo sem aviso/pausa.
 - Fase317 integrada pelas PRs405/407. Merge407 `8ea67a08` e CI main
   `38324741937` SUCCESS reconfirmados no GitHub neste ciclo. Correções de
   revogação persistente/contexto e timezone por tenant integradas; aceites e

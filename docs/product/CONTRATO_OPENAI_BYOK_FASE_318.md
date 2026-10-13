@@ -151,3 +151,31 @@ telemetria somente agregada/minimizada conforme política vigente.
 Revisão humana dos30casos pelo proprietário/equipe foi assumida, não executada.
 CorpusREV0 em CORPUS_REVISAO_FASE_318.md. G01 valor e G02 direitos/privacidade/
 qualidade continuamBLOCKED; permissões de produto não os marcamPASS.
+
+## 8. Contrato técnico concretizado em2026-10-13
+
+Endpoints e limites efetivos: seção10 do PLANO_FASE_318.md. Prova cifrada inclui
+ator/tenant/paciente/sessão/gerações, fonte/data/hash, modelo/política e digest da
+saída. Não é autenticação. Proveniência não duplica as fontes ou o rascunho bruto:
+registra os digests e versões, junto da evolução humana aceita cifrada. Permite
+rastrear a operação; não promete regenerar texto idêntico de um modelo remoto.
+
+Retenção da proveniência segue o prontuário; trigger bloqueia escrita/remoção
+pela role runtime. Rollback com dados é recusado. Revogação da credencial remove
+somente a cópia ativa no OctaClin; backups/WAL e revogação no fornecedor exigem a
+política operacional aprovada. Nenhum prazo jurídico é presumido para o ledger.
+Termos, retenção, custódia BYOK e política de expurgo continuam requisitos G02/G05
+antes do piloto. Não herdar90dias da comunidade ou consentimentos de outra fase.
+
+Correlações de sessão: modelos retorna `contextoSessao`, digest de
+ator/tenant/sessão verificados. Cadastro e remoção enviam esse marcador e CAS;
+marcador não autentica ninguém. A tela revalida antes/depois da geração e ao
+recuperar foco; troca de sessão descarta texto/fontes. Cifra da chave também se
+vincula ao usuário. Corpo do BFF limitado durante o streaming (128KiB,2KiB em
+operações administrativas), sem confiar somente em Content-Length.
+
+Operação futura: desligar a configuração versionada de cada clínica antes de
+retirar a variável operacional/reiniciar processos. Reativação usa novo CAS;
+variável de processo isolada não substitui revogação transacional na base.
+Status/ciclo de vida/encerramento da clínica também invalidam previews por geração
+monotônica. ProvasPG e revisão do HEAD permanecem requisitos independentes.

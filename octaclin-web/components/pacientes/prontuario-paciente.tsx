@@ -27,6 +27,7 @@ import {
 } from 'lucide-react';
 import { Botao, classesBotao } from '@/components/ui/botao';
 import { Abas } from '@/components/ui/abas';
+import { RascunhosIa318 } from './rascunhos-ia318';
 import { AbaAntropometria } from './aba-antropometria';
 import { ResumoAntropometrico } from './resumo-antropometrico';
 import { ResumoExamesForaFaixa } from './resumo-exames-fora-faixa';
@@ -1400,6 +1401,7 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
         </>
       ) : null}
 
+      {abaAtiva === 'evolucoes' && papel === 'Professional' && permissoes.includes('ia.executar') && podeGerenciarPaciente ? <RascunhosIa318 key={pacienteId} pacienteId={pacienteId} aoConfirmar={() => void carregarEvolucoes()} /> : null}
       {abaAtiva === 'evolucoes' ? !evolucoesCarregadas ? (
         falhaEvolucoes ? (
           <EstadoFalha

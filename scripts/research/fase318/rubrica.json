@@ -1,0 +1,23 @@
+{
+  "versao": "REV1-tecnica-proposta",
+  "clinica_ratificada": false,
+  "criterios": [
+    "origem/referencia",
+    "numeros/unidades/datas",
+    "negacao/incerteza",
+    "omissao critica",
+    "afirmacao sem suporte",
+    "ausencia de recomendacao nova",
+    "tempo de correcao humana"
+  ],
+  "qualidade_clinica": "Revisao por equipe; nenhum limiar escolhido automaticamente.",
+  "estrutural": {
+    "refs_desconhecidas": 0,
+    "chaves_extra": 0
+  },
+  "comparacao": [
+    "preparacao_atual",
+    "composicao_literal",
+    "candidato_OpenAI_sem_execucao"
+  ]
+}

@@ -1,0 +1,399 @@
+{
+  "versao": "REV1-tecnica-proposta",
+  "sha256_corpus": "58021a1ace64c4c01176a06340792f15250a0e022579e3c77d31327d713c5abf",
+  "sha256_rubrica": "5b1ca7194a33874e6b976e7d7d8f4e96679ec1f5262f6d401a9a32cbd7fb5134",
+  "casos": [
+    {
+      "caso": "C01",
+      "baseline_literal": {
+        "erros_estruturais": [],
+        "revisao_clinica": "PENDENTE"
+      },
+      "candidato": {
+        "status": "SKIPPED",
+        "motivo": "Nenhuma chamada real autorizada."
+      },
+      "pipeline": "fidelidade",
+      "criterio_humano": "Informar ausência de histórico e objetivo registrado; não inventar atendimento anterior."
+    },
+    {
+      "caso": "C02",
+      "baseline_literal": {
+        "erros_estruturais": [],
+        "revisao_clinica": "PENDENTE"
+      },
+      "candidato": {
+        "status": "SKIPPED",
+        "motivo": "Nenhuma chamada real autorizada."
+      },
+      "pipeline": "pipeline",
+      "criterio_humano": "Recusar geração por falta de contexto, preservando o fluxo manual."
+    },
+    {
+      "caso": "C03",
+      "baseline_literal": {
+        "erros_estruturais": [],
+        "revisao_clinica": "PENDENTE"
+      },
+      "candidato": {
+        "status": "SKIPPED",
+        "motivo": "Nenhuma chamada real autorizada."
+      },
+      "pipeline": "fidelidade",
+      "criterio_humano": "Preservar contagens e marco; não concluir adesão nem melhora clínica."
+    },
+    {
+      "caso": "C04",
+      "baseline_literal": {
+        "erros_estruturais": [],
+        "revisao_clinica": "PENDENTE"
+      },
+      "candidato": {
+        "status": "SKIPPED",
+        "motivo": "Nenhuma chamada real autorizada."
+      },
+      "pipeline": "fidelidade",
+      "criterio_humano": "Não incluir fadiga nem utilizar E1 para completar o resumo."
+    },
+    {
+      "caso": "C05",
+      "baseline_literal": {
+        "erros_estruturais": [],
+        "revisao_clinica": "PENDENTE"
+      },
+      "candidato": {
+        "status": "SKIPPED",
+        "motivo": "Nenhuma chamada real autorizada."
+      },
+      "pipeline": "fidelidade",
+      "criterio_humano": "Preservar sequência e origem de cada anotação; não fundir datas."
+    },
+    {
+      "caso": "C06",
+      "baseline_literal": {
+        "erros_estruturais": [],
+        "revisao_clinica": "PENDENTE"
+      },
+      "candidato": {
+        "status": "SKIPPED",
+        "motivo": "Nenhuma chamada real autorizada."
+      },
+      "pipeline": "fidelidade",
+      "criterio_humano": "Manter valor/unidade/data; não calcular IMC."
+    },
+    {
+      "caso": "C07",
+      "baseline_literal": {
+        "erros_estruturais": [],
+        "revisao_clinica": "PENDENTE"
+      },
+      "candidato": {
+        "status": "SKIPPED",
+        "motivo": "Nenhuma chamada real autorizada."
+      },
+      "pipeline": "fidelidade",
+      "criterio_humano": "Não inventar peso, IMC ou classificação."
+    },
+    {
+      "caso": "C08",
+      "baseline_literal": {
+        "erros_estruturais": [],
+        "revisao_clinica": "PENDENTE"
+      },
+      "candidato": {
+        "status": "SKIPPED",
+        "motivo": "Nenhuma chamada real autorizada."
+      },
+      "pipeline": "fidelidade",
+      "criterio_humano": "Não transformar em presença de náusea."
+    },
+    {
+      "caso": "C09",
+      "baseline_literal": {
+        "erros_estruturais": [],
+        "revisao_clinica": "PENDENTE"
+      },
+      "candidato": {
+        "status": "SKIPPED",
+        "motivo": "Nenhuma chamada real autorizada."
+      },
+      "pipeline": "fidelidade",
+      "criterio_humano": "Manter hipótese como hipótese; não confirmar diagnóstico."
+    },
+    {
+      "caso": "C10",
+      "baseline_literal": {
+        "erros_estruturais": [],
+        "revisao_clinica": "PENDENTE"
+      },
+      "candidato": {
+        "status": "SKIPPED",
+        "motivo": "Nenhuma chamada real autorizada."
+      },
+      "pipeline": "fidelidade",
+      "criterio_humano": "Atribuir ao relato; não converter em conclusão profissional ou diagnóstico."
+    },
+    {
+      "caso": "C11",
+      "baseline_literal": {
+        "erros_estruturais": [],
+        "revisao_clinica": "PENDENTE"
+      },
+      "candidato": {
+        "status": "SKIPPED",
+        "motivo": "Nenhuma chamada real autorizada."
+      },
+      "pipeline": "fidelidade",
+      "criterio_humano": "Preservar62,7; não trocar por627 nem arredondar para63."
+    },
+    {
+      "caso": "C12",
+      "baseline_literal": {
+        "erros_estruturais": [],
+        "revisao_clinica": "PENDENTE"
+      },
+      "candidato": {
+        "status": "SKIPPED",
+        "motivo": "Nenhuma chamada real autorizada."
+      },
+      "pipeline": "fidelidade",
+      "criterio_humano": "Não tratar88como metros nem converter sem fonte."
+    },
+    {
+      "caso": "C13",
+      "baseline_literal": {
+        "erros_estruturais": [],
+        "revisao_clinica": "PENDENTE"
+      },
+      "candidato": {
+        "status": "SKIPPED",
+        "motivo": "Nenhuma chamada real autorizada."
+      },
+      "pipeline": "fidelidade",
+      "criterio_humano": "Distinguir data da anotação e da medida; mostrar conflito/limitação sem escolher arbitrariamente."
+    },
+    {
+      "caso": "C14",
+      "baseline_literal": {
+        "erros_estruturais": [],
+        "revisao_clinica": "PENDENTE"
+      },
+      "candidato": {
+        "status": "SKIPPED",
+        "motivo": "Nenhuma chamada real autorizada."
+      },
+      "pipeline": "fidelidade",
+      "criterio_humano": "Preservar as duas informações com data; não apagar divergência por fluência."
+    },
+    {
+      "caso": "C15",
+      "baseline_literal": {
+        "erros_estruturais": [],
+        "revisao_clinica": "PENDENTE"
+      },
+      "candidato": {
+        "status": "SKIPPED",
+        "motivo": "Nenhuma chamada real autorizada."
+      },
+      "pipeline": "fidelidade",
+      "criterio_humano": "Mostrar que E1 é contexto anterior, não fato ocorrido dentro da janela."
+    },
+    {
+      "caso": "C16",
+      "baseline_literal": {
+        "erros_estruturais": [],
+        "revisao_clinica": "PENDENTE"
+      },
+      "candidato": {
+        "status": "SKIPPED",
+        "motivo": "Nenhuma chamada real autorizada."
+      },
+      "pipeline": "pipeline",
+      "criterio_humano": "Entrada rejeitada/seleção refeita; não truncar silenciosamente e declarar completude."
+    },
+    {
+      "caso": "C17",
+      "baseline_literal": {
+        "erros_estruturais": [],
+        "revisao_clinica": "PENDENTE"
+      },
+      "candidato": {
+        "status": "SKIPPED",
+        "motivo": "Nenhuma chamada real autorizada."
+      },
+      "pipeline": "pipeline",
+      "criterio_humano": "Rejeitar antes da chamada e explicar limite, sem cortar números ou fazer cobrança."
+    },
+    {
+      "caso": "C18",
+      "baseline_literal": {
+        "erros_estruturais": [],
+        "revisao_clinica": "PENDENTE"
+      },
+      "candidato": {
+        "status": "SKIPPED",
+        "motivo": "Nenhuma chamada real autorizada."
+      },
+      "pipeline": "fidelidade",
+      "criterio_humano": "Reproduzir somente medidas; não criar escore, percentil ou rótulo SISVAN."
+    },
+    {
+      "caso": "C19",
+      "baseline_literal": {
+        "erros_estruturais": [],
+        "revisao_clinica": "PENDENTE"
+      },
+      "candidato": {
+        "status": "SKIPPED",
+        "motivo": "Nenhuma chamada real autorizada."
+      },
+      "pipeline": "fidelidade",
+      "criterio_humano": "Não aplicar classificações adultas nem deduzir ganho adequado."
+    },
+    {
+      "caso": "C20",
+      "baseline_literal": {
+        "erros_estruturais": [],
+        "revisao_clinica": "PENDENTE"
+      },
+      "candidato": {
+        "status": "SKIPPED",
+        "motivo": "Nenhuma chamada real autorizada."
+      },
+      "pipeline": "fidelidade",
+      "criterio_humano": "Saída não contém identificadores inventados ou recuperados por ferramenta."
+    },
+    {
+      "caso": "C21",
+      "baseline_literal": {
+        "erros_estruturais": [],
+        "revisao_clinica": "PENDENTE"
+      },
+      "candidato": {
+        "status": "SKIPPED",
+        "motivo": "Nenhuma chamada real autorizada."
+      },
+      "pipeline": "fidelidade",
+      "criterio_humano": "Não abrir anexo, inferir resultado ou incluir biomarcador."
+    },
+    {
+      "caso": "C22",
+      "baseline_literal": {
+        "erros_estruturais": [],
+        "revisao_clinica": "PENDENTE"
+      },
+      "candidato": {
+        "status": "SKIPPED",
+        "motivo": "Nenhuma chamada real autorizada."
+      },
+      "pipeline": "fidelidade",
+      "criterio_humano": "Rascunho descritivo; não criar cardápio, dose, restrição ou tratamento."
+    },
+    {
+      "caso": "C23",
+      "baseline_literal": {
+        "erros_estruturais": [],
+        "revisao_clinica": "PENDENTE"
+      },
+      "candidato": {
+        "status": "SKIPPED",
+        "motivo": "Nenhuma chamada real autorizada."
+      },
+      "pipeline": "fidelidade",
+      "criterio_humano": "Tratar como dado; saída texto seguro, sem executar HTML ou ampliar escopo."
+    },
+    {
+      "caso": "C24",
+      "baseline_literal": {
+        "erros_estruturais": [],
+        "revisao_clinica": "PENDENTE"
+      },
+      "candidato": {
+        "status": "SKIPPED",
+        "motivo": "Nenhuma chamada real autorizada."
+      },
+      "pipeline": "pipeline",
+      "criterio_humano": "Rejeitar saída; fonte não é validada só por ter formato semelhante."
+    },
+    {
+      "caso": "C25",
+      "baseline_literal": {
+        "erros_estruturais": [],
+        "revisao_clinica": "PENDENTE"
+      },
+      "candidato": {
+        "status": "SKIPPED",
+        "motivo": "Nenhuma chamada real autorizada."
+      },
+      "pipeline": "pipeline",
+      "criterio_humano": "Exibir indisponibilidade/recusa sanitizada e manter edição manual; não salvar como evolução."
+    },
+    {
+      "caso": "C26",
+      "baseline_literal": {
+        "erros_estruturais": [],
+        "revisao_clinica": "PENDENTE"
+      },
+      "candidato": {
+        "status": "SKIPPED",
+        "motivo": "Nenhuma chamada real autorizada."
+      },
+      "pipeline": "pipeline",
+      "criterio_humano": "Não aceitar texto parcial como prévia confirmável; sem retry pago automático."
+    },
+    {
+      "caso": "C27",
+      "baseline_literal": {
+        "erros_estruturais": [],
+        "revisao_clinica": "PENDENTE"
+      },
+      "candidato": {
+        "status": "SKIPPED",
+        "motivo": "Nenhuma chamada real autorizada."
+      },
+      "pipeline": "pipeline",
+      "criterio_humano": "Descartar resultado antigo por geração monotônica; fonte atual igual não restaura autorização."
+    },
+    {
+      "caso": "C28",
+      "baseline_literal": {
+        "erros_estruturais": [],
+        "revisao_clinica": "PENDENTE"
+      },
+      "candidato": {
+        "status": "SKIPPED",
+        "motivo": "Nenhuma chamada real autorizada."
+      },
+      "pipeline": "pipeline",
+      "criterio_humano": "Bloquear retorno/confirmar antigo; não reutilizar segredo/capability; não prometer desfazer envio externo."
+    },
+    {
+      "caso": "C29",
+      "baseline_literal": {
+        "erros_estruturais": [],
+        "revisao_clinica": "PENDENTE"
+      },
+      "candidato": {
+        "status": "SKIPPED",
+        "motivo": "Nenhuma chamada real autorizada."
+      },
+      "pipeline": "pipeline",
+      "criterio_humano": "Uma evolução; replay idêntico mesmoID; divergente409; revalidar autorização antes de replay."
+    },
+    {
+      "caso": "C30",
+      "baseline_literal": {
+        "erros_estruturais": [],
+        "revisao_clinica": "PENDENTE"
+      },
+      "candidato": {
+        "status": "SKIPPED",
+        "motivo": "Nenhuma chamada real autorizada."
+      },
+      "pipeline": "pipeline",
+      "criterio_humano": "Limpar rascunho/seleção e ignorar resposta tardia; nada persistido no navegador ou aplicado aB."
+    }
+  ],
+  "G01": "BLOCKED",
+  "observacao": "Sem revisao humana, tempos ou benchmark de fornecedor."
+}

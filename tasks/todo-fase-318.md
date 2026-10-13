@@ -1,7 +1,8 @@
 # Fase 318 — checklist de planejamento e execução condicionada
 
 Plano: [PLANO_FASE_318.md](../docs/history/phases/PLANO_FASE_318.md).
-Só planejamento autorizado. T01–T03 exigem autorização de pesquisa/PoC/testes;
+Desenvolvimento técnico e testes sintéticos autorizados em2026-10-13. Chamadas reais,
+dados de pacientes e ativação permanecem bloqueados. Histórico do planejamento: T01–T03 exigiam autorização de pesquisa/PoC/testes;
 T04–T11 podem avançar tecnicamente isoladas após autorização de implementação,
 com backend fail-closed enquanto gates de valor/direitos estiverem pendentes.
 Ativação/chamada clínica exigeGO; não ativar protocolos pelo modo técnico. Nenhum item futuro
@@ -88,5 +89,8 @@ clínico depende de contrato/finalidade/base legal. Não herdar consentimento317
 - [x] T00 inspeção de base e análise dos gaps; D01–07 confirmadas.
 - [x] T00 D01–07 confirmadas; contratoBYOK e corpus documental30casos preparados.
 - [ ] Revisão efetiva da equipe, rubrica congelada e modelo/custo aprovados antes do ensaio.
-- [ ] T01–T12 não iniciadas, com checkpoints acima.
-- [x] Nenhum runtime, migration, provider ou ambiente alterado na fase318.
+- [x] T04–T06/T08–T09 implementadas tecnicamente; validações finais em andamento.
+- [ ] T01–T03: harness/corpus técnico preparado; rubrica humana e comparação real pendentes.
+- [ ] T07/T10/T11: provas PostgreSQL do CI, UI e revisão final pendentes.
+- [ ] T12: BLOCKED — nenhuma liberação operacional.
+- [x] Runtime técnico isolado e migration1071 nova; sem alteração de ambientes externos.

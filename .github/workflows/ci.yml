@@ -216,6 +216,8 @@ jobs:
           SQL
 
       - name: Suite completa
+        env:
+          IA318_PG_DESCARTAVEL: "true"
         run: pnpm test --runInBand
 
       - name: Provar rate limit e idempotencia com Redis real

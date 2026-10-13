@@ -1,6 +1,6 @@
 # Handoff — Fase 318: planejamento e análise de gaps
 
-Branch `docs/fase-318-planejamento`, worktree
+Branch `feature/fase-318-ia-rascunhos`, worktree
 `/workspace/octaclin/.worktrees/docs-fase-318-planejamento`, base main8ea67a08
 (merge407). Checkout principal e sua alteração em next-env.d.ts preservados.
 
@@ -57,8 +57,18 @@ inteira. Se houver transição, avisar modelo alvo e pausar para troca manual.
 Não houve troca nem delegação. Execução futura nativa, sem reabrir planejamento
 por preferência; novas decisões só para lacunas demonstradas.
 
-## Verificações desta etapa
+## Histórico das verificações do planejamento
 
-Inspeção de Git/worktrees/diff, contratos/código e GitHub407/CI main. Não rodados
+Inspeção de Git/worktrees/diff, contratos/código e GitHub407/CI main. No planejamento não rodados
 benchmarks/testes de implementação318; CI317 não prova318. Diff/secrets/links documentais conferidos ao concluir; consulta de páginas públicas
 OpenAI200, sem chamadasAPI. Nenhum resultado clínico ou modelo ratificado pelo agente.
+
+## Execução técnica — estado atual
+
+Backend318, credenciais cifradas/CAS, gates, fontes, adaptador, prova efêmera,
+confirmação transacional/idempotente e auditoria implementados. Migration1071
+aditiva cobre invalidação monotônica em pacientes/profissionais/usuários;1070
+intocada. BFF allowlist e UI no prontuário/integrações/configuração da clínica.
+Ledger: `docs/history/phases/reviews/fase-318/EXECUCAO.md`. Testes de fornecedor
+exclusivamente mock; nenhum modelo ou contrato ratificado. Gates G01/G02/G05
+BLOCKED. Terminar provas/CI e revisão antes de concluir T11; T12 exige autorização.

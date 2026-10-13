@@ -374,3 +374,13 @@ Além disso, cada clínica precisa habilitar explicitamente suas flags novas de
 conquistas/comunidade. Flags legadas e aceite da clínica não autorizam pacientes.
 Não configurar em staging/produção sem aprovação operacional expressa, termos,
 moderação e gates da317 comprovados. Esta implementação não altera ambientes.
+
+## Fase318 — integração BYOK bloqueada
+
+`IA_RASCUNHOS_OPERACAO_APROVADA`: default ausente/false. O literal `true` é apenas
+um dos requisitos operacionais. Catálogo clínico vazio e aprovação contratual
+false em código impedem a geração, mesmo com essa variável/configuração da clínica.
+Não habilitar antes de G01/G02/G03/G04 e autorização operacional. Não cadastrar
+chaves individuais nos envs; a cópia autorizada futura usa cifra e escopo próprio.
+`IA318_PG_DESCARTAVEL=true` é exclusivo do jobCI com PostgreSQL sintético local,
+sem caminho para DATABASE_URL de staging/produção. Não é flag do produto.
