@@ -4,16 +4,23 @@ Atualizado em 2026-10-13.
 
 ## Fase ativa
 
-- **Fase318 em implementação técnica isolada**, autorizada em2026-10-13,
-  sem chamada real ou ativação. D01–03 confirmadas: pré-consulta/rascunho de evolução,
-  somente responsável atual no console. D02 foi revisada depois para API externa
-  com chave própria OpenAI individual/habilitação pela clínica confirmados.
-  Sem chamadas pagas ou dados reais autorizados nesta pesquisa.
-  Seleção mínima de fontes e revisão jurídica pela equipe confirmadas; rascunho só na tela, catálogo aprovado e proprietário/equipe revisora confirmados.
-  Revisões clínica/contratual efetivas pendentes; desenvolvimento técnico autorizado.
-  Plano `docs/history/phases/PLANO_FASE_318.md`, handoff `tasks/plan.md`,
-  checklist `tasks/todo-fase-318.md`. G00PASS inspeção; G01/G02/G05BLOCKED;
-  G03/G04BLOCKED até provas finais/CI; ledger318 registra os testes. Sol6.1 médio suficiente; não trocar modelo sem aviso/pausa.
+- **Fase318 integrada pela PR408**, merge4aeb5297; CI do código84a42b5a
+  PASS (Backend/Web/Smoke/PRGate), revisão técnica por agente declarada.
+  Migration1071 confirmada por leitura em staging/produção: registro, quatro
+  gerações e três tabelas FORCE RLS/policies NULLIF. Role runtime efetivamente
+  usada pelos processos ainda exige conferência; consulta usou role administrativa.
+  Pré-consulta/rascunho no console, OpenAI BYOK individual, revisão humana e
+  catálogo permitido preservados. G01/G02/G05 continuam BLOCKED; não houve
+  chamada paga, alteração operacional ou uso de pacientes reais pelo agente.
+  Piloto somente sintético autorizado pelo proprietário; área separada/IDs do
+  alvo e condições contratuais/operacionais ainda pendentes. Estudo ChatGPT/MCP
+  separado, sem substituir BYOK. Sol6.1 médio; aviso/pausa antes de Luna alto.
+  Followup atual: corrigir SQL das conquistas legadas (500 Metas e Adesão),
+  esclarecer concessões OctaClin/OpenAI, exibir cadastro efetivamente bloqueado
+  e identificadores já autorizados em Profissionais. Novo CI/revisão pendentes.
+  Perfil profissional completo registrado como pendência de produto em
+  `docs/product/PENDENCIA_PERFIL_PROFISSIONAL.md`, sem implementação do módulo.
+  Contrato do piloto: `docs/product/PILOTO_SINTETICO_BYOK_FASE_318.md`.
 - Fase317 integrada pelas PRs405/407. Merge407 `8ea67a08` e CI main
   `38324741937` SUCCESS reconfirmados no GitHub neste ciclo. Correções de
   revogação persistente/contexto e timezone por tenant integradas; aceites e

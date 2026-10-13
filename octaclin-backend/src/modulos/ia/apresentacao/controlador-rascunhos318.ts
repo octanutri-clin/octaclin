@@ -48,6 +48,7 @@ export class ControladorRascunhos318 {
   ) {
     return this.contexto.executar(u, async (c) => ({
       contextoSessao: contextoSessao318(u),
+      cadastroCredencialPermitido: this.contexto.direitos === true,
       modelos: this.contexto.operacaoAprovada()
         ? this.contexto.modelos.map((m) => ({
             id: m.id,

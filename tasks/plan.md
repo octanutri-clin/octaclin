@@ -72,3 +72,24 @@ intocada. BFF allowlist e UI no prontuário/integrações/configuração da clí
 Ledger: `docs/history/phases/reviews/fase-318/EXECUCAO.md`. Testes de fornecedor
 exclusivamente mock; nenhum modelo ou contrato ratificado. Gates G01/G02/G05
 BLOCKED. Terminar provas/CI e revisão antes de concluir T11; T12 exige autorização.
+
+## Followup após408 — correções de uso e piloto ainda bloqueado
+
+Base4aeb5297. Usuário pediu revisão do500 Metas e Adesão, clareza da tela de
+Integrações, identificação de profissional e backlog de Perfil. Desenvolvimento
+e testes das correções autorizados; nenhum deploy/flag/migration externa executado.
+
+- SQL legado badges: Raw gerava BadgeOrm.regraConquista sem quoting; PostgreSQL
+  reportou missing FROM-clause. Teste gera SQL TypeORM sem conectar ao banco: RED,
+  correção mantém tenant/exclusão317, GREEN. Prova real nova só CI descartável.
+- Estado cadastral OpenAI deriva de direitos===true no backend e projeção BFF.
+  UI não infere permissão de estado ausente; não muda aprovação contratual/global.
+- Drawer mostra IDs já recebidos pelo DTO profissional autorizado; sem novo
+  acesso, inferência por nome, armazenamento de dados pessoais ou edição de perfil.
+- Perfil completo: pendência documentada e ligada ao roadmap, sem escopo novo.
+- Piloto sintético continua exigindo isolamento server-side e alvo comprovado;
+  não ativar direitos/catálogo clínicos para contornar o cadastro bloqueado.
+
+Finalizar regressões, navegador desktop/mobile, build/typecheck/lint, revisão
+R4 com autoria e PR única de followup. APIs/código só são considerados corrigidos
+em produção após revisão/merge/deploy próprio, não por testes locais.

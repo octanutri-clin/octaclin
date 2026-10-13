@@ -118,6 +118,7 @@ function projetar(acao: string, v: Record<string, unknown>) {
         /^[a-f0-9]{64}$/.test(v.contextoSessao)
           ? v.contextoSessao
           : undefined,
+      cadastroCredencialPermitido: v.cadastroCredencialPermitido === true,
       modelos: Array.isArray(v.modelos)
         ? v.modelos.map((m) =>
             pick(m, [

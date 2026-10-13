@@ -9,6 +9,26 @@ import {
 } from "./rascunhos318-dtos";
 import { ControladorRascunhos318 } from "./controlador-rascunhos318";
 describe("contratos HTTP318", () => {
+  it.each([true, false, undefined])(
+    "cadastro reflete permissao contratual efetiva %s",
+    async (direitos) => {
+      const ctx = {
+        direitos,
+        executar: async (_u: unknown, fn: Function) => fn({ m: {} }),
+        operacaoAprovada: () => false,
+        modelos: [],
+        config: async () => ({ habilitada: false }),
+      };
+      const r = await new ControladorRascunhos318(
+        {} as never,
+        ctx as never,
+      ).modelos({} as never);
+      expect(
+        (r as unknown as { cadastroCredencialPermitido: boolean })
+          .cadastroCredencialPermitido,
+      ).toBe(direitos === true);
+    },
+  );
   it("fontes geracao e configuracao exigem marcador de sessao da tela", async () => {
     for (const cls of [
       CapturarFontes318Dto,

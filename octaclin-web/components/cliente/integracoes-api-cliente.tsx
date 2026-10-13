@@ -231,7 +231,7 @@ export function IntegracoesApiCliente({ modo = 'cliente' }: { modo?: 'cliente' |
     <div className="grid gap-4" aria-busy={carregando}>
       {erro ? <p className="rounded-md border border-perigo-borda bg-perigo-suave p-3 text-sm text-perigo" role="alert">{erro}</p> : null}
       {profissional && !carregando && !acessoProfissional?.escoposApi.length && !acessoProfissional?.eventosWebhook.length ? (
-        <Cartao><CartaoConteudo className="p-4 text-sm text-texto-suave">O gestor da clínica ainda não concedeu acesso a chaves de API ou eventos de webhook.</CartaoConteudo></Cartao>
+        <Cartao><CartaoConteudo className="p-4 text-sm text-texto-suave">O gestor da clínica ainda não concedeu acesso às chaves da API do OctaClin ou aos eventos de webhook. Esse acesso é separado da chave OpenAI individual.</CartaoConteudo></Cartao>
       ) : null}
 
       {escoposDisponiveis.length ? <Cartao>
