@@ -1,3 +1,4 @@
+import { RascunhosClinicos1720000001071 } from './migracoes/1720000001071-RascunhosClinicos';
 import { ComandoGamificacaoOrm } from '../../modulos/gamificacao/infraestrutura/comando-gamificacao.orm';
 import { RevisaoPublicacaoOrm } from '../../modulos/gamificacao/infraestrutura/revisao-publicacao.orm';
 import { DenunciaComunidadeOrm } from '../../modulos/gamificacao/infraestrutura/denuncia-comunidade.orm';
@@ -452,7 +453,8 @@ export function criarOpcoesTypeOrm(): TypeOrmModuleOptions & DataSourceOptions {
         AdicionarEncaminhamentoDocumento1720000001067,
         AcompanhamentoGestacional1720000001068,
         ProtegerRetencaoAvaliacoes1720000001069,
-        PilotoGamificacao1720000001070
+        PilotoGamificacao1720000001070,
+        RascunhosClinicos1720000001071
       ],
     migrationsRun: executarMigracoesNoBoot(),
     synchronize: false,

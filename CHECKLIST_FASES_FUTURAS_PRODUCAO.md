@@ -4592,14 +4592,16 @@ auditoria estão ordenados na seção 15 de
   pesquisa local preservada em worktree própria, sem incluir artefatos nesta branch.
   PB-30: extração assistida de exame com revisão humana,
   condicionada aos gates jurídico, privacidade, provider e antimalware.
-- [~] Fase317 - entrega técnica em PR Draft #405: console/portal, conquistas
-  privadas e comunidade adulta, consentimentos, comentários/curtidas,
-  denúncias/moderação e retenção. Segunda revisão assistida R4 com fixes;
-  76 testes focais/21 PG/8 BFF/12 Playwright locais PASS. Gates finais/CI das
-  correções e revisão independente/operacional pendentes; gates locais finais PASS. Piloto desligado;
-  1070 não aplicada externamente. Handoff `tasks/plan-fase-317.md`.
-- [ ] Fase 318 - avaliação de valor e possível piloto de síntese pré-consulta
-  e rascunho de evolução/orientação, com assinatura humana.
+- [x] Fase317 - implementação integrada405/407; CI main38324741937 PASS
+  reconfirmado em2026-10-13. Correções de contexto/retorno e timezone integradas;
+  liberação global ainda pendente do preflight do processo/providers. Aceites e
+  autorização já recebidos; não habilitar flags pela fase318.
+- [~] Fase318 - planejamento/análise autorizados: pré-consulta e rascunho de
+  evolução, API externa com chave própria (D02 revisada), somente sintéticos, responsável atual
+  no console. Comparar baseline PB-25/modelos com candidato antes de GO.
+  D01–07 confirmadas; contratoBYOK/corpus30casos preparados; sem implementação/PoC. Handoff
+  `tasks/plan-fase-318.md`, plano `docs/history/phases/PLANO_FASE_318.md` e
+  checklist `tasks/todo-fase-318.md`. Gate de valor pode concluir NO-GO.
 - [ ] Fase 319 - avaliação de volume, privacidade e possível piloto de busca
   semântica no prontuário.
 - [ ] Fase 320 - avaliação de direitos da TBCA e possível importador próprio;

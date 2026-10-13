@@ -1,3 +1,9 @@
+import { CriptografiaDadosSensiveis } from '../../infraestrutura/seguranca/criptografia-dados-sensiveis';
+import { ConteudoRascunhos318, DIREITOS_IA318, MODELOS_IA318, DIREITOS_BYOK318_APROVADOS, catalogoClinico318 } from './dominio/rascunhos-clinicos';
+import { ContextoRascunhos318 } from './aplicacao/contexto-rascunhos318';
+import { ServicoRascunhosClinicosIa } from './aplicacao/servico-rascunhos-clinicos';
+import { AdaptadorOpenAi318 } from './infraestrutura/adaptador-openai318';
+import { ControladorRascunhos318, ControladorConfigRascunhos318, ControladorOperacoesRascunhos318 } from './apresentacao/controlador-rascunhos318';
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ServicoAuditoria } from '../../infraestrutura/auditoria/servico-auditoria';
@@ -25,8 +31,8 @@ import { TranscricaoMidiaOrm } from './infraestrutura/transcricao-midia.orm';
     ModuloAuth,
     ModuloTenancy
   ],
-  controllers: [ControladorIa],
-  providers: [ServicoIa, ServicoAuditoria],
+  controllers: [ControladorIa, ControladorRascunhos318, ControladorConfigRascunhos318, ControladorOperacoesRascunhos318],
+  providers: [ServicoIa, ServicoAuditoria, CriptografiaDadosSensiveis, ConteudoRascunhos318, ContextoRascunhos318, ServicoRascunhosClinicosIa, AdaptadorOpenAi318, {provide: DIREITOS_IA318, useValue: DIREITOS_BYOK318_APROVADOS}, {provide: MODELOS_IA318, useFactory: catalogoClinico318}],
   exports: [ServicoIa]
 })
 export class ModuloIa {}

@@ -1,5 +1,6 @@
 'use client';
 
+import { ConfiguracaoIa318 } from '@/components/ia/configuracao-ia318';
 import { AlertTriangle, ShieldCheck } from 'lucide-react';
 import Link from 'next/link';
 import type { Route } from 'next';
@@ -102,6 +103,7 @@ export function PortalCliente() {
         <AreaAssinaturaUsoCliente portal={portal} />
         <AreaEquipeCliente portal={portal} />
         <AreasConfiguracaoCliente portal={portal} />
+        {areaAtiva === 'integracoes' ? <ConfiguracaoIa318 /> : null}
         <AreaPerfilCliente portal={portal} />
       </section>
 

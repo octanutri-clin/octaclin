@@ -1,10 +1,29 @@
 # OctaClin - Status atual do projeto
 
-Atualizado em 2026-10-12.
+Atualizado em 2026-10-13.
 
 ## Fase ativa
 
-- Fase317: implementação técnica integrada na PR Draft #405, branch `feature/fase-317-gamificacao`, base `a84921fb`. Console/portal/BFF, conquistas privadas, comunidade adulta, consentimento, moderação e retenção implementados. Segunda revisão assistida R4 corrigiu projeções, respostas antigas, retirada direta, contexto/termo e versão da retirada. Provas locais desta rodada:76 testes focais,21 PG descartável,8 BFF e12 Playwright. Gates locais finais aprovados; CI das correções pendente no momento do commit; G01 revisão operacional, G02 independência de autoria e G05 ativação continuam bloqueados. Migration1070 sem aplicação externa. Handoff `tasks/plan-fase-317.md`; relatório `docs/history/phases/reviews/fase-317/REVISAO_R4.md`.
+- **Fase318 em implementação técnica isolada**, autorizada em2026-10-13,
+  sem chamada real ou ativação. D01–03 confirmadas: pré-consulta/rascunho de evolução,
+  somente responsável atual no console. D02 foi revisada depois para API externa
+  com chave própria OpenAI individual/habilitação pela clínica confirmados.
+  Sem chamadas pagas ou dados reais autorizados nesta pesquisa.
+  Seleção mínima de fontes e revisão jurídica pela equipe confirmadas; rascunho só na tela, catálogo aprovado e proprietário/equipe revisora confirmados.
+  Revisões clínica/contratual efetivas pendentes; desenvolvimento técnico autorizado.
+  Plano `docs/history/phases/PLANO_FASE_318.md`, handoff `tasks/plan.md`,
+  checklist `tasks/todo-fase-318.md`. G00PASS inspeção; G01/G02/G05BLOCKED;
+  G03/G04BLOCKED até provas finais/CI; ledger318 registra os testes. Sol6.1 médio suficiente; não trocar modelo sem aviso/pausa.
+- Fase317 integrada pelas PRs405/407. Merge407 `8ea67a08` e CI main
+  `38324741937` SUCCESS reconfirmados no GitHub neste ciclo. Correções de
+  revogação persistente/contexto e timezone por tenant integradas; aceites e
+  autorização global do proprietário preservados, sem nova revisão independente
+  solicitada. Evidências da correção em
+  `docs/history/phases/reviews/fase-317/ACEITE_E_PREFLIGHT_ATIVACAO.md` e corpo407.
+  Ativação global não executada pelo agente; confirmação operacional do processo
+  e providers continua em trilha separada, sem bloquear o planejamento318.
+  Migration1070/aplicação/FORCE RLS foram conferidos na rodada anterior de
+  preflight, não reconsultados nesta análise318; não inferir operação do CI.
 - Fase316 em **stand-by** por decisão do proprietário em2026-10-12. Pesquisa/evidências preservadas em worktree própria `research/fase-316-motores`, commit de pausa `9b638613`; não incluídas nesta branch. Nenhuma retomada automática.
 - Registro histórico da implementação da Fase315 (já integrada no merge `a84921fb` conferido por fetch; CI externo não consultado nesta rodada): implementação local da retirada compatível de `score_risco` concluída na branch `feature/fase-315-score-risco`, baseada em `c77c4520`. D01: PATCH legado é validado, ignorado e não persistido; respostas internas/CSV omitem o campo; coluna e histórico preservados. Backend completo, typecheck/build, RLS descartável, smoke BFF e Playwright focado passaram. A suíte Web `test:authz` foi parcial/cancelada; CI da PR e revisão R4 independente pendentes. Nenhuma migration ou ambiente externo alterado. Handoff `tasks/plan-fase-315.md`, plano `docs/history/phases/PLANO_FASE_315.md`.
 - Fase 314 factual integrada pela PR #394 (`c77c4520`, merge confirmado em 2026-10-11); CI pós-merge `38179801575` SUCCESS, SBOM provenance da PR SKIPPED. G02/CL01–10 ratificados REV9; seis métodos adultos desde18 integrados. Classificadores bloqueados por G01/direitos. R4 independente, vínculo/teste dos ambientes e autorização de liberação continuam exigidos; não inferir aplicação de migrations ou deploy do merge. Contrato `docs/product/LIBERACAO_FACTUAL_FASE_314_REV14.md`.

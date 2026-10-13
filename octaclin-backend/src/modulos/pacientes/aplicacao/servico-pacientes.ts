@@ -1,3 +1,4 @@
+import { criarEvolucaoNoContexto } from './criar-evolucao-no-contexto';
 import { bloquearContextoPiloto317, invalidarContextoPiloto317 } from '../../gamificacao/aplicacao/invalidar-contexto-piloto';
 import { projetarResultadoAntropometrico, projetarMedidasAntropometricas } from '../dominio/projecao-antropometria';
 import { registrarContextoPediatrico, projetarPediatrico } from '../dominio/antropometria-pediatrica';
@@ -734,21 +735,8 @@ export class ServicoPacientes {
   ): Promise<EvolucaoClinicaRespostaDto> {
     return this.executorTenant.executar(tenantId, async (gerenciador) => {
       await this.garantirPacienteExiste(gerenciador, tenantId, pacienteId, usuario);
-      const consultaId = await resolverConsultaOpcional(gerenciador, tenantId, pacienteId, dados.consultaId);
-
-      const repositorio = gerenciador.getRepository(EvolucaoClinicaOrm);
-      const evolucao = repositorio.create({
-        tenantId,
-        pacienteId,
-        autorUsuarioId,
-        tituloCriptografado: this.criptografia.criptografar(dados.titulo.trim()),
-        conteudoCriptografado: this.criptografia.criptografar(dados.conteudo.trim()),
-        tipo: dados.tipo ?? 'observacao',
-        visibilidade: dados.visibilidade ?? 'privada',
-        consultaId
-      });
-
-      return this.mapearEvolucao(await repositorio.save(evolucao));
+      const evolucao = await criarEvolucaoNoContexto(gerenciador, this.criptografia, tenantId, pacienteId, autorUsuarioId, dados);
+      return this.mapearEvolucao(evolucao);
     });
   }
 

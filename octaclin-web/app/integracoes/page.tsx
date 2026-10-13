@@ -1,3 +1,4 @@
+import { CredencialIa318 } from '@/components/ia/credencial-ia318';
 import type { Metadata } from 'next';
 import { ConsoleShell } from '@/components/app/console-shell';
 import { IntegracoesApiCliente } from '@/components/cliente/integracoes-api-cliente';
@@ -8,6 +9,7 @@ export default function IntegracoesProfissionalPage() {
   return (
     <ConsoleShell titulo="Integrações" subtitulo="Acesse somente os escopos e eventos liberados pelo gestor da clínica.">
       <IntegracoesApiCliente modo="profissional" />
+      <CredencialIa318 />
     </ConsoleShell>
   );
 }
