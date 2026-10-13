@@ -4691,7 +4691,9 @@ test.describe('gate de acessibilidade - gamificacao (PR 27)', () => {
     // nao pertence ao produto e nao pode ser confundido com o alerta da falha.
     const alerta = page.locator('[role="alert"]:not(#__next-route-announcer__)');
     await expect(alerta).toBeVisible();
-    await expect(alerta).toContainText('Falha sintética ao carregar a gamificação.');
+    // Falhas 5xx usam mensagem operacional; detalhes do servidor não vão à UI.
+    await expect(alerta).toContainText('Não foi possível carregar metas e adesão. Tente novamente em alguns instantes.');
+    await expect(alerta).not.toContainText('Falha sintética ao carregar a gamificação.');
     await expect(page.getByRole('heading', { name: 'Ranking' })).toHaveCount(0);
 
     await rodarChecagensDeAcessibilidade(page);

@@ -55,3 +55,14 @@ corpus sintético fechado e alvo comprovado; não ativar catálogo/direitos gera
 
 Após CI/revisão/merge e publicação autorizada destas correções, o titular poderá
 consultar seus identificadores no diretório e continuar a preparação do piloto.
+
+## Ajuste do smoke de acessibilidade409
+
+CI do6f7a26a0: Backend2851PASS/41SKIPPED, Redis2PASS e RLS/Testcontainers63PASS;
+novo testePG badges PASS. Web PASS. Smoke falhou em desktop/mobile porque o gate
+antigo esperava o corpo bruto do erro500, incompatível com a sanitização aplicada.
+Reprodução local RED2FAIL confirmou a expectativa antiga. Teste agora exige a
+mensagem operacional, proíbe o detalhe sintético interno e preserva role=alert,
+checagens axe, navegação por teclado, ausência de ranking e contagem de chamadas.
+Nenhuma alteração de runtime, guardas, configuração ou flags nesta correção.
+Grupo completo de gamificação: GREEN20PASS desktop/mobile,59.4s. Diff/secrets conferidos antes do push. CI do novo HEAD pendente.
