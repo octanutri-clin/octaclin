@@ -741,3 +741,17 @@ de 1068/1069 nem ratificação clínica de testes locais.
 Os quatro indicadores assistenciais permanecem bloqueados. Candidatos
 LMS/SISVAN/prematuridade e investigação INTERGROWTH não fecham G01/G02.
 Nenhum dado real, dependência nova, staging, produção, merge ou deploy.
+
+## Piloto sintético318 após409
+
+Corpus, catálogo candidato, serviço e DTOs:
+`octaclin-backend/src/modulos/ia/{dominio,aplicacao,apresentacao}` nos specs
+piloto-sintetico318/catalogo-piloto318. Testes só sintéticos, sem chamada paga.
+PG na suíte `rascunhos318.integracao.spec.ts`: quota/replay concorrentes/RLS e
+serviço completo com grant/SID/tenant/revogação em banco descartável e role
+NOBYPASSRLS. Rodar somente com CI=true/IA318_PG_DESCARTAVEL=true no alvo local
+fixo da suíte; nunca substituir por DATABASE_URL de staging/produção.
+BFF: `scripts/test-fase-318-bff.mjs`; UI/axe desktop/mobile:
+`tests/visual/fase-318-piloto.spec.mjs` e regressões318já existentes.
+Evidências, limites e autoria R4 em
+`docs/history/phases/reviews/fase-318/PILOTO_SINTETICO_EXECUCAO.md`.
