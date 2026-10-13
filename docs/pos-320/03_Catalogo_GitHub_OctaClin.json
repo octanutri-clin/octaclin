@@ -1,0 +1,1602 @@
+{
+  "schemaVersion": "1.2-post-320-coverage-reviewed",
+  "asOf": "2026-10-09",
+  "roadmap": "ROADMAP_IMPLEMENTACAO_PRS_ONDAS_POS_320.md",
+  "entries": [
+    {
+      "id": "R001",
+      "slug": "clauderic/dnd-kit",
+      "url": "https://github.com/clauderic/dnd-kit",
+      "area": "UI e produtividade",
+      "priority": "P0",
+      "mode": "JÁ INSTALADO",
+      "license": "MIT",
+      "prs": [
+        "PA01",
+        "DOC10"
+      ],
+      "application": "Ordenação de refeições e materiais.",
+      "benefit": "Reaproveita sensores, sortable e teclado sem fazer nova infraestrutura.",
+      "how": "Usar @dnd-kit/core, @dnd-kit/sortable e @dnd-kit/utilities já no octaclin-web; adaptar state e persistir campo ordem existente; manter botões ↑/↓.",
+      "caution": "Não adicionar pacote duplicado; testar toque, teclado, acessibilidade e persistência após reload."
+    },
+    {
+      "id": "R002",
+      "slug": "pdfme/pdfme",
+      "url": "https://github.com/pdfme/pdfme",
+      "area": "Documentos e PDF",
+      "priority": "P1",
+      "mode": "AVALIAR INTEGRAÇÃO",
+      "license": "MIT",
+      "prs": [
+        "DOC04",
+        "DOC05",
+        "DOC08",
+        "DOC09"
+      ],
+      "application": "Templates JSON, designer e renderização de documentos por clínica.",
+      "benefit": "Permite layouts personalizados, preview e campos opcionais.",
+      "how": "Fazer PoC com recibo sintético, template versionado, dados mockados, logo/cor e saída PDF; definir renderização em ambiente confiável.",
+      "caution": "Peso do bundle, fontes, SSR, segurança de templates e estabilidade da versão; não migrar PDFs existentes de uma vez."
+    },
+    {
+      "id": "R003",
+      "slug": "facebook/lexical",
+      "url": "https://github.com/facebook/lexical",
+      "area": "Documentos e PDF",
+      "priority": "P1",
+      "mode": "AVALIAR INTEGRAÇÃO",
+      "license": "MIT",
+      "prs": [
+        "DOC06",
+        "DOC07"
+      ],
+      "application": "Editor de orientações, condutas e textos qualitativos com tabelas/links.",
+      "benefit": "Rich text estruturado, boa extensibilidade e React.",
+      "how": "Testar editor mínimo (parágrafo, lista, tabela, hyperlink), serialização versionada e renderização sanitizada para tela e PDF.",
+      "caution": "Proibir HTML arbitrário; migrar texto simples sem perda; cuidar de clipboard, XSS, seleção e acessibilidade."
+    },
+    {
+      "id": "R004",
+      "slug": "recharts/recharts",
+      "url": "https://github.com/recharts/recharts",
+      "area": "Gráficos e relatórios",
+      "priority": "P1",
+      "mode": "AVALIAR INTEGRAÇÃO",
+      "license": "MIT",
+      "prs": [
+        "QST03",
+        "OPS06",
+        "ANT05",
+        "ANT06"
+      ],
+      "application": "Séries longitudinais, dashboards e curvas.",
+      "benefit": "Gráficos padronizados com tooltip, eixos e responsividade.",
+      "how": "Experimentar uma série numérica do questionário e comparar com SVG nativo atual; manter alternativa em tabela.",
+      "caution": "Evitar dependência se SVG existente atender; gráficos não substituem validação dos dados de referência.",
+      "post320Notes": [
+        "Clinical reference: check Fase 314 GO/NO-GO and reference-data rights first",
+        "Do not duplicate metrics delivered by Fases 263 and 306"
+      ]
+    },
+    {
+      "id": "R005",
+      "slug": "SunnySeedApp/who-growth-standards",
+      "url": "https://github.com/SunnySeedApp/who-growth-standards",
+      "area": "Cálculo clínico",
+      "priority": "P1",
+      "mode": "VALIDAR REFERÊNCIA",
+      "license": "MIT (código); direitos dos dados OMS separados",
+      "prs": [
+        "ANT05",
+        "ANT06"
+      ],
+      "application": "Curvas e escores-z pediátricos OMS 0–5 anos.",
+      "benefit": "Ponto de partida TypeScript para cálculo e dados de referência.",
+      "how": "Conferir fórmulas LMS, idade/sexo/unidades e arredondamentos contra tabelas originais e casos independentes; registrar versões.",
+      "caution": "NÃO cobre sozinho 5–19 anos; código MIT não libera automaticamente dados OMS; revisão clínica antes de produção.",
+      "post320Notes": [
+        "Clinical reference: check Fase 314 GO/NO-GO and reference-data rights first"
+      ]
+    },
+    {
+      "id": "R006",
+      "slug": "wojtekmaj/react-pdf",
+      "url": "https://github.com/wojtekmaj/react-pdf",
+      "area": "Documentos e PDF",
+      "priority": "P1",
+      "mode": "AVALIAR INTEGRAÇÃO",
+      "license": "MIT",
+      "prs": [
+        "DOC03",
+        "APP05"
+      ],
+      "application": "Visualizador React de arquivos PDF existentes.",
+      "benefit": "Ler anexos/documentos em interface autenticada.",
+      "how": "PoC de viewer client-side com PDF de teste e URL assinada de curta duração, sem cache persistente.",
+      "caution": "É visualizador, não gerador; verificar worker pdf.js, Next 16, SSR e Expo nativo separadamente."
+    },
+    {
+      "id": "R007",
+      "slug": "nerdyman/react-compare-slider",
+      "url": "https://github.com/nerdyman/react-compare-slider",
+      "area": "Antropometria e fotos",
+      "priority": "P1",
+      "mode": "AVALIAR INTEGRAÇÃO",
+      "license": "MIT",
+      "prs": [
+        "ANT08"
+      ],
+      "application": "Slider de comparação de fotografias antes/depois.",
+      "benefit": "Melhora percepção da evolução com baixo escopo técnico.",
+      "how": "Integrar componente sobre o fluxo existente de fotos privadas, com teclado e rótulos.",
+      "caution": "Não inferir diagnóstico, percentual de gordura ou mudanças corporais automaticamente."
+    },
+    {
+      "id": "R008",
+      "slug": "amannn/next-intl",
+      "url": "https://github.com/amannn/next-intl",
+      "area": "Portal e mobile",
+      "priority": "P1",
+      "mode": "AVALIAR INTEGRAÇÃO",
+      "license": "MIT",
+      "prs": [
+        "APP09"
+      ],
+      "application": "i18n do Next.js (portal web).",
+      "benefit": "Tradução de texto, datas, números e mensagens com suporte a Next.",
+      "how": "Fazer piloto pt-BR/en/es em uma tela do portal, incluindo rota/middleware e fallback.",
+      "caution": "Não traduz automaticamente o app Expo; evitar traduções inconsistentes entre backend e frontend."
+    },
+    {
+      "id": "R009",
+      "slug": "apache/casbin-node-casbin",
+      "url": "https://github.com/apache/casbin-node-casbin",
+      "area": "Gestão e segurança",
+      "priority": "P2",
+      "mode": "REFERÊNCIA DE POLÍTICAS",
+      "license": "Apache-2.0",
+      "prs": [
+        "OPS07"
+      ],
+      "application": "Permissões individuais RBAC/ABAC.",
+      "benefit": "Padrões para regras auditáveis e resolução de permissões efetivas.",
+      "how": "Estudar modelagem de grants/denies e comparar com guards existentes; prototipar adaptador somente se comprovadamente necessário.",
+      "caution": "Não substituir de imediato autorização NestJS/RLS; diferença de semântica pode criar bypass."
+    },
+    {
+      "id": "R010",
+      "slug": "medplum/medplum",
+      "url": "https://github.com/medplum/medplum",
+      "area": "Interoperabilidade clínica",
+      "priority": "P2",
+      "mode": "REFERÊNCIA ARQUITETURAL",
+      "license": "Apache-2.0 (revalidar subprojetos)",
+      "prs": [
+        "ANT04",
+        "QST04",
+        "QST07",
+        "AI05",
+        "ENG07"
+      ],
+      "application": "FHIR/Observation, prontuário, organização e identidade clínica.",
+      "benefit": "Modelo de interoperabilidade e nomenclaturas clínicas.",
+      "how": "Consultar padrões de observações, unidades e Provenance; elaborar mapeamento opcional sem alterar schema nativo automaticamente.",
+      "caution": "Não migrar OctaClin inteiro nem importar dados pessoais; versão/licença por pacote.",
+      "post320Notes": [
+        "AI05 is historical and not executable; Fase 316 governs exam extraction"
+      ]
+    },
+    {
+      "id": "R011",
+      "slug": "INSP-RH/bw",
+      "url": "https://github.com/INSP-RH/bw",
+      "area": "Cálculo clínico",
+      "priority": "P2",
+      "mode": "ESTUDO CIENTÍFICO",
+      "license": "MIT",
+      "prs": [
+        "CALC05"
+      ],
+      "application": "Modelo dinâmico de evolução do peso.",
+      "benefit": "Referência de comportamento matemático e premissas para simuladores.",
+      "how": "Ler código, testes e publicações primárias; comparar saídas em cenários sintéticos e documentar população/limitações.",
+      "caution": "Não é implementação comprovada do VENTA; não apresentar previsão como certeza."
+    },
+    {
+      "id": "R012",
+      "slug": "langchain-ai/langgraphjs",
+      "url": "https://github.com/langchain-ai/langgraphjs",
+      "area": "Inteligência artificial",
+      "priority": "P2",
+      "mode": "AVALIAR SE NECESSÁRIO",
+      "license": "MIT",
+      "prs": [
+        "AI01",
+        "AI02",
+        "AI03",
+        "AI04",
+        "AI05",
+        "AI06"
+      ],
+      "application": "Fluxos de IA com etapas/checkpoints e human-in-the-loop.",
+      "benefit": "Orquestração rastreável para várias etapas de revisão clínica.",
+      "how": "PoC só quando fluxo atual exigir checkpoints duráveis; conectar pelo serviço/gateway de IA autorizado.",
+      "caution": "Evitar orquestrador duplicado; PHI minimizada, revisão humana e ausência de acionamento automático clínico.",
+      "post320Notes": [
+        "AI05 is historical and not executable; Fase 316 governs exam extraction",
+        "Check Fase 318 provider/PHI gates and pilot findings"
+      ]
+    },
+    {
+      "id": "R013",
+      "slug": "TanStack/query",
+      "url": "https://github.com/TanStack/query",
+      "area": "Dados e produtividade",
+      "priority": "P0",
+      "mode": "AVALIAR INTEGRAÇÃO",
+      "license": "MIT",
+      "prs": [
+        "PA06",
+        "QST03",
+        "OPS06",
+        "ENG13"
+      ],
+      "application": "Gestão de leituras, estados de rede e mutações em web.",
+      "benefit": "Reduz boilerplate de fetch, melhora invalidação, loading e tratamento de erros.",
+      "how": "Piloto em um painel do prontuário com query keys contendo tenant/sessão e invalidação após mutação.",
+      "caution": "Cache de PHI apenas em memória; limpeza no logout/troca de tenant; não confundir com controle de versão/conflito.",
+      "post320Notes": [
+        "Do not duplicate metrics delivered by Fases 263 and 306"
+      ]
+    },
+    {
+      "id": "R014",
+      "slug": "react-hook-form/react-hook-form",
+      "url": "https://github.com/react-hook-form/react-hook-form",
+      "area": "UI e produtividade",
+      "priority": "P1",
+      "mode": "AVALIAR INTEGRAÇÃO",
+      "license": "MIT",
+      "prs": [
+        "PA05",
+        "PA06",
+        "QST05",
+        "QST07"
+      ],
+      "application": "Formulários extensos, cadastro e rascunhos.",
+      "benefit": "Menos re-renderizações e estados de validação coerentes.",
+      "how": "PoC em formulário isolado sem alterar formatos de API; comparar com componentes existentes.",
+      "caution": "Não migrar editor do plano inteiro só pelo autosave; regras clínicas seguem no backend."
+    },
+    {
+      "id": "R015",
+      "slug": "openfoodfacts/openfoodfacts-js",
+      "url": "https://github.com/openfoodfacts/openfoodfacts-js",
+      "area": "Catálogo alimentar",
+      "priority": "P2",
+      "mode": "AVALIAR FONTE SEPARADA",
+      "license": "Apache-2.0 (SDK); ODbL (dados)",
+      "prs": [
+        "FOOD02",
+        "FOOD06",
+        "FOOD08"
+      ],
+      "application": "Cliente de API Open Food Facts para produtos com marca/código de barras.",
+      "benefit": "Amplia cobertura de industrializados.",
+      "how": "Integrar por adaptador separado da USDA/TBCA/IBGE, guardar fonte, licença, versão e provenance.",
+      "caution": "ODbL e atribuição/share-alike para dados; não fundir bases silenciosamente; qualidade incompleta varia."
+    },
+    {
+      "id": "R016",
+      "slug": "metonym/fooddata-central",
+      "url": "https://github.com/metonym/fooddata-central",
+      "area": "Catálogo alimentar",
+      "priority": "P3",
+      "mode": "REFERÊNCIA HISTÓRICA",
+      "license": "MIT",
+      "prs": [
+        "FOOD02",
+        "FOOD05"
+      ],
+      "application": "Exemplo de cliente Node para USDA FoodData Central.",
+      "benefit": "Ajuda a entender modelos de consulta e paginação.",
+      "how": "Estudar interfaces se necessário, mas preservar a integração USDA por API nativa que o OctaClin já está construindo.",
+      "caution": "Cliente antigo; não substituir arquitetura atual."
+    },
+    {
+      "id": "R017",
+      "slug": "simonoppowa/OpenNutriTracker",
+      "url": "https://github.com/simonoppowa/OpenNutriTracker",
+      "area": "Catálogo alimentar",
+      "priority": "P3",
+      "mode": "SOMENTE INSPIRAÇÃO",
+      "license": "GPL-3.0",
+      "prs": [
+        "FOOD01",
+        "FOOD03",
+        "FOOD07",
+        "APP01",
+        "APP04"
+      ],
+      "application": "UX de rastreamento alimentar, nutrientes e metas.",
+      "benefit": "Inspira interação do diário, seleção de alimentos e indicadores.",
+      "how": "Examinar apenas telas/fluxos e implementar versão independente na stack atual.",
+      "caution": "Não copiar código GPL no SaaS comercial fechado sem revisão jurídica.",
+      "post320Notes": [
+        "Check Fase 317 product/clinical GO/NO-GO",
+        "Fase 310 implements searchable recipe categories and selective patient sharing"
+      ]
+    },
+    {
+      "id": "R018",
+      "slug": "TandoorRecipes/recipes",
+      "url": "https://github.com/TandoorRecipes/recipes",
+      "area": "Catálogo alimentar",
+      "priority": "P3",
+      "mode": "SOMENTE INSPIRAÇÃO",
+      "license": "AGPLv3 e condição adicional; verificar arquivo",
+      "prs": [
+        "FOOD07",
+        "FOOD08"
+      ],
+      "application": "Organização, tags, filtros e biblioteca de receitas.",
+      "benefit": "Inspira taxonomia e experiência de compartilhamento.",
+      "how": "Observar UX; implementar modelo próprio a partir de requisitos.",
+      "caution": "Não copiar código; licença com restrições comerciais adicionais.",
+      "post320Notes": [
+        "Fase 310 implements searchable recipe categories and selective patient sharing"
+      ]
+    },
+    {
+      "id": "R019",
+      "slug": "FlatNineOrg/medilab-pediatric-growth-calc",
+      "url": "https://github.com/FlatNineOrg/medilab-pediatric-growth-calc",
+      "area": "Cálculo clínico",
+      "priority": "P3",
+      "mode": "REFERÊNCIA SECUNDÁRIA",
+      "license": "MIT (código)",
+      "prs": [
+        "ANT05",
+        "ANT06"
+      ],
+      "application": "Cálculos LMS, percentis, interpolação e idade corrigida.",
+      "benefit": "Possível comparação independente de algoritmos pediátricos.",
+      "how": "Revisar código e casos de borda como fonte secundária, depois validar exclusivamente contra tabelas oficiais.",
+      "caution": "Projeto pequeno/recente; não tratar como biblioteca clínica validada.",
+      "post320Notes": [
+        "Clinical reference: check Fase 314 GO/NO-GO and reference-data rights first"
+      ]
+    },
+    {
+      "id": "R020",
+      "slug": "BetterTyped/react-zoom-pan-pinch",
+      "url": "https://github.com/BetterTyped/react-zoom-pan-pinch",
+      "area": "Antropometria e fotos",
+      "priority": "P2",
+      "mode": "AVALIAR INTEGRAÇÃO",
+      "license": "MIT (confirmar versão)",
+      "prs": [
+        "ANT06",
+        "ANT08"
+      ],
+      "application": "Zoom, pan e pinch em gráficos/imagens.",
+      "benefit": "Interação útil para curvas e fotos de evolução.",
+      "how": "PoC no gráfico SVG existente, com alternativa por teclado, limites e reset.",
+      "caution": "Não bloquear leitura acessível nem alterar coordenadas clínicas.",
+      "post320Notes": [
+        "Clinical reference: check Fase 314 GO/NO-GO and reference-data rights first"
+      ]
+    },
+    {
+      "id": "R021",
+      "slug": "i18next/react-i18next",
+      "url": "https://github.com/i18next/react-i18next",
+      "area": "Portal e mobile",
+      "priority": "P2",
+      "mode": "ALTERNATIVA",
+      "license": "MIT",
+      "prs": [
+        "APP09"
+      ],
+      "application": "i18n React genérico.",
+      "benefit": "Alternativa para partes não-Next e componentes compartilhados.",
+      "how": "Avaliar lado a lado com next-intl; preferir um padrão por plataforma.",
+      "caution": "Não adotar ambos no mesmo frontend sem justificativa; verificar suporte React Native separado."
+    },
+    {
+      "id": "R022",
+      "slug": "surveyjs/survey-library",
+      "url": "https://github.com/surveyjs/survey-library",
+      "area": "Questionários e prontuário",
+      "priority": "P2",
+      "mode": "REFERÊNCIA / PoC RESTRITA",
+      "license": "MIT (somente Form Library)",
+      "prs": [
+        "QST01",
+        "QST02",
+        "QST03",
+        "QST05"
+      ],
+      "application": "Renderização de perguntas, validação e lógica condicional.",
+      "benefit": "Inspira widgets e condicionais para questionários avançados.",
+      "how": "Comparar schema e versão atual; adaptar padrões isoladamente, sem reimplementar domínio.",
+      "caution": "Survey Creator, Dashboard e PDF Generator têm licenças comerciais separadas."
+    },
+    {
+      "id": "R023",
+      "slug": "surveyjs/survey-creator",
+      "url": "https://github.com/surveyjs/survey-creator",
+      "area": "Questionários e prontuário",
+      "priority": "P3",
+      "mode": "SOMENTE INSPIRAÇÃO",
+      "license": "Comercial para uso de produção",
+      "prs": [
+        "QST05",
+        "QST07"
+      ],
+      "application": "Editor visual de formulários.",
+      "benefit": "Referência da experiência de autoria e drag-and-drop de perguntas.",
+      "how": "Usar apenas como benchmarking funcional; codificar editor próprio.",
+      "caution": "Não presumir MIT a partir da Form Library."
+    },
+    {
+      "id": "R024",
+      "slug": "HabitRPG/habitica",
+      "url": "https://github.com/HabitRPG/habitica",
+      "area": "Portal e mobile",
+      "priority": "P3",
+      "mode": "SOMENTE INSPIRAÇÃO",
+      "license": "GPL-3.0",
+      "prs": [
+        "APP01",
+        "APP04"
+      ],
+      "application": "Streaks, recompensas e badges.",
+      "benefit": "Inspira progressão e adesão.",
+      "how": "Estudar mecânicas e criar regras próprias ligadas a hábitos reais.",
+      "caution": "Evitar copiar código e padrões de incentivo compulsivo; não gamificar metas clínicas sensíveis.",
+      "post320Notes": [
+        "Check Fase 317 product/clinical GO/NO-GO"
+      ]
+    },
+    {
+      "id": "R025",
+      "slug": "formbricks/formbricks",
+      "url": "https://github.com/formbricks/formbricks",
+      "area": "Questionários e prontuário",
+      "priority": "P3",
+      "mode": "SOMENTE INSPIRAÇÃO",
+      "license": "AGPL-3.0 (núcleo); SDKs MIT; EE separada",
+      "prs": [
+        "QST02",
+        "QST03"
+      ],
+      "application": "Distribuição de formulários, métricas e experiência de respostas.",
+      "benefit": "Benchmarking de surveys públicos, convites e relatórios.",
+      "how": "Analisar UX e arquitetura; se considerar SDK, isolar pacote e revisar licença exata.",
+      "caution": "Não copiar núcleo AGPL para SaaS fechado sem revisão jurídica."
+    },
+    {
+      "id": "R026",
+      "slug": "calcom/cal.com",
+      "url": "https://github.com/calcom/cal.com",
+      "area": "Agenda e gestão",
+      "priority": "P3",
+      "mode": "SOMENTE INSPIRAÇÃO",
+      "license": "AGPL/open-core e componentes comerciais",
+      "prs": [
+        "OPS01",
+        "OPS02"
+      ],
+      "application": "Agendamento público, disponibilidade, tipos e confirmações.",
+      "benefit": "Referência para jornada de autoagendamento e gestão de horários.",
+      "how": "Estudar fluxos e regras de agendamento; evoluir agenda existente.",
+      "caution": "Não migrar backend nem copiar implementação AGPL sem revisão jurídica."
+    },
+    {
+      "id": "R027",
+      "slug": "diegomura/react-pdf",
+      "url": "https://github.com/diegomura/react-pdf",
+      "area": "Documentos e PDF",
+      "priority": "P2",
+      "mode": "ALTERNATIVA DE GERAÇÃO",
+      "license": "MIT",
+      "prs": [
+        "DOC04",
+        "DOC05",
+        "DOC08"
+      ],
+      "application": "Geração declarativa de PDFs React/Node.",
+      "benefit": "Alternativa ao pdfme quando layout programático for melhor.",
+      "how": "Comparar prova sintética de recibo com pdfme, custo de rendering e tipografia.",
+      "caution": "Gerador, não visualizador; não confundir com wojtekmaj/react-pdf."
+    },
+    {
+      "id": "R028",
+      "slug": "mozilla/pdf.js",
+      "url": "https://github.com/mozilla/pdf.js",
+      "area": "Documentos e PDF",
+      "priority": "P2",
+      "mode": "MOTOR / REFERÊNCIA",
+      "license": "Apache-2.0",
+      "prs": [
+        "DOC03"
+      ],
+      "application": "Motor de renderização de PDF.",
+      "benefit": "Controlar renderização, navegação e seleção em viewer próprio.",
+      "how": "Preferir wrapper existente quando suficiente; se usar diretamente, testar worker e canvas.",
+      "caution": "Não expor URLs clínicas persistentes nem deixar documentos em cache aberto."
+    },
+    {
+      "id": "R029",
+      "slug": "szimek/signature_pad",
+      "url": "https://github.com/szimek/signature_pad",
+      "area": "Documentos e PDF",
+      "priority": "P1",
+      "mode": "AVALIAR INTEGRAÇÃO",
+      "license": "MIT",
+      "prs": [
+        "DOC01",
+        "DOC02"
+      ],
+      "application": "Captura de assinatura manuscrita em canvas.",
+      "benefit": "Permite representação visual profissional em documentos.",
+      "how": "Capturar imagem no contexto autorizado, armazenar privada e aplicar em template.",
+      "caution": "Não equivale a assinatura digital certificada; consentimento, acesso e uso indevido exigem cuidado."
+    },
+    {
+      "id": "R030",
+      "slug": "vercel/ai",
+      "url": "https://github.com/vercel/ai",
+      "area": "Inteligência artificial",
+      "priority": "P2",
+      "mode": "AVALIAR SE NECESSÁRIO",
+      "license": "Apache-2.0",
+      "prs": [
+        "AI01",
+        "AI02",
+        "AI03",
+        "AI05"
+      ],
+      "application": "SDK TypeScript de fluxo/streaming de IA.",
+      "benefit": "Facilita interação de chat, geração de texto e estados de UI.",
+      "how": "Conectar exclusivamente ao backend/gateway aprovado, com filtros e revisão humana.",
+      "caution": "Não enviar dados clínicos diretamente do browser ao provedor; evitar redundância com FastAPI.",
+      "post320Notes": [
+        "AI05 is historical and not executable; Fase 316 governs exam extraction",
+        "Check Fase 318 provider/PHI gates and pilot findings"
+      ]
+    },
+    {
+      "id": "R031",
+      "slug": "bigcalendar/react-big-calendar",
+      "url": "https://github.com/bigcalendar/react-big-calendar",
+      "area": "Agenda e gestão",
+      "priority": "P2",
+      "mode": "AVALIAR SUBSTITUIÇÃO PARCIAL",
+      "license": "MIT",
+      "prs": [
+        "OPS01",
+        "OPS02"
+      ],
+      "application": "Componente visual de calendário React.",
+      "benefit": "Pode melhorar agenda semanal/mensal sem reescrever regras.",
+      "how": "Testar exclusivamente camada de UI com eventos fictícios, inclusive bloqueios e drag-and-drop.",
+      "caution": "Preservar conflitos/escopo/sincronização Google atuais; não trocar calendário funcional sem ganho medido."
+    },
+    {
+      "id": "R032",
+      "slug": "open-telemetry/opentelemetry-js",
+      "url": "https://github.com/open-telemetry/opentelemetry-js",
+      "area": "Confiabilidade e engenharia",
+      "priority": "P1",
+      "mode": "AVALIAR INTEGRAÇÃO",
+      "license": "Apache-2.0",
+      "prs": [
+        "ENG03"
+      ],
+      "application": "Tracing entre Next, NestJS, Postgres, Redis e integrações.",
+      "benefit": "Acelera diagnóstico de latência, erro e gargalos.",
+      "how": "Começar com spans/trace IDs em uma jornada com sanitização e amostragem; não registrar request body clínico.",
+      "caution": "Risco de PHI em span attributes, headers e propagação; storage/exporter/custo a avaliar."
+    },
+    {
+      "id": "R033",
+      "slug": "felixmosh/bull-board",
+      "url": "https://github.com/felixmosh/bull-board",
+      "area": "Confiabilidade e engenharia",
+      "priority": "P1",
+      "mode": "AVALIAR INTEGRAÇÃO",
+      "license": "MIT",
+      "prs": [
+        "ENG04"
+      ],
+      "application": "Painel operacional para filas BullMQ.",
+      "benefit": "Visibilidade de jobs falhos e retentativas.",
+      "how": "Rodar apenas sob rota interna e guard SuperAdmin, atrás da rede/autenticação já existente; limitar operações destrutivas.",
+      "caution": "Jobs podem conter payload clínico; anonimizar UI, RBAC, logs e reprocessamento com idempotência."
+    },
+    {
+      "id": "R034",
+      "slug": "zizmorcore/zizmor",
+      "url": "https://github.com/zizmorcore/zizmor",
+      "area": "Confiabilidade e engenharia",
+      "priority": "P0",
+      "mode": "AVALIAR GATE",
+      "license": "MIT",
+      "prs": [
+        "ENG02"
+      ],
+      "application": "Análise estática de GitHub Actions.",
+      "benefit": "Encontra permissões excessivas e riscos em workflows CI.",
+      "how": "Executar inicialmente em relatório não bloqueante, corrigir achados, depois avaliar gate.",
+      "caution": "Sem alterar permissões de CI cegamente; testar pipelines e Actions usadas."
+    },
+    {
+      "id": "R035",
+      "slug": "webpro-nl/knip",
+      "url": "https://github.com/webpro-nl/knip",
+      "area": "Confiabilidade e engenharia",
+      "priority": "P0",
+      "mode": "AVALIAR GATE",
+      "license": "ISC",
+      "prs": [
+        "ENG01"
+      ],
+      "application": "Código/dependências sem uso em TS/JS.",
+      "benefit": "Reduz complexidade e superfície de manutenção.",
+      "how": "Rodar audit-only no monorepo; documentar entrypoints dinâmicos e exceções antes de remover arquivos.",
+      "caution": "Pode marcar rotas Next/Nest carregadas dinamicamente como não utilizadas; não apagar automaticamente."
+    },
+    {
+      "id": "R036",
+      "slug": "openapi-ts/openapi-typescript",
+      "url": "https://github.com/openapi-ts/openapi-typescript",
+      "area": "Confiabilidade e engenharia",
+      "priority": "P1",
+      "mode": "AVALIAR INTEGRAÇÃO",
+      "license": "MIT",
+      "prs": [
+        "ENG05"
+      ],
+      "application": "Tipos compartilhados a partir de OpenAPI.",
+      "benefit": "Reduz divergência de DTOs backend, BFF e web.",
+      "how": "Gerar tipos read-only do contrato Nest documentado; introduzir primeiro em uma API isolada.",
+      "caution": "Gerador não substitui validação em runtime; cuidar de autorização e alterações incompatíveis."
+    },
+    {
+      "id": "R037",
+      "slug": "open-feature/js-sdk",
+      "url": "https://github.com/open-feature/js-sdk",
+      "area": "Confiabilidade e engenharia",
+      "priority": "P1",
+      "mode": "AVALIAR INTERFACE",
+      "license": "Apache-2.0",
+      "prs": [
+        "ENG06"
+      ],
+      "application": "API padronizada de feature flags.",
+      "benefit": "Permite rollout controlado por tenant/ambiente.",
+      "how": "Definir interface de avaliação no backend, flags fail-closed e testes; começar sem serviço externo.",
+      "caution": "Nunca usar feature flag como permissão ou isolamento de tenant."
+    },
+    {
+      "id": "R038",
+      "slug": "docling-project/docling",
+      "url": "https://github.com/docling-project/docling",
+      "area": "Documentos e PDF",
+      "priority": "P2",
+      "mode": "AVALIAR PROTÓTIPO",
+      "license": "MIT (código)",
+      "prs": [
+        "AI05",
+        "ENG08"
+      ],
+      "application": "Parsing de PDF, tabelas e documentos no serviço Python.",
+      "benefit": "Pode acelerar estruturação de exames e arquivos recebidos.",
+      "how": "Executar offline/local com PDFs sintéticos no serviço Python; retornar texto/tabelas para revisão.",
+      "caution": "OCR/extração é probabilística; conferir recursos, isolamento, malware, privacidade e testes com scans difíceis.",
+      "post320Notes": [
+        "AI05 is historical and not executable; Fase 316 governs exam extraction"
+      ]
+    },
+    {
+      "id": "R039",
+      "slug": "data-privacy-stack/presidio",
+      "url": "https://github.com/data-privacy-stack/presidio",
+      "area": "Gestão e segurança",
+      "priority": "P1",
+      "mode": "AVALIAR CAMADA ADICIONAL",
+      "license": "MIT",
+      "prs": [
+        "AI01",
+        "AI02",
+        "AI03",
+        "AI05",
+        "ENG08"
+      ],
+      "application": "Detecção/mascaramento de identificadores em texto.",
+      "benefit": "Complementa minimização antes de IA e logs.",
+      "how": "Avaliar entidade CPF brasileira, números, e-mails e nomes com fixtures sintéticos; comparar falso positivo/negativo.",
+      "caution": "Não substitui autorização, LGPD, criptografia ou revisão; modelos podem perder contexto clínico.",
+      "post320Notes": [
+        "AI05 is historical and not executable; Fase 316 governs exam extraction",
+        "Check Fase 318 provider/PHI gates and pilot findings"
+      ]
+    },
+    {
+      "id": "R040",
+      "slug": "promptfoo/promptfoo",
+      "url": "https://github.com/promptfoo/promptfoo",
+      "area": "Inteligência artificial",
+      "priority": "P1",
+      "mode": "AVALIAR GATE DE IA",
+      "license": "MIT (verificar módulos/edição)",
+      "prs": [
+        "AI01",
+        "AI02",
+        "AI03",
+        "AI04",
+        "AI05",
+        "AI06",
+        "ENG17"
+      ],
+      "application": "Avaliação de prompts, regressões e ataques.",
+      "benefit": "Testar alucinação, vazamento PHI e prompt injection antes de habilitar IA.",
+      "how": "Rodar suite de prompts sintéticos sem dados reais; gates reprodutíveis e revisão humana.",
+      "caution": "Não subir transcrições/PHI para telemetria do avaliador; verificar recursos SaaS e licença.",
+      "post320Notes": [
+        "AI05 is historical and not executable; Fase 316 governs exam extraction",
+        "Check Fase 318 provider/PHI gates and pilot findings"
+      ]
+    },
+    {
+      "id": "R041",
+      "slug": "storybookjs/storybook",
+      "url": "https://github.com/storybookjs/storybook",
+      "area": "UI e produtividade",
+      "priority": "P2",
+      "mode": "AVALIAR COMPONENTES",
+      "license": "MIT",
+      "prs": [
+        "ENG15",
+        "PA05",
+        "QST01",
+        "DOC06"
+      ],
+      "application": "Catálogo visual de componentes e estados.",
+      "benefit": "Facilita testes de UI, estados vazios/erro e revisão responsiva.",
+      "how": "Piloto com componente compartilhado e histórias de permissão/erro/keyboard.",
+      "caution": "Não usar fixtures de pacientes reais; build separado não deve expor componentes internos."
+    },
+    {
+      "id": "R042",
+      "slug": "openfoodfacts/openfoodfacts-server",
+      "url": "https://github.com/openfoodfacts/openfoodfacts-server",
+      "area": "Catálogo alimentar",
+      "priority": "P3",
+      "mode": "REFERÊNCIA DE MODELO/DADOS",
+      "license": "Licença código e dados distintas; verificar arquivos",
+      "prs": [
+        "FOOD02",
+        "FOOD08"
+      ],
+      "application": "Infraestrutura e modelo de dados Open Food Facts.",
+      "benefit": "Inspiração de taxonomia, origem e processo de revisão.",
+      "how": "Estudar API/esquema; preferir SDK oficial e integração por fonte separada.",
+      "caution": "Dados ODbL; server não é biblioteca necessária para consumir API."
+    },
+    {
+      "id": "R043",
+      "slug": "Flagsmith/flagsmith",
+      "url": "https://github.com/Flagsmith/flagsmith",
+      "area": "Confiabilidade e engenharia",
+      "priority": "P2",
+      "mode": "ALTERNATIVA DE FLAGS",
+      "license": "BSD-3-Clause para núcleo; revisar EE",
+      "prs": [
+        "ENG06"
+      ],
+      "application": "Serviço de feature flags e segmentação.",
+      "benefit": "Rollouts sofisticados por ambiente/tenant quando necessário.",
+      "how": "Comparar custo operacional e compatibilidade com OpenFeature/implementação leve interna.",
+      "caution": "Serviço novo pode ser excessivo; conferir licença por componente e política de dados."
+    },
+    {
+      "id": "R044",
+      "slug": "PostHog/posthog",
+      "url": "https://github.com/PostHog/posthog",
+      "area": "Gestão e segurança",
+      "priority": "P2",
+      "mode": "AVALIAR COM MINIMIZAÇÃO",
+      "license": "Licenças mistas/open-core: revisar",
+      "prs": [
+        "OPS06",
+        "ENG16"
+      ],
+      "application": "Telemetria de produto e funis de onboarding.",
+      "benefit": "Medir adoção de recursos, gargalos de UX e retenção de uso.",
+      "how": "Somente eventos operacionais agregados sem PHI; política explícita de instrumentação.",
+      "caution": "Desabilitar autocapture/sessão e propriedades clínicas; revisar consentimento e residência dos dados.",
+      "post320Notes": [
+        "Do not duplicate metrics delivered by Fases 263 and 306"
+      ]
+    },
+    {
+      "id": "R045",
+      "slug": "triggerdotdev/trigger.dev",
+      "url": "https://github.com/triggerdotdev/trigger.dev",
+      "area": "Confiabilidade e engenharia",
+      "priority": "P3",
+      "mode": "SOMENTE REFERÊNCIA",
+      "license": "Licença por componentes/edição: verificar",
+      "prs": [
+        "ENG04",
+        "AI03"
+      ],
+      "application": "Workflows duráveis e console de jobs.",
+      "benefit": "Inspira observabilidade e retentativas.",
+      "how": "Comparar padrões com BullMQ existente; evitar acrescentar segundo orquestrador.",
+      "caution": "Troca de stack operacional de filas sem necessidade aumenta custo/risco.",
+      "post320Notes": [
+        "Check Fase 318 provider/PHI gates and pilot findings"
+      ]
+    },
+    {
+      "id": "R046",
+      "slug": "TanStack/table",
+      "url": "https://github.com/TanStack/table",
+      "area": "UI e produtividade",
+      "priority": "P0",
+      "mode": "AVALIAR INTEGRAÇÃO",
+      "license": "MIT",
+      "prs": [
+        "QST03",
+        "OPS04",
+        "OPS06",
+        "APP02"
+      ],
+      "application": "Tabelas de pacientes, questionários, exames e relatórios.",
+      "benefit": "Ordenação, filtros, seleção e virtualização integráveis ao design system.",
+      "how": "Piloto numa lista real paginada mantendo filtros server-side e permissões.",
+      "caution": "Não trazer todos os dados clínicos para client-side; desempenho e acessibilidade.",
+      "post320Notes": [
+        "Do not duplicate metrics delivered by Fases 263 and 306"
+      ]
+    },
+    {
+      "id": "R047",
+      "slug": "downshift-js/downshift",
+      "url": "https://github.com/downshift-js/downshift",
+      "area": "Catálogo alimentar",
+      "priority": "P0",
+      "mode": "AVALIAR INTEGRAÇÃO",
+      "license": "MIT",
+      "prs": [
+        "FOOD02",
+        "FOOD03",
+        "FOOD05"
+      ],
+      "application": "Combobox/autocomplete de busca de alimentos e substitutos.",
+      "benefit": "Busca acessível por teclado, foco e seleção eficiente em catálogo amplo.",
+      "how": "PoC no campo existente, usando o endpoint paginado atual; debouncing e teclado.",
+      "caution": "Não usar pesquisa local de catálogo inteiro; preservar proveniência e versão dos alimentos."
+    },
+    {
+      "id": "R048",
+      "slug": "resend/react-email",
+      "url": "https://github.com/resend/react-email",
+      "area": "Comunicação e agenda",
+      "priority": "P1",
+      "mode": "AVALIAR TEMPLATES",
+      "license": "MIT (revalidar pacote)",
+      "prs": [
+        "ENG19"
+      ],
+      "application": "Templates de e-mail React para convites, consultas e notificações.",
+      "benefit": "Padroniza responsividade e marca da clínica mantendo Nodemailer.",
+      "how": "Criar template React renderizado em HTML server-side; testar Gmail/outros clientes com conteúdo sintético.",
+      "caution": "Escapar variáveis, sanitizar HTML, não registrar PHI nem trocar provider sem autorização."
+    },
+    {
+      "id": "R049",
+      "slug": "gilbarbara/react-joyride",
+      "url": "https://github.com/gilbarbara/react-joyride",
+      "area": "UI e produtividade",
+      "priority": "P1",
+      "mode": "AVALIAR INTEGRAÇÃO",
+      "license": "MIT",
+      "prs": [
+        "ENG15"
+      ],
+      "application": "Tours guiados complementando checklist de onboarding.",
+      "benefit": "Ajuda usuário a localizar ações reais sem travar sistema.",
+      "how": "Tour opcional em uma jornada de onboarding, focando componentes existentes, com skip e persistência.",
+      "caution": "Não usar tour como indicador de conclusão; garantir SSR, React19 e mobile."
+    },
+    {
+      "id": "R050",
+      "slug": "rjsf-team/react-jsonschema-form",
+      "url": "https://github.com/rjsf-team/react-jsonschema-form",
+      "area": "Questionários e prontuário",
+      "priority": "P2",
+      "mode": "REFERÊNCIA / PoC RESTRITA",
+      "license": "Apache-2.0",
+      "prs": [
+        "QST05",
+        "QST07"
+      ],
+      "application": "Formulários gerados a partir de JSON Schema.",
+      "benefit": "Reduz código para campos e validação declarativa.",
+      "how": "Comparar com schema atual; PoC apenas em formulário interno novo sem migrar questionários antigos.",
+      "caution": "Schema JSON genérico não substitui versionamento, criptografia e domínio clínico."
+    },
+    {
+      "id": "R051",
+      "slug": "47ng/nuqs",
+      "url": "https://github.com/47ng/nuqs",
+      "area": "UI e produtividade",
+      "priority": "P1",
+      "mode": "AVALIAR INTEGRAÇÃO",
+      "license": "MIT",
+      "prs": [
+        "OPS01",
+        "OPS06",
+        "APP02",
+        "QST03"
+      ],
+      "application": "Filtros/paginação/aba da UI sincronizados com URL.",
+      "benefit": "Facilita retomar ou compartilhar visão interna sem perder estado.",
+      "how": "Piloto em filtro de lista com parâmetros não sensíveis, validação e default.",
+      "caution": "Nunca colocar nome/CPF/paciente/dado de saúde em query string.",
+      "post320Notes": [
+        "Do not duplicate metrics delivered by Fases 263 and 306"
+      ]
+    },
+    {
+      "id": "R052",
+      "slug": "transloadit/uppy",
+      "url": "https://github.com/transloadit/uppy",
+      "area": "Documentos e PDF",
+      "priority": "P2",
+      "mode": "AVALIAR PROTÓTIPO",
+      "license": "MIT",
+      "prs": [
+        "ANT08",
+        "APP05",
+        "AI05",
+        "ENG08"
+      ],
+      "application": "UI de uploads de imagens, exames e materiais.",
+      "benefit": "Progresso, múltiplos arquivos e recuperação de falhas.",
+      "how": "PoC conservando emissão de URL assinada/quarentena/validação B2 e contrato de confirmação existente.",
+      "caution": "Não contornar antivírus, magic bytes, tamanho, tenant ou confirmação segura do OctaClin.",
+      "post320Notes": [
+        "AI05 is historical and not executable; Fase 316 governs exam extraction"
+      ]
+    },
+    {
+      "id": "R053",
+      "slug": "MatthewHerbst/react-to-print",
+      "url": "https://github.com/MatthewHerbst/react-to-print",
+      "area": "Documentos e PDF",
+      "priority": "P2",
+      "mode": "AVALIAR UTILITÁRIO",
+      "license": "MIT",
+      "prs": [
+        "DOC04",
+        "DOC05",
+        "DOC08"
+      ],
+      "application": "Impressão de componentes React como PDF do navegador.",
+      "benefit": "Padroniza seleção de conteúdo e estilos para impressão.",
+      "how": "PoC com uma declaração sintética; preferir pdfme se exigência for arquivo PDF determinístico.",
+      "caution": "É impressão do navegador, não gerador de PDF completo; nomes podem depender do browser."
+    },
+    {
+      "id": "R054",
+      "slug": "jkbrzt/rrule",
+      "url": "https://github.com/jkbrzt/rrule",
+      "area": "Comunicação e agenda",
+      "priority": "P2",
+      "mode": "AVALIAR REGRAS",
+      "license": "BSD-like (verificar pacote)",
+      "prs": [
+        "OPS02",
+        "QST02"
+      ],
+      "application": "Regras de recorrência de agenda e formulários.",
+      "benefit": "Suporta ciclos complexos, exceções e horários recorrentes.",
+      "how": "Usar só para cálculo temporal ao comparar com cron existente; testes de fuso e DST.",
+      "caution": "Não substituir cron-parser/schedule já funcional sem motivo; agendamento exige idempotência."
+    },
+    {
+      "id": "R055",
+      "slug": "rosskhanas/react-qr-code",
+      "url": "https://github.com/rosskhanas/react-qr-code",
+      "area": "Comunicação e agenda",
+      "priority": "P2",
+      "mode": "AVALIAR UTILITÁRIO",
+      "license": "MIT",
+      "prs": [
+        "QST02",
+        "OPS02",
+        "APP05"
+      ],
+      "application": "QR codes para links públicos e documentos permitidos.",
+      "benefit": "Compartilhamento rápido de formulários e agendamento.",
+      "how": "Renderizar QR de token/URL público já autorizado, com fallback para link copiável.",
+      "caution": "QR não deve conter URL de prontuário/arquivo privado persistente nem PHI."
+    },
+    {
+      "id": "R056",
+      "slug": "dubzzz/fast-check",
+      "url": "https://github.com/dubzzz/fast-check",
+      "area": "Cálculo clínico",
+      "priority": "P0",
+      "mode": "AVALIAR TESTES",
+      "license": "MIT",
+      "prs": [
+        "CALC01",
+        "CALC02",
+        "CALC03",
+        "CALC04",
+        "CALC05",
+        "FOOD05",
+        "FOOD06",
+        "ANT01",
+        "ANT05",
+        "ENG09"
+      ],
+      "application": "Property-based testing para cálculo nutricional/antropometria.",
+      "benefit": "Descobre combinações e invariantes não cobertos por fixtures tradicionais.",
+      "how": "Criar geradores para entradas válidas/inválidas e invariantes (consistência de energia, escalas, limites, ordenação, reversibilidade).",
+      "caution": "Invariantes matemáticos devem ser clinicamente corretos; testes não substituem fontes clínicas primárias.",
+      "post320Notes": [
+        "Clinical reference: check Fase 314 GO/NO-GO and reference-data rights first"
+      ]
+    },
+    {
+      "id": "R057",
+      "slug": "stryker-mutator/stryker-js",
+      "url": "https://github.com/stryker-mutator/stryker-js",
+      "area": "Cálculo clínico",
+      "priority": "P1",
+      "mode": "AVALIAR TESTES",
+      "license": "Apache-2.0",
+      "prs": [
+        "CALC02",
+        "FOOD05",
+        "FOOD06",
+        "ANT05",
+        "ENG09"
+      ],
+      "application": "Mutation testing de fórmulas e validações.",
+      "benefit": "Mede se testes detectam fórmulas adulteradas.",
+      "how": "Piloto só no módulo de cálculo nutricional, com threshold e tempo controlados.",
+      "caution": "Custoso no CI; começar manual/cron e depois escolher gate.",
+      "post320Notes": [
+        "Clinical reference: check Fase 314 GO/NO-GO and reference-data rights first"
+      ]
+    },
+    {
+      "id": "R058",
+      "slug": "schemathesis/schemathesis",
+      "url": "https://github.com/schemathesis/schemathesis",
+      "area": "Confiabilidade e engenharia",
+      "priority": "P0",
+      "mode": "AVALIAR API TESTING",
+      "license": "MIT",
+      "prs": [
+        "ENG10",
+        "ENG05"
+      ],
+      "application": "Testes gerados de OpenAPI para API Nest.",
+      "benefit": "Encontra combinações inválidas, falhas 500 e contratos inconsistentes.",
+      "how": "Testar em banco descartável com usuário/tenant sintético, suite allowlist de rotas e seeds.",
+      "caution": "Nunca rodar operações destrutivas em produção; rate limits e efeitos externos mockados."
+    },
+    {
+      "id": "R059",
+      "slug": "pact-foundation/pact-js",
+      "url": "https://github.com/pact-foundation/pact-js",
+      "area": "Confiabilidade e engenharia",
+      "priority": "P1",
+      "mode": "AVALIAR CONTRATOS",
+      "license": "MIT",
+      "prs": [
+        "ENG05",
+        "ENG10"
+      ],
+      "application": "Contract testing entre Next/BFF e Nest/portal.",
+      "benefit": "Previne breaking changes durante deploys separados.",
+      "how": "PoC com endpoint de planos ou questionário; gerar pacto e verificar provider com fixtures.",
+      "caution": "Evitar duplicação com testes end-to-end existentes; manter schemas fonte única."
+    },
+    {
+      "id": "R060",
+      "slug": "sverweij/dependency-cruiser",
+      "url": "https://github.com/sverweij/dependency-cruiser",
+      "area": "Confiabilidade e engenharia",
+      "priority": "P0",
+      "mode": "AVALIAR GATE",
+      "license": "MIT",
+      "prs": [
+        "ENG11"
+      ],
+      "application": "Restrições arquiteturais de imports e ciclos em TS.",
+      "benefit": "Protege fronteiras entre backend, módulos clínicos e infraestrutura.",
+      "how": "Rodar relatório de dependências e ciclos; adicionar regras pontuais em modo não bloqueante inicialmente.",
+      "caution": "False positives por imports dinâmicos; não reorganizar monorepo todo em uma PR."
+    },
+    {
+      "id": "R061",
+      "slug": "mcollina/autocannon",
+      "url": "https://github.com/mcollina/autocannon",
+      "area": "Confiabilidade e engenharia",
+      "priority": "P1",
+      "mode": "AVALIAR CARGA",
+      "license": "MIT",
+      "prs": [
+        "ENG12"
+      ],
+      "application": "Load testing de APIs Nest e BFF.",
+      "benefit": "Detecta gargalos sob concorrência e regressões de latência.",
+      "how": "Rodar contra ambiente isolado sintético com limite de carga; medir P95, erros e recursos.",
+      "caution": "Não disparar contra produção sem autorização/capacidade; não inundar Redis/Neon externos."
+    },
+    {
+      "id": "R062",
+      "slug": "faker-js/faker",
+      "url": "https://github.com/faker-js/faker",
+      "area": "Confiabilidade e engenharia",
+      "priority": "P1",
+      "mode": "AVALIAR FIXTURES",
+      "license": "MIT",
+      "prs": [
+        "ENG14"
+      ],
+      "application": "Dados sintéticos para testes/staging.",
+      "benefit": "Reproduz jornadas clínicas sem expor pacientes.",
+      "how": "Criar factory determinística seed fixa compatível com esquema existente.",
+      "caution": "Nunca copiar PHI real; manter diversidade de casos e casos-limite."
+    },
+    {
+      "id": "R063",
+      "slug": "pinojs/pino",
+      "url": "https://github.com/pinojs/pino",
+      "area": "Confiabilidade e engenharia",
+      "priority": "P2",
+      "mode": "AVALIAR PADRÃO",
+      "license": "MIT",
+      "prs": [
+        "ENG13"
+      ],
+      "application": "Logging estruturado Nest/worker.",
+      "benefit": "Melhora observabilidade e correlação entre serviços.",
+      "how": "PoC de log estruturado, trace ID e redactor por schema com payload mínimo.",
+      "caution": "Bloquear PHI/PII em corpo/headers; não substituir auditoria imutável."
+    },
+    {
+      "id": "R064",
+      "slug": "zxing-js/browser",
+      "url": "https://github.com/zxing-js/browser",
+      "area": "Catálogo alimentar",
+      "priority": "P1",
+      "mode": "AVALIAR INTEGRAÇÃO",
+      "license": "MIT",
+      "prs": [
+        "FOOD02",
+        "APP01"
+      ],
+      "application": "Leitura de códigos de barras via câmera web.",
+      "benefit": "Agiliza inclusão de produtos industrializados no catálogo/diário.",
+      "how": "PoC em navegador com câmera e EAN/GTIN; consultar fonte de catálogo separadamente após leitura.",
+      "caution": "Barcode não contém valores nutricionais; consentimento/permissão de câmera e falhas de leitura."
+    },
+    {
+      "id": "R065",
+      "slug": "catamphetamine/libphonenumber-js",
+      "url": "https://github.com/catamphetamine/libphonenumber-js",
+      "area": "Comunicação e agenda",
+      "priority": "P1",
+      "mode": "AVALIAR VALIDAÇÃO",
+      "license": "MIT",
+      "prs": [
+        "OPS02",
+        "QST02",
+        "ENG14"
+      ],
+      "application": "Normalização de números para contato e WhatsApp.",
+      "benefit": "Menos falhas de disparo/convite por telefone inválido.",
+      "how": "Usar parsing E.164 em limites de entrada sem converter números legados automaticamente; testes BR/externo.",
+      "caution": "Não validar propriedade do número; não registrar telefone completo em logs."
+    },
+    {
+      "id": "R066",
+      "slug": "adamgibbons/ics",
+      "url": "https://github.com/adamgibbons/ics",
+      "area": "Comunicação e agenda",
+      "priority": "P2",
+      "mode": "AVALIAR UTILITÁRIO",
+      "license": "ISC",
+      "prs": [
+        "OPS02"
+      ],
+      "application": "Convites .ics de consulta.",
+      "benefit": "Paciente pode adicionar evento ao calendário sem depender de Google OAuth.",
+      "how": "Gerar arquivo ICS com UID, timezone, atualização e cancelamento; anexo no e-mail.",
+      "caution": "Não expor informações clínicas no título/descrição; tratar re-agendamento corretamente."
+    },
+    {
+      "id": "R067",
+      "slug": "Nozbe/WatermelonDB",
+      "url": "https://github.com/Nozbe/WatermelonDB",
+      "area": "Portal e mobile",
+      "priority": "P3",
+      "mode": "REFERÊNCIA OFFLINE",
+      "license": "MIT",
+      "prs": [
+        "APP01",
+        "APP02",
+        "APP07",
+        "ENG18"
+      ],
+      "application": "Banco e sync offline-first em app móvel.",
+      "benefit": "Inspira estratégia de filas locais, status e conflitos.",
+      "how": "Estudar arquitetura e comparar com Expo SQLite + sync existente; não migrar sem benchmark concreto.",
+      "caution": "Mudança de storage/sync é grande e afeta PHI/limpeza do dispositivo."
+    },
+    {
+      "id": "R068",
+      "slug": "yjs/yjs",
+      "url": "https://github.com/yjs/yjs",
+      "area": "UI e produtividade",
+      "priority": "P3",
+      "mode": "REFERÊNCIA PARA COLABORAÇÃO",
+      "license": "MIT",
+      "prs": [
+        "PA07",
+        "QST07",
+        "ENG18"
+      ],
+      "application": "CRDT e colaboração em tempo real entre editores.",
+      "benefit": "Pode apoiar edição colaborativa complexa futura.",
+      "how": "Estudar apenas; para trava de duas abas usar BroadcastChannel e ETag/versionamento do servidor.",
+      "caution": "CRDT em prontuário/planos requer semântica clínica e conflito de publicação, não adoção simples."
+    },
+    {
+      "id": "R069",
+      "slug": "react-native-share/react-native-share",
+      "area": "Mobile / compartilhamento",
+      "priority": "P1",
+      "mode": "PoC condicionada a Expo Development Build",
+      "license": "MIT",
+      "prs": [
+        "APP08"
+      ],
+      "application": "Compartilhar card do registro do diário por fluxo nativo, avaliando integração específica com Instagram Stories.",
+      "benefit": "Reaproveita integração e permissões nativas em vez de implementar URLs e intents ad hoc.",
+      "how": "PoC somente no app Expo/React Native, em build de desenvolvimento real para Android e iOS; confirmar compatibilidade com Expo 57/RN 0.86, comportamento das versões dos apps e plugins nativos; o usuário deve acionar explicitamente o compartilhamento.",
+      "caution": "Não prometer publicação automática. Story sharing não é garantido em todos os dispositivos; não enviar dados de saúde por padrão. Consentimento, preview, remoção de identificadores, fallback e revisão da política das plataformas.",
+      "url": "https://github.com/react-native-share/react-native-share"
+    },
+    {
+      "id": "R070",
+      "slug": "gre/react-native-view-shot",
+      "area": "Mobile / captura local",
+      "priority": "P1",
+      "mode": "PoC de geração de imagem",
+      "license": "MIT",
+      "prs": [
+        "APP08"
+      ],
+      "application": "Gerar uma imagem de um card visual do registro para compartilhamento manual.",
+      "benefit": "Captura componentes React Native em imagem local sem montar motor de imagem próprio.",
+      "how": "Renderizar card com dados fictícios, capturar localmente com react-native-view-shot, verificar Expo e novo RN, limpar arquivo temporário ao fim e passar resultado apenas após ação do usuário.",
+      "caution": "Capturas podem incluir PHI acidental. Revisar conteúdo visual, imagens protegidas, armazenamento temporário e restrições de privacidade; não registrar path do arquivo em telemetria.",
+      "url": "https://github.com/gre/react-native-view-shot"
+    },
+    {
+      "id": "R071",
+      "slug": "pubkey/broadcast-channel",
+      "area": "Concorrência / abas",
+      "priority": "P2",
+      "mode": "Alternativa ao BroadcastChannel nativo",
+      "license": "MIT",
+      "prs": [
+        "PA07"
+      ],
+      "application": "Coordenar edição concorrente de um mesmo rascunho entre abas do navegador.",
+      "benefit": "Mensagens entre abas e, se realmente necessário, eleição de líder com compatibilidade adicional.",
+      "how": "Primeiro provar uso do BroadcastChannel nativo em PA07; considerar polyfill apenas com necessidade documentada. Publicar no canal somente tenant/ID opaco da entidade, revisão e indicador de edição, nunca conteúdo clínico.",
+      "caution": "Não resolve concorrência entre dispositivos; persistência tem de usar conflito/versionamento do servidor. Nunca considerar canal local um lock de segurança.",
+      "url": "https://github.com/pubkey/broadcast-channel"
+    },
+    {
+      "id": "R072",
+      "slug": "intake24/intake24",
+      "area": "Nutrição / recordatório 24h",
+      "priority": "P1",
+      "mode": "Referência funcional e algoritmos sujeitos a revisão",
+      "license": "Apache-2.0 (código; bases/imagens/dados com direitos próprios)",
+      "prs": [
+        "QST04"
+      ],
+      "application": "Arquitetura de recordatório alimentar de 24h com abordagem multiple-pass, porções, busca/sinônimos e cálculo de nutrientes.",
+      "benefit": "Referência específica e consolidada do fluxo de recall, superior a usar um prontuário genérico como referência da funcionalidade.",
+      "how": "Estudar modelagem e fluxo para identificar o menor escopo de QST04; adaptar conceitos ao catálogo multifonte do OctaClin, manter revisão profissional, dados nutricionais versionados e origem de cada item.",
+      "caution": "Não copiar automaticamente alimentos, fotografias, tabelas ou materiais de pesquisadores: licença dos dados não equivale à licença Apache do código; verificar conteúdo, direitos e adequação brasileira.",
+      "url": "https://github.com/intake24/intake24"
+    },
+    {
+      "id": "R073",
+      "slug": "radix-ui/primitives",
+      "area": "UX acessível / componentes",
+      "priority": "P1",
+      "mode": "Avaliar componentes pontuais",
+      "license": "MIT",
+      "prs": [
+        "QST01",
+        "QST06",
+        "OPS08",
+        "UX01"
+      ],
+      "application": "Accordion para questionários, Dialog/Sheet para consulta de prontuário, popover e interfaces de comentários; links acessíveis continuam com Next Link.",
+      "benefit": "Primitivas sem estilo com gestão de foco, teclado, aria e overlays; reutilização sem desenvolver infraestrutura de acessibilidade.",
+      "how": "Inspecionar componentes atuais e integrar somente a primitive inexistente no web, comparando com o padrão visual atual; testar teclado, leitores de tela e mobile. Não trocar a biblioteca completa de UI.",
+      "caution": "É camada de apresentação, não autorização de dados clínicos; modal consulta APIs autenticadas já existentes.",
+      "url": "https://github.com/radix-ui/primitives"
+    },
+    {
+      "id": "R074",
+      "slug": "TanStack/virtual",
+      "area": "UX / virtualização",
+      "priority": "P2",
+      "mode": "PoC de performance se houver volume",
+      "license": "MIT",
+      "prs": [
+        "APP02",
+        "LAB02",
+        "QST03",
+        "OPS08"
+      ],
+      "application": "Listas longas de diário, matriz laboratorial e comentários com virtualização acessível.",
+      "benefit": "Reduz quantidade de elementos renderizados em páginas de histórico muito extensas.",
+      "how": "Medir rendering/DOM com dados sintéticos; se necessário virtualizar apenas o corpo da lista mantendo paginação e filtros server-side.",
+      "caution": "Não substitui paginação/autorização do backend; testar navegação de teclado, foco, impressão e leitores de tela.",
+      "url": "https://github.com/TanStack/virtual"
+    },
+    {
+      "id": "R075",
+      "slug": "dinerojs/dinero.js",
+      "area": "Financeiro / valores",
+      "priority": "P1",
+      "mode": "Avaliar domínio financeiro somente se necessário",
+      "license": "MIT",
+      "prs": [
+        "OPS04"
+      ],
+      "application": "Representar valores em centavos inteiros e fazer cálculos monetários controlados em fluxo de caixa, pagamentos e saldos.",
+      "benefit": "Evita erros de ponto flutuante e padroniza operações monetárias quando o domínio existente for insuficiente.",
+      "how": "Auditar representação de moeda já usada no backend; só em caso de gap testar 2-3 operações BRL (soma, subtração, divisão/arredondamento) com snapshots e dados sintéticos.",
+      "caution": "Não migrar toda a base financeira nem alterar valores históricos para adotar biblioteca; confirmar versões/APIs da linha escolhida.",
+      "url": "https://github.com/dinerojs/dinero.js"
+    },
+    {
+      "id": "R076",
+      "slug": "MikeMcl/decimal.js",
+      "area": "Precisão aritmética",
+      "priority": "P2",
+      "mode": "Alternativa a número nativo",
+      "license": "MIT",
+      "prs": [
+        "FOOD05",
+        "FOOD06",
+        "CALC02",
+        "CALC06"
+      ],
+      "application": "Aritmética decimal para equivalências nutricionais, quantidades, referências e ajustes energéticos quando os requisitos exigirem exatidão decimal.",
+      "benefit": "Controle explícito de precisão e arredondamento, facilitando resultados reproduzíveis.",
+      "how": "Comparar com o motor numérico existente, criar casos de teste de referência clínica e aceitar somente se houver divergência real; documentar quando converter para número e como arredondar.",
+      "caution": "Biblioteca matemática não contém equações clínicas, DRI nem regras de classificação. Não confundir precisão decimal com validade científica.",
+      "url": "https://github.com/MikeMcl/decimal.js"
+    },
+    {
+      "id": "R077",
+      "slug": "expo/expo",
+      "area": "Mobile / capacidades já presentes",
+      "priority": "P0",
+      "mode": "JÁ PRESENTE NA STACK; avaliar módulos oficiais",
+      "license": "MIT (repositório; verificar módulo)",
+      "prs": [
+        "APP05",
+        "APP08",
+        "APP09"
+      ],
+      "application": "Módulos oficiais Expo para arquivos/documentos e compartilhamento nativo; API do ecossistema do app do paciente.",
+      "benefit": "Diminui dependências React Native paralelas e favorece compatibilidade com o SDK atual.",
+      "how": "Primeiro verificar capacidades existentes no app; avaliar módulos oficiais expo-file-system, expo-sharing e expo-print conforme uso, checando compatibilidade exata do SDK; diferenciar exportar PDF no mobile de visualizar PDF na web.",
+      "caution": "Módulo ainda não presente no package.json exige instalação controlada. Expo Sharing genérico pode não suportar publicação específica em Stories; nesse caso testar R069.",
+      "url": "https://github.com/expo/expo"
+    },
+    {
+      "id": "R078",
+      "slug": "michael-m-2983/metbrowser",
+      "area": "Atividades / METs",
+      "priority": "P3",
+      "mode": "APENAS INSPIRAÇÃO; não copiar código nem importar dados",
+      "license": "Licença do repositório não localizada; sem autorização para reutilização de código",
+      "prs": [
+        "CALC01"
+      ],
+      "application": "Exemplo simples de navegação e conversão de dados do compêndio de MET de 2011.",
+      "benefit": "Mostra formato de pesquisa e apresentação de atividades, mas não resolve catálogo clínico atualizado.",
+      "how": "Consultar apenas para ideias de interface; buscar os valores e descrições na fonte primária da versão de 2024 do Compendium of Physical Activities, com avaliação de direitos e adequação à população.",
+      "caution": "Repositório assume compêndio 2011 e o próprio README o considera antigo. Não copiar script/código/dados sem licença, nem usar 2011 no lugar de 2024. Fonte primária: https://pacompendium.com/adult-compendium/.",
+      "url": "https://github.com/michael-m-2983/metbrowser"
+    }
+  ],
+  "proposedEngineeringPRs": {
+    "ENG01": "Auditar código/dependências inutilizados",
+    "ENG02": "Analisar workflows GitHub Actions",
+    "ENG03": "Tracing e diagnóstico de performance",
+    "ENG04": "Operação segura de filas e jobs",
+    "ENG05": "Contratos de API tipados",
+    "ENG06": "Feature flags por tenant/ambiente",
+    "ENG07": "Estudo de interoperabilidade FHIR",
+    "ENG08": "Extração segura de documentos",
+    "ENG09": "Testes de propriedades e mutação clínica",
+    "ENG10": "Fuzzing/contratos das APIs",
+    "ENG11": "Regras de arquitetura entre módulos",
+    "ENG12": "Testes de carga controlados",
+    "ENG13": "Padronização de dados/cache/logging",
+    "ENG14": "Factories de dados sintéticos e contratos",
+    "ENG15": "Catálogo UI e experiência de onboarding",
+    "ENG16": "Analytics operacional sem PHI",
+    "ENG17": "Avaliações e red-team de IA",
+    "ENG18": "Diagnóstico de sync offline/colaboração",
+    "ENG19": "Templates transacionais responsivos e seguro de e-mail"
+  },
+  "catalogMarkdown": "CATALOGO_MESTRE_REPOSITORIOS_GITHUB_OCTACLIN_POS_320_V2.md",
+  "executionGate": {
+    "notBefore": "Formal conclusion and reconciliation of Fase 320 (including GO/NO-GO outcomes)",
+    "source": "https://github.com/octanutri-clin/octaclin/blob/main/docs/product/ROADMAP_POS_AUDITORIA_FASES_302_320.md",
+    "actionsAllowedBeforeGate": [
+      "read",
+      "audit",
+      "compare",
+      "report"
+    ],
+    "actionsDisallowedBeforeGate": [
+      "create feature branch",
+      "implement",
+      "open functional PR",
+      "run external migrations",
+      "deploy"
+    ],
+    "checkCurrentMainBeforeEachPR": true,
+    "idsDoNotEqualPhaseNumbers": true
+  },
+  "supersededIds": {
+    "FND01": "Fase 298/PR #356 already integrated; no new PR",
+    "AI05": "Fase 316 scope and gates; no independent PR, including if NO-GO"
+  },
+  "phaseBindings": {
+    "302": [],
+    "303": [
+      "OPS07"
+    ],
+    "304": [
+      "APP01",
+      "APP02",
+      "APP03",
+      "FOOD04",
+      "FOOD05",
+      "PA04"
+    ],
+    "305": [
+      "QST03",
+      "ANT01",
+      "ANT02",
+      "ANT03",
+      "ANT04",
+      "OPS06"
+    ],
+    "306": [
+      "OPS06"
+    ],
+    "307": [
+      "ANT03",
+      "APP05",
+      "APP06"
+    ],
+    "308": [
+      "QST07"
+    ],
+    "309": [
+      "APP07"
+    ],
+    "310": [
+      "FOOD07",
+      "FOOD08"
+    ],
+    "311": [
+      "FOOD01",
+      "FOOD02"
+    ],
+    "312": [
+      "DOC01",
+      "DOC02",
+      "DOC08"
+    ],
+    "313": [
+      "ANT07"
+    ],
+    "314": [
+      "ANT05",
+      "ANT06"
+    ],
+    "315": [],
+    "316": [
+      "AI05",
+      "ENG08"
+    ],
+    "317": [
+      "APP04"
+    ],
+    "318": [
+      "AI01",
+      "AI02",
+      "AI03",
+      "AI04"
+    ],
+    "319": [],
+    "320": [
+      "FOOD01",
+      "FOOD02",
+      "FOOD05",
+      "FOOD06"
+    ]
+  },
+  "phaseStatusAsOfReview": {
+    "298": "merged PR #356",
+    "306": "merged PR #383",
+    "307": "merged PR #384; migration 1064 production unverified",
+    "308": "merged PR #385; source roadmap text stale",
+    "309-320": "planned and/or conditional in consulted source; recheck before execution"
+  },
+  "conditionalIds": [
+    "ANT03",
+    "ANT05",
+    "ANT06",
+    "ANT07",
+    "FOOD07",
+    "APP04",
+    "AI01",
+    "AI02",
+    "AI03",
+    "AI04"
+  ],
+  "coverageMatrix": "MATRIZ_RASTREABILIDADE_71_SUGESTOES_OCTACLIN_POS_320_V2.md",
+  "coverageAudit": {
+    "originalSuggestions": 71,
+    "formerlyWithNoExternalRepositoryReference": 20,
+    "newlyResearchedRepositories": 10,
+    "newRepositoryIds": [
+      "R069",
+      "R070",
+      "R071",
+      "R072",
+      "R073",
+      "R074",
+      "R075",
+      "R076",
+      "R077",
+      "R078"
+    ],
+    "requirement": "Nenhum pacote é obrigatório; bibliotecas novas só entram após auditoria de main e gate de Fase 320.",
+    "scientificSource2024Met": "https://pacompendium.com/adult-compendium/"
+  }
+}
