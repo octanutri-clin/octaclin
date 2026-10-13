@@ -4597,7 +4597,7 @@ auditoria estão ordenados na seção 15 de
   liberação global ainda pendente do preflight do processo/providers. Aceites e
   autorização já recebidos; não habilitar flags pela fase318.
 - [~] Fase318 - planejamento/análise autorizados: pré-consulta e rascunho de
-  evolução, local CPU, somente sintéticos e sem chamadas pagas, responsável atual
+  evolução, API externa com chave própria (D02 revisada), somente sintéticos, responsável atual
   no console. Comparar baseline PB-25/modelos com candidato antes de GO.
   Seleção/retencão e revisor pendentes; sem implementação/PoC. Handoff
   `tasks/plan-fase-318.md`, plano `docs/history/phases/PLANO_FASE_318.md` e

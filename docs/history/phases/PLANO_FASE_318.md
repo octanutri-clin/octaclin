@@ -34,14 +34,15 @@ reconsultados no GitHub em2026-10-13. Branch `docs/fase-318-planejamento`.
 | ID | Questão | Proposta preferencial | Estado |
 | --- | --- | --- | --- |
 | D01 | Fluxos a avaliar | Pré-consulta e rascunho de evolução; orientações depois | CONFIRMADA em2026-10-13 |
-| D02 | Processamento | Local CPU, somente sintéticos, sem chamadas pagas | CONFIRMADA em2026-10-13, resposta específica318 |
+| D02 | Processamento | API externa com chave própria do nutricionista | NOVA DECISÃO em2026-10-13; substitui a preferência local CPU; OpenAI confirmada; chave individual e habilitação pela clínica confirmadas |
 | D03 | Quem gera/confirma | Responsável atual, console, confirmação explícita | CONFIRMADA em2026-10-13 |
-| D04 | Contexto selecionável | Prévia dos fatos e seleção explícita; texto da consulta fornecido pelo profissional | PROPOSTA, confirmar com equipe antes do piloto |
+| D04 | Contexto selecionável | Prévia/seleção explícita de resumo factual, medidas e até3 evoluções; sem identificadores desnecessários | CONFIRMADA; equipe revisará finalidade/base legal e condições do fornecedor antes do uso real |
 | D05 | Rascunho/retencão | Sem persistir rascunho na primeira PoC; produção exige política específica antes de schema | PROPOSTA TÉCNICA, decisão pendente antes de integração |
 | D06 | Aceite da avaliação de valor | Equipe clínica revisa os casos sintéticos e mede tempo/correções | PENDENTE; não atribuir validação ao agente |
 
-D01–03 confirmadas pelo proprietário em2026-10-13. Perguntas D04–05 enviadas;
-respostas atualizam esta matriz antes de fechar o contrato executável. Os limites abaixo são propostas
+D01/D03 confirmadas em2026-10-13. D02 atualizada depois: API externa com chave própria;
+a preferência anterior local CPU foi substituída e permanece como histórico. D04 confirmada; D05/D06 e catálogo de modelos aguardam resposta.
+Respostas atualizam esta matriz antes de fechar o contrato executável. Os limites abaixo são propostas
 para a avaliação, não aprovação clínica, jurídica ou de implementação.
 
 ## 3. Gaps confrontados com código
@@ -106,7 +107,7 @@ fontes/datas, gestação, pediatria factual, adultos, negação, unidade/decimal
 conteúdo adversarial e troca de contexto. Corpus idêntico nas alternativas.
 
 1. Comparar A preparação/modelo atual, B composição determinística melhorada e
-   C candidato generativo local (D02). Não penalizar a baseline artificialmente.
+   C candidato generativo do fornecedor escolhido (D02). Não penalizar a baseline artificialmente.
 2. Rubrica prévia de fatos obrigatórios, fatos proibidos, fontes e afirmações
    sem suporte; aceitar desconhecido/ausente quando a fonte não permite concluir.
 3. Barreiras propostas: zero fabricação de fato crítico, zero inversão de
@@ -115,7 +116,7 @@ conteúdo adversarial e troca de contexto. Corpus idêntico nas alternativas.
 4. Tempo inclui leitura, correção e confirmação, não só geração. Propor ganho
    mediano>=20% em tarefas pareadas, sem piorar os critérios de qualidade; equipe
    define/revisa o alvo e rubrica antes dos ensaios. Registrar dispersão/outliers.
-5. Medir hardware real da PoC, RAM pico, CPU, cold/warm, latência p50/p95,
+5. Medir tokens/consumo estimado e retornado pelo fornecedor, latência p50/p95,
    concorrência e taxa de abandono. Alvo inicial p95<=30s, timeout máximo60s;
    compatibilidade com timeout legado15s precisa ser tratada, não ocultada.
 6. Revisores humanos e ordem de apresentação devem ser registrados. Execução e
@@ -130,23 +131,86 @@ plausível ou aparência do texto. Não executar benchmark neste planejamento.
 
 ## 6. Pesquisa de motor e direitos
 
-Ainda não há modelo aprovado, download autorizado ou desempenho demonstrado.
-A shortlist futura deverá conferir no fornecedor original: licença de pesos,
-código/runtime e quantização; restrições comerciais/saúde/distribuição;
-procedência, versão imutável/hash e manutenção. Registrar cada licença separada.
-Não inferir licença de pesos pela licença do servidor de inferência.
+OpenAI escolhida pelo proprietário. Modelo/catálogo, contrato revisado, credencial
+de teste e desempenho ainda não comprovados.
+A escolha BYOK não autoriza o agente a fazer chamadas pagas ou enviar PHI.
+A avaliação OpenAI deverá conferir documentação/termos oficiais da API, modelo
+permitido e sua versão quando disponível, limites, preços datados, região,
+retenção e políticas de dados. Não há necessidade de baixar pesos ou aprovar
+licença de runtime local nesta alternativa. A decisão local anterior fica como
+histórico; não manter uma segunda integração de inferência por consequência.
+Não confundir preço/licença de assinatura de chat com acesso e faturamento da API.
 
-PoC local isolada não implica serviço seguro para PHI em produção. Exigir rede
+PoC sintética não implica serviço seguro para PHI em produção. Exigir rede
 privada/autenticação, timeout/fila limitada, ausência de logs de prompts/respostas,
 não treinamento/retenção indevida, egress controlado, threat model e operação.
-Fornecedor externo, se D02 mudar, exige finalidade/base legal, região, contrato,
+O fornecedor externo escolhido exige finalidade/base legal, região, contrato,
 retenção/suboperadores e aprovação responsável; somente sintéticos nesta pesquisa.
 Não introduzir dependência, baixar modelos nem contratar provider nesta rodada.
 
+### Atualização BYOK — chave própria do profissional
+
+A solicitação de2026-10-13 substitui local CPU por credencial externa cadastrada
+pelo nutricionista. Confirmadas: OpenAI; chave individual não compartilhada;
+integração habilitada pela clínica; cobrança na conta do profissional; contexto
+mínimo com prévia/seleção. Equipe assumiu revisar finalidade/base legal e fornecedor,
+sem declarar revisão concluída. D05/D06 e seleção do catálogo continuam pendentes. Não confundir conta de chat com faturamento da API.
+
+Recomendações técnicas, ainda sem implementação:
+
+- Cadastro HTTPS autenticado; valor nunca em URL/localStorage/analytics/logs,
+  fila, auditoria ou resposta de leitura. Backend retorna apenas estado/provider,
+  nunca chave em claro, ciphertext ou hash público da credencial.
+- Chave cifrada no servidor, vinculada ao tenant e ao profissional autenticado;
+  gestão própria com substituição/revogação. Impersonação de SuperAdmin não
+  autoriza ler/testar/usar a chave; opção de chave da clínica exige contrato próprio.
+- Criptografia/rotação/backup seguem serviços/políticas atuais; separar credenciais
+  de IA_SERVICE_TOKEN. Não inserir chave de API nos envs globais do backend.
+- Somente endpoints oficiais allowlist do fornecedor escolhido; nenhuma URL
+  arbitrária configurável, redirect, ferramenta ou transporte a terceiros implícitos.
+- Chamadas pagas apenas por ação explícita do usuário autorizado; cache/retry
+  não reutiliza conteúdo entre pacientes/profissionais. Falha incerta não dispara
+  retry pago automático; mostrar consumo conhecido/estimado como tal.
+- Modelo permitido, limite de tokens e quotas por profissional; catálogo de preço
+  datado e limites de estimativa. Limite local não é garantia do saldo/fatura do
+  fornecedor; cobrar na conta externa não elimina custo nem obrigação da clínica.
+- Revalidar versão/revogação da chave e vínculo do profissional antes da chamada
+  e do retorno; revogação não pode desfazer dados já enviados ao fornecedor.
+- Testar contrato local sem credenciais reais; teste real com sintéticos só por
+  configuração segura e orçamento autorizado, sem chave nesta conversa.
+- Uso com pacientes exige aprovação do fornecedor/finalidade/base legal e
+  condições de retenção/treinamento/região/suboperadores. Remover nome não
+  anonimiza narrativa clínica. Chave própria não autoriza compartilhar PHI.
+
+### Fontes oficiais OpenAI consultadas em2026-10-13
+
+- [Data controls](https://developers.openai.com/api/docs/guides/your-data), HTTP200:
+  a API não usa entradas/saídas para treinamento por padrão, salvo opt-in;
+  logs de abuso podem conter conteúdo e são retidos por até30dias, com exceções
+  descritas. Zero Data Retention/Modified Abuse Monitoring exigem aprovação
+  e têm condições por endpoint. Não prometer retenção zero por store=false.
+- [API key safety](https://help.openai.com/en/articles/5112595-best-practices-for-api-key-safety),
+  HTTP200: chave individual, backend seguro, acesso/rotação; compartilhamento
+  de chaves é vedado segundo o guia. Chave não compartilhada entre profissionais
+  é necessária, mas não prova autorização de custódia por SaaS terceiro.
+- [Services Agreement](https://openai.com/policies/services-agreement/), HTTP200
+  por redirect oficial de business-terms: seção3.3(g) restringe compra/venda/
+  transferência de chaves a terceiros; seção5.3 incorpora DPA; seção5.4 trata
+  PHI/HIPAA/Healthcare Addendum e serviços elegíveis. Não inferir que a exigência
+  HIPAA se aplique automaticamente a toda clínica brasileira, nem dispensar
+  LGPD por isso. A equipe responsável precisa verificar o contrato aplicável,
+  custódia BYOK e finalidade antes de liberar dado real.
+
+Esses são fatos documentais e pontos para revisão, não parecer jurídico nem
+conclusão de que BYOK é autorizado/proibido em todos os casos. Respostas do
+proprietário aprovam o desenho do produto, não encerram essa verificação.
+Evidência de consulta/hash: docs/product/FONTES_OPENAI_FASE_318.json.
+
 ## 7. Arquitetura candidata após GO — não executar agora
 
-- Reusar ExecutorTenant, criptografia, guardas, auditoria redatada, wrappers BFF,
-  padrões FastAPI e formulário de evolução. Serviço318 pequeno no módulo IA;
+- Reusar ExecutorTenant, criptografia, guardas, auditoria redatada, wrappers BFF
+  e formulário de evolução. O adaptador OpenAI fica no backend, sem encaminhar
+  chaves individuais ao FastAPI legado ou ao navegador. Serviço318 pequeno no módulo IA;
   não ampliar ServicoIa nem criar nova aplicação de prontuário.
 - Proposta de API após GO: POST `/ia/pacientes/:id/sintese-pre-consulta` e
   POST `/ia/pacientes/:id/rascunho-evolucao`, Professional + ia.executar e

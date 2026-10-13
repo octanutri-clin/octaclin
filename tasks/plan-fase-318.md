@@ -7,17 +7,20 @@ Branch `docs/fase-318-planejamento`, worktree
 ## Autorização e próxima ação
 
 Só planejamento/análise autorizados. Não iniciar código, testes de implementação,
-benchmark, downloads, migrations, provider ou ativação. Fechar D04–06,
+benchmark, downloads, migrations, provider ou ativação. Fechar D05/D06 e catálogo de modelos,
 revisar corpus/rubrica propostos e obter autorização específica para PoC sintética.
 Não abrir PR documental isolada; integrar estes documentos à futura PR única.
 
 ## Decisões e contratos
 
 D01: pré-consulta e rascunho de evolução, sem orientação nesta fase.
-D02: local CPU, dados exclusivamente sintéticos, sem chamadas pagas.
+D02 revisada: API externa com chave própria do nutricionista; OpenAI, chave individual
+não compartilhada e integração habilitada pela clínica confirmadas. Substitui local CPU; nenhuma chamada paga
+ou transferência clínica autorizada ao agente. Pesquisa/testes somente sintéticos.
 D03: apenas responsável atual gera/confirma no console; manual legado preservado.
-D04/D05: seleção mínima de fontes e rascunho apenas na tela foram propostos,
-perguntas enviadas, ainda sem resposta. D06: revisão humana/rubrica antes da PoC.
+D04: contexto mínimo selecionado e revisão jurídica/privacidade pela equipe
+confirmados; revisão ainda não concluída. D05: rascunho apenas na tela proposto,
+ainda pendente, junto do catálogo de modelos. D06: revisão humana/rubrica antes da PoC.
 
 - [Plano, evidências, limites e gates](../docs/history/phases/PLANO_FASE_318.md).
 - [T00–T12, arquivos, dependências e critérios](todo-fase-318.md).
@@ -28,7 +31,8 @@ perguntas enviadas, ainda sem resposta. D06: revisão humana/rubrica antes da Po
 - Prévia com fontes/datas/limites; revisão humana não é assinatura digital.
 - Evolução privada/cifrada, título180/conteúdo6000; não prometer replay seguro
   sem desenhar/testar contrato idempotente; não alterar manual por consequência.
-- Licence de pesos/runtime/quantização e qualidade clínica não presumidas.
+- Termos/privacidade da API OpenAI, preços e qualidade clínica não presumidos.
+- Adaptador OpenAI no backend; não repassar BYOK ao FastAPI legado.
 - PoC pode concluir NO-GO; baseline permanece caminho completo para profissional.
 
 ## Continuidade

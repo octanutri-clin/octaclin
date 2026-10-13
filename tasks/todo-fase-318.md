@@ -9,10 +9,10 @@ marcado PASS por consequência do CI da317.
 | --- | --- | --- | --- |
 | T00 planejamento/gaps | main atual | plano318, handoff, checklist, estado/roadmap | base8ea67a08; fontes reais; decisões confirmadas separadas de propostas |
 | T01 corpus/rubrica | T00,D04,D06, autorização PoC | criar `scripts/research/fase318/corpus-sintetico.json`, `rubrica.json`, `README.md` |30 casos sem dados reais; fatos/ref/polaridade/unidades esperados; critérios congelados/hashes |
-| T02 motor/direitos | T01,D02 | manifesto de fontes/artefatos da pesquisa, sem dependência runtime | pesos/runtime/quantização com licenças comerciais verificadas; hardware explicitado; nenhuma chamada paga |
-| T03 comparação GO/NO-GO | T01–02 | harness `scripts/research/fase318/avaliar-sinteticos.py`, relatório | mesmas entradas A/B/C; qualidade, omissão, revisão humana, tempo corrigido e CPU; decidir G01/G02 sem auto-ratificação |
+| T02 motor/direitos | T01,D02 | manifesto de fontes/artefatos da pesquisa, sem dependência runtime | fornecedor/modelo/contratos e política de dados verificados; API key segura; nenhuma chamada paga sem orçamento autorizado |
+| T03 comparação GO/NO-GO | T01–02 | harness `scripts/research/fase318/avaliar-sinteticos.py`, relatório | mesmas entradas A/B/C; qualidade, omissão, revisão humana, tempo corrigido e tokens/custo; decidir G01/G02 sem auto-ratificação |
 | T04 contrato HTTP/gates/contexto | GO,T03,D03–05, autorização implementação | móduloIA: novos DTOs/serviço318; catálogo de flag318 se aprovado; testes Jest | schema fechado, fontes selecionadas, limites20/12000/6000; gate legado sozinho não libera318; identidade/vínculo/geração revalidados |
-| T05 adaptador de síntese | T04, licença aprovada | FastAPI novos schemas/rota interna; cliente Nest dedicado | autenticação constante, timeout, resposta bounded, refs válidas, erro sanitizado, sem redirect/egress indevido/log de texto |
+| T05 adaptador de síntese | T04, licença aprovada | adaptador OpenAI e schemas318 no móduloIA/Nest; FastAPI legado preservado | Bearer do profissional só para OpenAI, timeout, resposta bounded, refs válidas, erro sanitizado, sem redirect/egress indevido/log de texto |
 | T06 confirmação/provenance | T04–05,D05 | serviço318 chama construção compartilhada da evolução; migration somente se indispensável | contexto alterado409; autorização antes do replay; título180/conteúdo6000/privada; um nonce => uma evolução |
 | T07 prova PG/RLS/concorrência | T06 | nova spec PG317-style, banco descartável; opcoes-typeorm só se nova migration | tenant/carteira, A→B→A, role/sessão/arquivamento/gate, fontes alteradas, duas confirmações, falha/crash/tombstone |
 | T08 BFF | T04–07 | rotas318 sob `app/api/ia`, cliente tipado; registro authz | backend autoritativo, sessão/origem/no-store, payload allowlist, erros sem PHI; teste cruzado papel/tenant |
@@ -64,10 +64,21 @@ Para cada T04–T10:
 
 - `pnpm --dir octaclin-backend test --runInBand <spec318>`; typecheck/build;
   suíte ampla após correções; PG descartável com migrations completas/RLS.
-- `pytest` das novas rotas/autenticação/contratos no ambiente IA, dependências
-  pelo lock existente; benchmark CPU só depois de T01/02 autorizados.
+- Teste Jest do adaptador HTTP/schema/credencial no backend; benchmark sintético
+  só depois de T01/02, credencial e orçamento autorizados. FastAPI legado
+  permanece em regressão no CI, sem rota nova ou chave BYOK.
 - Web lint/typecheck/build, harness318 + `test:authz`, Playwrightdesktop/mobile,
   a11y, scanner/redação e workflow completo no HEAD da futura PR.
+
+## Complemento BYOK obrigatório após D02 revisada
+
+T02–T05 incluem fornecedor/modelo permitido, cadastro/substituição/revogação
+cifrada da chave, escopo tenant/profissional, DTO sem segredo, endpoint oficial
+allowlist e ausência de retry pago incerto. Testes negativos em T07/T08: outro
+profissional/tenant/SuperAdmin não lê nem usa a credencial; chave revogada/trocada
+não permite retorno antigo; segredo ausente/erro não vaza; sem URL arbitrária.
+Chamadas reais sintéticas exigem credencial por canal seguro e orçamento; uso
+clínico depende de contrato/finalidade/base legal. Não herdar consentimento317.
 
 ## Estado
 

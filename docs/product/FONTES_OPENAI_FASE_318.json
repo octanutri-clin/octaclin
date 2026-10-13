@@ -1,0 +1,22 @@
+{
+  "consultadoEm": "2026-10-13",
+  "conteudo": "texto HTML extraido; nenhum dado protegido ou chamada API",
+  "fontes": [
+    {
+      "url": "https://developers.openai.com/api/docs/guides/your-data",
+      "status": 200,
+      "sha256TextoExtraido": "0610ffd65260a56718df71f51ea3e45e14f90598003ce7d1e1745ddc25b768e3"
+    },
+    {
+      "url": "https://help.openai.com/en/articles/5112595-best-practices-for-api-key-safety",
+      "status": 200,
+      "sha256TextoExtraido": "0bccea4fa74c2676b391c9704d6034906e4708bd4fd54194a3c8d2dbef0992cb"
+    },
+    {
+      "url": "https://openai.com/policies/services-agreement/",
+      "status": 200,
+      "sha256TextoExtraido": "80be28aed35a4ffef60fdb69893413b0a2f540630ebcdf8191c6d764879d2140"
+    }
+  ],
+  "conclusao": "G02 contratual/privacidade pendente; selecao OpenAI nao autoriza BYOK/PHI sem verificacao"
+}

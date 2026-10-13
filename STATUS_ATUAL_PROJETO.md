@@ -6,8 +6,11 @@ Atualizado em 2026-10-13.
 
 - **Fase318 em planejamento/análise de gaps**, autorizados em2026-10-13,
   sem implementação ou PoC. D01–03 confirmadas: pré-consulta/rascunho de evolução,
-  local CPU/sintéticos/sem chamadas pagas, somente responsável atual no console.
-  Seleção de fontes, retenção do rascunho e revisão do corpus aguardam decisões.
+  somente responsável atual no console. D02 foi revisada depois para API externa
+  com chave própria OpenAI individual/habilitação pela clínica confirmados.
+  Sem chamadas pagas ou dados reais autorizados nesta pesquisa.
+  Seleção mínima de fontes e revisão jurídica pela equipe confirmadas; retenção
+  do rascunho, catálogo de modelos e revisor do corpus aguardam decisões.
   Plano `docs/history/phases/PLANO_FASE_318.md`, handoff `tasks/plan.md`,
   checklist `tasks/todo-fase-318.md`. G00PASS inspeção; G01/G02/G05BLOCKED;
   G03/G04SKIPPED. Sol6.1 médio suficiente; não trocar modelo sem aviso/pausa.
