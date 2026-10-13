@@ -1,3 +1,4 @@
+import { contextoSessao318 } from "../dominio/rascunhos-clinicos";
 import { ServicoRascunhosClinicosIa } from "./servico-rascunhos-clinicos";
 import { ConteudoRascunhos318, Modelo318 } from "../dominio/rascunhos-clinicos";
 import { CriptografiaDadosSensiveis } from "../../../infraestrutura/seguranca/criptografia-dados-sensiveis";
@@ -125,6 +126,7 @@ function fixture() {
     cripto,
   );
   const dado = {
+    contextoSessao: contextoSessao318(u),
     chaveComando: randomUUID(),
     modeloId: "fixture",
     selecoes: [{ tipo: "preparacao" as const, id: "resumo" }],
@@ -143,6 +145,24 @@ function fixture() {
   };
 }
 describe("geracao318 autorizada e efemera", () => {
+  it("troca de SID depois do precheck recusa antes de nonce e fornecedor", async () => {
+    const f = fixture();
+    await expect(
+      f.service.gerar(
+        u,
+        "paciente",
+        { ...f.dado, contextoSessao: "b".repeat(64) } as never,
+        "evolucao",
+      ),
+    ).rejects.toThrow("sessão");
+    expect(f.provider.gerar).not.toHaveBeenCalled();
+  });
+  it("fontes nao atravessam troca da sessao da tela", async () => {
+    const f = fixture();
+    await expect(
+      (f.service.fontes as any)(u, "paciente", "b".repeat(64)),
+    ).rejects.toThrow("sessão");
+  });
   it("gera previa com prova sem persistir texto como rascunho", async () => {
     const f = fixture();
     const r = await f.service.gerar(u, "paciente", f.dado, "pre_consulta");

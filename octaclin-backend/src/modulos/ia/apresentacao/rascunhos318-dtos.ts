@@ -24,7 +24,10 @@ export class Selecao318Dto {
   @MaxLength(100)
   id!: string;
 }
-export class GerarRascunho318Dto {
+export class CapturarFontes318Dto {
+  @IsString() @Matches(/^[a-f0-9]{64}$/) contextoSessao!: string;
+}
+export class GerarRascunho318Dto extends CapturarFontes318Dto {
   @IsUUID()
   chaveComando!: string;
   @IsString()
@@ -80,7 +83,7 @@ export class Credencial318Dto extends MutarCredencial318Dto {
   @MaxLength(1024)
   chave!: string;
 }
-export class Configurar318Dto extends Versao318Dto {
+export class Configurar318Dto extends MutarCredencial318Dto {
   @IsBoolean()
   habilitada!: boolean;
   @IsOptional()

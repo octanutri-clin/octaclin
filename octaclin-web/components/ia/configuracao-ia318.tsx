@@ -1,32 +1,68 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { requisitarIa318, type ConfigIa318 } from "@/lib/rascunhos318-api";
 export function ConfiguracaoIa318() {
   const [c, setC] = useState<ConfigIa318 | null>(null),
     [mensagem, setMensagem] = useState(""),
     [busy, setBusy] = useState(false);
+  const contexto = useRef<string | null>(null);
+  const invalida = useRef(false);
   useEffect(() => {
     const a = new AbortController();
     void requisitarIa318<ConfigIa318>("configuracao", {}, a.signal)
-      .then(setC)
+      .then((v) => {
+        if (!a.signal.aborted && !invalida.current) {
+          contexto.current = v.contextoSessao ?? null;
+          setC(v);
+        }
+      })
       .catch(() => {
         if (!a.signal.aborted) setMensagem("Configuração indisponível.");
       });
-    return () => a.abort();
+    const conferir = async () => {
+      try {
+        const v = await requisitarIa318<ConfigIa318>(
+          "configuracao",
+          {},
+          a.signal,
+        );
+        if (contexto.current && v.contextoSessao !== contexto.current) {
+          invalida.current = true;
+          setC(null);
+          setMensagem("Sessão mudou. Reabra as configurações.");
+        }
+      } catch {
+        if (!a.signal.aborted) {
+          invalida.current = true;
+          setC(null);
+        }
+      }
+    };
+    window.addEventListener("focus", conferir);
+    return () => {
+      a.abort();
+      window.removeEventListener("focus", conferir);
+    };
   }, []);
   async function salvar() {
     if (!c || busy) return;
     setBusy(true);
     try {
-      setC(
-        await requisitarIa318("configurar", {
-          habilitada: c.habilitada,
-          versaoEsperada: c.versao,
-          maxChamadas15min: c.maxChamadas15min,
-          maxTokensSaida: c.maxTokensSaida,
-        }),
-      );
-      setMensagem("Configuração salva.");
+      const atualizada = await requisitarIa318<ConfigIa318>("configurar", {
+        contextoSessao: c.contextoSessao,
+        habilitada: c.habilitada,
+        versaoEsperada: c.versao,
+        maxChamadas15min: c.maxChamadas15min,
+        maxTokensSaida: c.maxTokensSaida,
+      });
+      if (!invalida.current && atualizada.contextoSessao === contexto.current) {
+        setC(atualizada);
+        setMensagem("Configuração salva.");
+      } else {
+        invalida.current = true;
+        setC(null);
+        setMensagem("Sessão mudou. Reabra as configurações.");
+      }
     } catch (e) {
       setMensagem(e instanceof Error ? e.message : "Não foi possível salvar.");
     } finally {

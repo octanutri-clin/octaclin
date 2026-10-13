@@ -31,6 +31,7 @@ export interface Paciente318 {
   versao_contexto_ia318: string;
 }
 export interface Config318 {
+  contextoSessao?: string;
   habilitada: boolean;
   versao: number;
   operacaoAprovada: boolean;
@@ -221,6 +222,7 @@ export class ContextoRascunhos318 {
   async configurar(
     u: UsuarioAutenticado,
     d?: {
+      contextoSessao: string;
       habilitada: boolean;
       versaoEsperada: number;
       maxChamadas15min?: number;
@@ -255,6 +257,7 @@ export class ContextoRascunhos318 {
     u: UsuarioAutenticado,
     tenantId: string,
     d?: {
+      contextoSessao: string;
       habilitada: boolean;
       versaoEsperada: number;
       maxChamadas15min?: number;
@@ -283,6 +286,7 @@ export class ContextoRascunhos318 {
     tenantId: string,
     u: UsuarioAutenticado,
     d?: {
+      contextoSessao: string;
       habilitada: boolean;
       versaoEsperada: number;
       maxChamadas15min?: number;
@@ -290,7 +294,12 @@ export class ContextoRascunhos318 {
     },
   ): Promise<Config318> {
     const config = await this.config(m, tenantId);
-    if (!d) return config;
+    const contextoSessao = contextoSessao318(u);
+    if (!d) return { ...config, contextoSessao };
+    if (d.contextoSessao !== contextoSessao)
+      throw new ConflictException(
+        "Contexto da sessão mudou. Confira novamente.",
+      );
     if (d.habilitada && !config.operacaoAprovada)
       throw new ForbiddenException(
         "Integração aguarda validações obrigatórias.",
@@ -324,6 +333,10 @@ export class ContextoRascunhos318 {
       acao: "ia318.configuracao.alterar",
       recursoTipo: "integracao_ia",
     });
-    return { ...valor, operacaoAprovada: config.operacaoAprovada };
+    return {
+      ...valor,
+      operacaoAprovada: config.operacaoAprovada,
+      contextoSessao,
+    };
   }
 }

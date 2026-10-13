@@ -49,6 +49,7 @@ const ops: Record<
   configurar: {
     method: "PATCH",
     keys: [
+      "contextoSessao",
       "habilitada",
       "versaoEsperada",
       "maxChamadas15min",
@@ -56,16 +57,27 @@ const ops: Record<
     ],
     suffix: "configuracao",
   },
-  fontes: { method: "GET", keys: ["pacienteId"], suffix: "fontes" },
+  fontes: {
+    method: "POST",
+    keys: ["pacienteId", "contextoSessao"],
+    suffix: "fontes",
+  },
   "pre-consulta": {
     method: "POST",
-    keys: ["pacienteId", "chaveComando", "modeloId", "selecoes"],
+    keys: [
+      "pacienteId",
+      "contextoSessao",
+      "chaveComando",
+      "modeloId",
+      "selecoes",
+    ],
     suffix: "pre-consulta",
   },
   evolucao: {
     method: "POST",
     keys: [
       "pacienteId",
+      "contextoSessao",
       "chaveComando",
       "modeloId",
       "selecoes",
@@ -92,6 +104,7 @@ const ops: Record<
 function projetar(acao: string, v: Record<string, unknown>) {
   const config = (c: Record<string, unknown>) =>
     pick(c, [
+      "contextoSessao",
       "habilitada",
       "versao",
       "operacaoAprovada",
@@ -299,6 +312,7 @@ export async function tratarConfigIa318Operacoes(
         Object.keys(body).some(
           (k) =>
             ![
+              "contextoSessao",
               "habilitada",
               "versaoEsperada",
               "maxChamadas15min",
@@ -322,6 +336,7 @@ export async function tratarConfigIa318Operacoes(
       );
     return reply(
       pick(await r.json(), [
+        "contextoSessao",
         "habilitada",
         "versao",
         "operacaoAprovada",

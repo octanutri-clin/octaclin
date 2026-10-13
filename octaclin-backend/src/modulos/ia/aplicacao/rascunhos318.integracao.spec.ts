@@ -119,7 +119,11 @@ const executar =
         [t.id, prof, crypto.criptografar("Paciente sintético")],
       );
       paciente = p.id;
-      await base.configurar(gestor, { habilitada: true, versaoEsperada: 0 });
+      await base.configurar(gestor, {
+        contextoSessao: contextoSessao318(gestor),
+        habilitada: true,
+        versaoEsperada: 0,
+      });
       await base.definirCredencial(u, {
         chave: "fixture-segredo",
         contextoSessao: contextoSessao318(u),
@@ -139,6 +143,7 @@ const executar =
       await owner?.destroy();
     });
     const dado = () => ({
+      contextoSessao: contextoSessao318(u),
       chaveComando: randomUUID(),
       modeloId: modelo.id,
       selecoes: [{ tipo: "preparacao" as const, id: "resumo" }],
@@ -149,6 +154,35 @@ const executar =
       titulo: "Sintético",
       conteudo: "Texto sintético revisado.",
       confirmado: true,
+    });
+    it("marcador antigo bloqueia fontes geracao e configuracao antes de gravar", async () => {
+      provider.gerar.mockClear();
+      const nonce = randomUUID();
+      await expect(
+        service.gerar(
+          u,
+          paciente,
+          { ...dado(), chaveComando: nonce, contextoSessao: "b".repeat(64) },
+          "evolucao",
+        ),
+      ).rejects.toThrow("sessão");
+      await expect(service.fontes(u, paciente, "b".repeat(64))).rejects.toThrow(
+        "sessão",
+      );
+      await expect(
+        base.configurar(gestor, {
+          habilitada: false,
+          versaoEsperada: 1,
+          contextoSessao: "b".repeat(64),
+        }),
+      ).rejects.toThrow("sessão");
+      expect(provider.gerar).not.toHaveBeenCalled();
+      const [row] = await owner.query(
+        "select count(*)::int total from comandos_ia318 where chave=$1",
+        [nonce],
+      );
+      expect(row.total).toBe(0);
+      expect((await base.configurar(gestor)).versao).toBe(1);
     });
     it("RLS FORCE protege todas as tabelas e nega insert de outro tenant", async () => {
       const flags = await owner.query(
@@ -284,9 +318,17 @@ const executar =
       await owner.query("update usuarios set ativo=true where id=$1", [
         u.usuarioId,
       ]);
-      await base.configurar(gestor, { habilitada: false, versaoEsperada: 1 });
+      await base.configurar(gestor, {
+        contextoSessao: contextoSessao318(gestor),
+        habilitada: false,
+        versaoEsperada: 1,
+      });
       await expect(service.confirmar(u, paciente, d)).rejects.toThrow();
-      await base.configurar(gestor, { habilitada: true, versaoEsperada: 2 });
+      await base.configurar(gestor, {
+        contextoSessao: contextoSessao318(gestor),
+        habilitada: true,
+        versaoEsperada: 2,
+      });
     });
     it("outro profissional e tenant nao acessam fontes ou confirmam prova", async () => {
       const p = await service.gerar(u, paciente, dado(), "evolucao");
@@ -294,12 +336,18 @@ const executar =
         estado: "ausente",
         versao: 0,
       });
-      await expect(service.fontes(outro, paciente)).rejects.toThrow();
+      await expect(
+        service.fontes(outro, paciente, contextoSessao318(outro)),
+      ).rejects.toThrow();
       await expect(
         service.confirmar(outro, paciente, confirmar(p.provaRevisao)),
       ).rejects.toThrow();
       await expect(
-        service.fontes({ ...u, tenantId: tenantB }, paciente),
+        service.fontes(
+          { ...u, tenantId: tenantB },
+          paciente,
+          contextoSessao318(u),
+        ),
       ).rejects.toThrow();
     });
     it("CAS real permite apenas uma substituicao concorrente e invalida previa", async () => {
@@ -363,7 +411,9 @@ const executar =
         "update tenants set ciclo_vida_status='suspenso' where id=$1",
         [u.tenantId],
       );
-      await expect(service.fontes(u, paciente)).rejects.toThrow();
+      await expect(
+        service.fontes(u, paciente, contextoSessao318(u)),
+      ).rejects.toThrow();
       await owner.query(
         "update tenants set ciclo_vida_status='ativo',versao_contexto_ia318=0 where id=$1",
         [u.tenantId],

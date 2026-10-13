@@ -1,6 +1,7 @@
 import { MigrationInterface, QueryRunner } from "typeorm";
 
-/** Adicao fora de banda; nunca habilita IA, credenciais ou modelos. */
+/** @aplicacao fora-de-banda
+ * Adicao fora de banda; nunca habilita IA, credenciais ou modelos. */
 export class RascunhosClinicos1720000001071 implements MigrationInterface {
   name = "RascunhosClinicos1720000001071";
   async up(q: QueryRunner): Promise<void> {

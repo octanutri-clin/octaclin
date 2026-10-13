@@ -15,6 +15,7 @@ export interface ModeloIa318 {
   precoEm: string;
 }
 export interface ConfigIa318 {
+  contextoSessao?: string;
   habilitada: boolean;
   versao: number;
   operacaoAprovada: boolean;

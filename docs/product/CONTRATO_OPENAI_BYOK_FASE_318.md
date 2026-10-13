@@ -179,3 +179,13 @@ retirar a variável operacional/reiniciar processos. Reativação usa novo CAS;
 variável de processo isolada não substitui revogação transacional na base.
 Status/ciclo de vida/encerramento da clínica também invalidam previews por geração
 monotônica. ProvasPG e revisão do HEAD permanecem requisitos independentes.
+
+### Correções da revisão de sessão
+
+A geração, a captura de fontes (POST com corpo, sem correlação em URL), a
+configuração Client/SuperAdmin e as mutações de credencial exigem
+`contextoSessao` correspondente ao ator/tenant/SID verificado no backend.
+A comparação precede leitura de fontes, reserva de nonce/quota e envio externo.
+O precheck da UI é auxiliar: não substitui essa comparação transacional.
+GET de configuração devolve o marcador; mudança de sessão ao recuperar foco
+invalida a tela. A confirmação permanece vinculada à sessão pela prova selada.

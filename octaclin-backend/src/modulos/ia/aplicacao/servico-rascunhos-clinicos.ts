@@ -15,6 +15,7 @@ import {
 } from "../../../infraestrutura/tempo/timezone-clinico";
 import { UsuarioAutenticado } from "../../auth/dominio/usuario-autenticado";
 import {
+  contextoSessao318,
   Fonte318,
   fingerprint318,
   POLITICA318,
@@ -28,6 +29,7 @@ import {
 import { AdaptadorOpenAi318 } from "../infraestrutura/adaptador-openai318";
 import { Contexto318, ContextoRascunhos318 } from "./contexto-rascunhos318";
 export interface Gerar318 {
+  contextoSessao: string;
   chaveComando: string;
   modeloId: string;
   selecoes: {
@@ -95,8 +97,13 @@ export class ServicoRascunhosClinicosIa {
       ...medidas.map((r: any) => projetarMedida318(r, this.cripto)),
     ];
   }
-  async fontes(u: UsuarioAutenticado, pacienteId: string) {
+  async fontes(
+    u: UsuarioAutenticado,
+    pacienteId: string,
+    contextoSessao: string,
+  ) {
     return this.base.executar(u, async (c) => {
+      this.conferirSessao(c, contextoSessao);
       await this.base.paciente(c, pacienteId);
       await this.base.exigirGeracao(c);
       return {
@@ -104,6 +111,12 @@ export class ServicoRascunhosClinicosIa {
         cobertura: { evolucoes: 3, medidas: 3, examesIncluidos: false },
       };
     });
+  }
+  private conferirSessao(c: Contexto318, marcador: string) {
+    if (marcador !== contextoSessao318(c.u))
+      throw new ConflictException(
+        "Contexto da sessão mudou. Confira novamente.",
+      );
   }
   private async preparar(
     c: Contexto318,
@@ -192,6 +205,7 @@ export class ServicoRascunhosClinicosIa {
   ) {
     this.chave(d.chaveComando);
     const preparado = await this.base.executar(u, async (c) => {
+      this.conferirSessao(c, d.contextoSessao);
       const x = await this.preparar(c, pacienteId, d, modalidade);
       const [existente] = await c.m.query(
         "select acao,estado from comandos_ia318 where tenant_id=$1 and usuario_id=$2 and chave=$3",
@@ -430,6 +444,7 @@ export class ServicoRascunhosClinicosIa {
         c,
         pacienteId,
         {
+          contextoSessao: contextoSessao318(c.u),
           chaveComando: prova.nonceGeracao,
           modeloId: prova.stamp.modelo.id,
           selecoes: prova.selecoes,

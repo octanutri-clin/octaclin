@@ -100,7 +100,7 @@ test("318 chave em memoria, limpa apos envio, erro sem segredo e acessibilidade"
     .getByRole("button", { name: "Cadastrar ou substituir chave" })
     .click();
   await expect(campo).toHaveValue("");
-  expect(recebida).toBe("chave-sintetica-nao-valida");
+  await expect.poll(() => recebida).toBe("chave-sintetica-nao-valida");
   await expect(
     page.getByText("Cadastro aguarda revisão contratual."),
   ).toBeVisible();

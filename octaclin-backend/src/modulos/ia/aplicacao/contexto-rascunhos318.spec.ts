@@ -23,6 +23,7 @@ function fixture(direitos = true, config: any = undefined) {
     query: async (sql: string, args: any[]) => {
       if (sql.includes("from tenant_configuracoes"))
         return config ? [{ valor: config }] : [];
+      if (sql.includes("from usuarios")) return [{ id: "gestor" }];
       if (sql.includes("from profissionais pr"))
         return [
           {
@@ -54,6 +55,22 @@ function fixture(direitos = true, config: any = undefined) {
   return { c, m, auditorias, obterRow: () => row };
 }
 describe("credencial318 privada", () => {
+  it("configuracao da tela de outro ator tenant ou SID nao grava", async () => {
+    const f = fixture();
+    const gestor = {
+      ...(u as any),
+      papel: "Client",
+      permissoes: ["cliente.configuracoes.gerenciar"],
+    };
+    await expect(
+      f.c.configurar(gestor, {
+        habilitada: false,
+        versaoEsperada: 0,
+        contextoSessao: "b".repeat(64),
+      } as never),
+    ).rejects.toThrow("sessão");
+    expect(f.auditorias).toHaveLength(0);
+  });
   it("cifra chave e responde somente estado/versao", async () => {
     const f = fixture();
     expect(

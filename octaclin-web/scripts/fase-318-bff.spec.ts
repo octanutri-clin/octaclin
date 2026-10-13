@@ -171,3 +171,40 @@ test("318 limita leitura do corpo antes de alocar todo o stream", async () => {
     __clearCookies();
   }
 });
+
+test("318 encaminha marcador no corpo das fontes e da geracao, sem URL", async () => {
+  const old = global.fetch;
+  await login();
+  const calls: { url: string; method: string; body: any }[] = [];
+  global.fetch = (async (url, init) => {
+    calls.push({
+      url: String(url),
+      method: String(init?.method),
+      body: JSON.parse(String(init?.body)),
+    });
+    return Response.json({ fontes: [], cobertura: {} });
+  }) as typeof fetch;
+  try {
+    const pacienteId = "11111111-1111-4111-8111-111111111111";
+    for (const acao of ["fontes", "evolucao", "pre-consulta"]) {
+      const body = {
+        acao,
+        pacienteId,
+        contextoSessao: "a".repeat(64),
+        ...(acao === "fontes"
+          ? {}
+          : { chaveComando: pacienteId, modeloId: "fixture", selecoes: [] }),
+      };
+      assert.equal((await tratarRascunhos318(req(body))).status, 200);
+    }
+    for (const c of calls) {
+      assert.equal(c.method, "POST");
+      assert.equal(c.body.contextoSessao, "a".repeat(64));
+      assert(!c.url.includes("a".repeat(64)));
+    }
+    assert.equal(calls.length, 3);
+  } finally {
+    global.fetch = old;
+    __clearCookies();
+  }
+});

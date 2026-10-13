@@ -3,10 +3,22 @@ import { validate } from "class-validator";
 import { plainToInstance } from "class-transformer";
 import {
   GerarRascunho318Dto,
+  CapturarFontes318Dto,
+  Configurar318Dto,
   ConfirmarRascunho318Dto,
 } from "./rascunhos318-dtos";
 import { ControladorRascunhos318 } from "./controlador-rascunhos318";
 describe("contratos HTTP318", () => {
+  it("fontes geracao e configuracao exigem marcador de sessao da tela", async () => {
+    for (const cls of [
+      CapturarFontes318Dto,
+      GerarRascunho318Dto,
+      Configurar318Dto,
+    ]) {
+      const errors = await validate(plainToInstance(cls as any, {}));
+      expect(errors.some((e) => e.property === "contextoSessao")).toBe(true);
+    }
+  });
   it("rejeita modelo/url arbitrario e fonte malformada", async () => {
     const dto = plainToInstance(GerarRascunho318Dto, {
       chaveComando: "invalida",

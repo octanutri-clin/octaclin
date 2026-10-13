@@ -82,7 +82,11 @@ function ConteudoRascunhosIa318({
         if (r.configuracao.habilitada && r.configuracao.operacaoAprovada) {
           const f = await requisitarIa318<{
             fontes: FonteIa318[];
-          }>("fontes", { pacienteId }, c.signal);
+          }>(
+            "fontes",
+            { pacienteId, contextoSessao: r.contextoSessao },
+            c.signal,
+          );
           if (epoch.current === n && !c.signal.aborted) setFontes(f.fontes);
         }
       })
@@ -132,6 +136,7 @@ function ConteudoRascunhosIa318({
         modalidade,
         {
           pacienteId,
+          contextoSessao: contextoSessao.current,
           chaveComando: crypto.randomUUID(),
           modeloId: modelo,
           selecoes: selecoes.map((ref) => {

@@ -24,6 +24,7 @@ import { UsuarioAutenticado } from "../../auth/dominio/usuario-autenticado";
 import { ContextoRascunhos318 } from "../aplicacao/contexto-rascunhos318";
 import { ServicoRascunhosClinicosIa } from "../aplicacao/servico-rascunhos-clinicos";
 import {
+  CapturarFontes318Dto,
   ConfirmarRascunho318Dto,
   Configurar318Dto,
   Credencial318Dto,
@@ -90,15 +91,16 @@ export class ControladorRascunhos318 {
   ) {
     return this.contexto.removerCredencial(u, d);
   }
-  @Get("pacientes/:id/fontes")
+  @Post("pacientes/:id/fontes")
   @Header("Cache-Control", "no-store")
   fontes(
     @UsuarioAtual()
     u: UsuarioAutenticado,
     @Param("id", ParseUUIDPipe)
     id: string,
+    @Body() d: CapturarFontes318Dto,
   ) {
-    return this.servico.fontes(u, id);
+    return this.servico.fontes(u, id, d.contextoSessao);
   }
   @Post("pacientes/:id/pre-consulta")
   @Header("Cache-Control", "no-store")

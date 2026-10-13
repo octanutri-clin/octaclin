@@ -104,3 +104,26 @@ O esquema1070 integrado permanece intacto. Nenhum banco externo consultado.
 Formatter efêmero Prettier3.6.2/MIT, integridade NPM SHA512
 I7AIg5boAr5R0FFtJ6rCfD+LFsWHp81dolrFD8S79U9tb8Az2nGrJncnMSnys+bpQJfRUzqs9hnA81OAA3hCuQ==.
 Ferramenta em/tmp, sem dependência de produto ou alteração de lockfile.
+
+## Correções R4 — candidato posterior a0846811e
+
+Revisão técnica por agente em contexto novo encontrou dois P2: geração/fontes
+sem vínculo com a sessão original da tela e configuração de clínica sem esse
+vínculo. Não é revisão clínica nem revisão humana independente. Três testes
+RED reproduziram aceitação indevida; após correção, serviço/contexto24PASS.
+Agora DTO, BFF, UI e comparação transacional exigem contextoSessao antes de
+fontes/nonce/provider/CAS. Fontes passaram a POST; marcador nunca vai em URL.
+Teste PostgreSQL adicional verifica zero nonce/provider e configuração intacta;
+onze testes PG preparados, ainda pendentes do CI descartável.
+
+Backend completo local2787PASS/96SKIPPED antes do último teste HTTP adicional;
+HTTP5PASS/PG11SKIPPED. BFF4PASS antes do novo teste de encaminhamento.
+Playwright8PASS desktop/mobile; espera do mock de credencial corrigida com
+expect.poll (limpeza do input acontece antes de concluir a requisição).
+Typecheck backend PASS; web detectou types Next antigos da rota renomeada:
+a regeneração pelo build final é necessária, sem alteração do contrato [id].
+Migration1071 ganhou @aplicacao fora-de-banda conforme gate do repositório.
+Governança local passou confiabilidade/redação/migrations/guardas/actions;
+preflight PowerShell BLOCKED por ausência de pwsh no ambiente, sem afrouxar teste.
+CI precisa confirmar esse gate. Secrets/diff-check PASS após as correções.
+G01/G02/G05 continuam BLOCKED; G03/G04 aguardam revisão corrigida e CI.
