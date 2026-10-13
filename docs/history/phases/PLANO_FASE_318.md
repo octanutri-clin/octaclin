@@ -11,6 +11,8 @@ sintética separada do runtime; integração no módulo IA e no prontuário some
 após os gates de valor, segurança, direitos e autorização.
 **Stack existente:** NestJS/TypeORM/PostgreSQL, BFF Next.js e FastAPI/Pydantic.
 **Especificação:** roadmap302–320, PB-25/15/23, Fase241 e decisões abaixo.
+Contrato fechado de planejamento: [CONTRATO_OPENAI_BYOK_FASE_318.md](../../product/CONTRATO_OPENAI_BYOK_FASE_318.md).
+Revisão humana proposta: [CORPUS_REVISAO_FASE_318.md](../../product/CORPUS_REVISAO_FASE_318.md).
 **Base observada:** main `8ea67a08`, PR407 mergeada; CI38324741937 SUCCESS,
 reconsultados no GitHub em2026-10-13. Branch `docs/fase-318-planejamento`.
 
@@ -37,12 +39,13 @@ reconsultados no GitHub em2026-10-13. Branch `docs/fase-318-planejamento`.
 | D02 | Processamento | API externa com chave própria do nutricionista | NOVA DECISÃO em2026-10-13; substitui a preferência local CPU; OpenAI confirmada; chave individual e habilitação pela clínica confirmadas |
 | D03 | Quem gera/confirma | Responsável atual, console, confirmação explícita | CONFIRMADA em2026-10-13 |
 | D04 | Contexto selecionável | Prévia/seleção explícita de resumo factual, medidas e até3 evoluções; sem identificadores desnecessários | CONFIRMADA; equipe revisará finalidade/base legal e condições do fornecedor antes do uso real |
-| D05 | Rascunho/retencão | Sem persistir rascunho na primeira PoC; produção exige política específica antes de schema | PROPOSTA TÉCNICA, decisão pendente antes de integração |
-| D06 | Aceite da avaliação de valor | Equipe clínica revisa os casos sintéticos e mede tempo/correções | PENDENTE; não atribuir validação ao agente |
+| D05 | Rascunho/retencão | Apenas na tela, limpar ao sair/trocar de paciente; sem salvar rascunho | CONFIRMADA em2026-10-13; só evolução confirmada entra no histórico |
+| D06 | Aceite da avaliação de valor | Proprietário/equipe clínica revisarão30casos e tempo de correção | RESPONSABILIDADE CONFIRMADA; revisão ainda não executada |
+| D07 | Modelo/consumo | Seleção num catálogo aprovado, com padrão econômico e limites de chamadas/tokens | CONFIRMADA em2026-10-13; modelos/preços/qualidade ainda devem ser verificados |
 
 D01/D03 confirmadas em2026-10-13. D02 atualizada depois: API externa com chave própria;
-a preferência anterior local CPU foi substituída e permanece como histórico. D04 confirmada; D05/D06 e catálogo de modelos aguardam resposta.
-Respostas atualizam esta matriz antes de fechar o contrato executável. Os limites abaixo são propostas
+a preferência anterior local CPU foi substituída e permanece como histórico. D04–07 confirmadas, incluindo revisão humana a ser realizada.
+Não há pergunta de produto pendente; revisão efetiva e autorizações futuras continuam separadas. Os limites abaixo são propostas
 para a avaliação, não aprovação clínica, jurídica ou de implementação.
 
 ## 3. Gaps confrontados com código
@@ -57,7 +60,7 @@ para a avaliação, não aprovação clínica, jurídica ou de implementação.
 | GAP06: confirmação não é idempotente por contrato | `criarEvolucaoClinica` faz save direto, DTO sem nonce; limite6000/título180 | Não prometer assinatura digital/imutabilidade nem replay seguro do manual; desenhar confirmação318 com ledger/referência atômicos se houver persistência |
 | GAP07: provenance específica ausente | evolução tem autor/consulta opcional/texto cifrado, não modelo/contexto/versão318 | Decidir registro mínimo cifrado de origem; migration aditiva só após necessidade demonstrada |
 | GAP08: gate legado é abrangente | flags conhecidas `ia.clinica` e `mobile.sync`; não há gate318 | `ia.clinica=true` não pode ativar318 implicitamente; gate318 literal/piloto específico se GO |
-| GAP09: evidência de qualidade/CPU ausente | nenhuma síntese318, modelo, benchmark ou avaliação clínica presente | G01/G02 BLOCKED; medir antes de integrar |
+| GAP09: evidência de qualidade/custo ausente | nenhuma síntese318, modelo, benchmark ou avaliação clínica presente | G01/G02 BLOCKED; medir antes de integrar |
 | GAP10: autorização legado não equivale ao escopo novo | ControladorIa permite SuperAdmin/Professional; listagens ORM existentes | Novas projeções allowlist e papel D03 no serviço; preservar legado sem estender permissões |
 
 As referências são anchors da base acima; executores devem reconferir linhas e
@@ -154,7 +157,7 @@ A solicitação de2026-10-13 substitui local CPU por credencial externa cadastra
 pelo nutricionista. Confirmadas: OpenAI; chave individual não compartilhada;
 integração habilitada pela clínica; cobrança na conta do profissional; contexto
 mínimo com prévia/seleção. Equipe assumiu revisar finalidade/base legal e fornecedor,
-sem declarar revisão concluída. D05/D06 e seleção do catálogo continuam pendentes. Não confundir conta de chat com faturamento da API.
+sem declarar revisão concluída. D05–07 confirmadas; revisão efetiva do corpus/contrato/modelos ainda pendente. Não confundir conta de chat com faturamento da API.
 
 Recomendações técnicas, ainda sem implementação:
 
@@ -206,7 +209,7 @@ conclusão de que BYOK é autorizado/proibido em todos os casos. Respostas do
 proprietário aprovam o desenho do produto, não encerram essa verificação.
 Evidência de consulta/hash: docs/product/FONTES_OPENAI_FASE_318.json.
 
-## 7. Arquitetura candidata após GO — não executar agora
+## 7. Arquitetura candidata — desenvolvimento só após autorização; uso clínico após GO
 
 - Reusar ExecutorTenant, criptografia, guardas, auditoria redatada, wrappers BFF
   e formulário de evolução. O adaptador OpenAI fica no backend, sem encaminhar
@@ -224,9 +227,9 @@ Evidência de consulta/hash: docs/product/FONTES_OPENAI_FASE_318.json.
   gate e geração monotônica do contexto; retorno A→B→A também invalida.
 - Hash de snapshot cifrado identifica conteúdo, não assinatura nem anonimização.
   Fonte/modelo/base alterados entre prévia e confirmação =>409/refazer conferência.
-- D05 é checkpoint obrigatório: se rascunho persistir, TTL, purge, leitura,
-  revogação, idempotência e FORCE RLS devem ser definidos antes da migration.
-  Não copiar a retenção90dias da comunidade para dado clínico.
+- D05: rascunho não persiste; chave, ledger/provenance e geração de vínculo
+  são necessidades diferentes. Conferir schema mínimo e retention do metadata
+  antes de migration. Não copiar90dias da comunidade para conteúdo clínico.
 - Confirmar não publica no portal; visibilidade privada. Profissional edita e
   confirma; aprovação318 deve chamar a mesma construção clínica de evolução na
   mesma transação, sem duplicar criptografia ou simular aprovação no frontend.
@@ -247,8 +250,8 @@ Evidência de consulta/hash: docs/product/FONTES_OPENAI_FASE_318.json.
 | --- | --- | --- |
 | G00 base / gaps | PASS para inspeção | main8ea67a08 e contratos localizados; alteração principal preexistente preservada |
 | G01 valor | BLOCKED | corpus/rubrica congelados, comparação pareada e decisão humana GO/NO-GO |
-| G02 clínica/privacidade/direitos | BLOCKED | D01–06, responsável revisor, licença e finalidade/base legal do piloto |
-| G03 técnica/segurança | SKIPPED | implementação autorizada; testes reais de tenant/carteira/RLS/replay/contexto/CPU |
+| G02 clínica/privacidade/direitos | BLOCKED | D01–07 registradas; concluir revisão humana/contratual/custódia BYOK, finalidade/base legal e condições do piloto |
+| G03 técnica/segurança | SKIPPED | implementação autorizada; testes reais de tenant/carteira/RLS/replay/contexto/credencial/custo |
 | G04 CI/interface | SKIPPED | testes/builds/BFF/Playwright/a11y/scans do HEAD de implementação |
 | G05 operação | BLOCKED | provider/piloto/configuração/retencão e autorização operacional explícitos |
 
@@ -277,3 +280,20 @@ Não executados: testes de implementação318, benchmark, instalação/download 
 modelos, comparação externa, avaliação clínica humana, migrations, consultas
 operacionais318, deploy/merge/flags. Modelos e direitos continuam não verificados.
 Não abrir PR exclusiva de documentação; commit local acompanha futura entrega.
+
+
+## Consolidação final do planejamento — 2026-10-13
+
+D01–07 confirmadas; Fase318 mantida por decisão do proprietário, Fase316
+permanece stand-by. ContratoBYOK e corpus documental30casosREV0 preparados.
+Não há pergunta genérica de produto pendente. Revisão humana ainda não executada,
+modelos/preços e condições da API ainda não aprovados; gates correspondentes
+permanecemBLOCKED. Corpus documental não é benchmark nem resultado da PoC.
+
+Desenvolvimento técnico futuro pode avançar isolado após autorização específica,
+com mocks/sintéticos e bloqueio efetivo no backend. GO de qualidade/contrato é
+condição de uso clínico e não aprovação atribuída ao agente. Teste real da API
+continua dependente de chave por canal seguro e orçamento autorizado; não enviar
+chave nesta conversa. Nenhuma dessas autorizações foi inferida de “continue”
+no planejamento. Próxima entrega prevista: implementação técnica única/Draft,
+Sol6.1 médio suficiente; sem transição de modelo necessária para o núcleoR4.

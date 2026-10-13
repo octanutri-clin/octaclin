@@ -4599,7 +4599,7 @@ auditoria estão ordenados na seção 15 de
 - [~] Fase318 - planejamento/análise autorizados: pré-consulta e rascunho de
   evolução, API externa com chave própria (D02 revisada), somente sintéticos, responsável atual
   no console. Comparar baseline PB-25/modelos com candidato antes de GO.
-  Seleção/retencão e revisor pendentes; sem implementação/PoC. Handoff
+  D01–07 confirmadas; contratoBYOK/corpus30casos preparados; sem implementação/PoC. Handoff
   `tasks/plan-fase-318.md`, plano `docs/history/phases/PLANO_FASE_318.md` e
   checklist `tasks/todo-fase-318.md`. Gate de valor pode concluir NO-GO.
 - [ ] Fase 319 - avaliação de volume, privacidade e possível piloto de busca

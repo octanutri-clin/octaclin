@@ -16,6 +16,24 @@
       "url": "https://openai.com/policies/services-agreement/",
       "status": 200,
       "sha256TextoExtraido": "80be28aed35a4ffef60fdb69893413b0a2f540630ebcdf8191c6d764879d2140"
+    },
+    {
+      "url": "https://developers.openai.com/api/docs/guides/structured-outputs",
+      "final": "https://developers.openai.com/api/docs/guides/structured-outputs",
+      "status": 200,
+      "sha256TextoExtraido": "c47071f7f36baecfbc236f70495c758d2f8eb206c3de8b1bbef4d4a5fe2bf2af"
+    },
+    {
+      "url": "https://developers.openai.com/api/docs/guides/rate-limits",
+      "final": "https://developers.openai.com/api/docs/guides/rate-limits",
+      "status": 200,
+      "sha256TextoExtraido": "201ff066a0cde3256460ad1348c3a64f36609101b738ce6ea76716ad8fcadf66"
+    },
+    {
+      "url": "https://developers.openai.com/api/docs/guides/error-codes",
+      "final": "https://developers.openai.com/api/docs/guides/error-codes",
+      "status": 200,
+      "sha256TextoExtraido": "4d85657a9438bc8a297b7b572c499015458e503561ab59f84a4ba0c0af62d0a1"
     }
   ],
   "conclusao": "G02 contratual/privacidade pendente; selecao OpenAI nao autoriza BYOK/PHI sem verificacao"

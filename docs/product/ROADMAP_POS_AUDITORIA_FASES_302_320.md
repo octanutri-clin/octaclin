@@ -18,7 +18,7 @@ As notas anteriores de planejamento/ratificação abaixo são histórico.
 Atualização de sequência em2026-10-13: fase ativa318 em planejamento autorizado.
 D01/D03: pré-consulta/rascunho de evolução, responsável atual no console. D02
 revisada para OpenAI com chave individual do nutricionista/habilitação pela clínica;
-contexto mínimo selecionado. Retenção/catálogo/revisão do corpus pendentes. Pesquisa só sintética, sem chamadas pagas autorizadas. Orientações excluídas desta fase. Plano
+contexto mínimo selecionado. Rascunho só na tela/catálogo aprovado/equipe revisora confirmados; revisões efetivas pendentes. Pesquisa só sintética, sem chamadas pagas autorizadas. Orientações excluídas desta fase. Plano
 `docs/history/phases/PLANO_FASE_318.md` e handoff `tasks/plan-fase-318.md`.
 316 segue stand-by;317 integrada405/407, CI main38324741937 PASS reconfirmado.
 A liberação global317 ainda depende do preflight operacional; aceite e autorização

@@ -7,8 +7,9 @@ Branch `docs/fase-318-planejamento`, worktree
 ## Autorização e próxima ação
 
 Só planejamento/análise autorizados. Não iniciar código, testes de implementação,
-benchmark, downloads, migrations, provider ou ativação. Fechar D05/D06 e catálogo de modelos,
-revisar corpus/rubrica propostos e obter autorização específica para PoC sintética.
+benchmark, downloads, migrations, provider ou ativação. D01–07 confirmadas; planejamento consolidado. Próxima etapa proposta: desenvolvimento
+técnico protegido com mocks/sintéticos, mediante autorização expressa. Chamadas
+pagas, teste real com chave e ativação precisam de gates/orçamento correspondentes.
 Não abrir PR documental isolada; integrar estes documentos à futura PR única.
 
 ## Decisões e contratos
@@ -18,12 +19,16 @@ D02 revisada: API externa com chave própria do nutricionista; OpenAI, chave ind
 não compartilhada e integração habilitada pela clínica confirmadas. Substitui local CPU; nenhuma chamada paga
 ou transferência clínica autorizada ao agente. Pesquisa/testes somente sintéticos.
 D03: apenas responsável atual gera/confirma no console; manual legado preservado.
-D04: contexto mínimo selecionado e revisão jurídica/privacidade pela equipe
-confirmados; revisão ainda não concluída. D05: rascunho apenas na tela proposto,
-ainda pendente, junto do catálogo de modelos. D06: revisão humana/rubrica antes da PoC.
+D04: contexto mínimo selecionado e revisão jurídica/privacidade pela equipe;
+revisão ainda não concluída. D05: rascunho somente na tela, limpar ao sair/trocar.
+D06: proprietário/equipe revisarão30casos, ainda não executados. D07: catálogo
+aprovado com padrão econômico e limites. Sem pergunta de produto pendente.
+
 
 - [Plano, evidências, limites e gates](../docs/history/phases/PLANO_FASE_318.md).
 - [T00–T12, arquivos, dependências e critérios](todo-fase-318.md).
+- [Contrato técnico BYOK](../docs/product/CONTRATO_OPENAI_BYOK_FASE_318.md).
+- [30casos para revisão humana](../docs/product/CORPUS_REVISAO_FASE_318.md).
 - Modelos/baseline reais: fases271/272/274 e código pacientes/IA/FastAPI.
 - Gate legado ia.clinica não libera318; não copiar persistência/ORM do legado.
 - Inferência fora de lock; contexto/identidade revalidados no retorno e
@@ -54,5 +59,5 @@ por preferência; novas decisões só para lacunas demonstradas.
 ## Verificações desta etapa
 
 Inspeção de Git/worktrees/diff, contratos/código e GitHub407/CI main. Não rodados
-benchmarks/testes de implementação318; CI317 não prova318. Gate documental
-check-diff e referências locais deve ser registrado ao concluir.
+benchmarks/testes de implementação318; CI317 não prova318. Diff/secrets/links documentais conferidos ao concluir; consulta de páginas públicas
+OpenAI200, sem chamadasAPI. Nenhum resultado clínico ou modelo ratificado pelo agente.
