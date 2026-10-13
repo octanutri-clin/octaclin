@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState, useRef } from "react";
 import { requisitarIa318 } from "@/lib/rascunhos318-api";
-export function CredencialIa318() {
+export function CredencialIa318({ piloto = false }: { piloto?: boolean }) {
   const [estado, setEstado] = useState<{
       estado: string;
       versao: number;
@@ -17,7 +17,7 @@ export function CredencialIa318() {
       requisitarIa318<{
         contextoSessao: string;
         cadastroCredencialPermitido: boolean;
-      }>("modelos", {}, c.signal),
+      }>(piloto ? "piloto-catalogo" : "modelos", {}, c.signal),
       requisitarIa318<{ estado: string; versao: number }>(
         "credencial",
         {},
@@ -38,14 +38,16 @@ export function CredencialIa318() {
           );
       });
     return () => c.abort();
-  }, []);
+  }, [piloto]);
   async function alterar(remover = false) {
     if (!estado || busy || (!remover && !cadastroPermitido)) return;
     setBusy(true);
     const valor = chave;
     setChave("");
     try {
-      const meta = await requisitarIa318<{ contextoSessao: string }>("modelos");
+      const meta = await requisitarIa318<{ contextoSessao: string }>(
+        piloto ? "piloto-catalogo" : "modelos",
+      );
       if (!meta.contextoSessao || meta.contextoSessao !== contexto.current) {
         setEstado(null);
         setMensagem("Sessão mudou. Reabra as integrações.");
@@ -53,7 +55,11 @@ export function CredencialIa318() {
       }
       setEstado(
         await requisitarIa318(
-          remover ? "remover-credencial" : "definir-credencial",
+          remover
+            ? "remover-credencial"
+            : piloto
+              ? "piloto-definir-credencial"
+              : "definir-credencial",
           {
             versaoEsperada: estado.versao,
             contextoSessao: contexto.current,
@@ -77,9 +83,12 @@ export function CredencialIa318() {
   return (
     <section
       className="grid gap-3 rounded-md border border-linha bg-white p-4"
-      aria-labelledby="credencial-ia318"
+      aria-labelledby={piloto ? "credencial-piloto318" : "credencial-ia318"}
     >
-      <h2 id="credencial-ia318" className="font-semibold">
+      <h2
+        id={piloto ? "credencial-piloto318" : "credencial-ia318"}
+        className="font-semibold"
+      >
         Assistência OpenAI com chave própria
       </h2>
       <p>

@@ -1,3 +1,4 @@
+import { ServicoPilotoSintetico318 } from "./servico-piloto-sintetico318";
 import { contextoSessao318 } from "../dominio/rascunhos-clinicos";
 import { RascunhosClinicos1720000001071 } from "../../../infraestrutura/banco-dados/migracoes/1720000001071-RascunhosClinicos";
 import { randomUUID } from "crypto";
@@ -141,6 +142,132 @@ const executar =
       else process.env.IA_RASCUNHOS_OPERACAO_APROVADA = env;
       await runtime?.destroy();
       await owner?.destroy();
+    });
+    it("piloto sintetico: quota transacional concorrente e RLS sem paciente ficticio", async () => {
+      const piloto = new ServicoPilotoSintetico318(base, provider as never, {
+        ativo: true,
+        direitos: true,
+        modelos: [modelo],
+      });
+      const reserva = (nonce: string) =>
+        executor.executar(u.tenantId, async (m) => {
+          await m.query(
+            "select pg_advisory_xact_lock(hashtextextended($1,0))",
+            [`gamificacao317:${u.tenantId}`],
+          );
+          return piloto.reservar(
+            {
+              m,
+              u,
+              profissionalId: prof,
+              profissionalVersao: "0",
+              usuarioVersao: "0",
+              tenantVersao: "0",
+            },
+            nonce,
+          );
+        });
+      const nonce = randomUUID();
+      const r = await Promise.allSettled([reserva(nonce), reserva(nonce)]);
+      expect(r.filter((x) => x.status === "fulfilled")).toHaveLength(1);
+      expect(r.filter((x) => x.status === "rejected")).toHaveLength(1);
+      const chave = `ia318_piloto_quota:${u.usuarioId}`;
+      const [row] = await executor.executar(u.tenantId, (m) =>
+        m.query(
+          "select valor from tenant_configuracoes where tenant_id=$1 and chave=$2",
+          [u.tenantId, chave],
+        ),
+      );
+      expect(row.valor.comandos).toHaveLength(1);
+      expect(
+        await executor.executar(tenantB, (m) =>
+          m.query("select valor from tenant_configuracoes where chave=$1", [
+            chave,
+          ]),
+        ),
+      ).toEqual([]);
+      await expect(
+        executor.executar(tenantB, (m) =>
+          m.query(
+            "insert into tenant_configuracoes(tenant_id,chave,valor) values($1,'ia318_piloto_sintetico',$2)",
+            [u.tenantId, { habilitada: true }],
+          ),
+        ),
+      ).rejects.toThrow();
+      // Quota remains shared across processes even after the cooldown ends.
+      await owner.query(
+        `update tenant_configuracoes set valor=jsonb_set(valor,'{ocupadoAte}','0') where tenant_id=$1 and chave=$2`,
+        [u.tenantId, chave],
+      );
+      for (let i = 0; i < 4; i++) {
+        await reserva(randomUUID());
+        await owner.query(
+          `update tenant_configuracoes set valor=jsonb_set(valor,'{ocupadoAte}','0') where tenant_id=$1 and chave=$2`,
+          [u.tenantId, chave],
+        );
+      }
+      await expect(reserva(randomUUID())).rejects.toThrow("limite");
+    });
+    it("piloto sintetico: grant, SID, tenant e revogacao revalidados no servico real", async () => {
+      const [sessao] = await owner.query(
+        "insert into sessoes_usuario(tenant_id,usuario_id,expira_em) values($1,$2,now()+interval '1 hour') returning id",
+        [u.tenantId, u.usuarioId],
+      );
+      const ator = { ...u, sessaoId: sessao.id };
+      const permitir = (habilitada: boolean, versao: number) =>
+        owner.query(
+          "insert into tenant_configuracoes(tenant_id,chave,valor) values($1,'ia318_piloto_sintetico',$2) on conflict(tenant_id,chave) do update set valor=excluded.valor",
+          [
+            u.tenantId,
+            {
+              habilitada,
+              versao,
+              usuarioId: u.usuarioId,
+              profissionalId: prof,
+            },
+          ],
+        );
+      await permitir(true, 1);
+      const externo = {
+        gerar: jest.fn(async () => ({
+          itens: [{ texto: "Peso sintético", refs: ["F1"] }],
+          limitacoes: [],
+        })),
+      };
+      const piloto = new ServicoPilotoSintetico318(base, externo as never, {
+        ativo: true,
+        direitos: true,
+        modelos: [modelo],
+      });
+      const p = await piloto.previa(ator, {
+        casoId: "C06",
+        contextoSessao: contextoSessao318(ator),
+      });
+      expect(p.baseline.itens[0].texto).toContain("70,4 kg");
+      expect(externo.gerar).not.toHaveBeenCalled();
+      for (const invalido of [
+        { ...ator, tenantId: tenantB },
+        { ...ator, usuarioId: outro.usuarioId },
+        { ...ator, sessaoId: undefined },
+      ])
+        await expect(piloto.catalogo(invalido)).rejects.toThrow();
+      await permitir(false, 2);
+      await expect(piloto.catalogo(ator)).rejects.toThrow();
+      await permitir(true, 3);
+      await expect(
+        piloto.gerar(ator, {
+          prova: p.prova,
+          modeloId: modelo.id,
+          modalidade: "pre_consulta",
+          aceiteCobranca: true,
+        }),
+      ).rejects.toThrow("Contexto");
+      expect(externo.gerar).not.toHaveBeenCalled();
+      await owner.query(
+        "update sessoes_usuario set revogado_em=now(),motivo_revogacao='logout' where id=$1",
+        [ator.sessaoId],
+      );
+      await expect(piloto.catalogo(ator)).rejects.toThrow("Sessão");
     });
     const dado = () => ({
       contextoSessao: contextoSessao318(u),

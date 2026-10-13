@@ -33,6 +33,22 @@ const ops: Record<
     suffix: string;
   }
 > = {
+  "piloto-definir-credencial": {
+    method: "PUT",
+    keys: ["chave", "versaoEsperada", "contextoSessao"],
+    suffix: "piloto/credencial",
+  },
+  "piloto-catalogo": { method: "GET", keys: [], suffix: "piloto/catalogo" },
+  "piloto-previa": {
+    method: "POST",
+    keys: ["casoId", "contextoSessao"],
+    suffix: "piloto/previa",
+  },
+  "piloto-gerar": {
+    method: "POST",
+    keys: ["prova", "modeloId", "modalidade", "aceiteCobranca"],
+    suffix: "piloto/gerar",
+  },
   modelos: { method: "GET", keys: [], suffix: "modelos" },
   credencial: { method: "GET", keys: [], suffix: "credencial" },
   "definir-credencial": {
@@ -111,6 +127,68 @@ function projetar(acao: string, v: Record<string, unknown>) {
       "maxChamadas15min",
       "maxTokensSaida",
     ]);
+  if (acao === "piloto-definir-credencial")
+    return pick(v, ["estado", "versao"]);
+  if (acao.startsWith("piloto-")) {
+    const saida = (o: Record<string, unknown>) => ({
+      itens: Array.isArray(o.itens)
+        ? o.itens.map((i) => ({
+            ...pick(i, ["texto"]),
+            refs: Array.isArray(i.refs)
+              ? i.refs.filter((r: unknown) => typeof r === "string")
+              : [],
+          }))
+        : [],
+      limitacoes: Array.isArray(o.limitacoes)
+        ? o.limitacoes.filter((l) => typeof l === "string")
+        : [],
+    });
+    return {
+      ...pick(v, [
+        "contextoSessao",
+        "corpus",
+        "casoId",
+        "modeloId",
+        "versaoModelo",
+        "prova",
+        "revisaoHumanaObrigatoria",
+      ]),
+      cadastroCredencialPermitido: v.cadastroCredencialPermitido === true,
+      chamadaPermitida: v.chamadaPermitida === true,
+      casos: Array.isArray(v.casos)
+        ? v.casos.map((c) => ({
+            ...pick(c, ["id", "titulo", "geravel"]),
+            criterios: Array.isArray(c.criterios)
+              ? c.criterios.filter((x: unknown) => typeof x === "string")
+              : [],
+          }))
+        : [],
+      modelos: Array.isArray(v.modelos)
+        ? v.modelos.map((m) =>
+            pick(m, [
+              "id",
+              "nome",
+              "versao",
+              "padrao",
+              "maxOutputTokens",
+              "precoEntradaMilhaoUsd",
+              "precoSaidaMilhaoUsd",
+              "precoEm",
+            ]),
+          )
+        : [],
+      fontes: Array.isArray(v.fontes)
+        ? v.fontes.map((f) => pick(f, ["ref", "tipo", "data", "texto"]))
+        : [],
+      criterios: Array.isArray(v.criterios)
+        ? v.criterios.filter((x) => typeof x === "string")
+        : [],
+      ...(v.baseline && typeof v.baseline === "object"
+        ? { baseline: saida(v.baseline as Record<string, unknown>) }
+        : {}),
+      ...saida(v),
+    };
+  }
   if (acao === "modelos")
     return {
       contextoSessao:

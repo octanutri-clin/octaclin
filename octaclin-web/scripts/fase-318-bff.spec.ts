@@ -233,3 +233,72 @@ test("318 estado de cadastro vem do backend e nao revela campos internos", async
     __clearCookies();
   }
 });
+test("318 piloto sintetico aceita apenas contrato fechado e projeta fontes publicas", async () => {
+  const old = global.fetch;
+  await login();
+  let path = "";
+  let calls = 0;
+  global.fetch = (async (input) => {
+    calls++;
+    path = String(input);
+    return Response.json({
+      casoId: "C06",
+      corpus: "318-sintetico-v1",
+      fontes: [
+        {
+          ref: "F1",
+          tipo: "medida",
+          data: "2026-01-10",
+          texto: "70,4 kg",
+          chave: "proibida",
+        },
+      ],
+      baseline: {
+        itens: [{ texto: "70,4 kg", refs: ["F1"], interno: "proibido" }],
+        limitacoes: [],
+      },
+      prova: "sintetica",
+      criterios: ["Preservar unidade"],
+      chamadaPermitida: false,
+      chave: "proibida",
+    });
+  }) as typeof fetch;
+  try {
+    const r = await tratarRascunhos318(
+      req({
+        acao: "piloto-previa",
+        casoId: "C06",
+        contextoSessao: "a".repeat(64),
+      }),
+    );
+    assert.equal(r.status, 200);
+    assert.ok(path.endsWith("/ia/rascunhos/piloto/previa"));
+    const body = await r.text();
+    assert.ok(body.includes("70,4 kg"));
+    assert.ok(!body.includes("proibida"));
+    assert.ok(!body.includes("proibido"));
+    for (const extra of [
+      { pacienteId: "10000000-0000-4000-8000-000000000001" },
+      { texto: "real" },
+      { fontes: [] },
+      { tenantId: "outro" },
+    ])
+      assert.equal(
+        (
+          await tratarRascunhos318(
+            req({
+              acao: "piloto-previa",
+              casoId: "C06",
+              contextoSessao: "a".repeat(64),
+              ...extra,
+            }),
+          )
+        ).status,
+        400,
+      );
+    assert.equal(calls, 1);
+  } finally {
+    global.fetch = old;
+    __clearCookies();
+  }
+});

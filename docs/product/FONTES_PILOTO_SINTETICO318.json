@@ -1,0 +1,74 @@
+{
+  "consultadoEm": "2026-10-13",
+  "metodo": "GET publico sem autenticacao; SHA256 dos bytes HTML; nenhum pedido de inferencia",
+  "fontes": [
+    {
+      "url": "https://developers.openai.com/api/docs/models/gpt-5-mini",
+      "status": 200,
+      "sha256": "2f7a98c01604fb9d5a6fabf1acdcb6071cef15ac1e7ef7c600de04f164b6db26",
+      "excerpts": [
+        "and aliases for GPT-5 Mini. gpt-5-mini gpt-5-mini-2025-08-07 gpt-5-mini-2025-08-07 Deprecated Rate limits Rate limits ensure fair and reliable access to the API by placing specific caps on requests, tokens, aud",
+        "Try in Playground Reasoning High Speed Fast Price $0.25 • $2 Input • Output Input Text, Image Output Text GPT-5 Mini is a faster, more cost-efficient version of GPT-5. It&#x27;s great for well-defined tasks and",
+        " API price Input $0.25 Cached input $0.025 Output $2.00 Quick comparison Input Cached input Output GPT-5.4 Mini $ 0.75 GPT-5 Mini $ 0.25 GPT-5.4 nano $ 0.20 Modalities Text Input and output Image Input only Aud",
+        "curity Usage and cost Admin FAQ Collaboration and sharing GPTs and sharing Plugins and connections Plugin controls Plugin management Skill controls Migrate custom GPTs to plugins Usage and analytics Workspace a",
+        "es Streaming Supported Function calling Supported Structured outputs Supported Fine-tuning Not supported Predicted outputs Not supported Snapshots Snapshots let you lock in a specific version of the model so th",
+        "Quickstart Using GPT-6 Key concepts Core concepts Responses API Decisions API Conversation state Background mode Streaming WebSocket mode Mid-turn steering Multi-agent Webhooks File inputs Compaction Counting t"
+      ]
+    },
+    {
+      "url": "https://developers.openai.com/api/docs/models/gpt-5-nano",
+      "status": 200,
+      "sha256": "46162ea9d6ca6206dabff69cea7691e96d43aa67f94cd816f7bc6698ce8e03df",
+      "excerpts": [
+        "and aliases for GPT-5 nano. gpt-5-nano gpt-5-nano-2025-08-07 gpt-5-nano-2025-08-07 Deprecated Rate limits Rate limits ensure fair and reliable access to the API by placing specific caps on requests, tokens, aud",
+        "layground Reasoning Average Speed Very fast Price $0.05 • $0.4 Input • Output Input Text, Image Output Text GPT-5 Nano is our fastest, cheapest version of GPT-5. It&#x27;s great for summarization and classifica",
+        " API price Input $0.05 Cached input $0.005 Output $0.40 Quick comparison Input Cached input Output GPT-5.4 Mini $ 0.75 GPT-5.4 nano $ 0.20 GPT-5 nano $ 0.05 Modalities Text Input and output Image Input only Aud",
+        "curity Usage and cost Admin FAQ Collaboration and sharing GPTs and sharing Plugins and connections Plugin controls Plugin management Skill controls Migrate custom GPTs to plugins Usage and analytics Workspace a",
+        "es Streaming Supported Function calling Supported Structured outputs Supported Fine-tuning Not supported Predicted outputs Not supported Snapshots Snapshots let you lock in a specific version of the model so th",
+        "Quickstart Using GPT-6 Key concepts Core concepts Responses API Decisions API Conversation state Background mode Streaming WebSocket mode Mid-turn steering Multi-agent Webhooks File inputs Compaction Counting t"
+      ]
+    },
+    {
+      "url": "https://openai.com/policies/services-agreement/",
+      "erro": "HTTPError"
+    },
+    {
+      "url": "https://help.openai.com/en/articles/5112595-best-practices-for-api-key-safety",
+      "erro": "HTTPError"
+    },
+    {
+      "url": "https://developers.openai.com/api/docs/models/gpt-5.4-mini",
+      "status": 200,
+      "sha256": "8258589ff82b94be7a0b9f81303172f4845a70e2944e26911d1b60b375944d72",
+      "excerpts": [
+        "rted Snapshots Snapshots let you lock in a specific version of the model so that performance and behavior remain consistent. Below is a list of all available snapshots and aliases for GPT-5.4 Mini. gpt-5.4-mini gpt-5.4-mini-2026-03-17 gpt-5.4-mini-2026-03-17 Rate limits Rate limits ensure fair and reliable access to the API by placing specific caps on requests, tokens, audio duration, or other usage within a given time period. Your usage tie",
+        "tokens ∙ Batch API price Input $0.75 Cached input $0.075 Output $4.50 Quick comparison Input Cached input Output GPT-5.4 $ 2.50 GPT-5.4 Mini $ 0.75 GPT-5.4 nano $ 0.20 Regional processing (data residency) endpoints are charged a 10% uplift for GPT-5.4 Mini. Modalities Text Input and output Image Input only Audio Not supported Video Not supported Endpoints Live v1/live/sessions Chat Completions v1/chat/completions Responses v1/responses Realt",
+        "ling Supported Structured outputs Supported Fine-tuning Not supported Tools Tools supported by this model when using the Responses API. Web search Supported File search Supported Image generation Supported Code interpreter Supported Hosted shell Supported Apply patch Supported Skills Supported Computer use Supported MCP Supported Tool search Supported Snapshots Snapshots let you lock in a specific version of the model so that performance and",
+        " Not supported Endpoints Live v1/live/sessions Chat Completions v1/chat/completions Responses v1/responses Realtime v1/realtime Realtime translation v1/realtime/translations Realtime transcription v1/realtime/transcription_sessions Assistants v1/assistants Batch v1/batch Fine-tuning v1/fine-tuning Embeddings v1/embeddings Image generation v1/images/generations Videos v1/videos Image edit v1/images/edits Speech generation v1/audio/speech Tran"
+      ]
+    },
+    {
+      "url": "https://developers.openai.com/api/docs/models/gpt-5.4-nano",
+      "status": 200,
+      "sha256": "9d396aba67d3205720ce709304378c0652abe5a4fc99b2badb2b023507dcea49",
+      "excerpts": [
+        "rted Snapshots Snapshots let you lock in a specific version of the model so that performance and behavior remain consistent. Below is a list of all available snapshots and aliases for GPT-5.4 nano. gpt-5.4-nano gpt-5.4-nano-2026-03-17 Deprecated gpt-5.4-nano-2026-03-17 Rate limits Rate limits ensure fair and reliable access to the API by placing specific caps on requests, tokens, audio duration, or other usage within a given time period. You",
+        "tokens ∙ Batch API price Input $0.20 Cached input $0.02 Output $1.25 Quick comparison Input Cached input Output GPT-5.4 Mini $ 0.75 GPT-5.4 nano $ 0.20 GPT-5 nano $ 0.05 Regional processing (data residency) endpoints are charged a 10% uplift for GPT-5.4 nano. Modalities Text Input and output Image Input only Audio Not supported Video Not supported Endpoints Live v1/live/sessions Chat Completions v1/chat/completions Responses v1/responses Rea",
+        "ling Supported Structured outputs Supported Fine-tuning Not supported Tools Tools supported by this model when using the Responses API. Web search Supported File search Supported Image generation Supported Code interpreter Supported Hosted shell Supported Apply patch Supported Skills Supported Computer use Not supported MCP Supported Tool search Not supported Snapshots Snapshots let you lock in a specific version of the model so that perform",
+        " Not supported Endpoints Live v1/live/sessions Chat Completions v1/chat/completions Responses v1/responses Realtime v1/realtime Realtime translation v1/realtime/translations Realtime transcription v1/realtime/transcription_sessions Assistants v1/assistants Batch v1/batch Fine-tuning v1/fine-tuning Embeddings v1/embeddings Image generation v1/images/generations Videos v1/videos Image edit v1/images/edits Speech generation v1/audio/speech Tran",
+        "s GPT-5.4 nano Deprecated Default Our cheapest GPT-5.4-class model for simple high-volume tasks Our cheapest GPT-5.4-class model for simple high-volume tasks Compare Try in Playground Reasoning High Speed Fast Price $0.2 • $1.25 Input • Output Input Text, Image Output Text GPT-5.4 nano is designed for tasks where speed and cost matter most like classification, data extraction, ranking, and sub-agents. Learn more in our Model guidance page. R"
+      ]
+    },
+    {
+      "url": "https://developers.openai.com/api/docs/models/gpt-5.4",
+      "status": 200,
+      "sha256": "3dbfdcaf71b2f1e4e607a1546c8537377cc29247bba3660877bdf68b5faf91b3",
+      "excerpts": [
+        "s ∙ Batch API price Input $2.50 Cached input $0.25 Output $15.00 Quick comparison Input Cached input Output GPT-5.4 $ 2.50 GPT-5.2 $ 1.75 GPT-5.4 Mini $ 0.75 For models with a 1.05M context window (GPT-5.4 and GPT-5.4 Pro), prompts with &gt;272K input tokens are priced at 2x input and 1.5x output for the full session for standard, batch, and flex. Regional processing (data residency) endpoints are charged a 10% uplift for GPT-5.4 and GP",
+        "Snapshots Snapshots let you lock in a specific version of the model so that performance and behavior remain consistent. Below is a list of all available snapshots and aliases for GPT-5.4. gpt-5.4 gpt-5.4-2026-03-05 gpt-5.4-2026-03-05 Rate limits Rate limits ensure fair and reliable access to the API by placing specific caps on requests, tokens, audio duration, or other usage within a given time period. Your usage tier determines how hig",
+        "Supported Structured outputs Supported Fine-tuning Not supported Tools Tools supported by this model when using the Responses API. Web search Supported File search Supported Image generation Supported Code interpreter Supported Hosted shell Supported Apply patch Supported Skills Supported Computer use Supported MCP Supported Tool search Supported Snapshots Snapshots let you lock in a specific version of the model so that performance and"
+      ]
+    }
+  ],
+  "limites": "Preços e capacidades não comprovam qualidade clínica, disponibilidade na conta do titular ou direitos de custódia BYOK. Consulta contratual falhou nesta rodada (HTTPError, status não capturado). Catálogo clínico permanece vazio; direitos clínicos e sintéticos false."
+}

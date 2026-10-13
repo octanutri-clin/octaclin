@@ -93,3 +93,15 @@ e testes das correções autorizados; nenhum deploy/flag/migration externa execu
 Finalizar regressões, navegador desktop/mobile, build/typecheck/lint, revisão
 R4 com autoria e PR única de followup. APIs/código só são considerados corrigidos
 em produção após revisão/merge/deploy próprio, não por testes locais.
+
+## Continuidade técnica do piloto após409
+
+Branch feature/fase-318-revisao-sintetica, baseb9535170. IDs do titular recebidos
+por canal da sessão; não versionados. Grant/flag/revisão de custódia continuam
+pendentes, sem dados reais ou chamadas pagas. Implementação do corpus30casos,
+composição factual, serviço/prova/quota, BFF fechado, chave individual reutilizada
+e UI de revisão sintética. Nenhuma migration. R4 e evidências no ledger
+`docs/history/phases/reviews/fase-318/PILOTO_SINTETICO_EXECUCAO.md`.
+Checkout ativo para entrega: /tmp/octaclin-f318-entrega por ENOSPC do disco
+principal; worktree original preservada, sem novo escritor nela. Não fazer
+merge/deploy/configuração externa/ativação sem autorização correspondente.

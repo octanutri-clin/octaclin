@@ -1,3 +1,6 @@
+import { catalogoTecnicoPiloto318 } from './dominio/catalogo-piloto318';
+import { ControladorPilotoSintetico318 } from './apresentacao/controlador-piloto-sintetico318';
+import { ServicoPilotoSintetico318, POLITICA_PILOTO318, PROVIDER_PILOTO318, DIREITOS_PILOTO318_APROVADOS, PoliticaPiloto318 } from './aplicacao/servico-piloto-sintetico318';
 import { CriptografiaDadosSensiveis } from '../../infraestrutura/seguranca/criptografia-dados-sensiveis';
 import { ConteudoRascunhos318, DIREITOS_IA318, MODELOS_IA318, DIREITOS_BYOK318_APROVADOS, catalogoClinico318 } from './dominio/rascunhos-clinicos';
 import { ContextoRascunhos318 } from './aplicacao/contexto-rascunhos318';
@@ -31,8 +34,8 @@ import { TranscricaoMidiaOrm } from './infraestrutura/transcricao-midia.orm';
     ModuloAuth,
     ModuloTenancy
   ],
-  controllers: [ControladorIa, ControladorRascunhos318, ControladorConfigRascunhos318, ControladorOperacoesRascunhos318],
-  providers: [ServicoIa, ServicoAuditoria, CriptografiaDadosSensiveis, ConteudoRascunhos318, ContextoRascunhos318, ServicoRascunhosClinicosIa, AdaptadorOpenAi318, {provide: DIREITOS_IA318, useValue: DIREITOS_BYOK318_APROVADOS}, {provide: MODELOS_IA318, useFactory: catalogoClinico318}],
+  controllers: [ControladorPilotoSintetico318, ControladorIa, ControladorRascunhos318, ControladorConfigRascunhos318, ControladorOperacoesRascunhos318],
+  providers: [ServicoPilotoSintetico318, { provide: POLITICA_PILOTO318, useFactory: ():PoliticaPiloto318 => ({ativo:process.env.IA318_PILOTO_SINTETICO_ATIVO==='true',direitos:DIREITOS_PILOTO318_APROVADOS,modelos:catalogoTecnicoPiloto318()}) }, {provide:PROVIDER_PILOTO318, inject:[POLITICA_PILOTO318], useFactory:(p:PoliticaPiloto318)=>new AdaptadorOpenAi318(p.modelos,p.direitos)}, ServicoIa, ServicoAuditoria, CriptografiaDadosSensiveis, ConteudoRascunhos318, ContextoRascunhos318, ServicoRascunhosClinicosIa, AdaptadorOpenAi318, {provide: DIREITOS_IA318, useValue: DIREITOS_BYOK318_APROVADOS}, {provide: MODELOS_IA318, useFactory: catalogoClinico318}],
   exports: [ServicoIa]
 })
 export class ModuloIa {}

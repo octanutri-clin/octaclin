@@ -12,12 +12,15 @@ Atualizado em 2026-10-13.
   Pré-consulta/rascunho no console, OpenAI BYOK individual, revisão humana e
   catálogo permitido preservados. G01/G02/G05 continuam BLOCKED; não houve
   chamada paga, alteração operacional ou uso de pacientes reais pelo agente.
-  Piloto somente sintético autorizado pelo proprietário; área separada/IDs do
-  alvo e condições contratuais/operacionais ainda pendentes. Estudo ChatGPT/MCP
+  Piloto somente sintético autorizado pelo proprietário; IDs do alvo recebidos
+  por canal da sessão, sem versionamento. Condições contratuais/operacionais
+  ainda pendentes; grant específico e flag sintética não aplicados. Estudo ChatGPT/MCP
   separado, sem substituir BYOK. Sol6.1 médio; aviso/pausa antes de Luna alto.
-  Followup atual: corrigir SQL das conquistas legadas (500 Metas e Adesão),
-  esclarecer concessões OctaClin/OpenAI, exibir cadastro efetivamente bloqueado
-  e identificadores já autorizados em Profissionais. Novo CI/revisão pendentes.
+  Followup409 mergeado; baseb9535170 conferida nesta rodada. Correções de SQL,
+  mensagens e identificação integradas. Continuidade: piloto sintético isolado
+  com corpus30casos, baseline, UI, comparação OpenAI e cadastro bloqueados
+  por direitos próprios false; catálogo clínico vazio. CI novo ainda pendente
+  no checkpoint documental; evidências no ledger PILOTO_SINTETICO_EXECUCAO.md.
   Perfil profissional completo registrado como pendência de produto em
   `docs/product/PENDENCIA_PERFIL_PROFISSIONAL.md`, sem implementação do módulo.
   Contrato do piloto: `docs/product/PILOTO_SINTETICO_BYOK_FASE_318.md`.

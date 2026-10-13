@@ -66,3 +66,16 @@ Resultado/tempo do candidato:não executados. G01 continuaBLOCKED.
 A revisão deve registrar correções por caso, rubrica final, data/versão e decisão
 GO/NO-GO/mais evidência. Não incluir nome/dados de pacientes ou assinatura pessoal
 em Git; identificação institucional do revisor segue canal/documentação aprovada.
+
+## Fixture executável sintética-v1 — continuidade
+
+O documento REV0 acima preserva as situações e expectativas originalmente
+propostas. Corpus executável em
+`octaclin-backend/src/modulos/ia/dominio/piloto-sintetico318.ts`:30IDs,19casos
+para comparação factual e11casos de contrato/segurança sem chamada paga. O caso23
+permanece teste de segurança separado; não se envia instrução maliciosa como
+conteúdo assistencial. Fontes são inventadas e pré-selecionadas no servidor.
+Baseline repete fatos/ref/data sem calcular indicadores ou criar recomendação.
+Prévia e notas não persistem; reporte a conferência pelo canal institucional.
+A execução dos testes valida contratos, não ratifica rubrica ou qualidade clínica.
+G01clínico continua BLOCKED até revisão humana documentada dos30casos.

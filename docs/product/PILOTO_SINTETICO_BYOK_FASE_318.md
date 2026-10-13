@@ -96,3 +96,25 @@ Não implementar MCP ou transferir dados reais sem escopo/revisão próprios.
 - https://developers.openai.com/apps-sdk/build/auth.md — HTTP/status 200; SHA256 resposta `d6c994c0f628f73eacfbe2d7bd59e1df590f8263a36d62e3df823e76bd4fe345`.
 - https://openai.com/policies/services-agreement/ — HTTP/status 200; SHA256 resposta `8c3ff4a28d944dc78ac80dab78ec7487b456cfe237bea61d353c7541ed4d0330`.
 - https://help.openai.com/en/articles/8156019-how-can-i-move-my-chatgpt-subscription-to-the-api — HTTP/status 200; SHA256 resposta `f586252f21fbea8037ff16564bbc3fabdb084134679c2af6c6e7d7570455711a`.
+
+## Continuidade após merge409
+
+O proprietário informou o merge409 e forneceu os três IDs do alvo por canal da
+sessão. Não versionar nem publicar esses IDs. O backend verificará o vínculo
+atual, papel/permissões e SID contra o banco, sem inferir identidade pelo nome.
+A entrega técnica inclui corpus executável30casos, prévia/composição factual,
+comparação OpenAI isolada, cadastro do titular no piloto e revisão efêmera.
+Grant específico e flag sintética desativados por padrão; nenhum foi aplicado.
+Direitos clínicos e sintéticos continuam false. Catálogo clínico continua vazio.
+Os dois candidatos técnicos sintéticos não são aprovação assistencial.
+
+Quota sintética usa metadados limitados na tabela tenant_configuracoes, separados
+por tenant/ator e pelo advisory lock já usado no contexto318. Somente nonce e
+instante/cooldown; nenhuma chave, saída, nota ou pacienteId. Prova15min e nonce
+retido24h impedem repetição paga;5chamadas/15min/cooldown2min. Entradas antigas são
+expurgadas no próximo uso; o último registro operacional permanece até a limpeza
+administrativa, sem prometer TTL físico da tabela. Isso não substitui a auditoria.
+Não há nova migration nem mudança na FK do ledger clínico1071.
+
+[Termo proposto e gates separados](TERMO_PILOTO_SINTETICO_BYOK_FASE_318.md).
+[Execução, evidências e rollback](../history/phases/reviews/fase-318/PILOTO_SINTETICO_EXECUCAO.md).
