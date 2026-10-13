@@ -1,86 +1,54 @@
-# Handoff — Fase 313: implementação e evidências
+# Handoff — Fase 318: planejamento e análise de gaps
 
-## Estado
+Branch `docs/fase-318-planejamento`, worktree
+`/workspace/octaclin/.worktrees/docs-fase-318-planejamento`, base main8ea67a08
+(merge407). Checkout principal e sua alteração em next-env.d.ts preservados.
 
-Implementação concluída no código; validações locais PASS; PR #391 aberta; checks em acompanhamento. Regras clínicas ratificadas pelo proprietário/equipe.
-Risco R4 (dados clínicos, migration, RLS e consentimento).
+## Autorização e próxima ação
 
-- Branch: `feature/fase-313-antropometria-gestantes`.
-- Worktree: `/workspace/octaclin/.worktrees/feature-fase-313-antropometria-gestantes`.
-- Base: `774cf34fab2e9cd26e888e57fbaabfe14295930e`, PR #390 mergeado.
-- PR da 313: [#391](https://github.com/octanutri-clin/octaclin/pull/391), aberta; integração pendente.
-- [Plano/contratos/gaps/rollback](../docs/history/phases/PLANO_FASE_313.md).
-- [Ficha para revisão clínica](../docs/product/FICHA_VALIDACAO_CLINICA_FASE_313.md).
-- [Parecer recebido, preservado](../docs/product/PARECER_REVISAO_FASE_313.md).
-- [Sequência executável T01–T18](todo-fase-313.md).
-- [Execução, resultados e limites](../docs/history/phases/EXECUCAO_FASE_313.md).
-- [Handoff 312 preservado](plan-fase-312.md); gates residuais em todo-fase-312.md
-  permanecem históricos, sem fechamento por inferência de merge.
+Só planejamento/análise autorizados. Não iniciar código, testes de implementação,
+benchmark, downloads, migrations, provider ou ativação. Fechar D04–06,
+revisar corpus/rubrica propostos e obter autorização específica para PoC sintética.
+Não abrir PR documental isolada; integrar estes documentos à futura PR única.
 
-## Próxima ação exata
+## Decisões e contratos
 
-Implementação autorizada pelo proprietário em GPT-6.1 Sol médio. Em 2026-10-10,
-respondeu “Ficha revisada; equipe/responsável ratifica todas as regras” à ficha
-atualizada, incluindo peso habitual, 8s0d, bordas e plausibilidade técnica.
-Registrar como confirmação humana relatada, sem afirmar nova revisão clínica
-independente deste agente. Acompanhar/corrigir checks da PR #391 nesta branch, conforme T17–T18 e o relatório de execução.
+D01: pré-consulta e rascunho de evolução, sem orientação nesta fase.
+D02: local CPU, dados exclusivamente sintéticos, sem chamadas pagas.
+D03: apenas responsável atual gera/confirma no console; manual legado preservado.
+D04/D05: seleção mínima de fontes e rascunho apenas na tela foram propostos,
+perguntas enviadas, ainda sem resposta. D06: revisão humana/rubrica antes da PoC.
 
-## Escopo fechado
+- [Plano, evidências, limites e gates](../docs/history/phases/PLANO_FASE_318.md).
+- [T00–T12, arquivos, dependências e critérios](todo-fase-318.md).
+- Modelos/baseline reais: fases271/272/274 e código pacientes/IA/FastAPI.
+- Gate legado ia.clinica não libera318; não copiar persistência/ORM do legado.
+- Inferência fora de lock; contexto/identidade revalidados no retorno e
+  confirmação, inclusive transferência A→B→A e resposta tardia.
+- Prévia com fontes/datas/limites; revisão humana não é assinatura digital.
+- Evolução privada/cifrada, título180/conteúdo6000; não prometer replay seguro
+  sem desenhar/testar contrato idempotente; não alterar manual por consequência.
+- Licence de pesos/runtime/quantização e qualidade clínica não presumidas.
+- PoC pode concluir NO-GO; baseline permanece caminho completo para profissional.
 
-Curvas brasileiras, IMC de referência+ganho semanal; adulta >=18 na avaliação,
-feto único e risco habitual confirmado. Medidas sem faixa se fora da população
-ou incompletas. Peso pré-gestacional medido/informado, medido até oito semanas
-ou habitual como origem própria, conforme decisão adicional nesta conversa.
-Condição confirmada por avaliação, snapshot cifrado; bloqueio das interpretações
-adultas em novos registros gestantes, preservando medidas/histórico.
+## Continuidade
 
-Gestações explícitas com abrir/encerrar/reabrir; referência corrigida cria nova
-versão, séries separadas; avaliação/histórico+gráfico+portal. Profissional libera
-cada gestação desligada por padrão, confirmando registros atuais e futuros;
-paciente aceita especificamente, pode revogar. Sem notas internas no portal.
-Encerrar bloqueia novos registros/referências, conserva histórico/liberação.
-Retirada e nova liberação requerem novo aceite. Escopo de produto fechado;
-ratificação detalhada da ficha, incluindo peso habitual, recebida nesta conversa.
+316 permanece stand-by. 317 integrada407/CI main38324741937 PASS consultado nesta
+rodada; ativação global não executada pelo agente, preflight processo/providers
+pendente. Aceites/autorização já recebidos mantidos. Não habilitar flags aqui.
+314 classificadores permanecem bloqueados; medidas factuais autorizadas não são
+protocolo de IA. Handoff313 antigo preservado em plan-fase-313.md.
 
-## Invariantes para execução
+## Modelos e execução
 
-- Revalidar Git/branch/diff e números livres antes de editar; um escritor ativo.
-- Fonte offline e autoridade clínica no backend; não duplicar tabela na Web.
-- Migration proposta 1068: três tabelas (episódio/referência/consentimento),
-  FKs compostas tenant/paciente, FORCE RLS, snapshots/versões imutáveis.
-  Contexto clínico cifrado. Nada de vínculo automático de registros antigos.
-- Reusar ExecutorTenant/carteira/permissões atuais; não copiar exclusividade
-  do encaminhamento. Portal deriva paciente da identidade atual.
-- Concorrência: locks em ordem consistente, versão esperada/409, criação com
-  UUID/replay durável; referência e condição efetivas preservadas por avaliação.
-- Gráfico por episódio+versão; 100 avaliações/página, cursor estável, cobertura
-  parcial visível. Não usar janela global das últimas 100/24 avaliações.
-- Portal só com liberação+aceite atual por geração/usuário; allowlist sem notas,
-  no-store e origem nas mutações. Retirada/revogação revalidadas em cada leitura.
-- Reset paciente/episódio e respostas atrasadas em todos os fluxos Web.
-- PG real prova RLS, FKs, imutabilidade e corridas no serviço, não mocks.
-- Down recusa com dados novos; rollback conserva histórico/schema e bloqueios.
-- Nenhuma migration/deploy externo autorizado neste planejamento.
+GPT-6.1 Sol médio para análise/contratos/segurança e integraçãoR4. Luna alto pode
+preparar fixtures e UI com contrato fechado; não recomendado sozinho para fase
+inteira. Se houver transição, avisar modelo alvo e pausar para troca manual.
+Não houve troca nem delegação. Execução futura nativa, sem reabrir planejamento
+por preferência; novas decisões só para lacunas demonstradas.
 
-## Evidência e fatos operacionais
+## Verificações desta etapa
 
-CI final PR 312 `38049949959` e pós-merge `38052856367` SUCCESS; scanners
-pós-merge SUCCESS. Proprietário informou 1067 aplicada/validada em staging e
-produção; não houve consulta direta aos bancos. Não atribuir relato às 1065/1066.
-Monitor de produção `38065380981` FAIL: HTTP 503 após três tentativas; endpoint/
-causa não identificados. Não atribuir à 312 nem afirmar produção saudável.
-
-Implementação/tests/build/PG locais PASS; revisão R4 independente SKIPPED (sem segundo revisor neste ciclo). Clínica: ratificação recebida do proprietário nesta conversa. Parecer de 10/10/2026 relata
-conferência das 31 linhas sem erro de transcrição e declara aprovação final
-pendente; não é prova independente executada por este agente nem aceite clínico.
-O parecer não conferiu integralmente dataset UFRJ V3; download/checksum da
-análise anterior continuam evidência distinta, sem atribuir essa prova ao parecer.
-PASS: revisão do diff, `git diff --check` e scanner local de secrets
-(`node scripts/scan-secrets.mjs`, nenhum secret identificado pelos padrões). Sem teste de feature no planejamento.
-
-## Modelo
-
-GPT-6.1 Sol médio suficiente e recomendado para implementação completa.
-Luna alto suficiente para tarefas delimitadas de UI/fixtures/textos após fechar
-contratos R4. Priorizar tokens com tarefas pequenas e testes focados antes da
-suíte ampla. Avisar e pausar para qualquer troca manual; nenhuma troca feita.
+Inspeção de Git/worktrees/diff, contratos/código e GitHub407/CI main. Não rodados
+benchmarks/testes de implementação318; CI317 não prova318. Gate documental
+check-diff e referências locais deve ser registrado ao concluir.

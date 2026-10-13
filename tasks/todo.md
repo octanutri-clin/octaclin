@@ -1,17 +1,13 @@
-# Tarefa corrente — Fase 313
+# Tarefa corrente — Fase 318
 
-Planejamento/gaps preparados; implementação não iniciada.
+Planejamento/análise autorizados; implementação/PoC não iniciadas.
 
-- Handoff: [plan.md](plan.md).
-- Contratos: [PLANO_FASE_313.md](../docs/history/phases/PLANO_FASE_313.md).
-- Ficha aguardando revisão: [FICHA_VALIDACAO_CLINICA_FASE_313.md](../docs/product/FICHA_VALIDACAO_CLINICA_FASE_313.md).
-- Checklist de execução: [todo-fase-313.md](todo-fase-313.md).
-- Handoff 312 preservado: [plan-fase-312.md](plan-fase-312.md).
+- [Handoff atual](plan.md) e [handoff específico318](plan-fase-318.md).
+- [Plano/gaps/gates](../docs/history/phases/PLANO_FASE_318.md).
+- [Checklist T00–T12](todo-fase-318.md).
+- D01–03 confirmadas; D04–05 aguardam resposta, D06 exige revisão humana.
+- Fase316 stand-by; ativação317 em trilha separada, sem novo aceite necessário.
+- G00PASS inspeção; G01/G02/G05BLOCKED; G03/G04SKIPPED, sem implementação.
+- Modelo suficiente: Sol6.1 médio; Luna alto só para fatias com contrato fechado.
 
-Próximo passo: revisão/aceite específico da ficha pelo proprietário/equipe
-clínica; autorização para implementação ainda não dada neste ciclo.
-Parecer documental incorporado; tabela sem erro de transcrição relatado,
-ratificação clínica final pendente. Peso habitual incluído como origem própria
-por decisão adicional do proprietário; regras de uso detalhadas na ficha.
-Modelo recomendado para implementação completa: GPT-6.1 Sol médio.
-Não trocar automaticamente. Não há perguntas de produto pendentes.
+Histórico do handoff/checklist antigo313 preservado em [plan-fase-313.md](plan-fase-313.md).
