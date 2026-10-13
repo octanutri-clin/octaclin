@@ -6,10 +6,11 @@ Branch `docs/fase-318-planejamento`, worktree
 
 ## Autorização e próxima ação
 
-Só planejamento/análise autorizados. Não iniciar código, testes de implementação,
-benchmark, downloads, migrations, provider ou ativação. D01–07 confirmadas; planejamento consolidado. Próxima etapa proposta: desenvolvimento
-técnico protegido com mocks/sintéticos, mediante autorização expressa. Chamadas
-pagas, teste real com chave e ativação precisam de gates/orçamento correspondentes.
+Em2026-10-13 o proprietário autorizou prosseguir com implementação técnica,
+mocks, fixtures e testes sintéticos conforme o contrato preparado. Branch
+feature/fase-318-ia-rascunhos; gates clínicos/contratuais continuam bloqueados.
+Nenhuma chamada paga, envio de dados reais, migration externa, merge, deploy ou
+ativação está autorizado. Uma PR de entrega técnica, Draft enquanto houver gates.
 Não abrir PR documental isolada; integrar estes documentos à futura PR única.
 
 ## Decisões e contratos
