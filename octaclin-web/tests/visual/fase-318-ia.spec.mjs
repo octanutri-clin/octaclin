@@ -87,6 +87,7 @@ test("318 chave em memoria, limpa apos envio, erro sem segredo e acessibilidade"
         contentType: "application/json",
         body: JSON.stringify({
           estado: "ausente",
+          cadastroCredencialPermitido: true,
           versao: 0,
           contextoSessao: "a".repeat(64),
         }),
@@ -353,5 +354,98 @@ test("318 troca de identidade durante geracao descarta previa e nota", async ({
   ).toBeVisible();
   await expect(
     page.getByRole("heading", { name: "Prévia para revisão" }),
+  ).toHaveCount(0);
+});
+
+test("318 cadastro bloqueado fica explicito e nao envia chave", async ({
+  page,
+}) => {
+  await preparar(page);
+  let mutacoes = 0;
+  await page.route("**/api/ia/rascunhos", async (r) => {
+    const d = r.request().postDataJSON();
+    if (d.acao === "definir-credencial") mutacoes++;
+    await r.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        cadastroCredencialPermitido: false,
+        contextoSessao: "a".repeat(64),
+        estado: "ausente",
+        versao: 0,
+      }),
+    });
+  });
+  await page.goto("/integracoes");
+  await expect(
+    page.getByText("Estado: ausente", { exact: true }),
+  ).toBeVisible();
+  await page.getByLabel("Chave API individual").fill("fixture-nao-valida");
+  await expect(
+    page.getByRole("button", { name: "Cadastrar ou substituir chave" }),
+  ).toBeDisabled();
+  await expect(
+    page.getByText("Cadastro bloqueado: aprovação contratual pendente."),
+  ).toBeVisible();
+  expect(mutacoes).toBe(0);
+});
+
+test("318 diretorio mostra identificadores autorizados para suporte", async ({
+  page,
+}) => {
+  await preparar(page);
+  const id = "11111111-1111-4111-8111-111111111111";
+  const tenantId = "22222222-2222-4222-8222-222222222222";
+  const usuarioId = "33333333-3333-4333-8333-333333333333";
+  await page.route("**/api/profissionais**", (r) =>
+    r.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        itens: [
+          {
+            id,
+            tenantId,
+            usuarioId,
+            nome: "Profissional sintético",
+            criadoEm: "2026-01-01T09:00:00Z",
+          },
+        ],
+        total: 1,
+      }),
+    }),
+  );
+  await page.goto("/profissionais");
+  await page.getByText("Identificadores para suporte", { exact: true }).click();
+  await expect(page.getByText(id, { exact: true })).toBeVisible();
+  await expect(page.getByText(tenantId, { exact: true })).toBeVisible();
+  await expect(page.getByText(usuarioId, { exact: true })).toBeVisible();
+});
+
+test("318 metas e adesao mostra erro operacional sem JSON bruto", async ({
+  page,
+}) => {
+  await preparar(page);
+  await page.route("**/api/gamificacao/configuracao", (r) =>
+    r.fulfill({
+      status: 500,
+      contentType: "application/json",
+      body: JSON.stringify({
+        statusCode: 500,
+        message: "Internal server error",
+      }),
+    }),
+  );
+  await page.goto("/gamificacao");
+  await expect(
+    page.getByText(
+      "Não foi possível carregar metas e adesão. Tente novamente em alguns instantes.",
+      { exact: true },
+    ),
+  ).toBeVisible();
+  await expect(
+    page.getByText('{"statusCode":500,"message":"Internal server error"}', {
+      exact: true,
+    }),
   ).toHaveCount(0);
 });

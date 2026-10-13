@@ -100,6 +100,7 @@ async function requisitar<T>(caminho: string, init?: RequestInit): Promise<T> {
   });
 
   if (!resposta.ok) {
+    if (resposta.status >= 500) throw new ErroApiGamificacao(resposta.status, "Não foi possível carregar metas e adesão. Tente novamente em alguns instantes.");
     const detalhe = await resposta.text();
     throw new ErroApiGamificacao(resposta.status, detalhe || `Falha HTTP ${resposta.status}`);
   }

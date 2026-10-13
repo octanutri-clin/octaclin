@@ -218,7 +218,7 @@ export class ServicoGamificacao {
     return this.executorTenant.executar(tenantId, async (gerenciador) => {
       await this.exigirRecurso(gerenciador, tenantId, 'metasBadges');
       return gerenciador.getRepository(BadgeOrm).find({
-        where: { tenantId, regraConquista: Raw(alias => `coalesce(${alias}->>'modelo','')<>'317'`) },
+        where: { tenantId, regraConquista: Raw(alias => `coalesce((${alias})->>'modelo','')<>'317'`) },
         order: { nome: 'ASC' },
         take: 100
       });

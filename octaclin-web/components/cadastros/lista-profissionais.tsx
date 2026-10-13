@@ -2,6 +2,7 @@
 
 import { FormEvent, useCallback, useEffect, useState } from 'react';
 import { AlertTriangle, ArchiveRestore, CalendarDays, CheckCircle2, Edit3, Link2, Plus, RefreshCcw, Save, Stethoscope, Trash2, X } from 'lucide-react';
+import { IdentificadoresProfissional } from './identificadores-profissional';
 import { Botao } from '@/components/ui/botao';
 import { Cartao, CartaoCabecalho, CartaoConteudo, CartaoTitulo } from '@/components/ui/cartao';
 import { ModalConfirmacao } from '@/components/ui/modal';
@@ -356,6 +357,7 @@ export function ListaProfissionais() {
                       <strong className="truncate">{profissional.nome}</strong>
                     </div>
                     <p className="mt-1 text-xs text-texto-suave">Acesso clínico ativo</p>
+                    <IdentificadoresProfissional profissional={profissional} />
                   </div>
                   <span>{profissional.registroProfissional ?? '-'}</span>
                   <span>{profissional.especialidade ?? '-'}</span>

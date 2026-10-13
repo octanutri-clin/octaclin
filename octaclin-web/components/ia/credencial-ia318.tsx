@@ -8,12 +8,16 @@ export function CredencialIa318() {
     } | null>(null),
     [chave, setChave] = useState(""),
     [mensagem, setMensagem] = useState(""),
-    [busy, setBusy] = useState(false);
+    [busy, setBusy] = useState(false),
+    [cadastroPermitido, setCadastroPermitido] = useState(false);
   const contexto = useRef<string | null>(null);
   useEffect(() => {
     const c = new AbortController();
     void Promise.all([
-      requisitarIa318<{ contextoSessao: string }>("modelos", {}, c.signal),
+      requisitarIa318<{
+        contextoSessao: string;
+        cadastroCredencialPermitido: boolean;
+      }>("modelos", {}, c.signal),
       requisitarIa318<{ estado: string; versao: number }>(
         "credencial",
         {},
@@ -23,6 +27,7 @@ export function CredencialIa318() {
       .then(([meta, estado]) => {
         if (!c.signal.aborted) {
           contexto.current = meta.contextoSessao;
+          setCadastroPermitido(meta.cadastroCredencialPermitido === true);
           setEstado(estado);
         }
       })
@@ -35,7 +40,7 @@ export function CredencialIa318() {
     return () => c.abort();
   }, []);
   async function alterar(remover = false) {
-    if (!estado || busy) return;
+    if (!estado || busy || (!remover && !cadastroPermitido)) return;
     setBusy(true);
     const valor = chave;
     setChave("");
@@ -96,7 +101,7 @@ export function CredencialIa318() {
       <div className="flex flex-wrap gap-3">
         <button
           className="rounded border p-2"
-          disabled={busy || !estado || !chave.trim()}
+          disabled={busy || !estado || !chave.trim() || !cadastroPermitido}
           onClick={() => void alterar()}
         >
           Cadastrar ou substituir chave
@@ -111,8 +116,13 @@ export function CredencialIa318() {
       </div>
       <p role="status">{mensagem}</p>
       <p className="text-sm">
-        A função aguarda validação clínica e contratual. O cadastro também pode
-        permanecer bloqueado. Remover aqui não revoga a chave na OpenAI.
+        {cadastroPermitido
+          ? "Cadastro disponível. A geração depende das liberações da função e da clínica."
+          : "Cadastro bloqueado: aprovação contratual pendente."}
+      </p>
+      <p className="text-sm">
+        Estado ausente significa que não há chave cadastrada. Remover aqui não
+        revoga a chave na OpenAI.
       </p>
     </section>
   );

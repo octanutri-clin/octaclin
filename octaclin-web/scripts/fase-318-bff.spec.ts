@@ -175,7 +175,11 @@ test("318 limita leitura do corpo antes de alocar todo o stream", async () => {
 test("318 encaminha marcador no corpo das fontes e da geracao, sem URL", async () => {
   const old = global.fetch;
   await login();
-  const calls: { url: string; method: string; body: Record<string, unknown> }[] = [];
+  const calls: {
+    url: string;
+    method: string;
+    body: Record<string, unknown>;
+  }[] = [];
   global.fetch = (async (url, init) => {
     calls.push({
       url: String(url),
@@ -203,6 +207,27 @@ test("318 encaminha marcador no corpo das fontes e da geracao, sem URL", async (
       assert(!c.url.includes("a".repeat(64)));
     }
     assert.equal(calls.length, 3);
+  } finally {
+    global.fetch = old;
+    __clearCookies();
+  }
+});
+
+test("318 estado de cadastro vem do backend e nao revela campos internos", async () => {
+  const old = global.fetch;
+  await login();
+  global.fetch = (async () =>
+    Response.json({
+      cadastroCredencialPermitido: true,
+      segredo: "fixture",
+      modelos: [],
+      configuracao: {},
+    })) as typeof fetch;
+  try {
+    const r = await tratarRascunhos318(req({ acao: "modelos" }));
+    const j = await r.json();
+    assert.equal(j.cadastroCredencialPermitido, true);
+    assert.equal(j.segredo, undefined);
   } finally {
     global.fetch = old;
     __clearCookies();

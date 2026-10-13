@@ -183,3 +183,10 @@ atual, prévia completa e confirmação, snapshot cifrado e impressão/PDF do
 navegador. Atestados aguardam validação específica. Migration 1067 está no
 código; aplicação operacional não verificada. Evidências em
 `docs/history/phases/PLANO_FASE_312.md` e `tasks/todo-fase-312.md`.
+
+## Pendência de produto registrada — 2026-10-13
+
+Perfil da conta profissional: completar/editar dados permitidos e gerir dados da
+própria conta, reaproveitando cadastro/vínculos existentes. Escopo, verificação de
+campos, sessões e prioridade pendentes; não implementado nesta rodada. Contrato
+de pendência em [PENDENCIA_PERFIL_PROFISSIONAL.md](PENDENCIA_PERFIL_PROFISSIONAL.md).
