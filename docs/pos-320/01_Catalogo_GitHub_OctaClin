@@ -1,0 +1,1205 @@
+# OctaClin — Catálogo Mestre de Repositórios GitHub para o Codex
+
+> **Versão:** 1.2 — pós-Fase 320, matriz de lacunas revisada • **Reconciliação:** 09/10/2026  
+> **Objetivo:** reunir **todos os repositórios recomendados nas conversas e na pesquisa complementar de lacunas das 71 sugestões** em um único documento operacional. Complementa `ROADMAP_IMPLEMENTACAO_PRS_ONDAS_POS_320.md`, cuja execução fica bloqueada até o handoff da Fase 320.  
+> **Estado da pesquisa:** referências identificadas e diversas licenças principais verificadas diretamente no GitHub; **não significa que as versões atuais tenham sido testadas no OctaClin**. Revisar tudo na tag/commit de adoção.  
+> **Política:** 1 recurso = 1 PR; este catálogo é um guia de decisão, **não uma lista de pacotes a instalar**.
+
+## 0. Marco pós-320 e compatibilidade com as Fases 302–320
+
+**Fonte canônica:** [roadmap 302–320](https://github.com/octanutri-clin/octaclin/blob/main/docs/product/ROADMAP_POS_AUDITORIA_FASES_302_320.md). As referências listadas aqui **não autorizam** executar funcionalidades das Fases 302–320 antecipadamente, ignorar `NO-GO` ou substituir código já integrado. O usuário definiu que **todas as ondas e PRs deste catálogo começam somente após a Fase 320**.
+
+**Correções de status:** `FND01` está resolvido pela Fase 298/PR #356; `AI05` é inteiramente coberto pelo escopo/gate da Fase 316 e **não deve gerar PR própria**. A Fase 307/PR #384 já tem compartilhamento explícito de métricas no portal (`ANT03` vira residual condicional). Fase 308/PR #385 foi integrada segundo o GitHub consultado em 2026-10-09, enquanto o roadmap escrito ainda a indicava aberta.
+
+| Fase canônica | IDs pós-320 que exigem reconciliação | Regra para escolher referência GitHub |
+|---|---|---|
+| 304–305 | `QST03`, `APP01–03`, `ANT01–04`, `FOOD04–05` | Aproveitar leitura longitudinal e fatos declarados; não recriar timeline ou inferir consumo. |
+| 306 | `OPS06` | Só considerar gráficos/tabelas ou métricas adicionais além das entregas da fase. |
+| 307 | `ANT03`, `APP05`, `APP06` | Começar pelos controles de compartilhamento já implementados; evitar nova política paralela. |
+| 309 | `APP07`, notificações em operações | Respeitar preferências internas/alertas obrigatórios. |
+| 310 | `FOOD07`, `FOOD08` | Categorias e entrega ao paciente são base da 310; biblioteca pública intertenant é futura e distinta. |
+| 311/320 | `FOOD01–06` | Reutilizar catálogos aprovados; TBCA só com prova de direitos, incluindo licenças de dados. |
+| 312 | `DOC01–02`, `DOC08` | Preservar gate jurídico de tipos documentais e assinatura. |
+| 313 | `ANT07` | Não fornecer outra classificação gestacional; somente complemento sobre motor validado. |
+| 314 | `ANT05–06` | Não recriar curvas, escores e percentis já resolvidos; fontes e dados clínicos exigem validação. |
+| 316 | `AI05` (ARQUIVADO), `ENG08` (se aprovado) | Extração assistida é da Fase 316; não desenvolver atalho por Docling/PDF/IA. |
+| 317 | `APP04` | Badges/streak só se decisão clínica do piloto autorizar; `NO-GO` bloqueia. |
+| 318 | `AI01–04`, `AI06` quando afetado | Reutilizar decisão/piloto de IA; exigir revisão humana e gate PHI/provider. |
+| 319 | Busca semântica | Não integrar embeddings/vector DB se `NO-GO` ou sem benefício mensurado. |
+
+**Fluxo de decisão do Codex por referência:** (1) fase canônica e decisão `GO/NO-GO`; (2) implementação real na `main`; (3) gap residual mensurável; (4) alternativa nativa/já instalada; (5) licença e conformidade do código **e dos dados**; (6) PoC sintética; (7) uma PR pequena por ID autorizado. Se a fase canônica já cobre a necessidade, classificar `JÁ COBERTO` sem PR e sem instalação.
+
+---
+
+## 1. Instrução obrigatória para o Codex
+
+1. Confirmar formalmente o marco da **Fase 320** (ou operar somente em modo auditoria); ler **este arquivo**, `ROADMAP_IMPLEMENTACAO_PRS_ONDAS_POS_320.md` e `docs/product/ROADMAP_POS_AUDITORIA_FASES_302_320.md`, além de `AGENTS.md`, `CLAUDE.md`, documentos de fase, autorização e padrões do repositório.
+2. Reconciliar o estado final de 302–320 na `main` e identificar o **ID de PR pós-320** com gap residual confirmado; buscar referências por ID no catálogo. IDs históricos `FND01` e `AI05` **não são executáveis**.
+3. **Auditar a `main` antes de instalar, somente após o gate 320:** procurar a funcionalidade, o pacote já instalado, primitivos equivalentes e testes. Se já estiver resolvido, não instalar/codificar de novo.
+4. Selecionar **uma solução prioritária** por capacidade, preferindo nesta ordem: recurso atual > API nativa > biblioteca instalada > dependência nova pequena/permissiva > integração extensa > referência de arquitetura.
+5. Para cada candidato: verificar **licença do código e dos dados separadamente**; commit/tag; manutenção; versão Node/TypeScript/Next/React/Expo; segurança; dependências transitivas; SSR/bundle; privacidade; interoperabilidade; acessibilidade; custos e manutenção.
+6. Classificar decisão como `REUTILIZAR`, `INTEGRAR`, `ADAPTAR COM PERMISSÃO`, `REFERENCIAR SEM COPIAR` ou `REJEITAR`. **Não transformar o catálogo em requirements automáticos.**
+7. Se houver risco material, realizar **PoC pequena dentro da PR correspondente**, com fixtures sintéticas; comparar baseline (performance, bundle, complexidade e cobertura) e documentar rejeição se perder para o código existente.
+8. Backend NestJS segue autoridade para cálculos, permissões, versionamento e publicação. Preservar tenant, RLS/FORCE RLS, escopo profissional, criptografia, LGPD, registros de auditoria e tratamento de erros.
+9. Nenhum dado clínico/PII em URL, telemetria, prompt de terceiros, log, snapshots de teste público ou cache persistente. Preferir dados sintéticos. Provedores externos exigem aprovação específica.
+10. Toda implementação clínica deve citar fonte primária, população, unidade, precisão, limites, versão, testes independentes e aprovação pertinente; repositório aberto **não comprova validade clínica**.
+11. Um ID = uma PR, com testes focados e transversais, relatório de trade-offs, rollback, alterações de schema documentadas e sem migration externa/merge automático não autorizado.
+12. Na descrição da PR registrar `reference_repo`, URL, versão/commit, licença conferida, decisão, justificativa, alternativa rejeitada, dependências adicionadas e testes.
+
+### Critérios de prioridade
+
+- **P0 — avaliar nas próximas PRs relacionadas:** ganho transversal, risco controlado ou gate de qualidade de alto valor. **Não implica instalar agora**.
+- **P1 — avaliar quando chegar ao PR da funcionalidade:** boa aderência e expectativa de ganho concreto.
+- **P2 — opcional/alternativa:** PoC apenas se o código atual não atingir o aceite.
+- **P3 — inspiração/estudo:** não copiar nem instalar como padrão; alto custo, risco clínico, licença restritiva ou stack distante.
+
+### Modos de uso
+
+- **JÁ INSTALADO:** reaproveitar o pacote existente; conferir se já fornece a operação.
+- **AVALIAR INTEGRAÇÃO / TESTES / GATE / PROTÓTIPO:** candidato, não escolhido automaticamente.
+- **ALTERNATIVA / MOTOR / UTILITÁRIO:** comparar com outra opção da mesma família e escolher uma.
+- **REFERÊNCIA / ESTUDO / SOMENTE INSPIRAÇÃO:** aprender arquitetura, algoritmo/UX; licença/validação podem impedir cópia direta.
+
+### Estado da stack observado na `main` em 09/10/2026
+
+Consulta de `octaclin-web/package.json`, `octaclin-backend/package.json` e `octaclin-mobile/package.json` (confirmar novamente ao executar):
+
+- **Web:** Next.js 16, React 19, TypeScript; já inclui `@dnd-kit/core`, `@dnd-kit/sortable`, `@dnd-kit/utilities`.
+- **Backend:** NestJS, TypeORM, `pg`, BullMQ, `nodemailer`, `class-validator`, `testcontainers` no desenvolvimento.
+- **Mobile:** Expo / React Native, `expo-sqlite`, mecanismos próprios de diário e sincronização.
+- **Testes/CI:** Playwright e `@axe-core/playwright` já existem no web; Jest e testes de isolamento no backend.
+
+**Logo:** não propor instalar dnd-kit novamente; não substituir Testcontainers, SQLite, fila BullMQ, motor de permissões, calendário ou gerador de PDFs atual sem prova de ganho real.
+
+---
+
+## 2. Índice geral — consulta rápida
+
+| ID | Repositório (link) | Prioridade | Uso sugerido | Licença/atenção | PRs/áreas relacionadas |
+|---|---|---|---|---|---|
+| **R001** | [clauderic/dnd-kit](https://github.com/clauderic/dnd-kit) | P0 | JÁ INSTALADO | MIT | `PA01`, `DOC10` |
+| **R002** | [pdfme/pdfme](https://github.com/pdfme/pdfme) | P1 | AVALIAR INTEGRAÇÃO | MIT | `DOC04`, `DOC05`, `DOC08`, `DOC09` |
+| **R003** | [facebook/lexical](https://github.com/facebook/lexical) | P1 | AVALIAR INTEGRAÇÃO | MIT | `DOC06`, `DOC07` |
+| **R004** | [recharts/recharts](https://github.com/recharts/recharts) | P1 | AVALIAR INTEGRAÇÃO | MIT | `QST03`, `OPS06`, `ANT05`, `ANT06` |
+| **R005** | [SunnySeedApp/who-growth-standards](https://github.com/SunnySeedApp/who-growth-standards) | P1 | VALIDAR REFERÊNCIA | MIT (código); direitos dos dados OMS separados | `ANT05`, `ANT06` |
+| **R006** | [wojtekmaj/react-pdf](https://github.com/wojtekmaj/react-pdf) | P1 | AVALIAR INTEGRAÇÃO | MIT | `DOC03`, `APP05` |
+| **R007** | [nerdyman/react-compare-slider](https://github.com/nerdyman/react-compare-slider) | P1 | AVALIAR INTEGRAÇÃO | MIT | `ANT08` |
+| **R008** | [amannn/next-intl](https://github.com/amannn/next-intl) | P1 | AVALIAR INTEGRAÇÃO | MIT | `APP09` |
+| **R009** | [apache/casbin-node-casbin](https://github.com/apache/casbin-node-casbin) | P2 | REFERÊNCIA DE POLÍTICAS | Apache-2.0 | `OPS07` |
+| **R010** | [medplum/medplum](https://github.com/medplum/medplum) | P2 | REFERÊNCIA ARQUITETURAL | Apache-2.0 (revalidar subprojetos) | `ANT04`, `QST04`, `QST07`, `AI05`, `ENG07` |
+| **R011** | [INSP-RH/bw](https://github.com/INSP-RH/bw) | P2 | ESTUDO CIENTÍFICO | MIT | `CALC05` |
+| **R012** | [langchain-ai/langgraphjs](https://github.com/langchain-ai/langgraphjs) | P2 | AVALIAR SE NECESSÁRIO | MIT | `AI01`, `AI02`, `AI03`, `AI04`, `AI05`, `AI06` |
+| **R013** | [TanStack/query](https://github.com/TanStack/query) | P0 | AVALIAR INTEGRAÇÃO | MIT | `PA06`, `QST03`, `OPS06`, `ENG13` |
+| **R014** | [react-hook-form/react-hook-form](https://github.com/react-hook-form/react-hook-form) | P1 | AVALIAR INTEGRAÇÃO | MIT | `PA05`, `PA06`, `QST05`, `QST07` |
+| **R015** | [openfoodfacts/openfoodfacts-js](https://github.com/openfoodfacts/openfoodfacts-js) | P2 | AVALIAR FONTE SEPARADA | Apache-2.0 (SDK); ODbL (dados) | `FOOD02`, `FOOD06`, `FOOD08` |
+| **R016** | [metonym/fooddata-central](https://github.com/metonym/fooddata-central) | P3 | REFERÊNCIA HISTÓRICA | MIT | `FOOD02`, `FOOD05` |
+| **R017** | [simonoppowa/OpenNutriTracker](https://github.com/simonoppowa/OpenNutriTracker) | P3 | SOMENTE INSPIRAÇÃO | GPL-3.0 | `FOOD01`, `FOOD03`, `FOOD07`, `APP01`, `APP04` |
+| **R018** | [TandoorRecipes/recipes](https://github.com/TandoorRecipes/recipes) | P3 | SOMENTE INSPIRAÇÃO | AGPLv3 e condição adicional; verificar arquivo | `FOOD07`, `FOOD08` |
+| **R019** | [FlatNineOrg/medilab-pediatric-growth-calc](https://github.com/FlatNineOrg/medilab-pediatric-growth-calc) | P3 | REFERÊNCIA SECUNDÁRIA | MIT (código) | `ANT05`, `ANT06` |
+| **R020** | [BetterTyped/react-zoom-pan-pinch](https://github.com/BetterTyped/react-zoom-pan-pinch) | P2 | AVALIAR INTEGRAÇÃO | MIT (confirmar versão) | `ANT06`, `ANT08` |
+| **R021** | [i18next/react-i18next](https://github.com/i18next/react-i18next) | P2 | ALTERNATIVA | MIT | `APP09` |
+| **R022** | [surveyjs/survey-library](https://github.com/surveyjs/survey-library) | P2 | REFERÊNCIA / PoC RESTRITA | MIT (somente Form Library) | `QST01`, `QST02`, `QST03`, `QST05` |
+| **R023** | [surveyjs/survey-creator](https://github.com/surveyjs/survey-creator) | P3 | SOMENTE INSPIRAÇÃO | Comercial para uso de produção | `QST05`, `QST07` |
+| **R024** | [HabitRPG/habitica](https://github.com/HabitRPG/habitica) | P3 | SOMENTE INSPIRAÇÃO | GPL-3.0 | `APP01`, `APP04` |
+| **R025** | [formbricks/formbricks](https://github.com/formbricks/formbricks) | P3 | SOMENTE INSPIRAÇÃO | AGPL-3.0 (núcleo); SDKs MIT; EE separada | `QST02`, `QST03` |
+| **R026** | [calcom/cal.com](https://github.com/calcom/cal.com) | P3 | SOMENTE INSPIRAÇÃO | AGPL/open-core e componentes comerciais | `OPS01`, `OPS02` |
+| **R027** | [diegomura/react-pdf](https://github.com/diegomura/react-pdf) | P2 | ALTERNATIVA DE GERAÇÃO | MIT | `DOC04`, `DOC05`, `DOC08` |
+| **R028** | [mozilla/pdf.js](https://github.com/mozilla/pdf.js) | P2 | MOTOR / REFERÊNCIA | Apache-2.0 | `DOC03` |
+| **R029** | [szimek/signature_pad](https://github.com/szimek/signature_pad) | P1 | AVALIAR INTEGRAÇÃO | MIT | `DOC01`, `DOC02` |
+| **R030** | [vercel/ai](https://github.com/vercel/ai) | P2 | AVALIAR SE NECESSÁRIO | Apache-2.0 | `AI01`, `AI02`, `AI03`, `AI05` |
+| **R031** | [bigcalendar/react-big-calendar](https://github.com/bigcalendar/react-big-calendar) | P2 | AVALIAR SUBSTITUIÇÃO PARCIAL | MIT | `OPS01`, `OPS02` |
+| **R032** | [open-telemetry/opentelemetry-js](https://github.com/open-telemetry/opentelemetry-js) | P1 | AVALIAR INTEGRAÇÃO | Apache-2.0 | `ENG03` |
+| **R033** | [felixmosh/bull-board](https://github.com/felixmosh/bull-board) | P1 | AVALIAR INTEGRAÇÃO | MIT | `ENG04` |
+| **R034** | [zizmorcore/zizmor](https://github.com/zizmorcore/zizmor) | P0 | AVALIAR GATE | MIT | `ENG02` |
+| **R035** | [webpro-nl/knip](https://github.com/webpro-nl/knip) | P0 | AVALIAR GATE | ISC | `ENG01` |
+| **R036** | [openapi-ts/openapi-typescript](https://github.com/openapi-ts/openapi-typescript) | P1 | AVALIAR INTEGRAÇÃO | MIT | `ENG05` |
+| **R037** | [open-feature/js-sdk](https://github.com/open-feature/js-sdk) | P1 | AVALIAR INTERFACE | Apache-2.0 | `ENG06` |
+| **R038** | [docling-project/docling](https://github.com/docling-project/docling) | P2 | AVALIAR PROTÓTIPO | MIT (código) | `AI05`, `ENG08` |
+| **R039** | [data-privacy-stack/presidio](https://github.com/data-privacy-stack/presidio) | P1 | AVALIAR CAMADA ADICIONAL | MIT | `AI01`, `AI02`, `AI03`, `AI05`, `ENG08` |
+| **R040** | [promptfoo/promptfoo](https://github.com/promptfoo/promptfoo) | P1 | AVALIAR GATE DE IA | MIT (verificar módulos/edição) | `AI01`, `AI02`, `AI03`, `AI04`, `AI05`, `AI06`, `ENG17` |
+| **R041** | [storybookjs/storybook](https://github.com/storybookjs/storybook) | P2 | AVALIAR COMPONENTES | MIT | `ENG15`, `PA05`, `QST01`, `DOC06` |
+| **R042** | [openfoodfacts/openfoodfacts-server](https://github.com/openfoodfacts/openfoodfacts-server) | P3 | REFERÊNCIA DE MODELO/DADOS | Licença código e dados distintas; verificar arquivos | `FOOD02`, `FOOD08` |
+| **R043** | [Flagsmith/flagsmith](https://github.com/Flagsmith/flagsmith) | P2 | ALTERNATIVA DE FLAGS | BSD-3-Clause para núcleo; revisar EE | `ENG06` |
+| **R044** | [PostHog/posthog](https://github.com/PostHog/posthog) | P2 | AVALIAR COM MINIMIZAÇÃO | Licenças mistas/open-core: revisar | `OPS06`, `ENG16` |
+| **R045** | [triggerdotdev/trigger.dev](https://github.com/triggerdotdev/trigger.dev) | P3 | SOMENTE REFERÊNCIA | Licença por componentes/edição: verificar | `ENG04`, `AI03` |
+| **R046** | [TanStack/table](https://github.com/TanStack/table) | P0 | AVALIAR INTEGRAÇÃO | MIT | `QST03`, `OPS04`, `OPS06`, `APP02` |
+| **R047** | [downshift-js/downshift](https://github.com/downshift-js/downshift) | P0 | AVALIAR INTEGRAÇÃO | MIT | `FOOD02`, `FOOD03`, `FOOD05` |
+| **R048** | [resend/react-email](https://github.com/resend/react-email) | P1 | AVALIAR TEMPLATES | MIT (revalidar pacote) | `ENG19` |
+| **R049** | [gilbarbara/react-joyride](https://github.com/gilbarbara/react-joyride) | P1 | AVALIAR INTEGRAÇÃO | MIT | `ENG15` |
+| **R050** | [rjsf-team/react-jsonschema-form](https://github.com/rjsf-team/react-jsonschema-form) | P2 | REFERÊNCIA / PoC RESTRITA | Apache-2.0 | `QST05`, `QST07` |
+| **R051** | [47ng/nuqs](https://github.com/47ng/nuqs) | P1 | AVALIAR INTEGRAÇÃO | MIT | `OPS01`, `OPS06`, `APP02`, `QST03` |
+| **R052** | [transloadit/uppy](https://github.com/transloadit/uppy) | P2 | AVALIAR PROTÓTIPO | MIT | `ANT08`, `APP05`, `AI05`, `ENG08` |
+| **R053** | [MatthewHerbst/react-to-print](https://github.com/MatthewHerbst/react-to-print) | P2 | AVALIAR UTILITÁRIO | MIT | `DOC04`, `DOC05`, `DOC08` |
+| **R054** | [jkbrzt/rrule](https://github.com/jkbrzt/rrule) | P2 | AVALIAR REGRAS | BSD-like (verificar pacote) | `OPS02`, `QST02` |
+| **R055** | [rosskhanas/react-qr-code](https://github.com/rosskhanas/react-qr-code) | P2 | AVALIAR UTILITÁRIO | MIT | `QST02`, `OPS02`, `APP05` |
+| **R056** | [dubzzz/fast-check](https://github.com/dubzzz/fast-check) | P0 | AVALIAR TESTES | MIT | `CALC01`, `CALC02`, `CALC03`, `CALC04`, `CALC05`, `FOOD05`, `FOOD06`, `ANT01`, `ANT05`, `ENG09` |
+| **R057** | [stryker-mutator/stryker-js](https://github.com/stryker-mutator/stryker-js) | P1 | AVALIAR TESTES | Apache-2.0 | `CALC02`, `FOOD05`, `FOOD06`, `ANT05`, `ENG09` |
+| **R058** | [schemathesis/schemathesis](https://github.com/schemathesis/schemathesis) | P0 | AVALIAR API TESTING | MIT | `ENG10`, `ENG05` |
+| **R059** | [pact-foundation/pact-js](https://github.com/pact-foundation/pact-js) | P1 | AVALIAR CONTRATOS | MIT | `ENG05`, `ENG10` |
+| **R060** | [sverweij/dependency-cruiser](https://github.com/sverweij/dependency-cruiser) | P0 | AVALIAR GATE | MIT | `ENG11` |
+| **R061** | [mcollina/autocannon](https://github.com/mcollina/autocannon) | P1 | AVALIAR CARGA | MIT | `ENG12` |
+| **R062** | [faker-js/faker](https://github.com/faker-js/faker) | P1 | AVALIAR FIXTURES | MIT | `ENG14` |
+| **R063** | [pinojs/pino](https://github.com/pinojs/pino) | P2 | AVALIAR PADRÃO | MIT | `ENG13` |
+| **R064** | [zxing-js/browser](https://github.com/zxing-js/browser) | P1 | AVALIAR INTEGRAÇÃO | MIT | `FOOD02`, `APP01` |
+| **R065** | [catamphetamine/libphonenumber-js](https://github.com/catamphetamine/libphonenumber-js) | P1 | AVALIAR VALIDAÇÃO | MIT | `OPS02`, `QST02`, `ENG14` |
+| **R066** | [adamgibbons/ics](https://github.com/adamgibbons/ics) | P2 | AVALIAR UTILITÁRIO | ISC | `OPS02` |
+| **R067** | [Nozbe/WatermelonDB](https://github.com/Nozbe/WatermelonDB) | P3 | REFERÊNCIA OFFLINE | MIT | `APP01`, `APP02`, `APP07`, `ENG18` |
+| **R068** | [yjs/yjs](https://github.com/yjs/yjs) | P3 | REFERÊNCIA PARA COLABORAÇÃO | MIT | `PA07`, `QST07`, `ENG18` |
+
+| **R069** | [react-native-share/react-native-share](https://github.com/react-native-share/react-native-share) | P1 | PoC condicionada a Expo Development Build | MIT | `APP08` |
+| **R070** | [gre/react-native-view-shot](https://github.com/gre/react-native-view-shot) | P1 | PoC de geração de imagem | MIT | `APP08` |
+| **R071** | [pubkey/broadcast-channel](https://github.com/pubkey/broadcast-channel) | P2 | Alternativa ao BroadcastChannel nativo | MIT | `PA07` |
+| **R072** | [intake24/intake24](https://github.com/intake24/intake24) | P1 | Referência funcional e algoritmos sujeitos a revisão | Apache-2.0 (código; bases/imagens/dados com direitos próprios) | `QST04` |
+| **R073** | [radix-ui/primitives](https://github.com/radix-ui/primitives) | P1 | Avaliar componentes pontuais | MIT | `QST01`, `QST06`, `OPS08`, `UX01` |
+| **R074** | [TanStack/virtual](https://github.com/TanStack/virtual) | P2 | PoC de performance se houver volume | MIT | `APP02`, `LAB02`, `QST03`, `OPS08` |
+| **R075** | [dinerojs/dinero.js](https://github.com/dinerojs/dinero.js) | P1 | Avaliar domínio financeiro somente se necessário | MIT | `OPS04` |
+| **R076** | [MikeMcl/decimal.js](https://github.com/MikeMcl/decimal.js) | P2 | Alternativa a número nativo | MIT | `FOOD05`, `FOOD06`, `CALC02`, `CALC06` |
+| **R077** | [expo/expo](https://github.com/expo/expo) | P0 | JÁ PRESENTE NA STACK; avaliar módulos oficiais | MIT (repositório; verificar módulo) | `APP05`, `APP08`, `APP09` |
+| **R078** | [michael-m-2983/metbrowser](https://github.com/michael-m-2983/metbrowser) | P3 | APENAS INSPIRAÇÃO; não copiar código nem importar dados | Licença do repositório não localizada; sem autorização para reutilização de código | `CALC01` |
+
+---
+
+
+## 2.1 Resultado da busca complementar — lacunas das 71 sugestões
+
+Revisão da matriz em 2026-10-09: **71 sugestões examinadas; 20 tinham a marcação "código atual; sem nova biblioteca necessária"**, das quais **6** eram baseline existente/melhoria da base e **14** eram candidatas a exame mais cuidadoso. Esta busca encontrou referências materiais para Stories (`APP08`), edição em abas (`PA07`), modais/comentários (`QST06`/`OPS08`), recordatório (`QST04`) e financeiro (`OPS04`), e corrigiu referências antes pouco diretas de PDF mobile e METs. **Não é falha que algumas sugestões continuem sem biblioteca**: `PA02`, `PA03`, `PA04`, `FOOD04`, `OPS03`, `ANT02` e visibilidade server-side são extensões naturais do domínio atual. Na matriz v2, **53 sugestões têm link para algum repositório** e **18 não têm (6 baseline existentes e 12 resolvíveis com a stack/domínio atual)**; isso não significa que devam existir 53 novas dependências.
+
+**Correções de correspondência importantes:**
+
+- `APP05`: **React-PDF (`R006`) é voltado ao web**, não um módulo de download nativo de Expo. Priorizar módulos do repositório `R077` no app.
+- `APP07`: **WatermelonDB (`R067`) não implementa conversa contextual**; reutilizar o módulo de mensagens já existente e, se necessário, UI de `R073`.
+- `UX01`: **nuqs (`R051`) administra query params, não torna títulos clicáveis**. Usar `next/link` já disponível, sem nova dependência.
+- `DOC05`: **react-to-print (`R053`) não resolve sozinho o nome escolhido pelo navegador para um PDF**. Preferir helper de nomenclatura e mecanismo de exportação existente.
+- `CALC01`: repositório `R078` está defasado (2011) e sem licença identificada, então **não copiar nem usar como base clínica**. A fonte para METs atuais é o [Compêndio de 2024](https://pacompendium.com/adult-compendium/), com verificação de direitos de uso dos dados e população.
+- `FOOD06`: bibliotecas de números e testes não fornecem IDR/UL. Exigir **fonte oficial de DRI/RDA/AI/EAR/UL**, sexo, faixa etária, condição fisiológica, versão, sem inventar UL ausente.
+- `QST04`: `R072` (Intake24) é referência de recordatório 24h muito mais direta que usar repositório de prontuário geral; código e datasets são licenciados separadamente.
+
+Nenhuma destas referências altera o marco: **somente após a conclusão/reconciliação formal da Fase 320**, e respeitando todos os `GO/NO-GO` prévios.
+
+
+## 3. Fichas de adoção — aplicação, benefício, procedimento e riscos
+
+Cada ficha descreve o **uso concreto pretendido**, não um compromisso de instalação. A licença resumida é informativa: verificar o arquivo de licença na versão exata e direitos de bases, modelos, fontes e datasets.
+
+### Componentes, formulários, pesquisa e UX
+
+#### R001 — [clauderic/dnd-kit](https://github.com/clauderic/dnd-kit)
+
+**Prioridade:** P0 · **Decisão inicial:** JÁ INSTALADO · **Licença:** MIT · **PRs:** `PA01`, `DOC10`.
+
+**Aplicação no OctaClin:** Ordenação de refeições e materiais. **Benefício:** Reaproveita sensores, sortable e teclado sem fazer nova infraestrutura.
+
+**Como usar / PoC mínima:** Usar @dnd-kit/core, @dnd-kit/sortable e @dnd-kit/utilities já no octaclin-web; adaptar state e persistir campo ordem existente; manter botões ↑/↓.
+
+**Cuidados / condição de rejeição:** Não adicionar pacote duplicado; testar toque, teclado, acessibilidade e persistência após reload.
+
+#### R014 — [react-hook-form/react-hook-form](https://github.com/react-hook-form/react-hook-form)
+
+**Prioridade:** P1 · **Decisão inicial:** AVALIAR INTEGRAÇÃO · **Licença:** MIT · **PRs:** `PA05`, `PA06`, `QST05`, `QST07`.
+
+**Aplicação no OctaClin:** Formulários extensos, cadastro e rascunhos. **Benefício:** Menos re-renderizações e estados de validação coerentes.
+
+**Como usar / PoC mínima:** PoC em formulário isolado sem alterar formatos de API; comparar com componentes existentes.
+
+**Cuidados / condição de rejeição:** Não migrar editor do plano inteiro só pelo autosave; regras clínicas seguem no backend.
+
+#### R041 — [storybookjs/storybook](https://github.com/storybookjs/storybook)
+
+**Prioridade:** P2 · **Decisão inicial:** AVALIAR COMPONENTES · **Licença:** MIT · **PRs:** `ENG15`, `PA05`, `QST01`, `DOC06`.
+
+**Aplicação no OctaClin:** Catálogo visual de componentes e estados. **Benefício:** Facilita testes de UI, estados vazios/erro e revisão responsiva.
+
+**Como usar / PoC mínima:** Piloto com componente compartilhado e histórias de permissão/erro/keyboard.
+
+**Cuidados / condição de rejeição:** Não usar fixtures de pacientes reais; build separado não deve expor componentes internos.
+
+#### R046 — [TanStack/table](https://github.com/TanStack/table)
+
+**Prioridade:** P0 · **Decisão inicial:** AVALIAR INTEGRAÇÃO · **Licença:** MIT · **PRs:** `QST03`, `OPS04`, `OPS06`, `APP02`.
+
+**Aplicação no OctaClin:** Tabelas de pacientes, questionários, exames e relatórios. **Benefício:** Ordenação, filtros, seleção e virtualização integráveis ao design system.
+
+**Como usar / PoC mínima:** Piloto numa lista real paginada mantendo filtros server-side e permissões.
+
+**Cuidados / condição de rejeição:** Não trazer todos os dados clínicos para client-side; desempenho e acessibilidade.
+
+#### R049 — [gilbarbara/react-joyride](https://github.com/gilbarbara/react-joyride)
+
+**Prioridade:** P1 · **Decisão inicial:** AVALIAR INTEGRAÇÃO · **Licença:** MIT · **PRs:** `ENG15`.
+
+**Aplicação no OctaClin:** Tours guiados complementando checklist de onboarding. **Benefício:** Ajuda usuário a localizar ações reais sem travar sistema.
+
+**Como usar / PoC mínima:** Tour opcional em uma jornada de onboarding, focando componentes existentes, com skip e persistência.
+
+**Cuidados / condição de rejeição:** Não usar tour como indicador de conclusão; garantir SSR, React19 e mobile.
+
+#### R051 — [47ng/nuqs](https://github.com/47ng/nuqs)
+
+**Prioridade:** P1 · **Decisão inicial:** AVALIAR INTEGRAÇÃO · **Licença:** MIT · **PRs:** `OPS01`, `OPS06`, `APP02`, `QST03`.
+
+**Aplicação no OctaClin:** Filtros/paginação/aba da UI sincronizados com URL. **Benefício:** Facilita retomar ou compartilhar visão interna sem perder estado.
+
+**Como usar / PoC mínima:** Piloto em filtro de lista com parâmetros não sensíveis, validação e default.
+
+**Cuidados / condição de rejeição:** Nunca colocar nome/CPF/paciente/dado de saúde em query string.
+
+#### R068 — [yjs/yjs](https://github.com/yjs/yjs)
+
+**Prioridade:** P3 · **Decisão inicial:** REFERÊNCIA PARA COLABORAÇÃO · **Licença:** MIT · **PRs:** `PA07`, `QST07`, `ENG18`.
+
+**Aplicação no OctaClin:** CRDT e colaboração em tempo real entre editores. **Benefício:** Pode apoiar edição colaborativa complexa futura.
+
+**Como usar / PoC mínima:** Estudar apenas; para trava de duas abas usar BroadcastChannel e ETag/versionamento do servidor.
+
+**Cuidados / condição de rejeição:** CRDT em prontuário/planos requer semântica clínica e conflito de publicação, não adoção simples.
+
+### Catálogo, alimentos, substituições e receitas
+
+#### R015 — [openfoodfacts/openfoodfacts-js](https://github.com/openfoodfacts/openfoodfacts-js)
+
+**Prioridade:** P2 · **Decisão inicial:** AVALIAR FONTE SEPARADA · **Licença:** Apache-2.0 (SDK); ODbL (dados) · **PRs:** `FOOD02`, `FOOD06`, `FOOD08`.
+
+**Aplicação no OctaClin:** Cliente de API Open Food Facts para produtos com marca/código de barras. **Benefício:** Amplia cobertura de industrializados.
+
+**Como usar / PoC mínima:** Integrar por adaptador separado da USDA/TBCA/IBGE, guardar fonte, licença, versão e provenance.
+
+**Cuidados / condição de rejeição:** ODbL e atribuição/share-alike para dados; não fundir bases silenciosamente; qualidade incompleta varia.
+
+#### R016 — [metonym/fooddata-central](https://github.com/metonym/fooddata-central)
+
+**Prioridade:** P3 · **Decisão inicial:** REFERÊNCIA HISTÓRICA · **Licença:** MIT · **PRs:** `FOOD02`, `FOOD05`.
+
+**Aplicação no OctaClin:** Exemplo de cliente Node para USDA FoodData Central. **Benefício:** Ajuda a entender modelos de consulta e paginação.
+
+**Como usar / PoC mínima:** Estudar interfaces se necessário, mas preservar a integração USDA por API nativa que o OctaClin já está construindo.
+
+**Cuidados / condição de rejeição:** Cliente antigo; não substituir arquitetura atual.
+
+#### R017 — [simonoppowa/OpenNutriTracker](https://github.com/simonoppowa/OpenNutriTracker)
+
+**Prioridade:** P3 · **Decisão inicial:** SOMENTE INSPIRAÇÃO · **Licença:** GPL-3.0 · **PRs:** `FOOD01`, `FOOD03`, `FOOD07`, `APP01`, `APP04`.
+
+**Aplicação no OctaClin:** UX de rastreamento alimentar, nutrientes e metas. **Benefício:** Inspira interação do diário, seleção de alimentos e indicadores.
+
+**Como usar / PoC mínima:** Examinar apenas telas/fluxos e implementar versão independente na stack atual.
+
+**Cuidados / condição de rejeição:** Não copiar código GPL no SaaS comercial fechado sem revisão jurídica.
+
+#### R018 — [TandoorRecipes/recipes](https://github.com/TandoorRecipes/recipes)
+
+**Prioridade:** P3 · **Decisão inicial:** SOMENTE INSPIRAÇÃO · **Licença:** AGPLv3 e condição adicional; verificar arquivo · **PRs:** `FOOD07`, `FOOD08`.
+
+**Aplicação no OctaClin:** Organização, tags, filtros e biblioteca de receitas. **Benefício:** Inspira taxonomia e experiência de compartilhamento.
+
+**Como usar / PoC mínima:** Observar UX; implementar modelo próprio a partir de requisitos.
+
+**Cuidados / condição de rejeição:** Não copiar código; licença com restrições comerciais adicionais.
+
+#### R042 — [openfoodfacts/openfoodfacts-server](https://github.com/openfoodfacts/openfoodfacts-server)
+
+**Prioridade:** P3 · **Decisão inicial:** REFERÊNCIA DE MODELO/DADOS · **Licença:** Licença código e dados distintas; verificar arquivos · **PRs:** `FOOD02`, `FOOD08`.
+
+**Aplicação no OctaClin:** Infraestrutura e modelo de dados Open Food Facts. **Benefício:** Inspiração de taxonomia, origem e processo de revisão.
+
+**Como usar / PoC mínima:** Estudar API/esquema; preferir SDK oficial e integração por fonte separada.
+
+**Cuidados / condição de rejeição:** Dados ODbL; server não é biblioteca necessária para consumir API.
+
+#### R047 — [downshift-js/downshift](https://github.com/downshift-js/downshift)
+
+**Prioridade:** P0 · **Decisão inicial:** AVALIAR INTEGRAÇÃO · **Licença:** MIT · **PRs:** `FOOD02`, `FOOD03`, `FOOD05`.
+
+**Aplicação no OctaClin:** Combobox/autocomplete de busca de alimentos e substitutos. **Benefício:** Busca acessível por teclado, foco e seleção eficiente em catálogo amplo.
+
+**Como usar / PoC mínima:** PoC no campo existente, usando o endpoint paginado atual; debouncing e teclado.
+
+**Cuidados / condição de rejeição:** Não usar pesquisa local de catálogo inteiro; preservar proveniência e versão dos alimentos.
+
+#### R064 — [zxing-js/browser](https://github.com/zxing-js/browser)
+
+**Prioridade:** P1 · **Decisão inicial:** AVALIAR INTEGRAÇÃO · **Licença:** MIT · **PRs:** `FOOD02`, `APP01`.
+
+**Aplicação no OctaClin:** Leitura de códigos de barras via câmera web. **Benefício:** Agiliza inclusão de produtos industrializados no catálogo/diário.
+
+**Como usar / PoC mínima:** PoC em navegador com câmera e EAN/GTIN; consultar fonte de catálogo separadamente após leitura.
+
+**Cuidados / condição de rejeição:** Barcode não contém valores nutricionais; consentimento/permissão de câmera e falhas de leitura.
+
+### Questionários, prontuário e formulários clínicos
+
+#### R022 — [surveyjs/survey-library](https://github.com/surveyjs/survey-library)
+
+**Prioridade:** P2 · **Decisão inicial:** REFERÊNCIA / PoC RESTRITA · **Licença:** MIT (somente Form Library) · **PRs:** `QST01`, `QST02`, `QST03`, `QST05`.
+
+**Aplicação no OctaClin:** Renderização de perguntas, validação e lógica condicional. **Benefício:** Inspira widgets e condicionais para questionários avançados.
+
+**Como usar / PoC mínima:** Comparar schema e versão atual; adaptar padrões isoladamente, sem reimplementar domínio.
+
+**Cuidados / condição de rejeição:** Survey Creator, Dashboard e PDF Generator têm licenças comerciais separadas.
+
+#### R023 — [surveyjs/survey-creator](https://github.com/surveyjs/survey-creator)
+
+**Prioridade:** P3 · **Decisão inicial:** SOMENTE INSPIRAÇÃO · **Licença:** Comercial para uso de produção · **PRs:** `QST05`, `QST07`.
+
+**Aplicação no OctaClin:** Editor visual de formulários. **Benefício:** Referência da experiência de autoria e drag-and-drop de perguntas.
+
+**Como usar / PoC mínima:** Usar apenas como benchmarking funcional; codificar editor próprio.
+
+**Cuidados / condição de rejeição:** Não presumir MIT a partir da Form Library.
+
+#### R025 — [formbricks/formbricks](https://github.com/formbricks/formbricks)
+
+**Prioridade:** P3 · **Decisão inicial:** SOMENTE INSPIRAÇÃO · **Licença:** AGPL-3.0 (núcleo); SDKs MIT; EE separada · **PRs:** `QST02`, `QST03`.
+
+**Aplicação no OctaClin:** Distribuição de formulários, métricas e experiência de respostas. **Benefício:** Benchmarking de surveys públicos, convites e relatórios.
+
+**Como usar / PoC mínima:** Analisar UX e arquitetura; se considerar SDK, isolar pacote e revisar licença exata.
+
+**Cuidados / condição de rejeição:** Não copiar núcleo AGPL para SaaS fechado sem revisão jurídica.
+
+#### R050 — [rjsf-team/react-jsonschema-form](https://github.com/rjsf-team/react-jsonschema-form)
+
+**Prioridade:** P2 · **Decisão inicial:** REFERÊNCIA / PoC RESTRITA · **Licença:** Apache-2.0 · **PRs:** `QST05`, `QST07`.
+
+**Aplicação no OctaClin:** Formulários gerados a partir de JSON Schema. **Benefício:** Reduz código para campos e validação declarativa.
+
+**Como usar / PoC mínima:** Comparar com schema atual; PoC apenas em formulário interno novo sem migrar questionários antigos.
+
+**Cuidados / condição de rejeição:** Schema JSON genérico não substitui versionamento, criptografia e domínio clínico.
+
+### Antropometria e imagens de evolução
+
+#### R007 — [nerdyman/react-compare-slider](https://github.com/nerdyman/react-compare-slider)
+
+**Prioridade:** P1 · **Decisão inicial:** AVALIAR INTEGRAÇÃO · **Licença:** MIT · **PRs:** `ANT08`.
+
+**Aplicação no OctaClin:** Slider de comparação de fotografias antes/depois. **Benefício:** Melhora percepção da evolução com baixo escopo técnico.
+
+**Como usar / PoC mínima:** Integrar componente sobre o fluxo existente de fotos privadas, com teclado e rótulos.
+
+**Cuidados / condição de rejeição:** Não inferir diagnóstico, percentual de gordura ou mudanças corporais automaticamente.
+
+#### R020 — [BetterTyped/react-zoom-pan-pinch](https://github.com/BetterTyped/react-zoom-pan-pinch)
+
+**Prioridade:** P2 · **Decisão inicial:** AVALIAR INTEGRAÇÃO · **Licença:** MIT (confirmar versão) · **PRs:** `ANT06`, `ANT08`.
+
+**Aplicação no OctaClin:** Zoom, pan e pinch em gráficos/imagens. **Benefício:** Interação útil para curvas e fotos de evolução.
+
+**Como usar / PoC mínima:** PoC no gráfico SVG existente, com alternativa por teclado, limites e reset.
+
+**Cuidados / condição de rejeição:** Não bloquear leitura acessível nem alterar coordenadas clínicas.
+
+### Cálculos nutricionais e referências científicas
+
+#### R005 — [SunnySeedApp/who-growth-standards](https://github.com/SunnySeedApp/who-growth-standards)
+
+**Prioridade:** P1 · **Decisão inicial:** VALIDAR REFERÊNCIA · **Licença:** MIT (código); direitos dos dados OMS separados · **PRs:** `ANT05`, `ANT06`.
+
+**Aplicação no OctaClin:** Curvas e escores-z pediátricos OMS 0–5 anos. **Benefício:** Ponto de partida TypeScript para cálculo e dados de referência.
+
+**Como usar / PoC mínima:** Conferir fórmulas LMS, idade/sexo/unidades e arredondamentos contra tabelas originais e casos independentes; registrar versões.
+
+**Cuidados / condição de rejeição:** NÃO cobre sozinho 5–19 anos; código MIT não libera automaticamente dados OMS; revisão clínica antes de produção.
+
+#### R011 — [INSP-RH/bw](https://github.com/INSP-RH/bw)
+
+**Prioridade:** P2 · **Decisão inicial:** ESTUDO CIENTÍFICO · **Licença:** MIT · **PRs:** `CALC05`.
+
+**Aplicação no OctaClin:** Modelo dinâmico de evolução do peso. **Benefício:** Referência de comportamento matemático e premissas para simuladores.
+
+**Como usar / PoC mínima:** Ler código, testes e publicações primárias; comparar saídas em cenários sintéticos e documentar população/limitações.
+
+**Cuidados / condição de rejeição:** Não é implementação comprovada do VENTA; não apresentar previsão como certeza.
+
+#### R019 — [FlatNineOrg/medilab-pediatric-growth-calc](https://github.com/FlatNineOrg/medilab-pediatric-growth-calc)
+
+**Prioridade:** P3 · **Decisão inicial:** REFERÊNCIA SECUNDÁRIA · **Licença:** MIT (código) · **PRs:** `ANT05`, `ANT06`.
+
+**Aplicação no OctaClin:** Cálculos LMS, percentis, interpolação e idade corrigida. **Benefício:** Possível comparação independente de algoritmos pediátricos.
+
+**Como usar / PoC mínima:** Revisar código e casos de borda como fonte secundária, depois validar exclusivamente contra tabelas oficiais.
+
+**Cuidados / condição de rejeição:** Projeto pequeno/recente; não tratar como biblioteca clínica validada.
+
+#### R056 — [dubzzz/fast-check](https://github.com/dubzzz/fast-check)
+
+**Prioridade:** P0 · **Decisão inicial:** AVALIAR TESTES · **Licença:** MIT · **PRs:** `CALC01`, `CALC02`, `CALC03`, `CALC04`, `CALC05`, `FOOD05`, `FOOD06`, `ANT01`, `ANT05`, `ENG09`.
+
+**Aplicação no OctaClin:** Property-based testing para cálculo nutricional/antropometria. **Benefício:** Descobre combinações e invariantes não cobertos por fixtures tradicionais.
+
+**Como usar / PoC mínima:** Criar geradores para entradas válidas/inválidas e invariantes (consistência de energia, escalas, limites, ordenação, reversibilidade).
+
+**Cuidados / condição de rejeição:** Invariantes matemáticos devem ser clinicamente corretos; testes não substituem fontes clínicas primárias.
+
+#### R057 — [stryker-mutator/stryker-js](https://github.com/stryker-mutator/stryker-js)
+
+**Prioridade:** P1 · **Decisão inicial:** AVALIAR TESTES · **Licença:** Apache-2.0 · **PRs:** `CALC02`, `FOOD05`, `FOOD06`, `ANT05`, `ENG09`.
+
+**Aplicação no OctaClin:** Mutation testing de fórmulas e validações. **Benefício:** Mede se testes detectam fórmulas adulteradas.
+
+**Como usar / PoC mínima:** Piloto só no módulo de cálculo nutricional, com threshold e tempo controlados.
+
+**Cuidados / condição de rejeição:** Custoso no CI; começar manual/cron e depois escolher gate.
+
+### Portal, gamificação e aplicativo
+
+#### R008 — [amannn/next-intl](https://github.com/amannn/next-intl)
+
+**Prioridade:** P1 · **Decisão inicial:** AVALIAR INTEGRAÇÃO · **Licença:** MIT · **PRs:** `APP09`.
+
+**Aplicação no OctaClin:** i18n do Next.js (portal web). **Benefício:** Tradução de texto, datas, números e mensagens com suporte a Next.
+
+**Como usar / PoC mínima:** Fazer piloto pt-BR/en/es em uma tela do portal, incluindo rota/middleware e fallback.
+
+**Cuidados / condição de rejeição:** Não traduz automaticamente o app Expo; evitar traduções inconsistentes entre backend e frontend.
+
+#### R021 — [i18next/react-i18next](https://github.com/i18next/react-i18next)
+
+**Prioridade:** P2 · **Decisão inicial:** ALTERNATIVA · **Licença:** MIT · **PRs:** `APP09`.
+
+**Aplicação no OctaClin:** i18n React genérico. **Benefício:** Alternativa para partes não-Next e componentes compartilhados.
+
+**Como usar / PoC mínima:** Avaliar lado a lado com next-intl; preferir um padrão por plataforma.
+
+**Cuidados / condição de rejeição:** Não adotar ambos no mesmo frontend sem justificativa; verificar suporte React Native separado.
+
+#### R024 — [HabitRPG/habitica](https://github.com/HabitRPG/habitica)
+
+**Prioridade:** P3 · **Decisão inicial:** SOMENTE INSPIRAÇÃO · **Licença:** GPL-3.0 · **PRs:** `APP01`, `APP04`.
+
+**Aplicação no OctaClin:** Streaks, recompensas e badges. **Benefício:** Inspira progressão e adesão.
+
+**Como usar / PoC mínima:** Estudar mecânicas e criar regras próprias ligadas a hábitos reais.
+
+**Cuidados / condição de rejeição:** Evitar copiar código e padrões de incentivo compulsivo; não gamificar metas clínicas sensíveis.
+
+#### R067 — [Nozbe/WatermelonDB](https://github.com/Nozbe/WatermelonDB)
+
+**Prioridade:** P3 · **Decisão inicial:** REFERÊNCIA OFFLINE · **Licença:** MIT · **PRs:** `APP01`, `APP02`, `APP07`, `ENG18`.
+
+**Aplicação no OctaClin:** Banco e sync offline-first em app móvel. **Benefício:** Inspira estratégia de filas locais, status e conflitos.
+
+**Como usar / PoC mínima:** Estudar arquitetura e comparar com Expo SQLite + sync existente; não migrar sem benchmark concreto.
+
+**Cuidados / condição de rejeição:** Mudança de storage/sync é grande e afeta PHI/limpeza do dispositivo.
+
+### Comunicação, agenda e integração com paciente
+
+#### R048 — [resend/react-email](https://github.com/resend/react-email)
+
+**Prioridade:** P1 · **Decisão inicial:** AVALIAR TEMPLATES · **Licença:** MIT (revalidar pacote) · **PRs:** `ENG19`.
+
+**Aplicação no OctaClin:** Templates de e-mail React para convites, consultas e notificações. **Benefício:** Padroniza responsividade e marca da clínica mantendo Nodemailer.
+
+**Como usar / PoC mínima:** Criar template React renderizado em HTML server-side; testar Gmail/outros clientes com conteúdo sintético.
+
+**Cuidados / condição de rejeição:** Escapar variáveis, sanitizar HTML, não registrar PHI nem trocar provider sem autorização.
+
+#### R054 — [jkbrzt/rrule](https://github.com/jkbrzt/rrule)
+
+**Prioridade:** P2 · **Decisão inicial:** AVALIAR REGRAS · **Licença:** BSD-like (verificar pacote) · **PRs:** `OPS02`, `QST02`.
+
+**Aplicação no OctaClin:** Regras de recorrência de agenda e formulários. **Benefício:** Suporta ciclos complexos, exceções e horários recorrentes.
+
+**Como usar / PoC mínima:** Usar só para cálculo temporal ao comparar com cron existente; testes de fuso e DST.
+
+**Cuidados / condição de rejeição:** Não substituir cron-parser/schedule já funcional sem motivo; agendamento exige idempotência.
+
+#### R055 — [rosskhanas/react-qr-code](https://github.com/rosskhanas/react-qr-code)
+
+**Prioridade:** P2 · **Decisão inicial:** AVALIAR UTILITÁRIO · **Licença:** MIT · **PRs:** `QST02`, `OPS02`, `APP05`.
+
+**Aplicação no OctaClin:** QR codes para links públicos e documentos permitidos. **Benefício:** Compartilhamento rápido de formulários e agendamento.
+
+**Como usar / PoC mínima:** Renderizar QR de token/URL público já autorizado, com fallback para link copiável.
+
+**Cuidados / condição de rejeição:** QR não deve conter URL de prontuário/arquivo privado persistente nem PHI.
+
+#### R065 — [catamphetamine/libphonenumber-js](https://github.com/catamphetamine/libphonenumber-js)
+
+**Prioridade:** P1 · **Decisão inicial:** AVALIAR VALIDAÇÃO · **Licença:** MIT · **PRs:** `OPS02`, `QST02`, `ENG14`.
+
+**Aplicação no OctaClin:** Normalização de números para contato e WhatsApp. **Benefício:** Menos falhas de disparo/convite por telefone inválido.
+
+**Como usar / PoC mínima:** Usar parsing E.164 em limites de entrada sem converter números legados automaticamente; testes BR/externo.
+
+**Cuidados / condição de rejeição:** Não validar propriedade do número; não registrar telefone completo em logs.
+
+#### R066 — [adamgibbons/ics](https://github.com/adamgibbons/ics)
+
+**Prioridade:** P2 · **Decisão inicial:** AVALIAR UTILITÁRIO · **Licença:** ISC · **PRs:** `OPS02`.
+
+**Aplicação no OctaClin:** Convites .ics de consulta. **Benefício:** Paciente pode adicionar evento ao calendário sem depender de Google OAuth.
+
+**Como usar / PoC mínima:** Gerar arquivo ICS com UID, timezone, atualização e cancelamento; anexo no e-mail.
+
+**Cuidados / condição de rejeição:** Não expor informações clínicas no título/descrição; tratar re-agendamento corretamente.
+
+### Agenda, permissões e gestão
+
+#### R026 — [calcom/cal.com](https://github.com/calcom/cal.com)
+
+**Prioridade:** P3 · **Decisão inicial:** SOMENTE INSPIRAÇÃO · **Licença:** AGPL/open-core e componentes comerciais · **PRs:** `OPS01`, `OPS02`.
+
+**Aplicação no OctaClin:** Agendamento público, disponibilidade, tipos e confirmações. **Benefício:** Referência para jornada de autoagendamento e gestão de horários.
+
+**Como usar / PoC mínima:** Estudar fluxos e regras de agendamento; evoluir agenda existente.
+
+**Cuidados / condição de rejeição:** Não migrar backend nem copiar implementação AGPL sem revisão jurídica.
+
+#### R031 — [bigcalendar/react-big-calendar](https://github.com/bigcalendar/react-big-calendar)
+
+**Prioridade:** P2 · **Decisão inicial:** AVALIAR SUBSTITUIÇÃO PARCIAL · **Licença:** MIT · **PRs:** `OPS01`, `OPS02`.
+
+**Aplicação no OctaClin:** Componente visual de calendário React. **Benefício:** Pode melhorar agenda semanal/mensal sem reescrever regras.
+
+**Como usar / PoC mínima:** Testar exclusivamente camada de UI com eventos fictícios, inclusive bloqueios e drag-and-drop.
+
+**Cuidados / condição de rejeição:** Preservar conflitos/escopo/sincronização Google atuais; não trocar calendário funcional sem ganho medido.
+
+### Relatórios, estatísticas e gráficos
+
+#### R004 — [recharts/recharts](https://github.com/recharts/recharts)
+
+**Prioridade:** P1 · **Decisão inicial:** AVALIAR INTEGRAÇÃO · **Licença:** MIT · **PRs:** `QST03`, `OPS06`, `ANT05`, `ANT06`.
+
+**Aplicação no OctaClin:** Séries longitudinais, dashboards e curvas. **Benefício:** Gráficos padronizados com tooltip, eixos e responsividade.
+
+**Como usar / PoC mínima:** Experimentar uma série numérica do questionário e comparar com SVG nativo atual; manter alternativa em tabela.
+
+**Cuidados / condição de rejeição:** Evitar dependência se SVG existente atender; gráficos não substituem validação dos dados de referência.
+
+### Documentos, assinaturas, PDFs e upload
+
+#### R002 — [pdfme/pdfme](https://github.com/pdfme/pdfme)
+
+**Prioridade:** P1 · **Decisão inicial:** AVALIAR INTEGRAÇÃO · **Licença:** MIT · **PRs:** `DOC04`, `DOC05`, `DOC08`, `DOC09`.
+
+**Aplicação no OctaClin:** Templates JSON, designer e renderização de documentos por clínica. **Benefício:** Permite layouts personalizados, preview e campos opcionais.
+
+**Como usar / PoC mínima:** Fazer PoC com recibo sintético, template versionado, dados mockados, logo/cor e saída PDF; definir renderização em ambiente confiável.
+
+**Cuidados / condição de rejeição:** Peso do bundle, fontes, SSR, segurança de templates e estabilidade da versão; não migrar PDFs existentes de uma vez.
+
+#### R003 — [facebook/lexical](https://github.com/facebook/lexical)
+
+**Prioridade:** P1 · **Decisão inicial:** AVALIAR INTEGRAÇÃO · **Licença:** MIT · **PRs:** `DOC06`, `DOC07`.
+
+**Aplicação no OctaClin:** Editor de orientações, condutas e textos qualitativos com tabelas/links. **Benefício:** Rich text estruturado, boa extensibilidade e React.
+
+**Como usar / PoC mínima:** Testar editor mínimo (parágrafo, lista, tabela, hyperlink), serialização versionada e renderização sanitizada para tela e PDF.
+
+**Cuidados / condição de rejeição:** Proibir HTML arbitrário; migrar texto simples sem perda; cuidar de clipboard, XSS, seleção e acessibilidade.
+
+#### R006 — [wojtekmaj/react-pdf](https://github.com/wojtekmaj/react-pdf)
+
+**Prioridade:** P1 · **Decisão inicial:** AVALIAR INTEGRAÇÃO · **Licença:** MIT · **PRs:** `DOC03`, `APP05`.
+
+**Aplicação no OctaClin:** Visualizador React de arquivos PDF existentes. **Benefício:** Ler anexos/documentos em interface autenticada.
+
+**Como usar / PoC mínima:** PoC de viewer client-side com PDF de teste e URL assinada de curta duração, sem cache persistente.
+
+**Cuidados / condição de rejeição:** É visualizador, não gerador; verificar worker pdf.js, Next 16, SSR e Expo nativo separadamente.
+
+#### R027 — [diegomura/react-pdf](https://github.com/diegomura/react-pdf)
+
+**Prioridade:** P2 · **Decisão inicial:** ALTERNATIVA DE GERAÇÃO · **Licença:** MIT · **PRs:** `DOC04`, `DOC05`, `DOC08`.
+
+**Aplicação no OctaClin:** Geração declarativa de PDFs React/Node. **Benefício:** Alternativa ao pdfme quando layout programático for melhor.
+
+**Como usar / PoC mínima:** Comparar prova sintética de recibo com pdfme, custo de rendering e tipografia.
+
+**Cuidados / condição de rejeição:** Gerador, não visualizador; não confundir com wojtekmaj/react-pdf.
+
+#### R028 — [mozilla/pdf.js](https://github.com/mozilla/pdf.js)
+
+**Prioridade:** P2 · **Decisão inicial:** MOTOR / REFERÊNCIA · **Licença:** Apache-2.0 · **PRs:** `DOC03`.
+
+**Aplicação no OctaClin:** Motor de renderização de PDF. **Benefício:** Controlar renderização, navegação e seleção em viewer próprio.
+
+**Como usar / PoC mínima:** Preferir wrapper existente quando suficiente; se usar diretamente, testar worker e canvas.
+
+**Cuidados / condição de rejeição:** Não expor URLs clínicas persistentes nem deixar documentos em cache aberto.
+
+#### R029 — [szimek/signature_pad](https://github.com/szimek/signature_pad)
+
+**Prioridade:** P1 · **Decisão inicial:** AVALIAR INTEGRAÇÃO · **Licença:** MIT · **PRs:** `DOC01`, `DOC02`.
+
+**Aplicação no OctaClin:** Captura de assinatura manuscrita em canvas. **Benefício:** Permite representação visual profissional em documentos.
+
+**Como usar / PoC mínima:** Capturar imagem no contexto autorizado, armazenar privada e aplicar em template.
+
+**Cuidados / condição de rejeição:** Não equivale a assinatura digital certificada; consentimento, acesso e uso indevido exigem cuidado.
+
+#### R038 — [docling-project/docling](https://github.com/docling-project/docling)
+
+**Prioridade:** P2 · **Decisão inicial:** AVALIAR PROTÓTIPO · **Licença:** MIT (código) · **PRs:** `AI05`, `ENG08`.
+
+**Aplicação no OctaClin:** Parsing de PDF, tabelas e documentos no serviço Python. **Benefício:** Pode acelerar estruturação de exames e arquivos recebidos.
+
+**Como usar / PoC mínima:** Executar offline/local com PDFs sintéticos no serviço Python; retornar texto/tabelas para revisão.
+
+**Cuidados / condição de rejeição:** OCR/extração é probabilística; conferir recursos, isolamento, malware, privacidade e testes com scans difíceis.
+
+#### R052 — [transloadit/uppy](https://github.com/transloadit/uppy)
+
+**Prioridade:** P2 · **Decisão inicial:** AVALIAR PROTÓTIPO · **Licença:** MIT · **PRs:** `ANT08`, `APP05`, `AI05`, `ENG08`.
+
+**Aplicação no OctaClin:** UI de uploads de imagens, exames e materiais. **Benefício:** Progresso, múltiplos arquivos e recuperação de falhas.
+
+**Como usar / PoC mínima:** PoC conservando emissão de URL assinada/quarentena/validação B2 e contrato de confirmação existente.
+
+**Cuidados / condição de rejeição:** Não contornar antivírus, magic bytes, tamanho, tenant ou confirmação segura do OctaClin.
+
+#### R053 — [MatthewHerbst/react-to-print](https://github.com/MatthewHerbst/react-to-print)
+
+**Prioridade:** P2 · **Decisão inicial:** AVALIAR UTILITÁRIO · **Licença:** MIT · **PRs:** `DOC04`, `DOC05`, `DOC08`.
+
+**Aplicação no OctaClin:** Impressão de componentes React como PDF do navegador. **Benefício:** Padroniza seleção de conteúdo e estilos para impressão.
+
+**Como usar / PoC mínima:** PoC com uma declaração sintética; preferir pdfme se exigência for arquivo PDF determinístico.
+
+**Cuidados / condição de rejeição:** É impressão do navegador, não gerador de PDF completo; nomes podem depender do browser.
+
+### Inteligência artificial e automações assistidas
+
+#### R012 — [langchain-ai/langgraphjs](https://github.com/langchain-ai/langgraphjs)
+
+**Prioridade:** P2 · **Decisão inicial:** AVALIAR SE NECESSÁRIO · **Licença:** MIT · **PRs:** `AI01`, `AI02`, `AI03`, `AI04`, `AI05`, `AI06`.
+
+**Aplicação no OctaClin:** Fluxos de IA com etapas/checkpoints e human-in-the-loop. **Benefício:** Orquestração rastreável para várias etapas de revisão clínica.
+
+**Como usar / PoC mínima:** PoC só quando fluxo atual exigir checkpoints duráveis; conectar pelo serviço/gateway de IA autorizado.
+
+**Cuidados / condição de rejeição:** Evitar orquestrador duplicado; PHI minimizada, revisão humana e ausência de acionamento automático clínico.
+
+#### R030 — [vercel/ai](https://github.com/vercel/ai)
+
+**Prioridade:** P2 · **Decisão inicial:** AVALIAR SE NECESSÁRIO · **Licença:** Apache-2.0 · **PRs:** `AI01`, `AI02`, `AI03`, `AI05`.
+
+**Aplicação no OctaClin:** SDK TypeScript de fluxo/streaming de IA. **Benefício:** Facilita interação de chat, geração de texto e estados de UI.
+
+**Como usar / PoC mínima:** Conectar exclusivamente ao backend/gateway aprovado, com filtros e revisão humana.
+
+**Cuidados / condição de rejeição:** Não enviar dados clínicos diretamente do browser ao provedor; evitar redundância com FastAPI.
+
+#### R040 — [promptfoo/promptfoo](https://github.com/promptfoo/promptfoo)
+
+**Prioridade:** P1 · **Decisão inicial:** AVALIAR GATE DE IA · **Licença:** MIT (verificar módulos/edição) · **PRs:** `AI01`, `AI02`, `AI03`, `AI04`, `AI05`, `AI06`, `ENG17`.
+
+**Aplicação no OctaClin:** Avaliação de prompts, regressões e ataques. **Benefício:** Testar alucinação, vazamento PHI e prompt injection antes de habilitar IA.
+
+**Como usar / PoC mínima:** Rodar suite de prompts sintéticos sem dados reais; gates reprodutíveis e revisão humana.
+
+**Cuidados / condição de rejeição:** Não subir transcrições/PHI para telemetria do avaliador; verificar recursos SaaS e licença.
+
+### Governança de dados, autorização e analytics
+
+#### R009 — [apache/casbin-node-casbin](https://github.com/apache/casbin-node-casbin)
+
+**Prioridade:** P2 · **Decisão inicial:** REFERÊNCIA DE POLÍTICAS · **Licença:** Apache-2.0 · **PRs:** `OPS07`.
+
+**Aplicação no OctaClin:** Permissões individuais RBAC/ABAC. **Benefício:** Padrões para regras auditáveis e resolução de permissões efetivas.
+
+**Como usar / PoC mínima:** Estudar modelagem de grants/denies e comparar com guards existentes; prototipar adaptador somente se comprovadamente necessário.
+
+**Cuidados / condição de rejeição:** Não substituir de imediato autorização NestJS/RLS; diferença de semântica pode criar bypass.
+
+#### R039 — [data-privacy-stack/presidio](https://github.com/data-privacy-stack/presidio)
+
+**Prioridade:** P1 · **Decisão inicial:** AVALIAR CAMADA ADICIONAL · **Licença:** MIT · **PRs:** `AI01`, `AI02`, `AI03`, `AI05`, `ENG08`.
+
+**Aplicação no OctaClin:** Detecção/mascaramento de identificadores em texto. **Benefício:** Complementa minimização antes de IA e logs.
+
+**Como usar / PoC mínima:** Avaliar entidade CPF brasileira, números, e-mails e nomes com fixtures sintéticos; comparar falso positivo/negativo.
+
+**Cuidados / condição de rejeição:** Não substitui autorização, LGPD, criptografia ou revisão; modelos podem perder contexto clínico.
+
+#### R044 — [PostHog/posthog](https://github.com/PostHog/posthog)
+
+**Prioridade:** P2 · **Decisão inicial:** AVALIAR COM MINIMIZAÇÃO · **Licença:** Licenças mistas/open-core: revisar · **PRs:** `OPS06`, `ENG16`.
+
+**Aplicação no OctaClin:** Telemetria de produto e funis de onboarding. **Benefício:** Medir adoção de recursos, gargalos de UX e retenção de uso.
+
+**Como usar / PoC mínima:** Somente eventos operacionais agregados sem PHI; política explícita de instrumentação.
+
+**Cuidados / condição de rejeição:** Desabilitar autocapture/sessão e propriedades clínicas; revisar consentimento e residência dos dados.
+
+### Modelagem clínica e interoperabilidade
+
+#### R010 — [medplum/medplum](https://github.com/medplum/medplum)
+
+**Prioridade:** P2 · **Decisão inicial:** REFERÊNCIA ARQUITETURAL · **Licença:** Apache-2.0 (revalidar subprojetos) · **PRs:** `ANT04`, `QST04`, `QST07`, `AI05`, `ENG07`.
+
+**Aplicação no OctaClin:** FHIR/Observation, prontuário, organização e identidade clínica. **Benefício:** Modelo de interoperabilidade e nomenclaturas clínicas.
+
+**Como usar / PoC mínima:** Consultar padrões de observações, unidades e Provenance; elaborar mapeamento opcional sem alterar schema nativo automaticamente.
+
+**Cuidados / condição de rejeição:** Não migrar OctaClin inteiro nem importar dados pessoais; versão/licença por pacote.
+
+### Segurança, CI, testes, performance e arquitetura
+
+#### R032 — [open-telemetry/opentelemetry-js](https://github.com/open-telemetry/opentelemetry-js)
+
+**Prioridade:** P1 · **Decisão inicial:** AVALIAR INTEGRAÇÃO · **Licença:** Apache-2.0 · **PRs:** `ENG03`.
+
+**Aplicação no OctaClin:** Tracing entre Next, NestJS, Postgres, Redis e integrações. **Benefício:** Acelera diagnóstico de latência, erro e gargalos.
+
+**Como usar / PoC mínima:** Começar com spans/trace IDs em uma jornada com sanitização e amostragem; não registrar request body clínico.
+
+**Cuidados / condição de rejeição:** Risco de PHI em span attributes, headers e propagação; storage/exporter/custo a avaliar.
+
+#### R033 — [felixmosh/bull-board](https://github.com/felixmosh/bull-board)
+
+**Prioridade:** P1 · **Decisão inicial:** AVALIAR INTEGRAÇÃO · **Licença:** MIT · **PRs:** `ENG04`.
+
+**Aplicação no OctaClin:** Painel operacional para filas BullMQ. **Benefício:** Visibilidade de jobs falhos e retentativas.
+
+**Como usar / PoC mínima:** Rodar apenas sob rota interna e guard SuperAdmin, atrás da rede/autenticação já existente; limitar operações destrutivas.
+
+**Cuidados / condição de rejeição:** Jobs podem conter payload clínico; anonimizar UI, RBAC, logs e reprocessamento com idempotência.
+
+#### R034 — [zizmorcore/zizmor](https://github.com/zizmorcore/zizmor)
+
+**Prioridade:** P0 · **Decisão inicial:** AVALIAR GATE · **Licença:** MIT · **PRs:** `ENG02`.
+
+**Aplicação no OctaClin:** Análise estática de GitHub Actions. **Benefício:** Encontra permissões excessivas e riscos em workflows CI.
+
+**Como usar / PoC mínima:** Executar inicialmente em relatório não bloqueante, corrigir achados, depois avaliar gate.
+
+**Cuidados / condição de rejeição:** Sem alterar permissões de CI cegamente; testar pipelines e Actions usadas.
+
+#### R035 — [webpro-nl/knip](https://github.com/webpro-nl/knip)
+
+**Prioridade:** P0 · **Decisão inicial:** AVALIAR GATE · **Licença:** ISC · **PRs:** `ENG01`.
+
+**Aplicação no OctaClin:** Código/dependências sem uso em TS/JS. **Benefício:** Reduz complexidade e superfície de manutenção.
+
+**Como usar / PoC mínima:** Rodar audit-only no monorepo; documentar entrypoints dinâmicos e exceções antes de remover arquivos.
+
+**Cuidados / condição de rejeição:** Pode marcar rotas Next/Nest carregadas dinamicamente como não utilizadas; não apagar automaticamente.
+
+#### R036 — [openapi-ts/openapi-typescript](https://github.com/openapi-ts/openapi-typescript)
+
+**Prioridade:** P1 · **Decisão inicial:** AVALIAR INTEGRAÇÃO · **Licença:** MIT · **PRs:** `ENG05`.
+
+**Aplicação no OctaClin:** Tipos compartilhados a partir de OpenAPI. **Benefício:** Reduz divergência de DTOs backend, BFF e web.
+
+**Como usar / PoC mínima:** Gerar tipos read-only do contrato Nest documentado; introduzir primeiro em uma API isolada.
+
+**Cuidados / condição de rejeição:** Gerador não substitui validação em runtime; cuidar de autorização e alterações incompatíveis.
+
+#### R037 — [open-feature/js-sdk](https://github.com/open-feature/js-sdk)
+
+**Prioridade:** P1 · **Decisão inicial:** AVALIAR INTERFACE · **Licença:** Apache-2.0 · **PRs:** `ENG06`.
+
+**Aplicação no OctaClin:** API padronizada de feature flags. **Benefício:** Permite rollout controlado por tenant/ambiente.
+
+**Como usar / PoC mínima:** Definir interface de avaliação no backend, flags fail-closed e testes; começar sem serviço externo.
+
+**Cuidados / condição de rejeição:** Nunca usar feature flag como permissão ou isolamento de tenant.
+
+#### R043 — [Flagsmith/flagsmith](https://github.com/Flagsmith/flagsmith)
+
+**Prioridade:** P2 · **Decisão inicial:** ALTERNATIVA DE FLAGS · **Licença:** BSD-3-Clause para núcleo; revisar EE · **PRs:** `ENG06`.
+
+**Aplicação no OctaClin:** Serviço de feature flags e segmentação. **Benefício:** Rollouts sofisticados por ambiente/tenant quando necessário.
+
+**Como usar / PoC mínima:** Comparar custo operacional e compatibilidade com OpenFeature/implementação leve interna.
+
+**Cuidados / condição de rejeição:** Serviço novo pode ser excessivo; conferir licença por componente e política de dados.
+
+#### R045 — [triggerdotdev/trigger.dev](https://github.com/triggerdotdev/trigger.dev)
+
+**Prioridade:** P3 · **Decisão inicial:** SOMENTE REFERÊNCIA · **Licença:** Licença por componentes/edição: verificar · **PRs:** `ENG04`, `AI03`.
+
+**Aplicação no OctaClin:** Workflows duráveis e console de jobs. **Benefício:** Inspira observabilidade e retentativas.
+
+**Como usar / PoC mínima:** Comparar padrões com BullMQ existente; evitar acrescentar segundo orquestrador.
+
+**Cuidados / condição de rejeição:** Troca de stack operacional de filas sem necessidade aumenta custo/risco.
+
+#### R058 — [schemathesis/schemathesis](https://github.com/schemathesis/schemathesis)
+
+**Prioridade:** P0 · **Decisão inicial:** AVALIAR API TESTING · **Licença:** MIT · **PRs:** `ENG10`, `ENG05`.
+
+**Aplicação no OctaClin:** Testes gerados de OpenAPI para API Nest. **Benefício:** Encontra combinações inválidas, falhas 500 e contratos inconsistentes.
+
+**Como usar / PoC mínima:** Testar em banco descartável com usuário/tenant sintético, suite allowlist de rotas e seeds.
+
+**Cuidados / condição de rejeição:** Nunca rodar operações destrutivas em produção; rate limits e efeitos externos mockados.
+
+#### R059 — [pact-foundation/pact-js](https://github.com/pact-foundation/pact-js)
+
+**Prioridade:** P1 · **Decisão inicial:** AVALIAR CONTRATOS · **Licença:** MIT · **PRs:** `ENG05`, `ENG10`.
+
+**Aplicação no OctaClin:** Contract testing entre Next/BFF e Nest/portal. **Benefício:** Previne breaking changes durante deploys separados.
+
+**Como usar / PoC mínima:** PoC com endpoint de planos ou questionário; gerar pacto e verificar provider com fixtures.
+
+**Cuidados / condição de rejeição:** Evitar duplicação com testes end-to-end existentes; manter schemas fonte única.
+
+#### R060 — [sverweij/dependency-cruiser](https://github.com/sverweij/dependency-cruiser)
+
+**Prioridade:** P0 · **Decisão inicial:** AVALIAR GATE · **Licença:** MIT · **PRs:** `ENG11`.
+
+**Aplicação no OctaClin:** Restrições arquiteturais de imports e ciclos em TS. **Benefício:** Protege fronteiras entre backend, módulos clínicos e infraestrutura.
+
+**Como usar / PoC mínima:** Rodar relatório de dependências e ciclos; adicionar regras pontuais em modo não bloqueante inicialmente.
+
+**Cuidados / condição de rejeição:** False positives por imports dinâmicos; não reorganizar monorepo todo em uma PR.
+
+#### R061 — [mcollina/autocannon](https://github.com/mcollina/autocannon)
+
+**Prioridade:** P1 · **Decisão inicial:** AVALIAR CARGA · **Licença:** MIT · **PRs:** `ENG12`.
+
+**Aplicação no OctaClin:** Load testing de APIs Nest e BFF. **Benefício:** Detecta gargalos sob concorrência e regressões de latência.
+
+**Como usar / PoC mínima:** Rodar contra ambiente isolado sintético com limite de carga; medir P95, erros e recursos.
+
+**Cuidados / condição de rejeição:** Não disparar contra produção sem autorização/capacidade; não inundar Redis/Neon externos.
+
+#### R062 — [faker-js/faker](https://github.com/faker-js/faker)
+
+**Prioridade:** P1 · **Decisão inicial:** AVALIAR FIXTURES · **Licença:** MIT · **PRs:** `ENG14`.
+
+**Aplicação no OctaClin:** Dados sintéticos para testes/staging. **Benefício:** Reproduz jornadas clínicas sem expor pacientes.
+
+**Como usar / PoC mínima:** Criar factory determinística seed fixa compatível com esquema existente.
+
+**Cuidados / condição de rejeição:** Nunca copiar PHI real; manter diversidade de casos e casos-limite.
+
+#### R063 — [pinojs/pino](https://github.com/pinojs/pino)
+
+**Prioridade:** P2 · **Decisão inicial:** AVALIAR PADRÃO · **Licença:** MIT · **PRs:** `ENG13`.
+
+**Aplicação no OctaClin:** Logging estruturado Nest/worker. **Benefício:** Melhora observabilidade e correlação entre serviços.
+
+**Como usar / PoC mínima:** PoC de log estruturado, trace ID e redactor por schema com payload mínimo.
+
+**Cuidados / condição de rejeição:** Bloquear PHI/PII em corpo/headers; não substituir auditoria imutável.
+
+### Fetch, cache e estado de dados
+
+#### R013 — [TanStack/query](https://github.com/TanStack/query)
+
+**Prioridade:** P0 · **Decisão inicial:** AVALIAR INTEGRAÇÃO · **Licença:** MIT · **PRs:** `PA06`, `QST03`, `OPS06`, `ENG13`.
+
+**Aplicação no OctaClin:** Gestão de leituras, estados de rede e mutações em web. **Benefício:** Reduz boilerplate de fetch, melhora invalidação, loading e tratamento de erros.
+
+**Como usar / PoC mínima:** Piloto em um painel do prontuário com query keys contendo tenant/sessão e invalidação após mutação.
+
+**Cuidados / condição de rejeição:** Cache de PHI apenas em memória; limpeza no logout/troca de tenant; não confundir com controle de versão/conflito.
+
+---
+
+
+### Novas referências ligadas a lacunas da matriz de 71 sugestões
+
+#### R069 — [react-native-share/react-native-share](https://github.com/react-native-share/react-native-share)
+
+**Prioridade:** P1 · **Decisão inicial:** PoC condicionada a Expo Development Build · **Licença:** MIT · **PRs:** `APP08`.
+
+**Aplicação no OctaClin:** Compartilhar card do registro do diário por fluxo nativo, avaliando integração específica com Instagram Stories. **Benefício:** Reaproveita integração e permissões nativas em vez de implementar URLs e intents ad hoc.
+
+**Como usar / PoC mínima:** PoC somente no app Expo/React Native, em build de desenvolvimento real para Android e iOS; confirmar compatibilidade com Expo 57/RN 0.86, comportamento das versões dos apps e plugins nativos; o usuário deve acionar explicitamente o compartilhamento.
+
+**Cuidados / condição de rejeição:** Não prometer publicação automática. Story sharing não é garantido em todos os dispositivos; não enviar dados de saúde por padrão. Consentimento, preview, remoção de identificadores, fallback e revisão da política das plataformas.
+
+#### R070 — [gre/react-native-view-shot](https://github.com/gre/react-native-view-shot)
+
+**Prioridade:** P1 · **Decisão inicial:** PoC de geração de imagem · **Licença:** MIT · **PRs:** `APP08`.
+
+**Aplicação no OctaClin:** Gerar uma imagem de um card visual do registro para compartilhamento manual. **Benefício:** Captura componentes React Native em imagem local sem montar motor de imagem próprio.
+
+**Como usar / PoC mínima:** Renderizar card com dados fictícios, capturar localmente com react-native-view-shot, verificar Expo e novo RN, limpar arquivo temporário ao fim e passar resultado apenas após ação do usuário.
+
+**Cuidados / condição de rejeição:** Capturas podem incluir PHI acidental. Revisar conteúdo visual, imagens protegidas, armazenamento temporário e restrições de privacidade; não registrar path do arquivo em telemetria.
+
+#### R071 — [pubkey/broadcast-channel](https://github.com/pubkey/broadcast-channel)
+
+**Prioridade:** P2 · **Decisão inicial:** Alternativa ao BroadcastChannel nativo · **Licença:** MIT · **PRs:** `PA07`.
+
+**Aplicação no OctaClin:** Coordenar edição concorrente de um mesmo rascunho entre abas do navegador. **Benefício:** Mensagens entre abas e, se realmente necessário, eleição de líder com compatibilidade adicional.
+
+**Como usar / PoC mínima:** Primeiro provar uso do BroadcastChannel nativo em PA07; considerar polyfill apenas com necessidade documentada. Publicar no canal somente tenant/ID opaco da entidade, revisão e indicador de edição, nunca conteúdo clínico.
+
+**Cuidados / condição de rejeição:** Não resolve concorrência entre dispositivos; persistência tem de usar conflito/versionamento do servidor. Nunca considerar canal local um lock de segurança.
+
+#### R072 — [intake24/intake24](https://github.com/intake24/intake24)
+
+**Prioridade:** P1 · **Decisão inicial:** Referência funcional e algoritmos sujeitos a revisão · **Licença:** Apache-2.0 (código; bases/imagens/dados com direitos próprios) · **PRs:** `QST04`.
+
+**Aplicação no OctaClin:** Arquitetura de recordatório alimentar de 24h com abordagem multiple-pass, porções, busca/sinônimos e cálculo de nutrientes. **Benefício:** Referência específica e consolidada do fluxo de recall, superior a usar um prontuário genérico como referência da funcionalidade.
+
+**Como usar / PoC mínima:** Estudar modelagem e fluxo para identificar o menor escopo de QST04; adaptar conceitos ao catálogo multifonte do OctaClin, manter revisão profissional, dados nutricionais versionados e origem de cada item.
+
+**Cuidados / condição de rejeição:** Não copiar automaticamente alimentos, fotografias, tabelas ou materiais de pesquisadores: licença dos dados não equivale à licença Apache do código; verificar conteúdo, direitos e adequação brasileira.
+
+#### R073 — [radix-ui/primitives](https://github.com/radix-ui/primitives)
+
+**Prioridade:** P1 · **Decisão inicial:** Avaliar componentes pontuais · **Licença:** MIT · **PRs:** `QST01`, `QST06`, `OPS08`, `UX01`.
+
+**Aplicação no OctaClin:** Accordion para questionários, Dialog/Sheet para consulta de prontuário, popover e interfaces de comentários; links acessíveis continuam com Next Link. **Benefício:** Primitivas sem estilo com gestão de foco, teclado, aria e overlays; reutilização sem desenvolver infraestrutura de acessibilidade.
+
+**Como usar / PoC mínima:** Inspecionar componentes atuais e integrar somente a primitive inexistente no web, comparando com o padrão visual atual; testar teclado, leitores de tela e mobile. Não trocar a biblioteca completa de UI.
+
+**Cuidados / condição de rejeição:** É camada de apresentação, não autorização de dados clínicos; modal consulta APIs autenticadas já existentes.
+
+#### R074 — [TanStack/virtual](https://github.com/TanStack/virtual)
+
+**Prioridade:** P2 · **Decisão inicial:** PoC de performance se houver volume · **Licença:** MIT · **PRs:** `APP02`, `LAB02`, `QST03`, `OPS08`.
+
+**Aplicação no OctaClin:** Listas longas de diário, matriz laboratorial e comentários com virtualização acessível. **Benefício:** Reduz quantidade de elementos renderizados em páginas de histórico muito extensas.
+
+**Como usar / PoC mínima:** Medir rendering/DOM com dados sintéticos; se necessário virtualizar apenas o corpo da lista mantendo paginação e filtros server-side.
+
+**Cuidados / condição de rejeição:** Não substitui paginação/autorização do backend; testar navegação de teclado, foco, impressão e leitores de tela.
+
+#### R075 — [dinerojs/dinero.js](https://github.com/dinerojs/dinero.js)
+
+**Prioridade:** P1 · **Decisão inicial:** Avaliar domínio financeiro somente se necessário · **Licença:** MIT · **PRs:** `OPS04`.
+
+**Aplicação no OctaClin:** Representar valores em centavos inteiros e fazer cálculos monetários controlados em fluxo de caixa, pagamentos e saldos. **Benefício:** Evita erros de ponto flutuante e padroniza operações monetárias quando o domínio existente for insuficiente.
+
+**Como usar / PoC mínima:** Auditar representação de moeda já usada no backend; só em caso de gap testar 2-3 operações BRL (soma, subtração, divisão/arredondamento) com snapshots e dados sintéticos.
+
+**Cuidados / condição de rejeição:** Não migrar toda a base financeira nem alterar valores históricos para adotar biblioteca; confirmar versões/APIs da linha escolhida.
+
+#### R076 — [MikeMcl/decimal.js](https://github.com/MikeMcl/decimal.js)
+
+**Prioridade:** P2 · **Decisão inicial:** Alternativa a número nativo · **Licença:** MIT · **PRs:** `FOOD05`, `FOOD06`, `CALC02`, `CALC06`.
+
+**Aplicação no OctaClin:** Aritmética decimal para equivalências nutricionais, quantidades, referências e ajustes energéticos quando os requisitos exigirem exatidão decimal. **Benefício:** Controle explícito de precisão e arredondamento, facilitando resultados reproduzíveis.
+
+**Como usar / PoC mínima:** Comparar com o motor numérico existente, criar casos de teste de referência clínica e aceitar somente se houver divergência real; documentar quando converter para número e como arredondar.
+
+**Cuidados / condição de rejeição:** Biblioteca matemática não contém equações clínicas, DRI nem regras de classificação. Não confundir precisão decimal com validade científica.
+
+#### R077 — [expo/expo](https://github.com/expo/expo)
+
+**Prioridade:** P0 · **Decisão inicial:** JÁ PRESENTE NA STACK; avaliar módulos oficiais · **Licença:** MIT (repositório; verificar módulo) · **PRs:** `APP05`, `APP08`, `APP09`.
+
+**Aplicação no OctaClin:** Módulos oficiais Expo para arquivos/documentos e compartilhamento nativo; API do ecossistema do app do paciente. **Benefício:** Diminui dependências React Native paralelas e favorece compatibilidade com o SDK atual.
+
+**Como usar / PoC mínima:** Primeiro verificar capacidades existentes no app; avaliar módulos oficiais expo-file-system, expo-sharing e expo-print conforme uso, checando compatibilidade exata do SDK; diferenciar exportar PDF no mobile de visualizar PDF na web.
+
+**Cuidados / condição de rejeição:** Módulo ainda não presente no package.json exige instalação controlada. Expo Sharing genérico pode não suportar publicação específica em Stories; nesse caso testar R069.
+
+#### R078 — [michael-m-2983/metbrowser](https://github.com/michael-m-2983/metbrowser)
+
+**Prioridade:** P3 · **Decisão inicial:** APENAS INSPIRAÇÃO; não copiar código nem importar dados · **Licença:** Licença do repositório não localizada; sem autorização para reutilização de código · **PRs:** `CALC01`.
+
+**Aplicação no OctaClin:** Exemplo simples de navegação e conversão de dados do compêndio de MET de 2011. **Benefício:** Mostra formato de pesquisa e apresentação de atividades, mas não resolve catálogo clínico atualizado.
+
+**Como usar / PoC mínima:** Consultar apenas para ideias de interface; buscar os valores e descrições na fonte primária da versão de 2024 do Compendium of Physical Activities, com avaliação de direitos e adequação à população.
+
+**Cuidados / condição de rejeição:** Repositório assume compêndio 2011 e o próprio README o considera antigo. Não copiar script/código/dados sem licença, nem usar 2011 no lugar de 2024. Fonte primária: https://pacompendium.com/adult-compendium/.
+
+
+## 4. Mapa inverso: do PR do roadmap aos repositórios
+
+Use este índice como ponto de entrada. Um PR com várias referências **não deve instalar todas**; comparar alternativas e escolher a intervenção mínima. **`ENGxx` são propostas novas de engenharia e não aparecem no roadmap original**: criar/aceitar formalmente esses IDs antes de executar.
+
+| PR | Capacidade | Candidatos GitHub na ordem informativa de referência |
+|---|---|---|
+| `FND01` | **ARQUIVADO: Fase 298/PR #356 já integrada** | **NÃO ABRIR PR**; usar baseline atual |
+| `FND02` | Primitive compartilhada de proteção contra alterações não salvas | Sem biblioteca recomendada; usar primitives/código atual |
+| `PA01` | Reordenar refeições por drag-and-drop | [R001](https://github.com/clauderic/dnd-kit) |
+| `PA02` | Copiar, colar e duplicar refeições | Sem biblioteca recomendada; usar primitives/código atual |
+| `PA03` | Exibir macros no cabeçalho de refeições colapsadas | Sem biblioteca recomendada; usar primitives/código atual |
+| `PA04` | Resumo de macros na lista de planos alimentares | Sem biblioteca recomendada; usar primitives/código atual |
+| `PA05` | Preferências de exibição das refeições | [R014](https://github.com/react-hook-form/react-hook-form), [R041](https://github.com/storybookjs/storybook) |
+| `PA06` | Autosave opcional do plano alimentar | [R013](https://github.com/TanStack/query), [R014](https://github.com/react-hook-form/react-hook-form) |
+| `PA07` | Trava/aviso de edição simultânea entre abas | [R068](https://github.com/yjs/yjs) |
+| `FOOD01` | Medidas caseiras personalizadas por alimento | [R017](https://github.com/simonoppowa/OpenNutriTracker) |
+| `FOOD02` | Cadastrar alimento reutilizável dentro do editor do plano | [R015](https://github.com/openfoodfacts/openfoodfacts-js), [R016](https://github.com/metonym/fooddata-central), [R042](https://github.com/openfoodfacts/openfoodfacts-server), [R047](https://github.com/downshift-js/downshift), [R064](https://github.com/zxing-js/browser) |
+| `FOOD03` | Favoritar substitutos | [R017](https://github.com/simonoppowa/OpenNutriTracker), [R047](https://github.com/downshift-js/downshift) |
+| `FOOD04` | Grupos reutilizáveis de substituições | Sem biblioteca recomendada; usar primitives/código atual |
+| `FOOD05` | Equivalência automática por nutriente-alvo | [R016](https://github.com/metonym/fooddata-central), [R047](https://github.com/downshift-js/downshift), [R056](https://github.com/dubzzz/fast-check), [R057](https://github.com/stryker-mutator/stryker-js) |
+| `FOOD06` | IDR/DRI e UL de micronutrientes | [R015](https://github.com/openfoodfacts/openfoodfacts-js), [R056](https://github.com/dubzzz/fast-check), [R057](https://github.com/stryker-mutator/stryker-js) |
+| `FOOD07` | **Somente metadados/filtros residuais pós-310** | [R017](https://github.com/simonoppowa/OpenNutriTracker), [R018](https://github.com/TandoorRecipes/recipes) |
+| `FOOD08` | Biblioteca pública de receitas entre organizações | [R015](https://github.com/openfoodfacts/openfoodfacts-js), [R018](https://github.com/TandoorRecipes/recipes), [R042](https://github.com/openfoodfacts/openfoodfacts-server) |
+| `ANT01` | Relação cintura-estatura | [R056](https://github.com/dubzzz/fast-check) |
+| `ANT02` | Copiar última antropometria como base | Sem biblioteca recomendada; usar primitives/código atual |
+| `ANT03` | **Somente gap da política de compartilhamento pós-307** | Sem biblioteca recomendada; usar primitives/código atual |
+| `ANT04` | Bioimpedância estruturada | [R010](https://github.com/medplum/medplum) |
+| `ANT05` | **Somente complementos pós-314 (condicional)** | [R004](https://github.com/recharts/recharts), [R005](https://github.com/SunnySeedApp/who-growth-standards), [R019](https://github.com/FlatNineOrg/medilab-pediatric-growth-calc), [R056](https://github.com/dubzzz/fast-check), [R057](https://github.com/stryker-mutator/stryker-js) |
+| `ANT06` | Zoom e navegação em curvas de crescimento | [R004](https://github.com/recharts/recharts), [R005](https://github.com/SunnySeedApp/who-growth-standards), [R019](https://github.com/FlatNineOrg/medilab-pediatric-growth-calc), [R020](https://github.com/BetterTyped/react-zoom-pan-pinch) |
+| `ANT07` | **Somente complementos pós-313 (condicional)** | Sem biblioteca recomendada; usar primitives/código atual |
+| `ANT08` | Evolução fotográfica — UX avançada | [R007](https://github.com/nerdyman/react-compare-slider), [R020](https://github.com/BetterTyped/react-zoom-pan-pinch), [R052](https://github.com/transloadit/uppy) |
+| `QST01` | Expandir/recolher respostas de questionários | [R022](https://github.com/surveyjs/survey-library), [R041](https://github.com/storybookjs/storybook) |
+| `QST02` | Link permanente reutilizável de questionário | [R022](https://github.com/surveyjs/survey-library), [R025](https://github.com/formbricks/formbricks), [R054](https://github.com/jkbrzt/rrule), [R055](https://github.com/rosskhanas/react-qr-code), [R065](https://github.com/catamphetamine/libphonenumber-js) |
+| `QST03` | Gráficos e relatórios de questionários | [R004](https://github.com/recharts/recharts), [R013](https://github.com/TanStack/query), [R022](https://github.com/surveyjs/survey-library), [R025](https://github.com/formbricks/formbricks), [R046](https://github.com/TanStack/table), [R051](https://github.com/47ng/nuqs) |
+| `QST04` | Recordatório alimentar calculável | [R010](https://github.com/medplum/medplum) |
+| `QST05` | Páginas/deep links dedicados para anamnese e prontuário | [R014](https://github.com/react-hook-form/react-hook-form), [R022](https://github.com/surveyjs/survey-library), [R023](https://github.com/surveyjs/survey-creator), [R050](https://github.com/rjsf-team/react-jsonschema-form) |
+| `QST06` | Modal/painel lateral de prontuário e anamnese em outras telas | Sem biblioteca recomendada; usar primitives/código atual |
+| `QST07` | Modelos compostos de prontuário/consulta | [R010](https://github.com/medplum/medplum), [R014](https://github.com/react-hook-form/react-hook-form), [R023](https://github.com/surveyjs/survey-creator), [R050](https://github.com/rjsf-team/react-jsonschema-form), [R068](https://github.com/yjs/yjs) |
+| `APP01` | Habit Tracker configurável | [R017](https://github.com/simonoppowa/OpenNutriTracker), [R024](https://github.com/HabitRPG/habitica), [R064](https://github.com/zxing-js/browser), [R067](https://github.com/Nozbe/WatermelonDB) |
+| `APP02` | Filtro por paciente na fila consolidada de diário | [R046](https://github.com/TanStack/table), [R051](https://github.com/47ng/nuqs), [R067](https://github.com/Nozbe/WatermelonDB) |
+| `APP03` | Revisão em lote dos registros do diário | Sem biblioteca recomendada; usar primitives/código atual |
+| `APP04` | **Condicional à decisão da Fase 317** | [R017](https://github.com/simonoppowa/OpenNutriTracker), [R024](https://github.com/HabitRPG/habitica) |
+| `APP05` | Central de documentos e prescrições para download | [R006](https://github.com/wojtekmaj/react-pdf), [R052](https://github.com/transloadit/uppy), [R055](https://github.com/rosskhanas/react-qr-code) |
+| `APP06` | Macronutrientes por refeição no app, configuráveis | Sem biblioteca recomendada; usar primitives/código atual |
+| `APP07` | Thread de conversa em registro do diário/refeição | [R067](https://github.com/Nozbe/WatermelonDB) |
+| `APP08` | Compartilhamento de registro do diário em Stories | Sem biblioteca recomendada; usar primitives/código atual |
+| `APP09` | Internacionalização do app/portal do paciente | [R008](https://github.com/amannn/next-intl), [R021](https://github.com/i18next/react-i18next) |
+| `OPS01` | Agenda — busca rápida | [R026](https://github.com/calcom/cal.com), [R031](https://github.com/bigcalendar/react-big-calendar), [R051](https://github.com/47ng/nuqs) |
+| `OPS02` | Agenda — título personalizado e cores | [R026](https://github.com/calcom/cal.com), [R031](https://github.com/bigcalendar/react-big-calendar), [R054](https://github.com/jkbrzt/rrule), [R055](https://github.com/rosskhanas/react-qr-code), [R065](https://github.com/catamphetamine/libphonenumber-js), [R066](https://github.com/adamgibbons/ics) |
+| `OPS03` | Ocultar valores financeiros visualmente | Sem biblioteca recomendada; usar primitives/código atual |
+| `OPS04` | Financeiro detalhado | [R046](https://github.com/TanStack/table) |
+| `OPS05` | Aniversariantes do mês no dashboard | Sem biblioteca recomendada; usar primitives/código atual |
+| `OPS06` | **Apenas indicadores adicionais pós-306** | [R004](https://github.com/recharts/recharts), [R013](https://github.com/TanStack/query), [R044](https://github.com/PostHog/posthog), [R046](https://github.com/TanStack/table), [R051](https://github.com/47ng/nuqs) |
+| `OPS07` | Permissões individuais por usuário | [R009](https://github.com/apache/casbin-node-casbin) |
+| `OPS08` | Comentários transversais em registros | Sem biblioteca recomendada; usar primitives/código atual |
+| `DOC01` | Assinatura gráfica e carimbo em documentos | [R029](https://github.com/szimek/signature_pad) |
+| `DOC02` | Gerador de carimbo profissional | [R029](https://github.com/szimek/signature_pad) |
+| `DOC03` | Leitor nativo de PDF | [R006](https://github.com/wojtekmaj/react-pdf), [R028](https://github.com/mozilla/pdf.js) |
+| `DOC04` | Filtro de campos no PDF de antropometria | [R002](https://github.com/pdfme/pdfme), [R027](https://github.com/diegomura/react-pdf), [R053](https://github.com/MatthewHerbst/react-to-print) |
+| `DOC05` | Padronizar nomes de arquivos PDF | [R002](https://github.com/pdfme/pdfme), [R027](https://github.com/diegomura/react-pdf), [R053](https://github.com/MatthewHerbst/react-to-print) |
+| `DOC06` | Rich text seguro com tabelas | [R003](https://github.com/facebook/lexical), [R041](https://github.com/storybookjs/storybook) |
+| `DOC07` | Links clicáveis em orientações e textos | [R003](https://github.com/facebook/lexical) |
+| `DOC08` | Personalização visual dos PDFs/documentos | [R002](https://github.com/pdfme/pdfme), [R027](https://github.com/diegomura/react-pdf), [R053](https://github.com/MatthewHerbst/react-to-print) |
+| `DOC09` | Guia de logo para documentos | [R002](https://github.com/pdfme/pdfme) |
+| `DOC10` | Reordenar materiais de apoio | [R001](https://github.com/clauderic/dnd-kit) |
+| `CALC01` | Catálogo clínico/popular de atividades e METs | [R056](https://github.com/dubzzz/fast-check) |
+| `CALC02` | Novas equações de gasto energético | [R056](https://github.com/dubzzz/fast-check), [R057](https://github.com/stryker-mutator/stryker-js) |
+| `CALC03` | Atividade física estruturada e cálculo avançado de gasto | [R056](https://github.com/dubzzz/fast-check) |
+| `CALC04` | VO₂, MET diário e METy | [R056](https://github.com/dubzzz/fast-check) |
+| `CALC05` | Calculadora de estimativa de perda de peso / VENTA | [R011](https://github.com/INSP-RH/bw), [R056](https://github.com/dubzzz/fast-check) |
+| `AI01` | **Somente se Fase 318 autorizar gap residual** | [R012](https://github.com/langchain-ai/langgraphjs), [R030](https://github.com/vercel/ai), [R039](https://github.com/data-privacy-stack/presidio), [R040](https://github.com/promptfoo/promptfoo) |
+| `AI02` | **Somente se Fase 318 autorizar gap residual** | [R012](https://github.com/langchain-ai/langgraphjs), [R030](https://github.com/vercel/ai), [R039](https://github.com/data-privacy-stack/presidio), [R040](https://github.com/promptfoo/promptfoo) |
+| `AI03` | Rascunho de retorno semanal | [R012](https://github.com/langchain-ai/langgraphjs), [R030](https://github.com/vercel/ai), [R039](https://github.com/data-privacy-stack/presidio), [R040](https://github.com/promptfoo/promptfoo), [R045](https://github.com/triggerdotdev/trigger.dev) |
+| `AI04` | Organização assistida de prontuário | [R012](https://github.com/langchain-ai/langgraphjs), [R040](https://github.com/promptfoo/promptfoo) |
+| `AI05` | **ARQUIVADO: escopo/gate da Fase 316, SEM PR pós-320** | Referências apenas para o escopo autorizado da Fase 316, NÃO PARA executar AI05; [R010](https://github.com/medplum/medplum), [R012](https://github.com/langchain-ai/langgraphjs), [R030](https://github.com/vercel/ai), [R038](https://github.com/docling-project/docling), [R039](https://github.com/data-privacy-stack/presidio), [R040](https://github.com/promptfoo/promptfoo), [R052](https://github.com/transloadit/uppy) |
+| `AI06` | Reconhecimento alimentar integrado ao diário/plano | [R012](https://github.com/langchain-ai/langgraphjs), [R040](https://github.com/promptfoo/promptfoo) |
+
+### PRs de engenharia sugeridos (ainda não incorporados ao roadmap original)
+
+| `ENG01` | Auditar código/dependências inutilizados | [R035](https://github.com/webpro-nl/knip) |
+| `ENG02` | Analisar workflows GitHub Actions | [R034](https://github.com/zizmorcore/zizmor) |
+| `ENG03` | Tracing e diagnóstico de performance | [R032](https://github.com/open-telemetry/opentelemetry-js) |
+| `ENG04` | Operação segura de filas e jobs | [R033](https://github.com/felixmosh/bull-board), [R045](https://github.com/triggerdotdev/trigger.dev) |
+| `ENG05` | Contratos de API tipados | [R036](https://github.com/openapi-ts/openapi-typescript), [R058](https://github.com/schemathesis/schemathesis), [R059](https://github.com/pact-foundation/pact-js) |
+| `ENG06` | Feature flags por tenant/ambiente | [R037](https://github.com/open-feature/js-sdk), [R043](https://github.com/Flagsmith/flagsmith) |
+| `ENG07` | Estudo de interoperabilidade FHIR | [R010](https://github.com/medplum/medplum) |
+| `ENG08` | Extração segura de documentos | [R038](https://github.com/docling-project/docling), [R039](https://github.com/data-privacy-stack/presidio), [R052](https://github.com/transloadit/uppy) |
+| `ENG09` | Testes de propriedades e mutação clínica | [R056](https://github.com/dubzzz/fast-check), [R057](https://github.com/stryker-mutator/stryker-js) |
+| `ENG10` | Fuzzing/contratos das APIs | [R058](https://github.com/schemathesis/schemathesis), [R059](https://github.com/pact-foundation/pact-js) |
+| `ENG11` | Regras de arquitetura entre módulos | [R060](https://github.com/sverweij/dependency-cruiser) |
+| `ENG12` | Testes de carga controlados | [R061](https://github.com/mcollina/autocannon) |
+| `ENG13` | Padronização de dados/cache/logging | [R013](https://github.com/TanStack/query), [R063](https://github.com/pinojs/pino) |
+| `ENG14` | Factories de dados sintéticos e contratos | [R062](https://github.com/faker-js/faker), [R065](https://github.com/catamphetamine/libphonenumber-js) |
+| `ENG15` | Catálogo UI e experiência de onboarding | [R041](https://github.com/storybookjs/storybook), [R049](https://github.com/gilbarbara/react-joyride) |
+| `ENG16` | Analytics operacional sem PHI | [R044](https://github.com/PostHog/posthog) |
+| `ENG17` | Avaliações e red-team de IA | [R040](https://github.com/promptfoo/promptfoo) |
+| `ENG18` | Diagnóstico de sync offline/colaboração | [R067](https://github.com/Nozbe/WatermelonDB), [R068](https://github.com/yjs/yjs) |
+| `ENG19` | Templates transacionais responsivos e seguro de e-mail | [R048](https://github.com/resend/react-email) |
+
+---
+
+
+### Complemento do mapa inverso pós-busca
+
+| PR | Referências adicionais a avaliar | Decisão inicial |
+|---|---|---|
+| `APP02` | [R074](https://github.com/TanStack/virtual) | Comparar com nativo/domínio atual |
+| `APP05` | [R077](https://github.com/expo/expo) | Comparar com nativo/domínio atual |
+| `APP08` | [R069](https://github.com/react-native-share/react-native-share), [R070](https://github.com/gre/react-native-view-shot), [R077](https://github.com/expo/expo) | Comparar com nativo/domínio atual |
+| `APP09` | [R077](https://github.com/expo/expo) | Comparar com nativo/domínio atual |
+| `CALC01` | [R078](https://github.com/michael-m-2983/metbrowser) | Apenas referência; sem cópia |
+| `CALC02` | [R076](https://github.com/MikeMcl/decimal.js) | Comparar com nativo/domínio atual |
+| `CALC06` | [R076](https://github.com/MikeMcl/decimal.js) | Comparar com nativo/domínio atual |
+| `FOOD05` | [R076](https://github.com/MikeMcl/decimal.js) | Comparar com nativo/domínio atual |
+| `FOOD06` | [R076](https://github.com/MikeMcl/decimal.js) | Comparar com nativo/domínio atual |
+| `LAB02` | [R074](https://github.com/TanStack/virtual) | Comparar com nativo/domínio atual |
+| `OPS04` | [R075](https://github.com/dinerojs/dinero.js) | Comparar com nativo/domínio atual |
+| `OPS08` | [R073](https://github.com/radix-ui/primitives), [R074](https://github.com/TanStack/virtual) | Comparar com nativo/domínio atual |
+| `PA07` | [R071](https://github.com/pubkey/broadcast-channel) | Comparar com nativo/domínio atual |
+| `QST01` | [R073](https://github.com/radix-ui/primitives) | Comparar com nativo/domínio atual |
+| `QST03` | [R074](https://github.com/TanStack/virtual) | Comparar com nativo/domínio atual |
+| `QST04` | [R072](https://github.com/intake24/intake24) | Comparar com nativo/domínio atual |
+| `QST06` | [R073](https://github.com/radix-ui/primitives) | Comparar com nativo/domínio atual |
+| `UX01` | [R073](https://github.com/radix-ui/primitives) | Comparar com nativo/domínio atual |
+
+## 5. Matriz de escolhas concorrentes (não instalar tudo)
+
+| Necessidade | Escolha padrão para PoC | Alternativas / apenas referência | Critério de decisão |
+|---|---|---|---|
+| Reordenar refeições/materiais | `@dnd-kit` **já instalado** | Sem dependência nova | Persistência, teclado, toque, acessibilidade |
+| PDF com template visual | pdfme | diegomura/react-pdf / React Print | PDF determinístico vs impressão, peso, SSR e personalização |
+| Visualizar PDF no web | wojtekmaj/react-pdf | pdf.js diretamente | Segurança, worker, navegação, bundle |
+| i18n web | next-intl | react-i18next | Next App Router, traduções server/client, esforço |
+| Gráficos | SVG atual quando suficiente | Recharts | Volume de dados, acessibilidade, custo do bundle |
+| Autocomplete de alimentos | Downshift | Componentes atuais | Teclado, busca remota, tempo até selecionar item |
+| Tabelas | TanStack Table | Tabelas atuais | Filtros, paginação, performance e autorização server-side |
+| Cache/estado de requests | TanStack Query | Fetch atual | Menos duplicação sem risco de retenção de PHI |
+| Editor rich text | Lexical | Texto estruturado atual | Segurança/XSS, tabelas, serialização |
+| Formulários de anamnese | Componentes atuais | React Hook Form, RJSF, SurveyJS Form Library | Sem quebrar versões/snapshots/respostas |
+| Calendário | Agenda OctaClin atual | React Big Calendar, Cal.com (inspiração) | Nenhum custo de migração sem ganho de UX substancial |
+| Feature flags | Regras internas / OpenFeature | Flagsmith | Tenant, fallback, infraestrutura extra |
+| Workflows | BullMQ atual | Trigger.dev, LangGraph somente por necessidade | Não introduzir orquestradores paralelos |
+| Testes de cálculo | Jest/fixtures existentes + fast-check | StrykerJS | Invariantes corretas, custo de CI |
+| Contratos API | Schemas/DTOs atuais + OpenAPI | Pact / Schemathesis | Garantia de compatibilidade sem testes duplicados |
+| Offline mobile | Expo SQLite + sync atual | WatermelonDB / Yjs | Limpeza de PHI, conflitos, migração, custo |
+| Compartilhar Stories no app | Expo/share nativo + autorização do paciente | react-native-share + view-shot | Somente após gesto explícito, sem PHI por padrão, testes iOS/Android |
+| Edição concorrente entre abas | BroadcastChannel nativo + versionamento backend | broadcast-channel; Yjs somente para colaboração real | Nenhum sobrescrever silencioso; sem conteúdo clínico no canal |
+| Recordatório 24h | Domínio do OctaClin / catálogo multifonte | Intake24 como referência de fluxo | Código e datasets com licenças distintas, revisão humana |
+| Dinheiro | Inteiros em centavos e modelo atual | Dinero.js se houver lacuna real | Testes BRL e arredondamento/compatibilidade |
+| Anonimização antes de IA | Regras de minimização existentes | Presidio | Falsos positivos/negativos e transferência de PHI |
+
+## 6. Licenças: regras do OctaClin como SaaS comercial
+
+**Favoráveis à avaliação** não significa automaticamente liberadas: MIT, Apache-2.0, BSD/ISC dependem de notices e obrigações específicas por pacote. Verificar licenças transitivas, arquivos, patentes, marcas e datasets.
+
+- **AGPL/GPL, Commons Clause ou termos comerciais:** Formbricks (núcleo), Cal.com (open-core), Tandoor, Habitica, OpenNutriTracker e Survey Creator/Dashboard/PDF. **Usar como referência de UX/arquitetura; não copiar ou incorporar código** sem parecer jurídico/licença adequada. A mera inspiração em ideias/fluxos não autoriza copiar expressões protegidas.
+- **Open Food Facts:** licença do SDK não é licença dos dados. Avaliar ODbL, atribuição, base derivada e segregação da USDA/TBCA/IBGE.
+- **Curvas OMS e modelos clínicos:** MIT da biblioteca não cobre automaticamente direito de uso das tabelas; confirmar referência oficial, população, testes e autorização de reprodução.
+- **IA e analytics:** verificar termos do provider/modelo, fluxo de dados, retenção, suboperadores e base legal.
+- **Informações incertas:** quando esta lista trouxer “verificar”, o Codex deve buscar a licença na tag exata antes de propor qualquer cópia/instalação; se não conseguir verificar, tratar como **referência sem cópia**.
+
+## 7. Checklist de decisão técnica obrigatório em cada PR
+
+- [ ] Identifiquei o PR/ID e li a seção relevante do roadmap.
+- [ ] Inspecionei código e dependências atuais; recurso não estava pronto.
+- [ ] Identifiquei todos os repositórios candidatos e alternativas internas.
+- [ ] Avaliei *licença do pacote e dos dados*, versão/tag/commit e manutenção.
+- [ ] Comparei stack: React 19, Next 16, NestJS, TypeScript, Expo e/ou Python conforme o alvo.
+- [ ] Descrevi o ganho mensurável e o custo (dependências, bundle, latência, segurança, migração).
+- [ ] Fiz PoC pequena com dados sintéticos e testes se a integração tem risco.
+- [ ] Preservei tenant/RLS, escopo profissional, auditoria, PHI, LGPD e idempotência.
+- [ ] Cálculos clínicos possuem fontes primárias, versionamento e testes independentes.
+- [ ] Não substituí stack existente sem demonstração de ganho.
+- [ ] Não executei migração externa, habilitação de provider ou ação irreversível sem autorização.
+- [ ] Registrei decisão de adoção/rejeição na descrição do PR, com links e versão.
+
+## 8. Modelo de decisão curta a anexar ao PR
+
+```md
+### Referência externa — decisão técnica
+- ID roadmap: <PA01|...>
+- Repositório avaliado: <URL>
+- Revisão/tag consultada: <commit/tag>
+- Licença do código e dados: <conferida na versão>
+- Existente no OctaClin: <componente/pacote/fluxo>
+- Decisão: <REUTILIZAR|INTEGRAR|ADAPTAR|REFERENCIAR|REJEITAR>
+- Alternativa descartada e motivo: <...>
+- Ganho esperado / medido: <...>
+- Superfície alterada e impacto: <...>
+- Proteção tenant/LGPD/PHI: <...>
+- Testes de regressão/segurança: <...>
+- Migration/deploy/rollback: <...>
+```
+
+## 9. Prompt pronto para o Codex
+
+> Leia integralmente `ROADMAP_IMPLEMENTACAO_PRS_ONDAS_POS_320.md`, `CATALOGO_MESTRE_REPOSITORIOS_GITHUB_OCTACLIN_POS_320_V2.md` e `MATRIZ_RASTREABILIDADE_71_SUGESTOES_OCTACLIN_POS_320_V2.md`, além das instruções do repositório. Para o ID do PR que vou indicar, consulte a seção de candidatos e use o mapa inverso deste catálogo. Audite a `main` antes de decidir. Compare o que já existe com as bibliotecas e repositórios recomendados, incluindo licenças por tag, direitos de dados, versões, manutenção, segurança, desempenho, acessibilidade, impactos em PHI/LGPD, tenant e testes. **Não instale vários candidatos concorrentes**, não copie código de licenças restritivas, não migre domínio sem necessidade, não aceite fórmula clínica sem fonte oficial e testes independentes. Implemente o menor escopo capaz de atender o requisito, **um ID por PR**. Documente decisão/alternativas/rollback e rode os gates aplicáveis. Não faça merge, migração externa ou habilite serviços sem minha aprovação.
+
+---
+
+### Nota de manutenção do catálogo
+
+- Repositórios e versões evoluem; **o estado do catálogo não é estado atual garantido**. Revalidar na execução.
+- Atualizar uma ficha **não altera escopo** nem prioridade do roadmap sem decisão explícita de produto.
+- Se um repositório for arquivado, mudar licença ou se tornar incompatível, preservar o registro histórico e marcar como `REJEITADO`, anotando alternativa.
+- Nenhum repositório desta lista deve ser tomado como referência clínica primária para diagnósticos ou prescrições.
