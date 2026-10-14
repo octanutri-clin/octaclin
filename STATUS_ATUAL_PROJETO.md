@@ -4,14 +4,16 @@ Atualizado em 2026-10-14.
 
 ## Fase ativa
 
-- **PA05 — backend implementado, pausa antes da UI**, branch
+- **PA05 — implementação e revisão R4 concluídas; gates finais em execução**, branch
   `feat/pos320-pa05-preferencias`, base `64f54b88`. D01–D03 confirmadas.
   Cifra/CAS, clone/hash, projeção paciente e BFF/tipos validados; provas reais
   PostgreSQL15 específicas com RLS/concorrência PASS. Fixture omite extensões
   Timescale/pgvector não utilizadas pela PA05; gate integral será no CI.
-  UI T07/T08 para Luna alto após troca manual; Sol médio retorna para R4/CI/PR.
-  Sem PR/ambiente externo nesta pausa; migration1072 aditiva só em banco
-  descartável. Evidências `docs/governance/EVIDENCIAS_PA05_BACKEND_2026-10-14.md`,
+  UI T07/T08 implementada; Sol médio corrigiu quatro achados com testes RED.
+  Revisão estática independente final PASS; suíte visual e gates finais T09
+  em execução. Migration1072 aditiva somente em banco descartável neste ciclo.
+  Evidências `docs/governance/REVISAO_R4_PA05_2026-10-14.md` e
+  `docs/governance/EVIDENCIAS_PA05_BACKEND_2026-10-14.md`,
   handoff `tasks/plan-pos-320-pa05.md` e checklist `tasks/todo-pos-320-pa05.md`.
 - **PA04 — integrada pela PR #418**, main `64f54b88`, árvore idêntica ao HEAD
   aprovado `37d7979`. CI `38625821164` e checks aplicáveis PASS: Backend,

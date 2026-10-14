@@ -193,7 +193,7 @@ export interface PlanoAlimentarPacienteApi {
   id: string;
   titulo: string;
   numeroVersao: number;
-  publicadoEm: string;
+  publicadoEm?: string;
   objetivo?: string;
   orientacoes?: string;
   metaEnergeticaKcal?: number;

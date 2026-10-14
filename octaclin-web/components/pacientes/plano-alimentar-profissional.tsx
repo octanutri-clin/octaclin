@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
+import { flushSync } from 'react-dom';
 import { closestCenter, DndContext, KeyboardSensor, PointerSensor, type DragEndEvent, useSensor, useSensors } from '@dnd-kit/core';
 import { arrayMove, sortableKeyboardCoordinates, SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import {
@@ -34,6 +35,7 @@ import {
   criarPlanoAlimentar,
   listarPlanosAlimentares,
   obterAcompanhamentoVersaoPlanoAlimentar,
+  obterApresentacaoPacientePlano,
   obterPlanoAlimentar,
   obterVersaoPlanoAlimentar,
   publicarPlanoAlimentar,
@@ -41,6 +43,7 @@ import {
   type AlimentoComposicaoApi,
   type AtualizarRascunhoPlanoAlimentarEntrada,
   type AcompanhamentoVersaoPlanoApi,
+  type ApresentacaoPacientePlanoApi,
   type FonteCatalogoApi,
   type FormulaEnergeticaApi,
   type ItemPlanoAlimentarEntrada,
@@ -63,6 +66,9 @@ import { DuplicarPlanoDeOutroPaciente } from '@/components/pacientes/duplicar-pl
 import { ModelosPlanoAlimentar } from '@/components/pacientes/modelos-plano-alimentar';
 import { BibliotecaReceitasNutricionais } from '@/components/pacientes/biblioteca-receitas-nutricionais';
 import { CopiarRefeicaoDePlano } from '@/components/pacientes/copiar-refeicao-de-plano';
+import { PreferenciasApresentacaoPlano } from '@/components/pacientes/preferencias-apresentacao-plano';
+import { novasPreferenciasApresentacaoPlano, type PreferenciasApresentacaoPlanoApi, type PreferenciasExibicaoRefeicoesApi } from '@/lib/preferencias-apresentacao-plano';
+import { PlanoAlimentarPaciente } from '@/components/portal/plano-alimentar-paciente';
 import {
   LIMITE_REFEICOES_PLANO,
   acrescentarItensDeRefeicao,
@@ -119,6 +125,7 @@ interface FormularioPlano {
   justificativaDivergenciaClinica: string;
   objetivos: string;
   observacoes: string;
+  preferenciasApresentacao: PreferenciasApresentacaoPlanoApi;
   refeicoes: RefeicaoFormulario[];
 }
 
@@ -178,6 +185,7 @@ function formularioInicial(avaliacaoId = ''): FormularioPlano {
     justificativaDivergenciaClinica: '',
     objetivos: '',
     observacoes: '',
+    preferenciasApresentacao: novasPreferenciasApresentacaoPlano(),
     refeicoes: [novaRefeicao()]
   };
 }
@@ -242,6 +250,7 @@ function formularioDaVersao(versao: VersaoPlanoAlimentarApi, avaliacaoPadrao = '
     justificativaDivergenciaClinica: calculo?.justificativaDivergenciaClinica ?? '',
     objetivos: versao.objetivos ?? '',
     observacoes: versao.observacoes ?? '',
+    preferenciasApresentacao: versao.preferenciasApresentacao ?? novasPreferenciasApresentacaoPlano(),
     refeicoes: versao.refeicoes.length
       ? versao.refeicoes.map((refeicao) => ({
           chaveCliente: refeicao.id,
@@ -367,12 +376,15 @@ function itensParaBiblioteca(itens: ItemFormulario[]): ItemPlanoAlimentarEntrada
   }));
 }
 
-function montarEntrada(formulario: FormularioPlano): AtualizarRascunhoPlanoAlimentarEntrada {
+function montarEntrada(formulario: FormularioPlano, versao: VersaoPlanoAlimentarApi): AtualizarRascunhoPlanoAlimentarEntrada {
   // Condicao especial e meta manual andam juntas: o backend recusa uma sem a
   // outra, porque a formula preditiva continua bloqueada para esse paciente.
   const manual = formulario.possuiCondicaoEspecial;
   const porPeso = manual && formulario.metodoMacrosManual === 'gramas_por_kg';
   return {
+    preferenciasApresentacao: formulario.preferenciasApresentacao,
+    rascunhoIdEsperado: versao.id,
+    apresentacaoRevisaoEsperada: versao.apresentacaoRevisao ?? 0,
     avaliacaoAntropometricaId: formulario.avaliacaoAntropometricaId,
     origemMeta: manual ? 'manual' : 'formula',
     formula: manual ? undefined : formulario.formula,
@@ -964,8 +976,12 @@ function EditorItem({ pacienteId, item, indice, total, aoAlterar, aoRemover, aoM
 }
 
 function ResumoVersao({ plano, versao }: { plano: PlanoAlimentarApi; versao: VersaoPlanoAlimentarApi }) {
+  const preferencias = versao.preferenciasApresentacao?.profissional ?? {
+    ...novasPreferenciasApresentacaoPlano().profissional,
+    substituicoesExpandidas: true
+  };
   return (
-    <article className="folha-documento grid gap-5 rounded-md border border-linha bg-white p-5">
+    <article className={`grid rounded-md border border-linha bg-white ${preferencias.modoCompacto ? 'gap-3 p-3' : 'gap-5 p-5'}`}>
       <header className="border-b border-linha pb-4">
         <p className="text-xs font-semibold uppercase text-primaria">Plano alimentar</p>
         <h2 className="mt-1 text-xl font-semibold text-tinta">{plano.titulo}</h2>
@@ -973,11 +989,14 @@ function ResumoVersao({ plano, versao }: { plano: PlanoAlimentarApi; versao: Ver
           Versão {versao.numero} - {versao.status === 'publicada' ? `publicada em ${formatarData(versao.publicadaEm)}` : versao.status === 'descartada' ? `descartada em ${formatarData(versao.descartadaEm)}` : 'rascunho em consulta'}
         </p>
       </header>
+      {versao.apresentacaoEstado === 'indisponivel' ? (
+        <p role="alert" className="rounded-md border border-alerta-borda bg-alerta-suave p-3 text-sm text-alerta-forte">As preferências de apresentação desta versão não puderam ser lidas. A versão clínica continua disponível para o profissional; use a prévia autorizada do paciente somente após reconferir a configuração.</p>
+      ) : null}
       <section>
         <h3 className="text-sm font-semibold text-tinta">Objetivo</h3>
         <p className="mt-1 whitespace-pre-wrap text-sm text-texto-suave">{versao.objetivos}</p>
       </section>
-      {versao.calculo ? (
+      {versao.calculo && preferencias.macros ? (
         <section className="grid gap-3 rounded-md bg-superficie p-4 sm:grid-cols-2 lg:grid-cols-4">
           <div><p className="text-xs text-texto-suave">Meta energética</p><p className="text-lg font-semibold text-tinta">{formatarNumero(versao.calculo.metaEnergeticaKcal)} kcal</p></div>
           <div><p className="text-xs text-texto-suave">Carboidratos</p><p className="text-lg font-semibold text-tinta">{formatarNumero(versao.calculo.metasMacronutrientes.carboidratosG, 1)} g</p></div>
@@ -990,21 +1009,26 @@ function ResumoVersao({ plano, versao }: { plano: PlanoAlimentarApi; versao: Ver
           <section key={refeicao.id} className="break-inside-avoid border-t border-linha pt-4 first:border-t-0 first:pt-0">
             <div className="flex flex-wrap items-baseline justify-between gap-2">
               <h3 className="text-base font-semibold text-tinta">{refeicao.nome}</h3>
-              {refeicao.horarioLocal ? <p className="text-sm text-texto-suave">{refeicao.horarioLocal.slice(0, 5)}</p> : null}
+              {preferencias.horario && refeicao.horarioLocal ? <p className="text-sm text-texto-suave">{refeicao.horarioLocal.slice(0, 5)}</p> : null}
             </div>
-            {refeicao.orientacoes ? <p className="mt-1 whitespace-pre-wrap text-sm text-texto-suave">{refeicao.orientacoes}</p> : null}
+            {preferencias.orientacoes && refeicao.orientacoes ? <p className="mt-1 whitespace-pre-wrap text-sm text-texto-suave">{refeicao.orientacoes}</p> : null}
             <ul className="mt-3 grid gap-2">
               {refeicao.itens.map((item) => (
                 <li key={item.id} className="text-sm text-tinta">
-                  <span className="font-medium">{item.descricao}</span> - {formatarNumero(item.quantidade, 1)} {item.unidade} ({formatarNumero(item.porcaoGramas, 1)} g)
-                  {item.substituicoes.length ? <p className="mt-1 pl-3 text-xs text-texto-suave">Substituir por: {item.substituicoes.map((substituicao) => `${substituicao.descricao} (${formatarNumero(substituicao.quantidade, 1)} ${substituicao.unidade})`).join(' ou ')}</p> : null}
+                  <span className="font-medium">{item.descricao}</span>{preferencias.medidasCaseiras ? ` - ${formatarNumero(item.quantidade, 1)} ${item.unidade}` : ''} ({formatarNumero(item.porcaoGramas, 1)} g)
+                  {item.substituicoes.length ? (
+                    <details className="mt-1 pl-3 text-xs text-texto-suave" open={preferencias.substituicoesExpandidas || undefined}>
+                      <summary className="cursor-pointer">Substituições ({item.substituicoes.length})</summary>
+                      <p className="mt-1">{item.substituicoes.map((substituicao) => `${substituicao.descricao} (${preferencias.medidasCaseiras ? `${formatarNumero(substituicao.quantidade, 1)} ${substituicao.unidade}; ` : ''}${formatarNumero(substituicao.porcaoGramas, 1)} g)`).join(' · ')}</p>
+                    </details>
+                  ) : null}
                 </li>
               ))}
             </ul>
           </section>
         ))}
       </div>
-      {versao.observacoes ? <section className="border-t border-linha pt-4"><h3 className="text-sm font-semibold text-tinta">Observações</h3><p className="mt-1 whitespace-pre-wrap text-sm text-texto-suave">{versao.observacoes}</p></section> : null}
+      {preferencias.orientacoes && versao.observacoes ? <section className="border-t border-linha pt-4"><h3 className="text-sm font-semibold text-tinta">Observações</h3><p className="mt-1 whitespace-pre-wrap text-sm text-texto-suave">{versao.observacoes}</p></section> : null}
     </article>
   );
 }
@@ -1176,6 +1200,13 @@ interface PlanoAlimentarProfissionalProps {
   aoAlterarRascunho?: (alterado: boolean) => void;
 }
 
+type ModoProjecaoPaciente = 'rascunho' | 'impressao';
+interface ProjecaoPacienteLocal {
+  chave: string;
+  modo: ModoProjecaoPaciente;
+  dados: ApresentacaoPacientePlanoApi;
+}
+
 export function PlanoAlimentarProfissional({ pacienteId, podeGerenciar, aoAlterarRascunho }: PlanoAlimentarProfissionalProps) {
   const [planos, setPlanos] = useState<PlanoAlimentarResumoApi[]>([]);
   const [paginaPlanos, setPaginaPlanos] = useState(1);
@@ -1184,6 +1215,12 @@ export function PlanoAlimentarProfissional({ pacienteId, podeGerenciar, aoAltera
   const pacienteCarregadoRef = useRef(pacienteId);
   const controladorListaRef = useRef<AbortController | null>(null);
   const [plano, setPlano] = useState<PlanoAlimentarApi | null>(null);
+  const planoAtualRef = useRef<PlanoAlimentarApi | null>(null);
+  const pacienteAtualRef = useRef(pacienteId);
+  const [projecaoPaciente, setProjecaoPaciente] = useState<ProjecaoPacienteLocal | null>(null);
+  const [carregandoProjecao, setCarregandoProjecao] = useState(false);
+  const sequenciaProjecao = useRef(0);
+  const controladorProjecao = useRef<AbortController | null>(null);
   const [avaliacoes, setAvaliacoes] = useState<AvaliacaoAntropometricaApi[]>([]);
   const [numeroVersaoConsultada, setNumeroVersaoConsultada] = useState<number | null>(null);
   const [paginasAcompanhamento, setPaginasAcompanhamento] = useState<PaginasAcompanhamento>(paginasIniciaisAcompanhamento);
@@ -1193,6 +1230,7 @@ export function PlanoAlimentarProfissional({ pacienteId, podeGerenciar, aoAltera
   const [erroAcompanhamento, setErroAcompanhamento] = useState<string | null>(null);
   const [planoId, setPlanoId] = useState('');
   const [formulario, setFormulario] = useState<FormularioPlano>(() => formularioInicial());
+  const [reconferiuApresentacao, setReconferiuApresentacao] = useState(true);
   const [tituloNovo, setTituloNovo] = useState('Plano alimentar');
   const [carregando, setCarregando] = useState(true);
   const [operacao, setOperacao] = useState<string | null>(null);
@@ -1218,6 +1256,10 @@ export function PlanoAlimentarProfissional({ pacienteId, podeGerenciar, aoAltera
   useLayoutEffect(() => {
     formularioAtualRef.current = formulario;
   }, [formulario]);
+  useLayoutEffect(() => {
+    planoAtualRef.current = plano;
+    pacienteAtualRef.current = pacienteId;
+  }, [plano, pacienteId]);
   const [confirmarArquivo, setConfirmarArquivo] = useState(false);
   const [confirmarCriacao, setConfirmarCriacao] = useState(false);
   const sequenciaCarregamento = useRef(0);
@@ -1261,10 +1303,15 @@ export function PlanoAlimentarProfissional({ pacienteId, podeGerenciar, aoAltera
     : undefined;
 
   const aplicarPlano = useCallback((detalhe: PlanoAlimentarApi | null, avaliacoesAtuais: AvaliacaoAntropometricaApi[] = []) => {
+    controladorProjecao.current?.abort();
+    sequenciaProjecao.current += 1;
+    setProjecaoPaciente(null);
+    setCarregandoProjecao(false);
     setPlano(detalhe);
     setPlanoId(detalhe?.id ?? '');
     const avaliacaoPadrao = avaliacoesAtuais[0]?.id ?? '';
     setFormulario(detalhe?.draft ? formularioDaVersao(detalhe.draft, avaliacaoPadrao) : formularioInicial(avaliacaoPadrao));
+    setReconferiuApresentacao(detalhe?.draft?.apresentacaoEstado !== 'indisponivel');
     setRefeicoesAbertas(new Set());
     focoAposExpandir.current = null;
     setNumeroVersaoConsultada(detalhe?.current?.numero ?? null);
@@ -1278,6 +1325,10 @@ export function PlanoAlimentarProfissional({ pacienteId, podeGerenciar, aoAltera
 
   const carregar = useCallback(async (preferido?: string, paginaSolicitada?: number) => {
     const sequencia = ++sequenciaCarregamento.current;
+    controladorProjecao.current?.abort();
+    sequenciaProjecao.current += 1;
+    setProjecaoPaciente(null);
+    setCarregandoProjecao(false);
     controladorListaRef.current?.abort();
     const controlador = new AbortController();
     controladorListaRef.current = controlador;
@@ -1402,10 +1453,80 @@ export function PlanoAlimentarProfissional({ pacienteId, podeGerenciar, aoAltera
 
   function atualizar(mutacao: (atual: FormularioPlano) => FormularioPlano) {
     if (!podeGerenciar) return;
+    controladorProjecao.current?.abort();
+    sequenciaProjecao.current += 1;
+    setCarregandoProjecao(false);
     setFormulario(mutacao);
     setAlterado(true);
     setSucesso(null);
     setErrosFormulario([]);
+    setProjecaoPaciente(null);
+  }
+
+  async function carregarProjecaoPaciente(modo: ModoProjecaoPaciente) {
+    const versao = modo === 'impressao' ? plano?.current : plano?.draft;
+    if (!plano || !versao || (modo === 'rascunho' && alterado) || (modo === 'impressao' && versao.status !== 'publicada')) return;
+
+    controladorProjecao.current?.abort();
+    const controlador = new AbortController();
+    controladorProjecao.current = controlador;
+    const sequencia = ++sequenciaProjecao.current;
+    const chave = `${pacienteId}:${plano.id}:${versao.numero}:${versao.id}`;
+    setProjecaoPaciente(null);
+    setCarregandoProjecao(true);
+    setErro(null);
+    try {
+      const dados = await obterApresentacaoPacientePlano(pacienteId, plano.id, versao.numero, controlador.signal);
+      const planoAtual = planoAtualRef.current;
+      if (
+        controlador.signal.aborted || sequencia !== sequenciaProjecao.current ||
+        pacienteAtualRef.current !== pacienteId || planoAtual?.id !== plano.id ||
+        (modo === 'impressao' ? planoAtual.current?.id : planoAtual.draft?.id) !== versao.id
+      ) return;
+      if (dados.apresentacaoEstado === 'indisponivel') {
+        throw new Error('A apresentação do paciente está indisponível. Revise a configuração antes de continuar.');
+      }
+
+      flushSync(() => setProjecaoPaciente({ chave, modo, dados }));
+      if (modo === 'impressao') {
+        await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
+        const atual = planoAtualRef.current;
+        const alvo = document.querySelector<HTMLElement>('[data-impressao-paciente-chave]');
+        if (
+          controlador.signal.aborted || sequencia !== sequenciaProjecao.current ||
+          pacienteAtualRef.current !== pacienteId || atual?.id !== plano.id || atual.current?.id !== versao.id ||
+          alvo?.dataset.impressaoPacienteChave !== chave
+        ) return;
+        window.print();
+      }
+    } catch (falha: unknown) {
+      if (!controlador.signal.aborted && sequencia === sequenciaProjecao.current) {
+        setProjecaoPaciente(null);
+        setErro(mensagemFalhaInterface(falha, 'Não foi possível preparar a apresentação do paciente. Nenhum conteúdo foi enviado à impressão.'));
+      }
+    } finally {
+      if (sequencia === sequenciaProjecao.current) setCarregandoProjecao(false);
+    }
+  }
+
+  useEffect(() => () => {
+    sequenciaProjecao.current += 1;
+    controladorProjecao.current?.abort();
+  }, []);
+
+  function atualizarPreferenciaApresentacao(
+    conjunto: 'profissional' | 'paciente',
+    campo: keyof PreferenciasExibicaoRefeicoesApi,
+    valor: boolean
+  ) {
+    setReconferiuApresentacao(true);
+    atualizar((atual) => ({
+      ...atual,
+      preferenciasApresentacao: {
+        ...atual.preferenciasApresentacao,
+        [conjunto]: { ...atual.preferenciasApresentacao[conjunto], [campo]: valor }
+      }
+    }));
   }
 
   async function executar(rotulo: string, tarefa: () => Promise<unknown>, mensagem: string, preferido = planoId) {
@@ -1451,6 +1572,10 @@ export function PlanoAlimentarProfissional({ pacienteId, podeGerenciar, aoAltera
 
   async function salvar() {
     if (!podeGerenciar || !plano?.draft || copiaEmAndamentoRef.current) return;
+    if (plano.draft.apresentacaoEstado === 'indisponivel' && !reconferiuApresentacao) {
+      setErro('A apresentação salva está indisponível. Revise e altere uma preferência antes de salvar novamente.');
+      return;
+    }
     const erros = validarFormulario(formulario);
     setErrosFormulario(erros);
     if (erros.length) {
@@ -1459,7 +1584,7 @@ export function PlanoAlimentarProfissional({ pacienteId, podeGerenciar, aoAltera
     }
     await executar(
       'salvando',
-      () => atualizarRascunhoPlanoAlimentar(pacienteId, plano.id, montarEntrada(formulario)),
+      () => atualizarRascunhoPlanoAlimentar(pacienteId, plano.id, montarEntrada(formulario, plano.draft!)),
       'Rascunho salvo. Revise os resultados antes de continuar.'
     );
   }
@@ -1674,7 +1799,8 @@ export function PlanoAlimentarProfissional({ pacienteId, podeGerenciar, aoAltera
                     <Botao type="button" onClick={() => void carregar(plano.id)} disabled={alterado || Boolean(operacao)}>
                       <RefreshCcw size={16} /> Atualizar
                     </Botao>
-                    {plano.current ? <Botao type="button" onClick={() => window.print()}><Printer size={16} /> Imprimir</Botao> : null}
+                    {plano.draft ? <Botao type="button" onClick={() => void carregarProjecaoPaciente('rascunho')} disabled={alterado || carregandoProjecao || Boolean(operacao)}><Search size={16} /> Prévia do paciente</Botao> : null}
+                    {plano.current ? <Botao type="button" onClick={() => void carregarProjecaoPaciente('impressao')} disabled={alterado || carregandoProjecao || Boolean(operacao)}>{carregandoProjecao ? <RefreshCcw size={16} className="animate-spin" /> : <Printer size={16} />} {carregandoProjecao ? 'Preparando impressão' : 'Imprimir'}</Botao> : null}
                     {podeGerenciar ? <Botao type="button" variante="perigo" onClick={() => setConfirmarArquivo(true)} disabled={alterado || Boolean(operacao)}>
                       <Archive size={16} /> Arquivar
                     </Botao> : null}
@@ -1684,6 +1810,11 @@ export function PlanoAlimentarProfissional({ pacienteId, podeGerenciar, aoAltera
 
               {podeGerenciar ? (plano.draft ? (
                 <form onSubmit={(evento) => { evento.preventDefault(); void salvar(); }} onInvalidCapture={capturarInvalidos} className="grid gap-4 pb-16 lg:pb-0">
+                  {plano.draft.apresentacaoEstado === 'indisponivel' ? (
+                    <div role="alert" className="rounded-md border border-alerta-borda bg-alerta-suave p-4 text-sm text-alerta-forte">
+                      A configuração de exibição salva não pode ser lida. Revise as opções abaixo e salve novamente para reconferir esta versão antes de revisar ou publicar.
+                    </div>
+                  ) : null}
                   {errosFormulario.length ? (
                     <div role="alert" className="rounded-md border border-perigo-borda bg-perigo-suave p-4 text-sm text-perigo-forte">
                       <p className="font-semibold">Revise o rascunho antes de salvar:</p>
@@ -1833,6 +1964,20 @@ export function PlanoAlimentarProfissional({ pacienteId, podeGerenciar, aoAltera
                       setRefeicoesAbertas((atuais) => new Set(atuais).add(chaveRefeicao));
                     }}
                     desabilitado={Boolean(operacao)}
+                  />
+
+                  <PreferenciasApresentacaoPlano
+                    profissional={formulario.preferenciasApresentacao.profissional}
+                    paciente={formulario.preferenciasApresentacao.paciente}
+                    aoAlterar={atualizarPreferenciaApresentacao}
+                    desabilitado={Boolean(operacao) || copiaEmAndamento}
+                    refeicoes={formulario.refeicoes}
+                    metas={metasSalvas ? {
+                      energiaKcal: metasSalvas.metaEnergeticaKcal,
+                      carboidratosG: metasSalvas.metasMacronutrientes.carboidratosG,
+                      proteinasG: metasSalvas.metasMacronutrientes.proteinasG,
+                      gordurasG: metasSalvas.metasMacronutrientes.gordurasG
+                    } : undefined}
                   />
 
                   <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_20rem]">
@@ -2024,6 +2169,17 @@ export function PlanoAlimentarProfissional({ pacienteId, podeGerenciar, aoAltera
                 </section>
               ) : null}
 
+              {carregandoProjecao ? <p role="status" className="text-sm text-texto-suave">Preparando a apresentação autorizada do paciente…</p> : null}
+              {projecaoPaciente?.modo === 'rascunho' && projecaoPaciente.chave.startsWith(`${pacienteId}:${plano.id}:`) ? (
+                <section className="nao-imprimir grid gap-2" aria-label="Prévia do paciente">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <h3 className="text-base font-semibold text-tinta">Prévia do paciente</h3>
+                    <Botao type="button" variante="fantasma" tamanho="sm" onClick={() => setProjecaoPaciente(null)}>Fechar prévia</Botao>
+                  </div>
+                  <PlanoAlimentarPaciente plano={projecaoPaciente.dados} rotuloPreview="Prévia do rascunho salvo — ainda não publicado" mostrarBotaoImprimir={false} />
+                </section>
+              ) : null}
+
               {carregandoAcompanhamento ? <BarraCarregamento visivel rotulo="Carregando acompanhamento da versão" /> : null}
               {erroAcompanhamento ? <AlertaOperacional mensagem={erroAcompanhamento} /> : null}
               {versaoConsultada && plano.current?.numero !== versaoConsultada.numero ? (
@@ -2053,7 +2209,11 @@ export function PlanoAlimentarProfissional({ pacienteId, podeGerenciar, aoAltera
         </main>
       </div>
 
-      {podeGerenciar && plano?.current ? <ResumoVersao plano={plano} versao={plano.current} /> : null}
+      {projecaoPaciente?.modo === 'impressao' && plano?.current && projecaoPaciente.chave.startsWith(`${pacienteId}:${plano.id}:`) ? (
+        <div className="hidden print:block" data-impressao-paciente-chave={projecaoPaciente.chave}>
+          <PlanoAlimentarPaciente plano={projecaoPaciente.dados} impressaoSomente mostrarBotaoImprimir={false} />
+        </div>
+      ) : null}
 
       {podeGerenciar ? <ModalConfirmacao
         aberto={confirmarCriacao}

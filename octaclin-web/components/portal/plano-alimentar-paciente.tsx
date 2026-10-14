@@ -9,6 +9,9 @@ import type { PlanoAlimentarPacienteApi } from '@/lib/portal-api';
 
 interface PlanoAlimentarPacienteProps {
   plano?: PlanoAlimentarPacienteApi;
+  rotuloPreview?: string;
+  impressaoSomente?: boolean;
+  mostrarBotaoImprimir?: boolean;
 }
 
 function formatarNumero(valor: number, casasDecimais = 0) {
@@ -30,7 +33,12 @@ function descricaoPorcao(quantidade: number, unidade: string, porcaoGramas: numb
   return `${quantidadeFormatada} ${unidade}${porcao}`;
 }
 
-export function PlanoAlimentarPaciente({ plano }: PlanoAlimentarPacienteProps) {
+export function PlanoAlimentarPaciente({
+  plano,
+  rotuloPreview,
+  impressaoSomente = false,
+  mostrarBotaoImprimir = true
+}: PlanoAlimentarPacienteProps) {
   if (!plano) {
     return (
       <Cartao className="print:hidden">
@@ -44,29 +52,45 @@ export function PlanoAlimentarPaciente({ plano }: PlanoAlimentarPacienteProps) {
     );
   }
 
-  const metas = [
+  if (plano.apresentacaoEstado === 'indisponivel') {
+    return (
+      <Cartao className="border border-alerta-borda bg-alerta-suave print:hidden">
+        <CartaoConteudo>
+          <p role="alert" className="text-sm text-alerta-forte">A apresentação deste plano está indisponível. Peça ao profissional responsável para revisar a configuração antes de consultar ou imprimir o conteúdo.</p>
+        </CartaoConteudo>
+      </Cartao>
+    );
+  }
+
+  const preferencias = plano.preferenciasApresentacao;
+  const compacto = preferencias?.modoCompacto === true;
+  const mostrarMedidasCaseiras = preferencias?.medidasCaseiras !== false;
+  const metas = preferencias?.macros === false ? [] : [
     plano.metaEnergeticaKcal !== undefined ? { rotulo: 'Energia', valor: `${formatarNumero(plano.metaEnergeticaKcal)} kcal` } : null,
     plano.macros?.carboidratosG !== undefined ? { rotulo: 'Carboidratos', valor: `${formatarNumero(plano.macros.carboidratosG)} g` } : null,
     plano.macros?.proteinasG !== undefined ? { rotulo: 'Proteínas', valor: `${formatarNumero(plano.macros.proteinasG)} g` } : null,
     plano.macros?.gordurasG !== undefined ? { rotulo: 'Gorduras', valor: `${formatarNumero(plano.macros.gordurasG)} g` } : null
   ].filter((meta): meta is { rotulo: string; valor: string } => meta !== null);
 
+  const descreverPorcao = (quantidade: number, unidade: string, porcaoGramas: number) =>
+    mostrarMedidasCaseiras ? descricaoPorcao(quantidade, unidade, porcaoGramas) : `${formatarNumero(porcaoGramas)} g`;
+
   return (
-    <Cartao className="folha-documento print:border-0 print:shadow-none">
+    <Cartao className={`${impressaoSomente ? 'hidden print:block folha-documento' : rotuloPreview ? 'print:hidden' : 'folha-documento'} print:border-0 print:shadow-none`}>
       <CartaoCabecalho className="print:block">
         <div className="min-w-0">
           <CartaoTitulo icone={<Target className="h-4 w-4 print:hidden" />}>{plano.titulo}</CartaoTitulo>
-          <p className="mt-1 flex items-center gap-1 text-xs text-texto-suave">
-            <CalendarDays className="h-3.5 w-3.5 print:hidden" />
-            Publicado em {formatarData(plano.publicadoEm)}
-          </p>
+          {rotuloPreview ? <p role="status" className="mt-1 text-xs font-medium text-alerta-forte">{rotuloPreview}</p> : null}
+          {plano.publicadoEm ? <p className="mt-1 flex items-center gap-1 text-xs text-texto-suave">
+            <CalendarDays className="h-3.5 w-3.5 print:hidden" />Publicado em {formatarData(plano.publicadoEm)}
+          </p> : null}
         </div>
-        <Botao type="button" variante="secundario" className="print:hidden" onClick={() => window.print()}>
+        {mostrarBotaoImprimir ? <Botao type="button" variante="secundario" className="print:hidden" onClick={() => window.print()}>
           <Printer className="h-4 w-4" />
           Imprimir ou salvar PDF
-        </Botao>
+        </Botao> : null}
       </CartaoCabecalho>
-      <CartaoConteudo className="gap-5 print:gap-4">
+      <CartaoConteudo className={`${compacto ? 'gap-3' : 'gap-5'} print:gap-4`}>
         {plano.objetivo ? (
           <section aria-labelledby="objetivo-plano-alimentar">
             <h3 id="objetivo-plano-alimentar" className="text-sm font-semibold text-tinta">Objetivo</h3>
@@ -74,7 +98,7 @@ export function PlanoAlimentarPaciente({ plano }: PlanoAlimentarPacienteProps) {
           </section>
         ) : null}
 
-        {plano.orientacoes ? (
+        {preferencias?.orientacoes !== false && plano.orientacoes ? (
           <section aria-labelledby="orientacoes-plano-alimentar">
             <h3 id="orientacoes-plano-alimentar" className="text-sm font-semibold text-tinta">Orientações gerais</h3>
             <p className="mt-1 whitespace-pre-wrap break-words text-sm text-texto-suave">{plano.orientacoes}</p>
@@ -99,18 +123,24 @@ export function PlanoAlimentarPaciente({ plano }: PlanoAlimentarPacienteProps) {
           <h3 id="refeicoes-plano-alimentar" className="text-sm font-semibold text-tinta">Refeições</h3>
           {plano.refeicoes.length ? (
             plano.refeicoes.map((refeicao) => (
-              <article key={refeicao.id} className="border border-linha bg-superficie p-3 print:break-inside-avoid">
+              <article key={refeicao.id} className={`border border-linha bg-superficie ${compacto ? 'p-2' : 'p-3'} print:break-inside-avoid`}>
                 <div className="flex flex-wrap items-start justify-between gap-2">
                   <h4 className="text-sm font-semibold text-tinta">{refeicao.nome}</h4>
-                  {refeicao.horarioLocal ? <Etiqueta>{refeicao.horarioLocal}</Etiqueta> : null}
+                  {preferencias?.horario !== false && refeicao.horarioLocal ? <Etiqueta>{refeicao.horarioLocal}</Etiqueta> : null}
                 </div>
-                {refeicao.orientacoes ? <p className="mt-2 whitespace-pre-wrap break-words text-sm text-texto-suave">{refeicao.orientacoes}</p> : null}
+                {preferencias?.orientacoes !== false && refeicao.orientacoes ? <p className="mt-2 whitespace-pre-wrap break-words text-sm text-texto-suave">{refeicao.orientacoes}</p> : null}
                 <ul className="mt-3 grid gap-3" aria-label={`Itens de ${refeicao.nome}`}>
                   {refeicao.itens.map((item) => (
                     <li key={item.id} className="border-t border-linha pt-3 first:border-t-0 first:pt-0">
                       <p className="break-words text-sm font-medium text-tinta">{item.descricao}</p>
-                      <p className="mt-1 text-xs text-texto-suave">{descricaoPorcao(item.quantidade, item.unidade, item.porcaoGramas)}</p>
-                      <TrocasLiberadasItem item={item} descricaoPorcao={descricaoPorcao} />
+                      <p className="mt-1 text-xs text-texto-suave">{descreverPorcao(item.quantidade, item.unidade, item.porcaoGramas)}</p>
+                      <TrocasLiberadasItem
+                        key={`${item.id}:${item.escolhaAtualSubstituicaoId ?? 'principal'}:${plano.apresentacaoEstado === 'configurada' ? String(preferencias?.substituicoesExpandidas) : 'legado'}`}
+                        item={item}
+                        descricaoPorcao={descreverPorcao}
+                        substituicoesExpandidas={plano.apresentacaoEstado === 'configurada' ? preferencias?.substituicoesExpandidas : undefined}
+                        somenteLeitura={Boolean(rotuloPreview || impressaoSomente)}
+                      />
                     </li>
                   ))}
                 </ul>

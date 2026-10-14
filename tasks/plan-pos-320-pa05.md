@@ -3,8 +3,9 @@
 Planejamento autorizado e D01–D03 confirmadas em 2026-10-14. Base `main`
 `64f54b88` (PR #418), conteúdo idêntico ao HEAD aprovado `37d7979`.
 Branch `feat/pos320-pa05-preferencias`; worktree isolada. Implementação
-autorizada pelo proprietário em 2026-10-14 com Sol6.1 médio; pausar antes de
-Luna alto. Backend/contratos implementados; UI e gates finais pendentes.
+autorizada pelo proprietário em 2026-10-14; o usuário confirmou Luna alto para
+T07/T08. Backend/contratos e interface implementados; retorno ao Sol confirmado,
+revisão R4 estática concluída após quatro correções. Gates finais em execução.
 Origem: item 18, Onda 1 do [roadmap](../docs/pos-320/04_Roadmap_Ondas_Pos320_OctaClin.md).
 Checklist: [T00–T09](todo-pos-320-pa05.md).
 
@@ -183,10 +184,10 @@ registrar alternativa, compatibilidade, versão e gates antes de adotar.
 
 ## Gates, execução e modelos
 
-T00 e contrato/backend T01–T06 implementados, com evidências no checklist.
+T00 e T01–T08 implementados, com evidências no checklist.
 Prova PG específica executada com fixture descartável; gate integral de
-Timescale/pgvector continua pendente no CI. T07–T09, revisão R4 independente,
-interface e rollout ainda não concluídos. CI da PA04 não prova PA05.
+Timescale/pgvector continua pendente no CI. Revisão R4 estática independente PASS
+após correções; T09 e rollout ainda não concluídos. CI da PA04 não prova PA05.
 Uma PR de entrega futura reúne estes documentos e a implementação.
 
 GPT-6.1 Sol médio: persistência, CAS, hash, projeção e integração R4.
@@ -196,10 +197,11 @@ Não recomendar Luna sozinho para migration e projeção clínica desta fase.
 Antes de qualquer troca, avisar modelo alvo e pausar para mudança manual.
 Pesquisa restrita a R014/R041 e testes focados primeiro reduzem custo de tokens.
 
-Próxima ação: após confirmação da troca manual para Luna alto, executar T07/T08.
-Não reabrir D01–D03 nem instalar bibliotecas.
+Próxima ação: finalizar os gates locais/CI e preparar T09 com GPT-6.1 Sol médio.
+Não reabrir D01–D03 nem instalar
+bibliotecas.
 
-## Handoff para Luna alto — interface
+## Registro da implementação de interface — Luna alto
 
 Worktree `/workspace/octaclin/.worktrees/pos320-pa05-planejamento`, branch
 `feat/pos320-pa05-preferencias`. Conferir status/log antes de escrever. Backend
@@ -228,7 +230,7 @@ A alteração next-env.d.ts no checkout principal permanece intocada.
   mostrar mensagem, impedir saída/PDF incoerente e permitir reconferência do
   rascunho somente pelo fluxo autorizado. Não imprimir dados de fallback antigo.
 
-### Implementação UI exata
+### Implementação entregue
 
 1. Painel pequeno de preferências, separado do arquivo grande do editor; integrar
    FormularioPlano/formularioDaVersao/payload/dirty/save. Ocultar apresentação
@@ -263,7 +265,12 @@ use PATH correspondente e `corepack pnpm` (11.25.0). Dependências congeladas
 backend/Web instaladas. Nenhuma biblioteca nova. Containers descartáveis foram
 encerrados; PostgreSQL image permanece para repetir testes locais.
 
-Após T07/T08, avisar para retornar a Sol6.1 médio e PAUSAR antes de integrar
-R4/CI/PR T09. Uma PR futura reúne plano/código; nenhuma PR documental separada.
-Não fazer merge/deploy/migration externa. Revisão atual é autorrevisão técnica,
-não revisão independente. Migração1072 precisa de procedimento externo próprio.
+T07/T08 foram implementados na worktree e testados localmente; detalhes e
+contagens estão em [todo-pos-320-pa05.md](todo-pos-320-pa05.md). O retorno ao Sol
+foi confirmado; revisão R4 estática PASS e CI/PR T09 em execução. Uma PR reúne
+plano/código; nenhuma PR
+documental separada.
+Não fazer merge/deploy/migration externa. A autorrevisão inicial não era
+independente; revisão estática cruzada e correções estão em
+[REVISAO_R4_PA05_2026-10-14.md](../docs/governance/REVISAO_R4_PA05_2026-10-14.md).
+Migração1072 precisa de procedimento externo próprio.

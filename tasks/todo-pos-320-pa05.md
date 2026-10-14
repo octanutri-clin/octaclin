@@ -1,8 +1,9 @@
 # PA05 — checklist de planejamento e implementação
 
 Contrato: [plan-pos-320-pa05.md](plan-pos-320-pa05.md). Base main `64f54b88`.
-Implementação autorizada em 2026-10-14; backend implementado, UI pendente. Risco R4 para
-persistência, projeção e API; não executar migrations externas.
+Implementação autorizada em 2026-10-14; backend e UI implementados na worktree.
+Risco R4 independente e gates de entrega permanecem pendentes; não executar
+migrations externas.
 
 ## T00 — planejamento (documental)
 
@@ -68,49 +69,70 @@ persistência, projeção e API; não executar migrations externas.
 ### Checkpoint B
 
 - [x] T04–T06 PASS para a superfície PA05; contrato estabilizado e autorrevisão.
-- [ ] Revisão R4 independente final e gate integral Timescale/pgvector (T09).
-- [ ] Troca manual para Luna alto após aviso/pausa; contrato backend pronto.
+- [x] Revisão R4 estática independente após quatro correções.
+- [ ] Gate integral Timescale/pgvector no CI (T09).
+- [x] Troca manual para Luna alto confirmada; T07–T08 executados nesta etapa.
 
 ## T07 — formulário/preview profissional (depende checkpoint B; 3–5 arquivos)
 
-- [ ] Painel pequeno separado com dois conjuntos; dirty/save explícito e reidratação.
-- [ ] Ocultar apresentação não descarta valores ou validação; alertas sempre visíveis.
-- [ ] Falha/409 mantém estado; cancelamento/troca de paciente aborta/reset sem vazamento.
-- [ ] Verificação: testes UI/helpers, PA01–04/FND02/cópia e typecheck Web.
+- [x] Painel separado com conjuntos profissional/paciente, prévia profissional e salvar explícito.
+- [x] Rascunho reidrata pelo DTO; CAS envia ID e revisão reais; conflito 409 preserva valores locais.
+- [x] Snapshot ilegível bloqueia salvar até revisão explícita; falhas não descartam a edição.
+- [x] Prévia/saída profissional removidas ao editar ou trocar a versão; impressão usa projeção paciente.
+- [x] Playwright sintético cobre defaults/corrupção, CAS, 409, prévia e falha de impressão.
+- [x] Typecheck Web passou; lint direcionado sem erros (avisos existentes documentados abaixo).
 
 ## T08 — portal e impressão (depende T07; 3–5 arquivos)
 
-- [ ] Portal respeita conjunto paciente; principal/gramas/escolha atual sempre claros.
-- [ ] Recolhimento por versão sem alterar limite 1–20; botão acessível para liberadas.
-- [ ] PDF mostra todas as liberadas, nenhuma privada; saída paciente usa DTO backend.
-- [ ] Desktop/mobile, teclado/axe, overflow, estados parciais, print media e preferências.
-- [ ] Verificação: Playwright focado, BFF/nutrição; ampliar por regressão concreta.
+- [x] Portal respeita preferências do paciente; principal, medida e escolha atual continuam claros.
+- [x] Recolhimento por versão com botão acessível; preferências não alteram o limite legado 1–20.
+- [x] PDF usa projeção allowlisted e imprime todas as alternativas autorizadas, sem privadas.
+- [x] Preview de rascunho é somente leitura e explicitamente marcado; impressão sempre busca versão publicada.
+- [x] Falha/requisição obsoleta não imprime projeção antiga; desktop/mobile, Axe e overflow cobertos.
+- [x] Suíte conjunta final: PA05 8/8 + portal/cópia 42/42 em desktop/mobile, total 50/50.
 
 ### Checkpoint C
 
-- [ ] T07–T08 PASS; revisão Sol médio de integração, diff clínico e impressão.
+- [x] T07–T08 PASS nos checks locais descritos abaixo; sem erro de typecheck ou lint.
+- [x] Revisão Sol6.1 médio e revisão independente; quatro defeitos reproduzidos/corrigidos.
 
 ## T09 — entrega única (depende checkpoint C)
 
 - [ ] Backend/Web lint/typecheck/build, suítes proporcionais e segredo/diff PASS.
-- [ ] Revisão R4 cruzada com autoria/limites, sem alegar independência por autorrevisão.
+- [x] Revisão R4 cruzada com autoria/limites em `docs/governance/REVISAO_R4_PA05_2026-10-14.md`.
 - [ ] Uma PR integra código/documentos; CI do HEAD, scanners, Demo e PR Gate PASS.
 - [ ] Migration externa/deploy/ativação SKIPPED até autorização e alvo confirmado.
 - [ ] Atualizar gates reais, handoff, rollback e procedimento de implantação aditiva.
 
 ## Evidências desta rodada
 
+T07–T08 (Luna alto) implementados e validados nesta worktree: `pnpm typecheck`
+PASS; lint focado PASS sem erros, com avisos em hooks/refs no arquivo profissional
+(4 avisos de hooks/refs) e middleware deprecado pelo Next; Playwright PA05 dedicado
+6/6 PASS (3 cenários desktop/mobile, incluindo descarte de resposta após troca de
+plano); regressões direcionadas de portal e cópia 6/6 PASS (3 cenários
+desktop/mobile). Uma tentativa anterior da suíte ampla de 38 testes foi cancelada
+após timeouts com servidor Next órfão; os cenários relevantes passaram ao reiniciar
+o servidor. `git diff --check` PASS. Nenhuma migration externa, PR, merge ou deploy
+foi executado.
+
+T09 continua pendente: gates finais e CI completo do HEAD da PR única.
+A revisão estática independente R4 foi concluída após as correções do Sol.
+Não confundir os checks locais com os
+gates de PR nem com liberação assistencial.
+
 PASS: leitura de Git e contratos, merge #418 (`64f54b88`), comparação de árvores
 com HEAD aprovado (`37d7979`), `gh pr checks 418` e steps do backend
 [116065449406](https://github.com/octanutri-clin/octaclin/actions/runs/38625821164/job/116065449406).
-São evidências PA04; testes PA05 ainda não executados. SBOM provenance PA04
+Esse bloco registra evidências históricas de PA04 consultadas no T00; não substitui
+os testes PA05 registrados acima. SBOM provenance PA04
 SKIPPED conforme workflow, não PASS. Nenhum ambiente externo consultado/alterado.
 
 Verificações documentais finais PASS: `git diff --check`, 23 links locais
 conferidos sem ausências e `pnpm security:secrets`. Scanner executado com Node
 24.19.0/pnpm 11.19.0, com aviso de engine; não prova os gates do runtime alvo.
 Para implementação, usar Node >=22 <23 e pnpm 11.25.0 conforme package.json.
-T01–T06 implementados e validados para a superfície PA05. T07–T09 pendentes.
+T01–T08 implementados e validados para a superfície PA05. T09 pendente.
 
 ## Checkpoint técnico Sol → Luna
 
@@ -126,5 +148,25 @@ T01–T06 implementados e validados para a superfície PA05. T07–T09 pendentes
   duas bordas de clone que transformavam perda de snapshot em legado.
 - Evidências finais, comandos e contagens em
   `docs/governance/EVIDENCIAS_PA05_BACKEND_2026-10-14.md`.
-- Revisão independente/Playwright/UI/CI/PR ainda pendentes. Sem banco externo,
-  merge, deploy ou ativação. Uma PR final reunirá o trabalho.
+- Neste checkpoint histórico backend, revisão R4/CI/PR ainda estavam pendentes.
+  A revisão estática R4 final e o resultado UI estão registrados abaixo.
+
+## Integração final Sol6.1 médio
+
+- PASS: revisão R4 estática independente após quatro achados corrigidos com RED,
+  sem novo achado concreto na reinspeção; relatório em
+  `docs/governance/REVISAO_R4_PA05_2026-10-14.md`.
+- PASS: suíte visual conjunta 50/50, incluindo 8 casos PA05 e 42 regressões de
+  portal/cópia, desktop/mobile, print media e Axe nas preferências.
+- PASS: 4/4 casos adicionais de teclado/acessibilidade, incluindo troca de
+  checkbox por Space e regressão do estado vazio do plano no portal.
+- PASS: typecheck/build backend e nova prova PostgreSQL15 real 2/2 PA05;
+  os 32 casos não selecionados nesta fixture são SKIPPED, não PASS.
+- PASS: Web lint completo, 0 erros/66 avisos; scanner de secrets, governança de
+  migrations, matriz de confiabilidade e guardas de controladores.
+- Em execução: Web build/typecheck final, autorização BFF completa e CI da PR.
+- SKIPPED local: gate integral Timescale/pgvector por espaço Docker disponível;
+  será conferido no CI. PowerShell preflight não está instalado neste host;
+  verificações documentais proporcionais executadas e governança no CI.
+- Sem merge, deploy, migration externa ou ativação. Migração1072 precisa do
+  procedimento separado em `docs/governance/IMPLANTACAO_PA05_MIGRATION_1072.md`.

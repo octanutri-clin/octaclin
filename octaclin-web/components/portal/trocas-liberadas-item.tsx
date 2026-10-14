@@ -13,6 +13,8 @@ import { cn } from '@/lib/utils';
 interface TrocasLiberadasItemProps {
   item: ItemPlanoAlimentarPacienteApi;
   descricaoPorcao: (quantidade: number, unidade: string, porcaoGramas: number) => string;
+  substituicoesExpandidas?: boolean;
+  somenteLeitura?: boolean;
 }
 
 interface Opcao {
@@ -22,13 +24,14 @@ interface Opcao {
   preferida: boolean;
 }
 
-export function TrocasLiberadasItem({ item, descricaoPorcao }: TrocasLiberadasItemProps) {
+export function TrocasLiberadasItem({ item, descricaoPorcao, substituicoesExpandidas, somenteLeitura = false }: TrocasLiberadasItemProps) {
   // `undefined` significa "seguindo o alimento principal", que e o estado em que
   // todo plano publicado comeca.
   const [escolhida, definirEscolhida] = React.useState(item.escolhaAtualSubstituicaoId);
   const [pendente, definirPendente] = React.useState<Opcao | null>(null);
   const [salvando, definirSalvando] = React.useState(false);
   const [erro, definirErro] = React.useState<string | null>(null);
+  const [substituicoesAbertas, definirSubstituicoesAbertas] = React.useState(substituicoesExpandidas !== false);
   const [expandida, definirExpandida] = React.useState(false);
 
   const opcoes: Opcao[] = [
@@ -48,8 +51,19 @@ export function TrocasLiberadasItem({ item, descricaoPorcao }: TrocasLiberadasIt
   // O limite conta as alternativas, e nao o principal: o alimento principal
   // sempre aparece, senao o paciente perde a referencia do que esta trocando.
   const limite = item.substituicoesVisiveisInicialmente;
-  const recolhidas = !expandida && limite !== undefined ? item.substituicoes.length - limite : 0;
-  const visiveis = recolhidas > 0 ? opcoes.slice(0, limite! + 1) : opcoes;
+  const recolhidasPorPreferencia = !substituicoesAbertas;
+  const visiveisIniciais = recolhidasPorPreferencia
+    ? opcoes.slice(0, 1)
+    : !expandida && limite !== undefined
+      ? opcoes.slice(0, limite! + 1)
+      : opcoes;
+  // A escolha registrada permanece identificada mesmo quando estiver fora
+  // do grupo aberto ou do limite inicial; isso não libera nova alternativa.
+  const opcaoEscolhida = opcoes.find((opcao) => opcao.id === escolhida);
+  const visiveis = opcaoEscolhida && !visiveisIniciais.includes(opcaoEscolhida)
+    ? [...visiveisIniciais, opcaoEscolhida]
+    : visiveisIniciais;
+  const recolhidas = opcoes.length - visiveis.length;
 
   async function confirmar() {
     if (!pendente) return;
@@ -75,12 +89,17 @@ export function TrocasLiberadasItem({ item, descricaoPorcao }: TrocasLiberadasIt
       <p className="text-xs font-semibold text-texto-suave" id={`trocas-${item.id}`}>
         Trocas liberadas
       </p>
-      <ul className="mt-1 grid gap-1" role="radiogroup" aria-labelledby={`trocas-${item.id}`}>
+      <ul className="mt-1 grid gap-1 print:hidden" role={somenteLeitura ? undefined : 'radiogroup'} aria-labelledby={`trocas-${item.id}`}>
         {visiveis.map((opcao) => {
           const selecionada = opcao.id === escolhida;
           return (
             <li key={opcao.id ?? 'principal'}>
-              <button
+              {somenteLeitura ? (
+                <p className={`border px-2 py-1.5 text-xs ${selecionada ? 'border-primaria bg-superficie font-medium text-tinta' : 'border-linha bg-white text-texto-suave'}`}>
+                  {opcao.descricao} - {opcao.porcao}{opcao.id === undefined ? ' (alimento principal)' : ''}{opcao.preferida ? ' (recomendada)' : ''}
+                  {selecionada ? ' — opção atual' : ''}
+                </p>
+              ) : <button
                 type="button"
                 role="radio"
                 aria-checked={selecionada}
@@ -100,6 +119,7 @@ export function TrocasLiberadasItem({ item, descricaoPorcao }: TrocasLiberadasIt
                 <span className="min-w-0 break-words">
                   {opcao.descricao} - {opcao.porcao}
                   {opcao.id === undefined ? ' (alimento principal)' : ''}
+                  {selecionada ? ' — opção atual' : ''}
                   {opcao.preferida ? (
                     <Etiqueta className="ml-1 align-middle">
                       <Star className="h-3 w-3" aria-hidden />
@@ -107,7 +127,7 @@ export function TrocasLiberadasItem({ item, descricaoPorcao }: TrocasLiberadasIt
                     </Etiqueta>
                   ) : null}
                 </span>
-              </button>
+              </button>}
             </li>
           );
         })}
@@ -118,11 +138,20 @@ export function TrocasLiberadasItem({ item, descricaoPorcao }: TrocasLiberadasIt
           type="button"
           variante="secundario"
           className="mt-1 print:hidden"
-          onClick={() => definirExpandida(true)}
+          onClick={() => recolhidasPorPreferencia ? definirSubstituicoesAbertas(true) : definirExpandida(true)}
         >
-          Ver mais {recolhidas} {recolhidas === 1 ? 'opção' : 'opções'}
+          {recolhidasPorPreferencia ? `Ver substituições (${recolhidas})` : `Ver mais ${recolhidas} ${recolhidas === 1 ? 'opção' : 'opções'}`}
         </Botao>
       ) : null}
+
+      <ul className="hidden print:grid print:gap-1" aria-label={`Todas as substituições liberadas de ${item.descricao}`}>
+        {opcoes.map((opcao) => (
+          <li key={opcao.id ?? 'principal'} className="text-xs text-texto-suave">
+            {opcao.descricao} — {opcao.porcao}{opcao.id === undefined ? ' (alimento principal)' : ''}{opcao.preferida ? ' (recomendada)' : ''}
+            {opcao.id === escolhida ? ' — opção atual' : ''}
+          </li>
+        ))}
+      </ul>
 
       {erro ? <Aviso variante="erro" mensagem={erro} className="mt-2" aoFechar={() => definirErro(null)} /> : null}
 

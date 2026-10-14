@@ -1,23 +1,38 @@
-# Handoff atual — PA05: backend validado, pausa antes de Luna alto
+# Handoff atual — PA05: integração Sol e T09 em execução
 
 Worktree `/workspace/octaclin/.worktrees/pos320-pa05-planejamento`, branch
 `feat/pos320-pa05-preferencias`, base `64f54b88` (#418). Implementação autorizada
-em 2026-10-14 com Sol6.1 médio; aviso/pausa exigidos antes da troca manual.
+em 2026-10-14; UI entregue por Luna alto e retorno manual ao Sol confirmado.
 
 - [Contrato e handoff detalhado Luna](plan-pos-320-pa05.md);
   [T00–T09](todo-pos-320-pa05.md);
   [evidências backend](../docs/governance/EVIDENCIAS_PA05_BACKEND_2026-10-14.md).
 - D01–D03 mantidas: dois conjuntos, snapshot por versão e liberadas recolhidas.
   R014/R041 apenas referências; nenhuma nova dependência.
+- Revisão R4 independente estática final PASS após quatro achados corrigidos
+  com RED: escolha atual escondida, limite ignorado, prévia obsoleta após edição
+  e medidas nas alternativas profissionais. Relatório:
+  [REVISAO_R4_PA05_2026-10-14.md](../docs/governance/REVISAO_R4_PA05_2026-10-14.md).
 - Backend, DTOs, cifra/CAS, clone/hash/publicação, projeção paciente e BFF/tipos
   entregues. Refinamento comprovado: revisão1 para snapshot herdado; zero só
   legado. Isso impede que perda do snapshot pareça ausência legítima.
+- T07–T08 implementados: formulário versionado com CAS/reconferência de snapshot,
+  prévia profissional, preview de rascunho somente leitura, portal e impressão/PDF
+  pela projeção paciente, substituições recolhidas conforme preferência e falha
+  segura sem reutilizar conteúdo antigo.
+- Verificações locais Luna: typecheck Web PASS; Playwright PA05 focado 6/6 PASS;
+  regressões direcionadas de portal/cópia 6/6 PASS desktop/mobile; lint focado sem
+  erros (avisos de hooks/refs no componente profissional). Sem build/CI integral,
+  revisão R4 ou PR. A tentativa ampla de 38 casos foi interrompida por timeouts
+  com servidor Next órfão; os casos relevantes passaram após reinício limpo.
 - PostgreSQL 15 local descartável: provas PA05 reais com RLS/concorrência PASS.
   Fixture omite extensões Timescale/pgvector fora do escopo; gate integral
   Testcontainers padrão será validado no CI. ENOSPC anterior não é aprovação.
-- Próxima ação após troca manual: Luna alto executa T07/T08 conforme handoff;
-  ao terminar, avisar/pausar para Sol6.1 médio validar R4/CI e abrir PR única T09.
-- Nenhuma PR aberta nesta pausa; migração1072 somente na fixture local. Não
+- Próxima ação: concluir gates locais no Node22/pnpm11.25, commit/PR única e
+  verificar CI do HEAD. Suíte conjunta de 50 cenários UI e authz em execução;
+  backend typecheck/build e prova PG específica passaram novamente nesta rodada.
+- PR única preparada inicialmente como Draft para validar CI; migração1072
+  somente na fixture local. Não
   aplicar em staging/produção, nem fazer merge/deploy. Autorrevisão não substitui
   revisão independente. Outros checkouts/alteração next-env.d.ts preservados.
 

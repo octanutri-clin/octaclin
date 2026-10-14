@@ -159,4 +159,10 @@ opt-in para PostgreSQL15 descartável quando Docker VFS não comporta a imagem
 HA. Não valida Timescale/hypertables nem pgvector; não substitui o gate integral.
 A rota de preview também exige sessão/permissão e descarta escopo arbitrário,
 provados por `pnpm --dir octaclin-web test:planos-alimentares:bff`.
-UI/PDF, revisão independente e CI da entrega PA05 permanecem pendentes até T09.
+UI/PDF implementados; testes sintéticos em
+`octaclin-web/tests/visual/fase-320-pa05-apresentacao.spec.mjs` e
+`octaclin-web/tests/visual/portal-paciente.spec.mjs` cobrem CAS/409, corrupção,
+projeção privada, print media, troca de plano/edição durante GET pendente,
+escolha atual e limite de opções. Revisão estática R4 independente PASS após
+quatro correções; evidências em `docs/governance/REVISAO_R4_PA05_2026-10-14.md`.
+Gates finais/CI da entrega PA05 permanecem pendentes até T09.
