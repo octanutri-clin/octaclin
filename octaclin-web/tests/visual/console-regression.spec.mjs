@@ -3231,6 +3231,101 @@ test.describe('prontuario do paciente', () => {
     await assertSemOverflowHorizontal(page);
   });
 
+  test('reordena refeições por botões e salva a ordem', async ({ page }) => {
+    await prepararProntuarioMockado(page, {
+      permissoesExtras: ['planos_alimentares.ler', 'planos_alimentares.gerenciar']
+    });
+    const refeicoesOriginais = [
+      { id: 'refeicao-cafe', nome: 'Café da manhã', horarioLocal: '08:00' },
+      { id: 'refeicao-almoco', nome: 'Almoço', horarioLocal: '12:00' },
+      { id: 'refeicao-jantar', nome: 'Jantar', horarioLocal: '19:00' }
+    ];
+    const itemBase = (id) => ({
+      id: `item-${id}`, ordem: 0, descricao: `Alimento ${id}`, quantidade: 1, unidade: 'porção', porcaoGramas: 100,
+      composicaoSnapshot: { nutrientesPor100g: { energiaKcal: 100, proteinasG: 5, carboidratosG: 10, gordurasG: 3 } },
+      substituicoes: []
+    });
+    const montarRefeicoes = (nomes) => nomes.map((nome, ordem) => {
+      const original = refeicoesOriginais.find((refeicao) => refeicao.nome === nome);
+      return { id: original.id, ordem, nome, horarioLocal: original.horarioLocal, itens: [itemBase(original.id)] };
+    });
+    let nomesSalvos = refeicoesOriginais.map((refeicao) => refeicao.nome);
+    let corpoSalvo;
+    const versaoAtual = {
+      id: 'versao-publicada-pa01', numero: 1, status: 'publicada', publicadaEm: '2026-10-01T12:00:00.000Z',
+      criadoEm: '2026-10-01T12:00:00.000Z', atualizadoEm: '2026-10-01T12:00:00.000Z', objetivos: 'Objetivo sintético.',
+      refeicoes: montarRefeicoes(nomesSalvos)
+    };
+    const versaoRascunho = {
+      id: 'versao-rascunho-pa01', numero: 2, status: 'rascunho', avaliacaoAntropometricaId: 'avaliacao-pa01',
+      criadoEm: '2026-10-02T12:00:00.000Z', atualizadoEm: '2026-10-02T12:00:00.000Z', objetivos: 'Objetivo sintético.',
+      calculo: {
+        fatorAtividade: 1.4, ajusteEnergeticoKcal: 0, metaEnergeticaKcal: 2000,
+        metasMacronutrientes: { carboidratosG: 250, proteinasG: 100, gordurasG: 67 },
+        distribuicaoMacros: { carboidratosBasisPoints: 5000, proteinasBasisPoints: 2000, gordurasBasisPoints: 3000 },
+        possuiCondicaoEspecial: false, aplicabilidadeFormulaConfirmada: true
+      },
+      refeicoes: montarRefeicoes(nomesSalvos)
+    };
+    const detalhePlano = () => ({
+      id: 'plano-pa01', pacienteId: 'paciente-1', profissionalId: 'profissional-1', titulo: 'Plano de teste PA01',
+      criadoEm: '2026-10-01T12:00:00.000Z', atualizadoEm: '2026-10-02T12:00:00.000Z',
+      current: versaoAtual, draft: { ...versaoRascunho, refeicoes: montarRefeicoes(nomesSalvos) }, historico: [versaoAtual]
+    });
+
+    await page.route('**/api/pacientes/paciente-1/planos-alimentares?**', async (route) => route.fulfill({
+      status: 200, contentType: 'application/json', body: JSON.stringify({
+        itens: [{ id: 'plano-pa01', pacienteId: 'paciente-1', profissionalId: 'profissional-1', titulo: 'Plano de teste PA01',
+          criadoEm: '2026-10-01T12:00:00.000Z', atualizadoEm: '2026-10-02T12:00:00.000Z', current: versaoAtual,
+          draft: { id: versaoRascunho.id, numero: versaoRascunho.numero, status: versaoRascunho.status }, historicoQuantidade: 2 }],
+        total: 1, pagina: 1, limite: 100
+      })
+    }));
+    await page.route('**/api/pacientes/paciente-1/planos-alimentares/plano-pa01/rascunho', async (route) => {
+      if (route.request().method() === 'PUT') {
+        corpoSalvo = route.request().postDataJSON();
+        nomesSalvos = corpoSalvo.refeicoes.map((refeicao) => refeicao.nome);
+        await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({
+          ...versaoRascunho, ...corpoSalvo, refeicoes: montarRefeicoes(nomesSalvos), numero: 2
+        }) });
+        return;
+      }
+      await route.fallback();
+    });
+    await page.route('**/api/pacientes/paciente-1/planos-alimentares/plano-pa01', async (route) => {
+      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(detalhePlano()) });
+    });
+    await page.route('**/api/pacientes/paciente-1/avaliacoes-antropometricas', async (route) => route.fulfill({
+      status: 200, contentType: 'application/json', body: JSON.stringify({ avaliacoes: [{
+        id: 'avaliacao-pa01', pacienteId: 'paciente-1', avaliadaEm: '2026-10-01', protocolo: 'nenhum',
+        medidas: {}, resultado: { protocoloAplicado: 'nenhum', avisos: [] }, metricasCompartilhadasPortal: [], criadoEm: '2026-10-01T12:00:00.000Z'
+      }], deltaUltimas: [] })
+    }));
+
+    await page.goto('/pacientes/paciente-1');
+    await page.getByRole('tab', { name: 'Plano', exact: true }).click();
+    await page.getByRole('tab', { name: 'Plano alimentar', exact: true }).click();
+    const moverAlmocoParaCima = page.getByRole('button', { name: 'Mover refeição Almoço para cima' });
+    await moverAlmocoParaCima.focus();
+    await moverAlmocoParaCima.press('Enter');
+    await expect.poll(() => page.getByLabel('Nome da refeição').evaluateAll((campos) => campos.map((campo) => campo.value)))
+      .toEqual(['Almoço', 'Café da manhã', 'Jantar']);
+
+    const moverJantarParaCima = page.getByRole('button', { name: 'Mover refeição Jantar para cima' });
+    await moverJantarParaCima.focus();
+    await moverJantarParaCima.press('Enter');
+    await expect.poll(() => page.getByLabel('Nome da refeição').evaluateAll((campos) => campos.map((campo) => campo.value)))
+      .toEqual(['Almoço', 'Jantar', 'Café da manhã']);
+    await page.getByRole('button', { name: 'Salvar rascunho' }).click();
+    await expect.poll(() => corpoSalvo?.refeicoes?.map((refeicao) => refeicao.nome))
+      .toEqual(['Almoço', 'Jantar', 'Café da manhã']);
+    await page.reload();
+    await page.getByRole('tab', { name: 'Plano', exact: true }).click();
+    await page.getByRole('tab', { name: 'Plano alimentar', exact: true }).click();
+    await expect.poll(() => page.getByLabel('Nome da refeição').evaluateAll((campos) => campos.map((campo) => campo.value)))
+      .toEqual(['Almoço', 'Jantar', 'Café da manhã']);
+  });
+
   test('edita o modelo em cópia isolada e restaura versão como nova revisão', async ({ page }) => {
     await prepararProntuarioMockado(page, {
       permissoesExtras: ['planos_alimentares.ler', 'planos_alimentares.gerenciar']
