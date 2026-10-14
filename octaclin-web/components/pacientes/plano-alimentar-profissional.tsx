@@ -1120,6 +1120,18 @@ export function PlanoAlimentarProfissional({ pacienteId, podeGerenciar, aoAltera
   const [sucesso, setSucesso] = useState<string | null>(null);
   const [errosFormulario, setErrosFormulario] = useState<string[]>([]);
   const [alterado, setAlterado] = useState(false);
+  const [copiaEmAndamento, setCopiaEmAndamento] = useState(false);
+  const copiaEmAndamentoRef = useRef<symbol | null>(null);
+  const iniciarCopia = useCallback(() => {
+    const token = Symbol('copia-refeicao');
+    copiaEmAndamentoRef.current = token;
+    setCopiaEmAndamento(true);
+    return () => {
+      if (copiaEmAndamentoRef.current !== token) return;
+      copiaEmAndamentoRef.current = null;
+      setCopiaEmAndamento(false);
+    };
+  }, []);
   const formularioAtualRef = useRef(formulario);
   useLayoutEffect(() => {
     formularioAtualRef.current = formulario;
@@ -1275,7 +1287,7 @@ export function PlanoAlimentarProfissional({ pacienteId, podeGerenciar, aoAltera
   }
 
   async function executar(rotulo: string, tarefa: () => Promise<unknown>, mensagem: string, preferido = planoId) {
-    if (!podeGerenciar) return;
+    if (!podeGerenciar || copiaEmAndamentoRef.current) return;
     setOperacao(rotulo);
     setErro(null);
     setSucesso(null);
@@ -1291,7 +1303,7 @@ export function PlanoAlimentarProfissional({ pacienteId, podeGerenciar, aoAltera
   }
 
   async function criar() {
-    if (!podeGerenciar) return;
+    if (!podeGerenciar || copiaEmAndamentoRef.current) return;
     const titulo = tituloNovo.trim();
     if (!titulo) return;
     setOperacao('criando');
@@ -1316,7 +1328,7 @@ export function PlanoAlimentarProfissional({ pacienteId, podeGerenciar, aoAltera
   }
 
   async function salvar() {
-    if (!podeGerenciar || !plano?.draft) return;
+    if (!podeGerenciar || !plano?.draft || copiaEmAndamentoRef.current) return;
     const erros = validarFormulario(formulario);
     setErrosFormulario(erros);
     if (erros.length) return;
@@ -1352,28 +1364,24 @@ export function PlanoAlimentarProfissional({ pacienteId, podeGerenciar, aoAltera
     destino: { tipo: 'nova' } | { tipo: 'acrescentar'; chaveRefeicao?: string }
   ) {
     const atual = formularioAtualRef.current;
-    try {
-      let refeicoes: RefeicaoFormulario[];
-      if (destino.tipo === 'nova') {
-        if (atual.refeicoes.length >= LIMITE_REFEICOES_PLANO) {
-          throw new Error(`O plano atingiu o limite de ${LIMITE_REFEICOES_PLANO} refeições.`);
-        }
-        refeicoes = [...atual.refeicoes, refeicao];
-      } else {
-        const indice = atual.refeicoes.findIndex((item) => item.chaveCliente === destino.chaveRefeicao);
-        if (indice < 0) throw new Error('A refeição de destino não está mais disponível. Selecione-a novamente.');
-        refeicoes = atual.refeicoes.map((item, posicao) => posicao === indice
-          ? acrescentarItensDeRefeicao(item, refeicao.itens, novaChaveCliente)
-          : item);
+    let refeicoes: RefeicaoFormulario[];
+    if (destino.tipo === 'nova') {
+      if (atual.refeicoes.length >= LIMITE_REFEICOES_PLANO) {
+        throw new Error(`O plano atingiu o limite de ${LIMITE_REFEICOES_PLANO} refeições.`);
       }
-      atualizar(() => ({ ...atual, refeicoes }));
-      setSucesso(destino.tipo === 'nova'
-        ? 'Refeição copiada para o rascunho. Revise e salve para recalcular.'
-        : 'Alimentos e substituições acrescentados ao rascunho. Revise e salve para recalcular.');
-      setErro(null);
-    } catch (falha) {
-      setErro(mensagemFalhaInterface(falha, 'Não foi possível aplicar a refeição copiada.'));
+      refeicoes = [...atual.refeicoes, refeicao];
+    } else {
+      const indice = atual.refeicoes.findIndex((item) => item.chaveCliente === destino.chaveRefeicao);
+      if (indice < 0) throw new Error('A refeição de destino não está mais disponível. Selecione-a novamente.');
+      refeicoes = atual.refeicoes.map((item, posicao) => posicao === indice
+        ? acrescentarItensDeRefeicao(item, refeicao.itens, novaChaveCliente)
+        : item);
     }
+    atualizar(() => ({ ...atual, refeicoes }));
+    setSucesso(destino.tipo === 'nova'
+      ? 'Refeição copiada para o rascunho. Revise e salve para recalcular.'
+      : 'Alimentos e substituições acrescentados ao rascunho. Revise e salve para recalcular.');
+    setErro(null);
   }
 
   function finalizarArrasteRefeicao(evento: DragEndEvent) {
@@ -1584,6 +1592,7 @@ export function PlanoAlimentarProfissional({ pacienteId, podeGerenciar, aoAltera
                     refeicoesDestino={formulario.refeicoes}
                     gerarChave={novaChaveCliente}
                     aoAplicar={aplicarRefeicaoCopiada}
+                    aoIniciarCopia={iniciarCopia}
                     desabilitado={Boolean(operacao)}
                   />
 
@@ -1721,9 +1730,10 @@ export function PlanoAlimentarProfissional({ pacienteId, podeGerenciar, aoAltera
                       com a folha expandida, tabular ate Salvar deixaria o foco
                       escondido atras dela (WCAG 2.2 SC 2.4.11). */}
                   <div className="sticky bottom-20 z-30 flex flex-wrap justify-end gap-2 rounded-md border border-linha bg-white p-3 shadow-cartao lg:bottom-3 lg:z-10">
-                    <Botao type="submit" variante="primario" carregando={operacao === 'salvando'} disabled={Boolean(operacao)}><Save size={16} /> Salvar rascunho</Botao>
-                    <Botao type="button" carregando={operacao === 'revisando'} disabled={alterado || Boolean(operacao) || !plano.draft.calculo} onClick={() => void executar('revisando', () => revisarPlanoAlimentar(pacienteId, plano.id), 'Plano revisado. Confira a versão antes de publicar.')}><ClipboardCheck size={16} /> Revisar</Botao>
-                    <Botao type="button" variante="primario" carregando={operacao === 'publicando'} disabled={alterado || Boolean(operacao) || !plano.draft.revisadaEm} onClick={() => void executar('publicando', () => publicarPlanoAlimentar(pacienteId, plano.id), 'Plano publicado para o paciente.')}><CheckCircle2 size={16} /> Publicar</Botao>
+                    {copiaEmAndamento ? <p role="status" className="w-full text-sm text-texto-suave">Aguarde a cópia antes de salvar, revisar ou publicar.</p> : null}
+                    <Botao type="submit" variante="primario" carregando={operacao === 'salvando'} disabled={Boolean(operacao) || copiaEmAndamento}><Save size={16} /> Salvar rascunho</Botao>
+                    <Botao type="button" carregando={operacao === 'revisando'} disabled={alterado || Boolean(operacao) || copiaEmAndamento || !plano.draft.calculo} onClick={() => void executar('revisando', () => revisarPlanoAlimentar(pacienteId, plano.id), 'Plano revisado. Confira a versão antes de publicar.')}><ClipboardCheck size={16} /> Revisar</Botao>
+                    <Botao type="button" variante="primario" carregando={operacao === 'publicando'} disabled={alterado || Boolean(operacao) || copiaEmAndamento || !plano.draft.revisadaEm} onClick={() => void executar('publicando', () => publicarPlanoAlimentar(pacienteId, plano.id), 'Plano publicado para o paciente.')}><CheckCircle2 size={16} /> Publicar</Botao>
                   </div>
                 </form>
               ) : (
