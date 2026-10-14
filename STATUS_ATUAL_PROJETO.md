@@ -15,7 +15,7 @@ Atualizado em 2026-10-14.
   erros/10 avisos de hooks existentes. Revisão R4 estática confirmou as
   correções; relatório `docs/governance/REVISAO_R4_PA04_2026-10-14.md`.
   PostgreSQL/Testcontainers BLOCKED por ENOSPC no Docker VFS; 64 casos não
-  executaram. CI remoto ainda pendente. Sem
+  executaram. PR Draft #418 aberta; CI remoto ainda pendente. Sem
   migration/ambiente externo. Plano `tasks/plan-pos-320-pa04.md`; checklist
   `tasks/todo-pos-320-pa04.md`.
 - **PA03 — integrada pela PR #417**, main `6f0be7d`, idêntica ao HEAD aprovado

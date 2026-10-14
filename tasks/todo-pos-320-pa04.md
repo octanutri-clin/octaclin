@@ -79,8 +79,8 @@ Planejamento consolidado; D01–D03 confirmadas. CI/PR ainda não criados.
 - [x] Lint focado: 0 erros/10 avisos de regras React hooks existentes.
 - [x] Builds Web/backend e TypeScript; build Web emite aviso upstream do Next sobre API Node no Edge Runtime e depreciação de middleware.
 - [ ] Suíte PostgreSQL real BLOCKED por `ENOSPC` no Testcontainers/Docker VFS; 64 casos não executaram.
-- [ ] CI remoto, scanners da PR e Demo após abertura da PR.
-- [ ] Uma PR reúne plano e código; CI do HEAD/Scanners/Demo conferidos.
+- [x] Uma PR Draft #418 reúne plano e código.
+- [ ] CI do HEAD, scanners e Demo da PR #418 conferidos; pendentes neste checkpoint.
 - [ ] Rollback conserva histórico; sem merge, deploy ou migration externa.
 
-Evidência atual: projeção, listagem, BFF e UI implementados; revisão R4 estática confirmou as correções e Playwright atualizado passou 4/4. PostgreSQL real permanece BLOCKED por ENOSPC no Docker VFS. Builds locais, typechecks, backend 44/44, BFF 26/26, lint e verificações estáticas passaram. CI remota/PR pendentes. Staging, produção, deploy e migration externa SKIPPED; sem migration necessária.
+Evidência atual: projeção, listagem, BFF e UI implementados; revisão R4 estática confirmou as correções e Playwright atualizado passou 4/4. PostgreSQL real permanece BLOCKED por ENOSPC no Docker VFS. Builds locais, typechecks, backend 44/44, BFF 26/26, lint e verificações estáticas passaram. PR Draft #418 aberta; CI/scanners/Demo pendentes. Staging, produção, deploy e migration externa SKIPPED; sem migration necessária.

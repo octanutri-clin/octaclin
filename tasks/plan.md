@@ -24,8 +24,8 @@ PA04 — resumo de macros na lista de planos. Worktree isolada, base main
   não executaram. A imagem de teste foi removida após a tentativa. Revisão R4
   independente estática confirmou as correções sem executar testes; as
   regressões R4 locais passaram posteriormente.
-- CI remoto e PR pendentes. Nenhuma migration, staging, produção, deploy ou
-  ativação.
+- PR Draft #418 aberta para executar os gates em CI; checagens remotas pendentes
+  neste checkpoint. Nenhuma migration, staging, produção, deploy ou ativação.
 - Sem PR/CI. Nenhuma migration, staging, produção, deploy ou ativação.
 
 ---

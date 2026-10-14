@@ -4644,7 +4644,7 @@ auditoria estão ordenados na seção 15 de
   Revisão R4 estática confirmou correções sem executar testes; Playwright local
   posterior passou (relatório `docs/governance/REVISAO_R4_PA04_2026-10-14.md`).
   PostgreSQL/Testcontainers BLOCKED por ENOSPC no Docker VFS; 64 casos não
-  executaram. CI remoto pendente. Sem migration ou mudanças
+  executaram. PR Draft #418 aberta; CI remoto pendente. Sem migration ou mudanças
   externas; plano e checklist em `tasks/plan-pos-320-pa04.md` e
   `tasks/todo-pos-320-pa04.md`.
 
