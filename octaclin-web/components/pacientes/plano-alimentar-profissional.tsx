@@ -1,6 +1,8 @@
 'use client';
 
 import { useCallback, useEffect, useId, useRef, useState } from 'react';
+import { closestCenter, DndContext, KeyboardSensor, PointerSensor, type DragEndEvent, useSensor, useSensors } from '@dnd-kit/core';
+import { arrayMove, sortableKeyboardCoordinates, SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import {
   Archive,
   ArrowDown,
@@ -21,6 +23,7 @@ import { Cartao, CartaoCabecalho, CartaoConteudo, CartaoSubtitulo, CartaoTitulo 
 import { AreaTexto, Campo, Rotulo, Selecao } from '@/components/ui/campo';
 import { AlertaOperacional, BarraCarregamento, EstadoVazio } from '@/components/ui/feedback';
 import { ModalConfirmacao } from '@/components/ui/modal';
+import { RefeicaoOrdenavel } from '@/components/pacientes/refeicao-ordenavel';
 import { mensagemFalhaInterface } from '@/lib/erros-interface';
 import { useProtecaoAlteracoesNaoSalvas } from '@/lib/usar-protecao-alteracoes-nao-salvas';
 import {
@@ -1114,6 +1117,10 @@ export function PlanoAlimentarProfissional({ pacienteId, podeGerenciar, aoAltera
   const [confirmarCriacao, setConfirmarCriacao] = useState(false);
   const sequenciaCarregamento = useRef(0);
   const sequenciaAcompanhamento = useRef(0);
+  const sensoresArraste = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+  );
 
   const somaMacros = formulario.carboidratosBasisPoints + formulario.proteinasBasisPoints + formulario.gordurasBasisPoints;
   // Condicao especial implica meta manual: e a saida que substitui a recusa.
@@ -1316,6 +1323,17 @@ export function PlanoAlimentarProfissional({ pacienteId, podeGerenciar, aoAltera
 
   function atualizarRefeicao(indice: number, refeicao: RefeicaoFormulario) {
     atualizar((atual) => ({ ...atual, refeicoes: atual.refeicoes.map((item, posicao) => posicao === indice ? refeicao : item) }));
+  }
+
+  function finalizarArrasteRefeicao(evento: DragEndEvent) {
+    const { active, over } = evento;
+    if (!over || active.id === over.id) return;
+    atualizar((atual) => {
+      const origem = atual.refeicoes.findIndex((refeicao) => refeicao.chaveCliente === active.id);
+      const destino = atual.refeicoes.findIndex((refeicao) => refeicao.chaveCliente === over.id);
+      if (origem < 0 || destino < 0 || origem === destino) return atual;
+      return { ...atual, refeicoes: arrayMove(atual.refeicoes, origem, destino) };
+    });
   }
 
   if (carregando) return <BarraCarregamento visivel rotulo="Carregando planos alimentares" />;
@@ -1544,16 +1562,20 @@ export function PlanoAlimentarProfissional({ pacienteId, podeGerenciar, aoAltera
                       <div><h3 className="text-base font-semibold text-tinta">Refeições e alimentos</h3><p className="text-sm text-texto-suave">A composição selecionada e congelada quando a versão e publicada.</p></div>
                       <Botao type="button" onClick={() => atualizar((atual) => ({ ...atual, refeicoes: [...atual.refeicoes, novaRefeicao()] }))}><Plus size={16} /> Adicionar refeição</Botao>
                     </div>
+                    <DndContext sensors={sensoresArraste} collisionDetection={closestCenter} onDragEnd={finalizarArrasteRefeicao}>
+                      <SortableContext items={formulario.refeicoes.map((refeicao) => refeicao.chaveCliente)} strategy={verticalListSortingStrategy}>
                     {formulario.refeicoes.map((refeicao, indiceRefeicao) => (
-                      <section key={refeicao.chaveCliente} className="grid gap-4 rounded-md border border-linha bg-white p-4">
-                        <div className="flex flex-wrap items-center justify-between gap-2">
-                          <h4 className="text-sm font-semibold text-tinta">Refeição {indiceRefeicao + 1}</h4>
-                          <div className="flex flex-wrap gap-1">
-                            <Botao type="button" variante="fantasma" tamanho="sm" className="min-h-11 min-w-11" onClick={() => atualizar((atual) => ({ ...atual, refeicoes: mover(atual.refeicoes, indiceRefeicao, indiceRefeicao - 1) }))} disabled={indiceRefeicao === 0} aria-label="Mover refeição para cima"><ArrowUp size={15} /></Botao>
-                            <Botao type="button" variante="fantasma" tamanho="sm" className="min-h-11 min-w-11" onClick={() => atualizar((atual) => ({ ...atual, refeicoes: mover(atual.refeicoes, indiceRefeicao, indiceRefeicao + 1) }))} disabled={indiceRefeicao === formulario.refeicoes.length - 1} aria-label="Mover refeição para baixo"><ArrowDown size={15} /></Botao>
-                            <Botao type="button" variante="fantasma" tamanho="sm" className="min-h-11" onClick={() => atualizar((atual) => ({ ...atual, refeicoes: atual.refeicoes.filter((_, posicao) => posicao !== indiceRefeicao) }))} disabled={formulario.refeicoes.length === 1}><Trash2 size={15} /> Remover</Botao>
-                          </div>
-                        </div>
+                      <RefeicaoOrdenavel
+                        key={refeicao.chaveCliente}
+                        id={refeicao.chaveCliente}
+                        nome={refeicao.nome}
+                        posicao={indiceRefeicao}
+                        acoes={<>
+                          <Botao type="button" variante="fantasma" tamanho="sm" className="min-h-11 min-w-11" onClick={() => atualizar((atual) => ({ ...atual, refeicoes: mover(atual.refeicoes, indiceRefeicao, indiceRefeicao - 1) }))} disabled={indiceRefeicao === 0} aria-label={`Mover refeição ${refeicao.nome || indiceRefeicao + 1} para cima`}><ArrowUp size={15} /></Botao>
+                          <Botao type="button" variante="fantasma" tamanho="sm" className="min-h-11 min-w-11" onClick={() => atualizar((atual) => ({ ...atual, refeicoes: mover(atual.refeicoes, indiceRefeicao, indiceRefeicao + 1) }))} disabled={indiceRefeicao === formulario.refeicoes.length - 1} aria-label={`Mover refeição ${refeicao.nome || indiceRefeicao + 1} para baixo`}><ArrowDown size={15} /></Botao>
+                          <Botao type="button" variante="fantasma" tamanho="sm" className="min-h-11" onClick={() => atualizar((atual) => ({ ...atual, refeicoes: atual.refeicoes.filter((_, posicao) => posicao !== indiceRefeicao) }))} disabled={formulario.refeicoes.length === 1}><Trash2 size={15} /> Remover</Botao>
+                        </>}
+                      >
                         <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_160px]">
                           <label className="grid gap-1 text-xs font-semibold uppercase text-texto-suave">Nome da refeição<Campo value={refeicao.nome} onChange={(evento) => atualizarRefeicao(indiceRefeicao, { ...refeicao, nome: evento.target.value })} maxLength={180} required /></label>
                           <label className="grid gap-1 text-xs font-semibold uppercase text-texto-suave">Horário<Campo type="time" value={refeicao.horarioLocal ?? ''} onChange={(evento) => atualizarRefeicao(indiceRefeicao, { ...refeicao, horarioLocal: evento.target.value })} /></label>
@@ -1574,8 +1596,10 @@ export function PlanoAlimentarProfissional({ pacienteId, podeGerenciar, aoAltera
                           ))}
                           <Botao type="button" onClick={() => atualizarRefeicao(indiceRefeicao, { ...refeicao, itens: [...refeicao.itens, novoItem()] })}><Plus size={16} /> Adicionar alimento</Botao>
                         </div>
-                      </section>
+                      </RefeicaoOrdenavel>
                     ))}
+                      </SortableContext>
+                    </DndContext>
                   </div>
                     <PainelNutricional
                       refeicoes={refeicoesPrevistas}
