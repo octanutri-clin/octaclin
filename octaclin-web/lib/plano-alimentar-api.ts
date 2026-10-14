@@ -231,10 +231,18 @@ export interface PlanoAlimentarApi {
   historico: VersaoPlanoAlimentarResumoApi[];
 }
 
+export interface ResumoNutricionalPlanoApi {
+  estado: 'completo' | 'incompleto' | 'sem_snapshot' | 'indisponivel';
+  energiaKcal?: number;
+  proteinasG?: number;
+  carboidratosG?: number;
+  gordurasG?: number;
+}
+
 export type VersaoPlanoAlimentarResumoApi = Pick<
   VersaoPlanoAlimentarApi,
   'id' | 'numero' | 'status' | 'revisadaEm' | 'hashConteudo' | 'publicadaEm' | 'descartadaEm' | 'criadoEm' | 'atualizadoEm'
->;
+> & { resumoNutricional?: ResumoNutricionalPlanoApi };
 
 export interface PlanoAlimentarResumoApi {
   id: string;

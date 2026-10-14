@@ -998,6 +998,22 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
     [eventos]
   );
 
+  if (dados && dados.paciente.id !== pacienteId) {
+    if (falhaCarregamento?.tipo === 'permissao') return <EstadoPermissaoNegada />;
+    if (falhaCarregamento) {
+      return (
+        <EstadoFalha
+          titulo="Não foi possível carregar o prontuário"
+          descricao={falhaCarregamento.mensagem}
+          codigoReferencia={falhaCarregamento.requestId}
+          aoTentarNovamente={falhaCarregamento.recuperavel ? () => void carregar() : undefined}
+          tentando={carregando}
+        />
+      );
+    }
+    return <EsqueletoPagina rotulo="Carregando prontuário do paciente" />;
+  }
+
   if (carregando && !dados) return <EsqueletoPagina rotulo="Carregando prontuário do paciente" />;
 
   if (!dados && falhaCarregamento?.tipo === 'permissao') return <EstadoPermissaoNegada />;
@@ -1594,6 +1610,7 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
 
       {abaAtiva === 'plano_alimentar' ? (
         <PlanoAlimentarProfissional
+          key={pacienteId}
           pacienteId={pacienteId}
           podeGerenciar={podeGerenciarPlano}
           aoAlterarRascunho={setPlanoAlimentarNaoSalvo}

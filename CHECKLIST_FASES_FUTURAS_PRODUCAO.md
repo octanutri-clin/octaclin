@@ -4634,16 +4634,23 @@ auditoria estão ordenados na seção 15 de
   38608333870 SUCCESS. Sem nova API/schema/migration; relatório
   `docs/governance/REVISAO_R4_PA03_2026-10-14.md` e checklist
   `tasks/todo-pos-320-pa03.md`. Não inferir publicação pelo merge.
-- [ ] PA04 — planejamento em main6f0be7d, branch docs/pos320-pa04-planejamento.
-  Referências deste ID recomendam código interno. D01–D03 confirmadas:
-  ambas as versões separadas, totais salvos e somente console profissional;
-  snapshots cifrados, projeção mínima e paginação da lista previstos em
-  `tasks/plan-pos-320-pa04.md` e `tasks/todo-pos-320-pa04.md`. Handoff pronto,
-  aguardando troca manual para GPT-6 Luna alto; runtime intacto.
+- [~] PA04 — implementação técnica em andamento em `feat/pos320-pa04-resumos-macros`,
+  base main `6f0be7d`. D01–D03 confirmadas. Resumos por versão e paginação no
+  console; revisão R4 levou a limitar metadados à versão publicada atual + draft,
+  contar histórico por agregação tenant-scoped, confirmar lista/editor de forma
+  atômica e falhar fechado na troca de paciente. PASS: backend focado 44/44, BFF
+  26/26, typecheck e build Web/backend, Playwright R4 4/4 desktop/mobile,
+  secrets/syntax/diff checks; lint 0 erros/10 avisos de hooks existentes.
+  Revisão R4 estática confirmou correções sem executar testes; Playwright local
+  posterior passou (relatório `docs/governance/REVISAO_R4_PA04_2026-10-14.md`).
+  PostgreSQL/Testcontainers BLOCKED por ENOSPC no Docker VFS; 64 casos não
+  executaram. CI remoto pendente. Sem migration ou mudanças
+  externas; plano e checklist em `tasks/plan-pos-320-pa04.md` e
+  `tasks/todo-pos-320-pa04.md`.
 
-Merge e checks de #417 conferidos em 2026-10-14; nenhuma aprovação operacional
-ou publicação em produção é inferida. PA04 segue no planejamento; nenhum teste
-de implementação PA04 foi executado.
+Merge e checks de #417 conferidos em 2026-10-14; não inferir publicação em
+produção. PA04 ainda não está pronto para PR até executar PostgreSQL real e CI
+remoto. Playwright atualizado e builds locais passaram.
 
 O escopo, dependências, critérios de aceite, limites e gates destas fases estão
 em `docs/product/ROADMAP_POS_AUDITORIA_FASES_302_320.md`. Fases condicionais

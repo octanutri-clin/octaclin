@@ -125,7 +125,13 @@ function criarRepositorio<T extends { id?: string }>(iniciais: T[] = []): Reposi
     findOne: jest.fn(async (opcoes: OpcoesConsultaMemoria = {}) =>
       paginarMemoria(repositorio.registros, { ...opcoes, take: 1 }).pagina[0] ?? null
     ),
-    find: jest.fn(async (opcoes: OpcoesConsultaMemoria = {}) => paginarMemoria(repositorio.registros, opcoes).pagina),
+  find: jest.fn(async (opcoes: OpcoesConsultaMemoria = {}) => {
+    const criterios = Array.isArray(opcoes.where) ? opcoes.where : [opcoes.where ?? {}];
+    const correspondentes = repositorio.registros.filter((registro) => criterios.some((criterio) =>
+      corresponde(registro as Record<string, unknown>, criterio as Record<string, unknown>)
+    ));
+    return paginarMemoria(correspondentes, { ...opcoes, where: {} }).pagina;
+  }),
     findAndCount: jest.fn(async (opcoes: OpcoesConsultaMemoria = {}) => {
       const { pagina, total } = paginarMemoria(repositorio.registros, opcoes);
       return [pagina, total] as [unknown[], number];
@@ -298,7 +304,16 @@ describe('ServicoPlanosAlimentares', () => {
     registrar(MensagemNotificacaoOrm);
     registrar(OutboxEventoOrm);
     gerenciador = {
-      getRepository: jest.fn((entidade: Function) => repositorios.get(entidade))
+      getRepository: jest.fn((entidade: Function) => repositorios.get(entidade)),
+      query: jest.fn(async (_sql: string, parametros: [string, string[]]) => {
+        const [, planoIds] = parametros;
+        return planoIds.flatMap((planoId) => {
+          const quantidade = repositorios.get(PlanoAlimentarVersaoOrm)!.registros.filter((versao) =>
+            versao.tenantId === TENANT_ID && versao.planoId === planoId && (versao.publicadaEm || versao.descartadaEm)
+          ).length;
+          return quantidade ? [{ planoId, quantidade: String(quantidade) }] : [];
+        });
+      })
     } as unknown as EntityManager;
     executor = {
       executar: jest.fn(async (_tenantId: string, operacao: (manager: EntityManager) => Promise<unknown>) =>
@@ -412,21 +427,123 @@ describe('ServicoPlanosAlimentares', () => {
   });
 
   it('lista somente resumo sem carregar refeicoes, itens ou substituicoes', async () => {
+    const publicadaId = '10000000-0000-4000-8000-000000000008';
+    const historicaId = '10000000-0000-4000-8000-000000000009';
+    repositorios.get(PlanoAlimentarOrm)!.registros[0].versaoPublicadaAtualId = publicadaId;
+    repositorios.get(PlanoAlimentarVersaoOrm)!.registros.push(
+      {
+        id: publicadaId,
+        tenantId: TENANT_ID,
+        planoId: PLANO_ID,
+        numero: 2,
+        criadoPorUsuarioId: USUARIO_ID,
+        publicadaEm: new Date('2026-08-02T12:00:00Z'),
+        totaisSnapshotCriptografado: criptografia.criptografar(JSON.stringify({
+          energiaKcal: 1800, proteinasG: 90, carboidratosG: 200, gordurasG: 60, observacao: 'privada'
+        }))
+      },
+      {
+        id: historicaId,
+        tenantId: TENANT_ID,
+        planoId: PLANO_ID,
+        numero: 1,
+        criadoPorUsuarioId: USUARIO_ID,
+        publicadaEm: new Date('2026-07-02T12:00:00Z'),
+        totaisSnapshotCriptografado: criptografia.criptografar(JSON.stringify({
+          energiaKcal: 900, proteinasG: 40, carboidratosG: 100, gordurasG: 30
+        }))
+      }
+    );
+    const rascunho = repositorios.get(PlanoAlimentarVersaoOrm)!.registros[0];
+    rascunho.totaisSnapshotCriptografado = criptografia.criptografar(JSON.stringify({
+      energiaKcal: 0, proteinasG: 20, carboidratosG: 30, gordurasG: 5
+    }));
     const resultado = await servico.listar(TENANT_ID, PACIENTE_ID, usuarioProfissional());
 
     expect(resultado.itens).toEqual([
       expect.objectContaining({
         id: PLANO_ID,
         titulo: 'Plano principal',
-        draft: expect.objectContaining({ id: VERSAO_ID, numero: 1, status: 'rascunho' }),
-        historicoQuantidade: 0
+        current: expect.objectContaining({
+          id: publicadaId,
+          resumoNutricional: { estado: 'completo', energiaKcal: 1800, proteinasG: 90, carboidratosG: 200, gordurasG: 60 }
+        }),
+        draft: expect.objectContaining({
+          id: VERSAO_ID,
+          numero: 1,
+          status: 'rascunho',
+          resumoNutricional: { estado: 'completo', energiaKcal: 0, proteinasG: 20, carboidratosG: 30, gordurasG: 5 }
+        }),
+        historicoQuantidade: 2
       })
     ]);
+    expect(JSON.stringify(resultado)).not.toContain('observacao');
+    expect(JSON.stringify(resultado)).not.toContain('totaisSnapshotCriptografado');
     expect(resultado.itens[0]).not.toHaveProperty('historico');
-    expect(repositorios.get(PlanoAlimentarVersaoOrm)!.find).toHaveBeenCalledTimes(1);
+    const consultaPlanos = repositorios.get(PlanoAlimentarOrm)!.findAndCount.mock.calls[0][0];
+    expect(consultaPlanos.select).toEqual({
+      id: true,
+      pacienteId: true,
+      profissionalId: true,
+      tituloCriptografado: true,
+      versaoPublicadaAtualId: true,
+      criadoEm: true,
+      atualizadoEm: true
+    });
+    expect(consultaPlanos.select).not.toHaveProperty('criadoPorUsuarioId');
+    const consultasVersoes = repositorios.get(PlanoAlimentarVersaoOrm)!.find.mock.calls.map(([opcoes]) => opcoes);
+    expect(consultasVersoes).toHaveLength(2);
+    expect(consultasVersoes[0].select).not.toHaveProperty('totaisSnapshotCriptografado');
+    expect(consultasVersoes[1].select).toEqual({ id: true, totaisSnapshotCriptografado: true });
+    expect(valorDoOperador(consultasVersoes[1].where.id).valor).toEqual(expect.arrayContaining([VERSAO_ID, publicadaId]));
+    expect(valorDoOperador(consultasVersoes[1].where.id).valor).not.toContain(historicaId);
+    expect(repositorios.get(PacienteOrm)!.findOne.mock.calls[0][0].lock).toEqual({ mode: 'pessimistic_read' });
     expect(repositorios.get(PlanoAlimentarRefeicaoOrm)!.find).not.toHaveBeenCalled();
     expect(repositorios.get(PlanoAlimentarItemOrm)!.find).not.toHaveBeenCalled();
     expect(repositorios.get(PlanoAlimentarSubstituicaoOrm)!.find).not.toHaveBeenCalled();
+  });
+
+  it('mantem a busca de versoes limitada a atual e rascunho, contando o historico por agregacao', async () => {
+    const versoes = repositorios.get(PlanoAlimentarVersaoOrm)!;
+    const publicadaId = '10000000-0000-4000-8000-000000000008';
+    repositorios.get(PlanoAlimentarOrm)!.registros[0].versaoPublicadaAtualId = publicadaId;
+    versoes.registros[0].publicadaEm = undefined;
+    versoes.registros.push({
+      id: publicadaId, tenantId: TENANT_ID, planoId: PLANO_ID, numero: 2,
+      criadoPorUsuarioId: USUARIO_ID, publicadaEm: new Date('2026-08-02T12:00:00Z')
+    });
+    for (let numero = 3; numero < 80; numero += 1) {
+      versoes.registros.push({
+        id: `historica-${numero}`, tenantId: TENANT_ID, planoId: PLANO_ID, numero,
+        criadoPorUsuarioId: USUARIO_ID, publicadaEm: new Date(`2026-08-${String((numero % 27) + 1).padStart(2, '0')}T12:00:00Z`)
+      });
+    }
+    (gerenciador.query as jest.Mock).mockResolvedValue([{ planoId: PLANO_ID, quantidade: 78 }]);
+
+    const resultado = await servico.listar(TENANT_ID, PACIENTE_ID, usuarioProfissional());
+
+    expect(resultado.itens[0].historicoQuantidade).toBe(78);
+    const consultaMetadados = versoes.find.mock.calls[0][0];
+    expect(consultaMetadados.select).not.toHaveProperty('calculoSnapshotCriptografado');
+    expect(consultaMetadados.select).not.toHaveProperty('totaisSnapshotCriptografado');
+    expect(consultaMetadados.where).toEqual(expect.arrayContaining([
+      expect.objectContaining({ id: expect.objectContaining({ _value: [publicadaId] }) }),
+      expect.objectContaining({ planoId: expect.objectContaining({ _value: [PLANO_ID] }), publicadaEm: expect.anything(), descartadaEm: expect.anything() })
+    ]));
+    expect((gerenciador.query as jest.Mock).mock.calls[0][1]).toEqual([TENANT_ID, [PLANO_ID]]);
+    expect((gerenciador.query as jest.Mock).mock.calls[0][0]).toContain('COUNT(*)');
+    expect(resultado.itens[0].current?.id).toBe(publicadaId);
+    expect(resultado.itens[0].draft?.id).toBe(VERSAO_ID);
+  });
+
+  it('mantem a listagem autorizada e oculta falha de decriptacao do snapshot', async () => {
+    repositorios.get(PlanoAlimentarVersaoOrm)!.registros[0].totaisSnapshotCriptografado = Buffer.from('ciphertext-invalido');
+
+    const resultado = await servico.listar(TENANT_ID, PACIENTE_ID, usuarioProfissional());
+
+    expect(resultado.itens[0].draft?.resumoNutricional).toEqual({ estado: 'indisponivel' });
+    expect(JSON.stringify(resultado)).not.toContain('Conteudo cifrado invalido');
+    expect(JSON.stringify(resultado)).not.toContain('ciphertext-invalido');
   });
 
   it('obtem o detalhe completo somente para plano no escopo do paciente', async () => {

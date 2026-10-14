@@ -14,7 +14,7 @@ import { TERMO_GESTACAO } from '../../modulos/pacientes/dominio/contexto-gestaci
 import { randomUUID } from 'node:crypto';
 import { Client } from 'pg';
 import { GenericContainer, StartedTestContainer, Wait } from 'testcontainers';
-import { DataSource, DataSourceOptions, QueryRunner } from 'typeorm';
+import { DataSource, DataSourceOptions, EntityManager, QueryRunner } from 'typeorm';
 import { UserActionLogOrm } from '../auditoria/user-action-log.orm';
 import { ExecutorTenant } from './executor-tenant';
 import { ServicoPainelOperacao } from '../../modulos/clientes/aplicacao/servico-painel-operacao';
@@ -40,6 +40,9 @@ import { ServicoKitInicialClinica } from '../../modulos/tenancy/aplicacao/servic
 import { CONSULTA_DISPONIBILIDADE_CATALOGOS, ServicoDisponibilidadeCatalogos } from '../../modulos/operacoes/aplicacao/servico-disponibilidade-catalogos';
 import { criarOpcoesTypeOrm } from './opcoes-typeorm';
 import { AdicionarEncaminhamentoDocumento1720000001067 } from './migracoes/1720000001067-AdicionarEncaminhamentoDocumento';
+import { PlanoAlimentarOrm } from '../../modulos/planos-alimentares/infraestrutura/plano-alimentar.orm';
+import { PlanoAlimentarVersaoOrm } from '../../modulos/planos-alimentares/infraestrutura/plano-alimentar-versao.orm';
+import { ServicoPlanosAlimentares } from '../../modulos/planos-alimentares/aplicacao/servico-planos-alimentares';
 
 /**
  * Prova integral de isolamento por tenant em Postgres real (PR 43).
@@ -232,7 +235,9 @@ descrever('RLS e isolamento multi-tenant integral em Postgres real', () => {
         NotificacaoOrm,
         PreferenciaNotificacaoUsuarioOrm,
         ResumoNotificacaoUsuarioOrm,
-        MaterialEducativoOrm
+        MaterialEducativoOrm,
+        PlanoAlimentarOrm,
+        PlanoAlimentarVersaoOrm
       ],
       extra: { max: 2 }
     });
@@ -1478,6 +1483,126 @@ descrever('RLS e isolamento multi-tenant integral em Postgres real', () => {
     }
 
   },60000);
+
+  it('PA04 lista resumos salvos sob RLS e serializa a projeção em lote com transferência', async () => {
+    if (!cliente || !fonteDadosRuntime || !executorTenant) throw new Error('Banco descartavel indisponivel.');
+    await comoTenant(tenantA);
+    const planoId = randomUUID();
+    const versaoId = randomUUID();
+    const criptografia = new CriptografiaDadosSensiveis();
+    await cliente.query(
+      `insert into planos_alimentares
+         (id, tenant_id, paciente_id, profissional_id, criado_por_usuario_id, titulo_criptografado)
+       values ($1, $2, $3, $4, $5, $6)`,
+      [planoId, tenantA, pacienteIdTenantA, profissionalIdTenantA, usuarioIdTenantA, criptografia.criptografar('plano pa04 sintetico')]
+    );
+    await cliente.query(
+      `insert into plano_alimentar_versoes
+         (id, tenant_id, plano_id, numero, criado_por_usuario_id, totais_snapshot_criptografado)
+       values ($1, $2, $3, 1, $4, $5)`,
+      [versaoId, tenantA, planoId, usuarioIdTenantA, criptografia.criptografar(JSON.stringify({
+        energiaKcal: 1500, proteinasG: 75, carboidratosG: 180, gordurasG: 50, notaPrivada: 'nao projetar'
+      }))]
+    );
+
+    let liberarVersao!: () => void;
+    let informarMetadados!: () => void;
+    const barreiraVersao = new Promise<void>((resolve) => { liberarVersao = resolve; });
+    const metadadosCarregados = new Promise<void>((resolve) => { informarMetadados = resolve; });
+    let interceptada = false;
+    const executorComBarreira = {
+      executar: async <T>(tenantId: string, operacao: (gerenciador: EntityManager) => Promise<T>): Promise<T> =>
+        fonteDadosRuntime!.transaction(async (gerenciador) => {
+          await gerenciador.query("select set_config('app.tenant_id', $1, true)", [tenantId]);
+          const instrumentado = new Proxy(gerenciador, {
+            get(alvo, propriedade, receptor) {
+              if (propriedade === 'getRepository') {
+                return (entidade: Function) => {
+                  const repositorio = alvo.getRepository(entidade as never);
+                  if (entidade !== PlanoAlimentarVersaoOrm) return repositorio;
+                  return new Proxy(repositorio, {
+                    get(repo, chave) {
+                      if (chave === 'find') {
+                        return async (opcoes: { select?: Record<string, unknown> }) => {
+                          const linhas = await repo.find(opcoes as never);
+                          if (!interceptada && !opcoes.select?.totaisSnapshotCriptografado) {
+                            interceptada = true;
+                            informarMetadados();
+                            await barreiraVersao;
+                          }
+                          return linhas;
+                        };
+                      }
+                      const valor = Reflect.get(repo, chave, repo);
+                      return typeof valor === 'function' ? valor.bind(repo) : valor;
+                    }
+                  });
+                };
+              }
+              const valor = Reflect.get(alvo, propriedade, receptor);
+              return typeof valor === 'function' ? valor.bind(alvo) : valor;
+            }
+          });
+          return operacao(instrumentado);
+        })
+    } as ExecutorTenant;
+    const servicoPausado = new ServicoPlanosAlimentares(executorComBarreira, criptografia);
+    const profissional = {
+      tenantId: tenantA,
+      usuarioId: usuarioIdTenantA,
+      papel: 'Professional',
+      permissoes: ['planos_alimentares.ler'],
+      emailHash: 'usuario-sintetico-pa04'
+    } as UsuarioAutenticado;
+    const listaEmAndamento = servicoPausado.listar(tenantA, pacienteIdTenantA, profissional);
+    await metadadosCarregados;
+
+    const novoResponsavel = await prepararDadosRepresentativos(tenantA, 'pa04-transferencia');
+    const transferencia = fonteDadosRuntime.transaction(async (gerenciador) => {
+      await gerenciador.query("select set_config('app.tenant_id', $1, true)", [tenantA]);
+      await gerenciador.query('update pacientes set profissional_responsavel_id = $1 where id = $2', [novoResponsavel.profissionalId, pacienteIdTenantA]);
+    });
+    const prazo = Date.now() + 5_000;
+    let bloqueada = false;
+    let resultado: Awaited<ReturnType<typeof servicoPausado.listar>> | undefined;
+    try {
+      while (Date.now() < prazo) {
+        const espera = await cliente.query(
+          `select 1 from pg_stat_activity
+            where datname = current_database()
+              and wait_event_type = 'Lock'
+              and query ilike 'update pacientes set profissional_responsavel_id%'`
+        );
+        if (espera.rowCount) { bloqueada = true; break; }
+        await new Promise((resolve) => setTimeout(resolve, 10));
+      }
+    } finally {
+      liberarVersao();
+      const listaResolvida = await Promise.allSettled([listaEmAndamento, transferencia]);
+      if (listaResolvida[0].status === 'fulfilled') resultado = listaResolvida[0].value;
+    }
+    try {
+      expect(bloqueada).toBe(true);
+      if (!resultado) throw new Error('A listagem PA04 falhou dentro da transacao com lock.');
+      expect(resultado.itens).toEqual([
+        expect.objectContaining({
+          id: planoId,
+          current: undefined,
+          draft: expect.objectContaining({
+            id: versaoId,
+            resumoNutricional: { estado: 'completo', energiaKcal: 1500, proteinasG: 75, carboidratosG: 180, gordurasG: 50 }
+          })
+        })
+      ]);
+      expect(JSON.stringify(resultado)).not.toContain('notaPrivada');
+      const servicoNormal = new ServicoPlanosAlimentares(executorTenant, criptografia);
+      // Com o vínculo alterado, uma leitura nova do profissional anterior é negada.
+      await expect(servicoNormal.listar(tenantA, pacienteIdTenantA, profissional)).rejects.toThrow('Paciente nao encontrado');
+    } finally {
+      await comoTenant(tenantA);
+      await cliente.query('update pacientes set profissional_responsavel_id = $1 where id = $2', [profissionalIdTenantA, pacienteIdTenantA]);
+    }
+  }, 60_000);
 
   it('Fase 313 exige dupla autorizacao, revoga leitura e preserva snapshots no encerramento',async () => {
     if (!executorTenant || !cliente) throw new Error('Banco da prova indisponivel.');

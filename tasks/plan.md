@@ -4,25 +4,29 @@ PA03 integrada pela PR #417, main `6f0be7d`; conteúdo idêntico ao HEAD aprovad
 `a013555`. Cinco workflows SUCCESS e dez jobs do CI `38608333870` SUCCESS,
 incluindo Web, Backend, Demo e PR Gate. Não inferir deploy pelo merge.
 
-PA04 — resumo de macros na lista de planos. Branch
-`docs/pos320-pa04-planejamento`, worktree isolada em main6f0be7d.
-Planejamento autorizado; runtime não alterado.
+PA04 — resumo de macros na lista de planos. Worktree isolada, base main
+`6f0be7d`, implementação em `feat/pos320-pa04-resumos-macros`.
 
 - [Plano e gaps](plan-pos-320-pa04.md); [checklist T00–T08](todo-pos-320-pa04.md).
 - D01–D03 confirmadas: ambas as versões separadas, totais dos alimentos
   previstos salvos e somente console profissional.
 - Referências específicas PA04 recomendam código interno; nenhum repositório
   externo indicado ou biblioteca nova necessária.
-- Gaps materiais: snapshot cifrado não projetado; query carrega todas as colunas
-  de todas as versões; Web fixa página1/limite100 sem controles visíveis.
-- Proposta: projeção permitida dos totais salvos, lote das versões relevantes,
-  paginação segura, carteira/tenant/RLS e snapshots históricos preservados.
-  Trava compartilhada do paciente mantém coerência entre lotes; exigir prova PG.
-- GPT-6.1 Sol médio para planejamento/revisão; GPT-6 Luna alto para implementação
-  com TDD e contrato fechado. Avisar/pausar antes da troca manual.
-- Handoff consolidado. Próximo checkpoint: troca manual para GPT-6 Luna alto
-  e continuidade da implementação. Runtime ainda intacto; nenhuma migration,
-  merge, deploy ou ativação nesta etapa.
+- Implementado: projeção permitida dos snapshots salvos, duas consultas em lote,
+  trava compartilhada do paciente, resumo de rascunho/publicada e paginação25.
+  Nenhuma migration ou mudança em portal/impressão.
+- PASS local: typecheck e build backend/Web; testes focados backend 44/44; BFF
+  26/26; Playwright R4 4/4 em desktop/mobile; lint focado 0 erros/10 avisos de
+  hooks existentes; secrets, sintaxe e diff checks PASS.
+- PostgreSQL real BLOCKED por `ENOSPC` no Testcontainers. A imagem
+  `timescale/timescaledb-ha:pg15` foi puxada, mas a inicialização esgotou os
+  8,7 GB disponíveis sob Docker VFS; o hook expirou e os 64 casos de integração
+  não executaram. A imagem de teste foi removida após a tentativa. Revisão R4
+  independente estática confirmou as correções sem executar testes; as
+  regressões R4 locais passaram posteriormente.
+- CI remoto e PR pendentes. Nenhuma migration, staging, produção, deploy ou
+  ativação.
+- Sem PR/CI. Nenhuma migration, staging, produção, deploy ou ativação.
 
 ---
 

@@ -48,6 +48,7 @@ import {
   type NutrientesPor100gApi,
   type PlanoAlimentarApi,
   type PlanoAlimentarResumoApi,
+  type ResumoNutricionalPlanoApi,
   type RefeicaoPlanoAlimentarEntrada,
   type SubstituicaoPlanoAlimentarEntrada,
   type VersaoPlanoAlimentarApi
@@ -75,6 +76,7 @@ const nutrientesVazios: NutrientesPor100gApi = {
   carboidratosG: 0,
   gordurasG: 0
 };
+const LIMITE_PLANOS_LISTA = 25;
 
 interface AlimentoFormulario extends Omit<SubstituicaoPlanoAlimentarEntrada, 'nutrientesPor100g'> {
   chaveCliente: string;
@@ -441,6 +443,42 @@ function formatarNumero(valor?: number, casas = 0) {
 
 function formatarNutrienteSubtotal(valor?: number, casas = 0) {
   return valor === undefined ? '—' : formatarNumero(valor, casas);
+}
+
+function ResumoMacrosVersao({ rotulo, numero, resumo }: { rotulo: string; numero: number; resumo?: ResumoNutricionalPlanoApi }) {
+  const metricas = [
+    { nome: 'Energia', valor: resumo?.energiaKcal, unidade: 'kcal', casas: 0 },
+    { nome: 'Proteínas', valor: resumo?.proteinasG, unidade: 'g', casas: 1 },
+    { nome: 'Carboidratos', valor: resumo?.carboidratosG, unidade: 'g', casas: 1 },
+    { nome: 'Gorduras', valor: resumo?.gordurasG, unidade: 'g', casas: 1 }
+  ];
+  const rotuloEstado = resumo?.estado === 'completo'
+    ? 'Totais salvos dos alimentos previstos'
+    : resumo?.estado === 'incompleto'
+      ? 'Dados incompletos'
+      : resumo?.estado === 'sem_snapshot'
+        ? 'Sem resumo salvo'
+        : 'Resumo indisponível';
+
+  return (
+    <div className="mt-2 rounded-md border border-linha bg-white px-3 py-2 text-xs text-tinta">
+      <p className="font-semibold">{rotulo} v{numero} · Salvo</p>
+      <p className="mt-1 text-texto-suave">{rotuloEstado}</p>
+      {resumo?.estado === 'completo' || resumo?.estado === 'incompleto' ? (
+        <dl className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1 sm:grid-cols-4">
+          {metricas.map((metrica) => {
+            const valorValido = typeof metrica.valor === 'number' && Number.isFinite(metrica.valor) && metrica.valor >= 0;
+            return (
+              <div key={metrica.nome}>
+                <dt className="text-texto-suave">{metrica.nome}</dt>
+                <dd className="font-medium">{valorValido ? formatarNumero(metrica.valor, metrica.casas) : '—'} {metrica.unidade}</dd>
+              </div>
+            );
+          })}
+        </dl>
+      ) : null}
+    </div>
+  );
 }
 
 function resumoPorcaoAlimento(alimento: AlimentoFormulario) {
@@ -1140,6 +1178,11 @@ interface PlanoAlimentarProfissionalProps {
 
 export function PlanoAlimentarProfissional({ pacienteId, podeGerenciar, aoAlterarRascunho }: PlanoAlimentarProfissionalProps) {
   const [planos, setPlanos] = useState<PlanoAlimentarResumoApi[]>([]);
+  const [paginaPlanos, setPaginaPlanos] = useState(1);
+  const [totalPlanos, setTotalPlanos] = useState(0);
+  const paginaPlanosRef = useRef(1);
+  const pacienteCarregadoRef = useRef(pacienteId);
+  const controladorListaRef = useRef<AbortController | null>(null);
   const [plano, setPlano] = useState<PlanoAlimentarApi | null>(null);
   const [avaliacoes, setAvaliacoes] = useState<AvaliacaoAntropometricaApi[]>([]);
   const [numeroVersaoConsultada, setNumeroVersaoConsultada] = useState<number | null>(null);
@@ -1233,22 +1276,50 @@ export function PlanoAlimentarProfissional({ pacienteId, podeGerenciar, aoAltera
     setErrosFormulario([]);
   }, []);
 
-  const carregar = useCallback(async (preferido?: string) => {
+  const carregar = useCallback(async (preferido?: string, paginaSolicitada?: number) => {
     const sequencia = ++sequenciaCarregamento.current;
+    controladorListaRef.current?.abort();
+    const controlador = new AbortController();
+    controladorListaRef.current = controlador;
     setCarregando(true);
     setErro(null);
+    if (pacienteCarregadoRef.current !== pacienteId) {
+      pacienteCarregadoRef.current = pacienteId;
+      paginaPlanosRef.current = 1;
+      setPaginaPlanos(1);
+      setTotalPlanos(0);
+      setPlanos([]);
+      setAvaliacoes([]);
+      aplicarPlano(null, []);
+    }
     try {
-      // Seletor de planos ainda carrega tudo de uma vez; o limite maximo evita
-      // esconder um plano do profissional antes de a paginacao virar UI.
-      const { itens: lista } = await listarPlanosAlimentares(pacienteId, { pagina: 1, limite: 100 });
+      let paginaConsultada = paginaSolicitada ?? paginaPlanosRef.current;
+      let resposta = await listarPlanosAlimentares(
+        pacienteId,
+        { pagina: paginaConsultada, limite: LIMITE_PLANOS_LISTA },
+        controlador.signal
+      );
+      const ultimaPagina = Math.max(1, Math.ceil(resposta.total / LIMITE_PLANOS_LISTA));
+      if (!resposta.itens.length && paginaConsultada > ultimaPagina) {
+        paginaConsultada = ultimaPagina;
+        resposta = await listarPlanosAlimentares(
+          pacienteId,
+          { pagina: paginaConsultada, limite: LIMITE_PLANOS_LISTA },
+          controlador.signal
+        );
+      }
       if (sequencia !== sequenciaCarregamento.current) return;
-      setPlanos(lista);
+      const lista = resposta.itens;
       const selecionado = lista.find((item) => item.id === preferido) ?? lista[0];
       const [detalhe, serie] = await Promise.all([
         selecionado ? obterPlanoAlimentar(pacienteId, selecionado.id) : Promise.resolve(null),
         podeGerenciar ? listarAvaliacoesAntropometricas(pacienteId) : Promise.resolve({ avaliacoes: [] })
       ]);
       if (sequencia !== sequenciaCarregamento.current) return;
+      paginaPlanosRef.current = paginaConsultada;
+      setPaginaPlanos(paginaConsultada);
+      setTotalPlanos(resposta.total);
+      setPlanos(lista);
       setAvaliacoes(serie.avaliacoes);
       aplicarPlano(detalhe, serie.avaliacoes);
     } catch (erroAtual) {
@@ -1260,9 +1331,11 @@ export function PlanoAlimentarProfissional({ pacienteId, podeGerenciar, aoAltera
   }, [aplicarPlano, pacienteId, podeGerenciar]);
 
   useEffect(() => {
-    void carregar();
+    paginaPlanosRef.current = 1;
+    void carregar(undefined, 1);
     return () => {
       sequenciaCarregamento.current += 1;
+      controladorListaRef.current?.abort();
     };
   }, [carregar]);
 
@@ -1360,7 +1433,7 @@ export function PlanoAlimentarProfissional({ pacienteId, podeGerenciar, aoAltera
     try {
       const criado = await criarPlanoAlimentar(pacienteId, titulo);
       setSucesso('Plano criado. Complete o rascunho antes da revisão.');
-      await carregar(criado.id);
+      await carregar(criado.id, 1);
     } catch (erroAtual) {
       setErro(mensagemFalhaInterface(erroAtual, 'Não foi possível criar o plano alimentar.'));
     } finally {
@@ -1392,8 +1465,15 @@ export function PlanoAlimentarProfissional({ pacienteId, podeGerenciar, aoAltera
   }
 
   function selecionarPlano(destino: PlanoAlimentarResumoApi) {
-    if (alterado) return;
+    if (alterado || operacao || copiaEmAndamentoRef.current) return;
     void carregar(destino.id);
+  }
+
+  function mudarPaginaPlanos(proximaPagina: number) {
+    if (alterado || operacao || copiaEmAndamentoRef.current || proximaPagina < 1) return;
+    const paginas = Math.max(1, Math.ceil(totalPlanos / LIMITE_PLANOS_LISTA));
+    if (proximaPagina > paginas || proximaPagina === paginaPlanosRef.current) return;
+    void carregar(undefined, proximaPagina);
   }
 
   function atualizarRefeicao(indice: number, refeicao: RefeicaoFormulario) {
@@ -1510,7 +1590,9 @@ export function PlanoAlimentarProfissional({ pacienteId, podeGerenciar, aoAltera
     });
   }
 
-  if (carregando) return <BarraCarregamento visivel rotulo="Carregando planos alimentares" />;
+  if (carregando || pacienteCarregadoRef.current !== pacienteId) {
+    return <BarraCarregamento visivel rotulo="Carregando planos alimentares" />;
+  }
 
   return (
     <div className="grid gap-4">
@@ -1520,25 +1602,39 @@ export function PlanoAlimentarProfissional({ pacienteId, podeGerenciar, aoAltera
             <CartaoCabecalho>
               <div>
                 <CartaoTitulo icone={<Utensils size={17} />}>Planos alimentares</CartaoTitulo>
-                <CartaoSubtitulo>{planos.length} plano(s) ativo(s)</CartaoSubtitulo>
+                <CartaoSubtitulo>{totalPlanos} plano(s) ativo(s)</CartaoSubtitulo>
               </div>
             </CartaoCabecalho>
             <CartaoConteudo className="grid gap-2">
-              {planos.map((item) => (
-                <button
-                  key={item.id}
-                  type="button"
-                  disabled={alterado && item.id !== planoId}
-                  onClick={() => selecionarPlano(item)}
-                  aria-current={item.id === planoId ? 'true' : undefined}
-                  className={`min-h-11 rounded-md border px-3 py-2 text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primaria ${item.id === planoId ? 'border-primaria bg-primaria-suave' : 'border-linha bg-white hover:bg-superficie-hover'} disabled:cursor-not-allowed disabled:opacity-50`}
-                >
-                  <span className="block break-words text-sm font-semibold text-tinta">{item.titulo}</span>
-                  <span className="mt-1 block text-xs text-texto-suave">
-                    {item.draft ? `Rascunho v${item.draft.numero}` : item.current ? `Publicado v${item.current.numero}` : 'Sem versão publicada'}
-                  </span>
-                </button>
-              ))}
+              <ul id="lista-planos-alimentares" className="grid gap-3" aria-label="Planos alimentares">
+                {planos.map((item) => (
+                  <li key={item.id} className={`rounded-md border p-2 ${item.id === planoId ? 'border-primaria bg-primaria-suave' : 'border-linha bg-white'}`}>
+                    <button
+                      type="button"
+                      disabled={(alterado && item.id !== planoId) || Boolean(operacao) || copiaEmAndamento}
+                      onClick={() => selecionarPlano(item)}
+                      aria-current={item.id === planoId ? 'true' : undefined}
+                      className="min-h-11 w-full rounded-md px-1 py-2 text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primaria disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      <span className="block break-words text-sm font-semibold text-tinta">{item.titulo}</span>
+                      {!item.current && !item.draft ? <span className="mt-1 block text-xs text-texto-suave">Sem versão atual</span> : null}
+                    </button>
+                    {item.draft ? <ResumoMacrosVersao rotulo="Rascunho" numero={item.draft.numero} resumo={item.draft.resumoNutricional} /> : null}
+                    {item.current ? <ResumoMacrosVersao rotulo="Publicado" numero={item.current.numero} resumo={item.current.resumoNutricional} /> : null}
+                  </li>
+                ))}
+              </ul>
+              {totalPlanos > LIMITE_PLANOS_LISTA ? (
+                <nav className="flex items-center justify-between gap-2 border-t border-linha pt-3" aria-label="Paginação de planos alimentares">
+                  <button type="button" className="min-h-11 rounded-md border border-linha px-3 text-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primaria disabled:opacity-50" disabled={paginaPlanos <= 1 || carregando || Boolean(operacao) || alterado || copiaEmAndamento} onClick={() => mudarPaginaPlanos(paginaPlanos - 1)} aria-label="Página anterior de planos">
+                    Anterior
+                  </button>
+                  <span role="status" aria-live="polite" className="text-center text-xs text-texto-suave">Página {paginaPlanos} de {Math.max(1, Math.ceil(totalPlanos / LIMITE_PLANOS_LISTA))}</span>
+                  <button type="button" className="min-h-11 rounded-md border border-linha px-3 text-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primaria disabled:opacity-50" disabled={paginaPlanos >= Math.ceil(totalPlanos / LIMITE_PLANOS_LISTA) || carregando || Boolean(operacao) || alterado || copiaEmAndamento} onClick={() => mudarPaginaPlanos(paginaPlanos + 1)} aria-label="Próxima página de planos" aria-controls="lista-planos-alimentares">
+                    Próxima
+                  </button>
+                </nav>
+              ) : null}
               {!planos.length ? <EstadoVazio titulo="Nenhum plano alimentar" descricao={podeGerenciar ? 'Crie o primeiro plano para iniciar o cuidado nutricional.' : 'Ainda não existe plano disponível para consulta.'} /> : null}
             </CartaoConteudo>
           </Cartao>

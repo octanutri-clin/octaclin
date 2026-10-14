@@ -4,15 +4,20 @@ Atualizado em 2026-10-14.
 
 ## Fase ativa
 
-- **PA04 — planejamento e análise de gaps**, base main `6f0be7d` (#417), branch
-  `docs/pos320-pa04-planejamento`, worktree isolada. Resumo de macros na lista de
-  planos; snapshot cifrado existente, projeção mínima e paginação visível.
-  Decisões confirmadas: rascunho/publicada separados, totais dos alimentos
-  previstos na versão salva e somente console profissional. Handoff consolidado;
-  implementação aguarda troca manual para GPT-6 Luna alto.
-  Catálogo/matriz/JSON PA04 recomendam código interno, sem repositório externo
-  ou biblioteca nova. Plano `tasks/plan-pos-320-pa04.md`; checklist
-  `tasks/todo-pos-320-pa04.md`. Runtime e testes PA04 não iniciados.
+- **PA04 — implementação técnica em andamento**, base main `6f0be7d` (#417), branch
+  `feat/pos320-pa04-resumos-macros`, worktree isolada. D01–D03 confirmadas.
+  Escopo inclui projeção de snapshots, listagem paginada e resumos salvos.
+  Após revisão R4 independente, a consulta limita metadados à versão publicada
+  atual e ao rascunho, conta o histórico por agregação tenant-scoped, confirma
+  lista/editor de forma atômica e oculta estado ao trocar paciente. PASS: testes
+  focados backend 44/44, BFF 26/26, typecheck e build Web/backend, Playwright
+  R4 4/4 em desktop/mobile, scanner de secrets e syntax/diff checks. Lint 0
+  erros/10 avisos de hooks existentes. Revisão R4 estática confirmou as
+  correções; relatório `docs/governance/REVISAO_R4_PA04_2026-10-14.md`.
+  PostgreSQL/Testcontainers BLOCKED por ENOSPC no Docker VFS; 64 casos não
+  executaram. CI remoto ainda pendente. Sem
+  migration/ambiente externo. Plano `tasks/plan-pos-320-pa04.md`; checklist
+  `tasks/todo-pos-320-pa04.md`.
 - **PA03 — integrada pela PR #417**, main `6f0be7d`, idêntica ao HEAD aprovado
   `a013555`. Cinco workflows SUCCESS e dez jobs do CI `38608333870` SUCCESS,
   inclusive Backend, Web, Demo e PR Gate. Revisão cruzada R4 fechou overflow

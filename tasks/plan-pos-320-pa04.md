@@ -38,7 +38,7 @@ Professional exige carteira atual. Client e usuário do portal não ganham acess
 | Gap | Evidência | Correção planejada |
 | --- | --- | --- |
 | G01: listagem sem macros | montarResumoVersao() expõe só metadados; API Web usa Pick sem totais | Acrescentar projeção mínima somente às versões escolhidas da lista. Não ampliar histórico/portal automaticamente. |
-| G02: consulta “leve” carrega colunas sensíveis desnecessárias | listar() faz find() de todas as colunas de todas as versões da página | Selecionar explicitamente metadados; buscar totais cifrados em um segundo lote somente dos IDs current/draft relevantes. |
+| G02: consulta “leve” carregava metadados de todas as versões e colunas cifradas desnecessárias | Revisão R4 independente identificou materialização sem limite por quantidade de histórico | A seleção ORM agora inclui somente ponteiros publicados atuais e drafts ativos da página; histórico é preservado por `COUNT(*) GROUP BY plano_id` com filtro de tenant e IDs da página. Snapshot cifrado carregado em lote somente para os IDs relevantes. |
 | G03: fonte computacional já existe | PlanoAlimentarVersaoOrm.totaisSnapshotCriptografado; save/publicação conservam snapshots | Ler totais salvos, nunca recomputar árvore, catálogo ou conteúdo histórico. |
 | G04: Web corta em 100 | carregar() fixa página1/limite100 e descarta total/página/limite | Paginação visível, limite25, total real; não carregar páginas silenciosamente nem duplicar fetch por plano. |
 | G05: sidebar prioriza texto de rascunho | botão lista Rascunho vN, senão Publicado vN | Identificar a versão de cada resumo segundo D01; rascunho salvo não representa alterações não salvas. |
@@ -163,12 +163,36 @@ viável; rollback reverte campo/cards/paginação e preserva snapshots históric
 Não adicionar logs, auditoria com métricas, URLs de PHI, analytics, Cache Storage
 ou preferência persistente. Não copiar dados reais nem .env de outra worktree.
 
-PASS desta etapa: merge/CI PA03, worktree/base limpa, referências específicas e
-auditoria dos contratos. Runtime/tests PA04: SKIPPED, ainda não implementados.
-PostgreSQL/staging/produção/deploy: SKIPPED, não executados nesta análise.
+## Revisão R4 independente e correções adicionais
 
-Modelos: GPT-6.1 Sol médio para planejamento/gaps e revisão final R4;
-GPT-6 Luna alto suficiente para implementação deste contrato com TDD e gates.
-Avisar e pausar antes da troca manual. D01–D03 fechadas; não reabrir decisões
-de produto por preferência de implementação. O handoff está pronto para a
-execução com Luna alto após a troca manual solicitada.
+A revisão read-only independente encontrou dois P2: (1) a listagem materializava
+todas as versões históricas da página; (2) a navegação podia confirmar a lista
+de uma nova página antes de obter seu detalhe, deixando editor e lista de páginas
+diferentes após erro. Correções: seleção limitada ao pointer atual e draft ativo;
+contagem histórica em agregação tenant-scoped; lista/página/editor agora só são
+confirmados após detalhe e avaliações resolverem. Testes backend foram ampliados
+com muitas versões sintéticas e contagem agregada.
+
+A revisão também observou risco transitório ao trocar paciente no mesmo componente.
+O render do prontuário falha fechado se `dados.paciente.id` diverge da rota; o
+editor PA04 também verifica a identidade do paciente no próprio render e usa key
+por paciente. O link interno de duplicidade usa navegação SPA; o teste Playwright
+fornece prontuário sintético B, pausa a lista de B e verifica que o modal e os
+macros de A somem antes de B carregar. Esse novo cenário ainda aguarda execução. A revisão estática
+R4 confirmou a lógica do guard e das duas correções; não executou testes. Relatório:
+`docs/governance/REVISAO_R4_PA04_2026-10-14.md`.
+
+Estado final de verificação registrado nesta worktree: testes focados de
+domínio/serviço **44/44 PASS**; typecheck backend e Web **PASS**; BFF
+**26/26 PASS**; lint Web **0 erros e 10 avisos** de hooks na superfície
+auditada; `node --check`, `git diff --check` e scanner local de secrets
+**PASS**. O lint foi executado após os ajustes finais da UI.
+
+O Playwright com os novos cenários R4 e PostgreSQL/Testcontainers estão
+**BLOCKED** por `ENOSPC`: tentativas não conseguiram iniciar Next/Docker nem
+executar os casos novos. A execução Playwright anterior (2/2 desktop/mobile)
+antecede esses cenários. Build completo, CI remoto e PR ainda não executados.
+Não houve migration, acesso a staging/produção, deploy ou ativação.
+
+Reversão: reverter projeção/API e UI; snapshots cifrados preexistentes não são
+alterados. Não há migration nem backfill. D01–D03 seguem fechadas.
