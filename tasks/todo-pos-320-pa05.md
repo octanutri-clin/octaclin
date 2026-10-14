@@ -70,7 +70,7 @@ migrations externas.
 
 - [x] T04–T06 PASS para a superfície PA05; contrato estabilizado e autorrevisão.
 - [x] Revisão R4 estática independente após quatro correções.
-- [ ] Gate integral Timescale/pgvector no CI (T09).
+- [x] Gate integral Timescale/pgvector no CI: 66/66 PASS no HEAD `4eafd661`.
 - [x] Troca manual para Luna alto confirmada; T07–T08 executados nesta etapa.
 
 ## T07 — formulário/preview profissional (depende checkpoint B; 3–5 arquivos)
@@ -98,11 +98,11 @@ migrations externas.
 
 ## T09 — entrega única (depende checkpoint C)
 
-- [ ] Backend/Web lint/typecheck/build, suítes proporcionais e segredo/diff PASS.
+- [x] Backend/Web lint/typecheck/build, suítes proporcionais e segredo/diff PASS.
 - [x] Revisão R4 cruzada com autoria/limites em `docs/governance/REVISAO_R4_PA05_2026-10-14.md`.
 - [ ] Uma PR integra código/documentos; CI do HEAD, scanners, Demo e PR Gate PASS.
-- [ ] Migration externa/deploy/ativação SKIPPED até autorização e alvo confirmado.
-- [ ] Atualizar gates reais, handoff, rollback e procedimento de implantação aditiva.
+- [x] Migration externa/deploy/ativação SKIPPED até autorização e alvo confirmado.
+- [x] Atualizar gates reais, handoff, rollback e procedimento de implantação aditiva.
 
 ## Evidências desta rodada
 
@@ -160,6 +160,12 @@ T01–T08 implementados e validados para a superfície PA05. T09 pendente.
   portal/cópia, desktop/mobile, print media e Axe nas preferências.
 - PASS: 4/4 casos adicionais de teclado/acessibilidade, incluindo troca de
   checkbox por Space e regressão do estado vazio do plano no portal.
+- PASS: regressões dedicadas PA02/PA03, 38/38 desktop/mobile. RED adicional
+  reproduzido no seletor parcial “Horário”, que passou a selecionar a checkbox
+  “Horários” das preferências; nome exato corrige o teste sem alterar runtime ou
+  enfraquecer a asserção de preservação do horário. GREEN integral 38/38.
+  Comando: `E2E_WEB_URL=http://localhost:3012 pnpm --dir octaclin-web exec playwright test tests/visual/pa02-copia-refeicoes.spec.mjs`
+  com Node22.21.1/pnpm11.25.0; evidência local `/tmp/pa05-pa02-full.log`.
 - PASS: typecheck/build backend e prova PostgreSQL15 real conjunta 3/3 PA04/PA05;
   os 31 casos não selecionados nesta fixture são SKIPPED, não PASS.
 - PASS: Web lint completo, 0 erros/66 avisos; scanner de secrets, governança de
@@ -169,9 +175,11 @@ T01–T08 implementados e validados para a superfície PA05. T09 pendente.
   detectou contaminação entre fixtures PA05/PA04. Reprodução local RED; casos
   PA05 passaram a usar identidades próprias, sem alterar expectativas PA04.
   Nova prova conjunta GREEN 3/3; CI integral precisa ser reexecutado.
-- Em execução: autorização BFF completa local e CI do HEAD corrigido da PR #419.
+- PASS: autorização BFF completa local. CI `38654959106`, HEAD `4eafd661`:
+  Backend 331 suítes/2.923 testes PASS, 2 suítes/41 testes SKIPPED; PostgreSQL/RLS
+  integral 66/66 PASS, Redis 2/2 PASS, Web e Governança PASS. Demo/PR Gate pendentes.
 - SKIPPED local: gate integral Timescale/pgvector por espaço Docker disponível;
-  será conferido no CI. PowerShell preflight não está instalado neste host;
+  aprovado no CI conforme evidência acima. PowerShell preflight não está instalado neste host;
   verificações documentais proporcionais executadas e governança no CI.
 - Sem merge, deploy, migration externa ou ativação. Migração1072 precisa do
   procedimento separado em `docs/governance/IMPLANTACAO_PA05_MIGRATION_1072.md`.

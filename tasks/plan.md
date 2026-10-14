@@ -29,11 +29,15 @@ em 2026-10-14; UI entregue por Luna alto e retorno manual ao Sol confirmado.
   Fixture omite extensões Timescale/pgvector fora do escopo; gate integral
   Testcontainers padrão será validado no CI. ENOSPC anterior não é aprovação.
 - [PR única #419](https://github.com/octanutri-clin/octaclin/pull/419), Draft.
-  Próxima ação: enviar correção de isolamento dos fixtures PA05 e validar CI
-  do novo HEAD. CI inicial `38653741126` falhou na interação PA04/PA05;
+  Próxima ação: validar CI do HEAD final; regressões PA02/PA03 38/38 PASS.
+  CI inicial `38653741126` falhou na interação PA04/PA05;
   reprodução RED e correção GREEN real 3/3 sem enfraquecer asserções PA04.
   UI conjunta 50/50 + teclado/a11y 4/4, Web/backend typecheck/build PASS.
-  Autorização BFF ampla local ainda em execução.
+  Autorização BFF ampla local PASS. CI `38654959106`, HEAD `4eafd661`: Backend
+  2.923 testes PASS, PostgreSQL/RLS 66/66 PASS, Redis 2/2 PASS, Web/Governança PASS;
+  Demo/PR Gate pendentes. Nova regressão visual reproduzida: seletor parcial
+  “Horário” escolhia a checkbox “Horários”; correção exige nome exato e preserva
+  a asserção do horário da refeição. Não houve alteração de runtime nesse ajuste.
 - PR única preparada inicialmente como Draft para validar CI; migração1072
   somente na fixture local. Não
   aplicar em staging/produção, nem fazer merge/deploy. Autorrevisão não substitui

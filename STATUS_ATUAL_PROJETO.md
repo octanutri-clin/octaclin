@@ -10,10 +10,12 @@ Atualizado em 2026-10-14.
   PA05/PA04; casos PA05 isolados e prova conjunta PostgreSQL real 3/3 PASS.
   Cifra/CAS, clone/hash, projeção paciente e BFF/tipos validados; provas reais
   PostgreSQL15 específicas com RLS/concorrência PASS. Fixture omite extensões
-  Timescale/pgvector não utilizadas pela PA05; gate integral será no CI.
+  Timescale/pgvector não utilizadas pela PA05; gate integral CI do HEAD `4eafd661`
+  PASS, 66/66 casos. Backend 2.923 testes, Redis 2/2 e Web/Governança PASS.
   UI T07/T08 implementada; Sol médio corrigiu quatro achados com testes RED.
-  Revisão estática independente final PASS; suíte visual e gates finais T09
-  em execução. Migration1072 aditiva somente em banco descartável neste ciclo.
+  Revisão estática independente final PASS; suíte visual 50/50 + a11y/teclado 4/4
+  PASS; regressões PA02/PA03 38/38 PASS; gates finais T09 em execução. Migration1072
+  aditiva somente em banco descartável neste ciclo.
   Evidências `docs/governance/REVISAO_R4_PA05_2026-10-14.md` e
   `docs/governance/EVIDENCIAS_PA05_BACKEND_2026-10-14.md`,
   handoff `tasks/plan-pos-320-pa05.md` e checklist `tasks/todo-pos-320-pa05.md`.
