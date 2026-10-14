@@ -1,4 +1,29 @@
-# Handoff atual — PA02: implementação autorizada
+# Handoff atual — PA03: planejamento consolidado
+
+Base auditada em 2026-10-14: main `5b47fb1`, merge #416. Worktree isolada
+`/workspace/octaclin/.worktrees/pos320-pa03-planejamento`, branch
+`docs/pos320-pa03-planejamento`. Planejamento autorizado; runtime não iniciado.
+
+- Contratos, gaps G01–G07 e arquivos:
+  [plan-pos-320-pa03.md](plan-pos-320-pa03.md).
+- T00–T06 e checkpoints:
+  [todo-pos-320-pa03.md](todo-pos-320-pa03.md).
+- D01–D03 confirmadas: somente editor do profissional; todas as refeições
+  recolhidas na carga; subtotais parciais com aviso. Referências específicas
+  PA03 recomendam código interno, sem dependência externa.
+- Prioridades: preservar ausência de nutrientes, arredondamento por porção,
+  identidade/estado, validação de campos recolhidos e trava PA02 colagem/save.
+- Implementação proposta: GPT-6 Luna alto; revisão final: GPT-6.1 Sol médio.
+  Avisar e pausar antes de troca manual e implementação.
+- #416 mergeada: HEAD `38c3596`, todos os workflows SUCCESS; CI
+  `38583138559` SUCCESS. O registro PA02 abaixo preserva o checkpoint anterior;
+  seus itens pendentes de integração/CI foram resolvidos conforme o relatório R4.
+- Uma PR PA03 reunirá documentação e código após autorização. Não abrir PR
+  documental separada. Nenhuma migration, merge, deploy ou ativação autorizada.
+
+---
+
+# Handoff histórico — PA02: implementação autorizada
 
 Em 2026-10-14 o proprietário autorizou a análise e, após responder D01–D03,
 autorizou a implementação da PA02. Main auditada: `2d2edcf`, merge #414/PA01,

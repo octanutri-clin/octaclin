@@ -4,17 +4,19 @@ Atualizado em 2026-10-14.
 
 ## Fase ativa
 
-- **PA02 — integrada pela PR #415; correções na PR Draft #416**, branch
-  `fix/pa02-copia-revisao-r4`, main `50a9590`. D01–D03
-  confirmadas; catálogo deste ID recomenda código interno. Duplicação local,
-  cópia de versão salva e aplicação não destrutiva implementadas. Revisão
-  cruzada de outro agente encontrou dois P2 de interface, corrigidos com
-  RED/GREEN: falso sucesso e corrida entre colagem e save. Revisão das
-  correções PASS, com autoria/digest e limites em
-  `docs/governance/REVISAO_R4_PA02_PR415_2026-10-14.md`. Todos os workflows de
-  `f94ea94` passaram; as correções exigem CI do novo HEAD. Handoff
-  `tasks/plan-pos-320-pa02.md`, checklist `tasks/todo-pos-320-pa02.md`.
-  Sem backend/schema novo, migration externa, merge ou deploy.
+- **PA03 — planejamento consolidado; implementação não iniciada**, base main
+  `5b47fb1` (#416), branch `docs/pos320-pa03-planejamento`. Decisões confirmadas:
+  somente editor do profissional, todas as refeições recolhidas inicialmente e
+  indicadores parciais com aviso de dados incompletos. Catálogo PA03 recomenda
+  código interno; não há repositório externo indicado. Handoff
+  `tasks/plan-pos-320-pa03.md`; checklist `tasks/todo-pos-320-pa03.md`.
+  Próximo passo: autorização de implementação e troca manual para Luna alto.
+- **PA02 — integrada pelas PRs #415/#416**, main `5b47fb1`. Correções de
+  falso sucesso e corrida colagem/save revisadas com RED/GREEN. Os cinco
+  workflows do HEAD corretivo `38c3596` passaram, incluindo todos os jobs do
+  CI `38583138559`. Relatório
+  `docs/governance/REVISAO_R4_PA02_PR415_2026-10-14.md`. Nenhum novo backend/schema
+  ou migration; integração/CI não comprovam publicação em produção.
 
 - **Transição pós-Fase 320:** NO-GO nesta rodada para ingestão/uso da TBCA, pois
   a autorização de direitos não está disponível. O catálogo continua com TACO,

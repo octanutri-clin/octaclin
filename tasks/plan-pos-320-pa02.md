@@ -1,5 +1,11 @@
 # PA02 — análise de gaps e handoff de implementação
 
+> Encerramento conferido em 2026-10-14: PR #416 mergeada em `5b47fb1`;
+> HEAD corretivo `38c3596` aprovado nos cinco workflows e em todos os jobs do
+> CI `38583138559`. O corpo preserva checkpoints anteriores, inclusive o estado
+> Draft/CI pendente da época. Esses dois itens estão resolvidos; publicação em
+> produção não foi verificada. Continuidade: [PA03](plan-pos-320-pa03.md).
+
 Data: 2026-10-14. Base auditada: main `2d2edcfed20457cb21a1d27d2cbfcc21499bab13`,
 merge da PR #414/PA01; FND02 integrado pela PR #411.
 
