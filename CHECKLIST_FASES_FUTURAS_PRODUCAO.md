@@ -4628,18 +4628,22 @@ auditoria estão ordenados na seção 15 de
   `docs/governance/REVISAO_R4_PA02_PR415_2026-10-14.md`. Cinco workflows do HEAD
   corretivo `38c3596` SUCCESS; todos os jobs do CI `38583138559` SUCCESS.
   Handoff `tasks/plan-pos-320-pa02.md`; sem migration nova.
-- [ ] PA03 — planejamento em `5b47fb1`; implementação autorizada e T01–T04
-  desenvolvidos em worktree isolado `feat/pos320-pa03-subtotais-refeicoes`. Somente
-  editor do profissional; todas recolhidas inicialmente; subtotais parciais e
-  aviso. Código sem dependências externas, API ou migration. Unit/BFF/visual
-  dirigidos, lint e build tiveram PASS local; revisão independente R4 fechou um
-  P2 com RED/GREEN. Build final PASS; visual 48/48 + complementos 4/4 no build
-  local. PR #417 Draft aberta; CI do HEAD pendente. Ver `tasks/plan-pos-320-pa03.md` e
-  `tasks/todo-pos-320-pa03.md`. Sem merge, deploy ou ativação.
+- [x] PA03 — integrada pela PR #417, main `6f0be7d`, conteúdo idêntico ao HEAD
+  aprovado a013555. Cabeçalhos/subtotais parciais e recolhimento no editor;
+  revisão R4 corrigiu overflow RED/GREEN. Cinco workflows e dez jobs do CI
+  38608333870 SUCCESS. Sem nova API/schema/migration; relatório
+  `docs/governance/REVISAO_R4_PA03_2026-10-14.md` e checklist
+  `tasks/todo-pos-320-pa03.md`. Não inferir publicação pelo merge.
+- [ ] PA04 — planejamento em main6f0be7d, branch docs/pos320-pa04-planejamento.
+  Referências deste ID recomendam código interno. D01–D03 confirmadas:
+  ambas as versões separadas, totais salvos e somente console profissional;
+  snapshots cifrados, projeção mínima e paginação da lista previstos em
+  `tasks/plan-pos-320-pa04.md` e `tasks/todo-pos-320-pa04.md`. Handoff pronto,
+  aguardando troca manual para GPT-6 Luna alto; runtime intacto.
 
-Merges e checks de #416 conferidos em 2026-10-14; nenhuma aprovação operacional
-ou publicação em produção é inferida. A implementação PA03 segue em validação;
-testes locais não substituem CI do HEAD ou revisão R4 independente.
+Merge e checks de #417 conferidos em 2026-10-14; nenhuma aprovação operacional
+ou publicação em produção é inferida. PA04 segue no planejamento; nenhum teste
+de implementação PA04 foi executado.
 
 O escopo, dependências, critérios de aceite, limites e gates destas fases estão
 em `docs/product/ROADMAP_POS_AUDITORIA_FASES_302_320.md`. Fases condicionais

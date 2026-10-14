@@ -4,18 +4,20 @@ Atualizado em 2026-10-14.
 
 ## Fase ativa
 
-- **PA03 — PR #417 Draft; CI pendente**, base main `5b47fb1` (#416), branch
-  `feat/pos320-pa03-subtotais-refeicoes`. Implementação autorizada pelo proprietário;
-  código/testes T01–T04 entregues na [PR #417](https://github.com/octanutri-clin/octaclin/pull/417). Decisões confirmadas:
-  somente editor do profissional, todas as refeições recolhidas inicialmente e
-  indicadores parciais com aviso de dados incompletos. Catálogo PA03 recomenda
-  código interno; não há repositório externo indicado. Handoff
-  `tasks/plan-pos-320-pa03.md`; checklist `tasks/todo-pos-320-pa03.md`.
-  Revisão Sol e revisão cruzada R4 independente concluídas; overflow do
-  arredondamento final corrigido com RED/GREEN. Build e suite visual ampliada
-  48/48, complementos 4/4, unitários/BFF/regressões PASS em Node22/pnpm11.25.
-  Próximo passo: conferir CI do HEAD da PR e resolver qualquer falha antes de merge.
-  Não houve alteração backend/schema, migration, merge, deploy ou ativação.
+- **PA04 — planejamento e análise de gaps**, base main `6f0be7d` (#417), branch
+  `docs/pos320-pa04-planejamento`, worktree isolada. Resumo de macros na lista de
+  planos; snapshot cifrado existente, projeção mínima e paginação visível.
+  Decisões confirmadas: rascunho/publicada separados, totais dos alimentos
+  previstos na versão salva e somente console profissional. Handoff consolidado;
+  implementação aguarda troca manual para GPT-6 Luna alto.
+  Catálogo/matriz/JSON PA04 recomendam código interno, sem repositório externo
+  ou biblioteca nova. Plano `tasks/plan-pos-320-pa04.md`; checklist
+  `tasks/todo-pos-320-pa04.md`. Runtime e testes PA04 não iniciados.
+- **PA03 — integrada pela PR #417**, main `6f0be7d`, idêntica ao HEAD aprovado
+  `a013555`. Cinco workflows SUCCESS e dez jobs do CI `38608333870` SUCCESS,
+  inclusive Backend, Web, Demo e PR Gate. Revisão cruzada R4 fechou overflow
+  com RED/GREEN; relatório `docs/governance/REVISAO_R4_PA03_2026-10-14.md`.
+  Não há migration nova; merge/CI não comprovam publicação produtiva.
 - **PA02 — integrada pelas PRs #415/#416**, main `5b47fb1`. Correções de
   falso sucesso e corrida colagem/save revisadas com RED/GREEN. Os cinco
   workflows do HEAD corretivo `38c3596` passaram, incluindo todos os jobs do

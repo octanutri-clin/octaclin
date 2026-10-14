@@ -1,4 +1,36 @@
-# Handoff atual — PA03: implementação validada localmente
+# Handoff atual — PA04: planejamento e gaps
+
+PA03 integrada pela PR #417, main `6f0be7d`; conteúdo idêntico ao HEAD aprovado
+`a013555`. Cinco workflows SUCCESS e dez jobs do CI `38608333870` SUCCESS,
+incluindo Web, Backend, Demo e PR Gate. Não inferir deploy pelo merge.
+
+PA04 — resumo de macros na lista de planos. Branch
+`docs/pos320-pa04-planejamento`, worktree isolada em main6f0be7d.
+Planejamento autorizado; runtime não alterado.
+
+- [Plano e gaps](plan-pos-320-pa04.md); [checklist T00–T08](todo-pos-320-pa04.md).
+- D01–D03 confirmadas: ambas as versões separadas, totais dos alimentos
+  previstos salvos e somente console profissional.
+- Referências específicas PA04 recomendam código interno; nenhum repositório
+  externo indicado ou biblioteca nova necessária.
+- Gaps materiais: snapshot cifrado não projetado; query carrega todas as colunas
+  de todas as versões; Web fixa página1/limite100 sem controles visíveis.
+- Proposta: projeção permitida dos totais salvos, lote das versões relevantes,
+  paginação segura, carteira/tenant/RLS e snapshots históricos preservados.
+  Trava compartilhada do paciente mantém coerência entre lotes; exigir prova PG.
+- GPT-6.1 Sol médio para planejamento/revisão; GPT-6 Luna alto para implementação
+  com TDD e contrato fechado. Avisar/pausar antes da troca manual.
+- Handoff consolidado. Próximo checkpoint: troca manual para GPT-6 Luna alto
+  e continuidade da implementação. Runtime ainda intacto; nenhuma migration,
+  merge, deploy ou ativação nesta etapa.
+
+---
+
+# Handoff histórico — PA03: integrada pela PR #417
+
+Fechamento confirmado em 2026-10-14: merge `6f0be7d`; CI `38608333870`,
+Semgrep, CodeQL, Trivy e Dependency Review SUCCESS. Estado Draft/CI pendente
+abaixo pertence ao handoff anterior e foi superado por este checkpoint.
 
 Base auditada em 2026-10-14: main `5b47fb1`, merge #416. Worktree isolada
 `/workspace/octaclin/.worktrees/pos320-pa03-planejamento`, branch
