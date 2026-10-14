@@ -1,0 +1,1875 @@
+{
+  "protocolVersion": 4,
+  "corpusSha256": "28ca1fc052a20c286cfe8c2551ffa6d62d9967ea3270a2e1d19f6ca57239a5b6",
+  "testQueries": 30,
+  "eligibleSourceCount": 200,
+  "machine": {
+    "cpuCount": 3,
+    "python": "3.12.14 (main, Aug 25 2026, 14:00:49) [Clang 22.1.3 ]",
+    "maxRssKiB": 1816248
+  },
+  "models": {
+    "e5": {
+      "sha256": "ca456c06b3a9505ddfd9131408916dd79290368331e7d76bb621f1cba6bc8665",
+      "bytes": 470268510,
+      "opset": [
+        [
+          "",
+          11
+        ]
+      ],
+      "customDomains": [],
+      "metadata": {},
+      "inputs": [
+        [
+          "input_ids",
+          "tensor(int64)",
+          [
+            "batch_size",
+            "sequence_length"
+          ]
+        ],
+        [
+          "attention_mask",
+          "tensor(int64)",
+          [
+            "batch_size",
+            "sequence_length"
+          ]
+        ],
+        [
+          "token_type_ids",
+          "tensor(int64)",
+          [
+            "batch_size",
+            "sequence_length"
+          ]
+        ]
+      ],
+      "outputs": [
+        [
+          "last_hidden_state",
+          "tensor(float)",
+          [
+            "batch_size",
+            "sequence_length",
+            384
+          ]
+        ]
+      ]
+    },
+    "miniLM": {
+      "sha256": "10f7a088420252b26caf819236ca2c9d2987afd0fc06fec7553b542a5655a05a",
+      "bytes": 470301610,
+      "opset": [
+        [
+          "",
+          14
+        ]
+      ],
+      "customDomains": [],
+      "metadata": {},
+      "inputs": [
+        [
+          "input_ids",
+          "tensor(int64)",
+          [
+            "batch_size",
+            "sequence_length"
+          ]
+        ],
+        [
+          "attention_mask",
+          "tensor(int64)",
+          [
+            "batch_size",
+            "sequence_length"
+          ]
+        ],
+        [
+          "token_type_ids",
+          "tensor(int64)",
+          [
+            "batch_size",
+            "sequence_length"
+          ]
+        ]
+      ],
+      "outputs": [
+        [
+          "last_hidden_state",
+          "tensor(float)",
+          [
+            "batch_size",
+            "sequence_length",
+            384
+          ]
+        ]
+      ]
+    }
+  },
+  "build": {
+    "e5": {
+      "seconds": 1.9635845340017113,
+      "sources": 200,
+      "chunks": 200
+    },
+    "miniLM": {
+      "seconds": 1.8137538619994302,
+      "sources": 200,
+      "chunks": 200
+    }
+  },
+  "latency": {
+    "e5": {
+      "warmP95Seconds": 0.014501847800056564,
+      "queryEncodingBatchSeconds": 0.3511680779993185
+    },
+    "miniLM": {
+      "warmP95Seconds": 0.016089382850259425,
+      "queryEncodingBatchSeconds": 0.3095740599965211
+    }
+  },
+  "results": {
+    "bm25": {
+      "ndcg10Mean": 0.9452371901428583,
+      "recall10Mean": 0.96,
+      "rows": [
+        {
+          "queryId": "q-011",
+          "category": "termo-raro",
+          "answerable": true,
+          "ndcg10": 1.0,
+          "recall10": 1.0,
+          "top10": [
+            "syn-011",
+            "fill-000",
+            "fill-001",
+            "fill-002",
+            "fill-003",
+            "fill-004",
+            "fill-005",
+            "fill-006",
+            "fill-007",
+            "fill-008"
+          ]
+        },
+        {
+          "queryId": "q-012",
+          "category": "termo-raro",
+          "answerable": true,
+          "ndcg10": 1.0,
+          "recall10": 1.0,
+          "top10": [
+            "syn-012",
+            "fill-000",
+            "fill-001",
+            "fill-002",
+            "fill-003",
+            "fill-004",
+            "fill-005",
+            "fill-006",
+            "fill-007",
+            "fill-008"
+          ]
+        },
+        {
+          "queryId": "q-013",
+          "category": "negação",
+          "answerable": true,
+          "ndcg10": 1.0,
+          "recall10": 1.0,
+          "top10": [
+            "syn-013",
+            "syn-007",
+            "syn-003",
+            "syn-015",
+            "syn-014",
+            "neg-036",
+            "neg-039",
+            "fill-001",
+            "fill-009",
+            "fill-017"
+          ]
+        },
+        {
+          "queryId": "q-014",
+          "category": "negação",
+          "answerable": true,
+          "ndcg10": 1.0,
+          "recall10": 1.0,
+          "top10": [
+            "syn-014",
+            "syn-004",
+            "syn-033",
+            "syn-036",
+            "syn-025",
+            "syn-003",
+            "syn-015",
+            "syn-002",
+            "syn-013",
+            "neg-036"
+          ]
+        },
+        {
+          "queryId": "q-015",
+          "category": "negação",
+          "answerable": true,
+          "ndcg10": 0.6309297535714574,
+          "recall10": 1.0,
+          "top10": [
+            "syn-007",
+            "syn-015",
+            "fill-001",
+            "fill-009",
+            "fill-017",
+            "fill-025",
+            "fill-033",
+            "fill-041",
+            "fill-049",
+            "fill-057"
+          ]
+        },
+        {
+          "queryId": "q-016",
+          "category": "negação",
+          "answerable": true,
+          "ndcg10": 1.0,
+          "recall10": 1.0,
+          "top10": [
+            "syn-016",
+            "syn-025",
+            "syn-002",
+            "syn-013",
+            "syn-028",
+            "syn-018",
+            "neg-011",
+            "neg-017",
+            "neg-019",
+            "neg-020"
+          ]
+        },
+        {
+          "queryId": "q-017",
+          "category": "número-data",
+          "answerable": true,
+          "ndcg10": 1.0,
+          "recall10": 1.0,
+          "top10": [
+            "syn-017",
+            "syn-010",
+            "fill-003",
+            "fill-007",
+            "fill-011",
+            "fill-015",
+            "fill-019",
+            "fill-023",
+            "fill-027",
+            "fill-031"
+          ]
+        },
+        {
+          "queryId": "q-018",
+          "category": "número-unidade",
+          "answerable": true,
+          "ndcg10": 1.0,
+          "recall10": 1.0,
+          "top10": [
+            "syn-018",
+            "fill-000",
+            "fill-001",
+            "fill-002",
+            "fill-003",
+            "fill-004",
+            "fill-005",
+            "fill-006",
+            "fill-007",
+            "fill-008"
+          ]
+        },
+        {
+          "queryId": "q-019",
+          "category": "número-unidade",
+          "answerable": true,
+          "ndcg10": 1.0,
+          "recall10": 1.0,
+          "top10": [
+            "syn-019",
+            "syn-023",
+            "syn-034",
+            "syn-037",
+            "fill-004",
+            "fill-012",
+            "fill-020",
+            "fill-028",
+            "fill-036",
+            "fill-044"
+          ]
+        },
+        {
+          "queryId": "q-020",
+          "category": "número-unidade",
+          "answerable": true,
+          "ndcg10": 1.0,
+          "recall10": 1.0,
+          "top10": [
+            "syn-020",
+            "syn-024",
+            "fill-000",
+            "fill-001",
+            "fill-002",
+            "fill-003",
+            "fill-004",
+            "fill-005",
+            "fill-006",
+            "fill-007"
+          ]
+        },
+        {
+          "queryId": "q-021",
+          "category": "data",
+          "answerable": true,
+          "ndcg10": 1.0,
+          "recall10": 1.0,
+          "top10": [
+            "syn-021",
+            "fill-002",
+            "fill-010",
+            "fill-018",
+            "fill-026",
+            "fill-034",
+            "fill-042",
+            "fill-050",
+            "fill-058",
+            "fill-066"
+          ]
+        },
+        {
+          "queryId": "q-022",
+          "category": "horário",
+          "answerable": true,
+          "ndcg10": 0.0,
+          "recall10": 0.0,
+          "top10": [
+            "fill-002",
+            "fill-010",
+            "fill-018",
+            "fill-026",
+            "fill-034",
+            "fill-042",
+            "fill-050",
+            "fill-058",
+            "fill-066",
+            "fill-074"
+          ]
+        },
+        {
+          "queryId": "q-023",
+          "category": "número-unidade",
+          "answerable": true,
+          "ndcg10": 1.0,
+          "recall10": 1.0,
+          "top10": [
+            "syn-023",
+            "syn-019",
+            "syn-025",
+            "syn-031",
+            "syn-011",
+            "fill-000",
+            "fill-001",
+            "fill-002",
+            "fill-003",
+            "fill-004"
+          ]
+        },
+        {
+          "queryId": "q-024",
+          "category": "número",
+          "answerable": true,
+          "ndcg10": 1.0,
+          "recall10": 1.0,
+          "top10": [
+            "syn-024",
+            "syn-018",
+            "syn-017",
+            "syn-013",
+            "syn-028",
+            "syn-009",
+            "fill-004",
+            "fill-012",
+            "fill-020",
+            "fill-028"
+          ]
+        },
+        {
+          "queryId": "q-025",
+          "category": "fonte-antiga",
+          "answerable": true,
+          "ndcg10": 1.0,
+          "recall10": 1.0,
+          "top10": [
+            "syn-025",
+            "syn-033",
+            "syn-016",
+            "syn-036",
+            "syn-004",
+            "syn-006",
+            "syn-030",
+            "syn-038",
+            "syn-040",
+            "syn-001"
+          ]
+        },
+        {
+          "queryId": "q-026",
+          "category": "fonte-antiga",
+          "answerable": true,
+          "ndcg10": 1.0,
+          "recall10": 1.0,
+          "top10": [
+            "syn-026",
+            "syn-015",
+            "syn-013",
+            "syn-028",
+            "syn-018",
+            "fill-002",
+            "fill-010",
+            "fill-018",
+            "fill-026",
+            "fill-034"
+          ]
+        },
+        {
+          "queryId": "q-027",
+          "category": "fonte-antiga",
+          "answerable": true,
+          "ndcg10": 1.0,
+          "recall10": 1.0,
+          "top10": [
+            "syn-027",
+            "syn-003",
+            "syn-028",
+            "fill-000",
+            "fill-001",
+            "fill-002",
+            "fill-003",
+            "fill-004",
+            "fill-005",
+            "fill-006"
+          ]
+        },
+        {
+          "queryId": "q-028",
+          "category": "fonte-antiga",
+          "answerable": true,
+          "ndcg10": 1.0,
+          "recall10": 1.0,
+          "top10": [
+            "syn-028",
+            "syn-036",
+            "syn-001",
+            "syn-039",
+            "syn-032",
+            "syn-004",
+            "syn-006",
+            "syn-030",
+            "syn-033",
+            "syn-038"
+          ]
+        },
+        {
+          "queryId": "q-029",
+          "category": "termo-raro",
+          "answerable": true,
+          "ndcg10": 1.0,
+          "recall10": 1.0,
+          "top10": [
+            "syn-029",
+            "fill-003",
+            "fill-007",
+            "fill-011",
+            "fill-015",
+            "fill-019",
+            "fill-023",
+            "fill-027",
+            "fill-031",
+            "fill-035"
+          ]
+        },
+        {
+          "queryId": "q-030",
+          "category": "paráfrase",
+          "answerable": true,
+          "ndcg10": 1.0,
+          "recall10": 1.0,
+          "top10": [
+            "syn-030",
+            "syn-010",
+            "syn-002",
+            "fill-000",
+            "fill-001",
+            "fill-002",
+            "fill-003",
+            "fill-004",
+            "fill-005",
+            "fill-006"
+          ]
+        },
+        {
+          "queryId": "q-031",
+          "category": "termo-raro",
+          "answerable": true,
+          "ndcg10": 1.0,
+          "recall10": 1.0,
+          "top10": [
+            "syn-031",
+            "fill-000",
+            "fill-001",
+            "fill-002",
+            "fill-003",
+            "fill-004",
+            "fill-005",
+            "fill-006",
+            "fill-007",
+            "fill-008"
+          ]
+        },
+        {
+          "queryId": "q-032",
+          "category": "paráfrase",
+          "answerable": true,
+          "ndcg10": 1.0,
+          "recall10": 1.0,
+          "top10": [
+            "syn-032",
+            "fill-002",
+            "fill-010",
+            "fill-018",
+            "fill-026",
+            "fill-034",
+            "fill-042",
+            "fill-050",
+            "fill-058",
+            "fill-066"
+          ]
+        },
+        {
+          "queryId": "q-033",
+          "category": "negação",
+          "answerable": true,
+          "ndcg10": 1.0,
+          "recall10": 1.0,
+          "top10": [
+            "syn-033",
+            "syn-004",
+            "syn-015",
+            "syn-038",
+            "syn-025",
+            "syn-014",
+            "neg-002",
+            "syn-036",
+            "syn-006",
+            "syn-030"
+          ]
+        },
+        {
+          "queryId": "q-034",
+          "category": "paráfrase",
+          "answerable": true,
+          "ndcg10": 1.0,
+          "recall10": 1.0,
+          "top10": [
+            "syn-034",
+            "fill-000",
+            "fill-008",
+            "fill-016",
+            "fill-024",
+            "fill-032",
+            "fill-040",
+            "fill-048",
+            "fill-056",
+            "fill-064"
+          ]
+        },
+        {
+          "queryId": "q-035",
+          "category": "termo-raro",
+          "answerable": true,
+          "ndcg10": 1.0,
+          "recall10": 1.0,
+          "top10": [
+            "syn-035",
+            "syn-023",
+            "fill-000",
+            "fill-001",
+            "fill-002",
+            "fill-003",
+            "fill-004",
+            "fill-005",
+            "fill-006",
+            "fill-007"
+          ]
+        },
+        {
+          "queryId": "q-036",
+          "category": "sem-resposta",
+          "answerable": false,
+          "ndcg10": null,
+          "recall10": null,
+          "top10": [
+            "syn-013",
+            "syn-020",
+            "syn-008",
+            "fill-004",
+            "fill-012",
+            "fill-020",
+            "fill-028",
+            "fill-036",
+            "fill-044",
+            "fill-052"
+          ]
+        },
+        {
+          "queryId": "q-037",
+          "category": "sem-resposta",
+          "answerable": false,
+          "ndcg10": null,
+          "recall10": null,
+          "top10": [
+            "fill-000",
+            "fill-001",
+            "fill-002",
+            "fill-003",
+            "fill-004",
+            "fill-005",
+            "fill-006",
+            "fill-007",
+            "fill-008",
+            "fill-009"
+          ]
+        },
+        {
+          "queryId": "q-038",
+          "category": "sem-resposta",
+          "answerable": false,
+          "ndcg10": null,
+          "recall10": null,
+          "top10": [
+            "syn-009",
+            "fill-004",
+            "fill-012",
+            "fill-020",
+            "fill-028",
+            "fill-036",
+            "fill-044",
+            "fill-052",
+            "fill-060",
+            "fill-068"
+          ]
+        },
+        {
+          "queryId": "q-039",
+          "category": "sem-resposta",
+          "answerable": false,
+          "ndcg10": null,
+          "recall10": null,
+          "top10": [
+            "fill-003",
+            "fill-007",
+            "fill-011",
+            "fill-015",
+            "fill-019",
+            "fill-023",
+            "fill-027",
+            "fill-031",
+            "fill-035",
+            "fill-039"
+          ]
+        },
+        {
+          "queryId": "q-040",
+          "category": "sem-resposta",
+          "answerable": false,
+          "ndcg10": null,
+          "recall10": null,
+          "top10": [
+            "syn-013",
+            "syn-039",
+            "fill-000",
+            "fill-001",
+            "fill-002",
+            "fill-003",
+            "fill-004",
+            "fill-005",
+            "fill-006",
+            "fill-007"
+          ]
+        }
+      ],
+      "noAnswerReturnedAny": 5
+    },
+    "e5": {
+      "ndcg10Mean": 0.9452371901428583,
+      "recall10Mean": 0.96,
+      "rows": [
+        {
+          "queryId": "q-011",
+          "category": "termo-raro",
+          "answerable": true,
+          "ndcg10": 1.0,
+          "recall10": 1.0,
+          "top10": [
+            "syn-011",
+            "syn-009",
+            "syn-031",
+            "syn-035",
+            "fill-006",
+            "fill-014",
+            "fill-022",
+            "fill-030",
+            "fill-038",
+            "fill-046"
+          ]
+        },
+        {
+          "queryId": "q-012",
+          "category": "termo-raro",
+          "answerable": true,
+          "ndcg10": 1.0,
+          "recall10": 1.0,
+          "top10": [
+            "syn-012",
+            "syn-027",
+            "syn-015",
+            "syn-009",
+            "syn-032",
+            "syn-033",
+            "syn-019",
+            "syn-006",
+            "syn-029",
+            "syn-036"
+          ]
+        },
+        {
+          "queryId": "q-013",
+          "category": "negação",
+          "answerable": true,
+          "ndcg10": 1.0,
+          "recall10": 1.0,
+          "top10": [
+            "syn-013",
+            "syn-016",
+            "syn-015",
+            "syn-003",
+            "syn-014",
+            "syn-019",
+            "syn-004",
+            "syn-007",
+            "neg-036",
+            "neg-039"
+          ]
+        },
+        {
+          "queryId": "q-014",
+          "category": "negação",
+          "answerable": true,
+          "ndcg10": 1.0,
+          "recall10": 1.0,
+          "top10": [
+            "syn-014",
+            "syn-004",
+            "syn-033",
+            "syn-036",
+            "syn-015",
+            "syn-030",
+            "syn-003",
+            "syn-001",
+            "syn-016",
+            "syn-032"
+          ]
+        },
+        {
+          "queryId": "q-015",
+          "category": "negação",
+          "answerable": true,
+          "ndcg10": 1.0,
+          "recall10": 1.0,
+          "top10": [
+            "syn-015",
+            "syn-011",
+            "syn-019",
+            "syn-030",
+            "syn-035",
+            "syn-007",
+            "syn-027",
+            "syn-036",
+            "syn-028",
+            "syn-004"
+          ]
+        },
+        {
+          "queryId": "q-016",
+          "category": "negação",
+          "answerable": true,
+          "ndcg10": 1.0,
+          "recall10": 1.0,
+          "top10": [
+            "syn-016",
+            "syn-013",
+            "syn-015",
+            "syn-002",
+            "syn-009",
+            "syn-011",
+            "syn-035",
+            "syn-028",
+            "syn-036",
+            "neg-032"
+          ]
+        },
+        {
+          "queryId": "q-017",
+          "category": "número-data",
+          "answerable": true,
+          "ndcg10": 1.0,
+          "recall10": 1.0,
+          "top10": [
+            "syn-017",
+            "syn-018",
+            "fill-007",
+            "fill-015",
+            "fill-023",
+            "fill-031",
+            "fill-039",
+            "fill-047",
+            "fill-055",
+            "fill-063"
+          ]
+        },
+        {
+          "queryId": "q-018",
+          "category": "número-unidade",
+          "answerable": true,
+          "ndcg10": 1.0,
+          "recall10": 1.0,
+          "top10": [
+            "syn-018",
+            "syn-019",
+            "syn-023",
+            "syn-007",
+            "syn-024",
+            "syn-029",
+            "syn-027",
+            "fill-007",
+            "fill-015",
+            "fill-023"
+          ]
+        },
+        {
+          "queryId": "q-019",
+          "category": "número-unidade",
+          "answerable": true,
+          "ndcg10": 1.0,
+          "recall10": 1.0,
+          "top10": [
+            "syn-019",
+            "syn-023",
+            "syn-002",
+            "syn-017",
+            "syn-004",
+            "fill-006",
+            "fill-014",
+            "fill-022",
+            "fill-030",
+            "fill-038"
+          ]
+        },
+        {
+          "queryId": "q-020",
+          "category": "número-unidade",
+          "answerable": true,
+          "ndcg10": 1.0,
+          "recall10": 1.0,
+          "top10": [
+            "syn-020",
+            "syn-012",
+            "fill-006",
+            "fill-014",
+            "fill-022",
+            "fill-030",
+            "fill-038",
+            "fill-046",
+            "fill-054",
+            "fill-062"
+          ]
+        },
+        {
+          "queryId": "q-021",
+          "category": "data",
+          "answerable": true,
+          "ndcg10": 0.0,
+          "recall10": 0.0,
+          "top10": [
+            "fill-002",
+            "fill-010",
+            "fill-018",
+            "fill-026",
+            "fill-034",
+            "fill-042",
+            "fill-050",
+            "fill-058",
+            "fill-066",
+            "fill-074"
+          ]
+        },
+        {
+          "queryId": "q-022",
+          "category": "horário",
+          "answerable": true,
+          "ndcg10": 1.0,
+          "recall10": 1.0,
+          "top10": [
+            "syn-022",
+            "fill-002",
+            "fill-010",
+            "fill-018",
+            "fill-026",
+            "fill-034",
+            "fill-042",
+            "fill-050",
+            "fill-058",
+            "fill-066"
+          ]
+        },
+        {
+          "queryId": "q-023",
+          "category": "número-unidade",
+          "answerable": true,
+          "ndcg10": 1.0,
+          "recall10": 1.0,
+          "top10": [
+            "syn-023",
+            "syn-019",
+            "syn-029",
+            "fill-006",
+            "fill-014",
+            "fill-022",
+            "fill-030",
+            "fill-038",
+            "fill-046",
+            "fill-054"
+          ]
+        },
+        {
+          "queryId": "q-024",
+          "category": "número",
+          "answerable": true,
+          "ndcg10": 1.0,
+          "recall10": 1.0,
+          "top10": [
+            "syn-024",
+            "syn-018",
+            "syn-009",
+            "syn-019",
+            "syn-013",
+            "syn-004",
+            "syn-040",
+            "fill-007",
+            "fill-015",
+            "fill-023"
+          ]
+        },
+        {
+          "queryId": "q-025",
+          "category": "fonte-antiga",
+          "answerable": true,
+          "ndcg10": 1.0,
+          "recall10": 1.0,
+          "top10": [
+            "syn-025",
+            "syn-004",
+            "syn-036",
+            "syn-016",
+            "syn-033",
+            "syn-030",
+            "syn-009",
+            "syn-034",
+            "syn-005",
+            "syn-039"
+          ]
+        },
+        {
+          "queryId": "q-026",
+          "category": "fonte-antiga",
+          "answerable": true,
+          "ndcg10": 1.0,
+          "recall10": 1.0,
+          "top10": [
+            "syn-026",
+            "syn-028",
+            "fill-007",
+            "fill-015",
+            "fill-023",
+            "fill-031",
+            "fill-039",
+            "fill-047",
+            "fill-055",
+            "fill-063"
+          ]
+        },
+        {
+          "queryId": "q-027",
+          "category": "fonte-antiga",
+          "answerable": true,
+          "ndcg10": 1.0,
+          "recall10": 1.0,
+          "top10": [
+            "syn-027",
+            "syn-028",
+            "syn-011",
+            "syn-003",
+            "syn-007",
+            "syn-010",
+            "syn-006",
+            "syn-012",
+            "syn-015",
+            "syn-036"
+          ]
+        },
+        {
+          "queryId": "q-028",
+          "category": "fonte-antiga",
+          "answerable": true,
+          "ndcg10": 1.0,
+          "recall10": 1.0,
+          "top10": [
+            "syn-028",
+            "syn-036",
+            "syn-032",
+            "syn-005",
+            "fill-003",
+            "fill-011",
+            "fill-019",
+            "fill-027",
+            "fill-035",
+            "fill-043"
+          ]
+        },
+        {
+          "queryId": "q-029",
+          "category": "termo-raro",
+          "answerable": true,
+          "ndcg10": 1.0,
+          "recall10": 1.0,
+          "top10": [
+            "syn-029",
+            "syn-012",
+            "syn-007",
+            "syn-016",
+            "syn-032",
+            "syn-036",
+            "syn-035",
+            "fill-007",
+            "fill-015",
+            "fill-023"
+          ]
+        },
+        {
+          "queryId": "q-030",
+          "category": "paráfrase",
+          "answerable": true,
+          "ndcg10": 0.6309297535714574,
+          "recall10": 1.0,
+          "top10": [
+            "syn-010",
+            "syn-030",
+            "syn-019",
+            "syn-002",
+            "syn-027",
+            "syn-028",
+            "syn-012",
+            "syn-035",
+            "fill-007",
+            "fill-015"
+          ]
+        },
+        {
+          "queryId": "q-031",
+          "category": "termo-raro",
+          "answerable": true,
+          "ndcg10": 1.0,
+          "recall10": 1.0,
+          "top10": [
+            "syn-031",
+            "fill-006",
+            "fill-014",
+            "fill-022",
+            "fill-030",
+            "fill-038",
+            "fill-046",
+            "fill-054",
+            "fill-062",
+            "fill-070"
+          ]
+        },
+        {
+          "queryId": "q-032",
+          "category": "paráfrase",
+          "answerable": true,
+          "ndcg10": 1.0,
+          "recall10": 1.0,
+          "top10": [
+            "syn-032",
+            "syn-012",
+            "syn-028",
+            "syn-036",
+            "syn-004",
+            "fill-007",
+            "fill-015",
+            "fill-023",
+            "fill-031",
+            "fill-039"
+          ]
+        },
+        {
+          "queryId": "q-033",
+          "category": "negação",
+          "answerable": true,
+          "ndcg10": 1.0,
+          "recall10": 1.0,
+          "top10": [
+            "syn-033",
+            "syn-004",
+            "syn-014",
+            "syn-015",
+            "syn-025",
+            "fill-004",
+            "fill-012",
+            "fill-020",
+            "fill-028",
+            "fill-036"
+          ]
+        },
+        {
+          "queryId": "q-034",
+          "category": "paráfrase",
+          "answerable": true,
+          "ndcg10": 1.0,
+          "recall10": 1.0,
+          "top10": [
+            "syn-034",
+            "fill-000",
+            "fill-008",
+            "fill-016",
+            "fill-024",
+            "fill-032",
+            "fill-040",
+            "fill-048",
+            "fill-056",
+            "fill-064"
+          ]
+        },
+        {
+          "queryId": "q-035",
+          "category": "termo-raro",
+          "answerable": true,
+          "ndcg10": 1.0,
+          "recall10": 1.0,
+          "top10": [
+            "syn-035",
+            "syn-004",
+            "syn-036",
+            "syn-005",
+            "syn-029",
+            "fill-007",
+            "fill-015",
+            "fill-023",
+            "fill-031",
+            "fill-039"
+          ]
+        },
+        {
+          "queryId": "q-036",
+          "category": "sem-resposta",
+          "answerable": false,
+          "ndcg10": null,
+          "recall10": null,
+          "top10": [
+            "fill-004",
+            "fill-012",
+            "fill-020",
+            "fill-028",
+            "fill-036",
+            "fill-044",
+            "fill-052",
+            "fill-060",
+            "fill-068",
+            "fill-076"
+          ]
+        },
+        {
+          "queryId": "q-037",
+          "category": "sem-resposta",
+          "answerable": false,
+          "ndcg10": null,
+          "recall10": null,
+          "top10": [
+            "neg-036",
+            "neg-039",
+            "neg-002",
+            "fill-006",
+            "fill-014",
+            "fill-022",
+            "fill-030",
+            "fill-038",
+            "fill-046",
+            "fill-054"
+          ]
+        },
+        {
+          "queryId": "q-038",
+          "category": "sem-resposta",
+          "answerable": false,
+          "ndcg10": null,
+          "recall10": null,
+          "top10": [
+            "syn-028",
+            "fill-004",
+            "fill-012",
+            "fill-020",
+            "fill-028",
+            "fill-036",
+            "fill-044",
+            "fill-052",
+            "fill-060",
+            "fill-068"
+          ]
+        },
+        {
+          "queryId": "q-039",
+          "category": "sem-resposta",
+          "answerable": false,
+          "ndcg10": null,
+          "recall10": null,
+          "top10": [
+            "syn-031",
+            "fill-006",
+            "fill-014",
+            "fill-022",
+            "fill-030",
+            "fill-038",
+            "fill-046",
+            "fill-054",
+            "fill-062",
+            "fill-070"
+          ]
+        },
+        {
+          "queryId": "q-040",
+          "category": "sem-resposta",
+          "answerable": false,
+          "ndcg10": null,
+          "recall10": null,
+          "top10": [
+            "syn-011",
+            "fill-006",
+            "fill-014",
+            "fill-022",
+            "fill-030",
+            "fill-038",
+            "fill-046",
+            "fill-054",
+            "fill-062",
+            "fill-070"
+          ]
+        }
+      ],
+      "noAnswerReturnedAny": 5
+    },
+    "miniLM": {
+      "ndcg10Mean": 0.9052371901428583,
+      "recall10Mean": 0.92,
+      "rows": [
+        {
+          "queryId": "q-011",
+          "category": "termo-raro",
+          "answerable": true,
+          "ndcg10": 0.0,
+          "recall10": 0.0,
+          "top10": [
+            "syn-018",
+            "syn-035",
+            "syn-024",
+            "syn-009",
+            "fill-006",
+            "fill-014",
+            "fill-022",
+            "fill-030",
+            "fill-038",
+            "fill-046"
+          ]
+        },
+        {
+          "queryId": "q-012",
+          "category": "termo-raro",
+          "answerable": true,
+          "ndcg10": 1.0,
+          "recall10": 1.0,
+          "top10": [
+            "syn-012",
+            "syn-011",
+            "syn-009",
+            "syn-027",
+            "syn-036",
+            "syn-004",
+            "syn-029",
+            "syn-032",
+            "syn-035",
+            "syn-031"
+          ]
+        },
+        {
+          "queryId": "q-013",
+          "category": "negação",
+          "answerable": true,
+          "ndcg10": 1.0,
+          "recall10": 1.0,
+          "top10": [
+            "syn-013",
+            "syn-015",
+            "syn-014",
+            "syn-002",
+            "syn-030",
+            "neg-038",
+            "neg-040",
+            "syn-003",
+            "neg-002",
+            "neg-013"
+          ]
+        },
+        {
+          "queryId": "q-014",
+          "category": "negação",
+          "answerable": true,
+          "ndcg10": 1.0,
+          "recall10": 1.0,
+          "top10": [
+            "syn-014",
+            "syn-004",
+            "syn-030",
+            "syn-012",
+            "syn-011",
+            "fill-003",
+            "fill-011",
+            "fill-019",
+            "fill-027",
+            "fill-035"
+          ]
+        },
+        {
+          "queryId": "q-015",
+          "category": "negação",
+          "answerable": true,
+          "ndcg10": 1.0,
+          "recall10": 1.0,
+          "top10": [
+            "syn-015",
+            "syn-030",
+            "syn-010",
+            "syn-011",
+            "syn-007",
+            "neg-003",
+            "neg-014",
+            "neg-030",
+            "syn-009",
+            "syn-035"
+          ]
+        },
+        {
+          "queryId": "q-016",
+          "category": "negação",
+          "answerable": true,
+          "ndcg10": 1.0,
+          "recall10": 1.0,
+          "top10": [
+            "syn-016",
+            "syn-007",
+            "neg-032",
+            "neg-001",
+            "neg-008",
+            "neg-015",
+            "neg-016",
+            "neg-012",
+            "neg-033",
+            "neg-021"
+          ]
+        },
+        {
+          "queryId": "q-017",
+          "category": "número-data",
+          "answerable": true,
+          "ndcg10": 1.0,
+          "recall10": 1.0,
+          "top10": [
+            "syn-017",
+            "syn-024",
+            "syn-018",
+            "syn-019",
+            "fill-004",
+            "fill-012",
+            "fill-020",
+            "fill-028",
+            "fill-036",
+            "fill-044"
+          ]
+        },
+        {
+          "queryId": "q-018",
+          "category": "número-unidade",
+          "answerable": true,
+          "ndcg10": 1.0,
+          "recall10": 1.0,
+          "top10": [
+            "syn-018",
+            "syn-024",
+            "syn-023",
+            "syn-017",
+            "syn-019",
+            "syn-020",
+            "syn-022",
+            "syn-005",
+            "syn-010",
+            "syn-038"
+          ]
+        },
+        {
+          "queryId": "q-019",
+          "category": "número-unidade",
+          "answerable": true,
+          "ndcg10": 1.0,
+          "recall10": 1.0,
+          "top10": [
+            "syn-019",
+            "syn-023",
+            "syn-002",
+            "syn-010",
+            "syn-018",
+            "syn-031",
+            "syn-024",
+            "syn-030",
+            "syn-020",
+            "syn-004"
+          ]
+        },
+        {
+          "queryId": "q-020",
+          "category": "número-unidade",
+          "answerable": true,
+          "ndcg10": 1.0,
+          "recall10": 1.0,
+          "top10": [
+            "syn-020",
+            "syn-024",
+            "syn-023",
+            "syn-018",
+            "syn-017",
+            "syn-009",
+            "syn-036",
+            "syn-019",
+            "fill-006",
+            "fill-014"
+          ]
+        },
+        {
+          "queryId": "q-021",
+          "category": "data",
+          "answerable": true,
+          "ndcg10": 1.0,
+          "recall10": 1.0,
+          "top10": [
+            "syn-021",
+            "fill-002",
+            "fill-010",
+            "fill-018",
+            "fill-026",
+            "fill-034",
+            "fill-042",
+            "fill-050",
+            "fill-058",
+            "fill-066"
+          ]
+        },
+        {
+          "queryId": "q-022",
+          "category": "horário",
+          "answerable": true,
+          "ndcg10": 1.0,
+          "recall10": 1.0,
+          "top10": [
+            "syn-022",
+            "syn-005",
+            "fill-002",
+            "fill-010",
+            "fill-018",
+            "fill-026",
+            "fill-034",
+            "fill-042",
+            "fill-050",
+            "fill-058"
+          ]
+        },
+        {
+          "queryId": "q-023",
+          "category": "número-unidade",
+          "answerable": true,
+          "ndcg10": 1.0,
+          "recall10": 1.0,
+          "top10": [
+            "syn-023",
+            "syn-018",
+            "syn-024",
+            "syn-019",
+            "syn-020",
+            "syn-017",
+            "syn-010",
+            "syn-005",
+            "fill-006",
+            "fill-014"
+          ]
+        },
+        {
+          "queryId": "q-024",
+          "category": "número",
+          "answerable": true,
+          "ndcg10": 1.0,
+          "recall10": 1.0,
+          "top10": [
+            "syn-024",
+            "syn-018",
+            "fill-006",
+            "fill-014",
+            "fill-022",
+            "fill-030",
+            "fill-038",
+            "fill-046",
+            "fill-054",
+            "fill-062"
+          ]
+        },
+        {
+          "queryId": "q-025",
+          "category": "fonte-antiga",
+          "answerable": true,
+          "ndcg10": 0.0,
+          "recall10": 0.0,
+          "top10": [
+            "syn-034",
+            "syn-022",
+            "syn-007",
+            "syn-005",
+            "fill-004",
+            "fill-012",
+            "fill-020",
+            "fill-028",
+            "fill-036",
+            "fill-044"
+          ]
+        },
+        {
+          "queryId": "q-026",
+          "category": "fonte-antiga",
+          "answerable": true,
+          "ndcg10": 1.0,
+          "recall10": 1.0,
+          "top10": [
+            "syn-026",
+            "fill-007",
+            "fill-015",
+            "fill-023",
+            "fill-031",
+            "fill-039",
+            "fill-047",
+            "fill-055",
+            "fill-063",
+            "fill-071"
+          ]
+        },
+        {
+          "queryId": "q-027",
+          "category": "fonte-antiga",
+          "answerable": true,
+          "ndcg10": 1.0,
+          "recall10": 1.0,
+          "top10": [
+            "syn-027",
+            "syn-011",
+            "syn-009",
+            "syn-012",
+            "syn-035",
+            "syn-032",
+            "syn-029",
+            "syn-036",
+            "syn-028",
+            "syn-031"
+          ]
+        },
+        {
+          "queryId": "q-028",
+          "category": "fonte-antiga",
+          "answerable": true,
+          "ndcg10": 1.0,
+          "recall10": 1.0,
+          "top10": [
+            "syn-028",
+            "syn-036",
+            "syn-011",
+            "syn-009",
+            "syn-035",
+            "fill-003",
+            "fill-011",
+            "fill-019",
+            "fill-027",
+            "fill-035"
+          ]
+        },
+        {
+          "queryId": "q-029",
+          "category": "termo-raro",
+          "answerable": true,
+          "ndcg10": 1.0,
+          "recall10": 1.0,
+          "top10": [
+            "syn-029",
+            "syn-011",
+            "syn-012",
+            "syn-009",
+            "syn-035",
+            "syn-027",
+            "syn-032",
+            "syn-036",
+            "syn-004",
+            "syn-031"
+          ]
+        },
+        {
+          "queryId": "q-030",
+          "category": "paráfrase",
+          "answerable": true,
+          "ndcg10": 1.0,
+          "recall10": 1.0,
+          "top10": [
+            "syn-030",
+            "syn-010",
+            "syn-002",
+            "syn-019",
+            "syn-023",
+            "syn-031",
+            "syn-004",
+            "syn-013",
+            "syn-011",
+            "syn-027"
+          ]
+        },
+        {
+          "queryId": "q-031",
+          "category": "termo-raro",
+          "answerable": true,
+          "ndcg10": 1.0,
+          "recall10": 1.0,
+          "top10": [
+            "syn-031",
+            "syn-009",
+            "syn-036",
+            "syn-011",
+            "syn-004",
+            "fill-006",
+            "fill-014",
+            "fill-022",
+            "fill-030",
+            "fill-038"
+          ]
+        },
+        {
+          "queryId": "q-032",
+          "category": "paráfrase",
+          "answerable": true,
+          "ndcg10": 0.6309297535714574,
+          "recall10": 1.0,
+          "top10": [
+            "syn-009",
+            "syn-032",
+            "syn-029",
+            "syn-011",
+            "syn-031",
+            "syn-035",
+            "syn-036",
+            "syn-025",
+            "syn-004",
+            "syn-012"
+          ]
+        },
+        {
+          "queryId": "q-033",
+          "category": "negação",
+          "answerable": true,
+          "ndcg10": 1.0,
+          "recall10": 1.0,
+          "top10": [
+            "syn-033",
+            "syn-004",
+            "syn-014",
+            "syn-030",
+            "syn-031",
+            "syn-002",
+            "syn-022",
+            "syn-035",
+            "syn-034",
+            "syn-019"
+          ]
+        },
+        {
+          "queryId": "q-034",
+          "category": "paráfrase",
+          "answerable": true,
+          "ndcg10": 1.0,
+          "recall10": 1.0,
+          "top10": [
+            "syn-034",
+            "fill-000",
+            "fill-008",
+            "fill-016",
+            "fill-024",
+            "fill-032",
+            "fill-040",
+            "fill-048",
+            "fill-056",
+            "fill-064"
+          ]
+        },
+        {
+          "queryId": "q-035",
+          "category": "termo-raro",
+          "answerable": true,
+          "ndcg10": 1.0,
+          "recall10": 1.0,
+          "top10": [
+            "syn-035",
+            "syn-031",
+            "syn-019",
+            "syn-023",
+            "syn-004",
+            "syn-009",
+            "syn-030",
+            "fill-005",
+            "fill-013",
+            "fill-021"
+          ]
+        },
+        {
+          "queryId": "q-036",
+          "category": "sem-resposta",
+          "answerable": false,
+          "ndcg10": null,
+          "recall10": null,
+          "top10": [
+            "syn-011",
+            "syn-012",
+            "syn-030",
+            "fill-000",
+            "fill-008",
+            "fill-016",
+            "fill-024",
+            "fill-032",
+            "fill-040",
+            "fill-048"
+          ]
+        },
+        {
+          "queryId": "q-037",
+          "category": "sem-resposta",
+          "answerable": false,
+          "ndcg10": null,
+          "recall10": null,
+          "top10": [
+            "syn-009",
+            "syn-029",
+            "syn-012",
+            "syn-036",
+            "syn-011",
+            "syn-019",
+            "syn-023",
+            "syn-018",
+            "syn-025",
+            "syn-024"
+          ]
+        },
+        {
+          "queryId": "q-038",
+          "category": "sem-resposta",
+          "answerable": false,
+          "ndcg10": null,
+          "recall10": null,
+          "top10": [
+            "fill-004",
+            "fill-012",
+            "fill-020",
+            "fill-028",
+            "fill-036",
+            "fill-044",
+            "fill-052",
+            "fill-060",
+            "fill-068",
+            "fill-076"
+          ]
+        },
+        {
+          "queryId": "q-039",
+          "category": "sem-resposta",
+          "answerable": false,
+          "ndcg10": null,
+          "recall10": null,
+          "top10": [
+            "syn-004",
+            "syn-010",
+            "syn-011",
+            "syn-003",
+            "syn-009",
+            "syn-017",
+            "syn-019",
+            "syn-012",
+            "syn-015",
+            "syn-016"
+          ]
+        },
+        {
+          "queryId": "q-040",
+          "category": "sem-resposta",
+          "answerable": false,
+          "ndcg10": null,
+          "recall10": null,
+          "top10": [
+            "syn-011",
+            "syn-009",
+            "syn-035",
+            "syn-027",
+            "fill-000",
+            "fill-008",
+            "fill-016",
+            "fill-024",
+            "fill-032",
+            "fill-040"
+          ]
+        }
+      ],
+      "noAnswerReturnedAny": 5
+    }
+  },
+  "limitations": [
+    "synthetic authored corpus only",
+    "v4 fixes incorporate a supplied audit but the auditor's identity/qualifications were not independently verified",
+    "new neutral no-answer texts need independent semantic review",
+    "no abstention threshold was preregistered or implemented; no-answer criterion is not yet scoreable",
+    "no human task-time trial",
+    "no product tenant/RLS/authz integration",
+    "license rights not legally verified"
+  ]
+}

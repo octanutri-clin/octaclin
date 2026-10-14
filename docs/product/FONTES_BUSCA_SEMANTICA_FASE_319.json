@@ -1,0 +1,279 @@
+{
+  "consultadoEm": "2026-10-13",
+  "metodo": "GET público de metadata/configuração; nenhum peso, instalação ou código externo executado",
+  "candidatos": [
+    {
+      "modelo": "intfloat/multilingual-e5-small",
+      "url": "https://huggingface.co/api/models/intfloat/multilingual-e5-small?blobs=true",
+      "status": 200,
+      "sha256Metadata": "3ef616d437cbaf60f15373e5399f47088b4539895174fdebfd8167976cf628d7",
+      "revision": "614241f622f53c4eeff9890bdc4f31cfecc418b3",
+      "licencaDeclarada": "mit",
+      "pipeline": "sentence-similarity",
+      "biblioteca": "sentence-transformers",
+      "artefatos": [
+        {
+          "arquivo": "README.md",
+          "bytes": 497538,
+          "lfs": null
+        },
+        {
+          "arquivo": "config.json",
+          "bytes": 655,
+          "lfs": null
+        },
+        {
+          "arquivo": "model.safetensors",
+          "bytes": 470641600,
+          "lfs": {
+            "sha256": "1a55775f53449dac10a2bcbc312469fac40b96d53198c407081a831f81c98477",
+            "size": 470641600,
+            "pointerSize": 134
+          }
+        },
+        {
+          "arquivo": "onnx/model.onnx",
+          "bytes": 470268510,
+          "lfs": {
+            "sha256": "ca456c06b3a9505ddfd9131408916dd79290368331e7d76bb621f1cba6bc8665",
+            "size": 470268510,
+            "pointerSize": 134
+          }
+        },
+        {
+          "arquivo": "pytorch_model.bin",
+          "bytes": 470681649,
+          "lfs": {
+            "sha256": "f0ccb64a2edc689fce7b1895f25146740e4075c3da28c8d0e672a8ba49c51167",
+            "size": 470681649,
+            "pointerSize": 134
+          }
+        },
+        {
+          "arquivo": "tokenizer.json",
+          "bytes": 17082730,
+          "lfs": {
+            "sha256": "0b44a9d7b51c3c62626640cda0e2c2f70fdacdc25bbbd68038369d14ebdf4c39",
+            "size": 17082730,
+            "pointerSize": 133
+          }
+        }
+      ],
+      "configuracoes": [
+        {
+          "arquivo": "config.json",
+          "url": "https://huggingface.co/intfloat/multilingual-e5-small/resolve/614241f622f53c4eeff9890bdc4f31cfecc418b3/config.json",
+          "status": 200,
+          "sha256": "69137736cab8b8903a07fe8afaafdda25aac55415a12a55d1bffa9f581abf959",
+          "parametros": {
+            "hidden_size": 384,
+            "max_position_embeddings": 512
+          }
+        },
+        {
+          "arquivo": "sentence_bert_config.json",
+          "url": "https://huggingface.co/intfloat/multilingual-e5-small/resolve/614241f622f53c4eeff9890bdc4f31cfecc418b3/sentence_bert_config.json",
+          "status": 200,
+          "sha256": "948201d8329907aae938fa62f9ceeed53f5694dacc2b87b9f3b78b37ee986529",
+          "parametros": {
+            "max_seq_length": 512
+          }
+        },
+        {
+          "arquivo": "1_Pooling/config.json",
+          "url": "https://huggingface.co/intfloat/multilingual-e5-small/resolve/614241f622f53c4eeff9890bdc4f31cfecc418b3/1_Pooling/config.json",
+          "status": 200,
+          "sha256": "987f7a67a38fa564c849bb5d277c52ab9088a84368fc0be31a354125aebb12a0",
+          "parametros": {
+            "word_embedding_dimension": 384,
+            "pooling_mode_mean_tokens": true,
+            "pooling_mode_cls_token": false
+          }
+        }
+      ],
+      "card": {
+        "url": "https://huggingface.co/intfloat/multilingual-e5-small/resolve/614241f622f53c4eeff9890bdc4f31cfecc418b3/README.md",
+        "status": 200,
+        "sha256": "0038de97aee16258cecbad7ffda4b4febd6953e747a00e0ddbc8e6ed241e9c1c",
+        "trechosTecnicos": [
+          "ttention_mask.sum(dim=1)[..., None] # Each input text should start with \"query: \" or \"passage: \", even for non-English texts. # For tasks other than retrieval, you can simply use the \"query: \" prefix. input_texts = ['query: how much protein should a female e",
+          " # Each input text should start with \"query: \" or \"passage: \", even for non-English texts. # For tasks other than retrieval, you can simply use the \"query: \" prefix. input_texts = ['query: how much protein should a female eat', 'query: 南瓜的家常做法",
+          "ut text should start with \"query: \" or \"passage: \", even for non-English texts. # For tasks other than retrieval, you can simply use the \"query: \" prefix. input_texts = ['query: how much protein should a female eat', 'query: 南瓜的家常做法', ",
+          " embeddings = model.encode(input_texts, normalize_embeddings=True) ``` Package requirements `pip install sentence_transformers~=2.2.2` Contributors: [michaelfeil](https://huggingface.co/michaelfeil) ## FAQ **1. Do I need to add the prefix \"query: \" and \"p",
+          "]) # normalize embeddings embeddings = F.normalize(embeddings, p=2, dim=1) scores = (embeddings[:2] @ embeddings[2:].T) * 100 print(scores.tolist()) ``` ## Supported Languages This model is initialized from [microsoft/Multilingual-MiniLM-L12-H384](https://h",
+          "- ug - uk - ur - uz - vi - xh - yi - zh license: mit model-index: - name: intfloat/multilingual-e5-small results: - dataset: config: en name: MTEB AmazonCounterfactualClassification (en) revision: e8379541af4e31359cca9fbcf4b00f2671dba205 "
+        ]
+      }
+    },
+    {
+      "modelo": "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2",
+      "url": "https://huggingface.co/api/models/sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2?blobs=true",
+      "status": 200,
+      "sha256Metadata": "e8b7bb3854fc22926fe2b045d668f30c12ca5909874d79252cc09b3cf337b0e5",
+      "revision": "e8f8c211226b894fcb81acc59f3b34ba3efd5f42",
+      "licencaDeclarada": "apache-2.0",
+      "pipeline": "sentence-similarity",
+      "biblioteca": "sentence-transformers",
+      "artefatos": [
+        {
+          "arquivo": "README.md",
+          "bytes": 3888,
+          "lfs": null
+        },
+        {
+          "arquivo": "config.json",
+          "bytes": 645,
+          "lfs": null
+        },
+        {
+          "arquivo": "model.safetensors",
+          "bytes": 470641600,
+          "lfs": {
+            "sha256": "eaa086f0ffee582aeb45b36e34cdd1fe2d6de2bef61f8a559a1bbc9bd955917b",
+            "size": 470641600,
+            "pointerSize": 134
+          }
+        },
+        {
+          "arquivo": "onnx/model.onnx",
+          "bytes": 470301610,
+          "lfs": {
+            "sha256": "10f7a088420252b26caf819236ca2c9d2987afd0fc06fec7553b542a5655a05a",
+            "size": 470301610,
+            "pointerSize": 134
+          }
+        },
+        {
+          "arquivo": "pytorch_model.bin",
+          "bytes": 470693617,
+          "lfs": {
+            "sha256": "16cc9e54df6e083272378abec2d75dc34d7a48b5276db3ccc050d18de672ac59",
+            "size": 470693617,
+            "pointerSize": 134
+          }
+        },
+        {
+          "arquivo": "tokenizer.json",
+          "bytes": 9081518,
+          "lfs": {
+            "sha256": "2c3387be76557bd40970cec13153b3bbf80407865484b209e655e5e4729076b8",
+            "size": 9081518,
+            "pointerSize": 132
+          }
+        }
+      ],
+      "configuracoes": [
+        {
+          "arquivo": "config.json",
+          "url": "https://huggingface.co/sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2/resolve/e8f8c211226b894fcb81acc59f3b34ba3efd5f42/config.json",
+          "status": 200,
+          "sha256": "6300193cb75e01cf80c96decef7187dfb33094d97cc1490b7ead6ff134476e4e",
+          "parametros": {
+            "hidden_size": 384,
+            "max_position_embeddings": 512
+          }
+        },
+        {
+          "arquivo": "sentence_bert_config.json",
+          "url": "https://huggingface.co/sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2/resolve/e8f8c211226b894fcb81acc59f3b34ba3efd5f42/sentence_bert_config.json",
+          "status": 200,
+          "sha256": "70f4448f31320443fe3557cacea5abf2dcc4915dda8c80646bec9f3bb0aa5a1f",
+          "parametros": {
+            "max_seq_length": 128
+          }
+        },
+        {
+          "arquivo": "1_Pooling/config.json",
+          "url": "https://huggingface.co/sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2/resolve/e8f8c211226b894fcb81acc59f3b34ba3efd5f42/1_Pooling/config.json",
+          "status": 200,
+          "sha256": "4be450dde3b0273bb9787637cfbd28fe04a7ba6ab9d36ac48e92b11e350ffc23",
+          "parametros": {
+            "word_embedding_dimension": 384,
+            "pooling_mode_mean_tokens": true,
+            "pooling_mode_cls_token": false
+          }
+        }
+      ],
+      "card": {
+        "url": "https://huggingface.co/sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2/resolve/e8f8c211226b894fcb81acc59f3b34ba3efd5f42/README.md",
+        "status": 200,
+        "sha256": "1e98ea05b0de579fcaad3d625b62ea55647142ed674d5f5ebf1440e4bbbb6f23",
+        "trechosTecnicos": [
+          "- sq - sr - sv - th - tr - uk - ur - vi license: apache-2.0 library_name: sentence-transformers tags: - sentence-transformers - feature-extraction - sentence-similarity - transformers language_bcp47: - fr-ca - pt-br - zh-cn - zh-tw pipeline_tag: sentence-simil",
+          "model, then you have to apply the right pooling-operation on-top of the contextualized word embeddings. ```python from transformers import AutoTokenizer, AutoModel import torch # Mean Pooling - Take attention mask into account for correct averaging def mean",
+          "ntenceTransformer( (0): Transformer({'max_seq_length': 128, 'do_lower_case': False}) with Transformer model: BertModel (1): Pooling({'word_embedding_dimension': 384, 'pooling_mode_cls_token': False, 'pooling_mode_mean_tokens': True, 'pooling_mode_max_toke"
+        ]
+      }
+    }
+  ],
+  "estado": "Candidatos de pesquisa, não aprovados para runtime. Licença declarada na metadata não comprova sozinha a cadeia de direitos/comercialização. Hashes de pesos são valores declarados pelo LFS; não conferidos por download. Sem benchmark executado.",
+  "verificacaoPoC": {
+    "data": "2026-10-13",
+    "uso": "Somente avaliação técnica local com corpus sintético; artefatos mantidos fora do Git e do runtime.",
+    "arquivosVerificados": [
+      {
+        "modelo": "intfloat/multilingual-e5-small",
+        "revisao": "614241f622f53c4eeff9890bdc4f31cfecc418b3",
+        "arquivo": "onnx/model.onnx",
+        "statusHTTP": 200,
+        "bytes": 470268510,
+        "sha256Real": "ca456c06b3a9505ddfd9131408916dd79290368331e7d76bb621f1cba6bc8665",
+        "sha256LFSConfere": true,
+        "grafo": "ONNX standard opset 11, 384 dimensoes, sem domínios customizados"
+      },
+      {
+        "modelo": "intfloat/multilingual-e5-small",
+        "revisao": "614241f622f53c4eeff9890bdc4f31cfecc418b3",
+        "arquivo": "tokenizer.json",
+        "statusHTTP": 200,
+        "bytes": 17082730,
+        "sha256Real": "0b44a9d7b51c3c62626640cda0e2c2f70fdacdc25bbbd68038369d14ebdf4c39",
+        "sha256LFSConfere": true
+      },
+      {
+        "modelo": "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2",
+        "revisao": "e8f8c211226b894fcb81acc59f3b34ba3efd5f42",
+        "arquivo": "onnx/model.onnx",
+        "statusHTTP": 200,
+        "bytes": 470301610,
+        "sha256Real": "10f7a088420252b26caf819236ca2c9d2987afd0fc06fec7553b542a5655a05a",
+        "sha256LFSConfere": true,
+        "grafo": "ONNX standard opset 14, 384 dimensoes, sem domínios customizados"
+      },
+      {
+        "modelo": "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2",
+        "revisao": "e8f8c211226b894fcb81acc59f3b34ba3efd5f42",
+        "arquivo": "tokenizer.json",
+        "statusHTTP": 200,
+        "bytes": 9081518,
+        "sha256Real": "2c3387be76557bd40970cec13153b3bbf80407865484b209e655e5e4729076b8",
+        "sha256LFSConfere": true
+      }
+    ],
+    "licencas": [
+      {
+        "modelo": "E5",
+        "metadataDeclara": "MIT",
+        "arquivoLicenseStatus": 404,
+        "direitosComerciais": "nao comprovados; gate G02 permanece BLOCKED"
+      },
+      {
+        "modelo": "MiniLM",
+        "metadataDeclara": "Apache-2.0",
+        "arquivoLicenseStatus": 404,
+        "direitosComerciais": "nao comprovados; gate G02 permanece BLOCKED"
+      }
+    ],
+    "dependenciasTemporarias": [
+      "onnxruntime==1.22.1",
+      "onnx==1.19.0",
+      "tokenizers==0.21.4",
+      "numpy==2.5.4"
+    ],
+    "naoFeito": [
+      "auditoria legal da cadeia de direitos",
+      "scan completo de dependências",
+      "integração ou aprovação de runtime"
+    ]
+  }
+}

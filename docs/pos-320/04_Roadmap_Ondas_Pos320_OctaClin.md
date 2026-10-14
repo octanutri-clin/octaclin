@@ -4,30 +4,30 @@
 >
 > **Princípio central:** cada recurso ou melhoria deste roadmap deve ser implementado em **um Pull Request individual**, com escopo pequeno, revisável e reversível. As PRs são agrupadas em **ondas de implementação** apenas para organizar dependências e sequência de trabalho.
 >
-> Versão reconciliada em **2026-10-09** com o roadmap canônico `docs/product/ROADMAP_POS_AUDITORIA_FASES_302_320.md` da `main` do OctaClin, além dos PRs #356, #384 e #385. Os status são registros históricos e DEVEM ser revalidados na data de execução.
+> Versão reconciliada em **2026-10-14** com o roadmap canônico `docs/product/ROADMAP_POS_AUDITORIA_FASES_302_320.md` e os PRs integrados mais recentes. Os status são registros históricos e DEVEM ser revalidados na data de cada nova execução.
 
 ---
 
-## MARCO OBRIGATÓRIO — Este plano só começa APÓS a Fase 320
+## MARCO OBRIGATÓRIO — Handoff da Fase 320 registrado; Onda 0 iniciada
 
-> **Trava de início (não negociável):** não implementar, criar branch de implementação, abrir PR funcional ou iniciar as ondas deste arquivo antes de concluir e reconciliar formalmente o roadmap **Fases 302–320**. Leituras, auditorias e avaliação de bibliotecas podem ser feitas antes, mas não substituem essa autorização. A sequência **321+** será definida após a Fase 320; os IDs `PA01`, `ANT05` etc. são IDs de **PRs deste backlog**, NÃO números de fase nem números reais de PR do GitHub.
+> **Handoff formal:** a Fase 320 recebeu `NO-GO` para ingestão/uso da TBCA nesta rodada por falta de autorização documentada de direitos. O catálogo permanece com TACO, USDA e IBGE. O usuário autorizou formalizar o handoff e iniciar a Onda 0 nesta PR, começando apenas por `FND02`; isso não libera ingestão TBCA nem autoriza implementar os demais IDs do backlog. A sequência de fases funcionais 321+ será definida separadamente; os IDs `PA01`, `ANT05` etc. são IDs de PRs deste backlog, não números de fase ou de PR GitHub.
 >
 > **Fase condicional NÃO é sinônimo de funcionalidade entregue.** Quando o gate de uma fase negar o escopo, registrar `NO-GO` e somente retomar o recurso pós-320 mediante nova decisão explícita. Mesmo quando a fase estiver integrada, verificar código, migration, deploy e uso operacional como dimensões distintas.
 
 **Fonte prioritária:** [Roadmap canônico das Fases 302–320](https://github.com/octanutri-clin/octaclin/blob/main/docs/product/ROADMAP_POS_AUDITORIA_FASES_302_320.md). Consultar também `docs/product/OCTACLIN_PRODUCT_FEATURE_AUDIT.md`, `STATUS_ATUAL_PROJETO.md`, `RESUMO_FASES_CONCLUIDAS.md`, `CHECKLIST_FASES_FUTURAS_PRODUCAO.md`, `AGENTS.md` e as ADRs/planos relevantes.
 
-### Checklist obrigatório de handoff 320 → pós-320
+### Checklist de handoff 320 → pós-320
 
-- [ ] Revisar na `main` e no GitHub o estado das fases **302–320** e seus PRs; registrar SHA de `main`, data, riscos, gates e blockers.
-- [ ] Cada fase tem resultado documentado: `integrada`, `NO-GO aprovado`, `cancelada formalmente` ou `pendência explícita`; **não presumir implementação** para 313/314/316/317/318/319/320.
+- [x] Revisar na `main` e no GitHub o estado das fases **302–320** e seus PRs; base desta PR `bd4e436b`, 2026-10-14. Gates e limites permanecem descritos no checklist e roadmap canônicos.
+- [x] Registrar resultado documentado para 313/314/316/317/318/319/320; integração, gates e relatos de validação operacional estão diferenciados no checklist atualizado.
 - [ ] Confirmar decisões clínicas e referências de **gestação (313)** e **pediatria (314)**; caso gate negado, não criar motor clínico por este roadmap sem novo aceite.
 - [ ] Confirmar decisão de privacidade/provider para **exames assistidos (316)** e **IA (318)**; nunca contornar gate por mudança de ferramenta.
 - [ ] Confirmar decisão de produto, opt-in e segurança da **gamificação (317)**; `APP04` não está automaticamente aprovado.
 - [ ] Confirmar resultado `GO/NO-GO` da **busca semântica (319)**; não exigir infraestrutura de embeddings por padrão.
-- [ ] Verificar **autorização de direitos da TBCA (320)**: se NO-GO, manter TACO/USDA/IBGE e trabalhar catálogo sem TBCA; não usar repositório externo como pretexto para ingerir a base.
-- [ ] Conferir aplicação/validação operacional de migrations e integrações pendentes, especialmente 1064 da Fase 307 e quaisquer novas das fases 309–320, sem afirmar que merge prova produção.
-- [ ] Gerar **relatório de diferenças**: para cada ID deste arquivo, `JÁ COBERTO`, `RESIDUAL CONFIRMADO`, `CONDICIONAL`, `NO-GO` ou `PRECISA DE INVESTIGAÇÃO`, com link de evidência. Nunca abrir PR sem `RESIDUAL CONFIRMADO` ou decisão explícita.
-- [ ] Solicitar autorização do usuário para iniciar a primeira onda pós-320, respeitando a ordem revisada.
+- [x] Direitos da TBCA: `NO-GO` nesta rodada; nenhum dado importado, catálogo TACO/USDA/IBGE preservado. Reavaliar só após autorização escrita e revisão de escopo de uso/redistribuição.
+- [x] Separar fatos de merge dos relatos de aplicação/validação externa; nenhuma migration foi consultada ou aplicada nesta PR.
+- [x] Manter os IDs do backlog classificados por cobertura/condição; esta PR inicia FND02 por autorização explícita e não autoriza demais itens.
+- [x] Autorização do proprietário para o handoff e início da Onda 0 recebida em 2026-10-14.
 
 ### Cruzamento oficial das fases 302–320
 
@@ -57,7 +57,7 @@
 
 - Fases 298, 306, 307 e 308: PRs #356, #383, #384 e #385 integrados em código; **não equivale a deploy nem aplicação da migration 1064**.
 - A descrição da Fase 308 em `docs/product` estava defasada diante do [PR #385](https://github.com/octanutri-clin/octaclin/pull/385) integrado. Antes da onda pós-320, priorizar fatos mais recentes da `main` e PRs.
-- Fases 309–320: **planejadas/condicionais no documento consultado**. O Codex deve reavaliá-las no futuro; não marcar como entregues agora.
+- Fases 309–320 foram reconciliadas com o estado mais recente documentado no checklist. Merges não provam deploy ou aplicação de migration; gates específicos continuam separados.
 
 ---
 
@@ -65,19 +65,19 @@
 
 Quando for solicitado algo como:
 
-> Leia `ROADMAP_IMPLEMENTACAO_PRS_ONDAS_POS_320.md` e implemente a Onda 1 **somente se o handoff formal da Fase 320 estiver aprovado**.
+> Leia `docs/pos-320/04_Roadmap_Ondas_Pos320_OctaClin.md` e implemente o próximo item autorizado.
 
 o Codex deve:
 
 1. Ler este arquivo inteiro antes de alterar código.
 2. Ler `docs/product/ROADMAP_POS_AUDITORIA_FASES_302_320.md`, `docs/product/OCTACLIN_PRODUCT_FEATURE_AUDIT.md`, `AGENTS.md`, `CLAUDE.md` (se existir), `STATUS_ATUAL_PROJETO.md`, `CHECKLIST_FASES_FUTURAS_PRODUCAO.md`, `RESUMO_FASES_CONCLUIDAS.md`, documentos de autorização e os planos de fase relevantes. Arquivos ausentes devem ser registrados como tal, não presumidos.
-3. Confirmar o **handoff pós-Fase 320** e atualizar a branch local a partir da `main`. Sem o handoff, somente auditar e produzir relatório, **não criar PR**.
+3. Confirmar o **handoff pós-Fase 320** neste documento e atualizar a branch local a partir da `main`. Sem autorização explícita para o próximo item, somente auditar e produzir relatório, **não criar PR**.
 4. Fazer uma **auditoria curta do estado real da `main`** antes de cada PR.
 5. Não confiar cegamente no status deste documento se a `main` tiver avançado.
 6. Se o critério de aceite já estiver completamente atendido na `main`, **não reimplementar**.
 7. Implementar **uma PR por vez**.
 8. Nunca misturar dois IDs deste roadmap na mesma PR, salvo se este arquivo declarar explicitamente que uma PR é apenas integração de uma implementação pré-existente.
-9. Criar a PR seguinte somente quando a anterior não for uma dependência ainda não integrada. Priorizar a sequência aprovada pelo usuário após a Fase 320; nenhuma onda começa automaticamente.
+9. Criar a PR seguinte somente quando a anterior não for uma dependência ainda não integrada. A autorização atual inicia FND02; as ondas e itens seguintes não começam automaticamente.
 10. Manter compatibilidade com dados existentes e migrations já aplicadas.
 11. Preservar isolamento multi-tenant, escopo por profissional, RLS/FORCE RLS, autorização server-side, auditoria, LGPD, criptografia e minimização de PHI/PII.
 12. Implementar comportamento novo com testes antes ou junto da implementação.
@@ -179,7 +179,7 @@ Esses recursos podem ser **evoluídos** por PRs listadas abaixo, mas não substi
 
 # 4. ONDA 0 — Reconciliação e fundações pendentes
 
-Objetivo: **somente após a 320**, criar primitives compartilhadas ainda ausentes. A Fase 298 já concluiu os modelos versionados; a antiga `FND01` está encerrada, sem nova PR.
+Objetivo: após o handoff da Fase 320, criar primitives compartilhadas ainda ausentes. A Fase 298 já concluiu os modelos versionados; a antiga `FND01` está encerrada, sem nova PR.
 
 ---
 
@@ -194,6 +194,8 @@ Objetivo: **somente após a 320**, criar primitives compartilhadas ainda ausente
 ## [FND02] Primitive compartilhada de proteção contra alterações não salvas
 
 **Origem:** item 39, já existente parcialmente como implementação repetida em fluxos diferentes.
+
+**Execução:** iniciada nesta PR como primeiro item da Onda 0, por autorização do proprietário em 2026-10-14. Ver o handoff de implementação em `tasks/plan-pos-320-fnd02.md`; status final depende dos testes indicados ali e dos checks da PR.
 
 **Status atual:** proteção existe em plano, questionários e outros editores.
 
@@ -1484,7 +1486,7 @@ e não como concluída.
 
 Prompt sugerido:
 
-> Leia integralmente `ROADMAP_IMPLEMENTACAO_PRS_ONDAS_POS_320.md`, `CATALOGO_MESTRE_REPOSITORIOS_GITHUB_OCTACLIN_POS_320.md`, `docs/product/ROADMAP_POS_AUDITORIA_FASES_302_320.md`, `AGENTS.md`, os documentos de segurança e os arquivos canônicos de status da `main`. Quero executar a **Onda X SOMENTE APÓS o handoff formal da Fase 320**. Verifique primeiro se o marco pós-320 foi concluído, incluindo resultados `GO/NO-GO` das fases condicionais; se não, faça somente relatório de pendências. Se sim, audite a `main` e classifique os itens como `JÁ COBERTO`, `RESIDUAL CONFIRMADO`, `CONDICIONAL` ou `NO-GO`. Depois implemente apenas IDs `RESIDUAL CONFIRMADO` e autorizados, **individualmente, um ID por PR**, respeitando dependências e a ordem revisada com o usuário. Ignore `FND01`/`AI05` (arquivados), não contorne gates condicionais e não reimplemente escopos das Fases 302–320. Não junte recursos em uma única PR. Antes de cada PR, confirme pelo código que ela ainda é necessária. Use TDD para comportamento novo, preserve tenant/RLS/LGPD/autorização e execute todos os gates aplicáveis. Não aplique migrations em ambientes externos, não habilite providers externos e não faça ações irreversíveis sem minha autorização. Ao terminar cada PR, informe: ID, branch, arquivos principais, migrations, testes executados, resultado dos gates, riscos remanescentes e link/número da PR se ela tiver sido aberta.
+> Leia integralmente `docs/pos-320/04_Roadmap_Ondas_Pos320_OctaClin.md`, `docs/pos-320/01_Catalogo_GitHub_OctaClin`, `docs/pos-320/02_Matriz_71_Sugestoes_OctaClin.md`, `docs/product/ROADMAP_POS_AUDITORIA_FASES_302_320.md`, `AGENTS.md`, os documentos de segurança e os arquivos canônicos de status da `main`. Quero executar a próxima onda autorizada. O handoff da Fase 320 já foi registrado com NO-GO para ingestão TBCA nesta rodada; FND02 está sendo executado como primeira atividade da Onda 0. Para qualquer ID futuro, audite primeiro a `main` e classifique-o como `JÁ COBERTO`, `RESIDUAL CONFIRMADO`, `CONDICIONAL` ou `NO-GO`. Implemente apenas IDs `RESIDUAL CONFIRMADO` e autorizados, **individualmente, um ID por PR**, respeitando dependências e a ordem revisada com o usuário. Ignore `FND01`/`AI05` (arquivados), não contorne gates condicionais e não reimplemente escopos das Fases 302–320. Não agrupe vários IDs de produto numa PR. Antes de cada PR, confirme pelo código que ela ainda é necessária. Use TDD para comportamento novo, preserve tenant/RLS/LGPD/autorização e execute todos os gates aplicáveis. Não aplique migrations em ambientes externos, não habilite providers externos e não faça ações irreversíveis sem minha autorização. Ao terminar cada PR, informe: ID, branch, arquivos principais, migrations, testes executados, resultado dos gates, riscos remanescentes e link/número da PR se ela tiver sido aberta.
 
 ---
 

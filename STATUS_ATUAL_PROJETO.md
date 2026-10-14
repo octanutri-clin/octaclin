@@ -1,8 +1,24 @@
 # OctaClin - Status atual do projeto
 
-Atualizado em 2026-10-13.
+Atualizado em 2026-10-14.
 
 ## Fase ativa
+
+- **Transição pós-Fase 320:** NO-GO nesta rodada para ingestão/uso da TBCA, pois
+  a autorização de direitos não está disponível. O catálogo continua com TACO,
+  USDA e IBGE; nenhum dado TBCA foi importado. O handoff formal e o início da
+  Onda 0/FND02 estão nesta PR. FND02 consolida a proteção de saída não salva já
+  existente em três editores; próximas funcionalidades permanecem sujeitas a
+  auditoria da main e ao escopo individual por PR.
+
+- **Fase 319 encerrada como pesquisa técnica NO-GO** para busca semântica com
+  E5/MiniLM. V4: BM25/E5 NDCG@10 0,945 (ganho 0,000), MiniLM 0,905 (−0,040),
+  com regressão E5 em q-021/data; critério sem resposta não avaliado por falta de
+  regra de abstenção prévia. G01/G02/G03 BLOCKED, G04 SKIPPED, G05
+  BLOCKED/não executado; T05–T10 não iniciadas. Artefatos v3/v4 preservados.
+  Sem runtime, banco, paciente, migration ou dependência do produto. Plano e
+  relatório v4 em `docs/history/phases/PLANO_FASE_319.md` e
+  `docs/history/phases/reviews/fase-319/RELATORIO_POC_SINTETICA_V4.md`.
 
 - **Fase318 integrada pela PR408**, merge4aeb5297; CI do código84a42b5a
   PASS (Backend/Web/Smoke/PRGate), revisão técnica por agente declarada.

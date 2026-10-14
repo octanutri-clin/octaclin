@@ -22,6 +22,7 @@ import { AreaTexto, Campo, Rotulo, Selecao } from '@/components/ui/campo';
 import { AlertaOperacional, BarraCarregamento, EstadoVazio } from '@/components/ui/feedback';
 import { ModalConfirmacao } from '@/components/ui/modal';
 import { mensagemFalhaInterface } from '@/lib/erros-interface';
+import { useProtecaoAlteracoesNaoSalvas } from '@/lib/usar-protecao-alteracoes-nao-salvas';
 import {
   arquivarPlanoAlimentar,
   atualizarRascunhoPlanoAlimentar,
@@ -1245,15 +1246,7 @@ export function PlanoAlimentarProfissional({ pacienteId, podeGerenciar, aoAltera
     return () => aoAlterarRascunho?.(false);
   }, [alterado, aoAlterarRascunho]);
 
-  useEffect(() => {
-    function impedirSaida(evento: BeforeUnloadEvent) {
-      if (!alterado) return;
-      evento.preventDefault();
-      evento.returnValue = '';
-    }
-    window.addEventListener('beforeunload', impedirSaida);
-    return () => window.removeEventListener('beforeunload', impedirSaida);
-  }, [alterado]);
+  useProtecaoAlteracoesNaoSalvas(alterado);
 
   function atualizar(mutacao: (atual: FormularioPlano) => FormularioPlano) {
     if (!podeGerenciar) return;

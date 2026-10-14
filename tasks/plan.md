@@ -1,4 +1,22 @@
-# Handoff — Fase 318: planejamento e análise de gaps
+# Handoff atual — Fase 320 encerrada; Onda 0/FND02 iniciada
+
+Em 2026-10-14, por autorização do proprietário, a Fase 320 foi registrada como
+`NO-GO` nesta rodada para ingestão/uso da TBCA. O catálogo TACO/USDA/IBGE foi
+preservado. Handoff formal: [`plan-fase-320.md`](plan-fase-320.md) e
+[`PLANO_FASE_320.md`](../docs/history/phases/PLANO_FASE_320.md).
+
+A Onda 0 começa nesta PR somente com FND02 (consolidação da proteção contra
+saída com alterações não salvas), descrita em
+[`plan-pos-320-fnd02.md`](plan-pos-320-fnd02.md). Nenhuma outra sugestão das
+ondas está autorizada automaticamente. Não há migration TBCA, ativação,
+deploy ou alteração de ambiente externo nesta tarefa.
+
+Base da branch de entrega: `bd4e436b` (`origin/main`, 2026-10-14). Estado dos
+gates pós-320 e histórico das Fases 314/315/318 no checklist vigente.
+
+---
+
+# Handoff histórico — Fase 318: planejamento e análise de gaps
 
 Branch `feature/fase-318-ia-rascunhos`, worktree
 `/workspace/octaclin/.worktrees/docs-fase-318-planejamento`, base main8ea67a08
@@ -105,3 +123,13 @@ e UI de revisão sintética. Nenhuma migration. R4 e evidências no ledger
 Checkout ativo para entrega: /tmp/octaclin-f318-entrega por ENOSPC do disco
 principal; worktree original preservada, sem novo escritor nela. Não fazer
 merge/deploy/configuração externa/ativação sem autorização correspondente.
+
+## Fase 319 — pesquisa técnica concluída com NO-GO
+
+PoC sintética v4 concluída; decisão NO-GO para E5/MiniLM. Resultados e artefatos
+v3/v4 preservados em `research/fase319/`; plano e relatório em
+`docs/history/phases/PLANO_FASE_319.md` e `docs/history/phases/reviews/fase-319/`.
+G01/G02/G03 bloqueados, G04 skipped, G05 bloqueado/não executado; T05–T10 não
+iniciadas. Sem runtime/índice clínico. A Fase 320 é a etapa seguinte, com ingestão
+TBCA sujeita a direitos comprovados.
+
