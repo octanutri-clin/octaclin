@@ -4628,8 +4628,9 @@ auditoria estão ordenados na seção 15 de
   já implementadas. Unitários 6/6, BFF 26/26, proteção FND02 4/4, typecheck e
   Playwright 22/22 no conjunto principal e 2/2 no teste de resposta atrasada
   após troca de paciente passaram localmente. Build/lint e demais gates locais
-  passaram. Dependency Review passou no SHA inicial; Semgrep, Trivy, CodeQL e
-  OctaClin CI estavam em execução. Revisão R4 independente pendente. Nenhuma
+  passaram. No SHA `4582469`, CodeQL estava queued, OctaClin CI pending e
+  Semgrep/Dependency Review/Trivy in progress na última consulta. Revisão R4
+  independente pendente. Nenhuma
   migration, merge ou deploy. Handoff `tasks/plan-pos-320-pa02.md`.
 
 Os merges acima foram conferidos por Git e os checks da PR #415 foram consultados

@@ -83,8 +83,9 @@ desktop/mobile e ausência de overflow; dados sintéticos exclusivamente.
   nenhuma promessa de proveniência/CAS/idempotência atômica inexistente.
 - [x] Typecheck, lint (0 erros; 65 avisos preexistentes), build, secrets e
   `git diff --check` passaram localmente.
-- [ ] CI do HEAD atualizado passa. Dependency Review passou no SHA inicial;
-  outros checks estavam em execução. PostgreSQL/RLS: SKIPPED; não houve mudanças de
+- [ ] CI do HEAD atualizado passa. No SHA `4582469`, CodeQL queued, OctaClin CI
+  pending e Semgrep/Dependency Review/Trivy in progress na última consulta.
+  PostgreSQL/RLS: SKIPPED; não houve mudanças de
   backend, autorização ou schema; a evidência local não é prova de banco.
 - [ ] Revisão R4 independente registrada; nenhuma revisão independente foi
   simulada nesta execução.
@@ -108,6 +109,7 @@ scanner de secrets; `git diff --check`.
 por indisponibilidade do PowerShell neste container, pré-requisito explícito do
 teste de fail-closed do preflight; os testes de injeção nos workflows passaram.
 SKIPPED: PostgreSQL/RLS específico PA02 (sem alteração backend/schema) e revisão
-R4 independente. CI do commit inicial tinha Dependency Review PASS e demais
-checks ainda em execução; validar o HEAD após push. Nenhum merge, deploy ou
+R4 independente. No HEAD `4582469`, CodeQL estava queued, OctaClin CI pending e
+Semgrep/Dependency Review/Trivy in progress; consultar novamente o HEAD após
+qualquer commit de documentação. Nenhum merge, deploy ou
 migration externa executados.

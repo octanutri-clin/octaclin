@@ -265,8 +265,8 @@ no schema existente. Não fazer rollback destrutivo de histórico.
 ## PR e CI remoto
 
 - PR #415: https://github.com/octanutri-clin/octaclin/pull/415 (Draft).
-- No commit inicial `fbc5d43`, Dependency Review passou; Semgrep, Trivy,
-  CodeQL e OctaClin CI estavam em execução quando consultados.
-- O teste visual adicional de resposta atrasada após troca de paciente foi
-  executado depois desse commit; os checks deverão ser reconsultados após o
-  push do HEAD atualizado. Não declarar CI verde com base no commit anterior.
+- O teste visual adicional de resposta atrasada após troca de paciente passou
+  em desktop/mobile e foi enviado no commit `4582469`.
+- No HEAD `4582469`, CodeQL estava queued; OctaClin CI pending; Semgrep,
+  Dependency Review e Trivy in progress na última consulta. A confirmação de
+  aprovação deve ser feita no HEAD final após qualquer commit adicional.

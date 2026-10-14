@@ -11,8 +11,9 @@ Atualizado em 2026-10-14.
   local, cópia de origem salva e aplicação não destrutiva no rascunho. Unitários
   (6/6), BFF (26/26), proteção FND02 (4/4), typecheck, build, lint e Playwright
   (22/22 no conjunto principal e 2/2 no teste adicional de resposta atrasada)
-  passaram nesta worktree. Dependency Review passou no SHA inicial; Semgrep,
-  Trivy, CodeQL e OctaClin CI ainda estavam em execução. Revisão R4 pendente.
+  passaram nesta worktree. No SHA `4582469`, CodeQL estava queued, OctaClin CI
+  pending e Semgrep/Dependency Review/Trivy in progress na última consulta.
+  Revisão R4 pendente.
   Handoff `tasks/plan-pos-320-pa02.md`, checklist
   `tasks/todo-pos-320-pa02.md`. Sem alteração de backend/schema, migration,
   merge ou deploy nesta execução.
