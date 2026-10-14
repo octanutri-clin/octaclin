@@ -21,7 +21,9 @@ Uma única PR PA02 reunirá planejamento e implementação quando autorizada.
 
 ## Referências preparadas pelo proprietário
 
-Consultar estas quatro fontes no começo de cada ID, antes de propor biblioteca:
+Em cada ID, consultar somente suas seções e referências nestas quatro fontes,
+antes de propor biblioteca. Diretriz explícita do proprietário em2026-10-14:
+não auditar todos os repositórios do catálogo a cada fase.
 
 1. [Roadmap por ondas](../docs/pos-320/04_Roadmap_Ondas_Pos320_OctaClin.md):
    escopo, dependências, classificação JÁ COBERTO/RESIDUAL/CONDICIONAL/NO-GO.
@@ -34,7 +36,8 @@ Consultar estas quatro fontes no começo de cada ID, antes de propor biblioteca:
 
 **Decisão PA02: REUTILIZAR código interno.** O catálogo diz explicitamente
 “Sem biblioteca recomendada; usar primitives/código atual”. O JSON contém
-78 referências e nenhuma candidata PA02. A sugestão 44 confirma a escolha.
+78 referências no índice e nenhuma candidata PA02. A contagem não representa
+auditoria desses78 repositórios. A sugestão44 confirma a escolha.
 Não há código/dataset externo a copiar nem licença de novo pacote a aprovar.
 R001/dnd-kit é referência da PA01 já integrada, não uma dependência nova da PA02.
 OpenNutriTracker/Tandoor, RHF e TanStack não são candidatos PA02 no mapa;
@@ -43,6 +46,8 @@ não incorporá-los por semelhança de tema.
 Nos IDs futuros, registrar candidato por URL/tag/commit, licença do código e
 dos dados, manutenção, compatibilidade, decisão e alternativa interna. O catálogo
 é ponto de partida; licenças e versões ainda exigem revalidação na adoção.
+Investigar somente candidatos mapeados para o ID atual; ampliar a pesquisa
+apenas se houver lacuna demonstrada, explicando o motivo.
 
 ## Gaps observados no código
 
@@ -62,20 +67,22 @@ BFF de detalhe/versão/rascunho, serviço/DTOs/domínio de planos, specs de serv
 spec BFF e regressão visual 269. ADR-002/004/006, regras de dados e código externo
 e matriz de confiabilidade foram confrontados com esses caminhos.
 
-## Decisões de produto enviadas para resposta
+## Decisões de produto confirmadas
 
-Ainda não ratificadas nesta rodada; recomendações não são aceites.
+Confirmadas pelo proprietário em2026-10-14 nas três respostas da sessão.
+Essas decisões fecham o escopo; a implementação permanece pausada para a troca
+manual de modelo e sua instrução de continuidade.
 
-| ID | Proposta preferencial | Resposta necessária |
+| ID | Regra confirmada | Resposta do proprietário |
 |---|---|---|
-| D01 | Mesmo paciente e outros pacientes autorizados, reconsultando origem a cada colagem. | Ambos ou somente mesmo paciente? |
-| D02 | Colar como nova refeição ou acrescentar itens à existente, sem substituição destrutiva. | Acrescentar/criar ou substituir com confirmação? |
-| D03 | Entre planos, usar versão salva: publicada por padrão, rascunho salvo por seleção explícita. Duplicação local inclui alterações não salvas. | Exigir save antes de copiar alterações para outro plano? |
+| D01 | Mesmo paciente e outros pacientes autorizados, reconsultando origem a cada colagem. | Ambos, com verificação de acesso. |
+| D02 | Colar como nova refeição ou acrescentar itens à existente, preservando seu conteúdo. | Acrescentar itens ou criar nova refeição. |
+| D03 | Entre planos, usar versão salva: publicada por padrão, rascunho salvo por seleção explícita. Duplicação local inclui alterações não salvas. | Sim, salvar antes de copiar entre planos. |
 
-O fluxo abaixo está preparado para as propostas preferenciais. Se alguma resposta
-alterá-las, atualizar contrato e testes antes de implementar a parte dependente.
+O fluxo abaixo corresponde às decisões confirmadas. Não reabrir essas escolhas
+por preferência durante a implementação.
 
-## Fluxo proposto para as recomendações D01–D03
+## Fluxo definido pelas decisões D01–D03
 
 1. Abrir o rascunho de destino; todas as ações PA02 acontecem nesse editor.
 2. **Duplicar refeição:** copiar os valores atuais, inclusive não salvos,

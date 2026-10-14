@@ -9,7 +9,7 @@ Planejamento autorizado em 2026-10-14; implementação ainda não autorizada.
 - [x] Confirmar PA02 residual e as78 referências do catálogo; nenhuma
   candidata externa para PA02; decisão REUTILIZAR código interno.
 - [x] Auditar GET de versão e PUT de destino, chaves, snapshots e limites.
-- [ ] Receber respostas D01–D03 e registrar sem presumir aceite.
+- [x] D01–D03 confirmadas pelo proprietário em2026-10-14 e registradas.
 - [ ] Receber autorização de implementação após troca manual de modelo.
 - [ ] Reconfirmar main/status e preservar documentação no mesmo checkout/PR.
 

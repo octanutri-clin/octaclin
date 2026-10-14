@@ -8,7 +8,9 @@ Atualizado em 2026-10-14.
   em 2026-10-14. FND02/#411 e PA01/#414 integrados; arraste e setas permanecem
   baseline. PA02 tem gaps de duplicação/cópia/colagem por refeição. Catálogo
   pós-320 consultado: recomenda reutilizar domínio/primitives, sem nova
-  biblioteca. D01–D03 aguardam resposta; implementação e PR PA02 não iniciadas.
+  biblioteca. D01–D03 confirmadas: ambos os escopos autorizados,
+  acrescentar/criar e origem salva entre planos. Implementação e PR PA02
+  não iniciadas; pausa para troca manual de modelo e instrução de continuidade.
   Handoff `tasks/plan-pos-320-pa02.md`, checklist `tasks/todo-pos-320-pa02.md`.
   Integração em main não comprova deploy ou banco; esta análise não consultou
   CI/ambientes externos nem executou testes de implementação PA02.

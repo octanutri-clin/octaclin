@@ -4622,8 +4622,9 @@ auditoria estão ordenados na seção 15 de
   contra saída com alterações não salvas.
 - [x] PA01 — integrada pela PR #414, main `2d2edcf`; arraste de refeições
   com setas/teclado e salvamento existentes. Sem migration.
-- [ ] PA02 — análise autorizada, gaps residuais confirmados; decisões D01–D03
-  pendentes. Handoff `tasks/plan-pos-320-pa02.md`; sem runtime/PR nesta rodada.
+- [ ] PA02 — análise autorizada, gaps residuais e D01–D03 confirmados:
+  ambos os escopos autorizados, acrescentar/criar e origem salva entre planos.
+  Handoff `tasks/plan-pos-320-pa02.md`; sem runtime/PR nesta rodada.
   Catálogo consultado, sem biblioteca nova recomendada para este ID.
 
 Os merges acima foram conferidos por Git. CI e operação externa não foram

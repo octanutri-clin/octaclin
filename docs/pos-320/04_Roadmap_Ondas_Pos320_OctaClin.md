@@ -254,8 +254,9 @@ O arraste já existe no editor e permanece baseline da PA02; não reimplementar.
 ## [PA02] Copiar, colar e duplicar refeições
 
 **Reconciliação em 2026-10-14:** RESIDUAL CONFIRMADO na main `2d2edcf`.
-Análise autorizada, implementação ainda não iniciada. Handoff e escolhas de
-produto pendentes em [plan-pos-320-pa02.md](../../tasks/plan-pos-320-pa02.md).
+Análise autorizada, implementação ainda não iniciada. D01–D03 confirmadas pelo
+proprietário: ambos os escopos autorizados, acrescentar/criar e origem salva.
+Handoff em [plan-pos-320-pa02.md](../../tasks/plan-pos-320-pa02.md).
 Referências: catálogo/mapa inverso e sugestão44 recomendam código interno;
 nenhum repositório PA02 no JSON. Não criar dependência por analogia com outro ID.
 

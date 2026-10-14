@@ -11,7 +11,9 @@ merge #414/PA01, com FND02/#411 integrado. Nenhuma implementação PA02 iniciada
 - Branch `docs/pos320-pa02-handoff`, checkout
   `/workspace/octaclin/.worktrees/pos320-pa02-planejamento`.
 - Catálogo/mapa e JSON78 conferidos: PA02 recomenda código interno, sem
-  biblioteca nova. Respostas D01–D03 ainda pendentes; não presumir autorização.
+  biblioteca nova. D01–D03 confirmadas pelo proprietário em2026-10-14:
+  ambos os escopos autorizados, acrescentar/criar e origem salva entre planos.
+  Implementação pausada para troca manual de modelo e instrução de continuidade.
 - Luna alto pode implementar após fechamento das decisões e autorização;
   avisar/pausar para troca manual. Revisão R4/contrato novo pode exigir Sol médio.
 - Uma futura PR PA02 reúne docs/código; não abrir PR documental separada.
