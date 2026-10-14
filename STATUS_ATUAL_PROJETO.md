@@ -4,16 +4,16 @@ Atualizado em 2026-10-14.
 
 ## Fase ativa
 
-- **PA02 — planejamento/análise autorizados**, base main `2d2edcf` conferida
-  em 2026-10-14. FND02/#411 e PA01/#414 integrados; arraste e setas permanecem
-  baseline. PA02 tem gaps de duplicação/cópia/colagem por refeição. Catálogo
-  pós-320 consultado: recomenda reutilizar domínio/primitives, sem nova
-  biblioteca. D01–D03 confirmadas: ambos os escopos autorizados,
-  acrescentar/criar e origem salva entre planos. Implementação e PR PA02
-  não iniciadas; pausa para troca manual de modelo e instrução de continuidade.
-  Handoff `tasks/plan-pos-320-pa02.md`, checklist `tasks/todo-pos-320-pa02.md`.
-  Integração em main não comprova deploy ou banco; esta análise não consultou
-  CI/ambientes externos nem executou testes de implementação PA02.
+- **PA02 — implementação autorizada e em andamento** na branch
+  `feat/roadmap-PA02-copy-meals`, sobre main `2d2edcf` (#414); FND02/#411 e
+  PA01/#414 integrados. Catálogo pós-320 consultado para este ID: reutilizar
+  código interno, sem biblioteca nova. D01–D03 confirmadas. Já há duplicação
+  local, cópia de origem salva e aplicação não destrutiva no rascunho. Unitários
+  (6/6), BFF (26/26), proteção FND02 (4/4), typecheck e Playwright desktop/mobile
+  (22/22) passaram nesta worktree. Build, lint, gates finais, revisão R4 e PR
+  ainda não concluídos. Handoff `tasks/plan-pos-320-pa02.md`, checklist
+  `tasks/todo-pos-320-pa02.md`. Sem alteração de backend/schema, migration,
+  merge ou deploy nesta execução.
 
 - **Transição pós-Fase 320:** NO-GO nesta rodada para ingestão/uso da TBCA, pois
   a autorização de direitos não está disponível. O catálogo continua com TACO,

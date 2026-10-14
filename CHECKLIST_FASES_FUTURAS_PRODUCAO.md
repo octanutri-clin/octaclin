@@ -4622,10 +4622,13 @@ auditoria estão ordenados na seção 15 de
   contra saída com alterações não salvas.
 - [x] PA01 — integrada pela PR #414, main `2d2edcf`; arraste de refeições
   com setas/teclado e salvamento existentes. Sem migration.
-- [ ] PA02 — análise autorizada, gaps residuais e D01–D03 confirmados:
-  ambos os escopos autorizados, acrescentar/criar e origem salva entre planos.
-  Handoff `tasks/plan-pos-320-pa02.md`; sem runtime/PR nesta rodada.
-  Catálogo consultado, sem biblioteca nova recomendada para este ID.
+- [ ] PA02 — implementação em andamento na branch
+  `feat/roadmap-PA02-copy-meals`. D01–D03 confirmadas; código interno, sem
+  biblioteca nova. Duplicação local e cópia salva com aplicação não destrutiva
+  já implementadas. Unitários 6/6, BFF 26/26, proteção FND02 4/4, typecheck e
+  Playwright 22/22 desktop/mobile passaram localmente. Build/lint/gates finais,
+  revisão R4 independente, CI/PR ainda pendentes. Nenhuma migration, merge ou
+  deploy. Handoff `tasks/plan-pos-320-pa02.md`.
 
 Os merges acima foram conferidos por Git. CI e operação externa não foram
 reconsultados nesta análise; nenhuma aprovação operacional é inferida.

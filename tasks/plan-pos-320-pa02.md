@@ -3,20 +3,21 @@
 Data: 2026-10-14. Base auditada: main `2d2edcfed20457cb21a1d27d2cbfcc21499bab13`,
 merge da PR #414/PA01; FND02 integrado pela PR #411.
 
-**Autorização desta rodada:** análise e documentação. Implementação ainda não
-iniciada; respostas de produto abaixo não equivalem a autorização para codificar.
-Uma única PR PA02 reunirá planejamento e implementação quando autorizada.
+**Autorização atualizada:** em 2026-10-14 o proprietário autorizou a
+implementação da PA02 após a troca manual para Luna alto. Uma única PR reunirá
+planejamento e implementação. Merge, deploy e alterações externas continuam
+fora do escopo autorizado.
 
 ## Checkout e continuidade
 
-- Branch: `docs/pos320-pa02-handoff`.
+- Branch de implementação: `feat/roadmap-PA02-copy-meals`.
 - Checkout isolado: `/workspace/octaclin/.worktrees/pos320-pa02-planejamento`.
 - O checkout principal em `774cf34f` e sua alteração em `next-env.d.ts` foram
   preservados. O fetch ali falhou por objeto ausente em ref remoto legado;
   foi feito clone limpo da main, sem remover refs nem trabalhos preexistentes.
-- Antes da implementação, conferir status/HEAD/main novamente e continuar neste
-  checkout. Renomear a branch para `feat/roadmap-PA02-copy-meals` quando for
-  iniciar código; não abrir PR documental separada nem misturar PA03/PA04.
+- Implementação retomada neste checkout, branch
+  `feat/roadmap-PA02-copy-meals`; base remota revalidada em `2d2edcf`.
+  Não abrir PR documental separada nem misturar PA03/PA04.
 - Checklist executável: [todo-pos-320-pa02.md](todo-pos-320-pa02.md).
 
 ## Referências preparadas pelo proprietário
@@ -70,8 +71,8 @@ e matriz de confiabilidade foram confrontados com esses caminhos.
 ## Decisões de produto confirmadas
 
 Confirmadas pelo proprietário em2026-10-14 nas três respostas da sessão.
-Essas decisões fecham o escopo; a implementação permanece pausada para a troca
-manual de modelo e sua instrução de continuidade.
+Essas decisões fecham o escopo. Em seguida, o proprietário autorizou a
+implementação; o handoff está em execução nesta branch.
 
 | ID | Regra confirmada | Resposta do proprietário |
 |---|---|---|
@@ -228,16 +229,33 @@ Revisão de segurança R4 quando viável, com autoria/independência declaradas.
 Rollback: reverter UI/helpers da PA02; versões salvas/publicadas permanecem
 no schema existente. Não fazer rollback destrutivo de histórico.
 
+## Estado atual da implementação
+
+- T01–T03 implementadas nesta worktree: duplicação local profunda, seletor de
+  origem salva paginado, revalidação no momento da colagem, proteção contra
+  resposta tardia/contexto trocado e colagem como nova refeição ou acréscimo.
+- Sem mudanças em backend, banco, migration, contrato público ou dependências.
+- Evidência local: unitários PA02 6/6; BFF existente de planos 26/26; proteção
+  FND02 4/4; serviço/controlador NestJS 56/56; nutrição Web 13/13; typecheck;
+  Playwright desktop/mobile 22/22 (PA02, Fase 269 e regressões selecionadas);
+  lint (0 erros, 65 avisos no repositório); build Web; scanner de secrets e
+  `git diff --check`.
+- O teste legado de ordenação visual passou a validar as setas por teclado,
+  alternativa acessível estável para desktop e mobile. Tentativas sintéticas de
+  arraste em cartões altos variaram no Playwright; o código existente de arraste
+  não foi alterado. PA02 não deve alegar que esse gesto foi validado nesta rodada.
+- Não há prova nova PostgreSQL/RLS específica PA02: nenhuma rota/permissão ou
+  persistência backend foi criada. CI da branch ainda não executado.
+
 ## Modelos e estado real desta rodada
 
-- Sol6.1 médio: análise/contratos e fechamento deste handoff.
-- Luna alto: implementação UI/helpers/testes com decisões fechadas.
-- Retornar a Sol6.1 médio para revisão R4 se houver dúvida de autorização,
-  alteração server-side ou contrato novo. Avisar e pausar antes de cada troca.
-- Nenhuma delegação ou implementação nesta análise. Nenhuma PR PA02 aberta.
-- PASS: leitura da main e confirmação por Git dos merges411/414, identificação
-  das referências78/PA02 sem candidata e auditoria dos contratos acima.
-- Testes de implementação, navegador, CI PA02 e PostgreSQL: SKIPPED,
-  pois esta rodada é planejamento. Não transportar resultados PA01 como PA02.
-- PASS documental:15 links locais conferidos, diff--check sem erro e scanner
-  local de secrets sem achado. Evidências também no checklist.
+- Sol6.1 médio: análise/contratos e handoff.
+- Luna alto: implementação UI/helpers/testes atualmente realizada.
+- Revisão R4 independente ainda necessária e não simulada por esta execução.
+- PR PA02 não aberta até os gates finais; sem merge/deploy/migration externa.
+- PASS: leitura da main e confirmação por Git dos merges #411/#414, identificação
+  das referências do catálogo PA02 sem candidata e auditoria dos contratos;
+  implementação e verificações locais listadas acima.
+- SKIPPED: CI remoto e PostgreSQL/RLS específico PA02; nenhum código de backend,
+  autorização ou schema foi modificado.
+- PENDENTE: revisão R4 independente e criação da PR draft após revisão do diff.

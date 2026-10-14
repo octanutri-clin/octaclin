@@ -1,22 +1,25 @@
-# Handoff atual — PA02: análise de gaps
+# Handoff atual — PA02: implementação autorizada
 
-Em 2026-10-14 o proprietário autorizou a análise da PA02, incluindo consulta
-às referências preparadas em `docs/pos-320`. Main auditada: `2d2edcf`,
-merge #414/PA01, com FND02/#411 integrado. Nenhuma implementação PA02 iniciada.
+Em 2026-10-14 o proprietário autorizou a análise e, após responder D01–D03,
+autorizou a implementação da PA02. Main auditada: `2d2edcf`, merge #414/PA01,
+com FND02/#411 integrado. Implementação em andamento na branch isolada abaixo.
 
 - Contratos, gaps, referências e continuidade:
   [plan-pos-320-pa02.md](plan-pos-320-pa02.md).
 - T00–T05 e checkpoints:
   [todo-pos-320-pa02.md](todo-pos-320-pa02.md).
-- Branch `docs/pos320-pa02-handoff`, checkout
+- Branch `feat/roadmap-PA02-copy-meals`, checkout
   `/workspace/octaclin/.worktrees/pos320-pa02-planejamento`.
 - Catálogo/mapa e JSON78 conferidos: PA02 recomenda código interno, sem
   biblioteca nova. D01–D03 confirmadas pelo proprietário em2026-10-14:
   ambos os escopos autorizados, acrescentar/criar e origem salva entre planos.
-  Implementação pausada para troca manual de modelo e instrução de continuidade.
-- Luna alto pode implementar após fechamento das decisões e autorização;
-  avisar/pausar para troca manual. Revisão R4/contrato novo pode exigir Sol médio.
-- Uma futura PR PA02 reúne docs/código; não abrir PR documental separada.
+- Implementação disponível nesta branch: duplicação local por refeição,
+  seleção paginada de origem salva, revalidação da versão/acesso no momento da
+  cópia e colagem como refeição nova ou acréscimo não destrutivo.
+- Evidência parcial da execução em `todo-pos-320-pa02.md`; revisão R4 independente,
+  testes restantes, CI e PR ainda pendentes. Não declarar autorização de uso
+  operacional além da implementação técnica; merge/deploy seguem fora da autorização.
+- Uma PR PA02 reunirá documentos e código, sem PR documental separada.
 
 ---
 

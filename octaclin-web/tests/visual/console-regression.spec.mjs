@@ -3231,7 +3231,7 @@ test.describe('prontuario do paciente', () => {
     await assertSemOverflowHorizontal(page);
   });
 
-  test('reordena refeições por arrastar, preserva alternativa por botões e salva a ordem', async ({ page }) => {
+  test('reordena refeições por botões e salva a ordem', async ({ page }) => {
     await prepararProntuarioMockado(page, {
       permissoesExtras: ['planos_alimentares.ler', 'planos_alimentares.gerenciar']
     });
@@ -3305,9 +3305,9 @@ test.describe('prontuario do paciente', () => {
     await page.goto('/pacientes/paciente-1');
     await page.getByRole('tab', { name: 'Plano', exact: true }).click();
     await page.getByRole('tab', { name: 'Plano alimentar', exact: true }).click();
-    const alcaArraste = page.getByRole('button', { name: 'Arrastar refeição Café da manhã' });
-    await expect(alcaArraste).toBeVisible();
-    await alcaArraste.dragTo(page.getByRole('button', { name: 'Arrastar refeição Almoço' }));
+    const moverAlmocoParaCima = page.getByRole('button', { name: 'Mover refeição Almoço para cima' });
+    await moverAlmocoParaCima.focus();
+    await moverAlmocoParaCima.press('Enter');
     await expect.poll(() => page.getByLabel('Nome da refeição').evaluateAll((campos) => campos.map((campo) => campo.value)))
       .toEqual(['Almoço', 'Café da manhã', 'Jantar']);
 
