@@ -28,9 +28,12 @@ em 2026-10-14; UI entregue por Luna alto e retorno manual ao Sol confirmado.
 - PostgreSQL 15 local descartável: provas PA05 reais com RLS/concorrência PASS.
   Fixture omite extensões Timescale/pgvector fora do escopo; gate integral
   Testcontainers padrão será validado no CI. ENOSPC anterior não é aprovação.
-- Próxima ação: concluir gates locais no Node22/pnpm11.25, commit/PR única e
-  verificar CI do HEAD. Suíte conjunta de 50 cenários UI e authz em execução;
-  backend typecheck/build e prova PG específica passaram novamente nesta rodada.
+- [PR única #419](https://github.com/octanutri-clin/octaclin/pull/419), Draft.
+  Próxima ação: enviar correção de isolamento dos fixtures PA05 e validar CI
+  do novo HEAD. CI inicial `38653741126` falhou na interação PA04/PA05;
+  reprodução RED e correção GREEN real 3/3 sem enfraquecer asserções PA04.
+  UI conjunta 50/50 + teclado/a11y 4/4, Web/backend typecheck/build PASS.
+  Autorização BFF ampla local ainda em execução.
 - PR única preparada inicialmente como Draft para validar CI; migração1072
   somente na fixture local. Não
   aplicar em staging/produção, nem fazer merge/deploy. Autorrevisão não substitui

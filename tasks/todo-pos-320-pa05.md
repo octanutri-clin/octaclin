@@ -160,11 +160,16 @@ T01–T08 implementados e validados para a superfície PA05. T09 pendente.
   portal/cópia, desktop/mobile, print media e Axe nas preferências.
 - PASS: 4/4 casos adicionais de teclado/acessibilidade, incluindo troca de
   checkbox por Space e regressão do estado vazio do plano no portal.
-- PASS: typecheck/build backend e nova prova PostgreSQL15 real 2/2 PA05;
-  os 32 casos não selecionados nesta fixture são SKIPPED, não PASS.
+- PASS: typecheck/build backend e prova PostgreSQL15 real conjunta 3/3 PA04/PA05;
+  os 31 casos não selecionados nesta fixture são SKIPPED, não PASS.
 - PASS: Web lint completo, 0 erros/66 avisos; scanner de secrets, governança de
   migrations, matriz de confiabilidade e guardas de controladores.
-- Em execução: Web build/typecheck final, autorização BFF completa e CI da PR.
+- PASS: Web build e typecheck final com Node22.21.1/pnpm11.25.0.
+- FAIL corrigido: primeiro CI da PR #419, `38653741126`, HEAD `baa25a3f`,
+  detectou contaminação entre fixtures PA05/PA04. Reprodução local RED; casos
+  PA05 passaram a usar identidades próprias, sem alterar expectativas PA04.
+  Nova prova conjunta GREEN 3/3; CI integral precisa ser reexecutado.
+- Em execução: autorização BFF completa local e CI do HEAD corrigido da PR #419.
 - SKIPPED local: gate integral Timescale/pgvector por espaço Docker disponível;
   será conferido no CI. PowerShell preflight não está instalado neste host;
   verificações documentais proporcionais executadas e governança no CI.

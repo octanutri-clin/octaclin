@@ -188,7 +188,8 @@ T00 e T01–T08 implementados, com evidências no checklist.
 Prova PG específica executada com fixture descartável; gate integral de
 Timescale/pgvector continua pendente no CI. Revisão R4 estática independente PASS
 após correções; T09 e rollout ainda não concluídos. CI da PA04 não prova PA05.
-Uma PR de entrega futura reúne estes documentos e a implementação.
+A PR [#419](https://github.com/octanutri-clin/octaclin/pull/419) reúne estes
+documentos e a implementação, inicialmente Draft até os gates finais.
 
 GPT-6.1 Sol médio: persistência, CAS, hash, projeção e integração R4.
 GPT-6 Luna alto: componente isolado de preferências e estados visuais após

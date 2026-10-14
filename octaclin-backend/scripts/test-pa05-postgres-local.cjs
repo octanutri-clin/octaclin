@@ -1,4 +1,4 @@
-// Focused PA05 proof on disposable PostgreSQL when Docker VFS cannot fit Timescale HA.
+// Focused PA04/PA05 regression on disposable PostgreSQL when Docker VFS cannot fit Timescale HA.
 // This fixture does NOT validate pgvector or Timescale/hypertables; CI keeps the full gate.
 require('ts-node').register({ project: require('node:path').resolve(__dirname, '../tsconfig.json'), transpileOnly: true, compilerOptions: { rootDir: require('node:path').resolve(__dirname, '..'), ignoreDeprecations: '6.0' } });
 const { GenericContainer, Wait } = require('testcontainers');
@@ -43,7 +43,7 @@ const { criarOpcoesTypeOrm } = require('../src/infraestrutura/banco-dados/opcoes
     Object.assign(env, { RLS_PROVA_BANCO_HOST: container.getHost(), RLS_PROVA_BANCO_PORTA: String(container.getMappedPort(5432)), RLS_PROVA_BANCO_USUARIO: 'pa05_runtime', RLS_PROVA_BANCO_SENHA: 'pa05_runtime_sintetico', RLS_PROVA_BANCO_NOME: 'octaclin_pa05_descartavel' });
     console.log('PA05: PostgreSQL 15 descartável, schema/RLS de planos reais. Timescale/pgvector: SKIPPED nesta fixture; gate integral permanece no CI.');
     const code = await new Promise((resolve, reject) => {
-      const child = spawn('corepack', ['pnpm', 'exec', 'jest', '--runInBand', 'src/infraestrutura/banco-dados/rls-isolamento-tenant.integracao.spec.ts', '-t', 'PA05'], { cwd: require('node:path').resolve(__dirname, '..'), env, stdio: 'inherit' });
+      const child = spawn('corepack', ['pnpm', 'exec', 'jest', '--runInBand', 'src/infraestrutura/banco-dados/rls-isolamento-tenant.integracao.spec.ts', '-t', 'PA04|PA05'], { cwd: require('node:path').resolve(__dirname, '..'), env, stdio: 'inherit' });
       child.once('error', reject); child.once('exit', resolve);
     });
     process.exitCode = code ?? 1;

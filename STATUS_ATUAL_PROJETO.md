@@ -6,6 +6,8 @@ Atualizado em 2026-10-14.
 
 - **PA05 — implementação e revisão R4 concluídas; gates finais em execução**, branch
   `feat/pos320-pa05-preferencias`, base `64f54b88`. D01–D03 confirmadas.
+  PR #419 inicialmente Draft. CI inicial detectou contaminação de fixtures
+  PA05/PA04; casos PA05 isolados e prova conjunta PostgreSQL real 3/3 PASS.
   Cifra/CAS, clone/hash, projeção paciente e BFF/tipos validados; provas reais
   PostgreSQL15 específicas com RLS/concorrência PASS. Fixture omite extensões
   Timescale/pgvector não utilizadas pela PA05; gate integral será no CI.
