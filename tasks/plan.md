@@ -1,8 +1,10 @@
-# Handoff atual — PA03: planejamento consolidado
+# Handoff atual — PA03: implementação validada localmente
 
 Base auditada em 2026-10-14: main `5b47fb1`, merge #416. Worktree isolada
 `/workspace/octaclin/.worktrees/pos320-pa03-planejamento`, branch
-`docs/pos320-pa03-planejamento`. Planejamento autorizado; runtime não iniciado.
+`feat/pos320-pa03-subtotais-refeicoes`. O proprietário autorizou implementação em
+2026-10-14; código e testes locais validados, incluindo build e visual 48/48
+mais complementos 4/4. PR/CI do HEAD pendentes. Sem migration/backend.
 
 - Contratos, gaps G01–G07 e arquivos:
   [plan-pos-320-pa03.md](plan-pos-320-pa03.md).
@@ -13,13 +15,14 @@ Base auditada em 2026-10-14: main `5b47fb1`, merge #416. Worktree isolada
   PA03 recomendam código interno, sem dependência externa.
 - Prioridades: preservar ausência de nutrientes, arredondamento por porção,
   identidade/estado, validação de campos recolhidos e trava PA02 colagem/save.
-- Implementação proposta: GPT-6 Luna alto; revisão final: GPT-6.1 Sol médio.
-  Avisar e pausar antes de troca manual e implementação.
+- Implementação executada em modelo Luna; revisão Sol autorizada pelo
+  proprietário. Revisão cruzada independente corrigiu um P2 de overflow com
+  RED/GREEN. Relatório `docs/governance/REVISAO_R4_PA03_2026-10-14.md`.
 - #416 mergeada: HEAD `38c3596`, todos os workflows SUCCESS; CI
   `38583138559` SUCCESS. O registro PA02 abaixo preserva o checkpoint anterior;
   seus itens pendentes de integração/CI foram resolvidos conforme o relatório R4.
-- Uma PR PA03 reunirá documentação e código após autorização. Não abrir PR
-  documental separada. Nenhuma migration, merge, deploy ou ativação autorizada.
+- Uma PR Draft PA03 reunirá documentação/código após T05 local; seus checks
+  encerram T05 remoto. Nenhuma migration, merge, deploy ou ativação autorizada.
 
 ---
 

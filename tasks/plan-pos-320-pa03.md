@@ -1,8 +1,10 @@
 # PA03 — macros no cabeçalho de refeições recolhidas
 
-Planejamento autorizado em 2026-10-14. Implementação ainda não autorizada.
+Planejamento autorizado em 2026-10-14; implementação autorizada pelo proprietário
+em 2026-10-14. Execução técnica em worktree isolado; sem merge, deploy, migration
+externa ou ativação.
 Base auditada: main `5b47fb128e27dff0d72d9f5f0929c0ec0218a671`, merge #416.
-Branch: `docs/pos320-pa03-planejamento`. Checkout isolado:
+Branch: `feat/pos320-pa03-subtotais-refeicoes`. Checkout isolado:
 `/workspace/octaclin/.worktrees/pos320-pa03-planejamento`.
 A worktree PA02 e seus commits foram preservados.
 
@@ -140,9 +142,9 @@ igualdade antes de formatar tem precisão de 0,0001, não tolerância visual fro
 | T01 | autorização de implementação, T00 | `lib/nutricao-plano.ts`, `scripts/nutricao-plano.spec.ts`; adapters internos mínimos para G04 | RED/GREEN: completude, zeros, alternativas, porções, arredondamento e source sem densidades; testes legados intactos |
 | T02 | T01 | `refeicao-ordenavel.tsx`, editor; estado/toggle e cabeçalho | Todas recolhidas inicialmente; dados retidos e dirty intacto; subtotal reage ao formulário |
 | T03 | T02 | Editor: invalid capture, erros e foco | Salvar com required recolhido revela/foca campo e não envia PUT inválido; sem erro not focusable |
-| T04 | T03 | Nova spec `tests/visual/pa03-subtotal-refeicao.spec.mjs`; regressões existentes | Desktop/mobile, axe, DnD, PA02/269, modelos/receitas, save/rehidratação e contexto |
-| T05 | T04 | Gates locais/CI e revisão cruzada R4 quando viável | Resultados específicos, sem inferir PG ou independência; HEAD correto aprovado |
-| T06 | T05 | Uma PR PA03 reunindo plano e implementação, estado e rollback | Handoff final; nenhuma migration/merge/deploy/ativação pelo agente |
+| T04 | T03 | Casos PA03 em `tests/visual/pa02-copia-refeicoes.spec.mjs`; regressões existentes | Desktop/mobile, axe, DnD, PA02/269, modelos/receitas, save/rehidratação e contexto |
+| T05 | T04 | Gates locais e revisão cruzada R4; CI após abrir a PR Draft | Resultados específicos, sem inferir PG ou independência; conferir CI do HEAD da PR |
+| T06 | T05 local | Uma PR PA03 reunindo plano e implementação, estado e rollback | Draft até CI; T05 remoto fecha após checks; nenhuma migration/merge/deploy/ativação pelo agente |
 
 Usar o runner nutricional existente, já incluído em test:authz do CI. Não criar
 outro framework de testes. Novo componente pequeno de apresentação só se isso
@@ -163,18 +165,18 @@ required recolhido e requestSubmit; foco/axe/desktop/mobile; cópia pendente e
 save bloqueado; destino removido; navegação de paciente/plano e reset de estado;
 payload com todas as refeições; snapshots novos retornados após save.
 
-Comandos de implementação (não executados nesta análise documental):
+Comandos previstos para implementação e validação:
 
 ```sh
 pnpm --dir octaclin-web test:nutricao-plano
 pnpm --dir octaclin-web test:copia-refeicoes
 pnpm --dir octaclin-web test:planos-alimentares:bff
 pnpm --dir octaclin-web test:proteger-alteracoes-nao-salvas
-pnpm --dir octaclin-web exec playwright test tests/visual/pa03-subtotal-refeicao.spec.mjs tests/visual/pa02-copia-refeicoes.spec.mjs tests/visual/fase-269-duplicar-plano.spec.mjs tests/visual/console-regression.spec.mjs --grep 'PA03|PA02|Fase 269|reordena refeições pela alça|edita o modelo em cópia isolada' --reporter=list
+pnpm --dir octaclin-web exec playwright test tests/visual/pa02-copia-refeicoes.spec.mjs tests/visual/fase-269-duplicar-plano.spec.mjs tests/visual/console-regression.spec.mjs --grep 'PA03|PA02|Fase 269|reordena refeições pela alça|edita o modelo em cópia isolada' --reporter=list
 pnpm --dir octaclin-web lint
 pnpm --dir octaclin-web typecheck
 pnpm --dir octaclin-web build
-pnpm --dir octaclin-backend test -- --runInBand src/modulos/planos-alimentares/dominio/calculo-nutricional.spec.ts src/modulos/planos-alimentares/dominio/plano-alimentar.spec.ts
+pnpm --dir octaclin-backend exec jest --runInBand src/modulos/planos-alimentares/dominio/calculo-nutricional.spec.ts src/modulos/planos-alimentares/dominio/plano-alimentar.spec.ts
 pnpm security:secrets
 git diff --check
 ```
@@ -193,11 +195,35 @@ persistidos permanecem no schema existente. Sem migration prevista.
 ## Modelos e continuidade
 
 - Planejamento/gaps/contratos: GPT-6.1 Sol médio.
-- Implementação deste handoff: GPT-6 Luna alto, com checkpoints T01–T04.
-- Revisão final de cálculo, foco/validação e regressões R4: GPT-6.1 Sol médio;
-  revisão cruzada por outro agente quando viável, com independência declarada.
-- Avisar e pausar antes de cada troca manual. Não iniciar implementação por
-  inferência desta autorização de planejamento. Não reabrir D01–D03.
-- PASS nesta etapa: base/merge/CI anterior conferidos, referências PA03,
-  leitura dos contratos e decisões de produto. Testes runtime PA03, revisão R4
-  da implementação, CI PA03 e operação externa: SKIPPED/não iniciados.
+- Implementação autorizada pelo proprietário em 2026-10-14 e iniciada em
+  worktree isolado. Não reabrir D01–D03.
+- Implementação de código concluída localmente para T01–T04. T05 local permite
+  abrir a única PR Draft; seus gates de CI só podem ser executados depois da PR.
+  A revisão Sol e a revisão cruzada independente fecharam um P2 por overflow
+  do arredondamento final com teste RED/GREEN. Relatório:
+  `docs/governance/REVISAO_R4_PA03_2026-10-14.md`.
+- Build Web passou após remover somente artefatos locais de `.next/dev` que
+  estavam corrompidos por execução concorrente do Next dev. O build terminou
+  compilação, TypeScript, geração estática e coleta de traces com exit code 0.
+- Rodada Sol em Node 22.21.1/pnpm 11.25.0: nutricional 19/19; cópia 6/6;
+  BFF 26/26; proteção de alterações não salvas 4/4; backend nutricional 21/21;
+  typecheck PASS; lint focado sem erros (3 avisos preexistentes); build final
+  PASS. Suite visual ampliada 48/48 e complementos leitor/Fase297 4/4, todos em
+  desktop/mobile sobre o build local com `next start`, como no Demo CI.
+- Rodada anterior: visual PA03 10/10 desktop/mobile com axe; lint completo
+  exit 0 (65 avisos existentes); build exit 0. Secrets e diff check PASS sobre
+  o diff final; repetir antes de cada push adicional.
+- Uma rodada visual/BFF concorrente com lint/typecheck falhou por timeout de
+  navegação e arquivo `.next/dev/types/link.d.ts` parcialmente gerado. Depois de
+  cessarem os processos concorrentes, limpei somente `.next/dev` gerado local e
+  repeti BFF e a suite visual isoladamente: ambos passaram. Não ocultar a falha
+  transitória; ela demonstra que esses runners não devem compartilhar `.next`.
+- A primeira etapa usou host Node 24.19.0/pnpm 11.19.0 e teve avisos de engine.
+  A revisão utiliza o runtime conforme manifests. Não há nova prova PostgreSQL
+  específica da PA03, pois não há mudança de backend/schema. CI do HEAD da PR
+  ainda não observado; nenhuma migration, merge, deploy ou ativação realizada.
+- Uma execução ampliada em Next dev teve 42/48 PASS. Traces revelaram leituras
+  de fundo sem mock retornando 401 e timeouts de navegação/foco. Os mocks foram
+  completados somente nesses caminhos; as provas negativas da cópia continuam
+  intactas. A repetição integral sobre build local passou 48/48, mantendo os
+  limites originais dos testes. Relatório R4 contém comandos e limitações.

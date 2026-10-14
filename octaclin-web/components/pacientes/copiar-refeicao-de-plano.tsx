@@ -13,7 +13,7 @@ import {
   type PlanoAlimentarResumoApi,
   type VersaoPlanoAlimentarResumoApi
 } from '@/lib/plano-alimentar-api';
-import { copiarRefeicaoParaFormulario, type RefeicaoFormularioCopia } from '@/lib/copia-refeicoes-plano';
+import { copiarRefeicaoParaFormulario, type RefeicaoFormularioCopia, type RefeicaoFormularioCopiaFonte } from '@/lib/copia-refeicoes-plano';
 
 interface ReferenciaRefeicaoSalva {
   pacienteOrigemId: string;
@@ -40,7 +40,7 @@ interface CopiarRefeicaoDePlanoProps {
   pacienteIdAtual: string;
   planoIdDestino: string;
   versaoRascunhoDestinoId: string;
-  refeicoesDestino: RefeicaoFormularioCopia[];
+  refeicoesDestino: RefeicaoFormularioCopiaFonte[];
   destinoChave: string;
   gerarChave: (prefixo: 'refeicao' | 'alimento') => string;
   aoAplicar: (refeicao: RefeicaoFormularioCopia, destino: DestinoCopia) => void;

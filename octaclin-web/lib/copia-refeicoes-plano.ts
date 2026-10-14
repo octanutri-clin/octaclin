@@ -33,9 +33,28 @@ export interface RefeicaoFormularioCopia {
   itens: ItemFormularioCopia[];
 }
 
+/** Forma de leitura do editor: campos podem estar em edição e incompletos. */
+export interface AlimentoFormularioCopiaFonte extends Omit<AlimentoFormularioCopia, 'nutrientesPor100g'> {
+  nutrientesPor100g: Partial<NutrientesPor100gApi>;
+}
+
+export interface AlternativaFormularioCopiaFonte extends AlimentoFormularioCopiaFonte {
+  liberadaParaPaciente: boolean;
+  preferida: boolean;
+}
+
+export interface ItemFormularioCopiaFonte extends AlimentoFormularioCopiaFonte {
+  substituicoes: AlternativaFormularioCopiaFonte[];
+  substituicoesVisiveisInicialmente?: number;
+}
+
+export interface RefeicaoFormularioCopiaFonte extends Omit<RefeicaoFormularioCopia, 'itens'> {
+  itens: ItemFormularioCopiaFonte[];
+}
+
 export type GerarChaveCopia = (prefixo: 'refeicao' | 'alimento') => string;
 
-function validarNutrientes(nutrientes: NutrientesPor100gApi | undefined): NutrientesPor100gApi {
+function validarNutrientes(nutrientes: Partial<NutrientesPor100gApi> | undefined): NutrientesPor100gApi {
   const essenciais = ['energiaKcal', 'proteinasG', 'carboidratosG', 'gordurasG'] as const;
   if (!nutrientes || essenciais.some((chave) => !Number.isFinite(nutrientes[chave]))) {
     throw new Error('A refeição não pode ser copiada porque contém um snapshot nutricional incompleto.');
@@ -43,11 +62,11 @@ function validarNutrientes(nutrientes: NutrientesPor100gApi | undefined): Nutrie
   if (Object.values(nutrientes).some((valor) => valor !== undefined && !Number.isFinite(valor))) {
     throw new Error('A refeição não pode ser copiada porque contém valores nutricionais inválidos.');
   }
-  return { ...nutrientes };
+  return { ...nutrientes } as NutrientesPor100gApi;
 }
 
 function copiarAlimento(
-  alimento: AlimentoFormularioCopia,
+  alimento: AlimentoFormularioCopiaFonte,
   gerarChave: GerarChaveCopia
 ): AlimentoFormularioCopia {
   return {
@@ -62,7 +81,7 @@ function copiarAlimento(
   };
 }
 
-function copiarItemFormulario(item: ItemFormularioCopia, gerarChave: GerarChaveCopia): ItemFormularioCopia {
+function copiarItemFormulario(item: ItemFormularioCopiaFonte, gerarChave: GerarChaveCopia): ItemFormularioCopia {
   if (item.substituicoes.length > LIMITE_SUBSTITUICOES_ITEM) {
     throw new Error(`A refeição excede o limite de ${LIMITE_SUBSTITUICOES_ITEM} substituições por alimento.`);
   }
@@ -139,16 +158,16 @@ export function copiarRefeicaoParaFormulario(
 }
 
 export function duplicarRefeicaoNoRascunho(
-  refeicoes: RefeicaoFormularioCopia[],
+  refeicoes: RefeicaoFormularioCopiaFonte[],
   indice: number,
   gerarChave: GerarChaveCopia
-): RefeicaoFormularioCopia[] {
+): RefeicaoFormularioCopiaFonte[] {
   if (refeicoes.length >= LIMITE_REFEICOES_PLANO) {
     throw new Error(`O plano atingiu o limite de ${LIMITE_REFEICOES_PLANO} refeições.`);
   }
   const original = refeicoes[indice];
   if (!original) throw new Error('Não foi possível localizar a refeição selecionada. Atualize a tela e tente novamente.');
-  const copia: RefeicaoFormularioCopia = {
+  const copia: RefeicaoFormularioCopiaFonte = {
     chaveCliente: gerarChave('refeicao'),
     nome: original.nome,
     horarioLocal: original.horarioLocal,
@@ -159,10 +178,10 @@ export function duplicarRefeicaoNoRascunho(
 }
 
 export function acrescentarItensDeRefeicao(
-  destino: RefeicaoFormularioCopia,
-  itensOrigem: ItemFormularioCopia[],
+  destino: RefeicaoFormularioCopiaFonte,
+  itensOrigem: ItemFormularioCopiaFonte[],
   gerarChave: GerarChaveCopia
-): RefeicaoFormularioCopia {
+): RefeicaoFormularioCopiaFonte {
   if (destino.itens.length + itensOrigem.length > LIMITE_ITENS_REFEICAO) {
     throw new Error(`A refeição selecionada excederia o limite de ${LIMITE_ITENS_REFEICAO} alimentos.`);
   }

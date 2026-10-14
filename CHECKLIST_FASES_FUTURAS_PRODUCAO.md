@@ -4628,14 +4628,18 @@ auditoria estão ordenados na seção 15 de
   `docs/governance/REVISAO_R4_PA02_PR415_2026-10-14.md`. Cinco workflows do HEAD
   corretivo `38c3596` SUCCESS; todos os jobs do CI `38583138559` SUCCESS.
   Handoff `tasks/plan-pos-320-pa02.md`; sem migration nova.
-- [ ] PA03 — planejamento consolidado em `5b47fb1`, sem implementação.
-  Somente editor do profissional; todas recolhidas inicialmente; subtotais
-  parciais e aviso. Referências deste ID recomendam código interno. Contratos de
-  cálculo/foco/validação, regressões e T00–T06 em `tasks/plan-pos-320-pa03.md`
-  e `tasks/todo-pos-320-pa03.md`. Aguardar autorização e troca manual para Luna alto.
+- [ ] PA03 — planejamento em `5b47fb1`; implementação autorizada e T01–T04
+  desenvolvidos em worktree isolado `feat/pos320-pa03-subtotais-refeicoes`. Somente
+  editor do profissional; todas recolhidas inicialmente; subtotais parciais e
+  aviso. Código sem dependências externas, API ou migration. Unit/BFF/visual
+  dirigidos, lint e build tiveram PASS local; revisão independente R4 fechou um
+  P2 com RED/GREEN. Build final PASS; visual 48/48 + complementos 4/4 no build
+  local. PR/CI do HEAD pendentes. Ver `tasks/plan-pos-320-pa03.md` e
+  `tasks/todo-pos-320-pa03.md`. Sem merge, deploy ou ativação.
 
 Merges e checks de #416 conferidos em 2026-10-14; nenhuma aprovação operacional
-ou publicação em produção é inferida. Testes de implementação PA03 não iniciados.
+ou publicação em produção é inferida. A implementação PA03 segue em validação;
+testes locais não substituem CI do HEAD ou revisão R4 independente.
 
 O escopo, dependências, critérios de aceite, limites e gates destas fases estão
 em `docs/product/ROADMAP_POS_AUDITORIA_FASES_302_320.md`. Fases condicionais
