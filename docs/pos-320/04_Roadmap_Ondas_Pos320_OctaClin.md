@@ -254,11 +254,11 @@ O arraste já existe no editor e permanece baseline da PA02; não reimplementar.
 ## [PA02] Copiar, colar e duplicar refeições
 
 **Reconciliação em 2026-10-14:** RESIDUAL CONFIRMADO na main `2d2edcf`.
-Implementação integrada pela PR #415, main `50a9590`; correções de revisão
-na PR Draft #416. D01–D03 confirmadas pelo
-proprietário: ambos os escopos autorizados, acrescentar/criar e origem salva.
-Revisão cruzada identificou e fechou dois P2 de interface; CI do HEAD corrigido
-deve ser conferido antes da integração. Evidências no handoff e no relatório R4.
+Implementação integrada pelas PRs #415/#416, main `5b47fb1`. D01–D03
+confirmadas pelo proprietário: ambos os escopos autorizados, acrescentar/criar e
+origem salva. Dois P2 corrigidos com RED/GREEN e revisão cruzada. Cinco workflows
+do HEAD corretivo `38c3596` SUCCESS; CI `38583138559`, todos os jobs SUCCESS.
+Evidências no handoff e no relatório R4; não inferir deploy do merge/CI.
 Handoff em [plan-pos-320-pa02.md](../../tasks/plan-pos-320-pa02.md).
 Referências: catálogo/mapa inverso e sugestão44 recomendam código interno;
 nenhum repositório PA02 no JSON. Não criar dependência por analogia com outro ID.
@@ -285,6 +285,18 @@ nenhum repositório PA02 no JSON. Não criar dependência por analogia com outro
 ---
 
 ## [PA03] Exibir macros no cabeçalho de refeições colapsadas
+
+**Planejamento confirmado em 2026-10-14:** base `5b47fb1`, implementação ainda
+não iniciada. D01: somente editor do profissional. D02: todas as refeições
+recolhidas inicialmente, com controle individual/global sem persistir preferência.
+D03: indicador afetado mostra `—` e aviso de dados incompletos; os demais
+permanecem calculáveis; refeição vazia mostra “Sem alimentos”.
+Catálogo/mapa/JSON/matriz PA03 recomendam código interno; não há repositório
+externo candidato deste ID. Handoff
+[plan-pos-320-pa03.md](../../tasks/plan-pos-320-pa03.md) e checklist
+[todo-pos-320-pa03.md](../../tasks/todo-pos-320-pa03.md).
+Preservar ausência real de densidades, arredondamento por porção, foco/required
+em campos recolhidos e trava PA02. Nenhuma mudança de portal/PDF/API/schema.
 
 **Origem:** item 46.
 

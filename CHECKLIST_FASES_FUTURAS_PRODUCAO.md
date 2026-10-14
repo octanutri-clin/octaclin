@@ -4622,18 +4622,24 @@ auditoria estão ordenados na seção 15 de
   contra saída com alterações não salvas.
 - [x] PA01 — integrada pela PR #414, main `2d2edcf`; arraste de refeições
   com setas/teclado e salvamento existentes. Sem migration.
-- [ ] PA02 — implementação integrada pela PR #415, main `50a9590`; correções
-  na PR Draft #416, branch `fix/pa02-copia-revisao-r4`. D01–D03 confirmadas; código interno.
-  Cópia profunda, origem salva revalidada e aplicação não destrutiva. Revisão
-  cruzada sem autoria nas mudanças fechou dois P2 com RED/GREEN; relatório
-  `docs/governance/REVISAO_R4_PA02_PR415_2026-10-14.md`. Navegação SPA, destino
-  removido, limite de 50, bloqueio de persistência e alça DnD por teclado
-  cobertos. CI de `f94ea94` aprovado; exigir checks do HEAD corrigido antes de
-  integrar. Sem nova migration, merge ou deploy pelo agente. Handoff
-  `tasks/plan-pos-320-pa02.md`.
+- [x] PA02 — integrada pelas PRs #415/#416, main `5b47fb1`. D01–D03
+  confirmadas; cópia profunda, origem salva revalidada e colagem não destrutiva.
+  Dois P2 corrigidos com RED/GREEN e revisão cruzada; relatório
+  `docs/governance/REVISAO_R4_PA02_PR415_2026-10-14.md`. Cinco workflows do HEAD
+  corretivo `38c3596` SUCCESS; todos os jobs do CI `38583138559` SUCCESS.
+  Handoff `tasks/plan-pos-320-pa02.md`; sem migration nova.
+- [ ] PA03 — planejamento em `5b47fb1`; implementação autorizada e T01–T04
+  desenvolvidos em worktree isolado `feat/pos320-pa03-subtotais-refeicoes`. Somente
+  editor do profissional; todas recolhidas inicialmente; subtotais parciais e
+  aviso. Código sem dependências externas, API ou migration. Unit/BFF/visual
+  dirigidos, lint e build tiveram PASS local; revisão independente R4 fechou um
+  P2 com RED/GREEN. Build final PASS; visual 48/48 + complementos 4/4 no build
+  local. PR #417 Draft aberta; CI do HEAD pendente. Ver `tasks/plan-pos-320-pa03.md` e
+  `tasks/todo-pos-320-pa03.md`. Sem merge, deploy ou ativação.
 
-Os merges acima foram conferidos por Git e os checks da PR #415 foram consultados
-em 2026-10-14; nenhuma aprovação operacional é inferida.
+Merges e checks de #416 conferidos em 2026-10-14; nenhuma aprovação operacional
+ou publicação em produção é inferida. A implementação PA03 segue em validação;
+testes locais não substituem CI do HEAD ou revisão R4 independente.
 
 O escopo, dependências, critérios de aceite, limites e gates destas fases estão
 em `docs/product/ROADMAP_POS_AUDITORIA_FASES_302_320.md`. Fases condicionais

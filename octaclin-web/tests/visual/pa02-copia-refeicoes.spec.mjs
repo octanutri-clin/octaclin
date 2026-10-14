@@ -32,7 +32,7 @@ function versao({ id, numero, status, refeicoes, objetivos = 'Objetivo sintétic
   return { id, numero, status, criadoEm: instante, atualizadoEm: instante, objetivos, observacoes: 'Observação sintética de origem', refeicoes };
 }
 
-async function preparar(page, { falharRevalidacaoOrigem = false, alterarVersaoNaColagem = false, planosPaginados = false, atrasarLeituraExterna = false, atrasarRevalidacaoOrigem = false, duasRefeicoesDestino = false, limiteRefeicoesDestino = false } = {}) {
+async function preparar(page, { falharRevalidacaoOrigem = false, alterarVersaoNaColagem = false, planosPaginados = false, atrasarLeituraExterna = false, atrasarRevalidacaoOrigem = false, duasRefeicoesDestino = false, limiteRefeicoesDestino = false, manterRefeicoesRecolhidas = false, nutrientesIncompletos = false, refeicaoSemAlimentos = false, atualizarNutrientesAoSalvar = false } = {}) {
   let leiturasOrigemExterna = 0;
   let leiturasExternasPendentes = 0;
   let liberarLeituraExterna;
@@ -43,6 +43,25 @@ async function preparar(page, { falharRevalidacaoOrigem = false, alterarVersaoNa
     { name: 'octaclin_destino_inicial', value: encodeURIComponent('/pacientes'), domain: 'localhost', path: '/' }
   ]);
   await page.route('**/api/auth/session', (route) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ autenticado: true, apiUrl: 'http://localhost:3001', tenantSlug: 'pa02-sintetico', email: 'profissional.sintetico@example.test', expiraEm: instante, papel: 'Professional', permissoes, destinoInicial: '/pacientes' }) }));
+  // Estas leituras de fundo não pertencem ao cenário de cópia. Sem mocks,
+  // pedidos com cookies sintéticos chegavam ao BFF real e retornavam 401,
+  // exibindo estados de sessão expirada fora do escopo deste teste.
+  const respostasDeFundo = new Map([
+    ['/api/notificacoes', { naoLidas: 0, itens: [], resumos: [] }],
+    ['/api/notificacoes/resumos/gerar', { gerado: false }],
+    ['/api/pacientes/filtros-salvos', { itens: [] }]
+  ]);
+  await page.route((url) => respostasDeFundo.has(url.pathname), (route) => route.fulfill({
+    status: 200, contentType: 'application/json', body: JSON.stringify(respostasDeFundo.get(new URL(route.request().url()).pathname))
+  }));
+  for (const pacienteAtual of [paciente, outroPaciente]) {
+    await page.route((url) => url.pathname === `/api/pacientes/${pacienteAtual.id}/prioridade-acompanhamento`, (route) => route.fulfill({
+      status: 200, contentType: 'application/json', body: JSON.stringify({ pacienteId: pacienteAtual.id, apurado: false, valorCalculado: { score: 0, faixa: 'baixa', fatores: [] }, valorEfetivo: { faixa: 'baixa', origem: 'calculado' } })
+    }));
+    const compartilhamentos = `/api/planos-alimentares/receitas/compartilhamentos/pacientes/${pacienteAtual.id}`;
+    await page.route((url) => url.pathname === compartilhamentos, (route) => route.fulfill({ status: 200, contentType: 'application/json', body: '[]' }));
+    await page.route((url) => url.pathname === `${compartilhamentos}/preferencias`, (route) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ email: false, whatsapp: false, push: false }) }));
+  }
   await page.route((url) => url.pathname === '/api/profissionais', (route) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ itens: [{ id: 'pa02-profissional', tenantId: 'pa02-tenant-sintetico', nome: 'Profissional Sintético', criadoEm: instante }], total: 1 }) }));
   await page.route((url) => url.pathname === `/api/pacientes/${paciente.id}/prontuario`, (route) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ paciente, resumo: { consultas: 0, formulariosPendentes: 0, respostas: 0, checkinsRapidos: 0, mensagens: 0, evolucoes: 0, tarefasPendentes: 0, indicadoresRecentes: [], leituraClinica: { deltaUltimaAvaliacao: [], deltaDesdeInicio: [], condutasVencendo: [] } }, linhaDoTempo: [] }) }));
   await page.route((url) => url.pathname === `/api/pacientes/${outroPaciente.id}/prontuario`, (route) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ paciente: outroPaciente, resumo: { consultas: 0, formulariosPendentes: 0, respostas: 0, checkinsRapidos: 0, mensagens: 0, evolucoes: 0, tarefasPendentes: 0, indicadoresRecentes: [], leituraClinica: { deltaUltimaAvaliacao: [], deltaDesdeInicio: [], condutasVencendo: [] } }, linhaDoTempo: [] }) }));
@@ -53,6 +72,11 @@ async function preparar(page, { falharRevalidacaoOrigem = false, alterarVersaoNa
   await page.route((url) => url.pathname === '/api/pacientes', (route) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ itens: [outroPaciente], total: 1 }) }));
 
   const destino = versao({ id: 'pa02-draft-destino', numero: 2, status: 'rascunho', objetivos: 'Objetivo exclusivo do destino', refeicoes: [refeicao('destino-r', 'Almoço atual', 'Arroz sintético', 'Manter esta orientação')] });
+  if (nutrientesIncompletos) {
+    delete destino.refeicoes[0].itens[0].composicaoSnapshot.nutrientesPor100g.proteinasG;
+    delete destino.refeicoes[0].itens[0].composicaoSnapshot.nutrientesPorcao.proteinasG;
+  }
+  if (refeicaoSemAlimentos) destino.refeicoes[0].itens = [];
   if (duasRefeicoesDestino) destino.refeicoes.push(refeicao('destino-r2', 'Jantar destino', 'Batata sintética'));
   if (limiteRefeicoesDestino) {
     for (let indice = 1; indice < 50; indice += 1) {
@@ -116,16 +140,142 @@ async function preparar(page, { falharRevalidacaoOrigem = false, alterarVersaoNa
   let entradaSalva;
   await page.route((url) => url.pathname === `/api/pacientes/${paciente.id}/planos-alimentares/${resumoDestino.id}/rascunho`, async (route) => {
     entradaSalva = route.request().postDataJSON();
+    if (atualizarNutrientesAoSalvar) {
+      const snapshot = planoDestino.draft.refeicoes[0].itens[0].composicaoSnapshot;
+      snapshot.nutrientesPor100g.energiaKcal = 220;
+      snapshot.nutrientesPorcao.energiaKcal = 220;
+    }
     await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(planoDestino) });
   });
 
-  await page.goto(`/pacientes/${paciente.id}?aba=plano_alimentar`);
+  await page.goto(`/pacientes/${paciente.id}?aba=plano_alimentar`, { waitUntil: 'domcontentloaded' });
+  if (!manterRefeicoesRecolhidas) {
+    const expandir = page.getByRole('button', { name: 'Expandir todas' });
+    await expandir.focus();
+    await expandir.press('Enter');
+  }
   return { destino, sourcePublished, sourceDraft, resumoOrigem, resumoDestino, get entradaSalva() { return entradaSalva; }, get leiturasOrigemExterna() { return leiturasOrigemExterna; }, get leiturasExternasPendentes() { return leiturasExternasPendentes; }, liberarLeituraExterna() { liberarLeituraExterna?.(); } };
 }
 
 function painelCopia(page) {
   return page.getByRole('region', { name: 'Copiar uma refeição salva' });
 }
+
+test.describe('PA03 - subtotal e refeições recolhidas no editor', () => {
+  test('inicia recolhida com subtotal e alternar não altera rascunho nem envia requisição', async ({ page }) => {
+    await preparar(page, { manterRefeicoesRecolhidas: true });
+    const refeicao = page.getByTestId('refeicao-editor').first();
+    const alternar = page.getByRole('button', { name: 'Expandir refeição Almoço atual' });
+    await expect(alternar).toHaveAttribute('aria-expanded', 'false');
+    await expect(refeicao).toContainText('110 kcal · P 4,0 g · C 17,0 g · G 2,0 g');
+    await expect(refeicao.getByLabel('Nome da refeição')).toBeHidden();
+    const acessibilidade = await new AxeBuilder({ page }).include('[data-testid="refeicao-editor"]').analyze();
+    expect(acessibilidade.violations).toEqual([]);
+    await expect(page.getByText('Existem alterações não salvas neste rascunho.')).toHaveCount(0);
+    await alternar.click();
+    await expect(refeicao.getByLabel('Nome da refeição')).toHaveValue('Almoço atual');
+    await expect(page.getByRole('button', { name: 'Recolher refeição Almoço atual' })).toHaveAttribute('aria-expanded', 'true');
+    await refeicao.getByRole('button', { name: /^Recolher refeição/ }).click();
+    await expect(refeicao.getByLabel('Nome da refeição')).toBeHidden();
+    await expect(page.getByText('Existem alterações não salvas neste rascunho.')).toHaveCount(0);
+  });
+
+  test('subtotal parcial mostra ausência sem apagar os demais nutrientes', async ({ page }) => {
+    await preparar(page, { manterRefeicoesRecolhidas: true, nutrientesIncompletos: true });
+    const refeicao = page.getByTestId('refeicao-editor').first();
+    await expect(refeicao).toContainText('110 kcal · P — g · C 17,0 g · G 2,0 g · Dados incompletos');
+    await expect(refeicao.getByLabel(/Subtotal da refeição 1.*Proteínas: — gramas/)).toBeAttached();
+    await refeicao.getByRole('button', { name: /^Expandir refeição/ }).press('Enter');
+    await expect(refeicao.getByLabel(/Porção do alimento Arroz sintético.*Proteínas: — gramas/)).toBeVisible();
+  });
+
+  test('subtotal segue a porção não salva e não multiplica a quantidade caseira', async ({ page }) => {
+    const contexto = await preparar(page);
+    const refeicao = page.getByTestId('refeicao-editor').first();
+    await refeicao.getByLabel('Quantidade', { exact: true }).first().fill('2');
+    await expect(refeicao).toContainText('110 kcal · P 4,0 g · C 17,0 g · G 2,0 g');
+    await refeicao.getByLabel('Porcao (g)', { exact: true }).first().fill('200');
+    await refeicao.getByRole('button', { name: /^Recolher refeição/ }).press('Enter');
+    await expect(refeicao).toContainText('220 kcal · P 8,0 g · C 34,0 g · G 4,0 g');
+    await expect(page.getByText('Existem alterações não salvas neste rascunho.')).toBeVisible();
+    expect(contexto.entradaSalva).toBeUndefined();
+  });
+
+  test('refeição sem itens mostra estado vazio, não zeros completos', async ({ page }) => {
+    await preparar(page, { manterRefeicoesRecolhidas: true, refeicaoSemAlimentos: true });
+    const refeicao = page.getByTestId('refeicao-editor').first();
+    await expect(refeicao).toContainText('Sem alimentos');
+    await expect(refeicao).not.toContainText('0 kcal');
+  });
+
+  test('expandir todas funciona por teclado e a abertura acompanha a chave ao reordenar', async ({ page }) => {
+    await preparar(page, { manterRefeicoesRecolhidas: true, duasRefeicoesDestino: true });
+    const global = page.getByRole('button', { name: 'Expandir todas' });
+    await global.focus();
+    await global.press('Enter');
+    await expect(page.getByRole('button', { name: /^Recolher refeição/ })).toHaveCount(2);
+    await page.getByRole('button', { name: 'Recolher refeição Jantar destino' }).click();
+    await page.getByRole('button', { name: 'Mover refeição Almoço atual para baixo' }).click();
+    const refeicoes = page.getByTestId('refeicao-editor');
+    await expect(refeicoes.nth(0)).toHaveAttribute('aria-label', 'Refeição: Jantar destino');
+    await expect(refeicoes.nth(0).getByRole('button', { name: 'Expandir refeição Jantar destino' })).toHaveAttribute('aria-expanded', 'false');
+    await expect(refeicoes.nth(1)).toHaveAttribute('aria-label', 'Refeição: Almoço atual');
+    await expect(refeicoes.nth(1).getByRole('button', { name: 'Recolher refeição Almoço atual' })).toHaveAttribute('aria-expanded', 'true');
+    await expect(page.getByText('Existem alterações não salvas neste rascunho.')).toBeVisible();
+  });
+
+  test('campo required recolhido abre a refeição, recebe foco e não envia', async ({ page }) => {
+    const contexto = await preparar(page, { manterRefeicoesRecolhidas: true });
+    const refeicao = page.getByTestId('refeicao-editor').first();
+    await page.getByRole('button', { name: 'Expandir refeição Almoço atual' }).click();
+    const nome = refeicao.getByLabel('Nome da refeição');
+    await nome.fill('');
+    await refeicao.getByRole('button', { name: /^Recolher refeição/ }).click();
+    await page.getByRole('button', { name: 'Salvar rascunho' }).evaluate((botao) => botao.form.requestSubmit());
+    await expect(page.locator('form [role="alert"]')).toContainText('Há campos obrigatórios nesta refeição');
+    await expect(refeicao.getByRole('button', { name: /^Recolher refeição/ })).toHaveAttribute('aria-expanded', 'true');
+    await expect(nome).toBeFocused();
+    expect(contexto.entradaSalva).toBeUndefined();
+  });
+
+  test('nome longo sem espaços cabe no cabeçalho recolhido', async ({ page }) => {
+    await preparar(page, { manterRefeicoesRecolhidas: true });
+    const refeicao = page.getByTestId('refeicao-editor').first();
+    const expandir = refeicao.getByRole('button', { name: /^Expandir refeição/ });
+    await expandir.focus();
+    await expandir.press('Enter');
+    const nome = 'X'.repeat(180);
+    await refeicao.getByLabel('Nome da refeição').fill(nome);
+    await refeicao.getByRole('button', { name: /^Recolher refeição/ }).press('Enter');
+    await expect(refeicao.getByRole('heading')).toContainText(nome);
+    await conferirSemOverflow(page);
+  });
+
+  test('salva todas as refeições recolhidas e usa a resposta recalculada ao reidratar', async ({ page }) => {
+    const contexto = await preparar(page, { manterRefeicoesRecolhidas: true, duasRefeicoesDestino: true, atualizarNutrientesAoSalvar: true });
+    await expect(page.getByRole('button', { name: /^Expandir refeição/ })).toHaveCount(2);
+    await page.getByLabel('Revisei os dados da avaliação e confirmo a aplicabilidade da fórmula para este paciente.').check();
+    await page.getByRole('button', { name: 'Salvar rascunho' }).click();
+    await expect.poll(() => contexto.entradaSalva?.refeicoes.map((item) => item.nome)).toEqual(['Almoço atual', 'Jantar destino']);
+    expect(contexto.entradaSalva.refeicoes[0].itens[0].substituicoes).toHaveLength(1);
+    expect(contexto.entradaSalva.refeicoes[0].orientacoes).toBe('Manter esta orientação');
+    await expect(page.getByTestId('refeicao-editor').first()).toContainText('220 kcal');
+    await expect(page.getByRole('button', { name: /^Expandir refeição/ })).toHaveCount(2);
+    await expect(page.getByText('Existem alterações não salvas neste rascunho.')).toHaveCount(0);
+  });
+
+  test('vários required ocultos abrem suas refeições e focam apenas o primeiro', async ({ page }) => {
+    const contexto = await preparar(page, { duasRefeicoesDestino: true });
+    const refeicoes = page.getByTestId('refeicao-editor');
+    await refeicoes.nth(0).getByLabel('Nome da refeição').fill('');
+    await refeicoes.nth(1).getByLabel('Nome da refeição').fill('');
+    await page.getByRole('button', { name: 'Recolher todas' }).press('Enter');
+    await page.getByRole('button', { name: 'Salvar rascunho' }).evaluate((botao) => botao.form.requestSubmit());
+    await expect(page.getByRole('button', { name: /^Recolher refeição/ })).toHaveCount(2);
+    await expect(refeicoes.nth(0).getByLabel('Nome da refeição')).toBeFocused();
+    expect(contexto.entradaSalva).toBeUndefined();
+  });
+});
 
 async function conferirSemOverflow(page) {
   const largura = await page.evaluate(() => ({ viewport: document.documentElement.clientWidth, conteudo: document.documentElement.scrollWidth }));

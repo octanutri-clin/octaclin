@@ -57,7 +57,7 @@ import {
   type AvaliacaoAntropometricaApi
 } from '@/lib/prontuario-api';
 import { PainelNutricional } from '@/components/pacientes/painel-nutricional';
-import { nutrientesDaPorcao } from '@/lib/nutricao-plano';
+import { calcularSubtotalRefeicao } from '@/lib/nutricao-plano';
 import { DuplicarPlanoDeOutroPaciente } from '@/components/pacientes/duplicar-plano-de-outro-paciente';
 import { ModelosPlanoAlimentar } from '@/components/pacientes/modelos-plano-alimentar';
 import { BibliotecaReceitasNutricionais } from '@/components/pacientes/biblioteca-receitas-nutricionais';
@@ -76,10 +76,10 @@ const nutrientesVazios: NutrientesPor100gApi = {
   gordurasG: 0
 };
 
-interface AlimentoFormulario extends SubstituicaoPlanoAlimentarEntrada {
+interface AlimentoFormulario extends Omit<SubstituicaoPlanoAlimentarEntrada, 'nutrientesPor100g'> {
   chaveCliente: string;
   descricao: string;
-  nutrientesPor100g: NutrientesPor100gApi;
+  nutrientesPor100g: Partial<NutrientesPor100gApi>;
   fonteRotulo?: string;
 }
 
@@ -252,6 +252,14 @@ function formularioDaVersao(versao: VersaoPlanoAlimentarApi, avaliacaoPadrao = '
   };
 }
 
+function nutrientesCompletos(nutrientes: Partial<NutrientesPor100gApi>): NutrientesPor100gApi | undefined {
+  const essenciais = ['energiaKcal', 'proteinasG', 'carboidratosG', 'gordurasG'] as const;
+  if (essenciais.some((campo) => typeof nutrientes[campo] !== 'number' || !Number.isFinite(nutrientes[campo]) || nutrientes[campo]! < 0)) {
+    return undefined;
+  }
+  return nutrientes as NutrientesPor100gApi;
+}
+
 function entradaAlimento(alimento: AlimentoFormulario): SubstituicaoPlanoAlimentarEntrada {
   const base = {
     quantidade: alimento.quantidade,
@@ -263,7 +271,7 @@ function entradaAlimento(alimento: AlimentoFormulario): SubstituicaoPlanoAliment
     : {
         ...base,
         descricao: alimento.descricao.trim(),
-        nutrientesPor100g: alimento.nutrientesPor100g
+        nutrientesPor100g: nutrientesCompletos(alimento.nutrientesPor100g)
       };
 }
 
@@ -277,7 +285,9 @@ function alimentoParaModelo(alimento: AlimentoFormulario): SubstituicaoPlanoAlim
     quantidade: alimento.quantidade,
     unidade: alimento.unidade.trim(),
     porcaoGramas: alimento.porcaoGramas,
-    nutrientesPor100g: alimento.nutrientesPor100g
+    ...(nutrientesCompletos(alimento.nutrientesPor100g)
+      ? { nutrientesPor100g: nutrientesCompletos(alimento.nutrientesPor100g) }
+      : {})
   };
 }
 
@@ -306,7 +316,7 @@ function alimentoDoModelo(entrada: SubstituicaoPlanoAlimentarEntrada): AlimentoF
     quantidade: entrada.quantidade,
     unidade: entrada.unidade,
     porcaoGramas: entrada.porcaoGramas,
-    nutrientesPor100g: { ...nutrientesVazios, ...(entrada.nutrientesPor100g ?? {}) },
+    nutrientesPor100g: { ...(entrada.nutrientesPor100g ?? {}) },
     fonteRotulo: entrada.alimentoComposicaoId ? 'Catalogo nutricional' : undefined
   };
 }
@@ -427,6 +437,36 @@ function formatarData(valor?: string) {
 function formatarNumero(valor?: number, casas = 0) {
   if (valor === undefined) return '-';
   return valor.toLocaleString('pt-BR', { minimumFractionDigits: casas, maximumFractionDigits: casas });
+}
+
+function formatarNutrienteSubtotal(valor?: number, casas = 0) {
+  return valor === undefined ? '—' : formatarNumero(valor, casas);
+}
+
+function resumoPorcaoAlimento(alimento: AlimentoFormulario) {
+  const subtotal = calcularSubtotalRefeicao([{
+    identificacao: alimento.alimentoComposicaoId || alimento.descricao,
+    porcaoGramas: alimento.porcaoGramas,
+    nutrientesPor100g: alimento.nutrientesPor100g
+  }]);
+  if (subtotal.estado === 'sem_alimentos') return { visual: 'Sem alimentos', acessivel: 'Sem alimentos' };
+  const visual = [
+    `${formatarNutrienteSubtotal(subtotal.energiaKcal)} kcal`,
+    `P ${formatarNutrienteSubtotal(subtotal.proteinasG, 1)} g`,
+    `C ${formatarNutrienteSubtotal(subtotal.carboidratosG, 1)} g`,
+    `G ${formatarNutrienteSubtotal(subtotal.gordurasG, 1)} g`
+  ];
+  const acessivel = [
+    `Energia: ${formatarNutrienteSubtotal(subtotal.energiaKcal)} quilocalorias`,
+    `Proteínas: ${formatarNutrienteSubtotal(subtotal.proteinasG, 1)} gramas`,
+    `Carboidratos: ${formatarNutrienteSubtotal(subtotal.carboidratosG, 1)} gramas`,
+    `Gorduras: ${formatarNutrienteSubtotal(subtotal.gordurasG, 1)} gramas`
+  ];
+  if (subtotal.estado === 'incompleto') {
+    visual.push('Dados incompletos');
+    acessivel.push('Dados incompletos');
+  }
+  return { visual: visual.join(' · '), acessivel: `Porção do alimento ${alimento.descricao || 'sem nome'}: ${acessivel.join(', ')}` };
 }
 
 function validarFormulario(formulario: FormularioPlano): string[] {
@@ -730,11 +770,8 @@ function EditorAlimento({ pacienteId, rotulo, valor, aoAlterar, aoRemover }: Edi
         <div className="flex flex-wrap items-center justify-between gap-2">
           {/* Item de catalogo nao tem campos editaveis de nutriente, entao a
               porcao calculada e o unico retorno nutricional da linha. */}
-          <p className="text-xs tabular-nums text-texto-suave">
-            {(() => {
-              const porcao = nutrientesDaPorcao(valor.nutrientesPor100g, valor.porcaoGramas);
-              return `${formatarNumero(porcao.energiaKcal)} kcal - C ${formatarNumero(porcao.carboidratosG, 1)} g - P ${formatarNumero(porcao.proteinasG, 1)} g - G ${formatarNumero(porcao.gordurasG, 1)} g`;
-            })()}
+          <p className="text-xs tabular-nums text-texto-suave" aria-label={resumoPorcaoAlimento(valor).acessivel}>
+            {resumoPorcaoAlimento(valor).visual}
           </p>
           <button
             type="button"
@@ -1119,6 +1156,8 @@ export function PlanoAlimentarProfissional({ pacienteId, podeGerenciar, aoAltera
   const [erro, setErro] = useState<string | null>(null);
   const [sucesso, setSucesso] = useState<string | null>(null);
   const [errosFormulario, setErrosFormulario] = useState<string[]>([]);
+  const [refeicoesAbertas, setRefeicoesAbertas] = useState<Set<string>>(() => new Set());
+  const focoAposExpandir = useRef<HTMLElement | null>(null);
   const [alterado, setAlterado] = useState(false);
   const [copiaEmAndamento, setCopiaEmAndamento] = useState(false);
   const copiaEmAndamentoRef = useRef<symbol | null>(null);
@@ -1156,6 +1195,14 @@ export function PlanoAlimentarProfissional({ pacienteId, podeGerenciar, aoAltera
       nutrientesPor100g: item.nutrientesPor100g
     }))
   }));
+  const subtotaisRefeicoes = formulario.refeicoes.map((refeicao) => calcularSubtotalRefeicao(
+    refeicao.itens.map((item) => ({
+      identificacao: item.alimentoComposicaoId || item.descricao,
+      porcaoGramas: item.porcaoGramas,
+      nutrientesPor100g: item.nutrientesPor100g
+    }))
+  ));
+  const todasRefeicoesAbertas = formulario.refeicoes.every((refeicao) => refeicoesAbertas.has(refeicao.chaveCliente));
   const pesoTotalGramas = refeicoesPrevistas.reduce(
     (soma, refeicao) => soma + refeicao.itens.reduce((parcial, item) => parcial + (item.porcaoGramas || 0), 0),
     0
@@ -1175,6 +1222,8 @@ export function PlanoAlimentarProfissional({ pacienteId, podeGerenciar, aoAltera
     setPlanoId(detalhe?.id ?? '');
     const avaliacaoPadrao = avaliacoesAtuais[0]?.id ?? '';
     setFormulario(detalhe?.draft ? formularioDaVersao(detalhe.draft, avaliacaoPadrao) : formularioInicial(avaliacaoPadrao));
+    setRefeicoesAbertas(new Set());
+    focoAposExpandir.current = null;
     setNumeroVersaoConsultada(detalhe?.current?.numero ?? null);
     setPaginasAcompanhamento(paginasIniciaisAcompanhamento);
     setVersaoConsultada(detalhe?.current ?? null);
@@ -1331,7 +1380,10 @@ export function PlanoAlimentarProfissional({ pacienteId, podeGerenciar, aoAltera
     if (!podeGerenciar || !plano?.draft || copiaEmAndamentoRef.current) return;
     const erros = validarFormulario(formulario);
     setErrosFormulario(erros);
-    if (erros.length) return;
+    if (erros.length) {
+      focarRefeicaoComErro(erros);
+      return;
+    }
     await executar(
       'salvando',
       () => atualizarRascunhoPlanoAlimentar(pacienteId, plano.id, montarEntrada(formulario)),
@@ -1348,11 +1400,70 @@ export function PlanoAlimentarProfissional({ pacienteId, podeGerenciar, aoAltera
     atualizar((atual) => ({ ...atual, refeicoes: atual.refeicoes.map((item, posicao) => posicao === indice ? refeicao : item) }));
   }
 
+  function alternarRefeicao(chave: string) {
+    setRefeicoesAbertas((atuais) => {
+      const proximas = new Set(atuais);
+      if (proximas.has(chave)) proximas.delete(chave);
+      else proximas.add(chave);
+      return proximas;
+    });
+  }
+
+  function definirTodasRefeicoesAbertas(aberto: boolean) {
+    setRefeicoesAbertas(aberto ? new Set(formulario.refeicoes.map((refeicao) => refeicao.chaveCliente)) : new Set());
+  }
+
+  function adicionarRefeicao() {
+    const refeicao = novaRefeicao();
+    atualizar((atual) => ({ ...atual, refeicoes: [...atual.refeicoes, refeicao] }));
+    setRefeicoesAbertas((atuais) => new Set(atuais).add(refeicao.chaveCliente));
+  }
+
+  function aplicarRefeicoesDeModelo(refeicoesEntrada: RefeicaoPlanoAlimentarEntrada[]) {
+    const refeicoes = refeicoesDoModelo(refeicoesEntrada);
+    atualizar((atual) => ({ ...atual, refeicoes }));
+    setRefeicoesAbertas(new Set(refeicoes.map((refeicao) => refeicao.chaveCliente)));
+  }
+
+  useLayoutEffect(() => {
+    const pendente = focoAposExpandir.current;
+    if (!pendente || !pendente.isConnected) return;
+    focoAposExpandir.current = null;
+    pendente.focus();
+  }, [refeicoesAbertas]);
+
+  function capturarInvalidos(evento: React.FormEvent<HTMLFormElement>) {
+    const controle = evento.target;
+    if (!(controle instanceof HTMLElement)) return;
+    const corpo = controle.closest<HTMLElement>('[data-refeicao-conteudo]');
+    if (!corpo?.hidden) return;
+    const refeicao = controle.closest<HTMLElement>('[data-refeicao-id]');
+    const chave = refeicao?.dataset.refeicaoId;
+    if (!chave) return;
+    evento.preventDefault();
+    if (!focoAposExpandir.current) focoAposExpandir.current = controle;
+    setErrosFormulario(['Há campos obrigatórios nesta refeição. Revise os dados destacados.']);
+    setRefeicoesAbertas((atuais) => new Set(atuais).add(chave));
+  }
+
+  function focarRefeicaoComErro(erros: string[]) {
+    const indice = erros.map((erro) => erro.match(/refeicao (\d+)/i)?.[1]).find(Boolean);
+    if (!indice) return;
+    const refeicao = formulario.refeicoes[Number(indice) - 1];
+    if (!refeicao) return;
+    const secao = Array.from(document.querySelectorAll<HTMLElement>('[data-refeicao-id]'))
+      .find((elemento) => elemento.dataset.refeicaoId === refeicao.chaveCliente);
+    focoAposExpandir.current = secao?.querySelector<HTMLElement>('input, textarea, select') ?? null;
+    setRefeicoesAbertas((atuais) => new Set(atuais).add(refeicao.chaveCliente));
+  }
+
   function duplicarRefeicaoLocal(indice: number) {
     try {
       const atual = formularioAtualRef.current;
       const refeicoes = duplicarRefeicaoNoRascunho(atual.refeicoes, indice, novaChaveCliente);
       atualizar((rascunho) => ({ ...rascunho, refeicoes }));
+      const nova = refeicoes.find((refeicao) => !atual.refeicoes.some((anterior) => anterior.chaveCliente === refeicao.chaveCliente));
+      if (nova) setRefeicoesAbertas((atuais) => new Set(atuais).add(nova.chaveCliente));
       setSucesso('Refeição duplicada no rascunho. Revise e salve as alterações.');
     } catch (falha) {
       setErro(mensagemFalhaInterface(falha, 'Não foi possível duplicar a refeição.'));
@@ -1378,6 +1489,10 @@ export function PlanoAlimentarProfissional({ pacienteId, podeGerenciar, aoAltera
         : item);
     }
     atualizar(() => ({ ...atual, refeicoes }));
+    const aberta = destino.tipo === 'nova'
+      ? refeicoes.find((item) => !atual.refeicoes.some((anterior) => anterior.chaveCliente === item.chaveCliente))
+      : refeicoes.find((item) => item.chaveCliente === destino.chaveRefeicao);
+    if (aberta) setRefeicoesAbertas((atuais) => new Set(atuais).add(aberta.chaveCliente));
     setSucesso(destino.tipo === 'nova'
       ? 'Refeição copiada para o rascunho. Revise e salve para recalcular.'
       : 'Alimentos e substituições acrescentados ao rascunho. Revise e salve para recalcular.');
@@ -1472,7 +1587,7 @@ export function PlanoAlimentarProfissional({ pacienteId, podeGerenciar, aoAltera
               </Cartao>
 
               {podeGerenciar ? (plano.draft ? (
-                <form onSubmit={(evento) => { evento.preventDefault(); void salvar(); }} className="grid gap-4 pb-16 lg:pb-0">
+                <form onSubmit={(evento) => { evento.preventDefault(); void salvar(); }} onInvalidCapture={capturarInvalidos} className="grid gap-4 pb-16 lg:pb-0">
                   {errosFormulario.length ? (
                     <div role="alert" className="rounded-md border border-perigo-borda bg-perigo-suave p-4 text-sm text-perigo-forte">
                       <p className="font-semibold">Revise o rascunho antes de salvar:</p>
@@ -1577,9 +1692,7 @@ export function PlanoAlimentarProfissional({ pacienteId, podeGerenciar, aoAltera
 
                   <ModelosPlanoAlimentar
                     refeicoesAtuais={() => refeicoesParaModelo(formulario)}
-                    aoAplicar={(refeicoes) =>
-                      atualizar((atual) => ({ ...atual, refeicoes: refeicoesDoModelo(refeicoes) }))
-                    }
+                    aoAplicar={aplicarRefeicoesDeModelo}
                     desabilitado={Boolean(operacao)}
                   />
 
@@ -1601,12 +1714,7 @@ export function PlanoAlimentarProfissional({ pacienteId, podeGerenciar, aoAltera
                       item completo, sem um segundo caminho de copia para divergir. */}
                   <DuplicarPlanoDeOutroPaciente
                     pacienteIdAtual={pacienteId}
-                    aoAplicar={(versao) =>
-                      atualizar((atual) => ({
-                        ...atual,
-                        refeicoes: refeicoesDoModelo(refeicoesParaModelo(formularioDaVersao(versao)))
-                      }))
-                    }
+                    aoAplicar={(versao) => aplicarRefeicoesDeModelo(refeicoesParaModelo(formularioDaVersao(versao)))}
                     desabilitado={Boolean(operacao)}
                   />
 
@@ -1617,14 +1725,17 @@ export function PlanoAlimentarProfissional({ pacienteId, podeGerenciar, aoAltera
                       nome: refeicao.nome,
                       itens: itensParaBiblioteca(refeicao.itens)
                     }))}
-                    aoInserir={(chaveRefeicao, itens) => atualizar((atual) => ({
-                      ...atual,
-                      refeicoes: atual.refeicoes.map((refeicao) =>
-                        refeicao.chaveCliente === chaveRefeicao
-                          ? { ...refeicao, itens: [...refeicao.itens, ...itensDaBiblioteca(itens)] }
-                          : refeicao
-                      )
-                    }))}
+                    aoInserir={(chaveRefeicao, itens) => {
+                      atualizar((atual) => ({
+                        ...atual,
+                        refeicoes: atual.refeicoes.map((refeicao) =>
+                          refeicao.chaveCliente === chaveRefeicao
+                            ? { ...refeicao, itens: [...refeicao.itens, ...itensDaBiblioteca(itens)] }
+                            : refeicao
+                        )
+                      }));
+                      setRefeicoesAbertas((atuais) => new Set(atuais).add(chaveRefeicao));
+                    }}
                     desabilitado={Boolean(operacao)}
                   />
 
@@ -1632,7 +1743,12 @@ export function PlanoAlimentarProfissional({ pacienteId, podeGerenciar, aoAltera
                   <div className="grid gap-4">
                     <div className="flex flex-wrap items-center justify-between gap-2">
                       <div><h3 className="text-base font-semibold text-tinta">Refeições e alimentos</h3><p className="text-sm text-texto-suave">A composição selecionada e congelada quando a versão e publicada.</p></div>
-                      <Botao type="button" onClick={() => atualizar((atual) => ({ ...atual, refeicoes: [...atual.refeicoes, novaRefeicao()] }))}><Plus size={16} /> Adicionar refeição</Botao>
+                      <div className="flex flex-wrap gap-2">
+                        <Botao type="button" variante="fantasma" onClick={() => definirTodasRefeicoesAbertas(!todasRefeicoesAbertas)}>
+                          {todasRefeicoesAbertas ? 'Recolher todas' : 'Expandir todas'}
+                        </Botao>
+                        <Botao type="button" onClick={adicionarRefeicao}><Plus size={16} /> Adicionar refeição</Botao>
+                      </div>
                     </div>
                     <DndContext sensors={sensoresArraste} collisionDetection={closestCenter} onDragEnd={finalizarArrasteRefeicao}>
                       <SortableContext items={formulario.refeicoes.map((refeicao) => refeicao.chaveCliente)} strategy={verticalListSortingStrategy}>
@@ -1642,11 +1758,44 @@ export function PlanoAlimentarProfissional({ pacienteId, podeGerenciar, aoAltera
                         id={refeicao.chaveCliente}
                         nome={refeicao.nome}
                         posicao={indiceRefeicao}
+                        aberto={refeicoesAbertas.has(refeicao.chaveCliente)}
+                        aoAlternar={() => alternarRefeicao(refeicao.chaveCliente)}
+                        subtotalVisual={(() => {
+                          const subtotal = subtotaisRefeicoes[indiceRefeicao];
+                          if (subtotal.estado === 'sem_alimentos') return 'Sem alimentos';
+                          const partes = [
+                            `${formatarNutrienteSubtotal(subtotal.energiaKcal)} kcal`,
+                            `P ${formatarNutrienteSubtotal(subtotal.proteinasG, 1)} g`,
+                            `C ${formatarNutrienteSubtotal(subtotal.carboidratosG, 1)} g`,
+                            `G ${formatarNutrienteSubtotal(subtotal.gordurasG, 1)} g`
+                          ];
+                          if (subtotal.estado === 'incompleto') partes.push('Dados incompletos');
+                          return partes.join(' · ');
+                        })()}
+                        subtotalAcessivel={(() => {
+                          const subtotal = subtotaisRefeicoes[indiceRefeicao];
+                          if (subtotal.estado === 'sem_alimentos') return 'Sem alimentos';
+                          const partes = [
+                            `Energia: ${formatarNutrienteSubtotal(subtotal.energiaKcal)} quilocalorias`,
+                            `Proteínas: ${formatarNutrienteSubtotal(subtotal.proteinasG, 1)} gramas`,
+                            `Carboidratos: ${formatarNutrienteSubtotal(subtotal.carboidratosG, 1)} gramas`,
+                            `Gorduras: ${formatarNutrienteSubtotal(subtotal.gordurasG, 1)} gramas`
+                          ];
+                          if (subtotal.estado === 'incompleto') partes.push('Dados incompletos');
+                          return `Subtotal da refeição ${indiceRefeicao + 1}, ${refeicao.nome || 'sem nome'}: ${partes.join(', ')}`;
+                        })()}
                         acoes={<>
                           <Botao type="button" variante="fantasma" tamanho="sm" className="min-h-11 min-w-11" onClick={() => atualizar((atual) => ({ ...atual, refeicoes: mover(atual.refeicoes, indiceRefeicao, indiceRefeicao - 1) }))} disabled={indiceRefeicao === 0} aria-label={`Mover refeição ${refeicao.nome || indiceRefeicao + 1} para cima`}><ArrowUp size={15} /></Botao>
                           <Botao type="button" variante="fantasma" tamanho="sm" className="min-h-11 min-w-11" onClick={() => atualizar((atual) => ({ ...atual, refeicoes: mover(atual.refeicoes, indiceRefeicao, indiceRefeicao + 1) }))} disabled={indiceRefeicao === formulario.refeicoes.length - 1} aria-label={`Mover refeição ${refeicao.nome || indiceRefeicao + 1} para baixo`}><ArrowDown size={15} /></Botao>
                           <Botao type="button" variante="fantasma" tamanho="sm" className="min-h-11" onClick={() => duplicarRefeicaoLocal(indiceRefeicao)} disabled={Boolean(operacao)} aria-label={`Duplicar refeição ${refeicao.nome || indiceRefeicao + 1}`}>Duplicar</Botao>
-                          <Botao type="button" variante="fantasma" tamanho="sm" className="min-h-11" onClick={() => atualizar((atual) => ({ ...atual, refeicoes: atual.refeicoes.filter((_, posicao) => posicao !== indiceRefeicao) }))} disabled={formulario.refeicoes.length === 1}><Trash2 size={15} /> Remover</Botao>
+                          <Botao type="button" variante="fantasma" tamanho="sm" className="min-h-11" onClick={() => {
+                            atualizar((atual) => ({ ...atual, refeicoes: atual.refeicoes.filter((_, posicao) => posicao !== indiceRefeicao) }));
+                            setRefeicoesAbertas((atuais) => {
+                              const proximas = new Set(atuais);
+                              proximas.delete(refeicao.chaveCliente);
+                              return proximas;
+                            });
+                          }} disabled={formulario.refeicoes.length === 1}><Trash2 size={15} /> Remover</Botao>
                         </>}
                       >
                         <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_160px]">

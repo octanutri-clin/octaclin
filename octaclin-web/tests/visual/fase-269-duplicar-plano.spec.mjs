@@ -254,8 +254,9 @@ function blocoDuplicar(page) {
 }
 
 async function abrirEditorDePlano(page) {
-  await page.goto(`/pacientes/${pacienteDestino.id}?aba=plano_alimentar`);
+  await page.goto(`/pacientes/${pacienteDestino.id}?aba=plano_alimentar`, { waitUntil: 'domcontentloaded' });
   await expect(blocoDuplicar(page)).toBeVisible();
+  await page.getByRole('button', { name: 'Expandir todas' }).click();
 }
 
 test.describe('Fase 269 - duplicar plano de outro paciente (PB-13)', () => {

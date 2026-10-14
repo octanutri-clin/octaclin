@@ -1,5 +1,15 @@
 # OctaClin - Resumo das fases concluidas
 
+## Reconciliação pós-320 — 2026-10-14
+
+- PA02 integrada pelas PRs #415/#416, main `5b47fb1`: duplicação de refeições,
+  cópia de origem salva autorizada e colagem não destrutiva. Correções de falso
+  sucesso e concorrência colagem/save comprovadas com RED/GREEN e revisão
+  cruzada; [relatório R4](docs/governance/REVISAO_R4_PA02_PR415_2026-10-14.md).
+  Cinco workflows do HEAD corretivo `38c3596` e todos os jobs do CI
+  `38583138559` SUCCESS. Sem nova migration. Publicação/operação produtiva não
+  verificadas nesta etapa. PA03 permanece em planejamento, não concluída.
+
 ## Reconciliação em 2026-10-10
 
 - Fase 309 integrada pelo PR #386 (`34d186ec`), merge confirmado no GitHub

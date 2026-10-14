@@ -2,7 +2,7 @@
 
 Contrato: [plan-pos-320-pa02.md](plan-pos-320-pa02.md).
 Implementação autorizada em 2026-10-14; PR #415 mergeada pelo proprietário.
-Correções de revisão na PR Draft #416, branch `fix/pa02-copia-revisao-r4`.
+Correções de revisão integradas pela PR #416, merge `5b47fb1`, branch `fix/pa02-copia-revisao-r4`.
 
 ## T00 — base, referências e decisões
 
@@ -87,8 +87,8 @@ desktop/mobile e ausência de overflow; dados sintéticos exclusivamente.
   nenhuma promessa de proveniência/CAS/idempotência atômica inexistente.
 - [x] Typecheck, lint (0 erros; 65 avisos preexistentes), build, secrets e
   `git diff --check` passaram localmente.
-- [ ] CI do HEAD corrigido passa: aprovação de `f94ea94` foi conferida por
-  workflow/jobs; as correções exigem novo push e checks do novo HEAD.
+- [x] CI do HEAD corrigido `38c3596` aprovado: cinco workflows SUCCESS;
+  todos os jobs do CI `38583138559` SUCCESS, conferidos em 2026-10-14.
 - [x] Revisão cruzada R4 pelo agente `/root/review_pa02_r4`, que não escreveu
   o código: FAIL inicial em dois P2; correções PASS com digest no
   [relatório](../docs/governance/REVISAO_R4_PA02_PR415_2026-10-14.md).
@@ -96,7 +96,7 @@ desktop/mobile e ausência de overflow; dados sintéticos exclusivamente.
 ## T05 — entrega única e handoff (depende de T04)
 
 - [x] Documentação canônica de status e handoff atualizada com resultados reais.
-- [x] PA02 integrada na PR #415. Correções da revisão em Draft #416 porque o
+- [x] PA02 integrada na PR #415. Correções da revisão integradas pela #416 porque o
   merge da original já havia ocorrido; digest revisado preservado após
   cherry-pick sobre main `50a9590`. Sem dividir a implementação original.
 - [x] Sem merge/deploy/migration externa/ativação executados pelo agente.
@@ -122,7 +122,11 @@ check também passaram.
 CI de `f94ea94`: todos os workflows e jobs PASS, inclusive
 `test:workflows-seguros` que não tinha PowerShell local na execução inicial.
 Os jobs Backend executaram migrations e RLS em PostgreSQL descartável.
-CI do commit corrigido permanece pendente até push e consulta dos checks.
+CI do HEAD corrigido `38c3596` conferido em 2026-10-14: SUCCESS em
+Dependency Review `38583138681`, Semgrep `38583138090`, CodeQL `38583138583`,
+Trivy `38583138183` e OctaClin CI `38583138559` (todos os jobs SUCCESS).
+Merge #416 `5b47fb1` tem conteúdo idêntico ao HEAD aprovado. Isso não comprova
+deploy ou operação produtiva.
 
 SKIPPED: prova local PostgreSQL/RLS específica PA02 e scan automatizado da skill
 (cujos auxiliares/preflight não estão disponíveis neste host). A revisão cruzada

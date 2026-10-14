@@ -1,4 +1,33 @@
-# Handoff atual — PA02: implementação autorizada
+# Handoff atual — PA03: implementação validada localmente
+
+Base auditada em 2026-10-14: main `5b47fb1`, merge #416. Worktree isolada
+`/workspace/octaclin/.worktrees/pos320-pa03-planejamento`, branch
+`feat/pos320-pa03-subtotais-refeicoes`. O proprietário autorizou implementação em
+2026-10-14; código e testes locais validados, incluindo build e visual 48/48
+mais complementos 4/4. PR [#417](https://github.com/octanutri-clin/octaclin/pull/417)
+Draft aberta; CI do HEAD pendente. Sem migration/backend.
+
+- Contratos, gaps G01–G07 e arquivos:
+  [plan-pos-320-pa03.md](plan-pos-320-pa03.md).
+- T00–T06 e checkpoints:
+  [todo-pos-320-pa03.md](todo-pos-320-pa03.md).
+- D01–D03 confirmadas: somente editor do profissional; todas as refeições
+  recolhidas na carga; subtotais parciais com aviso. Referências específicas
+  PA03 recomendam código interno, sem dependência externa.
+- Prioridades: preservar ausência de nutrientes, arredondamento por porção,
+  identidade/estado, validação de campos recolhidos e trava PA02 colagem/save.
+- Implementação executada em modelo Luna; revisão Sol autorizada pelo
+  proprietário. Revisão cruzada independente corrigiu um P2 de overflow com
+  RED/GREEN. Relatório `docs/governance/REVISAO_R4_PA03_2026-10-14.md`.
+- #416 mergeada: HEAD `38c3596`, todos os workflows SUCCESS; CI
+  `38583138559` SUCCESS. O registro PA02 abaixo preserva o checkpoint anterior;
+  seus itens pendentes de integração/CI foram resolvidos conforme o relatório R4.
+- Uma PR Draft PA03 reunirá documentação/código após T05 local; seus checks
+  encerram T05 remoto. Nenhuma migration, merge, deploy ou ativação autorizada.
+
+---
+
+# Handoff histórico — PA02: implementação autorizada
 
 Em 2026-10-14 o proprietário autorizou a análise e, após responder D01–D03,
 autorizou a implementação da PA02. Main auditada: `2d2edcf`, merge #414/PA01,
