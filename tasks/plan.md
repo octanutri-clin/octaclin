@@ -1,4 +1,31 @@
-# Handoff atual — Fase 320 encerrada; Onda 0/FND02 iniciada
+# Handoff atual — PA02: implementação autorizada
+
+Em 2026-10-14 o proprietário autorizou a análise e, após responder D01–D03,
+autorizou a implementação da PA02. Main auditada: `2d2edcf`, merge #414/PA01,
+com FND02/#411 integrado. Implementação está na PR Draft #415; revisão R4 e CI
+permanecem pendentes.
+
+- Contratos, gaps, referências e continuidade:
+  [plan-pos-320-pa02.md](plan-pos-320-pa02.md).
+- T00–T05 e checkpoints:
+  [todo-pos-320-pa02.md](todo-pos-320-pa02.md).
+- Branch `feat/roadmap-PA02-copy-meals`, checkout
+  `/workspace/octaclin/.worktrees/pos320-pa02-planejamento`.
+- Catálogo/mapa e JSON78 conferidos: PA02 recomenda código interno, sem
+  biblioteca nova. D01–D03 confirmadas pelo proprietário em2026-10-14:
+  ambos os escopos autorizados, acrescentar/criar e origem salva entre planos.
+- Implementação disponível nesta branch: duplicação local por refeição,
+  seleção paginada de origem salva, revalidação da versão/acesso no momento da
+  cópia e colagem como refeição nova ou acréscimo não destrutivo.
+- Evidências e limitações em `todo-pos-320-pa02.md`; CI remoto está rodando no
+  commit submetido, e a revisão R4 independente segue pendente. A PR permanece
+  Draft. Não declarar autorização de uso operacional além da implementação
+  técnica; merge/deploy seguem fora da autorização.
+- Uma PR PA02 reunirá documentos e código, sem PR documental separada.
+
+---
+
+# Handoff histórico — Fase 320 encerrada; Onda 0/FND02 iniciada
 
 Em 2026-10-14, por autorização do proprietário, a Fase 320 foi registrada como
 `NO-GO` nesta rodada para ingestão/uso da TBCA. O catálogo TACO/USDA/IBGE foi

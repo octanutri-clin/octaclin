@@ -193,6 +193,10 @@ Objetivo: após o handoff da Fase 320, criar primitives compartilhadas ainda aus
 
 ## [FND02] Primitive compartilhada de proteção contra alterações não salvas
 
+**Reconciliação em 2026-10-14:** integrada pela PR #411, presente na main
+auditada para PA02. O registro de execução abaixo pertence ao handoff original;
+não inferir deploy/validação operacional da integração.
+
 **Origem:** item 39, já existente parcialmente como implementação repetida em fluxos diferentes.
 
 **Execução:** iniciada nesta PR como primeiro item da Onda 0, por autorização do proprietário em 2026-10-14. Ver o handoff de implementação em `tasks/plan-pos-320-fnd02.md`; status final depende dos testes indicados ali e dos checks da PR.
@@ -226,6 +230,9 @@ Objetivo: tornar a montagem do plano mais rápida sem alterar ainda o motor nutr
 
 ## [PA01] Reordenar refeições por drag-and-drop
 
+**Reconciliação em 2026-10-14:** integrada pela PR #414, main `2d2edcf`.
+O arraste já existe no editor e permanece baseline da PA02; não reimplementar.
+
 **Origem:** item 4.
 
 **Status atual:** reordenação por botões ↑/↓ já existe.
@@ -245,6 +252,13 @@ Objetivo: tornar a montagem do plano mais rápida sem alterar ainda o motor nutr
 ---
 
 ## [PA02] Copiar, colar e duplicar refeições
+
+**Reconciliação em 2026-10-14:** RESIDUAL CONFIRMADO na main `2d2edcf`.
+Análise autorizada, implementação ainda não iniciada. D01–D03 confirmadas pelo
+proprietário: ambos os escopos autorizados, acrescentar/criar e origem salva.
+Handoff em [plan-pos-320-pa02.md](../../tasks/plan-pos-320-pa02.md).
+Referências: catálogo/mapa inverso e sugestão44 recomendam código interno;
+nenhum repositório PA02 no JSON. Não criar dependência por analogia com outro ID.
 
 **Origem:** itens 44 e parte do item 4 da segunda lista.
 

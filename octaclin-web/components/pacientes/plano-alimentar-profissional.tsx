@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useId, useRef, useState } from 'react';
+import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 import { closestCenter, DndContext, KeyboardSensor, PointerSensor, type DragEndEvent, useSensor, useSensors } from '@dnd-kit/core';
 import { arrayMove, sortableKeyboardCoordinates, SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import {
@@ -61,6 +61,13 @@ import { nutrientesDaPorcao } from '@/lib/nutricao-plano';
 import { DuplicarPlanoDeOutroPaciente } from '@/components/pacientes/duplicar-plano-de-outro-paciente';
 import { ModelosPlanoAlimentar } from '@/components/pacientes/modelos-plano-alimentar';
 import { BibliotecaReceitasNutricionais } from '@/components/pacientes/biblioteca-receitas-nutricionais';
+import { CopiarRefeicaoDePlano } from '@/components/pacientes/copiar-refeicao-de-plano';
+import {
+  LIMITE_REFEICOES_PLANO,
+  acrescentarItensDeRefeicao,
+  duplicarRefeicaoNoRascunho,
+  type RefeicaoFormularioCopia
+} from '@/lib/copia-refeicoes-plano';
 
 const nutrientesVazios: NutrientesPor100gApi = {
   energiaKcal: 0,
@@ -1113,6 +1120,10 @@ export function PlanoAlimentarProfissional({ pacienteId, podeGerenciar, aoAltera
   const [sucesso, setSucesso] = useState<string | null>(null);
   const [errosFormulario, setErrosFormulario] = useState<string[]>([]);
   const [alterado, setAlterado] = useState(false);
+  const formularioAtualRef = useRef(formulario);
+  useLayoutEffect(() => {
+    formularioAtualRef.current = formulario;
+  }, [formulario]);
   const [confirmarArquivo, setConfirmarArquivo] = useState(false);
   const [confirmarCriacao, setConfirmarCriacao] = useState(false);
   const sequenciaCarregamento = useRef(0);
@@ -1325,6 +1336,46 @@ export function PlanoAlimentarProfissional({ pacienteId, podeGerenciar, aoAltera
     atualizar((atual) => ({ ...atual, refeicoes: atual.refeicoes.map((item, posicao) => posicao === indice ? refeicao : item) }));
   }
 
+  function duplicarRefeicaoLocal(indice: number) {
+    try {
+      const atual = formularioAtualRef.current;
+      const refeicoes = duplicarRefeicaoNoRascunho(atual.refeicoes, indice, novaChaveCliente);
+      atualizar((rascunho) => ({ ...rascunho, refeicoes }));
+      setSucesso('Refeição duplicada no rascunho. Revise e salve as alterações.');
+    } catch (falha) {
+      setErro(mensagemFalhaInterface(falha, 'Não foi possível duplicar a refeição.'));
+    }
+  }
+
+  function aplicarRefeicaoCopiada(
+    refeicao: RefeicaoFormularioCopia,
+    destino: { tipo: 'nova' } | { tipo: 'acrescentar'; chaveRefeicao?: string }
+  ) {
+    const atual = formularioAtualRef.current;
+    try {
+      let refeicoes: RefeicaoFormulario[];
+      if (destino.tipo === 'nova') {
+        if (atual.refeicoes.length >= LIMITE_REFEICOES_PLANO) {
+          throw new Error(`O plano atingiu o limite de ${LIMITE_REFEICOES_PLANO} refeições.`);
+        }
+        refeicoes = [...atual.refeicoes, refeicao];
+      } else {
+        const indice = atual.refeicoes.findIndex((item) => item.chaveCliente === destino.chaveRefeicao);
+        if (indice < 0) throw new Error('A refeição de destino não está mais disponível. Selecione-a novamente.');
+        refeicoes = atual.refeicoes.map((item, posicao) => posicao === indice
+          ? acrescentarItensDeRefeicao(item, refeicao.itens, novaChaveCliente)
+          : item);
+      }
+      atualizar(() => ({ ...atual, refeicoes }));
+      setSucesso(destino.tipo === 'nova'
+        ? 'Refeição copiada para o rascunho. Revise e salve para recalcular.'
+        : 'Alimentos e substituições acrescentados ao rascunho. Revise e salve para recalcular.');
+      setErro(null);
+    } catch (falha) {
+      setErro(mensagemFalhaInterface(falha, 'Não foi possível aplicar a refeição copiada.'));
+    }
+  }
+
   function finalizarArrasteRefeicao(evento: DragEndEvent) {
     const { active, over } = evento;
     if (!over || active.id === over.id) return;
@@ -1524,6 +1575,18 @@ export function PlanoAlimentarProfissional({ pacienteId, podeGerenciar, aoAltera
                     desabilitado={Boolean(operacao)}
                   />
 
+                  <CopiarRefeicaoDePlano
+                    key={`${pacienteId}:${plano.id}:${plano.draft.id}`}
+                    pacienteIdAtual={pacienteId}
+                    planoIdDestino={plano.id}
+                    versaoRascunhoDestinoId={plano.draft.id}
+                    destinoChave={`${pacienteId}:${plano.id}:${plano.draft.id}`}
+                    refeicoesDestino={formulario.refeicoes}
+                    gerarChave={novaChaveCliente}
+                    aoAplicar={aplicarRefeicaoCopiada}
+                    desabilitado={Boolean(operacao)}
+                  />
+
                   {/* Mesma conversao do modelo de proposito: duplicar so difere na origem
                       das refeicoes, entao passar pelo mesmo par garante chaves novas e o
                       item completo, sem um segundo caminho de copia para divergir. */}
@@ -1573,6 +1636,7 @@ export function PlanoAlimentarProfissional({ pacienteId, podeGerenciar, aoAltera
                         acoes={<>
                           <Botao type="button" variante="fantasma" tamanho="sm" className="min-h-11 min-w-11" onClick={() => atualizar((atual) => ({ ...atual, refeicoes: mover(atual.refeicoes, indiceRefeicao, indiceRefeicao - 1) }))} disabled={indiceRefeicao === 0} aria-label={`Mover refeição ${refeicao.nome || indiceRefeicao + 1} para cima`}><ArrowUp size={15} /></Botao>
                           <Botao type="button" variante="fantasma" tamanho="sm" className="min-h-11 min-w-11" onClick={() => atualizar((atual) => ({ ...atual, refeicoes: mover(atual.refeicoes, indiceRefeicao, indiceRefeicao + 1) }))} disabled={indiceRefeicao === formulario.refeicoes.length - 1} aria-label={`Mover refeição ${refeicao.nome || indiceRefeicao + 1} para baixo`}><ArrowDown size={15} /></Botao>
+                          <Botao type="button" variante="fantasma" tamanho="sm" className="min-h-11" onClick={() => duplicarRefeicaoLocal(indiceRefeicao)} disabled={Boolean(operacao)} aria-label={`Duplicar refeição ${refeicao.nome || indiceRefeicao + 1}`}>Duplicar</Botao>
                           <Botao type="button" variante="fantasma" tamanho="sm" className="min-h-11" onClick={() => atualizar((atual) => ({ ...atual, refeicoes: atual.refeicoes.filter((_, posicao) => posicao !== indiceRefeicao) }))} disabled={formulario.refeicoes.length === 1}><Trash2 size={15} /> Remover</Botao>
                         </>}
                       >
