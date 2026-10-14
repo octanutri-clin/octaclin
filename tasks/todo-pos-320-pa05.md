@@ -1,7 +1,7 @@
 # PA05 — checklist de planejamento e implementação
 
 Contrato: [plan-pos-320-pa05.md](plan-pos-320-pa05.md). Base main `64f54b88`.
-Documentação autorizada; implementação ainda não autorizada. Risco R4 para
+Implementação autorizada em 2026-10-14; backend implementado, UI pendente. Risco R4 para
 persistência, projeção e API; não executar migrations externas.
 
 ## T00 — planejamento (documental)
@@ -19,56 +19,57 @@ persistência, projeção e API; não executar migrations externas.
 
 ## T01 — domínio de apresentação (depende T00; 2–3 arquivos)
 
-- [ ] RED/GREEN de booleans estritos, versão desconhecida, defaults legados vs corrupção.
-- [ ] Flag não altera nutrientes, porções, autorização, limites ou escolha.
-- [ ] Projeção paciente permite apenas conjunto paciente; sem campos internos.
-- [ ] Verificação: Jest específico do novo helper/DTO; revisão do contrato.
+- [x] RED/GREEN de booleans estritos, versão desconhecida, defaults legados vs corrupção.
+- [x] Flag não altera nutrientes, porções, autorização, limites ou escolha.
+- [x] Projeção paciente permite apenas conjunto paciente; sem campos internos.
+- [x] Verificação: Jest específico do novo helper/DTO; revisão do contrato.
 
 ## T02 — persistência aditiva (depende T01; 3–4 arquivos)
 
-- [ ] Reconferir numeração; migration nova com coluna bytea nullable e revisão inteira.
-- [ ] Entidade/registro alinhados; defaults/check; nenhuma migration antiga editada.
-- [ ] PostgreSQL descartável: registros antigos intactos, cifra e FORCE RLS existentes.
-- [ ] Verificação: opcoes-typeorm specs e fixture sintética; plano externo separado.
+- [x] Reconferir numeração; migration nova com coluna bytea nullable e revisão inteira.
+- [x] Entidade/registro alinhados; defaults/check; nenhuma migration antiga editada.
+- [x] PostgreSQL descartável: registros antigos intactos, cifra e FORCE RLS existentes.
+- [x] Verificação: opcoes-typeorm specs e fixture sintética; plano externo separado.
 
 ## T03 — save e conflito (depende T02; 3–4 arquivos)
 
-- [ ] RED/GREEN: payload explícito exige rascunhoId/revisão esperados; conflito 409.
-- [ ] Tudo na mesma transação; replay/erro não altera filhos, metas ou apresentação.
-- [ ] PUT legado omisso conserva preferências; leitura expõe apenas DTO permitido.
-- [ ] Verificação: serviço/DTO/controlador e integração PG, sem mocks como prova de lock.
+- [x] RED/GREEN: payload explícito exige rascunhoId/revisão esperados; conflito 409.
+- [x] Tudo na mesma transação; replay/erro não altera filhos, metas ou apresentação.
+- [x] PUT legado omisso conserva preferências; leitura expõe apenas DTO permitido.
+- [x] Verificação: serviço/DTO/controlador e integração PG, sem mocks como prova de lock.
 
 ### Checkpoint A
 
-- [ ] T01–T03 PASS; concorrência CAS real, DTO e defaults coerentes; typecheck backend.
+- [x] T01–T03 PASS; concorrência CAS real, DTO e defaults coerentes; typecheck backend.
 
 ## T04 — ciclo da versão (depende T03; 2–3 arquivos)
 
-- [ ] Publicação inclui snapshot conferido e hash novo; edição invalida revisão.
-- [ ] Nova versão copia prefs, novo ID/revisão zero; versão antiga nunca é reescrita.
-- [ ] Cópia de refeição/modelo conserva configuração destino; matemática inalterada.
-- [ ] Verificação: RED/GREEN serviço de planos, regressões clone/revisar/publicar.
+- [x] Publicação inclui snapshot conferido e hash novo; edição invalida revisão.
+- [x] Nova versão copia prefs, novo ID; revisão1 com snapshot, zero somente legado; versão antiga nunca é reescrita.
+- [x] Cópia de refeição/modelo conserva configuração destino; matemática inalterada.
+- [x] Verificação: RED/GREEN serviço de planos, regressões clone/revisar/publicar.
 
 ## T05 — projeção paciente e preview (depende T04; dividir subetapas <=5 arquivos)
 
-- [ ] Helper reutilizado por portal e preview profissional autorizado; filtro de liberadas.
-- [ ] Portal só publicado atual; draft preview marcado como rascunho, não entrega.
-- [ ] Nunca retornar prefs profissionais/cipher/CAS em resposta ao paciente.
-- [ ] BFF usa wrappers e no-store; parâmetros limitados, sem tenant/escopo arbitrários.
-- [ ] Verificação: Jest portal/controladores, scripts BFF/authz e respostas allowlisted.
+- [x] Helper reutilizado por portal e preview profissional autorizado; filtro de liberadas.
+- [x] Portal só publicado atual; draft preview marcado como rascunho, não entrega.
+- [x] Nunca retornar prefs profissionais/cipher/CAS em resposta ao paciente.
+- [x] BFF usa wrappers e no-store; parâmetros limitados, sem tenant/escopo arbitrários.
+- [x] Verificação: Jest portal/controladores, scripts BFF/authz e respostas allowlisted.
 
 ## T06 — provas PostgreSQL/RLS (depende T05; 1–3 arquivos)
 
-- [ ] Role sem BYPASSRLS/não owner, FORCE RLS, tenant A/B e carteira A/B.
-- [ ] Revalidação após transferência/arquivamento/acesso revogado, sem prévia anterior.
-- [ ] Barreiras para save/save e save/publicação; uma escrita aceita, outra conflita.
-- [ ] Snapshot correto após clone, histórico e clients legados; sem commit parcial.
-- [ ] Verificação: pnpm --dir octaclin-backend test:rls:testcontainers e suíte PG alvo.
+- [x] Role sem BYPASSRLS/não owner, FORCE RLS, tenant A/B e carteira A/B.
+- [x] Revalidação após transferência/arquivamento/acesso revogado, sem prévia anterior.
+- [x] Barreiras para save/save e save/publicação; uma escrita aceita, outra conflita.
+- [x] Snapshot correto após clone, histórico e clients legados; sem commit parcial.
+- [x] Verificação: pnpm --dir octaclin-backend test:rls:testcontainers e suíte PG alvo.
 
 ### Checkpoint B
 
-- [ ] T04–T06 PASS; contrato API/projeção estabilizado; revisão R4 quando viável.
-- [ ] Antes de Luna alto, avisar e pausar para troca manual; contrato backend pronto.
+- [x] T04–T06 PASS para a superfície PA05; contrato estabilizado e autorrevisão.
+- [ ] Revisão R4 independente final e gate integral Timescale/pgvector (T09).
+- [ ] Troca manual para Luna alto após aviso/pausa; contrato backend pronto.
 
 ## T07 — formulário/preview profissional (depende checkpoint B; 3–5 arquivos)
 
@@ -109,4 +110,21 @@ Verificações documentais finais PASS: `git diff --check`, 23 links locais
 conferidos sem ausências e `pnpm security:secrets`. Scanner executado com Node
 24.19.0/pnpm 11.19.0, com aviso de engine; não prova os gates do runtime alvo.
 Para implementação, usar Node >=22 <23 e pnpm 11.25.0 conforme package.json.
-T01–T09 SKIPPED nesta rodada. Nenhum teste de implementação PA05 executado.
+T01–T06 implementados e validados para a superfície PA05. T07–T09 pendentes.
+
+## Checkpoint técnico Sol → Luna
+
+- PASS: suíte focada de domínio/DTO/serviço/portal/controlador/migration/registro.
+- PASS: BFF 27/27; typecheck Web/backend, build backend e lint Web focado.
+- PASS: duas provas PostgreSQL 15 descartável com RLS/role sem BYPASSRLS/não
+  owner, CAS save/save, save/publicação, preview/transferência e replay de geração.
+- A fixture local não prova Timescale/hypertables ou pgvector. Essas extensões
+  são omitidas e embedding da IA usa array somente na fixture; SQL de tabelas,
+  colunas/constraints/policies de planos e migration1072 executados sem alteração.
+  Gate integral continua no CI por Testcontainers padrão; ENOSPC não é PASS.
+- RED/GREEN: persistência/CAS (8 casos falharam antes), rota/projeção ausente,
+  duas bordas de clone que transformavam perda de snapshot em legado.
+- Evidências finais, comandos e contagens em
+  `docs/governance/EVIDENCIAS_PA05_BACKEND_2026-10-14.md`.
+- Revisão independente/Playwright/UI/CI/PR ainda pendentes. Sem banco externo,
+  merge, deploy ou ativação. Uma PR final reunirá o trabalho.

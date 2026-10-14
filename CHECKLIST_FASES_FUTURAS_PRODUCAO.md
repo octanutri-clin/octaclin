@@ -4640,11 +4640,13 @@ auditoria estão ordenados na seção 15 de
   SBOM provenance SKIPPED. Falha PG local por ENOSPC preservada no histórico,
   prova CI fechou o gate. Sem migration; merge não comprova deploy.
   Plano/checklist `tasks/plan-pos-320-pa04.md`/`tasks/todo-pos-320-pa04.md`.
-- [~] PA05 — planejamento e análise de gaps concluídos; D01–D03 confirmadas.
-  Configurações separadas profissional/paciente, por versão, recolhimento de
-  alternativas liberadas. R014/R041 consultados, sem dependência nova proposta.
-  Implementação ainda não autorizada; risco R4 por persistência/projeção.
-  Plano/checklist `tasks/plan-pos-320-pa05.md`/`tasks/todo-pos-320-pa05.md`.
+- [~] PA05 — backend e BFF implementados; preferências cifradas por versão,
+  CAS, clone/hash/projeção e testes reais específicos PostgreSQL/RLS PASS.
+  Refinamento: revisão1 para snapshot herdado; zero só legado. Fixture omite
+  extensões Timescale/pgvector; gate integral no CI ainda pendente. UI T07/T08
+  aguarda troca manual para Luna alto, revisão R4 independente/CI/PR T09 depois.
+  Sem migration externa/deploy. Handoff `tasks/plan-pos-320-pa05.md`, evidências
+  `docs/governance/EVIDENCIAS_PA05_BACKEND_2026-10-14.md`.
 
 Merge/checks de #418 conferidos em 2026-10-14. Não inferir estado de produção.
 

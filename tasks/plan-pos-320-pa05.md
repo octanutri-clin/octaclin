@@ -2,8 +2,9 @@
 
 Planejamento autorizado e D01–D03 confirmadas em 2026-10-14. Base `main`
 `64f54b88` (PR #418), conteúdo idêntico ao HEAD aprovado `37d7979`.
-Branch `docs/pos320-pa05-planejamento`; worktree isolada. Esta etapa altera
-somente documentação; implementação aguarda autorização do proprietário.
+Branch `feat/pos320-pa05-preferencias`; worktree isolada. Implementação
+autorizada pelo proprietário em 2026-10-14 com Sol6.1 médio; pausar antes de
+Luna alto. Backend/contratos implementados; UI e gates finais pendentes.
 Origem: item 18, Onda 1 do [roadmap](../docs/pos-320/04_Roadmap_Ondas_Pos320_OctaClin.md).
 Checklist: [T00–T09](todo-pos-320-pa05.md).
 
@@ -114,7 +115,9 @@ PUT legado sem o objeto preserva preferências já salvas. PUT com o objeto exig
 (`rascunhoIdEsperado`); conferir ambas sob lock antes de qualquer escrita.
 Incrementar revisão após cada gravação explícita de apresentação; replay velho
 retorna 409 e preserva o estado local para reconciliação. Rascunho novo tem ID
-novo e revisão zero, impedindo replay da versão anterior. O requisito novo é
+novo; revisão zero é reservada à ausência legada. Se herdar snapshot explícito,
+inicia revisão 1. Isso distingue perda de snapshot de ausência legítima; o ID
+novo impede replay da versão anterior mesmo quando as revisões coincidem. O requisito novo é
 condicional ao objeto novo, preservando clientes antigos sem autorização extra.
 
 Gravar apresentação, filhos e cálculo na mesma transação já existente. Nenhum
@@ -180,9 +183,10 @@ registrar alternativa, compatibilidade, versão e gates antes de adotar.
 
 ## Gates, execução e modelos
 
-T00/documentação PASS após verificações registradas no checklist; T01–T09
-SKIPPED nesta rodada, pois implementação não foi autorizada. R4 cruzada, banco,
-frontend, CI e rollout PA05 ainda não executados; CI da PA04 não prova PA05.
+T00 e contrato/backend T01–T06 implementados, com evidências no checklist.
+Prova PG específica executada com fixture descartável; gate integral de
+Timescale/pgvector continua pendente no CI. T07–T09, revisão R4 independente,
+interface e rollout ainda não concluídos. CI da PA04 não prova PA05.
 Uma PR de entrega futura reúne estes documentos e a implementação.
 
 GPT-6.1 Sol médio: persistência, CAS, hash, projeção e integração R4.
@@ -192,5 +196,74 @@ Não recomendar Luna sozinho para migration e projeção clínica desta fase.
 Antes de qualquer troca, avisar modelo alvo e pausar para mudança manual.
 Pesquisa restrita a R014/R041 e testes focados primeiro reduzem custo de tokens.
 
-Próxima ação: autorização de implementação pelo proprietário; iniciar T01 com
-RED de defaults/normalização, sem reabrir D01–D03 nem instalar bibliotecas.
+Próxima ação: após confirmação da troca manual para Luna alto, executar T07/T08.
+Não reabrir D01–D03 nem instalar bibliotecas.
+
+## Handoff para Luna alto — interface
+
+Worktree `/workspace/octaclin/.worktrees/pos320-pa05-planejamento`, branch
+`feat/pos320-pa05-preferencias`. Conferir status/log antes de escrever. Backend
+final validado conforme [evidências](../docs/governance/EVIDENCIAS_PA05_BACKEND_2026-10-14.md).
+Planejamento inicial: commit `49faa367`; consultar log para checkpoint técnico.
+A alteração next-env.d.ts no checkout principal permanece intocada.
+
+### Contrato entregue
+
+- Detalhe de versão/GET rascunho: `apresentacaoEstado` (`legado`, `configurada`,
+  `indisponivel`), `apresentacaoRevisao` e, se válida, `preferenciasApresentacao`
+  com `schemaVersao:1`, `profissional`/`paciente` e as seis flags.
+- PUT rascunho: incluir objeto completo + `rascunhoIdEsperado` (draft.id atual)
+  + `apresentacaoRevisaoEsperada` recebida. Atualizar ambos do retorno após save;
+  nunca codificar revisão zero fixa. Omissão conserva preferências existentes.
+  409 conserva formulário local e exige reconferência/reload explícito.
+- Herança: snapshot explícito novo começa revisão1; legado sem snapshot revisão0.
+  Refinamento técnico comprovado em RED/GREEN: zero para snapshot herdado não
+  permitia distinguir snapshot perdido de legado. Publicadas não são alteradas.
+- `GET .../versoes/:numero/apresentacao-paciente` (BFF já implementado) e helper
+  `obterApresentacaoPacientePlano` entregam DTO permitido, com status, dados de
+  paciente/porção e somente alternativas liberadas. Sem prefs profissionais,
+  revisão CAS, cipher, justificativas de cálculo ou hash clínico.
+- Portal conserva publicado atual e escolha atual; recebe preferências paciente
+  planas + estado. Ausência/legado mantém UI antiga. Indisponível NÃO é default:
+  mostrar mensagem, impedir saída/PDF incoerente e permitir reconferência do
+  rascunho somente pelo fluxo autorizado. Não imprimir dados de fallback antigo.
+
+### Implementação UI exata
+
+1. Painel pequeno de preferências, separado do arquivo grande do editor; integrar
+   FormularioPlano/formularioDaVersao/payload/dirty/save. Ocultar apresentação
+   nunca apaga campos ou esconde erros/justificativas obrigatórias. Metas e
+   valores matemáticos permanecem os mesmos. PA01–04/FND02 continuam funcionando.
+2. `horario/macros/medidasCaseiras/orientacoes` controlam apresentação existente;
+   porção em gramas e alimento principal permanecem visíveis. Modo compacto
+   somente espaçamento. Preferência profissional não modifica resumos PA04.
+3. Portal: expansão em memória independente do limite por item; principal e
+   escolha atual identificados mesmo recolhidos. Respeitar `Ver mais` quando
+   expandida configuração padrão; não mandar zero no campo legado.
+4. Impressão paciente: usar SOMENTE DTO da nova rota. O `ResumoVersao` atual
+   contém alternativas internas e NÃO pode continuar no DOM impresso da saída
+   paciente. Substituir a cópia `somente-imprimir`; conferir print media em teste.
+5. `PlanoAlimentarPaciente`/renderer compartilhado deve suportar preview draft
+   identificado como rascunho e sem botões de registrar escolha. Portal mantém
+   ações legítimas. PDF inclui todas as alternativas liberadas, mesmo recolhidas
+   na tela, e exclui ações. Não fazer escolha de paciente com sessão profissional.
+6. Antes de `window.print()`, buscar projeção publicada relevante, aguardar
+   renderização e conferir paciente/plano/versão ainda atuais. Abort/sequence
+   guard, limpeza no erro/403/404/troca; falha impede impressão de preview antigo.
+7. Testes sintéticos T07/T08: save/reidratação, 409, erro de corrupção, saída não
+   salva, aplicação/cópia sem mudar prefs destino, troca A→B/versão com request
+   pendente, alternativas privadas ausentes em DTO/PDF, flags independentes,
+   principal/gramas/escolha, print das liberadas e teclado/axe/overflow nos dois
+   projetos Playwright. Extrair testes por responsabilidade para evitar acoplamento.
+
+### Ambiente e conclusão
+
+Node22.21.1 disponível em `/tmp/octaclin-pa02-toolchain/node-v22.21.1-linux-x64/bin`;
+use PATH correspondente e `corepack pnpm` (11.25.0). Dependências congeladas
+backend/Web instaladas. Nenhuma biblioteca nova. Containers descartáveis foram
+encerrados; PostgreSQL image permanece para repetir testes locais.
+
+Após T07/T08, avisar para retornar a Sol6.1 médio e PAUSAR antes de integrar
+R4/CI/PR T09. Uma PR futura reúne plano/código; nenhuma PR documental separada.
+Não fazer merge/deploy/migration externa. Revisão atual é autorrevisão técnica,
+não revisão independente. Migração1072 precisa de procedimento externo próprio.

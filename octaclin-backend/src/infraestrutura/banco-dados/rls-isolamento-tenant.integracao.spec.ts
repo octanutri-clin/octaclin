@@ -1,3 +1,8 @@
+import { MensagemNotificacaoOrm } from '../../modulos/comunicacoes/infraestrutura/mensagem-notificacao.orm';
+import { PlanoAlimentarItemOrm } from '../../modulos/planos-alimentares/infraestrutura/plano-alimentar-item.orm';
+import { PlanoAlimentarRefeicaoOrm } from '../../modulos/planos-alimentares/infraestrutura/plano-alimentar-refeicao.orm';
+import { PlanoAlimentarSubstituicaoOrm } from '../../modulos/planos-alimentares/infraestrutura/plano-alimentar-substituicao.orm';
+import { OutboxEventoOrm } from '../outbox/outbox-evento.orm';
 import { ProtegerRetencaoAvaliacoes1720000001069 } from './migracoes/1720000001069-ProtegerRetencaoAvaliacoes';
 import { PerfilCadastroPacienteOrm } from '../../modulos/pacientes/infraestrutura/perfil-cadastro-paciente.orm';
 import { PacienteOrm } from '../../modulos/pacientes/infraestrutura/paciente.orm';
@@ -237,7 +242,12 @@ descrever('RLS e isolamento multi-tenant integral em Postgres real', () => {
         ResumoNotificacaoUsuarioOrm,
         MaterialEducativoOrm,
         PlanoAlimentarOrm,
-        PlanoAlimentarVersaoOrm
+        PlanoAlimentarVersaoOrm,
+        PlanoAlimentarItemOrm,
+        PlanoAlimentarRefeicaoOrm,
+        PlanoAlimentarSubstituicaoOrm,
+        OutboxEventoOrm,
+        MensagemNotificacaoOrm
       ],
       extra: { max: 2 }
     });
@@ -1482,6 +1492,169 @@ descrever('RLS e isolamento multi-tenant integral em Postgres real', () => {
       finally { await runner.rollbackTransaction(); await runner.release(); }
     }
 
+  },60000);
+
+  it('PA05 prévia usa lock compartilhado e nega leitura depois da transferência', async () => {
+    if (!cliente || !fonteDadosRuntime || !executorTenant) throw new Error('Banco descartável indisponível.');
+    await comoTenant(tenantA);
+    const planoId=randomUUID(),versaoId=randomUUID(),cripto=new CriptografiaDadosSensiveis();
+    const flags={horario:true,macros:false,medidasCaseiras:true,orientacoes:true,substituicoesExpandidas:false,modoCompacto:false};
+    await cliente.query('insert into planos_alimentares(id,tenant_id,paciente_id,profissional_id,criado_por_usuario_id,titulo_criptografado) values ($1,$2,$3,$4,$5,$6)',[planoId,tenantA,pacienteIdTenantA,profissionalIdTenantA,usuarioIdTenantA,cripto.criptografar('Prévia sintética')]);
+    await cliente.query('insert into plano_alimentar_versoes(id,tenant_id,plano_id,numero,criado_por_usuario_id,apresentacao_snapshot_criptografado,apresentacao_revisao) values($1,$2,$3,1,$4,$5,1)',[versaoId,tenantA,planoId,usuarioIdTenantA,cripto.criptografar(JSON.stringify({schemaVersao:1,profissional:flags,paciente:flags}))]);
+    await comoTenant(tenantB);
+    expect((await cliente.query('select id from plano_alimentar_versoes where id=$1',[versaoId])).rowCount).toBe(0);
+    await comoTenant(tenantA);
+    const usuario={tenantId:tenantA,usuarioId:usuarioIdTenantA,papel:'Professional',emailHash:'sintetico-pa05',permissoes:['planos_alimentares.ler']} as UsuarioAutenticado;
+    let liberar!:()=>void,sinalizar!:()=>void;
+    const barreira=new Promise<void>(r=>{liberar=r;});
+    const carregou=new Promise<void>(r=>{sinalizar=r;});
+    const executorPausado={executar:<T>(tenantId:string,operacao:(m:EntityManager)=>Promise<T>)=>fonteDadosRuntime!.transaction(async manager=>{
+      await manager.query("select set_config('app.tenant_id',$1,true)",[tenantId]);
+      const instrumentado=new Proxy(manager,{get(alvo,chave,receptor){
+        if(chave==='getRepository') return (classe:Function)=>{
+          const repo=alvo.getRepository(classe as never);
+          if(classe!==PlanoAlimentarVersaoOrm) return repo;
+          return new Proxy(repo,{get(r,k){
+            if(k==='findOne') return async(opcoes:Parameters<typeof repo.findOne>[0])=>{const linhas=await repo.findOne(opcoes);sinalizar();await barreira;return linhas;};
+            const v=Reflect.get(r,k,r);return typeof v==='function'?v.bind(r):v;
+          }});
+        };
+        const v=Reflect.get(alvo,chave,receptor);return typeof v==='function'?v.bind(alvo):v;
+      }});
+      return operacao(instrumentado);
+    })} as ExecutorTenant;
+    const novo=await prepararDadosRepresentativos(tenantA,'pa05-previa-transferencia');
+    const preview=new ServicoPlanosAlimentares(executorPausado,cripto).obterApresentacaoPaciente(tenantA,pacienteIdTenantA,planoId,1,usuario);
+    await carregou;
+    const transferir=fonteDadosRuntime.transaction(async m=>{
+      await m.query("select set_config('app.tenant_id',$1,true)",[tenantA]);
+      await m.query('update pacientes set profissional_responsavel_id=$1 where id=$2',[novo.profissionalId,pacienteIdTenantA]);
+    });
+    let bloqueada=false;
+    try {
+      const fim=Date.now()+5000;
+      while(Date.now()<fim){
+        const q=await cliente.query("select 1 from pg_stat_activity where datname=current_database() and wait_event_type='Lock' and query ilike 'update pacientes set profissional_responsavel_id%'");
+        if(q.rowCount){bloqueada=true;break;} await new Promise(r=>setTimeout(r,10));
+      }
+    } finally { liberar(); }
+    const resultados=await Promise.allSettled([preview,transferir]);
+    try {
+      expect(bloqueada).toBe(true);
+      expect(resultados[0].status).toBe('fulfilled');expect(resultados[1].status).toBe('fulfilled');
+      await expect(new ServicoPlanosAlimentares(executorTenant,cripto).obterApresentacaoPaciente(tenantA,pacienteIdTenantA,planoId,1,usuario)).rejects.toThrow('Paciente nao encontrado');
+    } finally {await cliente.query('update pacientes set profissional_responsavel_id=$1 where id=$2',[profissionalIdTenantA,pacienteIdTenantA]);}
+  },60000);
+
+  it('PA05 persiste sob RLS, aplica CAS concorrente e conserva geração/publicação', async () => {
+    if (!cliente || !fonteDadosRuntime || !executorTenant) throw new Error('Banco descartável indisponível.');
+    await comoTenant(tenantA);
+    const cripto = new CriptografiaDadosSensiveis();
+    const planoId = randomUUID(), versaoId = randomUUID(), avaliacaoId = randomUUID();
+    await cliente.query(`insert into planos_alimentares (id,tenant_id,paciente_id,profissional_id,criado_por_usuario_id,titulo_criptografado) values ($1,$2,$3,$4,$5,$6)`, [planoId,tenantA,pacienteIdTenantA,profissionalIdTenantA,usuarioIdTenantA,cripto.criptografar('Plano sintético PA05')]);
+    await cliente.query(`insert into plano_alimentar_versoes (id,tenant_id,plano_id,numero,criado_por_usuario_id) values ($1,$2,$3,1,$4)`, [versaoId,tenantA,planoId,usuarioIdTenantA]);
+    await cliente.query(`insert into avaliacoes_antropometricas (id,tenant_id,paciente_id,autor_usuario_id,avaliada_em,sexo,idade_anos,medidas_criptografadas,resultado_criptografado) values ($1,$2,$3,$4,'2026-08-01','masculino',35,$5,$6)`, [avaliacaoId,tenantA,pacienteIdTenantA,usuarioIdTenantA,cripto.criptografar(JSON.stringify({pesoKg:80,alturaCm:180})),cripto.criptografar('{}')]);
+    const usuario = { tenantId: tenantA, usuarioId: usuarioIdTenantA, papel: 'Professional', emailHash: 'sintetico-pa05', permissoes: ['planos_alimentares.ler','planos_alimentares.gerenciar'] } as UsuarioAutenticado;
+    const flags = { horario: true, macros: true, medidasCaseiras: true, orientacoes: true, substituicoesExpandidas: true, modoCompacto: false };
+    const preferencias = { schemaVersao: 1 as const, profissional: flags, paciente: { ...flags, macros: false } };
+    const entrada = { avaliacaoAntropometricaId: avaliacaoId, origemMeta: 'formula' as const, formula: 'mifflin_st_jeor_1990' as const, fatorAtividade: 1.4, distribuicaoMacros: {carboidratosBasisPoints:5000,proteinasBasisPoints:2000,gordurasBasisPoints:3000}, possuiCondicaoEspecial: false, aplicabilidadeFormulaConfirmada: true, objetivos: 'Objetivo sintético', justificativaDivergenciaClinica: 'Exemplo sintético de teste', preferenciasApresentacao: preferencias, apresentacaoRevisaoEsperada: 0, rascunhoIdEsperado: versaoId, refeicoes: [{ nome: 'Refeição sintética', itens: [{ descricao: 'Item sintético', quantidade: 1, unidade: 'porção', porcaoGramas: 100, nutrientesPor100g: {energiaKcal:120,proteinasG:10,carboidratosG:20,gordurasG:4}, substituicoes: [] }] }] };
+    const servico = new ServicoPlanosAlimentares(executorTenant, cripto);
+    const role = await cliente.query('select rolsuper,rolbypassrls from pg_roles where rolname=current_user');
+    expect(role.rows[0]).toEqual({rolsuper:false,rolbypassrls:false});
+    const owner = await cliente.query("select tableowner <> current_user as "+'"naoOwner"'+" from pg_tables where tablename='plano_alimentar_versoes'");
+    expect(owner.rows[0].naoOwner).toBe(true);
+    const rls = await cliente.query("select relrowsecurity,relforcerowsecurity from pg_class where relname='plano_alimentar_versoes'");
+    expect(rls.rows[0]).toEqual({relrowsecurity:true,relforcerowsecurity:true});
+    const inicial = await servico.obterRascunho(tenantA,pacienteIdTenantA,planoId,usuario);
+    expect(inicial).toMatchObject({apresentacaoEstado:'legado',apresentacaoRevisao:0});
+    let liberar!: () => void, sinalizar!: () => void;
+    let barreira = new Promise<void>(r => { liberar=r; });
+    let travou = new Promise<void>(r => { sinalizar=r; });
+    let interceptada = false;
+    const executorComBarreira = {
+      executar: <T>(tenantId: string, operacao: (m:EntityManager)=>Promise<T>) => fonteDadosRuntime!.transaction(async manager => {
+        await manager.query("select set_config('app.tenant_id',$1,true)",[tenantId]);
+        const proxy = new Proxy(manager, { get(alvo,chave,receptor) {
+          if(chave==='getRepository') return (classe:Function) => {
+            const repo=alvo.getRepository(classe as never);
+            if(classe!==PlanoAlimentarVersaoOrm) return repo;
+            return new Proxy(repo, { get(r,k) {
+              if(k==='findOne') return async (opcoes:Parameters<typeof repo.findOne>[0]) => {
+                const resultado=await repo.findOne(opcoes);
+                if(!interceptada && opcoes.lock?.mode==='pessimistic_write') { interceptada=true;sinalizar();await barreira; }
+                return resultado;
+              };
+              const v=Reflect.get(r,k,r);return typeof v==='function'?v.bind(r):v;
+            }});
+          };
+          const v=Reflect.get(alvo,chave,receptor);return typeof v==='function'?v.bind(alvo):v;
+        }});
+        return operacao(proxy);
+      })
+    } as ExecutorTenant;
+    const primeira = new ServicoPlanosAlimentares(executorComBarreira,cripto).atualizarRascunho(tenantA,pacienteIdTenantA,planoId,usuario,entrada);
+    await travou;
+    const segunda = servico.atualizarRascunho(tenantA,pacienteIdTenantA,planoId,usuario,{...entrada,objetivos:'Escrita concorrente que deve falhar'});
+    let esperou = false;
+    try {
+      const fim = Date.now()+5000;
+      while(Date.now()<fim) {
+        const q=await cliente.query("select 1 from pg_stat_activity where datname=current_database() and wait_event_type='Lock'");
+        if(q.rowCount){esperou=true;break;}
+        await new Promise(r=>setTimeout(r,10));
+      }
+    } finally { liberar(); }
+    const resultados=await Promise.allSettled([primeira,segunda]);
+    expect(esperou).toBe(true);
+    expect(resultados[0].status).toBe('fulfilled');
+    expect(resultados[1].status).toBe('rejected');
+    const salvo=await servico.obterRascunho(tenantA,pacienteIdTenantA,planoId,usuario);
+    expect(salvo).toMatchObject({apresentacaoEstado:'configurada',apresentacaoRevisao:1,preferenciasApresentacao:preferencias,objetivos:entrada.objetivos});
+    const cipher=await cliente.query('select apresentacao_snapshot_criptografado from plano_alimentar_versoes where id=$1',[versaoId]);
+    expect(JSON.parse(cripto.descriptografar(cipher.rows[0].apresentacao_snapshot_criptografado))).toEqual(preferencias);
+    await expect(servico.atualizarRascunho(tenantA,pacienteIdTenantA,planoId,usuario,entrada)).rejects.toThrow('foram alterados');
+    await expect(servico.obterApresentacaoPaciente(tenantB,pacienteIdTenantA,planoId,1,usuario)).rejects.toThrow();
+    await expect(cliente.query('update plano_alimentar_versoes set apresentacao_revisao=-1 where id=$1',[versaoId])).rejects.toThrow();
+    await servico.revisar(tenantA,pacienteIdTenantA,planoId,usuario);
+    // Um save concorrente invalida a revisão anterior antes da publicação.
+    interceptada = false;
+    barreira = new Promise<void>(r => { liberar=r; });
+    travou = new Promise<void>(r => { sinalizar=r; });
+    const saveRevisado = new ServicoPlanosAlimentares(executorComBarreira,cripto).atualizarRascunho(tenantA,pacienteIdTenantA,planoId,usuario,{...entrada,apresentacaoRevisaoEsperada:1});
+    await travou;
+    const publicarEmEspera = servico.publicar(tenantA,pacienteIdTenantA,planoId,usuario);
+    let publicacaoEsperou = false;
+    try {
+      const fim = Date.now()+5000;
+      while(Date.now()<fim) {
+        const q=await cliente.query("select 1 from pg_stat_activity where datname=current_database() and wait_event_type='Lock'");
+        if(q.rowCount){publicacaoEsperou=true;break;}
+        await new Promise(r=>setTimeout(r,10));
+      }
+    } finally { liberar(); }
+    const concorrentes = await Promise.allSettled([saveRevisado,publicarEmEspera]);
+    expect(publicacaoEsperou).toBe(true);
+    expect(concorrentes[0].status).toBe('fulfilled');
+    expect(concorrentes[1].status).toBe('rejected');
+    const aposSave=await servico.obterRascunho(tenantA,pacienteIdTenantA,planoId,usuario);
+    expect(aposSave).toMatchObject({apresentacaoRevisao:2,revisadaEm:null});
+    expect(aposSave.publicadaEm).toBeNull();
+    await servico.revisar(tenantA,pacienteIdTenantA,planoId,usuario);
+    await servico.publicar(tenantA,pacienteIdTenantA,planoId,usuario);
+    const hash=await cliente.query('select hash_conteudo from plano_alimentar_versoes where id=$1',[versaoId]);
+    const novo=await servico.criarNovaVersao(tenantA,pacienteIdTenantA,planoId,usuario);
+    expect(novo).toMatchObject({apresentacaoRevisao:1,preferenciasApresentacao:preferencias});
+    expect(novo.id).not.toBe(versaoId);
+    await expect(servico.atualizarRascunho(tenantA,pacienteIdTenantA,planoId,usuario,{...entrada,apresentacaoRevisaoEsperada:novo.apresentacaoRevisao})).rejects.toThrow('foram alterados');
+    const antes=await servico.obterVersao(tenantA,pacienteIdTenantA,planoId,1,usuario);
+    expect(antes.hashConteudo).toBe(hash.rows[0].hash_conteudo);
+    const preview=await servico.obterApresentacaoPaciente(tenantA,pacienteIdTenantA,planoId,1,usuario);
+    expect(preview.preferenciasApresentacao).toEqual(preferencias.paciente);
+    expect(preview).not.toHaveProperty('apresentacaoRevisao');
+    const outro = await prepararDadosRepresentativos(tenantA,'pa05-transferencia');
+    await cliente.query('update pacientes set profissional_responsavel_id=$1 where id=$2',[outro.profissionalId,pacienteIdTenantA]);
+    try { await expect(servico.obterApresentacaoPaciente(tenantA,pacienteIdTenantA,planoId,1,usuario)).rejects.toThrow('Paciente nao encontrado'); }
+    finally { await cliente.query('update pacientes set profissional_responsavel_id=$1 where id=$2',[profissionalIdTenantA,pacienteIdTenantA]); }
   },60000);
 
   it('PA04 lista resumos salvos sob RLS e serializa a projeção em lote com transferência', async () => {

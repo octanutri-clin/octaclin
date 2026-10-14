@@ -1,3 +1,4 @@
+import { lerApresentacaoVersao, projetarRefeicoesPaciente, PreferenciasExibicaoRefeicoes } from '../../planos-alimentares/dominio/apresentacao-plano';
 import { bloquearContextoPiloto317, invalidarContextoPiloto317 } from '../../gamificacao/aplicacao/invalidar-contexto-piloto';
 import { createHash, createHmac, randomUUID } from 'crypto';
 import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
@@ -116,6 +117,8 @@ export interface EscolhaSubstituicaoPortalPaciente {
 }
 
 export interface PlanoAlimentarPortalPaciente {
+  apresentacaoEstado?: 'legado' | 'configurada' | 'indisponivel';
+  preferenciasApresentacao?: PreferenciasExibicaoRefeicoes;
   id: string;
   titulo: string;
   numeroVersao: number;
@@ -815,7 +818,10 @@ export class ServicoPortalPaciente {
     const macros = this.mapearMacrosPaciente(metasMacronutrientes);
     const metaEnergeticaKcal = this.lerNumeroNaoNegativo(calculo.metaEnergeticaKcal);
 
+    const apresentacao = lerApresentacaoVersao(versao.apresentacaoSnapshotCriptografado, versao.apresentacaoRevisao, valor => this.criptografia.descriptografar(valor));
     return {
+      apresentacaoEstado: apresentacao.apresentacaoEstado,
+      ...(apresentacao.preferenciasApresentacao ? { preferenciasApresentacao: apresentacao.preferenciasApresentacao.paciente } : {}),
       id: plano.id,
       titulo: this.criptografia.descriptografar(plano.tituloCriptografado),
       numeroVersao: versao.numero,
@@ -828,7 +834,7 @@ export class ServicoPortalPaciente {
         : {}),
       ...(metaEnergeticaKcal !== undefined ? { metaEnergeticaKcal } : {}),
       ...(macros ? { macros } : {}),
-      refeicoes: refeicoes
+      refeicoes: projetarRefeicoesPaciente(refeicoes
         .sort((a, b) => a.ordem - b.ordem)
         .map((refeicao) => ({
           id: refeicao.id,
@@ -870,10 +876,11 @@ export class ServicoPortalPaciente {
                   nutrientes: this.mapearNutrientesPaciente(
                     this.lerSnapshotCriptografado(substituicao.composicaoSnapshotCriptografada)
                   ),
+                  liberadaParaPaciente: substituicao.liberadaParaPaciente === true,
                   preferida: substituicao.preferida === true
                 }))
             }))
-        }))
+        })))
     };
   }
 

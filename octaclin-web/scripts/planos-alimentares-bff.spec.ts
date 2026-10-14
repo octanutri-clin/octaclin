@@ -1,3 +1,4 @@
+import { GET as obterApresentacaoPaciente } from '../app/api/pacientes/[id]/planos-alimentares/[planoId]/versoes/[numero]/apresentacao-paciente/route';
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import * as nextHeaders from 'next/headers';
@@ -632,4 +633,27 @@ test('BFF codifica ID de receita e preserva corpo da atualizacao', async () => {
   } finally {
     restaurarFetch(original);
   }
+});
+
+test('PA05 BFF de prévia paciente exige sessão/permissão e não encaminha escopo do cliente', async () => {
+  const original = global.fetch;
+  let chamado = 0;
+  global.fetch = (async (url: string | URL | Request) => {
+    chamado++;
+    assert.equal(String(url), 'http://backend.octaclin.local/pacientes/paciente%2F1/planos-alimentares/plano%2F1/versoes/2/apresentacao-paciente');
+    return new Response(JSON.stringify({ status: 'rascunho', refeicoes: [] }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+  }) as typeof global.fetch;
+  const props = { params: Promise.resolve({ id: 'paciente/1', planoId: 'plano/1', numero: '2' }) };
+  try {
+    __clearCookies();
+    assert.equal((await obterApresentacaoPaciente(new Request('http://localhost/preview'), props)).status, 401);
+    __setCookies(cookiesSessaoValida(['pacientes.ler']));
+    assert.equal((await obterApresentacaoPaciente(new Request('http://localhost/preview'), props)).status, 403);
+    assert.equal(chamado, 0);
+    __setCookies(cookiesSessaoValida(['planos_alimentares.ler']));
+    const resposta = await obterApresentacaoPaciente(new Request('http://localhost/preview?tenantId=alheio&versaoId=alheia'), props);
+    assert.equal(resposta.status, 200);
+    assert.equal(resposta.headers.get('Cache-Control'), 'no-store');
+    assert.equal(chamado, 1);
+  } finally { restaurarFetch(original); __clearCookies(); }
 });

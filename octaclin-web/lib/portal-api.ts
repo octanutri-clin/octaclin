@@ -1,3 +1,4 @@
+import type { PreferenciasExibicaoRefeicoesApi, EstadoApresentacaoPlanoApi } from './preferencias-apresentacao-plano';
 import { criarIdOperacaoPwa, ehFalhaDeRede, enfileirarOperacaoPwa } from './pwa-private-queue';
 
 export type CanalPreferidoComunicacaoPaciente = 'email' | 'whatsapp' | 'qualquer';
@@ -187,6 +188,8 @@ export interface EscolhaSubstituicaoPacienteApi {
 }
 
 export interface PlanoAlimentarPacienteApi {
+  apresentacaoEstado?: EstadoApresentacaoPlanoApi;
+  preferenciasApresentacao?: PreferenciasExibicaoRefeicoesApi;
   id: string;
   titulo: string;
   numeroVersao: number;

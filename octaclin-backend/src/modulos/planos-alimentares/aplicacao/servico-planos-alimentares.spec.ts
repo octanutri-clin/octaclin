@@ -1571,4 +1571,83 @@ describe('ServicoPlanosAlimentares', () => {
       expect(itens.every((item) => item.substituicoesVisiveisInicialmente === 1)).toBe(true);
     });
   });
+  describe('PA05 — apresentação cifrada, CAS e versões', () => {
+    const preferencias = () => ({ schemaVersao: 1, profissional: { horario: true, macros: true, medidasCaseiras: true, orientacoes: true, substituicoesExpandidas: true, modoCompacto: false }, paciente: { horario: false, macros: false, medidasCaseiras: false, orientacoes: true, substituicoesExpandidas: false, modoCompacto: true } });
+    const entrada = (revisao = 0, id = VERSAO_ID) => Object.assign(dadosRascunho(), { preferenciasApresentacao: preferencias(), apresentacaoRevisaoEsperada: revisao, rascunhoIdEsperado: id });
+    it('salva prefs cifradas, retorna DTO e rejeita replay antes de alterar filhos', async () => {
+      const resultado = await servico.atualizarRascunho(TENANT_ID, PACIENTE_ID, PLANO_ID, usuarioProfissional(), entrada());
+      expect(resultado).toMatchObject({ preferenciasApresentacao: preferencias(), apresentacaoRevisao: 1, apresentacaoEstado: 'configurada' });
+      const salvo = repositorios.get(PlanoAlimentarVersaoOrm)!.registros[0];
+      expect(Buffer.isBuffer(salvo.apresentacaoSnapshotCriptografado)).toBe(true);
+      expect(JSON.parse(criptografia.descriptografar(salvo.apresentacaoSnapshotCriptografado))).toEqual(preferencias());
+      const deletes = repositorios.get(PlanoAlimentarItemOrm)!.delete.mock.calls.length;
+      await expect(servico.atualizarRascunho(TENANT_ID, PACIENTE_ID, PLANO_ID, usuarioProfissional(), entrada())).rejects.toBeInstanceOf(ConflictException);
+      expect(repositorios.get(PlanoAlimentarItemOrm)!.delete).toHaveBeenCalledTimes(deletes);
+    });
+    it.each([undefined, -1, 0.5])('recusa revisão ausente ou inválida (%s)', async revisao => {
+      await expect(servico.atualizarRascunho(TENANT_ID, PACIENTE_ID, PLANO_ID, usuarioProfissional(), Object.assign(entrada(), { apresentacaoRevisaoEsperada: revisao }))).rejects.toBeInstanceOf(BadRequestException);
+      expect(repositorios.get(PlanoAlimentarItemOrm)!.delete).not.toHaveBeenCalled();
+    });
+    it('recusa geração antiga mesmo com revisão coincidente', async () => {
+      await expect(servico.atualizarRascunho(TENANT_ID, PACIENTE_ID, PLANO_ID, usuarioProfissional(), entrada(0, '10000000-0000-4000-8000-000000000099'))).rejects.toBeInstanceOf(ConflictException);
+    });
+    it('PUT legado conserva preferências e revisão já salvas', async () => {
+      await servico.atualizarRascunho(TENANT_ID, PACIENTE_ID, PLANO_ID, usuarioProfissional(), entrada());
+      await expect(servico.atualizarRascunho(TENANT_ID, PACIENTE_ID, PLANO_ID, usuarioProfissional(), dadosRascunho())).resolves.toMatchObject({ preferenciasApresentacao: preferencias(), apresentacaoRevisao: 1 });
+    });
+    it('publicação preserva preferências e nova versão herda cipher com revisão inicial explícita', async () => {
+      await servico.atualizarRascunho(TENANT_ID, PACIENTE_ID, PLANO_ID, usuarioProfissional(), entrada());
+      await servico.revisar(TENANT_ID, PACIENTE_ID, PLANO_ID, usuarioProfissional());
+      await servico.publicar(TENANT_ID, PACIENTE_ID, PLANO_ID, usuarioProfissional());
+      const publicado = structuredClone(repositorios.get(PlanoAlimentarVersaoOrm)!.registros[0]);
+      const novo = await servico.criarNovaVersao(TENANT_ID, PACIENTE_ID, PLANO_ID, usuarioProfissional());
+      expect(novo).toMatchObject({ preferenciasApresentacao: preferencias(), apresentacaoRevisao: 1 });
+      expect(repositorios.get(PlanoAlimentarVersaoOrm)!.registros[0].hashConteudo).toBe(publicado.hashConteudo);
+      expect(repositorios.get(PlanoAlimentarVersaoOrm)!.registros[0].apresentacaoRevisao).toBe(1);
+    });
+    it('snapshot perdido no novo rascunho herdado continua indisponível', async () => {
+      await servico.atualizarRascunho(TENANT_ID, PACIENTE_ID, PLANO_ID, usuarioProfissional(), entrada());
+      await servico.revisar(TENANT_ID, PACIENTE_ID, PLANO_ID, usuarioProfissional());
+      await servico.publicar(TENANT_ID, PACIENTE_ID, PLANO_ID, usuarioProfissional());
+      const novo = await servico.criarNovaVersao(TENANT_ID, PACIENTE_ID, PLANO_ID, usuarioProfissional());
+      repositorios.get(PlanoAlimentarVersaoOrm)!.registros.find(v => v.id === novo.id)!.apresentacaoSnapshotCriptografado = null;
+      await expect(servico.obterRascunho(TENANT_ID, PACIENTE_ID, PLANO_ID, usuarioProfissional())).resolves.toMatchObject({ apresentacaoEstado: 'indisponivel' });
+    });
+    it('clone não converte snapshot publicado perdido em legado', async () => {
+      await servico.atualizarRascunho(TENANT_ID, PACIENTE_ID, PLANO_ID, usuarioProfissional(), entrada());
+      await servico.revisar(TENANT_ID, PACIENTE_ID, PLANO_ID, usuarioProfissional());
+      await servico.publicar(TENANT_ID, PACIENTE_ID, PLANO_ID, usuarioProfissional());
+      repositorios.get(PlanoAlimentarVersaoOrm)!.registros[0].apresentacaoSnapshotCriptografado = null;
+      await expect(servico.criarNovaVersao(TENANT_ID, PACIENTE_ID, PLANO_ID, usuarioProfissional())).rejects.toBeInstanceOf(ConflictException);
+    });
+    it('corrupção fica indisponível e bloqueia revisão/publicação sem expor cipher', async () => {
+      await servico.atualizarRascunho(TENANT_ID, PACIENTE_ID, PLANO_ID, usuarioProfissional(), entrada());
+      repositorios.get(PlanoAlimentarVersaoOrm)!.registros[0].apresentacaoSnapshotCriptografado = Buffer.from('cipher-invalido-sintetico');
+      await expect(servico.obterRascunho(TENANT_ID, PACIENTE_ID, PLANO_ID, usuarioProfissional())).resolves.toMatchObject({ apresentacaoEstado: 'indisponivel', apresentacaoRevisao: 1 });
+      await expect(servico.revisar(TENANT_ID, PACIENTE_ID, PLANO_ID, usuarioProfissional())).rejects.toBeInstanceOf(ConflictException);
+    });
+  });
+
+  describe('PA05 — prévia paciente autorizada', () => {
+    it('filtra substituições internas e devolve somente preferências paciente', async () => {
+      const dados = dadosRascunho();
+      dados.refeicoes[0].itens[0].substituicoes = [
+        { descricao: 'Alternativa privada sintética', quantidade: 1, unidade: 'porção', porcaoGramas: 100, nutrientesPor100g: { energiaKcal: 100, proteinasG: 10, carboidratosG: 10, gordurasG: 5 }, liberadaParaPaciente: false, preferida: true },
+        { descricao: 'Alternativa liberada sintética', quantidade: 1, unidade: 'porção', porcaoGramas: 100, nutrientesPor100g: { energiaKcal: 100, proteinasG: 10, carboidratosG: 10, gordurasG: 5 }, liberadaParaPaciente: true, preferida: false }
+      ];
+      await servico.atualizarRascunho(TENANT_ID, PACIENTE_ID, PLANO_ID, usuarioProfissional(), dados);
+      const preview = await (servico as any).obterApresentacaoPaciente(TENANT_ID, PACIENTE_ID, PLANO_ID, 1, usuarioProfissional());
+      expect(preview.status).toBe('rascunho');
+      expect(preview.refeicoes[0].itens[0].substituicoes).toHaveLength(1);
+      expect(JSON.stringify(preview)).not.toMatch(/privada|composicaoSnapshot|justificativaDivergencia|apresentacaoRevisao|revisadaPor|hashConteudo/);
+    });
+    it.each(['tenant', 'carteira', 'papel', 'permissao', 'paciente'] as const)('recusa prévia fora do escopo (%s)', async caso => {
+      const usuario = usuarioProfissional();
+      if (caso === 'carteira') repositorios.get(PacienteOrm)!.registros[0].profissionalResponsavelId = 'outro-profissional';
+      if (caso === 'papel') usuario.papel = 'Patient';
+      if (caso === 'permissao') usuario.permissoes = [];
+      await expect((servico as any).obterApresentacaoPaciente(caso === 'tenant' ? 'tenant-alheio' : TENANT_ID, caso === 'paciente' ? 'paciente-alheio' : PACIENTE_ID, PLANO_ID, 1, usuario)).rejects.toThrow();
+    });
+  });
+
 });

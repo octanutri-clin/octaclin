@@ -142,3 +142,21 @@ nenhum redirecionamento. Fontes OMS conservam SHA256; coletor Oxford conserva
 entradas sintéticas, validações e tolerâncias. Testes offline:
 `scripts/research/fase314/test_https_research.py` e `test_references_security.py`,
 executados na governança CI. Não comprova direitos de uso ou G01.
+
+
+## PA05 — apresentação por versão
+
+Cifra, identidade/revisão do rascunho, replay, corrupção, clone e allowlist
+paciente são cobertos por `apresentacao-plano.spec.ts`,
+`dtos-apresentacao-plano.spec.ts`, specs de serviço/portal/controlador e
+`apresentacao-planos.migracao.spec.ts` no backend. Concorrência save/save,
+save/publicação, leitura/transferência e RLS estão nos casos PA05 de
+`rls-isolamento-tenant.integracao.spec.ts`, executados pelo gate
+`pnpm --dir octaclin-backend test:rls:testcontainers` no CI.
+
+`octaclin-backend/scripts/test-pa05-postgres-local.cjs` é fixture alternativa
+opt-in para PostgreSQL15 descartável quando Docker VFS não comporta a imagem
+HA. Não valida Timescale/hypertables nem pgvector; não substitui o gate integral.
+A rota de preview também exige sessão/permissão e descarta escopo arbitrário,
+provados por `pnpm --dir octaclin-web test:planos-alimentares:bff`.
+UI/PDF, revisão independente e CI da entrega PA05 permanecem pendentes até T09.

@@ -37,6 +37,7 @@ import {
   SubstituicaoPlanoAlimentar,
   validarEstruturaPlano
 } from '../dominio/plano-alimentar';
+import { lerApresentacaoVersao, validarPreferenciasApresentacao, projetarRefeicoesPaciente, projetarMetasPaciente } from '../dominio/apresentacao-plano';
 import { projetarResumoNutricionalPlano, ResumoNutricionalPlano } from '../dominio/resumo-nutricional-plano';
 import { AlimentoComposicaoOrm } from '../infraestrutura/alimento-composicao.orm';
 import { FonteComposicaoAlimentoOrm } from '../infraestrutura/fonte-composicao-alimento.orm';
@@ -235,6 +236,44 @@ export class ServicoPlanosAlimentares {
    * publicada nunca é alterada: a escolha atual continua sendo a última linha,
    * enquanto esta leitura preserva cada retorno ao alimento principal.
    */
+  async obterApresentacaoPaciente(tenantId: string, pacienteId: string, planoId: string, numero: number, usuario: UsuarioAutenticado) {
+    this.garantirPapelProfissional(usuario);
+    this.garantirPermissao(usuario, 'planos_alimentares.ler');
+    if (!Number.isInteger(numero) || numero < 1) throw new BadRequestException('Número de versão inválido.');
+    return this.executorTenant.executar(tenantId, async gerenciador => {
+      const plano = await this.obterPlanoNoEscopo(gerenciador, tenantId, pacienteId, planoId, usuario, 'pessimistic_read');
+      const versao = await gerenciador.getRepository(PlanoAlimentarVersaoOrm).findOne({ where: { tenantId, planoId: plano.id, numero, descartadaEm: IsNull() }, lock: { mode: 'pessimistic_read' } });
+      if (!versao) throw new NotFoundException('Versão do plano alimentar não encontrada.');
+      this.garantirApresentacaoDisponivel(versao);
+      const detalhe = await this.montarVersao(gerenciador, versao);
+      return {
+        id: plano.id,
+        titulo: this.criptografia.descriptografar(plano.tituloCriptografado),
+        numeroVersao: versao.numero,
+        status: detalhe.status,
+        ...(versao.publicadaEm ? { publicadoEm: versao.publicadaEm } : {}),
+        ...(detalhe.objetivos ? { objetivo: detalhe.objetivos } : {}),
+        ...(detalhe.observacoes ? { orientacoes: detalhe.observacoes } : {}),
+        ...projetarMetasPaciente(detalhe.calculo),
+        apresentacaoEstado: detalhe.apresentacaoEstado,
+        ...(detalhe.preferenciasApresentacao ? { preferenciasApresentacao: detalhe.preferenciasApresentacao.paciente } : {}),
+        refeicoes: projetarRefeicoesPaciente(detalhe.refeicoes.map(refeicao => ({
+          id: refeicao.id, nome: refeicao.nome, horarioLocal: refeicao.horarioLocal, orientacoes: refeicao.orientacoes,
+          itens: refeicao.itens.map(item => ({
+            id: item.id, descricao: item.descricao, quantidade: item.quantidade, unidade: item.unidade, porcaoGramas: item.porcaoGramas,
+            nutrientes: item.composicaoSnapshot?.nutrientesPorcao ?? {},
+            substituicoesVisiveisInicialmente: item.substituicoesVisiveisInicialmente,
+            substituicoes: item.substituicoes.map(alternativa => ({
+              id: alternativa.id, descricao: alternativa.descricao, quantidade: alternativa.quantidade, unidade: alternativa.unidade,
+              porcaoGramas: alternativa.porcaoGramas, nutrientes: alternativa.composicaoSnapshot?.nutrientesPorcao ?? {},
+              liberadaParaPaciente: alternativa.liberadaParaPaciente, preferida: alternativa.preferida
+            }))
+          }))
+        })))
+      };
+    });
+  }
+
   async listarEscolhasPaciente(
     tenantId: string,
     pacienteId: string,
@@ -564,6 +603,17 @@ export class ServicoPlanosAlimentares {
         lock: { mode: 'pessimistic_write' }
       });
       if (!rascunho) throw new NotFoundException('Rascunho do plano alimentar nao encontrado.');
+      let preferencias;
+      if (dados.preferenciasApresentacao !== undefined) {
+        try { preferencias = validarPreferenciasApresentacao(dados.preferenciasApresentacao); }
+        catch { throw new BadRequestException('Preferências de apresentação inválidas.'); }
+        if (!Number.isSafeInteger(dados.apresentacaoRevisaoEsperada) || dados.apresentacaoRevisaoEsperada! < 0 || dados.apresentacaoRevisaoEsperada! >= 2147483647 || !dados.rascunhoIdEsperado) {
+          throw new BadRequestException('Informe a identidade e a revisão das preferências do rascunho.');
+        }
+        if (dados.rascunhoIdEsperado !== rascunho.id || dados.apresentacaoRevisaoEsperada !== (rascunho.apresentacaoRevisao ?? 0)) {
+          throw new ConflictException('O rascunho ou suas preferências foram alterados. Recarregue e confira antes de salvar.');
+        }
+      }
 
       const avaliacao = await gerenciador.getRepository(AvaliacaoAntropometricaOrm).findOne({
         where: {
@@ -646,6 +696,10 @@ export class ServicoPlanosAlimentares {
         justificativaDivergenciaClinica: dados.justificativaDivergenciaClinica?.trim()
       };
 
+      if (preferencias) {
+        rascunho.apresentacaoSnapshotCriptografado = this.criptografia.criptografar(JSON.stringify(preferencias));
+        rascunho.apresentacaoRevisao = (rascunho.apresentacaoRevisao ?? 0) + 1;
+      }
       await this.substituirFilhos(gerenciador, tenantId, rascunho.id, estrutura);
       rascunho.avaliacaoAntropometricaId = avaliacao!.id;
       // `null` e proposital: se o rascunho ja tinha formula e virou manual, so
@@ -680,6 +734,7 @@ export class ServicoPlanosAlimentares {
         lock: { mode: 'pessimistic_write' }
       });
       if (!rascunho) throw new NotFoundException('Rascunho do plano alimentar nao encontrado.');
+      this.garantirApresentacaoDisponivel(rascunho);
       this.garantirRascunhoCompleto(rascunho);
       const conteudo = await this.montarVersao(gerenciador, rascunho);
       if (!conteudo.refeicoes.length || conteudo.refeicoes.some((refeicao) => !refeicao.itens.length)) {
@@ -716,6 +771,7 @@ export class ServicoPlanosAlimentares {
       if (!rascunho.revisadaEm || !rascunho.revisadaPorUsuarioId) {
         throw new ConflictException('Revise o plano alimentar antes de publica-lo.');
       }
+      this.garantirApresentacaoDisponivel(rascunho);
       this.garantirRascunhoCompleto(rascunho);
       const conteudo = await this.montarVersao(gerenciador, rascunho);
       if (!conteudo.refeicoes.length || conteudo.refeicoes.some((refeicao) => !refeicao.itens.length)) {
@@ -779,6 +835,7 @@ export class ServicoPlanosAlimentares {
         where: { id: plano.versaoPublicadaAtualId, tenantId, planoId, descartadaEm: IsNull() }
       });
       if (!publicada?.publicadaEm) throw new ConflictException('Versao publicada atual nao encontrada.');
+      this.garantirApresentacaoDisponivel(publicada);
       const ultima = await repositorioVersao.find({ where: { tenantId, planoId }, order: { numero: 'DESC' }, take: 1 });
       const nova = await repositorioVersao.save(
         repositorioVersao.create({
@@ -793,6 +850,9 @@ export class ServicoPlanosAlimentares {
           objetivosCriptografados: this.copiarBuffer(publicada.objetivosCriptografados),
           observacoesCriptografadas: this.copiarBuffer(publicada.observacoesCriptografadas),
           calculoSnapshotCriptografado: this.copiarBuffer(publicada.calculoSnapshotCriptografado),
+          apresentacaoSnapshotCriptografado: this.copiarBuffer(publicada.apresentacaoSnapshotCriptografado ?? undefined),
+          // Zero identifica exclusivamente ausência legada, nunca snapshot já herdado.
+          apresentacaoRevisao: publicada.apresentacaoSnapshotCriptografado ? 1 : 0,
           totaisSnapshotCriptografado: this.copiarBuffer(publicada.totaisSnapshotCriptografado)
         })
       );
@@ -938,12 +998,12 @@ export class ServicoPlanosAlimentares {
     pacienteId: string,
     planoId: string,
     usuario: UsuarioAutenticado,
-    bloquear = false
+    bloquear: boolean | 'pessimistic_read' = false
   ): Promise<PlanoAlimentarOrm> {
     await this.garantirPacienteNoEscopo(gerenciador, tenantId, pacienteId, usuario, bloquear);
     const plano = await gerenciador.getRepository(PlanoAlimentarOrm).findOne({
       where: { id: planoId, tenantId, pacienteId, arquivadoEm: IsNull() },
-      ...(bloquear ? { lock: { mode: 'pessimistic_write' as const } } : {})
+      ...(bloquear ? { lock: { mode: bloquear === 'pessimistic_read' ? 'pessimistic_read' as const : 'pessimistic_write' as const } } : {})
     });
     if (!plano) throw new NotFoundException('Plano alimentar nao encontrado.');
     return plano;
@@ -1497,6 +1557,7 @@ export class ServicoPlanosAlimentares {
       observacoes: this.descriptografarOpcional(versao.observacoesCriptografadas),
       calculo: this.lerJsonCriptografadoOpcional(versao.calculoSnapshotCriptografado),
       totais: this.lerJsonCriptografadoOpcional(versao.totaisSnapshotCriptografado),
+      ...this.lerApresentacao(versao),
       hashConteudo: versao.hashConteudo,
       revisadaEm: versao.revisadaEm,
       revisadaPorUsuarioId: versao.revisadaPorUsuarioId,
@@ -1545,6 +1606,16 @@ export class ServicoPlanosAlimentares {
     };
   }
 
+  private lerApresentacao(versao: PlanoAlimentarVersaoOrm) {
+    return lerApresentacaoVersao(versao.apresentacaoSnapshotCriptografado, versao.apresentacaoRevisao, valor => this.criptografia.descriptografar(valor));
+  }
+
+  private garantirApresentacaoDisponivel(versao: PlanoAlimentarVersaoOrm): void {
+    if (this.lerApresentacao(versao).apresentacaoEstado === 'indisponivel') {
+      throw new ConflictException('Preferências de apresentação indisponíveis. Confira e salve uma configuração válida antes de continuar.');
+    }
+  }
+
   private conteudoClinicoParaHash(plano: PlanoAlimentarOrm, versao: Awaited<ReturnType<ServicoPlanosAlimentares['montarVersao']>>) {
     return {
       planoId: plano.id,
@@ -1555,6 +1626,7 @@ export class ServicoPlanosAlimentares {
       formulaCodigo: versao.formulaCodigo,
       formulaVersao: versao.formulaVersao,
       motorCalculoVersao: versao.motorCalculoVersao,
+      ...(versao.preferenciasApresentacao ? { preferenciasApresentacao: versao.preferenciasApresentacao } : {}),
       objetivos: versao.objetivos,
       observacoes: versao.observacoes,
       calculo: versao.calculo,

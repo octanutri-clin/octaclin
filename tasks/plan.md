@@ -1,26 +1,28 @@
-# Handoff atual — PA05: planejamento consolidado
+# Handoff atual — PA05: backend validado, pausa antes de Luna alto
 
-PA04 integrada pela PR #418, main `64f54b88`, conteúdo idêntico ao HEAD aprovado
-`37d7979`. Checks aplicáveis PASS (CI `38625821164`, incluindo Backend, banco
-PostgreSQL/RLS descartável, Web, Demo e PR Gate); SBOM provenance SKIPPED.
-Falha PostgreSQL local por ENOSPC permanece como fato histórico, superada como
-gate de integração pela prova CI. Merge não comprova deploy.
+Worktree `/workspace/octaclin/.worktrees/pos320-pa05-planejamento`, branch
+`feat/pos320-pa05-preferencias`, base `64f54b88` (#418). Implementação autorizada
+em 2026-10-14 com Sol6.1 médio; aviso/pausa exigidos antes da troca manual.
 
-Planejamento PA05 em `docs/pos320-pa05-planejamento`, worktree
-`/workspace/octaclin/.worktrees/pos320-pa05-planejamento`. Implementação não
-iniciada. A alteração next-env.d.ts e os demais trabalhos foram preservados.
+- [Contrato e handoff detalhado Luna](plan-pos-320-pa05.md);
+  [T00–T09](todo-pos-320-pa05.md);
+  [evidências backend](../docs/governance/EVIDENCIAS_PA05_BACKEND_2026-10-14.md).
+- D01–D03 mantidas: dois conjuntos, snapshot por versão e liberadas recolhidas.
+  R014/R041 apenas referências; nenhuma nova dependência.
+- Backend, DTOs, cifra/CAS, clone/hash/publicação, projeção paciente e BFF/tipos
+  entregues. Refinamento comprovado: revisão1 para snapshot herdado; zero só
+  legado. Isso impede que perda do snapshot pareça ausência legítima.
+- PostgreSQL 15 local descartável: provas PA05 reais com RLS/concorrência PASS.
+  Fixture omite extensões Timescale/pgvector fora do escopo; gate integral
+  Testcontainers padrão será validado no CI. ENOSPC anterior não é aprovação.
+- Próxima ação após troca manual: Luna alto executa T07/T08 conforme handoff;
+  ao terminar, avisar/pausar para Sol6.1 médio validar R4/CI e abrir PR única T09.
+- Nenhuma PR aberta nesta pausa; migração1072 somente na fixture local. Não
+  aplicar em staging/produção, nem fazer merge/deploy. Autorrevisão não substitui
+  revisão independente. Outros checkouts/alteração next-env.d.ts preservados.
 
-- [Plano/gaps/contratos](plan-pos-320-pa05.md); [T00–T09](todo-pos-320-pa05.md).
-- D01–D03 confirmadas: conjuntos profissional/paciente; por versão para todas
-  as refeições; substituições recolhidas mantendo acesso às liberadas.
-- R014 React Hook Form/R041 Storybook consultados por tag/commit, MIT conferida;
-  usar referências, sem instalação ou migração de framework nesta fase.
-- Gaps centrais: coluna cifrada aditiva, CAS condicionado ao payload novo,
-  inclusão no hash, clone/versionamento, projeção autorizada e PDF paciente.
-- Sol6.1 médio para backend/R4; Luna alto para UI isolada após checkpoint B;
-  avisar e pausar antes da troca manual. Uma PR futura reúne plano e código.
-- Próxima ação: obter autorização de implementação e iniciar RED em T01.
-  Sem migrations externas, deploy ou ativação nesta etapa documental.
+PA04 integrada pela PR #418, main `64f54b88`, checks aplicáveis PASS; estado de
+produção não inferido. Registro anterior preservado a seguir.
 
 ---
 
@@ -250,4 +252,3 @@ v3/v4 preservados em `research/fase319/`; plano e relatório em
 G01/G02/G03 bloqueados, G04 skipped, G05 bloqueado/não executado; T05–T10 não
 iniciadas. Sem runtime/índice clínico. A Fase 320 é a etapa seguinte, com ingestão
 TBCA sujeita a direitos comprovados.
-
