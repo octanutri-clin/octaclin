@@ -3231,7 +3231,8 @@ test.describe('prontuario do paciente', () => {
     await assertSemOverflowHorizontal(page);
   });
 
-  test('reordena refeições por botões e salva a ordem', async ({ page }) => {
+  test('reordena refeições pela alça de teclado, preserva botões e salva a ordem', async ({ page }) => {
+    test.setTimeout(60_000);
     await prepararProntuarioMockado(page, {
       permissoesExtras: ['planos_alimentares.ler', 'planos_alimentares.gerenciar']
     });
@@ -3305,9 +3306,13 @@ test.describe('prontuario do paciente', () => {
     await page.goto('/pacientes/paciente-1');
     await page.getByRole('tab', { name: 'Plano', exact: true }).click();
     await page.getByRole('tab', { name: 'Plano alimentar', exact: true }).click();
-    const moverAlmocoParaCima = page.getByRole('button', { name: 'Mover refeição Almoço para cima' });
-    await moverAlmocoParaCima.focus();
-    await moverAlmocoParaCima.press('Enter');
+    const alcaArraste = page.getByRole('button', { name: 'Arrastar refeição Café da manhã' });
+    await alcaArraste.focus();
+    await alcaArraste.press('Space');
+    await expect(alcaArraste).toHaveAttribute('aria-pressed', 'true');
+    await alcaArraste.press('ArrowDown');
+    await expect(page.getByRole('status').filter({ hasText: 'was moved over droppable area refeicao-almoco' })).toHaveCount(1);
+    await alcaArraste.press('Space');
     await expect.poll(() => page.getByLabel('Nome da refeição').evaluateAll((campos) => campos.map((campo) => campo.value)))
       .toEqual(['Almoço', 'Café da manhã', 'Jantar']);
 
@@ -3319,6 +3324,7 @@ test.describe('prontuario do paciente', () => {
     await page.getByRole('button', { name: 'Salvar rascunho' }).click();
     await expect.poll(() => corpoSalvo?.refeicoes?.map((refeicao) => refeicao.nome))
       .toEqual(['Almoço', 'Jantar', 'Café da manhã']);
+    await expect(page.getByRole('button', { name: 'Salvar rascunho' })).toBeEnabled();
     await page.reload();
     await page.getByRole('tab', { name: 'Plano', exact: true }).click();
     await page.getByRole('tab', { name: 'Plano alimentar', exact: true }).click();

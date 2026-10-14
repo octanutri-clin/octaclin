@@ -4,13 +4,17 @@ Data: 2026-10-14. Base auditada: main `2d2edcfed20457cb21a1d27d2cbfcc21499bab13`
 merge da PR #414/PA01; FND02 integrado pela PR #411.
 
 **Autorização atualizada:** em 2026-10-14 o proprietário autorizou a
-implementação da PA02 após a troca manual para Luna alto. Uma única PR reunirá
-planejamento e implementação. Merge, deploy e alterações externas continuam
-fora do escopo autorizado.
+implementação da PA02 após a troca manual para Luna alto. A PR #415 reuniu planejamento e implementação e já foi mergeada pelo
+proprietário. Ao constatar esse estado, as correções da revisão foram levadas
+à PR Draft #416, pois uma PR mergeada não recebe novas alterações. Merge, deploy
+e alterações externas pelo agente continuam fora do escopo autorizado.
 
 ## Checkout e continuidade
 
-- Branch de implementação: `feat/roadmap-PA02-copy-meals`.
+- Branch ativa de correção: `fix/pa02-copia-revisao-r4`, PR Draft #416.
+- Branch original preservada: `feat/roadmap-PA02-copy-meals`, PR #415 mergeada.
+- Main atual conferida: `50a9590`, merge da PR #415. Seu conteúdo é idêntico
+  ao HEAD inicial revisado `f94ea94` (git diff --quiet sem diferenças).
 - Checkout isolado: `/workspace/octaclin/.worktrees/pos320-pa02-planejamento`.
 - O checkout principal em `774cf34f` e sua alteração em `next-env.d.ts` foram
   preservados. O fetch ali falhou por objeto ausente em ref remoto legado;
@@ -212,7 +216,7 @@ Comandos existentes a executar durante implementação:
 - `pnpm --dir octaclin-web test:planos-alimentares:bff`
 - `pnpm --dir octaclin-web test:proteger-alteracoes-nao-salvas`
 - `pnpm --dir octaclin-web exec playwright test tests/visual/pa02-copia-refeicoes.spec.mjs tests/visual/fase-269-duplicar-plano.spec.mjs --project=desktop-chromium --project=mobile-chromium --reporter=list`
-- `pnpm --dir octaclin-web exec playwright test tests/visual/console-regression.spec.mjs --grep "reordena refeições por arrastar|edita o modelo em cópia isolada" --project=desktop-chromium --project=mobile-chromium --reporter=list`
+- `pnpm --dir octaclin-web exec playwright test tests/visual/console-regression.spec.mjs --grep "reordena refeições pela alça|edita o modelo em cópia isolada" --project=desktop-chromium --project=mobile-chromium --reporter=list`
 - `pnpm --dir octaclin-backend test -- --runInBand src/modulos/planos-alimentares/aplicacao/servico-planos-alimentares.spec.ts src/modulos/planos-alimentares/apresentacao/controlador-planos-alimentares.spec.ts`
 - `pnpm --dir octaclin-web typecheck`, `lint`, `build`; axe no painel/modal
   PA02 em desktop/mobile; diff/secrets; checks da PR no HEAD corrigido.
@@ -231,42 +235,42 @@ no schema existente. Não fazer rollback destrutivo de histórico.
 
 ## Estado atual da implementação
 
-- T01–T03 implementadas nesta worktree: duplicação local profunda, seletor de
-  origem salva paginado, revalidação no momento da colagem, proteção contra
-  resposta tardia/contexto trocado e colagem como nova refeição ou acréscimo.
-- Sem mudanças em backend, banco, migration, contrato público ou dependências.
-- Evidência local: unitários PA02 6/6; BFF existente de planos 26/26; proteção
-  FND02 4/4; serviço/controlador NestJS 56/56; nutrição Web 13/13; typecheck;
-  Playwright desktop/mobile 22/22 (PA02, Fase 269 e regressões selecionadas),
-  mais o cenário de resposta atrasada após trocar o paciente 2/2;
-  lint (0 erros, 65 avisos no repositório); build Web; scanner de secrets e
-  `git diff --check`.
-- O teste legado de ordenação visual passou a validar as setas por teclado,
-  alternativa acessível estável para desktop e mobile. Tentativas sintéticas de
-  arraste em cartões altos variaram no Playwright; o código existente de arraste
-  não foi alterado. PA02 não deve alegar que esse gesto foi validado nesta rodada.
-- Não há prova nova PostgreSQL/RLS específica PA02: nenhuma rota/permissão ou
-  persistência backend foi criada. CI da branch ainda não executado.
+- T01–T03 implementadas: duplicação local profunda, origem salva paginada,
+  revalidação na colagem, respostas tardias descartadas e aplicação não destrutiva.
+- A revisão cruzada por `/root/review_pa02_r4`, sem autoria nas mudanças,
+  encontrou dois P2: falso sucesso em aplicação recusada e corrida colar/salvar.
+  Ambos foram corrigidos com RED/GREEN. Callback propaga erros; a trava síncrona
+  de colagem bloqueia persistência e usa liberação tokenizada idempotente.
+- Navegação SPA entre pacientes, destino removido, limite de 50 e submissão
+  programática com formulário válido têm testes sintéticos específicos.
+- A alça DnD volta a ser exercitada por teclado, além das setas. O teste espera
+  anúncio do destino e conclusão do save antes de reload. Não há prova nova do
+  gesto de ponteiro.
+- Sem mudanças de backend, banco, migrations, contratos públicos ou dependências.
+- Sol médio fez o planejamento; a implementação inicial teve handoff para Luna
+  alto. A revisão cruzada e as correções desta retomada estão registradas com
+  autoria efetiva, sem confundir troca de modelo com revisão humana.
+- Relatório e evidências:
+  [REVISAO_R4_PA02_PR415_2026-10-14.md](../docs/governance/REVISAO_R4_PA02_PR415_2026-10-14.md).
+  Checklist: [todo-pos-320-pa02.md](todo-pos-320-pa02.md).
 
-## Modelos e estado real desta rodada
+## PR e gates
 
-- Sol6.1 médio: análise/contratos e handoff.
-- Luna alto: implementação UI/helpers/testes atualmente realizada.
-- Revisão R4 independente ainda necessária e não simulada por esta execução.
-- PR #415 Draft aberta; sem merge/deploy/migration externa.
-- PASS: leitura da main e confirmação por Git dos merges #411/#414, identificação
-  das referências do catálogo PA02 sem candidata e auditoria dos contratos;
-  implementação e verificações locais listadas acima.
-- SKIPPED: PostgreSQL/RLS específico PA02; nenhum código de backend,
-  autorização ou schema foi modificado.
-- PENDENTE: checks remotos do novo HEAD e revisão R4 independente focada em
-  cópia entre prontuários e trocas de contexto.
-
-## PR e CI remoto
-
-- PR #415: https://github.com/octanutri-clin/octaclin/pull/415 (Draft).
-- O teste visual adicional de resposta atrasada após troca de paciente passou
-  em desktop/mobile e foi enviado no commit `4582469`.
-- No HEAD `4582469`, CodeQL estava queued; OctaClin CI pending; Semgrep,
-  Dependency Review e Trivy in progress na última consulta. A confirmação de
-  aprovação deve ser feita no HEAD final após qualquer commit adicional.
+- PR #415 mergeada: https://github.com/octanutri-clin/octaclin/pull/415.
+- Correções na PR #416 Draft: https://github.com/octanutri-clin/octaclin/pull/416.
+  A necessidade do followup surgiu da constatação do merge da PR original, não
+  de divisão planejada da entrega. O commit corretivo foi cherry-picked sem
+  conflitos sobre main `50a9590`; o digest runtime revisado permaneceu igual.
+- PASS: revisão cruzada das correções de runtime, com digest e limitações no
+  relatório; verificações locais ali registradas.
+- PASS histórico conferido nesta retomada: todos os workflows do HEAD
+  `f94ea94`, inclusive Backend, Web, Governança, Demo local smoke e PR Gate.
+  O CI também executou migrations e RLS em bancos descartáveis.
+- PENDENTE: checks do HEAD que contém as correções. A aprovação do commit
+  anterior não é aprovação desse HEAD; o estado atual é consultado na PR.
+- SKIPPED local: nova prova PostgreSQL/RLS específica PA02. GET e PUT seguem
+  autorizados separadamente, com filtros e locks existentes; não afirmar nova
+  transação única ou proveniência persistida.
+- SKIPPED: scan automatizado da skill de segurança (preflight/auxiliares não
+  disponíveis); revisão cruzada de outro agente foi realizada e documentada.
+- Sem merge, deploy, migration externa ou ativação nesta execução.

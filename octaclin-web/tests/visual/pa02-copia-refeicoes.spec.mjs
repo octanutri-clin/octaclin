@@ -32,7 +32,7 @@ function versao({ id, numero, status, refeicoes, objetivos = 'Objetivo sintétic
   return { id, numero, status, criadoEm: instante, atualizadoEm: instante, objetivos, observacoes: 'Observação sintética de origem', refeicoes };
 }
 
-async function preparar(page, { falharRevalidacaoOrigem = false, alterarVersaoNaColagem = false, planosPaginados = false, atrasarLeituraExterna = false } = {}) {
+async function preparar(page, { falharRevalidacaoOrigem = false, alterarVersaoNaColagem = false, planosPaginados = false, atrasarLeituraExterna = false, atrasarRevalidacaoOrigem = false, duasRefeicoesDestino = false, limiteRefeicoesDestino = false } = {}) {
   let leiturasOrigemExterna = 0;
   let leiturasExternasPendentes = 0;
   let liberarLeituraExterna;
@@ -53,6 +53,14 @@ async function preparar(page, { falharRevalidacaoOrigem = false, alterarVersaoNa
   await page.route((url) => url.pathname === '/api/pacientes', (route) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ itens: [outroPaciente], total: 1 }) }));
 
   const destino = versao({ id: 'pa02-draft-destino', numero: 2, status: 'rascunho', objetivos: 'Objetivo exclusivo do destino', refeicoes: [refeicao('destino-r', 'Almoço atual', 'Arroz sintético', 'Manter esta orientação')] });
+  if (duasRefeicoesDestino) destino.refeicoes.push(refeicao('destino-r2', 'Jantar destino', 'Batata sintética'));
+  if (limiteRefeicoesDestino) {
+    for (let indice = 1; indice < 50; indice += 1) {
+      const item = refeicao(`destino-limite-${indice}`, `Refeição limite ${indice}`, 'Arroz sintético');
+      item.itens[0].substituicoes = [];
+      destino.refeicoes.push(item);
+    }
+  }
   const sourcePublished = versao({ id: 'pa02-publicado-origem', numero: 3, status: 'publicada', refeicoes: [refeicao('origem-pub-r', 'Lanche publicado', 'Banana sintética', 'Orientação publicada')] });
   const sourceDraft = versao({ id: 'pa02-rascunho-origem', numero: 4, status: 'rascunho', refeicoes: [refeicao('origem-draft-r', 'Jantar em rascunho', 'Feijão sintético', 'Orientação do rascunho')] });
   const resumoDestino = { id: 'pa02-plano-destino', pacienteId: paciente.id, profissionalId: 'pa02-profissional', titulo: 'Plano destino', criadoEm: instante, atualizadoEm: instante, draft: { id: destino.id, numero: destino.numero, status: 'rascunho', criadoEm: instante, atualizadoEm: instante }, historicoQuantidade: 1 };
@@ -82,16 +90,17 @@ async function preparar(page, { falharRevalidacaoOrigem = false, alterarVersaoNa
   await page.route((url) => url.pathname === `/api/pacientes/${outroPaciente.id}/planos-alimentares/${resumoDestinoOutro.id}`, (route) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(planoDestinoOutro) }));
   await page.route((url) => url.pathname === `/api/pacientes/${outroPaciente.id}/planos-alimentares/${resumoOrigem.id}/versoes/${sourcePublished.numero}`, async (route) => {
     leiturasOrigemExterna += 1;
-    if (falharRevalidacaoOrigem && leiturasOrigemExterna > 1) {
+    const numeroLeitura = leiturasOrigemExterna;
+    if (falharRevalidacaoOrigem && numeroLeitura > 1) {
       return route.fulfill({ status: 403, contentType: 'application/json', body: JSON.stringify({ message: 'Acesso revogado no caso sintético.' }) });
     }
-    if (atrasarLeituraExterna && leiturasOrigemExterna === 1) {
+    if ((atrasarLeituraExterna && numeroLeitura === 1) || (atrasarRevalidacaoOrigem && numeroLeitura === 2)) {
       leiturasExternasPendentes += 1;
       await new Promise((resolve) => { liberarLeituraExterna = resolve; });
     }
-    const versaoAtual = alterarVersaoNaColagem && leiturasOrigemExterna > 1
+    const versaoAtual = alterarVersaoNaColagem && numeroLeitura > 1
       ? { ...sourcePublished, atualizadoEm: '2026-10-02T12:00:00.000Z' }
-      : atrasarLeituraExterna && leiturasOrigemExterna === 1
+      : atrasarLeituraExterna && numeroLeitura === 1
         ? { ...sourcePublished, refeicoes: [refeicao('externa-obsoleta', 'Origem externa obsoleta', 'Maçã sintética')] }
         : sourcePublished;
     return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(versaoAtual) });
@@ -124,6 +133,61 @@ async function conferirSemOverflow(page) {
 }
 
 test.describe('PA02 - copiar refeições sem substituir o plano de destino', () => {
+  async function selecionarOrigemExterna(page) {
+    const painel = painelCopia(page);
+    await painel.getByLabel('Buscar outro paciente autorizado (opcional)').fill('Outra');
+    await painel.getByRole('button', { name: 'Buscar paciente' }).click();
+    await painel.getByLabel('Paciente de origem').selectOption(outroPaciente.id);
+    await painel.getByLabel('Plano de origem').selectOption('pa02-plano-origem');
+    await painel.getByRole('button', { name: 'Carregar refeições' }).click();
+    await painel.getByLabel('Refeição salva').selectOption({ label: 'Lanche publicado (1 alimentos)' });
+    return painel;
+  }
+
+  test('não anuncia sucesso quando a refeição de destino é removida durante a cópia', async ({ page }) => {
+    const contexto = await preparar(page, { atrasarRevalidacaoOrigem: true, duasRefeicoesDestino: true });
+    const painel = await selecionarOrigemExterna(page);
+    await painel.getByLabel('Acrescentar alimentos a uma refeição').check();
+    await painel.getByLabel('Refeição de destino').selectOption({ label: 'Jantar destino' });
+    await painel.getByRole('button', { name: 'Copiar refeição' }).click();
+    await expect.poll(() => contexto.leiturasExternasPendentes).toBe(1);
+    await page.getByRole('button', { name: 'Remover', exact: true }).nth(1).click();
+    contexto.liberarLeituraExterna();
+    await expect(page.getByRole('alert').filter({ hasText: 'A refeição de destino não está mais disponível.' })).toBeVisible();
+    await expect(painel.getByRole('status')).toHaveCount(0);
+    await expect(painel.getByLabel('Refeição salva')).toBeVisible();
+    await expect(page.getByRole('textbox', { name: 'Nome da refeição' })).toHaveCount(1);
+  });
+
+  test('impede salvar enquanto a revalidação da cópia está pendente', async ({ page }) => {
+    const contexto = await preparar(page, { atrasarRevalidacaoOrigem: true });
+    await page.getByLabel('Revisei os dados da avaliação e confirmo a aplicabilidade da fórmula para este paciente.').check();
+    const painel = await selecionarOrigemExterna(page);
+    await painel.getByRole('button', { name: 'Copiar refeição' }).click();
+    await expect.poll(() => contexto.leiturasExternasPendentes).toBe(1);
+    await expect(page.getByRole('button', { name: 'Salvar rascunho' })).toBeDisabled();
+    await page.getByRole('button', { name: 'Salvar rascunho' }).evaluate((botao) => botao.form.requestSubmit());
+    expect(contexto.entradaSalva).toBeUndefined();
+    contexto.liberarLeituraExterna();
+    await expect(page.getByRole('textbox', { name: 'Nome da refeição' })).toHaveCount(2);
+    await expect(page.getByRole('button', { name: 'Salvar rascunho' })).toBeEnabled();
+    await page.getByLabel('Revisei os dados da avaliação e confirmo a aplicabilidade da fórmula para este paciente.').check();
+    await page.getByRole('button', { name: 'Salvar rascunho' }).click();
+    await expect.poll(() => contexto.entradaSalva?.refeicoes.map((item) => item.nome)).toEqual(['Almoço atual', 'Lanche publicado']);
+  });
+
+  test('recusa uma nova refeição no limite sem anunciar sucesso nem perder a origem', async ({ page }) => {
+    await preparar(page, { limiteRefeicoesDestino: true });
+    const painel = await selecionarOrigemExterna(page);
+    await painel.getByRole('button', { name: 'Copiar refeição' }).click();
+    await expect(painel.getByRole('alert')).toContainText('limite de 50 refeições');
+    await expect(painel.getByRole('status')).toHaveCount(0);
+    await expect(painel.getByLabel('Refeição salva')).toHaveValue('origem-pub-r');
+    await expect(page.getByRole('textbox', { name: 'Nome da refeição' })).toHaveCount(50);
+    await expect(page.getByText('Existem alterações não salvas neste rascunho.')).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Salvar rascunho' })).toBeEnabled();
+  });
+
   test('duplica a refeição local não salva com chaves novas e edição independente', async ({ page }) => {
     await preparar(page);
     const nomes = page.getByRole('textbox', { name: 'Nome da refeição' });
@@ -167,7 +231,12 @@ test.describe('PA02 - copiar refeições sem substituir o plano de destino', () 
     await painel.getByRole('button', { name: 'Carregar refeições' }).click();
     await expect.poll(() => contexto.leiturasExternasPendentes).toBe(1);
 
-    await page.goto(`/pacientes/${outroPaciente.id}?aba=plano_alimentar`);
+    await page.evaluate(() => { window.__pa02NavegacaoSintetica = true; });
+    await page.getByRole('link', { name: 'Voltar', exact: true }).click();
+    await page.getByRole('link', { name: 'Abrir prontuário', exact: true }).click();
+    await page.getByRole('tab', { name: 'Plano', exact: true }).click();
+    await page.getByRole('tab', { name: 'Plano alimentar', exact: true }).click();
+    expect(await page.evaluate(() => window.__pa02NavegacaoSintetica)).toBe(true);
     const painelNovoPaciente = painelCopia(page);
     await expect(painelNovoPaciente.getByLabel('Paciente de origem')).toBeEnabled();
     contexto.liberarLeituraExterna();

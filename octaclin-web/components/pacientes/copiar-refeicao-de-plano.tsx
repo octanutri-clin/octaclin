@@ -44,6 +44,7 @@ interface CopiarRefeicaoDePlanoProps {
   destinoChave: string;
   gerarChave: (prefixo: 'refeicao' | 'alimento') => string;
   aoAplicar: (refeicao: RefeicaoFormularioCopia, destino: DestinoCopia) => void;
+  aoIniciarCopia: () => () => void;
   desabilitado?: boolean;
 }
 
@@ -62,6 +63,7 @@ export function CopiarRefeicaoDePlano({
   destinoChave,
   gerarChave,
   aoAplicar,
+  aoIniciarCopia,
   desabilitado = false
 }: CopiarRefeicaoDePlanoProps) {
   const id = useId();
@@ -70,6 +72,8 @@ export function CopiarRefeicaoDePlano({
   const controladorRef = useRef<AbortController | null>(null);
   const colandoRef = useRef(false);
   const aoAplicarAtualRef = useRef(aoAplicar);
+  const liberarCopiaRef = useRef<(() => void) | null>(null);
+  const destinoHabilitadoRef = useRef(!desabilitado && Boolean(versaoRascunhoDestinoId));
   const [termoPaciente, setTermoPaciente] = useState('');
   const [pacientesEncontrados, setPacientesEncontrados] = useState<PacienteResumo[]>([]);
   const [pacienteOrigemId, setPacienteOrigemId] = useState(pacienteIdAtual);
@@ -90,12 +94,15 @@ export function CopiarRefeicaoDePlano({
   useLayoutEffect(() => {
     destinoAtualRef.current = destinoChave;
     aoAplicarAtualRef.current = aoAplicar;
-  }, [aoAplicar, destinoChave]);
+    destinoHabilitadoRef.current = !desabilitado && Boolean(versaoRascunhoDestinoId);
+  }, [aoAplicar, destinoChave, desabilitado, versaoRascunhoDestinoId]);
 
   useEffect(() => () => {
     sequenciaRef.current += 1;
     controladorRef.current?.abort();
     controladorRef.current = null;
+    liberarCopiaRef.current?.();
+    liberarCopiaRef.current = null;
   }, []);
 
   const carregarPlanos = useCallback(async (pacienteId: string, pagina: number) => {
@@ -225,6 +232,8 @@ export function CopiarRefeicaoDePlano({
     const chaveDestinoCapturada = destinoChave;
     if (!versaoRascunhoDestinoId || desabilitado) return;
     colandoRef.current = true;
+    const liberarCopia = aoIniciarCopia();
+    liberarCopiaRef.current = liberarCopia;
     setOcupado('colando');
     setErro(null);
     setAviso(null);
@@ -240,6 +249,10 @@ export function CopiarRefeicaoDePlano({
         controlador.signal
       );
       if (sequencia !== sequenciaRef.current || controlador.signal.aborted) return;
+      if (!destinoHabilitadoRef.current) {
+        setErro('O plano está em outra operação. Selecione a origem novamente antes de copiar.');
+        return;
+      }
       if (destinoAtualRef.current !== chaveDestinoCapturada) {
         setErro('O plano de destino mudou. Selecione a refeição de origem novamente.');
         return;
@@ -274,6 +287,8 @@ export function CopiarRefeicaoDePlano({
     } finally {
       if (sequencia === sequenciaRef.current) setOcupado(null);
       colandoRef.current = false;
+      liberarCopia();
+      if (liberarCopiaRef.current === liberarCopia) liberarCopiaRef.current = null;
     }
   }
 

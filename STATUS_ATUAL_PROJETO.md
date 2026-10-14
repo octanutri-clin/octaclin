@@ -4,19 +4,17 @@ Atualizado em 2026-10-14.
 
 ## Fase ativa
 
-- **PA02 — implementação na PR Draft #415** na branch
-  `feat/roadmap-PA02-copy-meals`, sobre main `2d2edcf` (#414); FND02/#411 e
-  PA01/#414 integrados. Catálogo pós-320 consultado para este ID: reutilizar
-  código interno, sem biblioteca nova. D01–D03 confirmadas. Já há duplicação
-  local, cópia de origem salva e aplicação não destrutiva no rascunho. Unitários
-  (6/6), BFF (26/26), proteção FND02 (4/4), typecheck, build, lint e Playwright
-  (22/22 no conjunto principal e 2/2 no teste adicional de resposta atrasada)
-  passaram nesta worktree. No SHA `4582469`, CodeQL estava queued, OctaClin CI
-  pending e Semgrep/Dependency Review/Trivy in progress na última consulta.
-  Revisão R4 pendente.
-  Handoff `tasks/plan-pos-320-pa02.md`, checklist
-  `tasks/todo-pos-320-pa02.md`. Sem alteração de backend/schema, migration,
-  merge ou deploy nesta execução.
+- **PA02 — integrada pela PR #415; correções na PR Draft #416**, branch
+  `fix/pa02-copia-revisao-r4`, main `50a9590`. D01–D03
+  confirmadas; catálogo deste ID recomenda código interno. Duplicação local,
+  cópia de versão salva e aplicação não destrutiva implementadas. Revisão
+  cruzada de outro agente encontrou dois P2 de interface, corrigidos com
+  RED/GREEN: falso sucesso e corrida entre colagem e save. Revisão das
+  correções PASS, com autoria/digest e limites em
+  `docs/governance/REVISAO_R4_PA02_PR415_2026-10-14.md`. Todos os workflows de
+  `f94ea94` passaram; as correções exigem CI do novo HEAD. Handoff
+  `tasks/plan-pos-320-pa02.md`, checklist `tasks/todo-pos-320-pa02.md`.
+  Sem backend/schema novo, migration externa, merge ou deploy.
 
 - **Transição pós-Fase 320:** NO-GO nesta rodada para ingestão/uso da TBCA, pois
   a autorização de direitos não está disponível. O catálogo continua com TACO,
