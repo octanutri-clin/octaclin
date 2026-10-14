@@ -25,6 +25,14 @@ com 1.21.0. A troca é somente no ambiente de pesquisa, não no runtime do produ
 5. Rode `python -m unittest discover -s tests -v`, `run_benchmark.py` e
    `run_scale.py` em CPU.
 
+O downloader usa `requests==2.34.2`, valida cada URL antes de solicitá-la e
+aceita somente HTTPS em `huggingface.co` e no host CDN observado
+`us.aws.cdn.hf.co`. Redirecionamentos são verificados manualmente, limitados a
+quatro saltos e interrompidos se excederem o tamanho declarado; o arquivo só é
+promovido ao nome final após a validação de tamanho e SHA-256. Os testes
+`tests/test_fetch_models_security.py` exercitam destinos proibidos, redireção
+aprovada, limite de bytes e falhas de integridade com conteúdo sintético.
+
 Os hashes LFS só ficam confirmados quando a PoC os confere. Os cartões públicos
 declaram MIT e Apache-2.0; ambos os arquivos `LICENSE` consultados retornaram
 404. A avaliação sintética não constitui parecer de direitos nem autoriza uso
