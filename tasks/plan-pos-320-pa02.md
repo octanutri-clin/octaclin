@@ -237,7 +237,8 @@ no schema existente. Não fazer rollback destrutivo de histórico.
 - Sem mudanças em backend, banco, migration, contrato público ou dependências.
 - Evidência local: unitários PA02 6/6; BFF existente de planos 26/26; proteção
   FND02 4/4; serviço/controlador NestJS 56/56; nutrição Web 13/13; typecheck;
-  Playwright desktop/mobile 22/22 (PA02, Fase 269 e regressões selecionadas);
+  Playwright desktop/mobile 22/22 (PA02, Fase 269 e regressões selecionadas),
+  mais o cenário de resposta atrasada após trocar o paciente 2/2;
   lint (0 erros, 65 avisos no repositório); build Web; scanner de secrets e
   `git diff --check`.
 - O teste legado de ordenação visual passou a validar as setas por teclado,
@@ -252,10 +253,20 @@ no schema existente. Não fazer rollback destrutivo de histórico.
 - Sol6.1 médio: análise/contratos e handoff.
 - Luna alto: implementação UI/helpers/testes atualmente realizada.
 - Revisão R4 independente ainda necessária e não simulada por esta execução.
-- PR PA02 não aberta até os gates finais; sem merge/deploy/migration externa.
+- PR #415 Draft aberta; sem merge/deploy/migration externa.
 - PASS: leitura da main e confirmação por Git dos merges #411/#414, identificação
   das referências do catálogo PA02 sem candidata e auditoria dos contratos;
   implementação e verificações locais listadas acima.
-- SKIPPED: CI remoto e PostgreSQL/RLS específico PA02; nenhum código de backend,
+- SKIPPED: PostgreSQL/RLS específico PA02; nenhum código de backend,
   autorização ou schema foi modificado.
-- PENDENTE: revisão R4 independente e criação da PR draft após revisão do diff.
+- PENDENTE: checks remotos do novo HEAD e revisão R4 independente focada em
+  cópia entre prontuários e trocas de contexto.
+
+## PR e CI remoto
+
+- PR #415: https://github.com/octanutri-clin/octaclin/pull/415 (Draft).
+- No commit inicial `fbc5d43`, Dependency Review passou; Semgrep, Trivy,
+  CodeQL e OctaClin CI estavam em execução quando consultados.
+- O teste visual adicional de resposta atrasada após troca de paciente foi
+  executado depois desse commit; os checks deverão ser reconsultados após o
+  push do HEAD atualizado. Não declarar CI verde com base no commit anterior.

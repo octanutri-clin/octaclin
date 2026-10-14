@@ -32,8 +32,10 @@ function versao({ id, numero, status, refeicoes, objetivos = 'Objetivo sintétic
   return { id, numero, status, criadoEm: instante, atualizadoEm: instante, objetivos, observacoes: 'Observação sintética de origem', refeicoes };
 }
 
-async function preparar(page, { falharRevalidacaoOrigem = false, alterarVersaoNaColagem = false, planosPaginados = false } = {}) {
+async function preparar(page, { falharRevalidacaoOrigem = false, alterarVersaoNaColagem = false, planosPaginados = false, atrasarLeituraExterna = false } = {}) {
   let leiturasOrigemExterna = 0;
+  let leiturasExternasPendentes = 0;
+  let liberarLeituraExterna;
   await page.context().addCookies([
     { name: 'octaclin_access_token', value: 'synthetic', domain: 'localhost', path: '/' },
     { name: 'octaclin_refresh_token', value: 'synthetic', domain: 'localhost', path: '/' },
@@ -43,8 +45,10 @@ async function preparar(page, { falharRevalidacaoOrigem = false, alterarVersaoNa
   await page.route('**/api/auth/session', (route) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ autenticado: true, apiUrl: 'http://localhost:3001', tenantSlug: 'pa02-sintetico', email: 'profissional.sintetico@example.test', expiraEm: instante, papel: 'Professional', permissoes, destinoInicial: '/pacientes' }) }));
   await page.route((url) => url.pathname === '/api/profissionais', (route) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ itens: [{ id: 'pa02-profissional', tenantId: 'pa02-tenant-sintetico', nome: 'Profissional Sintético', criadoEm: instante }], total: 1 }) }));
   await page.route((url) => url.pathname === `/api/pacientes/${paciente.id}/prontuario`, (route) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ paciente, resumo: { consultas: 0, formulariosPendentes: 0, respostas: 0, checkinsRapidos: 0, mensagens: 0, evolucoes: 0, tarefasPendentes: 0, indicadoresRecentes: [], leituraClinica: { deltaUltimaAvaliacao: [], deltaDesdeInicio: [], condutasVencendo: [] } }, linhaDoTempo: [] }) }));
+  await page.route((url) => url.pathname === `/api/pacientes/${outroPaciente.id}/prontuario`, (route) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ paciente: outroPaciente, resumo: { consultas: 0, formulariosPendentes: 0, respostas: 0, checkinsRapidos: 0, mensagens: 0, evolucoes: 0, tarefasPendentes: 0, indicadoresRecentes: [], leituraClinica: { deltaUltimaAvaliacao: [], deltaDesdeInicio: [], condutasVencendo: [] } }, linhaDoTempo: [] }) }));
   const avaliacao = { id: 'pa02-avaliacao-sintetica', pacienteId: paciente.id, avaliadaEm: '2026-10-01', protocolo: 'nenhum', medidas: {}, resultado: { protocoloAplicado: 'nenhum', avisos: [] }, metricasCompartilhadasPortal: [], criadoEm: instante };
   await page.route((url) => url.pathname === `/api/pacientes/${paciente.id}/avaliacoes-antropometricas`, (route) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ avaliacoes: [avaliacao], deltaUltimas: [] }) }));
+  await page.route((url) => url.pathname === `/api/pacientes/${outroPaciente.id}/avaliacoes-antropometricas`, (route) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ avaliacoes: [{ ...avaliacao, pacienteId: outroPaciente.id }], deltaUltimas: [] }) }));
   await page.route((url) => url.pathname === '/api/planos-alimentares/modelos' || url.pathname === '/api/planos-alimentares/receitas', (route) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ itens: [], total: 0, pagina: 1, limite: 100 }) }));
   await page.route((url) => url.pathname === '/api/pacientes', (route) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ itens: [outroPaciente], total: 1 }) }));
 
@@ -52,8 +56,10 @@ async function preparar(page, { falharRevalidacaoOrigem = false, alterarVersaoNa
   const sourcePublished = versao({ id: 'pa02-publicado-origem', numero: 3, status: 'publicada', refeicoes: [refeicao('origem-pub-r', 'Lanche publicado', 'Banana sintética', 'Orientação publicada')] });
   const sourceDraft = versao({ id: 'pa02-rascunho-origem', numero: 4, status: 'rascunho', refeicoes: [refeicao('origem-draft-r', 'Jantar em rascunho', 'Feijão sintético', 'Orientação do rascunho')] });
   const resumoDestino = { id: 'pa02-plano-destino', pacienteId: paciente.id, profissionalId: 'pa02-profissional', titulo: 'Plano destino', criadoEm: instante, atualizadoEm: instante, draft: { id: destino.id, numero: destino.numero, status: 'rascunho', criadoEm: instante, atualizadoEm: instante }, historicoQuantidade: 1 };
+  const resumoDestinoOutro = { ...resumoDestino, id: 'pa02-plano-destino-outro', pacienteId: outroPaciente.id, draft: { ...resumoDestino.draft, id: 'pa02-draft-destino-outro' } };
   const resumoOrigem = { id: 'pa02-plano-origem', pacienteId: paciente.id, profissionalId: 'pa02-profissional', titulo: 'Plano origem salvo', criadoEm: instante, atualizadoEm: instante, current: { id: sourcePublished.id, numero: sourcePublished.numero, status: 'publicada', publicadoEm: instante, criadoEm: instante, atualizadoEm: instante }, draft: { id: sourceDraft.id, numero: sourceDraft.numero, status: 'rascunho', criadoEm: instante, atualizadoEm: instante }, historicoQuantidade: 2 };
   const planoDestino = { ...resumoDestino, historico: [], draft: { ...destino, calculo: { metaEnergeticaKcal: 2000, metasMacronutrientes: { carboidratosG: 250, proteinasG: 100, gordurasG: 67 } } } };
+  const planoDestinoOutro = { ...resumoDestinoOutro, historico: [], draft: { ...destino, id: 'pa02-draft-destino-outro', calculo: { metaEnergeticaKcal: 2000, metasMacronutrientes: { carboidratosG: 250, proteinasG: 100, gordurasG: 67 } } } };
 
   await page.route((url) => url.pathname === `/api/pacientes/${paciente.id}/planos-alimentares`, (route) => {
     const url = new URL(route.request().url());
@@ -72,15 +78,22 @@ async function preparar(page, { falharRevalidacaoOrigem = false, alterarVersaoNa
     const versaoAtual = numero === sourcePublished.numero ? sourcePublished : sourceDraft;
     return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(versaoAtual) });
   });
-  await page.route((url) => url.pathname === `/api/pacientes/${outroPaciente.id}/planos-alimentares`, (route) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ itens: [{ ...resumoOrigem, pacienteId: outroPaciente.id }], total: 1, pagina: 1, limite: 25 }) }));
-  await page.route((url) => url.pathname === `/api/pacientes/${outroPaciente.id}/planos-alimentares/${resumoOrigem.id}/versoes/${sourcePublished.numero}`, (route) => {
+  await page.route((url) => url.pathname === `/api/pacientes/${outroPaciente.id}/planos-alimentares`, (route) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ itens: [resumoDestinoOutro, { ...resumoOrigem, pacienteId: outroPaciente.id }], total: 2, pagina: 1, limite: 25 }) }));
+  await page.route((url) => url.pathname === `/api/pacientes/${outroPaciente.id}/planos-alimentares/${resumoDestinoOutro.id}`, (route) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(planoDestinoOutro) }));
+  await page.route((url) => url.pathname === `/api/pacientes/${outroPaciente.id}/planos-alimentares/${resumoOrigem.id}/versoes/${sourcePublished.numero}`, async (route) => {
     leiturasOrigemExterna += 1;
     if (falharRevalidacaoOrigem && leiturasOrigemExterna > 1) {
       return route.fulfill({ status: 403, contentType: 'application/json', body: JSON.stringify({ message: 'Acesso revogado no caso sintético.' }) });
     }
+    if (atrasarLeituraExterna && leiturasOrigemExterna === 1) {
+      leiturasExternasPendentes += 1;
+      await new Promise((resolve) => { liberarLeituraExterna = resolve; });
+    }
     const versaoAtual = alterarVersaoNaColagem && leiturasOrigemExterna > 1
       ? { ...sourcePublished, atualizadoEm: '2026-10-02T12:00:00.000Z' }
-      : sourcePublished;
+      : atrasarLeituraExterna && leiturasOrigemExterna === 1
+        ? { ...sourcePublished, refeicoes: [refeicao('externa-obsoleta', 'Origem externa obsoleta', 'Maçã sintética')] }
+        : sourcePublished;
     return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(versaoAtual) });
   });
   await page.route((url) => url.pathname === `/api/pacientes/${outroPaciente.id}/planos-alimentares/${resumoOrigem.id}/versoes/${sourceDraft.numero}`, (route) => {
@@ -98,7 +111,7 @@ async function preparar(page, { falharRevalidacaoOrigem = false, alterarVersaoNa
   });
 
   await page.goto(`/pacientes/${paciente.id}?aba=plano_alimentar`);
-  return { destino, sourcePublished, sourceDraft, resumoOrigem, resumoDestino, get entradaSalva() { return entradaSalva; }, get leiturasOrigemExterna() { return leiturasOrigemExterna; } };
+  return { destino, sourcePublished, sourceDraft, resumoOrigem, resumoDestino, get entradaSalva() { return entradaSalva; }, get leiturasOrigemExterna() { return leiturasOrigemExterna; }, get leiturasExternasPendentes() { return leiturasExternasPendentes; }, liberarLeituraExterna() { liberarLeituraExterna?.(); } };
 }
 
 function painelCopia(page) {
@@ -142,6 +155,27 @@ test.describe('PA02 - copiar refeições sem substituir o plano de destino', () 
     await expect(painel.getByText('Página 1 de 2')).toBeVisible();
     await expect(painel.getByLabel('Refeição salva')).toHaveCount(0);
     await expect(painel.getByRole('button', { name: 'Copiar refeição' })).toHaveCount(0);
+  });
+
+  test('descarta resposta atrasada da origem anterior após trocar o paciente', async ({ page }) => {
+    const contexto = await preparar(page, { atrasarLeituraExterna: true });
+    const painel = painelCopia(page);
+    await painel.getByLabel('Buscar outro paciente autorizado (opcional)').fill('Outra');
+    await painel.getByRole('button', { name: 'Buscar paciente' }).click();
+    await painel.getByLabel('Paciente de origem').selectOption(outroPaciente.id);
+    await painel.getByLabel('Plano de origem').selectOption('pa02-plano-origem');
+    await painel.getByRole('button', { name: 'Carregar refeições' }).click();
+    await expect.poll(() => contexto.leiturasExternasPendentes).toBe(1);
+
+    await page.goto(`/pacientes/${outroPaciente.id}?aba=plano_alimentar`);
+    const painelNovoPaciente = painelCopia(page);
+    await expect(painelNovoPaciente.getByLabel('Paciente de origem')).toBeEnabled();
+    contexto.liberarLeituraExterna();
+    await painelNovoPaciente.getByLabel('Paciente de origem').selectOption(outroPaciente.id);
+    await painelNovoPaciente.getByLabel('Plano de origem').selectOption('pa02-plano-origem');
+    await painelNovoPaciente.getByRole('button', { name: 'Carregar refeições' }).click();
+    await expect(painelNovoPaciente.getByLabel('Refeição salva')).not.toContainText('Origem externa obsoleta');
+    await expect(painelNovoPaciente.getByLabel('Refeição salva')).toContainText('Lanche publicado');
   });
 
   test('copia uma refeição publicada de outro paciente, revalida a origem e salva só no rascunho de destino', async ({ page }) => {

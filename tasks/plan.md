@@ -2,7 +2,8 @@
 
 Em 2026-10-14 o proprietário autorizou a análise e, após responder D01–D03,
 autorizou a implementação da PA02. Main auditada: `2d2edcf`, merge #414/PA01,
-com FND02/#411 integrado. Implementação em andamento na branch isolada abaixo.
+com FND02/#411 integrado. Implementação está na PR Draft #415; revisão R4 e CI
+permanecem pendentes.
 
 - Contratos, gaps, referências e continuidade:
   [plan-pos-320-pa02.md](plan-pos-320-pa02.md).
@@ -16,9 +17,10 @@ com FND02/#411 integrado. Implementação em andamento na branch isolada abaixo.
 - Implementação disponível nesta branch: duplicação local por refeição,
   seleção paginada de origem salva, revalidação da versão/acesso no momento da
   cópia e colagem como refeição nova ou acréscimo não destrutivo.
-- Evidência parcial da execução em `todo-pos-320-pa02.md`; revisão R4 independente,
-  testes restantes, CI e PR ainda pendentes. Não declarar autorização de uso
-  operacional além da implementação técnica; merge/deploy seguem fora da autorização.
+- Evidências e limitações em `todo-pos-320-pa02.md`; CI remoto está rodando no
+  commit submetido, e a revisão R4 independente segue pendente. A PR permanece
+  Draft. Não declarar autorização de uso operacional além da implementação
+  técnica; merge/deploy seguem fora da autorização.
 - Uma PR PA02 reunirá documentos e código, sem PR documental separada.
 
 ---

@@ -1,7 +1,7 @@
 # PA02 — checklist de execução
 
 Contrato: [plan-pos-320-pa02.md](plan-pos-320-pa02.md).
-Planejamento autorizado em 2026-10-14; implementação ainda não autorizada.
+Implementação autorizada em 2026-10-14; PR #415 aberta como Draft.
 
 ## T00 — base, referências e decisões
 
@@ -38,6 +38,9 @@ Arquivos: seletor de cópia, editor, fixtures/spec visual.
   origem dirty orienta salvar; descartada nunca aceita.
 - [x] Buffer só de referências em memória; desmontagem aborta e invalida
   respostas por geração local; troca de paciente/plano limpa a origem.
+- [x] Playwright com resposta da origem anterior atrasada enquanto o prontuário
+  muda de paciente; desktop/mobile 2/2. A resposta obsoleta não aparece nem
+  substitui a origem carregada no novo contexto.
 - [x] GET autorizado por versão exata ao carregar e a cada colagem, com abort
   e geração local.
 - [x] Rascunho alterado/ID ausente pede nova cópia; não busca por nome/posição.
@@ -80,7 +83,8 @@ desktop/mobile e ausência de overflow; dados sintéticos exclusivamente.
   nenhuma promessa de proveniência/CAS/idempotência atômica inexistente.
 - [x] Typecheck, lint (0 erros; 65 avisos preexistentes), build, secrets e
   `git diff --check` passaram localmente.
-- [ ] CI do HEAD/PR passa. PostgreSQL/RLS: SKIPPED; não houve mudanças de
+- [ ] CI do HEAD atualizado passa. Dependency Review passou no SHA inicial;
+  outros checks estavam em execução. PostgreSQL/RLS: SKIPPED; não houve mudanças de
   backend, autorização ou schema; a evidência local não é prova de banco.
 - [ ] Revisão R4 independente registrada; nenhuma revisão independente foi
   simulada nesta execução.
@@ -88,7 +92,8 @@ desktop/mobile e ausência de overflow; dados sintéticos exclusivamente.
 ## T05 — entrega única e handoff (depende de T04)
 
 - [x] Documentação canônica de status e handoff atualizada com resultados reais.
-- [ ] Uma PR PA02, com decisão de referências, validações e rollback.
+- [x] Uma PR PA02 aberta como Draft (#415), com decisão de referências,
+  validações e rollback.
 - [ ] Sem merge/deploy/migration externa/ativação executados pelo agente.
 - [ ] Avisar/pausar para Sol médio se revisão exigir novo contrato de segurança.
 
@@ -97,9 +102,12 @@ desktop/mobile e ausência de overflow; dados sintéticos exclusivamente.
 PASS: base Git/merges e catálogo PA02; unitários PA02 6/6; BFF planos 26/26;
 NestJS serviço/controlador 56/56; proteção FND02 4/4; nutrição web 13/13;
 typecheck; lint (0 erros, 65 avisos no repo); build Web; Playwright 22/22
-desktop/mobile; scanner de secrets; `git diff --check`.
+desktop/mobile no conjunto anterior e cenário tardio de troca de paciente 2/2;
+scanner de secrets; `git diff --check`.
 `test:security` passou. `test:workflows-seguros`: 7 testes passaram e 1 falhou
 por indisponibilidade do PowerShell neste container, pré-requisito explícito do
 teste de fail-closed do preflight; os testes de injeção nos workflows passaram.
-SKIPPED: PostgreSQL/RLS específico PA02 (sem alteração backend/schema), CI remoto
-e revisão R4 independente. Nenhum merge, deploy ou migration externa executados.
+SKIPPED: PostgreSQL/RLS específico PA02 (sem alteração backend/schema) e revisão
+R4 independente. CI do commit inicial tinha Dependency Review PASS e demais
+checks ainda em execução; validar o HEAD após push. Nenhum merge, deploy ou
+migration externa executados.

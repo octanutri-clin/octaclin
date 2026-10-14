@@ -4,14 +4,16 @@ Atualizado em 2026-10-14.
 
 ## Fase ativa
 
-- **PA02 — implementação autorizada e em andamento** na branch
+- **PA02 — implementação na PR Draft #415** na branch
   `feat/roadmap-PA02-copy-meals`, sobre main `2d2edcf` (#414); FND02/#411 e
   PA01/#414 integrados. Catálogo pós-320 consultado para este ID: reutilizar
   código interno, sem biblioteca nova. D01–D03 confirmadas. Já há duplicação
   local, cópia de origem salva e aplicação não destrutiva no rascunho. Unitários
-  (6/6), BFF (26/26), proteção FND02 (4/4), typecheck e Playwright desktop/mobile
-  (22/22) passaram nesta worktree. Build, lint, gates finais, revisão R4 e PR
-  ainda não concluídos. Handoff `tasks/plan-pos-320-pa02.md`, checklist
+  (6/6), BFF (26/26), proteção FND02 (4/4), typecheck, build, lint e Playwright
+  (22/22 no conjunto principal e 2/2 no teste adicional de resposta atrasada)
+  passaram nesta worktree. Dependency Review passou no SHA inicial; Semgrep,
+  Trivy, CodeQL e OctaClin CI ainda estavam em execução. Revisão R4 pendente.
+  Handoff `tasks/plan-pos-320-pa02.md`, checklist
   `tasks/todo-pos-320-pa02.md`. Sem alteração de backend/schema, migration,
   merge ou deploy nesta execução.
 
