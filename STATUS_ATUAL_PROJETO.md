@@ -4,18 +4,25 @@ Atualizado em 2026-10-14.
 
 ## Fase ativa
 
-- **PA03 — PR #417 Draft; CI pendente**, base main `5b47fb1` (#416), branch
-  `feat/pos320-pa03-subtotais-refeicoes`. Implementação autorizada pelo proprietário;
-  código/testes T01–T04 entregues na [PR #417](https://github.com/octanutri-clin/octaclin/pull/417). Decisões confirmadas:
-  somente editor do profissional, todas as refeições recolhidas inicialmente e
-  indicadores parciais com aviso de dados incompletos. Catálogo PA03 recomenda
-  código interno; não há repositório externo indicado. Handoff
-  `tasks/plan-pos-320-pa03.md`; checklist `tasks/todo-pos-320-pa03.md`.
-  Revisão Sol e revisão cruzada R4 independente concluídas; overflow do
-  arredondamento final corrigido com RED/GREEN. Build e suite visual ampliada
-  48/48, complementos 4/4, unitários/BFF/regressões PASS em Node22/pnpm11.25.
-  Próximo passo: conferir CI do HEAD da PR e resolver qualquer falha antes de merge.
-  Não houve alteração backend/schema, migration, merge, deploy ou ativação.
+- **PA04 — implementação técnica em andamento**, base main `6f0be7d` (#417), branch
+  `feat/pos320-pa04-resumos-macros`, worktree isolada. D01–D03 confirmadas.
+  Escopo inclui projeção de snapshots, listagem paginada e resumos salvos.
+  Após revisão R4 independente, a consulta limita metadados à versão publicada
+  atual e ao rascunho, conta o histórico por agregação tenant-scoped, confirma
+  lista/editor de forma atômica e oculta estado ao trocar paciente. PASS: testes
+  focados backend 44/44, BFF 26/26, typecheck e build Web/backend, Playwright
+  R4 4/4 em desktop/mobile, scanner de secrets e syntax/diff checks. Lint 0
+  erros/10 avisos de hooks existentes. Revisão R4 estática confirmou as
+  correções; relatório `docs/governance/REVISAO_R4_PA04_2026-10-14.md`.
+  PostgreSQL/Testcontainers BLOCKED por ENOSPC no Docker VFS; 64 casos não
+  executaram. PR Draft #418 aberta; CI remoto ainda pendente. Sem
+  migration/ambiente externo. Plano `tasks/plan-pos-320-pa04.md`; checklist
+  `tasks/todo-pos-320-pa04.md`.
+- **PA03 — integrada pela PR #417**, main `6f0be7d`, idêntica ao HEAD aprovado
+  `a013555`. Cinco workflows SUCCESS e dez jobs do CI `38608333870` SUCCESS,
+  inclusive Backend, Web, Demo e PR Gate. Revisão cruzada R4 fechou overflow
+  com RED/GREEN; relatório `docs/governance/REVISAO_R4_PA03_2026-10-14.md`.
+  Não há migration nova; merge/CI não comprovam publicação produtiva.
 - **PA02 — integrada pelas PRs #415/#416**, main `5b47fb1`. Correções de
   falso sucesso e corrida colagem/save revisadas com RED/GREEN. Os cinco
   workflows do HEAD corretivo `38c3596` passaram, incluindo todos os jobs do

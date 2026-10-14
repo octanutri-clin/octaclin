@@ -1,4 +1,40 @@
-# Handoff atual — PA03: implementação validada localmente
+# Handoff atual — PA04: planejamento e gaps
+
+PA03 integrada pela PR #417, main `6f0be7d`; conteúdo idêntico ao HEAD aprovado
+`a013555`. Cinco workflows SUCCESS e dez jobs do CI `38608333870` SUCCESS,
+incluindo Web, Backend, Demo e PR Gate. Não inferir deploy pelo merge.
+
+PA04 — resumo de macros na lista de planos. Worktree isolada, base main
+`6f0be7d`, implementação em `feat/pos320-pa04-resumos-macros`.
+
+- [Plano e gaps](plan-pos-320-pa04.md); [checklist T00–T08](todo-pos-320-pa04.md).
+- D01–D03 confirmadas: ambas as versões separadas, totais dos alimentos
+  previstos salvos e somente console profissional.
+- Referências específicas PA04 recomendam código interno; nenhum repositório
+  externo indicado ou biblioteca nova necessária.
+- Implementado: projeção permitida dos snapshots salvos, duas consultas em lote,
+  trava compartilhada do paciente, resumo de rascunho/publicada e paginação25.
+  Nenhuma migration ou mudança em portal/impressão.
+- PASS local: typecheck e build backend/Web; testes focados backend 44/44; BFF
+  26/26; Playwright R4 4/4 em desktop/mobile; lint focado 0 erros/10 avisos de
+  hooks existentes; secrets, sintaxe e diff checks PASS.
+- PostgreSQL real BLOCKED por `ENOSPC` no Testcontainers. A imagem
+  `timescale/timescaledb-ha:pg15` foi puxada, mas a inicialização esgotou os
+  8,7 GB disponíveis sob Docker VFS; o hook expirou e os 64 casos de integração
+  não executaram. A imagem de teste foi removida após a tentativa. Revisão R4
+  independente estática confirmou as correções sem executar testes; as
+  regressões R4 locais passaram posteriormente.
+- PR Draft #418 aberta para executar os gates em CI; checagens remotas pendentes
+  neste checkpoint. Nenhuma migration, staging, produção, deploy ou ativação.
+- Sem PR/CI. Nenhuma migration, staging, produção, deploy ou ativação.
+
+---
+
+# Handoff histórico — PA03: integrada pela PR #417
+
+Fechamento confirmado em 2026-10-14: merge `6f0be7d`; CI `38608333870`,
+Semgrep, CodeQL, Trivy e Dependency Review SUCCESS. Estado Draft/CI pendente
+abaixo pertence ao handoff anterior e foi superado por este checkpoint.
 
 Base auditada em 2026-10-14: main `5b47fb1`, merge #416. Worktree isolada
 `/workspace/octaclin/.worktrees/pos320-pa03-planejamento`, branch

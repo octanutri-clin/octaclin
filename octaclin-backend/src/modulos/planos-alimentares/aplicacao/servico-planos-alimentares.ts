@@ -37,6 +37,7 @@ import {
   SubstituicaoPlanoAlimentar,
   validarEstruturaPlano
 } from '../dominio/plano-alimentar';
+import { projetarResumoNutricionalPlano, ResumoNutricionalPlano } from '../dominio/resumo-nutricional-plano';
 import { AlimentoComposicaoOrm } from '../infraestrutura/alimento-composicao.orm';
 import { FonteComposicaoAlimentoOrm } from '../infraestrutura/fonte-composicao-alimento.orm';
 import { PlanoAlimentarItemOrm } from '../infraestrutura/plano-alimentar-item.orm';
@@ -132,12 +133,21 @@ export class ServicoPlanosAlimentares {
     const pagina = Math.min(PAGINA_MAXIMA, Math.max(1, Math.trunc(consulta.pagina ?? 1)));
     const limite = Math.min(100, Math.max(1, Math.trunc(consulta.limite ?? 25)));
     return this.executorTenant.executar(tenantId, async (gerenciador) => {
-      await this.garantirPacienteNoEscopo(gerenciador, tenantId, pacienteId, usuario);
+      await this.garantirPacienteNoEscopo(gerenciador, tenantId, pacienteId, usuario, 'pessimistic_read');
       const [planos, total] = await gerenciador.getRepository(PlanoAlimentarOrm).findAndCount({
         where: {
           tenantId,
           pacienteId,
           arquivadoEm: IsNull()
+        },
+        select: {
+          id: true,
+          pacienteId: true,
+          profissionalId: true,
+          tituloCriptografado: true,
+          versaoPublicadaAtualId: true,
+          criadoEm: true,
+          atualizadoEm: true
         },
         // `id` desempata: criado_em usa default now() e empata entre linhas da
         // mesma transacao, o que faria OFFSET repetir ou pular um plano.
@@ -147,13 +157,71 @@ export class ServicoPlanosAlimentares {
       });
       if (!planos.length) return { itens: [], total, pagina, limite };
 
-      const versoes = await gerenciador.getRepository(PlanoAlimentarVersaoOrm).find({
-        where: { tenantId, planoId: In(planos.map((plano) => plano.id)) },
-        order: { numero: 'DESC' }
+      const repositorioVersoes = gerenciador.getRepository(PlanoAlimentarVersaoOrm);
+      const idsPublicadosAtuais = planos
+        .map((plano) => plano.versaoPublicadaAtualId)
+        .filter((id): id is string => Boolean(id));
+      const condicoesVersoes = [
+        ...(idsPublicadosAtuais.length ? [{ tenantId, id: In(idsPublicadosAtuais) }] : []),
+        {
+          tenantId,
+          planoId: In(planos.map((plano) => plano.id)),
+          publicadaEm: IsNull(),
+          descartadaEm: IsNull()
+        }
+      ];
+      const versoes = await repositorioVersoes.find({
+        where: condicoesVersoes,
+        select: {
+          id: true, tenantId: true, planoId: true, numero: true, hashConteudo: true,
+          revisadaEm: true, publicadaEm: true, descartadaEm: true, criadoEm: true, atualizadoEm: true
+        }
       });
+      const contagensHistorico = await gerenciador.query(
+        `SELECT plano_id AS "planoId", COUNT(*)::text AS quantidade
+         FROM plano_alimentar_versoes
+         WHERE tenant_id = $1 AND plano_id = ANY($2::uuid[])
+           AND (publicada_em IS NOT NULL OR descartada_em IS NOT NULL)
+         GROUP BY plano_id`,
+        [tenantId, planos.map((plano) => plano.id)]
+      ) as Array<{ planoId: string; quantidade: string }>;
+      const historicoPorPlano = new Map(contagensHistorico.map((linha) => [linha.planoId, Number(linha.quantidade)]));
+      const versoesPorPlano = new Map<string, PlanoAlimentarVersaoOrm[]>();
+      for (const versao of versoes) {
+        const listaPlano = versoesPorPlano.get(versao.planoId) ?? [];
+        listaPlano.push(versao);
+        versoesPorPlano.set(versao.planoId, listaPlano);
+      }
+      const versoesRelevantes: PlanoAlimentarVersaoOrm[] = [];
+      for (const plano of planos) {
+        const doPlano = versoesPorPlano.get(plano.id) ?? [];
+        const atual = doPlano.find((versao) => versao.id === plano.versaoPublicadaAtualId);
+        const rascunho = doPlano.find((versao) => !versao.publicadaEm && !versao.descartadaEm);
+        if (atual) versoesRelevantes.push(atual);
+        if (rascunho && rascunho.id !== atual?.id) versoesRelevantes.push(rascunho);
+      }
+      const idsResumo = [...new Set(versoesRelevantes.map((versao) => versao.id))];
+      const snapshots = idsResumo.length
+        ? await repositorioVersoes.find({
+            where: { tenantId, id: In(idsResumo) },
+            select: { id: true, totaisSnapshotCriptografado: true }
+          })
+        : [];
+      const resumoPorVersao = new Map<string, ResumoNutricionalPlano>();
+      for (const snapshot of snapshots) {
+        try {
+          resumoPorVersao.set(snapshot.id, projetarResumoNutricionalPlano(
+            snapshot.totaisSnapshotCriptografado
+              ? this.lerJsonCriptografado<unknown>(snapshot.totaisSnapshotCriptografado)
+              : undefined
+          ));
+        } catch {
+          resumoPorVersao.set(snapshot.id, projetarResumoNutricionalPlano(undefined, true));
+        }
+      }
       return {
         itens: planos.map((plano) =>
-          this.montarResumoPlano(plano, versoes.filter((versao) => versao.planoId === plano.id))
+          this.montarResumoPlano(plano, versoesPorPlano.get(plano.id) ?? [], resumoPorVersao, historicoPorPlano.get(plano.id) ?? 0)
         ),
         total,
         pagina,
@@ -842,7 +910,7 @@ export class ServicoPlanosAlimentares {
     tenantId: string,
     pacienteId: string,
     usuario: UsuarioAutenticado,
-    bloquear = false
+    bloquear: boolean | 'pessimistic_read' = false
   ): Promise<PacienteOrm> {
     let profissionalId: string | undefined;
     if (usuario.papel === 'Professional') {
@@ -855,7 +923,7 @@ export class ServicoPlanosAlimentares {
         arquivadoEm: IsNull(),
         ...(usuario.papel === 'Professional' ? { profissionalResponsavelId: profissionalId } : {})
       },
-      ...(bloquear ? { lock: { mode: 'pessimistic_write' as const } } : {})
+      ...(bloquear ? { lock: { mode: bloquear === 'pessimistic_read' ? 'pessimistic_read' as const : 'pessimistic_write' as const } } : {})
     });
     if (!paciente) throw new NotFoundException('Paciente nao encontrado.');
     if (!paciente.profissionalResponsavelId) {
@@ -1348,8 +1416,16 @@ export class ServicoPlanosAlimentares {
     }
   }
 
-  private montarResumoPlano(plano: PlanoAlimentarOrm, versoes: PlanoAlimentarVersaoOrm[]) {
-    const resumos = versoes.map((versao) => this.montarResumoVersao(versao));
+  private montarResumoPlano(
+    plano: PlanoAlimentarOrm,
+    versoes: PlanoAlimentarVersaoOrm[],
+    resumoPorVersao: Map<string, ResumoNutricionalPlano>,
+    historicoQuantidade: number
+  ) {
+    const resumos = versoes.map((versao) => ({
+      ...this.montarResumoVersao(versao),
+      resumoNutricional: resumoPorVersao.get(versao.id) ?? projetarResumoNutricionalPlano(undefined)
+    }));
     return {
       id: plano.id,
       pacienteId: plano.pacienteId,
@@ -1359,7 +1435,7 @@ export class ServicoPlanosAlimentares {
       atualizadoEm: plano.atualizadoEm,
       current: resumos.find((versao) => versao.id === plano.versaoPublicadaAtualId),
       draft: resumos.find((versao) => versao.status === 'rascunho'),
-      historicoQuantidade: resumos.filter((versao) => versao.status !== 'rascunho').length
+      historicoQuantidade
     };
   }
 

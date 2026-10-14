@@ -4628,18 +4628,29 @@ auditoria estão ordenados na seção 15 de
   `docs/governance/REVISAO_R4_PA02_PR415_2026-10-14.md`. Cinco workflows do HEAD
   corretivo `38c3596` SUCCESS; todos os jobs do CI `38583138559` SUCCESS.
   Handoff `tasks/plan-pos-320-pa02.md`; sem migration nova.
-- [ ] PA03 — planejamento em `5b47fb1`; implementação autorizada e T01–T04
-  desenvolvidos em worktree isolado `feat/pos320-pa03-subtotais-refeicoes`. Somente
-  editor do profissional; todas recolhidas inicialmente; subtotais parciais e
-  aviso. Código sem dependências externas, API ou migration. Unit/BFF/visual
-  dirigidos, lint e build tiveram PASS local; revisão independente R4 fechou um
-  P2 com RED/GREEN. Build final PASS; visual 48/48 + complementos 4/4 no build
-  local. PR #417 Draft aberta; CI do HEAD pendente. Ver `tasks/plan-pos-320-pa03.md` e
-  `tasks/todo-pos-320-pa03.md`. Sem merge, deploy ou ativação.
+- [x] PA03 — integrada pela PR #417, main `6f0be7d`, conteúdo idêntico ao HEAD
+  aprovado a013555. Cabeçalhos/subtotais parciais e recolhimento no editor;
+  revisão R4 corrigiu overflow RED/GREEN. Cinco workflows e dez jobs do CI
+  38608333870 SUCCESS. Sem nova API/schema/migration; relatório
+  `docs/governance/REVISAO_R4_PA03_2026-10-14.md` e checklist
+  `tasks/todo-pos-320-pa03.md`. Não inferir publicação pelo merge.
+- [~] PA04 — implementação técnica em andamento em `feat/pos320-pa04-resumos-macros`,
+  base main `6f0be7d`. D01–D03 confirmadas. Resumos por versão e paginação no
+  console; revisão R4 levou a limitar metadados à versão publicada atual + draft,
+  contar histórico por agregação tenant-scoped, confirmar lista/editor de forma
+  atômica e falhar fechado na troca de paciente. PASS: backend focado 44/44, BFF
+  26/26, typecheck e build Web/backend, Playwright R4 4/4 desktop/mobile,
+  secrets/syntax/diff checks; lint 0 erros/10 avisos de hooks existentes.
+  Revisão R4 estática confirmou correções sem executar testes; Playwright local
+  posterior passou (relatório `docs/governance/REVISAO_R4_PA04_2026-10-14.md`).
+  PostgreSQL/Testcontainers BLOCKED por ENOSPC no Docker VFS; 64 casos não
+  executaram. PR Draft #418 aberta; CI remoto pendente. Sem migration ou mudanças
+  externas; plano e checklist em `tasks/plan-pos-320-pa04.md` e
+  `tasks/todo-pos-320-pa04.md`.
 
-Merges e checks de #416 conferidos em 2026-10-14; nenhuma aprovação operacional
-ou publicação em produção é inferida. A implementação PA03 segue em validação;
-testes locais não substituem CI do HEAD ou revisão R4 independente.
+Merge e checks de #417 conferidos em 2026-10-14; não inferir publicação em
+produção. PA04 ainda não está pronto para PR até executar PostgreSQL real e CI
+remoto. Playwright atualizado e builds locais passaram.
 
 O escopo, dependências, critérios de aceite, limites e gates destas fases estão
 em `docs/product/ROADMAP_POS_AUDITORIA_FASES_302_320.md`. Fases condicionais
