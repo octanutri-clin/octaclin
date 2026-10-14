@@ -4623,15 +4623,14 @@ auditoria estão ordenados na seção 15 de
 - [x] PA01 — integrada pela PR #414, main `2d2edcf`; arraste de refeições
   com setas/teclado e salvamento existentes. Sem migration.
 - [ ] PA02 — implementação entregue em Draft na PR #415, branch
-  `feat/roadmap-PA02-copy-meals`. D01–D03 confirmadas; código interno, sem
-  biblioteca nova. Duplicação local e cópia salva com aplicação não destrutiva
-  já implementadas. Unitários 6/6, BFF 26/26, proteção FND02 4/4, typecheck e
-  Playwright 22/22 no conjunto principal e 2/2 no teste de resposta atrasada
-  após troca de paciente passaram localmente. Build/lint e demais gates locais
-  passaram. No SHA `4582469`, CodeQL estava queued, OctaClin CI pending e
-  Semgrep/Dependency Review/Trivy in progress na última consulta. Revisão R4
-  independente pendente. Nenhuma
-  migration, merge ou deploy. Handoff `tasks/plan-pos-320-pa02.md`.
+  `feat/roadmap-PA02-copy-meals`. D01–D03 confirmadas; código interno.
+  Cópia profunda, origem salva revalidada e aplicação não destrutiva. Revisão
+  cruzada sem autoria nas mudanças fechou dois P2 com RED/GREEN; relatório
+  `docs/governance/REVISAO_R4_PA02_PR415_2026-10-14.md`. Navegação SPA, destino
+  removido, limite de 50, bloqueio de persistência e alça DnD por teclado
+  cobertos. CI de `f94ea94` aprovado; exigir checks do HEAD corrigido antes de
+  integrar. Sem nova migration, merge ou deploy. Handoff
+  `tasks/plan-pos-320-pa02.md`.
 
 Os merges acima foram conferidos por Git e os checks da PR #415 foram consultados
 em 2026-10-14; nenhuma aprovação operacional é inferida.
