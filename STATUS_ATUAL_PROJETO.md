@@ -4,6 +4,15 @@ Atualizado em 2026-10-14.
 
 ## Fase ativa
 
+- **PA02 — planejamento/análise autorizados**, base main `2d2edcf` conferida
+  em 2026-10-14. FND02/#411 e PA01/#414 integrados; arraste e setas permanecem
+  baseline. PA02 tem gaps de duplicação/cópia/colagem por refeição. Catálogo
+  pós-320 consultado: recomenda reutilizar domínio/primitives, sem nova
+  biblioteca. D01–D03 aguardam resposta; implementação e PR PA02 não iniciadas.
+  Handoff `tasks/plan-pos-320-pa02.md`, checklist `tasks/todo-pos-320-pa02.md`.
+  Integração em main não comprova deploy ou banco; esta análise não consultou
+  CI/ambientes externos nem executou testes de implementação PA02.
+
 - **Transição pós-Fase 320:** NO-GO nesta rodada para ingestão/uso da TBCA, pois
   a autorização de direitos não está disponível. O catálogo continua com TACO,
   USDA e IBGE; nenhum dado TBCA foi importado. O handoff formal e o início da

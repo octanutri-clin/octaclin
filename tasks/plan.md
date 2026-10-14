@@ -1,4 +1,24 @@
-# Handoff atual — Fase 320 encerrada; Onda 0/FND02 iniciada
+# Handoff atual — PA02: análise de gaps
+
+Em 2026-10-14 o proprietário autorizou a análise da PA02, incluindo consulta
+às referências preparadas em `docs/pos-320`. Main auditada: `2d2edcf`,
+merge #414/PA01, com FND02/#411 integrado. Nenhuma implementação PA02 iniciada.
+
+- Contratos, gaps, referências e continuidade:
+  [plan-pos-320-pa02.md](plan-pos-320-pa02.md).
+- T00–T05 e checkpoints:
+  [todo-pos-320-pa02.md](todo-pos-320-pa02.md).
+- Branch `docs/pos320-pa02-handoff`, checkout
+  `/workspace/octaclin/.worktrees/pos320-pa02-planejamento`.
+- Catálogo/mapa e JSON78 conferidos: PA02 recomenda código interno, sem
+  biblioteca nova. Respostas D01–D03 ainda pendentes; não presumir autorização.
+- Luna alto pode implementar após fechamento das decisões e autorização;
+  avisar/pausar para troca manual. Revisão R4/contrato novo pode exigir Sol médio.
+- Uma futura PR PA02 reúne docs/código; não abrir PR documental separada.
+
+---
+
+# Handoff histórico — Fase 320 encerrada; Onda 0/FND02 iniciada
 
 Em 2026-10-14, por autorização do proprietário, a Fase 320 foi registrada como
 `NO-GO` nesta rodada para ingestão/uso da TBCA. O catálogo TACO/USDA/IBGE foi

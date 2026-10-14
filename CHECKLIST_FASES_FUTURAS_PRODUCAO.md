@@ -4616,6 +4616,19 @@ auditoria estão ordenados na seção 15 de
   TACO/USDA/IBGE. Reabrir somente após autorização escrita e revisão de direitos.
   Handoff formal e primeira atividade pós-320 (FND02/Onda 0) reunidos nesta PR.
 
+### Ondas pós-320 — reconciliação de 2026-10-14
+
+- [x] FND02 — integrada pela PR #411; primitive compartilhada de proteção
+  contra saída com alterações não salvas.
+- [x] PA01 — integrada pela PR #414, main `2d2edcf`; arraste de refeições
+  com setas/teclado e salvamento existentes. Sem migration.
+- [ ] PA02 — análise autorizada, gaps residuais confirmados; decisões D01–D03
+  pendentes. Handoff `tasks/plan-pos-320-pa02.md`; sem runtime/PR nesta rodada.
+  Catálogo consultado, sem biblioteca nova recomendada para este ID.
+
+Os merges acima foram conferidos por Git. CI e operação externa não foram
+reconsultados nesta análise; nenhuma aprovação operacional é inferida.
+
 O escopo, dependências, critérios de aceite, limites e gates destas fases estão
 em `docs/product/ROADMAP_POS_AUDITORIA_FASES_302_320.md`. Fases condicionais
 podem terminar em NO-GO documentado após a decisão correspondente; a ordem
