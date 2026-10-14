@@ -4634,23 +4634,19 @@ auditoria estão ordenados na seção 15 de
   38608333870 SUCCESS. Sem nova API/schema/migration; relatório
   `docs/governance/REVISAO_R4_PA03_2026-10-14.md` e checklist
   `tasks/todo-pos-320-pa03.md`. Não inferir publicação pelo merge.
-- [~] PA04 — implementação técnica em andamento em `feat/pos320-pa04-resumos-macros`,
-  base main `6f0be7d`. D01–D03 confirmadas. Resumos por versão e paginação no
-  console; revisão R4 levou a limitar metadados à versão publicada atual + draft,
-  contar histórico por agregação tenant-scoped, confirmar lista/editor de forma
-  atômica e falhar fechado na troca de paciente. PASS: backend focado 44/44, BFF
-  26/26, typecheck e build Web/backend, Playwright R4 4/4 desktop/mobile,
-  secrets/syntax/diff checks; lint 0 erros/10 avisos de hooks existentes.
-  Revisão R4 estática confirmou correções sem executar testes; Playwright local
-  posterior passou (relatório `docs/governance/REVISAO_R4_PA04_2026-10-14.md`).
-  PostgreSQL/Testcontainers BLOCKED por ENOSPC no Docker VFS; 64 casos não
-  executaram. PR Draft #418 aberta; CI remoto pendente. Sem migration ou mudanças
-  externas; plano e checklist em `tasks/plan-pos-320-pa04.md` e
-  `tasks/todo-pos-320-pa04.md`.
+- [x] PA04 — integrada pela PR #418, main `64f54b88`, conteúdo idêntico ao
+  HEAD aprovado `37d7979`. Checks aplicáveis PASS no CI `38625821164`, incluindo
+  PostgreSQL/RLS descartável, Backend, Web, Demo e PR Gate; scanners PASS.
+  SBOM provenance SKIPPED. Falha PG local por ENOSPC preservada no histórico,
+  prova CI fechou o gate. Sem migration; merge não comprova deploy.
+  Plano/checklist `tasks/plan-pos-320-pa04.md`/`tasks/todo-pos-320-pa04.md`.
+- [~] PA05 — planejamento e análise de gaps concluídos; D01–D03 confirmadas.
+  Configurações separadas profissional/paciente, por versão, recolhimento de
+  alternativas liberadas. R014/R041 consultados, sem dependência nova proposta.
+  Implementação ainda não autorizada; risco R4 por persistência/projeção.
+  Plano/checklist `tasks/plan-pos-320-pa05.md`/`tasks/todo-pos-320-pa05.md`.
 
-Merge e checks de #417 conferidos em 2026-10-14; não inferir publicação em
-produção. PA04 ainda não está pronto para PR até executar PostgreSQL real e CI
-remoto. Playwright atualizado e builds locais passaram.
+Merge/checks de #418 conferidos em 2026-10-14. Não inferir estado de produção.
 
 O escopo, dependências, critérios de aceite, limites e gates destas fases estão
 em `docs/product/ROADMAP_POS_AUDITORIA_FASES_302_320.md`. Fases condicionais

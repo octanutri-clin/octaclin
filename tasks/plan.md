@@ -1,4 +1,30 @@
-# Handoff atual — PA04: planejamento e gaps
+# Handoff atual — PA05: planejamento consolidado
+
+PA04 integrada pela PR #418, main `64f54b88`, conteúdo idêntico ao HEAD aprovado
+`37d7979`. Checks aplicáveis PASS (CI `38625821164`, incluindo Backend, banco
+PostgreSQL/RLS descartável, Web, Demo e PR Gate); SBOM provenance SKIPPED.
+Falha PostgreSQL local por ENOSPC permanece como fato histórico, superada como
+gate de integração pela prova CI. Merge não comprova deploy.
+
+Planejamento PA05 em `docs/pos320-pa05-planejamento`, worktree
+`/workspace/octaclin/.worktrees/pos320-pa05-planejamento`. Implementação não
+iniciada. A alteração next-env.d.ts e os demais trabalhos foram preservados.
+
+- [Plano/gaps/contratos](plan-pos-320-pa05.md); [T00–T09](todo-pos-320-pa05.md).
+- D01–D03 confirmadas: conjuntos profissional/paciente; por versão para todas
+  as refeições; substituições recolhidas mantendo acesso às liberadas.
+- R014 React Hook Form/R041 Storybook consultados por tag/commit, MIT conferida;
+  usar referências, sem instalação ou migração de framework nesta fase.
+- Gaps centrais: coluna cifrada aditiva, CAS condicionado ao payload novo,
+  inclusão no hash, clone/versionamento, projeção autorizada e PDF paciente.
+- Sol6.1 médio para backend/R4; Luna alto para UI isolada após checkpoint B;
+  avisar e pausar antes da troca manual. Uma PR futura reúne plano e código.
+- Próxima ação: obter autorização de implementação e iniciar RED em T01.
+  Sem migrations externas, deploy ou ativação nesta etapa documental.
+
+---
+
+# Handoff histórico — PA04: checkpoint anterior ao merge
 
 PA03 integrada pela PR #417, main `6f0be7d`; conteúdo idêntico ao HEAD aprovado
 `a013555`. Cinco workflows SUCCESS e dez jobs do CI `38608333870` SUCCESS,

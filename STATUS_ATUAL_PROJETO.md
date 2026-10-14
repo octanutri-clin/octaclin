@@ -4,20 +4,20 @@ Atualizado em 2026-10-14.
 
 ## Fase ativa
 
-- **PA04 — implementação técnica em andamento**, base main `6f0be7d` (#417), branch
-  `feat/pos320-pa04-resumos-macros`, worktree isolada. D01–D03 confirmadas.
-  Escopo inclui projeção de snapshots, listagem paginada e resumos salvos.
-  Após revisão R4 independente, a consulta limita metadados à versão publicada
-  atual e ao rascunho, conta o histórico por agregação tenant-scoped, confirma
-  lista/editor de forma atômica e oculta estado ao trocar paciente. PASS: testes
-  focados backend 44/44, BFF 26/26, typecheck e build Web/backend, Playwright
-  R4 4/4 em desktop/mobile, scanner de secrets e syntax/diff checks. Lint 0
-  erros/10 avisos de hooks existentes. Revisão R4 estática confirmou as
-  correções; relatório `docs/governance/REVISAO_R4_PA04_2026-10-14.md`.
-  PostgreSQL/Testcontainers BLOCKED por ENOSPC no Docker VFS; 64 casos não
-  executaram. PR Draft #418 aberta; CI remoto ainda pendente. Sem
-  migration/ambiente externo. Plano `tasks/plan-pos-320-pa04.md`; checklist
-  `tasks/todo-pos-320-pa04.md`.
+- **PA05 — planejamento consolidado**, base main `64f54b88` (#418), worktree
+  isolada `pos320-pa05-planejamento`. D01–D03 confirmadas: apresentação
+  profissional/paciente, snapshot por versão e substituições recolhidas com
+  acesso às liberadas. R014/R041 consultados e MIT verificada nas revisões
+  fixadas; sem nova dependência. R4: persistência cifrada, CAS, hash/publicação,
+  projeção e PDF. Implementação aguarda autorização; plano/checklist em
+  `tasks/plan-pos-320-pa05.md` e `tasks/todo-pos-320-pa05.md`.
+- **PA04 — integrada pela PR #418**, main `64f54b88`, árvore idêntica ao HEAD
+  aprovado `37d7979`. CI `38625821164` e checks aplicáveis PASS: Backend,
+  PostgreSQL/RLS descartável, Web, Demo e PR Gate; scanners PASS. SBOM
+  provenance SKIPPED conforme workflow. PostgreSQL local não executou os 64
+  casos por ENOSPC; a prova CI encerrou o gate sem converter a falha local em
+  PASS. Revisão R4 estática em `docs/governance/REVISAO_R4_PA04_2026-10-14.md`.
+  Sem migration nova; merge/CI não comprovam publicação produtiva.
 - **PA03 — integrada pela PR #417**, main `6f0be7d`, idêntica ao HEAD aprovado
   `a013555`. Cinco workflows SUCCESS e dez jobs do CI `38608333870` SUCCESS,
   inclusive Backend, Web, Demo e PR Gate. Revisão cruzada R4 fechou overflow
