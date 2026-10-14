@@ -7,6 +7,9 @@ Base auditada: main `5b47fb128e27dff0d72d9f5f0929c0ec0218a671`, merge #416.
 Branch: `feat/pos320-pa03-subtotais-refeicoes`. Checkout isolado:
 `/workspace/octaclin/.worktrees/pos320-pa03-planejamento`.
 A worktree PA02 e seus commits foram preservados.
+PR única: [#417](https://github.com/octanutri-clin/octaclin/pull/417), Draft.
+Commit de implementação: `fa038d8`; conferir checks do HEAD após qualquer
+atualização documental, sem reutilizar green de commit anterior.
 
 ## Dependências e referências consultadas
 

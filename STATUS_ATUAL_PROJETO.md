@@ -4,9 +4,9 @@ Atualizado em 2026-10-14.
 
 ## Fase ativa
 
-- **PA03 — implementação validada localmente; PR em preparação**, base main `5b47fb1` (#416), branch
+- **PA03 — PR #417 Draft; CI pendente**, base main `5b47fb1` (#416), branch
   `feat/pos320-pa03-subtotais-refeicoes`. Implementação autorizada pelo proprietário;
-  código/testes T01–T04 estão na worktree, ainda sem PR. Decisões confirmadas:
+  código/testes T01–T04 entregues na [PR #417](https://github.com/octanutri-clin/octaclin/pull/417). Decisões confirmadas:
   somente editor do profissional, todas as refeições recolhidas inicialmente e
   indicadores parciais com aviso de dados incompletos. Catálogo PA03 recomenda
   código interno; não há repositório externo indicado. Handoff
@@ -14,7 +14,7 @@ Atualizado em 2026-10-14.
   Revisão Sol e revisão cruzada R4 independente concluídas; overflow do
   arredondamento final corrigido com RED/GREEN. Build e suite visual ampliada
   48/48, complementos 4/4, unitários/BFF/regressões PASS em Node22/pnpm11.25.
-  Próximo passo: abrir a PR única e conferir CI do HEAD.
+  Próximo passo: conferir CI do HEAD da PR e resolver qualquer falha antes de merge.
   Não houve alteração backend/schema, migration, merge, deploy ou ativação.
 - **PA02 — integrada pelas PRs #415/#416**, main `5b47fb1`. Correções de
   falso sucesso e corrida colagem/save revisadas com RED/GREEN. Os cinco

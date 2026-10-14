@@ -4634,7 +4634,7 @@ auditoria estão ordenados na seção 15 de
   aviso. Código sem dependências externas, API ou migration. Unit/BFF/visual
   dirigidos, lint e build tiveram PASS local; revisão independente R4 fechou um
   P2 com RED/GREEN. Build final PASS; visual 48/48 + complementos 4/4 no build
-  local. PR/CI do HEAD pendentes. Ver `tasks/plan-pos-320-pa03.md` e
+  local. PR #417 Draft aberta; CI do HEAD pendente. Ver `tasks/plan-pos-320-pa03.md` e
   `tasks/todo-pos-320-pa03.md`. Sem merge, deploy ou ativação.
 
 Merges e checks de #416 conferidos em 2026-10-14; nenhuma aprovação operacional

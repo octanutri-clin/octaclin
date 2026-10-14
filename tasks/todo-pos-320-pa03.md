@@ -80,7 +80,7 @@ Checkpoint: GREEN sem console not focusable, PUT inválido ou foco invisível.
 - [x] Secrets e diff check final PASS; somente fixtures sintéticas. Repetir
   antes de cada push adicional.
 - [ ] CI do HEAD: Web, Backend conforme impacto, Demo, Governança, PR Gate/scanners.
-  Ainda não há PR/HEAD remoto; nenhum desses gates foi inferido dos comandos locais.
+  PR #417 Draft; checks do HEAD pendentes, sem inferir aprovação dos comandos locais.
 - [x] Revisão cruzada R4 independente: cálculo, missing, foco/required e PA02 lock.
   FAIL inicial/P2 de overflow final; correção RED/GREEN 19/19; revisor confirmou
   PASS e digest runtime em `docs/governance/REVISAO_R4_PA03_2026-10-14.md`.
@@ -88,8 +88,8 @@ Checkpoint: GREEN sem console not focusable, PUT inválido ou foco invisível.
 
 ## T06 — entrega (depende de T05)
 
-- [ ] Uma PR PA03 reúne planejamento e código; nenhuma PR documental separada.
-- [ ] Status/checklist e handoff reconciliados com código e CI do HEAD.
+- [x] Uma PR PA03 reúne planejamento e código: #417 Draft; nenhuma PR documental separada.
+- [x] Status/checklist e handoff reconciliados com código e CI explicitamente pendente.
 - [x] Rollback documentado preserva histórico; nenhuma migration externa/merge/deploy/ativação.
 - [x] Pausa/troca manual para revisão Sol executada; proprietário autorizou continuar.
 
@@ -105,7 +105,7 @@ PASS adicional em Node 22.21.1/pnpm 11.25.0: subtotal 19/19, cópia 6/6,
 BFF 26/26, FND02 4/4, backend nutricional 21/21, typecheck e lint focado
 (0 erros, 3 avisos existentes); revisão cruzada independente do runtime PASS.
 PASS final: build Web e suites visuais 48/48 + 4/4 sobre build local, todos em
-Node22/pnpm11.25. PENDING: PR única e CI do HEAD PA03.
+Node22/pnpm11.25. PR #417 Draft aberta; PENDING: CI do HEAD PA03.
 SKIPPED/NA: PostgreSQL real (nenhum contrato ou schema
 backend mudou), migration, staging, produção, deploy e ativação. Não inferir estes
 gates a partir de build/browser.

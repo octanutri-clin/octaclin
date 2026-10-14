@@ -4,7 +4,8 @@ Base auditada em 2026-10-14: main `5b47fb1`, merge #416. Worktree isolada
 `/workspace/octaclin/.worktrees/pos320-pa03-planejamento`, branch
 `feat/pos320-pa03-subtotais-refeicoes`. O proprietário autorizou implementação em
 2026-10-14; código e testes locais validados, incluindo build e visual 48/48
-mais complementos 4/4. PR/CI do HEAD pendentes. Sem migration/backend.
+mais complementos 4/4. PR [#417](https://github.com/octanutri-clin/octaclin/pull/417)
+Draft aberta; CI do HEAD pendente. Sem migration/backend.
 
 - Contratos, gaps G01–G07 e arquivos:
   [plan-pos-320-pa03.md](plan-pos-320-pa03.md).
