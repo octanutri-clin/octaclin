@@ -1,7 +1,8 @@
 # PA02 — checklist de execução
 
 Contrato: [plan-pos-320-pa02.md](plan-pos-320-pa02.md).
-Implementação autorizada em 2026-10-14; PR #415 aberta como Draft.
+Implementação autorizada em 2026-10-14; PR #415 mergeada pelo proprietário.
+Correções de revisão na PR Draft #416, branch `fix/pa02-copia-revisao-r4`.
 
 ## T00 — base, referências e decisões
 
@@ -95,8 +96,9 @@ desktop/mobile e ausência de overflow; dados sintéticos exclusivamente.
 ## T05 — entrega única e handoff (depende de T04)
 
 - [x] Documentação canônica de status e handoff atualizada com resultados reais.
-- [x] Uma PR PA02 aberta como Draft (#415), com decisão de referências,
-  validações e rollback.
+- [x] PA02 integrada na PR #415. Correções da revisão em Draft #416 porque o
+  merge da original já havia ocorrido; digest revisado preservado após
+  cherry-pick sobre main `50a9590`. Sem dividir a implementação original.
 - [x] Sem merge/deploy/migration externa/ativação executados pelo agente.
 - [x] Correções de revisão mantêm contratos de autorização/persistência
   existentes; nova coordenação apenas na interface.

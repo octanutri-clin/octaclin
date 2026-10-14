@@ -4,8 +4,8 @@ Atualizado em 2026-10-14.
 
 ## Fase ativa
 
-- **PA02 — implementação na PR Draft #415**, branch
-  `feat/roadmap-PA02-copy-meals`, base main `2d2edcf` (#414). D01–D03
+- **PA02 — integrada pela PR #415; correções na PR Draft #416**, branch
+  `fix/pa02-copia-revisao-r4`, main `50a9590`. D01–D03
   confirmadas; catálogo deste ID recomenda código interno. Duplicação local,
   cópia de versão salva e aplicação não destrutiva implementadas. Revisão
   cruzada de outro agente encontrou dois P2 de interface, corrigidos com

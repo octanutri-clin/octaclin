@@ -4622,14 +4622,14 @@ auditoria estão ordenados na seção 15 de
   contra saída com alterações não salvas.
 - [x] PA01 — integrada pela PR #414, main `2d2edcf`; arraste de refeições
   com setas/teclado e salvamento existentes. Sem migration.
-- [ ] PA02 — implementação entregue em Draft na PR #415, branch
-  `feat/roadmap-PA02-copy-meals`. D01–D03 confirmadas; código interno.
+- [ ] PA02 — implementação integrada pela PR #415, main `50a9590`; correções
+  na PR Draft #416, branch `fix/pa02-copia-revisao-r4`. D01–D03 confirmadas; código interno.
   Cópia profunda, origem salva revalidada e aplicação não destrutiva. Revisão
   cruzada sem autoria nas mudanças fechou dois P2 com RED/GREEN; relatório
   `docs/governance/REVISAO_R4_PA02_PR415_2026-10-14.md`. Navegação SPA, destino
   removido, limite de 50, bloqueio de persistência e alça DnD por teclado
   cobertos. CI de `f94ea94` aprovado; exigir checks do HEAD corrigido antes de
-  integrar. Sem nova migration, merge ou deploy. Handoff
+  integrar. Sem nova migration, merge ou deploy pelo agente. Handoff
   `tasks/plan-pos-320-pa02.md`.
 
 Os merges acima foram conferidos por Git e os checks da PR #415 foram consultados

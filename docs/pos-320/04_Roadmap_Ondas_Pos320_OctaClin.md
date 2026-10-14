@@ -254,7 +254,8 @@ O arraste já existe no editor e permanece baseline da PA02; não reimplementar.
 ## [PA02] Copiar, colar e duplicar refeições
 
 **Reconciliação em 2026-10-14:** RESIDUAL CONFIRMADO na main `2d2edcf`.
-Implementação autorizada e entregue na PR Draft #415. D01–D03 confirmadas pelo
+Implementação integrada pela PR #415, main `50a9590`; correções de revisão
+na PR Draft #416. D01–D03 confirmadas pelo
 proprietário: ambos os escopos autorizados, acrescentar/criar e origem salva.
 Revisão cruzada identificou e fechou dois P2 de interface; CI do HEAD corrigido
 deve ser conferido antes da integração. Evidências no handoff e no relatório R4.

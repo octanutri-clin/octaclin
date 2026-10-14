@@ -4,13 +4,17 @@ Data: 2026-10-14. Base auditada: main `2d2edcfed20457cb21a1d27d2cbfcc21499bab13`
 merge da PR #414/PA01; FND02 integrado pela PR #411.
 
 **Autorização atualizada:** em 2026-10-14 o proprietário autorizou a
-implementação da PA02 após a troca manual para Luna alto. Uma única PR reunirá
-planejamento e implementação. Merge, deploy e alterações externas continuam
-fora do escopo autorizado.
+implementação da PA02 após a troca manual para Luna alto. A PR #415 reuniu planejamento e implementação e já foi mergeada pelo
+proprietário. Ao constatar esse estado, as correções da revisão foram levadas
+à PR Draft #416, pois uma PR mergeada não recebe novas alterações. Merge, deploy
+e alterações externas pelo agente continuam fora do escopo autorizado.
 
 ## Checkout e continuidade
 
-- Branch de implementação: `feat/roadmap-PA02-copy-meals`.
+- Branch ativa de correção: `fix/pa02-copia-revisao-r4`, PR Draft #416.
+- Branch original preservada: `feat/roadmap-PA02-copy-meals`, PR #415 mergeada.
+- Main atual conferida: `50a9590`, merge da PR #415. Seu conteúdo é idêntico
+  ao HEAD inicial revisado `f94ea94` (git diff --quiet sem diferenças).
 - Checkout isolado: `/workspace/octaclin/.worktrees/pos320-pa02-planejamento`.
 - O checkout principal em `774cf34f` e sua alteração em `next-env.d.ts` foram
   preservados. O fetch ali falhou por objeto ausente em ref remoto legado;
@@ -252,7 +256,11 @@ no schema existente. Não fazer rollback destrutivo de histórico.
 
 ## PR e gates
 
-- Uma PR #415 Draft: https://github.com/octanutri-clin/octaclin/pull/415.
+- PR #415 mergeada: https://github.com/octanutri-clin/octaclin/pull/415.
+- Correções na PR #416 Draft: https://github.com/octanutri-clin/octaclin/pull/416.
+  A necessidade do followup surgiu da constatação do merge da PR original, não
+  de divisão planejada da entrega. O commit corretivo foi cherry-picked sem
+  conflitos sobre main `50a9590`; o digest runtime revisado permaneceu igual.
 - PASS: revisão cruzada das correções de runtime, com digest e limitações no
   relatório; verificações locais ali registradas.
 - PASS histórico conferido nesta retomada: todos os workflows do HEAD
