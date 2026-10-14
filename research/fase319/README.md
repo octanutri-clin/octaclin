@@ -3,6 +3,17 @@
 Esta pasta é uma PoC offline, não integrada ao produto. Contém somente textos,
 IDs e pacientes artificiais. Não use ou substitua registros reais neste corpus.
 
+## Proveniência da dependência ONNX
+
+Os resultados v3/v4 arquivados foram gerados com a dependência de laboratório
+`onnx==1.19.0`, conforme o lock original da pesquisa. O Dependency Review
+identificou quatro advisories High para essa versão (GHSA-hqmj-h5c6-369m,
+GHSA-3r9x-f23j-gc73, GHSA-538c-55jv-c5g9 e GHSA-q56x-g2fj-4rj6). O lock de
+reprodução foi elevado para `onnx==1.21.0`, versão corrigida indicada pelos
+advisories. Nenhuma nova rodada da PoC foi executada: os resultados mantêm a
+proveniência histórica da versão antiga e não devem ser descritos como gerados
+com 1.21.0. A troca é somente no ambiente de pesquisa, não no runtime do produto.
+
 ## Reproduzir
 
 1. Use Python 3.12; crie ambiente virtual fora da aplicação.
