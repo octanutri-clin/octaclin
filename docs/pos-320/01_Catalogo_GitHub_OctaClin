@@ -1,15 +1,15 @@
 # OctaClin — Catálogo Mestre de Repositórios GitHub para o Codex
 
-> **Versão:** 1.2 — pós-Fase 320, matriz de lacunas revisada • **Reconciliação:** 09/10/2026  
-> **Objetivo:** reunir **todos os repositórios recomendados nas conversas e na pesquisa complementar de lacunas das 71 sugestões** em um único documento operacional. Complementa `ROADMAP_IMPLEMENTACAO_PRS_ONDAS_POS_320.md`, cuja execução fica bloqueada até o handoff da Fase 320.  
-> **Estado da pesquisa:** referências identificadas e diversas licenças principais verificadas diretamente no GitHub; **não significa que as versões atuais tenham sido testadas no OctaClin**. Revisar tudo na tag/commit de adoção.  
+> **Versão:** 1.3 — pós-Fase 320, NO-GO TBCA nesta rodada • **Reconciliação:** 14/10/2026
+> **Objetivo:** reunir **todos os repositórios recomendados nas conversas e na pesquisa complementar de lacunas das 71 sugestões** em um único documento operacional. Complementa `04_Roadmap_Ondas_Pos320_OctaClin.md`, cujo handoff da Fase 320 foi formalizado nesta rodada.
+> **Estado da pesquisa:** referências identificadas e diversas licenças principais verificadas diretamente no GitHub; **não significa que as versões atuais tenham sido testadas no OctaClin**. Revisar tudo na tag/commit de adoção.
 > **Política:** 1 recurso = 1 PR; este catálogo é um guia de decisão, **não uma lista de pacotes a instalar**.
 
 ## 0. Marco pós-320 e compatibilidade com as Fases 302–320
 
-**Fonte canônica:** [roadmap 302–320](https://github.com/octanutri-clin/octaclin/blob/main/docs/product/ROADMAP_POS_AUDITORIA_FASES_302_320.md). As referências listadas aqui **não autorizam** executar funcionalidades das Fases 302–320 antecipadamente, ignorar `NO-GO` ou substituir código já integrado. O usuário definiu que **todas as ondas e PRs deste catálogo começam somente após a Fase 320**.
+**Fonte canônica:** [roadmap 302–320](https://github.com/octanutri-clin/octaclin/blob/main/docs/product/ROADMAP_POS_AUDITORIA_FASES_302_320.md). As referências listadas aqui **não autorizam** executar funcionalidades das Fases 302–320 antecipadamente, ignorar `NO-GO` ou substituir código já integrado. A Fase 320 encerrou nesta rodada com NO-GO para ingestão TBCA, sem alterar o catálogo TACO/USDA/IBGE. Esta PR inicia somente FND02 da Onda 0 junto ao handoff; cada recurso restante continua em PR própria após reconciliação do código atual.
 
-**Correções de status:** `FND01` está resolvido pela Fase 298/PR #356; `AI05` é inteiramente coberto pelo escopo/gate da Fase 316 e **não deve gerar PR própria**. A Fase 307/PR #384 já tem compartilhamento explícito de métricas no portal (`ANT03` vira residual condicional). Fase 308/PR #385 foi integrada segundo o GitHub consultado em 2026-10-09, enquanto o roadmap escrito ainda a indicava aberta.
+**Correções de status:** `FND01` está resolvido pela Fase 298/PR #356; `AI05` é inteiramente coberto pelo escopo/gate da Fase 316 e **não deve gerar PR própria**. A Fase 307/PR #384 já tem compartilhamento explícito de métricas no portal (`ANT03` vira residual condicional). Fases 314, 315 e 318 foram integradas nas PRs #394, #395, #408 e #410; ver checklist e roadmap canônicos atualizados em 2026-10-14. Fase 319 encerrou em NO-GO semântico.
 
 | Fase canônica | IDs pós-320 que exigem reconciliação | Regra para escolher referência GitHub |
 |---|---|---|
@@ -33,7 +33,7 @@
 
 ## 1. Instrução obrigatória para o Codex
 
-1. Confirmar formalmente o marco da **Fase 320** (ou operar somente em modo auditoria); ler **este arquivo**, `ROADMAP_IMPLEMENTACAO_PRS_ONDAS_POS_320.md` e `docs/product/ROADMAP_POS_AUDITORIA_FASES_302_320.md`, além de `AGENTS.md`, `CLAUDE.md`, documentos de fase, autorização e padrões do repositório.
+1. Confirmar formalmente o marco da **Fase 320** (ou operar somente em modo auditoria); ler **este arquivo**, `docs/pos-320/04_Roadmap_Ondas_Pos320_OctaClin.md` e `docs/product/ROADMAP_POS_AUDITORIA_FASES_302_320.md`, além de `AGENTS.md`, `CLAUDE.md`, documentos de fase, autorização e padrões do repositório.
 2. Reconciliar o estado final de 302–320 na `main` e identificar o **ID de PR pós-320** com gap residual confirmado; buscar referências por ID no catálogo. IDs históricos `FND01` e `AI05` **não são executáveis**.
 3. **Auditar a `main` antes de instalar, somente após o gate 320:** procurar a funcionalidade, o pacote já instalado, primitivos equivalentes e testes. Se já estiver resolvido, não instalar/codificar de novo.
 4. Selecionar **uma solução prioritária** por capacidade, preferindo nesta ordem: recurso atual > API nativa > biblioteca instalada > dependência nova pequena/permissiva > integração extensa > referência de arquitetura.
@@ -1193,7 +1193,7 @@ Use este índice como ponto de entrada. Um PR com várias referências **não de
 
 ## 9. Prompt pronto para o Codex
 
-> Leia integralmente `ROADMAP_IMPLEMENTACAO_PRS_ONDAS_POS_320.md`, `CATALOGO_MESTRE_REPOSITORIOS_GITHUB_OCTACLIN_POS_320_V2.md` e `MATRIZ_RASTREABILIDADE_71_SUGESTOES_OCTACLIN_POS_320_V2.md`, além das instruções do repositório. Para o ID do PR que vou indicar, consulte a seção de candidatos e use o mapa inverso deste catálogo. Audite a `main` antes de decidir. Compare o que já existe com as bibliotecas e repositórios recomendados, incluindo licenças por tag, direitos de dados, versões, manutenção, segurança, desempenho, acessibilidade, impactos em PHI/LGPD, tenant e testes. **Não instale vários candidatos concorrentes**, não copie código de licenças restritivas, não migre domínio sem necessidade, não aceite fórmula clínica sem fonte oficial e testes independentes. Implemente o menor escopo capaz de atender o requisito, **um ID por PR**. Documente decisão/alternativas/rollback e rode os gates aplicáveis. Não faça merge, migração externa ou habilite serviços sem minha aprovação.
+> Leia integralmente `docs/pos-320/04_Roadmap_Ondas_Pos320_OctaClin.md`, `docs/pos-320/01_Catalogo_GitHub_OctaClin` e `docs/pos-320/02_Matriz_71_Sugestoes_OctaClin.md`, além das instruções do repositório. Para o ID do PR que vou indicar, consulte a seção de candidatos e use o mapa inverso deste catálogo. Audite a `main` antes de decidir. Compare o que já existe com as bibliotecas e repositórios recomendados, incluindo licenças por tag, direitos de dados, versões, manutenção, segurança, desempenho, acessibilidade, impactos em PHI/LGPD, tenant e testes. **Não instale vários candidatos concorrentes**, não copie código de licenças restritivas, não migre domínio sem necessidade, não aceite fórmula clínica sem fonte oficial e testes independentes. Implemente o menor escopo capaz de atender o requisito, **um ID por PR**. Documente decisão/alternativas/rollback e rode os gates aplicáveis. Não faça merge, migração externa ou habilite serviços sem minha aprovação.
 
 ---
 

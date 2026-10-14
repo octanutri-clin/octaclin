@@ -1,8 +1,8 @@
 # OctaClin - Checklist vivo de fases futuras ate producao
 
-Atualizado em 2026-10-11. Fase 314: entrega factual separada dos classificadores G01, G02 ratificado REV9; PR Draft #394 ainda aberta. Gates canônicos em `docs/product/LIBERACAO_FACTUAL_FASE_314_REV14.md`. Fases seguintes independentes não aguardam G01; liberação factual depende de gates operacionais e autorização.
+Atualizado em 2026-10-14. Fase 320: NO-GO para ingestão TBCA nesta rodada por ausência de autorização de uso; manter TACO, USDA e IBGE. O handoff formal e a primeira tarefa da Onda 0 (FND02) estão nesta PR. A ingestão poderá ser reavaliada após autorização escrita e revisão de direitos.
 
-## Estado reconciliado em 2026-10-10
+## Estado reconciliado em 2026-10-14
 
 Fases 309/310 integradas pelos PRs #386/#388 (`34d186ec`/`eb7f2aad`),
 confirmadas no GitHub neste ciclo. CI principal pós-merge 309 e CI da PR 310
@@ -18,8 +18,9 @@ em staging e produção, sem consulta direta aos bancos. Handoff preservado em
 `tasks/plan-fase-312.md`; gates residuais históricos não encerrados por inferência.
 Fase 313 integrada pelo PR #391 (`f8c5ab66`); CI final `38082785780`
 e principal pós-merge `38084523466` SUCCESS. Aplicação da 1068 e revisão
-independente não confirmadas. Fase 314 agora em desenvolvimento técnico controlado;
-handoff em `tasks/plan-fase-314.md`, G02 ratificado REV9 e entrega factual separada por REV14. Monitor de produção
+independente não confirmadas. Fase 314 factual integrada pela PR #394, com
+classificadores ainda bloqueados por G01/direitos e gates operacionais em
+`tasks/plan-fase-314.md`; G02 ratificado REV9. Monitor de produção
 `38065380981` FAIL com HTTP 503; causa não identificada.
 
 O parágrafo abaixo registra a atualização histórica anterior; para o estado
@@ -4576,18 +4577,19 @@ auditoria estão ordenados na seção 15 de
 - [x] Fase 313 - integrada pelo PR #391 (`f8c5ab66`); CI final e pós-merge
   SUCCESS. Aplicação/validação externa da 1068 e revisão independente não
   confirmadas; não representam aceite operacional. `tasks/todo-fase-313.md`.
-- [~] Fase 314 - entrega factual candidata à liberação após gates operacionais;
-  classificadores/curvas mantidos bloqueados por G01/direitos. G02 ratificado REV9.
-  PR #394 integrada (`c77c4520`); CI pós-merge `38179801575` SUCCESS. Contrato
-  em `docs/product/LIBERACAO_FACTUAL_FASE_314_REV14.md`. R4 independente,
-  vínculo/teste de ambientes e aceite de liberação pendentes; não
-  bloquear fases seguintes independentes das curvas/classificações.
-- [~] Fase 315 - implementação local D01 concluída: PATCH legado validado e
-  ignorado sem persistência; respostas/CSV omitem o campo; coluna/histórico
-  preservados. Backend, RLS descartável, smoke local e regressões focadas
-  passaram; suíte Web `test:authz` parcial/cancelada, CI da PR e revisão R4
-  independente pendentes. Sem migration ou ambiente externo. Handoff
-  `tasks/plan-fase-315.md`, checklist `tasks/todo-fase-315.md`.
+- [~] Fase 314 - entrega factual integrada pela PR #394 (`c77c4520`), CI pós-merge
+  `38179801575` SUCCESS. G02/CL-01–10 ratificados REV9; seis métodos adultos desde
+  18 anos integrados. Classificadores seguem bloqueados por G01/direitos. A entrega
+  factual não está liberada: revisão R4 independente, vínculo e testes operacionais
+  por ambiente e autorização de liberação pendentes. Não inferir deploy/aplicação
+  externa da integração. Contrato `docs/product/LIBERACAO_FACTUAL_FASE_314_REV14.md`.
+- [~] Fase 315 - retirada compatível de `score_risco` integrada pela PR #395
+  (`a84921fb`). PATCH legado validado e ignorado sem persistir; respostas/CSV omitem
+  o campo; coluna e histórico preservados. Backend, RLS descartável, smoke BFF e
+  regressões focadas passaram conforme evidência da PR. `test:authz` ficou parcial;
+  CI remoto e revisão R4 independente não foram reconfirmados nesta atualização.
+  Sem migration externa. Handoff `tasks/plan-fase-315.md`, checklist
+  `tasks/todo-fase-315.md`.
 - [~] Fase316 - **stand-by** por decisão do proprietário em2026-10-12;
   pesquisa local preservada em worktree própria, sem incluir artefatos nesta branch.
   PB-30: extração assistida de exame com revisão humana,
@@ -4596,16 +4598,23 @@ auditoria estão ordenados na seção 15 de
   reconfirmado em2026-10-13. Correções de contexto/retorno e timezone integradas;
   liberação global ainda pendente do preflight do processo/providers. Aceites e
   autorização já recebidos; não habilitar flags pela fase318.
-- [~] Fase318 - planejamento/análise autorizados: pré-consulta e rascunho de
-  evolução, API externa com chave própria (D02 revisada), somente sintéticos, responsável atual
-  no console. Comparar baseline PB-25/modelos com candidato antes de GO.
-  D01–07 confirmadas; contratoBYOK/corpus30casos preparados; sem implementação/PoC. Handoff
-  `tasks/plan-fase-318.md`, plano `docs/history/phases/PLANO_FASE_318.md` e
-  checklist `tasks/todo-fase-318.md`. Gate de valor pode concluir NO-GO.
-- [ ] Fase 319 - avaliação de volume, privacidade e possível piloto de busca
-  semântica no prontuário.
-- [ ] Fase 320 - avaliação de direitos da TBCA e possível importador próprio;
-  nenhuma carga sem licença comprovada.
+- [~] Fase 318 - implementação técnica integrada pelas PRs #408 e #410
+  (`4aeb5297`, `bd4e436b`); BYOK individual e piloto sintético isolado no console.
+  O proprietário informou migration 1071 validada em staging e produção. O piloto
+  continua bloqueado: G01/G02/G05 pendentes, grant/flag não aplicados, catálogo
+  clínico vazio; sem chamadas pagas ou pacientes reais. Revisão clínica humana,
+  contratual e operacional necessária antes de qualquer uso assistencial. CI da
+  PR410 não foi revalidado nesta atualização. Plano `tasks/plan-fase-318.md`,
+  `tasks/todo-fase-318.md` e ledger `docs/history/phases/reviews/fase-318/PILOTO_SINTETICO_EXECUCAO.md`.
+- [x] Fase 319 - pesquisa técnica encerrada com NO-GO para implementar busca
+  semântica E5/MiniLM. V4: BM25/E5 NDCG@10 0,945 (ganho 0,000); MiniLM 0,905
+  (−0,040); E5 regrediu em q-021. G01/G02/G03 BLOCKED, G04 SKIPPED, G05
+  BLOCKED/não executado; T05–T10 não iniciadas. Artefatos v3/v4 preservados em
+  `research/fase319/`; plano em `docs/history/phases/PLANO_FASE_319.md`.
+- [x] Fase 320 - decisão desta rodada: NO-GO para ingestão/uso da TBCA por não
+  haver autorização de direitos. Nenhum registro foi importado; catálogo permanece
+  TACO/USDA/IBGE. Reabrir somente após autorização escrita e revisão de direitos.
+  Handoff formal e primeira atividade pós-320 (FND02/Onda 0) reunidos nesta PR.
 
 O escopo, dependências, critérios de aceite, limites e gates destas fases estão
 em `docs/product/ROADMAP_POS_AUDITORIA_FASES_302_320.md`. Fases condicionais

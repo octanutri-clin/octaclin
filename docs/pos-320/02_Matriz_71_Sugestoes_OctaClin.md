@@ -1,8 +1,8 @@
 # OctaClin — Matriz de rastreabilidade (v2): 71 sugestões × PRs × GitHub
 
-> **Data da conferência:** 09/10/2026. **Uso:** auditoria e planejamento; não autoriza implementar antes da conclusão formal da Fase 320 e de uma reconciliação com a `main`.
+> **Data da matriz original:** 09/10/2026. **Atualização de handoff:** 14/10/2026, Fase 320 concluída com NO-GO para TBCA nesta rodada. **Uso:** auditoria e planejamento; cada sugestão ainda precisa ser reconciliada com a `main` e executada em PR individual.
 >
-> **Fontes de referência:** `ROADMAP_IMPLEMENTACAO_PRS_ONDAS_POS_320.md` e `CATALOGO_MESTRE_REPOSITORIOS_GITHUB_OCTACLIN_POS_320_V2.md`.
+> **Fontes de referência:** `04_Roadmap_Ondas_Pos320_OctaClin.md` e `01_Catalogo_GitHub_OctaClin`.
 >
 > Esta matriz faz a ligação explícita que não estava pronta nos documentos anteriores: **número original da sugestão (1 a 71) → ID do PR / situação → repositório(s) aplicáveis**.
 >
@@ -18,7 +18,7 @@
 - **Situação final da matriz:** 53 sugestões possuem pelo menos um link direto de GitHub; as 18 restantes não receberam repositório externo de propósito — 6 representam baseline e 12 são adequadas para implementação com a stack/domínio existente. Isso não equivale a 53 necessidades de instalar pacotes.
 - Sugestões que ganharam referências concretas: **2, 8, 10, 15, 27, 33, 45, 47, 51, 53, 55, 56, 63, 66, 67 e 69**; além de correções de qualidade de referência nas **3, 34 e 37**.
 - Sem biblioteca continua sendo a decisão recomendada em várias melhorias simples ou server-side (por exemplo: duplicar avaliação antropométrica, copiar refeição, ocultar dados financeiros ou fazer links nativos).
-- Mesmo com 78 referências, **1 ID de sugestão não deve virar 1 instalação**. O Codex continua obrigado a escolher a solução mínima adequada após a Fase 320.
+- Mesmo com 78 referências, **1 ID de sugestão não deve virar 1 instalação**. FND02 é a primeira atividade da Onda 0 nesta PR; os demais IDs exigem evidência de lacuna, solução mínima e PR individual. TBCA continua excluída enquanto não houver autorização escrita.
 
 
 | Nº original | Sugestão original resumida | PR / cobertura no roadmap | Situação pós-320 | Referências GitHub indicadas |

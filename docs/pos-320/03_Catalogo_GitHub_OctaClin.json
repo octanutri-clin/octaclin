@@ -1,7 +1,7 @@
 {
   "schemaVersion": "1.2-post-320-coverage-reviewed",
-  "asOf": "2026-10-09",
-  "roadmap": "ROADMAP_IMPLEMENTACAO_PRS_ONDAS_POS_320.md",
+  "asOf": "2026-10-14",
+  "roadmap": "docs/pos-320/04_Roadmap_Ondas_Pos320_OctaClin.md",
   "entries": [
     {
       "id": "R001",
@@ -1459,7 +1459,7 @@
     "ENG18": "Diagnóstico de sync offline/colaboração",
     "ENG19": "Templates transacionais responsivos e seguro de e-mail"
   },
-  "catalogMarkdown": "CATALOGO_MESTRE_REPOSITORIOS_GITHUB_OCTACLIN_POS_320_V2.md",
+  "catalogMarkdown": "docs/pos-320/01_Catalogo_GitHub_OctaClin",
   "executionGate": {
     "notBefore": "Formal conclusion and reconciliation of Fase 320 (including GO/NO-GO outcomes)",
     "source": "https://github.com/octanutri-clin/octaclin/blob/main/docs/product/ROADMAP_POS_AUDITORIA_FASES_302_320.md",
@@ -1565,7 +1565,11 @@
     "306": "merged PR #383",
     "307": "merged PR #384; migration 1064 production unverified",
     "308": "merged PR #385; source roadmap text stale",
-    "309-320": "planned and/or conditional in consulted source; recheck before execution"
+    "314": "PR #394 merged; factual release gates remain pending; pediatric classifiers blocked by G01/rights",
+    "315": "PR #395 merged; compatible score_risco removal integrated; R4/remote CI evidence not reconfirmed",
+    "318": "PRs #408/#410 merged; synthetic pilot technical path exists but clinical/legal/operational gates remain blocked",
+    "319": "research closed NO-GO for E5/MiniLM",
+    "320": "NO-GO this round for TBCA ingestion; TACO/USDA/IBGE remain the catalog"
   },
   "conditionalIds": [
     "ANT03",
@@ -1579,7 +1583,7 @@
     "AI03",
     "AI04"
   ],
-  "coverageMatrix": "MATRIZ_RASTREABILIDADE_71_SUGESTOES_OCTACLIN_POS_320_V2.md",
+  "coverageMatrix": "docs/pos-320/02_Matriz_71_Sugestoes_OctaClin.md",
   "coverageAudit": {
     "originalSuggestions": 71,
     "formerlyWithNoExternalRepositoryReference": 20,

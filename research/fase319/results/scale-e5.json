@@ -1,0 +1,98 @@
+{
+  "protocolVersion": 3,
+  "corpusSha256": "340f7247def447ae92f9306ee42a904af136c80aa598c0369fb987301e14a07e",
+  "model": "multilingual-e5-small",
+  "modelSha256": "ca456c06b3a9505ddfd9131408916dd79290368331e7d76bb621f1cba6bc8665",
+  "syntheticOnly": true,
+  "cpuOnly": true,
+  "sizes": [
+    {
+      "sources": 50,
+      "buildSegmentSeconds": 0.5329097059948253,
+      "cumulativeBuildSeconds": 0.5329097059948253,
+      "embeddingChunks": 50,
+      "queryCount": 30,
+      "warmP95Seconds": 0.014882932602631627,
+      "bm25OneQuerySeconds": 0.0010465240047778934,
+      "returnedIndexesSample": [
+        10,
+        11,
+        12,
+        13,
+        14
+      ]
+    },
+    {
+      "sources": 51,
+      "buildSegmentSeconds": 0.021677054006431717,
+      "cumulativeBuildSeconds": 0.5545867600012571,
+      "embeddingChunks": 51,
+      "queryCount": 30,
+      "warmP95Seconds": 0.016433083049196284,
+      "bm25OneQuerySeconds": 0.0007516359983128496,
+      "returnedIndexesSample": [
+        10,
+        11,
+        12,
+        13,
+        14
+      ]
+    },
+    {
+      "sources": 200,
+      "buildSegmentSeconds": 1.409634751995327,
+      "cumulativeBuildSeconds": 1.964221511996584,
+      "embeddingChunks": 200,
+      "queryCount": 30,
+      "warmP95Seconds": 0.019594555397634387,
+      "bm25OneQuerySeconds": 0.0056128529977286234,
+      "returnedIndexesSample": [
+        10,
+        11,
+        12,
+        13,
+        14
+      ]
+    },
+    {
+      "sources": 1000,
+      "buildSegmentSeconds": 10.908766205000575,
+      "cumulativeBuildSeconds": 12.872987716997159,
+      "embeddingChunks": 1000,
+      "queryCount": 30,
+      "warmP95Seconds": 0.021559084603723022,
+      "bm25OneQuerySeconds": 0.016502207996381912,
+      "returnedIndexesSample": [
+        10,
+        11,
+        12,
+        13,
+        14
+      ]
+    },
+    {
+      "sources": 5000,
+      "buildSegmentSeconds": 67.75390932199662,
+      "cumulativeBuildSeconds": 80.62689703899377,
+      "embeddingChunks": 5017,
+      "queryCount": 30,
+      "warmP95Seconds": 0.03354156404966488,
+      "bm25OneQuerySeconds": 0.13040931100113085,
+      "returnedIndexesSample": [
+        10,
+        11,
+        12,
+        13,
+        14
+      ]
+    }
+  ],
+  "modelLoadSeconds": 2.5117023040002096,
+  "maxRssKiB": 1436256,
+  "totalSeconds": 85.12504062899825,
+  "limitations": [
+    "generated short fillers except one 6000-character chunking fixture",
+    "timing from one local container, not deployment infrastructure",
+    "no PHI"
+  ]
+}

@@ -55,6 +55,7 @@ import { ModalConfirmacao } from '@/components/ui/modal';
 import { FaixaAcoes } from '@/components/ui/faixa-acoes';
 import { obterSessao } from '@/lib/auth-api';
 import { classificarFalhaInterface, type FalhaInterface } from '@/lib/erros-interface';
+import { useProtecaoAlteracoesNaoSalvas } from '@/lib/usar-protecao-alteracoes-nao-salvas';
 import { listarProfissionais, obterProfissional, type ProfissionalResumo } from '@/lib/cadastros-api';
 import {
   criarMaterial,
@@ -909,15 +910,7 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
     if (destino) solicitarTrocaAba(destino);
   }
 
-  useEffect(() => {
-    function aoTentarFecharAba(evento: BeforeUnloadEvent) {
-      if (!alteracoesNaoSalvas) return;
-      evento.preventDefault();
-      evento.returnValue = '';
-    }
-    window.addEventListener('beforeunload', aoTentarFecharAba);
-    return () => window.removeEventListener('beforeunload', aoTentarFecharAba);
-  }, [alteracoesNaoSalvas]);
+  useProtecaoAlteracoesNaoSalvas(alteracoesNaoSalvas);
 
   useEffect(() => () => requisicaoHistorico.current?.abort(), []);
 

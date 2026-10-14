@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { arrayMove, sortableKeyboardCoordinates } from '@dnd-kit/sortable';
 import { DragEndEvent, KeyboardSensor, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
 import {
@@ -31,6 +31,7 @@ import {
 } from '@/lib/questionarios-api';
 import { PacienteResumo, ProfissionalResumo } from '@/lib/cadastros-api';
 import { PerguntaEditor } from './tipos';
+import { useProtecaoAlteracoesNaoSalvas } from '@/lib/usar-protecao-alteracoes-nao-salvas';
 
 function mapearPergunta(pergunta: PerguntaApi): PerguntaEditor {
   return {
@@ -743,15 +744,9 @@ export function useWorkspaceQuestionarios() {
     );
   }
 
-  useEffect(() => {
-    function aoTentarFecharAba(evento: BeforeUnloadEvent) {
-      if (!alteracoesQuestionarioPendentes && !alteracoesPerguntaPendentes) return;
-      evento.preventDefault();
-      evento.returnValue = '';
-    }
-    window.addEventListener('beforeunload', aoTentarFecharAba);
-    return () => window.removeEventListener('beforeunload', aoTentarFecharAba);
-  }, [alteracoesQuestionarioPendentes, alteracoesPerguntaPendentes]);
+  useProtecaoAlteracoesNaoSalvas(
+    alteracoesQuestionarioPendentes || alteracoesPerguntaPendentes
+  );
 
   return {
     categorias,

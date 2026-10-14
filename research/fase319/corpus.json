@@ -1,0 +1,2395 @@
+{
+  "schema": 1,
+  "seed": 3190319,
+  "syntheticOnly": true,
+  "goldMethod": "gold IDs assigned by construction to the authored source; no independent human relevance review",
+  "queries": [
+    {
+      "id": "q-001",
+      "partition": "dev",
+      "category": "paráfrase",
+      "query": "A pessoa prefere arroz integral no almoço.",
+      "answerable": true,
+      "gold": [
+        {
+          "sourceId": "syn-001",
+          "grade": 2
+        }
+      ]
+    },
+    {
+      "id": "q-002",
+      "partition": "dev",
+      "category": "paráfrase",
+      "query": "Refere pouca ingestão de água durante o expediente.",
+      "answerable": true,
+      "gold": [
+        {
+          "sourceId": "syn-002",
+          "grade": 2
+        }
+      ]
+    },
+    {
+      "id": "q-003",
+      "partition": "dev",
+      "category": "paráfrase",
+      "query": "Foi registrada aversão a iogurte natural.",
+      "answerable": true,
+      "gold": [
+        {
+          "sourceId": "syn-003",
+          "grade": 2
+        }
+      ]
+    },
+    {
+      "id": "q-004",
+      "partition": "dev",
+      "category": "paráfrase",
+      "query": "A anotação confirma uso de bebida vegetal de aveia.",
+      "answerable": true,
+      "gold": [
+        {
+          "sourceId": "syn-004",
+          "grade": 2
+        }
+      ]
+    },
+    {
+      "id": "q-005",
+      "partition": "dev",
+      "category": "paráfrase",
+      "query": "O paciente relatou jantar depois das 22h.",
+      "answerable": true,
+      "gold": [
+        {
+          "sourceId": "syn-005",
+          "grade": 2
+        }
+      ]
+    },
+    {
+      "id": "q-006",
+      "partition": "dev",
+      "category": "paráfrase",
+      "query": "Existe uma observação sobre levar lanche à escola.",
+      "answerable": true,
+      "gold": [
+        {
+          "sourceId": "syn-006",
+          "grade": 2
+        }
+      ]
+    },
+    {
+      "id": "q-007",
+      "partition": "dev",
+      "category": "paráfrase",
+      "query": "O registro fala de desconforto com alimentos muito condimentados.",
+      "answerable": true,
+      "gold": [
+        {
+          "sourceId": "syn-007",
+          "grade": 2
+        }
+      ]
+    },
+    {
+      "id": "q-008",
+      "partition": "dev",
+      "category": "paráfrase",
+      "query": "A pessoa prepara refeições para a semana no domingo.",
+      "answerable": true,
+      "gold": [
+        {
+          "sourceId": "syn-008",
+          "grade": 2
+        }
+      ]
+    },
+    {
+      "id": "q-009",
+      "partition": "dev",
+      "category": "termo-raro",
+      "query": "Localize a menção a lentilha vermelha.",
+      "answerable": true,
+      "gold": [
+        {
+          "sourceId": "syn-009",
+          "grade": 2
+        }
+      ]
+    },
+    {
+      "id": "q-010",
+      "partition": "dev",
+      "category": "termo-raro",
+      "query": "Em qual evolução aparece o nome kefir de água?",
+      "answerable": true,
+      "gold": [
+        {
+          "sourceId": "syn-010",
+          "grade": 2
+        }
+      ]
+    },
+    {
+      "id": "q-011",
+      "partition": "test",
+      "category": "termo-raro",
+      "query": "Procure o registro que cita amaranto.",
+      "answerable": true,
+      "gold": [
+        {
+          "sourceId": "syn-011",
+          "grade": 2
+        }
+      ]
+    },
+    {
+      "id": "q-012",
+      "partition": "test",
+      "category": "termo-raro",
+      "query": "Qual nota menciona farinha de grão-de-bico?",
+      "answerable": true,
+      "gold": [
+        {
+          "sourceId": "syn-012",
+          "grade": 2
+        }
+      ]
+    },
+    {
+      "id": "q-013",
+      "partition": "test",
+      "category": "negação",
+      "query": "A pessoa não consome leite de vaca.",
+      "answerable": true,
+      "gold": [
+        {
+          "sourceId": "syn-013",
+          "grade": 2
+        }
+      ]
+    },
+    {
+      "id": "q-014",
+      "partition": "test",
+      "category": "negação",
+      "query": "Foi relatado que não costuma pular o café da manhã?",
+      "answerable": true,
+      "gold": [
+        {
+          "sourceId": "syn-014",
+          "grade": 2
+        }
+      ]
+    },
+    {
+      "id": "q-015",
+      "partition": "test",
+      "category": "negação",
+      "query": "A evolução diz que a pessoa consome peixe?",
+      "answerable": true,
+      "gold": [
+        {
+          "sourceId": "syn-015",
+          "grade": 2
+        }
+      ]
+    },
+    {
+      "id": "q-016",
+      "partition": "test",
+      "category": "negação",
+      "query": "Localize a hipótese de que o lanche causa desconforto, não uma confirmação.",
+      "answerable": true,
+      "gold": [
+        {
+          "sourceId": "syn-016",
+          "grade": 2
+        }
+      ]
+    },
+    {
+      "id": "q-017",
+      "partition": "test",
+      "category": "número-data",
+      "query": "Qual foi o peso anotado em 12 de março?",
+      "answerable": true,
+      "gold": [
+        {
+          "sourceId": "syn-017",
+          "grade": 2
+        }
+      ]
+    },
+    {
+      "id": "q-018",
+      "partition": "test",
+      "category": "número-unidade",
+      "query": "Localize a medida de 1,72 m.",
+      "answerable": true,
+      "gold": [
+        {
+          "sourceId": "syn-018",
+          "grade": 2
+        }
+      ]
+    },
+    {
+      "id": "q-019",
+      "partition": "test",
+      "category": "número-unidade",
+      "query": "Qual quantidade de água, em mililitros, foi citada?",
+      "answerable": true,
+      "gold": [
+        {
+          "sourceId": "syn-019",
+          "grade": 2
+        }
+      ]
+    },
+    {
+      "id": "q-020",
+      "partition": "test",
+      "category": "número-unidade",
+      "query": "Encontre o registro de 3,5 g de fibra.",
+      "answerable": true,
+      "gold": [
+        {
+          "sourceId": "syn-020",
+          "grade": 2
+        }
+      ]
+    },
+    {
+      "id": "q-021",
+      "partition": "test",
+      "category": "data",
+      "query": "O que foi combinado para a próxima conversa em 5 de abril?",
+      "answerable": true,
+      "gold": [
+        {
+          "sourceId": "syn-021",
+          "grade": 2
+        }
+      ]
+    },
+    {
+      "id": "q-022",
+      "partition": "test",
+      "category": "horário",
+      "query": "Localize a nota sobre acordar às seis e quinze.",
+      "answerable": true,
+      "gold": [
+        {
+          "sourceId": "syn-022",
+          "grade": 2
+        }
+      ]
+    },
+    {
+      "id": "q-023",
+      "partition": "test",
+      "category": "número-unidade",
+      "query": "Existe registro de uso de um copo de 200 ml?",
+      "answerable": true,
+      "gold": [
+        {
+          "sourceId": "syn-023",
+          "grade": 2
+        }
+      ]
+    },
+    {
+      "id": "q-024",
+      "partition": "test",
+      "category": "número",
+      "query": "Procure o valor 42,7 que aparece na anotação.",
+      "answerable": true,
+      "gold": [
+        {
+          "sourceId": "syn-024",
+          "grade": 2
+        }
+      ]
+    },
+    {
+      "id": "q-025",
+      "partition": "test",
+      "category": "fonte-antiga",
+      "query": "Qual evolução cita manga no lanche da tarde?",
+      "answerable": true,
+      "gold": [
+        {
+          "sourceId": "syn-025",
+          "grade": 2
+        }
+      ]
+    },
+    {
+      "id": "q-026",
+      "partition": "test",
+      "category": "fonte-antiga",
+      "query": "Há anotação sobre uma feira visitada em janeiro?",
+      "answerable": true,
+      "gold": [
+        {
+          "sourceId": "syn-026",
+          "grade": 2
+        }
+      ]
+    },
+    {
+      "id": "q-027",
+      "partition": "test",
+      "category": "fonte-antiga",
+      "query": "O registro mais antigo fala de pão de fermentação natural?",
+      "answerable": true,
+      "gold": [
+        {
+          "sourceId": "syn-027",
+          "grade": 2
+        }
+      ]
+    },
+    {
+      "id": "q-028",
+      "partition": "test",
+      "category": "fonte-antiga",
+      "query": "Localize a preferência por sopa no jantar nas notas antigas.",
+      "answerable": true,
+      "gold": [
+        {
+          "sourceId": "syn-028",
+          "grade": 2
+        }
+      ]
+    },
+    {
+      "id": "q-029",
+      "partition": "test",
+      "category": "termo-raro",
+      "query": "Qual texto descreve uma receita de milho roxo?",
+      "answerable": true,
+      "gold": [
+        {
+          "sourceId": "syn-029",
+          "grade": 2
+        }
+      ]
+    },
+    {
+      "id": "q-030",
+      "partition": "test",
+      "category": "paráfrase",
+      "query": "Existe nota que mencione água com gás?",
+      "answerable": true,
+      "gold": [
+        {
+          "sourceId": "syn-030",
+          "grade": 2
+        }
+      ]
+    },
+    {
+      "id": "q-031",
+      "partition": "test",
+      "category": "termo-raro",
+      "query": "Qual documento registra chá de hibisco?",
+      "answerable": true,
+      "gold": [
+        {
+          "sourceId": "syn-031",
+          "grade": 2
+        }
+      ]
+    },
+    {
+      "id": "q-032",
+      "partition": "test",
+      "category": "paráfrase",
+      "query": "Encontre uma nota sobre couve-flor assada.",
+      "answerable": true,
+      "gold": [
+        {
+          "sourceId": "syn-032",
+          "grade": 2
+        }
+      ]
+    },
+    {
+      "id": "q-033",
+      "partition": "test",
+      "category": "negação",
+      "query": "Há relato de que a pessoa deixou de consumir café?",
+      "answerable": true,
+      "gold": [
+        {
+          "sourceId": "syn-033",
+          "grade": 2
+        }
+      ]
+    },
+    {
+      "id": "q-034",
+      "partition": "test",
+      "category": "paráfrase",
+      "query": "Qual avaliação menciona rotina de turnos noturnos?",
+      "answerable": true,
+      "gold": [
+        {
+          "sourceId": "syn-034",
+          "grade": 2
+        }
+      ]
+    },
+    {
+      "id": "q-035",
+      "partition": "test",
+      "category": "termo-raro",
+      "query": "Procure uma referência a castanha de baru.",
+      "answerable": true,
+      "gold": [
+        {
+          "sourceId": "syn-035",
+          "grade": 2
+        }
+      ]
+    },
+    {
+      "id": "q-036",
+      "partition": "test",
+      "category": "sem-resposta",
+      "query": "O prontuário informa consumo de tofu nesta semana?",
+      "answerable": false,
+      "gold": []
+    },
+    {
+      "id": "q-037",
+      "partition": "test",
+      "category": "sem-resposta",
+      "query": "Existe algum registro de suplemento de zinco?",
+      "answerable": false,
+      "gold": []
+    },
+    {
+      "id": "q-038",
+      "partition": "test",
+      "category": "sem-resposta",
+      "query": "Qual nota descreve caminhada na neve?",
+      "answerable": false,
+      "gold": []
+    },
+    {
+      "id": "q-039",
+      "partition": "test",
+      "category": "sem-resposta",
+      "query": "Foi registrada alergia a kiwi?",
+      "answerable": false,
+      "gold": []
+    },
+    {
+      "id": "q-040",
+      "partition": "test",
+      "category": "sem-resposta",
+      "query": "O histórico registra consumo de pitaya amarela?",
+      "answerable": false,
+      "gold": []
+    }
+  ],
+  "documents": [
+    {
+      "id": "syn-001",
+      "tenant": "tenant-sim-1",
+      "patient": "patient-sim-1",
+      "ordinal": 1,
+      "created": "2020-01-02",
+      "text": "Relatou preferência por arroz integral em vez de arroz branco no almoço.",
+      "synthetic": true
+    },
+    {
+      "id": "neg-001",
+      "tenant": "tenant-sim-1",
+      "patient": "patient-sim-1",
+      "ordinal": 101,
+      "created": "2020-04-11",
+      "text": "Exemplo sintético distinto: o termo relatou apareceu em uma lista genérica, sem relato pessoal correspondente.",
+      "synthetic": true
+    },
+    {
+      "id": "syn-002",
+      "tenant": "tenant-sim-1",
+      "patient": "patient-sim-1",
+      "ordinal": 2,
+      "created": "2020-01-03",
+      "text": "No trabalho costuma esquecer de beber água e relata baixa ingestão de líquidos.",
+      "synthetic": true
+    },
+    {
+      "id": "neg-002",
+      "tenant": "tenant-sim-1",
+      "patient": "patient-sim-1",
+      "ordinal": 102,
+      "created": "2020-04-12",
+      "text": "Exemplo sintético distinto: o termo no apareceu em uma lista genérica, sem relato pessoal correspondente.",
+      "synthetic": true
+    },
+    {
+      "id": "syn-003",
+      "tenant": "tenant-sim-1",
+      "patient": "patient-sim-1",
+      "ordinal": 3,
+      "created": "2020-01-04",
+      "text": "Disse que não gosta do sabor do iogurte natural.",
+      "synthetic": true
+    },
+    {
+      "id": "neg-003",
+      "tenant": "tenant-sim-1",
+      "patient": "patient-sim-1",
+      "ordinal": 103,
+      "created": "2020-04-13",
+      "text": "Exemplo sintético distinto: o termo disse apareceu em uma lista genérica, sem relato pessoal correspondente.",
+      "synthetic": true
+    },
+    {
+      "id": "syn-004",
+      "tenant": "tenant-sim-1",
+      "patient": "patient-sim-1",
+      "ordinal": 4,
+      "created": "2020-01-05",
+      "text": "Conta que usa bebida de aveia no café da manhã.",
+      "synthetic": true
+    },
+    {
+      "id": "neg-004",
+      "tenant": "tenant-sim-1",
+      "patient": "patient-sim-1",
+      "ordinal": 104,
+      "created": "2020-04-14",
+      "text": "Exemplo sintético distinto: o termo conta apareceu em uma lista genérica, sem relato pessoal correspondente.",
+      "synthetic": true
+    },
+    {
+      "id": "syn-005",
+      "tenant": "tenant-sim-1",
+      "patient": "patient-sim-1",
+      "ordinal": 5,
+      "created": "2020-01-06",
+      "text": "Janta geralmente por volta das dez e meia da noite.",
+      "synthetic": true
+    },
+    {
+      "id": "neg-005",
+      "tenant": "tenant-sim-1",
+      "patient": "patient-sim-1",
+      "ordinal": 105,
+      "created": "2020-04-15",
+      "text": "Exemplo sintético distinto: o termo janta apareceu em uma lista genérica, sem relato pessoal correspondente.",
+      "synthetic": true
+    },
+    {
+      "id": "syn-006",
+      "tenant": "tenant-sim-1",
+      "patient": "patient-sim-1",
+      "ordinal": 6,
+      "created": "2020-01-07",
+      "text": "Mencionou que leva uma fruta para comer no intervalo da escola.",
+      "synthetic": true
+    },
+    {
+      "id": "neg-006",
+      "tenant": "tenant-sim-1",
+      "patient": "patient-sim-1",
+      "ordinal": 106,
+      "created": "2020-04-16",
+      "text": "Exemplo sintético distinto: o termo mencionou apareceu em uma lista genérica, sem relato pessoal correspondente.",
+      "synthetic": true
+    },
+    {
+      "id": "syn-007",
+      "tenant": "tenant-sim-1",
+      "patient": "patient-sim-1",
+      "ordinal": 7,
+      "created": "2020-01-08",
+      "text": "Referiu incômodo quando consome preparações bastante apimentadas.",
+      "synthetic": true
+    },
+    {
+      "id": "neg-007",
+      "tenant": "tenant-sim-1",
+      "patient": "patient-sim-1",
+      "ordinal": 107,
+      "created": "2020-04-17",
+      "text": "Exemplo sintético distinto: o termo referiu apareceu em uma lista genérica, sem relato pessoal correspondente.",
+      "synthetic": true
+    },
+    {
+      "id": "syn-008",
+      "tenant": "tenant-sim-1",
+      "patient": "patient-sim-1",
+      "ordinal": 8,
+      "created": "2020-01-09",
+      "text": "Relatou que cozinha e separa as refeições da semana aos domingos.",
+      "synthetic": true
+    },
+    {
+      "id": "neg-008",
+      "tenant": "tenant-sim-1",
+      "patient": "patient-sim-1",
+      "ordinal": 108,
+      "created": "2020-04-18",
+      "text": "Exemplo sintético distinto: o termo relatou apareceu em uma lista genérica, sem relato pessoal correspondente.",
+      "synthetic": true
+    },
+    {
+      "id": "syn-009",
+      "tenant": "tenant-sim-1",
+      "patient": "patient-sim-1",
+      "ordinal": 9,
+      "created": "2020-01-10",
+      "text": "Na lista de alimentos citados apareceu lentilha vermelha.",
+      "synthetic": true
+    },
+    {
+      "id": "neg-009",
+      "tenant": "tenant-sim-1",
+      "patient": "patient-sim-1",
+      "ordinal": 109,
+      "created": "2020-04-19",
+      "text": "Exemplo sintético distinto: o termo na apareceu em uma lista genérica, sem relato pessoal correspondente.",
+      "synthetic": true
+    },
+    {
+      "id": "syn-010",
+      "tenant": "tenant-sim-1",
+      "patient": "patient-sim-1",
+      "ordinal": 10,
+      "created": "2020-01-11",
+      "text": "Foi anotado que experimentou kefir de água pela primeira vez.",
+      "synthetic": true
+    },
+    {
+      "id": "neg-010",
+      "tenant": "tenant-sim-1",
+      "patient": "patient-sim-1",
+      "ordinal": 110,
+      "created": "2020-04-20",
+      "text": "Exemplo sintético distinto: o termo foi apareceu em uma lista genérica, sem relato pessoal correspondente.",
+      "synthetic": true
+    },
+    {
+      "id": "syn-011",
+      "tenant": "tenant-sim-1",
+      "patient": "patient-sim-1",
+      "ordinal": 11,
+      "created": "2020-01-12",
+      "text": "A conversa incluiu o alimento amaranto como ingrediente já conhecido.",
+      "synthetic": true
+    },
+    {
+      "id": "neg-011",
+      "tenant": "tenant-sim-1",
+      "patient": "patient-sim-1",
+      "ordinal": 111,
+      "created": "2020-04-21",
+      "text": "Exemplo sintético distinto: o termo a apareceu em uma lista genérica, sem relato pessoal correspondente.",
+      "synthetic": true
+    },
+    {
+      "id": "syn-012",
+      "tenant": "tenant-sim-1",
+      "patient": "patient-sim-1",
+      "ordinal": 12,
+      "created": "2020-01-13",
+      "text": "Informou que usa farinha de grão-de-bico em algumas receitas.",
+      "synthetic": true
+    },
+    {
+      "id": "neg-012",
+      "tenant": "tenant-sim-1",
+      "patient": "patient-sim-1",
+      "ordinal": 112,
+      "created": "2020-04-22",
+      "text": "Exemplo sintético distinto: o termo informou apareceu em uma lista genérica, sem relato pessoal correspondente.",
+      "synthetic": true
+    },
+    {
+      "id": "syn-013",
+      "tenant": "tenant-sim-1",
+      "patient": "patient-sim-1",
+      "ordinal": 13,
+      "created": "2020-01-14",
+      "text": "Nega consumo de leite de vaca; a anotação não informa intolerância.",
+      "synthetic": true
+    },
+    {
+      "id": "neg-013",
+      "tenant": "tenant-sim-1",
+      "patient": "patient-sim-1",
+      "ordinal": 113,
+      "created": "2020-04-23",
+      "text": "Exemplo sintético distinto: o termo nega apareceu em uma lista genérica, sem relato pessoal correspondente.",
+      "synthetic": true
+    },
+    {
+      "id": "syn-014",
+      "tenant": "tenant-sim-1",
+      "patient": "patient-sim-1",
+      "ordinal": 14,
+      "created": "2020-01-15",
+      "text": "Disse que não costuma pular o café da manhã nos dias úteis.",
+      "synthetic": true
+    },
+    {
+      "id": "neg-014",
+      "tenant": "tenant-sim-1",
+      "patient": "patient-sim-1",
+      "ordinal": 114,
+      "created": "2020-04-24",
+      "text": "Exemplo sintético distinto: o termo disse apareceu em uma lista genérica, sem relato pessoal correspondente.",
+      "synthetic": true
+    },
+    {
+      "id": "syn-015",
+      "tenant": "tenant-sim-1",
+      "patient": "patient-sim-1",
+      "ordinal": 15,
+      "created": "2020-01-16",
+      "text": "Relatou que não come peixe há vários meses.",
+      "synthetic": true
+    },
+    {
+      "id": "neg-015",
+      "tenant": "tenant-sim-1",
+      "patient": "patient-sim-1",
+      "ordinal": 115,
+      "created": "2020-04-25",
+      "text": "Exemplo sintético distinto: o termo relatou apareceu em uma lista genérica, sem relato pessoal correspondente.",
+      "synthetic": true
+    },
+    {
+      "id": "syn-016",
+      "tenant": "tenant-sim-1",
+      "patient": "patient-sim-1",
+      "ordinal": 16,
+      "created": "2020-01-17",
+      "text": "Relatou desconforto após o lanche em uma ocasião, sem afirmar relação causal.",
+      "synthetic": true
+    },
+    {
+      "id": "neg-016",
+      "tenant": "tenant-sim-1",
+      "patient": "patient-sim-1",
+      "ordinal": 116,
+      "created": "2020-04-26",
+      "text": "Exemplo sintético distinto: o termo relatou apareceu em uma lista genérica, sem relato pessoal correspondente.",
+      "synthetic": true
+    },
+    {
+      "id": "syn-017",
+      "tenant": "tenant-sim-1",
+      "patient": "patient-sim-1",
+      "ordinal": 17,
+      "created": "2020-01-18",
+      "text": "Em 12/03/2025 foi registrado peso de 68,4 kg (valor sintético).",
+      "synthetic": true
+    },
+    {
+      "id": "neg-017",
+      "tenant": "tenant-sim-1",
+      "patient": "patient-sim-1",
+      "ordinal": 117,
+      "created": "2020-04-27",
+      "text": "Exemplo sintético distinto: o termo em apareceu em uma lista genérica, sem relato pessoal correspondente.",
+      "synthetic": true
+    },
+    {
+      "id": "syn-018",
+      "tenant": "tenant-sim-1",
+      "patient": "patient-sim-1",
+      "ordinal": 18,
+      "created": "2020-01-19",
+      "text": "Estatura referida na anotação: 1,72 m, medida sintética para teste.",
+      "synthetic": true
+    },
+    {
+      "id": "neg-018",
+      "tenant": "tenant-sim-1",
+      "patient": "patient-sim-1",
+      "ordinal": 118,
+      "created": "2020-04-28",
+      "text": "Exemplo sintético distinto: o termo estatura apareceu em uma lista genérica, sem relato pessoal correspondente.",
+      "synthetic": true
+    },
+    {
+      "id": "syn-019",
+      "tenant": "tenant-sim-1",
+      "patient": "patient-sim-1",
+      "ordinal": 19,
+      "created": "2020-01-20",
+      "text": "A pessoa mencionou levar uma garrafa de 750 mL ao trabalho.",
+      "synthetic": true
+    },
+    {
+      "id": "neg-019",
+      "tenant": "tenant-sim-1",
+      "patient": "patient-sim-1",
+      "ordinal": 119,
+      "created": "2020-04-29",
+      "text": "Exemplo sintético distinto: o termo a apareceu em uma lista genérica, sem relato pessoal correspondente.",
+      "synthetic": true
+    },
+    {
+      "id": "syn-020",
+      "tenant": "tenant-sim-1",
+      "patient": "patient-sim-1",
+      "ordinal": 20,
+      "created": "2020-01-21",
+      "text": "O exemplo sintético da embalagem citada informa 3,5 g de fibra por porção.",
+      "synthetic": true
+    },
+    {
+      "id": "neg-020",
+      "tenant": "tenant-sim-1",
+      "patient": "patient-sim-1",
+      "ordinal": 120,
+      "created": "2020-04-30",
+      "text": "Exemplo sintético distinto: o termo o apareceu em uma lista genérica, sem relato pessoal correspondente.",
+      "synthetic": true
+    },
+    {
+      "id": "syn-021",
+      "tenant": "tenant-sim-1",
+      "patient": "patient-sim-1",
+      "ordinal": 21,
+      "created": "2020-01-22",
+      "text": "Próxima conversa combinada para 05/04/2025.",
+      "synthetic": true
+    },
+    {
+      "id": "neg-021",
+      "tenant": "tenant-sim-1",
+      "patient": "patient-sim-1",
+      "ordinal": 121,
+      "created": "2020-05-01",
+      "text": "Exemplo sintético distinto: o termo próxima apareceu em uma lista genérica, sem relato pessoal correspondente.",
+      "synthetic": true
+    },
+    {
+      "id": "syn-022",
+      "tenant": "tenant-sim-1",
+      "patient": "patient-sim-1",
+      "ordinal": 22,
+      "created": "2020-01-23",
+      "text": "Em dias presenciais, desperta às 06:15.",
+      "synthetic": true
+    },
+    {
+      "id": "neg-022",
+      "tenant": "tenant-sim-1",
+      "patient": "patient-sim-1",
+      "ordinal": 122,
+      "created": "2020-05-02",
+      "text": "Exemplo sintético distinto: o termo em apareceu em uma lista genérica, sem relato pessoal correspondente.",
+      "synthetic": true
+    },
+    {
+      "id": "syn-023",
+      "tenant": "tenant-sim-1",
+      "patient": "patient-sim-1",
+      "ordinal": 23,
+      "created": "2020-01-24",
+      "text": "Descreveu como referência um copo com capacidade aproximada de 200 mL.",
+      "synthetic": true
+    },
+    {
+      "id": "neg-023",
+      "tenant": "tenant-sim-1",
+      "patient": "patient-sim-1",
+      "ordinal": 123,
+      "created": "2020-05-03",
+      "text": "Exemplo sintético distinto: o termo descreveu apareceu em uma lista genérica, sem relato pessoal correspondente.",
+      "synthetic": true
+    },
+    {
+      "id": "syn-024",
+      "tenant": "tenant-sim-1",
+      "patient": "patient-sim-1",
+      "ordinal": 24,
+      "created": "2020-01-25",
+      "text": "Exemplo de rótulo mencionado: 42,7 g por porção declarada.",
+      "synthetic": true
+    },
+    {
+      "id": "neg-024",
+      "tenant": "tenant-sim-1",
+      "patient": "patient-sim-1",
+      "ordinal": 124,
+      "created": "2020-05-04",
+      "text": "Exemplo sintético distinto: o termo exemplo apareceu em uma lista genérica, sem relato pessoal correspondente.",
+      "synthetic": true
+    },
+    {
+      "id": "syn-025",
+      "tenant": "tenant-sim-1",
+      "patient": "patient-sim-1",
+      "ordinal": 225,
+      "created": "2020-08-13",
+      "text": "À tarde costuma escolher manga como fruta do lanche.",
+      "synthetic": true
+    },
+    {
+      "id": "neg-025",
+      "tenant": "tenant-sim-1",
+      "patient": "patient-sim-1",
+      "ordinal": 125,
+      "created": "2020-05-05",
+      "text": "Exemplo sintético distinto: o termo à apareceu em uma lista genérica, sem relato pessoal correspondente.",
+      "synthetic": true
+    },
+    {
+      "id": "syn-026",
+      "tenant": "tenant-sim-1",
+      "patient": "patient-sim-1",
+      "ordinal": 226,
+      "created": "2020-08-14",
+      "text": "Em janeiro comentou que visitou uma feira de produtores locais.",
+      "synthetic": true
+    },
+    {
+      "id": "neg-026",
+      "tenant": "tenant-sim-1",
+      "patient": "patient-sim-1",
+      "ordinal": 126,
+      "created": "2020-05-06",
+      "text": "Exemplo sintético distinto: o termo em apareceu em uma lista genérica, sem relato pessoal correspondente.",
+      "synthetic": true
+    },
+    {
+      "id": "syn-027",
+      "tenant": "tenant-sim-1",
+      "patient": "patient-sim-1",
+      "ordinal": 227,
+      "created": "2020-08-15",
+      "text": "Mencionou pão de fermentação natural em uma conversa inicial.",
+      "synthetic": true
+    },
+    {
+      "id": "neg-027",
+      "tenant": "tenant-sim-1",
+      "patient": "patient-sim-1",
+      "ordinal": 127,
+      "created": "2020-05-07",
+      "text": "Exemplo sintético distinto: o termo mencionou apareceu em uma lista genérica, sem relato pessoal correspondente.",
+      "synthetic": true
+    },
+    {
+      "id": "syn-028",
+      "tenant": "tenant-sim-1",
+      "patient": "patient-sim-1",
+      "ordinal": 228,
+      "created": "2020-08-16",
+      "text": "Em uma anotação antiga contou que prefere sopa no jantar durante o inverno.",
+      "synthetic": true
+    },
+    {
+      "id": "neg-028",
+      "tenant": "tenant-sim-1",
+      "patient": "patient-sim-1",
+      "ordinal": 128,
+      "created": "2020-05-08",
+      "text": "Exemplo sintético distinto: o termo em apareceu em uma lista genérica, sem relato pessoal correspondente.",
+      "synthetic": true
+    },
+    {
+      "id": "syn-029",
+      "tenant": "tenant-sim-1",
+      "patient": "patient-sim-1",
+      "ordinal": 29,
+      "created": "2020-01-30",
+      "text": "Compartilhou uma receita de milho roxo que conheceu em uma viagem.",
+      "synthetic": true
+    },
+    {
+      "id": "neg-029",
+      "tenant": "tenant-sim-1",
+      "patient": "patient-sim-1",
+      "ordinal": 129,
+      "created": "2020-05-09",
+      "text": "Exemplo sintético distinto: o termo compartilhou apareceu em uma lista genérica, sem relato pessoal correspondente.",
+      "synthetic": true
+    },
+    {
+      "id": "syn-030",
+      "tenant": "tenant-sim-1",
+      "patient": "patient-sim-1",
+      "ordinal": 30,
+      "created": "2020-01-31",
+      "text": "Disse que às vezes escolhe água com gás no almoço.",
+      "synthetic": true
+    },
+    {
+      "id": "neg-030",
+      "tenant": "tenant-sim-1",
+      "patient": "patient-sim-1",
+      "ordinal": 130,
+      "created": "2020-05-10",
+      "text": "Exemplo sintético distinto: o termo disse apareceu em uma lista genérica, sem relato pessoal correspondente.",
+      "synthetic": true
+    },
+    {
+      "id": "syn-031",
+      "tenant": "tenant-sim-1",
+      "patient": "patient-sim-1",
+      "ordinal": 31,
+      "created": "2020-02-01",
+      "text": "O chá de hibisco foi citado como bebida que experimentou.",
+      "synthetic": true
+    },
+    {
+      "id": "neg-031",
+      "tenant": "tenant-sim-1",
+      "patient": "patient-sim-1",
+      "ordinal": 131,
+      "created": "2020-05-11",
+      "text": "Exemplo sintético distinto: o termo o apareceu em uma lista genérica, sem relato pessoal correspondente.",
+      "synthetic": true
+    },
+    {
+      "id": "syn-032",
+      "tenant": "tenant-sim-1",
+      "patient": "patient-sim-1",
+      "ordinal": 32,
+      "created": "2020-02-02",
+      "text": "Comentou que preparou couve-flor assada para o jantar.",
+      "synthetic": true
+    },
+    {
+      "id": "neg-032",
+      "tenant": "tenant-sim-1",
+      "patient": "patient-sim-1",
+      "ordinal": 132,
+      "created": "2020-05-12",
+      "text": "Exemplo sintético distinto: o termo comentou apareceu em uma lista genérica, sem relato pessoal correspondente.",
+      "synthetic": true
+    },
+    {
+      "id": "syn-033",
+      "tenant": "tenant-sim-1",
+      "patient": "patient-sim-1",
+      "ordinal": 33,
+      "created": "2020-02-03",
+      "text": "Informou que parou de tomar café no período da tarde.",
+      "synthetic": true
+    },
+    {
+      "id": "neg-033",
+      "tenant": "tenant-sim-1",
+      "patient": "patient-sim-1",
+      "ordinal": 133,
+      "created": "2020-05-13",
+      "text": "Exemplo sintético distinto: o termo informou apareceu em uma lista genérica, sem relato pessoal correspondente.",
+      "synthetic": true
+    },
+    {
+      "id": "syn-034",
+      "tenant": "tenant-sim-1",
+      "patient": "patient-sim-1",
+      "ordinal": 34,
+      "created": "2020-02-04",
+      "text": "Descreveu trabalho em turnos noturnos alternados.",
+      "synthetic": true
+    },
+    {
+      "id": "neg-034",
+      "tenant": "tenant-sim-1",
+      "patient": "patient-sim-1",
+      "ordinal": 134,
+      "created": "2020-05-14",
+      "text": "Exemplo sintético distinto: o termo descreveu apareceu em uma lista genérica, sem relato pessoal correspondente.",
+      "synthetic": true
+    },
+    {
+      "id": "syn-035",
+      "tenant": "tenant-sim-1",
+      "patient": "patient-sim-1",
+      "ordinal": 35,
+      "created": "2020-02-05",
+      "text": "A conversa registrou castanha de baru entre os alimentos que conhece.",
+      "synthetic": true
+    },
+    {
+      "id": "neg-035",
+      "tenant": "tenant-sim-1",
+      "patient": "patient-sim-1",
+      "ordinal": 135,
+      "created": "2020-05-15",
+      "text": "Exemplo sintético distinto: o termo a apareceu em uma lista genérica, sem relato pessoal correspondente.",
+      "synthetic": true
+    },
+    {
+      "id": "syn-036",
+      "tenant": "tenant-sim-1",
+      "patient": "patient-sim-1",
+      "ordinal": 36,
+      "created": "2020-02-06",
+      "text": "Não há menção a tofu nesta semana; o texto fala apenas de feijão.",
+      "synthetic": true
+    },
+    {
+      "id": "neg-036",
+      "tenant": "tenant-sim-1",
+      "patient": "patient-sim-1",
+      "ordinal": 136,
+      "created": "2020-05-16",
+      "text": "Exemplo sintético distinto: o termo não apareceu em uma lista genérica, sem relato pessoal correspondente.",
+      "synthetic": true
+    },
+    {
+      "id": "syn-037",
+      "tenant": "tenant-sim-1",
+      "patient": "patient-sim-1",
+      "ordinal": 37,
+      "created": "2020-02-07",
+      "text": "As notas disponíveis não citam suplemento de zinco.",
+      "synthetic": true
+    },
+    {
+      "id": "neg-037",
+      "tenant": "tenant-sim-1",
+      "patient": "patient-sim-1",
+      "ordinal": 137,
+      "created": "2020-05-17",
+      "text": "Exemplo sintético distinto: o termo as apareceu em uma lista genérica, sem relato pessoal correspondente.",
+      "synthetic": true
+    },
+    {
+      "id": "syn-038",
+      "tenant": "tenant-sim-1",
+      "patient": "patient-sim-1",
+      "ordinal": 38,
+      "created": "2020-02-08",
+      "text": "Nenhuma anotação deste conjunto fala sobre caminhada na neve.",
+      "synthetic": true
+    },
+    {
+      "id": "neg-038",
+      "tenant": "tenant-sim-1",
+      "patient": "patient-sim-1",
+      "ordinal": 138,
+      "created": "2020-05-18",
+      "text": "Exemplo sintético distinto: o termo nenhuma apareceu em uma lista genérica, sem relato pessoal correspondente.",
+      "synthetic": true
+    },
+    {
+      "id": "syn-039",
+      "tenant": "tenant-sim-1",
+      "patient": "patient-sim-1",
+      "ordinal": 39,
+      "created": "2020-02-09",
+      "text": "Não existe informação sobre alergia a kiwi nas notas sintéticas.",
+      "synthetic": true
+    },
+    {
+      "id": "neg-039",
+      "tenant": "tenant-sim-1",
+      "patient": "patient-sim-1",
+      "ordinal": 139,
+      "created": "2020-05-19",
+      "text": "Exemplo sintético distinto: o termo não apareceu em uma lista genérica, sem relato pessoal correspondente.",
+      "synthetic": true
+    },
+    {
+      "id": "syn-040",
+      "tenant": "tenant-sim-1",
+      "patient": "patient-sim-1",
+      "ordinal": 40,
+      "created": "2020-02-10",
+      "text": "Nenhuma evolução menciona pitaya amarela.",
+      "synthetic": true
+    },
+    {
+      "id": "neg-040",
+      "tenant": "tenant-sim-1",
+      "patient": "patient-sim-1",
+      "ordinal": 140,
+      "created": "2020-05-20",
+      "text": "Exemplo sintético distinto: o termo nenhuma apareceu em uma lista genérica, sem relato pessoal correspondente.",
+      "synthetic": true
+    },
+    {
+      "id": "fill-000",
+      "tenant": "tenant-sim-1",
+      "patient": "patient-sim-1",
+      "ordinal": 1000,
+      "created": "2022-09-27",
+      "text": "Foi revisada a organização das refeições nos dias de rotina habitual.",
+      "synthetic": true
+    },
+    {
+      "id": "fill-001",
+      "tenant": "tenant-sim-1",
+      "patient": "patient-sim-1",
+      "ordinal": 1001,
+      "created": "2022-09-28",
+      "text": "A pessoa comentou que faz compras em mercados próximos de casa.",
+      "synthetic": true
+    },
+    {
+      "id": "fill-002",
+      "tenant": "tenant-sim-1",
+      "patient": "patient-sim-1",
+      "ordinal": 1002,
+      "created": "2022-09-29",
+      "text": "Conversaram sobre horários disponíveis para a próxima consulta.",
+      "synthetic": true
+    },
+    {
+      "id": "fill-003",
+      "tenant": "tenant-sim-1",
+      "patient": "patient-sim-1",
+      "ordinal": 1003,
+      "created": "2022-09-30",
+      "text": "Foi relatada preferência por refeições preparadas em casa.",
+      "synthetic": true
+    },
+    {
+      "id": "fill-004",
+      "tenant": "tenant-sim-1",
+      "patient": "patient-sim-1",
+      "ordinal": 1004,
+      "created": "2022-10-01",
+      "text": "A pessoa descreveu mudanças na agenda de trabalho nesta quinzena.",
+      "synthetic": true
+    },
+    {
+      "id": "fill-005",
+      "tenant": "tenant-sim-1",
+      "patient": "patient-sim-1",
+      "ordinal": 1005,
+      "created": "2022-10-02",
+      "text": "A conversa abordou opções variadas para o almoço de fim de semana.",
+      "synthetic": true
+    },
+    {
+      "id": "fill-006",
+      "tenant": "tenant-sim-1",
+      "patient": "patient-sim-1",
+      "ordinal": 1006,
+      "created": "2022-10-03",
+      "text": "Registrou-se uma dúvida sobre a leitura de informações em embalagens.",
+      "synthetic": true
+    },
+    {
+      "id": "fill-007",
+      "tenant": "tenant-sim-1",
+      "patient": "patient-sim-1",
+      "ordinal": 1007,
+      "created": "2022-10-04",
+      "text": "Foi mencionado o planejamento de uma lista de compras mensal.",
+      "synthetic": true
+    },
+    {
+      "id": "fill-008",
+      "tenant": "tenant-sim-1",
+      "patient": "patient-sim-1",
+      "ordinal": 1008,
+      "created": "2022-10-05",
+      "text": "Foi revisada a organização das refeições nos dias de rotina habitual.",
+      "synthetic": true
+    },
+    {
+      "id": "fill-009",
+      "tenant": "tenant-sim-1",
+      "patient": "patient-sim-1",
+      "ordinal": 1009,
+      "created": "2022-10-06",
+      "text": "A pessoa comentou que faz compras em mercados próximos de casa.",
+      "synthetic": true
+    },
+    {
+      "id": "fill-010",
+      "tenant": "tenant-sim-1",
+      "patient": "patient-sim-1",
+      "ordinal": 1010,
+      "created": "2022-10-07",
+      "text": "Conversaram sobre horários disponíveis para a próxima consulta.",
+      "synthetic": true
+    },
+    {
+      "id": "fill-011",
+      "tenant": "tenant-sim-1",
+      "patient": "patient-sim-1",
+      "ordinal": 1011,
+      "created": "2022-10-08",
+      "text": "Foi relatada preferência por refeições preparadas em casa.",
+      "synthetic": true
+    },
+    {
+      "id": "fill-012",
+      "tenant": "tenant-sim-1",
+      "patient": "patient-sim-1",
+      "ordinal": 1012,
+      "created": "2022-10-09",
+      "text": "A pessoa descreveu mudanças na agenda de trabalho nesta quinzena.",
+      "synthetic": true
+    },
+    {
+      "id": "fill-013",
+      "tenant": "tenant-sim-1",
+      "patient": "patient-sim-1",
+      "ordinal": 1013,
+      "created": "2022-10-10",
+      "text": "A conversa abordou opções variadas para o almoço de fim de semana.",
+      "synthetic": true
+    },
+    {
+      "id": "fill-014",
+      "tenant": "tenant-sim-1",
+      "patient": "patient-sim-1",
+      "ordinal": 1014,
+      "created": "2022-10-11",
+      "text": "Registrou-se uma dúvida sobre a leitura de informações em embalagens.",
+      "synthetic": true
+    },
+    {
+      "id": "fill-015",
+      "tenant": "tenant-sim-1",
+      "patient": "patient-sim-1",
+      "ordinal": 1015,
+      "created": "2022-10-12",
+      "text": "Foi mencionado o planejamento de uma lista de compras mensal.",
+      "synthetic": true
+    },
+    {
+      "id": "fill-016",
+      "tenant": "tenant-sim-1",
+      "patient": "patient-sim-1",
+      "ordinal": 1016,
+      "created": "2022-10-13",
+      "text": "Foi revisada a organização das refeições nos dias de rotina habitual.",
+      "synthetic": true
+    },
+    {
+      "id": "fill-017",
+      "tenant": "tenant-sim-1",
+      "patient": "patient-sim-1",
+      "ordinal": 1017,
+      "created": "2022-10-14",
+      "text": "A pessoa comentou que faz compras em mercados próximos de casa.",
+      "synthetic": true
+    },
+    {
+      "id": "fill-018",
+      "tenant": "tenant-sim-1",
+      "patient": "patient-sim-1",
+      "ordinal": 1018,
+      "created": "2022-10-15",
+      "text": "Conversaram sobre horários disponíveis para a próxima consulta.",
+      "synthetic": true
+    },
+    {
+      "id": "fill-019",
+      "tenant": "tenant-sim-1",
+      "patient": "patient-sim-1",
+      "ordinal": 1019,
+      "created": "2022-10-16",
+      "text": "Foi relatada preferência por refeições preparadas em casa.",
+      "synthetic": true
+    },
+    {
+      "id": "fill-020",
+      "tenant": "tenant-sim-1",
+      "patient": "patient-sim-1",
+      "ordinal": 1020,
+      "created": "2022-10-17",
+      "text": "A pessoa descreveu mudanças na agenda de trabalho nesta quinzena.",
+      "synthetic": true
+    },
+    {
+      "id": "fill-021",
+      "tenant": "tenant-sim-1",
+      "patient": "patient-sim-1",
+      "ordinal": 1021,
+      "created": "2022-10-18",
+      "text": "A conversa abordou opções variadas para o almoço de fim de semana.",
+      "synthetic": true
+    },
+    {
+      "id": "fill-022",
+      "tenant": "tenant-sim-1",
+      "patient": "patient-sim-1",
+      "ordinal": 1022,
+      "created": "2022-10-19",
+      "text": "Registrou-se uma dúvida sobre a leitura de informações em embalagens.",
+      "synthetic": true
+    },
+    {
+      "id": "fill-023",
+      "tenant": "tenant-sim-1",
+      "patient": "patient-sim-1",
+      "ordinal": 1023,
+      "created": "2022-10-20",
+      "text": "Foi mencionado o planejamento de uma lista de compras mensal.",
+      "synthetic": true
+    },
+    {
+      "id": "fill-024",
+      "tenant": "tenant-sim-1",
+      "patient": "patient-sim-1",
+      "ordinal": 1024,
+      "created": "2022-10-21",
+      "text": "Foi revisada a organização das refeições nos dias de rotina habitual.",
+      "synthetic": true
+    },
+    {
+      "id": "fill-025",
+      "tenant": "tenant-sim-1",
+      "patient": "patient-sim-1",
+      "ordinal": 1025,
+      "created": "2022-10-22",
+      "text": "A pessoa comentou que faz compras em mercados próximos de casa.",
+      "synthetic": true
+    },
+    {
+      "id": "fill-026",
+      "tenant": "tenant-sim-1",
+      "patient": "patient-sim-1",
+      "ordinal": 1026,
+      "created": "2022-10-23",
+      "text": "Conversaram sobre horários disponíveis para a próxima consulta.",
+      "synthetic": true
+    },
+    {
+      "id": "fill-027",
+      "tenant": "tenant-sim-1",
+      "patient": "patient-sim-1",
+      "ordinal": 1027,
+      "created": "2022-10-24",
+      "text": "Foi relatada preferência por refeições preparadas em casa.",
+      "synthetic": true
+    },
+    {
+      "id": "fill-028",
+      "tenant": "tenant-sim-1",
+      "patient": "patient-sim-1",
+      "ordinal": 1028,
+      "created": "2022-10-25",
+      "text": "A pessoa descreveu mudanças na agenda de trabalho nesta quinzena.",
+      "synthetic": true
+    },
+    {
+      "id": "fill-029",
+      "tenant": "tenant-sim-1",
+      "patient": "patient-sim-1",
+      "ordinal": 1029,
+      "created": "2022-10-26",
+      "text": "A conversa abordou opções variadas para o almoço de fim de semana.",
+      "synthetic": true
+    },
+    {
+      "id": "fill-030",
+      "tenant": "tenant-sim-1",
+      "patient": "patient-sim-1",
+      "ordinal": 1030,
+      "created": "2022-10-27",
+      "text": "Registrou-se uma dúvida sobre a leitura de informações em embalagens.",
+      "synthetic": true
+    },
+    {
+      "id": "fill-031",
+      "tenant": "tenant-sim-1",
+      "patient": "patient-sim-1",
+      "ordinal": 1031,
+      "created": "2022-10-28",
+      "text": "Foi mencionado o planejamento de uma lista de compras mensal.",
+      "synthetic": true
+    },
+    {
+      "id": "fill-032",
+      "tenant": "tenant-sim-1",
+      "patient": "patient-sim-1",
+      "ordinal": 1032,
+      "created": "2022-10-29",
+      "text": "Foi revisada a organização das refeições nos dias de rotina habitual.",
+      "synthetic": true
+    },
+    {
+      "id": "fill-033",
+      "tenant": "tenant-sim-1",
+      "patient": "patient-sim-1",
+      "ordinal": 1033,
+      "created": "2022-10-30",
+      "text": "A pessoa comentou que faz compras em mercados próximos de casa.",
+      "synthetic": true
+    },
+    {
+      "id": "fill-034",
+      "tenant": "tenant-sim-1",
+      "patient": "patient-sim-1",
+      "ordinal": 1034,
+      "created": "2022-10-31",
+      "text": "Conversaram sobre horários disponíveis para a próxima consulta.",
+      "synthetic": true
+    },
+    {
+      "id": "fill-035",
+      "tenant": "tenant-sim-1",
+      "patient": "patient-sim-1",
+      "ordinal": 1035,
+      "created": "2022-11-01",
+      "text": "Foi relatada preferência por refeições preparadas em casa.",
+      "synthetic": true
+    },
+    {
+      "id": "fill-036",
+      "tenant": "tenant-sim-1",
+      "patient": "patient-sim-1",
+      "ordinal": 1036,
+      "created": "2022-11-02",
+      "text": "A pessoa descreveu mudanças na agenda de trabalho nesta quinzena.",
+      "synthetic": true
+    },
+    {
+      "id": "fill-037",
+      "tenant": "tenant-sim-1",
+      "patient": "patient-sim-1",
+      "ordinal": 1037,
+      "created": "2022-11-03",
+      "text": "A conversa abordou opções variadas para o almoço de fim de semana.",
+      "synthetic": true
+    },
+    {
+      "id": "fill-038",
+      "tenant": "tenant-sim-1",
+      "patient": "patient-sim-1",
+      "ordinal": 1038,
+      "created": "2022-11-04",
+      "text": "Registrou-se uma dúvida sobre a leitura de informações em embalagens.",
+      "synthetic": true
+    },
+    {
+      "id": "fill-039",
+      "tenant": "tenant-sim-1",
+      "patient": "patient-sim-1",
+      "ordinal": 1039,
+      "created": "2022-11-05",
+      "text": "Foi mencionado o planejamento de uma lista de compras mensal.",
+      "synthetic": true
+    },
+    {
+      "id": "fill-040",
+      "tenant": "tenant-sim-1",
+      "patient": "patient-sim-1",
+      "ordinal": 1040,
+      "created": "2022-11-06",
+      "text": "Foi revisada a organização das refeições nos dias de rotina habitual.",
+      "synthetic": true
+    },
+    {
+      "id": "fill-041",
+      "tenant": "tenant-sim-1",
+      "patient": "patient-sim-1",
+      "ordinal": 1041,
+      "created": "2022-11-07",
+      "text": "A pessoa comentou que faz compras em mercados próximos de casa.",
+      "synthetic": true
+    },
+    {
+      "id": "fill-042",
+      "tenant": "tenant-sim-1",
+      "patient": "patient-sim-1",
+      "ordinal": 1042,
+      "created": "2022-11-08",
+      "text": "Conversaram sobre horários disponíveis para a próxima consulta.",
+      "synthetic": true
+    },
+    {
+      "id": "fill-043",
+      "tenant": "tenant-sim-1",
+      "patient": "patient-sim-1",
+      "ordinal": 1043,
+      "created": "2022-11-09",
+      "text": "Foi relatada preferência por refeições preparadas em casa.",
+      "synthetic": true
+    },
+    {
+      "id": "fill-044",
+      "tenant": "tenant-sim-1",
+      "patient": "patient-sim-1",
+      "ordinal": 1044,
+      "created": "2022-11-10",
+      "text": "A pessoa descreveu mudanças na agenda de trabalho nesta quinzena.",
+      "synthetic": true
+    },
+    {
+      "id": "fill-045",
+      "tenant": "tenant-sim-1",
+      "patient": "patient-sim-1",
+      "ordinal": 1045,
+      "created": "2022-11-11",
+      "text": "A conversa abordou opções variadas para o almoço de fim de semana.",
+      "synthetic": true
+    },
+    {
+      "id": "fill-046",
+      "tenant": "tenant-sim-1",
+      "patient": "patient-sim-1",
+      "ordinal": 1046,
+      "created": "2022-11-12",
+      "text": "Registrou-se uma dúvida sobre a leitura de informações em embalagens.",
+      "synthetic": true
+    },
+    {
+      "id": "fill-047",
+      "tenant": "tenant-sim-1",
+      "patient": "patient-sim-1",
+      "ordinal": 1047,
+      "created": "2022-11-13",
+      "text": "Foi mencionado o planejamento de uma lista de compras mensal.",
+      "synthetic": true
+    },
+    {
+      "id": "fill-048",
+      "tenant": "tenant-sim-1",
+      "patient": "patient-sim-1",
+      "ordinal": 1048,
+      "created": "2022-11-14",
+      "text": "Foi revisada a organização das refeições nos dias de rotina habitual.",
+      "synthetic": true
+    },
+    {
+      "id": "fill-049",
+      "tenant": "tenant-sim-1",
+      "patient": "patient-sim-1",
+      "ordinal": 1049,
+      "created": "2022-11-15",
+      "text": "A pessoa comentou que faz compras em mercados próximos de casa.",
+      "synthetic": true
+    },
+    {
+      "id": "fill-050",
+      "tenant": "tenant-sim-1",
+      "patient": "patient-sim-1",
+      "ordinal": 1050,
+      "created": "2022-11-16",
+      "text": "Conversaram sobre horários disponíveis para a próxima consulta.",
+      "synthetic": true
+    },
+    {
+      "id": "fill-051",
+      "tenant": "tenant-sim-1",
+      "patient": "patient-sim-1",
+      "ordinal": 1051,
+      "created": "2022-11-17",
+      "text": "Foi relatada preferência por refeições preparadas em casa.",
+      "synthetic": true
+    },
+    {
+      "id": "fill-052",
+      "tenant": "tenant-sim-1",
+      "patient": "patient-sim-1",
+      "ordinal": 1052,
+      "created": "2022-11-18",
+      "text": "A pessoa descreveu mudanças na agenda de trabalho nesta quinzena.",
+      "synthetic": true
+    },
+    {
+      "id": "fill-053",
+      "tenant": "tenant-sim-1",
+      "patient": "patient-sim-1",
+      "ordinal": 1053,
+      "created": "2022-11-19",
+      "text": "A conversa abordou opções variadas para o almoço de fim de semana.",
+      "synthetic": true
+    },
+    {
+      "id": "fill-054",
+      "tenant": "tenant-sim-1",
+      "patient": "patient-sim-1",
+      "ordinal": 1054,
+      "created": "2022-11-20",
+      "text": "Registrou-se uma dúvida sobre a leitura de informações em embalagens.",
+      "synthetic": true
+    },
+    {
+      "id": "fill-055",
+      "tenant": "tenant-sim-1",
+      "patient": "patient-sim-1",
+      "ordinal": 1055,
+      "created": "2022-11-21",
+      "text": "Foi mencionado o planejamento de uma lista de compras mensal.",
+      "synthetic": true
+    },
+    {
+      "id": "fill-056",
+      "tenant": "tenant-sim-1",
+      "patient": "patient-sim-1",
+      "ordinal": 1056,
+      "created": "2022-11-22",
+      "text": "Foi revisada a organização das refeições nos dias de rotina habitual.",
+      "synthetic": true
+    },
+    {
+      "id": "fill-057",
+      "tenant": "tenant-sim-1",
+      "patient": "patient-sim-1",
+      "ordinal": 1057,
+      "created": "2022-11-23",
+      "text": "A pessoa comentou que faz compras em mercados próximos de casa.",
+      "synthetic": true
+    },
+    {
+      "id": "fill-058",
+      "tenant": "tenant-sim-1",
+      "patient": "patient-sim-1",
+      "ordinal": 1058,
+      "created": "2022-11-24",
+      "text": "Conversaram sobre horários disponíveis para a próxima consulta.",
+      "synthetic": true
+    },
+    {
+      "id": "fill-059",
+      "tenant": "tenant-sim-1",
+      "patient": "patient-sim-1",
+      "ordinal": 1059,
+      "created": "2022-11-25",
+      "text": "Foi relatada preferência por refeições preparadas em casa.",
+      "synthetic": true
+    },
+    {
+      "id": "fill-060",
+      "tenant": "tenant-sim-1",
+      "patient": "patient-sim-1",
+      "ordinal": 1060,
+      "created": "2022-11-26",
+      "text": "A pessoa descreveu mudanças na agenda de trabalho nesta quinzena.",
+      "synthetic": true
+    },
+    {
+      "id": "fill-061",
+      "tenant": "tenant-sim-1",
+      "patient": "patient-sim-1",
+      "ordinal": 1061,
+      "created": "2022-11-27",
+      "text": "A conversa abordou opções variadas para o almoço de fim de semana.",
+      "synthetic": true
+    },
+    {
+      "id": "fill-062",
+      "tenant": "tenant-sim-1",
+      "patient": "patient-sim-1",
+      "ordinal": 1062,
+      "created": "2022-11-28",
+      "text": "Registrou-se uma dúvida sobre a leitura de informações em embalagens.",
+      "synthetic": true
+    },
+    {
+      "id": "fill-063",
+      "tenant": "tenant-sim-1",
+      "patient": "patient-sim-1",
+      "ordinal": 1063,
+      "created": "2022-11-29",
+      "text": "Foi mencionado o planejamento de uma lista de compras mensal.",
+      "synthetic": true
+    },
+    {
+      "id": "fill-064",
+      "tenant": "tenant-sim-1",
+      "patient": "patient-sim-1",
+      "ordinal": 1064,
+      "created": "2022-11-30",
+      "text": "Foi revisada a organização das refeições nos dias de rotina habitual.",
+      "synthetic": true
+    },
+    {
+      "id": "fill-065",
+      "tenant": "tenant-sim-1",
+      "patient": "patient-sim-1",
+      "ordinal": 1065,
+      "created": "2022-12-01",
+      "text": "A pessoa comentou que faz compras em mercados próximos de casa.",
+      "synthetic": true
+    },
+    {
+      "id": "fill-066",
+      "tenant": "tenant-sim-1",
+      "patient": "patient-sim-1",
+      "ordinal": 1066,
+      "created": "2022-12-02",
+      "text": "Conversaram sobre horários disponíveis para a próxima consulta.",
+      "synthetic": true
+    },
+    {
+      "id": "fill-067",
+      "tenant": "tenant-sim-1",
+      "patient": "patient-sim-1",
+      "ordinal": 1067,
+      "created": "2022-12-03",
+      "text": "Foi relatada preferência por refeições preparadas em casa.",
+      "synthetic": true
+    },
+    {
+      "id": "fill-068",
+      "tenant": "tenant-sim-1",
+      "patient": "patient-sim-1",
+      "ordinal": 1068,
+      "created": "2022-12-04",
+      "text": "A pessoa descreveu mudanças na agenda de trabalho nesta quinzena.",
+      "synthetic": true
+    },
+    {
+      "id": "fill-069",
+      "tenant": "tenant-sim-1",
+      "patient": "patient-sim-1",
+      "ordinal": 1069,
+      "created": "2022-12-05",
+      "text": "A conversa abordou opções variadas para o almoço de fim de semana.",
+      "synthetic": true
+    },
+    {
+      "id": "fill-070",
+      "tenant": "tenant-sim-1",
+      "patient": "patient-sim-1",
+      "ordinal": 1070,
+      "created": "2022-12-06",
+      "text": "Registrou-se uma dúvida sobre a leitura de informações em embalagens.",
+      "synthetic": true
+    },
+    {
+      "id": "fill-071",
+      "tenant": "tenant-sim-1",
+      "patient": "patient-sim-1",
+      "ordinal": 1071,
+      "created": "2022-12-07",
+      "text": "Foi mencionado o planejamento de uma lista de compras mensal.",
+      "synthetic": true
+    },
+    {
+      "id": "fill-072",
+      "tenant": "tenant-sim-1",
+      "patient": "patient-sim-1",
+      "ordinal": 1072,
+      "created": "2022-12-08",
+      "text": "Foi revisada a organização das refeições nos dias de rotina habitual.",
+      "synthetic": true
+    },
+    {
+      "id": "fill-073",
+      "tenant": "tenant-sim-1",
+      "patient": "patient-sim-1",
+      "ordinal": 1073,
+      "created": "2022-12-09",
+      "text": "A pessoa comentou que faz compras em mercados próximos de casa.",
+      "synthetic": true
+    },
+    {
+      "id": "fill-074",
+      "tenant": "tenant-sim-1",
+      "patient": "patient-sim-1",
+      "ordinal": 1074,
+      "created": "2022-12-10",
+      "text": "Conversaram sobre horários disponíveis para a próxima consulta.",
+      "synthetic": true
+    },
+    {
+      "id": "fill-075",
+      "tenant": "tenant-sim-1",
+      "patient": "patient-sim-1",
+      "ordinal": 1075,
+      "created": "2022-12-11",
+      "text": "Foi relatada preferência por refeições preparadas em casa.",
+      "synthetic": true
+    },
+    {
+      "id": "fill-076",
+      "tenant": "tenant-sim-1",
+      "patient": "patient-sim-1",
+      "ordinal": 1076,
+      "created": "2022-12-12",
+      "text": "A pessoa descreveu mudanças na agenda de trabalho nesta quinzena.",
+      "synthetic": true
+    },
+    {
+      "id": "fill-077",
+      "tenant": "tenant-sim-1",
+      "patient": "patient-sim-1",
+      "ordinal": 1077,
+      "created": "2022-12-13",
+      "text": "A conversa abordou opções variadas para o almoço de fim de semana.",
+      "synthetic": true
+    },
+    {
+      "id": "fill-078",
+      "tenant": "tenant-sim-1",
+      "patient": "patient-sim-1",
+      "ordinal": 1078,
+      "created": "2022-12-14",
+      "text": "Registrou-se uma dúvida sobre a leitura de informações em embalagens.",
+      "synthetic": true
+    },
+    {
+      "id": "fill-079",
+      "tenant": "tenant-sim-1",
+      "patient": "patient-sim-1",
+      "ordinal": 1079,
+      "created": "2022-12-15",
+      "text": "Foi mencionado o planejamento de uma lista de compras mensal.",
+      "synthetic": true
+    },
+    {
+      "id": "fill-080",
+      "tenant": "tenant-sim-1",
+      "patient": "patient-sim-1",
+      "ordinal": 1080,
+      "created": "2022-12-16",
+      "text": "Foi revisada a organização das refeições nos dias de rotina habitual.",
+      "synthetic": true
+    },
+    {
+      "id": "fill-081",
+      "tenant": "tenant-sim-1",
+      "patient": "patient-sim-1",
+      "ordinal": 1081,
+      "created": "2022-12-17",
+      "text": "A pessoa comentou que faz compras em mercados próximos de casa.",
+      "synthetic": true
+    },
+    {
+      "id": "fill-082",
+      "tenant": "tenant-sim-1",
+      "patient": "patient-sim-1",
+      "ordinal": 1082,
+      "created": "2022-12-18",
+      "text": "Conversaram sobre horários disponíveis para a próxima consulta.",
+      "synthetic": true
+    },
+    {
+      "id": "fill-083",
+      "tenant": "tenant-sim-1",
+      "patient": "patient-sim-1",
+      "ordinal": 1083,
+      "created": "2022-12-19",
+      "text": "Foi relatada preferência por refeições preparadas em casa.",
+      "synthetic": true
+    },
+    {
+      "id": "fill-084",
+      "tenant": "tenant-sim-1",
+      "patient": "patient-sim-1",
+      "ordinal": 1084,
+      "created": "2022-12-20",
+      "text": "A pessoa descreveu mudanças na agenda de trabalho nesta quinzena.",
+      "synthetic": true
+    },
+    {
+      "id": "fill-085",
+      "tenant": "tenant-sim-1",
+      "patient": "patient-sim-1",
+      "ordinal": 1085,
+      "created": "2022-12-21",
+      "text": "A conversa abordou opções variadas para o almoço de fim de semana.",
+      "synthetic": true
+    },
+    {
+      "id": "fill-086",
+      "tenant": "tenant-sim-1",
+      "patient": "patient-sim-1",
+      "ordinal": 1086,
+      "created": "2022-12-22",
+      "text": "Registrou-se uma dúvida sobre a leitura de informações em embalagens.",
+      "synthetic": true
+    },
+    {
+      "id": "fill-087",
+      "tenant": "tenant-sim-1",
+      "patient": "patient-sim-1",
+      "ordinal": 1087,
+      "created": "2022-12-23",
+      "text": "Foi mencionado o planejamento de uma lista de compras mensal.",
+      "synthetic": true
+    },
+    {
+      "id": "fill-088",
+      "tenant": "tenant-sim-1",
+      "patient": "patient-sim-1",
+      "ordinal": 1088,
+      "created": "2022-12-24",
+      "text": "Foi revisada a organização das refeições nos dias de rotina habitual.",
+      "synthetic": true
+    },
+    {
+      "id": "fill-089",
+      "tenant": "tenant-sim-1",
+      "patient": "patient-sim-1",
+      "ordinal": 1089,
+      "created": "2022-12-25",
+      "text": "A pessoa comentou que faz compras em mercados próximos de casa.",
+      "synthetic": true
+    },
+    {
+      "id": "fill-090",
+      "tenant": "tenant-sim-1",
+      "patient": "patient-sim-1",
+      "ordinal": 1090,
+      "created": "2022-12-26",
+      "text": "Conversaram sobre horários disponíveis para a próxima consulta.",
+      "synthetic": true
+    },
+    {
+      "id": "fill-091",
+      "tenant": "tenant-sim-1",
+      "patient": "patient-sim-1",
+      "ordinal": 1091,
+      "created": "2022-12-27",
+      "text": "Foi relatada preferência por refeições preparadas em casa.",
+      "synthetic": true
+    },
+    {
+      "id": "fill-092",
+      "tenant": "tenant-sim-1",
+      "patient": "patient-sim-1",
+      "ordinal": 1092,
+      "created": "2022-12-28",
+      "text": "A pessoa descreveu mudanças na agenda de trabalho nesta quinzena.",
+      "synthetic": true
+    },
+    {
+      "id": "fill-093",
+      "tenant": "tenant-sim-1",
+      "patient": "patient-sim-1",
+      "ordinal": 1093,
+      "created": "2022-12-29",
+      "text": "A conversa abordou opções variadas para o almoço de fim de semana.",
+      "synthetic": true
+    },
+    {
+      "id": "fill-094",
+      "tenant": "tenant-sim-1",
+      "patient": "patient-sim-1",
+      "ordinal": 1094,
+      "created": "2022-12-30",
+      "text": "Registrou-se uma dúvida sobre a leitura de informações em embalagens.",
+      "synthetic": true
+    },
+    {
+      "id": "fill-095",
+      "tenant": "tenant-sim-1",
+      "patient": "patient-sim-1",
+      "ordinal": 1095,
+      "created": "2022-12-31",
+      "text": "Foi mencionado o planejamento de uma lista de compras mensal.",
+      "synthetic": true
+    },
+    {
+      "id": "fill-096",
+      "tenant": "tenant-sim-1",
+      "patient": "patient-sim-1",
+      "ordinal": 1096,
+      "created": "2023-01-01",
+      "text": "Foi revisada a organização das refeições nos dias de rotina habitual.",
+      "synthetic": true
+    },
+    {
+      "id": "fill-097",
+      "tenant": "tenant-sim-1",
+      "patient": "patient-sim-1",
+      "ordinal": 1097,
+      "created": "2023-01-02",
+      "text": "A pessoa comentou que faz compras em mercados próximos de casa.",
+      "synthetic": true
+    },
+    {
+      "id": "fill-098",
+      "tenant": "tenant-sim-1",
+      "patient": "patient-sim-1",
+      "ordinal": 1098,
+      "created": "2023-01-03",
+      "text": "Conversaram sobre horários disponíveis para a próxima consulta.",
+      "synthetic": true
+    },
+    {
+      "id": "fill-099",
+      "tenant": "tenant-sim-1",
+      "patient": "patient-sim-1",
+      "ordinal": 1099,
+      "created": "2023-01-04",
+      "text": "Foi relatada preferência por refeições preparadas em casa.",
+      "synthetic": true
+    },
+    {
+      "id": "fill-100",
+      "tenant": "tenant-sim-1",
+      "patient": "patient-sim-1",
+      "ordinal": 1100,
+      "created": "2023-01-05",
+      "text": "A pessoa descreveu mudanças na agenda de trabalho nesta quinzena.",
+      "synthetic": true
+    },
+    {
+      "id": "fill-101",
+      "tenant": "tenant-sim-1",
+      "patient": "patient-sim-1",
+      "ordinal": 1101,
+      "created": "2023-01-06",
+      "text": "A conversa abordou opções variadas para o almoço de fim de semana.",
+      "synthetic": true
+    },
+    {
+      "id": "fill-102",
+      "tenant": "tenant-sim-1",
+      "patient": "patient-sim-1",
+      "ordinal": 1102,
+      "created": "2023-01-07",
+      "text": "Registrou-se uma dúvida sobre a leitura de informações em embalagens.",
+      "synthetic": true
+    },
+    {
+      "id": "fill-103",
+      "tenant": "tenant-sim-1",
+      "patient": "patient-sim-1",
+      "ordinal": 1103,
+      "created": "2023-01-08",
+      "text": "Foi mencionado o planejamento de uma lista de compras mensal.",
+      "synthetic": true
+    },
+    {
+      "id": "fill-104",
+      "tenant": "tenant-sim-1",
+      "patient": "patient-sim-1",
+      "ordinal": 1104,
+      "created": "2023-01-09",
+      "text": "Foi revisada a organização das refeições nos dias de rotina habitual.",
+      "synthetic": true
+    },
+    {
+      "id": "fill-105",
+      "tenant": "tenant-sim-1",
+      "patient": "patient-sim-1",
+      "ordinal": 1105,
+      "created": "2023-01-10",
+      "text": "A pessoa comentou que faz compras em mercados próximos de casa.",
+      "synthetic": true
+    },
+    {
+      "id": "fill-106",
+      "tenant": "tenant-sim-1",
+      "patient": "patient-sim-1",
+      "ordinal": 1106,
+      "created": "2023-01-11",
+      "text": "Conversaram sobre horários disponíveis para a próxima consulta.",
+      "synthetic": true
+    },
+    {
+      "id": "fill-107",
+      "tenant": "tenant-sim-1",
+      "patient": "patient-sim-1",
+      "ordinal": 1107,
+      "created": "2023-01-12",
+      "text": "Foi relatada preferência por refeições preparadas em casa.",
+      "synthetic": true
+    },
+    {
+      "id": "fill-108",
+      "tenant": "tenant-sim-1",
+      "patient": "patient-sim-1",
+      "ordinal": 1108,
+      "created": "2023-01-13",
+      "text": "A pessoa descreveu mudanças na agenda de trabalho nesta quinzena.",
+      "synthetic": true
+    },
+    {
+      "id": "fill-109",
+      "tenant": "tenant-sim-1",
+      "patient": "patient-sim-1",
+      "ordinal": 1109,
+      "created": "2023-01-14",
+      "text": "A conversa abordou opções variadas para o almoço de fim de semana.",
+      "synthetic": true
+    },
+    {
+      "id": "fill-110",
+      "tenant": "tenant-sim-1",
+      "patient": "patient-sim-1",
+      "ordinal": 1110,
+      "created": "2023-01-15",
+      "text": "Registrou-se uma dúvida sobre a leitura de informações em embalagens.",
+      "synthetic": true
+    },
+    {
+      "id": "fill-111",
+      "tenant": "tenant-sim-1",
+      "patient": "patient-sim-1",
+      "ordinal": 1111,
+      "created": "2023-01-16",
+      "text": "Foi mencionado o planejamento de uma lista de compras mensal.",
+      "synthetic": true
+    },
+    {
+      "id": "fill-112",
+      "tenant": "tenant-sim-1",
+      "patient": "patient-sim-1",
+      "ordinal": 1112,
+      "created": "2023-01-17",
+      "text": "Foi revisada a organização das refeições nos dias de rotina habitual.",
+      "synthetic": true
+    },
+    {
+      "id": "fill-113",
+      "tenant": "tenant-sim-1",
+      "patient": "patient-sim-1",
+      "ordinal": 1113,
+      "created": "2023-01-18",
+      "text": "A pessoa comentou que faz compras em mercados próximos de casa.",
+      "synthetic": true
+    },
+    {
+      "id": "fill-114",
+      "tenant": "tenant-sim-1",
+      "patient": "patient-sim-1",
+      "ordinal": 1114,
+      "created": "2023-01-19",
+      "text": "Conversaram sobre horários disponíveis para a próxima consulta.",
+      "synthetic": true
+    },
+    {
+      "id": "fill-115",
+      "tenant": "tenant-sim-1",
+      "patient": "patient-sim-1",
+      "ordinal": 1115,
+      "created": "2023-01-20",
+      "text": "Foi relatada preferência por refeições preparadas em casa.",
+      "synthetic": true
+    },
+    {
+      "id": "fill-116",
+      "tenant": "tenant-sim-1",
+      "patient": "patient-sim-1",
+      "ordinal": 1116,
+      "created": "2023-01-21",
+      "text": "A pessoa descreveu mudanças na agenda de trabalho nesta quinzena.",
+      "synthetic": true
+    },
+    {
+      "id": "fill-117",
+      "tenant": "tenant-sim-1",
+      "patient": "patient-sim-1",
+      "ordinal": 1117,
+      "created": "2023-01-22",
+      "text": "A conversa abordou opções variadas para o almoço de fim de semana.",
+      "synthetic": true
+    },
+    {
+      "id": "fill-118",
+      "tenant": "tenant-sim-1",
+      "patient": "patient-sim-1",
+      "ordinal": 1118,
+      "created": "2023-01-23",
+      "text": "Registrou-se uma dúvida sobre a leitura de informações em embalagens.",
+      "synthetic": true
+    },
+    {
+      "id": "fill-119",
+      "tenant": "tenant-sim-1",
+      "patient": "patient-sim-1",
+      "ordinal": 1119,
+      "created": "2023-01-24",
+      "text": "Foi mencionado o planejamento de uma lista de compras mensal.",
+      "synthetic": true
+    },
+    {
+      "id": "other-000",
+      "tenant": "tenant-sim-2",
+      "patient": "patient-sim-2",
+      "ordinal": 0,
+      "created": "2019-01-01",
+      "text": "Relatou preferência por arroz integral em vez de arroz branco no almoço.",
+      "synthetic": true
+    },
+    {
+      "id": "other-001",
+      "tenant": "tenant-sim-2",
+      "patient": "patient-sim-2",
+      "ordinal": 1,
+      "created": "2019-01-01",
+      "text": "No trabalho costuma esquecer de beber água e relata baixa ingestão de líquidos.",
+      "synthetic": true
+    },
+    {
+      "id": "other-002",
+      "tenant": "tenant-sim-2",
+      "patient": "patient-sim-2",
+      "ordinal": 2,
+      "created": "2019-01-01",
+      "text": "Disse que não gosta do sabor do iogurte natural.",
+      "synthetic": true
+    },
+    {
+      "id": "other-003",
+      "tenant": "tenant-sim-2",
+      "patient": "patient-sim-2",
+      "ordinal": 3,
+      "created": "2019-01-01",
+      "text": "Conta que usa bebida de aveia no café da manhã.",
+      "synthetic": true
+    },
+    {
+      "id": "other-004",
+      "tenant": "tenant-sim-2",
+      "patient": "patient-sim-2",
+      "ordinal": 4,
+      "created": "2019-01-01",
+      "text": "Janta geralmente por volta das dez e meia da noite.",
+      "synthetic": true
+    },
+    {
+      "id": "other-005",
+      "tenant": "tenant-sim-2",
+      "patient": "patient-sim-2",
+      "ordinal": 5,
+      "created": "2019-01-01",
+      "text": "Mencionou que leva uma fruta para comer no intervalo da escola.",
+      "synthetic": true
+    },
+    {
+      "id": "other-006",
+      "tenant": "tenant-sim-2",
+      "patient": "patient-sim-2",
+      "ordinal": 6,
+      "created": "2019-01-01",
+      "text": "Referiu incômodo quando consome preparações bastante apimentadas.",
+      "synthetic": true
+    },
+    {
+      "id": "other-007",
+      "tenant": "tenant-sim-2",
+      "patient": "patient-sim-2",
+      "ordinal": 7,
+      "created": "2019-01-01",
+      "text": "Relatou que cozinha e separa as refeições da semana aos domingos.",
+      "synthetic": true
+    },
+    {
+      "id": "other-008",
+      "tenant": "tenant-sim-2",
+      "patient": "patient-sim-2",
+      "ordinal": 8,
+      "created": "2019-01-01",
+      "text": "Na lista de alimentos citados apareceu lentilha vermelha.",
+      "synthetic": true
+    },
+    {
+      "id": "other-009",
+      "tenant": "tenant-sim-2",
+      "patient": "patient-sim-2",
+      "ordinal": 9,
+      "created": "2019-01-01",
+      "text": "Foi anotado que experimentou kefir de água pela primeira vez.",
+      "synthetic": true
+    }
+  ]
+}

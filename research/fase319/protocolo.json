@@ -1,0 +1,55 @@
+{
+  "fase": 319,
+  "versao": 3,
+  "status": "congelado antes da avaliacao final v3",
+  "corpus": "corpus.json",
+  "corpusSha256": "340f7247def447ae92f9306ee42a904af136c80aa598c0369fb987301e14a07e",
+  "seed": 3190319,
+  "somenteSintetico": true,
+  "consultas": {
+    "total": 40,
+    "desenvolvimento": 10,
+    "testeFinal": 30,
+    "semRespostaNoTeste": 5
+  },
+  "rotulos": "fonte-alvo atribuida por construcao; revisao humana independente pendente; nao inferir relevancia clinica",
+  "comparadores": [
+    "bm25-local",
+    "multilingual-e5-small-onnx",
+    "paraphrase-multilingual-MiniLM-L12-v2-onnx"
+  ],
+  "parametros": {
+    "k": 10,
+    "bm25": {
+      "k1": 1.2,
+      "b": 0.75,
+      "normalizacao": "NFKC, casefold, sem acentos, preserva numeros/unidades"
+    },
+    "e5Prefixos": {
+      "query": "query: ",
+      "documento": "passage: "
+    },
+    "e5MaxTokens": 512,
+    "miniLmMaxTokens": 128,
+    "embedding": "ONNX CPU, mean pooling com attention mask e normalizacao L2; revisar output do grafo antes de medir",
+    "timeouts": "nao aplicavel ao corpus pequeno; latencia/reportar separada de carga do modelo"
+  },
+  "criteriosCongelados": {
+    "ganhoNdcg10AbsolutoSobreBm25": 0.1,
+    "recall10MinimoConsultasPositivas": 0.9,
+    "regressaoExatasDatasUnidadesNegacoes": false,
+    "consultasSemRespostaEnganosasMaximo": 1,
+    "cpu": 1,
+    "memoriaGiB": 2,
+    "p95QuenteSegundosMaximo": 2.0,
+    "preparacao1000FontesSegundosMaximo": 300,
+    "alterarCortesDepoisDosResultados": false
+  },
+  "direitos": {
+    "e5": "metadata/cartao declara MIT; arquivo LICENSE nao existe na revisao consultada; cadeia do peso ainda nao comprovada juridicamente",
+    "miniLm": "metadata/cartao declara Apache-2.0; arquivo LICENSE nao existe na revisao consultada; cadeia do peso ainda nao comprovada juridicamente",
+    "uso": "avaliacao tecnica local, somente sintetica; nao representa aprovacao comercial nem autorizacao de runtime"
+  },
+  "correcoesV2": "fontes classificadas como antigas ordenam-se depois das primeiras 50 fontes para testar cobertura paginada; criterios inalterados",
+  "correcoesV3": "datas sintéticas agora são monotônicas com o ordinal; o corte após as primeiras 50 usa criado_em/id; demais critérios inalterados"
+}
