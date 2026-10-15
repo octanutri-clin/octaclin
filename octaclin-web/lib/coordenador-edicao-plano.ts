@@ -54,11 +54,18 @@ export class CoordenadorEdicaoPlano<T> {
   }
   private get alterado() { return this.assinatura !== this.confirmada; }
   get estado() {
-    return { status: this.status, alterado: this.alterado, precondicao: { ...this.precondicao } };
+    return { status: this.status, alterado: this.alterado || this.status === 'salvando' || this.status === 'incerto', precondicao: { ...this.precondicao } };
+  }
+  /** Uma transição recusada/incerta não pode ser destravada por fim de IME. */
+  invalidar(status: 'conflito' | 'incerto' | 'acesso-negado') {
+    if (!this.encerrado) this.falhar(status);
   }
   async salvarManual(): Promise<boolean> {
     if (this.encerrado || this.suspenso || bloqueios.has(this.status)) return false;
     this.pausado = false; // Reenvio após rejeição validada exige ação explícita.
+    if (!this.voo && !this.alterado) {
+      this.status = 'salvo'; this.notificar(); return true;
+    }
     await this.solicitar();
     return !this.encerrado && !this.alterado && this.status === 'salvo';
   }

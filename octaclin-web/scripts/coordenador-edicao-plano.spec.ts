@@ -77,7 +77,31 @@ test('PA06 relógio real simulado: 59999 não envia, 60000 envia, digitação n�
 test('PA06 alteração revertida durante request ainda atende save manual mais recente', async () => {
   const { c, chamadas, tick } = preparar(); c.iniciar(); c.alterar({ texto: 'B' }); tick();
   c.alterar({ texto: 'A' }); const manual = c.salvarManual();
+  assert.equal(c.estado.alterado, true, 'snapshot em voo ainda pode substituir a intenção local revertida');
   chamadas[0].resolver({ id: 'geracao', rascunhoRevisao: 4 }); await drenar();
   assert.equal(chamadas.length, 2); assert.equal(chamadas[1].documento.texto, 'A');
   chamadas[1].resolver({ id: 'geracao', rascunhoRevisao: 5 }); assert.equal(await manual, true); c.encerrar();
+});
+
+test('PA06 resultado incerto protege saída mesmo quando o texto voltou ao baseline', async () => {
+  const { c, chamadas, tick } = preparar(); c.iniciar(); c.alterar({ texto: 'B' }); tick(); c.alterar({ texto: 'A' });
+  chamadas[0].rejeitar(new Error('Rede sintética')); await drenar();
+  assert.equal(c.estado.status, 'incerto'); assert.equal(c.estado.alterado, true); c.encerrar();
+});
+
+test('PA06 falha de transição não é reativada por fim de IME ou nova edição', async () => {
+  const { c, chamadas, tick } = preparar(); c.iniciar();
+  c.invalidar('conflito'); c.configurar({ suspenso: false }); c.alterar({ texto: 'B' }); tick();
+  assert.equal(c.estado.status, 'conflito'); assert.equal(await c.salvarManual(), false); assert.equal(chamadas.length, 0); c.encerrar();
+});
+
+test('PA06 save manual sem mudança após rejeição conhecida restaura estado confirmado sem request', async () => {
+  const { c, chamadas, tick } = preparar(); c.iniciar(); c.alterar({ texto: 'B' }); tick();
+  chamadas[0].rejeitar({ status: 400 }); await drenar();
+  c.alterar({ texto: 'A' });
+  assert.equal(await c.salvarManual(), true);
+  assert.equal(c.estado.status, 'salvo');
+  assert.equal(c.estado.alterado, false);
+  assert.equal(chamadas.length, 1);
+  assert.equal(c.estado.precondicao.rascunhoRevisaoEsperada, 3); c.encerrar();
 });

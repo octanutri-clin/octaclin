@@ -1,8 +1,9 @@
 # PA06 — checklist: autosave, ativação e cálculo combinado
 
 Planejamento: [plan-pos-320-pa06.md](plan-pos-320-pa06.md).
-Base `eae74b1e`, 2026-10-15. Primeira entrega autorizada e núcleo implementado;
-T07/T08 aguardam troca manual para Luna alto. T09/T10 e entregas posteriores pendentes.
+Base `eae74b1e`, 2026-10-15. Núcleo T01–T06 e UI T07/T08 implementados nesta
+worktree. T09/T10 (integração final, revisão independente, CI/PR) e as entregas
+T08a–T08d continuam pendentes.
 
 ## T00 — base, evidência e produto (1–3 documentos)
 
@@ -127,30 +128,58 @@ de edição parcial e `pnpm --dir octaclin-web test:authz` na integração final
 
 Dependência: checkpoint B, D01/D02. Luna alto suficiente.
 
-- [ ] React StrictMode sem dois ciclos, cleanup sem gravação, autosave ligado inicialmente, status de ciclo/último ACK e ações de erro em
+- [x] React StrictMode sem dois ciclos, cleanup sem gravação, autosave ligado inicialmente, status de ciclo/último ACK e ações de erro em
   desktop/mobile; teclado/aria-live, sem chamada imediata só por abrir plano.
-- [ ] Salvar manual permanece; preservar metas/subtotais, PA05, colapso e chaves
+- [x] Salvar manual permanece; preservar metas/subtotais, PA05, colapso e chaves
   durante edição simultânea ao request; opção desligada não faz flush implícito.
-- [ ] Diferenciar pendente inválido, falha, conflito e envio incerto sem roubar foco.
+- [x] Diferenciar pendente inválido, falha, conflito e envio incerto sem roubar foco;
+  após ACK, subtotais usam a materialização canônica retornada pelo backend sem
+  substituir valores, foco, caret ou composição IME do formulário local.
 
 Aceite: todos os estados têm texto e comportamento verificáveis; não publicar
 nem revisar automaticamente; nenhum vazamento em cache/URL/telemetria.
-Verificação: Playwright novo `tests/visual/pa06-autosave.spec.mjs` com Axe/teclado.
+Verificação executada: Playwright focado em `console-regression.spec.mjs` (desktop
+e mobile, reordenação, fake clock de 60 s, autosave parcial, Axe e salvar-e-sair);
+regressões focadas PA02/PA03 (5 cenários desktop/mobile) e PA05 conflito/versão
+(desktop/mobile). ESLint nos arquivos alterados: zero erros, 12 avisos de hooks
+já presentes nos componentes de prontuário/editor. A suíte visual integral ainda
+é gate de T09.
 
 ## T08 — saída interna e transições (2–4 arquivos)
 
 Dependência: T07, D03 confirmada. Luna alto com contrato já fechado por Sol.
 
-- [ ] Integração com `prontuario-paciente.tsx`; manter guardas
+- [x] Integração com `prontuario-paciente.tsx`; manter guardas
   de outros editores e beforeunload FND02; navegação só após confirmação atual.
-- [ ] Troca de paciente/plano/geração invalida timers/respostas; nova versão,
+- [x] Troca de paciente/plano/geração invalida timers/respostas; nova versão,
   cópia, revisão/publicação e arquivo não compartilham request pendente indevido.
-- [ ] Salvar e sair não descarta outras pendências; erro409/rede mantém a tela.
+- [x] Salvar e sair não descarta outras pendências; erro409/rede mantém a tela.
 
 Aceite: nenhum POST/PUT de cleanup, nenhum “Salvo” após troca e nenhum save
 recebido pelo paciente errado. Guardas existentes continuam cobertas.
-Verificação: navegação de abas/agenda/voltar e refresh, erros e request atrasado
-em Playwright; `pnpm --dir octaclin-web test:proteger-alteracoes-nao-salvas`.
+Verificação executada: navegação entre abas, salvar e sair, proteção FND02
+(`test:proteger-alteracoes-nao-salvas`, 4/4), requests CAS em PA02/PA05 e
+acessibilidade no fluxo Playwright desktop/mobile. Falha 409 preserva edição e
+expõe Reconciliação, sem retry automático. Troca de paciente/plano, arquivo,
+revisão/publicação e chamadas atrasadas recebem regressão final em T09.
+
+### Resultado local da implementação T07/T08 — integração Sol em andamento
+
+- Web typecheck PASS; BFF de planos 29/29; coordenador/nutrição 33/33; proteção
+  contra saída 4/4.
+- Playwright focado: editor e saída segura 2/2; PA02/PA03 10 execuções de cenário
+  (5 cenários × desktop/mobile) GREEN após correção dos totais canônicos; PA05
+  preferências/conflict 2/2.
+- Um timeout inicial do Playwright ocorreu ao reutilizar servidor Next antigo;
+  reinício limpo eliminou o problema. Um teste PA02 inicialmente detectou subtotal
+  local divergente do ACK; corrigido para usar snapshot materializado do backend e
+  repetido em desktop/mobile (2/2 PASS).
+- ESLint encerra com zero erros e 12 warnings de regras `react-hooks` em efeitos
+  observados no editor/prontuário. Sem atribuir anterioridade sem comparação de base.
+- Nenhuma ativação, migration externa ou alteração de fluxo no portal. PR em preparação.
+  Confirmar `next-env.d.ts` e `git status` limpos de artefatos antes do checkpoint.
+- T09/T10 ainda exigem regressão integral, build/gates, revisão R4 independente e
+  validação CI do HEAD; abrir Draft após gates locais, manter merge/deploy bloqueados.
 
 ## T08a — visibilidade on/off, contrato/backend (3–5 arquivos por fatia)
 
@@ -232,7 +261,7 @@ Rascunho parcial deve ficar fora da soma, mesmo se tiver valores calculáveis.
 
 ### Checkpoint C — integração Sol
 
-- [ ] Voltar para GPT-6.1 Sol médio com aviso e pausa manual.
+- [x] Voltar para GPT-6.1 Sol médio com aviso e pausa manual; troca realizada.
 - [ ] Sem achado aberto de perda de edição, conflito silencioso ou authz.
 
 ## T09 — regressão e revisão R4 (3–5 arquivos por rodada de correção)
@@ -247,7 +276,7 @@ de três PRs no plano. Sol médio; repetir estes gates em cada entrega.
 - [ ] Atualizar matriz de confiabilidade/rotas, docs e plano externo de implantação/
   rollback; não confundir merge com schema ou deploy efetivo.
 
-Verificação: `pnpm --dir octaclin-backend test -- --runInBand`, `typecheck`, `build`;
+Verificação: `pnpm --dir octaclin-backend test --runInBand`, `typecheck`, `build`;
 `pnpm --dir octaclin-web lint`, `typecheck`, `build`, `test:authz`; Playwright
 PA06 + `pa02-copia-refeicoes.spec.mjs`, `fase-320-pa05-apresentacao.spec.mjs`,
 `portal-paciente.spec.mjs` e regressões PA04/BFF. Usar Node22/pnpm11.25 declarados;

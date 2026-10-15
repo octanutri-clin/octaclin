@@ -3,6 +3,31 @@ import type { PreferenciasApresentacaoPlanoApi } from './preferencias-apresentac
 import type { PrecondicaoEdicaoPlano } from './coordenador-edicao-plano';
 /** Contrato editorial versionado. Não representa validação clínica. Sem persistência no navegador. */
 export type NumeroEdicao = number | string | null;
+/** O editor conserva texto parcial; interpretar um número é uma operação separada. */
+export function campoNumeroEdicao(valor: NumeroEdicao | undefined): number | string {
+  return valor ?? '';
+}
+
+export function interpretarNumeroEdicao(valor: NumeroEdicao | undefined): number | undefined {
+  if (valor == null || (typeof valor === 'string' && !valor.trim())) return undefined;
+  const numero = typeof valor === 'number' ? valor : Number(valor.replace(',', '.'));
+  return Number.isFinite(numero) ? numero : undefined;
+}
+
+/** Deslocamento decimal, sem arredondar texto com mais de duas casas para uma prescrição válida. */
+export function percentualParaBasisPointsEdicao(valor: NumeroEdicao | undefined): number | undefined {
+  const numero = interpretarNumeroEdicao(valor);
+  if (numero === undefined) return undefined;
+  const [mantissa, expoente = '0'] = String(numero).split('e');
+  return Number(`${mantissa}e${Number(expoente) + 2}`);
+}
+
+export function nutrientesNumericosEdicao(valores: NutrientesEdicao): Partial<Record<keyof NutrientesEdicao, number>> {
+  return Object.fromEntries(Object.entries(valores).flatMap(([campo, valor]) => {
+    const numero = interpretarNumeroEdicao(valor);
+    return numero === undefined ? [] : [[campo, numero]];
+  }));
+}
 export type NutrientesEdicao = Partial<Record<'energiaKcal' | 'proteinasG' | 'carboidratosG' | 'gordurasG' | 'fibrasG' | 'sodioMg', NumeroEdicao>>;
 export interface AlimentoEdicao {
   chaveCliente: string;
@@ -26,6 +51,8 @@ export interface DocumentoEdicaoPlano {
   carboidratosBasisPoints?: NumeroEdicao;
   proteinasBasisPoints?: NumeroEdicao;
   gordurasBasisPoints?: NumeroEdicao;
+  /** Texto percentual exato, opcional para compatibilidade com documentos v1 anteriores. */
+  percentuaisMacrosEdicao?: Partial<Record<'carboidratosBasisPoints' | 'proteinasBasisPoints' | 'gordurasBasisPoints', NumeroEdicao>>;
   possuiCondicaoEspecial?: boolean;
   aplicabilidadeFormulaConfirmada?: boolean;
   justificativaCondicaoEspecial?: string;

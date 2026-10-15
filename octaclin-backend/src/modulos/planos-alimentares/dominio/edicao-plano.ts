@@ -25,6 +25,8 @@ export interface DocumentoEdicaoPlano {
   carboidratosBasisPoints?: NumeroEdicao;
   proteinasBasisPoints?: NumeroEdicao;
   gordurasBasisPoints?: NumeroEdicao;
+  /** Texto percentual exato, opcional para compatibilidade com documentos v1 anteriores. */
+  percentuaisMacrosEdicao?: Partial<Record<'carboidratosBasisPoints' | 'proteinasBasisPoints' | 'gordurasBasisPoints', NumeroEdicao>>;
   possuiCondicaoEspecial?: boolean;
   aplicabilidadeFormulaConfirmada?: boolean;
   justificativaCondicaoEspecial?: string;
@@ -79,12 +81,16 @@ function lista(valor: unknown, maximo: number): unknown[] {
 
 /** Valida a estrutura editorial; não atribui validade clínica a campos incompletos. */
 export function validarDocumentoEdicaoPlano(valor: unknown): DocumentoEdicaoPlano {
-  const d = objeto(valor, ['schemaVersao', 'avaliacaoAntropometricaId', 'formula', ...camposNumero, 'possuiCondicaoEspecial', 'aplicabilidadeFormulaConfirmada', 'justificativaCondicaoEspecial', 'metodoMacrosManual', 'justificativaDivergenciaClinica', 'objetivos', 'observacoes', 'preferenciasApresentacao', 'refeicoes']);
+  const d = objeto(valor, ['schemaVersao', 'avaliacaoAntropometricaId', 'formula', 'percentuaisMacrosEdicao', ...camposNumero, 'possuiCondicaoEspecial', 'aplicabilidadeFormulaConfirmada', 'justificativaCondicaoEspecial', 'metodoMacrosManual', 'justificativaDivergenciaClinica', 'objetivos', 'observacoes', 'preferenciasApresentacao', 'refeicoes']);
   if (d.schemaVersao !== 1 || Buffer.byteLength(JSON.stringify(d), 'utf8') > LIMITE_BYTES_EDICAO_PLANO) falhar();
   referencia(d.avaliacaoAntropometricaId);
   if (d.formula !== undefined && !['', 'mifflin_st_jeor_1990', 'harris_benedict_revisada_1984', 'fao_oms_unu_1985'].includes(d.formula as string)) falhar();
   if (d.metodoMacrosManual !== undefined && !['', 'percentual', 'gramas_por_kg'].includes(d.metodoMacrosManual as string)) falhar();
   for (const campo of camposNumero) numero(d[campo]);
+  if (d.percentuaisMacrosEdicao !== undefined) {
+    const percentuais = objeto(d.percentuaisMacrosEdicao, ['carboidratosBasisPoints', 'proteinasBasisPoints', 'gordurasBasisPoints']);
+    for (const v of Object.values(percentuais)) numero(v);
+  }
   for (const campo of ['possuiCondicaoEspecial', 'aplicabilidadeFormulaConfirmada']) booleano(d[campo]);
   for (const campo of ['objetivos', 'justificativaCondicaoEspecial', 'justificativaDivergenciaClinica']) texto(d[campo], 4000);
   texto(d.observacoes, 8000);

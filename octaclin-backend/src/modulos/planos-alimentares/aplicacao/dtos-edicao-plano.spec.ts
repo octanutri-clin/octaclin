@@ -2,7 +2,7 @@ import 'reflect-metadata';
 import { plainToInstance } from 'class-transformer';
 import { validate } from 'class-validator';
 import { numeroEdicao, validarDocumentoEdicaoPlano } from '../dominio/edicao-plano';
-import { PrecondicaoEdicaoPlanoDto, SalvarEdicaoPlanoDto } from './dtos-edicao-plano';
+import { converterEdicaoParaRascunho, PrecondicaoEdicaoPlanoDto, SalvarEdicaoPlanoDto } from './dtos-edicao-plano';
 
 const id = '10000000-0000-4000-8000-000000000001';
 const documento = () => ({ schemaVersao: 1, objetivos: '', refeicoes: [{ chaveCliente: 'r1', itens: [{ chaveCliente: 'i1', descricao: '', porcaoGramas: '', substituicoes: [] }] }] });
@@ -46,6 +46,26 @@ describe('PA06 DTO de edição parcial', () => {
     expect(() => validarDocumentoEdicaoPlano({ ...documento(), observacoes: 'x'.repeat(9000) })).toThrow();
     expect(() => validarDocumentoEdicaoPlano({ schemaVersao: 1, refeicoes: [{ chaveCliente: 'r', itens: [{ chaveCliente: 'i', nutrientesPor100g: { interno: 1 } }] }] })).toThrow();
     expect(() => validarDocumentoEdicaoPlano({ schemaVersao: 1, refeicoes: [], constructor: 'inválido' })).toThrow();
+  });
+  it('converte contexto manual g/kg sem aplicar fórmula ou distribuição preservadas na edição', () => {
+    const d = validarDocumentoEdicaoPlano({ ...documento(), possuiCondicaoEspecial: true,
+      metodoMacrosManual: 'gramas_por_kg', proteinasGPorKg: '0.6',
+      formula: 'mifflin_st_jeor_1990', fatorAtividade: 1.4, carboidratosBasisPoints: 5000 });
+    const convertido = converterEdicaoParaRascunho(d, { id });
+    expect(convertido.origemMeta).toBe('manual');
+    expect(convertido.macrosGramasPorKg?.proteinasGPorKg).toBe(0.6);
+    expect(convertido.formula).toBeUndefined();
+    expect(convertido.fatorAtividade).toBeUndefined();
+    expect(convertido.distribuicaoMacros).toBeUndefined();
+  });
+  it('preserva percentual cru e converte separadamente sem arredondar nem confiar no basis point redundante', () => {
+    for (const [texto, esperado] of [['1,', 100], ['1,25', 125], ['1,234', 123.4], ['', undefined], ['-', undefined]] as const) {
+      const d = validarDocumentoEdicaoPlano({ ...documento(), carboidratosBasisPoints: 9999, percentuaisMacrosEdicao: { carboidratosBasisPoints: texto } });
+      expect((d as unknown as { percentuaisMacrosEdicao: { carboidratosBasisPoints: string } }).percentuaisMacrosEdicao.carboidratosBasisPoints).toBe(texto);
+      expect(converterEdicaoParaRascunho(d, { id }).distribuicaoMacros?.carboidratosBasisPoints).toBe(esperado);
+    }
+    expect(converterEdicaoParaRascunho(validarDocumentoEdicaoPlano({ ...documento(), carboidratosBasisPoints: 5000 }), { id }).distribuicaoMacros?.carboidratosBasisPoints).toBe(5000);
+    expect(() => validarDocumentoEdicaoPlano({ ...documento(), percentuaisMacrosEdicao: { desconhecido: '1' } })).toThrow();
   });
   it('limita edição a 96KiB para caber no envelope HTTP existente de 100KiB', () => {
     const d = { schemaVersao: 1, refeicoes: Array.from({ length: 50 }, (_, i) => ({ chaveCliente: `r${i}`, orientacoes: 'x'.repeat(2000), itens: [] })) };

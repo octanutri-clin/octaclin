@@ -2,7 +2,8 @@
 
 Data:2026-10-15. Risco R4 (persistência clínica, migration, concorrência e authz).
 Base `eae74b1e`; branch `feat/pos320-pa06-autosave`. Escopo: primeira entrega
-aprovada em “Pode começar”. Interface ainda não implementada; não é aceite final
+aprovada em “Pode começar”. Este documento conserva checkpoints do núcleo e da
+UI abaixo; a integração final está na seção mais recente. Não é aceite final
 nem evidência de produção. Nenhum dado real, provider pago ou dependência nova.
 
 ## Contratos e correções
@@ -107,3 +108,101 @@ Depois da primeira adesão não voltar ao backend que ignore edicao_protegida/CA
 reverter UI desabilitando novos envios, manter backend compatível ou usar correção
 aditiva. Abort de request não garante rollback no servidor: cliente deve tratar
 resultado incerto e recarregar sob autorização antes de nova tentativa.
+
+## Aditivo de evidências — T07/T08 UI, 2026-10-15
+
+Esta seção atualiza o estado da UI; a tabela acima descreve apenas o checkpoint
+do núcleo T01–T06, quando a UI ainda estava pendente.
+
+| Comando / cenário | Resultado observado |
+| --- | --- |
+| `pnpm --dir octaclin-web typecheck` (após `next typegen`) | PASS |
+| `pnpm --dir octaclin-web test:proteger-alteracoes-nao-salvas` | PASS 4/4 |
+| `node octaclin-web/scripts/test-planos-alimentares-bff.mjs` | PASS 29/29; warning esperado de `headers()` no harness fora de request |
+| `node octaclin-web/scripts/test-nutricao-plano.mjs` | PASS 33/33, 14 coordenador + 19 subtotal/macros |
+| Playwright `console-regression.spec.mjs`, “reordena refeições…” | PASS 2/2 desktop/mobile; cobre 60 s, edição parcial, pendência, Axe, reload e salvar-e-sair |
+| Playwright `pa02-copia-refeicoes.spec.mjs`, cinco cenários selecionados | PASS 10/10 desktop/mobile; incompletude, resultado parcial, cópia suspensa e resposta canônica |
+| Playwright `fase-320-pa05-apresentacao.spec.mjs`, “salva os dois conjuntos…” | PASS 2/2 desktop/mobile; CAS, preferências e conflito 409 com reconciliação |
+| ESLint focado nos seis arquivos alterados | Exit 0, zero erros; 12 warnings de `react-hooks` nos componentes de prontuário/editor |
+
+Durante a primeira rodada visual, um servidor `next dev` antigo e travado foi
+reutilizado e causou timeout antes de carregar a página. O processo local foi
+reiniciado e os cenários foram repetidos em servidor limpo. A asserção de subtotal
+PA02 também detectou que o formulário preservava composição local após ACK enquanto
+o backend retornava snapshot recalculado; a UI passou a calcular os resultados
+vigentes pela resposta canônica sem substituir os campos editáveis. O cenário foi
+reexecutado e passou em desktop/mobile.
+
+O fixture de cópia também exercita retorno materializado com forma divergente da
+edição local (menos refeições). A UI não indexa subtotais ausentes: esconde os
+cálculos, mantém o documento e apresenta pendência até a resposta ser compatível.
+Os cinco cenários PA02/PA03 foram repetidos na revisão final em desktop/mobile,
+10/10 PASS sem exceção de renderização.
+
+Ainda pendente para T09/T10: suite visual completa (incluindo regressões adicionais
+PA02–PA05/FND02), build Web, authz integral, revisão R4 independente da UI e CI do
+HEAD final. Não se declara conclusão de T09/T10 nem prontidão para merge, deploy
+ou ativação.
+
+
+## Integração Sol — 2026-10-15 (em conclusão)
+
+Troca manual de modelo autorizada e realizada. Preservadas todas as alterações
+preexistentes de UI; revisão cruzada estática e achados detalhados em
+[REVISAO_R4_PA06_2026-10-15.md](REVISAO_R4_PA06_2026-10-15.md).
+
+Reproduções adicionais: A confirmado/B em voo/retorno aA protegia incorretamente
+a saída; Escape removia modal de save pendente; prévia profissional mantinha metas
+anteriores;400 suspendia novos saves;429 impedia retry limpo; hidratação selecionava
+avaliação e defaults ausentes; digitação percentual perdia a vírgula. Correções e
+testes preservam texto numérico, não substituem edição local pelo ACK e mantêm
+conflito/incerteza bloqueados após composição IME/cópia. Campos percentuais crus
+opcionais ficam cifrados no mesmo documento, com allowlist e validação clínica
+separada; não há alteração adicional de schema.
+
+Resultados intermediários, não substituir pelo status do CI:
+
+- Backend integral antes do aditivo percentual:329 suítes PASS,6 SKIPPED;
+  2906 testes PASS,113 SKIPPED. Nova execução final iniciada após o aditivo.
+- DTO/conversão percentual: RED1 falha real (campo não permitido),20 aprovados;
+  GREEN21/21. UI RED significativo: `1,` virou `1` durante digitação sequencial.
+- PostgreSQL final após o aditivo:12 PASS,31 SKIPPED,43 total. Mesmas omissões de
+  Timescale/pgvector explicitadas acima; nenhum banco externo.
+- Duas tentativas visuais em Next dev foram interrompidas/limitadas por timeouts;
+  não são GREEN nem prova de defeito clínico. Repetir em build de produção local,
+  sem compilação concorrente durante a navegação.
+- Backend não declara script lint. Tentativa `pnpm --dir octaclin-backend lint`
+  falhou por comando inexistente; não é lint PASS. Typecheck/build executados
+  separadamente conforme os scripts reais.
+- Um comando inicial `test -- --runInBand` tratou argumento como filtro e não
+  encontrou testes; a execução válida usa `test --runInBand`.
+
+Para liberar espaço local foram removidos apenas caches `.next` ignorados das
+worktrees concluídas PA02–PA05, após confirmar ausência de arquivos rastreados.
+Fontes/dependências/alterações de outras worktrees preservadas. Artefatos de teste
+locais usam exclusivamente dados sintéticos. Nenhum rollout externo ocorreu.
+
+
+### Gates finais já concluídos
+
+| Verificação | Resultado real |
+| --- | --- |
+| `pnpm --dir octaclin-backend test --runInBand` após o aditivo percentual | PASS329 suítes,6 SKIPPED;2907 testes,113 SKIPPED (3020 total) |
+| `pnpm --dir octaclin-backend typecheck` | PASS |
+| `pnpm --dir octaclin-backend build` | PASS; `dist/main.js` verificado pelo script oficial |
+| `pnpm --dir octaclin-web lint` | PASS (exit0),69 warnings e zero erros; sem alegação de que todos são preexistentes |
+| Governança local: secrets, migrations, confiabilidade, matriz a11y, redação/resposta auditoria, Actions imutáveis e guardas | PASS;11/11 casos de guardas |
+| Revisão cruzada estática R4 núcleo/UI | PASS após correções; independente da autoria, sem execução de testes pelo revisor |
+
+Build Web, regressões visuais finais e authz integral ainda em execução nesta
+seção. Somente registrar PASS quando concluídos. CI do HEAD e banco integral
+Timescale continuam obrigatórios. Não há autorização de rollout implícita.
+
+
+- Integração numérica/último ACK: nutrição/coordenador/campos38/38 PASS; no-op
+  rejeitado reproduzido com37 PASS/1 FAIL antes da correção. BFF29/29 e saída4/4
+  repetidos PASS. Textos/timestamp só refletem confirmação real de revisão.
+- Os harnesses de nutrição e BFF agora definem `include: []` no tsconfig temporário:
+  entram `files` declarados e imports; não recompilam todas as telas em cada suíte.
+  Typecheck/build geral preservados. Revisão estática confirmou nenhuma assertion
+  removida. Não foi feita alteração ampla dos harnesses de outras fases.

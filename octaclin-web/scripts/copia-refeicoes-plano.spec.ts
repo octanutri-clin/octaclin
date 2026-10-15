@@ -155,3 +155,13 @@ test('respeita máximo real de 20 substituições sem truncamento', () => {
   }));
   assert.throws(() => copiarRefeicaoParaFormulario(api, gerarChave), /limite de 20 substituições/i);
 });
+
+test('PA06 copiar texto numérico válido não trata campo vazio como zero', () => {
+  const origem = refeicaoFormulario();
+  const editar = (quantidade: string) => ({ ...origem, itens: [{ ...origem.itens[0], quantidade, porcaoGramas: '100,5' }] });
+  const copia = duplicarRefeicaoNoRascunho([editar('1,2')], 0, gerarChave);
+  assert.equal(copia[1].itens[0].quantidade, 1.2);
+  assert.equal(copia[1].itens[0].porcaoGramas, 100.5);
+  assert.throws(() => duplicarRefeicaoNoRascunho([editar('')], 0, gerarChave), /Complete a quantidade/);
+  assert.throws(() => duplicarRefeicaoNoRascunho([editar('-')], 0, gerarChave), /Complete a quantidade/);
+});

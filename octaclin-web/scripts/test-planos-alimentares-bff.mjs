@@ -53,6 +53,9 @@ writeFileSync(join(temporaria, 'tsconfig.json'), JSON.stringify({
     ignoreDeprecations: '6.0',
     target: 'ES2022'
   },
+  // O gate geral typecheck/build valida a aplicação. Este harness compila somente
+  // as entradas declaradas e seus imports, sem herdar o include de toda a UI.
+  include: [],
   files: arquivos.map((arquivo) => join(raiz, arquivo))
 }, null, 2));
 

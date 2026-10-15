@@ -268,12 +268,12 @@ function condicaoEspecial(page) {
 
 const campos = {
   formula: (page) => page.getByRole('combobox', { name: /^Fórmula/ }),
-  fatorAtividade: (page) => page.getByRole('spinbutton', { name: /Fator de atividade/ }),
-  metaManual: (page) => page.getByRole('spinbutton', { name: /Meta energética/ }),
+  fatorAtividade: (page) => page.getByRole('textbox', { name: /Fator de atividade/ }),
+  metaManual: (page) => page.getByRole('textbox', { name: /Meta energética/ }),
   metodoMacros: (page) => page.getByRole('combobox', { name: /Método dos macronutrientes/ }),
   justificativa: (page) => page.getByRole('textbox', { name: /Justificativa da condicao especial/ }),
-  macroPorPeso: (page, macro) => page.getByRole('spinbutton', { name: new RegExp(`${macro} \\(g/kg\\)`) }),
-  macroPercentual: (page, macro) => page.getByRole('spinbutton', { name: new RegExp(`${macro} \\(%\\)`) })
+  macroPorPeso: (page, macro) => page.getByRole('textbox', { name: new RegExp(`${macro} \\(g/kg\\)`) }),
+  macroPercentual: (page, macro) => page.getByRole('textbox', { name: new RegExp(`${macro} \\(%\\)`) })
 };
 
 async function abrirEditor(page) {
@@ -323,18 +323,19 @@ test.describe('Fase 270 - caminho manual para condicao especial (PB-14)', () => 
     await expect(campos.metaManual(page)).toHaveCount(0);
   });
 
-  test('envia a meta manual em g/kg sem formula no corpo da requisicao', async ({ page }) => {
+  test('salva o contexto manual em g/kg no documento editorial protegido', async ({ page }) => {
     await prepararSessao(page);
 
     const corpos = [];
     await page.route(
-      (url) => url.pathname === `/api/pacientes/${paciente.id}/planos-alimentares/plano-1/rascunho`,
+      (url) => url.pathname === `/api/pacientes/${paciente.id}/planos-alimentares/plano-1/rascunho/edicao`,
       (route) => {
         corpos.push(JSON.parse(route.request().postData() ?? '{}'));
         return route.fulfill({
           status: 200,
           contentType: 'application/json',
-          body: JSON.stringify(versaoRascunho)
+          body: JSON.stringify({ ...versaoRascunho, rascunhoRevisao: corpos.at(-1).rascunhoRevisaoEsperada + 1,
+            edicaoEstado: 'pendente', documentoEdicao: corpos.at(-1).documento, calculo: undefined, totais: undefined, refeicoes: [] })
         });
       }
     );
@@ -349,13 +350,14 @@ test.describe('Fase 270 - caminho manual para condicao especial (PB-14)', () => 
 
     await expect.poll(() => corpos.length).toBeGreaterThan(0);
     const corpo = corpos[corpos.length - 1];
-    expect(corpo.origemMeta).toBe('manual');
-    expect(corpo.possuiCondicaoEspecial).toBe(true);
-    expect(corpo.metodoMacrosManual).toBe('gramas_por_kg');
-    expect(corpo.macrosGramasPorKg.proteinasGPorKg).toBe(0.6);
-    // Nada de formula preditiva atravessa no caminho manual.
-    expect(corpo.formula).toBeUndefined();
-    expect(corpo.fatorAtividade).toBeUndefined();
-    expect(corpo.distribuicaoMacros).toBeUndefined();
+    expect(corpo.rascunhoIdEsperado).toBe(versaoRascunho.id);
+    expect(corpo.rascunhoRevisaoEsperada).toBe(0);
+    const documento = corpo.documento;
+    expect(documento.possuiCondicaoEspecial).toBe(true);
+    expect(documento.metodoMacrosManual).toBe('gramas_por_kg');
+    expect(documento.proteinasGPorKg).toBe('0.6');
+    // O snapshot editorial conserva a edição. A conversão clínica no backend
+    // ignora fórmula/fator/distribuição no modo manual g/kg (spec do DTO PA06).
+    expect(documento.formula).toBe('mifflin_st_jeor_1990');
   });
 });

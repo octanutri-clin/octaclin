@@ -18,7 +18,8 @@ Atualizado em 2026-10-15.
   seleção para cálculo independente da visibilidade. Três entregas/PRs sequenciais:
   autosave parcial → ativação → cálculo combinado/micros.
   Núcleo de edição cifrada/CAS, migration1073 aditiva, BFF e coordenador em memória
-  implementados; interface T07/T08 aguarda checkpoint e troca manual para Luna alto.
+  implementados, incluindo interface T07/T08 por Luna alto; integração Sol em
+  andamento com revisão cruzada estática, correções RED/GREEN e gates finais.
   Sem migration externa/deploy. Evidências em
   `docs/governance/EVIDENCIAS_PA06_NUCLEO_2026-10-15.md`.
   Plano e critérios

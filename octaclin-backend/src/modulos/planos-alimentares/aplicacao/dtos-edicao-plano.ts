@@ -31,6 +31,16 @@ export function converterEdicaoParaRascunho(
 ): AtualizarRascunhoPlanoAlimentarDto {
   const manual = documento.possuiCondicaoEspecial === true;
   const porPeso = manual && documento.metodoMacrosManual === 'gramas_por_kg';
+  function percentual(campo: 'carboidratosBasisPoints' | 'proteinasBasisPoints' | 'gordurasBasisPoints') {
+    if (documento.percentuaisMacrosEdicao && Object.prototype.hasOwnProperty.call(documento.percentuaisMacrosEdicao, campo)) {
+      const valor = numeroEdicao(documento.percentuaisMacrosEdicao[campo]);
+      // Não arredondar uma prescrição: a validação clínica continua exigindo basis points inteiros.
+      if (valor === undefined) return undefined;
+      const [mantissa, expoente = '0'] = String(valor).split('e');
+      return Number(`${mantissa}e${Number(expoente) + 2}`);
+    }
+    return numeroEdicao(documento[campo]);
+  }
   function alimento(a: AlimentoEdicao) {
     return {
       alimentoComposicaoId: a.alimentoComposicaoId || undefined,
@@ -60,9 +70,9 @@ export function converterEdicaoParaRascunho(
       gordurasGPorKg: numeroEdicao(documento.gordurasGPorKg)
     } : undefined,
     distribuicaoMacros: porPeso ? undefined : {
-      carboidratosBasisPoints: numeroEdicao(documento.carboidratosBasisPoints),
-      proteinasBasisPoints: numeroEdicao(documento.proteinasBasisPoints),
-      gordurasBasisPoints: numeroEdicao(documento.gordurasBasisPoints)
+      carboidratosBasisPoints: percentual('carboidratosBasisPoints'),
+      proteinasBasisPoints: percentual('proteinasBasisPoints'),
+      gordurasBasisPoints: percentual('gordurasBasisPoints')
     },
     possuiCondicaoEspecial: documento.possuiCondicaoEspecial,
     aplicabilidadeFormulaConfirmada: manual ? undefined : documento.aplicabilidadeFormulaConfirmada,

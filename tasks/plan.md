@@ -1,18 +1,20 @@
-# Handoff atual — PA06: núcleo da primeira entrega, antes da UI
+# Handoff atual — PA06: integração Sol, regressões e PR da primeira entrega
 
-## Branch, escopo e autorização
+## Estado do trabalho
 
 Worktree `/workspace/octaclin/.worktrees/pos320-pa06-planejamento`, branch
-`feat/pos320-pa06-autosave`, base `eae74b1e` (#419). Principal e seu next-env.d.ts
-preexistente preservados. Implementação autorizada em “Pode começar”. Uma PR
-para autosave/edição parcial; ativação e soma/micronutrientes são entregas seguintes.
-Sem dependência nova, migration externa, merge ou deploy. Pesquisa R013/R014 já
-feita e fixada no plano; não repetir outros repositórios nem instalar bibliotecas.
+`feat/pos320-pa06-autosave`, base `eae74b1e` (#419). T01–T06 backend/núcleo e
+T07–T08 interface agora implementados localmente. A UI integra CAS e coordenador
+de 60 s, preserva a edição local durante ACK, usa a materialização canônica para
+totais após salvar, distingue conflito/incerteza/acesso negado e oferece
+“Salvar e sair” sem flush no cleanup. Sem dependência nova, migration externa,
+merge, deploy ou ativação. O escopo on/off/múltiplos planos/micronutrientes segue
+nas entregas posteriores.
 
 Plano: `tasks/plan-pos-320-pa06.md`; checklist: `tasks/todo-pos-320-pa06.md`.
 Evidências: `docs/governance/EVIDENCIAS_PA06_NUCLEO_2026-10-15.md`.
 
-## Núcleo implementado — T01–T06
+## Implementação T01–T08
 
 - Migration1073 aditiva na versão existente: contador geral, adesão protegida,
   snapshot editorial cifrado e revisão materializada.1072 não alterada. Down recusa
@@ -33,17 +35,24 @@ Evidências: `docs/governance/EVIDENCIAS_PA06_NUCLEO_2026-10-15.md`.
   pendente; ACK confirma somente assinatura enviada sem substituir documento local.
   Manual e timer usam mesma fila. Off/IME/cópia suspendem; erros pausam sem retry.
   Cleanup encerra timer/aborta fetch, sem prometer desfazer commit no servidor.
-- BFF de edição e API cliente prontos; revisão/publicação agora encaminham CAS.
+- BFF de edição e API cliente prontos; revisão/publicação encaminham CAS.
   `lib/edicao-plano.ts` contém o contrato editorial de transporte, sem import do
-  backend/Buffer no cliente. Nenhuma tela ou portal foi alterado nesta etapa.
+  backend/Buffer no cliente.
+- UI implementada no editor profissional e no guard de saída do prontuário. O
+  último ACK confirmado é mostrado; totais usam a materialização retornada pelo
+  servidor e não sobrescrevem valores/foco/caret/IME. Conflito/resultado incerto
+  mantém a tela e exige reconciliação explícita. Nenhuma alteração de portal.
 
-## Próxima ação e modelo — checkpoint B
+## Próxima ação e modelo — integração Sol autorizada
 
-**Pausar antes de T07/T08 e solicitar troca manual para GPT-6 Luna alto.**
-Não iniciar UI até confirmação da troca. Depois de UI/testes visuais, pausar e
-voltar a GPT-6.1 Sol médio para revisão integrada, regressões, CI e PR única.
+Troca manual para GPT-6.1 Sol médio já realizada. Integração em andamento:
+revisão cruzada estática da UI, correções RED/GREEN, regressões, builds/gates e
+preparação da PR Draft. Não solicitar novamente troca nem inferir CI verde.
+Percentuais têm texto editorial cru opcional, cifrado no documento v1 e separado
+da conversão para basis points; documentos anteriores continuam compatíveis.
+Sem arredondamento para tornar prescrição inválida válida.
 
-### T07/T08 — instruções concretas para Luna
+### T07/T08 — contrato de implementação executado por Luna
 
 1. Ler Web AGENTS e guia Next instalado antes de editar. Reutilizar editor atual,
    sessão/BFF, chaves de PA02, subtotal/colapso PA03, lista PA04 e preferências PA05.
@@ -83,18 +92,21 @@ voltar a GPT-6.1 Sol médio para revisão integrada, regressões, CI e PR única
 10. Não abrir outra PR. Manter mesma branch, atualizar evidências/checklist reais;
     finalização Sol inclui testes integrais, revisão R4 e CI do HEAD.
 
-## Verificações e pendências
+## Verificações locais e pendências
 
 As contagens e os comandos realmente executados ficam no relatório de evidências.
-Núcleo focado GREEN, PostgreSQL15 real com RLS e barreiras GREEN. Fixture alternativa
-omite Timescale/pgvector e não substitui gate integral de CI. Revisão estática
-independente do núcleo sem novo achado após correções; revisor não executou testes.
-`test:authz` integral segue em execução no checkpoint (sessão62675; log local
-`/tmp/pa06-authz.log`). Assumidor deve colher seu término, não reiniciar em paralelo
-nem declarar PASS antes do exit0. Focado: backend238/238, PG12/12, BFF29/29,
-nutrição/coordenador33/33; typecheck backend/Web, build backend e lint alvo PASS.
-UI, Playwright/a11y, Web build, suíte backend integral, CI e revisão integrada ainda
-pendentes. Sem inferir estado de staging/produção ou aplicação1072/1073 por merge.
+Núcleo focado GREEN; PostgreSQL15 real com RLS/barreiras GREEN. Fixture alternativa
+omite Timescale/pgvector e não substitui gate integral de CI. Núcleo: backend
+238/238, PG12/12, BFF29/29, coordenador/nutrição33/33; backend/Web typecheck,
+backend build e lint alvo sem erros. UI: proteção de saída4/4; Playwright focado
+de saída/autosave2/2, PA02/PA03 cinco cenários em desktop/mobile10/10 e PA05
+conflito/preferences2/2; Web typecheck PASS. ESLint encerra sem erro, com12 avisos
+de hooks preexistentes nos componentes alterados. Um timeout inicial por servidor
+Next local antigo foi corrigido reiniciando o servidor; uma divergência do subtotal
+local versus ACK foi corrigida para usar o snapshot canônico e passou em desktop/
+mobile. Web build, suíte visual/regressão integral, `test:authz` integral, revisão
+R4 integrada e CI ainda pendentes. Não inferir estado de staging/produção ou
+aplicação1072/1073 por merge.
 
 O handoff PA05 abaixo é histórico. Pendências de CI nele foram encerradas pelos
 checks do HEAD final acima; não representam bloqueios atuais de implementação.

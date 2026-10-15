@@ -183,6 +183,10 @@ PostgreSQL15 omite extensões e não substitui gate integral `test:rls:testconta
 `coordenador-edicao-plano.spec.ts` executa dentro de `test:nutricao-plano`/`test:authz`:
 relógio60s, último pedido, ACK obsoleto, manual, suspensão, erros e cleanup.
 `planos-alimentares-bff.spec.ts` cobre nova rota, sessão/permissão/CAS/status/no-store.
-UI/T07/T08 e gates integrados T09/T10 ainda pendentes; detalhes e limitações em
+UI/T07/T08 implementada. Testes visuais cobrem texto parcial, avaliação não
+selecionada, ausência de autosave ao abrir, ACK sem perda de edição, totais
+canônicos, retry de rejeição conhecida, saída durante request e acessibilidade.
+Percentuais crus opcionais têm allowlist e conversão separada sem arredondar.
+Revisão cruzada estática e gates integrados T09/T10 em finalização; detalhes em
 `docs/governance/EVIDENCIAS_PA06_NUCLEO_2026-10-15.md`. Bloqueia integração final
 se faltar prova de perda de edição, isolamento, concorrência ou migration aditiva.

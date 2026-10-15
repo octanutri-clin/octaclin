@@ -409,9 +409,19 @@ Evitar Luna sozinho na etapa de concorrência e transição de contratos. Pesqui
 restrita a R013/R014 e nenhuma biblioteca nova reduzem custo e retrabalho.
 Avisar modelo alvo e pausar antes de toda troca manual.
 
-Próxima ação: concluir checkpoint B da primeira entrega e pausar para troca
-manual para GPT-6 Luna alto antes de T07/T08. D01–D10 preservadas; ativação,
-portal plural e cálculo combinado permanecem nas entregas posteriores.
+Estado atualizado em 2026-10-15: T07/T08 foram implementados por Luna alto nesta
+worktree após a troca manual. A interface usa o coordenador CAS por paciente/plano/
+geração, autosave 60 s, status acessível, ACK mais recente, save manual e diálogo
+de saída; conflitos não repetem requests e exigem reconciliação. A ordem das
+refeições e o conteúdo local sobrevivem ao ACK; totais apresentados após salvar
+usam a materialização canônica do backend. Evidências e limitações estão em
+`docs/governance/EVIDENCIAS_PA06_NUCLEO_2026-10-15.md` e no checklist PA06.
+
+Troca manual de volta para GPT-6.1 Sol médio concluída; revisão integrada e
+gates T09/T10 em execução, com revisão cruzada estática R4 e preparação de
+uma única PR Draft. D01–D10 preservadas; ativação, portal plural e cálculo
+combinado permanecem em entregas posteriores. Ainda não há autorização para merge,
+deploy, aplicação externa de migrations ou ativação.
 
 ## Contrato executado da primeira entrega — núcleo, 2026-10-15
 
@@ -441,3 +451,16 @@ portal plural e cálculo combinado permanecem nas entregas posteriores.
   preserva status/no-store. Nenhuma biblioteca, preferência persistente, flag de
   ativação, novo micronutriente ou mudança de portal foi introduzida.
 - Evidências e limites: `docs/governance/EVIDENCIAS_PA06_NUCLEO_2026-10-15.md`.
+
+
+### Aditivo da integração — campos percentuais
+
+O documento editorial schema1 aceita `percentuaisMacrosEdicao` opcional com
+somente as três chaves de distribuição já existentes. Conserva texto exato
+(inclusive vazio, sinal e separador decimal) cifrado, com os mesmos limites
+numéricos/editoriais. Quando a chave está presente, a conversão clínica usa esse
+percentual como fonte e desloca duas casas para basis points, sem arredondamento;
+a validação clínica existente continua exigindo inteiro/faixa/soma. Na ausência,
+usa os basis points existentes para compatibilidade. Não altera banco, publicação
+ou projeções do paciente. Testes cobrem digitação tecla a tecla, tick60s, reabertura,
+precedência no servidor, precisão excedente e recusa de chaves extras.

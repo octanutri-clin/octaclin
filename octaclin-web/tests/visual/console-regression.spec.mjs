@@ -3074,7 +3074,7 @@ test.describe('prontuario do paciente', () => {
     await abaAcompanhamento.focus();
     await page.keyboard.press('ArrowRight');
     await expect(page.getByRole('dialog', { name: 'Sair sem salvar' })).toBeVisible();
-    await page.getByRole('dialog', { name: 'Sair sem salvar' }).getByRole('button', { name: 'Cancelar' }).click();
+    await page.getByRole('dialog', { name: 'Sair sem salvar' }).getByRole('button', { name: 'Continuar editando' }).click();
     await expect(abaAcompanhamento).toBeFocused();
     await expect(page.getByLabel('Título da tarefa')).toHaveValue('Revisar diário alimentar');
     await expect(abaAcompanhamento).toHaveAttribute('aria-selected', 'true');
@@ -3398,6 +3398,7 @@ test.describe('prontuario do paciente', () => {
 
   test('reordena refeições pela alça de teclado, preserva botões e salva a ordem', async ({ page }) => {
     test.setTimeout(60_000);
+    await page.clock.install();
     await prepararProntuarioMockado(page, {
       permissoesExtras: ['planos_alimentares.ler', 'planos_alimentares.gerenciar']
     });
@@ -3417,6 +3418,7 @@ test.describe('prontuario do paciente', () => {
     });
     let nomesSalvos = refeicoesOriginais.map((refeicao) => refeicao.nome);
     let corpoSalvo;
+    let liberarSaveSaida;
     const versaoAtual = {
       id: 'versao-publicada-pa01', numero: 1, status: 'publicada', publicadaEm: '2026-10-01T12:00:00.000Z',
       criadoEm: '2026-10-01T12:00:00.000Z', atualizadoEm: '2026-10-01T12:00:00.000Z', objetivos: 'Objetivo sintético.',
@@ -3424,6 +3426,7 @@ test.describe('prontuario do paciente', () => {
     };
     const versaoRascunho = {
       id: 'versao-rascunho-pa01', numero: 2, status: 'rascunho', avaliacaoAntropometricaId: 'avaliacao-pa01',
+      rascunhoRevisao: 0, edicaoEstado: 'materializada',
       criadoEm: '2026-10-02T12:00:00.000Z', atualizadoEm: '2026-10-02T12:00:00.000Z', objetivos: 'Objetivo sintético.',
       calculo: {
         fatorAtividade: 1.4, ajusteEnergeticoKcal: 0, metaEnergeticaKcal: 2000,
@@ -3447,12 +3450,18 @@ test.describe('prontuario do paciente', () => {
         total: 1, pagina: 1, limite: 100
       })
     }));
-    await page.route('**/api/pacientes/paciente-1/planos-alimentares/plano-pa01/rascunho', async (route) => {
+    await page.route('**/api/pacientes/paciente-1/planos-alimentares/plano-pa01/rascunho/edicao', async (route) => {
       if (route.request().method() === 'PUT') {
         corpoSalvo = route.request().postDataJSON();
-        nomesSalvos = corpoSalvo.refeicoes.map((refeicao) => refeicao.nome);
+        if (corpoSalvo.documento.objetivos === 'Objetivo revisado após recarregar.') await new Promise(resolve => { liberarSaveSaida = resolve; });
+        nomesSalvos = corpoSalvo.documento.refeicoes.map((refeicao) => refeicao.nome);
+        versaoRascunho.rascunhoRevisao = corpoSalvo.rascunhoRevisaoEsperada + 1;
+        versaoRascunho.documentoEdicao = corpoSalvo.documento;
+        versaoRascunho.edicaoEstado = corpoSalvo.documento.objetivos ? 'materializada' : 'pendente';
         await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({
-          ...versaoRascunho, ...corpoSalvo, refeicoes: montarRefeicoes(nomesSalvos), numero: 2
+          ...versaoRascunho,
+          ...(versaoRascunho.edicaoEstado === 'pendente' ? { calculo: undefined, totais: undefined, refeicoes: [] } : { refeicoes: montarRefeicoes(nomesSalvos) }),
+          numero: 2
         }) });
         return;
       }
@@ -3486,15 +3495,36 @@ test.describe('prontuario do paciente', () => {
     await moverJantarParaCima.press('Enter');
     await expect.poll(() => page.getByLabel('Nome da refeição').evaluateAll((campos) => campos.map((campo) => campo.value)))
       .toEqual(['Almoço', 'Jantar', 'Café da manhã']);
-    await page.getByRole('button', { name: 'Salvar rascunho' }).click();
-    await expect.poll(() => corpoSalvo?.refeicoes?.map((refeicao) => refeicao.nome))
+    await page.getByLabel('Objetivo clínico').fill('');
+    await expect(page.getByRole('status').filter({ hasText: 'Último salvamento confirmado' })).toHaveCount(0);
+    await page.clock.fastForward(60_000);
+    await expect.poll(() => corpoSalvo?.documento?.refeicoes?.map((refeicao) => refeicao.nome))
       .toEqual(['Almoço', 'Jantar', 'Café da manhã']);
-    await expect(page.getByRole('button', { name: 'Salvar rascunho' })).toBeEnabled();
+    expect(corpoSalvo.rascunhoIdEsperado).toBe('versao-rascunho-pa01');
+    expect(corpoSalvo.rascunhoRevisaoEsperada).toBe(0);
+    expect(corpoSalvo.documento.objetivos).toBe('');
+    await expect(page.getByRole('status').filter({ hasText: 'Cálculos e subtotais indisponíveis' })).toBeVisible();
+    await expect(page.getByRole('status').filter({ hasText: 'Último salvamento confirmado' })).toBeVisible();
+    expect((await new AxeBuilder({ page }).include('main').withTags(['wcag2a', 'wcag2aa', 'wcag21aa']).analyze()).violations).toEqual([]);
+    await expect(page.getByLabel('Nome da refeição').evaluateAll((campos) => campos.map((campo) => campo.value)))
+      .resolves.toEqual(['Almoço', 'Jantar', 'Café da manhã']);
     await page.reload();
     await page.getByRole('tab', { name: 'Plano', exact: true }).click();
     await page.getByRole('tab', { name: 'Plano alimentar', exact: true }).click();
     await expect.poll(() => page.getByLabel('Nome da refeição').evaluateAll((campos) => campos.map((campo) => campo.value)))
       .toEqual(['Almoço', 'Jantar', 'Café da manhã']);
+    await page.getByLabel('Objetivo clínico').fill('Objetivo revisado após recarregar.');
+    await page.getByRole('tab', { name: 'Atendimentos', exact: true }).click();
+    const saida = page.getByRole('dialog', { name: 'Sair sem salvar' });
+    await expect(saida.getByRole('button', { name: 'Salvar e sair' })).toBeVisible();
+    await assertSemOverflowHorizontal(page);
+    await saida.getByRole('button', { name: 'Salvar e sair' }).click();
+    await expect.poll(() => Boolean(liberarSaveSaida)).toBe(true);
+    await page.keyboard.press('Escape');
+    await expect(saida).toBeVisible();
+    liberarSaveSaida();
+    await expect.poll(() => corpoSalvo?.documento?.objetivos).toBe('Objetivo revisado após recarregar.');
+    await expect(page.getByRole('tab', { name: 'Atendimentos', exact: true })).toHaveAttribute('aria-selected', 'true');
   });
 
   test('edita o modelo em cópia isolada e restaura versão como nova revisão', async ({ page }) => {
