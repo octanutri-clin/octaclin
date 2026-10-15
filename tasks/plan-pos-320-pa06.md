@@ -1,0 +1,200 @@
+# PA06 — autosave opcional do plano alimentar
+
+Planejamento de 2026-10-15. Autorização atual: análise de gaps e documentação;
+implementação ainda não iniciada. Uma PR futura reúne plano e implementação.
+Checklist: [T00–T10](todo-pos-320-pa06.md).
+
+## Base, continuidade e limites
+
+- Base `eae74b1e`, merge da [PR #419](https://github.com/octanutri-clin/octaclin/pull/419)
+  em 2026-10-15. Árvore idêntica ao HEAD aprovado `9e12271b`.
+- CI `38656591697` e checks aplicáveis PASS, inclusive Backend, Web,
+  PostgreSQL/RLS, Demo e PR Gate. Dependency Review, Semgrep, CodeQL e Trivy
+  SUCCESS. Provenance do SBOM SKIPPED; não convertido em PASS.
+- Nova worktree `/workspace/octaclin/.worktrees/pos320-pa06-planejamento`, branch
+  `docs/pos320-pa06-planejamento`; checkout principal antigo e sua alteração
+  preexistente em `octaclin-web/next-env.d.ts` preservados.
+- PA05 integrada não prova aplicação externa da migration1072 nem deploy.
+  Estado externo NÃO consultado nesta rodada. Antes de rollout, identificar
+  ambientes/roles e conferir migrations pelo procedimento autorizado.
+- FND02 e PA01–PA05 são baseline. PA07 (coordenação entre abas) permanece
+  separada: PA06 precisa detectar conflito entre abas/dispositivos pelo servidor,
+  mas não introduz BroadcastChannel, colaboração ou trava distribuída.
+- Escopo proposto: editor profissional, rascunho existente, mesmos cálculos,
+  autorização e revisão/publicação explícitas. Sem portal/PDF novo, IA,
+  anexos, recuperação offline ou ingestão TBCA.
+
+## Decisões de produto — aguardando respostas
+
+Perguntas enviadas nesta sessão; recomendação não equivale a aprovação.
+
+| ID | Recomendação | Alternativa e efeito |
+| --- | --- | --- |
+| D01 | Opt-in desligado por padrão, lembrado por profissional dentro da clínica | Somente por abertura evita persistência da preferência; limpar ao desmontar |
+| D02 | Salvar apenas rascunhos válidos segundo o contrato atual; incompletos permanecem em memória com motivo visível | Rascunho parcial exige novo contrato de persistência/validação, outro orçamento e revisão deste plano antes de codificar |
+| D03 | Saída interna oferece salvar e sair, continuar editando ou descartar com confirmação; falha/conflito mantém editor | Manter apenas o bloqueio atual reduz integração com o prontuário; não implementar callback novo sem resposta |
+
+Não gravar planos automaticamente só por abrir a tela. Ativar a preferência
+permite salvar alterações locais válidas após o debounce, com aviso junto ao
+controle. Desligar cancela pendências ainda não enviadas; uma transação já
+iniciada pode terminar. O estado deve informar isso, sem prometer cancelamento
+de uma gravação aceita pelo servidor.
+
+## Gaps confrontados com código real
+
+| Gap | Evidência atual | Consequência e trabalho |
+| --- | --- | --- |
+| G01 — revisão não cobre todos os writers | `ServicoPlanosAlimentares.atualizarRascunho`: CAS e incremento de `apresentacaoRevisao` somente quando há `preferenciasApresentacao`; teste “PUT legado conserva preferências e revisão já salvas” confirma a compatibilidade | PA06 exige revisão geral monotônica de edição; não tratar contador visual como controle universal nem usar `atualizadoEm` arredondado |
+| G02 — recarga apaga edição posterior | `salvar()` usa `executar()`, que termina em `carregar()`; `aplicarPlano()` reidrata formulário inteiro, limpa dirty, foco e refeições abertas | Separar confirmação da escrita da recarga; resposta do snapshot A não pode substituir edição B feita durante o request |
+| G03 — preferência não existe | `ProfissionalOrm` e `UsuarioOrm` não possuem preferência de autosave; nada correspondente no cliente do plano | Se D01 aprovada, extensão mínima em profissionais e API do próprio vínculo; sem módulo genérico de perfil ou reaproveitar preferências de notificações |
+| G04 — validação tem efeitos manuais | `validarFormulario()` mais `focarRefeicaoComErro()` em salvar; HTML required participa só do submit | Compartilhar regras puras, respeitar validade dos campos e composição; autosave não muda foco, não abre refeições e não repete erros a cada tecla |
+| G05 — não há coordenador de gravação | `operacao`, `alterado`, refs de cópia/preview e `sequenciaCarregamento` são separados | Coordenar manual/automático, cópia, revisão, publicação e saída com uma fila por contexto e teste de Promises fora de ordem |
+| G06 — saída tem vários donos | `useProtecaoAlteracoesNaoSalvas`, callback booleano `aoAlterarRascunho` e modal no `prontuario-paciente.tsx` | Se D03 aprovada, registrar capacidade de salvar/estado no pai, preservando pendências de evolução, tarefa, material e anexo; salvar plano não autoriza descartar outro editor |
+| G07 — resultado de rede incerto | PUT retorna versão, cliente lança `ErroApiPlanoAlimentar`; cancelar fetch não desfaz commit | Sem retry cego, beacon ou background sync. Distinguir falha de validação, conflito, acesso revogado e envio sem confirmação |
+| G08 — custo de cada escrita | `substituirFilhos()` recria estrutura e recalcula snapshots no save | Debounce e deduplicação obrigatórios; sem heartbeat. Não salvar de novo só porque cálculo/ID retornado mudou |
+
+## Contrato técnico proposto
+
+### Persistência e concorrência — checkpoint obrigatório com Sol
+
+1. Reutilizar `PUT /pacientes/:pacienteId/planos-alimentares/:planoId/rascunho`,
+   DTO, transação, cifragem e locks atuais. Retornar a versão aceita e sua revisão
+   geral. Cálculo continua exclusivamente autoritativo no backend.
+2. Introduzir revisão geral explícita do rascunho, separada da revisão de
+   apresentação da PA05, e identidade esperada da geração. Incrementar em toda
+   escrita de conteúdo, inclusive caminhos legados; incluir revisão/publicação
+   nas transições que invalidam uma pré-condição de edição.
+3. Comparar revisão/geração sob os locks existentes ANTES de apagar filhos ou
+   modificar snapshots. Conflito retorna 409 sem escrita parcial. Verificar
+   inteiro seguro/overflow e não confiar em clock ou timestamp do cliente.
+4. Não basta adicionar um campo opcional de CAS: documentar e testar a transição
+   dos clientes PA05/legados. Preferência técnica: modo protegido monotônico por
+   rascunho; após primeira edição pelo contrato PA06, uma escrita sem a
+   pré-condição geral é recusada com conflito orientando atualização da tela.
+   Antes da adesão, a compatibilidade PA05 continua. Todos os writers legados
+   incrementam a revisão geral, invalidando baselines PA06 anteriores.
+   A proteção não pode desaparecer ao desligar autosave ou por replay.
+5. Fechar nomes de DTO/colunas e mecanismo mínimo dessa adesão no T01/T02 com
+   RED/GREEN. Não redefinir `apresentacaoRevisao`, que também identifica
+   snapshots ilegíveis e heranças. Campos técnicos novos não entram no hash
+   clínico, projeção paciente, logs ou auditoria genérica.
+6. Migration nova aditiva; próximo número observado na base é1073, revalidar
+   registro/branch antes de criar. Nunca editar1072. Preservar dados antigos e
+   snapshots publicados; rollback por código sem apagar colunas/histórico e
+   sem reabrir escritas desprotegidas em rascunhos já protegidos.
+
+**Gate técnico:** sem prova do contrato legado↔PA06 e save↔revisão/publicação
+em PostgreSQL real, não entregar o motor à implementação de UI nem habilitar
+autosave. A política acima é proposta de engenharia, não alteração já aplicada.
+
+Se D01 aprovada: persistir apenas booleano, default false, no vínculo profissional
+existente. Endpoint de preferência do próprio usuário (por exemplo
+`/profissionais/me/preferencias-plano`), com identidade/tenant resolvidos da
+sessão, vínculo ativo e permissão de gerenciamento. Não aceitar profissional
+alvo no body; testar rota estática antes de `:id`. DTO permitido retorna só
+booleano, sem entidade ORM. Sem alteração por gestor/SuperAdmin em nome de
+terceiro. Reutilizar RLS de profissionais e conferir FORCE RLS no banco real.
+Falha ao carregar preferência deixa autosave inativo; erro ao salvar opção não
+deve aparecer como preferência persistida com sucesso.
+
+### Coordenador de edição em memória
+
+- Contexto: sessão/tenant atual + paciente + plano + ID do rascunho + geração
+  local de montagem. Não serializar contexto clínico em URL, telemetria ou disco.
+- Debounce inicial de **3 segundos** sem nova edição; parâmetro interno testável.
+  Não despachar durante composição IME, cópia, outra escrita ou transição de
+  revisão/publicação. Após estabilizar, revalidar contexto, permissão e formulário.
+- Uma escrita em voo. No máximo um estado pendente, substituído pelo mais
+  recente; não enfileirar cada tecla. Salvar manualmente cancela debounce e usa
+  a mesma fila. Duplo clique/StrictMode não duplica envio.
+- Capturar snapshot A e sequência de edição. Ao receber A, atualizar somente
+  baseline/revisão e cálculos correspondentes; se houver edição B, preservar B,
+  dirty, chaves locais, foco, cursor e refeições abertas. Preparar B com revisão
+  confirmada de A. Sem B, reidratar de forma deliberada e manter a navegação.
+- Comparar payload clínico normalizado, não referências de objetos ou campos
+  derivados. Uma recarga ou resposta não agenda nova gravação por si só.
+- Usar resposta do PUT, sem GET integral a cada sucesso. Atualizar o resumo do
+  rascunho em memória ou invalidar sua leitura de forma protegida, sem duplicar
+  o cálculo nutricional do backend ou misturar resumo publicado/rascunho.
+- Estado “Salvo” somente quando último conteúdo local foi confirmado pelo
+  servidor e não existe escrita pendente/incerta. Indicar que é rascunho, não
+  revisão clínica nem publicação; a edição aceita invalida revisão anterior.
+- Mudança de contexto/desmontagem/logout elimina timer e pendente, invalida
+  respostas obsoletas e aborta transporte quando possível. Não usar cleanup
+  para disparar PUT. Cancelar transporte não significa rollback do servidor.
+- 400/422: motivo sanitizado, sem loop automático; aguardar correção do usuário.
+  409: pausar autosave; preservar texto, sem trocar revisão e reenviar sozinho.
+  Oferecer continuar editando localmente ou recarregar com confirmação de perda.
+  401/403/404: pausar, manter proteção de saída, retirar ações de gravação; não
+  manter dados após descarte explícito/troca real de contexto ou fim da sessão.
+  Rede/5xx/timeout após envio: “Envio não confirmado”; bloquear novos PUTs até
+  conferência explícita da versão salva. Não afirmar que nada foi gravado.
+- Reconexão/foco da janela não reenvia escrita. Recarregar uma versão para
+  conferência não substitui conteúdo local nem autoriza sobrescrever conflito.
+
+### UI e saída
+
+Estados acessíveis: desligado, alterado, pendente por validação, salvando, salvo,
+falha, conflito e envio não confirmado. `role=status`/aria-live polite sem spam;
+erros acionáveis com foco deliberado só quando o usuário tenta salvar.
+Controle por teclado, mobile e desktop; nenhuma nova dependência de cor.
+
+Botão Salvar rascunho permanece disponível. Prévia/impressão/revisão/publicação
+continuam bloqueadas com conteúdo pendente ou operação incompatível. Desligar
+autosave preserva dirty e não faz flush escondido. Arquivar/criar nova versão/
+criar plano exigem estabilização ou descarte explícito, sem reaproveitar timer.
+
+Se D03 aprovada, “Salvar e sair” aguarda ACK do conteúdo mais recente, com
+permanência em caso de edição adicional/erro; só navega se demais editores
+estiverem sem pendências. Guardar intenção de navegação, nunca PHI em URL.
+Fechar/atualizar navegador usa FND02/beforeunload; não prometer save on exit.
+Não construir roteador global novo para esta entrega.
+
+## Referências externas — somente R013 e R014
+
+Consultadas por API GitHub em 2026-10-15, leitura de documentação/tipos/licenças;
+nenhum script externo executado, nenhum código copiado para o runtime.
+Catálogo/matriz/mapa inverso concordam sobre esses dois IDs.
+
+| Referência fixada | Evidência e uso | Decisão desta rodada |
+| --- | --- | --- |
+| [TanStack/query](https://github.com/TanStack/query), release `release-2026-10-11-1936`, commit `b699b52d60e10220403673a407d95bcebeba3e81`; pacote react-query5.104.2, MIT, não arquivado | [Mutations](https://github.com/TanStack/query/blob/b699b52d60e10220403673a407d95bcebeba3e81/docs/framework/react/guides/mutations.md): promises podem concluir fora de ordem, scope serializa, callbacks dependem da montagem; [licença](https://github.com/TanStack/query/blob/b699b52d60e10220403673a407d95bcebeba3e81/LICENSE) | Orienta fila e descarte de resposta obsoleta. Scope sozinho não faz CAS nem consolida estados antigos. Não adotar persistência offline ou retries. Biblioteca não está instalada; não introduzir provider/cache só para este caso |
+| [react-hook-form/react-hook-form](https://github.com/react-hook-form/react-hook-form), v7.90.0, commit `8ac7cc0bcc1f50f887230d50b1929d977b4d3fb4`, MIT, não arquivado | [Tipos form](https://github.com/react-hook-form/react-hook-form/blob/8ac7cc0bcc1f50f887230d50b1929d977b4d3fb4/src/types/form.ts): dirtyFields, isDirty, reset/keepDirtyValues e shouldUnregister; [licença](https://github.com/react-hook-form/react-hook-form/blob/8ac7cc0bcc1f50f887230d50b1929d977b4d3fb4/LICENSE) | Orienta baseline/dirty e preservação de campos recolhidos. Não migrar formulário atual nem assumir que keepDirtyValues resolve concorrência. Biblioteca não está instalada |
+
+Os dois projetos permanecem ativos segundo metadados consultados. Licença MIT
+não é auditoria de supply chain nem comprovação de adequação ao SaaS clínico.
+Se adoção de dependência se tornar necessária, interromper somente essa mudança
+para justificar custo, compatibilidade React, scans e política de licença.
+
+## Segurança, operação e validação
+
+Risco da implementação **R4**: persistência clínica, authz/carteira, RLS e
+concorrência. Documentação desta rodada não altera runtime. Reutilizar BFF e
+`ExecutorTenant`; private/no-store e projeções permitidas, sem cache persistente,
+localStorage, sessionStorage, IndexedDB ou service worker para conteúdo clínico.
+
+TDD: primeiro reproduzir perda A→B e baseline obsoleto após writer legado;
+depois provar solução com timers/Promises controladas e PostgreSQL real, role
+runtime não owner/sem BYPASSRLS. Cobrir tenant A/B, profissionais A/B, carteira,
+transferência, arquivamento e acesso revogado. Dados exclusivamente sintéticos.
+Fixtures de cada teste devem ser isoladas para não contaminar PA04/PA05.
+
+Gates de implementação: unitários de fila/validação/DTO/serviço; migration e
+inventário; banco real/RLS/concorrência; BFF positivo/negativo; Playwright
+desktop/mobile, teclado/Axe, PA02–PA05 e FND02; lint/typecheck/build, secrets,
+governança, revisão R4 cruzada e CI do HEAD. Comandos exatos no checklist.
+
+## Modelos e próxima ação
+
+- **GPT-6.1 Sol médio:** planejamento, revisão geral/compatibilidade legada,
+  migration, serviço, autorização, banco real e contrato do coordenador.
+- **GPT-6 Luna alto:** depois de checkpoint backend e motor testado, interface
+  de preferência/estados e integração visual com tarefas pequenas e DTOs fechados.
+- **GPT-6.1 Sol médio:** integração, segurança, regressões e PR única final.
+
+Evitar Luna sozinho na etapa de concorrência e transição de contratos. Pesquisa
+restrita a R013/R014 e nenhuma biblioteca nova reduzem custo e retrabalho.
+Avisar modelo alvo e pausar antes de toda troca manual.
+
+Próxima ação: incorporar respostas D01–D03 e autorização de implementação.
+Enquanto pendentes, T01–T10 não iniciadas; nenhuma aprovação presumida.

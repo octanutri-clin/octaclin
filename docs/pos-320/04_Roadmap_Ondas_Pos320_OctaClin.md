@@ -366,6 +366,17 @@ integração pela PR permanecem sujeitos às evidências do checklist PA05.
 
 ## [PA06] Autosave opcional do plano alimentar
 
+**Planejamento em 2026-10-15:** base `eae74b1e`, PA05 integrada pela PR #419;
+checks aplicáveis do HEAD `9e12271b` PASS, sem inferir migration externa/deploy.
+Análise de código identificou revisão CAS limitada a saves com preferências e
+recarga integral após escrita. PA06 precisa de revisão geral com transição
+segura de legados e preservação de edições feitas durante request. Preferência,
+validade mínima e saída aguardam respostas D01–D03. Só R013/R014 foram
+consultados, com versões/licenças/fontes no plano; sem biblioteca nova prevista.
+Implementação ainda não iniciada. Handoff
+[plan-pos-320-pa06.md](../../tasks/plan-pos-320-pa06.md) e checklist
+[todo-pos-320-pa06.md](../../tasks/todo-pos-320-pa06.md).
+
 **Origem:** item 16.
 
 **Status atual:** rascunho explícito + proteção contra perda.

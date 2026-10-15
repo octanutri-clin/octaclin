@@ -100,11 +100,20 @@ migrations externas.
 
 - [x] Backend/Web lint/typecheck/build, suítes proporcionais e segredo/diff PASS.
 - [x] Revisão R4 cruzada com autoria/limites em `docs/governance/REVISAO_R4_PA05_2026-10-14.md`.
-- [ ] Uma PR integra código/documentos; CI do HEAD, scanners, Demo e PR Gate PASS.
+- [x] Uma PR integra código/documentos; CI do HEAD, scanners, Demo e PR Gate PASS.
 - [x] Migration externa/deploy/ativação SKIPPED até autorização e alvo confirmado.
 - [x] Atualizar gates reais, handoff, rollback e procedimento de implantação aditiva.
 
 ## Evidências desta rodada
+
+### Fechamento conferido em 2026-10-15
+
+PR #419 MERGED, merge `eae74b1e`, árvore idêntica ao HEAD final `9e12271b`.
+CI `38656591697` e checks aplicáveis PASS, incluindo Backend, Web, Demo e PR Gate;
+Semgrep/CodeQL/Trivy/Dependency Review SUCCESS. SBOM provenance SKIPPED conforme
+workflow. T09 concluída para entrega de desenvolvimento. Migration1072 externa,
+deploy e validação operacional não consultados nesta rodada e não inferidos.
+Registros de CI pendente abaixo são checkpoints históricos anteriores ao fechamento.
 
 T07–T08 (Luna alto) implementados e validados nesta worktree: `pnpm typecheck`
 PASS; lint focado PASS sem erros, com avisos em hooks/refs no arquivo profissional

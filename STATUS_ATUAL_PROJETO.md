@@ -1,10 +1,23 @@
 # OctaClin - Status atual do projeto
 
-Atualizado em 2026-10-14.
+Atualizado em 2026-10-15.
 
 ## Fase ativa
 
-- **PA05 — implementação e revisão R4 concluídas; gates finais em execução**, branch
+- **PA06 — planejamento e análise de gaps em andamento**, base `eae74b1e`.
+  Autosave opcional do rascunho no editor profissional. Referências R013
+  TanStack/query e R014 react-hook-form consultadas em versões fixadas; uso
+  conceitual, sem dependência nova. Gaps: revisão geral de conteúdo/caminhos
+  legados, edição durante gravação, preferência própria e saída protegida.
+  D01–D03 aguardam respostas; nenhuma implementação iniciada. Plano e critérios
+  em `tasks/plan-pos-320-pa06.md` e `tasks/todo-pos-320-pa06.md`.
+  Sol6.1 médio para concorrência/backend e integração; Luna alto apenas após
+  contratos/motor testados, para interface. Avisar e pausar antes da troca.
+- **PA05 — integrada pela PR #419**, merge `eae74b1e`, árvore idêntica ao HEAD
+  `9e12271b`. CI `38656591697` e checks aplicáveis PASS em 2026-10-15, inclusive
+  Backend, Web, Demo e PR Gate; scanners SUCCESS. SBOM provenance SKIPPED.
+  Estado externo da1072/deploy não consultado nem inferido pelo merge.
+  Registro da implementação e evidências anteriores:
   `feat/pos320-pa05-preferencias`, base `64f54b88`. D01–D03 confirmadas.
   PR #419 inicialmente Draft. CI inicial detectou contaminação de fixtures
   PA05/PA04; casos PA05 isolados e prova conjunta PostgreSQL real 3/3 PASS.
@@ -14,8 +27,8 @@ Atualizado em 2026-10-14.
   PASS, 66/66 casos. Backend 2.923 testes, Redis 2/2 e Web/Governança PASS.
   UI T07/T08 implementada; Sol médio corrigiu quatro achados com testes RED.
   Revisão estática independente final PASS; suíte visual 50/50 + a11y/teclado 4/4
-  PASS; regressões PA02/PA03 38/38 PASS; gates finais T09 em execução. Migration1072
-  aditiva somente em banco descartável neste ciclo.
+  PASS; regressões PA02/PA03 38/38 PASS; gates finais T09 fechados pelo CI acima.
+  Migration1072 aditiva somente em banco descartável no ciclo de desenvolvimento.
   Evidências `docs/governance/REVISAO_R4_PA05_2026-10-14.md` e
   `docs/governance/EVIDENCIAS_PA05_BACKEND_2026-10-14.md`,
   handoff `tasks/plan-pos-320-pa05.md` e checklist `tasks/todo-pos-320-pa05.md`.

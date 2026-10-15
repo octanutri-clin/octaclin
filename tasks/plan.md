@@ -1,4 +1,35 @@
-# Handoff atual — PA05: integração Sol e T09 em execução
+# Handoff atual — PA06: planejamento, sem implementação
+
+Base `eae74b1e`, merge confirmado da PR #419 em 2026-10-15; árvore igual ao
+HEAD aprovado `9e12271b`. CI `38656591697` e checks aplicáveis PASS, inclusive
+Backend/Web/Demo/PR Gate; scanners SUCCESS; SBOM provenance SKIPPED.
+Estado externo da migration1072/deploy não consultado. Nenhuma autorização
+operacional inferida pelo merge.
+
+Worktree `/workspace/octaclin/.worktrees/pos320-pa06-planejamento`, branch
+`docs/pos320-pa06-planejamento`. Principal e demais worktrees preservados.
+Autorização desta etapa: planejamento/análise de gaps e referências pertinentes.
+
+- [Plano PA06](plan-pos-320-pa06.md) e [T00–T10](todo-pos-320-pa06.md).
+- Próximo item do roadmap: autosave opcional do rascunho no editor profissional.
+- Pesquisa restrita a R013 TanStack/query e R014 react-hook-form; licenças MIT,
+  commits fixados e aplicação conceitual no plano. Não instalar bibliotecas.
+- D01–D03 enviadas e reenviadas ao usuário: preferência por profissional ou
+  abertura; somente válido ou parcial; salvar e sair ou guarda atual. Aguardar
+  respostas sem presumir aprovação das recomendações.
+- Gaps críticos: revisão PA05 não cobre writer legado de conteúdo; salvar hoje
+  recarrega e pode apagar edição posterior. Fechar revisão geral/adesão segura,
+  provas PostgreSQL/RLS e coordenador testado antes de entregar UI a Luna.
+- Sol6.1 médio: contratos, persistência/concorrência e integração final. Luna alto:
+  UI após checkpoint B. Avisar e pausar antes de toda troca manual.
+- Próxima ação: incorporar respostas e autorização de implementação. T01–T10
+  ainda não iniciadas. Sem runtime, dependências, migrations, merge ou deploy.
+
+O handoff PA05 abaixo é histórico. Pendências de CI nele foram encerradas pelos
+checks do HEAD final acima; não representam bloqueios atuais de implementação.
+Preservado para rastrear decisões, falhas RED/GREEN e limites operacionais.
+
+## Handoff anterior — PA05: integração Sol e T09
 
 Worktree `/workspace/octaclin/.worktrees/pos320-pa05-planejamento`, branch
 `feat/pos320-pa05-preferencias`, base `64f54b88` (#418). Implementação autorizada
