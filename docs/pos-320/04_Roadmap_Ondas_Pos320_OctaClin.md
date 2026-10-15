@@ -370,8 +370,10 @@ integração pela PR permanecem sujeitos às evidências do checklist PA05.
 checks aplicáveis do HEAD `9e12271b` PASS, sem inferir migration externa/deploy.
 Análise de código identificou revisão CAS limitada a saves com preferências e
 recarga integral após escrita. PA06 precisa de revisão geral com transição
-segura de legados e preservação de edições feitas durante request. Preferência,
-validade mínima e saída aguardam respostas D01–D03. Só R013/R014 foram
+segura de legados e preservação de edições feitas durante request. D01–D03
+confirmadas: ligado por padrão, ciclo de 60 segundos, alimentos válidos salvos mesmo com
+formulário incompleto e saída protegida. D04/D05 pendentes sobre controle de
+visibilidade on/off e linhas incompletas. Só R013/R014 foram
 consultados, com versões/licenças/fontes no plano; sem biblioteca nova prevista.
 Implementação ainda não iniciada. Handoff
 [plan-pos-320-pa06.md](../../tasks/plan-pos-320-pa06.md) e checklist
@@ -384,14 +386,16 @@ Implementação ainda não iniciada. Handoff
 **Dependência:** FND02.
 
 **Implementação sugerida:**
-- preferência opt-in;
-- debounce;
+- habilitado por padrão, verificação a cada 60 segundos sem reiniciar o ciclo por tecla;
+- gravar alterações, sem PUT repetido quando nada mudou;
+- rascunho parcial preserva alimentos válidos sem exigir completude clínica;
 - estados `Alterado`, `Salvando`, `Salvo`, `Falha ao salvar`;
 - usar versão esperada/conflito otimista;
 - sem `localStorage` para PHI.
 
 **Aceite:**
-- autosave pode ser ligado/desligado;
+- controle de autosave, se mantido, não se confunde com visibilidade ao paciente;
+- on/off de visibilidade depende de D04 e não significa arquivar/excluir;
 - nunca publica automaticamente;
 - falha não apaga rascunho local em memória;
 - conflito exige ação do usuário.

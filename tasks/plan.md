@@ -11,18 +11,22 @@ Worktree `/workspace/octaclin/.worktrees/pos320-pa06-planejamento`, branch
 Autorização desta etapa: planejamento/análise de gaps e referências pertinentes.
 
 - [Plano PA06](plan-pos-320-pa06.md) e [T00–T10](todo-pos-320-pa06.md).
-- Próximo item do roadmap: autosave opcional do rascunho no editor profissional.
+- Próximo item do roadmap: autosave do rascunho no editor profissional.
 - Pesquisa restrita a R013 TanStack/query e R014 react-hook-form; licenças MIT,
   commits fixados e aplicação conceitual no plano. Não instalar bibliotecas.
-- D01–D03 enviadas e reenviadas ao usuário: preferência por profissional ou
-  abertura; somente válido ou parcial; salvar e sair ou guarda atual. Aguardar
-  respostas sem presumir aprovação das recomendações.
+- D01–D03 respondidas: habilitado por padrão, em ciclos de 60 segundos sem reiniciar por
+  tecla; alimentos com porção válida salvos mesmo com outros campos incompletos;
+  saída oferece salvar e sair/continuar/descartar com confirmação. Plano anterior
+  de opt-in e debounce de 3 segundos substituído. Novo fundamento: snapshot editorial parcial
+  cifrado com cálculo/completude vinculados à revisão e sem publicação automática.
+- D04/D05 pendentes: efeito do on/off sobre versão publicada e tratamento das
+  linhas incompletas. Perguntas enviadas; não inferir retirada de publicação.
 - Gaps críticos: revisão PA05 não cobre writer legado de conteúdo; salvar hoje
   recarrega e pode apagar edição posterior. Fechar revisão geral/adesão segura,
   provas PostgreSQL/RLS e coordenador testado antes de entregar UI a Luna.
 - Sol6.1 médio: contratos, persistência/concorrência e integração final. Luna alto:
   UI após checkpoint B. Avisar e pausar antes de toda troca manual.
-- Próxima ação: incorporar respostas e autorização de implementação. T01–T10
+- Próxima ação: incorporar D04/D05 e autorização de implementação. T01–T10
   ainda não iniciadas. Sem runtime, dependências, migrations, merge ou deploy.
 
 O handoff PA05 abaixo é histórico. Pendências de CI nele foram encerradas pelos

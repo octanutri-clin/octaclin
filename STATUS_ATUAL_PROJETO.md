@@ -5,11 +5,13 @@ Atualizado em 2026-10-15.
 ## Fase ativa
 
 - **PA06 — planejamento e análise de gaps em andamento**, base `eae74b1e`.
-  Autosave opcional do rascunho no editor profissional. Referências R013
+  Autosave ligado por padrão, ciclo de 60 segundos no editor profissional. Referências R013
   TanStack/query e R014 react-hook-form consultadas em versões fixadas; uso
   conceitual, sem dependência nova. Gaps: revisão geral de conteúdo/caminhos
-  legados, edição durante gravação, preferência própria e saída protegida.
-  D01–D03 aguardam respostas; nenhuma implementação iniciada. Plano e critérios
+  legados, edição durante gravação, snapshot editorial parcial e saída protegida.
+  D01–D03 confirmadas; alimentos válidos salvos sem exigir formulário completo.
+  D04/D05 (on/off e linhas incompletas) pendentes; nenhuma implementação iniciada.
+  Plano e critérios
   em `tasks/plan-pos-320-pa06.md` e `tasks/todo-pos-320-pa06.md`.
   Sol6.1 médio para concorrência/backend e integração; Luna alto apenas após
   contratos/motor testados, para interface. Avisar e pausar antes da troca.

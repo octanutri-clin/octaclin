@@ -1,4 +1,4 @@
-# PA06 — autosave opcional do plano alimentar
+# PA06 — autosave de 60 segundos e rascunho do plano alimentar
 
 Planejamento de 2026-10-15. Autorização atual: análise de gaps e documentação;
 implementação ainda não iniciada. Uma PR futura reúne plano e implementação.
@@ -20,25 +20,35 @@ Checklist: [T00–T10](todo-pos-320-pa06.md).
 - FND02 e PA01–PA05 são baseline. PA07 (coordenação entre abas) permanece
   separada: PA06 precisa detectar conflito entre abas/dispositivos pelo servidor,
   mas não introduz BroadcastChannel, colaboração ou trava distribuída.
-- Escopo proposto: editor profissional, rascunho existente, mesmos cálculos,
-  autorização e revisão/publicação explícitas. Sem portal/PDF novo, IA,
-  anexos, recuperação offline ou ingestão TBCA.
+- Escopo confirmado: editor profissional, autosave habilitado por padrão, ciclo
+  de 60 segundos e persistência de alimentos com porções válidas sem exigir formulário
+  clínico completo. Revisão/publicação continuam explícitas. A extensão on/off
+  de visibilidade aguarda definição D04, abaixo. Sem IA, anexos, recuperação
+  offline ou ingestão TBCA.
 
-## Decisões de produto — aguardando respostas
+## Decisões de produto — respostas e refinamentos de 2026-10-15
 
-Perguntas enviadas nesta sessão; recomendação não equivale a aprovação.
+As respostas do usuário substituem as recomendações iniciais conflitantes.
 
-| ID | Recomendação | Alternativa e efeito |
+| ID | Decisão ou proposta | Estado |
 | --- | --- | --- |
-| D01 | Opt-in desligado por padrão, lembrado por profissional dentro da clínica | Somente por abertura evita persistência da preferência; limpar ao desmontar |
-| D02 | Salvar apenas rascunhos válidos segundo o contrato atual; incompletos permanecem em memória com motivo visível | Rascunho parcial exige novo contrato de persistência/validação, outro orçamento e revisão deste plano antes de codificar |
-| D03 | Saída interna oferece salvar e sair, continuar editando ou descartar com confirmação; falha/conflito mantém editor | Manter apenas o bloqueio atual reduz integração com o prontuário; não implementar callback novo sem resposta |
+| D01 | Autosave ligado por padrão, a cada 60 segundos em ciclo enquanto o editor do plano estiver aberto | CONFIRMADA; substitui opt-in/default false e debounce de 3 segundos |
+| D02 | Todo alimento inserido com porção válida deve ser salvo no ciclo, mesmo se outros campos do plano estiverem incompletos | CONFIRMADA; contrato de rascunho parcial necessário, não bloquear pelo formulário clínico inteiro |
+| D03 | Saída antes do primeiro save oferece salvar e sair, continuar editando ou descartar com confirmação | CONFIRMADA; aplicar também a novas alterações ainda não confirmadas após um save anterior, evitando perda posterior |
+| D04 | Botão on/off: proposta de controle “Visível ao paciente”, separado de arquivo/exclusão; OFF também retiraria acesso a versão publicada, ON exigiria versão completa/revisada e confirmação | PENDENTE: usuário pediu o controle; o alcance sobre publicação existente ainda foi perguntado |
+| D05 | Preservar snapshot de edição inteiro, inclusive linhas incompletas marcadas pendentes, sem usá-las em cálculos dependentes ou publicação | PENDENTE: alternativa perguntada é salvar apenas linhas válidas e deixar incompletas na memória |
 
-Não gravar planos automaticamente só por abrir a tela. Ativar a preferência
-permite salvar alterações locais válidas após o debounce, com aviso junto ao
-controle. Desligar cancela pendências ainda não enviadas; uma transação já
-iniciada pode terminar. O estado deve informar isso, sem prometer cancelamento
-de uma gravação aceita pelo servidor.
+Não gravar só por abrir a tela nem criar plano por timer. O ciclo começa ao
+abrir o editor autorizado com um rascunho; aos 60 segundos verifica alterações e salva
+se houver conteúdo novo. A checagem continua a cada 60 segundos e NÃO reinicia a contagem
+a cada tecla. Sem alteração, nenhum PUT; salvar manualmente não cria loop de
+gravações repetidas. Autosave nunca liga a visibilidade ao paciente.
+
+Desabilitar agendamento (se o controle opcional for mantido) cancela pendências
+ainda não enviadas, sem desligar o plano para o paciente. A transação iniciada
+pode terminar; abortar fetch não comprova rollback. Não foi aprovada preferência
+persistente por profissional: não criar essa API/tabela por inferência. O padrão
+ligado é regra inicial do editor nesta proposta revisada.
 
 ## Gaps confrontados com código real
 
@@ -46,20 +56,24 @@ de uma gravação aceita pelo servidor.
 | --- | --- | --- |
 | G01 — revisão não cobre todos os writers | `ServicoPlanosAlimentares.atualizarRascunho`: CAS e incremento de `apresentacaoRevisao` somente quando há `preferenciasApresentacao`; teste “PUT legado conserva preferências e revisão já salvas” confirma a compatibilidade | PA06 exige revisão geral monotônica de edição; não tratar contador visual como controle universal nem usar `atualizadoEm` arredondado |
 | G02 — recarga apaga edição posterior | `salvar()` usa `executar()`, que termina em `carregar()`; `aplicarPlano()` reidrata formulário inteiro, limpa dirty, foco e refeições abertas | Separar confirmação da escrita da recarga; resposta do snapshot A não pode substituir edição B feita durante o request |
-| G03 — preferência não existe | `ProfissionalOrm` e `UsuarioOrm` não possuem preferência de autosave; nada correspondente no cliente do plano | Se D01 aprovada, extensão mínima em profissionais e API do próprio vínculo; sem módulo genérico de perfil ou reaproveitar preferências de notificações |
-| G04 — validação tem efeitos manuais | `validarFormulario()` mais `focarRefeicaoComErro()` em salvar; HTML required participa só do submit | Compartilhar regras puras, respeitar validade dos campos e composição; autosave não muda foco, não abre refeições e não repete erros a cada tecla |
+| G03 — gravação exige completude clínica | DTO/serviço exigem avaliação antropométrica, meta e aplicabilidade; itens ORM exigem composição e porção não nulas | Criar contrato de edição parcial cifrada, preservando rigor no cálculo/revisão/publicação; o snapshot editorial é fonte de edição, os clínicos são derivados validados, não um segundo plano |
+| G04 — validação tem efeitos manuais | `validarFormulario()` mais `focarRefeicaoComErro()` em salvar; HTML required participa só do submit | Separar validade estrutural da edição de completude clínica; autosave não muda foco nem abre refeições. Falta de objetivo/meta não impede persistir alimentos válidos |
 | G05 — não há coordenador de gravação | `operacao`, `alterado`, refs de cópia/preview e `sequenciaCarregamento` são separados | Coordenar manual/automático, cópia, revisão, publicação e saída com uma fila por contexto e teste de Promises fora de ordem |
-| G06 — saída tem vários donos | `useProtecaoAlteracoesNaoSalvas`, callback booleano `aoAlterarRascunho` e modal no `prontuario-paciente.tsx` | Se D03 aprovada, registrar capacidade de salvar/estado no pai, preservando pendências de evolução, tarefa, material e anexo; salvar plano não autoriza descartar outro editor |
+| G06 — saída tem vários donos | `useProtecaoAlteracoesNaoSalvas`, callback booleano `aoAlterarRascunho` e modal no `prontuario-paciente.tsx` | Registrar capacidade de salvar/estado no pai, preservando pendências de evolução, tarefa, material e anexo; salvar plano não autoriza descartar outro editor |
 | G07 — resultado de rede incerto | PUT retorna versão, cliente lança `ErroApiPlanoAlimentar`; cancelar fetch não desfaz commit | Sem retry cego, beacon ou background sync. Distinguir falha de validação, conflito, acesso revogado e envio sem confirmação |
-| G08 — custo de cada escrita | `substituirFilhos()` recria estrutura e recalcula snapshots no save | Debounce e deduplicação obrigatórios; sem heartbeat. Não salvar de novo só porque cálculo/ID retornado mudou |
+| G08 — custo de cada escrita | `substituirFilhos()` recria estrutura e recalcula snapshots no save | Ciclo de 60 segundos com deduplicação; tick sem mudança não escreve. Não salvar de novo só porque cálculo/ID retornado mudou |
+| G09 — on/off não equivale a arquivar | `arquivar()` descarta rascunho e marca plano; portal resolve versão publicada atual e verifica escolhas separadamente | Se D04 incluir retirar visibilidade, estado próprio autorizado e transacional; leitura/ações do portal devem revalidá-lo sem destruir publicação/histórico |
 
 ## Contrato técnico proposto
 
 ### Persistência e concorrência — checkpoint obrigatório com Sol
 
-1. Reutilizar `PUT /pacientes/:pacienteId/planos-alimentares/:planoId/rascunho`,
-   DTO, transação, cifragem e locks atuais. Retornar a versão aceita e sua revisão
-   geral. Cálculo continua exclusivamente autoritativo no backend.
+1. Reutilizar domínio, transação, cifragem e locks do rascunho. O PUT clínico
+   atual não aceita edição incompleta: adicionar contrato profissional de edição
+   parcial na mesma versão, com DTO próprio (rota candidata `PUT .../rascunho/edicao`)
+   delegando ao mesmo controle de concorrência; não afrouxar o DTO clínico nem
+   suas tabelas. Retornar edição/revisão aceita e estado de cálculo/completude.
+   Cálculo continua exclusivamente autoritativo no backend.
 2. Introduzir revisão geral explícita do rascunho, separada da revisão de
    apresentação da PA05, e identidade esperada da geração. Incrementar em toda
    escrita de conteúdo, inclusive caminhos legados; incluir revisão/publicação
@@ -87,31 +101,78 @@ de uma gravação aceita pelo servidor.
 em PostgreSQL real, não entregar o motor à implementação de UI nem habilitar
 autosave. A política acima é proposta de engenharia, não alteração já aplicada.
 
-Se D01 aprovada: persistir apenas booleano, default false, no vínculo profissional
-existente. Endpoint de preferência do próprio usuário (por exemplo
-`/profissionais/me/preferencias-plano`), com identidade/tenant resolvidos da
-sessão, vínculo ativo e permissão de gerenciamento. Não aceitar profissional
-alvo no body; testar rota estática antes de `:id`. DTO permitido retorna só
-booleano, sem entidade ORM. Sem alteração por gestor/SuperAdmin em nome de
-terceiro. Reutilizar RLS de profissionais e conferir FORCE RLS no banco real.
-Falha ao carregar preferência deixa autosave inativo; erro ao salvar opção não
-deve aparecer como preferência persistida com sucesso.
+### Edição parcial — novo fundamento obrigatório
+
+Proposta técnica condicionada ao refinamento D05: documento editorial com
+schemaVersao, cifrado na própria versão do plano, sem tabela paralela ou cache
+persistente no navegador. Reutilizar o envelope de autorização do plano. Campos
+explicitamente permitidos, limites de tamanho/quantidade, tipos e validação
+estrutural continuam obrigatórios mesmo para edição incompleta. Rejeitar IDs
+de catálogo/avaliação fora do escopo, campos extras e valores não representáveis.
+
+Não converter campo vazio em 0 nem perder a entrada ao transformar NaN em null
+no JSON. O modelo de edição deve representar números em preenchimento sem
+tratá-los como medidas válidas. Reabrir o plano reidrata o que foi confirmado
+pelo servidor, incluindo alimentos válidos quando meta/objetivo estão pendentes.
+Linhas incompletas seguem a resposta D05, sem exclusão silenciosa de linha já
+salva nem sua apresentação como alimento clinicamente válido.
+
+Quando todo o documento satisfizer o contrato clínico, materializar itens e
+snapshots validados de forma transacional; se incompleto, guardar a edição sem
+publicar ou recalcular usando zeros/substitutos inventados. Vincular cálculo e
+completude à revisão editorial: resultados anteriores ficam explicitamente
+defasados e não podem liberar revisar/publicar. O resumo PA04 deve informar
+rascunho pendente/resultado indisponível, sem usar cálculo antigo como atual.
+Campos editoriais crus nunca chegam à projeção paciente/PDF.
+
+Para legado sem documento editorial, derivar estado inicial da versão salva em
+memória; não regravar histórico ao ler. Revisão/publicação conferem no backend
+que o conteúdo materializado corresponde exatamente à edição mais recente e
+que não há pendências. Salvar e sair pode guardar edição incompleta; isso não
+equivale a “plano pronto”.
+
+### Botão on/off — efeito sobre paciente ainda pendente D04
+
+Não mapear OFF para `arquivar()`, `descartadaEm`, exclusão, nem remover datas,
+hashes ou snapshots de publicação. A versão publicada anterior continua imutável.
+Manter conceitos distintos: salvo em rascunho, revisado, publicado e visível.
+Rotular o controle pela consequência (“Visível ao paciente”), evitando que o
+mesmo switch desative autosave e visibilidade.
+
+Se D04 aprovar ocultar publicação: verificar estado no backend em toda leitura
+e escolha do portal, inclusive requisições diretas com IDs conhecidos; não basta
+esconder a seção no frontend. OFF esconde sem republicar conteúdo antigo ou
+selecionar automaticamente outro plano anterior. ON exige confirmação de qual
+versão completa/revisada será entregue; não expõe edição parcial nem liga ao
+salvar. Revalidar carteira, paciente e concorrência com nova publicação/retirada.
+Definir seleção do plano entregue entre múltiplos planos no checkpoint de
+contrato, sem apagar histórico e sem criar fallback oculto.
+
+Retirada regula novas leituras/ações; não promete apagar página já carregada ou
+PDF anteriormente obtido. Evitar polling clínico novo por inferência. Qualquer
+estado novo de visibilidade recebe migration aditiva e testes próprios somente
+depois de D04. Arquivo/exclusão continuam ações separadas.
 
 ### Coordenador de edição em memória
 
 - Contexto: sessão/tenant atual + paciente + plano + ID do rascunho + geração
   local de montagem. Não serializar contexto clínico em URL, telemetria ou disco.
-- Debounce inicial de **3 segundos** sem nova edição; parâmetro interno testável.
+- Ciclo fixo de **60 segundos** por abertura/contexto do plano; não é debounce.
   Não despachar durante composição IME, cópia, outra escrita ou transição de
-  revisão/publicação. Após estabilizar, revalidar contexto, permissão e formulário.
+  revisão/publicação. Se um tick precisar esperar, consolidar o estado mais
+  recente em uma única pendência; não disparar uma rajada de ciclos atrasados.
+  Revalidar contexto/permissão e validade estrutural da edição, sem exigir meta
+  ou objetivo completos para guardar alimentos válidos. Navegadores podem
+  atrasar timers em segundo plano/suspensão: informar último ACK real, sem
+  prometer relógio exato nem introduzir processamento no servidor por paciente.
 - Uma escrita em voo. No máximo um estado pendente, substituído pelo mais
-  recente; não enfileirar cada tecla. Salvar manualmente cancela debounce e usa
+  recente; não enfileirar cada tecla. Salvar manualmente usa
   a mesma fila. Duplo clique/StrictMode não duplica envio.
 - Capturar snapshot A e sequência de edição. Ao receber A, atualizar somente
   baseline/revisão e cálculos correspondentes; se houver edição B, preservar B,
   dirty, chaves locais, foco, cursor e refeições abertas. Preparar B com revisão
   confirmada de A. Sem B, reidratar de forma deliberada e manter a navegação.
-- Comparar payload clínico normalizado, não referências de objetos ou campos
+- Comparar payload editorial normalizado, não referências de objetos ou campos
   derivados. Uma recarga ou resposta não agenda nova gravação por si só.
 - Usar resposta do PUT, sem GET integral a cada sucesso. Atualizar o resumo do
   rascunho em memória ou invalidar sua leitura de forma protegida, sem duplicar
@@ -134,7 +195,7 @@ deve aparecer como preferência persistida com sucesso.
 
 ### UI e saída
 
-Estados acessíveis: desligado, alterado, pendente por validação, salvando, salvo,
+Estados acessíveis: alterado, salvando, rascunho salvo com pendências clínicas, salvo,
 falha, conflito e envio não confirmado. `role=status`/aria-live polite sem spam;
 erros acionáveis com foco deliberado só quando o usuário tenta salvar.
 Controle por teclado, mobile e desktop; nenhuma nova dependência de cor.
@@ -144,7 +205,7 @@ continuam bloqueadas com conteúdo pendente ou operação incompatível. Desliga
 autosave preserva dirty e não faz flush escondido. Arquivar/criar nova versão/
 criar plano exigem estabilização ou descarte explícito, sem reaproveitar timer.
 
-Se D03 aprovada, “Salvar e sair” aguarda ACK do conteúdo mais recente, com
+“Salvar e sair” aguarda ACK do conteúdo mais recente, com
 permanência em caso de edição adicional/erro; só navega se demais editores
 estiverem sem pendências. Guardar intenção de navegação, nunca PHI em URL.
 Fechar/atualizar navegador usa FND02/beforeunload; não prometer save on exit.
@@ -189,12 +250,12 @@ governança, revisão R4 cruzada e CI do HEAD. Comandos exatos no checklist.
 - **GPT-6.1 Sol médio:** planejamento, revisão geral/compatibilidade legada,
   migration, serviço, autorização, banco real e contrato do coordenador.
 - **GPT-6 Luna alto:** depois de checkpoint backend e motor testado, interface
-  de preferência/estados e integração visual com tarefas pequenas e DTOs fechados.
+  de estados/controles e integração visual com tarefas pequenas e DTOs fechados.
 - **GPT-6.1 Sol médio:** integração, segurança, regressões e PR única final.
 
 Evitar Luna sozinho na etapa de concorrência e transição de contratos. Pesquisa
 restrita a R013/R014 e nenhuma biblioteca nova reduzem custo e retrabalho.
 Avisar modelo alvo e pausar antes de toda troca manual.
 
-Próxima ação: incorporar respostas D01–D03 e autorização de implementação.
-Enquanto pendentes, T01–T10 não iniciadas; nenhuma aprovação presumida.
+Próxima ação: incorporar refinamentos D04/D05 e autorização de implementação.
+D01–D03 estão registradas acima; T01–T10 ainda não iniciadas.
