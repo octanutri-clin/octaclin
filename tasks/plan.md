@@ -1,4 +1,4 @@
-# Handoff atual — PA06: integração Sol, regressões e PR da primeira entrega
+# Handoff atual — PA06: primeira entrega local validada, PR Draft/CI
 
 ## Estado do trabalho
 
@@ -388,3 +388,18 @@ v3/v4 preservados em `research/fase319/`; plano e relatório em
 G01/G02/G03 bloqueados, G04 skipped, G05 bloqueado/não executado; T05–T10 não
 iniciadas. Sem runtime/índice clínico. A Fase 320 é a etapa seguinte, com ingestão
 TBCA sujeita a direitos comprovados.
+
+
+## Fechamento da integração Sol
+
+Commit de UI e correções `c7071d2d`; código local validado sem achados R4 estáticos
+abertos. Web/backend builds e typecheck PASS; backend integral329 suítes/2907 testes
+PASS (6 suítes/113 testes SKIPPED), DTO final22/22, PostgreSQL focado12 PASS/31
+SKIPPED, BFF29/29, nutrição/coordenador38/38, saída4/4 e cópia7/7. Playwright final
+82/82 em desktop/mobile no build de produção local. Governança/secrets PASS.
+
+Próxima ação: publicar/acompanhar uma PR Draft da branch atual e os checks do HEAD.
+Authz integral local em execução no checkpoint, sem PASS presumido. Banco integral
+com extensões, Demo e scanners continuam gates do CI. Não marcar T09/T10 completos
+antes do resultado final; não iniciar ativação/agregação dentro desta PR.
+Detalhes/comandos/R4/limites nas evidências. Sem merge/deploy/migration externa.

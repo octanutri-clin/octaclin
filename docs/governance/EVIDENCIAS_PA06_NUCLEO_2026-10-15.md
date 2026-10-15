@@ -206,3 +206,54 @@ Timescale continuam obrigatórios. Não há autorização de rollout implícita.
   entram `files` declarados e imports; não recompilam todas as telas em cada suíte.
   Typecheck/build geral preservados. Revisão estática confirmou nenhuma assertion
   removida. Não foi feita alteração ampla dos harnesses de outras fases.
+
+
+### Gates Web do código integrado
+
+- `pnpm --dir octaclin-web build`: PASS após a correção de no-op/timestamp,
+  incluindo compilação TypeScript e geração de185 páginas. Nenhum warning foi
+  convertido em erro ignorado. Deprecação de middleware permanece registrada.
+- `pnpm --dir octaclin-web typecheck`: PASS, execução explícita após o build.
+- `test:seguranca-operacional`, `test:apis-dinamicas`, `test:css-security` e
+  `test:seguranca-runtime`: PASS. Runtime verifica CSP nonce/cache/CORS/origem.
+- ESLint final dos arquivos editor/coordenador/contratos/harnesses: zero erros,
+  7 warnings observados. Lint integral anterior:69 warnings/zero erros.
+- Regressão Fase270 adaptada ao novo transporte editorial: texto de g/kg continua
+  bruto no snapshot; teste do DTO comprova que a conversão manual não usa fórmula,
+  fator nem distribuição percentual preservados. DTO final22/22 PASS.
+- Playwright usa `next start` do build final local, `E2E_REUSE_EXISTING_SERVER=true`,
+  Chromium desktop/mobile e fixtures sintéticas com mocks de API. São82 cenários
+  selecionados em5 arquivos, não a suíte visual inteira. Resultado final abaixo.
+
+
+### Fechamento local para PR Draft
+
+Playwright final: **82/82 PASS**,41 desktop e41 mobile, sem retry (7,3min).
+Cobre PA02/PA03/PA04/PA05, cinco cenários novos de integridade PA06 por plataforma,
+saída com gravação/Escape e Axe, modo manual Fase270, portal e impressão.
+Nenhuma exceção de página nos cenários PA02/PA03/PA06, verificada por listener.
+Execução sintética no build final, sem contato com backend de produção.
+
+Comando visual reproduzível (iniciar antes `pnpm --dir octaclin-web build` e
+`pnpm --dir octaclin-web start --hostname localhost --port 3000`):
+
+```sh
+E2E_REUSE_EXISTING_SERVER=true pnpm --dir octaclin-web exec playwright test \
+  tests/visual/pa02-copia-refeicoes.spec.mjs \
+  tests/visual/fase-320-pa05-apresentacao.spec.mjs \
+  tests/visual/fase-270-condicao-especial-manual.spec.mjs \
+  tests/visual/portal-paciente.spec.mjs \
+  tests/visual/console-regression.spec.mjs \
+  --grep 'PA0[2-6]|Fase 270|reordena refeições|aplica preferências|aviso de plano publicado|lista totais salvos|oculta imediatamente os macros|oferece consulta real do plano|ignora resposta historica atrasada|mantem editor disponivel'
+```
+
+`git diff --check` e21 links locais dos documentos PA06: PASS. `next-env.d.ts`
+restaurado ao conteúdo versionado; nenhum cache/build/trace incluído no commit.
+
+T09 local: builds/typecheck, testes focados, backend integral, PostgreSQL focado e
+revisão estática PASS. `test:authz` integral segue em execução no fechamento deste
+checkpoint: não foi convertido em PASS. Execuções parciais não equivalem à suíte
+completa. T09/T10 finais continuam dependentes do CI do HEAD, incluindo banco real
+integral Timescale/pgvector, Demo, Web, Backend, governança e scanners.
+PR Draft é entrega para revisão; não há autorização de merge, deploy ou migration
+em staging/produção. PA06 on/off e agregação continuam em PRs posteriores.

@@ -262,7 +262,8 @@ Rascunho parcial deve ficar fora da soma, mesmo se tiver valores calculáveis.
 ### Checkpoint C — integração Sol
 
 - [x] Voltar para GPT-6.1 Sol médio com aviso e pausa manual; troca realizada.
-- [ ] Sem achado aberto de perda de edição, conflito silencioso ou authz.
+- [x] Sem achado estático R4 aberto de perda de edição, conflito silencioso ou authz;
+  revisão cruzada da autoria, sem equivalência com revisão humana externa.
 
 ## T09 — regressão e revisão R4 (3–5 arquivos por rodada de correção)
 
@@ -271,9 +272,9 @@ de três PRs no plano. Sol médio; repetir estes gates em cada entrega.
 
 - [ ] Backend/Web lint, typecheck/build e testes proporcionais; banco real integral;
   revisão cruzada estática R4 com limites/autoria e correções em RED/GREEN.
-- [ ] PA02 cópia, PA03 subtotais/colapso, PA04 listagem e PA05 preferências/preview/
+- [x] PA02 cópia, PA03 subtotais/colapso, PA04 listagem e PA05 preferências/preview/
   portal/print; no-op não invalida revisão nem recria filhos.
-- [ ] Atualizar matriz de confiabilidade/rotas, docs e plano externo de implantação/
+- [x] Atualizar matriz de confiabilidade/rotas, docs e plano externo de implantação/
   rollback; não confundir merge com schema ou deploy efetivo.
 
 Verificação: `pnpm --dir octaclin-backend test --runInBand`, `typecheck`, `build`;
@@ -290,7 +291,7 @@ Dependência: T09. Sol médio.
   Cada uma inclui código/plano/evidências; não criar PR documental separada.
 - [ ] `git diff --check`, `pnpm security:secrets`, governança, scanners e CI
   Backend/Web/Demo/PR Gate do HEAD final PASS; SKIPPED justificados.
-- [ ] Nenhum merge/deploy/migration externa/ativação sem autorização e alvo.
+- [x] Nenhum merge/deploy/migration externa/ativação sem autorização e alvo.
 
 Aceite: relatório de segurança, limitações e sequência operacional explícitos.
 Checks de PA05 ou da primeira entrega não provam a próxima entrega PA06.
@@ -306,3 +307,18 @@ Checks de PA05 ou da primeira entrega não provam a próxima entrega PA06.
 - PASS: `git diff --check`, 21 links locais do plano/checklist/handoff sem
   destino ausente e `pnpm security:secrets` com Node22.21.1/pnpm11.25.0.
   Essas verificações documentais não são testes de implementação PA06.
+
+
+### Primeira entrega — fechamento local de integração
+
+- PASS: Web/backend builds e typecheck; lint Web (69 warnings/zero erros),
+  governança/secrets, R4 estática independente da autoria após correções.
+- PASS: backend integral329 suítes/2907 testes;6 suítes/113 testes SKIPPED.
+  DTO final22/22; PostgreSQL focado12 PASS/31 SKIPPED; BFF29/29; nutrição/
+  coordenador/campos38/38; saída4/4; cópia7/7.
+- PASS: Playwright final82/82 (41 desktop/41 mobile), incluindo modo manual,
+  portal/print, página de planos, cópia, autosave parcial, retry e saída/Axe.
+- PENDENTE: conclusão de `test:authz` integral local e CI do HEAD. Banco integral
+  Timescale/pgvector não comprovado localmente; não converter SKIPPED em PASS.
+- T10: preparar/publicar uma PR Draft desta entrega; acompanhar Backend, Web,
+  Demo, governança e scanners antes de propor merge. T08a–T08d fora desta PR.
