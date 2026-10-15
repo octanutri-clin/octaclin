@@ -22,6 +22,7 @@ import { PlanoAlimentarOrm } from '../infraestrutura/plano-alimentar.orm';
 import { MetodoMacrosManual } from '../dominio/calculo-nutricional';
 import { AtualizarRascunhoPlanoAlimentarDto } from './dtos';
 import { ServicoPlanosAlimentares } from './servico-planos-alimentares';
+import { SalvarEdicaoPlanoDto } from './dtos-edicao-plano';
 
 const TENANT_ID = '10000000-0000-4000-8000-000000000001';
 const USUARIO_ID = '10000000-0000-4000-8000-000000000002';
@@ -1571,6 +1572,165 @@ describe('ServicoPlanosAlimentares', () => {
       expect(itens.every((item) => item.substituicoesVisiveisInicialmente === 1)).toBe(true);
     });
   });
+  describe('PA06 — revisão geral de edição', () => {
+    const documentoParcial = () => ({
+      schemaVersao: 1,
+      objetivos: '',
+      avaliacaoAntropometricaId: '',
+      refeicoes: [{ chaveCliente: 'refeicao-sintetica', nome: 'Almoço', itens: [{
+        chaveCliente: 'item-sintetico', descricao: 'Alimento sintético', quantidade: 1,
+        unidade: 'porção', porcaoGramas: 80,
+        nutrientesPor100g: { energiaKcal: 100, carboidratosG: 10, proteinasG: 5, gordurasG: 2 },
+        substituicoes: []
+      }] }]
+    });
+    async function salvarEdicao(documento: unknown, revisao = 0) {
+      return servico.salvarEdicaoRascunho(TENANT_ID, PACIENTE_ID, PLANO_ID, usuarioProfissional(), {
+        rascunhoIdEsperado: VERSAO_ID, rascunhoRevisaoEsperada: revisao, documento
+      } as SalvarEdicaoPlanoDto);
+    }
+    const documentoCompleto = () => ({ ...documentoParcial(),
+      avaliacaoAntropometricaId: AVALIACAO_ID,
+      formula: 'mifflin_st_jeor_1990', fatorAtividade: 1.4, ajusteEnergeticoKcal: 0,
+      carboidratosBasisPoints: 5000, proteinasBasisPoints: 2000, gordurasBasisPoints: 3000,
+      possuiCondicaoEspecial: false, aplicabilidadeFormulaConfirmada: true,
+      objetivos: 'Objetivo sintético de acompanhamento',
+      justificativaDivergenciaClinica: 'Planejamento sintético revisado individualmente.'
+    });
+    it('recusa overflow sem alterar snapshot nem contador', async () => {
+      repositorios.get(PlanoAlimentarVersaoOrm)!.registros[0].rascunhoRevisao = 2147483647;
+      await expect(salvarEdicao(documentoParcial(), 2147483647)).rejects.toBeInstanceOf(BadRequestException);
+      await expect(servico.revisar(TENANT_ID, PACIENTE_ID, PLANO_ID, usuarioProfissional())).rejects.toThrow('limite de revisões');
+      expect(repositorios.get(PlanoAlimentarVersaoOrm)!.save).not.toHaveBeenCalled();
+    });
+    it('não transforma falha de persistência em sucesso editorial pendente', async () => {
+      repositorios.get(PlanoAlimentarVersaoOrm)!.save.mockRejectedValueOnce(new Error('Falha sintética de persistência'));
+      await expect(salvarEdicao(documentoParcial())).rejects.toThrow('Falha sintética de persistência');
+    });
+    it('guarda e reabre alimentos válidos sem avaliação ou meta, cifrando a edição', async () => {
+      expect(await salvarEdicao(documentoParcial())).toEqual(expect.objectContaining({ rascunhoRevisao: 1, edicaoEstado: 'pendente', documentoEdicao: documentoParcial() }));
+      const salvo = repositorios.get(PlanoAlimentarVersaoOrm)!.registros[0];
+      expect(Buffer.isBuffer(salvo.edicaoSnapshotCriptografado)).toBe(true);
+      expect(await servico.obterRascunho(TENANT_ID, PACIENTE_ID, PLANO_ID, usuarioProfissional())).toMatchObject({ documentoEdicao: documentoParcial(), edicaoEstado: 'pendente' });
+      expect(repositorios.get(PlanoAlimentarItemOrm)!.delete).not.toHaveBeenCalled();
+    });
+
+    it('materializa documento completo e mantém cópia editorial sem incluí-la na projeção paciente', async () => {
+      const salvo = await salvarEdicao(documentoCompleto());
+      expect(salvo).toMatchObject({ edicaoEstado: 'materializada', rascunhoRevisao: 1, totais: { energiaKcal: 80 } });
+      const antes = await servico.obterRascunho(TENANT_ID, PACIENTE_ID, PLANO_ID, usuarioProfissional());
+      const precondicao = { rascunhoIdEsperado: VERSAO_ID, rascunhoRevisaoEsperada: 1 };
+      const revisado = await servico.revisar(TENANT_ID, PACIENTE_ID, PLANO_ID, usuarioProfissional(), precondicao);
+      expect(revisado).toMatchObject({ edicaoEstado: 'materializada', rascunhoRevisao: 2 });
+      await expect(servico.publicar(TENANT_ID, PACIENTE_ID, PLANO_ID, usuarioProfissional(), precondicao)).rejects.toBeInstanceOf(ConflictException);
+      const publicado = await servico.publicar(TENANT_ID, PACIENTE_ID, PLANO_ID, usuarioProfissional(), { ...precondicao, rascunhoRevisaoEsperada: 2 });
+      expect(publicado.current).not.toHaveProperty('documentoEdicao');
+      expect(publicado.current?.totais).toEqual(antes.totais);
+      const preview = await servico.obterApresentacaoPaciente(TENANT_ID, PACIENTE_ID, PLANO_ID, 1, usuarioProfissional());
+      expect(JSON.stringify(preview)).not.toMatch(/documentoEdicao|edicaoSnapshot|rascunhoRevisao|edicaoProtegida/);
+    });
+
+    it('conteúdo publicado independe de corrupção posterior do documento editorial', async () => {
+      await salvarEdicao(documentoCompleto());
+      await servico.revisar(TENANT_ID, PACIENTE_ID, PLANO_ID, usuarioProfissional(), { rascunhoIdEsperado: VERSAO_ID, rascunhoRevisaoEsperada: 1 });
+      await servico.publicar(TENANT_ID, PACIENTE_ID, PLANO_ID, usuarioProfissional(), { rascunhoIdEsperado: VERSAO_ID, rascunhoRevisaoEsperada: 2 });
+      repositorios.get(PlanoAlimentarVersaoOrm)!.registros[0].edicaoSnapshotCriptografado = Buffer.from('inválido');
+      const versao = await servico.obterVersao(TENANT_ID, PACIENTE_ID, PLANO_ID, 1, usuarioProfissional());
+      expect(versao.totais).toMatchObject({ energiaKcal: 80 });
+      expect(versao.refeicoes).toHaveLength(1);
+      expect(versao).not.toHaveProperty('documentoEdicao');
+      const preview = await servico.obterApresentacaoPaciente(TENANT_ID, PACIENTE_ID, PLANO_ID, 1, usuarioProfissional());
+      expect(preview.refeicoes).toHaveLength(1);
+    });
+
+    it.each(['pendente', 'indisponivel'])('não apresenta nem copia materialização antiga quando edição está %s', async estado => {
+      await salvarEdicao(documentoCompleto());
+      await salvarEdicao(documentoParcial(), 1);
+      if (estado === 'indisponivel') repositorios.get(PlanoAlimentarVersaoOrm)!.registros[0].edicaoSnapshotCriptografado = Buffer.from('inválido');
+      const atual = await servico.obterRascunho(TENANT_ID, PACIENTE_ID, PLANO_ID, usuarioProfissional());
+      expect(atual).toMatchObject({ edicaoEstado: estado, refeicoes: [], objetivos: undefined, observacoes: undefined, avaliacaoAntropometricaId: undefined, formulaCodigo: undefined });
+      await expect(servico.obterApresentacaoPaciente(TENANT_ID, PACIENTE_ID, PLANO_ID, 1, usuarioProfissional())).rejects.toBeInstanceOf(ConflictException);
+    });
+
+    it('guarda linha incompleta e entrada numérica em edição sem convertê-la em zero', async () => {
+      const documento = documentoParcial();
+      const valor = { ...documento, refeicoes: [{ ...documento.refeicoes[0], itens: [{ ...documento.refeicoes[0].itens[0], quantidade: '', porcaoGramas: '-' }] }] };
+      expect(await salvarEdicao(valor)).toMatchObject({ edicaoEstado: 'pendente', documentoEdicao: valor, totais: undefined });
+    });
+
+    it.each([
+      { segredo: 'não permitido' },
+      { pacienteId: PACIENTE_ID },
+      { possuiCondicaoEspecial: 'false' },
+      { avaliacaoAntropometricaId: 'outro' },
+      { refeicoes: [{ chaveCliente: 'duplicada', itens: [{ chaveCliente: 'duplicada' }] }] },
+      { refeicoes: Array.from({ length: 51 }, (_, i) => ({ chaveCliente: `r-${i}`, itens: [] })) }
+    ])('rejeita estrutura editorial inválida sem escrita (%#)', async alteracao => {
+      await expect(salvarEdicao({ ...documentoParcial(), ...alteracao })).rejects.toBeInstanceOf(BadRequestException);
+      expect(repositorios.get(PlanoAlimentarVersaoOrm)!.save).not.toHaveBeenCalled();
+      expect(repositorios.get(PlanoAlimentarItemOrm)!.delete).not.toHaveBeenCalled();
+    });
+
+    it('nega avaliação de outro paciente mesmo em documento parcial', async () => {
+      repositorios.get(AvaliacaoAntropometricaOrm)!.registros[0].pacienteId = 'outro-paciente';
+      await expect(salvarEdicao({ ...documentoParcial(), avaliacaoAntropometricaId: AVALIACAO_ID })).rejects.toBeInstanceOf(BadRequestException);
+      expect(repositorios.get(PlanoAlimentarVersaoOrm)!.save).not.toHaveBeenCalled();
+    });
+
+    it('não reutiliza o cálculo anterior no resumo PA04 quando há edição pendente', async () => {
+      await servico.atualizarRascunho(TENANT_ID, PACIENTE_ID, PLANO_ID, usuarioProfissional(), dadosRascunho());
+      await salvarEdicao(documentoParcial(), 1);
+      const lista = await servico.listar(TENANT_ID, PACIENTE_ID, usuarioProfissional());
+      expect(lista.itens[0].draft?.resumoNutricional).toEqual({ estado: 'indisponivel' });
+    });
+
+    it('cipher editorial corrompido falha fechado na leitura e revisão', async () => {
+      await salvarEdicao(documentoCompleto());
+      repositorios.get(PlanoAlimentarVersaoOrm)!.registros[0].edicaoSnapshotCriptografado = Buffer.from('cipher-inválido');
+      expect(await servico.obterRascunho(TENANT_ID, PACIENTE_ID, PLANO_ID, usuarioProfissional())).toMatchObject({ edicaoEstado: 'indisponivel', calculo: undefined });
+      await expect(servico.revisar(TENANT_ID, PACIENTE_ID, PLANO_ID, usuarioProfissional(), { rascunhoIdEsperado: VERSAO_ID, rascunhoRevisaoEsperada: 1 })).rejects.toBeInstanceOf(ConflictException);
+    });
+
+    it('não revisa cálculos antigos depois de guardar uma edição parcial', async () => {
+      await servico.atualizarRascunho(TENANT_ID, PACIENTE_ID, PLANO_ID, usuarioProfissional(), dadosRascunho());
+      await salvarEdicao(documentoParcial(), 1);
+      await expect(servico.revisar(TENANT_ID, PACIENTE_ID, PLANO_ID, usuarioProfissional())).rejects.toBeInstanceOf(ConflictException);
+      expect(await servico.obterRascunho(TENANT_ID, PACIENTE_ID, PLANO_ID, usuarioProfissional())).toMatchObject({ edicaoEstado: 'pendente', calculo: undefined, totais: undefined });
+    });
+
+    it('não permite revisar um rascunho protegido sem precondição de edição', async () => {
+      await servico.atualizarRascunho(TENANT_ID, PACIENTE_ID, PLANO_ID, usuarioProfissional(), Object.assign(dadosRascunho(), { rascunhoIdEsperado: VERSAO_ID, rascunhoRevisaoEsperada: 0 }));
+      await expect(servico.revisar(TENANT_ID, PACIENTE_ID, PLANO_ID, usuarioProfissional())).rejects.toBeInstanceOf(ConflictException);
+    });
+
+    it('revisar e publicar avançam a revisão geral de modo monotônico', async () => {
+      await servico.atualizarRascunho(TENANT_ID, PACIENTE_ID, PLANO_ID, usuarioProfissional(), dadosRascunho());
+      expect(await servico.revisar(TENANT_ID, PACIENTE_ID, PLANO_ID, usuarioProfissional())).toMatchObject({ rascunhoRevisao: 2 });
+      const publicado = await servico.publicar(TENANT_ID, PACIENTE_ID, PLANO_ID, usuarioProfissional());
+      expect(publicado.current).toMatchObject({ rascunhoRevisao: 3 });
+    });
+
+    it('incrementa a revisão geral também nas escritas legadas sem preferências', async () => {
+      const primeiro = await servico.atualizarRascunho(TENANT_ID, PACIENTE_ID, PLANO_ID, usuarioProfissional(), dadosRascunho());
+      expect(primeiro).toMatchObject({ rascunhoRevisao: 1 });
+      const segundo = await servico.atualizarRascunho(TENANT_ID, PACIENTE_ID, PLANO_ID, usuarioProfissional(), dadosRascunho());
+      expect(segundo).toMatchObject({ rascunhoRevisao: 2 });
+    });
+
+    it('recusa replay do contrato novo antes de excluir alimentos', async () => {
+      const entrada = Object.assign(dadosRascunho(), { rascunhoIdEsperado: VERSAO_ID, rascunhoRevisaoEsperada: 0 });
+      await servico.atualizarRascunho(TENANT_ID, PACIENTE_ID, PLANO_ID, usuarioProfissional(), entrada);
+      const deletes = repositorios.get(PlanoAlimentarItemOrm)!.delete.mock.calls.length;
+      await expect(servico.atualizarRascunho(TENANT_ID, PACIENTE_ID, PLANO_ID, usuarioProfissional(), entrada)).rejects.toBeInstanceOf(ConflictException);
+      expect(repositorios.get(PlanoAlimentarItemOrm)!.delete).toHaveBeenCalledTimes(deletes);
+    });
+
+    it('não permite writer antigo depois da adesão ao contrato protegido', async () => {
+      await servico.atualizarRascunho(TENANT_ID, PACIENTE_ID, PLANO_ID, usuarioProfissional(), Object.assign(dadosRascunho(), { rascunhoIdEsperado: VERSAO_ID, rascunhoRevisaoEsperada: 0 }));
+      await expect(servico.atualizarRascunho(TENANT_ID, PACIENTE_ID, PLANO_ID, usuarioProfissional(), dadosRascunho())).rejects.toBeInstanceOf(ConflictException);
+    });
+  });
+
   describe('PA05 — apresentação cifrada, CAS e versões', () => {
     const preferencias = () => ({ schemaVersao: 1, profissional: { horario: true, macros: true, medidasCaseiras: true, orientacoes: true, substituicoesExpandidas: true, modoCompacto: false }, paciente: { horario: false, macros: false, medidasCaseiras: false, orientacoes: true, substituicoesExpandidas: false, modoCompacto: true } });
     const entrada = (revisao = 0, id = VERSAO_ID) => Object.assign(dadosRascunho(), { preferenciasApresentacao: preferencias(), apresentacaoRevisaoEsperada: revisao, rascunhoIdEsperado: id });

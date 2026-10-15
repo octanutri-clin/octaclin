@@ -470,9 +470,13 @@ export class AtualizarRascunhoPlanoAlimentarDto {
   @IsInt() @Min(0) @Max(2147483646)
   apresentacaoRevisaoEsperada?: number;
 
-  @ValidateIf(dto => dto.preferenciasApresentacao !== undefined)
+  @ValidateIf(dto => dto.preferenciasApresentacao !== undefined || dto.rascunhoRevisaoEsperada !== undefined)
   @IsUUID()
   rascunhoIdEsperado?: string;
+
+  @ValidateIf(dto => dto.rascunhoRevisaoEsperada !== undefined)
+  @IsInt() @Min(0) @Max(2147483646)
+  rascunhoRevisaoEsperada?: number;
 
   @IsUUID()
   avaliacaoAntropometricaId: string;

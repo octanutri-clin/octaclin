@@ -1,7 +1,7 @@
 # PA06 — autosave, ativação e cálculo combinado do planejamento alimentar
 
-Planejamento de 2026-10-15. Autorização atual: análise de gaps e documentação;
-implementação ainda não iniciada. Escopo ampliado pelo proprietário; seguir uma
+Planejamento de 2026-10-15. Implementação autorizada pelo proprietário em “Pode começar”.
+Primeira entrega em desenvolvimento: autosave e edição parcial. Escopo ampliado pelo proprietário; seguir uma
 PR por recurso, conforme o roadmap, em três entregas encadeadas descritas abaixo.
 Checklist: [T00–T10](todo-pos-320-pa06.md).
 
@@ -13,7 +13,7 @@ Checklist: [T00–T10](todo-pos-320-pa06.md).
   PostgreSQL/RLS, Demo e PR Gate. Dependency Review, Semgrep, CodeQL e Trivy
   SUCCESS. Provenance do SBOM SKIPPED; não convertido em PASS.
 - Nova worktree `/workspace/octaclin/.worktrees/pos320-pa06-planejamento`, branch
-  `docs/pos320-pa06-planejamento`; checkout principal antigo e sua alteração
+  `feat/pos320-pa06-autosave`; checkout principal antigo e sua alteração
   preexistente em `octaclin-web/next-env.d.ts` preservados.
 - PA05 integrada não prova aplicação externa da migration1072 nem deploy.
   Estado externo NÃO consultado nesta rodada. Antes de rollout, identificar
@@ -391,7 +391,7 @@ Cada entrega inclui seu plano/evidências e segue os mesmos gates R4 aplicáveis
 T09/T10 são aplicados a cada entrega, não apenas ao fim da última. Atualizar
 base/branch após cada integração; nunca misturar código não aprovado em PR
 anterior. Não criar PR documental separada. Decisões de produto D01–D10 fechadas;
-contratos técnicos e testes planejados serão implementados após autorização.
+contratos técnicos e testes da primeira entrega estão em implementação autorizada.
 
 Rollback merece uma condição adicional: backend anterior aos controles de
 ativação pode ignorar OFF e voltar a expor conteúdo. Não liberar reversão para
@@ -409,5 +409,35 @@ Evitar Luna sozinho na etapa de concorrência e transição de contratos. Pesqui
 restrita a R013/R014 e nenhuma biblioteca nova reduzem custo e retrabalho.
 Avisar modelo alvo e pausar antes de toda troca manual.
 
-Próxima ação: iniciar a primeira entrega após autorização de implementação.
-D01–D10 estão registradas acima; T01–T10 e suas fatias ainda não iniciadas.
+Próxima ação: concluir checkpoint B da primeira entrega e pausar para troca
+manual para GPT-6 Luna alto antes de T07/T08. D01–D10 preservadas; ativação,
+portal plural e cálculo combinado permanecem nas entregas posteriores.
+
+## Contrato executado da primeira entrega — núcleo, 2026-10-15
+
+- Migration1073 aditiva registrada; quatro colunas na versão existente: revisão
+  geral, adesão protegida monotônica, documento editorial cifrado e revisão da
+  materialização.1072 intacta; aplicação externa não executada nem inferida.
+- PUT `/:planoId/rascunho/edicao` exige geração e revisão geral; caps de50 refeições,
+  100 itens/refeição,20 alternativas/item e documento96KiB, reservando o envelope
+  no parser HTTP atual100KiB. Estrutura editorial incompleta não valida prescrição.
+- Retorno `rascunhoRevisao`, `edicaoEstado` (`legado`, `pendente`, `materializada`,
+  `indisponivel`) e `documentoEdicao` somente no detalhe profissional de rascunho.
+  Vazio não vira zero; referências fora do escopo são recusadas antes da escrita.
+- Novos/legados: todos os saves/revisão/publicação incrementam revisão geral.
+  Depois da adesão, omitir CAS falha409; PA05 conserva contador próprio. Transições
+  usam o mesmo par obrigatório para rascunhos protegidos. Geração antiga não serve.
+- Edição pendente/ilegível conserva o documento quando legível, mas não projeta
+  refeições/cálculo/objetivos antigos como atuais; bloqueia prévia/revisão/publicação.
+  A materialização publicada é independente de corrupção editorial posterior.
+- Observação apagada grava NULL explicitamente; TypeORM não limpa colunas com
+  undefined. Caso comprovado em PostgreSQL real, incluindo publicação posterior.
+- Coordenador somente em memória: iniciar idempotente,60s fixos, um voo, última
+  solicitação pendente, ACK não substitui formulário; ciclos sem dirty não enviam.
+  Off/IME/cópia suspendem envios pendentes; cleanup não faz flush.400/413/422/429
+  pausam até ação manual;401/403/404/409/rede/5xx exigem reconferência/reabertura
+  segura. Não aceitar revisão inválida ou geração divergente de ACK.
+- BFF reutiliza sessão e proxy existentes, encaminha CAS na revisão/publicação e
+  preserva status/no-store. Nenhuma biblioteca, preferência persistente, flag de
+  ativação, novo micronutriente ou mudança de portal foi introduzida.
+- Evidências e limites: `docs/governance/EVIDENCIAS_PA06_NUCLEO_2026-10-15.md`.

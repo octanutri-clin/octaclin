@@ -1,7 +1,8 @@
 # PA06 — checklist: autosave, ativação e cálculo combinado
 
 Planejamento: [plan-pos-320-pa06.md](plan-pos-320-pa06.md).
-Base `eae74b1e`, 2026-10-15. Somente T00 executada nesta rodada documental.
+Base `eae74b1e`, 2026-10-15. Primeira entrega autorizada e núcleo implementado;
+T07/T08 aguardam troca manual para Luna alto. T09/T10 e entregas posteriores pendentes.
 
 ## T00 — base, evidência e produto (1–3 documentos)
 
@@ -18,16 +19,16 @@ Base `eae74b1e`, 2026-10-15. Somente T00 executada nesta rodada documental.
 - [x] D09: todos os planos ativos publicados acessíveis no portal; desativados,
   arquivados e excluídos inacessíveis. D10: somente versão publicada atual salva
   no cálculo combinado, sem rascunho ou versão histórica.
-- [ ] Receber autorização de implementação; não iniciar T01–T10 automaticamente.
+- [x] Autorização de implementação recebida em “Pode começar”; primeira entrega em curso.
 
 ## T01 — testes RED e contrato de revisão geral (2–4 arquivos)
 
 Dependência: T00 e autorização. Sol médio.
 
-- [ ] Reproduzir resposta A sobrescrevendo edição B em Promise controlada.
-- [ ] Reproduzir PUT legado que altera conteúdo sem incrementar revisão PA05.
-- [ ] Reproduzir recusa atual de guardar alimento válido quando meta/objetivo faltam.
-- [ ] Fixar DTO/retorno de revisão geral, geração e transição de clientes antigos;
+- [x] Reproduzir resposta A sobrescrevendo edição B em Promise controlada.
+- [x] Reproduzir PUT legado que altera conteúdo sem incrementar revisão PA05.
+- [x] Reproduzir recusa atual de guardar alimento válido quando meta/objetivo faltam.
+- [x] Fixar DTO/retorno de revisão geral, geração e transição de clientes antigos;
   proteger rascunho aderido contra PUT sem precondição sem alterar dados antigos.
 
 Aceite: RED do comportamento e contrato inequívoco de novos/legados, sem usar
@@ -38,12 +39,12 @@ Verificação: testes focados de serviço e motor de gravação, estado anterior
 
 Dependência: T01. Sol médio.
 
-- [ ] Criar revisão monotônica e adesão protegida mínima em versão; registro e DTO.
-- [ ] Prever documento de edição parcial cifrado e vínculo entre revisão editorial,
+- [x] Criar revisão monotônica e adesão protegida mínima em versão; registro e DTO.
+- [x] Prever documento de edição parcial cifrado e vínculo entre revisão editorial,
   materialização clínica e completude, sem afrouxar tabelas clínicas existentes.
-- [ ] Conferir todos os writers de rascunho/transições, compatibilidade, overflow,
+- [x] Conferir todos os writers de rascunho/transições, compatibilidade, overflow,
   clones e preservação de hash/snapshot publicado; nenhuma escrita parcial.
-- [ ] Migration nova com testes e registro; próximo número revalidado, nunca editar1072.
+- [x] Migration nova com testes e registro; próximo número revalidado, nunca editar1072.
 
 Aceite: precondição checada sob lock antes dos filhos; erro não avança revisão;
 desligar autosave não reabre legado inseguro; rollback não perde histórico.
@@ -53,11 +54,11 @@ Verificação: serviço/DTO/migration/clone/hash unitários e integridade do inv
 
 Dependência: T02, D02/D05. Sol médio.
 
-- [ ] DTO profissional explícito de edição, limites e formato versionado cifrado;
+- [x] DTO profissional explícito de edição, limites e formato versionado cifrado;
   preservar alimentos com porção válida sem avaliação/objetivo/meta completos.
-- [ ] Reabrir snapshot editorial autorizado; tratar linhas incompletas conforme D05,
+- [x] Reabrir snapshot editorial autorizado; tratar linhas incompletas conforme D05,
   sem perder linha válida, zerar vazio ou permitir IDs de outra clínica/paciente.
-- [ ] Materializar cálculo/estrutura quando aptos, marcando revisão correspondente;
+- [x] Materializar cálculo/estrutura quando aptos, marcando revisão correspondente;
   backend bloqueia revisar/publicar e projeção clínica de edição ainda pendente.
 
 Aceite: snapshot parcial é persistido e reaberto com segurança, sem simular
@@ -69,10 +70,10 @@ Não criar preferência persistente de autosave por profissional nesta revisão.
 
 Dependência: T02/T03. Sol médio. Banco descartável com fixtures próprias.
 
-- [ ] Save/save com mesma revisão: um sucesso e um409; replay e geração antiga negados.
-- [ ] Writers PA05/legados↔PA06, adesão monotônica e save↔revisão/publicação;
+- [x] Save/save com mesma revisão: um sucesso e um409; replay e geração antiga negados.
+- [x] Writers PA05/legados↔PA06, adesão monotônica e save↔revisão/publicação;
   tenant/carteira/transferência/arquivamento/revogação, sem bypass de RLS.
-- [ ] Conferir FORCE RLS/role runtime; snapshot editorial no banco real;
+- [x] Conferir FORCE RLS/role runtime; snapshot editorial no banco real;
   executar também casos adjacentes PA04/PA05 para não esconder contaminação.
 
 Aceite: provas com PostgreSQL real e barreiras explícitas, sem depender de sleeps.
@@ -81,19 +82,19 @@ não pode virar PASS por fixture que omite Timescale/pgvector.
 
 ### Checkpoint A — contrato antes da UI
 
-- [ ] T01–T04 GREEN e limitações documentadas; backend completo tipado e buildável.
-- [ ] Nenhuma alteração publicada a pacientes; produção/migrations externas SKIPPED.
+- [x] T01–T04 GREEN e limitações documentadas; backend completo tipado e buildável.
+- [x] Nenhuma alteração publicada a pacientes; produção/migrations externas SKIPPED.
 
 ## T05 — coordenador em memória (2–4 arquivos)
 
 Dependência: checkpoint A. Sol médio.
 
-- [ ] Extrair regras puras mínimas sem reescrever o editor; ciclo de 60 segundos, um request,
-  pendente mais recente, snapshot A/edição B, retorno obsoleto e StrictMode.
-- [ ] Integrar save manual no mesmo coordenador; cópia/IME bloqueiam envio; campos
+- [x] Extrair regras puras mínimas sem reescrever o editor; ciclo de 60 segundos, um request,
+  pendente mais recente, snapshot A/edição B, retorno obsoleto e iniciar/encerrar idempotentes (React StrictMode emT07).
+- [x] Implementar save manual no mesmo coordenador; ligação ao formulário emT07; cópia/IME bloqueiam envio; campos
   clínicos pendentes não bloqueiam snapshot editorial estruturalmente válido;
   manter baseline confirmado, chaves locais/foco e dirty até último ACK.
-- [ ] Rede incerta,401/403/404,400/422 e409 pausam conforme plano; sem retry/flush
+- [x] Rede incerta,401/403/404,400/422 e409 pausam conforme plano; sem retry/flush
   no unmount, reconexão, foco, beacon ou persistência em navegador.
 
 Aceite:59.999ms sem envio,60.000ms com alteração envia,120.000ms próximo ciclo;
@@ -106,10 +107,10 @@ na suíte/CI existente, sem testes órfãos.
 
 Dependência: T05. Sol médio.
 
-- [ ] Encaminhar edição parcial/revisão e manter PUT clínico legado protegido;
-  retorno mínimo e no-store, catálogo de permissões e mapa de rotas atualizados.
-- [ ] Estado de completude e revisão calculada explícitos; sem campo editorial no portal.
-- [ ] Preservar status de conflito/acesso e mensagens sanitizadas, sem entidade crua.
+- [x] Encaminhar edição parcial/revisão e manter PUT clínico legado protegido;
+  retorno mínimo e no-store, permissões existentes reutilizadas e mapa de rotas atualizado.
+- [x] Estado de completude e revisão calculada explícitos; sem campo editorial no portal.
+- [x] Preservar status de conflito/acesso e mensagens sanitizadas, sem entidade crua.
 
 Aceite: sessão/tenant vêm do servidor; falhas de edição ou save não viram200.
 Verificação: testes específicos em `test-planos-alimentares-bff.mjs`, negativos
@@ -117,14 +118,16 @@ de edição parcial e `pnpm --dir octaclin-web test:authz` na integração final
 
 ### Checkpoint B — troca opcional para Luna
 
-- [ ] T05–T06 GREEN; DTOs, motor e fixtures fechados, handoff atualizado.
-- [ ] Avisar “GPT-6 Luna alto” e pausar para troca manual; não assumir alteração.
+- [x] T05–T06 GREEN focado; DTOs, motor e fixtures fechados, handoff atualizado.
+  `test:authz` integral e gates de integração mantidos emT09 até conclusão.
+- [x] Handoff preparado para aviso “GPT-6 Luna alto” e pausa antes deT07/T08;
+  não assumir troca automática.
 
 ## T07 — controles e estados acessíveis (2–4 arquivos)
 
 Dependência: checkpoint B, D01/D02. Luna alto suficiente.
 
-- [ ] Autosave ligado inicialmente, status de ciclo/último ACK e ações de erro em
+- [ ] React StrictMode sem dois ciclos, cleanup sem gravação, autosave ligado inicialmente, status de ciclo/último ACK e ações de erro em
   desktop/mobile; teclado/aria-live, sem chamada imediata só por abrir plano.
 - [ ] Salvar manual permanece; preservar metas/subtotais, PA05, colapso e chaves
   durante edição simultânea ao request; opção desligada não faz flush implícito.

@@ -1,0 +1,55 @@
+import 'reflect-metadata';
+import { plainToInstance } from 'class-transformer';
+import { validate } from 'class-validator';
+import { numeroEdicao, validarDocumentoEdicaoPlano } from '../dominio/edicao-plano';
+import { PrecondicaoEdicaoPlanoDto, SalvarEdicaoPlanoDto } from './dtos-edicao-plano';
+
+const id = '10000000-0000-4000-8000-000000000001';
+const documento = () => ({ schemaVersao: 1, objetivos: '', refeicoes: [{ chaveCliente: 'r1', itens: [{ chaveCliente: 'i1', descricao: '', porcaoGramas: '', substituicoes: [] }] }] });
+const entrada = () => ({ rascunhoIdEsperado: id, rascunhoRevisaoEsperada: 0, documento: documento() });
+const erros = (v: unknown) => validate(plainToInstance(SalvarEdicaoPlanoDto, v), { whitelist: true, forbidNonWhitelisted: true });
+
+describe('PA06 DTO de edição parcial', () => {
+  it('aceita incompletude editorial sem validar como prescrição clínica', async () => {
+    expect(await erros(entrada())).toHaveLength(0);
+  });
+  it.each([{}, { ...entrada(), tenantId: id }, { ...entrada(), rascunhoIdEsperado: 'x' },
+    { ...entrada(), rascunhoRevisaoEsperada: '0' }, { ...entrada(), rascunhoRevisaoEsperada: -1 },
+    { ...entrada(), rascunhoRevisaoEsperada: 2147483647 }, { ...entrada(), documento: null },
+    { ...entrada(), documento: { ...documento(), schemaVersao: 2 } },
+    { ...entrada(), documento: { ...documento(), preferenciasApresentacao: { interno: true } } }
+  ])('rejeita envelope/versão/extras sem expor conteúdo no erro (%#)', async v => {
+    expect((await erros(v)).length).toBeGreaterThan(0);
+  });
+  it('precondição de transição aceita legado vazio, mas não metade da identidade', async () => {
+    const validar = (v: unknown) => validate(plainToInstance(PrecondicaoEdicaoPlanoDto, v), { whitelist: true, forbidNonWhitelisted: true });
+    expect(await validar({})).toHaveLength(0);
+    expect(await validar({ rascunhoIdEsperado: id, rascunhoRevisaoEsperada: 0 })).toHaveLength(0);
+    expect((await validar({ rascunhoIdEsperado: id })).length).toBeGreaterThan(0);
+    expect((await validar({ rascunhoRevisaoEsperada: 0 })).length).toBeGreaterThan(0);
+  });
+  it('copia documento sem alias e preserva zero factual versus vazio', () => {
+    const original = documento();
+    const copia = validarDocumentoEdicaoPlano(original);
+    original.refeicoes[0].itens[0].descricao = 'alterado depois';
+    expect(copia.refeicoes[0].itens[0].descricao).toBe('');
+    expect(numeroEdicao(0)).toBe(0);
+    expect(numeroEdicao('')).toBeUndefined();
+    expect(numeroEdicao('-')).toBeUndefined();
+    expect(numeroEdicao('1,25')).toBe(1.25);
+  });
+  it.each([Number.NaN, Number.POSITIVE_INFINITY, {}, '1e99', 'texto', 1_000_000_001])('recusa valor numérico sem representação editorial segura (%#)', v => {
+    const d = documento();
+    expect(() => validarDocumentoEdicaoPlano({ ...d, fatorAtividade: v })).toThrow('Documento de edição do plano inválido.');
+  });
+  it('recusa payload excessivo e metadado clínico não permitido dentro de alimento', () => {
+    expect(() => validarDocumentoEdicaoPlano({ ...documento(), observacoes: 'x'.repeat(9000) })).toThrow();
+    expect(() => validarDocumentoEdicaoPlano({ schemaVersao: 1, refeicoes: [{ chaveCliente: 'r', itens: [{ chaveCliente: 'i', nutrientesPor100g: { interno: 1 } }] }] })).toThrow();
+    expect(() => validarDocumentoEdicaoPlano({ schemaVersao: 1, refeicoes: [], constructor: 'inválido' })).toThrow();
+  });
+  it('limita edição a 96KiB para caber no envelope HTTP existente de 100KiB', () => {
+    const d = { schemaVersao: 1, refeicoes: Array.from({ length: 50 }, (_, i) => ({ chaveCliente: `r${i}`, orientacoes: 'x'.repeat(2000), itens: [] })) };
+    expect(() => validarDocumentoEdicaoPlano(d)).toThrow();
+  });
+
+});

@@ -1,3 +1,5 @@
+import type { DocumentoEdicaoPlano, SalvarEdicaoPlanoEntrada } from './edicao-plano';
+import type { PrecondicaoEdicaoPlano } from './coordenador-edicao-plano';
 import type { PreferenciasApresentacaoPlanoApi, EstadoApresentacaoPlanoApi } from './preferencias-apresentacao-plano';
 import type { PlanoAlimentarPacienteApi } from './portal-api';
 
@@ -81,6 +83,7 @@ export interface AtualizarRascunhoPlanoAlimentarEntrada {
   /** Obrigatórios se preferenciasApresentacao estiver presente. */
   apresentacaoRevisaoEsperada?: number;
   rascunhoIdEsperado?: string;
+  rascunhoRevisaoEsperada?: number;
   avaliacaoAntropometricaId: string;
   /** `manual` e o caminho do paciente com condicao especial: sem formula. */
   origemMeta: OrigemMetaPlanoApi;
@@ -204,6 +207,9 @@ export interface TotaisPlanoAlimentarApi {
 }
 
 export interface VersaoPlanoAlimentarApi {
+  rascunhoRevisao?: number;
+  edicaoEstado?: 'legado' | 'pendente' | 'materializada' | 'indisponivel';
+  documentoEdicao?: DocumentoEdicaoPlano;
   apresentacaoEstado?: EstadoApresentacaoPlanoApi;
   apresentacaoRevisao?: number;
   preferenciasApresentacao?: PreferenciasApresentacaoPlanoApi;
@@ -478,17 +484,24 @@ export function atualizarRascunhoPlanoAlimentar(
   );
 }
 
-export function revisarPlanoAlimentar(pacienteId: string, planoId: string) {
+export function salvarEdicaoPlanoAlimentar(pacienteId: string, planoId: string, entrada: SalvarEdicaoPlanoEntrada, signal?: AbortSignal) {
   return requisitar<VersaoPlanoAlimentarApi>(
-    `${basePaciente(pacienteId)}/${encodeURIComponent(planoId)}/revisao`,
-    { method: 'POST', ...corpoJson({}) }
+    `${basePaciente(pacienteId)}/${encodeURIComponent(planoId)}/rascunho/edicao`,
+    { method: 'PUT', ...corpoJson(entrada), signal }
   );
 }
 
-export function publicarPlanoAlimentar(pacienteId: string, planoId: string) {
+export function revisarPlanoAlimentar(pacienteId: string, planoId: string, precondicao?: PrecondicaoEdicaoPlano) {
+  return requisitar<VersaoPlanoAlimentarApi>(
+    `${basePaciente(pacienteId)}/${encodeURIComponent(planoId)}/revisao`,
+    { method: 'POST', ...corpoJson(precondicao ?? {}) }
+  );
+}
+
+export function publicarPlanoAlimentar(pacienteId: string, planoId: string, precondicao?: PrecondicaoEdicaoPlano) {
   return requisitar<PlanoAlimentarApi>(
     `${basePaciente(pacienteId)}/${encodeURIComponent(planoId)}/publicacao`,
-    { method: 'POST', ...corpoJson({}) }
+    { method: 'POST', ...corpoJson(precondicao ?? {}) }
   );
 }
 

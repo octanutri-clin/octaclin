@@ -4,7 +4,7 @@ Atualizado em 2026-10-15.
 
 ## Fase ativa
 
-- **PA06 — planejamento consolidado; implementação não iniciada**, base `eae74b1e`.
+- **PA06 — primeira entrega em desenvolvimento autorizado**, base `eae74b1e`.
   Autosave ligado por padrão, ciclo de 60 segundos no editor profissional. Referências R013
   TanStack/query e R014 react-hook-form consultadas em versões fixadas; uso
   conceitual, sem dependência nova. Gaps: revisão geral de conteúdo/caminhos
@@ -17,7 +17,10 @@ Atualizado em 2026-10-15.
   inacessíveis. Cálculo combinado só da publicação atual salva, sem rascunhos;
   seleção para cálculo independente da visibilidade. Três entregas/PRs sequenciais:
   autosave parcial → ativação → cálculo combinado/micros.
-  Nenhuma implementação iniciada.
+  Núcleo de edição cifrada/CAS, migration1073 aditiva, BFF e coordenador em memória
+  implementados; interface T07/T08 aguarda checkpoint e troca manual para Luna alto.
+  Sem migration externa/deploy. Evidências em
+  `docs/governance/EVIDENCIAS_PA06_NUCLEO_2026-10-15.md`.
   Plano e critérios
   em `tasks/plan-pos-320-pa06.md` e `tasks/todo-pos-320-pa06.md`.
   Sol6.1 médio para concorrência/backend e integração; Luna alto apenas após

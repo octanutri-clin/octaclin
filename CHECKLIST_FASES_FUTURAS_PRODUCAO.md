@@ -4648,14 +4648,15 @@ auditoria estão ordenados na seção 15 de
   externa da1072/deploy não verificados nesta análise. Handoff `tasks/plan-pos-320-pa05.md`, evidências
   `docs/governance/EVIDENCIAS_PA05_BACKEND_2026-10-14.md` e
   `docs/governance/REVISAO_R4_PA05_2026-10-14.md`.
-- [~] PA06 — planejamento e análise de gaps, sem runtime alterado. Autosave
+- [~] PA06 — primeira entrega em implementação autorizada; núcleo backend/BFF e
+  coordenador em memória implementados, UI pendente. Autosave
   do rascunho ligado por padrão, ciclos de 60 segundos e edição parcial; D01–D03 confirmadas,
   D04–D08 registradas: on/off no plano e refeição; calorias/macros/micros de
   vários planos/refeições selecionados, excluindo desativados. Linhas incompletas
   preservadas. D09/D10 confirmadas: portal com todos os ativos publicados;
   excluídos/arquivados/desativados inacessíveis; soma só da publicação atual salva,
-  nunca rascunho/histórico. Planejamento consolidado; autorização de implementação
-  ainda não recebida. Três entregas
+  nunca rascunho/histórico. Autorização recebida em “Pode começar”; migration1073
+  criada e validada somente em banco descartável. Sem rollout externo. Três entregas
   com PR individual: autosave → ativação → cálculo combinado/micros.
   Referências R013/R014 consultadas,
   sem dependência nova. Concorrência geral/legados e edição durante request
