@@ -85,6 +85,18 @@ export class ControladorPlanosAlimentares {
     return this.servico.obterVersao(usuario.tenantId, pacienteId, planoId, numero, usuario);
   }
 
+  @Get(':planoId/versoes/:numero/apresentacao-paciente')
+  @Permissoes('planos_alimentares.ler')
+  @Header('Cache-Control', 'private, no-store')
+  obterApresentacaoPaciente(
+    @UsuarioAtual() usuario: UsuarioAutenticado,
+    @Param('pacienteId', ParseUUIDPipe) pacienteId: string,
+    @Param('planoId', ParseUUIDPipe) planoId: string,
+    @Param('numero', ParseIntPipe) numero: number
+  ) {
+    return this.servico.obterApresentacaoPaciente(usuario.tenantId, pacienteId, planoId, numero, usuario);
+  }
+
   @Get(':planoId/versoes/:numero/acompanhamento')
   @Permissoes('planos_alimentares.ler')
   @Header('Cache-Control', 'private, no-store')

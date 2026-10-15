@@ -1,3 +1,6 @@
+import type { PreferenciasApresentacaoPlanoApi, EstadoApresentacaoPlanoApi } from './preferencias-apresentacao-plano';
+import type { PlanoAlimentarPacienteApi } from './portal-api';
+
 export type FormulaEnergeticaApi =
   | 'mifflin_st_jeor_1990'
   | 'harris_benedict_revisada_1984'
@@ -74,6 +77,10 @@ export interface MacrosGramasPorKgApi {
 }
 
 export interface AtualizarRascunhoPlanoAlimentarEntrada {
+  preferenciasApresentacao?: PreferenciasApresentacaoPlanoApi;
+  /** Obrigatórios se preferenciasApresentacao estiver presente. */
+  apresentacaoRevisaoEsperada?: number;
+  rascunhoIdEsperado?: string;
   avaliacaoAntropometricaId: string;
   /** `manual` e o caminho do paciente com condicao especial: sem formula. */
   origemMeta: OrigemMetaPlanoApi;
@@ -197,6 +204,9 @@ export interface TotaisPlanoAlimentarApi {
 }
 
 export interface VersaoPlanoAlimentarApi {
+  apresentacaoEstado?: EstadoApresentacaoPlanoApi;
+  apresentacaoRevisao?: number;
+  preferenciasApresentacao?: PreferenciasApresentacaoPlanoApi;
   id: string;
   numero: number;
   status: 'rascunho' | 'publicada' | 'descartada';
@@ -778,4 +788,16 @@ export function revogarPushReceitasPortal(endpoint?: string) {
   return requisitar<{ revogado: boolean }>('/api/portal/paciente/preferencias/receitas/push-subscription', {
     method: 'DELETE', ...corpoJson(endpoint ? { endpoint } : {})
   });
+}
+
+/** Projeção backend para entrega; sem alternativas privadas nem configuração profissional. */
+export interface ApresentacaoPacientePlanoApi extends Omit<PlanoAlimentarPacienteApi, 'publicadoEm'> {
+  publicadoEm?: string;
+  status: 'rascunho' | 'publicada';
+}
+export function obterApresentacaoPacientePlano(pacienteId: string, planoId: string, numero: number, signal?: AbortSignal) {
+  return requisitar<ApresentacaoPacientePlanoApi>(
+    `${basePaciente(pacienteId)}/${encodeURIComponent(planoId)}/versoes/${encodeURIComponent(String(numero))}/apresentacao-paciente`,
+    { signal }
+  );
 }

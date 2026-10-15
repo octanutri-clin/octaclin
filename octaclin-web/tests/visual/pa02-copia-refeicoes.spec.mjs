@@ -447,7 +447,7 @@ test.describe('PA02 - copiar refeições sem substituir o plano de destino', () 
     const nomes = page.getByRole('textbox', { name: 'Nome da refeição' });
     await expect(nomes).toHaveCount(1);
     await expect(nomes.first()).toHaveValue('Almoço atual');
-    await expect(page.getByLabel('Horário').first()).toHaveValue('08:15');
+    await expect(page.getByLabel('Horário', { exact: true }).first()).toHaveValue('08:15');
     await expect(page.getByLabel('Orientações da refeição')).toHaveValue('Manter esta orientação');
     const alimentos = page.getByRole('textbox', { name: 'Alimento' });
     await expect(alimentos).toHaveCount(4);

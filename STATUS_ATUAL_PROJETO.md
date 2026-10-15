@@ -4,20 +4,28 @@ Atualizado em 2026-10-14.
 
 ## Fase ativa
 
-- **PA04 — implementação técnica em andamento**, base main `6f0be7d` (#417), branch
-  `feat/pos320-pa04-resumos-macros`, worktree isolada. D01–D03 confirmadas.
-  Escopo inclui projeção de snapshots, listagem paginada e resumos salvos.
-  Após revisão R4 independente, a consulta limita metadados à versão publicada
-  atual e ao rascunho, conta o histórico por agregação tenant-scoped, confirma
-  lista/editor de forma atômica e oculta estado ao trocar paciente. PASS: testes
-  focados backend 44/44, BFF 26/26, typecheck e build Web/backend, Playwright
-  R4 4/4 em desktop/mobile, scanner de secrets e syntax/diff checks. Lint 0
-  erros/10 avisos de hooks existentes. Revisão R4 estática confirmou as
-  correções; relatório `docs/governance/REVISAO_R4_PA04_2026-10-14.md`.
-  PostgreSQL/Testcontainers BLOCKED por ENOSPC no Docker VFS; 64 casos não
-  executaram. PR Draft #418 aberta; CI remoto ainda pendente. Sem
-  migration/ambiente externo. Plano `tasks/plan-pos-320-pa04.md`; checklist
-  `tasks/todo-pos-320-pa04.md`.
+- **PA05 — implementação e revisão R4 concluídas; gates finais em execução**, branch
+  `feat/pos320-pa05-preferencias`, base `64f54b88`. D01–D03 confirmadas.
+  PR #419 inicialmente Draft. CI inicial detectou contaminação de fixtures
+  PA05/PA04; casos PA05 isolados e prova conjunta PostgreSQL real 3/3 PASS.
+  Cifra/CAS, clone/hash, projeção paciente e BFF/tipos validados; provas reais
+  PostgreSQL15 específicas com RLS/concorrência PASS. Fixture omite extensões
+  Timescale/pgvector não utilizadas pela PA05; gate integral CI do HEAD `4eafd661`
+  PASS, 66/66 casos. Backend 2.923 testes, Redis 2/2 e Web/Governança PASS.
+  UI T07/T08 implementada; Sol médio corrigiu quatro achados com testes RED.
+  Revisão estática independente final PASS; suíte visual 50/50 + a11y/teclado 4/4
+  PASS; regressões PA02/PA03 38/38 PASS; gates finais T09 em execução. Migration1072
+  aditiva somente em banco descartável neste ciclo.
+  Evidências `docs/governance/REVISAO_R4_PA05_2026-10-14.md` e
+  `docs/governance/EVIDENCIAS_PA05_BACKEND_2026-10-14.md`,
+  handoff `tasks/plan-pos-320-pa05.md` e checklist `tasks/todo-pos-320-pa05.md`.
+- **PA04 — integrada pela PR #418**, main `64f54b88`, árvore idêntica ao HEAD
+  aprovado `37d7979`. CI `38625821164` e checks aplicáveis PASS: Backend,
+  PostgreSQL/RLS descartável, Web, Demo e PR Gate; scanners PASS. SBOM
+  provenance SKIPPED conforme workflow. PostgreSQL local não executou os 64
+  casos por ENOSPC; a prova CI encerrou o gate sem converter a falha local em
+  PASS. Revisão R4 estática em `docs/governance/REVISAO_R4_PA04_2026-10-14.md`.
+  Sem migration nova; merge/CI não comprovam publicação produtiva.
 - **PA03 — integrada pela PR #417**, main `6f0be7d`, idêntica ao HEAD aprovado
   `a013555`. Cinco workflows SUCCESS e dez jobs do CI `38608333870` SUCCESS,
   inclusive Backend, Web, Demo e PR Gate. Revisão cruzada R4 fechou overflow

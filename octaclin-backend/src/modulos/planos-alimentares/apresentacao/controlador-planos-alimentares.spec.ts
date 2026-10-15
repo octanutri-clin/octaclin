@@ -23,6 +23,7 @@ describe('ControladorPlanosAlimentares', () => {
       listar: jest.fn().mockResolvedValue([]),
       listarEscolhasPaciente: jest.fn().mockResolvedValue({ itens: [], total: 0 }),
       obter: jest.fn().mockResolvedValue({ id: planoId }),
+      obterApresentacaoPaciente: jest.fn().mockResolvedValue({ numeroVersao: 1 }),
       obterVersao: jest.fn().mockResolvedValue({ numero: 0 }),
       obterAcompanhamentoVersao: jest.fn().mockResolvedValue({ versao: { numero: 0 } }),
       criar: jest.fn().mockResolvedValue({ id: planoId }),
@@ -43,7 +44,7 @@ describe('ControladorPlanosAlimentares', () => {
     ]);
   });
 
-  it.each(['listar', 'listarEscolhasPaciente', 'obter', 'obterRascunho', 'obterVersao', 'obterAcompanhamentoVersao'] as const)('usa somente planos_alimentares.ler em %s', (metodo) => {
+  it.each(['listar', 'listarEscolhasPaciente', 'obter', 'obterRascunho', 'obterVersao', 'obterAcompanhamentoVersao', 'obterApresentacaoPaciente'] as const)('usa somente planos_alimentares.ler em %s', (metodo) => {
     expect(Reflect.getMetadata(CHAVE_PERMISSOES, ControladorPlanosAlimentares.prototype[metodo])).toEqual([
       'planos_alimentares.ler'
     ]);
@@ -58,7 +59,7 @@ describe('ControladorPlanosAlimentares', () => {
     }
   );
 
-  it.each(['obterVersao', 'obterAcompanhamentoVersao'] as const)(
+  it.each(['obterVersao', 'obterAcompanhamentoVersao', 'obterApresentacaoPaciente'] as const)(
     'marca %s como resposta clinica privada sem cache',
     (metodo) => {
       expect(Reflect.getMetadata(HEADERS_METADATA, ControladorPlanosAlimentares.prototype[metodo])).toContainEqual({
@@ -69,6 +70,8 @@ describe('ControladorPlanosAlimentares', () => {
   );
 
   it('encaminha tenant, paciente, plano e usuario para o servico', async () => {
+    await controlador.obterApresentacaoPaciente(usuario, pacienteId, planoId, 1);
+    expect(servico.obterApresentacaoPaciente).toHaveBeenCalledWith(usuario.tenantId, pacienteId, planoId, 1, usuario);
     await controlador.listar(usuario, pacienteId, { pagina: 1, limite: 25 });
     expect(servico.listar).toHaveBeenCalledWith(usuario.tenantId, pacienteId, usuario, { pagina: 1, limite: 25 });
 

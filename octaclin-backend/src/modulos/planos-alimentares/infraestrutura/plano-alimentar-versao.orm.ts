@@ -52,6 +52,12 @@ export class PlanoAlimentarVersaoOrm {
   @Column({ name: 'totais_snapshot_criptografado', type: 'bytea', nullable: true })
   totaisSnapshotCriptografado?: Buffer;
 
+  @Column({ name: 'apresentacao_snapshot_criptografado', type: 'bytea', nullable: true })
+  apresentacaoSnapshotCriptografado?: Buffer | null;
+
+  @Column({ name: 'apresentacao_revisao', type: 'integer', default: 0 })
+  apresentacaoRevisao: number;
+
   @Column({ name: 'hash_conteudo', type: 'char', length: 64, nullable: true })
   hashConteudo?: string | null;
 

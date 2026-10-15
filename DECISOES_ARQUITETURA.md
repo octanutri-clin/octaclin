@@ -379,3 +379,19 @@ consumidores assistenciais ou flag de ativação. G01/direitos bloqueiam esses
 classificadores; revisão R4 independente, CI, provas de banco/ambiente e aceite
 operacional bloqueiam a liberação factual. Fases seguintes independentes mantêm
 seus próprios gates. Rollback preserva projeção v1/v2 e dados, sem remover1069.
+
+
+## ADR-028 — Apresentação versionada de planos alimentares
+
+As preferências de apresentação profissional/paciente são dados do snapshot da
+versão, cifrados separadamente do cálculo e preservados na publicação. São
+preferências visuais: não modificam conteúdo, porções, liberação de alternativas
+ou autorização. Entrega e impressão paciente usam projeção explícita comum ao
+portal; nunca a árvore interna do profissional ou ocultação apenas por CSS.
+
+Gravação explícita confere identidade do rascunho e revisão monotônica sob as
+travas transacionais existentes. Omissão legada preserva o snapshot. Revisão
+zero identifica ausência legada; snapshot herdado começa revisão positiva para
+que perda do cipher seja indisponibilidade, não fallback. Publicação inclui
+preferências explícitas no hash conferido; versões antigas não são recalculadas.
+Rollback de código conserva schema aditivo e snapshots; não remover histórico.

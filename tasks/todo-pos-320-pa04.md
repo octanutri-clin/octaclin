@@ -1,5 +1,13 @@
 # PA04 — checklist de planejamento e implementação
 
+> Fechamento em 2026-10-14: PR #418 mergeada em `64f54b88`, árvore idêntica
+> ao HEAD `37d7979` aprovado. Checks aplicáveis PASS, incluindo CI
+> `38625821164`, Backend/PostgreSQL/RLS descartável, Web, Demo e PR Gate.
+> SBOM provenance SKIPPED. Os itens pendentes abaixo preservam o checkpoint
+> anterior; gates de integração/CI encerrados pela evidência remota, sem alegar
+> execução local dos 64 casos bloqueados por ENOSPC. Sem migration/deploy externo.
+
+
 Contrato: [plan-pos-320-pa04.md](plan-pos-320-pa04.md).
 Base main6f0be7d (#417), implementação na branch feat/pos320-pa04-resumos-macros.
 Planejamento consolidado; D01–D03 confirmadas. CI/PR ainda não criados.

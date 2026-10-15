@@ -1,5 +1,13 @@
 # PA04 — resumo de macros na lista de planos
 
+> Fechamento em 2026-10-14: PR #418 mergeada em `64f54b88`, árvore idêntica
+> ao HEAD `37d7979` aprovado. Checks aplicáveis PASS, incluindo CI
+> `38625821164`, Backend/PostgreSQL/RLS descartável, Web, Demo e PR Gate.
+> SBOM provenance SKIPPED. Os itens pendentes abaixo preservam o checkpoint
+> anterior; gates de integração/CI encerrados pela evidência remota, sem alegar
+> execução local dos 64 casos bloqueados por ENOSPC. Sem migration/deploy externo.
+
+
 Planejamento iniciado em 2026-10-14 após autorização do proprietário para
 seguir à próxima etapa. Base main `6f0be7d`, merge #417; worktree isolada
 `/workspace/octaclin/.worktrees/pos320-pa04-planejamento`, branch

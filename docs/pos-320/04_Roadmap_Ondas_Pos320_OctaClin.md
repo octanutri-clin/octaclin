@@ -316,6 +316,8 @@ em campos recolhidos e trava PA02. Nenhuma mudança de portal/PDF/API/schema.
 
 ## [PA04] Resumo de macros na lista de planos alimentares
 
+Integrada pela PR #418 em 2026-10-14; estado observado no checklist vigente.
+
 **Origem:** item 48.
 
 **Status atual:** listagem utiliza DTO leve sem refeições completas.
@@ -333,6 +335,13 @@ em campos recolhidos e trava PA02. Nenhuma mudança de portal/PDF/API/schema.
 ---
 
 ## [PA05] Preferências de exibição das refeições
+
+Planejamento específico em [plan-pos-320-pa05.md](../../tasks/plan-pos-320-pa05.md).
+D01–D03 confirmadas: configurações profissional/paciente separadas, persistidas
+por versão para todas as refeições; paciente acessa liberadas mesmo recolhidas.
+Portal e PDF paciente usam projeção permitida. Implementação autorizada e entregue
+na branch PA05; revisão R4 estática concluída após correções. Gates finais e
+integração pela PR permanecem sujeitos às evidências do checklist PA05.
 
 **Origem:** item 18.
 
