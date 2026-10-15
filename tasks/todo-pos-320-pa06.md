@@ -11,8 +11,9 @@ Base `eae74b1e`, 2026-10-15. Somente T00 executada nesta rodada documental.
 - [x] Registrar gaps, referências, risco R4, gates e sequência de modelos.
 - [x] D01: habilitado por padrão, ciclo de 60 segundos; D02: alimentos válidos salvos mesmo
   com formulário incompleto; D03: salvar e sair/continuar/descartar confirmados.
-- [ ] Resolver D04 (on/off e publicação existente) e D05 (linhas incompletas),
-  perguntas adicionais enviadas; não presumir recomendações aceitas.
+- [x] D04: on/off simples oculta e exclui dos macros, sem arquivar/excluir ou
+  exigir nova revisão para reexibir; D05: preservar linhas incompletas e pendentes.
+- [ ] Resolver D06: alvo é refeição, plano inteiro ou ambos? Pergunta enviada.
 - [ ] Receber autorização de implementação; não iniciar T01–T10 automaticamente.
 
 ## T01 — testes RED e contrato de revisão geral (2–4 arquivos)
@@ -146,24 +147,25 @@ em Playwright; `pnpm --dir octaclin-web test:proteger-alteracoes-nao-salvas`.
 
 ## T08a — visibilidade on/off, contrato/backend (3–5 arquivos por fatia)
 
-Dependência: D04 e T04. Sol médio. Não iniciar alcance ainda não confirmado.
+Dependência: D04/D06 e T04. Sol médio. Não iniciar alcance ainda não confirmado.
 
 - [ ] Definir OFF/ON sem arquivar, excluir ou reescrever publicação; impedir
   fallback automático para outro plano e entrega de edição incompleta.
-- [ ] Se houver retirada de publicação, adicionar estado aditivo, transação/CAS,
+- [ ] Adicionar estado aditivo, transação/CAS conforme alvo D06,
   autorização e leitura/ações do portal protegidas, incluindo IDs conhecidos.
 - [ ] Provar concorrência OFF/publicação/escolha em PostgreSQL e RLS; estado
   de visibilidade não é o switch de autosave nem aprovação clínica automática.
 
-Aceite: desligar preserva dados e impede novas leituras/ações afetadas; ligar
-exige confirmação da versão elegível. Histórico/PDF já obtido não são apagados.
+Aceite: desligar preserva dados, exclui dos macros vigentes e impede novas
+leituras/ações afetadas; reexibir não exige edição/nova revisão ou confirmação
+extra. Histórico/PDF já obtido não são apagados; primeira publicação mantém contrato.
 Verificação: negativos de portal, carteira, transferência, replay e concorrência.
 
 ## T08b — controle on/off e projeções (2–4 arquivos)
 
 Dependência: T08a e T07. Luna alto só após contrato backend fechado por Sol.
 
-- [ ] Switch com nome acessível correspondente ao efeito e confirmação de ON;
+- [ ] Switch com nome acessível correspondente ao efeito, liga/desliga direto;
   erro não afirma mudança aceita nem altera publicação só por clicar.
 - [ ] Resumo do console distingue salvo/parcial/revisado/publicado/visível;
   portal respeita retirada, sem expor DTO profissional ou edição incompleta.
@@ -180,7 +182,7 @@ publicação/retirada disparada pelo timer. Verificação: Playwright e BFF alvo
 
 ## T09 — regressão e revisão R4 (3–5 arquivos por rodada de correção)
 
-Dependência: checkpoint C e T08a/T08b conforme D04. Sol médio.
+Dependência: checkpoint C e T08a/T08b conforme D06. Sol médio.
 
 - [ ] Backend/Web lint, typecheck/build e testes proporcionais; banco real integral;
   revisão cruzada estática R4 com limites/autoria e correções em RED/GREEN.
@@ -210,7 +212,7 @@ Checks de PA05 não provam implementação PA06.
 ## Resultado desta rodada documental
 
 - PASS: leitura Git/PR/checks e contratos; referências R013/R014 verificadas.
-- PENDENTE: D04/D05 e autorização de implementação; D01–D03 confirmadas nesta sessão.
+- PENDENTE: D06 e autorização de implementação; D01–D05 confirmadas nesta sessão.
 - SKIPPED: testes de implementação, PostgreSQL, lint/build/Playwright de PA06,
   revisão R4 de código PA06 e CI PA06 — runtime não alterado.
 - NA: prova de produção nesta análise; nenhum banco externo foi acessado.

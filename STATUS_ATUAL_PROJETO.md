@@ -10,7 +10,9 @@ Atualizado em 2026-10-15.
   conceitual, sem dependência nova. Gaps: revisão geral de conteúdo/caminhos
   legados, edição durante gravação, snapshot editorial parcial e saída protegida.
   D01–D03 confirmadas; alimentos válidos salvos sem exigir formulário completo.
-  D04/D05 (on/off e linhas incompletas) pendentes; nenhuma implementação iniciada.
+  D04/D05 confirmadas: on/off simples oculta e exclui dos macros; preservar
+  linhas incompletas. D06 pendente: alvo do botão (refeição/plano/ambos).
+  Nenhuma implementação iniciada.
   Plano e critérios
   em `tasks/plan-pos-320-pa06.md` e `tasks/todo-pos-320-pa06.md`.
   Sol6.1 médio para concorrência/backend e integração; Luna alto apenas após

@@ -19,14 +19,16 @@ Autorização desta etapa: planejamento/análise de gaps e referências pertinen
   saída oferece salvar e sair/continuar/descartar com confirmação. Plano anterior
   de opt-in e debounce de 3 segundos substituído. Novo fundamento: snapshot editorial parcial
   cifrado com cálculo/completude vinculados à revisão e sem publicação automática.
-- D04/D05 pendentes: efeito do on/off sobre versão publicada e tratamento das
-  linhas incompletas. Perguntas enviadas; não inferir retirada de publicação.
+- D04/D05 confirmadas: liga/desliga simples oculta do paciente e exclui dos
+  macros, sem arquivo/exclusão ou nova revisão apenas para reexibir; linhas
+  incompletas preservadas e identificadas. D06 pendente: refeição, plano ou ambos?
+  Não presumir o alvo; pergunta enviada antes de definir cálculo/projeções.
 - Gaps críticos: revisão PA05 não cobre writer legado de conteúdo; salvar hoje
   recarrega e pode apagar edição posterior. Fechar revisão geral/adesão segura,
   provas PostgreSQL/RLS e coordenador testado antes de entregar UI a Luna.
 - Sol6.1 médio: contratos, persistência/concorrência e integração final. Luna alto:
   UI após checkpoint B. Avisar e pausar antes de toda troca manual.
-- Próxima ação: incorporar D04/D05 e autorização de implementação. T01–T10
+- Próxima ação: incorporar D06 e autorização de implementação. T01–T10
   ainda não iniciadas. Sem runtime, dependências, migrations, merge ou deploy.
 
 O handoff PA05 abaixo é histórico. Pendências de CI nele foram encerradas pelos

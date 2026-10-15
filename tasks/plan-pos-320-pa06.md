@@ -23,7 +23,7 @@ Checklist: [T00–T10](todo-pos-320-pa06.md).
 - Escopo confirmado: editor profissional, autosave habilitado por padrão, ciclo
   de 60 segundos e persistência de alimentos com porções válidas sem exigir formulário
   clínico completo. Revisão/publicação continuam explícitas. A extensão on/off
-  de visibilidade aguarda definição D04, abaixo. Sem IA, anexos, recuperação
+  de visibilidade/exclusão de macros aguarda o alvo D06, abaixo. Sem IA, anexos, recuperação
   offline ou ingestão TBCA.
 
 ## Decisões de produto — respostas e refinamentos de 2026-10-15
@@ -35,8 +35,9 @@ As respostas do usuário substituem as recomendações iniciais conflitantes.
 | D01 | Autosave ligado por padrão, a cada 60 segundos em ciclo enquanto o editor do plano estiver aberto | CONFIRMADA; substitui opt-in/default false e debounce de 3 segundos |
 | D02 | Todo alimento inserido com porção válida deve ser salvo no ciclo, mesmo se outros campos do plano estiverem incompletos | CONFIRMADA; contrato de rascunho parcial necessário, não bloquear pelo formulário clínico inteiro |
 | D03 | Saída antes do primeiro save oferece salvar e sair, continuar editando ou descartar com confirmação | CONFIRMADA; aplicar também a novas alterações ainda não confirmadas após um save anterior, evitando perda posterior |
-| D04 | Botão on/off: proposta de controle “Visível ao paciente”, separado de arquivo/exclusão; OFF também retiraria acesso a versão publicada, ON exigiria versão completa/revisada e confirmação | PENDENTE: usuário pediu o controle; o alcance sobre publicação existente ainda foi perguntado |
-| D05 | Preservar snapshot de edição inteiro, inclusive linhas incompletas marcadas pendentes, sem usá-las em cálculos dependentes ou publicação | PENDENTE: alternativa perguntada é salvar apenas linhas válidas e deixar incompletas na memória |
+| D04 | On/off simples: OFF oculta do paciente e retira dos macros do planejamento, sem arquivar/excluir; reativar visualização não exige edição ou nova revisão do plano | CONFIRMADA; o elemento controlado aguarda D06. Não impor a confirmação extra antes proposta para mero liga/desliga |
+| D05 | Preservar snapshot de edição inteiro, inclusive linhas incompletas marcadas pendentes, sem usá-las em cálculos dependentes ou publicação | CONFIRMADA pelo usuário “atende por enquanto sim” |
+| D06 | Qual elemento recebe o on/off: cada refeição, plano inteiro ou ambos? | PENDENTE; pergunta enviada porque exclusão dos macros e ocultação do plano têm efeitos distintos |
 
 Não gravar só por abrir a tela nem criar plano por timer. O ciclo começa ao
 abrir o editor autorizado com um rascunho; aos 60 segundos verifica alterações e salva
@@ -62,7 +63,7 @@ ligado é regra inicial do editor nesta proposta revisada.
 | G06 — saída tem vários donos | `useProtecaoAlteracoesNaoSalvas`, callback booleano `aoAlterarRascunho` e modal no `prontuario-paciente.tsx` | Registrar capacidade de salvar/estado no pai, preservando pendências de evolução, tarefa, material e anexo; salvar plano não autoriza descartar outro editor |
 | G07 — resultado de rede incerto | PUT retorna versão, cliente lança `ErroApiPlanoAlimentar`; cancelar fetch não desfaz commit | Sem retry cego, beacon ou background sync. Distinguir falha de validação, conflito, acesso revogado e envio sem confirmação |
 | G08 — custo de cada escrita | `substituirFilhos()` recria estrutura e recalcula snapshots no save | Ciclo de 60 segundos com deduplicação; tick sem mudança não escreve. Não salvar de novo só porque cálculo/ID retornado mudou |
-| G09 — on/off não equivale a arquivar | `arquivar()` descarta rascunho e marca plano; portal resolve versão publicada atual e verifica escolhas separadamente | Se D04 incluir retirar visibilidade, estado próprio autorizado e transacional; leitura/ações do portal devem revalidá-lo sem destruir publicação/histórico |
+| G09 — on/off não equivale a arquivar | `arquivar()` descarta rascunho e marca plano; portal resolve versão publicada atual e verifica escolhas separadamente | Estado próprio autorizado e transacional conforme alvo D06; leitura/ações do portal e totais devem revalidá-lo sem destruir publicação/histórico |
 
 ## Contrato técnico proposto
 
@@ -103,7 +104,7 @@ autosave. A política acima é proposta de engenharia, não alteração já apli
 
 ### Edição parcial — novo fundamento obrigatório
 
-Proposta técnica condicionada ao refinamento D05: documento editorial com
+Proposta técnica com preservação integral D05 aprovada: documento editorial com
 schemaVersao, cifrado na própria versão do plano, sem tabela paralela ou cache
 persistente no navegador. Reutilizar o envelope de autorização do plano. Campos
 explicitamente permitidos, limites de tamanho/quantidade, tipos e validação
@@ -131,7 +132,7 @@ que o conteúdo materializado corresponde exatamente à edição mais recente e
 que não há pendências. Salvar e sair pode guardar edição incompleta; isso não
 equivale a “plano pronto”.
 
-### Botão on/off — efeito sobre paciente ainda pendente D04
+### Botão on/off — comportamento confirmado, alvo pendente D06
 
 Não mapear OFF para `arquivar()`, `descartadaEm`, exclusão, nem remover datas,
 hashes ou snapshots de publicação. A versão publicada anterior continua imutável.
@@ -139,19 +140,27 @@ Manter conceitos distintos: salvo em rascunho, revisado, publicado e visível.
 Rotular o controle pela consequência (“Visível ao paciente”), evitando que o
 mesmo switch desative autosave e visibilidade.
 
-Se D04 aprovar ocultar publicação: verificar estado no backend em toda leitura
+Verificar estado no backend em toda leitura
 e escolha do portal, inclusive requisições diretas com IDs conhecidos; não basta
 esconder a seção no frontend. OFF esconde sem republicar conteúdo antigo ou
-selecionar automaticamente outro plano anterior. ON exige confirmação de qual
-versão completa/revisada será entregue; não expõe edição parcial nem liga ao
-salvar. Revalidar carteira, paciente e concorrência com nova publicação/retirada.
+selecionar automaticamente outro plano anterior. Reativar visualização é ação
+direta: não exigir nova edição, revisão clínica ou confirmação extra somente
+para ligar. Isso não publica automaticamente uma edição incompleta nem altera
+o fluxo da primeira publicação por inferência. Revalidar carteira, paciente e
+concorrência com nova publicação/retirada.
 Definir seleção do plano entregue entre múltiplos planos no checkpoint de
 contrato, sem apagar histórico e sem criar fallback oculto.
 
 Retirada regula novas leituras/ações; não promete apagar página já carregada ou
 PDF anteriormente obtido. Evitar polling clínico novo por inferência. Qualquer
 estado novo de visibilidade recebe migration aditiva e testes próprios somente
-depois de D04. Arquivo/exclusão continuam ações separadas.
+depois de D06. Arquivo/exclusão continuam ações separadas.
+
+A exclusão dos macros foi expressamente solicitada. Após D06, fechar qual
+agregação muda (subtotal/totais da versão ou visão de múltiplos planos), incluindo
+itens/substituições e PA04/PA05/portal/print. Não implementar “fora dos macros”
+somente escondendo um número nem recalcular histórico publicado retroativamente.
+O backend continua autoridade sobre inclusão e totais da projeção vigente.
 
 ### Coordenador de edição em memória
 
@@ -257,5 +266,5 @@ Evitar Luna sozinho na etapa de concorrência e transição de contratos. Pesqui
 restrita a R013/R014 e nenhuma biblioteca nova reduzem custo e retrabalho.
 Avisar modelo alvo e pausar antes de toda troca manual.
 
-Próxima ação: incorporar refinamentos D04/D05 e autorização de implementação.
-D01–D03 estão registradas acima; T01–T10 ainda não iniciadas.
+Próxima ação: incorporar D06 e autorização de implementação.
+D01–D05 estão registradas acima; T01–T10 ainda não iniciadas.

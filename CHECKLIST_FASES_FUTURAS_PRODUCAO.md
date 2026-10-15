@@ -4650,7 +4650,8 @@ auditoria estão ordenados na seção 15 de
   `docs/governance/REVISAO_R4_PA05_2026-10-14.md`.
 - [~] PA06 — planejamento e análise de gaps, sem runtime alterado. Autosave
   do rascunho ligado por padrão, ciclos de 60 segundos e edição parcial; D01–D03 confirmadas,
-  D04/D05 sobre on/off e linhas incompletas pendentes. Referências R013/R014 consultadas,
+  D04/D05 confirmadas (on/off simples e linhas incompletas); D06 pendente quanto
+  ao alvo do botão e agregado afetado. Referências R013/R014 consultadas,
   sem dependência nova. Concorrência geral/legados e edição durante request
   exigem contrato e provas antes da UI. Plano/checklist
   `tasks/plan-pos-320-pa06.md`/`tasks/todo-pos-320-pa06.md`.
