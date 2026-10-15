@@ -4,7 +4,7 @@ Atualizado em 2026-10-15.
 
 ## Fase ativa
 
-- **PA06 — planejamento e análise de gaps em andamento**, base `eae74b1e`.
+- **PA06 — planejamento consolidado; implementação não iniciada**, base `eae74b1e`.
   Autosave ligado por padrão, ciclo de 60 segundos no editor profissional. Referências R013
   TanStack/query e R014 react-hook-form consultadas em versões fixadas; uso
   conceitual, sem dependência nova. Gaps: revisão geral de conteúdo/caminhos
@@ -12,8 +12,10 @@ Atualizado em 2026-10-15.
   D01–D03 confirmadas; alimentos válidos salvos sem exigir formulário completo.
   D04–D08 registradas: on/off no plano e em cada refeição; desativados ficam
   ocultos e fora dos totais. Cálculo combinado de planos/refeições selecionados
-  para calorias/macros/micros, preservando linhas incompletas. D09/D10 pendentes:
-  alcance do portal e versões da agregação. Três entregas/PRs sequenciais:
+  para calorias/macros/micros, preservando linhas incompletas. D09/D10 confirmadas:
+  portal com todos os planos ativos publicados; desativados/arquivados/excluídos
+  inacessíveis. Cálculo combinado só da publicação atual salva, sem rascunhos;
+  seleção para cálculo independente da visibilidade. Três entregas/PRs sequenciais:
   autosave parcial → ativação → cálculo combinado/micros.
   Nenhuma implementação iniciada.
   Plano e critérios

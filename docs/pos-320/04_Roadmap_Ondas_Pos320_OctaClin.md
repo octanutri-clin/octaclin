@@ -376,7 +376,9 @@ formulário incompleto e saída protegida. D04/D05 confirmadas: on/off direto
 oculta do paciente e exclui dos macros, sem nova revisão só para reexibir;
 linhas incompletas preservadas. D06–D08: on/off no plano e refeição e cálculo
 combinado dos planos/refeições selecionados, incluindo calorias/macros/micros;
-desativados ficam fora do cálculo. D09/D10 pendentes: portal e versões da soma.
+desativados ficam fora do cálculo. D09/D10 confirmadas: todos os ativos publicados
+no portal, sem arquivados/excluídos/desativados; soma só da publicação atual salva,
+nunca rascunhos/histórico. Seleção de cálculo não filtra o acesso do paciente.
 Ampliação organizada em três PRs por recurso: autosave parcial, ativação e
 cálculo combinado/micros; sem implementar IDR/UL de FOOD06. Só R013/R014 foram
 consultados, com versões/licenças/fontes no plano; sem biblioteca nova prevista.
@@ -402,7 +404,10 @@ Implementação ainda não iniciada. Handoff
 - controle de autosave, se mantido, não se confunde com visibilidade ao paciente;
 - on/off de plano e refeição oculta e exclui de energia/macros/micros, sem
   arquivar/excluir ou exigir nova revisão para reexibir;
-- agregação considera seleção explícita, estado ativo e uma versão por plano;
+- agregação considera seleção explícita, estado ativo e publicação atual salva
+  de cada plano, sem versões históricas/rascunhos;
+- portal dá acesso a todos os planos ativos publicados, respeitando o estado
+  das refeições; nenhuma rota libera desativados/arquivados/excluídos;
 - nunca publica automaticamente;
 - falha não apaga rascunho local em memória;
 - conflito exige ação do usuário.

@@ -4652,7 +4652,10 @@ auditoria estão ordenados na seção 15 de
   do rascunho ligado por padrão, ciclos de 60 segundos e edição parcial; D01–D03 confirmadas,
   D04–D08 registradas: on/off no plano e refeição; calorias/macros/micros de
   vários planos/refeições selecionados, excluindo desativados. Linhas incompletas
-  preservadas. D09/D10 pendentes (portal e versões de agregação). Três entregas
+  preservadas. D09/D10 confirmadas: portal com todos os ativos publicados;
+  excluídos/arquivados/desativados inacessíveis; soma só da publicação atual salva,
+  nunca rascunho/histórico. Planejamento consolidado; autorização de implementação
+  ainda não recebida. Três entregas
   com PR individual: autosave → ativação → cálculo combinado/micros.
   Referências R013/R014 consultadas,
   sem dependência nova. Concorrência geral/legados e edição durante request

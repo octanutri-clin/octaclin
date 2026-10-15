@@ -23,10 +23,12 @@ Autorização desta etapa: planejamento/análise de gaps e referências pertinen
   paciente e excluindo dos totais; sem arquivo/exclusão ou nova revisão apenas
   para reexibir. Seleção explícita de vários planos/refeições do mesmo paciente
   para calorias/macros/micros. Linhas incompletas preservadas e identificadas.
-- D09/D10 pendentes: todos os planos ativos no portal ou um escolhido; escolha
-  rascunho/publicada por plano para agregação. Código atual entrega um plano no
-  portal e não propaga micros completos no cálculo; fontes existentes não
-  autorizam inventar nutriente ausente ou ingestão TBCA.
+- D09/D10 confirmadas: paciente acessa todos os planos ativos publicados,
+  nunca desativados/arquivados/excluídos. Agregação só da publicação atual salva
+  de cada plano selecionado e refeições ativas; sem rascunho ou versão histórica.
+  Seleção para somar não filtra acesso do paciente. Código atual entrega um
+  plano no portal e não propaga micros completos; contratos precisam evoluir,
+  sem inventar nutriente ausente ou permitir ingestão TBCA.
 - Três entregas encadeadas conforme roadmap: autosave parcial, ativação e cálculo
   combinado/micros. Uma PR por recurso com suas provas/CI; base revalidada após
   cada integração. Sem PR documental separada. Não exigir nova revisão para
@@ -36,7 +38,8 @@ Autorização desta etapa: planejamento/análise de gaps e referências pertinen
   provas PostgreSQL/RLS e coordenador testado antes de entregar UI a Luna.
 - Sol6.1 médio: contratos, persistência/concorrência e integração final. Luna alto:
   UI após checkpoint B. Avisar e pausar antes de toda troca manual.
-- Próxima ação: incorporar D09/D10 e autorização de implementação. T01–T10
+- Próxima ação: primeira entrega após autorização de implementação. D01–D10
+  registradas; T01–T10
   ainda não iniciadas. Sem runtime, dependências, migrations, merge ou deploy.
 
 O handoff PA05 abaixo é histórico. Pendências de CI nele foram encerradas pelos

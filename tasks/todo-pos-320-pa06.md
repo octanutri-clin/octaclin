@@ -15,8 +15,9 @@ Base `eae74b1e`, 2026-10-15. Somente T00 executada nesta rodada documental.
   exigir nova revisão para reexibir; D05: preservar linhas incompletas e pendentes.
 - [x] D06: plano inteiro e cada refeição; D07/D08: seleção de vários planos e
   refeições para calorias/macros/micros, excluindo automaticamente os desativados.
-- [ ] Resolver D09 (todos os planos ativos no portal ou um escolhido) e D10
-  (versão de cada plano para cálculo), perguntas objetivas enviadas.
+- [x] D09: todos os planos ativos publicados acessíveis no portal; desativados,
+  arquivados e excluídos inacessíveis. D10: somente versão publicada atual salva
+  no cálculo combinado, sem rascunho ou versão histórica.
 - [ ] Receber autorização de implementação; não iniciar T01–T10 automaticamente.
 
 ## T01 — testes RED e contrato de revisão geral (2–4 arquivos)
@@ -176,6 +177,8 @@ Dependência: T08a e T07. Luna alto só após contrato backend fechado por Sol.
   erro não afirma mudança aceita nem altera publicação só por clicar.
 - [ ] Resumo do console distingue salvo/parcial/revisado/publicado/visível;
   portal respeita retirada, sem expor DTO profissional ou edição incompleta.
+- [ ] Portal lista/pagina todos os planos ativos publicados; detalhe e ações
+  negam desativados/arquivados/excluídos/outro paciente, inclusive IDs conhecidos.
 - [ ] Cobrir teclado/mobile, reload, múltiplos planos e edição de nova versão
   enquanto a publicação anterior está visível.
 
@@ -195,7 +198,8 @@ Dependência: T08a, D07 confirmada e D10. Sol médio.
 - [ ] Terceira fatia: filtro comum plano ativo E selecionado E refeição ativa E
   selecionada; totais/cobertura por nutriente, sem somar substituições ou metas.
 - [ ] Negativos para outro paciente/tenant/carteira, versão duplicada, seleção
-  alterada, catálogo inválido, dado ausente, unidades incompatíveis e plano OFF.
+  alterada, catálogo inválido, dado ausente, unidades incompatíveis e plano OFF;
+  rascunhos e versões históricas nunca alimentam o cálculo combinado.
 
 Aceite: prova sintética de todas as16 combinações dos quatro booleanos de inclusão,
 além de vazio, soma multipágina e ausência por nutriente. Resultado independente
@@ -207,8 +211,9 @@ barreiras de cálculo↔ativação/transferência/save e regressões PA04/PA05.
 
 Dependência: T08c e T07. Luna alto após contrato de cálculo fechado por Sol.
 
-- [ ] Seleção explícita de planos e refeições; uma versão por plano segundo D10,
-  estado mantido entre páginas, só em memória e limpo ao trocar paciente/sessão.
+- [ ] Seleção explícita de planos ativos publicados e refeições; exibir número/data
+  da publicação atual de cada plano, sem seletor de rascunho. Seleção entre páginas
+  só em memória, limpa ao trocar paciente/sessão e independente do acesso no portal.
 - [ ] Mostrar “Desativado — fora do cálculo” sem apagar seleção; plano OFF
   prevalece, reativação respeita estado de cada refeição. Erro não afirma ACK.
 - [ ] Tabela acessível de energia/macros/micros com unidade, fonte/cobertura e
@@ -219,7 +224,8 @@ Dependência: T08c e T07. Luna alto após contrato de cálculo fechado por Sol.
 Aceite: cálculo por seleção é planejamento, não consumo nem soma de metas;
 keyboard/mobile/desktop, flags e arredondamento coerentes com backend.
 Verificação: BFF positivo/negativo e Playwright da seleção e múltiplos planos,
-incluindo páginas, OFF/ON e rascunho parcial com nutrientes faltantes.
+incluindo páginas, OFF/ON, mudança de publicação e versões antigas sem micros.
+Rascunho parcial deve ficar fora da soma, mesmo se tiver valores calculáveis.
 
 ### Checkpoint C — integração Sol
 
@@ -260,7 +266,8 @@ Checks de PA05 ou da primeira entrega não provam a próxima entrega PA06.
 ## Resultado desta rodada documental
 
 - PASS: leitura Git/PR/checks e contratos; referências R013/R014 verificadas.
-- PENDENTE: D09/D10 e autorização de implementação; D01–D08 registradas nesta sessão.
+- PASS: decisões de produto D01–D10 registradas nesta sessão.
+- PENDENTE: autorização de implementação; nenhum código ou teste de runtime alterado.
 - SKIPPED: testes de implementação, PostgreSQL, lint/build/Playwright de PA06,
   revisão R4 de código PA06 e CI PA06 — runtime não alterado.
 - NA: prova de produção nesta análise; nenhum banco externo foi acessado.
