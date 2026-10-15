@@ -19,16 +19,24 @@ Autorização desta etapa: planejamento/análise de gaps e referências pertinen
   saída oferece salvar e sair/continuar/descartar com confirmação. Plano anterior
   de opt-in e debounce de 3 segundos substituído. Novo fundamento: snapshot editorial parcial
   cifrado com cálculo/completude vinculados à revisão e sem publicação automática.
-- D04/D05 confirmadas: liga/desliga simples oculta do paciente e exclui dos
-  macros, sem arquivo/exclusão ou nova revisão apenas para reexibir; linhas
-  incompletas preservadas e identificadas. D06 pendente: refeição, plano ou ambos?
-  Não presumir o alvo; pergunta enviada antes de definir cálculo/projeções.
+- D04–D08 registradas: on/off no plano inteiro e em cada refeição, ocultando do
+  paciente e excluindo dos totais; sem arquivo/exclusão ou nova revisão apenas
+  para reexibir. Seleção explícita de vários planos/refeições do mesmo paciente
+  para calorias/macros/micros. Linhas incompletas preservadas e identificadas.
+- D09/D10 pendentes: todos os planos ativos no portal ou um escolhido; escolha
+  rascunho/publicada por plano para agregação. Código atual entrega um plano no
+  portal e não propaga micros completos no cálculo; fontes existentes não
+  autorizam inventar nutriente ausente ou ingestão TBCA.
+- Três entregas encadeadas conforme roadmap: autosave parcial, ativação e cálculo
+  combinado/micros. Uma PR por recurso com suas provas/CI; base revalidada após
+  cada integração. Sem PR documental separada. Não exigir nova revisão para
+  toggle; backend preserva histórico e aplica inclusão/totais por revisão atual.
 - Gaps críticos: revisão PA05 não cobre writer legado de conteúdo; salvar hoje
   recarrega e pode apagar edição posterior. Fechar revisão geral/adesão segura,
   provas PostgreSQL/RLS e coordenador testado antes de entregar UI a Luna.
 - Sol6.1 médio: contratos, persistência/concorrência e integração final. Luna alto:
   UI após checkpoint B. Avisar e pausar antes de toda troca manual.
-- Próxima ação: incorporar D06 e autorização de implementação. T01–T10
+- Próxima ação: incorporar D09/D10 e autorização de implementação. T01–T10
   ainda não iniciadas. Sem runtime, dependências, migrations, merge ou deploy.
 
 O handoff PA05 abaixo é histórico. Pendências de CI nele foram encerradas pelos

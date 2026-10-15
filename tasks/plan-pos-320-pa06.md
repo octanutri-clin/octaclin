@@ -1,7 +1,8 @@
-# PA06 — autosave de 60 segundos e rascunho do plano alimentar
+# PA06 — autosave, ativação e cálculo combinado do planejamento alimentar
 
 Planejamento de 2026-10-15. Autorização atual: análise de gaps e documentação;
-implementação ainda não iniciada. Uma PR futura reúne plano e implementação.
+implementação ainda não iniciada. Escopo ampliado pelo proprietário; seguir uma
+PR por recurso, conforme o roadmap, em três entregas encadeadas descritas abaixo.
 Checklist: [T00–T10](todo-pos-320-pa06.md).
 
 ## Base, continuidade e limites
@@ -22,8 +23,9 @@ Checklist: [T00–T10](todo-pos-320-pa06.md).
   mas não introduz BroadcastChannel, colaboração ou trava distribuída.
 - Escopo confirmado: editor profissional, autosave habilitado por padrão, ciclo
   de 60 segundos e persistência de alimentos com porções válidas sem exigir formulário
-  clínico completo. Revisão/publicação continuam explícitas. A extensão on/off
-  de visibilidade/exclusão de macros aguarda o alvo D06, abaixo. Sem IA, anexos, recuperação
+  clínico completo. Revisão/publicação continuam explícitas. On/off de plano e
+  refeição e cálculo combinado foram solicitados; entrega no portal e versão
+  para agregação aguardam D09/D10. Sem IA, anexos, recuperação
   offline ou ingestão TBCA.
 
 ## Decisões de produto — respostas e refinamentos de 2026-10-15
@@ -35,9 +37,13 @@ As respostas do usuário substituem as recomendações iniciais conflitantes.
 | D01 | Autosave ligado por padrão, a cada 60 segundos em ciclo enquanto o editor do plano estiver aberto | CONFIRMADA; substitui opt-in/default false e debounce de 3 segundos |
 | D02 | Todo alimento inserido com porção válida deve ser salvo no ciclo, mesmo se outros campos do plano estiverem incompletos | CONFIRMADA; contrato de rascunho parcial necessário, não bloquear pelo formulário clínico inteiro |
 | D03 | Saída antes do primeiro save oferece salvar e sair, continuar editando ou descartar com confirmação | CONFIRMADA; aplicar também a novas alterações ainda não confirmadas após um save anterior, evitando perda posterior |
-| D04 | On/off simples: OFF oculta do paciente e retira dos macros do planejamento, sem arquivar/excluir; reativar visualização não exige edição ou nova revisão do plano | CONFIRMADA; o elemento controlado aguarda D06. Não impor a confirmação extra antes proposta para mero liga/desliga |
+| D04 | On/off simples: OFF oculta do paciente e retira dos macros do planejamento, sem arquivar/excluir; reativar visualização não exige edição ou nova revisão do plano | CONFIRMADA. Não impor a confirmação extra antes proposta para mero liga/desliga |
 | D05 | Preservar snapshot de edição inteiro, inclusive linhas incompletas marcadas pendentes, sem usá-las em cálculos dependentes ou publicação | CONFIRMADA pelo usuário “atende por enquanto sim” |
-| D06 | Qual elemento recebe o on/off: cada refeição, plano inteiro ou ambos? | PENDENTE; pergunta enviada porque exclusão dos macros e ocultação do plano têm efeitos distintos |
+| D06 | Botões no plano inteiro e em cada refeição; OFF do plano prevalece sobre o estado das refeições | CONFIRMADA; ambos os níveis solicitados |
+| D07 | Profissional pode selecionar vários planos do mesmo paciente para calcular calorias, macronutrientes e micronutrientes; só planos/refeições ativos e selecionados participam | CONFIRMADA; seleção de cálculo é distinta de ativação/visibilidade e não indica consumo real |
+| D08 | Desativar plano ou refeição selecionados retira sua contribuição do cálculo vigente e oculta do paciente; não apaga conteúdo ou seleção | Efeito de exclusão CONFIRMADO; preservar seleção e estados filhos é solução técnica proposta, com indicação visual de exclusão |
+| D09 | Portal mostra todos os planos ativos publicados, ou somente um escolhido? | PENDENTE; hoje a API entrega um único plano, pergunta objetiva enviada |
+| D10 | Qual versão de cada plano entra no cálculo combinado? Proposta: escolha explícita entre rascunho/publicada, uma versão por plano | PENDENTE; pergunta enviada. Não somar versões do mesmo plano inadvertidamente |
 
 Não gravar só por abrir a tela nem criar plano por timer. O ciclo começa ao
 abrir o editor autorizado com um rascunho; aos 60 segundos verifica alterações e salva
@@ -64,6 +70,10 @@ ligado é regra inicial do editor nesta proposta revisada.
 | G07 — resultado de rede incerto | PUT retorna versão, cliente lança `ErroApiPlanoAlimentar`; cancelar fetch não desfaz commit | Sem retry cego, beacon ou background sync. Distinguir falha de validação, conflito, acesso revogado e envio sem confirmação |
 | G08 — custo de cada escrita | `substituirFilhos()` recria estrutura e recalcula snapshots no save | Ciclo de 60 segundos com deduplicação; tick sem mudança não escreve. Não salvar de novo só porque cálculo/ID retornado mudou |
 | G09 — on/off não equivale a arquivar | `arquivar()` descarta rascunho e marca plano; portal resolve versão publicada atual e verifica escolhas separadamente | Estado próprio autorizado e transacional conforme alvo D06; leitura/ações do portal e totais devem revalidá-lo sem destruir publicação/histórico |
+| G10 — agregação entre planos não existe | Editor e PA04 calculam/projetam por versão, sem seleção de múltiplos planos | Projeção de agregação no backend, seleção explícita de planos/refeições e revisão de cálculo; nenhum fetch limitado à página pode fingir cobertura completa |
+| G11 — micros não percorrem o contrato do plano | `AlimentoComposicaoOrm.micronutrientes` é Record, mas `NutrientesPor100g`/cálculo só propagam energia/P/C/G/fibras/sódio; resumo PA04 expõe apenas macros | Ampliar whitelist de nutrientes/unidades e snapshots; não assumir que metadado arbitrário do catálogo é quantidade calculável |
+| G12 — portal singular | `ServicoPortalPaciente.obterPlanoAlimentarPublicado()` escolhe a versão publicada mais recente e retorna `planoAlimentar` único | D09 define migração compatível da projeção e UI; validar escolhas/leituras pelo mesmo estado ativo, sem fallback silencioso |
+| G13 — identidade de refeição é recriada | `substituirFilhos()` apaga e recria refeições/itens do rascunho | Identidade lógica estável e mapeamento de versão são pré-requisito para estado por refeição não sumir ao autosalvar, clonar ou publicar |
 
 ## Contrato técnico proposto
 
@@ -126,13 +136,17 @@ defasados e não podem liberar revisar/publicar. O resumo PA04 deve informar
 rascunho pendente/resultado indisponível, sem usar cálculo antigo como atual.
 Campos editoriais crus nunca chegam à projeção paciente/PDF.
 
+Persistência do autosave e ações on/off têm efeitos diferentes: OFF de plano
+não bloqueia sua edição ou salvamento no console; apenas o retira da entrega e
+dos cálculos vigentes. Publicar/editar também não pode religá-lo implicitamente.
+
 Para legado sem documento editorial, derivar estado inicial da versão salva em
 memória; não regravar histórico ao ler. Revisão/publicação conferem no backend
 que o conteúdo materializado corresponde exatamente à edição mais recente e
 que não há pendências. Salvar e sair pode guardar edição incompleta; isso não
 equivale a “plano pronto”.
 
-### Botão on/off — comportamento confirmado, alvo pendente D06
+### Botões on/off — plano e refeição confirmados
 
 Não mapear OFF para `arquivar()`, `descartadaEm`, exclusão, nem remover datas,
 hashes ou snapshots de publicação. A versão publicada anterior continua imutável.
@@ -154,13 +168,85 @@ contrato, sem apagar histórico e sem criar fallback oculto.
 Retirada regula novas leituras/ações; não promete apagar página já carregada ou
 PDF anteriormente obtido. Evitar polling clínico novo por inferência. Qualquer
 estado novo de visibilidade recebe migration aditiva e testes próprios somente
-depois de D06. Arquivo/exclusão continuam ações separadas.
+com alvo plano/refeição. Arquivo/exclusão continuam ações separadas.
 
-A exclusão dos macros foi expressamente solicitada. Após D06, fechar qual
-agregação muda (subtotal/totais da versão ou visão de múltiplos planos), incluindo
-itens/substituições e PA04/PA05/portal/print. Não implementar “fora dos macros”
-somente escondendo um número nem recalcular histórico publicado retroativamente.
-O backend continua autoridade sobre inclusão e totais da projeção vigente.
+Compatibilidade de ativação exige ensaio com legado: a API antiga mostra uma
+publicação por paciente. Se D09 aprovar portal plural, não expor automaticamente
+todos os planos históricos não arquivados por um default true/backfill genérico.
+Preservar a entrega anterior e exigir ativação explícita para planos adicionais;
+provar isso em fixtures com vários planos/versões. Definir defaults de plano e
+refeição no checkpoint sem confundir “ativo para planejamento” com “publicado”.
+
+A ação de ativar/desativar persiste de imediato e responde com ACK/revisão; não
+espera o timer de60s. Falha não é exibida como mudança concluída. O autosave não
+pode reenviar um estado antigo e religar o que acabou de ser desativado.
+Estado operacional precisa de revisão própria/ordem transacional e histórico
+reproduzível, sem exigir nova revisão clínica nem reescrever hash/snapshot
+publicado. Compartilhar locks/autorizações do plano; uma projeção nunca mistura
+conteúdo e estados de instantes diferentes.
+
+Plano OFF exclui todas as suas refeições; ao voltar ON, respeitar o estado
+individual delas, sem religar todas por cascata. Preservar seleção de cálculo
+com indicação “Desativado — fora do cálculo”, em vez de apagá-la. Refeição
+precisa de identidade lógica estável dentro do plano, ligada explicitamente a
+suas versões. Recriar filhos, clonar versão, reordenar ou autosalvar não pode
+perder estado/seleção. Copiar para outro plano gera identidade própria, sem
+vínculo operacional com origem ou outro paciente. Fechar contrato de herança no
+checkpoint backend, evitando ressuscitar refeição desativada.
+
+Não implementar “fora dos macros” somente escondendo um número nem recalcular
+histórico publicado retroativamente. Totais vigentes filtrados e snapshot
+histórico são projeções distintas, identificadas por conteúdo e revisão de
+ativação. Aplicar a mesma seleção de refeições aos nutrientes do portal/print e
+resumo atual; histórico permanece reproduzível. Backend é autoridade sobre
+inclusão e totais, inclusive escolhas de substituição e acessos diretos.
+
+### Cálculo combinado — novo escopo confirmado D07
+
+Definição de inclusão: plano selecionado E plano ativo E refeição selecionada E
+refeição ativa. Somar os alimentos principais de cada refeição incluída; não
+somar alternativas como alimentos adicionais, nem somar metas/GET de diferentes
+planos. Não rotular a soma como adesão ou consumo real. Mesmo paciente/tenant,
+carteira revalidada em cada plano, inclusive os que não estão na página visível.
+
+UI proposta: selecionar planos e, dentro deles, refeições. Uma versão por plano
+conforme D10. Selecionar plano começa com suas refeições incluídas, permitindo
+desmarcação individual; OFF não equivale a desmarcar. Não incluir novo plano
+automaticamente por ter sido criado ou ativado. Seleção local do painel em
+memória nesta proposta; persistência entre acessos não foi solicitada.
+
+Projeção específica no domínio existente, por exemplo `POST .../planos-alimentares/calculo-combinado`,
+recebe IDs/versões/revisões e seleção, nunca nutrientes/totais confiados do
+cliente. Corpo limitado, IDs únicos e cardinalidade justificada; sem PHI em
+query string. Consultas em lote e consistência transacional com ativação,
+autosalvamento e transferência. Resposta mínima traz fontes/versões, cobertura e
+totais por nutriente; impedir duplicidade de plano/refeição/item. Fonte de
+rascunho parcial fica explicitamente identificada e nunca é promovida a versão
+publicada. Conflito/revogação invalidam a projeção antiga, sem mostrar soma
+parcial como se todos os planos ainda estivessem acessíveis.
+
+Não deduplicar pelo ID do alimento do catálogo: o mesmo alimento em duas
+refeições legítimas contribui duas vezes. A duplicidade a recusar é repetir a
+mesma contribuição selecionada. Rotular “Total dos selecionados”, sem inferir
+média diária ou frequência de consumo entre planos alternativos.
+
+Micronutrientes: acrescentar somente campos com significado e unidade
+verificados nas fontes atuais autorizadas TACO/USDA/IBGE, com whitelist
+versionada e snapshots de composição reproduzíveis. Não expor Record arbitrário,
+tratar dado ausente como zero, converter unidades sem regra ou recapturar
+catálogo atual para recalcular snapshot antigo. Expandir contrato manual para
+campos permitidos sem inventar dados. Fibras/sódio continuam identificados
+corretamente; ausência de vitaminas/minerais nos snapshots legados fica visível.
+Valor0 conhecido é distinto de ausente/traço/não analisado. Arredondar para
+exibição após agregação, com tolerância e convenção testadas.
+
+Cada nutriente tem cobertura própria: faltando contribuição de um item
+incluído, total completo fica indisponível ou explicitamente parcial, com
+quantidade conhecida identificada; nutrientes completos continuam disponíveis.
+Sem seleção/sem elementos ativos é estado próprio, não falsa dieta de0kcal.
+OFF de um item incompleto pode tornar outro total completo; reativação restaura
+a lacuna. Nenhuma IDR/DRI/UL, diagnóstico ou prescrição automática é adicionada;
+FOOD06 mantém suas referências e gates próprios. Isso não autoriza TBCA.
 
 ### Coordenador de edição em memória
 
@@ -254,17 +340,42 @@ inventário; banco real/RLS/concorrência; BFF positivo/negativo; Playwright
 desktop/mobile, teclado/Axe, PA02–PA05 e FND02; lint/typecheck/build, secrets,
 governança, revisão R4 cruzada e CI do HEAD. Comandos exatos no checklist.
 
-## Modelos e próxima ação
+## Entregas, modelos e próxima ação
+
+O roadmap exige PR individual por recurso. A ampliação não deve formar uma PR
+única de autosave + persistência parcial + portal múltiplo + novos nutrientes.
+Cada entrega inclui seu plano/evidências e segue os mesmos gates R4 aplicáveis:
+
+1. **Autosave e rascunho parcial:** T01–T08, excluindo as fatias de ativação e
+   agregação. Gate T09/T10 desta entrega exige compatibilidade com PA02–PA05,
+   sem mudar visibilidade ou introduzir micronutrientes novos.
+2. **Ativação do plano e das refeições:** T08a/T08b, após integrar o fundamento
+   anterior e confirmar D09. Identidade lógica de refeição e totais filtrados
+   entram aqui; revisão própria, banco e CI/PR específicos T09/T10.
+3. **Cálculo combinado e micronutrientes:** T08c/T08d, após integração anterior e
+   D10. Acrescenta whitelist/snapshots de micros e seleção de planos/refeições,
+   com testes de cobertura, unidades e totalizadores antes da UI.
+
+T09/T10 são aplicados a cada entrega, não apenas ao fim da última. Atualizar
+base/branch após cada integração; nunca misturar código não aprovado em PR
+anterior. Não criar PR documental separada. D09/D10 bloqueiam os contratos
+correspondentes, não o trabalho independente de autosave quando autorizado.
+
+Rollback merece uma condição adicional: backend anterior aos controles de
+ativação pode ignorar OFF e voltar a expor conteúdo. Não liberar reversão para
+esse backend; rollback deve preservar enforcement compatível de ativação e
+revisões. Conservação do schema, por si só, não comprova rollback seguro.
 
 - **GPT-6.1 Sol médio:** planejamento, revisão geral/compatibilidade legada,
-  migration, serviço, autorização, banco real e contrato do coordenador.
+  migrations, serviço, autorização, banco real, coordenador, ativação e contrato
+  de nutrientes/agregação.
 - **GPT-6 Luna alto:** depois de checkpoint backend e motor testado, interface
   de estados/controles e integração visual com tarefas pequenas e DTOs fechados.
-- **GPT-6.1 Sol médio:** integração, segurança, regressões e PR única final.
+- **GPT-6.1 Sol médio:** integração, segurança, regressões e PR final de cada entrega.
 
 Evitar Luna sozinho na etapa de concorrência e transição de contratos. Pesquisa
 restrita a R013/R014 e nenhuma biblioteca nova reduzem custo e retrabalho.
 Avisar modelo alvo e pausar antes de toda troca manual.
 
-Próxima ação: incorporar D06 e autorização de implementação.
-D01–D05 estão registradas acima; T01–T10 ainda não iniciadas.
+Próxima ação: incorporar D09/D10 e autorização de implementação.
+D01–D08 estão registradas acima; T01–T10 e suas fatias ainda não iniciadas.

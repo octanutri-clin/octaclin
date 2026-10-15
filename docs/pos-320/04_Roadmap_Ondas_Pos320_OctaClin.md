@@ -374,7 +374,11 @@ segura de legados e preservação de edições feitas durante request. D01–D03
 confirmadas: ligado por padrão, ciclo de 60 segundos, alimentos válidos salvos mesmo com
 formulário incompleto e saída protegida. D04/D05 confirmadas: on/off direto
 oculta do paciente e exclui dos macros, sem nova revisão só para reexibir;
-linhas incompletas preservadas. D06 pendente: alvo do controle. Só R013/R014 foram
+linhas incompletas preservadas. D06–D08: on/off no plano e refeição e cálculo
+combinado dos planos/refeições selecionados, incluindo calorias/macros/micros;
+desativados ficam fora do cálculo. D09/D10 pendentes: portal e versões da soma.
+Ampliação organizada em três PRs por recurso: autosave parcial, ativação e
+cálculo combinado/micros; sem implementar IDR/UL de FOOD06. Só R013/R014 foram
 consultados, com versões/licenças/fontes no plano; sem biblioteca nova prevista.
 Implementação ainda não iniciada. Handoff
 [plan-pos-320-pa06.md](../../tasks/plan-pos-320-pa06.md) e checklist
@@ -396,8 +400,9 @@ Implementação ainda não iniciada. Handoff
 
 **Aceite:**
 - controle de autosave, se mantido, não se confunde com visibilidade ao paciente;
-- on/off de visibilidade/exclusão dos macros depende do alvo D06 e não significa
+- on/off de plano e refeição oculta e exclui de energia/macros/micros, sem
   arquivar/excluir ou exigir nova revisão para reexibir;
+- agregação considera seleção explícita, estado ativo e uma versão por plano;
 - nunca publica automaticamente;
 - falha não apaga rascunho local em memória;
 - conflito exige ação do usuário.

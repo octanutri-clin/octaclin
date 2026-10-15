@@ -1,4 +1,4 @@
-# PA06 — checklist: autosave de 60 segundos e edição parcial
+# PA06 — checklist: autosave, ativação e cálculo combinado
 
 Planejamento: [plan-pos-320-pa06.md](plan-pos-320-pa06.md).
 Base `eae74b1e`, 2026-10-15. Somente T00 executada nesta rodada documental.
@@ -13,7 +13,10 @@ Base `eae74b1e`, 2026-10-15. Somente T00 executada nesta rodada documental.
   com formulário incompleto; D03: salvar e sair/continuar/descartar confirmados.
 - [x] D04: on/off simples oculta e exclui dos macros, sem arquivar/excluir ou
   exigir nova revisão para reexibir; D05: preservar linhas incompletas e pendentes.
-- [ ] Resolver D06: alvo é refeição, plano inteiro ou ambos? Pergunta enviada.
+- [x] D06: plano inteiro e cada refeição; D07/D08: seleção de vários planos e
+  refeições para calorias/macros/micros, excluindo automaticamente os desativados.
+- [ ] Resolver D09 (todos os planos ativos no portal ou um escolhido) e D10
+  (versão de cada plano para cálculo), perguntas objetivas enviadas.
 - [ ] Receber autorização de implementação; não iniciar T01–T10 automaticamente.
 
 ## T01 — testes RED e contrato de revisão geral (2–4 arquivos)
@@ -147,11 +150,13 @@ em Playwright; `pnpm --dir octaclin-web test:proteger-alteracoes-nao-salvas`.
 
 ## T08a — visibilidade on/off, contrato/backend (3–5 arquivos por fatia)
 
-Dependência: D04/D06 e T04. Sol médio. Não iniciar alcance ainda não confirmado.
+Dependência: D04/D06 confirmadas, D09 e T04. Sol médio.
 
-- [ ] Definir OFF/ON sem arquivar, excluir ou reescrever publicação; impedir
-  fallback automático para outro plano e entrega de edição incompleta.
-- [ ] Adicionar estado aditivo, transação/CAS conforme alvo D06,
+- [ ] OFF/ON no plano e refeição sem arquivar, excluir ou reescrever publicação;
+  impedir fallback automático para outro plano e entrega de edição incompleta.
+- [ ] Identidade lógica estável das refeições através de save/clone/ordenação;
+  cópia para outro plano não compartilha estado operacional da origem.
+- [ ] Estado aditivo com revisão operacional/histórico e transação/CAS,
   autorização e leitura/ações do portal protegidas, incluindo IDs conhecidos.
 - [ ] Provar concorrência OFF/publicação/escolha em PostgreSQL e RLS; estado
   de visibilidade não é o switch de autosave nem aprovação clínica automática.
@@ -159,6 +164,8 @@ Dependência: D04/D06 e T04. Sol médio. Não iniciar alcance ainda não confirm
 Aceite: desligar preserva dados, exclui dos macros vigentes e impede novas
 leituras/ações afetadas; reexibir não exige edição/nova revisão ou confirmação
 extra. Histórico/PDF já obtido não são apagados; primeira publicação mantém contrato.
+Plano OFF prevalece sobre as refeições, sem alterar seus estados individuais;
+autosave antigo não religa plano/refeição; macros/micros filtrados pelo backend.
 Verificação: negativos de portal, carteira, transferência, replay e concorrência.
 
 ## T08b — controle on/off e projeções (2–4 arquivos)
@@ -175,6 +182,45 @@ Dependência: T08a e T07. Luna alto só após contrato backend fechado por Sol.
 Aceite: todo estado exibido corresponde ao ACK autorizado do backend; nenhuma
 publicação/retirada disparada pelo timer. Verificação: Playwright e BFF alvo.
 
+## T08c — nutrientes e agregação entre planos, backend (fatias de3–5 arquivos)
+
+Dependência: T08a, D07 confirmada e D10. Sol médio.
+
+- [ ] Primeira fatia: whitelist versionada de micronutrientes/unidades verificados,
+  snapshot por composição e contrato manual. Legado incompleto não vira zero nem
+  consulta catálogo atual para fingir cálculo histórico. Sem IDR/UL ou TBCA.
+- [ ] Segunda fatia: projeção de cálculo combinado com planos/refeições/versões
+  selecionados do mesmo paciente, autorização em lote e consistência de revisão;
+  não confiar em valores do cliente nem limitar à página exibida.
+- [ ] Terceira fatia: filtro comum plano ativo E selecionado E refeição ativa E
+  selecionada; totais/cobertura por nutriente, sem somar substituições ou metas.
+- [ ] Negativos para outro paciente/tenant/carteira, versão duplicada, seleção
+  alterada, catálogo inválido, dado ausente, unidades incompatíveis e plano OFF.
+
+Aceite: prova sintética de todas as16 combinações dos quatro booleanos de inclusão,
+além de vazio, soma multipágina e ausência por nutriente. Resultado independente
+de ordem, sem dupla contagem; limites de cardinalidade definidos e testados.
+Verificação: unitários de domínio/snapshot/DTO e integração PostgreSQL/RLS com
+barreiras de cálculo↔ativação/transferência/save e regressões PA04/PA05.
+
+## T08d — seleção combinada e nutrientes, console/BFF (fatias de2–4 arquivos)
+
+Dependência: T08c e T07. Luna alto após contrato de cálculo fechado por Sol.
+
+- [ ] Seleção explícita de planos e refeições; uma versão por plano segundo D10,
+  estado mantido entre páginas, só em memória e limpo ao trocar paciente/sessão.
+- [ ] Mostrar “Desativado — fora do cálculo” sem apagar seleção; plano OFF
+  prevalece, reativação respeita estado de cada refeição. Erro não afirma ACK.
+- [ ] Tabela acessível de energia/macros/micros com unidade, fonte/cobertura e
+  estado parcial, sem zeros inventados, percentuais DRI ou interpretação automática.
+- [ ] Request atrasado, seleção alterada, acesso revogado e toggle não exibem
+  totais obsoletos como atuais; portal segue D09 e não recebe seleção do console.
+
+Aceite: cálculo por seleção é planejamento, não consumo nem soma de metas;
+keyboard/mobile/desktop, flags e arredondamento coerentes com backend.
+Verificação: BFF positivo/negativo e Playwright da seleção e múltiplos planos,
+incluindo páginas, OFF/ON e rascunho parcial com nutrientes faltantes.
+
 ### Checkpoint C — integração Sol
 
 - [ ] Voltar para GPT-6.1 Sol médio com aviso e pausa manual.
@@ -182,7 +228,8 @@ publicação/retirada disparada pelo timer. Verificação: Playwright e BFF alvo
 
 ## T09 — regressão e revisão R4 (3–5 arquivos por rodada de correção)
 
-Dependência: checkpoint C e T08a/T08b conforme D06. Sol médio.
+Dependência: checkpoint C da entrega atual e suas fatias, conforme sequência
+de três PRs no plano. Sol médio; repetir estes gates em cada entrega.
 
 - [ ] Backend/Web lint, typecheck/build e testes proporcionais; banco real integral;
   revisão cruzada estática R4 com limites/autoria e correções em RED/GREEN.
@@ -197,22 +244,23 @@ PA06 + `pa02-copia-refeicoes.spec.mjs`, `fase-320-pa05-apresentacao.spec.mjs`,
 `portal-paciente.spec.mjs` e regressões PA04/BFF. Usar Node22/pnpm11.25 declarados;
 um servidor Next por worktree; não reaproveitar órfão de outro teste.
 
-## T10 — PR única e gates do HEAD
+## T10 — PR individual por entrega e gates do HEAD
 
 Dependência: T09. Sol médio.
 
-- [ ] Uma PR com código/plano/evidências; não criar PR documental separada.
+- [ ] Uma PR por recurso: autosave parcial → ativação → cálculo combinado.
+  Cada uma inclui código/plano/evidências; não criar PR documental separada.
 - [ ] `git diff --check`, `pnpm security:secrets`, governança, scanners e CI
   Backend/Web/Demo/PR Gate do HEAD final PASS; SKIPPED justificados.
 - [ ] Nenhum merge/deploy/migration externa/ativação sem autorização e alvo.
 
 Aceite: relatório de segurança, limitações e sequência operacional explícitos.
-Checks de PA05 não provam implementação PA06.
+Checks de PA05 ou da primeira entrega não provam a próxima entrega PA06.
 
 ## Resultado desta rodada documental
 
 - PASS: leitura Git/PR/checks e contratos; referências R013/R014 verificadas.
-- PENDENTE: D06 e autorização de implementação; D01–D05 confirmadas nesta sessão.
+- PENDENTE: D09/D10 e autorização de implementação; D01–D08 registradas nesta sessão.
 - SKIPPED: testes de implementação, PostgreSQL, lint/build/Playwright de PA06,
   revisão R4 de código PA06 e CI PA06 — runtime não alterado.
 - NA: prova de produção nesta análise; nenhum banco externo foi acessado.
