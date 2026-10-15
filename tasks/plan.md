@@ -1,4 +1,118 @@
-# Handoff atual — PA05: integração Sol e T09 em execução
+# Handoff atual — PA06: primeira entrega local validada, PR Draft/CI
+
+## Estado do trabalho
+
+Worktree `/workspace/octaclin/.worktrees/pos320-pa06-planejamento`, branch
+`feat/pos320-pa06-autosave`, base `eae74b1e` (#419). T01–T06 backend/núcleo e
+T07–T08 interface agora implementados localmente. A UI integra CAS e coordenador
+de 60 s, preserva a edição local durante ACK, usa a materialização canônica para
+totais após salvar, distingue conflito/incerteza/acesso negado e oferece
+“Salvar e sair” sem flush no cleanup. Sem dependência nova, migration externa,
+merge, deploy ou ativação. O escopo on/off/múltiplos planos/micronutrientes segue
+nas entregas posteriores.
+
+Plano: `tasks/plan-pos-320-pa06.md`; checklist: `tasks/todo-pos-320-pa06.md`.
+Evidências: `docs/governance/EVIDENCIAS_PA06_NUCLEO_2026-10-15.md`.
+
+## Implementação T01–T08
+
+- Migration1073 aditiva na versão existente: contador geral, adesão protegida,
+  snapshot editorial cifrado e revisão materializada.1072 não alterada. Down recusa
+  apagar dados; rollback deve preservar backend compatível com proteção CAS.
+- PUT `/pacientes/:id/planos-alimentares/:planoId/rascunho/edicao` com
+  `{rascunhoIdEsperado, rascunhoRevisaoEsperada, documento}`. Geração/revisão
+  obrigatórias; documento estruturalmente válido pode ter campos clínicos pendentes.
+  Cap96KiB no documento; HTTP100KiB já existente. DTOs explícitos, sem PHI em log.
+- Toda escrita/revisão/publicação avança contador geral; após adesão, clientes
+  antigos sem CAS recebem409. Revisão PA05 de preferências preserva semântica própria.
+- Retorno profissional de rascunho: `rascunhoRevisao`, `edicaoEstado` e
+  `documentoEdicao`; quatro estados: legado,pendente,materializada,indisponivel.
+  Pendência/ilegibilidade suprime materialização antiga e bloqueia revisão/publicação/
+  prévia; publicada depende somente da materialização imutável, sem documento cru.
+- Observações vazias gravam NULL real. GET de detalhe/rascunho/versão protege
+  composição dos filhos com locks compartilhados de escopo; writers usam exclusivos.
+- `lib/coordenador-edicao-plano.ts`:60s fixos, um request, última solicitação
+  pendente; ACK confirma somente assinatura enviada sem substituir documento local.
+  Manual e timer usam mesma fila. Off/IME/cópia suspendem; erros pausam sem retry.
+  Cleanup encerra timer/aborta fetch, sem prometer desfazer commit no servidor.
+- BFF de edição e API cliente prontos; revisão/publicação encaminham CAS.
+  `lib/edicao-plano.ts` contém o contrato editorial de transporte, sem import do
+  backend/Buffer no cliente.
+- UI implementada no editor profissional e no guard de saída do prontuário. O
+  último ACK confirmado é mostrado; totais usam a materialização retornada pelo
+  servidor e não sobrescrevem valores/foco/caret/IME. Conflito/resultado incerto
+  mantém a tela e exige reconciliação explícita. Nenhuma alteração de portal.
+
+## Próxima ação e modelo — integração Sol autorizada
+
+Troca manual para GPT-6.1 Sol médio já realizada. Integração em andamento:
+revisão cruzada estática da UI, correções RED/GREEN, regressões, builds/gates e
+preparação da PR Draft. Não solicitar novamente troca nem inferir CI verde.
+Percentuais têm texto editorial cru opcional, cifrado no documento v1 e separado
+da conversão para basis points; documentos anteriores continuam compatíveis.
+Sem arredondamento para tornar prescrição inválida válida.
+
+### T07/T08 — contrato de implementação executado por Luna
+
+1. Ler Web AGENTS e guia Next instalado antes de editar. Reutilizar editor atual,
+   sessão/BFF, chaves de PA02, subtotal/colapso PA03, lista PA04 e preferências PA05.
+   Não implementar botões de ativação, soma combinada ou micros nesta PR.
+2. Usar documentoEdicao como fonte do formulário ao reabrir se legível; mapear
+   legado pelo formulário existente e gerar chaves uma única vez, sem zerar vazio.
+   Guardar documento inteiro, inclusive linhas pendentes. Estado indisponivel exige
+   erro/reconferência explícita, nunca restauração silenciosa de dados antigos.
+3. Instanciar coordenador por contexto paciente/plano/geração; iniciar/cleanup em
+   efeito com dependências estáveis. Atualizar documento por alterar(), sem recriar
+   timer a cada tecla/ACK. Usar refs para envio/notificação atuais. StrictMode não
+   pode duplicar timer ou causar save no cleanup. Sem localStorage/sessionStorage/
+   IndexedDB/CacheStorage, logging do documento ou fetch em render.
+4. Autosave default ON; cada tick60s checa dirty, não debounce; nenhum envio só por
+   abrir, foco, blur, reconexão ou desmontagem. Exibir estados e último ACK de modo
+   acessível. Dados pendentes salvos não significam cálculo/revisão/publicação aptos.
+5. Manual deve chamar salvarManual() da mesma fila. Transport envia snapshot/CAS
+   via salvarEdicaoPlanoAlimentar; devolve ao coordenador id+rascunhoRevisao do ACK.
+   Não chamar caminho clínico antigo sem CAS nem resetar formulário com resposta A
+   quando houve edição B. Não perder chaves, foco, seleção/caret ou composição IME.
+   Pré-validar formato/cap96KiB, sem exigir metas/avaliação clínica para guardar.
+6. Revisar/publicar: coordenar fila e bloquear edição durante transição explícita;
+   usar CAS atual após ACK. Revisão incrementa contador: rebaselinar de forma
+   explícita após sucesso, sem recriar ciclo em cada autosave; publicar encerra
+   contexto do rascunho.409/resultado incerto exige reconferência, não retry/overwrite
+   por simples avanço do baseline. Preservar edição local enquanto resolve erro.
+7. Bloquear envios durante cópia/IME com configurar({suspenso:true}); liberação
+   não faz flush imediato. Off cancela pedidos não iniciados, não desfaz request.
+8. Saída interna dirty: salvar e sair / continuar / descartar com confirmação;
+   falha ou conflito não permite sair como salvo. Fechar/refresh usa beforeunload
+   nativo, sem prometer save. Guardar contexto até decisão; ignorar ACK após troca.
+9. Ajustar fixtures sintéticas de api-demo-local e Playwright para novo contrato;
+   não mexer no runtime backend além de defeito demonstrado. Cobrir59999/60000,
+   dirty sem primeiro save, save A+edição B, manual simultâneo, off, cópia/IME,
+   400/401/403/404/409/422/5xx/rede, troca de plano/paciente e saída. Desktop/mobile,
+   teclado/aria-live, regressões PA02–PA05 e nenhuma mudança implícita no portal.
+10. Não abrir outra PR. Manter mesma branch, atualizar evidências/checklist reais;
+    finalização Sol inclui testes integrais, revisão R4 e CI do HEAD.
+
+## Verificações locais e pendências
+
+As contagens e os comandos realmente executados ficam no relatório de evidências.
+Núcleo focado GREEN; PostgreSQL15 real com RLS/barreiras GREEN. Fixture alternativa
+omite Timescale/pgvector e não substitui gate integral de CI. Núcleo: backend
+238/238, PG12/12, BFF29/29, coordenador/nutrição33/33; backend/Web typecheck,
+backend build e lint alvo sem erros. UI: proteção de saída4/4; Playwright focado
+de saída/autosave2/2, PA02/PA03 cinco cenários em desktop/mobile10/10 e PA05
+conflito/preferences2/2; Web typecheck PASS. ESLint encerra sem erro, com12 avisos
+de hooks preexistentes nos componentes alterados. Um timeout inicial por servidor
+Next local antigo foi corrigido reiniciando o servidor; uma divergência do subtotal
+local versus ACK foi corrigida para usar o snapshot canônico e passou em desktop/
+mobile. Web build, suíte visual/regressão integral, `test:authz` integral, revisão
+R4 integrada e CI ainda pendentes. Não inferir estado de staging/produção ou
+aplicação1072/1073 por merge.
+
+O handoff PA05 abaixo é histórico. Pendências de CI nele foram encerradas pelos
+checks do HEAD final acima; não representam bloqueios atuais de implementação.
+Preservado para rastrear decisões, falhas RED/GREEN e limites operacionais.
+
+## Handoff anterior — PA05: integração Sol e T09
 
 Worktree `/workspace/octaclin/.worktrees/pos320-pa05-planejamento`, branch
 `feat/pos320-pa05-preferencias`, base `64f54b88` (#418). Implementação autorizada
@@ -274,3 +388,18 @@ v3/v4 preservados em `research/fase319/`; plano e relatório em
 G01/G02/G03 bloqueados, G04 skipped, G05 bloqueado/não executado; T05–T10 não
 iniciadas. Sem runtime/índice clínico. A Fase 320 é a etapa seguinte, com ingestão
 TBCA sujeita a direitos comprovados.
+
+
+## Fechamento da integração Sol
+
+Commit de UI e correções `c7071d2d`; código local validado sem achados R4 estáticos
+abertos. Web/backend builds e typecheck PASS; backend integral329 suítes/2907 testes
+PASS (6 suítes/113 testes SKIPPED), DTO final22/22, PostgreSQL focado12 PASS/31
+SKIPPED, BFF29/29, nutrição/coordenador38/38, saída4/4 e cópia7/7. Playwright final
+82/82 em desktop/mobile no build de produção local. Governança/secrets PASS.
+
+Próxima ação: publicar/acompanhar uma PR Draft da branch atual e os checks do HEAD.
+Authz integral local em execução no checkpoint, sem PASS presumido. Banco integral
+com extensões, Demo e scanners continuam gates do CI. Não marcar T09/T10 completos
+antes do resultado final; não iniciar ativação/agregação dentro desta PR.
+Detalhes/comandos/R4/limites nas evidências. Sem merge/deploy/migration externa.

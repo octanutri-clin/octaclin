@@ -657,3 +657,44 @@ test('PA05 BFF de prévia paciente exige sessão/permissão e não encaminha esc
     assert.equal(chamado, 1);
   } finally { restaurarFetch(original); __clearCookies(); }
 });
+
+test('PA06 revisão e publicação preservam precondição e conflito sem retry', async () => {
+  __setCookies(cookiesSessaoValida(['planos_alimentares.gerenciar']));
+  const original = global.fetch;
+  const chamadas: string[] = [];
+  const corpo = JSON.stringify({ rascunhoIdEsperado: 'geracao-sintetica', rascunhoRevisaoEsperada: 7 });
+  global.fetch = (async (_entrada: unknown, init?: RequestInit) => {
+    chamadas.push(String(init?.body));
+    return Response.json({ message: 'Conflito de edição' }, { status: 409 });
+  }) as typeof global.fetch;
+  try {
+    for (const rota of [revisarPlano, publicarPlano]) {
+      const resposta = await rota(new Request('http://localhost/api/transicao', { method: 'POST', body: corpo }), { params: Promise.resolve({ id: 'p', planoId: 'pl' }) });
+      assert.equal(resposta.status, 409);
+      assert.equal(resposta.headers.get('Cache-Control'), 'no-store');
+    }
+    assert.deepEqual(chamadas, [corpo, corpo]);
+  } finally { restaurarFetch(original); }
+});
+
+test('PA06 edição exige gerenciar, preserva escopo, documento, status e no-store', async () => {
+  const { PUT } = await import('../app/api/pacientes/[id]/planos-alimentares/[planoId]/rascunho/edicao/route');
+  const original = global.fetch;
+  const corpo = JSON.stringify({ rascunhoIdEsperado: 'g', rascunhoRevisaoEsperada: 1, documento: { schemaVersao: 1, refeicoes: [] } });
+  const chamadas: string[] = [];
+  global.fetch = (async (url: unknown, init?: RequestInit) => {
+    chamadas.push(String(url)); assert.equal(init?.method, 'PUT'); assert.equal(init?.body, corpo);
+    return Response.json({ message: 'Conflito sintético' }, { status: 409 });
+  }) as typeof global.fetch;
+  const params = { params: Promise.resolve({ id: 'paciente/1', planoId: 'plano/1' }) };
+  const request = () => new Request('http://localhost/api/edicao', { method: 'PUT', body: corpo });
+  try {
+    __clearCookies(); assert.equal((await PUT(request(), params)).status, 401);
+    __setCookies(cookiesSessaoValida(['planos_alimentares.ler'])); assert.equal((await PUT(request(), params)).status, 403);
+    assert.equal(chamadas.length, 0);
+    __setCookies(cookiesSessaoValida(['planos_alimentares.gerenciar']));
+    const resposta = await PUT(request(), params);
+    assert.equal(resposta.status, 409); assert.equal(resposta.headers.get('Cache-Control'), 'no-store');
+    assert.deepEqual(chamadas, ['http://backend.octaclin.local/pacientes/paciente%2F1/planos-alimentares/plano%2F1/rascunho/edicao']);
+  } finally { restaurarFetch(original); }
+});

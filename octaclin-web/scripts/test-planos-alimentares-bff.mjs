@@ -8,6 +8,7 @@ const raiz = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const temporaria = mkdtempSync(join(tmpdir(), 'octaclin-planos-alimentares-bff-'));
 const arquivos = [
   'scripts/planos-alimentares-bff.spec.ts',
+  'app/api/pacientes/[id]/planos-alimentares/[planoId]/rascunho/edicao/route.ts',
   'app/api/pacientes/[id]/planos-alimentares/[planoId]/versoes/[numero]/apresentacao-paciente/route.ts',
   'app/api/pacientes/[id]/planos-alimentares/_proxy.ts',
   'app/api/pacientes/[id]/planos-alimentares/route.ts',
@@ -52,6 +53,9 @@ writeFileSync(join(temporaria, 'tsconfig.json'), JSON.stringify({
     ignoreDeprecations: '6.0',
     target: 'ES2022'
   },
+  // O gate geral typecheck/build valida a aplicação. Este harness compila somente
+  // as entradas declaradas e seus imports, sem herdar o include de toda a UI.
+  include: [],
   files: arquivos.map((arquivo) => join(raiz, arquivo))
 }, null, 2));
 

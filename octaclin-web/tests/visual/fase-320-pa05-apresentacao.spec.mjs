@@ -93,7 +93,7 @@ async function prepararConsole(page) {
 test.describe('PA05 apresentação versionada', () => {
   test('salva os dois conjuntos de preferências com identidade e revisão do rascunho', async ({ page }) => {
     await prepararConsole(page);
-    let draft = { ...versao({ id: 'draft-pa05', numero: 2, status: 'rascunho' }), apresentacaoEstado: 'indisponivel', preferenciasApresentacao: undefined };
+    let draft = { ...versao({ id: 'draft-pa05', numero: 2, status: 'rascunho' }), rascunhoRevisao: 0, edicaoEstado: 'materializada', apresentacaoEstado: 'indisponivel', preferenciasApresentacao: undefined };
     const current = versao({ id: 'current-pa05', numero: 1, status: 'publicada' });
     let payloadSalvo;
     let salvamentos = 0;
@@ -102,12 +102,18 @@ test.describe('PA05 apresentação versionada', () => {
       status: 200, contentType: 'application/json', body: JSON.stringify({ itens: [detalhe], total: 1, pagina: 1, limite: 25 })
     }));
     await page.route((url) => url.pathname === `/api/pacientes/${pacienteId}/planos-alimentares/${planoId}`, (route) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(detalhe) }));
-    await page.route((url) => url.pathname === `/api/pacientes/${pacienteId}/planos-alimentares/${planoId}/rascunho`, async (route) => {
-      if (route.request().method() !== 'PUT') return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(draft) });
+    await page.route((url) => url.pathname === `/api/pacientes/${pacienteId}/planos-alimentares/${planoId}/rascunho/edicao`, async (route) => {
       salvamentos += 1;
       payloadSalvo = route.request().postDataJSON();
       if (salvamentos > 1) return route.fulfill({ status: 409, contentType: 'application/json', body: JSON.stringify({ statusCode: 409, message: 'Rascunho alterado por outra sessão.' }) });
-      draft = { ...draft, apresentacaoRevisao: 4, preferenciasApresentacao: payloadSalvo.preferenciasApresentacao };
+      draft = {
+        ...draft,
+        rascunhoRevisao: payloadSalvo.rascunhoRevisaoEsperada + 1,
+        edicaoEstado: 'materializada',
+        documentoEdicao: payloadSalvo.documento,
+        apresentacaoRevisao: 4,
+        preferenciasApresentacao: payloadSalvo.documento.preferenciasApresentacao
+      };
       detalhe = { ...detalhe, draft };
       await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(draft) });
     });
@@ -140,9 +146,9 @@ test.describe('PA05 apresentação versionada', () => {
 
     await expect.poll(() => payloadSalvo).toBeTruthy();
     expect(payloadSalvo.rascunhoIdEsperado).toBe('draft-pa05');
-    expect(payloadSalvo.apresentacaoRevisaoEsperada).toBe(3);
-    expect(payloadSalvo.preferenciasApresentacao.profissional.horario).toBe(false);
-    expect(payloadSalvo.preferenciasApresentacao.paciente.medidasCaseiras).toBe(false);
+    expect(payloadSalvo.rascunhoRevisaoEsperada).toBe(0);
+    expect(payloadSalvo.documento.preferenciasApresentacao.profissional.horario).toBe(false);
+    expect(payloadSalvo.documento.preferenciasApresentacao.paciente.medidasCaseiras).toBe(false);
     await expect(page.getByRole('group', { name: 'Visualização do profissional' }).getByLabel('Horários')).not.toBeChecked();
     await expect(page.getByRole('group', { name: 'Portal e impressão/PDF do paciente' }).getByLabel('Medidas caseiras')).not.toBeChecked();
 
@@ -150,7 +156,8 @@ test.describe('PA05 apresentação versionada', () => {
     await page.getByRole('button', { name: 'Salvar rascunho' }).click();
     await expect.poll(() => salvamentos).toBe(2);
     await expect(page.getByRole('group', { name: 'Portal e impressão/PDF do paciente' }).getByLabel('Horários')).not.toBeChecked();
-    await expect(page.getByText(/Rascunho alterado por outra sessão/)).toBeVisible();
+    await expect(page.getByRole('status').filter({ hasText: 'A edição mudou em outra sessão' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Reconciliar' })).toBeVisible();
     const medidasViewport = await page.evaluate(() => ({ documento: document.documentElement.scrollWidth, viewport: document.documentElement.clientWidth }));
     expect(medidasViewport.documento).toBeLessThanOrEqual(medidasViewport.viewport + 1);
   });
@@ -227,7 +234,7 @@ test.describe('PA05 apresentação versionada', () => {
     await page.route((url) => url.pathname === `/api/pacientes/${pacienteId}/planos-alimentares`, (route) => route.fulfill({
       status: 200, contentType: 'application/json', body: JSON.stringify({ itens: [detalhe, detalheAlternativo], total: 2, pagina: 1, limite: 25 })
     }));
-    await page.route((url) => url.pathname.startsWith(`/api/pacientes/${pacienteId}/planos-alimentares/`) && !url.pathname.endsWith('/rascunho'), (route) => {
+    await page.route((url) => url.pathname.startsWith(`/api/pacientes/${pacienteId}/planos-alimentares/`) && !url.pathname.includes('/rascunho'), (route) => {
       const id = new URL(route.request().url()).pathname.split('/')[5];
       return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(id === idAlternativo ? detalheAlternativo : detalhe) });
     });

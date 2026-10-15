@@ -366,6 +366,26 @@ integração pela PR permanecem sujeitos às evidências do checklist PA05.
 
 ## [PA06] Autosave opcional do plano alimentar
 
+**Planejamento em 2026-10-15:** base `eae74b1e`, PA05 integrada pela PR #419;
+checks aplicáveis do HEAD `9e12271b` PASS, sem inferir migration externa/deploy.
+Análise de código identificou revisão CAS limitada a saves com preferências e
+recarga integral após escrita. PA06 precisa de revisão geral com transição
+segura de legados e preservação de edições feitas durante request. D01–D03
+confirmadas: ligado por padrão, ciclo de 60 segundos, alimentos válidos salvos mesmo com
+formulário incompleto e saída protegida. D04/D05 confirmadas: on/off direto
+oculta do paciente e exclui dos macros, sem nova revisão só para reexibir;
+linhas incompletas preservadas. D06–D08: on/off no plano e refeição e cálculo
+combinado dos planos/refeições selecionados, incluindo calorias/macros/micros;
+desativados ficam fora do cálculo. D09/D10 confirmadas: todos os ativos publicados
+no portal, sem arquivados/excluídos/desativados; soma só da publicação atual salva,
+nunca rascunhos/histórico. Seleção de cálculo não filtra o acesso do paciente.
+Ampliação organizada em três PRs por recurso: autosave parcial, ativação e
+cálculo combinado/micros; sem implementar IDR/UL de FOOD06. Só R013/R014 foram
+consultados, com versões/licenças/fontes no plano; sem biblioteca nova prevista.
+Implementação ainda não iniciada. Handoff
+[plan-pos-320-pa06.md](../../tasks/plan-pos-320-pa06.md) e checklist
+[todo-pos-320-pa06.md](../../tasks/todo-pos-320-pa06.md).
+
 **Origem:** item 16.
 
 **Status atual:** rascunho explícito + proteção contra perda.
@@ -373,14 +393,21 @@ integração pela PR permanecem sujeitos às evidências do checklist PA05.
 **Dependência:** FND02.
 
 **Implementação sugerida:**
-- preferência opt-in;
-- debounce;
+- habilitado por padrão, verificação a cada 60 segundos sem reiniciar o ciclo por tecla;
+- gravar alterações, sem PUT repetido quando nada mudou;
+- rascunho parcial preserva alimentos válidos sem exigir completude clínica;
 - estados `Alterado`, `Salvando`, `Salvo`, `Falha ao salvar`;
 - usar versão esperada/conflito otimista;
 - sem `localStorage` para PHI.
 
 **Aceite:**
-- autosave pode ser ligado/desligado;
+- controle de autosave, se mantido, não se confunde com visibilidade ao paciente;
+- on/off de plano e refeição oculta e exclui de energia/macros/micros, sem
+  arquivar/excluir ou exigir nova revisão para reexibir;
+- agregação considera seleção explícita, estado ativo e publicação atual salva
+  de cada plano, sem versões históricas/rascunhos;
+- portal dá acesso a todos os planos ativos publicados, respeitando o estado
+  das refeições; nenhuma rota libera desativados/arquivados/excluídos;
 - nunca publica automaticamente;
 - falha não apaga rascunho local em memória;
 - conflito exige ação do usuário.

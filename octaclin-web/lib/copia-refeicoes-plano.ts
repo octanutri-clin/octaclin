@@ -1,3 +1,4 @@
+import { interpretarNumeroEdicao, nutrientesNumericosEdicao, type NutrientesEdicao } from './edicao-plano';
 import type {
   NutrientesPor100gApi,
   RefeicaoPlanoAlimentarApi,
@@ -34,8 +35,10 @@ export interface RefeicaoFormularioCopia {
 }
 
 /** Forma de leitura do editor: campos podem estar em edição e incompletos. */
-export interface AlimentoFormularioCopiaFonte extends Omit<AlimentoFormularioCopia, 'nutrientesPor100g'> {
-  nutrientesPor100g: Partial<NutrientesPor100gApi>;
+export interface AlimentoFormularioCopiaFonte extends Omit<AlimentoFormularioCopia, 'nutrientesPor100g' | 'quantidade' | 'porcaoGramas'> {
+  quantidade: number | string;
+  porcaoGramas: number | string;
+  nutrientesPor100g: NutrientesEdicao;
 }
 
 export interface AlternativaFormularioCopiaFonte extends AlimentoFormularioCopiaFonte {
@@ -45,7 +48,7 @@ export interface AlternativaFormularioCopiaFonte extends AlimentoFormularioCopia
 
 export interface ItemFormularioCopiaFonte extends AlimentoFormularioCopiaFonte {
   substituicoes: AlternativaFormularioCopiaFonte[];
-  substituicoesVisiveisInicialmente?: number;
+  substituicoesVisiveisInicialmente?: number | string;
 }
 
 export interface RefeicaoFormularioCopiaFonte extends Omit<RefeicaoFormularioCopia, 'itens'> {
@@ -54,7 +57,11 @@ export interface RefeicaoFormularioCopiaFonte extends Omit<RefeicaoFormularioCop
 
 export type GerarChaveCopia = (prefixo: 'refeicao' | 'alimento') => string;
 
-function validarNutrientes(nutrientes: Partial<NutrientesPor100gApi> | undefined): NutrientesPor100gApi {
+function validarNutrientes(valores: NutrientesEdicao | undefined): NutrientesPor100gApi {
+  if (valores && Object.values(valores).some(valor => valor !== undefined && interpretarNumeroEdicao(valor) === undefined)) {
+    throw new Error('A refeição contém valores nutricionais incompletos.');
+  }
+  const nutrientes = valores ? nutrientesNumericosEdicao(valores) : undefined;
   const essenciais = ['energiaKcal', 'proteinasG', 'carboidratosG', 'gordurasG'] as const;
   if (!nutrientes || essenciais.some((chave) => !Number.isFinite(nutrientes[chave]))) {
     throw new Error('A refeição não pode ser copiada porque contém um snapshot nutricional incompleto.');
@@ -69,13 +76,18 @@ function copiarAlimento(
   alimento: AlimentoFormularioCopiaFonte,
   gerarChave: GerarChaveCopia
 ): AlimentoFormularioCopia {
+  const quantidade = interpretarNumeroEdicao(alimento.quantidade);
+  const porcaoGramas = interpretarNumeroEdicao(alimento.porcaoGramas);
+  if (quantidade === undefined || porcaoGramas === undefined || quantidade <= 0 || porcaoGramas <= 0) {
+    throw new Error('Complete a quantidade e a porção antes de copiar a refeição.');
+  }
   return {
     chaveCliente: gerarChave('alimento'),
     alimentoComposicaoId: alimento.alimentoComposicaoId,
     descricao: alimento.descricao,
-    quantidade: alimento.quantidade,
+    quantidade,
     unidade: alimento.unidade,
-    porcaoGramas: alimento.porcaoGramas,
+    porcaoGramas,
     nutrientesPor100g: validarNutrientes(alimento.nutrientesPor100g),
     fonteRotulo: alimento.fonteRotulo
   };
@@ -93,7 +105,7 @@ function copiarItemFormulario(item: ItemFormularioCopiaFonte, gerarChave: GerarC
       liberadaParaPaciente: substituicao.liberadaParaPaciente,
       preferida: substituicao.preferida
     })),
-    substituicoesVisiveisInicialmente: item.substituicoesVisiveisInicialmente
+    substituicoesVisiveisInicialmente: interpretarNumeroEdicao(item.substituicoesVisiveisInicialmente)
   };
 }
 
@@ -144,7 +156,7 @@ export function copiarRefeicaoParaFormulario(
           preferida: substituicao.preferida === true
         };
       }),
-      substituicoesVisiveisInicialmente: item.substituicoesVisiveisInicialmente
+      substituicoesVisiveisInicialmente: interpretarNumeroEdicao(item.substituicoesVisiveisInicialmente)
     };
   });
 

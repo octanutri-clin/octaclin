@@ -1,6 +1,14 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test } from '@playwright/test';
 
+const errosPagina = new WeakMap();
+test.beforeEach(({ page }) => {
+  const erros = [];
+  errosPagina.set(page, erros);
+  page.on('pageerror', erro => erros.push(erro.message));
+});
+test.afterEach(({ page }) => expect(errosPagina.get(page)).toEqual([]));
+
 const paciente = { id: 'pa02-paciente-sintetico', tenantId: 'pa02-tenant-sintetico', profissionalResponsavelId: 'pa02-profissional', nome: 'Paciente Sintético', statusAdesao: 'aderente', criadoEm: '2026-10-01T12:00:00.000Z' };
 const outroPaciente = { ...paciente, id: 'pa02-outra-paciente-sintetica', nome: 'Outra Paciente Sintética' };
 const permissoes = ['console.acessar', 'pacientes.listar', 'pacientes.ler', 'pacientes.gerenciar', 'profissionais.ler', 'planos_alimentares.ler', 'planos_alimentares.gerenciar'];
@@ -32,7 +40,7 @@ function versao({ id, numero, status, refeicoes, objetivos = 'Objetivo sintétic
   return { id, numero, status, criadoEm: instante, atualizadoEm: instante, objetivos, observacoes: 'Observação sintética de origem', refeicoes };
 }
 
-async function preparar(page, { falharRevalidacaoOrigem = false, alterarVersaoNaColagem = false, planosPaginados = false, atrasarLeituraExterna = false, atrasarRevalidacaoOrigem = false, duasRefeicoesDestino = false, limiteRefeicoesDestino = false, manterRefeicoesRecolhidas = false, nutrientesIncompletos = false, refeicaoSemAlimentos = false, atualizarNutrientesAoSalvar = false } = {}) {
+async function preparar(page, { falharRevalidacaoOrigem = false, alterarVersaoNaColagem = false, planosPaginados = false, atrasarLeituraExterna = false, atrasarRevalidacaoOrigem = false, duasRefeicoesDestino = false, limiteRefeicoesDestino = false, manterRefeicoesRecolhidas = false, nutrientesIncompletos = false, refeicaoSemAlimentos = false, atualizarNutrientesAoSalvar = false, documentoInicial } = {}) {
   let leiturasOrigemExterna = 0;
   let leiturasExternasPendentes = 0;
   let liberarLeituraExterna;
@@ -72,6 +80,9 @@ async function preparar(page, { falharRevalidacaoOrigem = false, alterarVersaoNa
   await page.route((url) => url.pathname === '/api/pacientes', (route) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ itens: [outroPaciente], total: 1 }) }));
 
   const destino = versao({ id: 'pa02-draft-destino', numero: 2, status: 'rascunho', objetivos: 'Objetivo exclusivo do destino', refeicoes: [refeicao('destino-r', 'Almoço atual', 'Arroz sintético', 'Manter esta orientação')] });
+  destino.rascunhoRevisao = 0;
+  destino.edicaoEstado = documentoInicial ? 'pendente' : 'materializada';
+  if (documentoInicial) destino.documentoEdicao = documentoInicial;
   if (nutrientesIncompletos) {
     delete destino.refeicoes[0].itens[0].composicaoSnapshot.nutrientesPor100g.proteinasG;
     delete destino.refeicoes[0].itens[0].composicaoSnapshot.nutrientesPorcao.proteinasG;
@@ -138,14 +149,24 @@ async function preparar(page, { falharRevalidacaoOrigem = false, alterarVersaoNa
   });
 
   let entradaSalva;
-  await page.route((url) => url.pathname === `/api/pacientes/${paciente.id}/planos-alimentares/${resumoDestino.id}/rascunho`, async (route) => {
-    entradaSalva = route.request().postDataJSON();
+  await page.route((url) => url.pathname === `/api/pacientes/${paciente.id}/planos-alimentares/${resumoDestino.id}/rascunho/edicao`, async (route) => {
+    const entrada = route.request().postDataJSON();
+    entradaSalva = entrada.documento;
+    const pendente = !entradaSalva.objetivos?.trim() || entradaSalva.refeicoes.some((refeicao) => !refeicao.nome?.trim());
     if (atualizarNutrientesAoSalvar) {
       const snapshot = planoDestino.draft.refeicoes[0].itens[0].composicaoSnapshot;
       snapshot.nutrientesPor100g.energiaKcal = 220;
       snapshot.nutrientesPorcao.energiaKcal = 220;
     }
-    await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(planoDestino) });
+    const versaoSalva = {
+      ...planoDestino.draft,
+      rascunhoRevisao: entrada.rascunhoRevisaoEsperada + 1,
+      edicaoEstado: pendente ? 'pendente' : 'materializada',
+      documentoEdicao: entradaSalva,
+      ...(pendente ? { calculo: undefined, totais: undefined, refeicoes: [] } : {})
+    };
+    planoDestino.draft = versaoSalva;
+    await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(versaoSalva) });
   });
 
   await page.goto(`/pacientes/${paciente.id}?aba=plano_alimentar`, { waitUntil: 'domcontentloaded' });
@@ -160,6 +181,103 @@ async function preparar(page, { falharRevalidacaoOrigem = false, alterarVersaoNa
 function painelCopia(page) {
   return page.getByRole('region', { name: 'Copiar uma refeição salva' });
 }
+
+
+test.describe('PA06 - integridade editorial', () => {
+  test('reabre campos vazios sem completar avaliação ou iniciar escrita automática', async ({ page }) => {
+    await page.clock.install();
+    const documento = { schemaVersao: 1, avaliacaoAntropometricaId: null, fatorAtividade: '-',
+      objetivos: '', refeicoes: [{ chaveCliente: 'r-parcial', nome: 'Parcial', itens: [{
+        chaveCliente: 'i-parcial', descricao: 'Alimento parcial', quantidade: '', porcaoGramas: '',
+        nutrientesPor100g: { energiaKcal: '1,' }, substituicoes: []
+      }] }] };
+    const contexto = await preparar(page, { documentoInicial: documento });
+    await expect(page.getByRole('combobox', { name: 'Avaliação antropométrica', exact: true })).toHaveValue('');
+    await expect(page.getByLabel('Fator de atividade', { exact: true })).toHaveValue('-');
+    await expect(page.getByLabel('Quantidade', { exact: true }).first()).toHaveValue('');
+    await expect(page.getByLabel('Porcao (g)', { exact: true }).first()).toHaveValue('');
+    await expect(page.getByText('Existem alterações não salvas neste rascunho.')).toHaveCount(0);
+    await page.clock.fastForward(120_000);
+    expect(contexto.entradaSalva).toBeUndefined();
+    await page.getByLabel('Quantidade', { exact: true }).first().fill('2');
+    await page.getByLabel('Quantidade', { exact: true }).first().fill('');
+    await page.getByLabel('Objetivo clínico').fill('Texto parcial');
+    await page.getByRole('button', { name: 'Salvar rascunho' }).click();
+    await expect.poll(() => contexto.entradaSalva?.objetivos).toBe('Texto parcial');
+    expect(contexto.entradaSalva.quantidade).toBeUndefined();
+    expect(contexto.entradaSalva.refeicoes[0].itens[0].quantidade).toBe('');
+    expect(contexto.entradaSalva.refeicoes[0].itens[0].porcaoGramas).toBe('');
+    expect(contexto.entradaSalva.avaliacaoAntropometricaId).toBeNull();
+    expect(contexto.entradaSalva.fatorAtividade).toBe('-');
+    expect(contexto.entradaSalva.refeicoes[0].itens[0].unidade).toBe('');
+    expect(contexto.entradaSalva.refeicoes[0].itens[0].nutrientesPor100g.energiaKcal).toBe('1,');
+  });
+
+  test('percentuais preservam separador durante digitação, autosave e reabertura', async ({ page }) => {
+    test.setTimeout(60_000);
+    await page.clock.install();
+    const contexto = await preparar(page);
+    const campo = page.getByLabel('Carboidratos (%)', { exact: true });
+    await campo.fill('');
+    await campo.pressSequentially('1,');
+    await expect(campo).toHaveValue('1,');
+    await page.clock.fastForward(60_000);
+    await expect.poll(() => contexto.entradaSalva?.percentuaisMacrosEdicao?.carboidratosBasisPoints).toBe('1,');
+    await campo.pressSequentially('25');
+    await expect(campo).toHaveValue('1,25');
+    await page.getByRole('button', { name: 'Salvar rascunho' }).click();
+    await expect.poll(() => contexto.entradaSalva?.percentuaisMacrosEdicao?.carboidratosBasisPoints).toBe('1,25');
+    await expect(page.getByText('Existem alterações não salvas neste rascunho.')).toHaveCount(0);
+    await page.reload({ waitUntil: 'domcontentloaded' });
+    await expect(campo).toHaveValue('1,25');
+  });
+
+  test('rejeição de save seguida de retorno ao baseline não inventa ACK nem prende revisão', async ({ page }) => {
+    await preparar(page);
+    let escritas = 0;
+    await page.route((url) => url.pathname.endsWith('/pa02-plano-destino/rascunho/edicao'), route => {
+      escritas++;
+      return route.fulfill({ status: 400, contentType: 'application/json', body: JSON.stringify({ message: 'Edição rejeitada no cenário sintético.' }) });
+    });
+    const objetivo = page.getByLabel('Objetivo clínico');
+    const original = await objetivo.inputValue();
+    await objetivo.fill('Edição rejeitada');
+    await page.getByRole('button', { name: 'Salvar rascunho' }).click();
+    await expect(page.getByRole('alert').filter({ hasText: 'O salvamento automático foi pausado.' })).toBeVisible();
+    await objetivo.fill(original);
+    await page.getByRole('button', { name: 'Salvar rascunho' }).click();
+    await expect(page.getByRole('button', { name: 'Revisar', exact: true })).toBeEnabled();
+    expect(escritas).toBe(1);
+    await expect(page.getByText(/Último salvamento confirmado/)).toHaveCount(0);
+  });
+
+  test('rejeição temporária da revisão permite retry sem editar conteúdo', async ({ page }) => {
+    await preparar(page);
+    let revisoes = 0;
+    await page.route((url) => url.pathname.endsWith('/pa02-plano-destino/revisao'), route => {
+      revisoes++;
+      return route.fulfill({ status: 429, contentType: 'application/json', body: JSON.stringify({ message: 'Revisão temporariamente limitada.' }) });
+    });
+    await page.getByRole('button', { name: 'Revisar', exact: true }).click();
+    await expect.poll(() => revisoes).toBe(1);
+    await page.getByRole('button', { name: 'Salvar rascunho' }).click();
+    await expect(page.getByRole('button', { name: 'Revisar', exact: true })).toBeEnabled();
+    await page.getByRole('button', { name: 'Revisar', exact: true }).click();
+    await expect.poll(() => revisoes).toBe(2);
+  });
+
+  test('recusa de revisão por validação permite corrigir e salvar novamente', async ({ page }) => {
+    const contexto = await preparar(page);
+    await page.route((url) => url.pathname.endsWith('/pa02-plano-destino/revisao'), route => route.fulfill({
+      status: 400, contentType: 'application/json', body: JSON.stringify({ message: 'Confira a justificativa sintética.' })
+    }));
+    await page.getByRole('button', { name: 'Revisar', exact: true }).click();
+    await expect(page.getByRole('alert').filter({ hasText: 'Confira a justificativa sintética.' })).toBeVisible();
+    await page.getByLabel('Objetivo clínico').fill('Correção após validação');
+    await page.getByRole('button', { name: 'Salvar rascunho' }).click();
+    await expect.poll(() => contexto.entradaSalva?.objetivos).toBe('Correção após validação');
+  });
+});
 
 test.describe('PA03 - subtotal e refeições recolhidas no editor', () => {
   test('inicia recolhida com subtotal e alternar não altera rascunho nem envia requisição', async ({ page }) => {
@@ -189,14 +307,15 @@ test.describe('PA03 - subtotal e refeições recolhidas no editor', () => {
     await expect(refeicao.getByLabel(/Porção do alimento Arroz sintético.*Proteínas: — gramas/)).toBeVisible();
   });
 
-  test('subtotal segue a porção não salva e não multiplica a quantidade caseira', async ({ page }) => {
+  test('subtotais ficam indisponíveis enquanto a edição não foi materializada', async ({ page }) => {
     const contexto = await preparar(page);
     const refeicao = page.getByTestId('refeicao-editor').first();
     await refeicao.getByLabel('Quantidade', { exact: true }).first().fill('2');
-    await expect(refeicao).toContainText('110 kcal · P 4,0 g · C 17,0 g · G 2,0 g');
+    await expect(page.getByRole('region', { name: 'Prévia profissional' }).getByText('Energia', { exact: true })).toHaveCount(0);
+    await expect(refeicao).toContainText('Pendente de materialização');
     await refeicao.getByLabel('Porcao (g)', { exact: true }).first().fill('200');
     await refeicao.getByRole('button', { name: /^Recolher refeição/ }).press('Enter');
-    await expect(refeicao).toContainText('220 kcal · P 8,0 g · C 34,0 g · G 4,0 g');
+    await expect(refeicao).toContainText('Pendente de materialização');
     await expect(page.getByText('Existem alterações não salvas neste rascunho.')).toBeVisible();
     expect(contexto.entradaSalva).toBeUndefined();
   });
@@ -224,18 +343,17 @@ test.describe('PA03 - subtotal e refeições recolhidas no editor', () => {
     await expect(page.getByText('Existem alterações não salvas neste rascunho.')).toBeVisible();
   });
 
-  test('campo required recolhido abre a refeição, recebe foco e não envia', async ({ page }) => {
+  test('linha incompleta recolhida pode ser salva como rascunho editorial pendente', async ({ page }) => {
     const contexto = await preparar(page, { manterRefeicoesRecolhidas: true });
     const refeicao = page.getByTestId('refeicao-editor').first();
     await page.getByRole('button', { name: 'Expandir refeição Almoço atual' }).click();
     const nome = refeicao.getByLabel('Nome da refeição');
     await nome.fill('');
     await refeicao.getByRole('button', { name: /^Recolher refeição/ }).click();
-    await page.getByRole('button', { name: 'Salvar rascunho' }).evaluate((botao) => botao.form.requestSubmit());
-    await expect(page.locator('form [role="alert"]')).toContainText('Há campos obrigatórios nesta refeição');
-    await expect(refeicao.getByRole('button', { name: /^Recolher refeição/ })).toHaveAttribute('aria-expanded', 'true');
-    await expect(nome).toBeFocused();
-    expect(contexto.entradaSalva).toBeUndefined();
+    await page.getByRole('button', { name: 'Salvar rascunho' }).click();
+    await expect.poll(() => contexto.entradaSalva?.refeicoes[0]?.nome).toBe('');
+    await expect(refeicao.getByRole('button', { name: /^Expandir refeição/ })).toHaveAttribute('aria-expanded', 'false');
+    await expect(page.getByRole('status').filter({ hasText: 'Cálculos e subtotais indisponíveis' })).toBeVisible();
   });
 
   test('nome longo sem espaços cabe no cabeçalho recolhido', async ({ page }) => {
@@ -259,21 +377,21 @@ test.describe('PA03 - subtotal e refeições recolhidas no editor', () => {
     await expect.poll(() => contexto.entradaSalva?.refeicoes.map((item) => item.nome)).toEqual(['Almoço atual', 'Jantar destino']);
     expect(contexto.entradaSalva.refeicoes[0].itens[0].substituicoes).toHaveLength(1);
     expect(contexto.entradaSalva.refeicoes[0].orientacoes).toBe('Manter esta orientação');
-    await expect(page.getByTestId('refeicao-editor').first()).toContainText('220 kcal');
+    await expect(page.getByTestId('refeicao-editor').first().getByText('220 kcal · P 4,0 g · C 17,0 g · G 2,0 g', { exact: true })).toHaveCount(2);
     await expect(page.getByRole('button', { name: /^Expandir refeição/ })).toHaveCount(2);
     await expect(page.getByText('Existem alterações não salvas neste rascunho.')).toHaveCount(0);
   });
 
-  test('vários required ocultos abrem suas refeições e focam apenas o primeiro', async ({ page }) => {
+  test('várias refeições incompletas permanecem no documento editorial salvo', async ({ page }) => {
     const contexto = await preparar(page, { duasRefeicoesDestino: true });
     const refeicoes = page.getByTestId('refeicao-editor');
     await refeicoes.nth(0).getByLabel('Nome da refeição').fill('');
     await refeicoes.nth(1).getByLabel('Nome da refeição').fill('');
     await page.getByRole('button', { name: 'Recolher todas' }).press('Enter');
-    await page.getByRole('button', { name: 'Salvar rascunho' }).evaluate((botao) => botao.form.requestSubmit());
-    await expect(page.getByRole('button', { name: /^Recolher refeição/ })).toHaveCount(2);
-    await expect(refeicoes.nth(0).getByLabel('Nome da refeição')).toBeFocused();
-    expect(contexto.entradaSalva).toBeUndefined();
+    await page.getByRole('button', { name: 'Salvar rascunho' }).click();
+    await expect.poll(() => contexto.entradaSalva?.refeicoes.map((item) => item.nome)).toEqual(['', '']);
+    await expect(page.getByRole('button', { name: /^Expandir refeição/ })).toHaveCount(2);
+    await expect(page.getByRole('status').filter({ hasText: 'Cálculos e subtotais indisponíveis' })).toBeVisible();
   });
 });
 
@@ -324,6 +442,7 @@ test.describe('PA02 - copiar refeições sem substituir o plano de destino', () 
     await page.getByLabel('Revisei os dados da avaliação e confirmo a aplicabilidade da fórmula para este paciente.').check();
     await page.getByRole('button', { name: 'Salvar rascunho' }).click();
     await expect.poll(() => contexto.entradaSalva?.refeicoes.map((item) => item.nome)).toEqual(['Almoço atual', 'Lanche publicado']);
+    await expect(page.getByRole('status').filter({ hasText: 'Cálculos e subtotais indisponíveis' })).toBeVisible();
   });
 
   test('recusa uma nova refeição no limite sem anunciar sucesso nem perder a origem', async ({ page }) => {

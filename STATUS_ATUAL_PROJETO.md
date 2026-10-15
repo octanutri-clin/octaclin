@@ -1,10 +1,36 @@
 # OctaClin - Status atual do projeto
 
-Atualizado em 2026-10-14.
+Atualizado em 2026-10-15.
 
 ## Fase ativa
 
-- **PA05 — implementação e revisão R4 concluídas; gates finais em execução**, branch
+- **PA06 — primeira entrega em desenvolvimento autorizado**, base `eae74b1e`.
+  Autosave ligado por padrão, ciclo de 60 segundos no editor profissional. Referências R013
+  TanStack/query e R014 react-hook-form consultadas em versões fixadas; uso
+  conceitual, sem dependência nova. Gaps: revisão geral de conteúdo/caminhos
+  legados, edição durante gravação, snapshot editorial parcial e saída protegida.
+  D01–D03 confirmadas; alimentos válidos salvos sem exigir formulário completo.
+  D04–D08 registradas: on/off no plano e em cada refeição; desativados ficam
+  ocultos e fora dos totais. Cálculo combinado de planos/refeições selecionados
+  para calorias/macros/micros, preservando linhas incompletas. D09/D10 confirmadas:
+  portal com todos os planos ativos publicados; desativados/arquivados/excluídos
+  inacessíveis. Cálculo combinado só da publicação atual salva, sem rascunhos;
+  seleção para cálculo independente da visibilidade. Três entregas/PRs sequenciais:
+  autosave parcial → ativação → cálculo combinado/micros.
+  Núcleo de edição cifrada/CAS, migration1073 aditiva, BFF e coordenador em memória
+  implementados, incluindo interface T07/T08 por Luna alto; integração Sol em
+  andamento com revisão cruzada estática, correções RED/GREEN e gates finais.
+  Sem migration externa/deploy. Evidências em
+  `docs/governance/EVIDENCIAS_PA06_NUCLEO_2026-10-15.md`.
+  Plano e critérios
+  em `tasks/plan-pos-320-pa06.md` e `tasks/todo-pos-320-pa06.md`.
+  Sol6.1 médio para concorrência/backend e integração; Luna alto apenas após
+  contratos/motor testados, para interface. Avisar e pausar antes da troca.
+- **PA05 — integrada pela PR #419**, merge `eae74b1e`, árvore idêntica ao HEAD
+  `9e12271b`. CI `38656591697` e checks aplicáveis PASS em 2026-10-15, inclusive
+  Backend, Web, Demo e PR Gate; scanners SUCCESS. SBOM provenance SKIPPED.
+  Estado externo da1072/deploy não consultado nem inferido pelo merge.
+  Registro da implementação e evidências anteriores:
   `feat/pos320-pa05-preferencias`, base `64f54b88`. D01–D03 confirmadas.
   PR #419 inicialmente Draft. CI inicial detectou contaminação de fixtures
   PA05/PA04; casos PA05 isolados e prova conjunta PostgreSQL real 3/3 PASS.
@@ -14,8 +40,8 @@ Atualizado em 2026-10-14.
   PASS, 66/66 casos. Backend 2.923 testes, Redis 2/2 e Web/Governança PASS.
   UI T07/T08 implementada; Sol médio corrigiu quatro achados com testes RED.
   Revisão estática independente final PASS; suíte visual 50/50 + a11y/teclado 4/4
-  PASS; regressões PA02/PA03 38/38 PASS; gates finais T09 em execução. Migration1072
-  aditiva somente em banco descartável neste ciclo.
+  PASS; regressões PA02/PA03 38/38 PASS; gates finais T09 fechados pelo CI acima.
+  Migration1072 aditiva somente em banco descartável no ciclo de desenvolvimento.
   Evidências `docs/governance/REVISAO_R4_PA05_2026-10-14.md` e
   `docs/governance/EVIDENCIAS_PA05_BACKEND_2026-10-14.md`,
   handoff `tasks/plan-pos-320-pa05.md` e checklist `tasks/todo-pos-320-pa05.md`.

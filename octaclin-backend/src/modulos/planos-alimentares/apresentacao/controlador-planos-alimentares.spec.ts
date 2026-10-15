@@ -44,6 +44,15 @@ describe('ControladorPlanosAlimentares', () => {
     ]);
   });
 
+  it('PA06 protege a rota de edição parcial com gerenciamento e no-store', () => {
+    const metodo = (ControladorPlanosAlimentares.prototype as unknown as Record<string, unknown>).salvarEdicao;
+    expect(typeof metodo).toBe('function');
+    if (typeof metodo === 'function') {
+      expect(Reflect.getMetadata(CHAVE_PERMISSOES, metodo)).toEqual(['planos_alimentares.gerenciar']);
+      expect(Reflect.getMetadata(HEADERS_METADATA, metodo)).toContainEqual({ name: 'Cache-Control', value: 'private, no-store' });
+    }
+  });
+
   it.each(['listar', 'listarEscolhasPaciente', 'obter', 'obterRascunho', 'obterVersao', 'obterAcompanhamentoVersao', 'obterApresentacaoPaciente'] as const)('usa somente planos_alimentares.ler em %s', (metodo) => {
     expect(Reflect.getMetadata(CHAVE_PERMISSOES, ControladorPlanosAlimentares.prototype[metodo])).toEqual([
       'planos_alimentares.ler'

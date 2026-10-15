@@ -1,4 +1,5 @@
 import { createHash } from 'crypto';
+import { validateSync } from 'class-validator';
 import {
   BadRequestException,
   ConflictException,
@@ -39,6 +40,8 @@ import {
 } from '../dominio/plano-alimentar';
 import { lerApresentacaoVersao, validarPreferenciasApresentacao, projetarRefeicoesPaciente, projetarMetasPaciente } from '../dominio/apresentacao-plano';
 import { projetarResumoNutricionalPlano, ResumoNutricionalPlano } from '../dominio/resumo-nutricional-plano';
+import { DocumentoEdicaoPlano, validarDocumentoEdicaoPlano } from '../dominio/edicao-plano';
+import { converterEdicaoParaRascunho, PrecondicaoEdicaoPlanoDto, SalvarEdicaoPlanoDto } from './dtos-edicao-plano';
 import { AlimentoComposicaoOrm } from '../infraestrutura/alimento-composicao.orm';
 import { FonteComposicaoAlimentoOrm } from '../infraestrutura/fonte-composicao-alimento.orm';
 import { PlanoAlimentarItemOrm } from '../infraestrutura/plano-alimentar-item.orm';
@@ -175,7 +178,8 @@ export class ServicoPlanosAlimentares {
         where: condicoesVersoes,
         select: {
           id: true, tenantId: true, planoId: true, numero: true, hashConteudo: true,
-          revisadaEm: true, publicadaEm: true, descartadaEm: true, criadoEm: true, atualizadoEm: true
+          revisadaEm: true, publicadaEm: true, descartadaEm: true, criadoEm: true, atualizadoEm: true,
+          rascunhoRevisao: true, edicaoProtegida: true, edicaoMaterializadaRevisao: true
         }
       });
       const contagensHistorico = await gerenciador.query(
@@ -210,6 +214,11 @@ export class ServicoPlanosAlimentares {
         : [];
       const resumoPorVersao = new Map<string, ResumoNutricionalPlano>();
       for (const snapshot of snapshots) {
+        const versao = versoesRelevantes.find(v => v.id === snapshot.id);
+        if (versao?.edicaoProtegida && versao.edicaoMaterializadaRevisao !== versao.rascunhoRevisao) {
+          resumoPorVersao.set(snapshot.id, projetarResumoNutricionalPlano(undefined, true));
+          continue;
+        }
         try {
           resumoPorVersao.set(snapshot.id, projetarResumoNutricionalPlano(
             snapshot.totaisSnapshotCriptografado
@@ -245,6 +254,12 @@ export class ServicoPlanosAlimentares {
       const versao = await gerenciador.getRepository(PlanoAlimentarVersaoOrm).findOne({ where: { tenantId, planoId: plano.id, numero, descartadaEm: IsNull() }, lock: { mode: 'pessimistic_read' } });
       if (!versao) throw new NotFoundException('Versão do plano alimentar não encontrada.');
       this.garantirApresentacaoDisponivel(versao);
+      if (!versao.publicadaEm) {
+        const estado = this.lerEdicao(versao).edicaoEstado;
+        if (estado === 'pendente' || estado === 'indisponivel') {
+          throw new ConflictException('A edição precisa estar completa antes de abrir a prévia do paciente.');
+        }
+      }
       const detalhe = await this.montarVersao(gerenciador, versao);
       return {
         id: plano.id,
@@ -356,7 +371,7 @@ export class ServicoPlanosAlimentares {
     this.garantirPapelProfissional(usuario);
     this.garantirPermissao(usuario, 'planos_alimentares.ler');
     return this.executorTenant.executar(tenantId, async (gerenciador) => {
-      await this.obterPlanoNoEscopo(gerenciador, tenantId, pacienteId, planoId, usuario);
+      await this.obterPlanoNoEscopo(gerenciador, tenantId, pacienteId, planoId, usuario, 'pessimistic_read');
       const versao = await gerenciador.getRepository(PlanoAlimentarVersaoOrm).findOne({
         where: { tenantId, planoId, numero }
       });
@@ -518,7 +533,7 @@ export class ServicoPlanosAlimentares {
     this.garantirPapelProfissional(usuario);
     this.garantirPermissao(usuario, 'planos_alimentares.ler');
     return this.executorTenant.executar(tenantId, async (gerenciador) => {
-      const plano = await this.obterPlanoNoEscopo(gerenciador, tenantId, pacienteId, planoId, usuario);
+      const plano = await this.obterPlanoNoEscopo(gerenciador, tenantId, pacienteId, planoId, usuario, 'pessimistic_read');
       return this.montarPlano(gerenciador, plano);
     });
   }
@@ -560,21 +575,90 @@ export class ServicoPlanosAlimentares {
     this.garantirPapelProfissional(usuario);
     this.garantirPermissao(usuario, 'planos_alimentares.ler');
     return this.executorTenant.executar(tenantId, async (gerenciador) => {
-      const plano = await this.obterPlanoNoEscopo(gerenciador, tenantId, pacienteId, planoId, usuario);
+      const plano = await this.obterPlanoNoEscopo(gerenciador, tenantId, pacienteId, planoId, usuario, 'pessimistic_read');
       const rascunho = await this.obterRascunhoAtivo(gerenciador, tenantId, plano.id);
       return this.montarVersao(gerenciador, rascunho);
     });
   }
 
   async atualizarRascunho(
-    tenantId: string,
-    pacienteId: string,
-    planoId: string,
-    usuario: UsuarioAutenticado,
-    dados: AtualizarRascunhoPlanoAlimentarDto
+    tenantId: string, pacienteId: string, planoId: string,
+    usuario: UsuarioAutenticado, dados: AtualizarRascunhoPlanoAlimentarDto
   ) {
     this.garantirPapelProfissional(usuario);
     this.garantirPermissao(usuario, 'planos_alimentares.gerenciar');
+    this.validarDadosClinicosRascunho(dados);
+    return this.executorTenant.executar(tenantId, async gerenciador => {
+      const plano = await this.obterPlanoNoEscopo(gerenciador, tenantId, pacienteId, planoId, usuario, true);
+      const rascunho = await this.obterRascunhoAtivo(gerenciador, tenantId, plano.id, true);
+      this.conferirRevisaoEdicao(rascunho, dados);
+      await this.aplicarRascunhoClinico(gerenciador, tenantId, pacienteId, rascunho, dados);
+      rascunho.edicaoSnapshotCriptografado = null;
+      rascunho.edicaoProtegida = rascunho.edicaoProtegida || dados.rascunhoRevisaoEsperada !== undefined;
+      this.avancarRevisaoEdicao(rascunho);
+      rascunho.edicaoMaterializadaRevisao = rascunho.rascunhoRevisao;
+      await gerenciador.getRepository(PlanoAlimentarVersaoOrm).save(rascunho);
+      return this.montarVersao(gerenciador, rascunho);
+    });
+  }
+
+  async salvarEdicaoRascunho(
+    tenantId: string, pacienteId: string, planoId: string,
+    usuario: UsuarioAutenticado, dados: SalvarEdicaoPlanoDto
+  ) {
+    this.garantirPapelProfissional(usuario);
+    this.garantirPermissao(usuario, 'planos_alimentares.gerenciar');
+    let documento: DocumentoEdicaoPlano;
+    try { documento = validarDocumentoEdicaoPlano(dados.documento); }
+    catch { throw new BadRequestException('Documento de edição do plano inválido.'); }
+    if (dados.rascunhoRevisaoEsperada === undefined) throw new BadRequestException('Informe a revisão do rascunho.');
+    return this.executorTenant.executar(tenantId, async gerenciador => {
+      const plano = await this.obterPlanoNoEscopo(gerenciador, tenantId, pacienteId, planoId, usuario, true);
+      const rascunho = await this.obterRascunhoAtivo(gerenciador, tenantId, plano.id, true);
+      this.conferirRevisaoEdicao(rascunho, dados);
+      await this.validarReferenciasEdicao(gerenciador, tenantId, pacienteId, documento);
+      const clinico = converterEdicaoParaRascunho(documento, rascunho);
+      let materializada = false;
+      if (!validateSync(clinico, { whitelist: true, forbidNonWhitelisted: true }).length && this.lerApresentacao(rascunho).apresentacaoEstado !== 'indisponivel') {
+        try {
+          await this.aplicarRascunhoClinico(gerenciador, tenantId, pacienteId, rascunho, clinico);
+          materializada = true;
+        } catch (erro) {
+          // Incompletude/inaplicabilidade clínica não apaga o documento editorial.
+          // Erros de infraestrutura/concorrência NÃO são convertidos em sucesso.
+          if (!(erro instanceof BadRequestException)) throw erro;
+        }
+      }
+      rascunho.edicaoSnapshotCriptografado = this.criptografia.criptografar(JSON.stringify(documento));
+      rascunho.edicaoProtegida = true;
+      this.avancarRevisaoEdicao(rascunho);
+      rascunho.edicaoMaterializadaRevisao = materializada ? rascunho.rascunhoRevisao : null;
+      rascunho.revisadaEm = null;
+      rascunho.revisadaPorUsuarioId = null;
+      rascunho.hashConteudo = null;
+      await gerenciador.getRepository(PlanoAlimentarVersaoOrm).save(rascunho);
+      return this.montarVersao(gerenciador, rascunho);
+    });
+  }
+
+  private async validarReferenciasEdicao(gerenciador: EntityManager, tenantId: string, pacienteId: string, documento: DocumentoEdicaoPlano) {
+    if (documento.avaliacaoAntropometricaId) {
+      const avaliacao = await gerenciador.getRepository(AvaliacaoAntropometricaOrm).findOne({
+        where: { id: documento.avaliacaoAntropometricaId, tenantId, pacienteId, excluidaEm: IsNull() },
+        lock: { mode: 'pessimistic_read' }
+      });
+      if (!avaliacao) throw new BadRequestException('Avaliação de referência indisponível para este paciente.');
+    }
+    const ids = new Set(documento.refeicoes.flatMap(r => r.itens.flatMap(i => [i, ...(i.substituicoes ?? [])])).map(i => i.alimentoComposicaoId).filter((id): id is string => Boolean(id)));
+    for (const id of ids) {
+      const alimento = await gerenciador.getRepository(AlimentoComposicaoOrm).findOne({ where: { id }, lock: { mode: 'pessimistic_read' } });
+      if (!alimento) throw new BadRequestException('Alimento de referência indisponível.');
+      const fonte = await gerenciador.getRepository(FonteComposicaoAlimentoOrm).findOne({ where: { id: alimento.fonteId, situacao: 'ativa' }, lock: { mode: 'pessimistic_read' } });
+      if (!fonte) throw new BadRequestException('Fonte do alimento indisponível.');
+    }
+  }
+
+  private validarDadosClinicosRascunho(dados: AtualizarRascunhoPlanoAlimentarDto): void {
     const metaManual = dados.origemMeta === 'manual';
     // A trava clinica continua: condicao especial nunca usa formula preditiva.
     // O que mudou e existir uma saida -- a meta manual -- em vez de recusa seca.
@@ -596,135 +680,133 @@ export class ServicoPlanosAlimentares {
       throw new BadRequestException('Confirme explicitamente a aplicabilidade da formula antes de calcular o plano.');
     }
 
-    return this.executorTenant.executar(tenantId, async (gerenciador) => {
-      const plano = await this.obterPlanoNoEscopo(gerenciador, tenantId, pacienteId, planoId, usuario, true);
-      const rascunho = await gerenciador.getRepository(PlanoAlimentarVersaoOrm).findOne({
-        where: { tenantId, planoId: plano.id, publicadaEm: IsNull(), descartadaEm: IsNull() },
-        lock: { mode: 'pessimistic_write' }
-      });
-      if (!rascunho) throw new NotFoundException('Rascunho do plano alimentar nao encontrado.');
-      let preferencias;
-      if (dados.preferenciasApresentacao !== undefined) {
-        try { preferencias = validarPreferenciasApresentacao(dados.preferenciasApresentacao); }
-        catch { throw new BadRequestException('Preferências de apresentação inválidas.'); }
-        if (!Number.isSafeInteger(dados.apresentacaoRevisaoEsperada) || dados.apresentacaoRevisaoEsperada! < 0 || dados.apresentacaoRevisaoEsperada! >= 2147483647 || !dados.rascunhoIdEsperado) {
-          throw new BadRequestException('Informe a identidade e a revisão das preferências do rascunho.');
-        }
-        if (dados.rascunhoIdEsperado !== rascunho.id || dados.apresentacaoRevisaoEsperada !== (rascunho.apresentacaoRevisao ?? 0)) {
-          throw new ConflictException('O rascunho ou suas preferências foram alterados. Recarregue e confira antes de salvar.');
-        }
-      }
+  }
 
-      const avaliacao = await gerenciador.getRepository(AvaliacaoAntropometricaOrm).findOne({
-        where: {
-          id: dados.avaliacaoAntropometricaId,
-          tenantId,
-          pacienteId,
-          excluidaEm: IsNull()
-        }
-      });
-      const entradaCalculo = this.validarAvaliacaoAntropometrica(avaliacao);
-      let estimativa: ReturnType<typeof calcularEstimativaEnergetica> | undefined;
-      let metasMacronutrientes: ReturnType<typeof calcularMetasMacronutrientes>;
-      let metaEnergeticaKcal: number;
-      try {
-        if (metaManual && dados.metodoMacrosManual === 'gramas_por_kg') {
-          // Em g/kg os macros sao a prescricao; a energia e consequencia deles.
-          metasMacronutrientes = calcularMetasMacronutrientesPorPeso(
-            entradaCalculo.pesoKg,
-            dados.macrosGramasPorKg!
-          );
-          metaEnergeticaKcal = calcularEnergiaDasMetas(metasMacronutrientes);
-        } else if (metaManual) {
-          metaEnergeticaKcal = dados.metaEnergeticaManualKcal!;
-          metasMacronutrientes = calcularMetasMacronutrientes(metaEnergeticaKcal, dados.distribuicaoMacros);
-        } else {
-          estimativa = calcularEstimativaEnergetica({
-            formula: dados.formula,
-            sexo: entradaCalculo.sexo,
-            idadeAnos: entradaCalculo.idadeAnos,
-            pesoKg: entradaCalculo.pesoKg,
-            alturaCm: entradaCalculo.alturaCm,
-            fatorAtividade: dados.fatorAtividade
-          });
-          metaEnergeticaKcal = estimativa.gastoEnergeticoTotalKcal + (dados.ajusteEnergeticoKcal ?? 0);
-          metasMacronutrientes = calcularMetasMacronutrientes(metaEnergeticaKcal, dados.distribuicaoMacros);
-        }
-      } catch (erro) {
-        throw new BadRequestException(erro instanceof Error ? erro.message : 'Dados invalidos para o calculo nutricional.');
+  private async aplicarRascunhoClinico(
+    gerenciador: EntityManager, tenantId: string, pacienteId: string,
+    rascunho: PlanoAlimentarVersaoOrm, dados: AtualizarRascunhoPlanoAlimentarDto
+  ): Promise<void> {
+    this.validarDadosClinicosRascunho(dados);
+    const metaManual = dados.origemMeta === 'manual';
+    let preferencias;
+    if (dados.preferenciasApresentacao !== undefined) {
+      try { preferencias = validarPreferenciasApresentacao(dados.preferenciasApresentacao); }
+      catch { throw new BadRequestException('Preferências de apresentação inválidas.'); }
+      if (!Number.isSafeInteger(dados.apresentacaoRevisaoEsperada) || dados.apresentacaoRevisaoEsperada! < 0 || dados.apresentacaoRevisaoEsperada! >= 2147483647 || !dados.rascunhoIdEsperado) {
+        throw new BadRequestException('Informe a identidade e a revisão das preferências do rascunho.');
       }
-
-      const estrutura = await this.resolverEstrutura(gerenciador, dados);
-      let totais: ReturnType<typeof calcularTotaisPlano>;
-      try {
-        validarEstruturaPlano(estrutura);
-        totais = calcularTotaisPlano(estrutura);
-      } catch (erro) {
-        throw new BadRequestException(erro instanceof Error ? erro.message : 'Estrutura do plano alimentar invalida.');
+      if (dados.rascunhoIdEsperado !== rascunho.id || dados.apresentacaoRevisaoEsperada !== (rascunho.apresentacaoRevisao ?? 0)) {
+        throw new ConflictException('O rascunho ou suas preferências foram alterados. Recarregue e confira antes de salvar.');
       }
+    }
 
-      const alertasDivergenciaClinica = this.avaliarDivergenciasNutricionais(
-        metaEnergeticaKcal,
-        metasMacronutrientes,
-        totais
-      );
-      const calculoSnapshot = {
-        motorCalculoVersao: MOTOR_CALCULO_VERSAO,
-        avaliacao: {
-          id: avaliacao!.id,
-          avaliadaEm: avaliacao!.avaliadaEm,
+    const avaliacao = await gerenciador.getRepository(AvaliacaoAntropometricaOrm).findOne({
+      where: {
+        id: dados.avaliacaoAntropometricaId,
+        tenantId,
+        pacienteId,
+        excluidaEm: IsNull()
+      }
+    });
+    const entradaCalculo = this.validarAvaliacaoAntropometrica(avaliacao);
+    let estimativa: ReturnType<typeof calcularEstimativaEnergetica> | undefined;
+    let metasMacronutrientes: ReturnType<typeof calcularMetasMacronutrientes>;
+    let metaEnergeticaKcal: number;
+    try {
+      if (metaManual && dados.metodoMacrosManual === 'gramas_por_kg') {
+        // Em g/kg os macros sao a prescricao; a energia e consequencia deles.
+        metasMacronutrientes = calcularMetasMacronutrientesPorPeso(
+          entradaCalculo.pesoKg,
+          dados.macrosGramasPorKg!
+        );
+        metaEnergeticaKcal = calcularEnergiaDasMetas(metasMacronutrientes);
+      } else if (metaManual) {
+        metaEnergeticaKcal = dados.metaEnergeticaManualKcal!;
+        metasMacronutrientes = calcularMetasMacronutrientes(metaEnergeticaKcal, dados.distribuicaoMacros);
+      } else {
+        estimativa = calcularEstimativaEnergetica({
+          formula: dados.formula,
           sexo: entradaCalculo.sexo,
           idadeAnos: entradaCalculo.idadeAnos,
           pesoKg: entradaCalculo.pesoKg,
-          alturaCm: entradaCalculo.alturaCm
-        },
-        origemMeta: dados.origemMeta,
-        metodoMacrosManual: metaManual ? dados.metodoMacrosManual : undefined,
-        macrosGramasPorKg:
-          metaManual && dados.metodoMacrosManual === 'gramas_por_kg' ? dados.macrosGramasPorKg : undefined,
-        possuiCondicaoEspecial: dados.possuiCondicaoEspecial,
-        justificativaCondicaoEspecial: dados.justificativaCondicaoEspecial?.trim(),
-        aplicabilidadeFormulaConfirmada: metaManual ? false : dados.aplicabilidadeFormulaConfirmada,
-        fatorAtividade: metaManual ? undefined : dados.fatorAtividade,
-        estimativa,
-        ajusteEnergeticoKcal: metaManual ? 0 : (dados.ajusteEnergeticoKcal ?? 0),
-        metaEnergeticaKcal,
-        distribuicaoMacros:
-          metaManual && dados.metodoMacrosManual === 'gramas_por_kg' ? undefined : dados.distribuicaoMacros,
-        metasMacronutrientes,
-        alertasDivergenciaClinica,
-        justificativaDivergenciaClinica: dados.justificativaDivergenciaClinica?.trim()
-      };
-
-      if (preferencias) {
-        rascunho.apresentacaoSnapshotCriptografado = this.criptografia.criptografar(JSON.stringify(preferencias));
-        rascunho.apresentacaoRevisao = (rascunho.apresentacaoRevisao ?? 0) + 1;
+          alturaCm: entradaCalculo.alturaCm,
+          fatorAtividade: dados.fatorAtividade
+        });
+        metaEnergeticaKcal = estimativa.gastoEnergeticoTotalKcal + (dados.ajusteEnergeticoKcal ?? 0);
+        metasMacronutrientes = calcularMetasMacronutrientes(metaEnergeticaKcal, dados.distribuicaoMacros);
       }
-      await this.substituirFilhos(gerenciador, tenantId, rascunho.id, estrutura);
-      rascunho.avaliacaoAntropometricaId = avaliacao!.id;
-      // `null` e proposital: se o rascunho ja tinha formula e virou manual, so
-      // `null` limpa a coluna -- `undefined` deixaria a formula antiga no banco.
-      rascunho.formulaCodigo = estimativa?.formulaCodigo ?? null;
-      rascunho.formulaVersao = estimativa?.formulaVersao ?? null;
-      rascunho.motorCalculoVersao = MOTOR_CALCULO_VERSAO;
-      rascunho.objetivosCriptografados = this.criptografia.criptografar(dados.objetivos.trim());
-      rascunho.observacoesCriptografadas = dados.observacoes?.trim()
-        ? this.criptografia.criptografar(dados.observacoes.trim())
-        : undefined;
-      rascunho.calculoSnapshotCriptografado = this.criptografia.criptografar(JSON.stringify(calculoSnapshot));
-      rascunho.totaisSnapshotCriptografado = this.criptografia.criptografar(JSON.stringify(totais));
-      // Editar invalida a revisao: quem revisou aprovou outro conteudo. Precisa
-      // ser `null` -- com `undefined` o TypeORM nao escreve a coluna e o plano
-      // continuaria "revisado" no banco, publicavel sem passar pela revisao.
-      rascunho.revisadaEm = null;
-      rascunho.revisadaPorUsuarioId = null;
-      rascunho.hashConteudo = null;
-      await gerenciador.getRepository(PlanoAlimentarVersaoOrm).save(rascunho);
-      return this.montarVersao(gerenciador, rascunho);
-    });
+    } catch (erro) {
+      throw new BadRequestException(erro instanceof Error ? erro.message : 'Dados invalidos para o calculo nutricional.');
+    }
+
+    const estrutura = await this.resolverEstrutura(gerenciador, dados);
+    let totais: ReturnType<typeof calcularTotaisPlano>;
+    try {
+      validarEstruturaPlano(estrutura);
+      totais = calcularTotaisPlano(estrutura);
+    } catch (erro) {
+      throw new BadRequestException(erro instanceof Error ? erro.message : 'Estrutura do plano alimentar invalida.');
+    }
+
+    const alertasDivergenciaClinica = this.avaliarDivergenciasNutricionais(
+      metaEnergeticaKcal,
+      metasMacronutrientes,
+      totais
+    );
+    const calculoSnapshot = {
+      motorCalculoVersao: MOTOR_CALCULO_VERSAO,
+      avaliacao: {
+        id: avaliacao!.id,
+        avaliadaEm: avaliacao!.avaliadaEm,
+        sexo: entradaCalculo.sexo,
+        idadeAnos: entradaCalculo.idadeAnos,
+        pesoKg: entradaCalculo.pesoKg,
+        alturaCm: entradaCalculo.alturaCm
+      },
+      origemMeta: dados.origemMeta,
+      metodoMacrosManual: metaManual ? dados.metodoMacrosManual : undefined,
+      macrosGramasPorKg:
+        metaManual && dados.metodoMacrosManual === 'gramas_por_kg' ? dados.macrosGramasPorKg : undefined,
+      possuiCondicaoEspecial: dados.possuiCondicaoEspecial,
+      justificativaCondicaoEspecial: dados.justificativaCondicaoEspecial?.trim(),
+      aplicabilidadeFormulaConfirmada: metaManual ? false : dados.aplicabilidadeFormulaConfirmada,
+      fatorAtividade: metaManual ? undefined : dados.fatorAtividade,
+      estimativa,
+      ajusteEnergeticoKcal: metaManual ? 0 : (dados.ajusteEnergeticoKcal ?? 0),
+      metaEnergeticaKcal,
+      distribuicaoMacros:
+        metaManual && dados.metodoMacrosManual === 'gramas_por_kg' ? undefined : dados.distribuicaoMacros,
+      metasMacronutrientes,
+      alertasDivergenciaClinica,
+      justificativaDivergenciaClinica: dados.justificativaDivergenciaClinica?.trim()
+    };
+
+    if (preferencias) {
+      rascunho.apresentacaoSnapshotCriptografado = this.criptografia.criptografar(JSON.stringify(preferencias));
+      rascunho.apresentacaoRevisao = (rascunho.apresentacaoRevisao ?? 0) + 1;
+    }
+    await this.substituirFilhos(gerenciador, tenantId, rascunho.id, estrutura);
+    rascunho.avaliacaoAntropometricaId = avaliacao!.id;
+    // `null` e proposital: se o rascunho ja tinha formula e virou manual, so
+    // `null` limpa a coluna -- `undefined` deixaria a formula antiga no banco.
+    rascunho.formulaCodigo = estimativa?.formulaCodigo ?? null;
+    rascunho.formulaVersao = estimativa?.formulaVersao ?? null;
+    rascunho.motorCalculoVersao = MOTOR_CALCULO_VERSAO;
+    rascunho.objetivosCriptografados = this.criptografia.criptografar(dados.objetivos.trim());
+    rascunho.observacoesCriptografadas = dados.observacoes?.trim()
+      ? this.criptografia.criptografar(dados.observacoes.trim())
+      : null;
+    rascunho.calculoSnapshotCriptografado = this.criptografia.criptografar(JSON.stringify(calculoSnapshot));
+    rascunho.totaisSnapshotCriptografado = this.criptografia.criptografar(JSON.stringify(totais));
+    // Editar invalida a revisao: quem revisou aprovou outro conteudo. Precisa
+    // ser `null` -- com `undefined` o TypeORM nao escreve a coluna e o plano
+    // continuaria "revisado" no banco, publicavel sem passar pela revisao.
+    rascunho.revisadaEm = null;
+    rascunho.revisadaPorUsuarioId = null;
+    rascunho.hashConteudo = null;
   }
 
-  async revisar(tenantId: string, pacienteId: string, planoId: string, usuario: UsuarioAutenticado) {
+  async revisar(tenantId: string, pacienteId: string, planoId: string, usuario: UsuarioAutenticado, dados: PrecondicaoEdicaoPlanoDto = {}) {
     this.garantirPapelProfissional(usuario);
     this.garantirPermissao(usuario, 'planos_alimentares.gerenciar');
     return this.executorTenant.executar(tenantId, async (gerenciador) => {
@@ -734,6 +816,7 @@ export class ServicoPlanosAlimentares {
         lock: { mode: 'pessimistic_write' }
       });
       if (!rascunho) throw new NotFoundException('Rascunho do plano alimentar nao encontrado.');
+      this.conferirRevisaoEdicao(rascunho, dados);
       this.garantirApresentacaoDisponivel(rascunho);
       this.garantirRascunhoCompleto(rascunho);
       const conteudo = await this.montarVersao(gerenciador, rascunho);
@@ -742,12 +825,15 @@ export class ServicoPlanosAlimentares {
       }
       rascunho.revisadaEm = new Date();
       rascunho.revisadaPorUsuarioId = usuario.usuarioId;
+      rascunho.edicaoProtegida = rascunho.edicaoProtegida || dados.rascunhoRevisaoEsperada !== undefined;
+      this.avancarRevisaoEdicao(rascunho);
+      rascunho.edicaoMaterializadaRevisao = rascunho.rascunhoRevisao;
       await gerenciador.getRepository(PlanoAlimentarVersaoOrm).save(rascunho);
       return this.montarVersao(gerenciador, rascunho);
     });
   }
 
-  async publicar(tenantId: string, pacienteId: string, planoId: string, usuario: UsuarioAutenticado) {
+  async publicar(tenantId: string, pacienteId: string, planoId: string, usuario: UsuarioAutenticado, dados: PrecondicaoEdicaoPlanoDto = {}) {
     this.garantirPapelProfissional(usuario);
     this.garantirPermissao(usuario, 'planos_alimentares.gerenciar');
     return this.executorTenant.executar(tenantId, async (gerenciador) => {
@@ -768,6 +854,7 @@ export class ServicoPlanosAlimentares {
         lock: { mode: 'pessimistic_write' }
       });
       if (!rascunho) throw new NotFoundException('Rascunho do plano alimentar nao encontrado.');
+      this.conferirRevisaoEdicao(rascunho, dados);
       if (!rascunho.revisadaEm || !rascunho.revisadaPorUsuarioId) {
         throw new ConflictException('Revise o plano alimentar antes de publica-lo.');
       }
@@ -782,6 +869,9 @@ export class ServicoPlanosAlimentares {
         .update(this.serializarEstavel(this.conteudoClinicoParaHash(plano, conteudo)))
         .digest('hex');
       rascunho.publicadaEm = new Date();
+      rascunho.edicaoProtegida = rascunho.edicaoProtegida || dados.rascunhoRevisaoEsperada !== undefined;
+      this.avancarRevisaoEdicao(rascunho);
+      rascunho.edicaoMaterializadaRevisao = rascunho.rascunhoRevisao;
       await gerenciador.getRepository(PlanoAlimentarVersaoOrm).save(rascunho);
       plano.versaoPublicadaAtualId = rascunho.id;
       await repositorioPlano.save(plano);
@@ -1009,9 +1099,10 @@ export class ServicoPlanosAlimentares {
     return plano;
   }
 
-  private async obterRascunhoAtivo(gerenciador: EntityManager, tenantId: string, planoId: string) {
+  private async obterRascunhoAtivo(gerenciador: EntityManager, tenantId: string, planoId: string, bloquear = false) {
     const rascunho = await gerenciador.getRepository(PlanoAlimentarVersaoOrm).findOne({
-      where: { tenantId, planoId, publicadaEm: IsNull(), descartadaEm: IsNull() }
+      where: { tenantId, planoId, publicadaEm: IsNull(), descartadaEm: IsNull() },
+      ...(bloquear ? { lock: { mode: 'pessimistic_write' as const } } : {})
     });
     if (!rascunho) throw new NotFoundException('Rascunho do plano alimentar nao encontrado.');
     return rascunho;
@@ -1357,7 +1448,38 @@ export class ServicoPlanosAlimentares {
     }
   }
 
+  private conferirRevisaoEdicao(
+    rascunho: PlanoAlimentarVersaoOrm,
+    dados: { rascunhoIdEsperado?: string; rascunhoRevisaoEsperada?: number }
+  ): void {
+    const revisao = dados.rascunhoRevisaoEsperada;
+    if (rascunho.edicaoProtegida && revisao === undefined) {
+      throw new ConflictException('Este rascunho exige a revisão atual de edição. Atualize o editor antes de continuar.');
+    }
+    if (revisao !== undefined) {
+      if (!Number.isSafeInteger(revisao) || revisao < 0 || revisao >= 2147483647 || !dados.rascunhoIdEsperado) {
+        throw new BadRequestException('Informe a identidade e a revisão do rascunho.');
+      }
+      if (dados.rascunhoIdEsperado !== rascunho.id || revisao !== (rascunho.rascunhoRevisao ?? 0)) {
+        throw new ConflictException('O rascunho foi alterado. Confira a versão salva antes de continuar.');
+      }
+    }
+    if ((rascunho.rascunhoRevisao ?? 0) >= 2147483647) {
+      throw new ConflictException('O rascunho atingiu o limite de revisões de edição.');
+    }
+  }
+
+  private avancarRevisaoEdicao(rascunho: PlanoAlimentarVersaoOrm): void {
+    const anterior = rascunho.rascunhoRevisao ?? 0;
+    rascunho.rascunhoRevisao = anterior + 1;
+    if (rascunho.edicaoMaterializadaRevisao === anterior) rascunho.edicaoMaterializadaRevisao = rascunho.rascunhoRevisao;
+  }
+
   private garantirRascunhoCompleto(rascunho: PlanoAlimentarVersaoOrm): void {
+    const estado = this.lerEdicao(rascunho).edicaoEstado;
+    if (estado === 'pendente' || estado === 'indisponivel') {
+      throw new ConflictException('A edição mais recente está pendente ou indisponível. Complete e salve antes de revisar ou publicar.');
+    }
     if (
       !rascunho.avaliacaoAntropometricaId ||
       !rascunho.motorCalculoVersao ||
@@ -1529,6 +1651,9 @@ export class ServicoPlanosAlimentares {
   }
 
   private async montarVersao(gerenciador: EntityManager, versao: PlanoAlimentarVersaoOrm) {
+    // Resultado publicado/descartado usa exclusivamente sua materialização imutável.
+    const edicao = versao.publicadaEm || versao.descartadaEm ? { edicaoEstado: 'legado' as const } : this.lerEdicao(versao);
+    const calculoAtual = edicao.edicaoEstado !== 'pendente' && edicao.edicaoEstado !== 'indisponivel';
     const refeicoes = await gerenciador.getRepository(PlanoAlimentarRefeicaoOrm).find({
       where: { tenantId: versao.tenantId, versaoId: versao.id },
       order: { ordem: 'ASC' }
@@ -1549,15 +1674,17 @@ export class ServicoPlanosAlimentares {
       id: versao.id,
       numero: versao.numero,
       status: versao.publicadaEm ? ('publicada' as const) : versao.descartadaEm ? ('descartada' as const) : ('rascunho' as const),
-      avaliacaoAntropometricaId: versao.avaliacaoAntropometricaId,
-      formulaCodigo: versao.formulaCodigo,
-      formulaVersao: versao.formulaVersao,
-      motorCalculoVersao: versao.motorCalculoVersao,
-      objetivos: this.descriptografarOpcional(versao.objetivosCriptografados),
-      observacoes: this.descriptografarOpcional(versao.observacoesCriptografadas),
-      calculo: this.lerJsonCriptografadoOpcional(versao.calculoSnapshotCriptografado),
-      totais: this.lerJsonCriptografadoOpcional(versao.totaisSnapshotCriptografado),
+      avaliacaoAntropometricaId: calculoAtual ? versao.avaliacaoAntropometricaId : undefined,
+      formulaCodigo: calculoAtual ? versao.formulaCodigo : undefined,
+      formulaVersao: calculoAtual ? versao.formulaVersao : undefined,
+      motorCalculoVersao: calculoAtual ? versao.motorCalculoVersao : undefined,
+      objetivos: calculoAtual ? this.descriptografarOpcional(versao.objetivosCriptografados) : undefined,
+      observacoes: calculoAtual ? this.descriptografarOpcional(versao.observacoesCriptografadas) : undefined,
+      calculo: calculoAtual ? this.lerJsonCriptografadoOpcional(versao.calculoSnapshotCriptografado) : undefined,
+      totais: calculoAtual ? this.lerJsonCriptografadoOpcional(versao.totaisSnapshotCriptografado) : undefined,
       ...this.lerApresentacao(versao),
+      rascunhoRevisao: versao.rascunhoRevisao ?? 0,
+      ...(!versao.publicadaEm && !versao.descartadaEm ? edicao : {}),
       hashConteudo: versao.hashConteudo,
       revisadaEm: versao.revisadaEm,
       revisadaPorUsuarioId: versao.revisadaPorUsuarioId,
@@ -1565,7 +1692,7 @@ export class ServicoPlanosAlimentares {
       descartadaEm: versao.descartadaEm,
       criadoEm: versao.criadoEm,
       atualizadoEm: versao.atualizadoEm,
-      refeicoes: refeicoes.map((refeicao) => ({
+      refeicoes: (calculoAtual ? refeicoes : []).map((refeicao) => ({
         id: refeicao.id,
         ordem: refeicao.ordem,
         nome: this.criptografia.descriptografar(refeicao.nomeCriptografado),
@@ -1604,6 +1731,19 @@ export class ServicoPlanosAlimentares {
           }))
       }))
     };
+  }
+
+  private lerEdicao(versao: PlanoAlimentarVersaoOrm): {
+    edicaoEstado: 'legado' | 'pendente' | 'materializada' | 'indisponivel';
+    documentoEdicao?: DocumentoEdicaoPlano;
+  } {
+    if (!versao.edicaoSnapshotCriptografado) return {
+      edicaoEstado: versao.edicaoProtegida && versao.edicaoMaterializadaRevisao !== versao.rascunhoRevisao ? 'indisponivel' : 'legado'
+    };
+    try {
+      const documentoEdicao = validarDocumentoEdicaoPlano(this.lerJsonCriptografado(versao.edicaoSnapshotCriptografado));
+      return { documentoEdicao, edicaoEstado: versao.edicaoMaterializadaRevisao === versao.rascunhoRevisao ? 'materializada' : 'pendente' };
+    } catch { return { edicaoEstado: 'indisponivel' }; }
   }
 
   private lerApresentacao(versao: PlanoAlimentarVersaoOrm) {
@@ -1662,11 +1802,11 @@ export class ServicoPlanosAlimentares {
     return valor ? this.lerJsonCriptografado<unknown>(valor) : undefined;
   }
 
-  private descriptografarOpcional(valor?: Buffer): string | undefined {
+  private descriptografarOpcional(valor?: Buffer | null): string | undefined {
     return valor ? this.criptografia.descriptografar(valor) : undefined;
   }
 
-  private copiarBuffer(valor?: Buffer): Buffer | undefined {
+  private copiarBuffer(valor?: Buffer | null): Buffer | undefined {
     return valor ? Buffer.from(valor) : undefined;
   }
 }

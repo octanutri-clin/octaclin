@@ -134,9 +134,11 @@ interface ModalConfirmacaoProps {
   mensagem: string;
   rotuloConfirmar?: string;
   rotuloCancelar?: string;
+  rotuloSecundario?: string;
   confirmando?: boolean;
   aoConfirmar: () => void;
   aoCancelar: () => void;
+  aoAcaoSecundaria?: () => void;
 }
 
 export function ModalConfirmacao({
@@ -145,16 +147,21 @@ export function ModalConfirmacao({
   mensagem,
   rotuloConfirmar = 'Confirmar',
   rotuloCancelar = 'Cancelar',
+  rotuloSecundario,
   confirmando = false,
   aoConfirmar,
-  aoCancelar
+  aoCancelar,
+  aoAcaoSecundaria
 }: ModalConfirmacaoProps) {
   return (
-    <Modal aberto={aberto} aoFechar={aoCancelar} titulo={titulo} descricao={mensagem}>
-      <div className="flex justify-end gap-2">
+    <Modal aberto={aberto} aoFechar={() => { if (!confirmando) aoCancelar(); }} titulo={titulo} descricao={mensagem}>
+      <div className="flex flex-wrap justify-end gap-2">
         <Botao type="button" variante="secundario" onClick={aoCancelar} disabled={confirmando}>
           {rotuloCancelar}
         </Botao>
+        {rotuloSecundario && aoAcaoSecundaria ? <Botao type="button" variante="secundario" onClick={aoAcaoSecundaria} disabled={confirmando}>
+          {confirmando ? 'Processando' : rotuloSecundario}
+        </Botao> : null}
         <Botao type="button" variante="perigo" onClick={aoConfirmar} disabled={confirmando}>
           {confirmando ? 'Processando' : rotuloConfirmar}
         </Botao>

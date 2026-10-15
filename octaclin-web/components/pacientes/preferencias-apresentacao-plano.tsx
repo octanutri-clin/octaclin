@@ -32,10 +32,10 @@ export function PreferenciasApresentacaoPlano({
     itens: Array<{
       chaveCliente: string;
       descricao: string;
-      quantidade: number;
+      quantidade: number | string;
       unidade: string;
-      porcaoGramas: number;
-      substituicoes: Array<{ chaveCliente: string; descricao: string; quantidade: number; unidade: string; porcaoGramas: number; preferida: boolean }>;
+      porcaoGramas: number | string;
+      substituicoes: Array<{ chaveCliente: string; descricao: string; quantidade: number | string; unidade: string; porcaoGramas: number | string; preferida: boolean }>;
     }>;
   }>;
   metas?: { carboidratosG: number; proteinasG: number; gordurasG: number; energiaKcal: number };
