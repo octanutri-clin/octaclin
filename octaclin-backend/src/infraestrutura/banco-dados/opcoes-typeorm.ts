@@ -1,3 +1,5 @@
+import { ApresentacaoPlanos1720000001072 } from './migracoes/1720000001072-ApresentacaoPlanos';
+import { EdicaoPlanos1720000001073 } from './migracoes/1720000001073-EdicaoPlanos';
 import { RascunhosClinicos1720000001071 } from './migracoes/1720000001071-RascunhosClinicos';
 import { ComandoGamificacaoOrm } from '../../modulos/gamificacao/infraestrutura/comando-gamificacao.orm';
 import { RevisaoPublicacaoOrm } from '../../modulos/gamificacao/infraestrutura/revisao-publicacao.orm';
@@ -454,7 +456,9 @@ export function criarOpcoesTypeOrm(): TypeOrmModuleOptions & DataSourceOptions {
         AcompanhamentoGestacional1720000001068,
         ProtegerRetencaoAvaliacoes1720000001069,
         PilotoGamificacao1720000001070,
-        RascunhosClinicos1720000001071
+        RascunhosClinicos1720000001071,
+        ApresentacaoPlanos1720000001072,
+        EdicaoPlanos1720000001073
       ],
     migrationsRun: executarMigracoesNoBoot(),
     synchronize: false,

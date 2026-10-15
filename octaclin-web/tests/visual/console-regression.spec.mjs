@@ -3074,7 +3074,7 @@ test.describe('prontuario do paciente', () => {
     await abaAcompanhamento.focus();
     await page.keyboard.press('ArrowRight');
     await expect(page.getByRole('dialog', { name: 'Sair sem salvar' })).toBeVisible();
-    await page.getByRole('dialog', { name: 'Sair sem salvar' }).getByRole('button', { name: 'Cancelar' }).click();
+    await page.getByRole('dialog', { name: 'Sair sem salvar' }).getByRole('button', { name: 'Continuar editando' }).click();
     await expect(abaAcompanhamento).toBeFocused();
     await expect(page.getByLabel('Título da tarefa')).toHaveValue('Revisar diário alimentar');
     await expect(abaAcompanhamento).toHaveAttribute('aria-selected', 'true');
@@ -3231,7 +3231,174 @@ test.describe('prontuario do paciente', () => {
     await assertSemOverflowHorizontal(page);
   });
 
-  test('reordena refeições por botões e salva a ordem', async ({ page }) => {
+  test('lista totais salvos das versões e pagina sem carregar versões por card', async ({ page }) => {
+    await prepararProntuarioMockado(page, { permissoesExtras: ['planos_alimentares.ler'] });
+    const consultas = [];
+    let falharDetalhePlano26 = false;
+    const versao = (id, numero, status, valores) => ({
+      id, numero, status, criadoEm: '2026-10-01T12:00:00.000Z', atualizadoEm: '2026-10-01T12:00:00.000Z',
+      resumoNutricional: { estado: 'completo', ...valores }
+    });
+    const criarPlanoResumo = (id, numero = 1, comRascunho = false) => ({
+      id, pacienteId: 'paciente-1', profissionalId: 'profissional-1', titulo: `Plano sintético ${id}`,
+      criadoEm: '2026-10-01T12:00:00.000Z', atualizadoEm: '2026-10-01T12:00:00.000Z',
+      current: versao(`${id}-publicada`, numero, 'publicada', { energiaKcal: 1800, proteinasG: 90, carboidratosG: 200, gordurasG: 60 }),
+      ...(comRascunho ? { draft: versao(`${id}-rascunho`, numero + 1, 'rascunho', { energiaKcal: 0, proteinasG: 10, carboidratosG: 0, gordurasG: 2 }) } : {}),
+      historicoQuantidade: 0
+    });
+    await page.route('**/api/pacientes/paciente-1/planos-alimentares*', async (route) => {
+      const url = new URL(route.request().url());
+      if (url.pathname !== '/api/pacientes/paciente-1/planos-alimentares') return route.fallback();
+      const pagina = Number(url.searchParams.get('pagina') ?? 1);
+      consultas.push({ pagina, limite: Number(url.searchParams.get('limite')) });
+      const itens = pagina === 1
+        ? [criarPlanoResumo('plano-01', 1, true), ...Array.from({ length: 24 }, (_, i) => criarPlanoResumo(`plano-${String(i + 2).padStart(2, '0')}`))]
+        : [criarPlanoResumo('plano-26')];
+      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ itens, total: 26, pagina, limite: 25 }) });
+    });
+    await page.route('**/api/pacientes/paciente-1/planos-alimentares/plano-01', async (route) => route.fulfill({
+      status: 200, contentType: 'application/json', body: JSON.stringify({
+        id: 'plano-01', pacienteId: 'paciente-1', profissionalId: 'profissional-1', titulo: 'Plano sintético plano-01',
+        criadoEm: '2026-10-01T12:00:00.000Z', atualizadoEm: '2026-10-01T12:00:00.000Z',
+        current: { id: 'publicada', numero: 1, status: 'publicada', criadoEm: '2026-10-01T12:00:00.000Z', atualizadoEm: '2026-10-01T12:00:00.000Z', refeicoes: [] },
+        historico: []
+      })
+    }));
+    await page.route('**/api/pacientes/paciente-1/planos-alimentares/plano-26', async (route) => {
+      if (falharDetalhePlano26) {
+        falharDetalhePlano26 = false;
+        await route.fulfill({ status: 500, contentType: 'application/json', body: JSON.stringify({ message: 'Falha sintética.' }) });
+        return;
+      }
+      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({
+        id: 'plano-26', pacienteId: 'paciente-1', profissionalId: 'profissional-1', titulo: 'Plano sintético plano-26',
+        criadoEm: '2026-10-01T12:00:00.000Z', atualizadoEm: '2026-10-01T12:00:00.000Z', current: undefined,
+        historico: []
+      }) });
+    });
+    await page.goto('/pacientes/paciente-1');
+    await page.getByRole('tab', { name: 'Plano', exact: true }).click();
+    await page.getByRole('tab', { name: 'Plano alimentar', exact: true }).click();
+
+    await expect(page.getByText('Rascunho v2 · Salvo')).toBeVisible();
+    await expect(page.getByText('Publicado v1 · Salvo').first()).toBeVisible();
+    await expect(page.getByText('1.800 kcal').first()).toBeVisible();
+    await expect(page.getByText('0 kcal', { exact: true })).toBeVisible();
+    await expect(page.getByRole('status').filter({ hasText: 'Página 1 de 2' })).toBeVisible();
+    await page.getByRole('button', { name: 'Próxima página de planos' }).click();
+    await expect(page.getByRole('button', { name: 'Plano sintético plano-26', exact: true })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Plano sintético plano-26' })).toBeVisible();
+    await expect.poll(() => [...new Set(consultas.map((consulta) => consulta.pagina))].sort()).toEqual([1, 2]);
+    expect(consultas.every((consulta) => consulta.limite === 25)).toBe(true);
+    await page.getByRole('button', { name: 'Página anterior de planos' }).click();
+    await expect(page.getByText('Rascunho v2 · Salvo')).toBeVisible();
+    await expect(page.getByRole('status').filter({ hasText: 'Página 1 de 2' })).toBeVisible();
+    falharDetalhePlano26 = true;
+    await page.getByRole('button', { name: 'Próxima página de planos' }).click();
+    await expect(page.getByRole('tabpanel', { name: 'Plano alimentar' }).getByRole('alert')).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Plano sintético plano-01', exact: true })).toBeVisible();
+    await expect(page.getByRole('article').getByRole('heading', { name: 'Plano sintético plano-01' })).toBeVisible();
+    await expect(page.getByRole('status').filter({ hasText: 'Página 1 de 2' })).toBeVisible();
+    await assertSemOverflowHorizontal(page);
+    const acessibilidade = await new AxeBuilder({ page }).include('nav[aria-label="Paginação de planos alimentares"]').analyze();
+    expect(acessibilidade.violations).toEqual([]);
+  });
+
+  test('oculta imediatamente os macros anteriores durante a troca de paciente na mesma tela', async ({ page }) => {
+    test.setTimeout(60_000);
+    await prepararProntuarioMockado(page, { permissoesExtras: ['planos_alimentares.ler'] });
+    let liberarListaPacienteB;
+    let sinalizarListaPacienteB;
+    let liberarProntuarioPacienteB;
+    let sinalizarProntuarioPacienteB;
+    const listaPacienteBIniciada = new Promise((resolve) => { sinalizarListaPacienteB = resolve; });
+    const respostaPacienteB = new Promise((resolve) => { liberarListaPacienteB = resolve; });
+    const prontuarioPacienteBIniciado = new Promise((resolve) => { sinalizarProntuarioPacienteB = resolve; });
+    const respostaProntuarioPacienteB = new Promise((resolve) => { liberarProntuarioPacienteB = resolve; });
+    const resumo = (id, titulo, energiaKcal) => ({
+      id, pacienteId: id === 'plano-paciente-a' ? 'paciente-1' : 'paciente-2', profissionalId: 'profissional-1', titulo,
+      criadoEm: '2026-10-01T12:00:00.000Z', atualizadoEm: '2026-10-01T12:00:00.000Z',
+      current: {
+        id: `${id}-versao`, numero: 1, status: 'publicada', criadoEm: '2026-10-01T12:00:00.000Z', atualizadoEm: '2026-10-01T12:00:00.000Z',
+        resumoNutricional: { estado: 'completo', energiaKcal, proteinasG: 80, carboidratosG: 180, gordurasG: 55 }
+      },
+      historicoQuantidade: 1
+    });
+    await page.route('**/api/pacientes/paciente-2/prontuario**', async (route) => {
+      sinalizarProntuarioPacienteB();
+      await respostaProntuarioPacienteB;
+      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({
+        paciente: {
+          id: 'paciente-2', tenantId: 'tenant-1', profissionalResponsavelId: 'profissional-1',
+          nome: 'Bruno Lima', contato: '11988880000', dataNascimento: '1987-05-10', statusAdesao: 'em_acompanhamento',
+          criadoEm: '2026-07-18T10:00:00.000Z', atualizadoEm: '2026-10-01T12:00:00.000Z'
+        },
+        resumo: {
+          consultas: 0, formulariosPendentes: 0, respostas: 0, checkinsRapidos: 0, mensagens: 0,
+          evolucoes: 0, tarefasPendentes: 0, indicadoresRecentes: [],
+          leituraClinica: { deltaUltimaAvaliacao: [], deltaDesdeInicio: [], examesForaFaixa: { status: 'disponivel', itens: [] }, condutasVencendo: [] },
+          preparacaoConsulta: { novaAvaliacaoAntropometrica: false, checkinsRegistrados: 0, formulariosRespondidos: 0, mensagensRecebidas: 0, escolhasSubstituicao: 0 }
+        },
+        linhaDoTempo: []
+      }) });
+    });
+    await page.route('**/api/pacientes/paciente-1/planos-alimentares?**', async (route) => route.fulfill({
+      status: 200, contentType: 'application/json',
+      body: JSON.stringify({ itens: [resumo('plano-paciente-a', 'Plano sintético do paciente A', 1111)], total: 1, pagina: 1, limite: 25 })
+    }));
+    await page.route('**/api/pacientes/paciente-1/planos-alimentares/plano-paciente-a', async (route) => route.fulfill({
+      status: 200, contentType: 'application/json',
+      body: JSON.stringify({
+        ...resumo('plano-paciente-a', 'Plano sintético do paciente A', 1111),
+        current: { ...resumo('plano-paciente-a', 'Plano sintético do paciente A', 1111).current, refeicoes: [] },
+        historico: []
+      })
+    }));
+    await page.route('**/api/pacientes/paciente-2/planos-alimentares?**', async (route) => {
+      sinalizarListaPacienteB();
+      await respostaPacienteB;
+      await route.fulfill({
+        status: 200, contentType: 'application/json',
+        body: JSON.stringify({ itens: [resumo('plano-paciente-b', 'Plano sintético do paciente B', 2222)], total: 1, pagina: 1, limite: 25 })
+      });
+    });
+    await page.route('**/api/pacientes/paciente-2/planos-alimentares/plano-paciente-b', async (route) => route.fulfill({
+      status: 200, contentType: 'application/json',
+      body: JSON.stringify({
+        ...resumo('plano-paciente-b', 'Plano sintético do paciente B', 2222),
+        current: { ...resumo('plano-paciente-b', 'Plano sintético do paciente B', 2222).current, refeicoes: [] },
+        historico: []
+      })
+    }));
+    await page.goto('/pacientes/paciente-1?area=plano&aba=plano_alimentar');
+    await expect(page.getByRole('article').getByRole('heading', { name: 'Plano sintético do paciente A' })).toBeVisible();
+    await expect(page.getByText('1.111 kcal').first()).toBeVisible();
+
+    await page.getByRole('button', { name: 'Editar cadastro do paciente' }).click();
+    await page.getByRole('dialog', { name: 'Cadastro do paciente' }).getByRole('link', { name: 'Ana Souza homonima' }).click();
+    await prontuarioPacienteBIniciado;
+    await expect(page.getByRole('status', { name: 'Carregando prontuário do paciente' })).toBeVisible();
+    await expect(page.getByRole('dialog', { name: 'Cadastro do paciente' })).toHaveCount(0);
+    await expect(page.getByText('1.111 kcal', { exact: true })).toHaveCount(0);
+    await expect(page.getByRole('heading', { name: 'Plano sintético do paciente A' })).toHaveCount(0);
+    liberarProntuarioPacienteB();
+    await expect(page.getByRole('heading', { name: 'Bruno Lima' })).toBeVisible();
+    await page.getByRole('tab', { name: 'Plano', exact: true }).click();
+    await page.getByRole('tab', { name: 'Plano alimentar', exact: true }).click();
+    await listaPacienteBIniciada;
+    await expect(page.getByRole('dialog', { name: 'Cadastro do paciente' })).toHaveCount(0);
+    await expect(page.getByText('1.111 kcal', { exact: true })).toHaveCount(0);
+    await expect(page.getByRole('heading', { name: 'Plano sintético do paciente A' })).toHaveCount(0);
+
+    liberarListaPacienteB();
+    await expect(page.getByRole('article').getByRole('heading', { name: 'Plano sintético do paciente B' })).toBeVisible();
+    await expect(page.getByText('2.222 kcal').first()).toBeVisible();
+    await expect(page.getByText('1.111 kcal', { exact: true })).toHaveCount(0);
+  });
+
+  test('reordena refeições pela alça de teclado, preserva botões e salva a ordem', async ({ page }) => {
+    test.setTimeout(60_000);
+    await page.clock.install();
     await prepararProntuarioMockado(page, {
       permissoesExtras: ['planos_alimentares.ler', 'planos_alimentares.gerenciar']
     });
@@ -3251,6 +3418,7 @@ test.describe('prontuario do paciente', () => {
     });
     let nomesSalvos = refeicoesOriginais.map((refeicao) => refeicao.nome);
     let corpoSalvo;
+    let liberarSaveSaida;
     const versaoAtual = {
       id: 'versao-publicada-pa01', numero: 1, status: 'publicada', publicadaEm: '2026-10-01T12:00:00.000Z',
       criadoEm: '2026-10-01T12:00:00.000Z', atualizadoEm: '2026-10-01T12:00:00.000Z', objetivos: 'Objetivo sintético.',
@@ -3258,6 +3426,7 @@ test.describe('prontuario do paciente', () => {
     };
     const versaoRascunho = {
       id: 'versao-rascunho-pa01', numero: 2, status: 'rascunho', avaliacaoAntropometricaId: 'avaliacao-pa01',
+      rascunhoRevisao: 0, edicaoEstado: 'materializada',
       criadoEm: '2026-10-02T12:00:00.000Z', atualizadoEm: '2026-10-02T12:00:00.000Z', objetivos: 'Objetivo sintético.',
       calculo: {
         fatorAtividade: 1.4, ajusteEnergeticoKcal: 0, metaEnergeticaKcal: 2000,
@@ -3281,12 +3450,18 @@ test.describe('prontuario do paciente', () => {
         total: 1, pagina: 1, limite: 100
       })
     }));
-    await page.route('**/api/pacientes/paciente-1/planos-alimentares/plano-pa01/rascunho', async (route) => {
+    await page.route('**/api/pacientes/paciente-1/planos-alimentares/plano-pa01/rascunho/edicao', async (route) => {
       if (route.request().method() === 'PUT') {
         corpoSalvo = route.request().postDataJSON();
-        nomesSalvos = corpoSalvo.refeicoes.map((refeicao) => refeicao.nome);
+        if (corpoSalvo.documento.objetivos === 'Objetivo revisado após recarregar.') await new Promise(resolve => { liberarSaveSaida = resolve; });
+        nomesSalvos = corpoSalvo.documento.refeicoes.map((refeicao) => refeicao.nome);
+        versaoRascunho.rascunhoRevisao = corpoSalvo.rascunhoRevisaoEsperada + 1;
+        versaoRascunho.documentoEdicao = corpoSalvo.documento;
+        versaoRascunho.edicaoEstado = corpoSalvo.documento.objetivos ? 'materializada' : 'pendente';
         await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({
-          ...versaoRascunho, ...corpoSalvo, refeicoes: montarRefeicoes(nomesSalvos), numero: 2
+          ...versaoRascunho,
+          ...(versaoRascunho.edicaoEstado === 'pendente' ? { calculo: undefined, totais: undefined, refeicoes: [] } : { refeicoes: montarRefeicoes(nomesSalvos) }),
+          numero: 2
         }) });
         return;
       }
@@ -3305,9 +3480,13 @@ test.describe('prontuario do paciente', () => {
     await page.goto('/pacientes/paciente-1');
     await page.getByRole('tab', { name: 'Plano', exact: true }).click();
     await page.getByRole('tab', { name: 'Plano alimentar', exact: true }).click();
-    const moverAlmocoParaCima = page.getByRole('button', { name: 'Mover refeição Almoço para cima' });
-    await moverAlmocoParaCima.focus();
-    await moverAlmocoParaCima.press('Enter');
+    const alcaArraste = page.getByRole('button', { name: 'Arrastar refeição Café da manhã' });
+    await alcaArraste.focus();
+    await alcaArraste.press('Space');
+    await expect(alcaArraste).toHaveAttribute('aria-pressed', 'true');
+    await alcaArraste.press('ArrowDown');
+    await expect(page.getByRole('status').filter({ hasText: 'was moved over droppable area refeicao-almoco' })).toHaveCount(1);
+    await alcaArraste.press('Space');
     await expect.poll(() => page.getByLabel('Nome da refeição').evaluateAll((campos) => campos.map((campo) => campo.value)))
       .toEqual(['Almoço', 'Café da manhã', 'Jantar']);
 
@@ -3316,14 +3495,36 @@ test.describe('prontuario do paciente', () => {
     await moverJantarParaCima.press('Enter');
     await expect.poll(() => page.getByLabel('Nome da refeição').evaluateAll((campos) => campos.map((campo) => campo.value)))
       .toEqual(['Almoço', 'Jantar', 'Café da manhã']);
-    await page.getByRole('button', { name: 'Salvar rascunho' }).click();
-    await expect.poll(() => corpoSalvo?.refeicoes?.map((refeicao) => refeicao.nome))
+    await page.getByLabel('Objetivo clínico').fill('');
+    await expect(page.getByRole('status').filter({ hasText: 'Último salvamento confirmado' })).toHaveCount(0);
+    await page.clock.fastForward(60_000);
+    await expect.poll(() => corpoSalvo?.documento?.refeicoes?.map((refeicao) => refeicao.nome))
       .toEqual(['Almoço', 'Jantar', 'Café da manhã']);
+    expect(corpoSalvo.rascunhoIdEsperado).toBe('versao-rascunho-pa01');
+    expect(corpoSalvo.rascunhoRevisaoEsperada).toBe(0);
+    expect(corpoSalvo.documento.objetivos).toBe('');
+    await expect(page.getByRole('status').filter({ hasText: 'Cálculos e subtotais indisponíveis' })).toBeVisible();
+    await expect(page.getByRole('status').filter({ hasText: 'Último salvamento confirmado' })).toBeVisible();
+    expect((await new AxeBuilder({ page }).include('main').withTags(['wcag2a', 'wcag2aa', 'wcag21aa']).analyze()).violations).toEqual([]);
+    await expect(page.getByLabel('Nome da refeição').evaluateAll((campos) => campos.map((campo) => campo.value)))
+      .resolves.toEqual(['Almoço', 'Jantar', 'Café da manhã']);
     await page.reload();
     await page.getByRole('tab', { name: 'Plano', exact: true }).click();
     await page.getByRole('tab', { name: 'Plano alimentar', exact: true }).click();
     await expect.poll(() => page.getByLabel('Nome da refeição').evaluateAll((campos) => campos.map((campo) => campo.value)))
       .toEqual(['Almoço', 'Jantar', 'Café da manhã']);
+    await page.getByLabel('Objetivo clínico').fill('Objetivo revisado após recarregar.');
+    await page.getByRole('tab', { name: 'Atendimentos', exact: true }).click();
+    const saida = page.getByRole('dialog', { name: 'Sair sem salvar' });
+    await expect(saida.getByRole('button', { name: 'Salvar e sair' })).toBeVisible();
+    await assertSemOverflowHorizontal(page);
+    await saida.getByRole('button', { name: 'Salvar e sair' }).click();
+    await expect.poll(() => Boolean(liberarSaveSaida)).toBe(true);
+    await page.keyboard.press('Escape');
+    await expect(saida).toBeVisible();
+    liberarSaveSaida();
+    await expect.poll(() => corpoSalvo?.documento?.objetivos).toBe('Objetivo revisado após recarregar.');
+    await expect(page.getByRole('tab', { name: 'Atendimentos', exact: true })).toHaveAttribute('aria-selected', 'true');
   });
 
   test('edita o modelo em cópia isolada e restaura versão como nova revisão', async ({ page }) => {

@@ -1,22 +1,68 @@
 # OctaClin - Status atual do projeto
 
-Atualizado em 2026-10-14.
+Atualizado em 2026-10-15.
 
 ## Fase ativa
 
-- **PA02 — implementação na PR Draft #415** na branch
-  `feat/roadmap-PA02-copy-meals`, sobre main `2d2edcf` (#414); FND02/#411 e
-  PA01/#414 integrados. Catálogo pós-320 consultado para este ID: reutilizar
-  código interno, sem biblioteca nova. D01–D03 confirmadas. Já há duplicação
-  local, cópia de origem salva e aplicação não destrutiva no rascunho. Unitários
-  (6/6), BFF (26/26), proteção FND02 (4/4), typecheck, build, lint e Playwright
-  (22/22 no conjunto principal e 2/2 no teste adicional de resposta atrasada)
-  passaram nesta worktree. No SHA `4582469`, CodeQL estava queued, OctaClin CI
-  pending e Semgrep/Dependency Review/Trivy in progress na última consulta.
-  Revisão R4 pendente.
-  Handoff `tasks/plan-pos-320-pa02.md`, checklist
-  `tasks/todo-pos-320-pa02.md`. Sem alteração de backend/schema, migration,
-  merge ou deploy nesta execução.
+- **PA06 — primeira entrega em desenvolvimento autorizado**, base `eae74b1e`.
+  Autosave ligado por padrão, ciclo de 60 segundos no editor profissional. Referências R013
+  TanStack/query e R014 react-hook-form consultadas em versões fixadas; uso
+  conceitual, sem dependência nova. Gaps: revisão geral de conteúdo/caminhos
+  legados, edição durante gravação, snapshot editorial parcial e saída protegida.
+  D01–D03 confirmadas; alimentos válidos salvos sem exigir formulário completo.
+  D04–D08 registradas: on/off no plano e em cada refeição; desativados ficam
+  ocultos e fora dos totais. Cálculo combinado de planos/refeições selecionados
+  para calorias/macros/micros, preservando linhas incompletas. D09/D10 confirmadas:
+  portal com todos os planos ativos publicados; desativados/arquivados/excluídos
+  inacessíveis. Cálculo combinado só da publicação atual salva, sem rascunhos;
+  seleção para cálculo independente da visibilidade. Três entregas/PRs sequenciais:
+  autosave parcial → ativação → cálculo combinado/micros.
+  Núcleo de edição cifrada/CAS, migration1073 aditiva, BFF e coordenador em memória
+  implementados, incluindo interface T07/T08 por Luna alto; integração Sol em
+  andamento com revisão cruzada estática, correções RED/GREEN e gates finais.
+  Sem migration externa/deploy. Evidências em
+  `docs/governance/EVIDENCIAS_PA06_NUCLEO_2026-10-15.md`.
+  Plano e critérios
+  em `tasks/plan-pos-320-pa06.md` e `tasks/todo-pos-320-pa06.md`.
+  Sol6.1 médio para concorrência/backend e integração; Luna alto apenas após
+  contratos/motor testados, para interface. Avisar e pausar antes da troca.
+- **PA05 — integrada pela PR #419**, merge `eae74b1e`, árvore idêntica ao HEAD
+  `9e12271b`. CI `38656591697` e checks aplicáveis PASS em 2026-10-15, inclusive
+  Backend, Web, Demo e PR Gate; scanners SUCCESS. SBOM provenance SKIPPED.
+  Estado externo da1072/deploy não consultado nem inferido pelo merge.
+  Registro da implementação e evidências anteriores:
+  `feat/pos320-pa05-preferencias`, base `64f54b88`. D01–D03 confirmadas.
+  PR #419 inicialmente Draft. CI inicial detectou contaminação de fixtures
+  PA05/PA04; casos PA05 isolados e prova conjunta PostgreSQL real 3/3 PASS.
+  Cifra/CAS, clone/hash, projeção paciente e BFF/tipos validados; provas reais
+  PostgreSQL15 específicas com RLS/concorrência PASS. Fixture omite extensões
+  Timescale/pgvector não utilizadas pela PA05; gate integral CI do HEAD `4eafd661`
+  PASS, 66/66 casos. Backend 2.923 testes, Redis 2/2 e Web/Governança PASS.
+  UI T07/T08 implementada; Sol médio corrigiu quatro achados com testes RED.
+  Revisão estática independente final PASS; suíte visual 50/50 + a11y/teclado 4/4
+  PASS; regressões PA02/PA03 38/38 PASS; gates finais T09 fechados pelo CI acima.
+  Migration1072 aditiva somente em banco descartável no ciclo de desenvolvimento.
+  Evidências `docs/governance/REVISAO_R4_PA05_2026-10-14.md` e
+  `docs/governance/EVIDENCIAS_PA05_BACKEND_2026-10-14.md`,
+  handoff `tasks/plan-pos-320-pa05.md` e checklist `tasks/todo-pos-320-pa05.md`.
+- **PA04 — integrada pela PR #418**, main `64f54b88`, árvore idêntica ao HEAD
+  aprovado `37d7979`. CI `38625821164` e checks aplicáveis PASS: Backend,
+  PostgreSQL/RLS descartável, Web, Demo e PR Gate; scanners PASS. SBOM
+  provenance SKIPPED conforme workflow. PostgreSQL local não executou os 64
+  casos por ENOSPC; a prova CI encerrou o gate sem converter a falha local em
+  PASS. Revisão R4 estática em `docs/governance/REVISAO_R4_PA04_2026-10-14.md`.
+  Sem migration nova; merge/CI não comprovam publicação produtiva.
+- **PA03 — integrada pela PR #417**, main `6f0be7d`, idêntica ao HEAD aprovado
+  `a013555`. Cinco workflows SUCCESS e dez jobs do CI `38608333870` SUCCESS,
+  inclusive Backend, Web, Demo e PR Gate. Revisão cruzada R4 fechou overflow
+  com RED/GREEN; relatório `docs/governance/REVISAO_R4_PA03_2026-10-14.md`.
+  Não há migration nova; merge/CI não comprovam publicação produtiva.
+- **PA02 — integrada pelas PRs #415/#416**, main `5b47fb1`. Correções de
+  falso sucesso e corrida colagem/save revisadas com RED/GREEN. Os cinco
+  workflows do HEAD corretivo `38c3596` passaram, incluindo todos os jobs do
+  CI `38583138559`. Relatório
+  `docs/governance/REVISAO_R4_PA02_PR415_2026-10-14.md`. Nenhum novo backend/schema
+  ou migration; integração/CI não comprovam publicação em produção.
 
 - **Transição pós-Fase 320:** NO-GO nesta rodada para ingestão/uso da TBCA, pois
   a autorização de direitos não está disponível. O catálogo continua com TACO,

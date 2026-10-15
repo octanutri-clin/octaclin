@@ -254,8 +254,11 @@ O arraste já existe no editor e permanece baseline da PA02; não reimplementar.
 ## [PA02] Copiar, colar e duplicar refeições
 
 **Reconciliação em 2026-10-14:** RESIDUAL CONFIRMADO na main `2d2edcf`.
-Análise autorizada, implementação ainda não iniciada. D01–D03 confirmadas pelo
-proprietário: ambos os escopos autorizados, acrescentar/criar e origem salva.
+Implementação integrada pelas PRs #415/#416, main `5b47fb1`. D01–D03
+confirmadas pelo proprietário: ambos os escopos autorizados, acrescentar/criar e
+origem salva. Dois P2 corrigidos com RED/GREEN e revisão cruzada. Cinco workflows
+do HEAD corretivo `38c3596` SUCCESS; CI `38583138559`, todos os jobs SUCCESS.
+Evidências no handoff e no relatório R4; não inferir deploy do merge/CI.
 Handoff em [plan-pos-320-pa02.md](../../tasks/plan-pos-320-pa02.md).
 Referências: catálogo/mapa inverso e sugestão44 recomendam código interno;
 nenhum repositório PA02 no JSON. Não criar dependência por analogia com outro ID.
@@ -283,6 +286,18 @@ nenhum repositório PA02 no JSON. Não criar dependência por analogia com outro
 
 ## [PA03] Exibir macros no cabeçalho de refeições colapsadas
 
+**Planejamento confirmado em 2026-10-14:** base `5b47fb1`, implementação ainda
+não iniciada. D01: somente editor do profissional. D02: todas as refeições
+recolhidas inicialmente, com controle individual/global sem persistir preferência.
+D03: indicador afetado mostra `—` e aviso de dados incompletos; os demais
+permanecem calculáveis; refeição vazia mostra “Sem alimentos”.
+Catálogo/mapa/JSON/matriz PA03 recomendam código interno; não há repositório
+externo candidato deste ID. Handoff
+[plan-pos-320-pa03.md](../../tasks/plan-pos-320-pa03.md) e checklist
+[todo-pos-320-pa03.md](../../tasks/todo-pos-320-pa03.md).
+Preservar ausência real de densidades, arredondamento por porção, foco/required
+em campos recolhidos e trava PA02. Nenhuma mudança de portal/PDF/API/schema.
+
 **Origem:** item 46.
 
 **Status atual:** há resumo total do plano, mas não subtotal no cabeçalho da refeição.
@@ -301,6 +316,8 @@ nenhum repositório PA02 no JSON. Não criar dependência por analogia com outro
 
 ## [PA04] Resumo de macros na lista de planos alimentares
 
+Integrada pela PR #418 em 2026-10-14; estado observado no checklist vigente.
+
 **Origem:** item 48.
 
 **Status atual:** listagem utiliza DTO leve sem refeições completas.
@@ -318,6 +335,13 @@ nenhum repositório PA02 no JSON. Não criar dependência por analogia com outro
 ---
 
 ## [PA05] Preferências de exibição das refeições
+
+Planejamento específico em [plan-pos-320-pa05.md](../../tasks/plan-pos-320-pa05.md).
+D01–D03 confirmadas: configurações profissional/paciente separadas, persistidas
+por versão para todas as refeições; paciente acessa liberadas mesmo recolhidas.
+Portal e PDF paciente usam projeção permitida. Implementação autorizada e entregue
+na branch PA05; revisão R4 estática concluída após correções. Gates finais e
+integração pela PR permanecem sujeitos às evidências do checklist PA05.
 
 **Origem:** item 18.
 
@@ -342,6 +366,26 @@ nenhum repositório PA02 no JSON. Não criar dependência por analogia com outro
 
 ## [PA06] Autosave opcional do plano alimentar
 
+**Planejamento em 2026-10-15:** base `eae74b1e`, PA05 integrada pela PR #419;
+checks aplicáveis do HEAD `9e12271b` PASS, sem inferir migration externa/deploy.
+Análise de código identificou revisão CAS limitada a saves com preferências e
+recarga integral após escrita. PA06 precisa de revisão geral com transição
+segura de legados e preservação de edições feitas durante request. D01–D03
+confirmadas: ligado por padrão, ciclo de 60 segundos, alimentos válidos salvos mesmo com
+formulário incompleto e saída protegida. D04/D05 confirmadas: on/off direto
+oculta do paciente e exclui dos macros, sem nova revisão só para reexibir;
+linhas incompletas preservadas. D06–D08: on/off no plano e refeição e cálculo
+combinado dos planos/refeições selecionados, incluindo calorias/macros/micros;
+desativados ficam fora do cálculo. D09/D10 confirmadas: todos os ativos publicados
+no portal, sem arquivados/excluídos/desativados; soma só da publicação atual salva,
+nunca rascunhos/histórico. Seleção de cálculo não filtra o acesso do paciente.
+Ampliação organizada em três PRs por recurso: autosave parcial, ativação e
+cálculo combinado/micros; sem implementar IDR/UL de FOOD06. Só R013/R014 foram
+consultados, com versões/licenças/fontes no plano; sem biblioteca nova prevista.
+Implementação ainda não iniciada. Handoff
+[plan-pos-320-pa06.md](../../tasks/plan-pos-320-pa06.md) e checklist
+[todo-pos-320-pa06.md](../../tasks/todo-pos-320-pa06.md).
+
 **Origem:** item 16.
 
 **Status atual:** rascunho explícito + proteção contra perda.
@@ -349,14 +393,21 @@ nenhum repositório PA02 no JSON. Não criar dependência por analogia com outro
 **Dependência:** FND02.
 
 **Implementação sugerida:**
-- preferência opt-in;
-- debounce;
+- habilitado por padrão, verificação a cada 60 segundos sem reiniciar o ciclo por tecla;
+- gravar alterações, sem PUT repetido quando nada mudou;
+- rascunho parcial preserva alimentos válidos sem exigir completude clínica;
 - estados `Alterado`, `Salvando`, `Salvo`, `Falha ao salvar`;
 - usar versão esperada/conflito otimista;
 - sem `localStorage` para PHI.
 
 **Aceite:**
-- autosave pode ser ligado/desligado;
+- controle de autosave, se mantido, não se confunde com visibilidade ao paciente;
+- on/off de plano e refeição oculta e exclui de energia/macros/micros, sem
+  arquivar/excluir ou exigir nova revisão para reexibir;
+- agregação considera seleção explícita, estado ativo e publicação atual salva
+  de cada plano, sem versões históricas/rascunhos;
+- portal dá acesso a todos os planos ativos publicados, respeitando o estado
+  das refeições; nenhuma rota libera desativados/arquivados/excluídos;
 - nunca publica automaticamente;
 - falha não apaga rascunho local em memória;
 - conflito exige ação do usuário.

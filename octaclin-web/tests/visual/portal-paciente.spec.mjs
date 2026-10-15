@@ -368,6 +368,90 @@ async function assertSemOverflowHorizontal(page) {
 }
 
 test.describe('portal do paciente', () => {
+  test('aplica preferências do plano e imprime todas as substituições liberadas', async ({ page }) => {
+    await prepararPortal(page);
+    const payload = {
+      ...portalPaciente,
+      planoAlimentar: {
+        id: 'plano-pa05', titulo: 'Plano com preferências', numeroVersao: 3,
+        publicadoEm: '2026-10-10T12:00:00.000Z', apresentacaoEstado: 'configurada',
+        preferenciasApresentacao: {
+          horario: false, macros: false, medidasCaseiras: false, orientacoes: false,
+          substituicoesExpandidas: false, modoCompacto: true
+        },
+        refeicoes: [{ id: 'refeicao-pa05', nome: 'Lanche sintético', horarioLocal: '15:30', orientacoes: 'Orientação escondida', itens: [{
+          id: 'item-pa05', descricao: 'Alimento principal', quantidade: 2, unidade: 'unidades', porcaoGramas: 75,
+          substituicoesVisiveisInicialmente: 1, substituicoes: [
+            { id: 'alt-1', descricao: 'Alternativa aprovada 1', quantidade: 1, unidade: 'unidade', porcaoGramas: 75, preferida: false },
+            { id: 'alt-2', descricao: 'Alternativa aprovada 2', quantidade: 1, unidade: 'unidade', porcaoGramas: 80, preferida: true }
+          ]
+        }]}]
+      }
+    };
+    await page.route((url) => url.pathname === '/api/portal/paciente', async (route) => {
+      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(payload) });
+    });
+    await page.addInitScript(() => { window.__pa05Impressao = 0; window.print = () => { window.__pa05Impressao += 1; }; });
+
+    await page.goto('/portal/plano');
+    await expect(page.getByRole('heading', { name: 'Plano com preferências' })).toBeVisible();
+    await expect(page.getByText('Alimento principal', { exact: true })).toBeVisible();
+    await expect(page.getByRole('list', { name: 'Itens de Lanche sintético' }).getByText('75 g', { exact: true })).toBeVisible();
+    await expect(page.getByText('2 unidades')).toHaveCount(0);
+    await expect(page.getByText('15:30')).toHaveCount(0);
+    await expect(page.getByText('Orientação escondida')).toHaveCount(0);
+    await expect(page.getByRole('heading', { name: 'Metas do plano' })).toHaveCount(0);
+    await expect(page.getByRole('radio', { name: /Alternativa aprovada/ })).toHaveCount(0);
+    await page.getByRole('button', { name: 'Ver substituições (2)' }).click();
+    await expect(page.getByRole('radio', { name: /Alternativa aprovada 1/ })).toBeVisible();
+    await expect(page.getByRole('radio', { name: /Alternativa aprovada 2/ })).toHaveCount(0);
+    await page.getByRole('button', { name: 'Ver mais 1 opção' }).click();
+    await expect(page.getByRole('radio', { name: /Alternativa aprovada 2/ })).toBeVisible();
+
+    await page.getByRole('button', { name: 'Imprimir ou salvar PDF' }).click();
+    await expect.poll(() => page.evaluate(() => window.__pa05Impressao)).toBe(1);
+    await page.emulateMedia({ media: 'print' });
+    const folha = page.locator('.folha-documento');
+    await expect(folha.getByText(/Alternativa aprovada 1 — 75 g/)).toBeVisible();
+    await expect(folha.getByText(/Alternativa aprovada 2 — 80 g/)).toBeVisible();
+  });
+
+  for (const substituicoesExpandidas of [false, true]) {
+    test(`PA05 preserva escolha atual e limite com substituições inicialmente ${substituicoesExpandidas ? 'abertas' : 'recolhidas'}`, async ({ page }) => {
+      await prepararPortal(page);
+      const payload = {
+        ...portalPaciente,
+        planoAlimentar: {
+          id: 'plano-pa05-escolha', titulo: 'Plano sintético com escolha', numeroVersao: 1,
+          publicadoEm: '2026-10-10T12:00:00.000Z', apresentacaoEstado: 'configurada',
+          preferenciasApresentacao: { horario: true, macros: true, medidasCaseiras: true, orientacoes: true, substituicoesExpandidas, modoCompacto: false },
+          refeicoes: [{ id: 'refeicao-pa05-escolha', nome: 'Lanche', itens: [{
+            id: 'item-pa05-escolha', descricao: 'Principal sintético', quantidade: 1, unidade: 'porção', porcaoGramas: 100,
+            substituicoesVisiveisInicialmente: 1, escolhaAtualSubstituicaoId: 'alt-escolhida',
+            substituicoes: [
+              { id: 'alt-primeira', descricao: 'Alternativa inicial', quantidade: 1, unidade: 'porção', porcaoGramas: 90, preferida: false },
+              { id: 'alt-demais', descricao: 'Alternativa adicional', quantidade: 1, unidade: 'porção', porcaoGramas: 95, preferida: false },
+              { id: 'alt-escolhida', descricao: 'Alternativa escolhida', quantidade: 1, unidade: 'porção', porcaoGramas: 80, preferida: false }
+            ]
+          }]}]
+        }
+      };
+      await page.route((url) => url.pathname === '/api/portal/paciente', (route) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(payload) }));
+      await page.goto('/portal/plano');
+      const escolhida = page.getByRole('radio', { name: /Alternativa escolhida/ });
+      await expect(escolhida).toBeVisible();
+      await expect(escolhida).toHaveAttribute('aria-checked', 'true');
+      await expect(page.getByRole('radio', { name: /Principal sintético/ })).toBeVisible();
+      await expect(page.getByRole('radio', { name: /Alternativa adicional/ })).toHaveCount(0);
+      if (!substituicoesExpandidas) await page.getByRole('button', { name: /Ver substituições/ }).click();
+      await expect(page.getByRole('radio', { name: /Alternativa inicial/ })).toBeVisible();
+      await expect(page.getByRole('radio', { name: /Alternativa adicional/ })).toHaveCount(0);
+      await page.getByRole('button', { name: 'Ver mais 1 opção' }).click();
+      await expect(page.getByRole('radio', { name: /Alternativa adicional/ })).toBeVisible();
+      await expect(escolhida).toHaveAttribute('aria-checked', 'true');
+    });
+  }
+
   test('paciente inicia conversa segura e recebe confirmação de fila da clínica', async ({ page }) => {
     const portal = await prepararPortal(page);
     await page.goto('/portal/mensagens');

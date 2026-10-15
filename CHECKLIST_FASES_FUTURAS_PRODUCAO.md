@@ -4616,25 +4616,54 @@ auditoria estão ordenados na seção 15 de
   TACO/USDA/IBGE. Reabrir somente após autorização escrita e revisão de direitos.
   Handoff formal e primeira atividade pós-320 (FND02/Onda 0) reunidos nesta PR.
 
-### Ondas pós-320 — reconciliação de 2026-10-14
+### Ondas pós-320 — reconciliação de 2026-10-15
 
 - [x] FND02 — integrada pela PR #411; primitive compartilhada de proteção
   contra saída com alterações não salvas.
 - [x] PA01 — integrada pela PR #414, main `2d2edcf`; arraste de refeições
   com setas/teclado e salvamento existentes. Sem migration.
-- [ ] PA02 — implementação entregue em Draft na PR #415, branch
-  `feat/roadmap-PA02-copy-meals`. D01–D03 confirmadas; código interno, sem
-  biblioteca nova. Duplicação local e cópia salva com aplicação não destrutiva
-  já implementadas. Unitários 6/6, BFF 26/26, proteção FND02 4/4, typecheck e
-  Playwright 22/22 no conjunto principal e 2/2 no teste de resposta atrasada
-  após troca de paciente passaram localmente. Build/lint e demais gates locais
-  passaram. No SHA `4582469`, CodeQL estava queued, OctaClin CI pending e
-  Semgrep/Dependency Review/Trivy in progress na última consulta. Revisão R4
-  independente pendente. Nenhuma
-  migration, merge ou deploy. Handoff `tasks/plan-pos-320-pa02.md`.
+- [x] PA02 — integrada pelas PRs #415/#416, main `5b47fb1`. D01–D03
+  confirmadas; cópia profunda, origem salva revalidada e colagem não destrutiva.
+  Dois P2 corrigidos com RED/GREEN e revisão cruzada; relatório
+  `docs/governance/REVISAO_R4_PA02_PR415_2026-10-14.md`. Cinco workflows do HEAD
+  corretivo `38c3596` SUCCESS; todos os jobs do CI `38583138559` SUCCESS.
+  Handoff `tasks/plan-pos-320-pa02.md`; sem migration nova.
+- [x] PA03 — integrada pela PR #417, main `6f0be7d`, conteúdo idêntico ao HEAD
+  aprovado a013555. Cabeçalhos/subtotais parciais e recolhimento no editor;
+  revisão R4 corrigiu overflow RED/GREEN. Cinco workflows e dez jobs do CI
+  38608333870 SUCCESS. Sem nova API/schema/migration; relatório
+  `docs/governance/REVISAO_R4_PA03_2026-10-14.md` e checklist
+  `tasks/todo-pos-320-pa03.md`. Não inferir publicação pelo merge.
+- [x] PA04 — integrada pela PR #418, main `64f54b88`, conteúdo idêntico ao
+  HEAD aprovado `37d7979`. Checks aplicáveis PASS no CI `38625821164`, incluindo
+  PostgreSQL/RLS descartável, Backend, Web, Demo e PR Gate; scanners PASS.
+  SBOM provenance SKIPPED. Falha PG local por ENOSPC preservada no histórico,
+  prova CI fechou o gate. Sem migration; merge não comprova deploy.
+  Plano/checklist `tasks/plan-pos-320-pa04.md`/`tasks/todo-pos-320-pa04.md`.
+- [x] PA05 — integrada pela PR #419, merge `eae74b1e`, árvore idêntica ao HEAD
+  aprovado `9e12271b`. CI `38656591697` e checks aplicáveis PASS, inclusive
+  Backend, Web, PostgreSQL/RLS, Demo e PR Gate; scanners SUCCESS, SBOM provenance
+  SKIPPED. Preferências cifradas por versão, CAS, clone/hash/projeção; revisão
+  R4 estática independente PASS após quatro correções RED/GREEN. Aplicação
+  externa da1072/deploy não verificados nesta análise. Handoff `tasks/plan-pos-320-pa05.md`, evidências
+  `docs/governance/EVIDENCIAS_PA05_BACKEND_2026-10-14.md` e
+  `docs/governance/REVISAO_R4_PA05_2026-10-14.md`.
+- [~] PA06 — primeira entrega em implementação autorizada; núcleo backend/BFF e
+  coordenador e UI implementados; integração/revisão Sol e gates finais em andamento. Autosave
+  do rascunho ligado por padrão, ciclos de 60 segundos e edição parcial; D01–D03 confirmadas,
+  D04–D08 registradas: on/off no plano e refeição; calorias/macros/micros de
+  vários planos/refeições selecionados, excluindo desativados. Linhas incompletas
+  preservadas. D09/D10 confirmadas: portal com todos os ativos publicados;
+  excluídos/arquivados/desativados inacessíveis; soma só da publicação atual salva,
+  nunca rascunho/histórico. Autorização recebida em “Pode começar”; migration1073
+  criada e validada somente em banco descartável. Sem rollout externo. Três entregas
+  com PR individual: autosave → ativação → cálculo combinado/micros.
+  Referências R013/R014 consultadas,
+  sem dependência nova. Concorrência geral/legados e edição durante request
+  cobertos no núcleo; regressões integradas em andamento. Plano/checklist
+  `tasks/plan-pos-320-pa06.md`/`tasks/todo-pos-320-pa06.md`.
 
-Os merges acima foram conferidos por Git e os checks da PR #415 foram consultados
-em 2026-10-14; nenhuma aprovação operacional é inferida.
+Merge/checks de #419 conferidos em 2026-10-15. Não inferir estado de produção.
 
 O escopo, dependências, critérios de aceite, limites e gates destas fases estão
 em `docs/product/ROADMAP_POS_AUDITORIA_FASES_302_320.md`. Fases condicionais

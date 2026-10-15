@@ -22,11 +22,26 @@ export type NutrientesPorcao = NutrientesPor100g;
 
 export interface ItemPrevisto {
   porcaoGramas: number;
-  nutrientesPor100g: NutrientesPor100g;
+  nutrientesPor100g: Partial<NutrientesPor100g>;
 }
 
 export interface RefeicaoPrevista {
   itens: ItemPrevisto[];
+}
+
+export interface ItemSubtotalRefeicao {
+  /** Identificador do catálogo ou descrição manual; vazio representa placeholder. */
+  identificacao?: string | null;
+  porcaoGramas: number;
+  nutrientesPor100g?: Partial<Record<'energiaKcal' | 'proteinasG' | 'carboidratosG' | 'gordurasG', number>> | null;
+}
+
+export interface SubtotalRefeicao {
+  estado: 'completo' | 'incompleto' | 'sem_alimentos';
+  energiaKcal: number | undefined;
+  proteinasG: number | undefined;
+  carboidratosG: number | undefined;
+  gordurasG: number | undefined;
 }
 
 export interface MetasPrevistas {
@@ -69,7 +84,7 @@ function numero(valor: number | undefined): number {
 }
 
 export function nutrientesDaPorcao(
-  nutrientes: NutrientesPor100g,
+  nutrientes: Partial<NutrientesPor100g>,
   porcaoGramas: number
 ): NutrientesPorcao {
   const fator = numero(porcaoGramas) / 100;
@@ -81,6 +96,72 @@ export function nutrientesDaPorcao(
     ...(nutrientes.fibrasG !== undefined ? { fibrasG: arredondar4(numero(nutrientes.fibrasG) * fator) } : {}),
     ...(nutrientes.sodioMg !== undefined ? { sodioMg: arredondar4(numero(nutrientes.sodioMg) * fator) } : {})
   };
+}
+
+const INDICADORES_REFEICAO = ['energiaKcal', 'proteinasG', 'carboidratosG', 'gordurasG'] as const;
+type IndicadorRefeicao = (typeof INDICADORES_REFEICAO)[number];
+
+/**
+ * Subtotal estrito para o cabeçalho PA03. O painel global legado continua
+ * tratando campos em edição como zero; aqui ausência e invalidade permanecem
+ * explícitas para não apresentar uma soma parcial como se fosse completa.
+ */
+export function calcularSubtotalRefeicao(itens: ItemSubtotalRefeicao[]): SubtotalRefeicao {
+  const semAlimentos: SubtotalRefeicao = {
+    estado: 'sem_alimentos', energiaKcal: undefined, proteinasG: undefined,
+    carboidratosG: undefined, gordurasG: undefined
+  };
+  if (!itens.length || itens.every((item) => !item.identificacao?.trim())) return semAlimentos;
+
+  const subtotal: Record<IndicadorRefeicao, number | undefined> = {
+    energiaKcal: 0, proteinasG: 0, carboidratosG: 0, gordurasG: 0
+  };
+  let incompleto = false;
+
+  for (const item of itens) {
+    if (!item.identificacao?.trim()) {
+      // Um alimento ainda sem identidade pode contribuir com qualquer macro.
+      for (const indicador of INDICADORES_REFEICAO) subtotal[indicador] = undefined;
+      incompleto = true;
+      continue;
+    }
+    if (typeof item.porcaoGramas !== 'number' || !Number.isFinite(item.porcaoGramas) || item.porcaoGramas <= 0 || item.porcaoGramas > 10_000) {
+      for (const indicador of INDICADORES_REFEICAO) subtotal[indicador] = undefined;
+      incompleto = true;
+      continue;
+    }
+    for (const indicador of INDICADORES_REFEICAO) {
+      const densidade: unknown = item.nutrientesPor100g?.[indicador];
+      if (typeof densidade !== 'number' || !Number.isFinite(densidade) || densidade < 0) {
+        subtotal[indicador] = undefined;
+        incompleto = true;
+        continue;
+      }
+      if (subtotal[indicador] !== undefined) {
+        const contribuicao = arredondar4(densidade * item.porcaoGramas / 100);
+        const soma = (subtotal[indicador] as number) + contribuicao;
+        if (!Number.isFinite(contribuicao) || !Number.isFinite(soma)) {
+          subtotal[indicador] = undefined;
+          incompleto = true;
+        } else {
+          subtotal[indicador] = soma;
+        }
+      }
+    }
+  }
+
+  for (const indicador of INDICADORES_REFEICAO) {
+    const soma = subtotal[indicador];
+    if (soma === undefined) continue;
+    const arredondado = arredondar4(soma);
+    if (!Number.isFinite(arredondado)) {
+      subtotal[indicador] = undefined;
+      incompleto = true;
+    } else {
+      subtotal[indicador] = arredondado;
+    }
+  }
+  return { estado: incompleto ? 'incompleto' : 'completo', ...subtotal };
 }
 
 export function totaisPrevistos(refeicoes: RefeicaoPrevista[]): NutrientesPorcao {

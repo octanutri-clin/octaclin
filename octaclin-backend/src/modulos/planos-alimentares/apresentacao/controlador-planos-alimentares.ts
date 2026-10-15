@@ -24,6 +24,7 @@ import { ServicoModelosPlanoAlimentar } from '../aplicacao/servico-modelos-plano
 import { ServicoPlanosAlimentares } from '../aplicacao/servico-planos-alimentares';
 import { ServicoReceitasNutricionais } from '../aplicacao/servico-receitas-nutricionais';
 import { ServicoCompartilhamentoReceitas } from '../aplicacao/servico-compartilhamento-receitas';
+import { PrecondicaoEdicaoPlanoDto, SalvarEdicaoPlanoDto } from '../aplicacao/dtos-edicao-plano';
 import { CompartilharReceitasNutricionaisDto } from '../aplicacao/dtos-compartilhamento-receita';
 
 @Controller('pacientes/:pacienteId/planos-alimentares')
@@ -85,6 +86,18 @@ export class ControladorPlanosAlimentares {
     return this.servico.obterVersao(usuario.tenantId, pacienteId, planoId, numero, usuario);
   }
 
+  @Get(':planoId/versoes/:numero/apresentacao-paciente')
+  @Permissoes('planos_alimentares.ler')
+  @Header('Cache-Control', 'private, no-store')
+  obterApresentacaoPaciente(
+    @UsuarioAtual() usuario: UsuarioAutenticado,
+    @Param('pacienteId', ParseUUIDPipe) pacienteId: string,
+    @Param('planoId', ParseUUIDPipe) planoId: string,
+    @Param('numero', ParseIntPipe) numero: number
+  ) {
+    return this.servico.obterApresentacaoPaciente(usuario.tenantId, pacienteId, planoId, numero, usuario);
+  }
+
   @Get(':planoId/versoes/:numero/acompanhamento')
   @Permissoes('planos_alimentares.ler')
   @Header('Cache-Control', 'private, no-store')
@@ -107,6 +120,7 @@ export class ControladorPlanosAlimentares {
 
   @Get(':planoId/rascunho')
   @Permissoes('planos_alimentares.ler')
+  @Header('Cache-Control', 'private, no-store')
   obterRascunho(
     @UsuarioAtual() usuario: UsuarioAutenticado,
     @Param('pacienteId', ParseUUIDPipe) pacienteId: string,
@@ -117,6 +131,7 @@ export class ControladorPlanosAlimentares {
 
   @Put(':planoId/rascunho')
   @Permissoes('planos_alimentares.gerenciar')
+  @Header('Cache-Control', 'private, no-store')
   atualizarRascunho(
     @UsuarioAtual() usuario: UsuarioAutenticado,
     @Param('pacienteId', ParseUUIDPipe) pacienteId: string,
@@ -126,14 +141,29 @@ export class ControladorPlanosAlimentares {
     return this.servico.atualizarRascunho(usuario.tenantId, pacienteId, planoId, usuario, dados);
   }
 
+  @Put(':planoId/rascunho/edicao')
+  @Permissoes('planos_alimentares.gerenciar')
+  @Header('Cache-Control', 'private, no-store')
+  salvarEdicao(
+    @UsuarioAtual() usuario: UsuarioAutenticado,
+    @Param('pacienteId', ParseUUIDPipe) pacienteId: string,
+    @Param('planoId', ParseUUIDPipe) planoId: string,
+    @Body() dados: SalvarEdicaoPlanoDto
+  ) {
+    return this.servico.salvarEdicaoRascunho(usuario.tenantId, pacienteId, planoId, usuario, dados);
+  }
+
   @Post(':planoId/revisao')
   @Permissoes('planos_alimentares.gerenciar')
   revisar(
     @UsuarioAtual() usuario: UsuarioAutenticado,
     @Param('pacienteId', ParseUUIDPipe) pacienteId: string,
-    @Param('planoId', ParseUUIDPipe) planoId: string
+    @Param('planoId', ParseUUIDPipe) planoId: string,
+    @Body() dados: PrecondicaoEdicaoPlanoDto = {}
   ) {
-    return this.servico.revisar(usuario.tenantId, pacienteId, planoId, usuario);
+    return Object.keys(dados).length
+      ? this.servico.revisar(usuario.tenantId, pacienteId, planoId, usuario, dados)
+      : this.servico.revisar(usuario.tenantId, pacienteId, planoId, usuario);
   }
 
   @Post(':planoId/publicacao')
@@ -141,9 +171,12 @@ export class ControladorPlanosAlimentares {
   publicar(
     @UsuarioAtual() usuario: UsuarioAutenticado,
     @Param('pacienteId', ParseUUIDPipe) pacienteId: string,
-    @Param('planoId', ParseUUIDPipe) planoId: string
+    @Param('planoId', ParseUUIDPipe) planoId: string,
+    @Body() dados: PrecondicaoEdicaoPlanoDto = {}
   ) {
-    return this.servico.publicar(usuario.tenantId, pacienteId, planoId, usuario);
+    return Object.keys(dados).length
+      ? this.servico.publicar(usuario.tenantId, pacienteId, planoId, usuario, dados)
+      : this.servico.publicar(usuario.tenantId, pacienteId, planoId, usuario);
   }
 
   @Post(':planoId/nova-versao')

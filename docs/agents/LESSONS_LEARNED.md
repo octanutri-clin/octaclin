@@ -202,3 +202,16 @@ CI do PR #349 apontou três rótulos “Status” no filtro novo; `test:linguage
 passou localmente após a correção. Como não repetir: rodar o gate de linguagem
 antes de enviar mudanças de microcopy ou seletores. Novo CI pendente. Status do
 controle: implemented locally, pending CI.
+
+## 2026-10-14 — Fixtures de uma fase contaminaram a listagem de outra
+
+Problema: novos testes PostgreSQL persistiam planos no paciente compartilhado
+da suíte; a listagem de uma regressão adjacente recebeu itens extras. Os testes
+novos isolados passavam, mas o CI integral revelou o acoplamento. Correção:
+fixtures próprias de paciente/profissional/usuário para os novos casos, sem
+alterar o runtime nem afrouxar as expectativas da regressão. Controle: o harness
+local seleciona conjuntamente os casos novos e a regressão adjacente; RED
+reproduzido e GREEN confirmado em PostgreSQL real. Como não repetir: em suítes
+com estado persistente, separar a identidade dos fixtures por cenário e conferir
+as leituras posteriores que dependem dos mesmos recursos. CI integral permanece
+obrigatório; prova parcial não encerra esse gate.

@@ -324,6 +324,12 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
   const [responsavelHistorico, setResponsavelHistorico] = useState('');
   const [areaAtiva, setAreaAtiva] = useState<AreaProntuario>('resumo');
   const [planoAlimentarNaoSalvo, setPlanoAlimentarNaoSalvo] = useState(false);
+  const salvarPlanoAlimentarRef = useRef<(() => Promise<boolean>) | null>(null);
+  const [salvandoPlanoAntesDaSaida, setSalvandoPlanoAntesDaSaida] = useState(false);
+  const [erroSalvarPlanoAntesDaSaida, setErroSalvarPlanoAntesDaSaida] = useState<string | null>(null);
+  const registrarSalvamentoRascunho = useCallback((salvar: (() => Promise<boolean>) | null) => {
+    salvarPlanoAlimentarRef.current = salvar;
+  }, []);
   const [permissoes, setPermissoes] = useState<string[]>([]);
   const [papel, setPapel] = useState<string | null>(null);
   const [sessaoCarregada, setSessaoCarregada] = useState(false);
@@ -803,6 +809,7 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
   );
   const envioMaterialNaoSalvo = Boolean(formularioEnvioMaterial.observacao.trim());
   const anexoNaoSalvo = Boolean(arquivoAnexo || consultaVinculadaId);
+  const outrasAlteracoesNaoSalvas = evolucaoNaoSalva || tarefaNaoSalva || materialNaoSalvo || envioMaterialNaoSalvo || anexoNaoSalvo;
   const alteracoesNaoSalvas = evolucaoNaoSalva
     || tarefaNaoSalva
     || materialNaoSalvo
@@ -858,7 +865,35 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
       return true;
     }
     setSaidaPendente({ tipo: 'aba', id });
+    setErroSalvarPlanoAntesDaSaida(null);
     return false;
+  }
+
+  function concluirSaida(pendente: NonNullable<typeof saidaPendente>) {
+    if (pendente.tipo === 'voltar') router.push('/pacientes');
+    else if (pendente.tipo === 'agenda') router.push(destinoAgenda(pendente));
+    else aplicarAba(pendente.id);
+  }
+
+  async function salvarPlanoESair() {
+    const pendente = saidaPendente;
+    const salvarPlano = salvarPlanoAlimentarRef.current;
+    if (!pendente || !salvarPlano || salvandoPlanoAntesDaSaida) return;
+    setSalvandoPlanoAntesDaSaida(true);
+    setErroSalvarPlanoAntesDaSaida(null);
+    try {
+      if (!await salvarPlano()) {
+        setErroSalvarPlanoAntesDaSaida('O rascunho não foi confirmado. Continue nesta tela e reconcilie o estado antes de sair.');
+        return;
+      }
+      setSaidaPendente(null);
+      setPlanoAlimentarNaoSalvo(false);
+      concluirSaida(pendente);
+    } catch {
+      setErroSalvarPlanoAntesDaSaida('Não foi possível confirmar o salvamento. O rascunho continua aberto para recuperação.');
+    } finally {
+      setSalvandoPlanoAntesDaSaida(false);
+    }
   }
 
   function solicitarTrocaArea(id: AreaProntuario) {
@@ -972,6 +1007,7 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
     if (!alteracoesNaoSalvas) return;
     evento.preventDefault();
     setSaidaPendente({ tipo: 'agenda', ...opcoes });
+    setErroSalvarPlanoAntesDaSaida(null);
   }
 
   function abrirProximaConduta() {
@@ -997,6 +1033,22 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
         })),
     [eventos]
   );
+
+  if (dados && dados.paciente.id !== pacienteId) {
+    if (falhaCarregamento?.tipo === 'permissao') return <EstadoPermissaoNegada />;
+    if (falhaCarregamento) {
+      return (
+        <EstadoFalha
+          titulo="Não foi possível carregar o prontuário"
+          descricao={falhaCarregamento.mensagem}
+          codigoReferencia={falhaCarregamento.requestId}
+          aoTentarNovamente={falhaCarregamento.recuperavel ? () => void carregar() : undefined}
+          tentando={carregando}
+        />
+      );
+    }
+    return <EsqueletoPagina rotulo="Carregando prontuário do paciente" />;
+  }
 
   if (carregando && !dados) return <EsqueletoPagina rotulo="Carregando prontuário do paciente" />;
 
@@ -1060,6 +1112,7 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
                 if (!alteracoesNaoSalvas) return;
                 evento.preventDefault();
                 setSaidaPendente({ tipo: 'voltar' });
+                setErroSalvarPlanoAntesDaSaida(null);
               }}
               className={classesBotao({ variante: 'fantasma', tamanho: 'sm', className: 'w-full sm:w-auto' })}
             >
@@ -1594,9 +1647,11 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
 
       {abaAtiva === 'plano_alimentar' ? (
         <PlanoAlimentarProfissional
+          key={pacienteId}
           pacienteId={pacienteId}
           podeGerenciar={podeGerenciarPlano}
           aoAlterarRascunho={setPlanoAlimentarNaoSalvo}
+          aoRegistrarSalvamentoRascunho={registrarSalvamentoRascunho}
         />
       ) : null}
 
@@ -2046,16 +2101,21 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
       <ModalConfirmacao
         aberto={Boolean(saidaPendente)}
         titulo="Sair sem salvar"
-        mensagem="Você tem alterações clínicas não salvas. Sair sem salvar?"
+        mensagem={erroSalvarPlanoAntesDaSaida ?? 'Você tem alterações clínicas não salvas. Salve o rascunho antes de sair ou descarte as alterações desta tela.'}
         rotuloConfirmar="Sair sem salvar"
-        aoCancelar={() => setSaidaPendente(null)}
+        rotuloCancelar="Continuar editando"
+        rotuloSecundario={planoAlimentarNaoSalvo && !outrasAlteracoesNaoSalvas ? 'Salvar e sair' : undefined}
+        confirmando={salvandoPlanoAntesDaSaida}
+        aoAcaoSecundaria={planoAlimentarNaoSalvo && !outrasAlteracoesNaoSalvas ? () => void salvarPlanoESair() : undefined}
+        aoCancelar={() => {
+          setSaidaPendente(null);
+          setErroSalvarPlanoAntesDaSaida(null);
+        }}
         aoConfirmar={() => {
           if (!saidaPendente) return;
           const pendente = saidaPendente;
           setSaidaPendente(null);
-          if (pendente.tipo === 'voltar') router.push('/pacientes');
-          else if (pendente.tipo === 'agenda') router.push(destinoAgenda(pendente));
-          else aplicarAba(pendente.id);
+          concluirSaida(pendente);
         }}
       />
       </div>

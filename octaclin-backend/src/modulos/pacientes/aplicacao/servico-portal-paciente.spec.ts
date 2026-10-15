@@ -325,6 +325,7 @@ describe('ServicoPortalPaciente', () => {
     const portal = await servico.obterResumoPortal('tenant-1', 'usuario-paciente-1');
 
     expect(portal.planoAlimentar).toEqual({
+      apresentacaoEstado: 'legado',
       id: 'plano-1',
       titulo: 'Plano alimentar de agosto',
       numeroVersao: 2,
@@ -2258,7 +2259,8 @@ describe('ServicoPortalPaciente', () => {
     function cenario(
       substituicoes: Record<string, any>[],
       extraItem: Record<string, any> = {},
-      escolhas: Record<string, any>[] = []
+      escolhas: Record<string, any>[] = [],
+      extraVersao: Record<string, any> = {}
     ) {
       return criarServico({
         pacientes: [
@@ -2289,7 +2291,8 @@ describe('ServicoPortalPaciente', () => {
             numero: 1,
             publicadaEm: PUBLICADO_EM,
             calculoSnapshotCriptografado: Buffer.from('cripto:{}'),
-            totaisSnapshotCriptografado: Buffer.from('cripto:{}')
+            totaisSnapshotCriptografado: Buffer.from('cripto:{}'),
+            ...extraVersao
           }
         ],
         planoAlimentarRefeicaos: [
@@ -2319,6 +2322,20 @@ describe('ServicoPortalPaciente', () => {
         planoAlimentarEscolhas: escolhas
       });
     }
+
+    it('PA05 expõe somente conjunto paciente e sinaliza corrupção sem defaults', async () => {
+      const flags = { horario: false, macros: true, medidasCaseiras: false, orientacoes: true, substituicoesExpandidas: false, modoCompacto: true };
+      const preferencias = { schemaVersao: 1, profissional: { ...flags, horario: true }, paciente: flags };
+      const { servico } = cenario([], {}, [], { apresentacaoSnapshotCriptografado: Buffer.from('cripto:' + JSON.stringify(preferencias)), apresentacaoRevisao: 7 });
+      const portal = await servico.obterResumoPortal('tenant-1', 'usuario-paciente-1');
+      expect(portal.planoAlimentar).toMatchObject({ apresentacaoEstado: 'configurada', preferenciasApresentacao: flags });
+      expect(portal.planoAlimentar).not.toHaveProperty('apresentacaoRevisao');
+      expect(portal.planoAlimentar!.preferenciasApresentacao).not.toHaveProperty('profissional');
+      const corrupto = cenario([], {}, [], { apresentacaoSnapshotCriptografado: Buffer.from('cripto:invalido-sintetico'), apresentacaoRevisao: 1 });
+      const portalCorrupto = await corrupto.servico.obterResumoPortal('tenant-1', 'usuario-paciente-1');
+      expect(portalCorrupto.planoAlimentar).toMatchObject({ apresentacaoEstado: 'indisponivel' });
+      expect(portalCorrupto.planoAlimentar).not.toHaveProperty('preferenciasApresentacao');
+    });
 
     function alternativa(id: string, ordem: number, extra: Record<string, any>) {
       return {
