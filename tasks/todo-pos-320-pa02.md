@@ -1,7 +1,8 @@
 # PA02 — checklist de execução
 
 Contrato: [plan-pos-320-pa02.md](plan-pos-320-pa02.md).
-Implementação autorizada em 2026-10-14; PR #415 aberta como Draft.
+Implementação autorizada em 2026-10-14; PR #415 mergeada pelo proprietário.
+Correções de revisão integradas pela PR #416, merge `5b47fb1`, branch `fix/pa02-copia-revisao-r4`.
 
 ## T00 — base, referências e decisões
 
@@ -45,12 +46,9 @@ Arquivos: seletor de cópia, editor, fixtures/spec visual.
   e geração local.
 - [x] Rascunho alterado/ID ausente pede nova cópia; não busca por nome/posição.
 
-Checkpoint parcial: Playwright comprova acesso revogado, versão alterada,
-paginação que limpa a origem e destino intacto nas falhas. AbortController,
-sequência e limpeza ao desmontar/contextualizar estão implementados, mas não há
-teste visual específico de resposta tardia após troca de paciente. Acrescentar
-esse cenário se uma revisão independente identificar risco que o teste atual
-não deixe coberto.
+Checkpoint: Playwright cobre acesso revogado, versão alterada, paginação que
+limpa a origem e resposta atrasada durante navegação SPA entre pacientes, com
+marcador em window para comprovar que o documento não foi descarregado.
 
 ## T03 — colar no destino e persistir (depende de T02 e D02)
 
@@ -59,6 +57,11 @@ Arquivos: editor, helper, spec Playwright e teste BFF existente quando necessár
 - [x] Nova refeição ao final ou itens acrescentados conforme D02;
   cabeçalho e conteúdo anterior do destino preservados.
 - [x] Novas chaves por gesto; duplo clique durante leitura não duplica.
+- [x] Callback propaga erro de aplicação; alvo removido e limite de 50 não
+  anunciam sucesso, não limpam origem e não aplicam parcialmente.
+- [x] Trava síncrona impede salvar/revisar/publicar durante colagem; releaser
+  tokenizado não libera uma operação posterior. requestSubmit com formulário
+  válido não envia PUT enquanto pendente; após concluir, save inclui a cópia.
 - [x] Não leva IDs de origem, metas/objetivos/revisão nem consentimentos ao PUT.
 - [x] Salvar confirma conteúdo e ordem no payload do rascunho; o Playwright
   verificou que só o destino é salvo e que a origem permanece intacta.
@@ -73,43 +76,60 @@ desktop/mobile e ausência de overflow; dados sintéticos exclusivamente.
 
 ## T04 — regressões e segurança (depende de T03)
 
-- [x] Fase269, modelos298, PA01 (reordenação por botões) e FND02 preservadas;
+- [x] Fase269, modelos298, PA01 (alça DnD por teclado e botões) e FND02 preservadas;
   biblioteca310 não foi alterada.
 - [x] BFF planos (26), serviço/controlador de planos NestJS (56) e testes da
   proteção FND02 (4) passaram.
-- [ ] Outra clínica, outro responsável, paciente/plano arquivado e destino sem
-  permissão não alcançam conteúdo/persistência; não basta esconder controles.
-- [ ] Source read e target save tratados como operações independentes;
+- [x] Revisão dos filtros autoritativos de tenant/carteira/arquivamento e de
+  permissões do GET/PUT existentes; testes de serviço e BFF preservados.
+  Prova PostgreSQL/RLS específica PA02: SKIPPED, sem novo backend/schema.
+- [x] Source read e target save tratados como operações independentes;
   nenhuma promessa de proveniência/CAS/idempotência atômica inexistente.
 - [x] Typecheck, lint (0 erros; 65 avisos preexistentes), build, secrets e
   `git diff --check` passaram localmente.
-- [ ] CI do HEAD atualizado passa. No SHA `4582469`, CodeQL queued, OctaClin CI
-  pending e Semgrep/Dependency Review/Trivy in progress na última consulta.
-  PostgreSQL/RLS: SKIPPED; não houve mudanças de
-  backend, autorização ou schema; a evidência local não é prova de banco.
-- [ ] Revisão R4 independente registrada; nenhuma revisão independente foi
-  simulada nesta execução.
+- [x] CI do HEAD corrigido `38c3596` aprovado: cinco workflows SUCCESS;
+  todos os jobs do CI `38583138559` SUCCESS, conferidos em 2026-10-14.
+- [x] Revisão cruzada R4 pelo agente `/root/review_pa02_r4`, que não escreveu
+  o código: FAIL inicial em dois P2; correções PASS com digest no
+  [relatório](../docs/governance/REVISAO_R4_PA02_PR415_2026-10-14.md).
 
 ## T05 — entrega única e handoff (depende de T04)
 
 - [x] Documentação canônica de status e handoff atualizada com resultados reais.
-- [x] Uma PR PA02 aberta como Draft (#415), com decisão de referências,
-  validações e rollback.
-- [ ] Sem merge/deploy/migration externa/ativação executados pelo agente.
-- [ ] Avisar/pausar para Sol médio se revisão exigir novo contrato de segurança.
+- [x] PA02 integrada na PR #415. Correções da revisão integradas pela #416 porque o
+  merge da original já havia ocorrido; digest revisado preservado após
+  cherry-pick sobre main `50a9590`. Sem dividir a implementação original.
+- [x] Sem merge/deploy/migration externa/ativação executados pelo agente.
+- [x] Correções de revisão mantêm contratos de autorização/persistência
+  existentes; nova coordenação apenas na interface.
 
 ## Evidências desta implementação
 
-PASS: base Git/merges e catálogo PA02; unitários PA02 6/6; BFF planos 26/26;
-NestJS serviço/controlador 56/56; proteção FND02 4/4; nutrição web 13/13;
-typecheck; lint (0 erros, 65 avisos no repo); build Web; Playwright 22/22
-desktop/mobile no conjunto anterior e cenário tardio de troca de paciente 2/2;
-scanner de secrets; `git diff --check`.
-`test:security` passou. `test:workflows-seguros`: 7 testes passaram e 1 falhou
-por indisponibilidade do PowerShell neste container, pré-requisito explícito do
-teste de fail-closed do preflight; os testes de injeção nos workflows passaram.
-SKIPPED: PostgreSQL/RLS específico PA02 (sem alteração backend/schema) e revisão
-R4 independente. No HEAD `4582469`, CodeQL estava queued, OctaClin CI pending e
-Semgrep/Dependency Review/Trivy in progress; consultar novamente o HEAD após
-qualquer commit de documentação. Nenhum merge, deploy ou
-migration externa executados.
+Evidência histórica da implementação inicial: unitários PA02 6/6, BFF 26/26,
+NestJS serviço/controlador 56/56, FND02 4/4, nutrição Web 13/13, typecheck,
+build, lint (0 erros / 65 avisos), Playwright 22/22 e teste tardio adicional 2/2.
+A primeira prova tardia usava navegação completa; a versão final comprova SPA.
+
+Nesta retomada: revisão cruzada inicial FAIL em dois P2; correções de runtime
+PASS pelo agente revisor com digest registrado; RED/GREEN dos dois cenários
+4/4; visual final 30/30 desktop/mobile; unitários PA02 6/6 em Node 22.21.1 /
+pnpm 11.25.0; typecheck e lint focado (0 erros / 3 avisos existentes).
+Uma compilação BFF paralela ao Next dev falhou por tipos gerados inconsistentes;
+nova execução sequencial após regeneração de tipos passou: BFF 26/26, FND02
+4/4, typegen, typecheck e build de produção Web. Scanner de secrets e diff
+check também passaram.
+
+CI de `f94ea94`: todos os workflows e jobs PASS, inclusive
+`test:workflows-seguros` que não tinha PowerShell local na execução inicial.
+Os jobs Backend executaram migrations e RLS em PostgreSQL descartável.
+CI do HEAD corrigido `38c3596` conferido em 2026-10-14: SUCCESS em
+Dependency Review `38583138681`, Semgrep `38583138090`, CodeQL `38583138583`,
+Trivy `38583138183` e OctaClin CI `38583138559` (todos os jobs SUCCESS).
+Merge #416 `5b47fb1` tem conteúdo idêntico ao HEAD aprovado. Isso não comprova
+deploy ou operação produtiva.
+
+SKIPPED: prova local PostgreSQL/RLS específica PA02 e scan automatizado da skill
+(cujos auxiliares/preflight não estão disponíveis neste host). A revisão cruzada
+por outro agente foi realizada; nenhum merge, deploy ou migration externa.
+
+Relatório: [REVISAO_R4_PA02_PR415_2026-10-14.md](../docs/governance/REVISAO_R4_PA02_PR415_2026-10-14.md).

@@ -142,3 +142,51 @@ nenhum redirecionamento. Fontes OMS conservam SHA256; coletor Oxford conserva
 entradas sintéticas, validações e tolerâncias. Testes offline:
 `scripts/research/fase314/test_https_research.py` e `test_references_security.py`,
 executados na governança CI. Não comprova direitos de uso ou G01.
+
+
+## PA05 — apresentação por versão
+
+Cifra, identidade/revisão do rascunho, replay, corrupção, clone e allowlist
+paciente são cobertos por `apresentacao-plano.spec.ts`,
+`dtos-apresentacao-plano.spec.ts`, specs de serviço/portal/controlador e
+`apresentacao-planos.migracao.spec.ts` no backend. Concorrência save/save,
+save/publicação, leitura/transferência e RLS estão nos casos PA05 de
+`rls-isolamento-tenant.integracao.spec.ts`, executados pelo gate
+`pnpm --dir octaclin-backend test:rls:testcontainers` no CI.
+
+`octaclin-backend/scripts/test-pa05-postgres-local.cjs` é fixture alternativa
+opt-in para PostgreSQL15 descartável quando Docker VFS não comporta a imagem
+HA. Não valida Timescale/hypertables nem pgvector; não substitui o gate integral.
+A rota de preview também exige sessão/permissão e descarta escopo arbitrário,
+provados por `pnpm --dir octaclin-web test:planos-alimentares:bff`.
+UI/PDF implementados; testes sintéticos em
+`octaclin-web/tests/visual/fase-320-pa05-apresentacao.spec.mjs` e
+`octaclin-web/tests/visual/portal-paciente.spec.mjs` cobrem CAS/409, corrupção,
+projeção privada, print media, troca de plano/edição durante GET pendente,
+escolha atual e limite de opções. Revisão estática R4 independente PASS após
+quatro correções; evidências em `docs/governance/REVISAO_R4_PA05_2026-10-14.md`.
+Gates finais/CI da entrega PA05 permanecem pendentes até T09.
+
+
+## PA06 — núcleo de autosave e edição parcial (primeira entrega)
+
+CAS geral por geração/revisão e adesão monotônica não substituem CAS PA05.
+Documento editorial cifrado incompleto não habilita revisão/publicação/prévia nem
+expõe materialização anterior como atual. Publicada independe de corrupção da
+cópia editorial. Specs `dtos-edicao-plano`, `servico-planos-alimentares`, controlador
+e `edicao-planos.migracao` cobrem contrato/limites/cifra/replay/projeções/overflow.
+Casos PA06 em `rls-isolamento-tenant.integracao.spec.ts` comprovam FORCE RLS/role,
+NULL, cifra, concorrência save/save/revisão/publicação e leitura/save com barreiras,
+isolamento, carteira, transferência e revogação. Fixture alternativa PA04–PA06
+PostgreSQL15 omite extensões e não substitui gate integral `test:rls:testcontainers`.
+
+`coordenador-edicao-plano.spec.ts` executa dentro de `test:nutricao-plano`/`test:authz`:
+relógio60s, último pedido, ACK obsoleto, manual, suspensão, erros e cleanup.
+`planos-alimentares-bff.spec.ts` cobre nova rota, sessão/permissão/CAS/status/no-store.
+UI/T07/T08 implementada. Testes visuais cobrem texto parcial, avaliação não
+selecionada, ausência de autosave ao abrir, ACK sem perda de edição, totais
+canônicos, retry de rejeição conhecida, saída durante request e acessibilidade.
+Percentuais crus opcionais têm allowlist e conversão separada sem arredondar.
+Revisão cruzada estática e gates integrados T09/T10 em finalização; detalhes em
+`docs/governance/EVIDENCIAS_PA06_NUCLEO_2026-10-15.md`. Bloqueia integração final
+se faltar prova de perda de edição, isolamento, concorrência ou migration aditiva.

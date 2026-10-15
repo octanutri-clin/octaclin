@@ -44,13 +44,31 @@ export class PlanoAlimentarVersaoOrm {
   objetivosCriptografados?: Buffer;
 
   @Column({ name: 'observacoes_criptografadas', type: 'bytea', nullable: true })
-  observacoesCriptografadas?: Buffer;
+  observacoesCriptografadas?: Buffer | null;
 
   @Column({ name: 'calculo_snapshot_criptografado', type: 'bytea', nullable: true })
   calculoSnapshotCriptografado?: Buffer;
 
   @Column({ name: 'totais_snapshot_criptografado', type: 'bytea', nullable: true })
   totaisSnapshotCriptografado?: Buffer;
+
+  @Column({ name: 'apresentacao_snapshot_criptografado', type: 'bytea', nullable: true })
+  apresentacaoSnapshotCriptografado?: Buffer | null;
+
+  @Column({ name: 'apresentacao_revisao', type: 'integer', default: 0 })
+  apresentacaoRevisao: number;
+
+  @Column({ name: 'rascunho_revisao', type: 'integer', default: 0 })
+  rascunhoRevisao: number;
+
+  @Column({ name: 'edicao_protegida', type: 'boolean', default: false })
+  edicaoProtegida: boolean;
+
+  @Column({ name: 'edicao_snapshot_criptografado', type: 'bytea', nullable: true })
+  edicaoSnapshotCriptografado?: Buffer | null;
+
+  @Column({ name: 'edicao_materializada_revisao', type: 'integer', nullable: true })
+  edicaoMaterializadaRevisao?: number | null;
 
   @Column({ name: 'hash_conteudo', type: 'char', length: 64, nullable: true })
   hashConteudo?: string | null;

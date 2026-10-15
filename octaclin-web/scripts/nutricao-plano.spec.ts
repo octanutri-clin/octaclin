@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
   LIMIAR_DIVERGENCIA_NUTRICIONAL,
+  calcularSubtotalRefeicao,
   desviosDasMetas,
   nutrientesDaPorcao,
   totaisPrevistos,
@@ -157,4 +158,84 @@ test('desviosDasMetas marca total zerado como impeditivo', () => {
 
 test('limiar exportado acompanha o backend', () => {
   assert.equal(LIMIAR_DIVERGENCIA_NUTRICIONAL, 0.3);
+});
+
+
+test('PA03 calcula subtotal por refeição sem multiplicar quantidade caseira', () => {
+  const subtotal = calcularSubtotalRefeicao([
+    { identificacao: 'Item A', porcaoGramas: 150, nutrientesPor100g: { energiaKcal: 100, proteinasG: 10, carboidratosG: 20, gordurasG: 5 } },
+    { identificacao: 'Item B', porcaoGramas: 50, nutrientesPor100g: { energiaKcal: 200, proteinasG: 4, carboidratosG: 5, gordurasG: 10 } }
+  ]);
+  assert.deepEqual(subtotal, {
+    estado: 'completo', energiaKcal: 250, proteinasG: 17, carboidratosG: 32.5, gordurasG: 12.5
+  });
+});
+
+test('PA03 mantém indicadores calculáveis e não soma parcialmente indicador ausente', () => {
+  const subtotal = calcularSubtotalRefeicao([
+    { identificacao: 'Item A', porcaoGramas: 150, nutrientesPor100g: { energiaKcal: 100, proteinasG: 10, carboidratosG: 20, gordurasG: 5 } },
+    { identificacao: 'Item B', porcaoGramas: 50, nutrientesPor100g: { energiaKcal: 200, carboidratosG: 5, gordurasG: 10 } }
+  ]);
+  assert.deepEqual(subtotal, {
+    estado: 'incompleto', energiaKcal: 250, proteinasG: undefined, carboidratosG: 32.5, gordurasG: 12.5
+  });
+});
+
+test('PA03 distingue zero válido de ausência e rejeita dados numéricos inválidos', () => {
+  const zero = calcularSubtotalRefeicao([
+    { identificacao: 'Item', porcaoGramas: 100, nutrientesPor100g: { energiaKcal: 0, proteinasG: 0, carboidratosG: 0, gordurasG: 0 } }
+  ]);
+  assert.deepEqual(zero, { estado: 'completo', energiaKcal: 0, proteinasG: 0, carboidratosG: 0, gordurasG: 0 });
+
+  const invalido = calcularSubtotalRefeicao([
+    { identificacao: 'Item A', porcaoGramas: 100, nutrientesPor100g: { energiaKcal: 100, proteinasG: 10, carboidratosG: 20, gordurasG: 5 } },
+    { identificacao: 'Item B', porcaoGramas: 100, nutrientesPor100g: { energiaKcal: Number.POSITIVE_INFINITY, proteinasG: -1, carboidratosG: '2' as unknown as number, gordurasG: Number.NaN } }
+  ]);
+  assert.deepEqual(invalido, { estado: 'incompleto', energiaKcal: undefined, proteinasG: undefined, carboidratosG: undefined, gordurasG: undefined });
+
+  const overflow = calcularSubtotalRefeicao([
+    { identificacao: 'Item', porcaoGramas: 10_000, nutrientesPor100g: { energiaKcal: Number.MAX_VALUE, proteinasG: 10, carboidratosG: 20, gordurasG: 5 } }
+  ]);
+  assert.deepEqual(overflow, { estado: 'incompleto', energiaKcal: undefined, proteinasG: 1000, carboidratosG: 2000, gordurasG: 500 });
+});
+
+test('PA03 não trata refeição vazia ou item sem identificação como zero completo', () => {
+  assert.deepEqual(calcularSubtotalRefeicao([]), {
+    estado: 'sem_alimentos', energiaKcal: undefined, proteinasG: undefined, carboidratosG: undefined, gordurasG: undefined
+  });
+  assert.deepEqual(calcularSubtotalRefeicao([
+    { identificacao: '', porcaoGramas: 100, nutrientesPor100g: { energiaKcal: 100, proteinasG: 10, carboidratosG: 20, gordurasG: 5 } }
+  ]), {
+    estado: 'sem_alimentos', energiaKcal: undefined, proteinasG: undefined, carboidratosG: undefined, gordurasG: undefined
+  });
+  assert.deepEqual(calcularSubtotalRefeicao([
+    { identificacao: 'Item', porcaoGramas: 100, nutrientesPor100g: { energiaKcal: 100, proteinasG: 10, carboidratosG: 20, gordurasG: 5 } },
+    { identificacao: '', porcaoGramas: 100, nutrientesPor100g: { energiaKcal: 100, proteinasG: 10, carboidratosG: 20, gordurasG: 5 } }
+  ]), {
+    estado: 'incompleto', energiaKcal: undefined, proteinasG: undefined, carboidratosG: undefined, gordurasG: undefined
+  });
+});
+
+test('PA03 rejeita porção inválida para todos os indicadores e arredonda por item', () => {
+  const invalida = calcularSubtotalRefeicao([
+    { identificacao: 'Item', porcaoGramas: 10_001, nutrientesPor100g: { energiaKcal: 100, proteinasG: 10, carboidratosG: 20, gordurasG: 5 } }
+  ]);
+  assert.deepEqual(invalida, { estado: 'incompleto', energiaKcal: undefined, proteinasG: undefined, carboidratosG: undefined, gordurasG: undefined });
+
+  const arredondado = calcularSubtotalRefeicao([
+    { identificacao: 'A', porcaoGramas: 10, nutrientesPor100g: { energiaKcal: 1.005, proteinasG: 0, carboidratosG: 0, gordurasG: 0 } },
+    { identificacao: 'B', porcaoGramas: 10, nutrientesPor100g: { energiaKcal: 1.005, proteinasG: 0, carboidratosG: 0, gordurasG: 0 } }
+  ]);
+  assert.equal(arredondado.energiaKcal, 0.201);
+});
+
+test('PA03 mantém indicadores parciais quando apenas o arredondamento final estoura', () => {
+  const subtotal = calcularSubtotalRefeicao(['A', 'B'].map((identificacao) => ({
+    identificacao,
+    porcaoGramas: 100,
+    nutrientesPor100g: { energiaKcal: 1e304, proteinasG: 1, carboidratosG: 1, gordurasG: 1 }
+  })));
+  assert.deepEqual(subtotal, {
+    estado: 'incompleto', energiaKcal: undefined, proteinasG: 2, carboidratosG: 2, gordurasG: 2
+  });
 });

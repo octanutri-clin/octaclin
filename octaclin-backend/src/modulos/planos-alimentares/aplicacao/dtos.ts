@@ -3,6 +3,7 @@ import {
   ArrayMaxSize,
   ArrayMinSize,
   IsArray,
+  IsDefined,
   IsBoolean,
   IsIn,
   IsInt,
@@ -444,7 +445,39 @@ export class MacrosGramasPorKgDto {
   gordurasGPorKg: number;
 }
 
+export class PreferenciasExibicaoRefeicoesDto {
+  @IsBoolean() horario: boolean;
+  @IsBoolean() macros: boolean;
+  @IsBoolean() medidasCaseiras: boolean;
+  @IsBoolean() orientacoes: boolean;
+  @IsBoolean() substituicoesExpandidas: boolean;
+  @IsBoolean() modoCompacto: boolean;
+}
+export class PreferenciasApresentacaoPlanoDto {
+  @IsIn([1]) schemaVersao: 1;
+  @IsDefined() @ValidateNested() @Type(() => PreferenciasExibicaoRefeicoesDto)
+  profissional: PreferenciasExibicaoRefeicoesDto;
+  @IsDefined() @ValidateNested() @Type(() => PreferenciasExibicaoRefeicoesDto)
+  paciente: PreferenciasExibicaoRefeicoesDto;
+}
+
 export class AtualizarRascunhoPlanoAlimentarDto {
+  @ValidateIf(dto => dto.preferenciasApresentacao !== undefined)
+  @IsDefined() @ValidateNested() @Type(() => PreferenciasApresentacaoPlanoDto)
+  preferenciasApresentacao?: PreferenciasApresentacaoPlanoDto;
+
+  @ValidateIf(dto => dto.preferenciasApresentacao !== undefined)
+  @IsInt() @Min(0) @Max(2147483646)
+  apresentacaoRevisaoEsperada?: number;
+
+  @ValidateIf(dto => dto.preferenciasApresentacao !== undefined || dto.rascunhoRevisaoEsperada !== undefined)
+  @IsUUID()
+  rascunhoIdEsperado?: string;
+
+  @ValidateIf(dto => dto.rascunhoRevisaoEsperada !== undefined)
+  @IsInt() @Min(0) @Max(2147483646)
+  rascunhoRevisaoEsperada?: number;
+
   @IsUUID()
   avaliacaoAntropometricaId: string;
 
