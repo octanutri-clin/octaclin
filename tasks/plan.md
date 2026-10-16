@@ -1,17 +1,13 @@
-# Handoff atual — PA06 segunda entrega: backend de ativação → UI Luna
+# Handoff atual — PA06 segunda entrega: ativação backend + UI/BFF
 
 ## Estado e limites
 
 Worktree `/workspace/octaclin/.worktrees/pos320-pa06-ativacao`, branch
-`feat/pos320-pa06-ativacao`, base `e2cb9cdd` da main (reconferida via fetch).
-PR420 mergeada em `66df9053`. O proprietário relatou migrations anteriores
-aplicadas em staging/produção; nenhum banco externo foi consultado neste ciclo.
-A nova1074 **não foi aplicada externamente**. Worktree principal conserva seu
-next-env preexistente. Nenhum arquivo Web/research foi alterado nesta etapa.
-
-Risco R4. Backend T08a validado localmente; T08b deve começar apenas depois do
-aviso/pausa e troca manual para **GPT-6 Luna alto**, solicitada pelo proprietário.
-T08c/T08d (agregação/micronutrientes) ficam na terceira entrega, fora desta PR.
+`feat/pos320-pa06-ativacao`, HEAD `ee276085`, base `e2cb9cdd`. PR420 mergeada
+em `66df9053`. O proprietário relatou migrations anteriores aplicadas em
+staging/produção; nenhum banco externo foi consultado neste ciclo. A nova1074
+**não foi aplicada externamente**. O trabalho local T08a+T08b está concluído
+para revisão. T08c/T08d (agregação/micronutrientes) seguem como entrega posterior.
 Não executar merge/deploy/migrations externas. Evidências e comandos:
 `docs/governance/EVIDENCIAS_PA06_ATIVACAO_2026-10-16.md`.
 
@@ -80,7 +76,7 @@ Paciente, já guardado por sessão Patient, sempre private/no-store:
   Detalhe solicitado nunca cai em outra publicação/plano. Escolha existente
   revalida plano/refeição ativos mesmo com itemId conhecido.
 
-## Implementação Luna — menor sequência concreta
+## Implementação UI/BFF concluída localmente
 
 1. Ler AGENTS da Web. Estender tipos/API em `lib/plano-alimentar-api.ts` e BFF
    sob `app/api/pacientes/[id]/planos-alimentares/[planoId]` + portal plural,
@@ -115,7 +111,7 @@ Paciente, já guardado por sessão Patient, sempre private/no-store:
 Referências de UI: somente R013/R014 já fixadas no plano, sem nova dependência
 ou nova auditoria de todos os repositórios. Backend não incorpora código externo.
 
-## Gates neste checkpoint
+## Gates da segunda entrega — estado local
 
 - PASS: backfill owner NOBYPASSRLS e19 casos reais PA04–PA06/inventário;
   29 casos fora do filtro SKIPPED. Timescale/pgvector integrais continuam CI.
@@ -125,7 +121,16 @@ ou nova auditoria de todos os repositórios. Backend não incorpora código exte
   Typecheck/build e artefato dist/main.js; PostgreSQL19 PASS/29 fora do filtro.
   Secrets/diff locais PASS; commit de checkpoint registrado no Git ao final.
   Gates de governança proporcionais conferidos nesta rodada (ver evidências).
-- PENDENTE: T08b/BFF/UI, Playwright e CI do HEAD da segunda entrega.
+- PASS: BFF37/37; Playwright PA06 6/6 desktop+mobile; PA02 24/24 por projeto;
+  PA05 desktop4/4 e mobile4/4 (ver registro de evidências).
+- PASS: typecheck/build Web e lint direcionado sem erros; warnings estão listados
+  no registro, inclusive dois warnings de hooks do componente de portal.
+- PASS: revisão R4 independente confirmou fechamento dos dois achados e não
+  encontrou riscos novos; uma leitura separada confirmou o delta de contexto do
+  portal. RED/GREEN e testes dirigidos estão no ledger.
+- PASS: `pnpm test:authz` integral (26 recortes concluídos, exit 0).
+- PENDENTE: CI/governança do HEAD. A fixture PostgreSQL local cobre PA04–PA06,
+  mas Timescale/pgvector integrais ficam para CI.
 - NÃO EXECUTADO: qualquer operação externa, merge ou deploy.
 
 ---

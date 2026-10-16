@@ -152,6 +152,8 @@ export class ServicoPlanosAlimentares {
           profissionalId: true,
           tituloCriptografado: true,
           versaoPublicadaAtualId: true,
+          ativoParaPaciente: true,
+          ativacaoRevisao: true,
           criadoEm: true,
           atualizadoEm: true
         },

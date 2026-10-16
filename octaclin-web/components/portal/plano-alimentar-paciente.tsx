@@ -5,13 +5,21 @@ import { Botao } from '@/components/ui/botao';
 import { Cartao, CartaoCabecalho, CartaoConteudo, CartaoTitulo } from '@/components/ui/cartao';
 import { Etiqueta } from '@/components/ui/etiqueta';
 import { TrocasLiberadasItem } from '@/components/portal/trocas-liberadas-item';
-import type { PlanoAlimentarPacienteApi } from '@/lib/portal-api';
+import {
+  listarPlanosAlimentaresPortalPaciente,
+  obterPlanoAlimentarPortalPaciente,
+  type PlanoAlimentarPacienteApi,
+  type PlanoAlimentarPortalResumoApi
+} from '@/lib/portal-api';
+import { useEffect, useState } from 'react';
 
 interface PlanoAlimentarPacienteProps {
   plano?: PlanoAlimentarPacienteApi;
   rotuloPreview?: string;
   impressaoSomente?: boolean;
   mostrarBotaoImprimir?: boolean;
+  usarLista?: boolean;
+  habilitado?: boolean;
 }
 
 function formatarNumero(valor: number, casasDecimais = 0) {
@@ -33,7 +41,7 @@ function descricaoPorcao(quantidade: number, unidade: string, porcaoGramas: numb
   return `${quantidadeFormatada} ${unidade}${porcao}`;
 }
 
-export function PlanoAlimentarPaciente({
+function ConteudoPlanoAlimentarPaciente({
   plano,
   rotuloPreview,
   impressaoSomente = false,
@@ -152,5 +160,112 @@ export function PlanoAlimentarPaciente({
         </section>
       </CartaoConteudo>
     </Cartao>
+  );
+}
+
+const LIMITE_PLANOS_PORTAL = 10;
+
+export function PlanoAlimentarPaciente({
+  plano,
+  rotuloPreview,
+  impressaoSomente = false,
+  mostrarBotaoImprimir = true,
+  usarLista = false,
+  habilitado = true
+}: PlanoAlimentarPacienteProps) {
+  const [pagina, setPagina] = useState(1);
+  const [paginaPlanos, setPaginaPlanos] = useState<{ itens: PlanoAlimentarPortalResumoApi[]; total: number; chaveConsulta: string } | null>(null);
+  const [planoSelecionadoId, setPlanoSelecionadoId] = useState('');
+  const [planoSelecionado, setPlanoSelecionado] = useState<{ chave: string; dados: PlanoAlimentarPacienteApi } | null>(null);
+  const [erroLista, setErroLista] = useState<{ chave: string; mensagem: string } | null>(null);
+  const [atualizacao, setAtualizacao] = useState(0);
+  const chaveConsulta = `${usarLista ? 'lista' : 'detalhe'}:${habilitado ? 'habilitado' : 'desabilitado'}:${pagina}:${atualizacao}`;
+  const mensagemErroLista = erroLista && (erroLista.chave === chaveConsulta || erroLista.chave === `${chaveConsulta}:${planoSelecionadoId}`)
+    ? erroLista.mensagem
+    : null;
+  const chaveDetalheAtual = `${chaveConsulta}:${planoSelecionadoId}`;
+  const detalheAtual = planoSelecionado?.chave === chaveDetalheAtual ? planoSelecionado.dados : null;
+  const dadosPaginaAtual = paginaPlanos?.chaveConsulta === chaveConsulta ? paginaPlanos : null;
+  const carregandoLista = usarLista && habilitado && !dadosPaginaAtual && !mensagemErroLista;
+
+  useEffect(() => {
+    if (!usarLista || !habilitado) return;
+    const controller = new AbortController();
+    void listarPlanosAlimentaresPortalPaciente({ pagina, limite: LIMITE_PLANOS_PORTAL }, controller.signal)
+      .then((resultado) => {
+        if (controller.signal.aborted) return;
+        const ultimoIndice = Math.max(1, Math.ceil(resultado.total / LIMITE_PLANOS_PORTAL));
+        if (!resultado.itens.length && pagina > ultimoIndice) {
+          setPagina(ultimoIndice);
+          setAtualizacao((valor) => valor + 1);
+          return;
+        }
+        setPaginaPlanos({ itens: resultado.itens, total: resultado.total, chaveConsulta });
+        setPlanoSelecionadoId((atual) => resultado.itens.some((item) => item.id === atual) ? atual : resultado.itens[0]?.id ?? '');
+        if (!resultado.itens.length) setPlanoSelecionado(null);
+      })
+      .catch(() => {
+        if (!controller.signal.aborted) setErroLista({ chave: chaveConsulta, mensagem: 'Não foi possível carregar seus planos alimentares. Tente novamente.' });
+      });
+    return () => controller.abort();
+  }, [usarLista, habilitado, pagina, atualizacao, chaveConsulta]);
+
+  useEffect(() => {
+    if (!usarLista || !habilitado || !planoSelecionadoId) return;
+    const controller = new AbortController();
+    void obterPlanoAlimentarPortalPaciente(planoSelecionadoId, controller.signal)
+      .then((resultado) => {
+        if (!controller.signal.aborted && resultado.id === planoSelecionadoId) setPlanoSelecionado({ chave: chaveDetalheAtual, dados: resultado });
+      })
+      .catch((erro: unknown) => {
+        if (controller.signal.aborted) return;
+        setPlanoSelecionado(null);
+        if (typeof erro === 'object' && erro !== null && 'status' in erro && erro.status === 404) {
+          setErroLista({ chave: `${chaveConsulta}:${planoSelecionadoId}`, mensagem: 'Este plano deixou de estar disponível. A lista foi atualizada.' });
+          setPlanoSelecionadoId('');
+          setAtualizacao((valor) => valor + 1);
+        } else {
+          setErroLista({ chave: `${chaveConsulta}:${planoSelecionadoId}`, mensagem: 'Não foi possível abrir este plano. Tente novamente.' });
+        }
+      });
+    return () => controller.abort();
+  }, [usarLista, habilitado, planoSelecionadoId, chaveConsulta, chaveDetalheAtual]);
+
+  if (!usarLista) return <ConteudoPlanoAlimentarPaciente plano={plano} rotuloPreview={rotuloPreview} impressaoSomente={impressaoSomente} mostrarBotaoImprimir={mostrarBotaoImprimir} />;
+
+  const totalPaginas = Math.max(1, Math.ceil((dadosPaginaAtual?.total ?? 0) / LIMITE_PLANOS_PORTAL));
+
+  return (
+    <div className="grid gap-4">
+      <section className="grid gap-3 print:hidden" aria-label="Seus planos alimentares">
+        <div className="flex flex-wrap items-end justify-between gap-2">
+          <div>
+            <h2 className="text-sm font-semibold text-tinta">Seus planos alimentares</h2>
+            <p className="text-xs text-texto-suave">Planos publicados que estão disponíveis para você.</p>
+          </div>
+          {dadosPaginaAtual && dadosPaginaAtual.total > LIMITE_PLANOS_PORTAL ? <nav className="flex items-center gap-2" aria-label="Paginação dos planos alimentares">
+            <Botao type="button" tamanho="sm" disabled={pagina <= 1 || carregandoLista} onClick={() => { setErroLista(null); setPagina((atual) => Math.max(1, atual - 1)); }}>Anterior</Botao>
+            <span role="status" aria-live="polite" className="text-xs text-texto-suave">Página {pagina} de {totalPaginas}</span>
+            <Botao type="button" tamanho="sm" disabled={pagina >= totalPaginas || carregandoLista} onClick={() => { setErroLista(null); setPagina((atual) => Math.min(totalPaginas, atual + 1)); }}>Próxima</Botao>
+          </nav> : null}
+        </div>
+        {mensagemErroLista ? <p role="alert" className="rounded-md border border-alerta-borda bg-alerta-suave p-3 text-sm text-alerta-forte">{mensagemErroLista}</p> : null}
+        {carregandoLista && !dadosPaginaAtual ? <p role="status" className="text-sm text-texto-suave">Carregando planos disponíveis…</p> : null}
+        {dadosPaginaAtual?.itens.length ? <ul className="grid gap-2 sm:grid-cols-2">
+          {dadosPaginaAtual.itens.map((item) => <li key={item.id}>
+            <button type="button" aria-current={planoSelecionadoId === item.id ? 'true' : undefined}
+              onClick={() => { setErroLista(null); setPlanoSelecionadoId(item.id); }}
+              className={`min-h-11 w-full rounded-md border p-3 text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primaria ${planoSelecionadoId === item.id ? 'border-primaria bg-primaria-suave' : 'border-linha bg-white'}`}>
+              <span className="block break-words text-sm font-semibold text-tinta">{item.titulo}</span>
+              <span className="mt-1 block text-xs text-texto-suave">Versão {item.numeroVersao} · publicado em {formatarData(item.publicadoEm)}</span>
+            </button>
+          </li>)}
+        </ul> : dadosPaginaAtual && !dadosPaginaAtual.itens.length && !carregandoLista && !mensagemErroLista ? <p className="rounded-md border border-linha bg-superficie p-3 text-sm text-texto-suave">Não há planos alimentares disponíveis no momento.</p> : null}
+      </section>
+      {habilitado && detalheAtual && detalheAtual.id === planoSelecionadoId && dadosPaginaAtual?.itens.some((item) => item.id === planoSelecionadoId)
+        ? <ConteudoPlanoAlimentarPaciente plano={detalheAtual} impressaoSomente={impressaoSomente} mostrarBotaoImprimir={mostrarBotaoImprimir} />
+        : habilitado && planoSelecionadoId ? <p role="status" className="text-sm text-texto-suave">Carregando o plano selecionado…</p>
+          : habilitado ? <ConteudoPlanoAlimentarPaciente plano={undefined} impressaoSomente={impressaoSomente} mostrarBotaoImprimir={false} /> : null}
+    </div>
   );
 }

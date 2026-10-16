@@ -213,6 +213,13 @@ export interface VersaoPlanoAlimentarApi {
   apresentacaoEstado?: EstadoApresentacaoPlanoApi;
   apresentacaoRevisao?: number;
   preferenciasApresentacao?: PreferenciasApresentacaoPlanoApi;
+  /** Flags operacionais atuais, sempre ligadas à versão publicada/edição atual. */
+  ativacaoRefeicoes?: AtivacaoRefeicaoApi[];
+  /** Chaves exatas do documento de edição salvo; nunca inferir por posição ou nome. */
+  ativacaoEdicao?: Array<{ chaveCliente: string; identidadeId: string; ativa: boolean }>;
+  resumoRefeicoesAtivas?: ResumoNutricionalPlanoApi;
+  ativoParaPaciente?: boolean;
+  ativacaoRevisao?: number;
   id: string;
   numero: number;
   status: 'rascunho' | 'publicada' | 'descartada';
@@ -240,11 +247,21 @@ export interface PlanoAlimentarApi {
   profissionalId: string;
   titulo: string;
   arquivadoEm?: string;
+  ativoParaPaciente?: boolean;
+  ativacaoRevisao?: number;
+  /** Projeção vigente após aplicar plano e refeições ativos. */
+  resumoNutricionalVigente?: ResumoNutricionalPlanoApi;
   criadoEm: string;
   atualizadoEm: string;
   current?: VersaoPlanoAlimentarApi;
   draft?: VersaoPlanoAlimentarApi;
   historico: VersaoPlanoAlimentarResumoApi[];
+}
+
+export interface AtivacaoRefeicaoApi {
+  refeicaoId: string;
+  identidadeId: string;
+  ativa: boolean;
 }
 
 export interface ResumoNutricionalPlanoApi {
@@ -267,6 +284,8 @@ export interface PlanoAlimentarResumoApi {
   titulo: string;
   criadoEm: string;
   atualizadoEm: string;
+  ativoParaPaciente?: boolean;
+  ativacaoRevisao?: number;
   current?: VersaoPlanoAlimentarResumoApi;
   draft?: VersaoPlanoAlimentarResumoApi;
   historicoQuantidade: number;
@@ -442,6 +461,26 @@ export function obterPlanoAlimentar(pacienteId: string, planoId: string, signal?
     `${basePaciente(pacienteId)}/${encodeURIComponent(planoId)}`,
     { signal }
   );
+}
+
+export interface ResultadoAtivacaoPlanoApi {
+  planoId: string;
+  ativoParaPaciente: boolean;
+  ativacaoRevisao: number;
+  identidadeRefeicaoId?: string;
+  ativa?: boolean;
+}
+
+export function alterarAtivacaoPlanoAlimentar(pacienteId: string, planoId: string, ativo: boolean, ativacaoRevisaoEsperada: number) {
+  return requisitar<ResultadoAtivacaoPlanoApi>(`${basePaciente(pacienteId)}/${encodeURIComponent(planoId)}/ativacao`, {
+    method: 'PUT', ...corpoJson({ ativo, ativacaoRevisaoEsperada })
+  });
+}
+
+export function alterarAtivacaoRefeicaoPlanoAlimentar(pacienteId: string, planoId: string, identidadeId: string, ativo: boolean, ativacaoRevisaoEsperada: number) {
+  return requisitar<ResultadoAtivacaoPlanoApi>(`${basePaciente(pacienteId)}/${encodeURIComponent(planoId)}/refeicoes/${encodeURIComponent(identidadeId)}/ativacao`, {
+    method: 'PUT', ...corpoJson({ ativo, ativacaoRevisaoEsperada })
+  });
 }
 
 export function listarEscolhasPlanoAlimentar(

@@ -1014,7 +1014,7 @@ export function PortalPaciente({ secao }: { secao: SecaoPortal }) {
             </section>
 
             <section id="plano" className={secao === 'plano' ? 'scroll-mt-4 grid gap-4' : 'hidden'}>
-              <PlanoAlimentarPaciente plano={portal.planoAlimentar} />
+                  <PlanoAlimentarPaciente key={`${portal.paciente.id}:${secao}`} plano={portal.planoAlimentar} usarLista habilitado={secao === 'plano'} />
 
               <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] print:hidden">
               <Cartao>

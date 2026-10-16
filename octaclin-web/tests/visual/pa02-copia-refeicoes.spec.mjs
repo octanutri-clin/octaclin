@@ -37,7 +37,12 @@ function refeicao(id, nome, descricao, orientacoes = '') {
 }
 
 function versao({ id, numero, status, refeicoes, objetivos = 'Objetivo sintético' }) {
-  return { id, numero, status, criadoEm: instante, atualizadoEm: instante, objetivos, observacoes: 'Observação sintética de origem', refeicoes };
+  return {
+    id, numero, status, criadoEm: instante, atualizadoEm: instante, objetivos, observacoes: 'Observação sintética de origem', refeicoes,
+    ativoParaPaciente: true, ativacaoRevisao: 1,
+    ativacaoRefeicoes: refeicoes.map((item) => ({ refeicaoId: item.id, identidadeId: `identidade-${id}-${item.id}`, ativa: true })),
+    ...(status === 'rascunho' ? { ativacaoEdicao: refeicoes.map((item) => ({ chaveCliente: item.id, identidadeId: `identidade-${id}-${item.id}`, ativa: true })) } : {})
+  };
 }
 
 async function preparar(page, { falharRevalidacaoOrigem = false, alterarVersaoNaColagem = false, planosPaginados = false, atrasarLeituraExterna = false, atrasarRevalidacaoOrigem = false, duasRefeicoesDestino = false, limiteRefeicoesDestino = false, manterRefeicoesRecolhidas = false, nutrientesIncompletos = false, refeicaoSemAlimentos = false, atualizarNutrientesAoSalvar = false, documentoInicial } = {}) {
@@ -101,7 +106,7 @@ async function preparar(page, { falharRevalidacaoOrigem = false, alterarVersaoNa
   const resumoDestino = { id: 'pa02-plano-destino', pacienteId: paciente.id, profissionalId: 'pa02-profissional', titulo: 'Plano destino', criadoEm: instante, atualizadoEm: instante, draft: { id: destino.id, numero: destino.numero, status: 'rascunho', criadoEm: instante, atualizadoEm: instante }, historicoQuantidade: 1 };
   const resumoDestinoOutro = { ...resumoDestino, id: 'pa02-plano-destino-outro', pacienteId: outroPaciente.id, draft: { ...resumoDestino.draft, id: 'pa02-draft-destino-outro' } };
   const resumoOrigem = { id: 'pa02-plano-origem', pacienteId: paciente.id, profissionalId: 'pa02-profissional', titulo: 'Plano origem salvo', criadoEm: instante, atualizadoEm: instante, current: { id: sourcePublished.id, numero: sourcePublished.numero, status: 'publicada', publicadoEm: instante, criadoEm: instante, atualizadoEm: instante }, draft: { id: sourceDraft.id, numero: sourceDraft.numero, status: 'rascunho', criadoEm: instante, atualizadoEm: instante }, historicoQuantidade: 2 };
-  const planoDestino = { ...resumoDestino, historico: [], draft: { ...destino, calculo: { metaEnergeticaKcal: 2000, metasMacronutrientes: { carboidratosG: 250, proteinasG: 100, gordurasG: 67 } } } };
+  const planoDestino = { ...resumoDestino, ativoParaPaciente: true, ativacaoRevisao: 1, historico: [], draft: { ...destino, calculo: { metaEnergeticaKcal: 2000, metasMacronutrientes: { carboidratosG: 250, proteinasG: 100, gordurasG: 67 } } } };
   const planoDestinoOutro = { ...resumoDestinoOutro, historico: [], draft: { ...destino, id: 'pa02-draft-destino-outro', calculo: { metaEnergeticaKcal: 2000, metasMacronutrientes: { carboidratosG: 250, proteinasG: 100, gordurasG: 67 } } } };
 
   await page.route((url) => url.pathname === `/api/pacientes/${paciente.id}/planos-alimentares`, (route) => {
@@ -153,17 +158,34 @@ async function preparar(page, { falharRevalidacaoOrigem = false, alterarVersaoNa
     const entrada = route.request().postDataJSON();
     entradaSalva = entrada.documento;
     const pendente = !entradaSalva.objetivos?.trim() || entradaSalva.refeicoes.some((refeicao) => !refeicao.nome?.trim());
-    if (atualizarNutrientesAoSalvar) {
-      const snapshot = planoDestino.draft.refeicoes[0].itens[0].composicaoSnapshot;
-      snapshot.nutrientesPor100g.energiaKcal = 220;
-      snapshot.nutrientesPorcao.energiaKcal = 220;
-    }
+    const refeicoesMaterializadas = pendente ? [] : entradaSalva.refeicoes.map((entradaRefeicao, indice) => {
+      const base = planoDestino.draft.refeicoes[indice] ?? planoDestino.draft.refeicoes[0];
+      const refeicaoMaterializada = {
+        ...base,
+        id: `refeicao-materializada-${indice}`,
+        nome: entradaRefeicao.nome,
+        horarioLocal: entradaRefeicao.horarioLocal,
+        orientacoes: entradaRefeicao.orientacoes,
+        itens: base.itens.map((item) => ({ ...item, composicaoSnapshot: structuredClone(item.composicaoSnapshot) }))
+      };
+      if (atualizarNutrientesAoSalvar) {
+        for (const item of refeicaoMaterializada.itens) {
+          item.composicaoSnapshot.nutrientesPor100g.energiaKcal = 220;
+          item.composicaoSnapshot.nutrientesPorcao.energiaKcal = 220;
+        }
+      }
+      return refeicaoMaterializada;
+    });
     const versaoSalva = {
       ...planoDestino.draft,
       rascunhoRevisao: entrada.rascunhoRevisaoEsperada + 1,
       edicaoEstado: pendente ? 'pendente' : 'materializada',
       documentoEdicao: entradaSalva,
-      ...(pendente ? { calculo: undefined, totais: undefined, refeicoes: [] } : {})
+      ativacaoEdicao: entradaSalva.refeicoes.map((refeicao) => ({ chaveCliente: refeicao.chaveCliente, identidadeId: `identidade-${refeicao.chaveCliente}`, ativa: true })),
+      ...(pendente ? { calculo: undefined, totais: undefined, refeicoes: [] } : {
+        refeicoes: refeicoesMaterializadas,
+        ativacaoRefeicoes: refeicoesMaterializadas.map((refeicao) => ({ refeicaoId: refeicao.id, identidadeId: `identidade-${refeicao.id}`, ativa: true }))
+      })
     };
     planoDestino.draft = versaoSalva;
     await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(versaoSalva) });

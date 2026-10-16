@@ -146,6 +146,20 @@ export interface PortalPacienteApi {
   lgpd: LgpdPortalPacienteApi;
 }
 
+export interface PlanoAlimentarPortalResumoApi {
+  id: string;
+  titulo: string;
+  numeroVersao: number;
+  publicadoEm: string;
+}
+
+export interface PaginaPlanosAlimentaresPortalApi {
+  itens: PlanoAlimentarPortalResumoApi[];
+  total: number;
+  pagina: number;
+  limite: number;
+}
+
 export interface NutrientesPlanoAlimentarPacienteApi {
   energiaKcal?: number;
   proteinasG?: number;
@@ -393,6 +407,22 @@ export async function obterPortalPaciente(): Promise<PortalPacienteApi> {
     throw new ErroApiPortal(resposta.status, await extrairMensagemErro(resposta));
   }
   return resposta.json() as Promise<PortalPacienteApi>;
+}
+
+export async function listarPlanosAlimentaresPortalPaciente(consulta: { pagina?: number; limite?: number } = {}, signal?: AbortSignal): Promise<PaginaPlanosAlimentaresPortalApi> {
+  const parametros = new URLSearchParams();
+  if (consulta.pagina !== undefined) parametros.set('pagina', String(consulta.pagina));
+  if (consulta.limite !== undefined) parametros.set('limite', String(consulta.limite));
+  const query = parametros.size ? `?${parametros.toString()}` : '';
+  const resposta = await fetch(`/api/portal/paciente/planos-alimentares${query}`, { cache: 'no-store', signal });
+  if (!resposta.ok) throw new ErroApiPortal(resposta.status, await extrairMensagemErro(resposta));
+  return resposta.json() as Promise<PaginaPlanosAlimentaresPortalApi>;
+}
+
+export async function obterPlanoAlimentarPortalPaciente(planoId: string, signal?: AbortSignal): Promise<PlanoAlimentarPacienteApi> {
+  const resposta = await fetch(`/api/portal/paciente/planos-alimentares/${encodeURIComponent(planoId)}`, { cache: 'no-store', signal });
+  if (!resposta.ok) throw new ErroApiPortal(resposta.status, await extrairMensagemErro(resposta));
+  return resposta.json() as Promise<PlanoAlimentarPacienteApi>;
 }
 
 export async function obterConversaPortalPaciente(): Promise<ConversaPortalPacienteApi | null> {

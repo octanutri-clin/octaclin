@@ -29,9 +29,12 @@ import { mensagemFalhaInterface } from '@/lib/erros-interface';
 import { useProtecaoAlteracoesNaoSalvas } from '@/lib/usar-protecao-alteracoes-nao-salvas';
 import {
   arquivarPlanoAlimentar,
+  alterarAtivacaoPlanoAlimentar,
+  alterarAtivacaoRefeicaoPlanoAlimentar,
   buscarAlimentosPlanoAlimentar,
   criarNovaVersaoPlanoAlimentar,
   criarPlanoAlimentar,
+  ErroApiPlanoAlimentar,
   listarPlanosAlimentares,
   obterAcompanhamentoVersaoPlanoAlimentar,
   obterApresentacaoPacientePlano,
@@ -63,6 +66,7 @@ import { PainelNutricional } from '@/components/pacientes/painel-nutricional';
 import { calcularSubtotalRefeicao } from '@/lib/nutricao-plano';
 import { CoordenadorEdicaoPlano, type EstadoSalvamentoPlano, type PrecondicaoEdicaoPlano } from '@/lib/coordenador-edicao-plano';
 import { LIMITE_BYTES_DOCUMENTO_EDICAO, campoNumeroEdicao as valorNumericoEdicao, percentualParaBasisPointsEdicao, interpretarNumeroEdicao, nutrientesNumericosEdicao, type DocumentoEdicaoPlano, type NutrientesEdicao } from '@/lib/edicao-plano';
+import { aplicarAckAtivacao, localizarAtivacaoRefeicao, mesclarProjecaoAtivacao } from '@/lib/ativacao-plano';
 import { DuplicarPlanoDeOutroPaciente } from '@/components/pacientes/duplicar-plano-de-outro-paciente';
 import { ModelosPlanoAlimentar } from '@/components/pacientes/modelos-plano-alimentar';
 import { BibliotecaReceitasNutricionais } from '@/components/pacientes/biblioteca-receitas-nutricionais';
@@ -513,6 +517,42 @@ function formatarNutrienteSubtotal(valor?: number, casas = 0) {
   return valor === undefined ? '—' : formatarNumero(valor, casas);
 }
 
+function projetarEstruturaAlimento(item: ItemFormulario) {
+  const numero = (valor: unknown) => {
+    if (valor === null || valor === undefined || valor === '') return null;
+    const interpretado = interpretarNumeroEdicao(valor as string | number);
+    return interpretado === undefined ? String(valor) : interpretado;
+  };
+  const projetarBase = (alimento: AlimentoFormulario) => ({
+    identificacao: alimento.alimentoComposicaoId ?? alimento.descricao,
+    quantidade: numero(alimento.quantidade),
+    unidade: alimento.unidade,
+    porcaoGramas: numero(alimento.porcaoGramas)
+  });
+  return {
+    ...projetarBase(item),
+    substituicoes: item.substituicoes.map((substituicao) => ({
+      ...projetarBase(substituicao),
+      liberadaParaPaciente: substituicao.liberadaParaPaciente,
+      preferida: substituicao.preferida
+    }))
+  };
+}
+
+function estruturasDeRefeicoesCoincidem(atual: RefeicaoFormulario[], materializada: RefeicaoFormulario[]) {
+  if (atual.length !== materializada.length) return false;
+  return atual.every((refeicao, indice) => {
+    const salva = materializada[indice];
+    if (!salva || refeicao.nome !== salva.nome || (refeicao.horarioLocal || '') !== (salva.horarioLocal || '')
+      || (refeicao.orientacoes || '') !== (salva.orientacoes || '') || refeicao.itens.length !== salva.itens.length) return false;
+    return refeicao.itens.every((item, indiceItem) => {
+      const itemSalvo = salva.itens[indiceItem];
+      if (!itemSalvo || JSON.stringify(projetarEstruturaAlimento(item)) !== JSON.stringify(projetarEstruturaAlimento(itemSalvo))) return false;
+      return true;
+    });
+  });
+}
+
 function ResumoMacrosVersao({ rotulo, numero, resumo }: { rotulo: string; numero: number; resumo?: ResumoNutricionalPlanoApi }) {
   const metricas = [
     { nome: 'Energia', valor: resumo?.energiaKcal, unidade: 'kcal', casas: 0 },
@@ -532,6 +572,7 @@ function ResumoMacrosVersao({ rotulo, numero, resumo }: { rotulo: string; numero
     <div className="mt-2 rounded-md border border-linha bg-white px-3 py-2 text-xs text-tinta">
       <p className="font-semibold">{rotulo} v{numero} · Salvo</p>
       <p className="mt-1 text-texto-suave">{rotuloEstado}</p>
+      <p className="mt-1 text-texto-suave">Resumo salvo da versão; pode incluir refeições atualmente ocultas. Os totais ativos aparecem no plano selecionado.</p>
       {resumo?.estado === 'completo' || resumo?.estado === 'incompleto' ? (
         <dl className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1 sm:grid-cols-4">
           {metricas.map((metrica) => {
@@ -981,7 +1022,32 @@ function EditorItem({ pacienteId, item, resumo, indice, total, aoAlterar, aoRemo
   );
 }
 
-function ResumoVersao({ plano, versao }: { plano: PlanoAlimentarApi; versao: VersaoPlanoAlimentarApi }) {
+function ControleAtivacao({ rotulo, ativo, desabilitado, aoAlternar }: { rotulo: string; ativo: boolean; desabilitado?: boolean; aoAlternar: () => void }) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={ativo}
+      aria-label={`${rotulo}: ${ativo ? 'visível para o paciente' : 'oculto do paciente'}`}
+      disabled={desabilitado}
+      onClick={aoAlternar}
+      className="inline-flex min-h-11 items-center gap-2 rounded-md px-2 text-sm text-tinta focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primaria disabled:cursor-not-allowed disabled:opacity-50"
+    >
+      <span aria-hidden="true" className={`relative h-6 w-11 rounded-full transition-colors ${ativo ? 'bg-primaria' : 'bg-texto-suave'}`}>
+        <span className={`absolute top-1 h-4 w-4 rounded-full bg-white transition-transform ${ativo ? 'translate-x-6' : 'translate-x-1'}`} />
+      </span>
+      <span>{ativo ? 'Visível' : 'Oculto'}</span>
+    </button>
+  );
+}
+
+function ResumoVersao({ plano, versao, podeAlterarVisibilidade = false, aoAlternarRefeicao, operacaoPendente = false }: {
+  plano: PlanoAlimentarApi;
+  versao: VersaoPlanoAlimentarApi;
+  podeAlterarVisibilidade?: boolean;
+  aoAlternarRefeicao?: (identidadeId: string, ativo: boolean) => void;
+  operacaoPendente?: boolean;
+}) {
   const preferencias = versao.preferenciasApresentacao?.profissional ?? {
     ...novasPreferenciasApresentacaoPlano().profissional,
     substituicoesExpandidas: true
@@ -1013,9 +1079,16 @@ function ResumoVersao({ plano, versao }: { plano: PlanoAlimentarApi; versao: Ver
       <div className="grid gap-4">
         {versao.refeicoes.map((refeicao) => (
           <section key={refeicao.id} className="break-inside-avoid border-t border-linha pt-4 first:border-t-0 first:pt-0">
-            <div className="flex flex-wrap items-baseline justify-between gap-2">
-              <h3 className="text-base font-semibold text-tinta">{refeicao.nome}</h3>
-              {preferencias.horario && refeicao.horarioLocal ? <p className="text-sm text-texto-suave">{refeicao.horarioLocal.slice(0, 5)}</p> : null}
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="flex flex-wrap items-baseline gap-2">
+                <h3 className="text-base font-semibold text-tinta">{refeicao.nome}</h3>
+                {preferencias.horario && refeicao.horarioLocal ? <p className="text-sm text-texto-suave">{refeicao.horarioLocal.slice(0, 5)}</p> : null}
+              </div>
+              {podeAlterarVisibilidade && versao.id === plano.current?.id ? (() => {
+                const estado = localizarAtivacaoRefeicao(versao, refeicao.id);
+                return estado ? <ControleAtivacao rotulo={`Visibilidade da refeição ${refeicao.nome || 'sem nome'}`} ativo={estado.ativa} desabilitado={operacaoPendente || !aoAlternarRefeicao} aoAlternar={() => aoAlternarRefeicao?.(estado.identidadeId, !estado.ativa)} />
+                  : <span className="text-xs text-alerta-forte">Estado de visibilidade indisponível</span>;
+              })() : null}
             </div>
             {preferencias.orientacoes && refeicao.orientacoes ? <p className="mt-1 whitespace-pre-wrap text-sm text-texto-suave">{refeicao.orientacoes}</p> : null}
             <ul className="mt-3 grid gap-2">
@@ -1210,6 +1283,7 @@ interface PlanoAlimentarProfissionalProps {
 type ModoProjecaoPaciente = 'rascunho' | 'impressao';
 interface ProjecaoPacienteLocal {
   chave: string;
+  ativacaoRevisao: number;
   modo: ModoProjecaoPaciente;
   dados: ApresentacaoPacientePlanoApi;
 }
@@ -1241,6 +1315,7 @@ export function PlanoAlimentarProfissional({ pacienteId, podeGerenciar, aoAltera
   const [tituloNovo, setTituloNovo] = useState('Plano alimentar');
   const [carregando, setCarregando] = useState(true);
   const [operacao, setOperacao] = useState<string | null>(null);
+  const [ativacaoNaoConfirmada, setAtivacaoNaoConfirmada] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
   const [sucesso, setSucesso] = useState<string | null>(null);
   const [estadoAutosave, setEstadoAutosave] = useState<EstadoSalvamentoPlano>('salvo');
@@ -1293,15 +1368,13 @@ export function PlanoAlimentarProfissional({ pacienteId, podeGerenciar, aoAltera
   const refeicoesMaterializadas = plano?.draft
     ? formularioDaVersao(plano.draft, avaliacoes[0]?.id ?? '').refeicoes
     : [];
-  const materializacaoCompativel = refeicoesMaterializadas.length === formulario.refeicoes.length
-    && formulario.refeicoes.every((refeicao, indice) => {
-      const refeicaoMaterializada = refeicoesMaterializadas[indice];
-      return refeicaoMaterializada?.itens.length === refeicao.itens.length
-        && refeicao.itens.every((item, indiceItem) => Boolean(refeicaoMaterializada.itens[indiceItem]));
-    });
+  const materializacaoCompativel = estruturasDeRefeicoesCoincidem(formulario.refeicoes, refeicoesMaterializadas);
+  const estadosAtivacaoEdicao = formulario.refeicoes.map((refeicao) => localizarAtivacaoRefeicao(plano?.draft, refeicao.chaveCliente));
+  const ativacaoEdicaoCompleta = Boolean(plano?.draft) && estadosAtivacaoEdicao.every(Boolean);
   const resultadosVigentes = Boolean(
     plano?.draft && materializacaoCompativel && !alterado
       && plano.draft.edicaoEstado !== 'pendente' && plano.draft.edicaoEstado !== 'indisponivel'
+      && ativacaoEdicaoCompleta
   );
   // Totais exibidos após ACK usam a materialização canônica retornada pelo
   // backend. O formulário local continua intacto para preservar caret/IME.
@@ -1312,7 +1385,10 @@ export function PlanoAlimentarProfissional({ pacienteId, podeGerenciar, aoAltera
       }))
     : formulario.refeicoes;
 
-  const refeicoesPrevistas = refeicoesParaResultado.map((refeicao) => ({
+  const refeicoesPrevistas = refeicoesParaResultado.filter((refeicao) => {
+    const estado = localizarAtivacaoRefeicao(plano?.draft, refeicao.chaveCliente);
+    return estado?.ativa === true;
+  }).map((refeicao) => ({
     itens: refeicao.itens.map((item) => ({
       porcaoGramas: Number(item.porcaoGramas),
       nutrientesPor100g: nutrientesNumericosEdicao(item.nutrientesPor100g)
@@ -1347,6 +1423,7 @@ export function PlanoAlimentarProfissional({ pacienteId, podeGerenciar, aoAltera
     setProjecaoPaciente(null);
     setCarregandoProjecao(false);
     setPlano(detalhe);
+    setAtivacaoNaoConfirmada(false);
     setContextoEdicao((valor) => valor + 1);
     setPlanoId(detalhe?.id ?? '');
     const avaliacaoPadrao = avaliacoesAtuais[0]?.id ?? '';
@@ -1459,14 +1536,35 @@ export function PlanoAlimentarProfissional({ pacienteId, podeGerenciar, aoAltera
         if (!signal.aborted && pacienteAtualRef.current === pacienteId && planoAtualRef.current?.id === plano.id) {
           setPlano((atual) => {
             if (!atual || atual.id !== plano.id || atual.draft?.id !== salvo.id) return atual;
-            const draft = { ...atual.draft, ...salvo };
+            const ativacaoObsoleta = (salvo.ativacaoRevisao ?? 0) < Math.max(
+              atual.ativacaoRevisao ?? 0,
+              atual.draft.ativacaoRevisao ?? 0
+            );
+            const draft = {
+              ...atual.draft,
+              ...salvo,
+              ...(ativacaoObsoleta ? {
+                ativoParaPaciente: atual.draft.ativoParaPaciente ?? atual.ativoParaPaciente,
+                ativacaoRevisao: Math.max(atual.ativacaoRevisao ?? 0, atual.draft.ativacaoRevisao ?? 0),
+                ativacaoEdicao: atual.draft.ativacaoEdicao,
+                ativacaoRefeicoes: atual.draft.ativacaoRefeicoes,
+                resumoRefeicoesAtivas: atual.draft.resumoRefeicoesAtivas
+              } : {})
+            };
             if (salvo.edicaoEstado === 'pendente' || salvo.edicaoEstado === 'indisponivel') {
               draft.calculo = undefined;
               draft.totais = undefined;
               draft.refeicoes = [];
               draft.revisadaEm = undefined;
             }
-            return { ...atual, draft };
+            return {
+              ...atual,
+              ...(ativacaoObsoleta ? {} : {
+                ativoParaPaciente: salvo.ativoParaPaciente ?? atual.ativoParaPaciente,
+                ativacaoRevisao: salvo.ativacaoRevisao ?? atual.ativacaoRevisao
+              }),
+              draft
+            };
           });
         }
         return { id: salvo.id, rascunhoRevisao: salvo.rascunhoRevisao! };
@@ -1573,12 +1671,13 @@ export function PlanoAlimentarProfissional({ pacienteId, podeGerenciar, aoAltera
 
   async function carregarProjecaoPaciente(modo: ModoProjecaoPaciente) {
     const versao = modo === 'impressao' ? plano?.current : plano?.draft;
-    if (!plano || !versao || (modo === 'rascunho' && alterado) || (modo === 'impressao' && versao.status !== 'publicada')) return;
+    if (!plano || !versao || operacao || ativacaoNaoConfirmada || (modo === 'rascunho' && alterado) || (modo === 'impressao' && versao.status !== 'publicada')) return;
 
     controladorProjecao.current?.abort();
     const controlador = new AbortController();
     controladorProjecao.current = controlador;
     const sequencia = ++sequenciaProjecao.current;
+    const ativacaoRevisao = plano.ativacaoRevisao ?? 0;
     const chave = `${pacienteId}:${plano.id}:${versao.numero}:${versao.id}`;
     setProjecaoPaciente(null);
     setCarregandoProjecao(true);
@@ -1589,13 +1688,14 @@ export function PlanoAlimentarProfissional({ pacienteId, podeGerenciar, aoAltera
       if (
         controlador.signal.aborted || sequencia !== sequenciaProjecao.current ||
         pacienteAtualRef.current !== pacienteId || planoAtual?.id !== plano.id ||
+        (planoAtual.ativacaoRevisao ?? 0) !== ativacaoRevisao ||
         (modo === 'impressao' ? planoAtual.current?.id : planoAtual.draft?.id) !== versao.id
       ) return;
       if (dados.apresentacaoEstado === 'indisponivel') {
         throw new Error('A apresentação do paciente está indisponível. Revise a configuração antes de continuar.');
       }
 
-      flushSync(() => setProjecaoPaciente({ chave, modo, dados }));
+      flushSync(() => setProjecaoPaciente({ chave, modo, dados, ativacaoRevisao }));
       if (modo === 'impressao') {
         await new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
         const atual = planoAtualRef.current;
@@ -1603,6 +1703,7 @@ export function PlanoAlimentarProfissional({ pacienteId, podeGerenciar, aoAltera
         if (
           controlador.signal.aborted || sequencia !== sequenciaProjecao.current ||
           pacienteAtualRef.current !== pacienteId || atual?.id !== plano.id || atual.current?.id !== versao.id ||
+          (atual.ativacaoRevisao ?? 0) !== ativacaoRevisao ||
           alvo?.dataset.impressaoPacienteChave !== chave
         ) return;
         window.print();
@@ -1635,6 +1736,93 @@ export function PlanoAlimentarProfissional({ pacienteId, podeGerenciar, aoAltera
         [conjunto]: { ...atual.preferenciasApresentacao[conjunto], [campo]: valor }
       }
     }));
+  }
+
+  function reconciliarDetalheAtivacao(remoto: PlanoAlimentarApi) {
+    setPlano((atual) => atual && atual.id === remoto.id ? mesclarProjecaoAtivacao(atual, remoto) : atual);
+    setPlanos((atuais) => atuais.map((item) => item.id === remoto.id
+      && (remoto.ativacaoRevisao ?? 0) >= (item.ativacaoRevisao ?? 0)
+      ? { ...item, ativoParaPaciente: remoto.ativoParaPaciente, ativacaoRevisao: remoto.ativacaoRevisao }
+      : item));
+  }
+
+  async function reconciliarAtivacao() {
+    if (!plano || !podeGerenciar || operacao) return;
+    setOperacao('consultando-ativacao');
+    try {
+      const remoto = await obterPlanoAlimentar(pacienteId, plano.id);
+      reconciliarDetalheAtivacao(remoto);
+      setAtivacaoNaoConfirmada(false);
+      setErro(null);
+      setSucesso('Estado de visibilidade atualizado a partir do servidor.');
+    } catch {
+      setErro('Não foi possível consultar o estado de visibilidade. Tente novamente quando a conexão estiver disponível.');
+    } finally {
+      setOperacao(null);
+    }
+  }
+
+  async function alterarVisibilidade(ativo: boolean, identidadeRefeicaoId?: string) {
+    if (!plano || !podeGerenciar || operacao || copiaEmAndamentoRef.current) return;
+    controladorProjecao.current?.abort();
+    sequenciaProjecao.current += 1;
+    setProjecaoPaciente(null);
+    setCarregandoProjecao(false);
+    const planoAlvo = plano;
+    const revisaoEsperada = planoAlvo.ativacaoRevisao ?? 0;
+    setOperacao(identidadeRefeicaoId ? 'ativando-refeicao' : 'ativando-plano');
+    setErro(null);
+    setSucesso(null);
+    try {
+      const resultado = identidadeRefeicaoId
+        ? await alterarAtivacaoRefeicaoPlanoAlimentar(pacienteId, planoAlvo.id, identidadeRefeicaoId, ativo, revisaoEsperada)
+        : await alterarAtivacaoPlanoAlimentar(pacienteId, planoAlvo.id, ativo, revisaoEsperada);
+      setPlano((atual) => atual && atual.id === planoAlvo.id ? aplicarAckAtivacao(atual, resultado) : atual);
+      setPlanos((atuais) => atuais.map((item) => item.id === planoAlvo.id
+        && resultado.ativacaoRevisao >= (item.ativacaoRevisao ?? 0)
+        ? { ...item, ativoParaPaciente: resultado.ativoParaPaciente, ativacaoRevisao: resultado.ativacaoRevisao }
+        : item));
+      setAtivacaoNaoConfirmada(false);
+      setSucesso(identidadeRefeicaoId
+        ? `Refeição ${ativo ? 'liberada ao' : 'ocultada do'} paciente.`
+        : `Plano ${ativo ? 'liberado ao' : 'ocultado do'} paciente.`);
+      // Atualiza os totais operacionais sem substituir campos editoriais locais.
+      try {
+        const remoto = await obterPlanoAlimentar(pacienteId, planoAlvo.id);
+        reconciliarDetalheAtivacao(remoto);
+      } catch {
+        // O ACK já confirma a alteração; somente a projeção agregada pode ficar
+        // indisponível até a próxima consulta explícita.
+      }
+    } catch (erroAtual) {
+      const status = erroAtual instanceof ErroApiPlanoAlimentar ? erroAtual.status : undefined;
+      if (status === 409) {
+        try {
+          const remoto = await obterPlanoAlimentar(pacienteId, planoAlvo.id);
+          reconciliarDetalheAtivacao(remoto);
+          setAtivacaoNaoConfirmada(false);
+          setErro('A visibilidade foi alterada em outra operação. O estado atual foi atualizado; confira antes de tentar novamente.');
+        } catch {
+          setAtivacaoNaoConfirmada(true);
+          setErro('A visibilidade mudou durante a operação e não foi possível reconciliar o estado.');
+        }
+      } else if (status === undefined || status >= 500) {
+        setAtivacaoNaoConfirmada(true);
+        setErro('A resposta da alteração de visibilidade não foi confirmada. Consulte o estado no servidor antes de tentar novamente.');
+      } else {
+        setErro(mensagemFalhaInterface(erroAtual, 'Não foi possível alterar a visibilidade.'));
+      }
+    } finally {
+      setOperacao(null);
+    }
+  }
+
+  function alterarVisibilidadePlano(ativo: boolean) {
+    return alterarVisibilidade(ativo);
+  }
+
+  function alterarVisibilidadeRefeicao(identidadeId: string, ativa: boolean) {
+    return alterarVisibilidade(ativa, identidadeId);
   }
 
   async function executar(rotulo: string, tarefa: () => Promise<unknown>, mensagem: string, preferido = planoId) {
@@ -1902,6 +2090,10 @@ export function PlanoAlimentarProfissional({ pacienteId, podeGerenciar, aoAltera
             {erro ? <AlertaOperacional mensagem={erro} /> : null}
             {sucesso ? <div role="status" className="flex items-start gap-2 rounded-md border border-sucesso-borda bg-sucesso-suave px-4 py-3 text-sm text-sucesso-forte"><CheckCircle2 size={17} className="mt-0.5 shrink-0" />{sucesso}</div> : null}
             {alterado && plano?.draft ? <div role="status" className="rounded-md border border-alerta-borda bg-alerta-suave px-4 py-3 text-sm text-alerta-forte">Existem alterações não salvas neste rascunho.</div> : null}
+            {ativacaoNaoConfirmada ? <div className="rounded-md border border-alerta-borda bg-alerta-suave p-3 text-sm text-alerta-forte">
+              <p>Não foi possível confirmar a última alteração de visibilidade. Consulte o estado atualizado antes de tentar novamente.</p>
+              <Botao type="button" tamanho="sm" className="mt-2" onClick={() => void reconciliarAtivacao()} disabled={Boolean(operacao)}>Consultar estado da visibilidade</Botao>
+            </div> : null}
             {plano?.draft && podeGerenciar ? <div role="status" aria-live="polite" className="rounded-md border border-linha bg-superficie px-4 py-3 text-sm text-texto-suave">{`Salvamento automático ativo (60 segundos). ${mensagemEstadoAutosave(estadoAutosave)}${ultimoSalvamentoConfirmado?.chave === `${pacienteId}:${plano.id}:${plano.draft.id}` ? ` Último salvamento confirmado: ${new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short', timeStyle: 'short' }).format(ultimoSalvamentoConfirmado.data)}.` : ''}`}</div> : null}
           </div>
 
@@ -1916,6 +2108,17 @@ export function PlanoAlimentarProfissional({ pacienteId, podeGerenciar, aoAltera
                     <CartaoSubtitulo>
                       {plano.draft ? `Rascunho da versao ${plano.draft.numero}` : 'Sem rascunho ativo'}
                     </CartaoSubtitulo>
+                    {podeGerenciar ? <div className="mt-2 flex flex-wrap items-center gap-3">
+                      <ControleAtivacao
+                        rotulo="Plano alimentar para o paciente"
+                        ativo={plano.ativoParaPaciente === true}
+                        desabilitado={Boolean(operacao) || copiaEmAndamento || (!plano.ativoParaPaciente && !plano.current)}
+                        aoAlternar={() => void alterarVisibilidadePlano(!(plano.ativoParaPaciente === true))}
+                      />
+                      <span className="text-xs text-texto-suave">
+                        {plano.current ? `Versão publicada ${plano.current.numero}; mudanças de visibilidade são independentes do rascunho.` : 'Publique uma versão salva antes de liberar ao paciente.'}
+                      </span>
+                    </div> : <p className="mt-2 text-xs text-texto-suave">{plano.ativoParaPaciente ? 'Disponível no portal do paciente.' : 'Oculto do paciente.'}</p>}
                   </div>
                   <div className="flex flex-wrap gap-2">
                     <Botao type="button" onClick={() => {
@@ -1924,8 +2127,8 @@ export function PlanoAlimentarProfissional({ pacienteId, podeGerenciar, aoAltera
                     }} disabled={Boolean(operacao) || (alterado && !['conflito', 'incerto', 'acesso-negado'].includes(estadoAutosave))}>
                       <RefreshCcw size={16} /> {['conflito', 'incerto', 'acesso-negado'].includes(estadoAutosave) ? 'Reconciliar' : 'Atualizar'}
                     </Botao>
-                    {plano.draft ? <Botao type="button" onClick={() => void carregarProjecaoPaciente('rascunho')} disabled={alterado || carregandoProjecao || Boolean(operacao)}><Search size={16} /> Prévia do paciente</Botao> : null}
-                    {plano.current ? <Botao type="button" onClick={() => void carregarProjecaoPaciente('impressao')} disabled={alterado || carregandoProjecao || Boolean(operacao)}>{carregandoProjecao ? <RefreshCcw size={16} className="animate-spin" /> : <Printer size={16} />} {carregandoProjecao ? 'Preparando impressão' : 'Imprimir'}</Botao> : null}
+                    {plano.draft ? <Botao type="button" onClick={() => void carregarProjecaoPaciente('rascunho')} disabled={alterado || carregandoProjecao || Boolean(operacao) || ativacaoNaoConfirmada}><Search size={16} /> Prévia do paciente</Botao> : null}
+                    {plano.current ? <Botao type="button" onClick={() => void carregarProjecaoPaciente('impressao')} disabled={alterado || carregandoProjecao || Boolean(operacao) || ativacaoNaoConfirmada}>{carregandoProjecao ? <RefreshCcw size={16} className="animate-spin" /> : <Printer size={16} />} {carregandoProjecao ? 'Preparando impressão' : 'Imprimir'}</Botao> : null}
                     {podeGerenciar ? <Botao type="button" variante="perigo" onClick={() => setConfirmarArquivo(true)} disabled={alterado || Boolean(operacao)}>
                       <Archive size={16} /> Arquivar
                     </Botao> : null}
@@ -2132,7 +2335,11 @@ export function PlanoAlimentarProfissional({ pacienteId, podeGerenciar, aoAltera
                         posicao={indiceRefeicao}
                         aberto={refeicoesAbertas.has(refeicao.chaveCliente)}
                         aoAlternar={() => alternarRefeicao(refeicao.chaveCliente)}
-                        subtotalVisual={resultadosVigentes ? (() => {
+                        subtotalVisual={localizarAtivacaoRefeicao(plano.draft, refeicao.chaveCliente)?.ativa === false
+                          ? 'Desativada · fora dos totais'
+                          : !localizarAtivacaoRefeicao(plano.draft, refeicao.chaveCliente)
+                            ? 'Visibilidade pendente de salvamento'
+                            : resultadosVigentes ? (() => {
                           const subtotal = subtotaisRefeicoes[indiceRefeicao];
                           if (subtotal.estado === 'sem_alimentos') return 'Sem alimentos';
                           const partes = [
@@ -2144,7 +2351,11 @@ export function PlanoAlimentarProfissional({ pacienteId, podeGerenciar, aoAltera
                           if (subtotal.estado === 'incompleto') partes.push('Dados incompletos');
                           return partes.join(' · ');
                         })() : 'Pendente de materialização'}
-                        subtotalAcessivel={resultadosVigentes ? (() => {
+                        subtotalAcessivel={localizarAtivacaoRefeicao(plano.draft, refeicao.chaveCliente)?.ativa === false
+                          ? `Subtotal da refeição ${indiceRefeicao + 1} não incluído nos totais porque está desativada.`
+                          : !localizarAtivacaoRefeicao(plano.draft, refeicao.chaveCliente)
+                            ? `Visibilidade da refeição ${indiceRefeicao + 1} pendente de salvamento.`
+                            : resultadosVigentes ? (() => {
                           const subtotal = subtotaisRefeicoes[indiceRefeicao];
                           if (subtotal.estado === 'sem_alimentos') return 'Sem alimentos';
                           const partes = [
@@ -2155,8 +2366,17 @@ export function PlanoAlimentarProfissional({ pacienteId, podeGerenciar, aoAltera
                           ];
                           if (subtotal.estado === 'incompleto') partes.push('Dados incompletos');
                           return `Subtotal da refeição ${indiceRefeicao + 1}, ${refeicao.nome || 'sem nome'}: ${partes.join(', ')}`;
-                        })() : `Subtotal da refeição ${indiceRefeicao + 1} indisponível enquanto a revisão editorial estiver pendente de materialização.`}
+                        })() : `Subtotal da refeição ${indiceRefeicao + 1} indisponível enquanto o rascunho estiver pendente de materialização.`}
                         acoes={<>
+                          {podeGerenciar ? (() => {
+                            const estado = localizarAtivacaoRefeicao(plano.draft, refeicao.chaveCliente);
+                            return estado ? <ControleAtivacao
+                              rotulo={`Visibilidade da refeição ${refeicao.nome || indiceRefeicao + 1}`}
+                              ativo={estado.ativa}
+                              desabilitado={Boolean(operacao) || copiaEmAndamento}
+                              aoAlternar={() => void alterarVisibilidadeRefeicao(estado.identidadeId, !estado.ativa)}
+                            /> : <span className="px-2 text-xs text-texto-suave">Salve para definir a visibilidade</span>;
+                          })() : null}
                           <Botao type="button" variante="fantasma" tamanho="sm" className="min-h-11 min-w-11" onClick={() => atualizar((atual) => ({ ...atual, refeicoes: mover(atual.refeicoes, indiceRefeicao, indiceRefeicao - 1) }))} disabled={indiceRefeicao === 0} aria-label={`Mover refeição ${refeicao.nome || indiceRefeicao + 1} para cima`}><ArrowUp size={15} /></Botao>
                           <Botao type="button" variante="fantasma" tamanho="sm" className="min-h-11 min-w-11" onClick={() => atualizar((atual) => ({ ...atual, refeicoes: mover(atual.refeicoes, indiceRefeicao, indiceRefeicao + 1) }))} disabled={indiceRefeicao === formulario.refeicoes.length - 1} aria-label={`Mover refeição ${refeicao.nome || indiceRefeicao + 1} para baixo`}><ArrowDown size={15} /></Botao>
                           <Botao type="button" variante="fantasma" tamanho="sm" className="min-h-11" onClick={() => duplicarRefeicaoLocal(indiceRefeicao)} disabled={Boolean(operacao)} aria-label={`Duplicar refeição ${refeicao.nome || indiceRefeicao + 1}`}>Duplicar</Botao>
@@ -2197,13 +2417,17 @@ export function PlanoAlimentarProfissional({ pacienteId, podeGerenciar, aoAltera
                       </SortableContext>
                     </DndContext>
                   </div>
-                    {resultadosVigentes ? (
+                    {resultadosVigentes && plano.ativoParaPaciente === true ? (
                       <PainelNutricional
                         refeicoes={refeicoesPrevistas}
                         pesoTotalGramas={pesoTotalGramas}
                         metas={metasSalvas}
                         metasDesatualizadas={false}
                       />
+                    ) : resultadosVigentes ? (
+                      <div role="status" className="rounded-md border border-linha bg-superficie p-3 text-sm text-texto-suave">Plano oculto do paciente e excluído dos totais ativos. Ative o plano para incluir suas refeições que estiverem visíveis.</div>
+                    ) : !ativacaoEdicaoCompleta && !alterado ? (
+                      <div role="status" className="rounded-md border border-alerta-borda bg-alerta-suave p-3 text-sm text-alerta-forte">A visibilidade de uma ou mais refeições não pôde ser confirmada. Atualize o plano antes de consultar os totais.</div>
                     ) : <div role="status" className="rounded-md border border-alerta-borda bg-alerta-suave p-3 text-sm text-alerta-forte">Cálculos e subtotais indisponíveis enquanto há alterações locais ou uma revisão editorial pendente de materialização.</div>}
                   </div>
 
@@ -2220,7 +2444,6 @@ export function PlanoAlimentarProfissional({ pacienteId, podeGerenciar, aoAltera
                           <div><p className="text-xs text-texto-suave">Método dos macros</p><p className="text-lg font-semibold text-tinta">{plano.draft.calculo.metodoMacrosManual === 'gramas_por_kg' ? 'g/kg' : 'Percentual'}</p></div>
                         )}
                         <div><p className="text-xs text-texto-suave">{plano.draft.calculo.estimativa ? 'Meta ajustada' : 'Meta energética'}</p><p className="text-lg font-semibold text-tinta">{formatarNumero(plano.draft.calculo.metaEnergeticaKcal)} kcal</p></div>
-                        <div><p className="text-xs text-texto-suave">Total das refeições</p><p className="text-lg font-semibold text-tinta">{formatarNumero(plano.draft.totais?.energiaKcal)} kcal</p></div>
                       </div>
                       {plano.draft.calculo.alertasDivergenciaClinica?.length ? (
                         <div className="grid gap-3 rounded-md border border-alerta-borda bg-alerta-suave p-3">
@@ -2262,7 +2485,17 @@ export function PlanoAlimentarProfissional({ pacienteId, podeGerenciar, aoAltera
                   </div>
                 </form>
               )) : (
-                <EstadoVazio titulo="Nenhum rascunho ativo" descricao="Crie uma nova versão a partir do plano publicado para continuar a edição." acao={plano.current ? <Botao type="button" variante="primario" carregando={operacao === 'nova-versao'} onClick={() => void executar('nova-versao', () => criarNovaVersaoPlanoAlimentar(pacienteId, plano.id), 'Nova versão criada a partir da publicação atual.')}><Plus size={16} /> Criar nova versão</Botao> : undefined} />
+                plano.current ? <div className="grid gap-3">
+                  {podeGerenciar ? <div role="status" className="rounded-md border border-linha bg-superficie p-3 text-sm text-texto-suave">O plano publicado continua disponível para o paciente enquanto você não o ocultar. As refeições podem ser ativadas separadamente.</div> : null}
+                  <ResumoVersao
+                    plano={plano}
+                    versao={plano.current}
+                    podeAlterarVisibilidade={podeGerenciar}
+                    aoAlternarRefeicao={alterarVisibilidadeRefeicao}
+                    operacaoPendente={Boolean(operacao) || copiaEmAndamento}
+                  />
+                  {podeGerenciar ? <Botao type="button" variante="primario" carregando={operacao === 'nova-versao'} onClick={() => void executar('nova-versao', () => criarNovaVersaoPlanoAlimentar(pacienteId, plano.id), 'Nova versão criada a partir da publicação atual.')} disabled={Boolean(operacao)}><Plus size={16} /> Criar nova versão</Botao> : null}
+                </div> : <EstadoVazio titulo="Nenhum rascunho ativo" descricao="Crie uma versão para continuar a edição do plano." acao={undefined} />
               )) : (
                 <div className="grid gap-4">
                   <div role="status" className="rounded-md border border-linha bg-superficie px-4 py-3 text-sm text-texto-suave">
@@ -2305,7 +2538,7 @@ export function PlanoAlimentarProfissional({ pacienteId, podeGerenciar, aoAltera
               ) : null}
 
               {carregandoProjecao ? <p role="status" className="text-sm text-texto-suave">Preparando a apresentação autorizada do paciente…</p> : null}
-              {projecaoPaciente?.modo === 'rascunho' && projecaoPaciente.chave.startsWith(`${pacienteId}:${plano.id}:`) ? (
+              {projecaoPaciente?.modo === 'rascunho' && projecaoPaciente.ativacaoRevisao === (plano.ativacaoRevisao ?? 0) && projecaoPaciente.chave.startsWith(`${pacienteId}:${plano.id}:`) ? (
                 <section className="nao-imprimir grid gap-2" aria-label="Prévia do paciente">
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <h3 className="text-base font-semibold text-tinta">Prévia do paciente</h3>
@@ -2344,7 +2577,7 @@ export function PlanoAlimentarProfissional({ pacienteId, podeGerenciar, aoAltera
         </main>
       </div>
 
-      {projecaoPaciente?.modo === 'impressao' && plano?.current && projecaoPaciente.chave.startsWith(`${pacienteId}:${plano.id}:`) ? (
+      {projecaoPaciente?.modo === 'impressao' && plano?.current && projecaoPaciente.ativacaoRevisao === (plano.ativacaoRevisao ?? 0) && projecaoPaciente.chave.startsWith(`${pacienteId}:${plano.id}:`) ? (
         <div className="hidden print:block" data-impressao-paciente-chave={projecaoPaciente.chave}>
           <PlanoAlimentarPaciente plano={projecaoPaciente.dados} impressaoSomente mostrarBotaoImprimir={false} />
         </div>

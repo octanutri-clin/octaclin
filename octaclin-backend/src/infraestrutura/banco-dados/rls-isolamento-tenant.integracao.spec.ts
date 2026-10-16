@@ -1748,6 +1748,11 @@ descrever('RLS e isolamento multi-tenant integral em Postgres real', () => {
     await c.servico.salvarEdicaoRascunho(tenantA,c.pacienteId,outro.id,c.usuario,{rascunhoIdEsperado:idRascunho,rascunhoRevisaoEsperada:0,documento:c.documento});
     await c.servico.revisar(tenantA,c.pacienteId,outro.id,c.usuario,{rascunhoIdEsperado:idRascunho,rascunhoRevisaoEsperada:1});
     await c.servico.publicar(tenantA,c.pacienteId,outro.id,c.usuario,{rascunhoIdEsperado:idRascunho,rascunhoRevisaoEsperada:2});
+    const listaProfissional=await c.servico.listar(tenantA,c.pacienteId,c.usuario);
+    expect(listaProfissional.itens).toEqual(expect.arrayContaining([
+      expect.objectContaining({id:c.planoId,ativoParaPaciente:true,ativacaoRevisao:1}),
+      expect.objectContaining({id:outro.id,ativoParaPaciente:true,ativacaoRevisao:1})
+    ]));
     const a=await portal.listarPlanosAlimentares(tenantA,usuarioPortal,{pagina:1,limite:1});
     const b=await portal.listarPlanosAlimentares(tenantA,usuarioPortal,{pagina:2,limite:1});
     expect(a.total).toBe(2);expect(b.total).toBe(2);expect(new Set([...a.itens,...b.itens].map(p=>p.id)).size).toBe(2);

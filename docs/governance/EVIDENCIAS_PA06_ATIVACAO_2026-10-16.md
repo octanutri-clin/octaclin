@@ -93,3 +93,103 @@ aprovação do proprietário para implantação.
 PASS: `test:confiabilidade`, `test:migracoes-fora-de-banda`,
 `test:guardas-controladores`, `test:redacao-auditoria` e
 `test:resposta-auditoria`. Não substituem os checks de CI da futura PR completa.
+
+## Segundo checkpoint — UI/BFF de ativação
+
+Escopo: T08b concluída localmente na mesma worktree/branch. Os quatro endpoints
+BFF novos reutilizam sessão e permissões; consultas do portal usam `no-store` e
+allowlist de paginação. O editor usa switches acessíveis com CAS, sem atualização
+otimista ou gravação/publicação editorial. Conflito409 reconcilia; resposta
+incerta não confirma estado e exige consulta explícita. O portal lista os planos
+ativos paginados e mantém o detalhe selecionado oculto durante troca de contexto.
+
+### Verificações executadas
+
+- PASS: `pnpm test:planos-alimentares:bff` —37/37.
+- PASS: Playwright `tests/visual/fase-320-pa06-ativacao.spec.mjs` —6/6 em
+  desktop-chromium e mobile-chromium; inclui teclado, conflito409, resposta503
+  incerta, consulta explícita e paginação/detalhe de 11 planos sintéticos.
+- PASS: `tests/visual/pa02-copia-refeicoes.spec.mjs` —24/24 por projeto desktop
+  e mobile; `tests/visual/fase-320-pa05-apresentacao.spec.mjs` —4/4 por projeto.
+- PASS: `pnpm typecheck` Web. ESLint direcionado: zero erros,10 warnings; 8 em
+  padrões preexistentes do editor e2 em efeitos do novo componente de portal.
+- PASS: `pnpm build` Web; compilação, TypeScript, 186 páginas estáticas e coleta
+  final de traces concluídos. Aviso existente do Next sobre convenção middleware.
+- PENDENTE: T09/R4 independente, CI e governança do HEAD continuam pendentes.
+- NÃO EXECUTADO: teste de PostgreSQL novo (T08b não altera schema), migration
+  externa1074, banco staging/produção, merge, deploy ou ativação.
+
+Comandos reproduzíveis (Node22.21.1/pnpm11.25.0):
+
+```sh
+pnpm test:planos-alimentares:bff
+pnpm exec playwright test tests/visual/fase-320-pa06-ativacao.spec.mjs --project=desktop-chromium --project=mobile-chromium --reporter=list
+pnpm exec playwright test tests/visual/pa02-copia-refeicoes.spec.mjs --project=desktop-chromium --reporter=list
+pnpm exec playwright test tests/visual/pa02-copia-refeicoes.spec.mjs --project=mobile-chromium --reporter=list
+pnpm exec playwright test tests/visual/fase-320-pa05-apresentacao.spec.mjs --project=desktop-chromium --reporter=list
+pnpm exec playwright test tests/visual/fase-320-pa05-apresentacao.spec.mjs --project=mobile-chromium --reporter=list
+pnpm typecheck
+pnpm build
+```
+
+## Terceiro checkpoint — correções R4 da ativação
+
+A revisão R4 independente identificou dois defeitos concretos. (1) A listagem
+profissional não selecionava `ativoParaPaciente` nem `ativacaoRevisao`; o ORM
+projetava `false/0` apesar do estado persistido ON. (2) Prévia/impressão carregada
+ou em voo podia sobreviver à desativação do plano/refeição e continuar mostrando
+conteúdo ao paciente. A investigação local também encontrou reconciliação de GET
+operacional atrasado capaz de regredir o mapa de refeições da revisão editorial.
+
+### RED/GREEN
+
+- RED: integração PostgreSQL descartável falhou na asserção da listagem: ON
+  persistido foi retornado como `false`, revisão `0`. GREEN: seleção explícita dos
+  dois campos e a mesma prova PostgreSQL passou.
+- RED: Playwright reproduziu conteúdo de prévia/impressão permanecendo após OFF;
+  a resposta tardia também podia imprimir conteúdo obsoleto. GREEN: OFF aborta e
+  invalida a projeção, incrementa a sequência, limpa estado local e bloqueia a
+  renderização/impressão quando a revisão de ativação não coincide.
+- RED: teste BFF de reconciliação observou o mapa antigo após uma resposta
+  operacional atrasada. GREEN: ACK atrasado não substitui estado editorial mais
+  recente; combinação de revisões contraditórias falha fechada, removendo mapas e
+  marcando o resumo de refeições indisponível.
+- Evidência de autoria dos testes: BFF `38/38`; PostgreSQL descartável `19 PASS,
+  29 SKIPPED` (fixture não cobre Timescale/pgvector); Playwright PA06+PA05
+  `22/22` em desktop/mobile. O resultado inclui teste para OFF do plano e da
+  refeição, prévia carregada, impressão carregada e resposta de impressão em voo.
+
+### Limites e estado
+
+- Duas leituras R4 independentes, read-only, foram concluídas. A primeira reportou
+  os dois achados acima; a segunda confirmou ambos fechados e não encontrou novo
+  risco concreto no diff. A segunda leitura verificou BFF/controller/serviços,
+  reconciliação, projeção do portal e testes; não executou testes nem consultou
+  ambientes. Uma leitura adicional focada no ajuste final de chaves do portal
+  confirmou que a guarda não reabre detalhe obsoleto; sem achado. Esta revisão
+  estática não substitui os gates dinâmicos abaixo.
+- Typecheck Web e teste unitário focado NestJS PASS (`89/89`). `pnpm test:authz`,
+  lint Web e typecheck Backend estão em execução; builds e CI do HEAD ainda são
+  gates distintos.
+- Nenhum teste consultou pacientes ou bancos externos. Migration 1074 não foi
+  aplicada; sem merge, deploy ou ativação operacional.
+
+### Fechamento de verificações locais
+
+- PASS: build NestJS e verificação do artefato `dist/main.js`; build Next/Web
+  (TypeScript e 186 rotas/páginas geradas); typecheck dos dois projetos.
+- PASS: lint global Web sem erros (70 warnings existentes no repositório); lint
+  direcionado do componente `plano-alimentar-paciente.tsx` sem warnings.
+- PASS: Playwright final PA06 + PA05 `22/22`, desktop e mobile, após os guards de
+  revisão de ativação e contexto do detalhe.
+- PASS: testes unitários NestJS `servico-planos-alimentares.spec.ts` `89/89`,
+  BFF `38/38`, PostgreSQL descartável `19 PASS/29 SKIPPED` e `security:secrets`.
+- PASS: matriz de confiabilidade (40 referências), migrations fora de banda
+  (13/13), guardas de controladores (11/11), redação de auditoria (24/24),
+  runbook de resposta de auditoria e `git diff --check`.
+- PASS: `pnpm test:authz` integral; todas as 26 suítes encadeadas concluíram com
+  exit 0. Avisos de `headers()` fora do contexto Next foram emitidos pelos testes
+  que validam precisamente a chamada isolada; esses casos e o gate passaram.
+- Limite de ambiente: Node `v24.19.0`/pnpm `11.19.0`; os manifests pedem Node
+  22/pnpm 11.25. Os comandos terminaram nos resultados indicados, mas CI com a
+  toolchain declarada ainda é obrigatório.

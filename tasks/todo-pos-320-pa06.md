@@ -3,9 +3,9 @@
 Planejamento: [plan-pos-320-pa06.md](plan-pos-320-pa06.md).
 Primeira entrega mergeada pelo proprietário na PR420; migrations anteriores
 aplicadas segundo seu relato, sem conferência externa neste ciclo. Segunda
-entrega: T08a/backend validado localmente na branch feat/pos320-pa06-ativacao,
-base e2cb9cdd. T08b/UI aguarda troca manual para Luna alto. T08c/T08d permanecem
-fora desta entrega; T09/T10 devem ser repetidos para a segunda PR.
+entrega: T08a/backend e T08b/UI/BFF implementados localmente na branch
+feat/pos320-pa06-ativacao, base e2cb9cdd. T08c/T08d permanecem fora desta
+entrega; revisão R4 final e T09/T10 ainda são gates pendentes para a PR.
 Evidências: docs/governance/EVIDENCIAS_PA06_ATIVACAO_2026-10-16.md.
 O histórico/checkpoints abaixo conserva o estado observado em cada rodada.
 
@@ -212,19 +212,25 @@ Isso não encerra T08b/T09/T10 nem comprova CI ou implantação desta entrega.
 
 ## T08b — controle on/off e projeções (2–4 arquivos)
 
-Dependência: T08a e T07. Luna alto só após contrato backend fechado por Sol.
+Dependência: T08a e T07, atendida antes do início da implementação de UI.
 
-- [ ] Switch com nome acessível correspondente ao efeito, liga/desliga direto;
+- [x] Switch com nome acessível correspondente ao efeito, liga/desliga direto;
   erro não afirma mudança aceita nem altera publicação só por clicar.
-- [ ] Resumo do console distingue salvo/parcial/revisado/publicado/visível;
+- [x] Resumo do console distingue salvo/parcial/revisado/publicado/visível;
   portal respeita retirada, sem expor DTO profissional ou edição incompleta.
-- [ ] Portal lista/pagina todos os planos ativos publicados; detalhe e ações
+- [x] Portal lista/pagina todos os planos ativos publicados; detalhe e ações
   negam desativados/arquivados/excluídos/outro paciente, inclusive IDs conhecidos.
-- [ ] Cobrir teclado/mobile, reload, múltiplos planos e edição de nova versão
+- [x] Cobrir teclado/mobile, reload, múltiplos planos e edição de nova versão
   enquanto a publicação anterior está visível.
 
 Aceite: todo estado exibido corresponde ao ACK autorizado do backend; nenhuma
-publicação/retirada disparada pelo timer. Verificação: Playwright e BFF alvo.
+publicação/retirada disparada pelo timer. Revisão R4 identificou e ajudou a
+reproduzir listagem com projeção incompleta e prévia/impressão obsoleta após OFF.
+As correções tiveram RED/GREEN: PostgreSQL descartável confirmou listagem ativa
+com revisão1; BFF38/38; Playwright PA06/PA05 22/22; PA02 24/24 em cada projeto;
+PA05 4/4 desktop e 4/4 mobile. Typecheck Web PASS. Build/lint Web, regressões
+completas, segunda revisão R4 independente e CI do HEAD continuam em T09/T10.
+Ver evidências vinculadas acima.
 
 ## T08c — nutrientes e agregação entre planos, backend (fatias de3–5 arquivos)
 
@@ -279,8 +285,14 @@ Rascunho parcial deve ficar fora da soma, mesmo se tiver valores calculáveis.
 Dependência: checkpoint C da entrega atual e suas fatias, conforme sequência
 de três PRs no plano. Sol médio; repetir estes gates em cada entrega.
 
-- [ ] Backend/Web lint, typecheck/build e testes proporcionais; banco real integral;
-  revisão cruzada estática R4 com limites/autoria e correções em RED/GREEN.
+- [x] Backend/Web lint, typecheck/build, `test:authz` (26 recortes) e testes
+  proporcionais. Lint global Web passou sem erros (70 warnings no repositório);
+  arquivo de portal alterado sem warnings.
+- [ ] Banco real integral com Timescale/pgvector continua pendente para CI; a
+  fixture PostgreSQL descartável cobriu PA04–PA06 e o inventário RLS.
+- [x] Segunda revisão cruzada estática R4 confirmou os dois fixes e o delta final
+  do portal sem novos achados; primeira leitura R4 encontrou dois achados P2.
+  Correções e retestes estão documentados na evidência PA06.
 - [x] PA02 cópia, PA03 subtotais/colapso, PA04 listagem e PA05 preferências/preview/
   portal/print; no-op não invalida revisão nem recria filhos.
 - [x] Atualizar matriz de confiabilidade/rotas, docs e plano externo de implantação/

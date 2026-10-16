@@ -50,6 +50,9 @@ function versao({ id, numero, status, prefs = preferencias() }) {
       distribuicaoMacros: { carboidratosBasisPoints: 5000, proteinasBasisPoints: 2000, gordurasBasisPoints: 3000 }
     },
     totais: { energiaKcal: 120, proteinasG: 4, carboidratosG: 20, gordurasG: 2 },
+    ativoParaPaciente: true, ativacaoRevisao: 1,
+    ativacaoRefeicoes: refeicao ? [{ refeicaoId: refeicao.id, identidadeId: `identidade-${id}-${refeicao.id}`, ativa: true }] : [],
+    ...(status === 'rascunho' && refeicao ? { ativacaoEdicao: [{ chaveCliente: refeicao.id, identidadeId: `identidade-${id}-${refeicao.id}`, ativa: true }] } : {}),
     apresentacaoEstado: 'configurada', apresentacaoRevisao: 3, preferenciasApresentacao: prefs,
     criadoEm: '2026-10-10T12:00:00.000Z', atualizadoEm: '2026-10-10T12:00:00.000Z',
     publicadaEm: status === 'publicada' ? '2026-10-10T12:00:00.000Z' : undefined,
@@ -79,6 +82,28 @@ async function prepararConsole(page) {
         indicadoresRecentes: [], leituraClinica: { deltaUltimaAvaliacao: [], deltaDesdeInicio: [], condutasVencendo: [] } }, linhaDoTempo: []
     })
   }));
+  const respostasDeFundo = new Map([
+    ['/api/notificacoes', { naoLidas: 0, itens: [], resumos: [] }],
+    ['/api/notificacoes/resumos/gerar', { gerado: false }],
+    ['/api/pacientes/filtros-salvos', { itens: [] }]
+  ]);
+  await page.route((url) => respostasDeFundo.has(url.pathname), (route) => route.fulfill({
+    status: 200, contentType: 'application/json', body: JSON.stringify(respostasDeFundo.get(new URL(route.request().url()).pathname))
+  }));
+  await page.route((url) => url.pathname === `/api/pacientes/${pacienteId}/prioridade-acompanhamento`, (route) => route.fulfill({
+    status: 200, contentType: 'application/json', body: JSON.stringify({ pacienteId, apurado: false, valorCalculado: { score: 0, faixa: 'baixa', fatores: [] }, valorEfetivo: { faixa: 'baixa', origem: 'calculado' } })
+  }));
+  const compartilhamentos = `/api/planos-alimentares/receitas/compartilhamentos/pacientes/${pacienteId}`;
+  await page.route((url) => url.pathname === compartilhamentos, (route) => route.fulfill({ status: 200, contentType: 'application/json', body: '[]' }));
+  await page.route((url) => url.pathname === `${compartilhamentos}/preferencias`, (route) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ email: false, whatsapp: false, push: false }) }));
+  await page.route((url) => url.pathname.endsWith('/acompanhamento'), (route) => route.fulfill({
+    status: 200, contentType: 'application/json', body: JSON.stringify({
+      versao: { id: 'versao-pa05-sintetica', numero: 1 }, periodo: { inicioEm: '2026-10-10T12:00:00.000Z' },
+      checkins: { itens: [], total: 0, pagina: 1, limite: 25 },
+      questionariosSemResposta: { itens: [], total: 0, pagina: 1, limite: 25, semReferenciaTemporal: 0 },
+      escolhas: { itens: [], total: 0, pagina: 1, limite: 25 }
+    })
+  }));
   await page.route((url) => url.pathname === `/api/pacientes/${pacienteId}/avaliacoes-antropometricas`, (route) => route.fulfill({
     status: 200, contentType: 'application/json', body: JSON.stringify({ avaliacoes: [{ id: 'avaliacao-pa05', avaliadaEm: '2026-10-09T12:00:00.000Z', medidas: { pesoKg: 70, alturaCm: 170 } }], deltaUltimas: [] })
   }));
@@ -97,7 +122,7 @@ test.describe('PA05 apresentação versionada', () => {
     const current = versao({ id: 'current-pa05', numero: 1, status: 'publicada' });
     let payloadSalvo;
     let salvamentos = 0;
-    let detalhe = { id: planoId, pacienteId, profissionalId: 'profissional-pa05', titulo: 'Plano sintético', criadoEm: '2026-10-10T12:00:00.000Z', atualizadoEm: '2026-10-10T12:00:00.000Z', current, draft, historico: [{ id: current.id, numero: 1, status: 'publicada', publicadaEm: current.publicadaEm }] };
+    let detalhe = { id: planoId, pacienteId, profissionalId: 'profissional-pa05', titulo: 'Plano sintético', criadoEm: '2026-10-10T12:00:00.000Z', atualizadoEm: '2026-10-10T12:00:00.000Z', ativoParaPaciente: true, ativacaoRevisao: 1, current, draft, historico: [{ id: current.id, numero: 1, status: 'publicada', publicadaEm: current.publicadaEm }] };
     await page.route((url) => url.pathname === `/api/pacientes/${pacienteId}/planos-alimentares`, (route) => route.fulfill({
       status: 200, contentType: 'application/json', body: JSON.stringify({ itens: [detalhe], total: 1, pagina: 1, limite: 25 })
     }));
@@ -166,7 +191,7 @@ test.describe('PA05 apresentação versionada', () => {
     await prepararConsole(page);
     const draft = versao({ id: 'draft-pa05', numero: 2, status: 'rascunho' });
     const current = versao({ id: 'current-pa05', numero: 1, status: 'publicada' });
-    const detalhe = { id: planoId, pacienteId, profissionalId: 'profissional-pa05', titulo: 'Plano sintético', criadoEm: '2026-10-10T12:00:00.000Z', atualizadoEm: '2026-10-10T12:00:00.000Z', current, draft, historico: [{ id: current.id, numero: 1, status: 'publicada', publicadaEm: current.publicadaEm }] };
+    const detalhe = { id: planoId, pacienteId, profissionalId: 'profissional-pa05', titulo: 'Plano sintético', criadoEm: '2026-10-10T12:00:00.000Z', atualizadoEm: '2026-10-10T12:00:00.000Z', ativoParaPaciente: true, ativacaoRevisao: 1, current, draft, historico: [{ id: current.id, numero: 1, status: 'publicada', publicadaEm: current.publicadaEm }] };
     await page.route((url) => url.pathname === `/api/pacientes/${pacienteId}/planos-alimentares`, (route) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ itens: [detalhe], total: 1, pagina: 1, limite: 25 }) }));
     await page.route((url) => url.pathname === `/api/pacientes/${pacienteId}/planos-alimentares/${planoId}`, (route) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(detalhe) }));
     const projeção = (status) => ({
