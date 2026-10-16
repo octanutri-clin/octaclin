@@ -1,3 +1,4 @@
+import { randomUUID } from 'crypto';
 import { BadRequestException, ConflictException, ForbiddenException, NotFoundException } from '@nestjs/common';
 import { EntityManager } from 'typeorm';
 import { UserActionLogOrm } from '../../../infraestrutura/auditoria/user-action-log.orm';
@@ -115,7 +116,7 @@ function criarRepositorio<T extends { id?: string }>(iniciais: T[] = []): Reposi
     create: jest.fn((dados: T) => ({ ...dados })),
     save: jest.fn(async (entrada: T | T[]) => {
       const salvarUm = (dados: T): T => {
-        if (!dados.id) dados.id = `mem-${repositorio.registros.length + 1}`;
+        if (!dados.id) dados.id = randomUUID();
         const indice = repositorio.registros.findIndex((registro) => registro.id === dados.id);
         if (indice >= 0) repositorio.registros[indice] = dados;
         else repositorio.registros.push(dados);
@@ -304,10 +305,27 @@ describe('ServicoPlanosAlimentares', () => {
     registrar(UserActionLogOrm);
     registrar(MensagemNotificacaoOrm);
     registrar(OutboxEventoOrm);
+    let identidadeContextual = '';
+    const identidadesFisicas = new Map<string,string>();
+    const refeicoesMemoria = repositorios.get(PlanoAlimentarRefeicaoOrm)!;
+    const salvarRefeicao = refeicoesMemoria.save.getMockImplementation()!;
+    refeicoesMemoria.save.mockImplementation(async entrada => {
+      const refeicao = await salvarRefeicao(entrada);
+      identidadesFisicas.set(refeicao.id, identidadeContextual || refeicao.id);
+      return refeicao;
+    });
     gerenciador = {
       getRepository: jest.fn((entidade: Function) => repositorios.get(entidade)),
-      query: jest.fn(async (_sql: string, parametros: [string, string[]]) => {
+      query: jest.fn(async (_sql: string, parametros: unknown[] = []) => {
+        if (_sql.includes("current_setting('app.refeicao_identidade_id'")) return [{identidade: identidadeContextual}];
+        if (_sql.includes("set_config('app.refeicao_identidade_id'")) { identidadeContextual = String(parametros[0]); return []; }
+        if (_sql.includes('from plano_alimentar_refeicao_vinculos')) {
+          const clonando = _sql.includes('select identidade_id');
+          return refeicoesMemoria.registros.filter(r => r.tenantId === parametros[0] && r.versaoId === parametros[clonando ? 1 : 2] && (!clonando || r.id === parametros[2]))
+            .sort((a,b) => a.ordem-b.ordem).map(r => ({refeicao_id:r.id,identidade_id:identidadesFisicas.get(r.id) ?? r.id,ativa:true}));
+        }
         const [, planoIds] = parametros;
+        if (!Array.isArray(planoIds)) return [];
         return planoIds.flatMap((planoId) => {
           const quantidade = repositorios.get(PlanoAlimentarVersaoOrm)!.registros.filter((versao) =>
             versao.tenantId === TENANT_ID && versao.planoId === planoId && (versao.publicadaEm || versao.descartadaEm)
@@ -322,6 +340,48 @@ describe('ServicoPlanosAlimentares', () => {
       )
     };
     servico = new ServicoPlanosAlimentares(executor as unknown as ExecutorTenant, criptografia);
+  });
+
+  describe('PA06b ativação operacional', () => {
+    beforeEach(() => {
+      Object.assign(repositorios.get(PlanoAlimentarOrm)!.registros[0], {
+        ativoParaPaciente: false, ativacaoDefinida: true, ativacaoRevisao: 0,
+        versaoPublicadaAtualId: VERSAO_ID
+      });
+      repositorios.get(PlanoAlimentarVersaoOrm)!.registros[0].publicadaEm = new Date('2026-10-15T12:00:00Z');
+      jest.mocked(gerenciador.query).mockResolvedValue([]);
+    });
+    it('liga sob lock, incrementa somente a revisão operacional e registra evento mínimo', async () => {
+      const resposta = await servico.alterarAtivacao(TENANT_ID, PACIENTE_ID, PLANO_ID, usuarioProfissional(), { ativo: true, ativacaoRevisaoEsperada: 0 });
+      expect(resposta).toEqual({ planoId: PLANO_ID, ativoParaPaciente: true, ativacaoRevisao: 1 });
+      expect(repositorios.get(PlanoAlimentarOrm)!.findOne).toHaveBeenCalledWith(expect.objectContaining({ lock: { mode: 'pessimistic_write' } }));
+      expect(repositorios.get(PlanoAlimentarVersaoOrm)!.save).not.toHaveBeenCalled();
+      expect(gerenciador.query).toHaveBeenCalledWith(expect.stringContaining('insert into plano_alimentar_ativacao_eventos'), [TENANT_ID, PLANO_ID, 1, USUARIO_ID, null, true]);
+      await expect(servico.alterarAtivacao(TENANT_ID, PACIENTE_ID, PLANO_ID, usuarioProfissional(), { ativo: true, ativacaoRevisaoEsperada: 0 })).rejects.toBeInstanceOf(ConflictException);
+    });
+    it('no-op não cria revisão; OFF anterior à primeira publicação é uma decisão explícita', async () => {
+      expect(await servico.alterarAtivacao(TENANT_ID, PACIENTE_ID, PLANO_ID, usuarioProfissional(), { ativo: false, ativacaoRevisaoEsperada: 0 })).toMatchObject({ ativacaoRevisao: 0 });
+      expect(gerenciador.query).not.toHaveBeenCalled();
+      Object.assign(repositorios.get(PlanoAlimentarOrm)!.registros[0], { ativacaoDefinida: false, versaoPublicadaAtualId: null });
+      expect(await servico.alterarAtivacao(TENANT_ID, PACIENTE_ID, PLANO_ID, usuarioProfissional(), { ativo: false, ativacaoRevisaoEsperada: 0 })).toMatchObject({ ativoParaPaciente: false, ativacaoRevisao: 1 });
+    });
+    it('não liga rascunho nem aceita revisão/booleano inválidos, papel ou carteira divergentes', async () => {
+      const dados = { ativo: true, ativacaoRevisaoEsperada: 0 };
+      repositorios.get(PlanoAlimentarOrm)!.registros[0].versaoPublicadaAtualId = null;
+      await expect(servico.alterarAtivacao(TENANT_ID, PACIENTE_ID, PLANO_ID, usuarioProfissional(), dados)).rejects.toBeInstanceOf(ConflictException);
+      for (const entrada of [{ ativo: 'false', ativacaoRevisaoEsperada: 0 }, { ativo: true, ativacaoRevisaoEsperada: -1 }, { ativo: true, ativacaoRevisaoEsperada: 2147483647 }]) {
+        await expect(servico.alterarAtivacao(TENANT_ID, PACIENTE_ID, PLANO_ID, usuarioProfissional(), entrada as never)).rejects.toBeInstanceOf(BadRequestException);
+      }
+      const semPermissao = { ...usuarioProfissional(), permissoes: [] };
+      await expect(servico.alterarAtivacao(TENANT_ID, PACIENTE_ID, PLANO_ID, semPermissao, dados)).rejects.toBeInstanceOf(ForbiddenException);
+      repositorios.get(PacienteOrm)!.registros[0].profissionalResponsavelId = 'outro';
+      await expect(servico.alterarAtivacao(TENANT_ID, PACIENTE_ID, PLANO_ID, usuarioProfissional(), dados)).rejects.toBeInstanceOf(NotFoundException);
+      expect(gerenciador.query).not.toHaveBeenCalled();
+    });
+    it('recusa identidade de refeição histórica ou fora do plano antes de gravar evento', async () => {
+      await expect(servico.alterarAtivacao(TENANT_ID, PACIENTE_ID, PLANO_ID, usuarioProfissional(), { ativo: false, ativacaoRevisaoEsperada: 0 }, VERSAO_ID)).rejects.toBeInstanceOf(NotFoundException);
+      expect(repositorios.get(PlanoAlimentarOrm)!.save).not.toHaveBeenCalled();
+    });
   });
 
   it('nao enumera paciente de outro profissional e filtra o responsavel na consulta', async () => {
@@ -761,6 +821,26 @@ describe('ServicoPlanosAlimentares', () => {
         servico.publicar(TENANT_ID, PACIENTE_ID, PLANO_ID, usuarioProfissional())
       ).resolves.toBeDefined();
     });
+  });
+
+  it.each([false,true])('primeira publicação ativa somente plano sem decisão OFF prévia (%s)', async desligado => {
+    await servico.atualizarRascunho(TENANT_ID,PACIENTE_ID,PLANO_ID,usuarioProfissional(),dadosRascunho());
+    if (desligado) await servico.alterarAtivacao(TENANT_ID,PACIENTE_ID,PLANO_ID,usuarioProfissional(),{ativo:false,ativacaoRevisaoEsperada:0});
+    await servico.revisar(TENANT_ID,PACIENTE_ID,PLANO_ID,usuarioProfissional());
+    const publicado=await servico.publicar(TENANT_ID,PACIENTE_ID,PLANO_ID,usuarioProfissional());
+    expect(publicado.ativoParaPaciente).toBe(!desligado);
+    expect(publicado.ativacaoRevisao).toBe(1);
+    expect(publicado.resumoNutricionalVigente).toMatchObject({estado:'completo',energiaKcal:desligado ? 0 : 120});
+  });
+
+  it('primeira publicação invalida baseline operacional anterior e impressão respeita OFF', async () => {
+    await servico.atualizarRascunho(TENANT_ID,PACIENTE_ID,PLANO_ID,usuarioProfissional(),dadosRascunho());
+    await servico.revisar(TENANT_ID,PACIENTE_ID,PLANO_ID,usuarioProfissional());
+    const publicado=await servico.publicar(TENANT_ID,PACIENTE_ID,PLANO_ID,usuarioProfissional());
+    await expect(servico.alterarAtivacao(TENANT_ID,PACIENTE_ID,PLANO_ID,usuarioProfissional(),{ativo:false,ativacaoRevisaoEsperada:0})).rejects.toBeInstanceOf(ConflictException);
+    await servico.alterarAtivacao(TENANT_ID,PACIENTE_ID,PLANO_ID,usuarioProfissional(),{ativo:false,ativacaoRevisaoEsperada:publicado.ativacaoRevisao});
+    await expect(servico.obterApresentacaoPaciente(TENANT_ID,PACIENTE_ID,PLANO_ID,1,usuarioProfissional())).rejects.toBeInstanceOf(ConflictException);
+    expect((await servico.obterVersao(TENANT_ID,PACIENTE_ID,PLANO_ID,1,usuarioProfissional())).refeicoes).toHaveLength(1);
   });
 
   it('bloqueia publicacao sem revisao', async () => {
@@ -1602,6 +1682,15 @@ describe('ServicoPlanosAlimentares', () => {
       await expect(salvarEdicao(documentoParcial(), 2147483647)).rejects.toBeInstanceOf(BadRequestException);
       await expect(servico.revisar(TENANT_ID, PACIENTE_ID, PLANO_ID, usuarioProfissional())).rejects.toThrow('limite de revisões');
       expect(repositorios.get(PlanoAlimentarVersaoOrm)!.save).not.toHaveBeenCalled();
+    });
+    it('ACK editorial identifica revisão operacional para rejeitar flags de retorno obsoleto', async () => {
+      Object.assign(repositorios.get(PlanoAlimentarOrm)!.registros[0],{ativacaoRevisao:4,ativoParaPaciente:true});
+      expect(await salvarEdicao(documentoParcial())).toMatchObject({ativacaoRevisao:4,ativoParaPaciente:true});
+    });
+    it('não transforma falha de banco ao ler identidades em conflito editorial', async () => {
+      const erro=new Error('Falha sintética de banco');
+      jest.mocked(gerenciador.query).mockRejectedValueOnce(erro);
+      await expect(salvarEdicao(documentoCompleto())).rejects.toBe(erro);
     });
     it('não transforma falha de persistência em sucesso editorial pendente', async () => {
       repositorios.get(PlanoAlimentarVersaoOrm)!.save.mockRejectedValueOnce(new Error('Falha sintética de persistência'));

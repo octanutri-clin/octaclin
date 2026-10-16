@@ -2126,3 +2126,38 @@ autorização e auditoria, nunca desativação automática deste trigger.
 
 Protocolos clínicos pediátricos permanecem bloqueados independentemente da
 aplicação da migration; não existe flag operacional que substitua G01/G02.
+
+## PA06 — implantação controlada de ativação de planos/refeições
+
+Procedimento planejado, **não executado em ambiente externo** neste ciclo.
+A primeira entrega foi mergeada pelo proprietário; o relato de aplicação das
+migrations anteriores não comprova a aplicação da nova migration1074.
+
+1. Após PR/checks/revisão final, identificar ambiente, branch, banco e role owner
+   reais pelo procedimento vigente; conferir migrations aplicadas e backup.
+   Não editar1073 ou anteriores nem conceder owner/BYPASSRLS ao runtime.
+2. Ensaiar1074 fora de banda. Backfill percorre tenants com contexto local à
+   transação sob FORCE RLS: mantém somente a publicação atual mais recente
+   inequívoca de cada paciente. Se as mais recentes empatarem no instante,
+   nenhuma é ativada automaticamente; o profissional escolhe explicitamente.
+   Conferir durações/locks antes da janela autorizada, sem registrar pacientes.
+3. Aplicar1074 somente com autorização operacional para o alvo. Conferir colunas,
+   três tabelas operacionais, constraints, triggers, ENABLE/FORCE RLS e policies.
+   Eventos aceitam apenas SELECT/INSERT por tenant; UPDATE/DELETE não são abertos
+   para satisfazer inventário de policies. Migrations no boot continuam desligadas.
+4. Publicar backend compatível em todas as réplicas e drenar writers antigos
+   antes de disponibilizar controles ON/OFF. Não operar com backend antigo que
+   ignore OFF. O guard de insert recusa writer sem identidade após revisão
+   operacional positiva; não desabilitar o guard para restaurar cliente antigo.
+5. Publicar BFF/UI compatíveis somente após backend saudável. Validar com dados
+   sintéticos: dois planos ativos, desligar plano/refeição, PDF e IDs conhecidos,
+   escolha recusada após retirada, autosave/clone preservando OFF e conflito409.
+   Conferir totais vigentes separados das metas e dos snapshots históricos.
+6. Registrar evidências sanitizadas e liberar somente o escopo autorizado.
+   Esta etapa não inclui agregação entre planos nem novos micronutrientes.
+
+Rollback: preservar schema, estados OFF e trilha. `down`1074 recusa apagar dados.
+Manter backend compatível com ON/OFF; corrigir por nova migration aditiva quando
+necessário. Reverter somente a UI não autoriza reverter o backend para uma versão
+que entregue conteúdo OFF. Não reativar publicações ou recomputar histórico para
+contornar incompatibilidade. PDFs já baixados permanecem fora do controle online.

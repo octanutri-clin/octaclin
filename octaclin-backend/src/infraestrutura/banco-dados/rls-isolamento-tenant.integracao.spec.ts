@@ -1,3 +1,5 @@
+import { ServicoPortalPaciente } from '../../modulos/pacientes/aplicacao/servico-portal-paciente';
+import { PlanoAlimentarEscolhaPacienteOrm } from '../../modulos/planos-alimentares/infraestrutura/plano-alimentar-escolha-paciente.orm';
 import 'reflect-metadata';
 import { converterEdicaoParaRascunho } from '../../modulos/planos-alimentares/aplicacao/dtos-edicao-plano';
 import { MensagemNotificacaoOrm } from '../../modulos/comunicacoes/infraestrutura/mensagem-notificacao.orm';
@@ -246,6 +248,7 @@ descrever('RLS e isolamento multi-tenant integral em Postgres real', () => {
         PlanoAlimentarOrm,
         PlanoAlimentarVersaoOrm,
         PlanoAlimentarItemOrm,
+        PlanoAlimentarEscolhaPacienteOrm,
         PlanoAlimentarRefeicaoOrm,
         PlanoAlimentarSubstituicaoOrm,
         OutboxEventoOrm,
@@ -756,13 +759,24 @@ descrever('RLS e isolamento multi-tenant integral em Postgres real', () => {
 
     for (const tabela of tabelasTenant) {
       const politicas = resultadoPoliticas.rows.filter((politica) => politica.tabela === tabela.tabela);
-      const policyCompleta = politicas.some(
+      const policyAll = politicas.some(
         (politica) =>
           politica.comando === 'ALL' &&
           politica.roles.includes('public') &&
           expressaoIsolaTenant(politica.usando) &&
           expressaoIsolaTenant(politica.comVerificacao)
       );
+      const politicaPorComando = (comando: string) => politicas.some(p =>
+        p.comando === comando && p.roles.includes('public') &&
+        (comando === 'INSERT' || expressaoIsolaTenant(p.usando)) &&
+        (!['INSERT','UPDATE'].includes(comando) || expressaoIsolaTenant(p.comVerificacao)));
+      const comandosSeparados = ['SELECT','INSERT','UPDATE','DELETE'].every(politicaPorComando);
+      // Esta tabela é intencionalmente append-only: exigir ALL abriria UPDATE e
+      // DELETE. A exceção é nominal, exige exatamente SELECT/INSERT por tenant.
+      const eventosAppendOnly = tabela.tabela === 'plano_alimentar_ativacao_eventos' && politicas.length === 2 &&
+        politicaPorComando('SELECT') && politicaPorComando('INSERT');
+      const policyCompleta = tabela.tabela === 'plano_alimentar_ativacao_eventos'
+        ? eventosAppendOnly : policyAll || comandosSeparados;
       expect({ tabela: tabela.tabela, policyCompleta, politicas }).toEqual(
         expect.objectContaining({ policyCompleta: true })
       );
@@ -1571,7 +1585,22 @@ descrever('RLS e isolamento multi-tenant integral em Postgres real', () => {
     return { ...dados, cripto, usuario, documento, planoId, versaoId, servico: new ServicoPlanosAlimentares(executorTenant, cripto) };
   }
 
-  async function disputarPa06<T>(primeira: (executor: ExecutorTenant) => Promise<T>, segunda: () => Promise<unknown>) {
+  async function publicarCenarioPa06(c: Awaited<ReturnType<typeof prepararCenarioPa06>>) {
+    const identidade = {rascunhoIdEsperado:c.versaoId,rascunhoRevisaoEsperada:0};
+    await c.servico.salvarEdicaoRascunho(tenantA,c.pacienteId,c.planoId,c.usuario,{...identidade,documento:c.documento});
+    await c.servico.revisar(tenantA,c.pacienteId,c.planoId,c.usuario,{...identidade,rascunhoRevisaoEsperada:1});
+    await c.servico.publicar(tenantA,c.pacienteId,c.planoId,c.usuario,{...identidade,rascunhoRevisaoEsperada:2});
+  }
+
+  async function vincularPortalPa06(c: Awaited<ReturnType<typeof prepararCenarioPa06>>) {
+    const usuarioPortal = randomUUID();
+    await comoTenant(tenantA);
+    await cliente!.query("insert into usuarios(id,tenant_id,email_hash,email_criptografado,senha_hash,role) values($1,$2,$3,$4,'sintetica','Patient')",[usuarioPortal,tenantA,`hash-sintetico-${usuarioPortal}`,c.cripto.criptografar('sintetico@example.test')]);
+    await cliente!.query('update pacientes set usuario_id=$1,nome_criptografado=$2 where tenant_id=$3 and id=$4',[usuarioPortal,c.cripto.criptografar('Paciente sintético'),tenantA,c.pacienteId]);
+    return {usuarioPortal,portal:new ServicoPortalPaciente(executorTenant!,c.cripto)};
+  }
+
+  async function disputarPa06<T>(primeira: (executor: ExecutorTenant) => Promise<T>, segunda: () => Promise<unknown>, alvoLock: Function = PlanoAlimentarVersaoOrm) {
     let liberar!: () => void, sinalizar!: () => void;
     const liberada = new Promise<void>(r => { liberar = r; });
     const travada = new Promise<void>(r => { sinalizar = r; });
@@ -1581,7 +1610,7 @@ descrever('RLS e isolamento multi-tenant integral em Postgres real', () => {
       const proxy = new Proxy(m, { get(alvo, chave) {
         if (chave === 'getRepository') return (classe: Function) => {
           const repo = alvo.getRepository(classe as never);
-          if (classe !== PlanoAlimentarVersaoOrm) return repo;
+          if (classe !== alvoLock) return repo;
           return new Proxy(repo, { get(r, k) {
             if (k === 'findOne') return async (opcoes: Parameters<typeof repo.findOne>[0]) => {
               const resultado = await repo.findOne(opcoes);
@@ -1611,6 +1640,139 @@ descrever('RLS e isolamento multi-tenant integral em Postgres real', () => {
     expect(esperou).toBe(true);
     return resultados;
   }
+
+  it('PA06b preserva OFF em edição parcial, reordenação, remoção/reinserção, clone e rejeita writer legado', async () => {
+    const c = await prepararCenarioPa06('pa06b-identidade');
+    const primeira=c.documento.refeicoes[0];
+    const segunda={...primeira,chaveCliente:'segunda',nome:'Segunda refeição sintética',itens:[{...primeira.itens[0],chaveCliente:'item-segundo'}]};
+    const salvar = (revisao: number, documento = c.documento) => c.servico.salvarEdicaoRascunho(tenantA,c.pacienteId,c.planoId,c.usuario,{rascunhoIdEsperado:c.versaoId,rascunhoRevisaoEsperada:revisao,documento});
+    await salvar(0,{...c.documento,refeicoes:[primeira,segunda]});
+    await comoTenant(tenantA);
+    const ler = async (versao: string) => (await cliente!.query(`select l.identidade_id,e.ativa,l.refeicao_id
+      from plano_alimentar_refeicao_vinculos l join plano_alimentar_refeicao_estados e
+      on e.tenant_id=l.tenant_id and e.id=l.identidade_id join plano_alimentar_refeicoes r on r.tenant_id=l.tenant_id and r.id=l.refeicao_id
+      where l.tenant_id=$1 and l.versao_id=$2 order by r.ordem`,[tenantA,versao])).rows;
+    const inicial = (await ler(c.versaoId))[0];
+    await c.servico.alterarAtivacao(tenantA,c.pacienteId,c.planoId,c.usuario,{ativo:false,ativacaoRevisaoEsperada:0},inicial.identidade_id);
+    expect(await salvar(1,{...c.documento,objetivos:'',refeicoes:[segunda,primeira]})).toMatchObject({edicaoEstado:'pendente'});
+    await salvar(2,{...c.documento,refeicoes:[segunda,primeira]});
+    await comoTenant(tenantA);
+    const posterior=(await ler(c.versaoId))[1];
+    expect(posterior).toMatchObject({identidade_id:inicial.identidade_id,ativa:false});
+    expect(posterior.refeicao_id).not.toBe(inicial.refeicao_id);
+    await salvar(3,{...c.documento,refeicoes:[segunda]});
+    await salvar(4,{...c.documento,refeicoes:[primeira,segunda]});
+    await comoTenant(tenantA);
+    expect((await ler(c.versaoId))[0]).toMatchObject({identidade_id:inicial.identidade_id,ativa:false});
+    await c.servico.revisar(tenantA,c.pacienteId,c.planoId,c.usuario,{rascunhoIdEsperado:c.versaoId,rascunhoRevisaoEsperada:5});
+    const publicado=await c.servico.publicar(tenantA,c.pacienteId,c.planoId,c.usuario,{rascunhoIdEsperado:c.versaoId,rascunhoRevisaoEsperada:6});
+    const hash=publicado.current!.hashConteudo;
+    const nova=await c.servico.criarNovaVersao(tenantA,c.pacienteId,c.planoId,c.usuario);
+    expect(nova).not.toHaveProperty('identidadesRefeicoesCriptografadas');
+    await comoTenant(tenantA);
+    expect((await ler(nova.id))[0]).toMatchObject({identidade_id:inicial.identidade_id,ativa:false});
+    await expect(cliente!.query("insert into plano_alimentar_refeicoes(tenant_id,versao_id,ordem,nome_criptografado) values($1,$2,10,$3)",[tenantA,nova.id,c.cripto.criptografar('Writer legado sintético')])).rejects.toThrow('Writer legado recusado');
+    expect((await c.servico.obterVersao(tenantA,c.pacienteId,c.planoId,1,c.usuario)).hashConteudo).toBe(hash);
+    await comoTenant(tenantA);
+    const evento=await cliente!.query('select * from plano_alimentar_ativacao_eventos where tenant_id=$1 and plano_id=$2',[tenantA,c.planoId]);
+    expect(evento.rows).toHaveLength(2);
+    expect(JSON.stringify(evento.rows)).not.toContain('Refeição sintética');
+  });
+
+  it('PA06b permite OFF de refeição salva em edição parcial e nega replay após remoção editorial', async () => {
+    const c=await prepararCenarioPa06('pa06b-parcial-operacional');
+    const parcial={...c.documento,objetivos:''};
+    const primeiro=await c.servico.salvarEdicaoRascunho(tenantA,c.pacienteId,c.planoId,c.usuario,{rascunhoIdEsperado:c.versaoId,rascunhoRevisaoEsperada:0,documento:parcial});
+    expect(primeiro).toMatchObject({edicaoEstado:'pendente'});
+    await comoTenant(tenantA);
+    const estados=await cliente!.query('select id,ativa from plano_alimentar_refeicao_estados where tenant_id=$1 and plano_id=$2',[tenantA,c.planoId]);
+    expect(estados.rows).toHaveLength(1);
+    const identidade=estados.rows[0].id;
+    expect(primeiro).toMatchObject({ativacaoEdicao:[{chaveCliente:c.documento.refeicoes[0].chaveCliente,identidadeId:identidade,ativa:true}]});
+    await c.servico.alterarAtivacao(tenantA,c.pacienteId,c.planoId,c.usuario,{ativo:false,ativacaoRevisaoEsperada:0},identidade);
+    await c.servico.salvarEdicaoRascunho(tenantA,c.pacienteId,c.planoId,c.usuario,{rascunhoIdEsperado:c.versaoId,rascunhoRevisaoEsperada:1,documento:{...parcial,refeicoes:[]}});
+    await expect(c.servico.alterarAtivacao(tenantA,c.pacienteId,c.planoId,c.usuario,{ativo:true,ativacaoRevisaoEsperada:1},identidade)).rejects.toThrow('Refeição vigente');
+    const materializado=await c.servico.salvarEdicaoRascunho(tenantA,c.pacienteId,c.planoId,c.usuario,{rascunhoIdEsperado:c.versaoId,rascunhoRevisaoEsperada:2,documento:c.documento});
+    expect(materializado).toMatchObject({ativacaoEdicao:[{identidadeId:identidade,ativa:false}],edicaoEstado:'materializada'});
+    await comoTenant(tenantA);
+    expect((await cliente!.query('select id,ativa from plano_alimentar_refeicao_estados where tenant_id=$1 and plano_id=$2',[tenantA,c.planoId])).rows).toEqual([{id:identidade,ativa:false}]);
+  });
+
+  it('PA06b serializa ativação concorrente, replay, evento append-only e RLS dos vínculos', async () => {
+    const c=await prepararCenarioPa06('pa06b-cas');
+    await publicarCenarioPa06(c);
+    const resultados=await disputarPa06(
+      e=>new ServicoPlanosAlimentares(e,c.cripto).alterarAtivacao(tenantA,c.pacienteId,c.planoId,c.usuario,{ativo:false,ativacaoRevisaoEsperada:1}),
+      ()=>c.servico.alterarAtivacao(tenantA,c.pacienteId,c.planoId,c.usuario,{ativo:false,ativacaoRevisaoEsperada:1}),PlanoAlimentarOrm);
+    expect(resultados.map(r=>r.status)).toEqual(['fulfilled','rejected']);
+    if(resultados[1].status==='rejected') expect(resultados[1].reason.getStatus()).toBe(409);
+    await comoTenant(tenantA);
+    const eventos=await cliente!.query('select id,revisao,ativo from plano_alimentar_ativacao_eventos where tenant_id=$1 and plano_id=$2 order by revisao',[tenantA,c.planoId]);
+    expect(eventos.rows.map(e=>[e.revisao,e.ativo])).toEqual([[1,true],[2,false]]);
+    expect((await cliente!.query('update plano_alimentar_ativacao_eventos set ativo=true where id=$1',[eventos.rows[1].id])).rowCount).toBe(0);
+    expect((await cliente!.query('delete from plano_alimentar_ativacao_eventos where id=$1',[eventos.rows[1].id])).rowCount).toBe(0);
+    const vinculo=(await cliente!.query('select * from plano_alimentar_refeicao_vinculos where tenant_id=$1 and plano_id=$2',[tenantA,c.planoId])).rows[0];
+    await comoTenant(tenantB);
+    expect((await cliente!.query('select * from plano_alimentar_refeicao_estados where id=$1',[vinculo.identidade_id])).rowCount).toBe(0);
+    expect((await cliente!.query('select * from plano_alimentar_refeicao_vinculos where refeicao_id=$1',[vinculo.refeicao_id])).rowCount).toBe(0);
+    await expect(cliente!.query('insert into plano_alimentar_refeicao_estados(tenant_id,plano_id) values($1,$2)',[tenantA,c.planoId])).rejects.toMatchObject({code:'42501'});
+    await expect(c.servico.alterarAtivacao(tenantB,c.pacienteId,c.planoId,c.usuario,{ativo:true,ativacaoRevisaoEsperada:2})).rejects.toThrow();
+  },60000);
+
+  it('PA06b OFF vence publicação posterior; publicação inicial invalida baseline anterior', async () => {
+    const c=await prepararCenarioPa06('pa06b-publicacao-off');
+    const identidade={rascunhoIdEsperado:c.versaoId,rascunhoRevisaoEsperada:0};
+    await c.servico.salvarEdicaoRascunho(tenantA,c.pacienteId,c.planoId,c.usuario,{...identidade,documento:c.documento});
+    await c.servico.revisar(tenantA,c.pacienteId,c.planoId,c.usuario,{...identidade,rascunhoRevisaoEsperada:1});
+    const resultados=await disputarPa06(
+      e=>new ServicoPlanosAlimentares(e,c.cripto).alterarAtivacao(tenantA,c.pacienteId,c.planoId,c.usuario,{ativo:false,ativacaoRevisaoEsperada:0}),
+      ()=>c.servico.publicar(tenantA,c.pacienteId,c.planoId,c.usuario,{...identidade,rascunhoRevisaoEsperada:2}),PlanoAlimentarOrm);
+    expect(resultados.map(r=>r.status)).toEqual(['fulfilled','fulfilled']);
+    expect(await c.servico.obter(tenantA,c.pacienteId,c.planoId,c.usuario)).toMatchObject({ativoParaPaciente:false,ativacaoRevisao:1});
+    const d=await prepararCenarioPa06('pa06b-publicacao-baseline');
+    await d.servico.salvarEdicaoRascunho(tenantA,d.pacienteId,d.planoId,d.usuario,{rascunhoIdEsperado:d.versaoId,rascunhoRevisaoEsperada:0,documento:d.documento});
+    await d.servico.revisar(tenantA,d.pacienteId,d.planoId,d.usuario,{rascunhoIdEsperado:d.versaoId,rascunhoRevisaoEsperada:1});
+    const inverso=await disputarPa06(
+      e=>new ServicoPlanosAlimentares(e,d.cripto).publicar(tenantA,d.pacienteId,d.planoId,d.usuario,{rascunhoIdEsperado:d.versaoId,rascunhoRevisaoEsperada:2}),
+      ()=>d.servico.alterarAtivacao(tenantA,d.pacienteId,d.planoId,d.usuario,{ativo:false,ativacaoRevisaoEsperada:0}));
+    expect(inverso.map(r=>r.status)).toEqual(['fulfilled','rejected']);
+    if(inverso[1].status==='rejected') expect(inverso[1].reason.getStatus()).toBe(409);
+  },60000);
+
+  it('PA06b pagina dois planos ativos, nega OFF/ID conhecido e serializa escolha com retirada', async () => {
+    const c=await prepararCenarioPa06('pa06b-portal');
+    await publicarCenarioPa06(c);
+    const {portal,usuarioPortal}=await vincularPortalPa06(c);
+    const outro=await c.servico.criar(tenantA,c.pacienteId,c.usuario,{titulo:'Segundo plano sintético'});
+    const idRascunho=outro.draft!.id;
+    await c.servico.salvarEdicaoRascunho(tenantA,c.pacienteId,outro.id,c.usuario,{rascunhoIdEsperado:idRascunho,rascunhoRevisaoEsperada:0,documento:c.documento});
+    await c.servico.revisar(tenantA,c.pacienteId,outro.id,c.usuario,{rascunhoIdEsperado:idRascunho,rascunhoRevisaoEsperada:1});
+    await c.servico.publicar(tenantA,c.pacienteId,outro.id,c.usuario,{rascunhoIdEsperado:idRascunho,rascunhoRevisaoEsperada:2});
+    const a=await portal.listarPlanosAlimentares(tenantA,usuarioPortal,{pagina:1,limite:1});
+    const b=await portal.listarPlanosAlimentares(tenantA,usuarioPortal,{pagina:2,limite:1});
+    expect(a.total).toBe(2);expect(b.total).toBe(2);expect(new Set([...a.itens,...b.itens].map(p=>p.id)).size).toBe(2);
+    const detalhe=await portal.obterPlanoAlimentar(tenantA,usuarioPortal,c.planoId);
+    const itemId=detalhe.refeicoes[0].itens[0].id;
+    await comoTenant(tenantA);
+    const estado=(await cliente!.query('select identidade_id from plano_alimentar_refeicao_vinculos where tenant_id=$1 and refeicao_id=$2',[tenantA,detalhe.refeicoes[0].id])).rows[0];
+    await c.servico.alterarAtivacao(tenantA,c.pacienteId,c.planoId,c.usuario,{ativo:false,ativacaoRevisaoEsperada:1},estado.identidade_id);
+    expect((await portal.obterPlanoAlimentar(tenantA,usuarioPortal,c.planoId)).refeicoes).toHaveLength(0);
+    expect((await c.servico.obterApresentacaoPaciente(tenantA,c.pacienteId,c.planoId,1,c.usuario)).refeicoes).toHaveLength(0);
+    expect((await c.servico.obter(tenantA,c.pacienteId,c.planoId,c.usuario)).resumoNutricionalVigente).toMatchObject({energiaKcal:0});
+    await expect(portal.registrarEscolhaSubstituicao(tenantA,usuarioPortal,itemId,{})).rejects.toThrow('Item de plano');
+    await c.servico.alterarAtivacao(tenantA,c.pacienteId,c.planoId,c.usuario,{ativo:true,ativacaoRevisaoEsperada:2},estado.identidade_id);
+    const corrida=await disputarPa06(
+      e=>new ServicoPlanosAlimentares(e,c.cripto).alterarAtivacao(tenantA,c.pacienteId,c.planoId,c.usuario,{ativo:false,ativacaoRevisaoEsperada:3}),
+      ()=>portal.registrarEscolhaSubstituicao(tenantA,usuarioPortal,itemId,{}),PlanoAlimentarOrm);
+    expect(corrida.map(r=>r.status)).toEqual(['fulfilled','rejected']);
+    if(corrida[1].status==='rejected') expect(corrida[1].reason.getStatus()).toBe(404);
+    await expect(portal.obterPlanoAlimentar(tenantA,usuarioPortal,c.planoId)).rejects.toThrow('Plano alimentar');
+    expect(await portal.listarPlanosAlimentares(tenantA,usuarioPortal,{pagina:1,limite:10})).toMatchObject({total:1,itens:[{id:outro.id}]});
+    const estranho=await prepararCenarioPa06('pa06b-outro-paciente');
+    await publicarCenarioPa06(estranho);
+    await expect(portal.obterPlanoAlimentar(tenantA,usuarioPortal,estranho.planoId)).rejects.toThrow('Plano alimentar');
+    await expect(portal.listarPlanosAlimentares(tenantB,usuarioPortal)).rejects.toThrow('Usuario nao possui');
+  },60000);
 
   it('PA06 apaga observação removida na edição e não a restaura ao publicar', async () => {
     const c = await prepararCenarioPa06('pa06-limpeza-observacao');

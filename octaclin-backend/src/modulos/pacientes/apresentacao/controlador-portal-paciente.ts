@@ -1,4 +1,5 @@
-import { Body, Controller, Get, Header, Param, ParseUUIDPipe, Patch, Post, Put, Req, UseGuards } from '@nestjs/common';
+import { ListarPlanosAtivosPortalDto } from '../aplicacao/dtos-planos-portal';
+import { Body, Controller, Get, Header, Param, ParseUUIDPipe, Patch, Post, Put, Query, Req, UseGuards } from '@nestjs/common';
 import { Request } from 'express';
 import { ServicoAuditoria } from '../../../infraestrutura/auditoria/servico-auditoria';
 import { Papeis, UsuarioAtual } from '../../auth/apresentacao/decorators';
@@ -32,8 +33,21 @@ export class ControladorPortalPaciente {
   ) {}
 
   @Get('paciente')
+  @Header('Cache-Control', 'private, no-store')
   obterResumo(@UsuarioAtual() usuario: UsuarioAutenticado) {
     return this.servicoPortal.obterResumoPortal(usuario.tenantId, usuario.usuarioId);
+  }
+
+  @Get('paciente/planos-alimentares')
+  @Header('Cache-Control', 'private, no-store')
+  listarPlanosAlimentares(@UsuarioAtual() usuario: UsuarioAutenticado, @Query() consulta: ListarPlanosAtivosPortalDto) {
+    return this.servicoPortal.listarPlanosAlimentares(usuario.tenantId,usuario.usuarioId,consulta);
+  }
+
+  @Get('paciente/planos-alimentares/:planoId')
+  @Header('Cache-Control', 'private, no-store')
+  obterPlanoAlimentar(@UsuarioAtual() usuario: UsuarioAutenticado, @Param('planoId', ParseUUIDPipe) planoId: string) {
+    return this.servicoPortal.obterPlanoAlimentar(usuario.tenantId,usuario.usuarioId,planoId);
   }
 
   @Get('paciente/receitas')

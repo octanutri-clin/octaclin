@@ -14,7 +14,9 @@ const { criarOpcoesTypeOrm } = require('../src/infraestrutura/banco-dados/opcoes
       .withEnvironment({ POSTGRES_USER: 'pa05_owner', POSTGRES_PASSWORD: fixturePassword, POSTGRES_DB: 'octaclin_pa05_descartavel' })
       .withExposedPorts(5432).withTmpFs({ '/var/lib/postgresql/data': 'rw' })
       .withWaitStrategy(Wait.forLogMessage(/database system is ready to accept connections/, 2)).start();
-    const { entities, migrations } = criarOpcoesTypeOrm();
+    const { entities, migrations: todasMigrations } = criarOpcoesTypeOrm();
+    const provarAtivacao = process.argv.includes('--ativacao');
+    const migrations = provarAtivacao ? todasMigrations.filter(m => m.name !== 'AtivacaoPlanos1720000001074') : todasMigrations;
     admin = new DataSource({ type: 'postgres', host: container.getHost(), port: container.getMappedPort(5432), username: 'pa05_owner', password: fixturePassword, database: 'octaclin_pa05_descartavel', entities, migrations, ssl: false, synchronize: false, migrationsRun: false, logging: false });
     await admin.initialize();
     const omissions = { vector: 0, timescale: 0, hypertable: 0, embedding: 0 };
@@ -33,6 +35,7 @@ const { criarOpcoesTypeOrm } = require('../src/infraestrutura/banco-dados/opcoes
     await admin.runMigrations({ transaction: 'all' });
     if (Object.values(omissions).some(count => count !== 1)) throw new Error('A fixture de extensões mudou; reconfira o escopo da prova local.');
     admin.createQueryRunner = createRunner;
+    if (provarAtivacao) await require('./prova-backfill-pa06.cjs')(admin);
     await admin.query(`create role pa05_runtime with login password 'pa05_runtime_sintetico' nosuperuser nocreatedb nocreaterole nobypassrls;
       grant connect on database octaclin_pa05_descartavel to pa05_runtime;
       grant usage on schema public to pa05_runtime;
@@ -43,7 +46,7 @@ const { criarOpcoesTypeOrm } = require('../src/infraestrutura/banco-dados/opcoes
     Object.assign(env, { RLS_PROVA_BANCO_HOST: container.getHost(), RLS_PROVA_BANCO_PORTA: String(container.getMappedPort(5432)), RLS_PROVA_BANCO_USUARIO: 'pa05_runtime', RLS_PROVA_BANCO_SENHA: 'pa05_runtime_sintetico', RLS_PROVA_BANCO_NOME: 'octaclin_pa05_descartavel' });
     console.log('PA04–PA06: PostgreSQL 15 descartável, schema/RLS de planos reais. Timescale/pgvector: SKIPPED nesta fixture; gate integral permanece no CI.');
     const code = await new Promise((resolve, reject) => {
-      const child = spawn('corepack', ['pnpm', 'exec', 'jest', '--runInBand', 'src/infraestrutura/banco-dados/rls-isolamento-tenant.integracao.spec.ts', '-t', 'PA04|PA05|PA06'], { cwd: require('node:path').resolve(__dirname, '..'), env, stdio: 'inherit' });
+      const child = spawn('corepack', ['pnpm', 'exec', 'jest', '--runInBand', 'src/infraestrutura/banco-dados/rls-isolamento-tenant.integracao.spec.ts', '-t', process.argv.includes('--inventario') ? 'PA04|PA05|PA06|inventaria toda|sem app.tenant_id' : 'PA04|PA05|PA06'], { cwd: require('node:path').resolve(__dirname, '..'), env, stdio: 'inherit' });
       child.once('error', reject); child.once('exit', resolve);
     });
     process.exitCode = code ?? 1;

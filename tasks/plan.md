@@ -1,3 +1,136 @@
+# Handoff atual — PA06 segunda entrega: backend de ativação → UI Luna
+
+## Estado e limites
+
+Worktree `/workspace/octaclin/.worktrees/pos320-pa06-ativacao`, branch
+`feat/pos320-pa06-ativacao`, base `e2cb9cdd` da main (reconferida via fetch).
+PR420 mergeada em `66df9053`. O proprietário relatou migrations anteriores
+aplicadas em staging/produção; nenhum banco externo foi consultado neste ciclo.
+A nova1074 **não foi aplicada externamente**. Worktree principal conserva seu
+next-env preexistente. Nenhum arquivo Web/research foi alterado nesta etapa.
+
+Risco R4. Backend T08a validado localmente; T08b deve começar apenas depois do
+aviso/pausa e troca manual para **GPT-6 Luna alto**, solicitada pelo proprietário.
+T08c/T08d (agregação/micronutrientes) ficam na terceira entrega, fora desta PR.
+Não executar merge/deploy/migrations externas. Evidências e comandos:
+`docs/governance/EVIDENCIAS_PA06_ATIVACAO_2026-10-16.md`.
+
+## Contrato backend entregue
+
+- Migration1074 aditiva: flags/revisão no plano, raízes lógicas de refeições,
+  vínculos físicos por versão e eventos append-only. FORCE RLS e escopo composto.
+  Não reescreve publicada/filhos/hash. Backfill com contexto local por tenant;
+  somente publicação mais recente inequívoca ativa. Empate mais recente: todas
+  OFF, sem escolha UUID arbitrária. Down recusa perder estados/histórico.
+- Primeira publicação ativa plano indefinido, incrementa revisão operacional e
+  evento na mesma transação. OFF explícito anterior à publicação é preservado.
+  Legacy writer sem identidade é recusado depois de revisão operacional positiva.
+- Toggle sob locks paciente→plano→versão/raiz; tenant/carteira/papel/permissão
+  revalidados. No-op não gera revisão/evento; primeira decisão OFF gera ambos.
+  Revisão obsoleta409, inclusive capturada antes da primeira publicação.
+- Identidade resiste a autosave/reorder/remoção/reinserção/clone dentro do plano.
+  Raízes também existem para documento parcial. Mapa chave→UUID cifrado preserva
+  tombstones internos, com limite4096/1MiB validado ANTES de persistir.
+  Cópia para outro plano recebe raiz independente; não inferir pelo nome/posição.
+- Plano OFF prevalece; ON não altera flags individuais. Draft protegido removido
+  não autoriza toggle por linha física antiga. Só chave atual do documento ou
+  refeição da publicação atual autoriza; histórico sozinho não autoriza operação.
+- Portal/ações usam locks compartilhados do paciente, publicação atual e flags.
+  Impressão paciente bloqueia plano OFF/publicação antiga e filtra refeições OFF.
+  GET histórico profissional conserva conteúdo/hash. Nenhum PDF baixado é apagado.
+- `totais`/resumos de versões salvas são históricos. `resumoRefeicoesAtivas` é a
+  projeção atual por versão; `resumoNutricionalVigente` do plano aplica também
+  plano OFF e somente current. Soma snapshots dos alimentos previstos, sem
+  alternativas/consumo/catálogo novo. Lacuna por campo não vira zero.
+
+## APIs para T08b
+
+Profissional, prefixo `/pacientes/:pacienteId/planos-alimentares`:
+
+- PUT `/:planoId/ativacao`
+- PUT `/:planoId/refeicoes/:identidadeId/ativacao`
+
+Corpo de ambos: `{ativo:boolean, ativacaoRevisaoEsperada:number}`. A revisão é
+**compartilhada pelo plano e suas refeições**, separada de rascunhoRevisao e
+apresentacaoRevisao. Requer planos_alimentares.gerenciar. Booleano literal;
+revisão0..2147483646. Tenant/usuário vêm da sessão, nunca do corpo.
+ACK `{planoId,ativoParaPaciente,ativacaoRevisao}`; refeição acrescenta
+`{identidadeRefeicaoId,ativa}`. Sem confirmação extra/republicação para ON/OFF.
+Plano sem publicação não pode ser ligado; pode receber OFF explícito antes dela.
+
+GET detalhe/lista profissional inclui ativoParaPaciente/ativacaoRevisao.
+Versão/save ACK inclui a mesma revisão/flag operacional. Nunca mesclar ACK de
+revisão operacional anterior à já confirmada no cliente. Metadados da versão:
+
+- `ativacaoRefeicoes:[{refeicaoId,identidadeId,ativa}]`: linhas materializadas.
+- `ativacaoEdicao:[{chaveCliente,identidadeId,ativa}]`: só draft, somente chaves
+  presentes no documento atual; permite operar também edição parcial salva.
+- Linhas recém-digitadas sem ACK ainda não têm identidade: switch indisponível
+  até salvar, sem inventar UUID nem atribuir pelo índice. Legado sem documento
+  permite correspondência EXATA chave física→refeicaoId da própria versão;
+  fora disso, salvar primeiro. Não expor tombstones/coluna cifrada ao cliente.
+
+Paciente, já guardado por sessão Patient, sempre private/no-store:
+
+- GET `/portal/paciente/planos-alimentares?pagina=1&limite=10`, limite máximo20,
+  página máxima1000000. `{itens:[{id,titulo,numeroVersao,publicadoEm}],total,pagina,limite}`.
+- GET `/portal/paciente/planos-alimentares/:planoId`: detalhe mínimo, refeições
+  ativas e resumoNutricionalVigente. IDs OFF/arquivados/outro paciente404.
+- Bootstrap singular antigo continua compatível; UI nova deve usar plural.
+  Detalhe solicitado nunca cai em outra publicação/plano. Escolha existente
+  revalida plano/refeição ativos mesmo com itemId conhecido.
+
+## Implementação Luna — menor sequência concreta
+
+1. Ler AGENTS da Web. Estender tipos/API em `lib/plano-alimentar-api.ts` e BFF
+   sob `app/api/pacientes/[id]/planos-alimentares/[planoId]` + portal plural,
+   reutilizando proxies/session/allowlist. Atualizar mapa de rotas e testes BFF.
+   Preservar409/401/403/404 e no-store; não serializar entidade ORM.
+2. Switch do plano no console e de refeições atuais em
+   `components/pacientes/plano-alimentar-profissional.tsx` / `refeicao-ordenavel.tsx`.
+   Usar identidade lógica, alvo explícito e revisão do plano; um toggle em voo
+   por plano (desabilitar controles enquanto aguarda ACK é suficiente).
+   Sem atualização otimista, retry silencioso ou dirty/save clínico só por toggle.
+3. ACK de autosave não substitui texto/linhas/foco nem estados operacionais mais
+   novos. Associar metadados só por chave atual; refeição removida não reaparece.
+   Em409 reconciliar flags/revisão sem descartar documento local. Rede incerta
+   deve mostrar estado não confirmado e permitir consultar backend; não afirmar
+   que mudou nem desfazer commit hipotético. Sem localStorage/IndexedDB clínico.
+4. Exibir distinção salvo/parcial/publicado/visível. Flags de uma versão histórica
+   são operacionais atuais, não reconstituição do passado; não oferecer toggle
+   em visualização histórica. Totais de planejamento atual usam projeção vigente,
+   sem confundir metas e snapshots históricos. Plano OFF não muda flags das refeições.
+5. `components/portal/plano-alimentar-paciente.tsx` / `app/portal/plano/page.tsx`:
+   listar/paginar todos ativos, abrir detalhe autorizado e tratar retirada/404.
+   Preservar preferências PA05, alternativas liberadas, macros como metas versus
+   total previsto vigente, impressão filtrada e acesso por teclado/mobile.
+6. Testes BFF/estado/Playwright (desktop/mobile/Axe): dois planos ativos, refeição
+   OFF, plano OFF/ON preservando refeição OFF, nova versão em edição, parcial
+   salvo com switch, dirty durante ACK, conflito/rede incerta, reload/retirada,
+   paginação e IDs conhecidos negados. Regressões PA02/PA03/PA04/PA05/PA06.
+7. Integrar nesta mesma branch/PR de ativação; não abrir PR documental separada.
+   Antes de R4 final/CI, avisar se precisar voltar a Sol médio, conforme preferência
+   do proprietário. Não reutilizar CI420 como evidência da segunda entrega.
+
+Referências de UI: somente R013/R014 já fixadas no plano, sem nova dependência
+ou nova auditoria de todos os repositórios. Backend não incorpora código externo.
+
+## Gates neste checkpoint
+
+- PASS: backfill owner NOBYPASSRLS e19 casos reais PA04–PA06/inventário;
+  29 casos fora do filtro SKIPPED. Timescale/pgvector integrais continuam CI.
+- PASS: revisão cruzada automatizada da autoria separada, achados corrigidos e
+  reinspecionados. Não é revisão humana externa nem avaliação da UI.
+- PASS: Jest integral332 suítes/2938 testes;6 suítes/118 testes SKIPPED.
+  Typecheck/build e artefato dist/main.js; PostgreSQL19 PASS/29 fora do filtro.
+  Secrets/diff locais PASS; commit de checkpoint registrado no Git ao final.
+  Gates de governança proporcionais conferidos nesta rodada (ver evidências).
+- PENDENTE: T08b/BFF/UI, Playwright e CI do HEAD da segunda entrega.
+- NÃO EXECUTADO: qualquer operação externa, merge ou deploy.
+
+---
+## Checkpoint anterior preservado — primeira entrega
+
 # Handoff atual — PA06: primeira entrega local validada, PR Draft/CI
 
 ## Estado do trabalho

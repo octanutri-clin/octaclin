@@ -97,6 +97,9 @@ function criarRepositorioFake(nome: string, dados: Record<string, any>) {
 }
 
 function criarServico(dados: Record<string, any>) {
+  // Fixtures anteriores representam publicações ativas; testes de retirada
+  // informam false explicitamente. Runtime nunca infere true de campo ausente.
+  for (const plano of dados.planoAlimentars ?? []) if (plano.ativoParaPaciente === undefined) plano.ativoParaPaciente = true;
   const repositorios = {
     paciente: criarRepositorioFake('paciente', dados),
     consulta: criarRepositorioFake('consulta', dados),
@@ -126,7 +129,21 @@ function criarServico(dados: Record<string, any>) {
   const execucoesRegra = (dados.execucoesRegra ?? (dados.execucoesRegra = [])) as Record<string, any>[];
   const outboxEventos = (dados.outboxEventos ?? (dados.outboxEventos = [])) as Record<string, any>[];
   const gerenciador = {
-    query: jest.fn(async () => []),
+    query: jest.fn(async (sql: string, parametros: unknown[] = []) => {
+      if (sql.includes('from planos_alimentares p join plano_alimentar_versoes')) {
+        const linhas = (dados.planoAlimentars ?? []).filter((p:Record<string,any>) => p.tenantId===parametros[0] && p.pacienteId===parametros[1] && p.ativoParaPaciente===true && !p.arquivadoEm)
+          .flatMap((p:Record<string,any>) => (dados.planoAlimentarVersaos ?? []).filter((v:Record<string,any>)=>v.id===p.versaoPublicadaAtualId && v.tenantId===p.tenantId && v.planoId===p.id && v.publicadaEm && !v.descartadaEm)
+            .map((v:Record<string,any>)=>({id:p.id,titulo_criptografado:p.tituloCriptografado,numero:v.numero,publicada_em:v.publicadaEm})))
+          .sort((a:Record<string,any>,b:Record<string,any>) => b.publicada_em.getTime()-a.publicada_em.getTime() || b.id.localeCompare(a.id));
+        if (sql.includes('count(*)')) return [{total:String(linhas.length)}];
+        return linhas.slice(Number(parametros[3]),Number(parametros[3])+Number(parametros[2]));
+      }
+      if (sql.includes('from plano_alimentar_refeicao_vinculos')) {
+        return (dados.planoAlimentarRefeicaos ?? []).filter((r: Record<string,any>) => r.tenantId===parametros[0] && r.versaoId===parametros[2] && !r.semVinculoOperacional)
+          .map((r: Record<string,any>) => ({refeicao_id:r.id,identidade_id:r.id,ativa:r.ativaParaPaciente !== false}));
+      }
+      return [];
+    }),
     getRepository: jest.fn((entidade: { name: string }) => {
       if (entidade === PacienteOrm) return repositorios.paciente;
       if (entidade === AgendaConsultaOrm) return repositorios.consulta;
@@ -223,6 +240,47 @@ describe('ServicoPortalPaciente', () => {
 
   afterEach(() => {
     jest.useRealTimers();
+  });
+
+  describe('PA06b retirada operacional', () => {
+    function cenario(ativo: boolean, refeicaoAtiva = true, semVinculoOperacional = false) {
+      return criarServico({
+        pacientes: [{id:'paciente-1',tenantId:'tenant-1',usuarioId:'usuario-1',nomeCriptografado:Buffer.from('cripto:Sintético')}],
+        planoAlimentars: [{id:'plano-1',tenantId:'tenant-1',pacienteId:'paciente-1',ativoParaPaciente:ativo,tituloCriptografado:Buffer.from('cripto:Plano sintético'),versaoPublicadaAtualId:'versao-1'}],
+        planoAlimentarVersaos: [{id:'versao-1',tenantId:'tenant-1',planoId:'plano-1',numero:1,publicadaEm:new Date('2026-10-15T12:00:00Z')}],
+        planoAlimentarRefeicaos: [{id:'refeicao-1',tenantId:'tenant-1',versaoId:'versao-1',semVinculoOperacional,ativaParaPaciente:refeicaoAtiva,ordem:0,nomeCriptografado:Buffer.from('cripto:Refeição sintética')}],
+        planoAlimentarItems: [{id:'item-1',tenantId:'tenant-1',refeicaoId:'refeicao-1',ordem:0,descricaoCriptografada:Buffer.from('cripto:Item sintético'),quantidade:'1',unidade:'porção',porcaoGramas:'100'}]
+      });
+    }
+    it('lista publicações ativas com paginação e permite detalhe autorizado sem fallback', async () => {
+      const {servico}=cenario(true);
+      expect(await servico.listarPlanosAlimentares('tenant-1','usuario-1',{pagina:1,limite:1})).toMatchObject({total:1,pagina:1,limite:1,itens:[{id:'plano-1',numeroVersao:1}]});
+      expect(await servico.listarPlanosAlimentares('tenant-1','usuario-1',{pagina:2,limite:1})).toMatchObject({total:1,itens:[]});
+      expect(await servico.obterPlanoAlimentar('tenant-1','usuario-1','plano-1')).toMatchObject({id:'plano-1'});
+      await expect(servico.obterPlanoAlimentar('tenant-1','usuario-1','outro-plano')).rejects.toBeInstanceOf(NotFoundException);
+      const desligado=cenario(false).servico;
+      await expect(desligado.obterPlanoAlimentar('tenant-1','usuario-1','plano-1')).rejects.toBeInstanceOf(NotFoundException);
+      expect(await desligado.listarPlanosAlimentares('tenant-1','usuario-1',{pagina:1,limite:1})).toMatchObject({total:0,itens:[]});
+      await expect(servico.listarPlanosAlimentares('tenant-1','usuario-1',{pagina:0,limite:1000})).rejects.toBeInstanceOf(BadRequestException);
+    });
+    it('não entrega plano OFF nem aceita escolha por ID conhecido', async () => {
+      const {servico}=cenario(false);
+      expect((await servico.obterResumoPortal('tenant-1','usuario-1')).planoAlimentar).toBeUndefined();
+      await expect(servico.registrarEscolhaSubstituicao('tenant-1','usuario-1','item-1',{})).rejects.toBeInstanceOf(NotFoundException);
+    });
+    it('vínculo operacional ausente oculta a refeição e não inventa total zero', async () => {
+      const {servico}=cenario(true,true,true);
+      expect(await servico.obterPlanoAlimentar('tenant-1','usuario-1','plano-1')).toMatchObject({refeicoes:[],resumoNutricionalVigente:{estado:'indisponivel'}});
+    });
+    it('retorna total vigente zero quando todas as refeições estão OFF', async () => {
+      const {servico}=cenario(true,false);
+      expect(await servico.obterPlanoAlimentar('tenant-1','usuario-1','plano-1')).toMatchObject({resumoNutricionalVigente:{estado:'completo',energiaKcal:0,proteinasG:0,carboidratosG:0,gordurasG:0}});
+    });
+    it('omite refeição OFF e recusa sua escolha, preservando o plano ativo', async () => {
+      const {servico}=cenario(true,false);
+      expect((await servico.obterResumoPortal('tenant-1','usuario-1')).planoAlimentar).toMatchObject({id:'plano-1',refeicoes:[]});
+      await expect(servico.registrarEscolhaSubstituicao('tenant-1','usuario-1','item-1',{})).rejects.toBeInstanceOf(NotFoundException);
+    });
   });
 
   it('deve expor a publicacao mais recente mesmo quando existe um plano em rascunho mais novo', async () => {
@@ -325,6 +383,7 @@ describe('ServicoPortalPaciente', () => {
     const portal = await servico.obterResumoPortal('tenant-1', 'usuario-paciente-1');
 
     expect(portal.planoAlimentar).toEqual({
+      resumoNutricionalVigente: {estado:'completo',energiaKcal:45,proteinasG:0.8,carboidratosG:11.6,gordurasG:0.1},
       apresentacaoEstado: 'legado',
       id: 'plano-1',
       titulo: 'Plano alimentar de agosto',

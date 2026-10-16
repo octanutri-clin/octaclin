@@ -1,9 +1,13 @@
 # PA06 — checklist: autosave, ativação e cálculo combinado
 
 Planejamento: [plan-pos-320-pa06.md](plan-pos-320-pa06.md).
-Base `eae74b1e`, 2026-10-15. Núcleo T01–T06 e UI T07/T08 implementados nesta
-worktree. T09/T10 (integração final, revisão independente, CI/PR) e as entregas
-T08a–T08d continuam pendentes.
+Primeira entrega mergeada pelo proprietário na PR420; migrations anteriores
+aplicadas segundo seu relato, sem conferência externa neste ciclo. Segunda
+entrega: T08a/backend validado localmente na branch feat/pos320-pa06-ativacao,
+base e2cb9cdd. T08b/UI aguarda troca manual para Luna alto. T08c/T08d permanecem
+fora desta entrega; T09/T10 devem ser repetidos para a segunda PR.
+Evidências: docs/governance/EVIDENCIAS_PA06_ATIVACAO_2026-10-16.md.
+O histórico/checkpoints abaixo conserva o estado observado em cada rodada.
 
 ## T00 — base, evidência e produto (1–3 documentos)
 
@@ -185,13 +189,13 @@ revisão/publicação e chamadas atrasadas recebem regressão final em T09.
 
 Dependência: D04/D06 confirmadas, D09 e T04. Sol médio.
 
-- [ ] OFF/ON no plano e refeição sem arquivar, excluir ou reescrever publicação;
+- [x] OFF/ON no plano e refeição sem arquivar, excluir ou reescrever publicação;
   impedir fallback automático para outro plano e entrega de edição incompleta.
-- [ ] Identidade lógica estável das refeições através de save/clone/ordenação;
+- [x] Identidade lógica estável das refeições através de save/clone/ordenação;
   cópia para outro plano não compartilha estado operacional da origem.
-- [ ] Estado aditivo com revisão operacional/histórico e transação/CAS,
+- [x] Estado aditivo com revisão operacional/histórico e transação/CAS,
   autorização e leitura/ações do portal protegidas, incluindo IDs conhecidos.
-- [ ] Provar concorrência OFF/publicação/escolha em PostgreSQL e RLS; estado
+- [x] Provar concorrência OFF/publicação/escolha em PostgreSQL e RLS; estado
   de visibilidade não é o switch de autosave nem aprovação clínica automática.
 
 Aceite: desligar preserva dados, exclui dos macros vigentes e impede novas
@@ -200,6 +204,11 @@ extra. Histórico/PDF já obtido não são apagados; primeira publicação mant�
 Plano OFF prevalece sobre as refeições, sem alterar seus estados individuais;
 autosave antigo não religa plano/refeição; macros/micros filtrados pelo backend.
 Verificação: negativos de portal, carteira, transferência, replay e concorrência.
+
+Checkpoint backend local: Jest332 suítes/2938 testes PASS (6 suítes/118 testes
+SKIPPED), typecheck/build PASS; PostgreSQL19 PASS/29 fora do filtro + backfill
+owner NOBYPASSRLS. Revisão cruzada automatizada reinspecionou os achados corrigidos.
+Isso não encerra T08b/T09/T10 nem comprova CI ou implantação desta entrega.
 
 ## T08b — controle on/off e projeções (2–4 arquivos)
 

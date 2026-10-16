@@ -70,6 +70,9 @@ export class PlanoAlimentarVersaoOrm {
   @Column({ name: 'edicao_materializada_revisao', type: 'integer', nullable: true })
   edicaoMaterializadaRevisao?: number | null;
 
+  @Column({ name: 'identidades_refeicoes_criptografadas', type: 'bytea', nullable: true })
+  identidadesRefeicoesCriptografadas?: Buffer | null;
+
   @Column({ name: 'hash_conteudo', type: 'char', length: 64, nullable: true })
   hashConteudo?: string | null;
 

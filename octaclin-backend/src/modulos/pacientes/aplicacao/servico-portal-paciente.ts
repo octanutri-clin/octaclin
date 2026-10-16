@@ -1,3 +1,6 @@
+import { resumirNutrientesItensEfetivos, ResumoNutricionalPlano } from '../../planos-alimentares/dominio/resumo-nutricional-plano';
+import { ListarPlanosAtivosPortalDto } from './dtos-planos-portal';
+import { lerEstadosRefeicoes } from '../../planos-alimentares/infraestrutura/estados-refeicoes';
 import { lerApresentacaoVersao, projetarRefeicoesPaciente, PreferenciasExibicaoRefeicoes } from '../../planos-alimentares/dominio/apresentacao-plano';
 import { bloquearContextoPiloto317, invalidarContextoPiloto317 } from '../../gamificacao/aplicacao/invalidar-contexto-piloto';
 import { createHash, createHmac, randomUUID } from 'crypto';
@@ -117,6 +120,7 @@ export interface EscolhaSubstituicaoPortalPaciente {
 }
 
 export interface PlanoAlimentarPortalPaciente {
+  resumoNutricionalVigente: ResumoNutricionalPlano;
   apresentacaoEstado?: 'legado' | 'configurada' | 'indisponivel';
   preferenciasApresentacao?: PreferenciasExibicaoRefeicoes;
   id: string;
@@ -426,7 +430,8 @@ export class ServicoPortalPaciente {
   async obterResumoPortal(tenantId: string, usuarioId: string): Promise<ResumoPortalPaciente> {
     return this.executorTenant.executar(tenantId, async (gerenciador) => {
       const paciente = await gerenciador.getRepository(PacienteOrm).findOne({
-        where: { tenantId, usuarioId, arquivadoEm: IsNull() }
+        where: { tenantId, usuarioId, arquivadoEm: IsNull() },
+        lock: { mode: 'pessimistic_read' }
       });
       if (!paciente) throw new ForbiddenException('Usuario nao possui paciente vinculado.');
 
@@ -681,7 +686,8 @@ export class ServicoPortalPaciente {
   ): Promise<EscolhaSubstituicaoPortalPaciente> {
     return this.executorTenant.executar(tenantId, async (gerenciador) => {
       const paciente = await gerenciador.getRepository(PacienteOrm).findOne({
-        where: { tenantId, usuarioId, arquivadoEm: IsNull() }
+        where: { tenantId, usuarioId, arquivadoEm: IsNull() },
+        lock: { mode: 'pessimistic_read' }
       });
       if (!paciente) throw new ForbiddenException('Usuario nao possui paciente vinculado.');
 
@@ -703,9 +709,15 @@ export class ServicoPortalPaciente {
       const plano = await gerenciador.getRepository(PlanoAlimentarOrm).findOne({
         where: { tenantId, id: versao.planoId, pacienteId: paciente.id, arquivadoEm: IsNull() }
       });
-      if (!plano) throw new NotFoundException('Item de plano alimentar nao encontrado.');
+      if (!plano || plano.ativoParaPaciente !== true) throw new NotFoundException('Item de plano alimentar nao encontrado.');
       if (plano.versaoPublicadaAtualId !== versao.id) {
         throw new BadRequestException('A troca so pode ser registrada na versao publicada atual do plano.');
+      }
+
+      if (!versao.publicadaEm || versao.descartadaEm) throw new NotFoundException('Item de plano alimentar nao encontrado.');
+      const estados = await lerEstadosRefeicoes(gerenciador,tenantId,plano.id,versao.id);
+      if (!estados.some(e => e.refeicao_id === refeicao.id && e.ativa === true)) {
+        throw new NotFoundException('Item de plano alimentar nao encontrado.');
       }
 
       if (dados.substituicaoId) {
@@ -740,13 +752,51 @@ export class ServicoPortalPaciente {
     });
   }
 
+  async listarPlanosAlimentares(tenantId: string, usuarioId: string, consulta: ListarPlanosAtivosPortalDto = {pagina:1,limite:10}) {
+    const {pagina,limite} = consulta;
+    if (!Number.isInteger(pagina) || pagina < 1 || pagina > 1000000 || !Number.isInteger(limite) || limite < 1 || limite > 20) {
+      throw new BadRequestException('Paginação de planos inválida.');
+    }
+    return this.executorTenant.executar(tenantId, async gerenciador => {
+      const paciente = await gerenciador.getRepository(PacienteOrm).findOne({
+        where: {tenantId,usuarioId,arquivadoEm:IsNull()}, lock: {mode:'pessimistic_read'}
+      });
+      if (!paciente) throw new ForbiddenException('Usuario nao possui paciente vinculado.');
+      // O lock do paciente serializa todas as mudanças de entrega e transferência.
+      // Lista mínima; conteúdo clínico somente no detalhe autorizado, não em cursor.
+      const escopo = `from planos_alimentares p join plano_alimentar_versoes v
+        on v.tenant_id=p.tenant_id and v.plano_id=p.id and v.id=p.versao_publicada_atual_id
+        where p.tenant_id=$1 and p.paciente_id=$2 and p.ativo_para_paciente=true
+          and p.arquivado_em is null and v.publicada_em is not null and v.descartada_em is null`;
+      const totais: Array<{total:string}> = await gerenciador.query(`select count(*)::text as total ${escopo}`, [tenantId,paciente.id]);
+      const linhas: Array<{id:string;titulo_criptografado:Buffer;numero:number;publicada_em:Date}> = await gerenciador.query(
+        `select p.id,p.titulo_criptografado,v.numero,v.publicada_em ${escopo}
+         order by v.publicada_em desc,p.id desc limit $3 offset $4`,[tenantId,paciente.id,limite,(pagina-1)*limite]);
+      return {itens:linhas.map(l=>({id:l.id,titulo:this.criptografia.descriptografar(l.titulo_criptografado),numeroVersao:l.numero,publicadoEm:l.publicada_em})),
+        total:Number(totais[0]?.total ?? 0),pagina,limite};
+    });
+  }
+
+  async obterPlanoAlimentar(tenantId: string, usuarioId: string, planoId: string): Promise<PlanoAlimentarPortalPaciente> {
+    return this.executorTenant.executar(tenantId, async gerenciador => {
+      const paciente = await gerenciador.getRepository(PacienteOrm).findOne({
+        where: {tenantId,usuarioId,arquivadoEm:IsNull()}, lock: {mode:'pessimistic_read'}
+      });
+      if (!paciente) throw new ForbiddenException('Usuario nao possui paciente vinculado.');
+      const plano = await this.obterPlanoAlimentarPublicado(gerenciador,tenantId,paciente.id,planoId);
+      if (!plano) throw new NotFoundException('Plano alimentar não encontrado.');
+      return plano;
+    });
+  }
+
   private async obterPlanoAlimentarPublicado(
     gerenciador: EntityManager,
     tenantId: string,
-    pacienteId: string
+    pacienteId: string,
+    planoId?: string
   ): Promise<PlanoAlimentarPortalPaciente | undefined> {
     const planos = await gerenciador.getRepository(PlanoAlimentarOrm).find({
-      where: { tenantId, pacienteId, arquivadoEm: IsNull() }
+      where: { tenantId, pacienteId, arquivadoEm: IsNull(), ativoParaPaciente: true, ...(planoId ? {id:planoId} : {}) }
     });
     const planosComPublicacao = planos.filter(
       (plano): plano is PlanoAlimentarOrm & { versaoPublicadaAtualId: string } =>
@@ -771,10 +821,14 @@ export class ServicoPortalPaciente {
     const plano = versao ? planoPorVersao.get(versao.id) : undefined;
     if (!plano || !versao?.publicadaEm) return undefined;
 
-    const refeicoes = await gerenciador.getRepository(PlanoAlimentarRefeicaoOrm).find({
-      where: { tenantId, versaoId: versao.id },
-      order: { ordem: 'ASC' }
+    const estados = await lerEstadosRefeicoes(gerenciador,tenantId,plano.id,versao.id);
+    const idsAtivos = estados.filter(e => e.ativa === true).map(e => e.refeicao_id);
+    const todasRefeicoes = await gerenciador.getRepository(PlanoAlimentarRefeicaoOrm).find({
+      where: { tenantId, versaoId: versao.id }, order: { ordem: 'ASC' }
     });
+    const estadoIndisponivel = todasRefeicoes.some(r => !estados.some(e => e.refeicao_id === r.id));
+    // Selecionar os filhos só depois do filtro; nomes/notas OFF não são decifrados.
+    const refeicoes = todasRefeicoes.filter(r => idsAtivos.includes(r.id));
     const refeicaoIds = refeicoes.map((refeicao) => refeicao.id);
     const itens = refeicaoIds.length
       ? await gerenciador.getRepository(PlanoAlimentarItemOrm).find({
@@ -820,6 +874,8 @@ export class ServicoPortalPaciente {
 
     const apresentacao = lerApresentacaoVersao(versao.apresentacaoSnapshotCriptografado, versao.apresentacaoRevisao, valor => this.criptografia.descriptografar(valor));
     return {
+      resumoNutricionalVigente: estadoIndisponivel ? {estado:'indisponivel'} : resumirNutrientesItensEfetivos(itens.map(i =>
+        this.lerSnapshotCriptografado(i.composicaoSnapshotCriptografada).nutrientesPorcao)),
       apresentacaoEstado: apresentacao.apresentacaoEstado,
       ...(apresentacao.preferenciasApresentacao ? { preferenciasApresentacao: apresentacao.preferenciasApresentacao.paciente } : {}),
       id: plano.id,
