@@ -92,7 +92,7 @@ function copiarAlimento(
     unidade: alimento.unidade,
     porcaoGramas,
     nutrientesPor100g: validarNutrientes(alimento.nutrientesPor100g),
-    ...(alimento.micronutrientesPor100g ? { micronutrientesPor100g: { ...alimento.micronutrientesPor100g } } : {}),
+    ...(!alimento.alimentoComposicaoId && alimento.micronutrientesPor100g ? { micronutrientesPor100g: { ...alimento.micronutrientesPor100g } } : {}),
     fonteRotulo: alimento.fonteRotulo
   };
 }
@@ -130,7 +130,7 @@ export function copiarRefeicaoParaFormulario(
       unidade: item.unidade,
       porcaoGramas: item.porcaoGramas,
       nutrientesPor100g: nutrientes,
-      ...(item.composicaoSnapshot.micronutrientes ? { micronutrientesPor100g: Object.fromEntries(Object.entries(item.composicaoSnapshot.micronutrientes.nutrientes).flatMap(([codigo, valor]) => valor.estado === 'conhecido' && valor.por100g !== undefined ? [[codigo, valor.por100g]] : [])) as MicronutrientesPor100gApi } : {}),
+      ...(!item.alimentoComposicaoId && item.composicaoSnapshot.micronutrientes ? { micronutrientesPor100g: Object.fromEntries(Object.entries(item.composicaoSnapshot.micronutrientes.nutrientes).flatMap(([codigo, valor]) => valor.estado === 'conhecido' && valor.por100g !== undefined ? [[codigo, valor.por100g]] : [])) as MicronutrientesPor100gApi } : {}),
       fonteRotulo: item.composicaoSnapshot.fonte
         ? `${item.composicaoSnapshot.fonte.nome} - ${item.composicaoSnapshot.fonte.versao}`
         : undefined
@@ -150,7 +150,7 @@ export function copiarRefeicaoParaFormulario(
           unidade: substituicao.unidade,
           porcaoGramas: substituicao.porcaoGramas,
           nutrientesPor100g: validarNutrientes(substituicao.composicaoSnapshot?.nutrientesPor100g),
-          ...(substituicao.composicaoSnapshot?.micronutrientes ? { micronutrientesPor100g: Object.fromEntries(Object.entries(substituicao.composicaoSnapshot.micronutrientes.nutrientes).flatMap(([codigo, valor]) => valor.estado === 'conhecido' && valor.por100g !== undefined ? [[codigo, valor.por100g]] : [])) as MicronutrientesPor100gApi } : {}),
+          ...(!substituicao.alimentoComposicaoId && substituicao.composicaoSnapshot?.micronutrientes ? { micronutrientesPor100g: Object.fromEntries(Object.entries(substituicao.composicaoSnapshot.micronutrientes.nutrientes).flatMap(([codigo, valor]) => valor.estado === 'conhecido' && valor.por100g !== undefined ? [[codigo, valor.por100g]] : [])) as MicronutrientesPor100gApi } : {}),
           fonteRotulo: substituicao.composicaoSnapshot.fonte
             ? `${substituicao.composicaoSnapshot.fonte.nome} - ${substituicao.composicaoSnapshot.fonte.versao}`
             : undefined

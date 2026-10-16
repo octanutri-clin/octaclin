@@ -272,7 +272,6 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
 
 function ProntuarioPacienteConteudo({ pacienteId }: { pacienteId: string }) {
   const [selecoesCalculo, setSelecoesCalculo] = useState<SelecaoCalculoLocal[]>([]);
-  const mudarSelecoesCalculo = useCallback((selecoes: SelecaoCalculoLocal[]) => setSelecoesCalculo(selecoes), []);
   const [dados, setDados] = useState<ProntuarioPacienteApi | null>(null);
   const [paginaHistorico, setPaginaHistorico] = useState<PaginaLinhaDoTempoProntuarioApi | null>(null);
   const [materiais, setMateriais] = useState<MaterialEducativoApi[]>([]);
@@ -1658,7 +1657,7 @@ function ProntuarioPacienteConteudo({ pacienteId }: { pacienteId: string }) {
           pacienteId={pacienteId}
           podeGerenciar={podeGerenciarPlano}
           selecoesCalculo={selecoesCalculo}
-          aoMudarSelecoesCalculo={mudarSelecoesCalculo}
+          aoMudarSelecoesCalculo={setSelecoesCalculo}
           aoAlterarRascunho={setPlanoAlimentarNaoSalvo}
           aoRegistrarSalvamentoRascunho={registrarSalvamentoRascunho}
         />

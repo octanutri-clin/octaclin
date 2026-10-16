@@ -114,3 +114,85 @@ test('PA06 conflito limpa o total e atualização mantém somente refeições es
   await expect(page.getByText('100 kcal')).toBeVisible();
   expect(requests).toBe(2);
 });
+
+function selecaoA(ativacaoRevisao = 1) {
+  return { planoId: planoIds[0], ativoParaPaciente: true, ativacaoRevisao, versao: { id: 'versao-a', numero: 1, publicadaEm: '2026-10-15T12:00:00.000Z' }, refeicoes: [{ identidadeId: idsRefeicoes[0], nome: 'Refeição A', ordem: 0, ativa: true }] };
+}
+
+async function adicionarPlanoA(page) {
+  await page.goto(`/pacientes/${pacienteId}?aba=plano_alimentar`, { waitUntil: 'domcontentloaded' });
+  await page.getByLabel('Adicionar plano desta página').selectOption(planoIds[0]);
+  await page.getByRole('button', { name: 'Adicionar', exact: true }).click();
+  await expect(page.getByText('100 kcal', { exact: true })).toBeVisible();
+}
+
+for (const motivo of ['recalculo409', 'recalculo403', 'focoRemoto', 'focoRevogado']) {
+  test(`PA06 retira total anterior ao detectar ${motivo} na mesma seleção`, async ({ page }) => {
+    await prepararConsole(page);
+    let alterado = false;
+    await page.route(url => url.pathname.endsWith('/selecao-calculo'), route => alterado && motivo === 'focoRevogado'
+      ? route.fulfill({ status: 403, json: { message: 'Acesso indisponível' } })
+      : route.fulfill({ json: selecaoA(alterado ? 2 : 1) }));
+    await page.route(url => url.pathname.endsWith('/calculo-combinado'), route => alterado
+      ? route.fulfill({ status: motivo === 'recalculo403' ? 403 : 409, json: { message: 'Atualize o contexto' } })
+      : route.fulfill({ json: resultado(1) }));
+    await adicionarPlanoA(page);
+    alterado = true;
+    if (motivo.startsWith('foco')) await page.evaluate(() => window.dispatchEvent(new Event('focus')));
+    else await page.getByRole('button', { name: 'Recalcular agora' }).click();
+    const painel = page.locator('section[aria-labelledby="calculo-combinado-titulo"]');
+    await expect(painel.getByRole('alert')).toBeVisible();
+    await expect(painel.getByText('100 kcal', { exact: true })).toHaveCount(0);
+  });
+}
+
+test('PA06 ACK atrasado de visibilidade não restaura plano removido do cálculo', async ({ page }) => {
+  await prepararConsole(page);
+  await page.route(url => url.pathname.endsWith('/selecao-calculo'), route => route.fulfill({ json: selecaoA() }));
+  await page.route(url => url.pathname.endsWith('/calculo-combinado'), route => route.fulfill({ json: resultado(1) }));
+  let liberar;
+  const pendente = new Promise(resolve => { liberar = resolve; });
+  await page.route(url => url.pathname.endsWith(`/${planoIds[0]}/ativacao`), async route => {
+    await pendente;
+    await route.fulfill({ json: { planoId: planoIds[0], ativoParaPaciente: false, ativacaoRevisao: 2 } });
+  });
+  await adicionarPlanoA(page);
+  await page.getByRole('button', { name: 'Plano A sintético', exact: true }).click();
+  const solicitacao = page.waitForRequest(url => url.url().endsWith(`/${planoIds[0]}/ativacao`));
+  await page.getByRole('switch', { name: 'Plano alimentar para o paciente: visível para o paciente' }).click();
+  await solicitacao;
+  await page.getByRole('button', { name: 'Remover do cálculo' }).click();
+  liberar();
+  await expect(page.getByText('Plano ocultado do paciente.', { exact: true })).toBeVisible();
+  await expect(page.getByText('Nenhum plano selecionado.', { exact: false })).toBeVisible();
+  await expect(page.getByRole('checkbox', { name: 'Refeição A' })).toHaveCount(0);
+});
+
+test('PA06 atualização atrasada não restaura plano removido do cálculo', async ({ page }) => {
+  await prepararConsole(page);
+  let leituras = 0;
+  let liberar;
+  const pendente = new Promise(resolve => { liberar = resolve; });
+  await page.route(url => url.pathname.endsWith('/selecao-calculo'), async route => {
+    leituras += 1;
+    if (leituras > 1) await pendente;
+    await route.fulfill({ json: selecaoA(leituras > 1 ? 2 : 1) });
+  });
+  let conflito = false;
+  await page.route(url => url.pathname.endsWith('/calculo-combinado'), route => conflito
+    ? route.fulfill({ status: 409, json: { message: 'Publicação alterada' } })
+    : route.fulfill({ json: resultado(1) }));
+  await adicionarPlanoA(page);
+  conflito = true;
+  await page.getByLabel('Adicionar plano desta página').selectOption(planoIds[1]);
+  await page.getByRole('button', { name: 'Recalcular agora' }).click();
+  await expect(page.getByRole('button', { name: 'Atualizar seleção' })).toBeVisible();
+  const solicitacao = page.waitForRequest(url => url.url().endsWith('/selecao-calculo'));
+  await page.getByRole('button', { name: 'Atualizar seleção' }).click();
+  await solicitacao;
+  await page.getByRole('button', { name: 'Remover do cálculo' }).click();
+  liberar();
+  await expect(page.getByRole('button', { name: 'Adicionar', exact: true })).toBeEnabled();
+  await expect(page.getByText('Nenhum plano selecionado.', { exact: false })).toBeVisible();
+  await expect(page.getByRole('checkbox', { name: 'Refeição A' })).toHaveCount(0);
+});

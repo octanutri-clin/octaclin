@@ -46,8 +46,8 @@ const MAXIMO = BigInt(Number.MAX_SAFE_INTEGER);
 function dividirHalfUp(numerador: bigint, denominador: bigint): bigint {
   return (numerador * 2n + denominador) / (denominador * 2n);
 }
-/** Decimal explícito evita o erro binário da multiplicação de floats por 1e8. */
-export function decimalParaEscala8(valor: unknown): bigint {
+/** Razão decimal exata; nenhuma etapa de normalização arredonda a origem. */
+function decimalComoRazao(valor: unknown): { numerador: bigint; denominador: bigint } {
   if ((typeof valor !== 'number' && typeof valor !== 'string') ||
       (typeof valor === 'number' && (!Number.isFinite(valor) || valor < 0))) {
     throw new Error('Valor nutricional inválido.');
@@ -56,11 +56,16 @@ export function decimalParaEscala8(valor: unknown): bigint {
   const partes = texto.length <= 64 ? /^(\d+)(?:\.(\d+))?(?:e([+-]?\d{1,3}))?$/i.exec(texto) : null;
   if (!partes) throw new Error('Valor nutricional inválido.');
   const fracao = partes[2] ?? '';
-  const deslocamento = 8 + Number(partes[3] ?? 0) - fracao.length;
+  const deslocamento = Number(partes[3] ?? 0) - fracao.length;
   const inteiro = BigInt(partes[1] + fracao);
-  const escalado = deslocamento >= 0
-    ? inteiro * (10n ** BigInt(deslocamento))
-    : dividirHalfUp(inteiro, 10n ** BigInt(-deslocamento));
+  return deslocamento >= 0
+    ? { numerador: inteiro * (10n ** BigInt(deslocamento)), denominador: 1n }
+    : { numerador: inteiro, denominador: 10n ** BigInt(-deslocamento) };
+}
+/** Decimal explícito evita o erro binário da multiplicação de floats por 1e8. */
+export function decimalParaEscala8(valor: unknown): bigint {
+  const { numerador, denominador } = decimalComoRazao(valor);
+  const escalado = dividirHalfUp(numerador * ESCALA, denominador);
   if (escalado > MAXIMO) throw new LimitePrecisaoNutricionalError();
   return escalado;
 }
@@ -92,12 +97,18 @@ export function criarSnapshotMicronutrientes(
   const base = decimalParaEscala8(baseGramas);
   const porcao = decimalParaEscala8(porcaoGramas);
   if (!base || !porcao) throw new Error('Base e porção devem ser positivas.');
+  const baseExata = decimalComoRazao(baseGramas);
+  const porcaoExata = decimalComoRazao(porcaoGramas);
   const nutrientes = Object.fromEntries(CODIGOS_MICRONUTRIENTES.map(codigo => {
     const origem = valores[codigo];
     if (!origem || origem.estado !== 'conhecido') return [codigo, { estado: origem?.estado ?? 'ausente' }];
     try {
-      const por100g = dividirHalfUp(decimalParaEscala8(origem.valor) * 100n * ESCALA, base);
-      const naPorcao = dividirHalfUp(por100g * porcao, 100n * ESCALA);
+      decimalParaEscala8(origem.valor); // Mantém a proteção técnica da entrada.
+      const valor = decimalComoRazao(origem.valor);
+      const denominador = valor.denominador * baseExata.numerador;
+      const por100g = dividirHalfUp(valor.numerador * 100n * baseExata.denominador * ESCALA, denominador);
+      const naPorcao = dividirHalfUp(valor.numerador * porcaoExata.numerador * baseExata.denominador * ESCALA,
+        denominador * porcaoExata.denominador);
       return [codigo, { estado: 'conhecido', valorOrigem: origem.valor, por100g: numeroDaEscala8(por100g), porcao: numeroDaEscala8(naPorcao) }];
     } catch (erro) {
       if (erro instanceof LimitePrecisaoNutricionalError) throw erro;

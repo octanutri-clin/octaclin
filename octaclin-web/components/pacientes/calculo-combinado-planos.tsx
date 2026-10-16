@@ -1,13 +1,13 @@
 'use client';
 
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { type Dispatch, type SetStateAction, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { RefreshCcw } from 'lucide-react';
 import { Botao } from '@/components/ui/botao';
 import { SelecaoCalculoLocal, PlanoAlimentarResumoApi, ResultadoCalculoCombinadoApi } from '@/lib/plano-alimentar-api';
 import { ErroApiPlanoAlimentar } from '@/lib/plano-alimentar-api';
 import { calcularPlanosCombinados, obterSelecaoCalculoPlano } from '@/lib/calculo-combinado-planos-api';
 import { atualizarSelecaoCalculo, iniciarSelecaoCalculo, montarEntradaCalculoCombinado } from '@/lib/calculo-combinado-planos';
-import { CAMPOS_MICRONUTRIENTES_PLANO } from '@/lib/micronutrientes-plano';
+import { CAMPOS_MICRONUTRIENTES_PLANO, formatarNutrientePlano } from '@/lib/micronutrientes-plano';
 
 const ROTULOS: Record<string, { nome: string; unidade: string }> = {
   energiaKcal: { nome: 'Energia', unidade: 'kcal' }, proteinasG: { nome: 'Proteínas', unidade: 'g' },
@@ -16,12 +16,6 @@ const ROTULOS: Record<string, { nome: string; unidade: string }> = {
 };
 const LIMITE_PLANOS_SELECIONADOS = 25;
 for (const item of CAMPOS_MICRONUTRIENTES_PLANO) ROTULOS[item.codigo] = { nome: item.rotulo, unidade: item.unidade };
-
-function formatar(valor?: number) {
-  return typeof valor === 'number' && Number.isFinite(valor)
-    ? valor.toLocaleString('pt-BR', { maximumFractionDigits: 4 })
-    : '—';
-}
 
 function formatarDataPublicacao(valor: string) {
   const data = new Date(valor);
@@ -32,7 +26,7 @@ interface Props {
   pacienteId: string;
   planos: PlanoAlimentarResumoApi[];
   selecoes: SelecaoCalculoLocal[];
-  aoMudarSelecoes: (selecoes: SelecaoCalculoLocal[]) => void;
+  aoMudarSelecoes: Dispatch<SetStateAction<SelecaoCalculoLocal[]>>;
   revisaoOperacional: number;
   versaoPublicadaSelecionada?: string;
 }
@@ -46,6 +40,7 @@ export function CalculoCombinadoPlanos({ pacienteId, planos, selecoes, aoMudarSe
   const [atualizando, setAtualizando] = useState(false);
   const controlador = useRef<AbortController | null>(null);
   const controladorRevalidacao = useRef<AbortController | null>(null);
+  const controladorSelecao = useRef<AbortController | null>(null);
   const geracao = useRef(0);
   const selecoesRef = useRef(selecoes);
   const chaveAtual = JSON.stringify({ pacienteId, selecoes, revisaoOperacional, versaoPublicadaSelecionada });
@@ -71,6 +66,7 @@ export function CalculoCombinadoPlanos({ pacienteId, planos, selecoes, aoMudarSe
     const chaveCalculo = chaveAtualRef.current;
     invalidar();
     const idGeracao = geracao.current;
+    setResultadoEstado(null);
     setErroEstado(null);
     setConflitoChave(null);
     if (selecoesAtuais.length === 0) {
@@ -106,12 +102,16 @@ export function CalculoCombinadoPlanos({ pacienteId, planos, selecoes, aoMudarSe
     geracao.current += 1;
     controlador.current?.abort();
     controladorRevalidacao.current?.abort();
+    controladorSelecao.current?.abort();
   }, []);
 
   const revalidarNoFoco = useCallback(async () => {
     const atuais = selecoesRef.current;
     if (!atuais.length) return;
     const chaveRevalidada = chaveAtualRef.current;
+    invalidar();
+    setResultadoEstado(null);
+    setCalculandoChave(chaveRevalidada);
     controladorRevalidacao.current?.abort();
     const signalController = new AbortController();
     controladorRevalidacao.current = signalController;
@@ -124,10 +124,11 @@ export function CalculoCombinadoPlanos({ pacienteId, planos, selecoes, aoMudarSe
     if (mudou) {
       invalidar();
       const chave = chaveAtualRef.current;
+      setCalculandoChave(null);
       setConflitoChave(chave);
       setErroEstado({ chave, mensagem: 'Há alterações remotas neste cálculo. Atualize a seleção para revisar as versões e refeições disponíveis.' });
-    }
-  }, [invalidar, pacienteId]);
+    } else await calcular();
+  }, [calcular, invalidar, pacienteId]);
 
   useEffect(() => {
     window.addEventListener('focus', revalidarNoFoco);
@@ -148,16 +149,19 @@ export function CalculoCombinadoPlanos({ pacienteId, planos, selecoes, aoMudarSe
     setErroEstado(null);
     setAtualizando(true);
     const controller = new AbortController();
+    controladorSelecao.current?.abort();
+    controladorSelecao.current = controller;
     try {
       const remoto = await obterSelecaoCalculoPlano(pacienteId, plano.id, controller.signal);
+      if (controller.signal.aborted) return;
       const nova = iniciarSelecaoCalculo(remoto, plano.titulo);
       if (!nova) setErroEstado({ chave: chaveAtualRef.current, mensagem: 'Este plano não está ativo ou ainda não tem uma versão publicada para cálculo.' });
       else {
         invalidar();
-        aoMudarSelecoes([...selecoesRef.current, nova]);
+        aoMudarSelecoes(atuais => atuais.length >= LIMITE_PLANOS_SELECIONADOS || atuais.some(item => item.planoId === nova.planoId) ? atuais : [...atuais, nova]);
       }
     } catch {
-      setErroEstado({ chave: chaveAtualRef.current, mensagem: 'Não foi possível carregar a publicação atual deste plano.' });
+      if (!controller.signal.aborted) setErroEstado({ chave: chaveAtualRef.current, mensagem: 'Não foi possível carregar a publicação atual deste plano.' });
     } finally {
       setAtualizando(false);
       setPlanoParaAdicionar('');
@@ -168,12 +172,16 @@ export function CalculoCombinadoPlanos({ pacienteId, planos, selecoes, aoMudarSe
     setAtualizando(true);
     setErroEstado(null);
     const antigas = selecoesRef.current;
+    const chaveAtualizada = chaveAtualRef.current;
     const controller = new AbortController();
+    controladorSelecao.current?.abort();
+    controladorSelecao.current = controller;
     try {
       const respostas = await Promise.all(antigas.map(async selecao => {
         try { return await obterSelecaoCalculoPlano(pacienteId, selecao.planoId, controller.signal); }
         catch { return null; }
       }));
+      if (controller.signal.aborted || chaveAtualizada !== chaveAtualRef.current) return;
       if (respostas.some(resposta => !resposta)) throw new Error('atualizacao indisponivel');
       const novas = antigas.flatMap((antiga, indice) => {
         const resposta = respostas[indice];
@@ -184,13 +192,13 @@ export function CalculoCombinadoPlanos({ pacienteId, planos, selecoes, aoMudarSe
       aoMudarSelecoes(novas);
       setConflitoChave(null);
     } catch {
-      setErroEstado({ chave: chaveAtualRef.current, mensagem: 'Não foi possível atualizar todos os planos. A seleção anterior foi mantida.' });
+      if (!controller.signal.aborted && chaveAtualizada === chaveAtualRef.current) setErroEstado({ chave: chaveAtualRef.current, mensagem: 'Não foi possível atualizar todos os planos. A seleção anterior foi mantida.' });
     } finally { setAtualizando(false); }
   }
 
   function marcarRefeicao(planoId: string, identidadeId: string, selecionada: boolean) {
     invalidar();
-    aoMudarSelecoes(selecoes.map(plano => plano.planoId !== planoId ? plano : {
+    aoMudarSelecoes(atuais => atuais.map(plano => plano.planoId !== planoId ? plano : {
       ...plano,
       refeicoes: plano.refeicoes.map(refeicao => refeicao.identidadeId === identidadeId ? { ...refeicao, selecionada } : refeicao)
     }));
@@ -198,7 +206,7 @@ export function CalculoCombinadoPlanos({ pacienteId, planos, selecoes, aoMudarSe
 
   function removerPlano(planoId: string) {
     invalidar();
-    aoMudarSelecoes(selecoes.filter(plano => plano.planoId !== planoId));
+    aoMudarSelecoes(atuais => atuais.filter(plano => plano.planoId !== planoId));
   }
 
   return (
@@ -248,7 +256,7 @@ export function CalculoCombinadoPlanos({ pacienteId, planos, selecoes, aoMudarSe
             const valor = nutriente.estado === 'completo' ? nutriente.total : nutriente.estado === 'parcial' ? nutriente.quantidadeConhecida : undefined;
             const estado = nutriente.estado === 'completo' ? 'Completo' : nutriente.estado === 'parcial' ? `Parcial · ${nutriente.itensComValor}/${nutriente.itensIncluidos} itens com valor` : 'Indisponível';
             const sufixo = nutriente.estado === 'parcial' ? `conhecido ${label.unidade}` : label.unidade;
-            return <div key={codigo} className="rounded-md border border-linha p-2"><p className="text-xs text-texto-suave">{label.nome} ({label.unidade})</p><p className="text-base font-semibold tabular-nums text-tinta">{formatar(valor)} {sufixo}</p><p className="text-xs text-texto-suave">{estado}</p></div>;
+            return <div key={codigo} className="rounded-md border border-linha p-2"><p className="text-xs text-texto-suave">{label.nome} ({label.unidade})</p><p className="text-base font-semibold tabular-nums text-tinta">{formatarNutrientePlano(codigo, valor)} {sufixo}</p><p className="text-xs text-texto-suave">{estado}</p></div>;
           })}
         </div>
         {resultado.exclusoes.length ? <p className="text-xs text-texto-suave">Há planos ou refeições desativados fora da soma; revise a seleção se necessário.</p> : null}

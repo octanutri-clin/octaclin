@@ -36,6 +36,16 @@ describe('micronutrientes factuais versionados', () => {
     expect(criarSnapshotMicronutrientes({ ferroMg: { estado: 'conhecido', valor: 2 } }, 10, 50).nutrientes.ferroMg.porcao).toBe(10);
   });
 
+  it.each([
+    [0.000000004, 100, 10000, 0.0000004],
+    [1.234567895, 100, 200, 2.46913579],
+    [1, 3, 3, 1]
+  ])('arredonda somente após aplicar base/porção (%s, %s, %s)', (valor, base, porcao, esperado) => {
+    const snapshot = criarSnapshotMicronutrientes({ ferroMg: { estado: 'conhecido', valor } }, base, porcao);
+    expect(snapshot.nutrientes.ferroMg.porcao).toBe(esperado);
+    expect(snapshot.nutrientes.ferroMg.valorOrigem).toBe(valor);
+  });
+
   it('mantém traço e erro de um nutriente sem apagar outro válido', () => {
     const snapshot = criarSnapshotMicronutrientes({ ferroMg: { estado: 'traco' }, calcioMg: { estado: 'conhecido', valor: NaN }, zincoMg: { estado: 'conhecido', valor: 1 } }, 100, 200);
     expect(snapshot.nutrientes.ferroMg).toEqual({ estado: 'traco' });

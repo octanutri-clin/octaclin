@@ -2,6 +2,17 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { atualizarSelecaoCalculo, iniciarSelecaoCalculo, montarEntradaCalculoCombinado } from '../lib/calculo-combinado-planos';
 import type { SelecaoCalculoPlanoApi } from '../lib/plano-alimentar-api';
+import { formatarNutrientePlano } from '../lib/micronutrientes-plano';
+
+test('PA06 apresentação por nutriente distingue zero de positivo abaixo da resolução', () => {
+  assert.equal(formatarNutrientePlano('energiaKcal', 12.5), '13');
+  assert.equal(formatarNutrientePlano('proteinasG', 1.25), '1,3');
+  assert.equal(formatarNutrientePlano('ferroMg', 0.00001), '<0,01');
+  assert.equal(formatarNutrientePlano('ferroMg', 0), '0');
+  assert.equal(formatarNutrientePlano('vitaminaCMg', 0.00001), '<0,001');
+  assert.equal(formatarNutrientePlano('selenioMcg', 0.00001), '<0,01');
+  assert.equal(formatarNutrientePlano('ferroMg', undefined), '—');
+});
 
 function api(overrides: Partial<SelecaoCalculoPlanoApi> = {}): SelecaoCalculoPlanoApi {
   return {

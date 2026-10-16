@@ -100,7 +100,7 @@ test('copia refeição com novos IDs locais e preserva conteúdo clínico editá
   assert.equal(copia.orientacoes, 'Orientação sintética');
   assert.equal(item.alimentoComposicaoId, 'alimento-catalogo-1');
   assert.equal(item.nutrientesPor100g.fibrasG, 2);
-  assert.deepEqual(item.micronutrientesPor100g, { ferroMg: 1 });
+  assert.equal(item.micronutrientesPor100g, undefined);
   assert.equal(alternativa.liberadaParaPaciente, true);
   assert.equal(alternativa.preferida, false);
   assert.equal(item.substituicoesVisiveisInicialmente, 1);
@@ -110,6 +110,16 @@ test('copia refeição com novos IDs locais e preserva conteúdo clínico editá
   assert.equal('id' in copia, false);
   assert.equal('id' in item, false);
   assert.equal('id' in alternativa, false);
+});
+
+test('cópia preserva micros manuais sem convertê-los em override de catálogo', () => {
+  const manual = refeicaoApi();
+  manual.itens[0].alimentoComposicaoId = undefined;
+  assert.deepEqual(copiarRefeicaoParaFormulario(manual, gerarChave).itens[0].micronutrientesPor100g, { ferroMg: 1 });
+  const catalogo = refeicaoFormulario();
+  catalogo.itens[0].alimentoComposicaoId = 'alimento-catalogo-1';
+  catalogo.itens[0].micronutrientesPor100g = { ferroMg: 1 };
+  assert.equal(duplicarRefeicaoNoRascunho([catalogo], 0, gerarChave)[1].itens[0].micronutrientesPor100g, undefined);
 });
 
 test('cópia é profunda e mudanças na origem, destino ou cópia não cruzam', () => {

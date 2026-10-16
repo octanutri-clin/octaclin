@@ -1,5 +1,16 @@
 import type { CodigoMicronutrienteApi } from './plano-alimentar-api';
 
+const VITAMINAS_MG = new Set(['tiaminaMg', 'riboflavinaMg', 'vitaminaB6Mg', 'niacinaMg', 'niacinaNeMg', 'vitaminaEAlfaTocoferolMg', 'vitaminaCMg']);
+
+/** Apresentação não participa da soma; positivos pequenos nunca parecem zero. */
+export function formatarNutrientePlano(codigo: string, valor?: number): string {
+  if (typeof valor !== 'number' || !Number.isFinite(valor)) return '—';
+  const casas = codigo === 'energiaKcal' ? 0 : codigo.endsWith('G') ? 1 : VITAMINAS_MG.has(codigo) ? 3 : 2;
+  const limiar = 10 ** -casas;
+  const formato = new Intl.NumberFormat('pt-BR', { maximumFractionDigits: casas });
+  return valor > 0 && valor < limiar ? `<${formato.format(limiar)}` : formato.format(valor);
+}
+
 export const CAMPOS_MICRONUTRIENTES_PLANO: ReadonlyArray<{ codigo: CodigoMicronutrienteApi; rotulo: string; unidade: 'mg' | 'mcg' }> = [
   { codigo: 'calcioMg', rotulo: 'Cálcio', unidade: 'mg' },
   { codigo: 'magnesioMg', rotulo: 'Magnésio', unidade: 'mg' },

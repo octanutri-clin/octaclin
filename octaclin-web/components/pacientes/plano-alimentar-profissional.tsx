@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
+import { type Dispatch, type SetStateAction, useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 import { flushSync } from 'react-dom';
 import { closestCenter, DndContext, KeyboardSensor, PointerSensor, type DragEndEvent, useSensor, useSensors } from '@dnd-kit/core';
 import { arrayMove, sortableKeyboardCoordinates, SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
@@ -224,7 +224,7 @@ function alimentoDaVersao(
     unidade: alimento.unidade,
     porcaoGramas: interpretarNumeroEdicao(alimento.porcaoGramas) ?? 0,
     nutrientesPor100g: { ...alimento.composicaoSnapshot.nutrientesPor100g },
-    micronutrientesPor100g: Object.fromEntries(Object.entries(alimento.composicaoSnapshot.micronutrientes?.nutrientes ?? {}).flatMap(([codigo, valor]) => valor.estado === 'conhecido' && valor.por100g !== undefined ? [[codigo, valor.por100g]] : [])),
+    micronutrientesPor100g: alimento.alimentoComposicaoId ? undefined : Object.fromEntries(Object.entries(alimento.composicaoSnapshot.micronutrientes?.nutrientes ?? {}).flatMap(([codigo, valor]) => valor.estado === 'conhecido' && valor.por100g !== undefined ? [[codigo, valor.por100g]] : [])),
     fonteRotulo: alimento.composicaoSnapshot.fonte
       ? `${alimento.composicaoSnapshot.fonte.nome} - ${alimento.composicaoSnapshot.fonte.versao}`
       : undefined
@@ -344,7 +344,7 @@ function alimentoDoModelo(entrada: SubstituicaoPlanoAlimentarEntrada): AlimentoF
     unidade: entrada.unidade,
     porcaoGramas: entrada.porcaoGramas,
     nutrientesPor100g: { ...(entrada.nutrientesPor100g ?? {}) },
-    micronutrientesPor100g: { ...(entrada.micronutrientesPor100g ?? {}) },
+    micronutrientesPor100g: entrada.alimentoComposicaoId ? undefined : { ...(entrada.micronutrientesPor100g ?? {}) },
     fonteRotulo: entrada.alimentoComposicaoId ? 'Catalogo nutricional' : undefined
   };
 }
@@ -429,7 +429,7 @@ function documentoDoFormulario(formulario: FormularioPlano): DocumentoEdicaoPlan
         unidade: item.unidade,
         porcaoGramas: item.porcaoGramas,
         nutrientesPor100g: item.nutrientesPor100g,
-        micronutrientesPor100g: item.micronutrientesPor100g,
+        micronutrientesPor100g: item.alimentoComposicaoId ? undefined : item.micronutrientesPor100g,
         fonteRotulo: item.fonteRotulo,
         substituicoes: item.substituicoes.map((alternativa) => ({
           chaveCliente: alternativa.chaveCliente,
@@ -439,7 +439,7 @@ function documentoDoFormulario(formulario: FormularioPlano): DocumentoEdicaoPlan
           unidade: alternativa.unidade,
           porcaoGramas: alternativa.porcaoGramas,
           nutrientesPor100g: alternativa.nutrientesPor100g,
-          micronutrientesPor100g: alternativa.micronutrientesPor100g,
+          micronutrientesPor100g: alternativa.alimentoComposicaoId ? undefined : alternativa.micronutrientesPor100g,
           fonteRotulo: alternativa.fonteRotulo,
           liberadaParaPaciente: alternativa.liberadaParaPaciente,
           preferida: alternativa.preferida
@@ -460,7 +460,7 @@ function formularioDoDocumento(documento: DocumentoEdicaoPlano, versao: VersaoPl
     unidade: item.unidade ?? '',
     porcaoGramas: valorNumericoEdicao(item.porcaoGramas),
     nutrientesPor100g: Object.fromEntries(Object.entries(item.nutrientesPor100g ?? {}).map(([campo, valor]) => [campo, valorNumericoEdicao(valor)])),
-    micronutrientesPor100g: Object.fromEntries(Object.entries(item.micronutrientesPor100g ?? {}).map(([campo, valor]) => [campo, valorNumericoEdicao(valor)])),
+    micronutrientesPor100g: item.alimentoComposicaoId ? undefined : Object.fromEntries(Object.entries(item.micronutrientesPor100g ?? {}).map(([campo, valor]) => [campo, valorNumericoEdicao(valor)])),
     fonteRotulo: item.fonteRotulo
   });
   return {
@@ -733,7 +733,7 @@ function EditorAlimento({ pacienteId, rotulo, valor, resumo, aoAlterar, aoRemove
       alimentoComposicaoId: alimento.id,
       descricao: alimento.preparacao ? `${alimento.nome}, ${alimento.preparacao}` : alimento.nome,
       nutrientesPor100g: { ...alimento.nutrientesPor100g },
-      micronutrientesPor100g: {},
+      micronutrientesPor100g: undefined,
       fonteRotulo: alimento.fonte ? `${alimento.fonte.nome} - ${alimento.fonte.versao}` : 'Catalogo TACO'
     });
     setBusca('');
@@ -1322,7 +1322,7 @@ interface PlanoAlimentarProfissionalProps {
   aoAlterarRascunho?: (alterado: boolean) => void;
   aoRegistrarSalvamentoRascunho?: (salvar: (() => Promise<boolean>) | null) => void;
   selecoesCalculo: SelecaoCalculoLocal[];
-  aoMudarSelecoesCalculo: (selecoes: SelecaoCalculoLocal[]) => void;
+  aoMudarSelecoesCalculo: Dispatch<SetStateAction<SelecaoCalculoLocal[]>>;
 }
 
 type ModoProjecaoPaciente = 'rascunho' | 'impressao';
@@ -1827,7 +1827,7 @@ export function PlanoAlimentarProfissional({ pacienteId, podeGerenciar, aoAltera
         && resultado.ativacaoRevisao >= (item.ativacaoRevisao ?? 0)
         ? { ...item, ativoParaPaciente: resultado.ativoParaPaciente, ativacaoRevisao: resultado.ativacaoRevisao }
         : item));
-      aoMudarSelecoesCalculo(selecoesCalculo.map(selecao => selecao.planoId !== planoAlvo.id ? selecao : {
+      aoMudarSelecoesCalculo(atuais => atuais.map(selecao => selecao.planoId !== planoAlvo.id || selecao.ativacaoRevisao > resultado.ativacaoRevisao ? selecao : {
         ...selecao,
         ativoParaPaciente: resultado.ativoParaPaciente,
         ativacaoRevisao: resultado.ativacaoRevisao,
