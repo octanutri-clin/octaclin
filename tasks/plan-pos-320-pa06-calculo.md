@@ -26,10 +26,10 @@ React/TypeScript, Jest, PostgreSQL descartável e Playwright. Sem nova dependên
 - PR #420 integrou autosave/1073; #421 integrou ativação/1074. Os arquivos das
   migrations 1072–1074 estão registrados no TypeORM. Nenhum banco externo foi
   consultado: aplicação efetiva da1074 e deploy continuam não verificados.
-- Pedido atual autoriza **planejamento**. Não iniciar implementação, testes de
-  runtime, cargas externas, migration, deploy ou ativação por este documento.
-  Após autorização de desenvolvimento, executar os passos em sequência na mesma
-  branch, com uma PR para esta terceira entrega; sem PR documental separada.
+- Planejamento preservado em `10ebf9aa`; em 2026-10-16 o proprietário autorizou
+  desenvolvimento com “Pode seguir com sol médio”. T08c em execução nesta mesma
+  branch. Cargas externas, migrations externas, merge/deploy e ativação continuam
+  fora desta autorização. Uma PR para a terceira entrega, sem PR documental separada.
 
 ## Decisões confirmadas nesta rodada
 
@@ -210,7 +210,7 @@ e revisão do diff; agrupar3–5 arquivos por fatia. Não marcar teste não roda
 | Tarefa | Arquivos/responsabilidade e resultado verificável | Dependência/modelo |
 | --- | --- | --- |
 | T08c.1a | Criar `dominio/micronutrientes.ts` e `.spec.ts`;22 códigos/unidades, estados, ponto fixo e arredondamento. Atualizar ficha de fontes com mapeamento literal; resolver somente a equivalência IBGE D ou manter esse mapping ausente | Base; Sol médio |
-| T08c.1b | Criar `dados/normalizar-micronutrientes.ts`/`.spec.ts`; adapters USDA IDs/unidades/LOQ/duplicatas, IBGE campos/marcadores, TACO novo bloco. Fixtures exclusivamente sintéticas; nenhum Record desconhecido vira nutriente | .1a; Sol médio |
+| T08c.1b | Criar `dados/micronutrientes-fonte.ts`/`.spec.ts`; adapters USDA IDs/unidades/LOQ/duplicatas, IBGE campos/marcadores, TACO novo bloco. Fixtures exclusivamente sintéticas; nenhum Record desconhecido vira nutriente | .1a; Sol médio |
 | T08c.1c | Modo novo em `dados/importador-taco.ts`, `scripts/importar-catalogo-taco.ts`, `scripts/carregar-catalogo-taco.ts` e provas em `dados/catalogo-taco.spec.ts`; artefato v2 separado e esquema de fonte declarado. V1 permanece reproduzível; simular carga idempotente somente em banco descartável | .1a/.1b e D13; Sol médio |
 | T08c.2a | `aplicacao/dtos.ts`, `dominio/edicao-plano.ts`, `aplicacao/dtos-edicao-plano.ts`, `servico-planos-alimentares.ts` e specs em fatias; validar micros manuais, criar snapshot cifrado e projetar somente campos aprovados; catálogos ignoram o navegador como fonte nutricional | .1b; Sol médio |
 | T08c.2b | `dominio/modelos-plano-alimentar.ts`, DTO/serviços de modelo/receita e respectivos specs; roundtrip manual, clone e publicação não perdem micros; publicação antiga/hash legado inalterados. Não ampliar projeção paciente por espalhamento de objeto | .2a; Sol médio |
@@ -257,8 +257,9 @@ Comandos de implementação: Jest específico de cada arquivo; depois
 `pnpm --dir octaclin-web test:planos-alimentares:bff`, `test:authz`, `lint`,
 `typecheck`, `build` e `pnpm exec playwright test` nos recortes citados; gates
 de governança, `pnpm security:secrets`, `git diff --check` e CI do HEAD final.
-Toolchain declarada: Node22/pnpm11.25. Nenhum desses testes de implementação
-foi executado nesta rodada de planejamento.
+Toolchain declarada: Node22/pnpm11.25. O checkpoint de implementação e os
+comandos realmente executados constam nas evidências desta entrega; a tabela
+abaixo conserva as verificações da rodada inicial de planejamento.
 
 ## Operação, rollback e modelos
 
@@ -300,5 +301,15 @@ ou FOOD06 por antecipação.
   CI desta terceira entrega; código não alterado nesta rodada. Nenhuma
   dependência instalada, carga, migration externa, merge ou deploy executado.
 - Decisões de produto D11–D13 respondidas; nenhum esclarecimento de produto
-  restante para começar T08c após a autorização de implementação. A equivalência
+  restante na data do planejamento, antes da autorização posterior de T08c. A equivalência
   IBGE D tem tratamento técnico conservador definido e não bloqueia outros campos.
+
+## Checkpoint posterior — desenvolvimento autorizado e backend entregue localmente
+
+Em 2026-10-16, o proprietário autorizou “Pode seguir com sol médio”. T08c.1a–.5
+implementados e validados; [evidências](../docs/governance/EVIDENCIAS_PA06_CALCULO_2026-10-16.md)
+e [handoff corrente](plan.md) registram arquivos, contratos, RED/GREEN e limites.
+Não alterar as verificações históricas do planejamento acima como se fossem
+provas executadas naquela data. Gate local de planos/RLS PASS; gate integral
+Timescale/pgvector/CI e revisão R4 final continuam pendentes. Nenhuma carga externa.
+Próxima ação: troca manual para Luna alto e T08d.1–T08d.4, depois Sol para T09.3/T10.3.

@@ -47,6 +47,11 @@ export function converterEdicaoParaRascunho(
       descricao: a.descricao,
       quantidade: numeroEdicao(a.quantidade), unidade: a.unidade,
       porcaoGramas: numeroEdicao(a.porcaoGramas),
+      micronutrientesPor100g: a.micronutrientesPor100g
+        ? Object.fromEntries(Object.entries(a.micronutrientesPor100g)
+          .filter(([, v]) => v !== undefined && v !== null && !(typeof v === 'string' && !v.trim()))
+          .map(([k, v]) => [k, numeroEdicao(v) ?? NaN]))
+        : undefined,
       nutrientesPor100g: a.nutrientesPor100g
         ? Object.fromEntries(Object.entries(a.nutrientesPor100g).map(([k, v]) => [k, numeroEdicao(v)]))
         : undefined

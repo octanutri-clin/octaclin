@@ -4,7 +4,7 @@ Atualizado em 2026-10-16.
 
 ## Fase ativa
 
-- **PA06 — terceira entrega em planejamento**, base `011ea87d`.
+- **PA06 — terceira entrega com backend implementado localmente**, base `011ea87d`.
   Autosave/rascunho parcial integrados por #420; ativação de planos/refeições e
   portal plural por #421, merge confirmado em 2026-10-16. Próxima entrega:
   cálculo combinado de publicações atuais com micros versionados/cobertura.
@@ -17,7 +17,12 @@ Atualizado em 2026-10-16.
   R013/R014 usados conceitualmente, com consulta restrita nesta rodada.
   Plano executável `tasks/plan-pos-320-pa06-calculo.md`, fontes em
   `docs/product/FONTES_MICRONUTRIENTES_PA06.md`; checklist T08c/T08d existente.
-  Esta rodada não iniciou runtime, teste de implementação, carga ou migration.
+  T08c implementado/testado: fontes versionadas, snapshots aditivos, soma por
+  cobertura e duas rotas autorizadas; TACO v2 preparada e carga repetida provada
+  somente em banco descartável. Evidências em
+  `docs/governance/EVIDENCIAS_PA06_CALCULO_2026-10-16.md`.
+  T08d (UI/BFF) ainda não iniciado; pausar para troca manual para Luna alto.
+  CI, revisão R4 final e gate integral com extensões continuam pendentes.
   Migrations1072–1074 registradas no código; aplicação real da1074/deploy não
   conferidos por consulta externa. Worktree `pos320-pa06-calculo` preserva os
   trabalhos anteriores. Sol6.1 médio para fontes/backend/RLS/cálculo; Luna alto

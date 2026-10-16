@@ -242,6 +242,18 @@ describe('ServicoPlanosAlimentares', () => {
   let executor: { executar: jest.Mock };
   let servico: ServicoPlanosAlimentares;
 
+  it('congela micros manuais por porção sem reescrever os seis nutrientes ou o histórico', async () => {
+    const entrada = dadosRascunho();
+    Object.assign(entrada.refeicoes[0].itens[0], { porcaoGramas: 50, micronutrientesPor100g: { ferroMg: 2, calcioMg: 0 } });
+    const resposta = await servico.atualizarRascunho(TENANT_ID, PACIENTE_ID, PLANO_ID, usuarioProfissional(), entrada);
+    const snapshot = resposta.refeicoes[0].itens[0].composicaoSnapshot;
+    expect(snapshot).toHaveProperty('micronutrientes.nutrientes.ferroMg.porcao', 1);
+    expect(snapshot).toHaveProperty('micronutrientes.nutrientes.calcioMg.porcao', 0);
+    expect(snapshot.nutrientesPorcao.energiaKcal).toBe(60);
+    Object.assign(entrada.refeicoes[0].itens[0], { micronutrientesPor100g: { ferroMg: -1 } });
+    await expect(servico.atualizarRascunho(TENANT_ID, PACIENTE_ID, PLANO_ID, usuarioProfissional(), entrada)).rejects.toThrow();
+  });
+
   beforeEach(() => {
     criptografia = new CriptografiaDadosSensiveis();
     repositorios = new Map<Function, RepositorioMemoria<any>>();
@@ -340,6 +352,52 @@ describe('ServicoPlanosAlimentares', () => {
       )
     };
     servico = new ServicoPlanosAlimentares(executor as unknown as ExecutorTenant, criptografia);
+  });
+
+  describe('PA06c cálculo combinado', () => {
+    async function publicarParaCalculo() {
+      const v = await servico.atualizarRascunho(TENANT_ID,PACIENTE_ID,PLANO_ID,usuarioProfissional(),dadosRascunho());
+      const versao = repositorios.get(PlanoAlimentarVersaoOrm)!.registros[0];
+      versao.publicadaEm = new Date('2026-10-16T12:00:00Z');
+      Object.assign(repositorios.get(PlanoAlimentarOrm)!.registros[0], { versaoPublicadaAtualId:VERSAO_ID, ativoParaPaciente:true, ativacaoRevisao:0, ativacaoDefinida:true });
+      return { selecoes:[{planoId:PLANO_ID,versaoIdEsperada:VERSAO_ID,ativacaoRevisaoEsperada:0,identidadesRefeicoes:[v.ativacaoRefeicoes[0].identidadeId]}] };
+    }
+    it('projeta somente seleção mínima e calcula sem gravar nem enriquecer legado', async () => {
+      const entrada = await publicarParaCalculo();
+      const selecao = await servico.obterSelecaoCalculo(TENANT_ID,PACIENTE_ID,PLANO_ID,usuarioProfissional());
+      expect(Object.keys(selecao).sort()).toEqual(['planoId','ativoParaPaciente','ativacaoRevisao','versao','refeicoes'].sort());
+      expect(Object.keys(selecao.refeicoes[0]).sort()).toEqual(['identidadeId','nome','ordem','ativa'].sort());
+      const saves = repositorios.get(PlanoAlimentarVersaoOrm)!.save.mock.calls.length;
+      const r = await servico.calcularCombinado(TENANT_ID,PACIENTE_ID,usuarioProfissional(),entrada);
+      expect(r.nutrientes.energiaKcal.total).toBe(120);
+      expect(r.nutrientes.ferroMg.estado).toBe('indisponivel');
+      expect(repositorios.get(PlanoAlimentarVersaoOrm)!.save.mock.calls).toHaveLength(saves);
+      expect(JSON.stringify(r)).not.toMatch(/Criptograf|objetivos|Alimento manual/);
+    });
+    it('exclui OFF e revalida precondições mesmo desligado', async () => {
+      const entrada = await publicarParaCalculo();
+      repositorios.get(PlanoAlimentarOrm)!.registros[0].ativoParaPaciente = false;
+      const r = await servico.calcularCombinado(TENANT_ID,PACIENTE_ID,usuarioProfissional(),entrada);
+      expect(r.estado).toBe('sem_itens_incluidos');
+      repositorios.get(PlanoAlimentarOrm)!.registros[0].ativacaoRevisao = 1;
+      await expect(servico.calcularCombinado(TENANT_ID,PACIENTE_ID,usuarioProfissional(),entrada)).rejects.toBeInstanceOf(ConflictException);
+    });
+    it('falha fechado quando faltar vínculo/estado de refeição, inclusive OFF', async () => {
+      const entrada = await publicarParaCalculo();
+      repositorios.get(PlanoAlimentarOrm)!.registros[0].ativoParaPaciente = false;
+      (gerenciador.query as jest.Mock).mockResolvedValueOnce([]);
+      await expect(servico.calcularCombinado(TENANT_ID,PACIENTE_ID,usuarioProfissional(),entrada)).rejects.toBeInstanceOf(ConflictException);
+    });
+    it('nega seleção inteira com plano alheio, outro tenant/carteira e identidade inválida', async () => {
+      const entrada = await publicarParaCalculo();
+      await expect(servico.calcularCombinado('outro-tenant',PACIENTE_ID,usuarioProfissional(),entrada)).rejects.toBeInstanceOf(NotFoundException);
+      const outro = {...usuarioProfissional(), usuarioId:'10000000-0000-4000-8000-000000000099'};
+      await expect(servico.calcularCombinado(TENANT_ID,PACIENTE_ID,outro,entrada)).rejects.toThrow();
+      const invalida = {selecoes:[{...entrada.selecoes[0],identidadesRefeicoes:[VERSAO_ID]}]};
+      await expect(servico.calcularCombinado(TENANT_ID,PACIENTE_ID,usuarioProfissional(),invalida)).rejects.toBeInstanceOf(ConflictException);
+      entrada.selecoes.push({...entrada.selecoes[0],planoId:'10000000-0000-4000-8000-000000000099'});
+      await expect(servico.calcularCombinado(TENANT_ID,PACIENTE_ID,usuarioProfissional(),entrada)).rejects.toBeInstanceOf(NotFoundException);
+    });
   });
 
   describe('PA06b ativação operacional', () => {
@@ -980,6 +1038,18 @@ describe('ServicoPlanosAlimentares', () => {
     expect(snapshot.nutrientesPorcao).not.toHaveProperty('sodioMg');
     expect(resposta.totais).not.toHaveProperty('fibrasG');
     expect(resposta.totais).not.toHaveProperty('sodioMg');
+  });
+
+  it('congela micros USDA normalizados da base e recusa override manual do catálogo', async () => {
+    const alimentoId = '10000000-0000-4000-8000-000000000010';
+    const fonteId = '10000000-0000-4000-8000-000000000011';
+    repositorios.get(AlimentoComposicaoOrm)!.registros.push({id:alimentoId,fonteId,codigoOrigem:'sintetico',nome:'USDA sintético',baseGramas:'10',energiaKcal:'10',proteinasG:'1',carboidratosG:'1',lipidiosG:'1',micronutrientes:{metadadosOrigem:{nutrientsOriginal:[{nutrient:{id:1089,unitName:'MG'},amount:2}]}}});
+    repositorios.get(FonteComposicaoAlimentoOrm)!.registros.push({id:fonteId,codigo:'usda_fdc_foundation',nome:'Fonte sintética',versao:'teste',situacao:'ativa',esquemaVersao:'octaclin-composicao-v1',hashConteudo:'a'.repeat(64)});
+    const entrada = dadosRascunho(alimentoId); entrada.refeicoes[0].itens[0].porcaoGramas=50;
+    const resposta = await servico.atualizarRascunho(TENANT_ID,PACIENTE_ID,PLANO_ID,usuarioProfissional(),entrada);
+    expect(resposta.refeicoes[0].itens[0].composicaoSnapshot).toHaveProperty('micronutrientes.nutrientes.ferroMg.porcao',10);
+    Object.assign(entrada.refeicoes[0].itens[0],{micronutrientesPor100g:{ferroMg:99}});
+    await expect(servico.atualizarRascunho(TENANT_ID,PACIENTE_ID,PLANO_ID,usuarioProfissional(),entrada)).rejects.toThrow('alteração manual');
   });
 
   it('rejeita alimento do catalogo sem macro essencial', async () => {
@@ -1678,6 +1748,13 @@ describe('ServicoPlanosAlimentares', () => {
       possuiCondicaoEspecial: false, aplicabilidadeFormulaConfirmada: true,
       objetivos: 'Objetivo sintético de acompanhamento',
       justificativaDivergenciaClinica: 'Planejamento sintético revisado individualmente.'
+    });
+    it.each(['-', '-1'])('preserva micros manuais pendentes %s sem materializar nem publicar', async valor => {
+      const documento = documentoCompleto();
+      Object.assign(documento.refeicoes[0].itens[0],{micronutrientesPor100g:{ferroMg:valor}});
+      const salvo = await salvarEdicao(documento);
+      expect(salvo).toMatchObject({edicaoEstado:'pendente',documentoEdicao:documento,totais:undefined});
+      await expect(servico.revisar(TENANT_ID,PACIENTE_ID,PLANO_ID,usuarioProfissional(),{rascunhoIdEsperado:VERSAO_ID,rascunhoRevisaoEsperada:1})).rejects.toThrow();
     });
     it('recusa overflow sem alterar snapshot nem contador', async () => {
       repositorios.get(PlanoAlimentarVersaoOrm)!.registros[0].rascunhoRevisao = 2147483647;

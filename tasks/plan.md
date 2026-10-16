@@ -1,4 +1,97 @@
-# Handoff atual — PA06 terceira entrega: cálculo combinado e micronutrientes
+# Handoff atual — PA06 cálculo combinado: backend concluído; troca para Luna
+
+## Branch, autorização e estado
+
+- Worktree `/workspace/octaclin/.worktrees/pos320-pa06-calculo`, branch
+  `feat/pos320-pa06-calculo`, base `011ea87d`. Planejamento em `10ebf9aa`;
+  desenvolvimento autorizado pelo proprietário em “Pode seguir com sol médio”.
+- T08c implementado/testado localmente. **Pausar para troca manual para GPT-6
+  Luna alto antes de iniciar T08d.** Não criar outra branch/worktree/PR para a
+  troca. Nenhum push/PR desta terceira entrega realizado até este checkpoint.
+- Sem migration nova;1072–1074 intocadas. Sem carga externa, merge ou deploy.
+  Alteração preexistente do checkout principal em `next-env.d.ts` preservada.
+- Evidências: [checkpoint backend](../docs/governance/EVIDENCIAS_PA06_CALCULO_2026-10-16.md).
+  Plano executável [T08c/T08d](plan-pos-320-pa06-calculo.md) e
+  [checklist](todo-pos-320-pa06.md). Seções antigas abaixo são históricas.
+
+## Backend fechado para implementar a interface
+
+- `GET /pacientes/:pacienteId/planos-alimentares/:planoId/selecao-calculo`:
+  `{planoId,ativoParaPaciente,ativacaoRevisao,versao:{id,numero,publicadaEm}|null,
+  refeicoes:[{identidadeId,nome,ordem,ativa}]}`. Apenas publicação atual.
+- `POST /pacientes/:pacienteId/planos-alimentares/calculo-combinado`:
+  `{selecoes:[{planoId,versaoIdEsperada,ativacaoRevisaoEsperada,identidadesRefeicoes:[]}]}`.
+  Nada de nutrientes/totais enviados pelo navegador. Máximos25/50/500/64KiB.
+- Resposta: `{motorVersao:'pa06-combinado-v1',estado:'sem_selecao'|
+  'sem_itens_incluidos'|'calculado',itensIncluidos,nutrientes,exclusoes,
+  calculadoEm,publicacoes:[{planoId,versaoId,ativacaoRevisao}]}`.
+  `nutrientes` é Record dos seis campos legados e22 micros, com
+  `{codigo,unidade,estado:'completo'|'parcial'|'indisponivel',total?,
+  quantidadeConhecida?,itensComValor,itensIncluidos}`. Só completo tem `total`;
+  parcial tem `quantidadeConhecida`; indisponível não vira0. Exclusões:
+  `{planoId,identidadeRefeicao?,motivo:'plano_desativado'|'refeicao_desativada'}`.
+- Erros400/404/409/422 e autorização403; BFF deve conservar os status e limitar
+  corpo antes do encaminhamento. Nenhuma resposta clínica entra em cache/log.
+- Registro22/qualificadores em `octaclin-backend/src/modulos/planos-alimentares/
+  dominio/micronutrientes.ts`, métodos novos no serviço/controlador existentes.
+  Não duplicar motor de soma no navegador. Rótulos/unidades não são livres.
+- Entrada manual irmã: `micronutrientesPor100g:Partial<Record<Codigo,number>>`.
+  No documento de edição aceita `NumeroEdicao`. Vazio/ausente são opcionais;
+  valor não vazio inválido deixa edição pendente, sem impedir autosave editorial.
+  Snapshot novo em `composicaoSnapshot.micronutrientes`: schema1, mapeamento,
+  base/porção, estados e `valorOrigem`/`por100g`/`porcao` quando conhecidos.
+  Catálogo não admite override; cópias manuais preservam valores permitidos.
+
+## Próximas ações exatas — T08d.1–T08d.4
+
+1. Reconfirmar Git/status; ler AGENTS web e executar TDD. Adicionar somente os
+   dois BFFs/cliente tipado, estendendo `scripts/planos-alimentares-bff.spec.ts`
+   e `lib/server/autorizacao-rotas.ts`. Reusar `_proxy.ts`
+   de planos; limite POST64KiB, sessão/permissão/no-store também nos erros.
+2. Atualizar `lib/edicao-plano.ts`, `lib/copia-refeicoes-plano.ts`, tipos API e
+   `components/pacientes/plano-alimentar-profissional.tsx` em fatias pequenas.
+   Incluir editor de micros manuais; rodada por editor/cópia/modelos/receitas e
+   substituições, sem criar override em alimento de catálogo.
+3. Componente próprio `calculo-combinado-planos.tsx`; seleção vazia em memória
+   pertence ao prontuário (`prontuario-paciente.tsx`), sobrevive páginas/planos/
+   abas internas e limpa em paciente/sessão/saída. Seleção não altera autosave.
+   Plano selecionado inclui refeições ativas naquele instante; OFF mantém a
+   seleção sem contribuição, ON reinclui somente o que já estava selecionado.
+4. Limpar total imediatamente ao mudar seleção/ativação/publicação; debounce
+   300ms, Recalcular imediato, AbortController+geração para resposta tardia.
+   409 ou publicação remota diferente exige Atualizar seleção, conservando
+   interseção de identidades; novas refeições não entram automaticamente.
+   Revalidar no foco/reconexão, sem polling nem promessa de realtime.
+5. Harnesses BFF/cópia/edição/seleção, Playwright desktop/mobile/Axe/teclado,
+   2+ planos/páginas, ausente vs0, parcial,409, respostaA após pacienteB,
+   OFF→ON e versões distintas. Portal/PDF conservam o contrato existente.
+6. Ao terminar T08d, avisar e pausar para retorno ao **Sol6.1 médio** em T09.3/
+   T10.3: integração/R4/regressões/gates finais e uma PR inicialmente Draft.
+
+## Ambiente e verificações
+
+- Toolchain declarada já disponível: adicionar ao PATH
+  `/tmp/octaclin-pa03-toolchain/bin` e
+  `/tmp/octaclin-pa02-toolchain/node-v22.21.1-linux-x64/bin` antes dos comandos.
+  Node22.21.1/pnpm11.25.0; não alterar lockfiles. Conferir espaço antes de Web/build.
+- PASS:337 suítes/3016 testes backend (123 SKIPPED),23 suítes/339 testes do módulo
+  no checkpoint final e97 testes focados de serviço
+  com dois casos editoriais adicionais; typecheck/build backend;11 guardas;
+  secrets/diff. Provas e comandos no documento de evidências.
+- PASS:24 testes PostgreSQL15 reais, incluindo5 novos PA06c; TACO v1/v2
+ 583 registros por fonte, V1 intacta e segunda carga V2 idempotente. Harness:
+  `node scripts/test-pa05-postgres-local.cjs --inventario --taco-micros`.
+  A fixture omite Timescale/pgvector/hypertables explicitamente. Não declarar
+  gate integral PASS por ela; full Testcontainers permanece no CI.
+- Falha encontrada/corrigida: JSONB reordena chaves do bloco de micros. Hash
+  TACO canoniza só esse bloco novo; v1 permanece byte a byte reproduzível.
+- Nenhuma revisão independente nesta rodada. R4 final e CI ainda pendentes;
+  UI/BFF/Playwright da entrega ainda não executados. IBGE vitamina D permanece
+  sem mapping por falta de equivalência comprovada; demais campos funcionam.
+
+---
+
+# Handoff anterior — PA06 terceira entrega: planejamento
 
 ## Estado e próxima ação
 

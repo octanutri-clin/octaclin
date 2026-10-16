@@ -2,13 +2,15 @@
 
 Planejamento: [plan-pos-320-pa06.md](plan-pos-320-pa06.md).
 Estado em 2026-10-16: primeira entrega integrada pela PR #420; segunda integrada
-pela PR #421, merge `011ea87d`. Próxima: planejamento T08c/T08d na branch
-`feat/pos320-pa06-calculo`, base `011ea87d`; implementação ainda não iniciada
-nesta rodada. Plano executável:
+pela PR #421, merge `011ea87d`. Terceira entrega: backend T08c implementado
+localmente na branch `feat/pos320-pa06-calculo`, base `011ea87d`; autorização
+“Pode seguir com sol médio”. Checkpoint técnico e limitações nas evidências de cálculo.
+UI/BFF T08d pendentes da troca manual para Luna alto. Plano executável:
 [plan-pos-320-pa06-calculo.md](plan-pos-320-pa06-calculo.md).
 Migrations anteriores relatadas pelo proprietário não comprovam aplicação da1074;
 nenhum banco externo consultado nesta rodada. Cada entrega tem T09/T10 próprios.
-Evidências: docs/governance/EVIDENCIAS_PA06_ATIVACAO_2026-10-16.md.
+Evidências anteriores: docs/governance/EVIDENCIAS_PA06_ATIVACAO_2026-10-16.md.
+Terceira entrega: docs/governance/EVIDENCIAS_PA06_CALCULO_2026-10-16.md.
 O histórico/checkpoints abaixo conserva o estado observado em cada rodada.
 
 ## T00 — base, evidência e produto (1–3 documentos)
@@ -244,15 +246,15 @@ T08c.1a–T08c.5 do plano da terceira entrega antes da troca para Luna.
   22 nutrientes mapeados em cabeçalhos/IDs oficiais, com hashes e pendência
   semântica IBGE D identificada; D11/D12/D13 confirmadas. Isto não valida runtime.
 
-- [ ] Primeira fatia: whitelist versionada de micronutrientes/unidades verificados,
+- [x] Primeira fatia: whitelist versionada de micronutrientes/unidades verificados,
   snapshot por composição e contrato manual. Legado incompleto não vira zero nem
   consulta catálogo atual para fingir cálculo histórico. Sem IDR/UL ou TBCA.
-- [ ] Segunda fatia: projeção de cálculo combinado com planos/refeições/versões
+- [x] Segunda fatia: projeção de cálculo combinado com planos/refeições/versões
   selecionados do mesmo paciente, autorização em lote e consistência de revisão;
   não confiar em valores do cliente nem limitar à página exibida.
-- [ ] Terceira fatia: filtro comum plano ativo E selecionado E refeição ativa E
+- [x] Terceira fatia: filtro comum plano ativo E selecionado E refeição ativa E
   selecionada; totais/cobertura por nutriente, sem somar substituições ou metas.
-- [ ] Negativos para outro paciente/tenant/carteira, versão duplicada, seleção
+- [x] Negativos para outro paciente/tenant/carteira, versão duplicada, seleção
   alterada, catálogo inválido, dado ausente, unidades incompatíveis e plano OFF;
   rascunhos e versões históricas nunca alimentam o cálculo combinado.
 
@@ -261,6 +263,11 @@ além de vazio, soma multipágina e ausência por nutriente. Resultado independe
 de ordem, sem dupla contagem; limites de cardinalidade definidos e testados.
 Verificação: unitários de domínio/snapshot/DTO e integração PostgreSQL/RLS com
 barreiras de cálculo↔ativação/transferência/save e regressões PA04/PA05.
+
+Checkpoint backend: PASS local — domínio/DTO/serviço, PostgreSQL/RLS com
+cinco cenários novos, carga TACO v1/v2 idempotente no banco descartável,
+typecheck/build. Gate integral Timescale/pgvector e CI permanecem SKIPPED nesta
+máquina; UI/BFF e revisão R4 final continuam pendentes. Sem carga externa.
 
 ## T08d — seleção combinada e nutrientes, console/BFF (fatias de2–4 arquivos)
 

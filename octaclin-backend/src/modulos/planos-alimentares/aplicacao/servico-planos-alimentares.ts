@@ -1,3 +1,7 @@
+import { CalculoCombinadoDto, validarSelecoesCalculo } from './dtos-calculo-combinado';
+import { calcularNutrientesCombinados, EntradaPlanoCombinado } from '../dominio/calculo-combinado';
+import { criarSnapshotMicronutrientes, LimitePrecisaoNutricionalError, SnapshotMicronutrientesV1, validarMicronutrientesManuais, ValoresMicronutrientesOrigem } from '../dominio/micronutrientes';
+import { extrairMicronutrientesFonte } from '../dados/micronutrientes-fonte';
 import { lerEstadosRefeicoes } from '../infraestrutura/estados-refeicoes';
 import { createHash, randomUUID } from 'crypto';
 import { validateSync } from 'class-validator';
@@ -6,7 +10,8 @@ import {
   ConflictException,
   ForbiddenException,
   Injectable,
-  NotFoundException
+  NotFoundException,
+  UnprocessableEntityException
 } from '@nestjs/common';
 import { And, EntityManager, In, IsNull, LessThan, MoreThan, MoreThanOrEqual } from 'typeorm';
 import { registrarAuditoriaNaTransacao } from '../../../infraestrutura/auditoria/servico-auditoria';
@@ -99,6 +104,7 @@ export interface SnapshotComposicao {
     capturadaEm?: string;
   };
   nutrientesPor100g: NutrientesPor100gPlano;
+  micronutrientes?: SnapshotMicronutrientesV1;
   nutrientesPorcao: SubstituicaoPlanoAlimentar['nutrientes'];
 }
 
@@ -127,6 +133,95 @@ export class ServicoPlanosAlimentares {
     private readonly executorTenant: ExecutorTenant,
     private readonly criptografia: CriptografiaDadosSensiveis
   ) {}
+
+  async obterSelecaoCalculo(tenantId: string, pacienteId: string, planoId: string, usuario: UsuarioAutenticado) {
+    this.garantirPapelProfissional(usuario);
+    this.garantirPermissao(usuario, 'planos_alimentares.ler');
+    return this.executorTenant.executar(tenantId, async gerenciador => {
+      const plano = await this.obterPlanoNoEscopo(gerenciador, tenantId, pacienteId, planoId, usuario, 'pessimistic_read');
+      const cabecalho = { planoId: plano.id, ativoParaPaciente: plano.ativoParaPaciente === true, ativacaoRevisao: plano.ativacaoRevisao ?? 0 };
+      if (!plano.versaoPublicadaAtualId) return { ...cabecalho, versao: null, refeicoes: [] };
+      const versao = await this.obterPublicacaoCalculo(gerenciador, plano);
+      const { refeicoes, estados } = await this.obterRefeicoesCalculo(gerenciador, plano, versao.id);
+      return { ...cabecalho, versao: { id:versao.id, numero:versao.numero, publicadaEm:versao.publicadaEm },
+        refeicoes:refeicoes.map(r => ({ identidadeId:estados.get(r.id)!.identidade_id, nome:this.criptografia.descriptografar(r.nomeCriptografado), ordem:r.ordem, ativa:estados.get(r.id)!.ativa })) };
+    });
+  }
+
+  async calcularCombinado(tenantId: string, pacienteId: string, usuario: UsuarioAutenticado, dados: CalculoCombinadoDto) {
+    this.garantirPapelProfissional(usuario);
+    this.garantirPermissao(usuario, 'planos_alimentares.ler');
+    let entrada: CalculoCombinadoDto;
+    try { entrada = validarSelecoesCalculo(dados); }
+    catch { throw new BadRequestException('Seleção do cálculo combinado inválida.'); }
+    return this.executorTenant.executar(tenantId, async gerenciador => {
+      await this.garantirPacienteNoEscopo(gerenciador, tenantId, pacienteId, usuario, 'pessimistic_read');
+      const planos: Array<{ plano:PlanoAlimentarOrm; selecao:CalculoCombinadoDto['selecoes'][number] }> = [];
+      // Toda autorização precede decifragem. Locks seguem a mesma ordem dos writers.
+      for (const selecao of [...entrada.selecoes].sort((a,b) => a.planoId.localeCompare(b.planoId))) {
+        const plano = await this.obterPlanoNoEscopo(gerenciador,tenantId,pacienteId,selecao.planoId,usuario,'pessimistic_read');
+        planos.push({plano,selecao});
+      }
+      const efetivos: EntradaPlanoCombinado[] = [];
+      let quantidadeItens = 0;
+      for (const {plano,selecao} of planos) {
+        if (plano.versaoPublicadaAtualId !== selecao.versaoIdEsperada || (plano.ativacaoRevisao ?? 0) !== selecao.ativacaoRevisaoEsperada) {
+          throw new ConflictException('A publicação ou ativação mudou. Atualize a seleção antes de calcular.');
+        }
+        const versao = await this.obterPublicacaoCalculo(gerenciador,plano);
+        const {refeicoes,estados} = await this.obterRefeicoesCalculo(gerenciador,plano,versao.id);
+        const identidadesAtuais = new Set(Array.from(estados.values()).map(e=>e.identidade_id));
+        if (selecao.identidadesRefeicoes.some(id=>!identidadesAtuais.has(id))) throw new ConflictException('As refeições mudaram. Atualize a seleção antes de calcular.');
+        const selecionadas = new Set(selecao.identidadesRefeicoes);
+        const entradaPlano: EntradaPlanoCombinado = {planoId:plano.id,ativo:plano.ativoParaPaciente === true,selecionado:true,refeicoes:[]};
+        for (const r of refeicoes) {
+          const estado = estados.get(r.id)!;
+          const selecionada = selecionadas.has(estado.identidade_id);
+          const itens: unknown[] = [];
+          if (entradaPlano.ativo && selecionada && estado.ativa) {
+            const registros = await gerenciador.getRepository(PlanoAlimentarItemOrm).find({
+              where:{tenantId,refeicaoId:r.id},select:{id:true,composicaoSnapshotCriptografada:true},take:10001
+            });
+            quantidadeItens += registros.length;
+            if (quantidadeItens > 10000) throw new UnprocessableEntityException('Limite de itens do cálculo combinado excedido.');
+            for (const item of registros) {
+              try { itens.push(this.lerJsonCriptografado<unknown>(item.composicaoSnapshotCriptografada)); }
+              catch { itens.push(null); }
+            }
+          }
+          entradaPlano.refeicoes.push({identidadeId:estado.identidade_id,ativa:estado.ativa,selecionada,itens});
+        }
+        efetivos.push(entradaPlano);
+      }
+      try { return { ...calcularNutrientesCombinados(efetivos), calculadoEm: new Date().toISOString(),
+        publicacoes:planos.map(({plano,selecao})=>({planoId:plano.id,versaoId:selecao.versaoIdEsperada,ativacaoRevisao:selecao.ativacaoRevisaoEsperada})) }; }
+      catch { throw new UnprocessableEntityException('Limite técnico de precisão nutricional excedido.'); }
+    });
+  }
+
+  private async obterPublicacaoCalculo(gerenciador: EntityManager, plano: PlanoAlimentarOrm) {
+    const versao = plano.versaoPublicadaAtualId ? await gerenciador.getRepository(PlanoAlimentarVersaoOrm).findOne({
+      where:{tenantId:plano.tenantId,planoId:plano.id,id:plano.versaoPublicadaAtualId},
+      select:{id:true,numero:true,publicadaEm:true,descartadaEm:true},lock:{mode:'pessimistic_read'}
+    }) : null;
+    if (!versao?.publicadaEm || versao.descartadaEm) throw new ConflictException('Publicação atual indisponível. Atualize a seleção.');
+    return versao;
+  }
+
+  private async obterRefeicoesCalculo(gerenciador: EntityManager, plano: PlanoAlimentarOrm, versaoId: string) {
+    const refeicoes = await gerenciador.getRepository(PlanoAlimentarRefeicaoOrm).find({
+      where:{tenantId:plano.tenantId,versaoId},select:{id:true,nomeCriptografado:true,ordem:true},order:{ordem:'ASC'},take:51
+    });
+    if (refeicoes.length > 50) throw new UnprocessableEntityException('Limite de refeições do cálculo combinado excedido.');
+    const linhas = await lerEstadosRefeicoes(gerenciador,plano.tenantId,plano.id,versaoId);
+    const estados = new Map(linhas.map(e=>[e.refeicao_id,e]));
+    if (linhas.length !== refeicoes.length || estados.size !== refeicoes.length ||
+        new Set(linhas.map(e=>e.identidade_id)).size !== linhas.length ||
+        refeicoes.some(r=>!estados.has(r.id)) || linhas.some(e=>typeof e.ativa !== 'boolean')) {
+      throw new ConflictException('Estado das refeições indisponível. Atualize a seleção.');
+    }
+    return {refeicoes,estados};
+  }
 
   async listar(
     tenantId: string,
@@ -1266,6 +1361,8 @@ export class ServicoPlanosAlimentares {
     entrada: SubstituicaoPlanoAlimentarDto
   ): Promise<ItemResolvido> {
     let descricao: string;
+    let micros: ValoresMicronutrientesOrigem = {};
+    let baseMicros = 100;
     let nutrientesPor100g: NutrientesPor100gPlano;
     let snapshotBase: Omit<SnapshotComposicao, 'nutrientesPor100g' | 'nutrientesPorcao'>;
     if (entrada.alimentoComposicaoId) {
@@ -1273,12 +1370,15 @@ export class ServicoPlanosAlimentares {
         where: { id: entrada.alimentoComposicaoId }
       });
       if (!alimento) throw new BadRequestException('Alimento do catalogo nao encontrado.');
+      if (entrada.micronutrientesPor100g !== undefined) throw new BadRequestException('Micronutrientes de catálogo não aceitam alteração manual.');
       nutrientesPor100g = this.obterNutrientesCatalogo(alimento, true)!;
       const fonte = await gerenciador.getRepository(FonteComposicaoAlimentoOrm).findOne({
         where: { id: alimento.fonteId, situacao: 'ativa' }
       });
       if (!fonte) throw new BadRequestException('Fonte do alimento nao esta ativa para uso clinico.');
       descricao = alimento.nome;
+      micros = extrairMicronutrientesFonte(fonte.codigo, fonte.esquemaVersao ?? '', alimento.micronutrientes);
+      baseMicros = Number(alimento.baseGramas);
       snapshotBase = {
         origem: 'catalogo',
         alimentoComposicaoId: alimento.id,
@@ -1303,12 +1403,19 @@ export class ServicoPlanosAlimentares {
       }
       descricao = entrada.descricao.trim();
       nutrientesPor100g = this.validarNutrientesManuais(entrada.nutrientesPor100g);
+      if (entrada.micronutrientesPor100g !== undefined) {
+        try { micros = Object.fromEntries(Object.entries(validarMicronutrientesManuais(entrada.micronutrientesPor100g)).map(([codigo, valor]) => [codigo, { estado: 'conhecido', valor }])); }
+        catch { throw new BadRequestException('Micronutrientes manuais inválidos.'); }
+      }
       snapshotBase = { origem: 'manual', descricao };
     }
     let nutrientesPorcao: SubstituicaoPlanoAlimentar['nutrientes'];
+    let micronutrientes: SnapshotMicronutrientesV1 | undefined;
     try {
       nutrientesPorcao = this.calcularNutrientesPorcao(nutrientesPor100g, entrada.porcaoGramas);
+      if (Object.keys(micros).length) micronutrientes = criarSnapshotMicronutrientes(micros, baseMicros, entrada.porcaoGramas);
     } catch (erro) {
+      if (erro instanceof LimitePrecisaoNutricionalError) throw new UnprocessableEntityException('Limite técnico de precisão nutricional excedido.');
       throw new BadRequestException(erro instanceof Error ? erro.message : 'Porcao do alimento invalida.');
     }
     return {
@@ -1320,7 +1427,7 @@ export class ServicoPlanosAlimentares {
         porcaoGramas: entrada.porcaoGramas,
         nutrientes: nutrientesPorcao
       },
-      snapshot: { ...snapshotBase, nutrientesPor100g, nutrientesPorcao }
+      snapshot: { ...snapshotBase, nutrientesPor100g, nutrientesPorcao, ...(micronutrientes ? { micronutrientes } : {}) }
     };
   }
 

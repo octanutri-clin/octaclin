@@ -383,9 +383,13 @@ Ampliação organizada em três PRs por recurso: autosave parcial, ativação e
 cálculo combinado/micros; sem implementar IDR/UL de FOOD06. Só R013/R014 foram
 consultados, com versões/licenças/fontes no plano; sem biblioteca nova prevista.
 Atualização em 2026-10-16: autosave integrado por #420; ativação/portal plural
-integrados por #421 (`011ea87d`). Terceira entrega em planejamento com D11–D13
+integrados por #421 (`011ea87d`). Terceira entrega com backend local implementado e
+checkpoint T08c validado; T08d UI/BFF aguarda troca manual para Luna alto. D11–D13
 confirmadas: seleção vazia, plano inclui refeições ativas, OFF mantém seleção/ON
-reinclui e preparar nova versão TACO com micros, preservando histórico.
+reinclui e preparar nova versão TACO com micros, preservando histórico. TACO v2
+preparada e carga idempotente provada somente em PostgreSQL descartável; CI
+integral e revisão R4 final pendentes. Evidências em
+`docs/governance/EVIDENCIAS_PA06_CALCULO_2026-10-16.md`.
 Plano detalhado de cálculo/cobertura/fontes:
 [plan-pos-320-pa06-calculo.md](../../tasks/plan-pos-320-pa06-calculo.md).
 Sem IDR/UL/TBCA ou execução externa nesta rodada. Handoff

@@ -1,3 +1,4 @@
+import { CodigoMicronutriente, CODIGOS_MICRONUTRIENTES } from './micronutrientes';
 import { FormulaEnergetica, MetodoMacrosManual } from './calculo-nutricional';
 import { PreferenciasApresentacaoPlano, validarPreferenciasApresentacao } from './apresentacao-plano';
 
@@ -11,6 +12,7 @@ export interface AlimentoEdicao {
   unidade?: string;
   porcaoGramas?: NumeroEdicao;
   nutrientesPor100g?: NutrientesEdicao;
+  micronutrientesPor100g?: Partial<Record<CodigoMicronutriente, NumeroEdicao>>;
   fonteRotulo?: string;
 }
 export interface AlternativaEdicao extends AlimentoEdicao { liberadaParaPaciente?: boolean; preferida?: boolean }
@@ -45,7 +47,7 @@ export interface DocumentoEdicaoPlano {
 // Reserva espaço para a precondição no parser HTTP existente de 100KiB.
 export const LIMITE_BYTES_EDICAO_PLANO = 96 * 1024;
 const camposNumero = ['fatorAtividade', 'ajusteEnergeticoKcal', 'carboidratosBasisPoints', 'proteinasBasisPoints', 'gordurasBasisPoints', 'metaEnergeticaManualKcal', 'carboidratosGPorKg', 'proteinasGPorKg', 'gordurasGPorKg'];
-const camposAlimento = ['chaveCliente', 'alimentoComposicaoId', 'descricao', 'quantidade', 'unidade', 'porcaoGramas', 'nutrientesPor100g', 'fonteRotulo'];
+const camposAlimento = ['chaveCliente', 'alimentoComposicaoId', 'descricao', 'quantidade', 'unidade', 'porcaoGramas', 'nutrientesPor100g', 'micronutrientesPor100g', 'fonteRotulo'];
 const camposNutriente = ['energiaKcal', 'proteinasG', 'carboidratosG', 'gordurasG', 'fibrasG', 'sodioMg'];
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
@@ -109,6 +111,10 @@ export function validarDocumentoEdicaoPlano(valor: unknown): DocumentoEdicaoPlan
     if (a.nutrientesPor100g !== undefined) {
       const nutrientes = objeto(a.nutrientesPor100g, camposNutriente);
       for (const n of Object.values(nutrientes)) numero(n);
+    }
+    if (a.micronutrientesPor100g !== undefined) {
+      const micros = objeto(a.micronutrientesPor100g, CODIGOS_MICRONUTRIENTES);
+      for (const v of Object.values(micros)) numero(v);
     }
     return a;
   }

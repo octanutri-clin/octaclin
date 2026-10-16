@@ -4650,14 +4650,17 @@ auditoria estão ordenados na seção 15 de
   `docs/governance/REVISAO_R4_PA05_2026-10-14.md`.
 - [~] PA06 — duas entregas integradas: autosave/edição parcial (#420) e ativação
   operacional/portal plural (#421, merge `011ea87d` confirmado em 2026-10-16).
-  Terceira entrega em planejamento: somar energia/macros/micros dos planos e
+  Terceira entrega com backend local implementado: somar energia/macros/micros dos planos e
   refeições ativos selecionados, exclusivamente da publicação atual salva.
   D01–D10 preservadas; D11/D12/D13 confirmadas: seleção vazia, plano inclui
   refeições ativas, OFF conserva seleção/ON reinclui e preparar TACO v2.
   Snapshots legados ficam intactos; cobertura por nutriente, sem IDR/UL/TBCA.
   Whitelist de 22 códigos e fontes/hashes em `docs/product/FONTES_MICRONUTRIENTES_PA06.md`;
-  pendência semântica IBGE D delimitada. Sem runtime novo/carga/migration externa
-  nesta rodada; aplicação operacional da1074/deploy não inferida do merge.
+  pendência semântica IBGE D delimitada. T08c e PostgreSQL/RLS local validados;
+  TACO v2 preparada/carga idempotente apenas em banco descartável. UI/BFF T08d,
+  revisão R4 e CI finais pendentes; sem carga/migration externa. Evidências em
+  `docs/governance/EVIDENCIAS_PA06_CALCULO_2026-10-16.md`.
+  Aplicação operacional da1074/deploy não inferida do merge.
   Plano executável `tasks/plan-pos-320-pa06-calculo.md`, checklist
   `tasks/todo-pos-320-pa06.md`. Sol médio para cálculo/fontes/RLS; Luna alto
   depois do checkpoint backend, com pausa para troca. PA07 é posterior.

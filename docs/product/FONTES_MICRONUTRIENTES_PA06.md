@@ -1,8 +1,9 @@
 # PA06 — fontes e contrato factual de micronutrientes
 
 Conferência documental em 2026-10-16, base `011ea87d` (PR #421 integrada).
-Este documento especifica a terceira entrega PA06; nenhum importador, catálogo
-operacional ou snapshot clínico foi alterado nesta rodada.
+Este documento especifica a terceira entrega PA06. Desenvolvimento autorizado
+em 2026-10-16: adapters, modo TACO v2 e snapshots aditivos implementados localmente.
+Nenhum catálogo ou ambiente externo foi alterado.
 
 ## Evidência de origem
 
@@ -132,3 +133,23 @@ fonte antiga, trocar IDs históricos, editar migrations 1072–1074 ou importar
 TBCA. Sem schema novo previsto; o JSONB do catálogo e os snapshots cifrados já
 acomodam o contrato aditivo. Qualquer necessidade comprovada de migration exige
 novo arquivo e gate próprio, sem aplicar DDL externamente nesta etapa.
+
+## Implementação local — 2026-10-16
+
+- Registro canônico: `dominio/micronutrientes.ts`; adapters puros:
+  `dados/micronutrientes-fonte.ts`. O adapter IBGE mantém vitamina D como
+  `definicao_incompativel`; os outros nutrientes independem dessa pendência.
+- TACO v2: `catalogo-taco-4a-micros1.json`, novo modo explícito
+  `TACO_MODO=v2-micros1`, esquema `octaclin-composicao-v2-micros1`.
+  Mesmos 583 alimentos/14 exclusões e seis valores legados. Fonte antiga não
+  é sobrescrita. O artefato v1 foi reproduzido integralmente a partir do XLSX
+  de SHA-256 conferido nesta execução, sem alteração dos bytes canônicos.
+- O bloco novo conserva os valores numéricos das células XML oficiais,
+  inclusive notação científica. Esses valores podem ter mais casas do que a
+  apresentação da planilha; não afirmamos que isso aumenta sua precisão clínica.
+  A aritmética de snapshot usa decimal com escala8/half-up. Valores de origem,
+  base, por100g e porção são preservados; estados de traço/NA/reavaliação não
+  recebem valor numérico conhecido. Os seis campos antigos mantêm sua própria
+  transformação histórica, sem reaplicá-la aos micros.
+- Runtime não acessa as URLs oficiais nem importa automaticamente artefatos.
+  Toda carga externa exige confirmação própria pelo runbook existente.

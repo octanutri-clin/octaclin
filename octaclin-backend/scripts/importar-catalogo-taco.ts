@@ -18,9 +18,12 @@ async function obterArquivoOrigem(): Promise<{ conteudo: Buffer; url: string }> 
 }
 
 async function executar() {
+  const modo = process.env.TACO_MODO ?? 'v1';
+  if (!['v1', 'v2-micros1'].includes(modo)) throw new Error('Modo TACO inválido.');
+  const micros = modo === 'v2-micros1';
   const origem = await obterArquivoOrigem();
-  const catalogo = montarCatalogoTaco(origem.conteudo, origem.url);
-  const destino = resolve(__dirname, '../src/modulos/planos-alimentares/dados/catalogo-taco-4a.json');
+  const catalogo = montarCatalogoTaco(origem.conteudo, origem.url, { micronutrientes: micros });
+  const destino = resolve(__dirname, `../src/modulos/planos-alimentares/dados/catalogo-taco-4a${micros ? '-micros1' : ''}.json`);
   await writeFile(destino, serializarCatalogoTaco(catalogo), 'utf8');
   process.stdout.write(
     `Catalogo TACO gerado: ${catalogo.metadados.contagem.alimentosValidos} alimentos, ` +

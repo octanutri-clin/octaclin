@@ -10,6 +10,15 @@ const entrada = () => ({ rascunhoIdEsperado: id, rascunhoRevisaoEsperada: 0, doc
 const erros = (v: unknown) => validate(plainToInstance(SalvarEdicaoPlanoDto, v), { whitelist: true, forbidNonWhitelisted: true });
 
 describe('PA06 DTO de edição parcial', () => {
+  it('preserva micros editoriais e materializa somente valores preenchidos', () => {
+    const d = validarDocumentoEdicaoPlano({ schemaVersao: 1, refeicoes: [{ chaveCliente: 'r', itens: [{ chaveCliente: 'i', micronutrientesPor100g: { ferroMg: '1,2', calcioMg: 0, vitaminaCMg: '' } }] }] });
+    expect(d.refeicoes[0].itens[0]).toHaveProperty('micronutrientesPor100g.ferroMg', '1,2');
+    const item = converterEdicaoParaRascunho(d, { id }).refeicoes[0].itens[0];
+    expect(item).toHaveProperty('micronutrientesPor100g', { ferroMg: 1.2, calcioMg: 0 });
+    expect(() => validarDocumentoEdicaoPlano({ schemaVersao: 1, refeicoes: [{ chaveCliente: 'r', itens: [{ chaveCliente: 'i', micronutrientesPor100g: { invalido: 1 } }] }] })).toThrow();
+    const pendente = validarDocumentoEdicaoPlano({ schemaVersao: 1, refeicoes: [{ chaveCliente: 'r', itens: [{ chaveCliente: 'i', micronutrientesPor100g: { ferroMg: '-' } }] }] });
+    expect(converterEdicaoParaRascunho(pendente, { id }).refeicoes[0].itens[0]).toHaveProperty('micronutrientesPor100g.ferroMg', NaN);
+  });
   it('aceita incompletude editorial sem validar como prescrição clínica', async () => {
     expect(await erros(entrada())).toHaveLength(0);
   });
