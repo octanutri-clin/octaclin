@@ -4657,13 +4657,15 @@ auditoria estão ordenados na seção 15 de
   Snapshots legados ficam intactos; cobertura por nutriente, sem IDR/UL/TBCA.
   Whitelist de 22 códigos e fontes/hashes em `docs/product/FONTES_MICRONUTRIENTES_PA06.md`;
   pendência semântica IBGE D delimitada. T08c e PostgreSQL/RLS local validados;
-  TACO v2 preparada/carga idempotente apenas em banco descartável. UI/BFF T08d,
-  revisão R4 e CI finais pendentes; sem carga/migration externa. Evidências em
+  TACO v2 preparada/carga idempotente apenas em banco descartável. UI/BFF T08d
+  implementado na PR #422 Draft; revisão separada da autoria com achados
+  corrigidos/reexaminados. CI inicial PASS com Testcontainers85/85; conferir
+  CI do HEAD corrigido na mesma PR. Sem carga/migration externa. Evidências em
   `docs/governance/EVIDENCIAS_PA06_CALCULO_2026-10-16.md`.
   Aplicação operacional da1074/deploy não inferida do merge.
   Plano executável `tasks/plan-pos-320-pa06-calculo.md`, checklist
-  `tasks/todo-pos-320-pa06.md`. Sol médio para cálculo/fontes/RLS; Luna alto
-  depois do checkpoint backend, com pausa para troca. PA07 é posterior.
+  `tasks/todo-pos-320-pa06.md`. Sol médio na integração final; trocas anteriores
+  já realizadas. PA07 é posterior.
 
 Merge/checks de #419 conferidos em 2026-10-15. Não inferir estado de produção.
 

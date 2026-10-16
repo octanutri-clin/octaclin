@@ -54,7 +54,7 @@ sem TLS e foi corretamente recusado pelo controle existente. O harness final
 usa `NODE_ENV=test`, banco descartável e alvo explícito. Nenhuma proteção de
 produção foi relaxada. As falhas dos ensaios não são declaradas PASS.
 
-## Comandos e gates
+## Comandos e gates — checkpoint backend histórico
 
 Toolchain final: Node22.21.1/pnpm11.25.0 já disponíveis em `/tmp`; sem alteração
 de dependências/lockfile. Primeiros testes focados usaram Node24/pnpm11.19 e
@@ -95,7 +95,7 @@ nos documentos, logs de operação ou respostas da aplicação.
 - Não alterar nem apagar fontes/snapshots antigos em rollback. Retirar a nova
   projeção/UI se necessário, mantendo os controles ON/OFF já integrados.
 
-## T08d — BFF e interface de seleção combinada
+## T08d — BFF e interface de seleção combinada (checkpoint inicial)
 
 Implementação local na mesma branch, sem migration, dependência nova, acesso a
 banco externo ou carga de catálogo. O seletor é estado volátil por prontuário;
@@ -133,3 +133,54 @@ Logs de execução foram temporários e não continham pacientes reais. O build
 produziu `.next` ignorado; não faz parte do diff. Um `next-env.d.ts` gerado pelo
 servidor Next de desenvolvimento foi restaurado ao conteúdo versionado para
 evitar incluir artefato local.
+
+## T09.3 — revisão separada e correções na PR #422
+
+O CI de `bcf0825f` passou, incluindo Backend, Web, Demo local smoke, PR Gate,
+governança, imagens, CodeQL, Semgrep e Trivy. Provenance do SBOM ficou SKIPPED
+pela condição do workflow. Run principal:
+<https://github.com/octanutri-clin/octaclin/actions/runs/38925522704>.
+O job Backend comprovou341 suítes/3100 testes PASS (41 SKIPPED nos gates próprios),
+Redis real2/2 e Testcontainers85/85 com imagem Timescale HA/pg15, migrations
+completas, role NOBYPASSRLS e extensões do schema. Essa é prova de banco
+descartável de CI, sem evidência sobre staging/produção.
+
+Revisão somente leitura realizada por outro agente, que não escreveu as mudanças,
+sobre `011ea87d → bcf0825f`. Não equivale a revisão humana, clínica ou externa.
+Foram encontrados cinco achados iniciais e uma borda adicional na revisão das
+correções. Todos tiveram causa identificada e correção examinada pelo revisor.
+
+| Achado | Causa e correção | Prova observada |
+| --- | --- | --- |
+| P1: catálogo bloqueado no autosave/publicação | UI enviava bloco vazio, ou valores do snapshot, como micros manuais de catálogo. O editor/cópia agora omitem esse campo para catálogo; conversor omite bloco vazio. Override efetivo continua chegando à validação para ser rejeitado | RED:1 caso DTO e2 casos de cópia; GREEN:343 testes do módulo e9/9 de cópia |
+| P1: total antigo em409/revalidação revogada | Resultado permanecia ligado à mesma chave local. Recálculo e revalidação invalidam o resultado antes de aguardar rede | RED:4 cenários de409/403/foco/retirada de acesso; GREEN em desktop e repetição móvel |
+| P2: ACK/GET tardio restaurava seleção | ACK operava sobre array capturado antes do await; refresh ignorava mudanças durante a leitura. ACK agora usa estado vigente/revisão monotônica; refresh descarta resposta se contexto/seleção mudou; requisições de seleção são abortadas ao desmontar | RED:remoção durante ACK e durante refresh; GREEN nos cenários desktop/mobile |
+| P2: arredondamento intermediário da porção | Origem e normalização/100g eram arredondadas antes de aplicar porção. Razão inteira decimal usa origem×porção/base e half-up somente ao final de cada resultado congelado | RED:2 valores sintéticos; GREEN:21 testes de micros incluídos nos343 do módulo. Exemplos independentes:4e-9×10000/100=4e-7;1.234567895×200/100=2.46913579 |
+| P3: positivo pequeno exibido como zero | Casas fixas para todos os nutrientes. Apresentação agora segue casas por nutriente e usa `<limiar` para positivo abaixo da resolução | GREEN:4 testes de seleção/apresentação, distinguindo ausência, zero e positivo pequeno; prova inicial acusou export inexistente do novo formatador |
+| P2: desmarcar/remarcar antes do debounce | A chave voltava ao valor antigo enquanto o sucesso anterior continuava guardado. `invalidar()` elimina o resultado imediatamente; cancelamento de transporte é separado | RED com relógio controlado:esperado0 ocorrências do total antigo, recebido1; GREEN:debounce/foco4/4 desktop/mobile |
+
+Commits de correção: `ddcea76c` e `2a4e87b0`. A segunda leitura confirmou as
+cinco correções em `ddcea76c`; a terceira confirmou a última borda em `2a4e87b0`,
+sem bloqueadores técnicos concretos restantes nos deltas examinados. Não houve
+repetição dos builds/CI pelo revisor; os testes descritos são execução da autoria,
+com provas sintéticas adicionais de precisão/apresentação pelo revisor.
+
+Retestes locais: módulo backend343/343, typecheck/build backend PASS; cópia9/9,
+nutrição/edição39/39, helpers/apresentação4/4, lint direcionado sem erros e13
+avisos nos arquivos legados do editor/prontuário. Uma primeira execução visual
+teve15/16 PASS e timeout móvel antes de carregar o seletor; o caso passou ao ser
+repetido isoladamente. Esse ensaio não é contado como suíte integral PASS.
+
+Reteste final no build de produção local (`next start`, porta3100, somente mocks
+e dados sintéticos):34/34 PASS,17 desktop/17 mobile. Inclui os9 cenários PA06
+de seleção/conflito/concorrência/debounce por projeto, integridade editorial e
+regressões de cópia/duplicação/acréscimo. Comando:
+`E2E_WEB_URL=http://localhost:3100 E2E_REUSE_EXISTING_SERVER=true pnpm exec playwright test tests/visual/pa06-calculo-combinado.spec.mjs tests/visual/pa02-copia-refeicoes.spec.mjs --project=desktop-chromium --project=mobile-chromium --grep 'PA06|copia uma refeição publicada|acrescenta alimentos|duplica a refeição local'`.
+Servidor local encerrado após os testes. Build/typecheck Web PASS; lint do
+componente de cálculo/formatador sem avisos/erros. `pnpm test:confiabilidade`
+PASS (40 referências críticas); `pnpm security:secrets`/`git diff --check` PASS.
+
+O CI de `bcf0825f` não aprova automaticamente os commits de correção. A PR #422
+concentra o estado operacional dos checks do HEAD final e permanece Draft até
+sua conclusão. Nenhum acesso a banco externo, migration externa, carga TACO,
+merge, deploy ou ativação foi executado nesta rodada.

@@ -304,7 +304,7 @@ ou FOOD06 por antecipação.
   restante na data do planejamento, antes da autorização posterior de T08c. A equivalência
   IBGE D tem tratamento técnico conservador definido e não bloqueia outros campos.
 
-## Checkpoint posterior — desenvolvimento autorizado e backend entregue localmente
+## Checkpoint histórico — desenvolvimento autorizado e backend entregue localmente
 
 Em 2026-10-16, o proprietário autorizou “Pode seguir com sol médio”. T08c.1a–.5
 implementados e validados; [evidências](../docs/governance/EVIDENCIAS_PA06_CALCULO_2026-10-16.md)
@@ -313,3 +313,14 @@ Não alterar as verificações históricas do planejamento acima como se fossem
 provas executadas naquela data. Gate local de planos/RLS PASS; gate integral
 Timescale/pgvector/CI e revisão R4 final continuam pendentes. Nenhuma carga externa.
 Próxima ação: troca manual para Luna alto e T08d.1–T08d.4, depois Sol para T09.3/T10.3.
+
+## Checkpoint de integração — T08d e revisão R4
+
+T08d implementado e PR #422 aberta. O primeiro CI comprovou também o gate
+integral PostgreSQL/Timescale. A revisão somente leitura por outro agente
+encontrou defeitos de catálogo, estado obsoleto, seleção e precisão; todos foram
+corrigidos com regressões e reexaminados sem achado concreto aberto. Não é
+revisão clínica, humana ou externa. O [handoff corrente](plan.md), as
+[evidências](../docs/governance/EVIDENCIAS_PA06_CALCULO_2026-10-16.md) e a PR
+concentram o estado dos retestes/CI do runtime corrigido. Nenhuma operação de
+staging/produção, migration externa ou carga de catálogo foi feita.

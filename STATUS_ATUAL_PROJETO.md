@@ -4,7 +4,7 @@ Atualizado em 2026-10-16.
 
 ## Fase ativa
 
-- **PA06 — terceira entrega com backend implementado localmente**, base `011ea87d`.
+- **PA06 — terceira entrega implementada, PR #422 Draft**, base `011ea87d`.
   Autosave/rascunho parcial integrados por #420; ativação de planos/refeições e
   portal plural por #421, merge confirmado em 2026-10-16. Próxima entrega:
   cálculo combinado de publicações atuais com micros versionados/cobertura.
@@ -21,13 +21,16 @@ Atualizado em 2026-10-16.
   cobertura e duas rotas autorizadas; TACO v2 preparada e carga repetida provada
   somente em banco descartável. Evidências em
   `docs/governance/EVIDENCIAS_PA06_CALCULO_2026-10-16.md`.
-  T08d (UI/BFF) ainda não iniciado; pausar para troca manual para Luna alto.
-  CI, revisão R4 final e gate integral com extensões continuam pendentes.
+  T08d (UI/BFF) implementado: seleção volátil por paciente, conflito explícito,
+  cobertura/ausência por nutriente e edição manual sem override de catálogo.
+  CI inicial PASS, inclusive PostgreSQL integral/Testcontainers85/85. Revisão
+  somente leitura por outro agente encontrou cinco achados e uma borda adicional,
+  corrigidos/reexaminados sem achado concreto aberto. Não equivale a revisão
+  humana ou clínica. Conferir na PR o CI do HEAD posterior às correções.
   Migrations1072–1074 registradas no código; aplicação real da1074/deploy não
   conferidos por consulta externa. Worktree `pos320-pa06-calculo` preserva os
-  trabalhos anteriores. Sol6.1 médio para fontes/backend/RLS/cálculo; Luna alto
-  só após checkpoint GREEN para UI/BFF; Sol para integração/revisão final.
-  Avisar e pausar antes de cada troca. PA07 vem depois desta entrega.
+  trabalhos anteriores. Integração/revisão final com Sol6.1 médio. PA07 vem
+  depois desta entrega; não há troca de modelo pendente nesta integração.
 - **PA05 — integrada pela PR #419**, merge `eae74b1e`, árvore idêntica ao HEAD
   `9e12271b`. CI `38656591697` e checks aplicáveis PASS em 2026-10-15, inclusive
   Backend, Web, Demo e PR Gate; scanners SUCCESS. SBOM provenance SKIPPED.

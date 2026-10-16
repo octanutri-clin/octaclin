@@ -5,7 +5,9 @@ Estado em 2026-10-16: primeira entrega integrada pela PR #420; segunda integrada
 pela PR #421, merge `011ea87d`. Terceira entrega: backend T08c e interface/BFF
 T08d implementados na branch `feat/pos320-pa06-calculo`, base `011ea87d`; o
 proprietário confirmou troca de modelo e autorizou “Pode seguir com sol médio”.
-Gates finais locais em execução; limites e evidências em:
+PR Draft #422 aberta; revisão separada encontrou cinco achados e uma borda
+adicional, todos corrigidos/reexaminados em `ddcea76c`/`2a4e87b0`. CI inicial
+`bcf0825f` PASS; CI do HEAD corrigido deve ser conferido na PR. Limites em:
 [plan-pos-320-pa06-calculo.md](plan-pos-320-pa06-calculo.md).
 Migrations anteriores relatadas pelo proprietário não comprovam aplicação da1074;
 nenhum banco externo consultado nesta rodada. Cada entrega tem T09/T10 próprios.
@@ -271,9 +273,8 @@ máquina; UI/BFF e revisão R4 final continuam pendentes. Sem carga externa.
 
 ## T08d — seleção combinada e nutrientes, console/BFF (fatias de2–4 arquivos)
 
-Dependência: T08c e T07. Luna alto após contrato de cálculo fechado por Sol.
-Executar T08d.1–T08d.4 do plano da terceira entrega. Avisar e pausar antes da
-troca para Luna; retornar ao Sol para T09.3/T10.3.
+Dependência: T08c e T07. T08d.1–T08d.4 implementados após troca manual de
+modelo; integração e correções T09.3/T10.3 conduzidas com Sol médio.
 
 - [x] Seleção explícita de planos ativos publicados e refeições; exibir número/data
   da publicação atual de cada plano, sem seletor de rascunho. Seleção entre páginas
@@ -297,6 +298,12 @@ PA06 e regressões PA02/PA05/portal. Typecheck e build Web PASS; lint Web sem
 erros (71 avisos preexistentes/distribuídos no repositório). Evidências e
 limitações em `docs/governance/EVIDENCIAS_PA06_CALCULO_2026-10-16.md`.
 
+Após revisão R4 e correções: módulo backend343/343, cópia9/9, helpers4/4,
+nutrição/edição39/39; build/typecheck backend e Web PASS. Reteste visual final
+no build de produção local34/34 desktop/mobile, com novas bordas de resultado
+obsoleto, ACK/refresh atrasados e debounce. Revisão por outro agente sem achados
+concretos abertos; CI dos commits corrigidos deve ser conferido na PR.
+
 ### Checkpoint C — integração Sol
 
 - [x] Voltar para GPT-6.1 Sol médio com aviso e pausa manual; troca realizada.
@@ -313,11 +320,12 @@ de três PRs no plano. Sol médio; repetir estes gates em cada entrega.
   os arquivos alterados não introduziram erro de lint; avisos atuais concentram
   padrões já existentes de `setState-in-effect` em arquivos grandes do editor e
   prontuário.
-- [ ] Banco real integral com Timescale/pgvector continua pendente para CI; a
-  fixture PostgreSQL descartável cobriu PA04–PA06 e o inventário RLS.
-- [ ] Revisão técnica R4 independente do diff completo T08c/T08d e CI do HEAD
-  continuam pendentes; testes locais e revisão da autoria não substituem essa
-  revisão.
+- [x] Banco real integral com Timescale HA/pgvector comprovado no CI de
+  `bcf0825f`:Testcontainers85/85. Fixture local parcial permanece documentada;
+  corrigido o runtime, repetir os gates no novo HEAD antes de integrar.
+- [x] Revisão técnica R4 do diff T08c/T08d por outro agente, somente leitura,
+  separado da autoria. Cinco achados iniciais e uma borda adicional corrigidos e
+  reexaminados até `2a4e87b0`; não equivale a revisão humana/clínica/externa.
 - [x] Segunda revisão cruzada estática R4 confirmou os dois fixes e o delta final
   do portal sem novos achados; primeira leitura R4 encontrou dois achados P2.
   Correções e retestes estão documentados na evidência PA06.
@@ -340,12 +348,12 @@ um servidor Next por worktree; não reaproveitar órfão de outro teste.
 
 Dependência: T09. Sol médio.
 
-- [ ] Uma PR por recurso: autosave parcial → ativação → cálculo combinado.
+- [x] Uma PR por recurso: autosave parcial → ativação → cálculo combinado (#422).
   Cada uma inclui código/plano/evidências; não criar PR documental separada.
-- [x] `git diff --check`, `pnpm security:secrets`, governança, scanners e CI
-  Backend/Web/Demo/PR Gate do HEAD validado PASS; Playwright do Demo `876/878`
-  com 2 testes SKIPPED; provenance SBOM SKIPPED pela condição do workflow.
-  Evidências incluem o primeiro RED, a correção do fixture e GREEN focal integral.
+- [ ] CI Backend/Web/Demo/PR Gate e scanners do HEAD corrigido da terceira
+  entrega: acompanhar na PR #422. CI de `bcf0825f` PASS, incluindo banco integral;
+  não extrapolar esse resultado aos commits posteriores. Histórico das entregas
+  anteriores e retestes locais preservados nas evidências.
 - [x] Nenhum merge/deploy/migration externa/ativação sem autorização e alvo.
 
 Aceite: relatório de segurança, limitações e sequência operacional explícitos.

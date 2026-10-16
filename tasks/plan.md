@@ -1,26 +1,31 @@
-# Handoff atual — PA06 cálculo combinado: T08d implementado, gates locais concluídos
+# Handoff atual — PA06 cálculo combinado: PR #422, correções R4 revisadas
 
 ## Branch, autorização e estado
 
 - Worktree `/workspace/octaclin/.worktrees/pos320-pa06-calculo`, branch
   `feat/pos320-pa06-calculo`, base `011ea87d`. Planejamento em `10ebf9aa`;
   desenvolvimento autorizado pelo proprietário em “Pode seguir com sol médio”.
-- T08c implementado/testado localmente; T08d de UI/BFF implementado na mesma
-  branch. O proprietário confirmou a troca de modelo e autorizou continuar em
-  “Pode seguir com sol médio”. Nenhum push/PR desta terceira entrega realizado
-  até concluir os gates e revisar o diff.
+- T08c/T08d implementados na mesma branch e PR Draft
+  <https://github.com/octanutri-clin/octaclin/pull/422>. O proprietário confirmou
+  a troca de modelo e autorizou continuar em “Pode seguir com sol médio”.
+  Runtime corrigido em `ddcea76c` e `2a4e87b0` após revisão separada da autoria.
 - Sem migration nova;1072–1074 intocadas. Sem carga externa, merge ou deploy.
-  A atualização de `octaclin-web/next-env.d.ts` foi gerada pelo Next 16 durante
-  os testes locais; não foi alterado o checkout principal.
+  Arquivos gerados pelo Next são excluídos do commit; checkout principal preservado.
 - Estado deste checkpoint: BFF focado42/42; cópia8/8; edição/nutrição39/39;
   helpers de seleção3/3; `test:authz` PASS (26 recortes); Playwright desktop/
   mobile94/94 (inclui Axe do painel); lint Web sem erros/71 avisos; typecheck e
   build Web PASS; scanner local de secrets PASS. `git diff --check` PASS.
-- R4 independente, CI do HEAD e gates integrais de PostgreSQL/Timescale/pgvector
-  ainda não comprovados nesta entrega. O estado reportado do banco remoto não foi
-  consultado; não houve alteração externa.
-- Próxima etapa: finalizar revisão do diff, criar commit e abrir uma única PR
-  Draft para CI e revisão R4 independente. Manter Draft até ambos concluírem.
+- CI de `bcf0825f` integral PASS, inclusive Testcontainers85/85 em Timescale HA,
+  Web e Demo. Não confundir esse resultado com os commits de correção posteriores;
+  repetir CI do HEAD corrigido na mesma PR. Banco remoto não consultado.
+- R4 por outro agente, somente leitura e separado da autoria: cinco achados
+  iniciais e uma borda adicional corrigidos e reexaminados. Sem bloqueadores
+  concretos abertos em `2a4e87b0`. Não é revisão humana, clínica ou externa.
+- Retestes das correções:343 testes backend,9 cópia,39 nutrição/edição e4
+  helpers PASS; builds/typechecks backend/Web PASS. Playwright final sobre build
+  de produção local34/34 desktop/mobile PASS; lint direcionado sem erros.
+- Próxima etapa: enviar o HEAD à mesma PR e conferir os checks finais. Manter
+  Draft até os gates finais passarem; estado operacional do CI na PR #422.
 - Evidências: [checkpoint backend](../docs/governance/EVIDENCIAS_PA06_CALCULO_2026-10-16.md).
   Plano executável [T08c/T08d](plan-pos-320-pa06-calculo.md) e
   [checklist](todo-pos-320-pa06.md). Seções antigas abaixo são históricas.
@@ -72,8 +77,9 @@
    cobertura, parcial/indisponível e distingue ausência de zero. Portal/PDF não
    recebem a seleção nem micronutrientes fora dos contratos de snapshot.
 6. Provas executadas estão em `docs/governance/EVIDENCIAS_PA06_CALCULO_2026-10-16.md`;
-   a suíte local desta entrega foi concluída. R4 independente, CI e gate integral
-   do PostgreSQL/Timescale/pgvector continuam pendentes antes de retirar Draft.
+   a revisão separada encontrou e confirmou correções de catálogo, precisão,
+   apresentação e estado obsoleto. CI do HEAD corrigido é requisito antes de
+   retirar Draft.
 
 ## Ambiente e verificações
 
@@ -92,9 +98,10 @@
   gate integral PASS por ela; full Testcontainers permanece no CI.
 - Falha encontrada/corrigida: JSONB reordena chaves do bloco de micros. Hash
   TACO canoniza só esse bloco novo; v1 permanece byte a byte reproduzível.
-- Nenhuma revisão independente nesta rodada. R4 final e CI ainda pendentes;
-  UI/BFF/Playwright da entrega ainda não executados. IBGE vitamina D permanece
-  sem mapping por falta de equivalência comprovada; demais campos funcionam.
+- Revisão R4 por outro agente documentada no checkpoint T09.3 das evidências;
+  IBGE vitamina D permanece sem mapping por falta de equivalência comprovada.
+  Testcontainers completo comprovado no CI de `bcf0825f`; correções posteriores
+  ainda precisam dos checks finais da PR.
 
 ---
 
