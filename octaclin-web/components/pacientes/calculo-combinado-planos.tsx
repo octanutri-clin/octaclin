@@ -55,18 +55,22 @@ export function CalculoCombinadoPlanos({ pacienteId, planos, selecoes, aoMudarSe
   const calculando = calculandoChave === chaveAtual;
   const opcoesDisponiveis = useMemo(() => planos.filter(plano => plano.ativoParaPaciente === true && !selecoes.some(item => item.planoId === plano.id)), [planos, selecoes]);
 
-  const invalidar = useCallback(() => {
+  const cancelarCalculo = useCallback(() => {
     geracao.current += 1;
     controlador.current?.abort();
     controlador.current = null;
   }, []);
+
+  const invalidar = useCallback(() => {
+    cancelarCalculo();
+    setResultadoEstado(null);
+  }, [cancelarCalculo]);
 
   const calcular = useCallback(async () => {
     const selecoesAtuais = selecoesRef.current;
     const chaveCalculo = chaveAtualRef.current;
     invalidar();
     const idGeracao = geracao.current;
-    setResultadoEstado(null);
     setErroEstado(null);
     setConflitoChave(null);
     if (selecoesAtuais.length === 0) {
@@ -92,11 +96,11 @@ export function CalculoCombinadoPlanos({ pacienteId, planos, selecoes, aoMudarSe
   }, [invalidar, pacienteId]);
 
   useEffect(() => {
-    invalidar();
+    cancelarCalculo();
     if (!selecoes.length) return;
     const timer = window.setTimeout(() => { void calcular(); }, 300);
     return () => window.clearTimeout(timer);
-  }, [calcular, chaveAtual, invalidar, selecoes.length]);
+  }, [calcular, cancelarCalculo, chaveAtual, selecoes.length]);
 
   useEffect(() => () => {
     geracao.current += 1;
@@ -110,7 +114,6 @@ export function CalculoCombinadoPlanos({ pacienteId, planos, selecoes, aoMudarSe
     if (!atuais.length) return;
     const chaveRevalidada = chaveAtualRef.current;
     invalidar();
-    setResultadoEstado(null);
     setCalculandoChave(chaveRevalidada);
     controladorRevalidacao.current?.abort();
     const signalController = new AbortController();

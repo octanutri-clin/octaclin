@@ -196,3 +196,29 @@ test('PA06 atualização atrasada não restaura plano removido do cálculo', asy
   await expect(page.getByText('Nenhum plano selecionado.', { exact: false })).toBeVisible();
   await expect(page.getByRole('checkbox', { name: 'Refeição A' })).toHaveCount(0);
 });
+
+test('PA06 desmarcar e remarcar antes do debounce não ressuscita resultado invalidado', async ({ page }) => {
+  await page.clock.install({ time: new Date('2026-10-16T12:00:00.000Z') });
+  await prepararConsole(page);
+  await page.route(url => url.pathname.endsWith('/selecao-calculo'), route => route.fulfill({ json: selecaoA() }));
+  let chamadas = 0;
+  let liberar;
+  const pendente = new Promise(resolve => { liberar = resolve; });
+  await page.route(url => url.pathname.endsWith('/calculo-combinado'), async route => {
+    chamadas += 1;
+    if (chamadas > 1) await pendente;
+    await route.fulfill({ json: resultado(chamadas > 1 ? 2 : 1) });
+  });
+  await adicionarPlanoA(page);
+  await page.clock.pauseAt(new Date('2026-10-16T12:05:00.000Z'));
+  const solicitacao = page.waitForRequest(url => url.url().endsWith('/calculo-combinado'));
+  await page.getByRole('checkbox', { name: 'Refeição A' }).evaluate(elemento => {
+    elemento.click();
+    elemento.click();
+  });
+  expect(await page.getByText('100 kcal', { exact: true }).count()).toBe(0);
+  await page.clock.runFor(301);
+  await solicitacao;
+  liberar();
+  await expect(page.getByText('200 kcal', { exact: true })).toBeVisible();
+});
