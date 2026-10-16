@@ -3422,12 +3422,14 @@ test.describe('prontuario do paciente', () => {
     const versaoAtual = {
       id: 'versao-publicada-pa01', numero: 1, status: 'publicada', publicadaEm: '2026-10-01T12:00:00.000Z',
       criadoEm: '2026-10-01T12:00:00.000Z', atualizadoEm: '2026-10-01T12:00:00.000Z', objetivos: 'Objetivo sintético.',
+      ativacaoEdicao: montarRefeicoes(nomesSalvos).map((refeicao) => ({ chaveCliente: refeicao.id, identidadeId: `identidade-${refeicao.id}`, ativa: true })),
       refeicoes: montarRefeicoes(nomesSalvos)
     };
     const versaoRascunho = {
       id: 'versao-rascunho-pa01', numero: 2, status: 'rascunho', avaliacaoAntropometricaId: 'avaliacao-pa01',
       rascunhoRevisao: 0, edicaoEstado: 'materializada',
       criadoEm: '2026-10-02T12:00:00.000Z', atualizadoEm: '2026-10-02T12:00:00.000Z', objetivos: 'Objetivo sintético.',
+      ativacaoEdicao: montarRefeicoes(nomesSalvos).map((refeicao) => ({ chaveCliente: refeicao.id, identidadeId: `identidade-${refeicao.id}`, ativa: true })),
       calculo: {
         fatorAtividade: 1.4, ajusteEnergeticoKcal: 0, metaEnergeticaKcal: 2000,
         metasMacronutrientes: { carboidratosG: 250, proteinasG: 100, gordurasG: 67 },
@@ -3438,6 +3440,7 @@ test.describe('prontuario do paciente', () => {
     };
     const detalhePlano = () => ({
       id: 'plano-pa01', pacienteId: 'paciente-1', profissionalId: 'profissional-1', titulo: 'Plano de teste PA01',
+      ativoParaPaciente: true, ativacaoRevisao: 1,
       criadoEm: '2026-10-01T12:00:00.000Z', atualizadoEm: '2026-10-02T12:00:00.000Z',
       current: versaoAtual, draft: { ...versaoRascunho, refeicoes: montarRefeicoes(nomesSalvos) }, historico: [versaoAtual]
     });
@@ -3445,6 +3448,7 @@ test.describe('prontuario do paciente', () => {
     await page.route('**/api/pacientes/paciente-1/planos-alimentares?**', async (route) => route.fulfill({
       status: 200, contentType: 'application/json', body: JSON.stringify({
         itens: [{ id: 'plano-pa01', pacienteId: 'paciente-1', profissionalId: 'profissional-1', titulo: 'Plano de teste PA01',
+          ativoParaPaciente: true, ativacaoRevisao: 1,
           criadoEm: '2026-10-01T12:00:00.000Z', atualizadoEm: '2026-10-02T12:00:00.000Z', current: versaoAtual,
           draft: { id: versaoRascunho.id, numero: versaoRascunho.numero, status: versaoRascunho.status }, historicoQuantidade: 2 }],
         total: 1, pagina: 1, limite: 100

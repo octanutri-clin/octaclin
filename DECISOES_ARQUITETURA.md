@@ -395,3 +395,31 @@ zero identifica ausência legada; snapshot herdado começa revisão positiva par
 que perda do cipher seja indisponibilidade, não fallback. Publicação inclui
 preferências explícitas no hash conferido; versões antigas não são recalculadas.
 Rollback de código conserva schema aditivo e snapshots; não remover histórico.
+
+## Estado operacional de entrega dos planos e refeições
+
+ON/OFF é estado do plano e da identidade lógica da refeição, separado das
+versões clínicas. Desativar não arquiva, não apaga e não reescreve o snapshot ou
+hash publicado. Plano OFF prevalece sobre refeições sem alterar seus estados.
+Múltiplas publicações atuais de planos diferentes podem permanecer ativas.
+
+Identidades de refeições sobrevivem ao autosave que recria linhas físicas e ao
+clone dentro do mesmo plano. Vínculos explícitos por tenant/plano/versão e mapa
+editorial cifrado evitam inferência entre versões por nome ou posição. Chaves
+removidas permanecem internas para impedir reativação por reinserção; não são
+projetadas fora da edição atual. Cópia entre planos cria identidades próprias.
+O limite de aliases é verificado em entradas e bytes antes da persistência.
+
+Decisões operacionais usam revisão própria e evento append-only na mesma
+transação, inclusive ativação inicial ao publicar. No-op não avança revisão;
+primeiro OFF anterior à publicação é decisão explícita. Escritores antigos sem
+identidade não podem recriar refeições depois de uma decisão operacional.
+Locks de paciente/plano serializam entrega, edição, publicação e escolhas;
+leituras do portal revalidam usuário, tenant, paciente e publicação atual.
+
+Totais históricos permanecem identificados como snapshots. Resumos vigentes
+somam somente os snapshots dos alimentos efetivos, sem substituições/consumo e
+sem consultar novamente o catálogo. Lacunas não viram zero. A prévia/impresso
+para entrega ao paciente respeita ON/OFF; consulta histórica profissional é
+separada. Documento já obtido fora do sistema não pode ser recolhido por ON/OFF.
+Procedimento operacional e limite de rollback: RUNBOOK_PRODUCAO.md.

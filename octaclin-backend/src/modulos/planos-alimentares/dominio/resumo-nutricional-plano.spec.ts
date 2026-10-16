@@ -26,3 +26,19 @@ describe('projetarResumoNutricionalPlano', () => {
     expect(projetarResumoNutricionalPlano([])).toEqual({ estado: 'indisponivel' });
   });
 });
+
+describe('PA06b totais dos itens efetivos', () => {
+  it('soma snapshots dos alimentos previstos sem substituir total histórico', async () => {
+    const { resumirNutrientesItensEfetivos } = await import('./resumo-nutricional-plano');
+    const item = {energiaKcal:100,proteinasG:5,carboidratosG:10,gordurasG:3};
+    expect(resumirNutrientesItensEfetivos([item,item])).toEqual({estado:'completo',energiaKcal:200,proteinasG:10,carboidratosG:20,gordurasG:6});
+    expect(resumirNutrientesItensEfetivos([])).toEqual({estado:'completo',energiaKcal:0,proteinasG:0,carboidratosG:0,gordurasG:0});
+    expect(item.energiaKcal).toBe(100);
+  });
+  it('propaga lacunas por indicador sem inventar zero nem omitir valores calculáveis', async () => {
+    const { resumirNutrientesItensEfetivos } = await import('./resumo-nutricional-plano');
+    expect(resumirNutrientesItensEfetivos([{energiaKcal:100,proteinasG:5,carboidratosG:10,gordurasG:3},{energiaKcal:40,proteinasG:2,gordurasG:1}]))
+      .toEqual({estado:'incompleto',energiaKcal:140,proteinasG:7,gordurasG:4});
+    expect(resumirNutrientesItensEfetivos([undefined])).toEqual({estado:'incompleto'});
+  });
+});

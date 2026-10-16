@@ -1,4 +1,5 @@
-import { createHash } from 'crypto';
+import { lerEstadosRefeicoes } from '../infraestrutura/estados-refeicoes';
+import { createHash, randomUUID } from 'crypto';
 import { validateSync } from 'class-validator';
 import {
   BadRequestException,
@@ -39,7 +40,8 @@ import {
   validarEstruturaPlano
 } from '../dominio/plano-alimentar';
 import { lerApresentacaoVersao, validarPreferenciasApresentacao, projetarRefeicoesPaciente, projetarMetasPaciente } from '../dominio/apresentacao-plano';
-import { projetarResumoNutricionalPlano, ResumoNutricionalPlano } from '../dominio/resumo-nutricional-plano';
+import { projetarResumoNutricionalPlano, ResumoNutricionalPlano, resumirNutrientesItensEfetivos } from '../dominio/resumo-nutricional-plano';
+import { AliasIdentidadeRefeicao, lerIdentidadesRefeicoes, prepararIdentidadesRefeicoes } from '../dominio/identidades-refeicoes';
 import { DocumentoEdicaoPlano, validarDocumentoEdicaoPlano } from '../dominio/edicao-plano';
 import { converterEdicaoParaRascunho, PrecondicaoEdicaoPlanoDto, SalvarEdicaoPlanoDto } from './dtos-edicao-plano';
 import { AlimentoComposicaoOrm } from '../infraestrutura/alimento-composicao.orm';
@@ -150,6 +152,8 @@ export class ServicoPlanosAlimentares {
           profissionalId: true,
           tituloCriptografado: true,
           versaoPublicadaAtualId: true,
+          ativoParaPaciente: true,
+          ativacaoRevisao: true,
           criadoEm: true,
           atualizadoEm: true
         },
@@ -260,10 +264,18 @@ export class ServicoPlanosAlimentares {
           throw new ConflictException('A edição precisa estar completa antes de abrir a prévia do paciente.');
         }
       }
+      if (versao.publicadaEm && (plano.ativoParaPaciente !== true || plano.versaoPublicadaAtualId !== versao.id)) {
+        throw new ConflictException('A entrega vigente deste plano não está disponível. Consulte a versão preservada no histórico profissional.');
+      }
       const detalhe = await this.montarVersao(gerenciador, versao);
+      if (detalhe.refeicoes.some(r => !detalhe.ativacaoRefeicoes.some(e => e.refeicaoId === r.id))) {
+        throw new ConflictException('Estado operacional das refeições indisponível.');
+      }
+      const refeicoesAtivas = new Set(detalhe.ativacaoRefeicoes.filter(e => e.ativa).map(e => e.refeicaoId));
       return {
         id: plano.id,
         titulo: this.criptografia.descriptografar(plano.tituloCriptografado),
+        resumoNutricionalVigente: detalhe.resumoRefeicoesAtivas,
         numeroVersao: versao.numero,
         status: detalhe.status,
         ...(versao.publicadaEm ? { publicadoEm: versao.publicadaEm } : {}),
@@ -272,7 +284,7 @@ export class ServicoPlanosAlimentares {
         ...projetarMetasPaciente(detalhe.calculo),
         apresentacaoEstado: detalhe.apresentacaoEstado,
         ...(detalhe.preferenciasApresentacao ? { preferenciasApresentacao: detalhe.preferenciasApresentacao.paciente } : {}),
-        refeicoes: projetarRefeicoesPaciente(detalhe.refeicoes.map(refeicao => ({
+        refeicoes: projetarRefeicoesPaciente(detalhe.refeicoes.filter(r => refeicoesAtivas.has(r.id)).map(refeicao => ({
           id: refeicao.id, nome: refeicao.nome, horarioLocal: refeicao.horarioLocal, orientacoes: refeicao.orientacoes,
           itens: refeicao.itens.map(item => ({
             id: item.id, descricao: item.descricao, quantidade: item.quantidade, unidade: item.unidade, porcaoGramas: item.porcaoGramas,
@@ -590,6 +602,9 @@ export class ServicoPlanosAlimentares {
     this.validarDadosClinicosRascunho(dados);
     return this.executorTenant.executar(tenantId, async gerenciador => {
       const plano = await this.obterPlanoNoEscopo(gerenciador, tenantId, pacienteId, planoId, usuario, true);
+      if ((plano.ativacaoRevisao ?? 0) > 0) {
+        throw new ConflictException('O plano e seus vínculos foram alterados. Use o editor atualizado com identidades de refeições.');
+      }
       const rascunho = await this.obterRascunhoAtivo(gerenciador, tenantId, plano.id, true);
       this.conferirRevisaoEdicao(rascunho, dados);
       await this.aplicarRascunhoClinico(gerenciador, tenantId, pacienteId, rascunho, dados);
@@ -617,11 +632,12 @@ export class ServicoPlanosAlimentares {
       const rascunho = await this.obterRascunhoAtivo(gerenciador, tenantId, plano.id, true);
       this.conferirRevisaoEdicao(rascunho, dados);
       await this.validarReferenciasEdicao(gerenciador, tenantId, pacienteId, documento);
+      const identidades = await this.prepararIdentidadesEdicao(gerenciador, plano, rascunho, documento);
       const clinico = converterEdicaoParaRascunho(documento, rascunho);
       let materializada = false;
       if (!validateSync(clinico, { whitelist: true, forbidNonWhitelisted: true }).length && this.lerApresentacao(rascunho).apresentacaoEstado !== 'indisponivel') {
         try {
-          await this.aplicarRascunhoClinico(gerenciador, tenantId, pacienteId, rascunho, clinico);
+          await this.aplicarRascunhoClinico(gerenciador, tenantId, pacienteId, rascunho, clinico, identidades);
           materializada = true;
         } catch (erro) {
           // Incompletude/inaplicabilidade clínica não apaga o documento editorial.
@@ -684,7 +700,7 @@ export class ServicoPlanosAlimentares {
 
   private async aplicarRascunhoClinico(
     gerenciador: EntityManager, tenantId: string, pacienteId: string,
-    rascunho: PlanoAlimentarVersaoOrm, dados: AtualizarRascunhoPlanoAlimentarDto
+    rascunho: PlanoAlimentarVersaoOrm, dados: AtualizarRascunhoPlanoAlimentarDto, identidades?: string[]
   ): Promise<void> {
     this.validarDadosClinicosRascunho(dados);
     const metaManual = dados.origemMeta === 'manual';
@@ -785,7 +801,7 @@ export class ServicoPlanosAlimentares {
       rascunho.apresentacaoSnapshotCriptografado = this.criptografia.criptografar(JSON.stringify(preferencias));
       rascunho.apresentacaoRevisao = (rascunho.apresentacaoRevisao ?? 0) + 1;
     }
-    await this.substituirFilhos(gerenciador, tenantId, rascunho.id, estrutura);
+    await this.substituirFilhos(gerenciador, tenantId, rascunho.id, estrutura, identidades);
     rascunho.avaliacaoAntropometricaId = avaliacao!.id;
     // `null` e proposital: se o rascunho ja tinha formula e virou manual, so
     // `null` limpa a coluna -- `undefined` deixaria a formula antiga no banco.
@@ -833,6 +849,70 @@ export class ServicoPlanosAlimentares {
     });
   }
 
+  /** Estado operacional, independente da edição clínica e do hash publicado. */
+  async alterarAtivacao(
+    tenantId: string, pacienteId: string, planoId: string, usuario: UsuarioAutenticado,
+    dados: { ativo: boolean; ativacaoRevisaoEsperada: number }, identidadeRefeicaoId?: string
+  ) {
+    this.garantirPapelProfissional(usuario);
+    this.garantirPermissao(usuario, 'planos_alimentares.gerenciar');
+    if (typeof dados.ativo !== 'boolean' || !Number.isInteger(dados.ativacaoRevisaoEsperada) ||
+        dados.ativacaoRevisaoEsperada < 0 || dados.ativacaoRevisaoEsperada >= 2147483647) {
+      throw new BadRequestException('Informe estado e revisão de ativação válidos.');
+    }
+    return this.executorTenant.executar(tenantId, async gerenciador => {
+      const plano = await this.obterPlanoNoEscopo(gerenciador, tenantId, pacienteId, planoId, usuario, true);
+      if (dados.ativacaoRevisaoEsperada !== (plano.ativacaoRevisao ?? 0)) {
+        throw new ConflictException('A ativação mudou. Recarregue antes de confirmar.');
+      }
+      let estadoAtual = plano.ativoParaPaciente === true;
+      if (identidadeRefeicaoId) {
+        // A identidade precisa estar em uma versão atual: IDs de versões antigas
+        // não autorizam alterar refeições que já não pertencem ao plano vigente.
+        const rascunho = await gerenciador.getRepository(PlanoAlimentarVersaoOrm).findOne({
+          where:{tenantId,planoId,publicadaEm:IsNull(),descartadaEm:IsNull()},lock:{mode:'pessimistic_read'}
+        });
+        const pertenceEdicao = rascunho ? this.identidadesAtuaisEdicao(rascunho).some(r => r.identidadeId === identidadeRefeicaoId) : false;
+        const estados: Array<{ ativa: boolean }> = await gerenciador.query(`
+          select e.ativa from plano_alimentar_refeicao_estados e
+          where e.tenant_id=$1 and e.plano_id=$2 and e.id=$3 and ($5::boolean or exists (
+            select 1 from plano_alimentar_refeicao_vinculos l
+            join plano_alimentar_versoes v on v.tenant_id=l.tenant_id and v.id=l.versao_id
+            where l.tenant_id=e.tenant_id and l.plano_id=e.plano_id and l.identidade_id=e.id
+              and v.plano_id=e.plano_id and v.descartada_em is null
+              and (v.id=$4 or (v.publicada_em is null and v.edicao_snapshot_criptografado is null)))) for update of e`,
+        [tenantId, planoId, identidadeRefeicaoId, plano.versaoPublicadaAtualId ?? null, pertenceEdicao]);
+        if (estados.length !== 1) throw new NotFoundException('Refeição vigente não encontrada.');
+        estadoAtual = estados[0].ativa === true;
+      } else if (dados.ativo) {
+        const publicada = plano.versaoPublicadaAtualId ? await gerenciador.getRepository(PlanoAlimentarVersaoOrm).findOne({
+          where: { tenantId, planoId, id: plano.versaoPublicadaAtualId, descartadaEm: IsNull() },
+          lock: { mode: 'pessimistic_read' }
+        }) : null;
+        if (!publicada?.publicadaEm) throw new ConflictException('Publique uma versão salva antes de ativar o plano.');
+      }
+      if (estadoAtual === dados.ativo && (identidadeRefeicaoId || plano.ativacaoDefinida)) {
+        return { planoId, ativoParaPaciente: plano.ativoParaPaciente === true,
+          ativacaoRevisao: plano.ativacaoRevisao ?? 0,
+          ...(identidadeRefeicaoId ? { identidadeRefeicaoId, ativa: estadoAtual } : {}) };
+      }
+      if (identidadeRefeicaoId) {
+        await gerenciador.query('update plano_alimentar_refeicao_estados set ativa=$4 where tenant_id=$1 and plano_id=$2 and id=$3',
+          [tenantId, planoId, identidadeRefeicaoId, dados.ativo]);
+      } else {
+        plano.ativoParaPaciente = dados.ativo;
+        plano.ativacaoDefinida = true;
+      }
+      plano.ativacaoRevisao = (plano.ativacaoRevisao ?? 0) + 1;
+      await gerenciador.getRepository(PlanoAlimentarOrm).save(plano);
+      await gerenciador.query(`insert into plano_alimentar_ativacao_eventos
+        (tenant_id,plano_id,revisao,usuario_id,refeicao_identidade_id,ativo) values($1,$2,$3,$4,$5,$6)`,
+      [tenantId, planoId, plano.ativacaoRevisao, usuario.usuarioId, identidadeRefeicaoId ?? null, dados.ativo]);
+      return { planoId, ativoParaPaciente: plano.ativoParaPaciente === true, ativacaoRevisao: plano.ativacaoRevisao,
+        ...(identidadeRefeicaoId ? { identidadeRefeicaoId, ativa: dados.ativo } : {}) };
+    });
+  }
+
   async publicar(tenantId: string, pacienteId: string, planoId: string, usuario: UsuarioAutenticado, dados: PrecondicaoEdicaoPlanoDto = {}) {
     this.garantirPapelProfissional(usuario);
     this.garantirPermissao(usuario, 'planos_alimentares.gerenciar');
@@ -873,8 +953,20 @@ export class ServicoPlanosAlimentares {
       this.avancarRevisaoEdicao(rascunho);
       rascunho.edicaoMaterializadaRevisao = rascunho.rascunhoRevisao;
       await gerenciador.getRepository(PlanoAlimentarVersaoOrm).save(rascunho);
+      // Primeira publicação conserva o fluxo legado. Uma decisão OFF explícita
+      // (inclusive anterior à publicação) nunca é sobrescrita por esta transição.
+      const ativacaoInicial = !plano.ativacaoDefinida;
+      if (ativacaoInicial) {
+        if ((plano.ativacaoRevisao ?? 0) >= 2147483647) throw new ConflictException('Limite de revisão operacional atingido.');
+        plano.ativoParaPaciente = true;
+        plano.ativacaoDefinida = true;
+        plano.ativacaoRevisao = (plano.ativacaoRevisao ?? 0) + 1;
+      }
       plano.versaoPublicadaAtualId = rascunho.id;
       await repositorioPlano.save(plano);
+      if (ativacaoInicial) await gerenciador.query(`insert into plano_alimentar_ativacao_eventos
+        (tenant_id,plano_id,revisao,usuario_id,refeicao_identidade_id,ativo) values($1,$2,$3,$4,$5,$6)`,
+        [tenantId,planoId,plano.ativacaoRevisao,usuario.usuarioId,null,true]);
 
       // Escrita direta, e nao `ServicoAuditoria.registrar`: estamos dentro do
       // `executorTenant.executar` que segura `pessimistic_write` sobre o plano
@@ -943,6 +1035,7 @@ export class ServicoPlanosAlimentares {
           apresentacaoSnapshotCriptografado: this.copiarBuffer(publicada.apresentacaoSnapshotCriptografado ?? undefined),
           // Zero identifica exclusivamente ausência legada, nunca snapshot já herdado.
           apresentacaoRevisao: publicada.apresentacaoSnapshotCriptografado ? 1 : 0,
+          identidadesRefeicoesCriptografadas: this.copiarBuffer(publicada.identidadesRefeicoesCriptografadas ?? undefined),
           totaisSnapshotCriptografado: this.copiarBuffer(publicada.totaisSnapshotCriptografado)
         })
       );
@@ -1303,11 +1396,82 @@ export class ServicoPlanosAlimentares {
     };
   }
 
+  private identidadesAtuaisEdicao(versao: PlanoAlimentarVersaoOrm): Array<{chaveCliente:string;identidadeId:string}> {
+    if (versao.publicadaEm || versao.descartadaEm || !versao.edicaoSnapshotCriptografado || !versao.identidadesRefeicoesCriptografadas ||
+        versao.identidadesRefeicoesCriptografadas.length > 1024*1024+64) return [];
+    try {
+      const documento = this.lerEdicao(versao).documentoEdicao;
+      if (!documento) return [];
+      const aliases = new Map(lerIdentidadesRefeicoes(this.criptografia.descriptografar(versao.identidadesRefeicoesCriptografadas)));
+      return documento.refeicoes.flatMap(r => {
+        const identidadeId=aliases.get(r.chaveCliente);
+        return identidadeId ? [{chaveCliente:r.chaveCliente,identidadeId}] : [];
+      });
+    } catch { return []; }
+  }
+
+  private async prepararIdentidadesEdicao(
+    gerenciador: EntityManager, plano: PlanoAlimentarOrm, versao: PlanoAlimentarVersaoOrm, documento: DocumentoEdicaoPlano
+  ): Promise<string[]> {
+    const linhas: Array<{ refeicao_id: string; identidade_id: string }> = await gerenciador.query(`
+      select l.refeicao_id,l.identidade_id from plano_alimentar_refeicao_vinculos l
+      join plano_alimentar_refeicoes r on r.tenant_id=l.tenant_id and r.id=l.refeicao_id and r.versao_id=l.versao_id
+      where l.tenant_id=$1 and l.plano_id=$2 and l.versao_id=$3 order by r.ordem`,
+    [plano.tenantId, plano.id, versao.id]);
+    let identidadesPreparadas: string[];
+    try {
+      if (versao.identidadesRefeicoesCriptografadas && versao.identidadesRefeicoesCriptografadas.length > 1024 * 1024 + 64) throw new Error('Limite de identidades.');
+      let aliases: AliasIdentidadeRefeicao[] = versao.identidadesRefeicoesCriptografadas
+        ? lerIdentidadesRefeicoes(this.criptografia.descriptografar(versao.identidadesRefeicoesCriptografadas)) : [];
+      if (!versao.identidadesRefeicoesCriptografadas && versao.edicaoSnapshotCriptografado) {
+        // Vínculo posicional SOMENTE entre o documento e sua própria materialização
+        // da mesma revisão. Nunca associa versões diferentes por ordem ou nome.
+        const anterior = this.lerEdicao(versao);
+        if (anterior.edicaoEstado === 'materializada' && anterior.documentoEdicao?.refeicoes.length === linhas.length) {
+          aliases = linhas.map((l,i) => [anterior.documentoEdicao!.refeicoes[i].chaveCliente,l.identidade_id]);
+        } else if ((plano.ativacaoRevisao ?? 0) > 0) {
+          throw new Error('Legado ambíguo após decisão operacional.');
+        }
+      }
+      const mapa = new Map(aliases);
+      // Formulário legado e clone usam o UUID físico como chave editorial.
+      if (!versao.edicaoSnapshotCriptografado) {
+        for (const l of linhas) if (!mapa.has(l.refeicao_id)) mapa.set(l.refeicao_id,l.identidade_id);
+      }
+      const preparados = prepararIdentidadesRefeicoes(documento.refeicoes.map(r => r.chaveCliente), Array.from(mapa), randomUUID);
+      versao.identidadesRefeicoesCriptografadas = this.criptografia.criptografar(JSON.stringify({schemaVersao: 1, aliases: preparados.aliases}));
+      identidadesPreparadas = preparados.identidades;
+    } catch {
+      throw new ConflictException('Identidades das refeições precisam de reconferência. Recarregue o plano.');
+    }
+    if (identidadesPreparadas.length) await gerenciador.query(`insert into plano_alimentar_refeicao_estados(id,tenant_id,plano_id)
+      select identidade,$1::uuid,$2::uuid from unnest($3::uuid[]) as novas(identidade)
+      on conflict(tenant_id,plano_id,id) do nothing`, [plano.tenantId,plano.id,identidadesPreparadas]);
+    return identidadesPreparadas;
+  }
+
+  private async comIdentidadeRefeicao<T>(gerenciador: EntityManager, identidade: string | undefined, operacao: () => Promise<T>): Promise<T> {
+    const anterior: Array<{ identidade: string | null }> = await gerenciador.query(
+      "select current_setting('app.refeicao_identidade_id',true) as identidade");
+    await gerenciador.query("select set_config('app.refeicao_identidade_id',$1,true)", [identidade ?? '']);
+    const restaurar = () => gerenciador.query("select set_config('app.refeicao_identidade_id',$1,true)", [anterior[0]?.identidade ?? '']);
+    let resultado: T;
+    try { resultado = await operacao(); }
+    catch (erro) {
+      // PostgreSQL abortado rejeita restauração; rollback limpa o GUC local.
+      await restaurar().catch(() => undefined);
+      throw erro;
+    }
+    await restaurar();
+    return resultado;
+  }
+
   private async substituirFilhos(
     gerenciador: EntityManager,
     tenantId: string,
     versaoId: string,
-    estrutura: EstruturaPlanoAlimentar
+    estrutura: EstruturaPlanoAlimentar,
+    identidades?: string[]
   ): Promise<void> {
     const repositorioRefeicao = gerenciador.getRepository(PlanoAlimentarRefeicaoOrm);
     const repositorioItem = gerenciador.getRepository(PlanoAlimentarItemOrm);
@@ -1323,7 +1487,7 @@ export class ServicoPlanosAlimentares {
     await repositorioRefeicao.delete({ tenantId, versaoId });
 
     for (const [ordemRefeicao, refeicao] of estrutura.refeicoes.entries()) {
-      const refeicaoSalva = await repositorioRefeicao.save(
+      const refeicaoSalva = await this.comIdentidadeRefeicao(gerenciador, identidades?.[ordemRefeicao], () => repositorioRefeicao.save(
         repositorioRefeicao.create({
           tenantId,
           versaoId,
@@ -1334,7 +1498,7 @@ export class ServicoPlanosAlimentares {
             ? this.criptografia.criptografar(refeicao.orientacoes)
             : undefined
         })
-      );
+      ));
       for (const [ordemItem, item] of refeicao.itens.entries()) {
         const snapshot = (item as ItemPlanoAlimentar & { snapshot: SnapshotComposicao }).snapshot;
         const itemSalvo = await repositorioItem.save(
@@ -1392,7 +1556,11 @@ export class ServicoPlanosAlimentares {
       order: { ordem: 'ASC' }
     });
     for (const refeicao of refeicoes) {
-      const novaRefeicao = await repositorioRefeicao.save(
+      const vinculos: Array<{ identidade_id: string }> = await gerenciador.query(
+        'select identidade_id from plano_alimentar_refeicao_vinculos where tenant_id=$1 and versao_id=$2 and refeicao_id=$3',
+        [tenantId, origemVersaoId, refeicao.id]);
+      if (vinculos.length !== 1) throw new ConflictException('Identidade da refeição de origem indisponível.');
+      const novaRefeicao = await this.comIdentidadeRefeicao(gerenciador, vinculos[0].identidade_id, () => repositorioRefeicao.save(
         repositorioRefeicao.create({
           tenantId,
           versaoId: destinoVersaoId,
@@ -1401,7 +1569,7 @@ export class ServicoPlanosAlimentares {
           horarioLocal: refeicao.horarioLocal,
           orientacoesCriptografadas: this.copiarBuffer(refeicao.orientacoesCriptografadas)
         })
-      );
+      ));
       const itens = await repositorioItem.find({
         where: { tenantId, refeicaoId: refeicao.id },
         order: { ordem: 'ASC' }
@@ -1577,6 +1745,8 @@ export class ServicoPlanosAlimentares {
       versoesEmDetalhe.map((versao) => this.montarVersao(gerenciador, versao))
     );
     return {
+      ativoParaPaciente: plano.ativoParaPaciente === true,
+      ativacaoRevisao: plano.ativacaoRevisao ?? 0,
       id: plano.id,
       pacienteId: plano.pacienteId,
       profissionalId: plano.profissionalId,
@@ -1584,6 +1754,9 @@ export class ServicoPlanosAlimentares {
       arquivadoEm: plano.arquivadoEm,
       criadoEm: plano.criadoEm,
       atualizadoEm: plano.atualizadoEm,
+      resumoNutricionalVigente: plano.ativoParaPaciente === true
+        ? detalhes.find(v => v.id === plano.versaoPublicadaAtualId)?.resumoRefeicoesAtivas ?? {estado: 'indisponivel' as const}
+        : resumirNutrientesItensEfetivos([]),
       current: detalhes.find((versao) => versao.id === plano.versaoPublicadaAtualId),
       draft: detalhes.find((versao) => versao.status === 'rascunho'),
       historico: versoes
@@ -1609,6 +1782,8 @@ export class ServicoPlanosAlimentares {
       resumoNutricional: resumoPorVersao.get(versao.id) ?? projetarResumoNutricionalPlano(undefined)
     }));
     return {
+      ativoParaPaciente: plano.ativoParaPaciente === true,
+      ativacaoRevisao: plano.ativacaoRevisao ?? 0,
       id: plano.id,
       pacienteId: plano.pacienteId,
       profissionalId: plano.profissionalId,
@@ -1651,6 +1826,12 @@ export class ServicoPlanosAlimentares {
   }
 
   private async montarVersao(gerenciador: EntityManager, versao: PlanoAlimentarVersaoOrm) {
+    // Todos os callers já mantêm o lock de escopo. A revisão acompanha o ACK
+    // editorial para o cliente não aplicar flags anteriores a um toggle posterior.
+    const planoOperacional = await gerenciador.getRepository(PlanoAlimentarOrm).findOne({
+      where:{tenantId:versao.tenantId,id:versao.planoId}
+    });
+    if (!planoOperacional) throw new NotFoundException('Plano alimentar nao encontrado.');
     // Resultado publicado/descartado usa exclusivamente sua materialização imutável.
     const edicao = versao.publicadaEm || versao.descartadaEm ? { edicaoEstado: 'legado' as const } : this.lerEdicao(versao);
     const calculoAtual = edicao.edicaoEstado !== 'pendente' && edicao.edicaoEstado !== 'indisponivel';
@@ -1670,7 +1851,29 @@ export class ServicoPlanosAlimentares {
           order: { ordem: 'ASC' }
         })
       : [];
+    const identidadesEdicao = this.identidadesAtuaisEdicao(versao);
+    const estadosEdicao: Array<{id:string;ativa:boolean}> = identidadesEdicao.length ? await gerenciador.query(
+      'select id,ativa from plano_alimentar_refeicao_estados where tenant_id=$1 and plano_id=$2 and id=any($3::uuid[])',
+      [versao.tenantId,versao.planoId,identidadesEdicao.map(r=>r.identidadeId)]) : [];
+    const estados = await lerEstadosRefeicoes(gerenciador,versao.tenantId,versao.planoId,versao.id);
+    const ativas = new Set(estados.filter(e => e.ativa === true).map(e => e.refeicao_id));
+    let resumoRefeicoesAtivas: ResumoNutricionalPlano = {estado: 'indisponivel'};
+    if (calculoAtual && refeicoes.every(r => estados.some(e => e.refeicao_id === r.id))) {
+      resumoRefeicoesAtivas = resumirNutrientesItensEfetivos(itens.filter(i => ativas.has(i.refeicaoId)).map(i => {
+        try { return this.lerJsonCriptografado<SnapshotComposicao>(i.composicaoSnapshotCriptografada).nutrientesPorcao; }
+        catch { return undefined; }
+      }));
+    }
     return {
+      ativoParaPaciente: planoOperacional.ativoParaPaciente === true,
+      ativacaoRevisao: planoOperacional.ativacaoRevisao ?? 0,
+      ...(!versao.publicadaEm && !versao.descartadaEm ? {ativacaoEdicao:identidadesEdicao.flatMap(r=>{
+        const estado=estadosEdicao.find(e=>e.id===r.identidadeId);
+        return estado ? [{...r,ativa:estado.ativa === true}] : [];
+      })} : {}),
+      // Projeção operacional atual, separada de totais/hash históricos.
+      ativacaoRefeicoes: estados.map(e => ({refeicaoId:e.refeicao_id,identidadeId:e.identidade_id,ativa:e.ativa === true})),
+      resumoRefeicoesAtivas,
       id: versao.id,
       numero: versao.numero,
       status: versao.publicadaEm ? ('publicada' as const) : versao.descartadaEm ? ('descartada' as const) : ('rascunho' as const),

@@ -34,3 +34,22 @@ export function projetarResumoNutricionalPlano(
 
   return { estado: completo ? 'completo' : 'incompleto', ...valores };
 }
+
+/** Soma exclusivamente nutrientes já preservados nos snapshots dos itens
+ * efetivos; não consulta catálogo, meta, substituições ou consumo do paciente. */
+export function resumirNutrientesItensEfetivos(itens: unknown[]): ResumoNutricionalPlano {
+  const valores: Partial<Record<(typeof CAMPOS)[number], number>> = {};
+  for (const campo of CAMPOS) {
+    let soma = 0;
+    let completo = true;
+    for (const item of itens) {
+      const valor = item && typeof item === 'object' && !Array.isArray(item)
+        ? (item as Record<string,unknown>)[campo] : undefined;
+      if (typeof valor !== 'number' || !Number.isFinite(valor) || valor < 0) { completo = false; break; }
+      soma += valor;
+      if (!Number.isFinite(soma)) { completo = false; break; }
+    }
+    if (completo) valores[campo] = soma;
+  }
+  return {estado: CAMPOS.every(c => valores[c] !== undefined) ? 'completo' : 'incompleto', ...valores};
+}

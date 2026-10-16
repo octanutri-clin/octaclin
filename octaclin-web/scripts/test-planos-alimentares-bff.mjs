@@ -8,6 +8,11 @@ const raiz = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const temporaria = mkdtempSync(join(tmpdir(), 'octaclin-planos-alimentares-bff-'));
 const arquivos = [
   'scripts/planos-alimentares-bff.spec.ts',
+  'lib/ativacao-plano.ts',
+  'app/api/pacientes/[id]/planos-alimentares/[planoId]/ativacao/route.ts',
+  'app/api/pacientes/[id]/planos-alimentares/[planoId]/refeicoes/[identidadeId]/ativacao/route.ts',
+  'app/api/portal/paciente/planos-alimentares/route.ts',
+  'app/api/portal/paciente/planos-alimentares/[planoId]/route.ts',
   'app/api/pacientes/[id]/planos-alimentares/[planoId]/rascunho/edicao/route.ts',
   'app/api/pacientes/[id]/planos-alimentares/[planoId]/versoes/[numero]/apresentacao-paciente/route.ts',
   'app/api/pacientes/[id]/planos-alimentares/_proxy.ts',
@@ -84,7 +89,8 @@ function cookies() {
 }
 function __setCookies(entrada) { armazenamento.clear(); for (const [nome, valor] of Object.entries(entrada)) armazenamento.set(nome, String(valor)); }
 function __clearCookies() { armazenamento.clear(); }
-module.exports = { cookies, __setCookies, __clearCookies };
+async function headers() { return new Headers(); }
+module.exports = { cookies, headers, __setCookies, __clearCookies };
 `);
 
 const alias = join(temporaria, 'node_modules', '@', 'lib');

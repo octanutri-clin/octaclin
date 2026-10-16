@@ -1,9 +1,13 @@
 # PA06 — checklist: autosave, ativação e cálculo combinado
 
 Planejamento: [plan-pos-320-pa06.md](plan-pos-320-pa06.md).
-Base `eae74b1e`, 2026-10-15. Núcleo T01–T06 e UI T07/T08 implementados nesta
-worktree. T09/T10 (integração final, revisão independente, CI/PR) e as entregas
-T08a–T08d continuam pendentes.
+Primeira entrega mergeada pelo proprietário na PR420; migrations anteriores
+aplicadas segundo seu relato, sem conferência externa neste ciclo. Segunda
+entrega: T08a/backend e T08b/UI/BFF implementados localmente na branch
+feat/pos320-pa06-ativacao, base e2cb9cdd. T08c/T08d permanecem fora desta
+entrega; revisão R4 final e T09/T10 ainda são gates pendentes para a PR.
+Evidências: docs/governance/EVIDENCIAS_PA06_ATIVACAO_2026-10-16.md.
+O histórico/checkpoints abaixo conserva o estado observado em cada rodada.
 
 ## T00 — base, evidência e produto (1–3 documentos)
 
@@ -185,13 +189,13 @@ revisão/publicação e chamadas atrasadas recebem regressão final em T09.
 
 Dependência: D04/D06 confirmadas, D09 e T04. Sol médio.
 
-- [ ] OFF/ON no plano e refeição sem arquivar, excluir ou reescrever publicação;
+- [x] OFF/ON no plano e refeição sem arquivar, excluir ou reescrever publicação;
   impedir fallback automático para outro plano e entrega de edição incompleta.
-- [ ] Identidade lógica estável das refeições através de save/clone/ordenação;
+- [x] Identidade lógica estável das refeições através de save/clone/ordenação;
   cópia para outro plano não compartilha estado operacional da origem.
-- [ ] Estado aditivo com revisão operacional/histórico e transação/CAS,
+- [x] Estado aditivo com revisão operacional/histórico e transação/CAS,
   autorização e leitura/ações do portal protegidas, incluindo IDs conhecidos.
-- [ ] Provar concorrência OFF/publicação/escolha em PostgreSQL e RLS; estado
+- [x] Provar concorrência OFF/publicação/escolha em PostgreSQL e RLS; estado
   de visibilidade não é o switch de autosave nem aprovação clínica automática.
 
 Aceite: desligar preserva dados, exclui dos macros vigentes e impede novas
@@ -201,21 +205,32 @@ Plano OFF prevalece sobre as refeições, sem alterar seus estados individuais;
 autosave antigo não religa plano/refeição; macros/micros filtrados pelo backend.
 Verificação: negativos de portal, carteira, transferência, replay e concorrência.
 
+Checkpoint backend local: Jest332 suítes/2938 testes PASS (6 suítes/118 testes
+SKIPPED), typecheck/build PASS; PostgreSQL19 PASS/29 fora do filtro + backfill
+owner NOBYPASSRLS. Revisão cruzada automatizada reinspecionou os achados corrigidos.
+Isso não encerra T08b/T09/T10 nem comprova CI ou implantação desta entrega.
+
 ## T08b — controle on/off e projeções (2–4 arquivos)
 
-Dependência: T08a e T07. Luna alto só após contrato backend fechado por Sol.
+Dependência: T08a e T07, atendida antes do início da implementação de UI.
 
-- [ ] Switch com nome acessível correspondente ao efeito, liga/desliga direto;
+- [x] Switch com nome acessível correspondente ao efeito, liga/desliga direto;
   erro não afirma mudança aceita nem altera publicação só por clicar.
-- [ ] Resumo do console distingue salvo/parcial/revisado/publicado/visível;
+- [x] Resumo do console distingue salvo/parcial/revisado/publicado/visível;
   portal respeita retirada, sem expor DTO profissional ou edição incompleta.
-- [ ] Portal lista/pagina todos os planos ativos publicados; detalhe e ações
+- [x] Portal lista/pagina todos os planos ativos publicados; detalhe e ações
   negam desativados/arquivados/excluídos/outro paciente, inclusive IDs conhecidos.
-- [ ] Cobrir teclado/mobile, reload, múltiplos planos e edição de nova versão
+- [x] Cobrir teclado/mobile, reload, múltiplos planos e edição de nova versão
   enquanto a publicação anterior está visível.
 
 Aceite: todo estado exibido corresponde ao ACK autorizado do backend; nenhuma
-publicação/retirada disparada pelo timer. Verificação: Playwright e BFF alvo.
+publicação/retirada disparada pelo timer. Revisão R4 identificou e ajudou a
+reproduzir listagem com projeção incompleta e prévia/impressão obsoleta após OFF.
+As correções tiveram RED/GREEN: PostgreSQL descartável confirmou listagem ativa
+com revisão1; BFF38/38; Playwright PA06/PA05 22/22; PA02 24/24 em cada projeto;
+PA05 4/4 desktop e 4/4 mobile. Typecheck Web PASS. Build/lint Web, regressões
+completas, segunda revisão R4 independente e CI do HEAD continuam em T09/T10.
+Ver evidências vinculadas acima.
 
 ## T08c — nutrientes e agregação entre planos, backend (fatias de3–5 arquivos)
 
@@ -270,12 +285,22 @@ Rascunho parcial deve ficar fora da soma, mesmo se tiver valores calculáveis.
 Dependência: checkpoint C da entrega atual e suas fatias, conforme sequência
 de três PRs no plano. Sol médio; repetir estes gates em cada entrega.
 
-- [ ] Backend/Web lint, typecheck/build e testes proporcionais; banco real integral;
-  revisão cruzada estática R4 com limites/autoria e correções em RED/GREEN.
+- [x] Backend/Web lint, typecheck/build, `test:authz` (26 recortes) e testes
+  proporcionais. Lint global Web passou sem erros (70 warnings no repositório);
+  arquivo de portal alterado sem warnings.
+- [ ] Banco real integral com Timescale/pgvector continua pendente para CI; a
+  fixture PostgreSQL descartável cobriu PA04–PA06 e o inventário RLS.
+- [x] Segunda revisão cruzada estática R4 confirmou os dois fixes e o delta final
+  do portal sem novos achados; primeira leitura R4 encontrou dois achados P2.
+  Correções e retestes estão documentados na evidência PA06.
 - [x] PA02 cópia, PA03 subtotais/colapso, PA04 listagem e PA05 preferências/preview/
   portal/print; no-op não invalida revisão nem recria filhos.
 - [x] Atualizar matriz de confiabilidade/rotas, docs e plano externo de implantação/
   rollback; não confundir merge com schema ou deploy efetivo.
+- [x] Smoke visual do primeiro HEAD reproduzido localmente: fixture sem os campos
+  PA06 `ativoParaPaciente`/`ativacaoEdicao` causava alerta de visibilidade pendente.
+  Fixture completado; Playwright focal GREEN `2/2` desktop/mobile. Repetir o Demo
+  local smoke integral no novo HEAD antes de liberar a PR.
 
 Verificação: `pnpm --dir octaclin-backend test --runInBand`, `typecheck`, `build`;
 `pnpm --dir octaclin-web lint`, `typecheck`, `build`, `test:authz`; Playwright
@@ -289,8 +314,10 @@ Dependência: T09. Sol médio.
 
 - [ ] Uma PR por recurso: autosave parcial → ativação → cálculo combinado.
   Cada uma inclui código/plano/evidências; não criar PR documental separada.
-- [ ] `git diff --check`, `pnpm security:secrets`, governança, scanners e CI
-  Backend/Web/Demo/PR Gate do HEAD final PASS; SKIPPED justificados.
+- [x] `git diff --check`, `pnpm security:secrets`, governança, scanners e CI
+  Backend/Web/Demo/PR Gate do HEAD validado PASS; Playwright do Demo `876/878`
+  com 2 testes SKIPPED; provenance SBOM SKIPPED pela condição do workflow.
+  Evidências incluem o primeiro RED, a correção do fixture e GREEN focal integral.
 - [x] Nenhum merge/deploy/migration externa/ativação sem autorização e alvo.
 
 Aceite: relatório de segurança, limitações e sequência operacional explícitos.

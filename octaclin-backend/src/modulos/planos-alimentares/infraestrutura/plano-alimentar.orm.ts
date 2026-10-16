@@ -27,6 +27,15 @@ export class PlanoAlimentarOrm {
   @Column({ name: 'versao_publicada_atual_id', type: 'uuid', nullable: true })
   versaoPublicadaAtualId?: string;
 
+  @Column({ name: 'ativo_para_paciente', type: 'boolean', default: false })
+  ativoParaPaciente: boolean;
+
+  @Column({ name: 'ativacao_definida', type: 'boolean', default: false })
+  ativacaoDefinida: boolean;
+
+  @Column({ name: 'ativacao_revisao', type: 'integer', default: 0 })
+  ativacaoRevisao: number;
+
   @Column({ name: 'arquivado_em', type: 'timestamptz', nullable: true })
   arquivadoEm?: Date;
 

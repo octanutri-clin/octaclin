@@ -190,3 +190,27 @@ Percentuais crus opcionais têm allowlist e conversão separada sem arredondar.
 Revisão cruzada estática e gates integrados T09/T10 em finalização; detalhes em
 `docs/governance/EVIDENCIAS_PA06_NUCLEO_2026-10-15.md`. Bloqueia integração final
 se faltar prova de perda de edição, isolamento, concorrência ou migration aditiva.
+
+## PA06 — ativação operacional (segunda entrega)
+
+Risco R4: delivery e cálculos vigentes dependem de tenant/paciente/identidade,
+FORCE RLS, revisão operacional própria e isolamento de snapshots publicados.
+Migration1074 cria estado/vínculo/eventos separados. Prova local descartável
+`node octaclin-backend/scripts/test-pa05-postgres-local.cjs --ativacao --inventario`
+ensaia o backfill em schema real com owner NOBYPASSRLS e fixtures sintéticas,
+mais inventário global de RLS e negação de leitura sem contexto. Omite exatamente
+as extensões pgvector/Timescale e não substitui o gate integral de CI.
+
+Regressões PA06b cobrem empate de publicações, restauração de tenant, save
+parcial/reordenação/remoção/reinserção/clone preservando OFF, replay de linha
+removida, guard de writer legado, CAS/no-op/evento inicial e append-only,
+concorrência OFF/publicação nas duas ordens e OFF/escolha, múltiplos planos
+paginados, carteira/tenant e impressão paciente versus histórico preservado.
+Vínculo ausente oculta conteúdo e torna resumo indisponível; dados faltantes não
+viram zero. DTOs/rotas validam booleano/revisão/UUID/limites e no-store.
+
+Revisão cruzada automatizada por agente diferente da autoria encontrou dois
+pontos (impressão ignorava OFF; publicação inicial não invalidava CAS), corrigidos
+e reinspecionados. Não representa revisão humana externa nem validação da UI.
+T08b/BFF/Playwright e CI desta entrega ainda precisam ser concluídos antes de
+propor merge. Evidências: docs/governance/EVIDENCIAS_PA06_ATIVACAO_2026-10-16.md.

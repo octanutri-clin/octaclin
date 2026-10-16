@@ -9,10 +9,15 @@ import {
 export async function executarProxyPlanoAlimentar(
   caminho: string,
   permissao: 'planos_alimentares.ler' | 'planos_alimentares.gerenciar',
-  init?: RequestInit
+  init?: RequestInit,
+  limiteCorpoBytes?: number
 ) {
   try {
     await exigirPermissaoBff(permissao);
+    if (limiteCorpoBytes !== undefined && typeof init?.body === 'string'
+      && new TextEncoder().encode(init.body).byteLength > limiteCorpoBytes) {
+      return NextResponse.json({ mensagem: 'Solicitação acima do limite.' }, { status: 413, headers: { 'Cache-Control': 'no-store' } });
+    }
     const resposta = await requisitarBackendAutenticado(caminho, init);
     return new NextResponse(await resposta.text(), {
       status: resposta.status,

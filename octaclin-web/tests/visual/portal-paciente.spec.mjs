@@ -223,6 +223,10 @@ async function prepararPortal(page) {
     carregamentos += 1;
     await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(portalPaciente) });
   });
+  await page.route((url) => url.pathname === '/api/portal/paciente/planos-alimentares', (route) => route.fulfill({
+    status: 200, contentType: 'application/json', body: JSON.stringify({ itens: [], total: 0, pagina: 1, limite: 10 })
+  }));
+  await page.route((url) => url.pathname.startsWith('/api/portal/paciente/planos-alimentares/'), (route) => route.fulfill({ status: 404, contentType: 'application/json', body: JSON.stringify({ mensagem: 'Plano indisponível.' }) }));
   await page.route((url) => url.pathname === '/api/portal/paciente/conversa', async (route) => {
     await route.fulfill({ status: 200, contentType: 'application/json', body: 'null' });
   });
@@ -391,6 +395,8 @@ test.describe('portal do paciente', () => {
     await page.route((url) => url.pathname === '/api/portal/paciente', async (route) => {
       await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(payload) });
     });
+    await page.route((url) => url.pathname === '/api/portal/paciente/planos-alimentares', (route) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ itens: [{ id: payload.planoAlimentar.id, titulo: payload.planoAlimentar.titulo, numeroVersao: payload.planoAlimentar.numeroVersao, publicadoEm: payload.planoAlimentar.publicadoEm }], total: 1, pagina: 1, limite: 10 }) }));
+    await page.route((url) => url.pathname === `/api/portal/paciente/planos-alimentares/${payload.planoAlimentar.id}`, (route) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(payload.planoAlimentar) }));
     await page.addInitScript(() => { window.__pa05Impressao = 0; window.print = () => { window.__pa05Impressao += 1; }; });
 
     await page.goto('/portal/plano');
@@ -437,6 +443,8 @@ test.describe('portal do paciente', () => {
         }
       };
       await page.route((url) => url.pathname === '/api/portal/paciente', (route) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(payload) }));
+      await page.route((url) => url.pathname === '/api/portal/paciente/planos-alimentares', (route) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ itens: [{ id: payload.planoAlimentar.id, titulo: payload.planoAlimentar.titulo, numeroVersao: payload.planoAlimentar.numeroVersao, publicadoEm: payload.planoAlimentar.publicadoEm }], total: 1, pagina: 1, limite: 10 }) }));
+      await page.route((url) => url.pathname === `/api/portal/paciente/planos-alimentares/${payload.planoAlimentar.id}`, (route) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(payload.planoAlimentar) }));
       await page.goto('/portal/plano');
       const escolhida = page.getByRole('radio', { name: /Alternativa escolhida/ });
       await expect(escolhida).toBeVisible();
@@ -489,6 +497,8 @@ test.describe('portal do paciente', () => {
         })
       });
     });
+    await page.route((url) => url.pathname === '/api/portal/paciente/planos-alimentares', (route) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ itens: [{ id: 'plano-1', titulo: 'Plano vigente', numeroVersao: 1, publicadoEm: '2026-09-28T12:00:00.000Z' }], total: 1, pagina: 1, limite: 10 }) }));
+    await page.route((url) => url.pathname === '/api/portal/paciente/planos-alimentares/plano-1', (route) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ id: 'plano-1', titulo: 'Plano vigente', numeroVersao: 1, publicadoEm: '2026-09-28T12:00:00.000Z', refeicoes: [] }) }));
 
     await page.goto('/portal/mensagens');
     const aviso = page.getByRole('article').filter({ hasText: 'Seu plano alimentar está disponível' });

@@ -4,6 +4,10 @@ import test from 'node:test';
 import * as nextHeaders from 'next/headers';
 import { GET as listarPlanos, POST as criarPlano } from '../app/api/pacientes/[id]/planos-alimentares/route';
 import { GET as obterPlano } from '../app/api/pacientes/[id]/planos-alimentares/[planoId]/route';
+import { PUT as alterarAtivacaoPlano } from '../app/api/pacientes/[id]/planos-alimentares/[planoId]/ativacao/route';
+import { PUT as alterarAtivacaoRefeicao } from '../app/api/pacientes/[id]/planos-alimentares/[planoId]/refeicoes/[identidadeId]/ativacao/route';
+import { GET as listarPlanosPortal } from '../app/api/portal/paciente/planos-alimentares/route';
+import { GET as obterPlanoPortal } from '../app/api/portal/paciente/planos-alimentares/[planoId]/route';
 import { GET as listarEscolhasPaciente } from '../app/api/pacientes/[id]/planos-alimentares/[planoId]/escolhas-paciente/route';
 import { GET as buscarAlimentos } from '../app/api/pacientes/[id]/planos-alimentares/alimentos/route';
 import { GET as buscarAlimentosModelo } from '../app/api/planos-alimentares/alimentos/route';
@@ -21,7 +25,9 @@ import { GET as obterVersaoModelo } from '../app/api/planos-alimentares/modelos/
 import { POST as restaurarVersaoModelo } from '../app/api/planos-alimentares/modelos/[modeloId]/versoes/[numero]/restaurar/route';
 import { GET as listarReceitas, POST as criarReceita } from '../app/api/planos-alimentares/receitas/route';
 import { GET as obterReceita, PUT as atualizarReceita, DELETE as arquivarReceita } from '../app/api/planos-alimentares/receitas/[receitaId]/route';
-import { obterAcompanhamentoVersaoPlanoAlimentar } from '../lib/plano-alimentar-api';
+import { alterarAtivacaoPlanoAlimentar, alterarAtivacaoRefeicaoPlanoAlimentar, obterAcompanhamentoVersaoPlanoAlimentar } from '../lib/plano-alimentar-api';
+import { listarPlanosAlimentaresPortalPaciente, obterPlanoAlimentarPortalPaciente } from '../lib/portal-api';
+import { aplicarAckAtivacao, ativacaoOperacionalEstaDesatualizada, localizarAtivacaoRefeicao, mesclarProjecaoAtivacao } from '../lib/ativacao-plano';
 
 const { __clearCookies, __setCookies } = nextHeaders as typeof nextHeaders & {
   __clearCookies: () => void;
@@ -206,6 +212,176 @@ test('BFF recusa todas as mutacoes para usuario com somente leitura', async () =
   } finally {
     restaurarFetch(original);
   }
+});
+
+test('BFF encaminha ativacao CAS com identidade codificada, permissao e no-store', async () => {
+  __setCookies(cookiesSessaoValida(['planos_alimentares.gerenciar']));
+  const original = global.fetch;
+  const chamadas: Array<{ url: string; metodo: string; corpo?: string }> = [];
+  global.fetch = (async (entrada: string | URL | Request, init?: RequestInit) => {
+    chamadas.push({ url: String(entrada), metodo: init?.method ?? 'GET', corpo: init?.body?.toString() });
+    return Response.json({ ativo: false });
+  }) as typeof global.fetch;
+  try {
+    const corpo = JSON.stringify({ ativo: false, ativacaoRevisaoEsperada: 7 });
+    const plano = await alterarAtivacaoPlano(new Request('http://localhost/toggle', { method: 'PUT', body: corpo }), {
+      params: Promise.resolve({ id: 'paciente/1', planoId: 'plano/1' })
+    });
+    const refeicao = await alterarAtivacaoRefeicao(new Request('http://localhost/toggle', { method: 'PUT', body: corpo }), {
+      params: Promise.resolve({ id: 'paciente/1', planoId: 'plano/1', identidadeId: 'refeicao/1' })
+    });
+    assert.equal(plano.status, 200);
+    assert.equal(plano.headers.get('Cache-Control'), 'no-store');
+    assert.equal(refeicao.status, 200);
+    assert.deepEqual(chamadas, [
+      { url: 'http://backend.octaclin.local/pacientes/paciente%2F1/planos-alimentares/plano%2F1/ativacao', metodo: 'PUT', corpo },
+      { url: 'http://backend.octaclin.local/pacientes/paciente%2F1/planos-alimentares/plano%2F1/refeicoes/refeicao%2F1/ativacao', metodo: 'PUT', corpo }
+    ]);
+  } finally { restaurarFetch(original); }
+});
+
+test('BFF bloqueia ativacao sem permissao antes do backend', async () => {
+  __setCookies(cookiesSessaoValida(['planos_alimentares.ler']));
+  const original = global.fetch;
+  let chamou = false;
+  global.fetch = (async () => { chamou = true; return Response.json({}); }) as typeof global.fetch;
+  try {
+    const resposta = await alterarAtivacaoPlano(new Request('http://localhost/toggle', { method: 'PUT', body: '{}' }), {
+      params: Promise.resolve({ id: 'paciente-1', planoId: 'plano-1' })
+    });
+    assert.equal(resposta.status, 403);
+    assert.equal(chamou, false);
+  } finally { restaurarFetch(original); }
+});
+
+test('BFF limita o corpo das mutacoes operacionais antes de encaminhar', async () => {
+  __setCookies(cookiesSessaoValida(['planos_alimentares.gerenciar']));
+  const original = global.fetch;
+  let chamou = false;
+  global.fetch = (async () => { chamou = true; return Response.json({}); }) as typeof global.fetch;
+  try {
+    const resposta = await alterarAtivacaoPlano(new Request('http://localhost/toggle', { method: 'PUT', body: 'x'.repeat(2049) }), {
+      params: Promise.resolve({ id: 'paciente-1', planoId: 'plano-1' })
+    });
+    assert.equal(resposta.status, 413);
+    assert.equal(chamou, false);
+  } finally { restaurarFetch(original); }
+});
+
+test('BFF do portal limita query e encaminha lista e detalhe sem cache', async () => {
+  __setCookies(cookiesSessaoValida([]));
+  const original = global.fetch;
+  const urls: string[] = [];
+  global.fetch = (async (entrada: string | URL | Request) => {
+    urls.push(String(entrada));
+    return Response.json({ itens: [], total: 0, pagina: 2, limite: 10 });
+  }) as typeof global.fetch;
+  try {
+    const lista = await listarPlanosPortal(new Request('http://localhost/portal?pagina=2&limite=10&tenantId=alheio'));
+    const detalhe = await obterPlanoPortal(new Request('http://localhost/portal'), {
+      params: Promise.resolve({ planoId: 'plano/1' })
+    });
+    assert.equal(lista.status, 200);
+    assert.equal(lista.headers.get('Cache-Control'), 'private, no-store');
+    assert.equal(detalhe.status, 200);
+    assert.equal(detalhe.headers.get('Cache-Control'), 'private, no-store');
+    assert.deepEqual(urls, [
+      'http://backend.octaclin.local/portal/paciente/planos-alimentares?pagina=2&limite=10',
+      'http://backend.octaclin.local/portal/paciente/planos-alimentares/plano%2F1'
+    ]);
+  } finally { restaurarFetch(original); }
+});
+
+test('cliente da API transmite CAS e consulta portal com no-store', async () => {
+  const original = global.fetch;
+  const chamadas: Array<{ url: string; method?: string; cache?: RequestCache; body?: string }> = [];
+  global.fetch = (async (entrada: string | URL | Request, init?: RequestInit) => {
+    chamadas.push({ url: String(entrada), method: init?.method, cache: init?.cache, body: init?.body?.toString() });
+    return Response.json({ ok: true });
+  }) as typeof global.fetch;
+  try {
+    await alterarAtivacaoPlanoAlimentar('paciente/1', 'plano/1', false, 8);
+    await alterarAtivacaoRefeicaoPlanoAlimentar('paciente/1', 'plano/1', 'identidade/1', true, 9);
+    await listarPlanosAlimentaresPortalPaciente({ pagina: 3, limite: 10 });
+    await obterPlanoAlimentarPortalPaciente('plano/1');
+    assert.deepEqual(chamadas, [
+      { url: '/api/pacientes/paciente%2F1/planos-alimentares/plano%2F1/ativacao', method: 'PUT', cache: 'no-store', body: JSON.stringify({ ativo: false, ativacaoRevisaoEsperada: 8 }) },
+      { url: '/api/pacientes/paciente%2F1/planos-alimentares/plano%2F1/refeicoes/identidade%2F1/ativacao', method: 'PUT', cache: 'no-store', body: JSON.stringify({ ativo: true, ativacaoRevisaoEsperada: 9 }) },
+      { url: '/api/portal/paciente/planos-alimentares?pagina=3&limite=10', method: undefined, cache: 'no-store', body: undefined },
+      { url: '/api/portal/paciente/planos-alimentares/plano%2F1', method: undefined, cache: 'no-store', body: undefined }
+    ]);
+  } finally { restaurarFetch(original); }
+});
+
+test('ativacao de refeicao usa identidade de chave exata e falha fechada sem mapa', () => {
+  const versao = {
+    ativacaoEdicao: [
+      { chaveCliente: 'chave-atual', identidadeId: 'raiz-atual', ativa: false },
+      { chaveCliente: 'chave-mesma', identidadeId: 'raiz-compartilhada', ativa: true }
+    ],
+    ativacaoRefeicoes: [
+      { refeicaoId: 'id-fisico-legado', identidadeId: 'raiz-legada', ativa: false },
+      { refeicaoId: 'id-fisico-mesma', identidadeId: 'raiz-compartilhada', ativa: false }
+    ]
+  };
+  assert.deepEqual(localizarAtivacaoRefeicao(versao, 'chave-atual'), { identidadeId: 'raiz-atual', ativa: false });
+  assert.deepEqual(localizarAtivacaoRefeicao(versao, 'id-fisico-legado'), { identidadeId: 'raiz-legada', ativa: false });
+  assert.deepEqual(localizarAtivacaoRefeicao(versao, 'chave-mesma'), { identidadeId: 'raiz-compartilhada', ativa: true });
+  assert.equal(localizarAtivacaoRefeicao(versao, 'chave-antiga'), undefined);
+  assert.deepEqual(localizarAtivacaoRefeicao(versao, 'id-fisico-mesma'), { identidadeId: 'raiz-compartilhada', ativa: false });
+});
+
+test('ACK editorial atrasado nao pode regredir a revisao ou flags operacionais', () => {
+  assert.equal(ativacaoOperacionalEstaDesatualizada(
+    { ativacaoRevisao: 12, ativoParaPaciente: false },
+    { ativacaoRevisao: 11, ativoParaPaciente: true }
+  ), true);
+  assert.equal(ativacaoOperacionalEstaDesatualizada(
+    { ativacaoRevisao: 12 },
+    { ativacaoRevisao: 12 }
+  ), false);
+});
+
+test('ACK operacional atualiza só visibilidade e não regressa um ACK posterior', () => {
+  const plano = {
+    id: 'plano-1', pacienteId: 'paciente-1', profissionalId: 'profissional-1', titulo: 'Plano', criadoEm: '', atualizadoEm: '',
+    ativoParaPaciente: true, ativacaoRevisao: 4,
+    current: { id: 'versao-publicada', ativacaoRevisao: 4, ativoParaPaciente: true, objetivos: 'preservar', refeicoes: [],
+      ativacaoRefeicoes: [{ refeicaoId: 'fisica-1', identidadeId: 'raiz-1', ativa: true }] },
+    draft: { id: 'versao-rascunho', ativacaoRevisao: 4, ativoParaPaciente: true, objetivos: 'preservar rascunho', refeicoes: [],
+      ativacaoEdicao: [{ chaveCliente: 'chave-1', identidadeId: 'raiz-1', ativa: true }] },
+    historico: []
+  } as unknown as import('../lib/plano-alimentar-api').PlanoAlimentarApi;
+  const anterior = aplicarAckAtivacao(plano, { planoId: plano.id, ativoParaPaciente: false, ativacaoRevisao: 3 });
+  assert.equal(anterior, plano);
+  const atualizado = aplicarAckAtivacao(plano, {
+    planoId: plano.id, ativoParaPaciente: true, ativacaoRevisao: 5, identidadeRefeicaoId: 'raiz-1', ativa: false
+  });
+  assert.equal(atualizado.draft?.objetivos, 'preservar rascunho');
+  assert.equal(atualizado.current?.ativacaoRefeicoes?.[0].ativa, false);
+  assert.equal(atualizado.draft?.ativacaoEdicao?.[0].ativa, false);
+  assert.equal(atualizado.ativacaoRevisao, 5);
+});
+
+test('reconciliação operacional atrasada preserva o mapa da revisão editorial mais recente', () => {
+  const plano = {
+    id: 'plano-sintetico', ativacaoRevisao: 5, ativoParaPaciente: true,
+    draft: { id: 'draft-sintetico', rascunhoRevisao: 8, ativacaoRevisao: 5,
+      ativacaoEdicao: [{ chaveCliente: 'nova-chave', identidadeId: 'nova-raiz', ativa: true }],
+      resumoRefeicoesAtivas: { estado: 'completo', energiaKcal: 200 } }
+  } as unknown as import('../lib/plano-alimentar-api').PlanoAlimentarApi;
+  const remoto = { ...plano, draft: { ...plano.draft!, rascunhoRevisao: 7,
+    ativacaoEdicao: [{ chaveCliente: 'antiga-chave', identidadeId: 'antiga-raiz', ativa: false }],
+    resumoRefeicoesAtivas: { estado: 'completo' as const, energiaKcal: 0 } } };
+  const resultado = mesclarProjecaoAtivacao(plano, remoto);
+  assert.deepEqual(resultado.draft?.ativacaoEdicao, plano.draft?.ativacaoEdicao);
+  assert.deepEqual(resultado.draft?.resumoRefeicoesAtivas, plano.draft?.resumoRefeicoesAtivas);
+  // Uma combinação contraditória não confirma vínculos de outro documento.
+  const contraditorio = mesclarProjecaoAtivacao(plano, { ...remoto, ativacaoRevisao: 6,
+    draft: { ...remoto.draft, ativacaoRevisao: 6 } });
+  assert.equal(contraditorio.draft?.rascunhoRevisao, 8);
+  assert.equal(contraditorio.draft?.ativacaoEdicao, undefined);
+  assert.deepEqual(contraditorio.draft?.resumoRefeicoesAtivas, { estado: 'indisponivel' });
 });
 
 test('BFF preserva PUT do rascunho e POST sem payload da publicacao', async () => {

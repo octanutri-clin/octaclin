@@ -1,7 +1,8 @@
 # PA06 — autosave, ativação e cálculo combinado do planejamento alimentar
 
 Planejamento de 2026-10-15. Implementação autorizada pelo proprietário em “Pode começar”.
-Primeira entrega em desenvolvimento: autosave e edição parcial. Escopo ampliado pelo proprietário; seguir uma
+Primeira entrega (autosave e edição parcial) mergeada na PR420. Segunda entrega
+(ativação) autorizada em “Pode seguir”, em execução no backend. Escopo ampliado pelo proprietário; seguir uma
 PR por recurso, conforme o roadmap, em três entregas encadeadas descritas abaixo.
 Checklist: [T00–T10](todo-pos-320-pa06.md).
 
@@ -464,3 +465,21 @@ a validação clínica existente continua exigindo inteiro/faixa/soma. Na ausên
 usa os basis points existentes para compatibilidade. Não altera banco, publicação
 ou projeções do paciente. Testes cobrem digitação tecla a tecla, tick60s, reabertura,
 precedência no servidor, precisão excedente e recusa de chaves extras.
+
+## Checkpoint da segunda entrega — backend de ativação
+
+Estado e instrução executável: tasks/plan.md. Código separado em estado
+operacional e identidade lógica; não há flag mutável na refeição publicada.
+Migração1074 aditiva com backfill tenant a tenant e empate fail-closed. A ativação
+inicial na publicação invalida baseline operacional e grava evento, substituindo
+a hipótese intermediária de manter revisão zero. Novo backend deve preceder UI;
+rollback não pode voltar ao backend que ignore OFF. Aceite operacional externo
+continua separado de merge/CI. Referências R013/R014 já avaliadas são suficientes
+para UI; não rever o catálogo inteiro nem adicionar bibliotecas de estado.
+
+Rascunhos parciais também recebem identidade operacional, sem autorizar entrega
+clínica incompleta. Chaves removidas ficam cifradas internamente; somente chaves
+presentes na edição atual ou refeições da publicação vigente autorizam toggle.
+ACK editorial inclui revisão operacional para evitar flags obsoletas no cliente.
+O mapa é limitado a4096 entradas/1MiB, com erro explícito antes da persistência;
+nenhuma remoção silenciosa de tombstones que possa restaurar OFF.
