@@ -178,11 +178,14 @@ Núcleo/adapter/save: `octaclin-web/scripts/coordenacao-abas-plano.spec.ts`,
 `octaclin-web/scripts/coordenador-edicao-plano.spec.ts`, executados pelo runner
 de nutrição já incluído em `test:authz`. Prova inicial com duas páginas e APIs
 nativas: `octaclin-web/tests/visual/pa07-coordenacao-abas.spec.mjs`.
-Checkpoint T02/T03 comprova consulta e preservação local; transferência via UI,
-envio em voo/rede incerta, todos os writers e regressões completas dependem de
-T04/T05. Bloquear integração final sem esses testes, prova PostgreSQL/CAS/RLS
-aplicável, revisão cruzada e CI do HEAD. Evidências:
-`docs/governance/EVIDENCIAS_PA07_NUCLEO_2026-10-16.md`.
+Integração T05 cobre consulta, retomada com releitura, envio em voo, retorno
+dirty, recarga explícita e cópia pendente invalidada pela geração, inclusive
+após perder/retomar posse. Fixture PostgreSQL15 prova CAS/RLS de planos; não
+substitui o gate integral de extensões no CI. Bloquear integração final sem
+regressões aplicáveis, revisão cruzada quando disponível e CI do HEAD; não
+confundir revisão própria com independente. Evidências/resultados:
+`docs/governance/EVIDENCIAS_PA07_NUCLEO_2026-10-16.md` e
+`docs/governance/RELATORIO_PA07_2026-10-16.md`.
 
 ## PA06 — núcleo de autosave e edição parcial (primeira entrega)
 

@@ -4,17 +4,19 @@ Atualizado em 2026-10-16.
 
 ## Fase ativa
 
-- **PA07 — núcleo e integração inicial implementados**, base `62a50104`.
-  D01 confirmada: segunda aba em consulta com retomada explícita. Desenvolvimento
-  autorizado em “Siga”. Núcleo59 testes, BFF42/42, typecheck e Playwright inicial
-  desktop/mobile2/2 PASS; lint direcionado sem erros. Ainda faltam aviso/botão de
-  retomada (T04), cenários completos T05, revisão/gates e PR. Não disponibilizar
-  este checkpoint. APIs nativas, sem dependência/schema novo; CAS/RLS do servidor
-  preservados. Só R071 consultado/pinado. Troca manual para Luna alto solicitada
-  para T04, aguardando usuário; depois Sol6.1 médio para integração final.
-  Plano/checklist `tasks/plan-pos-320-pa07.md`/`tasks/todo-pos-320-pa07.md`,
-  handoff `tasks/handoff-pos-320-pa07-luna.md`, evidências
-  `docs/governance/EVIDENCIAS_PA07_NUCLEO_2026-10-16.md`.
+- **PA07 — implementação em validação final**, base `62a50104`.
+  D01 confirmada: segunda aba em consulta com retomada explícita. Núcleo,
+  interface Luna e integração Sol implementados. Corrigidos retorno após recarga,
+  retomada de plano publicado sem rascunho e cópia em voo da geração anterior.
+  Duas abas reais desktop/mobile 16/16 PASS; backend 343/343, PostgreSQL15
+  descartável 24 PASS (29 filtrados), BFF/coordenação/autorização focados PASS.
+  Regressões de produção aprovadas após correções de harness; gates locais PASS.
+  CI do HEAD e revisão cruzada devem ser conferidos na PR desta branch.
+  Sem backend/schema/dependência nova ou operação
+  externa. Só R071 consultado/pinado. Não inferir disponibilização/produção.
+  Sol6.1 médio suficiente para concluir; não há troca de modelo pendente.
+  Plano/checklist `tasks/plan-pos-320-pa07.md`/`tasks/todo-pos-320-pa07.md`;
+  resultados e limites em `docs/governance/RELATORIO_PA07_2026-10-16.md`.
 - **PA06 — três entregas integradas**, #420 autosave/rascunho parcial,
   #421 ativação/portal plural e #422 cálculo combinado/micros, merge `62a50104`.
   CI final run38934810307 do HEAD `5eac6eab` SUCCESS, reconferido nesta rodada;

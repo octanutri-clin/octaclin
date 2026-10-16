@@ -431,10 +431,10 @@ TACO v2 preparada; carga e verificação operacional externas separadas.
 
 **Origem:** item 10.
 
-**Status atual (2026-10-16):** núcleo e integração inicial implementados sobre
-`62a50104`, após confirmação D01 e autorização em “Siga”.59 unitários e2 E2E
-iniciais PASS; aviso/retomada UI e aceite completo de concorrência/gates pendentes.
-Não disponibilizar o checkpoint. PA06 continua fornecendo CAS de rascunho.
+**Status atual (2026-10-16):** núcleo, interface e integração implementados sobre
+`62a50104`, após confirmação D01 e autorização em “Siga”. Em validação final
+T05–T07; resultados atuais no [relatório](../governance/RELATORIO_PA07_2026-10-16.md).
+CI/revisão e integração por PR permanecem pendentes; PA06 fornece CAS de rascunho.
 Plano [PA07](../../tasks/plan-pos-320-pa07.md) e
 [checklist](../../tasks/todo-pos-320-pa07.md). Apenas R071 consultado/pinado;
 APIs nativas propostas, sem dependência nova ou Yjs.

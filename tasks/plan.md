@@ -1,22 +1,22 @@
-# Handoff atual — PA07: núcleo pronto para T04, troca manual pendente
+# Handoff atual — PA07: integração final Sol e PR única
 
 Branch `feat/pos320-pa07-planejamento`, worktree isolada da base `62a50104`.
-D01 confirmada e implementação autorizada em “Siga”. Núcleo/adaptadores/hook e
-integração inicial do editor implementados por Sol6.1 médio.
+D01 confirmada e implementação autorizada em “Siga”. Núcleo/adaptadores/hook,
+T04 de interface Luna e correções finais de integração Sol implementados.
 
-**Próxima ação exata:** aguardar confirmação da troca manual para Luna alto e
-executar somente [T04 — aviso/retomada UI](handoff-pos-320-pa07-luna.md).
-Depois retornar a Sol para T05–T07. Nenhuma PR aberta; não disponibilizar este
-checkpoint enquanto falta aviso/botão de retomada e validação completa.
+**Próxima ação exata:** abrir/acompanhar a PR única da branch e seus gates do
+HEAD; regressões locais finalizadas com retestes PASS. Sol6.1 médio;
+nenhuma troca manual pendente. Não disponibilizar antes dos gates finais.
 
-- PASS59 unitários,42 BFF, typecheck, lint direcionado sem erros e2 E2E iniciais
-  desktop/mobile. RED/GREEN, falhas intermediárias, comandos e limites em
-  [evidências PA07](../docs/governance/EVIDENCIAS_PA07_NUCLEO_2026-10-16.md).
-- Pendente: T04, aceite completo T03/T05, regressões, banco descartável/CAS/RLS,
-  build produção, revisão cruzada e CI do HEAD. Nenhum gate herdado da PA06.
+- Correções RED/GREEN: recarga em consulta, retomada sem rascunho e callback de
+  cópia da geração anterior. Duas abas reais 16/16 PASS, backend 343/343 e
+  PostgreSQL15 descartável 24 PASS/29 filtrados. Detalhes/comandos/limites em
+  [relatório PA07](../docs/governance/RELATORIO_PA07_2026-10-16.md).
+- Pendente: revisão cruzada e CI do HEAD. A revisão própria
+  desta execução não é independente; nenhum gate herdado da PA06.
 - Sem backend/schema/dependência nova, merge/deploy ou acesso externo.
-  Node_modules reutilizado por symlink; servidor webpack local deve estar parado
-  na troca. Não tocar checkout principal/next-env do usuário; espaço livre baixo.
+  Node_modules reutilizado por symlink. Encerrar servidor de teste ao concluir.
+  Não tocar checkout principal/next-env do usuário; limpar somente caches PA07.
 - Plano/checklist [PA07](plan-pos-320-pa07.md)/[T00–T07](todo-pos-320-pa07.md).
   Preservar PA06 D01–D13, CAS/autorização e estado local em memória.
 

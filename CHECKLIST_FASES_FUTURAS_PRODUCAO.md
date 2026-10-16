@@ -4658,11 +4658,12 @@ auditoria estão ordenados na seção 15 de
   Migrations/deploy externos não inferidos do merge. Evidências:
   `docs/governance/EVIDENCIAS_PA06_CALCULO_2026-10-16.md`; plano/checklist
   `tasks/plan-pos-320-pa06-calculo.md` e `tasks/todo-pos-320-pa06.md`.
-- [~] PA07 — desenvolvimento na base `62a50104`, coordenação de edição entre abas.
+- [~] PA07 — implementação em validação final na base `62a50104`.
   Segunda aba em consulta/retomada explícita confirmada pelo proprietário;
-  núcleo/integração inicial implementados (59 unitários e2 E2E iniciais PASS);
-  T04–T07 pendentes, sem PR. Nativas BroadcastChannel/Web Locks, CAS preservado,
-  sem dependência/migration prevista; só R071 consultado. Plano/checklist:
+  núcleo/UI/integração implementados, incluindo recarga segura e cópia ABA.
+  Gates/PR pendentes; cobertura e limites em
+  `docs/governance/RELATORIO_PA07_2026-10-16.md`. Nativas BroadcastChannel/Web
+  Locks, CAS preservado, sem dependência/migration nova; só R071 consultado. Plano/checklist:
   `tasks/plan-pos-320-pa07.md` e `tasks/todo-pos-320-pa07.md`.
 
 Merge/checks de #419 conferidos em 2026-10-15. Não inferir estado de produção.

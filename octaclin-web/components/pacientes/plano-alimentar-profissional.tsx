@@ -1582,6 +1582,7 @@ export function PlanoAlimentarProfissional({ pacienteId, podeGerenciar, aoAltera
       setPlanos(lista);
       setAvaliacoes(serie.avaliacoes);
       aplicarPlano(detalhe, serie.avaliacoes);
+      return true;
     } catch (erroAtual) {
       if (sequencia !== sequenciaCarregamento.current) return;
       setErro(mensagemFalhaInterface(erroAtual, 'Não foi possível carregar os planos alimentares.'));
@@ -2251,18 +2252,19 @@ export function PlanoAlimentarProfissional({ pacienteId, podeGerenciar, aoAltera
                 </CartaoCabecalho>
               </Cartao>
 
+              {podeGerenciar ? <AvisoEdicaoAbasPlano
+                key={`${pacienteId}:${plano.id}`}
+                estado={edicaoEntreAbas.estado}
+                aoAssumir={edicaoEntreAbas.assumir}
+                aoRecarregar={() => setConfirmarReconciliacao(true)}
+              /> : null}
+
               {podeGerenciar ? (plano.draft ? (edicaoIndisponivel ? (
                 <div role="alert" className="grid gap-3 rounded-md border border-alerta-borda bg-alerta-suave p-4 text-sm text-alerta-forte">
                   <p>O documento editorial protegido não pôde ser lido. O conteúdo materializado não será usado como substituto. Atualize o plano para tentar reconciliar o rascunho.</p>
                   <Botao type="button" onClick={() => setConfirmarReconciliacao(true)} disabled={Boolean(operacao)}>Recarregar rascunho</Botao>
                 </div>
               ) : (
-                <>
-                <AvisoEdicaoAbasPlano
-                  estado={edicaoEntreAbas.estado}
-                  aoAssumir={edicaoEntreAbas.assumir}
-                  aoRecarregar={() => setConfirmarReconciliacao(true)}
-                />
                 <form noValidate onSubmit={(evento) => { evento.preventDefault(); void salvar(); }} onCompositionStartCapture={() => {
                   compondoRef.current = true;
                   coordenadorEdicaoRef.current?.configurar({ suspenso: true });
@@ -2609,7 +2611,6 @@ export function PlanoAlimentarProfissional({ pacienteId, podeGerenciar, aoAltera
                     <Botao type="button" variante="primario" carregando={operacao === 'publicando'} disabled={!edicaoEntreAbas.podeEditar || alterado || estadoAutosave !== 'salvo' || Boolean(operacao) || copiaEmAndamento || !plano.draft.revisadaEm} onClick={() => transicionarVersao('publicando')}><CheckCircle2 size={16} /> Publicar</Botao>
                   </div>
                 </form>
-                </>
               )) : (
                 plano.current ? <div className="grid gap-3">
                   {podeGerenciar ? <div role="status" className="rounded-md border border-linha bg-superficie p-3 text-sm text-texto-suave">O plano publicado continua disponível para o paciente enquanto você não o ocultar. As refeições podem ser ativadas separadamente.</div> : null}
@@ -2745,9 +2746,14 @@ export function PlanoAlimentarProfissional({ pacienteId, podeGerenciar, aoAltera
         aoConfirmar={() => {
           const id = plano?.id;
           setConfirmarReconciliacao(false);
+          edicaoEntreAbas.pausarParaReconferencia();
           coordenadorEdicaoRef.current?.encerrar();
           coordenadorEdicaoRef.current = null;
-          if (id) void carregar(id);
+          if (id) void carregar(id).then(carregado => {
+            if (carregado && pacienteAtualRef.current === pacienteId && planoAtualRef.current?.id === id) {
+              void edicaoEntreAbas.reiniciarEmConsulta();
+            }
+          });
         }}
       /> : null}
     </div>

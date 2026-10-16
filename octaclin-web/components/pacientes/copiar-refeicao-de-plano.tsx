@@ -230,6 +230,10 @@ export function CopiarRefeicaoDePlano({
   async function colar() {
     if (!referencia || !referencia.refeicaoId || colandoRef.current) return;
     const chaveDestinoCapturada = destinoChave;
+    // Captura também a geração editorial: perder e retomar a posse não pode
+    // revalidar uma cópia iniciada na geração anterior. O callback usa refs do
+    // formulário vigente para preservar edições locais dentro da mesma geração.
+    const aplicarNoDestino = aoAplicarAtualRef.current;
     if (!versaoRascunhoDestinoId || desabilitado) return;
     colandoRef.current = true;
     const liberarCopia = aoIniciarCopia();
@@ -274,7 +278,7 @@ export function CopiarRefeicaoDePlano({
         setErro('A refeição de destino não está mais disponível. Selecione-a novamente.');
         return;
       }
-      aoAplicarAtualRef.current(copia, destino);
+      aplicarNoDestino(copia, destino);
       setAviso(destino.tipo === 'nova'
         ? 'Refeição copiada para o rascunho. Revise e salve para recalcular com o catálogo disponível.'
         : 'Alimentos e substituições acrescentados ao rascunho. Revise e salve para recalcular com o catálogo disponível.');

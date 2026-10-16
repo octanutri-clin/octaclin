@@ -198,12 +198,13 @@ O benefício de trocar apenas T04 para Luna pode ser pequeno: se T04 não for
 isolável com handoff curto, manter Sol e evitar custo de reconstruir contexto.
 Nunca transicionar modelo sem avisar e pausar para o usuário trocar.
 
-## Matriz completa de testes — pendências T05/T06
+## Matriz completa de testes — cobertura requerida
 
-A matriz abaixo ainda define a cobertura total requerida. T04 cobriu somente
-consulta/retomada entre duas páginas, falha sintética de reconferência, entrada
-por teclado, eixo Axe do aviso e desktop/mobile. Os cenários extensos de envio
-em voo, lifecycle, segurança e servidor continuam pendentes.
+A matriz abaixo define a cobertura requerida por nível (núcleo, browser,
+serviço/banco e CI). T05 ampliou a integração para envio em voo, dirty, recarga,
+cópia ABA, revogação, fechamento, modo sem APIs e eventos persistidos. Resultados
+executados e limites, incluindo BFCache real e extensões locais, estão no
+relatório final; a existência da matriz não equivale a PASS em todos os ambientes.
 
 | Área | Cenários obrigatórios |
 | --- | --- |
@@ -247,8 +248,9 @@ timeout/heartbeat como garantia de posse. Links imutáveis:
 
 - PASS: auditoria documental/código da base, referência R071 e merge/CI PA06.
 - PASS: D01 e implementação técnica autorizadas pelo proprietário em “Siga”.
-- Em execução: testes RED/GREEN de T02/T03. Builds, PostgreSQL, E2E final e
-  revisão R4 de código PA07 pendentes; consultar handoff para resultados atuais.
+- PASS local: núcleo/UI/integração, backend focado, PostgreSQL15 descartável e
+  builds; cobertura detalhada no relatório final. Regressões finais, CI do HEAD
+  e revisão cruzada devem ser conferidos antes de integrar.
 - NA: migration nova, dependência externa, ativação clínica/feature flag.
 
 Rollback futuro: reverter código PA07 via PR, conservando autosave/CAS PA06 e
@@ -266,9 +268,23 @@ editor central), unitários 59/59 e Playwright 6/6 desktop/mobile PASS, incluind
 axe-core focado no aviso. Evidências em [núcleo](../docs/governance/EVIDENCIAS_PA07_NUCLEO_2026-10-16.md)
 e [T04 UI](../docs/governance/EVIDENCIAS_PA07_UI_2026-10-16.md).
 
-Não disponibilizar este checkpoint: T05–T07 permanecem pendentes. Durante a
+Não disponibilizar este checkpoint isoladamente. Durante a
 revisão T04, observou-se que o fluxo de reconferência encerra o coordenador e
 recarrega o plano; T05 deve provar que o hook e a posse local são reinicializados
 antes de permitir retomada. Nenhuma correção de lifecycle foi feita em T04 por
-estar fora do escopo delegado ao Luna. Próxima ação: retornar a Sol6.1 médio
-para T05–T07, regressões, PostgreSQL/RLS descartável, segurança e PR única.
+estar fora do escopo delegado ao Luna.
+
+## Integração Sol T05–T07
+
+Retomada autorizada em “pode seguir”. RED/GREEN de recuperação completa após
+falha/recarga, plano publicado sem rascunho e cópia anterior à perda de posse.
+O descarte confirmado pausa/invalida a instância anterior antes da rede e
+reinicia em consulta somente após leitura bem-sucedida no mesmo contexto. A
+recusa de recarga não retorna à edição. Cópias usam o callback/geração de início,
+sem reaplicação após perder e retomar posse. Não há alteração no servidor.
+
+Resultados atuais, segurança, comandos e limitações em
+[relatório de integração](../docs/governance/RELATORIO_PA07_2026-10-16.md).
+Sol6.1 médio conduz gates e PR única. Revisão própria não é independente; a
+revisão cruzada deve permanecer explicitamente identificada como não executada
+enquanto não houver revisor separado da autoria.

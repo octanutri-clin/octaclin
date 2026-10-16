@@ -1,4 +1,4 @@
-# PA07 — handoff pós T04 (retornar a Sol6.1 médio)
+# PA07 — histórico do handoff T04 (retomado por Sol)
 
 ## Contexto e objetivo
 
@@ -110,3 +110,8 @@ para T05–T07: investigar especialmente a reinicialização do coordenador/hook
 após recarga explícita em `reconferir`, revisar callbacks/lifecycle e base
 editorial, regressões completas, PostgreSQL/RLS/CAS/CI, revisão cruzada e PR
 única. CI antigo não aprova PA07.
+
+Retomado pelo Sol após “pode seguir”. Correções de recarga/retomada/cópia e
+resultados de integração no [relatório final](../docs/governance/RELATORIO_PA07_2026-10-16.md).
+Este arquivo conserva o escopo do handoff anterior; não existe troca de modelo
+pendente. A continuidade vigente está em [plan.md](plan.md) e no checklist PA07.

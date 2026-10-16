@@ -18,6 +18,7 @@ export function useCoordenacaoAbasPlano(opcoes: Opcoes) {
   const callbacks = useRef(opcoes);
   useLayoutEffect(() => { callbacks.current = opcoes; });
   const atual = useRef<CoordenacaoAbasPlano | null>(null);
+  const controleAtual = useRef<{ pausar: () => void; reiniciar: () => Promise<void> } | null>(null);
   const geracao = useRef(0);
   const [visao, setVisao] = useState<{ estado: EstadoCoordenacaoAbasPlano; geracao: number }>({ estado: 'inicializando', geracao: 0 });
   const { pacienteId, planoId, habilitado } = opcoes;
@@ -78,6 +79,14 @@ export function useCoordenacaoAbasPlano(opcoes: Opcoes) {
     };
     const revalidar = () => { if (document.visibilityState === 'visible') void atual.current?.revalidar(); };
     const restaurar = (evento: PageTransitionEvent) => { if (evento.persisted) void iniciar(true); };
+    const controle = {
+      pausar: () => {
+        parar();
+        setVisao({ estado: 'reconferir', geracao: geracao.current });
+      },
+      reiniciar: () => iniciar(true)
+    };
+    controleAtual.current = controle;
     void iniciar();
     window.addEventListener('focus', revalidar);
     document.addEventListener('visibilitychange', revalidar);
@@ -85,6 +94,7 @@ export function useCoordenacaoAbasPlano(opcoes: Opcoes) {
     window.addEventListener('pageshow', restaurar);
     return () => {
       desmontado = true; parar();
+      if (controleAtual.current === controle) controleAtual.current = null;
       window.removeEventListener('focus', revalidar);
       document.removeEventListener('visibilitychange', revalidar);
       window.removeEventListener('pagehide', parar);
@@ -97,6 +107,8 @@ export function useCoordenacaoAbasPlano(opcoes: Opcoes) {
     // O callback capturado por uma cópia antiga não volta a ser válido após retomar.
     permiteEscrever: () => atual.current?.podeEditar === true && visao.geracao === geracao.current,
     assumir: async () => { await atual.current?.assumir(); },
+    pausarParaReconferencia: () => controleAtual.current?.pausar(),
+    reiniciarEmConsulta: async () => { await controleAtual.current?.reiniciar(); },
     revalidar: async () => { await atual.current?.revalidar(); }
   };
 }
