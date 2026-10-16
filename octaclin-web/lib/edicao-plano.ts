@@ -1,6 +1,7 @@
 import type { FormulaEnergeticaApi, MetodoMacrosManualApi } from './plano-alimentar-api';
 import type { PreferenciasApresentacaoPlanoApi } from './preferencias-apresentacao-plano';
 import type { PrecondicaoEdicaoPlano } from './coordenador-edicao-plano';
+import type { CodigoMicronutrienteApi, MicronutrientesPor100gApi } from './plano-alimentar-api';
 /** Contrato editorial versionado. Não representa validação clínica. Sem persistência no navegador. */
 export type NumeroEdicao = number | string | null;
 /** O editor conserva texto parcial; interpretar um número é uma operação separada. */
@@ -29,6 +30,24 @@ export function nutrientesNumericosEdicao(valores: NutrientesEdicao): Partial<Re
   }));
 }
 export type NutrientesEdicao = Partial<Record<'energiaKcal' | 'proteinasG' | 'carboidratosG' | 'gordurasG' | 'fibrasG' | 'sodioMg', NumeroEdicao>>;
+export type MicronutrientesEdicao = Partial<Record<CodigoMicronutrienteApi, NumeroEdicao>>;
+export function micronutrientesNumericosEdicao(valores: MicronutrientesEdicao | undefined): MicronutrientesPor100gApi {
+  if (!valores) return {};
+  return Object.fromEntries(Object.entries(valores).flatMap(([campo, valor]) => {
+    if (typeof valor === 'string' && valor.trim() && !/^\d+(?:[.,]\d+)?(?:e[+-]?\d+)?$/i.test(valor.trim())) return [];
+    const numero = interpretarNumeroEdicao(valor);
+    return numero === undefined || numero < 0 ? [] : [[campo, numero]];
+  })) as MicronutrientesPor100gApi;
+}
+export function validarMicronutrientesEdicao(valores: MicronutrientesEdicao | undefined): MicronutrientesPor100gApi {
+  const normalizados = micronutrientesNumericosEdicao(valores);
+  const possuiValorIncompleto = Object.entries(valores ?? {}).some(([codigo, valor]) => {
+    if (valor == null || (typeof valor === 'string' && !valor.trim())) return false;
+    return !Object.hasOwn(normalizados, codigo);
+  });
+  if (possuiValorIncompleto) throw new Error('Complete ou limpe os campos de micronutrientes antes de salvar em um modelo ou receita.');
+  return normalizados;
+}
 export interface AlimentoEdicao {
   chaveCliente: string;
   alimentoComposicaoId?: string | null;
@@ -37,6 +56,7 @@ export interface AlimentoEdicao {
   unidade?: string;
   porcaoGramas?: NumeroEdicao;
   nutrientesPor100g?: NutrientesEdicao;
+  micronutrientesPor100g?: MicronutrientesEdicao;
   fonteRotulo?: string;
 }
 export interface AlternativaEdicao extends AlimentoEdicao { liberadaParaPaciente?: boolean; preferida?: boolean }

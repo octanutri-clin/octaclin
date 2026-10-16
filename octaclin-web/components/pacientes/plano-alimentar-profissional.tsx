@@ -53,6 +53,7 @@ import {
   type NutrientesPor100gApi,
   type PlanoAlimentarApi,
   type PlanoAlimentarResumoApi,
+  type SelecaoCalculoLocal,
   type ResumoNutricionalPlanoApi,
   type RefeicaoPlanoAlimentarEntrada,
   type SubstituicaoPlanoAlimentarEntrada,
@@ -65,13 +66,15 @@ import {
 import { PainelNutricional } from '@/components/pacientes/painel-nutricional';
 import { calcularSubtotalRefeicao } from '@/lib/nutricao-plano';
 import { CoordenadorEdicaoPlano, type EstadoSalvamentoPlano, type PrecondicaoEdicaoPlano } from '@/lib/coordenador-edicao-plano';
-import { LIMITE_BYTES_DOCUMENTO_EDICAO, campoNumeroEdicao as valorNumericoEdicao, percentualParaBasisPointsEdicao, interpretarNumeroEdicao, nutrientesNumericosEdicao, type DocumentoEdicaoPlano, type NutrientesEdicao } from '@/lib/edicao-plano';
+import { LIMITE_BYTES_DOCUMENTO_EDICAO, campoNumeroEdicao as valorNumericoEdicao, percentualParaBasisPointsEdicao, interpretarNumeroEdicao, micronutrientesNumericosEdicao, nutrientesNumericosEdicao, validarMicronutrientesEdicao, type DocumentoEdicaoPlano, type MicronutrientesEdicao, type NutrientesEdicao } from '@/lib/edicao-plano';
+import { CAMPOS_MICRONUTRIENTES_PLANO } from '@/lib/micronutrientes-plano';
 import { aplicarAckAtivacao, localizarAtivacaoRefeicao, mesclarProjecaoAtivacao } from '@/lib/ativacao-plano';
 import { DuplicarPlanoDeOutroPaciente } from '@/components/pacientes/duplicar-plano-de-outro-paciente';
 import { ModelosPlanoAlimentar } from '@/components/pacientes/modelos-plano-alimentar';
 import { BibliotecaReceitasNutricionais } from '@/components/pacientes/biblioteca-receitas-nutricionais';
 import { CopiarRefeicaoDePlano } from '@/components/pacientes/copiar-refeicao-de-plano';
 import { PreferenciasApresentacaoPlano } from '@/components/pacientes/preferencias-apresentacao-plano';
+import { CalculoCombinadoPlanos } from '@/components/pacientes/calculo-combinado-planos';
 import { novasPreferenciasApresentacaoPlano, type PreferenciasApresentacaoPlanoApi, type PreferenciasExibicaoRefeicoesApi } from '@/lib/preferencias-apresentacao-plano';
 import { PlanoAlimentarPaciente } from '@/components/portal/plano-alimentar-paciente';
 import {
@@ -91,12 +94,13 @@ const LIMITE_PLANOS_LISTA = 25;
 
 type NumeroFormulario = number | string;
 
-interface AlimentoFormulario extends Omit<SubstituicaoPlanoAlimentarEntrada, 'nutrientesPor100g' | 'quantidade' | 'porcaoGramas'> {
+interface AlimentoFormulario extends Omit<SubstituicaoPlanoAlimentarEntrada, 'nutrientesPor100g' | 'micronutrientesPor100g' | 'quantidade' | 'porcaoGramas'> {
   quantidade: NumeroFormulario;
   porcaoGramas: NumeroFormulario;
   chaveCliente: string;
   descricao: string;
   nutrientesPor100g: NutrientesEdicao;
+  micronutrientesPor100g?: MicronutrientesEdicao;
   fonteRotulo?: string;
 }
 
@@ -151,7 +155,8 @@ function novoAlimento(): AlimentoFormulario {
     quantidade: 1,
     unidade: 'porcao',
     porcaoGramas: 100,
-    nutrientesPor100g: { ...nutrientesVazios }
+    nutrientesPor100g: { ...nutrientesVazios },
+    micronutrientesPor100g: {}
   };
 }
 
@@ -219,6 +224,7 @@ function alimentoDaVersao(
     unidade: alimento.unidade,
     porcaoGramas: interpretarNumeroEdicao(alimento.porcaoGramas) ?? 0,
     nutrientesPor100g: { ...alimento.composicaoSnapshot.nutrientesPor100g },
+    micronutrientesPor100g: Object.fromEntries(Object.entries(alimento.composicaoSnapshot.micronutrientes?.nutrientes ?? {}).flatMap(([codigo, valor]) => valor.estado === 'conhecido' && valor.por100g !== undefined ? [[codigo, valor.por100g]] : [])),
     fonteRotulo: alimento.composicaoSnapshot.fonte
       ? `${alimento.composicaoSnapshot.fonte.nome} - ${alimento.composicaoSnapshot.fonte.versao}`
       : undefined
@@ -294,11 +300,25 @@ function alimentoParaModelo(alimento: AlimentoFormulario): SubstituicaoPlanoAlim
     porcaoGramas: interpretarNumeroEdicao(alimento.porcaoGramas) ?? 0,
     ...(nutrientesCompletos(alimento.nutrientesPor100g)
       ? { nutrientesPor100g: nutrientesCompletos(alimento.nutrientesPor100g) }
+      : {}),
+    ...(!alimento.alimentoComposicaoId && Object.keys(micronutrientesNumericosEdicao(alimento.micronutrientesPor100g)).length
+      ? { micronutrientesPor100g: micronutrientesNumericosEdicao(alimento.micronutrientesPor100g) }
       : {})
   };
 }
 
+function validarMicronutrientesFormulario(formulario: FormularioPlano, chaveRefeicao?: string) {
+  const refeicoes = chaveRefeicao
+    ? formulario.refeicoes.filter(refeicao => refeicao.chaveCliente === chaveRefeicao)
+    : formulario.refeicoes;
+  for (const refeicao of refeicoes) for (const item of refeicao.itens) {
+    if (!item.alimentoComposicaoId) validarMicronutrientesEdicao(item.micronutrientesPor100g);
+    for (const alternativa of item.substituicoes) if (!alternativa.alimentoComposicaoId) validarMicronutrientesEdicao(alternativa.micronutrientesPor100g);
+  }
+}
+
 function refeicoesParaModelo(formulario: FormularioPlano): RefeicaoPlanoAlimentarEntrada[] {
+  validarMicronutrientesFormulario(formulario);
   return formulario.refeicoes.map((refeicao) => ({
     nome: refeicao.nome.trim(),
     horarioLocal: refeicao.horarioLocal || undefined,
@@ -324,6 +344,7 @@ function alimentoDoModelo(entrada: SubstituicaoPlanoAlimentarEntrada): AlimentoF
     unidade: entrada.unidade,
     porcaoGramas: entrada.porcaoGramas,
     nutrientesPor100g: { ...(entrada.nutrientesPor100g ?? {}) },
+    micronutrientesPor100g: { ...(entrada.micronutrientesPor100g ?? {}) },
     fonteRotulo: entrada.alimentoComposicaoId ? 'Catalogo nutricional' : undefined
   };
 }
@@ -408,6 +429,7 @@ function documentoDoFormulario(formulario: FormularioPlano): DocumentoEdicaoPlan
         unidade: item.unidade,
         porcaoGramas: item.porcaoGramas,
         nutrientesPor100g: item.nutrientesPor100g,
+        micronutrientesPor100g: item.micronutrientesPor100g,
         fonteRotulo: item.fonteRotulo,
         substituicoes: item.substituicoes.map((alternativa) => ({
           chaveCliente: alternativa.chaveCliente,
@@ -417,6 +439,7 @@ function documentoDoFormulario(formulario: FormularioPlano): DocumentoEdicaoPlan
           unidade: alternativa.unidade,
           porcaoGramas: alternativa.porcaoGramas,
           nutrientesPor100g: alternativa.nutrientesPor100g,
+          micronutrientesPor100g: alternativa.micronutrientesPor100g,
           fonteRotulo: alternativa.fonteRotulo,
           liberadaParaPaciente: alternativa.liberadaParaPaciente,
           preferida: alternativa.preferida
@@ -437,6 +460,7 @@ function formularioDoDocumento(documento: DocumentoEdicaoPlano, versao: VersaoPl
     unidade: item.unidade ?? '',
     porcaoGramas: valorNumericoEdicao(item.porcaoGramas),
     nutrientesPor100g: Object.fromEntries(Object.entries(item.nutrientesPor100g ?? {}).map(([campo, valor]) => [campo, valorNumericoEdicao(valor)])),
+    micronutrientesPor100g: Object.fromEntries(Object.entries(item.micronutrientesPor100g ?? {}).map(([campo, valor]) => [campo, valorNumericoEdicao(valor)])),
     fonteRotulo: item.fonteRotulo
   });
   return {
@@ -709,6 +733,7 @@ function EditorAlimento({ pacienteId, rotulo, valor, resumo, aoAlterar, aoRemove
       alimentoComposicaoId: alimento.id,
       descricao: alimento.preparacao ? `${alimento.nome}, ${alimento.preparacao}` : alimento.nome,
       nutrientesPor100g: { ...alimento.nutrientesPor100g },
+      micronutrientesPor100g: {},
       fonteRotulo: alimento.fonte ? `${alimento.fonte.nome} - ${alimento.fonte.versao}` : 'Catalogo TACO'
     });
     setBusca('');
@@ -922,6 +947,24 @@ function EditorAlimento({ pacienteId, rotulo, valor, resumo, aoAlterar, aoRemove
                     onChange={(evento) =>
                       alterarNutriente(campo, evento.target.value)
                     }
+                  />
+                </label>
+              ))}
+            </div>
+          </details>
+          <details className="mt-1">
+            <summary className="flex min-h-11 w-fit cursor-pointer items-center text-xs font-semibold text-primaria focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primaria">
+              Micronutrientes por 100 g (opcional)
+            </summary>
+            <p className="mt-1 text-xs text-texto-suave">Informe somente valores conhecidos do alimento manual. Campos vazios permanecem sem valor informado.</p>
+            <div className="mt-2 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {CAMPOS_MICRONUTRIENTES_PLANO.map(({ codigo, rotulo: rotuloMicro, unidade }) => (
+                <label key={codigo} className="grid gap-1 text-xs font-semibold text-texto-suave">
+                  {rotuloMicro} ({unidade})
+                  <Campo
+                    type="text" inputMode="decimal" maxLength={32} min="0" step="0.0001"
+                    value={valor.micronutrientesPor100g?.[codigo] ?? ''}
+                    onChange={(evento) => aoAlterar({ ...valor, micronutrientesPor100g: { ...valor.micronutrientesPor100g, [codigo]: evento.target.value } })}
                   />
                 </label>
               ))}
@@ -1278,6 +1321,8 @@ interface PlanoAlimentarProfissionalProps {
   podeGerenciar: boolean;
   aoAlterarRascunho?: (alterado: boolean) => void;
   aoRegistrarSalvamentoRascunho?: (salvar: (() => Promise<boolean>) | null) => void;
+  selecoesCalculo: SelecaoCalculoLocal[];
+  aoMudarSelecoesCalculo: (selecoes: SelecaoCalculoLocal[]) => void;
 }
 
 type ModoProjecaoPaciente = 'rascunho' | 'impressao';
@@ -1288,7 +1333,7 @@ interface ProjecaoPacienteLocal {
   dados: ApresentacaoPacientePlanoApi;
 }
 
-export function PlanoAlimentarProfissional({ pacienteId, podeGerenciar, aoAlterarRascunho, aoRegistrarSalvamentoRascunho }: PlanoAlimentarProfissionalProps) {
+export function PlanoAlimentarProfissional({ pacienteId, podeGerenciar, aoAlterarRascunho, aoRegistrarSalvamentoRascunho, selecoesCalculo, aoMudarSelecoesCalculo }: PlanoAlimentarProfissionalProps) {
   const [planos, setPlanos] = useState<PlanoAlimentarResumoApi[]>([]);
   const [paginaPlanos, setPaginaPlanos] = useState(1);
   const [totalPlanos, setTotalPlanos] = useState(0);
@@ -1782,6 +1827,14 @@ export function PlanoAlimentarProfissional({ pacienteId, podeGerenciar, aoAltera
         && resultado.ativacaoRevisao >= (item.ativacaoRevisao ?? 0)
         ? { ...item, ativoParaPaciente: resultado.ativoParaPaciente, ativacaoRevisao: resultado.ativacaoRevisao }
         : item));
+      aoMudarSelecoesCalculo(selecoesCalculo.map(selecao => selecao.planoId !== planoAlvo.id ? selecao : {
+        ...selecao,
+        ativoParaPaciente: resultado.ativoParaPaciente,
+        ativacaoRevisao: resultado.ativacaoRevisao,
+        refeicoes: resultado.identidadeRefeicaoId
+          ? selecao.refeicoes.map(refeicao => refeicao.identidadeId === resultado.identidadeRefeicaoId ? { ...refeicao, ativa: resultado.ativa ?? ativo } : refeicao)
+          : selecao.refeicoes
+      }));
       setAtivacaoNaoConfirmada(false);
       setSucesso(identidadeRefeicaoId
         ? `Refeição ${ativo ? 'liberada ao' : 'ocultada do'} paciente.`
@@ -2030,6 +2083,16 @@ export function PlanoAlimentarProfissional({ pacienteId, podeGerenciar, aoAltera
 
   return (
     <div className="grid gap-4">
+      <div className="nao-imprimir">
+        <CalculoCombinadoPlanos
+          pacienteId={pacienteId}
+          planos={planos}
+          selecoes={selecoesCalculo}
+          aoMudarSelecoes={aoMudarSelecoesCalculo}
+          revisaoOperacional={plano?.ativacaoRevisao ?? 0}
+          versaoPublicadaSelecionada={plano?.current?.id}
+        />
+      </div>
       <div className="nao-imprimir grid gap-4 xl:grid-cols-[280px_minmax(0,1fr)]">
         <aside className="grid content-start gap-3">
           <Cartao className="border border-linha shadow-none">
@@ -2281,6 +2344,7 @@ export function PlanoAlimentarProfissional({ pacienteId, podeGerenciar, aoAltera
 
                   <BibliotecaReceitasNutricionais
                     pacienteId={pacienteId}
+                    validarAntesDeSalvar={(chaveRefeicao) => validarMicronutrientesFormulario(formularioAtualRef.current, chaveRefeicao)}
                     refeicoes={() => formulario.refeicoes.map((refeicao) => ({
                       chave: refeicao.chaveCliente,
                       nome: refeicao.nome,

@@ -1,4 +1,4 @@
-# PA06 — cálculo combinado: checkpoint backend
+# PA06 — cálculo combinado: evidências por checkpoint
 
 ## Escopo e base
 
@@ -7,8 +7,8 @@ Branch `feat/pos320-pa06-calculo`, worktree `pos320-pa06-calculo`, base
 `011ea87d` e planejamento `10ebf9aa`. Risco R4 (leitura clínica, snapshots,
 autorização, RLS e concorrência). Nenhum trabalho preexistente sobrescrito.
 
-T08c implementado localmente. UI/BFF T08d ainda pendentes. Uma PR será preparada
-com a terceira entrega completa; este checkpoint não autoriza merge/rollout.
+T08c e T08d implementados localmente na mesma branch. Uma PR Draft será preparada
+com a terceira entrega completa; estes checkpoints não autorizam merge/rollout.
 Não há migration nova nem alteração das migrations 1072–1074. Nenhum banco
 externo foi acessado. A aplicação real da1074/deploy não foi verificada.
 
@@ -95,8 +95,41 @@ nos documentos, logs de operação ou respostas da aplicação.
 - Não alterar nem apagar fontes/snapshots antigos em rollback. Retirar a nova
   projeção/UI se necessário, mantendo os controles ON/OFF já integrados.
 
-## Próximo checkpoint
+## T08d — BFF e interface de seleção combinada
 
-Troca manual para **GPT-6 Luna alto**: T08d.1–T08d.4, mesma branch/worktree.
-Ler `tasks/plan.md` e `tasks/plan-pos-320-pa06-calculo.md`. Depois voltar ao
-Sol médio para integração, revisão R4, gates finais e PR única.
+Implementação local na mesma branch, sem migration, dependência nova, acesso a
+banco externo ou carga de catálogo. O seletor é estado volátil por prontuário;
+os dados nutricionais e totais vêm exclusivamente do backend. O portal e a
+impressão mantêm os contratos anteriores.
+
+| Comando/verificação real | Resultado |
+| --- | --- |
+| `node scripts/test-planos-alimentares-bff.mjs` | PASS:42/42, incluindo autenticação/autorização, `no-store`, encoding, conflito e limite de corpo |
+| `node scripts/test-copia-refeicoes-plano.mjs` | PASS:8/8 |
+| `node scripts/test-nutricao-plano.mjs` | PASS:39/39 |
+| `node scripts/test-calculo-combinado-planos.mjs` | PASS:3/3 |
+| `pnpm test:authz` | PASS:26 recortes; as saídas de mocks sem contexto de request foram esperadas, sem falha da suíte |
+| `pnpm typecheck` | PASS, executado isoladamente após evitar concorrência com geração de tipos do Next |
+| `pnpm lint` no Web | PASS, zero erros;71 avisos existentes/distribuídos no repositório, incluindo padrões `setState-in-effect` nos arquivos extensos de editor/prontuário |
+| `NEXT_TELEMETRY_DISABLED=1 pnpm build` no Web | PASS; compilação, typecheck do build e186 páginas estáticas |
+| Playwright desktop/mobile: `pa06-calculo-combinado`, `pa02-copia-refeicoes`, `fase-320-pa05-apresentacao`, `portal-paciente` | PASS:94/94,47 desktop e47 mobile; Axe incluído no painel da PA06 |
+| `pnpm security:secrets`; `pnpm test:security` | PASS; nenhum segredo reconhecido e testes de segurança locais passaram |
+| `git diff --check` | PASS; sem erros de whitespace no checkpoint |
+
+O Playwright incluiu seleção em mais de um plano, paginação, exclusão/reativação
+de refeições, distinção entre valor zero e ausente/parcial, conflito409 que exige
+atualização explícita, teclado, regressões de cópia e apresentação, portal e
+impressão. Ambos os projetos de browser finalizaram sem falhas.
+
+| Gate restante | Estado |
+| --- | --- |
+| Revisão técnica R4 independente do diff T08c/T08d | BLOCKED/PENDING; revisão própria não é independente |
+| CI do HEAD corrigido e gates da PR | PENDING, ainda não publicada |
+| PostgreSQL integral com Timescale/pgvector/Testcontainers | SKIPPED localmente; evidência parcial PostgreSQL15 descartável descrita acima não cobre extensões/hypertables |
+| Banco, migrations, staging/produção e carga de catálogo externos | SKIPPED; não foram consultados nem alterados |
+| Merge, deploy e ativação | SKIPPED, não autorizados |
+
+Logs de execução foram temporários e não continham pacientes reais. O build
+produziu `.next` ignorado; não faz parte do diff. Um `next-env.d.ts` gerado pelo
+servidor Next de desenvolvimento foi restaurado ao conteúdo versionado para
+evitar incluir artefato local.

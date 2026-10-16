@@ -27,6 +27,7 @@
     "test:questionarios-revisao:bff": "node scripts/test-questionarios-revisao-bff.mjs",
     "test:importacao-pacientes": "node scripts/test-importacao-pacientes.mjs",
     "test:planos-alimentares:bff": "node scripts/test-planos-alimentares-bff.mjs",
+    "test:calculo-combinado-planos": "node scripts/test-calculo-combinado-planos.mjs",
     "test:copia-refeicoes": "node scripts/test-copia-refeicoes-plano.mjs",
     "test:nutricao-plano": "node scripts/test-nutricao-plano.mjs",
     "test:exames-laboratoriais:bff": "node scripts/test-exames-laboratoriais-bff.mjs",

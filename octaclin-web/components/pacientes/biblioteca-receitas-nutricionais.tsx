@@ -35,6 +35,7 @@ interface BibliotecaReceitasNutricionaisProps {
   pacienteId: string;
   refeicoes: () => RefeicaoDisponivel[];
   aoInserir: (chaveRefeicao: string, itens: ItemPlanoAlimentarEntrada[]) => void;
+  validarAntesDeSalvar?: (chaveRefeicao: string) => void;
   desabilitado?: boolean;
 }
 
@@ -51,6 +52,7 @@ export function BibliotecaReceitasNutricionais({
   pacienteId,
   refeicoes,
   aoInserir,
+  validarAntesDeSalvar,
   desabilitado = false
 }: BibliotecaReceitasNutricionaisProps) {
   const id = useId();
@@ -163,6 +165,7 @@ export function BibliotecaReceitasNutricionais({
     setErro(null);
     setAviso(null);
     try {
+      validarAntesDeSalvar?.(refeicaoDestinoAtual);
       const entrada = {
         nome: nome.trim(),
         origem,

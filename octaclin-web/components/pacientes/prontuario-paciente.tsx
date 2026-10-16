@@ -42,6 +42,7 @@ import { AbaDocumentos, ConsultaConcluidaOpcao } from './aba-documentos';
 import { PerfilCadastroPaciente } from './perfil-cadastro-paciente';
 import { SecaoPrioridadeAcompanhamento } from './prioridade-acompanhamento';
 import { PlanoAlimentarProfissional } from './plano-alimentar-profissional';
+import type { SelecaoCalculoLocal } from '@/lib/plano-alimentar-api';
 import { classeStatus, formatarDataHora, LinhaDoTempoProntuario as LinhaDoTempo } from './linha-do-tempo-prontuario';
 import {
   abasProntuario,
@@ -266,6 +267,12 @@ function tipoMidiaDoArquivo(arquivo: File): TipoMidiaMobile {
 }
 
 export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
+  return <ProntuarioPacienteConteudo key={pacienteId} pacienteId={pacienteId} />;
+}
+
+function ProntuarioPacienteConteudo({ pacienteId }: { pacienteId: string }) {
+  const [selecoesCalculo, setSelecoesCalculo] = useState<SelecaoCalculoLocal[]>([]);
+  const mudarSelecoesCalculo = useCallback((selecoes: SelecaoCalculoLocal[]) => setSelecoesCalculo(selecoes), []);
   const [dados, setDados] = useState<ProntuarioPacienteApi | null>(null);
   const [paginaHistorico, setPaginaHistorico] = useState<PaginaLinhaDoTempoProntuarioApi | null>(null);
   const [materiais, setMateriais] = useState<MaterialEducativoApi[]>([]);
@@ -1650,6 +1657,8 @@ export function ProntuarioPaciente({ pacienteId }: { pacienteId: string }) {
           key={pacienteId}
           pacienteId={pacienteId}
           podeGerenciar={podeGerenciarPlano}
+          selecoesCalculo={selecoesCalculo}
+          aoMudarSelecoesCalculo={mudarSelecoesCalculo}
           aoAlterarRascunho={setPlanoAlimentarNaoSalvo}
           aoRegistrarSalvamentoRascunho={registrarSalvamentoRascunho}
         />

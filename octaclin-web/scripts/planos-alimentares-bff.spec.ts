@@ -6,6 +6,8 @@ import { GET as listarPlanos, POST as criarPlano } from '../app/api/pacientes/[i
 import { GET as obterPlano } from '../app/api/pacientes/[id]/planos-alimentares/[planoId]/route';
 import { PUT as alterarAtivacaoPlano } from '../app/api/pacientes/[id]/planos-alimentares/[planoId]/ativacao/route';
 import { PUT as alterarAtivacaoRefeicao } from '../app/api/pacientes/[id]/planos-alimentares/[planoId]/refeicoes/[identidadeId]/ativacao/route';
+import { GET as obterSelecaoCalculo } from '../app/api/pacientes/[id]/planos-alimentares/[planoId]/selecao-calculo/route';
+import { POST as calcularPlanosCombinados } from '../app/api/pacientes/[id]/planos-alimentares/calculo-combinado/route';
 import { GET as listarPlanosPortal } from '../app/api/portal/paciente/planos-alimentares/route';
 import { GET as obterPlanoPortal } from '../app/api/portal/paciente/planos-alimentares/[planoId]/route';
 import { GET as listarEscolhasPaciente } from '../app/api/pacientes/[id]/planos-alimentares/[planoId]/escolhas-paciente/route';
@@ -26,6 +28,7 @@ import { POST as restaurarVersaoModelo } from '../app/api/planos-alimentares/mod
 import { GET as listarReceitas, POST as criarReceita } from '../app/api/planos-alimentares/receitas/route';
 import { GET as obterReceita, PUT as atualizarReceita, DELETE as arquivarReceita } from '../app/api/planos-alimentares/receitas/[receitaId]/route';
 import { alterarAtivacaoPlanoAlimentar, alterarAtivacaoRefeicaoPlanoAlimentar, obterAcompanhamentoVersaoPlanoAlimentar } from '../lib/plano-alimentar-api';
+import { calcularPlanosCombinados as calcularPlanosCombinadosApi, obterSelecaoCalculoPlano } from '../lib/calculo-combinado-planos-api';
 import { listarPlanosAlimentaresPortalPaciente, obterPlanoAlimentarPortalPaciente } from '../lib/portal-api';
 import { aplicarAckAtivacao, ativacaoOperacionalEstaDesatualizada, localizarAtivacaoRefeicao, mesclarProjecaoAtivacao } from '../lib/ativacao-plano';
 
@@ -231,7 +234,7 @@ test('BFF encaminha ativacao CAS com identidade codificada, permissao e no-store
       params: Promise.resolve({ id: 'paciente/1', planoId: 'plano/1', identidadeId: 'refeicao/1' })
     });
     assert.equal(plano.status, 200);
-    assert.equal(plano.headers.get('Cache-Control'), 'no-store');
+    assert.equal(plano.headers.get('Cache-Control'), 'private, no-store');
     assert.equal(refeicao.status, 200);
     assert.deepEqual(chamadas, [
       { url: 'http://backend.octaclin.local/pacientes/paciente%2F1/planos-alimentares/plano%2F1/ativacao', metodo: 'PUT', corpo },
@@ -265,6 +268,82 @@ test('BFF limita o corpo das mutacoes operacionais antes de encaminhar', async (
     });
     assert.equal(resposta.status, 413);
     assert.equal(chamou, false);
+  } finally { restaurarFetch(original); }
+});
+
+test('PA06 BFF lê seleção publicada sem cache e preserva status de conflito', async () => {
+  __setCookies(cookiesSessaoValida(['planos_alimentares.ler']));
+  const original = global.fetch;
+  const urls: string[] = [];
+  global.fetch = (async (entrada: string | URL | Request) => {
+    urls.push(String(entrada));
+    return new Response(JSON.stringify({ mensagem: 'Atualize a seleção.' }), { status: 409, headers: { 'Content-Type': 'application/json' } });
+  }) as typeof global.fetch;
+  try {
+    const resposta = await obterSelecaoCalculo(new Request('http://localhost/api/selecao'), {
+      params: Promise.resolve({ id: 'paciente/1', planoId: 'plano/1' })
+    });
+    assert.equal(resposta.status, 409);
+    assert.equal(resposta.headers.get('Cache-Control'), 'private, no-store');
+    assert.deepEqual(urls, ['http://backend.octaclin.local/pacientes/paciente%2F1/planos-alimentares/plano%2F1/selecao-calculo']);
+  } finally { restaurarFetch(original); }
+});
+
+test('PA06 BFF encaminha somente o cálculo pedido, protegido e com limite de 64 KiB', async () => {
+  __setCookies(cookiesSessaoValida(['planos_alimentares.ler']));
+  const original = global.fetch;
+  let chamada: { url: string; body?: string } | undefined;
+  global.fetch = (async (entrada: string | URL | Request, init?: RequestInit) => {
+    chamada = { url: String(entrada), body: init?.body?.toString() };
+    return Response.json({ estado: 'sem_selecao' });
+  }) as typeof global.fetch;
+  try {
+    const corpo = JSON.stringify({ selecoes: [] });
+    const resposta = await calcularPlanosCombinados(new Request('http://localhost/api/calcular', { method: 'POST', body: corpo }), {
+      params: Promise.resolve({ id: 'paciente/1' })
+    });
+    assert.equal(resposta.status, 200);
+    assert.equal(resposta.headers.get('Cache-Control'), 'private, no-store');
+    assert.deepEqual(chamada, { url: 'http://backend.octaclin.local/pacientes/paciente%2F1/planos-alimentares/calculo-combinado', body: corpo });
+  } finally { restaurarFetch(original); }
+});
+
+test('PA06 BFF bloqueia cálculo sem permissão e corpos maiores que 64 KiB', async () => {
+  const original = global.fetch;
+  let chamadas = 0;
+  global.fetch = (async () => { chamadas += 1; return Response.json({}); }) as typeof global.fetch;
+  try {
+    __setCookies(cookiesSessaoValida(['pacientes.ler']));
+    const semPermissao = await calcularPlanosCombinados(new Request('http://localhost/api/calcular', { method: 'POST', body: '{}' }), {
+      params: Promise.resolve({ id: 'paciente-1' })
+    });
+    assert.equal(semPermissao.status, 403);
+    assert.equal(semPermissao.headers.get('Cache-Control'), 'private, no-store');
+    __setCookies(cookiesSessaoValida(['planos_alimentares.ler']));
+    const grande = await calcularPlanosCombinados(new Request('http://localhost/api/calcular', { method: 'POST', body: 'x'.repeat(65 * 1024) }), {
+      params: Promise.resolve({ id: 'paciente-1' })
+    });
+    assert.equal(grande.status, 413);
+    assert.equal(grande.headers.get('Cache-Control'), 'private, no-store');
+    assert.equal(chamadas, 0);
+  } finally { restaurarFetch(original); }
+});
+
+test('PA06 cliente web usa no-store, escapa IDs e preserva conflito sem retry', async () => {
+  const original = global.fetch;
+  const chamadas: Array<{ url: string; metodo: string; cache?: RequestCache; body?: string }> = [];
+  global.fetch = (async (entrada: string | URL | Request, init?: RequestInit) => {
+    chamadas.push({ url: String(entrada), metodo: init?.method ?? 'GET', cache: init?.cache, body: init?.body?.toString() });
+    return chamadas.length === 1 ? Response.json({ planoId: 'plano/1' }) : new Response(JSON.stringify({ mensagem: 'Atualize a seleção.' }), { status: 409 });
+  }) as typeof global.fetch;
+  try {
+    const selecao = await obterSelecaoCalculoPlano('paciente/1', 'plano/1');
+    assert.equal(selecao.planoId, 'plano/1');
+    await assert.rejects(calcularPlanosCombinadosApi('paciente/1', { selecoes: [] }), (erro: unknown) => erro instanceof Error && erro.name === 'ErroApiPlanoAlimentar' && (erro as Error & { status?: number }).status === 409);
+    assert.deepEqual(chamadas, [
+      { url: '/api/pacientes/paciente%2F1/planos-alimentares/plano%2F1/selecao-calculo', metodo: 'GET', cache: 'no-store', body: undefined },
+      { url: '/api/pacientes/paciente%2F1/planos-alimentares/calculo-combinado', metodo: 'POST', cache: 'no-store', body: '{"selecoes":[]}' }
+    ]);
   } finally { restaurarFetch(original); }
 });
 
@@ -536,7 +615,7 @@ test('BFF encaminha acompanhamento da versao com allowlist, leitura e no-store',
       { params: Promise.resolve({ id: 'paciente/1', planoId: 'plano/1', numero: '2' }) }
     );
     assert.equal(resposta.status, 200);
-    assert.equal(resposta.headers.get('Cache-Control'), 'no-store');
+    assert.equal(resposta.headers.get('Cache-Control'), 'private, no-store');
     assert.equal(
       url,
       'http://backend.octaclin.local/pacientes/paciente%2F1/planos-alimentares/plano%2F1/versoes/2/acompanhamento?paginaCheckins=2&paginaQuestionarios=3&paginaEscolhas=4&limite=10'
@@ -829,7 +908,7 @@ test('PA05 BFF de prévia paciente exige sessão/permissão e não encaminha esc
     __setCookies(cookiesSessaoValida(['planos_alimentares.ler']));
     const resposta = await obterApresentacaoPaciente(new Request('http://localhost/preview?tenantId=alheio&versaoId=alheia'), props);
     assert.equal(resposta.status, 200);
-    assert.equal(resposta.headers.get('Cache-Control'), 'no-store');
+    assert.equal(resposta.headers.get('Cache-Control'), 'private, no-store');
     assert.equal(chamado, 1);
   } finally { restaurarFetch(original); __clearCookies(); }
 });
@@ -847,7 +926,7 @@ test('PA06 revisão e publicação preservam precondição e conflito sem retry'
     for (const rota of [revisarPlano, publicarPlano]) {
       const resposta = await rota(new Request('http://localhost/api/transicao', { method: 'POST', body: corpo }), { params: Promise.resolve({ id: 'p', planoId: 'pl' }) });
       assert.equal(resposta.status, 409);
-      assert.equal(resposta.headers.get('Cache-Control'), 'no-store');
+      assert.equal(resposta.headers.get('Cache-Control'), 'private, no-store');
     }
     assert.deepEqual(chamadas, [corpo, corpo]);
   } finally { restaurarFetch(original); }
@@ -870,7 +949,7 @@ test('PA06 edição exige gerenciar, preserva escopo, documento, status e no-sto
     assert.equal(chamadas.length, 0);
     __setCookies(cookiesSessaoValida(['planos_alimentares.gerenciar']));
     const resposta = await PUT(request(), params);
-    assert.equal(resposta.status, 409); assert.equal(resposta.headers.get('Cache-Control'), 'no-store');
+    assert.equal(resposta.status, 409); assert.equal(resposta.headers.get('Cache-Control'), 'private, no-store');
     assert.deepEqual(chamadas, ['http://backend.octaclin.local/pacientes/paciente%2F1/planos-alimentares/plano%2F1/rascunho/edicao']);
   } finally { restaurarFetch(original); }
 });

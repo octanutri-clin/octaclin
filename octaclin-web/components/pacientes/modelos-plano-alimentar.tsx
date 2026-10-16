@@ -300,19 +300,19 @@ export function ModelosPlanoAlimentar({ refeicoesAtuais, aoAplicar, desabilitado
   }
 
   async function salvar() {
-    const refeicoes = refeicoesAtuais();
-    if (!nome.trim() || !refeicoes.length) {
-      setErro('Informe um nome e tenha ao menos uma refeição no modelo.');
-      return;
-    }
-    if (refeicoes.some((refeicao) => refeicao.itens.length === 0)) {
-      setErro('Adicione ao menos um alimento em cada refeição antes de salvar o modelo.');
-      return;
-    }
     setOcupado('salvando');
     setErro(null);
     setAviso(null);
     try {
+      const refeicoes = refeicoesAtuais();
+      if (!nome.trim() || !refeicoes.length) {
+        setErro('Informe um nome e tenha ao menos uma refeição no modelo.');
+        return;
+      }
+      if (refeicoes.some((refeicao) => refeicao.itens.length === 0)) {
+        setErro('Adicione ao menos um alimento em cada refeição antes de salvar o modelo.');
+        return;
+      }
       await criarModeloPlanoAlimentar({ nome: nome.trim(), origem, refeicoes });
       setNome('');
       setAviso('Modelo salvo.');

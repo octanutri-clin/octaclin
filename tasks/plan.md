@@ -1,15 +1,26 @@
-# Handoff atual — PA06 cálculo combinado: backend concluído; troca para Luna
+# Handoff atual — PA06 cálculo combinado: T08d implementado, gates locais concluídos
 
 ## Branch, autorização e estado
 
 - Worktree `/workspace/octaclin/.worktrees/pos320-pa06-calculo`, branch
   `feat/pos320-pa06-calculo`, base `011ea87d`. Planejamento em `10ebf9aa`;
   desenvolvimento autorizado pelo proprietário em “Pode seguir com sol médio”.
-- T08c implementado/testado localmente. **Pausar para troca manual para GPT-6
-  Luna alto antes de iniciar T08d.** Não criar outra branch/worktree/PR para a
-  troca. Nenhum push/PR desta terceira entrega realizado até este checkpoint.
+- T08c implementado/testado localmente; T08d de UI/BFF implementado na mesma
+  branch. O proprietário confirmou a troca de modelo e autorizou continuar em
+  “Pode seguir com sol médio”. Nenhum push/PR desta terceira entrega realizado
+  até concluir os gates e revisar o diff.
 - Sem migration nova;1072–1074 intocadas. Sem carga externa, merge ou deploy.
-  Alteração preexistente do checkout principal em `next-env.d.ts` preservada.
+  A atualização de `octaclin-web/next-env.d.ts` foi gerada pelo Next 16 durante
+  os testes locais; não foi alterado o checkout principal.
+- Estado deste checkpoint: BFF focado42/42; cópia8/8; edição/nutrição39/39;
+  helpers de seleção3/3; `test:authz` PASS (26 recortes); Playwright desktop/
+  mobile94/94 (inclui Axe do painel); lint Web sem erros/71 avisos; typecheck e
+  build Web PASS; scanner local de secrets PASS. `git diff --check` PASS.
+- R4 independente, CI do HEAD e gates integrais de PostgreSQL/Timescale/pgvector
+  ainda não comprovados nesta entrega. O estado reportado do banco remoto não foi
+  consultado; não houve alteração externa.
+- Próxima etapa: finalizar revisão do diff, criar commit e abrir uma única PR
+  Draft para CI e revisão R4 independente. Manter Draft até ambos concluírem.
 - Evidências: [checkpoint backend](../docs/governance/EVIDENCIAS_PA06_CALCULO_2026-10-16.md).
   Plano executável [T08c/T08d](plan-pos-320-pa06-calculo.md) e
   [checklist](todo-pos-320-pa06.md). Seções antigas abaixo são históricas.
@@ -42,31 +53,27 @@
   base/porção, estados e `valorOrigem`/`por100g`/`porcao` quando conhecidos.
   Catálogo não admite override; cópias manuais preservam valores permitidos.
 
-## Próximas ações exatas — T08d.1–T08d.4
+## Trabalho T08d entregue localmente
 
-1. Reconfirmar Git/status; ler AGENTS web e executar TDD. Adicionar somente os
-   dois BFFs/cliente tipado, estendendo `scripts/planos-alimentares-bff.spec.ts`
-   e `lib/server/autorizacao-rotas.ts`. Reusar `_proxy.ts`
-   de planos; limite POST64KiB, sessão/permissão/no-store também nos erros.
-2. Atualizar `lib/edicao-plano.ts`, `lib/copia-refeicoes-plano.ts`, tipos API e
-   `components/pacientes/plano-alimentar-profissional.tsx` em fatias pequenas.
-   Incluir editor de micros manuais; rodada por editor/cópia/modelos/receitas e
-   substituições, sem criar override em alimento de catálogo.
-3. Componente próprio `calculo-combinado-planos.tsx`; seleção vazia em memória
-   pertence ao prontuário (`prontuario-paciente.tsx`), sobrevive páginas/planos/
-   abas internas e limpa em paciente/sessão/saída. Seleção não altera autosave.
-   Plano selecionado inclui refeições ativas naquele instante; OFF mantém a
-   seleção sem contribuição, ON reinclui somente o que já estava selecionado.
-4. Limpar total imediatamente ao mudar seleção/ativação/publicação; debounce
-   300ms, Recalcular imediato, AbortController+geração para resposta tardia.
-   409 ou publicação remota diferente exige Atualizar seleção, conservando
-   interseção de identidades; novas refeições não entram automaticamente.
-   Revalidar no foco/reconexão, sem polling nem promessa de realtime.
-5. Harnesses BFF/cópia/edição/seleção, Playwright desktop/mobile/Axe/teclado,
-   2+ planos/páginas, ausente vs0, parcial,409, respostaA após pacienteB,
-   OFF→ON e versões distintas. Portal/PDF conservam o contrato existente.
-6. Ao terminar T08d, avisar e pausar para retorno ao **Sol6.1 médio** em T09.3/
-   T10.3: integração/R4/regressões/gates finais e uma PR inicialmente Draft.
+1. BFF GET/POST e cliente tipado usam o proxy existente, limite de corpo de
+   64KiB, autorização de leitura, `private, no-store` inclusive nas respostas
+   de erro e preservação de conflitos/status.
+2. Editor manual, cópias, modelos e receitas conservam micronutrientes sem
+   criar override em alimento de catálogo; validação de valor parcial impede
+   materialização inválida e a mensagem permanece acessível.
+3. O seletor mantém seleção vazia em memória do prontuário, atravessa planos e
+   paginas; a instância é keyed por paciente, para limpar todo o estado ao trocar
+   o paciente. Selecionar inclui refeições ativas naquele instante.
+4. OFF mantém a identidade selecionada sem contribuir; ON mantém somente a
+   seleção anterior. Totais e erros são vinculados à chave de contexto/versão;
+   resposta tardia é descartada, debounce300ms, botão recalcula imediatamente,
+   409 exige atualização explícita sem selecionar refeições novas.
+5. O resumo mostra versão e data de publicação; tabela apresenta unidade,
+   cobertura, parcial/indisponível e distingue ausência de zero. Portal/PDF não
+   recebem a seleção nem micronutrientes fora dos contratos de snapshot.
+6. Provas executadas estão em `docs/governance/EVIDENCIAS_PA06_CALCULO_2026-10-16.md`;
+   a suíte local desta entrega foi concluída. R4 independente, CI e gate integral
+   do PostgreSQL/Timescale/pgvector continuam pendentes antes de retirar Draft.
 
 ## Ambiente e verificações
 

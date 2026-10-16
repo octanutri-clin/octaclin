@@ -2,10 +2,10 @@
 
 Planejamento: [plan-pos-320-pa06.md](plan-pos-320-pa06.md).
 Estado em 2026-10-16: primeira entrega integrada pela PR #420; segunda integrada
-pela PR #421, merge `011ea87d`. Terceira entrega: backend T08c implementado
-localmente na branch `feat/pos320-pa06-calculo`, base `011ea87d`; autorização
-“Pode seguir com sol médio”. Checkpoint técnico e limitações nas evidências de cálculo.
-UI/BFF T08d pendentes da troca manual para Luna alto. Plano executável:
+pela PR #421, merge `011ea87d`. Terceira entrega: backend T08c e interface/BFF
+T08d implementados na branch `feat/pos320-pa06-calculo`, base `011ea87d`; o
+proprietário confirmou troca de modelo e autorizou “Pode seguir com sol médio”.
+Gates finais locais em execução; limites e evidências em:
 [plan-pos-320-pa06-calculo.md](plan-pos-320-pa06-calculo.md).
 Migrations anteriores relatadas pelo proprietário não comprovam aplicação da1074;
 nenhum banco externo consultado nesta rodada. Cada entrega tem T09/T10 próprios.
@@ -275,14 +275,14 @@ Dependência: T08c e T07. Luna alto após contrato de cálculo fechado por Sol.
 Executar T08d.1–T08d.4 do plano da terceira entrega. Avisar e pausar antes da
 troca para Luna; retornar ao Sol para T09.3/T10.3.
 
-- [ ] Seleção explícita de planos ativos publicados e refeições; exibir número/data
+- [x] Seleção explícita de planos ativos publicados e refeições; exibir número/data
   da publicação atual de cada plano, sem seletor de rascunho. Seleção entre páginas
   só em memória, limpa ao trocar paciente/sessão e independente do acesso no portal.
-- [ ] Mostrar “Desativado — fora do cálculo” sem apagar seleção; plano OFF
+- [x] Mostrar “Desativado — fora do cálculo” sem apagar seleção; plano OFF
   prevalece, reativação respeita estado de cada refeição. Erro não afirma ACK.
-- [ ] Tabela acessível de energia/macros/micros com unidade, fonte/cobertura e
+- [x] Tabela acessível de energia/macros/micros com unidade, fonte/cobertura e
   estado parcial, sem zeros inventados, percentuais DRI ou interpretação automática.
-- [ ] Request atrasado, seleção alterada, acesso revogado e toggle não exibem
+- [x] Request atrasado, seleção alterada, acesso revogado e toggle não exibem
   totais obsoletos como atuais; portal segue D09 e não recebe seleção do console.
 
 Aceite: cálculo por seleção é planejamento, não consumo nem soma de metas;
@@ -290,6 +290,12 @@ keyboard/mobile/desktop, flags e arredondamento coerentes com backend.
 Verificação: BFF positivo/negativo e Playwright da seleção e múltiplos planos,
 incluindo páginas, OFF/ON, mudança de publicação e versões antigas sem micros.
 Rascunho parcial deve ficar fora da soma, mesmo se tiver valores calculáveis.
+
+Checkpoint T08d: PASS local — BFF 42/42; cópia 8/8; edição/nutrição 39/39;
+helpers 3/3; Playwright 94/94 em desktop/mobile, incluindo Axe no painel da
+PA06 e regressões PA02/PA05/portal. Typecheck e build Web PASS; lint Web sem
+erros (71 avisos preexistentes/distribuídos no repositório). Evidências e
+limitações em `docs/governance/EVIDENCIAS_PA06_CALCULO_2026-10-16.md`.
 
 ### Checkpoint C — integração Sol
 
@@ -303,10 +309,15 @@ Dependência: checkpoint C da entrega atual e suas fatias, conforme sequência
 de três PRs no plano. Sol médio; repetir estes gates em cada entrega.
 
 - [x] Backend/Web lint, typecheck/build, `test:authz` (26 recortes) e testes
-  proporcionais. Lint global Web passou sem erros (70 warnings no repositório);
-  arquivo de portal alterado sem warnings.
+  proporcionais. Lint global Web passou sem erros (71 warnings no repositório);
+  os arquivos alterados não introduziram erro de lint; avisos atuais concentram
+  padrões já existentes de `setState-in-effect` em arquivos grandes do editor e
+  prontuário.
 - [ ] Banco real integral com Timescale/pgvector continua pendente para CI; a
   fixture PostgreSQL descartável cobriu PA04–PA06 e o inventário RLS.
+- [ ] Revisão técnica R4 independente do diff completo T08c/T08d e CI do HEAD
+  continuam pendentes; testes locais e revisão da autoria não substituem essa
+  revisão.
 - [x] Segunda revisão cruzada estática R4 confirmou os dois fixes e o delta final
   do portal sem novos achados; primeira leitura R4 encontrou dois achados P2.
   Correções e retestes estão documentados na evidência PA06.
