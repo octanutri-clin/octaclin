@@ -1,12 +1,17 @@
 # PA06 — autosave, ativação e cálculo combinado do planejamento alimentar
 
-Planejamento de 2026-10-15. Implementação autorizada pelo proprietário em “Pode começar”.
-Primeira entrega (autosave e edição parcial) mergeada na PR420. Segunda entrega
-(ativação) autorizada em “Pode seguir”, em execução no backend. Escopo ampliado pelo proprietário; seguir uma
-PR por recurso, conforme o roadmap, em três entregas encadeadas descritas abaixo.
+Atualização de 2026-10-16: primeira entrega (autosave e edição parcial) integrada
+pela PR #420; segunda (ativação) integrada pela PR #421, merge `011ea87d`.
+Próxima etapa: planejamento da terceira entrega, cálculo combinado/micros,
+detalhada em [plan-pos-320-pa06-calculo.md](plan-pos-320-pa06-calculo.md).
+Esta rodada é documental; implementação da terceira entrega não iniciada.
+Preservar uma PR por recurso, conforme o roadmap e as três entregas abaixo.
 Checklist: [T00–T10](todo-pos-320-pa06.md).
 
-## Base, continuidade e limites
+## Base original, continuidade e limites
+
+Este bloco conserva a abertura da PA06. A base atual da terceira entrega e as
+condições de implementação estão no plano detalhado vinculado no início.
 
 - Base `eae74b1e`, merge da [PR #419](https://github.com/octanutri-clin/octaclin/pull/419)
   em 2026-10-15. Árvore idêntica ao HEAD aprovado `9e12271b`.
@@ -29,7 +34,7 @@ Checklist: [T00–T10](todo-pos-320-pa06.md).
   publicados e agregação usa a versão publicada atual de cada plano. Sem IA, anexos, recuperação
   offline ou ingestão TBCA.
 
-## Decisões de produto — respostas e refinamentos de 2026-10-15
+## Decisões de produto — respostas e refinamentos de 2026-10-15/16
 
 As respostas do usuário substituem as recomendações iniciais conflitantes.
 
@@ -42,9 +47,12 @@ As respostas do usuário substituem as recomendações iniciais conflitantes.
 | D05 | Preservar snapshot de edição inteiro, inclusive linhas incompletas marcadas pendentes, sem usá-las em cálculos dependentes ou publicação | CONFIRMADA pelo usuário “atende por enquanto sim” |
 | D06 | Botões no plano inteiro e em cada refeição; OFF do plano prevalece sobre o estado das refeições | CONFIRMADA; ambos os níveis solicitados |
 | D07 | Profissional pode selecionar vários planos do mesmo paciente para calcular calorias, macronutrientes e micronutrientes; só planos/refeições ativos e selecionados participam | CONFIRMADA; seleção de cálculo é distinta de ativação/visibilidade e não indica consumo real |
-| D08 | Desativar plano ou refeição selecionados retira sua contribuição do cálculo vigente e oculta do paciente; não apaga conteúdo ou seleção | Efeito de exclusão CONFIRMADO; preservar seleção e estados filhos é solução técnica proposta, com indicação visual de exclusão |
+| D08 | Desativar plano ou refeição selecionados retira sua contribuição do cálculo vigente e oculta do paciente; não apaga conteúdo ou seleção | CONFIRMADA; retenção da seleção e reinclusão em ON ratificadas em D12 |
 | D09 | Paciente pode acessar todos os planos ativos publicados; desativados, arquivados e excluídos não ficam acessíveis, inclusive por ID conhecido | CONFIRMADA; portal passa de singular para listagem paginada e detalhe autorizado |
 | D10 | Agregação usa somente a versão ativa, publicada e salva de cada plano selecionado, com suas refeições ativas; não usa rascunho nem versões publicadas antigas | CONFIRMADA; substitui proposta de escolher rascunho/publicada |
+| D11 | Seleção inicialmente vazia e só em memória do prontuário. Selecionar plano inclui refeições ativas; profissional pode desmarcar cada uma. Preserva seleção entre páginas/planos do mesmo paciente | CONFIRMADA em 2026-10-16 |
+| D12 | OFF mantém seleção e exclui contribuição; ON reinclui o que permaneceu selecionado. Refeição OFF não selecionada não é selecionada automaticamente ao ligar | CONFIRMADA em 2026-10-16; ratifica solução técnica D08 |
+| D13 | Preparar nova versão TACO com micros verificáveis, sem alterar fontes/publicações antigas; carga externa depende de operação autorizada separadamente | CONFIRMADA em 2026-10-16 |
 
 Não gravar só por abrir a tela nem criar plano por timer. O ciclo começa ao
 abrir o editor autorizado com um rascunho; aos 60 segundos verifica alterações e salva
@@ -391,8 +399,10 @@ Cada entrega inclui seu plano/evidências e segue os mesmos gates R4 aplicáveis
 
 T09/T10 são aplicados a cada entrega, não apenas ao fim da última. Atualizar
 base/branch após cada integração; nunca misturar código não aprovado em PR
-anterior. Não criar PR documental separada. Decisões de produto D01–D10 fechadas;
-contratos técnicos e testes da primeira entrega estão em implementação autorizada.
+anterior. Não criar PR documental separada. Decisões de produto D01–D13 fechadas;
+contratos da terceira entrega estão definidos no plano detalhado. As duas
+primeiras entregas já foram integradas; os registros de execução abaixo
+preservam o estado observado em cada rodada anterior.
 
 Rollback merece uma condição adicional: backend anterior aos controles de
 ativação pode ignorar OFF e voltar a expor conteúdo. Não liberar reversão para
@@ -409,6 +419,8 @@ revisões. Conservação do schema, por si só, não comprova rollback seguro.
 Evitar Luna sozinho na etapa de concorrência e transição de contratos. Pesquisa
 restrita a R013/R014 e nenhuma biblioteca nova reduzem custo e retrabalho.
 Avisar modelo alvo e pausar antes de toda troca manual.
+
+### Registro histórico da primeira entrega — 2026-10-15
 
 Estado atualizado em 2026-10-15: T07/T08 foram implementados por Luna alto nesta
 worktree após a troca manual. A interface usa o coordenador CAS por paciente/plano/

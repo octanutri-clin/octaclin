@@ -1,4 +1,67 @@
-# Handoff atual — PA06 segunda entrega: ativação backend + UI/BFF
+# Handoff atual — PA06 terceira entrega: cálculo combinado e micronutrientes
+
+## Estado e próxima ação
+
+PR #421 mergeada em `011ea87d`, confirmada por GitHub/main remota em
+2026-10-16. Planejamento na branch `feat/pos320-pa06-calculo`, worktree
+`/workspace/octaclin/.worktrees/pos320-pa06-calculo`, base `011ea87d`.
+O pedido desta rodada é planejar; nenhum runtime, migration, carga ou ambiente
+externo foi alterado. A alteração antiga em `next-env.d.ts` no checkout principal
+foi preservada. Não criar PR documental separada da terceira entrega.
+
+**Ler antes de implementar:**
+
+- [Plano executável da entrega](plan-pos-320-pa06-calculo.md): contratos,
+  limites, tarefas T08c.1a–T08c.5/T08d.1–T08d.4, testes e checkpoints.
+- [Plano principal/D01–D13](plan-pos-320-pa06.md) e
+  [checklist T08c/T08d/T09/T10](todo-pos-320-pa06.md).
+- [Whitelist/fontes](../docs/product/FONTES_MICRONUTRIENTES_PA06.md):22 códigos,
+  unidades, hashes oficiais, dados ausentes e nova versão TACO.
+
+## Decisões e invariantes para o sucessor
+
+- D11: seleção vazia inicialmente; plano inclui refeições ativas, com desmarcação
+  individual. Seleção só em memória do prontuário, atravessa páginas/planos e
+  limpa ao trocar paciente/sessão/sair do prontuário.
+- D12: OFF mantém seleção, exclui contribuição; ON reinclui o que permanecia
+  selecionado. Não ligar/desligar o portal por mudar a seleção de cálculo.
+- D13: preparar TACO v2 com micros, sem sobrescrever v1 ou histórico. Nenhuma
+  carga externa foi autorizada neste ciclo.
+- D07/D10: só snapshots da publicação atual salva, planos E refeições ativos E
+  selecionados. Não usar rascunhos, histórico, metas, substituições ou consumo.
+- Resultados parciais por nutriente; não converter ausência/traço/LOQ em zero,
+  misturar retinol/RE/RAE, niacina/NE ou folatos distintos. Sem IDR/UL/TBCA.
+- Fonte USDA/IBGE já preserva metadados originais; TACO atual não preservou os
+  micros. Novo snapshot pode usar adapter validado, leitura histórica não.
+- Sem schema novo previsto: JSONB/cipher existentes suportam o contrato aditivo.
+ 1072–1074 intocadas. Estado operacional real da1074/deploy não foi consultado;
+ verificar antes de rollout, sem inferir do merge/CI.
+- POST de cálculo em lote reusa RLS/escopo/locks atuais; seleção não autorizada
+  falha inteira. Versão/revisão obsoleta409, sem fallback para outra publicação.
+- Resultado identifica instante/revisões. Invalidar por ações locais/respostas
+  obsoletas e revalidar no foco; não prometer realtime ou introduzir polling.
+
+## Modelo e sequência
+
+GPT-6.1 Sol médio: T08c (fontes, snapshots, cálculo, DTOs, autorização, PG/RLS).
+Depois do checkpoint backend GREEN, avisar **GPT-6 Luna alto** e pausar para
+troca manual antes da UI/BFF T08d. Voltar ao Sol médio com nova pausa para
+integração/revisão R4/regressões/PR. Execução sequencial na mesma worktree/PR.
+Autorizações anteriores de outras entregas não substituem o escopo de
+planejamento solicitado nesta rodada.
+
+## Evidência desta rodada
+
+PASS documental: Git/merge/base; contratos/migrations registradas; leitura
+restrita das referências R013/R014 e dos cabeçalhos/IDs oficiais TACO/IBGE/USDA.
+Hashes e limites registrados na ficha de fontes. Três decisões de produto
+confirmadas pelo proprietário. Verificações finais documentais registradas no
+plano executável. Testes de runtime, PostgreSQL, migrações/cargas externas,
+lint/build/Playwright e CI da terceira entrega: SKIPPED, planejamento somente.
+
+---
+
+# Handoff anterior — PA06 segunda entrega: ativação backend + UI/BFF
 
 ## Estado e limites
 

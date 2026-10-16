@@ -1,31 +1,28 @@
 # OctaClin - Status atual do projeto
 
-Atualizado em 2026-10-15.
+Atualizado em 2026-10-16.
 
 ## Fase ativa
 
-- **PA06 — primeira entrega em desenvolvimento autorizado**, base `eae74b1e`.
-  Autosave ligado por padrão, ciclo de 60 segundos no editor profissional. Referências R013
-  TanStack/query e R014 react-hook-form consultadas em versões fixadas; uso
-  conceitual, sem dependência nova. Gaps: revisão geral de conteúdo/caminhos
-  legados, edição durante gravação, snapshot editorial parcial e saída protegida.
-  D01–D03 confirmadas; alimentos válidos salvos sem exigir formulário completo.
-  D04–D08 registradas: on/off no plano e em cada refeição; desativados ficam
-  ocultos e fora dos totais. Cálculo combinado de planos/refeições selecionados
-  para calorias/macros/micros, preservando linhas incompletas. D09/D10 confirmadas:
-  portal com todos os planos ativos publicados; desativados/arquivados/excluídos
-  inacessíveis. Cálculo combinado só da publicação atual salva, sem rascunhos;
-  seleção para cálculo independente da visibilidade. Três entregas/PRs sequenciais:
-  autosave parcial → ativação → cálculo combinado/micros.
-  Núcleo de edição cifrada/CAS, migration1073 aditiva, BFF e coordenador em memória
-  implementados, incluindo interface T07/T08 por Luna alto; integração Sol em
-  andamento com revisão cruzada estática, correções RED/GREEN e gates finais.
-  Sem migration externa/deploy. Evidências em
-  `docs/governance/EVIDENCIAS_PA06_NUCLEO_2026-10-15.md`.
-  Plano e critérios
-  em `tasks/plan-pos-320-pa06.md` e `tasks/todo-pos-320-pa06.md`.
-  Sol6.1 médio para concorrência/backend e integração; Luna alto apenas após
-  contratos/motor testados, para interface. Avisar e pausar antes da troca.
+- **PA06 — terceira entrega em planejamento**, base `011ea87d`.
+  Autosave/rascunho parcial integrados por #420; ativação de planos/refeições e
+  portal plural por #421, merge confirmado em 2026-10-16. Próxima entrega:
+  cálculo combinado de publicações atuais com micros versionados/cobertura.
+  D01–D10 preservadas; D11–D13 confirmadas: seleção vazia, plano inclui refeições
+  ativas; OFF preserva seleção e ON reinclui; preparar TACO v2 sem alterar v1.
+  Whitelist de 22 códigos e cabeçalhos/IDs oficiais conferidos, hashes registrados; equivalência
+  IBGE vitamina D precisa de comprovação antes de habilitar esse mapping.
+  TACO antigo não preservou micros; publicações antigas continuam sem esses
+  valores. Sem IDR/UL, TBCA, dependência nova ou mudança implícita no portal/PDF.
+  R013/R014 usados conceitualmente, com consulta restrita nesta rodada.
+  Plano executável `tasks/plan-pos-320-pa06-calculo.md`, fontes em
+  `docs/product/FONTES_MICRONUTRIENTES_PA06.md`; checklist T08c/T08d existente.
+  Esta rodada não iniciou runtime, teste de implementação, carga ou migration.
+  Migrations1072–1074 registradas no código; aplicação real da1074/deploy não
+  conferidos por consulta externa. Worktree `pos320-pa06-calculo` preserva os
+  trabalhos anteriores. Sol6.1 médio para fontes/backend/RLS/cálculo; Luna alto
+  só após checkpoint GREEN para UI/BFF; Sol para integração/revisão final.
+  Avisar e pausar antes de cada troca. PA07 vem depois desta entrega.
 - **PA05 — integrada pela PR #419**, merge `eae74b1e`, árvore idêntica ao HEAD
   `9e12271b`. CI `38656591697` e checks aplicáveis PASS em 2026-10-15, inclusive
   Backend, Web, Demo e PR Gate; scanners SUCCESS. SBOM provenance SKIPPED.

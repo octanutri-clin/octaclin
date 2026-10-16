@@ -1,11 +1,13 @@
 # PA06 — checklist: autosave, ativação e cálculo combinado
 
 Planejamento: [plan-pos-320-pa06.md](plan-pos-320-pa06.md).
-Primeira entrega mergeada pelo proprietário na PR420; migrations anteriores
-aplicadas segundo seu relato, sem conferência externa neste ciclo. Segunda
-entrega: T08a/backend e T08b/UI/BFF implementados localmente na branch
-feat/pos320-pa06-ativacao, base e2cb9cdd. T08c/T08d permanecem fora desta
-entrega; revisão R4 final e T09/T10 ainda são gates pendentes para a PR.
+Estado em 2026-10-16: primeira entrega integrada pela PR #420; segunda integrada
+pela PR #421, merge `011ea87d`. Próxima: planejamento T08c/T08d na branch
+`feat/pos320-pa06-calculo`, base `011ea87d`; implementação ainda não iniciada
+nesta rodada. Plano executável:
+[plan-pos-320-pa06-calculo.md](plan-pos-320-pa06-calculo.md).
+Migrations anteriores relatadas pelo proprietário não comprovam aplicação da1074;
+nenhum banco externo consultado nesta rodada. Cada entrega tem T09/T10 próprios.
 Evidências: docs/governance/EVIDENCIAS_PA06_ATIVACAO_2026-10-16.md.
 O histórico/checkpoints abaixo conserva o estado observado em cada rodada.
 
@@ -235,6 +237,12 @@ Ver evidências vinculadas acima.
 ## T08c — nutrientes e agregação entre planos, backend (fatias de3–5 arquivos)
 
 Dependência: T08a, D07 confirmada e D10. Sol médio.
+Base atual: T08a/T08b integradas por #421; D11–D13 confirmadas. Executar
+T08c.1a–T08c.5 do plano da terceira entrega antes da troca para Luna.
+
+- [x] Planejamento: gaps de catálogos/snapshots/seleção/concorrência conferidos;
+  22 nutrientes mapeados em cabeçalhos/IDs oficiais, com hashes e pendência
+  semântica IBGE D identificada; D11/D12/D13 confirmadas. Isto não valida runtime.
 
 - [ ] Primeira fatia: whitelist versionada de micronutrientes/unidades verificados,
   snapshot por composição e contrato manual. Legado incompleto não vira zero nem
@@ -257,6 +265,8 @@ barreiras de cálculo↔ativação/transferência/save e regressões PA04/PA05.
 ## T08d — seleção combinada e nutrientes, console/BFF (fatias de2–4 arquivos)
 
 Dependência: T08c e T07. Luna alto após contrato de cálculo fechado por Sol.
+Executar T08d.1–T08d.4 do plano da terceira entrega. Avisar e pausar antes da
+troca para Luna; retornar ao Sol para T09.3/T10.3.
 
 - [ ] Seleção explícita de planos ativos publicados e refeições; exibir número/data
   da publicação atual de cada plano, sem seletor de rascunho. Seleção entre páginas
