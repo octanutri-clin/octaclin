@@ -1,5 +1,7 @@
 import { createHash } from 'crypto';
 import { inflateRawSync } from 'zlib';
+import type { ValoresMicronutrientesOrigem, CodigoMicronutriente } from '../dominio/micronutrientes';
+import { interpretarMicronutrienteCelula } from './micronutrientes-fonte';
 
 export const TACO_URL_ORIGEM =
   'https://www.nepa.unicamp.br/arquivo/uploads/taco-4a-edicao/taco-4a-edicao-2/';
@@ -15,6 +17,7 @@ export interface AlimentoTaco {
   carboidratoG: number | null;
   fibraG: number | null;
   sodioMg: number | null;
+  micronutrientes?: ValoresMicronutrientesOrigem;
 }
 
 export interface CatalogoTaco {
@@ -87,6 +90,8 @@ const CAMPOS_NUTRICIONAIS = [
   ['J', 'fibraG', 1],
   ['R', 'sodioMg', 0]
 ] as const;
+
+const COLUNAS_MICROS: Partial<Record<CodigoMicronutriente, string>> = { calcioMg:'L', magnesioMg:'M', manganesMg:'O', fosforoMg:'P', ferroMg:'Q', potassioMg:'S', cobreMg:'T', zincoMg:'U', retinolMcg:'V', vitaminaAReMcg:'W', vitaminaARaeMcg:'X', tiaminaMg:'Y', riboflavinaMg:'Z', vitaminaB6Mg:'AA', niacinaMg:'AB', vitaminaCMg:'AC' };
 
 function sha256(conteudo: Buffer | string): string {
   return createHash('sha256').update(conteudo).digest('hex');
@@ -234,7 +239,14 @@ export function normalizarNutriente(valor: string, casas: number): number | null
 }
 
 export function calcularSha256Alimentos(alimentos: AlimentoTaco[]): string {
-  return sha256(JSON.stringify(alimentos));
+  // JSONB não preserva a ordem das chaves. Canonizar só o bloco novo mantém
+  // exatamente a identidade histórica da v1 e torna a releitura v2 idempotente.
+  function ordenar(valor: unknown): unknown {
+    if (Array.isArray(valor)) return valor.map(ordenar);
+    if (valor && typeof valor === 'object') return Object.fromEntries(Object.entries(valor).sort(([a],[b])=>a < b ? -1 : a > b ? 1 : 0).map(([k,v])=>[k,ordenar(v)]));
+    return valor;
+  }
+  return sha256(JSON.stringify(alimentos.map(a => a.micronutrientes === undefined ? a : { ...a, micronutrientes: ordenar(a.micronutrientes) })));
 }
 
 export function validarIdentidadeCatalogoTaco(catalogo: CatalogoTaco): {
@@ -250,7 +262,7 @@ export function validarIdentidadeCatalogoTaco(catalogo: CatalogoTaco): {
   return { versaoArtefato, sha256Alimentos };
 }
 
-export function montarCatalogoTaco(buffer: Buffer, urlArquivo = TACO_URL_ORIGEM): CatalogoTaco {
+export function montarCatalogoTaco(buffer: Buffer, urlArquivo = TACO_URL_ORIGEM, _opcoes: { micronutrientes?: boolean } = {}): CatalogoTaco {
   const arquivos = extrairZip(buffer);
   const compartilhadas = lerStringsCompartilhadas(arquivos.get('xl/sharedStrings.xml')?.toString('utf8'));
   const linhas = lerLinhas(localizarXmlDaAba(arquivos, TACO_ABA_ORIGEM), compartilhadas);
@@ -307,7 +319,8 @@ export function montarCatalogoTaco(buffer: Buffer, urlArquivo = TACO_URL_ORIGEM)
       lipideosG: nutrientes.lipideosG ?? null,
       carboidratoG: nutrientes.carboidratoG ?? null,
       fibraG: nutrientes.fibraG ?? null,
-      sodioMg: nutrientes.sodioMg ?? null
+      sodioMg: nutrientes.sodioMg ?? null,
+      ...(_opcoes.micronutrientes ? { micronutrientes: Object.fromEntries(Object.entries(COLUNAS_MICROS).map(([campo, coluna]) => [campo, interpretarMicronutrienteCelula(linha.celulas.get(coluna)?.valor)])) } : {})
     });
   }
 
@@ -315,7 +328,7 @@ export function montarCatalogoTaco(buffer: Buffer, urlArquivo = TACO_URL_ORIGEM)
   const excluidos = Object.values(exclusoesPorMotivo).reduce((total, atual) => total + atual, 0);
   return {
     metadados: {
-      versaoArtefato: 'taco-4a-cmvcol-taco3-v1',
+      versaoArtefato: _opcoes.micronutrientes ? 'taco-4a-cmvcol-taco3-v2-micros1' : 'taco-4a-cmvcol-taco3-v1',
       fonte: {
         nome: 'Tabela Brasileira de Composicao de Alimentos - TACO',
         instituicao: 'NEPA/UNICAMP',
@@ -336,7 +349,7 @@ export function montarCatalogoTaco(buffer: Buffer, urlArquivo = TACO_URL_ORIGEM)
         tamanhoBytes: buffer.length
       },
       transformacao: {
-        traco: 'Tr e convertido para 0. A TACO usa Tr para valor abaixo do criterio de arredondamento ou do limite de quantificacao.',
+        traco: _opcoes.micronutrientes ? 'Nos seis campos legados Tr permanece 0; no bloco de micros permanece estado traco, sem valor conhecido.' : 'Tr e convertido para 0. A TACO usa Tr para valor abaixo do criterio de arredondamento ou do limite de quantificacao.',
         naoAplicavel: 'NA e preservado como null.',
         ausente: 'Celula vazia e preservada como null.',
         arredondamento: {

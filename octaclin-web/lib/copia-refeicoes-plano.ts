@@ -1,6 +1,7 @@
-import { interpretarNumeroEdicao, nutrientesNumericosEdicao, type NutrientesEdicao } from './edicao-plano';
+import { interpretarNumeroEdicao, nutrientesNumericosEdicao, type MicronutrientesEdicao, type NutrientesEdicao } from './edicao-plano';
 import type {
   NutrientesPor100gApi,
+  MicronutrientesPor100gApi,
   RefeicaoPlanoAlimentarApi,
   SubstituicaoPlanoAlimentarEntrada
 } from '@/lib/plano-alimentar-api';
@@ -9,11 +10,12 @@ export const LIMITE_REFEICOES_PLANO = 50;
 export const LIMITE_ITENS_REFEICAO = 100;
 export const LIMITE_SUBSTITUICOES_ITEM = 20;
 
-export interface AlimentoFormularioCopia extends SubstituicaoPlanoAlimentarEntrada {
+export interface AlimentoFormularioCopia extends Omit<SubstituicaoPlanoAlimentarEntrada, 'micronutrientesPor100g'> {
   chaveCliente: string;
   descricao: string;
   nutrientesPor100g: NutrientesPor100gApi;
   fonteRotulo?: string;
+  micronutrientesPor100g?: MicronutrientesEdicao;
 }
 
 export interface AlternativaFormularioCopia extends AlimentoFormularioCopia {
@@ -35,10 +37,11 @@ export interface RefeicaoFormularioCopia {
 }
 
 /** Forma de leitura do editor: campos podem estar em edição e incompletos. */
-export interface AlimentoFormularioCopiaFonte extends Omit<AlimentoFormularioCopia, 'nutrientesPor100g' | 'quantidade' | 'porcaoGramas'> {
+export interface AlimentoFormularioCopiaFonte extends Omit<AlimentoFormularioCopia, 'nutrientesPor100g' | 'micronutrientesPor100g' | 'quantidade' | 'porcaoGramas'> {
   quantidade: number | string;
   porcaoGramas: number | string;
   nutrientesPor100g: NutrientesEdicao;
+  micronutrientesPor100g?: MicronutrientesEdicao;
 }
 
 export interface AlternativaFormularioCopiaFonte extends AlimentoFormularioCopiaFonte {
@@ -89,6 +92,7 @@ function copiarAlimento(
     unidade: alimento.unidade,
     porcaoGramas,
     nutrientesPor100g: validarNutrientes(alimento.nutrientesPor100g),
+    ...(!alimento.alimentoComposicaoId && alimento.micronutrientesPor100g ? { micronutrientesPor100g: { ...alimento.micronutrientesPor100g } } : {}),
     fonteRotulo: alimento.fonteRotulo
   };
 }
@@ -126,6 +130,7 @@ export function copiarRefeicaoParaFormulario(
       unidade: item.unidade,
       porcaoGramas: item.porcaoGramas,
       nutrientesPor100g: nutrientes,
+      ...(!item.alimentoComposicaoId && item.composicaoSnapshot.micronutrientes ? { micronutrientesPor100g: Object.fromEntries(Object.entries(item.composicaoSnapshot.micronutrientes.nutrientes).flatMap(([codigo, valor]) => valor.estado === 'conhecido' && valor.por100g !== undefined ? [[codigo, valor.por100g]] : [])) as MicronutrientesPor100gApi } : {}),
       fonteRotulo: item.composicaoSnapshot.fonte
         ? `${item.composicaoSnapshot.fonte.nome} - ${item.composicaoSnapshot.fonte.versao}`
         : undefined
@@ -145,6 +150,7 @@ export function copiarRefeicaoParaFormulario(
           unidade: substituicao.unidade,
           porcaoGramas: substituicao.porcaoGramas,
           nutrientesPor100g: validarNutrientes(substituicao.composicaoSnapshot?.nutrientesPor100g),
+          ...(!substituicao.alimentoComposicaoId && substituicao.composicaoSnapshot?.micronutrientes ? { micronutrientesPor100g: Object.fromEntries(Object.entries(substituicao.composicaoSnapshot.micronutrientes.nutrientes).flatMap(([codigo, valor]) => valor.estado === 'conhecido' && valor.por100g !== undefined ? [[codigo, valor.por100g]] : [])) as MicronutrientesPor100gApi } : {}),
           fonteRotulo: substituicao.composicaoSnapshot.fonte
             ? `${substituicao.composicaoSnapshot.fonte.nome} - ${substituicao.composicaoSnapshot.fonte.versao}`
             : undefined

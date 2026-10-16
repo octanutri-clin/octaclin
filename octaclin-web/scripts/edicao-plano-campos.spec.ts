@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { campoNumeroEdicao, percentualParaBasisPointsEdicao, interpretarNumeroEdicao, nutrientesNumericosEdicao } from '../lib/edicao-plano';
+import { campoNumeroEdicao, percentualParaBasisPointsEdicao, interpretarNumeroEdicao, micronutrientesNumericosEdicao, nutrientesNumericosEdicao, validarMicronutrientesEdicao } from '../lib/edicao-plano';
 
 test('PA06 campo editorial preserva vazio, zero, sinal parcial e vírgula sem atribuir valor clínico', () => {
   for (const valor of ['', '-', '1,', '01.20', 0, 5]) assert.equal(campoNumeroEdicao(valor), valor);
@@ -18,4 +18,16 @@ test('percentual vira basis points sem arredondar prescrição nem perder texto 
   assert.equal(percentualParaBasisPointsEdicao('1,234'), 123.4);
   assert.equal(percentualParaBasisPointsEdicao('-'), undefined);
   assert.equal(percentualParaBasisPointsEdicao(''), undefined);
+});
+
+test('PA06 preserva texto incompleto de micronutriente e normaliza valores válidos sem converter ausentes em zero', () => {
+  assert.deepEqual(micronutrientesNumericosEdicao({ ferroMg: '1,25', calcioMg: '0', zincoMg: '-', folatoDfeMcg: '' }), {
+    ferroMg: 1.25,
+    calcioMg: 0
+  });
+  assert.equal(campoNumeroEdicao('1,'), '1,');
+  assert.equal(campoNumeroEdicao(undefined), '');
+  assert.deepEqual(micronutrientesNumericosEdicao({ ferroMg: '1,' }), {});
+  assert.throws(() => validarMicronutrientesEdicao({ ferroMg: '1,' }), /Complete ou limpe/);
+  assert.deepEqual(validarMicronutrientesEdicao({ ferroMg: '1,25' }), { ferroMg: 1.25 });
 });

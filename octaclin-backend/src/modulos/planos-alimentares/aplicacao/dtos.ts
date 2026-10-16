@@ -1,3 +1,4 @@
+import { validarMicronutrientesManuais, MicronutrientesPor100gEntrada } from '../dominio/micronutrientes';
 import { Type } from 'class-transformer';
 import {
   ArrayMaxSize,
@@ -18,6 +19,9 @@ import {
   Min,
   MinLength,
   ValidateIf,
+  Validate,
+  ValidatorConstraint,
+  ValidatorConstraintInterface,
   ValidateNested
 } from 'class-validator';
 import {
@@ -200,6 +204,14 @@ export class NutrientesPor100gDto {
   sodioMg?: number;
 }
 
+@ValidatorConstraint({ name: 'micronutrientesManuais', async: false })
+export class ValidadorMicronutrientesManuais implements ValidatorConstraintInterface {
+  validate(valor: unknown): boolean {
+    try { validarMicronutrientesManuais(valor); return true; } catch { return false; }
+  }
+  defaultMessage(): string { return 'Micronutrientes manuais inválidos.'; }
+}
+
 export class SubstituicaoPlanoAlimentarDto {
   @IsOptional()
   @IsUUID()
@@ -230,6 +242,10 @@ export class SubstituicaoPlanoAlimentarDto {
   @ValidateNested()
   @Type(() => NutrientesPor100gDto)
   nutrientesPor100g?: NutrientesPor100gDto;
+
+  @ValidateIf(item => item.micronutrientesPor100g !== undefined)
+  @Validate(ValidadorMicronutrientesManuais)
+  micronutrientesPor100g?: MicronutrientesPor100gEntrada;
 }
 
 // As duas decisoes do profissional sobre uma alternativa. Ficam aqui, e nao em

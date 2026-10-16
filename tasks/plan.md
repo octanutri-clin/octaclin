@@ -1,4 +1,174 @@
-# Handoff atual — PA06 segunda entrega: ativação backend + UI/BFF
+# Handoff atual — PA06 cálculo combinado: PR #422, correções R4 revisadas
+
+## Branch, autorização e estado
+
+- Worktree `/workspace/octaclin/.worktrees/pos320-pa06-calculo`, branch
+  `feat/pos320-pa06-calculo`, base `011ea87d`. Planejamento em `10ebf9aa`;
+  desenvolvimento autorizado pelo proprietário em “Pode seguir com sol médio”.
+- T08c/T08d implementados na mesma branch e PR Draft
+  <https://github.com/octanutri-clin/octaclin/pull/422>. O proprietário confirmou
+  a troca de modelo e autorizou continuar em “Pode seguir com sol médio”.
+  Runtime corrigido em `ddcea76c` e `2a4e87b0` após revisão separada da autoria.
+- Sem migration nova;1072–1074 intocadas. Sem carga externa, merge ou deploy.
+  Arquivos gerados pelo Next são excluídos do commit; checkout principal preservado.
+- Estado deste checkpoint: BFF focado42/42; cópia8/8; edição/nutrição39/39;
+  helpers de seleção3/3; `test:authz` PASS (26 recortes); Playwright desktop/
+  mobile94/94 (inclui Axe do painel); lint Web sem erros/71 avisos; typecheck e
+  build Web PASS; scanner local de secrets PASS. `git diff --check` PASS.
+- CI de `bcf0825f` integral PASS, inclusive Testcontainers85/85 em Timescale HA,
+  Web e Demo. Não confundir esse resultado com os commits de correção posteriores;
+  repetir CI do HEAD corrigido na mesma PR. Banco remoto não consultado.
+- R4 por outro agente, somente leitura e separado da autoria: cinco achados
+  iniciais e uma borda adicional corrigidos e reexaminados. Sem bloqueadores
+  concretos abertos em `2a4e87b0`. Não é revisão humana, clínica ou externa.
+- Retestes das correções:343 testes backend,9 cópia,39 nutrição/edição e4
+  helpers PASS; builds/typechecks backend/Web PASS. Playwright final sobre build
+  de produção local34/34 desktop/mobile PASS; lint direcionado sem erros.
+- Próxima etapa: enviar o HEAD à mesma PR e conferir os checks finais. Manter
+  Draft até os gates finais passarem; estado operacional do CI na PR #422.
+- Evidências: [checkpoint backend](../docs/governance/EVIDENCIAS_PA06_CALCULO_2026-10-16.md).
+  Plano executável [T08c/T08d](plan-pos-320-pa06-calculo.md) e
+  [checklist](todo-pos-320-pa06.md). Seções antigas abaixo são históricas.
+
+## Backend fechado para implementar a interface
+
+- `GET /pacientes/:pacienteId/planos-alimentares/:planoId/selecao-calculo`:
+  `{planoId,ativoParaPaciente,ativacaoRevisao,versao:{id,numero,publicadaEm}|null,
+  refeicoes:[{identidadeId,nome,ordem,ativa}]}`. Apenas publicação atual.
+- `POST /pacientes/:pacienteId/planos-alimentares/calculo-combinado`:
+  `{selecoes:[{planoId,versaoIdEsperada,ativacaoRevisaoEsperada,identidadesRefeicoes:[]}]}`.
+  Nada de nutrientes/totais enviados pelo navegador. Máximos25/50/500/64KiB.
+- Resposta: `{motorVersao:'pa06-combinado-v1',estado:'sem_selecao'|
+  'sem_itens_incluidos'|'calculado',itensIncluidos,nutrientes,exclusoes,
+  calculadoEm,publicacoes:[{planoId,versaoId,ativacaoRevisao}]}`.
+  `nutrientes` é Record dos seis campos legados e22 micros, com
+  `{codigo,unidade,estado:'completo'|'parcial'|'indisponivel',total?,
+  quantidadeConhecida?,itensComValor,itensIncluidos}`. Só completo tem `total`;
+  parcial tem `quantidadeConhecida`; indisponível não vira0. Exclusões:
+  `{planoId,identidadeRefeicao?,motivo:'plano_desativado'|'refeicao_desativada'}`.
+- Erros400/404/409/422 e autorização403; BFF deve conservar os status e limitar
+  corpo antes do encaminhamento. Nenhuma resposta clínica entra em cache/log.
+- Registro22/qualificadores em `octaclin-backend/src/modulos/planos-alimentares/
+  dominio/micronutrientes.ts`, métodos novos no serviço/controlador existentes.
+  Não duplicar motor de soma no navegador. Rótulos/unidades não são livres.
+- Entrada manual irmã: `micronutrientesPor100g:Partial<Record<Codigo,number>>`.
+  No documento de edição aceita `NumeroEdicao`. Vazio/ausente são opcionais;
+  valor não vazio inválido deixa edição pendente, sem impedir autosave editorial.
+  Snapshot novo em `composicaoSnapshot.micronutrientes`: schema1, mapeamento,
+  base/porção, estados e `valorOrigem`/`por100g`/`porcao` quando conhecidos.
+  Catálogo não admite override; cópias manuais preservam valores permitidos.
+
+## Trabalho T08d entregue localmente
+
+1. BFF GET/POST e cliente tipado usam o proxy existente, limite de corpo de
+   64KiB, autorização de leitura, `private, no-store` inclusive nas respostas
+   de erro e preservação de conflitos/status.
+2. Editor manual, cópias, modelos e receitas conservam micronutrientes sem
+   criar override em alimento de catálogo; validação de valor parcial impede
+   materialização inválida e a mensagem permanece acessível.
+3. O seletor mantém seleção vazia em memória do prontuário, atravessa planos e
+   paginas; a instância é keyed por paciente, para limpar todo o estado ao trocar
+   o paciente. Selecionar inclui refeições ativas naquele instante.
+4. OFF mantém a identidade selecionada sem contribuir; ON mantém somente a
+   seleção anterior. Totais e erros são vinculados à chave de contexto/versão;
+   resposta tardia é descartada, debounce300ms, botão recalcula imediatamente,
+   409 exige atualização explícita sem selecionar refeições novas.
+5. O resumo mostra versão e data de publicação; tabela apresenta unidade,
+   cobertura, parcial/indisponível e distingue ausência de zero. Portal/PDF não
+   recebem a seleção nem micronutrientes fora dos contratos de snapshot.
+6. Provas executadas estão em `docs/governance/EVIDENCIAS_PA06_CALCULO_2026-10-16.md`;
+   a revisão separada encontrou e confirmou correções de catálogo, precisão,
+   apresentação e estado obsoleto. CI do HEAD corrigido é requisito antes de
+   retirar Draft.
+
+## Ambiente e verificações
+
+- Toolchain declarada já disponível: adicionar ao PATH
+  `/tmp/octaclin-pa03-toolchain/bin` e
+  `/tmp/octaclin-pa02-toolchain/node-v22.21.1-linux-x64/bin` antes dos comandos.
+  Node22.21.1/pnpm11.25.0; não alterar lockfiles. Conferir espaço antes de Web/build.
+- PASS:337 suítes/3016 testes backend (123 SKIPPED),23 suítes/339 testes do módulo
+  no checkpoint final e97 testes focados de serviço
+  com dois casos editoriais adicionais; typecheck/build backend;11 guardas;
+  secrets/diff. Provas e comandos no documento de evidências.
+- PASS:24 testes PostgreSQL15 reais, incluindo5 novos PA06c; TACO v1/v2
+ 583 registros por fonte, V1 intacta e segunda carga V2 idempotente. Harness:
+  `node scripts/test-pa05-postgres-local.cjs --inventario --taco-micros`.
+  A fixture omite Timescale/pgvector/hypertables explicitamente. Não declarar
+  gate integral PASS por ela; full Testcontainers permanece no CI.
+- Falha encontrada/corrigida: JSONB reordena chaves do bloco de micros. Hash
+  TACO canoniza só esse bloco novo; v1 permanece byte a byte reproduzível.
+- Revisão R4 por outro agente documentada no checkpoint T09.3 das evidências;
+  IBGE vitamina D permanece sem mapping por falta de equivalência comprovada.
+  Testcontainers completo comprovado no CI de `bcf0825f`; correções posteriores
+  ainda precisam dos checks finais da PR.
+
+---
+
+# Handoff anterior — PA06 terceira entrega: planejamento
+
+## Estado e próxima ação
+
+PR #421 mergeada em `011ea87d`, confirmada por GitHub/main remota em
+2026-10-16. Planejamento na branch `feat/pos320-pa06-calculo`, worktree
+`/workspace/octaclin/.worktrees/pos320-pa06-calculo`, base `011ea87d`.
+O pedido desta rodada é planejar; nenhum runtime, migration, carga ou ambiente
+externo foi alterado. A alteração antiga em `next-env.d.ts` no checkout principal
+foi preservada. Não criar PR documental separada da terceira entrega.
+
+**Ler antes de implementar:**
+
+- [Plano executável da entrega](plan-pos-320-pa06-calculo.md): contratos,
+  limites, tarefas T08c.1a–T08c.5/T08d.1–T08d.4, testes e checkpoints.
+- [Plano principal/D01–D13](plan-pos-320-pa06.md) e
+  [checklist T08c/T08d/T09/T10](todo-pos-320-pa06.md).
+- [Whitelist/fontes](../docs/product/FONTES_MICRONUTRIENTES_PA06.md):22 códigos,
+  unidades, hashes oficiais, dados ausentes e nova versão TACO.
+
+## Decisões e invariantes para o sucessor
+
+- D11: seleção vazia inicialmente; plano inclui refeições ativas, com desmarcação
+  individual. Seleção só em memória do prontuário, atravessa páginas/planos e
+  limpa ao trocar paciente/sessão/sair do prontuário.
+- D12: OFF mantém seleção, exclui contribuição; ON reinclui o que permanecia
+  selecionado. Não ligar/desligar o portal por mudar a seleção de cálculo.
+- D13: preparar TACO v2 com micros, sem sobrescrever v1 ou histórico. Nenhuma
+  carga externa foi autorizada neste ciclo.
+- D07/D10: só snapshots da publicação atual salva, planos E refeições ativos E
+  selecionados. Não usar rascunhos, histórico, metas, substituições ou consumo.
+- Resultados parciais por nutriente; não converter ausência/traço/LOQ em zero,
+  misturar retinol/RE/RAE, niacina/NE ou folatos distintos. Sem IDR/UL/TBCA.
+- Fonte USDA/IBGE já preserva metadados originais; TACO atual não preservou os
+  micros. Novo snapshot pode usar adapter validado, leitura histórica não.
+- Sem schema novo previsto: JSONB/cipher existentes suportam o contrato aditivo.
+ 1072–1074 intocadas. Estado operacional real da1074/deploy não foi consultado;
+ verificar antes de rollout, sem inferir do merge/CI.
+- POST de cálculo em lote reusa RLS/escopo/locks atuais; seleção não autorizada
+  falha inteira. Versão/revisão obsoleta409, sem fallback para outra publicação.
+- Resultado identifica instante/revisões. Invalidar por ações locais/respostas
+  obsoletas e revalidar no foco; não prometer realtime ou introduzir polling.
+
+## Modelo e sequência
+
+GPT-6.1 Sol médio: T08c (fontes, snapshots, cálculo, DTOs, autorização, PG/RLS).
+Depois do checkpoint backend GREEN, avisar **GPT-6 Luna alto** e pausar para
+troca manual antes da UI/BFF T08d. Voltar ao Sol médio com nova pausa para
+integração/revisão R4/regressões/PR. Execução sequencial na mesma worktree/PR.
+Autorizações anteriores de outras entregas não substituem o escopo de
+planejamento solicitado nesta rodada.
+
+## Evidência desta rodada
+
+PASS documental: Git/merge/base; contratos/migrations registradas; leitura
+restrita das referências R013/R014 e dos cabeçalhos/IDs oficiais TACO/IBGE/USDA.
+Hashes e limites registrados na ficha de fontes. Três decisões de produto
+confirmadas pelo proprietário. Verificações finais documentais registradas no
+plano executável. Testes de runtime, PostgreSQL, migrações/cargas externas,
+lint/build/Playwright e CI da terceira entrega: SKIPPED, planejamento somente.
+
+---
+
+# Handoff anterior — PA06 segunda entrega: ativação backend + UI/BFF
 
 ## Estado e limites
 

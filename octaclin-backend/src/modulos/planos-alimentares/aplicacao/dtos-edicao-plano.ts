@@ -42,11 +42,16 @@ export function converterEdicaoParaRascunho(
     return numeroEdicao(documento[campo]);
   }
   function alimento(a: AlimentoEdicao) {
+    const micros = Object.entries(a.micronutrientesPor100g ?? {})
+      .filter(([, v]) => v !== undefined && v !== null && !(typeof v === 'string' && !v.trim()));
     return {
       alimentoComposicaoId: a.alimentoComposicaoId || undefined,
       descricao: a.descricao,
       quantidade: numeroEdicao(a.quantidade), unidade: a.unidade,
       porcaoGramas: numeroEdicao(a.porcaoGramas),
+      micronutrientesPor100g: micros.length
+        ? Object.fromEntries(micros.map(([k, v]) => [k, numeroEdicao(v) ?? NaN]))
+        : undefined,
       nutrientesPor100g: a.nutrientesPor100g
         ? Object.fromEntries(Object.entries(a.nutrientesPor100g).map(([k, v]) => [k, numeroEdicao(v)]))
         : undefined

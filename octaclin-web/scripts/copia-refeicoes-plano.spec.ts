@@ -37,6 +37,13 @@ function refeicaoApi(id = 'origem-r1'): RefeicaoPlanoAlimentarApi {
         descricao: 'Iogurte sintético',
         nutrientesPor100g: { ...nutrientes },
         nutrientesPorcao: { energiaKcal: 212.5, proteinasG: 7.65, carboidratosG: 34, gordurasG: 5.1 }
+        ,micronutrientes: {
+          schemaVersao: 1,
+          mapeamentoVersao: 'octaclin-micronutrientes-v1',
+          baseGramasOrigem: 100,
+          porcaoGramas: 170,
+          nutrientes: { ferroMg: { estado: 'conhecido', valorOrigem: 1, por100g: 1, porcao: 1.7 }, vitaminaDMcg: { estado: 'ausente' } }
+        }
       },
       substituicoes: [{
         id: `${id}-s1`,
@@ -93,6 +100,7 @@ test('copia refeição com novos IDs locais e preserva conteúdo clínico editá
   assert.equal(copia.orientacoes, 'Orientação sintética');
   assert.equal(item.alimentoComposicaoId, 'alimento-catalogo-1');
   assert.equal(item.nutrientesPor100g.fibrasG, 2);
+  assert.equal(item.micronutrientesPor100g, undefined);
   assert.equal(alternativa.liberadaParaPaciente, true);
   assert.equal(alternativa.preferida, false);
   assert.equal(item.substituicoesVisiveisInicialmente, 1);
@@ -102,6 +110,16 @@ test('copia refeição com novos IDs locais e preserva conteúdo clínico editá
   assert.equal('id' in copia, false);
   assert.equal('id' in item, false);
   assert.equal('id' in alternativa, false);
+});
+
+test('cópia preserva micros manuais sem convertê-los em override de catálogo', () => {
+  const manual = refeicaoApi();
+  manual.itens[0].alimentoComposicaoId = undefined;
+  assert.deepEqual(copiarRefeicaoParaFormulario(manual, gerarChave).itens[0].micronutrientesPor100g, { ferroMg: 1 });
+  const catalogo = refeicaoFormulario();
+  catalogo.itens[0].alimentoComposicaoId = 'alimento-catalogo-1';
+  catalogo.itens[0].micronutrientesPor100g = { ferroMg: 1 };
+  assert.equal(duplicarRefeicaoNoRascunho([catalogo], 0, gerarChave)[1].itens[0].micronutrientesPor100g, undefined);
 });
 
 test('cópia é profunda e mudanças na origem, destino ou cópia não cruzam', () => {
@@ -164,4 +182,11 @@ test('PA06 copiar texto numérico válido não trata campo vazio como zero', () 
   assert.equal(copia[1].itens[0].porcaoGramas, 100.5);
   assert.throws(() => duplicarRefeicaoNoRascunho([editar('')], 0, gerarChave), /Complete a quantidade/);
   assert.throws(() => duplicarRefeicaoNoRascunho([editar('-')], 0, gerarChave), /Complete a quantidade/);
+});
+
+test('PA06 duplicação local conserva texto parcial de micronutriente exatamente como editado', () => {
+  const origem = refeicaoFormulario('rascunho-r1');
+  origem.itens[0].micronutrientesPor100g = { ferroMg: '1,' };
+  const copia = duplicarRefeicaoNoRascunho([origem], 0, gerarChave)[1];
+  assert.equal(copia.itens[0].micronutrientesPor100g?.ferroMg, '1,');
 });

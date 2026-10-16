@@ -14,7 +14,8 @@ import { FonteComposicaoAlimentoOrm } from '../src/modulos/planos-alimentares/in
 
 const CODIGO_FONTE = 'taco_nepa_unicamp';
 const BASE_CODIGO = 'cmvcol_taco3';
-const ESQUEMA_VERSAO = 'octaclin-composicao-v1';
+const ESQUEMA_V1 = 'octaclin-composicao-v1';
+const ESQUEMA_MICROS = 'octaclin-composicao-v2-micros1';
 
 function hashRegistro(valor: Record<string, unknown>): string {
   return createHash('sha256').update(JSON.stringify(valor)).digest('hex');
@@ -50,11 +51,17 @@ async function executar() {
     );
   }
 
-  const caminho = resolve(__dirname, '../src/modulos/planos-alimentares/dados/catalogo-taco-4a.json');
+  const modo = process.env.TACO_MODO ?? 'v1';
+  if (!['v1', 'v2-micros1'].includes(modo)) throw new Error('Modo TACO inválido.');
+  const micros = modo === 'v2-micros1';
+  const esquemaVersao = micros ? ESQUEMA_MICROS : ESQUEMA_V1;
+  const caminho = resolve(__dirname, `../src/modulos/planos-alimentares/dados/catalogo-taco-4a${micros ? '-micros1' : ''}.json`);
   const catalogo = JSON.parse(await readFile(caminho, 'utf8')) as CatalogoTaco;
   const identidade = validarIdentidadeCatalogoTaco(catalogo);
+  if (identidade.versaoArtefato !== (micros ? 'taco-4a-cmvcol-taco3-v2-micros1' : 'taco-4a-cmvcol-taco3-v1')) throw new Error('Modo TACO e versão de artefato incompatíveis.');
   const esquemaNutrientes = {
     baseGramas: 100,
+    ...(micros ? { micronutrientes: { mapeamentoVersao: 'octaclin-micronutrientes-v1' } } : {}),
     campos: {
       energiaKcal: 'kcal',
       proteinasG: 'g',
@@ -137,7 +144,7 @@ async function executar() {
           fonteExistente.codigo !== governanca.codigo ||
           fonteExistente.checksumArquivo !== governanca.checksumArquivo ||
           fonteExistente.hashConteudo !== governanca.hashConteudo ||
-          fonteExistente.esquemaVersao !== ESQUEMA_VERSAO
+          fonteExistente.esquemaVersao !== esquemaVersao
         ) {
           throw new Error('Carga recusada: a versao/base TACO ja existe com identidade ou situacao divergente.');
         }
@@ -152,7 +159,8 @@ async function executar() {
             lipideosG: numeroOuNulo(alimento.lipidiosG),
             carboidratoG: numeroOuNulo(alimento.carboidratosG),
             fibraG: numeroOuNulo(alimento.fibrasG),
-            sodioMg: numeroOuNulo(alimento.sodioMg)
+            sodioMg: numeroOuNulo(alimento.sodioMg),
+            ...(micros ? { micronutrientes: alimento.micronutrientes.nutrientes as CatalogoTaco['alimentos'][number]['micronutrientes'] } : {})
           }))
           .sort((a, b) => a.codigo - b.codigo);
         if (
@@ -179,7 +187,7 @@ async function executar() {
           hashConteudo: governanca.hashConteudo,
           publicadaEm: `${catalogo.metadados.fonte.ano}-01-01`,
           capturadaEm: agora,
-          esquemaVersao: ESQUEMA_VERSAO,
+          esquemaVersao: esquemaVersao,
           esquemaNutrientes,
           direitoUsoStatus: 'aprovado',
           direitoUsoReferencia: governanca.direitoUsoReferencia,
@@ -217,7 +225,7 @@ async function executar() {
             lipidiosG: alimento.lipideosG === null ? null : String(alimento.lipideosG),
             fibrasG: alimento.fibraG === null ? null : String(alimento.fibraG),
             sodioMg: alimento.sodioMg === null ? null : String(alimento.sodioMg),
-            micronutrientes: { categoria: alimento.categoria }
+            micronutrientes: { categoria: alimento.categoria, ...(micros ? { mapeamentoVersao: 'octaclin-micronutrientes-v1', nutrientes: alimento.micronutrientes } : {}) }
           };
           return {
             fonteId: fonte.id,

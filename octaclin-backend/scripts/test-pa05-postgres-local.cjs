@@ -44,6 +44,25 @@ const { criarOpcoesTypeOrm } = require('../src/infraestrutura/banco-dados/opcoes
     const env = { ...process.env };
     for (const name of Object.keys(env)) if (name === 'DATABASE_URL' || name.startsWith('BANCO_') || name.startsWith('RLS_PROVA_BANCO_') || name === 'RLS_TESTCONTAINERS') delete env[name];
     Object.assign(env, { RLS_PROVA_BANCO_HOST: container.getHost(), RLS_PROVA_BANCO_PORTA: String(container.getMappedPort(5432)), RLS_PROVA_BANCO_USUARIO: 'pa05_runtime', RLS_PROVA_BANCO_SENHA: 'pa05_runtime_sintetico', RLS_PROVA_BANCO_NOME: 'octaclin_pa05_descartavel' });
+    if (process.argv.includes('--taco-micros')) {
+      const assert = require('node:assert/strict');
+      const ambienteCarga = { ...env, NODE_ENV:'test', BANCO_HOST:container.getHost(), BANCO_PORTA:String(container.getMappedPort(5432)), BANCO_USUARIO:'pa05_owner', BANCO_SENHA:fixturePassword, BANCO_NOME:'octaclin_pa05_descartavel', BANCO_SSL:'false', BANCO_EXECUTAR_MIGRACOES:'false', TACO_CONFIRMAR_CARGA:'true', TACO_BANCO_ESPERADO:'octaclin_pa05_descartavel', TACO_RESPONSAVEL_APROVACAO:'Fixture sintética descartável', TACO_REFERENCIA_DIREITO_USO:'Teste local de preservação/idempotência; sem aprovação operacional' };
+      const carregar = modo => new Promise((resolve,reject) => {
+        const filho = spawn('corepack',['pnpm','exec','ts-node','scripts/carregar-catalogo-taco.ts'],{cwd:require('node:path').resolve(__dirname,'..'),env:{...ambienteCarga,TACO_MODO:modo},stdio:'inherit'});
+        filho.once('error',reject); filho.once('exit',codigo=>codigo===0?resolve():reject(new Error('Carga TACO descartável falhou.')));
+      });
+      await carregar('v1');
+      const v1 = await admin.query("select f.id,f.hash_conteudo,count(a.id)::integer as quantidade from fontes_composicao_alimentos f join alimentos_composicao a on a.fonte_id=f.id where f.codigo='taco_nepa_unicamp' group by f.id,f.hash_conteudo");
+      await carregar('v2-micros1'); await carregar('v2-micros1');
+      const fontes = await admin.query("select f.id,f.versao,f.hash_conteudo,f.esquema_versao,count(a.id)::integer as quantidade from fontes_composicao_alimentos f join alimentos_composicao a on a.fonte_id=f.id where f.codigo='taco_nepa_unicamp' group by f.id");
+      assert.equal(fontes.length,2);
+      assert.equal(fontes.find(f=>f.id===v1[0].id).hash_conteudo,v1[0].hash_conteudo);
+      assert(fontes.every(f=>f.quantidade===583));
+      assert.equal(fontes.find(f=>f.versao.endsWith('v2-micros1')).esquema_versao,'octaclin-composicao-v2-micros1');
+      const valor = await admin.query("select a.micronutrientes from alimentos_composicao a join fontes_composicao_alimentos f on f.id=a.fonte_id where f.versao='taco-4a-cmvcol-taco3-v2-micros1' and a.codigo_origem='1'");
+      assert.equal(valor[0].micronutrientes.nutrientes.cobreMg.estado,'conhecido');
+      console.log('PASS TACO v1/v2: 583 registros por fonte, V1 preservada e segundo load V2 idempotente; somente banco descartável.');
+    }
     console.log('PA04–PA06: PostgreSQL 15 descartável, schema/RLS de planos reais. Timescale/pgvector: SKIPPED nesta fixture; gate integral permanece no CI.');
     const code = await new Promise((resolve, reject) => {
       const child = spawn('corepack', ['pnpm', 'exec', 'jest', '--runInBand', 'src/infraestrutura/banco-dados/rls-isolamento-tenant.integracao.spec.ts', '-t', process.argv.includes('--inventario') ? 'PA04|PA05|PA06|inventaria toda|sem app.tenant_id' : 'PA04|PA05|PA06'], { cwd: require('node:path').resolve(__dirname, '..'), env, stdio: 'inherit' });

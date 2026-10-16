@@ -364,7 +364,7 @@ integração pela PR permanecem sujeitos às evidências do checklist PA05.
 
 ---
 
-## [PA06] Autosave opcional do plano alimentar
+## [PA06] Autosave, ativação e cálculo combinado do plano alimentar
 
 **Planejamento em 2026-10-15:** base `eae74b1e`, PA05 integrada pela PR #419;
 checks aplicáveis do HEAD `9e12271b` PASS, sem inferir migration externa/deploy.
@@ -382,13 +382,24 @@ nunca rascunhos/histórico. Seleção de cálculo não filtra o acesso do pacien
 Ampliação organizada em três PRs por recurso: autosave parcial, ativação e
 cálculo combinado/micros; sem implementar IDR/UL de FOOD06. Só R013/R014 foram
 consultados, com versões/licenças/fontes no plano; sem biblioteca nova prevista.
-Implementação ainda não iniciada. Handoff
+Atualização em 2026-10-16: autosave integrado por #420; ativação/portal plural
+integrados por #421 (`011ea87d`). Terceira entrega com backend local implementado e
+checkpoint T08c validado; T08d UI/BFF aguarda troca manual para Luna alto. D11–D13
+confirmadas: seleção vazia, plano inclui refeições ativas, OFF mantém seleção/ON
+reinclui e preparar nova versão TACO com micros, preservando histórico. TACO v2
+preparada e carga idempotente provada somente em PostgreSQL descartável; CI
+integral e revisão R4 final pendentes. Evidências em
+`docs/governance/EVIDENCIAS_PA06_CALCULO_2026-10-16.md`.
+Plano detalhado de cálculo/cobertura/fontes:
+[plan-pos-320-pa06-calculo.md](../../tasks/plan-pos-320-pa06-calculo.md).
+Sem IDR/UL/TBCA ou execução externa nesta rodada. Handoff
 [plan-pos-320-pa06.md](../../tasks/plan-pos-320-pa06.md) e checklist
 [todo-pos-320-pa06.md](../../tasks/todo-pos-320-pa06.md).
 
 **Origem:** item 16.
 
-**Status atual:** rascunho explícito + proteção contra perda.
+**Status atual:** autosave/edição protegida e ativação integrados; cálculo
+combinado/micros planejados, ainda não implementados.
 
 **Dependência:** FND02.
 

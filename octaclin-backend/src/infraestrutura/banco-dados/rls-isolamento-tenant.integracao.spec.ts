@@ -1600,7 +1600,7 @@ descrever('RLS e isolamento multi-tenant integral em Postgres real', () => {
     return {usuarioPortal,portal:new ServicoPortalPaciente(executorTenant!,c.cripto)};
   }
 
-  async function disputarPa06<T>(primeira: (executor: ExecutorTenant) => Promise<T>, segunda: () => Promise<unknown>, alvoLock: Function = PlanoAlimentarVersaoOrm) {
+  async function disputarPa06<T>(primeira: (executor: ExecutorTenant) => Promise<T>, segunda: () => Promise<unknown>, alvoLock: Function = PlanoAlimentarVersaoOrm, modoLock: 'pessimistic_read' | 'pessimistic_write' = 'pessimistic_write') {
     let liberar!: () => void, sinalizar!: () => void;
     const liberada = new Promise<void>(r => { liberar = r; });
     const travada = new Promise<void>(r => { sinalizar = r; });
@@ -1614,7 +1614,7 @@ descrever('RLS e isolamento multi-tenant integral em Postgres real', () => {
           return new Proxy(repo, { get(r, k) {
             if (k === 'findOne') return async (opcoes: Parameters<typeof repo.findOne>[0]) => {
               const resultado = await repo.findOne(opcoes);
-              if (!interceptada && opcoes.lock?.mode === 'pessimistic_write') { interceptada = true; sinalizar(); await liberada; }
+              if (!interceptada && opcoes.lock?.mode === modoLock) { interceptada = true; sinalizar(); await liberada; }
               return resultado;
             };
             const valor = Reflect.get(r, k, r); return typeof valor === 'function' ? valor.bind(r) : valor;
@@ -1640,6 +1640,79 @@ descrever('RLS e isolamento multi-tenant integral em Postgres real', () => {
     expect(esperou).toBe(true);
     return resultados;
   }
+
+  it('PA06c calcula snapshots cifrados com micros, ausência explícita e projeções mínimas sob RLS', async () => {
+    const c = await prepararCenarioPa06('pa06c-snapshots');
+    Object.assign(c.documento.refeicoes[0].itens[0], { micronutrientesPor100g: { ferroMg:2, calcioMg:0 } });
+    await publicarCenarioPa06(c);
+    const selecao = await c.servico.obterSelecaoCalculo(tenantA,c.pacienteId,c.planoId,c.usuario);
+    const entrada = {selecoes:[{planoId:c.planoId,versaoIdEsperada:selecao.versao!.id,ativacaoRevisaoEsperada:selecao.ativacaoRevisao,identidadesRefeicoes:selecao.refeicoes.map(r=>r.identidadeId)}]};
+    const r = await c.servico.calcularCombinado(tenantA,c.pacienteId,c.usuario,entrada);
+    expect(r.nutrientes.energiaKcal.total).toBe(100);
+    expect(r.nutrientes.ferroMg).toMatchObject({estado:'completo',total:2,itensComValor:1,itensIncluidos:1});
+    expect(r.nutrientes.calcioMg.total).toBe(0);
+    expect(r.nutrientes.selenioMcg.estado).toBe('indisponivel');
+    expect(JSON.stringify(r)).not.toMatch(/Criptograf|Objetivo sintético|Item sintético/);
+    const negativos = [
+      () => c.servico.calcularCombinado(tenantB,c.pacienteId,{...c.usuario,tenantId:tenantB},entrada),
+      () => c.servico.calcularCombinado(tenantA,c.pacienteId,{...c.usuario,papel:'Client'},entrada),
+      () => c.servico.calcularCombinado(tenantA,c.pacienteId,{...c.usuario,permissoes:[]},entrada),
+      () => c.servico.obterSelecaoCalculo(tenantB,c.pacienteId,c.planoId,{...c.usuario,tenantId:tenantB})
+    ];
+    for (const negar of negativos) await expect(negar()).rejects.toThrow();
+    await comoTenant(tenantB);
+    expect((await cliente!.query('select id from plano_alimentar_itens where refeicao_id in (select id from plano_alimentar_refeicoes where versao_id=$1)',[c.versaoId])).rows).toHaveLength(0);
+  });
+
+  it('PA06c não devolve subtotal de seleção com plano alheio ou carteira transferida', async () => {
+    const c = await prepararCenarioPa06('pa06c-escopo'); await publicarCenarioPa06(c);
+    const outro = await prepararCenarioPa06('pa06c-alheio'); await publicarCenarioPa06(outro);
+    const selecao = await c.servico.obterSelecaoCalculo(tenantA,c.pacienteId,c.planoId,c.usuario);
+    const item = {planoId:c.planoId,versaoIdEsperada:c.versaoId,ativacaoRevisaoEsperada:selecao.ativacaoRevisao,identidadesRefeicoes:selecao.refeicoes.map(r=>r.identidadeId)};
+    await expect(c.servico.calcularCombinado(tenantA,c.pacienteId,c.usuario,{selecoes:[item,{...item,planoId:outro.planoId,versaoIdEsperada:outro.versaoId}]})).rejects.toThrow();
+    await comoTenant(tenantA);
+    await cliente!.query('update pacientes set profissional_responsavel_id=$1 where id=$2',[outro.profissionalId,c.pacienteId]);
+    await expect(c.servico.calcularCombinado(tenantA,c.pacienteId,c.usuario,{selecoes:[item]})).rejects.toThrow();
+    await expect(c.servico.obterSelecaoCalculo(tenantA,c.pacienteId,c.planoId,c.usuario)).rejects.toThrow();
+  });
+
+  it('PA06c serializa toggle anterior ao cálculo e rejeita revisão obsoleta', async () => {
+    const c=await prepararCenarioPa06('pa06c-concorrencia-toggle'); await publicarCenarioPa06(c);
+    const selecao=await c.servico.obterSelecaoCalculo(tenantA,c.pacienteId,c.planoId,c.usuario);
+    const entrada={selecoes:[{planoId:c.planoId,versaoIdEsperada:c.versaoId,ativacaoRevisaoEsperada:selecao.ativacaoRevisao,identidadesRefeicoes:selecao.refeicoes.map(r=>r.identidadeId)}]};
+    const resultados=await disputarPa06(exec=>new ServicoPlanosAlimentares(exec,c.cripto).alterarAtivacao(tenantA,c.pacienteId,c.planoId,c.usuario,{ativo:false,ativacaoRevisaoEsperada:selecao.ativacaoRevisao}),()=>c.servico.calcularCombinado(tenantA,c.pacienteId,c.usuario,entrada),PlanoAlimentarOrm);
+    expect(resultados[0].status).toBe('fulfilled'); expect(resultados[1].status).toBe('rejected');
+    if(resultados[1].status==='rejected') expect(resultados[1].reason.getStatus()).toBe(409);
+    entrada.selecoes[0].ativacaoRevisaoEsperada++;
+    expect((await c.servico.calcularCombinado(tenantA,c.pacienteId,c.usuario,entrada)).estado).toBe('sem_itens_incluidos');
+  });
+
+  it('PA06c serializa publicação nova, rejeita versão antiga e conserva snapshot clonado', async () => {
+    const c=await prepararCenarioPa06('pa06c-concorrencia-publicacao');
+    Object.assign(c.documento.refeicoes[0].itens[0],{micronutrientesPor100g:{ferroMg:2}});
+    await publicarCenarioPa06(c);
+    const selecao=await c.servico.obterSelecaoCalculo(tenantA,c.pacienteId,c.planoId,c.usuario);
+    const antiga=await c.servico.obterVersao(tenantA,c.pacienteId,c.planoId,1,c.usuario);
+    const nova=await c.servico.criarNovaVersao(tenantA,c.pacienteId,c.planoId,c.usuario);
+    expect(nova.refeicoes[0].itens[0].composicaoSnapshot).toHaveProperty('micronutrientes.nutrientes.ferroMg.porcao',2);
+    const revisada=await c.servico.revisar(tenantA,c.pacienteId,c.planoId,c.usuario,{rascunhoIdEsperado:nova.id,rascunhoRevisaoEsperada:nova.rascunhoRevisao});
+    const entrada={selecoes:[{planoId:c.planoId,versaoIdEsperada:c.versaoId,ativacaoRevisaoEsperada:selecao.ativacaoRevisao,identidadesRefeicoes:selecao.refeicoes.map(r=>r.identidadeId)}]};
+    const resultados=await disputarPa06(exec=>new ServicoPlanosAlimentares(exec,c.cripto).publicar(tenantA,c.pacienteId,c.planoId,c.usuario,{rascunhoIdEsperado:nova.id,rascunhoRevisaoEsperada:revisada.rascunhoRevisao}),()=>c.servico.calcularCombinado(tenantA,c.pacienteId,c.usuario,entrada),PlanoAlimentarOrm);
+    expect(resultados[0].status).toBe('fulfilled'); expect(resultados[1].status).toBe('rejected');
+    if(resultados[1].status==='rejected') expect(resultados[1].reason.getStatus()).toBe(409);
+    expect((await c.servico.obterVersao(tenantA,c.pacienteId,c.planoId,1,c.usuario)).hashConteudo).toBe(antiga.hashConteudo);
+  });
+
+  it('PA06c mantém leitura consistente enquanto transferência aguarda lock compartilhado', async () => {
+    const c=await prepararCenarioPa06('pa06c-concorrencia-transferencia'); await publicarCenarioPa06(c);
+    const novo=await prepararCenarioPa06('pa06c-novo-responsavel');
+    const selecao=await c.servico.obterSelecaoCalculo(tenantA,c.pacienteId,c.planoId,c.usuario);
+    const entrada={selecoes:[{planoId:c.planoId,versaoIdEsperada:c.versaoId,ativacaoRevisaoEsperada:selecao.ativacaoRevisao,identidadesRefeicoes:selecao.refeicoes.map(r=>r.identidadeId)}]};
+    const resultados=await disputarPa06(exec=>new ServicoPlanosAlimentares(exec,c.cripto).calcularCombinado(tenantA,c.pacienteId,c.usuario,entrada),()=>executorTenant!.executar(tenantA,m=>m.query('update pacientes set profissional_responsavel_id=$1 where id=$2',[novo.profissionalId,c.pacienteId])),PacienteOrm,'pessimistic_read');
+    expect(resultados.map(r=>r.status)).toEqual(['fulfilled','fulfilled']);
+    if(resultados[0].status==='fulfilled') expect(resultados[0].value.nutrientes.energiaKcal.total).toBe(100);
+    await expect(c.servico.calcularCombinado(tenantA,c.pacienteId,c.usuario,entrada)).rejects.toThrow();
+  });
 
   it('PA06b preserva OFF em edição parcial, reordenação, remoção/reinserção, clone e rejeita writer legado', async () => {
     const c = await prepararCenarioPa06('pa06b-identidade');

@@ -1,3 +1,4 @@
+import { CalculoCombinadoDto } from '../aplicacao/dtos-calculo-combinado';
 import { AlterarAtivacaoPlanoDto } from '../aplicacao/dtos-ativacao';
 import { Body, Controller, Delete, Get, Header, Param, ParseIntPipe, ParseUUIDPipe, Post, Put, Query, UseGuards } from '@nestjs/common';
 import { Papeis, Permissoes, UsuarioAtual } from '../../auth/apresentacao/decorators';
@@ -77,6 +78,28 @@ export class ControladorPlanosAlimentares {
     @Body() dados: AlterarAtivacaoPlanoDto
   ) {
     return this.servico.alterarAtivacao(usuario.tenantId,pacienteId,planoId,usuario,dados,identidadeId);
+  }
+
+  @Post('calculo-combinado')
+  @Permissoes('planos_alimentares.ler')
+  @Header('Cache-Control', 'private, no-store')
+  calcularCombinado(
+    @UsuarioAtual() usuario: UsuarioAutenticado,
+    @Param('pacienteId', ParseUUIDPipe) pacienteId: string,
+    @Body() dados: CalculoCombinadoDto
+  ) {
+    return this.servico.calcularCombinado(usuario.tenantId, pacienteId, usuario, dados);
+  }
+
+  @Get(':planoId/selecao-calculo')
+  @Permissoes('planos_alimentares.ler')
+  @Header('Cache-Control', 'private, no-store')
+  obterSelecaoCalculo(
+    @UsuarioAtual() usuario: UsuarioAutenticado,
+    @Param('pacienteId', ParseUUIDPipe) pacienteId: string,
+    @Param('planoId', ParseUUIDPipe) planoId: string
+  ) {
+    return this.servico.obterSelecaoCalculo(usuario.tenantId, pacienteId, planoId, usuario);
   }
 
   @Get(':planoId')

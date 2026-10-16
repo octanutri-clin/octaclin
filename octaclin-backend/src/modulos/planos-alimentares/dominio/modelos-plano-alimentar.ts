@@ -1,3 +1,4 @@
+import type { MicronutrientesPor100gEntrada } from './micronutrientes';
 import type { PapelUsuario } from '../../auth/dominio/usuario-autenticado';
 
 /**
@@ -23,6 +24,7 @@ export interface ItemModeloPlanoAlimentar {
   unidade: string;
   porcaoGramas: number;
   nutrientesPor100g?: Record<string, number | undefined>;
+  micronutrientesPor100g?: MicronutrientesPor100gEntrada;
   substituicoes?: ItemModeloPlanoAlimentar[];
 }
 

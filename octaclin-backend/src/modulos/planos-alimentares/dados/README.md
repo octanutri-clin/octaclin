@@ -140,3 +140,31 @@ O importador recusa fonte/versionamento divergentes, checksum ou conteúdo
 alterados, IDs repetidos e referência ausente. Reexecutar o mesmo artefato
 íntegro é idempotente. Uma nova versão é aditiva. Não execute a carga em staging
 ou produção sem identificar o ambiente, banco e role owner no runbook.
+
+## PA06 — TACO v2 com micronutrientes (operação separada)
+
+O modo padrão continua gerando/carregando `catalogo-taco-4a.json` v1. Para
+preparar a versão aditiva, sem conexão de banco:
+
+```bash
+TACO_MODO=v2-micros1 TACO_ARQUIVO_LOCAL=/caminho/confirmado/taco.xlsx pnpm exec ts-node scripts/importar-catalogo-taco.ts
+```
+
+Saída: `catalogo-taco-4a-micros1.json`, versão
+`taco-4a-cmvcol-taco3-v2-micros1`, esquema
+`octaclin-composicao-v2-micros1`. Continua sendo a edição TACO de 2011.
+Origem, checksum e atribuição permanecem registrados no artefato. Os micros
+usam o número original da célula XML, inclusive notação científica, conservam
+os estados Tr/NA/* e não inferem nutrientes inexistentes. O snapshot normaliza
+a escala8; isso é precisão técnica de cálculo, sem alegação de precisão clínica.
+
+A carga usa o mesmo carregador e todas as confirmações descritas acima, acrescidas
+de `TACO_MODO=v2-micros1`. Requer banco/role/autorizações operacionais confirmados.
+A identidade nova cria outra fonte; não migra IDs, não substitui a fonte v1 e não
+complementa publicações antigas. Segunda execução idêntica deve ser idempotente.
+A preparação e a fixture local não autorizam carga em staging/produção.
+
+Fixture reproduzível, exclusivamente em PostgreSQL descartável criado pelo próprio
+harness: `node scripts/test-pa05-postgres-local.cjs --inventario --taco-micros`.
+O harness comprova os controles de planos/RLS; omite Timescale/pgvector de forma
+explícita. O gate integral com essas extensões permanece separado no CI.

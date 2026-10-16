@@ -17,6 +17,13 @@ export interface NutrientesPor100gApi {
   sodioMg?: number;
 }
 
+export type CodigoMicronutrienteApi =
+  | 'calcioMg' | 'magnesioMg' | 'manganesMg' | 'fosforoMg' | 'ferroMg' | 'potassioMg' | 'cobreMg' | 'zincoMg'
+  | 'selenioMcg' | 'retinolMcg' | 'vitaminaAReMcg' | 'vitaminaARaeMcg' | 'tiaminaMg' | 'riboflavinaMg'
+  | 'vitaminaB6Mg' | 'niacinaMg' | 'niacinaNeMg' | 'vitaminaB12Mcg' | 'folatoDfeMcg' | 'vitaminaDMcg'
+  | 'vitaminaEAlfaTocoferolMg' | 'vitaminaCMg';
+export type MicronutrientesPor100gApi = Partial<Record<CodigoMicronutrienteApi, number>>;
+
 export interface AlimentoComposicaoApi {
   id: string;
   codigoOrigem: string;
@@ -46,6 +53,7 @@ export interface SubstituicaoPlanoAlimentarEntrada {
   unidade: string;
   porcaoGramas: number;
   nutrientesPor100g?: NutrientesPor100gApi;
+  micronutrientesPor100g?: MicronutrientesPor100gApi;
 }
 
 // As duas decisoes do profissional sobre uma alternativa. Nao ficam em
@@ -126,6 +134,13 @@ export interface ComposicaoSnapshotApi {
   };
   nutrientesPor100g: NutrientesPor100gApi;
   nutrientesPorcao: NutrientesPor100gApi;
+  micronutrientes?: {
+    schemaVersao: 1;
+    mapeamentoVersao: 'octaclin-micronutrientes-v1';
+    baseGramasOrigem: number;
+    porcaoGramas: number;
+    nutrientes: Partial<Record<CodigoMicronutrienteApi, { estado: string; valorOrigem?: number; por100g?: number; porcao?: number }>>;
+  };
 }
 
 export interface SubstituicaoPlanoAlimentarApi {
@@ -256,6 +271,39 @@ export interface PlanoAlimentarApi {
   current?: VersaoPlanoAlimentarApi;
   draft?: VersaoPlanoAlimentarApi;
   historico: VersaoPlanoAlimentarResumoApi[];
+}
+
+export interface SelecaoCalculoPlanoApi {
+  planoId: string;
+  ativoParaPaciente: boolean;
+  ativacaoRevisao: number;
+  versao: { id: string; numero: number; publicadaEm: string } | null;
+  refeicoes: Array<{ identidadeId: string; nome: string; ordem: number; ativa: boolean }>;
+}
+
+export interface SelecaoCalculoLocal {
+  planoId: string;
+  titulo: string;
+  versaoId: string;
+  numeroVersao: number;
+  publicadaEm: string;
+  ativacaoRevisao: number;
+  ativoParaPaciente: boolean;
+  refeicoes: Array<{ identidadeId: string; nome: string; ordem: number; ativa: boolean; selecionada: boolean }>;
+}
+
+export interface ResultadoCalculoCombinadoApi {
+  motorVersao: 'pa06-combinado-v1';
+  estado: 'sem_selecao' | 'sem_itens_incluidos' | 'calculado';
+  itensIncluidos: number;
+  nutrientes: Record<string, { codigo: string; unidade: string; estado: 'completo' | 'parcial' | 'indisponivel'; total?: number; quantidadeConhecida?: number; itensComValor: number; itensIncluidos: number }>;
+  exclusoes: Array<{ planoId: string; identidadeRefeicao?: string; motivo: 'plano_desativado' | 'refeicao_desativada' }>;
+  calculadoEm: string;
+  publicacoes: Array<{ planoId: string; versaoId: string; ativacaoRevisao: number }>;
+}
+
+export interface CalcularCombinadoEntradaApi {
+  selecoes: Array<{ planoId: string; versaoIdEsperada: string; ativacaoRevisaoEsperada: number; identidadesRefeicoes: string[] }>;
 }
 
 export interface AtivacaoRefeicaoApi {
