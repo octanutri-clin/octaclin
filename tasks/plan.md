@@ -4,9 +4,9 @@
 
 Worktree `/workspace/octaclin/.worktrees/pos320-pa06-ativacao`, branch
 `feat/pos320-pa06-ativacao`, HEAD `b2ae7d8b`, base `e2cb9cdd`. PR #421 Draft
-aberta para a entrega PA06; os checks iniciais passaram exceto o Demo local
-smoke, cuja fixture visual foi corrigida em `b2ae7d8b`; aguarda repetição dos
-gates no novo HEAD. PR420 mergeada
+aberta para a entrega PA06; em `9d2a8f68` o smoke visual corrigido passou e os
+checks obrigatórios do HEAD passaram. A PR continua Draft para revisão humana.
+PR420 mergeada
 em `66df9053`. O proprietário relatou migrations anteriores aplicadas em
 staging/produção; nenhum banco externo foi consultado neste ciclo. A nova1074
 **não foi aplicada externamente**. O trabalho local T08a+T08b está concluído

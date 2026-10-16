@@ -208,5 +208,14 @@ operacional atrasado capaz de regredir o mapa de refeições da revisão editori
 - RED local antes da correção: Playwright focal, desktop `1 falhou`, mobile
   `1 passou`, reproduzindo a expectativa incompatível. GREEN após a correção:
   mesmo teste focal `2/2`, desktop e mobile.
-- O `Demo local smoke` integral precisa ser executado novamente pelo CI no
-  commit corrigido. Não considerar a PR inteiramente green até esse resultado.
+- No commit corrigido, o `Demo local smoke` integral do run `38895028852` passou;
+  Playwright `876 passed,
+  2 skipped` (878 testes previstos), seguido dos demais cenários de estado,
+  responsividade e microcopy, todos PASS. O job terminou em `success` após
+  19m50s.
+- No mesmo HEAD, Backend NestJS, Web Next.js, Mobile Expo, AI FastAPI, PR Gate,
+  governança, imagens, CodeQL, Dependency Review, Semgrep e Trivy PASS. O job
+  condicional de provenance SBOM foi SKIPPED conforme a condição do workflow.
+- PR #421 permanece aberta em Draft (`mergeStateStatus: CLEAN`); sem merge,
+  deploy, migration externa ou ativação. O gate final autoriza revisão humana da
+  PR, não implantação.

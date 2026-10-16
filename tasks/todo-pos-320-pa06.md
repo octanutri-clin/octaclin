@@ -314,10 +314,10 @@ Dependência: T09. Sol médio.
 
 - [ ] Uma PR por recurso: autosave parcial → ativação → cálculo combinado.
   Cada uma inclui código/plano/evidências; não criar PR documental separada.
-- [ ] `git diff --check`, `pnpm security:secrets`, governança, scanners e CI
-  Backend/Web/Demo/PR Gate do HEAD final PASS; SKIPPED justificados. Backend/Web
-  e demais scanners do HEAD anterior passaram; Demo foi corrigido e aguarda novo
-  resultado do HEAD atualizado.
+- [x] `git diff --check`, `pnpm security:secrets`, governança, scanners e CI
+  Backend/Web/Demo/PR Gate do HEAD validado PASS; Playwright do Demo `876/878`
+  com 2 testes SKIPPED; provenance SBOM SKIPPED pela condição do workflow.
+  Evidências incluem o primeiro RED, a correção do fixture e GREEN focal integral.
 - [x] Nenhum merge/deploy/migration externa/ativação sem autorização e alvo.
 
 Aceite: relatório de segurança, limitações e sequência operacional explícitos.
