@@ -297,6 +297,10 @@ de três PRs no plano. Sol médio; repetir estes gates em cada entrega.
   portal/print; no-op não invalida revisão nem recria filhos.
 - [x] Atualizar matriz de confiabilidade/rotas, docs e plano externo de implantação/
   rollback; não confundir merge com schema ou deploy efetivo.
+- [x] Smoke visual do primeiro HEAD reproduzido localmente: fixture sem os campos
+  PA06 `ativoParaPaciente`/`ativacaoEdicao` causava alerta de visibilidade pendente.
+  Fixture completado; Playwright focal GREEN `2/2` desktop/mobile. Repetir o Demo
+  local smoke integral no novo HEAD antes de liberar a PR.
 
 Verificação: `pnpm --dir octaclin-backend test --runInBand`, `typecheck`, `build`;
 `pnpm --dir octaclin-web lint`, `typecheck`, `build`, `test:authz`; Playwright
@@ -311,7 +315,9 @@ Dependência: T09. Sol médio.
 - [ ] Uma PR por recurso: autosave parcial → ativação → cálculo combinado.
   Cada uma inclui código/plano/evidências; não criar PR documental separada.
 - [ ] `git diff --check`, `pnpm security:secrets`, governança, scanners e CI
-  Backend/Web/Demo/PR Gate do HEAD final PASS; SKIPPED justificados.
+  Backend/Web/Demo/PR Gate do HEAD final PASS; SKIPPED justificados. Backend/Web
+  e demais scanners do HEAD anterior passaram; Demo foi corrigido e aguarda novo
+  resultado do HEAD atualizado.
 - [x] Nenhum merge/deploy/migration externa/ativação sem autorização e alvo.
 
 Aceite: relatório de segurança, limitações e sequência operacional explícitos.

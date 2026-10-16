@@ -193,3 +193,20 @@ operacional atrasado capaz de regredir o mapa de refeições da revisão editori
 - Limite de ambiente: Node `v24.19.0`/pnpm `11.19.0`; os manifests pedem Node
   22/pnpm 11.25. Os comandos terminaram nos resultados indicados, mas CI com a
   toolchain declarada ainda é obrigatório.
+
+### Correção do smoke visual do HEAD da PR #421
+
+- RED: o primeiro `Demo local smoke` do HEAD `b7f7d046` executou 878 testes;
+  874 passaram e os cenários desktop/mobile do teste de reordenação falharam.
+  A falha era no fixture legado: ele não informava `ativoParaPaciente` nem
+  `ativacaoEdicao`, então o componente, corretamente, mostrava “A visibilidade
+  de uma ou mais refeições não pôde ser confirmada” em vez do estado de cálculo
+  indisponível esperado depois de salvar um rascunho pendente.
+- Correção: fixture agora representa plano ativo e declara explicitamente as
+  identidades/estados ativos das refeições nas versões publicada e rascunho.
+  Nenhum comportamento de runtime foi alterado.
+- RED local antes da correção: Playwright focal, desktop `1 falhou`, mobile
+  `1 passou`, reproduzindo a expectativa incompatível. GREEN após a correção:
+  mesmo teste focal `2/2`, desktop e mobile.
+- O `Demo local smoke` integral precisa ser executado novamente pelo CI no
+  commit corrigido. Não considerar a PR inteiramente green até esse resultado.
