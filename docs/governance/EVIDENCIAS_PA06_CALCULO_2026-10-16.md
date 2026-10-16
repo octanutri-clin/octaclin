@@ -179,6 +179,9 @@ regressões de cópia/duplicação/acréscimo. Comando:
 Servidor local encerrado após os testes. Build/typecheck Web PASS; lint do
 componente de cálculo/formatador sem avisos/erros. `pnpm test:confiabilidade`
 PASS (40 referências críticas); `pnpm security:secrets`/`git diff --check` PASS.
+O script `test-calculo-combinado-planos.mjs` também foi incluído no encadeamento
+automático de `test:authz`, para que os4 testes de seleção/apresentação participem
+do job Web do CI, além de sua execução isolada local. A cadeia passa a27 recortes.
 
 O CI de `bcf0825f` não aprova automaticamente os commits de correção. A PR #422
 concentra o estado operacional dos checks do HEAD final e permanece Draft até
