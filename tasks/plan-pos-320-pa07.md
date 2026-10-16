@@ -198,7 +198,12 @@ O benefício de trocar apenas T04 para Luna pode ser pequeno: se T04 não for
 isolável com handoff curto, manter Sol e evitar custo de reconstruir contexto.
 Nunca transicionar modelo sem avisar e pausar para o usuário trocar.
 
-## Matriz mínima de testes (sintéticos; ainda não executados)
+## Matriz completa de testes — pendências T05/T06
+
+A matriz abaixo ainda define a cobertura total requerida. T04 cobriu somente
+consulta/retomada entre duas páginas, falha sintética de reconferência, entrada
+por teclado, eixo Axe do aviso e desktop/mobile. Os cenários extensos de envio
+em voo, lifecycle, segurança e servidor continuam pendentes.
 
 | Área | Cenários obrigatórios |
 | --- | --- |
@@ -251,12 +256,19 @@ histórico clínico. Liberação de lock não salva/apaga dados. Sem schema novo
 nada a reverter em banco. Nunca usar rollback para relaxar CAS/autorização.
 
 
-## Checkpoint T02/T03 — pausa antes de Luna
+## Checkpoint T02/T03/T04 — interface concluída
 
-Núcleo/adaptadores implementados e59 testes PASS; integração inicial do editor,
-typecheck, BFF42/42 e Playwright inicial2/2 desktop/mobile PASS. UI de aviso e
-retomada ainda não existe; não disponibilizar este checkpoint. T03 tem guardas
-implementadas, mas aceite completo depende dos cenários T04/T05. Evidências em
-[registro do núcleo](../docs/governance/EVIDENCIAS_PA07_NUCLEO_2026-10-16.md).
-Próxima ação: troca manual para Luna alto e somente
-[T04](handoff-pos-320-pa07-luna.md). Depois retornar a Sol para T05–T07.
+Núcleo/adaptadores implementados e 59 testes unitários PASS; integração inicial
+do editor, typecheck, BFF 42/42 e Playwright do núcleo 2/2 desktop/mobile PASS.
+T04 adicionou aviso, retomada acessível, controles de consulta e teste de falha
+de reconferência; typecheck PASS, lint sem erros (8 avisos preexistentes no
+editor central), unitários 59/59 e Playwright 6/6 desktop/mobile PASS, incluindo
+axe-core focado no aviso. Evidências em [núcleo](../docs/governance/EVIDENCIAS_PA07_NUCLEO_2026-10-16.md)
+e [T04 UI](../docs/governance/EVIDENCIAS_PA07_UI_2026-10-16.md).
+
+Não disponibilizar este checkpoint: T05–T07 permanecem pendentes. Durante a
+revisão T04, observou-se que o fluxo de reconferência encerra o coordenador e
+recarrega o plano; T05 deve provar que o hook e a posse local são reinicializados
+antes de permitir retomada. Nenhuma correção de lifecycle foi feita em T04 por
+estar fora do escopo delegado ao Luna. Próxima ação: retornar a Sol6.1 médio
+para T05–T07, regressões, PostgreSQL/RLS descartável, segurança e PR única.

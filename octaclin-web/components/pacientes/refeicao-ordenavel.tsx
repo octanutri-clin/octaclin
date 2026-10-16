@@ -15,10 +15,11 @@ interface RefeicaoOrdenavelProps {
   aoAlternar: () => void;
   subtotalVisual: string;
   subtotalAcessivel: string;
+  arrasteDesabilitado?: boolean;
 }
 
-export function RefeicaoOrdenavel({ id, nome, posicao, acoes, children, aberto, aoAlternar, subtotalVisual, subtotalAcessivel }: RefeicaoOrdenavelProps) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
+export function RefeicaoOrdenavel({ id, nome, posicao, acoes, children, aberto, aoAlternar, subtotalVisual, subtotalAcessivel, arrasteDesabilitado = false }: RefeicaoOrdenavelProps) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id, disabled: arrasteDesabilitado });
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
@@ -59,6 +60,7 @@ export function RefeicaoOrdenavel({ id, nome, posicao, acoes, children, aberto, 
             {...attributes}
             {...listeners}
             aria-label={`Arrastar refeição ${nomeAcessivel}`}
+            disabled={arrasteDesabilitado}
             title="Arraste para reordenar; use as setas do teclado para mover"
             className="inline-flex min-h-11 min-w-11 touch-none items-center justify-center rounded-md text-texto-suave hover:bg-superficie focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primaria"
           >

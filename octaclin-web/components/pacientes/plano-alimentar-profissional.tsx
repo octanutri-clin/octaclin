@@ -25,6 +25,7 @@ import { AreaTexto, Campo, Rotulo, Selecao } from '@/components/ui/campo';
 import { AlertaOperacional, BarraCarregamento, EstadoVazio } from '@/components/ui/feedback';
 import { ModalConfirmacao } from '@/components/ui/modal';
 import { RefeicaoOrdenavel } from '@/components/pacientes/refeicao-ordenavel';
+import { AvisoEdicaoAbasPlano } from '@/components/pacientes/aviso-edicao-abas-plano';
 import { mensagemFalhaInterface } from '@/lib/erros-interface';
 import { useProtecaoAlteracoesNaoSalvas } from '@/lib/usar-protecao-alteracoes-nao-salvas';
 import {
@@ -2208,7 +2209,7 @@ export function PlanoAlimentarProfissional({ pacienteId, podeGerenciar, aoAltera
               <p>Não foi possível confirmar a última alteração de visibilidade. Consulte o estado atualizado antes de tentar novamente.</p>
               <Botao type="button" tamanho="sm" className="mt-2" onClick={() => void reconciliarAtivacao()} disabled={Boolean(operacao)}>Consultar estado da visibilidade</Botao>
             </div> : null}
-            {plano?.draft && podeGerenciar ? <div role="status" aria-live="polite" className="rounded-md border border-linha bg-superficie px-4 py-3 text-sm text-texto-suave">{`Salvamento automático ativo (60 segundos). ${mensagemEstadoAutosave(estadoAutosave)}${ultimoSalvamentoConfirmado?.chave === `${pacienteId}:${plano.id}:${plano.draft.id}` ? ` Último salvamento confirmado: ${new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short', timeStyle: 'short' }).format(ultimoSalvamentoConfirmado.data)}.` : ''}`}</div> : null}
+            {plano?.draft && podeGerenciar ? <div role="status" aria-live="polite" className="rounded-md border border-linha bg-superficie px-4 py-3 text-sm text-texto-suave">{edicaoEntreAbas.podeEditar ? `Salvamento automático ativo (60 segundos). ${mensagemEstadoAutosave(estadoAutosave)}` : 'Salvamento automático pausado nesta aba.'}{ultimoSalvamentoConfirmado?.chave === `${pacienteId}:${plano.id}:${plano.draft.id}` ? ` Último salvamento confirmado: ${new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short', timeStyle: 'short' }).format(ultimoSalvamentoConfirmado.data)}.` : ''}</div> : null}
           </div>
 
           {!plano ? <EstadoVazio titulo={podeGerenciar ? 'Selecione ou crie um plano' : 'Selecione um plano'} descricao={podeGerenciar ? 'O editor será exibido depois que um plano alimentar for selecionado.' : 'O conteúdo será exibido somente para consulta.'} /> : null}
@@ -2243,7 +2244,7 @@ export function PlanoAlimentarProfissional({ pacienteId, podeGerenciar, aoAltera
                     </Botao>
                     {plano.draft ? <Botao type="button" onClick={() => void carregarProjecaoPaciente('rascunho')} disabled={alterado || carregandoProjecao || Boolean(operacao) || ativacaoNaoConfirmada}><Search size={16} /> Prévia do paciente</Botao> : null}
                     {plano.current ? <Botao type="button" onClick={() => void carregarProjecaoPaciente('impressao')} disabled={alterado || carregandoProjecao || Boolean(operacao) || ativacaoNaoConfirmada}>{carregandoProjecao ? <RefreshCcw size={16} className="animate-spin" /> : <Printer size={16} />} {carregandoProjecao ? 'Preparando impressão' : 'Imprimir'}</Botao> : null}
-                    {podeGerenciar ? <Botao type="button" variante="perigo" onClick={() => setConfirmarArquivo(true)} disabled={alterado || Boolean(operacao)}>
+                    {podeGerenciar ? <Botao type="button" variante="perigo" onClick={() => setConfirmarArquivo(true)} disabled={!edicaoEntreAbas.podeEditar || alterado || Boolean(operacao)}>
                       <Archive size={16} /> Arquivar
                     </Botao> : null}
                   </div>
@@ -2256,6 +2257,12 @@ export function PlanoAlimentarProfissional({ pacienteId, podeGerenciar, aoAltera
                   <Botao type="button" onClick={() => setConfirmarReconciliacao(true)} disabled={Boolean(operacao)}>Recarregar rascunho</Botao>
                 </div>
               ) : (
+                <>
+                <AvisoEdicaoAbasPlano
+                  estado={edicaoEntreAbas.estado}
+                  aoAssumir={edicaoEntreAbas.assumir}
+                  aoRecarregar={() => setConfirmarReconciliacao(true)}
+                />
                 <form noValidate onSubmit={(evento) => { evento.preventDefault(); void salvar(); }} onCompositionStartCapture={() => {
                   compondoRef.current = true;
                   coordenadorEdicaoRef.current?.configurar({ suspenso: true });
@@ -2437,7 +2444,7 @@ export function PlanoAlimentarProfissional({ pacienteId, podeGerenciar, aoAltera
                         <Botao type="button" variante="fantasma" onClick={() => definirTodasRefeicoesAbertas(!todasRefeicoesAbertas)}>
                           {todasRefeicoesAbertas ? 'Recolher todas' : 'Expandir todas'}
                         </Botao>
-                        <Botao type="button" onClick={adicionarRefeicao}><Plus size={16} /> Adicionar refeição</Botao>
+                        <Botao type="button" onClick={adicionarRefeicao} disabled={!edicaoEntreAbas.podeEditar}><Plus size={16} /> Adicionar refeição</Botao>
                       </div>
                     </div>
                     <DndContext sensors={sensoresArraste} collisionDetection={closestCenter} onDragEnd={finalizarArrasteRefeicao}>
@@ -2482,6 +2489,7 @@ export function PlanoAlimentarProfissional({ pacienteId, podeGerenciar, aoAltera
                           if (subtotal.estado === 'incompleto') partes.push('Dados incompletos');
                           return `Subtotal da refeição ${indiceRefeicao + 1}, ${refeicao.nome || 'sem nome'}: ${partes.join(', ')}`;
                         })() : `Subtotal da refeição ${indiceRefeicao + 1} indisponível enquanto o rascunho estiver pendente de materialização.`}
+                        arrasteDesabilitado={!edicaoEntreAbas.podeEditar}
                         acoes={<>
                           {podeGerenciar ? (() => {
                             const estado = localizarAtivacaoRefeicao(plano.draft, refeicao.chaveCliente);
@@ -2492,9 +2500,9 @@ export function PlanoAlimentarProfissional({ pacienteId, podeGerenciar, aoAltera
                               aoAlternar={() => void alterarVisibilidadeRefeicao(estado.identidadeId, !estado.ativa)}
                             /> : <span className="px-2 text-xs text-texto-suave">Salve para definir a visibilidade</span>;
                           })() : null}
-                          <Botao type="button" variante="fantasma" tamanho="sm" className="min-h-11 min-w-11" onClick={() => atualizar((atual) => ({ ...atual, refeicoes: mover(atual.refeicoes, indiceRefeicao, indiceRefeicao - 1) }))} disabled={indiceRefeicao === 0} aria-label={`Mover refeição ${refeicao.nome || indiceRefeicao + 1} para cima`}><ArrowUp size={15} /></Botao>
-                          <Botao type="button" variante="fantasma" tamanho="sm" className="min-h-11 min-w-11" onClick={() => atualizar((atual) => ({ ...atual, refeicoes: mover(atual.refeicoes, indiceRefeicao, indiceRefeicao + 1) }))} disabled={indiceRefeicao === formulario.refeicoes.length - 1} aria-label={`Mover refeição ${refeicao.nome || indiceRefeicao + 1} para baixo`}><ArrowDown size={15} /></Botao>
-                          <Botao type="button" variante="fantasma" tamanho="sm" className="min-h-11" onClick={() => duplicarRefeicaoLocal(indiceRefeicao)} disabled={Boolean(operacao)} aria-label={`Duplicar refeição ${refeicao.nome || indiceRefeicao + 1}`}>Duplicar</Botao>
+                          <Botao type="button" variante="fantasma" tamanho="sm" className="min-h-11 min-w-11" onClick={() => atualizar((atual) => ({ ...atual, refeicoes: mover(atual.refeicoes, indiceRefeicao, indiceRefeicao - 1) }))} disabled={!edicaoEntreAbas.podeEditar || indiceRefeicao === 0} aria-label={`Mover refeição ${refeicao.nome || indiceRefeicao + 1} para cima`}><ArrowUp size={15} /></Botao>
+                          <Botao type="button" variante="fantasma" tamanho="sm" className="min-h-11 min-w-11" onClick={() => atualizar((atual) => ({ ...atual, refeicoes: mover(atual.refeicoes, indiceRefeicao, indiceRefeicao + 1) }))} disabled={!edicaoEntreAbas.podeEditar || indiceRefeicao === formulario.refeicoes.length - 1} aria-label={`Mover refeição ${refeicao.nome || indiceRefeicao + 1} para baixo`}><ArrowDown size={15} /></Botao>
+                          <Botao type="button" variante="fantasma" tamanho="sm" className="min-h-11" onClick={() => duplicarRefeicaoLocal(indiceRefeicao)} disabled={!edicaoEntreAbas.podeEditar || Boolean(operacao)} aria-label={`Duplicar refeição ${refeicao.nome || indiceRefeicao + 1}`}>Duplicar</Botao>
                           <Botao type="button" variante="fantasma" tamanho="sm" className="min-h-11" onClick={() => {
                             atualizar((atual) => ({ ...atual, refeicoes: atual.refeicoes.filter((_, posicao) => posicao !== indiceRefeicao) }));
                             setRefeicoesAbertas((atuais) => {
@@ -2502,7 +2510,7 @@ export function PlanoAlimentarProfissional({ pacienteId, podeGerenciar, aoAltera
                               proximas.delete(refeicao.chaveCliente);
                               return proximas;
                             });
-                          }} disabled={formulario.refeicoes.length === 1}><Trash2 size={15} /> Remover</Botao>
+                          }} disabled={!edicaoEntreAbas.podeEditar || formulario.refeicoes.length === 1}><Trash2 size={15} /> Remover</Botao>
                         </>}
                       >
                         <fieldset disabled={!edicaoEntreAbas.podeEditar} className="contents" aria-label="Campos da refeição">
@@ -2526,7 +2534,7 @@ export function PlanoAlimentarProfissional({ pacienteId, podeGerenciar, aoAltera
                               aoMover={(destino) => atualizarRefeicao(indiceRefeicao, { ...refeicao, itens: mover(refeicao.itens, indiceItem, destino) })}
                             />
                           ))}
-                          <Botao type="button" onClick={() => atualizarRefeicao(indiceRefeicao, { ...refeicao, itens: [...refeicao.itens, novoItem()] })}><Plus size={16} /> Adicionar alimento</Botao>
+                          <Botao type="button" onClick={() => atualizarRefeicao(indiceRefeicao, { ...refeicao, itens: [...refeicao.itens, novoItem()] })} disabled={!edicaoEntreAbas.podeEditar}><Plus size={16} /> Adicionar alimento</Botao>
                         </div>
                         </fieldset>
                       </RefeicaoOrdenavel>
@@ -2596,11 +2604,12 @@ export function PlanoAlimentarProfissional({ pacienteId, podeGerenciar, aoAltera
                       escondido atras dela (WCAG 2.2 SC 2.4.11). */}
                   <div className="sticky bottom-20 z-30 flex flex-wrap justify-end gap-2 rounded-md border border-linha bg-white p-3 shadow-cartao lg:bottom-3 lg:z-10">
                     {copiaEmAndamento ? <p role="status" className="w-full text-sm text-texto-suave">Aguarde a cópia antes de salvar, revisar ou publicar.</p> : null}
-                    <Botao type="submit" variante="primario" carregando={operacao === 'salvando-edicao'} disabled={Boolean(operacao) || copiaEmAndamento || edicaoIndisponivel || ['conflito', 'incerto', 'acesso-negado'].includes(estadoAutosave)}><Save size={16} /> Salvar rascunho</Botao>
-                    <Botao type="button" carregando={operacao === 'revisando'} disabled={alterado || estadoAutosave !== 'salvo' || Boolean(operacao) || copiaEmAndamento || !plano.draft.calculo} onClick={() => transicionarVersao('revisando')}><ClipboardCheck size={16} /> Revisar</Botao>
-                    <Botao type="button" variante="primario" carregando={operacao === 'publicando'} disabled={alterado || estadoAutosave !== 'salvo' || Boolean(operacao) || copiaEmAndamento || !plano.draft.revisadaEm} onClick={() => transicionarVersao('publicando')}><CheckCircle2 size={16} /> Publicar</Botao>
+                    <Botao type="submit" variante="primario" carregando={operacao === 'salvando-edicao'} disabled={!edicaoEntreAbas.podeEditar || Boolean(operacao) || copiaEmAndamento || edicaoIndisponivel || ['conflito', 'incerto', 'acesso-negado'].includes(estadoAutosave)}><Save size={16} /> Salvar rascunho</Botao>
+                    <Botao type="button" carregando={operacao === 'revisando'} disabled={!edicaoEntreAbas.podeEditar || alterado || estadoAutosave !== 'salvo' || Boolean(operacao) || copiaEmAndamento || !plano.draft.calculo} onClick={() => transicionarVersao('revisando')}><ClipboardCheck size={16} /> Revisar</Botao>
+                    <Botao type="button" variante="primario" carregando={operacao === 'publicando'} disabled={!edicaoEntreAbas.podeEditar || alterado || estadoAutosave !== 'salvo' || Boolean(operacao) || copiaEmAndamento || !plano.draft.revisadaEm} onClick={() => transicionarVersao('publicando')}><CheckCircle2 size={16} /> Publicar</Botao>
                   </div>
                 </form>
+                </>
               )) : (
                 plano.current ? <div className="grid gap-3">
                   {podeGerenciar ? <div role="status" className="rounded-md border border-linha bg-superficie p-3 text-sm text-texto-suave">O plano publicado continua disponível para o paciente enquanto você não o ocultar. As refeições podem ser ativadas separadamente.</div> : null}
@@ -2611,7 +2620,7 @@ export function PlanoAlimentarProfissional({ pacienteId, podeGerenciar, aoAltera
                     aoAlternarRefeicao={alterarVisibilidadeRefeicao}
                     operacaoPendente={Boolean(operacao) || copiaEmAndamento}
                   />
-                  {podeGerenciar ? <Botao type="button" variante="primario" carregando={operacao === 'nova-versao'} onClick={() => void executar('nova-versao', () => criarNovaVersaoPlanoAlimentar(pacienteId, plano.id), 'Nova versão criada a partir da publicação atual.')} disabled={Boolean(operacao)}><Plus size={16} /> Criar nova versão</Botao> : null}
+                  {podeGerenciar ? <Botao type="button" variante="primario" carregando={operacao === 'nova-versao'} onClick={() => void executar('nova-versao', () => criarNovaVersaoPlanoAlimentar(pacienteId, plano.id), 'Nova versão criada a partir da publicação atual.')} disabled={!edicaoEntreAbas.podeEditar || Boolean(operacao)}><Plus size={16} /> Criar nova versão</Botao> : null}
                 </div> : <EstadoVazio titulo="Nenhum rascunho ativo" descricao="Crie uma versão para continuar a edição do plano." acao={undefined} />
               )) : (
                 <div className="grid gap-4">

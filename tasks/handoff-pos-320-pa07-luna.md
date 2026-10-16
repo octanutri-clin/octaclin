@@ -1,4 +1,4 @@
-# PA07 — T04 para Luna alto (troca manual pendente)
+# PA07 — handoff pós T04 (retornar a Sol6.1 médio)
 
 ## Contexto e objetivo
 
@@ -9,10 +9,11 @@ consulta, botão “Editar nesta aba”, anterior pausa e preserva edição loca
 Plano: [PA07](plan-pos-320-pa07.md). [Evidências do núcleo](../docs/governance/EVIDENCIAS_PA07_NUCLEO_2026-10-16.md).
 
 Sol implementou núcleo/adaptadores/hook e integração inicial (59 unitários,
-42 BFF, typecheck, lint sem erros e2 E2E PASS). **Ainda não existe interface
-de aviso/retomada e não há PR.** Não declarar fase completa neste checkpoint.
+42 BFF, typecheck, lint sem erros e 2 E2E PASS). Luna concluiu T04: aviso,
+retomada, bloqueio visual dos writers e regressões de browser. Não há PR; não
+declarar fase completa neste checkpoint.
 
-## Escopo do Luna — somente T04
+## T04 concluído — somente UI
 
 Criar aviso pequeno em `components/pacientes/aviso-edicao-abas-plano.tsx`,
 integrar JSX no editor e expandir `tests/visual/pa07-coordenacao-abas.spec.mjs`.
@@ -101,9 +102,11 @@ Espaço livre baixo (~699MiB): não remover artefatos de usuário/outras fases;
 reavaliar antes de build/instalação. Não versionar next-env gerado. Checkout
 principal tem alteração preexistente do usuário e permanece intocado.
 
-## Retorno ao Sol
+## Próxima etapa — Sol6.1 médio
 
-Ao concluir T04, registrar arquivos/commits, RED/GREEN, comandos/resultados e
-limites. Avisar e pausar para troca manual a Sol6.1 médio. Ele executará T05–T07:
-revisão dos callbacks/lifecycle e base editorial, regressões completas,
-PostgreSQL/RLS/CAS/CI, revisão cruzada e PR única. CI antigo não aprova PA07.
+T04 concluiu com RED/GREEN, comandos e limites registrados em
+`docs/governance/EVIDENCIAS_PA07_UI_2026-10-16.md`. Retomar com Sol6.1 médio
+para T05–T07: investigar especialmente a reinicialização do coordenador/hook
+após recarga explícita em `reconferir`, revisar callbacks/lifecycle e base
+editorial, regressões completas, PostgreSQL/RLS/CAS/CI, revisão cruzada e PR
+única. CI antigo não aprova PA07.
