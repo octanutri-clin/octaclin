@@ -398,8 +398,10 @@ Sem IDR/UL/TBCA ou execução externa nesta rodada. Handoff
 
 **Origem:** item 16.
 
-**Status atual:** autosave/edição protegida e ativação integrados; cálculo
-combinado/micros planejados, ainda não implementados.
+**Status atual (fechamento 2026-10-16):** PA06 integrada por #420/#421/#422,
+merge final `62a50104`; CI do HEAD `5eac6eab`, run38934810307, e scanners SUCCESS.
+SBOM provenance SKIPPED. Histórico acima preserva checkpoints anteriores.
+TACO v2 preparada; carga e verificação operacional externas separadas.
 
 **Dependência:** FND02.
 
@@ -429,7 +431,13 @@ combinado/micros planejados, ainda não implementados.
 
 **Origem:** item 10.
 
-**Status atual:** há controle otimista em partes do domínio, mas não coordenação de UI entre abas.
+**Status atual (2026-10-16):** núcleo e integração inicial implementados sobre
+`62a50104`, após confirmação D01 e autorização em “Siga”.59 unitários e2 E2E
+iniciais PASS; aviso/retomada UI e aceite completo de concorrência/gates pendentes.
+Não disponibilizar o checkpoint. PA06 continua fornecendo CAS de rascunho.
+Plano [PA07](../../tasks/plan-pos-320-pa07.md) e
+[checklist](../../tasks/todo-pos-320-pa07.md). Apenas R071 consultado/pinado;
+APIs nativas propostas, sem dependência nova ou Yjs.
 
 **Implementação sugerida:**
 - `BroadcastChannel` para aviso de edição concorrente no mesmo navegador;

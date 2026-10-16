@@ -168,6 +168,22 @@ quatro correções; evidências em `docs/governance/REVISAO_R4_PA05_2026-10-14.m
 Gates finais/CI da entrega PA05 permanecem pendentes até T09.
 
 
+## PA07 — coordenação local da edição entre abas
+
+R4 por integridade do rascunho clínico. Trava local nunca substitui autorização,
+CAS, transação ou RLS. Sem documento clínico no canal/storage, takeover por
+timeout/steal, retry cego ou rebase de conteúdo antigo sobre revisão nova.
+Núcleo/adapter/save: `octaclin-web/scripts/coordenacao-abas-plano.spec.ts`,
+`octaclin-web/scripts/coordenacao-abas-plano-nativa.spec.ts` e
+`octaclin-web/scripts/coordenador-edicao-plano.spec.ts`, executados pelo runner
+de nutrição já incluído em `test:authz`. Prova inicial com duas páginas e APIs
+nativas: `octaclin-web/tests/visual/pa07-coordenacao-abas.spec.mjs`.
+Checkpoint T02/T03 comprova consulta e preservação local; transferência via UI,
+envio em voo/rede incerta, todos os writers e regressões completas dependem de
+T04/T05. Bloquear integração final sem esses testes, prova PostgreSQL/CAS/RLS
+aplicável, revisão cruzada e CI do HEAD. Evidências:
+`docs/governance/EVIDENCIAS_PA07_NUCLEO_2026-10-16.md`.
+
 ## PA06 — núcleo de autosave e edição parcial (primeira entrega)
 
 CAS geral por geração/revisão e adesão monotônica não substituem CAS PA05.

@@ -324,3 +324,13 @@ revisão clínica, humana ou externa. O [handoff corrente](plan.md), as
 [evidências](../docs/governance/EVIDENCIAS_PA06_CALCULO_2026-10-16.md) e a PR
 concentram o estado dos retestes/CI do runtime corrigido. Nenhuma operação de
 staging/produção, migration externa ou carga de catálogo foi feita.
+
+
+## Fechamento após merge — 2026-10-16
+
+PR #422 integrada pelo proprietário em `62a50104`, HEAD aprovado `5eac6eab`.
+CI final38934810307 e scanners SUCCESS; SBOM provenance SKIPPED. Registro final
+nas [evidências](../docs/governance/EVIDENCIAS_PA06_CALCULO_2026-10-16.md).
+Checkpoints acima conservam a sequência histórica, não o estado atual.
+Próxima etapa: [planejamento PA07](plan-pos-320-pa07.md). Carga TACO v2,
+migrations/deploy externos não inferidos nem executados neste fechamento.

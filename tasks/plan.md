@@ -1,3 +1,29 @@
+# Handoff atual — PA07: núcleo pronto para T04, troca manual pendente
+
+Branch `feat/pos320-pa07-planejamento`, worktree isolada da base `62a50104`.
+D01 confirmada e implementação autorizada em “Siga”. Núcleo/adaptadores/hook e
+integração inicial do editor implementados por Sol6.1 médio.
+
+**Próxima ação exata:** aguardar confirmação da troca manual para Luna alto e
+executar somente [T04 — aviso/retomada UI](handoff-pos-320-pa07-luna.md).
+Depois retornar a Sol para T05–T07. Nenhuma PR aberta; não disponibilizar este
+checkpoint enquanto falta aviso/botão de retomada e validação completa.
+
+- PASS59 unitários,42 BFF, typecheck, lint direcionado sem erros e2 E2E iniciais
+  desktop/mobile. RED/GREEN, falhas intermediárias, comandos e limites em
+  [evidências PA07](../docs/governance/EVIDENCIAS_PA07_NUCLEO_2026-10-16.md).
+- Pendente: T04, aceite completo T03/T05, regressões, banco descartável/CAS/RLS,
+  build produção, revisão cruzada e CI do HEAD. Nenhum gate herdado da PA06.
+- Sem backend/schema/dependência nova, merge/deploy ou acesso externo.
+  Node_modules reutilizado por symlink; servidor webpack local deve estar parado
+  na troca. Não tocar checkout principal/next-env do usuário; espaço livre baixo.
+- Plano/checklist [PA07](plan-pos-320-pa07.md)/[T00–T07](todo-pos-320-pa07.md).
+  Preservar PA06 D01–D13, CAS/autorização e estado local em memória.
+
+---
+
+## Handoff anterior — histórico PA06, superado pelo fechamento acima
+
 # Handoff atual — PA06 cálculo combinado: PR #422, correções R4 revisadas
 
 ## Branch, autorização e estado

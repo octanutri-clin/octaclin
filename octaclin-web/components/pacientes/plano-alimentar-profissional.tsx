@@ -65,6 +65,7 @@ import {
 } from '@/lib/prontuario-api';
 import { PainelNutricional } from '@/components/pacientes/painel-nutricional';
 import { calcularSubtotalRefeicao } from '@/lib/nutricao-plano';
+import { useCoordenacaoAbasPlano } from '@/lib/usar-coordenacao-abas-plano';
 import { CoordenadorEdicaoPlano, type EstadoSalvamentoPlano, type PrecondicaoEdicaoPlano } from '@/lib/coordenador-edicao-plano';
 import { LIMITE_BYTES_DOCUMENTO_EDICAO, campoNumeroEdicao as valorNumericoEdicao, percentualParaBasisPointsEdicao, interpretarNumeroEdicao, micronutrientesNumericosEdicao, nutrientesNumericosEdicao, validarMicronutrientesEdicao, type DocumentoEdicaoPlano, type MicronutrientesEdicao, type NutrientesEdicao } from '@/lib/edicao-plano';
 import { CAMPOS_MICRONUTRIENTES_PLANO } from '@/lib/micronutrientes-plano';
@@ -1371,6 +1372,8 @@ export function PlanoAlimentarProfissional({ pacienteId, podeGerenciar, aoAltera
   const [alterado, setAlterado] = useState(false);
   const [copiaEmAndamento, setCopiaEmAndamento] = useState(false);
   const coordenadorEdicaoRef = useRef<CoordenadorEdicaoPlano<DocumentoEdicaoPlano> | null>(null);
+  const posseEdicaoRef = useRef(false);
+  const operacaoRascunhoRef = useRef<Promise<void> | null>(null);
   const documentoInicialEdicaoRef = useRef<DocumentoEdicaoPlano | null>(null);
   const compondoRef = useRef(false);
   const salvarRascunhoRef = useRef<() => Promise<boolean>>(async () => false);
@@ -1491,6 +1494,42 @@ export function PlanoAlimentarProfissional({ pacienteId, podeGerenciar, aoAltera
     setAlterado(false);
     setEstadoAutosave(indisponivel ? 'incerto' : 'salvo');
   }, []);
+
+  const edicaoEntreAbas = useCoordenacaoAbasPlano({
+    pacienteId, planoId: plano?.id, habilitado: podeGerenciar,
+    definirPosse: permitida => {
+      posseEdicaoRef.current = permitida;
+      coordenadorEdicaoRef.current?.configurar({ posseEdicao: permitida });
+    },
+    drenar: async () => {
+      await coordenadorEdicaoRef.current?.aguardarEnvio();
+      await operacaoRascunhoRef.current;
+    },
+    conferir: async signal => {
+      const anterior = planoAtualRef.current;
+      if (!anterior || pacienteAtualRef.current !== pacienteId) return false;
+      const remoto = await obterPlanoAlimentar(pacienteId, anterior.id, signal);
+      if (signal.aborted || pacienteAtualRef.current !== pacienteId || planoAtualRef.current?.id !== anterior.id) return false;
+      const estado = coordenadorEdicaoRef.current?.estado;
+      const mesmaBase = remoto.draft?.id === (estado?.precondicao.rascunhoIdEsperado ?? anterior.draft?.id)
+        && (remoto.draft?.rascunhoRevisao ?? 0) === (estado?.precondicao.rascunhoRevisaoEsperada ?? anterior.draft?.rascunhoRevisao ?? 0);
+      const bloqueado = estado && ['conflito', 'incerto', 'acesso-negado'].includes(estado.status);
+      if (bloqueado || (estado?.alterado && (!mesmaBase || remoto.arquivadoEm))) {
+        setErro('O rascunho precisa ser reconferido. Suas alterações locais foram preservadas. Use Recarregar rascunho para descartar e conferir a versão salva.');
+        return false;
+      }
+      if (!mesmaBase || remoto.current?.id !== anterior.current?.id || remoto.arquivadoEm !== anterior.arquivadoEm) {
+        if (estado?.alterado) return false;
+        aplicarPlano(remoto, avaliacoes);
+      } else {
+        // Uma leitura de foco com a mesma base não reinicia o ciclo de60s,
+        // reidrata campos ou perde o foco/IME. Só reconcilia estado operacional.
+        reconciliarDetalheAtivacao(remoto);
+      }
+      return !remoto.arquivadoEm && remoto.draft?.edicaoEstado !== 'indisponivel';
+    }
+  });
+  const permiteEscreverRascunho = edicaoEntreAbas.permiteEscrever;
 
   const carregar = useCallback(async (preferido?: string, paginaSolicitada?: number) => {
     const sequencia = ++sequenciaCarregamento.current;
@@ -1624,6 +1663,7 @@ export function PlanoAlimentarProfissional({ pacienteId, podeGerenciar, aoAltera
         setAlterado(estado.alterado);
       }
     });
+    coordenador.configurar({ posseEdicao: posseEdicaoRef.current });
     coordenadorEdicaoRef.current = coordenador;
     coordenador.iniciar();
     const documentoAtual = documentoDoFormulario(formularioAtualRef.current);
@@ -1700,7 +1740,7 @@ export function PlanoAlimentarProfissional({ pacienteId, podeGerenciar, aoAltera
   useProtecaoAlteracoesNaoSalvas(alterado);
 
   function atualizar(mutacao: (atual: FormularioPlano) => FormularioPlano) {
-    if (!podeGerenciar || operacao === 'revisando' || operacao === 'publicando') return;
+    if (!podeGerenciar || !permiteEscreverRascunho() || operacao === 'revisando' || operacao === 'publicando') return;
     controladorProjecao.current?.abort();
     sequenciaProjecao.current += 1;
     setCarregandoProjecao(false);
@@ -1773,6 +1813,7 @@ export function PlanoAlimentarProfissional({ pacienteId, podeGerenciar, aoAltera
     campo: keyof PreferenciasExibicaoRefeicoesApi,
     valor: boolean
   ) {
+    if (!permiteEscreverRascunho()) return;
     setReconferiuApresentacao(true);
     atualizar((atual) => ({
       ...atual,
@@ -1879,7 +1920,10 @@ export function PlanoAlimentarProfissional({ pacienteId, podeGerenciar, aoAltera
   }
 
   async function executar(rotulo: string, tarefa: () => Promise<unknown>, mensagem: string, preferido = planoId) {
-    if (!podeGerenciar || copiaEmAndamentoRef.current) return;
+    if (!podeGerenciar || !permiteEscreverRascunho() || copiaEmAndamentoRef.current) return;
+    let concluir!: () => void;
+    const fim = new Promise<void>(resolve => { concluir = resolve; });
+    operacaoRascunhoRef.current = fim;
     setOperacao(rotulo);
     setErro(null);
     setSucesso(null);
@@ -1900,6 +1944,8 @@ export function PlanoAlimentarProfissional({ pacienteId, podeGerenciar, aoAltera
         coordenadorEdicaoRef.current?.configurar({ suspenso: ![400, 413, 422, 429].includes(status as number) });
       }
     } finally {
+      if (operacaoRascunhoRef.current === fim) operacaoRascunhoRef.current = null;
+      concluir();
       setOperacao(null);
     }
   }
@@ -1930,7 +1976,7 @@ export function PlanoAlimentarProfissional({ pacienteId, podeGerenciar, aoAltera
   }
 
   const salvar = useCallback(async () => {
-    if (!podeGerenciar || !plano?.draft || copiaEmAndamentoRef.current) return;
+    if (!podeGerenciar || !permiteEscreverRascunho() || !plano?.draft || copiaEmAndamentoRef.current) return;
     const coordenador = coordenadorEdicaoRef.current;
     if (!coordenador) {
       setErro('O estado seguro deste rascunho está indisponível. Atualize o plano antes de editar.');
@@ -1950,7 +1996,7 @@ export function PlanoAlimentarProfissional({ pacienteId, podeGerenciar, aoAltera
     } finally {
       setOperacao(null);
     }
-  }, [copiaEmAndamento, podeGerenciar, plano, reconferiuApresentacao]);
+  }, [copiaEmAndamento, podeGerenciar, plano, reconferiuApresentacao, permiteEscreverRascunho]);
 
   useEffect(() => {
     salvarRascunhoRef.current = async () => {
@@ -1971,7 +2017,7 @@ export function PlanoAlimentarProfissional({ pacienteId, podeGerenciar, aoAltera
   }
 
   function transicionarVersao(tipo: 'revisando' | 'publicando') {
-    if (!plano) return;
+    if (!plano || !permiteEscreverRascunho()) return;
     const coordenador = coordenadorEdicaoRef.current;
     if (!coordenador || alterado || coordenador.estado.status !== 'salvo') return;
     const precondicao: PrecondicaoEdicaoPlano = { ...coordenador.estado.precondicao };
@@ -2011,12 +2057,14 @@ export function PlanoAlimentarProfissional({ pacienteId, podeGerenciar, aoAltera
   }
 
   function adicionarRefeicao() {
+    if (!permiteEscreverRascunho()) return;
     const refeicao = novaRefeicao();
     atualizar((atual) => ({ ...atual, refeicoes: [...atual.refeicoes, refeicao] }));
     setRefeicoesAbertas((atuais) => new Set(atuais).add(refeicao.chaveCliente));
   }
 
   function aplicarRefeicoesDeModelo(refeicoesEntrada: RefeicaoPlanoAlimentarEntrada[]) {
+    if (!permiteEscreverRascunho()) return;
     const refeicoes = refeicoesDoModelo(refeicoesEntrada);
     atualizar((atual) => ({ ...atual, refeicoes }));
     setRefeicoesAbertas(new Set(refeicoes.map((refeicao) => refeicao.chaveCliente)));
@@ -2025,6 +2073,7 @@ export function PlanoAlimentarProfissional({ pacienteId, podeGerenciar, aoAltera
 
 
   function duplicarRefeicaoLocal(indice: number) {
+    if (!permiteEscreverRascunho()) return;
     try {
       const atual = formularioAtualRef.current;
       const refeicoes = duplicarRefeicaoNoRascunho(atual.refeicoes, indice, novaChaveCliente);
@@ -2041,6 +2090,7 @@ export function PlanoAlimentarProfissional({ pacienteId, podeGerenciar, aoAltera
     refeicao: RefeicaoFormularioCopia,
     destino: { tipo: 'nova' } | { tipo: 'acrescentar'; chaveRefeicao?: string }
   ) {
+    if (!permiteEscreverRascunho()) throw new Error('A edição foi transferida. Assuma novamente antes de copiar.');
     const atual = formularioAtualRef.current;
     let refeicoes: RefeicaoFormulario[];
     if (destino.tipo === 'nova') {
@@ -2067,6 +2117,7 @@ export function PlanoAlimentarProfissional({ pacienteId, podeGerenciar, aoAltera
   }
 
   function finalizarArrasteRefeicao(evento: DragEndEvent) {
+    if (!permiteEscreverRascunho()) return;
     const { active, over } = evento;
     if (!over || active.id === over.id) return;
     atualizar((atual) => {
@@ -2217,7 +2268,7 @@ export function PlanoAlimentarProfissional({ pacienteId, podeGerenciar, aoAltera
                       A configuração de exibição salva não pode ser lida. Revise as opções abaixo e salve novamente para reconferir esta versão antes de revisar ou publicar.
                     </div>
                   ) : null}
-                  <fieldset className="grid gap-4 rounded-md border border-linha bg-white p-4">
+                  <fieldset disabled={!edicaoEntreAbas.podeEditar} className="grid gap-4 rounded-md border border-linha bg-white p-4">
                     <legend className="px-1 text-sm font-semibold text-tinta">Cálculo energetico</legend>
                     <p className="text-sm text-texto-suave">{metaManual ? 'Condição especial: a fórmula populacional não se aplica. Informe a meta manualmente e registre a justificativa clínica.' : 'Estimativa baseada em equacao populacional. Revise os dados e a aplicabilidade antes de definir ou publicar uma meta.'}</p>
                     <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
@@ -2308,7 +2359,7 @@ export function PlanoAlimentarProfissional({ pacienteId, podeGerenciar, aoAltera
                     {metaManual ? <label className="grid gap-1 text-xs font-semibold uppercase text-texto-suave">Justificativa da condicao especial<AreaTexto value={formulario.justificativaCondicaoEspecial} onChange={(evento) => atualizar((atual) => ({ ...atual, justificativaCondicaoEspecial: evento.target.value }))} maxLength={2000} required /></label> : null}
                   </fieldset>
 
-                  <fieldset className="grid gap-3 rounded-md border border-linha bg-white p-4">
+                  <fieldset disabled={!edicaoEntreAbas.podeEditar} className="grid gap-3 rounded-md border border-linha bg-white p-4">
                     <legend className="px-1 text-sm font-semibold text-tinta">Conduta</legend>
                     <label className="grid gap-1 text-xs font-semibold uppercase text-texto-suave">Objetivo clínico<AreaTexto value={formulario.objetivos} onChange={(evento) => atualizar((atual) => ({ ...atual, objetivos: evento.target.value }))} maxLength={4000} required /></label>
                     <label className="grid gap-1 text-xs font-semibold uppercase text-texto-suave">Observações para o plano<AreaTexto value={formulario.observacoes} onChange={(evento) => atualizar((atual) => ({ ...atual, observacoes: evento.target.value }))} maxLength={8000} /></label>
@@ -2317,7 +2368,7 @@ export function PlanoAlimentarProfissional({ pacienteId, podeGerenciar, aoAltera
                   <ModelosPlanoAlimentar
                     refeicoesAtuais={() => refeicoesParaModelo(formulario)}
                     aoAplicar={aplicarRefeicoesDeModelo}
-                    desabilitado={Boolean(operacao)}
+                    desabilitado={!edicaoEntreAbas.podeEditar || Boolean(operacao)}
                   />
 
                   <CopiarRefeicaoDePlano
@@ -2330,7 +2381,7 @@ export function PlanoAlimentarProfissional({ pacienteId, podeGerenciar, aoAltera
                     gerarChave={novaChaveCliente}
                     aoAplicar={aplicarRefeicaoCopiada}
                     aoIniciarCopia={iniciarCopia}
-                    desabilitado={Boolean(operacao)}
+                    desabilitado={!edicaoEntreAbas.podeEditar || Boolean(operacao)}
                   />
 
                   {/* Mesma conversao do modelo de proposito: duplicar so difere na origem
@@ -2339,7 +2390,7 @@ export function PlanoAlimentarProfissional({ pacienteId, podeGerenciar, aoAltera
                   <DuplicarPlanoDeOutroPaciente
                     pacienteIdAtual={pacienteId}
                     aoAplicar={(versao) => aplicarRefeicoesDeModelo(refeicoesParaModelo(formularioDaVersao(versao)))}
-                    desabilitado={Boolean(operacao)}
+                    desabilitado={!edicaoEntreAbas.podeEditar || Boolean(operacao)}
                   />
 
                   <BibliotecaReceitasNutricionais
@@ -2361,14 +2412,14 @@ export function PlanoAlimentarProfissional({ pacienteId, podeGerenciar, aoAltera
                       }));
                       setRefeicoesAbertas((atuais) => new Set(atuais).add(chaveRefeicao));
                     }}
-                    desabilitado={Boolean(operacao)}
+                    desabilitado={!edicaoEntreAbas.podeEditar || Boolean(operacao)}
                   />
 
                   <PreferenciasApresentacaoPlano
                     profissional={formulario.preferenciasApresentacao.profissional}
                     paciente={formulario.preferenciasApresentacao.paciente}
                     aoAlterar={atualizarPreferenciaApresentacao}
-                    desabilitado={Boolean(operacao) || copiaEmAndamento}
+                    desabilitado={!edicaoEntreAbas.podeEditar || Boolean(operacao) || copiaEmAndamento}
                     refeicoes={formulario.refeicoes}
                     metas={resultadosVigentes && metasSalvas ? {
                       energiaKcal: metasSalvas.metaEnergeticaKcal,
@@ -2454,6 +2505,7 @@ export function PlanoAlimentarProfissional({ pacienteId, podeGerenciar, aoAltera
                           }} disabled={formulario.refeicoes.length === 1}><Trash2 size={15} /> Remover</Botao>
                         </>}
                       >
+                        <fieldset disabled={!edicaoEntreAbas.podeEditar} className="contents" aria-label="Campos da refeição">
                         <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_160px]">
                           <label className="grid gap-1 text-xs font-semibold uppercase text-texto-suave">Nome da refeição<Campo value={refeicao.nome} onChange={(evento) => atualizarRefeicao(indiceRefeicao, { ...refeicao, nome: evento.target.value })} maxLength={180} required /></label>
                           <label className="grid gap-1 text-xs font-semibold uppercase text-texto-suave">Horário<Campo type="time" value={refeicao.horarioLocal ?? ''} onChange={(evento) => atualizarRefeicao(indiceRefeicao, { ...refeicao, horarioLocal: evento.target.value })} /></label>
@@ -2476,6 +2528,7 @@ export function PlanoAlimentarProfissional({ pacienteId, podeGerenciar, aoAltera
                           ))}
                           <Botao type="button" onClick={() => atualizarRefeicao(indiceRefeicao, { ...refeicao, itens: [...refeicao.itens, novoItem()] })}><Plus size={16} /> Adicionar alimento</Botao>
                         </div>
+                        </fieldset>
                       </RefeicaoOrdenavel>
                     ))}
                       </SortableContext>
