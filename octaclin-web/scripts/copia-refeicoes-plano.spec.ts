@@ -90,6 +90,25 @@ function gerarChave(prefixo: string) {
 }
 gerarChave.proxima = 0;
 
+test('FOOD01 duplicar ou acrescentar conserva fatos sem transferir vínculo privado da medida', () => {
+  const origem = refeicaoFormulario();
+  const vinculo = { id: '10000000-0000-4000-8000-000000000001', revisao: 1, aplicacaoId: '10000000-0000-4000-8000-000000000002' };
+  const referencia = { nome: 'Colher pessoal', quantidadeReferencia: 1, pesoReferenciaGramas: 25 };
+  Object.assign(origem.itens[0], { unidade: 'Colher pessoal', quantidade: 2, porcaoGramas: 50, medidaCaseira: vinculo, referenciaMedidaCaseira: referencia });
+  origem.itens[0].substituicoes.push({ ...origem.itens[0], chaveCliente: 'alternativa', liberadaParaPaciente: true, preferida: false });
+  const duplicada = duplicarRefeicaoNoRascunho([origem], 0, gerarChave)[1];
+  const acrescentada = acrescentarItensDeRefeicao(refeicaoFormulario('destino'), origem.itens, gerarChave);
+  for (const item of [duplicada.itens[0], acrescentada.itens[1]]) {
+    for (const alimento of [item, ...item.substituicoes]) {
+      assert.equal(alimento.unidade, 'Colher pessoal');
+      assert.equal(alimento.porcaoGramas, 50);
+      assert.ok(!Object.hasOwn(alimento, 'medidaCaseira'));
+      assert.ok(!Object.hasOwn(alimento, 'referenciaMedidaCaseira'));
+    }
+  }
+  assert.equal((origem.itens[0] as typeof origem.itens[0] & { medidaCaseira: unknown }).medidaCaseira, vinculo);
+});
+
 test('copia refeição com novos IDs locais e preserva conteúdo clínico editável sem IDs de origem', () => {
   const copia = copiarRefeicaoParaFormulario(refeicaoApi(), gerarChave);
   const item = copia.itens[0];

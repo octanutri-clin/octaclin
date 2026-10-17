@@ -13,6 +13,19 @@ Este arquivo define quais comandos rodar antes de concluir fases. Use validacao 
   desktop/mobile, com axe na aba, paginacao, filtros, vazio e recuperacao.
 - Rodar tambem typechecks, builds, lint, linguagem, preflight e secrets.
 
+## FOOD01 — medidas caseiras personalizadas
+
+- Backend: testes do módulo `planos-alimentares` e migration1075; preservação
+  de snapshot, nonce, CAS e autorizações positivas/negativas.
+- PostgreSQL: recorte FOOD01 de `rls-isolamento-tenant.integracao.spec.ts` no
+  banco descartável de CI. `scripts/test-pa05-postgres-local.cjs --inventario`
+  oferece prova local focada sem Timescale/pgvector; registrar essa limitação.
+- Web: `test:authz`, `test:nutricao-plano` e `test:copia-refeicoes`. Playwright
+  `tests/visual/pa07-coordenacao-abas.spec.mjs` cobre FOOD01 e coordenação de abas
+  desktop/mobile, com dados sintéticos e Axe focado no seletor.
+- Typechecks, builds, lint, guardas, migration fora de banda, diff e secrets.
+  Testes não autorizam aplicar migration ou disponibilizar em ambiente externo.
+
 ## Setup de PATH no Windows
 
 Se `node` ou `pnpm` nao estiverem no PATH, use o runtime empacotado do Codex:

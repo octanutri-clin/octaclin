@@ -1,3 +1,6 @@
+import { ControladorMedidasCaseiras } from './apresentacao/controlador-medidas-caseiras';
+import { ServicoMedidasCaseiras } from './aplicacao/servico-medidas-caseiras';
+import { MedidaCaseiraOrm } from './infraestrutura/medida-caseira.orm';
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { UserActionLogOrm } from '../../infraestrutura/auditoria/user-action-log.orm';
@@ -62,6 +65,7 @@ const processadoresCompartilhamento = deveExecutarProcessadores() ? [Processador
       CatalogoComposicaoAlimentoOrm,
       FonteComposicaoAlimentoOrm,
       AlimentoComposicaoOrm,
+      MedidaCaseiraOrm,
       PacienteOrm,
       AvaliacaoAntropometricaOrm,
       LogDiarioRapidoOrm,
@@ -82,11 +86,13 @@ const processadoresCompartilhamento = deveExecutarProcessadores() ? [Processador
   controllers: [
     ControladorPlanosAlimentares,
     ControladorCatalogoAlimentos,
+    ControladorMedidasCaseiras,
     ControladorModelosPlanoAlimentar,
     ControladorReceitasNutricionais
   ],
   providers: [
     ServicoPlanosAlimentares,
+    ServicoMedidasCaseiras,
     ServicoModelosPlanoAlimentar,
     ServicoReceitasNutricionais,
     ServicoCompartilhamentoReceitas,
@@ -95,6 +101,7 @@ const processadoresCompartilhamento = deveExecutarProcessadores() ? [Processador
   ],
   exports: [
     ServicoPlanosAlimentares,
+    ServicoMedidasCaseiras,
     ServicoModelosPlanoAlimentar,
     ServicoReceitasNutricionais,
     ServicoCompartilhamentoReceitas

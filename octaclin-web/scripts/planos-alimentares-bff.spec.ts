@@ -13,6 +13,8 @@ import { GET as obterPlanoPortal } from '../app/api/portal/paciente/planos-alime
 import { GET as listarEscolhasPaciente } from '../app/api/pacientes/[id]/planos-alimentares/[planoId]/escolhas-paciente/route';
 import { GET as buscarAlimentos } from '../app/api/pacientes/[id]/planos-alimentares/alimentos/route';
 import { GET as buscarAlimentosModelo } from '../app/api/planos-alimentares/alimentos/route';
+import { GET as listarMedidasCaseiras, POST as criarMedidaCaseira } from '../app/api/planos-alimentares/alimentos/[alimentoId]/medidas-caseiras/route';
+import { PATCH as editarMedidaCaseira } from '../app/api/planos-alimentares/alimentos/[alimentoId]/medidas-caseiras/[medidaId]/route';
 import { GET as obterVersao } from '../app/api/pacientes/[id]/planos-alimentares/[planoId]/versoes/[numero]/route';
 import { GET as obterAcompanhamentoVersao } from '../app/api/pacientes/[id]/planos-alimentares/[planoId]/versoes/[numero]/acompanhamento/route';
 import { PUT as salvarRascunho } from '../app/api/pacientes/[id]/planos-alimentares/[planoId]/rascunho/route';
@@ -952,4 +954,71 @@ test('PA06 edição exige gerenciar, preserva escopo, documento, status e no-sto
     assert.equal(resposta.status, 409); assert.equal(resposta.headers.get('Cache-Control'), 'private, no-store');
     assert.deepEqual(chamadas, ['http://backend.octaclin.local/pacientes/paciente%2F1/planos-alimentares/plano%2F1/rascunho/edicao']);
   } finally { restaurarFetch(original); }
+});
+
+test('FOOD01 BFF lista medidas com paginação allowlist, UUID, sessão e no-store', async () => {
+  const original = global.fetch;
+  let url = '';
+  global.fetch = (async (entrada: string | URL | Request) => {
+    url = String(entrada);
+    return Response.json({ itens: [], total: 0, pagina: 2, limite: 10 });
+  }) as typeof global.fetch;
+  const params = { params: Promise.resolve({ alimentoId: '7a1bb690-b95b-4c9f-b179-06fa8e8d5030' }) };
+  try {
+    __clearCookies();
+    assert.equal((await listarMedidasCaseiras(new Request('http://localhost/api/medidas'), params)).status, 401);
+    __setCookies(cookiesSessaoValida(['planos_alimentares.gerenciar']));
+    assert.equal((await listarMedidasCaseiras(new Request('http://localhost/api/medidas'), params)).status, 403);
+    __setCookies(cookiesSessaoValida(['planos_alimentares.ler']));
+    const resposta = await listarMedidasCaseiras(new Request('http://localhost/api/medidas?pagina=2&limite=10&tenantId=outro'), params);
+    assert.equal(resposta.status, 200);
+    assert.equal(resposta.headers.get('Cache-Control'), 'private, no-store');
+    assert.equal(url, 'http://backend.octaclin.local/planos-alimentares/alimentos/7a1bb690-b95b-4c9f-b179-06fa8e8d5030/medidas-caseiras?pagina=2&limite=10');
+    const invalida = await listarMedidasCaseiras(new Request('http://localhost/api/medidas'), { params: Promise.resolve({ alimentoId: '../segredo' }) });
+    assert.equal(invalida.status, 400);
+  } finally { restaurarFetch(original); __clearCookies(); }
+});
+
+test('FOOD01 BFF cria e edita medidas somente com gerenciar, body limitado e UUIDs', async () => {
+  const original = global.fetch;
+  const chamadas: Array<{ url: string; method?: string; body?: string }> = [];
+  global.fetch = (async (entrada: string | URL | Request, init?: RequestInit) => {
+    chamadas.push({ url: String(entrada), method: init?.method, body: String(init?.body ?? '') });
+    return Response.json({ id: 'measure-id' });
+  }) as typeof global.fetch;
+  const paramsColecao = { params: Promise.resolve({ alimentoId: '7a1bb690-b95b-4c9f-b179-06fa8e8d5030' }) };
+  const paramsItem = { params: Promise.resolve({ alimentoId: '7a1bb690-b95b-4c9f-b179-06fa8e8d5030', medidaId: '45c4bc05-7e40-4807-9b75-df8c2e97a70c' }) };
+  const corpo = JSON.stringify({ chaveIdempotencia: '098ff2e3-0010-4ec3-a684-926450e047aa', nome: 'colher', quantidadeReferencia: 1, pesoReferenciaGramas: 25 });
+  try {
+    __setCookies(cookiesSessaoValida(['planos_alimentares.ler']));
+    assert.equal((await criarMedidaCaseira(new Request('http://localhost/api/medidas', { method: 'POST', body: corpo }), paramsColecao)).status, 403);
+    assert.equal((await editarMedidaCaseira(new Request('http://localhost/api/medidas', { method: 'PATCH', body: corpo }), paramsItem)).status, 403);
+    assert.equal(chamadas.length, 0);
+    __setCookies(cookiesSessaoValida(['planos_alimentares.gerenciar']));
+    const criada = await criarMedidaCaseira(new Request('http://localhost/api/medidas', { method: 'POST', body: corpo }), paramsColecao);
+    assert.equal(criada.status, 200);
+    assert.equal(criada.headers.get('Cache-Control'), 'private, no-store');
+    const editada = await editarMedidaCaseira(new Request('http://localhost/api/medidas', { method: 'PATCH', body: corpo }), paramsItem);
+    assert.equal(editada.status, 200);
+    assert.deepEqual(chamadas, [
+      { url: 'http://backend.octaclin.local/planos-alimentares/alimentos/7a1bb690-b95b-4c9f-b179-06fa8e8d5030/medidas-caseiras', method: 'POST', body: corpo },
+      { url: 'http://backend.octaclin.local/planos-alimentares/alimentos/7a1bb690-b95b-4c9f-b179-06fa8e8d5030/medidas-caseiras/45c4bc05-7e40-4807-9b75-df8c2e97a70c', method: 'PATCH', body: corpo }
+    ]);
+    const grande = await criarMedidaCaseira(new Request('http://localhost/api/medidas', { method: 'POST', body: 'x'.repeat(4097) }), paramsColecao);
+    assert.equal(grande.status, 413);
+    const uuidInvalido = await editarMedidaCaseira(new Request('http://localhost/api/medidas', { method: 'PATCH', body: '{}' }), { params: Promise.resolve({ alimentoId: 'x', medidaId: 'y' }) });
+    assert.equal(uuidInvalido.status, 400);
+  } finally { restaurarFetch(original); __clearCookies(); }
+});
+
+test('FOOD01 BFF responde falha de backend sem detalhes e com no-store', async () => {
+  __setCookies(cookiesSessaoValida(['planos_alimentares.ler']));
+  const original = global.fetch;
+  global.fetch = (async () => { throw new Error('erro interno sintético com detalhe privado'); }) as typeof global.fetch;
+  try {
+    const resposta = await listarMedidasCaseiras(new Request('http://localhost/api/medidas'), { params: Promise.resolve({ alimentoId: '7a1bb690-b95b-4c9f-b179-06fa8e8d5030' }) });
+    assert.equal(resposta.status, 502);
+    assert.equal(resposta.headers.get('Cache-Control'), 'private, no-store');
+    assert.deepEqual(await resposta.json(), { mensagem: 'Não foi possível conectar ao backend configurado para esta sessão.' });
+  } finally { restaurarFetch(original); __clearCookies(); }
 });

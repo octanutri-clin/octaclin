@@ -2,6 +2,7 @@ import type { FormulaEnergeticaApi, MetodoMacrosManualApi } from './plano-alimen
 import type { PreferenciasApresentacaoPlanoApi } from './preferencias-apresentacao-plano';
 import type { PrecondicaoEdicaoPlano } from './coordenador-edicao-plano';
 import type { CodigoMicronutrienteApi, MicronutrientesPor100gApi } from './plano-alimentar-api';
+import type { MedidaCaseiraAplicadaApi } from './medidas-caseiras-plano';
 /** Contrato editorial versionado. Não representa validação clínica. Sem persistência no navegador. */
 export type NumeroEdicao = number | string | null;
 /** O editor conserva texto parcial; interpretar um número é uma operação separada. */
@@ -58,6 +59,8 @@ export interface AlimentoEdicao {
   nutrientesPor100g?: NutrientesEdicao;
   micronutrientesPor100g?: MicronutrientesEdicao;
   fonteRotulo?: string;
+  /** Identidade do vínculo do rascunho; não é transportada a cópias. */
+  medidaCaseira?: MedidaCaseiraAplicadaApi | null;
 }
 export interface AlternativaEdicao extends AlimentoEdicao { liberadaParaPaciente?: boolean; preferida?: boolean }
 export interface ItemEdicao extends AlimentoEdicao { substituicoes?: AlternativaEdicao[]; substituicoesVisiveisInicialmente?: NumeroEdicao }

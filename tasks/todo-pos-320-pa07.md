@@ -50,3 +50,14 @@ Evidências: [núcleo](../docs/governance/EVIDENCIAS_PA07_NUCLEO_2026-10-16.md) 
 [Integração final/limites](../docs/governance/RELATORIO_PA07_2026-10-16.md).
 Próxima ação: PR/gates com Sol6.1 médio; consultar também
 [handoff T04 concluído](handoff-pos-320-pa07-luna.md).
+
+
+## Fechamento reconciliado em 2026-10-17
+
+PR #423 mergeada em `d36b12e7`, confirmada no GitHub. CI38975905269 SUCCESS
+no HEAD `2b9a8074`: Backend, Web, Demo, PR Gate e demais jobs aplicáveis PASS;
+scanners PASS. SBOM provenance SKIPPED conforme workflow. T06/T07 acima
+registram o checkpoint anterior ao CI: acompanhamento/entrega encerrados,
+revisão independente permanece SKIPPED (não executada), sem transformá-la em
+PASS. Relatório local e suas limitações preservados. Nenhum deploy/migration
+externa inferido do merge. Próximo planejamento: FOOD01.

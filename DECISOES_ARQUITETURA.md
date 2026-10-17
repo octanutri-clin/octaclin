@@ -423,3 +423,26 @@ sem consultar novamente o catálogo. Lacunas não viram zero. A prévia/impresso
 para entrega ao paciente respeita ON/OFF; consulta histórica profissional é
 separada. Documento já obtido fora do sistema não pode ser recolhido por ON/OFF.
 Procedimento operacional e limite de rollback: RUNBOOK_PRODUCAO.md.
+
+## FOOD01 — equivalência aplicada separada da biblioteca (em desenvolvimento)
+
+A biblioteca de medidas é vinculada ao UUID exato de alimento do catálogo,
+com tenant e proprietário profissional; escopo pessoal é o padrão e escopo de
+clínica permite uso por colegas autorizados. Não agrupar alimentos por nome ou
+reaplicar equivalências entre versões de fontes. Conteúdo livre e pedido
+original são cifrados; endpoints projetam somente campos permitidos.
+
+A seleção editorial envia identidade/revisão/nonce de aplicação, sem snapshot
+numérico autoritativo. A primeira aplicação resolve autorização/fonte/revisão
+na transação do rascunho; contexto cifrado/schema1 por chave do item preserva
+as aplicações seguintes, mesmo se a biblioteca mudar. Reaplicação com nonce
+novo revalida; exclusão de item elimina contexto reutilizável. Null explícito
+desvincula; omissão legada preserva apenas quando identidade e fatos coincidem.
+
+O profissional recebe a base mínima da referência aplicada para reabrir o
+rascunho; publicações/portal/PDF recebem apenas suas projeções existentes.
+Quantidade/peso em gramas têm limite e precisão explícitos; não há inferência
+de densidade. Motor nutricional, CAS, criptografia e isolamento existentes
+continuam autoritativos. Migration1075 só ensaiada em banco descartável neste
+checkpoint; integração/CI/implantação são etapas separadas. Plano e limites em
+`tasks/plan-pos-320-food01.md`.

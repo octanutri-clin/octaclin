@@ -14,6 +14,7 @@ export interface AlimentoEdicao {
   nutrientesPor100g?: NutrientesEdicao;
   micronutrientesPor100g?: Partial<Record<CodigoMicronutriente, NumeroEdicao>>;
   fonteRotulo?: string;
+  medidaCaseira?: { id: string; revisao: number; aplicacaoId: string } | null;
 }
 export interface AlternativaEdicao extends AlimentoEdicao { liberadaParaPaciente?: boolean; preferida?: boolean }
 export interface ItemEdicao extends AlimentoEdicao { substituicoes?: AlternativaEdicao[]; substituicoesVisiveisInicialmente?: NumeroEdicao }
@@ -47,7 +48,7 @@ export interface DocumentoEdicaoPlano {
 // Reserva espaço para a precondição no parser HTTP existente de 100KiB.
 export const LIMITE_BYTES_EDICAO_PLANO = 96 * 1024;
 const camposNumero = ['fatorAtividade', 'ajusteEnergeticoKcal', 'carboidratosBasisPoints', 'proteinasBasisPoints', 'gordurasBasisPoints', 'metaEnergeticaManualKcal', 'carboidratosGPorKg', 'proteinasGPorKg', 'gordurasGPorKg'];
-const camposAlimento = ['chaveCliente', 'alimentoComposicaoId', 'descricao', 'quantidade', 'unidade', 'porcaoGramas', 'nutrientesPor100g', 'micronutrientesPor100g', 'fonteRotulo'];
+const camposAlimento = ['chaveCliente', 'alimentoComposicaoId', 'descricao', 'quantidade', 'unidade', 'porcaoGramas', 'nutrientesPor100g', 'micronutrientesPor100g', 'fonteRotulo', 'medidaCaseira'];
 const camposNutriente = ['energiaKcal', 'proteinasG', 'carboidratosG', 'gordurasG', 'fibrasG', 'sodioMg'];
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
@@ -108,6 +109,11 @@ export function validarDocumentoEdicaoPlano(valor: unknown): DocumentoEdicaoPlan
     chave(a.chaveCliente); referencia(a.alimentoComposicaoId);
     texto(a.descricao, 240); texto(a.unidade, 40); texto(a.fonteRotulo, 300);
     numero(a.quantidade); numero(a.porcaoGramas);
+    if (a.medidaCaseira !== undefined && a.medidaCaseira !== null) {
+      const m = objeto(a.medidaCaseira, ['id', 'revisao', 'aplicacaoId']);
+      if (typeof m.id !== 'string' || !uuid.test(m.id) || typeof m.aplicacaoId !== 'string' || !uuid.test(m.aplicacaoId) ||
+          !Number.isInteger(m.revisao) || Number(m.revisao) < 1 || Number(m.revisao) > 2147483647 || !a.alimentoComposicaoId) falhar();
+    }
     if (a.nutrientesPor100g !== undefined) {
       const nutrientes = objeto(a.nutrientesPor100g, camposNutriente);
       for (const n of Object.values(nutrientes)) numero(n);

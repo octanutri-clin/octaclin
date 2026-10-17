@@ -1,3 +1,7 @@
+import { AlimentoComposicaoOrm } from '../../modulos/planos-alimentares/infraestrutura/alimento-composicao.orm';
+import { FonteComposicaoAlimentoOrm } from '../../modulos/planos-alimentares/infraestrutura/fonte-composicao-alimento.orm';
+import { ServicoMedidasCaseiras } from '../../modulos/planos-alimentares/aplicacao/servico-medidas-caseiras';
+import { MedidaCaseiraOrm } from '../../modulos/planos-alimentares/infraestrutura/medida-caseira.orm';
 import { ServicoPortalPaciente } from '../../modulos/pacientes/aplicacao/servico-portal-paciente';
 import { PlanoAlimentarEscolhaPacienteOrm } from '../../modulos/planos-alimentares/infraestrutura/plano-alimentar-escolha-paciente.orm';
 import 'reflect-metadata';
@@ -245,6 +249,9 @@ descrever('RLS e isolamento multi-tenant integral em Postgres real', () => {
         PreferenciaNotificacaoUsuarioOrm,
         ResumoNotificacaoUsuarioOrm,
         MaterialEducativoOrm,
+        MedidaCaseiraOrm,
+        AlimentoComposicaoOrm,
+        FonteComposicaoAlimentoOrm,
         PlanoAlimentarOrm,
         PlanoAlimentarVersaoOrm,
         PlanoAlimentarItemOrm,
@@ -1640,6 +1647,85 @@ descrever('RLS e isolamento multi-tenant integral em Postgres real', () => {
     expect(esperou).toBe(true);
     return resultados;
   }
+
+  async function prepararFood01() {
+    const c=await prepararCenarioPa06(`food01-${randomUUID()}`);
+    await comoTenant(tenantA);
+    const fonteId=randomUUID(),alimentoId=randomUUID(),catalogoId=randomUUID();
+    await cliente!.query('insert into catalogos_composicao_alimentos(id,codigo,nome) values($1,$2,$3)',[catalogoId,`fixture-${catalogoId}`,'Catálogo sintético']);
+    await cliente!.query(`insert into fontes_composicao_alimentos
+      (id,catalogo_id,codigo,nome,versao,base_codigo,licenca,hash_conteudo,url_artefato,checksum_arquivo,capturada_em,esquema_versao,esquema_nutrientes,direito_uso_status,direito_uso_referencia,direito_uso_aprovado_em,responsavel_aprovacao)
+      select $1,id,codigo,'Fonte sintética',$2,'fixture','Somente fixture',$3,'https://example.test/sintetico',$3,now(),'fixture','{"fixture":true}'::jsonb,'aprovado','Fixture sintética',now(),'Teste descartável'
+      from catalogos_composicao_alimentos where id=$4`,[fonteId,randomUUID(),'a'.repeat(64),catalogoId]);
+    await cliente!.query(`insert into alimentos_composicao(id,fonte_id,codigo_origem,nome,energia_kcal,proteinas_g,carboidratos_g,lipidios_g) values($1,$2,'fixture','Alimento sintético FOOD01',100,10,20,2)`,[alimentoId,fonteId]);
+    const importacaoId=randomUUID();
+    await cliente!.query(`insert into importacoes_catalogo_composicao(id,fonte_versao_id,checksum_arquivo,hash_conteudo,status,total_registros,executor,concluida_em) values($1,$2,$3,$3,'concluida',1,'Fixture sintética',now())`,[importacaoId,fonteId,'a'.repeat(64)]);
+    await cliente!.query('update alimentos_composicao set importacao_id=$1,hash_registro=$2 where id=$3',[importacaoId,'b'.repeat(64),alimentoId]);
+    await cliente!.query("select set_config('app.catalogo_ator','fixture',false),set_config('app.catalogo_motivo','Fixture sintética descartável',false)");
+    await cliente!.query("update fontes_composicao_alimentos set situacao='ativa' where id=$1",[fonteId]);
+    const biblioteca=new ServicoMedidasCaseiras(executorTenant!,c.cripto);
+    const criar={chaveIdempotencia:randomUUID(),nome:'colher rasa',quantidadeReferencia:1,pesoReferenciaGramas:25};
+    const medida=await biblioteca.criar(tenantA,alimentoId,c.usuario,criar);
+    Object.assign(c.documento.refeicoes[0].itens[0],{alimentoComposicaoId:alimentoId,quantidade:2.5,porcaoGramas:999,medidaCaseira:{id:medida.id,revisao:1,aplicacaoId:randomUUID()}});
+    return {...c,biblioteca,criar,medida,alimentoId};
+  }
+
+  it('FOOD01 RLS e serviço isolam tenant, profissional e escopo sem expor cipher',async()=>{
+    const c=await prepararFood01();
+    const outro=await prepararCenarioPa06('food01-outro');
+    expect((await c.biblioteca.listar(tenantA,c.alimentoId,outro.usuario,{})).itens).toHaveLength(0);
+    await expect(c.biblioteca.atualizar(tenantA,c.alimentoId,c.medida.id,outro.usuario,{revisaoEsperada:1,ativa:false})).rejects.toThrow('Medida não encontrada');
+    const compartilhada=await c.biblioteca.criar(tenantA,c.alimentoId,c.usuario,{...c.criar,chaveIdempotencia:randomUUID(),escopo:'clinica'});
+    const lista=await c.biblioteca.listar(tenantA,c.alimentoId,outro.usuario,{});
+    expect(lista.itens).toHaveLength(1);expect(lista.itens[0]).toMatchObject({id:compartilhada.id,podeEditar:false});
+    expect(JSON.stringify(lista)).not.toMatch(/profissionalId|tenantId|Criptografado|chaveIdempotencia/);
+    await comoTenant(tenantB);
+    expect((await cliente!.query('select id from medidas_caseiras_alimentos where id=$1',[c.medida.id])).rowCount).toBe(0);
+    await comoTenant(undefined);
+    expect((await cliente!.query('select id from medidas_caseiras_alimentos')).rowCount).toBe(0);
+    await comoTenant(tenantA);
+    await expect(cliente!.query('update medidas_caseiras_alimentos set profissional_id=$1 where id=$2',[profissionalIdTenantB,c.medida.id])).rejects.toThrow();
+  },60000);
+
+  it('FOOD01 criação idempotente e CAS concorrentes em PostgreSQL real',async()=>{
+    const c=await prepararFood01();const entrada={...c.criar,chaveIdempotencia:randomUUID()};
+    const [a,b]=await Promise.all([c.biblioteca.criar(tenantA,c.alimentoId,c.usuario,entrada),c.biblioteca.criar(tenantA,c.alimentoId,c.usuario,entrada)]);
+    expect(a.id).toBe(b.id);
+    await expect(c.biblioteca.criar(tenantA,c.alimentoId,c.usuario,{...entrada,nome:'outra'})).rejects.toThrow('outros dados');
+    const corrida=await Promise.allSettled([c.biblioteca.atualizar(tenantA,c.alimentoId,a.id,c.usuario,{revisaoEsperada:1,pesoReferenciaGramas:20}),c.biblioteca.atualizar(tenantA,c.alimentoId,a.id,c.usuario,{revisaoEsperada:1,pesoReferenciaGramas:30})]);
+    expect(corrida.filter(r=>r.status==='fulfilled')).toHaveLength(1);
+    expect(corrida.filter(r=>r.status==='rejected')).toHaveLength(1);
+  },60000);
+
+  it('FOOD01 preserva fatos após desativação/transferência e bloqueia nova aplicação privada',async()=>{
+    const c=await prepararFood01();
+    const salvar=(doc:any,revisao:number,usuario=c.usuario)=>c.servico.salvarEdicaoRascunho(tenantA,c.pacienteId,c.planoId,usuario,{rascunhoIdEsperado:c.versaoId,rascunhoRevisaoEsperada:revisao,documento:doc});
+    const salvo=await salvar(c.documento,0);
+    expect(salvo.documentoEdicao!.refeicoes[0].itens[0]).toMatchObject({porcaoGramas:62.5,unidade:'colher rasa'});
+    await c.biblioteca.atualizar(tenantA,c.alimentoId,c.medida.id,c.usuario,{revisaoEsperada:1,ativa:false});
+    const outro=await prepararCenarioPa06('food01-transferencia');
+    await comoTenant(tenantA);await cliente!.query('update pacientes set profissional_responsavel_id=$1 where id=$2',[outro.profissionalId,c.pacienteId]);
+    await expect(salvar(salvo.documentoEdicao!,1)).rejects.toThrow('Paciente nao encontrado');
+    const apos=await salvar({...salvo.documentoEdicao,observacoes:'Mudança sintética'},1,outro.usuario);
+    expect(apos.documentoEdicao!.refeicoes[0].itens[0].porcaoGramas).toBe(62.5);
+    const nova=JSON.parse(JSON.stringify(apos.documentoEdicao));nova.refeicoes[0].itens[0].medidaCaseira.aplicacaoId=randomUUID();
+    await expect(salvar(nova,2,outro.usuario)).rejects.toThrow('Medida não encontrada');
+    await c.servico.revisar(tenantA,c.pacienteId,c.planoId,outro.usuario,{rascunhoIdEsperado:c.versaoId,rascunhoRevisaoEsperada:2});
+    await c.servico.publicar(tenantA,c.pacienteId,c.planoId,outro.usuario,{rascunhoIdEsperado:c.versaoId,rascunhoRevisaoEsperada:3});
+    const proj=await c.servico.obterApresentacaoPaciente(tenantA,c.pacienteId,c.planoId,1,outro.usuario);
+    expect(JSON.stringify(proj)).not.toMatch(/medidaCaseira|aplicacaoId|profissionalId|conteudoCriptografado/);
+    expect(JSON.stringify(proj)).toContain('colher rasa');
+  },60000);
+
+  it('FOOD01 aplicação e desativação serializam, sem reativação por replay',async()=>{
+    const c=await prepararFood01();
+    const resultado=await disputarPa06(
+      executor=>new ServicoPlanosAlimentares(executor,c.cripto).salvarEdicaoRascunho(tenantA,c.pacienteId,c.planoId,c.usuario,{rascunhoIdEsperado:c.versaoId,rascunhoRevisaoEsperada:0,documento:c.documento}),
+      ()=>c.biblioteca.atualizar(tenantA,c.alimentoId,c.medida.id,c.usuario,{revisaoEsperada:1,ativa:false}),
+      MedidaCaseiraOrm,'pessimistic_read');
+    expect(resultado.every(r=>r.status==='fulfilled')).toBe(true);
+    await expect(executorTenant!.executar(tenantA,g=>c.biblioteca.resolverAplicacao(g,tenantA,c.usuario,c.alimentoId,{id:c.medida.id,revisao:1},1))).rejects.toThrow('alterada ou desativada');
+  },60000);
 
   it('PA06c calcula snapshots cifrados com micros, ausência explícita e projeções mínimas sob RLS', async () => {
     const c = await prepararCenarioPa06('pa06c-snapshots');

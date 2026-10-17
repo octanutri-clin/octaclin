@@ -1,22 +1,31 @@
 # OctaClin - Status atual do projeto
 
-Atualizado em 2026-10-16.
+Atualizado em 2026-10-17.
 
 ## Fase ativa
 
-- **PA07 — implementação em validação final**, base `62a50104`.
-  D01 confirmada: segunda aba em consulta com retomada explícita. Núcleo,
-  interface Luna e integração Sol implementados. Corrigidos retorno após recarga,
-  retomada de plano publicado sem rascunho e cópia em voo da geração anterior.
-  Duas abas reais desktop/mobile 16/16 PASS; backend 343/343, PostgreSQL15
-  descartável 24 PASS (29 filtrados), BFF/coordenação/autorização focados PASS.
-  Regressões de produção aprovadas após correções de harness; gates locais PASS.
-  CI do HEAD e revisão cruzada devem ser conferidos na PR desta branch.
-  Sem backend/schema/dependência nova ou operação
-  externa. Só R071 consultado/pinado. Não inferir disponibilização/produção.
-  Sol6.1 médio suficiente para concluir; não há troca de modelo pendente.
-  Plano/checklist `tasks/plan-pos-320-pa07.md`/`tasks/todo-pos-320-pa07.md`;
-  resultados e limites em `docs/governance/RELATORIO_PA07_2026-10-16.md`.
+- **FOOD01 — backend e interface implementados, validação final**, base `d36b12e7`.
+  Desenvolvimento autorizado em “Pode seguir”; migration1075 só descartável. D01–D03 confirmadas: medidas pessoais ou da clínica com padrão
+  pessoal; peso em gramas explícito; alterações da biblioteca preservam itens
+  existentes, inclusive rascunhos. Só R017/OpenNutriTracker examinado como
+  inspiração GPL, sem código/dependência incorporados. Plano/checklist:
+  `tasks/plan-pos-320-food01.md`/`tasks/todo-pos-320-food01.md`.
+  T02–T06 implementados; integração Sol T07–T08 em fechamento. PostgreSQL
+  descartável28 PASS/29 filtrados, backend focados407 PASS e Playwright
+  FOOD01/PA07 desktop/mobile32 PASS nesta revisão. Corrigida perda do cadastro
+  da biblioteca durante autosave. Evidências/limites:
+  `docs/governance/RELATORIO_FOOD01_2026-10-17.md`.
+  PR única Draft #424 aberta. Backend, Web, governança e scanners passaram
+  no run39028272706 de `fd5299d1`; Demo ainda em execução na conferência.
+  Próximo passo: CI do HEAD final e revisão humana. A migration1075 precisa
+  preceder o novo backend; aplicação externa/deploy seguem separados conforme
+  `RUNBOOK_PRODUCAO.md`. Sem operação externa nesta entrega.
+- **PA07 — integrada pela PR #423**, merge `d36b12e7` confirmado em
+  2026-10-17. CI38975905269 do HEAD `2b9a8074` SUCCESS, incluindo Backend,
+  Web, Demo e PR Gate. Scanners SUCCESS; SBOM provenance SKIPPED conforme
+  workflow. Revisão independente não executada; não inferir aprovação dela
+  nem deploy. Evidências locais/limites preservados em
+  `docs/governance/RELATORIO_PA07_2026-10-16.md` e checklist PA07.
 - **PA06 — três entregas integradas**, #420 autosave/rascunho parcial,
   #421 ativação/portal plural e #422 cálculo combinado/micros, merge `62a50104`.
   CI final run38934810307 do HEAD `5eac6eab` SUCCESS, reconferido nesta rodada;

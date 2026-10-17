@@ -2161,3 +2161,38 @@ Manter backend compatível com ON/OFF; corrigir por nova migration aditiva quand
 necessário. Reverter somente a UI não autoriza reverter o backend para uma versão
 que entregue conteúdo OFF. Não reativar publicações ou recomputar histórico para
 contornar incompatibilidade. PDFs já baixados permanecem fora do controle online.
+
+## FOOD01 — biblioteca de medidas caseiras e migration1075
+
+Este procedimento é uma operação posterior autorizada separadamente. Testes
+descartáveis e CI não comprovam a aplicação em staging/produção.
+
+1. Identificar ambiente, projeto/branch, banco e roles owner/runtime. Registrar
+   aprovação e conferir backup/restore conforme o procedimento vigente.
+2. Aplicar a migration1075 fora de banda, com owner, **antes de publicar o novo
+   backend**. Os leitores de versões passam a selecionar a nova coluna; código
+   novo com schema antigo pode indisponibilizar as rotas de planos.
+3. Conferir o registro `MedidasCaseiras1720000001075`, a coluna
+   `plano_alimentar_versoes.medidas_caseiras_snapshot_criptografado`, a tabela
+   `medidas_caseiras_alimentos`, FK tenant/profissional, policy e FORCE RLS.
+   Verificar acesso da role runtime não owner/NOBYPASSRLS: SELECT/INSERT/UPDATE
+   na biblioteca e permissões já existentes sobre versões. Conceder somente
+   privilégios DML necessários pelo processo vigente; não conceder owner/DDL
+   nem desabilitar RLS para contornar erro de permissão.
+4. Publicar backend e depois BFF/UI compatíveis. Com fixtures sintéticas,
+   confirmar pessoal/clínica, edição por proprietário, CAS409, desativação sem
+   alterar itens, aplicação e recarga da referência, cópia sem nonce e entregas
+   portal/PDF somente com fatos publicados. Conferir negações de outro tenant
+   e profissional sem expor conteúdo em evidências.
+5. Registrar versão/resultado e somente então disponibilizar o fluxo. Esta
+   entrega não realiza carga de catálogo nem modifica os gates de suas fontes.
+
+Rollback: suspender novas aplicações pela UI, mantendo tabela, coluna e conteúdo
+cifrado e um backend compatível com os snapshots FOOD01. Não reimplantar o
+backend anterior à FOOD01 depois de gravar `medidaCaseira`: o parser editorial
+anterior rejeita campos extras e torna esses rascunhos `indisponivel`. Se houver
+falha no backend, usar uma correção compatível que preserve a leitura do novo
+contrato; reverter somente a UI não autoriza regredir esse leitor. O `down`1075
+recusa apagar dados. Não remover descriptors/contextos, recalcular publicações
+nem sobrescrever documentos para forçar compatibilidade. Corrigir schema com
+nova migration aditiva caso necessário.

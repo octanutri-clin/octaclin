@@ -2,6 +2,23 @@ import type { DocumentoEdicaoPlano, SalvarEdicaoPlanoEntrada } from './edicao-pl
 import type { PrecondicaoEdicaoPlano } from './coordenador-edicao-plano';
 import type { PreferenciasApresentacaoPlanoApi, EstadoApresentacaoPlanoApi } from './preferencias-apresentacao-plano';
 import type { PlanoAlimentarPacienteApi } from './portal-api';
+import type { MedidaCaseiraReferenciaApi } from './medidas-caseiras-plano';
+
+export interface MedidaCaseiraAlimentoApi extends MedidaCaseiraReferenciaApi {
+  id: string;
+  alimentoComposicaoId: string;
+  escopo: 'pessoal' | 'clinica';
+  revisao: number;
+  ativa: boolean;
+  podeEditar: boolean;
+}
+
+export interface MedidasCaseirasPaginadasApi {
+  itens: MedidaCaseiraAlimentoApi[];
+  total: number;
+  pagina: number;
+  limite: number;
+}
 
 export type FormulaEnergeticaApi =
   | 'mifflin_st_jeor_1990'
@@ -225,6 +242,8 @@ export interface VersaoPlanoAlimentarApi {
   rascunhoRevisao?: number;
   edicaoEstado?: 'legado' | 'pendente' | 'materializada' | 'indisponivel';
   documentoEdicao?: DocumentoEdicaoPlano;
+  /** Referências do snapshot do rascunho; exclusivas da projeção profissional. */
+  medidasCaseirasAplicadas?: Record<string, MedidaCaseiraReferenciaApi>;
   apresentacaoEstado?: EstadoApresentacaoPlanoApi;
   apresentacaoRevisao?: number;
   preferenciasApresentacao?: PreferenciasApresentacaoPlanoApi;
@@ -614,6 +633,39 @@ export function buscarAlimentosPlanoAlimentar(
   return requisitar<PaginaAlimentosApi>(
     `${basePaciente(pacienteId)}/alimentos${montarConsulta({ ...consulta })}`,
     { signal }
+  );
+}
+
+export function listarMedidasCaseirasAlimento(alimentoId: string, pagina: number, limite: number, signal?: AbortSignal) {
+  return requisitar<MedidasCaseirasPaginadasApi>(
+    `/api/planos-alimentares/alimentos/${encodeURIComponent(alimentoId)}/medidas-caseiras${montarConsulta({ pagina, limite })}`,
+    { signal }
+  );
+}
+
+export function criarMedidaCaseiraAlimento(alimentoId: string, entrada: {
+  chaveIdempotencia: string;
+  nome: string;
+  quantidadeReferencia: number;
+  pesoReferenciaGramas: number;
+  escopo?: 'pessoal' | 'clinica';
+}) {
+  return requisitar<MedidaCaseiraAlimentoApi>(
+    `/api/planos-alimentares/alimentos/${encodeURIComponent(alimentoId)}/medidas-caseiras`,
+    { method: 'POST', ...corpoJson(entrada) }
+  );
+}
+
+export function atualizarMedidaCaseiraAlimento(alimentoId: string, medidaId: string, entrada: {
+  revisaoEsperada: number;
+  nome?: string;
+  quantidadeReferencia?: number;
+  pesoReferenciaGramas?: number;
+  ativa?: false;
+}) {
+  return requisitar<MedidaCaseiraAlimentoApi>(
+    `/api/planos-alimentares/alimentos/${encodeURIComponent(alimentoId)}/medidas-caseiras/${encodeURIComponent(medidaId)}`,
+    { method: 'PATCH', ...corpoJson(entrada) }
   );
 }
 

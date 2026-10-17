@@ -1,3 +1,4 @@
+import { ServicoMedidasCaseiras } from './servico-medidas-caseiras';
 import { randomUUID } from 'crypto';
 import { BadRequestException, ConflictException, ForbiddenException, NotFoundException } from '@nestjs/common';
 import { EntityManager } from 'typeorm';
@@ -1748,6 +1749,44 @@ describe('ServicoPlanosAlimentares', () => {
       possuiCondicaoEspecial: false, aplicabilidadeFormulaConfirmada: true,
       objetivos: 'Objetivo sintético de acompanhamento',
       justificativaDivergenciaClinica: 'Planejamento sintético revisado individualmente.'
+    });
+    it('FOOD01 resolve no servidor, cifra contexto e preserva após perda de acesso à biblioteca', async () => {
+      const alimentoId='10000000-0000-4000-8000-000000000020';
+      const fonteId='10000000-0000-4000-8000-000000000021';
+      repositorios.get(AlimentoComposicaoOrm)!.registros.push({id:alimentoId,fonteId});
+      repositorios.get(FonteComposicaoAlimentoOrm)!.registros.push({id:fonteId,situacao:'ativa'});
+      const documento=documentoParcial();
+      Object.assign(documento.refeicoes[0].itens[0],{alimentoComposicaoId:alimentoId,quantidade:2.5,porcaoGramas:999,medidaCaseira:{id:alimentoId,revisao:1,aplicacaoId:fonteId}});
+      const resolver=jest.spyOn(ServicoMedidasCaseiras.prototype,'resolverAplicacao').mockResolvedValue({quantidade:2.5,unidade:'colher',porcaoGramas:62.5,referencia:{id:alimentoId,revisao:1,nome:'colher',quantidadeReferencia:1,pesoReferenciaGramas:25}});
+      try {
+        const salvo=await salvarEdicao(documento);
+        expect(salvo.documentoEdicao?.refeicoes[0].itens[0]).toMatchObject({unidade:'colher',porcaoGramas:62.5});
+        expect(salvo).toHaveProperty('medidasCaseirasAplicadas',{'item-sintetico':{nome:'colher',quantidadeReferencia:1,pesoReferenciaGramas:25}});
+        expect(Buffer.isBuffer((repositorios.get(PlanoAlimentarVersaoOrm)!.registros[0] as any).medidasCaseirasSnapshotCriptografado)).toBe(true);
+        expect(JSON.parse(criptografia.descriptografar((repositorios.get(PlanoAlimentarVersaoOrm)!.registros[0] as any).medidasCaseirasSnapshotCriptografado))).toMatchObject({schemaVersao:1,contextos:{'item-sintetico':expect.any(Object)}});
+        resolver.mockRejectedValue(new ForbiddenException('Revogado'));
+        const novo=salvo.documentoEdicao!;
+        novo.observacoes='Outro campo';
+        expect((await salvarEdicao(novo,1)).documentoEdicao?.refeicoes[0].itens[0].porcaoGramas).toBe(62.5);
+        expect(resolver).toHaveBeenCalledTimes(1);
+      } finally {resolver.mockRestore();}
+    });
+    it('FOOD01 falha fechada com snapshot corrompido ou schema desconhecido', async () => {
+      const rascunho=repositorios.get(PlanoAlimentarVersaoOrm)!.registros[0] as any;
+      for (const valor of [Buffer.from('cipher-invalido'),criptografia.criptografar(JSON.stringify({schemaVersao:2,contextos:{}}))]) {
+        rascunho.medidasCaseirasSnapshotCriptografado=valor;
+        await expect(salvarEdicao(documentoParcial())).rejects.toThrow('Referência de medida indisponível.');
+        expect(repositorios.get(PlanoAlimentarVersaoOrm)!.save).not.toHaveBeenCalled();
+      }
+    });
+    it('FOOD01 não transforma falha de autorização de medida em sucesso editorial', async () => {
+      const documento=documentoParcial();
+      Object.assign(documento.refeicoes[0].itens[0],{alimentoComposicaoId:AVALIACAO_ID,medidaCaseira:{id:AVALIACAO_ID,revisao:1,aplicacaoId:PLANO_ID}});
+      const resolver=jest.spyOn(ServicoMedidasCaseiras.prototype,'resolverAplicacao').mockRejectedValue(new ForbiddenException('Revogado'));
+      try {
+        await expect(salvarEdicao(documento)).rejects.toBeInstanceOf(ForbiddenException);
+        expect(repositorios.get(PlanoAlimentarVersaoOrm)!.save).not.toHaveBeenCalled();
+      } finally {resolver.mockRestore();}
     });
     it.each(['-', '-1'])('preserva micros manuais pendentes %s sem materializar nem publicar', async valor => {
       const documento = documentoCompleto();
