@@ -1,15 +1,15 @@
 # FOOD02 — checklist
 
 Base `95e9f33d`, PR424 integrada. [Plano/contratos](plan-pos-320-food02.md).
-Branch `feat/pos320-food02-planejamento`, apenas planejamento nesta etapa.
+Branch `feat/pos320-food02-planejamento`, backend em implementação autorizada.
 
 - [x] T00 — main/merge/CI conferidos; gaps e referências específicas examinados;
   D01–D03 confirmadas explicitamente pelo proprietário.
 - [x] D01 — pessoal ou clínica, pessoal por padrão; criador edita/desativa.
 - [x] D02 — por100g ou porção em gramas; ausente não vira zero.
 - [x] D03 — preservar itens existentes, inclusive rascunhos.
-- [ ] Autorização de implementação FOOD02 após consolidação.
-- [ ] T01 — normalização/DTOs/contratos em RED/GREEN.
+- [x] Autorização: “Pode seguir, sol médio”; executar T01–T05 antes da troca.
+- [x] T01 — normalização/DTOs em RED/GREEN:65 testes incluindo regressões de micros.
 - [ ] T02 — migration aditiva candidata1076, ORM, registro, RLS/FK/XOR.
 - [ ] T03 — serviço/controlador da biblioteca e pesquisa protegida.
 - [ ] T04 — aplicação/snapshots, medidas FOOD01 e todos os caminhos de save/cópia.

@@ -1,8 +1,8 @@
 # FOOD02 — alimentos reutilizáveis no editor
 
 > **For agentic workers:** usar `superpowers:executing-plans` por tarefa, com
-> TDD e um escritor ativo. Não delegar automaticamente. Este plano ainda não
-> autoriza implementação nem operação externa.
+> TDD e um escritor ativo. Não delegar automaticamente. Implementação T01–T05 autorizada em “Pode seguir, sol médio”. Operação externa
+> continua sem autorização.
 
 **Objetivo:** cadastrar, localizar e aplicar alimentos personalizados no editor
 profissional, preservando composição, proveniência e histórico.
@@ -43,8 +43,8 @@ aceites inferidos da FOOD01.
 | D03 | Edição/desativação não muda aplicações anteriores, inclusive rascunhos; atualização por reaplicação explícita | CONFIRMADA |
 
 Os contratos abaixo incorporam as três respostas. Detalhes de engenharia podem
-ser resolvidos pelo executor sem reabrir essas decisões. Esta etapa continua
-sendo planejamento; implementação será o próximo trabalho.
+ser resolvidos pelo executor sem reabrir essas decisões. Implementação backend iniciada após “Pode seguir, sol médio”, com pausa
+prevista antes da interface/BFF.
 
 Escopo confirmado: criação/edição/desativação, busca e aplicação no item principal
 e nas alternativas. Sem código de barras/câmera, uploads/OCR, novas fontes,

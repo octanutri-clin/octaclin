@@ -73,6 +73,13 @@ export function numeroDaEscala8(valor: bigint): number {
   if (valor < 0n || valor > MAXIMO) throw new LimitePrecisaoNutricionalError();
   return Number(valor) / Number(ESCALA);
 }
+/** Normalização única da razão decimal original; usada na composição custom. */
+export function normalizarNutrientePor100g(valor: number, baseGramas: number): number {
+  decimalParaEscala8(valor);
+  const v = decimalComoRazao(valor), b = decimalComoRazao(baseGramas);
+  if (!b.numerador) throw new Error('Base inválida.');
+  return numeroDaEscala8(dividirHalfUp(v.numerador * 100n * b.denominador * ESCALA, v.denominador * b.numerador));
+}
 export function somarEscala8(valores: readonly number[]): number {
   return numeroDaEscala8(valores.reduce((soma, valor) => soma + decimalParaEscala8(valor), 0n));
 }
