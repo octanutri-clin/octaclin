@@ -163,10 +163,10 @@ Não arquivado na consulta. Referência do catálogo/matriz: R017, sugestão14.
 | T07 | Regressões e revisão | T06 | Backend/Web/BFF/portal/PDF e duas abas; gates proporcionais e achados tratados |
 | T08 | Evidências e PR única | T07 | Diff/secrets limpos, CI do HEAD, relatório e limites operacionais explícitos |
 
-T02–T05: Sol6.1 médio. Luna alto pode executar T06 após contrato/backend
-estáveis e handoff com fixtures sintéticas e critérios. Alertar usuário e
-pausar antes da troca manual. Sol6.1 médio para revisão/integração/T07–T08;
-não transferir decisões de autorização/persistência como simples tarefa UI.
+T02–T07 implementados/revisados localmente. Luna alto concluiu o BFF e a
+interface; Sol médio integrou a revisão e as regressões. T08 acompanha a PR
+única e CI do HEAD; não há troca de modelo pendente. Merge, deploy e migration
+externa continuam operações posteriores. Ver relatório final e runbook.
 
 ## Matriz de testes a executar na implementação
 
@@ -251,7 +251,10 @@ existentes, sem introduzir ferramenta remota por uma revisão documental.
 condições próprias); PostgreSQL15 descartável28 PASS/29 filtrados após o código
 final. Typecheck/build/artefato, governança24, secrets/diff e matriz40 referências
 PASS. Sem extensões Timescale/pgvector nesta prova local; CI integral e revisão
-independente pendentes, assim como Web/BFF/UI/Playwright de T06–T08.
-[Relatório](../docs/governance/EVIDENCIAS_FOOD01_BACKEND_2026-10-17.md) e
-[handoff Luna](handoff-pos-320-food01-luna.md). Pausa para troca manual de modelo;
+independente separados. T06/T07 locais concluídos; CI de T08 permanece pendente.
+[Relatório](../docs/governance/EVIDENCIAS_FOOD01_BACKEND_2026-10-17.md),
+[evidências Web](../docs/governance/EVIDENCIAS_FOOD01_WEB_2026-10-17.md) e
+[relatório final](../docs/governance/RELATORIO_FOOD01_2026-10-17.md) (com os
+handoffs [Sol](handoff-pos-320-food01-sol.md) e [Luna](handoff-pos-320-food01-luna.md)
+preservados como checkpoints históricos);
 nenhum teste local comprova implantação externa ou feature disponível.

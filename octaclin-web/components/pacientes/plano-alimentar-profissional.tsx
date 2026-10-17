@@ -60,6 +60,8 @@ import {
   type SubstituicaoPlanoAlimentarEntrada,
   type VersaoPlanoAlimentarApi
 } from '@/lib/plano-alimentar-api';
+import type { MedidaCaseiraAplicadaApi, MedidaCaseiraReferenciaApi } from '@/lib/medidas-caseiras-plano';
+import { calcularPesoMedidaCaseira } from '@/lib/medidas-caseiras-plano';
 import {
   listarAvaliacoesAntropometricas,
   type AvaliacaoAntropometricaApi
@@ -77,6 +79,7 @@ import { BibliotecaReceitasNutricionais } from '@/components/pacientes/bibliotec
 import { CopiarRefeicaoDePlano } from '@/components/pacientes/copiar-refeicao-de-plano';
 import { PreferenciasApresentacaoPlano } from '@/components/pacientes/preferencias-apresentacao-plano';
 import { CalculoCombinadoPlanos } from '@/components/pacientes/calculo-combinado-planos';
+import { MedidasCaseirasAlimento } from '@/components/pacientes/medidas-caseiras-alimento';
 import { novasPreferenciasApresentacaoPlano, type PreferenciasApresentacaoPlanoApi, type PreferenciasExibicaoRefeicoesApi } from '@/lib/preferencias-apresentacao-plano';
 import { PlanoAlimentarPaciente } from '@/components/portal/plano-alimentar-paciente';
 import {
@@ -104,6 +107,8 @@ interface AlimentoFormulario extends Omit<SubstituicaoPlanoAlimentarEntrada, 'nu
   nutrientesPor100g: NutrientesEdicao;
   micronutrientesPor100g?: MicronutrientesEdicao;
   fonteRotulo?: string;
+  medidaCaseira?: MedidaCaseiraAplicadaApi | null;
+  referenciaMedidaCaseira?: MedidaCaseiraReferenciaApi;
 }
 
 interface AlternativaFormulario extends AlimentoFormulario {
@@ -433,6 +438,7 @@ function documentoDoFormulario(formulario: FormularioPlano): DocumentoEdicaoPlan
         nutrientesPor100g: item.nutrientesPor100g,
         micronutrientesPor100g: item.alimentoComposicaoId ? undefined : item.micronutrientesPor100g,
         fonteRotulo: item.fonteRotulo,
+        medidaCaseira: item.medidaCaseira,
         substituicoes: item.substituicoes.map((alternativa) => ({
           chaveCliente: alternativa.chaveCliente,
           alimentoComposicaoId: alternativa.alimentoComposicaoId,
@@ -444,7 +450,8 @@ function documentoDoFormulario(formulario: FormularioPlano): DocumentoEdicaoPlan
           micronutrientesPor100g: alternativa.alimentoComposicaoId ? undefined : alternativa.micronutrientesPor100g,
           fonteRotulo: alternativa.fonteRotulo,
           liberadaParaPaciente: alternativa.liberadaParaPaciente,
-          preferida: alternativa.preferida
+          preferida: alternativa.preferida,
+          medidaCaseira: alternativa.medidaCaseira
         })),
         substituicoesVisiveisInicialmente: item.substituicoesVisiveisInicialmente
       }))
@@ -463,7 +470,9 @@ function formularioDoDocumento(documento: DocumentoEdicaoPlano, versao: VersaoPl
     porcaoGramas: valorNumericoEdicao(item.porcaoGramas),
     nutrientesPor100g: Object.fromEntries(Object.entries(item.nutrientesPor100g ?? {}).map(([campo, valor]) => [campo, valorNumericoEdicao(valor)])),
     micronutrientesPor100g: item.alimentoComposicaoId ? undefined : Object.fromEntries(Object.entries(item.micronutrientesPor100g ?? {}).map(([campo, valor]) => [campo, valorNumericoEdicao(valor)])),
-    fonteRotulo: item.fonteRotulo
+    fonteRotulo: item.fonteRotulo,
+    medidaCaseira: item.medidaCaseira,
+    referenciaMedidaCaseira: versao.medidasCaseirasAplicadas?.[item.chaveCliente]
   });
   return {
     ...base,
@@ -553,7 +562,8 @@ function projetarEstruturaAlimento(item: ItemFormulario) {
     identificacao: alimento.alimentoComposicaoId ?? alimento.descricao,
     quantidade: numero(alimento.quantidade),
     unidade: alimento.unidade,
-    porcaoGramas: numero(alimento.porcaoGramas)
+    porcaoGramas: numero(alimento.porcaoGramas),
+    medidaCaseira: alimento.medidaCaseira
   });
   return {
     ...projetarBase(item),
@@ -654,6 +664,8 @@ function identificarFonte(fonte: FonteCatalogoApi): string {
 
 interface EditorAlimentoProps {
   pacienteId: string;
+  contextoEdicao: string;
+  podeEditar: boolean;
   rotulo: string;
   valor: AlimentoFormulario;
   resumo?: AlimentoFormulario;
@@ -662,7 +674,7 @@ interface EditorAlimentoProps {
   mostrarResumo?: boolean;
 }
 
-function EditorAlimento({ pacienteId, rotulo, valor, resumo, aoAlterar, aoRemover, mostrarResumo = true }: EditorAlimentoProps) {
+function EditorAlimento({ pacienteId, contextoEdicao, podeEditar, rotulo, valor, resumo, aoAlterar, aoRemover, mostrarResumo = true }: EditorAlimentoProps) {
   const id = useId();
   const [busca, setBusca] = useState('');
   // Guarda a fonte escolhida, e nao a chave: assim o efeito de busca depende so
@@ -736,7 +748,9 @@ function EditorAlimento({ pacienteId, rotulo, valor, resumo, aoAlterar, aoRemove
       descricao: alimento.preparacao ? `${alimento.nome}, ${alimento.preparacao}` : alimento.nome,
       nutrientesPor100g: { ...alimento.nutrientesPor100g },
       micronutrientesPor100g: undefined,
-      fonteRotulo: alimento.fonte ? `${alimento.fonte.nome} - ${alimento.fonte.versao}` : 'Catalogo TACO'
+      fonteRotulo: alimento.fonte ? `${alimento.fonte.nome} - ${alimento.fonte.versao}` : 'Catalogo TACO',
+      medidaCaseira: null,
+      referenciaMedidaCaseira: undefined
     });
     setBusca('');
     setResultados([]);
@@ -744,6 +758,22 @@ function EditorAlimento({ pacienteId, rotulo, valor, resumo, aoAlterar, aoRemove
 
   function alterarNutriente(campo: keyof NutrientesPor100gApi, numero: NumeroFormulario | undefined) {
     aoAlterar({ ...valor, nutrientesPor100g: { ...valor.nutrientesPor100g, [campo]: numero } });
+  }
+
+  function alterarQuantidade(quantidade: string) {
+    const proximo = { ...valor, quantidade };
+    if (valor.medidaCaseira) {
+      if (!valor.referenciaMedidaCaseira) proximo.porcaoGramas = '';
+      else {
+        try { proximo.porcaoGramas = calcularPesoMedidaCaseira(quantidade, valor.referenciaMedidaCaseira.pesoReferenciaGramas, valor.referenciaMedidaCaseira.quantidadeReferencia); }
+        catch { proximo.porcaoGramas = ''; }
+      }
+    }
+    aoAlterar(proximo);
+  }
+
+  function aplicarMedida(medidaCaseira: MedidaCaseiraAplicadaApi, referenciaMedidaCaseira: MedidaCaseiraReferenciaApi, unidade: string, porcaoGramas: number | '') {
+    aoAlterar({ ...valor, medidaCaseira, referenciaMedidaCaseira, unidade, porcaoGramas });
   }
 
   return (
@@ -859,7 +889,7 @@ function EditorAlimento({ pacienteId, rotulo, valor, resumo, aoAlterar, aoRemove
             max="10000"
             step="0.001"
             value={valor.quantidade}
-            onChange={(evento) => aoAlterar({ ...valor, quantidade: evento.target.value })}
+            onChange={(evento) => alterarQuantidade(evento.target.value)}
             required
           />
         </div>
@@ -868,7 +898,7 @@ function EditorAlimento({ pacienteId, rotulo, valor, resumo, aoAlterar, aoRemove
           <Campo
             id={`${id}-unidade`}
             value={valor.unidade}
-            onChange={(evento) => aoAlterar({ ...valor, unidade: evento.target.value })}
+            onChange={(evento) => aoAlterar({ ...valor, unidade: evento.target.value, medidaCaseira: null, referenciaMedidaCaseira: undefined })}
             maxLength={40}
             required
           />
@@ -882,11 +912,21 @@ function EditorAlimento({ pacienteId, rotulo, valor, resumo, aoAlterar, aoRemove
             max="10000"
             step="0.001"
             value={valor.porcaoGramas}
-            onChange={(evento) => aoAlterar({ ...valor, porcaoGramas: evento.target.value })}
+            onChange={(evento) => aoAlterar({ ...valor, porcaoGramas: evento.target.value, medidaCaseira: null, referenciaMedidaCaseira: undefined })}
             required
           />
         </div>
       </div>
+
+      {valor.alimentoComposicaoId ? <MedidasCaseirasAlimento
+        key={`${valor.alimentoComposicaoId}:${pacienteId}:${contextoEdicao}:${valor.chaveCliente}`}
+        alimentoId={valor.alimentoComposicaoId}
+        quantidade={valor.quantidade}
+        aplicada={valor.medidaCaseira}
+        referenciaAplicada={valor.referenciaMedidaCaseira}
+        podeEditar={podeEditar}
+        aoAplicar={aplicarMedida}
+      /> : null}
 
       {valor.alimentoComposicaoId ? (
         <div className="flex flex-wrap items-center justify-between gap-2">
@@ -895,7 +935,7 @@ function EditorAlimento({ pacienteId, rotulo, valor, resumo, aoAlterar, aoRemove
           {mostrarResumo ? <p className="text-xs tabular-nums text-texto-suave" aria-label={resumoPorcaoAlimento(resumo ?? valor).acessivel}>{resumoPorcaoAlimento(resumo ?? valor).visual}</p> : <p role="status" className="text-xs text-texto-suave">Resumo nutricional aguardando materialização.</p>}
           <button
             type="button"
-            onClick={() => aoAlterar({ ...valor, alimentoComposicaoId: undefined, fonteRotulo: undefined })}
+            onClick={() => aoAlterar({ ...valor, alimentoComposicaoId: undefined, fonteRotulo: undefined, medidaCaseira: null, referenciaMedidaCaseira: undefined })}
             className="flex min-h-11 w-fit items-center text-xs font-semibold text-primaria underline-offset-4 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primaria"
           >
             Transformar em item manual
@@ -980,6 +1020,8 @@ function EditorAlimento({ pacienteId, rotulo, valor, resumo, aoAlterar, aoRemove
 
 interface EditorItemProps {
   pacienteId: string;
+  contextoEdicao: string;
+  podeEditar: boolean;
   item: ItemFormulario;
   resumo?: ItemFormulario;
   indice: number;
@@ -990,7 +1032,7 @@ interface EditorItemProps {
   mostrarResumo: boolean;
 }
 
-function EditorItem({ pacienteId, item, resumo, indice, total, aoAlterar, aoRemover, aoMover, mostrarResumo }: EditorItemProps) {
+function EditorItem({ pacienteId, contextoEdicao, podeEditar, item, resumo, indice, total, aoAlterar, aoRemover, aoMover, mostrarResumo }: EditorItemProps) {
   return (
     <div className="grid gap-3 border-t border-linha py-4 first:border-t-0 first:pt-0">
       <div className="flex flex-wrap justify-end gap-1">
@@ -1001,7 +1043,7 @@ function EditorItem({ pacienteId, item, resumo, indice, total, aoAlterar, aoRemo
           <ArrowDown size={15} />
         </Botao>
       </div>
-      <EditorAlimento pacienteId={pacienteId} rotulo={`Alimento ${indice + 1}`} valor={item} resumo={resumo} aoAlterar={(valor) => aoAlterar({ ...item, ...valor })} aoRemover={aoRemover} mostrarResumo={mostrarResumo} />
+      <EditorAlimento pacienteId={pacienteId} contextoEdicao={contextoEdicao} podeEditar={podeEditar} rotulo={`Alimento ${indice + 1}`} valor={item} resumo={resumo} aoAlterar={(valor) => aoAlterar({ ...item, ...valor })} aoRemover={aoRemover} mostrarResumo={mostrarResumo} />
       <div className="ml-0 grid gap-3 border-l-2 border-primaria-suave pl-3 sm:ml-4">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <p className="text-xs font-semibold uppercase text-texto-suave">Substituicoes</p>
@@ -1018,6 +1060,8 @@ function EditorItem({ pacienteId, item, resumo, indice, total, aoAlterar, aoRemo
             </div>
             <EditorAlimento
               pacienteId={pacienteId}
+              contextoEdicao={contextoEdicao}
+              podeEditar={podeEditar}
               rotulo={`Substituicao ${indiceSubstituicao + 1}`}
               mostrarResumo={mostrarResumo}
               valor={substituicao}
@@ -2526,6 +2570,8 @@ export function PlanoAlimentarProfissional({ pacienteId, podeGerenciar, aoAltera
                             <EditorItem
                               key={item.chaveCliente}
                               pacienteId={pacienteId}
+                              contextoEdicao={`${plano.id}:${plano.draft?.id ?? ''}`}
+                              podeEditar={edicaoEntreAbas.podeEditar}
                               item={item}
                               resumo={refeicoesParaResultado[indiceRefeicao]?.itens[indiceItem]}
                               indice={indiceItem}

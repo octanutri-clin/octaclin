@@ -4,16 +4,20 @@ Atualizado em 2026-10-17.
 
 ## Fase ativa
 
-- **FOOD01 — backend implementado, interface pendente**, base `d36b12e7`.
+- **FOOD01 — backend e interface implementados, validação final**, base `d36b12e7`.
   Desenvolvimento autorizado em “Pode seguir”; migration1075 só descartável. D01–D03 confirmadas: medidas pessoais ou da clínica com padrão
   pessoal; peso em gramas explícito; alterações da biblioteca preservam itens
   existentes, inclusive rascunhos. Só R017/OpenNutriTracker examinado como
   inspiração GPL, sem código/dependência incorporados. Plano/checklist:
   `tasks/plan-pos-320-food01.md`/`tasks/todo-pos-320-food01.md`.
-  T02–T05 implementados com RED/GREEN; PostgreSQL28 PASS/29 filtrados e
-  testes focados407 PASS. Evidências no relatório backend FOOD01.
-  Próximo passo após checkpoint: Luna alto para interface T06, handoff
-  `tasks/handoff-pos-320-food01-luna.md` e troca manual. Sem operação externa.
+  T02–T06 implementados; integração Sol T07–T08 em fechamento. PostgreSQL
+  descartável28 PASS/29 filtrados, backend focados407 PASS e Playwright
+  FOOD01/PA07 desktop/mobile32 PASS nesta revisão. Corrigida perda do cadastro
+  da biblioteca durante autosave. Evidências/limites:
+  `docs/governance/RELATORIO_FOOD01_2026-10-17.md`.
+  Próximo passo: PR única, CI do HEAD e revisão humana. A migration1075 precisa
+  preceder o novo backend; aplicação externa/deploy seguem separados conforme
+  `RUNBOOK_PRODUCAO.md`. Sem operação externa nesta entrega.
 - **PA07 — integrada pela PR #423**, merge `d36b12e7` confirmado em
   2026-10-17. CI38975905269 do HEAD `2b9a8074` SUCCESS, incluindo Backend,
   Web, Demo e PR Gate. Scanners SUCCESS; SBOM provenance SKIPPED conforme

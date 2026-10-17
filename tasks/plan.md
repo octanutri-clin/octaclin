@@ -1,8 +1,8 @@
-# Handoff atual — FOOD01: backend e preparação da interface Luna
+# Handoff atual — FOOD01: integração final Sol e PR única
 
 Branch/worktree `feat/pos320-food01-planejamento`, base `d36b12e7`.
-D01–D03 confirmadas; desenvolvimento autorizado em “Pode seguir”. T02–T05
-backend implementados com RED/GREEN. Migration1075 ensaiada somente em banco
+D01–D03 confirmadas; desenvolvimento autorizado em “Pode seguir”. T02–T06
+backend/interface implementados com testes sintéticos. Migration1075 ensaiada somente em banco
 PostgreSQL15 descartável, com28 PASS/29 filtrados; sem operação externa.
 
 - Contratos, mapa cifrado/schema1 e projeção mínima para reabrir a medida
@@ -10,13 +10,14 @@ PostgreSQL15 descartável, com28 PASS/29 filtrados; sem operação externa.
 - Gates finais backend:407 focados,343 suítes/3086 testes integrais PASS
   (6 suítes/127 testes SKIPPED), typecheck/build/artefato PASS, governança24 PASS,
   secrets/diff e matriz40 referências PASS. PostgreSQL28 PASS/29 filtrados.
-  CI de extensões, UI e revisão independente ainda não executados.
+  UI FOOD01/PA07 desktop/mobile32 PASS na integração; backend407 e PostgreSQL28
+  reconferidos. CI de extensões e revisão independente continuam separados.
 - Plano/checklist [FOOD01](plan-pos-320-food01.md)/[T00–T08](todo-pos-320-food01.md).
   Evidências [backend](../docs/governance/EVIDENCIAS_FOOD01_BACKEND_2026-10-17.md).
-- Próxima ação: aguardar confirmação manual da troca para Luna alto e
-  implementar T06 pelo [handoff executável](handoff-pos-320-food01-luna.md).
-  Nenhuma PR paralela/documental; PR única na integração final. Devolver a Sol
-  para T07–T08. Não atribuir revisão independente à revisão própria.
+- Próxima ação: Sol médio conclui gates locais T07–T08 e abre a PR única.
+  [Handoff de integração](handoff-pos-320-food01-sol.md); nenhuma troca de modelo
+  pendente. Corrigida perda do cadastro da biblioteca no autosave, com RED/GREEN.
+  Não atribuir revisão independente à revisão própria.
 - Node22 em `/workspace/.toolchains/food01/node-v22.21.1-linux-x64/bin/node`.
   Lockfiles intactos, backend node_modules reutilizado. Não limpar trabalho de
   outras worktrees nem alterar next-env preexistente do checkout principal.

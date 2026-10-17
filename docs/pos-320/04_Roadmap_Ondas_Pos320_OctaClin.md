@@ -460,10 +460,11 @@ Objetivo: aproveitar a evolução do catálogo multifonte e transformar o editor
 
 ## [FOOD01] Medidas caseiras personalizadas por alimento
 
-**Planejamento consolidado em 2026-10-17:** RESIDUAL CONFIRMADO na base
-`d36b12e7`; backend T02–T05 implementado após “Pode seguir”; migration1075
-só no descartável, PostgreSQL28 PASS/29 filtrados e focados407 PASS. Interface
-T06 pendente de troca manual para Luna alto. D01–D03 confirmadas: escopo pessoal
+**Implementação em validação em 2026-10-17:** RESIDUAL CONFIRMADO na base
+`d36b12e7`; backend/interface T02–T06 implementados após “Pode seguir”;
+migration1075 só no descartável, PostgreSQL28 PASS/29 filtrados e focados407
+PASS. Sol integra/revisa T07–T08; PR/CI e rollout externo ainda separados.
+D01–D03 confirmadas: escopo pessoal
 ou clínica, pessoal por padrão; peso em gramas explícito sem converter mL
 implicitamente; alteração da biblioteca não muda itens existentes, nem rascunhos.
 Somente R017/OpenNutriTracker examinado/pinado, GPL/inspiração, sem copiar código.
@@ -473,7 +474,7 @@ exato de alimento do catálogo; não depende de TBCA nem inclui FOOD02/densidade
 
 **Origem:** item 14.
 
-**Status atual:** unidade textual livre no item do plano.
+**Base anterior à entrega:** unidade textual livre no item do plano.
 
 **Implementação sugerida:**
 - entidade de medida caseira;

@@ -234,7 +234,7 @@ e reinspecionados. Não representa revisão humana externa nem validação da UI
 T08b/BFF/Playwright e CI desta entrega ainda precisam ser concluídos antes de
 propor merge. Evidências: docs/governance/EVIDENCIAS_PA06_ATIVACAO_2026-10-16.md.
 
-## FOOD01 — biblioteca de medidas caseiras (checkpoint backend)
+## FOOD01 — biblioteca de medidas caseiras
 
 Risco R4: catálogo personalizado tenant/profissional e porções clínicas. Testes
 `octaclin-backend/src/modulos/planos-alimentares/dominio/medidas-caseiras.spec.ts`
@@ -250,6 +250,11 @@ Null explícito desvincula e omissão legada não destrói fatos/proveniência.
 Migration1075 aditiva tem teste de contrato e entra no inventário TypeORM;
 prova local de extensões continua parcial, não substitui Testcontainers do CI.
 Testes HTTP/DTO/editorial e serviço de planos cobrem negações e corrupção.
-BFF/UI e regressões visuais T06–T08 pendentes antes da integração. Revisão
-própria não é independente. Resultados/limites:
-`docs/governance/EVIDENCIAS_FOOD01_BACKEND_2026-10-17.md`.
+BFF exige sessão/permissão, UUID, paginação allowlist e corpo limitado; erros
+preservam `no-store`. Testes Web cobrem aritmética, cópias sem descriptor e
+Playwright FOOD01/PA07 desktop/mobile: autosave sem perder cadastro, conflito409
+sem retry, paginação/escopos, resposta tardia descartada, quantidade parcial,
+null manual e referência ausente. Axe focado no seletor. Revisão própria não é
+independente. Resultados/limites:
+`docs/governance/EVIDENCIAS_FOOD01_BACKEND_2026-10-17.md` e
+`docs/governance/EVIDENCIAS_FOOD01_WEB_2026-10-17.md`.

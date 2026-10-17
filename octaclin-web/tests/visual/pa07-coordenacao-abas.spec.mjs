@@ -83,7 +83,8 @@ async function preparar(context) {
         await route.fulfill({ status: 409, contentType: 'application/json', body: JSON.stringify({ message: 'Revisão sintética divergente' }) });
         return;
       }
-      detalhe = { ...detalhe, draft: { ...detalhe.draft, rascunhoRevisao: body.rascunhoRevisaoEsperada + 1, documentoEdicao: body.documento, edicaoEstado: 'pendente' } };
+      const medidasCaseirasAplicadas = Object.fromEntries(body.documento.refeicoes.flatMap(refeicao => refeicao.itens.flatMap(item => [item, ...(item.substituicoes ?? [])]).filter(item => item.medidaCaseira).map(item => [item.chaveCliente, { nome: 'Colher sintética', quantidadeReferencia: 1, pesoReferenciaGramas: 25 }])));
+      detalhe = { ...detalhe, draft: { ...detalhe.draft, rascunhoRevisao: body.rascunhoRevisaoEsperada + 1, documentoEdicao: body.documento, medidasCaseirasAplicadas, edicaoEstado: 'pendente' } };
       corpo = detalhe.draft;
     } else if (caminho === '/api/notificacoes') corpo = { naoLidas: 0, itens: [], resumos: [] };
     else if (caminho.endsWith('/resumos/gerar')) corpo = { gerado: false };
@@ -97,6 +98,7 @@ async function preparar(context) {
     bloquearProximaLeitura: () => (pausaLeitura = pausaControlada()),
     habilitarOrigem: () => { incluirOrigem = true; },
     bloquearProximaCopia: () => (pausaCopia = pausaControlada()),
+    omitirReferenciasMedidas: () => { detalhe = { ...detalhe, draft: { ...detalhe.draft, medidasCaseirasAplicadas: undefined } }; },
     definirSomentePublicada: () => { detalhe = { ...detalhe, current: { ...detalhe.draft, status: 'publicada', publicadaEm: instante }, draft: undefined }; }
   };
 }
@@ -327,4 +329,201 @@ test('PA07 ausência das APIs nativas exibe limitação e conserva leitura autor
   await page.getByRole('button', { name: 'Salvar rascunho' }).click();
   await expect.poll(() => fixture.escritas.length).toBe(1);
   expect(fixture.escritas[0].rascunhoRevisaoEsperada).toBe(1);
+});
+
+test('FOOD01 aplica medida explícita, recalcula com base escolhida e salva somente o vínculo mínimo', async ({ context, page }) => {
+  test.setTimeout(60_000);
+  const fixture = await preparar(context);
+  const foodId = '7a1bb690-b95b-4c9f-b179-06fa8e8d5030';
+  const measureId = '45c4bc05-7e40-4807-9b75-df8c2e97a70c';
+  const secondMeasureId = '2a3a78be-37b2-451b-9cf1-c5b17d492c4c';
+  let pesoReferenciaAtual = 25;
+  const medidas = [];
+  await page.route(url => url.pathname === `/api/pacientes/${pacienteId}/planos-alimentares/alimentos`, route => route.fulfill({
+    status: 200, contentType: 'application/json', body: JSON.stringify({
+      itens: [{ id: foodId, codigoOrigem: 'SINT-FOOD-1', nome: 'Aveia sintética', nutrientesPor100g: { energiaKcal: 100, proteinasG: 10, carboidratosG: 10, gordurasG: 10 }, disponivelParaCalculo: true, fonte: { codigo: 'SINTETICA', nome: 'Fonte sintética', versao: '1' } }],
+      fontes: [{ codigo: 'SINTETICA', nome: 'Fonte sintética', versao: '1' }], total: 1, pagina: 1, limite: 50
+    })
+  }));
+  await page.route(url => url.pathname === `/api/planos-alimentares/alimentos/${foodId}/medidas-caseiras`, async route => {
+    if (route.request().method() === 'GET') {
+      medidas[0] = { id: measureId, alimentoComposicaoId: foodId, nome: 'Colher sintética', quantidadeReferencia: 1, pesoReferenciaGramas: pesoReferenciaAtual, escopo: 'pessoal', revisao: 1, ativa: true, podeEditar: true };
+      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ itens: medidas.filter(item => item.ativa), total: medidas.filter(item => item.ativa).length, pagina: 1, limite: 25 }) });
+      return;
+    }
+    const corpo = route.request().postDataJSON();
+    const criada = { id: secondMeasureId, alimentoComposicaoId: foodId, nome: corpo.nome, quantidadeReferencia: corpo.quantidadeReferencia, pesoReferenciaGramas: corpo.pesoReferenciaGramas, escopo: corpo.escopo, revisao: 1, ativa: true, podeEditar: true };
+    medidas.push(criada);
+    await route.fulfill({ status: 201, contentType: 'application/json', body: JSON.stringify(criada) });
+  });
+  await page.route(url => url.pathname.startsWith(`/api/planos-alimentares/alimentos/${foodId}/medidas-caseiras/`), async route => {
+    const id = new URL(route.request().url()).pathname.split('/').at(-1);
+    const indice = medidas.findIndex(item => item.id === id);
+    const corpo = route.request().postDataJSON();
+    medidas[indice] = { ...medidas[indice], ...corpo, revisao: medidas[indice].revisao + 1, ativa: corpo.ativa === false ? false : medidas[indice].ativa };
+    await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(medidas[indice]) });
+  });
+  await abrir(page);
+  await page.getByRole('button', { name: 'Expandir todas' }).click();
+  await page.getByRole('button', { name: 'Adicionar alimento', exact: true }).click();
+  await page.getByRole('textbox', { name: 'Buscar no catálogo' }).last().fill('Aveia');
+  const resultado = page.getByRole('button', { name: /Aveia sintética/ });
+  await expect(resultado).toBeVisible();
+  await resultado.click();
+  const painelMedidas = page.locator('section[aria-label="Medidas caseiras do alimento"]').last();
+  await painelMedidas.getByRole('button', { name: 'Escolher medida' }).press('Enter');
+  await painelMedidas.getByRole('button', { name: 'Aplicar', exact: true }).click();
+  await expect(painelMedidas).toContainText('Aplicada: Colher sintética');
+  await painelMedidas.getByLabel('Nome da medida').fill('Copo sintético');
+  await painelMedidas.getByLabel('Quantidade de referência').fill('2');
+  await painelMedidas.getByLabel('Peso de referência (g)').fill('100');
+  await painelMedidas.getByRole('button', { name: 'Salvar na biblioteca' }).click();
+  const linhaCopo = painelMedidas.getByRole('listitem').filter({ hasText: 'Copo sintético' });
+  await expect(linhaCopo).toBeVisible();
+  await linhaCopo.getByRole('button', { name: 'Editar' }).click();
+  await painelMedidas.getByLabel('Nome da medida').fill('Copo revisado');
+  await painelMedidas.getByRole('button', { name: 'Salvar edição' }).click();
+  await expect(painelMedidas.getByText('Biblioteca atualizada.', { exact: false })).toBeVisible();
+  const linhaRevisada = painelMedidas.getByRole('listitem').filter({ hasText: 'Copo revisado' });
+  page.once('dialog', dialog => dialog.accept());
+  await linhaRevisada.getByRole('button', { name: 'Desativar' }).click();
+  await expect(linhaRevisada).toHaveCount(0);
+  const quantidade = page.getByRole('textbox', { name: 'Quantidade' }).nth(1);
+  const gramas = page.getByRole('textbox', { name: 'Porcao (g)' }).nth(1);
+  await expect(gramas).toHaveValue('25');
+  await quantidade.fill('2,5');
+  await expect(quantidade).toHaveValue('2,5');
+  await expect(gramas).toHaveValue('62.5');
+  const acessibilidade = await new AxeBuilder({ page }).include('section[aria-label="Medidas caseiras do alimento"]').analyze();
+  expect(acessibilidade.violations).toEqual([]);
+  await page.getByRole('button', { name: 'Salvar rascunho' }).click();
+  await expect.poll(() => fixture.escritas.length).toBe(1);
+  const salvo = fixture.escritas[0].documento.refeicoes[0].itens[1];
+  expect(salvo.quantidade).toBe('2,5');
+  expect(salvo.unidade).toBe('Colher sintética');
+  expect(salvo.porcaoGramas).toBe(62.5);
+  expect(salvo.medidaCaseira).toMatchObject({ id: measureId, revisao: 1 });
+  expect(salvo.medidaCaseira.aplicacaoId).toMatch(/^[0-9a-f-]{36}$/i);
+  expect(salvo).not.toHaveProperty('referenciaMedidaCaseira');
+  expect(salvo).not.toHaveProperty('medidasCaseirasAplicadas');
+  pesoReferenciaAtual = 50;
+  await page.reload({ waitUntil: 'domcontentloaded' });
+  await expect(page.getByRole('textbox', { name: 'Objetivo clínico', exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Expandir todas' }).click();
+  await expect(page.getByRole('textbox', { name: 'Quantidade' }).nth(1)).toHaveValue('2,5');
+  await expect(page.getByRole('textbox', { name: 'Porcao (g)' }).nth(1)).toHaveValue('62.5');
+  await page.getByRole('textbox', { name: 'Quantidade' }).nth(1).fill('3');
+  await expect(page.getByRole('textbox', { name: 'Porcao (g)' }).nth(1)).toHaveValue('75');
+  await page.getByRole('textbox', { name: 'Quantidade' }).nth(1).fill('');
+  await expect(page.getByRole('textbox', { name: 'Porcao (g)' }).nth(1)).toHaveValue('');
+  await page.getByRole('button', { name: 'Salvar rascunho' }).click();
+  await expect.poll(() => fixture.escritas.length).toBe(2);
+  expect(fixture.escritas[1].documento.refeicoes[0].itens[1].medidaCaseira.aplicacaoId).toBe(salvo.medidaCaseira.aplicacaoId);
+  await page.getByRole('textbox', { name: 'Quantidade' }).nth(1).fill('3');
+  await page.getByRole('button', { name: 'Salvar rascunho' }).click();
+  await expect.poll(() => fixture.escritas.length).toBe(3);
+  fixture.omitirReferenciasMedidas();
+  await page.reload({ waitUntil: 'domcontentloaded' });
+  await expect(page.getByRole('textbox', { name: 'Objetivo clínico', exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Expandir todas' }).click();
+  await expect(page.getByText('A referência desta medida não está disponível.', { exact: false })).toBeVisible();
+  await expect(page.getByRole('textbox', { name: 'Porcao (g)' }).nth(1)).toHaveValue('75');
+  await page.getByRole('textbox', { name: 'Quantidade' }).nth(1).fill('4');
+  await expect(page.getByRole('textbox', { name: 'Porcao (g)' }).nth(1)).toHaveValue('');
+  await page.getByRole('textbox', { name: 'Porcao (g)' }).nth(1).fill('80');
+  await page.getByRole('button', { name: 'Salvar rascunho' }).click();
+  await expect.poll(() => fixture.escritas.length).toBe(4);
+  expect(fixture.escritas[3].documento.refeicoes[0].itens[1].medidaCaseira).toBeNull();
+});
+
+async function abrirBibliotecaFood01(context, page, responderBiblioteca) {
+  const fixture = await preparar(context);
+  const alimentoId = '7a1bb690-b95b-4c9f-b179-06fa8e8d5030';
+  await context.route(url => url.pathname.endsWith('/planos-alimentares/alimentos'), route => route.fulfill({
+    json: { itens: [{ id: alimentoId, nome: 'Aveia sintética', nutrientesPor100g: { energiaKcal: 100, proteinasG: 10, carboidratosG: 10, gordurasG: 10 }, disponivelParaCalculo: true }], fontes: [], total: 1, pagina: 1, limite: 50 }
+  }));
+  await context.route(url => url.pathname.includes(`/alimentos/${alimentoId}/medidas-caseiras`), responderBiblioteca);
+  await abrir(page);
+  await page.getByRole('button', { name: 'Expandir todas' }).click();
+  await page.getByRole('button', { name: 'Adicionar alimento', exact: true }).click();
+  await page.getByRole('textbox', { name: 'Buscar no catálogo' }).last().fill('Aveia');
+  await page.getByRole('button', { name: /Aveia sintética/ }).click();
+  await page.getByRole('button', { name: 'Escolher medida' }).last().click();
+  const painel = page.getByRole('region', { name: 'Medidas caseiras do alimento' }).last();
+  await expect(painel.getByRole('status').filter({ hasText: 'Carregando' })).toHaveCount(0);
+  return { ...fixture, painel };
+}
+
+test('FOOD01 autosave do plano preserva cadastro de medida ainda não enviado', async ({ context, page }) => {
+  await page.clock.install();
+  const { painel, escritas } = await abrirBibliotecaFood01(context, page, route => route.fulfill({ json: { itens: [], total: 0, pagina: 1, limite: 25 } }));
+  await painel.getByLabel('Nome da medida').fill('Xícara ainda em edição');
+  await page.getByRole('textbox', { name: 'Objetivo clínico', exact: true }).fill('Objetivo sintético alterado');
+  await page.clock.fastForward(60_000);
+  await expect.poll(() => escritas.length).toBe(1);
+  await expect(painel.getByLabel('Nome da medida')).toHaveValue('Xícara ainda em edição');
+});
+
+test('FOOD01 pagina escopos, atualiza conflito sem retry e cria com escopo pessoal por padrão', async ({ context, page }) => {
+  let revisao = 1, patches = 0, criada = false;
+  const pausaPatch = pausaControlada();
+  const alimentoComposicaoId = '7a1bb690-b95b-4c9f-b179-06fa8e8d5030';
+  const medida = { id: '45c4bc05-7e40-4807-9b75-df8c2e97a70c', alimentoComposicaoId, nome: 'Colher própria', quantidadeReferencia: 1, pesoReferenciaGramas: 25, escopo: 'pessoal', revisao: 1, ativa: true, podeEditar: true };
+  const compartilhada = { ...medida, id: '2a3a78be-37b2-451b-9cf1-c5b17d492c4c', nome: 'Copo da clínica', escopo: 'clinica', podeEditar: false };
+  const { painel } = await abrirBibliotecaFood01(context, page, async route => {
+    if (route.request().method() === 'PATCH') {
+      patches++; revisao++;
+      await pausaPatch.aguardar();
+      await route.fulfill({ status: 409, json: { message: 'Revisão sintética divergente' } });
+    } else if (route.request().method() === 'POST') {
+      const entrada = route.request().postDataJSON();
+      expect(entrada.escopo).toBe('pessoal');
+      expect(entrada.chaveIdempotencia).toMatch(/^[0-9a-f-]{36}$/i);
+      criada = true;
+      await route.fulfill({ status: 201, json: { ...medida, nome: entrada.nome } });
+    } else {
+      const pagina = Number(new URL(route.request().url()).searchParams.get('pagina'));
+      await route.fulfill({ json: { itens: pagina === 1 ? [compartilhada, ...(criada ? [{ ...medida, nome: 'Xícara criada' }] : [])] : [{ ...medida, revisao }], total: 26, pagina, limite: 25 } });
+    }
+  });
+  const linhaClinica = painel.getByRole('listitem').filter({ hasText: 'Copo da clínica' });
+  await expect(linhaClinica).toContainText('Clínica');
+  await expect(linhaClinica.getByRole('button', { name: 'Editar' })).toHaveCount(0);
+  await painel.getByRole('button', { name: 'Próxima' }).click();
+  await expect(painel.getByText('Página 2 de 2')).toBeVisible();
+  await painel.getByRole('button', { name: 'Editar', exact: true }).click();
+  await painel.getByLabel('Nome da medida').fill('Alteração stale');
+  await painel.getByRole('button', { name: 'Salvar edição' }).click();
+  try {
+    await pausaPatch.iniciou;
+    await expect(painel.getByRole('button', { name: 'Editar', exact: true })).toBeDisabled();
+  } finally { pausaPatch.liberar(); }
+  await expect(painel.getByText('A medida foi alterada em outra operação.', { exact: false })).toBeVisible();
+  await expect(painel.getByLabel('Nome da medida')).toHaveValue('');
+  expect(patches).toBe(1);
+  await painel.getByLabel('Nome da medida').fill('Xícara criada');
+  await painel.getByLabel('Peso de referência (g)').fill('30');
+  await painel.getByRole('button', { name: 'Salvar na biblioteca' }).click();
+  await expect(painel.getByText('Página 1 de 2')).toBeVisible();
+  await expect(painel.getByRole('listitem').filter({ hasText: 'Xícara criada' })).toBeVisible();
+  expect(patches).toBe(1);
+});
+
+test('FOOD01 resposta tardia da biblioteca não reaparece ao converter o alimento em manual', async ({ context, page }) => {
+  const pausa = pausaControlada();
+  let fixture;
+  const abertura = abrirBibliotecaFood01(context, page, async route => {
+    await pausa.aguardar();
+    await route.fulfill({ json: { itens: [], total: 0, pagina: 1, limite: 25 } });
+  });
+  try {
+    await pausa.iniciou;
+    await page.getByRole('button', { name: 'Transformar em item manual' }).last().click();
+  } finally { pausa.liberar(); }
+  fixture = await abertura;
+  await expect(page.getByRole('region', { name: 'Medidas caseiras do alimento' })).toHaveCount(0);
+  await page.getByRole('button', { name: 'Salvar rascunho' }).click();
+  await expect.poll(() => fixture.escritas.length).toBe(1);
+  expect(fixture.escritas[0].documento.refeicoes[0].itens[1].medidaCaseira).toBeNull();
+  expect(fixture.escritas[0].documento.refeicoes[0].itens[1]).not.toHaveProperty('alimentoComposicaoId');
 });
