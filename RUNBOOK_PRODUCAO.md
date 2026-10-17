@@ -2187,6 +2187,12 @@ descartáveis e CI não comprovam a aplicação em staging/produção.
 5. Registrar versão/resultado e somente então disponibilizar o fluxo. Esta
    entrega não realiza carga de catálogo nem modifica os gates de suas fontes.
 
-Rollback: reverter código mantendo tabela, coluna e conteúdo cifrado. O `down`
-1075 recusa apagar esses dados. Não recalcular publicações nem apagar contextos
-para permitir rollback. Corrigir schema com nova migration aditiva caso necessário.
+Rollback: suspender novas aplicações pela UI, mantendo tabela, coluna e conteúdo
+cifrado e um backend compatível com os snapshots FOOD01. Não reimplantar o
+backend anterior à FOOD01 depois de gravar `medidaCaseira`: o parser editorial
+anterior rejeita campos extras e torna esses rascunhos `indisponivel`. Se houver
+falha no backend, usar uma correção compatível que preserve a leitura do novo
+contrato; reverter somente a UI não autoriza regredir esse leitor. O `down`1075
+recusa apagar dados. Não remover descriptors/contextos, recalcular publicações
+nem sobrescrever documentos para forçar compatibilidade. Corrigir schema com
+nova migration aditiva caso necessário.

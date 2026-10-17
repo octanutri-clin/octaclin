@@ -3,7 +3,7 @@
 Plano e contratos: [plan-pos-320-food01.md](plan-pos-320-food01.md).
 Planejamento em 2026-10-17, base `d36b12e7`; implementação autorizada em
 “Pode seguir”. T02–T07 implementados e validados localmente na worktree;
-T08 em preparação da PR única/CI. Sem migration ou deploy externos.
+T08 na PR única Draft #424, aguardando CI do HEAD final. Sem migration ou deploy externos.
 
 - [x] T00 — merge PA07, base/worktree e gaps conferidos; D01–D03 confirmadas.
 - [x] T01 — somente R017 examinado/pinado; GPL, inspiração e limites registrados.
@@ -16,8 +16,8 @@ T08 em preparação da PR única/CI. Sem migration ou deploy externos.
 - [x] T07 — revisão manual R4 e regressões proporcionais backend/Web/BFF,
   PostgreSQL/RLS/concorrência, portal/impressão e coordenação de abas.
   Revisão própria identificada; revisão independente não executada.
-- [~] T08 — relatório/documentação e gates locais concluídos; PR única e
-  acompanhamento de CI do HEAD. Merge/rollout continuam ações posteriores.
+- [~] T08 — relatório/documentação e gates locais concluídos; PR única Draft
+  #424 aberta, acompanhamento de CI do HEAD final. Merge/rollout continuam ações posteriores.
 
 ## Decisões fechadas
 
@@ -58,7 +58,7 @@ T08 em preparação da PR única/CI. Sem migration ou deploy externos.
 - SKIPPED: ambiente externo, migration/deploy; fora do escopo desta rodada.
 - SKIPPED: revisão independente; não executada.
 
-Próxima ação: concluir T08 na PR única/CI. Sol médio é suficiente, sem troca de
+Próxima ação: concluir T08 acompanhando o CI final da PR #424. Sol médio é suficiente, sem troca de
 modelo pendente. Não pedir outra decisão sobre D01–D03. A migration1075 deve
 preceder a publicação do backend pelo runbook, em operação autorizada separada.
 

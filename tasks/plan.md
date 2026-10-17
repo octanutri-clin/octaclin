@@ -14,7 +14,10 @@ PostgreSQL15 descartável, com28 PASS/29 filtrados; sem operação externa.
   reconferidos. CI de extensões e revisão independente continuam separados.
 - Plano/checklist [FOOD01](plan-pos-320-food01.md)/[T00–T08](todo-pos-320-food01.md).
   Evidências [backend](../docs/governance/EVIDENCIAS_FOOD01_BACKEND_2026-10-17.md).
-- Próxima ação: Sol médio conclui gates locais T07–T08 e abre a PR única.
+- PR única Draft #424 aberta; HEAD de implementação `fd5299d1`. Backend, Web,
+  governança e scanners passaram no run39028272706; Demo ainda em execução
+  na conferência. A atualização documental de rollback exige CI do HEAD final.
+  Próxima ação: acompanhar os checks da PR #424 e corrigir falhas, se houver.
   [Handoff de integração](handoff-pos-320-food01-sol.md); nenhuma troca de modelo
   pendente. Corrigida perda do cadastro da biblioteca no autosave, com RED/GREEN.
   Não atribuir revisão independente à revisão própria.

@@ -60,7 +60,7 @@ o teste foi corrigido para buscar a ação dentro do seletor de medidas.
 | Backend integral/typecheck/build | PASS checkpoint backend | Mesmo código de produção, sem alteração backend após `03883570`;343 suítes/3086 testes PASS,6 suítes/127 SKIPPED. Ver evidência backend |
 | PowerShell DocsOnly | SKIPPED local | `powershell`/`pwsh` ausentes; execução canônica fica no CI |
 | Revisão independente | SKIPPED | Não executada; revisão própria identificada acima |
-| CI da PR | PENDING | Não inferir resultado do CI da PA07 |
+| CI da PR #424 | PENDING final | Run39028272706 de `fd5299d1`: Backend, Web, governança e scanners SUCCESS; Demo em execução na conferência. Follow-up documental exige reconferir HEAD final |
 | Migration/deploy externos | SKIPPED | Não autorizados nesta execução |
 
 O smoke de runtime foi tentado antes de existir build de produção e falhou nessa
@@ -105,10 +105,24 @@ dependências com lockfile idêntico, com `E2E_REUSE_EXISTING_SERVER=true` e
 A migration1075 deve preceder a publicação do backend; a coluna nova entra nas
 consultas de versões. Confirmar alvo, autorização, owner/runtime, grants mínimos
 e FORCE RLS conforme `RUNBOOK_PRODUCAO.md`. Não houve aplicação externa.
-Rollback preserva tabela, coluna e snapshots cifrados; não executar `down`
-destrutivo nem recalcular publicações. O checkout principal mantém sua alteração
+Rollback preserva tabela, coluna, snapshots cifrados e backend capaz de ler o
+contrato FOOD01. Conferência do baseline `d36b12e7`: `camposAlimento` no domínio
+`edicao-plano.ts` não inclui `medidaCaseira`, `objeto()` rejeita campos extras e
+`ServicoPlanosAlimentares.lerEdicao()` converte a rejeição em `indisponivel`.
+Portanto, após novas gravações, suspender entradas pela UI e corrigir o backend
+mantendo o leitor compatível; não reimplantar cegamente o backend pré-FOOD01.
+Não executar `down` destrutivo, remover contextos nem recalcular publicações. O checkout principal mantém sua alteração
 preexistente em `next-env.d.ts`; gerados desta worktree ficam fora da entrega.
 
 Próxima ação: CI do HEAD da PR e revisão humana, depois operação autorizada
 com migration anterior ao deploy. A entrega não comprova disponibilidade em
 staging/produção nem autoriza merge, deploy ou carga de catálogo.
+
+## Limite da consulta de segurança no GitHub
+
+Os checks CodeQL, Semgrep, Dependency Review e Trivy do HEAD `fd5299d1`
+retornaram SUCCESS. A API de alertas detalhados de code-scanning respondeu403
+(`Resource not accessible by integration`); não houve leitura direta dessa
+listagem. Anotações consultadas de CodeQL JavaScript, Semgrep e Trivy continham
+somente o aviso de migração da imagem `ubuntu-latest`, sem apontamento de código.
+Isto não equivale a declarar ausência de alertas inacessíveis.

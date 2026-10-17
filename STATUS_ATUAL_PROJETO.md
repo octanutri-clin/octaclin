@@ -15,7 +15,9 @@ Atualizado em 2026-10-17.
   FOOD01/PA07 desktop/mobile32 PASS nesta revisão. Corrigida perda do cadastro
   da biblioteca durante autosave. Evidências/limites:
   `docs/governance/RELATORIO_FOOD01_2026-10-17.md`.
-  Próximo passo: PR única, CI do HEAD e revisão humana. A migration1075 precisa
+  PR única Draft #424 aberta. Backend, Web, governança e scanners passaram
+  no run39028272706 de `fd5299d1`; Demo ainda em execução na conferência.
+  Próximo passo: CI do HEAD final e revisão humana. A migration1075 precisa
   preceder o novo backend; aplicação externa/deploy seguem separados conforme
   `RUNBOOK_PRODUCAO.md`. Sem operação externa nesta entrega.
 - **PA07 — integrada pela PR #423**, merge `d36b12e7` confirmado em
