@@ -4664,15 +4664,18 @@ auditoria estão ordenados na seção 15 de
   workflow; revisão independente não executada, sem inferir deploy.
   Evidências/limites em `docs/governance/RELATORIO_PA07_2026-10-16.md`;
   plano/checklist `tasks/plan-pos-320-pa07.md`/`tasks/todo-pos-320-pa07.md`.
-- [~] FOOD01 — backend/interface em validação final na base `d36b12e7`, D01–D03
-  confirmadas em 2026-10-17. Medidas pessoais/clínica, peso explícito em g,
-  preservação dos itens existentes. T02–T06 implementados sob autorização;
-  migration1075 só descartável, PostgreSQL28 PASS/29 filtrados, focados407 PASS.
-  Só R017 consultado, GPL/inspiração; sem nova dependência. Plano/checklist
-  `tasks/plan-pos-320-food01.md`/`tasks/todo-pos-320-food01.md`.
-  Sol6.1 médio integra T07–T08 após interface Luna; nenhuma troca de modelo
-  pendente. Próximo passo: concluir gates locais e PR única/CI, com migration1075
-  obrigatória antes da publicação do backend. Sem aplicação externa nesta entrega.
+- [x] FOOD01 — integrada pela PR #424, merge `95e9f33d`, confirmado em
+  2026-10-17. CI39029460553 do HEAD `faeb603b` SUCCESS, inclusive Backend,
+  Web, Demo e PR Gate; scanners SUCCESS. Migration1075 apenas ensaiada no
+  descartável nesta entrega; estado externo não verificado. Preservar leitor
+  compatível no rollback. Evidências/limites:
+  `docs/governance/RELATORIO_FOOD01_2026-10-17.md`.
+- [~] FOOD02 — planejamento/gaps concluídos na base `95e9f33d`;
+  D01–D03 confirmadas: pessoal/clínica, composição por100g ou porção em gramas,
+  preservação dos itens já aplicados. Sem implementação iniciada nesta rodada.
+  Plano/checklist `tasks/plan-pos-320-food02.md`/`tasks/todo-pos-320-food02.md`.
+  Sol6.1 médio para backend/RLS; pausa para Luna alto após checkpointGREEN.
+
 
 
 Merge/checks de #419 conferidos em 2026-10-15. Não inferir estado de produção.

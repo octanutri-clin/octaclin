@@ -3,7 +3,7 @@
 Plano e contratos: [plan-pos-320-food01.md](plan-pos-320-food01.md).
 Planejamento em 2026-10-17, base `d36b12e7`; implementação autorizada em
 “Pode seguir”. T02–T07 implementados e validados localmente na worktree;
-T08 na PR única Draft #424, aguardando CI do HEAD final. Sem migration ou deploy externos.
+T08 encerrada com merge424 e CI final confirmado em 2026-10-17. Sem migration ou deploy externos.
 
 - [x] T00 — merge PA07, base/worktree e gaps conferidos; D01–D03 confirmadas.
 - [x] T01 — somente R017 examinado/pinado; GPL, inspiração e limites registrados.
@@ -16,8 +16,10 @@ T08 na PR única Draft #424, aguardando CI do HEAD final. Sem migration ou deplo
 - [x] T07 — revisão manual R4 e regressões proporcionais backend/Web/BFF,
   PostgreSQL/RLS/concorrência, portal/impressão e coordenação de abas.
   Revisão própria identificada; revisão independente não executada.
-- [~] T08 — relatório/documentação e gates locais concluídos; PR única Draft
-  #424 aberta, acompanhamento de CI do HEAD final. Merge/rollout continuam ações posteriores.
+- [x] T08 — PR única #424 integrada em `95e9f33d`. CI39029460553 do HEAD
+  `faeb603b` SUCCESS, inclusive Demo e PR Gate; scanners SUCCESS. Operação
+  externa permanece separada, sem inferir aplicação da1075 ou deploy.
+
 
 ## Decisões fechadas
 
@@ -58,10 +60,16 @@ T08 na PR única Draft #424, aguardando CI do HEAD final. Sem migration ou deplo
 - SKIPPED: ambiente externo, migration/deploy; fora do escopo desta rodada.
 - SKIPPED: revisão independente; não executada.
 
-Próxima ação: concluir T08 acompanhando o CI final da PR #424. Sol médio é suficiente, sem troca de
-modelo pendente. Não pedir outra decisão sobre D01–D03. A migration1075 deve
+Próxima ação: planejar FOOD02 após integração confirmada. Sol médio é suficiente. Não pedir outra decisão sobre D01–D03. A migration1075 deve
 preceder a publicação do backend pelo runbook, em operação autorizada separada.
 
 Evidências: [backend](../docs/governance/EVIDENCIAS_FOOD01_BACKEND_2026-10-17.md),
 [Web](../docs/governance/EVIDENCIAS_FOOD01_WEB_2026-10-17.md) e
 [relatório final](../docs/governance/RELATORIO_FOOD01_2026-10-17.md).
+
+## Reconciliação pós-merge — 2026-10-17
+
+Resultados PENDING/SKIPPED acima descrevem os checkpoints locais históricos.
+CI39029460553 do HEAD final `faeb603b` SUCCESS, incluindo Backend, Web,
+Governança, Demo e PR Gate. Scanners SUCCESS; revisão independente e aplicação
+externa continuam não comprovadas. Merge424 `95e9f33d` confirmado por API.

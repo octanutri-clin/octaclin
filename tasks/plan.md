@@ -1,4 +1,28 @@
-# Handoff atual — FOOD01: integração final Sol e PR única
+# Handoff atual — FOOD02: planejamento pronto, D01–D03 confirmadas
+
+- Branch `feat/pos320-food02-planejamento`, base `95e9f33d` (merge424).
+  Worktree isolada reutilizada `.worktrees/pos320-food01-planejamento`.
+  Checkout principal com `next-env.d.ts` preexistente preservado.
+- FOOD01 integrada; CI39029460553 de `faeb603b` SUCCESS, Demo/PR Gate incluídos.
+  Migration1075/deploy externos não conferidos; não inferir aplicação do merge.
+- [Plano](plan-pos-320-food02.md) e [checklist](todo-pos-320-food02.md).
+  Pessoal/clínica, pessoal por padrão; duas bases com gramas explícitos;
+  aplicações antigas preservadas. Não perguntar novamente D01–D03.
+- Gaps: catálogo global com DML revogado, identidade custom inexistente, medidas
+  FOOD01 só catálogo, snapshots/DTOs/projeções e copies precisam integração.
+  Biblioteca custom separada; não gravar UUID custom em FK pública.
+- Só referências FOOD02: R047/R064 lidos/pinados; R015/R016/R042 triados por
+  metadados/finalidade. Nenhuma instalação, código externo, câmera ou fonte nova.
+- Próxima ação: com autorização de implementação, Sol6.1 médio executa T01–T05
+  com TDD, contratos, PG/RLS/concorrência. Não começar pela UI. Após backendGREEN,
+  preparar handoff concreto, avisar e pausar para troca manual a Luna alto em
+  T06–T07; retorno a Sol médio para revisão R4/T08/CI. Não delegar automaticamente.
+- Só documentação nesta etapa, sem testes de implementação, migration, PR nova,
+  merge, deploy ou operação externa. Uma PR futura reúne FOOD02 completa.
+
+---
+
+# Handoff anterior — FOOD01: integrada pela PR #424
 
 Branch/worktree `feat/pos320-food01-planejamento`, base `d36b12e7`.
 D01–D03 confirmadas; desenvolvimento autorizado em “Pode seguir”. T02–T06

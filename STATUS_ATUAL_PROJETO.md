@@ -4,22 +4,26 @@ Atualizado em 2026-10-17.
 
 ## Fase ativa
 
-- **FOOD01 — backend e interface implementados, validação final**, base `d36b12e7`.
-  Desenvolvimento autorizado em “Pode seguir”; migration1075 só descartável. D01–D03 confirmadas: medidas pessoais ou da clínica com padrão
-  pessoal; peso em gramas explícito; alterações da biblioteca preservam itens
-  existentes, inclusive rascunhos. Só R017/OpenNutriTracker examinado como
-  inspiração GPL, sem código/dependência incorporados. Plano/checklist:
-  `tasks/plan-pos-320-food01.md`/`tasks/todo-pos-320-food01.md`.
-  T02–T06 implementados; integração Sol T07–T08 em fechamento. PostgreSQL
-  descartável28 PASS/29 filtrados, backend focados407 PASS e Playwright
-  FOOD01/PA07 desktop/mobile32 PASS nesta revisão. Corrigida perda do cadastro
-  da biblioteca durante autosave. Evidências/limites:
-  `docs/governance/RELATORIO_FOOD01_2026-10-17.md`.
-  PR única Draft #424 aberta. Backend, Web, governança e scanners passaram
-  no run39028272706 de `fd5299d1`; Demo ainda em execução na conferência.
-  Próximo passo: CI do HEAD final e revisão humana. A migration1075 precisa
-  preceder o novo backend; aplicação externa/deploy seguem separados conforme
-  `RUNBOOK_PRODUCAO.md`. Sem operação externa nesta entrega.
+- **FOOD02 — planejamento e análise de gaps concluídos**, base `95e9f33d`.
+  Cadastro de alimentos reutilizáveis no editor. D01–D03 confirmadas: pessoal
+  ou clínica, pessoal por padrão; composição por100g ou porção com gramas
+  explícitos; preservar aplicações existentes inclusive rascunhos.
+  Biblioteca isolada do catálogo público; snapshots confiáveis e medidas FOOD01
+  reutilizados. R047/Downshift e R064/ZXing examinados; R015/R016/R042 triados,
+  sem dependência nova, câmera ou fonte externa. Plano/checklist:
+  `tasks/plan-pos-320-food02.md`/`tasks/todo-pos-320-food02.md`.
+  Próximo passo: implementação backend/RLS com Sol6.1 médio após autorização;
+  pausar para Luna alto somente com contratos e banco GREEN, antes da UI/BFF.
+  Nenhum runtime, teste de implementação ou banco alterado neste planejamento.
+- **FOOD01 — integrada pela PR #424**, merge `95e9f33d` confirmado em
+  2026-10-17. CI39029460553 do HEAD `faeb603b` SUCCESS, inclusive Backend,
+  Web, Demo e PR Gate; CodeQL, Semgrep, Trivy e Dependency Review SUCCESS.
+  Medidas pessoais/clínica, peso em gramas explícito e preservação histórica.
+  Migration1075 ensaiada em PostgreSQL descartável; aplicação externa/deploy
+  não verificados nesta rodada. Migration deve preceder o backend; rollback
+  mantém leitor compatível e dados. Relatório/local/gates não executados:
+  `docs/governance/RELATORIO_FOOD01_2026-10-17.md`. Revisão própria não é
+  independente. Sem inferir produção do merge/CI.
 - **PA07 — integrada pela PR #423**, merge `d36b12e7` confirmado em
   2026-10-17. CI38975905269 do HEAD `2b9a8074` SUCCESS, incluindo Backend,
   Web, Demo e PR Gate. Scanners SUCCESS; SBOM provenance SKIPPED conforme

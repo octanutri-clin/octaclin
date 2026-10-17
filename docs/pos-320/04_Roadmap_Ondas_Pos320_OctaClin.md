@@ -460,17 +460,16 @@ Objetivo: aproveitar a evolução do catálogo multifonte e transformar o editor
 
 ## [FOOD01] Medidas caseiras personalizadas por alimento
 
-**Implementação em validação em 2026-10-17:** RESIDUAL CONFIRMADO na base
-`d36b12e7`; backend/interface T02–T06 implementados após “Pode seguir”;
-migration1075 só no descartável, PostgreSQL28 PASS/29 filtrados e focados407
-PASS. Sol integra/revisa T07–T08; PR/CI e rollout externo ainda separados.
-D01–D03 confirmadas: escopo pessoal
-ou clínica, pessoal por padrão; peso em gramas explícito sem converter mL
-implicitamente; alteração da biblioteca não muda itens existentes, nem rascunhos.
-Somente R017/OpenNutriTracker examinado/pinado, GPL/inspiração, sem copiar código.
-[Plano](../../tasks/plan-pos-320-food01.md) e
-[checklist](../../tasks/todo-pos-320-food01.md). Biblioteca vinculada ao UUID
-exato de alimento do catálogo; não depende de TBCA nem inclui FOOD02/densidades.
+**Integrada em 2026-10-17 pela PR #424**, merge `95e9f33d` confirmado.
+CI39029460553 de `faeb603b` SUCCESS, inclusive Backend, Web, Demo e PR Gate;
+CodeQL/Semgrep/Trivy/Dependency Review SUCCESS. Migration1075 só ensaiada em
+banco descartável nesta entrega; aplicação/deploy externos não verificados.
+D01–D03 preservadas: pessoal/clínica, pessoal por padrão; peso explícito em g;
+alterações da biblioteca não atualizam itens existentes. R017 somente inspiração.
+[Plano](../../tasks/plan-pos-320-food01.md),
+[checklist](../../tasks/todo-pos-320-food01.md) e
+[relatório](../governance/RELATORIO_FOOD01_2026-10-17.md).
+Rollback deve preservar leitor compatível com FOOD01. Não inclui FOOD02/densidades.
 
 **Origem:** item 14.
 
@@ -494,6 +493,16 @@ exato de alimento do catálogo; não depende de TBCA nem inclui FOOD02/densidade
 ---
 
 ## [FOOD02] Cadastrar alimento reutilizável dentro do editor do plano
+
+**RESIDUAL CONFIRMADO — planejamento em 2026-10-17**, base `95e9f33d`.
+D01–D03 confirmadas: pessoal/clínica com pessoal por padrão e edição pelo
+criador; por100g ou porção em gramas; aplicações existentes preservadas.
+Catálogo público permanece separado. Reutilizar FOOD01 com identidade custom,
+snapshots e controles de autosave/abas. R047/R064 examinados; R015/R016/R042
+triados; sem pacote novo, câmera ou API externa. Não depende de TBCA.
+Implementação ainda não iniciada. [Plano](../../tasks/plan-pos-320-food02.md) e
+[checklist](../../tasks/todo-pos-320-food02.md). Backend/RLS Sol médio; Luna alto
+somente após checkpoint e troca manual; revisão final Sol médio.
 
 **Origem:** item 24.
 
