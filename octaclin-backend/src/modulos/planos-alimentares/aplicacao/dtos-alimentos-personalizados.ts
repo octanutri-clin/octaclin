@@ -1,14 +1,14 @@
 import { Transform, Type } from 'class-transformer';
 import { Allow, Equals, IsIn, IsInt, IsString, IsUUID, Max, MaxLength, Min, MinLength, Validate, ValidateIf, ValidationArguments, ValidatorConstraint, ValidatorConstraintInterface } from 'class-validator';
 import { BaseComposicaoPersonalizada, CAMPOS_COMPOSICAO_CUSTOM, normalizarComposicaoPersonalizada, NutrientesPersonalizados, selecionarConteudoPersonalizado } from '../dominio/alimentos-personalizados';
-import { MicronutrientesPor100gEntrada } from '../dominio/micronutrientes';
+import { LimitePrecisaoNutricionalError, MicronutrientesPor100gEntrada } from '../dominio/micronutrientes';
 const presente = (_: unknown, v: unknown) => v !== undefined;
 @ValidatorConstraint({ name: 'composicaoAlimentoPersonalizado', async: false })
 class ValidadorComposicao implements ValidatorConstraintInterface {
   validate(_v: unknown, args: ValidationArguments): boolean {
     const o = args.object as Record<string, unknown>;
     if (o.ativo === false) return CAMPOS_COMPOSICAO_CUSTOM.every(k => o[k] === undefined);
-    try { normalizarComposicaoPersonalizada(selecionarConteudoPersonalizado(o)); return true; } catch { return false; }
+    try { normalizarComposicaoPersonalizada(selecionarConteudoPersonalizado(o)); return true; } catch (erro) { return erro instanceof LimitePrecisaoNutricionalError; }
   }
   defaultMessage() { return 'Composição informada inválida.'; }
 }

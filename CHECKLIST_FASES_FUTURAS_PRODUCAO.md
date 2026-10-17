@@ -4670,11 +4670,14 @@ auditoria estão ordenados na seção 15 de
   descartável nesta entrega; estado externo não verificado. Preservar leitor
   compatível no rollback. Evidências/limites:
   `docs/governance/RELATORIO_FOOD01_2026-10-17.md`.
-- [~] FOOD02 — planejamento/gaps concluídos na base `95e9f33d`;
-  D01–D03 confirmadas: pessoal/clínica, composição por100g ou porção em gramas,
-  preservação dos itens já aplicados. Sem implementação iniciada nesta rodada.
-  Plano/checklist `tasks/plan-pos-320-food02.md`/`tasks/todo-pos-320-food02.md`.
-  Sol6.1 médio para backend/RLS; pausa para Luna alto após checkpointGREEN.
+- [~] FOOD02 — backend T01–T05 implementado na base `95e9f33d`, autorizado
+  em “Pode seguir, sol médio”. D01–D03 confirmadas; migration1076 só PG local
+  descartável,34 PASS/29 filtrados;494 focados e typecheck/build PASS.
+  Interface/BFF/Playwright/CI e revisão final pendentes, sem operação externa.
+  Aguardar troca manual para Luna alto e seguir handoff
+  `tasks/handoff-pos-320-food02-luna.md`; plano/checklist
+  `tasks/plan-pos-320-food02.md`/`tasks/todo-pos-320-food02.md`.
+
 
 
 

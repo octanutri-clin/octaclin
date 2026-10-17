@@ -1,24 +1,24 @@
-# Handoff atual — FOOD02: planejamento pronto, D01–D03 confirmadas
+# Handoff atual — FOOD02: backendGREEN; aguarda troca manual para Luna alto
 
 - Branch `feat/pos320-food02-planejamento`, base `95e9f33d` (merge424).
-  Worktree isolada reutilizada `.worktrees/pos320-food01-planejamento`.
+  Worktree isolada `.worktrees/pos320-food01-planejamento` reutilizada.
   Checkout principal com `next-env.d.ts` preexistente preservado.
-- FOOD01 integrada; CI39029460553 de `faeb603b` SUCCESS, Demo/PR Gate incluídos.
-  Migration1075/deploy externos não conferidos; não inferir aplicação do merge.
-- [Plano](plan-pos-320-food02.md) e [checklist](todo-pos-320-food02.md).
-  Pessoal/clínica, pessoal por padrão; duas bases com gramas explícitos;
-  aplicações antigas preservadas. Não perguntar novamente D01–D03.
-- Gaps: catálogo global com DML revogado, identidade custom inexistente, medidas
-  FOOD01 só catálogo, snapshots/DTOs/projeções e copies precisam integração.
-  Biblioteca custom separada; não gravar UUID custom em FK pública.
-- Só referências FOOD02: R047/R064 lidos/pinados; R015/R016/R042 triados por
-  metadados/finalidade. Nenhuma instalação, código externo, câmera ou fonte nova.
-- Próxima ação: com autorização de implementação, Sol6.1 médio executa T01–T05
-  com TDD, contratos, PG/RLS/concorrência. Não começar pela UI. Após backendGREEN,
-  preparar handoff concreto, avisar e pausar para troca manual a Luna alto em
-  T06–T07; retorno a Sol médio para revisão R4/T08/CI. Não delegar automaticamente.
-- Só documentação nesta etapa, sem testes de implementação, migration, PR nova,
-  merge, deploy ou operação externa. Uma PR futura reúne FOOD02 completa.
+- Desenvolvimento autorizado em “Pode seguir, sol médio”. D01–D03 fechadas;
+  T01–T05 implementados no backend. Nenhum runtime Web/BFF alterado.
+- [Plano](plan-pos-320-food02.md), [checklist](todo-pos-320-food02.md),
+  [ledger](execucao-pos-320-food02.md) e [handoff Luna](handoff-pos-320-food02-luna.md).
+  Este último define contratos reais, exemplos sintéticos e limites da UI.
+- Biblioteca cifrada/índice HMAC, origem custom separada de catálogo, CAS e
+  idempotência, snapshots por intenção e medidas FOOD01 com pai XOR.
+  Nova migration1076, sem editar1075, ensaiada somente em PG descartável.
+- PASS:494 focados,3174 integrais/133 SKIPPED condicionais,34 PG/29 filtrados,
+  typecheck/build/artefato. Secrets/diff/matriz40 PASS, registrados no ledger. PG local omite Timescale/pgvector;
+  revisão independente, CI FOOD02 e aplicação externa continuam separados.
+- Próxima ação: aguardar troca MANUAL para GPT-6 Luna alto; então executar
+  T06–T07. Não executar UI/BFF antes da troca. Não delegar automaticamente.
+  Ao concluir UI, avisar e pausar para Sol médio em R4/T08/PR única/CI.
+- Sem nova dependência ou pesquisa externa; referências FOOD02 já triadas.
+  Uma única PR futura reúne FOOD02 completa; sem merge/deploy/migration externa.
 
 ---
 

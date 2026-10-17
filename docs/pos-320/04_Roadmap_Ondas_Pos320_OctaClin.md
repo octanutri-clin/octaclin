@@ -494,13 +494,16 @@ Rollback deve preservar leitor compatível com FOOD01. Não inclui FOOD02/densid
 
 ## [FOOD02] Cadastrar alimento reutilizável dentro do editor do plano
 
-**RESIDUAL CONFIRMADO — planejamento em 2026-10-17**, base `95e9f33d`.
+**EM IMPLEMENTAÇÃO — checkpoint backend em 2026-10-17**, base `95e9f33d`.
 D01–D03 confirmadas: pessoal/clínica com pessoal por padrão e edição pelo
 criador; por100g ou porção em gramas; aplicações existentes preservadas.
 Catálogo público permanece separado. Reutilizar FOOD01 com identidade custom,
 snapshots e controles de autosave/abas. R047/R064 examinados; R015/R016/R042
 triados; sem pacote novo, câmera ou API externa. Não depende de TBCA.
-Implementação ainda não iniciada. [Plano](../../tasks/plan-pos-320-food02.md) e
+T01–T05 backend implementados:494 focados,34 PG/29 filtrados e build/typecheck
+PASS; migration1076 só descartável. UI/BFF/CI pendentes.
+[Handoff Luna](../../tasks/handoff-pos-320-food02-luna.md).
+[Plano](../../tasks/plan-pos-320-food02.md) e
 [checklist](../../tasks/todo-pos-320-food02.md). Backend/RLS Sol médio; Luna alto
 somente após checkpoint e troca manual; revisão final Sol médio.
 

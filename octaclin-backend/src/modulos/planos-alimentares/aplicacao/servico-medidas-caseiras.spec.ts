@@ -1,3 +1,4 @@
+import { ServicoAlimentosPersonalizados } from './servico-alimentos-personalizados';
 import { randomUUID } from 'crypto';
 import { BadRequestException, ConflictException, ForbiddenException, NotFoundException } from '@nestjs/common';
 import { CriptografiaDadosSensiveis } from '../../../infraestrutura/seguranca/criptografia-dados-sensiveis';
@@ -91,4 +92,25 @@ describe('FOOD01 biblioteca autorizada', () => {
         await expect(a.servico.criar(tenant, alimento, usuario, criar())).rejects.toBeInstanceOf(BadRequestException);
         expect(a.registros).toHaveLength(0);
     });
+});
+
+describe('FOOD02 medidas e escopo do pai', () => {
+  afterEach(() => jest.restoreAllMocks());
+  it('cria com identidade custom e mantém medidas pessoais no pai pessoal', async () => {
+    const a = ambiente();
+    jest.spyOn(ServicoAlimentosPersonalizados.prototype, 'autorizarPaiMedida').mockResolvedValue({ escopo: 'pessoal', profissionalId: profissional });
+    const r = await a.servico.criar(tenant, alimento, usuario, criar(), 'custom');
+    expect(r.alimentoPersonalizadoId).toBe(alimento);
+    expect(r.alimentoComposicaoId).toBeUndefined();
+    expect(a.registros[0].alimentoComposicaoId).toBeNull();
+    await expect(a.servico.criar(tenant, alimento, usuario, { ...criar(), escopo: 'clinica' }, 'custom')).rejects.toBeInstanceOf(BadRequestException);
+  });
+  it('revalida o pai na leitura e distingue idempotência de catálogo/custom', async () => {
+    const a = ambiente(), d = criar();
+    await a.servico.criar(tenant, alimento, usuario, d);
+    jest.spyOn(ServicoAlimentosPersonalizados.prototype, 'autorizarPaiMedida').mockResolvedValue({ escopo: 'clinica', profissionalId: profissional });
+    await expect(a.servico.criar(tenant, alimento, usuario, d, 'custom')).rejects.toBeInstanceOf(ConflictException);
+    jest.spyOn(ServicoAlimentosPersonalizados.prototype, 'autorizarPaiMedida').mockRejectedValue(new NotFoundException('Pai indisponível'));
+    await expect(a.servico.listar(tenant, alimento, usuario, {}, 'custom')).rejects.toBeInstanceOf(NotFoundException);
+  });
 });

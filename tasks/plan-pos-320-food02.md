@@ -1,8 +1,8 @@
 # FOOD02 — alimentos reutilizáveis no editor
 
 > **For agentic workers:** usar `superpowers:executing-plans` por tarefa, com
-> TDD e um escritor ativo. Não delegar automaticamente. Implementação T01–T05 autorizada em “Pode seguir, sol médio”. Operação externa
-> continua sem autorização.
+> TDD e um escritor ativo. Não delegar automaticamente. T01–T05 autorizadas em
+> “Pode seguir, sol médio”. Operação externa continua sem autorização.
 
 **Objetivo:** cadastrar, localizar e aplicar alimentos personalizados no editor
 profissional, preservando composição, proveniência e histórico.
@@ -28,7 +28,8 @@ ou deploy externos. Não foi informada aplicação externa da1075 nesta rodada.
 Branch `feat/pos320-food02-planejamento`, worktree isolada existente reutilizada
 em `.worktrees/pos320-food01-planejamento`; o nome do diretório não define a
 branch. Alteração preexistente de `octaclin-web/next-env.d.ts` no checkout
-principal preservada. Nenhum runtime, migration ou lockfile alterado nesta etapa.
+principal preservada. No planejamento inicial, nenhum runtime/migration/lockfile foi alterado.
+A implementação backend foi autorizada posteriormente.
 Uma PR futura FOOD02 reunirá plano e implementação; não abrir PR só de plano.
 
 ## Decisões de produto — confirmadas
@@ -243,7 +244,7 @@ e commit. Não declarar RED por erro de ambiente ou teste que não chegou à aç
 
 ## Verificação e handoff de modelos
 
-Nesta etapa: revisão documental, leituras de código/contratos, metadados/licenças,
+No planejamento inicial: revisão documental, leituras de código/contratos, metadados/licenças,
 merge/CI, diff e links locais. Sem execução de testes de implementação, installs,
 builds, banco, provider, migration ou deploy. Baseline CI não é prova FOOD02.
 
@@ -260,3 +261,14 @@ para troca manual para GPT-6 Luna alto em T06–T07. Handoff deve conter exemplo
 de request/response reais e validados, sem campos ainda indefinidos. Retornar a
 Sol médio para revisão R4, integração T08 e CI; avisar e pausar também nessa
 troca. Revisão própria não é independente. Não há troca necessária agora.
+
+## Checkpoint backend implementado
+
+T01–T05 implementados após “Pode seguir, sol médio”, com migration1076,
+biblioteca/DTOs, mapas cifrados, medidas custom e projeções explícitas. Contratos
+reais e exemplos no [handoff Luna](handoff-pos-320-food02-luna.md); o
+[ledger](execucao-pos-320-food02.md) distingue RED/GREEN e falhas de preparação.
+494 focados,34 PG reais/29 filtrados e typecheck/build/artefato PASS. Suíte
+integral, verificações finais e limites nas
+[evidências](../docs/governance/EVIDENCIAS_FOOD02_BACKEND_2026-10-17.md).
+Pausar para troca manual a Luna alto ANTES de T06; T08/CI somente após UI.

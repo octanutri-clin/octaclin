@@ -446,3 +446,24 @@ de densidade. Motor nutricional, CAS, criptografia e isolamento existentes
 continuam autoritativos. Migration1075 só ensaiada em banco descartável neste
 checkpoint; integração/CI/implantação são etapas separadas. Plano e limites em
 `tasks/plan-pos-320-food01.md`.
+
+## FOOD02 — alimento personalizado separado das fontes públicas
+
+Biblioteca tenant-aware no módulo de planos, com escopo pessoal/clínica,
+criador, revisão, idempotência e conteúdo cifrado; índices HMAC reutilizam o
+mecanismo existente de busca. Custom não é fonte pública e não usa a FK de
+`alimentos_composicao`. Não há dependência de TBCA, provider ou câmera.
+
+Primeira aplicação editorial resolve acesso/revisão sob lock e normaliza a base
+informada. Mapa cifrado por item/identidade/revisão/nonce preserva a composição
+usada; biblioteca alterada não recalcula rascunhos nem publicações. Reaplicação
+exige acesso atual. Omissão legada só preserva fatos iguais, null desvincula e
+escritor clínico que descartaria contexto recebe409. Cópias preservam fatos sem
+capacidade privada. Publicações usam projeção factual explícita para custom,
+sem alterar a projeção/hash legado; não confundir tipos com ocultação runtime.
+
+Medidas FOOD01 admitem pai público OU personalizado, com FK composta e XOR.
+Pai pessoal não pode ser exposto por medida da clínica. Composição é resolvida
+antes de conversão de medida. Normalização guarda originais/base/versão; ausência
+não vira zero e completude editorial não equivale a completude clínica. Escopo,
+contratos e limites em `tasks/plan-pos-320-food02.md`; operação no runbook.

@@ -13,6 +13,9 @@ describe('FOOD02 DTOs fechados', () => {
   });
   it.each([{ nome: null }, { base: { tipo: 'ml' } }, { nutrientes: { energiaKcal: '50' } }, { nutrientes: null }, { tenantId: randomUUID() }, { profissionalId: randomUUID() }, { escopo: null }, { fonte: 'taco' }, { chaveIdempotencia: 'x' }])('rejeita cadastro inválido ou metadado arbitrário %#', v => expect(erros({ ...conteudo(), chaveIdempotencia: randomUUID(), ...v }).length).toBeGreaterThan(0));
   it.each([{ revisaoEsperada: 0, ativo: false }, { revisaoEsperada: 1, ativo: true }, { revisaoEsperada: 1, ativo: false, nome: 'x' }, { ...conteudo(), revisaoEsperada: 1, escopo: 'clinica' }, { revisaoEsperada: 1 }, { ...conteudo(), revisaoEsperada: '1' }])('rejeita PATCH ambíguo/sem revisão %#', v => expect(erros(v, 'AtualizarAlimentoPersonalizadoDto').length).toBeGreaterThan(0));
+  it('deixa overflow numérico estruturalmente válido chegar ao serviço para resposta422', () => {
+    expect(erros({ ...conteudo(), chaveIdempotencia: randomUUID(), base: { tipo: 'porcao', pesoGramas: 0.001 }, nutrientes: { energiaKcal: 1000 } })).toHaveLength(0);
+  });
   it('limita paginação e exige corpo de busca textual', () => {
     expect(erros({ pagina: '2', limite: '25', escopo: 'clinica' }, 'ListarAlimentosPersonalizadosDto')).toHaveLength(0);
     expect(erros({ busca: 'pro', pagina: 1 }, 'BuscarAlimentosPersonalizadosDto')).toHaveLength(0);

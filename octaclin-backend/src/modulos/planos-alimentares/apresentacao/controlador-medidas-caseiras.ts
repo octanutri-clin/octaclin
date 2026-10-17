@@ -50,3 +50,15 @@ export class ControladorMedidasCaseiras {
         return this.servico.atualizar(usuario.tenantId, alimentoId, medidaId, usuario, dados);
     }
 }
+@Controller('planos-alimentares/alimentos-personalizados/:alimentoId/medidas-caseiras')
+@UseGuards(GuardaJwt, GuardaPapeis, GuardaPermissoes)
+@Papeis('Professional')
+export class ControladorMedidasCaseirasPersonalizadas {
+  constructor(private readonly servico: ServicoMedidasCaseiras) {}
+  @Get() @Permissoes('planos_alimentares.ler') @Header('Cache-Control', 'private, no-store')
+  listar(@UsuarioAtual() u: UsuarioAutenticado, @Param('alimentoId', ParseUUIDPipe) id: string, @Query() q: ListarMedidasCaseirasDto) { return this.servico.listar(u.tenantId, id, u, q, 'custom'); }
+  @Post() @Permissoes('planos_alimentares.gerenciar') @Header('Cache-Control', 'private, no-store')
+  criar(@UsuarioAtual() u: UsuarioAutenticado, @Param('alimentoId', ParseUUIDPipe) id: string, @Body() d: CriarMedidaCaseiraDto) { return this.servico.criar(u.tenantId, id, u, d, 'custom'); }
+  @Patch(':medidaId') @Permissoes('planos_alimentares.gerenciar') @Header('Cache-Control', 'private, no-store')
+  atualizar(@UsuarioAtual() u: UsuarioAutenticado, @Param('alimentoId', ParseUUIDPipe) id: string, @Param('medidaId', ParseUUIDPipe) medidaId: string, @Body() d: AtualizarMedidaCaseiraDto) { return this.servico.atualizar(u.tenantId, id, medidaId, u, d, 'custom'); }
+}

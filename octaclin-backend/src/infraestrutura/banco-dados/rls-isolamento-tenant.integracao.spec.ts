@@ -1,3 +1,5 @@
+import { ServicoAlimentosPersonalizados } from '../../modulos/planos-alimentares/aplicacao/servico-alimentos-personalizados';
+import { AlimentoPersonalizadoOrm } from '../../modulos/planos-alimentares/infraestrutura/alimento-personalizado.orm';
 import { AlimentoComposicaoOrm } from '../../modulos/planos-alimentares/infraestrutura/alimento-composicao.orm';
 import { FonteComposicaoAlimentoOrm } from '../../modulos/planos-alimentares/infraestrutura/fonte-composicao-alimento.orm';
 import { ServicoMedidasCaseiras } from '../../modulos/planos-alimentares/aplicacao/servico-medidas-caseiras';
@@ -250,6 +252,7 @@ descrever('RLS e isolamento multi-tenant integral em Postgres real', () => {
         ResumoNotificacaoUsuarioOrm,
         MaterialEducativoOrm,
         MedidaCaseiraOrm,
+        AlimentoPersonalizadoOrm,
         AlimentoComposicaoOrm,
         FonteComposicaoAlimentoOrm,
         PlanoAlimentarOrm,
@@ -1669,6 +1672,106 @@ descrever('RLS e isolamento multi-tenant integral em Postgres real', () => {
     Object.assign(c.documento.refeicoes[0].itens[0],{alimentoComposicaoId:alimentoId,quantidade:2.5,porcaoGramas:999,medidaCaseira:{id:medida.id,revisao:1,aplicacaoId:randomUUID()}});
     return {...c,biblioteca,criar,medida,alimentoId};
   }
+
+  const entradaCustom = () => ({ chaveIdempotencia: randomUUID(), nome: 'Produto sintético FOOD02', base: { tipo: 'porcao' as const, pesoGramas: 30 }, nutrientes: { energiaKcal: 90, proteinasG: 3, carboidratosG: 12, gordurasG: 3 }, micronutrientes: { ferroMg: 0.6 } });
+  async function prepararFood02() {
+    const c = await prepararCenarioPa06(`food02-${randomUUID()}`);
+    const biblioteca = new ServicoAlimentosPersonalizados(executorTenant!, c.cripto);
+    const entrada = entradaCustom(), alimento = await biblioteca.criar(tenantA, c.usuario, entrada);
+    Object.assign(c.documento.refeicoes[0].itens[0], { alimentoPersonalizado: { id: alimento.id, revisao: 1, aplicacaoId: randomUUID() } });
+    return { ...c, biblioteca, entrada, alimento };
+  }
+  it('FOOD02 RLS, vínculo, pesquisa e projeções isolam tenant e proprietário', async () => {
+    const c = await prepararFood02(), outro = await prepararCenarioPa06('food02-outro');
+    expect((await c.biblioteca.listar(tenantA, outro.usuario, {})).itens.map(v => v.id)).not.toContain(c.alimento.id);
+    await expect(c.biblioteca.obter(tenantA, outro.usuario, c.alimento.id)).rejects.toThrow('não encontrado');
+    await expect(c.biblioteca.atualizar(tenantA, outro.usuario, c.alimento.id, { revisaoEsperada: 1, ativo: false } as any)).rejects.toThrow('não encontrado');
+    const clinica = await c.biblioteca.criar(tenantA, c.usuario, { ...entradaCustom(), escopo: 'clinica' });
+    const busca = await c.biblioteca.buscar(tenantA, outro.usuario, { busca: 'prod sint', limite: 1 });
+    expect(busca.total).toBeGreaterThanOrEqual(1);
+    expect((await c.biblioteca.obter(tenantA, outro.usuario, clinica.id)).podeEditar).toBe(false);
+    expect(JSON.stringify(busca)).not.toMatch(/conteudoCriptografado|buscaHashes|profissionalId|tenantId/);
+    for (const tenant of [undefined, tenantB]) {
+      await comoTenant(tenant);
+      expect((await cliente!.query('select id from alimentos_personalizados where id=$1', [c.alimento.id])).rowCount).toBe(0);
+    }
+    await comoTenant(tenantA);
+    const registro = (await cliente!.query('select conteudo_criptografado,busca_hashes from alimentos_personalizados where id=$1', [c.alimento.id])).rows[0];
+    expect(Buffer.isBuffer(registro.conteudo_criptografado)).toBe(true);
+    expect(JSON.stringify(registro.busca_hashes)).not.toContain('produto');
+    await expect(cliente!.query('update alimentos_personalizados set tenant_id=$1 where id=$2', [tenantB, c.alimento.id])).rejects.toMatchObject({ code: '42501' });
+    await cliente!.query('update profissionais set arquivado_em=now() where tenant_id=$1 and id=$2', [tenantA, c.profissionalId]);
+    await expect(c.biblioteca.obter(tenantA, c.usuario, c.alimento.id)).rejects.toThrow('Vínculo profissional');
+  }, 60000);
+  it('FOOD02 criação idempotente e CAS concorrentes reais', async () => {
+    const c = await prepararFood02(), e = entradaCustom();
+    const [a, b] = await Promise.all([c.biblioteca.criar(tenantA, c.usuario, e), c.biblioteca.criar(tenantA, c.usuario, e)]);
+    expect(a.id).toBe(b.id);
+    const atualizacao = { ...entradaCustom(), revisaoEsperada: 1 }; delete (atualizacao as any).chaveIdempotencia;
+    const corrida = await Promise.allSettled([c.biblioteca.atualizar(tenantA, c.usuario, a.id, atualizacao as any), c.biblioteca.atualizar(tenantA, c.usuario, a.id, { revisaoEsperada: 1, ativo: false } as any)]);
+    expect(corrida.filter(v => v.status === 'fulfilled')).toHaveLength(1);
+    expect(corrida.filter(v => v.status === 'rejected')).toHaveLength(1);
+    const replay = await c.biblioteca.criar(tenantA, c.usuario, e);
+    expect(replay.revisao).toBe(2);
+    await expect(c.biblioteca.criar(tenantA, c.usuario, { ...e, nome: 'Divergente' })).rejects.toThrow('outros dados');
+  }, 60000);
+  it('FOOD02 FK composta e XOR de medidas não permitem pai de outro tenant ou pai duplo', async () => {
+    const c = await prepararFood02(), publico = await prepararFood01();
+    const dadosB = await prepararDadosRepresentativos(tenantB, 'food02-b');
+    const uB = { ...c.usuario, tenantId: tenantB, usuarioId: dadosB.usuarioId };
+    const b = await c.biblioteca.criar(tenantB, uB, entradaCustom());
+    await comoTenant(tenantA);
+    const inserir = (customId: string | null, catalogoId: string | null) => cliente!.query(`insert into medidas_caseiras_alimentos
+      (tenant_id,profissional_id,alimento_composicao_id,alimento_personalizado_id,chave_idempotencia,escopo,conteudo_criptografado,criacao_snapshot_criptografado)
+      values($1,$2,$3,$4,$5,'pessoal',$6,$6)`, [tenantA, c.profissionalId, catalogoId, customId, randomUUID(), c.cripto.criptografar('Fixture sintética')]);
+    await expect(inserir(null, null)).rejects.toMatchObject({ code: '23514' });
+    await expect(inserir(c.alimento.id, publico.alimentoId)).rejects.toMatchObject({ code: '23514' });
+    await expect(inserir(b.id, null)).rejects.toMatchObject({ code: '23503' });
+    const medidas = new ServicoMedidasCaseiras(executorTenant!, c.cripto);
+    await expect(medidas.criar(tenantA, c.alimento.id, c.usuario, { chaveIdempotencia: randomUUID(), nome: 'colher', quantidadeReferencia: 1, pesoReferenciaGramas: 25, escopo: 'clinica' }, 'custom')).rejects.toThrow('permanecer pessoal');
+  }, 60000);
+  it('FOOD02 snapshots sobrevivem a edição/desativação/transferência sem conceder nova aplicação', async () => {
+    const c = await prepararFood02(), medidas = new ServicoMedidasCaseiras(executorTenant!, c.cripto);
+    const medida = await medidas.criar(tenantA, c.alimento.id, c.usuario, { chaveIdempotencia: randomUUID(), nome: 'colher', quantidadeReferencia: 1, pesoReferenciaGramas: 25 }, 'custom');
+    Object.assign(c.documento.refeicoes[0].itens[0], { quantidade: 2.5, medidaCaseira: { id: medida.id, revisao: 1, aplicacaoId: randomUUID() } });
+    const salvar = (d: any, revisao: number, u = c.usuario) => c.servico.salvarEdicaoRascunho(tenantA, c.pacienteId, c.planoId, u, { rascunhoIdEsperado: c.versaoId, rascunhoRevisaoEsperada: revisao, documento: d });
+    const r = await salvar(c.documento, 0);
+    expect(r.edicaoEstado).toBe('materializada');
+    expect(r.refeicoes[0].itens[0].composicaoSnapshot.nutrientesPorcao.energiaKcal).toBe(187.5);
+    await c.biblioteca.atualizar(tenantA, c.usuario, c.alimento.id, { nome: 'Alterado', base: { tipo: 'por100g' }, nutrientes: { energiaKcal: 10 }, revisaoEsperada: 1 } as any);
+    await c.biblioteca.atualizar(tenantA, c.usuario, c.alimento.id, { revisaoEsperada: 2, ativo: false } as any);
+    const outro = await prepararCenarioPa06('food02-transferido');
+    await comoTenant(tenantA); await cliente!.query('update pacientes set profissional_responsavel_id=$1 where tenant_id=$2 and id=$3', [outro.profissionalId, tenantA, c.pacienteId]);
+    await expect(salvar(r.documentoEdicao, 1)).rejects.toThrow('Paciente nao encontrado');
+    const preservado = await salvar(r.documentoEdicao, 1, outro.usuario);
+    expect(preservado.refeicoes[0].itens[0].composicaoSnapshot.nutrientesPorcao.energiaKcal).toBe(187.5);
+    const novaIntencao = JSON.parse(JSON.stringify(preservado.documentoEdicao)); novaIntencao.refeicoes[0].itens[0].alimentoPersonalizado.aplicacaoId = randomUUID();
+    await expect(salvar(novaIntencao, 2, outro.usuario)).rejects.toThrow('não encontrado');
+    await expect(medidas.listar(tenantA, c.alimento.id, outro.usuario, {}, 'custom')).rejects.toThrow('não encontrado');
+    await c.servico.revisar(tenantA, c.pacienteId, c.planoId, outro.usuario, { rascunhoIdEsperado: c.versaoId, rascunhoRevisaoEsperada: 2 });
+    await c.servico.publicar(tenantA, c.pacienteId, c.planoId, outro.usuario, { rascunhoIdEsperado: c.versaoId, rascunhoRevisaoEsperada: 3 });
+    const p = await c.servico.obterApresentacaoPaciente(tenantA, c.pacienteId, c.planoId, 1, outro.usuario);
+    expect(JSON.stringify(p)).not.toMatch(/alimentoPersonalizado|alimentosPersonalizadosAplicados|aplicacaoId|profissionalId|buscaHashes|Criptografado/);
+    expect(JSON.stringify(p)).not.toContain(c.alimento.id);
+    const n = await c.servico.criarNovaVersao(tenantA, c.pacienteId, c.planoId, outro.usuario);
+    expect(n).not.toHaveProperty('alimentosPersonalizadosAplicados');
+    expect(n.refeicoes[0].itens[0].composicaoSnapshot.nutrientesPorcao.energiaKcal).toBe(187.5);
+  }, 60000);
+  it('FOOD02 aplicar antes de desativar serializa e preserva fatos', async () => {
+    const c = await prepararFood02();
+    const r = await disputarPa06(executor => new ServicoPlanosAlimentares(executor, c.cripto).salvarEdicaoRascunho(tenantA, c.pacienteId, c.planoId, c.usuario, { rascunhoIdEsperado: c.versaoId, rascunhoRevisaoEsperada: 0, documento: c.documento }), () => c.biblioteca.atualizar(tenantA, c.usuario, c.alimento.id, { revisaoEsperada: 1, ativo: false } as any), AlimentoPersonalizadoOrm, 'pessimistic_read');
+    expect(r.every(v => v.status === 'fulfilled')).toBe(true);
+    const preservado = await c.servico.obterRascunho(tenantA, c.pacienteId, c.planoId, c.usuario);
+    expect(preservado.refeicoes[0].itens[0].composicaoSnapshot.origem).toBe('custom');
+  }, 60000);
+  it('FOOD02 desativação anterior impede aplicação bloqueada e não avança revisão', async () => {
+    const c = await prepararFood02();
+    const r = await disputarPa06(executor => new ServicoAlimentosPersonalizados(executor, c.cripto).atualizar(tenantA, c.usuario, c.alimento.id, { revisaoEsperada: 1, ativo: false } as any), () => c.servico.salvarEdicaoRascunho(tenantA, c.pacienteId, c.planoId, c.usuario, { rascunhoIdEsperado: c.versaoId, rascunhoRevisaoEsperada: 0, documento: c.documento }), AlimentoPersonalizadoOrm, 'pessimistic_write');
+    expect(r.map(v => v.status)).toEqual(['fulfilled', 'rejected']);
+    const atual = await c.servico.obterRascunho(tenantA, c.pacienteId, c.planoId, c.usuario);
+    expect(atual.rascunhoRevisao).toBe(0);
+    expect(atual).not.toHaveProperty('alimentosPersonalizadosAplicados');
+  }, 60000);
 
   it('FOOD01 RLS e serviço isolam tenant, profissional e escopo sem expor cipher',async()=>{
     const c=await prepararFood01();

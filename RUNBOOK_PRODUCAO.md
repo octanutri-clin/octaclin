@@ -2196,3 +2196,31 @@ contrato; reverter somente a UI não autoriza regredir esse leitor. O `down`1075
 recusa apagar dados. Não remover descriptors/contextos, recalcular publicações
 nem sobrescrever documentos para forçar compatibilidade. Corrigir schema com
 nova migration aditiva caso necessário.
+
+## FOOD02 — biblioteca de alimentos personalizados e migration1076
+
+Operação posterior, somente em alvo e roles confirmados e com autorização
+específica. Não inferir aplicação da1075/1076 de merge ou testes descartáveis.
+
+1. Conferir migrations efetivamente registradas, backup e ambiente. Aplicar
+   pendências na ordem, com owner fora de banda, antes de publicar o novo backend.
+2. Verificar registro `AlimentosPersonalizados1720000001076`, tabela
+   `alimentos_personalizados`, FORCE RLS/policy, FK tenant/profissional,
+   unicidade/idempotência e índices HMAC/listagem. Não consultar conteúdo real
+   para conferir estrutura. Índice protegido não pode aparecer em evidências.
+3. Conferir coluna cifrada da versão e medidas: pai público nullable, FK custom
+   composta por tenant e CHECK XOR exigindo exatamente um pai. Não editar1075.
+4. Verificar grants mínimos da role runtime (SELECT/INSERT/UPDATE na biblioteca,
+   permissões vigentes sobre versões/medidas), sem owner/BYPASSRLS/DDL e sem
+   permitir DML nas fontes públicas. Falha de grant não autoriza desativar RLS.
+5. Publicar backend e Web/BFF completos somente após gates da PR e autorização.
+   Validar com fixtures sintéticas: pessoal/clínica, busca, CAS, aplicação,
+   preservação após edição/desativação, medidas e projeções sem dados privados.
+   Registrar a versão verificada; nenhuma carga de catálogo faz parte da operação.
+
+Rollback suspende entradas novas pela UI e conserva leitor compatível com o
+novo descriptor/mapa, schema e cifras. Não apagar biblioteca/medidas/contextos,
+converter IDs em catálogo público ou recalcular história para usar parser antigo.
+O `down`1076 recusa perda de dados. Correção estrutural usa migration aditiva.
+Rotação da chave do índice HMAC segue o procedimento vigente de índices cegos e
+precisa contemplar esta biblioteca; não trocar chave assumindo busca inalterada.

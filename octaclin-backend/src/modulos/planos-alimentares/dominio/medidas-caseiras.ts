@@ -22,7 +22,9 @@ export function calcularPesoMedida(quantidade: unknown, pesoGramas: unknown, qua
     const arredondado = (produto * 2n + r) / (2n * r);
     return Number(arredondado) / 1000;
 }
+export type OrigemAlimentoMedida = 'catalogo' | 'custom';
 export interface ContextoMedidaSalvo {
+    origemAlimento?: 'custom';
     aplicacaoId: string;
     alimentoId: string;
     referencia: {
@@ -40,7 +42,7 @@ export type ContextosMedidas = Record<string, ContextoMedidaSalvo>;
 export async function resolverMedidasDocumento(documento: DocumentoEdicaoPlano, anteriores: ContextosMedidas, resolver: (alimentoId: string, ref: {
     id: string;
     revisao: number;
-}, quantidade?: number) => Promise<{
+}, quantidade?: number, origem?: OrigemAlimentoMedida) => Promise<{
     referencia: ContextoMedidaSalvo['referencia'];
 }>): Promise<ContextosMedidas> {
     const atuais: ContextosMedidas = Object.create(null);
@@ -49,18 +51,21 @@ export async function resolverMedidasDocumento(documento: DocumentoEdicaoPlano, 
             for (const a of [item, ...(item.substituicoes ?? [])]) {
                 const anterior = Object.hasOwn(anteriores, a.chaveCliente) ? anteriores[a.chaveCliente] : undefined;
                 const quantidade = numeroEdicao(a.quantidade);
+                const origem: OrigemAlimentoMedida = a.alimentoPersonalizado ? 'custom' : 'catalogo';
+                const alimentoId = a.alimentoPersonalizado?.id ?? a.alimentoComposicaoId;
+                if (a.alimentoPersonalizado && a.alimentoComposicaoId) throw new Error('Origem de alimento ambígua.');
                 // Writer legado que omite o novo campo não destrói proveniência por omissão.
-                if (a.medidaCaseira === undefined && anterior && a.alimentoComposicaoId === anterior.alimentoId && quantidade === anterior.quantidade &&
+                if (a.medidaCaseira === undefined && anterior && alimentoId === anterior.alimentoId && (anterior.origemAlimento ?? 'catalogo') === origem && quantidade === anterior.quantidade &&
                     a.unidade === anterior.referencia.nome && numeroEdicao(a.porcaoGramas) === anterior.porcaoGramas) {
                     a.medidaCaseira = { id: anterior.referencia.id, revisao: anterior.referencia.revisao, aplicacaoId: anterior.aplicacaoId };
                 }
                 const m = a.medidaCaseira;
                 if (!m)
                     continue;
-                if (!a.alimentoComposicaoId)
+                if (!alimentoId)
                     throw new Error('Medida exige alimento do catálogo.');
-                const preservar = anterior && anterior.aplicacaoId === m.aplicacaoId && anterior.alimentoId === a.alimentoComposicaoId && anterior.referencia.id === m.id && anterior.referencia.revisao === m.revisao;
-                const referencia = preservar ? anterior.referencia : (await resolver(a.alimentoComposicaoId, m, quantidade)).referencia;
+                const preservar = anterior && anterior.aplicacaoId === m.aplicacaoId && anterior.alimentoId === alimentoId && (anterior.origemAlimento ?? 'catalogo') === origem && anterior.referencia.id === m.id && anterior.referencia.revisao === m.revisao;
+                const referencia = preservar ? anterior.referencia : (await resolver(alimentoId, m, quantidade, origem)).referencia;
                 // Incompletude editorial é preservada; valor preenchido inválido continua pendente.
                 let porcaoGramas: number | undefined;
                 if (quantidade !== undefined) {
@@ -73,7 +78,7 @@ export async function resolverMedidasDocumento(documento: DocumentoEdicaoPlano, 
                 }
                 a.unidade = referencia.nome;
                 a.porcaoGramas = porcaoGramas;
-                atuais[a.chaveCliente] = { aplicacaoId: m.aplicacaoId, alimentoId: a.alimentoComposicaoId, referencia, quantidade, porcaoGramas };
+                atuais[a.chaveCliente] = { aplicacaoId: m.aplicacaoId, alimentoId, ...(origem === 'custom' ? { origemAlimento: 'custom' as const } : {}), referencia, quantidade, porcaoGramas };
             }
     return atuais;
 }

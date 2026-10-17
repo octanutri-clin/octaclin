@@ -67,6 +67,9 @@ describe('FOOD02 biblioteca autorizada', () => {
   it.each(['!!!', 'de um', 'a'.repeat(33)])('não transforma busca inválida em listagem: %s', async busca => {
     await expect(ambiente().s.buscar(tenant, usuario, { busca })).rejects.toBeInstanceOf(BadRequestException);
   });
+  it('rejeita chave de criação com formato inválido também no serviço', async () => {
+    await expect(ambiente().s.criar(tenant, usuario, { ...dados(), chaveIdempotencia: '0'.repeat(36) } as any)).rejects.toBeInstanceOf(BadRequestException);
+  });
   it('recusa composição adulterada, corrupta e medidas com base inválida', async () => {
     const a = ambiente();
     await expect(a.s.criar(tenant, usuario, { ...dados(), base: { tipo: 'ml' } } as any)).rejects.toBeInstanceOf(BadRequestException);

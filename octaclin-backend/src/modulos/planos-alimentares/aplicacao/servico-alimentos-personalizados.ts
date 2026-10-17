@@ -68,7 +68,7 @@ export class ServicoAlimentosPersonalizados {
       const p = await identidadeBiblioteca(g, tenantId, usuario, true);
       const c = this.normalizar(selecionarConteudoPersonalizado(dados as unknown as Record<string, unknown>));
       const escopo = dados.escopo ?? 'pessoal';
-      if (!['pessoal', 'clinica'].includes(escopo) || !/^[0-9a-f-]{36}$/i.test(dados.chaveIdempotencia ?? '')) throw new BadRequestException('Criação inválida.');
+      if (!['pessoal', 'clinica'].includes(escopo) || !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(dados.chaveIdempotencia ?? '')) throw new BadRequestException('Criação inválida.');
       const original = JSON.stringify({ escopo, composicao: c });
       await g.query('select pg_advisory_xact_lock(hashtextextended($1,0))', [`food02:${tenantId}:${p}:${dados.chaveIdempotencia}`]);
       const repo = g.getRepository(AlimentoPersonalizadoOrm);

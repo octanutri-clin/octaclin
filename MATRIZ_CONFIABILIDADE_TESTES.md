@@ -258,3 +258,20 @@ null manual e referência ausente. Axe focado no seletor. Revisão própria não
 independente. Resultados/limites:
 `docs/governance/EVIDENCIAS_FOOD01_BACKEND_2026-10-17.md` e
 `docs/governance/EVIDENCIAS_FOOD01_WEB_2026-10-17.md`.
+
+## FOOD02 — alimentos reutilizáveis e composição aplicada
+
+R4: biblioteca cifrada, autorização por tenant/criador, idempotência/CAS,
+normalização exata e preservação de referências. Contratos/valores e ausência
+são exercitados em
+`octaclin-backend/src/modulos/planos-alimentares/dominio/alimentos-personalizados.spec.ts`.
+Intenção/snapshot e replay/omissão/null são exercitados em
+`octaclin-backend/src/modulos/planos-alimentares/dominio/aplicacao-alimentos-personalizados.spec.ts`.
+Projeção aninhada explícita e preservação do legado:
+`octaclin-backend/src/modulos/planos-alimentares/aplicacao/projecao-composicao.spec.ts`.
+
+Os recortes FOOD02 do inventário PostgreSQL testam RLS, FK/XOR, vínculo,
+transferência, criação/CAS concorrentes e as duas ordens de aplicar/desativar,
+sem acesso a banco externo. Gate local não inclui Timescale/pgvector. Web/BFF e
+CI final continuam pendentes no checkpoint backend; evidências/limites em
+`docs/governance/EVIDENCIAS_FOOD02_BACKEND_2026-10-17.md`.

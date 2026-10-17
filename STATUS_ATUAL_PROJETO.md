@@ -4,17 +4,18 @@ Atualizado em 2026-10-17.
 
 ## Fase ativa
 
-- **FOOD02 — planejamento e análise de gaps concluídos**, base `95e9f33d`.
-  Cadastro de alimentos reutilizáveis no editor. D01–D03 confirmadas: pessoal
-  ou clínica, pessoal por padrão; composição por100g ou porção com gramas
-  explícitos; preservar aplicações existentes inclusive rascunhos.
-  Biblioteca isolada do catálogo público; snapshots confiáveis e medidas FOOD01
-  reutilizados. R047/Downshift e R064/ZXing examinados; R015/R016/R042 triados,
-  sem dependência nova, câmera ou fonte externa. Plano/checklist:
+- **FOOD02 — backend T01–T05 implementado, aguardando UI/BFF**, base `95e9f33d`.
+  D01–D03 confirmadas; desenvolvimento autorizado em “Pode seguir, sol médio”.
+  Biblioteca própria cifrada, pesquisa HMAC, CAS/idempotência, composição
+  aplicada preservada e medidas FOOD01 generalizadas. Migration1076 apenas
+  no PostgreSQL descartável:34 PASS/29 filtrados;494 focados PASS e
+  typecheck/build/artefato PASS. Suíte integral e limites nas evidências:
+  `docs/governance/EVIDENCIAS_FOOD02_BACKEND_2026-10-17.md`.
+  Próximo passo: troca manual para GPT-6 Luna alto em T06–T07, com handoff
+  `tasks/handoff-pos-320-food02-luna.md`. Sol médio retorna para R4/T08/PR única.
+  Web/BFF/Playwright/CI FOOD02, revisão independente e operação externa pendentes.
+  Sem novas fontes, dependências ou carga TBCA; planos/checklist em
   `tasks/plan-pos-320-food02.md`/`tasks/todo-pos-320-food02.md`.
-  Próximo passo: implementação backend/RLS com Sol6.1 médio após autorização;
-  pausar para Luna alto somente com contratos e banco GREEN, antes da UI/BFF.
-  Nenhum runtime, teste de implementação ou banco alterado neste planejamento.
 - **FOOD01 — integrada pela PR #424**, merge `95e9f33d` confirmado em
   2026-10-17. CI39029460553 do HEAD `faeb603b` SUCCESS, inclusive Backend,
   Web, Demo e PR Gate; CodeQL, Semgrep, Trivy e Dependency Review SUCCESS.
