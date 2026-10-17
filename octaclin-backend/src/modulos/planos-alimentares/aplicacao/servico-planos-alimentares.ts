@@ -1,3 +1,5 @@
+import { ServicoMedidasCaseiras } from './servico-medidas-caseiras';
+import { ContextosMedidas, resolverMedidasDocumento } from '../dominio/medidas-caseiras';
 import { CalculoCombinadoDto, validarSelecoesCalculo } from './dtos-calculo-combinado';
 import { calcularNutrientesCombinados, EntradaPlanoCombinado } from '../dominio/calculo-combinado';
 import { criarSnapshotMicronutrientes, LimitePrecisaoNutricionalError, SnapshotMicronutrientesV1, validarMicronutrientesManuais, ValoresMicronutrientesOrigem } from '../dominio/micronutrientes';
@@ -11,7 +13,8 @@ import {
   ForbiddenException,
   Injectable,
   NotFoundException,
-  UnprocessableEntityException
+  UnprocessableEntityException,
+  ServiceUnavailableException
 } from '@nestjs/common';
 import { And, EntityManager, In, IsNull, LessThan, MoreThan, MoreThanOrEqual } from 'typeorm';
 import { registrarAuditoriaNaTransacao } from '../../../infraestrutura/auditoria/servico-auditoria';
@@ -131,7 +134,8 @@ interface ItemResolvido {
 export class ServicoPlanosAlimentares {
   constructor(
     private readonly executorTenant: ExecutorTenant,
-    private readonly criptografia: CriptografiaDadosSensiveis
+    private readonly criptografia: CriptografiaDadosSensiveis,
+    private readonly medidasCaseiras: ServicoMedidasCaseiras = new ServicoMedidasCaseiras(executorTenant, criptografia)
   ) {}
 
   async obterSelecaoCalculo(tenantId: string, pacienteId: string, planoId: string, usuario: UsuarioAutenticado) {
@@ -704,6 +708,7 @@ export class ServicoPlanosAlimentares {
       this.conferirRevisaoEdicao(rascunho, dados);
       await this.aplicarRascunhoClinico(gerenciador, tenantId, pacienteId, rascunho, dados);
       rascunho.edicaoSnapshotCriptografado = null;
+      rascunho.medidasCaseirasSnapshotCriptografado = null;
       rascunho.edicaoProtegida = rascunho.edicaoProtegida || dados.rascunhoRevisaoEsperada !== undefined;
       this.avancarRevisaoEdicao(rascunho);
       rascunho.edicaoMaterializadaRevisao = rascunho.rascunhoRevisao;
@@ -726,6 +731,9 @@ export class ServicoPlanosAlimentares {
       const plano = await this.obterPlanoNoEscopo(gerenciador, tenantId, pacienteId, planoId, usuario, true);
       const rascunho = await this.obterRascunhoAtivo(gerenciador, tenantId, plano.id, true);
       this.conferirRevisaoEdicao(rascunho, dados);
+      const contextosAnteriores = this.lerContextosMedidas(rascunho);
+      const contextosMedidas = await resolverMedidasDocumento(documento, contextosAnteriores,
+        (alimentoId, referencia) => this.medidasCaseiras.resolverAplicacao(gerenciador, tenantId, usuario, alimentoId, referencia));
       await this.validarReferenciasEdicao(gerenciador, tenantId, pacienteId, documento);
       const identidades = await this.prepararIdentidadesEdicao(gerenciador, plano, rascunho, documento);
       const clinico = converterEdicaoParaRascunho(documento, rascunho);
@@ -741,6 +749,7 @@ export class ServicoPlanosAlimentares {
         }
       }
       rascunho.edicaoSnapshotCriptografado = this.criptografia.criptografar(JSON.stringify(documento));
+      rascunho.medidasCaseirasSnapshotCriptografado = Object.keys(contextosMedidas).length ? this.criptografia.criptografar(JSON.stringify({schemaVersao:1,contextos:contextosMedidas})) : null;
       rascunho.edicaoProtegida = true;
       this.avancarRevisaoEdicao(rascunho);
       rascunho.edicaoMaterializadaRevisao = materializada ? rascunho.rascunhoRevisao : null;
@@ -750,6 +759,15 @@ export class ServicoPlanosAlimentares {
       await gerenciador.getRepository(PlanoAlimentarVersaoOrm).save(rascunho);
       return this.montarVersao(gerenciador, rascunho);
     });
+  }
+
+  private lerContextosMedidas(versao: PlanoAlimentarVersaoOrm): ContextosMedidas {
+    if (!versao.medidasCaseirasSnapshotCriptografado) return {};
+    try {
+      const snapshot = JSON.parse(this.criptografia.descriptografar(versao.medidasCaseirasSnapshotCriptografado));
+      if (snapshot?.schemaVersao !== 1 || !snapshot.contextos || typeof snapshot.contextos !== 'object' || Array.isArray(snapshot.contextos)) throw new Error();
+      return snapshot.contextos;
+    } catch { throw new ServiceUnavailableException('Referência de medida indisponível.'); }
   }
 
   private async validarReferenciasEdicao(gerenciador: EntityManager, tenantId: string, pacienteId: string, documento: DocumentoEdicaoPlano) {
@@ -1995,6 +2013,13 @@ export class ServicoPlanosAlimentares {
       ...this.lerApresentacao(versao),
       rascunhoRevisao: versao.rascunhoRevisao ?? 0,
       ...(!versao.publicadaEm && !versao.descartadaEm ? edicao : {}),
+      ...(!versao.publicadaEm && !versao.descartadaEm && versao.medidasCaseirasSnapshotCriptografado ? {
+        medidasCaseirasAplicadas: Object.fromEntries(Object.entries(this.lerContextosMedidas(versao)).map(([chave, contexto]) => [chave, {
+          nome: contexto.referencia.nome,
+          quantidadeReferencia: contexto.referencia.quantidadeReferencia,
+          pesoReferenciaGramas: contexto.referencia.pesoReferenciaGramas
+        }]))
+      } : {}),
       hashConteudo: versao.hashConteudo,
       revisadaEm: versao.revisadaEm,
       revisadaPorUsuarioId: versao.revisadaPorUsuarioId,

@@ -65,7 +65,7 @@ const { criarOpcoesTypeOrm } = require('../src/infraestrutura/banco-dados/opcoes
     }
     console.log('PA04–PA06: PostgreSQL 15 descartável, schema/RLS de planos reais. Timescale/pgvector: SKIPPED nesta fixture; gate integral permanece no CI.');
     const code = await new Promise((resolve, reject) => {
-      const child = spawn('corepack', ['pnpm', 'exec', 'jest', '--runInBand', 'src/infraestrutura/banco-dados/rls-isolamento-tenant.integracao.spec.ts', '-t', process.argv.includes('--inventario') ? 'PA04|PA05|PA06|inventaria toda|sem app.tenant_id' : 'PA04|PA05|PA06'], { cwd: require('node:path').resolve(__dirname, '..'), env, stdio: 'inherit' });
+      const child = spawn(process.execPath, [require.resolve('jest/bin/jest'), '--runInBand', 'src/infraestrutura/banco-dados/rls-isolamento-tenant.integracao.spec.ts', '-t', process.argv.includes('--inventario') ? 'FOOD01|PA04|PA05|PA06|inventaria toda|sem app.tenant_id' : 'FOOD01|PA04|PA05|PA06'], { cwd: require('node:path').resolve(__dirname, '..'), env, stdio: 'inherit' });
       child.once('error', reject); child.once('exit', resolve);
     });
     process.exitCode = code ?? 1;

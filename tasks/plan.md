@@ -1,22 +1,28 @@
-# Handoff atual — FOOD01: planejamento consolidado
+# Handoff atual — FOOD01: backend e preparação da interface Luna
 
-Base `d36b12e7`, PR #423 (PA07) mergeada e confirmada no GitHub.
-Branch `feat/pos320-food01-planejamento`, worktree dedicada. Escopo desta
-rodada: planejamento; implementação não iniciada. Não modificar checkout
-principal/next-env do usuário. Sem PR documental separada.
+Branch/worktree `feat/pos320-food01-planejamento`, base `d36b12e7`.
+D01–D03 confirmadas; desenvolvimento autorizado em “Pode seguir”. T02–T05
+backend implementados com RED/GREEN. Migration1075 ensaiada somente em banco
+PostgreSQL15 descartável, com28 PASS/29 filtrados; sem operação externa.
 
-- D01–D03 confirmadas: pessoal/clínica com padrão pessoal, peso explícito em
-  gramas sem densidade presumida e biblioteca sem atualizar itens existentes.
-- Plano executável [FOOD01](plan-pos-320-food01.md) e
-  [checklist](todo-pos-320-food01.md). Ler antes de T02.
-- Somente R017/OpenNutriTracker examinado: GPL, inspiração apenas; SHA/fontes
-  registrados no plano. Não copiar código/dependência nem auditar outros IDs.
-- Próxima ação: após autorização de implementar, T02 com Sol6.1 médio;
-  contratos, materialização, RLS/concorrência e backend antes da interface.
-  Luna alto poderá assumir T06 após handoff; avisar e pausar para troca manual.
-- PA07: CI38975905269 SUCCESS no HEAD2b9a8074, merge d36b12e7.
-  Revisão independente não executada; SBOM provenance SKIPPED conforme workflow.
-  Merge não comprova deploy; nenhum ambiente externo consultado nesta rodada.
+- Contratos, mapa cifrado/schema1 e projeção mínima para reabrir a medida
+  histórica fechados. Backend continua autoritativo. Preservar PA02–PA07.
+- Gates finais backend:407 focados,343 suítes/3086 testes integrais PASS
+  (6 suítes/127 testes SKIPPED), typecheck/build/artefato PASS, governança24 PASS,
+  secrets/diff e matriz40 referências PASS. PostgreSQL28 PASS/29 filtrados.
+  CI de extensões, UI e revisão independente ainda não executados.
+- Plano/checklist [FOOD01](plan-pos-320-food01.md)/[T00–T08](todo-pos-320-food01.md).
+  Evidências [backend](../docs/governance/EVIDENCIAS_FOOD01_BACKEND_2026-10-17.md).
+- Próxima ação: aguardar confirmação manual da troca para Luna alto e
+  implementar T06 pelo [handoff executável](handoff-pos-320-food01-luna.md).
+  Nenhuma PR paralela/documental; PR única na integração final. Devolver a Sol
+  para T07–T08. Não atribuir revisão independente à revisão própria.
+- Node22 em `/workspace/.toolchains/food01/node-v22.21.1-linux-x64/bin/node`.
+  Lockfiles intactos, backend node_modules reutilizado. Não limpar trabalho de
+  outras worktrees nem alterar next-env preexistente do checkout principal.
+- R017 já examinado/pinado; sem copiar GPL, dependência nova ou outra pesquisa.
+  Sem merge, deploy ou migration externa. A1075 deverá preceder o código novo
+  e exigir verificação operacional da role/grants em alvo autorizado.
 
 ---
 

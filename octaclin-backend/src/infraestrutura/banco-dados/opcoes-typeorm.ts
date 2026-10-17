@@ -1,3 +1,5 @@
+import { MedidasCaseiras1720000001075 } from './migracoes/1720000001075-MedidasCaseiras';
+import { MedidaCaseiraOrm } from '../../modulos/planos-alimentares/infraestrutura/medida-caseira.orm';
 import { ApresentacaoPlanos1720000001072 } from './migracoes/1720000001072-ApresentacaoPlanos';
 import { AtivacaoPlanos1720000001074 } from './migracoes/1720000001074-AtivacaoPlanos';
 import { EdicaoPlanos1720000001073 } from './migracoes/1720000001073-EdicaoPlanos';
@@ -366,6 +368,7 @@ export function criarOpcoesTypeOrm(): TypeOrmModuleOptions & DataSourceOptions {
       CatalogoComposicaoAlimentoOrm,
       FonteComposicaoAlimentoOrm,
       AlimentoComposicaoOrm,
+      MedidaCaseiraOrm,
       UserActionLogOrm,
       OutboxEventoOrm,
       ApiChaveOrm,
@@ -460,7 +463,8 @@ export function criarOpcoesTypeOrm(): TypeOrmModuleOptions & DataSourceOptions {
         RascunhosClinicos1720000001071,
         ApresentacaoPlanos1720000001072,
         EdicaoPlanos1720000001073,
-        AtivacaoPlanos1720000001074
+        AtivacaoPlanos1720000001074,
+        MedidasCaseiras1720000001075
       ],
     migrationsRun: executarMigracoesNoBoot(),
     synchronize: false,

@@ -461,7 +461,9 @@ Objetivo: aproveitar a evolução do catálogo multifonte e transformar o editor
 ## [FOOD01] Medidas caseiras personalizadas por alimento
 
 **Planejamento consolidado em 2026-10-17:** RESIDUAL CONFIRMADO na base
-`d36b12e7`; implementação não iniciada. D01–D03 confirmadas: escopo pessoal
+`d36b12e7`; backend T02–T05 implementado após “Pode seguir”; migration1075
+só no descartável, PostgreSQL28 PASS/29 filtrados e focados407 PASS. Interface
+T06 pendente de troca manual para Luna alto. D01–D03 confirmadas: escopo pessoal
 ou clínica, pessoal por padrão; peso em gramas explícito sem converter mL
 implicitamente; alteração da biblioteca não muda itens existentes, nem rascunhos.
 Somente R017/OpenNutriTracker examinado/pinado, GPL/inspiração, sem copiar código.

@@ -8,9 +8,10 @@ Checklist: [T00–T08](todo-pos-320-food01.md).
 
 ## Estado, autorização e escopo
 
-RESIDUAL CONFIRMADO. Esta rodada autoriza planejamento e análise de gaps;
-as três decisões de produto abaixo estão confirmadas. Não há implementação,
-migration executada, deploy, nova dependência ou nova PR nesta rodada.
+RESIDUAL CONFIRMADO. Planejamento aprovado com D01–D03; implementação
+autorizada em “Pode seguir” após a consolidação. Backend em execução com
+Sol6.1 médio. Migration1075 nova ensaiada apenas em PostgreSQL descartável;
+nenhuma migration externa, deploy, dependência nova ou PR nesta rodada.
 Uma única PR futura FOOD01 reúne implementação, evidências e documentação.
 Não criar uma PR separada só para este planejamento.
 
@@ -32,8 +33,8 @@ sem endpoints de biblioteca ou identificadores privados novos.
 | D02 | Peso em gramas explícito para cada medida, inclusive líquidos; nunca inferir 1 mL = 1 g | Resposta explícita em 2026-10-17 |
 | D03 | Editar/desativar biblioteca preserva itens já inseridos, inclusive rascunhos; mudança só em novas inserções ou reaplicação explícita no rascunho | “Siga a sua recomendação nela também”, após reapresentação da terceira pergunta |
 
-Não confundir aprovação dessas regras com autorização operacional de migration
-externa ou com implementação já executada.
+Não confundir autorização de desenvolvimento com autorização operacional de
+migration externa, merge ou deploy.
 
 ## Gaps comprovados na base
 
@@ -193,7 +194,7 @@ não transferir decisões de autorização/persistência como simples tarefa UI.
   lint/typecheck/build backend/Web, authz, inventário de migrations, secrets,
   confiabilidade e CI do HEAD final. Só dados sintéticos.
 
-## Rollout, rollback e evidência desta rodada
+## Rollout, rollback e evidência do planejamento (histórico)
 
 Migration nova deve ser ensaiada no banco descartável e aplicada fora de banda
 somente após autorização de alvo/branch/role. Rollback preferencial de código
@@ -211,3 +212,46 @@ Revisão independente não executada, não herdada de PA07.
 A skill de planejamento foi consultada; não instalar/executar ai-devkit@latest
 nesta worktree sem configuração `.ai-devkit.json`: usar os documentos canônicos
 existentes, sem introduzir ferramenta remota por uma revisão documental.
+
+
+## Contrato fechado no checkpoint backend — T02–T05
+
+- Migration1075: tabela `medidas_caseiras_alimentos` com FORCE RLS, proprietário
+  composto ao tenant, criação idempotente e conteúdo/criação cifrados. Coluna
+  aditiva `medidas_caseiras_snapshot_criptografado` na versão: mapa de contextos
+  confiáveis por chave editorial; evita depender de acesso vivo à biblioteca.
+  Não existe coluna ou retorno de paciente na biblioteca.
+- GET/POST `planos-alimentares/alimentos/:alimentoId/medidas-caseiras` e
+  PATCH `.../:medidaId`. PATCH aceita revisão e apenas campos de conteúdo ou
+  `ativa:false`; escopo imutável, sem reativação implícita. GET lista ativas,
+  pessoal própria + clínica, com paginação estável. Corpo/retorno no handoff UI.
+- No documento editorial, `medidaCaseira:{id,revisao,aplicacaoId}` expressa
+  seleção; UUID de aplicação novo na seleção/reaplicação explícita. Snapshot
+  numérico da biblioteca nunca entra no DTO. `medidaCaseira:null` desvincula
+  explicitamente sem alterar fatos; `undefined` é omissão de cliente legado.
+- Primeiro save resolve autorização e revisão dentro da transação protegida.
+  Saves seguintes usam o mapa cifrado anterior apenas com a mesma chave de item,
+  alimento e identidade de aplicação. Alterar quantidade mantém a equivalência
+  já aplicada; reaplicar com nonce novo exige acesso atual. Remover item limpa
+  contexto. Omissão legada só preserva vínculo se todos os fatos forem iguais.
+- Normalização editorial resolve unidade/peso antes dos DTOs clínicos; entrada
+  incompleta continua pendente sem peso inventado. Falhas de acesso/infra não
+  são convertidas em sucesso parcial. Preservados CAS/identidades e PA07.
+- Origem permanece UUID exato de catálogo. Cópias/nova versão usam valores
+  factuais, sem transferir a seleção/aplicação privada ao novo item.
+- A interface deve produzir o mesmo peso de três casas e indicar pendência
+  enquanto não há quantidade válida, sem trocar todo o formulário pelo ACK.
+  Servidor recalcula; backend GREEN não prova que a UI existente já trata os
+  novos campos. T06 é necessário antes de disponibilizar a funcionalidade.
+
+
+### Resultado do checkpoint backend
+
+407 focados e343 suítes/3086 testes integrais PASS (6 suítes/127 SKIPPED por
+condições próprias); PostgreSQL15 descartável28 PASS/29 filtrados após o código
+final. Typecheck/build/artefato, governança24, secrets/diff e matriz40 referências
+PASS. Sem extensões Timescale/pgvector nesta prova local; CI integral e revisão
+independente pendentes, assim como Web/BFF/UI/Playwright de T06–T08.
+[Relatório](../docs/governance/EVIDENCIAS_FOOD01_BACKEND_2026-10-17.md) e
+[handoff Luna](handoff-pos-320-food01-luna.md). Pausa para troca manual de modelo;
+nenhum teste local comprova implantação externa ou feature disponível.

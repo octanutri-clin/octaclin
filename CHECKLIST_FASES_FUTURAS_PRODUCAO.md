@@ -4664,13 +4664,14 @@ auditoria estão ordenados na seção 15 de
   workflow; revisão independente não executada, sem inferir deploy.
   Evidências/limites em `docs/governance/RELATORIO_PA07_2026-10-16.md`;
   plano/checklist `tasks/plan-pos-320-pa07.md`/`tasks/todo-pos-320-pa07.md`.
-- [ ] FOOD01 — planejamento consolidado na base `d36b12e7`, D01–D03
+- [~] FOOD01 — backend em validação na base `d36b12e7`, D01–D03
   confirmadas em 2026-10-17. Medidas pessoais/clínica, peso explícito em g,
-  preservação dos itens existentes. Sem implementação/migration executada.
+  preservação dos itens existentes. T02–T05 implementados sob autorização;
+  migration1075 só descartável, PostgreSQL28 PASS/29 filtrados, focados407 PASS.
   Só R017 consultado, GPL/inspiração; sem nova dependência. Plano/checklist
   `tasks/plan-pos-320-food01.md`/`tasks/todo-pos-320-food01.md`.
   Modelo: Sol6.1 médio para contratos/backend/R4; Luna alto para UI após
-  handoff e troca manual. Próximo passo: autorização de implementação/T02.
+  handoff e troca manual. Próximo passo: T06 pela confirmação de troca manual.
 
 
 Merge/checks de #419 conferidos em 2026-10-15. Não inferir estado de produção.
