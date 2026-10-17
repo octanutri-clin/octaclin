@@ -16,9 +16,9 @@ export class ControladorMedidasCaseiras {
     @Header('Cache-Control', 'private, no-store')
     listar(
     @UsuarioAtual()
-    usuario: UsuarioAutenticado, 
+    usuario: UsuarioAutenticado,
     @Param('alimentoId', ParseUUIDPipe)
-    alimentoId: string, 
+    alimentoId: string,
     @Query()
     consulta: ListarMedidasCaseirasDto) {
         return this.servico.listar(usuario.tenantId, alimentoId, usuario, consulta);
@@ -28,9 +28,9 @@ export class ControladorMedidasCaseiras {
     @Header('Cache-Control', 'private, no-store')
     criar(
     @UsuarioAtual()
-    usuario: UsuarioAutenticado, 
+    usuario: UsuarioAutenticado,
     @Param('alimentoId', ParseUUIDPipe)
-    alimentoId: string, 
+    alimentoId: string,
     @Body()
     dados: CriarMedidaCaseiraDto) {
         return this.servico.criar(usuario.tenantId, alimentoId, usuario, dados);
@@ -40,11 +40,11 @@ export class ControladorMedidasCaseiras {
     @Header('Cache-Control', 'private, no-store')
     atualizar(
     @UsuarioAtual()
-    usuario: UsuarioAutenticado, 
+    usuario: UsuarioAutenticado,
     @Param('alimentoId', ParseUUIDPipe)
-    alimentoId: string, 
+    alimentoId: string,
     @Param('medidaId', ParseUUIDPipe)
-    medidaId: string, 
+    medidaId: string,
     @Body()
     dados: AtualizarMedidaCaseiraDto) {
         return this.servico.atualizar(usuario.tenantId, alimentoId, medidaId, usuario, dados);
