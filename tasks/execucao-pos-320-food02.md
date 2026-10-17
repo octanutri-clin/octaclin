@@ -24,3 +24,15 @@ Comando: Node22 jest --config octaclin-backend/package.json --runInBand
 --testPathPatterns='(alimentos-personalizados|micronutrientes).spec.ts'.
 Preservada razão original, ausência/zero, base30g e overflow. Não equivale à
 suíte integral nem à integração PostgreSQL, ainda pendentes.
+
+## T02/T03 — fundamentos GREEN
+
+Migration1076:2 RED de SQL/inventário, depois3 PASS incluindo1075.
+Biblioteca:11 RED comportamentais, depois11 PASS. HTTP:7 RED, depois7 PASS.
+A primeira tentativa GREEN do serviço parou em TS2532 no teste de detalhe;
+assertion ajustada com non-null (campo obrigatório naquele endpoint), rerun GREEN.
+Gate combinado:10 suítes/137 testes PASS, /tmp/food02-fundamentos-green.log.
+Schema não foi aplicado externamente. RLS real/concorrência ainda dependem T05.
+Biblioteca usa a identidade tenant/profissional e helpers criptográficos já
+existentes; sem writes nas tabelas públicas. Scripts/ledger cloud não foram
+executados nem instalados. Logs em /tmp são complementares a este registro.
