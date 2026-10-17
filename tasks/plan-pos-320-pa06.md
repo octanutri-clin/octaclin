@@ -1,12 +1,13 @@
 # PA06 — autosave, ativação e cálculo combinado do planejamento alimentar
 
-Atualização de 2026-10-16: primeira entrega (autosave e edição parcial) integrada
-pela PR #420; segunda (ativação) integrada pela PR #421, merge `011ea87d`.
-Próxima etapa: planejamento da terceira entrega, cálculo combinado/micros,
-detalhada em [plan-pos-320-pa06-calculo.md](plan-pos-320-pa06-calculo.md).
-Esta rodada é documental; implementação da terceira entrega não iniciada.
-Preservar uma PR por recurso, conforme o roadmap e as três entregas abaixo.
-Checklist: [T00–T10](todo-pos-320-pa06.md).
+Atualização final em 2026-10-16: três entregas integradas por #420, #421 e
+#422; merge final `62a50104`. CI final run38934810307 do HEAD `5eac6eab` SUCCESS,
+scanners SUCCESS, SBOM provenance SKIPPED. Evidências e limites em
+[registro de cálculo](../docs/governance/EVIDENCIAS_PA06_CALCULO_2026-10-16.md).
+Carga TACO v2 e confirmação operacional externa permanecem separadas.
+Próximo planejamento: [PA07](plan-pos-320-pa07.md). Histórico de execução em
+[plano da terceira entrega](plan-pos-320-pa06-calculo.md) e
+[checklist T00–T10](todo-pos-320-pa06.md).
 
 ## Base original, continuidade e limites
 

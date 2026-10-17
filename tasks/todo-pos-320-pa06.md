@@ -1,16 +1,12 @@
 # PA06 — checklist: autosave, ativação e cálculo combinado
 
 Planejamento: [plan-pos-320-pa06.md](plan-pos-320-pa06.md).
-Estado em 2026-10-16: primeira entrega integrada pela PR #420; segunda integrada
-pela PR #421, merge `011ea87d`. Terceira entrega: backend T08c e interface/BFF
-T08d implementados na branch `feat/pos320-pa06-calculo`, base `011ea87d`; o
-proprietário confirmou troca de modelo e autorizou “Pode seguir com sol médio”.
-PR Draft #422 aberta; revisão separada encontrou cinco achados e uma borda
-adicional, todos corrigidos/reexaminados em `ddcea76c`/`2a4e87b0`. CI inicial
-`bcf0825f` PASS; CI do HEAD corrigido deve ser conferido na PR. Limites em:
-[plan-pos-320-pa06-calculo.md](plan-pos-320-pa06-calculo.md).
-Migrations anteriores relatadas pelo proprietário não comprovam aplicação da1074;
-nenhum banco externo consultado nesta rodada. Cada entrega tem T09/T10 próprios.
+Estado final em2026-10-16: #420, #421 e #422 integradas; merge final `62a50104`.
+HEAD aprovado `5eac6eab`: CI run38934810307 SUCCESS; CodeQL/Semgrep/Dependency
+Review/Trivy SUCCESS; SBOM provenance SKIPPED. Cinco achados e uma borda adicional
+corrigidos/reexaminados; revisão por agente distinta de revisão humana/clínica.
+Aplicação de migrations/deploy/carga TACO externos não inferida nem executada.
+Próximo planejamento: [PA07](plan-pos-320-pa07.md).
 Evidências anteriores: docs/governance/EVIDENCIAS_PA06_ATIVACAO_2026-10-16.md.
 Terceira entrega: docs/governance/EVIDENCIAS_PA06_CALCULO_2026-10-16.md.
 O histórico/checkpoints abaixo conserva o estado observado em cada rodada.
@@ -350,10 +346,10 @@ Dependência: T09. Sol médio.
 
 - [x] Uma PR por recurso: autosave parcial → ativação → cálculo combinado (#422).
   Cada uma inclui código/plano/evidências; não criar PR documental separada.
-- [ ] CI Backend/Web/Demo/PR Gate e scanners do HEAD corrigido da terceira
-  entrega: acompanhar na PR #422. CI de `bcf0825f` PASS, incluindo banco integral;
-  não extrapolar esse resultado aos commits posteriores. Histórico das entregas
-  anteriores e retestes locais preservados nas evidências.
+- [x] CI Backend/Web/Demo/PR Gate final: run38934810307 do HEAD `5eac6eab`
+  SUCCESS. CodeQL38934810954, Semgrep38934810682, Dependency Review38934810518
+  e Trivy38934810566 SUCCESS, reconferidos no fechamento. SBOM provenance
+  SKIPPED; histórico dos checkpoints anteriores preservado nas evidências.
 - [x] Nenhum merge/deploy/migration externa/ativação sem autorização e alvo.
 
 Aceite: relatório de segurança, limitações e sequência operacional explícitos.

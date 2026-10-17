@@ -254,7 +254,7 @@ test('PA06 portal pagina todos os planos ativos e abre o detalhe selecionado sem
     }) });
   });
 
-  await page.goto('/portal/plano');
+  await page.goto('/portal/plano', { waitUntil: 'domcontentloaded' });
   await expect(page.getByRole('button', { name: /Plano sintético plano-01/ })).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Plano sintético plano-01' })).toBeVisible();
   await page.getByRole('button', { name: 'Próxima' }).click();

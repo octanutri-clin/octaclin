@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url';
 
 const raiz = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const temporaria = mkdtempSync(join(tmpdir(), 'octaclin-nutricao-plano-'));
-const arquivos = ['scripts/nutricao-plano.spec.ts', 'lib/nutricao-plano.ts', 'scripts/coordenador-edicao-plano.spec.ts', 'lib/coordenador-edicao-plano.ts', 'scripts/edicao-plano-campos.spec.ts', 'lib/edicao-plano.ts'];
+const arquivos = ['scripts/nutricao-plano.spec.ts', 'lib/nutricao-plano.ts', 'scripts/coordenador-edicao-plano.spec.ts', 'lib/coordenador-edicao-plano.ts', 'scripts/coordenacao-abas-plano.spec.ts', 'lib/coordenacao-abas-plano.ts', 'scripts/coordenacao-abas-plano-nativa.spec.ts', 'lib/coordenacao-abas-plano-nativa.ts', 'scripts/edicao-plano-campos.spec.ts', 'lib/edicao-plano.ts'];
 
 function executar(comando, args, cwd = raiz) {
   const resultado = spawnSync(comando, args, { cwd, stdio: 'inherit' });
@@ -39,5 +39,5 @@ executar(process.execPath, [join(raiz, 'node_modules', 'typescript', 'bin', 'tsc
 const alias = join(temporaria, 'node_modules', '@', 'lib');
 mkdirSync(dirname(alias), { recursive: true });
 cpSync(join(temporaria, 'lib'), alias, { recursive: true });
-executar(process.execPath, ['--test', join(temporaria, 'scripts', 'nutricao-plano.spec.js'), join(temporaria, 'scripts', 'coordenador-edicao-plano.spec.js'), join(temporaria, 'scripts', 'edicao-plano-campos.spec.js')], temporaria);
+executar(process.execPath, ['--test', join(temporaria, 'scripts', 'nutricao-plano.spec.js'), join(temporaria, 'scripts', 'coordenador-edicao-plano.spec.js'), join(temporaria, 'scripts', 'coordenacao-abas-plano.spec.js'), join(temporaria, 'scripts', 'coordenacao-abas-plano-nativa.spec.js'), join(temporaria, 'scripts', 'edicao-plano-campos.spec.js')], temporaria);
 rmSync(temporaria, { recursive: true, force: true });

@@ -4,33 +4,31 @@ Atualizado em 2026-10-16.
 
 ## Fase ativa
 
-- **PA06 — terceira entrega implementada, PR #422 Draft**, base `011ea87d`.
-  Autosave/rascunho parcial integrados por #420; ativação de planos/refeições e
-  portal plural por #421, merge confirmado em 2026-10-16. Próxima entrega:
-  cálculo combinado de publicações atuais com micros versionados/cobertura.
-  D01–D10 preservadas; D11–D13 confirmadas: seleção vazia, plano inclui refeições
-  ativas; OFF preserva seleção e ON reinclui; preparar TACO v2 sem alterar v1.
-  Whitelist de 22 códigos e cabeçalhos/IDs oficiais conferidos, hashes registrados; equivalência
-  IBGE vitamina D precisa de comprovação antes de habilitar esse mapping.
-  TACO antigo não preservou micros; publicações antigas continuam sem esses
-  valores. Sem IDR/UL, TBCA, dependência nova ou mudança implícita no portal/PDF.
-  R013/R014 usados conceitualmente, com consulta restrita nesta rodada.
-  Plano executável `tasks/plan-pos-320-pa06-calculo.md`, fontes em
-  `docs/product/FONTES_MICRONUTRIENTES_PA06.md`; checklist T08c/T08d existente.
-  T08c implementado/testado: fontes versionadas, snapshots aditivos, soma por
-  cobertura e duas rotas autorizadas; TACO v2 preparada e carga repetida provada
-  somente em banco descartável. Evidências em
-  `docs/governance/EVIDENCIAS_PA06_CALCULO_2026-10-16.md`.
-  T08d (UI/BFF) implementado: seleção volátil por paciente, conflito explícito,
-  cobertura/ausência por nutriente e edição manual sem override de catálogo.
-  CI inicial PASS, inclusive PostgreSQL integral/Testcontainers85/85. Revisão
-  somente leitura por outro agente encontrou cinco achados e uma borda adicional,
-  corrigidos/reexaminados sem achado concreto aberto. Não equivale a revisão
-  humana ou clínica. Conferir na PR o CI do HEAD posterior às correções.
-  Migrations1072–1074 registradas no código; aplicação real da1074/deploy não
-  conferidos por consulta externa. Worktree `pos320-pa06-calculo` preserva os
-  trabalhos anteriores. Integração/revisão final com Sol6.1 médio. PA07 vem
-  depois desta entrega; não há troca de modelo pendente nesta integração.
+- **PA07 — implementação em validação final**, base `62a50104`.
+  D01 confirmada: segunda aba em consulta com retomada explícita. Núcleo,
+  interface Luna e integração Sol implementados. Corrigidos retorno após recarga,
+  retomada de plano publicado sem rascunho e cópia em voo da geração anterior.
+  Duas abas reais desktop/mobile 16/16 PASS; backend 343/343, PostgreSQL15
+  descartável 24 PASS (29 filtrados), BFF/coordenação/autorização focados PASS.
+  Regressões de produção aprovadas após correções de harness; gates locais PASS.
+  CI do HEAD e revisão cruzada devem ser conferidos na PR desta branch.
+  Sem backend/schema/dependência nova ou operação
+  externa. Só R071 consultado/pinado. Não inferir disponibilização/produção.
+  Sol6.1 médio suficiente para concluir; não há troca de modelo pendente.
+  Plano/checklist `tasks/plan-pos-320-pa07.md`/`tasks/todo-pos-320-pa07.md`;
+  resultados e limites em `docs/governance/RELATORIO_PA07_2026-10-16.md`.
+- **PA06 — três entregas integradas**, #420 autosave/rascunho parcial,
+  #421 ativação/portal plural e #422 cálculo combinado/micros, merge `62a50104`.
+  CI final run38934810307 do HEAD `5eac6eab` SUCCESS, reconferido nesta rodada;
+  CodeQL, Semgrep, Dependency Review e Trivy SUCCESS. SBOM provenance SKIPPED.
+  Revisão por outro agente fechou cinco achados e uma borda adicional com
+  RED/GREEN; não equivale a revisão humana/clínica. D01–D13 preservadas.
+  TACO v2 preparada/provada em banco descartável; carga externa permanece
+  separada. IBGE vitamina D continua sem mapping habilitado por falta de prova.
+  Sem IDR/UL/TBCA; snapshots legados preservados. Migrations/deploy externos
+  não consultados nem inferidos do merge. Histórico, testes e limites em
+  `docs/governance/EVIDENCIAS_PA06_CALCULO_2026-10-16.md`,
+  `tasks/plan-pos-320-pa06-calculo.md` e `tasks/todo-pos-320-pa06.md`.
 - **PA05 — integrada pela PR #419**, merge `eae74b1e`, árvore idêntica ao HEAD
   `9e12271b`. CI `38656591697` e checks aplicáveis PASS em 2026-10-15, inclusive
   Backend, Web, Demo e PR Gate; scanners SUCCESS. SBOM provenance SKIPPED.

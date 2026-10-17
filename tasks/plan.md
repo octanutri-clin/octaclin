@@ -1,3 +1,29 @@
+# Handoff atual — PA07: integração final Sol e PR única
+
+Branch `feat/pos320-pa07-planejamento`, worktree isolada da base `62a50104`.
+D01 confirmada e implementação autorizada em “Siga”. Núcleo/adaptadores/hook,
+T04 de interface Luna e correções finais de integração Sol implementados.
+
+**Próxima ação exata:** abrir/acompanhar a PR única da branch e seus gates do
+HEAD; regressões locais finalizadas com retestes PASS. Sol6.1 médio;
+nenhuma troca manual pendente. Não disponibilizar antes dos gates finais.
+
+- Correções RED/GREEN: recarga em consulta, retomada sem rascunho e callback de
+  cópia da geração anterior. Duas abas reais 16/16 PASS, backend 343/343 e
+  PostgreSQL15 descartável 24 PASS/29 filtrados. Detalhes/comandos/limites em
+  [relatório PA07](../docs/governance/RELATORIO_PA07_2026-10-16.md).
+- Pendente: revisão cruzada e CI do HEAD. A revisão própria
+  desta execução não é independente; nenhum gate herdado da PA06.
+- Sem backend/schema/dependência nova, merge/deploy ou acesso externo.
+  Node_modules reutilizado por symlink. Encerrar servidor de teste ao concluir.
+  Não tocar checkout principal/next-env do usuário; limpar somente caches PA07.
+- Plano/checklist [PA07](plan-pos-320-pa07.md)/[T00–T07](todo-pos-320-pa07.md).
+  Preservar PA06 D01–D13, CAS/autorização e estado local em memória.
+
+---
+
+## Handoff anterior — histórico PA06, superado pelo fechamento acima
+
 # Handoff atual — PA06 cálculo combinado: PR #422, correções R4 revisadas
 
 ## Branch, autorização e estado

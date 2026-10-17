@@ -4648,24 +4648,23 @@ auditoria estão ordenados na seção 15 de
   externa da1072/deploy não verificados nesta análise. Handoff `tasks/plan-pos-320-pa05.md`, evidências
   `docs/governance/EVIDENCIAS_PA05_BACKEND_2026-10-14.md` e
   `docs/governance/REVISAO_R4_PA05_2026-10-14.md`.
-- [~] PA06 — duas entregas integradas: autosave/edição parcial (#420) e ativação
-  operacional/portal plural (#421, merge `011ea87d` confirmado em 2026-10-16).
-  Terceira entrega com backend local implementado: somar energia/macros/micros dos planos e
-  refeições ativos selecionados, exclusivamente da publicação atual salva.
-  D01–D10 preservadas; D11/D12/D13 confirmadas: seleção vazia, plano inclui
-  refeições ativas, OFF conserva seleção/ON reinclui e preparar TACO v2.
-  Snapshots legados ficam intactos; cobertura por nutriente, sem IDR/UL/TBCA.
-  Whitelist de 22 códigos e fontes/hashes em `docs/product/FONTES_MICRONUTRIENTES_PA06.md`;
-  pendência semântica IBGE D delimitada. T08c e PostgreSQL/RLS local validados;
-  TACO v2 preparada/carga idempotente apenas em banco descartável. UI/BFF T08d
-  implementado na PR #422 Draft; revisão separada da autoria com achados
-  corrigidos/reexaminados. CI inicial PASS com Testcontainers85/85; conferir
-  CI do HEAD corrigido na mesma PR. Sem carga/migration externa. Evidências em
-  `docs/governance/EVIDENCIAS_PA06_CALCULO_2026-10-16.md`.
-  Aplicação operacional da1074/deploy não inferida do merge.
-  Plano executável `tasks/plan-pos-320-pa06-calculo.md`, checklist
-  `tasks/todo-pos-320-pa06.md`. Sol médio na integração final; trocas anteriores
-  já realizadas. PA07 é posterior.
+- [x] PA06 — três entregas integradas: #420 autosave/rascunho parcial,
+  #421 ativação/portal plural, #422 cálculo combinado/micros (`62a50104`).
+  CI final run38934810307, HEAD `5eac6eab`, SUCCESS; scanners SUCCESS;
+  SBOM provenance SKIPPED. Revisão por outro agente fechou cinco achados e uma
+  borda adicional com RED/GREEN; não equivale a revisão humana/clínica.
+  D01–D13 preservadas; TACO v2 preparada em banco descartável, carga externa
+  separada. IBGE vitamina D sem mapping habilitado até comprovação; sem TBCA/IDR/UL.
+  Migrations/deploy externos não inferidos do merge. Evidências:
+  `docs/governance/EVIDENCIAS_PA06_CALCULO_2026-10-16.md`; plano/checklist
+  `tasks/plan-pos-320-pa06-calculo.md` e `tasks/todo-pos-320-pa06.md`.
+- [~] PA07 — implementação em validação final na base `62a50104`.
+  Segunda aba em consulta/retomada explícita confirmada pelo proprietário;
+  núcleo/UI/integração implementados, incluindo recarga segura e cópia ABA.
+  Gates/PR pendentes; cobertura e limites em
+  `docs/governance/RELATORIO_PA07_2026-10-16.md`. Nativas BroadcastChannel/Web
+  Locks, CAS preservado, sem dependência/migration nova; só R071 consultado. Plano/checklist:
+  `tasks/plan-pos-320-pa07.md` e `tasks/todo-pos-320-pa07.md`.
 
 Merge/checks de #419 conferidos em 2026-10-15. Não inferir estado de produção.
 

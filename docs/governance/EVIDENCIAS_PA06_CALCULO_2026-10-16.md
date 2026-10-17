@@ -187,3 +187,30 @@ O CI de `bcf0825f` não aprova automaticamente os commits de correção. A PR #4
 concentra o estado operacional dos checks do HEAD final e permanece Draft até
 sua conclusão. Nenhum acesso a banco externo, migration externa, carga TACO,
 merge, deploy ou ativação foi executado nesta rodada.
+
+
+## Encerramento após merge #422 — 2026-10-16
+
+O proprietário realizou o merge. Conferência do GitHub e de `origin/main`:
+merge `62a50104379ef3162295a2186169edf3a1da4d05`, HEAD aprovado
+`5eac6eabbfcd6cb981884dc9c4c49acf5313830e`. Consulta read-only à API GitHub
+reconfirmou `completed/success` e o mesmo HEAD nos cinco runs abaixo:
+
+| Verificação | Run | Resultado |
+| --- | --- | --- |
+| CI / Backend / Web / Demo / PR Gate | [38934810307](https://github.com/octanutri-clin/octaclin/actions/runs/38934810307) | PASS |
+| CodeQL | 38934810954 | PASS |
+| Semgrep | 38934810682 | PASS |
+| Dependency Review | 38934810518 | PASS |
+| Trivy | 38934810566 | PASS |
+
+No registro de execução final: backend341 suítes/3104 testes PASS e41 SKIPPED;
+Redis2/2; PostgreSQL/Testcontainers integral85/85; Playwright894 PASS e2 SKIPPED,
+mais8 testes de recuperação PASS. SBOM provenance SKIPPED conforme workflow,
+sem conversão em PASS. São evidências do CI da PA06, não retestes locais PA07.
+Scanners SUCCESS não garantem ausência de vulnerabilidades.
+
+Planejamento PA07 iniciado em worktree separada da base mergeada. Nenhum merge,
+deploy, migration ou carga TACO externa realizado pelo agente neste fechamento;
+estado de bancos externos não consultado. Checkpoints anteriores mantidos como
+histórico; a indicação de Draft/CI pendente acima refere-se àquela etapa.

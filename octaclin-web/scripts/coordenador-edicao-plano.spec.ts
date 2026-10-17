@@ -105,3 +105,47 @@ test('PA06 save manual sem mudança após rejeição conhecida restaura estado c
   assert.equal(chamadas.length, 1);
   assert.equal(c.estado.precondicao.rascunhoRevisaoEsperada, 3); c.encerrar();
 });
+
+test('PA07 perda de posse bloqueia manual e timer mesmo depois do fim de IME/cópia', async () => {
+  const { c, chamadas, tick } = preparar(); c.iniciar(); c.alterar({ texto: 'B' });
+  const opcoes = { suspenso: true, posseEdicao: false };
+  c.configurar(opcoes);
+  c.configurar({ suspenso: false });
+  tick(); assert.equal(chamadas.length, 0);
+  assert.equal(await c.salvarManual(), false);
+  const retomada = { ...opcoes, suspenso: false, posseEdicao: true }; c.configurar(retomada);
+  tick(); assert.equal(chamadas.length, 1);
+  chamadas[0].resolver({ id: 'geracao', rascunhoRevisao: 4 }); await drenar(); c.encerrar();
+});
+
+test('PA07 perda de posse não aborta envio e elimina escrita enfileirada sem perder dirty', async () => {
+  const { c, chamadas, tick } = preparar(); c.iniciar(); c.alterar({ texto: 'B' }); tick();
+  c.alterar({ texto: 'C' }); tick();
+  c.configurar({ suspenso: false, ...{ posseEdicao: false } });
+  chamadas[0].resolver({ id: 'geracao', rascunhoRevisao: 4 }); await drenar();
+  assert.equal(chamadas.length, 1);
+  assert.equal(c.estado.alterado, true);
+  assert.equal(await c.salvarManual(), false);
+  c.encerrar();
+});
+
+test('PA07 drenagem aguarda somente envio iniciado, sem flush da edição posterior', async () => {
+  const { c, chamadas, tick } = preparar(); c.iniciar(); c.alterar({ texto: 'B' }); tick();
+  c.alterar({ texto: 'C' }); c.configurar({ suspenso: false, ...{ posseEdicao: false } });
+  let drenado = false;
+  const fim = c.aguardarEnvio().then(() => { drenado = true; });
+  await drenar(); assert.equal(drenado, false);
+  chamadas[0].resolver({ id: 'geracao', rascunhoRevisao: 4 }); await fim;
+  assert.equal(drenado, true); assert.equal(chamadas.length, 1);
+  assert.equal(c.estado.alterado, true); c.encerrar();
+});
+
+test('PA07 devolver posse não limpa conflito nem incerteza', async () => {
+  for (const status of ['conflito', 'incerto', 'acesso-negado'] as const) {
+    const { c, chamadas, tick } = preparar(); c.iniciar(); c.alterar({ texto: 'B' }); c.invalidar(status);
+    c.configurar({ suspenso: false, ...{ posseEdicao: false } });
+    c.configurar({ suspenso: false, ...{ posseEdicao: true } });
+    tick(); assert.equal(await c.salvarManual(), false);
+    assert.equal(chamadas.length, 0); assert.equal(c.estado.status, status); c.encerrar();
+  }
+});
