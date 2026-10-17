@@ -431,13 +431,13 @@ TACO v2 preparada; carga e verificação operacional externas separadas.
 
 **Origem:** item 10.
 
-**Status atual (2026-10-16):** núcleo, interface e integração implementados sobre
-`62a50104`, após confirmação D01 e autorização em “Siga”. Em validação final
-T05–T07; resultados atuais no [relatório](../governance/RELATORIO_PA07_2026-10-16.md).
-CI/revisão e integração por PR permanecem pendentes; PA06 fornece CAS de rascunho.
-Plano [PA07](../../tasks/plan-pos-320-pa07.md) e
-[checklist](../../tasks/todo-pos-320-pa07.md). Apenas R071 consultado/pinado;
-APIs nativas propostas, sem dependência nova ou Yjs.
+**Estado reconciliado em 2026-10-17:** integrada pela PR #423, merge
+`d36b12e7`. CI38975905269 do HEAD `2b9a8074` SUCCESS, incluindo Demo e PR
+Gate; scanners SUCCESS. SBOM provenance SKIPPED conforme workflow; revisão
+independente não executada. Não inferir deploy. Evidências/limites no
+[relatório](../governance/RELATORIO_PA07_2026-10-16.md),
+[plano](../../tasks/plan-pos-320-pa07.md) e
+[checklist](../../tasks/todo-pos-320-pa07.md).
 
 **Implementação sugerida:**
 - `BroadcastChannel` para aviso de edição concorrente no mesmo navegador;
@@ -459,6 +459,15 @@ Objetivo: aproveitar a evolução do catálogo multifonte e transformar o editor
 ---
 
 ## [FOOD01] Medidas caseiras personalizadas por alimento
+
+**Planejamento consolidado em 2026-10-17:** RESIDUAL CONFIRMADO na base
+`d36b12e7`; implementação não iniciada. D01–D03 confirmadas: escopo pessoal
+ou clínica, pessoal por padrão; peso em gramas explícito sem converter mL
+implicitamente; alteração da biblioteca não muda itens existentes, nem rascunhos.
+Somente R017/OpenNutriTracker examinado/pinado, GPL/inspiração, sem copiar código.
+[Plano](../../tasks/plan-pos-320-food01.md) e
+[checklist](../../tasks/todo-pos-320-food01.md). Biblioteca vinculada ao UUID
+exato de alimento do catálogo; não depende de TBCA nem inclui FOOD02/densidades.
 
 **Origem:** item 14.
 

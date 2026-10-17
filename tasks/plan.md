@@ -1,3 +1,27 @@
+# Handoff atual — FOOD01: planejamento consolidado
+
+Base `d36b12e7`, PR #423 (PA07) mergeada e confirmada no GitHub.
+Branch `feat/pos320-food01-planejamento`, worktree dedicada. Escopo desta
+rodada: planejamento; implementação não iniciada. Não modificar checkout
+principal/next-env do usuário. Sem PR documental separada.
+
+- D01–D03 confirmadas: pessoal/clínica com padrão pessoal, peso explícito em
+  gramas sem densidade presumida e biblioteca sem atualizar itens existentes.
+- Plano executável [FOOD01](plan-pos-320-food01.md) e
+  [checklist](todo-pos-320-food01.md). Ler antes de T02.
+- Somente R017/OpenNutriTracker examinado: GPL, inspiração apenas; SHA/fontes
+  registrados no plano. Não copiar código/dependência nem auditar outros IDs.
+- Próxima ação: após autorização de implementar, T02 com Sol6.1 médio;
+  contratos, materialização, RLS/concorrência e backend antes da interface.
+  Luna alto poderá assumir T06 após handoff; avisar e pausar para troca manual.
+- PA07: CI38975905269 SUCCESS no HEAD2b9a8074, merge d36b12e7.
+  Revisão independente não executada; SBOM provenance SKIPPED conforme workflow.
+  Merge não comprova deploy; nenhum ambiente externo consultado nesta rodada.
+
+---
+
+## Handoff anterior — PA07 (histórico, merge confirmado acima)
+
 # Handoff atual — PA07: integração final Sol e PR única
 
 Branch `feat/pos320-pa07-planejamento`, worktree isolada da base `62a50104`.

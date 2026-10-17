@@ -4658,13 +4658,20 @@ auditoria estão ordenados na seção 15 de
   Migrations/deploy externos não inferidos do merge. Evidências:
   `docs/governance/EVIDENCIAS_PA06_CALCULO_2026-10-16.md`; plano/checklist
   `tasks/plan-pos-320-pa06-calculo.md` e `tasks/todo-pos-320-pa06.md`.
-- [~] PA07 — implementação em validação final na base `62a50104`.
-  Segunda aba em consulta/retomada explícita confirmada pelo proprietário;
-  núcleo/UI/integração implementados, incluindo recarga segura e cópia ABA.
-  Gates/PR pendentes; cobertura e limites em
-  `docs/governance/RELATORIO_PA07_2026-10-16.md`. Nativas BroadcastChannel/Web
-  Locks, CAS preservado, sem dependência/migration nova; só R071 consultado. Plano/checklist:
-  `tasks/plan-pos-320-pa07.md` e `tasks/todo-pos-320-pa07.md`.
+- [x] PA07 — integrada pela PR #423, merge `d36b12e7`, confirmado em
+  2026-10-17. CI38975905269 do HEAD `2b9a8074` SUCCESS, incluindo Backend,
+  Web, Demo e PR Gate; scanners SUCCESS. SBOM provenance SKIPPED conforme
+  workflow; revisão independente não executada, sem inferir deploy.
+  Evidências/limites em `docs/governance/RELATORIO_PA07_2026-10-16.md`;
+  plano/checklist `tasks/plan-pos-320-pa07.md`/`tasks/todo-pos-320-pa07.md`.
+- [ ] FOOD01 — planejamento consolidado na base `d36b12e7`, D01–D03
+  confirmadas em 2026-10-17. Medidas pessoais/clínica, peso explícito em g,
+  preservação dos itens existentes. Sem implementação/migration executada.
+  Só R017 consultado, GPL/inspiração; sem nova dependência. Plano/checklist
+  `tasks/plan-pos-320-food01.md`/`tasks/todo-pos-320-food01.md`.
+  Modelo: Sol6.1 médio para contratos/backend/R4; Luna alto para UI após
+  handoff e troca manual. Próximo passo: autorização de implementação/T02.
+
 
 Merge/checks de #419 conferidos em 2026-10-15. Não inferir estado de produção.
 
