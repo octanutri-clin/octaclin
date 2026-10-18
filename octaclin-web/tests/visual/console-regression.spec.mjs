@@ -3605,12 +3605,15 @@ test.describe('prontuario do paciente', () => {
     await expect(bibliotecaUi.getByText('Biblioteca salva. Revisões já aplicadas aos planos permanecem intactas até uma reaplicação explícita.')).toBeVisible();
     await bibliotecaUi.getByRole('button', { name: 'Aplicar revisão' }).click();
     await expect.poll(() => detalheBibliotecaInterceptado).toBe(true);
+    // A requisição de detalhe começa antes de sua resposta ser aplicada no
+    // formulário. Aguarde o estado vinculado antes de avançar o relógio do
+    // autosave, evitando salvar a versão anterior sob carga no CI.
+    await expect(page.getByRole('button', { name: 'Transformar em item manual' })).toBeVisible();
     await page.clock.fastForward(60_000);
     await expect.poll(() => corpoSalvo?.documento?.refeicoes?.[0]?.itens?.[0]?.alimentoPersonalizado).toMatchObject({ id: alimentoId, revisao: 1 });
     expect(corpoSalvo.documento.refeicoes[0].itens[0].alimentoPersonalizado.aplicacaoId).toMatch(/^[0-9a-f-]{36}$/i);
     expect(corpoSalvo.documento.refeicoes[0].itens[0]).not.toHaveProperty('alimentoComposicaoId');
     expect(corpoSalvo.documento.refeicoes[0].itens[0]).not.toHaveProperty('alimentosPersonalizadosAplicados');
-    await expect(page.getByRole('button', { name: 'Transformar em item manual' })).toBeVisible();
     expect((await new AxeBuilder({ page }).include('main').withTags(['wcag2a', 'wcag2aa', 'wcag21aa']).analyze()).violations).toEqual([]);
   });
 
