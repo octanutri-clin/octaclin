@@ -1,7 +1,9 @@
 # FOOD02 — checklist
 
 Base `95e9f33d`, PR424 integrada. [Plano/contratos](plan-pos-320-food02.md).
-Branch `feat/pos320-food02-planejamento`, backend T01–T05 implementado; interface/BFF pendentes.
+Branch `feat/pos320-food02-planejamento`, T01–T07 implementados; revisão R4 feita
+e achados corrigidos por TDD. Gates Web locais passaram; abrir PR Draft única e
+acompanhar CI/scanners, sem merge/deploy.
 
 - [x] T00 — main/merge/CI conferidos; gaps e referências específicas examinados;
   D01–D03 confirmadas explicitamente pelo proprietário.
@@ -14,11 +16,14 @@ Branch `feat/pos320-food02-planejamento`, backend T01–T05 implementado; interf
 - [x] T03 — serviço/controlador da biblioteca e pesquisa protegida.
 - [x] T04 — aplicação/snapshots, medidas FOOD01 e todos os caminhos de save/cópia.
 - [x] T05 — PostgreSQL real descartável, permissões, RLS, concorrência/revogação.
-- [x] Checkpoint Sol: backendGREEN + handoff; pausar para troca manual a Luna alto.
-- [ ] T06 — BFF/UI, cadastro e seleção explícitos, busca e CRUD.
-- [ ] T07 — Web/Playwright/regressões, desktop/mobile e acessibilidade.
-- [ ] Avisar/pausar para retorno ao Sol médio.
-- [ ] T08 — revisão R4, documentação e PR única/CI final.
+- [x] Checkpoint backend: GREEN + handoff; troca manual a Luna alto efetuada.
+- [x] T06 — BFF/UI, cadastro pessoal/clínica, busca, CRUD/CAS e aplicação explícita.
+- [x] T07 — Web/Playwright: desktop/mobile, autosave, composição parcial e Axe;
+  regressão PA07 desktop19/19 e testes FOOD02 finais desktop4/4 + mobile4/4.
+- [x] Regressões direcionadas de planos, BFF, origem e autorização; ver evidências.
+- [x] Avisar/pausar para retorno ao Sol médio.
+- [ ] T08 — gates locais e documentação concluídos; PR Draft única aberta, CI/
+  scanners do HEAD aguardando. Sem merge/deploy.
 
 ## Gates observados
 
@@ -34,9 +39,19 @@ Branch `feat/pos320-food02-planejamento`, backend T01–T05 implementado; interf
   `pnpm security:secrets` sem achados. Não são testes de implementação.
 - PASS backend:494 focados,3174 integrais (133 SKIPPED condicionais),
   34 PG/29 filtrados, typecheck/build/artefato; secrets/diff/matriz40 PASS.
-- PENDING: T06–T08 e CI FOOD02 após troca manual de modelo.
-- SKIPPED checkpoint: Web/BFF/Playwright, CI FOOD02, revisão independente e
-  operações externas. Extensões Timescale/pgvector não entram no harness local.
+- PASS local: T06–T07; BFF52/52, helper/unit67/67, origem9/9, rotas30/30,
+  combinado4/4, cópia10/10, Playwright FOOD02 2/2 e regressões dirigidas14/14;
+  typecheck PASS. Build Web de produção, ESLint focal0 erros/8 avisos existentes,
+  `git diff --check`, `pnpm security:secrets` e `pnpm test:security` PASS. Ver
+  evidências Web/R4 para avisos e limites.
+- PASS: revisão R4 estática independente feita; três achados Important corrigidos
+  e cobertos por RED/GREEN local. Sem segunda revisão independente do patch.
+- PASS: `pnpm test:authz` completo (27 scripts sequenciais), ESLint focal,
+  typecheck/build Web e testes R4 desktop/mobile.
+- PENDING: CI/scanners e revisão humana da PR Draft; migration1076 continua sem
+  confirmação/aplicação externa.
+- SKIPPED: suíte visual integral neste checkpoint; extensões
+  Timescale/pgvector não entram no harness local.
 
 FOOD01: merge não comprova aplicação externa da1075. Não reaplicar ou declarar
 aplicada sem confirmação de ambiente/role/estado. FOOD02 não depende de TBCA,

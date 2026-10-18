@@ -4670,13 +4670,15 @@ auditoria estão ordenados na seção 15 de
   descartável nesta entrega; estado externo não verificado. Preservar leitor
   compatível no rollback. Evidências/limites:
   `docs/governance/RELATORIO_FOOD01_2026-10-17.md`.
-- [~] FOOD02 — backend T01–T05 implementado na base `95e9f33d`, autorizado
-  em “Pode seguir, sol médio”. D01–D03 confirmadas; migration1076 só PG local
-  descartável,34 PASS/29 filtrados;494 focados e typecheck/build PASS.
-  Interface/BFF/Playwright/CI e revisão final pendentes, sem operação externa.
-  Aguardar troca manual para Luna alto e seguir handoff
-  `tasks/handoff-pos-320-food02-luna.md`; plano/checklist
-  `tasks/plan-pos-320-food02.md`/`tasks/todo-pos-320-food02.md`.
+- [~] FOOD02 — T01–T07 implementados localmente sobre base `95e9f33d`; D01–D03
+  confirmadas. Migration1076 ensaiada só em PG descartável, sem aplicação
+  externa. BFF52/52, helpers67/67, typecheck, origem9/9, autorização30/30 e
+  Playwright FOOD02/regressões desktop/mobile PASS. R4 independente encontrou
+  três achados Important, reproduzidos e corrigidos com RED/GREEN. PA07 desktop
+  19/19, testes R4 desktop/mobile3/3 por projeto e typecheck PASS. `test:authz`,
+  lint, Web build, CI/PR e estado externo da migration ainda pendentes.
+  Evidências em `docs/governance/EVIDENCIAS_FOOD02_WEB_2026-10-17.md` e plano/
+  checklist em `tasks/plan-pos-320-food02.md`/`tasks/todo-pos-320-food02.md`.
 
 
 

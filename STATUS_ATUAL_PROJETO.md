@@ -1,19 +1,26 @@
 # OctaClin - Status atual do projeto
 
-Atualizado em 2026-10-17.
+Atualizado em 2026-10-18.
 
 ## Fase ativa
 
-- **FOOD02 — backend T01–T05 implementado, aguardando UI/BFF**, base `95e9f33d`.
+- **FOOD02 — T01–T07 implementados localmente; gates finais/PR pendentes**, base `95e9f33d`.
   D01–D03 confirmadas; desenvolvimento autorizado em “Pode seguir, sol médio”.
   Biblioteca própria cifrada, pesquisa HMAC, CAS/idempotência, composição
   aplicada preservada e medidas FOOD01 generalizadas. Migration1076 apenas
   no PostgreSQL descartável:34 PASS/29 filtrados;494 focados PASS e
   typecheck/build/artefato PASS. Suíte integral e limites nas evidências:
   `docs/governance/EVIDENCIAS_FOOD02_BACKEND_2026-10-17.md`.
-  Próximo passo: troca manual para GPT-6 Luna alto em T06–T07, com handoff
-  `tasks/handoff-pos-320-food02-luna.md`. Sol médio retorna para R4/T08/PR única.
-  Web/BFF/Playwright/CI FOOD02, revisão independente e operação externa pendentes.
+  Web/BFF52/52, formulário/unit67/67, `test:authz` integral (27 scripts), build/
+  typecheck e Playwright PA07 desktop19/19 passaram localmente. Revisão R4
+  independente encontrou três achados Important;
+  todos foram reproduzidos e corrigidos com RED/GREEN; os três novos testes
+  passaram em desktop e mobile. CI/scanners e estado externo da migration1076
+  ainda são gates pendentes. Evidências:
+  `docs/governance/EVIDENCIAS_FOOD02_WEB_2026-10-17.md` e
+  `docs/governance/REVISAO_R4_FOOD02_2026-10-18.md`.
+  Gates locais fechados; preparar uma única PR Draft e aguardar CI/scanners. Não
+  inferir confirmação independente do patch nem estado de migration/deploy externo.
   Sem novas fontes, dependências ou carga TBCA; planos/checklist em
   `tasks/plan-pos-320-food02.md`/`tasks/todo-pos-320-food02.md`.
 - **FOOD01 — integrada pela PR #424**, merge `95e9f33d` confirmado em

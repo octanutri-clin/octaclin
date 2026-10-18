@@ -1,22 +1,33 @@
-# Handoff atual — FOOD02: backendGREEN; aguarda troca manual para Luna alto
+# Handoff atual — FOOD02: T01–T07 implementados; gates finais e PR em andamento
 
 - Branch `feat/pos320-food02-planejamento`, base `95e9f33d` (merge424).
   Worktree isolada `.worktrees/pos320-food01-planejamento` reutilizada.
   Checkout principal com `next-env.d.ts` preexistente preservado.
-- Desenvolvimento autorizado em “Pode seguir, sol médio”. D01–D03 fechadas;
-  T01–T05 implementados no backend. Nenhum runtime Web/BFF alterado.
+- Desenvolvimento autorizado em “Pode seguir, sol médio” e retomado em Luna alto.
+  D01–D03 fechadas; T01–T05 backend e T06–T07 Web/BFF implementados/testados
+  localmente. Nenhuma dependência adicionada; checkout principal preservado.
 - [Plano](plan-pos-320-food02.md), [checklist](todo-pos-320-food02.md),
   [ledger](execucao-pos-320-food02.md) e [handoff Luna](handoff-pos-320-food02-luna.md).
   Este último define contratos reais, exemplos sintéticos e limites da UI.
 - Biblioteca cifrada/índice HMAC, origem custom separada de catálogo, CAS e
   idempotência, snapshots por intenção e medidas FOOD01 com pai XOR.
   Nova migration1076, sem editar1075, ensaiada somente em PG descartável.
-- PASS:494 focados,3174 integrais/133 SKIPPED condicionais,34 PG/29 filtrados,
-  typecheck/build/artefato. Secrets/diff/matriz40 PASS, registrados no ledger. PG local omite Timescale/pgvector;
-  revisão independente, CI FOOD02 e aplicação externa continuam separados.
-- Próxima ação: aguardar troca MANUAL para GPT-6 Luna alto; então executar
-  T06–T07. Não executar UI/BFF antes da troca. Não delegar automaticamente.
-  Ao concluir UI, avisar e pausar para Sol médio em R4/T08/PR única/CI.
+- PASS backend:494 focados,3174 integrais/133 SKIPPED condicionais,34 PG/29
+  filtrados, typecheck/build/artefato. Secrets/diff/matriz40 PASS; PG local omite
+  Timescale/pgvector. Evidência no ledger.
+- T06/T07: cadastro pessoal/clínica, busca paginada, CRUD com revisão esperada,
+  aplicação explícita e cópia da base/composição na edição; rotas em
+  `MAPA_ROTAS_PERMISSOES.md`. BFF52/52, helpers67/67, typecheck, origem BFF9/9,
+  autorização de rotas30/30 e Playwright FOOD02/regressões desktop/mobile;
+  evidências em `docs/governance/EVIDENCIAS_FOOD02_WEB_2026-10-17.md`.
+- R4 independente examinou UI/BFF e achou três riscos Important; cada um foi
+  reproduzido em teste RED e corrigido. Os três novos testes passaram em desktop
+  e mobile, e a regressão PA07 desktop passou19/19. Typecheck PASS. R4 detalhada
+  em `docs/governance/REVISAO_R4_FOOD02_2026-10-18.md`.
+- `pnpm test:authz` (27 scripts), lint focal, Web build e typecheck passaram.
+  CI/scanners do HEAD final são os gates restantes; uma PR Draft reunirá a fase.
+  Não inferir confirmação independente do patch, migration externa, merge, deploy
+  ou ativação.
 - Sem nova dependência ou pesquisa externa; referências FOOD02 já triadas.
   Uma única PR futura reúne FOOD02 completa; sem merge/deploy/migration externa.
 

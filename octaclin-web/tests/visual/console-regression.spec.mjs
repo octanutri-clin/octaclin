@@ -3531,6 +3531,89 @@ test.describe('prontuario do paciente', () => {
     await expect(page.getByRole('tab', { name: 'Atendimentos', exact: true })).toHaveAttribute('aria-selected', 'true');
   });
 
+  test('FOOD02 cadastra alimento parcialmente informado, aplica explicitamente e autosave preserva descriptor', async ({ page }) => {
+    test.setTimeout(60_000);
+    await page.clock.install();
+    await prepararProntuarioMockado(page, { permissoesExtras: ['planos_alimentares.ler', 'planos_alimentares.gerenciar'] });
+    const alimentoId = '00000000-0000-4000-8000-000000000001';
+    const refeicao = { id: 'refeicao-food02', ordem: 0, nome: 'Lanche', horarioLocal: '15:00', orientacoes: '', itens: [{
+      id: 'item-food02', ordem: 0, descricao: '', quantidade: 1, unidade: 'porção', porcaoGramas: 30,
+      composicaoSnapshot: { nutrientesPor100g: {} }, substituicoes: []
+    }] };
+    const versaoAtual = { id: 'versao-atual-food02', numero: 1, status: 'publicada', publicadaEm: '2026-10-10T12:00:00.000Z', criadoEm: '2026-10-10T12:00:00.000Z', atualizadoEm: '2026-10-10T12:00:00.000Z', refeicoes: [refeicao] };
+    const versaoRascunho = { id: 'versao-rascunho-food02', numero: 2, status: 'rascunho', rascunhoRevisao: 0, edicaoEstado: 'pendente', criadoEm: '2026-10-11T12:00:00.000Z', atualizadoEm: '2026-10-11T12:00:00.000Z', refeicoes: [refeicao] };
+    let biblioteca = [];
+    let corpoSalvo;
+    const paginaBiblioteca = () => ({ itens: biblioteca, total: biblioteca.length, pagina: 1, limite: 25 });
+    await page.route('**/api/pacientes/paciente-1/planos-alimentares?**', async route => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({
+      itens: [{ id: 'plano-food02', pacienteId: 'paciente-1', profissionalId: 'profissional-1', titulo: 'Plano sintético FOOD02', ativoParaPaciente: false, ativacaoRevisao: 1, criadoEm: '2026-10-10T12:00:00.000Z', atualizadoEm: '2026-10-11T12:00:00.000Z', current: versaoAtual, draft: { id: versaoRascunho.id, numero: 2, status: 'rascunho' }, historicoQuantidade: 1 }], total: 1, pagina: 1, limite: 100
+    }) }));
+    await page.route('**/api/pacientes/paciente-1/planos-alimentares/plano-food02/rascunho/edicao', async route => {
+      if (route.request().method() !== 'PUT') return route.fallback();
+      corpoSalvo = route.request().postDataJSON();
+      versaoRascunho.rascunhoRevisao = corpoSalvo.rascunhoRevisaoEsperada + 1;
+      versaoRascunho.documentoEdicao = corpoSalvo.documento;
+      versaoRascunho.edicaoEstado = 'pendente';
+      return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ ...versaoRascunho, refeicoes: [] }) });
+    });
+    await page.route('**/api/pacientes/paciente-1/planos-alimentares/plano-food02', async route => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({
+      id: 'plano-food02', pacienteId: 'paciente-1', profissionalId: 'profissional-1', titulo: 'Plano sintético FOOD02', ativoParaPaciente: false, ativacaoRevisao: 1,
+      criadoEm: '2026-10-10T12:00:00.000Z', atualizadoEm: '2026-10-11T12:00:00.000Z', current: versaoAtual, draft: versaoRascunho, historico: [versaoAtual]
+    }) }));
+    await page.route('**/api/planos-alimentares/alimentos-personalizados/busca', async route => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(paginaBiblioteca()) }));
+    let detalheBibliotecaInterceptado = false;
+    await page.route(new RegExp(`/api/planos-alimentares/alimentos-personalizados/${alimentoId}$`), async route => {
+      detalheBibliotecaInterceptado = true;
+      return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({
+        id: alimentoId, nome: 'Alimento sintético parcial', escopo: 'pessoal', revisao: 1, ativo: true,
+        baseOrigem: { tipo: 'porcao', pesoGramas: 30 }, nutrientesPor100g: { energiaKcal: 300, proteinasG: 10 }, micronutrientesPor100g: { ferroMg: 2 },
+        disponivelParaCalculo: false, podeEditar: true,
+        composicaoOrigem: { nutrientes: { energiaKcal: 90, proteinasG: 3 }, micronutrientes: { ferroMg: 0.6 } }
+      }) });
+    });
+    await page.route(/\/api\/planos-alimentares\/alimentos-personalizados(?:\?.*)?$/, async route => {
+      if (route.request().method() === 'POST') {
+        const corpo = route.request().postDataJSON();
+        expect(corpo.base).toEqual({ tipo: 'porcao', pesoGramas: 30 });
+        expect(corpo.nutrientes).toEqual({ energiaKcal: 90, proteinasG: 3 });
+        expect(corpo.micronutrientes).toEqual({ ferroMg: 0.6 });
+        expect(corpo).not.toHaveProperty('nutrientesPor100g');
+        biblioteca = [{ id: alimentoId, nome: corpo.nome, escopo: 'pessoal', revisao: 1, ativo: true, baseOrigem: { tipo: 'porcao', pesoGramas: 30 }, nutrientesPor100g: { energiaKcal: 300, proteinasG: 10 }, micronutrientesPor100g: { ferroMg: 2 }, disponivelParaCalculo: false, podeEditar: true }];
+        return route.fulfill({ status: 201, contentType: 'application/json', body: JSON.stringify(biblioteca[0]) });
+      }
+      return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(paginaBiblioteca()) });
+    });
+
+    await page.goto('/pacientes/paciente-1');
+    await page.getByRole('tab', { name: 'Plano', exact: true }).click();
+    await page.getByRole('tab', { name: 'Plano alimentar', exact: true }).click();
+    await page.getByRole('button', { name: 'Expandir refeição Lanche' }).click();
+    const bibliotecaUi = page.locator('section[aria-label="Biblioteca de alimentos personalizados"]');
+    await bibliotecaUi.getByRole('button', { name: 'Abrir biblioteca' }).click();
+    await bibliotecaUi.getByLabel('Buscar alimentos personalizados').fill('ab');
+    await expect(bibliotecaUi.getByRole('alert').filter({ hasText: 'Use pelo menos 3 letras ou números' })).toBeVisible();
+    await bibliotecaUi.getByLabel('Buscar alimentos personalizados').fill('');
+    await bibliotecaUi.getByRole('button', { name: 'Cadastrar alimento' }).click();
+    await bibliotecaUi.getByLabel('Nome', { exact: true }).fill('Alimento sintético parcial');
+    await bibliotecaUi.locator('label').filter({ hasText: 'Base informada' }).locator('select').selectOption('porcao');
+    await bibliotecaUi.getByLabel('Peso da porção (g)').fill('30');
+    await bibliotecaUi.getByLabel('Energia (kcal; opcional)').fill('90');
+    await bibliotecaUi.getByLabel('Proteínas (g; opcional)').fill('3');
+    await bibliotecaUi.getByText('Micronutrientes (opcional; ausentes não são zero)').click();
+    await bibliotecaUi.getByLabel('Ferro (mg)').fill('0,6');
+    await bibliotecaUi.getByRole('button', { name: 'Salvar na biblioteca' }).click();
+    await expect(bibliotecaUi.getByText('Biblioteca salva. Revisões já aplicadas aos planos permanecem intactas até uma reaplicação explícita.')).toBeVisible();
+    await bibliotecaUi.getByRole('button', { name: 'Aplicar revisão' }).click();
+    await expect.poll(() => detalheBibliotecaInterceptado).toBe(true);
+    await page.clock.fastForward(60_000);
+    await expect.poll(() => corpoSalvo?.documento?.refeicoes?.[0]?.itens?.[0]?.alimentoPersonalizado).toMatchObject({ id: alimentoId, revisao: 1 });
+    expect(corpoSalvo.documento.refeicoes[0].itens[0].alimentoPersonalizado.aplicacaoId).toMatch(/^[0-9a-f-]{36}$/i);
+    expect(corpoSalvo.documento.refeicoes[0].itens[0]).not.toHaveProperty('alimentoComposicaoId');
+    expect(corpoSalvo.documento.refeicoes[0].itens[0]).not.toHaveProperty('alimentosPersonalizadosAplicados');
+    await expect(page.getByRole('button', { name: 'Transformar em item manual' })).toBeVisible();
+    expect((await new AxeBuilder({ page }).include('main').withTags(['wcag2a', 'wcag2aa', 'wcag21aa']).analyze()).violations).toEqual([]);
+  });
+
   test('edita o modelo em cópia isolada e restaura versão como nova revisão', async ({ page }) => {
     await prepararProntuarioMockado(page, {
       permissoesExtras: ['planos_alimentares.ler', 'planos_alimentares.gerenciar']

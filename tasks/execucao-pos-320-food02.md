@@ -69,8 +69,53 @@ Após as duas novas provas, integral repetido:350 suítes/3174 PASS e os mesmos
 build/artefato PASS; diff/secrets e matriz40 referências PASS. Nenhum lockfile,
 dependência, Web runtime ou checkout principal modificado por esta execução.
 
-T01–T05 concluídos no backend. Revisão própria de integração não é independente.
-CI FOOD02 e Web/BFF/Playwright ainda não executados: dependem de T06–T08.
-Handoff concreto em tasks/handoff-pos-320-food02-luna.md; PAUSAR agora para
-modelo GPT-6 Luna alto. Sem push/PR parcial: manter uma única PR após a UI,
-conforme plano; merge, deploy e migrations externas não autorizados.
+## T06–T07 — UI/BFF local
+
+Implementados BFF (lista/busca/criação/detalhe/PATCH e medidas caseiras),
+cliente/tipos, formulário de composição parcial, componente da biblioteca e
+integração com o editor. A aplicação é ação separada; o editor revalida o detalhe
+e a revisão corrente. Autosave serializa somente `{id,revisao,aplicacaoId}`;
+os fatos/normalização vêm do backend. Medidas caseiras personalizadas mantêm a
+origem e os controles de permissão do backend.
+
+Verificações: `pnpm typecheck`; `node scripts/test-nutricao-plano.mjs` (67/67);
+`node scripts/test-planos-alimentares-bff.mjs` (52/52);
+`pnpm test:origem-backend:bff` (9/9, inventário de 305 rotas);
+`node scripts/test-autorizacao-rotas.mjs` (30/30);
+`pnpm test:calculo-combinado-planos` (4/4);
+`node scripts/test-copia-refeicoes-plano.mjs` (10/10);
+Playwright FOOD02 (2/2) e regressões direcionadas PA (14/14), todas em
+desktop/mobile. Axe passou no fluxo novo. ESLint dos arquivos alterados: sem
+erros, 8 avisos de hooks/ref no editor legado `plano-alimentar-profissional.tsx`.
+Comandos e limites em `docs/governance/EVIDENCIAS_FOOD02_WEB_2026-10-17.md`.
+
+T01–T07 estão concluídos tecnicamente na worktree. No checkpoint original,
+revisão/build/gates finais ainda estavam pendentes; os resultados T08 atuais vêm
+abaixo. CI FOOD02 e scanners do HEAD final continuam pendentes. Sem push/PR
+parcial; manter uma PR única após gates locais. Merge, deploy, migrations
+externas e ativação não autorizados.
+
+## T08 — revisão, build e regressões finais (2026-10-18)
+
+- R4 independente estática identificou três achados Important: seleção usando
+  callback obsoleto após GET; edição concorrente do formulário durante POST;
+  troca de chave/payload depois de criação com resposta incerta. Achados, escopo
+  e limitação herdada em `docs/governance/REVISAO_R4_FOOD02_2026-10-18.md`.
+- RED/GREEN Playwright: os três casos falharam antes da correção (porção voltou
+  de42 para100; vínculo custom reaplicado após escolha de catálogo; campo ficou
+  habilitado durante resposta incerta). Correções usam callback atual, geração
+  monotônica por contexto/permissão, bloqueio da edição enquanto salva e pedido
+  imutável com chave preservada até confirmação/repetição/cancelamento explícito.
+- GREEN final no build de produção: quatro casos FOOD02 desktop4/4 e mobile4/4;
+  adicionalmente a suíte completa PA07 desktop19/19. O quarto caso cobre ABA de
+  posse na mesma aba (perder/retomar) e a resposta velha não é aplicada.
+- `pnpm build` Web PASS com188 páginas estáticas/dinâmicas geradas;
+  typecheck PASS. ESLint focal:0 erros,8 avisos em efeitos/dependências e refs
+  já existentes no editor legado; nenhum aviso no componente/rotas FOOD02 novos.
+- `git diff --check`, `pnpm security:secrets`, `pnpm test:security` e `node
+  --check` do spec visual PASS. `pnpm test:authz` permanece em execução. Backend
+  T01–T05 não foi alterado nesta correção Web; evidências de PG/CI backend acima
+  seguem inalteradas.
+- A R4 foi executada por agente independente antes da correção; não houve
+  segunda revisão independente do patch. Nenhum SQL/PG novo ou CI foi executado
+  neste exame. CI/scanners do HEAD final ainda são obrigatórios para fechar T08.

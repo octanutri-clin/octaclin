@@ -1,8 +1,9 @@
 # FOOD02 — alimentos reutilizáveis no editor
 
-> **For agentic workers:** usar `superpowers:executing-plans` por tarefa, com
-> TDD e um escritor ativo. Não delegar automaticamente. T01–T05 autorizadas em
-> “Pode seguir, sol médio”. Operação externa continua sem autorização.
+> **For agentic workers:** usar TDD por tarefa, um escritor ativo e não delegar
+> automaticamente. T01–T07 implementadas localmente. A revisão R4 foi feita e
+> seus três achados Important corrigidos com testes; T08 aguarda gates finais,
+> CI e uma PR única. Operação externa não autorizada.
 
 **Objetivo:** cadastrar, localizar e aplicar alimentos personalizados no editor
 profissional, preservando composição, proveniência e histórico.
@@ -32,6 +33,14 @@ principal preservada. No planejamento inicial, nenhum runtime/migration/lockfile
 A implementação backend foi autorizada posteriormente.
 Uma PR futura FOOD02 reunirá plano e implementação; não abrir PR só de plano.
 
+Checkpoint de 2026-10-18: T01–T07 implementadas localmente após as mudanças de
+modelo autorizadas. Revisão R4 estática independente executada; os três achados
+foram reproduzidos em RED e corrigidos. Typecheck, testes BFF/unit e Playwright
+direcionado PASS; `test:authz`, lint e build estão em fechamento. Contagens,
+evidências e limites em `../docs/governance/EVIDENCIAS_FOOD02_WEB_2026-10-17.md`
+e `../docs/governance/REVISAO_R4_FOOD02_2026-10-18.md`. CI e estado externo da
+migration1076 seguem sem comprovação.
+
 ## Decisões de produto — confirmadas
 
 Respostas explícitas do proprietário às três perguntas em 2026-10-17. Não são
@@ -44,8 +53,8 @@ aceites inferidos da FOOD01.
 | D03 | Edição/desativação não muda aplicações anteriores, inclusive rascunhos; atualização por reaplicação explícita | CONFIRMADA |
 
 Os contratos abaixo incorporam as três respostas. Detalhes de engenharia podem
-ser resolvidos pelo executor sem reabrir essas decisões. Implementação backend iniciada após “Pode seguir, sol médio”, com pausa
-prevista antes da interface/BFF.
+ser resolvidos pelo executor sem reabrir essas decisões. A pausa de modelo entre
+backend e UI/BFF foi realizada antes de T06.
 
 Escopo confirmado: criação/edição/desativação, busca e aplicação no item principal
 e nas alternativas. Sem código de barras/câmera, uploads/OCR, novas fontes,
@@ -226,8 +235,8 @@ e commit. Não declarar RED por erro de ambiente ou teste que não chegou à aç
 | T04 | `dominio/edicao-plano.ts`, novo resolver privado, `aplicacao/servico-planos-alimentares.ts`, `dtos-edicao-plano.ts`, DTOs/cópias/modelos/receitas e respectivas specs; serviço/domínio medidas | T03; snapshot autoritativo, reabertura após biblioteca alterada/desativada, corrupção fail-closed, nonce, omissão/null, duas origens de medida, todos os caminhos de save sem bypass |
 | T05 | `rls-isolamento-tenant.integracao.spec.ts`, `scripts/test-pa05-postgres-local.cjs` e integração biblioteca | T02–T04; PostgreSQL descartável, role não owner/NOBYPASSRLS; cross-tenant/owner, FK/XOR, criação e CAS concorrentes, aplicar×desativar, transferência/revogação; sem falso PASS por skip |
 | T06 | Novos `app/api/planos-alimentares/alimentos-personalizados/**/route.ts`, `lib/alimentos-personalizados-plano.ts`; componente `components/pacientes/alimentos-personalizados.tsx`; editor/API/edicao | Após checkpoint backendGREEN. BFF/contratos fechados; criar sem aplicar automaticamente, selecionar explicitamente, CRUD, busca paginada, campos parciais, idempotência/confirmação incerta; nenhum remount por revisão de autosave |
-| T07 | Specs Web BFF/helpers/cópias e novo `tests/visual/food02-alimentos-personalizados.spec.mjs`; regressões PA02–PA07/FOOD01 | T06; desktop/mobile, teclado/Axe, autosave/abas/troca de paciente/ACK tardio, portal/impressão, combinado/micros sem mudança de fontes |
-| T08 | Docs de evidências, rotas, matriz/runbook, checklist e PR única | T01–T07; diff/secrets, gates de backend/Web/PG, CI do HEAD e revisão R4; declarar independência/limites reais. Não executar merge/rollout |
+| T07 | Specs Web BFF/helpers/cópias e extensões de `tests/visual/pa07-coordenacao-abas.spec.mjs` e `console-regression.spec.mjs`; regressões PA02–PA07/FOOD01 | T06; desktop/mobile, teclado/Axe, autosave/abas/troca de paciente/ACK tardio, portal/impressão, combinado/micros sem mudança de fontes |
+| T08 | Evidências/revisão R4, rotas, matriz/runbook, checklist e PR única | T01–T07; diff/secrets, gates de backend/Web/PG, CI do HEAD e transparência sobre revisão/limites reais. Não executar merge/rollout |
 
 ### Foco de revisão e provas negativas
 
