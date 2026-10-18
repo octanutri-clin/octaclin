@@ -81,7 +81,7 @@ chave idempotente até repetição/cancelamento explícito. Depois da correção
 | `pnpm build` Web (Node22) | PASS; 188 páginas geradas. Avisos upstream da convenção middleware/runtime Edge não bloquearam a build. |
 | ESLint focal nos arquivos alterados | PASS, 0 erros; 8 avisos do editor legado. Nenhum aviso no componente novo ou rotas FOOD02. |
 | `pnpm test:authz` | PASS, sequência integral de 27 scripts; inclui BFF52/52, nutrição67/67, autorização de rotas30/30 e regressões por fase |
-| CI/scanners da PR final | PENDENTE |
+| CI/scanners da PR #425, HEAD `778b7906` | QUEUED na consulta de 2026-10-18 |
 
 Os screenshots/trace dos RED foram gerados por dados sintéticos locais; testes
 verdes não foram tratados como revisão independente. A matriz inteira de

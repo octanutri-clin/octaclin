@@ -4670,13 +4670,14 @@ auditoria estão ordenados na seção 15 de
   descartável nesta entrega; estado externo não verificado. Preservar leitor
   compatível no rollback. Evidências/limites:
   `docs/governance/RELATORIO_FOOD01_2026-10-17.md`.
-- [~] FOOD02 — T01–T07 implementados localmente sobre base `95e9f33d`; D01–D03
+- [~] FOOD02 — T01–T08 implementados sobre base `95e9f33d`; D01–D03
   confirmadas. Migration1076 ensaiada só em PG descartável, sem aplicação
   externa. BFF52/52, helpers67/67, typecheck, origem9/9, autorização30/30 e
   Playwright FOOD02/regressões desktop/mobile PASS. R4 independente encontrou
   três achados Important, reproduzidos e corrigidos com RED/GREEN. PA07 desktop
-  19/19, testes R4 desktop/mobile3/3 por projeto e typecheck PASS. `test:authz`,
-  lint, Web build, CI/PR e estado externo da migration ainda pendentes.
+  19/19, testes FOOD02 finais desktop/mobile4/4 por projeto, `test:authz`, lint
+  focal e Web build PASS. Draft PR #425 aberta; checks do HEAD `778b7906` estavam
+  QUEUED. Estado externo da migration ainda não verificado.
   Evidências em `docs/governance/EVIDENCIAS_FOOD02_WEB_2026-10-17.md` e plano/
   checklist em `tasks/plan-pos-320-food02.md`/`tasks/todo-pos-320-food02.md`.
 

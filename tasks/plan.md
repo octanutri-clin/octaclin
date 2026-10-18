@@ -1,4 +1,4 @@
-# Handoff atual — FOOD02: T01–T07 implementados; gates finais e PR em andamento
+# Handoff atual — FOOD02: T01–T08 implementados; Draft PR #425 e CI em andamento
 
 - Branch `feat/pos320-food02-planejamento`, base `95e9f33d` (merge424).
   Worktree isolada `.worktrees/pos320-food01-planejamento` reutilizada.
@@ -25,11 +25,11 @@
   e mobile, e a regressão PA07 desktop passou19/19. Typecheck PASS. R4 detalhada
   em `docs/governance/REVISAO_R4_FOOD02_2026-10-18.md`.
 - `pnpm test:authz` (27 scripts), lint focal, Web build e typecheck passaram.
-  CI/scanners do HEAD final são os gates restantes; uma PR Draft reunirá a fase.
-  Não inferir confirmação independente do patch, migration externa, merge, deploy
-  ou ativação.
+  Draft PR #425 está aberta; CI/scanners do HEAD `778b7906` estavam QUEUED na
+  última consulta. Não inferir confirmação independente do patch, migration
+  externa, merge, deploy ou ativação.
 - Sem nova dependência ou pesquisa externa; referências FOOD02 já triadas.
-  Uma única PR futura reúne FOOD02 completa; sem merge/deploy/migration externa.
+  A única PR de FOOD02 é #425; sem merge/deploy/migration externa.
 
 ---
 

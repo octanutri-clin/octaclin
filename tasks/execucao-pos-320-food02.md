@@ -89,11 +89,11 @@ desktop/mobile. Axe passou no fluxo novo. ESLint dos arquivos alterados: sem
 erros, 8 avisos de hooks/ref no editor legado `plano-alimentar-profissional.tsx`.
 Comandos e limites em `docs/governance/EVIDENCIAS_FOOD02_WEB_2026-10-17.md`.
 
-T01–T07 estão concluídos tecnicamente na worktree. No checkpoint original,
+T01–T08 estão concluídos tecnicamente na branch. No checkpoint original,
 revisão/build/gates finais ainda estavam pendentes; os resultados T08 atuais vêm
-abaixo. CI FOOD02 e scanners do HEAD final continuam pendentes. Sem push/PR
-parcial; manter uma PR única após gates locais. Merge, deploy, migrations
-externas e ativação não autorizados.
+abaixo. Draft PR #425 está aberta; os checks/scanners do HEAD `778b7906` estavam
+QUEUED na última consulta. Merge, deploy, migrations externas e ativação não
+autorizados.
 
 ## T08 — revisão, build e regressões finais (2026-10-18)
 

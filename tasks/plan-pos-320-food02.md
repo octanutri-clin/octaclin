@@ -31,15 +31,16 @@ em `.worktrees/pos320-food01-planejamento`; o nome do diretório não define a
 branch. Alteração preexistente de `octaclin-web/next-env.d.ts` no checkout
 principal preservada. No planejamento inicial, nenhum runtime/migration/lockfile foi alterado.
 A implementação backend foi autorizada posteriormente.
-Uma PR futura FOOD02 reunirá plano e implementação; não abrir PR só de plano.
+Uma PR única reúne plano e implementação; não abrir PR só de plano.
 
-Checkpoint de 2026-10-18: T01–T07 implementadas localmente após as mudanças de
-modelo autorizadas. Revisão R4 estática independente executada; os três achados
-foram reproduzidos em RED e corrigidos. Typecheck, testes BFF/unit e Playwright
-direcionado PASS; `test:authz`, lint e build estão em fechamento. Contagens,
+Checkpoint de 2026-10-18: T01–T08 implementadas na branch
+`feat/pos320-food02-planejamento`. Draft PR #425:
+<https://github.com/octanutri-clin/octaclin/pull/425>. Os checks do HEAD
+`778b7906` estavam QUEUED na última consulta. Revisão R4 estática independente
+executada; os três achados foram reproduzidos em RED e corrigidos. Gates locais
+passaram; migration1076 não foi consultada nem aplicada externamente. Contagens,
 evidências e limites em `../docs/governance/EVIDENCIAS_FOOD02_WEB_2026-10-17.md`
-e `../docs/governance/REVISAO_R4_FOOD02_2026-10-18.md`. CI e estado externo da
-migration1076 seguem sem comprovação.
+e `../docs/governance/REVISAO_R4_FOOD02_2026-10-18.md`.
 
 ## Decisões de produto — confirmadas
 

@@ -4,7 +4,7 @@ Atualizado em 2026-10-18.
 
 ## Fase ativa
 
-- **FOOD02 — T01–T07 implementados localmente; gates finais/PR pendentes**, base `95e9f33d`.
+- **FOOD02 — T01–T08 implementados; Draft PR #425 e CI pendentes**, base `95e9f33d`.
   D01–D03 confirmadas; desenvolvimento autorizado em “Pode seguir, sol médio”.
   Biblioteca própria cifrada, pesquisa HMAC, CAS/idempotência, composição
   aplicada preservada e medidas FOOD01 generalizadas. Migration1076 apenas
@@ -14,12 +14,12 @@ Atualizado em 2026-10-18.
   Web/BFF52/52, formulário/unit67/67, `test:authz` integral (27 scripts), build/
   typecheck e Playwright PA07 desktop19/19 passaram localmente. Revisão R4
   independente encontrou três achados Important;
-  todos foram reproduzidos e corrigidos com RED/GREEN; os três novos testes
-  passaram em desktop e mobile. CI/scanners e estado externo da migration1076
-  ainda são gates pendentes. Evidências:
+  todos foram reproduzidos e corrigidos com RED/GREEN; os quatro testes finais
+  passaram em desktop e mobile. Checks/scanners da PR #425 estavam QUEUED e o
+  estado externo da migration1076 não foi verificado. Evidências:
   `docs/governance/EVIDENCIAS_FOOD02_WEB_2026-10-17.md` e
   `docs/governance/REVISAO_R4_FOOD02_2026-10-18.md`.
-  Gates locais fechados; preparar uma única PR Draft e aguardar CI/scanners. Não
+  Gates locais fechados; PR Draft #425 aberta e aguardando CI/scanners. Não
   inferir confirmação independente do patch nem estado de migration/deploy externo.
   Sem novas fontes, dependências ou carga TBCA; planos/checklist em
   `tasks/plan-pos-320-food02.md`/`tasks/todo-pos-320-food02.md`.

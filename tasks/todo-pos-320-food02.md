@@ -1,9 +1,9 @@
 # FOOD02 — checklist
 
 Base `95e9f33d`, PR424 integrada. [Plano/contratos](plan-pos-320-food02.md).
-Branch `feat/pos320-food02-planejamento`, T01–T07 implementados; revisão R4 feita
-e achados corrigidos por TDD. Gates Web locais passaram; abrir PR Draft única e
-acompanhar CI/scanners, sem merge/deploy.
+Branch `feat/pos320-food02-planejamento`, T01–T08 implementados; revisão R4 feita
+e achados corrigidos por TDD. Draft PR #425 aberta; CI/scanners aguardando, sem
+merge/deploy.
 
 - [x] T00 — main/merge/CI conferidos; gaps e referências específicas examinados;
   D01–D03 confirmadas explicitamente pelo proprietário.
@@ -22,8 +22,8 @@ acompanhar CI/scanners, sem merge/deploy.
   regressão PA07 desktop19/19 e testes FOOD02 finais desktop4/4 + mobile4/4.
 - [x] Regressões direcionadas de planos, BFF, origem e autorização; ver evidências.
 - [x] Avisar/pausar para retorno ao Sol médio.
-- [ ] T08 — gates locais e documentação concluídos; PR Draft única aberta, CI/
-  scanners do HEAD aguardando. Sem merge/deploy.
+- [x] T08 — gates locais/documentação concluídos e Draft PR #425 aberta.
+- [ ] CI/scanners do HEAD #425: aguardando na última consulta. Sem merge/deploy.
 
 ## Gates observados
 
