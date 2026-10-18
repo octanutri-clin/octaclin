@@ -1,3 +1,6 @@
+import { ServiceUnavailableException } from '@nestjs/common';
+import { ServicoAlimentosPersonalizados } from './servico-alimentos-personalizados';
+import { normalizarComposicaoPersonalizada } from '../dominio/alimentos-personalizados';
 import { ServicoMedidasCaseiras } from './servico-medidas-caseiras';
 import { randomUUID } from 'crypto';
 import { BadRequestException, ConflictException, ForbiddenException, NotFoundException } from '@nestjs/common';
@@ -1749,6 +1752,74 @@ describe('ServicoPlanosAlimentares', () => {
       possuiCondicaoEspecial: false, aplicabilidadeFormulaConfirmada: true,
       objetivos: 'Objetivo sintético de acompanhamento',
       justificativaDivergenciaClinica: 'Planejamento sintético revisado individualmente.'
+    });
+    const customId = '10000000-0000-4000-8000-000000000098';
+    const customComp = () => normalizarComposicaoPersonalizada({ nome: 'Arroz custom', base: { tipo: 'porcao', pesoGramas: 30 }, nutrientes: { energiaKcal: 90, proteinasG: 3, carboidratosG: 12, gordurasG: 3 }, micronutrientes: { ferroMg: 0.6 } });
+    it('FOOD02 preserva aplicação cifrada depois de editar/desativar a biblioteca', async () => {
+      const d = documentoParcial();
+      Object.assign(d.refeicoes[0].itens[0], { alimentoPersonalizado: { id: customId, revisao: 1, aplicacaoId: customId } });
+      const spy = jest.spyOn(ServicoAlimentosPersonalizados.prototype, 'resolverAplicacao').mockResolvedValue({ id: customId, revisao: 1, composicao: customComp() });
+      try {
+        const r = await salvarEdicao(d);
+        expect(r.documentoEdicao?.refeicoes[0].itens[0].nutrientesPor100g?.energiaKcal).toBe(300);
+        expect(r).toHaveProperty('alimentosPersonalizadosAplicados.item-sintetico.nome', 'Arroz custom');
+        spy.mockRejectedValue(new ForbiddenException('Sem acesso atual à biblioteca'));
+        const outro = await salvarEdicao(r.documentoEdicao, 1);
+        expect(outro.documentoEdicao?.refeicoes[0].itens[0].descricao).toBe('Arroz custom');
+        expect(spy).toHaveBeenCalledTimes(1);
+        expect(Buffer.isBuffer((repositorios.get(PlanoAlimentarVersaoOrm)!.registros[0] as any).alimentosPersonalizadosSnapshotCriptografado)).toBe(true);
+      } finally { spy.mockRestore(); }
+    });
+    it('FOOD02 materializa origem custom e nutrientes pela base correta, sem IDs privados no snapshot factual', async () => {
+      const d = documentoCompleto();
+      Object.assign(d.refeicoes[0].itens[0], { alimentoPersonalizado: { id: customId, revisao: 1, aplicacaoId: customId } });
+      const spy = jest.spyOn(ServicoAlimentosPersonalizados.prototype, 'resolverAplicacao').mockResolvedValue({ id: customId, revisao: 1, composicao: customComp() });
+      try {
+        const r = await salvarEdicao(d);
+        expect(r.edicaoEstado).toBe('materializada');
+        const item = r.refeicoes[0].itens[0];
+        expect(item.composicaoSnapshot.origem).toBe('custom');
+        expect(item.composicaoSnapshot.nutrientesPorcao.energiaKcal).toBe(240);
+        expect(item.composicaoSnapshot.micronutrientes?.nutrientes.ferroMg.porcao).toBe(1.6);
+        expect(JSON.stringify(item.composicaoSnapshot)).not.toContain(customId);
+        expect(item.alimentoComposicaoId).toBeUndefined();
+      } finally { spy.mockRestore(); }
+    });
+    it('FOOD02 aplica composição autoritativa também nas substituições', async () => {
+      const d = documentoCompleto();
+      (d.refeicoes[0].itens[0] as any).substituicoes = [{ chaveCliente: 'alt-custom', quantidade: 1, unidade: 'porção', porcaoGramas: 45, liberadaParaPaciente: true, preferida: false, alimentoPersonalizado: { id: customId, revisao: 1, aplicacaoId: customId } }];
+      const spy = jest.spyOn(ServicoAlimentosPersonalizados.prototype, 'resolverAplicacao').mockResolvedValue({ id: customId, revisao: 1, composicao: customComp() });
+      try {
+        const r = await salvarEdicao(d), a = r.refeicoes[0].itens[0].substituicoes[0];
+        expect(r.edicaoEstado).toBe('materializada');
+        expect(a.composicaoSnapshot.origem).toBe('custom');
+        expect(a.composicaoSnapshot.nutrientesPorcao.energiaKcal).toBe(135);
+        expect(a.composicaoSnapshot.micronutrientes?.nutrientes.ferroMg.porcao).toBe(0.9);
+        expect(r).toHaveProperty('alimentosPersonalizadosAplicados.alt-custom.nome', 'Arroz custom');
+      } finally { spy.mockRestore(); }
+    });
+    it('FOOD02 composição parcial fica pendente sem completar macros com zero', async () => {
+      const d = documentoCompleto();
+      Object.assign(d.refeicoes[0].itens[0], { alimentoPersonalizado: { id: customId, revisao: 1, aplicacaoId: customId } });
+      const parcial = normalizarComposicaoPersonalizada({ nome: 'Parcial', base: { tipo: 'por100g' }, nutrientes: { energiaKcal: 100 } });
+      const spy = jest.spyOn(ServicoAlimentosPersonalizados.prototype, 'resolverAplicacao').mockResolvedValue({ id: customId, revisao: 1, composicao: parcial });
+      try {
+        const r = await salvarEdicao(d);
+        expect(r.edicaoEstado).toBe('pendente');
+        expect(r.documentoEdicao?.refeicoes[0].itens[0].nutrientesPor100g).toEqual({ energiaKcal: 100 });
+        expect(r.refeicoes).toEqual([]);
+        await expect(servico.revisar(TENANT_ID, PACIENTE_ID, PLANO_ID, usuarioProfissional(), { rascunhoIdEsperado: VERSAO_ID, rascunhoRevisaoEsperada: 1 })).rejects.toBeInstanceOf(ConflictException);
+      } finally { spy.mockRestore(); }
+    });
+    it('FOOD02 rejeita mapa corrupto em vez de perder proveniência', async () => {
+      (repositorios.get(PlanoAlimentarVersaoOrm)!.registros[0] as any).alimentosPersonalizadosSnapshotCriptografado = Buffer.from('corrompido');
+      await expect(servico.obterRascunho(TENANT_ID, PACIENTE_ID, PLANO_ID, usuarioProfissional())).rejects.toBeInstanceOf(ServiceUnavailableException);
+      await expect(salvarEdicao(documentoParcial())).rejects.toBeInstanceOf(ServiceUnavailableException);
+    });
+    it('FOOD02 escritor clínico antigo não descarta contexto custom', async () => {
+      (repositorios.get(PlanoAlimentarVersaoOrm)!.registros[0] as any).alimentosPersonalizadosSnapshotCriptografado = Buffer.from('contexto-existente');
+      await expect(servico.atualizarRascunho(TENANT_ID, PACIENTE_ID, PLANO_ID, usuarioProfissional(), dadosRascunho())).rejects.toBeInstanceOf(ConflictException);
+      expect(repositorios.get(PlanoAlimentarVersaoOrm)!.save).not.toHaveBeenCalled();
     });
     it('FOOD01 resolve no servidor, cifra contexto e preserva após perda de acesso à biblioteca', async () => {
       const alimentoId='10000000-0000-4000-8000-000000000020';

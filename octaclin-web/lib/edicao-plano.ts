@@ -5,6 +5,19 @@ import type { CodigoMicronutrienteApi, MicronutrientesPor100gApi } from './plano
 import type { MedidaCaseiraAplicadaApi } from './medidas-caseiras-plano';
 /** Contrato editorial versionado. Não representa validação clínica. Sem persistência no navegador. */
 export type NumeroEdicao = number | string | null;
+export interface AlimentoPersonalizadoEdicao { id: string; revisao: number; aplicacaoId: string }
+
+/** A ausência preserva clientes legados; null desvincula de forma explícita. */
+export function serializarAlimentoPersonalizadoEdicao(
+  valor: AlimentoPersonalizadoEdicao | null | undefined
+): AlimentoPersonalizadoEdicao | null | undefined {
+  if (valor === undefined || valor === null) return valor;
+  const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+  if (!uuid.test(valor.id) || !uuid.test(valor.aplicacaoId) || !Number.isSafeInteger(valor.revisao) || valor.revisao < 1) {
+    throw new Error('Referência de alimento personalizado inválida.');
+  }
+  return { id: valor.id, revisao: valor.revisao, aplicacaoId: valor.aplicacaoId };
+}
 /** O editor conserva texto parcial; interpretar um número é uma operação separada. */
 export function campoNumeroEdicao(valor: NumeroEdicao | undefined): number | string {
   return valor ?? '';
@@ -52,6 +65,7 @@ export function validarMicronutrientesEdicao(valores: MicronutrientesEdicao | un
 export interface AlimentoEdicao {
   chaveCliente: string;
   alimentoComposicaoId?: string | null;
+  alimentoPersonalizado?: AlimentoPersonalizadoEdicao | null;
   descricao?: string;
   quantidade?: NumeroEdicao;
   unidade?: string;

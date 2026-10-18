@@ -1,4 +1,39 @@
-# Handoff atual — FOOD01: integração final Sol e PR única
+# Handoff atual — FOOD02: T01–T08 implementados; Draft PR #425 e CI em andamento
+
+- Branch `feat/pos320-food02-planejamento`, base `95e9f33d` (merge424).
+  Worktree isolada `.worktrees/pos320-food01-planejamento` reutilizada.
+  Checkout principal com `next-env.d.ts` preexistente preservado.
+- Desenvolvimento autorizado em “Pode seguir, sol médio” e retomado em Luna alto.
+  D01–D03 fechadas; T01–T05 backend e T06–T07 Web/BFF implementados/testados
+  localmente. Nenhuma dependência adicionada; checkout principal preservado.
+- [Plano](plan-pos-320-food02.md), [checklist](todo-pos-320-food02.md),
+  [ledger](execucao-pos-320-food02.md) e [handoff Luna](handoff-pos-320-food02-luna.md).
+  Este último define contratos reais, exemplos sintéticos e limites da UI.
+- Biblioteca cifrada/índice HMAC, origem custom separada de catálogo, CAS e
+  idempotência, snapshots por intenção e medidas FOOD01 com pai XOR.
+  Nova migration1076, sem editar1075, ensaiada somente em PG descartável.
+- PASS backend:494 focados,3174 integrais/133 SKIPPED condicionais,34 PG/29
+  filtrados, typecheck/build/artefato. Secrets/diff/matriz40 PASS; PG local omite
+  Timescale/pgvector. Evidência no ledger.
+- T06/T07: cadastro pessoal/clínica, busca paginada, CRUD com revisão esperada,
+  aplicação explícita e cópia da base/composição na edição; rotas em
+  `MAPA_ROTAS_PERMISSOES.md`. BFF52/52, helpers67/67, typecheck, origem BFF9/9,
+  autorização de rotas30/30 e Playwright FOOD02/regressões desktop/mobile;
+  evidências em `docs/governance/EVIDENCIAS_FOOD02_WEB_2026-10-17.md`.
+- R4 independente examinou UI/BFF e achou três riscos Important; cada um foi
+  reproduzido em teste RED e corrigido. Os três novos testes passaram em desktop
+  e mobile, e a regressão PA07 desktop passou19/19. Typecheck PASS. R4 detalhada
+  em `docs/governance/REVISAO_R4_FOOD02_2026-10-18.md`.
+- `pnpm test:authz` (27 scripts), lint focal, Web build e typecheck passaram.
+  Draft PR #425 está aberta; CI/scanners do HEAD `778b7906` estavam QUEUED na
+  última consulta. Não inferir confirmação independente do patch, migration
+  externa, merge, deploy ou ativação.
+- Sem nova dependência ou pesquisa externa; referências FOOD02 já triadas.
+  A única PR de FOOD02 é #425; sem merge/deploy/migration externa.
+
+---
+
+# Handoff anterior — FOOD01: integrada pela PR #424
 
 Branch/worktree `feat/pos320-food01-planejamento`, base `d36b12e7`.
 D01–D03 confirmadas; desenvolvimento autorizado em “Pode seguir”. T02–T06

@@ -527,3 +527,104 @@ test('FOOD01 resposta tardia da biblioteca não reaparece ao converter o aliment
   expect(fixture.escritas[0].documento.refeicoes[0].itens[1].medidaCaseira).toBeNull();
   expect(fixture.escritas[0].documento.refeicoes[0].itens[1]).not.toHaveProperty('alimentoComposicaoId');
 });
+
+async function abrirBibliotecaFood02(context, page, aoLerDetalhe) {
+  const fixture = await preparar(context);
+  const alimento = { id: '00000000-0000-4000-8000-000000000031', nome: 'Composição sintética FOOD02', escopo: 'pessoal', revisao: 1, ativo: true,
+    baseOrigem: { tipo: 'por100g', pesoGramas: 100 }, nutrientesPor100g: { energiaKcal: 100, proteinasG: 10, carboidratosG: 10, gordurasG: 2 },
+    micronutrientesPor100g: {}, composicaoOrigem: { nutrientes: { energiaKcal: 100, proteinasG: 10, carboidratosG: 10, gordurasG: 2 }, micronutrientes: {} },
+    disponivelParaCalculo: true, podeEditar: true };
+  await page.route(url => url.pathname === '/api/planos-alimentares/alimentos-personalizados', route => route.fulfill({ json: { itens: [alimento], total: 1, pagina: 1, limite: 25 } }));
+  await page.route(url => url.pathname === `/api/planos-alimentares/alimentos-personalizados/${alimento.id}`, async route => {
+    await aoLerDetalhe();
+    await route.fulfill({ json: alimento });
+  });
+  await abrir(page);
+  await page.getByRole('button', { name: 'Expandir todas' }).click();
+  await page.getByRole('button', { name: 'Adicionar alimento', exact: true }).click();
+  const indice = await page.getByLabel('Porcao (g)', { exact: true }).count() - 1;
+  const painel = page.getByRole('region', { name: 'Biblioteca de alimentos personalizados' }).nth(indice);
+  await painel.getByRole('button', { name: 'Abrir biblioteca' }).click();
+  await expect(painel.getByRole('button', { name: 'Aplicar revisão' })).toBeVisible();
+  return { ...fixture, painel, indice };
+}
+
+test('FOOD02 detalhe tardio preserva porções e outros itens editados durante a leitura', async ({ context, page }) => {
+  const pausa = pausaControlada();
+  const { painel, indice } = await abrirBibliotecaFood02(context, page, pausa.aguardar);
+  await painel.getByRole('button', { name: 'Aplicar revisão' }).click();
+  try {
+    await pausa.iniciou;
+    await page.getByLabel('Porcao (g)', { exact: true }).nth(indice).fill('42');
+    await page.getByLabel('Porcao (g)', { exact: true }).nth(0).fill('21');
+    await page.getByRole('button', { name: 'Adicionar alimento', exact: true }).click();
+  } finally { pausa.liberar(); }
+  await expect(painel.getByRole('status').filter({ hasText: 'aplicado ao item' })).toBeVisible();
+  await expect(page.getByLabel('Porcao (g)', { exact: true }).nth(indice)).toHaveValue('42');
+  await expect(page.getByLabel('Porcao (g)', { exact: true }).nth(0)).toHaveValue('21');
+  await expect(page.getByLabel('Porcao (g)', { exact: true })).toHaveCount(indice + 2);
+});
+
+test('FOOD02 detalhe anterior não substitui catálogo escolhido enquanto a leitura estava em voo', async ({ context, page }) => {
+  const pausa = pausaControlada();
+  const { painel, indice } = await abrirBibliotecaFood02(context, page, pausa.aguardar);
+  await page.route(url => url.pathname === `/api/pacientes/${pacienteId}/planos-alimentares/alimentos`, route => route.fulfill({ json: {
+    itens: [{ id: '00000000-0000-4000-8000-000000000032', nome: 'Catálogo escolhido depois', nutrientesPor100g: { energiaKcal: 90, proteinasG: 3, carboidratosG: 4, gordurasG: 5 }, disponivelParaCalculo: true }], fontes: [], total: 1, pagina: 1, limite: 50
+  } }));
+  await painel.getByRole('button', { name: 'Aplicar revisão' }).click();
+  try {
+    await pausa.iniciou;
+    await page.getByRole('textbox', { name: 'Buscar no catálogo', exact: true }).nth(indice).fill('Catálogo');
+    await page.getByRole('button', { name: 'Catálogo escolhido depois Catálogo nutricional' }).click();
+  } finally { pausa.liberar(); }
+  await expect(page.getByRole('textbox', { name: 'Alimento', exact: true }).nth(indice)).toHaveValue('Catálogo escolhido depois');
+  await expect(painel.getByRole('status').filter({ hasText: 'aplicado ao item' })).toHaveCount(0);
+});
+
+test('FOOD02 resposta pendente é invalidada ao perder e retomar posse na mesma aba', async ({ context, page }) => {
+  const pausa = pausaControlada();
+  const { painel, indice } = await abrirBibliotecaFood02(context, page, pausa.aguardar);
+  await painel.getByRole('button', { name: 'Aplicar revisão' }).click();
+  const porcao = page.getByLabel('Porcao (g)', { exact: true }).nth(indice);
+  try {
+    await pausa.iniciou;
+    await page.evaluate(() => {
+      window.dispatchEvent(new PageTransitionEvent('pagehide', { persisted: true }));
+      window.dispatchEvent(new PageTransitionEvent('pageshow', { persisted: true }));
+    });
+    await expect(porcao).toBeDisabled();
+    await page.getByRole('button', { name: 'Editar nesta aba' }).click();
+    await expect(porcao).toBeEditable();
+  } finally { pausa.liberar(); }
+  await expect(porcao).toHaveValue('100');
+  await expect(painel.getByRole('status').filter({ hasText: 'aplicado ao item' })).toHaveCount(0);
+});
+
+test('FOOD02 criação incerta mantém campos bloqueados e repete exatamente pedido e chave', async ({ context, page }) => {
+  const { painel } = await abrirBibliotecaFood02(context, page, async () => {});
+  const pausa = pausaControlada();
+  const pedidos = [];
+  await page.route(url => url.pathname === '/api/planos-alimentares/alimentos-personalizados', async route => {
+    if (route.request().method() !== 'POST') return route.fallback();
+    pedidos.push(route.request().postDataJSON());
+    if (pedidos.length === 1) { await pausa.aguardar(); return route.abort('failed'); }
+    return route.fulfill({ status: 201, json: { id: '00000000-0000-4000-8000-000000000033' } });
+  });
+  await painel.getByRole('button', { name: 'Cadastrar alimento' }).click();
+  const nome = painel.getByLabel('Nome', { exact: true });
+  await nome.fill('Cadastro sintético com resposta incerta');
+  await painel.getByRole('button', { name: 'Salvar na biblioteca', exact: true }).click();
+  try {
+    await pausa.iniciou;
+    await expect(nome).toBeDisabled();
+    await expect(painel.getByRole('button', { name: 'Cadastrar alimento' })).toBeDisabled();
+  }
+  finally { pausa.liberar(); }
+  await expect(painel.getByRole('alert').filter({ hasText: 'O servidor pode ter salvo este alimento' })).toBeVisible();
+  await expect(nome).toBeDisabled();
+  await expect(painel.getByRole('button', { name: 'Cadastrar alimento' })).toBeDisabled();
+  await painel.getByRole('button', { name: 'Repetir cadastro', exact: true }).click();
+  await expect.poll(() => pedidos.length).toBe(2);
+  expect(pedidos[1]).toEqual(pedidos[0]);
+  await expect(painel.getByText('Biblioteca salva.', { exact: false })).toBeVisible();
+});

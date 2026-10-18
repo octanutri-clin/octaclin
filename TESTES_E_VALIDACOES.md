@@ -768,3 +768,26 @@ BFF: `scripts/test-fase-318-bff.mjs`; UI/axe desktop/mobile:
 `tests/visual/fase-318-piloto.spec.mjs` e regressões318já existentes.
 Evidências, limites e autoria R4 em
 `docs/history/phases/reviews/fase-318/PILOTO_SINTETICO_EXECUCAO.md`.
+
+## FOOD02 — biblioteca de alimentos personalizados (T06–T08 local)
+
+Requisitos e limites: `tasks/plan-pos-320-food02.md`. Verificações feitas na
+worktree sem dados reais: em `octaclin-web`, `pnpm typecheck`,
+`node scripts/test-nutricao-plano.mjs`,
+`node scripts/test-planos-alimentares-bff.mjs`,
+`pnpm test:origem-backend:bff`, `node scripts/test-autorizacao-rotas.mjs`,
+`pnpm test:calculo-combinado-planos`,
+`node scripts/test-copia-refeicoes-plano.mjs`; Playwright focado em
+`tests/visual/console-regression.spec.mjs` para FOOD02 e regressões de plano,
+com projetos desktop/mobile.
+
+Em 2026-10-18, revisão R4 independente encontrou três achados Important. Foram
+acrescentados testes RED antes da correção; depois, os três passaram em desktop
+e mobile, e a regressão completa de PA07 passou19/19 em desktop. Typecheck PASS.
+Resultados adicionais e limites:
+`docs/governance/EVIDENCIAS_FOOD02_WEB_2026-10-17.md` e
+`docs/governance/REVISAO_R4_FOOD02_2026-10-18.md`. `test:authz` passou nos 27
+scripts sequenciais; o lint focal passou sem erros (8 avisos preexistentes no
+editor legado) e o build Web de produção passou. CI da PR e estado externo da
+migration1076 não foram comprovados. Testes locais não substituem o CI nem
+autorizam operação externa.

@@ -15,6 +15,11 @@ import { GET as buscarAlimentos } from '../app/api/pacientes/[id]/planos-aliment
 import { GET as buscarAlimentosModelo } from '../app/api/planos-alimentares/alimentos/route';
 import { GET as listarMedidasCaseiras, POST as criarMedidaCaseira } from '../app/api/planos-alimentares/alimentos/[alimentoId]/medidas-caseiras/route';
 import { PATCH as editarMedidaCaseira } from '../app/api/planos-alimentares/alimentos/[alimentoId]/medidas-caseiras/[medidaId]/route';
+import { GET as listarPersonalizados, POST as criarPersonalizado } from '../app/api/planos-alimentares/alimentos-personalizados/route';
+import { POST as buscarPersonalizados } from '../app/api/planos-alimentares/alimentos-personalizados/busca/route';
+import { GET as obterPersonalizado, PATCH as editarPersonalizado } from '../app/api/planos-alimentares/alimentos-personalizados/[alimentoId]/route';
+import { GET as listarMedidasPersonalizadas, POST as criarMedidaPersonalizada } from '../app/api/planos-alimentares/alimentos-personalizados/[alimentoId]/medidas-caseiras/route';
+import { PATCH as editarMedidaPersonalizada } from '../app/api/planos-alimentares/alimentos-personalizados/[alimentoId]/medidas-caseiras/[medidaId]/route';
 import { GET as obterVersao } from '../app/api/pacientes/[id]/planos-alimentares/[planoId]/versoes/[numero]/route';
 import { GET as obterAcompanhamentoVersao } from '../app/api/pacientes/[id]/planos-alimentares/[planoId]/versoes/[numero]/acompanhamento/route';
 import { PUT as salvarRascunho } from '../app/api/pacientes/[id]/planos-alimentares/[planoId]/rascunho/route';
@@ -29,7 +34,7 @@ import { GET as obterVersaoModelo } from '../app/api/planos-alimentares/modelos/
 import { POST as restaurarVersaoModelo } from '../app/api/planos-alimentares/modelos/[modeloId]/versoes/[numero]/restaurar/route';
 import { GET as listarReceitas, POST as criarReceita } from '../app/api/planos-alimentares/receitas/route';
 import { GET as obterReceita, PUT as atualizarReceita, DELETE as arquivarReceita } from '../app/api/planos-alimentares/receitas/[receitaId]/route';
-import { alterarAtivacaoPlanoAlimentar, alterarAtivacaoRefeicaoPlanoAlimentar, obterAcompanhamentoVersaoPlanoAlimentar } from '../lib/plano-alimentar-api';
+import { alterarAtivacaoPlanoAlimentar, alterarAtivacaoRefeicaoPlanoAlimentar, obterAcompanhamentoVersaoPlanoAlimentar, listarAlimentosPersonalizados, buscarAlimentosPersonalizados, criarAlimentoPersonalizado, atualizarAlimentoPersonalizado, listarMedidasCaseirasAlimento } from '../lib/plano-alimentar-api';
 import { calcularPlanosCombinados as calcularPlanosCombinadosApi, obterSelecaoCalculoPlano } from '../lib/calculo-combinado-planos-api';
 import { listarPlanosAlimentaresPortalPaciente, obterPlanoAlimentarPortalPaciente } from '../lib/portal-api';
 import { aplicarAckAtivacao, ativacaoOperacionalEstaDesatualizada, localizarAtivacaoRefeicao, mesclarProjecaoAtivacao } from '../lib/ativacao-plano';
@@ -74,6 +79,150 @@ test('BFF recusa listagem sem sessao antes de consultar o backend', async () => 
   } finally {
     restaurarFetch(original);
   }
+});
+
+test('BFF da biblioteca personalizada exige permissao de leitura e nunca lista sem sessao', async () => {
+  __setCookies(cookiesSessaoValida(['pacientes.ler']));
+  const original = global.fetch;
+  let chamado = false;
+  global.fetch = (async () => { chamado = true; return Response.json({ itens: [] }); }) as typeof global.fetch;
+  try {
+    const resposta = await listarPersonalizados(new Request('http://localhost/api/alimentos-personalizados'));
+    assert.equal(resposta.status, 403);
+    assert.equal(resposta.headers.get('cache-control'), 'private, no-store');
+    assert.equal(chamado, false);
+  } finally { restaurarFetch(original); }
+});
+
+test('BFF lista apenas parâmetros permitidos e exige permissão planos_alimentares.ler', async () => {
+  __setCookies(cookiesSessaoValida(['planos_alimentares.ler']));
+  const original = global.fetch;
+  let url = '';
+  global.fetch = (async (entrada: string | URL | Request) => { url = String(entrada); return Response.json({ itens: [], total: 0, pagina: 1, limite: 25 }); }) as typeof global.fetch;
+  try {
+    const resposta = await listarPersonalizados(new Request('http://localhost/api/alimentos-personalizados?pagina=2&limite=25&escopo=clinica&tenant=alheio&busca=nome-livre'));
+    assert.equal(resposta.status, 200);
+    assert.equal(url, 'http://backend.octaclin.local/planos-alimentares/alimentos-personalizados?pagina=2&limite=25&escopo=clinica');
+    assert.equal(resposta.headers.get('cache-control'), 'private, no-store');
+  } finally { restaurarFetch(original); }
+});
+
+test('BFF cria com permissão gerenciar, limita corpo a 16 KiB e mantém no-store', async () => {
+  __setCookies(cookiesSessaoValida(['planos_alimentares.gerenciar']));
+  const original = global.fetch;
+  let chamada: { url?: string; metodo?: string; corpo?: string } = {};
+  global.fetch = (async (entrada: string | URL | Request, init?: RequestInit) => { chamada = { url: String(entrada), metodo: init?.method, corpo: String(init?.body) }; return Response.json({ id: 'custom-1' }); }) as typeof global.fetch;
+  try {
+    const resposta = await criarPersonalizado(new Request('http://localhost/api/alimentos-personalizados', { method: 'POST', body: '{"nome":"Alimento sintético"}' }));
+    assert.ok(resposta);
+    assert.equal(resposta.status, 200);
+    assert.equal(chamada.url, 'http://backend.octaclin.local/planos-alimentares/alimentos-personalizados');
+    assert.equal(chamada.metodo, 'POST');
+    assert.equal(chamada.corpo, '{"nome":"Alimento sintético"}');
+    assert.equal(resposta.headers.get('cache-control'), 'private, no-store');
+    const excessiva = await criarPersonalizado(new Request('http://localhost/api/alimentos-personalizados', { method: 'POST', body: 'x'.repeat(16 * 1024 + 1) }));
+    assert.ok(excessiva);
+    assert.equal(excessiva.status, 413);
+    assert.match(await excessiva.text(), /limite/);
+  } finally { restaurarFetch(original); }
+});
+
+test('BFF pesquisa no corpo com permissão de leitura e não coloca nome livre na URL', async () => {
+  __setCookies(cookiesSessaoValida(['planos_alimentares.ler']));
+  const original = global.fetch;
+  let chamada: { url?: string; metodo?: string; corpo?: string } = {};
+  global.fetch = (async (entrada: string | URL | Request, init?: RequestInit) => { chamada = { url: String(entrada), metodo: init?.method, corpo: String(init?.body) }; return Response.json({ itens: [] }); }) as typeof global.fetch;
+  try {
+    const resposta = await buscarPersonalizados(new Request('http://localhost/api/alimentos-personalizados/busca', { method: 'POST', body: '{"busca":"Farinha de teste","pagina":2}' }));
+    assert.ok(resposta);
+    assert.equal(resposta.status, 200);
+    assert.equal(chamada.url, 'http://backend.octaclin.local/planos-alimentares/alimentos-personalizados/busca');
+    assert.equal(chamada.metodo, 'POST');
+    assert.equal(chamada.corpo, '{"busca":"Farinha de teste","pagina":2}');
+  } finally { restaurarFetch(original); }
+});
+
+test('BFF protege detalhe e edição por UUID e encaminha revisão sem expor dados no caminho', async () => {
+  __setCookies(cookiesSessaoValida(['planos_alimentares.ler', 'planos_alimentares.gerenciar']));
+  const original = global.fetch;
+  const chamadas: string[] = [];
+  global.fetch = (async (entrada: string | URL | Request) => { chamadas.push(String(entrada)); return Response.json({ ok: true }); }) as typeof global.fetch;
+  try {
+    const id = '00000000-0000-4000-8000-000000000001';
+    assert.equal((await obterPersonalizado(new Request('http://localhost/api/custom'), { params: Promise.resolve({ alimentoId: 'invalido' }) })).status, 400);
+    assert.equal(chamadas.length, 0);
+    const detalhe = await obterPersonalizado(new Request('http://localhost/api/custom'), { params: Promise.resolve({ alimentoId: id }) });
+    assert.equal(detalhe.status, 200);
+    const edicao = await editarPersonalizado(new Request('http://localhost/api/custom', { method: 'PATCH', body: '{"revisaoEsperada":1,"ativo":false}' }), { params: Promise.resolve({ alimentoId: id }) });
+    assert.ok(edicao);
+    assert.equal(edicao.status, 200);
+    assert.deepEqual(chamadas, [
+      `http://backend.octaclin.local/planos-alimentares/alimentos-personalizados/${id}`,
+      `http://backend.octaclin.local/planos-alimentares/alimentos-personalizados/${id}`
+    ]);
+  } finally { restaurarFetch(original); }
+});
+
+test('BFF de medidas personalizadas usa permissão, UUIDs, paginação e limite estrito de 4 KiB', async () => {
+  __setCookies(cookiesSessaoValida(['planos_alimentares.ler', 'planos_alimentares.gerenciar']));
+  const original = global.fetch;
+  const chamadas: Array<{ url: string; metodo?: string }> = [];
+  global.fetch = (async (entrada: string | URL | Request, init?: RequestInit) => { chamadas.push({ url: String(entrada), metodo: init?.method }); return Response.json({ itens: [] }); }) as typeof global.fetch;
+  try {
+    const alimentoId = '00000000-0000-4000-8000-000000000001';
+    const medidaId = '00000000-0000-4000-8000-000000000002';
+    assert.equal((await listarMedidasPersonalizadas(new Request('http://localhost/api/custom'), { params: Promise.resolve({ alimentoId: 'bad' }) })).status, 400);
+    const lista = await listarMedidasPersonalizadas(new Request('http://localhost/api/custom?pagina=1&limite=25&tenant=alheio'), { params: Promise.resolve({ alimentoId }) });
+    assert.equal(lista.status, 200);
+    const criada = await criarMedidaPersonalizada(new Request('http://localhost/api/custom', { method: 'POST', body: '{}' }), { params: Promise.resolve({ alimentoId }) });
+    assert.ok(criada);
+    assert.equal(criada.status, 200);
+    const editada = await editarMedidaPersonalizada(new Request('http://localhost/api/custom', { method: 'PATCH', body: '{}' }), { params: Promise.resolve({ alimentoId, medidaId }) });
+    assert.ok(editada);
+    assert.equal(editada.status, 200);
+    const excessiva = await criarMedidaPersonalizada(new Request('http://localhost/api/custom', { method: 'POST', body: 'x'.repeat(4 * 1024 + 1) }), { params: Promise.resolve({ alimentoId }) });
+    assert.ok(excessiva);
+    assert.equal(excessiva.status, 413);
+    assert.deepEqual(chamadas.map(x => [x.url, x.metodo]), [
+      [`http://backend.octaclin.local/planos-alimentares/alimentos-personalizados/${alimentoId}/medidas-caseiras?pagina=1&limite=25`, undefined],
+      [`http://backend.octaclin.local/planos-alimentares/alimentos-personalizados/${alimentoId}/medidas-caseiras`, 'POST'],
+      [`http://backend.octaclin.local/planos-alimentares/alimentos-personalizados/${alimentoId}/medidas-caseiras/${medidaId}`, 'PATCH']
+    ]);
+    for (const resposta of [lista, criada, editada, excessiva]) assert.equal(resposta.headers.get('cache-control'), 'private, no-store');
+  } finally { restaurarFetch(original); }
+});
+
+test('FOOD02 cliente usa no-store, busca em body, preserva base original e seleciona rota de medidas custom', async () => {
+  const original = global.fetch;
+  const chamadas: Array<{ url: string; method: string; body?: string; cache?: RequestCache }> = [];
+  global.fetch = (async (entrada: string | URL | Request, init?: RequestInit) => {
+    chamadas.push({ url: String(entrada), method: init?.method ?? 'GET', body: init?.body?.toString(), cache: init?.cache });
+    return Response.json({ itens: [], total: 0, pagina: 1, limite: 25 });
+  }) as typeof global.fetch;
+  try {
+    await listarAlimentosPersonalizados({ pagina: 1, limite: 25, escopo: 'pessoal' });
+    await buscarAlimentosPersonalizados({ busca: 'Arroz exemplo', pagina: 2, limite: 25 });
+    const entrada = {
+      chaveIdempotencia: '00000000-0000-4000-8000-000000000001', nome: 'Arroz teste',
+      base: { tipo: 'porcao' as const, pesoGramas: 30 }, nutrientes: { energiaKcal: 90 }, micronutrientes: { ferroMg: 0.6 }
+    };
+    await criarAlimentoPersonalizado(entrada);
+    await atualizarAlimentoPersonalizado('00000000-0000-4000-8000-000000000002', { revisaoEsperada: 1, nome: 'Arroz teste', base: { tipo: 'por100g' }, nutrientes: {} });
+    await atualizarAlimentoPersonalizado('00000000-0000-4000-8000-000000000002', { revisaoEsperada: 2, ativo: false });
+    await listarMedidasCaseirasAlimento('00000000-0000-4000-8000-000000000002', 1, 25, undefined, 'custom');
+    assert.deepEqual(chamadas.map(c => [c.url, c.method, c.cache]), [
+      ['/api/planos-alimentares/alimentos-personalizados?pagina=1&limite=25&escopo=pessoal', 'GET', 'no-store'],
+      ['/api/planos-alimentares/alimentos-personalizados/busca', 'POST', 'no-store'],
+      ['/api/planos-alimentares/alimentos-personalizados', 'POST', 'no-store'],
+      ['/api/planos-alimentares/alimentos-personalizados/00000000-0000-4000-8000-000000000002', 'PATCH', 'no-store'],
+      ['/api/planos-alimentares/alimentos-personalizados/00000000-0000-4000-8000-000000000002', 'PATCH', 'no-store'],
+      ['/api/planos-alimentares/alimentos-personalizados/00000000-0000-4000-8000-000000000002/medidas-caseiras?pagina=1&limite=25', 'GET', 'no-store']
+    ]);
+    assert.equal(chamadas[1].body, JSON.stringify({ busca: 'Arroz exemplo', pagina: 2, limite: 25 }));
+    assert.equal(chamadas[2].body, JSON.stringify(entrada));
+    assert.equal(chamadas[3].body, JSON.stringify({ revisaoEsperada: 1, nome: 'Arroz teste', base: { tipo: 'por100g' }, nutrientes: {} }));
+    assert.doesNotMatch(chamadas[2].body ?? '', /nutrientesPor100g|normalizacaoVersao/);
+  } finally { restaurarFetch(original); }
 });
 
 test('BFF recusa plano alimentar sem permissao clinica especifica', async () => {

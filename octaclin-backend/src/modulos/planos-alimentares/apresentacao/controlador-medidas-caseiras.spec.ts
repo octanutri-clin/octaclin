@@ -26,3 +26,20 @@ describe('FOOD01 fronteira HTTP', () => {
         expect(servico.atualizar).toHaveBeenCalledWith(u.tenantId, 'alimento', 'medida', u, {});
     });
 });
+describe('FOOD02 fronteira HTTP de medidas custom', () => {
+  const cls = () => (contrato as any).ControladorMedidasCaseirasPersonalizadas;
+  it('restringe papel e guardas também na rota custom', () => {
+    expect(Reflect.getMetadata(CHAVE_PAPEIS, cls())).toEqual(['Professional']);
+    expect(Reflect.getMetadata(GUARDS_METADATA, cls())).toHaveLength(3);
+  });
+  it.each(['listar', 'criar', 'atualizar'])('preserva permissão e no-store em %s', n => {
+    const m = cls().prototype[n];
+    expect(Reflect.getMetadata(CHAVE_PERMISSOES, m)).toEqual([n === 'listar' ? 'planos_alimentares.ler' : 'planos_alimentares.gerenciar']);
+    expect(Reflect.getMetadata(HEADERS_METADATA, m)).toContainEqual({ name: 'Cache-Control', value: 'private, no-store' });
+  });
+  it('origem custom é fixada pela rota, nunca pelo cliente', async () => {
+    const s = { criar: jest.fn() }, u = { tenantId: 'sessao' }, d = { origem: 'catalogo' };
+    await new (cls())(s).criar(u, 'id', d);
+    expect(s.criar).toHaveBeenCalledWith('sessao', 'id', u, d, 'custom');
+  });
+});

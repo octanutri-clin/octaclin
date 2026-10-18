@@ -4664,15 +4664,24 @@ auditoria estão ordenados na seção 15 de
   workflow; revisão independente não executada, sem inferir deploy.
   Evidências/limites em `docs/governance/RELATORIO_PA07_2026-10-16.md`;
   plano/checklist `tasks/plan-pos-320-pa07.md`/`tasks/todo-pos-320-pa07.md`.
-- [~] FOOD01 — backend/interface em validação final na base `d36b12e7`, D01–D03
-  confirmadas em 2026-10-17. Medidas pessoais/clínica, peso explícito em g,
-  preservação dos itens existentes. T02–T06 implementados sob autorização;
-  migration1075 só descartável, PostgreSQL28 PASS/29 filtrados, focados407 PASS.
-  Só R017 consultado, GPL/inspiração; sem nova dependência. Plano/checklist
-  `tasks/plan-pos-320-food01.md`/`tasks/todo-pos-320-food01.md`.
-  Sol6.1 médio integra T07–T08 após interface Luna; nenhuma troca de modelo
-  pendente. Próximo passo: concluir gates locais e PR única/CI, com migration1075
-  obrigatória antes da publicação do backend. Sem aplicação externa nesta entrega.
+- [x] FOOD01 — integrada pela PR #424, merge `95e9f33d`, confirmado em
+  2026-10-17. CI39029460553 do HEAD `faeb603b` SUCCESS, inclusive Backend,
+  Web, Demo e PR Gate; scanners SUCCESS. Migration1075 apenas ensaiada no
+  descartável nesta entrega; estado externo não verificado. Preservar leitor
+  compatível no rollback. Evidências/limites:
+  `docs/governance/RELATORIO_FOOD01_2026-10-17.md`.
+- [~] FOOD02 — T01–T08 implementados sobre base `95e9f33d`; D01–D03
+  confirmadas. Migration1076 ensaiada só em PG descartável, sem aplicação
+  externa. BFF52/52, helpers67/67, typecheck, origem9/9, autorização30/30 e
+  Playwright FOOD02/regressões desktop/mobile PASS. R4 independente encontrou
+  três achados Important, reproduzidos e corrigidos com RED/GREEN. PA07 desktop
+  19/19, testes FOOD02 finais desktop/mobile4/4 por projeto, `test:authz`, lint
+  focal e Web build PASS. Draft PR #425 aberta; checks do HEAD `778b7906` estavam
+  QUEUED. Estado externo da migration ainda não verificado.
+  Evidências em `docs/governance/EVIDENCIAS_FOOD02_WEB_2026-10-17.md` e plano/
+  checklist em `tasks/plan-pos-320-food02.md`/`tasks/todo-pos-320-food02.md`.
+
+
 
 
 Merge/checks de #419 conferidos em 2026-10-15. Não inferir estado de produção.

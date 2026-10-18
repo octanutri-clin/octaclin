@@ -64,6 +64,9 @@ export class PlanoAlimentarVersaoOrm {
   @Column({ name: 'edicao_protegida', type: 'boolean', default: false })
   edicaoProtegida: boolean;
 
+  @Column({ name: 'alimentos_personalizados_snapshot_criptografado', type: 'bytea', nullable: true })
+  alimentosPersonalizadosSnapshotCriptografado?: Buffer | null;
+
   @Column({ name: 'medidas_caseiras_snapshot_criptografado', type: 'bytea', nullable: true })
   medidasCaseirasSnapshotCriptografado?: Buffer | null;
 

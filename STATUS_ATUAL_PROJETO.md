@@ -1,25 +1,37 @@
 # OctaClin - Status atual do projeto
 
-Atualizado em 2026-10-17.
+Atualizado em 2026-10-18.
 
 ## Fase ativa
 
-- **FOOD01 — backend e interface implementados, validação final**, base `d36b12e7`.
-  Desenvolvimento autorizado em “Pode seguir”; migration1075 só descartável. D01–D03 confirmadas: medidas pessoais ou da clínica com padrão
-  pessoal; peso em gramas explícito; alterações da biblioteca preservam itens
-  existentes, inclusive rascunhos. Só R017/OpenNutriTracker examinado como
-  inspiração GPL, sem código/dependência incorporados. Plano/checklist:
-  `tasks/plan-pos-320-food01.md`/`tasks/todo-pos-320-food01.md`.
-  T02–T06 implementados; integração Sol T07–T08 em fechamento. PostgreSQL
-  descartável28 PASS/29 filtrados, backend focados407 PASS e Playwright
-  FOOD01/PA07 desktop/mobile32 PASS nesta revisão. Corrigida perda do cadastro
-  da biblioteca durante autosave. Evidências/limites:
-  `docs/governance/RELATORIO_FOOD01_2026-10-17.md`.
-  PR única Draft #424 aberta. Backend, Web, governança e scanners passaram
-  no run39028272706 de `fd5299d1`; Demo ainda em execução na conferência.
-  Próximo passo: CI do HEAD final e revisão humana. A migration1075 precisa
-  preceder o novo backend; aplicação externa/deploy seguem separados conforme
-  `RUNBOOK_PRODUCAO.md`. Sem operação externa nesta entrega.
+- **FOOD02 — T01–T08 implementados; Draft PR #425 e CI pendentes**, base `95e9f33d`.
+  D01–D03 confirmadas; desenvolvimento autorizado em “Pode seguir, sol médio”.
+  Biblioteca própria cifrada, pesquisa HMAC, CAS/idempotência, composição
+  aplicada preservada e medidas FOOD01 generalizadas. Migration1076 apenas
+  no PostgreSQL descartável:34 PASS/29 filtrados;494 focados PASS e
+  typecheck/build/artefato PASS. Suíte integral e limites nas evidências:
+  `docs/governance/EVIDENCIAS_FOOD02_BACKEND_2026-10-17.md`.
+  Web/BFF52/52, formulário/unit67/67, `test:authz` integral (27 scripts), build/
+  typecheck e Playwright PA07 desktop19/19 passaram localmente. Revisão R4
+  independente encontrou três achados Important;
+  todos foram reproduzidos e corrigidos com RED/GREEN; os quatro testes finais
+  passaram em desktop e mobile. Checks/scanners da PR #425 estavam QUEUED e o
+  estado externo da migration1076 não foi verificado. Evidências:
+  `docs/governance/EVIDENCIAS_FOOD02_WEB_2026-10-17.md` e
+  `docs/governance/REVISAO_R4_FOOD02_2026-10-18.md`.
+  Gates locais fechados; PR Draft #425 aberta e aguardando CI/scanners. Não
+  inferir confirmação independente do patch nem estado de migration/deploy externo.
+  Sem novas fontes, dependências ou carga TBCA; planos/checklist em
+  `tasks/plan-pos-320-food02.md`/`tasks/todo-pos-320-food02.md`.
+- **FOOD01 — integrada pela PR #424**, merge `95e9f33d` confirmado em
+  2026-10-17. CI39029460553 do HEAD `faeb603b` SUCCESS, inclusive Backend,
+  Web, Demo e PR Gate; CodeQL, Semgrep, Trivy e Dependency Review SUCCESS.
+  Medidas pessoais/clínica, peso em gramas explícito e preservação histórica.
+  Migration1075 ensaiada em PostgreSQL descartável; aplicação externa/deploy
+  não verificados nesta rodada. Migration deve preceder o backend; rollback
+  mantém leitor compatível e dados. Relatório/local/gates não executados:
+  `docs/governance/RELATORIO_FOOD01_2026-10-17.md`. Revisão própria não é
+  independente. Sem inferir produção do merge/CI.
 - **PA07 — integrada pela PR #423**, merge `d36b12e7` confirmado em
   2026-10-17. CI38975905269 do HEAD `2b9a8074` SUCCESS, incluindo Backend,
   Web, Demo e PR Gate. Scanners SUCCESS; SBOM provenance SKIPPED conforme

@@ -1,3 +1,7 @@
+import { projetarComposicao } from './projecao-composicao';
+import { ServicoAlimentosPersonalizados } from './servico-alimentos-personalizados';
+import { ComposicaoPersonalizada } from '../dominio/alimentos-personalizados';
+import { capturarFatosCustom, ContextosAlimentosPersonalizados, ReferenciaCustomConflitanteError, resolverAlimentosPersonalizados, validarContextosCustom } from '../dominio/aplicacao-alimentos-personalizados';
 import { ServicoMedidasCaseiras } from './servico-medidas-caseiras';
 import { ContextosMedidas, resolverMedidasDocumento } from '../dominio/medidas-caseiras';
 import { CalculoCombinadoDto, validarSelecoesCalculo } from './dtos-calculo-combinado';
@@ -90,7 +94,8 @@ export type NutrientesPor100gPlano = Omit<NutrientesPor100g, 'fibrasG' | 'sodioM
   Partial<Pick<NutrientesPor100g, 'fibrasG' | 'sodioMg'>>;
 
 export interface SnapshotComposicao {
-  origem: 'catalogo' | 'manual';
+  origem: 'catalogo' | 'manual' | 'custom';
+  composicaoInformada?: { baseGramas: number; nutrientes: ComposicaoPersonalizada['composicaoOrigem']['nutrientes']; micronutrientes: ComposicaoPersonalizada['composicaoOrigem']['micronutrientes']; normalizacaoVersao: string; referencia?: string };
   alimentoComposicaoId?: string;
   codigoOrigem?: string;
   descricao: string;
@@ -135,7 +140,8 @@ export class ServicoPlanosAlimentares {
   constructor(
     private readonly executorTenant: ExecutorTenant,
     private readonly criptografia: CriptografiaDadosSensiveis,
-    private readonly medidasCaseiras: ServicoMedidasCaseiras = new ServicoMedidasCaseiras(executorTenant, criptografia)
+    private readonly medidasCaseiras: ServicoMedidasCaseiras = new ServicoMedidasCaseiras(executorTenant, criptografia),
+    private readonly alimentosPersonalizados: ServicoAlimentosPersonalizados = new ServicoAlimentosPersonalizados(executorTenant, criptografia)
   ) {}
 
   async obterSelecaoCalculo(tenantId: string, pacienteId: string, planoId: string, usuario: UsuarioAutenticado) {
@@ -706,6 +712,7 @@ export class ServicoPlanosAlimentares {
       }
       const rascunho = await this.obterRascunhoAtivo(gerenciador, tenantId, plano.id, true);
       this.conferirRevisaoEdicao(rascunho, dados);
+      if (rascunho.alimentosPersonalizadosSnapshotCriptografado) throw new ConflictException('Use o editor atualizado para preservar a referência do alimento personalizado.');
       await this.aplicarRascunhoClinico(gerenciador, tenantId, pacienteId, rascunho, dados);
       rascunho.edicaoSnapshotCriptografado = null;
       rascunho.medidasCaseirasSnapshotCriptografado = null;
@@ -731,16 +738,33 @@ export class ServicoPlanosAlimentares {
       const plano = await this.obterPlanoNoEscopo(gerenciador, tenantId, pacienteId, planoId, usuario, true);
       const rascunho = await this.obterRascunhoAtivo(gerenciador, tenantId, plano.id, true);
       this.conferirRevisaoEdicao(rascunho, dados);
+      let contextosCustom: ContextosAlimentosPersonalizados;
+      try {
+        contextosCustom = await resolverAlimentosPersonalizados(documento, this.lerContextosCustom(rascunho),
+          ref => this.alimentosPersonalizados.resolverAplicacao(gerenciador, tenantId, usuario, ref));
+      } catch (erro) {
+        if (erro instanceof ReferenciaCustomConflitanteError) throw new ConflictException(erro.message);
+        throw erro;
+      }
       const contextosAnteriores = this.lerContextosMedidas(rascunho);
       const contextosMedidas = await resolverMedidasDocumento(documento, contextosAnteriores,
-        (alimentoId, referencia) => this.medidasCaseiras.resolverAplicacao(gerenciador, tenantId, usuario, alimentoId, referencia));
+        (alimentoId, referencia, quantidade, origem) => this.medidasCaseiras.resolverAplicacao(gerenciador, tenantId, usuario, alimentoId, referencia, quantidade, origem));
+      capturarFatosCustom(documento, contextosCustom);
       await this.validarReferenciasEdicao(gerenciador, tenantId, pacienteId, documento);
       const identidades = await this.prepararIdentidadesEdicao(gerenciador, plano, rascunho, documento);
       const clinico = converterEdicaoParaRascunho(documento, rascunho);
+      const composicoesCustom = new Map<object, ComposicaoPersonalizada>();
+      documento.refeicoes.forEach((r, ri) => r.itens.forEach((i, ii) => {
+        const dto = clinico.refeicoes[ri].itens[ii];
+        if (Object.hasOwn(contextosCustom, i.chaveCliente)) composicoesCustom.set(dto, contextosCustom[i.chaveCliente].composicao);
+        (i.substituicoes ?? []).forEach((a, ai) => {
+          if (Object.hasOwn(contextosCustom, a.chaveCliente)) composicoesCustom.set(dto.substituicoes![ai], contextosCustom[a.chaveCliente].composicao);
+        });
+      }));
       let materializada = false;
       if (!validateSync(clinico, { whitelist: true, forbidNonWhitelisted: true }).length && this.lerApresentacao(rascunho).apresentacaoEstado !== 'indisponivel') {
         try {
-          await this.aplicarRascunhoClinico(gerenciador, tenantId, pacienteId, rascunho, clinico, identidades);
+          await this.aplicarRascunhoClinico(gerenciador, tenantId, pacienteId, rascunho, clinico, identidades, composicoesCustom);
           materializada = true;
         } catch (erro) {
           // Incompletude/inaplicabilidade clínica não apaga o documento editorial.
@@ -749,6 +773,7 @@ export class ServicoPlanosAlimentares {
         }
       }
       rascunho.edicaoSnapshotCriptografado = this.criptografia.criptografar(JSON.stringify(documento));
+      rascunho.alimentosPersonalizadosSnapshotCriptografado = Object.keys(contextosCustom).length ? this.criptografia.criptografar(JSON.stringify({ schemaVersao: 1, contextos: contextosCustom })) : null;
       rascunho.medidasCaseirasSnapshotCriptografado = Object.keys(contextosMedidas).length ? this.criptografia.criptografar(JSON.stringify({schemaVersao:1,contextos:contextosMedidas})) : null;
       rascunho.edicaoProtegida = true;
       this.avancarRevisaoEdicao(rascunho);
@@ -759,6 +784,12 @@ export class ServicoPlanosAlimentares {
       await gerenciador.getRepository(PlanoAlimentarVersaoOrm).save(rascunho);
       return this.montarVersao(gerenciador, rascunho);
     });
+  }
+
+  private lerContextosCustom(versao: PlanoAlimentarVersaoOrm): ContextosAlimentosPersonalizados {
+    if (!versao.alimentosPersonalizadosSnapshotCriptografado) return {};
+    try { return validarContextosCustom(JSON.parse(this.criptografia.descriptografar(versao.alimentosPersonalizadosSnapshotCriptografado))); }
+    catch { throw new ServiceUnavailableException('Referência de alimento personalizado indisponível.'); }
   }
 
   private lerContextosMedidas(versao: PlanoAlimentarVersaoOrm): ContextosMedidas {
@@ -813,7 +844,7 @@ export class ServicoPlanosAlimentares {
 
   private async aplicarRascunhoClinico(
     gerenciador: EntityManager, tenantId: string, pacienteId: string,
-    rascunho: PlanoAlimentarVersaoOrm, dados: AtualizarRascunhoPlanoAlimentarDto, identidades?: string[]
+    rascunho: PlanoAlimentarVersaoOrm, dados: AtualizarRascunhoPlanoAlimentarDto, identidades?: string[], composicoesCustom?: ReadonlyMap<object, ComposicaoPersonalizada>
   ): Promise<void> {
     this.validarDadosClinicosRascunho(dados);
     const metaManual = dados.origemMeta === 'manual';
@@ -868,7 +899,7 @@ export class ServicoPlanosAlimentares {
       throw new BadRequestException(erro instanceof Error ? erro.message : 'Dados invalidos para o calculo nutricional.');
     }
 
-    const estrutura = await this.resolverEstrutura(gerenciador, dados);
+    const estrutura = await this.resolverEstrutura(gerenciador, dados, composicoesCustom);
     let totais: ReturnType<typeof calcularTotaisPlano>;
     try {
       validarEstruturaPlano(estrutura);
@@ -1339,16 +1370,17 @@ export class ServicoPlanosAlimentares {
 
   private async resolverEstrutura(
     gerenciador: EntityManager,
-    dados: AtualizarRascunhoPlanoAlimentarDto
+    dados: AtualizarRascunhoPlanoAlimentarDto,
+    composicoesCustom?: ReadonlyMap<object, ComposicaoPersonalizada>
   ): Promise<EstruturaPlanoAlimentar> {
     const refeicoes = [];
     for (const refeicao of dados.refeicoes) {
       const itens: ItemPlanoAlimentar[] = [];
       for (const itemEntrada of refeicao.itens) {
-        const item = await this.resolverItem(gerenciador, itemEntrada);
+        const item = await this.resolverItem(gerenciador, itemEntrada, composicoesCustom?.get(itemEntrada));
         const substituicoes = [];
         for (const substituicaoEntrada of itemEntrada.substituicoes ?? []) {
-          const substituicao = await this.resolverItem(gerenciador, substituicaoEntrada);
+          const substituicao = await this.resolverItem(gerenciador, substituicaoEntrada, composicoesCustom?.get(substituicaoEntrada));
           substituicoes.push({
             ...substituicao.dominio,
             snapshot: substituicao.snapshot,
@@ -1376,14 +1408,23 @@ export class ServicoPlanosAlimentares {
 
   private async resolverItem(
     gerenciador: EntityManager,
-    entrada: SubstituicaoPlanoAlimentarDto
+    entrada: SubstituicaoPlanoAlimentarDto,
+    custom?: ComposicaoPersonalizada
   ): Promise<ItemResolvido> {
     let descricao: string;
     let micros: ValoresMicronutrientesOrigem = {};
     let baseMicros = 100;
     let nutrientesPor100g: NutrientesPor100gPlano;
     let snapshotBase: Omit<SnapshotComposicao, 'nutrientesPor100g' | 'nutrientesPorcao'>;
-    if (entrada.alimentoComposicaoId) {
+    if (custom) {
+      if (entrada.alimentoComposicaoId) throw new BadRequestException('Origem do alimento ambígua.');
+      descricao = custom.nome;
+      nutrientesPor100g = this.validarNutrientesManuais(custom.nutrientesPor100g as NutrientesPor100gDto);
+      micros = Object.fromEntries(Object.entries(custom.composicaoOrigem.micronutrientes).map(([k, valor]) => [k, { estado: 'conhecido', valor }]));
+      baseMicros = custom.baseOrigem.pesoGramas;
+      snapshotBase = { origem: 'custom', descricao, preparacao: custom.preparacao,
+        composicaoInformada: { baseGramas: custom.baseOrigem.pesoGramas, nutrientes: custom.composicaoOrigem.nutrientes, micronutrientes: custom.composicaoOrigem.micronutrientes, normalizacaoVersao: custom.normalizacaoVersao, referencia: custom.referenciaComposicao } };
+    } else if (entrada.alimentoComposicaoId) {
       const alimento = await gerenciador.getRepository(AlimentoComposicaoOrm).findOne({
         where: { id: entrada.alimentoComposicaoId }
       });
@@ -2020,6 +2061,13 @@ export class ServicoPlanosAlimentares {
           pesoReferenciaGramas: contexto.referencia.pesoReferenciaGramas
         }]))
       } : {}),
+      ...(!versao.publicadaEm && !versao.descartadaEm && versao.alimentosPersonalizadosSnapshotCriptografado ? {
+        alimentosPersonalizadosAplicados: Object.fromEntries(Object.entries(this.lerContextosCustom(versao)).map(([chave, contexto]) => {
+          const c = contexto.composicao;
+          return [chave, { nome: c.nome, preparacao: c.preparacao, referenciaComposicao: c.referenciaComposicao, baseOrigem: c.baseOrigem,
+            composicaoOrigem: c.composicaoOrigem, nutrientesPor100g: c.nutrientesPor100g, micronutrientesPor100g: c.micronutrientesPor100g, normalizacaoVersao: c.normalizacaoVersao }];
+        }))
+      } : {}),
       hashConteudo: versao.hashConteudo,
       revisadaEm: versao.revisadaEm,
       revisadaPorUsuarioId: versao.revisadaPorUsuarioId,
@@ -2044,7 +2092,7 @@ export class ServicoPlanosAlimentares {
             quantidade: Number(item.quantidade),
             unidade: item.unidade,
             porcaoGramas: Number(item.porcaoGramas),
-            composicaoSnapshot: this.lerJsonCriptografado<SnapshotComposicao>(item.composicaoSnapshotCriptografada),
+            composicaoSnapshot: projetarComposicao(this.lerJsonCriptografado<SnapshotComposicao>(item.composicaoSnapshotCriptografada)),
             substituicoesVisiveisInicialmente: item.substituicoesVisiveisInicialmente,
             substituicoes: substituicoes
               .filter((substituicao) => substituicao.itemId === item.id)
@@ -2057,9 +2105,9 @@ export class ServicoPlanosAlimentares {
                 quantidade: Number(substituicao.quantidade),
                 unidade: substituicao.unidade,
                 porcaoGramas: Number(substituicao.porcaoGramas),
-                composicaoSnapshot: this.lerJsonCriptografado<SnapshotComposicao>(
+                composicaoSnapshot: projetarComposicao(this.lerJsonCriptografado<SnapshotComposicao>(
                   substituicao.composicaoSnapshotCriptografada
-                ),
+                )),
                 liberadaParaPaciente: substituicao.liberadaParaPaciente,
                 preferida: substituicao.preferida
               }))

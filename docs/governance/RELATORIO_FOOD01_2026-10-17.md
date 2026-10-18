@@ -126,3 +126,11 @@ retornaram SUCCESS. A API de alertas detalhados de code-scanning respondeu403
 listagem. Anotações consultadas de CodeQL JavaScript, Semgrep e Trivy continham
 somente o aviso de migração da imagem `ubuntu-latest`, sem apontamento de código.
 Isto não equivale a declarar ausência de alertas inacessíveis.
+
+## Reconciliação pós-merge — 2026-10-17
+
+PR #424 MERGED em `95e9f33d`. CI39029460553 do HEAD final `faeb603b`
+SUCCESS, incluindo Backend, Web, Governança, Demo e PR Gate; CodeQL, Semgrep,
+Trivy e Dependency Review SUCCESS. Os registros PENDING anteriores descrevem
+o checkpoint antes desse resultado. Revisão independente e estado externo da
+migration1075/deploy continuam não comprovados; CI não os substitui.

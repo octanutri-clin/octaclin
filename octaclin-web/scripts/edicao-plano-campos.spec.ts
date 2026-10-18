@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { campoNumeroEdicao, percentualParaBasisPointsEdicao, interpretarNumeroEdicao, micronutrientesNumericosEdicao, nutrientesNumericosEdicao, validarMicronutrientesEdicao } from '../lib/edicao-plano';
+import { campoNumeroEdicao, percentualParaBasisPointsEdicao, interpretarNumeroEdicao, micronutrientesNumericosEdicao, nutrientesNumericosEdicao, serializarAlimentoPersonalizadoEdicao, validarMicronutrientesEdicao } from '../lib/edicao-plano';
 
 test('PA06 campo editorial preserva vazio, zero, sinal parcial e vírgula sem atribuir valor clínico', () => {
   for (const valor of ['', '-', '1,', '01.20', 0, 5]) assert.equal(campoNumeroEdicao(valor), valor);
@@ -30,4 +30,17 @@ test('PA06 preserva texto incompleto de micronutriente e normaliza valores váli
   assert.deepEqual(micronutrientesNumericosEdicao({ ferroMg: '1,' }), {});
   assert.throws(() => validarMicronutrientesEdicao({ ferroMg: '1,' }), /Complete ou limpe/);
   assert.deepEqual(validarMicronutrientesEdicao({ ferroMg: '1,25' }), { ferroMg: 1.25 });
+});
+
+test('FOOD02 distingue ausência legada de desvinculação explícita e limita o descriptor serializado', () => {
+  const descriptor = {
+    id: '00000000-0000-4000-8000-000000000001',
+    revisao: 2,
+    aplicacaoId: '00000000-0000-4000-8000-000000000002'
+  };
+  assert.equal(serializarAlimentoPersonalizadoEdicao(undefined), undefined);
+  assert.equal(serializarAlimentoPersonalizadoEdicao(null), null);
+  assert.deepEqual(serializarAlimentoPersonalizadoEdicao(descriptor), descriptor);
+  assert.throws(() => serializarAlimentoPersonalizadoEdicao({ ...descriptor, revisao: 0 }), /inválida/);
+  assert.throws(() => serializarAlimentoPersonalizadoEdicao({ ...descriptor, id: 'não-é-uuid' }), /inválida/);
 });

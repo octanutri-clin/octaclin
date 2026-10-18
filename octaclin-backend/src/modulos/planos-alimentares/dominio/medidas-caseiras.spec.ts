@@ -80,3 +80,21 @@ describe('FOOD01 materialização separada da biblioteca', () => {
         expect(await fn()({ schemaVersao: 1, refeicoes: [] }, mapa, resolver())).toEqual({});
     });
 });
+describe('FOOD02 medidas com pai personalizado', () => {
+  it('converte e preserva snapshot custom sem fingir FK de catálogo', async () => {
+    const d: any = doc({ alimentoComposicaoId: undefined, alimentoPersonalizado: { id, revisao: 1, aplicacaoId: app } });
+    const resolver = jest.fn(async () => ({ referencia: { id, revisao: 1, nome: 'colher', quantidadeReferencia: 1, pesoReferenciaGramas: 25 } }));
+    const mapa = await contrato.resolverMedidasDocumento(d, {}, resolver);
+    expect(d.refeicoes[0].itens[0].porcaoGramas).toBe(62.5);
+    expect(mapa.i).toHaveProperty('origemAlimento', 'custom');
+    const proximo: any = JSON.parse(JSON.stringify(d)); proximo.refeicoes[0].itens[0].quantidade = 3;
+    await contrato.resolverMedidasDocumento(proximo, mapa, async () => { throw new Error('Não reler biblioteca'); });
+    expect(proximo.refeicoes[0].itens[0].porcaoGramas).toBe(75);
+  });
+  it('não reaproveita referência de catálogo em pai custom com mesmo UUID', async () => {
+    const resolver = async () => ({ referencia: { id, revisao: 1, nome: 'colher', quantidadeReferencia: 1, pesoReferenciaGramas: 25 } });
+    const anterior = await contrato.resolverMedidasDocumento(doc() as any, {}, resolver);
+    const d: any = doc({ alimentoComposicaoId: undefined, alimentoPersonalizado: { id, revisao: 1, aplicacaoId: app } });
+    await expect(contrato.resolverMedidasDocumento(d, anterior, async () => { throw new Error('Acesso atual negado'); })).rejects.toThrow('Acesso atual negado');
+  });
+});

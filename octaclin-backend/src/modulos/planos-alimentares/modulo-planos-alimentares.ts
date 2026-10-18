@@ -1,4 +1,7 @@
-import { ControladorMedidasCaseiras } from './apresentacao/controlador-medidas-caseiras';
+import { AlimentoPersonalizadoOrm } from './infraestrutura/alimento-personalizado.orm';
+import { ServicoAlimentosPersonalizados } from './aplicacao/servico-alimentos-personalizados';
+import { ControladorAlimentosPersonalizados } from './apresentacao/controlador-alimentos-personalizados';
+import { ControladorMedidasCaseiras, ControladorMedidasCaseirasPersonalizadas } from './apresentacao/controlador-medidas-caseiras';
 import { ServicoMedidasCaseiras } from './aplicacao/servico-medidas-caseiras';
 import { MedidaCaseiraOrm } from './infraestrutura/medida-caseira.orm';
 import { Module } from '@nestjs/common';
@@ -66,6 +69,7 @@ const processadoresCompartilhamento = deveExecutarProcessadores() ? [Processador
       FonteComposicaoAlimentoOrm,
       AlimentoComposicaoOrm,
       MedidaCaseiraOrm,
+      AlimentoPersonalizadoOrm,
       PacienteOrm,
       AvaliacaoAntropometricaOrm,
       LogDiarioRapidoOrm,
@@ -87,12 +91,15 @@ const processadoresCompartilhamento = deveExecutarProcessadores() ? [Processador
     ControladorPlanosAlimentares,
     ControladorCatalogoAlimentos,
     ControladorMedidasCaseiras,
+    ControladorMedidasCaseirasPersonalizadas,
+    ControladorAlimentosPersonalizados,
     ControladorModelosPlanoAlimentar,
     ControladorReceitasNutricionais
   ],
   providers: [
     ServicoPlanosAlimentares,
     ServicoMedidasCaseiras,
+    ServicoAlimentosPersonalizados,
     ServicoModelosPlanoAlimentar,
     ServicoReceitasNutricionais,
     ServicoCompartilhamentoReceitas,
@@ -102,6 +109,7 @@ const processadoresCompartilhamento = deveExecutarProcessadores() ? [Processador
   exports: [
     ServicoPlanosAlimentares,
     ServicoMedidasCaseiras,
+    ServicoAlimentosPersonalizados,
     ServicoModelosPlanoAlimentar,
     ServicoReceitasNutricionais,
     ServicoCompartilhamentoReceitas

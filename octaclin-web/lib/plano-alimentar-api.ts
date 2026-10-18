@@ -6,7 +6,8 @@ import type { MedidaCaseiraReferenciaApi } from './medidas-caseiras-plano';
 
 export interface MedidaCaseiraAlimentoApi extends MedidaCaseiraReferenciaApi {
   id: string;
-  alimentoComposicaoId: string;
+  alimentoComposicaoId?: string;
+  alimentoPersonalizadoId?: string;
   escopo: 'pessoal' | 'clinica';
   revisao: number;
   ativa: boolean;
@@ -133,7 +134,7 @@ export interface AtualizarRascunhoPlanoAlimentarEntrada {
 }
 
 export interface ComposicaoSnapshotApi {
-  origem: 'catalogo' | 'manual';
+  origem: 'catalogo' | 'manual' | 'custom';
   alimentoComposicaoId?: string;
   codigoOrigem?: string;
   descricao: string;
@@ -151,6 +152,13 @@ export interface ComposicaoSnapshotApi {
   };
   nutrientesPor100g: NutrientesPor100gApi;
   nutrientesPorcao: NutrientesPor100gApi;
+  composicaoInformada?: {
+    baseGramas: number;
+    nutrientes: Partial<NutrientesPor100gApi>;
+    micronutrientes: MicronutrientesPor100gApi;
+    normalizacaoVersao: string;
+    referencia?: string;
+  };
   micronutrientes?: {
     schemaVersao: 1;
     mapeamentoVersao: 'octaclin-micronutrientes-v1';
@@ -242,6 +250,8 @@ export interface VersaoPlanoAlimentarApi {
   rascunhoRevisao?: number;
   edicaoEstado?: 'legado' | 'pendente' | 'materializada' | 'indisponivel';
   documentoEdicao?: DocumentoEdicaoPlano;
+  /** Composição de origem para reabrir, nunca enviada como entrada confiável. */
+  alimentosPersonalizadosAplicados?: Record<string, AlimentoPersonalizadoAplicadoApi>;
   /** Referências do snapshot do rascunho; exclusivas da projeção profissional. */
   medidasCaseirasAplicadas?: Record<string, MedidaCaseiraReferenciaApi>;
   apresentacaoEstado?: EstadoApresentacaoPlanoApi;
@@ -273,6 +283,46 @@ export interface VersaoPlanoAlimentarApi {
   criadoEm: string;
   atualizadoEm: string;
   refeicoes: RefeicaoPlanoAlimentarApi[];
+}
+
+export interface AlimentoPersonalizadoApi {
+  id: string;
+  nome: string;
+  preparacao?: string;
+  referenciaComposicao?: string;
+  escopo: 'pessoal' | 'clinica';
+  revisao: number;
+  ativo: boolean;
+  baseOrigem: { tipo: 'por100g' | 'porcao'; pesoGramas: number };
+  nutrientesPor100g: Partial<NutrientesPor100gApi>;
+  micronutrientesPor100g: MicronutrientesPor100gApi;
+  disponivelParaCalculo: boolean;
+  podeEditar: boolean;
+  composicaoOrigem?: { nutrientes: Partial<NutrientesPor100gApi>; micronutrientes: MicronutrientesPor100gApi };
+}
+
+export interface AlimentoPersonalizadoAplicadoApi {
+  nome: string;
+  preparacao?: string;
+  referenciaComposicao?: string;
+  baseOrigem: { tipo: 'por100g' | 'porcao'; pesoGramas: number };
+  composicaoOrigem: { nutrientes: Partial<NutrientesPor100gApi>; micronutrientes: MicronutrientesPor100gApi };
+  nutrientesPor100g: Partial<NutrientesPor100gApi>;
+  micronutrientesPor100g: MicronutrientesPor100gApi;
+  normalizacaoVersao: string;
+}
+
+export type PaginaAlimentosPersonalizadosApi = PaginaApi<AlimentoPersonalizadoApi>;
+
+export interface EntradaAlimentoPersonalizadoApi {
+  chaveIdempotencia: string;
+  escopo?: 'pessoal' | 'clinica';
+  nome: string;
+  preparacao?: string;
+  referenciaComposicao?: string;
+  base: { tipo: 'por100g' | 'porcao'; pesoGramas?: number };
+  nutrientes: Partial<NutrientesPor100gApi>;
+  micronutrientes?: MicronutrientesPor100gApi;
 }
 
 export interface PlanoAlimentarApi {
@@ -636,9 +686,16 @@ export function buscarAlimentosPlanoAlimentar(
   );
 }
 
-export function listarMedidasCaseirasAlimento(alimentoId: string, pagina: number, limite: number, signal?: AbortSignal) {
+export type OrigemBibliotecaAlimentoApi = 'catalogo' | 'custom';
+
+function caminhoMedidasCaseiras(alimentoId: string, origem: OrigemBibliotecaAlimentoApi) {
+  const tipo = origem === 'custom' ? 'alimentos-personalizados' : 'alimentos';
+  return `/api/planos-alimentares/${tipo}/${encodeURIComponent(alimentoId)}/medidas-caseiras`;
+}
+
+export function listarMedidasCaseirasAlimento(alimentoId: string, pagina: number, limite: number, signal?: AbortSignal, origem: OrigemBibliotecaAlimentoApi = 'catalogo') {
   return requisitar<MedidasCaseirasPaginadasApi>(
-    `/api/planos-alimentares/alimentos/${encodeURIComponent(alimentoId)}/medidas-caseiras${montarConsulta({ pagina, limite })}`,
+    `${caminhoMedidasCaseiras(alimentoId, origem)}${montarConsulta({ pagina, limite })}`,
     { signal }
   );
 }
@@ -649,9 +706,9 @@ export function criarMedidaCaseiraAlimento(alimentoId: string, entrada: {
   quantidadeReferencia: number;
   pesoReferenciaGramas: number;
   escopo?: 'pessoal' | 'clinica';
-}) {
+}, origem: OrigemBibliotecaAlimentoApi = 'catalogo') {
   return requisitar<MedidaCaseiraAlimentoApi>(
-    `/api/planos-alimentares/alimentos/${encodeURIComponent(alimentoId)}/medidas-caseiras`,
+    caminhoMedidasCaseiras(alimentoId, origem),
     { method: 'POST', ...corpoJson(entrada) }
   );
 }
@@ -662,11 +719,33 @@ export function atualizarMedidaCaseiraAlimento(alimentoId: string, medidaId: str
   quantidadeReferencia?: number;
   pesoReferenciaGramas?: number;
   ativa?: false;
-}) {
+}, origem: OrigemBibliotecaAlimentoApi = 'catalogo') {
   return requisitar<MedidaCaseiraAlimentoApi>(
-    `/api/planos-alimentares/alimentos/${encodeURIComponent(alimentoId)}/medidas-caseiras/${encodeURIComponent(medidaId)}`,
+    `${caminhoMedidasCaseiras(alimentoId, origem)}/${encodeURIComponent(medidaId)}`,
     { method: 'PATCH', ...corpoJson(entrada) }
   );
+}
+
+const BASE_ALIMENTOS_PERSONALIZADOS = '/api/planos-alimentares/alimentos-personalizados';
+
+export function listarAlimentosPersonalizados(consulta: { pagina?: number; limite?: number; escopo?: 'pessoal' | 'clinica' } = {}, signal?: AbortSignal) {
+  return requisitar<PaginaAlimentosPersonalizadosApi>(`${BASE_ALIMENTOS_PERSONALIZADOS}${montarConsulta(consulta)}`, { signal });
+}
+
+export function buscarAlimentosPersonalizados(consulta: { busca: string; pagina?: number; limite?: number; escopo?: 'pessoal' | 'clinica' }, signal?: AbortSignal) {
+  return requisitar<PaginaAlimentosPersonalizadosApi>(`${BASE_ALIMENTOS_PERSONALIZADOS}/busca`, { method: 'POST', ...corpoJson(consulta), signal });
+}
+
+export function obterAlimentoPersonalizado(id: string, signal?: AbortSignal) {
+  return requisitar<AlimentoPersonalizadoApi>(`${BASE_ALIMENTOS_PERSONALIZADOS}/${encodeURIComponent(id)}`, { signal });
+}
+
+export function criarAlimentoPersonalizado(entrada: EntradaAlimentoPersonalizadoApi) {
+  return requisitar<AlimentoPersonalizadoApi>(BASE_ALIMENTOS_PERSONALIZADOS, { method: 'POST', ...corpoJson(entrada) });
+}
+
+export function atualizarAlimentoPersonalizado(id: string, entrada: Omit<EntradaAlimentoPersonalizadoApi, 'chaveIdempotencia' | 'escopo'> & { revisaoEsperada: number } | { revisaoEsperada: number; ativo: false }) {
+  return requisitar<AlimentoPersonalizadoApi>(`${BASE_ALIMENTOS_PERSONALIZADOS}/${encodeURIComponent(id)}`, { method: 'PATCH', ...corpoJson(entrada) });
 }
 
 export type OrigemModeloApi = 'pessoal' | 'clinica';

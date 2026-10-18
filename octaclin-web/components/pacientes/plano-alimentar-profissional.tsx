@@ -45,6 +45,7 @@ import {
   revisarPlanoAlimentar,
   salvarEdicaoPlanoAlimentar,
   type AlimentoComposicaoApi,
+  type AlimentoPersonalizadoApi,
   type AcompanhamentoVersaoPlanoApi,
   type ApresentacaoPacientePlanoApi,
   type FonteCatalogoApi,
@@ -70,7 +71,7 @@ import { PainelNutricional } from '@/components/pacientes/painel-nutricional';
 import { calcularSubtotalRefeicao } from '@/lib/nutricao-plano';
 import { useCoordenacaoAbasPlano } from '@/lib/usar-coordenacao-abas-plano';
 import { CoordenadorEdicaoPlano, type EstadoSalvamentoPlano, type PrecondicaoEdicaoPlano } from '@/lib/coordenador-edicao-plano';
-import { LIMITE_BYTES_DOCUMENTO_EDICAO, campoNumeroEdicao as valorNumericoEdicao, percentualParaBasisPointsEdicao, interpretarNumeroEdicao, micronutrientesNumericosEdicao, nutrientesNumericosEdicao, validarMicronutrientesEdicao, type DocumentoEdicaoPlano, type MicronutrientesEdicao, type NutrientesEdicao } from '@/lib/edicao-plano';
+import { LIMITE_BYTES_DOCUMENTO_EDICAO, campoNumeroEdicao as valorNumericoEdicao, percentualParaBasisPointsEdicao, interpretarNumeroEdicao, micronutrientesNumericosEdicao, nutrientesNumericosEdicao, serializarAlimentoPersonalizadoEdicao, validarMicronutrientesEdicao, type DocumentoEdicaoPlano, type MicronutrientesEdicao, type NutrientesEdicao } from '@/lib/edicao-plano';
 import { CAMPOS_MICRONUTRIENTES_PLANO } from '@/lib/micronutrientes-plano';
 import { aplicarAckAtivacao, localizarAtivacaoRefeicao, mesclarProjecaoAtivacao } from '@/lib/ativacao-plano';
 import { DuplicarPlanoDeOutroPaciente } from '@/components/pacientes/duplicar-plano-de-outro-paciente';
@@ -80,6 +81,7 @@ import { CopiarRefeicaoDePlano } from '@/components/pacientes/copiar-refeicao-de
 import { PreferenciasApresentacaoPlano } from '@/components/pacientes/preferencias-apresentacao-plano';
 import { CalculoCombinadoPlanos } from '@/components/pacientes/calculo-combinado-planos';
 import { MedidasCaseirasAlimento } from '@/components/pacientes/medidas-caseiras-alimento';
+import { AlimentosPersonalizados } from '@/components/pacientes/alimentos-personalizados';
 import { novasPreferenciasApresentacaoPlano, type PreferenciasApresentacaoPlanoApi, type PreferenciasExibicaoRefeicoesApi } from '@/lib/preferencias-apresentacao-plano';
 import { PlanoAlimentarPaciente } from '@/components/portal/plano-alimentar-paciente';
 import {
@@ -99,6 +101,16 @@ const LIMITE_PLANOS_LISTA = 25;
 
 type NumeroFormulario = number | string;
 
+interface OrigemComposicaoPersonalizadaFormulario {
+  baseOrigem?: { tipo: 'por100g' | 'porcao'; pesoGramas: number };
+  composicaoOrigem?: { nutrientes: Partial<NutrientesPor100gApi>; micronutrientes: Record<string, number> };
+  baseGramas?: number;
+  nutrientes?: Partial<NutrientesPor100gApi>;
+  micronutrientes?: Record<string, number>;
+  normalizacaoVersao?: string;
+  referencia?: string;
+}
+
 interface AlimentoFormulario extends Omit<SubstituicaoPlanoAlimentarEntrada, 'nutrientesPor100g' | 'micronutrientesPor100g' | 'quantidade' | 'porcaoGramas'> {
   quantidade: NumeroFormulario;
   porcaoGramas: NumeroFormulario;
@@ -109,6 +121,8 @@ interface AlimentoFormulario extends Omit<SubstituicaoPlanoAlimentarEntrada, 'nu
   fonteRotulo?: string;
   medidaCaseira?: MedidaCaseiraAplicadaApi | null;
   referenciaMedidaCaseira?: MedidaCaseiraReferenciaApi;
+  alimentoPersonalizado?: DocumentoEdicaoPlano['refeicoes'][number]['itens'][number]['alimentoPersonalizado'];
+  origemComposicaoPersonalizada?: OrigemComposicaoPersonalizadaFormulario;
 }
 
 interface AlternativaFormulario extends AlimentoFormulario {
@@ -232,9 +246,10 @@ function alimentoDaVersao(
     porcaoGramas: interpretarNumeroEdicao(alimento.porcaoGramas) ?? 0,
     nutrientesPor100g: { ...alimento.composicaoSnapshot.nutrientesPor100g },
     micronutrientesPor100g: alimento.alimentoComposicaoId ? undefined : Object.fromEntries(Object.entries(alimento.composicaoSnapshot.micronutrientes?.nutrientes ?? {}).flatMap(([codigo, valor]) => valor.estado === 'conhecido' && valor.por100g !== undefined ? [[codigo, valor.por100g]] : [])),
-    fonteRotulo: alimento.composicaoSnapshot.fonte
+    fonteRotulo: alimento.composicaoSnapshot.origem === 'custom' ? 'Alimento personalizado' : alimento.composicaoSnapshot.fonte
       ? `${alimento.composicaoSnapshot.fonte.nome} - ${alimento.composicaoSnapshot.fonte.versao}`
-      : undefined
+      : undefined,
+    origemComposicaoPersonalizada: alimento.composicaoSnapshot.composicaoInformada
   };
   if ('substituicoes' in alimento) {
     return {
@@ -431,6 +446,7 @@ function documentoDoFormulario(formulario: FormularioPlano): DocumentoEdicaoPlan
       itens: refeicao.itens.map((item) => ({
         chaveCliente: item.chaveCliente,
         alimentoComposicaoId: item.alimentoComposicaoId,
+        alimentoPersonalizado: serializarAlimentoPersonalizadoEdicao(item.alimentoPersonalizado),
         descricao: item.descricao,
         quantidade: item.quantidade,
         unidade: item.unidade,
@@ -442,6 +458,7 @@ function documentoDoFormulario(formulario: FormularioPlano): DocumentoEdicaoPlan
         substituicoes: item.substituicoes.map((alternativa) => ({
           chaveCliente: alternativa.chaveCliente,
           alimentoComposicaoId: alternativa.alimentoComposicaoId,
+          alimentoPersonalizado: serializarAlimentoPersonalizadoEdicao(alternativa.alimentoPersonalizado),
           descricao: alternativa.descricao,
           quantidade: alternativa.quantidade,
           unidade: alternativa.unidade,
@@ -464,13 +481,17 @@ function formularioDoDocumento(documento: DocumentoEdicaoPlano, versao: VersaoPl
   const mapearAlimento = (item: DocumentoEdicaoPlano['refeicoes'][number]['itens'][number]) => ({
     chaveCliente: item.chaveCliente || novaChaveCliente('alimento'),
     alimentoComposicaoId: item.alimentoComposicaoId ?? undefined,
+    alimentoPersonalizado: serializarAlimentoPersonalizadoEdicao(item.alimentoPersonalizado),
     descricao: item.descricao ?? '',
     quantidade: valorNumericoEdicao(item.quantidade),
     unidade: item.unidade ?? '',
     porcaoGramas: valorNumericoEdicao(item.porcaoGramas),
     nutrientesPor100g: Object.fromEntries(Object.entries(item.nutrientesPor100g ?? {}).map(([campo, valor]) => [campo, valorNumericoEdicao(valor)])),
     micronutrientesPor100g: item.alimentoComposicaoId ? undefined : Object.fromEntries(Object.entries(item.micronutrientesPor100g ?? {}).map(([campo, valor]) => [campo, valorNumericoEdicao(valor)])),
-    fonteRotulo: item.fonteRotulo,
+    fonteRotulo: item.alimentoPersonalizado ? 'Alimento personalizado' : item.fonteRotulo,
+    origemComposicaoPersonalizada: item.alimentoPersonalizado
+      ? versao.alimentosPersonalizadosAplicados?.[item.chaveCliente]
+      : undefined,
     medidaCaseira: item.medidaCaseira,
     referenciaMedidaCaseira: versao.medidasCaseirasAplicadas?.[item.chaveCliente]
   });
@@ -745,6 +766,7 @@ function EditorAlimento({ pacienteId, contextoEdicao, podeEditar, rotulo, valor,
     aoAlterar({
       ...valor,
       alimentoComposicaoId: alimento.id,
+      alimentoPersonalizado: null,
       descricao: alimento.preparacao ? `${alimento.nome}, ${alimento.preparacao}` : alimento.nome,
       nutrientesPor100g: { ...alimento.nutrientesPor100g },
       micronutrientesPor100g: undefined,
@@ -776,6 +798,30 @@ function EditorAlimento({ pacienteId, contextoEdicao, podeEditar, rotulo, valor,
     aoAlterar({ ...valor, medidaCaseira, referenciaMedidaCaseira, unidade, porcaoGramas });
   }
 
+  function selecionarPersonalizado(alimento: AlimentoPersonalizadoApi, aplicacaoId: string) {
+    aoAlterar({
+      ...valor,
+      alimentoComposicaoId: undefined,
+      alimentoPersonalizado: { id: alimento.id, revisao: alimento.revisao, aplicacaoId },
+      origemComposicaoPersonalizada: {
+        baseOrigem: alimento.baseOrigem,
+        composicaoOrigem: alimento.composicaoOrigem,
+        normalizacaoVersao: 'octaclin-custom-v1',
+        referencia: alimento.referenciaComposicao
+      },
+      descricao: alimento.preparacao ? `${alimento.nome}, ${alimento.preparacao}` : alimento.nome,
+      nutrientesPor100g: { ...alimento.nutrientesPor100g },
+      micronutrientesPor100g: { ...alimento.micronutrientesPor100g },
+      fonteRotulo: 'Alimento personalizado',
+      medidaCaseira: null,
+      referenciaMedidaCaseira: undefined
+    });
+  }
+
+  const possuiVinculoBiblioteca = Boolean(valor.alimentoComposicaoId || valor.alimentoPersonalizado);
+  const idBiblioteca = valor.alimentoComposicaoId ?? valor.alimentoPersonalizado?.id;
+  const origemBiblioteca = valor.alimentoPersonalizado ? 'custom' as const : 'catalogo' as const;
+
   return (
     <fieldset className="grid min-w-0 gap-3 border-t border-linha pt-3 first:border-t-0 first:pt-0">
       <legend className="sr-only">{rotulo}</legend>
@@ -783,7 +829,7 @@ function EditorAlimento({ pacienteId, contextoEdicao, podeEditar, rotulo, valor,
         <div>
           <p className="text-sm font-semibold text-tinta">{rotulo}</p>
           <p className="text-xs text-texto-suave">
-            {valor.alimentoComposicaoId ? valor.fonteRotulo ?? 'Catálogo nutricional' : 'Composição informada manualmente'}
+            {valor.alimentoPersonalizado ? 'Alimento personalizado' : valor.alimentoComposicaoId ? valor.fonteRotulo ?? 'Catálogo nutricional' : 'Composição informada manualmente'}
           </p>
         </div>
         {aoRemover ? (
@@ -793,6 +839,17 @@ function EditorAlimento({ pacienteId, contextoEdicao, podeEditar, rotulo, valor,
           </Botao>
         ) : null}
       </div>
+
+      {valor.alimentoPersonalizado && valor.origemComposicaoPersonalizada ? <details className="rounded border border-linha px-3">
+        <summary className="min-h-11 cursor-pointer py-3 text-xs font-semibold text-primaria">Conferir composição de origem</summary>
+        <div className="grid gap-1 pb-3 text-xs text-texto-suave">
+          <p>Base original: {valor.origemComposicaoPersonalizada.baseOrigem?.pesoGramas ?? valor.origemComposicaoPersonalizada.baseGramas} g</p>
+          {valor.origemComposicaoPersonalizada.normalizacaoVersao ? <p>Normalização: {valor.origemComposicaoPersonalizada.normalizacaoVersao}</p> : null}
+          {valor.origemComposicaoPersonalizada.referencia ? <p>Referência informada: {valor.origemComposicaoPersonalizada.referencia}</p> : null}
+          {Object.entries(valor.origemComposicaoPersonalizada.composicaoOrigem?.nutrientes ?? valor.origemComposicaoPersonalizada.nutrientes ?? {}).map(([campo, numero]) => <p key={campo}>{campo}: {numero}</p>)}
+          {Object.entries(valor.origemComposicaoPersonalizada.composicaoOrigem?.micronutrientes ?? valor.origemComposicaoPersonalizada.micronutrientes ?? {}).map(([campo, numero]) => <p key={campo}>{campo}: {numero}</p>)}
+        </div>
+      </details> : null}
 
       <div className="grid gap-2">
         <Rotulo htmlFor={`${id}-busca`}>Buscar no catálogo</Rotulo>
@@ -868,6 +925,18 @@ function EditorAlimento({ pacienteId, contextoEdicao, podeEditar, rotulo, valor,
         ) : null}
       </div>
 
+      <AlimentosPersonalizados
+        key={`${pacienteId}:${contextoEdicao}:${valor.chaveCliente}`}
+        podeEditar={podeEditar}
+        contextoSelecao={JSON.stringify([
+          valor.alimentoComposicaoId ?? null,
+          valor.alimentoPersonalizado?.id ?? null,
+          valor.alimentoPersonalizado?.revisao ?? null,
+          valor.alimentoPersonalizado?.aplicacaoId ?? null
+        ])}
+        aoSelecionar={({ alimento, aplicacaoId }) => selecionarPersonalizado(alimento, aplicacaoId)}
+      />
+
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-[minmax(0,1fr)_120px_150px_150px]">
         <div className="grid gap-1">
           <Rotulo htmlFor={`${id}-descricao`}>Alimento</Rotulo>
@@ -875,7 +944,7 @@ function EditorAlimento({ pacienteId, contextoEdicao, podeEditar, rotulo, valor,
             id={`${id}-descricao`}
             value={valor.descricao}
             onChange={(evento) => aoAlterar({ ...valor, descricao: evento.target.value })}
-            disabled={Boolean(valor.alimentoComposicaoId)}
+            disabled={possuiVinculoBiblioteca}
             maxLength={240}
             required
           />
@@ -918,9 +987,10 @@ function EditorAlimento({ pacienteId, contextoEdicao, podeEditar, rotulo, valor,
         </div>
       </div>
 
-      {valor.alimentoComposicaoId ? <MedidasCaseirasAlimento
-        key={`${valor.alimentoComposicaoId}:${pacienteId}:${contextoEdicao}:${valor.chaveCliente}`}
-        alimentoId={valor.alimentoComposicaoId}
+      {idBiblioteca ? <MedidasCaseirasAlimento
+        key={`${origemBiblioteca}:${idBiblioteca}:${pacienteId}:${contextoEdicao}:${valor.chaveCliente}`}
+        alimentoId={idBiblioteca}
+        origemBiblioteca={origemBiblioteca}
         quantidade={valor.quantidade}
         aplicada={valor.medidaCaseira}
         referenciaAplicada={valor.referenciaMedidaCaseira}
@@ -928,14 +998,14 @@ function EditorAlimento({ pacienteId, contextoEdicao, podeEditar, rotulo, valor,
         aoAplicar={aplicarMedida}
       /> : null}
 
-      {valor.alimentoComposicaoId ? (
+      {possuiVinculoBiblioteca ? (
         <div className="flex flex-wrap items-center justify-between gap-2">
           {/* Item de catalogo nao tem campos editaveis de nutriente, entao a
               porcao calculada e o unico retorno nutricional da linha. */}
           {mostrarResumo ? <p className="text-xs tabular-nums text-texto-suave" aria-label={resumoPorcaoAlimento(resumo ?? valor).acessivel}>{resumoPorcaoAlimento(resumo ?? valor).visual}</p> : <p role="status" className="text-xs text-texto-suave">Resumo nutricional aguardando materialização.</p>}
           <button
             type="button"
-            onClick={() => aoAlterar({ ...valor, alimentoComposicaoId: undefined, fonteRotulo: undefined, medidaCaseira: null, referenciaMedidaCaseira: undefined })}
+            onClick={() => aoAlterar({ ...valor, alimentoComposicaoId: undefined, alimentoPersonalizado: valor.alimentoPersonalizado ? null : undefined, fonteRotulo: undefined, medidaCaseira: null, referenciaMedidaCaseira: undefined })}
             className="flex min-h-11 w-fit items-center text-xs font-semibold text-primaria underline-offset-4 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primaria"
           >
             Transformar em item manual

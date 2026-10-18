@@ -6,7 +6,8 @@ import {
   atualizarMedidaCaseiraAlimento,
   criarMedidaCaseiraAlimento,
   listarMedidasCaseirasAlimento,
-  type MedidaCaseiraAlimentoApi
+  type MedidaCaseiraAlimentoApi,
+  type OrigemBibliotecaAlimentoApi
 } from '@/lib/plano-alimentar-api';
 import type { MedidaCaseiraAplicadaApi, MedidaCaseiraReferenciaApi } from '@/lib/medidas-caseiras-plano';
 import { calcularPesoMedidaCaseira } from '@/lib/medidas-caseiras-plano';
@@ -30,10 +31,11 @@ interface Props {
   aplicada?: MedidaCaseiraAplicadaApi | null;
   referenciaAplicada?: MedidaCaseiraReferenciaApi;
   podeEditar: boolean;
+  origemBiblioteca?: OrigemBibliotecaAlimentoApi;
   aoAplicar: (aplicada: MedidaCaseiraAplicadaApi, referencia: MedidaCaseiraReferenciaApi, unidade: string, gramas: number | '') => void;
 }
 
-export function MedidasCaseirasAlimento({ alimentoId, quantidade, aplicada, referenciaAplicada, podeEditar, aoAplicar }: Props) {
+export function MedidasCaseirasAlimento({ alimentoId, quantidade, aplicada, referenciaAplicada, podeEditar, origemBiblioteca = 'catalogo', aoAplicar }: Props) {
   const montado = useRef(true);
   const [aberto, setAberto] = useState(false);
   const [pagina, setPagina] = useState(1);
@@ -59,7 +61,7 @@ export function MedidasCaseirasAlimento({ alimentoId, quantidade, aplicada, refe
     setCarregando(true);
     setErro('');
     try {
-      const resultado = await listarMedidasCaseirasAlimento(alimentoId, proximaPagina, 25);
+      const resultado = await listarMedidasCaseirasAlimento(alimentoId, proximaPagina, 25, undefined, origemBiblioteca);
       if (sequencia.current !== requisicao || !montado.current) return;
       setItens(resultado.itens);
       setTotal(resultado.total);
@@ -117,7 +119,7 @@ export function MedidasCaseirasAlimento({ alimentoId, quantidade, aplicada, refe
           nome,
           quantidadeReferencia,
           pesoReferenciaGramas
-        });
+        }, origemBiblioteca);
         if (!montado.current) return;
         setItens((atuais) => atuais.map((item) => item.id === atualizada.id ? atualizada : item));
         setEditando(null);
@@ -130,7 +132,7 @@ export function MedidasCaseirasAlimento({ alimentoId, quantidade, aplicada, refe
         }
         await criarMedidaCaseiraAlimento(alimentoId, {
           chaveIdempotencia: chaveCriacaoPendente.current.chave, nome, quantidadeReferencia, pesoReferenciaGramas, escopo: formulario.escopo
-        });
+        }, origemBiblioteca);
         if (!montado.current) return;
         setPagina(1);
         setFormulario(formularioVazio);
@@ -155,7 +157,7 @@ export function MedidasCaseirasAlimento({ alimentoId, quantidade, aplicada, refe
     setSalvando(true);
     setErro('');
     try {
-      const desativada = await atualizarMedidaCaseiraAlimento(alimentoId, item.id, { revisaoEsperada: item.revisao, ativa: false });
+      const desativada = await atualizarMedidaCaseiraAlimento(alimentoId, item.id, { revisaoEsperada: item.revisao, ativa: false }, origemBiblioteca);
       if (!montado.current) return;
       setItens((atuais) => atuais.filter((atual) => atual.id !== desativada.id));
       setTotal((atual) => Math.max(0, atual - 1));
@@ -170,7 +172,7 @@ export function MedidasCaseirasAlimento({ alimentoId, quantidade, aplicada, refe
     }
   }
 
-  if (!alimentoId) return <p className="text-xs text-texto-suave">Selecione um alimento do catálogo para usar medidas personalizadas. Itens manuais continuam com peso informado diretamente.</p>;
+  if (!alimentoId) return <p className="text-xs text-texto-suave">Selecione um alimento da biblioteca para usar medidas caseiras. Itens manuais continuam com peso informado diretamente.</p>;
   const paginas = Math.max(1, Math.ceil(total / 25));
 
   return (
@@ -220,7 +222,7 @@ export function MedidasCaseirasAlimento({ alimentoId, quantidade, aplicada, refe
             </label>)}
           </div>
           {!editando ? <label className="grid gap-1 text-xs font-semibold text-texto-suave">Disponibilidade
-            <select className="min-h-11 rounded border border-linha px-3 text-sm text-tinta focus-visible:outline focus-visible:outline-2 focus-visible:outline-primaria" disabled={salvando} value={formulario.escopo} onChange={(evento) => setFormulario((atual) => ({ ...atual, escopo: evento.target.value as Formulario['escopo'] }))}><option value="pessoal">Pessoal (padrão)</option><option value="clinica">Clínica</option></select>
+            <select className="min-h-11 rounded border border-linha px-3 text-sm text-tinta focus-visible:outline focus-visible:outline-2 focus-visible:outline-primaria" disabled={salvando || origemBiblioteca === 'custom'} value={origemBiblioteca === 'custom' ? 'pessoal' : formulario.escopo} onChange={(evento) => setFormulario((atual) => ({ ...atual, escopo: evento.target.value as Formulario['escopo'] }))}><option value="pessoal">Pessoal (padrão)</option>{origemBiblioteca === 'catalogo' ? <option value="clinica">Clínica</option> : null}</select>
           </label> : <p className="text-xs text-texto-suave">A disponibilidade da medida não pode ser alterada depois de criada.</p>}
           <div className="flex flex-wrap gap-2">
             <button className="min-h-11 rounded bg-primaria px-4 text-sm font-semibold text-white disabled:opacity-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primaria" type="button" onClick={() => void salvar()} disabled={salvando}>{salvando ? 'Salvando…' : editando ? 'Salvar edição' : 'Salvar na biblioteca'}</button>
