@@ -249,6 +249,26 @@ assert.match(sqlManifesto, /c\.relrowsecurity/);
 assert.match(sqlManifesto, /c\.relforcerowsecurity/);
 assert.match(sqlManifesto, /current_setting\(''app\.tenant_id/);
 assert.match(sqlManifesto, /from public\.migrations/);
+assert.match(
+  sqlManifesto,
+  /p\.cmd in \('ALL', 'SELECT', 'INSERT', 'UPDATE', 'DELETE'\)/,
+  'O manifesto deve reconhecer politicas tenant-aware separadas por comando.',
+);
+assert.match(
+  sqlManifesto,
+  /'public' = any\(p\.roles\)/,
+  'As politicas tenant-aware precisam abranger o papel public.',
+);
+assert.match(
+  sqlManifesto,
+  /p\.cmd not in \('ALL', 'SELECT', 'UPDATE', 'DELETE'\)[\s\S]*p\.qual/,
+  'SELECT/UPDATE/DELETE precisam validar o predicado de leitura por tenant.',
+);
+assert.match(
+  sqlManifesto,
+  /p\.cmd not in \('ALL', 'INSERT', 'UPDATE'\)[\s\S]*p\.with_check/,
+  'INSERT/UPDATE precisam validar o predicado de escrita por tenant.',
+);
 
 const runbookRansomware = readFileSync(
   new URL("../RUNBOOK_RECUPERACAO_RANSOMWARE.md", import.meta.url),
