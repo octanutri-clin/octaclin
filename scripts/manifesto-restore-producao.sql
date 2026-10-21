@@ -1,28 +1,42 @@
 \set ON_ERROR_STOP on
 
-with tabelas_tenant as (
+-- RLS pode separar comandos (por exemplo, trilha append-only). Validar cada
+-- predicado conforme o comando coberto, sem exigir UPDATE/DELETE onde nao existe.
+with politicas_tenant as (
+  select p.tablename,
+         count(*) > 0 and bool_and(
+           p.cmd in ('ALL', 'SELECT', 'INSERT', 'UPDATE', 'DELETE')
+           and (
+             p.cmd not in ('ALL', 'SELECT', 'UPDATE', 'DELETE')
+             or (
+               lower(coalesce(p.qual, '')) like '%tenant_id%'
+               and lower(coalesce(p.qual, '')) like '%current_setting(''app.tenant_id%'
+               and lower(coalesce(p.qual, '')) like '%nullif%'
+               and lower(coalesce(p.qual, '')) like '%uuid%'
+             )
+           )
+           and (
+             p.cmd not in ('ALL', 'INSERT', 'UPDATE')
+             or (
+               lower(coalesce(p.with_check, '')) like '%tenant_id%'
+               and lower(coalesce(p.with_check, '')) like '%current_setting(''app.tenant_id%'
+               and lower(coalesce(p.with_check, '')) like '%nullif%'
+               and lower(coalesce(p.with_check, '')) like '%uuid%'
+             )
+           )
+         ) as policy_completa
+    from pg_policies p
+   where p.schemaname = 'public'
+   group by p.tablename
+), tabelas_tenant as (
   select c.relname as tabela,
          c.relrowsecurity as rls,
          c.relforcerowsecurity as rls_forcada,
-         exists (
-           select 1
-             from pg_policies p
-            where p.schemaname = 'public'
-              and p.tablename = c.relname
-              and p.cmd = 'ALL'
-              and 'public' = any(p.roles)
-              and lower(coalesce(p.qual, '')) like '%tenant_id%'
-              and lower(coalesce(p.qual, '')) like '%current_setting(''app.tenant_id%'
-              and lower(coalesce(p.qual, '')) like '%nullif%'
-              and lower(coalesce(p.qual, '')) like '%uuid%'
-              and lower(coalesce(p.with_check, '')) like '%tenant_id%'
-              and lower(coalesce(p.with_check, '')) like '%current_setting(''app.tenant_id%'
-              and lower(coalesce(p.with_check, '')) like '%nullif%'
-              and lower(coalesce(p.with_check, '')) like '%uuid%'
-         ) as policy_completa
+         coalesce(p.policy_completa, false) as policy_completa
     from pg_class c
     join pg_namespace n on n.oid = c.relnamespace
     join pg_attribute a on a.attrelid = c.oid
+    left join politicas_tenant p on p.tablename = c.relname
    where n.nspname = 'public'
      and c.relkind in ('r', 'p')
      and a.attname = 'tenant_id'
