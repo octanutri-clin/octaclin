@@ -6,6 +6,7 @@ with politicas_tenant as (
   select p.tablename,
          count(*) > 0 and bool_and(
            p.cmd in ('ALL', 'SELECT', 'INSERT', 'UPDATE', 'DELETE')
+           and 'public' = any(p.roles)
            and (
              p.cmd not in ('ALL', 'SELECT', 'UPDATE', 'DELETE')
              or (

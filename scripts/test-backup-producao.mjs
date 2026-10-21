@@ -256,6 +256,11 @@ assert.match(
 );
 assert.match(
   sqlManifesto,
+  /'public' = any\(p\.roles\)/,
+  'As politicas tenant-aware precisam abranger o papel public.',
+);
+assert.match(
+  sqlManifesto,
   /p\.cmd not in \('ALL', 'SELECT', 'UPDATE', 'DELETE'\)[\s\S]*p\.qual/,
   'SELECT/UPDATE/DELETE precisam validar o predicado de leitura por tenant.',
 );
