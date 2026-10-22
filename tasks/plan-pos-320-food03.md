@@ -1,6 +1,6 @@
 # FOOD03 — favoritos de substituições por profissional
 
-**Estado:** planejamento técnico concluído; implementação ainda não iniciada.
+**Estado:** implementação em curso na PR Draft #438; não mergeada nem implantada.
 **Base auditada:** `main` em `a853685e8becc2d38248f0608f749c6643a692c2` (PR #437).
 **Escopo:** permitir ao profissional favoritar/desfavoritar alimentos elegíveis
 na seleção de substituições e ordenar favoritos antes dos demais resultados.
@@ -96,15 +96,15 @@ MIT é orientação, não exigência de integração; a GPL permanece fora do ru
 
 | ID | Atividade | Dependências | Critério objetivo de aceite |
 | --- | --- | --- | --- |
-| T00 | Conferir base/árvore, contratos food/substituições, migrations, RLS, busca do editor e acessibilidade atual | Base atualizada | Escopo confirmado; migrations anteriores intactas; sem reaproveitar `preferida` do snapshot |
-| T01 | Escrever testes RED do domínio e contrato de identidade/sort | T00 | Favorito não altera `preferida`, snapshots, macros ou plano; texto livre não cria identidade implícita; ordenação estável |
-| T02 | Fechar armazenamento idempotente por profissional e resolver de identidade | T01 | Unicidade tenant+professional+food; alimentos canônicos e FOOD02; remoção/desativação tratada sem cascata em planos |
-| T03 | Implementar persistência e migration aditiva, se realmente necessária | T02 | Migração reversível/conservadora; RLS/FORCE RLS; FK/constraints; role de aplicação; migração antiga não editada |
-| T04 | Serviços/endpoints de lista, favoritar e desfavoritar | T03 | Autorização derivada do contexto; valida estado do alimento em cada operação; idempotência e projeção mínima |
-| T05 | PostgreSQL descartável: RLS, tenant, profissional e concorrência | T04 | Role não-owner; negar cross-tenant/cross-professional; operações concorrentes convergem; nenhum falso PASS por skip |
-| T06 | BFF e UI de busca/seletor de substituição | T04–T05 | Favorite/unfavorite com atualização explícita; favoritos no topo; ordenação estável; teclado, foco e estado acessível; sem autoaplicar |
-| T07 | Regressões de planos, publicação, macros, escolhas e portal/print | T06 | Snapshots e saídas existentes idênticos salvo ordenação de resultados no seletor; paciente não recebe favorito privado |
-| T08 | Revisão R4, documentação, gates e PR única | T01–T07 | Evidências dos testes, diff de segurança, CI do HEAD; reportar migration/deploy como estados separados; não mergear/deployar |
+| T00 | Conferir base/árvore, contratos food/substituições, migrations, RLS, busca do editor e acessibilidade atual | Base atualizada | **Concluída:** base #437; confirmado não reutilizar `preferida`; migração aditiva 1077 |
+| T01 | Escrever testes RED do domínio e contrato de identidade/sort | T00 | **Concluída:** RED/GREEN de ordenação estável e origem discriminada; BFF e UI cobertos |
+| T02 | Fechar armazenamento idempotente por profissional e resolver de identidade | T01 | **Concluída:** unicidade tenant+profissional+alimento; resolução no servidor; catálogo e FOOD02 |
+| T03 | Implementar persistência e migration aditiva, se realmente necessária | T02 | **Concluída:** migration 1077 aditiva, FK, XOR, unicidade `NULLS NOT DISTINCT`, ENABLE/FORCE RLS; migrations antigas intactas |
+| T04 | Serviços/endpoints de lista, favoritar e desfavoritar | T03 | **Concluída:** guardas de papel/permissão, tenant e vínculo profissional; validação do estado atual; mutações idempotentes |
+| T05 | PostgreSQL descartável: RLS, tenant, profissional e concorrência | T04 | **PASS local:** PostgreSQL 15 descartável, role `NOBYPASSRLS`, FORCE RLS, tenant adulterado negado e inserts concorrentes convergem; escopo profissional verificado no serviço. O suite RLS geral falhou antes de executar por falta da imagem `timescale/timescaledb-ha:pg15` |
+| T06 | BFF e UI de busca/seletor de substituição | T04–T05 | **Implementado; BFF e Playwright desktop/mobile + axe passaram.** Catálogo e custom, `aria-pressed`, ordenação local após favoritar, sem autoaplicar |
+| T07 | Regressões de planos, publicação, macros, escolhas e portal/print | T06 | **Parcial:** serviços de plano regressivos e fluxo Playwright confirmam que favorito não grava nem seleciona; gates adicionais da PR pendentes |
+| T08 | Revisão R4, documentação, gates e PR única | T01–T07 | **Pendente:** gates do HEAD corrigido e revisão; PR segue Draft; sem merge/deploy |
 
 ## Plano de testes da implementação
 
@@ -124,6 +124,20 @@ MIT é orientação, não exigência de integração; a GPL permanece fora do ru
   publicado para representar favoritos atuais.
 - Gates aplicáveis do PR: Backend NestJS, Web Next.js, PostgreSQL/RLS, Demo local
   smoke, PR Gate, scanners e segurança; revisão independente focada na diff.
+
+### Evidência local registrada
+
+- RED inicial: o teste de domínio falhou porque o módulo não existia; após a
+  implementação, ordenação estável e origem discriminada passaram.
+- Backend: typecheck e 127 testes focados passaram, incluindo domínio, serviço,
+  controller, migration, FOOD02 e busca de catálogo.
+- PostgreSQL descartável: `pnpm test:food03:postgres` passou em PostgreSQL 15
+  com duas conexões concorrentes e role sem `BYPASSRLS`.
+- BFF: `pnpm test:planos-alimentares:bff` passou (54 testes).
+- Playwright desktop e mobile FOOD03 passaram com axe no seletor.
+- `pnpm test:rls:testcontainers` não iniciou o suite geral porque a imagem
+  configurada `timescale/timescaledb-ha:pg15` não estava disponível localmente;
+  a prova isolada de FOOD03 usou Postgres 15 descartável.
 
 ## Critérios de conclusão
 

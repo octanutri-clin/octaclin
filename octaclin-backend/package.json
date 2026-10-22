@@ -14,6 +14,7 @@
     "test": "jest",
     "test:abuso:redis-real": "jest --runInBand src/modulos/auth/aplicacao/servico-protecao-abuso.redis.integracao.spec.ts",
     "test:rls:testcontainers": "node scripts/test-rls-testcontainers.mjs",
+    "test:food03:postgres": "FOOD03_RLS_TESTCONTAINERS=true jest --runInBand src/infraestrutura/banco-dados/migracoes/1720000001077-FavoritosAlimentosProfissional.integracao.spec.ts",
     "typeorm": "typeorm-ts-node-commonjs -d src/infraestrutura/banco-dados/fonte-dados.ts",
     "migration:run": "npm run typeorm -- migration:run",
     "migration:generate": "npm run typeorm -- migration:generate src/infraestrutura/banco-dados/migracoes/MigracaoAutomatica",

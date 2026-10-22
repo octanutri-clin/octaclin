@@ -16,6 +16,7 @@ import {
   RefreshCcw,
   Save,
   Search,
+  Star,
   Trash2,
   Utensils
 } from 'lucide-react';
@@ -33,6 +34,7 @@ import {
   alterarAtivacaoPlanoAlimentar,
   alterarAtivacaoRefeicaoPlanoAlimentar,
   buscarAlimentosPlanoAlimentar,
+  alterarFavoritoAlimento,
   criarNovaVersaoPlanoAlimentar,
   criarPlanoAlimentar,
   ErroApiPlanoAlimentar,
@@ -707,6 +709,23 @@ function EditorAlimento({ pacienteId, contextoEdicao, podeEditar, rotulo, valor,
   const [total, setTotal] = useState(0);
   const [buscando, setBuscando] = useState(false);
   const [erroBusca, setErroBusca] = useState<string | null>(null);
+  const [favoritosEmAtualizacao, setFavoritosEmAtualizacao] = useState<Set<string>>(new Set());
+
+  async function alternarFavorito(alimento: AlimentoComposicaoApi) {
+    const novoEstado = !alimento.favorito;
+    setFavoritosEmAtualizacao((atual) => new Set(atual).add(alimento.id));
+    setErroBusca(null);
+    try {
+      await alterarFavoritoAlimento('catalogo', alimento.id, novoEstado);
+      setResultados((atuais) => atuais
+        .map((item) => item.id === alimento.id ? { ...item, favorito: novoEstado } : item)
+        .sort((a, b) => Number(b.favorito === true) - Number(a.favorito === true)));
+    } catch (erro) {
+      setErroBusca(mensagemFalhaInterface(erro, 'Não foi possível atualizar o favorito.'));
+    } finally {
+      setFavoritosEmAtualizacao((atual) => { const proximo = new Set(atual); proximo.delete(alimento.id); return proximo; });
+    }
+  }
 
   useEffect(() => {
     if (busca.trim().length < 2) {
@@ -901,12 +920,12 @@ function EditorAlimento({ pacienteId, contextoEdicao, podeEditar, rotulo, valor,
             </p>
             <ul className="max-h-52 overflow-y-auto rounded-md border border-linha bg-white" aria-label="Resultados da busca de alimentos">
               {resultados.map((alimento) => (
-                <li key={alimento.id} className="border-b border-linha last:border-b-0">
+                <li key={alimento.id} className="flex items-stretch border-b border-linha last:border-b-0">
                   <button
                     type="button"
                     disabled={!alimento.disponivelParaCalculo}
                     onClick={() => selecionar(alimento)}
-                    className="min-h-11 w-full px-3 py-2 text-left text-sm hover:bg-superficie-hover disabled:cursor-not-allowed disabled:opacity-55 focus-visible:outline focus-visible:outline-2 focus-visible:outline-inset focus-visible:outline-primaria"
+                    className="min-h-11 min-w-0 flex-1 px-3 py-2 text-left text-sm hover:bg-superficie-hover disabled:cursor-not-allowed disabled:opacity-55 focus-visible:outline focus-visible:outline-2 focus-visible:outline-inset focus-visible:outline-primaria"
                   >
                     <span className="block font-medium text-tinta">{alimento.nome}</span>
                     <span className="block text-xs text-texto-suave">
@@ -917,6 +936,17 @@ function EditorAlimento({ pacienteId, contextoEdicao, podeEditar, rotulo, valor,
                         .join(' - ') || 'Catálogo nutricional'}
                       {!alimento.disponivelParaCalculo ? ' - composição incompleta' : ''}
                     </span>
+                  </button>
+                  <button
+                    type="button"
+                    aria-pressed={alimento.favorito === true}
+                    aria-label={`${alimento.favorito ? 'Remover' : 'Adicionar'} ${alimento.nome} ${alimento.favorito ? 'dos' : 'aos'} favoritos`}
+                    title={alimento.favorito ? 'Remover dos favoritos' : 'Adicionar aos favoritos'}
+                    disabled={favoritosEmAtualizacao.has(alimento.id)}
+                    onClick={() => void alternarFavorito(alimento)}
+                    className="min-h-11 min-w-11 px-3 text-primaria hover:bg-superficie-hover disabled:opacity-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-inset focus-visible:outline-primaria"
+                  >
+                    <Star aria-hidden="true" size={18} fill={alimento.favorito ? 'currentColor' : 'none'} />
                   </button>
                 </li>
               ))}

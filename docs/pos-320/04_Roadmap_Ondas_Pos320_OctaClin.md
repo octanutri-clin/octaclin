@@ -527,7 +527,7 @@ somente após checkpoint e troca manual; revisão final Sol médio.
 
 **Origem:** item 30.
 
-**Status atual:** não existe favorito de substituição.
+**Status atual:** implementação em andamento na PR Draft #438; migration 1077 e seletores de catálogo/custom implementados. Validação local parcial; mobile/a11y, R4 e gates do HEAD permanecem. Não está mergeada nem ativa.
 
 **Planejamento técnico atualizado em 2026-10-22:** `tasks/plan-pos-320-food03.md`.
 O contrato separa a preferência privada do profissional do campo `preferida`
@@ -535,8 +535,9 @@ existente no snapshot de substituição do plano, que afeta a apresentação ao
 paciente. FOOD02 (#425/#426) foi integrada. Favoritos devem usar identidade
 persistente de catálogo/alimento personalizado quando disponível, ser isolados
 por tenant+profissional e ordenar o seletor sem alterar publicação, macros,
-escolhas ou planos existentes. Não iniciar implementação até autorização
-expressa; a PR futura deve validar RLS e concorrência em PostgreSQL descartável.
+escolhas ou planos existentes. A autorização de implementação foi dada em
+2026-10-22; o teste RLS em PostgreSQL descartável e regressões são gates antes
+de encerrar a PR.
 
 **Implementação sugerida:**
 - favorito por profissional;

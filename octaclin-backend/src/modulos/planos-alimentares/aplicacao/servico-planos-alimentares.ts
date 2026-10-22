@@ -57,6 +57,7 @@ import { AliasIdentidadeRefeicao, lerIdentidadesRefeicoes, prepararIdentidadesRe
 import { DocumentoEdicaoPlano, validarDocumentoEdicaoPlano } from '../dominio/edicao-plano';
 import { converterEdicaoParaRascunho, PrecondicaoEdicaoPlanoDto, SalvarEdicaoPlanoDto } from './dtos-edicao-plano';
 import { AlimentoComposicaoOrm } from '../infraestrutura/alimento-composicao.orm';
+import { FavoritoAlimentoOrm } from '../infraestrutura/favorito-alimento.orm';
 import { FonteComposicaoAlimentoOrm } from '../infraestrutura/fonte-composicao-alimento.orm';
 import { PlanoAlimentarItemOrm } from '../infraestrutura/plano-alimentar-item.orm';
 import { PlanoAlimentarEscolhaPacienteOrm } from '../infraestrutura/plano-alimentar-escolha-paciente.orm';
@@ -1248,17 +1249,35 @@ export class ServicoPlanosAlimentares {
       }));
       if (!fontes.length) return { itens: [], total: 0, pagina, limite, fontes: fontesDisponiveis };
       const fontePorId = new Map(fontes.map((fonte) => [fonte.id, fonte]));
-      const [alimentos, total] = await gerenciador
-        .getRepository(AlimentoComposicaoOrm)
-        .createQueryBuilder('alimento')
+      const profissionalId = usuario.papel === 'Professional'
+        ? await resolverProfissionalIdDoUsuario(gerenciador, tenantId, usuario)
+        : undefined;
+      const repoAlimentos = gerenciador.getRepository(AlimentoComposicaoOrm);
+      const consultaAlimentos = repoAlimentos.createQueryBuilder('alimento')
         .where("lower(alimento.nome) like lower(:busca) escape '\\'", { busca: `%${escaparCuringaLike(termo)}%` })
-        .andWhere('alimento.fonte_id in (:...fonteIds)', { fonteIds: [...fontePorId.keys()] })
-        .orderBy('alimento.nome', 'ASC')
+        .andWhere('alimento.fonte_id in (:...fonteIds)', { fonteIds: [...fontePorId.keys()] });
+      const podeOrdenarFavoritos = Boolean(profissionalId && typeof consultaAlimentos.leftJoin === 'function');
+      if (podeOrdenarFavoritos) {
+        consultaAlimentos.leftJoin(FavoritoAlimentoOrm, 'favorito',
+          'favorito.alimento_composicao_id=alimento.id AND favorito.tenant_id=:tenantId AND favorito.profissional_id=:profissionalId',
+          { tenantId, profissionalId })
+          .orderBy('CASE WHEN favorito.id IS NULL THEN 1 ELSE 0 END', 'ASC');
+      }
+      const consultaOrdenada = podeOrdenarFavoritos
+        ? consultaAlimentos.addOrderBy('alimento.nome', 'ASC')
+        : consultaAlimentos.orderBy('alimento.nome', 'ASC');
+      const [alimentos, total] = await consultaOrdenada
         // `nome` nao e unico: sem desempate o OFFSET repete ou pula alimento.
         .addOrderBy('alimento.id', 'ASC')
         .skip((pagina - 1) * limite)
         .take(limite)
         .getManyAndCount();
+      const favoritoRepo = gerenciador.getRepository(FavoritoAlimentoOrm);
+      const favoritos = podeOrdenarFavoritos && profissionalId && alimentos.length && typeof favoritoRepo.find === 'function'
+        ? new Set((await favoritoRepo.find({
+            where: { tenantId, profissionalId, alimentoComposicaoId: In(alimentos.map((alimento) => alimento.id)) }
+          })).map((favorito) => favorito.alimentoComposicaoId))
+        : new Set<string>();
       const itens = alimentos.filter((alimento) => fontePorId.has(alimento.fonteId)).map((alimento) => ({
         id: alimento.id,
         codigoOrigem: alimento.codigoOrigem,
@@ -1267,6 +1286,7 @@ export class ServicoPlanosAlimentares {
         metadadosOrigem: alimento.micronutrientes?.metadadosOrigem ?? {},
         nutrientesPor100g: this.obterNutrientesCatalogo(alimento, false),
         disponivelParaCalculo: this.composicaoEssencialCatalogoCompleta(alimento),
+        ...(podeOrdenarFavoritos ? { favorito: favoritos.has(alimento.id) } : {}),
         fonte: fontePorId.has(alimento.fonteId)
           ? {
               codigo: fontePorId.get(alimento.fonteId)!.codigo,

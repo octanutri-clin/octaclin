@@ -50,6 +50,7 @@ export interface AlimentoComposicaoApi {
   metadadosOrigem?: Record<string, unknown>;
   nutrientesPor100g?: NutrientesPor100gApi;
   disponivelParaCalculo: boolean;
+  favorito?: boolean;
   fonte?: {
     codigo: string;
     nome: string;
@@ -293,6 +294,7 @@ export interface AlimentoPersonalizadoApi {
   escopo: 'pessoal' | 'clinica';
   revisao: number;
   ativo: boolean;
+  favorito?: boolean;
   baseOrigem: { tipo: 'por100g' | 'porcao'; pesoGramas: number };
   nutrientesPor100g: Partial<NutrientesPor100gApi>;
   micronutrientesPor100g: MicronutrientesPor100gApi;
@@ -684,6 +686,14 @@ export function buscarAlimentosPlanoAlimentar(
     `${basePaciente(pacienteId)}/alimentos${montarConsulta({ ...consulta })}`,
     { signal }
   );
+}
+
+export function alterarFavoritoAlimento(origem: OrigemBibliotecaAlimentoApi, alimentoId: string, favorito: boolean) {
+  const caminho = `/api/planos-alimentares/favoritos${favorito ? '' : `/${origem}/${encodeURIComponent(alimentoId)}`}`;
+  return requisitar<{ origem: OrigemBibliotecaAlimentoApi; alimentoId: string; favorito: boolean }>(caminho, {
+    method: favorito ? 'POST' : 'DELETE',
+    ...(favorito ? corpoJson({ origem, alimentoId }) : {})
+  });
 }
 
 export type OrigemBibliotecaAlimentoApi = 'catalogo' | 'custom';

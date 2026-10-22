@@ -13,6 +13,8 @@ import { GET as obterPlanoPortal } from '../app/api/portal/paciente/planos-alime
 import { GET as listarEscolhasPaciente } from '../app/api/pacientes/[id]/planos-alimentares/[planoId]/escolhas-paciente/route';
 import { GET as buscarAlimentos } from '../app/api/pacientes/[id]/planos-alimentares/alimentos/route';
 import { GET as buscarAlimentosModelo } from '../app/api/planos-alimentares/alimentos/route';
+import { GET as listarFavoritos, POST as favoritar } from '../app/api/planos-alimentares/favoritos/route';
+import { DELETE as desfavoritar } from '../app/api/planos-alimentares/favoritos/[origem]/[alimentoId]/route';
 import { GET as listarMedidasCaseiras, POST as criarMedidaCaseira } from '../app/api/planos-alimentares/alimentos/[alimentoId]/medidas-caseiras/route';
 import { PATCH as editarMedidaCaseira } from '../app/api/planos-alimentares/alimentos/[alimentoId]/medidas-caseiras/[medidaId]/route';
 import { GET as listarPersonalizados, POST as criarPersonalizado } from '../app/api/planos-alimentares/alimentos-personalizados/route';
@@ -34,7 +36,7 @@ import { GET as obterVersaoModelo } from '../app/api/planos-alimentares/modelos/
 import { POST as restaurarVersaoModelo } from '../app/api/planos-alimentares/modelos/[modeloId]/versoes/[numero]/restaurar/route';
 import { GET as listarReceitas, POST as criarReceita } from '../app/api/planos-alimentares/receitas/route';
 import { GET as obterReceita, PUT as atualizarReceita, DELETE as arquivarReceita } from '../app/api/planos-alimentares/receitas/[receitaId]/route';
-import { alterarAtivacaoPlanoAlimentar, alterarAtivacaoRefeicaoPlanoAlimentar, obterAcompanhamentoVersaoPlanoAlimentar, listarAlimentosPersonalizados, buscarAlimentosPersonalizados, criarAlimentoPersonalizado, atualizarAlimentoPersonalizado, listarMedidasCaseirasAlimento } from '../lib/plano-alimentar-api';
+import { alterarAtivacaoPlanoAlimentar, alterarAtivacaoRefeicaoPlanoAlimentar, obterAcompanhamentoVersaoPlanoAlimentar, listarAlimentosPersonalizados, buscarAlimentosPersonalizados, criarAlimentoPersonalizado, atualizarAlimentoPersonalizado, listarMedidasCaseirasAlimento, alterarFavoritoAlimento } from '../lib/plano-alimentar-api';
 import { calcularPlanosCombinados as calcularPlanosCombinadosApi, obterSelecaoCalculoPlano } from '../lib/calculo-combinado-planos-api';
 import { listarPlanosAlimentaresPortalPaciente, obterPlanoAlimentarPortalPaciente } from '../lib/portal-api';
 import { aplicarAckAtivacao, ativacaoOperacionalEstaDesatualizada, localizarAtivacaoRefeicao, mesclarProjecaoAtivacao } from '../lib/ativacao-plano';
@@ -189,6 +191,65 @@ test('BFF de medidas personalizadas usa permissão, UUIDs, paginação e limite 
       [`http://backend.octaclin.local/planos-alimentares/alimentos-personalizados/${alimentoId}/medidas-caseiras/${medidaId}`, 'PATCH']
     ]);
     for (const resposta of [lista, criada, editada, excessiva]) assert.equal(resposta.headers.get('cache-control'), 'private, no-store');
+  } finally { restaurarFetch(original); }
+});
+
+test('FOOD03 BFF protege favoritos por sessão e permissão, valida identidade e não usa cache', async () => {
+  __clearCookies();
+  const original = global.fetch;
+  let chamadas = 0;
+  global.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+    chamadas += 1;
+    const url = new URL(String(input));
+    assert.match(url.pathname, /^\/planos-alimentares\/favoritos(?:\/catalogo\/aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa)?$/);
+    assert.equal(init?.cache, 'no-store');
+    return Response.json({ itens: [{ origem: 'catalogo', alimentoId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa' }] });
+  }) as typeof global.fetch;
+  try {
+    const semSessao = await listarFavoritos();
+    assert.equal(semSessao.status, 401);
+    assert.equal(chamadas, 0);
+
+    __setCookies(cookiesSessaoValida(['planos_alimentares.ler']));
+    const lista = await listarFavoritos();
+    assert.equal(lista.status, 200);
+    assert.equal(chamadas, 1);
+
+    __setCookies(cookiesSessaoValida(['planos_alimentares.ler']));
+    const negado = await favoritar(new Request('http://localhost/api/favoritos', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ origem: 'catalogo', alimentoId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa' })
+    }));
+    assert.ok(negado);
+    assert.equal(negado.status, 403);
+    assert.equal(chamadas, 1);
+
+    __setCookies(cookiesSessaoValida(['planos_alimentares.gerenciar']));
+    const uuid = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+    const removido = await desfavoritar(new Request('http://localhost/api/favoritos', { method: 'DELETE' }), {
+      params: Promise.resolve({ origem: 'catalogo', alimentoId: uuid })
+    });
+    assert.equal(removido.status, 200);
+    assert.equal(chamadas, 2);
+    const invalido = await desfavoritar(new Request('http://localhost/api/favoritos', { method: 'DELETE' }), {
+      params: Promise.resolve({ origem: 'paciente', alimentoId: uuid })
+    });
+    assert.equal(invalido.status, 400);
+  } finally { restaurarFetch(original); __clearCookies(); }
+});
+
+test('FOOD03 cliente de favorito usa origem discriminada, body restrito e no-store', async () => {
+  const original = global.fetch;
+  let requisicao: RequestInit | undefined;
+  global.fetch = (async (_input: RequestInfo | URL, init?: RequestInit) => {
+    requisicao = init;
+    return Response.json({ origem: 'custom', alimentoId: 'id', favorito: true });
+  }) as typeof global.fetch;
+  try {
+    await alterarFavoritoAlimento('custom', 'id', true);
+    assert.equal(requisicao?.method, 'POST');
+    assert.equal(requisicao?.cache, 'no-store');
+    assert.deepEqual(JSON.parse(String(requisicao?.body)), { origem: 'custom', alimentoId: 'id' });
   } finally { restaurarFetch(original); }
 });
 

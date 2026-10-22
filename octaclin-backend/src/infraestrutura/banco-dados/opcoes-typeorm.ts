@@ -1,6 +1,8 @@
 import { AlimentosPersonalizados1720000001076 } from './migracoes/1720000001076-AlimentosPersonalizados';
 import { AlimentoPersonalizadoOrm } from '../../modulos/planos-alimentares/infraestrutura/alimento-personalizado.orm';
+import { FavoritoAlimentoOrm } from '../../modulos/planos-alimentares/infraestrutura/favorito-alimento.orm';
 import { MedidasCaseiras1720000001075 } from './migracoes/1720000001075-MedidasCaseiras';
+import { FavoritosAlimentosProfissional1720000001077 } from './migracoes/1720000001077-FavoritosAlimentosProfissional';
 import { MedidaCaseiraOrm } from '../../modulos/planos-alimentares/infraestrutura/medida-caseira.orm';
 import { ApresentacaoPlanos1720000001072 } from './migracoes/1720000001072-ApresentacaoPlanos';
 import { AtivacaoPlanos1720000001074 } from './migracoes/1720000001074-AtivacaoPlanos';
@@ -372,6 +374,7 @@ export function criarOpcoesTypeOrm(): TypeOrmModuleOptions & DataSourceOptions {
       AlimentoComposicaoOrm,
       MedidaCaseiraOrm,
       AlimentoPersonalizadoOrm,
+      FavoritoAlimentoOrm,
       UserActionLogOrm,
       OutboxEventoOrm,
       ApiChaveOrm,
@@ -468,7 +471,8 @@ export function criarOpcoesTypeOrm(): TypeOrmModuleOptions & DataSourceOptions {
         EdicaoPlanos1720000001073,
         AtivacaoPlanos1720000001074,
         MedidasCaseiras1720000001075,
-        AlimentosPersonalizados1720000001076
+        AlimentosPersonalizados1720000001076,
+        FavoritosAlimentosProfissional1720000001077
       ],
     migrationsRun: executarMigracoesNoBoot(),
     synchronize: false,

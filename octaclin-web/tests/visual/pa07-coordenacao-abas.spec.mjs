@@ -107,6 +107,39 @@ async function abrir(page) {
   await expect(page.getByRole('textbox', { name: 'Objetivo clínico', exact: true })).toBeVisible({ timeout: 30_000 });
 }
 
+test('FOOD03 favorita alimentos no seletor sem aplicar a substituição ou alterar o rascunho', async ({ context, page }) => {
+  const { escritas } = await preparar(context);
+  const favoritosCriados = [];
+  const busca = `/api/pacientes/${pacienteId}/planos-alimentares/alimentos`;
+  await page.route(url => url.pathname === busca, route => route.fulfill({ json: {
+    itens: [
+      { id: '10000000-0000-4000-8000-000000000031', codigoOrigem: 'SINT-1', nome: 'Aveia sintética favorita', disponivelParaCalculo: true, favorito: false, fonte: { nome: 'Fonte sintética', versao: '1' } },
+      { id: '10000000-0000-4000-8000-000000000032', codigoOrigem: 'SINT-2', nome: 'Banana sintética', disponivelParaCalculo: true, favorito: false, fonte: { nome: 'Fonte sintética', versao: '1' } }
+    ], fontes: [], total: 2, pagina: 1, limite: 50
+  } }));
+  await page.route(url => url.pathname === '/api/planos-alimentares/favoritos', async route => {
+    if (route.request().method() === 'POST') favoritosCriados.push(route.request().postDataJSON());
+    await route.fulfill({ json: { origem: 'catalogo', alimentoId: '10000000-0000-4000-8000-000000000031', favorito: true } });
+  });
+  await abrir(page);
+  await page.getByRole('button', { name: 'Expandir todas' }).click();
+  await page.getByRole('button', { name: 'Adicionar alimento', exact: true }).click();
+  await page.getByRole('textbox', { name: 'Buscar no catálogo' }).last().fill('Aveia');
+  const lista = page.getByRole('list', { name: 'Resultados da busca de alimentos' });
+  await expect(lista.getByRole('listitem')).toHaveCount(2);
+  await expect(lista.getByRole('listitem').first()).toContainText('Aveia sintética favorita');
+  const a11y = await new AxeBuilder({ page }).include('[aria-label="Resultados da busca de alimentos"]').withTags(['wcag2a', 'wcag2aa', 'wcag21aa']).analyze();
+  expect(a11y.violations).toEqual([]);
+  const favorito = page.getByRole('button', { name: 'Adicionar Banana sintética aos favoritos' });
+  await expect(favorito).toHaveAttribute('aria-pressed', 'false');
+  await favorito.press('Enter');
+  await expect.poll(() => favoritosCriados.length).toBe(1);
+  expect(favoritosCriados[0]).toEqual({ origem: 'catalogo', alimentoId: '10000000-0000-4000-8000-000000000032' });
+  await expect(page.getByRole('button', { name: 'Remover Banana sintética dos favoritos' })).toHaveAttribute('aria-pressed', 'true');
+  await expect(lista.getByRole('listitem').first()).toContainText('Banana sintética');
+  expect(escritas).toHaveLength(0);
+});
+
 test('PA07 segunda aba consulta sem habilitar edição nem autosave; aba original conserva conteúdo local', async ({ context, page }) => {
   const { escritas } = await preparar(context); await abrir(page);
   const objetivo = page.getByRole('textbox', { name: 'Objetivo clínico', exact: true }); await expect(objetivo).toBeEditable();
