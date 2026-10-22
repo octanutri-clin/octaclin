@@ -293,3 +293,26 @@ isso não é RED de vulnerabilidade.
 Checkpoint UI commitado em `6cee690c`; a branch permanece aberta para completar
 T11–T14. A fase não está concluída: regressões restantes, revisão R4, CI e PR
 seguem pendentes.
+
+## Regressão PA02–PA06 e sincronização da fixture — 2026-10-22
+
+- A execução desktop/mobile da `pa02-copia-refeicoes.spec.mjs` revelou uma
+  corrida nos testes: interações começavam antes da reconferência de posse de
+  edição entre abas. A fixture agora aguarda o campo editável ficar habilitado;
+  também clica no controle de expandir refeições, deixando a cobertura de
+  teclado no teste dedicado. No caso que usa relógio controlado, a fixture
+  avança a hidratação após reload e aguarda o cabeçalho do plano.
+- O resultado completo após os ajustes foi 47/48. O único caso restante parou
+  com a tela ainda em “Carregando prontuário do paciente”, antes de renderizar o
+  editor ou iniciar o fluxo de revogação da origem. O mesmo cenário, repetido
+  isoladamente em mobile, passou 1/1; os cinco cenários que haviam oscilado na
+  primeira tentativa passaram em rerun focal 10/10, e quatro cenários focais
+  passaram 8/8 após a espera explícita pela posse. Portanto, não registrar a
+  suíte integral como PASS; há um sinal de instabilidade no carregamento da
+  fixture que precisa ser reavaliado.
+- ESLint da spec e `git diff --check` passaram. O diff desta continuação é
+  somente teste; `next-env.d.ts` gerado pelo Next foi restaurado. Sem alteração
+  no runtime.
+- T11–T12/C3 continuam parciais: além desta execução inconclusiva, permanecem
+  pendentes revisão R4 independente, acessibilidade global e regressões
+  restantes. Nenhuma PR foi aberta.

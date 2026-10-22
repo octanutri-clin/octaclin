@@ -192,10 +192,11 @@ async function preparar(page, { falharRevalidacaoOrigem = false, alterarVersaoNa
   });
 
   await page.goto(`/pacientes/${paciente.id}?aba=plano_alimentar`, { waitUntil: 'domcontentloaded' });
+  // Aguarda a reconferência de posse entre abas antes de interagir com o editor.
+  await expect(page.getByLabel('Objetivo clínico')).toBeEnabled({ timeout: 15_000 });
   if (!manterRefeicoesRecolhidas) {
     const expandir = page.getByRole('button', { name: 'Expandir todas' });
-    await expandir.focus();
-    await expandir.press('Enter');
+    await expandir.click();
   }
   return { destino, sourcePublished, sourceDraft, resumoOrigem, resumoDestino, get entradaSalva() { return entradaSalva; }, get leiturasOrigemExterna() { return leiturasOrigemExterna; }, get leiturasExternasPendentes() { return leiturasExternasPendentes; }, liberarLeituraExterna() { liberarLeituraExterna?.(); } };
 }
@@ -251,6 +252,10 @@ test.describe('PA06 - integridade editorial', () => {
     await expect.poll(() => contexto.entradaSalva?.percentuaisMacrosEdicao?.carboidratosBasisPoints).toBe('1,25');
     await expect(page.getByText('Existem alterações não salvas neste rascunho.')).toHaveCount(0);
     await page.reload({ waitUntil: 'domcontentloaded' });
+    // O relógio fica controlado entre navegações; avance a hidratação e os
+    // timers de reconciliação antes de procurar campos do editor reidratado.
+    await page.clock.runFor(1_000);
+    await expect(page.getByRole('heading', { name: 'Plano destino' })).toBeVisible();
     await expect(campo).toHaveValue('1,25');
   });
 
