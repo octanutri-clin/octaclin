@@ -232,6 +232,9 @@ isso não é RED de vulnerabilidade.
   o processo foi interrompido após esse erro e a prova FOOD04 foi executada
   separadamente. Não atribuir esse resultado a um defeito FOOD04, mas manter C2
   bloqueado até o runner/CI integral passar.
+- O teste de aplicação FOOD04 foi reexecutado em desktop/mobile (2/2 PASS) com
+  a resposta de salvamento pausada: o botão de undo já fica desabilitado durante
+  a gravação e continua bloqueado depois da confirmação.
 - T11/T12 permanecem PARCIAIS: criação, edição/arquivo/restauração, favorito,
   duplicação pessoal, compartilhamento confirmado e aplicação têm provas visuais;
   testes Client/SuperAdmin

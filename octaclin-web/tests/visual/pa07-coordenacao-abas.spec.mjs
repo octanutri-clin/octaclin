@@ -754,7 +754,13 @@ test('FOOD04 aplicação seletiva preserva o principal e mantém alternativa nã
   await alternativaRestaurada.locator('xpath=ancestor::div[contains(@class,"rounded border")]').first().getByRole('checkbox').check();
   await page.getByRole('button', { name: 'Acrescentar selecionadas' }).click();
   await expect(page.getByText(/Alternativas acrescentadas ao rascunho e ainda não liberadas ao paciente/)).toBeVisible();
+  const pausaSalvamento = fixture.bloquearProximaEscrita();
   await page.getByRole('button', { name: 'Salvar rascunho' }).click();
+  try {
+    await pausaSalvamento.iniciou;
+    await expect(page.getByRole('button', { name: 'Desfazer', exact: true })).toBeDisabled();
+    await expect.poll(() => fixture.escritas.length).toBe(1);
+  } finally { pausaSalvamento.liberar(); }
   await expect.poll(() => fixture.escritas.length).toBe(1);
   await expect(page.getByRole('button', { name: 'Desfazer', exact: true })).toBeDisabled();
   const itemSalvo = fixture.escritas[0].documento.refeicoes[0].itens.find(item => item.alimentoComposicaoId === principalId);
