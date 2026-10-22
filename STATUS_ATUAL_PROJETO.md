@@ -6,11 +6,15 @@ Atualizado em 2026-10-22 (planejamento FOOD04; registros anteriores preservados)
 
 - **FOOD04 — planejamento e gaps**, base `origin/main` `9e1984a2`, merge
   documental #440 confirmado por fetch em 2026-10-22. Biblioteca de grupos
-  reutilizáveis; D01–D03 enviadas e aguardando respostas. Não há implementação
+  reutilizáveis; D01–D03 aprovadas e ampliadas em D01–D08. Especificação inclui
+  administração de compartilhados, duplicação, favoritos, aplicação seletiva,
+  dedup e arquivo/restauração. Não há implementação
   nem PR FOOD04. Plano/checkpoints em `tasks/plan-pos-320-food04.md` e
   `tasks/todo-pos-320-food04.md`; handoff ativo em `tasks/plan.md`.
   Referências específicas recomendam código interno, sem biblioteca externa.
-  Sol médio para planejamento; avisar/pausar antes de Luna alto.
+  Sol médio para backend/authz/snapshots/BFF; Luna alto para UI após contratos,
+  com aviso/pausa antes da troca. Alertas estruturados/lote/undo persistente
+  registrados como FOOD04-C01/C02/C03, sem antecipar implementação.
 - **FOOD03 — integrada #438 e fechamento #440**. Evidências históricas de
   migration1077/RLS/deploy em `tasks/plan-pos-320-food03.md` e checklist vivo;
   ambientes externos não foram reconsultados nesta rodada documental.

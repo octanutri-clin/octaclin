@@ -1,63 +1,80 @@
 # FOOD04 — tarefas, checkpoints e aceite
 
-Base/contratos: [plan-pos-320-food04.md](plan-pos-320-food04.md).
-Estado: planejamento, sem implementação. T00 concluída; T01 aguarda D01–D03.
-Cada tarefa exige RED antes do código quando muda comportamento/segurança.
-Não declarar gate aprovado com mocks se a propriedade depende de PostgreSQL.
+Contrato vigente: [plan-pos-320-food04.md](plan-pos-320-food04.md).
+D01–D08 aprovadas pelo proprietário e incorporadas ao planejamento. T00/T01
+concluídas documentalmente; implementação T02–T14 não iniciada.
+TDD obrigatório para lógica/segurança: registrar RED, correção e GREEN, com
+fixtures sintéticas. Dividir cada tarefa em subpassos de3–5 arquivos, uma PR.
 
-| ID | Atividade / arquivos principais | Depende de | Aceite e verificação |
+| ID | Atividade / superfícies | Dependências | Aceite objetivo |
 | --- | --- | --- | --- |
-| T00 | Base, AGENTS, referências FOOD04 e contratos reais | — | [x] Main9e1984a2; alteração preexistente preservada; gaps G01–G08 mapeados |
-| T01 | Ratificar D01–D03 e congelar DTO/intenções/limites | T00 | [ ] Respostas registradas; exemplos sintéticos e critérios de erro fechados |
-| T02 | Domínio/DTO da biblioteca (`dominio/grupos-substituicoes.ts`, spec, DTO/spec) | T01 | [ ] RED/GREEN para identidade XOR, porções, ordem, ausências,20 entradas, escopo; unknown fields rejeitados |
-| T03 | ORM/migration nova e registro TypeORM + specs | T02 | [ ] Migration aditiva registrada; FORCE RLS/tenant FK/unique/checks;1077 intacta; unit de registro PASS |
-| T04 | Serviço CRUD/controle/identidade (`servico-grupos-substituicoes`, controller e respectivos specs) | T03 | [ ] Criação idempotente, CAS, só criador altera, pesquisa HMAC/cifra/projeção; cross-profissional/tenant e custom pessoal em grupo clínica negados |
-| C1 | Checkpoint biblioteca | T02–T04 | [ ] Focados backend/typecheck PASS; sem novo acesso clínico ou dependência |
-| T05 | Resolver puro da intenção editorial (`dominio/aplicacao-grupos-substituicoes.ts`, spec, `edicao-plano.ts` e spec) | C1 | [ ] RED/GREEN primeira aplicação vs cópia salva, chaves/nonce, revisão, teto/bytes; metadados falsos não conferem autoridade |
-| T06 | Integrar save/clone/projeções (`servico-planos-alimentares.ts`, spec, DTO editorial) | T05 | [ ] Grupo/fonte e destino revalidados na mesma transação; revisão/locks existentes; histórico inalterado após edição/desativação; não vazar proveniência |
-| T07 | Postgres real descartável: RLS/autorização/concorrência (`*.integracao.spec.ts`, runner/script) | T06 | [ ] Role não-owner/NOBYPASSRLS; contextos ausente/incorreto negados; races criação/CAS/save/desativar/transferência; executado de fato |
-| C2 | Checkpoint persistência | T05–T07 | [ ] RED/GREEN e SQL real registrados; registro da migration; revisão de locks e snapshots, sem escalar acesso runtime |
-| T08 | BFF/API/types (`app/api`, `lib/plano-alimentar-api.ts`, scripts BFF/permissões) | C2 | [ ] Allowlist/guardas/no-store; body validado; erro sanitizado; negar sessão/papel/permissão e campos extras |
-| T09 | UI de biblioteca independente (`components/pacientes/grupos-substituicoes.tsx`, helper/spec) | T08 | [ ] Criar/editar/desativar/selecionar, paginação, loading/vazio/erro, pessoal padrão se ratificado; sem nomes clínicos no cache/URL |
-| T10 | UI aplicação no editor e helper/spec | T09 | [ ] Prévia, múltiplos destinos, acréscimo e estados D03; posse/abort/coordenador; nenhuma resposta tardia altera outro plano |
-| T11 | Playwright desktop/mobile e acessibilidade | T10 | [ ] Teclado/foco/nome/erro; 20→21, perda de posse, autosave/retry, troca de paciente e grupo indisponível; relatório PASS |
-| C3 | Checkpoint funcional | T08–T11 | [ ] Fluxo inteiro funciona; cópias/planos publicados/portal/print e cálculos preservados |
-| T12 | Regressões/gates e documentação/segurança | C3 | [ ] Focados e integral backend, Web authz, typecheck/build/lint, RLS integral, regressões PA02–PA07/FOOD01–03; revisão R4 identificada; resultados/limites explícitos |
-| T13 | PR única e checks do HEAD final | T12 | [ ] Diff/secrets/governança PASS; CI Backend/Web/Demo/PRGate e scanners conferidos; sem alegar deploy pelo CI |
+| T00 | Base/AGENTS/referências/contratos atuais | — | [x] Main9e1984a2 e worktree isolada; ausência de biblioteca externa específica confirmada |
+| T01 | Consolidar decisões e seis entregáveis de planejamento | T00 + mensagem do proprietário | [x] D01–D08, modelos/fluxos/permissões/testes/essencial vs complementares registrados; sem código |
+| T02 | Domínio e DTOs grupos/entradas/consulta/duplicação | T01 | [ ] RED/GREEN limites, estados, escopo, porções, identidade XOR, metadados, reordenação e campos extras |
+| T03 | ORM grupos/favoritos + migration aditiva/registro | T02 | [ ] Nova migration disponível e registrada; FK tenant-aware/unique/checks/índices/ENABLE+FORCE RLS;1077 intacta; rollback conservador |
+| T04 | CRUD pessoal/compartilhado/cifra/HMAC/CAS/arquivo/restauração | T03 | [ ] Só autorizados; composição custom autoritativa; estados/cópias independentes; pedido idempotente sem duplo create; audit na transação |
+| T05 | Permissões e administração institucional | T04 | [ ] Client/SuperAdmin somente compartilhados do tenant com capacidade específica; criador desligado não orfana gestão; nenhum acesso pessoal/prontuário novo |
+| T06 | Duplicar/favoritos/filtros/compartilhar | T04–T05 | [ ] Cópia pessoal padrão/IDnovo/origem interna; promoção autorizada sem custom pessoal; favorito isolado/idempotente; paginação/estado/categoria/pesquisa sem vazamento |
+| C1 | Checkpoint biblioteca | T02–T06 | [ ] Focados/typecheck e matriz de autorização PASS; revisão do escopo administrativo |
+| T07 | Resolver editorial seletivo/dedup/proveniência | C1 | [ ] RED/GREEN principal excluído, selecionadas somente, porção personalizada, duplicata exata, divergência explícita, snapshot anterior confiável vs replay forjado |
+| T08 | Integrar save/materialização/cópias/projeções | T07 | [ ] Mesma transação/CAS/locks; snapshots preservados após arquivo/edição; nova versão/copy/modelos mantêm origem/composição; DTO não vaza campo interno |
+| T09 | PostgreSQL real descartável/RLS/concorrência | T08 | [ ] Role não-owner/NOBYPASSRLS; tenant ausente/cruzado, pessoal/admin, duas criações/duplicações, races CAS/arquivo/restauração/aplicar/transferir; provar execução no runner/CI |
+| C2 | Checkpoint R4 backend | T07–T09 | [ ] RED/GREEN e SQL real registrados; sem inferir isolamento de mocks; locks sem ordem inversa |
+| T10 | BFF/API/types/rotas e testes de autorização | C2 | [ ] Helpers existentes, allowlists, no-store, sessão/papel/permissão/escopo/erros; catálogo de rotas atualizado sem abrir endpoints clínicos ao Client |
+| T11 | UI biblioteca/administração/duplicação/organização | T10 | [ ] Fluxos CRUD/favorito/arquivo/restauração/compartilhamento, filtros/paginação e ordem por teclado; componente comum sem expor pessoal ao admin |
+| T12 | UI prévia/aplicação/undo e Playwright | T11 | [ ] Seleção/porções/dedup/cancelamento; flags falsas; coordenador/posse/abort; undo local seguro; desktop/mobile/a11y e corridas de autosave/contexto |
+| C3 | Checkpoint funcional | T10–T12 | [ ] Fluxo completo e regressões editoriais; 20/item e96KiB, sem perda silenciosa ou liberação paciente |
+| T13 | Regressões, revisão R4, evidências e docs | C3 | [ ] Backend/Web/banco/a11y e regressões PA02–PA07/FOOD01–03; revisão com autoria/achados; gates reais e limites documentados |
+| T14 | PR única/CI/scanners do HEAD final | T13 | [ ] Diff/secrets/governança e checks aplicáveis; separar CI de deploy/migration; complementar não implementado por antecipação |
 
-Tarefas com mais de cinco arquivos devem ser feitas em subpassos sequenciais,
-mantendo a mesma PR: T03a migration/ORM e T03b registro/provas; T04a serviço e
-T04b controller; T08a DTO/BFF e T08b catálogo de permissões; T12a regressões e
-T12b revisão/documentos. Não abrir PRs paralelas nem duplicar writers do editor.
+## Subpassos para manter tarefas executáveis
 
-## Comandos previstos para implementação
+- T03a: entidades e migration; T03b: registro/constraints/fixtures/provas de migração.
+- T04a: criar/ler; T04b: editar/arquivar/restaurar com auditoria/CAS.
+- T05a: capacidades/backend; T05b: rotas administrativas sem afrouxar helper profissional.
+- T06a: duplicar/compartilhar; T06b: favoritos/filtros/consulta e testes.
+- T07a: seleção/dedup/porções; T07b: confiança/idempotência/proveniência.
+- T08a: save e materialização; T08b: clone/copy/modelos/projeção e regressões.
+- T10a: BFF profissional/admin; T10b: catálogo de permissões e testes negativos.
+- T11a: biblioteca profissional; T11b: administração reaproveitada; T11c: organização/duplicação.
+- T12a: helper/preview; T12b: integração autosave/undo; T12c: navegador e acessibilidade.
+- T13a: regressões locais; T13b: revisão/evidências e documentos.
 
-- Backend: `pnpm --dir octaclin-backend exec jest --runInBand <specs-food04>`;
-  depois `pnpm --dir octaclin-backend test --runInBand`, `typecheck` e `build`.
-  Substituir `<specs-food04>` por paths reais; não é comando executado.
-- Postgres: criar suite FOOD04 sintética e conectá-la ao runner/CI existente;
-  executar também `pnpm --dir octaclin-backend test:rls:testcontainers`.
-  O runner atual tem lista explícita de duas suites e não descobre automaticamente
-  um novo spec: adicionar FOOD04 e a flag apropriada, ou invocá-la em step
-  dedicado no CI, com falha se a prova real não executar.
-  Não aceitar skip condicional do Jest como evidência de banco real.
-- Web: `pnpm --dir octaclin-web test:authz`, `test:copia-refeicoes`,
-  `test:nutricao-plano`, `test:calculo-combinado-planos`, `typecheck`, `build`
-  e lint dos arquivos alterados; specs novas devem entrar nos runners reais.
-- UI: `pnpm --dir octaclin-web exec playwright test <spec-food04> --project=desktop-chromium --project=mobile-chromium --reporter=list`;
-  adicionar provas de a11y proporcionais no runner atual. Placeholders serão
-  substituídos pelo caminho existente na implementação.
-- Governança: `git diff --check`, `pnpm security:secrets`,
-  `pnpm test:confiabilidade`, `pnpm validate:docs`. PowerShell ausente deve ser
-  reportado como bloqueio, sem converter conferência local de links em PASS do preflight.
+Nenhum subpasso cria escritor concorrente nos arquivos críticos. Complementares
+FOOD04-C01/C02/C03 estão no roadmap, sem tarefas de implementação nesta PR.
 
-## Gates
+## Comandos previstos, não executados nesta etapa
 
-| Gate | Estado inicial | Condição de saída |
+1. Selecionar Node22.x/pnpm11.25.0 do projeto antes dos testes; instalar somente
+   com lockfile congelado. Não alterar engines/lockfile para adaptar ao ambiente.
+2. `pnpm --dir octaclin-backend exec jest --runInBand <paths-reais-food04>`;
+   depois `pnpm --dir octaclin-backend test --runInBand`, `typecheck` e `build`.
+   Placeholders devem virar paths reais na execução/handoff.
+3. Suite PostgreSQL FOOD04 com flag e comando explícitos; incluir no runner/step
+   CI. Também `pnpm --dir octaclin-backend test:rls:testcontainers` para regressão.
+   O runner atual enumera suites; adicionar um arquivo isolado não o executa.
+4. Web: `pnpm --dir octaclin-web test:authz`, `test:copia-refeicoes`,
+   `test:nutricao-plano`, `test:calculo-combinado-planos`, `typecheck`, `build`,
+   lint dos alterados; novos specs precisam integrar runners de fato executados.
+5. Playwright FOOD04 desktop/mobile, acessibilidade e regressões proporcionais
+   usando projetos `desktop-chromium` e `mobile-chromium`; incluir teste de
+   espera após60s, falha de rede, perda de posse e conflito entre edições.
+6. Governança: `git diff --check`, `pnpm security:secrets`,
+   `pnpm test:confiabilidade`, `pnpm audit:redacao-auditoria`, `pnpm validate:docs`.
+   PowerShell ausente significa BLOCKED, sem fingir PASS do preflight oficial.
+7. CI Backend/Web/Demo/PRGate e scanners do HEAD final da PR; nenhuma aprovação
+   implícita de migration/deploy externo.
+
+## Gates e resultados reais
+
+| Gate | Estado no planejamento | Condição de saída |
 | --- | --- | --- |
-| Planejamento técnico | EM ANDAMENTO | D01–D03 incorporadas e handoff conferido |
-| Segurança / R4 | SKIPPED | Revisão com autoria e achados resolvidos; própria não é independente |
-| PostgreSQL / RLS / concorrência | SKIPPED | Execução real descartável, role e isolamento demonstrados |
-| Regressões / UI / a11y | SKIPPED | Comandos específicos e integrais aplicáveis passam no código final |
-| CI / scanners | SKIPPED | Runs da PR e HEAD final identificados; nenhum falso verde |
-| Migration externa / operação | SKIPPED | Preflight alvo/role, autorização aplicável, ensaio e verificação separados |
+| Decisões de produto | PASS | D01–D08 aprovadas; regras adicionais incorporadas |
+| Especificação técnica | PREPARADA | Seis entregáveis apresentados; qualquer divergência nova deve ser evidenciada |
+| Diff/secrets/links/matriz documental | PASS | Diff/secrets limpos; 4 links válidos; 40 referências da matriz; comandos no plano |
+| Preflight documental oficial | BLOCKED anterior | PowerShell ausente; nova execução apenas com ferramenta adequada |
+| Backend/BFF/UI/regressões | SKIPPED | Implementação e comandos apropriados passam no código final |
+| PostgreSQL/RLS/concorrência | SKIPPED | Prova real sintética e role adequada, não skip condicional |
+| Revisão técnica R4 | SKIPPED | Revisão com autoria/escopo/achados; autorrevisão não é independente |
+| CI/scanners | SKIPPED | PR e HEAD final identificados e conferidos |
+| Migration externa/deploy | SKIPPED | Exigem autorização operacional específica e preflight separado |

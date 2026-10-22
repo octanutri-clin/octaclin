@@ -5,18 +5,23 @@ Branch `docs/pos320-food04-planning`, worktree
 `/workspace/octaclin/.worktrees/pos320-food04-planning`.
 
 - Objetivo: grupos reutilizáveis de substituições; [plano e gaps](plan-pos-320-food04.md)
-  e [T00–T13/checkpoints](todo-pos-320-food04.md).
-- Planejamento autorizado em Sol médio. Três perguntas D01–D03 enviadas;
-  respostas ainda pendentes, propostas identificadas no plano. Sem runtime.
+  e [T00–T14/checkpoints](todo-pos-320-food04.md).
+- D01–D03 aprovadas e ampliadas para D01–D08: administração específica de
+  compartilhados, duplicação, favoritos/organização, aplicação seletiva/dedup,
+  arquivo/restauração, proveniência e undo local. Sem runtime. Especificação
+  atual substitui propostas conflitantes do commit059c6bd9; histórico preservado.
 - FOOD04 recomenda primitives/código atual; não há repositório externo específico
   a consultar ou dependência nova justificada.
 - Preservar pessoal/clínica, composição custom, snapshots, limite20/item,
   CAS/autosave/posse PA07 e projeções portal/print. Risco de implementação R4.
-- Próxima ação: incorporar respostas, concluir handoff; avisar e pausar antes de
-  mudar para Luna alto. Uma PR reunirá documentos e código. Não há PR FOOD04 aberta.
+- Próxima ação: apresentar a especificação antes de implementar. Sol médio para
+  backend/authz/BFF/snapshots T02–T10; avisar/pausar antes de Luna alto para UI
+  T11–T12 e retornar Sol médio para revisão R4/fechamento. Uma PR principal;
+  FOOD04-C01 alertas estruturados, C02 lote e C03 undo persistente ficam propostos.
+  Não há PR FOOD04 aberta nem autorização de migration externa/deploy.
 - Main local antiga e alteração preexistente next-env.d.ts preservadas. Nenhum
   banco externo, migration, deploy ou configuração operacional alterado.
-- PASS: diff/secrets, links FOOD04 e matriz documental40 referências. Preflight
+- PASS revalidado: diff/secrets, quatro links FOOD04 e matriz documental40 referências. Preflight
   oficial BLOCKED por PowerShell ausente. Node24/pnpm11.19 observados; selecionar
   Node22/pnpm11.25 antes de implementar. Testes de implementação/CI/RLS SKIPPED.
 

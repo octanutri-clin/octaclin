@@ -24,7 +24,9 @@ Atualizado em 2026-10-22. Fase 320: NO-GO para ingestão TBCA nesta rodada por a
   `tasks/plan-pos-320-food03.md`.
 - **Próxima entrega funcional / planejamento ativo:** FOOD04, grupos
   reutilizáveis de substituições. Base `9e1984a2` (merge #440) conferida em
-  2026-10-22; D01–D03 enviadas, respostas pendentes; implementação não iniciada.
+  2026-10-22; D01–D03 aprovadas e ampliadas para D01–D08. Administração,
+  duplicação, filtros/favoritos, aplicação seletiva, dedup e restauração fazem
+  parte da entrega essencial; implementação não iniciada.
   Plano: `tasks/plan-pos-320-food04.md`; tarefas: `tasks/todo-pos-320-food04.md`.
   Referência específica recomenda primitives/código atual, sem nova biblioteca.
   Fase 316 permanece em stand-by.
