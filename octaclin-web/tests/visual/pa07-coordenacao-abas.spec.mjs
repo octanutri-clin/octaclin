@@ -756,6 +756,7 @@ test('FOOD04 aplicação seletiva preserva o principal e mantém alternativa nã
   await expect(page.getByText(/Alternativas acrescentadas ao rascunho e ainda não liberadas ao paciente/)).toBeVisible();
   await page.getByRole('button', { name: 'Salvar rascunho' }).click();
   await expect.poll(() => fixture.escritas.length).toBe(1);
+  await expect(page.getByRole('button', { name: 'Desfazer', exact: true })).toBeDisabled();
   const itemSalvo = fixture.escritas[0].documento.refeicoes[0].itens.find(item => item.alimentoComposicaoId === principalId);
   expect(itemSalvo).toBeTruthy();
   expect(itemSalvo.substituicoes).toHaveLength(1);
