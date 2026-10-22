@@ -1,6 +1,28 @@
 # OctaClin - Checklist vivo de fases futuras ate producao
 
-Atualizado em 2026-10-14. Fase 320: NO-GO para ingestão TBCA nesta rodada por ausência de autorização de uso; manter TACO, USDA e IBGE. O handoff formal e a primeira tarefa da Onda 0 (FND02) estão nesta PR. A ingestão poderá ser reavaliada após autorização escrita e revisão de direitos.
+Atualizado em 2026-10-22. Fase 320: NO-GO para ingestão TBCA nesta rodada por ausência de autorização de uso; manter TACO, USDA e IBGE. FOOD02 foi mergeada (#425) e a estabilização visual correspondente (#426) também foi integrada; FOOD03 passa a ser o próximo planejamento funcional pós-320. PR #437 foi integrada e o workflow de backup/restauração dedicada concluiu com sucesso em 2026-10-22. O monitor de produção ainda sinaliza ClamAV ausente (issue #234 aberta); Fase 316 permanece em stand-by e esse alerta não deve ser tratado como resolvido pelo backup.
+
+## Estado reconciliado em 2026-10-22
+
+- **Base desta atualização:** `main`/`origin/main` no merge #437, commit
+  `a853685e8becc2d38248f0608f749c6643a692c2`. Não houve alteração de runtime.
+- **FOOD02:** PRs #425 e #426 integradas; o registro histórico de implementação
+  abaixo foi supersedido. Estado de migrations/deploy externos não foi
+  reconsultado nesta atualização e não é inferido do merge.
+- **Backup:** PR #437 integrada; workflow
+  [39727168790](https://github.com/octanutri-clin/octaclin/actions/runs/39727168790)
+  terminou `success`, incluindo restauração e validação em destino dedicado.
+  O tempo observado para restore+validação foi 102s, dentro do objetivo de
+  30min; idade do snapshot 133s, dentro do objetivo RPO de 24h. Retenção foi
+  explicitamente ignorada nesta execução (`configurar_retencao=false`), portanto
+  esse resultado não valida a política de retenção.
+- **Saúde/ClamAV:** consulta pública a `/health/detalhado` em 2026-10-22
+  retornou estado degradado por ClamAV não configurado. O scanner real continua
+  ausente, uploads não recebem detecção real de malware, e a issue #234 segue
+  aberta. Não criar serviço pago nem declarar mitigação sem decisão operacional.
+- **Próxima entrega planejada:** FOOD03, favoritos de substituições por
+  profissional. Handoff em `tasks/plan-pos-320-food03.md`; a implementação
+  ainda exige autorização explícita. Fase 316 permanece em stand-by.
 
 ## Estado reconciliado em 2026-10-14
 
@@ -4670,16 +4692,17 @@ auditoria estão ordenados na seção 15 de
   descartável nesta entrega; estado externo não verificado. Preservar leitor
   compatível no rollback. Evidências/limites:
   `docs/governance/RELATORIO_FOOD01_2026-10-17.md`.
-- [~] FOOD02 — T01–T08 implementados sobre base `95e9f33d`; D01–D03
-  confirmadas. Migration1076 ensaiada só em PG descartável, sem aplicação
-  externa. BFF52/52, helpers67/67, typecheck, origem9/9, autorização30/30 e
-  Playwright FOOD02/regressões desktop/mobile PASS. R4 independente encontrou
-  três achados Important, reproduzidos e corrigidos com RED/GREEN. PA07 desktop
-  19/19, testes FOOD02 finais desktop/mobile4/4 por projeto, `test:authz`, lint
-  focal e Web build PASS. Draft PR #425 aberta; checks do HEAD `778b7906` estavam
-  QUEUED. Estado externo da migration ainda não verificado.
-  Evidências em `docs/governance/EVIDENCIAS_FOOD02_WEB_2026-10-17.md` e plano/
-  checklist em `tasks/plan-pos-320-food02.md`/`tasks/todo-pos-320-food02.md`.
+- [x] FOOD02 — integrada pela PR #425; estabilização visual complementar na
+  #426. O bloco histórico acima sobre Draft/checks QUEUED foi supersedido pelo
+  estado reconciliado em 2026-10-22. Estado externo da migration1076 e deploy
+  não foram reconsultados nesta atualização; não inferir do merge. Evidências:
+  `docs/governance/EVIDENCIAS_FOOD02_WEB_2026-10-17.md`,
+  `docs/governance/REVISAO_R4_FOOD02_2026-10-18.md` e
+  `tasks/plan-pos-320-food02.md`/`tasks/todo-pos-320-food02.md`.
+- [ ] FOOD03 — planejamento consolidado em `tasks/plan-pos-320-food03.md`;
+  próximo recurso da Onda 2, ainda sem implementação autorizada. A preferência
+  profissional não deve reutilizar nem sobrescrever `preferida`, que pertence
+  ao snapshot da substituição no plano e influencia apresentação ao paciente.
 
 
 
