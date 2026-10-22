@@ -3850,6 +3850,9 @@ test.describe('gate de acessibilidade - operacoes (PR 26)', () => {
     await expect(painel.getByRole('heading', { name: 'Grupos compartilhados da clínica' })).toBeVisible();
     await expect(painel.getByRole('button', { name: 'Novo grupo' })).toHaveCount(0);
     await expect(painel.getByText('Nenhum grupo encontrado')).toBeVisible();
+    const acessibilidade = await new AxeBuilder({ page }).include('[aria-label="Administração de grupos compartilhados"]')
+      .withTags(['wcag2a', 'wcag2aa', 'wcag21aa']).analyze();
+    expect(acessibilidade.violations).toEqual([]);
     expect(chamadas.gruposAdmin.length).toBeGreaterThan(0);
     expect(chamadas.gruposAdmin.every((chamada) => chamada === 'POST /api/planos-alimentares/grupos-substituicoes-administracao/consulta')).toBe(true);
     expect(chamadas.naoMockadas).toEqual([]);

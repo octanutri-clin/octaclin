@@ -235,6 +235,8 @@ isso não é RED de vulnerabilidade.
 - O teste de aplicação FOOD04 foi reexecutado em desktop/mobile (2/2 PASS) com
   a resposta de salvamento pausada: o botão de undo já fica desabilitado durante
   a gravação e continua bloqueado depois da confirmação.
+- A superfície compartilhada do SuperAdmin passou Axe (WCAG 2.1 AA) e Playwright
+  em desktop/mobile (2/2), sem violações no painel testado.
 - T11/T12 permanecem PARCIAIS: criação, edição/arquivo/restauração, favorito,
   duplicação pessoal, compartilhamento confirmado e aplicação têm provas visuais;
   testes Client/SuperAdmin
