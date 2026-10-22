@@ -153,8 +153,10 @@ MIT é orientação, não exigência de integração; a GPL permanece fora do ru
   nome acessível iniciado por `Aveia sintética`, mantendo o botão de favorito
   fora da correspondência. GREEN: os quatro cenários FOOD01 afetados passaram em
   Chromium desktop e mobile localmente (8/8, incluindo aplicação de medida,
-  autosave, paginação/conflito e resposta tardia). O Demo local smoke completo
-  precisa ser repetido no novo HEAD.
+  autosave, paginação/conflito e resposta tardia). Demo local smoke completo no
+  HEAD `8414b0d4`: 938 testes visuais passaram e 2 foram ignorados; estados e
+  recuperação (4/4), densidade/responsividade (3/3) e jornada de microcopy
+  (1/1) também passaram.
 - `pnpm test:rls:testcontainers` não iniciou o suite geral porque a imagem
   configurada `timescale/timescaledb-ha:pg15` não estava disponível localmente;
   a prova isolada de FOOD03 usou Postgres 15 descartável.
