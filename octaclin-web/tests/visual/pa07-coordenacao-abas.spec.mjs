@@ -848,3 +848,45 @@ test('FOOD04 edita, arquiva e restaura grupo próprio mantendo revisão', async 
   expect(patchs[2]).toEqual({ revisaoEsperada: 3, estado: 'ativo' });
   expect(grupo).toMatchObject({ nome: 'Grupo atualizado sintético', estado: 'ativo', revisao: 4 });
 });
+
+test('FOOD04 favorita grupo da clínica e duplica cópia pessoal independente', async ({ context, page }) => {
+  await preparar(context);
+  const grupoId = '10000000-0000-4000-8000-000000000081';
+  const alimentoId = '10000000-0000-4000-8000-000000000082';
+  const entradaId = '10000000-0000-4000-8000-000000000083';
+  let favorito = false;
+  let duplicacao;
+  const grupo = {
+    id: grupoId, nome: 'Grupo compartilhado sintético', descricao: 'Descrição da clínica', categoria: 'Lanche', etiquetas: ['clínica'],
+    escopo: 'clinica', estado: 'ativo', revisao: 3, quantidadeEntradas: 1, podeEditar: false, favorito,
+    entradas: [{ id: entradaId, origem: 'catalogo', alimentoId, quantidade: 1, unidade: 'porção', porcaoGramas: 75, disponivel: true, composicao: { descricao: 'Alimento da clínica sintético', nutrientesPor100g: { energiaKcal: 100 } } }]
+  };
+  await page.route(url => url.pathname === '/api/planos-alimentares/grupos-substituicoes/consulta', async route => await route.fulfill({ json: {
+    itens: [{ ...grupo, entradas: undefined, favorito }], total: 1, pagina: 1, limite: 25
+  } }));
+  await page.route(url => url.pathname === `/api/planos-alimentares/grupos-substituicoes/${grupoId}`, async route => await route.fulfill({ json: { ...grupo, favorito } }));
+  await page.route(url => url.pathname === `/api/planos-alimentares/grupos-substituicoes/${grupoId}/favorito`, async route => {
+    favorito = true;
+    await route.fulfill({ json: { grupoId, favorito } });
+  });
+  await page.route(url => url.pathname === `/api/planos-alimentares/grupos-substituicoes/${grupoId}/duplicar`, async route => {
+    duplicacao = route.request().postDataJSON();
+    await route.fulfill({ status: 201, json: { id: '10000000-0000-4000-8000-000000000084' } });
+  });
+  await abrir(page);
+  const biblioteca = page.getByRole('region', { name: 'Biblioteca de grupos de substituições' });
+  await page.getByText('Biblioteca de grupos de substituições', { exact: true }).click();
+  await biblioteca.getByRole('button', { name: 'Adicionar aos favoritos' }).click();
+  await expect(biblioteca.getByRole('button', { name: 'Remover dos favoritos' })).toBeVisible();
+  await biblioteca.getByRole('button', { name: 'Abrir' }).click();
+  await biblioteca.getByRole('button', { name: 'Duplicar para pessoal' }).click();
+  await biblioteca.getByLabel('Nome obrigatório').fill('Minha cópia independente');
+  await biblioteca.getByRole('button', { name: 'Salvar', exact: true }).click();
+  await expect(biblioteca.getByRole('status')).toContainText('não representam equivalência nutricional');
+  expect(duplicacao).toMatchObject({
+    revisaoEsperada: 3,
+    conteudo: { nome: 'Minha cópia independente', categoria: 'Lanche', etiquetas: ['clínica'], entradas: [{ alimentoId, quantidade: 1, unidade: 'porção', porcaoGramas: 75 }] }
+  });
+  expect(duplicacao.escopo).toBeUndefined();
+  expect(grupo).toMatchObject({ nome: 'Grupo compartilhado sintético', escopo: 'clinica', revisao: 3 });
+});
