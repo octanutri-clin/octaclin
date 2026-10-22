@@ -143,6 +143,18 @@ MIT é orientação, não exigência de integração; a GPL permanece fora do ru
   com duas conexões concorrentes e role sem `BYPASSRLS`.
 - BFF: `pnpm test:planos-alimentares:bff` passou (54 testes).
 - Playwright desktop e mobile FOOD03 passaram com axe no seletor.
+- O primeiro Demo local smoke da CI passou em 930/940 testes visuais, mas
+  encontrou 8 falhas em quatro testes legados FOOD01 (desktop/mobile): os
+  seletores acessíveis `getByRole('button', { name: /Aveia sintética/ })`
+  passaram a corresponder tanto à opção de alimento quanto ao botão independente
+  de favorito. A regressão era somente no seletor dos testes, sem falha de
+  comportamento do produto.
+- RED reproduzido pela execução completa da CI. O seletor foi restringido ao
+  nome acessível iniciado por `Aveia sintética`, mantendo o botão de favorito
+  fora da correspondência. GREEN: os quatro cenários FOOD01 afetados passaram em
+  Chromium desktop e mobile localmente (8/8, incluindo aplicação de medida,
+  autosave, paginação/conflito e resposta tardia). O Demo local smoke completo
+  precisa ser repetido no novo HEAD.
 - `pnpm test:rls:testcontainers` não iniciou o suite geral porque a imagem
   configurada `timescale/timescaledb-ha:pg15` não estava disponível localmente;
   a prova isolada de FOOD03 usou Postgres 15 descartável.

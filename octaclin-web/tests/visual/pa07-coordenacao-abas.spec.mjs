@@ -400,7 +400,7 @@ test('FOOD01 aplica medida explícita, recalcula com base escolhida e salva some
   await page.getByRole('button', { name: 'Expandir todas' }).click();
   await page.getByRole('button', { name: 'Adicionar alimento', exact: true }).click();
   await page.getByRole('textbox', { name: 'Buscar no catálogo' }).last().fill('Aveia');
-  const resultado = page.getByRole('button', { name: /Aveia sintética/ });
+  const resultado = page.getByRole('button', { name: /^Aveia sintética/ });
   await expect(resultado).toBeVisible();
   await resultado.click();
   const painelMedidas = page.locator('section[aria-label="Medidas caseiras do alimento"]').last();
@@ -480,7 +480,7 @@ async function abrirBibliotecaFood01(context, page, responderBiblioteca) {
   await page.getByRole('button', { name: 'Expandir todas' }).click();
   await page.getByRole('button', { name: 'Adicionar alimento', exact: true }).click();
   await page.getByRole('textbox', { name: 'Buscar no catálogo' }).last().fill('Aveia');
-  await page.getByRole('button', { name: /Aveia sintética/ }).click();
+  await page.getByRole('button', { name: /^Aveia sintética/ }).click();
   await page.getByRole('button', { name: 'Escolher medida' }).last().click();
   const painel = page.getByRole('region', { name: 'Medidas caseiras do alimento' }).last();
   await expect(painel.getByRole('status').filter({ hasText: 'Carregando' })).toHaveCount(0);
