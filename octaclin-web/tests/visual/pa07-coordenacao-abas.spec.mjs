@@ -800,3 +800,47 @@ test('FOOD04 resposta tardia após cancelar a prévia não troca o grupo selecio
   await expect(page.getByText('Alternativa B', { exact: true })).toBeVisible();
   await expect(page.getByText('Alternativa A', { exact: true })).toHaveCount(0);
 });
+
+test('FOOD04 edita, arquiva e restaura grupo próprio mantendo revisão', async ({ context, page }) => {
+  await preparar(context);
+  const grupoId = '10000000-0000-4000-8000-000000000071';
+  const alimentoId = '10000000-0000-4000-8000-000000000072';
+  let grupo = {
+    id: grupoId, nome: 'Grupo editável sintético', descricao: 'Descrição sintética', categoria: 'Lanche', etiquetas: ['sintético'],
+    escopo: 'pessoal', estado: 'ativo', revisao: 1, quantidadeEntradas: 1, podeEditar: true, favorito: false,
+    entradas: [{ id: '10000000-0000-4000-8000-000000000073', origem: 'catalogo', alimentoId, quantidade: 1, unidade: 'porção', porcaoGramas: 100, disponivel: true, composicao: { descricao: 'Alimento sintético para grupo', nutrientesPor100g: { energiaKcal: 100 } } }]
+  };
+  const patchs = [];
+  await page.route(url => url.pathname === '/api/planos-alimentares/grupos-substituicoes/consulta', async route => {
+    const consulta = route.request().postDataJSON();
+    const visivel = consulta.estado === 'todos' || grupo.estado === 'ativo' && consulta.estado !== 'arquivado' || grupo.estado === 'arquivado' && consulta.estado === 'arquivado';
+    const resumo = (({ entradas: _entradas, ...resto }) => resto)(grupo);
+    await route.fulfill({ json: { itens: visivel ? [resumo] : [], total: visivel ? 1 : 0, pagina: 1, limite: 25 } });
+  });
+  await page.route(url => url.pathname === `/api/planos-alimentares/grupos-substituicoes/${grupoId}`, async route => {
+    if (route.request().method() === 'PATCH') {
+      const corpo = route.request().postDataJSON(); patchs.push(corpo);
+      grupo = { ...grupo, ...(corpo.conteudo ?? {}), ...(corpo.estado ? { estado: corpo.estado } : {}), revisao: grupo.revisao + 1 };
+    }
+    await route.fulfill({ json: grupo });
+  });
+  await abrir(page);
+  const biblioteca = page.getByRole('region', { name: 'Biblioteca de grupos de substituições' });
+  await page.getByText('Biblioteca de grupos de substituições', { exact: true }).click();
+  await biblioteca.getByRole('button', { name: 'Abrir' }).click();
+  await biblioteca.getByRole('button', { name: 'Editar' }).click();
+  await biblioteca.getByLabel('Nome obrigatório').fill('Grupo atualizado sintético');
+  await biblioteca.getByLabel('Categoria opcional').fill('Refeição');
+  await biblioteca.getByRole('button', { name: 'Salvar', exact: true }).click();
+  await expect(biblioteca.getByRole('status')).toContainText('não representam equivalência nutricional');
+  expect(patchs[0]).toMatchObject({ revisaoEsperada: 1, conteudo: { nome: 'Grupo atualizado sintético', categoria: 'Refeição' } });
+  await biblioteca.getByRole('button', { name: 'Abrir' }).click();
+  await biblioteca.getByRole('button', { name: 'Arquivar' }).click();
+  await biblioteca.getByRole('group', { name: 'Confirmar arquivamento' }).getByRole('button', { name: 'Confirmar arquivamento' }).click();
+  expect(patchs[1]).toEqual({ revisaoEsperada: 2, estado: 'arquivado' });
+  await biblioteca.getByLabel('Estado').selectOption('arquivado');
+  await biblioteca.getByRole('button', { name: 'Abrir' }).click();
+  await biblioteca.getByRole('button', { name: 'Restaurar' }).click();
+  expect(patchs[2]).toEqual({ revisaoEsperada: 3, estado: 'ativo' });
+  expect(grupo).toMatchObject({ nome: 'Grupo atualizado sintético', estado: 'ativo', revisao: 4 });
+});
