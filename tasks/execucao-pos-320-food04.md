@@ -178,6 +178,11 @@ isso não é RED de vulnerabilidade.
   inclusão repetida com a porção padrão antes do request. O aviso pós-aplicação
   permanece visível até nova ação, sem timeout que pudesse ocultar a opção de
   desfazer. `test:grupos-substituicoes:aplicacao` agora4 PASS.
+- TDD de interface detectou uma corrida adicional na troca/cancelamento de grupo:
+  o teste de resposta tardia do grupo A depois de reabrir e selecionar B falhou
+  antes da correção. O seletor agora fica bloqueado durante a leitura e Cancelar
+  aborta/versiona o pedido pendente; a resposta antiga não muda B. RED reproduzido,
+  GREEN em desktop e mobile.
 - Revalidações executadas no worktree dedicado: Web `typecheck` PASS;
   `test:grupos-substituicoes:aplicacao`4 PASS; `test:copia-refeicoes`12 PASS;
   `test:nutricao-plano`67 PASS; `test:authz` exit0 em27 comandos, incluindo
@@ -190,7 +195,8 @@ isso não é RED de vulnerabilidade.
   Next emitiu os avisos já observados de depreciação do middleware e `process.cwd`
   na cadeia Edge; build terminou com exit0.
 - Playwright em ambos os projetos: PA07/FOOD01–03,42 PASS; criação FOOD04,2 PASS
-  (inclui Axe no componente); aplicação seletiva FOOD04,2 PASS. No início,
+  (inclui Axe no componente); aplicação seletiva FOOD04,2 PASS; cancelamento e
+  resposta tardia FOOD04,2 PASS. Total desta regressão:48 testes PASS. No início,
   tentativas do teste novo falharam por expectativas incorretas do teste (porção
   é `1 porção` com 100g, e a proveniência enriquecida é materializada no backend);
   os critérios foram alinhados aos contratos, sem relaxar validações de produto.
@@ -202,9 +208,10 @@ isso não é RED de vulnerabilidade.
   acessibilidade geral, backend completo, cadeia PostgreSQL do runner, C2/R4
   independente e CI.
 - `git diff --check` PASS antes do commit `8c93fdd9`.
-- T11/T12 permanecem PARCIAIS até a prova no navegador, estados visuais e acessíveis,
-  validação de concorrência/autosave no fluxo de interface, regressões PA02–PA07/
-  FOOD01–03 e revisão R4 independente. Não afirmar C3 PASS nem criar PR até fechar.
+- T11/T12 permanecem PARCIAIS: criação e aplicação têm provas visuais; faltam
+  fluxos de administração/CRUD restantes, undo e corridas FOOD04 adicionais,
+  regressões PA02–PA07/FOOD01–03 completas, acessibilidade geral e revisão R4
+  independente. Não afirmar C3 PASS nem criar PR até fechar.
 
 Checkpoint UI commitado em `8c93fdd9`; a branch permanece aberta para completar
 T11–T14. A fase não está concluída: regressões restantes, revisão R4, CI e PR

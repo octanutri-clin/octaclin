@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useId, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import { Plus } from 'lucide-react';
 import { Botao } from '@/components/ui/botao';
 import { Campo } from '@/components/ui/campo';
@@ -35,6 +35,12 @@ export function AplicarGrupoSubstituicoes({ identidadePrincipal, existentes, aoA
   const [confirmadas, setConfirmadas] = useState<Set<string>>(new Set());
   const [erro, setErro] = useState<string | null>(null);
   const [ocupado, setOcupado] = useState(false);
+  const controladorGrupo = useRef<AbortController | null>(null);
+  const sequenciaGrupo = useRef(0);
+  useEffect(() => () => {
+    controladorGrupo.current?.abort();
+    sequenciaGrupo.current += 1;
+  }, []);
   useEffect(() => {
     if (!aberto) return;
     const controlador = new AbortController();
@@ -45,19 +51,32 @@ export function AplicarGrupoSubstituicoes({ identidadePrincipal, existentes, aoA
   }, [aberto, contexto, buscaGrupo, pagina]);
 
   async function carregarGrupo(valor: string) {
+    controladorGrupo.current?.abort();
+    controladorGrupo.current = null;
+    const sequencia = ++sequenciaGrupo.current;
     setGrupoId(valor); setDetalhe(null); setOpcoes([]); setSelecionadas(new Set()); setConfirmadas(new Set()); setErro(null);
-    if (!valor) return;
+    if (!valor) { setOcupado(false); return; }
+    const controlador = new AbortController();
+    controladorGrupo.current = controlador;
     setOcupado(true);
     try {
-      const grupo = await obterGrupoSubstituicoes(valor);
+      const grupo = await obterGrupoSubstituicoes(valor, controlador.signal);
+      if (controlador.signal.aborted || sequencia !== sequenciaGrupo.current) return;
       const disponiveis: AlternativaAplicacaoGrupo[] = [];
       for (const entrada of grupo.entradas) if ('composicao' in entrada && entrada.disponivel) {
         disponiveis.push({ ...entrada, entradaId: entrada.id, descricao: entrada.composicao.descricao, nutrientesPor100g: entrada.composicao.nutrientesPor100g as Record<string, number>, micronutrientesPor100g: entrada.composicao.micronutrientesPor100g as Record<string, number> | undefined });
       }
       const candidatas = prepararOpcoesAplicacaoGrupo(disponiveis, existentes, identidadePrincipal);
       setDetalhe(grupo); setOpcoes(candidatas); setPorcoes(Object.fromEntries(candidatas.map((opcao) => [opcao.entradaId, opcao.porcaoGramas])));
-    } catch (falha) { setErro(mensagemFalhaInterface(falha, 'Não foi possível abrir este grupo. Atualize a biblioteca e tente novamente.')); }
-    finally { setOcupado(false); }
+    } catch (falha) { if (!controlador.signal.aborted && sequencia === sequenciaGrupo.current) setErro(mensagemFalhaInterface(falha, 'Não foi possível abrir este grupo. Atualize a biblioteca e tente novamente.')); }
+    finally { if (!controlador.signal.aborted && sequencia === sequenciaGrupo.current) setOcupado(false); }
+  }
+
+  function cancelarPrevia() {
+    controladorGrupo.current?.abort();
+    controladorGrupo.current = null;
+    sequenciaGrupo.current += 1;
+    setOcupado(false); setAberto(false); setErro(null); setGrupoId(''); setDetalhe(null); setOpcoes([]);
   }
 
   async function confirmar() {
@@ -78,10 +97,10 @@ export function AplicarGrupoSubstituicoes({ identidadePrincipal, existentes, aoA
   return <div className="grid gap-2">
     <div className="flex flex-wrap gap-2"><Botao type="button" variante="fantasma" tamanho="sm" onClick={() => { setAberto(true); setErro(null); setSucesso(false); }} disabled={desabilitado}><Plus size={15} /> Aplicar grupo de alternativas</Botao>{sucesso ? <><span role="status" className="self-center text-sm text-texto-suave">Alternativas acrescentadas ao rascunho e ainda não liberadas ao paciente.</span><Botao type="button" variante="fantasma" tamanho="sm" onClick={async () => { if (aoDesfazer && await aoDesfazer(contexto)) setSucesso(false); else setErro('Não é possível desfazer: o rascunho foi salvo, as alternativas mudaram ou o contexto de edição mudou.'); }} disabled={!podeDesfazer}>Desfazer</Botao></> : null}</div>
     {aberto ? <section className="grid gap-3 rounded-md border border-primaria/30 bg-superficie p-3" aria-label="Prévia da aplicação do grupo" aria-busy={ocupado}>
-      <div className="flex items-center justify-between gap-2"><h4 className="text-sm font-semibold">Aplicar alternativas de um grupo</h4><Botao type="button" variante="fantasma" onClick={() => { setAberto(false); setErro(null); }}>Cancelar</Botao></div>
+      <div className="flex items-center justify-between gap-2"><h4 className="text-sm font-semibold">Aplicar alternativas de um grupo</h4><Botao type="button" variante="fantasma" onClick={cancelarPrevia}>Cancelar</Botao></div>
       {erro ? <AlertaOperacional mensagem={erro} /> : null}
       <label className="grid gap-1 text-xs font-semibold text-texto-suave" htmlFor={`${id}-busca`}>Buscar grupo por nome (3 caracteres)<Campo id={`${id}-busca`} value={buscaGrupo} onChange={(event) => { setBuscaGrupo(event.target.value); setPagina(1); setGrupoId(''); setDetalhe(null); }} /></label>
-      <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end"><label className="grid gap-1 text-xs font-semibold text-texto-suave" htmlFor={`${id}-grupo`}>Grupo ativo<select id={`${id}-grupo`} value={grupoId} onChange={(event) => void carregarGrupo(event.target.value)} className="min-h-11 rounded-md border border-linha bg-white px-2"><option value="">Selecione</option>{grupos.map((grupo) => <option key={grupo.id} value={grupo.id}>{grupo.nome} · {grupo.escopo === 'clinica' ? 'Clínica' : 'Pessoal'} · {grupo.quantidadeEntradas} alimentos</option>)}</select></label><div className="flex items-center gap-1"><Botao type="button" variante="fantasma" onClick={() => setPagina((atual) => Math.max(1, atual - 1))} disabled={pagina === 1}>Anterior</Botao><span className="text-xs" aria-live="polite">{pagina}/{Math.max(1, Math.ceil(totalGrupos / 25))}</span><Botao type="button" variante="fantasma" onClick={() => setPagina((atual) => atual + 1)} disabled={pagina * 25 >= totalGrupos}>Próxima</Botao></div></div>
+      <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end"><label className="grid gap-1 text-xs font-semibold text-texto-suave" htmlFor={`${id}-grupo`}>Grupo ativo<select id={`${id}-grupo`} value={grupoId} onChange={(event) => void carregarGrupo(event.target.value)} disabled={ocupado} className="min-h-11 rounded-md border border-linha bg-white px-2"><option value="">Selecione</option>{grupos.map((grupo) => <option key={grupo.id} value={grupo.id}>{grupo.nome} · {grupo.escopo === 'clinica' ? 'Clínica' : 'Pessoal'} · {grupo.quantidadeEntradas} alimentos</option>)}</select></label><div className="flex items-center gap-1"><Botao type="button" variante="fantasma" onClick={() => setPagina((atual) => Math.max(1, atual - 1))} disabled={pagina === 1}>Anterior</Botao><span className="text-xs" aria-live="polite">{pagina}/{Math.max(1, Math.ceil(totalGrupos / 25))}</span><Botao type="button" variante="fantasma" onClick={() => setPagina((atual) => atual + 1)} disabled={pagina * 25 >= totalGrupos}>Próxima</Botao></div></div>
       {detalhe ? <><p className="text-xs text-texto-suave">Escolha somente as alternativas desejadas. A porção é ajustável; a aplicação não substitui o alimento principal nem altera o grupo original.</p>{opcoes.length ? opcoes.map((opcao) => <div key={opcao.entradaId} className="grid gap-2 rounded border border-linha bg-white p-2 sm:grid-cols-[minmax(0,1fr)_9rem] sm:items-center"><label className="flex min-h-11 items-start gap-2 text-sm"><input type="checkbox" className="mt-1 h-4 w-4" checked={selecionadas.has(opcao.entradaId)} disabled={opcao.estado === 'existente'} onChange={(event) => setSelecionadas((atual) => { const proximo = new Set(atual); if (event.target.checked) proximo.add(opcao.entradaId); else proximo.delete(opcao.entradaId); return proximo; })} /><span><strong>{opcao.descricao}</strong><span className="block text-xs text-texto-suave">{opcao.estado === 'existente' ? 'Já presente com a mesma porção; não será duplicado.' : opcao.estado === 'porcao-divergente' ? 'Já existe com porção diferente. Confirme para acrescentar sem sobrescrever.' : `${opcao.origem === 'custom' ? 'Personalizado' : 'Catálogo'} · ${opcao.porcaoGramas} g`}</span></span></label><label className="grid gap-1 text-xs font-semibold">Porção (g)<Campo type="number" min="0.001" max="10000" step="0.001" value={porcoes[opcao.entradaId] ?? ''} disabled={opcao.estado === 'existente'} onChange={(event) => setPorcoes((atual) => ({ ...atual, [opcao.entradaId]: Number(event.target.value) }))} /></label>{opcao.estado === 'porcao-divergente' && selecionadas.has(opcao.entradaId) ? <label className="flex gap-2 text-xs sm:col-span-2"><input type="checkbox" checked={confirmadas.has(opcao.entradaId)} onChange={(event) => setConfirmadas((atual) => { const proximo = new Set(atual); if (event.target.checked) proximo.add(opcao.entradaId); else proximo.delete(opcao.entradaId); return proximo; })} /> Confirmo acrescentar esta porção diferente; manter a existente.</label> : null}</div>) : <p className="text-sm text-texto-suave">Não há alternativas disponíveis novas neste grupo. O alimento principal é omitido da lista; entradas indisponíveis não podem ser aplicadas.</p>}<Botao type="button" variante="primario" onClick={() => void confirmar()} carregando={ocupado} disabled={desabilitado || selecionadas.size === 0}>Acrescentar selecionadas</Botao></> : null}
     </section> : null}
   </div>;

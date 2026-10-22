@@ -754,3 +754,49 @@ test('FOOD04 aplicação seletiva preserva o principal e mantém alternativa nã
   expect(itemSalvo.substituicoes[0].origemGrupo).not.toHaveProperty('schemaVersao');
   expect(itemSalvo.substituicoes[0].origemGrupo).not.toHaveProperty('porcaoAplicadaGramas');
 });
+
+test('FOOD04 resposta tardia após cancelar a prévia não troca o grupo selecionado', async ({ context, page }) => {
+  await preparar(context);
+  const principalId = '10000000-0000-4000-8000-000000000061';
+  const grupoA = '10000000-0000-4000-8000-000000000062';
+  const grupoB = '10000000-0000-4000-8000-000000000063';
+  const alternativaA = '10000000-0000-4000-8000-000000000064';
+  const alternativaB = '10000000-0000-4000-8000-000000000065';
+  let liberarA;
+  let iniciouA;
+  const esperandoA = new Promise(resolve => { liberarA = resolve; });
+  const chamadaA = new Promise(resolve => { iniciouA = resolve; });
+  await page.route(url => url.pathname.endsWith('/planos-alimentares/alimentos'), async route => route.fulfill({ json: {
+    itens: [{ id: principalId, codigoOrigem: 'SINT-PRINCIPAL', nome: 'Principal sintético', disponivelParaCalculo: true, nutrientesPor100g: { energiaKcal: 90 } }],
+    fontes: [], total: 1, pagina: 1, limite: 20
+  } }));
+  await page.route(url => url.pathname === '/api/planos-alimentares/grupos-substituicoes/consulta', async route => route.fulfill({ json: {
+    itens: [grupoA, grupoB].map((id, index) => ({ id, nome: `Grupo ${index ? 'B' : 'A'}`, etiquetas: [], escopo: 'pessoal', estado: 'ativo', revisao: 1, quantidadeEntradas: 1, podeEditar: true, favorito: false })),
+    total: 2, pagina: 1, limite: 25
+  } }));
+  await page.route(url => url.pathname === `/api/planos-alimentares/grupos-substituicoes/${grupoA}` || url.pathname === `/api/planos-alimentares/grupos-substituicoes/${grupoB}`, async route => {
+    const a = new URL(route.request().url()).pathname.endsWith(grupoA);
+    if (a) { iniciouA(); await esperandoA; }
+    const id = a ? grupoA : grupoB;
+    const alimentoId = a ? alternativaA : alternativaB;
+    return route.fulfill({ json: {
+      id, nome: `Grupo ${a ? 'A' : 'B'}`, etiquetas: [], escopo: 'pessoal', estado: 'ativo', revisao: 1, quantidadeEntradas: 1, podeEditar: true, favorito: false,
+      entradas: [{ id: a ? '10000000-0000-4000-8000-000000000066' : '10000000-0000-4000-8000-000000000067', origem: 'catalogo', alimentoId, quantidade: 1, unidade: 'porção', porcaoGramas: 80, disponivel: true, composicao: { descricao: `Alternativa ${a ? 'A' : 'B'}`, nutrientesPor100g: { energiaKcal: 70 } } }]
+    } }).catch(() => {});
+  });
+  await abrir(page);
+  await page.getByRole('button', { name: 'Expandir todas' }).click();
+  await page.getByRole('button', { name: 'Adicionar alimento', exact: true }).first().click();
+  await page.getByRole('textbox', { name: 'Buscar no catálogo' }).last().fill('Principal');
+  await page.getByRole('button', { name: /^Principal sintético/ }).click();
+  await page.getByRole('button', { name: /Aplicar grupo de alternativas/ }).click();
+  await page.getByLabel('Grupo ativo').selectOption(grupoA);
+  await chamadaA;
+  await page.getByRole('region', { name: 'Prévia da aplicação do grupo' }).getByRole('button', { name: 'Cancelar' }).click();
+  await page.getByRole('button', { name: /Aplicar grupo de alternativas/ }).click();
+  await page.getByLabel('Grupo ativo').selectOption(grupoB);
+  await expect(page.getByText('Alternativa B', { exact: true })).toBeVisible();
+  liberarA();
+  await expect(page.getByText('Alternativa B', { exact: true })).toBeVisible();
+  await expect(page.getByText('Alternativa A', { exact: true })).toHaveCount(0);
+});
