@@ -1,3 +1,8 @@
+import { lerOrigensMaterializadas, possuiGruposMaterializados } from './origens-grupos-materializadas';
+import { resolverGruposDocumento, ConflitoAplicacaoGrupo, DocumentoGrupoInvalido } from '../dominio/aplicacao-grupos-substituicoes';
+import { ServicoGruposSubstituicoes } from './servico-grupos-substituicoes';
+import { FontesGruposSubstituicoes } from './fontes-grupos-substituicoes';
+import type { OrigemGrupoSnapshot } from '../dominio/grupos-substituicoes';
 import { projetarComposicao } from './projecao-composicao';
 import { ServicoAlimentosPersonalizados } from './servico-alimentos-personalizados';
 import { ComposicaoPersonalizada } from '../dominio/alimentos-personalizados';
@@ -95,6 +100,7 @@ export type NutrientesPor100gPlano = Omit<NutrientesPor100g, 'fibrasG' | 'sodioM
   Partial<Pick<NutrientesPor100g, 'fibrasG' | 'sodioMg'>>;
 
 export interface SnapshotComposicao {
+  origemGrupo?: OrigemGrupoSnapshot;
   origem: 'catalogo' | 'manual' | 'custom';
   composicaoInformada?: { baseGramas: number; nutrientes: ComposicaoPersonalizada['composicaoOrigem']['nutrientes']; micronutrientes: ComposicaoPersonalizada['composicaoOrigem']['micronutrientes']; normalizacaoVersao: string; referencia?: string };
   alimentoComposicaoId?: string;
@@ -142,7 +148,8 @@ export class ServicoPlanosAlimentares {
     private readonly executorTenant: ExecutorTenant,
     private readonly criptografia: CriptografiaDadosSensiveis,
     private readonly medidasCaseiras: ServicoMedidasCaseiras = new ServicoMedidasCaseiras(executorTenant, criptografia),
-    private readonly alimentosPersonalizados: ServicoAlimentosPersonalizados = new ServicoAlimentosPersonalizados(executorTenant, criptografia)
+    private readonly alimentosPersonalizados: ServicoAlimentosPersonalizados = new ServicoAlimentosPersonalizados(executorTenant, criptografia),
+    private readonly gruposSubstituicoes: ServicoGruposSubstituicoes = new ServicoGruposSubstituicoes(executorTenant, criptografia, new FontesGruposSubstituicoes(criptografia))
   ) {}
 
   async obterSelecaoCalculo(tenantId: string, pacienteId: string, planoId: string, usuario: UsuarioAutenticado) {
@@ -714,6 +721,11 @@ export class ServicoPlanosAlimentares {
       const rascunho = await this.obterRascunhoAtivo(gerenciador, tenantId, plano.id, true);
       this.conferirRevisaoEdicao(rascunho, dados);
       if (rascunho.alimentosPersonalizadosSnapshotCriptografado) throw new ConflictException('Use o editor atualizado para preservar a referência do alimento personalizado.');
+      const edicaoAnterior = this.lerEdicao(rascunho).documentoEdicao;
+      if (edicaoAnterior?.refeicoes.some(r => r.itens.some(i => i.substituicoes?.some(a => a.origemGrupo))) ||
+          await possuiGruposMaterializados(gerenciador, tenantId, rascunho.id, this.criptografia)) {
+        throw new ConflictException('Use o editor atualizado para preservar a origem das substituições.');
+      }
       await this.aplicarRascunhoClinico(gerenciador, tenantId, pacienteId, rascunho, dados);
       rascunho.edicaoSnapshotCriptografado = null;
       rascunho.medidasCaseirasSnapshotCriptografado = null;
@@ -739,9 +751,28 @@ export class ServicoPlanosAlimentares {
       const plano = await this.obterPlanoNoEscopo(gerenciador, tenantId, pacienteId, planoId, usuario, true);
       const rascunho = await this.obterRascunhoAtivo(gerenciador, tenantId, plano.id, true);
       this.conferirRevisaoEdicao(rascunho, dados);
+      const anteriorEdicao=this.lerEdicao(rascunho).documentoEdicao??null;
+      const materializadas=anteriorEdicao?{anteriores:{},custom:{}}:await lerOrigensMaterializadas(gerenciador,tenantId,rascunho.id,documento,this.criptografia);
+      let origensGrupo: Record<string,OrigemGrupoSnapshot>;
+      try {
+        origensGrupo=await resolverGruposDocumento(documento,anteriorEdicao,
+          ref=>this.gruposSubstituicoes.resolverAplicacao(gerenciador,tenantId,usuario,ref),materializadas.anteriores);
+      }catch(erro){
+        if(erro instanceof ConflitoAplicacaoGrupo)throw new ConflictException(erro.message);
+        if(erro instanceof DocumentoGrupoInvalido)throw new BadRequestException(erro.message);
+        throw erro;
+      }
+      const contextosCustomAnteriores={...this.lerContextosCustom(rascunho)};
+      for(const r of documento.refeicoes)for(const i of r.itens)for(const a of i.substituicoes??[]){
+        const herdado=materializadas.custom[a.chaveCliente];
+        if(herdado&&a.origemGrupo&&!a.alimentoPersonalizado){
+          a.alimentoPersonalizado={id:herdado.id,revisao:herdado.revisao,aplicacaoId:herdado.aplicacaoId};
+          contextosCustomAnteriores[a.chaveCliente]=herdado;
+        }
+      }
       let contextosCustom: ContextosAlimentosPersonalizados;
       try {
-        contextosCustom = await resolverAlimentosPersonalizados(documento, this.lerContextosCustom(rascunho),
+        contextosCustom = await resolverAlimentosPersonalizados(documento, contextosCustomAnteriores,
           ref => this.alimentosPersonalizados.resolverAplicacao(gerenciador, tenantId, usuario, ref));
       } catch (erro) {
         if (erro instanceof ReferenciaCustomConflitanteError) throw new ConflictException(erro.message);
@@ -755,17 +786,24 @@ export class ServicoPlanosAlimentares {
       const identidades = await this.prepararIdentidadesEdicao(gerenciador, plano, rascunho, documento);
       const clinico = converterEdicaoParaRascunho(documento, rascunho);
       const composicoesCustom = new Map<object, ComposicaoPersonalizada>();
+      const provenienciasGrupo = new Map<object,OrigemGrupoSnapshot>();
       documento.refeicoes.forEach((r, ri) => r.itens.forEach((i, ii) => {
         const dto = clinico.refeicoes[ri].itens[ii];
         if (Object.hasOwn(contextosCustom, i.chaveCliente)) composicoesCustom.set(dto, contextosCustom[i.chaveCliente].composicao);
         (i.substituicoes ?? []).forEach((a, ai) => {
           if (Object.hasOwn(contextosCustom, a.chaveCliente)) composicoesCustom.set(dto.substituicoes![ai], contextosCustom[a.chaveCliente].composicao);
+          if (Object.hasOwn(origensGrupo,a.chaveCliente)) {
+            const origem=origensGrupo[a.chaveCliente],custom=contextosCustom[a.chaveCliente];
+            if(custom){origem.referenciaAlimento={origem:'custom',alimentoId:custom.id,revisao:custom.revisao};origem.tipoBaseCustom=custom.composicao.baseOrigem.tipo;}
+            else if(a.alimentoComposicaoId)origem.referenciaAlimento={origem:'catalogo',alimentoId:a.alimentoComposicaoId};
+            provenienciasGrupo.set(dto.substituicoes![ai],origem);
+          }
         });
       }));
       let materializada = false;
       if (!validateSync(clinico, { whitelist: true, forbidNonWhitelisted: true }).length && this.lerApresentacao(rascunho).apresentacaoEstado !== 'indisponivel') {
         try {
-          await this.aplicarRascunhoClinico(gerenciador, tenantId, pacienteId, rascunho, clinico, identidades, composicoesCustom);
+          await this.aplicarRascunhoClinico(gerenciador, tenantId, pacienteId, rascunho, clinico, identidades, composicoesCustom, provenienciasGrupo);
           materializada = true;
         } catch (erro) {
           // Incompletude/inaplicabilidade clínica não apaga o documento editorial.
@@ -845,7 +883,7 @@ export class ServicoPlanosAlimentares {
 
   private async aplicarRascunhoClinico(
     gerenciador: EntityManager, tenantId: string, pacienteId: string,
-    rascunho: PlanoAlimentarVersaoOrm, dados: AtualizarRascunhoPlanoAlimentarDto, identidades?: string[], composicoesCustom?: ReadonlyMap<object, ComposicaoPersonalizada>
+    rascunho: PlanoAlimentarVersaoOrm, dados: AtualizarRascunhoPlanoAlimentarDto, identidades?: string[], composicoesCustom?: ReadonlyMap<object, ComposicaoPersonalizada>, provenienciasGrupo?: ReadonlyMap<object,OrigemGrupoSnapshot>
   ): Promise<void> {
     this.validarDadosClinicosRascunho(dados);
     const metaManual = dados.origemMeta === 'manual';
@@ -900,7 +938,7 @@ export class ServicoPlanosAlimentares {
       throw new BadRequestException(erro instanceof Error ? erro.message : 'Dados invalidos para o calculo nutricional.');
     }
 
-    const estrutura = await this.resolverEstrutura(gerenciador, dados, composicoesCustom);
+    const estrutura = await this.resolverEstrutura(gerenciador, dados, composicoesCustom, provenienciasGrupo);
     let totais: ReturnType<typeof calcularTotaisPlano>;
     try {
       validarEstruturaPlano(estrutura);
@@ -1392,7 +1430,7 @@ export class ServicoPlanosAlimentares {
   private async resolverEstrutura(
     gerenciador: EntityManager,
     dados: AtualizarRascunhoPlanoAlimentarDto,
-    composicoesCustom?: ReadonlyMap<object, ComposicaoPersonalizada>
+    composicoesCustom?: ReadonlyMap<object, ComposicaoPersonalizada>, provenienciasGrupo?: ReadonlyMap<object,OrigemGrupoSnapshot>
   ): Promise<EstruturaPlanoAlimentar> {
     const refeicoes = [];
     for (const refeicao of dados.refeicoes) {
@@ -1402,6 +1440,8 @@ export class ServicoPlanosAlimentares {
         const substituicoes = [];
         for (const substituicaoEntrada of itemEntrada.substituicoes ?? []) {
           const substituicao = await this.resolverItem(gerenciador, substituicaoEntrada, composicoesCustom?.get(substituicaoEntrada));
+          const origemGrupo=provenienciasGrupo?.get(substituicaoEntrada);
+          if(origemGrupo)substituicao.snapshot.origemGrupo=origemGrupo;
           substituicoes.push({
             ...substituicao.dominio,
             snapshot: substituicao.snapshot,

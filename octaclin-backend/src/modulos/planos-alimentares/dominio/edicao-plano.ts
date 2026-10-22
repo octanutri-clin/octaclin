@@ -1,3 +1,4 @@
+import { IntencaoGrupo, validarIntencaoGrupo } from './grupos-substituicoes';
 import type { IntencaoAlimentoPersonalizado } from './aplicacao-alimentos-personalizados';
 import { CodigoMicronutriente, CODIGOS_MICRONUTRIENTES } from './micronutrientes';
 import { FormulaEnergetica, MetodoMacrosManual } from './calculo-nutricional';
@@ -18,7 +19,7 @@ export interface AlimentoEdicao {
   alimentoPersonalizado?: IntencaoAlimentoPersonalizado | null;
   medidaCaseira?: { id: string; revisao: number; aplicacaoId: string } | null;
 }
-export interface AlternativaEdicao extends AlimentoEdicao { liberadaParaPaciente?: boolean; preferida?: boolean }
+export interface AlternativaEdicao extends AlimentoEdicao { origemGrupo?: IntencaoGrupo | null; liberadaParaPaciente?: boolean; preferida?: boolean }
 export interface ItemEdicao extends AlimentoEdicao { substituicoes?: AlternativaEdicao[]; substituicoesVisiveisInicialmente?: NumeroEdicao }
 export interface RefeicaoEdicao { chaveCliente: string; nome?: string; horarioLocal?: string; orientacoes?: string; itens: ItemEdicao[] }
 export interface DocumentoEdicaoPlano {
@@ -138,7 +139,8 @@ export function validarDocumentoEdicaoPlano(valor: unknown): DocumentoEdicaoPlan
       const i = alimento(item, ['substituicoes', 'substituicoesVisiveisInicialmente']);
       numero(i.substituicoesVisiveisInicialmente);
       for (const alt of lista(i.substituicoes ?? [], 20)) {
-        const a = alimento(alt, ['liberadaParaPaciente', 'preferida']);
+        const a = alimento(alt, ['liberadaParaPaciente', 'preferida', 'origemGrupo']);
+        if(a.origemGrupo!==undefined&&a.origemGrupo!==null)a.origemGrupo=validarIntencaoGrupo(a.origemGrupo);
         booleano(a.liberadaParaPaciente); booleano(a.preferida);
       }
     }

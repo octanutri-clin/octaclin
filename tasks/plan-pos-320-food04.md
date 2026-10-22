@@ -5,13 +5,13 @@
 Planejamento consolidado em 2026-10-22. Base auditada `origin/main` `9e1984a2`
 (merge #440); branch `docs/pos320-food04-planning`, worktree dedicada. O checkout
 principal e sua alteração preexistente `octaclin-web/next-env.d.ts` permanecem
-preservados. Implementação ainda não iniciada; nenhuma PR FOOD04 aberta.
+preservados. Implementação técnica autorizada e iniciada após “Pode seguir”; nenhuma PR FOOD04 aberta.
 
 O proprietário aprovou D01–D03 e ampliou o escopo em sua mensagem sobre a
 Biblioteca de Grupos de Substituições Alimentares. Esta revisão incorpora os
 12 itens daquela mensagem. A especificação anterior está no commit `059c6bd9`.
-Autorização atual desta etapa: apresentar o planejamento antes de implementar;
-não há autorização operacional para migration externa/deploy nesta fase.
+Especificação apresentada e desenvolvimento autorizado pelo proprietário em
+“Pode seguir”. Não há autorização operacional para migration externa/deploy nesta fase.
 Uma PR funcional principal reunirá documentos e implementação essencial.
 
 | Decisão | Regra vigente aprovada | O que substitui |
@@ -213,12 +213,12 @@ validação atual. Clone histórico não é nova aplicação de biblioteca.
     Alternativas não entram como consumo nem como soma dos itens principais.
     Grupo/favorito não autoriza exposição de alternativa ao paciente.
 
-## 4. Matriz de permissões proposta
+## 4. Matriz de permissões implementada no backend
 
-O catálogo atual é primariamente estático por papel; não há permissão específica
-para grupos. Acrescentar `grupos_substituicoes.compartilhar` a Professional e
-`grupos_substituicoes.administrar` a Client/SuperAdmin. Esses nomes são propostas
-de implementação, não permissões hoje existentes. Não criar delegação genérica
+O catálogo é primariamente estático por papel. Foram acrescentadas
+`grupos_substituicoes.compartilhar` a Professional e
+`grupos_substituicoes.administrar` a Client/SuperAdmin, com testes de segregação.
+Não criar delegação genérica
 por usuário nesta fase. Contexto de tenant é sempre verificado no servidor.
 
 | Ator/condição | Pessoal | Compartilhado | Duplicar/favoritar/aplicar |
@@ -321,4 +321,31 @@ Testes de implementação/Postgres/CI/builds/Playwright permanecem SKIPPED.
 atual: Sol6.1 médio para backend/contratos e integração crítica (T01–T10); Luna
 alto para UI/helpers/testes delimitados (T11–T12); Sol médio para revisão R4 e
 fechamento (T13–T14). Avisar e pausar antes de qualquer troca manual. Não trocar
-modelo nem iniciar implementação automaticamente nesta entrega de planejamento.
+modelo automaticamente; avisar e pausar antes da etapa de interface.
+
+## Execução autorizada
+
+Checkpoint e provas reais: [execucao-pos-320-food04.md](execucao-pos-320-food04.md).
+Os estados SKIPPED da seção de planejamento descrevem a rodada documental;
+o ledger distingue execução nova de gates finais ainda pendentes.
+
+### Ajustes fundamentados nos contratos reais
+
+- Nova versão do mesmo plano herda proveniência do snapshot cifrado autorizado,
+  inclusive no primeiro save depois de arquivar a biblioteca/fonte. Essa origem
+  nunca se transforma em capability pública ou acesso à biblioteca anterior.
+- PA02 e modelos genéricos transportam fatos nutricionais selecionados, criam
+  novas chaves editoriais e não têm capability para herdar autoridade interna de
+  aplicação. Não copiar `origemGrupo` para esses novos itens: seria replay em
+  outro pai/paciente. A aplicação original mantém sua proveniência no histórico;
+  a cópia mantém composição/porções independentes, sem atribuir uma nova aplicação
+  não verificada ao grupo. Rastreabilidade adicional entre essas cópias exige
+  contrato autenticado de origem, não confiar no UUID enviado pelo navegador.
+  Isto esclarece T08/G06 sem alterar o contrato legado de cópia nem expor origem
+  de outra carteira. A regressão de cópia factual continua obrigatória em T13.
+- Duplicação da biblioteca revalida fontes acessíveis e atuais. Referência
+  obsoleta não é atualizada silenciosamente: editar/remover/substituir explicitamente
+  a entrada antes de confirmar. O grupo original e aplicações existentes permanecem.
+- Administração dispõe de consulta mínima própria de fontes de grupos:
+  catálogo ativo/aprovado e custom compartilhado. Não conceder ao Client as
+  consultas clínicas do Professional para preencher o seletor.

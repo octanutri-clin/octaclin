@@ -1,15 +1,17 @@
 # OctaClin - Status atual do projeto
 
-Atualizado em 2026-10-22 (planejamento FOOD04; registros anteriores preservados).
+Atualizado em 2026-10-22 (execução FOOD04; registros anteriores preservados).
 
 ## Fase ativa
 
-- **FOOD04 — planejamento e gaps**, base `origin/main` `9e1984a2`, merge
+- **FOOD04 — backend/BFF em validação, UI pendente**, base `origin/main` `9e1984a2`, merge
   documental #440 confirmado por fetch em 2026-10-22. Biblioteca de grupos
   reutilizáveis; D01–D03 aprovadas e ampliadas em D01–D08. Especificação inclui
   administração de compartilhados, duplicação, favoritos, aplicação seletiva,
-  dedup e arquivo/restauração. Não há implementação
-  nem PR FOOD04. Plano/checkpoints em `tasks/plan-pos-320-food04.md` e
+  dedup e arquivo/restauração. Desenvolvimento autorizado em “Pode seguir”;
+  domínio, biblioteca, migration1078, save/snapshots e BFF implementados.
+  Sem PR FOOD04 neste checkpoint. Evidências e limitações em
+  `tasks/execucao-pos-320-food04.md`. Plano/checkpoints em `tasks/plan-pos-320-food04.md` e
   `tasks/todo-pos-320-food04.md`; handoff ativo em `tasks/plan.md`.
   Referências específicas recomendam código interno, sem biblioteca externa.
   Sol médio para backend/authz/snapshots/BFF; Luna alto para UI após contratos,

@@ -2,7 +2,9 @@
 
 Contrato vigente: [plan-pos-320-food04.md](plan-pos-320-food04.md).
 D01–D08 aprovadas pelo proprietário e incorporadas ao planejamento. T00/T01
-concluídas documentalmente; implementação T02–T14 não iniciada.
+concluídas documentalmente; T02–T10 têm implementação backend/BFF no checkpoint.
+UI T11–T12 e aceite final T13–T14 permanecem pendentes. As caixas abaixo
+representam o aceite integral, não apenas a existência do código.
 TDD obrigatório para lógica/segurança: registrar RED, correção e GREEN, com
 fixtures sintéticas. Dividir cada tarefa em subpassos de3–5 arquivos, uma PR.
 
@@ -27,6 +29,24 @@ fixtures sintéticas. Dividir cada tarefa em subpassos de3–5 arquivos, uma PR.
 | T13 | Regressões, revisão R4, evidências e docs | C3 | [ ] Backend/Web/banco/a11y e regressões PA02–PA07/FOOD01–03; revisão com autoria/achados; gates reais e limites documentados |
 | T14 | PR única/CI/scanners do HEAD final | T13 | [ ] Diff/secrets/governança e checks aplicáveis; separar CI de deploy/migration; complementar não implementado por antecipação |
 
+## Estado observado no checkpoint backend/BFF
+
+Evidências: [ledger](execucao-pos-320-food04.md); próxima etapa delimitada no
+[handoff Luna](handoff-pos-320-food04-luna.md).
+
+| Tarefas | Estado real | O que falta para aceite final |
+| --- | --- | --- |
+| T02–T06 / C1 | Implementadas; unitários e4 testes PG da biblioteca PASS | Regressão do HEAD final e revisão R4 em T13 |
+| T07–T08 | Implementadas; save/publicação/nova versão, snapshots e projeções testados | UI transportando intenção e regressões factuais PA02/modelos; não copiar autoridade entre pais |
+| T09 / C2 |4 provas PG da biblioteca e3 clínicas PASS, runtime não-owner | Cadeia oficial com Timescale/pgvector e execução CI ainda não comprovadas |
+| T10 | BFF, tipos, wrappers e mapa implementados;60 BFF e authz/typecheck PASS | Revalidar no HEAD completo após UI; limites no ledger |
+| T11–T12 / C3 | Não iniciadas; aguardam troca manual para Luna alto | UI, helper seletivo/undo, Playwright desktop/mobile/a11y |
+| T13–T14 | Parcial: regressões/revisão própria/documentos em andamento | Revisão R4 identificada, PR única, CI/scanners finais; sem operação externa |
+
+T08/G06: composição/porções de cópias legadas são preservadas; proveniência da
+aplicação original permanece no histórico. Não transferir intenção de grupo
+para um novo pai como capability. Justificativa e limites no plano.
+
 ## Subpassos para manter tarefas executáveis
 
 - T03a: entidades e migration; T03b: registro/constraints/fixtures/provas de migração.
@@ -43,7 +63,9 @@ fixtures sintéticas. Dividir cada tarefa em subpassos de3–5 arquivos, uma PR.
 Nenhum subpasso cria escritor concorrente nos arquivos críticos. Complementares
 FOOD04-C01/C02/C03 estão no roadmap, sem tarefas de implementação nesta PR.
 
-## Comandos previstos, não executados nesta etapa
+## Comandos previstos e rastreamento da execução
+
+Resultados realmente executados estão no ledger; esta lista não é prova de PASS.
 
 1. Selecionar Node22.x/pnpm11.25.0 do projeto antes dos testes; instalar somente
    com lockfile congelado. Não alterar engines/lockfile para adaptar ao ambiente.
@@ -73,8 +95,8 @@ FOOD04-C01/C02/C03 estão no roadmap, sem tarefas de implementação nesta PR.
 | Especificação técnica | PREPARADA | Seis entregáveis apresentados; qualquer divergência nova deve ser evidenciada |
 | Diff/secrets/links/matriz documental | PASS | Diff/secrets limpos; 4 links válidos; 40 referências da matriz; comandos no plano |
 | Preflight documental oficial | BLOCKED anterior | PowerShell ausente; nova execução apenas com ferramenta adequada |
-| Backend/BFF/UI/regressões | SKIPPED | Implementação e comandos apropriados passam no código final |
-| PostgreSQL/RLS/concorrência | SKIPPED | Prova real sintética e role adequada, não skip condicional |
+| Backend/BFF/UI/regressões | PARCIAL | Backend/BFF testados; UI e regressões do HEAD completo pendentes; detalhes no ledger |
+| PostgreSQL/RLS/concorrência | PARCIAL |7 provas explícitas locais PASS; cadeia oficial com extensões/CI ainda pendente |
 | Revisão técnica R4 | SKIPPED | Revisão com autoria/escopo/achados; autorrevisão não é independente |
 | CI/scanners | SKIPPED | PR e HEAD final identificados e conferidos |
 | Migration externa/deploy | SKIPPED | Exigem autorização operacional específica e preflight separado |

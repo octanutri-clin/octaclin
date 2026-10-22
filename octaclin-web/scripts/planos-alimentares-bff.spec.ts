@@ -1,3 +1,8 @@
+import { POST as consultarFontesGruposFood04 } from '../app/api/planos-alimentares/grupos-substituicoes-administracao/alimentos/consulta/route';
+import { POST as consultarGruposFood04 } from '../app/api/planos-alimentares/grupos-substituicoes/consulta/route';
+import { POST as criarGrupoFood04 } from '../app/api/planos-alimentares/grupos-substituicoes/route';
+import { PATCH as editarGrupoFood04 } from '../app/api/planos-alimentares/grupos-substituicoes/[grupoId]/route';
+import { POST as consultarGruposAdminFood04 } from '../app/api/planos-alimentares/grupos-substituicoes-administracao/consulta/route';
 import { GET as obterApresentacaoPaciente } from '../app/api/pacientes/[id]/planos-alimentares/[planoId]/versoes/[numero]/apresentacao-paciente/route';
 import assert from 'node:assert/strict';
 import test from 'node:test';
@@ -1231,4 +1236,58 @@ test('FOOD01 BFF responde falha de backend sem detalhes e com no-store', async (
     assert.equal(resposta.headers.get('Cache-Control'), 'private, no-store');
     assert.deepEqual(await resposta.json(), { mensagem: 'Não foi possível conectar ao backend configurado para esta sessão.' });
   } finally { restaurarFetch(original); __clearCookies(); }
+});
+
+const idGrupoFood04='70000000-0000-4000-8000-000000000001';
+const requestGrupoFood04=(body:unknown)=>new Request('http://localhost/api/grupos',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+test('FOOD04 BFF nega sem sessão/capacidade administrativa antes de fetch',async()=>{
+  const original=global.fetch;let calls=0;global.fetch=(async()=>{calls++;return Response.json({});})as typeof global.fetch;
+  try{
+    __clearCookies();assert.equal((await consultarGruposFood04(requestGrupoFood04({}))).status,401);
+    __setCookies(cookiesSessaoValida(['planos_alimentares.ler']));assert.equal((await consultarGruposAdminFood04(requestGrupoFood04({}))).status,403);
+    assert.equal(calls,0);
+  }finally{restaurarFetch(original);}
+});
+test('FOOD04 BFF admin usa capacidade própria e projeção sem campos internos',async()=>{
+  __setCookies(cookiesSessaoValida(['grupos_substituicoes.administrar']));
+  const original=global.fetch;let path='';
+  global.fetch=(async(url:unknown)=>{path=String(url);return Response.json({itens:[{id:idGrupoFood04,nome:'Grupo sintético',escopo:'clinica',estado:'ativo',revisao:1,quantidadeEntradas:1,podeEditar:true,favorito:false,tenantId:'interno-nao-projetar',origemCopia:'interno-nao-projetar',conteudoCriptografado:'interno-nao-projetar'}],total:1,pagina:1,limite:25});})as typeof global.fetch;
+  try{
+    const r=await consultarGruposAdminFood04(requestGrupoFood04({}));assert.equal(r.status,200);assert.equal(r.headers.get('cache-control'),'private, no-store');
+    assert.match(path,/grupos-substituicoes-administracao\/consulta$/);assert.doesNotMatch(JSON.stringify(await r.json()),/interno-nao-projetar/);
+  }finally{restaurarFetch(original);}
+});
+test('FOOD04 BFF recusa propriedades de identidade, conteúdo excessivo e UUID inseguro',async()=>{
+  __setCookies(cookiesSessaoValida(['planos_alimentares.gerenciar']));const original=global.fetch;let calls=0;global.fetch=(async()=>{calls++;return Response.json({});})as typeof global.fetch;
+  try{
+    assert.equal((await criarGrupoFood04(requestGrupoFood04({tenantId:idGrupoFood04}))).status,400);
+    assert.equal((await criarGrupoFood04(requestGrupoFood04({nome:'x'.repeat(100000)}))).status,413);
+    assert.equal((await editarGrupoFood04(requestGrupoFood04({revisaoEsperada:1,estado:'ativo'}),{params:Promise.resolve({grupoId:'../outro'})})).status,400);
+    assert.equal(calls,0);
+  }finally{restaurarFetch(original);}
+});
+test('FOOD04 BFF não repassa detalhes internos de falha do backend',async()=>{
+  __setCookies(cookiesSessaoValida(['planos_alimentares.ler']));const original=global.fetch;global.fetch=(async()=>Response.json({message:'interno-nao-projetar',stack:'interno-nao-projetar'},{status:500}))as typeof global.fetch;
+  try{const r=await consultarGruposFood04(requestGrupoFood04({}));assert.equal(r.status,500);assert.doesNotMatch(JSON.stringify(await r.json()),/interno-nao-projetar/);}
+  finally{restaurarFetch(original);}
+});
+
+test('FOOD04 BFF rejeita grupo pessoal na resposta administrativa e escalares adulterados',async()=>{
+  __setCookies(cookiesSessaoValida(['grupos_substituicoes.administrar']));const original=global.fetch;
+  try{
+    for(const extra of [{escopo:'pessoal'},{descricao:{conteudo:'interno-nao-projetar'}}]){
+      global.fetch=(async()=>Response.json({itens:[{id:idGrupoFood04,nome:'Grupo sintético',escopo:'clinica',estado:'ativo',revisao:1,quantidadeEntradas:1,podeEditar:true,favorito:false,...extra}],total:1,pagina:1,limite:25}))as typeof global.fetch;
+      const r=await consultarGruposAdminFood04(requestGrupoFood04({}));assert.equal(r.status,503);assert.doesNotMatch(JSON.stringify(await r.json()),/interno-nao-projetar/);
+    }
+  }finally{restaurarFetch(original);}
+});
+
+test('FOOD04 BFF fonte administrativa não abre biblioteca pessoal e projeta composição mínima',async()=>{
+  const original=global.fetch;let caminho='';
+  global.fetch=(async(url:unknown)=>{caminho=String(url);return Response.json({itens:[{id:idGrupoFood04,origem:'custom',alimentoId:idGrupoFood04,revisao:1,nome:'Produto sintético',profissionalId:'interno-nao-projetar',composicao:{descricao:'Produto sintético',nutrientesPor100g:{energiaKcal:100,owner:'interno-nao-projetar'},composicaoCustom:'interno-nao-projetar'}}],total:1,pagina:1,limite:25});})as typeof global.fetch;
+  try{
+    __setCookies(cookiesSessaoValida(['planos_alimentares.ler']));assert.equal((await consultarFontesGruposFood04(requestGrupoFood04({origem:'custom',busca:'produto'}))).status,403);
+    __setCookies(cookiesSessaoValida(['grupos_substituicoes.administrar']));const r=await consultarFontesGruposFood04(requestGrupoFood04({origem:'custom',busca:'produto'}));
+    assert.equal(r.status,200);assert.match(caminho,/administracao\/alimentos\/consulta$/);assert.doesNotMatch(JSON.stringify(await r.json()),/interno-nao-projetar/);
+  }finally{restaurarFetch(original);}
 });
