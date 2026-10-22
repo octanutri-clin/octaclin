@@ -40,11 +40,10 @@ Evidências: [ledger](execucao-pos-320-food04.md); próxima etapa delimitada no
 
 | Tarefas | Estado real | O que falta para aceite final |
 | --- | --- | --- |
-| T02–T06 / C1 | Implementadas; unitários e4 testes PG da biblioteca PASS | Regressão do HEAD final e revisão R4 em T13 |
-| T07–T08 | Implementadas; save/publicação/nova versão, snapshots e projeções testados | UI transportando intenção e regressões factuais PA02/modelos; não copiar autoridade entre pais |
-| T09 / C2 |4 provas PG da biblioteca e3 clínicas PASS, runtime não-owner | Cadeia oficial com Timescale/pgvector e execução CI ainda não comprovadas |
+| T02–T08 / C1 | Implementadas; 43 testes unitários FOOD04 PASS; typecheck backend PASS com `tsBuildInfoFile` redirecionado para `/tmp` por falta de espaço no volume | Regressão do HEAD final e revisão R4 em T13 |
+| T09 / C2 | Integração `1720000001078` em PostgreSQL 15 descartável:4 PASS; prova local de RLS:3 PASS,64 não aplicáveis ignorados; runtime não-owner | Runner RLS completo FAIL no teste legado da Fase 317 por imagem `timescale/timescaledb-ha:pg15` indisponível; cadeia com extensões e execução CI ainda não comprovadas |
 | T10 | BFF, tipos, wrappers e mapa implementados;60 BFF e authz/typecheck PASS | Revalidar no HEAD completo após UI; limites no ledger |
-| T11–T12 / C3 | Interface/helper integrados parcialmente; typecheck, quatro testes helper, build,42 regressões PA07/FOOD01–03 e dezoito cenários FOOD04 desktop/mobile passaram | Corridas adicionais FOOD04, acessibilidade geral, demais regressões editoriais e revisão R4 independente |
+| T11–T12 / C3 | Typecheck Web PASS; Playwright completo PA07/FOOD01–04:54 PASS, incluindo desktop/mobile; testes de autorização Client/SuperAdmin:6 PASS | Corridas adicionais FOOD04, acessibilidade geral, demais regressões editoriais e revisão R4 independente |
 | T13–T14 | Parcial: regressões/revisão própria/documentos em andamento | Revisão R4 identificada, PR única, CI/scanners finais; sem operação externa |
 
 T08/G06: composição/porções de cópias legadas são preservadas; proveniência da

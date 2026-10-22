@@ -217,6 +217,21 @@ isso não é RED de vulnerabilidade.
   runner, C2/R4
   independente e CI.
 - `git diff --check` PASS antes do commit `8c93fdd9`.
+- Continuação T12/backend (2026-10-22): a regressão completa
+  `pa07-coordenacao-abas.spec.mjs` passou 54/54 em desktop e mobile. Os testes de
+  autorização Client/SuperAdmin passaram 6/6. ESLint dos specs alterados e
+  `git diff --check` passaram. Testes unitários backend FOOD04 passaram 43/43;
+  TypeScript backend passou ao redirecionar o arquivo incremental para `/tmp`,
+  pois o comando padrão não conseguiu escrever `dist/tsconfig.tsbuildinfo` com o
+  volume cheio. Web typecheck passou.
+- PostgreSQL: `1720000001078-GruposSubstituicoes.integracao.spec.ts` passou 4/4
+  em PostgreSQL 15 Testcontainers descartável; `test:food04:clinica-local` passou
+  3 verificações FOOD04 de RLS, com 64 casos não aplicáveis pulados por filtro.
+  O runner agregado `test:rls:testcontainers` não concluiu PASS: falhou no
+  conjunto legado da Fase 317 por não encontrar `timescale/timescaledb-ha:pg15`;
+  o processo foi interrompido após esse erro e a prova FOOD04 foi executada
+  separadamente. Não atribuir esse resultado a um defeito FOOD04, mas manter C2
+  bloqueado até o runner/CI integral passar.
 - T11/T12 permanecem PARCIAIS: criação, edição/arquivo/restauração, favorito,
   duplicação pessoal, compartilhamento confirmado e aplicação têm provas visuais;
   testes Client/SuperAdmin
