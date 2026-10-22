@@ -397,6 +397,48 @@ async function prepararSessaoCliente(page, opcoes = {}) {
   });
 }
 
+test('FOOD04 gestor com capacidade específica vê somente grupos compartilhados e não os administra por padrão', async ({ page }) => {
+  await prepararSessaoCliente(page);
+  await page.route('**/api/auth/session', async route => route.fulfill({ json: {
+    autenticado: true, apiUrl: 'http://localhost:3001', tenantSlug: 'clinica-carla', email: 'gestor@example.test',
+    expiraEm: '2026-10-22T12:00:00.000Z', papel: 'Client', destinoInicial: '/cliente',
+    permissoes: ['cliente.acessar', 'cliente.assinatura.ler', 'grupos_substituicoes.administrar']
+  } }));
+  const grupoId = '10000000-0000-4000-8000-000000000091';
+  let corpoConsulta;
+  await page.route(url => url.pathname === '/api/planos-alimentares/grupos-substituicoes-administracao/consulta', async route => {
+    corpoConsulta = route.request().postDataJSON();
+    await route.fulfill({ json: { itens: [{ id: grupoId, nome: 'Grupo compartilhado sintético', categoria: 'Lanche', etiquetas: [], escopo: 'clinica', estado: 'ativo', revisao: 1, quantidadeEntradas: 1, podeEditar: false, favorito: false }], total: 1, pagina: 1, limite: 25 } });
+  });
+  await page.goto('/cliente', { waitUntil: 'domcontentloaded' });
+  const abaGrupos = page.getByRole('tab', { name: 'Grupos alimentares' });
+  await expect(abaGrupos).toBeVisible();
+  await abaGrupos.click();
+  const biblioteca = page.getByRole('region', { name: 'Administração de grupos compartilhados' });
+  await expect(biblioteca).toBeVisible();
+  await expect(biblioteca).toContainText('Grupos compartilhados da clínica');
+  await expect(biblioteca.getByRole('button', { name: 'Novo grupo' })).toHaveCount(0);
+  await expect(biblioteca.getByLabel('Escopo')).toHaveCount(0);
+  await expect(biblioteca.getByLabel('Somente favoritos')).toHaveCount(0);
+  await expect(biblioteca.getByRole('button', { name: /Grupo pessoal/ })).toHaveCount(0);
+  expect(corpoConsulta).toMatchObject({ estado: 'ativo' });
+  await biblioteca.getByRole('button', { name: 'Abrir' }).click();
+  await expect(biblioteca.getByRole('button', { name: 'Duplicar para pessoal' })).toHaveCount(0);
+  await expect(biblioteca.getByRole('button', { name: 'Compartilhar com clínica' })).toHaveCount(0);
+});
+
+test('FOOD04 gestor sem capacidade específica não recebe aba nem consulta administrativa', async ({ page }) => {
+  await prepararSessaoCliente(page);
+  let consultasAdministrativas = 0;
+  await page.route('**/api/planos-alimentares/grupos-substituicoes-administracao/**', async route => {
+    consultasAdministrativas += 1;
+    await route.fulfill({ status: 403, json: { message: 'Acesso negado' } });
+  });
+  await page.goto('/cliente', { waitUntil: 'domcontentloaded' });
+  await expect(page.getByRole('tab', { name: 'Grupos alimentares' })).toHaveCount(0);
+  expect(consultasAdministrativas).toBe(0);
+});
+
 async function assertSemOverflowHorizontal(page) {
   const medidas = await page.evaluate(() => ({
     larguraDocumento: document.documentElement.scrollWidth,

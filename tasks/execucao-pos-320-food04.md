@@ -200,7 +200,8 @@ isso não é RED de vulnerabilidade.
 - Playwright em ambos os projetos: PA07/FOOD01–03,42 PASS; criação FOOD04,2 PASS
   (inclui Axe no componente); aplicação seletiva FOOD04,2 PASS; cancelamento e
   resposta tardia FOOD04,2 PASS; edição/arquivo/restauração FOOD04,2 PASS;
-  favorito/duplicação pessoal FOOD04,2 PASS. Total desta regressão:52 testes PASS. No início,
+  favorito/duplicação pessoal FOOD04,2 PASS; portal Client com e sem a capacidade
+  administrativa,4 PASS. Total desta regressão:56 testes PASS. No início,
   tentativas do teste novo falharam por expectativas incorretas do teste (porção
   é `1 porção` com 100g, e a proveniência enriquecida é materializada no backend);
   os critérios foram alinhados aos contratos, sem relaxar validações de produto.
@@ -214,7 +215,7 @@ isso não é RED de vulnerabilidade.
 - `git diff --check` PASS antes do commit `8c93fdd9`.
 - T11/T12 permanecem PARCIAIS: criação, edição/arquivo/restauração, favorito,
   duplicação pessoal e aplicação têm provas visuais; faltam compartilhamento e
-  superfícies de administração,
+  prova visual da superfície SuperAdmin,
   undo e corridas FOOD04 adicionais,
   regressões PA02–PA07/FOOD01–03 completas, acessibilidade geral e revisão R4
   independente. Não afirmar C3 PASS nem criar PR até fechar.
