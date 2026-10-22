@@ -527,7 +527,7 @@ somente após checkpoint e troca manual; revisão final Sol médio.
 
 **Origem:** item 30.
 
-**Status atual:** implementação em andamento na PR Draft #438; migration 1077 e seletores de catálogo/custom implementados. Validação local parcial; mobile/a11y, R4 e gates do HEAD permanecem. Não está mergeada nem ativa.
+**Status atual (2026-10-22):** concluída pela PR #438 (`9f13b80a`). Migration 1077 aplicada e conferida em staging e produção; deploy automático do backend/Web nos dois ambientes está `live`, com `/health` e `/login` respondendo HTTP 200. Revisão R4 foi confirmada pelo proprietário. Evidências e limites em `tasks/plan-pos-320-food03.md`.
 
 **Planejamento técnico atualizado em 2026-10-22:** `tasks/plan-pos-320-food03.md`.
 O contrato separa a preferência privada do profissional do campo `preferida`
