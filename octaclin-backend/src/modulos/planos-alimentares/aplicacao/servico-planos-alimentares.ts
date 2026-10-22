@@ -1261,7 +1261,8 @@ export class ServicoPlanosAlimentares {
         consultaAlimentos.leftJoin(FavoritoAlimentoOrm, 'favorito',
           'favorito.alimento_composicao_id=alimento.id AND favorito.tenant_id=:tenantId AND favorito.profissional_id=:profissionalId',
           { tenantId, profissionalId })
-          .orderBy('CASE WHEN favorito.id IS NULL THEN 1 ELSE 0 END', 'ASC');
+          .addSelect('CASE WHEN favorito.id IS NULL THEN 1 ELSE 0 END', 'ordem_favorito')
+          .orderBy('ordem_favorito', 'ASC');
       }
       const consultaOrdenada = podeOrdenarFavoritos
         ? consultaAlimentos.addOrderBy('alimento.nome', 'ASC')

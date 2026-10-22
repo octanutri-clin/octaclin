@@ -131,6 +131,14 @@ MIT é orientação, não exigência de integração; a GPL permanece fora do ru
   implementação, ordenação estável e origem discriminada passaram.
 - Backend: typecheck e 127 testes focados passaram, incluindo domínio, serviço,
   controller, migration, FOOD02 e busca de catálogo.
+- A primeira execução do Backend NestJS no CI encontrou uma regressão na busca
+  FOOD02 de alimentos personalizados: o TypeORM não resolveu o critério `CASE`
+  como alias durante paginação com join. Corrigido selecionando a expressão
+  calculada com alias explícito e ordenando por esse alias nas buscas de
+  alimentos personalizados e canônicos.
+- Após a correção: suíte completa local do backend — 354 suítes e 3.183 testes
+  passaram; typecheck e build de produção — PASS. A CI ainda precisa repetir a
+  integração do serviço com PostgreSQL/RLS.
 - PostgreSQL descartável: `pnpm test:food03:postgres` passou em PostgreSQL 15
   com duas conexões concorrentes e role sem `BYPASSRLS`.
 - BFF: `pnpm test:planos-alimentares:bff` passou (54 testes).

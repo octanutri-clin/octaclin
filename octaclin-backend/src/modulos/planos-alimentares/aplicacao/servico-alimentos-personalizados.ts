@@ -59,13 +59,14 @@ export class ServicoAlimentosPersonalizados {
       }
       const consulta = repo.createQueryBuilder('alimento')
         .leftJoin(FavoritoAlimentoOrm, 'favorito', 'favorito.alimento_personalizado_id=alimento.id AND favorito.tenant_id=:tenantId AND favorito.profissional_id=:profissionalId', { tenantId, profissionalId })
+        .addSelect('CASE WHEN favorito.id IS NULL THEN 1 ELSE 0 END', 'ordem_favorito')
         .where('alimento.tenant_id=:tenantId AND alimento.ativo=true', { tenantId })
         .andWhere(q.escopo === 'pessoal' ? 'alimento.escopo=\'pessoal\' AND alimento.profissional_id=:profissionalId'
           : q.escopo === 'clinica' ? 'alimento.escopo=\'clinica\''
             : '(alimento.escopo=\'clinica\' OR (alimento.escopo=\'pessoal\' AND alimento.profissional_id=:profissionalId))', { profissionalId });
       if (hashes) consulta.andWhere('alimento.busca_hashes @> :hashes', { hashes });
       const [itens, total] = await consulta
-        .orderBy('CASE WHEN favorito.id IS NULL THEN 1 ELSE 0 END', 'ASC')
+        .orderBy('ordem_favorito', 'ASC')
         .addOrderBy('alimento.criado_em', 'DESC')
         .addOrderBy('alimento.id', 'DESC')
         .skip((pagina - 1) * limite).take(limite).getManyAndCount();
