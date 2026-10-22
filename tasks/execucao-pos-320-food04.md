@@ -255,6 +255,30 @@ isso não é RED de vulnerabilidade.
   regressões PA02–PA07/FOOD01–03 completas, acessibilidade geral e revisão R4
   independente. Não afirmar C3 PASS nem criar PR até fechar.
 
-Checkpoint UI commitado em `8c93fdd9`; a branch permanece aberta para completar
+## Continuação dos gates de autorização — 2026-10-22
+
+- Reexecutei `pnpm --dir octaclin-web test:authz` com a suíte iniciada no
+  ambiente Node 24 do runner (apesar de Node 22 estar disponível no `PATH`, o
+  pnpm global manteve seu runtime próprio; os scripts TypeScript filhos usaram
+  Node 22). Os dez primeiros scripts em sequência passaram integralmente:
+  correlação BFF (57), origem do backend (9), autorização de rotas (30), sessões
+  (9), integrações profissionais (9), pacientes Fase 254 (3), agendamento
+  público (9), revisão de questionários (5), dashboard clínico (5) e timeline do
+  prontuário (4). O próximo script emitiu quatro casos TAP verdes, mas a cadeia
+  foi cancelada antes de seu término e antes dos demais comandos. Portanto, o
+  agregado `test:authz` desta execução é INCOMPLETO, não PASS.
+- O motivo para interromper foi o custo de recompilar cada subconjunto do Web
+  (cerca de um minuto por script) e a duração projetada do agregado completo.
+  Nenhum arquivo da worktree foi alterado pelo teste. O resultado anterior de
+  `test:authz` com exit 0 em 27 comandos permanece registrado no checkpoint de
+  implementação, mas não substitui uma execução integral do HEAD atual.
+- A execução usou somente respostas sintéticas. Logs `headers() indisponível`
+  ocorreram nos casos negativos que exercitam chamadas fora de uma requisição e
+  não fizeram os scripts falhar.
+- O agregado de autorização do HEAD continua pendente; os testes focados FOOD04,
+  backend, BFF, Playwright, PostgreSQL descartável e regressões citados acima
+  mantêm seus resultados individuais. C3 e a entrega permanecem parciais.
+
+Checkpoint UI commitado em `6cee690c`; a branch permanece aberta para completar
 T11–T14. A fase não está concluída: regressões restantes, revisão R4, CI e PR
 seguem pendentes.
