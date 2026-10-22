@@ -1,8 +1,21 @@
 # OctaClin - Status atual do projeto
 
-Atualizado em 2026-10-18.
+Atualizado em 2026-10-22 (planejamento FOOD04; registros anteriores preservados).
 
 ## Fase ativa
+
+- **FOOD04 — planejamento e gaps**, base `origin/main` `9e1984a2`, merge
+  documental #440 confirmado por fetch em 2026-10-22. Biblioteca de grupos
+  reutilizáveis; D01–D03 enviadas e aguardando respostas. Não há implementação
+  nem PR FOOD04. Plano/checkpoints em `tasks/plan-pos-320-food04.md` e
+  `tasks/todo-pos-320-food04.md`; handoff ativo em `tasks/plan.md`.
+  Referências específicas recomendam código interno, sem biblioteca externa.
+  Sol médio para planejamento; avisar/pausar antes de Luna alto.
+- **FOOD03 — integrada #438 e fechamento #440**. Evidências históricas de
+  migration1077/RLS/deploy em `tasks/plan-pos-320-food03.md` e checklist vivo;
+  ambientes externos não foram reconsultados nesta rodada documental.
+
+### Checkpoints históricos anteriores (não são a fase ativa)
 
 - **FOOD02 — T01–T08 implementados; Draft PR #425 e CI pendentes**, base `95e9f33d`.
   D01–D03 confirmadas; desenvolvimento autorizado em “Pode seguir, sol médio”.

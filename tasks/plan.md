@@ -1,3 +1,29 @@
+# Handoff ativo — FOOD04: planejamento
+
+Base `origin/main` `9e1984a2` (merge #440), conferida em 2026-10-22.
+Branch `docs/pos320-food04-planning`, worktree
+`/workspace/octaclin/.worktrees/pos320-food04-planning`.
+
+- Objetivo: grupos reutilizáveis de substituições; [plano e gaps](plan-pos-320-food04.md)
+  e [T00–T13/checkpoints](todo-pos-320-food04.md).
+- Planejamento autorizado em Sol médio. Três perguntas D01–D03 enviadas;
+  respostas ainda pendentes, propostas identificadas no plano. Sem runtime.
+- FOOD04 recomenda primitives/código atual; não há repositório externo específico
+  a consultar ou dependência nova justificada.
+- Preservar pessoal/clínica, composição custom, snapshots, limite20/item,
+  CAS/autosave/posse PA07 e projeções portal/print. Risco de implementação R4.
+- Próxima ação: incorporar respostas, concluir handoff; avisar e pausar antes de
+  mudar para Luna alto. Uma PR reunirá documentos e código. Não há PR FOOD04 aberta.
+- Main local antiga e alteração preexistente next-env.d.ts preservadas. Nenhum
+  banco externo, migration, deploy ou configuração operacional alterado.
+- PASS: diff/secrets, links FOOD04 e matriz documental40 referências. Preflight
+  oficial BLOCKED por PowerShell ausente. Node24/pnpm11.19 observados; selecionar
+  Node22/pnpm11.25 antes de implementar. Testes de implementação/CI/RLS SKIPPED.
+
+Os checkpoints abaixo são históricos e não substituem o estado ativo acima.
+
+---
+
 # Handoff atual — FOOD02: T01–T08 implementados; Draft PR #425 e CI em andamento
 
 - Branch `feat/pos320-food02-planejamento`, base `95e9f33d` (merge424).

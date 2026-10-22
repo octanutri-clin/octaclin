@@ -553,6 +553,12 @@ de encerrar a PR.
 
 ## [FOOD04] Grupos reutilizáveis de substituições
 
+**Planejamento ativo (2026-10-22):** main `9e1984a2`, após merge #440.
+[Plano e gaps](../../tasks/plan-pos-320-food04.md) e
+[tarefas/checkpoints](../../tasks/todo-pos-320-food04.md).
+D01–D03 aguardam respostas; sem implementação ou PR FOOD04 nesta etapa.
+Referência específica: primitives/código atual, sem repositório externo recomendado.
+
 **Origem:** itens 49 e parte do 17.
 
 **Status atual:** substituições são ancoradas diretamente ao item principal.
