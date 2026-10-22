@@ -237,6 +237,10 @@ isso não é RED de vulnerabilidade.
   a gravação e continua bloqueado depois da confirmação.
 - A superfície compartilhada do SuperAdmin passou Axe (WCAG 2.1 AA) e Playwright
   em desktop/mobile (2/2), sem violações no painel testado.
+- Regressões Web adicionais: `test:nutricao-plano` 67/67,
+  `test:calculo-combinado-planos` 4/4, `test:copia-refeicoes` 12/12,
+  `test-grupos-substituicoes-aplicacao.mjs` 4/4 e `test-fase-314-bff.mjs` 1/1.
+  Não foi executado o `test:authz` agregado inteiro nesta continuação.
 - T11/T12 permanecem PARCIAIS: criação, edição/arquivo/restauração, favorito,
   duplicação pessoal, compartilhamento confirmado e aplicação têm provas visuais;
   testes Client/SuperAdmin
