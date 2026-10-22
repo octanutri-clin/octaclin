@@ -890,3 +890,32 @@ test('FOOD04 favorita grupo da clínica e duplica cópia pessoal independente', 
   expect(duplicacao.escopo).toBeUndefined();
   expect(grupo).toMatchObject({ nome: 'Grupo compartilhado sintético', escopo: 'clinica', revisao: 3 });
 });
+
+test('FOOD04 compartilhar grupo pessoal exige confirmação e registra a revisão esperada', async ({ context, page }) => {
+  await preparar(context);
+  const grupoId = '10000000-0000-4000-8000-000000000091';
+  const grupo = {
+    id: grupoId, nome: 'Grupo pessoal para compartilhar', descricao: 'Fixture sintética', categoria: 'Lanche', etiquetas: [],
+    escopo: 'pessoal', estado: 'ativo', revisao: 3, quantidadeEntradas: 1, podeEditar: true, favorito: false,
+    entradas: [{ id: '10000000-0000-4000-8000-000000000092', origem: 'catalogo', alimentoId: '10000000-0000-4000-8000-000000000093', quantidade: 1, unidade: 'porção', porcaoGramas: 100, disponivel: true, composicao: { descricao: 'Alimento sintético', nutrientesPor100g: { energiaKcal: 100 } } }]
+  };
+  let compartilhamento;
+  await page.route(url => url.pathname === '/api/planos-alimentares/grupos-substituicoes/consulta', async route => route.fulfill({ json: {
+    itens: [{ id: grupo.id, nome: grupo.nome, descricao: grupo.descricao, categoria: grupo.categoria, etiquetas: grupo.etiquetas, escopo: grupo.escopo, estado: grupo.estado, revisao: grupo.revisao, quantidadeEntradas: grupo.quantidadeEntradas, podeEditar: true, favorito: false }], total: 1, pagina: 1, limite: 25
+  } }));
+  await page.route(url => url.pathname === `/api/planos-alimentares/grupos-substituicoes/${grupoId}`, async route => {
+    if (route.request().method() === 'PATCH') compartilhamento = route.request().postDataJSON();
+    await route.fulfill({ json: grupo });
+  });
+  await abrir(page);
+  const biblioteca = page.getByRole('region', { name: 'Biblioteca de grupos de substituições' });
+  await page.getByText('Biblioteca de grupos de substituições', { exact: true }).click();
+  await biblioteca.getByRole('button', { name: 'Abrir' }).click();
+  await biblioteca.getByRole('button', { name: 'Compartilhar com clínica' }).click();
+  const confirmacao = biblioteca.getByRole('group', { name: 'Confirmar compartilhamento' });
+  await expect(confirmacao).toBeVisible();
+  await expect(confirmacao).toContainText('Profissionais autorizados e administradores da clínica poderão consultar');
+  await confirmacao.getByRole('button', { name: 'Confirmar compartilhamento' }).click();
+  await expect.poll(() => compartilhamento).toEqual({ revisaoEsperada: 3, escopo: 'clinica' });
+  expect(compartilhamento).toEqual({ revisaoEsperada: 3, escopo: 'clinica' });
+});
