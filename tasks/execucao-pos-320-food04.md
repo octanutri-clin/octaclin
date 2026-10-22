@@ -237,6 +237,10 @@ isso não é RED de vulnerabilidade.
   a gravação e continua bloqueado depois da confirmação.
 - A superfície compartilhada do SuperAdmin passou Axe (WCAG 2.1 AA) e Playwright
   em desktop/mobile (2/2), sem violações no painel testado.
+- Recorte Playwright `acessibilidade.spec.mjs --grep "operacoes|FOOD04"`:38/38
+  PASS em desktop/mobile, incluindo áreas de operações, navegação por teclado,
+  autorização SuperAdmin e tabs ARIA. A suíte a11y completa (276 casos) não foi
+  executada; não declarar a11y global PASS.
 - Regressões Web adicionais: `test:nutricao-plano` 67/67,
   `test:calculo-combinado-planos` 4/4, `test:copia-refeicoes` 12/12,
   `test-grupos-substituicoes-aplicacao.mjs` 4/4 e `test-fase-314-bff.mjs` 1/1.

@@ -43,7 +43,7 @@ Evidências: [ledger](execucao-pos-320-food04.md); próxima etapa delimitada no
 | T02–T08 / C1 | Implementadas; 43 testes unitários backend FOOD04 PASS e4 testes helper Web FOOD04 PASS; typecheck backend PASS com `tsBuildInfoFile` em `/tmp` por falta de espaço | Regressão do HEAD final e revisão R4 em T13 |
 | T09 / C2 | Integração `1720000001078` em PostgreSQL 15 descartável:4 PASS; prova local de RLS:3 PASS,64 não aplicáveis ignorados; runtime não-owner | Runner RLS completo FAIL no teste legado da Fase 317 por imagem `timescale/timescaledb-ha:pg15` indisponível; cadeia com extensões e execução CI ainda não comprovadas |
 | T10 | BFF, tipos, wrappers e mapa implementados;60 BFF/authz prévios e teste BFF da Fase 314,1 PASS; Web typecheck PASS | Revalidar no HEAD completo após UI; limites no ledger |
-| T11–T12 / C3 | Regressões Web: PA03/PA06,67; cálculo combinado,4; cópia de refeições,12 PASS; Playwright PA07/FOOD01–04:54 PASS, desktop/mobile; caso de undo atualizado2 PASS; autorização Client/SuperAdmin6 PASS, Axe do painel SuperAdmin PASS | Corridas adicionais FOOD04, acessibilidade geral, demais regressões editoriais e revisão R4 independente |
+| T11–T12 / C3 | Regressões Web: PA03/PA06,67; cálculo combinado,4; cópia de refeições,12 PASS; Playwright PA07/FOOD01–04:54 PASS; autorização Client/SuperAdmin6 PASS; recorte de operações/acessibilidade38 PASS, Axe do painel SuperAdmin PASS | Corridas adicionais FOOD04, suíte global de acessibilidade, demais regressões editoriais e revisão R4 independente |
 | T13–T14 | Parcial: regressões/revisão própria/documentos em andamento | Revisão R4 identificada, PR única, CI/scanners finais; sem operação externa |
 
 T08/G06: composição/porções de cópias legadas são preservadas; proveniência da
