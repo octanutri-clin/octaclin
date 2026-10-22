@@ -814,7 +814,11 @@ test('FOOD04 edita, arquiva e restaura grupo próprio mantendo revisão', async 
   await page.route(url => url.pathname === '/api/planos-alimentares/grupos-substituicoes/consulta', async route => {
     const consulta = route.request().postDataJSON();
     const visivel = consulta.estado === 'todos' || grupo.estado === 'ativo' && consulta.estado !== 'arquivado' || grupo.estado === 'arquivado' && consulta.estado === 'arquivado';
-    const resumo = (({ entradas: _entradas, ...resto }) => resto)(grupo);
+    const resumo = {
+      id: grupo.id, nome: grupo.nome, descricao: grupo.descricao, categoria: grupo.categoria, etiquetas: grupo.etiquetas,
+      escopo: grupo.escopo, estado: grupo.estado, revisao: grupo.revisao, quantidadeEntradas: grupo.quantidadeEntradas,
+      podeEditar: grupo.podeEditar, favorito: grupo.favorito
+    };
     await route.fulfill({ json: { itens: visivel ? [resumo] : [], total: visivel ? 1 : 0, pagina: 1, limite: 25 } });
   });
   await page.route(url => url.pathname === `/api/planos-alimentares/grupos-substituicoes/${grupoId}`, async route => {

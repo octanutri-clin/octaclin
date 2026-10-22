@@ -190,6 +190,9 @@ isso não é RED de vulnerabilidade.
 - ESLint focal exit0, sem erros. Nos arquivos do checkpoint UI, os componentes
   FOOD04 ficaram sem avisos; no conjunto ampliado aparecem avisos `react-hooks`
   existentes no editor/hooks e padrões assíncronos de carregamento via effect.
+- ESLint global Web exit0 (0 erros,71 avisos durante a execução); um aviso do
+  novo fixture E2E por variável de desestruturação não usada foi removido depois
+  e a spec foi revalidada focalmente.
 - Web `build` PASS com os artefatos `.next` temporariamente redirecionados a
   `/tmp/food04-tools/web-next` (o volume da worktree tinha 0 bytes livres). O
   Next emitiu os avisos já observados de depreciação do middleware e `process.cwd`
