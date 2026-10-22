@@ -202,9 +202,9 @@ isso não é RED de vulnerabilidade.
   resposta tardia FOOD04,2 PASS; edição/arquivo/restauração FOOD04,2 PASS;
   favorito/duplicação pessoal FOOD04,2 PASS; portal Client com e sem a capacidade
   administrativa,4 PASS; compartilhamento explícito por profissional,2 PASS;
-  Operações SuperAdmin com capacidade administrativa,2 PASS; aplicação seletiva
-  com desfazer/reaplicar antes de salvar,2 PASS. Total desta regressão:62 testes
-  PASS. No início,
+  Operações SuperAdmin com capacidade administrativa,2 PASS; o teste de aplicação
+  seletiva foi reexecutado com desfazer/reaplicar antes de salvar,2 PASS. Total
+  desta regressão:60 testes únicos PASS (42 anteriores +18 FOOD04). No início,
   tentativas do teste novo falharam por expectativas incorretas do teste (porção
   é `1 porção` com 100g, e a proveniência enriquecida é materializada no backend);
   os critérios foram alinhados aos contratos, sem relaxar validações de produto.

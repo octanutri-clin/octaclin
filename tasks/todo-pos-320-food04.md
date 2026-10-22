@@ -44,7 +44,7 @@ Evidências: [ledger](execucao-pos-320-food04.md); próxima etapa delimitada no
 | T07–T08 | Implementadas; save/publicação/nova versão, snapshots e projeções testados | UI transportando intenção e regressões factuais PA02/modelos; não copiar autoridade entre pais |
 | T09 / C2 |4 provas PG da biblioteca e3 clínicas PASS, runtime não-owner | Cadeia oficial com Timescale/pgvector e execução CI ainda não comprovadas |
 | T10 | BFF, tipos, wrappers e mapa implementados;60 BFF e authz/typecheck PASS | Revalidar no HEAD completo após UI; limites no ledger |
-| T11–T12 / C3 | Interface/helper integrados parcialmente; typecheck, quatro testes helper, build,42 regressões PA07/FOOD01–03 e vinte cenários FOOD04 desktop/mobile passaram | Corridas adicionais FOOD04, acessibilidade geral, demais regressões editoriais e revisão R4 independente |
+| T11–T12 / C3 | Interface/helper integrados parcialmente; typecheck, quatro testes helper, build,42 regressões PA07/FOOD01–03 e dezoito cenários FOOD04 desktop/mobile passaram | Corridas adicionais FOOD04, acessibilidade geral, demais regressões editoriais e revisão R4 independente |
 | T13–T14 | Parcial: regressões/revisão própria/documentos em andamento | Revisão R4 identificada, PR única, CI/scanners finais; sem operação externa |
 
 T08/G06: composição/porções de cópias legadas são preservadas; proveniência da
