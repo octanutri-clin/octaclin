@@ -819,6 +819,45 @@ test('FOOD04 resposta tardia após cancelar a prévia não troca o grupo selecio
   await expect(page.getByText('Alternativa A', { exact: true })).toHaveCount(0);
 });
 
+test('FOOD04 perda de posse com prévia aberta bloqueia confirmação e preserva rascunho', async ({ context, page }) => {
+  await preparar(context);
+  const principalId = '10000000-0000-4000-8000-000000000068';
+  const grupoId = '10000000-0000-4000-8000-000000000069';
+  const alternativaId = '10000000-0000-4000-8000-000000000070';
+  const entradaId = '10000000-0000-4000-8000-000000000074';
+  await page.route(url => url.pathname.endsWith('/planos-alimentares/alimentos'), async route => route.fulfill({ json: {
+    itens: [{ id: principalId, codigoOrigem: 'SINT-PRINCIPAL', nome: 'Principal posse sintético', disponivelParaCalculo: true, nutrientesPor100g: { energiaKcal: 90 } }],
+    fontes: [], total: 1, pagina: 1, limite: 20
+  } }));
+  await page.route(url => url.pathname === '/api/planos-alimentares/grupos-substituicoes/consulta', async route => route.fulfill({ json: {
+    itens: [{ id: grupoId, nome: 'Grupo posse sintético', etiquetas: [], escopo: 'pessoal', estado: 'ativo', revisao: 1, quantidadeEntradas: 1, podeEditar: true, favorito: false }], total: 1, pagina: 1, limite: 25
+  } }));
+  await page.route(url => url.pathname === `/api/planos-alimentares/grupos-substituicoes/${grupoId}`, async route => route.fulfill({ json: {
+    id: grupoId, nome: 'Grupo posse sintético', etiquetas: [], escopo: 'pessoal', estado: 'ativo', revisao: 1, quantidadeEntradas: 1, podeEditar: true, favorito: false,
+    entradas: [{ id: entradaId, origem: 'catalogo', alimentoId: alternativaId, quantidade: 1, unidade: 'porção', porcaoGramas: 75, disponivel: true, composicao: { descricao: 'Alternativa posse sintética', nutrientesPor100g: { energiaKcal: 70 } } }]
+  } }));
+  await abrir(page);
+  await page.getByRole('button', { name: 'Expandir todas' }).click();
+  await page.getByRole('button', { name: 'Adicionar alimento', exact: true }).first().click();
+  await page.getByRole('textbox', { name: 'Buscar no catálogo' }).last().fill('Principal posse');
+  await page.getByRole('button', { name: /^Principal posse sintético/ }).click();
+  await page.getByRole('button', { name: /Aplicar grupo de alternativas/ }).click();
+  await page.getByLabel('Grupo ativo').selectOption(grupoId);
+  const previa = page.getByRole('region', { name: 'Prévia da aplicação do grupo' });
+  await previa.getByRole('checkbox').check();
+  const confirmar = previa.getByRole('button', { name: 'Acrescentar selecionadas' });
+  await expect(confirmar).toBeEnabled();
+
+  await page.evaluate(() => {
+    window.dispatchEvent(new PageTransitionEvent('pagehide', { persisted: true }));
+    window.dispatchEvent(new PageTransitionEvent('pageshow', { persisted: true }));
+  });
+
+  await expect(page.getByRole('button', { name: 'Editar nesta aba' })).toBeEnabled();
+  await expect(confirmar).toBeDisabled();
+  await expect(page.getByText('Alternativa posse sintética', { exact: true })).toHaveCount(1);
+});
+
 test('FOOD04 edita, arquiva e restaura grupo próprio mantendo revisão', async ({ context, page }) => {
   await preparar(context);
   const grupoId = '10000000-0000-4000-8000-000000000071';

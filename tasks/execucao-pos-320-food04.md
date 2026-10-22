@@ -278,6 +278,13 @@ isso não é RED de vulnerabilidade.
 - O agregado de autorização do HEAD continua pendente; os testes focados FOOD04,
   backend, BFF, Playwright, PostgreSQL descartável e regressões citados acima
   mantêm seus resultados individuais. C3 e a entrega permanecem parciais.
+- T12 recebeu cobertura adicional para perda de posse enquanto a prévia de
+  grupo está aberta: `pa07-coordenacao-abas.spec.mjs --grep='FOOD04 perda de
+  posse com prévia aberta' --project=desktop-chromium --project=mobile-chromium`
+  passou 2/2 com fixtures sintéticas. A confirmação desabilita após
+  `pagehide/pageshow` e a alternativa não entra no rascunho. Não houve alteração
+  de runtime; a execução modificou apenas o `next-env.d.ts` gerado pelo Next,
+  que foi restaurado. `git diff --check` passou depois da restauração.
 
 Checkpoint UI commitado em `6cee690c`; a branch permanece aberta para completar
 T11–T14. A fase não está concluída: regressões restantes, revisão R4, CI e PR
