@@ -117,14 +117,15 @@ isso não é RED de vulnerabilidade.
 
 ## Gates em aberto e próxima ação
 
-- UI T11–T12 e helpers de aplicação/undo: não implementados. Contratos e
-  próxima ação no [handoff Luna](handoff-pos-320-food04-luna.md). Pausar antes
-  da troca manual, conforme preferência do proprietário.
-- Regressões finais, revisão R4, cadeia PostgreSQL oficial com extensões,
-  Playwright desktop/mobile/a11y e CI/scanners do HEAD final: pendentes.
+- O registro seguinte deste ledger atualiza o checkpoint antigo: T11–T12 já têm
+  interface, helpers, build, regressões PA07 e dois fluxos FOOD04 em Playwright.
+- Continuam pendentes regressões finais, revisão R4 independente, execução da
+  cadeia PostgreSQL oficial com extensões e CI/scanners do HEAD completo.
 - `nest build` padrão tentou escrever no workspace e falhou por ENOSPC. Uma
   compilação com o mesmo tsconfig e artefatos em `/tmp` é alternativa local;
-  registrar resultado sem ocultar a falha do comando padrão. Web build após UI.
+  o backend já foi compilado em `/tmp`; o Web build também passou mais adiante
+  com `.next` em `/tmp`. As duas limitações originais de espaço permanecem
+  registradas junto aos resultados substitutos bem-sucedidos.
 - Preflight PowerShell BLOCKED (ferramenta ausente); não inferir PASS.
 - Sem PR, revisão independente, migration externa, merge, deploy ou ativação.
 
@@ -144,7 +145,8 @@ isso não é RED de vulnerabilidade.
  FOOD04. Fetch reconfirmou main9e1984a2. Nenhuma alteração em lockfile.
 - PASS: `pnpm --dir octaclin-web test:authz`, 27 comandos concluídos
  com exit0; nenhum subteste falhou. Log temporário
- `/tmp/food04-tools/web-authz-final.log`. UI/Playwright/build Web continuam pendentes.
+  `/tmp/food04-tools/web-authz-final.log`. No checkpoint T10, antes da UI, os
+  gates de navegador/build ainda estavam pendentes.
 
 ## Checkpoint T11–T12 — interface e integração do editor
 
@@ -180,8 +182,9 @@ isso não é RED de vulnerabilidade.
   `test:grupos-substituicoes:aplicacao`4 PASS; `test:copia-refeicoes`12 PASS;
   `test:nutricao-plano`67 PASS; `test:authz` exit0 em27 comandos, incluindo
   BFF FOOD04 (60 casos no script de planos alimentares) e demais regressões.
-- ESLint focal exit0, sem erros. Mostra13 avisos `react-hooks` já existentes ou
-  padrões de carregamento via effect; este checkpoint não executa lint global.
+- ESLint focal exit0, sem erros. Nos arquivos do checkpoint UI, os componentes
+  FOOD04 ficaram sem avisos; no conjunto ampliado aparecem avisos `react-hooks`
+  existentes no editor/hooks e padrões assíncronos de carregamento via effect.
 - Web `build` PASS com os artefatos `.next` temporariamente redirecionados a
   `/tmp/food04-tools/web-next` (o volume da worktree tinha 0 bytes livres). O
   Next emitiu os avisos já observados de depreciação do middleware e `process.cwd`
@@ -195,12 +198,14 @@ isso não é RED de vulnerabilidade.
   testes devido ao symlink compartilhado de `node_modules` entre worktrees. Os
   testes executados passaram com configuração temporária fora do repositório
   que usa `next dev --webpack`; nenhuma configuração versionada foi alterada.
-- Ainda falta rodar regressões editoriais FOOD01–03 e PA02–PA07 além da bateria
-  PA07 acima, acessibilidade geral, backend completo, C2/R4 independente e CI.
-- `git diff --check` será repetido após o último ajuste de documentação.
+- Ainda falta rodar as regressões editoriais completas FOOD01–03 e PA02–PA07,
+  acessibilidade geral, backend completo, cadeia PostgreSQL do runner, C2/R4
+  independente e CI.
+- `git diff --check` PASS antes do commit `8c93fdd9`.
 - T11/T12 permanecem PARCIAIS até a prova no navegador, estados visuais e acessíveis,
   validação de concorrência/autosave no fluxo de interface, regressões PA02–PA07/
   FOOD01–03 e revisão R4 independente. Não afirmar C3 PASS nem criar PR até fechar.
 
-Checkpoint validado em Sol médio e preparado para troca manual a Luna alto.
-A fase não está concluída: UI, revisão R4 e gates da PR seguem pendentes.
+Checkpoint UI commitado em `8c93fdd9`; a branch permanece aberta para completar
+T11–T14. A fase não está concluída: regressões restantes, revisão R4, CI e PR
+seguem pendentes.
