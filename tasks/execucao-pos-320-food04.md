@@ -285,6 +285,10 @@ isso não é RED de vulnerabilidade.
   `pagehide/pageshow` e a alternativa não entra no rascunho. Não houve alteração
   de runtime; a execução modificou apenas o `next-env.d.ts` gerado pelo Next,
   que foi restaurado. `git diff --check` passou depois da restauração.
+- Repeti a spec completa `pa07-coordenacao-abas.spec.mjs` nos projetos
+  desktop/mobile: 56/56 PASS em 9,8 min, cobrindo os fluxos PA07 e FOOD01–04.
+  Todos os dados são fixtures sintéticas interceptadas. `next-env.d.ts` foi
+  novamente restaurado após a execução; a spec passou ESLint focal.
 
 Checkpoint UI commitado em `6cee690c`; a branch permanece aberta para completar
 T11–T14. A fase não está concluída: regressões restantes, revisão R4, CI e PR
