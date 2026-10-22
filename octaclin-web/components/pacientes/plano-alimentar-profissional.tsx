@@ -84,6 +84,10 @@ import { PreferenciasApresentacaoPlano } from '@/components/pacientes/preferenci
 import { CalculoCombinadoPlanos } from '@/components/pacientes/calculo-combinado-planos';
 import { MedidasCaseirasAlimento } from '@/components/pacientes/medidas-caseiras-alimento';
 import { AlimentosPersonalizados } from '@/components/pacientes/alimentos-personalizados';
+import { BibliotecaGruposSubstituicoes } from '@/components/pacientes/biblioteca-grupos-substituicoes';
+import { AplicarGrupoSubstituicoes } from '@/components/pacientes/aplicar-grupo-substituicoes';
+import type { IntencaoGrupoSubstituicoesEdicao } from '@/lib/grupos-substituicoes-tipos';
+import type { AlternativaAplicadaGrupo } from '@/lib/aplicacao-grupo-substituicoes';
 import { novasPreferenciasApresentacaoPlano, type PreferenciasApresentacaoPlanoApi, type PreferenciasExibicaoRefeicoesApi } from '@/lib/preferencias-apresentacao-plano';
 import { PlanoAlimentarPaciente } from '@/components/portal/plano-alimentar-paciente';
 import {
@@ -125,11 +129,13 @@ interface AlimentoFormulario extends Omit<SubstituicaoPlanoAlimentarEntrada, 'nu
   referenciaMedidaCaseira?: MedidaCaseiraReferenciaApi;
   alimentoPersonalizado?: DocumentoEdicaoPlano['refeicoes'][number]['itens'][number]['alimentoPersonalizado'];
   origemComposicaoPersonalizada?: OrigemComposicaoPersonalizadaFormulario;
+  origemGrupo?: IntencaoGrupoSubstituicoesEdicao | null;
 }
 
 interface AlternativaFormulario extends AlimentoFormulario {
   liberadaParaPaciente: boolean;
   preferida: boolean;
+  origemGrupo?: IntencaoGrupoSubstituicoesEdicao | null;
 }
 
 interface ItemFormulario extends AlimentoFormulario {
@@ -470,7 +476,8 @@ function documentoDoFormulario(formulario: FormularioPlano): DocumentoEdicaoPlan
           fonteRotulo: alternativa.fonteRotulo,
           liberadaParaPaciente: alternativa.liberadaParaPaciente,
           preferida: alternativa.preferida,
-          medidaCaseira: alternativa.medidaCaseira
+          medidaCaseira: alternativa.medidaCaseira,
+          origemGrupo: alternativa.origemGrupo
         })),
         substituicoesVisiveisInicialmente: item.substituicoesVisiveisInicialmente
       }))
@@ -480,7 +487,7 @@ function documentoDoFormulario(formulario: FormularioPlano): DocumentoEdicaoPlan
 
 function formularioDoDocumento(documento: DocumentoEdicaoPlano, versao: VersaoPlanoAlimentarApi, avaliacaoPadrao = ''): FormularioPlano {
   const base = formularioDaVersao(versao, avaliacaoPadrao);
-  const mapearAlimento = (item: DocumentoEdicaoPlano['refeicoes'][number]['itens'][number]) => ({
+  const mapearAlimento = (item: DocumentoEdicaoPlano['refeicoes'][number]['itens'][number] | NonNullable<DocumentoEdicaoPlano['refeicoes'][number]['itens'][number]['substituicoes']>[number], origemGrupo?: IntencaoGrupoSubstituicoesEdicao | null) => ({
     chaveCliente: item.chaveCliente || novaChaveCliente('alimento'),
     alimentoComposicaoId: item.alimentoComposicaoId ?? undefined,
     alimentoPersonalizado: serializarAlimentoPersonalizadoEdicao(item.alimentoPersonalizado),
@@ -495,7 +502,8 @@ function formularioDoDocumento(documento: DocumentoEdicaoPlano, versao: VersaoPl
       ? versao.alimentosPersonalizadosAplicados?.[item.chaveCliente]
       : undefined,
     medidaCaseira: item.medidaCaseira,
-    referenciaMedidaCaseira: versao.medidasCaseirasAplicadas?.[item.chaveCliente]
+    referenciaMedidaCaseira: versao.medidasCaseirasAplicadas?.[item.chaveCliente],
+    origemGrupo: origemGrupo ?? null
   });
   return {
     ...base,
@@ -527,7 +535,7 @@ function formularioDoDocumento(documento: DocumentoEdicaoPlano, versao: VersaoPl
       itens: refeicao.itens.map((item) => ({
         ...mapearAlimento(item),
         substituicoes: (item.substituicoes ?? []).map((alternativa) => ({
-          ...mapearAlimento(alternativa),
+          ...mapearAlimento(alternativa, alternativa.origemGrupo),
           liberadaParaPaciente: alternativa.liberadaParaPaciente === true,
           preferida: alternativa.preferida === true
         })),
@@ -1130,9 +1138,12 @@ interface EditorItemProps {
   aoRemover: () => void;
   aoMover: (destino: number) => void;
   mostrarResumo: boolean;
+  aoAplicarGrupo?: (item: ItemFormulario, alternativas: AlternativaAplicadaGrupo[], contexto: string) => Promise<boolean>;
+  aoDesfazerGrupo?: (contexto: string) => Promise<boolean>;
+  podeDesfazerGrupo?: boolean;
 }
 
-function EditorItem({ pacienteId, contextoEdicao, podeEditar, item, resumo, indice, total, aoAlterar, aoRemover, aoMover, mostrarResumo }: EditorItemProps) {
+function EditorItem({ pacienteId, contextoEdicao, podeEditar, item, resumo, indice, total, aoAlterar, aoRemover, aoMover, mostrarResumo, aoAplicarGrupo, aoDesfazerGrupo, podeDesfazerGrupo }: EditorItemProps) {
   return (
     <div className="grid gap-3 border-t border-linha py-4 first:border-t-0 first:pt-0">
       <div className="flex flex-wrap justify-end gap-1">
@@ -1145,6 +1156,16 @@ function EditorItem({ pacienteId, contextoEdicao, podeEditar, item, resumo, indi
       </div>
       <EditorAlimento pacienteId={pacienteId} contextoEdicao={contextoEdicao} podeEditar={podeEditar} rotulo={`Alimento ${indice + 1}`} valor={item} resumo={resumo} aoAlterar={(valor) => aoAlterar({ ...item, ...valor })} aoRemover={aoRemover} mostrarResumo={mostrarResumo} />
       <div className="ml-0 grid gap-3 border-l-2 border-primaria-suave pl-3 sm:ml-4">
+        {aoAplicarGrupo && (item.alimentoComposicaoId || item.alimentoPersonalizado?.id) ? <AplicarGrupoSubstituicoes
+          key={`${contextoEdicao}:${item.chaveCliente}`}
+          contexto={contextoEdicao}
+          identidadePrincipal={{ origem: item.alimentoComposicaoId ? 'catalogo' : 'custom', alimentoId: item.alimentoComposicaoId ?? item.alimentoPersonalizado!.id }}
+          existentes={item.substituicoes.map((alternativa) => ({ origem: alternativa.alimentoComposicaoId ? 'catalogo' : 'custom', alimentoId: alternativa.alimentoComposicaoId ?? alternativa.alimentoPersonalizado?.id, alimentoComposicaoId: alternativa.alimentoComposicaoId, porcaoGramas: alternativa.porcaoGramas }))}
+          aoAplicar={(alternativas, contexto) => aoAplicarGrupo(item, alternativas, contexto)}
+          aoDesfazer={aoDesfazerGrupo}
+          podeDesfazer={podeDesfazerGrupo}
+          desabilitado={!podeEditar}
+        /> : null}
         <div className="flex flex-wrap items-center justify-between gap-2">
           <p className="text-xs font-semibold uppercase text-texto-suave">Substituicoes</p>
           <Botao type="button" variante="fantasma" tamanho="sm" onClick={() => aoAlterar({ ...item, substituicoes: [...item.substituicoes, novaAlternativa()] })}>
@@ -1166,7 +1187,13 @@ function EditorItem({ pacienteId, contextoEdicao, podeEditar, item, resumo, indi
               mostrarResumo={mostrarResumo}
               valor={substituicao}
               resumo={resumo?.substituicoes[indiceSubstituicao]}
-              aoAlterar={(valor) => aoAlterar({ ...item, substituicoes: item.substituicoes.map((atual, posicao) => posicao === indiceSubstituicao ? { ...atual, ...valor } : atual) })}
+              aoAlterar={(valor) => aoAlterar({ ...item, substituicoes: item.substituicoes.map((atual, posicao) => {
+                if (posicao !== indiceSubstituicao) return atual;
+                const proxima = { ...atual, ...valor };
+                const identidadeMudou = atual.alimentoComposicaoId !== proxima.alimentoComposicaoId
+                  || atual.alimentoPersonalizado?.id !== proxima.alimentoPersonalizado?.id;
+                return identidadeMudou ? { ...proxima, origemGrupo: null } : proxima;
+              }) })}
               aoRemover={() => aoAlterar({ ...item, substituicoes: item.substituicoes.filter((_, posicao) => posicao !== indiceSubstituicao) })}
             />
             <div className="flex flex-wrap gap-4">
@@ -1516,6 +1543,7 @@ export function PlanoAlimentarProfissional({ pacienteId, podeGerenciar, aoAltera
   const [refeicoesAbertas, setRefeicoesAbertas] = useState<Set<string>>(() => new Set());
   const [alterado, setAlterado] = useState(false);
   const [copiaEmAndamento, setCopiaEmAndamento] = useState(false);
+  const [podeDesfazerGrupo, setPodeDesfazerGrupo] = useState(false);
   const coordenadorEdicaoRef = useRef<CoordenadorEdicaoPlano<DocumentoEdicaoPlano> | null>(null);
   const posseEdicaoRef = useRef(false);
   const operacaoRascunhoRef = useRef<Promise<void> | null>(null);
@@ -1523,6 +1551,7 @@ export function PlanoAlimentarProfissional({ pacienteId, podeGerenciar, aoAltera
   const compondoRef = useRef(false);
   const salvarRascunhoRef = useRef<() => Promise<boolean>>(async () => false);
   const copiaEmAndamentoRef = useRef<symbol | null>(null);
+  const desfazerGrupoRef = useRef<{ contexto: string; itemChave: string; alternativas: AlternativaFormulario[] } | null>(null);
   const iniciarCopia = useCallback(() => {
     const token = Symbol('copia-refeicao');
     copiaEmAndamentoRef.current = token;
@@ -1621,6 +1650,8 @@ export function PlanoAlimentarProfissional({ pacienteId, podeGerenciar, aoAltera
     setPlanoId(detalhe?.id ?? '');
     const avaliacaoPadrao = avaliacoesAtuais[0]?.id ?? '';
     const draft = detalhe?.draft;
+    desfazerGrupoRef.current = null;
+    setPodeDesfazerGrupo(false);
     const indisponivel = draft?.edicaoEstado === 'indisponivel';
     setEdicaoIndisponivel(indisponivel);
     const formularioAplicado = draft?.documentoEdicao && !indisponivel
@@ -1801,6 +1832,7 @@ export function PlanoAlimentarProfissional({ pacienteId, podeGerenciar, aoAltera
       },
       notificar: () => {
         const estado = coordenador.estado;
+        if (estado.status === 'salvando') { desfazerGrupoRef.current = null; setPodeDesfazerGrupo(false); }
         if (estado.precondicao.rascunhoRevisaoEsperada > ultimaRevisaoConfirmadaNotificada) {
           setUltimoSalvamentoConfirmado({ chave: `${pacienteId}:${plano.id}:${versao.id}`, data: new Date() });
         }
@@ -1896,8 +1928,90 @@ export function PlanoAlimentarProfissional({ pacienteId, podeGerenciar, aoAltera
     const coordenador = coordenadorEdicaoRef.current;
     if (coordenador) coordenador.alterar(documentoDoFormulario(proximo));
     else setAlterado(true);
+    if (desfazerGrupoRef.current) {
+      const alvoUndo = proximo.refeicoes.flatMap((refeicao) => refeicao.itens).find((item) => item.chaveCliente === desfazerGrupoRef.current?.itemChave);
+      const alternativasAtuais = new Map(alvoUndo?.substituicoes.map((alternativa) => [alternativa.chaveCliente, alternativa]) ?? []);
+      if (desfazerGrupoRef.current.alternativas.some((alternativa) => JSON.stringify(alternativasAtuais.get(alternativa.chaveCliente)) !== JSON.stringify(alternativa))) {
+        desfazerGrupoRef.current = null;
+        setPodeDesfazerGrupo(false);
+      }
+    }
     setSucesso(null);
     setProjecaoPaciente(null);
+  }
+
+  async function aplicarGrupoAoItem(itemAlvo: ItemFormulario, alternativas: AlternativaAplicadaGrupo[], contexto: string): Promise<boolean> {
+    if (!plano?.draft || alternativas.length === 0) return false;
+    if (copiaEmAndamentoRef.current) return false;
+    const liberar = iniciarCopia();
+    try {
+      await coordenadorEdicaoRef.current?.aguardarEnvio();
+      const contextoAtual = `${pacienteId}:${plano.id}:${plano.draft.id}:${contextoEdicao}`;
+      if (contexto !== contextoAtual || pacienteAtualRef.current !== pacienteId || planoAtualRef.current?.id !== plano.id
+        || planoAtualRef.current?.draft?.id !== plano.draft.id || !posseEdicaoRef.current || !permiteEscreverRascunho()) return false;
+      const formularioAtual = formularioAtualRef.current;
+      const refeicaoAlvo = formularioAtual.refeicoes.find((refeicao) => refeicao.itens.some((item) => item.chaveCliente === itemAlvo.chaveCliente));
+      const itemAtual = refeicaoAlvo?.itens.find((item) => item.chaveCliente === itemAlvo.chaveCliente);
+      if (!itemAtual || itemAtual.substituicoes.length + alternativas.length > 20) {
+        setErro('O item não está mais disponível ou atingiria o limite de 20 alternativas.'); return false;
+      }
+      const novas: AlternativaFormulario[] = alternativas.map((alternativa) => ({
+        chaveCliente: alternativa.chaveCliente,
+        alimentoComposicaoId: alternativa.origem === 'catalogo' ? alternativa.alimentoId : undefined,
+        alimentoPersonalizado: alternativa.origem === 'custom' && alternativa.revisao ? { id: alternativa.alimentoId, revisao: alternativa.revisao, aplicacaoId: alternativa.origemGrupo.aplicacaoId } : undefined,
+        descricao: alternativa.descricao,
+        quantidade: alternativa.quantidade,
+        unidade: alternativa.unidade,
+        porcaoGramas: alternativa.porcaoGramas,
+        nutrientesPor100g: alternativa.nutrientesPor100g as NutrientesEdicao,
+        micronutrientesPor100g: alternativa.micronutrientesPor100g as MicronutrientesEdicao | undefined,
+        fonteRotulo: alternativa.origem === 'custom' ? 'Alimento personalizado' : 'Catálogo',
+        preferida: false,
+        liberadaParaPaciente: false,
+        origemGrupo: alternativa.origemGrupo
+      }));
+      const proximo = {
+        ...formularioAtual,
+        refeicoes: formularioAtual.refeicoes.map((refeicao) => ({
+          ...refeicao,
+          itens: refeicao.itens.map((item) => item.chaveCliente === itemAlvo.chaveCliente
+            ? { ...item, substituicoes: [...item.substituicoes, ...novas] } : item)
+        }))
+      };
+      if (new TextEncoder().encode(JSON.stringify(documentoDoFormulario(proximo))).byteLength > LIMITE_BYTES_DOCUMENTO_EDICAO) {
+        setErro('A aplicação excederia o limite do rascunho. Remova itens ou informações antes de tentar novamente.'); return false;
+      }
+      atualizar(() => proximo);
+      desfazerGrupoRef.current = { contexto, itemChave: itemAlvo.chaveCliente, alternativas: novas };
+      setPodeDesfazerGrupo(true);
+      return true;
+    } finally { liberar(); }
+  }
+
+  async function desfazerGrupo(contexto: string): Promise<boolean> {
+    const registro = desfazerGrupoRef.current;
+    if (!registro || registro.contexto !== contexto || !plano?.draft || copiaEmAndamentoRef.current
+      || !posseEdicaoRef.current || !permiteEscreverRascunho()
+      || coordenadorEdicaoRef.current?.estado.status === 'salvando') return false;
+    const contextoAtual = `${pacienteId}:${plano.id}:${plano.draft.id}:${contextoEdicao}`;
+    if (contextoAtual !== contexto || planoAtualRef.current?.id !== plano.id || pacienteAtualRef.current !== pacienteId) return false;
+    const alvo = formularioAtualRef.current.refeicoes.flatMap((refeicao) => refeicao.itens).find((item) => item.chaveCliente === registro.itemChave);
+    if (!alvo) return false;
+    const porChave = new Map(alvo.substituicoes.map((alternativa) => [alternativa.chaveCliente, alternativa]));
+    if (registro.alternativas.some((alternativa) => JSON.stringify(porChave.get(alternativa.chaveCliente)) !== JSON.stringify(alternativa))) return false;
+    const chaves = new Set(registro.alternativas.map((alternativa) => alternativa.chaveCliente));
+    atualizar((atual) => ({
+      ...atual,
+      refeicoes: atual.refeicoes.map((refeicao) => ({
+        ...refeicao,
+        itens: refeicao.itens.map((item) => item.chaveCliente === registro.itemChave
+          ? { ...item, substituicoes: item.substituicoes.filter((alternativa) => !chaves.has(alternativa.chaveCliente)) }
+          : item)
+      }))
+    }));
+    desfazerGrupoRef.current = null;
+    setPodeDesfazerGrupo(false);
+    return true;
   }
 
   async function carregarProjecaoPaciente(modo: ModoProjecaoPaciente) {
@@ -2518,6 +2632,11 @@ export function PlanoAlimentarProfissional({ pacienteId, podeGerenciar, aoAltera
                     <label className="grid gap-1 text-xs font-semibold uppercase text-texto-suave">Observações para o plano<AreaTexto value={formulario.observacoes} onChange={(evento) => atualizar((atual) => ({ ...atual, observacoes: evento.target.value }))} maxLength={8000} /></label>
                   </fieldset>
 
+                  <details className="rounded-lg border border-linha bg-white p-3">
+                    <summary className="min-h-11 cursor-pointer content-center font-semibold text-tinta">Biblioteca de grupos de substituições</summary>
+                    <div className="mt-3"><BibliotecaGruposSubstituicoes pacienteId={pacienteId} /></div>
+                  </details>
+
                   <ModelosPlanoAlimentar
                     refeicoesAtuais={() => refeicoesParaModelo(formulario)}
                     aoAplicar={aplicarRefeicoesDeModelo}
@@ -2670,8 +2789,11 @@ export function PlanoAlimentarProfissional({ pacienteId, podeGerenciar, aoAltera
                             <EditorItem
                               key={item.chaveCliente}
                               pacienteId={pacienteId}
-                              contextoEdicao={`${plano.id}:${plano.draft?.id ?? ''}`}
+                              contextoEdicao={`${pacienteId}:${plano.id}:${plano.draft?.id ?? ''}:${contextoEdicao}`}
                               podeEditar={edicaoEntreAbas.podeEditar}
+                              aoAplicarGrupo={aplicarGrupoAoItem}
+                              aoDesfazerGrupo={desfazerGrupo}
+                              podeDesfazerGrupo={podeDesfazerGrupo}
                               item={item}
                               resumo={refeicoesParaResultado[indiceRefeicao]?.itens[indiceItem]}
                               indice={indiceItem}

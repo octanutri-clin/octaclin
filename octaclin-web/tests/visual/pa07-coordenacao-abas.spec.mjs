@@ -661,3 +661,96 @@ test('FOOD02 criação incerta mantém campos bloqueados e repete exatamente ped
   expect(pedidos[1]).toEqual(pedidos[0]);
   await expect(painel.getByText('Biblioteca salva.', { exact: false })).toBeVisible();
 });
+
+test('FOOD04 cria grupo pessoal com porção em gramas e avisa que não declara equivalência', async ({ context, page }) => {
+  const fixture = await preparar(context);
+  const alimentoId = '10000000-0000-4000-8000-000000000041';
+  let corpoCriacao;
+  await page.route(url => url.pathname.startsWith('/api/planos-alimentares/grupos-substituicoes'), async route => {
+    const url = new URL(route.request().url());
+    if (url.pathname.endsWith('/consulta')) {
+      return route.fulfill({ json: { itens: [], total: 0, pagina: 1, limite: 25 } });
+    }
+    if (route.request().method() === 'POST' && url.pathname === '/api/planos-alimentares/grupos-substituicoes') {
+      corpoCriacao = route.request().postDataJSON();
+      return route.fulfill({ status: 201, json: { id: '10000000-0000-4000-8000-000000000042' } });
+    }
+    return route.fulfill({ json: { itens: [], total: 0, pagina: 1, limite: 25 } });
+  });
+  await page.route(url => url.pathname.endsWith('/planos-alimentares/alimentos'), async route => route.fulfill({ json: {
+    itens: [{ id: alimentoId, codigoOrigem: 'SINT-FOOD04', nome: 'Aveia sintética FOOD04', disponivelParaCalculo: true, nutrientesPor100g: { energiaKcal: 380 }, fonte: { codigo: 'SINT', nome: 'Fixture sintética', versao: '1' } }],
+    fontes: [], total: 1, pagina: 1, limite: 10
+  } }));
+  await abrir(page);
+  const biblioteca = page.getByRole('region', { name: 'Biblioteca de grupos de substituições' });
+  await page.getByText('Biblioteca de grupos de substituições', { exact: true }).click();
+  await biblioteca.getByRole('button', { name: 'Novo grupo' }).click();
+  await biblioteca.getByLabel('Nome obrigatório').fill('Alternativas sintéticas para aveia');
+  await biblioteca.getByLabel('Categoria opcional').fill('Desjejum');
+  await biblioteca.getByLabel('Etiquetas separadas por vírgula').fill('teste, sintético');
+  await biblioteca.getByLabel('Pesquisar alimento (3 caracteres)').fill('Aveia');
+  await expect(biblioteca.getByRole('button', { name: 'Adicionar Aveia sintética FOOD04' })).toBeVisible();
+  await biblioteca.getByRole('button', { name: 'Adicionar Aveia sintética FOOD04' }).click();
+  await expect(biblioteca.getByText('Aveia sintética FOOD04')).toBeVisible();
+  await biblioteca.getByLabel('Pesquisar alimento (3 caracteres)').fill('Aveia');
+  await biblioteca.getByRole('button', { name: 'Adicionar Aveia sintética FOOD04' }).click();
+  await expect(biblioteca.getByRole('alert')).toContainText('Este alimento já está no grupo com porção de 100 g');
+  const acessibilidade = await new AxeBuilder({ page }).include('section[aria-label="Biblioteca de grupos de substituições"]').withTags(['wcag2a', 'wcag2aa', 'wcag21aa']).analyze();
+  expect(acessibilidade.violations).toEqual([]);
+  await biblioteca.getByRole('button', { name: 'Salvar', exact: true }).click();
+  await expect(biblioteca.getByRole('status')).toContainText('não representam equivalência nutricional');
+  expect(corpoCriacao).toMatchObject({
+    conteudo: {
+      nome: 'Alternativas sintéticas para aveia', categoria: 'Desjejum', etiquetas: ['teste', 'sintético'],
+      entradas: [{ origem: 'catalogo', alimentoId, quantidade: 1, unidade: 'porção', porcaoGramas: 100 }]
+    }
+  });
+  expect(corpoCriacao.escopo).toBeUndefined();
+  expect(fixture.escritas).toHaveLength(0);
+});
+
+test('FOOD04 aplicação seletiva preserva o principal e mantém alternativa não liberada no rascunho', async ({ context, page }) => {
+  const fixture = await preparar(context);
+  const principalId = '10000000-0000-4000-8000-000000000051';
+  const alternativaId = '10000000-0000-4000-8000-000000000052';
+  const grupoId = '10000000-0000-4000-8000-000000000053';
+  const entradaId = '10000000-0000-4000-8000-000000000054';
+  await page.route(url => url.pathname.endsWith('/planos-alimentares/alimentos'), async route => route.fulfill({ json: {
+    itens: [{ id: principalId, codigoOrigem: 'SINT-PRINCIPAL', nome: 'Principal sintético', disponivelParaCalculo: true, nutrientesPor100g: { energiaKcal: 90 }, fonte: { codigo: 'SINT', nome: 'Fixture sintética', versao: '1' } }],
+    fontes: [], total: 1, pagina: 1, limite: 20
+  } }));
+  await page.route(url => url.pathname === '/api/planos-alimentares/grupos-substituicoes/consulta', async route => route.fulfill({ json: {
+    itens: [{ id: grupoId, nome: 'Grupo sintético', etiquetas: [], escopo: 'pessoal', estado: 'ativo', revisao: 1, quantidadeEntradas: 2, podeEditar: true, favorito: false }], total: 1, pagina: 1, limite: 25
+  } }));
+  await page.route(url => url.pathname === `/api/planos-alimentares/grupos-substituicoes/${grupoId}`, async route => route.fulfill({ json: {
+    id: grupoId, nome: 'Grupo sintético', etiquetas: [], escopo: 'pessoal', estado: 'ativo', revisao: 1, quantidadeEntradas: 2, podeEditar: true, favorito: false,
+    entradas: [
+      { id: entradaId, origem: 'catalogo', alimentoId: alternativaId, quantidade: 1, unidade: 'porção', porcaoGramas: 80, disponivel: true, composicao: { descricao: 'Alternativa sintética', nutrientesPor100g: { energiaKcal: 70 } } },
+      { id: '10000000-0000-4000-8000-000000000055', origem: 'catalogo', alimentoId: principalId, quantidade: 1, unidade: 'porção', porcaoGramas: 80, disponivel: true, composicao: { descricao: 'Principal sintético', nutrientesPor100g: { energiaKcal: 90 } } }
+    ]
+  } }));
+  await abrir(page);
+  await page.getByRole('button', { name: 'Expandir todas' }).click();
+  await page.getByRole('button', { name: 'Adicionar alimento', exact: true }).first().click();
+  await page.getByRole('textbox', { name: 'Buscar no catálogo' }).last().fill('Principal');
+  await page.getByRole('button', { name: /^Principal sintético/ }).click();
+  await page.getByRole('button', { name: /Aplicar grupo de alternativas/ }).click();
+  await page.getByLabel('Grupo ativo').selectOption(grupoId);
+  const alternativa = page.getByText('Alternativa sintética', { exact: true });
+  await expect(alternativa).toBeVisible();
+  await expect(page.getByText('Não há alternativas disponíveis novas neste grupo')).toHaveCount(0);
+  const linhaAlternativa = alternativa.locator('xpath=ancestor::div[contains(@class,"rounded border")]').first();
+  await linhaAlternativa.getByRole('checkbox').check();
+  await page.getByRole('button', { name: 'Acrescentar selecionadas' }).click();
+  await expect(page.getByText(/Alternativas acrescentadas ao rascunho e ainda não liberadas ao paciente/)).toBeVisible();
+  await page.getByRole('button', { name: 'Salvar rascunho' }).click();
+  await expect.poll(() => fixture.escritas.length).toBe(1);
+  const itemSalvo = fixture.escritas[0].documento.refeicoes[0].itens.find(item => item.alimentoComposicaoId === principalId);
+  expect(itemSalvo).toBeTruthy();
+  expect(itemSalvo.substituicoes).toHaveLength(1);
+  expect(itemSalvo.substituicoes[0]).toMatchObject({ alimentoComposicaoId: alternativaId, porcaoGramas: 80, preferida: false, liberadaParaPaciente: false });
+  expect(itemSalvo.substituicoes[0].origemGrupo).toMatchObject({ grupoId, revisao: 1, entradaId });
+  expect(itemSalvo.substituicoes[0].origemGrupo.aplicacaoId).toMatch(/^[0-9a-f-]{36}$/i);
+  expect(itemSalvo.substituicoes[0].origemGrupo).not.toHaveProperty('schemaVersao');
+  expect(itemSalvo.substituicoes[0].origemGrupo).not.toHaveProperty('porcaoAplicadaGramas');
+});

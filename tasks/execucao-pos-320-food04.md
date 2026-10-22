@@ -3,8 +3,8 @@
 Branch `docs/pos320-food04-planning`, base main `9e1984a2`.
 Planejamento: commits `059c6bd9` e `6ede1beb`. Desenvolvimento autorizado pelo
 proprietário em “Pode seguir”, após apresentação da especificação ampliada.
-Sol médio permanece no backend/authz/snapshots/BFF. Pausar antes de Luna alto
-para UI T11–T12. Uma PR funcional, ainda não aberta neste checkpoint.
+Checkpoint backend/BFF commit `78e7ee61`; UI T11–T12 em implementação no
+checkpoint Luna. Uma PR funcional, ainda não aberta neste checkpoint.
 
 ## Ambiente e limites
 
@@ -145,6 +145,62 @@ isso não é RED de vulnerabilidade.
 - PASS: `pnpm --dir octaclin-web test:authz`, 27 comandos concluídos
  com exit0; nenhum subteste falhou. Log temporário
  `/tmp/food04-tools/web-authz-final.log`. UI/Playwright/build Web continuam pendentes.
+
+## Checkpoint T11–T12 — interface e integração do editor
+
+- Biblioteca profissional em `BibliotecaGruposSubstituicoes`: pesquisa/categoria/
+  etiqueta/escopo/estado/favoritos com paginação; formulário com entradas
+  explícitas em gramas, até20 itens, descrição/categoria/etiquetas, busca nos
+  catálogos permitidos e custom pessoal/clínica, ordem por botões acessíveis,
+  edição, duplicação pessoal, promoção explícita a clínica, arquivamento e
+  restauração. Grupos com fontes indisponíveis não são reconstruídos por cópia
+  parcial: edição/duplicação ficam bloqueadas e a limitação é comunicada.
+- Superfície administrativa reusa a mesma UI no portal Client e painel de
+  Operações SuperAdmin, ambas condicionadas à capacidade `grupos_substituicoes.administrar`;
+  endpoints e escopo efetivo continuam autoritativos no backend.
+- Aplicação seletiva no item principal: prévia em diálogo inline, paginação e
+  busca por grupo, seleção parcial, porções em gramas, principal omitido,
+  duplicata exata bloqueada, porção divergente exige confirmação explícita e
+  informação sem fonte não pode ser aplicada. Alternativas novas iniciam
+  `preferida=false`/`liberadaParaPaciente=false`.
+- O editor serializa/reidrata apenas a intenção fechada `origemGrupo` em cada
+  alternativa, limpa a intenção ao mudar identidade da fonte e mantém composição
+  canônica resolvida no backend. Aplicação pausa o autosave, aguarda envio em
+  curso e revalida paciente/plano/rascunho/posse; confere o teto de20 alternativas
+  e96KiB antes de alterar o formulário. Undo local remove apenas as novas linhas
+  ainda inalteradas, no mesmo contexto/posse, e expira quando o autosave começa.
+- TDD helper local: primeiro ciclo revelou inclusão indevida de candidato quando
+  o principal tinha outra origem e ausência de confirmação da porção distinta;
+  critérios corrigidos. A revisão também conferiu o validador real do domínio:
+  ele rejeita alimento e porção duplicados. A UI agora explica e bloqueia a
+  inclusão repetida com a porção padrão antes do request. O aviso pós-aplicação
+  permanece visível até nova ação, sem timeout que pudesse ocultar a opção de
+  desfazer. `test:grupos-substituicoes:aplicacao` agora4 PASS.
+- Revalidações executadas no worktree dedicado: Web `typecheck` PASS;
+  `test:grupos-substituicoes:aplicacao`4 PASS; `test:copia-refeicoes`12 PASS;
+  `test:nutricao-plano`67 PASS; `test:authz` exit0 em27 comandos, incluindo
+  BFF FOOD04 (60 casos no script de planos alimentares) e demais regressões.
+- ESLint focal exit0, sem erros. Mostra13 avisos `react-hooks` já existentes ou
+  padrões de carregamento via effect; este checkpoint não executa lint global.
+- Web `build` PASS com os artefatos `.next` temporariamente redirecionados a
+  `/tmp/food04-tools/web-next` (o volume da worktree tinha 0 bytes livres). O
+  Next emitiu os avisos já observados de depreciação do middleware e `process.cwd`
+  na cadeia Edge; build terminou com exit0.
+- Playwright em ambos os projetos: PA07/FOOD01–03,42 PASS; criação FOOD04,2 PASS
+  (inclui Axe no componente); aplicação seletiva FOOD04,2 PASS. No início,
+  tentativas do teste novo falharam por expectativas incorretas do teste (porção
+  é `1 porção` com 100g, e a proveniência enriquecida é materializada no backend);
+  os critérios foram alinhados aos contratos, sem relaxar validações de produto.
+- A primeira tentativa do Playwright usou Turbopack e bloqueou antes de iniciar
+  testes devido ao symlink compartilhado de `node_modules` entre worktrees. Os
+  testes executados passaram com configuração temporária fora do repositório
+  que usa `next dev --webpack`; nenhuma configuração versionada foi alterada.
+- Ainda falta rodar regressões editoriais FOOD01–03 e PA02–PA07 além da bateria
+  PA07 acima, acessibilidade geral, backend completo, C2/R4 independente e CI.
+- `git diff --check` será repetido após o último ajuste de documentação.
+- T11/T12 permanecem PARCIAIS até a prova no navegador, estados visuais e acessíveis,
+  validação de concorrência/autosave no fluxo de interface, regressões PA02–PA07/
+  FOOD01–03 e revisão R4 independente. Não afirmar C3 PASS nem criar PR até fechar.
 
 Checkpoint validado em Sol médio e preparado para troca manual a Luna alto.
 A fase não está concluída: UI, revisão R4 e gates da PR seguem pendentes.

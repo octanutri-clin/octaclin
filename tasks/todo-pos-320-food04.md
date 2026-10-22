@@ -3,7 +3,9 @@
 Contrato vigente: [plan-pos-320-food04.md](plan-pos-320-food04.md).
 D01–D08 aprovadas pelo proprietário e incorporadas ao planejamento. T00/T01
 concluídas documentalmente; T02–T10 têm implementação backend/BFF no checkpoint.
-UI T11–T12 e aceite final T13–T14 permanecem pendentes. As caixas abaixo
+T11–T12 têm implementação de interface e testes focados parciais; o aceite de
+navegador desktop/mobile, acessibilidade e revisão final ainda está pendente.
+As caixas abaixo
 representam o aceite integral, não apenas a existência do código.
 TDD obrigatório para lógica/segurança: registrar RED, correção e GREEN, com
 fixtures sintéticas. Dividir cada tarefa em subpassos de3–5 arquivos, uma PR.
@@ -23,8 +25,8 @@ fixtures sintéticas. Dividir cada tarefa em subpassos de3–5 arquivos, uma PR.
 | T09 | PostgreSQL real descartável/RLS/concorrência | T08 | [ ] Role não-owner/NOBYPASSRLS; tenant ausente/cruzado, pessoal/admin, duas criações/duplicações, races CAS/arquivo/restauração/aplicar/transferir; provar execução no runner/CI |
 | C2 | Checkpoint R4 backend | T07–T09 | [ ] RED/GREEN e SQL real registrados; sem inferir isolamento de mocks; locks sem ordem inversa |
 | T10 | BFF/API/types/rotas e testes de autorização | C2 | [ ] Helpers existentes, allowlists, no-store, sessão/papel/permissão/escopo/erros; catálogo de rotas atualizado sem abrir endpoints clínicos ao Client |
-| T11 | UI biblioteca/administração/duplicação/organização | T10 | [ ] Fluxos CRUD/favorito/arquivo/restauração/compartilhamento, filtros/paginação e ordem por teclado; componente comum sem expor pessoal ao admin |
-| T12 | UI prévia/aplicação/undo e Playwright | T11 | [ ] Seleção/porções/dedup/cancelamento; flags falsas; coordenador/posse/abort; undo local seguro; desktop/mobile/a11y e corridas de autosave/contexto |
+| T11 | UI biblioteca/administração/duplicação/organização | T10 | [ ] CRUD, duplicação/favorito/arquivo/restauração/compartilhamento, filtros/paginação/ordem por botões de teclado; superfície Client e SuperAdmin; componente comum sem expor pessoal ao admin; Playwright e verificação visual pendentes |
+| T12 | UI prévia/aplicação/undo e Playwright | T11 | [ ] Seleção/porções/dedup/cancelamento; flags falsas; coordenador/posse/abort; undo local seguro; desktop/mobile/a11y e corridas de autosave/contexto ainda precisam de navegador |
 | C3 | Checkpoint funcional | T10–T12 | [ ] Fluxo completo e regressões editoriais; 20/item e96KiB, sem perda silenciosa ou liberação paciente |
 | T13 | Regressões, revisão R4, evidências e docs | C3 | [ ] Backend/Web/banco/a11y e regressões PA02–PA07/FOOD01–03; revisão com autoria/achados; gates reais e limites documentados |
 | T14 | PR única/CI/scanners do HEAD final | T13 | [ ] Diff/secrets/governança e checks aplicáveis; separar CI de deploy/migration; complementar não implementado por antecipação |
@@ -40,7 +42,7 @@ Evidências: [ledger](execucao-pos-320-food04.md); próxima etapa delimitada no
 | T07–T08 | Implementadas; save/publicação/nova versão, snapshots e projeções testados | UI transportando intenção e regressões factuais PA02/modelos; não copiar autoridade entre pais |
 | T09 / C2 |4 provas PG da biblioteca e3 clínicas PASS, runtime não-owner | Cadeia oficial com Timescale/pgvector e execução CI ainda não comprovadas |
 | T10 | BFF, tipos, wrappers e mapa implementados;60 BFF e authz/typecheck PASS | Revalidar no HEAD completo após UI; limites no ledger |
-| T11–T12 / C3 | Não iniciadas; aguardam troca manual para Luna alto | UI, helper seletivo/undo, Playwright desktop/mobile/a11y |
+| T11–T12 / C3 | Interface/helper integrados parcialmente; typecheck, quatro testes helper, build,42 regressões PA07/FOOD01–03 e quatro cenários FOOD04 desktop/mobile passaram | Fluxos restantes CRUD/duplicação/admin/arquivo no navegador, corridas/undo FOOD04, acessibilidade geral, demais regressões editoriais e revisão R4 independente |
 | T13–T14 | Parcial: regressões/revisão própria/documentos em andamento | Revisão R4 identificada, PR única, CI/scanners finais; sem operação externa |
 
 T08/G06: composição/porções de cópias legadas são preservadas; proveniência da

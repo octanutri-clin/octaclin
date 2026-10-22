@@ -13,6 +13,7 @@ import { AreaLgpd } from './area-lgpd';
 import { AreaOnboarding } from './area-onboarding';
 import { AreaSaude } from './area-saude';
 import { AreaRollout } from './area-rollout';
+import { BibliotecaGruposSubstituicoes } from '@/components/pacientes/biblioteca-grupos-substituicoes';
 import { AreaOperacoes, usePainelOperacoes } from './use-painel-operacoes';
 
 const areasOperacoes = [
@@ -83,7 +84,9 @@ export function PainelOperacoes() {
 
       <Abas
         identificador="operacoes"
-        abas={areasOperacoes}
+        abas={sessao?.papel === 'SuperAdmin' && sessao.permissoes.includes('grupos_substituicoes.administrar')
+          ? [...areasOperacoes, { id: 'grupos', rotulo: 'Grupos alimentares' }]
+          : areasOperacoes}
         ativaId={areaAtiva}
         aoMudar={(id) => setAreaAtiva(id as AreaOperacoes)}
         rotulo="Áreas de operações"
@@ -97,6 +100,8 @@ export function PainelOperacoes() {
       <AreaFilas controlador={controlador} />
       <AreaLgpd controlador={controlador} />
       <AreaAuditoria controlador={controlador} />
+      {areaAtiva === 'grupos' && sessao?.papel === 'SuperAdmin' && sessao.permissoes.includes('grupos_substituicoes.administrar')
+        ? <BibliotecaGruposSubstituicoes administracao /> : null}
     </div>
   );
 }

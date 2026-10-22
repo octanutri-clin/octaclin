@@ -110,6 +110,7 @@ export function usePortalCliente() {
   const podeAjustarUsuarios = possuiPermissao('cliente.usuarios.gerenciar');
   const podeGerenciarConvites = possuiPermissao('cliente.convites.gerenciar');
   const podeGerenciarConfiguracoes = possuiPermissao('cliente.configuracoes.gerenciar');
+  const podeAdministrarGrupos = possuiPermissao('grupos_substituicoes.administrar');
   const podeLerFinanceiro = possuiPermissao('agenda.financeiro.ler');
 
   useEffect(() => {
@@ -608,6 +609,7 @@ export function usePortalCliente() {
     podeAjustarUsuarios,
     podeGerenciarConvites,
     podeGerenciarConfiguracoes,
+    podeAdministrarGrupos,
     podeLerFinanceiro,
     podeVerGestaoUsuarios,
     indicadores,
