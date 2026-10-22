@@ -743,6 +743,17 @@ test('FOOD04 aplicação seletiva preserva o principal e mantém alternativa nã
   await linhaAlternativa.getByRole('checkbox').check();
   await page.getByRole('button', { name: 'Acrescentar selecionadas' }).click();
   await expect(page.getByText(/Alternativas acrescentadas ao rascunho e ainda não liberadas ao paciente/)).toBeVisible();
+  const desfazer = page.getByRole('button', { name: 'Desfazer', exact: true });
+  await expect(desfazer).toBeEnabled();
+  await desfazer.click();
+  await expect(page.getByText('Alternativa sintética', { exact: true })).toHaveCount(0);
+  await page.getByRole('button', { name: /Aplicar grupo de alternativas/ }).click();
+  await page.getByLabel('Grupo ativo').selectOption(grupoId);
+  const alternativaRestaurada = page.getByText('Alternativa sintética', { exact: true });
+  await expect(alternativaRestaurada).toBeVisible();
+  await alternativaRestaurada.locator('xpath=ancestor::div[contains(@class,"rounded border")]').first().getByRole('checkbox').check();
+  await page.getByRole('button', { name: 'Acrescentar selecionadas' }).click();
+  await expect(page.getByText(/Alternativas acrescentadas ao rascunho e ainda não liberadas ao paciente/)).toBeVisible();
   await page.getByRole('button', { name: 'Salvar rascunho' }).click();
   await expect.poll(() => fixture.escritas.length).toBe(1);
   const itemSalvo = fixture.escritas[0].documento.refeicoes[0].itens.find(item => item.alimentoComposicaoId === principalId);
