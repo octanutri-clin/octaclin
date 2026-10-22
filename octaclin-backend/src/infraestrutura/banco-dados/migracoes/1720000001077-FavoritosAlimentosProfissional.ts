@@ -1,5 +1,6 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
+/** @aplicacao fora-de-banda */
 export class FavoritosAlimentosProfissional1720000001077 implements MigrationInterface {
   name = 'FavoritosAlimentosProfissional1720000001077';
   async up(q: QueryRunner): Promise<void> {
