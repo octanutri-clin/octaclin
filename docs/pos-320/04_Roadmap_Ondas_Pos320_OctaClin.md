@@ -4,7 +4,7 @@
 >
 > **Princípio central:** cada recurso ou melhoria deste roadmap deve ser implementado em **um Pull Request individual**, com escopo pequeno, revisável e reversível. As PRs são agrupadas em **ondas de implementação** apenas para organizar dependências e sequência de trabalho.
 >
-> Versão reconciliada em **2026-10-14** com o roadmap canônico `docs/product/ROADMAP_POS_AUDITORIA_FASES_302_320.md` e os PRs integrados mais recentes. Os status são registros históricos e DEVEM ser revalidados na data de cada nova execução.
+> Versão reconciliada em **2026-10-22** com o roadmap canônico `docs/product/ROADMAP_POS_AUDITORIA_FASES_302_320.md` e os PRs integrados mais recentes. Os status são registros históricos e DEVEM ser revalidados na data de cada nova execução.
 
 ---
 
@@ -527,7 +527,17 @@ somente após checkpoint e troca manual; revisão final Sol médio.
 
 **Origem:** item 30.
 
-**Status atual:** não existe favorito de substituição.
+**Status atual:** implementação em andamento na PR Draft #438; migration 1077 e seletores de catálogo/custom implementados. Validação local parcial; mobile/a11y, R4 e gates do HEAD permanecem. Não está mergeada nem ativa.
+
+**Planejamento técnico atualizado em 2026-10-22:** `tasks/plan-pos-320-food03.md`.
+O contrato separa a preferência privada do profissional do campo `preferida`
+existente no snapshot de substituição do plano, que afeta a apresentação ao
+paciente. FOOD02 (#425/#426) foi integrada. Favoritos devem usar identidade
+persistente de catálogo/alimento personalizado quando disponível, ser isolados
+por tenant+profissional e ordenar o seletor sem alterar publicação, macros,
+escolhas ou planos existentes. A autorização de implementação foi dada em
+2026-10-22; o teste RLS em PostgreSQL descartável e regressões são gates antes
+de encerrar a PR.
 
 **Implementação sugerida:**
 - favorito por profissional;

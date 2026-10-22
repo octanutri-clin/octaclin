@@ -1,6 +1,9 @@
 import { AlimentoPersonalizadoOrm } from './infraestrutura/alimento-personalizado.orm';
 import { ServicoAlimentosPersonalizados } from './aplicacao/servico-alimentos-personalizados';
 import { ControladorAlimentosPersonalizados } from './apresentacao/controlador-alimentos-personalizados';
+import { ControladorFavoritosAlimentos } from './apresentacao/controlador-favoritos-alimentos';
+import { ServicoFavoritosAlimentos } from './aplicacao/servico-favoritos-alimentos';
+import { FavoritoAlimentoOrm } from './infraestrutura/favorito-alimento.orm';
 import { ControladorMedidasCaseiras, ControladorMedidasCaseirasPersonalizadas } from './apresentacao/controlador-medidas-caseiras';
 import { ServicoMedidasCaseiras } from './aplicacao/servico-medidas-caseiras';
 import { MedidaCaseiraOrm } from './infraestrutura/medida-caseira.orm';
@@ -70,6 +73,7 @@ const processadoresCompartilhamento = deveExecutarProcessadores() ? [Processador
       AlimentoComposicaoOrm,
       MedidaCaseiraOrm,
       AlimentoPersonalizadoOrm,
+      FavoritoAlimentoOrm,
       PacienteOrm,
       AvaliacaoAntropometricaOrm,
       LogDiarioRapidoOrm,
@@ -93,6 +97,7 @@ const processadoresCompartilhamento = deveExecutarProcessadores() ? [Processador
     ControladorMedidasCaseiras,
     ControladorMedidasCaseirasPersonalizadas,
     ControladorAlimentosPersonalizados,
+    ControladorFavoritosAlimentos,
     ControladorModelosPlanoAlimentar,
     ControladorReceitasNutricionais
   ],
@@ -100,6 +105,7 @@ const processadoresCompartilhamento = deveExecutarProcessadores() ? [Processador
     ServicoPlanosAlimentares,
     ServicoMedidasCaseiras,
     ServicoAlimentosPersonalizados,
+    ServicoFavoritosAlimentos,
     ServicoModelosPlanoAlimentar,
     ServicoReceitasNutricionais,
     ServicoCompartilhamentoReceitas,

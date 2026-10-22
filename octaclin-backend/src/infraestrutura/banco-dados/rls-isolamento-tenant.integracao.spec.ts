@@ -1,5 +1,6 @@
 import { ServicoAlimentosPersonalizados } from '../../modulos/planos-alimentares/aplicacao/servico-alimentos-personalizados';
 import { AlimentoPersonalizadoOrm } from '../../modulos/planos-alimentares/infraestrutura/alimento-personalizado.orm';
+import { FavoritoAlimentoOrm } from '../../modulos/planos-alimentares/infraestrutura/favorito-alimento.orm';
 import { AlimentoComposicaoOrm } from '../../modulos/planos-alimentares/infraestrutura/alimento-composicao.orm';
 import { FonteComposicaoAlimentoOrm } from '../../modulos/planos-alimentares/infraestrutura/fonte-composicao-alimento.orm';
 import { ServicoMedidasCaseiras } from '../../modulos/planos-alimentares/aplicacao/servico-medidas-caseiras';
@@ -253,6 +254,7 @@ descrever('RLS e isolamento multi-tenant integral em Postgres real', () => {
         MaterialEducativoOrm,
         MedidaCaseiraOrm,
         AlimentoPersonalizadoOrm,
+        FavoritoAlimentoOrm,
         AlimentoComposicaoOrm,
         FonteComposicaoAlimentoOrm,
         PlanoAlimentarOrm,
@@ -791,6 +793,24 @@ descrever('RLS e isolamento multi-tenant integral em Postgres real', () => {
         expect.objectContaining({ policyCompleta: true })
       );
     }
+  });
+
+  it('FOOD03 protege favoritos com FORCE RLS e oculta registros ao trocar tenant', async () => {
+    if (!cliente) throw new Error('Cliente da prova RLS nao foi inicializado.');
+    const alimentoId = randomUUID();
+    const favoritoId = randomUUID();
+    await comoTenant(tenantA);
+    await cliente.query(`insert into alimentos_personalizados
+      (id,tenant_id,profissional_id,chave_idempotencia,escopo,conteudo_criptografado,criacao_snapshot_criptografado)
+      values ($1,$2,$3,$4,'pessoal',$5,$6)`, [alimentoId, tenantA, profissionalIdTenantA, randomUUID(), Buffer.from('sintetico'), Buffer.from('sintetico')]);
+    await cliente.query(`insert into favoritos_alimentos_profissional
+      (id,tenant_id,profissional_id,alimento_personalizado_id) values ($1,$2,$3,$4)`, [favoritoId, tenantA, profissionalIdTenantA, alimentoId]);
+    const proprio = await cliente.query('select id from favoritos_alimentos_profissional where id=$1', [favoritoId]);
+    expect(proprio.rows).toEqual([{ id: favoritoId }]);
+    await comoTenant(tenantB);
+    const cruzado = await cliente.query('select id from favoritos_alimentos_profissional where id=$1', [favoritoId]);
+    expect(cruzado.rows).toHaveLength(0);
+    await expect(cliente.query('insert into favoritos_alimentos_profissional (tenant_id,profissional_id,alimento_personalizado_id) values ($1,$2,$3)', [tenantB, profissionalIdTenantA, alimentoId])).rejects.toMatchObject({ code: '23503' });
   });
 
   it('PB-26 agrega somente pacientes e profissionais do tenant corrente', async () => {

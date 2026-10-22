@@ -23,6 +23,8 @@ const arquivos = [
   'app/api/pacientes/[id]/planos-alimentares/[planoId]/escolhas-paciente/route.ts',
   'app/api/pacientes/[id]/planos-alimentares/alimentos/route.ts',
   'app/api/planos-alimentares/alimentos/route.ts',
+  'app/api/planos-alimentares/favoritos/route.ts',
+  'app/api/planos-alimentares/favoritos/[origem]/[alimentoId]/route.ts',
   'app/api/planos-alimentares/alimentos/[alimentoId]/medidas-caseiras/route.ts',
   'app/api/planos-alimentares/alimentos/[alimentoId]/medidas-caseiras/[medidaId]/route.ts',
   'app/api/planos-alimentares/alimentos-personalizados/_proxy.ts',
