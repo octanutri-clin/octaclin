@@ -197,15 +197,14 @@ isso não é RED de vulnerabilidade.
   `/tmp/food04-tools/web-next` (o volume da worktree tinha 0 bytes livres). O
   Next emitiu os avisos já observados de depreciação do middleware e `process.cwd`
   na cadeia Edge; build terminou com exit0.
-- Playwright em ambos os projetos: PA07/FOOD01–03,42 PASS; criação FOOD04,2 PASS
-  (inclui Axe no componente); aplicação seletiva FOOD04,2 PASS; cancelamento e
-  resposta tardia FOOD04,2 PASS; edição/arquivo/restauração FOOD04,2 PASS;
-  favorito/duplicação pessoal FOOD04,2 PASS; portal Client com e sem a capacidade
-  administrativa,4 PASS; compartilhamento explícito por profissional,2 PASS;
-  Operações SuperAdmin com capacidade administrativa,2 PASS; o teste de aplicação
-  seletiva foi reexecutado com desfazer/reaplicar antes de salvar e confirmação
-  de que salvar desativa o undo,2 PASS. Total
-  desta regressão:60 testes únicos PASS (42 anteriores +18 FOOD04). No início,
+- Playwright: regressão completa `pa07-coordenacao-abas.spec.mjs`,54/54 PASS
+  nos projetos desktop/mobile (PA07, FOOD01–04); os 12 casos FOOD04 cobrem
+  criação, aplicação seletiva com desfazer antes do salvamento e bloqueio depois,
+  resposta tardia/cancelamento, edição/arquivo/restauração, favorito/duplicação
+  e compartilhamento confirmado. Em `portal-cliente.spec.mjs`, Client com e sem
+  capacidade administrativa,4 PASS; em `acessibilidade.spec.mjs`, SuperAdmin
+  com capacidade administrativa,2 PASS. Total documentado:60 testes únicos
+  PASS, todos com respostas de API sintéticas interceptadas. No início,
   tentativas do teste novo falharam por expectativas incorretas do teste (porção
   é `1 porção` com 100g, e a proveniência enriquecida é materializada no backend);
   os critérios foram alinhados aos contratos, sem relaxar validações de produto.
@@ -213,8 +212,9 @@ isso não é RED de vulnerabilidade.
   testes devido ao symlink compartilhado de `node_modules` entre worktrees. Os
   testes executados passaram com configuração temporária fora do repositório
   que usa `next dev --webpack`; nenhuma configuração versionada foi alterada.
-- Ainda falta rodar as regressões editoriais completas FOOD01–03 e PA02–PA07,
-  acessibilidade geral, backend completo, cadeia PostgreSQL do runner, C2/R4
+- Ainda falta rodar as regressões editoriais completas FOOD01–03 e PA02–PA07
+  fora desta suíte, acessibilidade geral, backend completo, cadeia PostgreSQL do
+  runner, C2/R4
   independente e CI.
 - `git diff --check` PASS antes do commit `8c93fdd9`.
 - T11/T12 permanecem PARCIAIS: criação, edição/arquivo/restauração, favorito,
