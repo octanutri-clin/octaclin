@@ -193,10 +193,11 @@ async function preparar(page, { falharRevalidacaoOrigem = false, alterarVersaoNa
 
   await page.goto(`/pacientes/${paciente.id}?aba=plano_alimentar`, { waitUntil: 'domcontentloaded' });
   // Aguarda a reconferência de posse entre abas antes de interagir com o editor.
-  await expect(page.getByLabel('Objetivo clínico')).toBeEnabled({ timeout: 15_000 });
+  await expect(page.getByLabel('Objetivo clínico')).toBeEnabled({ timeout: 30_000 });
   if (!manterRefeicoesRecolhidas) {
     const expandir = page.getByRole('button', { name: 'Expandir todas' });
-    await expandir.click();
+    await expandir.focus();
+    await expandir.press('Enter');
   }
   return { destino, sourcePublished, sourceDraft, resumoOrigem, resumoDestino, get entradaSalva() { return entradaSalva; }, get leiturasOrigemExterna() { return leiturasOrigemExterna; }, get leiturasExternasPendentes() { return leiturasExternasPendentes; }, liberarLeituraExterna() { liberarLeituraExterna?.(); } };
 }
@@ -529,6 +530,8 @@ test.describe('PA02 - copiar refeições sem substituir o plano de destino', () 
 
     await page.evaluate(() => { window.__pa02NavegacaoSintetica = true; });
     await page.getByRole('link', { name: 'Voltar', exact: true }).click();
+    await expect(page.getByRole('heading', { name: 'Pacientes', exact: true })).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByRole('link', { name: 'Abrir prontuário', exact: true })).toBeVisible({ timeout: 30_000 });
     await page.getByRole('link', { name: 'Abrir prontuário', exact: true }).click();
     await page.getByRole('tab', { name: 'Plano', exact: true }).click();
     await page.getByRole('tab', { name: 'Plano alimentar', exact: true }).click();

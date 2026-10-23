@@ -316,3 +316,29 @@ seguem pendentes.
 - T11–T12/C3 continuam parciais: além desta execução inconclusiva, permanecem
   pendentes revisão R4 independente, acessibilidade global e regressões
   restantes. Nenhuma PR foi aberta.
+
+## Retomada em ambiente reiniciado — 2026-10-23
+
+- O ambiente novo não preservou `/tmp/food04-tools` e iniciou em Node 24, fora
+  da faixa do `package.json`. Baixei Node 22.23.4 para `/tmp` e usei um `.next`
+  temporário em `/tmp`; nenhum runtime, dependência ou migration do repositório
+  foi alterado.
+- Com Node 24, uma tentativa da spec completa fechou 46/48, mas não é evidência
+  válida para o projeto por incompatibilidade de runtime. Com Node 22, a spec
+  PA02 isolada chegou a permanecer em leitura: `Objetivo clínico` ficou
+  desabilitado após 30 s enquanto a tela aguardava planos. No PA07 isolado, a
+  segunda aba exibiu “A edição está em outra aba” e o botão de retomada, porém
+  o clique não foi acionado pelo Playwright no executor reiniciado. Os
+  snapshots e traces estão em `/tmp/food04-rerun2/output` para diagnóstico
+  reproduzível enquanto esse ambiente existir.
+- Um rerun anterior em ambiente aquecido aprovou o cenário de navegação PA02
+  (1/1) e os dois cenários que haviam falhado no ciclo precedente (2/2), mas a
+  reprodução em Node 22 recém-inicializado não foi consistente. Logo, não
+  afirmar regressão integral PA02/PA07 PASS para a revisão atual; investigar a
+  interação Web Locks/BroadcastChannel com o lifecycle de navegação e repetir
+  em um runner estável.
+- Aumentei no teste PA02 o limite de aquisição/espera e sincronizei a
+  navegação pela lista; são alterações locais ainda não commitadas. A fixture
+  também usa ativação por teclado para abrir as refeições. ESLint e `diff
+  --check` devem ser repetidos antes de eventual commit. Não alterei runtime e
+  não abri PR.
