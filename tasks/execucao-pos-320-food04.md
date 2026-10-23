@@ -342,3 +342,37 @@ seguem pendentes.
   também usa ativação por teclado para abrir as refeições. ESLint e `diff
   --check` devem ser repetidos antes de eventual commit. Não alterei runtime e
   não abri PR.
+
+## Diagnóstico cold runner de coordenação — 2026-10-23
+
+- Reproduzi em Node22.23.4 duas falhas focais sob `next dev --webpack`: a
+  segunda aba não estabilizava em consulta e o teste de aquisição não encontrava
+  “Editar nesta aba”. Instrumentação temporária mostrou reexecuções do hook em
+  ambas as páginas com a mesma chave Web Locks durante a compilação/HMR; não
+  houve `pagehide` ou `visibilitychange`. Os logs de diagnóstico foram
+  removidos e o runtime não foi alterado.
+- Com `next build --webpack` concluído e `next start` sem HMR, passaram em Node22
+  os casos focais PA07 consulta/retomada (1/1), aquisição com leitura pendente
+  (1/1) e PA02 descarte de resposta obsoleta após troca de paciente (1/1).
+  O build de produção local compilou com os avisos existentes de Edge Runtime
+  e middleware. Isso identifica a oscilação como específica do runner de
+  desenvolvimento frio neste executor; não substitui a regressão integral.
+- Nos testes PA07, a instalação do relógio controlado foi movida para depois
+  da inicialização e confirmação explícita do estado em consulta. Isso impede
+  que relógios falsos cubram a inicialização da coordenação; nada muda no
+  runtime do produto. A suíte completa PA02 passou depois, abaixo; PA04–PA06 e
+  integração PA02–PA07/FOOD01–03 ainda precisam da regressão consolidada.
+- O `next-env.d.ts` gerado foi restaurado; `.next` voltou ao symlink baseline
+  `/tmp/food04-tools/web-next`. Não houve consulta ou alteração externa,
+  migration, dependência, merge ou deploy.
+- Reexecutadas as suítes completas em servidor `next start` com fixtures
+  sintéticas: `pa07-coordenacao-abas.spec.mjs` 56/56 (desktop/mobile) e
+  `pa02-copia-refeicoes.spec.mjs` 48/48 (desktop/mobile). A build usada para
+  esse diagnóstico continha apenas `console.log` temporários no hook, sem
+  mudança de fluxo; eles foram removidos antes de encerrar. A especificação
+  PA07 também foi ajustada para instalar relógio falso somente depois de o
+  estado de consulta estar visível. ESLint focal e `git diff --check` passaram.
+- O cold `next dev` continua classificado como harness não estável neste
+  executor; testes focais e as duas suites completas passaram em `next start`.
+  Não extrapolar isso para os gates de acessibilidade global, regressões
+  PA04–PA06, R4, authz agregado, CI ou regressões FOOD01–03 completas.

@@ -144,7 +144,9 @@ test('PA07 segunda aba consulta sem habilitar edição nem autosave; aba origina
   const { escritas } = await preparar(context); await abrir(page);
   const objetivo = page.getByRole('textbox', { name: 'Objetivo clínico', exact: true }); await expect(objetivo).toBeEditable();
   await objetivo.fill('Alteração sintética somente local');
-  const segunda = await context.newPage(); await segunda.clock.install(); await abrir(segunda);
+  const segunda = await context.newPage(); await abrir(segunda);
+  await expect(segunda.getByRole('button', { name: 'Editar nesta aba' })).toBeVisible();
+  await segunda.clock.install();
   await expect(segunda.getByRole('textbox', { name: 'Objetivo clínico', exact: true })).toBeDisabled();
   await expect(segunda.getByRole('status').filter({ hasText: 'Salvamento automático pausado nesta aba.' })).toBeVisible();
   await expect(segunda.getByRole('button', { name: 'Expandir todas' })).toBeEnabled();
@@ -266,7 +268,9 @@ test('PA07 transferência drena envio iniciado sem salvar a edição posterior',
 test('PA07 aquisição aguarda leitura autorizada sem habilitação otimista', async ({ context, page }) => {
   const fixture = await preparar(context); await abrir(page);
   await expect(page.getByRole('textbox', { name: 'Objetivo clínico', exact: true })).toBeEditable();
-  const segunda = await context.newPage(); await segunda.clock.install(); await abrir(segunda);
+  const segunda = await context.newPage(); await abrir(segunda);
+  await expect(segunda.getByRole('button', { name: 'Editar nesta aba' })).toBeVisible();
+  await segunda.clock.install();
   const pausa = fixture.bloquearProximaLeitura();
   try {
     await segunda.getByRole('button', { name: 'Editar nesta aba' }).click(); await pausa.iniciou;
