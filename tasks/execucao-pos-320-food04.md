@@ -380,3 +380,24 @@ seguem pendentes.
   `fase-320-pa06-ativacao.spec.mjs` e `pa06-calculo-combinado.spec.mjs`
   passaram 40/40 desktop/mobile. Não encontrei spec visual com o rótulo PA04;
   sua cobertura específica de lista continua sem prova nomeada nesta rodada.
+
+## Fechamento do agregado de autorização — 2026-10-23
+
+- `PATH="/tmp/node-v22-runtime/bin:$PATH" pnpm --dir octaclin-web test:authz`
+  terminou com exit 0: os 27 comandos do agregado passaram no HEAD atual. A
+  suíte inclui os testes BFF/autorização de FOOD04 no script de planos
+  alimentares (60/60), além das regressões de planos, documentos, exames,
+  operação, notificações e Fases 311–318. Os subtestes executados reportaram
+  zero falhas; o resumo por comando está no log temporário
+  `/tmp/food04-tools/web-authz-final.log`.
+- O launcher global `pnpm` reportou aviso de engine por iniciar sob Node 24,
+  embora os scripts tenham sido executados com Node 22 via `PATH`. Portanto,
+  o resultado comprova o agregado concluído neste executor, mas não substitui
+  o job canônico de CI nem validação de engine do pipeline.
+- T10 passa pelos testes locais do agregado. R4 independente, CI/scanners,
+  cobertura nomeada de PA04/lista e os demais gates de T13–T14 seguem
+  pendentes; este resultado não autoriza merge ou operação externa.
+- Também passaram `test-grupos-substituicoes-aplicacao.mjs` (4/4), o contrato
+  operacional do BFF (10/10), `pnpm --dir octaclin-web typecheck` e
+  `git diff --check`. A aplicação de grupo foi verificada em regras de
+  seleção/duplicata/porção; typecheck não altera o bloqueio de R4 independente.
