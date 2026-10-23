@@ -401,3 +401,10 @@ seguem pendentes.
   operacional do BFF (10/10), `pnpm --dir octaclin-web typecheck` e
   `git diff --check`. A aplicação de grupo foi verificada em regras de
   seleção/duplicata/porção; typecheck não altera o bloqueio de R4 independente.
+- Reexecução `pnpm --dir octaclin-backend test:rls:testcontainers` terminou
+  FAIL depois de 293,6 s: 4 testes FOOD04 (`1720000001078`) passaram em
+  PostgreSQL descartável; 99 testes de duas suítes legadas falharam durante o
+  setup, antes dos cenários, porque a imagem
+  `timescale/timescaledb-ha:pg15` não existe localmente e o runner não a
+  conseguiu obter. Resultado agregado não é PASS; o teste FOOD04 isolado é
+  PASS. Não foi criado container persistente nem tocado ambiente externo.
