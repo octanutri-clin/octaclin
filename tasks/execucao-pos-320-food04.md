@@ -374,5 +374,9 @@ seguem pendentes.
   estado de consulta estar visível. ESLint focal e `git diff --check` passaram.
 - O cold `next dev` continua classificado como harness não estável neste
   executor; testes focais e as duas suites completas passaram em `next start`.
-  Não extrapolar isso para os gates de acessibilidade global, regressões
-  PA04–PA06, R4, authz agregado, CI ou regressões FOOD01–03 completas.
+  Não extrapolar isso para PA04/lista, a11y global, R4, authz agregado, CI ou
+  regressões FOOD01–03 consolidadas no HEAD final.
+- Em `next start`, as specs visuais `fase-320-pa05-apresentacao.spec.mjs`,
+  `fase-320-pa06-ativacao.spec.mjs` e `pa06-calculo-combinado.spec.mjs`
+  passaram 40/40 desktop/mobile. Não encontrei spec visual com o rótulo PA04;
+  sua cobertura específica de lista continua sem prova nomeada nesta rodada.
