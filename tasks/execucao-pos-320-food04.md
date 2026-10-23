@@ -408,3 +408,11 @@ seguem pendentes.
   `timescale/timescaledb-ha:pg15` não existe localmente e o runner não a
   conseguiu obter. Resultado agregado não é PASS; o teste FOOD04 isolado é
   PASS. Não foi criado container persistente nem tocado ambiente externo.
+- A prova PA04 `lista totais salvos das versões e pagina sem carregar versões
+  por card`, em servidor `next start` local com fixtures sintéticas, passou
+  2/2 (desktop/mobile). A primeira tentativa usou host `127.0.0.1`, incompatível
+  com os cookies sintéticos host-only de `localhost`, e falhou antes da lista;
+  a repetição com `E2E_WEB_URL=http://localhost:3000` passou. Artefatos ficaram
+  em `/tmp/food04-diag/pa04-output`; symlink `.next` restaurado ao alvo
+  baseline `/tmp/food04-tools/web-next` e nenhum `test-results` foi criado no
+  workspace.
