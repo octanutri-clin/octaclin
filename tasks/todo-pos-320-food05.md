@@ -18,7 +18,7 @@ FE = `octaclin-web/`. Novos nomes são propostas, não arquivos criados nesta ro
 | T09 | Backend, BFF, cliente tipado e integração principal com a UI implementados; verificações Web passam |
 | T10–T13 | Implementação parcial integrada; focados FOOD05/PA07 passam, critérios completos e cópias ainda pendentes |
 | T14 | PostgreSQL/migrations/RLS e Redis/idempotência do fluxo executado no GitHub CI PASS; matriz integral de concorrência e todos os critérios ainda precisam ser fechados |
-| T15–T18 | Regressões focadas e scanners CI PASS; smoke visual global ainda em execução no último acompanhamento, R4 independente e fechamento final pendentes |
+| T15–T18 | Smoke visual global, PR Gate, regressões executadas e scanners CI PASS no HEAD bb513d1d; revisão R4 independente e fechamento final pendentes |
 
 As caixas abaixo continuam sendo critérios de aceite detalhados; nenhuma prova
 focada isolada encerra a entrega. Uma PR funcional foi escolhida dentre as opções
@@ -328,11 +328,11 @@ requisitos e critérios T01–T18 permanecem vigentes.
 | T07 cópias/modelos com proveniência | BLOCKED | UI recusa a conversão silenciosa; contratos atuais de cópia não transportam proveniência com segurança |
 | T10–T13 interface, FOOD04, revisão e histórico | Parcialmente implementados; Playwright focalizado 14/14 em desktop e mobile | Há bloqueios deliberados para cópias; não considerar M01–M08 fechadas |
 | T14 PostgreSQL/RLS e concorrência real | Parcial: PostgreSQL/migrations, Redis/idempotência e RLS executados com PASS no GitHub CI | Não equivale à matriz integral de concorrência/aceitação T14; Testcontainers local continua indisponível |
-| T15–T18 regressões, R4, documentação e CI final | CI de backend, web, mobile, AI, governança e scanners PASS; smoke global ainda `in_progress` no último acompanhamento | R4 independente e fechamento integral dos critérios continuam pendentes |
+| T15–T18 regressões, R4, documentação e CI final | Run GitHub `40124900107` e PR Gate concluídos PASS no HEAD `bb513d1d`; smoke global e scanners PASS | R4 independente e fechamento integral dos critérios continuam pendentes |
 | G01–G05 e prontidão clínica/operacional | Não PASS | Ver [execução FOOD05](execucao-pos-320-food05.md) para evidências locais e bloqueios |
 
 Playwright focalizado FOOD05/PA07: 14/14 desktop e 14/14 mobile PASS; typecheck Web,
 build Web webpack e testes puros de cópia 14/14 PASS. O run GitHub `40124900107` no
-HEAD `bb513d1d` passou Backend/PostgreSQL/RLS, Web, Mobile, AI, governança e scanners;
-o smoke global permanecia em execução no último acompanhamento. Esses resultados não
-substituem R4 independente nem demonstram prontidão de produção.
+HEAD `bb513d1d` e o PR Gate concluíram PASS, incluindo Backend/PostgreSQL/RLS, Web,
+Mobile, AI, Demo local smoke, governança e scanners. Esses resultados não substituem
+R4 independente nem demonstram prontidão de produção.

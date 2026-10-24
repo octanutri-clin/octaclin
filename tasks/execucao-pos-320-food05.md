@@ -337,10 +337,10 @@ Fechamento do checkpoint intermediário:
   PostgreSQL/migrations, Redis/idempotência e RLS concluíram PASS; Web Next.js,
   Mobile Expo, AI FastAPI, governança, rollout seguro, operação de lançamento e
   scanners Dependency Review, Semgrep, CodeQL e Trivy também concluíram PASS.
-- No último acompanhamento, apenas `Demo local smoke` / Smoke visual Playwright
-  continuava `in_progress`; portanto o gate global ainda não está concluído. O
-  conjunto Playwright local focalizado FOOD05/PA07 passou 14/14 em desktop e mobile,
-  mas não substitui esse smoke global.
+- O run concluiu com `success`: Smoke visual Playwright, testes de estados/recuperação,
+  densidade/responsividade, linguagem e jornada de microcopy finalizaram PASS; o
+  `PR Gate` também concluiu PASS. O conjunto Playwright local focalizado FOOD05/PA07
+  passou 14/14 em desktop e mobile.
 - A verificação da projeção pós-desvinculação em RLS foi corrigida para consultar o
   GET profissional do rascunho, onde `equivalenciaAplicada` é projetado; os dados
   editoriais/autosave não carregam esse marcador de leitura.
@@ -349,3 +349,6 @@ Fechamento do checkpoint intermediário:
   local ainda não consegue iniciar a imagem Testcontainers deste ambiente.
 - O run não representa revisão independente R4, liberação de T07, validação da
   FOOD04 em produção, nem autorização para migration externa, deploy ou ativação.
+- Resultado final conferido no GitHub Actions para o run `40124900107`, HEAD
+  `bb513d1d`: todos os jobs concluídos com `success`. O registro descreve apenas esse
+  HEAD; qualquer atualização posterior da PR exige seus próprios checks.
