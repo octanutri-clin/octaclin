@@ -43,7 +43,7 @@
 | 18 | Configurar apresentação das refeições no plano | `PA05` | PR pós-320 | [R014 — react-hook-form/react-hook-form](https://github.com/react-hook-form/react-hook-form), [R041 — storybookjs/storybook](https://github.com/storybookjs/storybook) |
 | 19 | Ingredientes e tags em receitas | `FOOD07; reavaliar fase 310` | RESIDUAL PÓS-310 | [R017 — simonoppowa/OpenNutriTracker](https://github.com/simonoppowa/OpenNutriTracker), [R018 — TandoorRecipes/recipes](https://github.com/TandoorRecipes/recipes) |
 | 20 | Assinatura/carimbo em declarações e recibos | `DOC01` | PR pós-320 | [R029 — szimek/signature_pad](https://github.com/szimek/signature_pad) |
-| 21 | Até 50 substitutos por grupo | `BASELINE: já existe` | SEM NOVO PR | Código atual; sem nova biblioteca necessária |
+| 21 | Até 50 substitutos por grupo | `BASELINE parcial: limite real 20 por item` | FOOD04 mantém teto 20; aumento exige decisão própria | Código validado em 2026-10-22: plano-alimentar.ts, edicao-plano.ts e dtos.ts; sem nova biblioteca necessária |
 | 22 | Templates de prontuário | `QST07` | PR pós-320 | [R010 — medplum/medplum](https://github.com/medplum/medplum), [R050 — rjsf-team/react-jsonschema-form](https://github.com/rjsf-team/react-jsonschema-form) |
 | 23 | Páginas dedicadas para anamnese/prontuário | `QST05` | PR pós-320 | [R014 — react-hook-form/react-hook-form](https://github.com/react-hook-form/react-hook-form), [R050 — rjsf-team/react-jsonschema-form](https://github.com/rjsf-team/react-jsonschema-form) |
 | 24 | Cadastrar alimento no próprio editor do plano | `FOOD02` | PR pós-320 | [R047 — downshift-js/downshift](https://github.com/downshift-js/downshift), [R064 — zxing-js/browser](https://github.com/zxing-js/browser) |

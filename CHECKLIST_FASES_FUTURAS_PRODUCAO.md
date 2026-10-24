@@ -22,8 +22,18 @@ Atualizado em 2026-10-22. Fase 320: NO-GO para ingestão TBCA nesta rodada por a
   aberta. Não criar serviço pago nem declarar mitigação sem decisão operacional.
 - **FOOD03:** PR #438, migration 1077 e deploy reconciliados; ver
   `tasks/plan-pos-320-food03.md`.
-- **Próxima entrega funcional:** FOOD04, grupos reutilizáveis de substituições,
-  sujeito a planejamento próprio. Fase 316 permanece em stand-by.
+- **Próxima entrega funcional / planejamento ativo:** FOOD04, grupos
+  reutilizáveis de substituições. Base `9e1984a2` (merge #440) conferida em
+  2026-10-22; D01–D03 aprovadas e ampliadas para D01–D08. Administração,
+  duplicação, filtros/favoritos, aplicação seletiva, dedup e restauração fazem
+  parte da entrega essencial. Backend/BFF, migration1078 e UI implementados na
+  PR #441 (Draft); correções de snapshot catálogo e cancelamento durante save
+  reavaliadas por outro agente, sem novos Critical/P1/P2 confirmados no delta.
+  Regressões locais PASS (backend3244; visual20), CI do HEAD final pendente. Provas reais e limites em
+  `tasks/execucao-pos-320-food04.md`; nenhuma migration externa aplicada.
+  Plano: `tasks/plan-pos-320-food04.md`; tarefas: `tasks/todo-pos-320-food04.md`.
+  Referência específica recomenda primitives/código atual, sem nova biblioteca.
+  Fase 316 permanece em stand-by.
 
 ## Estado reconciliado em 2026-10-14
 

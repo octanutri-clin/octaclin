@@ -275,3 +275,37 @@ transferência, criação/CAS concorrentes e as duas ordens de aplicar/desativar
 sem acesso a banco externo. Gate local não inclui Timescale/pgvector. Web/BFF e
 CI final continuam pendentes no checkpoint backend; evidências/limites em
 `docs/governance/EVIDENCIAS_FOOD02_BACKEND_2026-10-17.md`.
+
+## FOOD04 — grupos de substituições e administração segregada
+
+R4: biblioteca cifrada/HMAC, capacidades próprias de compartilhar/administrar,
+tenant/criador e ausência de acesso pessoal ou clínico pela administração.
+Provas em `servico-grupos-substituicoes.spec.ts`,
+`fontes-grupos-substituicoes.spec.ts` e `controlador-grupos-substituicoes.spec.ts`
+sob `octaclin-backend/src/modulos/planos-alimentares/` (aplicação/apresentação).
+
+Idempotência, CAS e FORCE RLS são exercitados na migration
+`1720000001078-GruposSubstituicoes.integracao.spec.ts` em PostgreSQL descartável,
+role não-owner/NOBYPASSRLS. Recortes FOOD04 do inventário
+`rls-isolamento-tenant.integracao.spec.ts` cobrem fontes reais, save, carteira e
+serialização com arquivo. O runner oficial `test:rls:testcontainers` inclui as
+duas superfícies; existir teste ou usar uma adaptação local sem extensões não
+substitui a execução da cadeia oficial.
+
+`dominio/aplicacao-grupos-substituicoes.spec.ts` prova dedup por identidade/peso,
+porção divergente explícita, flags novas falsas, ação vinculada ao pai inclusive
+no primeiro pedido, replay e preservação de cópia já salva. O spec do serviço
+de planos verifica proveniência cifrada, nova versão e bloqueio do PATCH legado
+que não transporta essa origem. A projeção explícita remove os metadados internos.
+
+BFF profissional/admin: `octaclin-web/scripts/planos-alimentares-bff.spec.ts`,
+executado por `test:planos-alimentares:bff` e `test:authz`. Respostas selecionam
+campos e rejeitam grupo pessoal no canal administrativo; pedidos têm limite,
+allowlist e sessão anterior à leitura. Cópias factuais PA02 não transplantam a
+autoridade do grupo, conforme `scripts/copia-refeicoes-plano.spec.ts` da Web.
+
+UI/autosave/posse/undo, Playwright desktop/mobile/a11y, revisão R4 identificada e
+CI do HEAD completo continuam gates separados. Estado observado, comandos e
+limites: `tasks/execucao-pos-320-food04.md`; aceite: `tasks/todo-pos-320-food04.md`.
+Rollout exige autorização própria, migration aditiva fora de banda e leitor
+compatível com snapshots; rollback não apaga tabelas nem histórico.

@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import { mkdtempSync, readFileSync, rmdirSync, unlinkSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -226,35 +227,47 @@ test('rejeita campos incompletos ou com tipo errado em Dependabot', () => {
 
 const INVENTARIO_REAL = new URL('../docs/governance/inventario-security-quality.json', import.meta.url);
 
+test('snapshot revisado preserva byte e cobertura da captura autenticada', () => {
+  const bytes = readFileSync(new URL('../docs/governance/evidencias/2026-10-24/inventario-capturado.json', import.meta.url));
+  assert.equal(createHash('sha256').update(bytes).digest('hex'), '3e8cb7400759f9a22b6ce8d7e1975f0dd4b78cead1788c69590ab207ed89985c');
+  const captura = JSON.parse(bytes);
+  const inventario = JSON.parse(readFileSync(INVENTARIO_REAL, 'utf8'));
+  assert.equal(inventario.commitBase, captura.commitBase);
+  assert.equal(inventario.capturadoEm, captura.capturadoEm);
+  assert.deepEqual(inventario.snapshot, captura.snapshot);
+});
+
 test('valida estrutura e cobertura do inventario real na data da captura', () => {
   const inventario = JSON.parse(readFileSync(INVENTARIO_REAL, 'utf8'));
-  // A captura completa da main de 2026-10-09 fechou os 40 alertas OpenSSL e
-  // revelou alertas novos, triados por pacote junto a SQ-2026-004 e SQ-2026-240..247.
+  // Recaptura autenticada de 2026-10-24: referencias fechadas saem das causas;
+  // certifi e musl-utils entram sem dispensar os alertas remanescentes.
   assert.equal(inventario.gateEncerramentoSq4, undefined);
-  assert.deepEqual(inventario.causas.map(({ alertas }) => alertas.length), [206, 0, 0, 3, 3, 3, 2, 2, 1, 1, 2]);
+  assert.deepEqual(inventario.causas.map(({ alertas }) => alertas.length), [167, 0, 0, 0, 0, 0, 2, 2, 0, 0, 0, 2, 2]);
   assert.deepEqual(inventario.causas.map(({ disposicao }) => disposicao), [
     'corrigir',
     'mitigado',
     'mitigado',
-    'corrigir',
-    'corrigir',
-    'corrigir',
+    'mitigado',
+    'mitigado',
+    'mitigado',
     'aguardando_upstream',
     'aguardando_upstream',
-    'aguardando_upstream',
+    'mitigado',
+    'mitigado',
+    'mitigado',
     'corrigir',
     'corrigir',
   ]);
-  assert.match(carregarEValidarInventario(undefined, { hoje: HOJE }), /223 alertas cobertos/);
+  assert.match(carregarEValidarInventario(undefined, { hoje: new Date(inventario.capturadoEm) }), /175 alertas cobertos/);
 });
 
-// Fronteira ancorada no `revisarEm` vigente da SQ-2026-004 (2026-10-23): a data
+// Fronteira ancorada no `revisarEm` vigente da SQ-2026-004 (2026-11-07): a data
 // de revisao ainda vale durante todo o dia; no dia seguinte reprova. Ao renovar
 // a data na causa, mova estes casos junto para provar que a CLI aplica o relogio.
 for (const [data, status, mensagem] of [
-  ['2026-10-22T23:59:59.999Z', 0, /223 alertas cobertos/],
-  ['2026-10-23T00:00:00.000Z', 0, /223 alertas cobertos/],
-  ['2026-10-24T00:00:00.000Z', 1, /SQ-2026-004 esta com revisao vencida/],
+  ['2026-11-06T23:59:59.999Z', 0, /175 alertas cobertos/],
+  ['2026-11-07T00:00:00.000Z', 0, /175 alertas cobertos/],
+  ['2026-11-08T00:00:00.000Z', 1, /SQ-2026-004 esta com revisao vencida/],
 ]) {
   test(`CLI do gate de CI aplica o relogio corrente em ${data}`, () => {
     const pacote = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8'));

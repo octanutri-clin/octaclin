@@ -51,3 +51,13 @@ export function normalizarComposicaoPersonalizada(entrada: unknown): ComposicaoP
     micronutrientesPor100g: Object.fromEntries(Object.entries(micronutrientes).map(([k, n]) => [k as CodigoMicronutriente, normalizarNutrientePor100g(n, peso)])),
     disponivelParaCalculo: MACROS.slice(0, 4).every(k => nutrientes[k] !== undefined), normalizacaoVersao: NORMALIZACAO_CUSTOM };
 }
+
+/** Leitor canônico compartilhado; valida conteúdo já autenticado pela cifra. */
+export function validarSnapshotPersonalizado(valor: unknown): ComposicaoPersonalizada {
+  const s = valor as { schemaVersao?: number; composicao?: ComposicaoPersonalizada };
+  const c = s?.composicao;
+  if (s?.schemaVersao !== 1 || c?.normalizacaoVersao !== NORMALIZACAO_CUSTOM) throw new Error('Snapshot custom inválido.');
+  const r = normalizarComposicaoPersonalizada({ nome:c.nome,...(c.preparacao?{preparacao:c.preparacao}:{}),...(c.referenciaComposicao?{referenciaComposicao:c.referenciaComposicao}:{}),base:c.baseOrigem,...c.composicaoOrigem });
+  if(JSON.stringify(r)!==JSON.stringify(c)) throw new Error('Composição custom inválida.');
+  return r;
+}

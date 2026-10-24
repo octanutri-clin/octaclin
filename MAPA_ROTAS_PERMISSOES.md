@@ -73,6 +73,32 @@ Inclui permissoes de `Professional` e adiciona:
 
 ## Rotas web principais
 
+### FOOD04 — biblioteca de grupos de substituições
+
+Capacidades adicionais: `grupos_substituicoes.compartilhar` para Professional
+(e SuperAdmin por herança) e `grupos_substituicoes.administrar` para
+Client/SuperAdmin. Compartilhar exige também identidade profissional própria;
+a capacidade administrativa não concede acesso ao prontuário nem a grupos pessoais.
+
+Prefixos backend `/planos-alimentares/`; BFF `/api/planos-alimentares/`.
+Todas as rotas abaixo exigem sessão e devolvem `private, no-store`.
+
+| Sufixo / método em ambos os prefixos | Papel | Permissão e escopo autoritativo |
+| --- | --- | --- |
+| `grupos-substituicoes/consulta` POST; `grupos-substituicoes/:id` GET | Professional | `planos_alimentares.ler`; próprios pessoais ou compartilhados do tenant |
+| `grupos-substituicoes` POST | Professional | `planos_alimentares.gerenciar`; pessoal padrão, clínica requer compartilhar |
+| `grupos-substituicoes/:id` PATCH | Professional | Gerenciar + criador; CAS; promoção requer compartilhar |
+| `grupos-substituicoes/:id/duplicar` POST | Professional | Gerenciar + acesso à origem; cópia pessoal padrão e idempotente |
+| `grupos-substituicoes/:id/favorito` POST/DELETE | Professional | Gerenciar + acesso ao grupo; favorito individual |
+| `grupos-substituicoes-administracao/consulta` POST; `grupos-substituicoes-administracao/:id` GET/PATCH | Client, SuperAdmin | Administrar; somente compartilhados do tenant; PATCH com CAS |
+| `grupos-substituicoes-administracao/alimentos/consulta` POST | Client, SuperAdmin | Administrar; catálogo ativo/aprovado ou custom ativo compartilhado; nunca custom pessoal |
+
+Aplicação não possui segundo endpoint de gravação clínica: a intenção limitada
+`origemGrupo` passa pelo save editorial existente, que revalida paciente,
+carteira, rascunho, grupo e fonte na mesma transação. Proveniência completa fica
+no snapshot cifrado; respostas factuais selecionam explicitamente os campos.
+Nenhuma rota aceita tenant ou profissional arbitrário no corpo.
+
 | Rota web | Perfil esperado | Permissao de menu/uso |
 | --- | --- | --- |
 | `/login` | Publica | N/A |

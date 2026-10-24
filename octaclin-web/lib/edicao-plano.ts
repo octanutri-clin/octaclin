@@ -1,3 +1,4 @@
+import type { IntencaoGrupoSubstituicoesEdicao } from './grupos-substituicoes-tipos';
 import type { FormulaEnergeticaApi, MetodoMacrosManualApi } from './plano-alimentar-api';
 import type { PreferenciasApresentacaoPlanoApi } from './preferencias-apresentacao-plano';
 import type { PrecondicaoEdicaoPlano } from './coordenador-edicao-plano';
@@ -76,7 +77,7 @@ export interface AlimentoEdicao {
   /** Identidade do vínculo do rascunho; não é transportada a cópias. */
   medidaCaseira?: MedidaCaseiraAplicadaApi | null;
 }
-export interface AlternativaEdicao extends AlimentoEdicao { liberadaParaPaciente?: boolean; preferida?: boolean }
+export interface AlternativaEdicao extends AlimentoEdicao { origemGrupo?: IntencaoGrupoSubstituicoesEdicao | null; liberadaParaPaciente?: boolean; preferida?: boolean }
 export interface ItemEdicao extends AlimentoEdicao { substituicoes?: AlternativaEdicao[]; substituicoesVisiveisInicialmente?: NumeroEdicao }
 export interface RefeicaoEdicao { chaveCliente: string; nome?: string; horarioLocal?: string; orientacoes?: string; itens: ItemEdicao[] }
 export interface DocumentoEdicaoPlano {

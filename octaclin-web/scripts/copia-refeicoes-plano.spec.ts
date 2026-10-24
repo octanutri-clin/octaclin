@@ -16,6 +16,38 @@ const nutrientes = {
   fibrasG: 2
 };
 
+test('FOOD04 cópia factual entre planos não transplanta a autoridade do grupo', () => {
+  const origem = refeicaoApi();
+  const alternativa = origem.itens[0].substituicoes[0];
+  const referencia = { grupoId: '10000000-0000-4000-8000-000000000051', revisao: 1,
+    entradaId: '10000000-0000-4000-8000-000000000052', aplicacaoId: '10000000-0000-4000-8000-000000000053' };
+  Object.assign(alternativa.composicaoSnapshot, { origemGrupo: referencia });
+  const copia = copiarRefeicaoParaFormulario(origem, gerarChave).itens[0].substituicoes[0];
+  assert.equal(Object.hasOwn(copia, 'origemGrupo'), false);
+  assert.notEqual(copia.chaveCliente, alternativa.id);
+  assert.equal(copia.porcaoGramas, alternativa.porcaoGramas);
+  assert.deepEqual(copia.nutrientesPor100g, alternativa.composicaoSnapshot.nutrientesPor100g);
+  alternativa.composicaoSnapshot.nutrientesPor100g.energiaKcal = 999;
+  assert.notEqual(copia.nutrientesPor100g.energiaKcal, 999);
+  assert.equal(referencia.revisao, 1);
+});
+
+test('FOOD04 duplicação local mantém fatos independentes e não reutiliza intenção antiga', () => {
+  const origem = refeicaoFormulario('origem-grupo');
+  const alternativa = { chaveCliente: 'alternativa-grupo', descricao: 'Alternativa sintética',
+    quantidade: 1, unidade: 'g', porcaoGramas: 30, nutrientesPor100g: { ...nutrientes },
+    preferida: false, liberadaParaPaciente: false };
+  origem.itens[0].substituicoes = [alternativa];
+  Object.assign(alternativa, { origemGrupo: { grupoId: 'grupo-sintetico', revisao: 1,
+    entradaId: 'entrada-sintetica', aplicacaoId: 'acao-sintetica' } });
+  const copia = duplicarRefeicaoNoRascunho([origem], 0, gerarChave)[1].itens[0].substituicoes[0];
+  assert.equal(Object.hasOwn(copia, 'origemGrupo'), false);
+  assert.notEqual(copia.chaveCliente, alternativa.chaveCliente);
+  assert.equal(copia.porcaoGramas, alternativa.porcaoGramas);
+  assert.deepEqual(copia.nutrientesPor100g, alternativa.nutrientesPor100g);
+  assert.ok(Object.hasOwn(alternativa, 'origemGrupo'));
+});
+
 function refeicaoApi(id = 'origem-r1'): RefeicaoPlanoAlimentarApi {
   return {
     id,

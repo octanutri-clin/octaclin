@@ -553,6 +553,16 @@ de encerrar a PR.
 
 ## [FOOD04] Grupos reutilizáveis de substituições
 
+**Planejamento ativo (2026-10-22):** main `9e1984a2`, após merge #440.
+[Plano e gaps](../../tasks/plan-pos-320-food04.md) e
+[tarefas/checkpoints](../../tasks/todo-pos-320-food04.md).
+D01–D03 aprovadas e ampliadas para D01–D08 pelo proprietário: grupos pessoais
+  e compartilhados, administração específica e continuidade institucional,
+  duplicação independente, descrição/categoria/etiquetas, favoritos/filtros,
+  aplicação seletiva/porções/dedup, arquivo/restauração e proveniência cifrada.
+  Undo local seguro incluído; sem implementação ou PR FOOD04 nesta etapa.
+Referência específica: primitives/código atual, sem repositório externo recomendado.
+
 **Origem:** itens 49 e parte do 17.
 
 **Status atual:** substituições são ancoradas diretamente ao item principal.
@@ -565,8 +575,19 @@ de encerrar a PR.
 
 **Aceite:**
 - mesmo grupo aplicável a itens diferentes;
-- editar biblioteca não altera versão publicada;
-- histórico do plano preservado.
+- criar, editar, duplicar, arquivar e restaurar conforme matriz de permissões;
+- seleção parcial e porções personalizadas, sem repetir principal ou duplicata
+  exata; divergência de porções exige decisão explícita;
+- preservar alternativas anteriores; novas sem preferência ou liberação automática;
+- editar biblioteca não altera cópias aplicadas, rascunhos ou versões publicadas;
+- autosave, RLS, CAS, snapshots, cálculos e histórico do plano preservados.
+
+**Complementares propostos, sem execução antecipada:** FOOD04-C01 avisos de
+incompatibilidade, dependentes de cadastro estruturado e regras clínicas validadas
+(hoje não demonstrados); FOOD04-C02 aplicação simultânea em múltiplos destinos;
+FOOD04-C03 undo persistente e histórico navegável/diff da biblioteca. Auditoria e
+rastreabilidade essenciais continuam na PR principal. Equivalência automática
+permanece exclusivamente FOOD05.
 
 ---
 

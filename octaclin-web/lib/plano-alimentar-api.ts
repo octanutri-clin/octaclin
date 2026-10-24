@@ -1,3 +1,4 @@
+import type { FonteGrupoSubstituicoes, GrupoSubstituicoesResumo, GrupoSubstituicoesDetalhe, CriarGrupoSubstituicoesEntrada, AtualizarGrupoSubstituicoesEntrada, DuplicarGrupoSubstituicoesEntrada, ConsultaGruposSubstituicoes } from './grupos-substituicoes-tipos';
 import type { DocumentoEdicaoPlano, SalvarEdicaoPlanoEntrada } from './edicao-plano';
 import type { PrecondicaoEdicaoPlano } from './coordenador-edicao-plano';
 import type { PreferenciasApresentacaoPlanoApi, EstadoApresentacaoPlanoApi } from './preferencias-apresentacao-plano';
@@ -1041,4 +1042,29 @@ export function obterApresentacaoPacientePlano(pacienteId: string, planoId: stri
     `${basePaciente(pacienteId)}/${encodeURIComponent(planoId)}/versoes/${encodeURIComponent(String(numero))}/apresentacao-paciente`,
     { signal }
   );
+}
+
+// FOOD04: escopo/tenant são derivados da sessão; nomes/filtros ficam no body.
+const baseGruposSubstituicoes=(administracao=false)=>`/api/planos-alimentares/${administracao?'grupos-substituicoes-administracao':'grupos-substituicoes'}`;
+export function consultarGruposSubstituicoes(consulta: ConsultaGruposSubstituicoes={},signal?: AbortSignal,administracao=false) {
+  return requisitar<PaginaApi<GrupoSubstituicoesResumo>>(`${baseGruposSubstituicoes(administracao)}/consulta`,{method:'POST',...corpoJson(consulta),signal});
+}
+export function obterGrupoSubstituicoes(id: string,signal?: AbortSignal,administracao=false) {
+  return requisitar<GrupoSubstituicoesDetalhe>(`${baseGruposSubstituicoes(administracao)}/${encodeURIComponent(id)}`,{signal});
+}
+export function criarGrupoSubstituicoes(entrada: CriarGrupoSubstituicoesEntrada,signal?: AbortSignal) {
+  return requisitar<GrupoSubstituicoesDetalhe>(baseGruposSubstituicoes(),{method:'POST',...corpoJson(entrada),signal});
+}
+export function atualizarGrupoSubstituicoes(id: string,entrada: AtualizarGrupoSubstituicoesEntrada,signal?: AbortSignal,administracao=false) {
+  return requisitar<GrupoSubstituicoesDetalhe>(`${baseGruposSubstituicoes(administracao)}/${encodeURIComponent(id)}`,{method:'PATCH',...corpoJson(entrada),signal});
+}
+export function duplicarGrupoSubstituicoes(id: string,entrada: DuplicarGrupoSubstituicoesEntrada,signal?: AbortSignal) {
+  return requisitar<GrupoSubstituicoesDetalhe>(`${baseGruposSubstituicoes()}/${encodeURIComponent(id)}/duplicar`,{method:'POST',...corpoJson(entrada),signal});
+}
+export function alterarFavoritoGrupoSubstituicoes(id: string,favorito: boolean,signal?: AbortSignal) {
+  return requisitar<{grupoId:string;favorito:boolean}>(`${baseGruposSubstituicoes()}/${encodeURIComponent(id)}/favorito`,{method:favorito?'POST':'DELETE',signal});
+}
+
+export function consultarFontesGruposAdministracao(consulta:{origem:'catalogo'|'custom';busca:string;pagina?:number;limite?:number},signal?:AbortSignal){
+  return requisitar<PaginaApi<FonteGrupoSubstituicoes>>(`${baseGruposSubstituicoes(true)}/alimentos/consulta`,{method:'POST',...corpoJson(consulta),signal});
 }

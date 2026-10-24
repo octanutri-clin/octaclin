@@ -7,6 +7,14 @@ import { fileURLToPath } from 'node:url';
 const raiz = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const temporaria = mkdtempSync(join(tmpdir(), 'octaclin-planos-alimentares-bff-'));
 const arquivos = [
+  'app/api/planos-alimentares/grupos-substituicoes-administracao/alimentos/consulta/route.ts',
+  'app/api/planos-alimentares/grupos-substituicoes/consulta/route.ts',
+  'app/api/planos-alimentares/grupos-substituicoes/route.ts',
+  'app/api/planos-alimentares/grupos-substituicoes/[grupoId]/route.ts',
+  'app/api/planos-alimentares/grupos-substituicoes/[grupoId]/duplicar/route.ts',
+  'app/api/planos-alimentares/grupos-substituicoes/[grupoId]/favorito/route.ts',
+  'app/api/planos-alimentares/grupos-substituicoes-administracao/consulta/route.ts',
+  'app/api/planos-alimentares/grupos-substituicoes-administracao/[grupoId]/route.ts',
   'scripts/planos-alimentares-bff.spec.ts',
   'lib/ativacao-plano.ts',
   'app/api/pacientes/[id]/planos-alimentares/[planoId]/ativacao/route.ts',

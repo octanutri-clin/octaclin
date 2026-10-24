@@ -15,6 +15,7 @@ import { AreaPortalCliente } from './portal-cliente-dominio';
 import { AreaOperacaoCliente } from './area-operacao-cliente';
 import { AreaAuditoriaCliente } from './area-auditoria-cliente';
 import { AreaLgpdCliente } from './area-lgpd-cliente';
+import { BibliotecaGruposSubstituicoes } from '@/components/pacientes/biblioteca-grupos-substituicoes';
 import { usePortalCliente } from './use-portal-cliente';
 
 export function PortalCliente() {
@@ -26,6 +27,7 @@ export function PortalCliente() {
     erro,
     carregando,
     podeLerFinanceiro,
+    podeAdministrarGrupos,
     confirmacaoUsuario,
     setConfirmacaoUsuario,
     desativandoUsuarioId,
@@ -80,6 +82,7 @@ export function PortalCliente() {
           abas={[
             { id: 'ativacao', rotulo: 'Ativação' },
             { id: 'operacao', rotulo: 'Operação' },
+            ...(podeAdministrarGrupos ? [{ id: 'grupos', rotulo: 'Grupos alimentares' }] : []),
             { id: 'auditoria', rotulo: 'Auditoria' },
             { id: 'lgpd', rotulo: 'Privacidade' },
             { id: 'assinatura', rotulo: 'Assinatura' },
@@ -98,6 +101,7 @@ export function PortalCliente() {
 
         <AreaVisaoGeralCliente portal={portal} />
         {areaAtiva === 'operacao' ? <AreaOperacaoCliente /> : null}
+        {areaAtiva === 'grupos' && podeAdministrarGrupos ? <BibliotecaGruposSubstituicoes administracao /> : null}
         {areaAtiva === 'auditoria' ? <AreaAuditoriaCliente /> : null}
         {areaAtiva === 'lgpd' ? <AreaLgpdCliente /> : null}
         <AreaAssinaturaUsoCliente portal={portal} />
