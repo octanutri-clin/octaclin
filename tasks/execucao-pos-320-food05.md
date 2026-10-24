@@ -332,12 +332,20 @@ Fechamento do checkpoint intermediário:
   mas o ORM atual já as seleciona. O erro observado foi `column
   ProfissionalOrm.preferencias_equivalencia does not exist` em `identidadeBiblioteca`.
 - A fixture agora aplica a migration 1079 depois da 1078 no Testcontainers descartável,
-  sem editar migration histórica nem tocar ambientes externos. HEAD `79065318` foi
-  enviado para a Draft e disparou nova execução; o resultado final desse novo CI ainda
-  está pendente neste registro.
+  sem editar migration histórica nem tocar ambientes externos. HEAD atual
+  `bb513d1d` foi executado no GitHub Actions, run `40124900107`: Backend NestJS,
+  PostgreSQL/migrations, Redis/idempotência e RLS concluíram PASS; Web Next.js,
+  Mobile Expo, AI FastAPI, governança, rollout seguro, operação de lançamento e
+  scanners Dependency Review, Semgrep, CodeQL e Trivy também concluíram PASS.
+- No último acompanhamento, apenas `Demo local smoke` / Smoke visual Playwright
+  continuava `in_progress`; portanto o gate global ainda não está concluído. O
+  conjunto Playwright local focalizado FOOD05/PA07 passou 14/14 em desktop e mobile,
+  mas não substitui esse smoke global.
 - A verificação da projeção pós-desvinculação em RLS foi corrigida para consultar o
   GET profissional do rascunho, onde `equivalenciaAplicada` é projetado; os dados
   editoriais/autosave não carregam esse marcador de leitura.
 - A spec unitária da migration 1079 passou 2/2 e o build backend validou `dist/main.js`.
-  A integração PostgreSQL precisa ser repetida no GitHub, pois o Docker local não
-  consegue iniciar a imagem Testcontainers deste ambiente.
+  A integração PostgreSQL/RLS foi repetida no GitHub e passou no run acima. O Docker
+  local ainda não consegue iniciar a imagem Testcontainers deste ambiente.
+- O run não representa revisão independente R4, liberação de T07, validação da
+  FOOD04 em produção, nem autorização para migration externa, deploy ou ativação.
