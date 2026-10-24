@@ -12,7 +12,7 @@ export interface ContextoEquivalencia {
  estado:EstadoEquivalencia;ator:{usuarioId:string;profissionalId:string};comandoHash:string;dependenciasHash:string;fingerprintResolucao:string;
  snapshotPrincipal?:SnapshotComposicao;snapshotAlternativa?:SnapshotComposicao;
  aplicados?:{principal:FatosComposicaoEquivalencia;alternativa:FatosComposicaoEquivalencia;snapshotPrincipal?:SnapshotComposicao;snapshotAlternativa?:SnapshotComposicao};
- resolucao?:{aplicacaoId:string;comandoHash:string};
+ resolucao?:{aplicacaoId:string;comandoHash:string;ator:ContextoEquivalencia['ator']};
 }
 export type ContextosEquivalencias=Record<string,ContextoEquivalencia>;
 export class ConflitoEquivalenciaEdicao extends Error { constructor(){super('A equivalência mudou ou perdeu sua referência. Confira a prévia novamente.');} }
@@ -47,7 +47,7 @@ export function validarContextosEquivalencias(v:unknown):ContextosEquivalencias 
   if(c.resultado?.estado!=='calculavel'||c.resultado.nutriente!==c.nutriente||typeof c.porcaoEfetivaGramas!=='string'||typeof c.porcaoPrincipalGramas!=='string')throw new ConflitoEquivalenciaEdicao();
   lerRazaoSnapshot(c.resultado.porcaoMatematica);for(const r of Object.values(c.resultado.exatos??{}))lerRazaoSnapshot(r);
   if(!c.resultado.exatos?.alvo||!c.resultado.exatos?.obtido||!c.resultado.exatos?.delta||!c.resultado.exatos?.percentual)throw new ConflitoEquivalenciaEdicao();
-  if(c.resolucao){const r=objetoGrupo(c.resolucao,['aplicacaoId','comandoHash']);if(typeof r.aplicacaoId!=='string'||!UUID_GRUPO.test(r.aplicacaoId)||!hashValido(r.comandoHash)||ids.has(r.aplicacaoId))throw new ConflitoEquivalenciaEdicao();ids.add(r.aplicacaoId);}
+  if(c.resolucao){const r=objetoGrupo(c.resolucao,['aplicacaoId','comandoHash','ator']);if(typeof r.aplicacaoId!=='string'||!UUID_GRUPO.test(r.aplicacaoId)||!hashValido(r.comandoHash)||ids.has(r.aplicacaoId))throw new ConflitoEquivalenciaEdicao();const autor=objetoGrupo(r.ator,['usuarioId','profissionalId']);if(![autor.usuarioId,autor.profissionalId].every(x=>typeof x==='string'&&UUID_GRUPO.test(x)))throw new ConflitoEquivalenciaEdicao();ids.add(r.aplicacaoId);}
  }
  return copia(v) as ContextosEquivalencias;
 }
@@ -74,11 +74,12 @@ export async function resolverEquivalenciasDocumento(documento:DocumentoEdicaoPl
   }
   const ch=hashComando(e);
   if(e.acao==='desvincular'){
+   if(!cb.ator)throw new ConflitoEquivalenciaEdicao();
    if(anterior?.estado==='desvinculada_manualmente'&&anterior.resolucao?.aplicacaoId===e.aplicacaoId&&anterior.resolucao.comandoHash===ch){atuais[a.chaveCliente]=anterior;delete a.equivalencia;continue;}
    if(!anterior||anterior.estado==='desvinculada_manualmente'||e.anteriorAplicacaoId!==anterior.aplicacaoId||e.fingerprintEsperado!==anterior.fingerprintResolucao)throw new ConflitoEquivalenciaEdicao();
    if(identidades.has(e.aplicacaoId))throw new ConflitoEquivalenciaEdicao();
    identidades.set(e.aplicacaoId,a.chaveCliente);
-   const c=copia(anterior);c.estado='desvinculada_manualmente';c.resolucao={aplicacaoId:e.aplicacaoId,comandoHash:ch};atuais[a.chaveCliente]=c;delete a.equivalencia;continue;
+   const c=copia(anterior);c.estado='desvinculada_manualmente';c.resolucao={aplicacaoId:e.aplicacaoId,comandoHash:ch,ator:{...cb.ator}};atuais[a.chaveCliente]=c;delete a.equivalencia;continue;
   }
   if(anterior?.aplicacaoId===e.aplicacaoId){
    if(anterior.comandoHash!==ch||anterior.estado!=='calculada_revisada'||await cb.dependencias(item,a,anterior)!==anterior.dependenciasHash)throw new ConflitoEquivalenciaEdicao();

@@ -1797,6 +1797,15 @@ describe('ServicoPlanosAlimentares', () => {
       const salvo:any=await servico.salvarEdicaoRascunho(TENANT_ID,PACIENTE_ID,PLANO_ID,usuarioProfissional(),{rascunhoIdEsperado:nova.id,rascunhoRevisaoEsperada:0,documento:alterado});
       expect(salvo.equivalenciasAplicadas.equivalente).toMatchObject({aplicacaoId,estado:'calculada_revisada'});
     });
+    it.each(['liberadaParaPaciente','preferida'])('FOOD05 não aceita nova alternativa já com %s no comando de aplicação',async campo=>{const {d}=await prepararEquivalencia();d.refeicoes[0].itens[0].substituicoes[0][campo]=true;await expect(salvarEdicao(d)).rejects.toBeInstanceOf(BadRequestException);});
+    it('FOOD05 converter alternativa manual já existente preserva decisões legítimas anteriores',async()=>{
+      const {d}=await prepararEquivalencia();const a=d.refeicoes[0].itens[0].substituicoes[0];delete a.equivalencia;a.liberadaParaPaciente=true;a.preferida=true;
+      const manual:any=await salvarEdicao(d);const doc=manual.documentoEdicao,alternativa=doc.refeicoes[0].itens[0].substituicoes[0];
+      const fontes=new FontesGruposSubstituicoes(criptografia);const s=new ServicoEquivalenciasPlano(executor as any,criptografia,fontes,new ServicoGruposSubstituicoes(executor as any,criptografia,fontes));
+      const p=await s.prever(TENANT_ID,PACIENTE_ID,PLANO_ID,usuarioProfissional(),{versaoId:VERSAO_ID,rascunhoRevisaoEsperada:1,documentoEdicao:doc,itemChave:doc.refeicoes[0].itens[0].chaveCliente,nutriente:'energiaKcal',alternativas:[alternativa],politica:{passoPorcaoGramas:'1'}});
+      alternativa.equivalencia={acao:'calcular',aplicacaoId:randomUUID(),nutriente:'energiaKcal',politica:{passoPorcaoGramas:'1'},porcaoEfetiva:'50',fingerprintEsperado:p.alternativas[0].fingerprint};
+      const salvo:any=await salvarEdicao(doc,1);expect(salvo.refeicoes[0].itens[0].substituicoes[0]).toMatchObject({liberadaParaPaciente:true,preferida:true});
+    });
     it('FOOD05 autosave marca revisão pendente sem mudar porção e bloqueia nova publicação',async()=>{
       const {d}=await prepararEquivalencia();const primeiro:any=await salvarEdicao(d);const proximo=primeiro.documentoEdicao;proximo.refeicoes[0].itens[0].porcaoGramas=160;
       const segundo:any=await salvarEdicao(proximo,1);expect(segundo.equivalenciasAplicadas.equivalente.estado).toBe('revisao_pendente');expect(segundo.documentoEdicao.refeicoes[0].itens[0].substituicoes[0].porcaoGramas).toBe('50');

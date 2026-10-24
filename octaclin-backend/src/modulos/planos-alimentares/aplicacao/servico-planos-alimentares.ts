@@ -764,6 +764,14 @@ export class ServicoPlanosAlimentares {
       const estadoAnterior = this.lerEdicao(rascunho);
       if (estadoAnterior.edicaoEstado === 'indisponivel') throw new ConflictException('Snapshot de edição indisponível. Reconfira o rascunho.');
       const anteriorEdicao=estadoAnterior.documentoEdicao??null;
+      // Confirmar uma nova aplicação nunca disponibiliza automaticamente uma
+      // alternativa ao paciente. Decisões já salvas no mesmo item são legítimas.
+      for(const r of documento.refeicoes)for(const i of r.itens)for(const a of i.substituicoes??[]){
+        if(a.equivalencia&&'acao'in a.equivalencia&&a.equivalencia.acao==='calcular'&&(a.liberadaParaPaciente===true||a.preferida===true)){
+          const anterior=anteriorEdicao?.refeicoes.flatMap(ref=>ref.itens).find(item=>item.chaveCliente===i.chaveCliente)?.substituicoes?.find(alt=>alt.chaveCliente===a.chaveCliente);
+          if(!anterior)throw new BadRequestException('Novas alternativas de equivalência começam sem liberação ou preferência. Configure após confirmar.');
+        }
+      }
       const equivalenciasAnteriores=this.lerContextosEquivalencias(rascunho);
       const catalogosAnteriores = rascunho.edicaoSnapshotCriptografado
         ? lerSnapshotEdicaoGrupos(this.lerJsonCriptografado(rascunho.edicaoSnapshotCriptografado)).catalogos : {};
