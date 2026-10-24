@@ -1,3 +1,29 @@
+# Handoff ativo — FOOD04 integrada; rollout produtivo bloqueado
+
+Branch documental `docs/food04-rollout-1078`, base main `02a51be8` (#441).
+Worktree `/workspace/octaclin/.worktrees/pos320-food04-planning`; checkout principal
+com alteração preexistente preservado.
+
+- Proprietário autorizou migrations e validações nesta sessão de24/10.
+- CI final de b2da3799 e revisão corretiva concluídos; não reabrir FOOD04.
+- Migration1078 aplicada e validada no staging principal, após ensaio/backup.
+- Produção não alterada: Neon HTTP402/quota excedida confirmado em duas consultas
+  read-only e logs do backend Render; último deploy automático update_failed.
+- Sem alteração de plano/cobrança, flag, deploy, privilege grant ou dado clínico.
+- Próximo item operacional: regularizar quota com o proprietário, reconciliar
+  produção, backup/ensaio, aplicar somente migrations pendentes e verificar.
+- Smokes HTTP deram timeout; jornada autenticada pós-aplicação não executada.
+- [Relatório detalhado](../docs/governance/EVIDENCIAS_ROLLOUT_FOOD04_2026-10-24.md).
+- FOOD05: explicar equivalência por um nutriente-alvo e colher decisões de
+  indicadores, pontos de aplicação e atualização explícita. Não implementar antes
+  do escopo aprovado. Consultar somente repositórios de referência dessa fase.
+- Modelo: Sol médio para operações/planejamento; handoff para Luna alto quando
+  implementação estiver suficientemente definida, avisando e pausando a troca.
+
+---
+
+## Handoff anterior preservado — supersedido pelo estado operacional acima
+
 # Handoff ativo — FOOD04: PR #441 em validacao final
 
 Base `origin/main` `9e1984a2` (merge #440), branch `docs/pos320-food04-planning`,
