@@ -10,7 +10,8 @@ acessibilidade geral e revisão final ainda dependem do HEAD final.
 Atualização 24/10: PR #441 Draft aberta, UI implementada e CI do checkpoint
 anterior aprovado nas superfícies funcionais. Governança e Mobile receberam
 correções próprias; revisão cruzada apontou dois P2 adicionais em catálogo e
-cancelamento, agora sob regressão e reavaliação. O quadro de checkpoint abaixo
+cancelamento, corrigidos e reavaliados em fonte por outro agente sem novos
+Critical/P1/P2 confirmados; regressões locais PASS (backend3244; visual20), CI final pendente. O quadro de checkpoint abaixo
 é histórico; os gates finais continuam abertos até a evidência do novo HEAD.
 As caixas abaixo
 representam o aceite integral, não apenas a existência do código.

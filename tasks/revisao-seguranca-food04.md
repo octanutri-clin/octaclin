@@ -88,6 +88,32 @@ Os riscos residuais de dependencias ficam no inventario, sem declaracao SQ4.
 
 ## Gate final
 
-Revisao do delta corretivo: PENDING. Regressoes/CI do HEAD final: PENDING.
-O primeiro parecer nao aprova a fase enquanto R4-F01/R4-F02 nao forem
-reavaliados. A cobertura e seus limites devem ser atualizados com o parecer.
+Revisao cruzada do delta `d3157af0..c0247662`: PASS na leitura de fonte.
+O mesmo revisor independente da autoria reavaliou ambos os achados e seus
+caminhos relacionados: R4-F01/R4-F02 resolvidos; nenhum novo Critical/P1/P2
+confirmado. Conferiu identidade/pai/origem, nova aplicacao reautorizada,
+compatibilidade schema1, envelope2 interno, clone de filhos autorizados e
+cancelamento depois do await antes da mutacao. Nao executou suites nem CI;
+nao equivale a auditoria humana externa ou aprovacao operacional.
+
+O CI do checkpoint `d3157af0` concluiu SUCCESS: run40074420091, alem de
+CodeQL40074420062, Semgrep40074420103, Trivy40074420036 e Dependency
+Review40074420148. Essa evidencia fecha Governanca/Mobile daquele checkpoint,
+mas nao substitui as regressoes e o CI do HEAD corretivo final, ainda pendentes.
+
+
+## Regressoes locais do codigo corretivo
+
+Node22.23.4, fixtures sinteticas. Backend completo: 362 suites PASS,
+3244 testes PASS, 8 suites/142 testes SKIPPED (condicionais de integracao);
+370 suites/3386 testes no total, 431,333s. Esse comando nao habilitou os
+runners PostgreSQL: nao inferir PASS de RLS/concorrrencia dos skips.
+FOOD04 Playwright: 20/20 PASS em desktop/mobile, 7,1min, incluindo cancelamento
+aguardando ACK, snapshots editoriais e as regressoes da biblioteca.
+Backend typecheck/build/artefato de producao e Web typecheck PASS;
+ESLint dos arquivos Web: zero erros e oito avisos preexistentes.
+Scan local de segredos e diff-check PASS. Logs/artefatos temporarios em
+`/tmp/food04-r4-fixes`; servidor encerrado e symlinks locais restaurados.
+
+CI com PostgreSQL/RLS/Testcontainers e scanners do HEAD final ainda PENDING;
+nenhum resultado do checkpoint anterior e promovido ao novo codigo.

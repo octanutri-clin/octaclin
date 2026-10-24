@@ -11,7 +11,8 @@ Atualizado em 2026-10-24 (validacao final FOOD04; registros anteriores preservad
   dedup e arquivo/restauração. Desenvolvimento autorizado em “Pode seguir”;
   domínio, biblioteca, migration1078, save/snapshots, BFF e UI implementados.
   Revisao cruzada encontrou dois P2 em snapshots de catalogo e cancelamento de
-  aplicacao durante save; correcoes sob regressao/revisao antes do aceite.
+  aplicacao durante save; ambos corrigidos e reavaliados por outro agente
+  sem novos Critical/P1/P2 confirmados. Regressoes locais PASS (backend3244; visual20); CI final pendente.
   A PR permanece Draft. Evidências e limitações em
   `tasks/execucao-pos-320-food04.md`. Plano/checkpoints em `tasks/plan-pos-320-food04.md` e
   `tasks/todo-pos-320-food04.md`; handoff ativo em `tasks/plan.md`.

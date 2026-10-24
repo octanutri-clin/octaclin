@@ -173,3 +173,30 @@ O advisory node-forge continua mitigado pelo backport existente; certifi,
 musl-utils e residuos IA permanecem no inventario. Nao declarar zero riscos.
 O proximo gate e revisao cruzada do diff e CI do novo HEAD; o `doctor` local
 ficou sem dois metadados externos e deve passar no runner canonico.
+
+
+## Fechamento corretivo R4 — 2026-10-24
+
+- Dois P2 confirmados pela revisao cruzada foram reproduzidos antes da correcao:
+  tres RED de snapshot de catalogo mutavel/inativo e dois RED de cancelamento
+  durante save em voo (desktop/mobile). Relatorio completo e limites:
+  [revisao-seguranca-food04.md](revisao-seguranca-food04.md).
+- `c0247662`: contexto autoritativo cifrado/versionado preserva composicao ja
+  aplicada; documentos editoriais schema1 continuam compativeis, envelope2
+  interno nao e aceito como DTO. AbortSignal cancela confirmacao pendente antes
+  de alterar o editor, sem cancelar o autosave anterior.
+- Revisor distinto da autoria reavaliou `d3157af0..c0247662`, somente leitura:
+  ambos resolvidos, nenhum novo Critical/P1/P2 confirmado. Nao e auditoria humana
+  externa; execucao de suites e CI sao evidencias separadas.
+- GREEN: servico113/113, helper7/7; backend integral362 suites/3244 testes PASS,
+  8 suites/142 testes SKIPPED condicionais. Playwright FOOD04 20/20 PASS em
+  desktop/mobile. Typecheck/build/artefato backend, typecheck Web e scan de
+  segredos PASS; ESLint zero erros/oito avisos preexistentes. Runners de banco
+  nao habilitados na suite integral local; nao atribuir PASS a esses skips.
+- CI checkpoint `d3157af0`: run40074420091 SUCCESS, incluindo Mobile,
+  Governanca, Backend/Testcontainers, Web e Demo smoke. CodeQL, Semgrep, Trivy
+  e Dependency Review tambem SUCCESS. CI/scanners do HEAD corretivo final ainda
+  pendentes e obrigatorios antes de aprovar merge.
+- Sem schema SQL novo, migration externa, flag, merge ou deploy. Rollback apos
+  gravar envelope2 exige writer compativel; preservar ciphertext/historico e
+  preferir correcao adiante. Migration1078 externa continua operacao separada.
