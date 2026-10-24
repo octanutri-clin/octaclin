@@ -50,3 +50,11 @@ para preparo — FOOD04 compara snapshots JSON e isso invalidaria referências
 legítimas. O resolver FOOD05 enriquece a sua própria projeção autorizada, mantendo
 origem/base originais e contratos de grupo intactos. Custo: leitura adicional da
 origem sob o lock já obtido, deduplicável por pedido; sem alterar biblioteca.
+
+T05 focais54/54 PASS (4 suites). RED: medida ausente na projeção de prévia
+(1 falha/9 PASS) e helper novo inexistente; GREEN após integração com resolução
+FOOD01/medidas registradas e conversão exata. Caso real de DTO transformado
+adicional reproduziu1 RED/10 PASS no serviço, corrigido sem abrir a allowlist.
+Peso ao aplicar quantidade doméstica é recalculado e seu resíduo mostrado;
+medida de revisão vencida fica indisponível. Referência preservada de histórico
+será integrada/validada junto a T06/T07; não declarar M02 integral ainda.
