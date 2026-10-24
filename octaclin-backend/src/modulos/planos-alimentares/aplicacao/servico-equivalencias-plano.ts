@@ -54,7 +54,8 @@ export class ServicoEquivalenciasPlano {
     // Apenas contextos autenticados do servidor; referências no pedido não
     // conferem acesso a outra fonte nem a outro pai editorial.
     const pais=new Map(p.documentoEdicao.refeicoes.flatMap(r=>r.itens).map(i=>[i.chaveCliente,i]));
-    for(const c of Object.values(snapshot.equivalencias??{})){
+    for(const original of Object.values(snapshot.equivalencias??{})){
+     const c={...original,...original.aplicados};
      const pai=pais.get(c.itemChave);if(!pai)continue;
      if(pai.substituicoes?.some(a=>a.chaveCliente===c.alternativaChave))preservados.equivalencias![c.alternativaChave]={identidade:c.alternativa.identidade,fatos:c.alternativa};
      preservados.equivalencias![c.itemChave]={identidade:c.principal.identidade,fatos:c.principal};

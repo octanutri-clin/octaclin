@@ -11,6 +11,7 @@ export interface ContextoEquivalencia {
  porcaoPrincipalGramas:string;porcaoEfetivaGramas:string;resultado:Extract<ResultadoEquivalencia,{estado:'calculavel'}>;
  estado:EstadoEquivalencia;ator:{usuarioId:string;profissionalId:string};comandoHash:string;dependenciasHash:string;fingerprintResolucao:string;
  snapshotPrincipal?:SnapshotComposicao;snapshotAlternativa?:SnapshotComposicao;
+ aplicados?:{principal:FatosComposicaoEquivalencia;alternativa:FatosComposicaoEquivalencia;snapshotPrincipal?:SnapshotComposicao;snapshotAlternativa?:SnapshotComposicao};
  resolucao?:{aplicacaoId:string;comandoHash:string};
 }
 export type ContextosEquivalencias=Record<string,ContextoEquivalencia>;
@@ -34,7 +35,7 @@ function hashComando(c:ComandoEquivalencia):string {return fingerprintEquivalenc
 function fingerprintResolucao(c:ContextoEquivalencia,atual:string):string {return fingerprintEquivalencia({aplicacaoId:c.aplicacaoId,itemChave:c.itemChave,alternativaChave:c.alternativaChave,estado:c.estado,dependencias:atual});}
 export function validarContextosEquivalencias(v:unknown):ContextosEquivalencias {
  if(!v||typeof v!=='object'||Array.isArray(v)||![Object.prototype,null].includes(Object.getPrototypeOf(v))||Object.keys(v).length>10000||Buffer.byteLength(JSON.stringify(v),'utf8')>2*1024*1024)throw new ConflitoEquivalenciaEdicao();
- const campos=['schemaVersao','algoritmo','aplicacaoId','itemChave','alternativaChave','nutriente','politica','principal','alternativa','porcaoPrincipalGramas','porcaoEfetivaGramas','resultado','estado','ator','comandoHash','dependenciasHash','fingerprintResolucao','snapshotPrincipal','snapshotAlternativa','resolucao'];
+ const campos=['schemaVersao','algoritmo','aplicacaoId','itemChave','alternativaChave','nutriente','politica','principal','alternativa','porcaoPrincipalGramas','porcaoEfetivaGramas','resultado','estado','ator','comandoHash','dependenciasHash','fingerprintResolucao','snapshotPrincipal','snapshotAlternativa','aplicados','resolucao'];
  const ids=new Set<string>();
  for(const [chave,valor]of Object.entries(v)){
   const c=objetoGrupo(valor,campos) as unknown as ContextoEquivalencia;
@@ -42,6 +43,7 @@ export function validarContextosEquivalencias(v:unknown):ContextosEquivalencias 
   ids.add(c.aplicacaoId);validarPoliticaEquivalencia(c.politica);
   const ator=objetoGrupo(c.ator,['usuarioId','profissionalId']);if(![ator.usuarioId,ator.profissionalId].every(x=>typeof x==='string'&&UUID_GRUPO.test(x)))throw new ConflitoEquivalenciaEdicao();
   fatosSemanticosEquivalencia(c.principal);fatosSemanticosEquivalencia(c.alternativa);
+  if(c.aplicados){const a=objetoGrupo(c.aplicados,['principal','alternativa','snapshotPrincipal','snapshotAlternativa']);fatosSemanticosEquivalencia(a.principal as FatosComposicaoEquivalencia);fatosSemanticosEquivalencia(a.alternativa as FatosComposicaoEquivalencia);}
   if(c.resultado?.estado!=='calculavel'||c.resultado.nutriente!==c.nutriente||typeof c.porcaoEfetivaGramas!=='string'||typeof c.porcaoPrincipalGramas!=='string')throw new ConflitoEquivalenciaEdicao();
   lerRazaoSnapshot(c.resultado.porcaoMatematica);for(const r of Object.values(c.resultado.exatos??{}))lerRazaoSnapshot(r);
   if(!c.resultado.exatos?.alvo||!c.resultado.exatos?.obtido||!c.resultado.exatos?.delta||!c.resultado.exatos?.percentual)throw new ConflitoEquivalenciaEdicao();

@@ -3,7 +3,7 @@ import { resolverEquivalenciasDocumento, assinaturaDependenciasEquivalencia, Con
 import { projetarEquivalenciasProfissional } from './projecao-equivalencias-profissional';
 import { resolverFatosEquivalencia, FatosPreservadosEquivalencia, identidadeFatoEquivalencia } from './fatos-equivalencia-plano';
 import { FatosComposicaoEquivalencia } from '../dominio/equivalencia-nutriente';
-import { calcularNutrientesDaPorcaoDecimal, normalizarComposicaoDecimal } from '../dominio/calculo-nutricional';
+import { calcularNutrientesDaPorcaoDecimal, normalizarComposicaoDecimal, POLITICA_NUTRICAO_DECIMAL } from '../dominio/calculo-nutricional';
 import { lerOrigensMaterializadas, possuiGruposMaterializados } from './origens-grupos-materializadas';
 import { ContextosCatalogoGrupo, lerSnapshotEdicaoGrupos, mesmaOrigemGrupo, serializarSnapshotEdicaoGrupos } from './snapshot-edicao-grupos';
 import { resolverGruposDocumento, ConflitoAplicacaoGrupo, DocumentoGrupoInvalido } from '../dominio/aplicacao-grupos-substituicoes';
@@ -848,7 +848,8 @@ export class ServicoPlanosAlimentares {
         const temComandos=documento.refeicoes.some(r=>r.itens.some(i=>i.substituicoes?.some(a=>a.equivalencia&&'acao'in a.equivalencia)));
         if(temComandos&&!atorEquivalencia)throw new ForbiddenException('Equivalência requer profissional responsável.');
         const preservados:FatosPreservadosEquivalencia={custom:contextosCustom,catalogos:catalogosGrupos,equivalencias:Object.create(null)};
-        for(const [chave,c]of Object.entries(equivalenciasAnteriores)){
+        for(const [chave,original]of Object.entries(equivalenciasAnteriores)){
+          const c={...original,...original.aplicados};
           preservados.equivalencias![chave]={identidade:c.alternativa.identidade,fatos:c.alternativa};
           if(!c.principal.identidade.startsWith('manual:'))preservados.equivalencias![c.itemChave]={identidade:c.principal.identidade,fatos:c.principal};
         }
@@ -870,9 +871,18 @@ export class ServicoPlanosAlimentares {
         Object.assign(contextosEquivalencias,resolvidos);
         for(const r of documento.refeicoes)for(const i of r.itens){const pi=localizar(i.chaveCliente);for(let ai=0;ai<(i.substituicoes??[]).length;ai++){
           const a=i.substituicoes![ai],c=resolvidos[a.chaveCliente];if(!c)continue;const pa=pi.substituicoes![ai],f=await fatos(a,i.chaveCliente);
-          if(c.snapshotPrincipal?.origem==='catalogo'&&i.alimentoComposicaoId===c.snapshotPrincipal.alimentoComposicaoId)composicoesCatalogoGrupo.set(pi,c.snapshotPrincipal);
+          const atual=c.aplicados??c;
+          if(atual.snapshotPrincipal?.origem==='catalogo'&&i.alimentoComposicaoId===atual.snapshotPrincipal.alimentoComposicaoId)composicoesCatalogoGrupo.set(pi,atual.snapshotPrincipal);
+          if(atual.snapshotAlternativa?.origem==='catalogo'&&a.alimentoComposicaoId===atual.snapshotAlternativa.alimentoComposicaoId)composicoesCatalogoGrupo.set(pa,atual.snapshotAlternativa);
+          const principalAtual=await fatos(i);
+          if(c.aplicados||principalAtual.identidade!==c.principal.identidade||f.identidade!==c.alternativa.identidade){
+            // Registra os fatos da edição atual sem reescrever o cálculo original.
+            // A pendência só se resolve por recálculo ou desvinculação explícitos.
+            c.aplicados={principal:principalAtual,alternativa:f,
+              snapshotPrincipal:(await this.resolverItem(gerenciador,pi,composicoesCustom.get(pi),composicoesCatalogoGrupo.get(pi))).snapshot,
+              snapshotAlternativa:(await this.resolverItem(gerenciador,pa,composicoesCustom.get(pa),composicoesCatalogoGrupo.get(pa))).snapshot};
+          }
           materiaisEquivalencia.set(pa,{contexto:c,fatos:f});
-          if(c.snapshotAlternativa?.origem==='catalogo'&&a.alimentoComposicaoId===c.snapshotAlternativa.alimentoComposicaoId)composicoesCatalogoGrupo.set(pa,c.snapshotAlternativa);
         }}
       }
       await this.validarReferenciasEdicao(gerenciador, tenantId, pacienteId, documento, catalogosGrupos, contextosEquivalencias);
@@ -932,7 +942,7 @@ export class ServicoPlanosAlimentares {
       });
       if (!avaliacao) throw new BadRequestException('Avaliação de referência indisponível para este paciente.');
     }
-    const protegido=(a:{chaveCliente:string;alimentoComposicaoId?:string|null},pai:string)=>Object.hasOwn(catalogosGrupos,a.chaveCliente)||Object.values(equivalencias).some(c=>c.itemChave===pai&&((c.alternativaChave===a.chaveCliente&&c.snapshotAlternativa?.origem==='catalogo'&&c.snapshotAlternativa.alimentoComposicaoId===a.alimentoComposicaoId)||(c.itemChave===a.chaveCliente&&c.snapshotPrincipal?.origem==='catalogo'&&c.snapshotPrincipal.alimentoComposicaoId===a.alimentoComposicaoId)));
+    const protegido=(a:{chaveCliente:string;alimentoComposicaoId?:string|null},pai:string)=>Object.hasOwn(catalogosGrupos,a.chaveCliente)||Object.values(equivalencias).some(original=>{const c={...original,...original.aplicados};return c.itemChave===pai&&((c.alternativaChave===a.chaveCliente&&c.snapshotAlternativa?.origem==='catalogo'&&c.snapshotAlternativa.alimentoComposicaoId===a.alimentoComposicaoId)||(c.itemChave===a.chaveCliente&&c.snapshotPrincipal?.origem==='catalogo'&&c.snapshotPrincipal.alimentoComposicaoId===a.alimentoComposicaoId));});
     const ids = new Set(documento.refeicoes.flatMap(r => r.itens.flatMap(i => [i, ...(i.substituicoes ?? [])].filter(a=>!protegido(a,i.chaveCliente)))).map(i => i.alimentoComposicaoId).filter((id): id is string => Boolean(id)));
     for (const id of ids) {
       const alimento = await gerenciador.getRepository(AlimentoComposicaoOrm).findOne({ where: { id }, lock: { mode: 'pessimistic_read' } });
@@ -1878,7 +1888,7 @@ export class ServicoPlanosAlimentares {
               unidade: substituicao.unidade,
               porcaoGramas: substituicao.porcaoGramas.toFixed(3),
               composicaoSnapshotCriptografada: this.criptografia.criptografar(JSON.stringify(snapshotSubstituicao)),
-              motorCalculoVersao: MOTOR_CALCULO_VERSAO,
+              motorCalculoVersao: snapshotSubstituicao.equivalencia ? POLITICA_NUTRICAO_DECIMAL : MOTOR_CALCULO_VERSAO,
               // Exposicao ao paciente e decisao explicita: a ausencia nunca vira um sim.
               liberadaParaPaciente: substituicao.liberadaParaPaciente === true,
               preferida: substituicao.preferida === true

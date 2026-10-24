@@ -1778,6 +1778,7 @@ describe('ServicoPlanosAlimentares', () => {
       const {d,aplicacaoId}=await prepararEquivalencia();const salvo:any=await salvarEdicao(d);
       expect(salvo.documentoEdicao.refeicoes[0].itens[0].substituicoes[0].equivalencia).toEqual({aplicacaoId});
       expect(salvo.equivalenciasAplicadas.equivalente).toMatchObject({aplicacaoId,estado:'calculada_revisada',nutriente:'energiaKcal',porcaoEfetivaGramas:'50'});
+      expect(repositorios.get(PlanoAlimentarSubstituicaoOrm)!.registros[0].motorCalculoVersao).toBe('nutricao-decimal-v1');
       const cipher=repositorios.get(PlanoAlimentarVersaoOrm)!.registros[0].edicaoSnapshotCriptografado;expect(JSON.parse(criptografia.descriptografar(cipher)).schemaSnapshotEdicao).toBe(3);
       expect(salvo.refeicoes[0].itens[0].substituicoes[0]).toMatchObject({porcaoGramas:50,liberadaParaPaciente:false,preferida:false,composicaoSnapshot:{nutrientesPorcao:{energiaKcal:80}}});
       expect(JSON.stringify(salvo.equivalenciasAplicadas)).not.toMatch(/comandoHash|snapshotAlternativa|dependenciasHash|ator/);
@@ -1826,6 +1827,18 @@ describe('ServicoPlanosAlimentares', () => {
       const segundo:any=await salvarEdicao(primeiro.documentoEdicao,1);
       expect(segundo.equivalenciasAplicadas.equivalente.estado).toBe('calculada_revisada');
       expect(segundo.refeicoes[0].itens[0].composicaoSnapshot.nutrientesPorcao.energiaKcal).toBe(128);
+    });
+    it('FOOD05 troca explícita conserva fatos novos e cálculo original pendente após fonte inativa',async()=>{
+      const {d}=await prepararEquivalencia(true);const primeiro:any=await salvarEdicao(d);
+      const origem=repositorios.get(AlimentoComposicaoOrm)!.registros.find((r:any)=>r.id==='10000000-0000-4000-8000-000000000087')!;
+      const novoId=randomUUID();repositorios.get(AlimentoComposicaoOrm)!.registros.push({...origem,id:novoId,nome:'Outra alternativa',energiaKcal:'200'});
+      primeiro.documentoEdicao.refeicoes[0].itens[0].substituicoes[0].alimentoComposicaoId=novoId;
+      const segundo:any=await salvarEdicao(primeiro.documentoEdicao,1);expect(segundo.equivalenciasAplicadas.equivalente.estado).toBe('revisao_pendente');
+      expect(segundo.refeicoes[0].itens[0].substituicoes[0].composicaoSnapshot.nutrientesPorcao.energiaKcal).toBe(100);
+      repositorios.get(FonteComposicaoAlimentoOrm)!.registros.find((r:any)=>r.id===origem.fonteId)!.situacao='inativa';
+      const terceiro:any=await salvarEdicao(segundo.documentoEdicao,2);
+      expect(terceiro.equivalenciasAplicadas.equivalente).toMatchObject({estado:'revisao_pendente',resultado:{obtido:'80'}});
+      expect(terceiro.refeicoes[0].itens[0].substituicoes[0].composicaoSnapshot.nutrientesPorcao.energiaKcal).toBe(100);
     });
     it('FOOD05 preserva edição legada autorizada do SuperAdmin sem permitir comandos novos em nome alheio',async()=>{
       const {d}=await prepararEquivalencia();const primeiro:any=await salvarEdicao(d);const admin={...usuarioProfissional(),papel:'SuperAdmin' as const};
