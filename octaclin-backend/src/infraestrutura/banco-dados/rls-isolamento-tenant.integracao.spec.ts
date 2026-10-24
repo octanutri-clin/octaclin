@@ -1675,7 +1675,8 @@ descrever('RLS e isolamento multi-tenant integral em Postgres real', () => {
   it('FOOD05 PostgreSQL: resolução manual auditável não ressuscita pelo replay da referência antiga',async()=>{
     const c=await prepararCenarioFood05('food05-desvincular');const salva:any=await c.salvar();const a=salva.documentoEdicao.refeicoes[0].itens[0].substituicoes[0],antiga=a.equivalencia.aplicacaoId;
     a.equivalencia={acao:'desvincular',aplicacaoId:randomUUID(),anteriorAplicacaoId:antiga,fingerprintEsperado:salva.equivalenciasAplicadas['a-food05'].fingerprintResolucao};
-    const resolvida:any=await c.salvar(salva.documentoEdicao,1);expect(resolvida.equivalenciasAplicadas['a-food05'].estado).toBe('desvinculada_manualmente');expect(resolvida.refeicoes[0].itens[0].substituicoes[0].equivalenciaAplicada).toBeUndefined();
+    const resolvida:any=await c.salvar(salva.documentoEdicao,1);expect(resolvida.equivalenciasAplicadas['a-food05'].estado).toBe('desvinculada_manualmente');
+    const projecao:any=await c.servico.obterRascunho(tenantA,c.pacienteId,c.planoId,c.usuario);expect(projecao.refeicoes[0].itens[0].substituicoes[0].equivalenciaAplicada).toBeUndefined();
     const linhas=await executorTenant!.executar(tenantA,g=>g.query('select s.composicao_snapshot_criptografada from plano_alimentar_substituicoes s join plano_alimentar_itens i on i.id=s.item_id and i.tenant_id=s.tenant_id join plano_alimentar_refeicoes r on r.id=i.refeicao_id and r.tenant_id=i.tenant_id where r.versao_id=$1',[c.versaoId]));
     expect(JSON.parse(c.cripto.descriptografar(linhas[0].composicao_snapshot_criptografada)).equivalencia.resolucao.ator).toEqual({usuarioId:c.usuario.usuarioId,profissionalId:c.profissionalId});
     resolvida.documentoEdicao.refeicoes[0].itens[0].substituicoes[0].equivalencia={aplicacaoId:antiga};await expect(c.salvar(resolvida.documentoEdicao,2)).rejects.toMatchObject({status:409});
