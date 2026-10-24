@@ -21,7 +21,7 @@ import { AlimentoEdicao, AlternativaEdicao, ItemEdicao, numeroEdicao } from '../
 import { FatosPreservadosEquivalencia, resolverFatosEquivalencia } from './fatos-equivalencia-plano';
 import { lerSnapshotEdicaoGrupos } from './snapshot-edicao-grupos';
 import { validarContextosCustom } from '../dominio/aplicacao-alimentos-personalizados';
-export interface LinhaPreviaEquivalencia {chaveCliente:string;alimento?:FatosComposicaoEquivalencia;resultado:ResultadoEquivalencia;impacto?:ImpactoRefeicao;fingerprint?:string;medidas?:{itens:Array<{id:string;revisao:number;nome:string;quantidade:string;aproximada:boolean;podeAplicarQuantidade:boolean;gramasAposMedida?:string;quantidadeReferencia:number;pesoReferenciaGramas:number}>;total:number;pagina:number;limite:number}}
+export interface LinhaPreviaEquivalencia {chaveCliente:string;alimento?:FatosComposicaoEquivalencia;resultado:ResultadoEquivalencia;impacto?:ImpactoRefeicao;comparacaoIndividual?:ImpactoRefeicao;fingerprint?:string;medidas?:{itens:Array<{id:string;revisao:number;nome:string;quantidade:string;aproximada:boolean;podeAplicarQuantidade:boolean;gramasAposMedida?:string;quantidadeReferencia:number;pesoReferenciaGramas:number}>;total:number;pagina:number;limite:number}}
 export interface PreviaEquivalenciasDto {fingerprint:string;rascunhoRevisao:number;nutriente:PedidoEquivalencias['nutriente'];principal:FatosComposicaoEquivalencia;alternativas:LinhaPreviaEquivalencia[]}
 @Injectable()
 export class ServicoEquivalenciasPlano {
@@ -104,7 +104,7 @@ export class ServicoEquivalenciasPlano {
     if(idMedida&&resultado.estado==='calculavel'){
      try{const lista=await this.medidas.listarNaTransacao(g,tenantId,idMedida,u,{pagina:1,limite:25},alternativa.alimentoPersonalizado?'custom':'catalogo');medidas={...lista,itens:lista.itens.map(m=>({id:m.id,revisao:m.revisao,quantidadeReferencia:m.quantidadeReferencia,pesoReferenciaGramas:m.pesoReferenciaGramas,...projetarMedidaEquivalente(resultado.porcaoEfetivaGramas,m)}))};}catch{medidas={itens:[],total:0,pagina:1,limite:25};}
     }
-    alternativas.push({chaveCliente:alternativa.chaveCliente,alimento,resultado,fingerprint,...(medidas?{medidas}:{}),...(resultado.estado==='calculavel'?{impacto:simularTrocaNaRefeicao(itens,p.itemChave,{chaveCliente:alternativa.chaveCliente,porcaoGramas:resultado.porcaoEfetivaGramas,composicao:alimento})}:{})});
+    alternativas.push({chaveCliente:alternativa.chaveCliente,alimento,resultado,fingerprint,...(medidas?{medidas}:{}),...(resultado.estado==='calculavel'?{impacto:simularTrocaNaRefeicao(itens,p.itemChave,{chaveCliente:alternativa.chaveCliente,porcaoGramas:resultado.porcaoEfetivaGramas,composicao:alimento}),comparacaoIndividual:simularTrocaNaRefeicao([{chaveCliente:p.itemChave,porcaoGramas:String(numeroEdicao(principalEntrada.porcaoGramas)),composicao:principal}],p.itemChave,{chaveCliente:alternativa.chaveCliente,porcaoGramas:resultado.porcaoEfetivaGramas,composicao:alimento})}:{})});
    }catch{alternativas.push({chaveCliente:alternativa.chaveCliente,resultado:{estado:'indisponivel',motivo:'referencia_indisponivel',nutriente:p.nutriente}});}
   }
   return {fingerprint:fingerprintEquivalencia({...contexto,alternativas:alternativas.map(a=>({chave:a.chaveCliente,fingerprint:a.fingerprint,estado:a.resultado.estado}))}),rascunhoRevisao:versao.rascunhoRevisao,nutriente:p.nutriente,principal,alternativas};
