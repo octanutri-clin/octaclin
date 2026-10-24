@@ -15,6 +15,8 @@ export type PermissaoOctaClin =
   | 'pacientes.gerenciar'
   | 'planos_alimentares.ler'
   | 'planos_alimentares.gerenciar'
+  | 'grupos_substituicoes.compartilhar'
+  | 'grupos_substituicoes.administrar'
   | 'questionarios.ler'
   | 'questionarios.gerenciar'
   | 'agenda.consultas.ler'
@@ -57,6 +59,7 @@ const permissoesPaciente = [
 
 const permissoesCliente = [
   'cliente.acessar',
+  'grupos_substituicoes.administrar',
   'cliente.assinatura.ler',
   'cliente.usuarios.ler',
   'cliente.usuarios.convidar',
@@ -87,6 +90,7 @@ const permissoesProfissional = [
   'pacientes.gerenciar',
   'planos_alimentares.ler',
   'planos_alimentares.gerenciar',
+  'grupos_substituicoes.compartilhar',
   'questionarios.gerenciar',
   'materiais.gerenciar',
   'profissionais.ler',
@@ -102,6 +106,7 @@ const permissoesProfissional = [
 
 const permissoesSuperAdmin = [
   ...permissoesProfissional,
+  'grupos_substituicoes.administrar',
   'operacoes.auditoria.ler',
   'operacoes.outbox.reprocessar',
   'operacoes.tenants.gerenciar',

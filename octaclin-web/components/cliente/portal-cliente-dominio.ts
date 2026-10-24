@@ -9,6 +9,7 @@ import {
 export type AreaPortalCliente =
   | 'ativacao'
   | 'operacao'
+  | 'grupos'
   | 'auditoria'
   | 'lgpd'
   | 'assinatura'

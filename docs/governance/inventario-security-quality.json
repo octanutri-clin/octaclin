@@ -1,11 +1,11 @@
 {
   "schemaVersion": 1,
   "repositorio": "octanutri-clin/octaclin",
-  "commitBase": "104a154688241a2581200f28ad1ff7d7f4261f90",
-  "capturadoEm": "2026-10-09T14:22:51.422Z",
+  "commitBase": "9e1984a277e89469581b620d8c637324327a9342",
+  "capturadoEm": "2026-10-24T07:11:22.967Z",
   "snapshot": {
     "codeScanning": {
-      "total": 216,
+      "total": 171,
       "alertas": [
         {
           "numero": 154,
@@ -1892,474 +1892,6 @@
           "severidadeQualidade": "note"
         },
         {
-          "numero": 436,
-          "ferramenta": "Trivy",
-          "regra": "CVE-2026-35189",
-          "categoria": "trivy-imagem-ia-service",
-          "caminho": "library/octaclin-ia-service",
-          "pacote": "libssl3t64",
-          "versaoInstalada": "3.5.7-1~deb13u2",
-          "versaoCorrigida": "3.5.7-1~deb13u3",
-          "severidade": "low",
-          "severidadeQualidade": "note"
-        },
-        {
-          "numero": 437,
-          "ferramenta": "Trivy",
-          "regra": "CVE-2026-35191",
-          "categoria": "trivy-imagem-ia-service",
-          "caminho": "library/octaclin-ia-service",
-          "pacote": "libssl3t64",
-          "versaoInstalada": "3.5.7-1~deb13u2",
-          "versaoCorrigida": "3.5.7-1~deb13u3",
-          "severidade": "low",
-          "severidadeQualidade": "note"
-        },
-        {
-          "numero": 438,
-          "ferramenta": "Trivy",
-          "regra": "CVE-2026-42772",
-          "categoria": "trivy-imagem-ia-service",
-          "caminho": "library/octaclin-ia-service",
-          "pacote": "libssl3t64",
-          "versaoInstalada": "3.5.7-1~deb13u2",
-          "versaoCorrigida": "3.5.7-1~deb13u3",
-          "severidade": "medium",
-          "severidadeQualidade": "warning"
-        },
-        {
-          "numero": 439,
-          "ferramenta": "Trivy",
-          "regra": "CVE-2026-54872",
-          "categoria": "trivy-imagem-ia-service",
-          "caminho": "library/octaclin-ia-service",
-          "pacote": "libssl3t64",
-          "versaoInstalada": "3.5.7-1~deb13u2",
-          "versaoCorrigida": "3.5.7-1~deb13u3",
-          "severidade": "medium",
-          "severidadeQualidade": "warning"
-        },
-        {
-          "numero": 440,
-          "ferramenta": "Trivy",
-          "regra": "CVE-2026-54873",
-          "categoria": "trivy-imagem-ia-service",
-          "caminho": "library/octaclin-ia-service",
-          "pacote": "libssl3t64",
-          "versaoInstalada": "3.5.7-1~deb13u2",
-          "versaoCorrigida": "3.5.7-1~deb13u3",
-          "severidade": "medium",
-          "severidadeQualidade": "warning"
-        },
-        {
-          "numero": 441,
-          "ferramenta": "Trivy",
-          "regra": "CVE-2026-54875",
-          "categoria": "trivy-imagem-ia-service",
-          "caminho": "library/octaclin-ia-service",
-          "pacote": "libssl3t64",
-          "versaoInstalada": "3.5.7-1~deb13u2",
-          "versaoCorrigida": "3.5.7-1~deb13u3",
-          "severidade": "medium",
-          "severidadeQualidade": "warning"
-        },
-        {
-          "numero": 442,
-          "ferramenta": "Trivy",
-          "regra": "CVE-2026-72897",
-          "categoria": "trivy-imagem-ia-service",
-          "caminho": "library/octaclin-ia-service",
-          "pacote": "libssl3t64",
-          "versaoInstalada": "3.5.7-1~deb13u2",
-          "versaoCorrigida": "3.5.7-1~deb13u3",
-          "severidade": "medium",
-          "severidadeQualidade": "warning"
-        },
-        {
-          "numero": 443,
-          "ferramenta": "Trivy",
-          "regra": "CVE-2026-75804",
-          "categoria": "trivy-imagem-ia-service",
-          "caminho": "library/octaclin-ia-service",
-          "pacote": "libssl3t64",
-          "versaoInstalada": "3.5.7-1~deb13u2",
-          "versaoCorrigida": "3.5.7-1~deb13u3",
-          "severidade": "high",
-          "severidadeQualidade": "error"
-        },
-        {
-          "numero": 444,
-          "ferramenta": "Trivy",
-          "regra": "CVE-2026-75805",
-          "categoria": "trivy-imagem-ia-service",
-          "caminho": "library/octaclin-ia-service",
-          "pacote": "libssl3t64",
-          "versaoInstalada": "3.5.7-1~deb13u2",
-          "versaoCorrigida": "3.5.7-1~deb13u3",
-          "severidade": "medium",
-          "severidadeQualidade": "warning"
-        },
-        {
-          "numero": 445,
-          "ferramenta": "Trivy",
-          "regra": "CVE-2026-75806",
-          "categoria": "trivy-imagem-ia-service",
-          "caminho": "library/octaclin-ia-service",
-          "pacote": "libssl3t64",
-          "versaoInstalada": "3.5.7-1~deb13u2",
-          "versaoCorrigida": "3.5.7-1~deb13u3",
-          "severidade": "medium",
-          "severidadeQualidade": "warning"
-        },
-        {
-          "numero": 446,
-          "ferramenta": "Trivy",
-          "regra": "CVE-2026-77696",
-          "categoria": "trivy-imagem-ia-service",
-          "caminho": "library/octaclin-ia-service",
-          "pacote": "libssl3t64",
-          "versaoInstalada": "3.5.7-1~deb13u2",
-          "versaoCorrigida": "3.5.7-1~deb13u3",
-          "severidade": "medium",
-          "severidadeQualidade": "warning"
-        },
-        {
-          "numero": 447,
-          "ferramenta": "Trivy",
-          "regra": "CVE-2026-84782",
-          "categoria": "trivy-imagem-ia-service",
-          "caminho": "library/octaclin-ia-service",
-          "pacote": "libssl3t64",
-          "versaoInstalada": "3.5.7-1~deb13u2",
-          "versaoCorrigida": "3.5.7-1~deb13u3",
-          "severidade": "high",
-          "severidadeQualidade": "error"
-        },
-        {
-          "numero": 448,
-          "ferramenta": "Trivy",
-          "regra": "CVE-2026-84784",
-          "categoria": "trivy-imagem-ia-service",
-          "caminho": "library/octaclin-ia-service",
-          "pacote": "libssl3t64",
-          "versaoInstalada": "3.5.7-1~deb13u2",
-          "versaoCorrigida": "3.5.7-1~deb13u3",
-          "severidade": "medium",
-          "severidadeQualidade": "warning"
-        },
-        {
-          "numero": 449,
-          "ferramenta": "Trivy",
-          "regra": "CVE-2026-35189",
-          "categoria": "trivy-imagem-ia-service",
-          "caminho": "library/octaclin-ia-service",
-          "pacote": "openssl",
-          "versaoInstalada": "3.5.7-1~deb13u2",
-          "versaoCorrigida": "3.5.7-1~deb13u3",
-          "severidade": "low",
-          "severidadeQualidade": "note"
-        },
-        {
-          "numero": 450,
-          "ferramenta": "Trivy",
-          "regra": "CVE-2026-35191",
-          "categoria": "trivy-imagem-ia-service",
-          "caminho": "library/octaclin-ia-service",
-          "pacote": "openssl",
-          "versaoInstalada": "3.5.7-1~deb13u2",
-          "versaoCorrigida": "3.5.7-1~deb13u3",
-          "severidade": "low",
-          "severidadeQualidade": "note"
-        },
-        {
-          "numero": 451,
-          "ferramenta": "Trivy",
-          "regra": "CVE-2026-42772",
-          "categoria": "trivy-imagem-ia-service",
-          "caminho": "library/octaclin-ia-service",
-          "pacote": "openssl",
-          "versaoInstalada": "3.5.7-1~deb13u2",
-          "versaoCorrigida": "3.5.7-1~deb13u3",
-          "severidade": "medium",
-          "severidadeQualidade": "warning"
-        },
-        {
-          "numero": 452,
-          "ferramenta": "Trivy",
-          "regra": "CVE-2026-54872",
-          "categoria": "trivy-imagem-ia-service",
-          "caminho": "library/octaclin-ia-service",
-          "pacote": "openssl",
-          "versaoInstalada": "3.5.7-1~deb13u2",
-          "versaoCorrigida": "3.5.7-1~deb13u3",
-          "severidade": "medium",
-          "severidadeQualidade": "warning"
-        },
-        {
-          "numero": 453,
-          "ferramenta": "Trivy",
-          "regra": "CVE-2026-54873",
-          "categoria": "trivy-imagem-ia-service",
-          "caminho": "library/octaclin-ia-service",
-          "pacote": "openssl",
-          "versaoInstalada": "3.5.7-1~deb13u2",
-          "versaoCorrigida": "3.5.7-1~deb13u3",
-          "severidade": "medium",
-          "severidadeQualidade": "warning"
-        },
-        {
-          "numero": 454,
-          "ferramenta": "Trivy",
-          "regra": "CVE-2026-54875",
-          "categoria": "trivy-imagem-ia-service",
-          "caminho": "library/octaclin-ia-service",
-          "pacote": "openssl",
-          "versaoInstalada": "3.5.7-1~deb13u2",
-          "versaoCorrigida": "3.5.7-1~deb13u3",
-          "severidade": "medium",
-          "severidadeQualidade": "warning"
-        },
-        {
-          "numero": 455,
-          "ferramenta": "Trivy",
-          "regra": "CVE-2026-72897",
-          "categoria": "trivy-imagem-ia-service",
-          "caminho": "library/octaclin-ia-service",
-          "pacote": "openssl",
-          "versaoInstalada": "3.5.7-1~deb13u2",
-          "versaoCorrigida": "3.5.7-1~deb13u3",
-          "severidade": "medium",
-          "severidadeQualidade": "warning"
-        },
-        {
-          "numero": 456,
-          "ferramenta": "Trivy",
-          "regra": "CVE-2026-75804",
-          "categoria": "trivy-imagem-ia-service",
-          "caminho": "library/octaclin-ia-service",
-          "pacote": "openssl",
-          "versaoInstalada": "3.5.7-1~deb13u2",
-          "versaoCorrigida": "3.5.7-1~deb13u3",
-          "severidade": "high",
-          "severidadeQualidade": "error"
-        },
-        {
-          "numero": 457,
-          "ferramenta": "Trivy",
-          "regra": "CVE-2026-75805",
-          "categoria": "trivy-imagem-ia-service",
-          "caminho": "library/octaclin-ia-service",
-          "pacote": "openssl",
-          "versaoInstalada": "3.5.7-1~deb13u2",
-          "versaoCorrigida": "3.5.7-1~deb13u3",
-          "severidade": "medium",
-          "severidadeQualidade": "warning"
-        },
-        {
-          "numero": 458,
-          "ferramenta": "Trivy",
-          "regra": "CVE-2026-75806",
-          "categoria": "trivy-imagem-ia-service",
-          "caminho": "library/octaclin-ia-service",
-          "pacote": "openssl",
-          "versaoInstalada": "3.5.7-1~deb13u2",
-          "versaoCorrigida": "3.5.7-1~deb13u3",
-          "severidade": "medium",
-          "severidadeQualidade": "warning"
-        },
-        {
-          "numero": 459,
-          "ferramenta": "Trivy",
-          "regra": "CVE-2026-77696",
-          "categoria": "trivy-imagem-ia-service",
-          "caminho": "library/octaclin-ia-service",
-          "pacote": "openssl",
-          "versaoInstalada": "3.5.7-1~deb13u2",
-          "versaoCorrigida": "3.5.7-1~deb13u3",
-          "severidade": "medium",
-          "severidadeQualidade": "warning"
-        },
-        {
-          "numero": 460,
-          "ferramenta": "Trivy",
-          "regra": "CVE-2026-84782",
-          "categoria": "trivy-imagem-ia-service",
-          "caminho": "library/octaclin-ia-service",
-          "pacote": "openssl",
-          "versaoInstalada": "3.5.7-1~deb13u2",
-          "versaoCorrigida": "3.5.7-1~deb13u3",
-          "severidade": "high",
-          "severidadeQualidade": "error"
-        },
-        {
-          "numero": 461,
-          "ferramenta": "Trivy",
-          "regra": "CVE-2026-84784",
-          "categoria": "trivy-imagem-ia-service",
-          "caminho": "library/octaclin-ia-service",
-          "pacote": "openssl",
-          "versaoInstalada": "3.5.7-1~deb13u2",
-          "versaoCorrigida": "3.5.7-1~deb13u3",
-          "severidade": "medium",
-          "severidadeQualidade": "warning"
-        },
-        {
-          "numero": 462,
-          "ferramenta": "Trivy",
-          "regra": "CVE-2026-35189",
-          "categoria": "trivy-imagem-ia-service",
-          "caminho": "library/octaclin-ia-service",
-          "pacote": "openssl-provider-legacy",
-          "versaoInstalada": "3.5.7-1~deb13u2",
-          "versaoCorrigida": "3.5.7-1~deb13u3",
-          "severidade": "low",
-          "severidadeQualidade": "note"
-        },
-        {
-          "numero": 463,
-          "ferramenta": "Trivy",
-          "regra": "CVE-2026-35191",
-          "categoria": "trivy-imagem-ia-service",
-          "caminho": "library/octaclin-ia-service",
-          "pacote": "openssl-provider-legacy",
-          "versaoInstalada": "3.5.7-1~deb13u2",
-          "versaoCorrigida": "3.5.7-1~deb13u3",
-          "severidade": "low",
-          "severidadeQualidade": "note"
-        },
-        {
-          "numero": 464,
-          "ferramenta": "Trivy",
-          "regra": "CVE-2026-42772",
-          "categoria": "trivy-imagem-ia-service",
-          "caminho": "library/octaclin-ia-service",
-          "pacote": "openssl-provider-legacy",
-          "versaoInstalada": "3.5.7-1~deb13u2",
-          "versaoCorrigida": "3.5.7-1~deb13u3",
-          "severidade": "medium",
-          "severidadeQualidade": "warning"
-        },
-        {
-          "numero": 465,
-          "ferramenta": "Trivy",
-          "regra": "CVE-2026-54872",
-          "categoria": "trivy-imagem-ia-service",
-          "caminho": "library/octaclin-ia-service",
-          "pacote": "openssl-provider-legacy",
-          "versaoInstalada": "3.5.7-1~deb13u2",
-          "versaoCorrigida": "3.5.7-1~deb13u3",
-          "severidade": "medium",
-          "severidadeQualidade": "warning"
-        },
-        {
-          "numero": 466,
-          "ferramenta": "Trivy",
-          "regra": "CVE-2026-54873",
-          "categoria": "trivy-imagem-ia-service",
-          "caminho": "library/octaclin-ia-service",
-          "pacote": "openssl-provider-legacy",
-          "versaoInstalada": "3.5.7-1~deb13u2",
-          "versaoCorrigida": "3.5.7-1~deb13u3",
-          "severidade": "medium",
-          "severidadeQualidade": "warning"
-        },
-        {
-          "numero": 467,
-          "ferramenta": "Trivy",
-          "regra": "CVE-2026-54875",
-          "categoria": "trivy-imagem-ia-service",
-          "caminho": "library/octaclin-ia-service",
-          "pacote": "openssl-provider-legacy",
-          "versaoInstalada": "3.5.7-1~deb13u2",
-          "versaoCorrigida": "3.5.7-1~deb13u3",
-          "severidade": "medium",
-          "severidadeQualidade": "warning"
-        },
-        {
-          "numero": 468,
-          "ferramenta": "Trivy",
-          "regra": "CVE-2026-72897",
-          "categoria": "trivy-imagem-ia-service",
-          "caminho": "library/octaclin-ia-service",
-          "pacote": "openssl-provider-legacy",
-          "versaoInstalada": "3.5.7-1~deb13u2",
-          "versaoCorrigida": "3.5.7-1~deb13u3",
-          "severidade": "medium",
-          "severidadeQualidade": "warning"
-        },
-        {
-          "numero": 469,
-          "ferramenta": "Trivy",
-          "regra": "CVE-2026-75804",
-          "categoria": "trivy-imagem-ia-service",
-          "caminho": "library/octaclin-ia-service",
-          "pacote": "openssl-provider-legacy",
-          "versaoInstalada": "3.5.7-1~deb13u2",
-          "versaoCorrigida": "3.5.7-1~deb13u3",
-          "severidade": "high",
-          "severidadeQualidade": "error"
-        },
-        {
-          "numero": 470,
-          "ferramenta": "Trivy",
-          "regra": "CVE-2026-75805",
-          "categoria": "trivy-imagem-ia-service",
-          "caminho": "library/octaclin-ia-service",
-          "pacote": "openssl-provider-legacy",
-          "versaoInstalada": "3.5.7-1~deb13u2",
-          "versaoCorrigida": "3.5.7-1~deb13u3",
-          "severidade": "medium",
-          "severidadeQualidade": "warning"
-        },
-        {
-          "numero": 471,
-          "ferramenta": "Trivy",
-          "regra": "CVE-2026-75806",
-          "categoria": "trivy-imagem-ia-service",
-          "caminho": "library/octaclin-ia-service",
-          "pacote": "openssl-provider-legacy",
-          "versaoInstalada": "3.5.7-1~deb13u2",
-          "versaoCorrigida": "3.5.7-1~deb13u3",
-          "severidade": "medium",
-          "severidadeQualidade": "warning"
-        },
-        {
-          "numero": 472,
-          "ferramenta": "Trivy",
-          "regra": "CVE-2026-77696",
-          "categoria": "trivy-imagem-ia-service",
-          "caminho": "library/octaclin-ia-service",
-          "pacote": "openssl-provider-legacy",
-          "versaoInstalada": "3.5.7-1~deb13u2",
-          "versaoCorrigida": "3.5.7-1~deb13u3",
-          "severidade": "medium",
-          "severidadeQualidade": "warning"
-        },
-        {
-          "numero": 473,
-          "ferramenta": "Trivy",
-          "regra": "CVE-2026-84782",
-          "categoria": "trivy-imagem-ia-service",
-          "caminho": "library/octaclin-ia-service",
-          "pacote": "openssl-provider-legacy",
-          "versaoInstalada": "3.5.7-1~deb13u2",
-          "versaoCorrigida": "3.5.7-1~deb13u3",
-          "severidade": "high",
-          "severidadeQualidade": "error"
-        },
-        {
-          "numero": 474,
-          "ferramenta": "Trivy",
-          "regra": "CVE-2026-84784",
-          "categoria": "trivy-imagem-ia-service",
-          "caminho": "library/octaclin-ia-service",
-          "pacote": "openssl-provider-legacy",
-          "versaoInstalada": "3.5.7-1~deb13u2",
-          "versaoCorrigida": "3.5.7-1~deb13u3",
-          "severidade": "medium",
-          "severidadeQualidade": "warning"
-        },
-        {
           "numero": 480,
           "ferramenta": "Trivy",
           "regra": "CVE-2026-102473",
@@ -2418,18 +1950,6 @@
           "versaoCorrigida": null,
           "severidade": "medium",
           "severidadeQualidade": "warning"
-        },
-        {
-          "numero": 488,
-          "ferramenta": "Trivy",
-          "regra": "CVE-2026-103111",
-          "categoria": "trivy-imagem-ia-service",
-          "caminho": "library/octaclin-ia-service",
-          "pacote": "libpcre2-8-0",
-          "versaoInstalada": "10.46-1~deb13u2",
-          "versaoCorrigida": "10.46-1~deb13u3",
-          "severidade": "high",
-          "severidadeQualidade": "error"
         },
         {
           "numero": 489,
@@ -2492,102 +2012,6 @@
           "severidadeQualidade": "warning"
         },
         {
-          "numero": 494,
-          "ferramenta": "Trivy",
-          "regra": "CVE-2026-90711",
-          "categoria": ".github/workflows/trivy.yml:analisar",
-          "caminho": "octaclin-backend/pnpm-lock.yaml",
-          "pacote": "proxy-addr",
-          "versaoInstalada": "2.0.7",
-          "versaoCorrigida": "2.0.8",
-          "severidade": "critical",
-          "severidadeQualidade": "error"
-        },
-        {
-          "numero": 497,
-          "ferramenta": "Trivy",
-          "regra": "CVE-2026-93749",
-          "categoria": ".github/workflows/trivy.yml:analisar",
-          "caminho": "octaclin-web/pnpm-lock.yaml",
-          "pacote": "source-map-js",
-          "versaoInstalada": "1.2.1",
-          "versaoCorrigida": "1.2.2",
-          "severidade": "high",
-          "severidadeQualidade": "error"
-        },
-        {
-          "numero": 498,
-          "ferramenta": "Trivy",
-          "regra": "CVE-2026-90711",
-          "categoria": "trivy-imagem-backend",
-          "caminho": "app/node_modules/.pnpm/proxy-addr@2.0.7/node_modules/proxy-addr/package.json",
-          "pacote": "proxy-addr",
-          "versaoInstalada": "2.0.7",
-          "versaoCorrigida": "2.0.8",
-          "severidade": "critical",
-          "severidadeQualidade": "error"
-        },
-        {
-          "numero": 499,
-          "ferramenta": "Trivy",
-          "regra": "CVE-2026-93749",
-          "categoria": "trivy-imagem-web",
-          "caminho": "app/node_modules/.pnpm/source-map-js@1.2.1/node_modules/source-map-js/package.json",
-          "pacote": "source-map-js",
-          "versaoInstalada": "1.2.1",
-          "versaoCorrigida": "1.2.2",
-          "severidade": "high",
-          "severidadeQualidade": "error"
-        },
-        {
-          "numero": 500,
-          "ferramenta": "Trivy",
-          "regra": "GHSA-wq5f-xc86-pv6w",
-          "categoria": ".github/workflows/trivy.yml:analisar",
-          "caminho": "octaclin-web/pnpm-lock.yaml",
-          "pacote": "sharp",
-          "versaoInstalada": "0.35.4",
-          "versaoCorrigida": "0.35.5",
-          "severidade": "high",
-          "severidadeQualidade": "error"
-        },
-        {
-          "numero": 501,
-          "ferramenta": "Trivy",
-          "regra": "CVE-2026-85091",
-          "categoria": "trivy-imagem-backend",
-          "caminho": "library/octaclin-backend",
-          "pacote": "zlib",
-          "versaoInstalada": "1.3.2-r0",
-          "versaoCorrigida": "1.3.2-r1",
-          "severidade": "medium",
-          "severidadeQualidade": "warning"
-        },
-        {
-          "numero": 502,
-          "ferramenta": "Trivy",
-          "regra": "CVE-2026-85091",
-          "categoria": "trivy-imagem-web",
-          "caminho": "library/octaclin-web",
-          "pacote": "zlib",
-          "versaoInstalada": "1.3.2-r0",
-          "versaoCorrigida": "1.3.2-r1",
-          "severidade": "medium",
-          "severidadeQualidade": "warning"
-        },
-        {
-          "numero": 503,
-          "ferramenta": "Trivy",
-          "regra": "GHSA-wq5f-xc86-pv6w",
-          "categoria": "trivy-imagem-web",
-          "caminho": "app/node_modules/.pnpm/sharp@0.35.4_@types+node@26.6.4/node_modules/sharp/package.json",
-          "pacote": "sharp",
-          "versaoInstalada": "0.35.4",
-          "versaoCorrigida": "0.35.5",
-          "severidade": "high",
-          "severidadeQualidade": "error"
-        },
-        {
           "numero": 504,
           "ferramenta": "Trivy",
           "regra": "DSA-6549-1",
@@ -2598,14 +2022,50 @@
           "versaoCorrigida": "5.8.1-1+deb13u2",
           "severidade": "none",
           "severidadeQualidade": "note"
+        },
+        {
+          "numero": 512,
+          "ferramenta": "Trivy",
+          "regra": "DSA-6572-1",
+          "categoria": "trivy-imagem-ia-service",
+          "caminho": "library/octaclin-ia-service",
+          "pacote": "ca-certificates",
+          "versaoInstalada": "20250419",
+          "versaoCorrigida": "20250419+deb13u1",
+          "severidade": "none",
+          "severidadeQualidade": "note"
+        },
+        {
+          "numero": 514,
+          "ferramenta": "Trivy",
+          "regra": "CVE-2026-107891",
+          "categoria": "trivy-imagem-backend",
+          "caminho": "library/octaclin-backend",
+          "pacote": "musl-utils",
+          "versaoInstalada": "1.2.6-r2",
+          "versaoCorrigida": "1.2.6-r3",
+          "severidade": "none",
+          "severidadeQualidade": "note"
+        },
+        {
+          "numero": 515,
+          "ferramenta": "Trivy",
+          "regra": "CVE-2026-107891",
+          "categoria": "trivy-imagem-web",
+          "caminho": "library/octaclin-web",
+          "pacote": "musl-utils",
+          "versaoInstalada": "1.2.6-r2",
+          "versaoCorrigida": "1.2.6-r3",
+          "severidade": "none",
+          "severidadeQualidade": "note"
         }
       ],
       "porFerramenta": {
-        "Trivy": 216
+        "Trivy": 171
       }
     },
     "dependabot": {
-      "total": 7,
+      "total": 4,
       "alertas": [
         {
           "numero": 98,
@@ -2626,49 +2086,22 @@
           "versaoCorrigida": null
         },
         {
-          "numero": 101,
-          "advisory": "GHSA-jqcg-44mw-7w3h",
+          "numero": 113,
+          "advisory": "GHSA-6q48-6c7w-9gw2",
           "severidade": "critical",
-          "ecossistema": "npm",
-          "pacote": "proxy-addr",
-          "manifesto": "octaclin-backend/pnpm-lock.yaml",
-          "versaoCorrigida": "2.0.8"
+          "ecossistema": "pip",
+          "pacote": "certifi",
+          "manifesto": "octaclin-ai-service/requirements.lock.txt",
+          "versaoCorrigida": "2026.10.19"
         },
         {
-          "numero": 102,
-          "advisory": "GHSA-hp3w-g68c-fv3c",
-          "severidade": "medium",
-          "ecossistema": "npm",
-          "pacote": "sprintf-js",
-          "manifesto": "octaclin-backend/pnpm-lock.yaml",
-          "versaoCorrigida": null
-        },
-        {
-          "numero": 103,
-          "advisory": "GHSA-rj75-hqrm-r3gf",
-          "severidade": "medium",
-          "ecossistema": "npm",
-          "pacote": "postcss-selector-parser",
-          "manifesto": "octaclin-web/pnpm-lock.yaml",
-          "versaoCorrigida": "7.1.6"
-        },
-        {
-          "numero": 104,
-          "advisory": "GHSA-68fv-2mgg-jv7q",
-          "severidade": "high",
-          "ecossistema": "npm",
-          "pacote": "source-map-js",
-          "manifesto": "octaclin-web/pnpm-lock.yaml",
-          "versaoCorrigida": "1.2.2"
-        },
-        {
-          "numero": 105,
-          "advisory": "GHSA-wq5f-xc86-pv6w",
-          "severidade": "high",
-          "ecossistema": "npm",
-          "pacote": "sharp",
-          "manifesto": "octaclin-web/pnpm-lock.yaml",
-          "versaoCorrigida": "0.35.5"
+          "numero": 114,
+          "advisory": "GHSA-6q48-6c7w-9gw2",
+          "severidade": "critical",
+          "ecossistema": "pip",
+          "pacote": "certifi",
+          "manifesto": "research/fase319/requirements-lab-lock.txt",
+          "versaoCorrigida": "2026.10.19"
         }
       ]
     },
@@ -2679,7 +2112,7 @@
   "causas": [
     {
       "id": "SQ-2026-004",
-      "titulo": "Base oficial Python da imagem IA desatualizada frente a correcoes Debian publicadas",
+      "titulo": "Pacotes Debian remanescentes na imagem oficial Python do servico IA",
       "alertas": [
         "code-scanning:154",
         "code-scanning:155",
@@ -2838,60 +2271,21 @@
         "code-scanning:429",
         "code-scanning:433",
         "code-scanning:434",
-        "code-scanning:436",
-        "code-scanning:437",
-        "code-scanning:438",
-        "code-scanning:439",
-        "code-scanning:440",
-        "code-scanning:441",
-        "code-scanning:442",
-        "code-scanning:443",
-        "code-scanning:444",
-        "code-scanning:445",
-        "code-scanning:446",
-        "code-scanning:447",
-        "code-scanning:448",
-        "code-scanning:449",
-        "code-scanning:450",
-        "code-scanning:451",
-        "code-scanning:452",
-        "code-scanning:453",
-        "code-scanning:454",
-        "code-scanning:455",
-        "code-scanning:456",
-        "code-scanning:457",
-        "code-scanning:458",
-        "code-scanning:459",
-        "code-scanning:460",
-        "code-scanning:461",
-        "code-scanning:462",
-        "code-scanning:463",
-        "code-scanning:464",
-        "code-scanning:465",
-        "code-scanning:466",
-        "code-scanning:467",
-        "code-scanning:468",
-        "code-scanning:469",
-        "code-scanning:470",
-        "code-scanning:471",
-        "code-scanning:472",
-        "code-scanning:473",
-        "code-scanning:474",
         "code-scanning:480",
         "code-scanning:481",
         "code-scanning:485",
         "code-scanning:486",
         "code-scanning:487",
-        "code-scanning:488",
         "code-scanning:491",
         "code-scanning:492",
         "code-scanning:493",
-        "code-scanning:504"
+        "code-scanning:504",
+        "code-scanning:512"
       ],
       "disposicao": "corrigir",
       "severidadeContextual": "critical",
       "owner": "octanutri-clin/octaclin (proprietario do repositorio)",
-      "revisarEm": "2026-10-23",
+      "revisarEm": "2026-11-07",
       "ondaDestino": "SQ-1A",
       "evidencia": [
         "Recaptura da main 98b6e5f em 2026-09-08: 173 alertas Trivy na imagem final library/octaclin-ia-service; 3 critical, 51 high, 57 medium, 57 low e 5 none.",
@@ -2907,17 +2301,20 @@
         "Captura autenticada completa da main em 2026-10-09T14:22:51.422Z (commit 104a154688241a2581200f28ad1ff7d7f4261f90; SHA-256 39b3184eee2ee2cfe6c8fe6200d5acbcf8039f9bdb71842f3d8a8223e2311d8e): 216 Code Scanning, 7 Dependabot e zero Secret Scanning.",
         "A imagem IA tem 206 alertas abertos: 51 high, 85 medium, 67 low e 3 none; nenhum critical. Quarenta e dois alertas reportam versao corrigida, portanto a causa saiu de aguardando upstream/mitigado para corrigir.",
         "Dos 156 alertas IA da captura de 2026-09-25, 155 continuam abertos e um foi fechado; a captura atual adiciona 51 referencias IA abertas, que foram vinculadas a esta causa. A migracao de base deve ser validada por build, compatibilidade, SBOM e novo Trivy.",
-        "Reconciliacao SQ-4 de 2026-10-09: referencias atualizadas a partir da captura autenticada; nenhuma nova referencia IA ficou sem causa."
+        "Reconciliacao SQ-4 de 2026-10-09: referencias atualizadas a partir da captura autenticada; nenhuma nova referencia IA ficou sem causa.",
+        "Recaptura autenticada da main 9e1984a277e89469581b620d8c637324327a9342 em 2026-10-24T07:11:22.967Z, run 40073140896; SHA-256 3e8cb7400759f9a22b6ce8d7e1975f0dd4b78cead1788c69590ab207ed89985c: 171 Code Scanning, 4 Dependabot e zero Secret Scanning. Referencias ausentes nesta captura: code-scanning:436, code-scanning:437, code-scanning:438, code-scanning:439, code-scanning:440, code-scanning:441, code-scanning:442, code-scanning:443, code-scanning:444, code-scanning:445, code-scanning:446, code-scanning:447, code-scanning:448, code-scanning:449, code-scanning:450, code-scanning:451, code-scanning:452, code-scanning:453, code-scanning:454, code-scanning:455, code-scanning:456, code-scanning:457, code-scanning:458, code-scanning:459, code-scanning:460, code-scanning:461, code-scanning:462, code-scanning:463, code-scanning:464, code-scanning:465, code-scanning:466, code-scanning:467, code-scanning:468, code-scanning:469, code-scanning:470, code-scanning:471, code-scanning:472, code-scanning:473, code-scanning:474, code-scanning:488.",
+        "Recaptura autenticada da main 9e1984a277e89469581b620d8c637324327a9342 em 2026-10-24T07:11:22.967Z, run 40073140896; SHA-256 3e8cb7400759f9a22b6ce8d7e1975f0dd4b78cead1788c69590ab207ed89985c: 171 Code Scanning, 4 Dependabot e zero Secret Scanning. Imagem IA: 167 alertas, severidades {'low': 61, 'medium': 58, 'high': 44, 'none': 4}; 3 informam patch (liblzma5 e ca-certificates), todos com severidade none. O alerta novo code-scanning:512 foi vinculado; os demais IDs remanescentes foram reconciliados individualmente.",
+        "Inspecao do Dockerfile atual confirma Python 3.14-slim fixado pelo indice sha256:a2b82f3c48559aa0a8446d9af49826b6e2b2016f4cd2afabfe6013ec53729170, com atualizacao documentada em 2026-10-12. A captura comprova a reducao de 206 para 167 alertas IA; nao comprova ausencia de risco dos residuos. A severidade contextual critical conservadora e mantida e revisada em 14 dias."
       ],
       "preCondicoes": [
-        "A exploracao depende de o pacote Debian sinalizado estar alcancavel pelo fluxo do servico; o scanner nao publicou versao corrigida e a ausencia de patch nao demonstra falso positivo.",
-        "Qualquer troca de base precisa preservar Python, FastAPI, Uvicorn, lock por hash, health real e arquitetura suportada."
+        "A exploracao depende do pacote Debian estar alcancavel pelo fluxo do servico; ausencia de patch nao demonstra falso positivo.",
+        "Troca de base exige preservar Python, FastAPI, Uvicorn, lock por hash, health e arquiteturas suportadas."
       ],
       "mitigacoes": [
         "Runtime final sem pip global e executado como usuario nao-root octaclin; dependencias da aplicacao permanecem travadas por hash.",
         "A integracao de IA e opcional e exige IA_SERVICE_URL e IA_SERVICE_TOKEN em conjunto; configuracao parcial degrada de forma visivel sem expor token."
       ],
-      "impacto": "A imagem IA da main tem 206 alertas abertos (51 high, 85 medium, 67 low e 3 none); 42 reportam versao corrigida e aguardam atualizacao e novo scan. A severidade contextual critical e conservadora e nao significa que o snapshot contenha alerta scanner critical nesta imagem.",
+      "impacto": "Imagem IA da main com 167 alertas abertos: {'low': 61, 'medium': 58, 'high': 44, 'none': 4}. Ha 3 patches reportados com severidade none; os demais residuos continuam sem correcao informada. Critical e a classificacao contextual conservadora, nao uma contagem de scanner critical.",
       "condicaoSaida": "Atualizar a imagem Python oficial para digest suportado que incorpore os patches disponiveis, validar compatibilidade, runtime, SBOM e Trivy; recapturar a main e reconciliar todas as referencias que fecharem."
     },
     {
@@ -2978,21 +2375,20 @@
     {
       "id": "SQ-2026-240",
       "titulo": "proxy-addr vulneravel no backend (CVE-2026-90711)",
-      "alertas": [
-        "code-scanning:494",
-        "code-scanning:498",
-        "dependabot:101"
-      ],
-      "disposicao": "corrigir",
+      "alertas": [],
+      "disposicao": "mitigado",
       "severidadeContextual": "critical",
       "owner": "octanutri-clin/octaclin (proprietario do repositorio)",
-      "revisarEm": "2026-10-23",
+      "revisarEm": "2026-11-07",
       "ondaDestino": "SQ-1A",
       "evidencia": [
         "Captura autenticada da main 104a154688241a2581200f28ad1ff7d7f4261f90 em 2026-10-09T14:22:51.422Z; referencias Code Scanning e Dependabot reconciliadas.",
         "Trivy no lockfile e/ou alerta Dependabot identificam o pacote e a versao instalada no lockfile da main.",
         "Trivy na imagem final confirma que o pacote vulneravel integra o artefato publicado pela main.",
-        "Dependabot #101 e Trivy #494/#498 mostram proxy-addr 2.0.7; o snapshot oferece 2.0.8 como versao corrigida."
+        "Dependabot #101 e Trivy #494/#498 mostram proxy-addr 2.0.7; o snapshot oferece 2.0.8 como versao corrigida.",
+        "Recaptura autenticada da main 9e1984a277e89469581b620d8c637324327a9342 em 2026-10-24T07:11:22.967Z, run 40073140896; SHA-256 3e8cb7400759f9a22b6ce8d7e1975f0dd4b78cead1788c69590ab207ed89985c: 171 Code Scanning, 4 Dependabot e zero Secret Scanning. Referencias ausentes nesta captura: code-scanning:494, code-scanning:498, dependabot:101.",
+        "Condicao de saida anterior: Atualizar o pacote para a versao corrigida em lockfile/base suportada, validar build e testes, e exigir nova captura da main sem as referencias vinculadas.",
+        "Conferencia do lock backend na main capturada: proxy-addr 2.0.8, corrigindo a versao 2.0.7 anteriormente sinalizada."
       ],
       "preCondicoes": [
         "A versao vulneravel esta presente no artefato ou lockfile indicado no snapshot."
@@ -3000,18 +2396,14 @@
       "mitigacoes": [
         "Os checks de seguranca continuam ativos; nenhuma mitigacao funcional foi assumida sem teste."
       ],
-      "impacto": "A dependencia proxy-addr 2.0.7 esta no lockfile e imagem backend; o scanner reporta severidade critical e patch 2.0.8.",
-      "condicaoSaida": "Atualizar o pacote para a versao corrigida em lockfile/base suportada, validar build e testes, e exigir nova captura da main sem as referencias vinculadas."
+      "impacto": "A captura autenticada de 2026-10-24 nao contem nenhuma referencia anteriormente vinculada a esta causa; o historico de evidencias foi preservado.",
+      "condicaoSaida": "Atendida pela captura autenticada da main em 2026-10-24: nenhuma referencia vinculada permanece aberta. Reabrir se uma captura futura demonstrar regressao."
     },
     {
       "id": "SQ-2026-241",
       "titulo": "source-map-js vulneravel no web (CVE-2026-93749)",
-      "alertas": [
-        "code-scanning:497",
-        "code-scanning:499",
-        "dependabot:104"
-      ],
-      "disposicao": "corrigir",
+      "alertas": [],
+      "disposicao": "mitigado",
       "severidadeContextual": "high",
       "owner": "octanutri-clin/octaclin (proprietario do repositorio)",
       "revisarEm": "2026-11-08",
@@ -3020,7 +2412,10 @@
         "Captura autenticada da main 104a154688241a2581200f28ad1ff7d7f4261f90 em 2026-10-09T14:22:51.422Z; referencias Code Scanning e Dependabot reconciliadas.",
         "Trivy no lockfile e/ou alerta Dependabot identificam o pacote e a versao instalada no lockfile da main.",
         "Trivy na imagem final confirma que o pacote vulneravel integra o artefato publicado pela main.",
-        "Dependabot #104 e Trivy #497/#499 mostram source-map-js 1.2.1; o snapshot oferece 1.2.2 como versao corrigida."
+        "Dependabot #104 e Trivy #497/#499 mostram source-map-js 1.2.1; o snapshot oferece 1.2.2 como versao corrigida.",
+        "Recaptura autenticada da main 9e1984a277e89469581b620d8c637324327a9342 em 2026-10-24T07:11:22.967Z, run 40073140896; SHA-256 3e8cb7400759f9a22b6ce8d7e1975f0dd4b78cead1788c69590ab207ed89985c: 171 Code Scanning, 4 Dependabot e zero Secret Scanning. Referencias ausentes nesta captura: code-scanning:497, code-scanning:499, dependabot:104.",
+        "Condicao de saida anterior: Atualizar o pacote para a versao corrigida em lockfile/base suportada, validar build e testes, e exigir nova captura da main sem as referencias vinculadas.",
+        "Conferencia do lock web na main capturada: source-map-js 1.2.2, corrigindo 1.2.1."
       ],
       "preCondicoes": [
         "A versao vulneravel esta presente no artefato ou lockfile indicado no snapshot."
@@ -3028,18 +2423,14 @@
       "mitigacoes": [
         "Os checks de seguranca continuam ativos; nenhuma mitigacao funcional foi assumida sem teste."
       ],
-      "impacto": "source-map-js 1.2.1 esta no lockfile e imagem web; o scanner reporta severidade high e patch 1.2.2.",
-      "condicaoSaida": "Atualizar o pacote para a versao corrigida em lockfile/base suportada, validar build e testes, e exigir nova captura da main sem as referencias vinculadas."
+      "impacto": "A captura autenticada de 2026-10-24 nao contem nenhuma referencia anteriormente vinculada a esta causa; o historico de evidencias foi preservado.",
+      "condicaoSaida": "Atendida pela captura autenticada da main em 2026-10-24: nenhuma referencia vinculada permanece aberta. Reabrir se uma captura futura demonstrar regressao."
     },
     {
       "id": "SQ-2026-242",
       "titulo": "sharp vulneravel no web (GHSA-wq5f-xc86-pv6w)",
-      "alertas": [
-        "code-scanning:500",
-        "code-scanning:503",
-        "dependabot:105"
-      ],
-      "disposicao": "corrigir",
+      "alertas": [],
+      "disposicao": "mitigado",
       "severidadeContextual": "high",
       "owner": "octanutri-clin/octaclin (proprietario do repositorio)",
       "revisarEm": "2026-11-08",
@@ -3048,7 +2439,10 @@
         "Captura autenticada da main 104a154688241a2581200f28ad1ff7d7f4261f90 em 2026-10-09T14:22:51.422Z; referencias Code Scanning e Dependabot reconciliadas.",
         "Trivy no lockfile e/ou alerta Dependabot identificam o pacote e a versao instalada no lockfile da main.",
         "Trivy na imagem final confirma que o pacote vulneravel integra o artefato publicado pela main.",
-        "Dependabot #105 e Trivy #500/#503 mostram sharp 0.35.4; o snapshot oferece 0.35.5 como versao corrigida."
+        "Dependabot #105 e Trivy #500/#503 mostram sharp 0.35.4; o snapshot oferece 0.35.5 como versao corrigida.",
+        "Recaptura autenticada da main 9e1984a277e89469581b620d8c637324327a9342 em 2026-10-24T07:11:22.967Z, run 40073140896; SHA-256 3e8cb7400759f9a22b6ce8d7e1975f0dd4b78cead1788c69590ab207ed89985c: 171 Code Scanning, 4 Dependabot e zero Secret Scanning. Referencias ausentes nesta captura: code-scanning:500, code-scanning:503, dependabot:105.",
+        "Condicao de saida anterior: Atualizar o pacote para a versao corrigida em lockfile/base suportada, validar build e testes, e exigir nova captura da main sem as referencias vinculadas.",
+        "Conferencia do lock web na main capturada: sharp 0.35.5, corrigindo 0.35.4."
       ],
       "preCondicoes": [
         "A versao vulneravel esta presente no artefato ou lockfile indicado no snapshot."
@@ -3056,8 +2450,8 @@
       "mitigacoes": [
         "Os checks de seguranca continuam ativos; nenhuma mitigacao funcional foi assumida sem teste."
       ],
-      "impacto": "sharp 0.35.4 esta no lockfile e imagem web; o scanner reporta severidade high e patch 0.35.5.",
-      "condicaoSaida": "Atualizar o pacote para a versao corrigida em lockfile/base suportada, validar build e testes, e exigir nova captura da main sem as referencias vinculadas."
+      "impacto": "A captura autenticada de 2026-10-24 nao contem nenhuma referencia anteriormente vinculada a esta causa; o historico de evidencias foi preservado.",
+      "condicaoSaida": "Atendida pela captura autenticada da main em 2026-10-24: nenhuma referencia vinculada permanece aberta. Reabrir se uma captura futura demonstrar regressao."
     },
     {
       "id": "SQ-2026-243",
@@ -3114,10 +2508,8 @@
     {
       "id": "SQ-2026-245",
       "titulo": "sprintf-js vulneravel no backend sem patch reportado",
-      "alertas": [
-        "dependabot:102"
-      ],
-      "disposicao": "aguardando_upstream",
+      "alertas": [],
+      "disposicao": "mitigado",
       "severidadeContextual": "medium",
       "owner": "octanutri-clin/octaclin (proprietario do repositorio)",
       "revisarEm": "2027-01-07",
@@ -3125,7 +2517,10 @@
       "evidencia": [
         "Captura autenticada da main 104a154688241a2581200f28ad1ff7d7f4261f90 em 2026-10-09T14:22:51.422Z; referencias Code Scanning e Dependabot reconciliadas.",
         "Trivy no lockfile e/ou alerta Dependabot identificam o pacote e a versao instalada no lockfile da main.",
-        "Dependabot #102 aponta sprintf-js no lockfile backend; a captura nao reporta versao corrigida."
+        "Dependabot #102 aponta sprintf-js no lockfile backend; a captura nao reporta versao corrigida.",
+        "Recaptura autenticada da main 9e1984a277e89469581b620d8c637324327a9342 em 2026-10-24T07:11:22.967Z, run 40073140896; SHA-256 3e8cb7400759f9a22b6ce8d7e1975f0dd4b78cead1788c69590ab207ed89985c: 171 Code Scanning, 4 Dependabot e zero Secret Scanning. Referencias ausentes nesta captura: dependabot:102.",
+        "Condicao de saida anterior: Quando upstream publicar versao corrigida, atualizar lockfile, validar backend e confirmar fechamento em nova captura.",
+        "Consulta a GitHub Advisory API em 2026-10-24 confirma GHSA-hp3w-g68c-fv3c retirado (withdrawn_at 2026-10-22T19:21:04Z). sprintf-js 1.0.3 permanece no lock; nao foi declarada correcao por upgrade. A referencia #102 deixou a lista de abertos por retirada do advisory."
       ],
       "preCondicoes": [
         "A versao vulneravel esta presente no artefato ou lockfile indicado no snapshot."
@@ -3133,16 +2528,14 @@
       "mitigacoes": [
         "O backend permanece coberto pelos testes e pela auditoria de dependencias; nao ha versao corrigida publicada no snapshot."
       ],
-      "impacto": "sprintf-js esta na arvore de dependencia do backend; o scanner reporta severidade medium e nao indica patch.",
-      "condicaoSaida": "Quando upstream publicar versao corrigida, atualizar lockfile, validar backend e confirmar fechamento em nova captura."
+      "impacto": "A captura autenticada de 2026-10-24 nao contem nenhuma referencia anteriormente vinculada a esta causa; o historico de evidencias foi preservado.",
+      "condicaoSaida": "Atendida pela captura autenticada da main em 2026-10-24: nenhuma referencia vinculada permanece aberta. Reabrir se uma captura futura demonstrar regressao."
     },
     {
       "id": "SQ-2026-246",
       "titulo": "postcss-selector-parser vulneravel no web com patch disponivel",
-      "alertas": [
-        "dependabot:103"
-      ],
-      "disposicao": "corrigir",
+      "alertas": [],
+      "disposicao": "mitigado",
       "severidadeContextual": "medium",
       "owner": "octanutri-clin/octaclin (proprietario do repositorio)",
       "revisarEm": "2027-01-07",
@@ -3150,7 +2543,10 @@
       "evidencia": [
         "Captura autenticada da main 104a154688241a2581200f28ad1ff7d7f4261f90 em 2026-10-09T14:22:51.422Z; referencias Code Scanning e Dependabot reconciliadas.",
         "Trivy no lockfile e/ou alerta Dependabot identificam o pacote e a versao instalada no lockfile da main.",
-        "Dependabot #103 reporta postcss-selector-parser no lockfile web e versao corrigida 7.1.6."
+        "Dependabot #103 reporta postcss-selector-parser no lockfile web e versao corrigida 7.1.6.",
+        "Recaptura autenticada da main 9e1984a277e89469581b620d8c637324327a9342 em 2026-10-24T07:11:22.967Z, run 40073140896; SHA-256 3e8cb7400759f9a22b6ce8d7e1975f0dd4b78cead1788c69590ab207ed89985c: 171 Code Scanning, 4 Dependabot e zero Secret Scanning. Referencias ausentes nesta captura: dependabot:103.",
+        "Condicao de saida anterior: Atualizar o pacote para a versao corrigida em lockfile/base suportada, validar build e testes, e exigir nova captura da main sem as referencias vinculadas.",
+        "Conferencia do lock web na main capturada: postcss-selector-parser 7.1.6, versao corrigida indicada pelo advisory anterior."
       ],
       "preCondicoes": [
         "A versao vulneravel esta presente no artefato ou lockfile indicado no snapshot."
@@ -3158,17 +2554,14 @@
       "mitigacoes": [
         "Os checks de seguranca continuam ativos; nenhuma mitigacao funcional foi assumida sem teste."
       ],
-      "impacto": "postcss-selector-parser esta na arvore de dependencias web; o snapshot reporta patch 7.1.6.",
-      "condicaoSaida": "Atualizar o pacote para a versao corrigida em lockfile/base suportada, validar build e testes, e exigir nova captura da main sem as referencias vinculadas."
+      "impacto": "A captura autenticada de 2026-10-24 nao contem nenhuma referencia anteriormente vinculada a esta causa; o historico de evidencias foi preservado.",
+      "condicaoSaida": "Atendida pela captura autenticada da main em 2026-10-24: nenhuma referencia vinculada permanece aberta. Reabrir se uma captura futura demonstrar regressao."
     },
     {
       "id": "SQ-2026-247",
       "titulo": "zlib vulneravel nas imagens backend e web com patch disponivel",
-      "alertas": [
-        "code-scanning:501",
-        "code-scanning:502"
-      ],
-      "disposicao": "corrigir",
+      "alertas": [],
+      "disposicao": "mitigado",
       "severidadeContextual": "medium",
       "owner": "octanutri-clin/octaclin (proprietario do repositorio)",
       "revisarEm": "2027-01-07",
@@ -3176,7 +2569,10 @@
       "evidencia": [
         "Captura autenticada da main 104a154688241a2581200f28ad1ff7d7f4261f90 em 2026-10-09T14:22:51.422Z; referencias Code Scanning e Dependabot reconciliadas.",
         "Trivy na imagem final confirma que o pacote vulneravel integra o artefato publicado pela main.",
-        "Trivy #501/#502 encontra zlib 1.3.2-r0 nas imagens backend e web; o snapshot reporta patch 1.3.2-r1."
+        "Trivy #501/#502 encontra zlib 1.3.2-r0 nas imagens backend e web; o snapshot reporta patch 1.3.2-r1.",
+        "Recaptura autenticada da main 9e1984a277e89469581b620d8c637324327a9342 em 2026-10-24T07:11:22.967Z, run 40073140896; SHA-256 3e8cb7400759f9a22b6ce8d7e1975f0dd4b78cead1788c69590ab207ed89985c: 171 Code Scanning, 4 Dependabot e zero Secret Scanning. Referencias ausentes nesta captura: code-scanning:501, code-scanning:502.",
+        "Condicao de saida anterior: Atualizar o pacote para a versao corrigida em lockfile/base suportada, validar build e testes, e exigir nova captura da main sem as referencias vinculadas.",
+        "Dockerfiles backend e web da main capturada instalam explicitamente zlib=1.3.2-r1, corrigindo 1.3.2-r0; ambas as imagens usam o digest Node 22 Alpine fixado."
       ],
       "preCondicoes": [
         "A versao vulneravel esta presente no artefato ou lockfile indicado no snapshot."
@@ -3184,8 +2580,60 @@
       "mitigacoes": [
         "Os checks de seguranca continuam ativos; nenhuma mitigacao funcional foi assumida sem teste."
       ],
-      "impacto": "As imagens backend e web incluem zlib 1.3.2-r0; o scanner reporta patch 1.3.2-r1.",
-      "condicaoSaida": "Atualizar o pacote para a versao corrigida em lockfile/base suportada, validar build e testes, e exigir nova captura da main sem as referencias vinculadas."
+      "impacto": "A captura autenticada de 2026-10-24 nao contem nenhuma referencia anteriormente vinculada a esta causa; o historico de evidencias foi preservado.",
+      "condicaoSaida": "Atendida pela captura autenticada da main em 2026-10-24: nenhuma referencia vinculada permanece aberta. Reabrir se uma captura futura demonstrar regressao."
+    },
+    {
+      "id": "SQ-2026-248",
+      "titulo": "certifi com raizes emSign comprometidas em locks Python",
+      "alertas": [
+        "dependabot:113",
+        "dependabot:114"
+      ],
+      "disposicao": "corrigir",
+      "severidadeContextual": "critical",
+      "owner": "octanutri-clin/octaclin (proprietario do repositorio)",
+      "revisarEm": "2026-11-07",
+      "ondaDestino": "SQ-1A",
+      "evidencia": [
+        "Recaptura autenticada da main 9e1984a277e89469581b620d8c637324327a9342 em 2026-10-24T07:11:22.967Z, run 40073140896; SHA-256 3e8cb7400759f9a22b6ce8d7e1975f0dd4b78cead1788c69590ab207ed89985c: 171 Code Scanning, 4 Dependabot e zero Secret Scanning.",
+        "GHSA-6q48-6c7w-9gw2 consultado na API publica em 2026-10-24: certifi >=2019.03.09 e <2026.10.19 afetado; primeira correcao 2026.10.19.",
+        "O lock atual do servico IA ja fixa certifi 2026.10.19 com hashes, mas Dependabot #113 permanece aberto nesta captura. O lock de pesquisa Fase 319 ainda fixa 2026.7.22 (#114). A pesquisa esta encerrada em NO-GO; nao foi executada nova PoC."
+      ],
+      "preCondicoes": [
+        "Validacao TLS com o trust store afetado em um ambiente que instale o lock vulneravel."
+      ],
+      "mitigacoes": [
+        "Servico IA fixa a versao corrigida no lock; falta fechamento comprovado de #113 pela API.",
+        "Fase 319 encerrada como pesquisa NO-GO, sem novas execucoes autorizadas."
+      ],
+      "impacto": "Dois alertas critical continuam abertos. O servico IA tem correcao no codigo; o ambiente de pesquisa requer atualizacao antes de qualquer uso futuro. Nenhum alerta foi dispensado.",
+      "condicaoSaida": "Atualizar o lock de pesquisa com a versao corrigida sem rodar a PoC, validar os locks e obter nova captura da main com #113 e #114 fechados."
+    },
+    {
+      "id": "SQ-2026-249",
+      "titulo": "musl-utils das imagens Node com patch Alpine disponivel",
+      "alertas": [
+        "code-scanning:514",
+        "code-scanning:515"
+      ],
+      "disposicao": "corrigir",
+      "severidadeContextual": "none",
+      "owner": "octanutri-clin/octaclin (proprietario do repositorio)",
+      "revisarEm": "2026-11-23",
+      "ondaDestino": "SQ-1A",
+      "evidencia": [
+        "Recaptura autenticada da main 9e1984a277e89469581b620d8c637324327a9342 em 2026-10-24T07:11:22.967Z, run 40073140896; SHA-256 3e8cb7400759f9a22b6ce8d7e1975f0dd4b78cead1788c69590ab207ed89985c: 171 Code Scanning, 4 Dependabot e zero Secret Scanning.",
+        "Trivy #514 e #515: musl-utils 1.2.6-r2 nas imagens backend e web, CVE-2026-107891, patch 1.2.6-r3, severidade none no snapshot."
+      ],
+      "preCondicoes": [
+        "O artefato final inclui a versao sinalizada de musl-utils; o scanner nao fornece gravidade clinica ou alcancabilidade."
+      ],
+      "mitigacoes": [
+        "Imagens fixadas por digest, executadas sem usuario root e submetidas aos gates existentes; nao presumir que isso remova o advisory."
+      ],
+      "impacto": "Dois alertas informativos com patch permanecem rastreados sem supressao.",
+      "condicaoSaida": "Atualizar a base suportada por digest que incorpore 1.2.6-r3, validar builds, runtime e SBOM, e recapturar a main sem as duas referencias."
     }
   ]
 }

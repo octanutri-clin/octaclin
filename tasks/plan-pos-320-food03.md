@@ -1,6 +1,6 @@
 # FOOD03 — favoritos de substituições por profissional
 
-**Estado:** implementação em curso na PR Draft #438; não mergeada nem implantada.
+**Estado:** concluída; PR #438 mergeada e implantação reconciliada em 2026-10-22.
 **Base auditada:** `main` em `a853685e8becc2d38248f0608f749c6643a692c2` (PR #437).
 **Escopo:** permitir ao profissional favoritar/desfavoritar alimentos elegíveis
 na seleção de substituições e ordenar favoritos antes dos demais resultados.
@@ -103,8 +103,8 @@ MIT é orientação, não exigência de integração; a GPL permanece fora do ru
 | T04 | Serviços/endpoints de lista, favoritar e desfavoritar | T03 | **Concluída:** guardas de papel/permissão, tenant e vínculo profissional; validação do estado atual; mutações idempotentes |
 | T05 | PostgreSQL descartável: RLS, tenant, profissional e concorrência | T04 | **PASS local:** PostgreSQL 15 descartável, role `NOBYPASSRLS`, FORCE RLS, tenant adulterado negado e inserts concorrentes convergem; escopo profissional verificado no serviço. O suite RLS geral falhou antes de executar por falta da imagem `timescale/timescaledb-ha:pg15` |
 | T06 | BFF e UI de busca/seletor de substituição | T04–T05 | **Implementado; BFF e Playwright desktop/mobile + axe passaram.** Catálogo e custom, `aria-pressed`, ordenação local após favoritar, sem autoaplicar |
-| T07 | Regressões de planos, publicação, macros, escolhas e portal/print | T06 | **Parcial:** serviços de plano regressivos e fluxo Playwright confirmam que favorito não grava nem seleciona; gates adicionais da PR pendentes |
-| T08 | Revisão R4, documentação, gates e PR única | T01–T07 | **Pendente:** gates do HEAD corrigido e revisão; PR segue Draft; sem merge/deploy |
+| T07 | Regressões de planos, publicação, macros, escolhas e portal/print | T06 | **PASS:** suíte de backend, BFF, Playwright desktop/mobile, acessibilidade e CI da PR aprovadas; sem alteração dos snapshots ou projeções |
+| T08 | Revisão R4, documentação, gates e PR única | T01–T07 | **PASS conforme revisão confirmada pelo proprietário:** PR #438 mergeada; migration 1077 aplicada e conferida em staging e produção; deploy automático dos quatro serviços confirmado |
 
 ## Plano de testes da implementação
 
@@ -161,6 +161,21 @@ MIT é orientação, não exigência de integração; a GPL permanece fora do ru
   configurada `timescale/timescaledb-ha:pg15` não estava disponível localmente;
   a prova isolada de FOOD03 usou Postgres 15 descartável.
 
+## Reconciliação pós-merge e operação — 2026-10-22
+
+- PR #438 mergeada no commit `9f13b80a3984f36f1259fcd798eba54dd9d8070a`.
+- Migration 1077 preparada e verificada em branches temporários; aplicada a
+  staging (`octaclin-staging`, branch `production`, banco `neondb`) e produção
+  (`Octaclin-produção`, branch `production`, banco `Octaclin-db-producao`).
+- Verificação estrutural pós-aplicação: registro TypeORM 1077 presente; tabela
+  presente; ENABLE/FORCE RLS e policy tenant presentes; cinco constraints e
+  quatro índices presentes. Nenhuma linha clínica foi consultada ou alterada.
+- Render confirmou os quatro serviços `live` no commit do merge: backend e Web
+  de staging e produção. Smokes públicos pós-deploy: backend `/health` e Web
+  `/login` responderam HTTP 200 em ambos ambientes.
+- `down` recusa remover o schema. Rollback de aplicação deve manter tabela e
+  preferências; não executar rollback destrutivo.
+
 ## Critérios de conclusão
 
 1. Preferência por profissional implementada sem sobrepor a `preferida` do
@@ -170,8 +185,8 @@ MIT é orientação, não exigência de integração; a GPL permanece fora do ru
 3. Compatibilidade FOOD01/02, planos publicados, escolhas do paciente, portal,
    impressão e cálculo preservada.
 4. Acessibilidade e comportamento em desktop/mobile verificados.
-5. Uma PR revisável com status dos gates real; aplicação de migration/deploy
-   permanece operação posterior, separada e não presumida pelo merge.
+5. PR revisável, gates, revisão R4 confirmada pelo proprietário, migration e
+   deploy reconciliados com verificações pós-merge.
 
 ## Fora de escopo
 

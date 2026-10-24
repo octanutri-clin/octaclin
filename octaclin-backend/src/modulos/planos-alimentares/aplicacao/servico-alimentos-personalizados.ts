@@ -5,7 +5,7 @@ import { CriptografiaDadosSensiveis } from '../../../infraestrutura/seguranca/cr
 import { UsuarioAutenticado } from '../../auth/dominio/usuario-autenticado';
 import { AlimentoPersonalizadoOrm } from '../infraestrutura/alimento-personalizado.orm';
 import { FavoritoAlimentoOrm } from '../infraestrutura/favorito-alimento.orm';
-import { ComposicaoPersonalizada, NORMALIZACAO_CUSTOM, normalizarComposicaoPersonalizada, selecionarConteudoPersonalizado } from '../dominio/alimentos-personalizados';
+import { ComposicaoPersonalizada, validarSnapshotPersonalizado, normalizarComposicaoPersonalizada, selecionarConteudoPersonalizado } from '../dominio/alimentos-personalizados';
 import { LimitePrecisaoNutricionalError } from '../dominio/micronutrientes';
 import { AtualizarAlimentoPersonalizadoDto, BuscarAlimentosPersonalizadosDto, CriarAlimentoPersonalizadoDto, ListarAlimentosPersonalizadosDto } from './dtos-alimentos-personalizados';
 import { identidadeBiblioteca } from './identidade-biblioteca-alimentos';
@@ -19,12 +19,7 @@ export class ServicoAlimentosPersonalizados {
   }
   private ler(m: AlimentoPersonalizadoOrm): ComposicaoPersonalizada {
     try {
-      const s = JSON.parse(this.crypto.descriptografar(m.conteudoCriptografado));
-      const c = s.composicao;
-      if (s.schemaVersao !== 1 || c?.normalizacaoVersao !== NORMALIZACAO_CUSTOM) throw new Error();
-      const r = normalizarComposicaoPersonalizada({ nome: c.nome, ...(c.preparacao ? { preparacao: c.preparacao } : {}), ...(c.referenciaComposicao ? { referenciaComposicao: c.referenciaComposicao } : {}), base: c.baseOrigem, ...c.composicaoOrigem });
-      if (JSON.stringify(r) !== JSON.stringify(c)) throw new Error();
-      return r;
+      return validarSnapshotPersonalizado(JSON.parse(this.crypto.descriptografar(m.conteudoCriptografado)));
     } catch { throw new ServiceUnavailableException('Alimento personalizado indisponível.'); }
   }
   private projetar(m: AlimentoPersonalizadoOrm, profissionalId: string, detalhe = false) {

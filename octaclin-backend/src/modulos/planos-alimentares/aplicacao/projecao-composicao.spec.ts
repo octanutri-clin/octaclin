@@ -15,3 +15,10 @@ describe('FOOD02 projeção factual explícita', () => {
     expect(JSON.stringify(projetarComposicao(legado as any))).toBe(JSON.stringify(legado));
   });
 });
+
+describe('FOOD04 proveniência interna',()=>{
+  it.each(['catalogo','manual','custom'])('omite origemGrupo de snapshot %s sem alterar os nutrientes',origem=>{
+    const r=projetarComposicao({origem,descricao:'Alimento',origemGrupo:{grupoId:'privado'},nutrientesPor100g:{energiaKcal:100},nutrientesPorcao:{energiaKcal:50}}as any);
+    expect(r).not.toHaveProperty('origemGrupo');expect(r.nutrientesPorcao.energiaKcal).toBe(50);
+  });
+});

@@ -1,3 +1,35 @@
+# Handoff ativo — FOOD04: PR #441 em validacao final
+
+Base `origin/main` `9e1984a2` (merge #440), branch `docs/pos320-food04-planning`,
+worktree `/workspace/octaclin/.worktrees/pos320-food04-planning`.
+
+- Desenvolvimento autorizado pelo proprietário em “Pode seguir”. Uma única PR
+  funcional: [#441](https://github.com/octanutri-clin/octaclin/pull/441), ainda
+  Draft. Checkout principal/alteração preexistente preservados.
+- [Plano e decisões D01–D08](plan-pos-320-food04.md),
+  [T00–T14](todo-pos-320-food04.md), [evidências](execucao-pos-320-food04.md).
+  Contratos e próxima ação exata no [handoff Luna](handoff-pos-320-food04-luna.md).
+- Domínio/DTOs, biblioteca cifrada/HMAC, capacidades, migration1078, aplicação,
+  snapshots, BFF, UI profissional/admin e testes de navegador implementados.
+  Testes e limites exatos no ledger; não confundir checkpoint com fase concluída.
+- Referências FOOD04 recomendam código interno; nenhuma dependência nova.
+  Preservar CAS/autosave60s/posse PA07,20 alternativas/item e96KiB.
+- Sol médio está fechando T13–T14. A revisão cruzada de 24/10 encontrou dois
+  P2 adicionais (snapshot catálogo e cancelamento durante save); regressões RED
+  confirmadas, correções e GREEN focais implementados. Faltam revisão do delta,
+  regressões e CI do HEAD final. Não confundir checks de SHAs anteriores com aceite.
+- Os gates Governança/Mobile foram corrigidos no checkpoint d3157af0; relatório
+  em `docs/governance/REVISAO_SECURITY_QUALITY_2026-10-24.md`. Os alertas residuais
+  do inventário continuam rastreados, sem dispensas ou encerramento de SQ-4.
+- Administração tem consulta própria de fontes: não dar permissões de prontuário
+  ao Client. Proveniência interna nunca é capability de cópia entre pacientes.
+- Nenhuma migration externa, merge, deploy ou ativação autorizados por esta fase.
+  FOOD04-C01/C02/C03 permanecem propostas complementares, FOOD05 não antecipada.
+
+Os checkpoints abaixo são históricos e não substituem o estado ativo acima.
+
+---
+
 # Handoff atual — FOOD02: T01–T08 implementados; Draft PR #425 e CI em andamento
 
 - Branch `feat/pos320-food02-planejamento`, base `95e9f33d` (merge424).

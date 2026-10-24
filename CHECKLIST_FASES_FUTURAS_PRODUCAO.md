@@ -1,11 +1,11 @@
 # OctaClin - Checklist vivo de fases futuras ate producao
 
-Atualizado em 2026-10-22. Fase 320: NO-GO para ingestão TBCA nesta rodada por ausência de autorização de uso; manter TACO, USDA e IBGE. FOOD02 foi mergeada (#425) e a estabilização visual correspondente (#426) também foi integrada; FOOD03 passa a ser o próximo planejamento funcional pós-320. PR #437 foi integrada e o workflow de backup/restauração dedicada concluiu com sucesso em 2026-10-22. O monitor de produção ainda sinaliza ClamAV ausente (issue #234 aberta); Fase 316 permanece em stand-by e esse alerta não deve ser tratado como resolvido pelo backup.
+Atualizado em 2026-10-22. Fase 320: NO-GO para ingestão TBCA nesta rodada por ausência de autorização de uso; manter TACO, USDA e IBGE. FOOD02 (#425/#426), FOOD03 (#438) e PR #437 estão integradas. Migration 1077 aplicada e verificada em staging e produção; deploys Render do backend e Web estão live e os smokes de saúde/login retornaram HTTP 200. O workflow de backup/restauração dedicada concluiu com sucesso. O monitor de produção ainda sinaliza ClamAV ausente (issue #234 aberta); Fase 316 permanece em stand-by.
 
 ## Estado reconciliado em 2026-10-22
 
-- **Base desta atualização:** `main`/`origin/main` no merge #437, commit
-  `a853685e8becc2d38248f0608f749c6643a692c2`. Não houve alteração de runtime.
+- **Base desta atualização:** `main`/`origin/main` no merge #438, commit
+  `9f13b80a3984f36f1259fcd798eba54dd9d8070a`.
 - **FOOD02:** PRs #425 e #426 integradas; o registro histórico de implementação
   abaixo foi supersedido. Estado de migrations/deploy externos não foi
   reconsultado nesta atualização e não é inferido do merge.
@@ -20,9 +20,20 @@ Atualizado em 2026-10-22. Fase 320: NO-GO para ingestão TBCA nesta rodada por a
   retornou estado degradado por ClamAV não configurado. O scanner real continua
   ausente, uploads não recebem detecção real de malware, e a issue #234 segue
   aberta. Não criar serviço pago nem declarar mitigação sem decisão operacional.
-- **Próxima entrega planejada:** FOOD03, favoritos de substituições por
-  profissional. Handoff em `tasks/plan-pos-320-food03.md`; a implementação
-  ainda exige autorização explícita. Fase 316 permanece em stand-by.
+- **FOOD03:** PR #438, migration 1077 e deploy reconciliados; ver
+  `tasks/plan-pos-320-food03.md`.
+- **Próxima entrega funcional / planejamento ativo:** FOOD04, grupos
+  reutilizáveis de substituições. Base `9e1984a2` (merge #440) conferida em
+  2026-10-22; D01–D03 aprovadas e ampliadas para D01–D08. Administração,
+  duplicação, filtros/favoritos, aplicação seletiva, dedup e restauração fazem
+  parte da entrega essencial. Backend/BFF, migration1078 e UI implementados na
+  PR #441 (Draft); correções de snapshot catálogo e cancelamento durante save
+  reavaliadas por outro agente, sem novos Critical/P1/P2 confirmados no delta.
+  Regressões locais PASS (backend3244; visual20), CI do HEAD final pendente. Provas reais e limites em
+  `tasks/execucao-pos-320-food04.md`; nenhuma migration externa aplicada.
+  Plano: `tasks/plan-pos-320-food04.md`; tarefas: `tasks/todo-pos-320-food04.md`.
+  Referência específica recomenda primitives/código atual, sem nova biblioteca.
+  Fase 316 permanece em stand-by.
 
 ## Estado reconciliado em 2026-10-14
 
@@ -4699,10 +4710,10 @@ auditoria estão ordenados na seção 15 de
   `docs/governance/EVIDENCIAS_FOOD02_WEB_2026-10-17.md`,
   `docs/governance/REVISAO_R4_FOOD02_2026-10-18.md` e
   `tasks/plan-pos-320-food02.md`/`tasks/todo-pos-320-food02.md`.
-- [ ] FOOD03 — planejamento consolidado em `tasks/plan-pos-320-food03.md`;
-  próximo recurso da Onda 2, ainda sem implementação autorizada. A preferência
-  profissional não deve reutilizar nem sobrescrever `preferida`, que pertence
-  ao snapshot da substituição no plano e influencia apresentação ao paciente.
+- [x] FOOD03 — PR #438 mergeada; migration 1077 aplicada e verificada em
+  staging/produção; backend e Web `live` nos dois ambientes. A preferência
+  profissional permanece separada do campo `preferida` do snapshot do plano.
+  Evidências: `tasks/plan-pos-320-food03.md`.
 
 
 

@@ -10,7 +10,7 @@ const CABECALHOS_PRIVADOS = { 'Cache-Control': 'private, no-store' };
 
 export async function executarProxyPlanoAlimentar(
   caminho: string,
-  permissao: 'planos_alimentares.ler' | 'planos_alimentares.gerenciar',
+  permissao: 'planos_alimentares.ler' | 'planos_alimentares.gerenciar' | 'grupos_substituicoes.administrar',
   init?: RequestInit,
   limiteCorpoBytes?: number
 ) {
@@ -47,7 +47,7 @@ export async function lerCorpo(request: Request) {
 export class ErroCorpoAcimaDoLimite extends Error {}
 
 /** Lê o body em blocos e interrompe assim que ultrapassa o limite configurado. */
-export async function lerCorpoLimitado(request: Request, limiteBytes: number): Promise<string> {
+export async function lerCorpoLimitado(request: Request | Response, limiteBytes: number): Promise<string> {
   const tamanhoDeclarado = Number(request.headers.get('content-length'));
   if (Number.isFinite(tamanhoDeclarado) && tamanhoDeclarado > limiteBytes) throw new ErroCorpoAcimaDoLimite();
   if (!request.body) return '{}';
