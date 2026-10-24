@@ -1,13 +1,19 @@
 import { plainToInstance } from 'class-transformer';
-import { ArrayMaxSize, IsArray, IsDefined, IsInt, IsOptional, IsString, IsUUID, Length, Max, Min, Validate, ValidateIf, ValidateNested, ValidatorConstraint, ValidatorConstraintInterface } from 'class-validator';
+import { ArrayMaxSize, IsArray, IsDefined, IsInt, IsOptional, IsString, IsUUID, Length, Max, Min, Validate, ValidateIf, ValidateNested, ValidatorConstraint, ValidatorConstraintInterface, ValidationArguments } from 'class-validator';
 import { Type } from 'class-transformer';
 import { AlimentoEdicao, DocumentoEdicaoPlano, numeroEdicao, validarDocumentoEdicaoPlano } from '../dominio/edicao-plano';
 import { AtualizarRascunhoPlanoAlimentarDto } from './dtos';
+import { LIMITE_BYTES_EDICAO_PLANO } from '../dominio/edicao-plano';
 
 @ValidatorConstraint({ name: 'documentoEdicaoPlano', async: false })
 export class ValidadorDocumentoEdicaoPlano implements ValidatorConstraintInterface {
-  validate(valor: unknown): boolean {
-    try { validarDocumentoEdicaoPlano(valor); return true; } catch { return false; }
+  validate(valor: unknown, argumentos: ValidationArguments): boolean {
+    try {
+      validarDocumentoEdicaoPlano(valor);
+      // O documento e as referências de proveniência compõem um único body HTTP.
+      // Limitar apenas o documento permitiria exceder o parser de 100 KB.
+      return Buffer.byteLength(JSON.stringify(argumentos.object), 'utf8') <= LIMITE_BYTES_EDICAO_PLANO;
+    } catch { return false; }
   }
   defaultMessage(): string { return 'Documento de edição do plano inválido.'; }
 }
