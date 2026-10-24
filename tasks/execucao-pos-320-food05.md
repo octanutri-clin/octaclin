@@ -112,3 +112,82 @@ módulos (RED por TS2307,0 testes; não é vulnerabilidade reproduzida). Após c
 CAS próprio e rollback conservador. Migration1079 registrada;1078 não alterada.
 Não executada em banco externo. Provas PostgreSQL/RLS/role seguem para T14;
 testes de migration até aqui inspecionam SQL e registro, não provam o banco real.
+
+T08 typecheck inicial detectou3 fixtures legadas sem campos novos do ORM.
+Tipagem admite projeções parciais, sem enfraquecer NOT NULL/checks no schema;
+repetição t08-typecheck-final.log PASS.
+T09 parcial:
+- Controller/DTO novos: RED por módulo ausente, depois7/7 PASS.
+- Prévia HTTP por allowlist, sem identidade interna/fatos de auditoria. Comparação
+  individual não depende da completude de outros itens:1 RED/13 PASS, depois
+ 21/21 PASS com controlador (t09-comparacao-{red,green}.log).
+- Ruling de rota: Next já usa `[id]`; não criar sibling `[pacienteId]`. Checklist
+  corrigido. BFF reutiliza os wrappers existentes de sessão, stream limitado,
+  no-store e erro sanitizado; não cria proxy/parâmetro de tenant paralelo.
+- BFF: primeiro comando em cwd incorreto (não é RED funcional). Repetição correta
+  reproduziu arquivos ausentes; após rotas, typecheck apontou retorno possivelmente
+  undefined; corrigido por discriminação explícita. Caso de falha de conexão
+  esperava503, mas contrato canônico sessao-bff.ts retorna502 sanitizado; teste
+  ajustado ao contrato comprovado, sem alterar runtime legado.61/61 PASS no harness
+  completo (t09-bff-final.log), sem chamadas externas.
+- T14 iniciado antecipadamente para conferir fundação antes da UI: reutiliza o
+  provisionador FOOD04 somente com filtro --fase-food05; nenhum alvo externo aceito.
+  PostgreSQL15 local já disponível. Extensões vector/Timescale são omitidas pelo
+  provisionador preexistente; resultado não comprova a cadeia integral oficial.
+
+T14 provas reais:
+- Primeira execução provisionou fixture mas imports novos tinham um nível relativo
+  errado (TS2307,0 testes); corrigidos, não era falha de isolamento reproduzida.
+- Segunda execução:4 PASS/67 SKIPPED por filtro FOOD05. Com matriz ampliada:
+ 6 PASS/67 SKIPPED em t14-local-final.log; banco e container encerrados pelo runner.
+- Provados com serviços reais: CAS concorrente, fingerprint adulterado sem gravação,
+  carteira/tenant, rollback depois de falha ao gravar filho, nova versão/histórico,
+  pendência que bloqueia publicação, JSON de preferências fechado/CAS, FORCE RLS,
+  role sem bypass/owner/DDL, transferência serializada e revogação, desvinculação
+  com autoria e replay da referência antiga recusado. Somente dados sintéticos.
+- Prova não cobre vector/Timescale nem substitui CI/matriz completa da T14.
+
+Revisão adicional de consumo:2 RED/11 PASS reproduziram falta de autoria da
+resolução manual e consumo sem ator na função pura. Corrigidos;17/17 GREEN com
+snapshot. Autor do cálculo original não é sobrescrito pelo autor da resolução.
+M05/M04 precisão:1 RED/3 PASS demonstrou soma de contribuições arredondadas e
+resíduo falsamente zero. Motor existente agora fornece razões exatas; total recebe
+um único arredondamento e delta pequeno é explícito.52/52 GREEN com motor/prévia.
+BFF+cliente tipado62/62 PASS (t09-api-green.log); autorização de rotas30/30 PASS.
+Web typecheck PASS (checkpoint-web-typecheck.log).
+
+Regressão backend primeira execução completa:1 FAIL/3378 PASS/148 SKIPPED;
+falha foi o caso de precisão acima, inserido/corrigido durante aquele checkpoint.
+Essa execução não é evidência GREEN do HEAD final. Nova execução estável solicitada.
+Writer:2 RED comprovaram que flags positivas de nova aplicação eram aceitas;
+backend agora recusa novas alternativas já liberadas/preferidas, sem sobrescrever
+as decisões legítimas de uma alternativa manual já salva.126/126 PASS no serviço
+(t06-flags-{red,green}.log).
+
+## Checkpoint estável de fundação/API — HEAD de código78117bc7
+
+- Backend geral:374 suites PASS/8 SKIPPED;3382 testes PASS/148 SKIPPED,
+ 3530 totais (checkpoint-backend-final.log), após correções de precisão/flags.
+- Build Nest PASS (checkpoint-build-estavel.log); verificador do artefato PASS,
+  dist/main.js (checkpoint-artefato.log). Typecheck Web PASS.
+- Repetida prova real PG no código estável:6 PASS/67 SKIPPED por filtro,
+  t14-head-estavel.log; fixture removida. Não é prova das extensões omitidas.
+- BFF62/62 e autorização30/30 permanecem PASS; sem alteração de UI nesta rodada.
+- Triagem estática limitada de segredos no patch: sem correspondências para chaves
+  OpenAI/privadas e URLs PostgreSQL com senha; não substitui revisão de segurança.
+- Migration1078 sem diff; checkout raiz conserva somente a alteração preexistente
+  em octaclin-web/next-env.d.ts, que não foi editada nesta worktree.
+- Nenhum ambiente externo, merge, deploy ou flag foi alterado. FOOD04 produção
+  continua BLOCKED pelo último registro de quota; não revalidada externamente.
+
+Próxima troca proposta: Luna alto para UI T10–T13 com contrato existente, aguardando
+mudança manual. T07 cópias/modelos e gates finais exigem retomada/revisão Sol médio;
+nenhuma melhoria M01–M08 removida e nenhum gate final declarado PASS.
+
+Fechamento do checkpoint intermediário:
+- Typecheck backend explícito PASS (checkpoint-backend-typecheck-estavel.log).
+- Lint Web focado inicialmente3 FAIL por `any` nas novas fixtures de transporte;
+  substituídos por tipos Parameters, sem mudança de comportamento. Repetição
+  t09-web-lint-final.log PASS e BFF repetido62/62 PASS em t09-bff-head-estavel.log.
+- UI/Playwright, revisão distinta final e CI do conjunto funcional ainda NOT RUN.
+  PR446 mantém Draft: este checkpoint não libera M01–M08 nem autoriza merge.

@@ -405,10 +405,10 @@ JSON fechado validado no backend; dados exclusivamente de apresentação, sem
 PHI, tokens ou conteúdo de plano; não precisam de cifra clínica. Reutilizar
 RLS/FKs existentes do profissional e vincular a escrita ao usuarioId autenticado.
 
-Migration1079 provisória: arquivo futuro
-`1720000001079-PreferenciasEquivalencia.ts`, registrado em opcoes-typeorm.ts.
-Não criar agora.2 colunas, sem tabela nova de preferência/cálculo e sem backfill
-clínico. Default é configuração, não recálculo. Down conservador: não remover
+Migration1079 confirmada na execução autorizada:
+`1720000001079-PreferenciasEquivalencia.ts`, registrada em opcoes-typeorm.ts e
+provada no PostgreSQL local descartável.2 colunas, sem tabela nova de
+preferência/cálculo e sem backfill clínico. Nenhuma aplicação externa autorizada. Default é configuração, não recálculo. Down conservador: não remover
 preferências/dados em ambiente integrado; rollback de app preserva schema.
 
 ## 7. Fluxos e integração FOOD04/PA07

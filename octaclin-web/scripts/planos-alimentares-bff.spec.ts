@@ -1320,9 +1320,9 @@ test('FOOD05 cliente usa POST privado/cancelável e preferências me sem IDs no 
  const original=global.fetch,c=new AbortController();const chamadas:Array<{url:string;init?:RequestInit}>=[];
  global.fetch=(async(url:string|URL|Request,init?:RequestInit)=>{chamadas.push({url:String(url),init});return Response.json({});}) as typeof global.fetch;
  try{
-  await preverEquivalenciasPlano('p/1','pl/1',{} as any,c.signal);await obterPreferenciasEquivalencia(c.signal);await salvarPreferenciasEquivalencia({revisaoEsperada:0,preferencias:{} as any},c.signal);
+  await preverEquivalenciasPlano('p/1','pl/1',{} as Parameters<typeof preverEquivalenciasPlano>[2],c.signal);await obterPreferenciasEquivalencia(c.signal);await salvarPreferenciasEquivalencia({revisaoEsperada:0,preferencias:{} as Parameters<typeof salvarPreferenciasEquivalencia>[0]['preferencias']},c.signal);
   assert.deepEqual(chamadas.map(x=>[x.url,x.init?.method,x.init?.cache]),[['/api/pacientes/p%2F1/planos-alimentares/pl%2F1/equivalencias/previa','POST','no-store'],['/api/profissionais/me/preferencias-equivalencia',undefined,'no-store'],['/api/profissionais/me/preferencias-equivalencia','PUT','no-store']]);assert.ok(chamadas.every(x=>x.init?.signal===c.signal));
   global.fetch=(async()=>new Response('<html>PRIVADO</html>',{status:500})) as typeof global.fetch;
-  await assert.rejects(()=>preverEquivalenciasPlano('p','pl',{} as any),e=>e instanceof Error&&!e.message.includes('PRIVADO'));
+  await assert.rejects(()=>preverEquivalenciasPlano('p','pl',{} as Parameters<typeof preverEquivalenciasPlano>[2]),e=>e instanceof Error&&!e.message.includes('PRIVADO'));
  }finally{restaurarFetch(original);}
 });

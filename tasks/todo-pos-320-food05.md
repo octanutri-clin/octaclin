@@ -7,6 +7,23 @@ D01–D14 e M01–M08 não são opcionais. Cada caixa representa prova, não có
 Paths BE = `octaclin-backend/src/modulos/planos-alimentares/`;
 FE = `octaclin-web/`. Novos nomes são propostas, não arquivos criados nesta rodada.
 
+## Checkpoint intermediário de execução
+
+| Tarefas | Estado real |
+| --- | --- |
+| T01–T05 | Fundamentos implementados e focados PASS; verificar ledger e gates integrados |
+| T06 | Writer/ACK/revisão/snapshots implementados; regressões e integração em consolidação |
+| T07 | Projeções e nova versão do mesmo plano testadas; cópia entre planos/modelos pendente |
+| T08 | Preferências e1079 implementadas; CAS/RLS/JSON provados no PostgreSQL descartável |
+| T09 | Backend, BFF e cliente tipado implementados; integração com UI pendente |
+| T10–T13 | Interface e integrações ainda não concluídas |
+| T14 |6 casos PostgreSQL PASS, matriz completa e cadeia oficial ainda pendentes |
+| T15–T18 | Regressões finais, revisão distinta, governança e entrega pendentes |
+
+As caixas abaixo continuam sendo critérios de aceite detalhados; nenhuma prova
+focada isolada encerra a entrega. Uma PR funcional foi escolhida dentre as opções
+aprovadas, mantendo as dependências dos blocos A/B/C.
+
 ## Ciclo obrigatório de cada tarefa de implementação
 
 - [ ] Escrever os testes indicados e executar o comando focado para registrar RED real.
@@ -146,7 +163,7 @@ sem autorização; M01–M08 ainda não são entrega funcional.
 Dep: T04/T07/T08 e checkpoint A.
 Criar BE `apresentacao/controlador-equivalencias-plano.ts`/spec e controlador
 pessoal de preferências (registro explícito no módulo existente).
-Criar FE `app/api/pacientes/[pacienteId]/planos-alimentares/[planoId]/equivalencias/previa/route.ts`
+Criar FE `app/api/pacientes/[id]/planos-alimentares/[planoId]/equivalencias/previa/route.ts`
 e BFF de preferências pessoais sob `app/api/profissionais/me/preferencias-equivalencia/route.ts`.
 A família atual usa `/api/pacientes/:pacienteId/planos-alimentares`
 (`lib/plano-alimentar-api.ts:521`); manter essa convenção sem novos aliases.
