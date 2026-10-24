@@ -1,21 +1,22 @@
 # OctaClin - Status atual do projeto
 
-Atualizado em 2026-10-22 (execução FOOD04; registros anteriores preservados).
+Atualizado em 2026-10-24 (validacao final FOOD04; registros anteriores preservados).
 
 ## Fase ativa
 
-- **FOOD04 — backend/BFF em validação, UI pendente**, base `origin/main` `9e1984a2`, merge
+- **FOOD04 — implementada na PR #441, em validacao final**, base `origin/main` `9e1984a2`, merge
   documental #440 confirmado por fetch em 2026-10-22. Biblioteca de grupos
   reutilizáveis; D01–D03 aprovadas e ampliadas em D01–D08. Especificação inclui
   administração de compartilhados, duplicação, favoritos, aplicação seletiva,
   dedup e arquivo/restauração. Desenvolvimento autorizado em “Pode seguir”;
-  domínio, biblioteca, migration1078, save/snapshots e BFF implementados.
-  Sem PR FOOD04 neste checkpoint. Evidências e limitações em
+  domínio, biblioteca, migration1078, save/snapshots, BFF e UI implementados.
+  Revisao cruzada encontrou dois P2 em snapshots de catalogo e cancelamento de
+  aplicacao durante save; correcoes sob regressao/revisao antes do aceite.
+  A PR permanece Draft. Evidências e limitações em
   `tasks/execucao-pos-320-food04.md`. Plano/checkpoints em `tasks/plan-pos-320-food04.md` e
   `tasks/todo-pos-320-food04.md`; handoff ativo em `tasks/plan.md`.
   Referências específicas recomendam código interno, sem biblioteca externa.
-  Sol médio para backend/authz/snapshots/BFF; Luna alto para UI após contratos,
-  com aviso/pausa antes da troca. Alertas estruturados/lote/undo persistente
+  Sol medio conduz revisao e fechamento de seguranca. Alertas estruturados/lote/undo persistente
   registrados como FOOD04-C01/C02/C03, sem antecipar implementação.
 - **FOOD03 — integrada #438 e fechamento #440**. Evidências históricas de
   migration1077/RLS/deploy em `tasks/plan-pos-320-food03.md` e checklist vivo;

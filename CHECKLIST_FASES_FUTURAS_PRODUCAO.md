@@ -26,8 +26,9 @@ Atualizado em 2026-10-22. Fase 320: NO-GO para ingestão TBCA nesta rodada por a
   reutilizáveis de substituições. Base `9e1984a2` (merge #440) conferida em
   2026-10-22; D01–D03 aprovadas e ampliadas para D01–D08. Administração,
   duplicação, filtros/favoritos, aplicação seletiva, dedup e restauração fazem
-  parte da entrega essencial. Desenvolvimento autorizado; backend/BFF e migration1078
-  implementados, UI e gates finais pendentes. Provas reais e limites em
+  parte da entrega essencial. Backend/BFF, migration1078 e UI implementados na
+  PR #441 (Draft); revisão cruzada e CI final pendentes após correções de
+  snapshot catálogo e cancelamento durante save. Provas reais e limites em
   `tasks/execucao-pos-320-food04.md`; nenhuma migration externa aplicada.
   Plano: `tasks/plan-pos-320-food04.md`; tarefas: `tasks/todo-pos-320-food04.md`.
   Referência específica recomenda primitives/código atual, sem nova biblioteca.

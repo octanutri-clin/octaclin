@@ -1756,6 +1756,56 @@ describe('ServicoPlanosAlimentares', () => {
     });
     const customId = '10000000-0000-4000-8000-000000000098';
     const customComp = () => normalizarComposicaoPersonalizada({ nome: 'Arroz custom', base: { tipo: 'porcao', pesoGramas: 30 }, nutrientes: { energiaKcal: 90, proteinasG: 3, carboidratosG: 12, gordurasG: 3 }, micronutrientes: { ferroMg: 0.6 } });
+    it.each(['alterada', 'inativa', 'rascunho-pendente'])('FOOD04 preserva catalogo aplicado com fonte %s', async (cenario) => {
+      const alimentoId='10000000-0000-4000-8000-000000000081',fonteId='10000000-0000-4000-8000-000000000082';
+      const fonte={id:fonteId,codigo:'usda_fdc_foundation',nome:'Fonte original',versao:'1',situacao:'ativa',esquemaVersao:'octaclin-composicao-v1',hashConteudo:'a'.repeat(64)};
+      const alimento={id:alimentoId,fonteId,codigoOrigem:'SINT',nome:'Catalogo original',baseGramas:'100',energiaKcal:'100',proteinasG:'5',carboidratosG:'10',lipidiosG:'2',micronutrientes:{metadadosOrigem:{nutrientsOriginal:[{nutrient:{id:1089,unitName:'MG'},amount:2}]}}};
+      repositorios.get(AlimentoComposicaoOrm)!.registros.push(alimento);repositorios.get(FonteComposicaoAlimentoOrm)!.registros.push(fonte);
+      const ref={grupoId:customId,entradaId:fonteId,aplicacaoId:'10000000-0000-4000-8000-000000000083',revisao:1};
+      const grupo=jest.spyOn(ServicoGruposSubstituicoes.prototype,'resolverAplicacao').mockResolvedValue({id:ref.entradaId,origem:'catalogo',alimentoId,quantidade:1,unidade:'porção',porcaoGramas:100,composicao:{descricao:'Catalogo original',nutrientesPor100g:{energiaKcal:100,proteinasG:5,carboidratosG:10,gordurasG:2}}});
+      try {
+        const d:any=documentoCompleto();d.refeicoes[0].itens[0].substituicoes=[{chaveCliente:'alternativa-catalogo',origemGrupo:ref,alimentoComposicaoId:alimentoId,quantidade:1,unidade:'porção',porcaoGramas:100}];
+        if(cenario==='rascunho-pendente')d.avaliacaoAntropometricaId='';
+        const primeira=await salvarEdicao(d);
+        expect(primeira.edicaoEstado).toBe(cenario==='rascunho-pendente'?'pendente':'materializada');
+        alimento.nome='Catalogo alterado';alimento.energiaKcal='999';fonte.versao='2';
+        if(cenario!=='alterada')fonte.situacao='inativa';
+        grupo.mockRejectedValue(new ConflictException('Biblioteca desativada'));
+        const proximo:any={...primeira.documentoEdicao,avaliacaoAntropometricaId:AVALIACAO_ID,objetivos:'Alteracao nao relacionada'};
+        proximo.refeicoes[0].itens[0].substituicoes[0].porcaoGramas=50;
+        const segunda=await salvarEdicao(proximo,1);
+        expect(segunda.edicaoEstado).toBe('materializada');
+        const snapshot=segunda.refeicoes[0].itens[0].substituicoes[0].composicaoSnapshot;
+        expect(snapshot).toMatchObject({descricao:'Catalogo original',fonte:{versao:'1'},nutrientesPor100g:{energiaKcal:100},nutrientesPorcao:{energiaKcal:50},micronutrientes:{nutrientes:{ferroMg:{por100g:2,porcao:1}}}});
+        expect(grupo).toHaveBeenCalledTimes(1);
+        expect(JSON.stringify(segunda.documentoEdicao)).not.toContain('catalogosGrupos');
+        if (cenario === 'inativa') {
+          const novaAplicacao:any=JSON.parse(JSON.stringify(segunda.documentoEdicao));
+          novaAplicacao.refeicoes[0].itens[0].substituicoes[0].origemGrupo.aplicacaoId='10000000-0000-4000-8000-000000000084';
+          await expect(salvarEdicao(novaAplicacao,2)).rejects.toBeInstanceOf(ConflictException);
+          expect(grupo).toHaveBeenCalledTimes(2);
+          await servico.revisar(TENANT_ID,PACIENTE_ID,PLANO_ID,usuarioProfissional(),{rascunhoIdEsperado:VERSAO_ID,rascunhoRevisaoEsperada:2});
+          await servico.publicar(TENANT_ID,PACIENTE_ID,PLANO_ID,usuarioProfissional(),{rascunhoIdEsperado:VERSAO_ID,rascunhoRevisaoEsperada:3});
+          const nova=await servico.criarNovaVersao(TENANT_ID,PACIENTE_ID,PLANO_ID,usuarioProfissional());
+          const documento:any=JSON.parse(JSON.stringify(segunda.documentoEdicao));
+          documento.refeicoes[0].chaveCliente=nova.refeicoes[0].id;
+          documento.refeicoes[0].itens[0].chaveCliente=nova.refeicoes[0].itens[0].id;
+          documento.refeicoes[0].itens[0].substituicoes[0].chaveCliente=nova.refeicoes[0].itens[0].substituicoes[0].id;
+          delete documento.refeicoes[0].itens[0].substituicoes[0].origemGrupo;
+          const reaberta=await servico.salvarEdicaoRascunho(TENANT_ID,PACIENTE_ID,PLANO_ID,usuarioProfissional(),{rascunhoIdEsperado:nova.id,rascunhoRevisaoEsperada:0,documento});
+          expect(reaberta.edicaoEstado).toBe('materializada');
+          expect(reaberta.refeicoes[0].itens[0].substituicoes[0].composicaoSnapshot).toMatchObject({descricao:'Catalogo original',fonte:{versao:'1'},nutrientesPorcao:{energiaKcal:50}});
+          expect(grupo).toHaveBeenCalledTimes(2);
+        }
+        if (cenario === 'alterada') {
+          const versao=repositorios.get(PlanoAlimentarVersaoOrm)!.registros[0] as PlanoAlimentarVersaoOrm;
+          const envelope=JSON.parse(criptografia.descriptografar(versao.edicaoSnapshotCriptografado!));
+          envelope.catalogosGrupos['alternativa-catalogo'].snapshot.alimentoComposicaoId=customId;
+          versao.edicaoSnapshotCriptografado=criptografia.criptografar(JSON.stringify(envelope));
+          await expect(salvarEdicao(segunda.documentoEdicao,2)).rejects.toBeInstanceOf(ConflictException);
+        }
+      } finally {grupo.mockRestore();}
+    });
     it('FOOD04 aplica no mesmo save, preserva snapshot e não reconsulta biblioteca depois', async () => {
       const ref={grupoId:'10000000-0000-4000-8000-000000000051',entradaId:'10000000-0000-4000-8000-000000000052',aplicacaoId:'10000000-0000-4000-8000-000000000053',revisao:1};
       const d=documentoCompleto();

@@ -1052,3 +1052,32 @@ test('FOOD04 troca de grupo invalida confirmações pendentes do grupo anterior'
   await biblioteca.getByRole('button', { name: 'Abrir' }).nth(0).click();
   await expect(biblioteca.getByRole('group', { name: 'Confirmar arquivamento' })).toHaveCount(0);
 });
+
+test('FOOD04 cancelar aplicacao aguardando save impede acrescentar alternativas apos o ACK', async ({ context, page }) => {
+  test.setTimeout(60_000);
+  const fixture=await preparar(context);
+  const principalId='10000000-0000-4000-8000-000000000161',grupoId='10000000-0000-4000-8000-000000000162',alternativaId='10000000-0000-4000-8000-000000000163';
+  await page.route(url=>url.pathname.endsWith('/planos-alimentares/alimentos'),route=>route.fulfill({json:{itens:[{id:principalId,nome:'Principal cancelamento',codigoOrigem:'SINT',disponivelParaCalculo:true,nutrientesPor100g:{energiaKcal:100,proteinasG:5,carboidratosG:10,gordurasG:2}}],fontes:[],total:1,pagina:1,limite:20}}));
+  await page.route(url=>url.pathname==='/api/planos-alimentares/grupos-substituicoes/consulta',route=>route.fulfill({json:{itens:[{id:grupoId,nome:'Grupo cancelamento',etiquetas:[],escopo:'pessoal',estado:'ativo',revisao:1,quantidadeEntradas:1,podeEditar:true,favorito:false}],total:1,pagina:1,limite:25}}));
+  await page.route(url=>url.pathname===`/api/planos-alimentares/grupos-substituicoes/${grupoId}`,route=>route.fulfill({json:{id:grupoId,nome:'Grupo cancelamento',etiquetas:[],escopo:'pessoal',estado:'ativo',revisao:1,quantidadeEntradas:1,podeEditar:true,favorito:false,entradas:[{id:'10000000-0000-4000-8000-000000000164',origem:'catalogo',alimentoId:alternativaId,quantidade:1,unidade:'porção',porcaoGramas:80,disponivel:true,composicao:{descricao:'Alternativa cancelada',nutrientesPor100g:{energiaKcal:90}}}]}}));
+  await abrir(page);await page.getByRole('button',{name:'Expandir todas'}).click();
+  await page.getByRole('button',{name:'Adicionar alimento',exact:true}).first().click();
+  await page.getByRole('textbox',{name:'Buscar no catálogo'}).last().fill('Principal');
+  await page.getByRole('button',{name:/^Principal cancelamento/}).click();
+  await page.getByRole('button',{name:/Aplicar grupo de alternativas/}).click();
+  await page.getByLabel('Grupo ativo').selectOption(grupoId);
+  const previa=page.getByRole('region',{name:'Prévia da aplicação do grupo'});await previa.getByRole('checkbox').check();
+  const pausa=fixture.bloquearProximaEscrita();
+  try {
+    await page.getByRole('button',{name:'Salvar rascunho'}).click();await pausa.iniciou;
+    await previa.getByRole('button',{name:'Acrescentar selecionadas'}).click();
+    await expect(previa).toHaveAttribute('aria-busy','true');
+    await previa.getByRole('button',{name:'Cancelar',exact:true}).click();
+  } finally {pausa.liberar();}
+  await expect(page.getByRole('button',{name:'Salvar rascunho'})).toBeEnabled();
+  await expect(page.getByRole('status').filter({hasText:'Alternativas acrescentadas'})).toHaveCount(0);
+  await page.getByRole('textbox',{name:'Objetivo clínico',exact:true}).fill('Depois do cancelamento');
+  await page.getByRole('button',{name:'Salvar rascunho'}).click();
+  await expect.poll(()=>fixture.escritas.length).toBe(2);
+  expect(fixture.escritas[1].documento.refeicoes[0].itens[0].substituicoes).toHaveLength(0);
+});

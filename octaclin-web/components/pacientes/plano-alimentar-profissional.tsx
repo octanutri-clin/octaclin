@@ -1138,7 +1138,7 @@ interface EditorItemProps {
   aoRemover: () => void;
   aoMover: (destino: number) => void;
   mostrarResumo: boolean;
-  aoAplicarGrupo?: (item: ItemFormulario, alternativas: AlternativaAplicadaGrupo[], contexto: string) => Promise<boolean>;
+  aoAplicarGrupo?: (item: ItemFormulario, alternativas: AlternativaAplicadaGrupo[], contexto: string, signal: AbortSignal) => Promise<boolean>;
   aoDesfazerGrupo?: (contexto: string) => Promise<boolean>;
   podeDesfazerGrupo?: boolean;
 }
@@ -1161,7 +1161,7 @@ function EditorItem({ pacienteId, contextoEdicao, podeEditar, item, resumo, indi
           contexto={contextoEdicao}
           identidadePrincipal={{ origem: item.alimentoComposicaoId ? 'catalogo' : 'custom', alimentoId: item.alimentoComposicaoId ?? item.alimentoPersonalizado!.id }}
           existentes={item.substituicoes.map((alternativa) => ({ origem: alternativa.alimentoComposicaoId ? 'catalogo' : 'custom', alimentoId: alternativa.alimentoComposicaoId ?? alternativa.alimentoPersonalizado?.id, alimentoComposicaoId: alternativa.alimentoComposicaoId, porcaoGramas: alternativa.porcaoGramas }))}
-          aoAplicar={(alternativas, contexto) => aoAplicarGrupo(item, alternativas, contexto)}
+          aoAplicar={(alternativas, contexto, signal) => aoAplicarGrupo(item, alternativas, contexto, signal)}
           aoDesfazer={aoDesfazerGrupo}
           podeDesfazer={podeDesfazerGrupo}
           desabilitado={!podeEditar}
@@ -1940,12 +1940,13 @@ export function PlanoAlimentarProfissional({ pacienteId, podeGerenciar, aoAltera
     setProjecaoPaciente(null);
   }
 
-  async function aplicarGrupoAoItem(itemAlvo: ItemFormulario, alternativas: AlternativaAplicadaGrupo[], contexto: string): Promise<boolean> {
-    if (!plano?.draft || alternativas.length === 0) return false;
+  async function aplicarGrupoAoItem(itemAlvo: ItemFormulario, alternativas: AlternativaAplicadaGrupo[], contexto: string, signal: AbortSignal): Promise<boolean> {
+    if (signal.aborted || !plano?.draft || alternativas.length === 0) return false;
     if (copiaEmAndamentoRef.current) return false;
     const liberar = iniciarCopia();
     try {
       await coordenadorEdicaoRef.current?.aguardarEnvio();
+      if (signal.aborted) return false;
       const contextoAtual = `${pacienteId}:${plano.id}:${plano.draft.id}:${contextoEdicao}`;
       if (contexto !== contextoAtual || pacienteAtualRef.current !== pacienteId || planoAtualRef.current?.id !== plano.id
         || planoAtualRef.current?.draft?.id !== plano.draft.id || !posseEdicaoRef.current || !permiteEscreverRascunho()) return false;

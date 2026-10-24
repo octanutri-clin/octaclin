@@ -3,10 +3,15 @@
 Contrato vigente: [plan-pos-320-food04.md](plan-pos-320-food04.md).
 D01–D08 aprovadas pelo proprietário e incorporadas ao planejamento. T00/T01
 concluídas documentalmente; T02–T10 têm implementação backend/BFF no checkpoint.
-T11–T12 têm implementação de interface e testes focados parciais. Os fluxos
+T11–T12 têm implementação de interface e testes focados. Os fluxos
 principais cobertos no navegador incluem CRUD e autorização Client/SuperAdmin;
 undo e perda de posse durante prévia já têm cobertura; outras corridas,
-acessibilidade geral e revisão final ainda estão pendentes.
+acessibilidade geral e revisão final ainda dependem do HEAD final.
+Atualização 24/10: PR #441 Draft aberta, UI implementada e CI do checkpoint
+anterior aprovado nas superfícies funcionais. Governança e Mobile receberam
+correções próprias; revisão cruzada apontou dois P2 adicionais em catálogo e
+cancelamento, agora sob regressão e reavaliação. O quadro de checkpoint abaixo
+é histórico; os gates finais continuam abertos até a evidência do novo HEAD.
 As caixas abaixo
 representam o aceite integral, não apenas a existência do código.
 TDD obrigatório para lógica/segurança: registrar RED, correção e GREEN, com
@@ -33,7 +38,7 @@ fixtures sintéticas. Dividir cada tarefa em subpassos de3–5 arquivos, uma PR.
 | T13 | Regressões, revisão R4, evidências e docs | C3 | [ ] Backend/Web/banco/a11y e regressões PA02–PA07/FOOD01–03; revisão com autoria/achados; gates reais e limites documentados |
 | T14 | PR única/CI/scanners do HEAD final | T13 | [ ] Diff/secrets/governança e checks aplicáveis; separar CI de deploy/migration; complementar não implementado por antecipação |
 
-## Estado observado no checkpoint backend/BFF
+## Estado historico no checkpoint backend/BFF
 
 Evidências: [ledger](execucao-pos-320-food04.md); próxima etapa delimitada no
 [handoff Luna](handoff-pos-320-food04-luna.md).

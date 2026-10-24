@@ -13,7 +13,7 @@ import type { GrupoSubstituicoesDetalhe, GrupoSubstituicoesResumo } from '@/lib/
 interface AplicarGrupoSubstituicoesProps {
   identidadePrincipal: { origem: 'catalogo' | 'custom'; alimentoId: string };
   existentes: Array<{ origem: 'catalogo' | 'custom'; alimentoId?: string; alimentoComposicaoId?: string; porcaoGramas: number | string }>;
-  aoAplicar: (alternativas: AlternativaAplicadaGrupo[], contexto: string) => Promise<boolean>;
+  aoAplicar: (alternativas: AlternativaAplicadaGrupo[], contexto: string, signal: AbortSignal) => Promise<boolean>;
   aoDesfazer?: (contexto: string) => Promise<boolean>;
   podeDesfazer?: boolean;
   contexto: string;
@@ -37,10 +37,12 @@ export function AplicarGrupoSubstituicoes({ identidadePrincipal, existentes, aoA
   const [ocupado, setOcupado] = useState(false);
   const controladorGrupo = useRef<AbortController | null>(null);
   const sequenciaGrupo = useRef(0);
+  const controladorAplicacao = useRef<AbortController | null>(null);
   useEffect(() => () => {
     controladorGrupo.current?.abort();
+    controladorAplicacao.current?.abort();
     sequenciaGrupo.current += 1;
-  }, []);
+  }, [contexto]);
   useEffect(() => {
     if (!aberto) return;
     const controlador = new AbortController();
@@ -73,6 +75,8 @@ export function AplicarGrupoSubstituicoes({ identidadePrincipal, existentes, aoA
   }
 
   function cancelarPrevia() {
+    controladorAplicacao.current?.abort();
+    controladorAplicacao.current = null;
     controladorGrupo.current?.abort();
     controladorGrupo.current = null;
     sequenciaGrupo.current += 1;
@@ -81,15 +85,20 @@ export function AplicarGrupoSubstituicoes({ identidadePrincipal, existentes, aoA
 
   async function confirmar() {
     if (!detalhe || selecionadas.size === 0) { setErro('Selecione pelo menos uma alternativa disponível.'); return; }
+    controladorAplicacao.current?.abort();
+    const controlador = new AbortController();
+    controladorAplicacao.current = controlador;
     setOcupado(true); setErro(null);
     try {
       const alternativas = criarAlternativasAplicadasGrupo(opcoes, selecionadas, porcoes, {
         grupoId: detalhe.id, revisao: detalhe.revisao, aplicacaoId: crypto.randomUUID()
       }, () => `alimento-${crypto.randomUUID()}`, confirmadas);
-      if (!await aoAplicar(alternativas, contexto)) throw new Error('O plano mudou, a edição foi assumida em outra aba ou o acesso deixou de estar disponível. Reabra a prévia antes de aplicar.');
+      const aplicada = await aoAplicar(alternativas, contexto, controlador.signal);
+      if (controlador.signal.aborted || controladorAplicacao.current !== controlador) return;
+      if (!aplicada) throw new Error('O plano mudou, a edição foi assumida em outra aba ou o acesso deixou de estar disponível. Reabra a prévia antes de aplicar.');
       setAberto(false); setDetalhe(null); setAvisoAplicado();
-    } catch (falha) { setErro(mensagemFalhaInterface(falha, 'Não foi possível aplicar as alternativas.')); }
-    finally { setOcupado(false); }
+    } catch (falha) { if (!controlador.signal.aborted && controladorAplicacao.current === controlador) setErro(mensagemFalhaInterface(falha, 'Não foi possível aplicar as alternativas.')); }
+    finally { if (controladorAplicacao.current === controlador) { controladorAplicacao.current = null; setOcupado(false); } }
   }
   const [sucesso, setSucesso] = useState(false);
   function setAvisoAplicado() { setSucesso(true); }
