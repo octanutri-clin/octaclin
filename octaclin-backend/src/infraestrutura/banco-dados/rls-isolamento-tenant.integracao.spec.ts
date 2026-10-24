@@ -1,3 +1,6 @@
+import { ServicoEquivalenciasPlano } from '../../modulos/planos-alimentares/aplicacao/servico-equivalencias-plano';
+import { ServicoPreferenciasEquivalencia } from '../../modulos/planos-alimentares/aplicacao/servico-preferencias-equivalencia';
+import { PREFERENCIAS_EQUIVALENCIA_PADRAO } from '../../modulos/planos-alimentares/dominio/preferencias-equivalencia';
 import { ServicoGruposSubstituicoes } from '../../modulos/planos-alimentares/aplicacao/servico-grupos-substituicoes';
 import { FontesGruposSubstituicoes } from '../../modulos/planos-alimentares/aplicacao/fontes-grupos-substituicoes';
 import { GrupoSubstituicoesOrm, FavoritoGrupoSubstituicoesOrm } from '../../modulos/planos-alimentares/infraestrutura/grupo-substituicoes.orm';
@@ -1619,6 +1622,73 @@ descrever('RLS e isolamento multi-tenant integral em Postgres real', () => {
     };
     return { ...dados, cripto, usuario, documento, planoId, versaoId, servico: new ServicoPlanosAlimentares(executorTenant, cripto) };
   }
+
+  async function prepararCenarioFood05(sufixo:string){
+    const c=await prepararCenarioPa06(sufixo),documento:any=c.documento;
+    const alternativa={chaveCliente:'a-food05',descricao:'Alternativa sintética FOOD05',quantidade:1,unidade:'porção',liberadaParaPaciente:false,preferida:false,nutrientesPor100g:{energiaKcal:40,proteinasG:4,carboidratosG:8,gordurasG:1}};
+    documento.refeicoes[0].itens[0].substituicoes=[alternativa];
+    const fontes=new FontesGruposSubstituicoes(c.cripto);
+    const previa=new ServicoEquivalenciasPlano(executorTenant!,c.cripto,fontes,new ServicoGruposSubstituicoes(executorTenant!,c.cripto,fontes));
+    const pedido={versaoId:c.versaoId,rascunhoRevisaoEsperada:0,documentoEdicao:documento,itemChave:'i-sintetico',nutriente:'energiaKcal',alternativas:[alternativa],politica:{passoPorcaoGramas:'1'}};
+    const r=await previa.prever(tenantA,c.pacienteId,c.planoId,c.usuario,pedido),linha=r.alternativas[0];
+    if(linha.resultado.estado!=='calculavel')throw new Error('Fixture FOOD05 não calculável.');
+    Object.assign(alternativa,{porcaoGramas:linha.resultado.porcaoEfetivaGramas,equivalencia:{acao:'calcular',aplicacaoId:randomUUID(),nutriente:'energiaKcal',politica:{passoPorcaoGramas:'1'},porcaoEfetiva:linha.resultado.porcaoEfetivaGramas,fingerprintEsperado:linha.fingerprint}});
+    const salvar=(doc=documento,revisao=0,executor=executorTenant!)=>new ServicoPlanosAlimentares(executor,c.cripto).salvarEdicaoRascunho(tenantA,c.pacienteId,c.planoId,c.usuario,{rascunhoIdEsperado:c.versaoId,rascunhoRevisaoEsperada:revisao,documento:doc});
+    return {...c,documento,pedido,previa,salvar};
+  }
+  it('FOOD05 PostgreSQL: CAS real, corpo manipulado, tenant e carteira não gravam resultados indevidos',async()=>{
+    const c=await prepararCenarioFood05('food05-cas');
+    const outro=await prepararDadosRepresentativos(tenantA,'food05-outro-profissional');
+    await expect(c.previa.prever(tenantA,c.pacienteId,c.planoId,{...c.usuario,usuarioId:outro.usuarioId},c.pedido)).rejects.toMatchObject({status:404});
+    await expect(c.previa.prever(tenantB,c.pacienteId,c.planoId,{...c.usuario,tenantId:tenantB},c.pedido)).rejects.toMatchObject({status:404});
+    const adulterado=JSON.parse(JSON.stringify(c.documento));adulterado.refeicoes[0].itens[0].substituicoes[0].equivalencia.fingerprintEsperado='0'.repeat(64);
+    await expect(c.salvar(adulterado)).rejects.toMatchObject({status:409});
+    const antes=await executorTenant!.executar(tenantA,g=>g.query('select rascunho_revisao,edicao_snapshot_criptografado from plano_alimentar_versoes where id=$1',[c.versaoId]));expect(antes[0]).toMatchObject({rascunho_revisao:0,edicao_snapshot_criptografado:null});
+    const disputa=await Promise.allSettled([c.salvar(),c.salvar()]);expect(disputa.filter(x=>x.status==='fulfilled')).toHaveLength(1);expect((disputa.find(x=>x.status==='rejected') as PromiseRejectedResult).reason).toMatchObject({status:409});
+    const linhas=await executorTenant!.executar(tenantA,g=>g.query('select s.motor_calculo_versao from plano_alimentar_substituicoes s join plano_alimentar_itens i on i.id=s.item_id join plano_alimentar_refeicoes r on r.id=i.refeicao_id where r.versao_id=$1',[c.versaoId]));expect(linhas).toEqual([{motor_calculo_versao:'nutricao-decimal-v1'}]);
+  },60000);
+  it('FOOD05 PostgreSQL: rollback após falha materializando filho conserva cipher e revisão anteriores',async()=>{
+    const c=await prepararCenarioFood05('food05-rollback');const primeira:any=await c.salvar();
+    const ler=()=>executorTenant!.executar(tenantA,g=>g.query('select rascunho_revisao,edicao_snapshot_criptografado from plano_alimentar_versoes where id=$1',[c.versaoId]));const antes=await ler();
+    const falhar={executar:<T>(tenantId:string,operacao:(g:EntityManager)=>Promise<T>)=>executorTenant!.executar(tenantId,g=>{
+      const proxy=new Proxy(g,{get(alvo,k){if(k==='getRepository')return(classe:Function)=>{const r=alvo.getRepository(classe as never);if(classe!==PlanoAlimentarSubstituicaoOrm)return r;return new Proxy(r,{get(repo,campo){if(campo==='save')return async()=>{throw new Error('Falha sintética de persistência FOOD05');};const v=Reflect.get(repo,campo,repo);return typeof v==='function'?v.bind(repo):v;}});};const v=Reflect.get(alvo,k,alvo);return typeof v==='function'?v.bind(alvo):v;}});return operacao(proxy);
+    })} as ExecutorTenant;
+    primeira.documentoEdicao.refeicoes[0].nome='Nova edição sintética';await expect(c.salvar(primeira.documentoEdicao,1,falhar)).rejects.toThrow('Falha sintética de persistência FOOD05');expect(await ler()).toEqual(antes);
+    const vigente:any=await c.servico.obter(tenantA,c.pacienteId,c.planoId,c.usuario);expect(JSON.stringify(vigente)).toContain('calculada_revisada');
+  },60000);
+  it('FOOD05 PostgreSQL: pendência, publicação e nova versão conservam matemática original e bloqueio legado',async()=>{
+    const c=await prepararCenarioFood05('food05-historico');await c.salvar();
+    await c.servico.revisar(tenantA,c.pacienteId,c.planoId,c.usuario,{rascunhoIdEsperado:c.versaoId,rascunhoRevisaoEsperada:1});
+    await c.servico.publicar(tenantA,c.pacienteId,c.planoId,c.usuario,{rascunhoIdEsperado:c.versaoId,rascunhoRevisaoEsperada:2});
+    const nova:any=await c.servico.criarNovaVersao(tenantA,c.pacienteId,c.planoId,c.usuario);expect(nova.equivalenciasAplicadas['a-food05']).toMatchObject({estado:'calculada_revisada',porcaoEfetivaGramas:'250'});
+    const d=nova.documentoEdicao;d.refeicoes[0].itens[0].porcaoGramas=200;
+    const pendente:any=await c.servico.salvarEdicaoRascunho(tenantA,c.pacienteId,c.planoId,c.usuario,{rascunhoIdEsperado:nova.id,rascunhoRevisaoEsperada:0,documento:d});expect(pendente.equivalenciasAplicadas['a-food05']).toMatchObject({estado:'revisao_pendente',resultado:{obtido:'100'}});
+    await expect(c.servico.revisar(tenantA,c.pacienteId,c.planoId,c.usuario,{rascunhoIdEsperado:nova.id,rascunhoRevisaoEsperada:1})).rejects.toMatchObject({status:400});
+    const publicada:any=await c.servico.obterVersao(tenantA,c.pacienteId,c.planoId,1,c.usuario);expect(publicada.equivalenciasAplicadas['a-food05'].estado).toBe('calculada_revisada');expect(JSON.stringify(publicada.refeicoes)).not.toMatch(/comandoHash|dependenciasHash|snapshotAlternativa/);
+  },60000);
+  it('FOOD05 PostgreSQL: prévia serializa com transferência e acesso anterior é revogado',async()=>{
+    const c=await prepararCenarioFood05('food05-transferencia'),novo=await prepararDadosRepresentativos(tenantA,'food05-novo-responsavel');
+    const resultados=await disputarPa06(e=>{const f=new FontesGruposSubstituicoes(c.cripto);return new ServicoEquivalenciasPlano(e,c.cripto,f,new ServicoGruposSubstituicoes(e,c.cripto,f)).prever(tenantA,c.pacienteId,c.planoId,c.usuario,c.pedido);},()=>executorTenant!.executar(tenantA,g=>g.query('update pacientes set profissional_responsavel_id=$1 where tenant_id=$2 and id=$3',[novo.profissionalId,tenantA,c.pacienteId])),PacienteOrm,'pessimistic_read');
+    expect(resultados.map(r=>r.status)).toEqual(['fulfilled','fulfilled']);
+    await expect(c.previa.prever(tenantA,c.pacienteId,c.planoId,c.usuario,c.pedido)).rejects.toMatchObject({status:404});await expect(c.salvar()).rejects.toMatchObject({status:404});
+  },60000);
+  it('FOOD05 PostgreSQL: resolução manual auditável não ressuscita pelo replay da referência antiga',async()=>{
+    const c=await prepararCenarioFood05('food05-desvincular');const salva:any=await c.salvar();const a=salva.documentoEdicao.refeicoes[0].itens[0].substituicoes[0],antiga=a.equivalencia.aplicacaoId;
+    a.equivalencia={acao:'desvincular',aplicacaoId:randomUUID(),anteriorAplicacaoId:antiga,fingerprintEsperado:salva.equivalenciasAplicadas['a-food05'].fingerprintResolucao};
+    const resolvida:any=await c.salvar(salva.documentoEdicao,1);expect(resolvida.equivalenciasAplicadas['a-food05'].estado).toBe('desvinculada_manualmente');
+    const linhas=await executorTenant!.executar(tenantA,g=>g.query('select s.composicao_snapshot_criptografada from plano_alimentar_substituicoes s join plano_alimentar_itens i on i.id=s.item_id and i.tenant_id=s.tenant_id join plano_alimentar_refeicoes r on r.id=i.refeicao_id and r.tenant_id=i.tenant_id where r.versao_id=$1',[c.versaoId]));
+    expect(JSON.parse(c.cripto.descriptografar(linhas[0].composicao_snapshot_criptografada)).equivalencia.resolucao.ator).toEqual({usuarioId:c.usuario.usuarioId,profissionalId:c.profissionalId});
+    resolvida.documentoEdicao.refeicoes[0].itens[0].substituicoes[0].equivalencia={aplicacaoId:antiga};await expect(c.salvar(resolvida.documentoEdicao,2)).rejects.toMatchObject({status:409});
+  },60000);
+  it('FOOD05 PostgreSQL: preferências CAS próprio, JSON fechado, FORCE RLS e role sem DDL',async()=>{
+    const c=await prepararCenarioFood05('food05-preferencias'),s=new ServicoPreferenciasEquivalencia(executorTenant!);
+    const d={revisaoEsperada:0,preferencias:PREFERENCIAS_EQUIVALENCIA_PADRAO};const r=await Promise.allSettled([s.salvar(c.usuario,d),s.salvar(c.usuario,d)]);expect(r.filter(x=>x.status==='fulfilled')).toHaveLength(1);expect((r.find(x=>x.status==='rejected') as PromiseRejectedResult).reason).toMatchObject({status:409});
+    const role=(await fonteDadosRuntime!.query('select rolsuper,rolbypassrls,rolcreatedb,rolcreaterole from pg_roles where rolname=current_user'))[0];expect(role).toEqual({rolsuper:false,rolbypassrls:false,rolcreatedb:false,rolcreaterole:false});
+    const force=(await fonteDadosRuntime!.query("select relrowsecurity,relforcerowsecurity from pg_class where relname='profissionais'"))[0];expect(force).toEqual({relrowsecurity:true,relforcerowsecurity:true});
+    expect(await fonteDadosRuntime!.query('select id from profissionais where id=$1',[c.profissionalId])).toHaveLength(0);
+    await expect(executorTenant!.executar(tenantA,g=>g.query("update profissionais set preferencias_equivalencia=preferencias_equivalencia || '{\"paciente\":\"nao-permitido\"}'::jsonb where id=$1",[c.profissionalId]))).rejects.toMatchObject({code:'23514'});
+    await expect(fonteDadosRuntime!.query('create table food05_ddl_indevido(id integer)')).rejects.toMatchObject({code:'42501'});
+  },60000);
 
   async function publicarCenarioPa06(c: Awaited<ReturnType<typeof prepararCenarioPa06>>) {
     const identidade = {rascunhoIdEsperado:c.versaoId,rascunhoRevisaoEsperada:0};
