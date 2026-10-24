@@ -1,7 +1,8 @@
 # FOOD05 — T01–T18, dependências e critérios de aceite
 
 Contrato: [plan-pos-320-food05.md](plan-pos-320-food05.md).
-Estado: planejamento concluído para revisão; implementação NÃO autorizada.
+Estado: implementação autorizada pelo proprietário em “Pode seguir, sol médio”.
+Execução/evidências reais em [execucao-pos-320-food05.md](execucao-pos-320-food05.md).
 D01–D14 e M01–M08 não são opcionais. Cada caixa representa prova, não código existente.
 Paths BE = `octaclin-backend/src/modulos/planos-alimentares/`;
 FE = `octaclin-web/`. Novos nomes são propostas, não arquivos criados nesta rodada.
