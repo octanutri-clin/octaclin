@@ -593,23 +593,36 @@ permanece exclusivamente FOOD05.
 
 ## [FOOD05] Equivalência automática por nutriente-alvo
 
-**Origem:** item 45.
+**Origem:** item45. **Atualização24/10/2026:** escopo integral aprovado;
+planejamento técnico consolidado, aguardando revisão e autorização de execução.
 
-**Status atual:** há composição nutricional e substituições, mas não equivalência automática por nutriente selecionado.
+**Entrega obrigatória:** energia/proteínas/carboidratos/gorduras, um alvo por
+operação; substituição individual e prévia dos grupos FOOD04 usam o mesmo motor.
+M01 preparo, M02 medidas caseiras confiáveis, M03 precisão/resíduos, M04 impacto
+hipotético da refeição, M05 avisos objetivos de praticidade, M06 comparação
+simultânea/seleção parcial, M07 revisão pendente/recálculo explícito e M08
+preferências pessoais. Nenhum M é opcional ou removível por divisão de PRs.
 
-**Dependência:** catálogo nutricional confiável.
+**Preservar:** principal/grupos/substituições existentes, autosave/PA07,
+fontes autorizadas, cifra/RLS/CAS, snapshots publicados e revisão humana.
+Novas alternativas sem liberação automática ao paciente. Zero/ausente não são
+intercambiáveis; sem otimização multinutriente, micronutrientes-alvo ou IA.
 
-**Implementação sugerida:**
-- escolher energia, proteína, carboidrato, gordura ou outro nutriente suportado;
-- calcular porção equivalente no backend;
-- tratar nutriente zero/ausente;
-- mostrar diferenças dos demais nutrientes antes de aplicar.
+**Aceite:** porção confirmada reproduz os números mostrados; cancelamento sem
+efeito parcial; todas M01–M08 e os dois contextos implementados/testados, matriz
+de autorização e regressões/CI concluídos. Prévia não grava nem soma todas as
+alternativas como consumo. Gates operacionais separados do aceite de código.
 
-**Aceite:**
-- cálculo reproduzível;
-- fonte do alimento preservada;
-- usuário revisa antes de inserir;
-- nenhum nutriente ausente é presumido como zero.
+**Dependência operacional:** FOOD04 #441 mergeada;1078 comprovada apenas em
+staging no último registro. Produção BLOCKED por quota Neon HTTP402/deploy backend
+falho. Sem nova autorização para cobrança/infra/migration/deploy. Esse bloqueio
+não impede planejamento/testes descartáveis, mas impede declarar rollout pronto.
+
+**Documentos:** [plano](../../tasks/plan-pos-320-food05.md),
+[tarefas](../../tasks/todo-pos-320-food05.md),
+[referências específicas](../../tasks/referencias-pos-320-food05.md).
+Esses links sobem a partir de docs/pos-320; o contrato detalhado fixa prioridades,
+propostas ainda para revisão e critérios objetivos por M01–M08.
 
 ---
 

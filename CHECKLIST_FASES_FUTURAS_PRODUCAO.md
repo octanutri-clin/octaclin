@@ -11,7 +11,10 @@ Atualizado em 2026-10-24; reconciliação FOOD04 abaixo. Histórico anterior: 20
 - Probes HTTP atuais inconclusivos por timeout; não reutilizar os200 históricos
   como evidência atual. Jornada autenticada pós-aplicação não executada.
 - [Evidência e próximos passos](docs/governance/EVIDENCIAS_ROLLOUT_FOOD04_2026-10-24.md).
-- FOOD05: próximo diálogo de escopo; planejamento/implementação ainda não iniciados.
+- **FOOD05:** escopo D01–D14/M01–M08 integral aprovado. Planejamento técnico
+  consolidado para revisão; implementação não autorizada. [Plano e propostas](tasks/plan-pos-320-food05.md),
+  [T01–T18](tasks/todo-pos-320-food05.md); sem runtime/infra/migration nesta rodada.
+  G00 documental PASS; G01–G05 NOT RUN; G06 BLOCKED por liberação FOOD04 em produção.
 
 ### Histórico anterior, supersedido no estado FOOD04
 

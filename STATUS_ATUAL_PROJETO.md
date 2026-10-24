@@ -1,8 +1,17 @@
 # OctaClin - Status atual do projeto
 
-Atualizado em 2026-10-24 (validacao final FOOD04; registros anteriores preservados).
+Atualizado em 2026-10-24 (planejamento FOOD05; registros anteriores preservados).
 
 ## Fase ativa
+
+- **FOOD05 — planejamento técnico para revisão**, escopo D01–D14 e M01–M08
+  integralmente aprovado; implementação NÃO autorizada. Base main2f24fcb1;
+  [plano](tasks/plan-pos-320-food05.md), [T01–T18](tasks/todo-pos-320-food05.md)
+  e [handoff](tasks/handoff-pos-320-food05-luna.md). Reutilizar motor/FOOD04,
+  cálculos determinísticos e snapshots cifrados; propostas de precisão, avisos,
+  preferências, revisão/publicação e papéis aguardam revisão do plano. Nenhuma
+  dependência/runtime/migration ou infraestrutura alterada nesta rodada.
+
 
 - **FOOD04 integrada pela PR #441**, merge `02a51be8`, CI final PASS e revisão
   cruzada corretiva concluída. Migration1078 aplicada e verificada em staging,

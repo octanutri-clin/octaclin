@@ -1,3 +1,22 @@
+# Handoff ativo — FOOD05 planejada; aguardando revisão e autorização
+
+Escopo D01–D14/M01–M08 integral aprovado pelo proprietário. Só documentação nesta
+rodada. Plano técnico consolidado, tarefas T01–T18 e propostas de engenharia para
+revisão, sem autorização de implementação, merge, deploy, migrations ou infra.
+
+- [Plano](plan-pos-320-food05.md), [tarefas](todo-pos-320-food05.md),
+  [referências](referencias-pos-320-food05.md), [handoff](handoff-pos-320-food05-luna.md).
+- Branch `docs/pos320-food05-planning`, base main2f24fcb1; worktree física continua
+  `pos320-food04-planning`. Revisão documental de outro agente incorporada.
+- FOOD04 produção continua bloqueada no último registro por quota Neon;1078 só
+  comprovada em staging. Não executar produção sem regularização e nova autorização.
+- Sol médio; avisar e pausar antes de troca para Luna alto. Próxima ação: revisão
+  do plano pelo proprietário e autorização expressa, sem nova rodada genérica.
+
+---
+
+## Histórico de handoff preservado — supersedido pelo estado acima
+
 # Handoff ativo — FOOD04 integrada; rollout produtivo bloqueado
 
 Branch documental `docs/food04-rollout-1078`, base main `02a51be8` (#441).
