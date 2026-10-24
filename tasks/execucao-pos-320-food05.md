@@ -191,3 +191,135 @@ Fechamento do checkpoint intermediário:
   t09-web-lint-final.log PASS e BFF repetido62/62 PASS em t09-bff-head-estavel.log.
 - UI/Playwright, revisão distinta final e CI do conjunto funcional ainda NOT RUN.
   PR446 mantém Draft: este checkpoint não libera M01–M08 nem autoriza merge.
+
+## Retomada UI — preview individual e integração inicial FOOD04
+
+- Em `PainelEquivalenciaNutriente`, o cálculo continua autoritativo no backend;
+  painel oferece alvo, políticas/preferências, M02 medida caseira do alimento,
+  diferenças/resíduos e escolha de linhas. Confirmação aguarda fingerprint e
+  revisão do rascunho atuais; mudanças explícitas de medida/gramas voltam à API.
+- Integrado ao item do editor e à prévia de grupo FOOD04. Grupo oferece modo
+  manual existente ou “Calcular por nutriente”; opções calculadas conservam
+  `origemGrupo`, `equivalencia`, porção/unidade e referência de medida caseira ao
+  passar pelo callback do editor. Conflitos por mesma identidade e porção diversa
+  exigem checkbox explícito; principal e original do grupo não mudam. O painel
+  fica bloqueado quando editor/rascunho/revisão não está apto para preview.
+- Playwright sintético desktop PASS: preview de alternativa selecionada, medida
+  caseira e flags; regressão de aplicação manual FOOD04; integração de cálculo
+  através do grupo e autosave, preservando os dois metadados. Testes executados
+  individualmente/serialmente para evitar conflito do artifact writer Playwright.
+- Playwright sintético mobile PASS: preview individual e medida caseira; cálculo
+  FOOD04 por grupo, confirmação seletiva e persistência da origem + intenção.
+- Web `tsc --noEmit` PASS após integração. ESLint focado PASS, 0 erros e 8 avisos
+  preexistentes no grande `plano-alimentar-profissional.tsx`, fora do novo painel/
+  adaptador. `git diff --check` PASS.
+- O Next dev gera imports de rota em `next-env.d.ts`; após desligar o servidor o
+  arquivo foi restaurado a HEAD; nenhum delta funcional mantido nele.
+- Limite naquele checkpoint intermediário: aquela integração não fechava M07/T13. O status/projeção de
+  equivalências já existe na API profissional, mas o frontend ainda precisa
+  carregar/apresentar `revisao_pendente`, histórico reproduzível e ações de
+  recálculo/desvinculação explícitas. Não marque M07 como concluído.
+- Cópias entre planos/modelos (T07) ainda exigem remapeamento seguro server-side
+  da proveniência cifrada, sem transportar contextos/capacidades pela BFF ou
+  browser. Não se declarou essa lacuna resolvida.
+- Esta verificação não é revisão independente, não executa a matriz CI integral,
+  gates R4, build completo da PR nem confirma comportamento em produção. Draft
+  permanece. Sem commit/push, migrations externas, flags ou deploy.
+
+## Retomada FOOD05 — T13 projeção/revisão no editor
+
+- O editor tipou e apresenta o mapa `equivalenciasAplicadas` recebido do backend
+  (projeção profissional allowlisted, rota privada `no-store`, tenant/paciente/plano
+  conferidos no serviço). Cada alternativa vinculada mostra estado e detalhe
+  reproduzível do cálculo salvo: algoritmo, nutriente, porção principal/efetiva,
+  descrição/preparo, fonte/revisão, valores-base, alvo, obtido, delta e delta%.
+  A ausência/falha da projeção fica explícita; não é tratada como ausência de contexto.
+- Para `revisao_pendente`, ação “Recalcular equivalência” reabre o painel com o
+  nutriente e alternativa originais selecionados; precisa carregar a prévia atual e
+  clicar “Confirmar recálculo”. A ação “Desvincular equivalência” pede confirmação,
+  envia identidade anterior/fingerprint de resolução e salva sem alterar a porção.
+  A validação final permanece no backend; snapshots publicados não são editados.
+- Testes sintéticos novos/verificados: detalhe e recálculo pendente com confirmação
+  desktop/mobile; desvinculação confirmada/cancelada e porção preservada desktop/mobile.
+  Preferências pessoais M08: atualização CAS de casas decimais/comparação, sem gravar
+  o plano, desktop/mobile.
+  Regressões focadas desktop: prévia individual, aplicação manual FOOD04 e cálculo
+  FOOD05 originado em grupo; mobile: prévia individual e cálculo FOOD04 por grupo.
+  Resultado dos cenários focados: PASS. Uma tentativa de teste desktop expirou na
+  navegação fria enquanto a compilação Next levou 18,7s (limite do helper 15s); o
+  mesmo teste isolado passou depois do cache aquecido. Uma repetição em lote teve
+  timeout semelhante e passou isolada. Registrar como instabilidade de compilação
+  local, não como teste green da primeira tentativa.
+- TypeScript Web `tsc --noEmit`: PASS após integração. ESLint focado: 0 erros; 8
+  avisos preexistentes em `plano-alimentar-profissional.tsx`. `git diff --check`: PASS.
+- Build Web: `next build --webpack` PASS (compile, TypeScript, 194 páginas,
+  otimização e traces). Dois avisos preexistentes de API Node `process.cwd` na
+  cadeia Edge Runtime. `next build` padrão/Turbopack BLOCKED pelo ambiente: symlink
+  `node_modules` aponta para fora da raiz; não alterei o symlink/dependências.
+  Next dev desligado e `next-env.d.ts` restaurado; sem mudança residual gerada.
+- T07 e parte de T13 seguem BLOQUEADOS: API de versão publicada não correlaciona
+  `chaveCliente` com a identidade relacional de cada alternativa, e modelos não têm
+  contrato de proveniência. Cópias não podem transportar o contexto cifrado como
+  capability nem remover vínculo silenciosamente. Exigir solução server-side segura
+  antes de habilitar cópia de planos FOOD05 e antes de encerrar T13.
+- Salvaguarda parcial adicionada nesta retomada: a projeção profissional da alternativa
+  retorna somente `equivalenciaAplicada`, derivado do snapshot cifrado e omitido quando
+  a resposta não pede equivalências. Não expõe contexto, fingerprints nem capabilities.
+  Salvar plano como modelo, duplicar plano, copiar refeição salva e duplicar refeição local
+  agora recusam converter uma alternativa FOOD05 para manual enquanto o formato de
+  destino não preservar sua proveniência. Testes focados do serviço backend, cópia pura
+  (14/14) e Playwright desktop sintético (1/1) passaram; o rascunho não foi alterado.
+  Isto reduz perda silenciosa, mas não conclui T07: a cópia de cálculos continua
+  bloqueada até haver contrato de proveniência de ponta a ponta.
+- Não repetidos neste checkpoint: suite geral backend/build, PostgreSQL/RLS, CI da PR,
+  Axe global, segurança R4 independente. Sem commit/push, merge, migration externa,
+  deploy, ativação ou uso de dados reais.
+
+## Retomada — proteção de proveniência em cópias e fechamento de verificações locais
+
+- `equivalenciaAplicada` só aparece na projeção profissional solicitada; é um
+  booleano derivado do snapshot cifrado e fica omitido para equivalência já
+  desvinculada. Não transporta fingerprints ou contexto cifrado. A projeção do
+  paciente explicitamente remove esse campo; teste de allowlist PASS.
+- Escrita como modelo, duplicação de plano, cópia de refeição publicada e cópia
+  local agora recusam a conversão para substituição manual quando há vínculo FOOD05.
+  O alerta não envia requisição nem altera rascunho. Ainda não se preserva a
+  proveniência nos formatos de cópia; bloqueio é uma salvaguarda deliberada e T07
+  continua parcial/BLOCKED.
+- Testes: `test-copia-refeicoes-plano.mjs` 14/14 PASS; suites completas do serviço de
+  planos e projeção paciente 139/139 PASS; Playwright
+  sintético desktop e mobile: bloqueio de cópia de refeição e bloqueio ao salvar modelo
+  2/2 em cada projeto PASS. Typecheck Web PASS; typecheck backend PASS; build backend PASS; build Web
+  `next build --webpack` PASS, compile, TS e 194 páginas. ESLint focado sem erros e
+  8 avisos preexistentes no componente editor.
+- RLS/PostgreSQL descartável: BLOCKED antes da inicialização do banco: Testcontainers
+  recebeu HTTP 404 do Docker para `timescale/timescaledb-ha:pg15` (“No such image”).
+  Não houve conexão a staging/produção nem tentativa de substituir a imagem.
+- Playwright tentou inicialmente executar com o dev-server padrão/Turbopack e foi
+  BLOCKED pelo symlink de `node_modules` fora da raiz; o mesmo gate, servido por
+  Next webpack já iniciado e reutilizado, passou. `next-env.d.ts` foi restaurado
+  após o build/dev e `git diff --check` PASS.
+- Não executados neste checkpoint: suite integral, CI GitHub, PostgreSQL/RLS real,
+  Playwright global/Axe global e revisão R4 independente. Sem commit/push/merge,
+  migration externa, deploy ou ativação. FOOD04 produção continua com o bloqueio
+  operacional anteriormente documentado (HTTP 402), sem nova consulta externa.
+
+## Revalidação — invalidação de prévia concorrente
+
+- TDD para mudança de entrada durante uma prévia: o teste segurou a segunda resposta
+  HTTP depois de trocar a medida caseira. A versão anterior da interface ainda permitia
+  confirmar durante a janela de atualização (RED reproduzido). A correção vincula cada
+  prévia à assinatura dos fatos usados no pedido, invalida a aplicação imediatamente
+  quando essa assinatura muda e só permite confirmar a resposta que corresponde aos
+  dados correntes.
+- O teste Playwright sintético foi repetido e ficou GREEN em desktop e mobile. A suíte
+  focalizada de FOOD05/PA07 passou 14/14 nos dois projetos, incluindo FOOD04, recálculo,
+  preferências, desvinculação e bloqueios de cópia que perderiam proveniência.
+- Web `tsc --noEmit`: PASS. `next build --webpack`: PASS, 194 páginas. ESLint focado:
+  0 erros e 8 avisos preexistentes no editor grande. `test:copia-refeicoes`: 14/14 PASS;
+  `git diff --check`: PASS. Build/dev não deixou alteração gerada em `next-env.d.ts`.
+- Ambiente de execução usou Node 24.19.0 embora o projeto declare Node 22; pnpm reportou
+  aviso de engine. O build e testes concluíram, mas a validação com a versão de runtime
+  declarada continua recomendável no CI.
+- Continuam fora desta evidência: PostgreSQL/RLS real (bloqueado pela imagem ausente do
+  Testcontainers, anotada acima), CI GitHub, revisão R4 independente e smoke global.

@@ -1,4 +1,5 @@
 import { interpretarNumeroEdicao, nutrientesNumericosEdicao, type MicronutrientesEdicao, type NutrientesEdicao } from './edicao-plano';
+import type { IntencaoEquivalenciaEdicao } from './equivalencias-plano-api';
 import type {
   NutrientesPor100gApi,
   MicronutrientesPor100gApi,
@@ -21,6 +22,7 @@ export interface AlimentoFormularioCopia extends Omit<SubstituicaoPlanoAlimentar
 export interface AlternativaFormularioCopia extends AlimentoFormularioCopia {
   liberadaParaPaciente: boolean;
   preferida: boolean;
+  provenienciaEquivalencia?: true;
 }
 
 export interface ItemFormularioCopia extends AlimentoFormularioCopia {
@@ -47,6 +49,8 @@ export interface AlimentoFormularioCopiaFonte extends Omit<AlimentoFormularioCop
 export interface AlternativaFormularioCopiaFonte extends AlimentoFormularioCopiaFonte {
   liberadaParaPaciente: boolean;
   preferida: boolean;
+  provenienciaEquivalencia?: true;
+  equivalencia?: IntencaoEquivalenciaEdicao;
 }
 
 export interface ItemFormularioCopiaFonte extends AlimentoFormularioCopiaFonte {
@@ -101,6 +105,9 @@ function copiarItemFormulario(item: ItemFormularioCopiaFonte, gerarChave: GerarC
   if (item.substituicoes.length > LIMITE_SUBSTITUICOES_ITEM) {
     throw new Error(`A refeição excede o limite de ${LIMITE_SUBSTITUICOES_ITEM} substituições por alimento.`);
   }
+  if (item.substituicoes.some((substituicao) => substituicao.provenienciaEquivalencia === true || substituicao.equivalencia !== undefined)) {
+    throw new Error('Esta refeição contém equivalência FOOD05. A cópia está bloqueada até preservar a proveniência do cálculo.');
+  }
   const base = copiarAlimento(item, gerarChave);
   return {
     ...base,
@@ -137,6 +144,9 @@ export function copiarRefeicaoParaFormulario(
     };
     if ((item.substituicoes?.length ?? 0) > LIMITE_SUBSTITUICOES_ITEM) {
       throw new Error(`A refeição excede o limite de ${LIMITE_SUBSTITUICOES_ITEM} substituições por alimento.`);
+    }
+    if (item.substituicoes?.some((substituicao) => substituicao.equivalenciaAplicada === true)) {
+      throw new Error('Esta refeição contém equivalência FOOD05. A cópia está bloqueada até preservar a proveniência do cálculo.');
     }
     return {
       ...base,

@@ -2310,20 +2310,26 @@ export class ServicoPlanosAlimentares {
             substituicoes: substituicoes
               .filter((substituicao) => substituicao.itemId === item.id)
               .sort((a, b) => a.ordem - b.ordem)
-              .map((substituicao) => ({
-                id: substituicao.id,
-                ordem: substituicao.ordem,
-                alimentoComposicaoId: substituicao.alimentoComposicaoId,
-                descricao: this.criptografia.descriptografar(substituicao.descricaoCriptografada),
-                quantidade: Number(substituicao.quantidade),
-                unidade: substituicao.unidade,
-                porcaoGramas: Number(substituicao.porcaoGramas),
-                composicaoSnapshot: projetarComposicao(this.lerJsonCriptografado<SnapshotComposicao>(
+              .map((substituicao) => {
+                const snapshot = this.lerJsonCriptografado<SnapshotComposicao>(
                   substituicao.composicaoSnapshotCriptografada
-                )),
-                liberadaParaPaciente: substituicao.liberadaParaPaciente,
-                preferida: substituicao.preferida
-              }))
+                );
+                const equivalenciaAtiva = snapshot.equivalencia?.estado !== undefined
+                  && snapshot.equivalencia.estado !== 'desvinculada_manualmente';
+                return {
+                  id: substituicao.id,
+                  ordem: substituicao.ordem,
+                  alimentoComposicaoId: substituicao.alimentoComposicaoId,
+                  descricao: this.criptografia.descriptografar(substituicao.descricaoCriptografada),
+                  quantidade: Number(substituicao.quantidade),
+                  unidade: substituicao.unidade,
+                  porcaoGramas: Number(substituicao.porcaoGramas),
+                  composicaoSnapshot: projetarComposicao(snapshot),
+                  ...(incluirEquivalencias && equivalenciaAtiva ? { equivalenciaAplicada: true } : {}),
+                  liberadaParaPaciente: substituicao.liberadaParaPaciente,
+                  preferida: substituicao.preferida
+                };
+              })
           }))
       }))
     };

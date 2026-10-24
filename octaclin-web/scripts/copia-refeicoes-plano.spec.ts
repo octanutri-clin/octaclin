@@ -32,6 +32,20 @@ test('FOOD04 cópia factual entre planos não transplanta a autoridade do grupo'
   assert.equal(referencia.revisao, 1);
 });
 
+test('FOOD05 cópia de refeição publicada recusa perder proveniência do cálculo', () => {
+  const origem = refeicaoApi();
+  origem.itens[0].substituicoes[0].equivalenciaAplicada = true;
+  assert.throws(() => copiarRefeicaoParaFormulario(origem, gerarChave), /equivalência FOOD05.*proveniência/i);
+});
+
+test('FOOD05 duplicação local recusa converter equivalência calculada em alternativa manual', () => {
+  const origem = refeicaoFormulario('food05-origem');
+  origem.itens[0].substituicoes.push({ ...origem.itens[0], chaveCliente: 'food05-alternativa', liberadaParaPaciente: false, preferida: false, provenienciaEquivalencia: true });
+  assert.throws(() => duplicarRefeicaoNoRascunho([origem], 0, gerarChave), /equivalência FOOD05.*proveniência/i);
+  Object.assign(origem.itens[0].substituicoes[0], { equivalencia: { aplicacaoId: 'aplicacao-sintetica' } });
+  assert.throws(() => duplicarRefeicaoNoRascunho([origem], 0, gerarChave), /equivalência FOOD05.*proveniência/i);
+});
+
 test('FOOD04 duplicação local mantém fatos independentes e não reutiliza intenção antiga', () => {
   const origem = refeicaoFormulario('origem-grupo');
   const alternativa = { chaveCliente: 'alternativa-grupo', descricao: 'Alternativa sintética',

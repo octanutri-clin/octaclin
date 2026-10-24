@@ -1,11 +1,10 @@
-# FOOD05 — checkpoint de backend/API e próxima etapa de interface
+# FOOD05 — checkpoint de UI individual/FOOD04 e etapas restantes
 
 ## Modelo e autorização
 
-Desenvolvimento autorizado em Sol médio. Próxima troca recomendada: **GPT 6 Luna
-alto para T10–T13 de interface**, com revisão posterior em Sol médio dos caminhos
-R4, cópia/modelos e gates finais. A troca depende da ação manual do proprietário;
-não presumir que ocorreu. M01–M08 continuam essenciais, sem redução de escopo.
+Desenvolvimento autorizado em Sol médio. Continuar na configuração atual até a
+próxima decisão de troca; não presumir alteração manual. M01–M08 continuam
+essenciais, sem redução de escopo.
 
 Branch `docs/pos320-food05-planning`, worktree física
 `/workspace/octaclin/.worktrees/pos320-food04-planning`. PR446 Draft. Ler o estado
@@ -54,20 +53,33 @@ feature a partir dos testes focados. Não executar produção/infra/migrations e
 
 ## Trabalho restante — não declarar FOOD05 concluída
 
-1. T10 painel compartilhado e preferências, debounce/AbortSignal, resposta tardia,
-   tabela desktop/cartões mobile, teclado/axe. Usar dados sintéticos.
-2. T11 integração com editor, autosave60s, posse PA07, dirty/ACK, limites20/96KiB,
-   cancelar sem efeitos. Acrescentar campo/tipo na serialização editorial Web.
-3. T12 usar o mesmo painel na FOOD04, porções só na aplicação, origem preservada,
-   seleção parcial, duplicata e recálculo explícitos; biblioteca não muda.
-4. T13 indicadores e detalhe histórico. Antes de encerrar T07/T13, concluir a
-   rastreabilidade em cópias entre planos e modelos: **não transportar contexto
-   interno como capability e não remover FOOD05 silenciosamente na cópia**.
-   Nova versão do mesmo plano já conserva o envelope; outros caminhos precisam
-   de contrato/prova de origem e destino autorizados, remap de chaves e testes.
-   Se exigir novos contratos de backend, retomar Sol médio antes de alterá-los.
+T10/T11/T12 têm uma integração inicial agora exercitada com dados sintéticos. O
+painel individual e o grupo FOOD04 passam no desktop/mobile nos caminhos descritos
+no registro de execução. Isso não encerra os itens completos nem os gates.
+
+1. T10 completar revisão de interface e matriz: tabela/card responsivo conforme
+   especificação, teclado/axe abrangente, estados tardios/erro/sem medida e
+   preferências M08, sem regressão do editor.
+2. T11 verificar em testes dedicados autosave60s, posse PA07/retomada, dirty/ACK,
+   limites20/96KiB e cancelamento/replay após mudanças de revisão.
+3. T12 ampliar grupo: conflitos de duplicatas/porções, seleção parcial, cancelamento,
+   referências caseiras, histórico original e regressões FOOD04.
+4. T13: o rascunho já consome a projeção profissional allowlisted; exibe estado,
+   detalhe reproduzível, revisão pendente, recálculo seletivo em prévia/confirmar
+   e desvinculação explícita que mantém a porção. Testes sintéticos desktop/mobile
+   cobrem esses fluxos. Ainda falta segurança contra o estado da projeção indisponível
+   em outras telas/versões e a revisão completa de regressão/contrato.
+   T07/cópias entre planos/modelos continua bloqueado: **não transportar contexto
+   interno como capability e não remover FOOD05 silenciosamente na cópia**. O GET
+   publicado expõe fatos/projeção, mas não fornece relação estável entre `chaveCliente`
+   e IDs relacionais de alternativa para remapear um snapshot com segurança. Modelos
+   também não têm contrato para guardar essa proveniência. Precisamos de contrato
+   server-side de origem/destino autorizados, remapeamento de identidades e testes;
+   manter a cópia bloqueada para versões FOOD05 até isso existir. Não marcar T07/T13
+   completos nem permitir merge enquanto a perda silenciosa ainda for possível.
 5. T14 matriz PostgreSQL completa, regressões FOOD04 e CI; prova local atual é
-   parcial. T15–T18 UI completa, revisão distinta final, governança/CI e entrega.
+   parcial. T15–T18 regressões/acessibilidade/segurança completa, revisão distinta,
+   governança/CI e entrega.
 
 Todas as oito melhorias precisam de interface e testes antes da conclusão.
 Checklist detalhado em [T01–T18](todo-pos-320-food05.md). Não habilitar entrega

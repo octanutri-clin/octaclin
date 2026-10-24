@@ -1781,6 +1781,7 @@ describe('ServicoPlanosAlimentares', () => {
       expect(repositorios.get(PlanoAlimentarSubstituicaoOrm)!.registros[0].motorCalculoVersao).toBe('nutricao-decimal-v1');
       const cipher=repositorios.get(PlanoAlimentarVersaoOrm)!.registros[0].edicaoSnapshotCriptografado;expect(JSON.parse(criptografia.descriptografar(cipher)).schemaSnapshotEdicao).toBe(3);
       expect(salvo.refeicoes[0].itens[0].substituicoes[0]).toMatchObject({porcaoGramas:50,liberadaParaPaciente:false,preferida:false,composicaoSnapshot:{nutrientesPorcao:{energiaKcal:80}}});
+      expect(salvo.refeicoes[0].itens[0].substituicoes[0].equivalenciaAplicada).toBe(true);
       expect(JSON.stringify(salvo.equivalenciasAplicadas)).not.toMatch(/comandoHash|snapshotAlternativa|dependenciasHash|ator/);
     });
     it('FOOD05 nova versão mantém chaves editoriais, referências e proteção contra PATCH legado',async()=>{

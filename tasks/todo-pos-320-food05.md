@@ -13,7 +13,7 @@ FE = `octaclin-web/`. Novos nomes são propostas, não arquivos criados nesta ro
 | --- | --- |
 | T01–T05 | Fundamentos implementados e focados PASS; verificar ledger e gates integrados |
 | T06 | Writer/ACK/revisão/snapshots implementados; regressões e integração em consolidação |
-| T07 | Projeções e nova versão do mesmo plano testadas; cópia entre planos/modelos pendente |
+| T07 | Marcador profissional mínimo e bloqueio contra perda silenciosa implementados; cópia com proveniência preservada ainda pendente |
 | T08 | Preferências e1079 implementadas; CAS/RLS/JSON provados no PostgreSQL descartável |
 | T09 | Backend, BFF e cliente tipado implementados; integração com UI pendente |
 | T10–T13 | Interface e integrações ainda não concluídas |
@@ -130,6 +130,14 @@ Modificar BE `aplicacao/origens-grupos-materializadas.ts`,
 `aplicacao/projecao-composicao.ts`/spec, caminhos de clonar/cópia/modelos em
 `servico-planos-alimentares.ts` e `servico-modelos-plano-alimentar.ts`/specs.
 Adicionar `projecao-equivalencias-profissional.ts`/spec.
+
+Checkpoint parcial: a resposta profissional de versão inclui somente o booleano
+`equivalenciaAplicada` para alternativas ainda vinculadas, calculado do snapshot
+cifrado. Cópia de refeição publicada/local, duplicação de plano e gravação do plano
+como modelo recusam remover essa proveniência silenciosamente. Isso previne perda,
+mas não implementa cópia: falta destino que armazene proveniência FOOD05 e remapeamento
+server-side seguro. Contexto cifrado e fingerprints nunca devem ser enviados como
+capability pelo browser. T07 permanece aberto.
 
 - [ ] RED: novo metadata aninhado aparece no portal/PDF; clone sem envelope perde
   fatos; fonte/grupo arquivado muda histórico; cópia vira capability de origem.
@@ -308,3 +316,21 @@ Dep: T17; G05/G06.
 | Banco/infra/provedor/deploy nesta rodada | NOT RUN / não autorizados |
 | FOOD04 produção | BLOCKED no último registro; não reconsultada |
 | Autorização de executar T01–T18 | PENDENTE após revisão deste planejamento |
+
+## Estado de execução — checkpoint de 2026-10-24
+
+Esta tabela supersede apenas os estados “NOT RUN / não implementados” acima; os
+requisitos e critérios T01–T18 permanecem vigentes.
+
+| Tarefa/área | Estado observado | Limite atual |
+| --- | --- | --- |
+| T06 motor, snapshot e resolução de equivalência | Implementação técnica exercitada em suites focadas | Integração real PostgreSQL/RLS não validada |
+| T07 cópias/modelos com proveniência | BLOCKED | UI recusa a conversão silenciosa; contratos atuais de cópia não transportam proveniência com segurança |
+| T10–T13 interface, FOOD04, revisão e histórico | Parcialmente implementados e exercitados em desktop/mobile | Há bloqueios deliberados para cópias; não considerar M01–M08 fechadas |
+| T14 PostgreSQL/RLS e concorrência real | BLOCKED | Testcontainers não iniciou devido à imagem ausente no daemon local |
+| T15–T18 regressões, R4, documentação e CI final | NOT RUN / parcial | Não houve suite integral, R4 independente, CI GitHub ou smoke global |
+| G01–G05 e prontidão clínica/operacional | Não PASS | Ver [execução FOOD05](execucao-pos-320-food05.md) para evidências locais e bloqueios |
+
+Playwright focalizado FOOD05/PA07: 14/14 desktop e 14/14 mobile PASS; typecheck Web,
+build Web webpack e testes puros de cópia 14/14 PASS. Esses resultados são locais e
+não substituem PostgreSQL/RLS, CI, revisão independente nem prontidão de produção.
