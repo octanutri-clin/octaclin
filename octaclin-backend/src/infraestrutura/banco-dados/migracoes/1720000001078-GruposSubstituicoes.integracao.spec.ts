@@ -4,6 +4,7 @@ import { Client } from 'pg';
 import { DataSource } from 'typeorm';
 import { GenericContainer, StartedTestContainer, Wait } from 'testcontainers';
 import { GruposSubstituicoes1720000001078 } from './1720000001078-GruposSubstituicoes';
+import { PreferenciasEquivalencia1720000001079 } from './1720000001079-PreferenciasEquivalencia';
 import { GrupoSubstituicoesOrm, FavoritoGrupoSubstituicoesOrm } from '../../../modulos/planos-alimentares/infraestrutura/grupo-substituicoes.orm';
 import { ProfissionalOrm } from '../../../modulos/profissionais/infraestrutura/profissional.orm';
 import { UserActionLogOrm } from '../../auditoria/user-action-log.orm';
@@ -29,7 +30,7 @@ suite('FOOD04 PostgreSQL15 descartável: biblioteca, RLS e concorrência',()=>{
       create table user_action_logs(id uuid primary key default gen_random_uuid(),tenant_id uuid not null,usuario_id uuid,acao varchar(120) not null,recurso_tipo varchar(120),recurso_id uuid,ip inet,user_agent text,metadados jsonb not null default '{}',criado_em timestamptz not null default now());`);
     const migrator=new DataSource({type:'postgres',...conn,username:'owner',password:'owner-test',entities:[],synchronize:false,logging:false});
     await migrator.initialize();const runner=migrator.createQueryRunner();await runner.connect();
-    try{await new GruposSubstituicoes1720000001078().up(runner);}finally{await runner.release();await migrator.destroy();}
+    try{await new GruposSubstituicoes1720000001078().up(runner);await new PreferenciasEquivalencia1720000001079().up(runner);}finally{await runner.release();await migrator.destroy();}
     await owner.query(`create role food04_runtime login password 'runtime-test' nosuperuser nocreatedb nocreaterole nobypassrls;
       grant connect on database food04_test to food04_runtime;grant usage on schema public to food04_runtime;
       grant select,insert,update,delete on all tables in schema public to food04_runtime;`);

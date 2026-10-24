@@ -323,3 +323,21 @@ Fechamento do checkpoint intermediário:
   declarada continua recomendável no CI.
 - Continuam fora desta evidência: PostgreSQL/RLS real (bloqueado pela imagem ausente do
   Testcontainers, anotada acima), CI GitHub, revisão R4 independente e smoke global.
+
+## CI da PR — falha de fixture corrigida
+
+- O primeiro CI do HEAD `dc7e177c` executou PostgreSQL real, migrações, suite backend,
+  Redis e RLS. RLS da FOOD05 passou; a suite de integração da migration 1078 falhou
+  porque sua fixture criava `profissionais` sem as colunas da migration aditiva 1079,
+  mas o ORM atual já as seleciona. O erro observado foi `column
+  ProfissionalOrm.preferencias_equivalencia does not exist` em `identidadeBiblioteca`.
+- A fixture agora aplica a migration 1079 depois da 1078 no Testcontainers descartável,
+  sem editar migration histórica nem tocar ambientes externos. HEAD `79065318` foi
+  enviado para a Draft e disparou nova execução; o resultado final desse novo CI ainda
+  está pendente neste registro.
+- A verificação da projeção pós-desvinculação em RLS foi corrigida para consultar o
+  GET profissional do rascunho, onde `equivalenciaAplicada` é projetado; os dados
+  editoriais/autosave não carregam esse marcador de leitura.
+- A spec unitária da migration 1079 passou 2/2 e o build backend validou `dist/main.js`.
+  A integração PostgreSQL precisa ser repetida no GitHub, pois o Docker local não
+  consegue iniciar a imagem Testcontainers deste ambiente.
