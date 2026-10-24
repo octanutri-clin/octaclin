@@ -1,3 +1,4 @@
+import { PreferenciasEquivalencia1720000001079 } from './migracoes/1720000001079-PreferenciasEquivalencia';
 import { GruposSubstituicoes1720000001078 } from './migracoes/1720000001078-GruposSubstituicoes';
 import { GrupoSubstituicoesOrm, FavoritoGrupoSubstituicoesOrm } from '../../modulos/planos-alimentares/infraestrutura/grupo-substituicoes.orm';
 import { AlimentosPersonalizados1720000001076 } from './migracoes/1720000001076-AlimentosPersonalizados';
@@ -477,7 +478,8 @@ export function criarOpcoesTypeOrm(): TypeOrmModuleOptions & DataSourceOptions {
         MedidasCaseiras1720000001075,
         AlimentosPersonalizados1720000001076,
         FavoritosAlimentosProfissional1720000001077,
-        GruposSubstituicoes1720000001078
+        GruposSubstituicoes1720000001078,
+        PreferenciasEquivalencia1720000001079
       ],
     migrationsRun: executarMigracoesNoBoot(),
     synchronize: false,

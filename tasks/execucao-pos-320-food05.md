@@ -97,3 +97,18 @@ T07 parcial:
   nonce exige autorização atual. Focais e regressões em t07-medida-green.log.
 - Typecheck backend executado: PASS (t06-typecheck.log), antes dos últimos ajustes.
   Reexecutar no checkpoint consolidado. Nenhum teste PG/CI/UI concluído ainda.
+
+T07 continuidade: teste RED1 comprovou que composição explicitamente trocada
+não era preservada após a fonte ficar inativa. Captura `aplicados` cifrada separa
+fatos atuais da matemática original; cálculo/resíduo original continuam imutáveis
+com revisão pendente. Focais138/138 PASS (t07-troca-green.log).
+Marcador por filho:1 RED comprovou que FOOD05 ainda dizia motor1; corrigido para
+nutricao-decimal-v1 somente nos filhos FOOD05, sem trocar motor global legado.
+Repetição consolidada em t07-final-green.log.
+
+T08 iniciado: testes de contrato, serviço/CAS e migration escritos antes dos
+módulos (RED por TS2307,0 testes; não é vulnerabilidade reproduzida). Após código,
+21/21 PASS em t08-green.log. Dois campos em profissionais, JSON fechado, sem PHI,
+CAS próprio e rollback conservador. Migration1079 registrada;1078 não alterada.
+Não executada em banco externo. Provas PostgreSQL/RLS/role seguem para T14;
+testes de migration até aqui inspecionam SQL e registro, não provam o banco real.
