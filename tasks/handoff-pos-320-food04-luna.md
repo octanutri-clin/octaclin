@@ -162,3 +162,14 @@ preflight oficial PowerShell e cadeia PG com extensões não têm PASS local.
   novo HEAD ainda são necessários. Não faça merge até CI/scanners e revisão R4
   independente concluírem; os checks verdes anteriores não cobrem esta
   correção. Nenhuma operação externa foi executada.
+
+## Retomada Sol: gates de seguranca — 2026-10-24
+
+Governanca foi reconciliada com uma captura autenticada atual, sem apenas
+adiar prazos. Mobile recebeu override Zod limitado a CLI Expo, com RED/GREEN,
+contratos reais e export multiplataforma PASS. Ver o
+[relatorio e limites](../docs/governance/REVISAO_SECURITY_QUALITY_2026-10-24.md).
+O advisory node-forge continua mitigado pelo backport existente; certifi,
+musl-utils e residuos IA permanecem no inventario. Nao declarar zero riscos.
+O proximo gate e revisao cruzada do diff e CI do novo HEAD; o `doctor` local
+ficou sem dois metadados externos e deve passar no runner canonico.

@@ -448,3 +448,19 @@ seguem pendentes.
 - Os checks verdes anteriores pertencem ao HEAD anterior à correção. CI/scanners
   do novo HEAD precisam rodar novamente. O gate R4 independente permanece
   aberto; a autocorreção e estes testes não equivalem a revisão independente.
+
+## Correcao dos gates Governanca e Mobile — 2026-10-24
+
+- O HEAD `f2ff69e9` passou Backend, Web, Demo smoke, imagens e scanners, mas
+  Governanca reprovou pelo inventario vencido e Mobile por um advisory Zod novo.
+- [Revisao e evidencias consolidadas](../docs/governance/REVISAO_SECURITY_QUALITY_2026-10-24.md):
+  captura autenticada da main, hash e 175 referencias reconciliadas sem
+  dispensas; pendencias certifi/musl-utils e residuos IA continuam rastreados.
+- Zod 4.6.7 restrito a CLI Expo 57.0.27: dois testes negativos RED antes e GREEN
+  depois; contratos reais da CLI preservados. Nenhuma excecao nova no audit.
+- Node 22/pnpm 11.25: seguranca Mobile 14/14, a11y 15/15, typecheck, licencas de
+  586 pacotes, audit com backport node-forge e export Android/iOS/Web PASS.
+  `doctor` local teve 19/21 PASS e dois metadados externos inacessiveis; exigir
+  o gate canonico no CI. O agregado de inventario passou 73/73 e cobertura175.
+- CI e revisao cruzada deste novo conjunto ainda pendentes neste registro.
+  Sem merge, deploy, distribuicao Mobile, nova PoC ou migrations externas.
