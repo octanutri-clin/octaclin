@@ -143,3 +143,22 @@ checkout FOOD03 (mesmos lockfiles). Workspace com pouco espaço; `/tmp` tem
 filesystem separado. Não remover trabalho de outras fases para construir.
 Usar evidências de build alternativas explicitamente identificadas no ledger;
 preflight oficial PowerShell e cadeia PG com extensões não têm PASS local.
+
+## Atualização: correção de segurança antes da retomada — 2026-10-24
+
+- Revisão local focada encontrou risco de troca do alvo da biblioteca enquanto
+  o conteúdo continuava em edição e confirmações que persistiam entre grupos.
+  A revisão foi manual, feita pelo mesmo agente e não é independente.
+- Corrigido na branch desta PR: captura imutável de ID/revisão ao iniciar
+  edição/duplicação, bloqueio da navegação e ações da lista durante edição,
+  invalidação da leitura pendente e limpeza de confirmações ao trocar/fechar
+  grupo. Não houve alteração de backend, contrato, schema ou autorização.
+- Regressões TDD: os dois testes novos reproduziram o comportamento antes da
+  correção em desktop/mobile (4 RED); depois passaram em desktop/mobile (4
+  GREEN). FOOD04 visual: 17/18 no agregado, com timeout transitório do axe; o
+  caso restante passou isolado, total final observado 18/18. BFF planos 60/60,
+  aplicação 4/4, ESLint, typecheck, secret scan e diff-check PASS.
+- O teste local usou Node 24, fora da engine declarada 22.x; checks oficiais do
+  novo HEAD ainda são necessários. Não faça merge até CI/scanners e revisão R4
+  independente concluírem; os checks verdes anteriores não cobrem esta
+  correção. Nenhuma operação externa foi executada.

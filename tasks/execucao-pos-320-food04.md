@@ -416,3 +416,35 @@ seguem pendentes.
   em `/tmp/food04-diag/pa04-output`; symlink `.next` restaurado ao alvo
   baseline `/tmp/food04-tools/web-next` e nenhum `test-results` foi criado no
   workspace.
+
+## Correção focada de segurança da biblioteca — 2026-10-24
+
+- A revisão local identificou que a seleção de outro grupo enquanto o editor
+  estava aberto podia trocar o alvo usado pelo `PATCH`, embora o formulário
+  ainda contivesse dados do grupo anterior. Confirmações pendentes também
+  sobreviviam à troca de seleção. A revisão foi manual e não independente.
+- Antes da correção, dois testes Playwright sintéticos falharam em desktop e
+  mobile: o PATCH do conteúdo editado apontava para o outro grupo; a confirmação
+  de compartilhamento continuava visível ao abrir outro grupo. A evidência RED
+  está nos resultados locais temporários `/tmp/food04-fix-test/test-results`.
+- A correção captura ID e revisão do grupo ao iniciar edição/duplicação e usa
+  esse contexto imutável no save; bloqueia abertura/favorito/criação enquanto o
+  editor está ativo; invalida detalhes pendentes e limpa confirmações ao mudar
+  ou fechar a seleção. Cancelar limpa o alvo e a chave de idempotência.
+- Os dois testes novos passaram em desktop e mobile (4/4). A suíte FOOD04
+  Playwright completa passou em 17 cenários; o cenário de criação teve timeout
+  do axe no primeiro agregado e passou isolado na repetição (1/1). Portanto,
+  todos os 18 resultados por viewport foram aprovados nas tentativas finais;
+  registrar o timeout inicial como transiente do executor, sem ocultá-lo.
+- ESLint dos dois arquivos alterados, typecheck, `test:planos-alimentares:bff`
+  (60/60), `test:grupos-substituicoes:aplicacao` (4/4), `security:secrets` e
+  `git diff --check` passaram. Os comandos usaram Node 24.19.0, fora da faixa
+  declarada do frontend (22.x); o typecheck concluiu sem erros, mas CI com a
+  versão suportada ainda é a evidência canônica.
+- `.next` e `test-results` foram redirecionados temporariamente para `/tmp`
+  devido ao filesystem de overlay cheio; o servidor local foi encerrado e os
+  symlinks temporários foram restaurados/removidos. Nenhum ambiente externo,
+  banco, migration ou flag foi alterado.
+- Os checks verdes anteriores pertencem ao HEAD anterior à correção. CI/scanners
+  do novo HEAD precisam rodar novamente. O gate R4 independente permanece
+  aberto; a autocorreção e estes testes não equivalem a revisão independente.

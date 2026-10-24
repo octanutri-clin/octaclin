@@ -980,3 +980,75 @@ test('FOOD04 compartilhar grupo pessoal exige confirmação e registra a revisã
   await expect.poll(() => compartilhamento).toEqual({ revisaoEsperada: 3, escopo: 'clinica' });
   expect(compartilhamento).toEqual({ revisaoEsperada: 3, escopo: 'clinica' });
 });
+
+test('FOOD04 trocar de grupo durante edição não redireciona conteúdo pessoal para outro grupo', async ({ context, page }) => {
+  await preparar(context);
+  const grupoA = '10000000-0000-4000-8000-000000000094';
+  const grupoB = '10000000-0000-4000-8000-000000000095';
+  const alimentoId = '10000000-0000-4000-8000-000000000096';
+  const grupos = [
+    { id: grupoA, nome: 'Grupo pessoal A', escopo: 'pessoal', podeEditar: true },
+    { id: grupoB, nome: 'Grupo compartilhado B', escopo: 'clinica', podeEditar: true }
+  ];
+  const detalhe = (grupo) => ({
+    ...grupo, descricao: 'Descrição sintética', categoria: 'Lanche', etiquetas: [], estado: 'ativo',
+    revisao: 1, quantidadeEntradas: 1, favorito: false,
+    entradas: [{ id: `${grupo.id}-entrada`, origem: 'catalogo', alimentoId, quantidade: 1, unidade: 'porção', porcaoGramas: 100, disponivel: true,
+      composicao: { descricao: 'Alimento sintético do grupo', nutrientesPor100g: { energiaKcal: 100 } } }]
+  });
+  const patches = [];
+  await page.route(url => url.pathname === '/api/planos-alimentares/grupos-substituicoes/consulta', async route => route.fulfill({ json: {
+    itens: grupos.map(grupo => ({ ...grupo, etiquetas: [], estado: 'ativo', revisao: 1, quantidadeEntradas: 1, favorito: false })),
+    total: grupos.length, pagina: 1, limite: 25
+  } }));
+  await page.route(url => url.pathname === `/api/planos-alimentares/grupos-substituicoes/${grupoA}` || url.pathname === `/api/planos-alimentares/grupos-substituicoes/${grupoB}`, async route => {
+    if (route.request().method() === 'PATCH') patches.push({ id: new URL(route.request().url()).pathname.split('/').at(-1), body: route.request().postDataJSON() });
+    const grupo = grupos.find(item => item.id === new URL(route.request().url()).pathname.split('/').at(-1));
+    await route.fulfill({ json: detalhe(grupo) });
+  });
+  await abrir(page);
+  const biblioteca = page.getByRole('region', { name: 'Biblioteca de grupos de substituições' });
+  await page.getByText('Biblioteca de grupos de substituições', { exact: true }).click();
+  await biblioteca.getByRole('button', { name: 'Abrir' }).nth(0).click();
+  await biblioteca.getByRole('button', { name: 'Editar' }).click();
+  await biblioteca.getByLabel('Nome obrigatório').fill('Conteúdo pessoal A revisado');
+  await expect(biblioteca.getByRole('button', { name: 'Abrir' }).nth(1)).toBeDisabled();
+  await biblioteca.getByRole('button', { name: 'Salvar', exact: true }).click();
+  await expect.poll(() => patches.length).toBe(1);
+  expect(patches[0]).toMatchObject({ id: grupoA, body: { revisaoEsperada: 1, conteudo: { nome: 'Conteúdo pessoal A revisado' } } });
+  expect(patches[0].id).not.toBe(grupoB);
+});
+
+test('FOOD04 troca de grupo invalida confirmações pendentes do grupo anterior', async ({ context, page }) => {
+  await preparar(context);
+  const grupos = [
+    { id: '10000000-0000-4000-8000-000000000097', nome: 'Grupo pessoal A', escopo: 'pessoal', podeEditar: true },
+    { id: '10000000-0000-4000-8000-000000000098', nome: 'Grupo pessoal B', escopo: 'pessoal', podeEditar: true }
+  ];
+  const detalhe = grupo => ({
+    ...grupo, descricao: 'Descrição sintética', categoria: 'Lanche', etiquetas: [], estado: 'ativo', revisao: 1,
+    quantidadeEntradas: 1, favorito: false,
+    entradas: [{ id: `${grupo.id}-entrada`, origem: 'catalogo', alimentoId: '10000000-0000-4000-8000-000000000099', quantidade: 1, unidade: 'porção', porcaoGramas: 100, disponivel: true,
+      composicao: { descricao: 'Alimento sintético', nutrientesPor100g: { energiaKcal: 100 } } }]
+  });
+  await page.route(url => url.pathname === '/api/planos-alimentares/grupos-substituicoes/consulta', async route => route.fulfill({ json: {
+    itens: grupos.map(grupo => ({ ...grupo, etiquetas: [], estado: 'ativo', revisao: 1, quantidadeEntradas: 1, favorito: false })), total: 2, pagina: 1, limite: 25
+  } }));
+  await page.route(url => grupos.some(grupo => url.pathname === `/api/planos-alimentares/grupos-substituicoes/${grupo.id}`), async route => {
+    const caminho = new URL(route.request().url()).pathname;
+    const grupo = grupos.find(item => caminho.endsWith(item.id)); await route.fulfill({ json: detalhe(grupo) });
+  });
+  await abrir(page);
+  const biblioteca = page.getByRole('region', { name: 'Biblioteca de grupos de substituições' });
+  await page.getByText('Biblioteca de grupos de substituições', { exact: true }).click();
+  await biblioteca.getByRole('button', { name: 'Abrir' }).nth(0).click();
+  await biblioteca.getByRole('button', { name: 'Compartilhar com clínica' }).click();
+  await expect(biblioteca.getByRole('group', { name: 'Confirmar compartilhamento' })).toBeVisible();
+  await expect(biblioteca.getByRole('button', { name: 'Abrir' }).nth(1)).toBeEnabled();
+  await biblioteca.getByRole('button', { name: 'Abrir' }).nth(1).click();
+  await expect(biblioteca.getByRole('group', { name: 'Confirmar compartilhamento' })).toHaveCount(0);
+  await biblioteca.getByRole('button', { name: 'Arquivar' }).click();
+  await expect(biblioteca.getByRole('group', { name: 'Confirmar arquivamento' })).toBeVisible();
+  await biblioteca.getByRole('button', { name: 'Abrir' }).nth(0).click();
+  await expect(biblioteca.getByRole('group', { name: 'Confirmar arquivamento' })).toHaveCount(0);
+});
