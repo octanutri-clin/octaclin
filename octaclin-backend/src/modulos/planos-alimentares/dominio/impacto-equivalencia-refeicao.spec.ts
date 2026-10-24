@@ -1,0 +1,7 @@
+import { simularTrocaNaRefeicao } from './impacto-equivalencia-refeicao';
+const item=(chaveCliente:string,energia:string)=>({chaveCliente,porcaoGramas:'100',composicao:{identidade:'manual:'+chaveCliente,descricao:chaveCliente,baseGramas:'100',nutrientes:{energiaKcal:energia,proteinasG:'10',carboidratosG:'20',gordurasG:'5'}}});
+describe('FOOD05 impacto hipotético da refeição',()=>{
+ it('remove principal antes de incluir alternativa e não muda os demais',()=>{const itens=[item('p','300'),item('outro','50')];const copia=JSON.stringify(itens);expect(simularTrocaNaRefeicao(itens,'p',item('a','250'))).toMatchObject({antes:{energiaKcal:'350'},depois:{energiaKcal:'300'},diferencas:{energiaKcal:'-50'},estado:'completo'});expect(JSON.stringify(itens)).toBe(copia);});
+ it('preserva ausência por indicador e não impede indicadores completos',()=>{const outro=item('o','50');delete (outro.composicao.nutrientes as any).proteinasG;expect(simularTrocaNaRefeicao([item('p','300'),outro],'p',item('a','250'))).toMatchObject({estado:'incompleto',antes:{energiaKcal:'350'},depois:{energiaKcal:'300'}});expect(simularTrocaNaRefeicao([item('p','300'),outro],'p',item('a','250')).antes.proteinasG).toBeUndefined();});
+ it('recusa principal inexistente/duplicado em vez de apagar itens arbitrários',()=>{expect(()=>simularTrocaNaRefeicao([item('p','1')],'x',item('a','2'))).toThrow();expect(()=>simularTrocaNaRefeicao([item('p','1'),item('p','2')],'p',item('a','3'))).toThrow();});
+});

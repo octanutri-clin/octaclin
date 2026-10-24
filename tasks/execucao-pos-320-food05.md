@@ -35,3 +35,8 @@ T02: focais de aritmética+micros+DTO55/55 PASS, com4000 vetores Python Fraction
 (seed314159,1000/alvo), sem tolerância float. RED por módulo ausente antes da
 implementação. Parser decimal existente apenas exportado; sem semântica global nova.
 Suite completa/build/CI ainda NOT RUN: focais não equivalem a feature concluída.
+
+T03 focais47/47 PASS (4 suites), com casos energia/macros/base diferente,
+zero/ausente, resíduos/edição, limites/avisos, simulação350→300 e comparação
+com4000 casos independentes no motor. RED inicial por funções/módulo ausentes.
+Nova política decimal é aditiva no motor; defaults legados não mudaram.
