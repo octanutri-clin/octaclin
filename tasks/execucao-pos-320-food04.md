@@ -491,3 +491,14 @@ seguem pendentes.
 - Sem schema SQL novo, migration externa, flag, merge ou deploy. Rollback apos
   gravar envelope2 exige writer compativel; preservar ciphertext/historico e
   preferir correcao adiante. Migration1078 externa continua operacao separada.
+
+
+## Pós-merge e operação autorizada — 24/10/2026
+
+PR #441 MERGED/CI final PASS; migration1078 aplicada/validada em staging após
+ensaio isolado e backup. Produção BLOCKED por quota Neon HTTP402; nenhuma escrita
+nessa base. Último deploy automático do backend de produção update_failed pelo
+mesmo erro. Smokes HTTP inconclusivos por timeout; jornada autenticada não rodada.
+[Evidências, testes e retomada](../docs/governance/EVIDENCIAS_ROLLOUT_FOOD04_2026-10-24.md).
+A autorização operacional desta sessão supera os limites históricos do plano,
+mas não permite declarar rollout de produção concluído nem alterar cobrança.
