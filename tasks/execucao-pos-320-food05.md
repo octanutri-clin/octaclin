@@ -40,3 +40,13 @@ T03 focais47/47 PASS (4 suites), com casos energia/macros/base diferente,
 zero/ausente, resíduos/edição, limites/avisos, simulação350→300 e comparação
 com4000 casos independentes no motor. RED inicial por funções/módulo ausentes.
 Nova política decimal é aditiva no motor; defaults legados não mudaram.
+
+T04 prévia focada9/9 PASS. RED por serviço ausente, depois fonte real/preparo/base,
+composição de catálogo manipulada ignorada, papel/permissão/tenant/carteira,
+revisão vencida e resultado parcial por alternativa verificados. Nenhum save no
+harness de leitura. Rotas/provider ainda não registrados; sem superfície liberada.
+Ruling: não acrescentar campos à composição canônica de grupos antigos apenas
+para preparo — FOOD04 compara snapshots JSON e isso invalidaria referências
+legítimas. O resolver FOOD05 enriquece a sua própria projeção autorizada, mantendo
+origem/base originais e contratos de grupo intactos. Custo: leitura adicional da
+origem sob o lock já obtido, deduplicável por pedido; sem alterar biblioteca.
