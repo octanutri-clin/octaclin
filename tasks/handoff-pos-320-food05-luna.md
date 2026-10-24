@@ -69,14 +69,18 @@ no registro de execução. Isso não encerra os itens completos nem os gates.
    e desvinculação explícita que mantém a porção. Testes sintéticos desktop/mobile
    cobrem esses fluxos. Ainda falta segurança contra o estado da projeção indisponível
    em outras telas/versões e a revisão completa de regressão/contrato.
-   T07/cópias entre planos/modelos continua bloqueado: **não transportar contexto
-   interno como capability e não remover FOOD05 silenciosamente na cópia**. O GET
-   publicado expõe fatos/projeção, mas não fornece relação estável entre `chaveCliente`
-   e IDs relacionais de alternativa para remapear um snapshot com segurança. Modelos
-   também não têm contrato para guardar essa proveniência. Precisamos de contrato
-   server-side de origem/destino autorizados, remapeamento de identidades e testes;
-   manter a cópia bloqueada para versões FOOD05 até isso existir. Não marcar T07/T13
-   completos nem permitir merge enquanto a perda silenciosa ainda for possível.
+   T07 agora preserva FOOD05 em cópias de refeição/plano salvo: o cliente transmite
+   apenas paciente/plano/versão e chaves editoriais; o backend revalida autorização
+   da origem, resolve snapshots cifrados (rascunho ou publicação), remapeia as chaves,
+   gera nova identidade e conserva o cálculo como `revisao_pendente`. Testes cobrem
+   origem sem acesso, cópia de rascunho/publicada, remapeamento e não liberação.
+   Gravar/aplicar como modelo segue bloqueado: o modelo não tem aplicação server-side
+   que preserve a proveniência sem expor IDs de pacientes a usuários da clínica.
+   Projetar esse contrato antes de remover o bloqueio. T07/T13 permanecem abertos.
+   Evidência local atualizada: serviço129/129 PASS; focais FOOD05 30 PASS; BFF62/62;
+   helpers de cópia14/14; PG descartável7 PASS/67 SKIPPED (sem vector/Timescale);
+   Playwright de cópia + bloqueio de modelo Desktop2/2 e Mobile2/2; build,
+   typecheck e lint focado executados. R4 independente e CI do novo HEAD ainda faltam.
 5. T14 matriz PostgreSQL completa, regressões FOOD04 e CI; prova local atual é
    parcial. T15–T18 regressões/acessibilidade/segurança completa, revisão distinta,
    governança/CI e entrega.

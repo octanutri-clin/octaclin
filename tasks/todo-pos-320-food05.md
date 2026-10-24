@@ -13,7 +13,7 @@ FE = `octaclin-web/`. Novos nomes são propostas, não arquivos criados nesta ro
 | --- | --- |
 | T01–T05 | Fundamentos implementados e verificações focadas PASS; fechamento integrado ainda depende dos gates finais |
 | T06 | Motor, writer/ACK, revisão e snapshots implementados; suites focadas PASS, conclusão funcional ainda vinculada às cópias e regressões finais |
-| T07 | Marcador profissional mínimo e bloqueio contra perda silenciosa implementados; transporte seguro de proveniência nas cópias continua BLOCKED |
+| T07 | Cópia entre refeições/planos salvos usa referências opacas e revalidação server-side; modelo continua bloqueado. T07 não concluído |
 | T08 | Preferências e migration 1079 implementadas; CAS/RLS/JSON exercitados no PostgreSQL de CI |
 | T09 | Backend, BFF, cliente tipado e integração principal com a UI implementados; verificações Web passam |
 | T10–T13 | Implementação parcial integrada; focados FOOD05/PA07 passam, critérios completos e cópias ainda pendentes |
@@ -131,19 +131,27 @@ Modificar BE `aplicacao/origens-grupos-materializadas.ts`,
 `servico-planos-alimentares.ts` e `servico-modelos-plano-alimentar.ts`/specs.
 Adicionar `projecao-equivalencias-profissional.ts`/spec.
 
-Checkpoint parcial: a resposta profissional de versão inclui somente o booleano
-`equivalenciaAplicada` para alternativas ainda vinculadas, calculado do snapshot
-cifrado. Cópia de refeição publicada/local, duplicação de plano e gravação do plano
-como modelo recusam remover essa proveniência silenciosamente. Isso previne perda,
-mas não implementa cópia: falta destino que armazene proveniência FOOD05 e remapeamento
-server-side seguro. Contexto cifrado e fingerprints nunca devem ser enviados como
-capability pelo browser. T07 permanece aberto.
+Checkpoint parcial: a projeção profissional de versão inclui `equivalenciaAplicada`
+e as chaves editoriais estáveis, nunca um contexto de cálculo como capability.
+Copiar refeição salva ou plano salvo envia referências de origem/destino; o backend
+revalida profissional, paciente, plano e versão dentro da transação, lê contexto
+cifrado (ou snapshot materializado publicado), remapeia identidades e marca a nova
+aplicação para revisão. A UI não confirma essa intenção até ACK e remove o envelope
+de transporte ao reconciliar o salvamento. Duplicação local sem referência verificada
+continua falhando fechada.
 
-- [ ] RED: novo metadata aninhado aparece no portal/PDF; clone sem envelope perde
-  fatos; fonte/grupo arquivado muda histórico; cópia vira capability de origem.
-- [ ] GREEN: allowlists explícitas para catálogo/custom/manual, DTO profissional
-  separado, contexto interno cifrado, remap de chaves autorizado; novo paciente
-  exige acesso à origem/destino sem carregar identidade anterior como permissão.
+Persistir/aplicar equivalência em modelo permanece bloqueado: modelos são compartilhados
+na clínica e não podem expor IDs de paciente de origem aos demais profissionais; o
+fluxo atual devolve refeições ao browser antes de salvar o plano. Exige aplicação
+server-side com autorização de modelo e da origem, sem retornar o contexto cifrado.
+Não remover esse bloqueio nem marcar T07 completo antes desse contrato e testes.
+
+- [ ] RED/GREEN: projeção profissional mantém chaves/referências fora do portal/PDF;
+  cópia de rascunho/publicação, autorização atual, remapeamento e revisão pendente
+  têm testes focados. As suítes já existentes de projeção/portal devem continuar.
+- [ ] RED/GREEN: aplicação por modelo executa inteiramente server-side, verifica
+  acesso ao modelo e origem, remapeia chaves e nunca devolve IDs/contexts da origem
+  clínica ao navegador; sem esse contrato, manter bloqueio explícito.
 - [ ] Comando: Jest `projecao-composicao projecao-equivalencias-profissional servico-modelos-plano-alimentar servico-planos-alimentares`.
 
 ### T08 — preferências pessoais e migration mínima

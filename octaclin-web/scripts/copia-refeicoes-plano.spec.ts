@@ -32,10 +32,31 @@ test('FOOD04 cópia factual entre planos não transplanta a autoridade do grupo'
   assert.equal(referencia.revisao, 1);
 });
 
-test('FOOD05 cópia de refeição publicada recusa perder proveniência do cálculo', () => {
+test('FOOD05 cópia de refeição salva exige e preserva referência opaca para revalidação no servidor', () => {
   const origem = refeicaoApi();
   origem.itens[0].substituicoes[0].equivalenciaAplicada = true;
-  assert.throws(() => copiarRefeicaoParaFormulario(origem, gerarChave), /equivalência FOOD05.*proveniência/i);
+  origem.itens[0].substituicoes[0].referenciaEquivalencia = { itemChave: 'orig-item', alternativaChave: 'orig-alt' };
+  assert.throws(() => copiarRefeicaoParaFormulario(origem, gerarChave), /sem referência de origem verificável/i);
+  const copia = copiarRefeicaoParaFormulario(origem, gerarChave, {
+    pacienteId: '10000000-0000-4000-8000-000000000001',
+    planoId: '10000000-0000-4000-8000-000000000002',
+    numeroVersao: 4
+  });
+  const item = copia.itens[0];
+  const alternativa = item.substituicoes[0];
+  assert.equal(alternativa.provenienciaEquivalencia, true);
+  assert.deepEqual(alternativa.origemCopiaEquivalencia, {
+    pacienteOrigemId: '10000000-0000-4000-8000-000000000001',
+    planoOrigemId: '10000000-0000-4000-8000-000000000002',
+    numeroVersaoOrigem: 4,
+    itemChaveOrigem: 'orig-item',
+    alternativaChaveOrigem: 'orig-alt'
+  });
+  const acrescentada = acrescentarItensDeRefeicao(refeicaoFormulario('alvo'), copia.itens, gerarChave);
+  const alternativaRemapeada = acrescentada.itens[1].substituicoes[0];
+  assert.notEqual(alternativaRemapeada.chaveCliente, alternativa.chaveCliente);
+  assert.equal(alternativaRemapeada.origemCopiaEquivalencia?.alternativaChaveOrigem, 'orig-alt');
+  assert.equal(alternativaRemapeada.provenienciaEquivalencia, true);
 });
 
 test('FOOD05 duplicação local recusa converter equivalência calculada em alternativa manual', () => {

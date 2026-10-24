@@ -187,6 +187,8 @@ export interface AlternativaPlanoAlimentarApi extends SubstituicaoPlanoAlimentar
   preferida: boolean;
   /** Indicador restrito à projeção profissional; não contém o snapshot/contexto do cálculo. */
   equivalenciaAplicada?: boolean;
+  /** Chaves editoriais necessárias para pedir cópia ao backend; não são autorização. */
+  referenciaEquivalencia?: { itemChave: string; alternativaChave: string };
 }
 
 export interface ItemPlanoAlimentarApi extends SubstituicaoPlanoAlimentarApi {

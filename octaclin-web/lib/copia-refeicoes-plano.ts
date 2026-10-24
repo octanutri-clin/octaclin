@@ -23,6 +23,13 @@ export interface AlternativaFormularioCopia extends AlimentoFormularioCopia {
   liberadaParaPaciente: boolean;
   preferida: boolean;
   provenienciaEquivalencia?: true;
+  origemCopiaEquivalencia?: {
+    pacienteOrigemId: string;
+    planoOrigemId: string;
+    numeroVersaoOrigem: number;
+    itemChaveOrigem: string;
+    alternativaChaveOrigem: string;
+  };
 }
 
 export interface ItemFormularioCopia extends AlimentoFormularioCopia {
@@ -51,6 +58,7 @@ export interface AlternativaFormularioCopiaFonte extends AlimentoFormularioCopia
   preferida: boolean;
   provenienciaEquivalencia?: true;
   equivalencia?: IntencaoEquivalenciaEdicao;
+  origemCopiaEquivalencia?: AlternativaFormularioCopia['origemCopiaEquivalencia'];
 }
 
 export interface ItemFormularioCopiaFonte extends AlimentoFormularioCopiaFonte {
@@ -105,24 +113,32 @@ function copiarItemFormulario(item: ItemFormularioCopiaFonte, gerarChave: GerarC
   if (item.substituicoes.length > LIMITE_SUBSTITUICOES_ITEM) {
     throw new Error(`A refeição excede o limite de ${LIMITE_SUBSTITUICOES_ITEM} substituições por alimento.`);
   }
-  if (item.substituicoes.some((substituicao) => substituicao.provenienciaEquivalencia === true || substituicao.equivalencia !== undefined)) {
+  if (item.substituicoes.some((substituicao) => (substituicao.provenienciaEquivalencia === true && !substituicao.origemCopiaEquivalencia) || substituicao.equivalencia !== undefined)) {
     throw new Error('Esta refeição contém equivalência FOOD05. A cópia está bloqueada até preservar a proveniência do cálculo.');
   }
   const base = copiarAlimento(item, gerarChave);
   return {
     ...base,
-    substituicoes: item.substituicoes.map((substituicao) => ({
-      ...copiarAlimento(substituicao, gerarChave),
-      liberadaParaPaciente: substituicao.liberadaParaPaciente,
-      preferida: substituicao.preferida
-    })),
+    substituicoes: item.substituicoes.map((substituicao) => {
+      const alternativa = copiarAlimento(substituicao, gerarChave);
+      return {
+        ...alternativa,
+        liberadaParaPaciente: substituicao.liberadaParaPaciente,
+        preferida: substituicao.preferida,
+        ...(substituicao.origemCopiaEquivalencia ? {
+          provenienciaEquivalencia: true as const,
+          origemCopiaEquivalencia: { ...substituicao.origemCopiaEquivalencia }
+        } : {})
+      };
+    }),
     substituicoesVisiveisInicialmente: interpretarNumeroEdicao(item.substituicoesVisiveisInicialmente)
   };
 }
 
 export function copiarRefeicaoParaFormulario(
   refeicao: RefeicaoPlanoAlimentarApi,
-  gerarChave: GerarChaveCopia
+  gerarChave: GerarChaveCopia,
+  origem?: { pacienteId: string; planoId: string; numeroVersao: number }
 ): RefeicaoFormularioCopia {
   if (refeicao.itens.length > LIMITE_ITENS_REFEICAO) {
     throw new Error(`A refeição excede o limite de ${LIMITE_ITENS_REFEICAO} alimentos.`);
@@ -145,13 +161,14 @@ export function copiarRefeicaoParaFormulario(
     if ((item.substituicoes?.length ?? 0) > LIMITE_SUBSTITUICOES_ITEM) {
       throw new Error(`A refeição excede o limite de ${LIMITE_SUBSTITUICOES_ITEM} substituições por alimento.`);
     }
-    if (item.substituicoes?.some((substituicao) => substituicao.equivalenciaAplicada === true)) {
-      throw new Error('Esta refeição contém equivalência FOOD05. A cópia está bloqueada até preservar a proveniência do cálculo.');
-    }
+    const itemDestinoChave = gerarChave('alimento');
     return {
       ...base,
-      chaveCliente: gerarChave('alimento'),
+      chaveCliente: itemDestinoChave,
       substituicoes: (item.substituicoes ?? []).map((substituicao) => {
+        if (substituicao.equivalenciaAplicada && (!origem || !substituicao.referenciaEquivalencia?.itemChave || !substituicao.referenciaEquivalencia.alternativaChave)) {
+          throw new Error('Esta refeição contém equivalência FOOD05 sem referência de origem verificável; a cópia foi cancelada.');
+        }
         const substituicaoBase: AlimentoFormularioCopia = {
           chaveCliente: '',
           alimentoComposicaoId: substituicao.alimentoComposicaoId,
@@ -165,11 +182,22 @@ export function copiarRefeicaoParaFormulario(
             ? `${substituicao.composicaoSnapshot.fonte.nome} - ${substituicao.composicaoSnapshot.fonte.versao}`
             : undefined
         };
+        const alternativaDestinoChave = gerarChave('alimento');
         return {
           ...substituicaoBase,
-          chaveCliente: gerarChave('alimento'),
+          chaveCliente: alternativaDestinoChave,
           liberadaParaPaciente: substituicao.liberadaParaPaciente === true,
-          preferida: substituicao.preferida === true
+          preferida: substituicao.preferida === true,
+          ...(substituicao.equivalenciaAplicada && origem && substituicao.referenciaEquivalencia ? {
+            provenienciaEquivalencia: true as const,
+            origemCopiaEquivalencia: {
+              pacienteOrigemId: origem.pacienteId,
+              planoOrigemId: origem.planoId,
+              numeroVersaoOrigem: origem.numeroVersao,
+              itemChaveOrigem: substituicao.referenciaEquivalencia.itemChave,
+              alternativaChaveOrigem: substituicao.referenciaEquivalencia.alternativaChave
+            }
+          } : {})
         };
       }),
       substituicoesVisiveisInicialmente: interpretarNumeroEdicao(item.substituicoesVisiveisInicialmente)

@@ -1,5 +1,5 @@
 import { ServicoEquivalenciasPlano } from './servico-equivalencias-plano';
-import { resolverEquivalenciasDocumento, assinaturaDependenciasEquivalencia, ContextoEquivalencia, ContextosEquivalencias, validarContextosEquivalencias, ConflitoEquivalenciaEdicao } from './resolver-equivalencias-edicao';
+import { clonarContextoEquivalenciaParaCopia, resolverEquivalenciasDocumento, assinaturaDependenciasEquivalencia, ContextoEquivalencia, ContextosEquivalencias, validarContextosEquivalencias, ConflitoEquivalenciaEdicao } from './resolver-equivalencias-edicao';
 import { projetarEquivalenciasProfissional } from './projecao-equivalencias-profissional';
 import { resolverFatosEquivalencia, FatosPreservadosEquivalencia, identidadeFatoEquivalencia } from './fatos-equivalencia-plano';
 import { FatosComposicaoEquivalencia } from '../dominio/equivalencia-nutriente';
@@ -67,7 +67,7 @@ import { lerApresentacaoVersao, validarPreferenciasApresentacao, projetarRefeico
 import { projetarResumoNutricionalPlano, ResumoNutricionalPlano, resumirNutrientesItensEfetivos } from '../dominio/resumo-nutricional-plano';
 import { AliasIdentidadeRefeicao, lerIdentidadesRefeicoes, prepararIdentidadesRefeicoes } from '../dominio/identidades-refeicoes';
 import { DocumentoEdicaoPlano, validarDocumentoEdicaoPlano } from '../dominio/edicao-plano';
-import { converterEdicaoParaRascunho, PrecondicaoEdicaoPlanoDto, SalvarEdicaoPlanoDto } from './dtos-edicao-plano';
+import { converterEdicaoParaRascunho, PrecondicaoEdicaoPlanoDto, ReferenciaCopiaEquivalenciaDto, SalvarEdicaoPlanoDto } from './dtos-edicao-plano';
 import { AlimentoComposicaoOrm } from '../infraestrutura/alimento-composicao.orm';
 import { FavoritoAlimentoOrm } from '../infraestrutura/favorito-alimento.orm';
 import { FonteComposicaoAlimentoOrm } from '../infraestrutura/fonte-composicao-alimento.orm';
@@ -772,7 +772,7 @@ export class ServicoPlanosAlimentares {
           if(!anterior)throw new BadRequestException('Novas alternativas de equivalência começam sem liberação ou preferência. Configure após confirmar.');
         }
       }
-      const equivalenciasAnteriores=this.lerContextosEquivalencias(rascunho);
+      const equivalenciasAnteriores=await this.resolverCopiasEquivalencia(gerenciador,tenantId,pacienteId,plano,rascunho,usuario,documento,dados.copiasEquivalencia);
       const catalogosAnteriores = rascunho.edicaoSnapshotCriptografado
         ? lerSnapshotEdicaoGrupos(this.lerJsonCriptografado(rascunho.edicaoSnapshotCriptografado)).catalogos : {};
       const materializadas=anteriorEdicao?{anteriores:{},custom:{},catalogo:{}}:await lerOrigensMaterializadas(gerenciador,tenantId,rascunho.id,documento,this.criptografia);
@@ -916,6 +916,11 @@ export class ServicoPlanosAlimentares {
       rascunho.revisadaPorUsuarioId = null;
       rascunho.hashConteudo = null;
       await gerenciador.getRepository(PlanoAlimentarVersaoOrm).save(rascunho);
+      if(dados.copiasEquivalencia?.length)await registrarAuditoriaNaTransacao(gerenciador,{
+        tenantId,usuarioId:usuario.usuarioId,acao:'planos_alimentares.equivalencia_copiar',
+        recursoTipo:'plano_alimentar_versao',recursoId:rascunho.id,
+        metadados:{quantidadeEquivalencias:dados.copiasEquivalencia.length,versaoDestino:rascunho.numero}
+      });
       return this.montarVersao(gerenciador, rascunho, true);
     });
   }
@@ -923,6 +928,69 @@ export class ServicoPlanosAlimentares {
   private lerContextosEquivalencias(versao:PlanoAlimentarVersaoOrm):ContextosEquivalencias {
     if(!versao.edicaoSnapshotCriptografado)return {};
     try{return lerSnapshotEdicaoGrupos(this.lerJsonCriptografado(versao.edicaoSnapshotCriptografado)).equivalencias??{};}catch{throw new ConflictException('Contexto de equivalência indisponível.');}
+  }
+
+  private async lerContextosEquivalenciasMaterializadas(gerenciador:EntityManager,versao:PlanoAlimentarVersaoOrm):Promise<ContextosEquivalencias>{
+    const refeicoes=await gerenciador.getRepository(PlanoAlimentarRefeicaoOrm).find({where:{tenantId:versao.tenantId,versaoId:versao.id}});
+    if(!refeicoes.length)return Object.create(null);
+    const itens=await gerenciador.getRepository(PlanoAlimentarItemOrm).find({where:{tenantId:versao.tenantId,refeicaoId:In(refeicoes.map(r=>r.id))}});
+    if(!itens.length)return Object.create(null);
+    const linhas=await gerenciador.getRepository(PlanoAlimentarSubstituicaoOrm).find({where:{tenantId:versao.tenantId,itemId:In(itens.map(i=>i.id))}});
+    const contextos:ContextosEquivalencias=Object.create(null);
+    for(const linha of linhas){
+      const contexto=this.lerJsonCriptografado<SnapshotComposicao>(linha.composicaoSnapshotCriptografada).equivalencia;
+      if(!contexto)continue;
+      if(Object.hasOwn(contextos,contexto.alternativaChave))throw new ConflictException('A versão de origem contém referências FOOD05 duplicadas.');
+      contextos[contexto.alternativaChave]=contexto;
+    }
+    return validarContextosEquivalencias(contextos);
+  }
+
+  private async resolverCopiasEquivalencia(
+    gerenciador:EntityManager,tenantId:string,pacienteDestinoId:string,planoDestino:PlanoAlimentarOrm,
+    versaoDestino:PlanoAlimentarVersaoOrm,usuario:UsuarioAutenticado,documento:DocumentoEdicaoPlano,
+    referencias:ReferenciaCopiaEquivalenciaDto[]|undefined
+  ):Promise<ContextosEquivalencias>{
+    const atuais=this.lerContextosEquivalencias(versaoDestino);
+    if(!referencias?.length)return atuais;
+    const profissionalId=await resolverProfissionalIdDoUsuario(gerenciador,tenantId,usuario);
+    if(usuario.papel!=='Professional'||!profissionalId)throw new ForbiddenException('Cópia de equivalência exige profissional vinculado.');
+    const copiadaPor={usuarioId:usuario.usuarioId,profissionalId},usos=new Set<string>(),versoes=new Map<string,{versao:PlanoAlimentarVersaoOrm;documento?:DocumentoEdicaoPlano;contextos:ContextosEquivalencias}>();
+    const porChaveDestino=new Map<string,{item:DocumentoEdicaoPlano['refeicoes'][number]['itens'][number];alternativa:NonNullable<DocumentoEdicaoPlano['refeicoes'][number]['itens'][number]['substituicoes']>[number]}>();
+    for(const refeicao of documento.refeicoes)for(const item of refeicao.itens)for(const alternativa of item.substituicoes??[])porChaveDestino.set(alternativa.chaveCliente,{item,alternativa});
+    const resultado:ContextosEquivalencias=Object.assign(Object.create(null),atuais);
+    for(const referencia of referencias){
+      const chave=referencia.alternativaChaveDestino,alvo=porChaveDestino.get(chave);
+      if(!alvo||alvo.item.chaveCliente!==referencia.itemChaveDestino||atuais[chave]||alvo.alternativa.equivalencia||Object.hasOwn(resultado,chave)||usos.has(chave))throw new ConflictException('A cópia não corresponde ao rascunho atual. Recarregue e tente novamente.');
+      usos.add(chave);
+      const cache=`${referencia.pacienteOrigemId}:${referencia.planoOrigemId}:${referencia.numeroVersaoOrigem}`;
+      let fonte=versoes.get(cache);
+      if(!fonte){
+        await this.obterPlanoNoEscopo(gerenciador,tenantId,referencia.pacienteOrigemId,referencia.planoOrigemId,usuario,'pessimistic_read');
+        const versao=await gerenciador.getRepository(PlanoAlimentarVersaoOrm).findOne({where:{tenantId,planoId:referencia.planoOrigemId,numero:referencia.numeroVersaoOrigem},lock:{mode:'pessimistic_read'}});
+        if(!versao||versao.descartadaEm)throw new ConflictException('A versão de origem não está disponível para cópia.');
+        if(versao.publicadaEm){
+          fonte={versao,contextos:await this.lerContextosEquivalenciasMaterializadas(gerenciador,versao)};
+        }else{
+          const leitura=this.lerEdicao(versao);
+          if(!leitura.documentoEdicao||leitura.edicaoEstado==='indisponivel')throw new ConflictException('A proveniência de equivalência da origem não está disponível.');
+          fonte={versao,documento:leitura.documentoEdicao,contextos:this.lerContextosEquivalencias(versao)};
+        }
+        versoes.set(cache,fonte);
+      }
+      const contexto=fonte.contextos[referencia.alternativaChaveOrigem];
+      const alternativaOrigem=fonte.documento?.refeicoes.flatMap(r=>r.itens).find(i=>i.chaveCliente===referencia.itemChaveOrigem)?.substituicoes?.find(a=>a.chaveCliente===referencia.alternativaChaveOrigem);
+      if(!contexto||contexto.itemChave!==referencia.itemChaveOrigem||contexto.alternativaChave!==referencia.alternativaChaveOrigem
+        ||(!fonte.versao.publicadaEm&&(!alternativaOrigem?.equivalencia||'acao'in alternativaOrigem.equivalencia||alternativaOrigem.equivalencia.aplicacaoId!==contexto.aplicacaoId)))throw new ConflictException('A equivalência da origem mudou ou não está vinculada a essa alternativa. Carregue a origem novamente.');
+      let copiado:ContextoEquivalencia;
+      try{copiado=clonarContextoEquivalenciaParaCopia(contexto,
+        {pacienteId:referencia.pacienteOrigemId,planoId:referencia.planoOrigemId,versaoId:fonte.versao.id},
+        {pacienteId:pacienteDestinoId,planoId:planoDestino.id,versaoId:versaoDestino.id,itemChave:referencia.itemChaveDestino,alternativaChave:referencia.alternativaChaveDestino},
+        copiadaPor,new Date().toISOString());}
+      catch(erro){if(erro instanceof ConflitoEquivalenciaEdicao)throw new ConflictException(erro.message);throw erro;}
+      resultado[chave]=copiado;
+    }
+    return validarContextosEquivalencias(resultado);
   }
   private garantirEquivalenciasRevisadas(versao:PlanoAlimentarVersaoOrm):void {
     if(Object.values(this.lerContextosEquivalencias(versao)).some(c=>c.estado==='revisao_pendente'))throw new BadRequestException('Equivalência com revisão pendente: recalcular ou manter como manual antes de publicar.');
@@ -2325,7 +2393,13 @@ export class ServicoPlanosAlimentares {
                   unidade: substituicao.unidade,
                   porcaoGramas: Number(substituicao.porcaoGramas),
                   composicaoSnapshot: projetarComposicao(snapshot),
-                  ...(incluirEquivalencias && equivalenciaAtiva ? { equivalenciaAplicada: true } : {}),
+                  ...(incluirEquivalencias && equivalenciaAtiva ? {
+                    equivalenciaAplicada: true,
+                    ...(snapshot.equivalencia ? { referenciaEquivalencia: {
+                      itemChave: snapshot.equivalencia.itemChave,
+                      alternativaChave: snapshot.equivalencia.alternativaChave
+                    } } : {})
+                  } : {}),
                   liberadaParaPaciente: substituicao.liberadaParaPaciente,
                   preferida: substituicao.preferida
                 };

@@ -1,5 +1,5 @@
 import { randomUUID } from 'crypto';
-import { resolverEquivalenciasDocumento, ContextosEquivalencias, assinaturaDependenciasEquivalencia } from './resolver-equivalencias-edicao';
+import { clonarContextoEquivalenciaParaCopia, resolverEquivalenciasDocumento, ContextosEquivalencias, assinaturaDependenciasEquivalencia } from './resolver-equivalencias-edicao';
 import { calcularEquivalencia, FatosComposicaoEquivalencia } from '../dominio/equivalencia-nutriente';
 import { DocumentoEdicaoPlano } from '../dominio/edicao-plano';
 const fp='a'.repeat(64),ator={usuarioId:randomUUID(),profissionalId:randomUUID()};
@@ -11,6 +11,23 @@ const comando=(acao='calcular',anteriorAplicacaoId?:string)=>({acao,aplicacaoId:
 function callbacks(){let calculos=0;return {ator,prever:async(d:DocumentoEdicaoPlano,i:any,a:any,c:any)=>{calculos++;const p=fatos(i),alternativa=fatos(a);return {fingerprint:fp,principal:p,alternativa,resultado:calcularEquivalencia({principal:p,alternativa,porcaoPrincipalGramas:String(i.porcaoGramas),porcaoEfetiva:c.porcaoEfetiva,nutriente:c.nutriente,politica:c.politica})};},dependencias:async(i:any,a:any,c:any)=>assinaturaDependenciasEquivalencia(i,a,fatos(i),fatos(a),c.nutriente,c.politica),quantidade:()=>calculos};}
 async function inicial(){const d=documento(),c=comando();alt(d).equivalencia=c;const cb=callbacks();const contextos=await resolverEquivalenciasDocumento(d,{},cb);return {d,c,cb,contextos};}
 describe('FOOD05 ciclo comando ACK referência e revisão pendente',()=>{
+ it('copia proveniência no servidor com identidade nova, linhagem e chaves remapeadas sem alterar a origem',async()=>{
+  const a=await inicial(),origem=clone(a.contextos.a),copiadoPor={usuarioId:randomUUID(),profissionalId:randomUUID()};
+  const copia=clonarContextoEquivalenciaParaCopia(origem,{pacienteId:randomUUID(),planoId:randomUUID(),versaoId:randomUUID()},{pacienteId:randomUUID(),planoId:randomUUID(),versaoId:randomUUID(),itemChave:'item-destino',alternativaChave:'alternativa-destino'},copiadoPor,'2026-10-24T12:00:00.000Z');
+  expect(copia.aplicacaoId).not.toBe(origem.aplicacaoId);
+  expect(copia).toMatchObject({itemChave:'item-destino',alternativaChave:'alternativa-destino',estado:'calculada_revisada',ator:origem.ator,copiaOrigem:{aplicacaoId:origem.aplicacaoId,pacienteId:expect.any(String),planoId:expect.any(String),versaoId:expect.any(String),itemChave:origem.itemChave,alternativaChave:origem.alternativaChave,copiadaPor:copiadoPor,copiadaEm:'2026-10-24T12:00:00.000Z'}});
+  expect(copia.fingerprintResolucao).not.toBe(origem.fingerprintResolucao);
+  expect(JSON.stringify(origem)).toBe(JSON.stringify(a.contextos.a));
+ });
+ it('salva cópia reidentificada pelo fluxo normal sem recalcular nem apagar a linhagem',async()=>{
+  const a=await inicial(),origem=clone(a.contextos.a),copiadoPor={usuarioId:randomUUID(),profissionalId:randomUUID()};
+  const copia=clonarContextoEquivalenciaParaCopia(origem,{pacienteId:randomUUID(),planoId:randomUUID(),versaoId:randomUUID()},{pacienteId:randomUUID(),planoId:randomUUID(),versaoId:randomUUID(),itemChave:'item-destino',alternativaChave:'alternativa-destino'},copiadoPor,'2026-10-24T12:00:00.000Z');
+  const destino=clone(a.d);principal(destino).chaveCliente='item-destino';alt(destino).chaveCliente='alternativa-destino';delete alt(destino).equivalencia;
+  const cb=callbacks(),resolvidos=await resolverEquivalenciasDocumento(destino,{[copia.alternativaChave]:copia},cb);
+  expect(alt(destino).equivalencia).toEqual({aplicacaoId:copia.aplicacaoId});
+  expect(resolvidos['alternativa-destino']).toMatchObject({estado:'revisao_pendente',copiaOrigem:copia.copiaOrigem});
+  expect(cb.quantidade()).toBe(0);
+ });
  it('consome comando e devolve referência no documento canônico',async()=>{const a=await inicial();expect(alt(a.d).equivalencia).toEqual({aplicacaoId:a.c.aplicacaoId});expect(a.contextos.a).toMatchObject({aplicacaoId:a.c.aplicacaoId,itemChave:'p',alternativaChave:'a',estado:'calculada_revisada',ator});expect(a.cb.quantidade()).toBe(1);});
  it('autosave com referência não calcula novamente e não altera porção',async()=>{const a=await inicial();const r=await resolverEquivalenciasDocumento(a.d,a.contextos,a.cb);expect(r.a.estado).toBe('calculada_revisada');expect(alt(a.d).porcaoGramas).toBe('100');expect(a.cb.quantidade()).toBe(1);});
  it('mudança do principal marca pendente sem mudar alternativa; pendência salva é aderente',async()=>{const a=await inicial();principal(a.d).porcaoGramas='200';let r=await resolverEquivalenciasDocumento(a.d,a.contextos,a.cb);expect(r.a.estado).toBe('revisao_pendente');expect(alt(a.d).porcaoGramas).toBe('100');principal(a.d).porcaoGramas='100';r=await resolverEquivalenciasDocumento(a.d,r,a.cb);expect(r.a.estado).toBe('revisao_pendente');expect(a.cb.quantidade()).toBe(1);});

@@ -30,6 +30,13 @@ describe('PA06 DTO de edição parcial', () => {
   it('aceita incompletude editorial sem validar como prescrição clínica', async () => {
     expect(await erros(entrada())).toHaveLength(0);
   });
+  it('aceita referências fechadas de cópia e rejeita IDs/identidades manipulados ou extras', async () => {
+    const copia={pacienteOrigemId:id,planoOrigemId:id,numeroVersaoOrigem:1,itemChaveOrigem:'item-origem',alternativaChaveOrigem:'alternativa-origem',itemChaveDestino:'item-destino',alternativaChaveDestino:'alternativa-destino'};
+    expect(await erros({...entrada(),copiasEquivalencia:[copia]})).toHaveLength(0);
+    expect((await erros({...entrada(),copiasEquivalencia:[{...copia,tenantId:id}]})).length).toBeGreaterThan(0);
+    expect((await erros({...entrada(),copiasEquivalencia:[{...copia,pacienteOrigemId:'invalido'}]})).length).toBeGreaterThan(0);
+    expect((await erros({...entrada(),copiasEquivalencia:Array(201).fill(copia)})).length).toBeGreaterThan(0);
+  });
   it.each([{}, { ...entrada(), tenantId: id }, { ...entrada(), rascunhoIdEsperado: 'x' },
     { ...entrada(), rascunhoRevisaoEsperada: '0' }, { ...entrada(), rascunhoRevisaoEsperada: -1 },
     { ...entrada(), rascunhoRevisaoEsperada: 2147483647 }, { ...entrada(), documento: null },

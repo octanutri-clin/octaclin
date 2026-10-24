@@ -107,7 +107,20 @@ export interface DocumentoEdicaoPlano {
   refeicoes: RefeicaoEdicao[];
 }
 
-export interface SalvarEdicaoPlanoEntrada extends PrecondicaoEdicaoPlano { documento: DocumentoEdicaoPlano }
+export interface ReferenciaCopiaEquivalenciaEdicao {
+  pacienteOrigemId: string;
+  planoOrigemId: string;
+  numeroVersaoOrigem: number;
+  itemChaveOrigem: string;
+  alternativaChaveOrigem: string;
+  itemChaveDestino: string;
+  alternativaChaveDestino: string;
+}
+
+export interface SalvarEdicaoPlanoEntrada extends PrecondicaoEdicaoPlano {
+  documento: DocumentoEdicaoPlano;
+  copiasEquivalencia?: ReferenciaCopiaEquivalenciaEdicao[];
+}
 
 /** Limite do documento; o envelope HTTP inteiro continua limitado a 100KiB. */
 export const LIMITE_BYTES_DOCUMENTO_EDICAO = 96 * 1024;

@@ -106,6 +106,47 @@ Marcador por filho:1 RED comprovou que FOOD05 ainda dizia motor1; corrigido para
 nutricao-decimal-v1 somente nos filhos FOOD05, sem trocar motor global legado.
 Repetição consolidada em t07-final-green.log.
 
+T07 retomada (24/10): novo ciclo RED/GREEN para cópia FOOD05 de refeição/plano
+salvo. DTO fechado aceita apenas referências (IDs de origem, versão e chaves editoriais),
+limitadas a200. O browser não recebe nem envia fatos, hashes, contexto cifrado ou
+capability. Backend exige papel/profissional atual, revalida acesso ao plano de origem
+no mesmo tenant e lock transacional, confere contexto cifrado e associação origem↔chave,
+gera nova aplicação/chaves, registra autoria/linhagem cifrada e mantém estado pendente.
+Auditoria registra somente contagem/versão destino. Rascunho e snapshot materializado
+publicado têm resoluções separadas; publicação não depende de snapshot editorial apagado.
+Origem inacessível é recusada antes de persistir; replay da referência na chave destino
+é conflito porque já existe contexto.
+
+RED: helper/DTO ausentes inicialmente; depois teste do service sem remapeamento falhou
+por não retornar contexto no destino. Após implementação, backend focused `FOOD05`
+30 PASS (DTO, resolver, serviço), inclusive origem inacessível e cópia de versão
+publicada. Web `test:copia-refeicoes` 14/14 PASS; TypeScript Web `tsc --noEmit` PASS;
+backend build/artefato PASS; BFF de planos 62/62 PASS. Validado localmente em
+24/10/2026, sem dados de pacientes e sem banco externo.
+
+Playwright da cópia: Desktop Chromium 2/2 PASS e Mobile Chromium 2/2 PASS para
+cópia FOOD05 de versão publicada e recusa explícita de salvar como modelo. Um
+primeiro comando Playwright não iniciou o editor porque o Turbopack do worktree
+detectou symlink de node_modules fora do root; o teste foi repetido com servidor
+local Webpack reutilizado. Outra tentativa usou 127.0.0.1, incompatível com os
+cookies da fixture localhost; repetição em localhost PASS. Não foram defeitos
+funcionais.
+
+PostgreSQL/RLS sintético: adicionada prova que publica a origem, copia para novo
+rascunho, verifica nova aplicação pendente e lineage cifrada, revoga o profissional
+e confirma 404/rollback para nova cópia. O Testcontainers de imagem
+`timescale/timescaledb-ha:pg15` não iniciou nesta execução (daemon retornou 404,
+imagem local ausente). Repetida a matriz pelo runner descartável `postgres:15-alpine`:
+7 PASS/67 SKIPPED no filtro FOOD05. Isso comprova transação/RLS no PostgreSQL local,
+mas omite vector/Timescale e não substitui o gate CI integral.
+
+Limite restante: gravar ou aplicar por modelo continua bloqueado. A biblioteca é
+compartilhável na clínica; guardar referências de paciente no conteúdo acessível
+a todos não atende minimização, e o fluxo atual entrega refeições ao browser antes
+do save. Não implementar transporte da proveniência em modelos até haver aplicação
+server-side que reautorize a origem sem expor identificadores clínicos. T07 não está
+completo; PostgreSQL/RLS real para cópias, regressões e revisão R4 ainda faltam.
+
 T08 iniciado: testes de contrato, serviço/CAS e migration escritos antes dos
 módulos (RED por TS2307,0 testes; não é vulnerabilidade reproduzida). Após código,
 21/21 PASS em t08-green.log. Dois campos em profissionais, JSON fechado, sem PHI,

@@ -140,7 +140,8 @@ async function preparar(context) {
         id: 'pa07-item-origem', ordem: 0, descricao: 'Alimento principal sintético', quantidade: 1, unidade: 'porção', porcaoGramas: 100,
         composicaoSnapshot: { descricao: 'Alimento principal sintético', nutrientesPor100g: { energiaKcal: 100, proteinasG: 5, carboidratosG: 10, gordurasG: 2 } },
         substituicoes: [{ id: 'pa07-alternativa-origem', ordem: 0, descricao: 'Alternativa FOOD05 sintética', quantidade: 1, unidade: 'porção', porcaoGramas: 50,
-          equivalenciaAplicada: true, composicaoSnapshot: { descricao: 'Alternativa FOOD05 sintética', nutrientesPor100g: { energiaKcal: 200, proteinasG: 10, carboidratosG: 20, gordurasG: 4 } }, liberadaParaPaciente: false, preferida: false }]
+          equivalenciaAplicada: true, referenciaEquivalencia: { itemChave: 'pa07-item-editorial-origem', alternativaChave: 'pa07-alternativa-editorial-origem' },
+          composicaoSnapshot: { descricao: 'Alternativa FOOD05 sintética', nutrientesPor100g: { energiaKcal: 200, proteinasG: 10, carboidratosG: 20, gordurasG: 4 } }, liberadaParaPaciente: false, preferida: false }]
       }] }];
     },
     bloquearProximaCopia: () => (pausaCopia = pausaControlada()),
@@ -186,7 +187,7 @@ test('FOOD03 favorita alimentos no seletor sem aplicar a substituição ou alter
   expect(escritas).toHaveLength(0);
 });
 
-test('PA07 bloqueia cópia de refeição calculada FOOD05 para não descartar sua proveniência', async ({ context, page }) => {
+test('PA07 cópia FOOD05 de versão salva envia só referências para revalidação no backend', async ({ context, page }) => {
   const fixture = await preparar(context); fixture.habilitarOrigem(); fixture.marcarOrigemComEquivalencia(); await abrir(page);
   const quantidadeInicial = await page.getByTestId('refeicao-editor').count();
   const copia = page.getByRole('region', { name: 'Copiar uma refeição salva' });
@@ -194,9 +195,19 @@ test('PA07 bloqueia cópia de refeição calculada FOOD05 para não descartar su
   await copia.getByRole('button', { name: 'Carregar refeições' }).click();
   await copia.getByRole('combobox', { name: 'Refeição salva', exact: true }).selectOption('pa07-refeicao-origem');
   await copia.getByRole('button', { name: 'Copiar refeição', exact: true }).click();
-  await expect(copia.getByRole('alert')).toContainText('A cópia está bloqueada até preservar a proveniência do cálculo.');
-  await expect(page.getByTestId('refeicao-editor')).toHaveCount(quantidadeInicial);
-  expect(fixture.escritas).toHaveLength(0);
+  await expect(page.getByTestId('refeicao-editor')).toHaveCount(quantidadeInicial + 1);
+  await page.getByRole('button', { name: 'Salvar rascunho' }).click();
+  await expect.poll(() => fixture.escritas.length).toBe(1);
+  const body = fixture.escritas[0];
+  expect(body.copiasEquivalencia).toHaveLength(1);
+  expect(body.copiasEquivalencia[0]).toMatchObject({
+    pacienteOrigemId: pacienteId,
+    planoOrigemId: 'pa07-origem',
+    numeroVersaoOrigem: 1,
+    itemChaveOrigem: 'pa07-item-editorial-origem',
+    alternativaChaveOrigem: 'pa07-alternativa-editorial-origem'
+  });
+  expect(body.documento.refeicoes.flatMap(refeicao => refeicao.itens.flatMap(item => item.substituicoes ?? [])).some(alternativa => 'origemCopiaEquivalencia' in alternativa || 'snapshotEquivalencia' in alternativa)).toBe(false);
 });
 
 test('FOOD05 apresenta comparação calculada no servidor e confirma somente alternativa selecionada', async ({ context, page }) => {

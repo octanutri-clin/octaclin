@@ -141,6 +141,7 @@ interface AlternativaFormulario extends AlimentoFormulario {
   origemGrupo?: IntencaoGrupoSubstituicoesEdicao | null;
   equivalencia?: IntencaoEquivalenciaEdicao;
   provenienciaEquivalencia?: true;
+  origemCopiaEquivalencia?: NonNullable<import('@/lib/copia-refeicoes-plano').AlternativaFormularioCopia['origemCopiaEquivalencia']>;
 }
 
 interface ItemFormulario extends AlimentoFormulario {
@@ -279,7 +280,7 @@ function alimentoDaVersao(
   return base;
 }
 
-function formularioDaVersao(versao: VersaoPlanoAlimentarApi, avaliacaoPadrao = ''): FormularioPlano {
+function formularioDaVersao(versao: VersaoPlanoAlimentarApi, avaliacaoPadrao = '', origemCopia?: { pacienteId: string; planoId: string }): FormularioPlano {
   const calculo = versao.calculo;
   return {
     avaliacaoAntropometricaId: versao.avaliacaoAntropometricaId ?? avaliacaoPadrao,
@@ -309,7 +310,27 @@ function formularioDaVersao(versao: VersaoPlanoAlimentarApi, avaliacaoPadrao = '
           nome: refeicao.nome,
           horarioLocal: refeicao.horarioLocal?.slice(0, 5) ?? '',
           orientacoes: refeicao.orientacoes ?? '',
-          itens: refeicao.itens.map((item) => alimentoDaVersao(item))
+          itens: refeicao.itens.map((item) => {
+            const mapeado = alimentoDaVersao(item) as ItemFormulario;
+            if (!origemCopia) return mapeado;
+            return {
+              ...mapeado,
+              substituicoes: mapeado.substituicoes.map((alternativa, indice) => {
+                const fonte = item.substituicoes[indice];
+                if (!fonte?.equivalenciaAplicada || !fonte.referenciaEquivalencia) return alternativa;
+                return {
+                  ...alternativa,
+                  origemCopiaEquivalencia: {
+                    pacienteOrigemId: origemCopia.pacienteId,
+                    planoOrigemId: origemCopia.planoId,
+                    numeroVersaoOrigem: versao.numero,
+                    itemChaveOrigem: fonte.referenciaEquivalencia.itemChave,
+                    alternativaChaveOrigem: fonte.referenciaEquivalencia.alternativaChave
+                  }
+                };
+              })
+            };
+          })
         }))
       : [novaRefeicao()]
   };
@@ -1890,11 +1911,53 @@ export function PlanoAlimentarProfissional({ pacienteId, podeGerenciar, aoAltera
       enviar: async (documento, precondicao, signal) => {
         const bytes = new TextEncoder().encode(JSON.stringify(documento)).byteLength;
         if (bytes > LIMITE_BYTES_DOCUMENTO_EDICAO) throw Object.assign(new Error('O rascunho ultrapassa o limite de segurança.'), { status: 413 });
-        const salvo = await salvarEdicaoPlanoAlimentar(pacienteId, plano.id, { ...precondicao, documento }, signal);
+        const chavesDocumento = new Set(documento.refeicoes.flatMap((refeicao) => refeicao.itens.flatMap((item) => [
+          ...item.substituicoes ?? []
+        ].map((alternativa) => alternativa.chaveCliente))));
+        const itensDocumento = new Map(documento.refeicoes.flatMap((refeicao) => refeicao.itens.map((item) => [item.chaveCliente, new Set((item.substituicoes ?? []).map((alternativa) => alternativa.chaveCliente))] as const)));
+        const copiasEquivalencia = formularioAtualRef.current.refeicoes.flatMap((refeicao) => refeicao.itens.flatMap((item) => item.substituicoes.flatMap((alternativa) => {
+          const origem = alternativa.origemCopiaEquivalencia;
+          if (!origem || !chavesDocumento.has(alternativa.chaveCliente) || !itensDocumento.get(item.chaveCliente)?.has(alternativa.chaveCliente)) return [];
+          return [{
+            pacienteOrigemId: origem.pacienteOrigemId,
+            planoOrigemId: origem.planoOrigemId,
+            numeroVersaoOrigem: origem.numeroVersaoOrigem,
+            itemChaveOrigem: origem.itemChaveOrigem,
+            alternativaChaveOrigem: origem.alternativaChaveOrigem,
+            itemChaveDestino: item.chaveCliente,
+            alternativaChaveDestino: alternativa.chaveCliente
+          }];
+        })));
+        const salvo = await salvarEdicaoPlanoAlimentar(pacienteId, plano.id, {
+          ...precondicao,
+          documento,
+          ...(copiasEquivalencia.length ? { copiasEquivalencia } : {})
+        }, signal);
         if (salvo.id !== precondicao.rascunhoIdEsperado || !Number.isSafeInteger(salvo.rascunhoRevisao) || salvo.rascunhoRevisao !== precondicao.rascunhoRevisaoEsperada + 1) {
           throw Object.assign(new Error('A confirmação da revisão não pôde ser reconciliada.'), { status: 502 });
         }
         if (!signal.aborted && pacienteAtualRef.current === pacienteId && planoAtualRef.current?.id === plano.id) {
+          if (copiasEquivalencia.length) {
+            const chavesConfirmadas = new Set(copiasEquivalencia.map((copia) => `${copia.itemChaveDestino}:${copia.alternativaChaveDestino}`));
+            const atual = formularioAtualRef.current;
+            const reconciliado = {
+              ...atual,
+              refeicoes: atual.refeicoes.map((refeicao) => ({
+                ...refeicao,
+                itens: refeicao.itens.map((item) => ({
+                  ...item,
+                  substituicoes: item.substituicoes.map((alternativa) => {
+                    if (!chavesConfirmadas.has(`${item.chaveCliente}:${alternativa.chaveCliente}`)) return alternativa;
+                    const persistida = { ...alternativa };
+                    delete persistida.origemCopiaEquivalencia;
+                    return persistida;
+                  })
+                }))
+              }))
+            };
+            formularioAtualRef.current = reconciliado;
+            setFormulario(reconciliado);
+          }
           setPlano((atual) => {
             if (!atual || atual.id !== plano.id || atual.draft?.id !== salvo.id) return atual;
             const ativacaoObsoleta = (salvo.ativacaoRevisao ?? 0) < Math.max(
@@ -2434,6 +2497,27 @@ export function PlanoAlimentarProfissional({ pacienteId, podeGerenciar, aoAltera
     setRefeicoesAbertas(new Set(refeicoes.map((refeicao) => refeicao.chaveCliente)));
   }
 
+  function aplicarPlanoCopiado(versao: VersaoPlanoAlimentarApi, origem: { pacienteId: string; planoId: string }) {
+    if (!permiteEscreverRascunho()) return;
+    const refeicoes = formularioDaVersao(versao, '', origem).refeicoes.map((refeicao) => ({
+      ...refeicao,
+      chaveCliente: novaChaveCliente('refeicao'),
+      itens: refeicao.itens.map((item) => ({
+        ...item,
+        chaveCliente: novaChaveCliente('alimento'),
+        substituicoes: item.substituicoes.map((alternativa) => ({ ...alternativa, chaveCliente: novaChaveCliente('alimento') }))
+      }))
+    }));
+    if (refeicoes.length > LIMITE_REFEICOES_PLANO || refeicoes.some((refeicao) => refeicao.itens.length > 100)) {
+      setErro('O plano de origem excede os limites aceitos para cópia. Nenhuma alteração foi aplicada.');
+      return;
+    }
+    atualizar((atual) => ({ ...atual, refeicoes }));
+    setRefeicoesAbertas(new Set(refeicoes.map((refeicao) => refeicao.chaveCliente)));
+    setSucesso('Plano copiado para o rascunho. Revise os itens e salve para validar novamente as equivalências.');
+    setErro(null);
+  }
+
 
 
   function duplicarRefeicaoLocal(indice: number) {
@@ -2765,7 +2849,7 @@ export function PlanoAlimentarProfissional({ pacienteId, podeGerenciar, aoAltera
                       item completo, sem um segundo caminho de copia para divergir. */}
                   <DuplicarPlanoDeOutroPaciente
                     pacienteIdAtual={pacienteId}
-                    aoAplicar={(versao) => aplicarRefeicoesDeModelo(refeicoesParaModelo(formularioDaVersao(versao)))}
+                    aoAplicar={aplicarPlanoCopiado}
                     desabilitado={!edicaoEntreAbas.podeEditar || Boolean(operacao)}
                   />
 

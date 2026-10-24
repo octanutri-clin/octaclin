@@ -270,7 +270,11 @@ export function CopiarRefeicaoDePlano({
         setErro('A refeição de origem não está mais disponível. Carregue a versão novamente.');
         return;
       }
-      const copia = copiarRefeicaoParaFormulario(refeicao, gerarChave);
+      const copia = copiarRefeicaoParaFormulario(refeicao, gerarChave, {
+        pacienteId: referencia.pacienteOrigemId,
+        planoId: referencia.planoOrigemId,
+        numeroVersao: referencia.numeroVersao
+      });
       const destino = destinoTipo === 'acrescentar'
         ? { tipo: 'acrescentar' as const, chaveRefeicao: destinoRefeicaoChave }
         : { tipo: 'nova' as const };

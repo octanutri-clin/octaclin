@@ -9,9 +9,11 @@ infraestrutura ou alteração de cobrança/quota.
   [referências](referencias-pos-320-food05.md).
 - Branch `docs/pos320-food05-planning`, base main2f24fcb1; worktree física
   `pos320-food04-planning`. PR446 Draft; implementação ainda em consolidação local.
-- T01–T09 com fundamentos/API implementados; T07 cópias/modelos ainda pendente.
-  Regressão backend3382 PASS/148 SKIPPED, BFF62 PASS, rotas30 PASS, PG local6 PASS.
-  Build/artefato e typecheck Web PASS. Isso não encerra gates de UI/CI/revisão final.
+- T01–T09 com fundamentos/API implementados; T07 agora transporta proveniência
+  de cópias entre refeições/planos salvos sob revalidação server-side; aplicação
+  por modelos continua pendente e impede fechar T07.
+  Contagens completas em `tasks/execucao-pos-320-food05.md`. Gates CI/R4 ainda
+  não foram repetidos no delta.
 - Uma PR funcional, commits por tarefa, conforme alternativa aprovada no plano.
 - FOOD04 produção continua BLOCKED pelo último registro HTTP402;1078 comprovada
   somente em staging. Nenhum acesso externo realizado nesta implementação.

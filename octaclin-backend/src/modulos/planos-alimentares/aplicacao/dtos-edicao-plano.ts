@@ -1,5 +1,6 @@
 import { plainToInstance } from 'class-transformer';
-import { IsDefined, IsInt, IsUUID, Max, Min, Validate, ValidateIf, ValidatorConstraint, ValidatorConstraintInterface } from 'class-validator';
+import { ArrayMaxSize, IsArray, IsDefined, IsInt, IsOptional, IsString, IsUUID, Length, Max, Min, Validate, ValidateIf, ValidateNested, ValidatorConstraint, ValidatorConstraintInterface } from 'class-validator';
+import { Type } from 'class-transformer';
 import { AlimentoEdicao, DocumentoEdicaoPlano, numeroEdicao, validarDocumentoEdicaoPlano } from '../dominio/edicao-plano';
 import { AtualizarRascunhoPlanoAlimentarDto } from './dtos';
 
@@ -11,10 +12,23 @@ export class ValidadorDocumentoEdicaoPlano implements ValidatorConstraintInterfa
   defaultMessage(): string { return 'Documento de edição do plano inválido.'; }
 }
 
+/** Referência não secreta; o backend revalida acesso e lê o contexto cifrado da origem. */
+export class ReferenciaCopiaEquivalenciaDto {
+  @IsUUID() pacienteOrigemId: string;
+  @IsUUID() planoOrigemId: string;
+  @IsInt() @Min(1) @Max(2147483646) numeroVersaoOrigem: number;
+  @IsString() @Length(1, 100) itemChaveOrigem: string;
+  @IsString() @Length(1, 100) alternativaChaveOrigem: string;
+  @IsString() @Length(1, 100) itemChaveDestino: string;
+  @IsString() @Length(1, 100) alternativaChaveDestino: string;
+}
+
 export class SalvarEdicaoPlanoDto {
   @IsUUID() rascunhoIdEsperado: string;
   @IsInt() @Min(0) @Max(2147483646) rascunhoRevisaoEsperada: number;
   @IsDefined() @Validate(ValidadorDocumentoEdicaoPlano) documento: DocumentoEdicaoPlano;
+  @IsOptional() @IsArray() @ArrayMaxSize(200) @ValidateNested({ each: true }) @Type(() => ReferenciaCopiaEquivalenciaDto)
+  copiasEquivalencia?: ReferenciaCopiaEquivalenciaDto[];
 }
 
 /** Legado sem precondição continua somente enquanto o rascunho não aderiu à PA06. */
