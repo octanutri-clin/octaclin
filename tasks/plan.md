@@ -1,17 +1,20 @@
-# Handoff ativo — FOOD05 planejada; aguardando revisão e autorização
+# Handoff ativo — FOOD05 em implementação autorizada
 
-Escopo D01–D14/M01–M08 integral aprovado pelo proprietário. Só documentação nesta
-rodada. Plano técnico consolidado, tarefas T01–T18 e propostas de engenharia para
-revisão, sem autorização de implementação, merge, deploy, migrations ou infra.
+O proprietário autorizou a execução em “Pode seguir, sol médio”. D01–D14/M01–M08
+permanecem integrais. Não há autorização de merge, deploy, migrations externas,
+infraestrutura ou alteração de cobrança/quota.
 
 - [Plano](plan-pos-320-food05.md), [tarefas](todo-pos-320-food05.md),
-  [referências](referencias-pos-320-food05.md), [handoff](handoff-pos-320-food05-luna.md).
-- Branch `docs/pos320-food05-planning`, base main2f24fcb1; worktree física continua
-  `pos320-food04-planning`. Revisão documental de outro agente incorporada.
-- FOOD04 produção continua bloqueada no último registro por quota Neon;1078 só
-  comprovada em staging. Não executar produção sem regularização e nova autorização.
-- Sol médio; avisar e pausar antes de troca para Luna alto. Próxima ação: revisão
-  do plano pelo proprietário e autorização expressa, sem nova rodada genérica.
+  [execução e evidências](execucao-pos-320-food05.md),
+  [referências](referencias-pos-320-food05.md).
+- Branch `docs/pos320-food05-planning`, base main2f24fcb1; worktree física
+  `pos320-food04-planning`. PR446 Draft; implementação ainda em consolidação local.
+- T01–T05 focados aprovados; T06/T07 em integração. Serviço de planos122/122 PASS,
+  typecheck backend PASS neste checkpoint. Isso não encerra gates de banco/CI/UI.
+- Uma PR funcional, commits por tarefa, conforme alternativa aprovada no plano.
+- FOOD04 produção continua BLOCKED pelo último registro HTTP402;1078 comprovada
+  somente em staging. Nenhum acesso externo realizado nesta implementação.
+- Modelo Sol médio. Avisar e pausar antes de trocar para Luna alto.
 
 ---
 

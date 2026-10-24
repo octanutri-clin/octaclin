@@ -1,3 +1,4 @@
+import { ContextosEquivalencias, validarContextosEquivalencias } from './resolver-equivalencias-edicao';
 import { DocumentoEdicaoPlano, validarDocumentoEdicaoPlano } from '../dominio/edicao-plano';
 import { IntencaoGrupo, objetoGrupo, UUID_GRUPO, validarIntencaoGrupo } from '../dominio/grupos-substituicoes';
 import type { SnapshotComposicao } from './servico-planos-alimentares';
@@ -14,8 +15,19 @@ export function mesmaOrigemGrupo(a: IntencaoGrupo, b: IntencaoGrupo): boolean {
 }
 
 /** Envelope interno cifrado: nunca entra no DTO editorial nem na projecao. */
-export function lerSnapshotEdicaoGrupos(valor: unknown): { documento: DocumentoEdicaoPlano; catalogos: ContextosCatalogoGrupo } {
+export function lerSnapshotEdicaoGrupos(valor: unknown): { documento: DocumentoEdicaoPlano; catalogos: ContextosCatalogoGrupo; equivalencias?: ContextosEquivalencias } {
   const bruto = valor as { schemaSnapshotEdicao?: unknown } | null;
+  if(bruto?.schemaSnapshotEdicao===3){
+    const e=objetoGrupo(valor,['schemaSnapshotEdicao','documento','catalogosGrupos','equivalencias']);
+    const base=lerSnapshotEdicaoGrupos({schemaSnapshotEdicao:2,documento:e.documento,catalogosGrupos:e.catalogosGrupos});
+    const equivalencias=validarContextosEquivalencias(e.equivalencias);
+    for(const [chave,c]of Object.entries(equivalencias)){
+      const pai=base.documento.refeicoes.flatMap(r=>r.itens).find(i=>i.chaveCliente===c.itemChave);
+      const alternativa=pai?.substituicoes?.find(a=>a.chaveCliente===chave);
+      if(!alternativa||(c.estado==='desvinculada_manualmente'?alternativa.equivalencia!=null:alternativa.equivalencia?.aplicacaoId!==c.aplicacaoId))throw new Error('Contexto de equivalência inválido.');
+    }
+    return {...base,equivalencias};
+  }
   if (bruto?.schemaSnapshotEdicao !== 2) return { documento: validarDocumentoEdicaoPlano(valor), catalogos: Object.create(null) };
   const envelope = objetoGrupo(valor, ['schemaSnapshotEdicao', 'documento', 'catalogosGrupos']);
   const documento = validarDocumentoEdicaoPlano(envelope.documento);
@@ -38,6 +50,7 @@ export function lerSnapshotEdicaoGrupos(valor: unknown): { documento: DocumentoE
   return { documento, catalogos };
 }
 
-export function serializarSnapshotEdicaoGrupos(documento: DocumentoEdicaoPlano, catalogos: ContextosCatalogoGrupo): string {
+export function serializarSnapshotEdicaoGrupos(documento: DocumentoEdicaoPlano, catalogos: ContextosCatalogoGrupo, equivalencias: ContextosEquivalencias = {}): string {
+  if(Object.keys(equivalencias).length)return JSON.stringify({schemaSnapshotEdicao:3,documento,catalogosGrupos:catalogos,equivalencias:validarContextosEquivalencias(equivalencias)});
   return JSON.stringify(Object.keys(catalogos).length ? { schemaSnapshotEdicao: 2, documento, catalogosGrupos: catalogos } : documento);
 }

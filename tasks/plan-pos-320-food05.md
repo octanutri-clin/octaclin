@@ -1,8 +1,8 @@
 # FOOD05 — plano de implementação: equivalência por nutriente
 
-> Para execução futura: usar `superpowers:executing-plans`, tarefa por tarefa,
-> somente depois da revisão deste documento e autorização do proprietário.
-> Planejamento não autoriza implementação, migrations, merge, deploy ou infraestrutura.
+> Execução autorizada: `superpowers:executing-plans`, tarefa por tarefa.
+> A autorização de desenvolvimento não abrange migrations externas, merge, deploy
+> ou infraestrutura. Preservar os gates e todas as melhorias M01–M08.
 
 **Objetivo:** comparar porções alternativas por um único nutriente e confirmar
 sua aplicação no editor individual e na FOOD04, com M01–M08 completas.
@@ -12,7 +12,9 @@ imutáveis e preferências próprias do profissional.
 **Stack:** NestJS/TypeORM/PostgreSQL/RLS; Next/React/BFF; BigInt nativo; Jest/Playwright.
 **Especificação:** mensagem integral do proprietário “OCTACLIN — FOOD05:
 Equivalência por Nutriente”, de24/10/2026, consolidada em D01–D14 e M01–M08 abaixo.
-**Estado:** proposta técnica para revisão, nenhuma implementação autorizada.
+**Estado:** implementação autorizada pelo proprietário em “Pode seguir, sol médio”.
+Progresso real e evidências em [execucao-pos-320-food05.md](execucao-pos-320-food05.md).
+Autorização não abrange merge, deploy, infraestrutura ou migrations externas.
 **Base:** main `2f24fcb1` (inclui #441/#439/#432); branch
 `docs/pos320-food05-planning`, worktree `pos320-food04-planning` reaproveitada,
 limpa antes de iniciar. Registro operacional FOOD04 preservado de43345453,

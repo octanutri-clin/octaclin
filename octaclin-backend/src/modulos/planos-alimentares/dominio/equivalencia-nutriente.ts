@@ -79,11 +79,11 @@ export function calcularEquivalencia(entrada: EntradaEquivalencia): ResultadoEqu
     const matematica=dividirRazoes(multiplicarRazoes(alvo,ba),densidade),passo=razaoDecimal(politica.passoPorcaoGramas);
     const sugerida=arredondarAoPasso(matematica,passo),sugeridaTexto=formatarRazao(sugerida,3);
     if(entrada.porcaoEfetiva!==undefined && (!/^\d{1,5}(?:\.\d{1,3})?$/.test(entrada.porcaoEfetiva)||!porcaoGrupoValida(Number(entrada.porcaoEfetiva))))return indisponivel('porcao_efetiva_invalida');
-    const efetivaTexto=entrada.porcaoEfetiva??sugeridaTexto,efetiva=razaoDecimal(efetivaTexto);
+    const efetivaTexto=entrada.porcaoEfetiva===undefined?sugeridaTexto:formatarRazao(razaoDecimal(entrada.porcaoEfetiva),3),efetiva=razaoDecimal(efetivaTexto);
     const obtido=dividirRazoes(multiplicarRazoes(efetiva,densidade),ba),delta=subtrairRazoes(obtido,alvo),percentual=dividirRazoes(multiplicarRazoes(delta,razaoDecimal('100')),alvo);
     const motivosAplicacao:string[]=[];
     if(!porcaoGrupoValida(Number(efetivaTexto)))motivosAplicacao.push('porcao_fora_dominio');
-    if(NUTRIENTES_EQUIVALENCIA.some(n=>entrada.alternativa.nutrientes[n]===undefined))motivosAplicacao.push('composicao_incompleta');
+    if(NUTRIENTES_EQUIVALENCIA.some(n=>entrada.alternativa.nutrientes[n]===undefined||entrada.principal.nutrientes[n]===undefined))motivosAplicacao.push('composicao_incompleta');
     const nutrientesPorcao=calcularNutrientesDaPorcaoDecimal(entrada.alternativa.nutrientes,entrada.alternativa.baseGramas,efetivaTexto);
     const avisos:string[]=[];
     if(compararRazoes(matematica,passo)<0)avisos.push('menor_que_passo');

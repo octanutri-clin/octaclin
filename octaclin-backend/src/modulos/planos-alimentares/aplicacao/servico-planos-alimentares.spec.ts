@@ -1,3 +1,5 @@
+import { ServicoEquivalenciasPlano } from './servico-equivalencias-plano';
+import { FontesGruposSubstituicoes } from './fontes-grupos-substituicoes';
 import { ServicoGruposSubstituicoes } from './servico-grupos-substituicoes';
 import { ServiceUnavailableException } from '@nestjs/common';
 import { ServicoAlimentosPersonalizados } from './servico-alimentos-personalizados';
@@ -1753,6 +1755,82 @@ describe('ServicoPlanosAlimentares', () => {
       possuiCondicaoEspecial: false, aplicabilidadeFormulaConfirmada: true,
       objetivos: 'Objetivo sintético de acompanhamento',
       justificativaDivergenciaClinica: 'Planejamento sintético revisado individualmente.'
+    });
+    async function prepararEquivalencia(catalogo=false,principalCatalogo=false) {
+      repositorios.get(PlanoAlimentarVersaoOrm)!.registros[0].rascunhoRevisao=0;
+      const d:any=documentoCompleto();
+      const a:any={chaveCliente:'equivalente',descricao:'Alternativa FOOD05',quantidade:1,unidade:'porção',nutrientesPor100g:{energiaKcal:160,proteinasG:8,carboidratosG:16,gordurasG:4},liberadaParaPaciente:false,preferida:false};
+      if(catalogo||principalCatalogo){
+        const fid='10000000-0000-4000-8000-000000000086',aid='10000000-0000-4000-8000-000000000087';
+        repositorios.get(FonteComposicaoAlimentoOrm)!.registros.push({id:fid,codigo:'usda_fdc_foundation',nome:'Fonte sintética',versao:'1',situacao:'ativa',direitoUsoStatus:'aprovado',esquemaVersao:'octaclin-composicao-v1',hashConteudo:'a'.repeat(64)});
+        repositorios.get(AlimentoComposicaoOrm)!.registros.push({id:aid,fonteId:fid,codigoOrigem:'SINTETICO',nome:'Alternativa catalogada',preparacao:'Cozido',baseGramas:'100',energiaKcal:'160',proteinasG:'8',carboidratosG:'16',lipidiosG:'4',micronutrientes:{metadadosOrigem:{nutrientsOriginal:[{nutrient:{id:1089,unitName:'MG'},amount:2}]}}});if(catalogo)a.alimentoComposicaoId=aid;
+        if(principalCatalogo){const principal=d.refeicoes[0].itens[0];principal.alimentoComposicaoId=aid;delete principal.nutrientesPor100g;}
+      }
+      d.refeicoes[0].itens[0].substituicoes=[a];
+      const fontes=new FontesGruposSubstituicoes(criptografia);
+      const previaServico=new ServicoEquivalenciasPlano(executor as any,criptografia,fontes,new ServicoGruposSubstituicoes(executor as any,criptografia,fontes));
+      const previa=await previaServico.prever(TENANT_ID,PACIENTE_ID,PLANO_ID,usuarioProfissional(),{versaoId:VERSAO_ID,rascunhoRevisaoEsperada:0,documentoEdicao:d,itemChave:d.refeicoes[0].itens[0].chaveCliente,nutriente:'energiaKcal',alternativas:[a],politica:{passoPorcaoGramas:'1'}});
+      const linha=previa.alternativas[0];if(linha.resultado.estado!=='calculavel')throw new Error('Prévia sintética deveria calcular');
+      const aplicacaoId=randomUUID();a.porcaoGramas=linha.resultado.porcaoEfetivaGramas;a.equivalencia={acao:'calcular',aplicacaoId,nutriente:'energiaKcal',politica:{passoPorcaoGramas:'1'},porcaoEfetiva:a.porcaoGramas,fingerprintEsperado:linha.fingerprint};
+      return {d,aplicacaoId};
+    }
+    it('FOOD05 save consome comando, congela cálculo e devolve referência sem liberar ao paciente',async()=>{
+      const {d,aplicacaoId}=await prepararEquivalencia();const salvo:any=await salvarEdicao(d);
+      expect(salvo.documentoEdicao.refeicoes[0].itens[0].substituicoes[0].equivalencia).toEqual({aplicacaoId});
+      expect(salvo.equivalenciasAplicadas.equivalente).toMatchObject({aplicacaoId,estado:'calculada_revisada',nutriente:'energiaKcal',porcaoEfetivaGramas:'50'});
+      const cipher=repositorios.get(PlanoAlimentarVersaoOrm)!.registros[0].edicaoSnapshotCriptografado;expect(JSON.parse(criptografia.descriptografar(cipher)).schemaSnapshotEdicao).toBe(3);
+      expect(salvo.refeicoes[0].itens[0].substituicoes[0]).toMatchObject({porcaoGramas:50,liberadaParaPaciente:false,preferida:false,composicaoSnapshot:{nutrientesPorcao:{energiaKcal:80}}});
+      expect(JSON.stringify(salvo.equivalenciasAplicadas)).not.toMatch(/comandoHash|snapshotAlternativa|dependenciasHash|ator/);
+    });
+    it('FOOD05 nova versão mantém chaves editoriais, referências e proteção contra PATCH legado',async()=>{
+      const {d,aplicacaoId}=await prepararEquivalencia(true);await salvarEdicao(d);
+      const esperado={rascunhoIdEsperado:VERSAO_ID,rascunhoRevisaoEsperada:1};
+      await servico.revisar(TENANT_ID,PACIENTE_ID,PLANO_ID,usuarioProfissional(),esperado);
+      await servico.publicar(TENANT_ID,PACIENTE_ID,PLANO_ID,usuarioProfissional(),{...esperado,rascunhoRevisaoEsperada:2});
+      const nova:any=await servico.criarNovaVersao(TENANT_ID,PACIENTE_ID,PLANO_ID,usuarioProfissional());
+      expect(nova.documentoEdicao?.refeicoes[0].itens[0].substituicoes[0].equivalencia).toEqual({aplicacaoId});
+      expect(nova.rascunhoRevisao).toBe(0);expect(nova.edicaoEstado).toBe('materializada');
+      expect(nova.equivalenciasAplicadas.equivalente.estado).toBe('calculada_revisada');
+      await expect(servico.atualizarRascunho(TENANT_ID,PACIENTE_ID,PLANO_ID,usuarioProfissional(),Object.assign(dadosRascunho(),{rascunhoIdEsperado:nova.id,rascunhoRevisaoEsperada:0}))).rejects.toBeInstanceOf(ConflictException);
+      const alterado=nova.documentoEdicao;alterado.refeicoes[0].nome='Título novo';
+      const salvo:any=await servico.salvarEdicaoRascunho(TENANT_ID,PACIENTE_ID,PLANO_ID,usuarioProfissional(),{rascunhoIdEsperado:nova.id,rascunhoRevisaoEsperada:0,documento:alterado});
+      expect(salvo.equivalenciasAplicadas.equivalente).toMatchObject({aplicacaoId,estado:'calculada_revisada'});
+    });
+    it('FOOD05 autosave marca revisão pendente sem mudar porção e bloqueia nova publicação',async()=>{
+      const {d}=await prepararEquivalencia();const primeiro:any=await salvarEdicao(d);const proximo=primeiro.documentoEdicao;proximo.refeicoes[0].itens[0].porcaoGramas=160;
+      const segundo:any=await salvarEdicao(proximo,1);expect(segundo.equivalenciasAplicadas.equivalente.estado).toBe('revisao_pendente');expect(segundo.documentoEdicao.refeicoes[0].itens[0].substituicoes[0].porcaoGramas).toBe('50');
+      await expect(servico.revisar(TENANT_ID,PACIENTE_ID,PLANO_ID,usuarioProfissional(),{rascunhoIdEsperado:VERSAO_ID,rascunhoRevisaoEsperada:2})).rejects.toThrow(/equivalência.*pendente/i);
+    });
+    it('FOOD05 não aceita fingerprint manipulado ou PATCH legado que apague proveniência',async()=>{
+      const {d}=await prepararEquivalencia();const errado=JSON.parse(JSON.stringify(d));errado.refeicoes[0].itens[0].substituicoes[0].equivalencia.fingerprintEsperado='b'.repeat(64);await expect(salvarEdicao(errado)).rejects.toBeInstanceOf(ConflictException);
+      await salvarEdicao(d);await expect(servico.atualizarRascunho(TENANT_ID,PACIENTE_ID,PLANO_ID,usuarioProfissional(),Object.assign(dadosRascunho(),{rascunhoIdEsperado:VERSAO_ID,rascunhoRevisaoEsperada:1}))).rejects.toBeInstanceOf(ConflictException);
+    });
+    it.each(['alterada','inativa'])('FOOD05 preserva fonte de catálogo %s e micros nos autosaves seguintes',async(cenario)=>{
+      const {d}=await prepararEquivalencia(true);const primeiro:any=await salvarEdicao(d);
+      const a=repositorios.get(AlimentoComposicaoOrm)!.registros.find((r:any)=>r.id==='10000000-0000-4000-8000-000000000087')!;
+      if(cenario==='alterada')a.energiaKcal='999';else repositorios.get(FonteComposicaoAlimentoOrm)!.registros.find((r:any)=>r.id===a.fonteId)!.situacao='inativa';
+      const segundo:any=await salvarEdicao(primeiro.documentoEdicao,1);
+      expect(segundo.equivalenciasAplicadas.equivalente.estado).toBe('calculada_revisada');
+      const alt=segundo.refeicoes[0].itens[0].substituicoes[0];expect(alt.composicaoSnapshot.nutrientesPorcao.energiaKcal).toBe(80);expect(alt.composicaoSnapshot.micronutrientes.nutrientes.ferroMg.porcao).toBe(1);
+    });
+    it('FOOD05 reabre prévia de equivalência com fonte aplicada inativa sem buscar composição nova',async()=>{
+      const {d}=await prepararEquivalencia(true);const primeiro:any=await salvarEdicao(d);
+      repositorios.get(FonteComposicaoAlimentoOrm)!.registros.find((r:any)=>r.id==='10000000-0000-4000-8000-000000000086')!.situacao='inativa';
+      const fontes=new FontesGruposSubstituicoes(criptografia);const s=new ServicoEquivalenciasPlano(executor as any,criptografia,fontes,new ServicoGruposSubstituicoes(executor as any,criptografia,fontes));
+      const previa=await s.prever(TENANT_ID,PACIENTE_ID,PLANO_ID,usuarioProfissional(),{versaoId:VERSAO_ID,rascunhoRevisaoEsperada:1,documentoEdicao:primeiro.documentoEdicao,itemChave:d.refeicoes[0].itens[0].chaveCliente,nutriente:'energiaKcal',alternativas:primeiro.documentoEdicao.refeicoes[0].itens[0].substituicoes,politica:{passoPorcaoGramas:'1'}});
+      expect(previa.alternativas[0].resultado).toMatchObject({estado:'calculavel',porcaoEfetivaGramas:'50'});
+    });
+    it('FOOD05 preserva também catálogo principal aplicado quando a fonte é desativada',async()=>{
+      const {d}=await prepararEquivalencia(false,true);const primeiro:any=await salvarEdicao(d);
+      repositorios.get(FonteComposicaoAlimentoOrm)!.registros.find((r:any)=>r.id==='10000000-0000-4000-8000-000000000086')!.situacao='inativa';
+      const segundo:any=await salvarEdicao(primeiro.documentoEdicao,1);
+      expect(segundo.equivalenciasAplicadas.equivalente.estado).toBe('calculada_revisada');
+      expect(segundo.refeicoes[0].itens[0].composicaoSnapshot.nutrientesPorcao.energiaKcal).toBe(128);
+    });
+    it('FOOD05 preserva edição legada autorizada do SuperAdmin sem permitir comandos novos em nome alheio',async()=>{
+      const {d}=await prepararEquivalencia();const primeiro:any=await salvarEdicao(d);const admin={...usuarioProfissional(),papel:'SuperAdmin' as const};
+      primeiro.documentoEdicao.refeicoes[0].nome='Título administrativo';const salvo:any=await servico.salvarEdicaoRascunho(TENANT_ID,PACIENTE_ID,PLANO_ID,admin,{rascunhoIdEsperado:VERSAO_ID,rascunhoRevisaoEsperada:1,documento:primeiro.documentoEdicao});expect(salvo.equivalenciasAplicadas.equivalente.estado).toBe('calculada_revisada');
+      const a=salvo.documentoEdicao.refeicoes[0].itens[0].substituicoes[0];a.equivalencia={...d.refeicoes[0].itens[0].substituicoes[0].equivalencia,aplicacaoId:randomUUID(),acao:'recalcular',anteriorAplicacaoId:a.equivalencia.aplicacaoId};await expect(servico.salvarEdicaoRascunho(TENANT_ID,PACIENTE_ID,PLANO_ID,admin,{rascunhoIdEsperado:VERSAO_ID,rascunhoRevisaoEsperada:2,documento:salvo.documentoEdicao})).rejects.toBeInstanceOf(ForbiddenException);
     });
     const customId = '10000000-0000-4000-8000-000000000098';
     const customComp = () => normalizarComposicaoPersonalizada({ nome: 'Arroz custom', base: { tipo: 'porcao', pesoGramas: 30 }, nutrientes: { energiaKcal: 90, proteinasG: 3, carboidratosG: 12, gordurasG: 3 }, micronutrientes: { ferroMg: 0.6 } });

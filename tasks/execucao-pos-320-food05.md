@@ -58,3 +58,42 @@ adicional reproduziu1 RED/10 PASS no serviço, corrigido sem abrir a allowlist.
 Peso ao aplicar quantidade doméstica é recalculado e seu resíduo mostrado;
 medida de revisão vencida fica indisponível. Referência preservada de histórico
 será integrada/validada junto a T06/T07; não declarar M02 integral ainda.
+
+T06 em consolidação; T07 iniciado pelas projeções e cópia histórica.
+- RED de fingerprint: formatação decimal e porção explícita equivalente davam
+  identidade diferente; normalização semântica corrigida. Focais45/45 PASS.
+- Envelope3:2 RED/2 PASS antes do reader/writer;21/21 PASS após integração,
+  preservando formatos1/2 e vínculo pai/filho/identidade.
+- Projeção explícita: catálogo/manual vazavam campos internos (2 RED/6 PASS);
+  allowlists corrigidas,29/29 PASS com envelopes/resolver.
+- Writer:3 RED comportamentais iniciais (intenção ignorada/fingerprint sem
+  validação), depois2 RED (fonte inativa e edição legada do SuperAdmin).
+  Integração autoriza comandos somente ao responsável; mantém edição ordinária
+  legada, snapshots, ACK estável e revisão pendente persistente.
+- Regressão publicada:1 FAIL/118 PASS por leitura do cipher editorial ao invés
+  dos filhos históricos; corrigido sem recalcular. Serviço completo119/119 PASS
+  em t06-save-full-final.log. Não equivale ao backend inteiro nem RLS real.
+- Negativos adicionais:2 RED/30 PASS reproduziram composição principal parcial
+  aplicável indevidamente e reutilização de UUID de desvinculação em outro filho.
+  Corrigidos:36/36 GREEN incluindo envelope (t06-negativos-{red,green}.log).
+- Revisar/publicar bloqueiam equivalência pendente; omissão não desvincula,
+  replay não ressuscita, fontes aplicadas conservam composição/micros.
+
+Pendências T06/T07: cópia/reabertura; fonte principal preservada na materialização;
+prévia com fonte/medida histórica inativa; captura de fatos após troca explícita;
+marcador decimal por filho; cópias entre planos/modelos e regressões completas.
+T08–T18 ainda não concluídos. Nenhum gate final ou clínico declarado PASS.
+
+T07 parcial:
+- Cópia de versão: a primeira tentativa do teste usava revisão anterior à ação
+  Revisar e falhou no CAS correto (não é RED da cópia). Corrigido o teste para2,
+  RED comprovou referência perdida. Nova versão FOOD05 conserva ciphers/chaves
+  editoriais e revisão0 protegida; planos sem FOOD05 mantêm reconstrução legada.
+- Fonte congelada na prévia e principal:3 RED/6 PASS incluindo cópia; ajustes
+  reutilizam somente contexto autenticado e vínculo editorial correspondente.
+  Serviço completo122/122 PASS em t07-save-full-green.log.
+- Medida salva:1 RED/12 PASS, prévia dependia da biblioteca atual. Reutilizado o
+  resolver FOOD01 com contexto cifrado da versão, sem novas conversões. Novo
+  nonce exige autorização atual. Focais e regressões em t07-medida-green.log.
+- Typecheck backend executado: PASS (t06-typecheck.log), antes dos últimos ajustes.
+  Reexecutar no checkpoint consolidado. Nenhum teste PG/CI/UI concluído ainda.

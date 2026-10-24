@@ -1,3 +1,16 @@
+# Estado atualizado — implementação autorizada, ainda em Sol médio
+
+A autorização “Pode seguir, sol médio” substitui a restrição operacional do
+planejamento original abaixo. O histórico é preservado para rastreabilidade.
+Ler primeiro [execução](execucao-pos-320-food05.md) e [handoff ativo](plan.md).
+T01–T05 têm focados PASS; T06/T07 em integração local. T08–T18 não concluídos.
+Uma PR funcional escolhida; PR446 segue Draft, sem entrega funcional declarada.
+Não trocar de modelo sem avisar e pausar para o proprietário.
+
+---
+
+## Handoff original de planejamento — estado operacional supersedido
+
 # FOOD05 — handoff de planejamento, sem execução autorizada
 
 ## Estado

@@ -19,7 +19,7 @@ export function fatosDeSnapshotEquivalencia(s:SnapshotComposicao,identidade:stri
  return {identidade,descricao:s.descricao,...(s.preparacao?{preparacao:s.preparacao}:{}),baseGramas:String(original?.baseGramas??100),nutrientes:valores(original?.nutrientes??s.nutrientesPor100g),...(s.fonte?{fonte:{codigo:s.fonte.codigo,versao:s.fonte.versao,hashConteudo:s.fonte.hashConteudo}}:{})};
 }
 /** Caller já autorizou paciente/plano; contextos só podem vir de cipher servidor. */
-export async function resolverFatosEquivalencia(g:EntityManager,tenantId:string,profissionalId:string,a:AlimentoEdicao,fontes:FontesGruposSubstituicoes,preservados:FatosPreservadosEquivalencia,itemChave?:string):Promise<FatosComposicaoEquivalencia>{
+export async function resolverFatosEquivalencia(g:EntityManager,tenantId:string,profissionalId:string|undefined,a:AlimentoEdicao,fontes:FontesGruposSubstituicoes,preservados:FatosPreservadosEquivalencia,itemChave?:string):Promise<FatosComposicaoEquivalencia>{
  const identidade=identidadeFatoEquivalencia(a),congelado=preservados.equivalencias?.[a.chaveCliente];
  if(congelado&&congelado.identidade===identidade&&!identidade.startsWith('manual:'))return JSON.parse(JSON.stringify(congelado.fatos));
  const custom=preservados.custom[a.chaveCliente];
