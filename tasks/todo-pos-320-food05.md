@@ -417,3 +417,20 @@ Este registro atualiza somente as evidências recentes; não fecha T10 nem gates
   de iniciar por imagem ausente, enquanto a suite específica FOOD04/FOOD05 com
   `postgres:15-alpine` completou 6/6. Não contar como falha do runtime nem como PASS
   do runner global.
+
+### Revalidação local e CI — HEAD 9e0aa1bc (25/10/2026)
+
+- Checks GitHub da PR #446: Backend NestJS, Web Next.js, Demo local smoke, PR Gate,
+  PostgreSQL/RLS, governança, Mobile, AI, imagens e scanners aplicáveis PASS;
+  provenance do SBOM SKIPPED pelo workflow. A PR permanece Draft.
+- Regressões focadas: backend 4 suites/184 testes PASS; typecheck backend e Web PASS;
+  cópia FOOD04/FOOD05 14/14, aplicação FOOD04 4/4, totais nutricionais 67/67 e
+  cálculo combinado 4/4 PASS. Aviso local de engine: Node 24.19.0, requisito Node
+  >=22 <23.
+- `pnpm test:authz`: parcial/inconclusivo; scripts iniciais passaram, mas o comando
+  foi interrompido após vários minutos (exit 130), pois o CI do HEAD já cobre os
+  gates BFF e de autorização. Não registrar como PASS local.
+- Continuam BLOCKED/PARCIAL: aplicação de equivalência por modelo sem transporte de
+  contexto clínico; matriz integral T14 de concorrência/save/snapshot; revisão R4
+  independente; fechamento T15–T18 e dependência operacional da FOOD04 em produção.
+  Nenhuma ação em ambiente externo foi realizada.

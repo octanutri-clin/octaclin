@@ -602,3 +602,25 @@ tenant; não consulta staging nem produção.
   por modelo. T07 segue parcial: será necessário um comando server-side que autorize
   modelo e origem, remapeie chaves no destino e nunca exponha IDs/contextos do paciente
   de origem ao consumidor de um modelo compartilhado.
+
+### Revalidação do HEAD 9e0aa1bc — rodada local e CI (25/10/2026)
+
+- PR #446 permanece aberta em Draft; HEAD `9e0aa1bcff27c1f98e0882e3d6ed869deabc12a7`.
+- CI consultado neste HEAD: Backend NestJS, Web Next.js, Demo local smoke, PR Gate,
+  PostgreSQL/RLS, governança, Mobile, AI, imagens e scanners aplicáveis PASS;
+  provenance do SBOM SKIPPED pelo workflow.
+- Backend focal: 4 suites/184 testes PASS para aritmética, resolução, preferências,
+  planos e fronteira de modelos (o Jest descobriu quatro suites). Typecheck backend PASS.
+- Web local: typecheck PASS; cópia FOOD04/FOOD05 14/14, aplicação de grupos FOOD04
+  4/4, nutrição do plano 67/67 e cálculo combinado 4/4 PASS. Total destes scripts:
+  89 testes PASS. Os comandos emitiram aviso de engine: ambiente Node 24.19.0,
+  projeto requer Node >=22 <23; a execução passou, mas não substitui validação local
+  com a versão declarada.
+- `pnpm test:authz` foi iniciado como regressão ampla. Os primeiros scripts de
+  correlação, origem do backend, rotas/sessão e alguns módulos passaram, mas o comando
+  foi interrompido após vários minutos (SIGINT, exit 130) para não duplicar toda a
+  matriz já executada pelo CI; portanto o pacote completo fica INCONCLUSIVO, não PASS.
+- Nenhuma edição de runtime, migration, merge, deploy, flag ou consulta a ambiente
+  externo nesta rodada. T07 por modelos, T14 matriz integral de save/snapshot, T15–T18
+  e revisão R4 independente continuam abertos. Os checks green não removem esses
+  bloqueios nem tornam a FOOD05 pronta para uso clínico/produção.
