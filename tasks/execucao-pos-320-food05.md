@@ -433,3 +433,26 @@ passaram. Governança e Demo local smoke falharam, fazendo o PR Gate reprovar.
 - Backend, Web, Mobile e scans do run falho já estavam PASS. PR Gate precisa rodar
   novamente sobre o novo HEAD. O relatório documental atual permanece apenas na
   worktree até a sincronização desse commit.
+
+## T10 — cancelamento de prévia e mensagens de indisponibilidade (25/10/2026)
+
+RED reproduziu que cancelar uma prévia em andamento abortava o fetch e invalidava
+sua geração, mas deixava `carregando=true`; como o `finally` antigo respeita a
+geração invalidada, o botão permanecia desabilitado. GREEN: limpar carregamento ao
+iniciar outra geração e nas ações de cancelar, fechar o painel e abrir recálculo.
+
+Um segundo RED mostrou que o caso 0/0 aparecia como código técnico
+`alvo_zero_indeterminado`. O painel agora traduz códigos conhecidos em explicações
+objetivas e usa fallback genérico para códigos desconhecidos; não libera seleção ou
+aplicação quando o resultado é indeterminado.
+
+- Playwright FOOD05/PA07 após ambas as mudanças: 18/18 PASS, 9 cenários em desktop e
+  mobile, incluindo cancelamento, zero/zero, aplicação individual, FOOD04, recálculo,
+  desvinculação, preferências e bloqueio de modelos. Axe no painel já coberto pelo
+  cenário comparativo.
+- Web typecheck e ESLint focal: PASS. A primeira execução local do Playwright usando
+  Turbopack falhou pela resolução do symlink de `node_modules`; a bateria foi repetida
+  com Next Webpack em `localhost:3018` e passou.
+- T10 permanece parcial: esta prova não fecha, por si só, todas as combinações de
+  limites de 20 alternativas, resposta obsoleta após cada tipo de mudança, nem toda a
+  matriz de teclado/reflow. CI será repetido no novo HEAD; Draft/R4 continuam abertos.

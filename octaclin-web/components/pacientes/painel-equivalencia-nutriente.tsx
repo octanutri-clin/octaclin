@@ -76,6 +76,26 @@ function mostrarPreferencia(valor: string | undefined, casas: number, unidade: s
   return mostrar(formatarDecimalVisual(valor, casas), unidade);
 }
 
+const MENSAGENS_INDISPONIBILIDADE: Record<string, string> = {
+  nutriente_invalido: 'Escolha um dos nutrientes disponíveis.',
+  principal_invalido: 'Confira a porção do alimento principal.',
+  base_invalida: 'A base nutricional de um dos alimentos está indisponível.',
+  alvo_ausente: 'Falta a informação do nutriente escolhido para o alimento principal.',
+  concentracao_ausente: 'Falta a informação do nutriente escolhido para esta alternativa.',
+  alvo_zero_sem_porcao_positiva: 'O alimento principal não tem quantidade positiva do nutriente escolhido; não há uma porção alternativa positiva para igualar.',
+  alvo_zero_indeterminado: 'Os dois alimentos têm valor zero para o nutriente escolhido; não é possível determinar uma porção equivalente por esse critério.',
+  concentracao_zero: 'A alternativa não tem quantidade do nutriente escolhido para igualar um alvo positivo.',
+  porcao_efetiva_invalida: 'A porção informada está fora dos valores permitidos.',
+  dados_invalidos_ou_limite_precisao: 'Não foi possível calcular com esses dados. Confira as porções e os valores nutricionais.',
+  referencia_indisponivel: 'A referência nutricional desta alternativa está indisponível.'
+};
+
+function explicarIndisponibilidade(motivo: string) {
+  return Object.prototype.hasOwnProperty.call(MENSAGENS_INDISPONIBILIDADE, motivo)
+    ? MENSAGENS_INDISPONIBILIDADE[motivo]
+    : 'Confira a porção, o preparo e os dados nutricionais dos alimentos.';
+}
+
 function idAleatorio() {
   return globalThis.crypto.randomUUID();
 }
@@ -123,6 +143,7 @@ export function PainelEquivalenciaNutriente<T extends AlternativaEdicao>(props: 
     const controller = new AbortController();
     requestRef.current = controller;
     const generation = ++generationRef.current;
+    setCarregando(false);
     setPrevia(undefined);
     setAssinaturaPrevia(undefined);
     setErro('');
@@ -244,7 +265,7 @@ export function PainelEquivalenciaNutriente<T extends AlternativaEdicao>(props: 
         <span className="text-sm"><strong>Equivalência — revisão pendente.</strong> {pendencia.descricao}</span>
         <Botao type="button" variante="secundario" disabled={desabilitado || !versaoId} onClick={() => {
           requestRef.current?.abort(); generationRef.current++;
-          setPrevia(undefined); setAssinaturaPrevia(undefined); setErro(''); setAjustes({}); setMedidasEscolhidas({});
+          setCarregando(false); setPrevia(undefined); setAssinaturaPrevia(undefined); setErro(''); setAjustes({}); setMedidasEscolhidas({});
           setNutriente(pendencia.nutriente); setSelecionadas(new Set([pendencia.chaveCliente]));
           setRecalculoExplicitoChave(pendencia.chaveCliente); setAberto(true);
         }}>Recalcular equivalência</Botao>
@@ -252,7 +273,7 @@ export function PainelEquivalenciaNutriente<T extends AlternativaEdicao>(props: 
     </div> : null}
     <Botao type="button" variante="fantasma" aria-expanded={aberto} onClick={() => {
       setAberto((atual) => !atual);
-      if (aberto) { requestRef.current?.abort(); generationRef.current++; previaSolicitadaRef.current = false; setPrevia(undefined); setAssinaturaPrevia(undefined); setSelecionadas(new Set()); setMedidasEscolhidas({}); }
+      if (aberto) { requestRef.current?.abort(); generationRef.current++; previaSolicitadaRef.current = false; setCarregando(false); setPrevia(undefined); setAssinaturaPrevia(undefined); setSelecionadas(new Set()); setMedidasEscolhidas({}); }
     }}>Equivalência por nutriente</Botao>
     {aberto ? <div className="mt-3 grid gap-3">
       <p className="text-sm text-texto-suave">A equivalência iguala apenas o nutriente escolhido. Compare os outros nutrientes e confirme as porções manualmente. Alimento principal: {principalDescricao} ({mostrar(String(porcaoPrincipalGramas ?? ''), 'g')}).</p>
@@ -283,7 +304,7 @@ export function PainelEquivalenciaNutriente<T extends AlternativaEdicao>(props: 
       <div className="flex flex-wrap gap-2">
         <Botao type="button" variante="primario" carregando={carregando} disabled={desabilitado || !versaoId || !alternativas.length} onClick={() => { void calcular(); }}>Calcular alternativas</Botao>
         {previa ? <Botao type="button" variante="secundario" onClick={confirmar} disabled={desabilitado || !podeConfirmar || previa.rascunhoRevisao !== rascunhoRevisao}>{selecionadasParaRecalculo ? 'Confirmar recálculo' : 'Aplicar selecionadas'}</Botao> : null}
-      <Botao type="button" variante="fantasma" onClick={() => { requestRef.current?.abort(); generationRef.current++; previaSolicitadaRef.current = false; setPrevia(undefined); setAssinaturaPrevia(undefined); setSelecionadas(new Set()); setAjustes({}); setErro(''); }}>Cancelar</Botao>
+      <Botao type="button" variante="fantasma" onClick={() => { requestRef.current?.abort(); generationRef.current++; previaSolicitadaRef.current = false; setCarregando(false); setPrevia(undefined); setAssinaturaPrevia(undefined); setSelecionadas(new Set()); setAjustes({}); setErro(''); }}>Cancelar</Botao>
       </div>
       {erro ? <AlertaOperacional mensagem={erro} /> : null}
       {previa && !previaCorresponde ? <p className="text-sm" role="status">Os dados mudaram. Aguarde a prévia atualizada antes de confirmar.</p> : null}
@@ -295,7 +316,7 @@ export function PainelEquivalenciaNutriente<T extends AlternativaEdicao>(props: 
             <caption className="sr-only">Comparação das alternativas para {principalDescricao}</caption>
             <thead><tr>{['Selecionar', 'Alternativa e preparo', 'Porção sugerida', 'Alvo', 'Obtido', 'Diferença', 'Refeição após troca'].map((t) => <th key={t} scope="col" className="border-b border-linha p-2">{t}</th>)}</tr></thead>
             <tbody>{previa.alternativas.map((linha) => linha.resultado.estado === 'indisponivel'
-              ? <tr key={linha.chaveCliente} className="border-b border-linha"><th scope="row" className="p-2">{linha.alimento?.descricao ?? alternativas.find((a) => a.chaveCliente === linha.chaveCliente)?.descricao}</th><td className="p-2" colSpan={6}>Cálculo indisponível: {linha.resultado.motivo}</td></tr>
+              ? <tr key={linha.chaveCliente} className="border-b border-linha"><th scope="row" className="p-2">{linha.alimento?.descricao ?? alternativas.find((a) => a.chaveCliente === linha.chaveCliente)?.descricao}</th><td className="p-2" colSpan={6}>Cálculo indisponível: {explicarIndisponibilidade(linha.resultado.motivo)}</td></tr>
               : <LinhaComparacao key={linha.chaveCliente} linha={linha} alternativas={alternativas} selecionada={selecionadas.has(linha.chaveCliente)} aoSelecionar={() => alternarAlternativa(linha.chaveCliente)} ajuste={ajustes[linha.chaveCliente]} aoAjustar={(valor) => { setAjustes((atual) => ({ ...atual, [linha.chaveCliente]: valor })); setMedidasEscolhidas((atual) => { const proximo = { ...atual }; delete proximo[linha.chaveCliente]; return proximo; }); }} medidaEscolhida={medidasEscolhidas[linha.chaveCliente]} aoEscolherMedida={(medida) => { setAjustes((atual) => { const proximo = { ...atual }; delete proximo[linha.chaveCliente]; return proximo; }); setMedidasEscolhidas((atual) => { const proximo = { ...atual }; if (medida) proximo[linha.chaveCliente] = { ...medida, aplicacaoId: idAleatorio() }; else delete proximo[linha.chaveCliente]; return proximo; }); }} preferencias={preferencias} />)}</tbody>
           </table>
         </div>

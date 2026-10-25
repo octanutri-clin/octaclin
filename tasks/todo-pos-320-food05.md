@@ -16,7 +16,7 @@ FE = `octaclin-web/`. Novos nomes são propostas, não arquivos criados nesta ro
 | T07 | Cópia entre refeições/planos salvos usa referências opacas e revalidação server-side; modelo continua bloqueado. T07 não concluído |
 | T08 | Preferências e migration 1079 implementadas; CAS/RLS/JSON exercitados no PostgreSQL de CI |
 | T09 | Backend, BFF, cliente tipado e integração principal com a UI implementados; verificações Web passam |
-| T10–T13 | Implementação parcial integrada; focados FOOD05/PA07 passam, critérios completos e cópias ainda pendentes |
+| T10–T13 | Implementação parcial integrada; FOOD05/PA07 18/18 desktop/mobile após cancelamento e 0/0; limites, matriz completa, cópias e critérios restantes ainda pendentes |
 | T14 | PostgreSQL/migrations/RLS e Redis/idempotência do fluxo executado no GitHub CI PASS; matriz integral de concorrência e todos os critérios ainda precisam ser fechados |
 | T15–T18 | Smoke visual global, PR Gate, regressões executadas e scanners CI PASS no HEAD bb513d1d; revisão R4 independente e fechamento final pendentes |
 
@@ -334,7 +334,7 @@ requisitos e critérios T01–T18 permanecem vigentes.
 | --- | --- | --- |
 | T06 motor, snapshot e resolução de equivalência | Implementação técnica exercitada em suites focadas e CI | Cópias com proveniência e fechamento dos critérios integrados permanecem pendentes |
 | T07 cópias/modelos com proveniência | BLOCKED | UI recusa a conversão silenciosa; contratos atuais de cópia não transportam proveniência com segurança |
-| T10–T13 interface, FOOD04, revisão e histórico | Parcialmente implementados; Playwright focalizado 14/14 em desktop e mobile | Há bloqueios deliberados para cópias; não considerar M01–M08 fechadas |
+| T10–T13 interface, FOOD04, revisão e histórico | Parcialmente implementados; Playwright FOOD05/PA07 18/18 em desktop e mobile no HEAD local atual | T10 ainda carece de toda a matriz de limites/teclado/reflow; há bloqueios deliberados para cópias; não considerar M01–M08 fechadas |
 | T14 PostgreSQL/RLS e concorrência real | Parcial: PostgreSQL/migrations, Redis/idempotência e RLS executados com PASS no GitHub CI | Não equivale à matriz integral de concorrência/aceitação T14; Testcontainers local continua indisponível |
 | T15–T18 regressões, R4, documentação e CI final | Run GitHub `40124900107` e PR Gate concluídos PASS no HEAD `bb513d1d`; smoke global e scanners PASS | R4 independente e fechamento integral dos critérios continuam pendentes |
 | G01–G05 e prontidão clínica/operacional | Não PASS | Ver [execução FOOD05](execucao-pos-320-food05.md) para evidências locais e bloqueios |

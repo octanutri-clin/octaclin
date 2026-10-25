@@ -266,6 +266,58 @@ test('FOOD05 apresenta comparação calculada no servidor e confirma somente alt
   expect(alternativaAplicada.preferida).toBe(false);
 });
 
+test('FOOD05 libera o painel para novo cálculo ao cancelar uma prévia em andamento', async ({ context, page }) => {
+  const fixture = await preparar(context);
+  fixture.configurarEquivalenciaSintetica();
+  const pendente = pausaControlada();
+  await page.route(url => url.pathname === '/api/profissionais/me/preferencias-equivalencia', route => route.fulfill({ json: {
+    preferencias: { schemaVersao: 1, unidades: 'gramas', casasGramas: 3, casasNutrientes: 2, passoPorcaoGramas: '1', modoComparacao: 'detalhado' }, revisao: 1
+  } }));
+  await page.route(url => url.pathname === `/api/pacientes/${pacienteId}/planos-alimentares/${planoId}/equivalencias/previa`, async route => {
+    await pendente.aguardar();
+    await route.abort().catch(() => {});
+  });
+  await abrir(page);
+  await page.getByRole('button', { name: 'Expandir todas' }).click();
+  const painel = page.getByRole('region', { name: 'Equivalência por nutriente para Iogurte sintético' });
+  await painel.getByRole('button', { name: 'Equivalência por nutriente' }).click();
+  const calcular = painel.getByRole('button', { name: 'Calcular alternativas' });
+  await calcular.click();
+  await pendente.iniciou;
+  try {
+    await painel.getByRole('button', { name: 'Cancelar' }).click();
+    await expect(calcular).toBeEnabled();
+  } finally { pendente.liberar(); }
+});
+
+test('FOOD05 explica alvo zero indeterminado sem expor código interno ou permitir aplicação', async ({ context, page }) => {
+  const fixture = await preparar(context);
+  fixture.configurarEquivalenciaSintetica();
+  await page.route(url => url.pathname === '/api/profissionais/me/preferencias-equivalencia', route => route.fulfill({ json: {
+    preferencias: { schemaVersao: 1, unidades: 'gramas', casasGramas: 3, casasNutrientes: 2, passoPorcaoGramas: '1', modoComparacao: 'detalhado' }, revisao: 1
+  } }));
+  await page.route(url => url.pathname === `/api/pacientes/${pacienteId}/planos-alimentares/${planoId}/equivalencias/previa`, async route => {
+    const pedido = route.request().postDataJSON();
+    await route.fulfill({ json: {
+      fingerprint: 'c'.repeat(64), rascunhoRevisao: 1, nutriente: 'energiaKcal',
+      principal: { descricao: 'Iogurte sintético', baseGramas: '100', nutrientes: { energiaKcal: '0' }, fonte: { codigo: 'SINTETICA', versao: '1' } },
+      alternativas: [{ chaveCliente: pedido.alternativas[0].chaveCliente,
+        alimento: { descricao: 'Queijo sintético', baseGramas: '100', nutrientes: { energiaKcal: '0' }, fonte: { codigo: 'SINTETICA', versao: '1' } },
+        resultado: { estado: 'indisponivel', motivo: 'alvo_zero_indeterminado', nutriente: 'energiaKcal' } }]
+    } });
+  });
+  await abrir(page);
+  await page.getByRole('button', { name: 'Expandir todas' }).click();
+  const painel = page.getByRole('region', { name: 'Equivalência por nutriente para Iogurte sintético' });
+  await painel.getByRole('button', { name: 'Equivalência por nutriente' }).click();
+  await painel.getByRole('button', { name: 'Calcular alternativas' }).click();
+  await expect(painel.getByText('Os dois alimentos têm valor zero para o nutriente escolhido; não é possível determinar uma porção equivalente por esse critério.')).toBeVisible();
+  await expect(painel.getByText('alvo_zero_indeterminado', { exact: true })).toHaveCount(0);
+  await expect(painel.getByRole('checkbox', { name: 'Selecionar Queijo sintético' })).toHaveCount(0);
+  await expect(painel.getByRole('button', { name: 'Aplicar selecionadas' })).toBeDisabled();
+  expect(fixture.escritas).toHaveLength(0);
+});
+
 test('FOOD05 impede salvar modelo quando isso descartaria a proveniência da equivalência', async ({ context, page }) => {
   const fixture = await preparar(context);
   fixture.configurarEquivalenciaSintetica();
