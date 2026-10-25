@@ -352,9 +352,12 @@ Este registro atualiza somente as evidências recentes; não fecha T10 nem gates
 - HEAD enviado anteriormente: `76f266c7921332fe85cc8ce9e439a9658a8d3634`, PR #446
   continua Draft. Nesse HEAD, Dependency Review e Semgrep passaram; OctaClin CI,
   CodeQL e Trivy ainda estavam em andamento na última consulta.
-- Teste de regressão local novo, ainda não enviado: resposta de prévia anterior é
+- Teste de regressão enviado no commit `7dacf56b`: resposta de prévia anterior é
   descartada quando o alvo muda de energia para proteínas durante uma requisição
-  pendente. Playwright desktop 1/1 e mobile 1/1 passaram com mocks sintéticos.
-- Próximo commit precisará disparar novamente todos os checks para o HEAD exato.
+  pendente. Bateria Playwright FOOD05/cópia FOOD05: 20/20 PASS, 10 cenários por
+  navegador desktop e mobile, com mocks sintéticos.
+- Checks GitHub para `7dacf56b`: Dependency Review, Semgrep, CodeQL PASS; OctaClin CI
+  e Trivy seguem em andamento. Uma atualização documental posterior exigirá checks
+  do HEAD seguinte antes de usar os resultados como gate final.
   Revisão R4 independente, T10 integral, T14/T15/T16 completos e demais critérios
   seguem pendentes; não promover a PR nem habilitar uso assistencial.

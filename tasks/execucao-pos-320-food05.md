@@ -470,5 +470,7 @@ outras dimensões (porção, alternativa, medida, arredondamento e troca de cont
   sintéticos e servidor Webpack local em `localhost:3018`. A tentativa inicial sem
   reutilização do servidor falhou ao tentar iniciar uma segunda instância Next; a
   repetição usando o servidor existente passou.
-- `git diff --check`: PASS. T10 continua parcial; os checks GitHub observados no
-  HEAD anterior ainda não incluem este teste até que seja enviado novo commit.
+- Reexecução da bateria FOOD05 e cópia FOOD05 após o novo cenário: 20/20 PASS
+  (10 testes em desktop e 10 em mobile; duração 3m42s).
+- `git diff --check`: PASS. T10 continua parcial; os checks GitHub do HEAD `7dacf56b`
+  incluem este cenário e seguem em andamento na última consulta.
