@@ -16,9 +16,9 @@ FE = `octaclin-web/`. Novos nomes são propostas, não arquivos criados nesta ro
 | T07 | Cópia entre refeições/planos salvos usa referências opacas e revalidação server-side; modelo continua bloqueado. T07 não concluído |
 | T08 | Preferências e migration 1079 implementadas; CAS/RLS/JSON exercitados no PostgreSQL de CI |
 | T09 | Backend, BFF, cliente tipado e integração principal com a UI implementados; verificações Web passam |
-| T10–T13 | Implementação parcial integrada; FOOD05/PA07 24/24 desktop/mobile no último teste local; edição de porção atualiza residual. Matriz completa, dimensões restantes, cópias de modelo e histórico integral ainda pendentes |
+| T10–T13 | Implementação parcial integrada; FOOD05/PA07 24/24 desktop/mobile no último teste local; edição de porção atualiza residual sem escrita antes de confirmar. Matriz restante, cópia por modelo e histórico integral pendentes |
 | T14 | PostgreSQL/Testcontainers prova agora defaults, RLS por tenant/profissional, CAS concorrente das preferências 1079 e ausência de DDL na role runtime (6/6); matriz integral do save/snapshot ainda precisa ser fechada |
-| T15–T18 | Smoke visual global, PR Gate, regressões executadas e scanners CI PASS no HEAD bb513d1d; revisão R4 independente e fechamento final pendentes |
+| T15–T18 | No HEAD `f72a5320`: checks remotos aplicáveis PASS, incluindo backend, web, PostgreSQL/RLS, Demo smoke, PR Gate, governança e scanners; provenance do SBOM SKIPPED pelo workflow. Regressão integral/independente R4 e prontidão operacional ainda pendentes |
 
 As caixas abaixo continuam sendo critérios de aceite detalhados; nenhuma prova
 focada isolada encerra a entrega. Uma PR funcional foi escolhida dentre as opções
@@ -334,9 +334,9 @@ requisitos e critérios T01–T18 permanecem vigentes.
 | --- | --- | --- |
 | T06 motor, snapshot e resolução de equivalência | Implementação técnica exercitada em suites focadas e CI | Cópias com proveniência e fechamento dos critérios integrados permanecem pendentes |
 | T07 cópias/modelos com proveniência | BLOCKED | UI recusa a conversão silenciosa; contratos atuais de cópia não transportam proveniência com segurança |
-| T10–T13 interface, FOOD04, revisão e histórico | Parcialmente implementados; Playwright FOOD05/PA07 18/18 em desktop e mobile no HEAD local atual | T10 ainda carece de toda a matriz de limites/teclado/reflow; há bloqueios deliberados para cópias; não considerar M01–M08 fechadas |
+| T10–T13 interface, FOOD04, revisão e histórico | Parcialmente implementados; Playwright FOOD05/PA07 24/24 desktop/mobile no HEAD `f72a5320` anterior | T10 ainda carece da matriz integral de limites/reflow; cópia por modelos bloqueada; não considerar M01–M08 fechadas |
 | T14 PostgreSQL/RLS e concorrência real | Parcial: PostgreSQL/migrations, Redis/idempotência e RLS executados com PASS no GitHub CI | Não equivale à matriz integral de concorrência/aceitação T14; Testcontainers local continua indisponível |
-| T15–T18 regressões, R4, documentação e CI final | Run GitHub `40124900107` e PR Gate concluídos PASS no HEAD `bb513d1d`; smoke global e scanners PASS | R4 independente e fechamento integral dos critérios continuam pendentes |
+| T15–T18 regressões, R4, documentação e CI final | Run GitHub `40165702181`, scanners e PR Gate PASS no HEAD `f72a5320`; Demo smoke PASS; provenance do SBOM SKIPPED | R4 independente, regressão integral da matriz e fechamento operacional continuam pendentes |
 | G01–G05 e prontidão clínica/operacional | Não PASS | Ver [execução FOOD05](execucao-pos-320-food05.md) para evidências locais e bloqueios |
 
 Playwright focalizado FOOD05/PA07: 14/14 desktop e 14/14 mobile PASS; typecheck Web,

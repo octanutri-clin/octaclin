@@ -550,3 +550,35 @@ tenant; não consulta staging nem produção.
   1078/1079 passaram. Classificar o runner local completo como BLOCKED ambiental,
   não como regressão FOOD05 nem PASS global. A imagem Postgres 15 usada pelo teste
   direcionado estava disponível e executou os testes em banco real descartável.
+
+### Retomada — verificação do HEAD e limite do fluxo de modelos (25/10/2026)
+
+- Worktree limpa no início, branch `docs/pos320-food05-planning`, HEAD
+  `f72a5320e9d30359eba42eac324f8e43792a8589`; PR #446 continua Draft.
+- Checks do GitHub consultados nesse HEAD: Backend NestJS, Web Next.js, PostgreSQL/RLS,
+  Demo local smoke, PR Gate, governança, mobile, imagens e scanners aplicáveis PASS;
+  provenance do SBOM SKIPPED pelo workflow. Nenhum deploy, merge ou migration externa.
+- Suítes backend focadas (`equivalencia-nutriente`, `resolver-equivalencias-edicao`,
+  `servico-preferencias-equivalencia`, `servico-planos-alimentares`): 4 suites,
+  173/173 testes PASS.
+- Reconfirmação de T07: modelos atuais devolvem `refeicoes` ao navegador, sem rota
+  de aplicação server-side nem vínculo de origem reautorizável no save. Levar
+  proveniência/capability do paciente a modelos compartilhados exporia contexto de
+  origem; manter o bloqueio de conversão/aplicação de cálculo por modelo até existir
+  contrato server-side transacional com nova autorização e remapeamento. Esse fluxo
+  precisa preservar os dados do modelo e não persistir identificadores do paciente
+  de origem no conteúdo compartilhado.
+- Tentativa de ampliar o teste visual para uma segunda mudança de porção durante a
+  prévia revelou uma limitação intencional do fluxo: ao mudar entradas, a tabela e a
+  linha editável são removidas enquanto a nova prévia carrega. A segunda edição não
+  pode ser produzida pela interface nesse estado; o teste experimental foi revertido
+  e não há mudança pendente no editor. A cobertura existente de resposta tardia após
+  troca de nutriente permanece válida, assim como o cenário de edição da porção com
+  recálculo de residual.
+- Tentativa local do Playwright foi inicialmente bloqueada pelo Turbopack, que rejeita
+  o symlink de `node_modules` fora da raiz do app. A tentativa via Webpack falhou no
+  cenário experimental acima; não contar como PASS. O `next-env.d.ts` gerado durante
+  a execução foi restaurado e `git status` confirmou que nenhum artefato de teste
+  ficou na worktree. O smoke e a suíte visual do HEAD continuam comprovados pelo CI.
+- T07 por modelos, matriz integral de T14, T15–T18 funcionalmente completos e revisão
+  R4 independente seguem abertos; nenhum bloqueio foi reclassificado por inferência.
