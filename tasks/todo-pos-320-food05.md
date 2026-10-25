@@ -434,3 +434,14 @@ Este registro atualiza somente as evidências recentes; não fecha T10 nem gates
   contexto clínico; matriz integral T14 de concorrência/save/snapshot; revisão R4
   independente; fechamento T15–T18 e dependência operacional da FOOD04 em produção.
   Nenhuma ação em ambiente externo foi realizada.
+
+### T14 — rollback multialternativa incluído (25/10/2026)
+
+- Novo caso PostgreSQL sintético prova que falha de fingerprint na segunda alternativa
+  não persiste a primeira parcialmente aplicada, não incrementa revisão e não cria
+  filhos. Typecheck backend PASS.
+- Execução local da spec RLS ficou BLOCKED antes da execução por ausência da imagem
+  Testcontainers `timescale/timescaledb-ha:pg15`; não contar como GREEN local. O novo
+  HEAD precisa do gate PostgreSQL/RLS no GitHub.
+- T14 segue parcial até a evidência do novo CI e fechamento da matriz completa; T07,
+  revisão R4 independente e outros gates permanecem conforme acima.

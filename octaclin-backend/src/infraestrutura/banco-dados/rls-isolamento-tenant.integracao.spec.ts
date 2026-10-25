@@ -1656,6 +1656,48 @@ descrever('RLS e isolamento multi-tenant integral em Postgres real', () => {
     primeira.documentoEdicao.refeicoes[0].nome='Nova edição sintética';await expect(c.salvar(primeira.documentoEdicao,1,falhar)).rejects.toThrow('Falha sintética de persistência FOOD05');expect(await ler()).toEqual(antes);
     const vigente:any=await c.servico.obter(tenantA,c.pacienteId,c.planoId,c.usuario);expect(JSON.stringify(vigente)).toContain('calculada_revisada');
   },60000);
+  it('FOOD05 PostgreSQL: falha na segunda alternativa selecionada não persiste aplicação parcial',async()=>{
+    const c=await prepararCenarioFood05('food05-multi-rollback');
+    const documento=JSON.parse(JSON.stringify(c.documento));
+    const item=documento.refeicoes[0].itens[0];
+    const primeira=item.substituicoes[0];
+    delete primeira.equivalencia;
+    const segunda:any={
+      chaveCliente:'a-food05-segunda',
+      descricao:'Segunda alternativa sintética',
+      quantidade:1,
+      unidade:'porção',
+      porcaoGramas:100,
+      nutrientesPor100g:{energiaKcal:80,proteinasG:8,carboidratosG:16,gordurasG:2},
+      liberadaParaPaciente:false,
+      preferida:false
+    };
+    item.substituicoes.push(segunda);
+    const pedido={...c.pedido,documentoEdicao:documento,alternativas:[primeira,segunda]};
+    const previa=await c.previa.prever(tenantA,c.pacienteId,c.planoId,c.usuario,pedido);
+    for(const alternativa of [primeira,segunda]){
+      const linha=previa.alternativas.find((x:any)=>x.chaveCliente===alternativa.chaveCliente);
+      if(!linha||linha.resultado.estado!=='calculavel')throw new Error('Fixture de alternativa FOOD05 não calculável.');
+      Object.assign(alternativa,{
+        porcaoGramas:linha.resultado.porcaoEfetivaGramas,
+        equivalencia:{acao:'calcular',aplicacaoId:randomUUID(),nutriente:'energiaKcal',politica:{passoPorcaoGramas:'1'},porcaoEfetiva:linha.resultado.porcaoEfetivaGramas,fingerprintEsperado:linha.fingerprint}
+      });
+    }
+    segunda.equivalencia.fingerprintEsperado='0'.repeat(64);
+
+    await expect(c.salvar(documento)).rejects.toMatchObject({status:409});
+    const rascunho=await executorTenant!.executar(tenantA,g=>g.query(
+      'select rascunho_revisao,edicao_snapshot_criptografado from plano_alimentar_versoes where id=$1',[c.versaoId]
+    ));
+    expect(rascunho).toEqual([{rascunho_revisao:0,edicao_snapshot_criptografado:null}]);
+    const filhos=await executorTenant!.executar(tenantA,g=>g.query(
+      `select count(*)::int as total from plano_alimentar_substituicoes s
+       join plano_alimentar_itens i on i.id=s.item_id and i.tenant_id=s.tenant_id
+       join plano_alimentar_refeicoes r on r.id=i.refeicao_id and r.tenant_id=i.tenant_id
+       where r.versao_id=$1`,[c.versaoId]
+    ));
+    expect(filhos).toEqual([{total:0}]);
+  },60000);
   it('FOOD05 PostgreSQL: pendência, publicação e nova versão conservam matemática original e bloqueio legado',async()=>{
     const c=await prepararCenarioFood05('food05-historico');await c.salvar();
     await c.servico.revisar(tenantA,c.pacienteId,c.planoId,c.usuario,{rascunhoIdEsperado:c.versaoId,rascunhoRevisaoEsperada:1});

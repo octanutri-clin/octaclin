@@ -624,3 +624,14 @@ tenant; não consulta staging nem produção.
   externo nesta rodada. T07 por modelos, T14 matriz integral de save/snapshot, T15–T18
   e revisão R4 independente continuam abertos. Os checks green não removem esses
   bloqueios nem tornam a FOOD05 pronta para uso clínico/produção.
+
+### T14 — atomicidade ao aplicar múltiplas alternativas selecionadas (25/10/2026)
+
+- Acrescentada prova de integração PostgreSQL com duas alternativas sintéticas:
+  calcula ambas na prévia, adultera o fingerprint da segunda e exige rollback completo
+  sem revisão/snapshot no rascunho e sem linhas filhas parciais.
+- Typecheck backend PASS e `git diff --check` PASS.
+- Execução local direcionada da spec RLS foi BLOCKED antes dos testes: Testcontainers
+  requer `timescale/timescaledb-ha:pg15`, que não existe no daemon local (HTTP 404).
+  Não é falha do caso nem evidência GREEN; o PostgreSQL/RLS CI deverá executar a prova
+  no novo HEAD. Nenhuma imagem foi trocada e nenhum banco externo foi consultado.
