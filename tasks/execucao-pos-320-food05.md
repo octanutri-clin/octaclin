@@ -466,11 +466,19 @@ proteínas e nenhuma escrita é realizada. Isso valida especificamente a invalid
 por geração/AbortSignal desta alteração de entrada; não cobre, por si só, todas as
 outras dimensões (porção, alternativa, medida, arredondamento e troca de contexto).
 
+O teste foi endurecido para retirar o `AbortSignal` apenas do fetch da prévia sintética,
+simulando transporte que ainda entrega resposta depois do cancelamento. Com a guarda
+`generationRef` temporariamente removida, o teste falhou porque a resposta de energia
+substituiu a comparação de proteínas (RED). Restaurada a guarda, passou (GREEN) em
+desktop e mobile. Essa prova exercita resposta HTTP tardia real do mock, não apenas
+uma rejeição causada pelo abort.
+
 - Playwright focal: desktop-chromium 1/1 PASS e mobile-chromium 1/1 PASS, com dados
   sintéticos e servidor Webpack local em `localhost:3018`. A tentativa inicial sem
   reutilização do servidor falhou ao tentar iniciar uma segunda instância Next; a
   repetição usando o servidor existente passou.
 - Reexecução da bateria FOOD05 e cópia FOOD05 após o novo cenário: 20/20 PASS
-  (10 testes em desktop e 10 em mobile; duração 3m42s).
+  (10 testes em desktop e 10 em mobile; duração 3m06s), já com o mock endurecido para
+  entregar resposta apesar do abort.
 - `git diff --check`: PASS. T10 continua parcial; os checks GitHub do HEAD `7dacf56b`
   incluem este cenário e seguem em andamento na última consulta.

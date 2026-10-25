@@ -295,6 +295,19 @@ test('FOOD05 descarta resposta antiga quando o nutriente-alvo muda durante a prÃ
   fixture.configurarEquivalenciaSintetica();
   const primeira = pausaControlada();
   const pedidos = [];
+  let respostaAntigaEntregue = false;
+  await page.addInitScript(() => {
+    const fetchOriginal = window.fetch.bind(window);
+    window.fetch = (input, init = {}) => {
+      const url = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
+      if (url.includes('/equivalencias/previa')) {
+        const semAbortSignal = { ...init };
+        delete semAbortSignal.signal;
+        return fetchOriginal(input, semAbortSignal);
+      }
+      return fetchOriginal(input, init);
+    };
+  });
   await page.route(url => url.pathname === '/api/profissionais/me/preferencias-equivalencia', route => route.fulfill({ json: {
     preferencias: { schemaVersao: 1, unidades: 'gramas', casasGramas: 3, casasNutrientes: 2, passoPorcaoGramas: '1', modoComparacao: 'detalhado' }, revisao: 1
   } }));
@@ -308,7 +321,8 @@ test('FOOD05 descarta resposta antiga quando o nutriente-alvo muda durante a prÃ
         alternativas: [{ chaveCliente: pedido.alternativas[0].chaveCliente, alimento: { descricao: 'Queijo sintÃ©tico', baseGramas: '100', nutrientes: { energiaKcal: '200' }, fonte: { codigo: 'SINTETICA', versao: '1' } }, fingerprint: 'b'.repeat(64), resultado: {
           estado: 'calculavel', nutriente: pedido.nutriente, aplicavel: true, motivosAplicacao: [], porcaoMatematica: { numerador: '50', denominador: '1' }, porcaoMatematicaGramas: '50', porcaoMatematicaAproximada: false,
           porcaoSugeridaGramas: '50', porcaoEfetivaGramas: '50', nutrienteAlvo: pedido.nutriente === 'energiaKcal' ? '100' : '5', obtido: pedido.nutriente === 'energiaKcal' ? '100' : '5', delta: '0', diferencaAbsoluta: '0', deltaPercentual: '0', nutrientesPorcao: { energiaKcal: '100', proteinasG: '5' }, avisos: []
-        } }] } }).catch(() => {});
+        } }] } });
+      respostaAntigaEntregue = true;
       return;
     }
     await route.fulfill({ json: { fingerprint: 'c'.repeat(64), rascunhoRevisao: 1, nutriente: pedido.nutriente,
@@ -328,7 +342,7 @@ test('FOOD05 descarta resposta antiga quando o nutriente-alvo muda durante a prÃ
   await expect.poll(() => pedidos.length).toBe(2);
   await expect(painel.getByRole('status').filter({ hasText: 'Alvo calculado: ProteÃ­nas.' })).toBeVisible();
   primeira.liberar();
-  await page.waitForTimeout(50);
+  await expect.poll(() => respostaAntigaEntregue).toBe(true);
   await expect(painel.getByRole('status').filter({ hasText: 'Alvo calculado: ProteÃ­nas.' })).toBeVisible();
   expect(pedidos.map(pedido => pedido.nutriente)).toEqual(['energiaKcal', 'proteinasG']);
   expect(fixture.escritas).toHaveLength(0);
