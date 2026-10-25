@@ -372,5 +372,7 @@ Este registro atualiza somente as evidências recentes; não fecha T10 nem gates
 - Mudança local ainda não enviada: a região rolável da tabela recebeu nome acessível
   e foco por teclado. O teste reproduziu RED antes do ajuste e passou 1/1 desktop e
   1/1 mobile; Axe, ESLint focal e `git diff --check` passaram depois do ajuste.
+- Também foi coberta a fronteira do DTO: 20 alternativas aceitas, 21 e duplicadas
+  rejeitadas (Jest focal 23/23 PASS).
 - T10 continua parcial. O próximo commit precisará de CI no HEAD exato; demais
   critérios FOOD05 e R4 seguem abertos.

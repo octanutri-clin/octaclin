@@ -492,6 +492,8 @@ focalizável; `ArrowRight` desloca a tabela sem exigir navegação horizontal po
 
 - Playwright do cenário comparativo: desktop 1/1 PASS e mobile 1/1 PASS, com Axe sem
   violações após a região ser adicionada.
-- ESLint focal e `git diff --check`: PASS. T10 permanece parcial: limite de 20 linhas,
-  demais dimensões de respostas obsoletas e revisão independente ainda requerem
-  evidência; este cenário não fecha esses itens.
+- DTO de prévia: Jest 23/23 PASS; acrescentada prova de fronteira, com exatamente 20
+  alternativas aceitas e 21/duplicatas rejeitadas.
+- ESLint focal e `git diff --check`: PASS. T10 permanece parcial: renderização e
+  seleção da matriz completa de 20 linhas, demais dimensões de respostas obsoletas e
+  revisão independente ainda requerem evidência; este cenário não fecha esses itens.
