@@ -243,6 +243,13 @@ test('FOOD05 apresenta comparação calculada no servidor e confirma somente alt
   expect(corpoPrevia.alternativas[0]).not.toHaveProperty('porcaoGramas');
   const acessibilidade = await new AxeBuilder({ page }).include('[aria-label="Equivalência por nutriente para Iogurte sintético"]').withTags(['wcag2a', 'wcag2aa', 'wcag21aa']).analyze();
   expect(acessibilidade.violations).toEqual([]);
+  await page.setViewportSize({ width: 320, height: 800 });
+  const tabelaComparativa = painel.getByRole('region', { name: 'Tabela comparativa de alternativas' });
+  await expect(tabelaComparativa).toBeVisible();
+  await expect(tabelaComparativa).toHaveAttribute('tabindex', '0');
+  await tabelaComparativa.focus();
+  await page.keyboard.press('ArrowRight');
+  await expect.poll(() => tabelaComparativa.evaluate(element => element.scrollLeft)).toBeGreaterThan(0);
   await page.getByRole('checkbox', { name: 'Selecionar Queijo sintético' }).check();
   const medida = painel.getByLabel('Medida caseira');
   try {

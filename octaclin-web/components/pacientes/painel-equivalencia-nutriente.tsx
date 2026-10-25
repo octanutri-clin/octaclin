@@ -311,7 +311,7 @@ export function PainelEquivalenciaNutriente<T extends AlternativaEdicao>(props: 
       {previaCorresponde && previa ? <div className="grid gap-3">
         <p className="text-sm" role="status">Alvo calculado: {NUTRIENTES.find((opcao) => opcao.valor === nutriente)?.rotulo}. Cada alternativa representa um cenário independente da refeição.</p>
         {linhasSelecionadas.length && !podeConfirmar ? <p role="alert" className="text-sm text-alerta-forte">Remova da seleção as alternativas sem cálculo aplicável antes de confirmar.</p> : null}
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto" role="region" aria-label="Tabela comparativa de alternativas" tabIndex={0}>
           <table className="w-full min-w-[720px] border-collapse text-left text-sm">
             <caption className="sr-only">Comparação das alternativas para {principalDescricao}</caption>
             <thead><tr>{['Selecionar', 'Alternativa e preparo', 'Porção sugerida', 'Alvo', 'Obtido', 'Diferença', 'Refeição após troca'].map((t) => <th key={t} scope="col" className="border-b border-linha p-2">{t}</th>)}</tr></thead>

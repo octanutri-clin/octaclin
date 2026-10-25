@@ -482,3 +482,16 @@ uma rejeição causada pelo abort.
   entregar resposta apesar do abort.
 - `git diff --check`: PASS. T10 continua parcial; os checks GitHub do HEAD `7dacf56b`
   incluem este cenário e seguem em andamento na última consulta.
+
+### T10 — tabela comparativa acessível por teclado em viewport estreito (25/10/2026)
+
+RED: o cenário de comparação não encontrava uma região nomeada para a área rolável;
+em viewport de 320 px a tabela tem largura mínima de 720 px e o contêiner não tinha
+tab stop para rolagem por teclado. GREEN: a área agora é uma região rotulada e
+focalizável; `ArrowRight` desloca a tabela sem exigir navegação horizontal por mouse.
+
+- Playwright do cenário comparativo: desktop 1/1 PASS e mobile 1/1 PASS, com Axe sem
+  violações após a região ser adicionada.
+- ESLint focal e `git diff --check`: PASS. T10 permanece parcial: limite de 20 linhas,
+  demais dimensões de respostas obsoletas e revisão independente ainda requerem
+  evidência; este cenário não fecha esses itens.

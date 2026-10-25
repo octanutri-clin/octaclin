@@ -364,3 +364,13 @@ Este registro atualiza somente as evidências recentes; não fecha T10 nem gates
   do HEAD seguinte antes de usar os resultados como gate final.
   Revisão R4 independente, T10 integral, T14/T15/T16 completos e demais critérios
   seguem pendentes; não promover a PR nem habilitar uso assistencial.
+
+### Continuação — acessibilidade do comparativo (worktree após `b33ab6e8`)
+
+- Run GitHub `40157902718` no HEAD `b33ab6e8`: OctaClin CI, Demo local smoke, Backend,
+  PostgreSQL/RLS, Web build, Mobile, governança, PR Gate e scanners terminaram PASS.
+- Mudança local ainda não enviada: a região rolável da tabela recebeu nome acessível
+  e foco por teclado. O teste reproduziu RED antes do ajuste e passou 1/1 desktop e
+  1/1 mobile; Axe, ESLint focal e `git diff --check` passaram depois do ajuste.
+- T10 continua parcial. O próximo commit precisará de CI no HEAD exato; demais
+  critérios FOOD05 e R4 seguem abertos.
