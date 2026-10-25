@@ -290,6 +290,50 @@ test('FOOD05 libera o painel para novo cálculo ao cancelar uma prévia em andam
   } finally { pendente.liberar(); }
 });
 
+test('FOOD05 descarta resposta antiga quando o nutriente-alvo muda durante a prévia', async ({ context, page }) => {
+  const fixture = await preparar(context);
+  fixture.configurarEquivalenciaSintetica();
+  const primeira = pausaControlada();
+  const pedidos = [];
+  await page.route(url => url.pathname === '/api/profissionais/me/preferencias-equivalencia', route => route.fulfill({ json: {
+    preferencias: { schemaVersao: 1, unidades: 'gramas', casasGramas: 3, casasNutrientes: 2, passoPorcaoGramas: '1', modoComparacao: 'detalhado' }, revisao: 1
+  } }));
+  await page.route(url => url.pathname === `/api/pacientes/${pacienteId}/planos-alimentares/${planoId}/equivalencias/previa`, async route => {
+    const pedido = route.request().postDataJSON();
+    pedidos.push(pedido);
+    if (pedidos.length === 1) {
+      await primeira.aguardar();
+      await route.fulfill({ json: { fingerprint: 'a'.repeat(64), rascunhoRevisao: 1, nutriente: pedido.nutriente,
+        principal: { descricao: 'Iogurte sintético', baseGramas: '100', nutrientes: { energiaKcal: '100' }, fonte: { codigo: 'SINTETICA', versao: '1' } },
+        alternativas: [{ chaveCliente: pedido.alternativas[0].chaveCliente, alimento: { descricao: 'Queijo sintético', baseGramas: '100', nutrientes: { energiaKcal: '200' }, fonte: { codigo: 'SINTETICA', versao: '1' } }, fingerprint: 'b'.repeat(64), resultado: {
+          estado: 'calculavel', nutriente: pedido.nutriente, aplicavel: true, motivosAplicacao: [], porcaoMatematica: { numerador: '50', denominador: '1' }, porcaoMatematicaGramas: '50', porcaoMatematicaAproximada: false,
+          porcaoSugeridaGramas: '50', porcaoEfetivaGramas: '50', nutrienteAlvo: pedido.nutriente === 'energiaKcal' ? '100' : '5', obtido: pedido.nutriente === 'energiaKcal' ? '100' : '5', delta: '0', diferencaAbsoluta: '0', deltaPercentual: '0', nutrientesPorcao: { energiaKcal: '100', proteinasG: '5' }, avisos: []
+        } }] } }).catch(() => {});
+      return;
+    }
+    await route.fulfill({ json: { fingerprint: 'c'.repeat(64), rascunhoRevisao: 1, nutriente: pedido.nutriente,
+      principal: { descricao: 'Iogurte sintético', baseGramas: '100', nutrientes: { energiaKcal: '100', proteinasG: '5' }, fonte: { codigo: 'SINTETICA', versao: '1' } },
+      alternativas: [{ chaveCliente: pedido.alternativas[0].chaveCliente, alimento: { descricao: 'Queijo sintético', baseGramas: '100', nutrientes: { energiaKcal: '200', proteinasG: '10' }, fonte: { codigo: 'SINTETICA', versao: '1' } }, fingerprint: 'd'.repeat(64), resultado: {
+        estado: 'calculavel', nutriente: pedido.nutriente, aplicavel: true, motivosAplicacao: [], porcaoMatematica: { numerador: '50', denominador: '1' }, porcaoMatematicaGramas: '50', porcaoMatematicaAproximada: false,
+        porcaoSugeridaGramas: '50', porcaoEfetivaGramas: '50', nutrienteAlvo: '5', obtido: '5', delta: '0', diferencaAbsoluta: '0', deltaPercentual: '0', nutrientesPorcao: { energiaKcal: '100', proteinasG: '5' }, avisos: []
+      } }] } });
+  });
+  await abrir(page);
+  await page.getByRole('button', { name: 'Expandir todas' }).click();
+  const painel = page.getByRole('region', { name: 'Equivalência por nutriente para Iogurte sintético' });
+  await painel.getByRole('button', { name: 'Equivalência por nutriente' }).click();
+  await painel.getByRole('button', { name: 'Calcular alternativas' }).click();
+  await primeira.iniciou;
+  await painel.getByLabel('Nutriente-alvo').selectOption('proteinasG');
+  await expect.poll(() => pedidos.length).toBe(2);
+  await expect(painel.getByRole('status').filter({ hasText: 'Alvo calculado: Proteínas.' })).toBeVisible();
+  primeira.liberar();
+  await page.waitForTimeout(50);
+  await expect(painel.getByRole('status').filter({ hasText: 'Alvo calculado: Proteínas.' })).toBeVisible();
+  expect(pedidos.map(pedido => pedido.nutriente)).toEqual(['energiaKcal', 'proteinasG']);
+  expect(fixture.escritas).toHaveLength(0);
+});
+
 test('FOOD05 explica alvo zero indeterminado sem expor código interno ou permitir aplicação', async ({ context, page }) => {
   const fixture = await preparar(context);
   fixture.configurarEquivalenciaSintetica();

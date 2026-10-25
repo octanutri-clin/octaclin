@@ -456,3 +456,19 @@ aplicação quando o resultado é indeterminado.
 - T10 permanece parcial: esta prova não fecha, por si só, todas as combinações de
   limites de 20 alternativas, resposta obsoleta após cada tipo de mudança, nem toda a
   matriz de teclado/reflow. CI será repetido no novo HEAD; Draft/R4 continuam abertos.
+
+### T10 — troca do nutriente durante prévia pendente (25/10/2026)
+
+Adicionado cenário Playwright sintético em que a primeira resposta para energia fica
+pendente, o profissional troca o alvo para proteínas e a segunda resposta chega
+primeiro. A resposta antiga é então liberada; a comparação permanece no alvo de
+proteínas e nenhuma escrita é realizada. Isso valida especificamente a invalidação
+por geração/AbortSignal desta alteração de entrada; não cobre, por si só, todas as
+outras dimensões (porção, alternativa, medida, arredondamento e troca de contexto).
+
+- Playwright focal: desktop-chromium 1/1 PASS e mobile-chromium 1/1 PASS, com dados
+  sintéticos e servidor Webpack local em `localhost:3018`. A tentativa inicial sem
+  reutilização do servidor falhou ao tentar iniciar uma segunda instância Next; a
+  repetição usando o servidor existente passou.
+- `git diff --check`: PASS. T10 continua parcial; os checks GitHub observados no
+  HEAD anterior ainda não incluem este teste até que seja enviado novo commit.
