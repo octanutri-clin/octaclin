@@ -393,3 +393,43 @@ Fechamento do checkpoint intermediário:
 - Resultado final conferido no GitHub Actions para o run `40124900107`, HEAD
   `bb513d1d`: todos os jobs concluídos com `success`. O registro descreve apenas esse
   HEAD; qualquer atualização posterior da PR exige seus próprios checks.
+
+## FOOD05 T07 — limite do envelope de cópia (24/10/2026)
+
+Revisão do caminho de cópia encontrou que o limite de 96 KiB cobria somente o
+documento editorial. As referências fechadas de proveniência seguem como campos do
+mesmo pedido HTTP; portanto um documento válido perto do teto podia fazer o envelope
+ultrapassar o parser Nest de 100 KB. O limite de 200 referências não impedia esse
+caso.
+
+- RED: teste DTO com documento estruturalmente válido e referências de tamanho máximo
+  aceitou o pedido, apesar do envelope serializado exceder 96 KiB.
+- GREEN: o validador do documento também mede o objeto completo de `SalvarEdicaoPlanoDto`
+  em UTF-8 e rejeita envelopes acima de 96 KiB. Mantém margem em relação ao parser
+  global de 100 KB; não muda rotas, persistência nem limites de conteúdo clínico.
+- Validação posterior: DTO, serviço de planos e resolver focal — 155/155 PASS;
+  `pnpm build` do Nest e verificação do artefato `dist/main.js` — PASS;
+  `git diff --check` — PASS.
+- Commit `571d93a` enviado à mesma PR Draft #446. CI do novo HEAD ainda precisa concluir;
+  revisão R4 independente e T07 para modelos continuam pendentes. Nenhuma migration,
+  consulta externa, merge, deploy ou ativação foi realizada.
+
+## CI PR #446 — falhas de governança e smoke corrigidas (25/10/2026)
+
+No run `40135661731` do HEAD `571d93a`, backend, Web, Mobile, AI FastAPI e scanners
+passaram. Governança e Demo local smoke falharam, fazendo o PR Gate reprovar.
+
+- Governança: o gate de redação apontou `quantidadeEquivalencias` e `versaoDestino`
+  na auditoria da cópia FOOD05 sem justificativas na allowlist. Foram incluídas
+  justificativas de que são apenas contagem e ordinal da versão destino; nenhum
+  identificador, composição ou fato clínico é gravado. `pnpm test:redacao-auditoria`
+  passou 24/24.
+- Smoke visual: quatro casos desktop/mobile da Fase 269 falharam porque a fixture
+  interceptava o resumo do plano de origem, mas não o novo GET da versão salva exata.
+  A fixture passou a responder esse endpoint com a versão sintética já definida.
+  Playwright focal passou 4/4 em desktop e mobile usando servidor Webpack local.
+  Turbopack local não iniciou por symlink de `node_modules` fora do filesystem root;
+  essa limitação do ambiente não reproduziu o erro funcional.
+- Backend, Web, Mobile e scans do run falho já estavam PASS. PR Gate precisa rodar
+  novamente sobre o novo HEAD. O relatório documental atual permanece apenas na
+  worktree até a sincronização desse commit.
