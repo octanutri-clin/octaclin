@@ -13,7 +13,7 @@ FE = `octaclin-web/`. Novos nomes são propostas, não arquivos criados nesta ro
 | --- | --- |
 | T01–T05 | Fundamentos implementados e verificações focadas PASS; fechamento integrado ainda depende dos gates finais |
 | T06 | Motor, writer/ACK, revisão e snapshots implementados; suites focadas PASS, conclusão funcional ainda vinculada às cópias e regressões finais |
-| T07 | Cópia entre refeições/planos salvos usa referências opacas e revalidação server-side; modelo continua bloqueado. T07 não concluído |
+| T07 | Cópia entre refeições/planos salvos usa referências opacas e revalidação server-side; serviço de modelos rejeita proveniência inesperada em gravação/leitura. Aplicação de equivalências por modelo continua bloqueada; T07 não concluído |
 | T08 | Preferências e migration 1079 implementadas; CAS/RLS/JSON exercitados no PostgreSQL de CI |
 | T09 | Backend, BFF, cliente tipado e integração principal com a UI implementados; verificações Web passam |
 | T10–T13 | Implementação parcial integrada; FOOD05/PA07 24/24 desktop/mobile no último teste local; edição de porção atualiza residual sem escrita antes de confirmar. Matriz restante, cópia por modelo e histórico integral pendentes |
@@ -145,6 +145,12 @@ na clínica e não podem expor IDs de paciente de origem aos demais profissionai
 fluxo atual devolve refeições ao browser antes de salvar o plano. Exige aplicação
 server-side com autorização de modelo e da origem, sem retornar o contexto cifrado.
 Não remover esse bloqueio nem marcar T07 completo antes desse contrato e testes.
+
+Defesa já adicionada na fronteira de modelos: o serviço revalida campos aninhados
+contra o DTO allowlist ao criar/editar e antes de devolver/restaurar snapshots.
+Campos FOOD05 desconhecidos são recusados na gravação e snapshots com esse conteúdo
+falham fechados; isso previne transporte de proveniência pelo modelo, mas não cria
+uma aplicação server-side e não conclui T07.
 
 - [ ] RED/GREEN: projeção profissional mantém chaves/referências fora do portal/PDF;
   cópia de rascunho/publicação, autorização atual, remapeamento e revisão pendente
@@ -333,7 +339,7 @@ requisitos e critérios T01–T18 permanecem vigentes.
 | Tarefa/área | Estado observado | Limite atual |
 | --- | --- | --- |
 | T06 motor, snapshot e resolução de equivalência | Implementação técnica exercitada em suites focadas e CI | Cópias com proveniência e fechamento dos critérios integrados permanecem pendentes |
-| T07 cópias/modelos com proveniência | BLOCKED | UI recusa a conversão silenciosa; contratos atuais de cópia não transportam proveniência com segurança |
+| T07 cópias/modelos com proveniência | Parcial; aplica referências opacas em cópias de planos e bloqueia conversão nos modelos | Serviço de modelos rejeita campos de proveniência desconhecidos (32 testes PASS); aplicação server-side por modelo ainda precisa reautorizar origem e remapear identidades |
 | T10–T13 interface, FOOD04, revisão e histórico | Parcialmente implementados; Playwright FOOD05/PA07 24/24 desktop/mobile no HEAD `f72a5320` anterior | T10 ainda carece da matriz integral de limites/reflow; cópia por modelos bloqueada; não considerar M01–M08 fechadas |
 | T14 PostgreSQL/RLS e concorrência real | Parcial: PostgreSQL/migrations, Redis/idempotência e RLS executados com PASS no GitHub CI | Não equivale à matriz integral de concorrência/aceitação T14; Testcontainers local continua indisponível |
 | T15–T18 regressões, R4, documentação e CI final | Run GitHub `40165702181`, scanners e PR Gate PASS no HEAD `f72a5320`; Demo smoke PASS; provenance do SBOM SKIPPED | R4 independente, regressão integral da matriz e fechamento operacional continuam pendentes |

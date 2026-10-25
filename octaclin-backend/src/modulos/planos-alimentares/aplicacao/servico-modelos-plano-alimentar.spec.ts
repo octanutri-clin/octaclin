@@ -162,6 +162,21 @@ describe('ServicoModelosPlanoAlimentar', () => {
   }
 
   describe('criar', () => {
+    it('recusa proveniência FOOD05 enviada para um modelo compartilhável', async () => {
+      const refeicoes = refeicoesExemplo();
+      refeicoes[0].itens[0].substituicoes = [{
+        alimentoComposicaoId: ALIMENTO_ID,
+        quantidade: 1,
+        unidade: 'porção',
+        porcaoGramas: 25,
+        equivalencia: { pacienteOrigemId: 'dado-sensível' }
+      }] as never;
+      await expect(servico.criar(TENANT_ID, usuarioProfissional(), {
+        nome: 'Modelo compartilhável', origem: 'clinica', refeicoes: refeicoes as never
+      })).rejects.toMatchObject({ status: 400 });
+      expect(repositorios.get(ModeloPlanoAlimentarOrm)!.save).not.toHaveBeenCalled();
+    });
+
     it('guarda nome e conteudo criptografados e conta a estrutura', async () => {
       await servico.criar(TENANT_ID, usuarioProfissional(), {
         nome: 'Plano padrao',
@@ -304,6 +319,25 @@ describe('ServicoModelosPlanoAlimentar', () => {
   });
 
   describe('obter', () => {
+    it('falha fechada sem devolver proveniência inesperada de paciente em snapshot de modelo', async () => {
+      const refeicoes = refeicoesExemplo();
+      refeicoes[0].itens[0].substituicoes = [{
+        alimentoComposicaoId: ALIMENTO_ID,
+        quantidade: 1,
+        unidade: 'porção',
+        porcaoGramas: 25,
+        equivalencia: { pacienteOrigemId: 'dado-sensível' }
+      }] as never;
+      repositorios.get(ModeloPlanoAlimentarOrm)!.registros.push({
+        id: MODELO_ID, tenantId: TENANT_ID, origem: 'clinica', profissionalId: undefined,
+        nomeCriptografado: criptografia.criptografar('Modelo compartilhável'),
+        conteudoCriptografado: criptografia.criptografar(JSON.stringify(refeicoes)),
+        totalRefeicoes: 1, totalItens: 1, versaoAtual: 1
+      });
+      await expect(servico.obter(TENANT_ID, MODELO_ID, usuarioProfissional()))
+        .rejects.toMatchObject({ status: 503 });
+    });
+
     it('devolve as refeicoes para aplicar no rascunho', async () => {
       await servico.criar(TENANT_ID, usuarioProfissional(), {
         nome: 'Plano padrao',

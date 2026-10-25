@@ -1,4 +1,6 @@
-import { ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException, ServiceUnavailableException } from '@nestjs/common';
+import { plainToInstance } from 'class-transformer';
+import { ValidationError, validateSync } from 'class-validator';
 import { EntityManager, FindOptionsWhere, In, IsNull } from 'typeorm';
 import { registrarAuditoriaNaTransacao } from '../../../infraestrutura/auditoria/servico-auditoria';
 import { ExecutorTenant } from '../../../infraestrutura/banco-dados/executor-tenant';
@@ -47,7 +49,7 @@ export class ServicoModelosPlanoAlimentar {
   async criar(tenantId: string, usuario: UsuarioAutenticado, dados: CriarModeloPlanoAlimentarDto) {
     this.garantirPapelProfissional(usuario);
     this.garantirPermissao(usuario, 'planos_alimentares.gerenciar');
-    const refeicoes = dados.refeicoes as unknown as RefeicaoModeloPlanoAlimentar[];
+    const refeicoes = this.validarRefeicoesModelo(dados.refeicoes, false);
     const { totalRefeicoes, totalItens } = contarEstruturaModelo(refeicoes);
 
     return this.executorTenant.executar(tenantId, async (gerenciador) => {
@@ -137,9 +139,14 @@ export class ServicoModelosPlanoAlimentar {
 
     return this.executorTenant.executar(tenantId, async (gerenciador) => {
       const modelo = await this.obterNoEscopo(gerenciador, tenantId, modeloId, usuario);
-      const refeicoes = JSON.parse(
-        this.criptografia.descriptografar(modelo.conteudoCriptografado)
-      ) as RefeicaoModeloPlanoAlimentar[];
+      let refeicoes: RefeicaoModeloPlanoAlimentar[];
+      try {
+        refeicoes = this.validarRefeicoesModelo(JSON.parse(
+          this.criptografia.descriptografar(modelo.conteudoCriptografado)
+        ), true);
+      } catch {
+        throw new ServiceUnavailableException('Conteúdo do modelo indisponível.');
+      }
       return {
         id: modelo.id,
         nome: this.criptografia.descriptografar(modelo.nomeCriptografado),
@@ -163,7 +170,7 @@ export class ServicoModelosPlanoAlimentar {
   ) {
     this.garantirPapelProfissional(usuario);
     this.garantirPermissao(usuario, 'planos_alimentares.gerenciar');
-    const refeicoes = dados.refeicoes as unknown as RefeicaoModeloPlanoAlimentar[];
+    const refeicoes = this.validarRefeicoesModelo(dados.refeicoes, false);
     const { totalRefeicoes, totalItens } = contarEstruturaModelo(refeicoes);
 
     return this.executorTenant.executar(tenantId, async (gerenciador) => {
@@ -242,7 +249,12 @@ export class ServicoModelosPlanoAlimentar {
         ? modelo
         : undefined);
       if (!snapshot) throw new NotFoundException('Versao do modelo nao encontrada.');
-      const refeicoes = JSON.parse(this.criptografia.descriptografar(snapshot.conteudoCriptografado)) as RefeicaoModeloPlanoAlimentar[];
+      let refeicoes: RefeicaoModeloPlanoAlimentar[];
+      try {
+        refeicoes = this.validarRefeicoesModelo(JSON.parse(this.criptografia.descriptografar(snapshot.conteudoCriptografado)), true);
+      } catch {
+        throw new ServiceUnavailableException('Conteúdo da versão do modelo indisponível.');
+      }
       return {
         id: revisao?.id ?? `${modelo.id}:1`, numero,
         nome: this.criptografia.descriptografar(snapshot.nomeCriptografado),
@@ -274,6 +286,11 @@ export class ServicoModelosPlanoAlimentar {
       const origem = await revisoes.findOne({ where: { tenantId, modeloId, numero } });
       const snapshot = origem ?? ((numero === 1 && versaoAtual === 1) ? modelo : undefined);
       if (!snapshot) throw new NotFoundException('Versao do modelo nao encontrada.');
+      try {
+        this.validarRefeicoesModelo(JSON.parse(this.criptografia.descriptografar(snapshot.conteudoCriptografado)), true);
+      } catch {
+        throw new ServiceUnavailableException('Conteúdo da versão do modelo indisponível.');
+      }
       if (!origem) await this.persistirRevisao(gerenciador, modelo, 1, usuario.usuarioId);
 
       modelo.nomeCriptografado = Buffer.from(snapshot.nomeCriptografado);
@@ -400,6 +417,27 @@ export class ServicoModelosPlanoAlimentar {
       alimentos.filter((alimento) => fontesPermitidas.has(alimento.fonteId)).map((alimento) => alimento.id)
     );
     return ids.filter((id) => !disponiveis.has(id));
+  }
+
+  /**
+   * O conteúdo persistido de um modelo é compartilhável e não pode transportar
+   * capabilities ou proveniência clínica de equivalências. A validação aqui
+   * duplica deliberadamente a fronteira HTTP para cobrir chamadas internas e
+   * snapshots antigos/adulterados; leituras falham fechadas sem devolver JSON
+   * desconhecido ao navegador.
+   */
+  private validarRefeicoesModelo(valor: unknown, armazenado: boolean): RefeicaoModeloPlanoAlimentar[] {
+    const dto = plainToInstance(CriarModeloPlanoAlimentarDto, {
+      nome: 'Modelo', origem: 'pessoal', refeicoes: valor
+    });
+    const possuiCamposNaoPermitidos = (erros: ValidationError[]): boolean => erros.some((erro) =>
+      Boolean(erro.constraints?.whitelistValidation) || possuiCamposNaoPermitidos(erro.children ?? [])
+    );
+    if (possuiCamposNaoPermitidos(validateSync(dto, { whitelist: true, forbidNonWhitelisted: true }))) {
+      if (armazenado) throw new Error('Conteúdo de modelo fora do contrato.');
+      throw new BadRequestException('Estrutura do modelo inválida.');
+    }
+    return dto.refeicoes as unknown as RefeicaoModeloPlanoAlimentar[];
   }
 
   private async resolverProfissional(

@@ -582,3 +582,23 @@ tenant; não consulta staging nem produção.
   ficou na worktree. O smoke e a suíte visual do HEAD continuam comprovados pelo CI.
 - T07 por modelos, matriz integral de T14, T15–T18 funcionalmente completos e revisão
   R4 independente seguem abertos; nenhum bloqueio foi reclassificado por inferência.
+
+### T07 — modelo compartilhável rejeita contexto clínico inesperado (25/10/2026)
+
+- RED: dois testes novos demonstraram que `ServicoModelosPlanoAlimentar.criar`
+  persistia uma propriedade aninhada `equivalencia` com identificador de paciente,
+  e `obter` devolvia a mesma propriedade de um snapshot armazenado. O serviço era
+  chamado atrás do DTO HTTP, mas não revalidava o limite ao persistir/ler.
+- GREEN: serviço agora aplica allowlist aninhada também em criação/edição e antes de
+  retornar ou restaurar snapshots. Campo FOOD05 inesperado resulta em 400 na entrada;
+  snapshot inválido resulta em 503 genérico, sem devolver seu conteúdo. Não persiste
+  o campo e não altera modelos/plano em caso de rejeição.
+- Verificações: `pnpm exec jest --runInBand
+  src/modulos/planos-alimentares/aplicacao/servico-modelos-plano-alimentar.spec.ts`
+  — 32/32 PASS após correção (RED reproduzido nos dois casos antes); `pnpm typecheck`
+  — PASS; integração serviço/DTO/controlador — 3 suites, 55/55 PASS;
+  `pnpm typecheck` — PASS (exit 0); `git diff --check` — PASS.
+- Limite: isso fecha a fronteira de conteúdo inesperado, não a aplicação de equivalência
+  por modelo. T07 segue parcial: será necessário um comando server-side que autorize
+  modelo e origem, remapeie chaves no destino e nunca exponha IDs/contextos do paciente
+  de origem ao consumidor de um modelo compartilhado.
