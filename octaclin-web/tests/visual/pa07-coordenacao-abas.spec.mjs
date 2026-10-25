@@ -92,25 +92,33 @@ async function preparar(context) {
   });
   return {
     escritas,
-    configurarEquivalenciaSintetica() {
+    configurarEquivalenciaSintetica(quantidadeAlternativas = 1) {
       const refeicaoId = 'pa07-refeicao-food05';
       const principalId = 'pa07-principal-food05';
       const alternativaId = 'pa07-alternativa-food05';
       const principais = { energiaKcal: 100, proteinasG: 5, carboidratosG: 10, gordurasG: 2 };
       const alternativas = { energiaKcal: 200, proteinasG: 10, carboidratosG: 20, gordurasG: 4 };
+      const linhasAlternativas = Array.from({ length: quantidadeAlternativas }, (_, indice) => ({
+        chaveCliente: indice === 0 ? alternativaId : `${alternativaId}-${indice + 1}`,
+        alimentoComposicaoId: indice === 0 ? 'pa07-alimento-alternativo' : `pa07-alimento-alternativo-${indice + 1}`,
+        descricao: indice === 0 ? 'Queijo sintético' : `Queijo sintético ${indice + 1}`,
+        ordem: indice,
+        nutrientesPor100g: alternativas
+      }));
       const documentoEdicao = {
         schemaVersao: 1,
         refeicoes: [{ chaveCliente: refeicaoId, nome: 'Lanche sintético', horarioLocal: '10:00', orientacoes: '', itens: [{
           chaveCliente: principalId, alimentoComposicaoId: 'pa07-alimento-principal', descricao: 'Iogurte sintético', quantidade: 1, unidade: 'porção', porcaoGramas: 100,
-          nutrientesPor100g: principais, substituicoes: [{ chaveCliente: alternativaId, alimentoComposicaoId: 'pa07-alimento-alternativo', descricao: 'Queijo sintético', quantidade: 1, unidade: 'porção', porcaoGramas: 80,
-            nutrientesPor100g: alternativas, liberadaParaPaciente: false, preferida: false }]
+          nutrientesPor100g: principais, substituicoes: linhasAlternativas.map(linha => ({ ...linha, quantidade: 1, unidade: 'porção', porcaoGramas: 80,
+            liberadaParaPaciente: false, preferida: false }))
         }]}]
       };
       const refeicao = { id: refeicaoId, ordem: 0, nome: 'Lanche sintético', horarioLocal: '10:00', orientacoes: '', itens: [{
         id: principalId, ordem: 0, alimentoComposicaoId: 'pa07-alimento-principal', descricao: 'Iogurte sintético', quantidade: 1, unidade: 'porção', porcaoGramas: 100,
         composicaoSnapshot: { descricao: 'Iogurte sintético', nutrientesPor100g: principais, fonte: { codigo: 'SINTETICA', versao: '1' } },
-        substituicoes: [{ id: alternativaId, ordem: 0, alimentoComposicaoId: 'pa07-alimento-alternativo', descricao: 'Queijo sintético', quantidade: 1, unidade: 'porção', porcaoGramas: 80,
-          composicaoSnapshot: { descricao: 'Queijo sintético', nutrientesPor100g: alternativas, fonte: { codigo: 'SINTETICA', versao: '1' } }, liberadaParaPaciente: false, preferida: false }]
+        substituicoes: linhasAlternativas.map(linha => ({ id: linha.chaveCliente, ordem: linha.ordem, alimentoComposicaoId: linha.alimentoComposicaoId,
+          descricao: linha.descricao, quantidade: 1, unidade: 'porção', porcaoGramas: 80,
+          composicaoSnapshot: { descricao: linha.descricao, nutrientesPor100g: linha.nutrientesPor100g, fonte: { codigo: 'SINTETICA', versao: '1' } }, liberadaParaPaciente: false, preferida: false }))
       }] };
       detalhe = { ...detalhe, draft: { ...detalhe.draft, edicaoEstado: 'materializada', documentoEdicao, refeicoes: [refeicao],
         ativacaoEdicao: [{ chaveCliente: refeicaoId, identidadeId: 'pa07-identidade-sintetica', ativa: true }],
@@ -271,6 +279,42 @@ test('FOOD05 apresenta comparação calculada no servidor e confirma somente alt
   expect(alternativaAplicada.equivalencia).toMatchObject({ acao: 'calcular', nutriente: 'energiaKcal', porcaoEfetiva: '50' });
   expect(alternativaAplicada.liberadaParaPaciente).toBe(false);
   expect(alternativaAplicada.preferida).toBe(false);
+});
+
+test('FOOD05 mostra as 20 alternativas permitidas e mantém seleção parcial', async ({ context, page }) => {
+  const fixture = await preparar(context);
+  fixture.configurarEquivalenciaSintetica(20);
+  await page.route(url => url.pathname === '/api/profissionais/me/preferencias-equivalencia', route => route.fulfill({ json: {
+    preferencias: { schemaVersao: 1, unidades: 'gramas', casasGramas: 2, casasNutrientes: 2, passoPorcaoGramas: '1', modoComparacao: 'detalhado' }, revisao: 1
+  } }));
+  await page.route(url => url.pathname === `/api/pacientes/${pacienteId}/planos-alimentares/${planoId}/equivalencias/previa`, async route => {
+    const pedido = route.request().postDataJSON();
+    expect(pedido.alternativas).toHaveLength(20);
+    await route.fulfill({ json: {
+      fingerprint: 'a'.repeat(64), rascunhoRevisao: 1, nutriente: 'energiaKcal',
+      principal: { descricao: 'Iogurte sintético', baseGramas: '100', nutrientes: { energiaKcal: '100', proteinasG: '5', carboidratosG: '10', gordurasG: '2' }, fonte: { codigo: 'SINTETICA', versao: '1' } },
+      alternativas: pedido.alternativas.map((alternativa, indice) => ({
+        chaveCliente: alternativa.chaveCliente,
+        alimento: { descricao: alternativa.descricao, preparacao: 'não informada', baseGramas: '100', nutrientes: { energiaKcal: '200', proteinasG: '10', carboidratosG: '20', gordurasG: '4' }, fonte: { codigo: 'SINTETICA', versao: '1' } },
+        fingerprint: `${String(indice).padStart(64, '0')}`,
+        resultado: { estado: 'calculavel', nutriente: 'energiaKcal', aplicavel: true, motivosAplicacao: [], porcaoMatematica: { numerador: '50', denominador: '1' }, porcaoMatematicaGramas: '50', porcaoMatematicaAproximada: false,
+          porcaoSugeridaGramas: '50', porcaoEfetivaGramas: '50', nutrienteAlvo: '100', obtido: '100', delta: '0', diferencaAbsoluta: '0', deltaPercentual: '0', nutrientesPorcao: { energiaKcal: '100', proteinasG: '5', carboidratosG: '10', gordurasG: '2' }, avisos: [] }
+      }))
+    } });
+  });
+  await abrir(page);
+  await page.getByRole('button', { name: 'Expandir todas' }).click();
+  const painel = page.getByRole('region', { name: 'Equivalência por nutriente para Iogurte sintético' });
+  await painel.getByRole('button', { name: 'Equivalência por nutriente' }).click();
+  await painel.getByRole('button', { name: 'Calcular alternativas' }).click();
+  const tabela = painel.getByRole('region', { name: 'Tabela comparativa de alternativas' }).getByRole('table');
+  await expect(tabela.locator('tbody tr')).toHaveCount(20);
+  await expect(painel.getByRole('checkbox', { name: /^Selecionar Queijo sintético/ })).toHaveCount(20);
+  await painel.getByRole('checkbox', { name: 'Selecionar Queijo sintético', exact: true }).check();
+  await expect(painel.getByRole('checkbox', { name: 'Selecionar Queijo sintético', exact: true })).toBeChecked();
+  await expect(painel.getByRole('checkbox', { name: 'Selecionar Queijo sintético 2', exact: true })).not.toBeChecked();
+  await expect(painel.getByRole('button', { name: 'Aplicar selecionadas' })).toBeEnabled();
+  expect(fixture.escritas).toHaveLength(0);
 });
 
 test('FOOD05 libera o painel para novo cálculo ao cancelar uma prévia em andamento', async ({ context, page }) => {

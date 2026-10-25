@@ -374,5 +374,7 @@ Este registro atualiza somente as evidências recentes; não fecha T10 nem gates
   1/1 mobile; Axe, ESLint focal e `git diff --check` passaram depois do ajuste.
 - Também foi coberta a fronteira do DTO: 20 alternativas aceitas, 21 e duplicadas
   rejeitadas (Jest focal 23/23 PASS).
+- A interface recebeu cenário de lote máximo: 20 linhas renderizadas, seleção
+  parcial provada, Playwright focal completo 22/22 PASS (11 desktop, 11 mobile).
 - T10 continua parcial. O próximo commit precisará de CI no HEAD exato; demais
   critérios FOOD05 e R4 seguem abertos.

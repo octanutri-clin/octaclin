@@ -492,8 +492,13 @@ focalizável; `ArrowRight` desloca a tabela sem exigir navegação horizontal po
 
 - Playwright do cenário comparativo: desktop 1/1 PASS e mobile 1/1 PASS, com Axe sem
   violações após a região ser adicionada.
+- Playwright do lote máximo: 20 alternativas renderizadas em 20 linhas; uma seleção
+  individual habilita aplicação e mantém as outras 19 desmarcadas — desktop 1/1 e
+  mobile 1/1 PASS.
 - DTO de prévia: Jest 23/23 PASS; acrescentada prova de fronteira, com exatamente 20
   alternativas aceitas e 21/duplicatas rejeitadas.
+- Bateria FOOD05/PA07/copiar FOOD05 após essa expansão: 22/22 PASS (11 testes por
+  projeto, desktop e mobile).
 - ESLint focal e `git diff --check`: PASS. T10 permanece parcial: renderização e
   seleção da matriz completa de 20 linhas, demais dimensões de respostas obsoletas e
   revisão independente ainda requerem evidência; este cenário não fecha esses itens.
