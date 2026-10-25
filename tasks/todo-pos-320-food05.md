@@ -16,7 +16,7 @@ FE = `octaclin-web/`. Novos nomes são propostas, não arquivos criados nesta ro
 | T07 | Cópia entre refeições/planos salvos usa referências opacas e revalidação server-side; modelo continua bloqueado. T07 não concluído |
 | T08 | Preferências e migration 1079 implementadas; CAS/RLS/JSON exercitados no PostgreSQL de CI |
 | T09 | Backend, BFF, cliente tipado e integração principal com a UI implementados; verificações Web passam |
-| T10–T13 | Implementação parcial integrada; FOOD05/PA07 18/18 desktop/mobile após cancelamento e 0/0; limites, matriz completa, cópias e critérios restantes ainda pendentes |
+| T10–T13 | Implementação parcial integrada; FOOD05/PA07 24/24 desktop/mobile no último teste local; edição de porção atualiza residual. Matriz completa, dimensões restantes, cópias de modelo e histórico integral ainda pendentes |
 | T14 | PostgreSQL/migrations/RLS e Redis/idempotência do fluxo executado no GitHub CI PASS; matriz integral de concorrência e todos os critérios ainda precisam ser fechados |
 | T15–T18 | Smoke visual global, PR Gate, regressões executadas e scanners CI PASS no HEAD bb513d1d; revisão R4 independente e fechamento final pendentes |
 
@@ -378,3 +378,17 @@ Este registro atualiza somente as evidências recentes; não fecha T10 nem gates
   parcial provada, Playwright focal completo 22/22 PASS (11 desktop, 11 mobile).
 - T10 continua parcial. O próximo commit precisará de CI no HEAD exato; demais
   critérios FOOD05 e R4 seguem abertos.
+
+### T10 — porção editada e regressão integrada (25/10/2026)
+
+- Novo cenário compara prévia original e porção efetiva editada: envia a nova porção,
+  apresenta obtido/residual recalculados e não escreve antes da confirmação.
+- Após alinhar a asserção ao formato visual vigente, cenário Playwright 2/2
+  desktop/mobile. Suite FOOD05 dentro de
+  `pa07-coordenacao-abas.spec.mjs`: 24/24 PASS (12 casos em cada projeto), com
+  mocks sintéticos. ESLint focal e `git diff --check` PASS.
+- Os checks remotos do HEAD anterior `5a1ad869` concluíram PASS. Esta alteração
+  exige CI no novo HEAD; não reutilizar o PASS anterior.
+- T10 continua parcial; T07 modelos, T14 matriz completa, T15–T18 e revisão R4
+  independente continuam abertos. PR #446 permanece Draft; nenhum merge, deploy,
+  migration externa ou ativação ocorreu.

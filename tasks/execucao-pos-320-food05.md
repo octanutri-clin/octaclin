@@ -502,3 +502,24 @@ focalizável; `ArrowRight` desloca a tabela sem exigir navegação horizontal po
 - ESLint focal e `git diff --check`: PASS. T10 permanece parcial: renderização e
   seleção da matriz completa de 20 linhas, demais dimensões de respostas obsoletas e
   revisão independente ainda requerem evidência; este cenário não fecha esses itens.
+
+### T10 — edição da porção efetiva e atualização do residual (25/10/2026)
+
+Adicionado teste Playwright sintético para editar a porção efetiva após uma prévia
+válida. A fixture verifica que o novo pedido envia a porção escolhida e que a UI
+atualiza porção, valor obtido, diferença absoluta e percentual antes de qualquer
+confirmação; não ocorre escrita no plano durante a prévia.
+
+- RED: a primeira execução falhou por uma expectativa de texto incompatível com a
+  apresentação real localizada (vírgula decimal e duas casas); não indicou falha do
+  comportamento do produto. A expectativa foi alinhada ao contrato visual existente.
+- GREEN: cenário focal passou em desktop e mobile (2/2). A bateria FOOD05 na suíte
+  PA07/copiar passou 24/24 (12 cenários por projeto, desktop/mobile), incluindo o
+  lote máximo, resposta tardia após troca de alvo, recálculo e integração FOOD04.
+- ESLint focal, `git diff --check`: PASS. Playwright foi iniciado com Next Webpack
+  em localhost porque o Turbopack desta worktree rejeita o symlink de dependências
+  para fora da raiz do app; `next-env.d.ts` gerado pelo servidor foi restaurado.
+- O HEAD `5a1ad869` teve todos os checks remotos PASS, incluindo Backend, Web,
+  PostgreSQL/RLS, Demo local smoke, PR Gate e scanners. Esta alteração cria novo
+  HEAD e precisa de execução CI própria. T10/T07/T14–T18 e R4 independente continuam
+  abertos; FOOD05 permanece Draft e sem liberação operacional.
