@@ -17,7 +17,7 @@ FE = `octaclin-web/`. Novos nomes são propostas, não arquivos criados nesta ro
 | T08 | Preferências e migration 1079 implementadas; CAS/RLS/JSON exercitados no PostgreSQL de CI |
 | T09 | Backend, BFF, cliente tipado e integração principal com a UI implementados; verificações Web passam |
 | T10–T13 | Implementação parcial integrada; FOOD05/PA07 24/24 desktop/mobile no último teste local; edição de porção atualiza residual. Matriz completa, dimensões restantes, cópias de modelo e histórico integral ainda pendentes |
-| T14 | PostgreSQL/migrations/RLS e Redis/idempotência do fluxo executado no GitHub CI PASS; matriz integral de concorrência e todos os critérios ainda precisam ser fechados |
+| T14 | PostgreSQL/Testcontainers prova agora defaults, RLS por tenant/profissional, CAS concorrente das preferências 1079 e ausência de DDL na role runtime (6/6); matriz integral do save/snapshot ainda precisa ser fechada |
 | T15–T18 | Smoke visual global, PR Gate, regressões executadas e scanners CI PASS no HEAD bb513d1d; revisão R4 independente e fechamento final pendentes |
 
 As caixas abaixo continuam sendo critérios de aceite detalhados; nenhuma prova
@@ -392,3 +392,22 @@ Este registro atualiza somente as evidências recentes; não fecha T10 nem gates
 - T10 continua parcial; T07 modelos, T14 matriz completa, T15–T18 e revisão R4
   independente continuam abertos. PR #446 permanece Draft; nenhum merge, deploy,
   migration externa ou ativação ocorreu.
+
+### T14 — PostgreSQL real para migration 1079 e preferências FOOD05 (25/10/2026)
+
+- A integração descartável já executava 1078/1079; foi ampliada para exercitar
+  `ServicoPreferenciasEquivalencia` contra PostgreSQL 15 e role runtime sem owner,
+  superuser ou BYPASSRLS. A policy usa o tenant da sessão com cast protegido por
+  `NULLIF`, e FORCE RLS é verificado na tabela `profissionais`.
+- Casos reais: defaults; isolamento por profissional e tenant; vínculo forjado
+  negado; CAS simultâneo (uma escrita aceita e outra conflito); constraint JSON da
+  migration; DDL negado para runtime; nenhuma linha visível sem tenant. Suite
+  `1720000001078-GruposSubstituicoes.integracao.spec.ts`: 6/6 PASS em Testcontainers.
+- T14 permanece parcial: a matriz de concorrência integral de save/snapshot e
+  rollback atômico de aplicação ainda não foi provada. CI deve executar no próximo
+  HEAD após este acréscimo.
+- Runner local completo `pnpm test:rls:testcontainers`: BLOCKED ambiental. O daemon
+  não tinha `timescale/timescaledb-ha:pg15`; 106 casos de duas suites falharam antes
+  de iniciar por imagem ausente, enquanto a suite específica FOOD04/FOOD05 com
+  `postgres:15-alpine` completou 6/6. Não contar como falha do runtime nem como PASS
+  do runner global.

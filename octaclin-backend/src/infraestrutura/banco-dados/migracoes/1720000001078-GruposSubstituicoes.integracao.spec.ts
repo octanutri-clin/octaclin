@@ -12,11 +12,14 @@ import { ExecutorTenant } from '../executor-tenant';
 import { ServicoGruposSubstituicoes } from '../../../modulos/planos-alimentares/aplicacao/servico-grupos-substituicoes';
 import { CriptografiaDadosSensiveis } from '../../seguranca/criptografia-dados-sensiveis';
 import { UsuarioAutenticado } from '../../../modulos/auth/dominio/usuario-autenticado';
+import { ServicoPreferenciasEquivalencia } from '../../../modulos/planos-alimentares/aplicacao/servico-preferencias-equivalencia';
+import { PREFERENCIAS_EQUIVALENCIA_PADRAO } from '../../../modulos/planos-alimentares/dominio/preferencias-equivalencia';
 
 const suite=process.env.FOOD04_RLS_TESTCONTAINERS==='true'?describe:describe.skip;
 suite('FOOD04 PostgreSQL15 descartável: biblioteca, RLS e concorrência',()=>{
-  let container:StartedTestContainer,owner:Client,ds:DataSource,s:ServicoGruposSubstituicoes;
+  let container:StartedTestContainer,owner:Client,ds:DataSource,s:ServicoGruposSubstituicoes,prefs:ServicoPreferenciasEquivalencia;
   const tenant=randomUUID(),outroTenant=randomUUID(),p=randomUUID(),p2=randomUUID();
+  const usuarioOutroTenant=randomUUID();
   const profissional=(id=p):UsuarioAutenticado=>({usuarioId:id,tenantId:tenant,papel:'Professional',emailHash:'sintetico',permissoes:['planos_alimentares.ler','planos_alimentares.gerenciar','grupos_substituicoes.compartilhar']});
   const admin:UsuarioAutenticado={...profissional(),usuarioId:randomUUID(),papel:'Client',permissoes:['grupos_substituicoes.administrar']};
   const dados=(escopo:'pessoal'|'clinica'='pessoal',nome='Grupo sintético')=>({chaveIdempotencia:randomUUID(),escopo,conteudo:{nome,etiquetas:['caseiro'],categoria:'Flexível',entradas:[{id:randomUUID(),origem:'catalogo' as const,alimentoId:randomUUID(),quantidade:1,unidade:'porção',porcaoGramas:30}]}});
@@ -33,14 +36,21 @@ suite('FOOD04 PostgreSQL15 descartável: biblioteca, RLS e concorrência',()=>{
     try{await new GruposSubstituicoes1720000001078().up(runner);await new PreferenciasEquivalencia1720000001079().up(runner);}finally{await runner.release();await migrator.destroy();}
     await owner.query(`create role food04_runtime login password 'runtime-test' nosuperuser nocreatedb nocreaterole nobypassrls;
       grant connect on database food04_test to food04_runtime;grant usage on schema public to food04_runtime;
-      grant select,insert,update,delete on all tables in schema public to food04_runtime;`);
+      grant select,insert,update,delete on all tables in schema public to food04_runtime;
+      alter table profissionais enable row level security;alter table profissionais force row level security;
+      create policy profissionais_tenant_test on profissionais
+        using (tenant_id=nullif(current_setting('app.tenant_id',true),'')::uuid)
+        with check (tenant_id=nullif(current_setting('app.tenant_id',true),'')::uuid);`);
     await owner.query('insert into tenants(id) values ($1),($2)',[tenant,outroTenant]);
     for(const id of [p,p2,admin.usuarioId])await owner.query('insert into usuarios(id,tenant_id) values($1,$2)',[id,tenant]);
+    await owner.query('insert into usuarios(id,tenant_id) values($1,$2)',[usuarioOutroTenant,outroTenant]);
     for(const id of [p,p2])await owner.query("insert into profissionais(id,tenant_id,usuario_id,nome_criptografado) values($1,$2,$1,decode('00','hex'))",[id,tenant]);
+    await owner.query("insert into profissionais(id,tenant_id,usuario_id,nome_criptografado) values($1,$2,$3,decode('00','hex'))",[randomUUID(),outroTenant,usuarioOutroTenant]);
     ds=new DataSource({type:'postgres',...conn,username:'food04_runtime',password:'runtime-test',entities:[GrupoSubstituicoesOrm,FavoritoGrupoSubstituicoesOrm,ProfissionalOrm,UserActionLogOrm],synchronize:false,logging:false,extra:{max:6}});await ds.initialize();
     // Fonte sintética no limite da biblioteca; cálculos/fontes reais têm specs próprios.
     const fontes={resolver:async(_g:unknown,_t:string,_p:unknown,_s:unknown,e:any)=>({...e,composicao:{descricao:'Alimento sintético',nutrientesPor100g:{energiaKcal:100}}})};
     s=new ServicoGruposSubstituicoes(new ExecutorTenant(ds),new CriptografiaDadosSensiveis(),fontes as any);
+    prefs=new ServicoPreferenciasEquivalencia(new ExecutorTenant(ds));
   },90000);
   afterAll(async()=>{if(ds?.isInitialized)await ds.destroy();await owner?.end();await container?.stop();},30000);
   it('prova role sem bypass/owner, FORCE RLS e tenant ausente/incorreto negados',async()=>{
@@ -63,6 +73,30 @@ suite('FOOD04 PostgreSQL15 descartável: biblioteca, RLS e concorrência',()=>{
     const res=await Promise.allSettled([s.atualizar(tenant,profissional(),r.id,{revisaoEsperada:1,estado:'arquivado'}),s.atualizar(tenant,profissional(),r.id,{revisaoEsperada:1,estado:'ativo'})]);
     expect(res.filter(x=>x.status==='fulfilled')).toHaveLength(1);
     expect(await s.atualizar(tenant,profissional(),r.id,{revisaoEsperada:2,estado:'ativo'})).toMatchObject({revisao:3,estado:'ativo'});
+  });
+  it('FOOD05 mantém preferências pessoais isoladas e resolve CAS concorrente no PostgreSQL/RLS real',async()=>{
+    expect(await prefs.obter(profissional())).toEqual({preferencias:PREFERENCIAS_EQUIVALENCIA_PADRAO,revisao:0});
+    const primeiro={...PREFERENCIAS_EQUIVALENCIA_PADRAO,casasGramas:1};
+    const segundo={...PREFERENCIAS_EQUIVALENCIA_PADRAO,casasGramas:2};
+    const concorrentes=await Promise.allSettled([
+      prefs.salvar(profissional(),{preferencias:primeiro,revisaoEsperada:0}),
+      prefs.salvar(profissional(),{preferencias:segundo,revisaoEsperada:0})
+    ]);
+    expect(concorrentes.filter(x=>x.status==='fulfilled')).toHaveLength(1);
+    expect(concorrentes.filter(x=>x.status==='rejected')).toHaveLength(1);
+    const final=await prefs.obter(profissional());
+    expect(final.revisao).toBe(1);
+    expect([1,2]).toContain(final.preferencias.casasGramas);
+    expect(await prefs.obter(profissional(p2))).toEqual({preferencias:PREFERENCIAS_EQUIVALENCIA_PADRAO,revisao:0});
+    expect(await prefs.obter({...profissional(),tenantId:outroTenant,usuarioId:usuarioOutroTenant})).toEqual({preferencias:PREFERENCIAS_EQUIVALENCIA_PADRAO,revisao:0});
+    await expect(prefs.obter({...profissional(),usuarioId:usuarioOutroTenant})).rejects.toMatchObject({status:403});
+    await expect(ds.query('alter table profissionais add column food05_ddl_forbidden integer')).rejects.toMatchObject({code:'42501'});
+  });
+  it('FOOD05 aplica a constraint da migration 1079 e a tabela profissional usa FORCE RLS',async()=>{
+    const r=await owner.query("select relrowsecurity,relforcerowsecurity from pg_class where oid='profissionais'::regclass");
+    expect(r.rows[0]).toEqual({relrowsecurity:true,relforcerowsecurity:true});
+    await expect(owner.query("update profissionais set preferencias_equivalencia='{}'::jsonb where id=$1",[p])).rejects.toMatchObject({code:'23514'});
+    expect(await ds.query('select id from profissionais')).toEqual([]);
   });
   it('consulta/autorização/favoritos/dedup de cópia usam SQL real',async()=>{
     const pessoal=await s.criar(tenant,profissional(),dados()),compartilhado=await s.criar(tenant,profissional(),dados('clinica','Grupo compartilhado'));

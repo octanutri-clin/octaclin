@@ -523,3 +523,30 @@ confirmação; não ocorre escrita no plano durante a prévia.
   PostgreSQL/RLS, Demo local smoke, PR Gate e scanners. Esta alteração cria novo
   HEAD e precisa de execução CI própria. T10/T07/T14–T18 e R4 independente continuam
   abertos; FOOD05 permanece Draft e sem liberação operacional.
+
+### T14 — preferências FOOD05 no PostgreSQL descartável com RLS (25/10/2026)
+
+Expandido o teste de integração PostgreSQL 15 descartável existente que aplica as
+migrations reais 1078 e 1079. A mesma suite agora instancia o serviço de preferências
+FOOD05 contra uma role runtime `NOSUPERUSER/NOBYPASSRLS`, com FORCE RLS e policy de
+tenant; não consulta staging nem produção.
+
+- Prova defaults isolados por profissional e tenant, vínculo forjado entre tenant e
+  usuário negado, duas atualizações CAS concorrentes com a mesma revisão convergindo
+  em exatamente um sucesso/uma recusa, e role runtime sem permissão de DDL.
+- Prova constraint da migration 1079 contra JSON fora do contrato, FORCE RLS ativo
+  na tabela `profissionais` e invisibilidade de registros sem tenant de sessão.
+- Execução real: `FOOD04_RLS_TESTCONTAINERS=true pnpm exec jest --runInBand
+  src/infraestrutura/banco-dados/migracoes/1720000001078-GruposSubstituicoes.integracao.spec.ts`
+  — 6/6 PASS, Postgres 15 em Testcontainers. Uma primeira execução apontou erro no
+  fixture (cast de tenant vazio); a policy sintética foi corrigida com `NULLIF` e a
+  repetição completa passou.
+- Esta prova fecha somente os casos listados; não comprova toda a matriz T14 de
+  concorrência do fluxo de edição/snapshot, rollback parcial ou integração completa
+  das equivalências. CI do HEAD atualizado ainda será necessário.
+- O runner completo `pnpm test:rls:testcontainers` foi tentado, mas 106 casos de
+  suites que usam `timescale/timescaledb-ha:pg15` falharam antes de iniciar por
+  imagem ausente no daemon local (`No such image`); 6 casos da integração específica
+  1078/1079 passaram. Classificar o runner local completo como BLOCKED ambiental,
+  não como regressão FOOD05 nem PASS global. A imagem Postgres 15 usada pelo teste
+  direcionado estava disponível e executou os testes em banco real descartável.
