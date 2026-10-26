@@ -603,6 +603,25 @@ tenant; não consulta staging nem produção.
   modelo e origem, remapeie chaves no destino e nunca exponha IDs/contextos do paciente
   de origem ao consumidor de um modelo compartilhado.
 
+### Alertas de atribuição de objeto na revisão da PR #446 (26/10/2026)
+
+- O comentário CodeQL ancorava a cópia de contextos de equivalência cujas chaves
+  vêm do documento editável. A tabela de destino já tinha protótipo nulo; para tornar
+  a garantia explícita e independente de futuros callers, a mesclagem passou a definir
+  propriedades próprias. Um teste sintético inclui `__proto__` e `constructor` e
+  verifica que `Object.prototype` não muda.
+- O comentário Semgrep ancorava `Object.assign` usado para montar uma fixture no teste
+  PostgreSQL. O teste agora atribui os dois campos explicitamente, sem alterar o cenário.
+- Validações locais: Jest do resolver de equivalências 16/16 PASS; backend typecheck
+  PASS; `pnpm security:secrets` PASS; `git diff --check` PASS. Typecheck executado com
+  Node 24.19.0 apesar do intervalo declarado pelo pacote ser Node 22.x.
+- A integração PostgreSQL/RLS não foi executada nesta rodada; depende do container
+  descartável. CodeQL/Semgrep remotos ainda precisam reavaliar o novo HEAD.
+- A tentativa de consultar/reexecutar a revisão R4 Strix retornou exigência de
+  reautenticação da conexão; não marcar revisão independente como refeita ou PASS.
+- A correção mantém os bloqueios de proveniência por modelos: a conversão segue
+  fail-closed até existir aplicação server-side autorizada e sem vazamento de IDs.
+
 ### Revalidação do HEAD 9e0aa1bc — rodada local e CI (25/10/2026)
 
 - PR #446 permanece aberta em Draft; HEAD `9e0aa1bcff27c1f98e0882e3d6ed869deabc12a7`.

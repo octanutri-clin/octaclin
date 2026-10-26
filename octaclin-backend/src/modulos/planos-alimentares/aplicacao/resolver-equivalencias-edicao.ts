@@ -18,6 +18,10 @@ export interface ContextoEquivalencia {
 }
 export type ContextosEquivalencias=Record<string,ContextoEquivalencia>;
 export class ConflitoEquivalenciaEdicao extends Error { constructor(){super('A equivalência mudou ou perdeu sua referência. Confira a prévia novamente.');} }
+/** Copia chaves potencialmente fornecidas pelo documento sem invocar setters de protótipo. */
+export function mesclarContextosEquivalenciaSeguro(destino:ContextosEquivalencias,origem:ContextosEquivalencias):void {
+ for(const [chave,contexto] of Object.entries(origem))Object.defineProperty(destino,chave,{configurable:true,enumerable:true,writable:true,value:contexto});
+}
 interface PreviaConfiavel {
  fingerprint:string;principal:FatosComposicaoEquivalencia;alternativa:FatosComposicaoEquivalencia;resultado:ResultadoEquivalencia;
  snapshotPrincipal?:SnapshotComposicao;snapshotAlternativa?:SnapshotComposicao;

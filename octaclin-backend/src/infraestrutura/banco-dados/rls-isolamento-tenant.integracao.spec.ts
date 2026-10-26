@@ -1625,14 +1625,15 @@ descrever('RLS e isolamento multi-tenant integral em Postgres real', () => {
 
   async function prepararCenarioFood05(sufixo:string){
     const c=await prepararCenarioPa06(sufixo),documento:any=c.documento;
-    const alternativa={chaveCliente:'a-food05',descricao:'Alternativa sintética FOOD05',quantidade:1,unidade:'porção',liberadaParaPaciente:false,preferida:false,nutrientesPor100g:{energiaKcal:40,proteinasG:4,carboidratosG:8,gordurasG:1}};
+    const alternativa:any={chaveCliente:'a-food05',descricao:'Alternativa sintética FOOD05',quantidade:1,unidade:'porção',liberadaParaPaciente:false,preferida:false,nutrientesPor100g:{energiaKcal:40,proteinasG:4,carboidratosG:8,gordurasG:1}};
     documento.refeicoes[0].itens[0].substituicoes=[alternativa];
     const fontes=new FontesGruposSubstituicoes(c.cripto);
     const previa=new ServicoEquivalenciasPlano(executorTenant!,c.cripto,fontes,new ServicoGruposSubstituicoes(executorTenant!,c.cripto,fontes));
     const pedido={versaoId:c.versaoId,rascunhoRevisaoEsperada:0,documentoEdicao:documento,itemChave:'i-sintetico',nutriente:'energiaKcal',alternativas:[alternativa],politica:{passoPorcaoGramas:'1'}};
     const r=await previa.prever(tenantA,c.pacienteId,c.planoId,c.usuario,pedido),linha=r.alternativas[0];
     if(linha.resultado.estado!=='calculavel')throw new Error('Fixture FOOD05 não calculável.');
-    Object.assign(alternativa,{porcaoGramas:linha.resultado.porcaoEfetivaGramas,equivalencia:{acao:'calcular',aplicacaoId:randomUUID(),nutriente:'energiaKcal',politica:{passoPorcaoGramas:'1'},porcaoEfetiva:linha.resultado.porcaoEfetivaGramas,fingerprintEsperado:linha.fingerprint}});
+    alternativa.porcaoGramas=linha.resultado.porcaoEfetivaGramas;
+    alternativa.equivalencia={acao:'calcular',aplicacaoId:randomUUID(),nutriente:'energiaKcal',politica:{passoPorcaoGramas:'1'},porcaoEfetiva:linha.resultado.porcaoEfetivaGramas,fingerprintEsperado:linha.fingerprint};
     const salvar=(doc=documento,revisao=0,executor=executorTenant!)=>new ServicoPlanosAlimentares(executor,c.cripto).salvarEdicaoRascunho(tenantA,c.pacienteId,c.planoId,c.usuario,{rascunhoIdEsperado:c.versaoId,rascunhoRevisaoEsperada:revisao,documento:doc});
     return {...c,documento,pedido,previa,salvar};
   }
@@ -1678,10 +1679,8 @@ descrever('RLS e isolamento multi-tenant integral em Postgres real', () => {
     for(const alternativa of [primeira,segunda]){
       const linha=previa.alternativas.find((x:any)=>x.chaveCliente===alternativa.chaveCliente);
       if(!linha||linha.resultado.estado!=='calculavel')throw new Error('Fixture de alternativa FOOD05 não calculável.');
-      Object.assign(alternativa,{
-        porcaoGramas:linha.resultado.porcaoEfetivaGramas,
-        equivalencia:{acao:'calcular',aplicacaoId:randomUUID(),nutriente:'energiaKcal',politica:{passoPorcaoGramas:'1'},porcaoEfetiva:linha.resultado.porcaoEfetivaGramas,fingerprintEsperado:linha.fingerprint}
-      });
+      alternativa.porcaoGramas=linha.resultado.porcaoEfetivaGramas;
+      alternativa.equivalencia={acao:'calcular',aplicacaoId:randomUUID(),nutriente:'energiaKcal',politica:{passoPorcaoGramas:'1'},porcaoEfetiva:linha.resultado.porcaoEfetivaGramas,fingerprintEsperado:linha.fingerprint};
     }
     segunda.equivalencia.fingerprintEsperado='0'.repeat(64);
 

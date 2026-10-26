@@ -1,5 +1,5 @@
 import { randomUUID } from 'crypto';
-import { clonarContextoEquivalenciaParaCopia, resolverEquivalenciasDocumento, ContextosEquivalencias, assinaturaDependenciasEquivalencia } from './resolver-equivalencias-edicao';
+import { clonarContextoEquivalenciaParaCopia, resolverEquivalenciasDocumento, ContextosEquivalencias, assinaturaDependenciasEquivalencia, mesclarContextosEquivalenciaSeguro } from './resolver-equivalencias-edicao';
 import { calcularEquivalencia, FatosComposicaoEquivalencia } from '../dominio/equivalencia-nutriente';
 import { DocumentoEdicaoPlano } from '../dominio/edicao-plano';
 const fp='a'.repeat(64),ator={usuarioId:randomUUID(),profissionalId:randomUUID()};
@@ -11,6 +11,15 @@ const comando=(acao='calcular',anteriorAplicacaoId?:string)=>({acao,aplicacaoId:
 function callbacks(){let calculos=0;return {ator,prever:async(d:DocumentoEdicaoPlano,i:any,a:any,c:any)=>{calculos++;const p=fatos(i),alternativa=fatos(a);return {fingerprint:fp,principal:p,alternativa,resultado:calcularEquivalencia({principal:p,alternativa,porcaoPrincipalGramas:String(i.porcaoGramas),porcaoEfetiva:c.porcaoEfetiva,nutriente:c.nutriente,politica:c.politica})};},dependencias:async(i:any,a:any,c:any)=>assinaturaDependenciasEquivalencia(i,a,fatos(i),fatos(a),c.nutriente,c.politica),quantidade:()=>calculos};}
 async function inicial(){const d=documento(),c=comando();alt(d).equivalencia=c;const cb=callbacks();const contextos=await resolverEquivalenciasDocumento(d,{},cb);return {d,c,cb,contextos};}
 describe('FOOD05 ciclo comando ACK referência e revisão pendente',()=>{
+ it('mescla chaves especiais como propriedades próprias sem poluir protótipos',()=>{
+  const destino=Object.create(null) as ContextosEquivalencias;
+  const origem=JSON.parse('{"__proto__":{"poluido":true},"constructor":{"prova":true}}') as ContextosEquivalencias;
+  mesclarContextosEquivalenciaSeguro(destino,origem);
+  expect(Object.getPrototypeOf(destino)).toBeNull();
+  expect(Object.hasOwn(destino,'__proto__')).toBe(true);
+  expect((destino as any).__proto__).toEqual({poluido:true});
+  expect(({} as any).poluido).toBeUndefined();
+ });
  it('copia proveniência no servidor com identidade nova, linhagem e chaves remapeadas sem alterar a origem',async()=>{
   const a=await inicial(),origem=clone(a.contextos.a),copiadoPor={usuarioId:randomUUID(),profissionalId:randomUUID()};
   const copia=clonarContextoEquivalenciaParaCopia(origem,{pacienteId:randomUUID(),planoId:randomUUID(),versaoId:randomUUID()},{pacienteId:randomUUID(),planoId:randomUUID(),versaoId:randomUUID(),itemChave:'item-destino',alternativaChave:'alternativa-destino'},copiadoPor,'2026-10-24T12:00:00.000Z');

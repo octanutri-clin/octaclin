@@ -1,5 +1,5 @@
 import { ServicoEquivalenciasPlano } from './servico-equivalencias-plano';
-import { clonarContextoEquivalenciaParaCopia, resolverEquivalenciasDocumento, assinaturaDependenciasEquivalencia, ContextoEquivalencia, ContextosEquivalencias, validarContextosEquivalencias, ConflitoEquivalenciaEdicao } from './resolver-equivalencias-edicao';
+import { clonarContextoEquivalenciaParaCopia, resolverEquivalenciasDocumento, assinaturaDependenciasEquivalencia, ContextoEquivalencia, ContextosEquivalencias, validarContextosEquivalencias, ConflitoEquivalenciaEdicao, mesclarContextosEquivalenciaSeguro } from './resolver-equivalencias-edicao';
 import { projetarEquivalenciasProfissional } from './projecao-equivalencias-profissional';
 import { resolverFatosEquivalencia, FatosPreservadosEquivalencia, identidadeFatoEquivalencia } from './fatos-equivalencia-plano';
 import { FatosComposicaoEquivalencia } from '../dominio/equivalencia-nutriente';
@@ -876,7 +876,9 @@ export class ServicoPlanosAlimentares {
             return {fingerprint:linha.fingerprint,principal:previa.principal,alternativa:linha.alimento,resultado:linha.resultado,snapshotPrincipal,snapshotAlternativa};
           }
         });}catch(erro){if(erro instanceof ConflitoEquivalenciaEdicao)throw new ConflictException(erro.message);throw erro;}
-        Object.assign(contextosEquivalencias,resolvidos);
+        // Chaves editoriais vêm do documento do cliente. A mesclagem define
+        // propriedades próprias e não executa setters de protótipo.
+        mesclarContextosEquivalenciaSeguro(contextosEquivalencias,resolvidos);
         for(const r of documento.refeicoes)for(const i of r.itens){const pi=localizar(i.chaveCliente);for(let ai=0;ai<(i.substituicoes??[]).length;ai++){
           const a=i.substituicoes![ai],c=resolvidos[a.chaveCliente];if(!c)continue;const pa=pi.substituicoes![ai],f=await fatos(a,i.chaveCliente);
           const atual=c.aplicados??c;
