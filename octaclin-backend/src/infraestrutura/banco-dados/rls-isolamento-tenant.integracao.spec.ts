@@ -1772,7 +1772,8 @@ descrever('RLS e isolamento multi-tenant integral em Postgres real', () => {
       PacienteOrm,
       'pessimistic_write'
     );
-    expect(resultados.filter(r=>r.status==='fulfilled')).toHaveLength(1);
+    const resultadosDescritos=resultados.map(r=>r.status==='fulfilled'?'fulfilled':`rejected:${String(r.reason?.message??r.reason)}`);
+    expect(resultadosDescritos).toEqual(['fulfilled',expect.stringMatching(/^rejected:/)]);
     const rejeitada=resultados.find(r=>r.status==='rejected') as PromiseRejectedResult;
     expect(rejeitada.reason).toMatchObject({status:409});
     const estado=await executorTenant!.executar(tenantA,g=>g.query('select id,rascunho_revisao from plano_alimentar_versoes where id = any($1::uuid[]) order by id',[ [a.versaoId,bVersao] ]));
@@ -1838,7 +1839,7 @@ descrever('RLS e isolamento multi-tenant integral em Postgres real', () => {
       PlanoAlimentarVersaoOrm,
       'pessimistic_read'
     );
-    expect(resultados.map(r=>r.status)).toEqual(['fulfilled','fulfilled']);
+    expect(resultados.map(r=>r.status==='fulfilled'?'fulfilled':`rejected:${String(r.reason?.message??r.reason)}`)).toEqual(['fulfilled','fulfilled']);
     const copia:any=(resultados[0] as PromiseFulfilledResult<any>).value;
     expect(copia.equivalenciasAplicadas['origem-race-copia-alt']).toMatchObject({estado:'revisao_pendente'});
     expect(await executorTenant!.executar(tenantA,g=>g.query('select rascunho_revisao from plano_alimentar_versoes where id=$1',[origem.versaoId]))).toEqual([{rascunho_revisao:2}]);
