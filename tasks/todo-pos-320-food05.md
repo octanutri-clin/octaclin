@@ -148,11 +148,14 @@ Não remover esse bloqueio nem marcar T07 completo antes desse contrato e testes
 
 Contrato e riscos revisados em
 [revisão de arquitetura T07](revisao-arquitetura-t07-food05.md).
-Fechar A02 (pendência explícita também em cópia de catálogo idêntico) e A03
-(validação semântica completa de modelos), fixar revisão exata da origem e
-identidades estáveis antes de habilitar o fluxo. A reautorização do paciente de
-origem continua obrigatória; compartilhamento independente dessa autorização
-depende da decisão de produto descrita no parecer.
+D15/A02 e D16/A03 foram corrigidos no HEAD `c7df3bfe`: toda cópia nova recebe
+estado pendente e nova identidade; o validador agora rejeita todos os erros do
+DTO e entradas inválidas em todos os caminhos de modelos. RED/GREEN direcionados
+estão registrados em `tasks/execucao-pos-320-food05.md`. A correção não fecha T07:
+fixar revisão exata da origem e identidades estáveis (A05/A06), além de resolver a
+ordem de locks (A04), continua necessário para ampliar cópias. A reautorização do
+paciente de origem continua obrigatória; compartilhamento independente dessa
+autorização exigiria o contrato futuro D18 e autorização própria.
 
 Defesa já adicionada na fronteira de modelos: o serviço revalida campos aninhados
 contra o DTO allowlist ao criar/editar e antes de devolver/restaurar snapshots.

@@ -1,7 +1,7 @@
-# Checkpoint D15–D18 — 27/10/2026
+# Checkpoint D15–D18 — atualizado em 27/10/2026
 
-O proprietário autorizou correções delimitadas D15/D16 na configuração atual.
-**Pausar antes de trocar para Luna alto; a troca é manual.**
+O proprietário autorizou correções delimitadas D15/D16. O usuário confirmou a
+troca manual para **Luna alto**; continuar nessa configuração até nova instrução.
 
 - D15: cópia agora nasce `revisao_pendente` explicitamente; identidade nova,
   fingerprint recalculado, cálculo/ator original e cadeia cifrada preservados.
@@ -19,7 +19,7 @@ O proprietário autorizou correções delimitadas D15/D16 na configuração atua
   por D15/D16. Não reescrever snapshots históricos já publicados ou aplicações
   existentes para simular que a regra D15 existia anteriormente.
 
-Evidências RED/GREEN e situação final dos comandos em
+Evidências RED/GREEN e situação dos comandos em
 [execução](execucao-pos-320-food05.md). Nenhuma migration/deploy/merge externo.
 
 ---
@@ -28,9 +28,8 @@ Evidências RED/GREEN e situação final dos comandos em
 
 ## Modelo e autorização
 
-Desenvolvimento autorizado em Sol médio. Continuar na configuração atual até a
-próxima decisão de troca; não presumir alteração manual. M01–M08 continuam
-essenciais, sem redução de escopo.
+Desenvolvimento autorizado; configuração atual Luna alto confirmada pelo usuário.
+M01–M08 continuam essenciais, sem redução de escopo.
 
 Branch `docs/pos320-food05-planning`, worktree física
 `/workspace/octaclin/.worktrees/pos320-food04-planning`. PR446 Draft. Ler o estado
@@ -109,10 +108,12 @@ no registro de execução. Isso não encerra os itens completos nem os gates.
    Gravar/aplicar como modelo segue bloqueado: o modelo não tem aplicação server-side
    que preserve a proveniência sem expor IDs de pacientes a usuários da clínica.
    Projetar esse contrato antes de remover o bloqueio. T07/T13 permanecem abertos.
-   Evidência local atualizada: serviço129/129 PASS; focais FOOD05 30 PASS; BFF62/62;
+   Evidência local anterior: serviço129/129 PASS; focais FOOD05 30 PASS; BFF62/62;
    helpers de cópia14/14; PG descartável7 PASS/67 SKIPPED (sem vector/Timescale);
    Playwright de cópia + bloqueio de modelo Desktop2/2 e Mobile2/2; build,
-   typecheck e lint focado executados. R4 independente e CI do novo HEAD ainda faltam.
+   typecheck e lint focado executados. No HEAD atual, Backend NestJS com
+   PostgreSQL/RLS, Web, scanners e governança passaram; Demo local smoke ainda
+   está em execução. R4 independente continua pendente.
 5. T14 matriz PostgreSQL completa, regressões FOOD04 e CI; prova local atual é
    parcial. T15–T18 regressões/acessibilidade/segurança completa, revisão distinta,
    governança/CI e entrega.

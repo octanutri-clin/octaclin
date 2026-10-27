@@ -705,3 +705,25 @@ tenant; não consulta staging nem produção.
   PostgreSQL em ambiente descartável viável e fechar a matriz restante dos fluxos
   existentes. Não iniciar D18, remover bloqueio D17, mergear ou operar ambientes
   externos. Manter T07 parcial e discriminar teste unitário de prova em banco.
+
+### Reavaliação de arquitetura e CI remoto — HEAD `c7df3bfe7a280959b69093c3cca3ccb0db5bb1a1` (27/10/2026)
+
+- Revisão de impacto limitada ao commit range D15/D16 `7af23a86..c7df3bfe`;
+  patch SHA-256 `f7fbabc47de893b91cb9c6258577bb9b7095a943159c73edd44c0ae6dfee699f`.
+- A02/D15 corrigido e A03/D16 corrigido, com evidências RED/GREEN acima. A01
+  permanece contido pelo bloqueio de equivalência em modelos. A04 (ordem global
+  de locks), A05 (revisão exata da origem editável) e A06 (identidade estável nas
+  entradas de modelo) permanecem abertos e impedem marcar T07 concluído.
+- CI OctaClin run `40496482809` no HEAD exato: Backend NestJS, incluindo
+  PostgreSQL/RLS descartável, Web Next.js e Governança concluíram PASS. CodeQL,
+  Semgrep, Trivy e Dependency Review concluíram PASS em seus runs do mesmo HEAD.
+  Demo local smoke permanecia em andamento na última consulta; por isso CI global
+  não é declarado totalmente green.
+- A tentativa de revisão R4 independente não foi concluída. Revisão própria do
+  patch é análise técnica interna e não substitui autoria/revisão independente.
+- D18: proposta técnica registrada em `tasks/revisao-arquitetura-t07-food05.md`.
+  Recomenda envelope genérico versionado no armazenamento cifrado existente, nova
+  prévia/confirmador server-side, resolução das fontes no destino e uso do writer
+  atual; nenhuma migration parece necessária, condicionada à prova dos leitores.
+  Não foi implementada; requer autorização específica.
+- Estado: PR #446 continua Draft; sem merge, migration externa, deploy ou ativação.

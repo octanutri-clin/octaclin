@@ -137,3 +137,95 @@ há alegação de teste RED/GREEN ou exploração executada nesta revisão.
 
 Esta ratificação resolve a decisão de política acima; não conclui o T07 nem os
 respectivos testes/gates. A04/A05 e demais critérios integrados continuam pendentes.
+
+## Reavaliação após as correções D15/D16 — 27/10/2026
+
+| Achado | Estado no HEAD `c7df3bfe` | Evidência e limite |
+| --- | --- | --- |
+| A01 — contexto clínico em modelo compartilhado | Contido pelo bloqueio explícito | O fluxo FOOD05 por modelo continua recusado no frontend e no serviço. D17 proíbe remover proveniência ou conceder acesso à origem via compartilhamento. Não há novo contrato de aplicação server-side. |
+| A02 — cópia idêntica herda revisão | Corrigido | `clonarContextoEquivalenciaParaCopia` atribui `revisao_pendente` explicitamente, gera identidade nova e refaz fingerprint. RED/GREEN cobre catálogo idêntico, planos/pacientes, repetição e recálculo. |
+| A03 — validação parcial do modelo | Corrigido | Serviço rejeita todos os erros do class-validator e valida campos fornecidos fora do caminho principal do DTO; aplica limite/estrutura e falha genericamente em snapshots corrompidos. Specs cobrem criação, edição, leitura, versão, restauração e legado válido. |
+| A04 — ordem de locks | Aberto | Cópias recíprocas ainda precisam de ordem global determinística e teste PostgreSQL de concorrência. |
+| A05 — revisão mutável da origem | Aberto | Referência por número não fixa revisão exata de rascunho entre prévia e aplicação; exigir revisão esperada/CAS e reconferência. |
+| A06 — identidade de itens de modelo | Aberto e ligado a D17 | Modelos usam posições sem identidade persistente. FOOD05 continua bloqueado em modelos; qualquer futura integração precisa de identidades estáveis e contrato aprovado, sem transportar proveniência pelo browser. |
+| A07 — RLS e rollout | Sem nova alteração de schema nesta correção | No HEAD `c7df3bfe`, o job Backend NestJS e seu passo PostgreSQL/RLS descartável concluíram PASS. Isso comprova a execução automatizada indicada pelo CI, não aplicação de migrations externas nem prontidão de produção. |
+
+O CI do HEAD exato também concluiu PASS para CodeQL, Semgrep, Trivy, Dependency
+Review, Web e governança. O Demo local smoke ainda estava em execução na última
+consulta. Esses resultados não são revisão R4 independente. T07 permanece parcial
+até A04/A05 e os demais testes de integração serem fechados; D17 mantém bloqueada
+a aplicação FOOD05 por modelos, e D18 exige proposta e autorização próprias.
+
+## Proposta técnica D18 — pendente de autorização de execução
+
+### Contrato
+
+Separar o **modelo matemático genérico** do `ContextoEquivalencia` clínico. O
+artefato reutilizável conteria somente uma versão de schema, alimento de origem e
+alternativas por referências de catálogo permitidas, nutriente-alvo e política de
+cálculo. Não guardaria paciente, plano, ator, cálculo aplicado, dados cifrados de
+origem, hashes/capabilities clínicas ou snapshots individuais de composição.
+
+Ao aplicar, o backend deverá carregar a revisão exata do artefato, revalidar o
+acesso do profissional ao modelo e ao paciente/plano destino, resolver cada
+referência contra o catálogo e a fonte nutricional atualmente autorizados, e
+calcular a prévia no contexto do destino. Alteração/indisponibilidade da fonte,
+versão do modelo ou revisão do rascunho invalida a prévia. A confirmação do
+profissional usa fingerprint e CAS do destino, cria UUID de aplicação próprio,
+persiste somente a nova proveniência clínica cifrada sob o paciente destino e
+aplica o resultado pelo writer FOOD05 existente. A confirmação vale para esse
+destino; nenhuma quantidade calculada para outro paciente é copiada. O retorno da
+API não contém referência ou identidade clínica de uma aplicação de origem.
+
+### Persistência e contratos existentes
+
+Recomendação inicial: envelope versionado no conteúdo cifrado e imutável das
+revisões de modelo que já existem; manter leitores de arrays legados e adicionar
+um discriminador explícito e allowlist para o artefato genérico. Criar endpoints
+de leitura/prévia/confirmação próprios que projetem apenas o DTO genérico e o
+resultado calculado para o profissional autorizado; não ampliar a resposta ampla
+de modelos para transportar contexto clínico. Reutilizar `ExecutorTenant`, RLS,
+permissões de biblioteca, motor FOOD05, writer transacional, auditoria redigida,
+snapshots e política de publicação.
+
+Não parece necessária migration: conteúdo e revisões já guardam envelopes JSON
+cifrados em `bytea`. Antes de implementar, comprovar que todos os leitores e
+escritores conseguem distinguir a versão sem ambiguidade e que rollback pode
+preservar leitura de versões antigas. Se essa prova falhar, propor migration
+aditiva e plano de rollout separado. Nenhuma migration externa está autorizada.
+
+### Riscos e controles
+
+| Risco | Controle proposto |
+| --- | --- |
+| Uma referência de alimento permite acessar outra clínica ou fonte não licenciada | Resolver no backend por tenant/escopo e allowlist de fonte ativa; não confiar em valores nutricionais enviados pelo navegador |
+| Modelo muda entre prévia e confirmação | Fixar `modeloId + numero/revisao` e rejeitar por CAS se a revisão divergir |
+| Rascunho destino muda ou muda a autorização | Revalidar carteira, paciente, versão e revisão dentro da transação de confirmação |
+| Retry duplica aplicação | UUID/ACK idempotente por intenção confirmada; mesma chave repetida retorna mesmo resultado ou conflito explícito |
+| Envelope genérico recebe proveniência clínica por mass assignment | DTO discriminado estrito, allowlist recursiva e testes negativos de IDs/contextos/capabilities |
+| Mudança de catálogo altera resultado histórico | Congelar fatos efetivamente utilizados apenas no novo snapshot clínico destino; nunca atualizar aplicações históricas |
+| Modelo compartilhado expõe contexto clínico por projeção, auditoria ou cache | DTO independente, logs/auditoria redigidos, sem cache persistente; testes de projeção e isolamento |
+
+### Testes necessários para aprovação futura
+
+- Leitura de modelos legados e envelope genérico v1, versões imutáveis e restauração.
+- Rejeição de IDs de paciente/plano, contexto cifrado, ator e campos desconhecidos
+  em todas as fronteiras do novo envelope.
+- Fonte permitida, inativa, removida, alterada e de escopo/tenant incompatível;
+  recálculo usa a composição resolvida no destino, nunca snapshot de outro paciente.
+- Acesso negado ao modelo e ao destino, transferência/revogação de carteira,
+  conflito de revisão, paciente de outro tenant e resposta sem dados de origem.
+- Prévia cancelada sem escrita; confirmação, replay e retry idempotentes; duas
+  confirmações concorrentes e rollback integral em falha intermediária no
+  PostgreSQL real com role runtime e FORCE RLS.
+- Confirmação só após conferência explícita do profissional, política de revisão,
+  publicação, autosave, snapshots FOOD04 e regressões dos arrays legados.
+
+### Proposta de aceitação
+
+D18 pode ser implementada em PR própria depois de aprovar este contrato, comprovar
+direitos e escopo das referências do catálogo e fechar A04–A06. Estimativa de
+impacto: novos DTOs/rotas, integração com o writer existente, testes de banco e
+ampliação discriminada do validador; sem nova tabela/migration prevista. Esta
+proposta não altera o bloqueio D17, não libera FOOD05 por modelos e não completa
+T07. A execução depende de autorização específica.
