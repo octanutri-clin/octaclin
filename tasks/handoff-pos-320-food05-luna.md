@@ -239,3 +239,7 @@ em A05 faltava corrida PostgreSQL de edição da origem. Os cenários foram ent�
 reforçados com barreira detectada via `pg_stat_activity`, falha injetada após
 persistir versão e edição concorrente da origem. A04/A05 continuam BLOCKED até que
 PostgreSQL/RLS real execute essas novas provas e ocorra revisão R4 do estado final.
+
+### Estado consolidado após correção do fixture — 27/10/2026
+
+HEAD `643076ba124dc3f45998b1b4e8ed008f68f73091`, PR #446 aberta e Draft. A revisão independente estática específica dos deltas A04/A05 revisou também a correção dos fixtures e não encontrou achados adicionais; o revisor não executou testes. O CI desse HEAD iniciou a suite com PostgreSQL/RLS real; consultar seu resultado final antes de atualizar os gates. Até a prova controlada passar, manter A04/A05, T07-A e T14 como BLOCKED. T07-B/D18/A06 continuam transferidos à FOOD05-MDL, com D17 bloqueando cópias por modelo no backend e na interface.

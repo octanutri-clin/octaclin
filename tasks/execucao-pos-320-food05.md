@@ -783,3 +783,13 @@ Não reportar T07-A ou T14 como PASS até completar o banco e as regressões. T0
 - Revisão R4 independente estática final dos deltas A04/A05: **sem achados adicionais**, código-review portion encerrado para esses deltas. O revisor não executou testes; PostgreSQL não executado, A04/A05/T14 permanecem BLOCKED até as provas RLS e concorrência passarem.
 - Testes focados após essas correções: `pnpm exec jest --runInBand src/modulos/planos-alimentares/aplicacao/resolver-equivalencias-edicao.spec.ts src/modulos/planos-alimentares/aplicacao/servico-planos-alimentares.spec.ts src/modulos/planos-alimentares/aplicacao/ordenacao-locks-copia.spec.ts -t 'copia proveniência|cópia idêntica|revisão editorial inválida|recusa cópia quando|ordenação de locks'`: **PASS, 13 selecionados**, 143 filtrados; 3 suítes passaram. Esse resultado cobre unidade/serviço, não PostgreSQL/RLS concorrente.
 - A barreira PostgreSQL foi refinada para só liberar depois de observar `pg_stat_activity` indicando que uma sessão está bloqueada especificamente pelo PID da primeira transação (`pg_blocking_pids`), reduzindo falsos positivos de espera de lock de outras sessões.
+
+### Reexecução CI e correção adicional dos fixtures — 27/10/2026
+
+- O CI do HEAD `643076ba` executou Postgres/RLS, mas falhou em dois novos testes: no caso stale, o destino recém-criado não tinha snapshot editorial; no caso de corrida A05, o documento da origem ainda era usado como destino. As outras suítes reportaram 3.554 testes PASS e 48 SKIPPED.
+- Correção local: salvar primeiro o destino stale sem substituições, então conferir revisão do destino 1 e garantir que permanece 1 após recusa por origem stale. Na corrida de cópia-primeiro, manter o snapshot salvo do destino como base e clonar item/equivalência do snapshot de origem.
+- Revisão independente estática destes dois deltas: sem achados adicionais; revisor não executou testes.
+- `pnpm run typecheck` backend: PASS, com aviso de ambiente Node v24.19.0 fora do range declarado >=22 <23. Regressões focadas resolver/serviço/ordenação: 13 PASS, 144 filtrados; 3 suítes PASS. `git diff --check`: PASS.
+- A execução focal local da suíte RLS com Testcontainers foi interrompida após mais de 3 minutos sem iniciar o container; classificada BLOCKED de setup, não resultado dos testes. Rodada sem `RLS_TESTCONTAINERS=true` pulou a suíte e não conta como validação.
+- Scanners do HEAD `643076ba`: CodeQL, Semgrep, Trivy e Dependency Review PASS; Governança, AI e Mobile PASS. Backend CI falhou nos dois casos acima; Web ainda estava em execução na última consulta. O delta corrigido precisa de nova execução PostgreSQL/RLS no próximo HEAD.
+- Estados: A04/A05/T07-A/T14 seguem BLOCKED. PR #446 Draft. Nenhuma operação externa, migration, merge ou deploy.

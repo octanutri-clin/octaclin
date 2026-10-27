@@ -1786,11 +1786,18 @@ descrever('RLS e isolamento multi-tenant integral em Postgres real', () => {
     const origemAlterada=salvouAB?origemB:origemA;
     const destinoTerceiro=await a.servico.criar(tenantA,origemAlterada.pacienteId,a.usuario,{titulo:'Plano sintético C'});
     const terceiroVersao=destinoTerceiro.draft!.id;
+    // Um plano recém-criado ainda não tem snapshot editorial. Inicialize seu
+    // rascunho sem equivalências para que o caso stale copie para um destino real.
+    const documentoBaseTerceiro=JSON.parse(JSON.stringify(a.documento));
+    for(const refeicao of documentoBaseTerceiro.refeicoes)for(const item of refeicao.itens)item.substituicoes=[];
+    await a.servico.salvarEdicaoRascunho(tenantA,origemAlterada.pacienteId,destinoTerceiro.id,a.usuario,{
+      rascunhoIdEsperado:terceiroVersao,rascunhoRevisaoEsperada:0,documento:documentoBaseTerceiro
+    } as any);
     const documentoTerceiro=await a.servico.obterRascunho(tenantA,origemAlterada.pacienteId,destinoTerceiro.id,a.usuario);
-    const stale=prepararCopia(origemAlterada,{pacienteId:origemAlterada.pacienteId,planoId:destinoTerceiro.id,versaoId:terceiroVersao,documento:documentoTerceiro.documentoEdicao},'stale',0);
+    const stale=prepararCopia(origemAlterada,{pacienteId:origemAlterada.pacienteId,planoId:destinoTerceiro.id,versaoId:terceiroVersao,documento:documentoTerceiro.documentoEdicao},'stale',1);
     await expect(new ServicoPlanosAlimentares(executorTenant!,a.cripto).salvarEdicaoRascunho(tenantA,origemAlterada.pacienteId,destinoTerceiro.id,a.usuario,stale.request as any)).rejects.toMatchObject({status:409});
     const depois=await executorTenant!.executar(tenantA,g=>g.query('select rascunho_revisao from plano_alimentar_versoes where id=$1',[terceiroVersao]));
-    expect(depois).toEqual([{rascunho_revisao:0}]);
+    expect(depois).toEqual([{rascunho_revisao:1}]);
   },60000);
   it('FOOD05 PostgreSQL: falha após gravar o rascunho reverte integralmente a cópia',async()=>{
     const c=await prepararCenarioFood05('food05-copy-rollback'),salvo:any=await c.salvar();
@@ -1826,11 +1833,12 @@ descrever('RLS e isolamento multi-tenant integral em Postgres real', () => {
   it('FOOD05 PostgreSQL: edição da origem concorrente serializa antes da confirmação da cópia',async()=>{
     const origem=await prepararCenarioFood05('food05-copy-origin-race'),salvaOrigem:any=await origem.salvar();
     const destino=await prepararCenarioFood05('food05-copy-destination-race');
-    await destino.salvar();
+    const salvoDestino:any=await destino.salvar();
     await cliente!.query('update pacientes set profissional_responsavel_id=$1 where tenant_id=$2 and id=$3',[origem.profissionalId,tenantA,destino.pacienteId]);
     const preparada=(()=>{
-      const documento=JSON.parse(JSON.stringify(salvaOrigem.documentoEdicao));
-      const item=documento.refeicoes[0].itens[0],alternativa=item.substituicoes[0];
+      const documento=JSON.parse(JSON.stringify(salvoDestino.documentoEdicao));
+      const documentoOrigem=JSON.parse(JSON.stringify(salvaOrigem.documentoEdicao));
+      const item=documentoOrigem.refeicoes[0].itens[0],alternativa=item.substituicoes[0];
       const copiado=JSON.parse(JSON.stringify(item)),alternativaCopiada=copiado.substituicoes[0];
       copiado.chaveCliente='origem-race-copia-item';alternativaCopiada.chaveCliente='origem-race-copia-alt';delete alternativaCopiada.equivalencia;
       documento.refeicoes[0].itens.push(copiado);

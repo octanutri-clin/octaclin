@@ -502,3 +502,14 @@ Critério de fechamento: FOOD05 principal pode concluir quando T07-A passar e D0
 - R4 independente específica A04/A05 não achou vulnerabilidade confirmada, mas manteve ambos BLOCKED por falta de prova executada. O reviewer não executou testes e a análise foi somente leitura.
 - R4 independente estática final revisou proveniência de revisão, cadeia legado, os dois ordenamentos concorrentes e rollback; sem achados adicionais. O trecho de code review pode ser encerrado para o delta, mas não representa PASS de A04/A05/T14. Prova PostgreSQL/RLS ainda BLOCKED.
 - CI PostgreSQL/RLS do HEAD 6aa2c77b expôs duas falhas nos novos testes concorrentes; diagnóstico encontrou que os testes usavam como documento de destino o snapshot da origem. Corrigido o fixture para começar do rascunho destino vigente; repetir CI/RLS antes de mudar qualquer gate.
+
+### Atualização pós-CI `643076ba` e correção de fixtures — 27/10/2026
+
+- [x] Corrigir fixture stale: criar snapshot vazio de equivalências no destino, usar CAS de destino revisão 1 e verificar ausência de alteração após conflito da origem.
+- [x] Corrigir corrida A05: documento-base é snapshot persistido do destino; item/equivalência copiados vêm do snapshot persistido da origem e recebem novas chaves.
+- [x] Revisão R4 independente estática dos ajustes dos fixtures: sem achados adicionais; reviewer não executou testes.
+- [x] Backend typecheck PASS; 13 testes unitários/serviço de A04/A05 PASS em 3 suítes; diff check PASS.
+- [ ] Commitar/enviar as correções e executar novo CI com Postgres/RLS real. O run `40525760297` no HEAD anterior falhou nos dois casos concorrentes, com 3.554 PASS e 48 SKIPPED; nunca tratar como PASS.
+- [ ] A04/A05, T07-A e T14 só deixam BLOCKED após as duas concorrências, stale/CAS, autorização/carteira e rollback passarem no Postgres/RLS descartável.
+- Tentativa local `RLS_TESTCONTAINERS=true` bloqueou antes dos casos, sem container disponível, e foi interrompida após >3 min; run sem a flag pulou a suíte. Não contam como PASS.
+- CodeQL, Semgrep, Trivy, Dependency Review, Governança, AI FastAPI e Mobile Expo do HEAD anterior PASS; Backend falhou nos dois testes; Web estava em execução na última consulta. PR #446 continua Draft.
