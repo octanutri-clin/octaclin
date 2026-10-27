@@ -19,6 +19,7 @@ import { calcularEquivalencia, FatosComposicaoEquivalencia, ResultadoEquivalenci
 import { simularTrocaNaRefeicao, FatosItemRefeicao, ImpactoRefeicao } from '../dominio/impacto-equivalencia-refeicao';
 import { AlimentoEdicao, AlternativaEdicao, ItemEdicao, numeroEdicao } from '../dominio/edicao-plano';
 import { FatosPreservadosEquivalencia, resolverFatosEquivalencia } from './fatos-equivalencia-plano';
+import { assinaturaDependenciasEquivalencia } from './resolver-equivalencias-edicao';
 import { lerSnapshotEdicaoGrupos } from './snapshot-edicao-grupos';
 import { validarContextosCustom } from '../dominio/aplicacao-alimentos-personalizados';
 export interface LinhaPreviaEquivalencia {chaveCliente:string;alimento?:FatosComposicaoEquivalencia;resultado:ResultadoEquivalencia;impacto?:ImpactoRefeicao;comparacaoIndividual?:ImpactoRefeicao;fingerprint?:string;medidas?:{itens:Array<{id:string;revisao:number;nome:string;quantidade:string;aproximada:boolean;podeAplicarQuantidade:boolean;gramasAposMedida?:string;quantidadeReferencia:number;pesoReferenciaGramas:number}>;total:number;pagina:number;limite:number}}
@@ -54,6 +55,7 @@ export class ServicoEquivalenciasPlano {
    if(versao.edicaoSnapshotCriptografado){
     const snapshot=lerSnapshotEdicaoGrupos(JSON.parse(this.crypto.descriptografar(versao.edicaoSnapshotCriptografado)));
     preservados.catalogos=snapshot.catalogos;preservados.equivalencias=Object.create(null);
+    if(versao.alimentosPersonalizadosSnapshotCriptografado)preservados.custom=validarContextosCustom(JSON.parse(this.crypto.descriptografar(versao.alimentosPersonalizadosSnapshotCriptografado)));
     // Apenas contextos autenticados do servidor; referências no pedido não
     // conferem acesso a outra fonte nem a outro pai editorial.
     const pais=new Map(p.documentoEdicao.refeicoes.flatMap(r=>r.itens).map(i=>[i.chaveCliente,i]));
@@ -66,7 +68,17 @@ export class ServicoEquivalenciasPlano {
      if(recalculoExplicito.has(c.alternativaChave)){
       const intencao=alternativa?.equivalencia;
       const referenciaAnterior=Boolean(intencao&&('aplicacaoId'in intencao&&intencao.aplicacaoId===c.aplicacaoId||'anteriorAplicacaoId'in intencao&&intencao.anteriorAplicacaoId===c.aplicacaoId));
-      if(c.estado!=='revisao_pendente'||c.itemChave!==p.itemChave||!referenciaAnterior)throw new BadRequestException('Só é possível recalcular uma equivalência pendente desta refeição.');
+      if(c.itemChave!==p.itemChave||!referenciaAnterior)throw new BadRequestException('Só é possível recalcular uma equivalência desta refeição que tenha revisão pendente.');
+      if(c.estado!=='revisao_pendente'){
+       // A tela pode projetar stale sem escrever no snapshot. Permita então
+       // recálculo somente se a fonte atual, ainda autorizada, provar mudança
+       // real nos fatos usados; a prévia/fingerprint e o CAS continuam exigidos.
+       const pai=pais.get(c.itemChave);if(!pai||!alternativa)throw new BadRequestException('Equivalência pendente não encontrada.');
+       const principalAtual=await resolverFatosEquivalencia(g,tenantId,profissionalId,pai,this.fontes,preservados,undefined,true,false);
+       const alternativaAtual=await resolverFatosEquivalencia(g,tenantId,profissionalId,alternativa,this.fontes,preservados,c.itemChave,true,false);
+       const dependenciasAtuais=assinaturaDependenciasEquivalencia(pai,alternativa,principalAtual,alternativaAtual,c.nutriente,c.politica,c.dependenciasVersao??1);
+       if(dependenciasAtuais===c.dependenciasHash)throw new BadRequestException('Só é possível recalcular uma equivalência com revisão pendente.');
+      }
       recalculosValidados.add(c.alternativaChave);recalculoFatos.add(c.alternativaChave);recalculoFatos.add(c.itemChave);
      }
     }
@@ -77,7 +89,7 @@ export class ServicoEquivalenciasPlano {
     medidasSalvas=snapshot.contextos;
    }
    if(versao.alimentosPersonalizadosSnapshotCriptografado)preservados.custom=validarContextosCustom(JSON.parse(this.crypto.descriptografar(versao.alimentosPersonalizadosSnapshotCriptografado)));
-  }catch{throw new ServiceUnavailableException('Contexto de edição indisponível.');}
+  }catch(erro){if(erro instanceof BadRequestException)throw erro;throw new ServiceUnavailableException('Contexto de edição indisponível.');}
   if([...recalculoExplicito].some(chave=>!recalculosValidados.has(chave)))throw new BadRequestException('Equivalência pendente não encontrada.');
   const resolverMedida=async(a:AlimentoEdicao)=>{
    const quantidade=numeroEdicao(a.quantidade);if(quantidade===undefined)throw new BadRequestException('Informe a quantidade da medida.');

@@ -2032,6 +2032,28 @@ describe('ServicoPlanosAlimentares', () => {
         expect(recalculada.refeicoes[0].itens[0].substituicoes[0].composicaoSnapshot.nutrientesPorcao.energiaKcal).toBeGreaterThan(0);
       }
     });
+    it('FOOD05 projeta revisão pendente na leitura e bloqueia revisão/publicação após mudança de composição',async()=>{
+      const {d}=await prepararEquivalencia(true);const salvo:any=await salvarEdicao(d);
+      await servico.revisar(TENANT_ID,PACIENTE_ID,PLANO_ID,usuarioProfissional(),{rascunhoIdEsperado:VERSAO_ID,rascunhoRevisaoEsperada:1});
+      const alimento=repositorios.get(AlimentoComposicaoOrm)!.registros.find((r:any)=>r.id==='10000000-0000-4000-8000-000000000087')!;alimento.energiaKcal='999';
+      const leitura:any=await servico.obter(TENANT_ID,PACIENTE_ID,PLANO_ID,usuarioProfissional());
+      expect(leitura.draft.equivalenciasAplicadas.equivalente.estado).toBe('revisao_pendente');
+      expect(leitura.draft.documentoEdicao.refeicoes[0].itens[0].substituicoes[0].porcaoGramas).toBe('50');
+      expect(repositorios.get(PlanoAlimentarVersaoOrm)!.registros[0].revisadaEm).not.toBeNull();
+      await expect(servico.revisar(TENANT_ID,PACIENTE_ID,PLANO_ID,usuarioProfissional(),{rascunhoIdEsperado:VERSAO_ID,rascunhoRevisaoEsperada:2})).rejects.toThrow(/equivalência.*pendente/i);
+      await expect(servico.publicar(TENANT_ID,PACIENTE_ID,PLANO_ID,usuarioProfissional(),{rascunhoIdEsperado:VERSAO_ID,rascunhoRevisaoEsperada:2})).rejects.toThrow(/equivalência.*pendente/i);
+      const persistido=(servico as any).lerContextosEquivalencias(repositorios.get(PlanoAlimentarVersaoOrm)!.registros[0]);
+      expect(persistido.equivalente.estado).toBe('calculada_revisada');
+      const fontes=new FontesGruposSubstituicoes(criptografia),equivalencias=new ServicoEquivalenciasPlano(executor as any,criptografia,fontes,new ServicoGruposSubstituicoes(executor as any,criptografia,fontes));
+      const documento=leitura.draft.documentoEdicao,item=documento.refeicoes[0].itens[0],alternativa=item.substituicoes[0];
+      const previa=await equivalencias.prever(TENANT_ID,PACIENTE_ID,PLANO_ID,usuarioProfissional(),{versaoId:VERSAO_ID,rascunhoRevisaoEsperada:2,documentoEdicao:documento,itemChave:item.chaveCliente,nutriente:'energiaKcal',politica:{passoPorcaoGramas:'1'},alternativas:[alternativa],recalculoExplicitoChaves:[alternativa.chaveCliente]});
+      expect(previa.alternativas[0].alimento?.nutrientes.energiaKcal).toBe('999');
+      const linha=previa.alternativas[0];if(linha.resultado.estado!=='calculavel'||!linha.fingerprint)throw new Error('Prévia stale deveria permitir recálculo explícito validado.');
+      alternativa.porcaoGramas=linha.resultado.porcaoEfetivaGramas;
+      alternativa.equivalencia={acao:'recalcular',aplicacaoId:randomUUID(),anteriorAplicacaoId:leitura.draft.equivalenciasAplicadas.equivalente.aplicacaoId,nutriente:'energiaKcal',politica:{passoPorcaoGramas:'1'},porcaoEfetiva:linha.resultado.porcaoEfetivaGramas,fingerprintEsperado:linha.fingerprint};
+      const recalculada:any=await salvarEdicao(documento,2);
+      expect(recalculada.equivalenciasAplicadas.equivalente).toMatchObject({estado:'calculada_revisada',alternativa:{nutrientes:{energiaKcal:'999'}}});
+    });
     it('FOOD05 não marca revisão por mudança somente de metadados nem de formatação numérica da fonte',async()=>{
       const {d}=await prepararEquivalencia(true);const primeiro:any=await salvarEdicao(d);
       const alimento=repositorios.get(AlimentoComposicaoOrm)!.registros.find((r:any)=>r.id==='10000000-0000-4000-8000-000000000087')!;alimento.energiaKcal='160.000';

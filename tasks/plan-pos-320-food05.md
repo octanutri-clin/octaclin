@@ -684,3 +684,13 @@ Esta nota suplementa o contrato funcional abaixo sem reduzir D01–D17 ou M01–
 - **Atualidade do catálogo:** equivalência nova guarda versão de dependências 2 e detecta mudanças nos fatos que entram no cálculo (identidade, preparo, base e nutrientes disponíveis normalizados). Mudança editorial/formatting sem mudança nutricional não marca revisão nessa versão. Contextos anteriores sem esse discriminador usam a assinatura versão 1 para compatibilidade histórica.
 - **Recálculo:** apenas ação explícita de profissional sobre equivalência pendente pode usar composição atual autorizada; preview/fingerprint é vinculado à revisão. Fonte inativa/indisponível não permite recálculo com snapshot antigo. Porção e snapshot histórico permanecem intactos até confirmação.
 - **Critério de saída atualizado:** testes locais focados e typechecks são pré-condição para enviar o delta, não para fechar T07-A/T14/T15–T18. Exigir CI do commit exato, cobertura PostgreSQL/RLS aplicável, cenário PA07 em execução efetiva, scanners, matriz de regressão e R4 final independente. Sem mudança de schema nesta correção; não há migration autorizada ou necessária.
+
+### Atualização técnica — projeção stale em leitura e recálculo explícito
+
+A R4 independente final do delta `59f7ecaa` mostrou que mudanças de composição no catálogo não apareciam até o próximo save. A implementação agora revalida fatos atuais ao abrir a edição pelo caminho `obter()` utilizado pelo console e projeta `revisao_pendente` sem persistir estado, alterar a revisão editorial, recalcular porção ou mexer em snapshots. Revisar e publicar consultam a mesma condição atual dentro da operação.
+
+Para recuperar o cálculo, uma prévia de recálculo pode partir do estado armazenado `calculada_revisada` apenas quando a origem ainda autorizada é resolvida e sua assinatura versionada diverge comprovadamente da assinatura original. CAS/revisão, identidade, fingerprint, confirmação explícita e falha fechada para fonte indisponível continuam obrigatórios. A atualização subsequente exige save explícito; leitura não escreve.
+
+RED/GREEN: teste RED mostrou leitura primária stale; teste GREEN cobre projeção, bloqueio de revisão/publicação, composição atual na prévia e confirmação do recálculo. Cinco suítes backend: **206/206 PASS**; typecheck backend **PASS** localmente em Node 24.19.0 (ambiente fora da engine). R4 independente focada no fix: **PASS estático**, não executou testes. O CI `40583522721` e Demo/PA07/Backend/RLS verdes pertencem ao commit anterior `59f7ecaa`; aguardam reexecução no novo HEAD.
+
+Sem alteração de schema/migration. Até CI/RLS, scanners, revisão R4 integral final e matriz T07-A/T14/T15–T18 no HEAD corrigido, os gates permanecem **BLOCKED** e #446 Draft.

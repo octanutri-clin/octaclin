@@ -511,7 +511,7 @@ export class ServicoPlanosAlimentares {
         where: { tenantId, planoId, numero }
       });
       if (!versao) throw new NotFoundException('Versao do plano alimentar nao encontrada.');
-      return this.montarVersao(gerenciador, versao, true);
+      return this.montarVersao(gerenciador, versao, true, usuario);
     });
   }
 
@@ -669,7 +669,7 @@ export class ServicoPlanosAlimentares {
     this.garantirPermissao(usuario, 'planos_alimentares.ler');
     return this.executorTenant.executar(tenantId, async (gerenciador) => {
       const plano = await this.obterPlanoNoEscopo(gerenciador, tenantId, pacienteId, planoId, usuario, 'pessimistic_read');
-      return this.montarPlano(gerenciador, plano);
+      return this.montarPlano(gerenciador, plano, usuario);
     });
   }
 
@@ -702,7 +702,7 @@ export class ServicoPlanosAlimentares {
           criadoPorUsuarioId: usuario.usuarioId
         })
       );
-      return this.montarPlano(gerenciador, plano);
+      return this.montarPlano(gerenciador, plano, usuario);
     });
   }
 
@@ -712,7 +712,7 @@ export class ServicoPlanosAlimentares {
     return this.executorTenant.executar(tenantId, async (gerenciador) => {
       const plano = await this.obterPlanoNoEscopo(gerenciador, tenantId, pacienteId, planoId, usuario, 'pessimistic_read');
       const rascunho = await this.obterRascunhoAtivo(gerenciador, tenantId, plano.id);
-      return this.montarVersao(gerenciador, rascunho, true);
+      return this.montarVersao(gerenciador, rascunho, true, usuario);
     });
   }
 
@@ -957,6 +957,46 @@ export class ServicoPlanosAlimentares {
   private lerContextosEquivalencias(versao:PlanoAlimentarVersaoOrm):ContextosEquivalencias {
     if(!versao.edicaoSnapshotCriptografado)return {};
     try{return lerSnapshotEdicaoGrupos(this.lerJsonCriptografado(versao.edicaoSnapshotCriptografado)).equivalencias??{};}catch{throw new ConflictException('Contexto de equivalência indisponível.');}
+  }
+
+  /** Revalida apenas a dependência atual para exibição/decisão. Nunca recalcula
+   * porção nem persiste a pendência durante uma leitura. Fontes sem acesso ou
+   * indisponíveis falham fechadas e também exigem revisão explícita. */
+  private async projetarEquivalenciasAtuais(gerenciador:EntityManager,versao:PlanoAlimentarVersaoOrm,usuario:UsuarioAutenticado,anteriores:ContextosEquivalencias):Promise<ContextosEquivalencias>{
+    const edicao=this.lerEdicao(versao),documento=edicao.documentoEdicao;
+    if(!documento||edicao.edicaoEstado==='indisponivel')throw new ConflictException('Equivalência indisponível para conferência atual. Recarregue o plano.');
+    let catalogos:ContextosCatalogoGrupo;
+    try{catalogos=versao.edicaoSnapshotCriptografado?lerSnapshotEdicaoGrupos(this.lerJsonCriptografado(versao.edicaoSnapshotCriptografado),anteriores).catalogos:Object.create(null);}
+    catch{throw new ConflictException('Origem da equivalência indisponível para conferência atual.');}
+    const profissionalId=await resolverProfissionalIdDoUsuario(gerenciador,versao.tenantId,usuario);
+    const preservados:FatosPreservadosEquivalencia={custom:this.lerContextosCustom(versao),catalogos,equivalencias:Object.create(null)};
+    for(const [chave,cOriginal]of Object.entries(anteriores)){
+      const c=cOriginal.aplicados??cOriginal;
+      preservados.equivalencias![chave]={identidade:c.alternativa.identidade,fatos:c.alternativa};
+      if(!c.principal.identidade.startsWith('manual:'))preservados.equivalencias![cOriginal.itemChave]={identidade:c.principal.identidade,fatos:c.principal};
+    }
+    const fontes=new FontesGruposSubstituicoes(this.criptografia);
+    const fatosAtuais=(a:Parameters<typeof resolverFatosEquivalencia>[3],pai?:string)=>resolverFatosEquivalencia(gerenciador,versao.tenantId,profissionalId,a,fontes,preservados,pai,true,false);
+    return resolverEquivalenciasDocumento(JSON.parse(JSON.stringify(documento)),anteriores,{
+      dependencias:async(item,alternativa,c)=>{
+        try{
+          const principal=await fatosAtuais(item),atual=await fatosAtuais(alternativa,item.chaveCliente);
+          return assinaturaDependenciasEquivalencia(item,alternativa,principal,atual,c.nutriente,c.politica,c.dependenciasVersao??1);
+        }catch{
+          // Um contexto cuja fonte deixou de ser autorizada/consultável não pode
+          // ser apresentado como conferido nem liberado para publicação.
+          return `fonte-indisponivel:${c.dependenciasHash}`;
+        }
+      },
+      prever:async()=>{throw new ConflictException('Leitura não pode calcular nem substituir uma equivalência.');}
+    });
+  }
+
+  private async garantirEquivalenciasRevisadasAtuais(gerenciador:EntityManager,versao:PlanoAlimentarVersaoOrm,usuario:UsuarioAutenticado):Promise<void>{
+    const contextos=this.lerContextosEquivalencias(versao);
+    if(!Object.keys(contextos).length)return;
+    const atuais=await this.projetarEquivalenciasAtuais(gerenciador,versao,usuario,contextos);
+    if(Object.values(atuais).some(c=>c.estado==='revisao_pendente'))throw new BadRequestException('Equivalência com revisão pendente: recalcule ou mantenha como manual antes de revisar ou publicar.');
   }
 
   private async lerContextosEquivalenciasMaterializadas(gerenciador:EntityManager,versao:PlanoAlimentarVersaoOrm):Promise<ContextosEquivalencias>{
@@ -1260,7 +1300,7 @@ export class ServicoPlanosAlimentares {
       this.conferirRevisaoEdicao(rascunho, dados);
       this.garantirApresentacaoDisponivel(rascunho);
       this.garantirRascunhoCompleto(rascunho);
-      this.garantirEquivalenciasRevisadas(rascunho);
+      await this.garantirEquivalenciasRevisadasAtuais(gerenciador,rascunho,usuario);
       const conteudo = await this.montarVersao(gerenciador, rascunho);
       if (!conteudo.refeicoes.length || conteudo.refeicoes.some((refeicao) => !refeicao.itens.length)) {
         throw new BadRequestException('Preencha todas as refeicoes antes da revisao.');
@@ -1366,7 +1406,7 @@ export class ServicoPlanosAlimentares {
       }
       this.garantirApresentacaoDisponivel(rascunho);
       this.garantirRascunhoCompleto(rascunho);
-      this.garantirEquivalenciasRevisadas(rascunho);
+      await this.garantirEquivalenciasRevisadasAtuais(gerenciador,rascunho,usuario);
       const conteudo = await this.montarVersao(gerenciador, rascunho);
       if (!conteudo.refeicoes.length || conteudo.refeicoes.some((refeicao) => !refeicao.itens.length)) {
         throw new BadRequestException('Plano alimentar precisa de refeicoes preenchidas para publicacao.');
@@ -1423,7 +1463,7 @@ export class ServicoPlanosAlimentares {
         planoId: plano.id,
         versaoId: rascunho.id
       });
-      return this.montarPlano(gerenciador, plano);
+      return this.montarPlano(gerenciador, plano, usuario);
     });
   }
 
@@ -2271,7 +2311,7 @@ export class ServicoPlanosAlimentares {
     return alertas;
   }
 
-  private async montarPlano(gerenciador: EntityManager, plano: PlanoAlimentarOrm) {
+  private async montarPlano(gerenciador: EntityManager, plano: PlanoAlimentarOrm, usuario?:UsuarioAutenticado) {
     const versoes = await gerenciador.getRepository(PlanoAlimentarVersaoOrm).find({
       where: { tenantId: plano.tenantId, planoId: plano.id },
       order: { numero: 'DESC' }
@@ -2283,7 +2323,7 @@ export class ServicoPlanosAlimentares {
         Boolean(versao) && lista.findIndex((item) => item?.id === versao?.id) === indice
     );
     const detalhes = await Promise.all(
-      versoesEmDetalhe.map((versao) => this.montarVersao(gerenciador, versao, true))
+      versoesEmDetalhe.map((versao) => this.montarVersao(gerenciador, versao, true, usuario))
     );
     return {
       ativoParaPaciente: plano.ativoParaPaciente === true,
@@ -2366,7 +2406,7 @@ export class ServicoPlanosAlimentares {
     }
   }
 
-  private async montarVersao(gerenciador: EntityManager, versao: PlanoAlimentarVersaoOrm, incluirEquivalencias=false) {
+  private async montarVersao(gerenciador: EntityManager, versao: PlanoAlimentarVersaoOrm, incluirEquivalencias=false, usuario?:UsuarioAutenticado) {
     // Todos os callers já mantêm o lock de escopo. A revisão acompanha o ACK
     // editorial para o cliente não aplicar flags anteriores a um toggle posterior.
     const planoOperacional = await gerenciador.getRepository(PlanoAlimentarOrm).findOne({
@@ -2414,7 +2454,7 @@ export class ServicoPlanosAlimentares {
           contextos=Object.create(null);
           for(const linha of substituicoes){const snapshot=this.lerJsonCriptografado<SnapshotComposicao>(linha.composicaoSnapshotCriptografada);const c=snapshot.equivalencia;if(c){if(Object.hasOwn(contextos,c.alternativaChave))throw new ConflictException('Referência duplicada.');contextos[c.alternativaChave]=c;}}
           contextos=validarContextosEquivalencias(contextos);
-        }else{if(edicao.edicaoEstado==='indisponivel')throw new ConflictException('Edição indisponível.');contextos=this.lerContextosEquivalencias(versao);}
+        }else{if(edicao.edicaoEstado==='indisponivel')throw new ConflictException('Edição indisponível.');contextos=this.lerContextosEquivalencias(versao);if(usuario&&contextos&&Object.keys(contextos).length)contextos=await this.projetarEquivalenciasAtuais(gerenciador,versao,usuario,contextos);}
         equivalenciasProfissionais=projetarEquivalenciasProfissional(contextos);
       }catch{equivalenciasEstado='indisponivel';}
     }
