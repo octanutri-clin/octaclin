@@ -282,3 +282,7 @@ Após a correção dos fixtures de integração, o revisor independente fez nova
 ### Revisão estática dos ajustes pós-CI `403bbc11` — 27/10/2026
 
 O reviewer independente confirmou o documento base do destino stale como proveniente do mesmo paciente/avaliação e sem substituições, e a ampliação do timeout A05 para 120s sem afrouxar assertions. Sem novos achados estáticos. Não executou testes; a evidência PostgreSQL segue pendente no próximo CI.
+
+### Revisão estática da divisão dos cenários A05 — 27/10/2026
+
+O revisor confirmou que a prova agora isola as duas ordens: copy-first termina a cópia e depois permite editar a origem; edit-first avança a origem para revisão 2 e exige 409 para a cópia com revisão 1, sem escrita no destino. Os limites de 90s não alteram assertions. Sem achados adicionais; revisor não executou testes. A validação final depende do próximo PostgreSQL/RLS CI.

@@ -522,3 +522,10 @@ Critério de fechamento: FOOD05 principal pode concluir quando T07-A passar e D0
 - [x] Backend typecheck local e diff check PASS.
 - [ ] Commit/push e nova execução CI PostgreSQL/RLS; o run `40528993006` no HEAD `403bbc11` ainda falhou nos 2 casos, com 3.554 PASS/48 SKIPPED. Diagnóstico: paciente/avaliação inconsistente no fixture stale e timeout de 60s na prova A05 completa.
 - [ ] Somente mover A04/A05/T07-A/T14 de BLOCKED após os casos atuais passarem no Postgres/RLS com asserções de CAS, concorrência e ausência de escrita parcial.
+
+### Provas A05 separadas por ordem — 27/10/2026
+
+- [x] Dividir a prova concorrente agregada que excedeu 120s em dois testes isolados: copy-first e edit-first, cada um com timeout 90s e asserts completos de revisão/estado/409.
+- [x] R4 independente estática do delta: sem achados adicionais; revisor não executou testes.
+- [ ] Executar ambos em PostgreSQL/RLS no próximo CI; não considerar o timeout anterior como prova funcional.
+- [ ] T07-A/T14 continuam BLOCKED até estes cenários e os gates restantes passarem.

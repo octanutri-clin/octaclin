@@ -1830,7 +1830,7 @@ descrever('RLS e isolamento multi-tenant integral em Postgres real', () => {
       join plano_alimentar_itens i on i.id=s.item_id and i.tenant_id=s.tenant_id
       join plano_alimentar_refeicoes r on r.id=i.refeicao_id and r.tenant_id=i.tenant_id where r.versao_id=$1`,[c.versaoId]))).toEqual([{total:1}]);
   },60000);
-  it('FOOD05 PostgreSQL: edição da origem concorrente serializa antes da confirmação da cópia',async()=>{
+  it('FOOD05 PostgreSQL: cópia serializa antes da edição concorrente da origem',async()=>{
     const origem=await prepararCenarioFood05('food05-copy-origin-race'),salvaOrigem:any=await origem.salvar();
     const destino=await prepararCenarioFood05('food05-copy-destination-race');
     const salvoDestino:any=await destino.salvar();
@@ -1855,8 +1855,9 @@ descrever('RLS e isolamento multi-tenant integral em Postgres real', () => {
     const copia:any=(resultados[0] as PromiseFulfilledResult<any>).value;
     expect(copia.equivalenciasAplicadas['origem-race-copia-alt']).toMatchObject({estado:'revisao_pendente'});
     expect(await executorTenant!.executar(tenantA,g=>g.query('select rascunho_revisao from plano_alimentar_versoes where id=$1',[origem.versaoId]))).toEqual([{rascunho_revisao:2}]);
-    const stale=JSON.parse(JSON.stringify(preparada.request));stale.rascunhoIdEsperado=destino.versaoId;stale.rascunhoRevisaoEsperada=2;
-    await expect(new ServicoPlanosAlimentares(executorTenant!,origem.cripto).salvarEdicaoRascunho(tenantA,destino.pacienteId,destino.planoId,origem.usuario,stale)).rejects.toMatchObject({status:409});
+  },90000);
+  it('FOOD05 PostgreSQL: edição da origem vence e cópia stale não grava',async()=>{
+    const origem=await prepararCenarioFood05('food05-copy-edit-first-origin'),salvaOrigem:any=await origem.salvar();
     const destinoNovo=await prepararCenarioFood05('food05-copy-edit-first-destination');
     const salvoDestinoNovo:any=await destinoNovo.salvar();
     await cliente!.query('update pacientes set profissional_responsavel_id=$1 where tenant_id=$2 and id=$3',[origem.profissionalId,tenantA,destinoNovo.pacienteId]);
@@ -1867,18 +1868,19 @@ descrever('RLS e isolamento multi-tenant integral em Postgres real', () => {
     itemCopia.chaveCliente='origem-editada-primeiro-item';alternativaCopia.chaveCliente='origem-editada-primeiro-alt';delete alternativaCopia.equivalencia;
     documentoNovo.refeicoes[0].itens.push(itemCopia);
     const pedidoDepoisEdicao={rascunhoIdEsperado:destinoNovo.versaoId,rascunhoRevisaoEsperada:1,documento:documentoNovo,
-      copiasEquivalencia:[{pacienteOrigemId:origem.pacienteId,planoOrigemId:origem.planoId,versaoIdOrigem:origem.versaoId,numeroVersaoOrigem:1,rascunhoRevisaoOrigemEsperada:2,itemChaveOrigem:itemNovo.chaveCliente,alternativaChaveOrigem:alternativaNova.chaveCliente,itemChaveDestino:itemCopia.chaveCliente,alternativaChaveDestino:alternativaCopia.chaveCliente}]};
+      copiasEquivalencia:[{pacienteOrigemId:origem.pacienteId,planoOrigemId:origem.planoId,versaoIdOrigem:origem.versaoId,numeroVersaoOrigem:1,rascunhoRevisaoOrigemEsperada:1,itemChaveOrigem:itemNovo.chaveCliente,alternativaChaveOrigem:alternativaNova.chaveCliente,itemChaveDestino:itemCopia.chaveCliente,alternativaChaveDestino:alternativaCopia.chaveCliente}]};
     const edicaoDaOrigem={...salvaOrigem.documentoEdicao,refeicoes:salvaOrigem.documentoEdicao!.refeicoes.map((r:any)=>({...r,nome:`${r.nome} revisado`}))};
     const editouPrimeiro=await disputarPa06(
-      ()=>origem.servico.salvarEdicaoRascunho(tenantA,origem.pacienteId,origem.planoId,origem.usuario,{rascunhoIdEsperado:origem.versaoId,rascunhoRevisaoEsperada:2,documento:edicaoDaOrigem}),
+      ()=>origem.servico.salvarEdicaoRascunho(tenantA,origem.pacienteId,origem.planoId,origem.usuario,{rascunhoIdEsperado:origem.versaoId,rascunhoRevisaoEsperada:1,documento:edicaoDaOrigem}),
       ()=>new ServicoPlanosAlimentares(executorTenant!,origem.cripto).salvarEdicaoRascunho(tenantA,destinoNovo.pacienteId,destinoNovo.planoId,origem.usuario,pedidoDepoisEdicao as any),
       PlanoAlimentarVersaoOrm,
       'pessimistic_write'
     );
     expect(editouPrimeiro.map(r=>r.status)).toEqual(['fulfilled','rejected']);
     expect((editouPrimeiro[1] as PromiseRejectedResult).reason).toMatchObject({status:409});
+    expect(await executorTenant!.executar(tenantA,g=>g.query('select rascunho_revisao from plano_alimentar_versoes where id=$1',[origem.versaoId]))).toEqual([{rascunho_revisao:2}]);
     expect(await executorTenant!.executar(tenantA,g=>g.query('select rascunho_revisao from plano_alimentar_versoes where id=$1',[destinoNovo.versaoId]))).toEqual([{rascunho_revisao:1}]);
-  },120000);
+  },90000);
   it('FOOD05 PostgreSQL: prévia serializa com transferência e acesso anterior é revogado',async()=>{
     const c=await prepararCenarioFood05('food05-transferencia'),novo=await prepararDadosRepresentativos(tenantA,'food05-novo-responsavel');
     const resultados=await disputarPa06(e=>{const f=new FontesGruposSubstituicoes(c.cripto);return new ServicoEquivalenciasPlano(e,c.cripto,f,new ServicoGruposSubstituicoes(e,c.cripto,f)).prever(tenantA,c.pacienteId,c.planoId,c.usuario,c.pedido);},()=>executorTenant!.executar(tenantA,g=>g.query('update pacientes set profissional_responsavel_id=$1 where tenant_id=$2 and id=$3',[novo.profissionalId,tenantA,c.pacienteId])),PacienteOrm,'pessimistic_read');

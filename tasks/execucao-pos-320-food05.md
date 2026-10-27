@@ -801,3 +801,9 @@ Não reportar T07-A ou T14 como PASS até completar o banco e as regressões. T0
 - R4 independente estática dos dois ajustes finais: sem achados adicionais; não executou testes. `git diff --check` PASS. Backend typecheck local repetido PASS (Node 24.19 fora do range declarado >=22 <23).
 - CI `40528993006`: 3.554 testes PASS, 48 SKIPPED; os 2 testes concorrentes continuam falhando no HEAD `403bbc11` pelos motivos de fixture/timeout acima. Scanners e demais jobs aplicáveis reportaram PASS; não considerar CI global verde.
 - Os novos ajustes estão na worktree e requerem commit/push e nova execução Postgres/RLS. A04/A05/T07-A/T14 seguem BLOCKED. Nenhuma alteração no runtime clínico, migration externa, merge ou deploy.
+
+### CI Postgres `3e45f1dc` — prova A05 separada por ordem — 27/10/2026
+
+- Backend CI executou Postgres/RLS e reportou 3.555 testes PASS, 48 SKIPPED; o único fail foi a prova A05 agregada, que excedeu 120s, sem falha de assertion capturada.
+- Dividi em duas corridas independentes com timeout de 90s: (1) cópia adquire locks primeiro, ambas as operações concluem, cópia fica `revisao_pendente` e a revisão da origem avança; (2) edição adquire locks primeiro, a origem avança, cópia com revisão antiga recebe 409 e o destino permanece inalterado. Nenhuma asserção foi removida.
+- R4 independente estática do delta de divisão: sem achados adicionais; revisor não executou testes. Nova execução CI/Postgres/RLS necessária. A04/A05/T07-A/T14 seguem BLOCKED.

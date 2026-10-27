@@ -247,3 +247,7 @@ HEAD `643076ba124dc3f45998b1b4e8ed008f68f73091`, PR #446 aberta e Draft. A revis
 ### Atualização de verificação — commit `403bbc11` e delta em andamento — 27/10/2026
 
 O CI `40528993006` executou Postgres/RLS e reportou 3.554 PASS, 48 SKIPPED e 2 falhas nas provas novas. O fixture stale referenciava avaliação de outro paciente; corrigido para o paciente correto. A corrida A05 completa excedeu 60s; timeout passou a 120s, mantendo os asserts. Revisor R4 estático leu esses dois ajustes sem achados; não executou testes. Typecheck backend local PASS. Próximo passo: commit/push deste delta e novo CI. Não marcar A04/A05/T07-A/T14 PASS. PR #446 Draft; sem operação externa.
+
+### Último delta de testes — 27/10/2026
+
+O CI `40530639253` executou PostgreSQL/RLS; 3.555 testes passaram, 48 foram skipped, e a prova A05 conjunta excedeu 120s. O teste agora está dividido em copy-first e edit-first (90s cada), mantendo asserts de sucesso/revisão pendente/revisão incrementada para a primeira ordem e 409/nenhuma escrita na segunda. R4 independente estática: sem novos achados, sem execução de testes. Fazer commit/push e aguardar CI; A04/A05/T07-A/T14 permanecem BLOCKED.
