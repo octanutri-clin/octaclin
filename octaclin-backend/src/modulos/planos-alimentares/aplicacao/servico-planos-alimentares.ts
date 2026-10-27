@@ -877,7 +877,7 @@ export class ServicoPlanosAlimentares {
             const snapshotAlternativa=(await this.resolverItem(gerenciador,pa,composicoesCustom.get(pa),composicoesCatalogoGrupo.get(pa))).snapshot;
             return {fingerprint:linha.fingerprint,principal:previa.principal,alternativa:linha.alimento,resultado:linha.resultado,snapshotPrincipal,snapshotAlternativa};
           }
-        });}catch(erro){if(erro instanceof ConflitoEquivalenciaEdicao)throw new ConflictException(erro.message);throw erro;}
+        });}catch(erro){if(erro instanceof ConflitoEquivalenciaEdicao)throw new ConflictException(erro.message,{cause:erro});throw erro;}
         // Chaves editoriais vêm do documento do cliente. A mesclagem define
         // propriedades próprias e não executa setters de protótipo.
         mesclarContextosEquivalenciaSeguro(contextosEquivalencias,resolvidos);
