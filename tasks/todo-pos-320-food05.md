@@ -1,5 +1,7 @@
 # FOOD05 — T01–T18, dependências e critérios de aceite
 
+> **Estado vigente — preparação para Ready for Review (27/10/2026):** código `8ed85259`, CI documental `81e738f3` confirmado verde; P2-01/P2-02, T07-A/T14 e critérios executados T15–T18 reconhecidos como PASS técnico. R4 independente integral **estática** favorável, sem testes pelo revisor; CI Node 22 compatível com engines. Provenance SBOM **SKIPPED**. G06 operacional **BLOCKED**, separado do código. PR #446 **Draft**; revisão formal, merge e operação exigem autorizações distintas. Estado e evidências por requisito: [matriz vigente e checklist pré-merge](aceite-pos-320-food05.md). Qualquer checkpoint anterior conflitante abaixo é histórico e está substituído por esta matriz; requisitos normativos continuam vigentes.
+
 ### Fechamento da retomada P2 — commit `8ed8525926a3548d7f6630205fd885ccd6fb785d` (27/10/2026)
 
 Este checkpoint substitui os estados de retomada anteriores para os itens abaixo; os registros históricos continuam preservados.
@@ -25,39 +27,26 @@ D01–D14 e M01–M08 não são opcionais. Cada caixa representa prova, não có
 Paths BE = `octaclin-backend/src/modulos/planos-alimentares/`;
 FE = `octaclin-web/`. Novos nomes são propostas, não arquivos criados nesta rodada.
 
-## Checkpoint intermediário de execução
+## Quadro técnico consolidado (limites na matriz vigente)
 
 | Tarefas | Estado real |
 | --- | --- |
-| T01–T05 | Fundamentos implementados e verificações focadas PASS; fechamento integrado ainda depende dos gates finais |
-| T06 | Motor, writer/ACK, revisão e snapshots implementados; suites focadas PASS, conclusão funcional ainda vinculada às cópias e regressões finais |
+| T01–T05 | Fundamentos e verificações focadas PASS; integração posterior no CI 81e738f3, com limites da matriz vigente |
+| T06 | Motor, writer/ACK, revisão e snapshots implementados; suites focadas PASS, cópias/regressões posteriores comprovadas nos cenários de CI; ver matriz vigente |
 | T07-A | **PASS técnico no HEAD 8ed85259**: cópias clínicas autorizadas, proveniência cifrada, nova identidade, revisão pendente, revalidação, CAS/locks/rollback e RLS exercitados. |
 | T07-B | **PENDENTE / FOOD05-MDL**: modelos matemáticos compartilháveis não implementados; D17 bloqueia aplicação no frontend/backend. Não marcar T07 original integralmente concluído. |
 | T08 | Preferências e migration 1079 implementadas; CAS/RLS/JSON exercitados no PostgreSQL de CI |
 | T09 | Backend, BFF, cliente tipado e integração principal com a UI implementados; verificações Web passam |
-| T10–T13 | Implementação parcial integrada; FOOD05/PA07 24/24 desktop/mobile no último teste local; edição de porção atualiza residual sem escrita antes de confirmar. Matriz restante, cópia por modelo e histórico integral pendentes |
+| T10–T13 | Individual/FOOD04, revisão, preferências e PA07: critérios executados PASS no CI 81e738f3; limites por melhoria na matriz vigente. Cópia por modelo pertence a T07-B futuro |
 | T14 | **PASS técnico nos cenários executados no HEAD 8ed85259**: PostgreSQL/Testcontainers, role runtime/RLS, CAS, cópia concorrente, rollback, autorização e persistência. |
 | T15 | **PASS nos gates executados no HEAD 8ed85259**: regressões Backend/Web, FOOD04 copy, Demo smoke e Playwright PA07 desktop/mobile. |
 | T16 | **PASS estático/checks aplicáveis**: R4 independente integral sem achados; CodeQL, Semgrep, Trivy e Dependency Review PASS. Reviewer não executou testes; SBOM SKIPPED. |
 | T17 | **PASS documental deste checkpoint**: checklist, execução, plano, arquitetura, handoff e PR atualizados. |
 | T18 | **PASS CI do HEAD** (PR Gate incluído); pendência operacional FOOD04-produção permanece separada e fora desta PR. |
 
-## Atualização do checkpoint P2 — 27/10/2026
+## Matriz de aceitação vigente
 
-Este quadro complementa o checkpoint histórico acima; não altera a sequência T01–T18.
-
-| Item | Estado atual | Evidência / pendência |
-| --- | --- | --- |
-| P2-01 — macros não alvo ausentes | **PASS** | 206/206 em cinco suítes FOOD05; CI do HEAD exato em Node 22 e PostgreSQL/RLS PASS. Ausências continuam desconhecidas; subtotal/impacto marcado incompleto. |
-| P2-02 — composição de catálogo atualizada | **PASS** | 206/206; leitura primária projeta revisão pendente read-only, bloquear revisão/publicação, recálculo explícito usa fonte atual autorizada, prévia e confirmação; fonte indisponível falha fechado. CI/RLS do HEAD PASS. |
-| Typecheck backend/Web | **PASS local Node 22.21.1** | TypeScript direto, exit code 0 em ambos. |
-| BFF planos / Fase 314 | **PASS local** | 62/62 e 1/1. |
-| T07-A / T14 | **BLOCKED** | Falta CI/PostgreSQL-RLS do delta e fechamento da matriz integrada; a prova RLS local existente não cobre o caminho novo de composição parcial. A04/A05 permanecem PASS técnico. |
-| T15–T18 | **BLOCKED / parcial** | PA07 Playwright não iniciou assertions por dependências apontadas a outra worktree e módulos Next/React ausentes. Exigir CI equivalente; se ausente, gap segue aberto. Regressões, acessibilidade, scanners e build devem ser conferidos no novo HEAD. |
-| R4 | **PASS estático somente para os dois P2** | Re-review independente sem novos achados; não executou testes. Revisão R4 integral da FOOD05 pendente após CI. |
-| PR #446 | **Draft, sem novo commit/push nesta atualização documental** | Delta P2 permanece na worktree; adicionar apenas arquivos intencionais e excluir alteração preexistente em `octaclin-web/next-env.d.ts`. |
-
-Não interpretar os focais locais como conclusão da FOOD05. D01–D17 aplicáveis e M01–M08 ainda exigem matriz final individual; D17 mantém modelos bloqueados e T07-B/D18/A06 permanecem na FOOD05-MDL.
+A evidência individual D01–D17/M01–M08 e os limites de cobertura estão na [matriz vigente](aceite-pos-320-food05.md). T07-A/T14 PASS técnico; T15–T18 PASS nos critérios executados; G06 BLOCKED. Typechecks e BFF históricos permanecem evidências dos respectivos commits; o CI Node 22 de `81e738f3` concluiu sem falha. O delta foi enviado; apenas `next-env.d.ts` preexistente fica fora da PR.
 
 As caixas abaixo continuam sendo critérios de aceite detalhados; nenhuma prova
 focada isolada encerra a entrega. Uma PR funcional foi escolhida dentre as opções
@@ -367,7 +356,7 @@ Dep: T17; G05/G06.
 - [ ] Entrega funcional FOOD05 só aceita com todas M01–M08 e dois contextos prontos;
   prontidão de produção depende de G06 mesmo se código/CI estiverem completos.
 
-## Estado desta rodada
+## Histórico substituído — estado da rodada de planejamento
 
 | Verificação | Resultado |
 | --- | --- |
@@ -379,7 +368,7 @@ Dep: T17; G05/G06.
 | FOOD04 produção | BLOCKED no último registro; não reconsultada |
 | Autorização de executar T01–T18 | PENDENTE após revisão deste planejamento |
 
-## Estado de execução — checkpoint de 2026-10-24
+## Histórico substituído — estado de execução / checkpoint de 2026-10-24
 
 Esta tabela supersede apenas os estados “NOT RUN / não implementados” acima; os
 requisitos e critérios T01–T18 permanecem vigentes.
@@ -634,3 +623,20 @@ Critério de fechamento: FOOD05 principal pode concluir quando T07-A passar e D0
 - R4 independente detectou no commit `59f7ecaa` falta de invalidação em leitura normal. RED reproduziu stale na rota primária `obter()`. Correção local projeta estado pendente sem escrita e protege revisar/publicar; recálculo explícito compara dependências atuais autorizadas e aceita estado persistido antigo somente se houve mudança comprovada. Fonte indisponível falha fechada. Teste também conclui recálculo com prévia/fingerprint.
 - Fix focal R4: **PASS estático** após re-review independente; nenhuma edição ou teste pelo revisor. Suítes backend focadas **206/206 PASS** e typecheck **PASS** executados localmente com Node 24.19.0, fora da engine declarada. A confirmação obrigatória com Node 22 e CI novo ainda não existe.
 - **T07-A/T14: BLOCKED** até CI/RLS no novo HEAD, integração completa, rollback/concorrência e matriz por critério. **T15: BLOCKED** até regressões integradas. **T16: BLOCKED** até R4 integral final e matriz a11y/abuso. **T17: IN PROGRESS** (documentação registrada, aceitação integral D01–D17/M01–M08 ainda não reconfirmada após o último fix). **T18: BLOCKED** até CI/scanners do novo HEAD. PR #446 permanece Draft.
+
+## Histórico substituído — checkpoint P2 — 27/10/2026
+
+Este quadro complementa o checkpoint histórico acima; não altera a sequência T01–T18.
+
+| Item | Estado naquele checkpoint | Evidência / pendência |
+| --- | --- | --- |
+| P2-01 — macros não alvo ausentes | **PASS** | 206/206 em cinco suítes FOOD05; CI do HEAD exato em Node 22 e PostgreSQL/RLS PASS. Ausências continuam desconhecidas; subtotal/impacto marcado incompleto. |
+| P2-02 — composição de catálogo atualizada | **PASS** | 206/206; leitura primária projeta revisão pendente read-only, bloquear revisão/publicação, recálculo explícito usa fonte atual autorizada, prévia e confirmação; fonte indisponível falha fechado. CI/RLS do HEAD PASS. |
+| Typecheck backend/Web | **PASS local Node 22.21.1** | TypeScript direto, exit code 0 em ambos. |
+| BFF planos / Fase 314 | **PASS local** | 62/62 e 1/1. |
+| T07-A / T14 | **BLOCKED** | Falta CI/PostgreSQL-RLS do delta e fechamento da matriz integrada; a prova RLS local existente não cobre o caminho novo de composição parcial. A04/A05 permanecem PASS técnico. |
+| T15–T18 | **BLOCKED / parcial** | PA07 Playwright não iniciou assertions por dependências apontadas a outra worktree e módulos Next/React ausentes. Exigir CI equivalente; se ausente, gap segue aberto. Regressões, acessibilidade, scanners e build devem ser conferidos no novo HEAD. |
+| R4 | **PASS estático somente para os dois P2** | Re-review independente sem novos achados; não executou testes. Revisão R4 integral da FOOD05 pendente após CI. |
+| PR #446 | **Draft, sem novo commit/push nesta atualização documental** | Delta P2 permanece na worktree; adicionar apenas arquivos intencionais e excluir alteração preexistente em `octaclin-web/next-env.d.ts`. |
+
+Não interpretar os focais locais como conclusão da FOOD05. D01–D17 aplicáveis e M01–M08 ainda exigem matriz final individual; D17 mantém modelos bloqueados e T07-B/D18/A06 permanecem na FOOD05-MDL.

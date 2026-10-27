@@ -1,5 +1,7 @@
 # FOOD05 — plano de implementação: equivalência por nutriente
 
+> **Estado vigente — preparação para Ready for Review (27/10/2026):** código `8ed85259`, CI documental `81e738f3` confirmado verde; P2-01/P2-02, T07-A/T14 e critérios executados T15–T18 reconhecidos como PASS técnico. R4 independente integral **estática** favorável, sem testes pelo revisor; CI Node 22 compatível com engines. Provenance SBOM **SKIPPED**. G06 operacional **BLOCKED**, separado do código. PR #446 **Draft**; revisão formal, merge e operação exigem autorizações distintas. Estado e evidências por requisito: [matriz vigente e checklist pré-merge](aceite-pos-320-food05.md). Qualquer checkpoint anterior conflitante abaixo é histórico e está substituído por esta matriz; requisitos normativos continuam vigentes.
+
 > Execução autorizada: `superpowers:executing-plans`, tarefa por tarefa.
 > A autorização de desenvolvimento não abrange migrations externas, merge, deploy
 > ou infraestrutura. Preservar os gates e todas as melhorias M01–M08.
@@ -549,14 +551,14 @@ Por risco do envelope3, não mesclar writer novo e reader antigo: primeiro reade
 compatível, depois writers. PRs distintas devem manter todas as fases intermediárias
 executáveis, sem rebaixar auth. Uma PR de documentação não conclui feature faltante.
 
-| Gate | Condição de saída | Estado nesta rodada |
+| Gate | Condição de saída | Estado vigente (evidências na matriz de aceite) |
 | --- | --- | --- |
 | G00 Base/contratos | Main/branch limpos, escopo D01–D14/M01–M08 e gaps rastreados | PASS documental |
-| G01 Matemática | Oráculo independente e propriedades/exemplos/bordas PASS, precisão reproduzível | NOT RUN |
-| G02 Persistência/histórico | Rascunhos/publicações/clones/legados/omissão e sem recálculo retroativo PASS | NOT RUN |
-| G03 Segurança | Matriz/authz/RLS/CAS/concorrência/projeções + revisão cruzada PASS | NOT RUN |
-| G04 UX integral | Individual+grupo e M01–M08 todas PASS, a11y/mobile, cancelamento/ACK | NOT RUN |
-| G05 Integração | CI/scanners/regressões do HEAD exato PASS | NOT RUN |
+| G01 Matemática | Oráculo independente e propriedades/exemplos/bordas PASS, precisão reproduzível | PASS nos critérios executados; ver matriz vigente |
+| G02 Persistência/histórico | Rascunhos/publicações/clones/legados/omissão e sem recálculo retroativo PASS | PASS nos critérios executados; ver matriz vigente |
+| G03 Segurança | Matriz/authz/RLS/CAS/concorrência/projeções + revisão cruzada PASS | PASS nos critérios executados; ver matriz vigente |
+| G04 UX integral | Individual+grupo e M01–M08 todas PASS, a11y/mobile, cancelamento/ACK | PASS nos critérios executados; ver matriz vigente |
+| G05 Integração | CI/scanners/regressões do HEAD exato PASS | PASS nos critérios executados; ver matriz vigente |
 | G06 Operação | FOOD04 1078/produção regularizada e validada; migration prefs ensaiada/autorizada, app/readiness/jornada verificadas | BLOCKED |
 
 FOOD04 produção tem registro explícito em

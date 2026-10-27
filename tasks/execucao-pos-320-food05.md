@@ -1,5 +1,7 @@
 # Execução FOOD05 — plano tasks/plan-pos-320-food05.md
 
+> **Estado vigente — preparação para Ready for Review (27/10/2026):** código `8ed85259`, CI documental `81e738f3` confirmado verde; P2-01/P2-02, T07-A/T14 e critérios executados T15–T18 reconhecidos como PASS técnico. R4 independente integral **estática** favorável, sem testes pelo revisor; CI Node 22 compatível com engines. Provenance SBOM **SKIPPED**. G06 operacional **BLOCKED**, separado do código. PR #446 **Draft**; revisão formal, merge e operação exigem autorizações distintas. Estado e evidências por requisito: [matriz vigente e checklist pré-merge](aceite-pos-320-food05.md). Qualquer checkpoint anterior conflitante abaixo é histórico e está substituído por esta matriz; requisitos normativos continuam vigentes.
+
 Autorização: proprietário “Pode seguir, sol médio”. T01–T18 autorizadas;
 produção/infra/migrations externas não. Base e3b47da1, PR446 Draft, árvore limpa.
 

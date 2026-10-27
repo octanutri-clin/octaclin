@@ -1,4 +1,8 @@
-# Checkpoint D15–D18 — atualizado em 27/10/2026
+# FOOD05 — handoff vigente e histórico de execução
+
+> **Estado vigente — preparação para Ready for Review (27/10/2026):** código `8ed85259`, CI documental `81e738f3` confirmado verde; P2-01/P2-02, T07-A/T14 e critérios executados T15–T18 reconhecidos como PASS técnico. R4 independente integral **estática** favorável, sem testes pelo revisor; CI Node 22 compatível com engines. Provenance SBOM **SKIPPED**. G06 operacional **BLOCKED**, separado do código. PR #446 **Draft**; revisão formal, merge e operação exigem autorizações distintas. Estado e evidências por requisito: [matriz vigente e checklist pré-merge](aceite-pos-320-food05.md). Qualquer checkpoint anterior conflitante abaixo é histórico e está substituído por esta matriz; requisitos normativos continuam vigentes.
+
+## Histórico de checkpoints — substituído pelo estado vigente acima
 
 O proprietário autorizou correções delimitadas D15/D16. O usuário confirmou a
 troca manual para **Luna alto**; continuar nessa configuração até nova instrução.
