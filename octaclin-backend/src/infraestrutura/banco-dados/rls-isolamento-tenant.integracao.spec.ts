@@ -1,3 +1,6 @@
+import { ServicoEquivalenciasPlano } from '../../modulos/planos-alimentares/aplicacao/servico-equivalencias-plano';
+import { ServicoPreferenciasEquivalencia } from '../../modulos/planos-alimentares/aplicacao/servico-preferencias-equivalencia';
+import { PREFERENCIAS_EQUIVALENCIA_PADRAO } from '../../modulos/planos-alimentares/dominio/preferencias-equivalencia';
 import { ServicoGruposSubstituicoes } from '../../modulos/planos-alimentares/aplicacao/servico-grupos-substituicoes';
 import { FontesGruposSubstituicoes } from '../../modulos/planos-alimentares/aplicacao/fontes-grupos-substituicoes';
 import { GrupoSubstituicoesOrm, FavoritoGrupoSubstituicoesOrm } from '../../modulos/planos-alimentares/infraestrutura/grupo-substituicoes.orm';
@@ -343,7 +346,9 @@ descrever('RLS e isolamento multi-tenant integral em Postgres real', () => {
     snapshotAmbiente = new Map(CHAVES_AMBIENTE_BANCO.map((nome) => [nome, process.env[nome]]));
 
     // A imagem HA registra readiness no initdb e novamente apos o reinicio definitivo.
-    container = await new GenericContainer('timescale/timescaledb-ha:pg15')
+    // Permite fixar uma tag equivalente em ambientes locais sem alterar o padrão do CI.
+    const imagemPostgresTeste = process.env.RLS_TESTCONTAINERS_IMAGE ?? 'timescale/timescaledb-ha:pg15';
+    container = await new GenericContainer(imagemPostgresTeste)
       .withEnvironment({
         POSTGRES_USER: 'octaclin',
         POSTGRES_PASSWORD: 'octaclin_testcontainers',
@@ -1620,6 +1625,325 @@ descrever('RLS e isolamento multi-tenant integral em Postgres real', () => {
     return { ...dados, cripto, usuario, documento, planoId, versaoId, servico: new ServicoPlanosAlimentares(executorTenant, cripto) };
   }
 
+  async function prepararCenarioFood05(sufixo:string){
+    const c=await prepararCenarioPa06(sufixo),documento:any=c.documento;
+    const alternativa:any={chaveCliente:'a-food05',descricao:'Alternativa sintética FOOD05',quantidade:1,unidade:'porção',liberadaParaPaciente:false,preferida:false,nutrientesPor100g:{energiaKcal:40,proteinasG:4,carboidratosG:8,gordurasG:1}};
+    documento.refeicoes[0].itens[0].substituicoes=[alternativa];
+    const fontes=new FontesGruposSubstituicoes(c.cripto);
+    const previa=new ServicoEquivalenciasPlano(executorTenant!,c.cripto,fontes,new ServicoGruposSubstituicoes(executorTenant!,c.cripto,fontes));
+    const pedido={versaoId:c.versaoId,rascunhoRevisaoEsperada:0,documentoEdicao:documento,itemChave:'i-sintetico',nutriente:'energiaKcal',alternativas:[alternativa],politica:{passoPorcaoGramas:'1'}};
+    const r=await previa.prever(tenantA,c.pacienteId,c.planoId,c.usuario,pedido),linha=r.alternativas[0];
+    if(linha.resultado.estado!=='calculavel')throw new Error('Fixture FOOD05 não calculável.');
+    alternativa.porcaoGramas=linha.resultado.porcaoEfetivaGramas;
+    alternativa.equivalencia={acao:'calcular',aplicacaoId:randomUUID(),nutriente:'energiaKcal',politica:{passoPorcaoGramas:'1'},porcaoEfetiva:linha.resultado.porcaoEfetivaGramas,fingerprintEsperado:linha.fingerprint};
+    const salvar=(doc=documento,revisao=0,executor=executorTenant!)=>new ServicoPlanosAlimentares(executor,c.cripto).salvarEdicaoRascunho(tenantA,c.pacienteId,c.planoId,c.usuario,{rascunhoIdEsperado:c.versaoId,rascunhoRevisaoEsperada:revisao,documento:doc});
+    return {...c,documento,pedido,previa,salvar};
+  }
+  it('FOOD05 PostgreSQL: CAS real, corpo manipulado, tenant e carteira não gravam resultados indevidos',async()=>{
+    const c=await prepararCenarioFood05('food05-cas');
+    const outro=await prepararDadosRepresentativos(tenantA,'food05-outro-profissional');
+    await expect(c.previa.prever(tenantA,c.pacienteId,c.planoId,{...c.usuario,usuarioId:outro.usuarioId},c.pedido)).rejects.toMatchObject({status:404});
+    await expect(c.previa.prever(tenantB,c.pacienteId,c.planoId,{...c.usuario,tenantId:tenantB},c.pedido)).rejects.toMatchObject({status:404});
+    const adulterado=JSON.parse(JSON.stringify(c.documento));adulterado.refeicoes[0].itens[0].substituicoes[0].equivalencia.fingerprintEsperado='0'.repeat(64);
+    await expect(c.salvar(adulterado)).rejects.toMatchObject({status:409});
+    const antes=await executorTenant!.executar(tenantA,g=>g.query('select rascunho_revisao,edicao_snapshot_criptografado from plano_alimentar_versoes where id=$1',[c.versaoId]));expect(antes[0]).toMatchObject({rascunho_revisao:0,edicao_snapshot_criptografado:null});
+    const disputa=await Promise.allSettled([c.salvar(),c.salvar()]);expect(disputa.filter(x=>x.status==='fulfilled')).toHaveLength(1);expect((disputa.find(x=>x.status==='rejected') as PromiseRejectedResult).reason).toMatchObject({status:409});
+    const linhas=await executorTenant!.executar(tenantA,g=>g.query('select s.motor_calculo_versao from plano_alimentar_substituicoes s join plano_alimentar_itens i on i.id=s.item_id join plano_alimentar_refeicoes r on r.id=i.refeicao_id where r.versao_id=$1',[c.versaoId]));expect(linhas).toEqual([{motor_calculo_versao:'nutricao-decimal-v1'}]);
+  },60000);
+  it('FOOD05 PostgreSQL: rollback após falha materializando filho conserva cipher e revisão anteriores',async()=>{
+    const c=await prepararCenarioFood05('food05-rollback');const primeira:any=await c.salvar();
+    const ler=()=>executorTenant!.executar(tenantA,g=>g.query('select rascunho_revisao,edicao_snapshot_criptografado from plano_alimentar_versoes where id=$1',[c.versaoId]));const antes=await ler();
+    const falhar={executar:<T>(tenantId:string,operacao:(g:EntityManager)=>Promise<T>)=>executorTenant!.executar(tenantId,g=>{
+      const proxy=new Proxy(g,{get(alvo,k){if(k==='getRepository')return(classe:Function)=>{const r=alvo.getRepository(classe as never);if(classe!==PlanoAlimentarSubstituicaoOrm)return r;return new Proxy(r,{get(repo,campo){if(campo==='save')return async()=>{throw new Error('Falha sintética de persistência FOOD05');};const v=Reflect.get(repo,campo,repo);return typeof v==='function'?v.bind(repo):v;}});};const v=Reflect.get(alvo,k,alvo);return typeof v==='function'?v.bind(alvo):v;}});return operacao(proxy);
+    })} as ExecutorTenant;
+    primeira.documentoEdicao.refeicoes[0].nome='Nova edição sintética';await expect(c.salvar(primeira.documentoEdicao,1,falhar)).rejects.toThrow('Falha sintética de persistência FOOD05');expect(await ler()).toEqual(antes);
+    const vigente:any=await c.servico.obter(tenantA,c.pacienteId,c.planoId,c.usuario);expect(JSON.stringify(vigente)).toContain('calculada_revisada');
+  },60000);
+  it('FOOD05 PostgreSQL: falha na segunda alternativa selecionada não persiste aplicação parcial',async()=>{
+    const c=await prepararCenarioFood05('food05-multi-rollback');
+    const documento=JSON.parse(JSON.stringify(c.documento));
+    const item=documento.refeicoes[0].itens[0];
+    const primeira=item.substituicoes[0];
+    delete primeira.equivalencia;
+    const segunda:any={
+      chaveCliente:'a-food05-segunda',
+      descricao:'Segunda alternativa sintética',
+      quantidade:1,
+      unidade:'porção',
+      porcaoGramas:100,
+      nutrientesPor100g:{energiaKcal:80,proteinasG:8,carboidratosG:16,gordurasG:2},
+      liberadaParaPaciente:false,
+      preferida:false
+    };
+    item.substituicoes.push(segunda);
+    const pedido={...c.pedido,documentoEdicao:documento,alternativas:[primeira,segunda]};
+    const previa=await c.previa.prever(tenantA,c.pacienteId,c.planoId,c.usuario,pedido);
+    for(const alternativa of [primeira,segunda]){
+      const linha=previa.alternativas.find((x:any)=>x.chaveCliente===alternativa.chaveCliente);
+      if(!linha||linha.resultado.estado!=='calculavel')throw new Error('Fixture de alternativa FOOD05 não calculável.');
+      alternativa.porcaoGramas=linha.resultado.porcaoEfetivaGramas;
+      alternativa.equivalencia={acao:'calcular',aplicacaoId:randomUUID(),nutriente:'energiaKcal',politica:{passoPorcaoGramas:'1'},porcaoEfetiva:linha.resultado.porcaoEfetivaGramas,fingerprintEsperado:linha.fingerprint};
+    }
+    segunda.equivalencia.fingerprintEsperado='0'.repeat(64);
+
+    await expect(c.salvar(documento)).rejects.toMatchObject({status:409});
+    const rascunho=await executorTenant!.executar(tenantA,g=>g.query(
+      'select rascunho_revisao,edicao_snapshot_criptografado from plano_alimentar_versoes where id=$1',[c.versaoId]
+    ));
+    expect(rascunho).toEqual([{rascunho_revisao:0,edicao_snapshot_criptografado:null}]);
+    const filhos=await executorTenant!.executar(tenantA,g=>g.query(
+      `select count(*)::int as total from plano_alimentar_substituicoes s
+       join plano_alimentar_itens i on i.id=s.item_id and i.tenant_id=s.tenant_id
+       join plano_alimentar_refeicoes r on r.id=i.refeicao_id and r.tenant_id=i.tenant_id
+       where r.versao_id=$1`,[c.versaoId]
+    ));
+    expect(filhos).toEqual([{total:0}]);
+  },60000);
+  it('FOOD05 PostgreSQL: pendência, publicação e nova versão conservam matemática original e bloqueio legado',async()=>{
+    const c=await prepararCenarioFood05('food05-historico');await c.salvar();
+    await c.servico.revisar(tenantA,c.pacienteId,c.planoId,c.usuario,{rascunhoIdEsperado:c.versaoId,rascunhoRevisaoEsperada:1});
+    await c.servico.publicar(tenantA,c.pacienteId,c.planoId,c.usuario,{rascunhoIdEsperado:c.versaoId,rascunhoRevisaoEsperada:2});
+    const nova:any=await c.servico.criarNovaVersao(tenantA,c.pacienteId,c.planoId,c.usuario);expect(nova.equivalenciasAplicadas['a-food05']).toMatchObject({estado:'calculada_revisada',porcaoEfetivaGramas:'250'});
+    const d=nova.documentoEdicao;d.refeicoes[0].itens[0].porcaoGramas=200;
+    const pendente:any=await c.servico.salvarEdicaoRascunho(tenantA,c.pacienteId,c.planoId,c.usuario,{rascunhoIdEsperado:nova.id,rascunhoRevisaoEsperada:0,documento:d});expect(pendente.equivalenciasAplicadas['a-food05']).toMatchObject({estado:'revisao_pendente',resultado:{obtido:'100'}});
+    await expect(c.servico.revisar(tenantA,c.pacienteId,c.planoId,c.usuario,{rascunhoIdEsperado:nova.id,rascunhoRevisaoEsperada:1})).rejects.toMatchObject({status:400});
+    const publicada:any=await c.servico.obterVersao(tenantA,c.pacienteId,c.planoId,1,c.usuario);expect(publicada.equivalenciasAplicadas['a-food05'].estado).toBe('calculada_revisada');expect(JSON.stringify(publicada.refeicoes)).not.toMatch(/comandoHash|dependenciasHash|snapshotAlternativa/);
+  },60000);
+  it('FOOD05 PostgreSQL: cópia de versão publicada revalida escopo, remapeia chaves e persiste nova identidade',async()=>{
+    const c=await prepararCenarioFood05('food05-copy-published');const inicial:any=await c.salvar();
+    inicial.documentoEdicao.refeicoes[0].itens[0].substituicoes[0].liberadaParaPaciente=true;
+    inicial.documentoEdicao.refeicoes[0].itens[0].substituicoes[0].preferida=true;
+    await c.servico.salvarEdicaoRascunho(tenantA,c.pacienteId,c.planoId,c.usuario,{rascunhoIdEsperado:c.versaoId,rascunhoRevisaoEsperada:1,documento:inicial.documentoEdicao});
+    await c.servico.revisar(tenantA,c.pacienteId,c.planoId,c.usuario,{rascunhoIdEsperado:c.versaoId,rascunhoRevisaoEsperada:2});
+    await c.servico.publicar(tenantA,c.pacienteId,c.planoId,c.usuario,{rascunhoIdEsperado:c.versaoId,rascunhoRevisaoEsperada:3});
+    const nova:any=await c.servico.criarNovaVersao(tenantA,c.pacienteId,c.planoId,c.usuario);
+    const documento=JSON.parse(JSON.stringify(nova.documentoEdicao));
+    const origem=documento.refeicoes[0].itens[0],alternativaOrigem=origem.substituicoes[0];
+    const destino=JSON.parse(JSON.stringify(origem)),alternativaDestino=destino.substituicoes[0];
+    destino.chaveCliente='item-copiado-pg';alternativaDestino.chaveCliente='alternativa-copiada-pg';delete alternativaDestino.equivalencia;
+    alternativaDestino.liberadaParaPaciente=false;alternativaDestino.preferida=false;
+    documento.refeicoes[0].itens.push(destino);
+    const salva:any=await c.servico.salvarEdicaoRascunho(tenantA,c.pacienteId,c.planoId,c.usuario,{
+      rascunhoIdEsperado:nova.id,rascunhoRevisaoEsperada:0,documento,
+      copiasEquivalencia:[{pacienteOrigemId:c.pacienteId,planoOrigemId:c.planoId,versaoIdOrigem:c.versaoId,numeroVersaoOrigem:1,itemChaveOrigem:origem.chaveCliente,alternativaChaveOrigem:alternativaOrigem.chaveCliente,itemChaveDestino:destino.chaveCliente,alternativaChaveDestino:alternativaDestino.chaveCliente}]
+    } as any);
+    expect(salva.equivalenciasAplicadas['alternativa-copiada-pg']).toMatchObject({estado:'revisao_pendente'});
+    expect(salva.documentoEdicao.refeicoes[0].itens[1].substituicoes[0]).toMatchObject({liberadaParaPaciente:false,preferida:false});
+    const linhasCopiadas=await executorTenant!.executar(tenantA,g=>g.query(
+      `select s.id,s.liberada_para_paciente,s.preferida,s.composicao_snapshot_criptografada
+       from plano_alimentar_substituicoes s join plano_alimentar_itens i on i.id=s.item_id and i.tenant_id=s.tenant_id
+       join plano_alimentar_refeicoes r on r.id=i.refeicao_id and r.tenant_id=i.tenant_id
+       where r.versao_id=$1 order by s.id`,[nova.id]));
+    const linhaCopia=linhasCopiadas.find((linha:any)=>JSON.parse(c.cripto.descriptografar(linha.composicao_snapshot_criptografada)).equivalencia?.alternativaChave==='alternativa-copiada-pg');
+    expect(linhaCopia).toMatchObject({liberada_para_paciente:false,preferida:false});
+    const armazenado=await executorTenant!.executar(tenantA,g=>g.query('select edicao_snapshot_criptografado from plano_alimentar_versoes where id=$1',[nova.id]));
+    const contextos=JSON.parse(c.cripto.descriptografar(armazenado[0].edicao_snapshot_criptografado)).equivalencias;
+    expect(contextos['alternativa-copiada-pg']).toMatchObject({itemChave:'item-copiado-pg',alternativaChave:'alternativa-copiada-pg',estado:'revisao_pendente',copiaOrigem:{pacienteId:c.pacienteId,planoId:c.planoId,versaoId:c.versaoId,aplicacaoId:contextos['a-food05'].aplicacaoId}});
+    const revisaoAntesFlags=await executorTenant!.executar(tenantA,g=>g.query('select rascunho_revisao from plano_alimentar_versoes where id=$1',[nova.id]));
+    const snapshotAntesFlags=armazenado[0].edicao_snapshot_criptografado;
+    const linhasAntesFlags=linhasCopiadas.map((linha:any)=>({id:linha.id,liberada_para_paciente:linha.liberada_para_paciente,preferida:linha.preferida}));
+    const documentoFlags=JSON.parse(JSON.stringify(salva.documentoEdicao));
+    const itemFlags=JSON.parse(JSON.stringify(origem)),alternativaFlags=itemFlags.substituicoes[0];
+    itemFlags.chaveCliente='item-copiado-flags-forjadas';alternativaFlags.chaveCliente='alternativa-copiada-flags-forjadas';delete alternativaFlags.equivalencia;
+    alternativaFlags.liberadaParaPaciente=true;alternativaFlags.preferida=true;documentoFlags.refeicoes[0].itens.push(itemFlags);
+    await expect(c.servico.salvarEdicaoRascunho(tenantA,c.pacienteId,c.planoId,c.usuario,{
+      rascunhoIdEsperado:nova.id,rascunhoRevisaoEsperada:1,documento:documentoFlags,
+      copiasEquivalencia:[{pacienteOrigemId:c.pacienteId,planoOrigemId:c.planoId,versaoIdOrigem:c.versaoId,numeroVersaoOrigem:1,itemChaveOrigem:origem.chaveCliente,alternativaChaveOrigem:alternativaOrigem.chaveCliente,itemChaveDestino:itemFlags.chaveCliente,alternativaChaveDestino:alternativaFlags.chaveCliente}]
+    } as any)).rejects.toMatchObject({status:400});
+    expect(await executorTenant!.executar(tenantA,g=>g.query('select rascunho_revisao from plano_alimentar_versoes where id=$1',[nova.id]))).toEqual(revisaoAntesFlags);
+    const snapshotDepoisFlags=await executorTenant!.executar(tenantA,g=>g.query('select edicao_snapshot_criptografado from plano_alimentar_versoes where id=$1',[nova.id]));
+    expect(snapshotDepoisFlags[0].edicao_snapshot_criptografado).toEqual(snapshotAntesFlags);
+    const linhasDepoisFlags=await executorTenant!.executar(tenantA,g=>g.query(
+      `select s.id,s.liberada_para_paciente,s.preferida from plano_alimentar_substituicoes s
+       join plano_alimentar_itens i on i.id=s.item_id and i.tenant_id=s.tenant_id
+       join plano_alimentar_refeicoes r on r.id=i.refeicao_id and r.tenant_id=i.tenant_id
+       where r.versao_id=$1 order by s.id`,[nova.id]));
+    expect(linhasDepoisFlags).toEqual(linhasAntesFlags);
+    const atual=await prepararDadosRepresentativos(tenantA,'food05-copy-published-access-revoked');
+    await cliente!.query('update pacientes set profissional_responsavel_id=$1 where tenant_id=$2 and id=$3',[atual.profissionalId,tenantA,c.pacienteId]);
+    try {
+      const revisaoAntes=await executorTenant!.executar(tenantA,g=>g.query('select rascunho_revisao from plano_alimentar_versoes where id=$1',[nova.id]));
+      const documentoReplay=JSON.parse(JSON.stringify(salva.documentoEdicao));
+      const itemReplay=JSON.parse(JSON.stringify(origem)),alternativaReplay=itemReplay.substituicoes[0];
+      itemReplay.chaveCliente='item-copiado-revogado';alternativaReplay.chaveCliente='alternativa-copiada-revogada';delete alternativaReplay.equivalencia;
+      documentoReplay.refeicoes[0].itens.push(itemReplay);
+      await expect(c.servico.salvarEdicaoRascunho(tenantA,c.pacienteId,c.planoId,c.usuario,{
+        rascunhoIdEsperado:nova.id,rascunhoRevisaoEsperada:1,documento:documentoReplay,
+        copiasEquivalencia:[{pacienteOrigemId:c.pacienteId,planoOrigemId:c.planoId,versaoIdOrigem:c.versaoId,numeroVersaoOrigem:1,itemChaveOrigem:origem.chaveCliente,alternativaChaveOrigem:alternativaOrigem.chaveCliente,itemChaveDestino:itemReplay.chaveCliente,alternativaChaveDestino:alternativaReplay.chaveCliente}]
+      } as any)).rejects.toMatchObject({status:404});
+      expect(await executorTenant!.executar(tenantA,g=>g.query('select rascunho_revisao from plano_alimentar_versoes where id=$1',[nova.id]))).toEqual(revisaoAntes);
+    } finally {
+      await cliente!.query('update pacientes set profissional_responsavel_id=$1 where tenant_id=$2 and id=$3',[c.profissionalId,tenantA,c.pacienteId]);
+    }
+  },60000);
+  it('FOOD05 PostgreSQL: cópias recíprocas entre rascunhos usam ordem global de locks e rejeitam revisão obsoleta',async()=>{
+    const a=await prepararCenarioFood05('food05-copy-lock-a');
+    const salvoA:any=await a.salvar();
+    const b=await prepararCenarioFood05('food05-copy-lock-b');
+    const salvoB:any=await b.salvar();
+    const bPlano={id:b.planoId},bVersao=b.versaoId;
+    // Dois pacientes diferentes acessíveis pelo mesmo profissional. Assim a prova
+    // detecta também promoção cruzada de locks nos pacientes, não só nos planos.
+    await cliente!.query('update pacientes set profissional_responsavel_id=$1 where tenant_id=$2 and id=$3',[a.profissionalId,tenantA,b.pacienteId]);
+
+    const prepararCopia=(origem:any,destino:any,alvo:string,revisaoDestino=1)=>{
+      const documento=JSON.parse(JSON.stringify(destino.documento));
+      const documentoOrigem=JSON.parse(JSON.stringify(origem.documento));
+      const itemOrigem=documentoOrigem.refeicoes[0].itens[0],alternativaOrigem=itemOrigem.substituicoes[0];
+      const itemDestino=JSON.parse(JSON.stringify(itemOrigem)),alternativaDestino=itemDestino.substituicoes[0];
+      itemDestino.chaveCliente=`${alvo}-item`;alternativaDestino.chaveCliente=`${alvo}-alternativa`;delete alternativaDestino.equivalencia;
+      documento.refeicoes[0].itens.push(itemDestino);
+      return {documento,request:{rascunhoIdEsperado:destino.versaoId,rascunhoRevisaoEsperada:revisaoDestino,documento,
+        copiasEquivalencia:[{pacienteOrigemId:origem.pacienteId,planoOrigemId:origem.planoId,versaoIdOrigem:origem.versaoId,numeroVersaoOrigem:1,rascunhoRevisaoOrigemEsperada:1,itemChaveOrigem:itemOrigem.chaveCliente,alternativaChaveOrigem:alternativaOrigem.chaveCliente,itemChaveDestino:itemDestino.chaveCliente,alternativaChaveDestino:alternativaDestino.chaveCliente}]}};
+    };
+    const origemA={...a,documento:salvoA.documentoEdicao};
+    const origemB={pacienteId:b.pacienteId,planoId:bPlano.id,versaoId:bVersao,documento:salvoB.documentoEdicao};
+    const destinoA={pacienteId:a.pacienteId,planoId:a.planoId,versaoId:a.versaoId,documento:salvoA.documentoEdicao};
+    const destinoB={pacienteId:b.pacienteId,planoId:bPlano.id,versaoId:bVersao,documento:salvoB.documentoEdicao};
+    const ab=prepararCopia(origemA,destinoB,'ab'),ba=prepararCopia(origemB,destinoA,'ba');
+    const resultados=await disputarPa06(
+      executor=>new ServicoPlanosAlimentares(executor,a.cripto).salvarEdicaoRascunho(tenantA,b.pacienteId,bPlano.id,a.usuario,ab.request as any),
+      ()=>new ServicoPlanosAlimentares(executorTenant!,a.cripto).salvarEdicaoRascunho(tenantA,a.pacienteId,a.planoId,a.usuario,ba.request as any),
+      PacienteOrm,
+      'pessimistic_write'
+    );
+    const resultadosDescritos=resultados.map(r=>r.status==='fulfilled'?'fulfilled':`rejected:${String(r.reason?.cause?.stack??r.reason?.stack??r.reason).split('\n').slice(0,5).join(' | ')}`);
+    expect(resultadosDescritos).toEqual(['fulfilled',expect.stringMatching(/^rejected:/)]);
+    const rejeitada=resultados.find(r=>r.status==='rejected') as PromiseRejectedResult;
+    expect(rejeitada.reason).toMatchObject({status:409});
+    const estado=await executorTenant!.executar(tenantA,g=>g.query('select id,rascunho_revisao from plano_alimentar_versoes where id = any($1::uuid[]) order by id',[ [a.versaoId,bVersao] ]));
+    expect(estado).toHaveLength(2);expect(estado.reduce((total:number,r:any)=>total+r.rascunho_revisao,0)).toBe(3);
+
+    const salvouAB=resultados[0].status==='fulfilled';
+    const origemAlterada=salvouAB?origemB:origemA;
+    const destinoTerceiro=await a.servico.criar(tenantA,origemAlterada.pacienteId,a.usuario,{titulo:'Plano sintético C'});
+    const terceiroVersao=destinoTerceiro.draft!.id;
+    // Um plano recém-criado ainda não tem snapshot editorial. Inicialize seu
+    // rascunho sem equivalências para que o caso stale copie para um destino real.
+    const documentoBaseTerceiro=JSON.parse(JSON.stringify(origemAlterada.documento));
+    for(const refeicao of documentoBaseTerceiro.refeicoes)for(const item of refeicao.itens)item.substituicoes=[];
+    await a.servico.salvarEdicaoRascunho(tenantA,origemAlterada.pacienteId,destinoTerceiro.id,a.usuario,{
+      rascunhoIdEsperado:terceiroVersao,rascunhoRevisaoEsperada:0,documento:documentoBaseTerceiro
+    } as any);
+    const documentoTerceiro=await a.servico.obterRascunho(tenantA,origemAlterada.pacienteId,destinoTerceiro.id,a.usuario);
+    const stale=prepararCopia(origemAlterada,{pacienteId:origemAlterada.pacienteId,planoId:destinoTerceiro.id,versaoId:terceiroVersao,documento:documentoTerceiro.documentoEdicao},'stale',1);
+    await expect(new ServicoPlanosAlimentares(executorTenant!,a.cripto).salvarEdicaoRascunho(tenantA,origemAlterada.pacienteId,destinoTerceiro.id,a.usuario,stale.request as any)).rejects.toMatchObject({status:409});
+    const depois=await executorTenant!.executar(tenantA,g=>g.query('select rascunho_revisao from plano_alimentar_versoes where id=$1',[terceiroVersao]));
+    expect(depois).toEqual([{rascunho_revisao:1}]);
+  },60000);
+  it('FOOD05 PostgreSQL: falha após gravar o rascunho reverte integralmente a cópia',async()=>{
+    const c=await prepararCenarioFood05('food05-copy-rollback'),salvo:any=await c.salvar();
+    const documento=JSON.parse(JSON.stringify(salvo.documentoEdicao));
+    const original=documento.refeicoes[0].itens[0],alternativaOriginal=original.substituicoes[0];
+    const copiado=JSON.parse(JSON.stringify(original)),alternativaCopiada=copiado.substituicoes[0];
+    copiado.chaveCliente='rollback-copia-item';alternativaCopiada.chaveCliente='rollback-copia-alt';delete alternativaCopiada.equivalencia;
+    documento.refeicoes[0].itens.push(copiado);
+    const executorComFalha={executar:(tenantId:string,operacao:(gerenciador:EntityManager)=>Promise<unknown>)=>executorTenant!.executar(tenantId,async gerenciador=>{
+      const proxy=new Proxy(gerenciador,{get(alvo,chave){
+        if(chave==='getRepository')return (entidade:Function)=>{
+          const repositorio=alvo.getRepository(entidade as never);
+          if(entidade!==PlanoAlimentarVersaoOrm)return repositorio;
+          return new Proxy(repositorio,{get(r,metodo){
+            if(metodo==='save')return async(...argumentos:unknown[])=>{await (r.save as (...args:unknown[])=>Promise<unknown>)(...argumentos);throw new Error('falha sintética após gravação do rascunho');};
+            const valor=Reflect.get(r,metodo,r);return typeof valor==='function'?valor.bind(r):valor;
+          }});
+        };
+        const valor=Reflect.get(alvo,chave,alvo);return typeof valor==='function'?valor.bind(alvo):valor;
+      }}) as EntityManager;
+      return operacao(proxy);
+    })} as ExecutorTenant;
+    const servicoComFalha=new ServicoPlanosAlimentares(executorComFalha,c.cripto);
+    await expect(servicoComFalha.salvarEdicaoRascunho(tenantA,c.pacienteId,c.planoId,c.usuario,{
+      rascunhoIdEsperado:c.versaoId,rascunhoRevisaoEsperada:1,documento,
+      copiasEquivalencia:[{pacienteOrigemId:c.pacienteId,planoOrigemId:c.planoId,versaoIdOrigem:c.versaoId,numeroVersaoOrigem:1,rascunhoRevisaoOrigemEsperada:1,itemChaveOrigem:original.chaveCliente,alternativaChaveOrigem:alternativaOriginal.chaveCliente,itemChaveDestino:copiado.chaveCliente,alternativaChaveDestino:alternativaCopiada.chaveCliente}]
+    } as any)).rejects.toThrow('falha sintética após gravação do rascunho');
+    expect(await executorTenant!.executar(tenantA,g=>g.query('select rascunho_revisao from plano_alimentar_versoes where id=$1',[c.versaoId]))).toEqual([{rascunho_revisao:1}]);
+    expect(await executorTenant!.executar(tenantA,g=>g.query(`select count(*)::int as total from plano_alimentar_substituicoes s
+      join plano_alimentar_itens i on i.id=s.item_id and i.tenant_id=s.tenant_id
+      join plano_alimentar_refeicoes r on r.id=i.refeicao_id and r.tenant_id=i.tenant_id where r.versao_id=$1`,[c.versaoId]))).toEqual([{total:1}]);
+  },60000);
+  it('FOOD05 PostgreSQL: cópia serializa antes da edição concorrente da origem',async()=>{
+    const origem=await prepararCenarioFood05('food05-copy-origin-race'),salvaOrigem:any=await origem.salvar();
+    const destino=await prepararCenarioFood05('food05-copy-destination-race');
+    const salvoDestino:any=await destino.salvar();
+    await cliente!.query('update pacientes set profissional_responsavel_id=$1 where tenant_id=$2 and id=$3',[origem.profissionalId,tenantA,destino.pacienteId]);
+    const preparada=(()=>{
+      const documento=JSON.parse(JSON.stringify(salvoDestino.documentoEdicao));
+      const documentoOrigem=JSON.parse(JSON.stringify(salvaOrigem.documentoEdicao));
+      const item=documentoOrigem.refeicoes[0].itens[0],alternativa=item.substituicoes[0];
+      const copiado=JSON.parse(JSON.stringify(item)),alternativaCopiada=copiado.substituicoes[0];
+      copiado.chaveCliente='origem-race-copia-item';alternativaCopiada.chaveCliente='origem-race-copia-alt';delete alternativaCopiada.equivalencia;
+      documento.refeicoes[0].itens.push(copiado);
+      return {documento,request:{rascunhoIdEsperado:destino.versaoId,rascunhoRevisaoEsperada:1,documento,
+        copiasEquivalencia:[{pacienteOrigemId:origem.pacienteId,planoOrigemId:origem.planoId,versaoIdOrigem:origem.versaoId,numeroVersaoOrigem:1,rascunhoRevisaoOrigemEsperada:1,itemChaveOrigem:item.chaveCliente,alternativaChaveOrigem:alternativa.chaveCliente,itemChaveDestino:copiado.chaveCliente,alternativaChaveDestino:alternativaCopiada.chaveCliente}]}};
+    })();
+    const resultados=await disputarPa06(
+      executor=>new ServicoPlanosAlimentares(executor,origem.cripto).salvarEdicaoRascunho(tenantA,destino.pacienteId,destino.planoId,origem.usuario,preparada.request as any),
+      ()=>origem.servico.salvarEdicaoRascunho(tenantA,origem.pacienteId,origem.planoId,origem.usuario,{rascunhoIdEsperado:origem.versaoId,rascunhoRevisaoEsperada:1,documento:salvaOrigem.documentoEdicao!}),
+      PlanoAlimentarVersaoOrm,
+      'pessimistic_read'
+    );
+    expect(resultados.map(r=>r.status==='fulfilled'?'fulfilled':`rejected:${String(r.reason?.cause?.stack??r.reason?.stack??r.reason).split('\n').slice(0,5).join(' | ')}`)).toEqual(['fulfilled','fulfilled']);
+    const copia:any=(resultados[0] as PromiseFulfilledResult<any>).value;
+    expect(copia.equivalenciasAplicadas['origem-race-copia-alt']).toMatchObject({estado:'revisao_pendente'});
+    expect(await executorTenant!.executar(tenantA,g=>g.query('select rascunho_revisao from plano_alimentar_versoes where id=$1',[origem.versaoId]))).toEqual([{rascunho_revisao:2}]);
+  },90000);
+  it('FOOD05 PostgreSQL: edição da origem vence e cópia stale não grava',async()=>{
+    const origem=await prepararCenarioFood05('food05-copy-edit-first-origin'),salvaOrigem:any=await origem.salvar();
+    // Use a segunda versão/plano do mesmo paciente para reduzir o custo do
+    // fixture sem enfraquecer o cenário: a edição primeiro retém o lock do
+    // paciente de origem, e a cópia precisa revalidar a revisão ao prosseguir.
+    const destinoNovo=await origem.servico.criar(tenantA,origem.pacienteId,origem.usuario,{titulo:'Destino sintético FOOD05'});
+    const documentoDestino=JSON.parse(JSON.stringify(salvaOrigem.documentoEdicao));
+    for(const refeicao of documentoDestino.refeicoes)for(const item of refeicao.itens)item.substituicoes=[];
+    const salvoDestinoNovo:any=await origem.servico.salvarEdicaoRascunho(tenantA,origem.pacienteId,destinoNovo.id,origem.usuario,{
+      rascunhoIdEsperado:destinoNovo.draft!.id,rascunhoRevisaoEsperada:0,documento:documentoDestino
+    });
+    const documentoNovo=JSON.parse(JSON.stringify(salvoDestinoNovo.documentoEdicao));
+    const documentoOrigemNovo=JSON.parse(JSON.stringify(salvaOrigem.documentoEdicao));
+    const itemNovo=documentoOrigemNovo.refeicoes[0].itens[0],alternativaNova=itemNovo.substituicoes[0];
+    const itemCopia=JSON.parse(JSON.stringify(itemNovo)),alternativaCopia=itemCopia.substituicoes[0];
+    itemCopia.chaveCliente='origem-editada-primeiro-item';alternativaCopia.chaveCliente='origem-editada-primeiro-alt';delete alternativaCopia.equivalencia;
+    documentoNovo.refeicoes[0].itens.push(itemCopia);
+    const pedidoDepoisEdicao={rascunhoIdEsperado:destinoNovo.draft!.id,rascunhoRevisaoEsperada:1,documento:documentoNovo,
+      copiasEquivalencia:[{pacienteOrigemId:origem.pacienteId,planoOrigemId:origem.planoId,versaoIdOrigem:origem.versaoId,numeroVersaoOrigem:1,rascunhoRevisaoOrigemEsperada:1,itemChaveOrigem:itemNovo.chaveCliente,alternativaChaveOrigem:alternativaNova.chaveCliente,itemChaveDestino:itemCopia.chaveCliente,alternativaChaveDestino:alternativaCopia.chaveCliente}]};
+    const edicaoDaOrigem={...salvaOrigem.documentoEdicao,refeicoes:salvaOrigem.documentoEdicao!.refeicoes.map((r:any)=>({...r,nome:`${r.nome} revisado`}))};
+    const editouPrimeiro=await disputarPa06(
+      executor=>new ServicoPlanosAlimentares(executor,origem.cripto).salvarEdicaoRascunho(tenantA,origem.pacienteId,origem.planoId,origem.usuario,{rascunhoIdEsperado:origem.versaoId,rascunhoRevisaoEsperada:1,documento:edicaoDaOrigem}),
+      ()=>new ServicoPlanosAlimentares(executorTenant!,origem.cripto).salvarEdicaoRascunho(tenantA,origem.pacienteId,destinoNovo.id,origem.usuario,pedidoDepoisEdicao as any),
+      PlanoAlimentarVersaoOrm,
+      'pessimistic_write'
+    );
+    expect(editouPrimeiro.map(r=>r.status)).toEqual(['fulfilled','rejected']);
+    expect((editouPrimeiro[1] as PromiseRejectedResult).reason).toMatchObject({status:409});
+    expect(await executorTenant!.executar(tenantA,g=>g.query('select rascunho_revisao from plano_alimentar_versoes where id=$1',[origem.versaoId]))).toEqual([{rascunho_revisao:2}]);
+    expect(await executorTenant!.executar(tenantA,g=>g.query('select rascunho_revisao from plano_alimentar_versoes where id=$1',[destinoNovo.draft!.id]))).toEqual([{rascunho_revisao:1}]);
+  },90000);
+  it('FOOD05 PostgreSQL: prévia serializa com transferência e acesso anterior é revogado',async()=>{
+    const c=await prepararCenarioFood05('food05-transferencia'),novo=await prepararDadosRepresentativos(tenantA,'food05-novo-responsavel');
+    const resultados=await disputarPa06(e=>{const f=new FontesGruposSubstituicoes(c.cripto);return new ServicoEquivalenciasPlano(e,c.cripto,f,new ServicoGruposSubstituicoes(e,c.cripto,f)).prever(tenantA,c.pacienteId,c.planoId,c.usuario,c.pedido);},()=>executorTenant!.executar(tenantA,g=>g.query('update pacientes set profissional_responsavel_id=$1 where tenant_id=$2 and id=$3',[novo.profissionalId,tenantA,c.pacienteId])),PacienteOrm,'pessimistic_read');
+    expect(resultados.map(r=>r.status)).toEqual(['fulfilled','fulfilled']);
+    await expect(c.previa.prever(tenantA,c.pacienteId,c.planoId,c.usuario,c.pedido)).rejects.toMatchObject({status:404});await expect(c.salvar()).rejects.toMatchObject({status:404});
+  },60000);
+  it('FOOD05 PostgreSQL: resolução manual auditável não ressuscita pelo replay da referência antiga',async()=>{
+    const c=await prepararCenarioFood05('food05-desvincular');const salva:any=await c.salvar();const a=salva.documentoEdicao.refeicoes[0].itens[0].substituicoes[0],antiga=a.equivalencia.aplicacaoId;
+    a.equivalencia={acao:'desvincular',aplicacaoId:randomUUID(),anteriorAplicacaoId:antiga,fingerprintEsperado:salva.equivalenciasAplicadas['a-food05'].fingerprintResolucao};
+    const resolvida:any=await c.salvar(salva.documentoEdicao,1);expect(resolvida.equivalenciasAplicadas['a-food05'].estado).toBe('desvinculada_manualmente');
+    const projecao:any=await c.servico.obterRascunho(tenantA,c.pacienteId,c.planoId,c.usuario);expect(projecao.refeicoes[0].itens[0].substituicoes[0].equivalenciaAplicada).toBeUndefined();
+    const linhas=await executorTenant!.executar(tenantA,g=>g.query('select s.composicao_snapshot_criptografada from plano_alimentar_substituicoes s join plano_alimentar_itens i on i.id=s.item_id and i.tenant_id=s.tenant_id join plano_alimentar_refeicoes r on r.id=i.refeicao_id and r.tenant_id=i.tenant_id where r.versao_id=$1',[c.versaoId]));
+    expect(JSON.parse(c.cripto.descriptografar(linhas[0].composicao_snapshot_criptografada)).equivalencia.resolucao.ator).toEqual({usuarioId:c.usuario.usuarioId,profissionalId:c.profissionalId});
+    resolvida.documentoEdicao.refeicoes[0].itens[0].substituicoes[0].equivalencia={aplicacaoId:antiga};await expect(c.salvar(resolvida.documentoEdicao,2)).rejects.toMatchObject({status:409});
+  },60000);
+  it('FOOD05 PostgreSQL: preferências CAS próprio, JSON fechado, FORCE RLS e role sem DDL',async()=>{
+    const c=await prepararCenarioFood05('food05-preferencias'),s=new ServicoPreferenciasEquivalencia(executorTenant!);
+    const d={revisaoEsperada:0,preferencias:PREFERENCIAS_EQUIVALENCIA_PADRAO};const r=await Promise.allSettled([s.salvar(c.usuario,d),s.salvar(c.usuario,d)]);expect(r.filter(x=>x.status==='fulfilled')).toHaveLength(1);expect((r.find(x=>x.status==='rejected') as PromiseRejectedResult).reason).toMatchObject({status:409});
+    const role=(await fonteDadosRuntime!.query('select rolsuper,rolbypassrls,rolcreatedb,rolcreaterole from pg_roles where rolname=current_user'))[0];expect(role).toEqual({rolsuper:false,rolbypassrls:false,rolcreatedb:false,rolcreaterole:false});
+    const force=(await fonteDadosRuntime!.query("select relrowsecurity,relforcerowsecurity from pg_class where relname='profissionais'"))[0];expect(force).toEqual({relrowsecurity:true,relforcerowsecurity:true});
+    expect(await fonteDadosRuntime!.query('select id from profissionais where id=$1',[c.profissionalId])).toHaveLength(0);
+    await expect(executorTenant!.executar(tenantA,g=>g.query("update profissionais set preferencias_equivalencia=preferencias_equivalencia || '{\"paciente\":\"nao-permitido\"}'::jsonb where id=$1",[c.profissionalId]))).rejects.toMatchObject({code:'23514'});
+    await expect(fonteDadosRuntime!.query('create table food05_ddl_indevido(id integer)')).rejects.toMatchObject({code:'42501'});
+  },60000);
+
   async function publicarCenarioPa06(c: Awaited<ReturnType<typeof prepararCenarioPa06>>) {
     const identidade = {rascunhoIdEsperado:c.versaoId,rascunhoRevisaoEsperada:0};
     await c.servico.salvarEdicaoRascunho(tenantA,c.pacienteId,c.planoId,c.usuario,{...identidade,documento:c.documento});
@@ -1639,9 +1963,11 @@ descrever('RLS e isolamento multi-tenant integral em Postgres real', () => {
     let liberar!: () => void, sinalizar!: () => void;
     const liberada = new Promise<void>(r => { liberar = r; });
     const travada = new Promise<void>(r => { sinalizar = r; });
-    let interceptada = false;
+    let interceptada = false, pidPrimeira: number | undefined;
     const executor = { executar: <R>(tenantId: string, operacao: (m: EntityManager) => Promise<R>) => fonteDadosRuntime!.transaction(async m => {
       await m.query("select set_config('app.tenant_id',$1,true)", [tenantId]);
+      const [{pid}] = await m.query('select pg_backend_pid() as pid');
+      pidPrimeira = Number(pid);
       const proxy = new Proxy(m, { get(alvo, chave) {
         if (chave === 'getRepository') return (classe: Function) => {
           const repo = alvo.getRepository(classe as never);
@@ -1666,7 +1992,7 @@ descrever('RLS e isolamento multi-tenant integral em Postgres real', () => {
     try {
       const fim = Date.now() + 5000;
       while (Date.now() < fim) {
-        const q = await cliente!.query("select 1 from pg_stat_activity where datname=current_database() and wait_event_type='Lock'");
+        const q = await cliente!.query("select a.pid from pg_stat_activity a where a.datname=current_database() and a.wait_event_type='Lock' and $1 = any(pg_blocking_pids(a.pid))",[pidPrimeira]);
         if (q.rowCount) { esperou = true; break; }
         await new Promise(r => setTimeout(r, 10));
       }

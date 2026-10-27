@@ -30,6 +30,19 @@ describe('PA06 DTO de edição parcial', () => {
   it('aceita incompletude editorial sem validar como prescrição clínica', async () => {
     expect(await erros(entrada())).toHaveLength(0);
   });
+  it('aceita referências fechadas de cópia e rejeita IDs/identidades manipulados ou extras', async () => {
+    const copia={pacienteOrigemId:id,planoOrigemId:id,versaoIdOrigem:id,numeroVersaoOrigem:1,rascunhoRevisaoOrigemEsperada:0,itemChaveOrigem:'item-origem',alternativaChaveOrigem:'alternativa-origem',itemChaveDestino:'item-destino',alternativaChaveDestino:'alternativa-destino'};
+    expect(await erros({...entrada(),copiasEquivalencia:[copia]})).toHaveLength(0);
+    expect((await erros({...entrada(),copiasEquivalencia:[{...copia,tenantId:id}]})).length).toBeGreaterThan(0);
+    expect((await erros({...entrada(),copiasEquivalencia:[{...copia,pacienteOrigemId:'invalido'}]})).length).toBeGreaterThan(0);
+    expect((await erros({...entrada(),copiasEquivalencia:Array(201).fill(copia)})).length).toBeGreaterThan(0);
+  });
+  it('limita o envelope inteiro de salvamento quando as referências excedem o orçamento do documento', async () => {
+    const copia={pacienteOrigemId:id,planoOrigemId:id,numeroVersaoOrigem:1,itemChaveOrigem:'i'.repeat(100),alternativaChaveOrigem:'a'.repeat(100),itemChaveDestino:'d'.repeat(100),alternativaChaveDestino:'b'.repeat(100)};
+    const itens=Array.from({length:100},(_,i)=>({chaveCliente:`item-${i}`,descricao:'a'.repeat(200),substituicoes:[]}));
+    const pedido={...entrada(),documento:{schemaVersao:1,refeicoes:[{chaveCliente:'r1',itens},{chaveCliente:'r2',itens:itens.map((item,i)=>({...item,chaveCliente:`item-b-${i}`}))}]},copiasEquivalencia:Array(100).fill(copia)};
+    expect((await erros(pedido)).length).toBeGreaterThan(0);
+  });
   it.each([{}, { ...entrada(), tenantId: id }, { ...entrada(), rascunhoIdEsperado: 'x' },
     { ...entrada(), rascunhoRevisaoEsperada: '0' }, { ...entrada(), rascunhoRevisaoEsperada: -1 },
     { ...entrada(), rascunhoRevisaoEsperada: 2147483647 }, { ...entrada(), documento: null },

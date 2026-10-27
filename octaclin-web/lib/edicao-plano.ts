@@ -1,4 +1,5 @@
 import type { IntencaoGrupoSubstituicoesEdicao } from './grupos-substituicoes-tipos';
+import type { IntencaoEquivalenciaEdicao } from './equivalencias-plano-api';
 import type { FormulaEnergeticaApi, MetodoMacrosManualApi } from './plano-alimentar-api';
 import type { PreferenciasApresentacaoPlanoApi } from './preferencias-apresentacao-plano';
 import type { PrecondicaoEdicaoPlano } from './coordenador-edicao-plano';
@@ -77,7 +78,7 @@ export interface AlimentoEdicao {
   /** Identidade do vínculo do rascunho; não é transportada a cópias. */
   medidaCaseira?: MedidaCaseiraAplicadaApi | null;
 }
-export interface AlternativaEdicao extends AlimentoEdicao { origemGrupo?: IntencaoGrupoSubstituicoesEdicao | null; liberadaParaPaciente?: boolean; preferida?: boolean }
+export interface AlternativaEdicao extends AlimentoEdicao { origemGrupo?: IntencaoGrupoSubstituicoesEdicao | null; equivalencia?: IntencaoEquivalenciaEdicao; liberadaParaPaciente?: boolean; preferida?: boolean }
 export interface ItemEdicao extends AlimentoEdicao { substituicoes?: AlternativaEdicao[]; substituicoesVisiveisInicialmente?: NumeroEdicao }
 export interface RefeicaoEdicao { chaveCliente: string; nome?: string; horarioLocal?: string; orientacoes?: string; itens: ItemEdicao[] }
 export interface DocumentoEdicaoPlano {
@@ -106,7 +107,22 @@ export interface DocumentoEdicaoPlano {
   refeicoes: RefeicaoEdicao[];
 }
 
-export interface SalvarEdicaoPlanoEntrada extends PrecondicaoEdicaoPlano { documento: DocumentoEdicaoPlano }
+export interface ReferenciaCopiaEquivalenciaEdicao {
+  pacienteOrigemId: string;
+  planoOrigemId: string;
+  versaoIdOrigem: string;
+  numeroVersaoOrigem: number;
+  rascunhoRevisaoOrigemEsperada?: number;
+  itemChaveOrigem: string;
+  alternativaChaveOrigem: string;
+  itemChaveDestino: string;
+  alternativaChaveDestino: string;
+}
+
+export interface SalvarEdicaoPlanoEntrada extends PrecondicaoEdicaoPlano {
+  documento: DocumentoEdicaoPlano;
+  copiasEquivalencia?: ReferenciaCopiaEquivalenciaEdicao[];
+}
 
 /** Limite do documento; o envelope HTTP inteiro continua limitado a 100KiB. */
 export const LIMITE_BYTES_DOCUMENTO_EDICAO = 96 * 1024;

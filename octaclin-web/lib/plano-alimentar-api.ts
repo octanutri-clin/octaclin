@@ -4,6 +4,7 @@ import type { PrecondicaoEdicaoPlano } from './coordenador-edicao-plano';
 import type { PreferenciasApresentacaoPlanoApi, EstadoApresentacaoPlanoApi } from './preferencias-apresentacao-plano';
 import type { PlanoAlimentarPacienteApi } from './portal-api';
 import type { MedidaCaseiraReferenciaApi } from './medidas-caseiras-plano';
+import type { EquivalenciaAplicadaApi } from './equivalencias-plano-api';
 
 export interface MedidaCaseiraAlimentoApi extends MedidaCaseiraReferenciaApi {
   id: string;
@@ -184,6 +185,10 @@ export interface SubstituicaoPlanoAlimentarApi {
 export interface AlternativaPlanoAlimentarApi extends SubstituicaoPlanoAlimentarApi {
   liberadaParaPaciente: boolean;
   preferida: boolean;
+  /** Indicador restrito à projeção profissional; não contém o snapshot/contexto do cálculo. */
+  equivalenciaAplicada?: boolean;
+  /** Chaves editoriais necessárias para pedir cópia ao backend; não são autorização. */
+  referenciaEquivalencia?: { itemChave: string; alternativaChave: string };
 }
 
 export interface ItemPlanoAlimentarApi extends SubstituicaoPlanoAlimentarApi {
@@ -264,6 +269,9 @@ export interface VersaoPlanoAlimentarApi {
   /** Chaves exatas do documento de edição salvo; nunca inferir por posição ou nome. */
   ativacaoEdicao?: Array<{ chaveCliente: string; identidadeId: string; ativa: boolean }>;
   resumoRefeicoesAtivas?: ResumoNutricionalPlanoApi;
+  /** Projeção profissional allowlisted; ausente em respostas que não pedem equivalências. */
+  equivalenciasAplicadas?: Record<string, EquivalenciaAplicadaApi>;
+  equivalenciasEstado?: 'disponivel' | 'indisponivel';
   ativoParaPaciente?: boolean;
   ativacaoRevisao?: number;
   id: string;

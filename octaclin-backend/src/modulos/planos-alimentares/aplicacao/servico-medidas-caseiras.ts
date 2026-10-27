@@ -68,20 +68,18 @@ export class ServicoMedidasCaseiras {
     private projetar(m: MedidaCaseiraOrm, profissionalId: string) {
         return { id: m.id, ...(m.alimentoPersonalizadoId ? { alimentoPersonalizadoId: m.alimentoPersonalizadoId } : { alimentoComposicaoId: m.alimentoComposicaoId }), ...this.ler(m.conteudoCriptografado), escopo: m.escopo, revisao: m.revisao, ativa: m.ativa, podeEditar: m.profissionalId === profissionalId };
     }
-    async listar(tenantId: string, alimentoId: string, usuario: UsuarioAutenticado, consulta: {
-        pagina?: number;
-        limite?: number;
-    }, origem: OrigemAlimentoMedida = 'catalogo') {
-        return this.executor.executar(tenantId, async (g) => {
-            const profissionalId = await this.identidade(g, tenantId, usuario, false);
-            const pagina = consulta.pagina ?? 1, limite = consulta.limite ?? 25;
-            if (!Number.isInteger(pagina) || pagina < 1 || pagina > 10000 || !Number.isInteger(limite) || limite < 1 || limite > 100)
-                throw new BadRequestException('Paginação inválida.');
-            if (origem === 'custom') await this.custom.autorizarPaiMedida(g, tenantId, usuario, alimentoId, false);
-            const base = { tenantId, ...this.pai(alimentoId, origem), ativa: true };
-            const [itens, total] = await g.getRepository(MedidaCaseiraOrm).findAndCount({ where: [{ ...base, escopo: 'clinica' }, { ...base, escopo: 'pessoal', profissionalId }], order: { criadoEm: 'DESC', id: 'DESC' }, take: limite, skip: (pagina - 1) * limite });
-            return { itens: itens.map(m => this.projetar(m, profissionalId)), total, pagina, limite };
-        });
+    async listar(tenantId: string, alimentoId: string, usuario: UsuarioAutenticado, consulta: {pagina?:number;limite?:number}, origem: OrigemAlimentoMedida = 'catalogo') {
+        return this.executor.executar(tenantId,g=>this.listarNaTransacao(g,tenantId,alimentoId,usuario,consulta,origem));
+    }
+    /** Reutiliza escopo/projeção existentes sem abrir conexão dentro da prévia. */
+    async listarNaTransacao(g: EntityManager, tenantId: string, alimentoId: string, usuario: UsuarioAutenticado, consulta: {pagina?:number;limite?:number}, origem: OrigemAlimentoMedida = 'catalogo') {
+        const profissionalId = await this.identidade(g, tenantId, usuario, false);
+        const pagina = consulta.pagina ?? 1, limite = consulta.limite ?? 25;
+        if (!Number.isInteger(pagina) || pagina < 1 || pagina > 10000 || !Number.isInteger(limite) || limite < 1 || limite > 100) throw new BadRequestException('Paginação inválida.');
+        if (origem === 'custom') await this.custom.autorizarPaiMedida(g, tenantId, usuario, alimentoId, false);
+        const base = { tenantId, ...this.pai(alimentoId, origem), ativa: true };
+        const [itens, total] = await g.getRepository(MedidaCaseiraOrm).findAndCount({where:[{...base,escopo:'clinica'},{...base,escopo:'pessoal',profissionalId}],order:{criadoEm:'DESC',id:'DESC'},take:limite,skip:(pagina-1)*limite});
+        return {itens:itens.map(m=>this.projetar(m,profissionalId)),total,pagina,limite};
     }
     async criar(tenantId: string, alimentoId: string, usuario: UsuarioAutenticado, dados: CriarMedidaEntrada, origem: OrigemAlimentoMedida = 'catalogo') {
         return this.executor.executar(tenantId, async (g) => {

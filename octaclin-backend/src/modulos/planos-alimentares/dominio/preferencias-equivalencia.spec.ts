@@ -1,0 +1,6 @@
+import { PREFERENCIAS_EQUIVALENCIA_PADRAO, validarPreferenciasEquivalencia, validarPedidoPreferenciasEquivalencia } from './preferencias-equivalencia';
+describe('FOOD05 preferências pessoais fechadas',()=>{
+ it('conserva defaults e separa formato visual de passo aplicado',()=>{const v=validarPreferenciasEquivalencia({...PREFERENCIAS_EQUIVALENCIA_PADRAO,casasGramas:0,passoPorcaoGramas:'0.001',unidades:'gramas'});expect(v).toMatchObject({casasGramas:0,passoPorcaoGramas:'0.001'});expect(PREFERENCIAS_EQUIVALENCIA_PADRAO.casasGramas).toBe(3);});
+ it.each([{schemaVersao:2},{casasGramas:4},{casasNutrientes:-1},{casasNutrientes:1.5},{passoPorcaoGramas:'0.5'},{unidades:'ml'},{modoComparacao:'automatico'},{pacienteId:'privado'},{chaveApi:'privado'}])('recusa valor/campo inválido %j',extra=>{expect(()=>validarPreferenciasEquivalencia({...PREFERENCIAS_EQUIVALENCIA_PADRAO,...extra})).toThrow();});
+ it('não aceita payload vazio, identificação de outro usuário ou revisão inválida',()=>{for(const v of [{},{preferencias:PREFERENCIAS_EQUIVALENCIA_PADRAO,revisaoEsperada:-1},{preferencias:PREFERENCIAS_EQUIVALENCIA_PADRAO,revisaoEsperada:0,profissionalId:'outro'}])expect(()=>validarPedidoPreferenciasEquivalencia(v)).toThrow();expect(validarPedidoPreferenciasEquivalencia({preferencias:PREFERENCIAS_EQUIVALENCIA_PADRAO,revisaoEsperada:0}).revisaoEsperada).toBe(0);});
+});

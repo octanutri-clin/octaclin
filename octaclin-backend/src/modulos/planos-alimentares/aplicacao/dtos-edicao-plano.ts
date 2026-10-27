@@ -1,20 +1,43 @@
 import { plainToInstance } from 'class-transformer';
-import { IsDefined, IsInt, IsUUID, Max, Min, Validate, ValidateIf, ValidatorConstraint, ValidatorConstraintInterface } from 'class-validator';
+import { ArrayMaxSize, IsArray, IsDefined, IsInt, IsOptional, IsString, IsUUID, Length, Max, Min, Validate, ValidateIf, ValidateNested, ValidatorConstraint, ValidatorConstraintInterface, ValidationArguments } from 'class-validator';
+import { Type } from 'class-transformer';
 import { AlimentoEdicao, DocumentoEdicaoPlano, numeroEdicao, validarDocumentoEdicaoPlano } from '../dominio/edicao-plano';
 import { AtualizarRascunhoPlanoAlimentarDto } from './dtos';
+import { LIMITE_BYTES_EDICAO_PLANO } from '../dominio/edicao-plano';
 
 @ValidatorConstraint({ name: 'documentoEdicaoPlano', async: false })
 export class ValidadorDocumentoEdicaoPlano implements ValidatorConstraintInterface {
-  validate(valor: unknown): boolean {
-    try { validarDocumentoEdicaoPlano(valor); return true; } catch { return false; }
+  validate(valor: unknown, argumentos: ValidationArguments): boolean {
+    try {
+      validarDocumentoEdicaoPlano(valor);
+      // O documento e as referências de proveniência compõem um único body HTTP.
+      // Limitar apenas o documento permitiria exceder o parser de 100 KB.
+      return Buffer.byteLength(JSON.stringify(argumentos.object), 'utf8') <= LIMITE_BYTES_EDICAO_PLANO;
+    } catch { return false; }
   }
   defaultMessage(): string { return 'Documento de edição do plano inválido.'; }
+}
+
+/** Referência não secreta; o backend revalida acesso e lê o contexto cifrado da origem. */
+export class ReferenciaCopiaEquivalenciaDto {
+  @IsUUID() pacienteOrigemId: string;
+  @IsUUID() planoOrigemId: string;
+  @IsUUID() versaoIdOrigem: string;
+  @IsInt() @Min(1) @Max(2147483646) numeroVersaoOrigem: number;
+  @ValidateIf(valor => valor.rascunhoRevisaoOrigemEsperada !== undefined)
+  @IsInt() @Min(0) @Max(2147483646) rascunhoRevisaoOrigemEsperada?: number;
+  @IsString() @Length(1, 100) itemChaveOrigem: string;
+  @IsString() @Length(1, 100) alternativaChaveOrigem: string;
+  @IsString() @Length(1, 100) itemChaveDestino: string;
+  @IsString() @Length(1, 100) alternativaChaveDestino: string;
 }
 
 export class SalvarEdicaoPlanoDto {
   @IsUUID() rascunhoIdEsperado: string;
   @IsInt() @Min(0) @Max(2147483646) rascunhoRevisaoEsperada: number;
   @IsDefined() @Validate(ValidadorDocumentoEdicaoPlano) documento: DocumentoEdicaoPlano;
+  @IsOptional() @IsArray() @ArrayMaxSize(200) @ValidateNested({ each: true }) @Type(() => ReferenciaCopiaEquivalenciaDto)
+  copiasEquivalencia?: ReferenciaCopiaEquivalenciaDto[];
 }
 
 /** Legado sem precondição continua somente enquanto o rascunho não aderiu à PA06. */

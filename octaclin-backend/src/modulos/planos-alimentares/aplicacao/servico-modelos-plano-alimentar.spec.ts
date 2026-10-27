@@ -161,7 +161,76 @@ describe('ServicoModelosPlanoAlimentar', () => {
     });
   }
 
+  describe('D16 validação integral em todas as fronteiras',()=>{
+    const casos:[string,(r:any)=>any][]=[
+      ['raiz null',()=>null],
+      ['raiz objeto',()=>({})],
+      ['array vazio',()=>[]],
+      ['itens excedidos',(r)=>{r[0].itens=Array(101).fill(r[0].itens[0]);return r;}],
+      ['alternativas excedidas',(r)=>{r[0].itens[0].substituicoes=Array(21).fill({...r[0].itens[0],substituicoes:undefined});return r;}],
+      ['tipo',(r)=>{r[0].itens[0].quantidade='1';return r;}],
+      ['obrigatório',(r)=>{delete r[0].nome;return r;}],
+      ['mínimo',(r)=>{r[0].itens[0].porcaoGramas=0;return r;}],
+      ['máximo',(r)=>{r[0].itens[0].quantidade=10001;return r;}],
+      ['array',(r)=>{r[0].itens={};return r;}],
+      ['objeto',(r)=>{r[0].itens=[null];return r;}],
+      ['null opcional',(r)=>{r[0].horarioLocal=null;return r;}],
+      ['desconhecido',(r)=>{r[0].itens[0].invasor=true;return r;}],
+      ['aninhado',(r)=>{r[0].itens[0].substituicoes=[{quantidade:-1}];return r;}],
+      ['limite array',(r)=>Array(51).fill(r[0])],
+      ['limite texto',(r)=>{r[0].nome='x'.repeat(181);return r;}],
+      ['bytes',(r)=>Array.from({length:50},()=>({...r[0],orientacoes:'x'.repeat(2000)}))],
+      ['proveniência',(r)=>{r[0].itens[0].equivalencia={aplicacaoId:MODELO_ID};return r;}],
+      ['descrição de catálogo inválida',(r)=>{r[0].itens[0].descricao=123;return r;}],
+      ['nutrientes de catálogo inválidos',(r)=>{r[0].itens[0].nutrientesPor100g={energiaKcal:-1};return r;}],
+      ['nutrientes como array',(r)=>{r[0].itens[0].nutrientesPor100g=[];return r;}],
+      ['não finito',(r)=>{r[0].itens[0].quantidade=Infinity;return r;}]
+    ];
+    it.each(casos)('rejeita %s na criação e edição sem gravar',async(_nome,alterar)=>{
+      const r=alterar(refeicoesExemplo());
+      await expect(servico.criar(TENANT_ID,usuarioProfissional(),{nome:'Modelo',origem:'pessoal',refeicoes:r})).rejects.toMatchObject({status:400});
+      await expect(servico.editar(TENANT_ID,MODELO_ID,usuarioProfissional(),{nome:'Modelo',versaoEsperada:1,refeicoes:r})).rejects.toMatchObject({status:400});
+      expect(repositorios.get(ModeloPlanoAlimentarOrm)!.save).not.toHaveBeenCalled();
+    });
+    it.each(casos)('snapshot com %s falha fechado em leitura, versão e restauração',async(_nome,alterar)=>{
+      await servico.criar(TENANT_ID,usuarioProfissional(),{nome:'Modelo',origem:'pessoal',refeicoes:refeicoesExemplo() as never});
+      const conteudo=criptografia.criptografar(JSON.stringify(alterar(refeicoesExemplo())));
+      repositorios.get(ModeloPlanoAlimentarOrm)!.registros[0].conteudoCriptografado=conteudo;
+      repositorios.get(RevisaoModeloPlanoAlimentarOrm)!.registros[0].conteudoCriptografado=conteudo;
+      for(const repo of repositorios.values())repo.save.mockClear();
+      for(const operacao of [()=>servico.obter(TENANT_ID,MODELO_ID,usuarioProfissional()),()=>servico.obterVersao(TENANT_ID,MODELO_ID,1,usuarioProfissional()),()=>servico.restaurarVersao(TENANT_ID,MODELO_ID,1,usuarioProfissional(),1)]){
+        await expect(operacao()).rejects.toMatchObject({status:503});
+      }
+      for(const repo of repositorios.values())expect(repo.save).not.toHaveBeenCalled();
+      expect(repositorios.get(ModeloPlanoAlimentarOrm)!.registros[0].versaoAtual).toBe(1);
+    });
+  });
+
+  it('D16 não arquiva snapshot atual corrompido ao editar com entrada válida',async()=>{
+    await servico.criar(TENANT_ID,usuarioProfissional(),{nome:'Modelo',origem:'pessoal',refeicoes:refeicoesExemplo() as never});
+    const modelo=repositorios.get(ModeloPlanoAlimentarOrm)!.registros[0];
+    modelo.conteudoCriptografado=criptografia.criptografar(JSON.stringify([{nome:123,itens:[]}]));
+    for(const repo of repositorios.values())repo.save.mockClear();
+    await expect(servico.editar(TENANT_ID,MODELO_ID,usuarioProfissional(),{nome:'Modelo',versaoEsperada:1,refeicoes:refeicoesExemplo() as never})).rejects.toMatchObject({status:503});
+    for(const repo of repositorios.values())expect(repo.save).not.toHaveBeenCalled();
+    expect(modelo.versaoAtual).toBe(1);
+  });
   describe('criar', () => {
+    it('recusa proveniência FOOD05 enviada para um modelo compartilhável', async () => {
+      const refeicoes = refeicoesExemplo();
+      refeicoes[0].itens[0].substituicoes = [{
+        alimentoComposicaoId: ALIMENTO_ID,
+        quantidade: 1,
+        unidade: 'porção',
+        porcaoGramas: 25,
+        equivalencia: { pacienteOrigemId: 'dado-sensível' }
+      }] as never;
+      await expect(servico.criar(TENANT_ID, usuarioProfissional(), {
+        nome: 'Modelo compartilhável', origem: 'clinica', refeicoes: refeicoes as never
+      })).rejects.toMatchObject({ status: 400 });
+      expect(repositorios.get(ModeloPlanoAlimentarOrm)!.save).not.toHaveBeenCalled();
+    });
+
     it('guarda nome e conteudo criptografados e conta a estrutura', async () => {
       await servico.criar(TENANT_ID, usuarioProfissional(), {
         nome: 'Plano padrao',
@@ -304,6 +373,25 @@ describe('ServicoModelosPlanoAlimentar', () => {
   });
 
   describe('obter', () => {
+    it('falha fechada sem devolver proveniência inesperada de paciente em snapshot de modelo', async () => {
+      const refeicoes = refeicoesExemplo();
+      refeicoes[0].itens[0].substituicoes = [{
+        alimentoComposicaoId: ALIMENTO_ID,
+        quantidade: 1,
+        unidade: 'porção',
+        porcaoGramas: 25,
+        equivalencia: { pacienteOrigemId: 'dado-sensível' }
+      }] as never;
+      repositorios.get(ModeloPlanoAlimentarOrm)!.registros.push({
+        id: MODELO_ID, tenantId: TENANT_ID, origem: 'clinica', profissionalId: undefined,
+        nomeCriptografado: criptografia.criptografar('Modelo compartilhável'),
+        conteudoCriptografado: criptografia.criptografar(JSON.stringify(refeicoes)),
+        totalRefeicoes: 1, totalItens: 1, versaoAtual: 1
+      });
+      await expect(servico.obter(TENANT_ID, MODELO_ID, usuarioProfissional()))
+        .rejects.toMatchObject({ status: 503 });
+    });
+
     it('devolve as refeicoes para aplicar no rascunho', async () => {
       await servico.criar(TENANT_ID, usuarioProfissional(), {
         nome: 'Plano padrao',
@@ -383,7 +471,7 @@ describe('ServicoModelosPlanoAlimentar', () => {
         arquivadoEm: undefined
       };
       repositorios.get(ModeloPlanoAlimentarOrm)!.registros.push(legado);
-      const refeicoes = [{ nome: 'Nova estrutura', itens: [{ quantidade: 2, unidade: 'porcao', porcaoGramas: 70 }] }];
+      const refeicoes = [{ nome: 'Nova estrutura', itens: [{ alimentoComposicaoId: ALIMENTO_ID, quantidade: 2, unidade: 'porcao', porcaoGramas: 70 }] }];
       const resultado = await servico.editar(TENANT_ID, MODELO_ID, usuarioProfissional(), {
         versaoEsperada: 1, nome: 'Revisado', refeicoes: refeicoes as never
       });

@@ -21,7 +21,7 @@ describe('PA05 — projeção paciente explícita', () => {
     const entrada = [{ id: 'refeicao-sintetica', nome: 'Almoço', horarioLocal: '12:00', orientacoes: 'Texto sintético', segredo: 'privado', itens: [{ id: 'item-sintetico', descricao: 'Arroz', quantidade: 2, unidade: 'colher', porcaoGramas: 80, nutrientes: { energiaKcal: 100, proteinasG: 0, metadados: 'privado' }, composicaoSnapshotCriptografada: 'privado', substituicoesVisiveisInicialmente: 1, substituicoes: [
       { id: 'negada', descricao: 'Privada', liberadaParaPaciente: false },
       { id: 'omitida', descricao: 'Sem liberação' },
-      { id: 'normal', descricao: 'Alternativa', liberadaParaPaciente: true, preferida: false, quantidade: 1, unidade: 'colher', porcaoGramas: 30, nutrientes: { energiaKcal: 50 } },
+      { id: 'normal', descricao: 'Alternativa', liberadaParaPaciente: true, preferida: false, equivalenciaAplicada: true, quantidade: 1, unidade: 'colher', porcaoGramas: 30, nutrientes: { energiaKcal: 50 } },
       { id: 'preferida', descricao: 'Preferida', liberadaParaPaciente: true, preferida: true, quantidade: 1, unidade: 'unidade', porcaoGramas: 20, nutrientes: { energiaKcal: 20 } }
     ] }] }];
     const copia = structuredClone(entrada);
@@ -32,6 +32,7 @@ describe('PA05 — projeção paciente explícita', () => {
     expect(Object.keys(saida[0])).toEqual(['id', 'nome', 'horarioLocal', 'orientacoes', 'itens']);
     expect(saida[0].itens[0]).not.toHaveProperty('composicaoSnapshotCriptografada');
     expect(saida[0].itens[0].substituicoes[0]).not.toHaveProperty('liberadaParaPaciente');
+    expect(saida[0].itens[0].substituicoes[0]).not.toHaveProperty('equivalenciaAplicada');
     expect(entrada).toEqual(copia);
   });
   it('retira escolha não liberada e nutrientes inválidos, preservando ausência', () => {

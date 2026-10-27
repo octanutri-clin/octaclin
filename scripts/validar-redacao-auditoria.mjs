@@ -131,6 +131,8 @@ const CHAVES_SEGURAS = new Map([
   // --- Contagens e medidas da operacao ---
   ['total', 'contagem'],
   ['quantidade', 'contagem de receitas compartilhadas na acao'],
+  ['quantidadeequivalencias', 'contagem de referências FOOD05 copiadas; não inclui composição, identificadores nem fatos clínicos'],
+  ['versaodestino', 'número ordinal da versão de rascunho destino na cópia FOOD05; não identifica paciente nem conteúdo'],
   ['totalitens', 'contagem de itens do modelo ou da receita'],
   ['totallinhas', 'contagem de linhas do arquivo'],
   ['linhas', 'contagem de linhas exportadas'],

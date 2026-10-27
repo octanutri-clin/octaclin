@@ -1,24 +1,26 @@
 # OctaClin - Status atual do projeto
 
-Atualizado em 2026-10-24 (validacao final FOOD04; registros anteriores preservados).
+Atualizado em 2026-10-24 (planejamento FOOD05; registros anteriores preservados).
 
 ## Fase ativa
 
-- **FOOD04 — implementada na PR #441, em validacao final**, base `origin/main` `9e1984a2`, merge
-  documental #440 confirmado por fetch em 2026-10-22. Biblioteca de grupos
-  reutilizáveis; D01–D03 aprovadas e ampliadas em D01–D08. Especificação inclui
-  administração de compartilhados, duplicação, favoritos, aplicação seletiva,
-  dedup e arquivo/restauração. Desenvolvimento autorizado em “Pode seguir”;
-  domínio, biblioteca, migration1078, save/snapshots, BFF e UI implementados.
-  Revisao cruzada encontrou dois P2 em snapshots de catalogo e cancelamento de
-  aplicacao durante save; ambos corrigidos e reavaliados por outro agente
-  sem novos Critical/P1/P2 confirmados. Regressoes locais PASS (backend3244; visual20); CI final pendente.
-  A PR permanece Draft. Evidências e limitações em
-  `tasks/execucao-pos-320-food04.md`. Plano/checkpoints em `tasks/plan-pos-320-food04.md` e
-  `tasks/todo-pos-320-food04.md`; handoff ativo em `tasks/plan.md`.
-  Referências específicas recomendam código interno, sem biblioteca externa.
-  Sol medio conduz revisao e fechamento de seguranca. Alertas estruturados/lote/undo persistente
-  registrados como FOOD04-C01/C02/C03, sem antecipar implementação.
+- **FOOD05 — planejamento técnico para revisão**, escopo D01–D14 e M01–M08
+  integralmente aprovado; implementação NÃO autorizada. Base main2f24fcb1;
+  [plano](tasks/plan-pos-320-food05.md), [T01–T18](tasks/todo-pos-320-food05.md)
+  e [handoff](tasks/handoff-pos-320-food05-luna.md). Reutilizar motor/FOOD04,
+  cálculos determinísticos e snapshots cifrados; propostas de precisão, avisos,
+  preferências, revisão/publicação e papéis aguardam revisão do plano. Nenhuma
+  dependência/runtime/migration ou infraestrutura alterada nesta rodada.
+
+
+- **FOOD04 integrada pela PR #441**, merge `02a51be8`, CI final PASS e revisão
+  cruzada corretiva concluída. Migration1078 aplicada e verificada em staging,
+  com ensaio sintético PostgreSQL/RLS e runtime sem bypass. **Produção BLOCKED
+  por quota Neon HTTP402**: nenhuma migration aplicada nesta rodada nesse alvo;
+  último deploy automático do backend está update_failed pelo mesmo erro.
+  Smokes HTTP desta rodada inconclusivos por timeout; não declarar disponibilidade.
+  [Evidências e retomada](docs/governance/EVIDENCIAS_ROLLOUT_FOOD04_2026-10-24.md).
+  FOOD05 aguarda definição de escopo pelo proprietário, sem implementação.
 - **FOOD03 — integrada #438 e fechamento #440**. Evidências históricas de
   migration1077/RLS/deploy em `tasks/plan-pos-320-food03.md` e checklist vivo;
   ambientes externos não foram reconsultados nesta rodada documental.

@@ -1,3 +1,4 @@
+import type { PreferenciasEquivalencia } from '../../planos-alimentares/dominio/preferencias-equivalencia';
 import { Column, CreateDateColumn, Entity, PrimaryGeneratedColumn, UpdateDateColumn } from 'typeorm';
 
 @Entity('profissionais')
@@ -22,6 +23,13 @@ export class ProfissionalOrm {
 
   @Column({ name: 'arquivado_em', type: 'timestamptz', nullable: true })
   arquivadoEm?: Date | null;
+
+  @Column({ name: 'preferencias_equivalencia', type: 'jsonb', default: () => `'{"schemaVersao":1,"unidades":"gramas_e_medida_disponivel","casasGramas":3,"casasNutrientes":2,"passoPorcaoGramas":"1","modoComparacao":"detalhado"}'::jsonb` })
+  // Projeções legadas podem omitir configuração; a coluna no banco é NOT NULL.
+  preferenciasEquivalencia?: PreferenciasEquivalencia;
+
+  @Column({ name: 'preferencias_equivalencia_revisao', type: 'integer', default: 0 })
+  preferenciasEquivalenciaRevisao?: number;
 
   @CreateDateColumn({ name: 'criado_em', type: 'timestamptz' })
   criadoEm: Date;

@@ -1,6 +1,22 @@
 # OctaClin - Checklist vivo de fases futuras ate producao
 
-Atualizado em 2026-10-22. Fase 320: NO-GO para ingestão TBCA nesta rodada por ausência de autorização de uso; manter TACO, USDA e IBGE. FOOD02 (#425/#426), FOOD03 (#438) e PR #437 estão integradas. Migration 1077 aplicada e verificada em staging e produção; deploys Render do backend e Web estão live e os smokes de saúde/login retornaram HTTP 200. O workflow de backup/restauração dedicada concluiu com sucesso. O monitor de produção ainda sinaliza ClamAV ausente (issue #234 aberta); Fase 316 permanece em stand-by.
+Atualizado em 2026-10-24; reconciliação FOOD04 abaixo. Histórico anterior: 2026-10-22. Fase 320: NO-GO para ingestão TBCA nesta rodada por ausência de autorização de uso; manter TACO, USDA e IBGE. FOOD02 (#425/#426), FOOD03 (#438) e PR #437 estão integradas. Migration 1077 aplicada e verificada em staging e produção; deploys Render do backend e Web estão live e os smokes de saúde/login retornaram HTTP 200. O workflow de backup/restauração dedicada concluiu com sucesso. O monitor de produção ainda sinaliza ClamAV ausente (issue #234 aberta); Fase 316 permanece em stand-by.
+
+## Estado reconciliado em 2026-10-24
+
+- PR #441 mergeada (`02a51be8`), CI/scanners finais SUCCESS; SBOM provenance SKIPPED.
+- Migration1078: staging PASS (ledger/schema/RLS/runtime, ensaio isolado sintético).
+- Produção BLOCKED por quota Neon HTTP402; backend Render update_failed com esse
+  erro. Nenhuma aplicação em produção ou redeploy executado nesta rodada.
+- Probes HTTP atuais inconclusivos por timeout; não reutilizar os200 históricos
+  como evidência atual. Jornada autenticada pós-aplicação não executada.
+- [Evidência e próximos passos](docs/governance/EVIDENCIAS_ROLLOUT_FOOD04_2026-10-24.md).
+- **FOOD05:** escopo D01–D14/M01–M08 integral aprovado. Planejamento técnico
+  consolidado para revisão; implementação não autorizada. [Plano e propostas](tasks/plan-pos-320-food05.md),
+  [T01–T18](tasks/todo-pos-320-food05.md); sem runtime/infra/migration nesta rodada.
+  G00 documental PASS; G01–G05 NOT RUN; G06 BLOCKED por liberação FOOD04 em produção.
+
+### Histórico anterior, supersedido no estado FOOD04
 
 ## Estado reconciliado em 2026-10-22
 

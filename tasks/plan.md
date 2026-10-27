@@ -1,3 +1,55 @@
+# Handoff ativo — FOOD05 em implementação autorizada
+
+O proprietário autorizou a execução em “Pode seguir, sol médio”. D01–D14/M01–M08
+permanecem integrais. Não há autorização de merge, deploy, migrations externas,
+infraestrutura ou alteração de cobrança/quota.
+
+- [Plano](plan-pos-320-food05.md), [tarefas](todo-pos-320-food05.md),
+  [execução e evidências](execucao-pos-320-food05.md),
+  [referências](referencias-pos-320-food05.md).
+- Branch `docs/pos320-food05-planning`, base main2f24fcb1; worktree física
+  `pos320-food04-planning`. PR446 Draft; implementação ainda em consolidação local.
+- T01–T09 com fundamentos/API implementados; T07 agora transporta proveniência
+  de cópias entre refeições/planos salvos sob revalidação server-side; aplicação
+  por modelos continua pendente e impede fechar T07.
+  Contagens completas em `tasks/execucao-pos-320-food05.md`. Gates CI/R4 ainda
+  não foram repetidos no delta.
+- Uma PR funcional, commits por tarefa, conforme alternativa aprovada no plano.
+- FOOD04 produção continua BLOCKED pelo último registro HTTP402;1078 comprovada
+  somente em staging. Nenhum acesso externo realizado nesta implementação.
+- Modelo Sol médio. Handoff preparado para Luna alto em T10–T13; avisar e pausar
+  antes da troca manual. Retomar Sol médio nos contratos R4 restantes e revisão final.
+
+---
+
+## Histórico de handoff preservado — supersedido pelo estado acima
+
+# Handoff ativo — FOOD04 integrada; rollout produtivo bloqueado
+
+Branch documental `docs/food04-rollout-1078`, base main `02a51be8` (#441).
+Worktree `/workspace/octaclin/.worktrees/pos320-food04-planning`; checkout principal
+com alteração preexistente preservado.
+
+- Proprietário autorizou migrations e validações nesta sessão de24/10.
+- CI final de b2da3799 e revisão corretiva concluídos; não reabrir FOOD04.
+- Migration1078 aplicada e validada no staging principal, após ensaio/backup.
+- Produção não alterada: Neon HTTP402/quota excedida confirmado em duas consultas
+  read-only e logs do backend Render; último deploy automático update_failed.
+- Sem alteração de plano/cobrança, flag, deploy, privilege grant ou dado clínico.
+- Próximo item operacional: regularizar quota com o proprietário, reconciliar
+  produção, backup/ensaio, aplicar somente migrations pendentes e verificar.
+- Smokes HTTP deram timeout; jornada autenticada pós-aplicação não executada.
+- [Relatório detalhado](../docs/governance/EVIDENCIAS_ROLLOUT_FOOD04_2026-10-24.md).
+- FOOD05: explicar equivalência por um nutriente-alvo e colher decisões de
+  indicadores, pontos de aplicação e atualização explícita. Não implementar antes
+  do escopo aprovado. Consultar somente repositórios de referência dessa fase.
+- Modelo: Sol médio para operações/planejamento; handoff para Luna alto quando
+  implementação estiver suficientemente definida, avisando e pausando a troca.
+
+---
+
+## Handoff anterior preservado — supersedido pelo estado operacional acima
+
 # Handoff ativo — FOOD04: PR #441 em validacao final
 
 Base `origin/main` `9e1984a2` (merge #440), branch `docs/pos320-food04-planning`,

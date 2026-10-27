@@ -1,4 +1,6 @@
 import type { IntencaoGrupoSubstituicoesEdicao } from './grupos-substituicoes-tipos';
+import type { IntencaoEquivalenciaEdicao } from './equivalencias-plano-api';
+import type { MedidaCaseiraAplicadaApi, MedidaCaseiraReferenciaApi } from './medidas-caseiras-plano';
 
 export interface AlternativaAplicacaoGrupo {
   entradaId: string;
@@ -78,4 +80,8 @@ export function criarAlternativasAplicadasGrupo(
   return alternativas;
 }
 
-export type AlternativaAplicadaGrupo = ReturnType<typeof criarAlternativasAplicadasGrupo>[number];
+export type AlternativaAplicadaGrupo = ReturnType<typeof criarAlternativasAplicadasGrupo>[number] & {
+  equivalencia?: IntencaoEquivalenciaEdicao;
+  medidaCaseira?: MedidaCaseiraAplicadaApi | null;
+  referenciaMedidaCaseira?: MedidaCaseiraReferenciaApi;
+};

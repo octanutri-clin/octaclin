@@ -1,3 +1,10 @@
+import { ServicoEquivalenciasPlano } from './servico-equivalencias-plano';
+import { ordenarEscoposCopia } from './ordenacao-locks-copia';
+import { clonarContextoEquivalenciaParaCopia, resolverEquivalenciasDocumento, assinaturaDependenciasEquivalencia, ContextoEquivalencia, ContextosEquivalencias, validarContextosEquivalencias, ConflitoEquivalenciaEdicao, mesclarContextosEquivalenciaSeguro } from './resolver-equivalencias-edicao';
+import { projetarEquivalenciasProfissional } from './projecao-equivalencias-profissional';
+import { resolverFatosEquivalencia, FatosPreservadosEquivalencia, identidadeFatoEquivalencia } from './fatos-equivalencia-plano';
+import { FatosComposicaoEquivalencia } from '../dominio/equivalencia-nutriente';
+import { calcularNutrientesDaPorcaoDecimal, normalizarComposicaoDecimal, POLITICA_NUTRICAO_DECIMAL } from '../dominio/calculo-nutricional';
 import { lerOrigensMaterializadas, possuiGruposMaterializados } from './origens-grupos-materializadas';
 import { ContextosCatalogoGrupo, lerSnapshotEdicaoGrupos, mesmaOrigemGrupo, serializarSnapshotEdicaoGrupos } from './snapshot-edicao-grupos';
 import { resolverGruposDocumento, ConflitoAplicacaoGrupo, DocumentoGrupoInvalido } from '../dominio/aplicacao-grupos-substituicoes';
@@ -61,7 +68,7 @@ import { lerApresentacaoVersao, validarPreferenciasApresentacao, projetarRefeico
 import { projetarResumoNutricionalPlano, ResumoNutricionalPlano, resumirNutrientesItensEfetivos } from '../dominio/resumo-nutricional-plano';
 import { AliasIdentidadeRefeicao, lerIdentidadesRefeicoes, prepararIdentidadesRefeicoes } from '../dominio/identidades-refeicoes';
 import { DocumentoEdicaoPlano, validarDocumentoEdicaoPlano } from '../dominio/edicao-plano';
-import { converterEdicaoParaRascunho, PrecondicaoEdicaoPlanoDto, SalvarEdicaoPlanoDto } from './dtos-edicao-plano';
+import { converterEdicaoParaRascunho, PrecondicaoEdicaoPlanoDto, ReferenciaCopiaEquivalenciaDto, SalvarEdicaoPlanoDto } from './dtos-edicao-plano';
 import { AlimentoComposicaoOrm } from '../infraestrutura/alimento-composicao.orm';
 import { FavoritoAlimentoOrm } from '../infraestrutura/favorito-alimento.orm';
 import { FonteComposicaoAlimentoOrm } from '../infraestrutura/fonte-composicao-alimento.orm';
@@ -101,6 +108,7 @@ export type NutrientesPor100gPlano = Omit<NutrientesPor100g, 'fibrasG' | 'sodioM
   Partial<Pick<NutrientesPor100g, 'fibrasG' | 'sodioMg'>>;
 
 export interface SnapshotComposicao {
+  equivalencia?: ContextoEquivalencia;
   origemGrupo?: OrigemGrupoSnapshot;
   origem: 'catalogo' | 'manual' | 'custom';
   composicaoInformada?: { baseGramas: number; nutrientes: ComposicaoPersonalizada['composicaoOrigem']['nutrientes']; micronutrientes: ComposicaoPersonalizada['composicaoOrigem']['micronutrientes']; normalizacaoVersao: string; referencia?: string };
@@ -150,7 +158,8 @@ export class ServicoPlanosAlimentares {
     private readonly criptografia: CriptografiaDadosSensiveis,
     private readonly medidasCaseiras: ServicoMedidasCaseiras = new ServicoMedidasCaseiras(executorTenant, criptografia),
     private readonly alimentosPersonalizados: ServicoAlimentosPersonalizados = new ServicoAlimentosPersonalizados(executorTenant, criptografia),
-    private readonly gruposSubstituicoes: ServicoGruposSubstituicoes = new ServicoGruposSubstituicoes(executorTenant, criptografia, new FontesGruposSubstituicoes(criptografia))
+    private readonly gruposSubstituicoes: ServicoGruposSubstituicoes = new ServicoGruposSubstituicoes(executorTenant, criptografia, new FontesGruposSubstituicoes(criptografia)),
+    private readonly equivalencias: ServicoEquivalenciasPlano = new ServicoEquivalenciasPlano(executorTenant,criptografia,new FontesGruposSubstituicoes(criptografia),gruposSubstituicoes,medidasCaseiras)
   ) {}
 
   async obterSelecaoCalculo(tenantId: string, pacienteId: string, planoId: string, usuario: UsuarioAutenticado) {
@@ -502,7 +511,7 @@ export class ServicoPlanosAlimentares {
         where: { tenantId, planoId, numero }
       });
       if (!versao) throw new NotFoundException('Versao do plano alimentar nao encontrada.');
-      return this.montarVersao(gerenciador, versao);
+      return this.montarVersao(gerenciador, versao, true, usuario);
     });
   }
 
@@ -660,7 +669,7 @@ export class ServicoPlanosAlimentares {
     this.garantirPermissao(usuario, 'planos_alimentares.ler');
     return this.executorTenant.executar(tenantId, async (gerenciador) => {
       const plano = await this.obterPlanoNoEscopo(gerenciador, tenantId, pacienteId, planoId, usuario, 'pessimistic_read');
-      return this.montarPlano(gerenciador, plano);
+      return this.montarPlano(gerenciador, plano, usuario);
     });
   }
 
@@ -693,7 +702,7 @@ export class ServicoPlanosAlimentares {
           criadoPorUsuarioId: usuario.usuarioId
         })
       );
-      return this.montarPlano(gerenciador, plano);
+      return this.montarPlano(gerenciador, plano, usuario);
     });
   }
 
@@ -703,7 +712,7 @@ export class ServicoPlanosAlimentares {
     return this.executorTenant.executar(tenantId, async (gerenciador) => {
       const plano = await this.obterPlanoNoEscopo(gerenciador, tenantId, pacienteId, planoId, usuario, 'pessimistic_read');
       const rascunho = await this.obterRascunhoAtivo(gerenciador, tenantId, plano.id);
-      return this.montarVersao(gerenciador, rascunho);
+      return this.montarVersao(gerenciador, rascunho, true, usuario);
     });
   }
 
@@ -723,6 +732,7 @@ export class ServicoPlanosAlimentares {
       this.conferirRevisaoEdicao(rascunho, dados);
       if (rascunho.alimentosPersonalizadosSnapshotCriptografado) throw new ConflictException('Use o editor atualizado para preservar a referência do alimento personalizado.');
       const edicaoAnterior = this.lerEdicao(rascunho).documentoEdicao;
+      if(Object.keys(this.lerContextosEquivalencias(rascunho)).length)throw new ConflictException('Use o editor atualizado para preservar a equivalência.');
       if (edicaoAnterior?.refeicoes.some(r => r.itens.some(i => i.substituicoes?.some(a => a.origemGrupo))) ||
           await possuiGruposMaterializados(gerenciador, tenantId, rascunho.id, this.criptografia)) {
         throw new ConflictException('Use o editor atualizado para preservar a origem das substituições.');
@@ -734,7 +744,7 @@ export class ServicoPlanosAlimentares {
       this.avancarRevisaoEdicao(rascunho);
       rascunho.edicaoMaterializadaRevisao = rascunho.rascunhoRevisao;
       await gerenciador.getRepository(PlanoAlimentarVersaoOrm).save(rascunho);
-      return this.montarVersao(gerenciador, rascunho);
+      return this.montarVersao(gerenciador, rascunho, true);
     });
   }
 
@@ -749,12 +759,42 @@ export class ServicoPlanosAlimentares {
     catch { throw new BadRequestException('Documento de edição do plano inválido.'); }
     if (dados.rascunhoRevisaoEsperada === undefined) throw new BadRequestException('Informe a revisão do rascunho.');
     return this.executorTenant.executar(tenantId, async gerenciador => {
+      await this.bloquearEscoposCopiaOrdenados(gerenciador, tenantId, pacienteId, planoId, usuario, dados.copiasEquivalencia);
       const plano = await this.obterPlanoNoEscopo(gerenciador, tenantId, pacienteId, planoId, usuario, true);
       const rascunho = await this.obterRascunhoAtivo(gerenciador, tenantId, plano.id, true);
       this.conferirRevisaoEdicao(rascunho, dados);
       const estadoAnterior = this.lerEdicao(rascunho);
       if (estadoAnterior.edicaoEstado === 'indisponivel') throw new ConflictException('Snapshot de edição indisponível. Reconfira o rascunho.');
       const anteriorEdicao=estadoAnterior.documentoEdicao??null;
+      // Confirmar uma nova aplicação nunca disponibiliza automaticamente uma
+      // alternativa ao paciente. Decisões já salvas no mesmo item são legítimas.
+      for(const r of documento.refeicoes)for(const i of r.itens)for(const a of i.substituicoes??[]){
+        if(a.equivalencia&&'acao'in a.equivalencia&&a.equivalencia.acao==='calcular'&&(a.liberadaParaPaciente===true||a.preferida===true)){
+          const anterior=anteriorEdicao?.refeicoes.flatMap(ref=>ref.itens).find(item=>item.chaveCliente===i.chaveCliente)?.substituicoes?.find(alt=>alt.chaveCliente===a.chaveCliente);
+          if(!anterior)throw new BadRequestException('Novas alternativas de equivalência começam sem liberação ou preferência. Configure após confirmar.');
+        }
+      }
+      const equivalenciasAnteriores=await this.resolverCopiasEquivalencia(gerenciador,tenantId,pacienteId,plano,rascunho,usuario,documento,dados.copiasEquivalencia);
+      for(const refeicao of documento.refeicoes)for(const item of refeicao.itens)for(const alternativa of item.substituicoes??[]){
+        const intencao=alternativa.equivalencia;
+        const anterior=equivalenciasAnteriores[alternativa.chaveCliente];
+        const alternativaAnterior=anteriorEdicao?.refeicoes.flatMap(ref=>ref.itens)
+          .find(i=>i.chaveCliente===item.chaveCliente)?.substituicoes?.find(a=>a.chaveCliente===alternativa.chaveCliente);
+        const ativandoLiberacao=alternativa.liberadaParaPaciente===true&&alternativaAnterior?.liberadaParaPaciente!==true;
+        const ativandoPreferencia=alternativa.preferida===true&&alternativaAnterior?.preferida!==true;
+        if(intencao&&'acao'in intencao&&intencao.acao==='recalcular'&&anterior?.estado==='revisao_pendente'
+          &&(ativandoLiberacao||ativandoPreferencia))
+          throw new BadRequestException('Resolva e salve a revisão da equivalência antes de liberar ou marcar preferência.');
+      }
+      for(const referencia of dados.copiasEquivalencia??[]){
+        const alternativa=documento.refeicoes.flatMap(refeicao=>refeicao.itens
+          .filter(item=>item.chaveCliente===referencia.itemChaveDestino)
+          .flatMap(item=>item.substituicoes??[]))
+          .find(item=>item.chaveCliente===referencia.alternativaChaveDestino);
+        if(!alternativa)throw new ConflictException('A alternativa copiada não corresponde ao rascunho atual. Recarregue e tente novamente.');
+        if(alternativa.liberadaParaPaciente===true||alternativa.preferida===true)
+          throw new BadRequestException('Novas equivalências copiadas começam sem liberação ou preferência. Configure após confirmar.');
+      }
       const catalogosAnteriores = rascunho.edicaoSnapshotCriptografado
         ? lerSnapshotEdicaoGrupos(this.lerJsonCriptografado(rascunho.edicaoSnapshotCriptografado)).catalogos : {};
       const materializadas=anteriorEdicao?{anteriores:{},custom:{},catalogo:{}}:await lerOrigensMaterializadas(gerenciador,tenantId,rascunho.id,documento,this.criptografia);
@@ -822,18 +862,72 @@ export class ServicoPlanosAlimentares {
             }
           }
           if (a.micronutrientesPor100g !== undefined) throw new BadRequestException('Micronutrientes de catálogo não aceitam alteração manual.');
-          const snapshot = preservado ? anterior.snapshot : (await this.resolverItem(gerenciador, dto)).snapshot;
+          const intencaoEquivalencia=a.equivalencia&&'acao'in a.equivalencia?a.equivalencia:undefined;
+          const nutrientForFood05=intencaoEquivalencia&&intencaoEquivalencia.acao!=='desvincular'?intencaoEquivalencia.nutriente:undefined;
+          const snapshot = preservado ? anterior.snapshot : (await this.resolverItem(gerenciador, dto,undefined,undefined,undefined,nutrientForFood05)).snapshot;
           catalogosGrupos[a.chaveCliente] = { itemChave: item.chaveCliente, origemGrupo: a.origemGrupo, snapshot };
           a.descricao = snapshot.descricao; a.nutrientesPor100g = { ...snapshot.nutrientesPor100g };
           composicoesCatalogoGrupo.set(dto, snapshot);
         }
       }
-      await this.validarReferenciasEdicao(gerenciador, tenantId, pacienteId, documento, catalogosGrupos);
+      const contextosEquivalencias:ContextosEquivalencias=Object.create(null);
+      const materiaisEquivalencia=new Map<object,{contexto:ContextoEquivalencia;fatos:FatosComposicaoEquivalencia}>();
+      const temEquivalencia=Object.keys(equivalenciasAnteriores).length||documento.refeicoes.some(r=>r.itens.some(i=>i.substituicoes?.some(a=>a.equivalencia)));
+      if(temEquivalencia){
+        const fontes=new FontesGruposSubstituicoes(this.criptografia);
+        const profissionalId=await resolverProfissionalIdDoUsuario(gerenciador,tenantId,usuario);
+        const atorEquivalencia=usuario.papel==='Professional'&&profissionalId?{usuarioId:usuario.usuarioId,profissionalId}:undefined;
+        const temComandos=documento.refeicoes.some(r=>r.itens.some(i=>i.substituicoes?.some(a=>a.equivalencia&&'acao'in a.equivalencia)));
+        if(temComandos&&!atorEquivalencia)throw new ForbiddenException('Equivalência requer profissional responsável.');
+        const preservados:FatosPreservadosEquivalencia={custom:contextosCustom,catalogos:catalogosGrupos,equivalencias:Object.create(null)};
+        for(const [chave,original]of Object.entries(equivalenciasAnteriores)){
+          const c={...original,...original.aplicados};
+          preservados.equivalencias![chave]={identidade:c.alternativa.identidade,fatos:c.alternativa};
+          if(!c.principal.identidade.startsWith('manual:'))preservados.equivalencias![c.itemChave]={identidade:c.principal.identidade,fatos:c.principal};
+        }
+        const fatos=(a:any,pai?:string)=>resolverFatosEquivalencia(gerenciador,tenantId,profissionalId,a,fontes,preservados,pai);
+        const fatosAtuais=(a:any,pai?:string)=>resolverFatosEquivalencia(gerenciador,tenantId,profissionalId,a,fontes,preservados,pai,true);
+        const localizar=(chave:string)=>{for(let ri=0;ri<documento.refeicoes.length;ri++)for(let ii=0;ii<documento.refeicoes[ri].itens.length;ii++)if(documento.refeicoes[ri].itens[ii].chaveCliente===chave)return clinico.refeicoes[ri].itens[ii];throw new ConflitoEquivalenciaEdicao();};
+        let resolvidos:ContextosEquivalencias;
+        try{resolvidos=await resolverEquivalenciasDocumento(documento,equivalenciasAnteriores,{
+          ator:atorEquivalencia,
+          // Compara também com a composição corrente acessível. Se a fonte foi
+          // retirada, o resolver mantém o snapshot; se mudou, marca pendente.
+          dependencias:async(i,a,c)=>assinaturaDependenciasEquivalencia(i,a,await fatosAtuais(i),await fatosAtuais(a,i.chaveCliente),c.nutriente,c.politica,c.dependenciasVersao??1),
+          prever:async(d,i,a,c)=>{
+            const previa=await this.equivalencias.preverNaTransacao(gerenciador,tenantId,pacienteId,planoId,usuario,{versaoId:rascunho.id,rascunhoRevisaoEsperada:rascunho.rascunhoRevisao??0,documentoEdicao:d,itemChave:i.chaveCliente,nutriente:c.nutriente!,politica:c.politica!,alternativas:[a],...(c.acao==='recalcular'?{recalculoExplicitoChaves:[a.chaveCliente]}:{})});
+            const linha=previa.alternativas[0];if(!linha.alimento||!linha.fingerprint)throw new ConflitoEquivalenciaEdicao();
+            const pi=localizar(i.chaveCliente),ai=(i.substituicoes??[]).findIndex(x=>x.chaveCliente===a.chaveCliente),pa=pi.substituicoes![ai];
+            const snapshotPrincipal=(await this.resolverItem(gerenciador,pi,composicoesCustom.get(pi),composicoesCatalogoGrupo.get(pi))).snapshot;
+            const snapshotAlternativa=(await this.resolverItem(gerenciador,pa,composicoesCustom.get(pa),composicoesCatalogoGrupo.get(pa),undefined,c.nutriente)).snapshot;
+            return {fingerprint:linha.fingerprint,principal:previa.principal,alternativa:linha.alimento,resultado:linha.resultado,snapshotPrincipal,snapshotAlternativa};
+          }
+        });}catch(erro){if(erro instanceof ConflitoEquivalenciaEdicao)throw new ConflictException(erro.message,{cause:erro});throw erro;}
+        // Chaves editoriais vêm do documento do cliente. A mesclagem define
+        // propriedades próprias e não executa setters de protótipo.
+        mesclarContextosEquivalenciaSeguro(contextosEquivalencias,resolvidos);
+        for(const r of documento.refeicoes)for(const i of r.itens){const pi=localizar(i.chaveCliente);for(let ai=0;ai<(i.substituicoes??[]).length;ai++){
+          const a=i.substituicoes![ai],c=resolvidos[a.chaveCliente];if(!c)continue;const pa=pi.substituicoes![ai],f=await fatos(a,i.chaveCliente);
+          const atual=c.aplicados??c;
+          if(atual.snapshotPrincipal?.origem==='catalogo'&&i.alimentoComposicaoId===atual.snapshotPrincipal.alimentoComposicaoId)composicoesCatalogoGrupo.set(pi,atual.snapshotPrincipal);
+          if(atual.snapshotAlternativa?.origem==='catalogo'&&a.alimentoComposicaoId===atual.snapshotAlternativa.alimentoComposicaoId)composicoesCatalogoGrupo.set(pa,atual.snapshotAlternativa);
+          const principalAtual=await fatos(i);
+          if(c.aplicados||principalAtual.identidade!==c.principal.identidade||f.identidade!==c.alternativa.identidade){
+            // Registra os fatos da edição atual sem reescrever o cálculo original.
+            // A pendência só se resolve por recálculo ou desvinculação explícitos.
+            c.aplicados={principal:principalAtual,alternativa:f,
+              snapshotPrincipal:(await this.resolverItem(gerenciador,pi,composicoesCustom.get(pi),composicoesCatalogoGrupo.get(pi))).snapshot,
+              snapshotAlternativa:(await this.resolverItem(gerenciador,pa,composicoesCustom.get(pa),composicoesCatalogoGrupo.get(pa),undefined,c.nutriente)).snapshot};
+          }
+          materiaisEquivalencia.set(pa,{contexto:c,fatos:f});
+        }}
+      }
+      await this.validarReferenciasEdicao(gerenciador, tenantId, pacienteId, documento, catalogosGrupos, contextosEquivalencias);
       const identidades = await this.prepararIdentidadesEdicao(gerenciador, plano, rascunho, documento);
       let materializada = false;
       if (!validateSync(clinico, { whitelist: true, forbidNonWhitelisted: true }).length && this.lerApresentacao(rascunho).apresentacaoEstado !== 'indisponivel') {
         try {
-          await this.aplicarRascunhoClinico(gerenciador, tenantId, pacienteId, rascunho, clinico, identidades, composicoesCustom, provenienciasGrupo, composicoesCatalogoGrupo);
+          await this.aplicarRascunhoClinico(gerenciador, tenantId, pacienteId, rascunho, clinico, identidades, composicoesCustom, provenienciasGrupo, composicoesCatalogoGrupo, materiaisEquivalencia);
           materializada = true;
         } catch (erro) {
           // Incompletude/inaplicabilidade clínica não apaga o documento editorial.
@@ -841,7 +935,7 @@ export class ServicoPlanosAlimentares {
           if (!(erro instanceof BadRequestException)) throw erro;
         }
       }
-      rascunho.edicaoSnapshotCriptografado = this.criptografia.criptografar(serializarSnapshotEdicaoGrupos(documento, catalogosGrupos));
+      rascunho.edicaoSnapshotCriptografado = this.criptografia.criptografar(serializarSnapshotEdicaoGrupos(documento, catalogosGrupos, contextosEquivalencias));
       rascunho.alimentosPersonalizadosSnapshotCriptografado = Object.keys(contextosCustom).length ? this.criptografia.criptografar(JSON.stringify({ schemaVersao: 1, contextos: contextosCustom })) : null;
       rascunho.medidasCaseirasSnapshotCriptografado = Object.keys(contextosMedidas).length ? this.criptografia.criptografar(JSON.stringify({schemaVersao:1,contextos:contextosMedidas})) : null;
       rascunho.edicaoProtegida = true;
@@ -851,10 +945,167 @@ export class ServicoPlanosAlimentares {
       rascunho.revisadaPorUsuarioId = null;
       rascunho.hashConteudo = null;
       await gerenciador.getRepository(PlanoAlimentarVersaoOrm).save(rascunho);
-      return this.montarVersao(gerenciador, rascunho);
+      if(dados.copiasEquivalencia?.length)await registrarAuditoriaNaTransacao(gerenciador,{
+        tenantId,usuarioId:usuario.usuarioId,acao:'planos_alimentares.equivalencia_copiar',
+        recursoTipo:'plano_alimentar_versao',recursoId:rascunho.id,
+        metadados:{quantidadeEquivalencias:dados.copiasEquivalencia.length,versaoDestino:rascunho.numero}
+      });
+      return this.montarVersao(gerenciador, rascunho, true);
     });
   }
 
+  private lerContextosEquivalencias(versao:PlanoAlimentarVersaoOrm):ContextosEquivalencias {
+    if(!versao.edicaoSnapshotCriptografado)return {};
+    try{return lerSnapshotEdicaoGrupos(this.lerJsonCriptografado(versao.edicaoSnapshotCriptografado)).equivalencias??{};}catch{throw new ConflictException('Contexto de equivalência indisponível.');}
+  }
+
+  /** Revalida apenas a dependência atual para exibição/decisão. Nunca recalcula
+   * porção nem persiste a pendência durante uma leitura. Fontes sem acesso ou
+   * indisponíveis falham fechadas e também exigem revisão explícita. */
+  private async projetarEquivalenciasAtuais(gerenciador:EntityManager,versao:PlanoAlimentarVersaoOrm,usuario:UsuarioAutenticado,anteriores:ContextosEquivalencias):Promise<ContextosEquivalencias>{
+    const edicao=this.lerEdicao(versao),documento=edicao.documentoEdicao;
+    if(!documento||edicao.edicaoEstado==='indisponivel')throw new ConflictException('Equivalência indisponível para conferência atual. Recarregue o plano.');
+    let catalogos:ContextosCatalogoGrupo;
+    try{catalogos=versao.edicaoSnapshotCriptografado?lerSnapshotEdicaoGrupos(this.lerJsonCriptografado(versao.edicaoSnapshotCriptografado),anteriores).catalogos:Object.create(null);}
+    catch{throw new ConflictException('Origem da equivalência indisponível para conferência atual.');}
+    const profissionalId=await resolverProfissionalIdDoUsuario(gerenciador,versao.tenantId,usuario);
+    const preservados:FatosPreservadosEquivalencia={custom:this.lerContextosCustom(versao),catalogos,equivalencias:Object.create(null)};
+    for(const [chave,cOriginal]of Object.entries(anteriores)){
+      const c=cOriginal.aplicados??cOriginal;
+      preservados.equivalencias![chave]={identidade:c.alternativa.identidade,fatos:c.alternativa};
+      if(!c.principal.identidade.startsWith('manual:'))preservados.equivalencias![cOriginal.itemChave]={identidade:c.principal.identidade,fatos:c.principal};
+    }
+    const fontes=new FontesGruposSubstituicoes(this.criptografia);
+    const fatosAtuais=(a:Parameters<typeof resolverFatosEquivalencia>[3],pai?:string)=>resolverFatosEquivalencia(gerenciador,versao.tenantId,profissionalId,a,fontes,preservados,pai,true,false);
+    return resolverEquivalenciasDocumento(JSON.parse(JSON.stringify(documento)),anteriores,{
+      dependencias:async(item,alternativa,c)=>{
+        try{
+          const principal=await fatosAtuais(item),atual=await fatosAtuais(alternativa,item.chaveCliente);
+          return assinaturaDependenciasEquivalencia(item,alternativa,principal,atual,c.nutriente,c.politica,c.dependenciasVersao??1);
+        }catch{
+          // Um contexto cuja fonte deixou de ser autorizada/consultável não pode
+          // ser apresentado como conferido nem liberado para publicação.
+          return `fonte-indisponivel:${c.dependenciasHash}`;
+        }
+      },
+      prever:async()=>{throw new ConflictException('Leitura não pode calcular nem substituir uma equivalência.');}
+    });
+  }
+
+  private async garantirEquivalenciasRevisadasAtuais(gerenciador:EntityManager,versao:PlanoAlimentarVersaoOrm,usuario:UsuarioAutenticado):Promise<void>{
+    const contextos=this.lerContextosEquivalencias(versao);
+    if(!Object.keys(contextos).length)return;
+    const atuais=await this.projetarEquivalenciasAtuais(gerenciador,versao,usuario,contextos);
+    if(Object.values(atuais).some(c=>c.estado==='revisao_pendente'))throw new BadRequestException('Equivalência com revisão pendente: recalcule ou mantenha como manual antes de revisar ou publicar.');
+  }
+
+  private async lerContextosEquivalenciasMaterializadas(gerenciador:EntityManager,versao:PlanoAlimentarVersaoOrm):Promise<ContextosEquivalencias>{
+    const refeicoes=await gerenciador.getRepository(PlanoAlimentarRefeicaoOrm).find({where:{tenantId:versao.tenantId,versaoId:versao.id}});
+    if(!refeicoes.length)return Object.create(null);
+    const itens=await gerenciador.getRepository(PlanoAlimentarItemOrm).find({where:{tenantId:versao.tenantId,refeicaoId:In(refeicoes.map(r=>r.id))}});
+    if(!itens.length)return Object.create(null);
+    const linhas=await gerenciador.getRepository(PlanoAlimentarSubstituicaoOrm).find({where:{tenantId:versao.tenantId,itemId:In(itens.map(i=>i.id))}});
+    const contextos:ContextosEquivalencias=Object.create(null);
+    for(const linha of linhas){
+      const contexto=this.lerJsonCriptografado<SnapshotComposicao>(linha.composicaoSnapshotCriptografada).equivalencia;
+      if(!contexto)continue;
+      if(Object.hasOwn(contextos,contexto.alternativaChave))throw new ConflictException('A versão de origem contém referências FOOD05 duplicadas.');
+      contextos[contexto.alternativaChave]=contexto;
+    }
+    return validarContextosEquivalencias(contextos);
+  }
+
+  private async resolverCopiasEquivalencia(
+    gerenciador:EntityManager,tenantId:string,pacienteDestinoId:string,planoDestino:PlanoAlimentarOrm,
+    versaoDestino:PlanoAlimentarVersaoOrm,usuario:UsuarioAutenticado,documento:DocumentoEdicaoPlano,
+    referencias:ReferenciaCopiaEquivalenciaDto[]|undefined
+  ):Promise<ContextosEquivalencias>{
+    const atuais=this.lerContextosEquivalencias(versaoDestino);
+    if(!referencias?.length)return atuais;
+    const profissionalId=await resolverProfissionalIdDoUsuario(gerenciador,tenantId,usuario);
+    if(usuario.papel!=='Professional'||!profissionalId)throw new ForbiddenException('Cópia de equivalência exige profissional vinculado.');
+    const copiadaPor={usuarioId:usuario.usuarioId,profissionalId},usos=new Set<string>(),versoes=new Map<string,{versao:PlanoAlimentarVersaoOrm;documento?:DocumentoEdicaoPlano;contextos:ContextosEquivalencias}>();
+    const porChaveDestino=new Map<string,{item:DocumentoEdicaoPlano['refeicoes'][number]['itens'][number];alternativa:NonNullable<DocumentoEdicaoPlano['refeicoes'][number]['itens'][number]['substituicoes']>[number]}>();
+    for(const refeicao of documento.refeicoes)for(const item of refeicao.itens)for(const alternativa of item.substituicoes??[])porChaveDestino.set(alternativa.chaveCliente,{item,alternativa});
+    const resultado:ContextosEquivalencias=Object.assign(Object.create(null),atuais);
+    for(const referencia of referencias){
+      const chave=referencia.alternativaChaveDestino,alvo=porChaveDestino.get(chave);
+      if(!alvo||alvo.item.chaveCliente!==referencia.itemChaveDestino||atuais[chave]||alvo.alternativa.equivalencia||Object.hasOwn(resultado,chave)||usos.has(chave))throw new ConflictException('A cópia não corresponde ao rascunho atual. Recarregue e tente novamente.');
+      usos.add(chave);
+      const cache=`${referencia.pacienteOrigemId}:${referencia.planoOrigemId}:${referencia.versaoIdOrigem}`;
+      let fonte=versoes.get(cache);
+      if(!fonte){
+        await this.obterPlanoNoEscopo(gerenciador,tenantId,referencia.pacienteOrigemId,referencia.planoOrigemId,usuario,'pessimistic_read');
+        const versao=await gerenciador.getRepository(PlanoAlimentarVersaoOrm).findOne({where:{id:referencia.versaoIdOrigem,tenantId,planoId:referencia.planoOrigemId,numero:referencia.numeroVersaoOrigem},lock:{mode:'pessimistic_read'}});
+        if(!versao||versao.descartadaEm)throw new ConflictException('A versão de origem não está disponível para cópia.');
+        const revisaoOrigem=versao.rascunhoRevisao??0;
+        if(referencia.rascunhoRevisaoOrigemEsperada!==undefined&&referencia.rascunhoRevisaoOrigemEsperada!==revisaoOrigem)
+          throw new ConflictException('A versão de origem foi alterada. Recarregue e confira antes de copiar.');
+        if(!versao.publicadaEm&&referencia.rascunhoRevisaoOrigemEsperada===undefined)
+          throw new ConflictException('Informe a revisão exata do rascunho de origem antes de copiar.');
+        if(versao.publicadaEm){
+          fonte={versao,contextos:await this.lerContextosEquivalenciasMaterializadas(gerenciador,versao)};
+        }else{
+          const leitura=this.lerEdicao(versao);
+          if(!leitura.documentoEdicao||leitura.edicaoEstado==='indisponivel')throw new ConflictException('A proveniência de equivalência da origem não está disponível.');
+          fonte={versao,documento:leitura.documentoEdicao,contextos:this.lerContextosEquivalencias(versao)};
+        }
+        versoes.set(cache,fonte);
+      }
+      const contexto=fonte.contextos[referencia.alternativaChaveOrigem];
+      const alternativaOrigem=fonte.documento?.refeicoes.flatMap(r=>r.itens).find(i=>i.chaveCliente===referencia.itemChaveOrigem)?.substituicoes?.find(a=>a.chaveCliente===referencia.alternativaChaveOrigem);
+      if(!contexto||contexto.itemChave!==referencia.itemChaveOrigem||contexto.alternativaChave!==referencia.alternativaChaveOrigem
+        ||(!fonte.versao.publicadaEm&&(!alternativaOrigem?.equivalencia||'acao'in alternativaOrigem.equivalencia||alternativaOrigem.equivalencia.aplicacaoId!==contexto.aplicacaoId)))throw new ConflictException('A equivalência da origem mudou ou não está vinculada a essa alternativa. Carregue a origem novamente.');
+      let copiado:ContextoEquivalencia;
+      try{copiado=clonarContextoEquivalenciaParaCopia(contexto,
+        {pacienteId:referencia.pacienteOrigemId,planoId:referencia.planoOrigemId,versaoId:fonte.versao.id,...(!fonte.versao.publicadaEm?{rascunhoRevisaoOrigem:fonte.versao.rascunhoRevisao??0}:{})},
+        {pacienteId:pacienteDestinoId,planoId:planoDestino.id,versaoId:versaoDestino.id,itemChave:referencia.itemChaveDestino,alternativaChave:referencia.alternativaChaveDestino},
+        copiadaPor,new Date().toISOString());}
+      catch(erro){if(erro instanceof ConflitoEquivalenciaEdicao)throw new ConflictException(erro.message);throw erro;}
+      resultado[chave]=copiado;
+    }
+    return validarContextosEquivalencias(resultado);
+  }
+
+  /**
+   * Trava primeiro todos os pacientes em UUID crescente e depois todos os planos
+   * em UUID crescente. O paciente/plano de destino recebe write desde a primeira
+   * aquisição; origens recebem read. Isso evita promoção cruzada em A→B/B→A.
+   */
+  private async bloquearEscoposCopiaOrdenados(
+    gerenciador: EntityManager,
+    tenantId: string,
+    pacienteDestinoId: string,
+    planoDestinoId: string,
+    usuario: UsuarioAutenticado,
+    referencias: readonly ReferenciaCopiaEquivalenciaDto[] | undefined
+  ): Promise<void> {
+    if (!referencias?.length) return;
+    let ordem: ReturnType<typeof ordenarEscoposCopia>;
+    try {
+      ordem = ordenarEscoposCopia(
+        { pacienteId: pacienteDestinoId, planoId: planoDestinoId },
+        referencias.map(ref => ({ pacienteId: ref.pacienteOrigemId, planoId: ref.planoOrigemId }))
+      );
+    } catch {
+      throw new ConflictException('A origem da cópia está inconsistente. Recarregue e confira antes de salvar.');
+    }
+    for (const paciente of ordem.pacientes) {
+      await this.garantirPacienteNoEscopo(
+        gerenciador, tenantId, paciente.pacienteId, usuario,
+        paciente.modo === 'pessimistic_write' ? true : 'pessimistic_read'
+      );
+    }
+    for (const escopo of ordem.planos) {
+      await this.obterPlanoNoEscopo(
+        gerenciador, tenantId, escopo.pacienteId, escopo.planoId, usuario,
+        escopo.modo === 'pessimistic_write' ? true : 'pessimistic_read'
+      );
+    }
+  }
+  private garantirEquivalenciasRevisadas(versao:PlanoAlimentarVersaoOrm):void {
+    if(Object.values(this.lerContextosEquivalencias(versao)).some(c=>c.estado==='revisao_pendente'))throw new BadRequestException('Equivalência com revisão pendente: recalcular ou manter como manual antes de publicar.');
+  }
   private lerContextosCustom(versao: PlanoAlimentarVersaoOrm): ContextosAlimentosPersonalizados {
     if (!versao.alimentosPersonalizadosSnapshotCriptografado) return {};
     try { return validarContextosCustom(JSON.parse(this.criptografia.descriptografar(versao.alimentosPersonalizadosSnapshotCriptografado))); }
@@ -870,7 +1121,7 @@ export class ServicoPlanosAlimentares {
     } catch { throw new ServiceUnavailableException('Referência de medida indisponível.'); }
   }
 
-  private async validarReferenciasEdicao(gerenciador: EntityManager, tenantId: string, pacienteId: string, documento: DocumentoEdicaoPlano, catalogosGrupos: ContextosCatalogoGrupo = {}) {
+  private async validarReferenciasEdicao(gerenciador: EntityManager, tenantId: string, pacienteId: string, documento: DocumentoEdicaoPlano, catalogosGrupos: ContextosCatalogoGrupo = {}, equivalencias: ContextosEquivalencias = {}) {
     if (documento.avaliacaoAntropometricaId) {
       const avaliacao = await gerenciador.getRepository(AvaliacaoAntropometricaOrm).findOne({
         where: { id: documento.avaliacaoAntropometricaId, tenantId, pacienteId, excluidaEm: IsNull() },
@@ -878,7 +1129,8 @@ export class ServicoPlanosAlimentares {
       });
       if (!avaliacao) throw new BadRequestException('Avaliação de referência indisponível para este paciente.');
     }
-    const ids = new Set(documento.refeicoes.flatMap(r => r.itens.flatMap(i => [i, ...(i.substituicoes ?? []).filter(a => !Object.hasOwn(catalogosGrupos, a.chaveCliente))])).map(i => i.alimentoComposicaoId).filter((id): id is string => Boolean(id)));
+    const protegido=(a:{chaveCliente:string;alimentoComposicaoId?:string|null},pai:string)=>Object.hasOwn(catalogosGrupos,a.chaveCliente)||Object.values(equivalencias).some(original=>{const c={...original,...original.aplicados};return c.itemChave===pai&&((c.alternativaChave===a.chaveCliente&&c.snapshotAlternativa?.origem==='catalogo'&&c.snapshotAlternativa.alimentoComposicaoId===a.alimentoComposicaoId)||(c.itemChave===a.chaveCliente&&c.snapshotPrincipal?.origem==='catalogo'&&c.snapshotPrincipal.alimentoComposicaoId===a.alimentoComposicaoId));});
+    const ids = new Set(documento.refeicoes.flatMap(r => r.itens.flatMap(i => [i, ...(i.substituicoes ?? [])].filter(a=>!protegido(a,i.chaveCliente)))).map(i => i.alimentoComposicaoId).filter((id): id is string => Boolean(id)));
     for (const id of ids) {
       const alimento = await gerenciador.getRepository(AlimentoComposicaoOrm).findOne({ where: { id }, lock: { mode: 'pessimistic_read' } });
       if (!alimento) throw new BadRequestException('Alimento de referência indisponível.');
@@ -913,7 +1165,7 @@ export class ServicoPlanosAlimentares {
 
   private async aplicarRascunhoClinico(
     gerenciador: EntityManager, tenantId: string, pacienteId: string,
-    rascunho: PlanoAlimentarVersaoOrm, dados: AtualizarRascunhoPlanoAlimentarDto, identidades?: string[], composicoesCustom?: ReadonlyMap<object, ComposicaoPersonalizada>, provenienciasGrupo?: ReadonlyMap<object,OrigemGrupoSnapshot>, composicoesCatalogoGrupo?: ReadonlyMap<object, SnapshotComposicao>
+    rascunho: PlanoAlimentarVersaoOrm, dados: AtualizarRascunhoPlanoAlimentarDto, identidades?: string[], composicoesCustom?: ReadonlyMap<object, ComposicaoPersonalizada>, provenienciasGrupo?: ReadonlyMap<object,OrigemGrupoSnapshot>, composicoesCatalogoGrupo?: ReadonlyMap<object, SnapshotComposicao>, materiaisEquivalencia?: ReadonlyMap<object,{contexto:ContextoEquivalencia;fatos:FatosComposicaoEquivalencia}>
   ): Promise<void> {
     this.validarDadosClinicosRascunho(dados);
     const metaManual = dados.origemMeta === 'manual';
@@ -968,7 +1220,7 @@ export class ServicoPlanosAlimentares {
       throw new BadRequestException(erro instanceof Error ? erro.message : 'Dados invalidos para o calculo nutricional.');
     }
 
-    const estrutura = await this.resolverEstrutura(gerenciador, dados, composicoesCustom, provenienciasGrupo, composicoesCatalogoGrupo);
+    const estrutura = await this.resolverEstrutura(gerenciador, dados, composicoesCustom, provenienciasGrupo, composicoesCatalogoGrupo, materiaisEquivalencia);
     let totais: ReturnType<typeof calcularTotaisPlano>;
     try {
       validarEstruturaPlano(estrutura);
@@ -1048,6 +1300,7 @@ export class ServicoPlanosAlimentares {
       this.conferirRevisaoEdicao(rascunho, dados);
       this.garantirApresentacaoDisponivel(rascunho);
       this.garantirRascunhoCompleto(rascunho);
+      await this.garantirEquivalenciasRevisadasAtuais(gerenciador,rascunho,usuario);
       const conteudo = await this.montarVersao(gerenciador, rascunho);
       if (!conteudo.refeicoes.length || conteudo.refeicoes.some((refeicao) => !refeicao.itens.length)) {
         throw new BadRequestException('Preencha todas as refeicoes antes da revisao.');
@@ -1058,7 +1311,7 @@ export class ServicoPlanosAlimentares {
       this.avancarRevisaoEdicao(rascunho);
       rascunho.edicaoMaterializadaRevisao = rascunho.rascunhoRevisao;
       await gerenciador.getRepository(PlanoAlimentarVersaoOrm).save(rascunho);
-      return this.montarVersao(gerenciador, rascunho);
+      return this.montarVersao(gerenciador, rascunho, true);
     });
   }
 
@@ -1153,6 +1406,7 @@ export class ServicoPlanosAlimentares {
       }
       this.garantirApresentacaoDisponivel(rascunho);
       this.garantirRascunhoCompleto(rascunho);
+      await this.garantirEquivalenciasRevisadasAtuais(gerenciador,rascunho,usuario);
       const conteudo = await this.montarVersao(gerenciador, rascunho);
       if (!conteudo.refeicoes.length || conteudo.refeicoes.some((refeicao) => !refeicao.itens.length)) {
         throw new BadRequestException('Plano alimentar precisa de refeicoes preenchidas para publicacao.');
@@ -1209,7 +1463,7 @@ export class ServicoPlanosAlimentares {
         planoId: plano.id,
         versaoId: rascunho.id
       });
-      return this.montarPlano(gerenciador, plano);
+      return this.montarPlano(gerenciador, plano, usuario);
     });
   }
 
@@ -1231,6 +1485,17 @@ export class ServicoPlanosAlimentares {
       });
       if (!publicada?.publicadaEm) throw new ConflictException('Versao publicada atual nao encontrada.');
       this.garantirApresentacaoDisponivel(publicada);
+      // FOOD05 conserva as chaves editoriais que vinculam os snapshots; filhos
+      // físicos continuam recebendo novos IDs. Sem isso, um PATCH legado apagaria
+      // a proveniência herdada. Não alterar a reconstrução dos planos legados.
+      const historicoEquivalencias = await this.montarVersao(gerenciador, publicada, true);
+      const herdaEquivalencias = Object.keys(historicoEquivalencias.equivalenciasAplicadas ?? {}).length > 0;
+      if (herdaEquivalencias) {
+        const contextos = this.lerContextosEquivalencias(publicada);
+        if (!Object.keys(contextos).length || !publicada.edicaoSnapshotCriptografado) {
+          throw new ConflictException('Contexto editorial da equivalência indisponível para nova versão.');
+        }
+      }
       const ultima = await repositorioVersao.find({ where: { tenantId, planoId }, order: { numero: 'DESC' }, take: 1 });
       const nova = await repositorioVersao.save(
         repositorioVersao.create({
@@ -1249,11 +1514,17 @@ export class ServicoPlanosAlimentares {
           // Zero identifica exclusivamente ausência legada, nunca snapshot já herdado.
           apresentacaoRevisao: publicada.apresentacaoSnapshotCriptografado ? 1 : 0,
           identidadesRefeicoesCriptografadas: this.copiarBuffer(publicada.identidadesRefeicoesCriptografadas ?? undefined),
+          ...(herdaEquivalencias ? {
+            edicaoSnapshotCriptografado: this.copiarBuffer(publicada.edicaoSnapshotCriptografado!),
+            alimentosPersonalizadosSnapshotCriptografado: this.copiarBuffer(publicada.alimentosPersonalizadosSnapshotCriptografado ?? undefined),
+            medidasCaseirasSnapshotCriptografado: this.copiarBuffer(publicada.medidasCaseirasSnapshotCriptografado ?? undefined),
+            rascunhoRevisao: 0, edicaoMaterializadaRevisao: 0, edicaoProtegida: true
+          } : {}),
           totaisSnapshotCriptografado: this.copiarBuffer(publicada.totaisSnapshotCriptografado)
         })
       );
       await this.clonarFilhos(gerenciador, tenantId, publicada.id, nova.id);
-      return this.montarVersao(gerenciador, nova);
+      return this.montarVersao(gerenciador, nova, true);
     });
   }
 
@@ -1460,16 +1731,16 @@ export class ServicoPlanosAlimentares {
   private async resolverEstrutura(
     gerenciador: EntityManager,
     dados: AtualizarRascunhoPlanoAlimentarDto,
-    composicoesCustom?: ReadonlyMap<object, ComposicaoPersonalizada>, provenienciasGrupo?: ReadonlyMap<object,OrigemGrupoSnapshot>, composicoesCatalogoGrupo?: ReadonlyMap<object, SnapshotComposicao>
+    composicoesCustom?: ReadonlyMap<object, ComposicaoPersonalizada>, provenienciasGrupo?: ReadonlyMap<object,OrigemGrupoSnapshot>, composicoesCatalogoGrupo?: ReadonlyMap<object, SnapshotComposicao>, materiaisEquivalencia?: ReadonlyMap<object,{contexto:ContextoEquivalencia;fatos:FatosComposicaoEquivalencia}>
   ): Promise<EstruturaPlanoAlimentar> {
     const refeicoes = [];
     for (const refeicao of dados.refeicoes) {
       const itens: ItemPlanoAlimentar[] = [];
       for (const itemEntrada of refeicao.itens) {
-        const item = await this.resolverItem(gerenciador, itemEntrada, composicoesCustom?.get(itemEntrada));
+        const item = await this.resolverItem(gerenciador, itemEntrada, composicoesCustom?.get(itemEntrada), composicoesCatalogoGrupo?.get(itemEntrada));
         const substituicoes = [];
         for (const substituicaoEntrada of itemEntrada.substituicoes ?? []) {
-          const substituicao = await this.resolverItem(gerenciador, substituicaoEntrada, composicoesCustom?.get(substituicaoEntrada), composicoesCatalogoGrupo?.get(substituicaoEntrada));
+          const substituicao = await this.resolverItem(gerenciador, substituicaoEntrada, composicoesCustom?.get(substituicaoEntrada), composicoesCatalogoGrupo?.get(substituicaoEntrada), materiaisEquivalencia?.get(substituicaoEntrada));
           const origemGrupo=provenienciasGrupo?.get(substituicaoEntrada);
           if(origemGrupo)substituicao.snapshot.origemGrupo=origemGrupo;
           substituicoes.push({
@@ -1501,7 +1772,7 @@ export class ServicoPlanosAlimentares {
     gerenciador: EntityManager,
     entrada: SubstituicaoPlanoAlimentarDto,
     custom?: ComposicaoPersonalizada,
-    catalogoGrupo?: SnapshotComposicao
+    catalogoGrupo?: SnapshotComposicao, equivalencia?: {contexto:ContextoEquivalencia;fatos:FatosComposicaoEquivalencia}, nutrientForFood05?:ContextoEquivalencia['nutriente']
   ): Promise<ItemResolvido> {
     let descricao: string;
     let micros: ValoresMicronutrientesOrigem = {};
@@ -1511,7 +1782,8 @@ export class ServicoPlanosAlimentares {
     if (catalogoGrupo) {
       if (custom || catalogoGrupo.origem !== 'catalogo' || entrada.alimentoComposicaoId !== catalogoGrupo.alimentoComposicaoId || !catalogoGrupo.fonte) throw new BadRequestException('Snapshot de catálogo incompatível.');
       descricao = catalogoGrupo.descricao;
-      nutrientesPor100g = this.validarNutrientesManuais(catalogoGrupo.nutrientesPor100g);
+      const nutrienteParcial=equivalencia?.contexto.nutriente??nutrientForFood05;
+      nutrientesPor100g = nutrienteParcial?this.validarNutrientesParciais(catalogoGrupo.nutrientesPor100g,nutrienteParcial):this.validarNutrientesManuais(catalogoGrupo.nutrientesPor100g);
       if (catalogoGrupo.micronutrientes) {
         baseMicros = catalogoGrupo.micronutrientes.baseGramasOrigem;
         micros = Object.fromEntries(Object.entries(catalogoGrupo.micronutrientes.nutrientes).map(([k,v]) => [k,{estado:v.estado,...(v.valorOrigem !== undefined ? {valor:v.valorOrigem} : {})}]));
@@ -1532,7 +1804,10 @@ export class ServicoPlanosAlimentares {
       });
       if (!alimento) throw new BadRequestException('Alimento do catalogo nao encontrado.');
       if (entrada.micronutrientesPor100g !== undefined) throw new BadRequestException('Micronutrientes de catálogo não aceitam alteração manual.');
-      nutrientesPor100g = this.obterNutrientesCatalogo(alimento, true)!;
+      const nutrienteParcial=equivalencia?.contexto.nutriente??nutrientForFood05;
+      nutrientesPor100g = nutrienteParcial
+        ? this.obterNutrientesCatalogoParaEquivalencia(alimento, nutrienteParcial)
+        : this.obterNutrientesCatalogo(alimento, true)!;
       const fonte = await gerenciador.getRepository(FonteComposicaoAlimentoOrm).findOne({
         where: { id: alimento.fonteId, situacao: 'ativa' }
       });
@@ -1563,7 +1838,8 @@ export class ServicoPlanosAlimentares {
         throw new BadRequestException('Item manual exige descricao e todos os nutrientes por 100 g.');
       }
       descricao = entrada.descricao.trim();
-      nutrientesPor100g = this.validarNutrientesManuais(entrada.nutrientesPor100g);
+      const nutrienteParcial=equivalencia?.contexto.nutriente??nutrientForFood05;
+      nutrientesPor100g = nutrienteParcial?this.validarNutrientesParciais(entrada.nutrientesPor100g,nutrienteParcial):this.validarNutrientesManuais(entrada.nutrientesPor100g);
       if (entrada.micronutrientesPor100g !== undefined) {
         try { micros = Object.fromEntries(Object.entries(validarMicronutrientesManuais(entrada.micronutrientesPor100g)).map(([codigo, valor]) => [codigo, { estado: 'conhecido', valor }])); }
         catch { throw new BadRequestException('Micronutrientes manuais inválidos.'); }
@@ -1573,7 +1849,17 @@ export class ServicoPlanosAlimentares {
     let nutrientesPorcao: SubstituicaoPlanoAlimentar['nutrientes'];
     let micronutrientes: SnapshotMicronutrientesV1 | undefined;
     try {
-      nutrientesPorcao = this.calcularNutrientesPorcao(nutrientesPor100g, entrada.porcaoGramas);
+      if(equivalencia){
+        const f=equivalencia.fatos;
+        const canonico=normalizarComposicaoDecimal({nutrientes:f.nutrientes,baseGramas:f.baseGramas});
+        nutrientesPor100g={...nutrientesPor100g,...Object.fromEntries(Object.entries(canonico).map(([k,v])=>[k,Number(v)]))};
+        // Snapshot de FOOD05 preserva apenas nutrientes conhecidos. Os totais
+        // downstream já os projetam como incompletos, sem preencher ausências.
+        nutrientesPorcao=Object.fromEntries(Object.entries(calcularNutrientesDaPorcaoDecimal(f.nutrientes,f.baseGramas,String(entrada.porcaoGramas))).map(([k,v])=>[k,Number(v)])) as unknown as SubstituicaoPlanoAlimentar['nutrientes'];
+      }else if(nutrientForFood05){
+        const conhecidos=Object.fromEntries(Object.entries(nutrientesPor100g).filter(([,v])=>v!==undefined).map(([k,v])=>[k,String(v)]));
+        nutrientesPorcao=Object.fromEntries(Object.entries(calcularNutrientesDaPorcaoDecimal(conhecidos,'100',String(entrada.porcaoGramas))).map(([k,v])=>[k,Number(v)])) as unknown as SubstituicaoPlanoAlimentar['nutrientes'];
+      }else nutrientesPorcao = this.calcularNutrientesPorcao(nutrientesPor100g, entrada.porcaoGramas);
       if (Object.keys(micros).length) micronutrientes = criarSnapshotMicronutrientes(micros, baseMicros, entrada.porcaoGramas);
     } catch (erro) {
       if (erro instanceof LimitePrecisaoNutricionalError) throw new UnprocessableEntityException('Limite técnico de precisão nutricional excedido.');
@@ -1588,7 +1874,7 @@ export class ServicoPlanosAlimentares {
         porcaoGramas: entrada.porcaoGramas,
         nutrientes: nutrientesPorcao
       },
-      snapshot: { ...snapshotBase, nutrientesPor100g, nutrientesPorcao, ...(micronutrientes ? { micronutrientes } : {}) }
+      snapshot: { ...snapshotBase, nutrientesPor100g, nutrientesPorcao, ...(micronutrientes ? { micronutrientes } : {}), ...(equivalencia?{equivalencia:equivalencia.contexto}:{}) }
     };
   }
 
@@ -1606,6 +1892,14 @@ export class ServicoPlanosAlimentares {
     return { ...nutrientes };
   }
 
+  private validarNutrientesParciais(nutrientes:Partial<NutrientesPor100gDto>,alvo:ContextoEquivalencia['nutriente']):NutrientesPor100gPlano{
+    const permitidos=['energiaKcal','proteinasG','carboidratosG','gordurasG','fibrasG','sodioMg'];
+    if(!nutrientes||typeof nutrientes!=='object'||Object.keys(nutrientes).some(k=>!permitidos.includes(k)))throw new BadRequestException('Composição FOOD05 inválida.');
+    for(const [campo,valor] of Object.entries(nutrientes))if(valor!==undefined&&(!Number.isFinite(valor)||Number(valor)<0))throw new BadRequestException('Composição FOOD05 inválida.');
+    if(nutrientes[alvo]===undefined)throw new BadRequestException('O nutriente alvo está ausente na composição.');
+    return {...nutrientes} as NutrientesPor100gPlano;
+  }
+
   private composicaoEssencialCatalogoCompleta(alimento: AlimentoComposicaoOrm): boolean {
     return [
       alimento.energiaKcal,
@@ -1613,6 +1907,25 @@ export class ServicoPlanosAlimentares {
       alimento.carboidratosG,
       alimento.lipidiosG
     ].every((valor) => valor !== undefined && valor !== null && Number.isFinite(Number(valor)) && Number(valor) >= 0);
+  }
+
+  private obterNutrientesCatalogoParaEquivalencia(alimento:AlimentoComposicaoOrm,nutriente:ContextoEquivalencia['nutriente']):NutrientesPor100gPlano {
+    const base=Number(alimento.baseGramas);
+    if(!Number.isFinite(base)||base<=0)throw new BadRequestException('Alimento do catalogo possui base nutricional invalida.');
+    const colunas={energiaKcal:'energiaKcal',proteinasG:'proteinasG',carboidratosG:'carboidratosG',gordurasG:'lipidiosG'} as const;
+    const valores:Partial<NutrientesPor100gPlano>={};
+    for(const [campo,coluna] of Object.entries(colunas) as Array<[keyof typeof colunas,typeof colunas[keyof typeof colunas]]>){
+      const valor=alimento[coluna];if(valor===undefined||valor===null)continue;
+      const n=Number(valor);if(!Number.isFinite(n)||n<0)throw new BadRequestException('Composição de catálogo inválida.');
+      valores[campo]=Math.round(n*(100/base)*10_000)/10_000;
+    }
+    if(valores[nutriente]===undefined)throw new BadRequestException('O nutriente alvo está ausente na composição do catálogo.');
+    for(const [campo,coluna] of [['fibrasG','fibrasG'],['sodioMg','sodioMg']] as const){
+      const valor=alimento[coluna];if(valor===undefined||valor===null)continue;
+      const n=Number(valor);if(!Number.isFinite(n)||n<0)throw new BadRequestException('Composição de catálogo inválida.');
+      valores[campo]=Math.round(n*(100/base)*10_000)/10_000;
+    }
+    return valores as NutrientesPor100gPlano;
   }
 
   private obterNutrientesCatalogo(alimento: AlimentoComposicaoOrm, obrigatorio: true): NutrientesPor100gPlano;
@@ -1799,7 +2112,7 @@ export class ServicoPlanosAlimentares {
               unidade: substituicao.unidade,
               porcaoGramas: substituicao.porcaoGramas.toFixed(3),
               composicaoSnapshotCriptografada: this.criptografia.criptografar(JSON.stringify(snapshotSubstituicao)),
-              motorCalculoVersao: MOTOR_CALCULO_VERSAO,
+              motorCalculoVersao: snapshotSubstituicao.equivalencia ? POLITICA_NUTRICAO_DECIMAL : MOTOR_CALCULO_VERSAO,
               // Exposicao ao paciente e decisao explicita: a ausencia nunca vira um sim.
               liberadaParaPaciente: substituicao.liberadaParaPaciente === true,
               preferida: substituicao.preferida === true
@@ -1998,7 +2311,7 @@ export class ServicoPlanosAlimentares {
     return alertas;
   }
 
-  private async montarPlano(gerenciador: EntityManager, plano: PlanoAlimentarOrm) {
+  private async montarPlano(gerenciador: EntityManager, plano: PlanoAlimentarOrm, usuario?:UsuarioAutenticado) {
     const versoes = await gerenciador.getRepository(PlanoAlimentarVersaoOrm).find({
       where: { tenantId: plano.tenantId, planoId: plano.id },
       order: { numero: 'DESC' }
@@ -2010,7 +2323,7 @@ export class ServicoPlanosAlimentares {
         Boolean(versao) && lista.findIndex((item) => item?.id === versao?.id) === indice
     );
     const detalhes = await Promise.all(
-      versoesEmDetalhe.map((versao) => this.montarVersao(gerenciador, versao))
+      versoesEmDetalhe.map((versao) => this.montarVersao(gerenciador, versao, true, usuario))
     );
     return {
       ativoParaPaciente: plano.ativoParaPaciente === true,
@@ -2093,7 +2406,7 @@ export class ServicoPlanosAlimentares {
     }
   }
 
-  private async montarVersao(gerenciador: EntityManager, versao: PlanoAlimentarVersaoOrm) {
+  private async montarVersao(gerenciador: EntityManager, versao: PlanoAlimentarVersaoOrm, incluirEquivalencias=false, usuario?:UsuarioAutenticado) {
     // Todos os callers já mantêm o lock de escopo. A revisão acompanha o ACK
     // editorial para o cliente não aplicar flags anteriores a um toggle posterior.
     const planoOperacional = await gerenciador.getRepository(PlanoAlimentarOrm).findOne({
@@ -2131,6 +2444,19 @@ export class ServicoPlanosAlimentares {
         try { return this.lerJsonCriptografado<SnapshotComposicao>(i.composicaoSnapshotCriptografada).nutrientesPorcao; }
         catch { return undefined; }
       }));
+    }
+    let equivalenciasProfissionais:ReturnType<typeof projetarEquivalenciasProfissional>|undefined;
+    let equivalenciasEstado:'disponivel'|'indisponivel'='disponivel';
+    if(incluirEquivalencias){
+      try{
+        let contextos:ContextosEquivalencias;
+        if(versao.publicadaEm||versao.descartadaEm){
+          contextos=Object.create(null);
+          for(const linha of substituicoes){const snapshot=this.lerJsonCriptografado<SnapshotComposicao>(linha.composicaoSnapshotCriptografada);const c=snapshot.equivalencia;if(c){if(Object.hasOwn(contextos,c.alternativaChave))throw new ConflictException('Referência duplicada.');contextos[c.alternativaChave]=c;}}
+          contextos=validarContextosEquivalencias(contextos);
+        }else{if(edicao.edicaoEstado==='indisponivel')throw new ConflictException('Edição indisponível.');contextos=this.lerContextosEquivalencias(versao);if(usuario&&contextos&&Object.keys(contextos).length)contextos=await this.projetarEquivalenciasAtuais(gerenciador,versao,usuario,contextos);}
+        equivalenciasProfissionais=projetarEquivalenciasProfissional(contextos);
+      }catch{equivalenciasEstado='indisponivel';}
     }
     return {
       ativoParaPaciente: planoOperacional.ativoParaPaciente === true,
@@ -2170,6 +2496,7 @@ export class ServicoPlanosAlimentares {
             composicaoOrigem: c.composicaoOrigem, nutrientesPor100g: c.nutrientesPor100g, micronutrientesPor100g: c.micronutrientesPor100g, normalizacaoVersao: c.normalizacaoVersao }];
         }))
       } : {}),
+      ...(incluirEquivalencias?{equivalenciasAplicadas:equivalenciasProfissionais,equivalenciasEstado}:{}),
       hashConteudo: versao.hashConteudo,
       revisadaEm: versao.revisadaEm,
       revisadaPorUsuarioId: versao.revisadaPorUsuarioId,
@@ -2199,20 +2526,32 @@ export class ServicoPlanosAlimentares {
             substituicoes: substituicoes
               .filter((substituicao) => substituicao.itemId === item.id)
               .sort((a, b) => a.ordem - b.ordem)
-              .map((substituicao) => ({
-                id: substituicao.id,
-                ordem: substituicao.ordem,
-                alimentoComposicaoId: substituicao.alimentoComposicaoId,
-                descricao: this.criptografia.descriptografar(substituicao.descricaoCriptografada),
-                quantidade: Number(substituicao.quantidade),
-                unidade: substituicao.unidade,
-                porcaoGramas: Number(substituicao.porcaoGramas),
-                composicaoSnapshot: projetarComposicao(this.lerJsonCriptografado<SnapshotComposicao>(
+              .map((substituicao) => {
+                const snapshot = this.lerJsonCriptografado<SnapshotComposicao>(
                   substituicao.composicaoSnapshotCriptografada
-                )),
-                liberadaParaPaciente: substituicao.liberadaParaPaciente,
-                preferida: substituicao.preferida
-              }))
+                );
+                const equivalenciaAtiva = snapshot.equivalencia?.estado !== undefined
+                  && snapshot.equivalencia.estado !== 'desvinculada_manualmente';
+                return {
+                  id: substituicao.id,
+                  ordem: substituicao.ordem,
+                  alimentoComposicaoId: substituicao.alimentoComposicaoId,
+                  descricao: this.criptografia.descriptografar(substituicao.descricaoCriptografada),
+                  quantidade: Number(substituicao.quantidade),
+                  unidade: substituicao.unidade,
+                  porcaoGramas: Number(substituicao.porcaoGramas),
+                  composicaoSnapshot: projetarComposicao(snapshot),
+                  ...(incluirEquivalencias && equivalenciaAtiva ? {
+                    equivalenciaAplicada: true,
+                    ...(snapshot.equivalencia ? { referenciaEquivalencia: {
+                      itemChave: snapshot.equivalencia.itemChave,
+                      alternativaChave: snapshot.equivalencia.alternativaChave
+                    } } : {})
+                  } : {}),
+                  liberadaParaPaciente: substituicao.liberadaParaPaciente,
+                  preferida: substituicao.preferida
+                };
+              })
           }))
       }))
     };

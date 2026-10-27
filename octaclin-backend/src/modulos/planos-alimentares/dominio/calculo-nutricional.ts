@@ -1,3 +1,4 @@
+import { razaoDecimal, dividirRazoes, multiplicarRazoes, formatarRazao, RazaoNutricional } from './decimal-nutricional';
 export const FORMULAS_ENERGETICAS = [
   'mifflin_st_jeor_1990',
   'harris_benedict_revisada_1984',
@@ -232,4 +233,27 @@ export function calcularNutrientesDaPorcao(nutrientes: NutrientesPor100g, quanti
     fibrasG: nutrientes.fibrasG === undefined ? undefined : arredondar4(nutrientes.fibrasG * fator),
     sodioMg: nutrientes.sodioMg === undefined ? undefined : arredondar4(nutrientes.sodioMg * fator)
   };
+}
+
+/** Política explícita FOOD05. Legado mantém sua aritmética/default; não recalcula snapshots. */
+export const POLITICA_NUTRICAO_DECIMAL = 'nutricao-decimal-v1' as const;
+export type NutrientesDecimais = Partial<Record<keyof NutrientesPor100g, string>>;
+export function calcularRazoesNutrientesDaPorcao(nutrientes: NutrientesDecimais, baseGramas: string, porcaoGramas: string): Partial<Record<keyof NutrientesPor100g, RazaoNutricional>> {
+  const base = razaoDecimal(baseGramas), porcao = razaoDecimal(porcaoGramas);
+  if (!base.numerador) throw new Error('Base deve ser positiva.');
+  const resultado: Partial<Record<keyof NutrientesPor100g, RazaoNutricional>> = {};
+  for (const [campo, valor] of Object.entries(nutrientes)) {
+    if (!['energiaKcal','proteinasG','carboidratosG','gordurasG','fibrasG','sodioMg'].includes(campo)) throw new Error('Nutriente incompatível.');
+    if (valor !== undefined) resultado[campo as keyof NutrientesPor100g] = dividirRazoes(multiplicarRazoes(razaoDecimal(valor),porcao),base);
+  }
+  return resultado;
+}
+function transformarComposicaoDecimal(nutrientes: NutrientesDecimais, baseGramas: string, porcaoGramas: string, casas: number): NutrientesDecimais {
+  return Object.fromEntries(Object.entries(calcularRazoesNutrientesDaPorcao(nutrientes,baseGramas,porcaoGramas)).map(([campo,valor])=>[campo,formatarRazao(valor,casas)]));
+}
+export function calcularNutrientesDaPorcaoDecimal(nutrientes: NutrientesDecimais, baseGramas: string, porcaoGramas: string): NutrientesDecimais {
+  return transformarComposicaoDecimal(nutrientes,baseGramas,porcaoGramas,4);
+}
+export function normalizarComposicaoDecimal(origem: { nutrientes: NutrientesDecimais; baseGramas: string }): NutrientesDecimais {
+  return transformarComposicaoDecimal(origem.nutrientes,origem.baseGramas,'100',8);
 }

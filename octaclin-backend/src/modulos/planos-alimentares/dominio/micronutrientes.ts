@@ -47,7 +47,7 @@ function dividirHalfUp(numerador: bigint, denominador: bigint): bigint {
   return (numerador * 2n + denominador) / (denominador * 2n);
 }
 /** Razão decimal exata; nenhuma etapa de normalização arredonda a origem. */
-function decimalComoRazao(valor: unknown): { numerador: bigint; denominador: bigint } {
+export function decimalComoRazao(valor: unknown): { numerador: bigint; denominador: bigint } {
   if ((typeof valor !== 'number' && typeof valor !== 'string') ||
       (typeof valor === 'number' && (!Number.isFinite(valor) || valor < 0))) {
     throw new Error('Valor nutricional inválido.');
