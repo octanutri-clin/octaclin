@@ -501,3 +501,4 @@ Critério de fechamento: FOOD05 principal pode concluir quando T07-A passar e D0
 - [ ] T07-A/T14: regressões FOOD04/PA07/autosave, CI do HEAD, revisão R4 completa após correções e todas as demais linhas da matriz.
 - R4 independente específica A04/A05 não achou vulnerabilidade confirmada, mas manteve ambos BLOCKED por falta de prova executada. O reviewer não executou testes e a análise foi somente leitura.
 - R4 independente estática final revisou proveniência de revisão, cadeia legado, os dois ordenamentos concorrentes e rollback; sem achados adicionais. O trecho de code review pode ser encerrado para o delta, mas não representa PASS de A04/A05/T14. Prova PostgreSQL/RLS ainda BLOCKED.
+- CI PostgreSQL/RLS do HEAD 6aa2c77b expôs duas falhas nos novos testes concorrentes; diagnóstico encontrou que os testes usavam como documento de destino o snapshot da origem. Corrigido o fixture para começar do rascunho destino vigente; repetir CI/RLS antes de mudar qualquer gate.

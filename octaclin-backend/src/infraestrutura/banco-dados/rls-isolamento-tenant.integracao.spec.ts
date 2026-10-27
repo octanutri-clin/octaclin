@@ -1754,18 +1754,21 @@ descrever('RLS e isolamento multi-tenant integral em Postgres real', () => {
     // detecta também promoção cruzada de locks nos pacientes, não só nos planos.
     await cliente!.query('update pacientes set profissional_responsavel_id=$1 where tenant_id=$2 and id=$3',[a.profissionalId,tenantA,b.pacienteId]);
 
-    const prepararCopia=(origem:any,destinoPlanoId:string,destinoVersaoId:string,alvo:string,revisaoDestino=1)=>{
-      const documento=JSON.parse(JSON.stringify(origem.documento));
-      const itemOrigem=documento.refeicoes[0].itens[0],alternativaOrigem=itemOrigem.substituicoes[0];
+    const prepararCopia=(origem:any,destino:any,alvo:string,revisaoDestino=1)=>{
+      const documento=JSON.parse(JSON.stringify(destino.documento));
+      const documentoOrigem=JSON.parse(JSON.stringify(origem.documento));
+      const itemOrigem=documentoOrigem.refeicoes[0].itens[0],alternativaOrigem=itemOrigem.substituicoes[0];
       const itemDestino=JSON.parse(JSON.stringify(itemOrigem)),alternativaDestino=itemDestino.substituicoes[0];
       itemDestino.chaveCliente=`${alvo}-item`;alternativaDestino.chaveCliente=`${alvo}-alternativa`;delete alternativaDestino.equivalencia;
       documento.refeicoes[0].itens.push(itemDestino);
-      return {documento,request:{rascunhoIdEsperado:destinoVersaoId,rascunhoRevisaoEsperada:revisaoDestino,documento,
+      return {documento,request:{rascunhoIdEsperado:destino.versaoId,rascunhoRevisaoEsperada:revisaoDestino,documento,
         copiasEquivalencia:[{pacienteOrigemId:origem.pacienteId,planoOrigemId:origem.planoId,versaoIdOrigem:origem.versaoId,numeroVersaoOrigem:1,rascunhoRevisaoOrigemEsperada:1,itemChaveOrigem:itemOrigem.chaveCliente,alternativaChaveOrigem:alternativaOrigem.chaveCliente,itemChaveDestino:itemDestino.chaveCliente,alternativaChaveDestino:alternativaDestino.chaveCliente}]}};
     };
-    const origemA={...a,planoId:a.planoId,versaoId:a.versaoId,documento:salvoA.documentoEdicao};
+    const origemA={...a,documento:salvoA.documentoEdicao};
     const origemB={pacienteId:b.pacienteId,planoId:bPlano.id,versaoId:bVersao,documento:salvoB.documentoEdicao};
-    const ab=prepararCopia(origemA,bPlano.id,bVersao,'ab'),ba=prepararCopia(origemB,a.planoId,a.versaoId,'ba');
+    const destinoA={pacienteId:a.pacienteId,planoId:a.planoId,versaoId:a.versaoId,documento:salvoA.documentoEdicao};
+    const destinoB={pacienteId:b.pacienteId,planoId:bPlano.id,versaoId:bVersao,documento:salvoB.documentoEdicao};
+    const ab=prepararCopia(origemA,destinoB,'ab'),ba=prepararCopia(origemB,destinoA,'ba');
     const resultados=await disputarPa06(
       executor=>new ServicoPlanosAlimentares(executor,a.cripto).salvarEdicaoRascunho(tenantA,b.pacienteId,bPlano.id,a.usuario,ab.request as any),
       ()=>new ServicoPlanosAlimentares(executorTenant!,a.cripto).salvarEdicaoRascunho(tenantA,a.pacienteId,a.planoId,a.usuario,ba.request as any),
@@ -1783,7 +1786,8 @@ descrever('RLS e isolamento multi-tenant integral em Postgres real', () => {
     const origemAlterada=salvouAB?origemB:origemA;
     const destinoTerceiro=await a.servico.criar(tenantA,origemAlterada.pacienteId,a.usuario,{titulo:'Plano sintético C'});
     const terceiroVersao=destinoTerceiro.draft!.id;
-    const stale=prepararCopia(origemAlterada,destinoTerceiro.id,terceiroVersao,'stale',0);
+    const documentoTerceiro=await a.servico.obterRascunho(tenantA,origemAlterada.pacienteId,destinoTerceiro.id,a.usuario);
+    const stale=prepararCopia(origemAlterada,{pacienteId:origemAlterada.pacienteId,planoId:destinoTerceiro.id,versaoId:terceiroVersao,documento:documentoTerceiro.documentoEdicao},'stale',0);
     await expect(new ServicoPlanosAlimentares(executorTenant!,a.cripto).salvarEdicaoRascunho(tenantA,origemAlterada.pacienteId,destinoTerceiro.id,a.usuario,stale.request as any)).rejects.toMatchObject({status:409});
     const depois=await executorTenant!.executar(tenantA,g=>g.query('select rascunho_revisao from plano_alimentar_versoes where id=$1',[terceiroVersao]));
     expect(depois).toEqual([{rascunho_revisao:0}]);
@@ -1846,10 +1850,11 @@ descrever('RLS e isolamento multi-tenant integral em Postgres real', () => {
     const stale=JSON.parse(JSON.stringify(preparada.request));stale.rascunhoIdEsperado=destino.versaoId;stale.rascunhoRevisaoEsperada=2;
     await expect(new ServicoPlanosAlimentares(executorTenant!,origem.cripto).salvarEdicaoRascunho(tenantA,destino.pacienteId,destino.planoId,origem.usuario,stale)).rejects.toMatchObject({status:409});
     const destinoNovo=await prepararCenarioFood05('food05-copy-edit-first-destination');
-    await destinoNovo.salvar();
+    const salvoDestinoNovo:any=await destinoNovo.salvar();
     await cliente!.query('update pacientes set profissional_responsavel_id=$1 where tenant_id=$2 and id=$3',[origem.profissionalId,tenantA,destinoNovo.pacienteId]);
-    const documentoNovo=JSON.parse(JSON.stringify(salvaOrigem.documentoEdicao));
-    const itemNovo=documentoNovo.refeicoes[0].itens[0],alternativaNova=itemNovo.substituicoes[0];
+    const documentoNovo=JSON.parse(JSON.stringify(salvoDestinoNovo.documentoEdicao));
+    const documentoOrigemNovo=JSON.parse(JSON.stringify(salvaOrigem.documentoEdicao));
+    const itemNovo=documentoOrigemNovo.refeicoes[0].itens[0],alternativaNova=itemNovo.substituicoes[0];
     const itemCopia=JSON.parse(JSON.stringify(itemNovo)),alternativaCopia=itemCopia.substituicoes[0];
     itemCopia.chaveCliente='origem-editada-primeiro-item';alternativaCopia.chaveCliente='origem-editada-primeiro-alt';delete alternativaCopia.equivalencia;
     documentoNovo.refeicoes[0].itens.push(itemCopia);
