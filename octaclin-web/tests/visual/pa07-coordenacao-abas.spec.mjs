@@ -521,6 +521,7 @@ test('FOOD05 expõe recálculo pendente com contexto preservado e confirmação 
   await painel.getByRole('button', { name: 'Calcular alternativas' }).click();
   await expect.poll(() => pedido).toBeTruthy();
   expect(pedido.nutriente).toBe('energiaKcal');
+  expect(pedido.recalculoExplicitoChaves).toEqual(['pa07-alternativa-food05']);
   await expect(painel.getByRole('checkbox', { name: 'Selecionar Queijo sintético' })).toBeChecked();
   await painel.getByRole('button', { name: 'Confirmar recálculo' }).click();
   await page.clock.fastForward(60_000);

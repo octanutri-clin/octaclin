@@ -83,7 +83,8 @@ export function calcularEquivalencia(entrada: EntradaEquivalencia): ResultadoEqu
     const obtido=dividirRazoes(multiplicarRazoes(efetiva,densidade),ba),delta=subtrairRazoes(obtido,alvo),percentual=dividirRazoes(multiplicarRazoes(delta,razaoDecimal('100')),alvo);
     const motivosAplicacao:string[]=[];
     if(!porcaoGrupoValida(Number(efetivaTexto)))motivosAplicacao.push('porcao_fora_dominio');
-    if(NUTRIENTES_EQUIVALENCIA.some(n=>entrada.alternativa.nutrientes[n]===undefined||entrada.principal.nutrientes[n]===undefined))motivosAplicacao.push('composicao_incompleta');
+    // A equivalência depende somente do nutriente escolhido. Composição dos
+    // demais macros pode deixar o impacto parcial, mas não invalida a porção.
     const nutrientesPorcao=calcularNutrientesDaPorcaoDecimal(entrada.alternativa.nutrientes,entrada.alternativa.baseGramas,efetivaTexto);
     const avisos:string[]=[];
     if(compararRazoes(matematica,passo)<0)avisos.push('menor_que_passo');

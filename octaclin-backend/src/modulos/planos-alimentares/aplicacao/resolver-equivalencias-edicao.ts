@@ -3,7 +3,7 @@ import { AlternativaEdicao, DocumentoEdicaoPlano, ItemEdicao, numeroEdicao } fro
 import { FatosComposicaoEquivalencia, ComandoEquivalencia, PoliticaEquivalencia, NutrienteEquivalencia, ResultadoEquivalencia, validarIntencaoEquivalencia, validarPoliticaEquivalencia, nutrienteEquivalenciaValido } from '../dominio/equivalencia-nutriente';
 import { fingerprintEquivalencia, fatosSemanticosEquivalencia } from '../dominio/fingerprint-equivalencia';
 import { UUID_GRUPO, objetoGrupo } from '../dominio/grupos-substituicoes';
-import { lerRazaoSnapshot } from '../dominio/decimal-nutricional';
+import { formatarRazao, lerRazaoSnapshot, razaoDecimal } from '../dominio/decimal-nutricional';
 import type { SnapshotComposicao } from './servico-planos-alimentares';
 export type EstadoEquivalencia='calculada_revisada'|'revisao_pendente'|'desvinculada_manualmente';
 export interface CalculoOriginalEquivalencia {
@@ -16,6 +16,7 @@ export interface CalculoOriginalEquivalencia {
 export interface ContextoEquivalencia {
  schemaVersao:1;algoritmo:'equivalencia-nutriente-v1';aplicacaoId:string;itemChave:string;alternativaChave:string;
  nutriente:NutrienteEquivalencia;politica:PoliticaEquivalencia;principal:FatosComposicaoEquivalencia;alternativa:FatosComposicaoEquivalencia;
+ dependenciasVersao?:1|2;
  porcaoPrincipalGramas:string;porcaoEfetivaGramas:string;resultado:Extract<ResultadoEquivalencia,{estado:'calculavel'}>;
  estado:EstadoEquivalencia;ator:{usuarioId:string;profissionalId:string};comandoHash:string;dependenciasHash:string;fingerprintResolucao:string;
  snapshotPrincipal?:SnapshotComposicao;snapshotAlternativa?:SnapshotComposicao;
@@ -49,8 +50,13 @@ function calculoOriginal(c:ContextoEquivalencia):CalculoOriginalEquivalencia {
   ...(c.snapshotPrincipal?{snapshotPrincipal:copia(c.snapshotPrincipal)}:{}),...(c.snapshotAlternativa?{snapshotAlternativa:copia(c.snapshotAlternativa)}:{})};
 }
 function dadosMedida(a:ItemEdicao|AlternativaEdicao){return a.medidaCaseira?{id:a.medidaCaseira.id,revisao:a.medidaCaseira.revisao,quantidade:numeroEdicao(a.quantidade)}:undefined;}
-export function assinaturaDependenciasEquivalencia(i:ItemEdicao,a:AlternativaEdicao,p:FatosComposicaoEquivalencia,f:FatosComposicaoEquivalencia,nutriente:NutrienteEquivalencia,politica:PoliticaEquivalencia):string {
- return fingerprintEquivalencia({principal:fatosSemanticosEquivalencia(p),alternativa:fatosSemanticosEquivalencia(f),porcaoPrincipal:numeroEdicao(i.porcaoGramas),porcaoAlternativa:numeroEdicao(a.porcaoGramas),medidaPrincipal:dadosMedida(i),medidaAlternativa:dadosMedida(a),nutriente,politica});
+export function assinaturaDependenciasEquivalencia(i:ItemEdicao,a:AlternativaEdicao,p:FatosComposicaoEquivalencia,f:FatosComposicaoEquivalencia,nutriente:NutrienteEquivalencia,politica:PoliticaEquivalencia,versao:1|2=2):string {
+ if(versao===1)return fingerprintEquivalencia({principal:fatosSemanticosEquivalencia(p),alternativa:fatosSemanticosEquivalencia(f),porcaoPrincipal:numeroEdicao(i.porcaoGramas),porcaoAlternativa:numeroEdicao(a.porcaoGramas),medidaPrincipal:dadosMedida(i),medidaAlternativa:dadosMedida(a),nutriente,politica});
+ const fatosDeCalculo=(x:FatosComposicaoEquivalencia)=>({identidade:x.identidade,...(x.identidade.startsWith('manual:')?{identificacaoManual:x.descricao.trim().replace(/\s+/g,' ').toLowerCase()}:{}),preparacao:x.preparacao?.trim().replace(/\s+/g,' ').toLowerCase(),baseGramas:formatarRazao(razaoDecimal(x.baseGramas),16),nutrientes:Object.fromEntries(Object.entries(x.nutrientes).filter(([,v])=>v!==undefined).map(([k,v])=>[k,formatarRazao(razaoDecimal(v),16)]))});
+ // A dependência que marca revisão representa os dados que entram na fórmula.
+ // Versão/hash/código editorial da fonte continuam no snapshot e no fingerprint
+ // da prévia, mas mudança somente de metadados não torna o cálculo obsoleto.
+ return fingerprintEquivalencia({principal:fatosDeCalculo(p),alternativa:fatosDeCalculo(f),porcaoPrincipal:numeroEdicao(i.porcaoGramas),porcaoAlternativa:numeroEdicao(a.porcaoGramas),medidaPrincipal:dadosMedida(i),medidaAlternativa:dadosMedida(a),nutriente,politica});
 }
 function hashComando(c:ComandoEquivalencia):string {return fingerprintEquivalencia({...c,...(c.porcaoEfetiva!==undefined?{porcaoEfetiva:Number(c.porcaoEfetiva)}:{})});}
 function fingerprintResolucao(c:ContextoEquivalencia,atual:string):string {return fingerprintEquivalencia({aplicacaoId:c.aplicacaoId,itemChave:c.itemChave,alternativaChave:c.alternativaChave,estado:c.estado,dependencias:atual});}
@@ -86,12 +92,13 @@ export function clonarContextoEquivalenciaParaCopia(
 const copiaJson=<T>(v:T):T=>JSON.parse(JSON.stringify(v));
 export function validarContextosEquivalencias(v:unknown):ContextosEquivalencias {
  if(!v||typeof v!=='object'||Array.isArray(v)||![Object.prototype,null].includes(Object.getPrototypeOf(v))||Object.keys(v).length>10000||Buffer.byteLength(JSON.stringify(v),'utf8')>2*1024*1024)throw new ConflitoEquivalenciaEdicao();
- const campos=['schemaVersao','algoritmo','aplicacaoId','itemChave','alternativaChave','nutriente','politica','principal','alternativa','porcaoPrincipalGramas','porcaoEfetivaGramas','resultado','estado','ator','comandoHash','dependenciasHash','fingerprintResolucao','snapshotPrincipal','snapshotAlternativa','aplicados','resolucao','copiaOrigem','calculoOriginalCopia'];
+ const campos=['schemaVersao','algoritmo','aplicacaoId','itemChave','alternativaChave','nutriente','politica','principal','alternativa','dependenciasVersao','porcaoPrincipalGramas','porcaoEfetivaGramas','resultado','estado','ator','comandoHash','dependenciasHash','fingerprintResolucao','snapshotPrincipal','snapshotAlternativa','aplicados','resolucao','copiaOrigem','calculoOriginalCopia'];
  const ids=new Set<string>();
  for(const [chave,valor]of Object.entries(v)){
   const c=objetoGrupo(valor,campos) as unknown as ContextoEquivalencia;
   if(c.schemaVersao!==1||c.algoritmo!=='equivalencia-nutriente-v1'||typeof c.aplicacaoId!=='string'||!UUID_GRUPO.test(c.aplicacaoId)||ids.has(c.aplicacaoId)||c.alternativaChave!==chave||typeof c.itemChave!=='string'||!c.itemChave||c.itemChave.length>100||!nutrienteEquivalenciaValido(c.nutriente)||!['calculada_revisada','revisao_pendente','desvinculada_manualmente'].includes(c.estado)||![c.comandoHash,c.dependenciasHash,c.fingerprintResolucao].every(hashValido)||Buffer.byteLength(JSON.stringify(c),'utf8')>16*1024)throw new ConflitoEquivalenciaEdicao();
   ids.add(c.aplicacaoId);validarPoliticaEquivalencia(c.politica);
+  if(c.dependenciasVersao!==undefined&&c.dependenciasVersao!==1&&c.dependenciasVersao!==2)throw new ConflitoEquivalenciaEdicao();
   const ator=objetoGrupo(c.ator,['usuarioId','profissionalId']);if(![ator.usuarioId,ator.profissionalId].every(x=>typeof x==='string'&&UUID_GRUPO.test(x)))throw new ConflitoEquivalenciaEdicao();
   fatosSemanticosEquivalencia(c.principal);fatosSemanticosEquivalencia(c.alternativa);
   if(c.aplicados){const a=objetoGrupo(c.aplicados,['principal','alternativa','snapshotPrincipal','snapshotAlternativa']);fatosSemanticosEquivalencia(a.principal as FatosComposicaoEquivalencia);fatosSemanticosEquivalencia(a.alternativa as FatosComposicaoEquivalencia);}
@@ -155,8 +162,8 @@ export async function resolverEquivalenciasDocumento(documento:DocumentoEdicaoPl
   if(!cb.ator)throw new ConflitoEquivalenciaEdicao();
   const previa=await cb.prever(documento,item,a,e);
   if(previa.fingerprint!==e.fingerprintEsperado||previa.resultado.estado!=='calculavel'||!previa.resultado.aplicavel||Number(e.porcaoEfetiva)!==Number(previa.resultado.porcaoEfetivaGramas)||Number(numeroEdicao(a.porcaoGramas))!==Number(previa.resultado.porcaoEfetivaGramas))throw new ConflitoEquivalenciaEdicao();
-  const dep=assinaturaDependenciasEquivalencia(item,a,previa.principal,previa.alternativa,e.nutriente!,e.politica!);
-  const c:ContextoEquivalencia={schemaVersao:1,algoritmo:'equivalencia-nutriente-v1',aplicacaoId:e.aplicacaoId,itemChave:item.chaveCliente,alternativaChave:a.chaveCliente,nutriente:e.nutriente!,politica:e.politica!,principal:copia(previa.principal),alternativa:copia(previa.alternativa),porcaoPrincipalGramas:String(numeroEdicao(item.porcaoGramas)),porcaoEfetivaGramas:previa.resultado.porcaoEfetivaGramas,resultado:copia(previa.resultado),estado:'calculada_revisada',ator:{...cb.ator},comandoHash:ch,dependenciasHash:dep,fingerprintResolucao:'',...(previa.snapshotPrincipal?{snapshotPrincipal:copia(previa.snapshotPrincipal)}:{}),...(previa.snapshotAlternativa?{snapshotAlternativa:copia(previa.snapshotAlternativa)}:{}),...(anterior?.copiaOrigem?{copiaOrigem:copia(anterior.copiaOrigem),calculoOriginalCopia:copia(anterior.calculoOriginalCopia??calculoOriginal(anterior))}:{})};
+  const dep=assinaturaDependenciasEquivalencia(item,a,previa.principal,previa.alternativa,e.nutriente!,e.politica!,2);
+  const c:ContextoEquivalencia={schemaVersao:1,algoritmo:'equivalencia-nutriente-v1',aplicacaoId:e.aplicacaoId,itemChave:item.chaveCliente,alternativaChave:a.chaveCliente,nutriente:e.nutriente!,politica:e.politica!,principal:copia(previa.principal),alternativa:copia(previa.alternativa),dependenciasVersao:2,porcaoPrincipalGramas:String(numeroEdicao(item.porcaoGramas)),porcaoEfetivaGramas:previa.resultado.porcaoEfetivaGramas,resultado:copia(previa.resultado),estado:'calculada_revisada',ator:{...cb.ator},comandoHash:ch,dependenciasHash:dep,fingerprintResolucao:'',...(previa.snapshotPrincipal?{snapshotPrincipal:copia(previa.snapshotPrincipal)}:{}),...(previa.snapshotAlternativa?{snapshotAlternativa:copia(previa.snapshotAlternativa)}:{}),...(anterior?.copiaOrigem?{copiaOrigem:copia(anterior.copiaOrigem),calculoOriginalCopia:copia(anterior.calculoOriginalCopia??calculoOriginal(anterior))}:{})};
   c.fingerprintResolucao=fingerprintResolucao(c,dep);atuais[a.chaveCliente]=c;identidades.set(c.aplicacaoId,a.chaveCliente);a.equivalencia={aplicacaoId:c.aplicacaoId};
  }
  return validarContextosEquivalencias(atuais);

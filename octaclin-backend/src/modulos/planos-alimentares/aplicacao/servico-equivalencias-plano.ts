@@ -46,6 +46,9 @@ export class ServicoEquivalenciasPlano {
   p=validarPedidoEquivalencias(p);
   const {profissionalId,versao}=await this.autorizar(g,tenantId,pacienteId,planoId,u,p);
   let preservados:FatosPreservadosEquivalencia={custom:{},catalogos:{}};
+  const recalculoExplicito=new Set(p.recalculoExplicitoChaves??[]);
+  const recalculoFatos=new Set<string>();
+  const recalculosValidados=new Set<string>();
   let medidasSalvas:ContextosMedidas={};
   try{
    if(versao.edicaoSnapshotCriptografado){
@@ -57,8 +60,15 @@ export class ServicoEquivalenciasPlano {
     for(const original of Object.values(snapshot.equivalencias??{})){
      const c={...original,...original.aplicados};
      const pai=pais.get(c.itemChave);if(!pai)continue;
-     if(pai.substituicoes?.some(a=>a.chaveCliente===c.alternativaChave))preservados.equivalencias![c.alternativaChave]={identidade:c.alternativa.identidade,fatos:c.alternativa};
+     const alternativa= pai.substituicoes?.find(a=>a.chaveCliente===c.alternativaChave);
+     if(alternativa)preservados.equivalencias![c.alternativaChave]={identidade:c.alternativa.identidade,fatos:c.alternativa};
      preservados.equivalencias![c.itemChave]={identidade:c.principal.identidade,fatos:c.principal};
+     if(recalculoExplicito.has(c.alternativaChave)){
+      const intencao=alternativa?.equivalencia;
+      const referenciaAnterior=Boolean(intencao&&('aplicacaoId'in intencao&&intencao.aplicacaoId===c.aplicacaoId||'anteriorAplicacaoId'in intencao&&intencao.anteriorAplicacaoId===c.aplicacaoId));
+      if(c.estado!=='revisao_pendente'||c.itemChave!==p.itemChave||!referenciaAnterior)throw new BadRequestException('Só é possível recalcular uma equivalência pendente desta refeição.');
+      recalculosValidados.add(c.alternativaChave);recalculoFatos.add(c.alternativaChave);recalculoFatos.add(c.itemChave);
+     }
     }
    }
    if(versao.medidasCaseirasSnapshotCriptografado){
@@ -68,6 +78,7 @@ export class ServicoEquivalenciasPlano {
    }
    if(versao.alimentosPersonalizadosSnapshotCriptografado)preservados.custom=validarContextosCustom(JSON.parse(this.crypto.descriptografar(versao.alimentosPersonalizadosSnapshotCriptografado)));
   }catch{throw new ServiceUnavailableException('Contexto de edição indisponível.');}
+  if([...recalculoExplicito].some(chave=>!recalculosValidados.has(chave)))throw new BadRequestException('Equivalência pendente não encontrada.');
   const resolverMedida=async(a:AlimentoEdicao)=>{
    const quantidade=numeroEdicao(a.quantidade);if(quantidade===undefined)throw new BadRequestException('Informe a quantidade da medida.');
    const contextos=await resolverMedidasDocumento({schemaVersao:1,refeicoes:[{chaveCliente:'medidas-food05',itens:[{...a,substituicoes:[]} as ItemEdicao]}]},medidasSalvas,
@@ -77,7 +88,7 @@ export class ServicoEquivalenciasPlano {
   };
   const refeicao=p.documentoEdicao.refeicoes.find(r=>r.itens.some(i=>i.chaveCliente===p.itemChave))!;
   const principalEntrada=refeicao.itens.find(i=>i.chaveCliente===p.itemChave)!;
-  const resolver=(a:AlimentoEdicao,pai?:string)=>resolverFatosEquivalencia(g,tenantId,profissionalId,a,this.fontes,preservados,pai);
+  const resolver=(a:AlimentoEdicao,pai?:string)=>resolverFatosEquivalencia(g,tenantId,profissionalId,a,this.fontes,preservados,pai,recalculoFatos.has(a.chaveCliente),!recalculoFatos.has(a.chaveCliente));
   if(principalEntrada.medidaCaseira)principalEntrada.porcaoGramas=(await resolverMedida(principalEntrada)).porcaoGramas;
   const principal=await resolver(principalEntrada);
   const itens:FatosItemRefeicao[]=[];

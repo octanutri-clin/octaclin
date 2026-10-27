@@ -218,6 +218,12 @@ aditiva e plano de rollout separado. Nenhuma migration externa está autorizada.
 - Prévia cancelada sem escrita; confirmação, replay e retry idempotentes; duas
   confirmações concorrentes e rollback integral em falha intermediária no
   PostgreSQL real com role runtime e FORCE RLS.
+
+## Re-review R4 dos achados P2 — 27/10/2026
+
+Revisor independente examinou o delta local atual (HEAD remoto ainda `c3616081`), sem editar arquivos e sem executar testes. Resultado estático favorável: não encontrou riscos bloqueantes novos; considerou P2-01 (composição parcial ligada a contexto FOOD05 válido, snapshot schema 3, sem zeros e sem enfraquecer legado) e P2-02 (dependência de fatos nutricionais, recálculo atual, fonte indisponível e versão legada) corrigidos no código revisado. Esta revisão não é execução independente de testes, não encerra R4 integral e não prova CI/RLS.
+
+Evidências dinâmicas do delta, registradas em `execucao-pos-320-food05.md`: backend focado 205/205, typechecks backend/Web, BFF 62/62 e Fase 314 1/1 passaram localmente em Node 22. PostgreSQL/RLS e CI ainda pendentes. Playwright PA07 não executou assertions: setup local retornou 500 devido ao `node_modules` de outra worktree sem módulos Next/React resolvidos. Exigir a cobertura PA07 no CI; se ausente, manter o gate bloqueado. Não reabrir A04/A05 sem nova evidência.
 - Confirmação só após conferência explícita do profissional, política de revisão,
   publicação, autosave, snapshots FOOD04 e regressões dos arrays legados.
 

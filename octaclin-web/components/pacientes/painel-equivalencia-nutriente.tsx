@@ -122,8 +122,8 @@ export function PainelEquivalenciaNutriente<T extends AlternativaEdicao>(props: 
   const previaSolicitadaRef = useRef(false);
   const assinaturaEntrada = useMemo(() => JSON.stringify({
     versaoId, rascunhoRevisao, documentoEdicao, itemChave, principalDescricao, porcaoPrincipalGramas, nutriente, alternativas,
-    passoPorcaoGramas: preferencias.passoPorcaoGramas, ajustes, medidasEscolhidas
-  }), [ajustes, alternativas, documentoEdicao, itemChave, medidasEscolhidas, nutriente, porcaoPrincipalGramas, preferencias.passoPorcaoGramas, principalDescricao, rascunhoRevisao, versaoId]);
+    passoPorcaoGramas: preferencias.passoPorcaoGramas, ajustes, medidasEscolhidas, recalculoExplicitoChave
+  }), [ajustes, alternativas, documentoEdicao, itemChave, medidasEscolhidas, nutriente, porcaoPrincipalGramas, preferencias.passoPorcaoGramas, principalDescricao, rascunhoRevisao, recalculoExplicitoChave, versaoId]);
   const previaCorresponde = Boolean(previa && assinaturaPrevia === assinaturaEntrada);
 
   useEffect(() => {
@@ -168,7 +168,8 @@ export function PainelEquivalenciaNutriente<T extends AlternativaEdicao>(props: 
         if (medida) return { ...fatos, medidaCaseira: { id: medida.id, revisao: medida.revisao, aplicacaoId: medida.aplicacaoId }, quantidade: medida.quantidade, unidade: medida.nome };
         return porcaoEscolhida === undefined ? fatos : { ...fatos, porcaoGramas: porcaoEscolhida };
       }),
-      politica
+      politica,
+      ...(recalculoExplicitoChave ? { recalculoExplicitoChaves: [recalculoExplicitoChave] } : {})
     };
     previaSolicitadaRef.current = true;
     const assinaturaSolicitada = assinaturaEntrada;
@@ -185,7 +186,7 @@ export function PainelEquivalenciaNutriente<T extends AlternativaEdicao>(props: 
     }).finally(() => {
       if (generationRef.current === generation) setCarregando(false);
     });
-  }, [alternativas, ajustes, assinaturaEntrada, documentoEdicao, itemChave, medidasEscolhidas, nutriente, pacienteId, planoId, preferencias.passoPorcaoGramas, rascunhoRevisao, versaoId]);
+  }, [alternativas, ajustes, assinaturaEntrada, documentoEdicao, itemChave, medidasEscolhidas, nutriente, pacienteId, planoId, preferencias.passoPorcaoGramas, recalculoExplicitoChave, rascunhoRevisao, versaoId]);
 
   useEffect(() => {
     if (!aberto || !previaSolicitadaRef.current) return;

@@ -15,12 +15,12 @@ export function mesmaOrigemGrupo(a: IntencaoGrupo, b: IntencaoGrupo): boolean {
 }
 
 /** Envelope interno cifrado: nunca entra no DTO editorial nem na projecao. */
-export function lerSnapshotEdicaoGrupos(valor: unknown): { documento: DocumentoEdicaoPlano; catalogos: ContextosCatalogoGrupo; equivalencias?: ContextosEquivalencias } {
+export function lerSnapshotEdicaoGrupos(valor: unknown, equivalenciasParaParcial?:ContextosEquivalencias): { documento: DocumentoEdicaoPlano; catalogos: ContextosCatalogoGrupo; equivalencias?: ContextosEquivalencias } {
   const bruto = valor as { schemaSnapshotEdicao?: unknown } | null;
   if(bruto?.schemaSnapshotEdicao===3){
     const e=objetoGrupo(valor,['schemaSnapshotEdicao','documento','catalogosGrupos','equivalencias']);
-    const base=lerSnapshotEdicaoGrupos({schemaSnapshotEdicao:2,documento:e.documento,catalogosGrupos:e.catalogosGrupos});
     const equivalencias=validarContextosEquivalencias(e.equivalencias);
+    const base=lerSnapshotEdicaoGrupos({schemaSnapshotEdicao:2,documento:e.documento,catalogosGrupos:e.catalogosGrupos},equivalencias);
     for(const [chave,c]of Object.entries(equivalencias)){
       const pai=base.documento.refeicoes.flatMap(r=>r.itens).find(i=>i.chaveCliente===c.itemChave);
       const alternativa=pai?.substituicoes?.find(a=>a.chaveCliente===chave);
@@ -44,7 +44,11 @@ export function lerSnapshotEdicaoGrupos(valor: unknown): { documento: DocumentoE
       !snapshot.fonte || typeof snapshot.descricao !== 'string' || !alternativa?.origemGrupo ||
       alternativa.alimentoComposicaoId !== snapshot.alimentoComposicaoId || !mesmaOrigemGrupo(origemGrupo, alternativa.origemGrupo)) throw new Error('Snapshot de catalogo invalido.');
     const n = snapshot.nutrientesPor100g;
-    if (!n || [n.energiaKcal, n.proteinasG, n.carboidratosG, n.gordurasG, ...[n.fibrasG, n.sodioMg].filter(v => v !== undefined)].some(v => typeof v !== 'number' || !Number.isFinite(v) || v < 0)) throw new Error('Composicao de catalogo invalida.');
+    const nutrientesInvalidos=!n||Object.values(n).some(v=>v!==undefined&&(typeof v!=='number'||!Number.isFinite(v)||v<0));
+    const nutrientesEssenciaisAusentes=!n||[n.energiaKcal,n.proteinasG,n.carboidratosG,n.gordurasG].some(v=>v===undefined);
+    const contextoFood05=equivalenciasParaParcial?.[chave];
+    const parcialAutorizado=Boolean(contextoFood05&&contextoFood05.estado!=='desvinculada_manualmente'&&contextoFood05.alternativa.identidade===`catalogo:${snapshot.alimentoComposicaoId!.toLowerCase()}`&&contextoFood05.alternativa.nutrientes[contextoFood05.nutriente]!==undefined);
+    if (nutrientesInvalidos||(nutrientesEssenciaisAusentes&&!parcialAutorizado)) throw new Error('Composicao de catalogo invalida.');
     catalogos[chave] = { itemChave: c.itemChave as string, origemGrupo, snapshot };
   }
   return { documento, catalogos };

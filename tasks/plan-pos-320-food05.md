@@ -676,3 +676,11 @@ O revisor independente releu os fixes de transição de flags e preservação da
 ### Status individual dos gates T15–T18 nesta retomada — 27/10/2026
 
 T15 BLOCKED (focused green não substitui regressões completas de produto). T16 BLOCKED (R4 do delta sem achados, mas R4 integral e a11y/abuso ainda faltam). T17 IN PROGRESS (documentos atualizados; matriz D01–D17/M01–M08 por critério ainda incompleta). T18 BLOCKED (novo CI/RLS não executado; Food04 produção segue pendência operacional). A lista objetiva e os critérios de saída ficam no checklist.
+# Atualização de execução — P2 do checkpoint de 27/10/2026
+
+Esta nota suplementa o contrato funcional abaixo sem reduzir D01–D17 ou M01–M08.
+
+- **Composição parcial FOOD05:** a decisão é limitada à operação FOOD05 com alvo válido. Macros não alvo ausentes continuam ausentes; os totais/impactos afetados devem permanecer marcados incompletos. Snapshot schema 3 pode guardar composição parcial somente quando um contexto FOOD05 validado identifica a mesma alternativa de catálogo e contém o nutriente-alvo. Leitores legados/schema 2 e persistência sem contexto FOOD05 mantêm validação estrita.
+- **Atualidade do catálogo:** equivalência nova guarda versão de dependências 2 e detecta mudanças nos fatos que entram no cálculo (identidade, preparo, base e nutrientes disponíveis normalizados). Mudança editorial/formatting sem mudança nutricional não marca revisão nessa versão. Contextos anteriores sem esse discriminador usam a assinatura versão 1 para compatibilidade histórica.
+- **Recálculo:** apenas ação explícita de profissional sobre equivalência pendente pode usar composição atual autorizada; preview/fingerprint é vinculado à revisão. Fonte inativa/indisponível não permite recálculo com snapshot antigo. Porção e snapshot histórico permanecem intactos até confirmação.
+- **Critério de saída atualizado:** testes locais focados e typechecks são pré-condição para enviar o delta, não para fechar T07-A/T14/T15–T18. Exigir CI do commit exato, cobertura PostgreSQL/RLS aplicável, cenário PA07 em execução efetiva, scanners, matriz de regressão e R4 final independente. Sem mudança de schema nesta correção; não há migration autorizada ou necessária.

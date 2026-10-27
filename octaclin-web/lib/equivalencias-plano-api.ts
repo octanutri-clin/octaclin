@@ -37,7 +37,7 @@ export interface PreviaEquivalenciasApi {
 }
 export interface PedidoPreviaEquivalenciasApi {
  versaoId: string; rascunhoRevisaoEsperada: number; documentoEdicao: DocumentoEdicaoPlano;
- itemChave: string; nutriente: NutrienteEquivalencia; alternativas: AlternativaEdicao[]; politica: PoliticaEquivalencia;
+ itemChave: string; nutriente: NutrienteEquivalencia; alternativas: AlternativaEdicao[]; politica: PoliticaEquivalencia; recalculoExplicitoChaves?: string[];
 }
 export interface EquivalenciaAplicadaApi {
  aplicacaoId: string; estado: 'calculada_revisada' | 'revisao_pendente' | 'desvinculada_manualmente';

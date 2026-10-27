@@ -19,18 +19,25 @@ export function fatosDeSnapshotEquivalencia(s:SnapshotComposicao,identidade:stri
  return {identidade,descricao:s.descricao,...(s.preparacao?{preparacao:s.preparacao}:{}),baseGramas:String(original?.baseGramas??100),nutrientes:valores(original?.nutrientes??s.nutrientesPor100g),...(s.fonte?{fonte:{codigo:s.fonte.codigo,versao:s.fonte.versao,hashConteudo:s.fonte.hashConteudo}}:{})};
 }
 /** Caller já autorizou paciente/plano; contextos só podem vir de cipher servidor. */
-export async function resolverFatosEquivalencia(g:EntityManager,tenantId:string,profissionalId:string|undefined,a:AlimentoEdicao,fontes:FontesGruposSubstituicoes,preservados:FatosPreservadosEquivalencia,itemChave?:string):Promise<FatosComposicaoEquivalencia>{
+export async function resolverFatosEquivalencia(g:EntityManager,tenantId:string,profissionalId:string|undefined,a:AlimentoEdicao,fontes:FontesGruposSubstituicoes,preservados:FatosPreservadosEquivalencia,itemChave?:string,usarComposicaoAtual=false,permitirSnapshotIndisponivel=true):Promise<FatosComposicaoEquivalencia>{
  const identidade=identidadeFatoEquivalencia(a),congelado=preservados.equivalencias?.[a.chaveCliente];
- if(congelado&&congelado.identidade===identidade&&!identidade.startsWith('manual:'))return JSON.parse(JSON.stringify(congelado.fatos));
+ if(congelado&&congelado.identidade===identidade&&!identidade.startsWith('manual:')&&!usarComposicaoAtual)return JSON.parse(JSON.stringify(congelado.fatos));
  const custom=preservados.custom[a.chaveCliente];
  if(a.alimentoPersonalizado&&custom&&custom.id===a.alimentoPersonalizado.id&&custom.revisao===a.alimentoPersonalizado.revisao&&custom.aplicacaoId===a.alimentoPersonalizado.aplicacaoId){
   const c=custom.composicao;return {identidade,descricao:c.nome,...(c.preparacao?{preparacao:c.preparacao}:{}),baseGramas:String(c.baseOrigem.pesoGramas),nutrientes:valores(c.composicaoOrigem.nutrientes),fonte:{codigo:'custom',revisao:custom.revisao}};
  }
  const grupo=preservados.catalogos[a.chaveCliente],ref=(a as {origemGrupo?:any}).origemGrupo;
- if(grupo&&a.alimentoComposicaoId===grupo.snapshot.alimentoComposicaoId&&grupo.itemChave===itemChave&&ref&&mesmaOrigemGrupo(grupo.origemGrupo,ref))return fatosDeSnapshotEquivalencia(grupo.snapshot,identidade);
+ if(grupo&&a.alimentoComposicaoId===grupo.snapshot.alimentoComposicaoId&&grupo.itemChave===itemChave&&ref&&mesmaOrigemGrupo(grupo.origemGrupo,ref)&&!usarComposicaoAtual)return fatosDeSnapshotEquivalencia(grupo.snapshot,identidade);
  if(a.alimentoComposicaoId||a.alimentoPersonalizado){
   const origem=a.alimentoPersonalizado?'custom':'catalogo',id=a.alimentoPersonalizado?.id??a.alimentoComposicaoId!;
-  const r=await fontes.resolver(g,tenantId,profissionalId,'pessoal',{id:a.chaveCliente,origem,alimentoId:id,...(a.alimentoPersonalizado?{revisao:a.alimentoPersonalizado.revisao}:{}),quantidade:1,unidade:'g',porcaoGramas:100});
+  let r:Awaited<ReturnType<FontesGruposSubstituicoes['resolver']>>;
+  try{r=await fontes.resolver(g,tenantId,profissionalId,'pessoal',{id:a.chaveCliente,origem,alimentoId:id,...(a.alimentoPersonalizado?{revisao:a.alimentoPersonalizado.revisao}:{}),quantidade:1,unidade:'g',porcaoGramas:100});}
+  catch(erro){
+   // Um item já aplicado pode continuar usando seu snapshot se a fonte sair
+   // de circulação. A indisponibilidade não atualiza nem apaga fatos históricos.
+   if(permitirSnapshotIndisponivel&&congelado&&congelado.identidade===identidade)return JSON.parse(JSON.stringify(congelado.fatos));
+   throw erro;
+  }
   if(origem==='custom'){
    const c=r.composicao.composicaoCustom;if(!c)throw new ConflictException('Composição indisponível.');
    return {identidade,descricao:c.nome,...(c.preparacao?{preparacao:c.preparacao}:{}),baseGramas:String(c.baseOrigem.pesoGramas),nutrientes:valores(c.composicaoOrigem.nutrientes),fonte:{codigo:'custom',revisao:r.revisao}};

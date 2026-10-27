@@ -862,7 +862,9 @@ export class ServicoPlanosAlimentares {
             }
           }
           if (a.micronutrientesPor100g !== undefined) throw new BadRequestException('Micronutrientes de catálogo não aceitam alteração manual.');
-          const snapshot = preservado ? anterior.snapshot : (await this.resolverItem(gerenciador, dto)).snapshot;
+          const intencaoEquivalencia=a.equivalencia&&'acao'in a.equivalencia?a.equivalencia:undefined;
+          const nutrientForFood05=intencaoEquivalencia&&intencaoEquivalencia.acao!=='desvincular'?intencaoEquivalencia.nutriente:undefined;
+          const snapshot = preservado ? anterior.snapshot : (await this.resolverItem(gerenciador, dto,undefined,undefined,undefined,nutrientForFood05)).snapshot;
           catalogosGrupos[a.chaveCliente] = { itemChave: item.chaveCliente, origemGrupo: a.origemGrupo, snapshot };
           a.descricao = snapshot.descricao; a.nutrientesPor100g = { ...snapshot.nutrientesPor100g };
           composicoesCatalogoGrupo.set(dto, snapshot);
@@ -884,17 +886,20 @@ export class ServicoPlanosAlimentares {
           if(!c.principal.identidade.startsWith('manual:'))preservados.equivalencias![c.itemChave]={identidade:c.principal.identidade,fatos:c.principal};
         }
         const fatos=(a:any,pai?:string)=>resolverFatosEquivalencia(gerenciador,tenantId,profissionalId,a,fontes,preservados,pai);
+        const fatosAtuais=(a:any,pai?:string)=>resolverFatosEquivalencia(gerenciador,tenantId,profissionalId,a,fontes,preservados,pai,true);
         const localizar=(chave:string)=>{for(let ri=0;ri<documento.refeicoes.length;ri++)for(let ii=0;ii<documento.refeicoes[ri].itens.length;ii++)if(documento.refeicoes[ri].itens[ii].chaveCliente===chave)return clinico.refeicoes[ri].itens[ii];throw new ConflitoEquivalenciaEdicao();};
         let resolvidos:ContextosEquivalencias;
         try{resolvidos=await resolverEquivalenciasDocumento(documento,equivalenciasAnteriores,{
           ator:atorEquivalencia,
-          dependencias:async(i,a,c)=>assinaturaDependenciasEquivalencia(i,a,await fatos(i),await fatos(a,i.chaveCliente),c.nutriente,c.politica),
+          // Compara também com a composição corrente acessível. Se a fonte foi
+          // retirada, o resolver mantém o snapshot; se mudou, marca pendente.
+          dependencias:async(i,a,c)=>assinaturaDependenciasEquivalencia(i,a,await fatosAtuais(i),await fatosAtuais(a,i.chaveCliente),c.nutriente,c.politica,c.dependenciasVersao??1),
           prever:async(d,i,a,c)=>{
-            const previa=await this.equivalencias.preverNaTransacao(gerenciador,tenantId,pacienteId,planoId,usuario,{versaoId:rascunho.id,rascunhoRevisaoEsperada:rascunho.rascunhoRevisao??0,documentoEdicao:d,itemChave:i.chaveCliente,nutriente:c.nutriente!,politica:c.politica!,alternativas:[a]});
+            const previa=await this.equivalencias.preverNaTransacao(gerenciador,tenantId,pacienteId,planoId,usuario,{versaoId:rascunho.id,rascunhoRevisaoEsperada:rascunho.rascunhoRevisao??0,documentoEdicao:d,itemChave:i.chaveCliente,nutriente:c.nutriente!,politica:c.politica!,alternativas:[a],...(c.acao==='recalcular'?{recalculoExplicitoChaves:[a.chaveCliente]}:{})});
             const linha=previa.alternativas[0];if(!linha.alimento||!linha.fingerprint)throw new ConflitoEquivalenciaEdicao();
             const pi=localizar(i.chaveCliente),ai=(i.substituicoes??[]).findIndex(x=>x.chaveCliente===a.chaveCliente),pa=pi.substituicoes![ai];
             const snapshotPrincipal=(await this.resolverItem(gerenciador,pi,composicoesCustom.get(pi),composicoesCatalogoGrupo.get(pi))).snapshot;
-            const snapshotAlternativa=(await this.resolverItem(gerenciador,pa,composicoesCustom.get(pa),composicoesCatalogoGrupo.get(pa))).snapshot;
+            const snapshotAlternativa=(await this.resolverItem(gerenciador,pa,composicoesCustom.get(pa),composicoesCatalogoGrupo.get(pa),undefined,c.nutriente)).snapshot;
             return {fingerprint:linha.fingerprint,principal:previa.principal,alternativa:linha.alimento,resultado:linha.resultado,snapshotPrincipal,snapshotAlternativa};
           }
         });}catch(erro){if(erro instanceof ConflitoEquivalenciaEdicao)throw new ConflictException(erro.message,{cause:erro});throw erro;}
@@ -912,7 +917,7 @@ export class ServicoPlanosAlimentares {
             // A pendência só se resolve por recálculo ou desvinculação explícitos.
             c.aplicados={principal:principalAtual,alternativa:f,
               snapshotPrincipal:(await this.resolverItem(gerenciador,pi,composicoesCustom.get(pi),composicoesCatalogoGrupo.get(pi))).snapshot,
-              snapshotAlternativa:(await this.resolverItem(gerenciador,pa,composicoesCustom.get(pa),composicoesCatalogoGrupo.get(pa))).snapshot};
+              snapshotAlternativa:(await this.resolverItem(gerenciador,pa,composicoesCustom.get(pa),composicoesCatalogoGrupo.get(pa),undefined,c.nutriente)).snapshot};
           }
           materiaisEquivalencia.set(pa,{contexto:c,fatos:f});
         }}
@@ -1727,7 +1732,7 @@ export class ServicoPlanosAlimentares {
     gerenciador: EntityManager,
     entrada: SubstituicaoPlanoAlimentarDto,
     custom?: ComposicaoPersonalizada,
-    catalogoGrupo?: SnapshotComposicao, equivalencia?: {contexto:ContextoEquivalencia;fatos:FatosComposicaoEquivalencia}
+    catalogoGrupo?: SnapshotComposicao, equivalencia?: {contexto:ContextoEquivalencia;fatos:FatosComposicaoEquivalencia}, nutrientForFood05?:ContextoEquivalencia['nutriente']
   ): Promise<ItemResolvido> {
     let descricao: string;
     let micros: ValoresMicronutrientesOrigem = {};
@@ -1737,7 +1742,8 @@ export class ServicoPlanosAlimentares {
     if (catalogoGrupo) {
       if (custom || catalogoGrupo.origem !== 'catalogo' || entrada.alimentoComposicaoId !== catalogoGrupo.alimentoComposicaoId || !catalogoGrupo.fonte) throw new BadRequestException('Snapshot de catálogo incompatível.');
       descricao = catalogoGrupo.descricao;
-      nutrientesPor100g = this.validarNutrientesManuais(catalogoGrupo.nutrientesPor100g);
+      const nutrienteParcial=equivalencia?.contexto.nutriente??nutrientForFood05;
+      nutrientesPor100g = nutrienteParcial?this.validarNutrientesParciais(catalogoGrupo.nutrientesPor100g,nutrienteParcial):this.validarNutrientesManuais(catalogoGrupo.nutrientesPor100g);
       if (catalogoGrupo.micronutrientes) {
         baseMicros = catalogoGrupo.micronutrientes.baseGramasOrigem;
         micros = Object.fromEntries(Object.entries(catalogoGrupo.micronutrientes.nutrientes).map(([k,v]) => [k,{estado:v.estado,...(v.valorOrigem !== undefined ? {valor:v.valorOrigem} : {})}]));
@@ -1758,7 +1764,10 @@ export class ServicoPlanosAlimentares {
       });
       if (!alimento) throw new BadRequestException('Alimento do catalogo nao encontrado.');
       if (entrada.micronutrientesPor100g !== undefined) throw new BadRequestException('Micronutrientes de catálogo não aceitam alteração manual.');
-      nutrientesPor100g = this.obterNutrientesCatalogo(alimento, true)!;
+      const nutrienteParcial=equivalencia?.contexto.nutriente??nutrientForFood05;
+      nutrientesPor100g = nutrienteParcial
+        ? this.obterNutrientesCatalogoParaEquivalencia(alimento, nutrienteParcial)
+        : this.obterNutrientesCatalogo(alimento, true)!;
       const fonte = await gerenciador.getRepository(FonteComposicaoAlimentoOrm).findOne({
         where: { id: alimento.fonteId, situacao: 'ativa' }
       });
@@ -1789,7 +1798,8 @@ export class ServicoPlanosAlimentares {
         throw new BadRequestException('Item manual exige descricao e todos os nutrientes por 100 g.');
       }
       descricao = entrada.descricao.trim();
-      nutrientesPor100g = this.validarNutrientesManuais(entrada.nutrientesPor100g);
+      const nutrienteParcial=equivalencia?.contexto.nutriente??nutrientForFood05;
+      nutrientesPor100g = nutrienteParcial?this.validarNutrientesParciais(entrada.nutrientesPor100g,nutrienteParcial):this.validarNutrientesManuais(entrada.nutrientesPor100g);
       if (entrada.micronutrientesPor100g !== undefined) {
         try { micros = Object.fromEntries(Object.entries(validarMicronutrientesManuais(entrada.micronutrientesPor100g)).map(([codigo, valor]) => [codigo, { estado: 'conhecido', valor }])); }
         catch { throw new BadRequestException('Micronutrientes manuais inválidos.'); }
@@ -1803,7 +1813,12 @@ export class ServicoPlanosAlimentares {
         const f=equivalencia.fatos;
         const canonico=normalizarComposicaoDecimal({nutrientes:f.nutrientes,baseGramas:f.baseGramas});
         nutrientesPor100g={...nutrientesPor100g,...Object.fromEntries(Object.entries(canonico).map(([k,v])=>[k,Number(v)]))};
-        nutrientesPorcao={...this.calcularNutrientesPorcao(nutrientesPor100g,entrada.porcaoGramas),...Object.fromEntries(Object.entries(calcularNutrientesDaPorcaoDecimal(f.nutrientes,f.baseGramas,String(entrada.porcaoGramas))).map(([k,v])=>[k,Number(v)]))};
+        // Snapshot de FOOD05 preserva apenas nutrientes conhecidos. Os totais
+        // downstream já os projetam como incompletos, sem preencher ausências.
+        nutrientesPorcao=Object.fromEntries(Object.entries(calcularNutrientesDaPorcaoDecimal(f.nutrientes,f.baseGramas,String(entrada.porcaoGramas))).map(([k,v])=>[k,Number(v)])) as unknown as SubstituicaoPlanoAlimentar['nutrientes'];
+      }else if(nutrientForFood05){
+        const conhecidos=Object.fromEntries(Object.entries(nutrientesPor100g).filter(([,v])=>v!==undefined).map(([k,v])=>[k,String(v)]));
+        nutrientesPorcao=Object.fromEntries(Object.entries(calcularNutrientesDaPorcaoDecimal(conhecidos,'100',String(entrada.porcaoGramas))).map(([k,v])=>[k,Number(v)])) as unknown as SubstituicaoPlanoAlimentar['nutrientes'];
       }else nutrientesPorcao = this.calcularNutrientesPorcao(nutrientesPor100g, entrada.porcaoGramas);
       if (Object.keys(micros).length) micronutrientes = criarSnapshotMicronutrientes(micros, baseMicros, entrada.porcaoGramas);
     } catch (erro) {
@@ -1837,6 +1852,14 @@ export class ServicoPlanosAlimentares {
     return { ...nutrientes };
   }
 
+  private validarNutrientesParciais(nutrientes:Partial<NutrientesPor100gDto>,alvo:ContextoEquivalencia['nutriente']):NutrientesPor100gPlano{
+    const permitidos=['energiaKcal','proteinasG','carboidratosG','gordurasG','fibrasG','sodioMg'];
+    if(!nutrientes||typeof nutrientes!=='object'||Object.keys(nutrientes).some(k=>!permitidos.includes(k)))throw new BadRequestException('Composição FOOD05 inválida.');
+    for(const [campo,valor] of Object.entries(nutrientes))if(valor!==undefined&&(!Number.isFinite(valor)||Number(valor)<0))throw new BadRequestException('Composição FOOD05 inválida.');
+    if(nutrientes[alvo]===undefined)throw new BadRequestException('O nutriente alvo está ausente na composição.');
+    return {...nutrientes} as NutrientesPor100gPlano;
+  }
+
   private composicaoEssencialCatalogoCompleta(alimento: AlimentoComposicaoOrm): boolean {
     return [
       alimento.energiaKcal,
@@ -1844,6 +1867,25 @@ export class ServicoPlanosAlimentares {
       alimento.carboidratosG,
       alimento.lipidiosG
     ].every((valor) => valor !== undefined && valor !== null && Number.isFinite(Number(valor)) && Number(valor) >= 0);
+  }
+
+  private obterNutrientesCatalogoParaEquivalencia(alimento:AlimentoComposicaoOrm,nutriente:ContextoEquivalencia['nutriente']):NutrientesPor100gPlano {
+    const base=Number(alimento.baseGramas);
+    if(!Number.isFinite(base)||base<=0)throw new BadRequestException('Alimento do catalogo possui base nutricional invalida.');
+    const colunas={energiaKcal:'energiaKcal',proteinasG:'proteinasG',carboidratosG:'carboidratosG',gordurasG:'lipidiosG'} as const;
+    const valores:Partial<NutrientesPor100gPlano>={};
+    for(const [campo,coluna] of Object.entries(colunas) as Array<[keyof typeof colunas,typeof colunas[keyof typeof colunas]]>){
+      const valor=alimento[coluna];if(valor===undefined||valor===null)continue;
+      const n=Number(valor);if(!Number.isFinite(n)||n<0)throw new BadRequestException('Composição de catálogo inválida.');
+      valores[campo]=Math.round(n*(100/base)*10_000)/10_000;
+    }
+    if(valores[nutriente]===undefined)throw new BadRequestException('O nutriente alvo está ausente na composição do catálogo.');
+    for(const [campo,coluna] of [['fibrasG','fibrasG'],['sodioMg','sodioMg']] as const){
+      const valor=alimento[coluna];if(valor===undefined||valor===null)continue;
+      const n=Number(valor);if(!Number.isFinite(n)||n<0)throw new BadRequestException('Composição de catálogo inválida.');
+      valores[campo]=Math.round(n*(100/base)*10_000)/10_000;
+    }
+    return valores as NutrientesPor100gPlano;
   }
 
   private obterNutrientesCatalogo(alimento: AlimentoComposicaoOrm, obrigatorio: true): NutrientesPor100gPlano;

@@ -20,6 +20,23 @@ FE = `octaclin-web/`. Novos nomes são propostas, não arquivos criados nesta ro
 | T14 | PostgreSQL/Testcontainers prova agora defaults, RLS por tenant/profissional, CAS concorrente das preferências 1079 e ausência de DDL na role runtime (6/6); matriz integral do save/snapshot ainda precisa ser fechada |
 | T15–T18 | No HEAD `f72a5320`: checks remotos aplicáveis PASS, incluindo backend, web, PostgreSQL/RLS, Demo smoke, PR Gate, governança e scanners; provenance do SBOM SKIPPED pelo workflow. Regressão integral/independente R4 e prontidão operacional ainda pendentes |
 
+## Atualização do checkpoint P2 — 27/10/2026
+
+Este quadro complementa o checkpoint histórico acima; não altera a sequência T01–T18.
+
+| Item | Estado atual | Evidência / pendência |
+| --- | --- | --- |
+| P2-01 — macros não alvo ausentes | **Corrigido localmente; focais PASS** | 205/205 backend em cinco suítes no Node 22, incluindo cálculo, snapshot parcial schema 3, materialização individual e FOOD04. Ausências não viram zero; impacto aparece incompleto. CI do novo HEAD ainda necessário. |
+| P2-02 — composição de catálogo atualizada | **Corrigido localmente; focais PASS** | 205/205 inclui stale após valor nutricional alterado, metadados/formatação sem stale falso, recálculo com composição atual e recusa quando fonte fica inativa. CI do novo HEAD ainda necessário. |
+| Typecheck backend/Web | **PASS local Node 22.21.1** | TypeScript direto, exit code 0 em ambos. |
+| BFF planos / Fase 314 | **PASS local** | 62/62 e 1/1. |
+| T07-A / T14 | **BLOCKED** | Falta CI/PostgreSQL-RLS do delta e fechamento da matriz integrada; a prova RLS local existente não cobre o caminho novo de composição parcial. A04/A05 permanecem PASS técnico. |
+| T15–T18 | **BLOCKED / parcial** | PA07 Playwright não iniciou assertions por dependências apontadas a outra worktree e módulos Next/React ausentes. Exigir CI equivalente; se ausente, gap segue aberto. Regressões, acessibilidade, scanners e build devem ser conferidos no novo HEAD. |
+| R4 | **PASS estático somente para os dois P2** | Re-review independente sem novos achados; não executou testes. Revisão R4 integral da FOOD05 pendente após CI. |
+| PR #446 | **Draft, sem novo commit/push nesta atualização documental** | Delta P2 permanece na worktree; adicionar apenas arquivos intencionais e excluir alteração preexistente em `octaclin-web/next-env.d.ts`. |
+
+Não interpretar os focais locais como conclusão da FOOD05. D01–D17 aplicáveis e M01–M08 ainda exigem matriz final individual; D17 mantém modelos bloqueados e T07-B/D18/A06 permanecem na FOOD05-MDL.
+
 As caixas abaixo continuam sendo critérios de aceite detalhados; nenhuma prova
 focada isolada encerra a entrega. Uma PR funcional foi escolhida dentre as opções
 aprovadas, mantendo as dependências dos blocos A/B/C.
