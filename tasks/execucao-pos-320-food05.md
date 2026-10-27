@@ -871,3 +871,15 @@ Não reportar T07-A ou T14 como PASS até completar o banco e as regressões. T0
 - Re-review R4 independente focada no fix read→recalc: **PASS estático**, sem achados materiais; revisor não executou testes. Isso não equivale à R4 integral final.
 - Testes locais após fix: 5 suítes backend **206/206 PASS**; typecheck backend **PASS**. Este executor só expôs Node `24.19.0` nesta rodada, fora de `>=22 <23`; CI do novo commit precisa confirmar com Node 22. O teste FOOD04, PA07 desktop/mobile, RLS, build, scanners e PR Gate verdes reportados acima são do commit anterior `59f7ecaa`, não do patch read→recalc ainda local.
 - Estado após o fix local: novo delta ainda não commitado/enviado; T07-A/T14/T15–T18 e prontidão de merge **BLOCKED** até CI/RLS do HEAD atualizado, cobertura final e revisão R4 integral da FOOD05. PR #446 permanece Draft; sem migration, deploy ou merge.
+
+
+## Fechamento da retomada P2 — HEAD `8ed8525926a3548d7f6630205fd885ccd6fb785d` (27/10/2026)
+
+- P2-01/P2-02: 206/206 em cinco suítes FOOD05 e typecheck backend local; execução local Node 24.19.0 (fora de `>=22 <23`). CI do commit exato validou Backend em Node 22, suíte completa e PostgreSQL/Testcontainers/RLS descartável.
+- O teste FOOD04 que não tivera resultado foi executado: PASS. `test:copia-refeicoes` Web: PASS no CI.
+- PA07 desktop/mobile: PASS dentro de `pnpm smoke:visual` no Demo local smoke do HEAD, com projetos Chromium desktop e mobile.
+- Backend, Web, Mobile, AI, Governança, Rollout, operação, PR Gate e scanners aplicáveis: PASS. Runs: OctaClin CI `40588351876`, CodeQL `40588351862`, Semgrep `40588351786`, Trivy `40588351895`, Dependency Review `40588351845`. Provenance SBOM: SKIPPED pelo workflow.
+- PostgreSQL/RLS PASS em Testcontainers descartável, role runtime, no CI exato; cenários FOOD05 cobrem CAS/stale, cópia/revisão, concorrência/locks, autorização/carteira, rollback e integridade materializada/snapshot. Sem banco externo ou migration externa.
+- R4 independente integral FOOD05 no commit exato: PASS estático sem achados materiais. O revisor não executou testes; CI/testes são evidência separada.
+- T07-A, T14 e T15–T18 estão registrados no checklist conforme evidência e limites. T07-B/FOOD05-MDL, A06 e D18 não implementados; D17 continua bloqueando aplicação por modelos. Pendência operacional da FOOD04 em produção é separada.
+- Commit enviado `8ed8525926a3548d7f6630205fd885ccd6fb785d`; #446 permanece Draft. `octaclin-web/next-env.d.ts` preexistente ficou fora do commit.

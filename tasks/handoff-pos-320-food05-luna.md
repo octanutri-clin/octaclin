@@ -294,3 +294,15 @@ Releitura R4 independente do delta prioritário concluída: sem achados materiai
 - A revisão independente R4 do commit identificou P2-02: a fonte atualizada não aparecia como pendente na leitura primária. Correção read→recalc concluída localmente; leitura projeta stale sem persistir/recalcular, revisar/publicar revalidam; recálculo só prossegue com divergência de fatos comprovada por fonte autorizada, prévia/fingerprint e CAS. Fontes indisponíveis falham fechadas. RED/GREEN demonstrado por teste do `obter()` até o save de recálculo.
 - Evidência pós-fix: backend cinco suítes 206/206 e typecheck PASS local Node 24.19.0 (fora de engines); re-review R4 focada da correção PASS estático e sem testes pelo revisor. Novas mudanças ainda não enviadas neste handoff; CI verde acima não as valida. Necessário reexecutar CI com Node 22 (incl. RLS/PA07 e scanners) no novo HEAD e obter R4 integral final.
 - Arquivos de código e docs FOOD05 são o delta intencional. `octaclin-web/next-env.d.ts` permanece alteração preexistente fora do patch. Revisar `git status`, diff, `git diff --check`, padrões de segredo; commit/push somente delta FOOD05 na branch `docs/pos320-food05-planning`. #446 permanece Draft. T07-A/T14/T15–T18 BLOCKED até novo CI e R4 integral; nenhum merge/deploy/migration externa.
+
+
+### Fechamento dos P2 e gates no HEAD `8ed8525926a3548d7f6630205fd885ccd6fb785d` — 27/10/2026
+
+- Estado recuperado sem operações destrutivas. `octaclin-web/next-env.d.ts` foi preservado e excluído do commit.
+- **P2-01 PASS:** 206/206 testes focados em cinco suítes; composição parcial exige alvo válido, ausências não viram zero, e subtotal/impacto incompleto permanece identificado. Cobertura individual e FOOD04.
+- **P2-02 PASS:** RED/GREEN do caminho primário `obter()` mostra pendência projetada após mudança de composição, sem alterar porção/revisão/snapshot; revisar/publicar bloqueiam; recálculo explícito resolve fonte atual autorizada, exige prévia/confirmação/CAS e falha fechado quando indisponível.
+- Teste FOOD04 anteriormente interrompido: PASS. CI Web `test:copia-refeicoes`: PASS. Smoke Playwright completo com PA07 desktop/mobile: PASS.
+- **T07-A PASS técnico; T14 PASS técnico para os casos executados:** CI Backend inclui PostgreSQL/Testcontainers/RLS, role runtime, cópias concorrentes, stale/CAS, autorização/carteira, idempotência/replay, rollback e integridade persistida. A04/A05 mantidos PASS, sem reabertura.
+- **T15–T18:** PASS nos critérios e checks executados, com limites SBOM/R4 registrados no checklist. R4 independente integral: PASS estático sem achados; sem execução de testes pelo revisor.
+- CI exato: OctaClin `40588351876`, CodeQL `40588351862`, Semgrep `40588351786`, Trivy `40588351895`, Dependency Review `40588351845`; jobs aplicáveis PASS; SBOM provenance SKIPPED. Backend local 206/206 e typecheck usaram Node 24.19.0 fora da engine; CI executou em Node 22.
+- PR #446 continua Draft. Nenhum merge, deploy, migration externa ou alteração de infraestrutura/cobrança. FOOD04 produção continua pendência operacional separada. FOOD05-MDL/T07-B/D18/A06 não implementados; D17 permanece no frontend e backend.

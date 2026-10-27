@@ -694,3 +694,8 @@ Para recuperar o cálculo, uma prévia de recálculo pode partir do estado armaz
 RED/GREEN: teste RED mostrou leitura primária stale; teste GREEN cobre projeção, bloqueio de revisão/publicação, composição atual na prévia e confirmação do recálculo. Cinco suítes backend: **206/206 PASS**; typecheck backend **PASS** localmente em Node 24.19.0 (ambiente fora da engine). R4 independente focada no fix: **PASS estático**, não executou testes. O CI `40583522721` e Demo/PA07/Backend/RLS verdes pertencem ao commit anterior `59f7ecaa`; aguardam reexecução no novo HEAD.
 
 Sem alteração de schema/migration. Até CI/RLS, scanners, revisão R4 integral final e matriz T07-A/T14/T15–T18 no HEAD corrigido, os gates permanecem **BLOCKED** e #446 Draft.
+
+
+## Checkpoint final de validação P2 — 27/10/2026
+
+No commit `8ed8525926a3548d7f6630205fd885ccd6fb785d`, P2-01 e P2-02 passaram nos testes focados e no CI completo aplicável. O fluxo read→recalc de catálogo é read-only até confirmação; composição ausente não vira zero e totais dependentes são apresentados incompletos. PostgreSQL/RLS, PA07 desktop/mobile, Demo smoke, PR Gate e scanners aplicáveis passaram. R4 independente integral: PASS estático sem achados, sem execução de testes pelo revisor. Consulte o checklist e o handoff para IDs, escopo e limitações. A PR #446 segue Draft; nenhuma operação externa foi feita.

@@ -1,5 +1,23 @@
 # FOOD05 — T01–T18, dependências e critérios de aceite
 
+### Fechamento da retomada P2 — commit `8ed8525926a3548d7f6630205fd885ccd6fb785d` (27/10/2026)
+
+Este checkpoint substitui os estados de retomada anteriores para os itens abaixo; os registros históricos continuam preservados.
+
+- **P2-01 — PASS:** cinco suítes FOOD05, 206/206; alvo válido permite cálculo parcial, não alvos ausentes permanecem ausentes, e impactos incompletos não são apresentados como totais completos. Cobertura individual e grupos FOOD04. Backend CI no Node 22 e integração PostgreSQL/RLS do HEAD também passaram.
+- **P2-02 — PASS:** regressão RED/GREEN cobre a leitura primária `obter()` projetando `revisao_pendente` read-only após mudança nutricional, bloqueio de revisão/publicação, prévia atual e confirmação explícita do recálculo. Porção/snapshot histórico não mudam na leitura; fonte indisponível falha fechada. Re-review R4 independente focada: PASS estático.
+- **Teste FOOD04 interrompido — PASS:** a suíte focada de serviço inclui cálculo parcial por grupo FOOD04; Web `test:copia-refeicoes` também passou no CI do HEAD.
+- **T07-A — PASS técnico:** provas Postgres/RLS do HEAD cobrem cópias, CAS/revisão stale, locks concorrentes, rollback, autorização/carteira, replay e inspeção de persistência; testes de cópia cobrem identidade nova, proveniência cifrada e flags false/false/revisão pendente. T07-B segue futuro.
+- **T14 — PASS técnico para a matriz FOOD05 exercitada:** Backend CI executou PostgreSQL descartável com role runtime/RLS; cenários de cópia concorrente, stale/CAS, autorização, rollback e integridade persistida passaram. Não interpretar como certificação de cenários não presentes na suíte.
+- **T15 — PASS nos gates executados:** regressões Backend/Web, cópia, Demo smoke e jornada Playwright, incluindo coordenação PA07 desktop/mobile, passaram no HEAD. Rastrear os limites de cobertura nas suítes existentes.
+- **T16 — PASS estático e checks automatizados aplicáveis:** revisão R4 independente integral sem achados materiais; CodeQL, Semgrep, Trivy e Dependency Review passaram. O revisor não executou testes. Provenance do SBOM foi SKIPPED. Isso não afirma auditoria externa de acessibilidade além dos testes executados.
+- **T17 — PASS documental para este checkpoint:** documentos e descrição da PR atualizados com evidências, gates e limitações; a transferência T07-B/FOOD05-MDL, D17 e a pendência operacional FOOD04-produção permanecem registradas.
+- **T18 — PASS CI do HEAD; operacional de produção BLOCKED/fora desta PR:** PR Gate passou. Não houve migration externa, deploy ou alteração de infraestrutura. A FOOD04 ainda precisa regularização operacional própria.
+- **R4 independente final — PASS estático:** revisão integral da FOOD05 no commit exato, sem achados materiais. A revisão não executou testes; os testes são evidência separada do CI.
+- **CI do HEAD exato:** OctaClin CI `40588351876`; CodeQL `40588351862`; Semgrep `40588351786`; Trivy `40588351895`; Dependency Review `40588351845`. Jobs aplicáveis passaram; SBOM provenance SKIPPED.
+- **Ambiente local:** 206/206 e typecheck Backend passaram localmente em Node 24.19.0, fora do intervalo declarado. A validação compatível Node 22 está fornecida pelo CI do commit exato; não alterar engines.
+- **Estado de entrega:** commit enviado `8ed8525926a3548d7f6630205fd885ccd6fb785d`; PR #446 permanece Draft por decisão expressa. Nenhum merge/deploy/migration externa.
+
 Contrato: [plan-pos-320-food05.md](plan-pos-320-food05.md).
 Estado: implementação autorizada pelo proprietário em “Pode seguir, sol médio”.
 Execução/evidências reais em [execucao-pos-320-food05.md](execucao-pos-320-food05.md).
@@ -13,12 +31,16 @@ FE = `octaclin-web/`. Novos nomes são propostas, não arquivos criados nesta ro
 | --- | --- |
 | T01–T05 | Fundamentos implementados e verificações focadas PASS; fechamento integrado ainda depende dos gates finais |
 | T06 | Motor, writer/ACK, revisão e snapshots implementados; suites focadas PASS, conclusão funcional ainda vinculada às cópias e regressões finais |
-| T07 | Cópia entre refeições/planos salvos usa referências opacas e revalidação server-side; serviço de modelos rejeita proveniência inesperada em gravação/leitura. Aplicação de equivalências por modelo continua bloqueada; T07 não concluído |
+| T07-A | **PASS técnico no HEAD 8ed85259**: cópias clínicas autorizadas, proveniência cifrada, nova identidade, revisão pendente, revalidação, CAS/locks/rollback e RLS exercitados. |
+| T07-B | **PENDENTE / FOOD05-MDL**: modelos matemáticos compartilháveis não implementados; D17 bloqueia aplicação no frontend/backend. Não marcar T07 original integralmente concluído. |
 | T08 | Preferências e migration 1079 implementadas; CAS/RLS/JSON exercitados no PostgreSQL de CI |
 | T09 | Backend, BFF, cliente tipado e integração principal com a UI implementados; verificações Web passam |
 | T10–T13 | Implementação parcial integrada; FOOD05/PA07 24/24 desktop/mobile no último teste local; edição de porção atualiza residual sem escrita antes de confirmar. Matriz restante, cópia por modelo e histórico integral pendentes |
-| T14 | PostgreSQL/Testcontainers prova agora defaults, RLS por tenant/profissional, CAS concorrente das preferências 1079 e ausência de DDL na role runtime (6/6); matriz integral do save/snapshot ainda precisa ser fechada |
-| T15–T18 | No HEAD `f72a5320`: checks remotos aplicáveis PASS, incluindo backend, web, PostgreSQL/RLS, Demo smoke, PR Gate, governança e scanners; provenance do SBOM SKIPPED pelo workflow. Regressão integral/independente R4 e prontidão operacional ainda pendentes |
+| T14 | **PASS técnico nos cenários executados no HEAD 8ed85259**: PostgreSQL/Testcontainers, role runtime/RLS, CAS, cópia concorrente, rollback, autorização e persistência. |
+| T15 | **PASS nos gates executados no HEAD 8ed85259**: regressões Backend/Web, FOOD04 copy, Demo smoke e Playwright PA07 desktop/mobile. |
+| T16 | **PASS estático/checks aplicáveis**: R4 independente integral sem achados; CodeQL, Semgrep, Trivy e Dependency Review PASS. Reviewer não executou testes; SBOM SKIPPED. |
+| T17 | **PASS documental deste checkpoint**: checklist, execução, plano, arquitetura, handoff e PR atualizados. |
+| T18 | **PASS CI do HEAD** (PR Gate incluído); pendência operacional FOOD04-produção permanece separada e fora desta PR. |
 
 ## Atualização do checkpoint P2 — 27/10/2026
 
@@ -26,8 +48,8 @@ Este quadro complementa o checkpoint histórico acima; não altera a sequência 
 
 | Item | Estado atual | Evidência / pendência |
 | --- | --- | --- |
-| P2-01 — macros não alvo ausentes | **Corrigido localmente; focais PASS** | 205/205 backend em cinco suítes no Node 22, incluindo cálculo, snapshot parcial schema 3, materialização individual e FOOD04. Ausências não viram zero; impacto aparece incompleto. CI do novo HEAD ainda necessário. |
-| P2-02 — composição de catálogo atualizada | **Corrigido localmente; focais PASS** | 205/205 inclui stale após valor nutricional alterado, metadados/formatação sem stale falso, recálculo com composição atual e recusa quando fonte fica inativa. CI do novo HEAD ainda necessário. |
+| P2-01 — macros não alvo ausentes | **PASS** | 206/206 em cinco suítes FOOD05; CI do HEAD exato em Node 22 e PostgreSQL/RLS PASS. Ausências continuam desconhecidas; subtotal/impacto marcado incompleto. |
+| P2-02 — composição de catálogo atualizada | **PASS** | 206/206; leitura primária projeta revisão pendente read-only, bloquear revisão/publicação, recálculo explícito usa fonte atual autorizada, prévia e confirmação; fonte indisponível falha fechado. CI/RLS do HEAD PASS. |
 | Typecheck backend/Web | **PASS local Node 22.21.1** | TypeScript direto, exit code 0 em ambos. |
 | BFF planos / Fase 314 | **PASS local** | 62/62 e 1/1. |
 | T07-A / T14 | **BLOCKED** | Falta CI/PostgreSQL-RLS do delta e fechamento da matriz integrada; a prova RLS local existente não cobre o caminho novo de composição parcial. A04/A05 permanecem PASS técnico. |
