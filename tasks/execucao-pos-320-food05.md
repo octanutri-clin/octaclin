@@ -825,3 +825,11 @@ Não reportar T07-A ou T14 como PASS até completar o banco e as regressões. T0
 - R4 independente estática do delta: sem achados; confirmou que o executor instrumentado sinaliza a barreira e mantém as verificações. O revisor não executou testes.
 - Backend typecheck local foi reiniciado para este delta e ainda aguarda resultado. Nova prova PostgreSQL/RLS/CI obrigatória; A04/A05/T07-A/T14 permanecem BLOCKED.
 - A04/A05/T07-A/T14 permanecem BLOCKED. PR #446 continua Draft; sem migration externa, merge ou deploy.
+
+### Resultado CI `40536581786` — HEAD `919ce32f` — 27/10/2026
+
+- Backend NestJS: **PASS**, 3.557 testes passaram e 48 foram skipped; Testcontainers/RLS descartável também **PASS**. A04 e A05 ficam **PASS técnico** para concorrência, ordem de locks, rollback, CAS/revisão stale e ausência de escrita em destino após conflito.
+- Causa dos dois timeouts anteriores: callback edit-first usava executor normal, então `disputarPa06` nunca sinalizava a barreira. Corrigido usando o executor instrumentado. R4 independente estática confirmou a correção, sem achados; reviewer não executou testes.
+- Web Next.js, Mobile Expo, AI FastAPI, Governança, Operação, Rollout, CodeQL, Semgrep, Trivy e Dependency Review: **PASS**.
+- Demo local smoke: **em andamento** em “Smoke visual Playwright”; PR Gate ainda não estava fechado na consulta.
+- Portanto T07-A/T14 seguem BLOCKED até regressões FOOD04/autosave/PA07, os demais critérios de aceitação, smoke/PR Gate e R4 independente final. PR #446 permanece Draft; sem migration externa, merge ou deploy.

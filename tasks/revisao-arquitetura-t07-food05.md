@@ -255,8 +255,8 @@ Não há migration nova neste desenho: revisão editorial e UUID já existem. O 
 | A01 | Contido por D17 | Segue bloqueio de modelo; ver T07-B |
 | A02/D15 | Corrigido tecnicamente | Preservar testes/histórico; gate integrado final |
 | A03/D16 | Corrigido tecnicamente | Preservar testes/histórico; gate integrado final |
-| A04 | Implementação + unit tests; integração pendente | PostgreSQL/RLS recíproco, atomicidade, rollback, R4 |
-| A05 | DTO/service/browser + focados; integração pendente | PostgreSQL stale/revogação/transferência, nenhuma escrita e R4 |
+| A04 | PASS técnico no CI `40536581786` | Prova Postgres/RLS controlada, cópias recíprocas, atomicidade e rollback executados; R4 estática sem achados |
+| A05 | PASS técnico no CI `40536581786` | Copy-first/edit-first, revisão stale sem gravação e R4 estática sem achados |
 | A06 | Aberto, transferido para T07-B | D17 impede caminho; projeto FOOD05-MDL separado |
 | A07 | Sem mudança estrutural nesta correção | Confirmar gates no HEAD; produção separada e não autorizada |
 
@@ -294,3 +294,9 @@ Após o CI `40532192140` exceder 90s no cenário edit-first, o fixture foi reduz
 ### Causa do timeout repetido no CI `40534905458` — 27/10/2026
 
 O segundo CI manteve o timeout porque o callback da edição usava o executor normal do serviço, não o executor de teste recebido de `disputarPa06`; a barreira aguardada pelo helper nunca era sinalizada. O callback foi corrigido para instanciar o serviço com o executor instrumentado. A revisão R4 independente estática desse delta confirmou a barreira e os asserts edit-first (revisão de origem 2, cópia stale 409 e destino ainda em revisão 1), sem novos achados. Revisor não executou testes. Necessária nova prova PostgreSQL/RLS para PASS.
+
+### Resultado da prova A04/A05 — HEAD `919ce32f` — 27/10/2026
+
+O CI `40536581786` passou o Backend NestJS com 3.557 testes PASS/48 SKIPPED e a etapa separada Testcontainers/RLS descartável também PASS. As provas de A04/A05 foram exercitadas com concorrência controlada, recusa de cópia stale e nenhuma escrita no destino. A04 e A05 recebem PASS técnico para seus critérios de concorrência/CAS/rollback. A R4 independente estática da correção do executor não encontrou achados; não executou testes.
+
+T07-A e T14 permanecem BLOCKED enquanto faltarem regressões FOOD04/autosave/PA07 e a confirmação dos demais critérios/gates da FOOD05. O smoke visual Playwright ainda estava em execução; PR #446 permanece Draft.

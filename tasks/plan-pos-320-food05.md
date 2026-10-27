@@ -646,3 +646,9 @@ Esta seção substitui afirmações anteriores que exigiam implementar aplicaç�
 Critérios para T07-A PASS: testes de serviço/DTO e BFF/cliente para UUID e revisão; teste PostgreSQL/RLS com cópias A→B e B→A concorrentes; rejeição sem gravação para draft obsoleto ou autorização revogada/transferida; verificação de rollback e snapshots/proveniência cifrados; regressões FOOD04/autosave/PA07; CI no HEAD; revisão R4 independente específica. Até essas evidências, A04/A05 e T07-A permanecem BLOCKED/PARCIAL.
 
 **Operação:** PR #446 permanece Draft. Nenhum merge, deploy ou migration externa. FOOD04 produção continua uma dependência operacional registrada; o evento prévio de quota não é considerado resolvido sem nova evidência.
+
+### Resultado dos gates A04/A05 e continuidade — 27/10/2026
+
+No HEAD `919ce32f`, CI `40536581786` passou Backend NestJS com Postgres descartável/RLS real: 3.557 testes PASS, 48 SKIPPED; o passo Testcontainers/RLS também PASS. A04 e A05 recebem PASS técnico, incluindo concorrência/locks, rollback, revisão stale e ausência de escrita no destino. O timeout do run anterior foi causado pelo teste edit-first ignorar o executor instrumentado do helper; a correção foi revisada estaticamente por R4 independente, sem achados. O revisor não executou testes.
+
+T07-A e T14 continuam BLOCKED até regressões FOOD04, autosave e PA07, revisão final dos critérios, Demo local smoke/PR Gate e R4 independente final da entrega. CodeQL, Semgrep, Trivy, Dependency Review, Backend, Web, Mobile, Governança, Operação, Rollout e AI passaram; Demo local smoke estava em execução, portanto PR Gate não estava fechado. PR #446 continua Draft. T07-B/FOOD05-MDL, D18 e A06 não foram implementados; D17 permanece bloqueando aplicação por modelo.

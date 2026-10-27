@@ -545,3 +545,14 @@ Critério de fechamento: FOOD05 principal pode concluir quando T07-A passar e D0
 - [x] Injetar o executor de `disputarPa06` na operação de edição; assertions edit-first e destino sem escrita mantidas.
 - [x] R4 estática independente do delta: sem achados; não executou testes.
 - [ ] Confirmar typecheck local e executar novamente Postgres/RLS no CI. Até lá A04/A05/T07-A/T14 continuam BLOCKED.
+
+### Resultado CI `40536581786` / HEAD `919ce32f` — 27/10/2026
+
+- [x] A04: prova PostgreSQL concorrente/locks, rollback e RLS em role runtime descartável — PASS.
+- [x] A05: copy-first/edit-first, revisão stale, 409 sem escrita no destino e RLS — PASS.
+- [x] Backend: 3.557 PASS, 48 SKIPPED; Testcontainers/RLS PASS; typecheck/build PASS no CI.
+- [x] R4 independente estática do fix do executor: sem achados; revisor não executou testes.
+- [x] Web, Mobile, AI, Governança, Operação, Rollout, CodeQL, Semgrep, Trivy e Dependency Review — PASS.
+- [ ] T07-A/T14: regressões FOOD04/autosave/PA07 e critérios finais ainda pendentes.
+- [ ] Demo local smoke estava em Smoke visual Playwright; PR Gate ainda não confirmado. Manter #446 Draft.
+- T07-B/FOOD05-MDL permanece futuro; D18 não implementada e A06 aberto/contido por D17.
