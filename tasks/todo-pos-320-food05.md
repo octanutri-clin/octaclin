@@ -529,3 +529,11 @@ Critério de fechamento: FOOD05 principal pode concluir quando T07-A passar e D0
 - [x] R4 independente estática do delta: sem achados adicionais; revisor não executou testes.
 - [ ] Executar ambos em PostgreSQL/RLS no próximo CI; não considerar o timeout anterior como prova funcional.
 - [ ] T07-A/T14 continuam BLOCKED até estes cenários e os gates restantes passarem.
+
+### Resultado e retrabalho após CI `40532192140` — 27/10/2026
+
+- [x] Identificar a falha real: 3.556 testes PostgreSQL/RLS passaram e 48 foram skipped; a prova edit-first excedeu 90s, sem assertion falha. Backend CI FAIL.
+- [x] Reduzir trabalho redundante do fixture A05: destino passa a ser outro plano do mesmo paciente, preservando lock concorrente, edição da origem primeiro, cópia com revisão 1 obsoleta, resposta 409 e destino na revisão 1.
+- [x] Revisão R4 independente estática do fixture reduzido: sem achados; revisor não executou testes.
+- [x] Backend typecheck PASS e testes focados PASS (8 selecionados em 2 suítes; 127 filtrados/skipped).
+- [ ] Executar nova prova Postgres/RLS no CI. A04/A05/T07-A/T14 seguem BLOCKED até sucesso de edit-first, copy-first, cópias recíprocas, rollback, autorização e CAS.

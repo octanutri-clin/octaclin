@@ -251,3 +251,7 @@ O CI `40528993006` executou Postgres/RLS e reportou 3.554 PASS, 48 SKIPPED e 2 f
 ### Último delta de testes — 27/10/2026
 
 O CI `40530639253` executou PostgreSQL/RLS; 3.555 testes passaram, 48 foram skipped, e a prova A05 conjunta excedeu 120s. O teste agora está dividido em copy-first e edit-first (90s cada), mantendo asserts de sucesso/revisão pendente/revisão incrementada para a primeira ordem e 409/nenhuma escrita na segunda. R4 independente estática: sem novos achados, sem execução de testes. Fazer commit/push e aguardar CI; A04/A05/T07-A/T14 permanecem BLOCKED.
+
+### Continuidade após CI `40532192140` — 27/10/2026
+
+No HEAD `78482c33`, Postgres/RLS passou 3.556 testes, pulou 48 e falhou somente por timeout de 90s na prova edit-first A05 (nenhuma assertion de domínio falhou). Reduzi o setup para usar segundo plano do mesmo paciente, mantendo lock concorrente, origem editada para revisão 2, cópia com revisão esperada 1 recusada com 409 e destino imutável em revisão 1. R4 independente estática deste delta: sem achados; reviewer não executou testes. Backend typecheck local PASS; Jest focado PASS (8 selecionados em 2 suítes; 127 filtrados/skipped). PR #446 aberta/Draft. Nova execução PostgreSQL/RLS obrigatória; A04/A05/T07-A/T14 seguem BLOCKED. FOOD05-MDL/D18/A06 não implementados; D17 mantém bloqueio backend/UI. Nenhuma migration externa, merge ou deploy.

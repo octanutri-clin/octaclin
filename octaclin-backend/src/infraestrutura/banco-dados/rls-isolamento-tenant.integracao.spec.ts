@@ -1858,28 +1858,34 @@ descrever('RLS e isolamento multi-tenant integral em Postgres real', () => {
   },90000);
   it('FOOD05 PostgreSQL: edição da origem vence e cópia stale não grava',async()=>{
     const origem=await prepararCenarioFood05('food05-copy-edit-first-origin'),salvaOrigem:any=await origem.salvar();
-    const destinoNovo=await prepararCenarioFood05('food05-copy-edit-first-destination');
-    const salvoDestinoNovo:any=await destinoNovo.salvar();
-    await cliente!.query('update pacientes set profissional_responsavel_id=$1 where tenant_id=$2 and id=$3',[origem.profissionalId,tenantA,destinoNovo.pacienteId]);
+    // Use a segunda versão/plano do mesmo paciente para reduzir o custo do
+    // fixture sem enfraquecer o cenário: a edição primeiro retém o lock do
+    // paciente de origem, e a cópia precisa revalidar a revisão ao prosseguir.
+    const destinoNovo=await origem.servico.criar(tenantA,origem.pacienteId,origem.usuario,{titulo:'Destino sintético FOOD05'});
+    const documentoDestino=JSON.parse(JSON.stringify(salvaOrigem.documentoEdicao));
+    for(const refeicao of documentoDestino.refeicoes)for(const item of refeicao.itens)item.substituicoes=[];
+    const salvoDestinoNovo:any=await origem.servico.salvarEdicaoRascunho(tenantA,origem.pacienteId,destinoNovo.id,origem.usuario,{
+      rascunhoIdEsperado:destinoNovo.draft!.id,rascunhoRevisaoEsperada:0,documento:documentoDestino
+    });
     const documentoNovo=JSON.parse(JSON.stringify(salvoDestinoNovo.documentoEdicao));
     const documentoOrigemNovo=JSON.parse(JSON.stringify(salvaOrigem.documentoEdicao));
     const itemNovo=documentoOrigemNovo.refeicoes[0].itens[0],alternativaNova=itemNovo.substituicoes[0];
     const itemCopia=JSON.parse(JSON.stringify(itemNovo)),alternativaCopia=itemCopia.substituicoes[0];
     itemCopia.chaveCliente='origem-editada-primeiro-item';alternativaCopia.chaveCliente='origem-editada-primeiro-alt';delete alternativaCopia.equivalencia;
     documentoNovo.refeicoes[0].itens.push(itemCopia);
-    const pedidoDepoisEdicao={rascunhoIdEsperado:destinoNovo.versaoId,rascunhoRevisaoEsperada:1,documento:documentoNovo,
+    const pedidoDepoisEdicao={rascunhoIdEsperado:destinoNovo.draft!.id,rascunhoRevisaoEsperada:1,documento:documentoNovo,
       copiasEquivalencia:[{pacienteOrigemId:origem.pacienteId,planoOrigemId:origem.planoId,versaoIdOrigem:origem.versaoId,numeroVersaoOrigem:1,rascunhoRevisaoOrigemEsperada:1,itemChaveOrigem:itemNovo.chaveCliente,alternativaChaveOrigem:alternativaNova.chaveCliente,itemChaveDestino:itemCopia.chaveCliente,alternativaChaveDestino:alternativaCopia.chaveCliente}]};
     const edicaoDaOrigem={...salvaOrigem.documentoEdicao,refeicoes:salvaOrigem.documentoEdicao!.refeicoes.map((r:any)=>({...r,nome:`${r.nome} revisado`}))};
     const editouPrimeiro=await disputarPa06(
       ()=>origem.servico.salvarEdicaoRascunho(tenantA,origem.pacienteId,origem.planoId,origem.usuario,{rascunhoIdEsperado:origem.versaoId,rascunhoRevisaoEsperada:1,documento:edicaoDaOrigem}),
-      ()=>new ServicoPlanosAlimentares(executorTenant!,origem.cripto).salvarEdicaoRascunho(tenantA,destinoNovo.pacienteId,destinoNovo.planoId,origem.usuario,pedidoDepoisEdicao as any),
+      ()=>new ServicoPlanosAlimentares(executorTenant!,origem.cripto).salvarEdicaoRascunho(tenantA,origem.pacienteId,destinoNovo.id,origem.usuario,pedidoDepoisEdicao as any),
       PlanoAlimentarVersaoOrm,
       'pessimistic_write'
     );
     expect(editouPrimeiro.map(r=>r.status)).toEqual(['fulfilled','rejected']);
     expect((editouPrimeiro[1] as PromiseRejectedResult).reason).toMatchObject({status:409});
     expect(await executorTenant!.executar(tenantA,g=>g.query('select rascunho_revisao from plano_alimentar_versoes where id=$1',[origem.versaoId]))).toEqual([{rascunho_revisao:2}]);
-    expect(await executorTenant!.executar(tenantA,g=>g.query('select rascunho_revisao from plano_alimentar_versoes where id=$1',[destinoNovo.versaoId]))).toEqual([{rascunho_revisao:1}]);
+    expect(await executorTenant!.executar(tenantA,g=>g.query('select rascunho_revisao from plano_alimentar_versoes where id=$1',[destinoNovo.draft!.id]))).toEqual([{rascunho_revisao:1}]);
   },90000);
   it('FOOD05 PostgreSQL: prévia serializa com transferência e acesso anterior é revogado',async()=>{
     const c=await prepararCenarioFood05('food05-transferencia'),novo=await prepararDadosRepresentativos(tenantA,'food05-novo-responsavel');

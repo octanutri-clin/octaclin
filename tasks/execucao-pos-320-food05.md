@@ -807,3 +807,12 @@ Não reportar T07-A ou T14 como PASS até completar o banco e as regressões. T0
 - Backend CI executou Postgres/RLS e reportou 3.555 testes PASS, 48 SKIPPED; o único fail foi a prova A05 agregada, que excedeu 120s, sem falha de assertion capturada.
 - Dividi em duas corridas independentes com timeout de 90s: (1) cópia adquire locks primeiro, ambas as operações concluem, cópia fica `revisao_pendente` e a revisão da origem avança; (2) edição adquire locks primeiro, a origem avança, cópia com revisão antiga recebe 409 e o destino permanece inalterado. Nenhuma asserção foi removida.
 - R4 independente estática do delta de divisão: sem achados adicionais; revisor não executou testes. Nova execução CI/Postgres/RLS necessária. A04/A05/T07-A/T14 seguem BLOCKED.
+
+### CI `40532192140` e redução do fixture A05 — 27/10/2026
+
+- O Postgres/RLS real executou 3.556 testes PASS e 48 SKIPPED; a prova “edição da origem vence e cópia stale não grava” excedeu 90s sem registrar falha de assertion. Backend permanece FAIL; Web ainda estava em execução na consulta. CodeQL, Semgrep, Trivy, Dependency Review, Governança, Operação, Rollout, Mobile e AI FastAPI passaram.
+- A05 foi ajustado para criar o rascunho destino como segundo plano do mesmo paciente, reutilizando o cenário sintético já preparado. Isso reduz uma preparação completa de paciente sem retirar a contenção, a edição primeiro, a revisão esperada stale, o 409 ou a verificação de que o destino continua na revisão 1.
+- R4 independente estática deste ajuste: sem achados; o revisor confirmou que o cenário ainda exercita edição primeiro e cópia bloqueada até a edição concluir. O revisor não executou testes.
+- Typecheck backend após o ajuste: **PASS** (Node local v24 continua fora do range declarado >=22 <23). Testes focados: **PASS**, 8 selecionados em 2 suítes; 127 testes filtrados/skipped.
+- O próximo CI deve executar novamente a prova PostgreSQL/RLS após o fixture reduzido. Não aumentar timeouts nem relaxar assertions como substituto da causa-raiz.
+- A04/A05/T07-A/T14 permanecem BLOCKED. PR #446 continua Draft; sem migration externa, merge ou deploy.

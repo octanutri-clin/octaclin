@@ -286,3 +286,7 @@ O reviewer independente confirmou o documento base do destino stale como proveni
 ### Revisão estática da divisão dos cenários A05 — 27/10/2026
 
 O revisor confirmou que a prova agora isola as duas ordens: copy-first termina a cópia e depois permite editar a origem; edit-first avança a origem para revisão 2 e exige 409 para a cópia com revisão 1, sem escrita no destino. Os limites de 90s não alteram assertions. Sem achados adicionais; revisor não executou testes. A validação final depende do próximo PostgreSQL/RLS CI.
+
+### Revisão estática do fixture A05 após timeout — 27/10/2026
+
+Após o CI `40532192140` exceder 90s no cenário edit-first, o fixture foi reduzido para reutilizar o paciente e criar um segundo plano/draft como destino. A revisão R4 independente estática confirmou que o rascunho de origem continua sendo editado primeiro, a cópia espera o lock e então compara a revisão esperada 1 com a revisão atual 2; o destino deve permanecer em revisão 1. Não foram encontrados achados adicionais. O revisor não executou testes; a validação PostgreSQL/RLS continua pendente.
