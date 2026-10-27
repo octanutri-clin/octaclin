@@ -110,7 +110,9 @@ export interface DocumentoEdicaoPlano {
 export interface ReferenciaCopiaEquivalenciaEdicao {
   pacienteOrigemId: string;
   planoOrigemId: string;
+  versaoIdOrigem: string;
   numeroVersaoOrigem: number;
+  rascunhoRevisaoOrigemEsperada?: number;
   itemChaveOrigem: string;
   alternativaChaveOrigem: string;
   itemChaveDestino: string;

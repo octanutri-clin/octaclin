@@ -31,7 +31,7 @@ describe('PA06 DTO de edição parcial', () => {
     expect(await erros(entrada())).toHaveLength(0);
   });
   it('aceita referências fechadas de cópia e rejeita IDs/identidades manipulados ou extras', async () => {
-    const copia={pacienteOrigemId:id,planoOrigemId:id,numeroVersaoOrigem:1,itemChaveOrigem:'item-origem',alternativaChaveOrigem:'alternativa-origem',itemChaveDestino:'item-destino',alternativaChaveDestino:'alternativa-destino'};
+    const copia={pacienteOrigemId:id,planoOrigemId:id,versaoIdOrigem:id,numeroVersaoOrigem:1,rascunhoRevisaoOrigemEsperada:0,itemChaveOrigem:'item-origem',alternativaChaveOrigem:'alternativa-origem',itemChaveDestino:'item-destino',alternativaChaveDestino:'alternativa-destino'};
     expect(await erros({...entrada(),copiasEquivalencia:[copia]})).toHaveLength(0);
     expect((await erros({...entrada(),copiasEquivalencia:[{...copia,tenantId:id}]})).length).toBeGreaterThan(0);
     expect((await erros({...entrada(),copiasEquivalencia:[{...copia,pacienteOrigemId:'invalido'}]})).length).toBeGreaterThan(0);

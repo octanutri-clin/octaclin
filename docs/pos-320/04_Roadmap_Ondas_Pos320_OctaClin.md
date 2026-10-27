@@ -594,7 +594,7 @@ permanece exclusivamente FOOD05.
 ## [FOOD05] Equivalência automática por nutriente-alvo
 
 **Origem:** item45. **Atualização24/10/2026:** escopo integral aprovado;
-planejamento técnico consolidado, aguardando revisão e autorização de execução.
+escopo integral aprovado e desenvolvimento autorizado. O checkpoint atualizado, incluindo T07-A/T07-B e bloqueios correntes, aparece ao final do roadmap.
 
 **Entrega obrigatória:** energia/proteínas/carboidratos/gorduras, um alvo por
 operação; substituição individual e prévia dos grupos FOOD04 usam o mesmo motor.
@@ -1631,6 +1631,15 @@ Implementação apenas em branch deve ser registrada como:
 `IMPLEMENTADO — AGUARDANDO INTEGRAÇÃO`
 
 e não como concluída.
+
+
+### Atualização FOOD05 / FOOD05-MDL — decisão de 27/10/2026
+
+A autorização de desenvolvimento da FOOD05 principal está vigente. Seu escopo inclui D01–D17 aplicáveis, M01–M08 e T07-A (cópias entre planos/refeições autorizados, reautorização de origem, proveniência cifrada, nova identidade/pendência, revisão exata, locks, CAS, idempotência e rollback). A cópia por modelos não é requisito da entrega principal.
+
+**T07-B / FOOD05-MDL — entrega futura, ainda indisponível:** D18 e A06 foram transferidos para uma fase/PR complementar de prioridade alta após estabilizar FOOD05. Deve planejar artefato matemático genérico versionado, resolução e cálculo novo no destino, sem proveniência/paciente de origem transportado. Exige revisão técnica e autorização de execução próprias. D17 mantém bloqueio de modelo no backend e interface enquanto isso. Não tratar como concluída nem disponível.
+
+D15 e D16 estão reconhecidos como corrigidos tecnicamente; A04/A05 e a prova PostgreSQL concorrente permanecem pendentes até evidência. T07-A e T14 não recebem PASS antes de testes reais em PostgreSQL/RLS, regressões e revisão R4 independente. PR #446 permanece Draft. FOOD04 produção segue uma dependência operacional não confirmada como resolvida; CI/staging não comprovam produção. Nenhuma migration externa, merge ou deploy está autorizado neste checkpoint.
 
 ---
 

@@ -1794,11 +1794,11 @@ describe('ServicoPlanosAlimentares', () => {
       doc.refeicoes[0].itens.push(itemDestino);
       const salvo:any=await servico.salvarEdicaoRascunho(TENANT_ID,PACIENTE_ID,PLANO_ID,usuarioProfissional(),{
         rascunhoIdEsperado:VERSAO_ID,rascunhoRevisaoEsperada:1,documento:doc,
-        copiasEquivalencia:[{pacienteOrigemId:PACIENTE_ID,planoOrigemId:PLANO_ID,numeroVersaoOrigem:1,itemChaveOrigem:itemOrigem.chaveCliente,alternativaChaveOrigem:alternativaOrigem.chaveCliente,itemChaveDestino:itemDestino.chaveCliente,alternativaChaveDestino:alternativaDestino.chaveCliente}]
+        copiasEquivalencia:[{pacienteOrigemId:PACIENTE_ID,planoOrigemId:PLANO_ID,versaoIdOrigem:VERSAO_ID,numeroVersaoOrigem:1,rascunhoRevisaoOrigemEsperada:1,itemChaveOrigem:itemOrigem.chaveCliente,alternativaChaveOrigem:alternativaOrigem.chaveCliente,itemChaveDestino:itemDestino.chaveCliente,alternativaChaveDestino:alternativaDestino.chaveCliente}]
       } as any);
       const contextos=JSON.parse(criptografia.descriptografar(repositorios.get(PlanoAlimentarVersaoOrm)!.registros[0].edicaoSnapshotCriptografado)).equivalencias;
       expect(salvo.equivalenciasAplicadas['alternativa-copia-food05']).toMatchObject({estado:'revisao_pendente'});
-      expect(contextos['alternativa-copia-food05']).toMatchObject({itemChave:'item-copia-food05',alternativaChave:'alternativa-copia-food05',estado:'revisao_pendente',copiaOrigem:{pacienteId:PACIENTE_ID,planoId:PLANO_ID,versaoId:VERSAO_ID,aplicacaoId, itemChave:itemOrigem.chaveCliente,alternativaChave:alternativaOrigem.chaveCliente,copiadaPor:{usuarioId:USUARIO_ID,profissionalId:PROFISSIONAL_ID}}});
+      expect(contextos['alternativa-copia-food05']).toMatchObject({itemChave:'item-copia-food05',alternativaChave:'alternativa-copia-food05',estado:'revisao_pendente',copiaOrigem:{pacienteId:PACIENTE_ID,planoId:PLANO_ID,versaoId:VERSAO_ID,rascunhoRevisaoOrigem:1,origemInicial:{rascunhoRevisaoOrigem:1},aplicacaoId, itemChave:itemOrigem.chaveCliente,alternativaChave:alternativaOrigem.chaveCliente,copiadaPor:{usuarioId:USUARIO_ID,profissionalId:PROFISSIONAL_ID}}});
       expect(contextos['alternativa-copia-food05'].aplicacaoId).not.toBe(aplicacaoId);
       expect(alternativaDestino.equivalencia).toBeUndefined();
     });
@@ -1808,8 +1808,32 @@ describe('ServicoPlanosAlimentares', () => {
       itemDestino.chaveCliente='item-sem-acesso';alternativaDestino.chaveCliente='alternativa-sem-acesso';delete alternativaDestino.equivalencia;doc.refeicoes[0].itens.push(itemDestino);
       await expect(servico.salvarEdicaoRascunho(TENANT_ID,PACIENTE_ID,PLANO_ID,usuarioProfissional(),{
         rascunhoIdEsperado:VERSAO_ID,rascunhoRevisaoEsperada:1,documento:doc,
-        copiasEquivalencia:[{pacienteOrigemId:randomUUID(),planoOrigemId:randomUUID(),numeroVersaoOrigem:1,itemChaveOrigem:'item-origem',alternativaChaveOrigem:'alternativa-origem',itemChaveDestino:itemDestino.chaveCliente,alternativaChaveDestino:alternativaDestino.chaveCliente}]
+        copiasEquivalencia:[{pacienteOrigemId:randomUUID(),planoOrigemId:randomUUID(),versaoIdOrigem:VERSAO_ID,numeroVersaoOrigem:1,rascunhoRevisaoOrigemEsperada:1,itemChaveOrigem:'item-origem',alternativaChaveOrigem:'alternativa-origem',itemChaveDestino:itemDestino.chaveCliente,alternativaChaveDestino:alternativaDestino.chaveCliente}]
       } as any)).rejects.toBeInstanceOf(NotFoundException);
+      expect(repositorios.get(PlanoAlimentarVersaoOrm)!.registros[0].rascunhoRevisao).toBe(1);
+    });
+    it.each([
+      ['identidade da versão divergente', { versaoIdOrigem: randomUUID(), rascunhoRevisaoOrigemEsperada: 1 }],
+      ['revisão do rascunho divergente', { versaoIdOrigem: VERSAO_ID, rascunhoRevisaoOrigemEsperada: 0 }],
+      ['revisão do rascunho ausente', { versaoIdOrigem: VERSAO_ID }]
+    ])('FOOD05 recusa cópia quando %s', async (_caso, origemEsperada) => {
+      const { d } = await prepararEquivalencia();
+      const origem: any = await salvarEdicao(d), documento = JSON.parse(JSON.stringify(origem.documentoEdicao));
+      const itemOrigem = documento.refeicoes[0].itens[0], alternativaOrigem = itemOrigem.substituicoes[0];
+      const itemDestino = JSON.parse(JSON.stringify(itemOrigem)), alternativaDestino = itemDestino.substituicoes[0];
+      itemDestino.chaveCliente = `item-origem-desatualizada-${_caso}`;
+      alternativaDestino.chaveCliente = `alternativa-origem-desatualizada-${_caso}`;
+      delete alternativaDestino.equivalencia;
+      documento.refeicoes[0].itens.push(itemDestino);
+      await expect(servico.salvarEdicaoRascunho(TENANT_ID, PACIENTE_ID, PLANO_ID, usuarioProfissional(), {
+        rascunhoIdEsperado: VERSAO_ID, rascunhoRevisaoEsperada: 1, documento,
+        copiasEquivalencia: [{
+          pacienteOrigemId: PACIENTE_ID, planoOrigemId: PLANO_ID, numeroVersaoOrigem: 1,
+          ...origemEsperada, itemChaveOrigem: itemOrigem.chaveCliente,
+          alternativaChaveOrigem: alternativaOrigem.chaveCliente,
+          itemChaveDestino: itemDestino.chaveCliente, alternativaChaveDestino: alternativaDestino.chaveCliente
+        }]
+      } as any)).rejects.toBeInstanceOf(ConflictException);
       expect(repositorios.get(PlanoAlimentarVersaoOrm)!.registros[0].rascunhoRevisao).toBe(1);
     });
     it('FOOD05 copia proveniência de versão publicada sem depender do snapshot editorial removido',async()=>{
@@ -1823,7 +1847,7 @@ describe('ServicoPlanosAlimentares', () => {
       nova.documentoEdicao.refeicoes[0].itens.push(itemDestino);
       const salvo:any=await servico.salvarEdicaoRascunho(TENANT_ID,PACIENTE_ID,PLANO_ID,usuarioProfissional(),{
         rascunhoIdEsperado:nova.id,rascunhoRevisaoEsperada:0,documento:nova.documentoEdicao,
-        copiasEquivalencia:[{pacienteOrigemId:PACIENTE_ID,planoOrigemId:PLANO_ID,numeroVersaoOrigem:1,itemChaveOrigem:itemOrigem.chaveCliente,alternativaChaveOrigem:alternativaOrigem.chaveCliente,itemChaveDestino:itemDestino.chaveCliente,alternativaChaveDestino:alternativaDestino.chaveCliente}]
+        copiasEquivalencia:[{pacienteOrigemId:PACIENTE_ID,planoOrigemId:PLANO_ID,versaoIdOrigem:VERSAO_ID,numeroVersaoOrigem:1,itemChaveOrigem:itemOrigem.chaveCliente,alternativaChaveOrigem:alternativaOrigem.chaveCliente,itemChaveDestino:itemDestino.chaveCliente,alternativaChaveDestino:alternativaDestino.chaveCliente}]
       } as any);
       expect(salvo.equivalenciasAplicadas['alternativa-copia-versao-publicada']).toMatchObject({estado:'revisao_pendente'});
       expect(alternativaDestino.equivalencia).toBeUndefined();

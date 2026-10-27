@@ -229,3 +229,48 @@ impacto: novos DTOs/rotas, integração com o writer existente, testes de banco 
 ampliação discriminada do validador; sem nova tabela/migration prevista. Esta
 proposta não altera o bloqueio D17, não libera FOOD05 por modelos e não completa
 T07. A execução depende de autorização específica.
+
+## Decisão definitiva do proprietário — divisão T07-A/T07-B (27/10/2026)
+
+Esta decisão substitui a recomendação anterior deste parecer de que aplicação por modelo seria necessária para concluir a FOOD05 principal.
+
+- **T07-A / FOOD05:** cópias entre planos e refeições autorizados, com proveniência cifrada, reautorização atual, nova identidade, `revisao_pendente`, remapeamento, revisão exata, ordem de locks, CAS, idempotência e rollback. D15/D16 preservados como correções técnicas; A04/A05 permanecem abertos até evidência abaixo.
+- **T07-B / FOOD05-MDL:** identidade estável de itens/modelos, artefato matemático independente de pacientes, resolução e cálculo no destino. D18 é direção de produto, não execução autorizada. A06 é transferido para T07-B e fica aberto, contido pelo bloqueio D17.
+- **D17:** aplicação de FOOD05 por modelos continua bloqueada no backend e na interface. Acesso a modelo compartilhado não autoriza leitura/proveniência do paciente original; não remover, mascarar ou converter proveniência silenciosamente.
+
+### A04 — implementação e critério de prova
+
+O runtime agora constrói manifesto de todos os pacientes/planos envolvidos, ordena UUIDs em forma canônica, bloqueia primeiro pacientes e depois planos; destino recebe lock de escrita e origens de leitura. A operação permanece em uma transação tenant. A ordenação pura tem teste para reciprocidade, consolidação e identidade ambígua. Isso é evidência unitária, não prova de banco. T07-A/T14 ficam bloqueados até teste concorrente controlado de serviço em PostgreSQL descartável, com role runtime/RLS, chamadas A→B e B→A simultâneas, confirmação de ambas ou conflito recuperável, nenhuma linha parcial e cenário de falha/rollback. Sem retry cego.
+
+### A05 — contrato de revisão exata
+
+A referência inclui `versaoIdOrigem` obrigatório. Draft exige `rascunhoRevisaoOrigemEsperada` e rejeita ausente/divergente dentro da transação, após autorização atual; versão publicada aceita ausência de revisão mutável, mas exige o UUID exato. O browser também compara UUID, número, status, `updatedAt` e revisão do draft entre seleção e confirmação. Se qualquer um divergir, deve obter nova conferência em vez de aplicar dados antigos. Testes focados incluem versão trocada, revisão stale e ausência para draft. A prova PostgreSQL ainda deve cobrir stale no save, preservação da revisão/snapshot destino e transferência/revogação.
+
+Não há migration nova neste desenho: revisão editorial e UUID já existem. O comportamento de versões legadas sem UUID deve ser rejeitado nas operações FOOD05; compatibilidade de leitura histórica não concede capacidade de cópia.
+
+### Reavaliação do status
+
+| ID | Estado atual nesta correção | Saída requerida |
+| --- | --- | --- |
+| A01 | Contido por D17 | Segue bloqueio de modelo; ver T07-B |
+| A02/D15 | Corrigido tecnicamente | Preservar testes/histórico; gate integrado final |
+| A03/D16 | Corrigido tecnicamente | Preservar testes/histórico; gate integrado final |
+| A04 | Implementação + unit tests; integração pendente | PostgreSQL/RLS recíproco, atomicidade, rollback, R4 |
+| A05 | DTO/service/browser + focados; integração pendente | PostgreSQL stale/revogação/transferência, nenhuma escrita e R4 |
+| A06 | Aberto, transferido para T07-B | D17 impede caminho; projeto FOOD05-MDL separado |
+| A07 | Sem mudança estrutural nesta correção | Confirmar gates no HEAD; produção separada e não autorizada |
+
+T07-A pode receber PASS individual após as provas e revisão independente. O T07 original não recebe PASS integral enquanto T07-B estiver pendente. R4 independente, CI atualizado e testes integrais T14 ainda não concluídos.
+
+
+### Ajuste de A04 após revisão do padrão de locks — 27/10/2026
+
+A primeira proposta de bloquear todos os pacientes como leitura e promover o destino depois poderia deadlockar em cópias recíprocas entre dois pacientes: cada transação retém leitura nos dois pacientes e tenta promover seu destino distinto para escrita. A implementação foi ajustada para adquirir desde o primeiro passo `pessimistic_write` no paciente de destino e `pessimistic_read` nos demais, sempre por UUID crescente; depois, mesma ordem para planos, destino write/origem read. O teste de integração foi alterado para usar dois pacientes distintos atribuídos ao mesmo profissional e deve verificar que uma cópia vence enquanto a concorrente encerra com conflito de revisão recuperável, sem deadlock/efeito parcial. A prova PostgreSQL ainda está bloqueada pelo setup local; não declarar A04/T14 PASS.
+
+### R4 independente complementar — proveniência da revisão exata (27/10/2026)
+
+O revisor independente não encontrou vulnerabilidade confirmada, mas apontou que A05 validava a revisão editorial no momento da confirmação sem gravar a revisão usada na proveniência cifrada. Isso dificultaria reproduzir qual estado de um rascunho mutável foi a origem da cópia. A implementação foi ampliada para gravar `rascunhoRevisaoOrigem` na proveniência imediata e na origem inicial da linhagem, quando a fonte é draft. O campo é opcional para preservar leitura dos snapshots históricos e validado quando presente. Fontes publicadas seguem identificadas por UUID imutável, sem inventar revisão editorial.
+
+A revisão também exigiu o cenário concorrente inverso: edição da origem vence o lock antes da tentativa de cópia, que deve então rejeitar revisão obsoleta sem alterar o destino. O teste foi adicionado com barreira e espera observável. A R4 permanece aberta até revisar esse delta e executar as duas ordens de concorrência no PostgreSQL/RLS descartável.
+
+Na revisão seguinte, foi identificado que linhagem legada sem revisão inicial poderia herdar incorretamente a revisão do draft intermediário. A clonagem agora usa a revisão direta da proveniência legada para inicializar a linhagem apenas quando conhecida; se a origem inicial já existe mas não tem revisão, mantém esse dado como desconhecido. Uma aplicação sem linhagem anterior ainda inicializa com a revisão atual do draft. Há teste unitário de cópia em cadeia legado; a revisão final desse ajuste e a prova PostgreSQL continuam pendentes.

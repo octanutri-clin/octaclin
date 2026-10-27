@@ -12,7 +12,7 @@ imutáveis e preferências próprias do profissional.
 **Stack:** NestJS/TypeORM/PostgreSQL/RLS; Next/React/BFF; BigInt nativo; Jest/Playwright.
 **Especificação:** mensagem integral do proprietário “OCTACLIN — FOOD05:
 Equivalência por Nutriente”, de24/10/2026, consolidada em D01–D14 e M01–M08 abaixo.
-**Estado:** implementação autorizada pelo proprietário em “Pode seguir, sol médio”.
+**Estado:** implementação autorizada pelo proprietário; usar os gates atuais acrescentados ao final deste plano.
 Progresso real e evidências em [execucao-pos-320-food05.md](execucao-pos-320-food05.md).
 Autorização não abrange merge, deploy, infraestrutura ou migrations externas.
 **Base:** main `2f24fcb1` (inclui #441/#439/#432); branch
@@ -21,6 +21,14 @@ limpa antes de iniciar. Registro operacional FOOD04 preservado de43345453,
 cherry-pick documental47ed21f2. Não confundir o nome físico da worktree com a fase.
 
 ## 1. Contratos de produto aprovados
+
+> **Decisão consolidada do proprietário — 27/10/2026:** a conclusão abaixo atualiza
+> o escopo operacional de T07. A FOOD05 principal inclui T07-A (cópias clínicas
+> autorizadas); T07-B foi separado para a entrega futura FOOD05-MDL. D15/D16 foram
+> reconhecidos como tecnicamente corrigidos. A04/A05 continuam bloqueantes até
+> provas de concorrência e revisão exata da origem. A06/D18 não serão implementados
+> nesta etapa; o bloqueio D17 continua no frontend e backend. Não reduzir D01–D17
+> aplicáveis nem M01–M08.
 
 | Decisão | Contrato obrigatório |
 | --- | --- |
@@ -608,9 +616,7 @@ aritmética/proveniência/segurança e revisão final podem exigir Sol médio.
 - NOT RUN: consultas/alterações Neon/Render, cobrança, produção ou dados reais nesta
   rodada. Estado operacional FOOD04 permanece o último registro, não uma nova medição.
 
-Resultado: planejamento consolidado para revisão do proprietário. Prontidão de
-implementação exige aceitar as propostas da seção12 e autorizar execução.
-Prontidão de produção segue bloqueada; não atribuir PASS a G01–G06.
+Resultado naquele checkpoint: plano aguardava revisão/autorização. Esse texto é histórico e foi supersedido pela decisão de 27/10/2026 ao final deste arquivo; desenvolvimento de T07-A está autorizado, FOOD05-MDL/D18 não. A prontidão de produção segue bloqueada; não atribuir PASS a gate não executado.
 
 ## Decisões adicionais D15–D18 — ratificadas em 27/10/2026
 
@@ -623,3 +629,20 @@ FOOD05 enquanto não houver contrato seguro. D18 é direção futura de modelo m
 genérico com novo cálculo/confirmacão no destino; execução depende de proposta e
 aprovação específicas. Não declarar T07 concluído por estas correções.
 Contrato e evidências no [parecer T07](revisao-arquitetura-t07-food05.md).
+
+## Decisão de escopo FOOD05 / FOOD05-MDL e critérios A04/A05 — 27/10/2026
+
+Esta seção substitui afirmações anteriores que exigiam implementar aplicação por modelos para encerrar FOOD05.
+
+- **FOOD05 principal:** D01–D17 aplicáveis, M01–M08 e T07-A. Cópias autorizadas entre refeições/planos permanecem obrigatórias; cópia por modelo não faz parte desta entrega. FOOD05 só pode ser considerada tecnicamente pronta quando T07-A e os demais requisitos/gates obrigatórios passarem.
+- **T07-A (FOOD05):** reautorização do paciente de origem, linhagem cifrada, nova identidade e `revisao_pendente`, remapeamento, cópia de rascunho/publicação, locks globais, revisão exata da origem, CAS, idempotência, rollback e proteção de projeções.
+- **T07-B (FOOD05-MDL):** D18, identidade estável em modelos, resolução e recálculo no destino, compartilhamento sem dependência do prontuário de origem e aprovação/implementação futuras. A06 é transferido para esse bloco. A06 permanece aberto e contido por D17. Não está disponível nem implementado.
+- **D15/D16:** reconhecidos pelo proprietário como corrigidos tecnicamente; preservar os testes RED/GREEN e snapshots anteriores. A integração continua sujeita aos gates finais e R4 independente.
+- **A04:** comparar todos os recursos envolvidos antes de bloqueá-los; bloquear pacientes por UUID ordenado e depois planos por UUID ordenado; paciente e plano de destino recebem `pessimistic_write` desde a primeira aquisição, origens `pessimistic_read`. Isso evita promoção cruzada de locks em cópias recíprocas entre pacientes. Nenhuma rota de cópia pode tomar locks fora dessa ordem. Rejeitar associação ambígua plano/paciente. Testar chamadas recíprocas simultâneas em PostgreSQL descartável, RLS/role runtime, deadlock, atomicidade e falha intermediária. Sem retry cego.
+- **A05:** toda referência inclui UUID exato da versão. Para draft mutável, inclui também `rascunhoRevisaoOrigemEsperada`; a ausência ou divergência é conflito e exige nova prévia. Publicação imutável é distinguida pelo estado publicado, mas continua fixada pelo UUID. Autorização, versão e revisão são revalidadas no backend dentro da transação.
+- Proveniência A05 persistida deve registrar, no snapshot cifrado, a revisão editorial de origem efetivamente validada para drafts, inclusive a origem inicial da linhagem. O campo é opcional para leitura histórica; fontes publicadas usam UUID imutável. Cobrir também a corrida em que a edição da origem vence antes da cópia e produz conflito sem escrita.
+- **Sem nova migration:** A04/A05 são tratados com os locks e revisão editorial existentes. Essa decisão deve ser revista se o schema real exigir persistir revisão adicional; não introduzir schema preventivamente.
+
+Critérios para T07-A PASS: testes de serviço/DTO e BFF/cliente para UUID e revisão; teste PostgreSQL/RLS com cópias A→B e B→A concorrentes; rejeição sem gravação para draft obsoleto ou autorização revogada/transferida; verificação de rollback e snapshots/proveniência cifrados; regressões FOOD04/autosave/PA07; CI no HEAD; revisão R4 independente específica. Até essas evidências, A04/A05 e T07-A permanecem BLOCKED/PARCIAL.
+
+**Operação:** PR #446 permanece Draft. Nenhum merge, deploy ou migration externa. FOOD04 produção continua uma dependência operacional registrada; o evento prévio de quota não é considerado resolvido sem nova evidência.

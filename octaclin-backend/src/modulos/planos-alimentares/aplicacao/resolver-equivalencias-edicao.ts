@@ -14,7 +14,7 @@ export interface ContextoEquivalencia {
  snapshotPrincipal?:SnapshotComposicao;snapshotAlternativa?:SnapshotComposicao;
  aplicados?:{principal:FatosComposicaoEquivalencia;alternativa:FatosComposicaoEquivalencia;snapshotPrincipal?:SnapshotComposicao;snapshotAlternativa?:SnapshotComposicao};
  resolucao?:{aplicacaoId:string;comandoHash:string;ator:ContextoEquivalencia['ator']};
- copiaOrigem?:{pacienteId:string;planoId:string;versaoId:string;aplicacaoId:string;itemChave:string;alternativaChave:string;copiadaPor:ContextoEquivalencia['ator'];copiadaEm:string;origemInicial?:{pacienteId:string;planoId:string;versaoId:string;aplicacaoId:string;itemChave:string;alternativaChave:string}};
+ copiaOrigem?:{pacienteId:string;planoId:string;versaoId:string;rascunhoRevisaoOrigem?:number;aplicacaoId:string;itemChave:string;alternativaChave:string;copiadaPor:ContextoEquivalencia['ator'];copiadaEm:string;origemInicial?:{pacienteId:string;planoId:string;versaoId:string;rascunhoRevisaoOrigem?:number;aplicacaoId:string;itemChave:string;alternativaChave:string}};
 }
 export type ContextosEquivalencias=Record<string,ContextoEquivalencia>;
 export class ConflitoEquivalenciaEdicao extends Error { constructor(){super('A equivalência mudou ou perdeu sua referência. Confira a prévia novamente.');} }
@@ -33,6 +33,7 @@ export interface CallbacksEquivalencias {
 }
 const copia=<T>(v:T):T=>JSON.parse(JSON.stringify(v));
 const hashValido=(v:unknown):v is string=>typeof v==='string'&&/^[a-f0-9]{64}$/.test(v);
+const revisaoOrigemValida=(v:unknown):boolean=>v===undefined||(Number.isInteger(v)&&Number(v)>=0&&Number(v)<=2147483646);
 function dadosMedida(a:ItemEdicao|AlternativaEdicao){return a.medidaCaseira?{id:a.medidaCaseira.id,revisao:a.medidaCaseira.revisao,quantidade:numeroEdicao(a.quantidade)}:undefined;}
 export function assinaturaDependenciasEquivalencia(i:ItemEdicao,a:AlternativaEdicao,p:FatosComposicaoEquivalencia,f:FatosComposicaoEquivalencia,nutriente:NutrienteEquivalencia,politica:PoliticaEquivalencia):string {
  return fingerprintEquivalencia({principal:fatosSemanticosEquivalencia(p),alternativa:fatosSemanticosEquivalencia(f),porcaoPrincipal:numeroEdicao(i.porcaoGramas),porcaoAlternativa:numeroEdicao(a.porcaoGramas),medidaPrincipal:dadosMedida(i),medidaAlternativa:dadosMedida(a),nutriente,politica});
@@ -41,7 +42,7 @@ function hashComando(c:ComandoEquivalencia):string {return fingerprintEquivalenc
 function fingerprintResolucao(c:ContextoEquivalencia,atual:string):string {return fingerprintEquivalencia({aplicacaoId:c.aplicacaoId,itemChave:c.itemChave,alternativaChave:c.alternativaChave,estado:c.estado,dependencias:atual});}
 export function clonarContextoEquivalenciaParaCopia(
  contexto:ContextoEquivalencia,
- origem:{pacienteId:string;planoId:string;versaoId:string},
+ origem:{pacienteId:string;planoId:string;versaoId:string;rascunhoRevisaoOrigem?:number},
  destino:{pacienteId:string;planoId:string;versaoId:string;itemChave:string;alternativaChave:string},
  copiadaPor:ContextoEquivalencia['ator'],
  copiadaEm:string
@@ -50,13 +51,17 @@ export function clonarContextoEquivalenciaParaCopia(
  if(original.estado==='desvinculada_manualmente')throw new ConflitoEquivalenciaEdicao();
  const ids=[origem.pacienteId,origem.planoId,origem.versaoId,destino.pacienteId,destino.planoId,destino.versaoId];
  if(!ids.every(x=>typeof x==='string'&&UUID_GRUPO.test(x))||!destino.itemChave||destino.itemChave.length>100||!destino.alternativaChave||destino.alternativaChave.length>100||![copiadaPor.usuarioId,copiadaPor.profissionalId].every(x=>typeof x==='string'&&UUID_GRUPO.test(x))||typeof copiadaEm!=='string'||!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/.test(copiadaEm)||Number.isNaN(Date.parse(copiadaEm)))throw new ConflitoEquivalenciaEdicao();
- const origemInicial=original.copiaOrigem?.origemInicial??{
-  pacienteId:original.copiaOrigem?.origemInicial?.pacienteId??origem.pacienteId,
-  planoId:original.copiaOrigem?.origemInicial?.planoId??origem.planoId,
-  versaoId:original.copiaOrigem?.origemInicial?.versaoId??origem.versaoId,
-  aplicacaoId:original.copiaOrigem?.aplicacaoId??original.aplicacaoId,
-  itemChave:original.copiaOrigem?.itemChave??original.itemChave,
-  alternativaChave:original.copiaOrigem?.alternativaChave??original.alternativaChave
+ const origemAnterior=original.copiaOrigem;
+ const origemInicial=origemAnterior?.origemInicial??{
+  pacienteId:origemAnterior?.pacienteId??origem.pacienteId,
+  planoId:origemAnterior?.planoId??origem.planoId,
+  versaoId:origemAnterior?.versaoId??origem.versaoId,
+  ...(origemAnterior
+    ?(origemAnterior.rascunhoRevisaoOrigem!==undefined?{rascunhoRevisaoOrigem:origemAnterior.rascunhoRevisaoOrigem}:{})
+    :(origem.rascunhoRevisaoOrigem!==undefined?{rascunhoRevisaoOrigem:origem.rascunhoRevisaoOrigem}:{})),
+  aplicacaoId:origemAnterior?.aplicacaoId??original.aplicacaoId,
+  itemChave:origemAnterior?.itemChave??original.itemChave,
+  alternativaChave:origemAnterior?.alternativaChave??original.alternativaChave
  };
  const copia:ContextoEquivalencia={...copiaJson(original),estado:'revisao_pendente',aplicacaoId:randomUUID(),itemChave:destino.itemChave,alternativaChave:destino.alternativaChave,
   copiaOrigem:{...origem,aplicacaoId:original.aplicacaoId,itemChave:original.itemChave,alternativaChave:original.alternativaChave,copiadaPor:{...copiadaPor},copiadaEm,origemInicial:copiaJson(origemInicial)}};
@@ -79,7 +84,12 @@ export function validarContextosEquivalencias(v:unknown):ContextosEquivalencias 
   lerRazaoSnapshot(c.resultado.porcaoMatematica);for(const r of Object.values(c.resultado.exatos??{}))lerRazaoSnapshot(r);
   if(!c.resultado.exatos?.alvo||!c.resultado.exatos?.obtido||!c.resultado.exatos?.delta||!c.resultado.exatos?.percentual)throw new ConflitoEquivalenciaEdicao();
   if(c.resolucao){const r=objetoGrupo(c.resolucao,['aplicacaoId','comandoHash','ator']);if(typeof r.aplicacaoId!=='string'||!UUID_GRUPO.test(r.aplicacaoId)||!hashValido(r.comandoHash)||ids.has(r.aplicacaoId))throw new ConflitoEquivalenciaEdicao();const autor=objetoGrupo(r.ator,['usuarioId','profissionalId']);if(![autor.usuarioId,autor.profissionalId].every(x=>typeof x==='string'&&UUID_GRUPO.test(x)))throw new ConflitoEquivalenciaEdicao();ids.add(r.aplicacaoId);}
-  if(c.copiaOrigem){const x=objetoGrupo(c.copiaOrigem,['pacienteId','planoId','versaoId','aplicacaoId','itemChave','alternativaChave','copiadaPor','copiadaEm','origemInicial']);if(![x.pacienteId,x.planoId,x.versaoId,x.aplicacaoId].every(id=>typeof id==='string'&&UUID_GRUPO.test(id))||typeof x.itemChave!=='string'||!x.itemChave||x.itemChave.length>100||typeof x.alternativaChave!=='string'||!x.alternativaChave||x.alternativaChave.length>100||typeof x.copiadaEm!=='string'||!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/.test(x.copiadaEm)||Number.isNaN(Date.parse(x.copiadaEm)))throw new ConflitoEquivalenciaEdicao();const autor=objetoGrupo(x.copiadaPor,['usuarioId','profissionalId']);if(![autor.usuarioId,autor.profissionalId].every(id=>typeof id==='string'&&UUID_GRUPO.test(id)))throw new ConflitoEquivalenciaEdicao();if(x.origemInicial){const o=objetoGrupo(x.origemInicial,['pacienteId','planoId','versaoId','aplicacaoId','itemChave','alternativaChave']);if(![o.pacienteId,o.planoId,o.versaoId,o.aplicacaoId].every(id=>typeof id==='string'&&UUID_GRUPO.test(id))||typeof o.itemChave!=='string'||!o.itemChave||o.itemChave.length>100||typeof o.alternativaChave!=='string'||!o.alternativaChave||o.alternativaChave.length>100)throw new ConflitoEquivalenciaEdicao();}}
+  if(c.copiaOrigem){
+   const x=objetoGrupo(c.copiaOrigem,['pacienteId','planoId','versaoId','rascunhoRevisaoOrigem','aplicacaoId','itemChave','alternativaChave','copiadaPor','copiadaEm','origemInicial']);
+   if(![x.pacienteId,x.planoId,x.versaoId,x.aplicacaoId].every(id=>typeof id==='string'&&UUID_GRUPO.test(id))||!revisaoOrigemValida(x.rascunhoRevisaoOrigem)||typeof x.itemChave!=='string'||!x.itemChave||x.itemChave.length>100||typeof x.alternativaChave!=='string'||!x.alternativaChave||x.alternativaChave.length>100||typeof x.copiadaEm!=='string'||!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/.test(x.copiadaEm)||Number.isNaN(Date.parse(x.copiadaEm)))throw new ConflitoEquivalenciaEdicao();
+   const autor=objetoGrupo(x.copiadaPor,['usuarioId','profissionalId']);if(![autor.usuarioId,autor.profissionalId].every(id=>typeof id==='string'&&UUID_GRUPO.test(id)))throw new ConflitoEquivalenciaEdicao();
+   if(x.origemInicial){const o=objetoGrupo(x.origemInicial,['pacienteId','planoId','versaoId','rascunhoRevisaoOrigem','aplicacaoId','itemChave','alternativaChave']);if(![o.pacienteId,o.planoId,o.versaoId,o.aplicacaoId].every(id=>typeof id==='string'&&UUID_GRUPO.test(id))||!revisaoOrigemValida(o.rascunhoRevisaoOrigem)||typeof o.itemChave!=='string'||!o.itemChave||o.itemChave.length>100||typeof o.alternativaChave!=='string'||!o.alternativaChave||o.alternativaChave.length>100)throw new ConflitoEquivalenciaEdicao();}
+  }
  }
  return copia(v) as ContextosEquivalencias;
 }

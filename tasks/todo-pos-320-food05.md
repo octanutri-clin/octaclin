@@ -144,7 +144,7 @@ Persistir/aplicar equivalência em modelo permanece bloqueado: modelos são comp
 na clínica e não podem expor IDs de paciente de origem aos demais profissionais; o
 fluxo atual devolve refeições ao browser antes de salvar o plano. Exige aplicação
 server-side com autorização de modelo e da origem, sem retornar o contexto cifrado.
-Não remover esse bloqueio nem marcar T07 completo antes desse contrato e testes.
+Não remover esse bloqueio. O contrato FOOD05 principal é T07-A; T07-B passa a FOOD05-MDL. Não marcar T07 original integralmente concluído.
 
 Contrato e riscos revisados em
 [revisão de arquitetura T07](revisao-arquitetura-t07-food05.md).
@@ -152,8 +152,7 @@ D15/A02 e D16/A03 foram corrigidos no HEAD `c7df3bfe`: toda cópia nova recebe
 estado pendente e nova identidade; o validador agora rejeita todos os erros do
 DTO e entradas inválidas em todos os caminhos de modelos. RED/GREEN direcionados
 estão registrados em `tasks/execucao-pos-320-food05.md`. A correção não fecha T07:
-fixar revisão exata da origem e identidades estáveis (A05/A06), além de resolver a
-ordem de locks (A04), continua necessário para ampliar cópias. A reautorização do
+fixar revisão exata da origem e resolver ordem de locks (A05/A04) continuam bloqueantes para T07-A. A06 foi transferido a T07-B/FOOD05-MDL e não bloqueia a conclusão principal enquanto D17 bloquear a aplicação por modelos. A reautorização do
 paciente de origem continua obrigatória; compartilhamento independente dessa
 autorização exigiria o contrato futuro D18 e autorização própria.
 
@@ -166,9 +165,8 @@ uma aplicação server-side e não conclui T07.
 - [ ] RED/GREEN: projeção profissional mantém chaves/referências fora do portal/PDF;
   cópia de rascunho/publicação, autorização atual, remapeamento e revisão pendente
   têm testes focados. As suítes já existentes de projeção/portal devem continuar.
-- [ ] RED/GREEN: aplicação por modelo executa inteiramente server-side, verifica
-  acesso ao modelo e origem, remapeia chaves e nunca devolve IDs/contexts da origem
-  clínica ao navegador; sem esse contrato, manter bloqueio explícito.
+- [x] D17: aplicação por modelo bloqueada explicitamente no frontend e backend; não transportar proveniência nem conceder acesso ao paciente original.
+- [ ] T07-B/A06: modelos matemáticos reutilizáveis ficam para FOOD05-MDL, com planejamento e autorização próprios.
 - [ ] Comando: Jest `projecao-composicao projecao-equivalencias-profissional servico-modelos-plano-alimentar servico-planos-alimentares`.
 
 ### T08 — preferências pessoais e migration mínima
@@ -468,3 +466,38 @@ Este registro atualiza somente as evidências recentes; não fecha T10 nem gates
   silenciosamente equivalência em substituição manual.
 - D18: artefato matemático compartilhável reservado a proposta e autorização
   específicas; sem execução nesta entrega. D01–D14 e M01–M08 preservados.
+
+## Decisão de escopo T07 revisada e gates atuais — 27/10/2026
+
+Este registro substitui itens anteriores que exigiam a integração FOOD05 por modelos para completar T07.
+
+### T07-A — cópias clínicas (obrigatório na FOOD05 principal)
+
+- [x] D15: toda cópia recebe nova aplicação, estado `revisao_pendente`, fingerprint atualizado, cálculo original preservado e proveniência cifrada. Testes RED/GREEN anteriores preservados.
+- [x] D16: validação integral dos modelos nas fronteiras existentes; snapshots inválidos falham fechados sem persistência. Testes RED/GREEN anteriores preservados.
+- [ ] A04: ordem global de locks aplicada; testes unitários passam. Falta prova controlada PostgreSQL real/RLS para cópias recíprocas e rollback antes de PASS.
+- [ ] A05: UUID exato obrigatório; draft exige revisão editorial esperada; publicado exige identidade exata. Testes locais focados passam. Falta prova PostgreSQL de conflito entre revisão capturada e confirmação, sem escrita parcial, mais autorização transferida/revogada.
+- [ ] T07-A: regressões FOOD04, autosave60s, PA07, snapshots e revisão R4 independente.
+
+### T07-B — FOOD05-MDL (fora da FOOD05 atual)
+
+- [ ] D18 e A06 transferidos para entrega futura FOOD05-MDL. Nenhuma funcionalidade está implementada/disponível.
+- [x] D17: bloqueio explícito de aplicação por modelo permanece no frontend e backend; compartilhamento de modelo não concede acesso ao paciente de origem.
+- [ ] Planejamento e autorização de execução próprios para FOOD05-MDL.
+
+### T14 e demais gates
+
+T14 não recebe PASS por testes unitários ou CI histórico. Exige Postgres descartável com role runtime sem BYPASSRLS, cópias recíprocas concorrentes, CAS da origem, autorização/carteira, replay/idempotência, rollback integral e inspeção de persistência. Registrar contagens e skips do filtro. T15–T18, regressões FOOD04/PA07, CI do HEAD atualizado e R4 independente permanecem necessários.
+
+Critério de fechamento: FOOD05 principal pode concluir quando T07-A passar e D01–D17 aplicáveis/M01–M08 e gates finais estiverem comprovados. T07 original nunca recebe conclusão integral enquanto T07-B estiver futuro; relatar separadamente `T07-A PASS` e `T07-B PENDENTE`. PR #446 continua Draft até revisão R4 independente e critérios da principal.
+
+### Atualização após R4 A04/A05 — 27/10/2026
+
+- [x] A04: lock global determinístico e unit tests; prova PostgreSQL agora usa contenção observável, duas cópias recíprocas e falha pós-escrita para verificar rollback. **Execução bloqueada** pelo setup Testcontainers; não marcar PASS.
+- [x] A05: UUID da versão e revisão do draft exigidos no contrato; incluído teste PostgreSQL de edição concorrente da origem contra a cópia e tentativa stale subsequente. **Execução bloqueada** pelo setup Testcontainers; autorização transferida/revogada e conflito transacional continuam no gate integrado.
+- [x] R4 complementar A05: proveniência cifrada registra a revisão de origem efetivamente validada em drafts e propaga a revisão da origem inicial da linhagem; publicado segue pelo UUID imutável. Leitura de snapshots históricos continua aceitando ausência do campo.
+- [x] R4 complementar A05: teste PostgreSQL adicionado para ordem concorrente inversa (edição adquire lock primeiro, cópia recebe 409 sem escrita), além da ordem cópia-primeiro.
+- [ ] A04/A05: executar os cenários novos no PostgreSQL descartável com role runtime/RLS; conferir sem deadlock, sem persistência parcial e conflitos recuperáveis.
+- [ ] T07-A/T14: regressões FOOD04/PA07/autosave, CI do HEAD, revisão R4 completa após correções e todas as demais linhas da matriz.
+- R4 independente específica A04/A05 não achou vulnerabilidade confirmada, mas manteve ambos BLOCKED por falta de prova executada. O reviewer não executou testes e a análise foi somente leitura.
+- R4 independente estática final revisou proveniência de revisão, cadeia legado, os dois ordenamentos concorrentes e rollback; sem achados adicionais. O trecho de code review pode ser encerrado para o delta, mas não representa PASS de A04/A05/T14. Prova PostgreSQL/RLS ainda BLOCKED.

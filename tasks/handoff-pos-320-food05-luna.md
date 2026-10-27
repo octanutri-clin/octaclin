@@ -202,3 +202,40 @@ Sol médio concluiu o planejamento na configuração atual, sem elevar raciocín
 Aguardar revisão/autorização. Depois: Sol médio para aritmética/snapshot/segurança;
 Luna alto é suficiente para tarefas FE/DTO bem definidas. Antes de qualquer troca
 manual, avisar e pausar; não alterar modelo silenciosamente.
+
+## Handoff — T07-A/A04/A05 e decisão FOOD05-MDL (27/10/2026)
+
+PR #446 aberta em `docs/pos320-food05-planning`, Draft. HEAD inicial deste ciclo `c7f19227`; alterações de runtime/documentação abaixo ainda locais até commit/push. Configuração de raciocínio Luna alto autorizada, sem solicitação de troca.
+
+### Decisão de escopo
+
+T07-A (cópias clínicas entre planos/refeições) é obrigatório na FOOD05 principal. T07-B (D18, A06, modelos matemáticos compartilháveis) passa para FOOD05-MDL e não é implementado. D17 mantém bloqueio backend+UI de cópia por modelo. D15/D16 são reconhecidos como corrigidos tecnicamente. FOOD05 só conclui com T07-A e demais requisitos/gates; T07 integral segue dividido. R4 independente ainda precisa revisar.
+
+### Alterações locais
+
+- Backend: UUID exato e revisão editorial esperada para cópia de draft; versão publicada usa UUID exato; bloqueios ordenados por paciente e plano com destino em escrita e origens em leitura.
+- Web: referência transmite UUID/revisão, verifica novamente draft ao confirmar; cópia de plano completo também compara identidade/revisão.
+- Testes: A05 service 4 selecionados PASS; A04 helper 3/3 PASS com RED/GREEN reproduzido pela sequência antiga de inserção. A prova PostgreSQL foi tentada, mas o hook `beforeAll` excedeu 180s ao subir a imagem HA; nenhuma asserção do caso foi executada. O pull de tag alternativa falhou por falta de espaço local.
+- Arquivos: serviço/DTO e specs de planos, helper de ordenação+spec, RLS integração, BFF/edição/copiar refeição/duplicar plano e specs web; planos/checklist/parecer/ledger/handoff/roadmap.
+
+### Pendente antes de avançar
+
+1. Manter A04/T14 BLOCKED até o CI ou novo ambiente descartável executar o caso PostgreSQL/RLS. A tentativa local bloqueou antes do teste; não remover dados/imagens para liberar espaço.
+2. Rodar focused service + DTO, testes de cópia Web e typecheck/lint/build afetados.
+3. Rodar regressões Food04/PA07 e CI no HEAD final; registrar statuses reais.
+4. Solicitar revisão R4 independente focada em A04/A05 e caminhos vizinhos; não declarar esta revisão como independente.
+5. Atualizar PR #446, sem retirar Draft.
+
+Não rodar migrations externas, deploy, merge ou ativação. Não começar FOOD05-MDL.
+
+
+**Achado A04 adicional:** lock de paciente destino precisa ser write desde a aquisição ordenada inicial; não adquirir todos read e promover depois. A prova PG usa pacientes distintos com o mesmo profissional, e seu resultado continua pendente.
+
+### Resultado da revisão independente A04/A05 — 27/10/2026
+
+O revisor independente não encontrou vulnerabilidade confirmada, mas identificou
+que a concorrência anterior não era controlada e não havia rollback pós-escrita;
+em A05 faltava corrida PostgreSQL de edição da origem. Os cenários foram então
+reforçados com barreira detectada via `pg_stat_activity`, falha injetada após
+persistir versão e edição concorrente da origem. A04/A05 continuam BLOCKED até que
+PostgreSQL/RLS real execute essas novas provas e ocorra revisão R4 do estado final.

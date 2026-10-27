@@ -40,7 +40,9 @@ test('FOOD05 cópia de refeição salva exige e preserva referência opaca para 
   const copia = copiarRefeicaoParaFormulario(origem, gerarChave, {
     pacienteId: '10000000-0000-4000-8000-000000000001',
     planoId: '10000000-0000-4000-8000-000000000002',
-    numeroVersao: 4
+    versaoId: '10000000-0000-4000-8000-000000000003',
+    numeroVersao: 4,
+    rascunhoRevisao: 7
   });
   const item = copia.itens[0];
   const alternativa = item.substituicoes[0];
@@ -48,7 +50,9 @@ test('FOOD05 cópia de refeição salva exige e preserva referência opaca para 
   assert.deepEqual(alternativa.origemCopiaEquivalencia, {
     pacienteOrigemId: '10000000-0000-4000-8000-000000000001',
     planoOrigemId: '10000000-0000-4000-8000-000000000002',
+    versaoIdOrigem: '10000000-0000-4000-8000-000000000003',
     numeroVersaoOrigem: 4,
+    rascunhoRevisaoOrigemEsperada: 7,
     itemChaveOrigem: 'orig-item',
     alternativaChaveOrigem: 'orig-alt'
   });

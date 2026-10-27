@@ -727,3 +727,57 @@ tenant; não consulta staging nem produção.
   atual; nenhuma migration parece necessária, condicionada à prova dos leitores.
   Não foi implementada; requer autorização específica.
 - Estado: PR #446 continua Draft; sem merge, migration externa, deploy ou ativação.
+
+## A04/A05 — cópias seguras, atualização 27/10/2026
+
+Decisão: FOOD05 principal exige T07-A (cópias de refeições/planos autorizados); T07-B/A06/D18 vai para FOOD05-MDL separada e não foi implementada. D15/D16 permanecem corrigidos tecnicamente. PR #446 segue Draft.
+
+**A05 RED:** `pnpm exec jest --runInBand src/modulos/planos-alimentares/aplicacao/servico-planos-alimentares.spec.ts -t 'recusa cópia quando'` reproduziu 3 falhas nos casos versão UUID divergente, revisão draft obsoleta e revisão ausente: o código anterior aceitava a cópia.
+
+**A05 GREEN focado:** após tornar UUID de versão obrigatório, exigir revisão esperada em draft, resolver versão pelo `id + tenant + plano + número` e comparar revisão sob lock, o teste focal passou 4 casos (3 negativos + cópia de versão publicada), 128 casos não selecionados. O DTO e o caminho do navegador também propagam/comparam identidade e revisão.
+
+**A04 RED/GREEN unitário:** o manifesto de locks foi extraído para função pura e testado. A ordenação consistente por UUID de pacientes antes de planos garante que chamadas recíprocas concordem na sequência; destino usa escrita, origens leitura; duplicatas são consolidadas e associação plano/paciente ambígua falha. 3/3 testes unitários PASS. Isto não fecha a prova PostgreSQL.
+
+### Resultado dos gates neste checkpoint
+
+- PASS — focado serviço A05: 4 selecionados; 128 skipped por filtro.
+- PASS — helper A04: 3/3.
+- PASS — `git diff --check` no checkpoint atual.
+- BLOCKED/PENDING — prova PostgreSQL descartável com role runtime/RLS, concorrência recíproca A→B/B→A, CAS de revisão, autorização transferida/revogada e rollback. Está em execução neste ambiente; registrar saída final antes de alterar o estado.
+- NOT RUN — suítes integrais backend, BFF/Web, Playwright, regressões FOOD04/PA07, CI do HEAD atualizado e revisão R4 independente.
+- NOT AUTHORIZED — migrations externas, merge, deploy, produção e ativação. Nenhuma migration foi criada ou aplicada.
+
+Não reportar T07-A ou T14 como PASS até completar o banco e as regressões. T07-B/A06/D18 permanece futuro; D17 segue bloqueando aplicação por modelo no backend e frontend.
+
+### A04/A05 — tentativa PostgreSQL descartável e bloqueio de ambiente (27/10/2026)
+
+- A prova focal `RLS_TESTCONTAINERS=true pnpm exec jest --runInBand src/infraestrutura/banco-dados/rls-isolamento-tenant.integracao.spec.ts -t 'cópias recíprocas entre rascunhos'` foi compilada, mas o `beforeAll` estourou 180s preparando `timescale/timescaledb-ha:pg15`; o teste alvo não iniciou. Resultado: **BLOCKED por setup do container**, não PASS nem FAIL do comportamento.
+- Testei a tag local `timescale/timescaledb:2.17.2-pg15`; o pull falhou com `no space left on device` e a imagem não foi instalada. Não removi imagens, volumes ou arquivos para liberar espaço.
+- Ajuste no harness: `RLS_TESTCONTAINERS_IMAGE` permite selecionar uma tag local; o default do CI continua `timescale/timescaledb-ha:pg15`. A nova tag não foi validada, por isso o harness alterado também precisa passar no CI.
+- Não houve conexão com staging/produção, nem migration externa.
+- Backend `pnpm run typecheck`: PASS after the lock manifest and copy-reference changes (Node v24.19.0; project engine declares Node >=22 <23, so the environment emitted a compatibility warning).
+- Web `pnpm run typecheck`: PASS with the same Node engine warning.
+- `pnpm security:secrets`: PASS, local patterns found no real secret.
+- `pnpm run test:copia-refeicoes`: PASS 14/14. Does not execute Playwright.
+- DTO de edição/cópia `pnpm exec jest --runInBand src/modulos/planos-alimentares/aplicacao/dtos-edicao-plano.spec.ts`: PASS 26/26, incluindo UUID/revisão obrigatórios pela validação da referência.
+- A04 TDD: mutação temporária reproduzindo ordem antiga de inserção falhou especificamente na comparação recíproca de pacientes (1 FAIL/2 PASS); mutação foi removida imediatamente. GREEN da versão ordenada já havia passado 3/3 antes da mutação e será repetido após restaurar.
+- A04 RED/GREEN repetido após remover mutação: 3/3 PASS no manifesto global ordenado. O teste de manifesto valida a ordem; ainda não substitui a prova PostgreSQL concorrente bloqueada pelo setup.
+
+- Revisão adicional A04: identificada e corrigida possibilidade de deadlock por promoção de lock do paciente. Agora o lock write do paciente destino é adquirido na sequência global inicial; teste PostgreSQL foi ampliado para pacientes distintos. A prova permanece BLOCKED por falha de setup do container.
+- Playwright A05 novo (desktop, caso de revisão editorial): FAIL no setup local por timeout de 15s ao navegar para `/pacientes/:id`; Webpack ainda compilava a rota após vários minutos. Turbopack falhou pelo symlink externo. Não houve assertion do caso; resultado é BLOCKED por ambiente, não regressão confirmada. Retry após compilação da rota pendente.
+
+### R4 independente e reforço das provas A04/A05 — 27/10/2026
+
+- A revisão independente específica A04/A05 não encontrou vulnerabilidade confirmada, mas manteve **A04 BLOCKED**: concorrência não determinística e ausência de rollback pós-escrita; **A05 BLOCKED**: falta prova PostgreSQL da edição da origem durante a confirmação e da revalidação de autorização/revisão no mesmo fluxo. Revisão completa em `tasks/revisao-arquitetura-t07-food05.md`.
+- Reforcei o teste PostgreSQL A04 usando a barreira já existente `disputarPa06`: a primeira operação mantém o lock de escrita no paciente ordenado; a segunda deve aparecer aguardando lock antes da liberação. O teste exige uma cópia concluída, um conflito 409 recuperável e revisão final sem linhas parciais.
+- Adicionei falha injetada após gravar a versão do destino, verificando rollback da revisão e das substituições em PostgreSQL. Adicionei corrida A05 entre cópia e edição da origem, exigindo espera observável e serialização; depois a referência antiga deve resultar em 409 sem alterar o destino.
+- Esses novos cenários ainda **não foram executados**: Testcontainers não iniciou devido ao timeout ao preparar a imagem Timescale/PostgreSQL e a tentativa de obter imagem alternativa encontrou falta de espaço. Permanecem BLOCKED, sem inferir PASS.
+- Backend `pnpm run typecheck` está em execução após as novas provas; registrar o resultado final. `next-env.d.ts` foi restaurado após alteração gerada pelo Next e não integra o patch.
+- Resultado R4 independente: revisão somente leitura, sem testes; A04/A05 continuam bloqueados até execução PostgreSQL controlada. Não equivale à revisão final de todo o HEAD/PR.
+- Complemento independente A05: revisão do delta encontrou que a origem era checada mas a revisão validada não era preservada na proveniência cifrada. Corrigido para persistir revisão de origem de draft na cópia e no elo inicial da linhagem, mantendo leitura histórica compatível; published segue por UUID. O teste da integração agora cobre também edição-primeiro e deve rejeitar a cópia obsoleta sem alterar o destino. A R4 pediu nova leitura deste delta; teste PostgreSQL ainda não executado.
+- A revisão complementar identificou risco de atribuir revisão do rascunho intermediário a uma linhagem legada cuja revisão inicial é desconhecida. Corrigido: uma linhagem existente sem revisão preserva a ausência; só uma aplicação sem linhagem anterior inicializa a revisão inicial a partir da fonte atual. Adicionado teste unitário de cópia em cadeia legado; aguarda execução e nova leitura independente.
+- Reexecução dos testes direcionados após a correção da linhagem: **PASS, 14 selecionados**, 143 filtrados, 3 suítes aprovadas. Inclui a cópia em cadeia legado.
+- Backend `pnpm run typecheck` após a correção final: **PASS**; ambiente Node v24.19.0 fora do range declarado >=22 <23 (warn). `pnpm security:secrets`: **PASS**, nenhum segredo real identificado por padrões locais.
+- Revisão R4 independente estática final dos deltas A04/A05: **sem achados adicionais**, código-review portion encerrado para esses deltas. O revisor não executou testes; PostgreSQL não executado, A04/A05/T14 permanecem BLOCKED até as provas RLS e concorrência passarem.
+- Testes focados após essas correções: `pnpm exec jest --runInBand src/modulos/planos-alimentares/aplicacao/resolver-equivalencias-edicao.spec.ts src/modulos/planos-alimentares/aplicacao/servico-planos-alimentares.spec.ts src/modulos/planos-alimentares/aplicacao/ordenacao-locks-copia.spec.ts -t 'copia proveniência|cópia idêntica|revisão editorial inválida|recusa cópia quando|ordenação de locks'`: **PASS, 13 selecionados**, 143 filtrados; 3 suítes passaram. Esse resultado cobre unidade/serviço, não PostgreSQL/RLS concorrente.
+- A barreira PostgreSQL foi refinada para só liberar depois de observar `pg_stat_activity` indicando que uma sessão está bloqueada especificamente pelo PID da primeira transação (`pg_blocking_pids`), reduzindo falsos positivos de espera de lock de outras sessões.

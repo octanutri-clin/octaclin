@@ -1,4 +1,5 @@
 import { ServicoEquivalenciasPlano } from './servico-equivalencias-plano';
+import { ordenarEscoposCopia } from './ordenacao-locks-copia';
 import { clonarContextoEquivalenciaParaCopia, resolverEquivalenciasDocumento, assinaturaDependenciasEquivalencia, ContextoEquivalencia, ContextosEquivalencias, validarContextosEquivalencias, ConflitoEquivalenciaEdicao, mesclarContextosEquivalenciaSeguro } from './resolver-equivalencias-edicao';
 import { projetarEquivalenciasProfissional } from './projecao-equivalencias-profissional';
 import { resolverFatosEquivalencia, FatosPreservadosEquivalencia, identidadeFatoEquivalencia } from './fatos-equivalencia-plano';
@@ -758,6 +759,7 @@ export class ServicoPlanosAlimentares {
     catch { throw new BadRequestException('Documento de edição do plano inválido.'); }
     if (dados.rascunhoRevisaoEsperada === undefined) throw new BadRequestException('Informe a revisão do rascunho.');
     return this.executorTenant.executar(tenantId, async gerenciador => {
+      await this.bloquearEscoposCopiaOrdenados(gerenciador, tenantId, pacienteId, planoId, usuario, dados.copiasEquivalencia);
       const plano = await this.obterPlanoNoEscopo(gerenciador, tenantId, pacienteId, planoId, usuario, true);
       const rascunho = await this.obterRascunhoAtivo(gerenciador, tenantId, plano.id, true);
       this.conferirRevisaoEdicao(rascunho, dados);
@@ -965,12 +967,17 @@ export class ServicoPlanosAlimentares {
       const chave=referencia.alternativaChaveDestino,alvo=porChaveDestino.get(chave);
       if(!alvo||alvo.item.chaveCliente!==referencia.itemChaveDestino||atuais[chave]||alvo.alternativa.equivalencia||Object.hasOwn(resultado,chave)||usos.has(chave))throw new ConflictException('A cópia não corresponde ao rascunho atual. Recarregue e tente novamente.');
       usos.add(chave);
-      const cache=`${referencia.pacienteOrigemId}:${referencia.planoOrigemId}:${referencia.numeroVersaoOrigem}`;
+      const cache=`${referencia.pacienteOrigemId}:${referencia.planoOrigemId}:${referencia.versaoIdOrigem}`;
       let fonte=versoes.get(cache);
       if(!fonte){
         await this.obterPlanoNoEscopo(gerenciador,tenantId,referencia.pacienteOrigemId,referencia.planoOrigemId,usuario,'pessimistic_read');
-        const versao=await gerenciador.getRepository(PlanoAlimentarVersaoOrm).findOne({where:{tenantId,planoId:referencia.planoOrigemId,numero:referencia.numeroVersaoOrigem},lock:{mode:'pessimistic_read'}});
+        const versao=await gerenciador.getRepository(PlanoAlimentarVersaoOrm).findOne({where:{id:referencia.versaoIdOrigem,tenantId,planoId:referencia.planoOrigemId,numero:referencia.numeroVersaoOrigem},lock:{mode:'pessimistic_read'}});
         if(!versao||versao.descartadaEm)throw new ConflictException('A versão de origem não está disponível para cópia.');
+        const revisaoOrigem=versao.rascunhoRevisao??0;
+        if(referencia.rascunhoRevisaoOrigemEsperada!==undefined&&referencia.rascunhoRevisaoOrigemEsperada!==revisaoOrigem)
+          throw new ConflictException('A versão de origem foi alterada. Recarregue e confira antes de copiar.');
+        if(!versao.publicadaEm&&referencia.rascunhoRevisaoOrigemEsperada===undefined)
+          throw new ConflictException('Informe a revisão exata do rascunho de origem antes de copiar.');
         if(versao.publicadaEm){
           fonte={versao,contextos:await this.lerContextosEquivalenciasMaterializadas(gerenciador,versao)};
         }else{
@@ -986,13 +993,50 @@ export class ServicoPlanosAlimentares {
         ||(!fonte.versao.publicadaEm&&(!alternativaOrigem?.equivalencia||'acao'in alternativaOrigem.equivalencia||alternativaOrigem.equivalencia.aplicacaoId!==contexto.aplicacaoId)))throw new ConflictException('A equivalência da origem mudou ou não está vinculada a essa alternativa. Carregue a origem novamente.');
       let copiado:ContextoEquivalencia;
       try{copiado=clonarContextoEquivalenciaParaCopia(contexto,
-        {pacienteId:referencia.pacienteOrigemId,planoId:referencia.planoOrigemId,versaoId:fonte.versao.id},
+        {pacienteId:referencia.pacienteOrigemId,planoId:referencia.planoOrigemId,versaoId:fonte.versao.id,...(!fonte.versao.publicadaEm?{rascunhoRevisaoOrigem:fonte.versao.rascunhoRevisao??0}:{})},
         {pacienteId:pacienteDestinoId,planoId:planoDestino.id,versaoId:versaoDestino.id,itemChave:referencia.itemChaveDestino,alternativaChave:referencia.alternativaChaveDestino},
         copiadaPor,new Date().toISOString());}
       catch(erro){if(erro instanceof ConflitoEquivalenciaEdicao)throw new ConflictException(erro.message);throw erro;}
       resultado[chave]=copiado;
     }
     return validarContextosEquivalencias(resultado);
+  }
+
+  /**
+   * Trava primeiro todos os pacientes em UUID crescente e depois todos os planos
+   * em UUID crescente. O paciente/plano de destino recebe write desde a primeira
+   * aquisição; origens recebem read. Isso evita promoção cruzada em A→B/B→A.
+   */
+  private async bloquearEscoposCopiaOrdenados(
+    gerenciador: EntityManager,
+    tenantId: string,
+    pacienteDestinoId: string,
+    planoDestinoId: string,
+    usuario: UsuarioAutenticado,
+    referencias: readonly ReferenciaCopiaEquivalenciaDto[] | undefined
+  ): Promise<void> {
+    if (!referencias?.length) return;
+    let ordem: ReturnType<typeof ordenarEscoposCopia>;
+    try {
+      ordem = ordenarEscoposCopia(
+        { pacienteId: pacienteDestinoId, planoId: planoDestinoId },
+        referencias.map(ref => ({ pacienteId: ref.pacienteOrigemId, planoId: ref.planoOrigemId }))
+      );
+    } catch {
+      throw new ConflictException('A origem da cópia está inconsistente. Recarregue e confira antes de salvar.');
+    }
+    for (const paciente of ordem.pacientes) {
+      await this.garantirPacienteNoEscopo(
+        gerenciador, tenantId, paciente.pacienteId, usuario,
+        paciente.modo === 'pessimistic_write' ? true : 'pessimistic_read'
+      );
+    }
+    for (const escopo of ordem.planos) {
+      await this.obterPlanoNoEscopo(
+        gerenciador, tenantId, escopo.pacienteId, escopo.planoId, usuario,
+        escopo.modo === 'pessimistic_write' ? true : 'pessimistic_read'
+      );
+    }
   }
   private garantirEquivalenciasRevisadas(versao:PlanoAlimentarVersaoOrm):void {
     if(Object.values(this.lerContextosEquivalencias(versao)).some(c=>c.estado==='revisao_pendente'))throw new BadRequestException('Equivalência com revisão pendente: recalcular ou manter como manual antes de publicar.');

@@ -22,7 +22,10 @@ export class ValidadorDocumentoEdicaoPlano implements ValidatorConstraintInterfa
 export class ReferenciaCopiaEquivalenciaDto {
   @IsUUID() pacienteOrigemId: string;
   @IsUUID() planoOrigemId: string;
+  @IsUUID() versaoIdOrigem: string;
   @IsInt() @Min(1) @Max(2147483646) numeroVersaoOrigem: number;
+  @ValidateIf(valor => valor.rascunhoRevisaoOrigemEsperada !== undefined)
+  @IsInt() @Min(0) @Max(2147483646) rascunhoRevisaoOrigemEsperada?: number;
   @IsString() @Length(1, 100) itemChaveOrigem: string;
   @IsString() @Length(1, 100) alternativaChaveOrigem: string;
   @IsString() @Length(1, 100) itemChaveDestino: string;

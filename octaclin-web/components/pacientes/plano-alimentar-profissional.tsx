@@ -323,7 +323,9 @@ function formularioDaVersao(versao: VersaoPlanoAlimentarApi, avaliacaoPadrao = '
                   origemCopiaEquivalencia: {
                     pacienteOrigemId: origemCopia.pacienteId,
                     planoOrigemId: origemCopia.planoId,
+                    versaoIdOrigem: versao.id,
                     numeroVersaoOrigem: versao.numero,
+                    ...(versao.status === 'rascunho' ? { rascunhoRevisaoOrigemEsperada: versao.rascunhoRevisao ?? 0 } : {}),
                     itemChaveOrigem: fonte.referenciaEquivalencia.itemChave,
                     alternativaChaveOrigem: fonte.referenciaEquivalencia.alternativaChave
                   }
@@ -1921,7 +1923,9 @@ export function PlanoAlimentarProfissional({ pacienteId, podeGerenciar, aoAltera
           return [{
             pacienteOrigemId: origem.pacienteOrigemId,
             planoOrigemId: origem.planoOrigemId,
+            versaoIdOrigem: origem.versaoIdOrigem,
             numeroVersaoOrigem: origem.numeroVersaoOrigem,
+            ...(origem.rascunhoRevisaoOrigemEsperada !== undefined ? { rascunhoRevisaoOrigemEsperada: origem.rascunhoRevisaoOrigemEsperada } : {}),
             itemChaveOrigem: origem.itemChaveOrigem,
             alternativaChaveOrigem: origem.alternativaChaveOrigem,
             itemChaveDestino: item.chaveCliente,

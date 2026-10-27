@@ -103,7 +103,10 @@ export function DuplicarPlanoDeOutroPaciente({
         return;
       }
       const versao = await obterVersaoPlanoAlimentar(pacienteOrigemId, plano.id, resumoVersao.numero);
-      if (versao.status !== resumoVersao.status) throw new Error('A versão de origem mudou. Carregue o plano novamente antes de copiar.');
+      if (versao.id !== resumoVersao.id || versao.numero !== resumoVersao.numero || versao.status !== resumoVersao.status ||
+          (resumoVersao.status === 'rascunho' && (versao.rascunhoRevisao ?? 0) !== (resumoVersao.rascunhoRevisao ?? 0))) {
+        throw new Error('A versão de origem mudou. Carregue o plano novamente antes de copiar.');
+      }
       if (!versao.refeicoes.length) {
         setErro('O plano escolhido não tem refeições para duplicar.');
         return;

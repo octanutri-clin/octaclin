@@ -1,5 +1,5 @@
 import { randomUUID } from 'crypto';
-import { clonarContextoEquivalenciaParaCopia, resolverEquivalenciasDocumento, ContextosEquivalencias, assinaturaDependenciasEquivalencia, mesclarContextosEquivalenciaSeguro } from './resolver-equivalencias-edicao';
+import { clonarContextoEquivalenciaParaCopia, resolverEquivalenciasDocumento, ContextosEquivalencias, assinaturaDependenciasEquivalencia, mesclarContextosEquivalenciaSeguro, validarContextosEquivalencias } from './resolver-equivalencias-edicao';
 import { calcularEquivalencia, FatosComposicaoEquivalencia } from '../dominio/equivalencia-nutriente';
 import { DocumentoEdicaoPlano } from '../dominio/edicao-plano';
 const fp='a'.repeat(64),ator={usuarioId:randomUUID(),profissionalId:randomUUID()};
@@ -22,11 +22,25 @@ describe('FOOD05 ciclo comando ACK referência e revisão pendente',()=>{
  });
  it('copia proveniência no servidor com identidade nova, linhagem e chaves remapeadas sem alterar a origem',async()=>{
   const a=await inicial(),origem=clone(a.contextos.a),copiadoPor={usuarioId:randomUUID(),profissionalId:randomUUID()};
-  const copia=clonarContextoEquivalenciaParaCopia(origem,{pacienteId:randomUUID(),planoId:randomUUID(),versaoId:randomUUID()},{pacienteId:randomUUID(),planoId:randomUUID(),versaoId:randomUUID(),itemChave:'item-destino',alternativaChave:'alternativa-destino'},copiadoPor,'2026-10-24T12:00:00.000Z');
+  const copia=clonarContextoEquivalenciaParaCopia(origem,{pacienteId:randomUUID(),planoId:randomUUID(),versaoId:randomUUID(),rascunhoRevisaoOrigem:7},{pacienteId:randomUUID(),planoId:randomUUID(),versaoId:randomUUID(),itemChave:'item-destino',alternativaChave:'alternativa-destino'},copiadoPor,'2026-10-24T12:00:00.000Z');
   expect(copia.aplicacaoId).not.toBe(origem.aplicacaoId);
-  expect(copia).toMatchObject({itemChave:'item-destino',alternativaChave:'alternativa-destino',estado:'revisao_pendente',ator:origem.ator,copiaOrigem:{aplicacaoId:origem.aplicacaoId,pacienteId:expect.any(String),planoId:expect.any(String),versaoId:expect.any(String),itemChave:origem.itemChave,alternativaChave:origem.alternativaChave,copiadaPor:copiadoPor,copiadaEm:'2026-10-24T12:00:00.000Z'}});
+  expect(copia).toMatchObject({itemChave:'item-destino',alternativaChave:'alternativa-destino',estado:'revisao_pendente',ator:origem.ator,copiaOrigem:{aplicacaoId:origem.aplicacaoId,pacienteId:expect.any(String),planoId:expect.any(String),versaoId:expect.any(String),rascunhoRevisaoOrigem:7,origemInicial:{rascunhoRevisaoOrigem:7},itemChave:origem.itemChave,alternativaChave:origem.alternativaChave,copiadaPor:copiadoPor,copiadaEm:'2026-10-24T12:00:00.000Z'}});
   expect(copia.fingerprintResolucao).not.toBe(origem.fingerprintResolucao);
   expect(JSON.stringify(origem)).toBe(JSON.stringify(a.contextos.a));
+ });
+ it('rejeita revisão editorial inválida na proveniência cifrada da cópia',async()=>{
+  const a=await inicial(),origem=clone(a.contextos.a),copia=clonarContextoEquivalenciaParaCopia(origem,{pacienteId:randomUUID(),planoId:randomUUID(),versaoId:randomUUID(),rascunhoRevisaoOrigem:1},{pacienteId:randomUUID(),planoId:randomUUID(),versaoId:randomUUID(),itemChave:'item-destino',alternativaChave:'alternativa-destino'},ator,'2026-10-24T12:00:00.000Z');
+  (copia.copiaOrigem as any).rascunhoRevisaoOrigem=-1;
+  expect(()=>validarContextosEquivalencias({'alternativa-destino':copia})).toThrow();
+ });
+ it('não atribui revisão do rascunho intermediário à linhagem antiga sem revisão conhecida',async()=>{
+  const a=await inicial(),origem=clone(a.contextos.a);
+  const copiaLegada=clonarContextoEquivalenciaParaCopia(origem,{pacienteId:randomUUID(),planoId:randomUUID(),versaoId:randomUUID()},{pacienteId:randomUUID(),planoId:randomUUID(),versaoId:randomUUID(),itemChave:'item-legado',alternativaChave:'alternativa-legada'},ator,'2026-10-24T12:00:00.000Z');
+  delete (copiaLegada.copiaOrigem as any).origemInicial;
+  delete (copiaLegada.copiaOrigem as any).rascunhoRevisaoOrigem;
+  const recopia=clonarContextoEquivalenciaParaCopia(copiaLegada,{pacienteId:randomUUID(),planoId:randomUUID(),versaoId:randomUUID(),rascunhoRevisaoOrigem:42},{pacienteId:randomUUID(),planoId:randomUUID(),versaoId:randomUUID(),itemChave:'item-recopia',alternativaChave:'alternativa-recopia'},ator,'2026-10-25T12:00:00.000Z');
+  expect(recopia.copiaOrigem?.rascunhoRevisaoOrigem).toBe(42);
+  expect(recopia.copiaOrigem?.origemInicial).not.toHaveProperty('rascunhoRevisaoOrigem');
  });
  it('salva cópia reidentificada pelo fluxo normal sem recalcular nem apagar a linhagem',async()=>{
   const a=await inicial(),origem=clone(a.contextos.a),copiadoPor={usuarioId:randomUUID(),profissionalId:randomUUID()};

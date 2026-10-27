@@ -26,7 +26,9 @@ export interface AlternativaFormularioCopia extends AlimentoFormularioCopia {
   origemCopiaEquivalencia?: {
     pacienteOrigemId: string;
     planoOrigemId: string;
+    versaoIdOrigem: string;
     numeroVersaoOrigem: number;
+    rascunhoRevisaoOrigemEsperada?: number;
     itemChaveOrigem: string;
     alternativaChaveOrigem: string;
   };
@@ -138,7 +140,7 @@ function copiarItemFormulario(item: ItemFormularioCopiaFonte, gerarChave: GerarC
 export function copiarRefeicaoParaFormulario(
   refeicao: RefeicaoPlanoAlimentarApi,
   gerarChave: GerarChaveCopia,
-  origem?: { pacienteId: string; planoId: string; numeroVersao: number }
+  origem?: { pacienteId: string; planoId: string; versaoId: string; numeroVersao: number; rascunhoRevisao?: number }
 ): RefeicaoFormularioCopia {
   if (refeicao.itens.length > LIMITE_ITENS_REFEICAO) {
     throw new Error(`A refeição excede o limite de ${LIMITE_ITENS_REFEICAO} alimentos.`);
@@ -193,7 +195,9 @@ export function copiarRefeicaoParaFormulario(
             origemCopiaEquivalencia: {
               pacienteOrigemId: origem.pacienteId,
               planoOrigemId: origem.planoId,
+              versaoIdOrigem: origem.versaoId,
               numeroVersaoOrigem: origem.numeroVersao,
+              ...(origem.rascunhoRevisao !== undefined ? { rascunhoRevisaoOrigemEsperada: origem.rascunhoRevisao } : {}),
               itemChaveOrigem: substituicao.referenciaEquivalencia.itemChave,
               alternativaChaveOrigem: substituicao.referenciaEquivalencia.alternativaChave
             }
