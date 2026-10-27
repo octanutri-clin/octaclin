@@ -185,11 +185,12 @@ export function copiarRefeicaoParaFormulario(
             : undefined
         };
         const alternativaDestinoChave = gerarChave('alimento');
+        const equivalenciaCopiada = substituicao.equivalenciaAplicada === true;
         return {
           ...substituicaoBase,
           chaveCliente: alternativaDestinoChave,
-          liberadaParaPaciente: substituicao.liberadaParaPaciente === true,
-          preferida: substituicao.preferida === true,
+          liberadaParaPaciente: equivalenciaCopiada ? false : substituicao.liberadaParaPaciente === true,
+          preferida: equivalenciaCopiada ? false : substituicao.preferida === true,
           ...(substituicao.equivalenciaAplicada && origem && substituicao.referenciaEquivalencia ? {
             provenienciaEquivalencia: true as const,
             origemCopiaEquivalencia: {

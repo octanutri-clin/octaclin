@@ -28,6 +28,23 @@ describe('FOOD05 ciclo comando ACK referência e revisão pendente',()=>{
   expect(copia.fingerprintResolucao).not.toBe(origem.fingerprintResolucao);
   expect(JSON.stringify(origem)).toBe(JSON.stringify(a.contextos.a));
  });
+ it('preserva linhagem e cálculo de origem ao recalcular uma cópia',async()=>{
+  const a=await inicial(),origem=clone(a.contextos.a);
+  const copiada=clonarContextoEquivalenciaParaCopia(origem,
+   {pacienteId:randomUUID(),planoId:randomUUID(),versaoId:randomUUID()},
+   {pacienteId:randomUUID(),planoId:randomUUID(),versaoId:randomUUID(),itemChave:'item-copia',alternativaChave:'alternativa-copia'},
+   ator,'2026-10-27T12:00:00.000Z');
+  const documentoCopia=documento(),item=principal(documentoCopia),alternativa=alt(documentoCopia);
+  item.chaveCliente='item-copia';alternativa.chaveCliente='alternativa-copia';
+  alternativa.equivalencia={acao:'recalcular',aplicacaoId:randomUUID(),anteriorAplicacaoId:copiada.aplicacaoId,nutriente:'energiaKcal',politica:{passoPorcaoGramas:'1'},porcaoEfetiva:'100',fingerprintEsperado:fp};
+  const recalc=await resolverEquivalenciasDocumento(documentoCopia,{'alternativa-copia':copiada},a.cb);
+  expect(recalc['alternativa-copia'].estado).toBe('calculada_revisada');
+  expect(recalc['alternativa-copia'].copiaOrigem).toEqual(copiada.copiaOrigem);
+  expect(recalc['alternativa-copia'].calculoOriginalCopia).toMatchObject({
+   aplicacaoId:origem.aplicacaoId,nutriente:origem.nutriente,principal:origem.principal,
+   alternativa:origem.alternativa,resultado:origem.resultado
+  });
+ });
  it('rejeita revisão editorial inválida na proveniência cifrada da cópia',async()=>{
   const a=await inicial(),origem=clone(a.contextos.a),copia=clonarContextoEquivalenciaParaCopia(origem,{pacienteId:randomUUID(),planoId:randomUUID(),versaoId:randomUUID(),rascunhoRevisaoOrigem:1},{pacienteId:randomUUID(),planoId:randomUUID(),versaoId:randomUUID(),itemChave:'item-destino',alternativaChave:'alternativa-destino'},ator,'2026-10-24T12:00:00.000Z');
   (copia.copiaOrigem as any).rascunhoRevisaoOrigem=-1;

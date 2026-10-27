@@ -556,3 +556,35 @@ Critério de fechamento: FOOD05 principal pode concluir quando T07-A passar e D0
 - [ ] T07-A/T14: regressões FOOD04/autosave/PA07 e critérios finais ainda pendentes.
 - [ ] Demo local smoke estava em Smoke visual Playwright; PR Gate ainda não confirmado. Manter #446 Draft.
 - T07-B/FOOD05-MDL permanece futuro; D18 não implementada e A06 aberto/contido por D17.
+
+### Retomada de 27/10/2026 — cópia e flags
+
+- [x] Preservar worktree existente e confirmar branch/HEAD/upstream `a4039561`; nenhum comando destrutivo.
+- [x] TDD RED/GREEN para herança de flags: helper Web normaliza só cópias FOOD05; API rejeita payload positivo sem persistir ou avançar revisão; FOOD04 factual preservada.
+- [x] TDD adicional RED/GREEN para `recalcular` + liberação simultânea de aplicação pendente. Recálculo false/false, review e publicação mantêm flags desligadas; ativação explícita em operação posterior permanece permitida.
+- [x] Web cópia 14/14; serviço 134/134; resolvedor 22/22; typecheck backend/Web, lint Web, diff check PASS em Node 22.21.1.
+- [x] CodeQL discussion `r4367826603` respondida com evidência técnica do merge seguro e teste de propriedades especiais; thread resolvida. CodeQL do HEAD `a4039561` PASS.
+- [ ] Executar prova Postgres/RLS do delta no CI descartável e conferir estado persistido, rollback e rejeição do payload combinado.
+- [ ] Testcontainers local BLOCKED: imagem Timescale ausente; pull falhou por `no space left on device`. Não houve teste real de RLS local nessa tentativa.
+- [ ] Revisor independente deve reavaliar o fix do bypass `recalcular` e, depois, revisar a entrega FOOD05 integral.
+- [ ] Completar matriz T07-A/T14: FOOD04, autosave/ACK, snapshots cifrados, histórico, PA07, autorizações/carteira, idempotência/replay, rollback, projeções e cópias entre escopos autorizados.
+- [ ] Fechar T15, T16, T17 e T18 individualmente; comprovar D01–D17/M01–M08 nos fluxos de substituição individual e grupos FOOD04, acessibilidade desktop/mobile, limites e erros.
+- [x] A04/A05 mantidos PASS técnico do CI `40536581786`/`919ce32f`; não reabertos. D15/D16 corrigidos tecnicamente; D17 bloqueia modelos; T07-B/D18/A06 ficam na futura FOOD05-MDL.
+- CI atual de `a4039561` PASS, mas antecede o delta. Manter PR #446 Draft até novo CI e revisão independente final.
+
+### Follow-up R4 do delta de flags — 27/10/2026
+
+- [x] Evitar regressão de flags legítimas: teste RED para uma equivalência previamente liberada, que fica pendente e é recalculada preservando `true/true`; guard backend bloqueia somente transição `false→true` na mesma operação.
+- [x] Preservar após recálculo da cópia a proveniência original cifrada (`copiaOrigem`) e os fatos/resultado/snapshots do cálculo inicial (`calculoOriginalCopia`), com teste RED/GREEN unitário e assertion no snapshot cifrado pelo serviço.
+- [x] Suítes completas finais locais: serviço 136/136; resolvedor 23/23; Web cópia 14/14; typechecks backend/Web e ESLint Web PASS em Node 22.21.1.
+- [ ] R4 independente deve reler estes dois ajustes finais; revisão não executa testes.
+- [ ] Novo CI/Postgres/RLS do delta ainda obrigatório.
+- [x] R4 independente estática do delta prioritário reexecutada após os fixes adjacentes: sem achados materiais; reviewer não executou testes.
+- [ ] Postgres/RLS da cópia e rejeição sem escrita aguardam novo CI; integração ampliada compara flags materializadas, bytes do snapshot cifrado e linhas do destino antes/depois do payload forjado.
+
+### Situação individual T15–T18 após retomada — 27/10/2026
+
+- **T15 — BLOCKED:** testes locais focados de cópia/serviço/resolvedor passaram, mas regressões integradas de FOOD04, PA02–PA07, autosave/ACK, snapshots legados, portal/PDF e clientes antigos não foram executadas nesta rodada.
+- **T16 — BLOCKED:** R4 independente do delta prioritário sem achados estáticos; a revisão integral de segurança/arquitetura FOOD05 ainda falta. Matriz Axe/teclado/leitor de tela desktop/mobile e abusos/erros completa não executada após o delta.
+- **T17 — IN PROGRESS:** plan/todo/execução/parecer/handoff atualizados com bloqueios/evidências e diff check PASS. A matriz integral de aceitação D01–D17/M01–M08, links/contratos e evidência por linha ainda não está fechada.
+- **T18 — BLOCKED:** CI do HEAD novo ainda pendente; o CI verde `a4039561` antecede o delta. Prova RLS local não iniciou por falta de espaço. Rollout/produção FOOD04 permanecem fora deste ciclo e pendentes de regularização/autorização.

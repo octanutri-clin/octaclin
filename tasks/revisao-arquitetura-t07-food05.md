@@ -300,3 +300,26 @@ O segundo CI manteve o timeout porque o callback da edição usava o executor no
 O CI `40536581786` passou o Backend NestJS com 3.557 testes PASS/48 SKIPPED e a etapa separada Testcontainers/RLS descartável também PASS. As provas de A04/A05 foram exercitadas com concorrência controlada, recusa de cópia stale e nenhuma escrita no destino. A04 e A05 recebem PASS técnico para seus critérios de concorrência/CAS/rollback. A R4 independente estática da correção do executor não encontrou achados; não executou testes.
 
 T07-A e T14 permanecem BLOCKED enquanto faltarem regressões FOOD04/autosave/PA07 e a confirmação dos demais critérios/gates da FOOD05. O smoke visual Playwright ainda estava em execução; PR #446 permanece Draft.
+
+### Retomada: revisão de flags copiadas e CodeQL — 27/10/2026
+
+O delta da cópia FOOD05 zera flags no helper web e o backend rejeita payload com flags positivas para os destinos indicados em `copiasEquivalencia`, antes de gravar o draft. Não redefine alternativas preexistentes fora da operação de cópia; cópias factuais FOOD04 mantêm flags/semântica anteriores.
+
+**Achado R4 delta P2 adicional:** cópia false/false seguida de `acao=recalcular` com flags positivas no mesmo save ainda passava; a validação inicial cobria `calcular`, não `recalcular`. O teste de serviço reproduziu o bypass (RED). O backend agora inspeciona o contexto anterior após resolver referências e rejeita flags positivas enquanto o estado anterior está `revisao_pendente`. GREEN verificou sem alteração de revisão e snapshot; recálculo numa gravação separada mantém false/false até review/publicação, e ativação explícita posterior é aceita. O revisor não executou testes; precisa reler este último fix.
+
+Testes locais em Node 22.21.1: web cópia 14/14; serviço NestJS 134/134 + caso adicional focado aprovado; resolvedor 22/22; typechecks backend/web e ESLint web PASS. Testcontainers local BLOCKED antes das asserções: imagem `timescale/timescaledb-ha:pg15` ausente e pull falhou por falta de espaço; o novo caso de persistência/rollback precisa do CI descartável.
+
+CodeQL `discussion_r4367826603` tratada: atribuição antiga `Object.assign` foi substituída em commit anterior por mapa `Object.create(null)` e merge usando `Object.defineProperty`. Teste com JSON `__proto__`/`constructor` confirma propriedades próprias e nenhuma alteração a `{}`; suíte do resolvedor 22/22. CodeQL do HEAD `a4039561` PASS no run `40539879968`. Resposta técnica registrada e thread resolvida.
+
+Status: A04/A05 PASS técnico em `919ce32f`, não reabertos. Fix de flags aguarda CI e nova leitura independente; R4 integral pendente. T07-A/T14 BLOCKED, T15–T18 e D01–D17/M01–M08 ainda precisam da matriz final. D17 e transferência T07-B/D18/A06 para FOOD05-MDL permanecem inalteradas.
+
+### Resposta aos achados adjacentes R4 — 27/10/2026
+
+1. **Flags anteriores legítimas:** teste RED reproduziu que o guard bloqueava `true/true` já presentes antes do stale. Agora compara valores atuais com a alternativa correspondente em `anteriorEdicao` e só rejeita transições novas false→true quando o contexto anterior está `revisao_pendente`; teste GREEN cobre manter as escolhas já existentes.
+2. **Linhagem/cálculo após recálculo:** teste RED detectou ausência de `copiaOrigem` no contexto recém-calculado. O resolvedor agora preserva linhagem e `calculoOriginalCopia` (identidade original, nutriente/política, fatos, porções, resultado, hashes e snapshots) dentro do snapshot cifrado. Teste do resolvedor e teste de serviço validam o conteúdo após persistência.
+
+GREEN completo local em Node 22.21.1: serviço 136/136, resolvedor 23/23, Web 14/14, typechecks e ESLint Web PASS. Revisor independente precisa confirmar o delta final. A prova PostgreSQL/RLS continua sem execução por falta de espaço para a imagem Timescale local; usar CI descartável.
+
+### Resultado da releitura R4 independente do delta de flags — 27/10/2026
+
+Após os fixes do guard de transição false→true e preservação de `copiaOrigem`/`calculoOriginalCopia`, o revisor independente confirmou os dois pontos sem achado material adicional. Também confirmou ramo FOOD04 inalterado e os testes de serviço cobrindo rejeição sem escrita, preservação de flags preexistentes, publicação desligada e ativação em etapa posterior. Escopo estático: não executou testes. A integração foi adicionalmente fortalecida para verificar estado materializado e snapshot cifrado persistidos; aguarda CI PostgreSQL/RLS. Esta releitura encerra a revisão independente do achado de flags, não equivale à R4 integral de toda FOOD05.

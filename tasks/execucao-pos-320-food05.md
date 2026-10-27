@@ -833,3 +833,21 @@ Não reportar T07-A ou T14 como PASS até completar o banco e as regressões. T0
 - Web Next.js, Mobile Expo, AI FastAPI, Governança, Operação, Rollout, CodeQL, Semgrep, Trivy e Dependency Review: **PASS**.
 - Demo local smoke: **em andamento** em “Smoke visual Playwright”; PR Gate ainda não estava fechado na consulta.
 - Portanto T07-A/T14 seguem BLOCKED até regressões FOOD04/autosave/PA07, os demais critérios de aceitação, smoke/PR Gate e R4 independente final. PR #446 permanece Draft; sem migration externa, merge ou deploy.
+
+### Retomada, flags e segurança — 27/10/2026
+
+- Worktree PR recuperada em `docs/pos320-food05-planning`, HEAD/upstream `a4039561fd4260c2cb87dc3cd5e0f648ec712846`; preservado o delta não commitado de cinco arquivos. Nenhum reset/clean/rebase ou acesso externo.
+- RED/GREEN: helper Web define flags false somente para equivalências FOOD05; backend rejeita flags positivas nas referências de cópia. A revisão independente identificou também recálculo pendente + liberação no mesmo save. Teste RED reproduziu aceitação; backend agora rejeita essa combinação antes da persistência. GREEN comprova revisão/snapshot sem alteração, recálculo false, estado `calculada_revisada`, revisão/publicação sem liberar, e ativação separada posterior aceita.
+- Node 22.21.1: `test:copia-refeicoes` 14/14; `servico-planos-alimentares.spec.ts` 134/134 (e teste adicional focado aprovado); `resolver-equivalencias-edicao.spec.ts` 22/22; typecheck backend/Web e ESLint Web PASS; diff check PASS. Backend ESLint não disponível no pacote local. Playwright completo e suíte global não foram executados nesta retomada.
+- Tentativa RLS Testcontainers bloqueada no setup: imagem Timescale não estava em cache e pull falhou por falta de espaço no filesystem (97% usado). Nenhuma asserção do cenário de banco foi executada; sem banco externo. Classificação BLOCKED, não FAIL funcional.
+- CodeQL: discussão `r4367826603` sobre antigo `Object.assign` conferida contra `Object.create(null)` + `Object.defineProperty`; teste `__proto__`/`constructor` PASS (na suíte 22/22) e CodeQL remoto do HEAD a4039561 PASS (`40539879968`). Comentário respondido com evidências e thread resolvida.
+- CI remoto confirmado no HEAD `a4039561`: run OctaClin `40539879848`, CodeQL `40539879968`, Semgrep `40539879930`, Trivy `40539880199`, Dependency Review `40539879900` PASS nos jobs aplicáveis (Backend/Postgres-RLS, Web, Demo, PR Gate, Mobile, AI, Governança); SBOM provenance SKIPPED. Estas execuções antecedem o delta e não o validam.
+- A04/A05 permanecem PASS técnico do commit `919ce32f`; D15/D16 corrigidos. R4 independente do delta encontrou inicialmente o bypass no recalcular; correção implementada e aguarda re-revisão. R4 integral não concluída. T07-A/T14 BLOCKED; T15–T18 sem fechamento individual nesta rodada. #446 continua Draft.
+
+### Follow-up dos achados R4 — 27/10/2026
+
+- R4 independente encontrou um falso bloqueio: flags true já salvas antes da equivalência ficar pendente eram rejeitadas no recálculo. RED confirmou; comparação agora bloqueia só ativação nova false→true na mesma gravação. Teste verifica recalcular equivalência previamente liberada sem desativar sua escolha.
+- R4 também encontrou perda da linhagem e cálculo inicial ao recalcular cópia. O snapshot cifrado agora carrega `copiaOrigem` e `calculoOriginalCopia` imutável (fatos, parâmetros, resultado, hashes e snapshots); teste de domínio e teste de serviço conferem persistência após recálculo.
+- Regressões finais após os ajustes: serviço 136/136, resolvedor 23/23, Web cópia 14/14, backend/Web typecheck e ESLint Web PASS (Node 22.21.1). Diffs continuam locais; Postgres/RLS CI do delta e re-revisão R4 independente ainda pendentes.
+- Releitura independente final do delta prioritário: sem achados materiais adicionais. Escopo foi estático, não executou testes; a aprovação técnica depende da execução CI Postgres/RLS e dos outros gates integrais.
+- O teste de integração RLS foi reforçado depois da revisão: inspeciona flags materializadas no banco, captura snapshot cifrado e linhas existentes antes de payload adulterado, e exige igualdade integral depois da rejeição.

@@ -775,6 +775,26 @@ export class ServicoPlanosAlimentares {
         }
       }
       const equivalenciasAnteriores=await this.resolverCopiasEquivalencia(gerenciador,tenantId,pacienteId,plano,rascunho,usuario,documento,dados.copiasEquivalencia);
+      for(const refeicao of documento.refeicoes)for(const item of refeicao.itens)for(const alternativa of item.substituicoes??[]){
+        const intencao=alternativa.equivalencia;
+        const anterior=equivalenciasAnteriores[alternativa.chaveCliente];
+        const alternativaAnterior=anteriorEdicao?.refeicoes.flatMap(ref=>ref.itens)
+          .find(i=>i.chaveCliente===item.chaveCliente)?.substituicoes?.find(a=>a.chaveCliente===alternativa.chaveCliente);
+        const ativandoLiberacao=alternativa.liberadaParaPaciente===true&&alternativaAnterior?.liberadaParaPaciente!==true;
+        const ativandoPreferencia=alternativa.preferida===true&&alternativaAnterior?.preferida!==true;
+        if(intencao&&'acao'in intencao&&intencao.acao==='recalcular'&&anterior?.estado==='revisao_pendente'
+          &&(ativandoLiberacao||ativandoPreferencia))
+          throw new BadRequestException('Resolva e salve a revisão da equivalência antes de liberar ou marcar preferência.');
+      }
+      for(const referencia of dados.copiasEquivalencia??[]){
+        const alternativa=documento.refeicoes.flatMap(refeicao=>refeicao.itens
+          .filter(item=>item.chaveCliente===referencia.itemChaveDestino)
+          .flatMap(item=>item.substituicoes??[]))
+          .find(item=>item.chaveCliente===referencia.alternativaChaveDestino);
+        if(!alternativa)throw new ConflictException('A alternativa copiada não corresponde ao rascunho atual. Recarregue e tente novamente.');
+        if(alternativa.liberadaParaPaciente===true||alternativa.preferida===true)
+          throw new BadRequestException('Novas equivalências copiadas começam sem liberação ou preferência. Configure após confirmar.');
+      }
       const catalogosAnteriores = rascunho.edicaoSnapshotCriptografado
         ? lerSnapshotEdicaoGrupos(this.lerJsonCriptografado(rascunho.edicaoSnapshotCriptografado)).catalogos : {};
       const materializadas=anteriorEdicao?{anteriores:{},custom:{},catalogo:{}}:await lerOrigensMaterializadas(gerenciador,tenantId,rascunho.id,documento,this.criptografia);

@@ -261,3 +261,21 @@ O CI `40534905458` repetiu o timeout edit-first no HEAD `f799760f`: 3.556 PASS/4
 ### Handoff após CI Postgres/RLS verde — 27/10/2026
 
 HEAD `919ce32f`, run `40536581786`: Backend NestJS PASS com 3.557 testes/48 skipped; etapa Testcontainers/RLS PASS. A04 e A05 recebem PASS técnico. A causa do timeout edit-first era executor não instrumentado; corrigida e revisada estaticamente por R4 independente (sem achados, sem execução de testes). Web, Mobile, AI, Governança, Operação, Rollout e scanners CodeQL/Semgrep/Trivy/Dependency Review passaram. Demo smoke visual Playwright ainda rodava; PR Gate não fechado. T07-A/T14 seguem BLOCKED por regressões FOOD04/autosave/PA07, critérios finais e revisão R4 final. PR #446 permanece Draft. T07-B/FOOD05-MDL e D18/A06 seguem fora; D17 bloqueia modelo no backend/UI. Sem migration externa, merge ou deploy.
+
+### Handoff de retomada — 27/10/2026
+
+Worktree `docs/pos320-food05-planning`, HEAD e upstream `a4039561`; delta recuperado sem operações destrutivas. Alteração local de `next-env.d.ts` no worktree `main` preservada e fora desta PR.
+
+Fix de flags: cópia de equivalência começa false/false e pendente; backend rejeita adulteração. Revisão R4 independente encontrou bypass composto `recalcular` + flags positivas. Teste RED demonstrou a aceitação; backend passou a rejeitar flags positivas enquanto o contexto anterior está `revisao_pendente`. GREEN demonstrou sem escrita em falha, recálculo desligado, revisão/publicação mantendo false/false e ativação explícita posterior em operação distinta. Testes locais Node 22.21.1: Web 14/14, serviço 134/134 e caso adicional, resolvedor 22/22, typechecks Web/backend, lint Web e diff check PASS.
+
+RLS Testcontainers local não executou caso de integração: Timescale image ausente; pull falhou por falta de espaço. O delta precisa de CI novo com Postgres/RLS. Revisor independente precisa reler o último fix; R4 integral continua pendente.
+
+CodeQL `discussion_r4367826603` respondida e resolvida com evidência do mapa `Object.create(null)`, merge seguro via `Object.defineProperty`, teste `__proto__`/`constructor` 22/22 e CodeQL PASS no run `40539879968` do HEAD `a4039561`.
+
+O CI completo confirmado do HEAD remoto (OctaClin `40539879848`, CodeQL `40539879968`, Semgrep `40539879930`, Trivy `40539880199`, Dependency Review `40539879900`) não valida o delta local; SBOM provenance skipped. A04/A05 permanecem PASS técnico do `919ce32f`; D15/D16 corrigidos. T07-A/T14 e T15–T18 ainda bloqueados até CI, regressões completas, matriz D01–D17/M01–M08 e R4 final. #446 segue Draft; T07-B/D18/A06 ficam em FOOD05-MDL; D17 continua bloqueando modelos.
+
+### Follow-up R4 — flags legítimas e proveniência após recálculo — 27/10/2026
+
+A revisão independente apontou dois riscos adicionais ao patch inicial. O backend agora bloqueia apenas nova transição de flag false→true ao resolver um contexto pendente, preservando flags true já salvas antes do stale. O resolvedor mantém `copiaOrigem` e `calculoOriginalCopia` após recálculo, com snapshot de fatos, parâmetros, resultado e hashes no armazenamento cifrado. RED/GREEN e persistência foram verificados. GREEN mais recente: serviço 136/136, resolvedor 23/23, Web 14/14, typechecks backend/Web e lint Web PASS em Node 22.21.1. Aguarda releitura R4 independente, CI descartável Postgres/RLS e R4 integral.
+
+Releitura R4 independente do delta prioritário concluída: sem achados materiais adicionais; revisão estática, sem execução independente de testes. O revisor verificou UI/helper, backend, transições false→true, preservação de flags antigas, linhagem/cálculo original e ramo FOOD04. A prova RLS foi ampliada para verificar o snapshot cifrado e as linhas materializadas sem alteração após payload forjado, mas depende de novo CI. A R4 integral ainda está aberta.

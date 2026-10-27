@@ -35,6 +35,8 @@ test('FOOD04 cópia factual entre planos não transplanta a autoridade do grupo'
 test('FOOD05 cópia de refeição salva exige e preserva referência opaca para revalidação no servidor', () => {
   const origem = refeicaoApi();
   origem.itens[0].substituicoes[0].equivalenciaAplicada = true;
+  origem.itens[0].substituicoes[0].liberadaParaPaciente = true;
+  origem.itens[0].substituicoes[0].preferida = true;
   origem.itens[0].substituicoes[0].referenciaEquivalencia = { itemChave: 'orig-item', alternativaChave: 'orig-alt' };
   assert.throws(() => copiarRefeicaoParaFormulario(origem, gerarChave), /sem referência de origem verificável/i);
   const copia = copiarRefeicaoParaFormulario(origem, gerarChave, {
@@ -46,6 +48,8 @@ test('FOOD05 cópia de refeição salva exige e preserva referência opaca para 
   });
   const item = copia.itens[0];
   const alternativa = item.substituicoes[0];
+  assert.equal(alternativa.liberadaParaPaciente, false);
+  assert.equal(alternativa.preferida, false);
   assert.equal(alternativa.provenienciaEquivalencia, true);
   assert.deepEqual(alternativa.origemCopiaEquivalencia, {
     pacienteOrigemId: '10000000-0000-4000-8000-000000000001',

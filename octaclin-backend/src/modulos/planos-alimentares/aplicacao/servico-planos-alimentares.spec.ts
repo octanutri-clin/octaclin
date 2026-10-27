@@ -1787,20 +1787,119 @@ describe('ServicoPlanosAlimentares', () => {
     });
     it('FOOD05 copia proveniência da versão autorizada no backend, remapeia chaves e marca nova aplicação pendente',async()=>{
       const {d,aplicacaoId}=await prepararEquivalencia();
-      const origem:any=await salvarEdicao(d),doc:any=JSON.parse(JSON.stringify(origem.documentoEdicao));
+      const primeira:any=await salvarEdicao(d);
+      primeira.documentoEdicao.refeicoes[0].itens[0].substituicoes[0].liberadaParaPaciente=true;
+      primeira.documentoEdicao.refeicoes[0].itens[0].substituicoes[0].preferida=true;
+      const origem:any=await salvarEdicao(primeira.documentoEdicao,1),doc:any=JSON.parse(JSON.stringify(origem.documentoEdicao));
       const itemOrigem=doc.refeicoes[0].itens[0],alternativaOrigem=itemOrigem.substituicoes[0];
       const itemDestino=JSON.parse(JSON.stringify(itemOrigem)),alternativaDestino=itemDestino.substituicoes[0];
       itemDestino.chaveCliente='item-copia-food05';alternativaDestino.chaveCliente='alternativa-copia-food05';delete alternativaDestino.equivalencia;
+      alternativaDestino.liberadaParaPaciente=false;alternativaDestino.preferida=false;
       doc.refeicoes[0].itens.push(itemDestino);
       const salvo:any=await servico.salvarEdicaoRascunho(TENANT_ID,PACIENTE_ID,PLANO_ID,usuarioProfissional(),{
+        rascunhoIdEsperado:VERSAO_ID,rascunhoRevisaoEsperada:2,documento:doc,
+        copiasEquivalencia:[{pacienteOrigemId:PACIENTE_ID,planoOrigemId:PLANO_ID,versaoIdOrigem:VERSAO_ID,numeroVersaoOrigem:1,rascunhoRevisaoOrigemEsperada:2,itemChaveOrigem:itemOrigem.chaveCliente,alternativaChaveOrigem:alternativaOrigem.chaveCliente,itemChaveDestino:itemDestino.chaveCliente,alternativaChaveDestino:alternativaDestino.chaveCliente}]
+      } as any);
+      const contextos=JSON.parse(criptografia.descriptografar(repositorios.get(PlanoAlimentarVersaoOrm)!.registros[0].edicaoSnapshotCriptografado)).equivalencias;
+      expect(salvo.equivalenciasAplicadas['alternativa-copia-food05']).toMatchObject({estado:'revisao_pendente'});
+      expect(salvo.documentoEdicao.refeicoes[0].itens[1].substituicoes[0]).toMatchObject({liberadaParaPaciente:false,preferida:false});
+      expect(contextos['alternativa-copia-food05']).toMatchObject({itemChave:'item-copia-food05',alternativaChave:'alternativa-copia-food05',estado:'revisao_pendente',copiaOrigem:{pacienteId:PACIENTE_ID,planoId:PLANO_ID,versaoId:VERSAO_ID,rascunhoRevisaoOrigem:2,origemInicial:{rascunhoRevisaoOrigem:2},aplicacaoId, itemChave:itemOrigem.chaveCliente,alternativaChave:alternativaOrigem.chaveCliente,copiadaPor:{usuarioId:USUARIO_ID,profissionalId:PROFISSIONAL_ID}}});
+      expect(contextos['alternativa-copia-food05'].aplicacaoId).not.toBe(aplicacaoId);
+      expect(alternativaDestino.equivalencia).toBeUndefined();
+    });
+    it.each(['liberadaParaPaciente','preferida'])('FOOD05 recusa cópia com %s positiva antes de gravar',async campo=>{
+      const {d}=await prepararEquivalencia();
+      const origem:any=await salvarEdicao(d),doc:any=JSON.parse(JSON.stringify(origem.documentoEdicao));
+      const itemOrigem=doc.refeicoes[0].itens[0],alternativaOrigem=itemOrigem.substituicoes[0];
+      const itemDestino=JSON.parse(JSON.stringify(itemOrigem)),alternativaDestino=itemDestino.substituicoes[0];
+      itemDestino.chaveCliente=`item-copia-flags-${campo}`;alternativaDestino.chaveCliente=`alternativa-copia-flags-${campo}`;delete alternativaDestino.equivalencia;
+      alternativaDestino[campo]=true;doc.refeicoes[0].itens.push(itemDestino);
+      const versao=repositorios.get(PlanoAlimentarVersaoOrm)!.registros[0],revisaoAntes=versao.rascunhoRevisao;
+      await expect(servico.salvarEdicaoRascunho(TENANT_ID,PACIENTE_ID,PLANO_ID,usuarioProfissional(),{
+        rascunhoIdEsperado:VERSAO_ID,rascunhoRevisaoEsperada:1,documento:doc,
+        copiasEquivalencia:[{pacienteOrigemId:PACIENTE_ID,planoOrigemId:PLANO_ID,versaoIdOrigem:VERSAO_ID,numeroVersaoOrigem:1,rascunhoRevisaoOrigemEsperada:1,itemChaveOrigem:itemOrigem.chaveCliente,alternativaChaveOrigem:alternativaOrigem.chaveCliente,itemChaveDestino:itemDestino.chaveCliente,alternativaChaveDestino:alternativaDestino.chaveCliente}]
+      } as any)).rejects.toBeInstanceOf(BadRequestException);
+      expect(versao.rascunhoRevisao).toBe(revisaoAntes);
+    });
+    it('FOOD05 não libera equivalência copiada no mesmo save que resolve revisão pendente',async()=>{
+      const {d}=await prepararEquivalencia();
+      const origem:any=await salvarEdicao(d),doc:any=JSON.parse(JSON.stringify(origem.documentoEdicao));
+      const itemOrigem=doc.refeicoes[0].itens[0],alternativaOrigem=itemOrigem.substituicoes[0];
+      const itemDestino=JSON.parse(JSON.stringify(itemOrigem)),alternativaDestino=itemDestino.substituicoes[0];
+      itemDestino.chaveCliente='item-copia-revisao-flags';alternativaDestino.chaveCliente='alternativa-copia-revisao-flags';delete alternativaDestino.equivalencia;
+      alternativaDestino.liberadaParaPaciente=false;alternativaDestino.preferida=false;doc.refeicoes[0].itens.push(itemDestino);
+      const copiada:any=await servico.salvarEdicaoRascunho(TENANT_ID,PACIENTE_ID,PLANO_ID,usuarioProfissional(),{
         rascunhoIdEsperado:VERSAO_ID,rascunhoRevisaoEsperada:1,documento:doc,
         copiasEquivalencia:[{pacienteOrigemId:PACIENTE_ID,planoOrigemId:PLANO_ID,versaoIdOrigem:VERSAO_ID,numeroVersaoOrigem:1,rascunhoRevisaoOrigemEsperada:1,itemChaveOrigem:itemOrigem.chaveCliente,alternativaChaveOrigem:alternativaOrigem.chaveCliente,itemChaveDestino:itemDestino.chaveCliente,alternativaChaveDestino:alternativaDestino.chaveCliente}]
       } as any);
       const contextos=JSON.parse(criptografia.descriptografar(repositorios.get(PlanoAlimentarVersaoOrm)!.registros[0].edicaoSnapshotCriptografado)).equivalencias;
-      expect(salvo.equivalenciasAplicadas['alternativa-copia-food05']).toMatchObject({estado:'revisao_pendente'});
-      expect(contextos['alternativa-copia-food05']).toMatchObject({itemChave:'item-copia-food05',alternativaChave:'alternativa-copia-food05',estado:'revisao_pendente',copiaOrigem:{pacienteId:PACIENTE_ID,planoId:PLANO_ID,versaoId:VERSAO_ID,rascunhoRevisaoOrigem:1,origemInicial:{rascunhoRevisaoOrigem:1},aplicacaoId, itemChave:itemOrigem.chaveCliente,alternativaChave:alternativaOrigem.chaveCliente,copiadaPor:{usuarioId:USUARIO_ID,profissionalId:PROFISSIONAL_ID}}});
-      expect(contextos['alternativa-copia-food05'].aplicacaoId).not.toBe(aplicacaoId);
-      expect(alternativaDestino.equivalencia).toBeUndefined();
+      const contexto=contextos['alternativa-copia-revisao-flags'];
+      const calculoOriginalPersistido=contexto.calculoOriginalCopia;
+      const paraRecalcular:any=JSON.parse(JSON.stringify(copiada.documentoEdicao));
+      const item=paraRecalcular.refeicoes[0].itens[1],alternativa=item.substituicoes[0];
+      const fontes=new FontesGruposSubstituicoes(criptografia);
+      const previaServico=new ServicoEquivalenciasPlano(executor as any,criptografia,fontes,new ServicoGruposSubstituicoes(executor as any,criptografia,fontes));
+      const previa=await previaServico.prever(TENANT_ID,PACIENTE_ID,PLANO_ID,usuarioProfissional(),{
+        versaoId:VERSAO_ID,rascunhoRevisaoEsperada:2,documentoEdicao:paraRecalcular,itemChave:item.chaveCliente,
+        nutriente:'energiaKcal',alternativas:[alternativa],politica:{passoPorcaoGramas:'1'}
+      });
+      const linha=previa.alternativas[0];if(linha.resultado.estado!=='calculavel')throw new Error('Prévia de recálculo sintética deveria calcular');
+      alternativa.porcaoGramas=linha.resultado.porcaoEfetivaGramas;
+      alternativa.equivalencia={acao:'recalcular',aplicacaoId:randomUUID(),anteriorAplicacaoId:contexto.aplicacaoId,nutriente:'energiaKcal',politica:{passoPorcaoGramas:'1'},porcaoEfetiva:alternativa.porcaoGramas,fingerprintEsperado:linha.fingerprint};
+      alternativa.liberadaParaPaciente=true;alternativa.preferida=true;
+      const versao=repositorios.get(PlanoAlimentarVersaoOrm)!.registros[0],revisaoAntes=versao.rascunhoRevisao,snapshotAntes=versao.edicaoSnapshotCriptografado;
+      await expect(servico.salvarEdicaoRascunho(TENANT_ID,PACIENTE_ID,PLANO_ID,usuarioProfissional(),{
+        rascunhoIdEsperado:VERSAO_ID,rascunhoRevisaoEsperada:2,documento:paraRecalcular
+      })).rejects.toBeInstanceOf(BadRequestException);
+      expect(versao.rascunhoRevisao).toBe(revisaoAntes);
+      expect(versao.edicaoSnapshotCriptografado).toBe(snapshotAntes);
+      alternativa.liberadaParaPaciente=false;alternativa.preferida=false;
+      const resolvida:any=await servico.salvarEdicaoRascunho(TENANT_ID,PACIENTE_ID,PLANO_ID,usuarioProfissional(),{
+        rascunhoIdEsperado:VERSAO_ID,rascunhoRevisaoEsperada:2,documento:paraRecalcular
+      });
+      expect(resolvida.equivalenciasAplicadas['alternativa-copia-revisao-flags'].estado).toBe('calculada_revisada');
+      expect(resolvida.documentoEdicao.refeicoes[0].itens[1].substituicoes[0]).toMatchObject({liberadaParaPaciente:false,preferida:false});
+      const contextoRecalculado=JSON.parse(criptografia.descriptografar(repositorios.get(PlanoAlimentarVersaoOrm)!.registros[0].edicaoSnapshotCriptografado)).equivalencias['alternativa-copia-revisao-flags'];
+      expect(contextoRecalculado.copiaOrigem).toEqual(contexto.copiaOrigem);
+      expect(contextoRecalculado.calculoOriginalCopia).toEqual(calculoOriginalPersistido);
+      await servico.revisar(TENANT_ID,PACIENTE_ID,PLANO_ID,usuarioProfissional(),{rascunhoIdEsperado:VERSAO_ID,rascunhoRevisaoEsperada:3});
+      await servico.publicar(TENANT_ID,PACIENTE_ID,PLANO_ID,usuarioProfissional(),{rascunhoIdEsperado:VERSAO_ID,rascunhoRevisaoEsperada:4});
+      const publicada:any=await servico.obterVersao(TENANT_ID,PACIENTE_ID,PLANO_ID,1,usuarioProfissional());
+      expect(publicada.refeicoes[0].itens[1].substituicoes[0]).toMatchObject({liberadaParaPaciente:false,preferida:false});
+      const nova:any=await servico.criarNovaVersao(TENANT_ID,PACIENTE_ID,PLANO_ID,usuarioProfissional());
+      const ativada=JSON.parse(JSON.stringify(nova.documentoEdicao));
+      ativada.refeicoes[0].itens[1].substituicoes[0].liberadaParaPaciente=true;
+      ativada.refeicoes[0].itens[1].substituicoes[0].preferida=true;
+      const salvamentoAtivacao:any=await servico.salvarEdicaoRascunho(TENANT_ID,PACIENTE_ID,PLANO_ID,usuarioProfissional(),{
+        rascunhoIdEsperado:nova.id,rascunhoRevisaoEsperada:0,documento:ativada
+      });
+      expect(salvamentoAtivacao.documentoEdicao.refeicoes[0].itens[1].substituicoes[0]).toMatchObject({liberadaParaPaciente:true,preferida:true});
+    });
+    it('FOOD05 mantém flags legítimas ao recalcular equivalência já liberada que ficou pendente',async()=>{
+      const {d}=await prepararEquivalencia();
+      const primeira:any=await salvarEdicao(d);
+      const liberada:any=JSON.parse(JSON.stringify(primeira.documentoEdicao));
+      liberada.refeicoes[0].itens[0].substituicoes[0].liberadaParaPaciente=true;
+      liberada.refeicoes[0].itens[0].substituicoes[0].preferida=true;
+      const segunda:any=await salvarEdicao(liberada,1);
+      const desatualizada:any=JSON.parse(JSON.stringify(segunda.documentoEdicao));
+      desatualizada.refeicoes[0].itens[0].porcaoGramas=160;
+      const pendente:any=await salvarEdicao(desatualizada,2);
+      expect(pendente.equivalenciasAplicadas.equivalente.estado).toBe('revisao_pendente');
+      const documento=JSON.parse(JSON.stringify(pendente.documentoEdicao));
+      const item=documento.refeicoes[0].itens[0],alternativa=item.substituicoes[0];
+      const fontes=new FontesGruposSubstituicoes(criptografia);
+      const previaServico=new ServicoEquivalenciasPlano(executor as any,criptografia,fontes,new ServicoGruposSubstituicoes(executor as any,criptografia,fontes));
+      const previa=await previaServico.prever(TENANT_ID,PACIENTE_ID,PLANO_ID,usuarioProfissional(),{
+        versaoId:VERSAO_ID,rascunhoRevisaoEsperada:3,documentoEdicao:documento,itemChave:item.chaveCliente,
+        nutriente:'energiaKcal',alternativas:[alternativa],politica:{passoPorcaoGramas:'1'}
+      });
+      const linha=previa.alternativas[0];if(linha.resultado.estado!=='calculavel')throw new Error('Prévia sintética deveria calcular');
+      alternativa.porcaoGramas=linha.resultado.porcaoEfetivaGramas;
+      alternativa.equivalencia={acao:'recalcular',aplicacaoId:randomUUID(),anteriorAplicacaoId:pendente.equivalenciasAplicadas.equivalente.aplicacaoId,nutriente:'energiaKcal',politica:{passoPorcaoGramas:'1'},porcaoEfetiva:alternativa.porcaoGramas,fingerprintEsperado:linha.fingerprint};
+      const resolvida:any=await salvarEdicao(documento,3);
+      expect(resolvida.equivalenciasAplicadas.equivalente.estado).toBe('calculada_revisada');
+      expect(resolvida.documentoEdicao.refeicoes[0].itens[0].substituicoes[0]).toMatchObject({liberadaParaPaciente:true,preferida:true});
     });
     it('FOOD05 cópia não aceita referência de uma origem sem acesso no escopo atual',async()=>{
       const {d}=await prepararEquivalencia();const origem:any=await salvarEdicao(d),doc=JSON.parse(JSON.stringify(origem.documentoEdicao));
