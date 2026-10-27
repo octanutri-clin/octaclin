@@ -24,7 +24,7 @@ describe('FOOD05 ciclo comando ACK referência e revisão pendente',()=>{
   const a=await inicial(),origem=clone(a.contextos.a),copiadoPor={usuarioId:randomUUID(),profissionalId:randomUUID()};
   const copia=clonarContextoEquivalenciaParaCopia(origem,{pacienteId:randomUUID(),planoId:randomUUID(),versaoId:randomUUID()},{pacienteId:randomUUID(),planoId:randomUUID(),versaoId:randomUUID(),itemChave:'item-destino',alternativaChave:'alternativa-destino'},copiadoPor,'2026-10-24T12:00:00.000Z');
   expect(copia.aplicacaoId).not.toBe(origem.aplicacaoId);
-  expect(copia).toMatchObject({itemChave:'item-destino',alternativaChave:'alternativa-destino',estado:'calculada_revisada',ator:origem.ator,copiaOrigem:{aplicacaoId:origem.aplicacaoId,pacienteId:expect.any(String),planoId:expect.any(String),versaoId:expect.any(String),itemChave:origem.itemChave,alternativaChave:origem.alternativaChave,copiadaPor:copiadoPor,copiadaEm:'2026-10-24T12:00:00.000Z'}});
+  expect(copia).toMatchObject({itemChave:'item-destino',alternativaChave:'alternativa-destino',estado:'revisao_pendente',ator:origem.ator,copiaOrigem:{aplicacaoId:origem.aplicacaoId,pacienteId:expect.any(String),planoId:expect.any(String),versaoId:expect.any(String),itemChave:origem.itemChave,alternativaChave:origem.alternativaChave,copiadaPor:copiadoPor,copiadaEm:'2026-10-24T12:00:00.000Z'}});
   expect(copia.fingerprintResolucao).not.toBe(origem.fingerprintResolucao);
   expect(JSON.stringify(origem)).toBe(JSON.stringify(a.contextos.a));
  });
@@ -36,6 +36,29 @@ describe('FOOD05 ciclo comando ACK referência e revisão pendente',()=>{
   expect(alt(destino).equivalencia).toEqual({aplicacaoId:copia.aplicacaoId});
   expect(resolvidos['alternativa-destino']).toMatchObject({estado:'revisao_pendente',copiaOrigem:copia.copiaOrigem});
   expect(cb.quantidade()).toBe(0);
+ });
+ it.each(['mesmo-plano','outro-plano','outro-paciente'])('D15 cópia idêntica %s permanece pendente após snapshot e autosaves',async modo=>{
+  const a=await inicial(),origem=clone(a.contextos.a),pacienteId=randomUUID(),planoId=randomUUID(),versaoId=randomUUID();
+  const copiado=clonarContextoEquivalenciaParaCopia(origem,{pacienteId,planoId,versaoId},{pacienteId:modo==='outro-paciente'?randomUUID():pacienteId,planoId:modo==='mesmo-plano'?planoId:randomUUID(),versaoId:randomUUID(),itemChave:'p',alternativaChave:'a'},ator,'2026-10-27T12:00:00.000Z');
+  expect(copiado.estado).toBe('revisao_pendente');
+  expect(copiado.aplicacaoId).not.toBe(origem.aplicacaoId);
+  expect(copiado.fingerprintResolucao).not.toBe(origem.fingerprintResolucao);
+  expect(copiado.resultado).toEqual(origem.resultado);
+  const restaurado=clone({a:copiado}),d=clone(a.d);delete alt(d).equivalencia;
+  const cb=callbacks();let r=await resolverEquivalenciasDocumento(d,restaurado,cb);
+  r=await resolverEquivalenciasDocumento(d,r,cb);
+  expect(r.a.estado).toBe('revisao_pendente');expect(r.a.aplicacaoId).toBe(copiado.aplicacaoId);expect(cb.quantidade()).toBe(0);
+  alt(d).equivalencia=comando('recalcular',copiado.aplicacaoId);
+  expect((await resolverEquivalenciasDocumento(d,r,cb)).a.estado).toBe('calculada_revisada');
+  expect(a.contextos.a).toEqual(origem);
+ });
+ it('D15 catálogo idêntico mantém pendência mesmo com dependências iguais',async()=>{
+  const a=await inicial(),original=clone(a.contextos.a);
+  original.principal.identidade='catalogo:'+randomUUID();original.alternativa.identidade='catalogo:'+randomUUID();
+  const copiado=clonarContextoEquivalenciaParaCopia(original,{pacienteId:randomUUID(),planoId:randomUUID(),versaoId:randomUUID()},{pacienteId:randomUUID(),planoId:randomUUID(),versaoId:randomUUID(),itemChave:'p',alternativaChave:'a'},ator,'2026-10-27T12:00:00.000Z');
+  const d=clone(a.d);delete alt(d).equivalencia;
+  const cb={...callbacks(),dependencias:async()=>original.dependenciasHash};
+  expect((await resolverEquivalenciasDocumento(d,{a:copiado},cb)).a.estado).toBe('revisao_pendente');
  });
  it('consome comando e devolve referência no documento canônico',async()=>{const a=await inicial();expect(alt(a.d).equivalencia).toEqual({aplicacaoId:a.c.aplicacaoId});expect(a.contextos.a).toMatchObject({aplicacaoId:a.c.aplicacaoId,itemChave:'p',alternativaChave:'a',estado:'calculada_revisada',ator});expect(a.cb.quantidade()).toBe(1);});
  it('autosave com referência não calcula novamente e não altera porção',async()=>{const a=await inicial();const r=await resolverEquivalenciasDocumento(a.d,a.contextos,a.cb);expect(r.a.estado).toBe('calculada_revisada');expect(alt(a.d).porcaoGramas).toBe('100');expect(a.cb.quantidade()).toBe(1);});

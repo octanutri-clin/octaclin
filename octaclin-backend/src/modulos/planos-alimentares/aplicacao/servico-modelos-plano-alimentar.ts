@@ -1,6 +1,6 @@
 import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException, ServiceUnavailableException } from '@nestjs/common';
 import { plainToInstance } from 'class-transformer';
-import { ValidationError, validateSync } from 'class-validator';
+import { validateSync } from 'class-validator';
 import { EntityManager, FindOptionsWhere, In, IsNull } from 'typeorm';
 import { registrarAuditoriaNaTransacao } from '../../../infraestrutura/auditoria/servico-auditoria';
 import { ExecutorTenant } from '../../../infraestrutura/banco-dados/executor-tenant';
@@ -10,6 +10,7 @@ import type { PermissaoOctaClin } from '../../auth/dominio/permissoes';
 import { UsuarioAutenticado } from '../../auth/dominio/usuario-autenticado';
 import { TenantConfiguracaoOrm } from '../../tenancy/infraestrutura/tenant-configuracao.orm';
 import { CHAVE_KIT_INICIAL_CLINICA, interpretarMarcadorKitInicial } from '../../tenancy/kit-inicial-clinica';
+import { LIMITE_BYTES_EDICAO_PLANO } from '../dominio/edicao-plano';
 import { listarEstruturasIniciaisPlano } from '../dominio/estruturas-iniciais-plano';
 import {
   contarEstruturaModelo,
@@ -26,7 +27,8 @@ import {
   EditarModeloPlanoAlimentarDto,
   ListarModelosPlanoAlimentarDto,
   ListarVersoesModeloPlanoAlimentarDto,
-  PAGINA_MAXIMA
+  PAGINA_MAXIMA,
+  NutrientesPor100gDto
 } from './dtos';
 import { RevisaoModeloPlanoAlimentarOrm } from '../infraestrutura/revisao-modelo-plano-alimentar.orm';
 
@@ -179,6 +181,12 @@ export class ServicoModelosPlanoAlimentar {
       const versaoAtual = modelo.versaoAtual ?? 1;
       if (dados.versaoEsperada !== versaoAtual) {
         throw new ConflictException('O modelo foi alterado. Recarregue o historico antes de salvar.');
+      }
+
+      try {
+        this.validarRefeicoesModelo(JSON.parse(this.criptografia.descriptografar(modelo.conteudoCriptografado)), true);
+      } catch {
+        throw new ServiceUnavailableException('Conteúdo do modelo indisponível.');
       }
 
       const revisoes = gerenciador.getRepository(RevisaoModeloPlanoAlimentarOrm);
@@ -427,15 +435,39 @@ export class ServicoModelosPlanoAlimentar {
    * desconhecido ao navegador.
    */
   private validarRefeicoesModelo(valor: unknown, armazenado: boolean): RefeicaoModeloPlanoAlimentar[] {
+    const falhar = (): never => {
+      if (armazenado) throw new Error('Conteúdo de modelo fora do contrato.');
+      throw new BadRequestException('Estrutura do modelo inválida.');
+    };
+    // O mesmo teto editorial de 96 KiB precede transformação/validação recursiva.
+    // Campos opcionais podem estar ausentes; null nunca representa uma refeição
+    // ou um campo opcional válido no contrato de modelos.
+    const conferirJson = (v: unknown, profundidade = 0): boolean => {
+      if (profundidade > 12 || v === null) return false;
+      if (typeof v === 'number') return Number.isFinite(v);
+      if (typeof v !== 'object') return ['string', 'boolean', 'undefined'].includes(typeof v);
+      if (!Array.isArray(v) && ![Object.prototype, null].includes(Object.getPrototypeOf(v))) return false;
+      return Object.values(v).every(filho => conferirJson(filho, profundidade + 1));
+    };
+    try {
+      if (Buffer.byteLength(JSON.stringify(valor), 'utf8') > LIMITE_BYTES_EDICAO_PLANO || !conferirJson(valor)) falhar();
+    } catch { falhar(); }
     const dto = plainToInstance(CriarModeloPlanoAlimentarDto, {
       nome: 'Modelo', origem: 'pessoal', refeicoes: valor
     });
-    const possuiCamposNaoPermitidos = (erros: ValidationError[]): boolean => erros.some((erro) =>
-      Boolean(erro.constraints?.whitelistValidation) || possuiCamposNaoPermitidos(erro.children ?? [])
-    );
-    if (possuiCamposNaoPermitidos(validateSync(dto, { whitelist: true, forbidNonWhitelisted: true }))) {
-      if (armazenado) throw new Error('Conteúdo de modelo fora do contrato.');
-      throw new BadRequestException('Estrutura do modelo inválida.');
+    if (validateSync(dto, { whitelist: true, forbidNonWhitelisted: true, forbidUnknownValues: true }).length) falhar();
+    // ValidateIf no DTO clínico dispensa os valores do cliente para catálogo.
+    // Em um modelo eles serão armazenados/devolvidos: quando fornecidos, também
+    // precisam obedecer integralmente ao contrato, mesmo sem serem autoritativos.
+    for (const refeicao of dto.refeicoes) for (const item of refeicao.itens) {
+      for (const alimento of [item, ...(item.substituicoes ?? [])]) {
+        if (alimento.descricao !== undefined && (typeof alimento.descricao !== 'string' || !alimento.descricao.trim() || alimento.descricao.length > 240)) falhar();
+        if (alimento.nutrientesPor100g !== undefined) {
+          const nutrientes = alimento.nutrientesPor100g;
+          if (typeof nutrientes !== 'object' || Array.isArray(nutrientes) ||
+              validateSync(plainToInstance(NutrientesPor100gDto, nutrientes), { whitelist: true, forbidNonWhitelisted: true, forbidUnknownValues: true }).length) falhar();
+        }
+      }
     }
     return dto.refeicoes as unknown as RefeicaoModeloPlanoAlimentar[];
   }

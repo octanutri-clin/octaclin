@@ -611,3 +611,15 @@ aritmética/proveniência/segurança e revisão final podem exigir Sol médio.
 Resultado: planejamento consolidado para revisão do proprietário. Prontidão de
 implementação exige aceitar as propostas da seção12 e autorizar execução.
 Prontidão de produção segue bloqueada; não atribuir PASS a G01–G06.
+
+## Decisões adicionais D15–D18 — ratificadas em 27/10/2026
+
+D01–D14 e M01–M08 continuam obrigatórios. D15 exige pendência explícita em toda
+nova cópia de equivalência, inclusive composição idêntica, com nova identidade,
+fingerprint atualizado e cálculo original preservado. D16 exige validação integral
+nas cinco operações de modelos e falha segura sem persistência em snapshots inválidos.
+D17 mantém a autorização sobre o paciente original e o bloqueio explícito de modelos
+FOOD05 enquanto não houver contrato seguro. D18 é direção futura de modelo matemático
+genérico com novo cálculo/confirmacão no destino; execução depende de proposta e
+aprovação específicas. Não declarar T07 concluído por estas correções.
+Contrato e evidências no [parecer T07](revisao-arquitetura-t07-food05.md).

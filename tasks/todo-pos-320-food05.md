@@ -146,6 +146,14 @@ fluxo atual devolve refeições ao browser antes de salvar o plano. Exige aplica
 server-side com autorização de modelo e da origem, sem retornar o contexto cifrado.
 Não remover esse bloqueio nem marcar T07 completo antes desse contrato e testes.
 
+Contrato e riscos revisados em
+[revisão de arquitetura T07](revisao-arquitetura-t07-food05.md).
+Fechar A02 (pendência explícita também em cópia de catálogo idêntico) e A03
+(validação semântica completa de modelos), fixar revisão exata da origem e
+identidades estáveis antes de habilitar o fluxo. A reautorização do paciente de
+origem continua obrigatória; compartilhamento independente dessa autorização
+depende da decisão de produto descrita no parecer.
+
 Defesa já adicionada na fronteira de modelos: o serviço revalida campos aninhados
 contra o DTO allowlist ao criar/editar e antes de devolver/restaurar snapshots.
 Campos FOOD05 desconhecidos são recusados na gravação e snapshots com esse conteúdo
@@ -445,3 +453,15 @@ Este registro atualiza somente as evidências recentes; não fecha T10 nem gates
   HEAD precisa do gate PostgreSQL/RLS no GitHub.
 - T14 segue parcial até a evidência do novo CI e fechamento da matriz completa; T07,
   revisão R4 independente e outros gates permanecem conforme acima.
+
+
+### D15–D18 — decisão obrigatória de 27/10/2026
+
+- D15/D16: correções delimitadas implementadas; evidências RED/GREEN e limites
+  no registro de execução. Pendência de cópia explícita e validação integral não
+  concluem a matriz de integração/autorização de T07/T14.
+- D17: modelos com proveniência clínica FOOD05 permanecem bloqueados. Acesso ao
+  modelo compartilhado não concede acesso ao paciente original. Não converter
+  silenciosamente equivalência em substituição manual.
+- D18: artefato matemático compartilhável reservado a proposta e autorização
+  específicas; sem execução nesta entrega. D01–D14 e M01–M08 preservados.

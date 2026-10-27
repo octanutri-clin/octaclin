@@ -1,3 +1,29 @@
+# Checkpoint D15–D18 — 27/10/2026
+
+O proprietário autorizou correções delimitadas D15/D16 na configuração atual.
+**Pausar antes de trocar para Luna alto; a troca é manual.**
+
+- D15: cópia agora nasce `revisao_pendente` explicitamente; identidade nova,
+  fingerprint recalculado, cálculo/ator original e cadeia cifrada preservados.
+- D16: validação completa nas cinco fronteiras, incluindo campos conhecidos
+  opcionais de catálogo, null/não finitos, profundidade12 e limite96KiB reutilizado
+  do editor. Edição valida o snapshot atual antes de arquivá-lo. Erros400/503
+  genéricos, sem gravações em rejeição. Modelos legados válidos continuam arrays.
+- D17: autorização sobre paciente original permanece obrigatória; bloqueio de
+  modelos FOOD05 e mensagem atual devem continuar. **Não implementar aplicação
+  de equivalências por modelo nem apagar proveniência para contornar o bloqueio.**
+- D18: direção futura de artefato matemático genérico com novo cálculo no destino;
+  proposta técnica e autorização próprias exigidas antes de implementar. B1–B5
+  do parecer são referência de riscos, não autorização para executar D18.
+- T07 continua parcial; A04/A05 e gates de integração/revisão não são concluídos
+  por D15/D16. Não reescrever snapshots históricos já publicados ou aplicações
+  existentes para simular que a regra D15 existia anteriormente.
+
+Evidências RED/GREEN e situação final dos comandos em
+[execução](execucao-pos-320-food05.md). Nenhuma migration/deploy/merge externo.
+
+---
+
 # FOOD05 — checkpoint de UI individual/FOOD04 e etapas restantes
 
 ## Modelo e autorização
@@ -52,6 +78,12 @@ feature a partir dos testes focados. Não executar produção/infra/migrations e
   não altera porção persistida. Resíduo não nulo não pode parecer igualdade.
 
 ## Trabalho restante — não declarar FOOD05 concluída
+
+Antes de escrever o T07 de modelos, ler a
+[revisão de arquitetura e riscos](revisao-arquitetura-t07-food05.md).
+Ela define B1–B5 e registra os achados estáticos A01–A07; não substitui testes
+de implementação ou revisão independente. Não remover a reautorização de origem
+por inferência a partir do escopo compartilhado de um modelo.
 
 T10/T11/T12 têm uma integração inicial agora exercitada com dados sintéticos. O
 painel individual e o grupo FOOD04 passam no desktop/mobile nos caminhos descritos

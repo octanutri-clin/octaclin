@@ -58,7 +58,7 @@ export function clonarContextoEquivalenciaParaCopia(
   itemChave:original.copiaOrigem?.itemChave??original.itemChave,
   alternativaChave:original.copiaOrigem?.alternativaChave??original.alternativaChave
  };
- const copia:ContextoEquivalencia={...copiaJson(original),aplicacaoId:randomUUID(),itemChave:destino.itemChave,alternativaChave:destino.alternativaChave,
+ const copia:ContextoEquivalencia={...copiaJson(original),estado:'revisao_pendente',aplicacaoId:randomUUID(),itemChave:destino.itemChave,alternativaChave:destino.alternativaChave,
   copiaOrigem:{...origem,aplicacaoId:original.aplicacaoId,itemChave:original.itemChave,alternativaChave:original.alternativaChave,copiadaPor:{...copiadaPor},copiadaEm,origemInicial:copiaJson(origemInicial)}};
  copia.fingerprintResolucao=fingerprintResolucao(copia,copia.dependenciasHash);
  return validarContextosEquivalencias({[copia.alternativaChave]:copia})[copia.alternativaChave];

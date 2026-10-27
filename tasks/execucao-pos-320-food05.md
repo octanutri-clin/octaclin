@@ -654,3 +654,54 @@ tenant; não consulta staging nem produção.
   requer `timescale/timescaledb-ha:pg15`, que não existe no daemon local (HTTP 404).
   Não é falha do caso nem evidência GREEN; o PostgreSQL/RLS CI deverá executar a prova
   no novo HEAD. Nenhuma imagem foi trocada e nenhum banco externo foi consultado.
+
+### D15–D18 — correções delimitadas e ratificação (27/10/2026)
+
+- D15: toda chamada de `clonarContextoEquivalenciaParaCopia` agora força
+  `revisao_pendente` antes de recalcular o fingerprint. Mantém nova identidade,
+  cálculo/fatos originais e linhagem cifrada. Histórico e aplicação existente
+  não são reclassificados retroativamente. Cópias idênticas entre contextos de
+  plano/paciente, catálogo com dependências iguais, roundtrip do snapshot,
+  autosaves repetidos e recálculo explícito têm testes focados.
+- D16: todas as falhas de `validateSync` são consideradas. Pré-validação limita
+  conteúdo ao teto editorial existente (96KiB), profundidade12 e dados JSON sem
+  null/não finitos. Campos descrição/composição fornecidos para catálogo são
+  validados mesmo quando `ValidateIf` do DTO clínico os dispensaria. Edição
+  verifica snapshot atual antes de arquivá-lo; leitura/versões/restauração falham
+  com503 genérico; entrada inválida com400, sem gravação.
+- RED comprovado: primeira rodada2 suites,28 FAIL/51 PASS; casos adicionais de
+  campos opcionais de catálogo6 FAIL/60 PASS; edição de snapshot atual inválido
+  1 FAIL/66 SKIPPED. Uma fixture antiga de edição sem descrição nem vínculo foi
+  corrigida para usar catálogo válido, preservando a finalidade de versionamento.
+- GREEN: regressões de resolver/serviço de planos/modelos/projeção4 suites,
+  223/223 PASS. Depois de ampliar raízes/limites de arrays, suíte de modelos
+  77/77 PASS. Testes abrangem criação, edição, leitura, versão e restauração,
+  erros de tipo, obrigatórios, faixa, nesting, arrays, null, não finitos,
+  tamanho, desconhecidos, proveniência e modelos legados válidos.
+- Backend `pnpm typecheck`: PASS. Engine local Node24.19.0, fora do intervalo
+  declarado22.x; execução CI no Node previsto continua necessária.
+- PostgreSQL descartável: tentativa `RLS_TESTCONTAINERS=true ...jest ... -t
+  'FOOD05 PostgreSQL: cópia de versão publicada'` BLOCKED no preparo: hook180s
+  excedido antes da prova; resultado1 FAIL/74 SKIPPED. Processo Jest com handles
+  abertos foi encerrado deliberadamente após o diagnóstico. Não comprova GREEN
+  de RLS/concorrência/persistência e não consultou banco externo.
+- D17 ratificada: autorização de paciente original permanece; modelo clínico
+  compartilhado continua bloqueado com mensagem explícita. D18 registrada como
+  direção futura, exigindo proposta/aprovação próprias; nenhuma arquitetura de
+  artefato matemático compartilhável foi implementada.
+- T07 permanece parcial; A04/A05, matriz integrada e revisão independente não
+  foram aprovadas por estas correções. Rollback de código conserva snapshots;
+  D16 pode bloquear modelos legados fora dos limites atuais sem apagar conteúdo.
+  Investigar/corrigir conteúdo pelo fluxo autorizado, nunca desabilitar validação
+  nem fazer reescrita silenciosa para contornar esse bloqueio.
+- Build local: primeira tentativa BLOCKED por `TS5033/ENOSPC` ao gravar dist,
+  durante o preparo do container. Após encerramento do teste/preparo e recuperação
+  de espaço local, nova execução de `pnpm build` PASS (exit0), incluindo
+  `verificar-artefato-producao.mjs` e `dist/main.js`. Nenhuma limpeza global Docker,
+  mudança de quota/plano ou operação de infraestrutura externa foi executada.
+- `pnpm security:secrets` e `git diff --check`: PASS. CI/scanners do novo commit
+  devem rodar novamente; revisão R4 independente não foi reexecutada nesta rodada.
+- Handoff atualizado para troca manual a Luna alto: acompanhar CI, reproduzir
+  PostgreSQL em ambiente descartável viável e fechar a matriz restante dos fluxos
+  existentes. Não iniciar D18, remover bloqueio D17, mergear ou operar ambientes
+  externos. Manter T07 parcial e discriminar teste unitário de prova em banco.
