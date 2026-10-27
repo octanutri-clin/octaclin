@@ -538,3 +538,10 @@ Critério de fechamento: FOOD05 principal pode concluir quando T07-A passar e D0
 - [x] Backend typecheck PASS e testes focados PASS (8 selecionados em 2 suítes; 127 filtrados/skipped).
 - [ ] Executar nova prova Postgres/RLS no CI. A04/A05/T07-A/T14 seguem BLOCKED até sucesso de edit-first, copy-first, cópias recíprocas, rollback, autorização e CAS.
 - No HEAD `86f5873e`, Dependency Review PASS; CodeQL, Trivy e Semgrep em andamento e OctaClin CI pendente. Run anterior `40532192140`: Web PASS, Demo local smoke cancelled, PR Gate queued.
+
+### Correção do harness edit-first — 27/10/2026
+
+- [x] Identificar causa do timeout repetido no CI `40534905458` (3.556 PASS, 48 SKIPPED): callback edit-first não usava o executor instrumentado e nunca liberava a barreira.
+- [x] Injetar o executor de `disputarPa06` na operação de edição; assertions edit-first e destino sem escrita mantidas.
+- [x] R4 estática independente do delta: sem achados; não executou testes.
+- [ ] Confirmar typecheck local e executar novamente Postgres/RLS no CI. Até lá A04/A05/T07-A/T14 continuam BLOCKED.

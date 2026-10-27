@@ -1877,7 +1877,7 @@ descrever('RLS e isolamento multi-tenant integral em Postgres real', () => {
       copiasEquivalencia:[{pacienteOrigemId:origem.pacienteId,planoOrigemId:origem.planoId,versaoIdOrigem:origem.versaoId,numeroVersaoOrigem:1,rascunhoRevisaoOrigemEsperada:1,itemChaveOrigem:itemNovo.chaveCliente,alternativaChaveOrigem:alternativaNova.chaveCliente,itemChaveDestino:itemCopia.chaveCliente,alternativaChaveDestino:alternativaCopia.chaveCliente}]};
     const edicaoDaOrigem={...salvaOrigem.documentoEdicao,refeicoes:salvaOrigem.documentoEdicao!.refeicoes.map((r:any)=>({...r,nome:`${r.nome} revisado`}))};
     const editouPrimeiro=await disputarPa06(
-      ()=>origem.servico.salvarEdicaoRascunho(tenantA,origem.pacienteId,origem.planoId,origem.usuario,{rascunhoIdEsperado:origem.versaoId,rascunhoRevisaoEsperada:1,documento:edicaoDaOrigem}),
+      executor=>new ServicoPlanosAlimentares(executor,origem.cripto).salvarEdicaoRascunho(tenantA,origem.pacienteId,origem.planoId,origem.usuario,{rascunhoIdEsperado:origem.versaoId,rascunhoRevisaoEsperada:1,documento:edicaoDaOrigem}),
       ()=>new ServicoPlanosAlimentares(executorTenant!,origem.cripto).salvarEdicaoRascunho(tenantA,origem.pacienteId,destinoNovo.id,origem.usuario,pedidoDepoisEdicao as any),
       PlanoAlimentarVersaoOrm,
       'pessimistic_write'

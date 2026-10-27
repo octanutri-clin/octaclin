@@ -816,4 +816,12 @@ Não reportar T07-A ou T14 como PASS até completar o banco e as regressões. T0
 - Typecheck backend após o ajuste: **PASS** (Node local v24 continua fora do range declarado >=22 <23). Testes focados: **PASS**, 8 selecionados em 2 suítes; 127 testes filtrados/skipped.
 - O próximo CI deve executar novamente a prova PostgreSQL/RLS após o fixture reduzido. Não aumentar timeouts nem relaxar assertions como substituto da causa-raiz.
 - No HEAD `86f5873e`, Dependency Review PASS; CodeQL, Trivy e Semgrep em andamento e OctaClin CI pendente na consulta.
+
+### Causa-raiz confirmada do timeout edit-first — 27/10/2026
+
+- CI `40534905458` no HEAD `f799760f`: PostgreSQL/RLS reportou 3.556 testes PASS, 48 SKIPPED e uma falha de timeout (90s) somente em “edição da origem vence e cópia stale não grava”. A suite global continuou; Web ainda executava na consulta.
+- Causa: o callback de edição ignorava o `ExecutorTenant` instrumentado por `disputarPa06` e chamava `origem.servico` com executor normal. Assim, a transação de edição nunca sinalizava a barreira; o teste esperava até timeout. A redução do fixture não corrigia esse defeito do harness.
+- Correção: construir o serviço da primeira operação com o executor recebido do helper. A barreira passa a observar a edição antes de iniciar a cópia concorrente; as assertions de edição concluída/revisão 2, cópia 409 e destino inalterado/revisão 1 são preservadas.
+- R4 independente estática do delta: sem achados; confirmou que o executor instrumentado sinaliza a barreira e mantém as verificações. O revisor não executou testes.
+- Backend typecheck local foi reiniciado para este delta e ainda aguarda resultado. Nova prova PostgreSQL/RLS/CI obrigatória; A04/A05/T07-A/T14 permanecem BLOCKED.
 - A04/A05/T07-A/T14 permanecem BLOCKED. PR #446 continua Draft; sem migration externa, merge ou deploy.
