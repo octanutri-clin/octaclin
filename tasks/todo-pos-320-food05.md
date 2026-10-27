@@ -537,3 +537,4 @@ Critério de fechamento: FOOD05 principal pode concluir quando T07-A passar e D0
 - [x] Revisão R4 independente estática do fixture reduzido: sem achados; revisor não executou testes.
 - [x] Backend typecheck PASS e testes focados PASS (8 selecionados em 2 suítes; 127 filtrados/skipped).
 - [ ] Executar nova prova Postgres/RLS no CI. A04/A05/T07-A/T14 seguem BLOCKED até sucesso de edit-first, copy-first, cópias recíprocas, rollback, autorização e CAS.
+- No HEAD `86f5873e`, Dependency Review PASS; CodeQL, Trivy e Semgrep em andamento e OctaClin CI pendente. Run anterior `40532192140`: Web PASS, Demo local smoke cancelled, PR Gate queued.

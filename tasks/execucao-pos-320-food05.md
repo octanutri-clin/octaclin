@@ -810,9 +810,10 @@ Não reportar T07-A ou T14 como PASS até completar o banco e as regressões. T0
 
 ### CI `40532192140` e redução do fixture A05 — 27/10/2026
 
-- O Postgres/RLS real executou 3.556 testes PASS e 48 SKIPPED; a prova “edição da origem vence e cópia stale não grava” excedeu 90s sem registrar falha de assertion. Backend permanece FAIL; Web ainda estava em execução na consulta. CodeQL, Semgrep, Trivy, Dependency Review, Governança, Operação, Rollout, Mobile e AI FastAPI passaram.
+- O Postgres/RLS real executou 3.556 testes PASS e 48 SKIPPED; a prova “edição da origem vence e cópia stale não grava” excedeu 90s sem registrar falha de assertion. Backend permanece FAIL. Web concluiu PASS; Demo local smoke foi cancelado e PR Gate ficou na fila quando chegou o novo commit. CodeQL, Semgrep, Trivy, Dependency Review, Governança, Operação, Rollout, Mobile e AI FastAPI passaram.
 - A05 foi ajustado para criar o rascunho destino como segundo plano do mesmo paciente, reutilizando o cenário sintético já preparado. Isso reduz uma preparação completa de paciente sem retirar a contenção, a edição primeiro, a revisão esperada stale, o 409 ou a verificação de que o destino continua na revisão 1.
 - R4 independente estática deste ajuste: sem achados; o revisor confirmou que o cenário ainda exercita edição primeiro e cópia bloqueada até a edição concluir. O revisor não executou testes.
 - Typecheck backend após o ajuste: **PASS** (Node local v24 continua fora do range declarado >=22 <23). Testes focados: **PASS**, 8 selecionados em 2 suítes; 127 testes filtrados/skipped.
 - O próximo CI deve executar novamente a prova PostgreSQL/RLS após o fixture reduzido. Não aumentar timeouts nem relaxar assertions como substituto da causa-raiz.
+- No HEAD `86f5873e`, Dependency Review PASS; CodeQL, Trivy e Semgrep em andamento e OctaClin CI pendente na consulta.
 - A04/A05/T07-A/T14 permanecem BLOCKED. PR #446 continua Draft; sem migration externa, merge ou deploy.
