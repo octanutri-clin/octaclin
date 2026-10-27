@@ -513,3 +513,12 @@ Critério de fechamento: FOOD05 principal pode concluir quando T07-A passar e D0
 - [ ] A04/A05, T07-A e T14 só deixam BLOCKED após as duas concorrências, stale/CAS, autorização/carteira e rollback passarem no Postgres/RLS descartável.
 - Tentativa local `RLS_TESTCONTAINERS=true` bloqueou antes dos casos, sem container disponível, e foi interrompida após >3 min; run sem a flag pulou a suíte. Não contam como PASS.
 - CodeQL, Semgrep, Trivy, Dependency Review, Governança, AI FastAPI e Mobile Expo do HEAD anterior PASS; Backend falhou nos dois testes; Web estava em execução na última consulta. PR #446 continua Draft.
+
+### Diagnóstico do CI `403bbc11` e ajuste final — 27/10/2026
+
+- [x] Corrigir dado de avaliação no destino stale: usar documento do mesmo paciente vencedor da corrida e remover substituições antes da inicialização do rascunho C.
+- [x] Aumentar somente timeout da prova A05 com duas corridas de 60s para 120s, mantendo asserts de cópia e rejeição stale.
+- [x] R4 estática independente destes ajustes: sem achados adicionais; não executou testes.
+- [x] Backend typecheck local e diff check PASS.
+- [ ] Commit/push e nova execução CI PostgreSQL/RLS; o run `40528993006` no HEAD `403bbc11` ainda falhou nos 2 casos, com 3.554 PASS/48 SKIPPED. Diagnóstico: paciente/avaliação inconsistente no fixture stale e timeout de 60s na prova A05 completa.
+- [ ] Somente mover A04/A05/T07-A/T14 de BLOCKED após os casos atuais passarem no Postgres/RLS com asserções de CAS, concorrência e ausência de escrita parcial.

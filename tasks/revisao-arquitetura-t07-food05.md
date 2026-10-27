@@ -278,3 +278,7 @@ Na revisão seguinte, foi identificado que linhagem legada sem revisão inicial 
 ### Fechamento da revisão estática independente dos deltas A04/A05 — 27/10/2026
 
 Após a correção dos fixtures de integração, o revisor independente fez nova leitura somente estática do commit `643076ba`. Confirmou que os cenários partem do documento atual do destino, preservam suas equivalências e acrescentam o item copiado com novas chaves; não encontrou achados adicionais no fixture ou no caminho de serviço relacionado. O revisor não executou testes. Este fechamento encerra somente a revisão estática dos deltas A04/A05; não fecha prova PostgreSQL/RLS, T07-A, T14 nem revisão de todos os requisitos FOOD05.
+
+### Revisão estática dos ajustes pós-CI `403bbc11` — 27/10/2026
+
+O reviewer independente confirmou o documento base do destino stale como proveniente do mesmo paciente/avaliação e sem substituições, e a ampliação do timeout A05 para 120s sem afrouxar assertions. Sem novos achados estáticos. Não executou testes; a evidência PostgreSQL segue pendente no próximo CI.

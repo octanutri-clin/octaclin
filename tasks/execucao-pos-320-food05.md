@@ -793,3 +793,11 @@ Não reportar T07-A ou T14 como PASS até completar o banco e as regressões. T0
 - A execução focal local da suíte RLS com Testcontainers foi interrompida após mais de 3 minutos sem iniciar o container; classificada BLOCKED de setup, não resultado dos testes. Rodada sem `RLS_TESTCONTAINERS=true` pulou a suíte e não conta como validação.
 - Scanners do HEAD `643076ba`: CodeQL, Semgrep, Trivy e Dependency Review PASS; Governança, AI e Mobile PASS. Backend CI falhou nos dois casos acima; Web ainda estava em execução na última consulta. O delta corrigido precisa de nova execução PostgreSQL/RLS no próximo HEAD.
 - Estados: A04/A05/T07-A/T14 seguem BLOCKED. PR #446 Draft. Nenhuma operação externa, migration, merge ou deploy.
+
+### CI Postgres `403bbc11` — diagnóstico e ajuste final de fixture — 27/10/2026
+
+- A nova execução com PostgreSQL/RLS ainda falhou em dois testes. No caso stale, o plano C era criado para o paciente cujo cenário selecionado venceu, mas o documento inicial era de outro paciente e referenciava avaliação alheia; corrigi para iniciar a partir do documento da mesma origem/paciente e remover substituições antes de salvar.
+- A prova A05 com duas ordens de corrida excedeu o timeout de 60s; ampliei somente esse limite de teste para 120s, sem mudar asserts ou aceitar resultado parcial. A cópia-primeiro mantém snapshot destino + item da origem; a ordem edição-primeiro continua exigindo 409 sem escrita.
+- R4 independente estática dos dois ajustes finais: sem achados adicionais; não executou testes. `git diff --check` PASS. Backend typecheck local repetido PASS (Node 24.19 fora do range declarado >=22 <23).
+- CI `40528993006`: 3.554 testes PASS, 48 SKIPPED; os 2 testes concorrentes continuam falhando no HEAD `403bbc11` pelos motivos de fixture/timeout acima. Scanners e demais jobs aplicáveis reportaram PASS; não considerar CI global verde.
+- Os novos ajustes estão na worktree e requerem commit/push e nova execução Postgres/RLS. A04/A05/T07-A/T14 seguem BLOCKED. Nenhuma alteração no runtime clínico, migration externa, merge ou deploy.

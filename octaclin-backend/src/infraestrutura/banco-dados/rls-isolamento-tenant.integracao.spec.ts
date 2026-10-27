@@ -1788,7 +1788,7 @@ descrever('RLS e isolamento multi-tenant integral em Postgres real', () => {
     const terceiroVersao=destinoTerceiro.draft!.id;
     // Um plano recém-criado ainda não tem snapshot editorial. Inicialize seu
     // rascunho sem equivalências para que o caso stale copie para um destino real.
-    const documentoBaseTerceiro=JSON.parse(JSON.stringify(a.documento));
+    const documentoBaseTerceiro=JSON.parse(JSON.stringify(origemAlterada.documento));
     for(const refeicao of documentoBaseTerceiro.refeicoes)for(const item of refeicao.itens)item.substituicoes=[];
     await a.servico.salvarEdicaoRascunho(tenantA,origemAlterada.pacienteId,destinoTerceiro.id,a.usuario,{
       rascunhoIdEsperado:terceiroVersao,rascunhoRevisaoEsperada:0,documento:documentoBaseTerceiro
@@ -1878,7 +1878,7 @@ descrever('RLS e isolamento multi-tenant integral em Postgres real', () => {
     expect(editouPrimeiro.map(r=>r.status)).toEqual(['fulfilled','rejected']);
     expect((editouPrimeiro[1] as PromiseRejectedResult).reason).toMatchObject({status:409});
     expect(await executorTenant!.executar(tenantA,g=>g.query('select rascunho_revisao from plano_alimentar_versoes where id=$1',[destinoNovo.versaoId]))).toEqual([{rascunho_revisao:1}]);
-  },60000);
+  },120000);
   it('FOOD05 PostgreSQL: prévia serializa com transferência e acesso anterior é revogado',async()=>{
     const c=await prepararCenarioFood05('food05-transferencia'),novo=await prepararDadosRepresentativos(tenantA,'food05-novo-responsavel');
     const resultados=await disputarPa06(e=>{const f=new FontesGruposSubstituicoes(c.cripto);return new ServicoEquivalenciasPlano(e,c.cripto,f,new ServicoGruposSubstituicoes(e,c.cripto,f)).prever(tenantA,c.pacienteId,c.planoId,c.usuario,c.pedido);},()=>executorTenant!.executar(tenantA,g=>g.query('update pacientes set profissional_responsavel_id=$1 where tenant_id=$2 and id=$3',[novo.profissionalId,tenantA,c.pacienteId])),PacienteOrm,'pessimistic_read');
