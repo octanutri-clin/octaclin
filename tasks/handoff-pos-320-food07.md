@@ -6,13 +6,13 @@
 
 ## Objetivo e autorização
 
-Planejar FOOD07 com Sol6.1 alto, apenas gaps residuais da biblioteca310. Nenhuma implementação autorizada ainda. Três perguntas enviadas por ferramenta assíncrona sobre campos/filtros, rendimento informativo e escopo de apresentação. Aguardar respostas e consolidar decisão; não inventar aceite. Depois de plano aprovado, Luna alto tende a ser suficiente para tarefas delimitadas; avisar e pausar **antes** da troca manual, conforme fluxo do proprietário.
+Planejar FOOD07 com Sol6.1 alto, apenas gaps residuais da biblioteca310. Nenhuma implementação autorizada ainda. Q1 campos/filtros e Q3 tags internas+rendimento/tempo nos novos envios foram aprovadas. Q2 foi ampliada pelo proprietário para **ajustar quantidades por rendimento**. Foram enviadas perguntas complementares S1–S3 sobre base, frações e extensão ao portal. Aguardar essas respostas; não inventar aceite. Depois de plano aprovado, Luna alto tende a ser suficiente para tarefas delimitadas; avisar e pausar **antes** da troca manual, conforme fluxo do proprietário.
 
 ## Concluído
 
 - Auditoria dos contratos reais; receitas atuais já cobrem categorias/itens/instruções, versões e envios imutáveis.
 - Tags/rendimento/tempo ausentes e UI primeira página100 confirmados estaticamente.
-- Plano T01–T06 com interfaces, limites, omissão/limpeza, migração candidata1080 e gates; checklist e referências.
+- Plano T01–T07 com interfaces, limites, omissão/limpeza, migração candidata1080 e gates; checklist e referências.
 - Licenças Tandoor AGPL+Commons Clause e OpenNutriTracker GPLv3 conferidas em arquivos, blobs registrados; nenhuma cópia/dependência.
 
 ## Pontos críticos
@@ -20,7 +20,7 @@ Planejar FOOD07 com Sol6.1 alto, apenas gaps residuais da biblioteca310. Nenhuma
 - Portal atual retorna snapshot JSON completo. Tags novas internas exigem allowlist server-side tanto ao criar snapshot quanto ao retornar ao portal; ocultar JSX não é suficiente.
 - Não decifrar todo o acervo para filtrar; HMAC por tenant e SQL antes de count/offset. Novo POST consulta evita etiquetas em URL; GET legado mantém contrato.
 - Metadados no ciphertext; writer antigo sem novos campos deve preservar por omissão; null/[] só para remoção explícita definida no plano.
-- Não escalar automaticamente alimentos pelo rendimento se Q2 aprovar apenas informativo. Não exportar contexto FOOD05 por receita/modelo.
+- Novo porcionamento exige base/rendimento explícitos, razão exata e prévia/confirmar server-side; somente após S1–S3 e autorização de implementação. Não inferir base de receitas antigas; tempo/instruções e concentrações por100g não são escalados. Não exportar contexto FOOD05 por receita/modelo.
 - Preservar selecionadas/versão ao paginar e evitar respostas antigas em troca de paciente/filtro; testar assincronismo.
 - Sem nova política de papéis/admin: receitas310 e gruposFOOD04 têm contratos distintos.
 - Número de migration/reconciliação de1079/446 deve ser conferido antes de escrever; nenhuma migration criada.
@@ -31,4 +31,4 @@ Análise de código/referências e base: executadas. Links locais, diff check e 
 
 ## Próxima ação
 
-Incorporar Q1–Q3, corrigir variantes do plano e apresentar escopo final para autorização de implementação. Sem merge/deploy/DDL externo/infra/cobrança; G06 segue separado. Documentos em `tasks/plan-pos-320-food07.md`, `todo-pos-320-food07.md`, `referencias-pos-320-food07.md` e este handoff. Manter PR futura individual Draft.
+Incorporar S1–S3, fechar porcionamento/variantes do plano e apresentar escopo final para autorização de implementação. Sem merge/deploy/DDL externo/infra/cobrança; G06 segue separado. Documentos em `tasks/plan-pos-320-food07.md`, `todo-pos-320-food07.md`, `referencias-pos-320-food07.md` e este handoff. Manter PR futura individual Draft.

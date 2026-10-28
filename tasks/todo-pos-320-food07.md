@@ -1,6 +1,6 @@
 # FOOD07 — checklist de planejamento e execução
 
-Contrato proposto: [plano](plan-pos-320-food07.md). [Referências](referencias-pos-320-food07.md). Sem autorização de implementação até decisões e aceite do plano.
+Contrato proposto: [plano](plan-pos-320-food07.md). [Referências](referencias-pos-320-food07.md). Sem autorização de implementação até decisões S1–S3 e aceite do plano.
 
 ## Estado desta rodada
 
@@ -10,9 +10,12 @@ Contrato proposto: [plano](plan-pos-320-food07.md). [Referências](referencias-p
 - [x] Lacunas estáticas confirmadas: tags/rendimento/tempo inexistentes e UI fixa nos primeiros100 registros.
 - [x] R017/R018 consultadas de forma direcionada, com licença/blobs documentados; nenhuma instalação/cópia.
 - [x] Modelo de dados, consulta paginada, projeções, migration candidata, segurança e testes propostos.
-- [ ] Q1: aprovar campos opcionais, paginação e filtros.
-- [ ] Q2: confirmar rendimento apenas informativo.
-- [ ] Q3: decidir console/novos envios ao portal.
+- [x] Q1: campos opcionais, paginação e filtros aprovados.
+- [x] Q2: proprietário aprovou também ajuste de quantidades por rendimento; proposta somente informativa substituída.
+- [x] Q3: tags internas; rendimento/tempo em novos envios ao portal aprovado.
+- [ ] S1: base receita inteira confirmada ou múltiplas bases.
+- [ ] S2: porções desejadas fracionárias ou inteiras.
+- [ ] S3: escala somente na aplicação ao plano ou também envio personalizado ao portal.
 - [ ] Aprovar implementação após incorporar respostas. Campo PENDENTE não deve ser tratado como aprovado por silêncio.
 
 ## Execução futura — NOT RUN
@@ -24,7 +27,8 @@ Contrato proposto: [plano](plan-pos-320-food07.md). [Referências](referencias-p
 | T03 | Tag interna não sai em HTTP/snapshot; legado íntegro; novo envio e replay/agendamento corretos | G02/G04 |
 | T04 | BFF/cliente/body consulta/limites/authz/no-store; GET antigo preservado | G03/G04 |
 | T05 | Formulário/paginação/filtros/erros/cancelamento/seleção entre páginas; desktop/mobile/teclado/Axe; aplicar não escala alimentos | G03 |
-| T06 | Regressões, R4 independente, documentação e CI/scanners do HEAD, PR individual Draft | G04/G05 |
+| T06 | Porcionamento determinístico no backend, base explícita, prévia/confirmar, limites e regressões de persistência; depende S1–S3 | G01–G04 |
+| T07 | Regressões, R4 independente, documentação e CI/scanners do HEAD, PR individual Draft | G04/G05 |
 
 Cada tarefa exige testes RED funcionais antes da mudança, GREEN após, regressão apropriada e commit intencional. Não usar erro de infraestrutura como RED. Se um teste não executar, registrar BLOCKED/NOT RUN/SKIPPED com motivo. CI genérico não substitui o caso específico.
 
