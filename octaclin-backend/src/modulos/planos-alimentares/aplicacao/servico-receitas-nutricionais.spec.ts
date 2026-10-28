@@ -82,6 +82,7 @@ describe('ServicoReceitasNutricionais', () => {
   let criptografia: CriptografiaDadosSensiveis;
   let repositorios: Map<Function, RepositorioMemoria>;
   let servico: ServicoReceitasNutricionais;
+  let gerenciador: EntityManager;
 
   beforeEach(() => {
     criptografia = new CriptografiaDadosSensiveis();
@@ -91,12 +92,26 @@ describe('ServicoReceitasNutricionais', () => {
     repositorios.set(AlimentoComposicaoOrm, criarRepositorio([{ id: ALIMENTO_ID, fonteId: FONTE_ID }]));
     repositorios.set(FonteComposicaoAlimentoOrm, criarRepositorio([{ id: FONTE_ID, situacao: 'ativa' }]));
     repositorios.set(UserActionLogOrm, criarRepositorio());
-    const gerenciador = {
+    gerenciador = {
       getRepository: jest.fn((entidade: Function) => repositorios.get(entidade)),
       query: jest.fn(async () => [])
     } as unknown as EntityManager;
     const executor = { executar: jest.fn(async (_tenant: string, operacao: (manager: EntityManager) => Promise<unknown>) => operacao(gerenciador)) };
     servico = new ServicoReceitasNutricionais(executor as unknown as ExecutorTenant, criptografia);
+  });
+
+  it('T03 reader compartilhado revalida escopo e usa lock sem outra transação', async () => {
+    await servico.criar(TENANT_ID, usuarioProfissional(), { nome: 'Controle sintético', origem: 'pessoal', tipo: 'receita', categoria: 'Lanche', itens: itensExemplo() });
+    const r = await servico.obterParaPorcionamento(gerenciador, TENANT_ID, RECEITA_ID, usuarioProfissional());
+    expect(r).toMatchObject({ id: RECEITA_ID, versao: 1, conteudo: { itens: itensExemplo() } });
+    expect(repositorios.get(ReceitaNutricionalOrm)!.findOne).toHaveBeenLastCalledWith(expect.objectContaining({ lock: { mode: 'pessimistic_read' } }));
+    await expect(servico.obterParaPorcionamento(gerenciador, TENANT_ID, RECEITA_ID, { ...usuarioProfissional(), permissoes: [] })).rejects.toBeInstanceOf(ForbiddenException);
+    await expect(servico.obterParaPorcionamento(gerenciador, '20000000-0000-4000-8000-000000000001', RECEITA_ID, usuarioProfissional())).rejects.toBeInstanceOf(NotFoundException);
+    repositorios.get(ReceitaNutricionalOrm)!.registros[0].profissionalId = OUTRO_PROFISSIONAL_ID;
+    await expect(servico.obterParaPorcionamento(gerenciador, TENANT_ID, RECEITA_ID, usuarioProfissional())).rejects.toBeInstanceOf(NotFoundException);
+    repositorios.get(ReceitaNutricionalOrm)!.registros[0].profissionalId = PROFISSIONAL_ID;
+    repositorios.get(ReceitaNutricionalOrm)!.registros[0].arquivadoEm = new Date();
+    await expect(servico.obterParaPorcionamento(gerenciador, TENANT_ID, RECEITA_ID, usuarioProfissional())).rejects.toBeInstanceOf(NotFoundException);
   });
 
   it('T02 grava os metadados no ciphertext e deriva o índice por tenant na mesma criação', async () => {

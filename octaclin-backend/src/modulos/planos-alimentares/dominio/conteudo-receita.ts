@@ -63,7 +63,8 @@ function alimento(v: unknown, alternativa: boolean): Record<string, unknown> {
     if (!Array.isArray(a.substituicoes) || a.substituicoes.length > 20) return invalido();
     a.substituicoes = a.substituicoes.map(sub => alimento(sub, true));
   }
-  return structuredClone(a);
+  // Clone JSON após validar, preservando o contrato JSON também entre realms.
+  return JSON.parse(JSON.stringify(a));
 }
 
 /** Valida dados decifrados; não escreve, não completa pelo catálogo e não reinterpreta legado. */

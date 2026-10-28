@@ -216,13 +216,33 @@ export function calcularEnergiaDasMetas(metas: {
   return energia;
 }
 
-export function calcularNutrientesDaPorcao(nutrientes: NutrientesPor100g, quantidadeGramas: number) {
+function validarPorcaoENutrientes(nutrientes: Partial<NutrientesPor100g>, quantidadeGramas: number) {
   if (!Number.isFinite(quantidadeGramas) || quantidadeGramas <= 0 || quantidadeGramas > 10_000) {
     throw new Error('Quantidade deve estar entre 0 e 10.000 gramas.');
   }
   if (Object.values(nutrientes).some((valor) => valor !== undefined && (!Number.isFinite(valor) || valor < 0))) {
     throw new Error('Nutrientes por 100 g devem ser numeros nao negativos quando informados.');
   }
+}
+
+/** Política existente do catálogo materializado: quatro casas, fonte original intacta. */
+export function normalizarNutrienteCatalogoPor100g(valor: number, baseGramas: number): number {
+  return Math.round(valor * (100 / baseGramas) * 10_000) / 10_000;
+}
+
+/** Prévia parcial: aplica a mesma matemática sem inventar os indicadores ausentes. */
+export function calcularNutrientesParciaisDaPorcao(nutrientes: Partial<NutrientesPor100g>, quantidadeGramas: number): Partial<NutrientesPor100g> {
+  validarPorcaoENutrientes(nutrientes, quantidadeGramas);
+  const resultado: Partial<NutrientesPor100g> = {};
+  for (const campo of ['energiaKcal', 'proteinasG', 'carboidratosG', 'gordurasG', 'fibrasG', 'sodioMg'] as const) {
+    const valor = nutrientes[campo];
+    if (valor !== undefined) resultado[campo] = arredondar4(valor * (quantidadeGramas / 100));
+  }
+  return resultado;
+}
+
+export function calcularNutrientesDaPorcao(nutrientes: NutrientesPor100g, quantidadeGramas: number) {
+  validarPorcaoENutrientes(nutrientes, quantidadeGramas);
   const fator = quantidadeGramas / 100;
   return {
     energiaKcal: arredondar4(nutrientes.energiaKcal * fator),

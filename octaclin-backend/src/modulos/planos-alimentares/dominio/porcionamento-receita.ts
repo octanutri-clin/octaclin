@@ -2,7 +2,7 @@ import type { ItemModeloPlanoAlimentar } from './modelos-plano-alimentar';
 import type { BaseQuantidadesReceita } from './metadados-receita';
 import { lerConteudoReceita, milesimosReceita } from './conteudo-receita';
 
-interface LocalIngrediente { item: number; substituicao?: number }
+export interface LocalIngrediente { item: number; substituicao?: number }
 export interface AvisoPorcionamentoReceita extends LocalIngrediente {
   codigo: 'ARREDONDAMENTO'; campo: 'quantidade' | 'porcaoGramas';
 }

@@ -1,3 +1,4 @@
+import { normalizarNutrienteCatalogoPor100g } from '../dominio/calculo-nutricional';
 import { lerOrigensMaterializadas, possuiGruposMaterializados } from './origens-grupos-materializadas';
 import { ContextosCatalogoGrupo, lerSnapshotEdicaoGrupos, mesmaOrigemGrupo, serializarSnapshotEdicaoGrupos } from './snapshot-edicao-grupos';
 import { resolverGruposDocumento, ConflitoAplicacaoGrupo, DocumentoGrupoInvalido } from '../dominio/aplicacao-grupos-substituicoes';
@@ -1629,8 +1630,7 @@ export class ServicoPlanosAlimentares {
       if (obrigatorio) throw new BadRequestException('Alimento do catalogo possui base nutricional invalida.');
       return undefined;
     }
-    const fator = 100 / baseGramas;
-    const normalizar = (valor?: string) => Math.round(Number(valor) * fator * 10_000) / 10_000;
+    const normalizar = (valor?: string) => normalizarNutrienteCatalogoPor100g(Number(valor), baseGramas);
     const nutrientes: NutrientesPor100gPlano = {
       energiaKcal: normalizar(alimento.energiaKcal),
       proteinasG: normalizar(alimento.proteinasG),

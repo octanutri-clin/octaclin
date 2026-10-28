@@ -20,11 +20,14 @@ import {
   ListarVersoesModeloPlanoAlimentarDto,
   ListarPlanosAlimentaresDto,
   ListarReceitasNutricionaisDto,
+  ConsultarReceitasNutricionaisDto,
+  PreverPorcionamentoReceitaDto,
   RestaurarVersaoModeloPlanoAlimentarDto
 } from '../aplicacao/dtos';
 import { ServicoModelosPlanoAlimentar } from '../aplicacao/servico-modelos-plano-alimentar';
 import { ServicoPlanosAlimentares } from '../aplicacao/servico-planos-alimentares';
 import { ServicoReceitasNutricionais } from '../aplicacao/servico-receitas-nutricionais';
+import { ServicoPorcionamentoReceita } from '../aplicacao/servico-porcionamento-receita';
 import { ServicoCompartilhamentoReceitas } from '../aplicacao/servico-compartilhamento-receitas';
 import { PrecondicaoEdicaoPlanoDto, SalvarEdicaoPlanoDto } from '../aplicacao/dtos-edicao-plano';
 import { CompartilharReceitasNutricionaisDto } from '../aplicacao/dtos-compartilhamento-receita';
@@ -355,8 +358,24 @@ export class ControladorModelosPlanoAlimentar {
 export class ControladorReceitasNutricionais {
   constructor(
     private readonly servico: ServicoReceitasNutricionais,
-    private readonly compartilhamentos: ServicoCompartilhamentoReceitas
+    private readonly compartilhamentos: ServicoCompartilhamentoReceitas,
+    private readonly porcionamento: ServicoPorcionamentoReceita
   ) {}
+
+  @Post('consulta')
+  @Permissoes('planos_alimentares.ler')
+  @Header('Cache-Control', 'private, no-store')
+  consultar(@UsuarioAtual() usuario: UsuarioAutenticado, @Body() dados: ConsultarReceitasNutricionaisDto) {
+    return this.servico.consultar(usuario.tenantId, usuario, dados);
+  }
+
+  @Post(':receitaId/previa-porcionamento')
+  @Permissoes('planos_alimentares.ler')
+  @Header('Cache-Control', 'private, no-store')
+  preverPorcionamento(@UsuarioAtual() usuario: UsuarioAutenticado, @Param('receitaId', ParseUUIDPipe) receitaId: string,
+    @Body() dados: PreverPorcionamentoReceitaDto) {
+    return this.porcionamento.prever(usuario.tenantId, receitaId, usuario, dados);
+  }
 
   @Post('compartilhamentos')
   @Permissoes('planos_alimentares.gerenciar')

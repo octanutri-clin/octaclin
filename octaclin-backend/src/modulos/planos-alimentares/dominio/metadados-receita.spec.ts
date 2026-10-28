@@ -29,6 +29,11 @@ describe('FOOD07 — leitura e projeção do conteúdo', () => {
     copia.itens[0].porcaoGramas = 999;
     expect(legado.itens[0].porcaoGramas).toBe(125);
   });
+  it('a saída validada pode ser lida novamente sem falhar em outra etapa', () => {
+    const json = { itens: [item], metadados: { baseQuantidades: 'por_porcao' } };
+    const primeira = api.lerConteudoReceita(json);
+    expect(api.lerConteudoReceita(primeira)).toEqual(primeira);
+  });
   it('preserva limites legados em caracteres Unicode, não unidades UTF-16', () => {
     const instrucoes = '🍋'.repeat(4000);
     expect(api.lerConteudoReceita({ instrucoes, itens: [item] }).instrucoes).toBe(instrucoes);

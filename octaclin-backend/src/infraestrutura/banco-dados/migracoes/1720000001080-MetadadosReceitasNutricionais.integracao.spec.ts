@@ -9,8 +9,11 @@ import { ExecutorTenant } from '../executor-tenant';
 import { CriptografiaDadosSensiveis } from '../../seguranca/criptografia-dados-sensiveis';
 import { UserActionLogOrm } from '../../auditoria/user-action-log.orm';
 import { ProfissionalOrm } from '../../../modulos/profissionais/infraestrutura/profissional.orm';
+import { AlimentoComposicaoOrm } from '../../../modulos/planos-alimentares/infraestrutura/alimento-composicao.orm';
+import { FonteComposicaoAlimentoOrm } from '../../../modulos/planos-alimentares/infraestrutura/fonte-composicao-alimento.orm';
 import { ReceitaNutricionalOrm } from '../../../modulos/planos-alimentares/infraestrutura/receita-nutricional.orm';
 import { ServicoReceitasNutricionais } from '../../../modulos/planos-alimentares/aplicacao/servico-receitas-nutricionais';
+import { ServicoPorcionamentoReceita } from '../../../modulos/planos-alimentares/aplicacao/servico-porcionamento-receita';
 import type { UsuarioAutenticado } from '../../../modulos/auth/dominio/usuario-autenticado';
 
 const executar = process.env.RLS_TESTCONTAINERS === 'true';
@@ -57,8 +60,20 @@ const executar = process.env.RLS_TESTCONTAINERS === 'true';
       grant select,insert,update,delete on all tables in schema public to food07_runtime;`);
     for (const tabela of ['profissionais', 'user_action_logs']) await owner.query(`alter table ${tabela} enable row level security; alter table ${tabela} force row level security;
       create policy fixture_tenant on ${tabela} using(tenant_id=nullif(current_setting('app.tenant_id',true),'')::uuid) with check(tenant_id=nullif(current_setting('app.tenant_id',true),'')::uuid);`);
+    // Catálogo global somente leitura, como a política endurecida da1030.
+    // Criado DEPOIS do grant DML das tabelas tenant-aware para não ampliar privilégios.
+    await owner.query(`create table fontes_composicao_alimentos (
+      id uuid primary key,catalogo_id uuid,codigo varchar(80),nome varchar(180),versao varchar(80),base_codigo varchar(80),licenca text,
+      url_fonte text,url_artefato text,checksum_arquivo char(64),hash_conteudo char(64),publicada_em date,capturada_em timestamptz,
+      esquema_versao varchar(40),esquema_nutrientes jsonb,direito_uso_status varchar(24),direito_uso_referencia text,
+      direito_uso_aprovado_em timestamptz,responsavel_aprovacao varchar(180),situacao varchar(20),importada_em timestamptz);
+      create table alimentos_composicao (
+      id uuid primary key,fonte_id uuid,importacao_id uuid,hash_registro char(64),codigo_origem varchar(120),nome varchar(240),preparacao varchar(180),
+      base_gramas numeric(12,3),energia_kcal numeric(16,8),proteinas_g numeric(16,8),carboidratos_g numeric(16,8),lipidios_g numeric(16,8),
+      fibras_g numeric(16,8),sodio_mg numeric(16,8),micronutrientes jsonb,criado_em timestamptz);
+      grant select on fontes_composicao_alimentos,alimentos_composicao to food07_runtime;`);
     runtime = new DataSource({ type: 'postgres', ...conexao, username: 'food07_runtime', password: 'runtime-test',
-      entities: [ReceitaNutricionalOrm, ProfissionalOrm, UserActionLogOrm], synchronize: false, logging: false,
+      entities: [ReceitaNutricionalOrm, ProfissionalOrm, UserActionLogOrm, AlimentoComposicaoOrm, FonteComposicaoAlimentoOrm], synchronize: false, logging: false,
       extra: { max: 6, application_name: 'food07-runtime-test' } });
     await runtime.initialize(); servico = new ServicoReceitasNutricionais(new ExecutorTenant(runtime), crypto);
   }, 90000);
@@ -104,6 +119,36 @@ const executar = process.env.RLS_TESTCONTAINERS === 'true';
     expect(h1).not.toBe(h2);
     const pagina = await servico.consultar(tenant, usuario(), { etiqueta: 'Lote', limite: 25, pagina: 5 });
     expect(pagina.total).toBe(101); expect(pagina.itens).toHaveLength(1);
+  });
+  it('T03 prévia real não grava; revisão antiga e profissional revogado são rejeitados', async () => {
+    const r = await servico.criar(tenant, usuario(), dados('Prévia'));
+    const previa = new ServicoPorcionamentoReceita(new ExecutorTenant(runtime), servico);
+    const ler = async () => (await owner.query('select conteudo_criptografado,etiquetas_hashes,versao_atual from receitas_nutricionais where id=$1', [r.id])).rows[0];
+    const antes = await ler();
+    const logsAntes = (await owner.query('select count(*)::int n from user_action_logs')).rows[0].n;
+    const p = await previa.prever(tenant, r.id, usuario(), { versaoEsperada: 1, porcoesDesejadas: 1.5 });
+    expect(p.estado).toBe('calculavel');
+    if (p.estado !== 'calculavel') throw new Error('Prévia não calculável');
+    expect(p.itens[0].porcaoGramas).toBe(37.5);
+    expect(p.totais.energiaKcal.valor).toBe(37.5);
+    expect(await ler()).toEqual(antes);
+    expect((await owner.query('select count(*)::int n from user_action_logs')).rows[0].n).toBe(logsAntes);
+    await servico.atualizar(tenant, r.id, usuario(), { ...dados(), versaoEsperada: 1 });
+    await expect(previa.prever(tenant, r.id, usuario(), { versaoEsperada: 1, porcoesDesejadas: 1.5 })).rejects.toMatchObject({ status: 409 });
+    await owner.query('update profissionais set arquivado_em=now() where id=$1', [p1]);
+    try {
+      await expect(previa.prever(tenant, r.id, usuario(), { versaoEsperada: 2, porcoesDesejadas: 1.5 })).rejects.toMatchObject({ status: 404 });
+    } finally { await owner.query('update profissionais set arquivado_em=null where id=$1', [p1]); }
+  });
+  it('T03 catálogo funciona com grants apenas SELECT, sem FOR SHARE ou privilégio adicional', async () => {
+    const alimento = randomUUID(), fonte = randomUUID();
+    await owner.query("insert into fontes_composicao_alimentos(id,codigo,versao,hash_conteudo,situacao,direito_uso_status) values($1,'SINTETICA','1',$2,'ativa','aprovado')", [fonte, 'a'.repeat(64)]);
+    await owner.query("insert into alimentos_composicao(id,fonte_id,nome,base_gramas,energia_kcal,proteinas_g,carboidratos_g,lipidios_g,micronutrientes) values($1,$2,'Alimento sintético',100,100,1,20,1,'{}')", [alimento, fonte]);
+    expect((await runtime.query("select has_table_privilege(current_user,'alimentos_composicao','UPDATE') permitido"))[0].permitido).toBe(false);
+    await expect(runtime.query('select id from alimentos_composicao for share')).rejects.toMatchObject({ code: '42501' });
+    const r = await servico.criar(tenant, usuario(), { ...dados(), itens: [{ alimentoComposicaoId: alimento, quantidade: 1, unidade: 'g', porcaoGramas: 100, substituicoes: [] }] });
+    const previa = new ServicoPorcionamentoReceita(new ExecutorTenant(runtime), servico);
+    await expect(previa.prever(tenant, r.id, usuario(), { versaoEsperada: 1, porcoesDesejadas: 1.5 })).resolves.toMatchObject({ estado: 'calculavel', totais: { energiaKcal: { valor: 37.5 } } });
   });
   it('duas edições realmente bloqueadas na mesma linha têm um único vencedor CAS', async () => {
     const r = await servico.criar(tenant, usuario(), dados('Concorrência'));

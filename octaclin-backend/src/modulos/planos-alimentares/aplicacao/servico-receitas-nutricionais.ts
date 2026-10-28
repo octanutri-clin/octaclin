@@ -248,14 +248,24 @@ export class ServicoReceitasNutricionais {
     return origem ? filtros.filter((filtro) => filtro.origem === origem) : filtros;
   }
 
+  /** Interno: o chamador fornece o EntityManager tenant-aware da própria operação. */
+  async obterParaPorcionamento(gerenciador: EntityManager, tenantId: string, receitaId: string, usuario: UsuarioAutenticado) {
+    this.garantirAcesso(usuario, 'planos_alimentares.ler');
+    const receita = await this.obterNoEscopo(gerenciador, tenantId, receitaId, usuario, true);
+    return { id: receita.id, nome: this.criptografia.descriptografar(receita.nomeCriptografado),
+      versao: receita.versaoAtual ?? 1, conteudo: this.descriptografarConteudo(receita) };
+  }
+
   private async obterNoEscopo(
     gerenciador: EntityManager,
     tenantId: string,
     receitaId: string,
-    usuario: UsuarioAutenticado
+    usuario: UsuarioAutenticado,
+    bloquearLeitura = false
   ): Promise<ReceitaNutricionalOrm> {
     const receita = await gerenciador.getRepository(ReceitaNutricionalOrm).findOne({
-      where: { id: receitaId, tenantId, arquivadoEm: IsNull() }
+      where: { id: receitaId, tenantId, arquivadoEm: IsNull() },
+      ...(bloquearLeitura ? { lock: { mode: 'pessimistic_read' as const } } : {})
     });
     if (!receita) throw new NotFoundException('Receita nutricional nao encontrada.');
     const profissionalId = await this.resolverProfissional(gerenciador, tenantId, usuario);
