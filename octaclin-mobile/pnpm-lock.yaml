@@ -18,6 +18,7 @@ overrides:
 
 patchedDependencies:
   braces@3.0.3: 7662c889fabee63233a590fc3b8bab66e77bf80008080dd01affbaad2b1e2619
+  deepmerge@4.3.1: d3ca73d14114658325509fa5157ab914d807ab286efcf506849c3ce142882af5
   node-forge@1.4.0: b6876574a5de19521a766856b293aeae2689848c5d8dab03f93040be0a64b8b4
 
 importers:
@@ -3636,7 +3637,7 @@ snapshots:
       '@expo/config-types': 57.0.2
       '@expo/json-file': 11.0.1
       '@expo/require-utils': 57.0.5(supports-color@8.1.1)(typescript@7.0.2)
-      deepmerge: 4.3.1
+      deepmerge: 4.3.1(patch_hash=d3ca73d14114658325509fa5157ab914d807ab286efcf506849c3ce142882af5)
       getenv: 2.0.0
       glob: 13.0.6
       resolve-workspace-root: 2.0.1
@@ -4755,7 +4756,7 @@ snapshots:
 
   decode-uri-component@0.5.0: {}
 
-  deepmerge@4.3.1: {}
+  deepmerge@4.3.1(patch_hash=d3ca73d14114658325509fa5157ab914d807ab286efcf506849c3ce142882af5): {}
 
   defaults@1.0.4:
     dependencies:
