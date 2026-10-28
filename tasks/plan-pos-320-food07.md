@@ -1,6 +1,6 @@
 # FOOD07 — plano técnico: metadados e localização de receitas
 
-> Execução futura: usar `superpowers:executing-plans` tarefa por tarefa. **Somente planejamento autorizado** nesta rodada. Q1–Q3 e S1–S3 respondidas e incorporadas: duas bases de ingredientes, porções fracionárias com prévia e envio porcionado ao portal. Plano consolidado para revisão/autorização de implementação; parâmetros técnicos abaixo são escolhas de engenharia propostas, não ratificação clínica. Nenhuma implementação, migration externa, merge ou deploy autorizado.
+> Estado atual em 28/10/2026: **implementação autorizada** pelo proprietário após a integração das aprovações UX da PR #451. Executar T01–T07 com TDD e PR Draft própria. Q1–Q3/S1–S3 permanecem válidas; NUX/PUX aprovados estão na [matriz de aceite](aceite-pos-320-food07.md). Esta autorização substitui as restrições anteriores de somente planejamento, preservadas no histórico Git. Sem merge, deploy, migrations externas ou mudanças Render/Neon. Usar `superpowers:executing-plans` tarefa por tarefa.
 
 **Objetivo:** completar metadados e localização da biblioteca existente, preservando receitas, planos aplicados e envios históricos.
 
@@ -16,7 +16,15 @@
 - PR446 permanece Ready for Review no HEAD aprovado2ed4ad40; sem mudança. Nenhum arquivo/G06 da outra worktree foi movido ou descartado; `next-env.d.ts` preexistente preservado lá.
 - FOOD07 não depende do motor FOOD05 nem de1079. A futura migration deve usar número livre superior ao1079 reservado pela PR446; candidato1080, confirmar novamente antes de criar/registrar. Não importar1079 para esta branch nem encadear a PR em446.
 - A main contém FOOD04/1078; testes descartáveis poderão aplicar o conjunto do checkout. Integração futura com446 precisa reconciliação de registro TypeORM, DTO/API/UI e ensaio combinado, sem modificar a PR aprovada.
-- Nova PR individual Draft somente para FOOD07; implementação depende do fechamento de decisões e autorização. G06 produtivo permanece separado/BLOCKED; main auto-deploy exige zero merge sem nova autorização.
+- Nova PR individual Draft somente para FOOD07; execução autorizada nesta decisão, com gates ainda NOT RUN. G06 produtivo permanece separado/BLOCKED; main auto-deploy exige zero merge sem nova autorização.
+
+### Revisões de produto aprovadas e referência explícita
+
+Enquanto a PR #451 não for integrada, consultar exclusivamente os papéis e o procedimento da branch `chore/ux-product-agents`, commit **0d3382b6d29dbaa297227cd648021daf61117ea4**, por `git show <commit>:<path>` ou pelos arquivos do mesmo commit no GitHub. Paths: `.codex/agents/octaclin-nutricionista-ux.toml`, `.codex/agents/octaclin-paciente-ux.toml` e `docs/agents/ux/PROCEDIMENTO.md`. Não fazer merge/cherry-pick implícito, não copiar configuração para simular integração.
+
+Piloto etapa A: `docs/agents/ux/reports/FOOD07-A-2026-10-28/` naquele commit, avaliado sobre este plano em `9dd9bd6d`. Relatórios são sugestões históricas; a aprovação humana atual está na matriz própria FOOD07. Seleção nativa TOML NÃO COMPROVADA por autenticação do CLI; usar duas instâncias com papel explícito e brief sintético, ou declarar fallback sequencial se delegação indisponível. Não bloquear engenharia pela autenticação do CLI.
+
+Reexecutar nutricionista e paciente nas etapas B (primeira interface utilizável) e C (após testes, antes da conclusão da PR), com telas/fluxos reais e registro exato de ferramentas e limitações. Persona não substitui R4, teste de acessibilidade, validação clínica ou autorização operacional. PUX-06 fica BACKLOG condicionado à auditoria da Fase 310; nenhuma outra recomendação se torna requisito implicitamente.
 
 ## Decisões para fechamento
 
@@ -34,7 +42,7 @@
 | S2 | Porções fracionárias com prévia | Solicitar0,5/1,5etc.; prévia e confirmação obrigatórias; precisão/limites técnicos abaixo |
 | S3 | Ajustar também receitas enviadas ao portal | Escolha de porções individual por receita do lote, snapshot independente do destino e mesma matemática do editor |
 
-Campos de organização continuam opcionais. Rendimento da preparação inteira é obrigatório apenas para escalar a base `receita_inteira`; base `por_porcao` já define uma porção e pode ter rendimento total informado separadamente. Receitas sem base conhecida mantêm fluxo legado explícito sem escala. Não há outra decisão funcional bloqueante identificada nesta rodada; o plano e a execução ainda exigem aceite do proprietário.
+Campos de organização continuam opcionais. Rendimento da preparação inteira é obrigatório apenas para escalar a base `receita_inteira`; base `por_porcao` já define uma porção e pode ter rendimento total informado separadamente. Receitas sem base conhecida mantêm fluxo legado explícito sem escala. Escopo e continuidade aprovados; não há nova decisão funcional bloqueante identificada. Extensão aditiva aprovada de instruções por envio detalhada abaixo; nenhuma validação de texto livre garante detectar todas as contradições.
 
 ## Gaps observados e reuso
 
@@ -112,17 +120,30 @@ A proposta de rendimento somente informativo foi substituída pelas decisões Q2
 - Formulário mostra base antes dos ingredientes. Selecionar outra base em receita preenchida abre confirmação: os valores digitados serão reinterpretados naquela base; não converter silenciosamente nem permitir salvar a mudança sem conferência. Conversor automático de base não faz parte desta entrega. Legados requerem confirmação explícita da base de seus valores; cadastrar rendimento sozinho não habilita escala. Alteração incrementa versão/CAS como as demais edições.
 - Prévia `POST /planos-alimentares/receitas/:receitaId/previa-porcionamento`, body `{versaoEsperada,porcoesDesejadas}` e permissão de leitura existente. Fonte autorizada/versão/arquivamento revalidados; cliente não fornece composição, fator, tenant ou resultado canônico. Resposta `{receitaId,versao,porcoesDesejadas,baseQuantidades,rendimentoPorcoes?,itens,avisos,fingerprint}` por allowlist; fingerprint SHA256 da serialização canônica dos fatos matemáticos e resultado, não token nem autorização. Sem paciente no cálculo genérico nem escrita.
 - Para aplicar no plano, a confirmação solicita a mesma prévia novamente e compara versão/fingerprint/solicitação antes de inserir os valores canônicos; alteração pede nova conferência. Alterar números depois segue edição manual existente. Uma confirmação local aceita uma única intenção de aplicação, desabilita dupla ação e ignora respostas tardias; retries da prévia são read-only. Depois, autosave60s/ACK/PA07 e backend atual revalidam e persistem os pesos efetivos. Não criar endpoint de escrita paralela no plano, capability ou proveniência FOOD05.
-- Tempo e números no texto das instruções não são escalados: UI informa que instruções gerais precisam de revisão profissional. Quantidades estruturadas são a referência. No portal, rótulo explícito “Quantidades para X porções”, separado de “Rendimento da preparação original”, quando conhecido. Não apresentar1,5porções ajustadas como receita inteira que ainda rende4.
+- Tempo e números no texto das instruções não são escalados. Para envio personalizado, o profissional revisa/adapta a cópia conforme contrato abaixo; não apresentar texto original divergente como segunda orientação aplicável. No portal: “Os ingredientes abaixo já estão nas quantidades para X porções”; rendimento original apenas secundário, quando conhecido. Não apresentar 1,5 porções ajustadas como receita inteira que ainda rende 4.
+
+### Experiência aprovada: prévia, bases e quantidades
+
+- NUX-01: prévia mostra energia/proteínas/carboidratos/gorduras **totais para as porções solicitadas**, calculados sobre os pesos efetivos após arredondamento, sem somar alternativas como alimentos simultâneos. Composição por 100 g é secundária e explicitamente rotulada. Cada indicador tem valor conhecido ou indisponível; uma ausência não vira zero nem impede os demais totais calculáveis. Reusar o motor nutricional, inclusive `octaclin-web/lib/nutricao-plano.ts:calcularSubtotalRefeicao` na apresentação. Isso não flexibiliza o DTO legado de composição manual, que exige os quatro macros quando informado; não fabricar composição parcial para salvá-la.
+- NUX-02: mudança de base em receita preenchida mostra antes/depois concreto (500 g representam receita inteira → 500 g representarão uma porção), rendimento pertinente e ação “Confirmar nova interpretação”. Cancelar mantém base e valores; confirmar mantém números e altera seu significado, seguindo CAS. Não converter automaticamente.
+- NUX-04: captura mostra refeição de origem; aplicação identifica receita/versão, quantidade, base e refeição/plano de destino. Nenhuma inferência da base a partir da origem; destino/posse revalidados pelos contratos existentes.
+- NUX-05: resumo do lote até dez com nome/modo/porções/base/pendência por receita, acesso direto à correção e preservação dos demais formulários. Falha bloqueia o envio inteiro; não confirmar parcialmente.
+- PUX-02/03/05: formatação `pt-BR`, precisão interna intacta, ingrediente/número/unidade semanticamente associados. Medida caseira e peso somente agrupados como equivalentes se houver conversão confiável daquela preparação; não inferir densidade. Remover zeros visuais dispensáveis, mostrar aproximação textual sem ocultar valores. Testar teclado, reflow mobile/desktop, zoom/texto 200%, Axe e leitura assistiva efetivamente disponível; registrar o que não foi exercitado.
+- PUX-04: receita inacessível usa mensagem genérica “Esta receita não está disponível. Consulte suas receitas”, com retorno à lista autorizada. Mesmo contrato 404 para inexistente, retirada, substituída ou de outro paciente; não consultar/revelar estado de recurso não autorizado para melhorar texto.
 
 ### Envio personalizado: confirmação, snapshot e replay
 
-- Estender DTO existente com `porcionamentos?: Array<{receitaId:string;porcoesDesejadas:number;fingerprintPrevia:string}>`, até10, sem repetição, todos pertencentes a `receitaIds`. Ausência conserva envio legacy das quantidades cadastradas. Novo UI oferece modo explícito `quantidades_cadastradas` ou `porcionado` por receita; nunca adivinhar pelo rendimento. Itens porcionados exigem prévia e confirmação; itens sem base podem seguir modo legacy sem receber rótulo de porcionados.
+- Estender DTO existente com `porcionamentos?: Array<{receitaId:string;porcoesDesejadas:number;fingerprintPrevia:string;instrucoesPersonalizadas?:string;confirmacaoConferenciaInstrucoes:true}>`, até10, sem repetição, todos pertencentes a `receitaIds`. Ausência conserva envio legacy das quantidades cadastradas. Novo UI oferece modo explícito `quantidades_cadastradas` ou `porcionado` por receita; nunca adivinhar pelo rendimento. Itens porcionados exigem prévia e confirmação; itens sem base podem seguir modo legacy sem receber rótulo de porcionados.
+- NUX-03/PUX-01: ao personalizar, pré-preencher instruções com texto original e mostrar quantidades ajustadas lado a lado; texto é editável **somente na cópia enviada**. Omissão de `instrucoesPersonalizadas` usa o original da versão conferida, string vazia remove texto somente daquela cópia; null, não-string e mais de 4.000 caracteres são rejeitados no DTO e serviço, preservando o limite existente. Normalizar somente CRLF para LF e NFC; não fazer reescrita numérica, HTML ou redução semântica automática.
+- Exigir `confirmacaoConferenciaInstrucoes === true` por receita porcionada no backend, mesmo quando heurística não identifica números; frontend limpa a confirmação se mudar texto, quantidade, base, receita ou prévia. Essa exigência conservadora assegura conferência quando houver possível contradição sem alegar compreensão de toda linguagem livre. A confirmação cobre a cópia final e não autoriza remoção da validação manual já existente na Fase 310. Heurística, se houver, é apenas informativa; sem rejeitar arbitrariamente toda menção de número (temperatura/tempo etc.).
+- O fingerprint matemático da prévia continua independente de texto editável. Nova identidade semântica do comando inclui instruções efetivas finais e confirmação por item, além dos parâmetros existentes. Omissão e texto idêntico ao original normalizado são semanticamente equivalentes; não usar o valor da biblioteca viva em replay. Congelar, no contexto interno cifrado, o comando canônico necessário para resolver omissão conforme a versão original. Não retornar esse comando/hash ao paciente nem gravar texto em logs/auditoria/URL.
 - Nova gravação em `compartilhar` revalida paciente/carteira/consentimentos, versão, base, fontes e cálculo **dentro da transação**, confronta fingerprint da prévia e cria snapshot com resultado atual. Reusar locks existentes; fixar ordem estável de receitas por UUID no lote e proteger leitura do vínculo contra transferência durante a operação pelo padrão transacional de paciente existente, sem copiar a arquitetura FOOD05. Testar transferências concorrentes; não ampliar permissões.
-- Idempotência atual ainda não cobre porções: incorporar pedido completo normalizado (paciente, receitas/versões, modos/porções/fingerprint, canais e agendamento explícito) ao hash canônico de envio. Excluir horário dinâmico de “agora”; distinguir ausência de agendamento de data fixa. Mesma chave/corpo retorna os mesmos shares/bytes; mesma chave com diferente porção/base/versão/paciente/canais/horário recebe409, sem novas entregas. Não usar apenas receitaId/versão como identidade matemática.
+- Idempotência atual ainda não cobre porções/texto: incorporar pedido completo normalizado (paciente, receitas/versões, modos/porções/fingerprint, instruções efetivas/conferência por item, canais e agendamento explícito) ao hash canônico de envio. Excluir horário dinâmico de “agora”; distinguir ausência de agendamento de data fixa. Mesma chave/corpo retorna os mesmos shares/bytes; mesma chave com diferente texto/porção/base/versão/paciente/canais/horário recebe 409, sem novas entregas. Não usar apenas receitaId/versão como identidade matemática.
 - Reutilizar `snapshotCriptografado` existente, sem tabela paralela: manter campos legacy `{nome,conteudo,versao}` e adicionar contexto interno opcional versionado `{schemaVersao:1,algoritmo:'porcionamento-receita-v1',baseQuantidades,rendimentoOriginalPorcoes?,porcoesDesejadas,fatorExato,hashPedidoCompartilhamento,fingerprint,...fatosNecessarios}`. Conteúdo público guarda somente itens ajustados, instruções e metadados permitidos; etiquetas/hashes/contexto interno nunca saem na projeção paciente. Guardar parâmetros mínimos suficientes para reproduzir o cálculo, não duplicar PII nem copiar dados de paciente para a biblioteca.
 - Encapsular leitura do snapshot em helper validado que aceita o formato antigo e novo. Usar em todas as leituras do service (`listarEnvios`, listagem portal e detalhe); auditar consumidores/workers sem refazer o transporte310. Novo contexto/regras são internos; não repassar JSON cru. Reader antigo sem contexto nunca preenche rendimento/porções a partir da biblioteca viva.
 - Retry de share novo usa o hash congelado no ciphertext para comparar **comando original**, não recalcula o snapshot por ter mudado a biblioteca. Revalidar acesso atual obrigatório; não criar nova ação nem dispensar autorização por hash. Share legado sem hash admite somente replay compatível com contrato antigo e sem `porcionamentos`; tentar introduzir personalização na mesma chave recebe409. Nada de reescrever snapshot antigo para completar hash.
 - Agendamento congela a receita personalizada na confirmação, não no disparo. Worker não recalcula ao ativar; preserva consentimentos/janela e aviso externo genérico, nunca receita ou porções em e-mail/WhatsApp/push. Editar biblioteca ou mudar porções exige nova prévia, nova chave e novo envio explícito.
+- NUX-06 (semântica já coberta): reenvio imediato substitui a cópia ativa anterior da mesma receita/paciente; agendamento faz isso ao ativar. Histórico não concede acesso simultâneo a múltiplas versões ativas. Preservar serviço/worker da Fase 310, retirada e autorização; não adotar a hipótese inicial da persona de manter ambas ativas.
 - Antes de qualquer writer novo, todos os leitores do snapshot e projeções devem estar no release compatível. Depois de shares personalizados, rollback para backend antigo que retorne JSON cru pode vazar contexto interno ou interpretar porções incorretamente; exigir release compatível/correção adiante e manter schema/ciphertext/histórico.
 
 ## Migration candidata e autorização
@@ -144,7 +165,7 @@ Se auditoria adicional achar risco existente de permissão, relatar evidência e
 
 ## Tarefas sequenciais e TDD — plano consolidado
 
-Sem execução nesta rodada. Cada tarefa: escrever teste funcional RED, rodar e observar assertion falhar, implementar mínimo GREEN, executar regressões afetadas e commit. Erro de setup não é RED. Interfaces exatas do domínio:
+Implementação autorizada, ainda sem runtime alterado neste checkpoint documental. Cada tarefa: escrever teste funcional RED, rodar e observar assertion falhar, implementar mínimo GREEN, executar regressões afetadas e commit. Erro de setup não é RED. Interfaces exatas do domínio:
 
 - `normalizarMetadadosReceita(entrada:unknown):MetadadosReceitaV1` e `mesclarMetadadosReceita(anterior,alteracao)` preservam omissão/removem explicitamente.
 - `lerConteudoReceita(valor:unknown):ConteudoReceitaNutricional` valida legado e novo; `projetarConteudoReceitaPaciente` entrega somente allowlist pública.
@@ -175,6 +196,7 @@ Criar `aplicacao/servico-porcionamento-receita.ts`/spec; modificar módulo/contr
 
 - [ ] RED: receita atual/legada, arquivada, versão stale, outra clínica/pessoal de outro profissional, fonte revogada; DTO manipulado com composição/fator/tenant é rejeitado. Nenhuma gravação na prévia.
 - [ ] RED: fingerprint muda com quantidades/base/versão, não com serialização arbitrária de chaves; confirmar prévia alterada exige reabrir. Reutilização dentro do EntityManager de compartilhar não abre transação independente.
+- [ ] RED NUX-01: totais para 1/1,5/2,5 porções em ambas as bases, arredondamento efetivo, nutriente ausente permanece indisponível e demais indicadores calculáveis; denominador explícito T06.
 - [ ] GREEN serviço/controller/typecheck; commit. Não considerar fingerprint autorização.
 
 ### T04 — compartilhamento porcionado e snapshot independente
@@ -184,6 +206,7 @@ Modificar `aplicacao/servico-compartilhamento-receitas.ts`, DTO compartilhamento
 - [ ] RED: preview1,5 confirmado gera quantidades congeladas corretas, tags/contexto interno ausentes do HTTP; histórico antigo igual; edição posterior da biblioteca não altera share; worker agendado não recalcula.
 - [ ] RED: lote misto modos legacy/porcionado, até10, sem IDs duplicados/extras; versões/fingerprint stale, fonte/consentimento/carteira revogados; uma falha não deixa share/entrega parcial.
 - [ ] RED: replay idêntico mantém UUID/ciphertext/entregas; mesma chave com porção diferente ou trocar modo recebe409; legado sem hash não aceita upgrade de modo; compare pedido original sem Date.now variável.
+- [ ] RED NUX-03/PUX-01: texto personalizado e conferência obrigatória por item, omissão vs original explícito, string vazia/null/4.000/4.001 caracteres; mesma chave/texto diferente → 409 e nenhuma escrita; edição da biblioteca após envio/retry não altera snapshot nem semântica da omissão; agendamento congela texto. Provar biblioteca e shares anteriores byte a byte intactos, rollback integral em erro do lote.
 - [ ] RED Postgres com contenção controlada: editar/compartilhar, lotes recíprocos com fontes em ordem inversa, transferência do paciente e revogação; locks ordenados, autorização transacional e rollback. Inspecionar linhas e bytes cifrados após rejeição.
 - [ ] GREEN serviço/snapshot/descartável/regressões310; commit. Não ampliar regra de acesso a pacientes.
 
@@ -202,6 +225,7 @@ Modificar componentes `biblioteca-receitas-nutricionais.tsx`/`receitas-compartil
 - [ ] RED prévia fracionária com original/efetivo/avisos, confirmar/cancelar, duplo clique/retry, resposta antiga/trocar paciente/perder posse PA07. Confirmar aplicação obtém resultado atual e insere uma vez; persistência só via autosave/ACK existentes.
 - [ ] RED lote: porções individuais por receita, prévia e confirmação explícita de envio, código indisponível explica bloqueio, acesso retirada/legado permanece; portal mostra “Quantidades para1,5porções” sem confundir rendimento original4, sem tags/hashes/contexto.
 - [ ] RED teclado/foco/reflow/Axe desktop/mobile, macros por peso efetivo, nenhum tempo/texto escalado. GREEN visual/BFF/portal/regressões310/FOOD04/PA07; commit.
+- [ ] RED NUX-01/02/04/05 e PUX-01–05: cumprir cenários/asserções da matriz própria, incluindo antes/depois/cancelar, correção de lote sem perder outras linhas, conferência invalidada por edição, 404 indistinguível e ausência de dupla orientação quantitativa. Reavaliar etapa B com interface real, depois C após gates; não marcar teste assistivo como PASS por mera leitura de código.
 
 ### T07 — gates, revisão independente e PR
 
@@ -219,7 +243,7 @@ Modificar componentes `biblioteca-receitas-nutricionais.tsx`/`receitas-compartil
 
 ## Gates e comandos previstos (ainda NOT RUN)
 
-- G00 análise documental: branch/base/paths/referências/decisões rastreados; Q1–Q3 e S1–S3 aprovadas; plano consolidado aguarda aceite de implementação.
+- G00 análise documental: branch/base/paths/referências/decisões rastreados; Q1–Q3/S1–S3 e melhorias UX enumeradas aprovadas; implementação autorizada. Evidência de planejamento não comprova G01–G05.
 - G01 domínio/DTO/service: `pnpm --dir octaclin-backend exec jest --runInBand metadados-receita porcionamento-receita dtos-receitas-metadados servico-receitas-nutricionais servico-porcionamento-receita snapshot-compartilhamento-receita servico-compartilhamento-receitas`; incluir novos testes de projeção/legacy.
 - G02 banco: suite Testcontainers específica deve ser incluída em `pnpm test --runInBand` do CI Backend; flag única documentada e habilitada no workflow se necessário, provar asserções executadas (nenhum skipped como PASS). Sem conexão externa. Não reutilizar suite com apenas mocks como evidência RLS.
 - G03 Web: `pnpm --dir octaclin-web test:planos-alimentares:bff`, `pnpm --dir octaclin-web test:authz`, lint/typecheck/build dos pacotes afetados; `pnpm --dir octaclin-web exec playwright test tests/visual/food07-metadados-receitas.spec.mjs` usando config/projetos reais (não presumir nome de projeto sem conferir). Regressão PA07 e Axe no mesmo config, Node22.
@@ -227,7 +251,7 @@ Modificar componentes `biblioteca-receitas-nutricionais.tsx`/`receitas-compartil
 - G05 CI/entrega técnica: todos os checks aplicáveis no commit exato, skips explicados; PR Draft e sem merge.
 - G06 operação: BLOCKED/separado até autorização pós-retorno e regularização real. Não reivindicar prontidão produtiva por teste descartável ou data03/11.
 
-## Evidências desta rodada
+## Evidências históricas — planejamento até 9dd9bd6d
 
 Executado somente leitura de main atualizada, arquivos/contratos/testes existentes e duas referências externas específicas; branch limpa criada de main. Nenhum teste de runtime, migration ou CI foi executado nesta etapa documental. A chamada `pnpm security:secrets` inicializou automaticamente o ambiente pnpm e reportou Already up to date; não houve mudança versionada de dependências/lockfiles. Não criar symlink de node_modules para outra worktree nem reinstalar sem necessidade. Espaço do executor observado97% usado é limitação para futura prova local; não apagar artefatos sem critério/autorização. Se execução local for inviável, gates oficiais de banco/Playwright no CI devem executar exatamente os cenários, sem declarar PASS de teste bloqueado.
 
@@ -236,3 +260,5 @@ Verificação documental executada: links locais dos quatro arquivos PASS; scann
 ## Histórico de decisão — respostas do proprietário
 
 Q1 integral aprovado; Q3 tags internas e rendimento/tempo em novos envios aprovado. Q2 passou de proposta informativa para **ajuste de quantidades por rendimento**, incluído nesta fase de planejamento. Essa alteração não autoriza runtime automaticamente. S1–S3 foram respondidas posteriormente: duas bases, frações e envio porcionado aprovados; este plano substitui as alternativas anteriores. A versão anterior do plano está preservada no commit691b34d3.
+
+Atualização de 28/10/2026 posterior ao piloto #451: proprietário aprovou NUX-01–05, PUX-01–05 nos limites expressos, preservou NUX-06/Fase 310 e PUX-06 BACKLOG; autorizou implementar após integrar decisões e apresentar incompatibilidades materiais. A restrição histórica de somente planejamento foi substituída, sem autorizar operação externa. Ver [matriz atual](aceite-pos-320-food07.md).

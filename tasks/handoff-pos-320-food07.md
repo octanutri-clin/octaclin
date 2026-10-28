@@ -1,4 +1,4 @@
-# FOOD07 — handoff de planejamento
+# FOOD07 — handoff: decisões UX integradas, execução autorizada
 
 ## Branch/base
 
@@ -6,7 +6,7 @@
 
 ## Objetivo e autorização
 
-Planejar FOOD07 com Sol6.1 alto, apenas gaps residuais da biblioteca310. Nenhuma implementação autorizada ainda. Q1 campos/filtros e Q3 tags internas+rendimento/tempo nos novos envios foram aprovadas. Q2 foi ampliada pelo proprietário para **ajustar quantidades por rendimento**. S1–S3 respondidas: cadastro tanto da receita inteira como por porção, frações com prévia e envio porcionado ao portal aprovados. Nenhuma pergunta funcional restante identificada; apresentar plano consolidado antes da implementação. Pelo escopo ampliado de bases/snapshots/idempotência, recomendar Sol6.1 médio para integração e Luna alto apenas para tarefas delimitadas com interfaces fechadas; avisar e pausar **antes** da troca manual, conforme fluxo do proprietário.
+Implementar FOOD07 após integrar decisões aprovadas na mensagem “Aprovação das sugestões UX da FOOD07 e continuidade da PR #451”, em 28/10/2026. Q1–Q3/S1–S3 preservadas; NUX-01–05 e PUX-01–05 enumerados aprovados, NUX-06 mantém a política 310, PUX-06 BACKLOG. Ver [matriz de aceite](aceite-pos-320-food07.md). Restrição anterior de somente planejamento superada por autorização expressa; sem merge, deploy, migrations externas, mudanças de Render/Neon ou FOOD05-MDL. Manter configuração atual; avisar e pausar antes de troca manual. Não é necessário novo aceite para executar detalhes de engenharia já autorizados.
 
 ## Concluído
 
@@ -14,22 +14,26 @@ Planejar FOOD07 com Sol6.1 alto, apenas gaps residuais da biblioteca310. Nenhuma
 - Tags/rendimento/tempo ausentes e UI primeira página100 confirmados estaticamente.
 - Plano T01–T07 com interfaces, limites, omissão/limpeza, migração candidata1080 e gates; checklist e referências.
 - Licenças Tandoor AGPL+Commons Clause e OpenNutriTracker GPLv3 conferidas em arquivos, blobs registrados; nenhuma cópia/dependência.
+- Aprovações UX integradas a plano/checklist/matriz; instruções específicas por envio, hash semântico e conferência explícita por receita porcionada definidos antes de mudar runtime.
+- Papéis/procedimento e histórico #451 referenciados no commit 0d3382b6, sem importar configuração. Reexecutar personas em B e C; seleção nativa permanece NÃO COMPROVADA, ponte com papel explícito permitida.
 
 ## Pontos críticos
 
 - Portal atual retorna snapshot JSON completo. Tags novas internas exigem allowlist server-side tanto ao criar snapshot quanto ao retornar ao portal; ocultar JSX não é suficiente.
 - Não decifrar todo o acervo para filtrar; HMAC por tenant e SQL antes de count/offset. Novo POST consulta evita etiquetas em URL; GET legado mantém contrato.
 - Metadados no ciphertext; writer antigo sem novos campos deve preservar por omissão; null/[] só para remoção explícita definida no plano.
-- Novo porcionamento exige base/rendimento explícitos, razão exata e prévia/confirmar server-side; somente após autorização de implementação; S1–S3 já foram aprovadas. Não inferir base de receitas antigas; tempo/instruções e concentrações por100g não são escalados. Não exportar contexto FOOD05 por receita/modelo.
+- Novo porcionamento exige base/rendimento explícitos, razão exata e prévia/confirmar server-side; execução agora autorizada. Não inferir base de receitas antigas; tempo/instruções e concentrações por100g não são escalados. Profissional pode adaptar instruções só na cópia enviada, com conferência por item obrigatória no backend, texto cifrado e incluído na identidade idempotente. Não exportar contexto FOOD05 por receita/modelo.
 - Share novo deve comparar comando completo incluindo porções e congelar resultado no snapshot cifrado; legado sem hash não aceita virar porcionado por replay. Backend de portal usa allowlist; worker agendado não recalcula.
 - Preservar selecionadas/versão ao paginar e evitar respostas antigas em troca de paciente/filtro; testar assincronismo.
 - Sem nova política de papéis/admin: receitas310 e gruposFOOD04 têm contratos distintos.
 - Número de migration/reconciliação de1079/446 deve ser conferido antes de escrever; nenhuma migration criada.
+- Reenvio imediato substitui cópia ativa da mesma receita/paciente; agendado só na ativação. Resposta inacessível usa 404 genérico, sem revelar estado de recurso alheio.
+- DTO manual atual exige quatro indicadores quando composição é informada; resumo parcial de prévia não autoriza enfraquecer esse contrato. Detecção universal de contradições em linguagem livre é inviável: usar conferência profissional explícita, não promessa de regex infalível.
 
 ## Validações
 
-Análise de código/referências e base: executadas. Links locais, diff check e scanner local de segredos PASS; scanner em Node24/pnpm11.19 fora do intervalo do projeto, sem alteração versionada de dependências. O pnpm inicializou automaticamente seu ambiente ao chamar o script (Already up to date). Testes de implementação/baseline, builds, PostgreSQL, Playwright, CI/scanners/R4: NOT RUN, pois autorização atual é planejamento. Não instalar dependências na worktree documental nem ligar symlink para outro checkout; executor observado com pouco espaço. Não excluir artefatos para contornar infraestrutura. Planejar CI equivalente se local não suportar prova.
+Evidência histórica até 9dd9bd6d: análise de código/referências, links, diff e scanner local PASS; Node24/pnpm11.19 fora de engines, sem alteração de dependências. Rodada atual: confronto estático dos DTOs, snapshot/worker e idempotência310; integração documental de decisões. Testes de implementação/baseline, builds, PostgreSQL, Playwright, CI/scanners/R4 FOOD07: NOT RUN. Usar Node22 nos gates. Não instalar dependências nem ligar symlink de outra worktree por conveniência; se local não suportar prova, executar cenários exatos no CI. Não confundir CI #451 com teste FOOD07. Falha Mobile #451 permanece separada e não pode ser suprimida para aprovar agentes.
 
 ## Próxima ação
 
-Plano com S1–S3 consolidado: revisar sua cobertura e obter autorização de implementação. Não implementar automaticamente pela resposta às perguntas. Reconfirmar base e estado do Git antes de qualquer execução. Sem merge/deploy/DDL externo/infra/cobrança; G06 segue separado. Documentos em `tasks/plan-pos-320-food07.md`, `todo-pos-320-food07.md`, `referencias-pos-320-food07.md` e este handoff. Manter PR futura individual Draft.
+Apresentar integração das decisões e limites materiais ao proprietário antes de alterar contratos; em seguida iniciar T01 com teste RED funcional de metadados/porcionamento. Autorização expressa já existe. Reconfirmar estado do Git e Node22/dependências reais antes da execução; não duplicar implementação. Abrir PR Draft própria FOOD07 e preservar #451/#446/G06. Papéis via `git show 0d3382b6:<path>` conforme plano, sem merge/cherry-pick. Sem merge/deploy/DDL externo/infra/cobrança; produção permanece separada.
