@@ -1,4 +1,5 @@
 import { validarMicronutrientesManuais, MicronutrientesPor100gEntrada } from '../dominio/micronutrientes';
+export { CriarMetadadosReceitaDto, AtualizarMetadadosReceitaDto, PreverPorcionamentoReceitaDto } from './dtos-receitas-metadados';
 import { Type } from 'class-transformer';
 import {
   ArrayMaxSize,
