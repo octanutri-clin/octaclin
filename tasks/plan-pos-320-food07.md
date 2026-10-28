@@ -195,12 +195,15 @@ PASS técnico local específico: ORM receita, serviço de receitas/spec e `opcoe
 
 ### T03 — prévia autorizada de porcionamento
 
+PASS técnico local específico no código `5e20b279`; CI próprio e confirmação posterior T04/T06 permanecem separados.
+
 Criar `aplicacao/servico-porcionamento-receita.ts`/spec; modificar módulo/controlador existente; reusar código autorizado de resolução de fonte e serviço receitas sem criar bypass de escopo.
 
-- [ ] RED: receita atual/legada, arquivada, versão stale, outra clínica/pessoal de outro profissional, fonte revogada; DTO manipulado com composição/fator/tenant é rejeitado. Nenhuma gravação na prévia.
-- [ ] RED: fingerprint muda com quantidades/base/versão, não com serialização arbitrária de chaves; confirmar prévia alterada exige reabrir. Reutilização dentro do EntityManager de compartilhar não abre transação independente.
-- [ ] RED NUX-01: totais para 1/1,5/2,5 porções em ambas as bases, arredondamento efetivo, nutriente ausente permanece indisponível e demais indicadores calculáveis; denominador explícito T06.
-- [ ] GREEN serviço/controller/typecheck; commit. Não considerar fingerprint autorização.
+- [x] RED/GREEN: receita atual/legada, arquivada, versão stale, outra clínica/pessoal de outro profissional, fonte revogada; DTO manipulado com composição/fator/tenant é rejeitado. Nenhuma gravação na prévia.
+- [x] RED/GREEN: fingerprint muda com quantidades/base/versão/composição, não com serialização arbitrária de chaves. Reuso do EntityManager comprovado sem transação independente. Rejeição de confirmação de fingerprint antigo pertence à implementação T04/T06 ainda pendente.
+- [x] RED/GREEN NUX-01: totais para 1/1,5/2,5 porções em ambas as bases, arredondamento efetivo, nutriente ausente permanece indisponível e demais indicadores calculáveis; denominador explícito T06.
+- [x] GREEN local serviço/controller/typecheck/build, PostgreSQL8/8 e re-revisão específica independente; CI próprio após commit. Não considerar fingerprint autorização.
+- Resolução do catálogo em JOIN bulk/um statement, sem FOR SHARE (runtime só SELECT). Prévia reusa normalização/porção/soma4 casas do plano para não prometer total diferente ao aplicar; fonte bruta intacta/fingerprint. Aritmética racional de quantidade3 casas permanece T01. Validações de materialização/publicação existentes não foram afrouxadas por permitir preview parcial.
 
 ### T04 — compartilhamento porcionado e snapshot independente
 

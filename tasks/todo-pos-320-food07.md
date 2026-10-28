@@ -23,15 +23,15 @@ Contrato vigente: [plano](plan-pos-320-food07.md). [Matriz de aceite e aprovaç�
 - [ ] Avaliação etapa B das duas personas com interface real.
 - [ ] Avaliação etapa C das duas personas após testes, antes da conclusão da PR.
 
-## Execução autorizada — checkpoint T02
+## Execução autorizada — checkpoint T03
 
-T01 **PASS técnico local** no código `bdb816f8`. T02 código `dc9620c0` implementado e validado localmente (3.544 PASS/148 skipped, typecheck/build PASS), com PostgreSQL/RLS descartável **6/6 PASS**, sem aplicação externa da1080. [Execução, RED/GREEN e limites](execucao-pos-320-food07.md). T03–T07 NOT RUN, salvo projeção mínima de segurança antecipada de T04 para não expor etiquetas ao conectar o writer. Gate PostgreSQL amplo local BLOCKED por imagem Timescale indisponível; CI global não aprovado devido à auditoria Mobile, tratada na #453. Revisão T02 independente com achado legado corrigido não equivale à R4 integral FOOD07.
+T01 código `bdb816f8` e T02 código `dc9620c0` concluídos tecnicamente; CI Backend/RLS T02 comprovado no HEAD4c5a8fc9. T03 código `5e20b279` implementado com prévia autorizada e reuso do motor; suíte completa3.577 PASS/150 skipped, typecheck/build PASS; **398/398 focados e PostgreSQL/RLS8/8 PASS**, re-revisão específica independente favorável após correções P1/P2. [Execução e limites](execucao-pos-320-food07.md). T04–T07 ainda pendentes, salvo allowlist mínima T04 antecipada por segurança. Não equivale a R4 integral nem CI global verde: Mobile audit permanece FAIL em fluxo separado #453. G06 BLOCKED.
 
 | Tarefa | Entrega / critério verificável | Gate |
 | --- | --- | --- |
 | T01 — PASS local | Metadados/duas bases/aritmética racional, limites, legado sem base, helpers de projeção e oráculo sintético independente com RED/GREEN; wiring HTTP/persistência nas tarefas seguintes | G01 parcial |
 | T02 — PASS local específico | Ciphertext+índice tenant-aware/CAS, migração aditiva, count/paginação SQL e PostgreSQL real RLS/rollback | G02 |
-| T03 | Prévia server-side autorizada, fonte/versão/fingerprint, totais por quantidade e ausência por indicador, nenhuma escrita e EntityManager compartilhado | G01/G04 |
+| T03 — PASS local específico | Prévia server-side autorizada, fonte/versão/fingerprint, totais por quantidade e ausência por indicador, nenhuma escrita e EntityManager compartilhado | G01/G04 |
 | T04 | Share com instruções específicas/conferência por item, hash do pedido completo inclusive texto, replay409 divergente, snapshots/legados/agendamento, projeção pública e concorrência transacional | G02/G04 |
 | T05 | BFF/tipos/body/authz/no-store/limites e compatibilidade GET/cliente antigo | G03/G04 |
 | T06 | Duas bases antes/depois, origem/destino, lote corrigível, instruções ao lado de quantidades, portal pt-BR/404 seguro, erros/respostas tardias/desktop/mobile/Axe/PA07; personas B | G03 |

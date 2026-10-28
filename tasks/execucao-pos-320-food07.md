@@ -134,3 +134,48 @@ T03–T07 continuam pendentes, exceto allowlist mínima de T04 descrita acima. R
 | `git diff --check`; `pnpm security:secrets` | PASS |
 
 Os 148 skipped da suíte default são os142 já descritos em T01 mais6 da nova integração1080 sob flag. Estes6 foram executados separadamente com PostgreSQL real e passaram; isso não remove os demais skips nem o bloqueio amplo de Timescale. Não somar testes sobrepostos como provas distintas. CI do commit T02 ainda não concluído neste registro.
+
+## T03 — prévia autorizada, PASS local específico
+
+Código validado e commitado: `5e20b279`.
+
+Implementados serviço de prévia, rotas privadas POST de consulta/porcionamento e registro de provider; reader autorizado reutiliza o EntityManager tenant-aware do chamador. A prévia não grava/audita nem aceita tenant, composição, fator ou resultado do cliente. Versão stale retorna409; pessoal alheio/outra clínica/arquivada mantém404 e permissão ausente403. O fingerprint canônico é comparação de conteúdo, nunca autorização/capability.
+
+Fontes: resolução bulk de alimentos+fonte em **um statement JOIN**, SQL parametrizado e allowlist, apenas fontes ativas com direitos aprovados. Não alterar grants do catálogo global. Fonte ausente/revogada/inválida impede a prévia inteira. Concentração parcial conhecida permanece parcial; alternativas não contam como itens consumidos nos totais. Respostas incluem denominador das porções, preparo/fonte/versão, peso efetivo, avisos e totais por indicador; sem etiquetas/ciphertext/contexto clínico. Prévia parcial não enfraquece os requisitos vigentes de materialização/publicação do plano.
+
+### RED/GREEN e revisão específica
+
+| Evidência | RED observado | Correção e GREEN |
+| --- | --- | --- |
+| Rotas | Duas asserções de handlers/metadata falharam por rotas inexistentes; testes executaram sem erro de import/setup | POST leitura privada, guards/permissões herdados, no-store; teste de metadados não equivale a teste HTTP ponta a ponta |
+| Catálogo/micros | Micronutriente do cadastro era conservado como override de catálogo na prévia | Removido somente da projeção; plano continua resolvendo micros pelo ID, receita/snapshots intactos. Teste cruzado preserva manual |
+| P1 do revisor | PostgreSQL real: UPDATE=false, FOR SHARE42501; chamada da prévia falhou “permission denied for table alimentos_composicao” | JOIN sem lock no catálogo, sem grants novos; caso real aprovado |
+| P2 do revisor | Comparação com métodos reais do plano: prévia1234,5001 versus plano1235, com100 itens sintéticos de10.000g | Reuso do normalizador escalar/porção/soma do motor existente, quatro casas; prévia/plano1235. Precisão da fonte persistida permanece intacta; composição bruta participa do fingerprint |
+| Idempotência do reader | `lerConteudoReceita(lerConteudoReceita(JSON))` falhava no Jest por prototype do structuredClone nativo em outro realm | Clone JSON somente depois da validação, sem relaxar protótipos/unknown keys; leitura repetível e sem mutação |
+
+Erros iniciais de tipagem de fixture, export de tipo privado e expectativa403 em vez do404 canônico não foram tratados como vulnerabilidade nem RED funcional. Corrigidos antes das provas finais. `LocalIngrediente` foi exportado de forma aditiva para permitir declaração dos tipos públicos. Nenhuma alteração de engines, setup Jest, dependências ou segurança para contornar o ambiente.
+
+Revisor `/root/food07_t02_boundary_review`, somente leitura: encontrou P1/P2 e reavaliou correções, **437/437 testes em oito suítes**,175 comparações matemáticas próprias, sem achado novo no delta. Não executou PostgreSQL/build e não é R4 integral FOOD07. A primeira aprovação parcial de235 testes não encerrava os achados; substituída pela re-revisão após correção.
+
+### Prova real ampliada
+
+Mesma instância descartável PostgreSQL15/`food07_test`/role runtime da T02, agora **8/8 PASS**. Seis provas T02 preservadas, mais:
+
+1. Prévia manual mantém bytes/versão/índice e contagem de auditoria; edição posterior invalida versão; arquivamento do vínculo profissional nega acesso pessoal com404.
+2. Catálogo com **apenas SELECT**, criado depois dos grants DML da fixture tenant-aware, não herda UPDATE. Asserção direta de FOR SHARE continua42501, enquanto prévia funciona com JOIN e mesmos grants. Fixture do catálogo é mínima, não execução de todo schema/ledger produtivo.
+
+Foco autor após correções: **398/398 testes em11 suítes**, incluindo domínio, DTO, rotas, serviço, cálculos e modelos legados. Não somar com os437 da revisão, pois há sobreposição. Suíte completa/typecheck/build do delta ainda precisam do registro final abaixo.
+
+### CI T02 observado após envio
+
+HEAD documental `4c5a8fc97c5579f1b952e70412868f5e2228294f`, run40782726575, job Backend123148242537: migration1080 aplicada **no PostgreSQL de CI**, suíte principal **3.640 PASS/52 skipped**, Redis real2/2, launcher Testcontainers/RLS **109/109 PASS em4 suítes**, incluindo a1080 com6 casos. Isso supera a lacuna ampla do setup local **para aquele HEAD**, não comprova T03 ainda local nem produção. Web/AI/governança/operação/rollout e scanners associados PASS; Mobile audit FAIL, smoke ainda em acompanhamento naquele momento. Não declarar CI global verde.
+
+### Próximo passo autorizado
+
+Concluir commit/push/CI próprios de T03 e seguir T04: compartilhamento porcionado com instruções específicas, identidade semântica/replay, snapshots, agendamento e concorrência. Revalidar fonte/versão/fingerprint na confirmação; a prévia é uma leitura pontual, sem reserva do catálogo para uma ação posterior. BFF/UI/UX B/C e R4 final permanecem pendentes. G06 BLOCKED; zero operação externa.
+
+### Verificações finais T03
+
+Node22.23.4/pnpm11.25.0, após as correções e re-revisão: suíte backend completa **3.577 PASS/150 skipped/zero falhas**,369 suítes PASS/9 integralmente skipped; typecheck e build/artefato PASS; guardas de controladores PASS; diff/segredos PASS. Os150 skipped são os142 legados identificados em T01 mais8 da integração1080 default; esses8 foram executados separadamente com PostgreSQL real. Não aprovar os142 restantes por equivalência. Oráculo T01 permanece21 casos reproduzidos; nenhuma troca de política quantitativa.
+
+As alterações no motor preexistente são extrações mínimas da normalização escalar, validação e soma para evitar divergência da prévia: sem mudar quatro casas, fórmulas, requisitos dos DTOs ou totais legados. Cálculo parcial é helper explícito para leitura, não autorização para salvar composição manual incompleta. Nenhuma dependência/migration adicional além da1080 já documentada; CI próprio T03 ainda pendente neste registro.
