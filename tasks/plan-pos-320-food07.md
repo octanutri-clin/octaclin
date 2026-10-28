@@ -175,12 +175,14 @@ Implementação autorizada, ainda sem runtime alterado neste checkpoint document
 
 ### T01 — metadados, duas bases e matemática
 
+PASS técnico local no código `bdb816f8`, conforme [execução](execucao-pos-320-food07.md); integração HTTP/persistência, frontend e gates globais continuam nas tarefas seguintes. DTOs apenas definidos/reexportados em T01, para não aceitar metadata sem writer compatível antes de T02.
+
 Arquivos BE relativos a `octaclin-backend/src/modulos/planos-alimentares/`: modificar `dominio/receitas-nutricionais.ts`; criar `dominio/metadados-receita.ts`, `dominio/porcionamento-receita.ts` e respectivas `.spec.ts`; DTOs de metadados/prévia em `aplicacao/dtos-receitas-metadados.ts` e `.spec.ts`, referenciados pelo DTO existente.
 
-- [ ] RED: base inteira500g/4/0,5→62,5; por_porção125g/1,5→187,5 mesmo com rendimento4; fração periódica com resultado half-up/resíduo, independência de cálculos sucessivos, por100g/tempo/instruções intactos, alternativas escaladas pela mesma razão.
-- [ ] RED: ausência/zero/NaN/Infinity/precisão excessiva/limites, alvo0,001 e1000, gram/quantidade abaixo/acima da faixa, legado sem base e inteiro sem rendimento; não converter desconhecido em1, não clamp nem confirmar parte.
-- [ ] RED: tags e normalização; unknown/null/objeto/chaves especiais, omissão vs limpeza; mudança de base exige confirmação frontend T06. Fixture racional independente e resultados esperados fixados antes da implementação.
-- [ ] GREEN e commit. Sem importar código446 ou dependência externa.
+- [x] RED: base inteira500g/4/0,5→62,5; por_porção125g/1,5→187,5 mesmo com rendimento4; fração periódica com resultado half-up/resíduo, independência de cálculos sucessivos, por100g/tempo/instruções intactos, alternativas escaladas pela mesma razão.
+- [x] RED: ausência/zero/NaN/Infinity/precisão excessiva/limites, alvo0,001 e1000, gram/quantidade abaixo/acima da faixa, legado sem base e inteiro sem rendimento; não converter desconhecido em1, não clamp nem confirmar parte.
+- [x] RED: tags e normalização; unknown/null/objeto/chaves especiais, omissão vs limpeza. Fixture racional independente e resultados esperados fixados antes da implementação. Confirmação visual da mudança de base continua pendente em T06.
+- [x] GREEN e commit. Sem importar código446 ou adicionar dependência ao produto. R4 final e CI do novo HEAD ainda pendentes.
 
 ### T02 — persistência cifrada, índice e consulta
 

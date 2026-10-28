@@ -23,11 +23,13 @@ Contrato vigente: [plano](plan-pos-320-food07.md). [Matriz de aceite e aprovaç�
 - [ ] Avaliação etapa B das duas personas com interface real.
 - [ ] Avaliação etapa C das duas personas após testes, antes da conclusão da PR.
 
-## Execução autorizada — tarefas ainda NOT RUN
+## Execução autorizada — checkpoint T01
+
+T01 **PASS técnico local** no código `bdb816f8`: [execução e limitações](execucao-pos-320-food07.md). Node22/pnpm declarado, 270 testes próprios, suíte backend 3.514 PASS/142 skipped, typecheck/build PASS. T02 em preparação; T03–T07 NOT RUN. G01 integral, CI/R4/UX B/C e gates de integração não concluídos.
 
 | Tarefa | Entrega / critério verificável | Gate |
 | --- | --- | --- |
-| T01 | Metadados/duas bases/aritmética racional, limites, legado sem base, projeções e oráculo sintético independente com RED/GREEN | G01 |
+| T01 — PASS local | Metadados/duas bases/aritmética racional, limites, legado sem base, helpers de projeção e oráculo sintético independente com RED/GREEN; wiring HTTP/persistência nas tarefas seguintes | G01 parcial |
 | T02 | Ciphertext+índice tenant-aware/CAS, migração aditiva, count/paginação SQL e PostgreSQL real RLS/rollback | G02 |
 | T03 | Prévia server-side autorizada, fonte/versão/fingerprint, totais por quantidade e ausência por indicador, nenhuma escrita e EntityManager compartilhado | G01/G04 |
 | T04 | Share com instruções específicas/conferência por item, hash do pedido completo inclusive texto, replay409 divergente, snapshots/legados/agendamento, projeção pública e concorrência transacional | G02/G04 |
@@ -42,5 +44,5 @@ Cada tarefa exige testes RED funcionais antes da mudança, GREEN após, regress�
 - Número1080 da migration é candidato, não arquivo criado nem número formalmente reservado. Conferir colisões com main e PRs antes da implementação.
 - Sem dependência de1079/motor FOOD05; composição futura com446 pode exigir resolução de registro/DTOs, jamais merge implícito.
 - G06/produção BLOCKED; sem DDL em staging/prod, merge, deploy, configuração, quota/cobrança. Retorno03/11 não implica desbloqueio.
-- Testes de runtime/banco/Playwright FOOD07, baseline, builds, CI, scanners e revisão independente: NOT RUN neste checkpoint; verificação documental local separada.
+- Baseline, domínio/DTO/regressões backend, typecheck/build, diff e scanner local: PASS nos limites da execução T01. Banco/Playwright FOOD07, CI do novo HEAD e revisão independente final: NOT RUN. Skips do backend explicitados no relatório; sem aprovação implícita.
 - CI #451 do HEAD 0d3382b6 não prova FOOD07. Falha Mobile em auditoria de dependências já presentes na base deve seguir fluxo separado, sem waiver ou mudança em dependências nesta fase por conveniência.
