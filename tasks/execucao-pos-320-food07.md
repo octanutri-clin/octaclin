@@ -68,3 +68,69 @@ T01 é domínio puro e não necessita banco. Essas ausências não provam RLS, c
 T02 passa a ser a próxima tarefa em execução: writer/reader cifrados, CAS, índice derivado HMAC, consulta antes de paginação e migration aditiva, com provas reais descartáveis. Conferir numeração livre acima da 1079 reservada pela #446 e permissões reais antes de implementar schema. Sem aplicação externa.
 
 Correção Mobile isolada em `fix/mobile-deepmerge-prototype`, worktree própria; investigação e testes não pertencem a esta PR. Nenhum waiver ou gate global verde atribuído por esta entrega. Papéis UX seguem referência explícita #451/0d3382b6, B/C quando houver interface. #446/G06 preservados; sem FOOD05-MDL/FOOD08, merge, deploy ou operação produtiva.
+
+## T02 — persistência e consulta, checkpoint local
+
+Código validado: `dc9620c0` (diff intencional, sem dependências novas).
+
+Este checkpoint substitui “T02 próxima/em preparação” quanto ao trabalho local. T01 continua no código `bdb816f8`; não reclassificar seus testes históricos como testes deste delta. PR #452 continua Draft, base main `2f24fcb1` reconferida por `git ls-remote`. Nenhuma alteração em #446/#451, nenhuma dependência/lockfile/engine modificada.
+
+### Mudanças e fronteiras
+
+- Metadados no conteúdo cifrado; índice de etiquetas HMAC por tenant na mesma transação. Omissão em clientes antigos preserva metadados; remoção explícita mantém o contrato. GET/list/edição validam conteúdo/índice, falham com erro sanitizado em drift, sem reparar/escrever durante leitura.
+- Consulta usa o escopo existente e `ArrayContains` parametrizado antes de count/offset; ordenação estável. Só a página retornada é decifrada. Serviço valida shape/unknown keys/null/protótipos antes da transformação do DTO. Endpoint de consulta/prévia e BFF permanecem nas tarefas seguintes.
+- Migration **1080** criada/registrada, aditiva (`text[]` default vazio, constraint, GIN), sem editar migrations antigas nem importar1079 da #446. Número reconferido livre na main; nenhuma tabela paralela, nova permissão ou DDL runtime.
+- Antecipação mínima de T04: conectar a allowlist pública no novo snapshot e na leitura do portal era necessário antes do writer T02, pois a resposta anterior retornava JSON completo. Tags/base internas ficam fora do portal; rendimento/tempo permitidos. Snapshot inválido é rejeitado **antes** de registrar primeira leitura. Sem alteração de consentimentos, canais, retirada/reenvio ou regra de versão ativa310. Compartilhamento porcionado/instruções/hash semântico ainda NOT RUN.
+- Compatibilidade de leitores/escritores: voltar ao writer antigo após novos metadados pode perdê-los em edição. O `down` recusa exclusão destrutiva; rollback futuro exige código que preserve os novos campos. Deploy/rollout continua sujeito a G06; não alegar compatibilidade de rollback somente de código.
+
+### RED/GREEN funcional
+
+1. Serviço não preservava/persistia metadados nem índice; testes de omissão, limpeza, consulta/visibilidade e CAS adicionados antes da correção.
+2. Asserções de registro/estrutura provaram ausência da1080; PostgreSQL preparado executou consulta de schema e falhou pela coluna inexistente. Erros iniciais de tipagem de fixture não contaram como RED.
+3. Projeção pública: rodada limpa teve **3 FAIL / 1 PASS**, por exposição de etiquetas no portal/snapshot e aceitação de snapshot inválido com write; corrigido. Erros de mock/setup anteriores não são evidência funcional.
+4. Revisão independente de T02 encontrou P2: campos opcionais `null` legitimamente persistidos pelos DTOs antigos eram recusados pelo novo leitor. Reprodução **4 FAIL**, cobrindo domínio, serviço e portal. Correção normaliza apenas opcionais válidos em memória, inclusive substituições aninhadas; não altera fonte/ciphertext nem transforma ausência em zero. Campos obrigatórios, composição manual obrigatória e metadados inválidos continuam bloqueados. Compatibilidade Unicode também preserva contagem por caracteres do DTO legado.
+5. GREEN após correção P2: **277/277** testes focados de domínio/porcionamento/serviço/projeção/migration. A suíte de projeção contém agora **5/5** casos; não confundir com os quatro anteriores ao P2.
+
+### PostgreSQL descartável real
+
+Comando: `RLS_TESTCONTAINERS=true pnpm --dir octaclin-backend exec jest --runInBand src/infraestrutura/banco-dados/migracoes/1720000001080-MetadadosReceitasNutricionais.integracao.spec.ts`, Node22.23.4/pnpm11.25.0, socket Docker local explicitamente escolhido, sem contexto/TLS remoto.
+
+**6/6 PASS após correção P2.** Instância PostgreSQL15-alpine descartável, banco `food07_test`, dados sintéticos, armazenamento tmpfs. Role owner apenas monta schema; `food07_runtime` é não owner, NOSUPERUSER/NOBYPASSRLS, sem DDL. Fixture executa migration1033 real + campos legados mínimos1066 +1080 registrada; não é aplicação de toda1066/ledger produtivo.
+
+| Prova | Evidência/asserts |
+| --- | --- |
+| Schema/legado | Default vazio/constraint/GIN; ciphertext e versão antigos idênticos |
+| RLS/role | FORCE RLS real, tenant ausente/errado sem linhas; DDL runtime negado |
+| Cifra/escopo | Conteúdo cifrado/índice derivado, omissão preservada, pessoal de outro profissional/tenant404 |
+| Paginação | 102 receitas, filtro antes de count/offset, página5 correta; HMAC distinto por tenant |
+| CAS concorrente | Owner segura lock; duas sessões runtime comprovadamente aguardando; uma vence, outra rejeita, versão2 |
+| Rollback | Falha tardia real em auditoria; cifra/índice/versão iguais ao estado anterior |
+
+O primeiro teste de concorrência esgotou a espera da barreira porque `pg_stat_activity` usava snapshot da transação observadora. Corrigida **somente a observação** com `pg_stat_clear_snapshot`, prazo reduzido de5s para2s; nenhum timeout ampliado nem assert removido. Reexecutado isoladamente e no conjunto.
+
+### Revisão independente
+
+Revisor `/root/food07_t02_boundary_review`, instância independente, somente leitura. Primeira análise encontrou o P2 de compatibilidade. Re-revisão da correção executou **99/99 testes** em três suítes de domínio/serviço/portal, reproduziu os exemplos originais e casos negativos, sem novos achados. Não repetiu PostgreSQL/build/gates amplos; não é R4 integral FOOD07, nem validação com usuários reais. Personas B/C aguardam UI real.
+
+### Gates amplos e CI históricos
+
+- Launcher oficial `pnpm --dir octaclin-backend test:rls:testcontainers`: FOOD04/FOOD07 **10 PASS**. Outras duas suítes, **99 casos**, falharam no setup: imagem `timescale/timescaledb-ha:pg15` indisponível. Resultado global FAIL/BLOCKED infraestrutura, não regressão funcional demonstrada, não PASS. Não substituí Timescale por PostgreSQL puro nem alterei gates para mascarar a ausência. CI do novo HEAD deverá comprovar os cenários restantes.
+- CI do HEAD T01/documental `ce6ec296`: run40742525365 Backend/Web/Demo/governança/operação/AI PASS; Mobile FAIL em auditoria e PR Gate FAIL. Scanners associados PASS. Não é CI verde global nem evidência do delta T02.
+- Correção Mobile fica na PR Draft **#453**, HEAD `12ae0b6f`: comportamento/testes independentes corrigidos, porém run40778341744 Mobile audit e PR Gate FAIL. Backend/Web/AI/Demo skipped por impacto; scanners PASS. Nenhum waiver/exceção/severidade alterado. Não importar esse patch implicitamente para FOOD07.
+
+### Limites restantes
+
+T03–T07 continuam pendentes, exceto allowlist mínima de T04 descrita acima. R4 integral, UX B/C, UI/BFF/prévia e envios porcionados não são aprovados por T02. Espaço local limitado (~237MB), sem limpeza de arquivos alheios ou instalação extra para contornar ambiente. G06 permanece BLOCKED; zero DDL externo, merge/deploy ou mudança de infraestrutura/cobrança.
+
+### Verificações finais T02 após o P2
+
+| Verificação | Resultado |
+| --- | --- |
+| `pnpm --dir octaclin-backend test --runInBand --json --outputFile=<temporário>` | **3.544 PASS, 148 skipped, zero falhas**; 367 suítes PASS/9 integralmente skipped |
+| `pnpm --dir octaclin-backend typecheck` | PASS, Node22.23.4 |
+| `pnpm --dir octaclin-backend build` | PASS, `dist/main.js` validado |
+| `python3 scripts/research/food07/gerar-oraculo-porcionamento.py --check` | PASS, 21 casos reproduzidos |
+| `pnpm test:migracoes-fora-de-banda` | PASS, 13/13 |
+| `git diff --check`; `pnpm security:secrets` | PASS |
+
+Os 148 skipped da suíte default são os142 já descritos em T01 mais6 da nova integração1080 sob flag. Estes6 foram executados separadamente com PostgreSQL real e passaram; isso não remove os demais skips nem o bloqueio amplo de Timescale. Não somar testes sobrepostos como provas distintas. CI do commit T02 ainda não concluído neste registro.

@@ -14,7 +14,7 @@
 
 - Worktree `/workspace/octaclin/.worktrees/pos320-food07-planning`, branch `docs/pos320-food07-planning`, criada de origin/main `2f24fcb178ff6cbd4623a233a665cce1416bfd9f` em28/10/2026; fetch conferido nesta rodada.
 - PR446 permanece Ready for Review no HEAD aprovado2ed4ad40; sem mudança. Nenhum arquivo/G06 da outra worktree foi movido ou descartado; `next-env.d.ts` preexistente preservado lá.
-- FOOD07 não depende do motor FOOD05 nem de1079. A futura migration deve usar número livre superior ao1079 reservado pela PR446; candidato1080, confirmar novamente antes de criar/registrar. Não importar1079 para esta branch nem encadear a PR em446.
+- FOOD07 não depende do motor FOOD05 nem de1079. A migration1080 foi criada/registrada em T02 após reconferência da base e reserva1079 da PR446; aplicação somente em banco descartável. Reconciliar antes de futura integração. Não importar1079 para esta branch nem encadear a PR em446.
 - A main contém FOOD04/1078; testes descartáveis poderão aplicar o conjunto do checkout. Integração futura com446 precisa reconciliação de registro TypeORM, DTO/API/UI e ensaio combinado, sem modificar a PR aprovada.
 - Nova PR individual Draft somente para FOOD07; execução autorizada nesta decisão, com gates ainda NOT RUN. G06 produtivo permanece separado/BLOCKED; main auto-deploy exige zero merge sem nova autorização.
 
@@ -148,7 +148,7 @@ A proposta de rendimento somente informativo foi substituída pelas decisões Q2
 
 ## Migration candidata e autorização
 
-Uma migration aditiva proposta: `1720000001080-MetadadosReceitasNutricionais.ts`, classe/registro correspondentes; **confirmar número livre após decisões e na base de implementação**. Adicionar somente `etiquetas_hashes`, constraint de cardinalidade e índice GIN; campos sem query ficam cifrados. Não editar1033/1066/1078/1079, não recriar policies, não conceder DDL ao runtime. Não exige nova tabela/tag global nem dependência npm.
+Migration aditiva criada/registrada em T02 (`dc9620c0`): `1720000001080-MetadadosReceitasNutricionais.ts`; número livre conferido na base. Executada somente no banco descartável `food07_test`; conferir novamente antes da integração futura. Adicionar somente `etiquetas_hashes`, constraint de cardinalidade e índice GIN; campos sem query ficam cifrados. Não editar1033/1066/1078/1079, não recriar policies, não conceder DDL ao runtime. Não exige nova tabela/tag global nem dependência npm.
 
 Preservar FORCE RLS e grants existentes; provar acesso de runtime e ausência de acesso entre tenants em PostgreSQL real. Down deve recusar remoção destrutiva de histórico/índice ou ter estratégia explicitamente aprovada; preferir manter schema aditivo e correção adiante. Dados novos cifrados podem ser ignorados/lost por writers antigos: rollback após novas gravações exige reader/writer compatível, não só revert da imagem. Sem alteração de produção/staging até autorização própria, mesmo após03/11; data não desbloqueia quota/G06.
 
@@ -186,11 +186,12 @@ Arquivos BE relativos a `octaclin-backend/src/modulos/planos-alimentares/`: modi
 
 ### T02 — persistência cifrada, índice e consulta
 
-Modificar ORM receita, serviço de receitas/spec, `opcoes-typeorm.ts`; criar migration candidata1080/spec e `infraestrutura/banco-dados/metadados-receitas.integracao.spec.ts`. Consome T01; produz `consultar(tenantId,usuario,consulta)` e atualização metadata/cifra/índice/CAS atômica.
+PASS técnico local específico: ORM receita, serviço de receitas/spec e `opcoes-typeorm.ts`; migration1080 e suas specs unitária/integração na pasta `infraestrutura/banco-dados/migracoes/`. Evidências e limites no [registro](execucao-pos-320-food07.md). Consome T01; produz `consultar(tenantId,usuario,consulta)` e atualização metadata/cifra/índice/CAS atômica.
 
-- [ ] RED: cliente antigo preserva novos metadados; SQL filtra antes de count/offset com101+receitas; tenant/escopo/role negativos; hashes não saem em DTO/auditoria.
-- [ ] RED Postgres real: defaults/constraints/GIN, FORCE RLS e runtime sem DDL/bypass, CAS concorrente, rollback da cifra/índice/versão, página/total corretos. Arquivar sob lock evita sobrescrever edição nova; não alterar permissões por conveniência.
-- [ ] GREEN focado e descartável; commit. Número de migration novamente conferido antes de criar.
+- [x] RED/GREEN: cliente antigo preserva novos metadados; SQL filtra antes de count/offset com101+receitas; tenant/escopo/role negativos; hashes não saem em DTO/auditoria.
+- [x] RED/GREEN Postgres real: defaults/constraints/GIN, FORCE RLS e runtime sem DDL/bypass, CAS concorrente, rollback da cifra/índice/versão, página/total corretos. Arquivar sob lock evita sobrescrever edição nova; não alterar permissões por conveniência.
+- [x] GREEN focado e PostgreSQL descartável, número revalidado antes do schema. Gate amplo RLS local BLOCKED por Timescale indisponível; CI do delta e R4 final não aprovados por esta tarefa.
+- Ajuste estritamente necessário de sequência: allowlist de snapshot/portal prevista em T04 foi conectada antes do writer T02. Sem isso, etiquetas internas seriam expostas. Restante de T04 continua pendente. Leitura conserva compatibilidade com opcionais `null` válidos legados, sem regravar histórico ou converter ausência em zero.
 
 ### T03 — prévia autorizada de porcionamento
 

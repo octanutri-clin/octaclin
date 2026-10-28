@@ -23,14 +23,14 @@ Contrato vigente: [plano](plan-pos-320-food07.md). [Matriz de aceite e aprovaç�
 - [ ] Avaliação etapa B das duas personas com interface real.
 - [ ] Avaliação etapa C das duas personas após testes, antes da conclusão da PR.
 
-## Execução autorizada — checkpoint T01
+## Execução autorizada — checkpoint T02
 
-T01 **PASS técnico local** no código `bdb816f8`: [execução e limitações](execucao-pos-320-food07.md). Node22/pnpm declarado, 270 testes próprios, suíte backend 3.514 PASS/142 skipped, typecheck/build PASS. T02 em preparação; T03–T07 NOT RUN. G01 integral, CI/R4/UX B/C e gates de integração não concluídos.
+T01 **PASS técnico local** no código `bdb816f8`. T02 código `dc9620c0` implementado e validado localmente (3.544 PASS/148 skipped, typecheck/build PASS), com PostgreSQL/RLS descartável **6/6 PASS**, sem aplicação externa da1080. [Execução, RED/GREEN e limites](execucao-pos-320-food07.md). T03–T07 NOT RUN, salvo projeção mínima de segurança antecipada de T04 para não expor etiquetas ao conectar o writer. Gate PostgreSQL amplo local BLOCKED por imagem Timescale indisponível; CI global não aprovado devido à auditoria Mobile, tratada na #453. Revisão T02 independente com achado legado corrigido não equivale à R4 integral FOOD07.
 
 | Tarefa | Entrega / critério verificável | Gate |
 | --- | --- | --- |
 | T01 — PASS local | Metadados/duas bases/aritmética racional, limites, legado sem base, helpers de projeção e oráculo sintético independente com RED/GREEN; wiring HTTP/persistência nas tarefas seguintes | G01 parcial |
-| T02 | Ciphertext+índice tenant-aware/CAS, migração aditiva, count/paginação SQL e PostgreSQL real RLS/rollback | G02 |
+| T02 — PASS local específico | Ciphertext+índice tenant-aware/CAS, migração aditiva, count/paginação SQL e PostgreSQL real RLS/rollback | G02 |
 | T03 | Prévia server-side autorizada, fonte/versão/fingerprint, totais por quantidade e ausência por indicador, nenhuma escrita e EntityManager compartilhado | G01/G04 |
 | T04 | Share com instruções específicas/conferência por item, hash do pedido completo inclusive texto, replay409 divergente, snapshots/legados/agendamento, projeção pública e concorrência transacional | G02/G04 |
 | T05 | BFF/tipos/body/authz/no-store/limites e compatibilidade GET/cliente antigo | G03/G04 |
@@ -41,8 +41,8 @@ Cada tarefa exige testes RED funcionais antes da mudança, GREEN após, regress�
 
 ## Dependências e limites
 
-- Número1080 da migration é candidato, não arquivo criado nem número formalmente reservado. Conferir colisões com main e PRs antes da implementação.
+- Migration1080 criada/registrada após conferir main e reserva1079 da #446; aplicada somente no PostgreSQL descartável `food07_test`. Nunca aplicada em staging/produção. Reconciliar numeração e leitores/escritores novamente antes de futura integração.
 - Sem dependência de1079/motor FOOD05; composição futura com446 pode exigir resolução de registro/DTOs, jamais merge implícito.
 - G06/produção BLOCKED; sem DDL em staging/prod, merge, deploy, configuração, quota/cobrança. Retorno03/11 não implica desbloqueio.
-- Baseline, domínio/DTO/regressões backend, typecheck/build, diff e scanner local: PASS nos limites da execução T01. Banco/Playwright FOOD07, CI do novo HEAD e revisão independente final: NOT RUN. Skips do backend explicitados no relatório; sem aprovação implícita.
+- Baseline/T01 e provas específicas T02: resultados e comandos no registro de execução. PostgreSQL T02 não substitui regressões amplas RLS bloqueadas por setup. Playwright FOOD07, CI do novo HEAD e revisão independente integral ainda pendentes; skips não são aprovação.
 - CI #451 do HEAD 0d3382b6 não prova FOOD07. Falha Mobile em auditoria de dependências já presentes na base deve seguir fluxo separado, sem waiver ou mudança em dependências nesta fase por conveniência.
