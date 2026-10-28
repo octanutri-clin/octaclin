@@ -1,12 +1,13 @@
 import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
-import { EntityManager, FindOptionsWhere, In, IsNull } from 'typeorm';
+import { ArrayContains, EntityManager, FindOptionsWhere, In, IsNull } from 'typeorm';
+import { plainToInstance } from 'class-transformer';
+import { validateSync } from 'class-validator';
 import { registrarAuditoriaNaTransacao } from '../../../infraestrutura/auditoria/servico-auditoria';
 import { ExecutorTenant } from '../../../infraestrutura/banco-dados/executor-tenant';
 import { CriptografiaDadosSensiveis } from '../../../infraestrutura/seguranca/criptografia-dados-sensiveis';
 import { resolverProfissionalIdDoUsuario } from '../../../infraestrutura/seguranca/escopo-profissional';
 import type { PermissaoOctaClin } from '../../auth/dominio/permissoes';
 import { UsuarioAutenticado } from '../../auth/dominio/usuario-autenticado';
-import { ItemModeloPlanoAlimentar } from '../dominio/modelos-plano-alimentar';
 import {
   contarItensReceita,
   normalizarCategoriaReceita,
@@ -16,12 +17,15 @@ import {
   type OrigemReceitaNutricional,
   type TipoReceitaNutricional
 } from '../dominio/receitas-nutricionais';
+import { lerConteudoReceita } from '../dominio/conteudo-receita';
+import { mesclarMetadadosReceita, normalizarMetadadosReceita, type MetadadosReceitaV1 } from '../dominio/metadados-receita';
 import { AlimentoComposicaoOrm } from '../infraestrutura/alimento-composicao.orm';
 import { FonteComposicaoAlimentoOrm } from '../infraestrutura/fonte-composicao-alimento.orm';
 import { ReceitaNutricionalOrm } from '../infraestrutura/receita-nutricional.orm';
 import {
   AtualizarReceitaNutricionalDto,
   CriarReceitaNutricionalDto,
+  ConsultarReceitasNutricionaisDto,
   ListarReceitasNutricionaisDto,
   PAGINA_MAXIMA
 } from './dtos';
@@ -52,6 +56,7 @@ export class ServicoReceitasNutricionais {
         profissionalId: dados.origem === 'pessoal' ? profissionalId : undefined,
         nomeCriptografado: this.criptografia.criptografar(dados.nome.trim()),
         conteudoCriptografado: this.criptografia.criptografar(JSON.stringify(conteudo)),
+        etiquetasHashes: this.indices(tenantId, conteudo.metadados),
         totalItens,
         criadoPorUsuarioId: usuario.usuarioId
       });
@@ -63,7 +68,7 @@ export class ServicoReceitasNutricionais {
         receitaId: receita.id,
         metadados: { origem: receita.origem, tipo: receita.tipo, totalItens }
       });
-      return this.resumo(receita, dados.nome.trim());
+      return this.resumo(receita, dados.nome.trim(), conteudo);
     });
   }
 
@@ -72,19 +77,46 @@ export class ServicoReceitasNutricionais {
     usuario: UsuarioAutenticado,
     consulta: ListarReceitasNutricionaisDto = new ListarReceitasNutricionaisDto()
   ) {
+    return this.listarNoEscopo(tenantId, usuario, consulta);
+  }
+
+  async consultar(tenantId: string, usuario: UsuarioAutenticado, entrada: unknown = {}) {
+    this.garantirAcesso(usuario, 'planos_alimentares.ler');
+    if (!entrada || typeof entrada !== 'object' || Array.isArray(entrada)) throw new BadRequestException('Consulta de receitas inválida.');
+    const campos = ['pagina', 'limite', 'origem', 'tipo', 'categoria', 'etiqueta'];
+    if ((![Object.prototype, null].includes(Object.getPrototypeOf(entrada)) && !(entrada instanceof ConsultarReceitasNutricionaisDto)) ||
+      Object.getOwnPropertySymbols(entrada).length || Object.entries(Object.getOwnPropertyDescriptors(entrada)).some(([k, d]) =>
+        !campos.includes(k) || !Object.hasOwn(d, 'value') || !d.enumerable)) throw new BadRequestException('Consulta de receitas inválida.');
+    const dados = entrada as Record<string, unknown>;
+    if (Object.values(dados).some(v => v === null) || ['pagina', 'limite'].some(k => dados[k] !== undefined && typeof dados[k] !== 'number')) {
+      throw new BadRequestException('Consulta de receitas inválida.');
+    }
+    const consulta = plainToInstance(ConsultarReceitasNutricionaisDto, entrada);
+    if (validateSync(consulta, { whitelist: true, forbidNonWhitelisted: true, forbidUnknownValues: true }).length) {
+      throw new BadRequestException('Consulta de receitas inválida.');
+    }
+    let etiqueta: string | undefined;
+    try { etiqueta = consulta.etiqueta === undefined ? undefined : normalizarMetadadosReceita({ etiquetas: [consulta.etiqueta] }).etiquetas[0]; }
+    catch { throw new BadRequestException('Consulta de receitas inválida.'); }
+    return this.listarNoEscopo(tenantId, usuario, consulta, etiqueta);
+  }
+
+  private async listarNoEscopo(tenantId: string, usuario: UsuarioAutenticado, consulta: ListarReceitasNutricionaisDto, etiqueta?: string) {
     this.garantirAcesso(usuario, 'planos_alimentares.ler');
     const pagina = Math.min(PAGINA_MAXIMA, Math.max(1, Math.trunc(consulta.pagina ?? 1)));
     const limite = Math.min(100, Math.max(1, Math.trunc(consulta.limite ?? 25)));
     return this.executorTenant.executar(tenantId, async (gerenciador) => {
       const profissionalId = await this.resolverProfissional(gerenciador, tenantId, usuario);
       const [receitas, total] = await gerenciador.getRepository(ReceitaNutricionalOrm).findAndCount({
-        where: this.montarFiltroVisibilidade(tenantId, usuario, profissionalId, consulta.origem, consulta.tipo, consulta.categoria),
+        where: this.montarFiltroVisibilidade(tenantId, usuario, profissionalId, consulta.origem, consulta.tipo, consulta.categoria).map(filtro => ({
+          ...filtro, ...(etiqueta === undefined ? {} : { etiquetasHashes: ArrayContains([this.criptografia.gerarHashPerfilExato(tenantId, 'tag', etiqueta)]) })
+        })),
         order: { atualizadoEm: 'DESC', id: 'DESC' },
         skip: (pagina - 1) * limite,
         take: limite
       });
       return {
-        itens: receitas.map((receita) => this.resumo(receita, this.criptografia.descriptografar(receita.nomeCriptografado))),
+        itens: receitas.map((receita) => this.resumo(receita, this.criptografia.descriptografar(receita.nomeCriptografado), this.descriptografarConteudo(receita))),
         total,
         pagina,
         limite
@@ -98,7 +130,7 @@ export class ServicoReceitasNutricionais {
       const receita = await this.obterNoEscopo(gerenciador, tenantId, receitaId, usuario);
       const conteudo = this.descriptografarConteudo(receita);
       return {
-        ...this.resumo(receita, this.criptografia.descriptografar(receita.nomeCriptografado)),
+        ...this.resumo(receita, this.criptografia.descriptografar(receita.nomeCriptografado), conteudo),
         instrucoes: conteudo.instrucoes,
         itens: conteudo.itens,
         alimentosIndisponiveis: await this.detectarAlimentosIndisponiveis(gerenciador, conteudo)
@@ -113,8 +145,6 @@ export class ServicoReceitasNutricionais {
     dados: AtualizarReceitaNutricionalDto
   ) {
     this.garantirAcesso(usuario, 'planos_alimentares.gerenciar');
-    const conteudo = this.conteudoDe(dados);
-    const totalItens = contarItensReceita(conteudo);
     return this.executorTenant.executar(tenantId, async (gerenciador) => {
       await gerenciador.query(
         'select id from receitas_nutricionais where tenant_id = $1 and id = $2 for update',
@@ -125,6 +155,9 @@ export class ServicoReceitasNutricionais {
       if (dados.versaoEsperada !== versaoAtual) {
         throw new ConflictException('A receita foi alterada. Recarregue antes de salvar.');
       }
+      const anterior = this.descriptografarConteudo(receita);
+      const conteudo = this.conteudoDe(dados, anterior.metadados, true);
+      const totalItens = contarItensReceita(conteudo);
       const profissionalId = await this.resolverProfissional(gerenciador, tenantId, usuario);
       this.garantirDonoPessoal(dados.origem, profissionalId);
       receita.origem = dados.origem;
@@ -134,6 +167,7 @@ export class ServicoReceitasNutricionais {
       receita.profissionalId = dados.origem === 'pessoal' ? profissionalId : undefined;
       receita.nomeCriptografado = this.criptografia.criptografar(dados.nome.trim());
       receita.conteudoCriptografado = this.criptografia.criptografar(JSON.stringify(conteudo));
+      receita.etiquetasHashes = this.indices(tenantId, conteudo.metadados);
       receita.totalItens = totalItens;
       await gerenciador.getRepository(ReceitaNutricionalOrm).save(receita);
       await this.registrarAuditoria(gerenciador, {
@@ -143,13 +177,14 @@ export class ServicoReceitasNutricionais {
         receitaId: receita.id,
         metadados: { origem: receita.origem, tipo: receita.tipo, totalItens }
       });
-      return this.resumo(receita, dados.nome.trim());
+      return this.resumo(receita, dados.nome.trim(), conteudo);
     });
   }
 
   async arquivar(tenantId: string, receitaId: string, usuario: UsuarioAutenticado) {
     this.garantirAcesso(usuario, 'planos_alimentares.gerenciar');
     return this.executorTenant.executar(tenantId, async (gerenciador) => {
+      await gerenciador.query('select id from receitas_nutricionais where tenant_id = $1 and id = $2 for update', [tenantId, receitaId]);
       const receita = await this.obterNoEscopo(gerenciador, tenantId, receitaId, usuario);
       receita.arquivadoEm = new Date();
       await gerenciador.getRepository(ReceitaNutricionalOrm).save(receita);
@@ -164,11 +199,13 @@ export class ServicoReceitasNutricionais {
     });
   }
 
-  private conteudoDe(dados: Pick<CriarReceitaNutricionalDto, 'instrucoes' | 'itens'>): ConteudoReceitaNutricional {
-    return {
-      instrucoes: dados.instrucoes?.trim() || undefined,
-      itens: dados.itens as unknown as ItemModeloPlanoAlimentar[]
-    };
+  private conteudoDe(dados: Pick<CriarReceitaNutricionalDto, 'instrucoes' | 'itens' | 'metadados'>, anterior?: MetadadosReceitaV1, atualizar = false): ConteudoReceitaNutricional {
+    try {
+      const metadados = atualizar ? mesclarMetadadosReceita(anterior, dados.metadados)
+        : dados.metadados === undefined ? undefined : normalizarMetadadosReceita(dados.metadados);
+      // DTOs transformados têm protótipos de classe; o conteúdo persistido é JSON.
+      return lerConteudoReceita(JSON.parse(JSON.stringify({ instrucoes: dados.instrucoes?.trim() || undefined, itens: dados.itens, metadados })));
+    } catch { throw new BadRequestException('Conteúdo da receita inválido.'); }
   }
 
   private categoriaValida(valor: string): string {
@@ -179,7 +216,7 @@ export class ServicoReceitasNutricionais {
     }
   }
 
-  private resumo(receita: ReceitaNutricionalOrm, nome: string) {
+  private resumo(receita: ReceitaNutricionalOrm, nome: string, conteudo?: ConteudoReceitaNutricional) {
     return {
       id: receita.id,
       nome,
@@ -188,6 +225,7 @@ export class ServicoReceitasNutricionais {
       categoria: receita.categoria ?? null,
       versaoAtual: receita.versaoAtual ?? 1,
       totalItens: receita.totalItens,
+      ...(conteudo?.metadados === undefined ? {} : { metadados: conteudo.metadados }),
       atualizadoEm: receita.atualizadoEm
     };
   }
@@ -228,7 +266,17 @@ export class ServicoReceitasNutricionais {
   }
 
   private descriptografarConteudo(receita: ReceitaNutricionalOrm): ConteudoReceitaNutricional {
-    return JSON.parse(this.criptografia.descriptografar(receita.conteudoCriptografado)) as ConteudoReceitaNutricional;
+    try {
+      const conteudo = lerConteudoReceita(JSON.parse(this.criptografia.descriptografar(receita.conteudoCriptografado)));
+      const esperado = this.indices(receita.tenantId, conteudo.metadados).sort();
+      const atual = receita.etiquetasHashes ?? [];
+      if (!Array.isArray(atual) || JSON.stringify([...atual].sort()) !== JSON.stringify(esperado)) throw new Error('Índice inconsistente.');
+      return conteudo;
+    } catch { throw new BadRequestException('Não foi possível ler a receita.'); }
+  }
+
+  private indices(tenantId: string, metadados?: MetadadosReceitaV1): string[] {
+    return (metadados?.etiquetas ?? []).map(etiqueta => this.criptografia.gerarHashPerfilExato(tenantId, 'tag', etiqueta));
   }
 
   private async detectarAlimentosIndisponiveis(gerenciador: EntityManager, conteudo: ConteudoReceitaNutricional) {

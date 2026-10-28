@@ -1,4 +1,7 @@
-import { ConflictException, ForbiddenException, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, ForbiddenException, NotFoundException } from '@nestjs/common';
+import { plainToInstance } from 'class-transformer';
+import { validateSync } from 'class-validator';
+import { CriarReceitaNutricionalDto } from './dtos';
 import { EntityManager } from 'typeorm';
 import { UserActionLogOrm } from '../../../infraestrutura/auditoria/user-action-log.orm';
 import { ExecutorTenant } from '../../../infraestrutura/banco-dados/executor-tenant';
@@ -49,6 +52,7 @@ function filtrar(registros: any[], opcoes: any): any[] {
       const operador = valor as any;
       if (operador._type === 'isNull') return registro[chave] === undefined || registro[chave] === null;
       if (operador._type === 'in') return operador._value.includes(registro[chave]);
+      if (operador._type === 'arrayContains') return operador._value.every((v: string) => (registro[chave] ?? []).includes(v));
     }
     return registro[chave] === valor;
   })));
@@ -93,6 +97,97 @@ describe('ServicoReceitasNutricionais', () => {
     } as unknown as EntityManager;
     const executor = { executar: jest.fn(async (_tenant: string, operacao: (manager: EntityManager) => Promise<unknown>) => operacao(gerenciador)) };
     servico = new ServicoReceitasNutricionais(executor as unknown as ExecutorTenant, criptografia);
+  });
+
+  it('T02 grava os metadados no ciphertext e deriva o índice por tenant na mesma criação', async () => {
+    const metadados = { schemaVersao: 1, etiquetas: ['Café'], baseQuantidades: 'receita_inteira', rendimentoPorcoes: 4, tempoPreparoMinutos: 20 };
+    await servico.criar(TENANT_ID, usuarioProfissional(), {
+      nome: 'Receita sintética', origem: 'pessoal', tipo: 'receita', categoria: 'Lanche', itens: itensExemplo(), metadados
+    } as never);
+    const receita = repositorios.get(ReceitaNutricionalOrm)!.registros[0];
+    const conteudo = JSON.parse(criptografia.descriptografar(receita.conteudoCriptografado));
+    expect(conteudo.metadados).toEqual(metadados);
+    expect(receita.etiquetasHashes).toEqual([criptografia.gerarHashPerfilExato(TENANT_ID, 'tag', 'Café')]);
+    expect(JSON.stringify(receita.etiquetasHashes)).not.toContain('Café');
+  });
+
+  it('T02 writer antigo preserva metadata e limpeza explícita não remove os outros campos', async () => {
+    const entrada = { nome: 'Controle', origem: 'pessoal', tipo: 'receita', categoria: 'Lanche', itens: itensExemplo() };
+    const metadados = { schemaVersao: 1, etiquetas: ['Lanche'], baseQuantidades: 'receita_inteira', rendimentoPorcoes: 4, tempoPreparoMinutos: 20 };
+    await servico.criar(TENANT_ID, usuarioProfissional(), { ...entrada, metadados } as never);
+    await servico.atualizar(TENANT_ID, RECEITA_ID, usuarioProfissional(), { ...entrada, versaoEsperada: 1 } as never);
+    const aposLegado = await servico.obter(TENANT_ID, RECEITA_ID, usuarioProfissional());
+    expect(aposLegado).toMatchObject({ metadados, versaoAtual: 2 });
+    await servico.atualizar(TENANT_ID, RECEITA_ID, usuarioProfissional(), { ...entrada, versaoEsperada: 2, metadados: { tempoPreparoMinutos: null } } as never);
+    expect(await servico.obter(TENANT_ID, RECEITA_ID, usuarioProfissional())).toMatchObject({ metadados: {
+      schemaVersao: 1, etiquetas: ['Lanche'], baseQuantidades: 'receita_inteira', rendimentoPorcoes: 4
+    }, versaoAtual: 3 });
+    const cifra = repositorios.get(ReceitaNutricionalOrm)!.registros[0].conteudoCriptografado;
+    expect(JSON.parse(criptografia.descriptografar(cifra)).metadados).not.toHaveProperty('tempoPreparoMinutos');
+  });
+  it('P2 legado DTO válido com nulls opcionais continua abrindo/listando/editando sem reescrever na leitura', async () => {
+    const dto = plainToInstance(CriarReceitaNutricionalDto, { nome: 'Controle legado', origem: 'clinica', tipo: 'receita', categoria: 'Lanche', itens: [{
+      descricao: 'Controle', quantidade: 1, unidade: 'g', porcaoGramas: 100, substituicoes: [], substituicoesVisiveisInicialmente: null,
+      nutrientesPor100g: { energiaKcal: 100, proteinasG: 1, carboidratosG: 20, gordurasG: 1, fibrasG: null }
+    }] });
+    expect(validateSync(dto, { whitelist: true, forbidNonWhitelisted: true })).toEqual([]);
+    const cipherLegado = criptografia.criptografar(JSON.stringify({ itens: dto.itens }));
+    repositorios.get(ReceitaNutricionalOrm)!.registros.push({ id: RECEITA_ID, tenantId: TENANT_ID, origem: 'clinica', tipo: 'receita', categoria: 'Lanche', versaoAtual: 1,
+      nomeCriptografado: criptografia.criptografar('Controle legado'), conteudoCriptografado: cipherLegado });
+    const lido = await servico.obter(TENANT_ID, RECEITA_ID, usuarioProfissional());
+    expect(lido.itens[0].nutrientesPor100g?.fibrasG).toBeUndefined();
+    expect((await servico.listar(TENANT_ID, usuarioProfissional())).total).toBe(1);
+    expect(repositorios.get(ReceitaNutricionalOrm)!.registros[0].conteudoCriptografado).toEqual(cipherLegado);
+    await expect(servico.atualizar(TENANT_ID, RECEITA_ID, usuarioProfissional(), { ...dto, versaoEsperada: 1 })).resolves.toMatchObject({ versaoAtual: 2 });
+  });
+
+  it.each([{ etiquetas: null }, { schemaVersao: 2 }, { segredo: 'sintético' }])('T02 valida metadata também no serviço antes de gravar: %#', async metadados => {
+    await expect(servico.criar(TENANT_ID, usuarioProfissional(), {
+      nome: 'Controle', origem: 'pessoal', tipo: 'receita', categoria: 'Lanche', itens: itensExemplo(), metadados
+    } as never)).rejects.toBeInstanceOf(BadRequestException);
+    expect(repositorios.get(ReceitaNutricionalOrm)!.registros).toHaveLength(0);
+  });
+
+  it('T02 rejeita drift do índice ou ciphertext malformado sem reescrever registros', async () => {
+    await servico.criar(TENANT_ID, usuarioProfissional(), {
+      nome: 'Controle', origem: 'clinica', tipo: 'receita', categoria: 'Lanche', itens: itensExemplo(), metadados: { etiquetas: ['Lanche'] }
+    } as never);
+    const receita = repositorios.get(ReceitaNutricionalOrm)!.registros[0];
+    const antes = Buffer.from(receita.conteudoCriptografado);
+    receita.etiquetasHashes = ['incorreto'];
+    await expect(servico.obter(TENANT_ID, RECEITA_ID, usuarioProfissional())).rejects.toBeInstanceOf(BadRequestException);
+    expect(receita.conteudoCriptografado).toEqual(antes);
+    receita.etiquetasHashes = [];
+    receita.conteudoCriptografado = criptografia.criptografar('{"itens":"incorreto"}');
+    await expect(servico.obter(TENANT_ID, RECEITA_ID, usuarioProfissional())).rejects.toBeInstanceOf(BadRequestException);
+  });
+
+  it('T02 consulta aplica igualdade de etiqueta antes do count/paginação e não expõe o índice', async () => {
+    const receitaRepo = repositorios.get(ReceitaNutricionalOrm)!;
+    for (let i = 0; i < 102; i++) {
+      const etiqueta = i === 101 ? 'Café' : 'Lanche';
+      receitaRepo.registros.push({ id: `10000000-0000-4000-8000-${String(i).padStart(12, '0')}`, tenantId: TENANT_ID,
+        origem: 'clinica', tipo: 'receita', categoria: 'Lanche', totalItens: 1, versaoAtual: 1,
+        nomeCriptografado: criptografia.criptografar('Controle'),
+        conteudoCriptografado: criptografia.criptografar(JSON.stringify({ itens: itensExemplo(), metadados: { schemaVersao: 1, etiquetas: [etiqueta] } })),
+        etiquetasHashes: [criptografia.gerarHashPerfilExato(TENANT_ID, 'tag', etiqueta)] });
+    }
+    const api = servico as unknown as { consultar: (t: string, u: UsuarioAutenticado, c: unknown) => Promise<{ itens: object[]; total: number }> };
+    expect(api.consultar).toEqual(expect.any(Function));
+    const resultado = await api.consultar(TENANT_ID, usuarioProfissional(), { etiqueta: ' cafe ', limite: 1, pagina: 1 });
+    expect(resultado.total).toBe(1);
+    expect(resultado.itens).toHaveLength(1);
+    expect(resultado.itens[0]).not.toHaveProperty('etiquetasHashes');
+    expect(receitaRepo.findAndCount).toHaveBeenCalledWith(expect.objectContaining({ skip: 0, take: 1,
+      order: { atualizadoEm: 'DESC', id: 'DESC' }, where: [expect.objectContaining({ tenantId: TENANT_ID, etiquetasHashes: expect.objectContaining({ _type: 'arrayContains' }) }),
+        expect.objectContaining({ origem: 'pessoal', profissionalId: PROFISSIONAL_ID })] }));
+  });
+  it.each([null, [], new Date(), Object.create({ pagina: 1 }), { tenantId: TENANT_ID },
+    { pagina: '1' }, { limite: 101 }, { pagina: 0 }, { etiqueta: null }, { etiqueta: ['Lanche'] },
+    JSON.parse('{"__proto__":{"pagina":1}}'), { constructor: 'invalido' }])('T02 consulta rejeita estrutura/controle desconhecido antes de consultar: %#', async entrada => {
+    const api = servico as unknown as { consultar: (t: string, u: UsuarioAutenticado, c: unknown) => Promise<unknown> };
+    await expect(api.consultar(TENANT_ID, usuarioProfissional(), entrada)).rejects.toBeInstanceOf(BadRequestException);
+    expect(repositorios.get(ReceitaNutricionalOrm)!.findAndCount).not.toHaveBeenCalled();
   });
 
   function receitaPessoalDeOutro() {

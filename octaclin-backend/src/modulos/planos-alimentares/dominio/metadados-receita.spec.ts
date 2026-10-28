@@ -29,6 +29,13 @@ describe('FOOD07 — leitura e projeção do conteúdo', () => {
     copia.itens[0].porcaoGramas = 999;
     expect(legado.itens[0].porcaoGramas).toBe(125);
   });
+  it('preserva limites legados em caracteres Unicode, não unidades UTF-16', () => {
+    const instrucoes = '🍋'.repeat(4000);
+    expect(api.lerConteudoReceita({ instrucoes, itens: [item] }).instrucoes).toBe(instrucoes);
+    const manual = { descricao: '🍋'.repeat(240), quantidade: 1, unidade: '🍋'.repeat(40), porcaoGramas: 1,
+      nutrientesPor100g: { energiaKcal: 1, proteinasG: 1, carboidratosG: 1, gordurasG: 1 } };
+    expect(api.lerConteudoReceita({ itens: [manual] }).itens[0]).toEqual(manual);
+  });
   it('projeta apenas instruções, ingredientes e rendimento/tempo públicos', () => {
     const entrada = { instrucoes: 'Prepare.', itens: [{ ...item, substituicoesVisiveisInicialmente: 1,
       substituicoes: [{ ...item, liberadaParaPaciente: false, preferida: true }] }],
@@ -43,6 +50,30 @@ describe('FOOD07 — leitura e projeção do conteúdo', () => {
       nutrientesPor100g: { energiaKcal: 100, proteinasG: 2, carboidratosG: 20, gordurasG: 1 } };
     expect(api.lerConteudoReceita({ itens: [manual] })).toEqual({ itens: [manual] });
     expect(() => api.lerConteudoReceita({ itens: [{ ...manual, nutrientesPor100g: { energiaKcal: 100 } }] })).toThrow();
+  });
+  it('lê nulls opcionais legados como ausência sem alterar origem nem inventar zero', () => {
+    const legado = { itens: [{ ...item, descricao: null, nutrientesPor100g: { energiaKcal: null, fibrasG: null, sodioMg: null },
+      substituicoesVisiveisInicialmente: null, substituicoes: [{ ...item, descricao: null, nutrientesPor100g: null, liberadaParaPaciente: null, preferida: null }] }] };
+    const antes = JSON.stringify(legado);
+    const r = api.lerConteudoReceita(legado);
+    expect(r.itens[0]).not.toHaveProperty('descricao');
+    expect(r.itens[0]).not.toHaveProperty('substituicoesVisiveisInicialmente');
+    expect(r.itens[0].nutrientesPor100g).toEqual({});
+    expect(r.itens[0].substituicoes?.[0]).not.toHaveProperty('nutrientesPor100g');
+    expect(r.itens[0].substituicoes?.[0]).not.toHaveProperty('liberadaParaPaciente');
+    expect(r.itens[0].substituicoes?.[0]).not.toHaveProperty('preferida');
+    expect(JSON.stringify(legado)).toBe(antes);
+  });
+  it.each([
+    { descricao: 'Controle', alimentoComposicaoId: null, quantidade: 1, unidade: 'g', porcaoGramas: 1,
+      nutrientesPor100g: { energiaKcal: 1, proteinasG: 1, carboidratosG: 1, gordurasG: 1, fibrasG: null, sodioMg: null } }
+  ])('preserva manual legado com id ausente/null e opcionais desconhecidos', manual => {
+    const lido = api.lerConteudoReceita({ itens: [manual] }).itens[0];
+    expect(lido).not.toHaveProperty('alimentoComposicaoId');
+    expect(lido.nutrientesPor100g).toEqual({ energiaKcal: 1, proteinasG: 1, carboidratosG: 1, gordurasG: 1 });
+    expect(() => api.lerConteudoReceita({ itens: [{ ...manual, nutrientesPor100g: { ...manual.nutrientesPor100g, energiaKcal: null } }] })).toThrow();
+    expect(() => api.lerConteudoReceita({ itens: [{ ...manual, porcaoGramas: null }] })).toThrow();
+    expect(() => api.lerConteudoReceita({ itens: [{ ...manual, micronutrientesPor100g: null }] })).toThrow();
   });
   it('preserva precisão já existente no catálogo, inclusive notação exponencial pequena', () => {
     const nutrientesPor100g = { energiaKcal: 0.123456789, proteinasG: 1e-7 };

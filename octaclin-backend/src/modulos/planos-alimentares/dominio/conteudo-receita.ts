@@ -12,7 +12,7 @@ function objeto(v: unknown, campos: readonly string[]): Record<string, unknown> 
   return v as Record<string, unknown>;
 }
 function texto(v: unknown, maximo: number): boolean {
-  return typeof v === 'string' && v.trim().length > 0 && v.length <= maximo;
+  return typeof v === 'string' && v.trim().length > 0 && Array.from(v).length <= maximo;
 }
 /** Não arredonda para validar: a precisão extra é erro, não autorização de corte. */
 export function milesimosReceita(v: unknown, maximo = 10000): bigint {
@@ -22,7 +22,13 @@ export function milesimosReceita(v: unknown, maximo = 10000): bigint {
   return BigInt(partes[1]) * 1000n + BigInt((partes[2] ?? '').padEnd(3, '0'));
 }
 function alimento(v: unknown, alternativa: boolean): Record<string, unknown> {
-  const a = objeto(v, [...CAMPOS_ALIMENTO, ...(alternativa ? ['liberadaParaPaciente', 'preferida'] : ['substituicoes', 'substituicoesVisiveisInicialmente'])]);
+  const a = { ...objeto(v, [...CAMPOS_ALIMENTO, ...(alternativa ? ['liberadaParaPaciente', 'preferida'] : ['substituicoes', 'substituicoesVisiveisInicialmente'])]) };
+  // Os DTOs anteriores aceitam null em campos opcionais e o writer os
+  // preservava. Normalizar só a projeção em memória, nunca o ciphertext lido.
+  for (const campo of ['alimentoComposicaoId', 'descricao', 'substituicoesVisiveisInicialmente', 'liberadaParaPaciente', 'preferida']) {
+    if (a[campo] === null) delete a[campo];
+  }
+  if (a.alimentoComposicaoId && a.nutrientesPor100g === null) delete a.nutrientesPor100g;
   milesimosReceita(a.quantidade); milesimosReceita(a.porcaoGramas);
   if (!texto(a.unidade, 40)) return invalido();
   if (a.alimentoComposicaoId !== undefined && (typeof a.alimentoComposicaoId !== 'string' ||
@@ -30,7 +36,11 @@ function alimento(v: unknown, alternativa: boolean): Record<string, unknown> {
   if (!a.alimentoComposicaoId && !texto(a.descricao, 240)) return invalido();
   if (a.descricao !== undefined && !texto(a.descricao, 240)) return invalido();
   if (a.nutrientesPor100g !== undefined) {
-    const n = objeto(a.nutrientesPor100g, [...MACROS, 'fibrasG', 'sodioMg']);
+    const n = { ...objeto(a.nutrientesPor100g, [...MACROS, 'fibrasG', 'sodioMg']) };
+    for (const campo of Object.keys(n)) {
+      if (n[campo] === null && (a.alimentoComposicaoId || campo === 'fibrasG' || campo === 'sodioMg')) delete n[campo];
+    }
+    a.nutrientesPor100g = n;
     for (const valor of Object.values(n)) {
       if (typeof valor !== 'number' || !Number.isFinite(valor) || valor < 0) return invalido();
       // Precisão da fonte de catálogo permanece intacta. A restrição de quatro
@@ -51,7 +61,7 @@ function alimento(v: unknown, alternativa: boolean): Record<string, unknown> {
     a.substituicoesVisiveisInicialmente < 1 || a.substituicoesVisiveisInicialmente > 20)) return invalido();
   if (a.substituicoes !== undefined) {
     if (!Array.isArray(a.substituicoes) || a.substituicoes.length > 20) return invalido();
-    for (const sub of a.substituicoes) alimento(sub, true);
+    a.substituicoes = a.substituicoes.map(sub => alimento(sub, true));
   }
   return structuredClone(a);
 }
@@ -59,7 +69,7 @@ function alimento(v: unknown, alternativa: boolean): Record<string, unknown> {
 /** Valida dados decifrados; não escreve, não completa pelo catálogo e não reinterpreta legado. */
 export function lerConteudoReceita(v: unknown): ConteudoReceitaNutricional {
   const dados = objeto(v, ['instrucoes', 'itens', 'metadados']);
-  if (dados.instrucoes !== undefined && (typeof dados.instrucoes !== 'string' || dados.instrucoes.length > 4000)) return invalido();
+  if (dados.instrucoes !== undefined && (typeof dados.instrucoes !== 'string' || Array.from(dados.instrucoes).length > 4000)) return invalido();
   if (!Array.isArray(dados.itens) || !dados.itens.length || dados.itens.length > 100) return invalido();
   const itens = dados.itens.map(i => alimento(i, false));
   const metadados = dados.metadados === undefined ? undefined : normalizarMetadadosReceita(dados.metadados);

@@ -14,6 +14,7 @@ import { PreferenciaCompartilhamentoReceitaOrm } from '../infraestrutura/prefere
 import { SubscriptionPushPacienteOrm } from '../infraestrutura/subscription-push-paciente.orm';
 import { CompartilharReceitasNutricionaisDto, AtualizarConsentimentoReceitasDto, CriarSubscriptionPushDto, RevogarSubscriptionPushDto } from './dtos-compartilhamento-receita';
 import { resumirAlimentosDaReceita } from '../dominio/receitas-nutricionais';
+import { projetarConteudoReceitaPaciente } from '../dominio/conteudo-receita';
 import { AlimentoComposicaoOrm } from '../infraestrutura/alimento-composicao.orm';
 import { FonteComposicaoAlimentoOrm } from '../infraestrutura/fonte-composicao-alimento.orm';
 
@@ -115,7 +116,7 @@ export class ServicoCompartilhamentoReceitas {
         }
         const snapshot = {
           nome: this.criptografia.descriptografar(receita.nomeCriptografado),
-          conteudo: conteudoReceita,
+          conteudo: projetarConteudoReceitaPaciente(conteudoReceita),
           versao: receita.versaoAtual ?? 1
         };
         const status = dados.agendadoPara ? 'agendado' as const : 'ativo' as const;
@@ -308,6 +309,7 @@ export class ServicoCompartilhamentoReceitas {
       const repo = gerenciador.getRepository(CompartilhamentoReceitaNutricionalOrm);
       const share = await repo.findOne({ where: { tenantId, pacienteId: paciente.id, id: shareId, status: 'ativo' }, lock: { mode: 'pessimistic_write' } });
       if (!share) throw new NotFoundException('Receita compartilhada nao encontrada.');
+      const snapshot = this.snapshotPaciente(share);
       if (!share.visualizadoEm) {
         share.visualizadoEm = new Date();
         await repo.save(share);
@@ -316,7 +318,6 @@ export class ServicoCompartilhamentoReceitas {
           recursoTipo: 'compartilhamento_receita', recursoId: share.id, metadados: { primeiraLeitura: true }
         });
       }
-      const snapshot = JSON.parse(this.criptografia.descriptografar(share.snapshotCriptografado));
       return { id: share.id, enviadoEm: share.enviadoEm, receita: snapshot };
     });
   }
@@ -350,6 +351,15 @@ export class ServicoCompartilhamentoReceitas {
   chavePublicaPush(): { chavePublica: string | null } {
     const configurado = process.env.WEB_PUSH_VAPID_PUBLIC_KEY?.trim() && process.env.WEB_PUSH_VAPID_PRIVATE_KEY?.trim() && process.env.WEB_PUSH_VAPID_SUBJECT?.trim();
     return { chavePublica: configurado ? process.env.WEB_PUSH_VAPID_PUBLIC_KEY!.trim() : null };
+  }
+
+  private snapshotPaciente(share: CompartilhamentoReceitaNutricionalOrm) {
+    try {
+      const valor = JSON.parse(this.criptografia.descriptografar(share.snapshotCriptografado));
+      if (!valor || typeof valor.nome !== 'string' || !valor.nome.trim() || Array.from(valor.nome).length > 180 ||
+        !Number.isInteger(valor.versao) || valor.versao < 1) throw new Error('Snapshot inválido.');
+      return { nome: valor.nome as string, versao: valor.versao as number, conteudo: projetarConteudoReceitaPaciente(valor.conteudo) };
+    } catch { throw new BadRequestException('Não foi possível ler a receita compartilhada.'); }
   }
 
   private async pacienteDoUsuario(gerenciador: EntityManager, tenantId: string, usuarioId: string) {
