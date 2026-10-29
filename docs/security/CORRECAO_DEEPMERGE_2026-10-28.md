@@ -2,7 +2,7 @@
 
 > O checkpoint abaixo substitui a conclusão operacional histórica registrada para a primeira estratégia. As etapas antigas foram preservadas ao final para rastreabilidade.
 
-## Estado atual — candidato local, ainda sem CI/R4
+## Estado atual — PR #453 Draft, gates parciais
 
 **`deepmerge@4.3.1` foi removido do grafo instalado** por um patch versionado de `@expo/config@57.0.9`. A resolução a partir do consumidor Expo falha com `MODULE_NOT_FOUND`; o lockfile não contém mais o pacote. Nenhum waiver, waiver de auditoria, downgrade ou mudança de severidade foi usado.
 
@@ -19,14 +19,17 @@ Ambiente isolado em `/tmp`, Node **22.23.4** e pnpm **11.25.0**. Nenhuma depend�
 - **GREEN:** testes de segurança **19/19**, acessibilidade estática **15/15**, typecheck PASS, frozen install PASS e export Expo completo para Web/iOS/Android PASS.
 - Teste de integração atravessa `@expo/config.modifyConfigAsync` com fixtures sintéticas e `dryRun`, incluindo merge recursivo, arrays, propriedades de plugin, `__proto__`, `constructor`, `prototype`, configuração com e sem objeto `expo` e ausência de gravação.
 - Comparação suplementar com entradas JSON-like determinísticas: **100/100** resultados iguais ao comportamento padrão anterior do deepmerge. É evidência exploratória local; o gerador/oráculo usado em `/tmp` não faz parte do repositório e esse número não substitui os testes versionados.
-- `pnpm audit:security`: **FAIL** pelo advisory novo de `decode-uri-component`, mais o advisory existente de `node-forge`; não ocultar essa falha. `Expo Doctor`, CI deste candidato, scanners remotos e revisão R4 independente ainda não foram executados.
+- `pnpm audit:security`: **FAIL** pelos advisories `GHSA-qr28-fpjm-wq7f` (`decode-uri-component@0.5.0`) e `GHSA-86w9-cpqp-85rv` (`node-forge@1.4.0`); não ocultar essa falha. No CI do HEAD `79416b29c408c1153704c8107ac6595b146c7ba8`, os passos anteriores do Mobile passaram: instalação frozen, licenças, typecheck, Expo Doctor (21/21), segurança (19/19) e acessibilidade (15/15). O job Mobile falhou no passo `audit:security`, e o PR Gate falhou em consequência.
+- No mesmo CI, Governança, CodeQL (JavaScript/TypeScript e Python), Semgrep, Trivy, Dependency Review e builds/identidade das imagens backend, IA e Web passaram. Web, backend, AI e demo smoke foram `skipped` pelo classificador de impacto; não contam como PASS. Provenance do SBOM foi `skipped`. O job Rollout seguro ainda aparece como pendente na consulta de checks, embora todos os seus passos listados estejam concluídos com sucesso; seu estado final precisa ser reconfirmado.
+- A revisão independente do patch atual de `@expo/config` ainda não ocorreu. As revisões registradas abaixo dizem respeito à estratégia anterior e não substituem esta revisão.
 
 ### Próximos gates
 
-1. Aguardar o cooldown e então atualizar `decode-uri-component` para `0.5.1`, quando a política de idade permitir, ou tratar o advisory por fluxo próprio com os mesmos controles. Não usar waiver.
-2. Reexecutar instalação frozen, audit, testes mobile, typecheck, Expo Doctor e export.
-3. Enviar candidato à #453 em Draft, solicitar CI/scanners e revisão independente do patch a `@expo/config`.
-4. Manter a #452 Draft: ela não herda esta alteração até a integração autorizada da #453 na base e sua própria CI no HEAD atualizado.
+1. Após **30/10/2026 16:41:28 UTC**, confirmar que `decode-uri-component@0.5.1` atende ao cooldown de 24 horas e atualizar o override de segurança existente sem waiver; então regenerar o lockfile sob as políticas atuais.
+2. Reexecutar instalação frozen, audit, testes Mobile, typecheck, Expo Doctor e export.
+3. Reconferir o resultado final do job Rollout seguro e solicitar revisão independente do patch atual de `@expo/config`.
+4. Executar novamente CI/scanners no novo HEAD. Manter a #453 Draft até audit, gates e revisão independente passarem.
+5. Manter a #452 Draft: ela não herda esta alteração até a integração autorizada da #453 na base e sua própria CI no HEAD atualizado.
 
 **Sem autorização para merge ou deploy.** O app Mobile continua NO-GO até audit e CI aprovarem; #452 e #453 permanecem Draft.
 
