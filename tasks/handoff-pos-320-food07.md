@@ -1,8 +1,8 @@
-# FOOD07 — handoff: T06 fechado; gates finais pendentes
+# FOOD07 — handoff: implementação T01–T06; gate Mobile pendente
 
 ## Estado atual — 29/10/2026
 
-Branch `docs/pos320-food07-planning`, PR #452 Draft. Base remota observada `4bd97a92`; delta T06 ainda precisa commit/push e CI. T01–T05 preservadas conforme histórico. T06 passou 13/13 Playwright em desktop e mobile; PA07 de posse/transferência/revogação 10/10 nos dois projetos. Typecheck/build Web PASS Node22.21.1; lint 0 errors/1 warning preexistente em `portal-shell.tsx:78`. R4 independente estática integral FOOD07 favorável, sem execução própria de testes. CI da base: Backend/Web/Demo/scanners aplicáveis verdes, Mobile Expo e PR Gate falharam na auditoria de dependência transitiva separada em #453; SBOM provenance skipped. R4 estática integral está concluída; para merge ainda faltam CI do novo HEAD e resolver a falha de Mobile/#453. Não misturar o fix Mobile. Relatório UX B/C: [revisao-ux-pos-320-food07-b-c.md](revisao-ux-pos-320-food07-b-c.md).
+Branch `docs/pos320-food07-planning`, PR #452 Draft, HEAD `166cc03969c4fd351d1aa5d46db6201e2182c753`. T01–T06 implementadas e validadas conforme [registro de execução](execucao-pos-320-food07.md). T06 passou 13/13 Playwright desktop e mobile; PA07 transferência/revogação 10/10; typecheck/build Web PASS Node22.21.1; lint 0 erros/1 aviso preexistente. R4 independente estática integral FOOD07 favorável, sem execução própria de testes. CI `40889806780`: Backend/Web/Demo/AI, governança, rollout/operação, CodeQL, Semgrep, Trivy e Dependency Review PASS; Mobile Expo e PR Gate FAIL por `deepmerge@4.3.1` e `node-forge` ainda presentes na base; Provenance SBOM SKIPPED. A #453 está corrigindo deepmerge separadamente; seu audit também aguarda o cooldown do novo advisory de `decode-uri-component`. Não misturar esse patch na FOOD07. Após a integração autorizada da correção de segurança na base, reexecutar CI da #452; manter Draft até esse gate passar. G06 segue separado/BLOCKED. UX B/C: [relatório](revisao-ux-pos-320-food07-b-c.md).
 
 ## Branch/base
 
@@ -51,7 +51,7 @@ Histórico documental até ea2bd1d5, substituído quanto à execução por T01 a
 
 ## Próxima ação
 
-Conferir branch/HEAD/diff e CI da PR Draft #452; T05 BFF concluída localmente; continuar T06 (UI/portal/UX B) e T07 (regressões/UX C/R4 integral/CI). Usar o contrato de `snapshot-compartilhamento-receita.ts` e a prévia realT03. Não refazer T01–T04 nem mexer #451/#446/#453 para esconder auditoria.
+Manter #452 Draft enquanto a #453 aguarda cooldown e revisão; não alterar o escopo FOOD07 para ocultar a falha. Após a integração autorizada da correção de segurança, atualizar a base remota sem operações destrutivas, reexecutar Mobile/PR Gate e confirmar todos os checks do HEAD final. Regressões locais, T06/PA07, UX B/C e R4 estática integral já possuem evidência registrada; conservar seus limites. Sem merge, deploy, DDL externa, infraestrutura ou cobrança.
 
 Ferramentas temporárias anteriores desapareceram na retomada: Node22.21.1 persistente em `/workspace/.toolchains/food01`, pnpm11.25.0 verificado em `/tmp/octaclin-food07-tools/bin`. Backend node_modules preservado; Web instalada frozen/offline com hardlinks do store, sem alterações em dependências/lockfile. Espaço ~237MB; store pnpm contém hardlinks reutilizáveis, conferir orçamento antes de instalação frozen necessária, sem symlink entre worktrees/alteração de políticas ou apagar trabalho alheio. Docker PG15 cached/socket local, Timescale local indisponível; CI anterior executou gates oficiais. G06 BLOCKED. Sem FOOD05-MDL/FOOD08, merge/deploy/DDL externo/infra/cobrança.
 

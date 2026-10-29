@@ -240,10 +240,10 @@ Modificar componentes `biblioteca-receitas-nutricionais.tsx`/`receitas-compartil
 
 ### T07 — gates, revisão independente e PR
 
-- [ ] Regressões locais T06/PA07 concluídas em Node22, mas matriz T07 total e CI do novo HEAD ainda pendentes; gate Mobile/PR Gate base continua FAIL via #453. T01–T05 têm evidências históricas específicas; não presumir todo o gate G02 como PASS amplo.
+- [x] Regressões locais T06/PA07 concluídas em Node22; matriz de cobertura e limites registrados no relatório de execução. T01–T06 têm evidências específicas; skips de banco continuam identificados, sem presumir que mocks substituam RLS.
 - [x] R4 independente estática integral FOOD07, sem achados materiais; não executou testes.
-- [ ] CI/scanners do novo HEAD e resolução do gate Mobile/#453; nenhum check do delta local é presumido até executar no commit enviado.
-- [ ] Atualizar roadmap/checklist/handoff e abrir PR individual Draft FOOD07; diff/segredos/links e CI/scanners no HEAD. Sem merge, migration externa, deploy, infra, cobrança ou FOOD05-MDL. Revisar composição com446 separadamente sem alterar PR aprovada.
+- [x] CI/scanners executados no HEAD `166cc03969c4fd351d1aa5d46db6201e2182c753`: Backend/Web/Demo/AI, governança, rollout/operação, CodeQL, Semgrep, Trivy e Dependency Review PASS; Mobile Expo e PR Gate FAIL pelo audit da base (`deepmerge@4.3.1`, `node-forge`); Provenance SBOM SKIPPED.
+- [ ] Depois da integração autorizada da correção Mobile #453 na base, reexecutar Mobile/PR Gate no HEAD atualizado e confirmar checks. PR #452 permanece Draft. Sem merge, migration externa, deploy, infra, cobrança ou FOOD05-MDL. Revisar composição com #446 separadamente sem alterar PR aprovada.
 
 ## Review Focus — entradas com cobertura obrigatória
 
