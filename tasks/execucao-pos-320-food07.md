@@ -1,5 +1,7 @@
 # FOOD07 — execução técnica
 
+> **Estado atual 29/10/2026:** T06 local PASS, 13/13 Playwright desktop e 13/13 mobile; PA07 focal de posse/transferência/revogação 10/10; typecheck/build Web PASS Node22.21.1. Lint 0 erros/1 aviso preexistente. R4 estática independente integral FOOD07 sem achados, sem execução própria de testes. Delta local sobre `4bd97a92` ainda não enviado; CI do delta pendente. CI consultado na base teve Mobile Expo e PR Gate FAIL por auditoria de dependência em fluxo #453; SBOM provenance skipped. O histórico T01–T05 abaixo foi preservado. UX B/C: [relatório](revisao-ux-pos-320-food07-b-c.md).
+
 ## T01 — PASS técnico local, 28/10/2026
 
 Código: `bdb816f8`, base documental `ea2bd1d5`, PR Draft #452, branch `docs/pos320-food07-planning`. Nenhuma alteração de banco, endpoint HTTP, portal ou operação externa nesta tarefa. T02–T07 e G06 não foram aprovados por esta evidência.
@@ -52,7 +54,7 @@ A suíte final teve 365 suítes aprovadas e 8 integralmente skipped; uma suíte 
 | `servico-protecao-abuso.redis.integracao.spec.ts` | 2 | Redis real não habilitado |
 | `validacao-rev11-investigacao.spec.ts` | 4 | Grades/oráculos locais opcionais OMS não fornecidos; classificadores não ativados |
 
-T01 é domínio puro e não necessita banco. Essas ausências não provam RLS, concorrência ou Redis e não encerram G02/G04. R4 final FOOD07, CI do novo HEAD e UX B/C permanecem pendentes; sem interface FOOD07 nesta tarefa.
+Checkpoint histórico da tarefa T01: domínio puro sem banco; as ausências então observadas não provaram RLS/concorrência/Redis. R4, CI e UX foram pendentes naquele checkpoint; estado atual está no topo deste registro.
 
 ### Contratos preservados / decisões de engenharia
 
@@ -120,7 +122,7 @@ Revisor `/root/food07_t02_boundary_review`, instância independente, somente lei
 
 ### Limites restantes
 
-T03–T07 continuam pendentes, exceto allowlist mínima de T04 descrita acima. R4 integral, UX B/C, UI/BFF/prévia e envios porcionados não são aprovados por T02. Espaço local limitado (~237MB), sem limpeza de arquivos alheios ou instalação extra para contornar ambiente. G06 permanece BLOCKED; zero DDL externo, merge/deploy ou mudança de infraestrutura/cobrança.
+Checkpoint histórico após T02: T03–T07 estavam pendentes (exceto allowlist antecipada descrita acima). R4, UX e UI foram pendentes naquele checkpoint; ver estado atual no topo. Espaço local limitado (~237MB), sem limpeza de arquivos alheios ou instalação extra para contornar ambiente. G06 permanece BLOCKED; zero DDL externo, merge/deploy ou mudança de infraestrutura/cobrança.
 
 ### Verificações finais T02 após o P2
 
@@ -172,7 +174,7 @@ HEAD documental `4c5a8fc97c5579f1b952e70412868f5e2228294f`, run40782726575, job 
 
 ### Próximo passo autorizado
 
-Concluir commit/push/CI próprios de T03 e seguir T04: compartilhamento porcionado com instruções específicas, identidade semântica/replay, snapshots, agendamento e concorrência. Revalidar fonte/versão/fingerprint na confirmação; a prévia é uma leitura pontual, sem reserva do catálogo para uma ação posterior. BFF/UI/UX B/C e R4 final permanecem pendentes. G06 BLOCKED; zero operação externa.
+Concluir commit/push/CI próprios de T03 e seguir T04: compartilhamento porcionado com instruções específicas, identidade semântica/replay, snapshots, agendamento e concorrência. Revalidar fonte/versão/fingerprint na confirmação; a prévia é uma leitura pontual, sem reserva do catálogo para uma ação posterior. Checkpoint histórico após T03: BFF/UI/UX B/C e R4 ainda pendentes; G06 BLOCKED e zero operação externa. Estado atual ver topo.
 
 ### Verificações finais T03
 
@@ -235,11 +237,11 @@ Não foram executadas chamadas externas, dados reais, DDL de staging/produção 
 - Suíte backend completa Node22: **3.620 PASS,161 skipped,zero falhas**;370 suítes PASS/9 integralmente skipped. Os161 incluem19 casos de integração sob flag, executados separadamente acima, e142 skips legados já discriminados em T01. Não aprovar os142 por equivalência.
 - Typecheck e build backend/artefato: **PASS**. Guardas de controladores11/11, diff/segredos e oráculo21: PASS. Imagem Timescale local reconferida indisponível; gate amplo fica para CI, sem substituir a imagem para esconder setup.
 - CI do HEAD anterior `ff6cde0e`, run40784685792: Backend/Web/Demo/AI/governança/operação/rollout PASS; scanners associados PASS. Mobile audit e PR Gate FAIL. Esses resultados não aprovam T04 ainda não enviada. Não alterar #451/#453/#446 para ocultar a falha.
-- R4 integral FOOD07, UX B/C e UI ainda pendentes. Parecer específico anterior T03 não é revisão deste novo writer. CI do novo HEAD deve ser consultado após push.
+- No checkpoint de T04, R4 integral FOOD07, UX B/C e UI ainda estavam pendentes. Parecer específico anterior T03 não é revisão deste writer. CI do novo HEAD deve ser consultado após push.
 
 ### Sequência e rollback
 
-T05 BFF/tipos é a próxima tarefa autorizada; T06 UI/portal e personas B, T07 regressões/personas C/R4 integral/CI. Não declarar FOOD07 concluída por T04. Novos snapshots exigem leitores compatíveis antes do writer; rollback para backend antigo que devolve JSON cru pode expor contexto, portanto manter reader/writer compatível ou corrigir adiante, sem descartar histórico. G06 BLOCKED; nenhuma autorização de merge/deploy/migrations externas/infra/cobrança foi inferida.
+Checkpoint histórico de T04: T05 era a tarefa seguinte então; T06/T07 ainda não tinham começado. Esse status foi substituído pelo estado atual no topo. Não declarar FOOD07 concluída por T04. Novos snapshots exigem leitores compatíveis antes do writer; rollback para backend antigo que devolve JSON cru pode expor contexto, portanto manter reader/writer compatível ou corrigir adiante, sem descartar histórico. G06 BLOCKED; nenhuma autorização de merge/deploy/migrations externas/infra/cobrança foi inferida.
 
 ## T05 — BFF e contratos Web, PASS técnico local específico (29/10/2026)
 
@@ -250,6 +252,35 @@ Reconfirmados branch/HEAD6778ab63 e delta intencional; nenhuma perda/alteração
 - RED funcional:3 casos falhavam no código anterior (campo tenant adulterado aceito, body sem limite, cliente POST novo ausente). Erro inicial de tipo da constante de micros não foi RED. GREEN70/70 casos de BFF, preservando60 anteriores.
 - Um teste positivo máximo adicional reproduziu69/70:256KiB recusava lote válido com10 textos de4000 caracteres suplementares escapados em JSON. Limite512KiB derivado do tamanho máximo do contrato, mantendo teste negativo acima dele. Consulta/prévia permanecem8KiB. Resposta prévia limitada16MiB para100 ingredientes/20 alternativas e fontes; demais512KiB. Não alterada a política backend/global.
 - `pnpm --dir octaclin-web test:authz`: **332/332 PASS,26 scripts,zero falhas/skips/cancelamentos**,exit0. `pnpm --dir octaclin-web typecheck`:PASS. `pnpm --dir octaclin-web lint`:exit0,zero erros/70 avisos em arquivos não alterados. `git diff --check` e `pnpm security:secrets`:PASS. Logs temporários `t05-*`, não versionar artefatos.
-- Build Web local/CI do delta ainda NOT RUN; UI/Playwright/UX B/C e R4 integral pendentes. Não usar resultados do HEAD T04 para comprovar T05. CI T04 Backend/Web PASS e scanners PASS, Mobile audit FAIL; smoke ainda em acompanhamento no último checkpoint. Manter falha separada #453 e G06 BLOCKED.
+- Checkpoint histórico do T05: build Web local/CI do delta ainda NOT RUN; UI/Playwright/UX B/C e R4 estavam pendentes. Não usar resultados do HEAD T04 para comprovar T05. CI T04 Backend/Web PASS e scanners PASS, Mobile audit FAIL; smoke ainda em acompanhamento no último checkpoint. Manter falha separada #453 e G06 BLOCKED.
 
 Nenhum banco/infra externa, merge/deploy ou mudança da #446/#451/#453. Continuar T06 conforme autorização.
+
+
+## T06 — interface FOOD07 e etapa B/C UX, 29/10/2026
+
+Base remota observada `4bd97a921edba1d2a3344d07ecf6d32db53047f4`, branch `docs/pos320-food07-planning`. As alterações T06 listadas abaixo permanecem no delta da worktree e devem ser validadas novamente no HEAD após push. Nenhuma alteração de dependências, endpoint backend ou migration foi criada nesta etapa.
+
+### Mudanças
+
+- Editor/biblioteca: seleção separada da refeição de origem usada para compor a receita e da refeição de destino ao aplicar. Mudanças/remoção da base exibem confirmação; limpar metadados envia `null`/lista vazia explícitos, preservando o comportamento legado por omissão. Tags têm aviso contra dados de paciente.
+- Paginação, filtros, seleção persistida entre páginas, resumo de lote, edição/arquivo/restauração e revalidação de receita/fingerprint; inserção ao plano acontece após confirmação e utiliza o mecanismo/autosave existente. Envio inclui porções e instruções personalizadas na cópia, sem reescrever a biblioteca.
+- Portal: quantidades ajustadas por porção, rendimento original contextual, instruções da cópia, formatação `pt-BR`, medida caseira/peso apenas quando cadastrados, sem tags/contexto interno. Estado do componente é reiniciado por identidade do paciente.
+- Navegação compartilhada: etapa B detectou que rótulos móveis extrapolavam as células com viewport 320 px e fonte a 200% (teste RED, 4 rótulos). `min-w-0` no link e label contido corrigiram a sobreposição (GREEN). O texto pode ser truncado nessa ampliação; personas colocaram a compreensão dos destinos em backlog P2, sem evidência de falha de compreensão.
+
+### RED/GREEN e verificações
+
+- Playwright sintético `tests/visual/food07-metadados-receitas.spec.mjs`: **13/13 desktop-chromium e 13/13 mobile-chromium PASS**. Cobre base, confirmação/cancelamento, clearing, prévia, origem distinta do destino, revalidação, resposta tardia, 2,5 porções, lote/paginação/filtros/arquivo, instruções customizadas e portal. A spec verifica Axe nos alvos configurados, rolagem horizontal do card a 320 px, texto a 200% e contenção dos rótulos de navegação. Um teste focado adicional passou 2/2 e confirmou a rolagem da quantidade acima da barra fixa. Não são chamadas reais ao backend; rotas sintéticas, com evidências backend/BFF separadas nos checkpoints anteriores.
+- PA07: cinco casos — segunda aba somente leitura, transferência com envio drenado, cópia após perda/retomada de posse, fechar titular e revogação em foco — executados nos projetos desktop/mobile: **10/10 PASS**.
+- Typecheck Web (`pnpm exec tsc --noEmit`): PASS; build `pnpm exec next build --webpack`: compilação, TypeScript e 194 páginas estáticas PASS. Build registrou avisos de Edge Runtime em módulos de `next` e depreciação de `middleware`, sem erro.
+- ESLint nos três componentes e spec: zero erros, um aviso preexistente de `react-hooks/set-state-in-effect` em `portal-shell.tsx:78`, fora das linhas modificadas. Não alterado nesta entrega.
+- R4 estática independente integral FOOD07: sem achados materiais; reviewer não executou testes nem substituiu a revisão executável/CI. Não foi testada tecnologia assistiva real nem houve participação de usuários.
+- Uma tentativa de Playwright mobile inicialmente encontrou `page.goto` timeout porque o servidor Next local existente deixou de responder; servidor isolado foi reiniciado e o teste focado/full suite passou. O timeout não foi contado como falha funcional nem como PASS. Uma execução de arquivo PA07 sem filtro efetivo foi interrompida após primeiro caso; somente os 10 cenários focalizados relatados acima contam.
+
+### UX B/C e backlog
+
+As duas personas revisaram imagens reais da UI com fixture sintética. O relatório independente está em [revisão UX B/C](revisao-ux-pos-320-food07-b-c.md). O achado reproduzível de sobreposição mobile foi corrigido. Permanecem como backlog P2: atalho à seção de receitas no plano, data de agendamento com apresentação pt-BR e validar compreensão dos rótulos truncados em texto ampliado. O teste focado confirma que a linha de quantidade pode ser rolada acima da barra fixa (2/2 projetos); rótulos visuais truncados e compreensão/assistiva real seguem sem teste humano.
+
+### Limites de T06 e próximo gate
+
+G03/T06 local recebe PASS para a cobertura explicitamente executada, não como aprovação irrestrita de acessibilidade. T07 segue pendente: regressões restantes/CI, `git diff --check`/segredos após documentação final, commit/push e CI/scanners do novo HEAD. R4 estática independente integral já concluída. CI remoto consultado antes do delta (`4bd97a92`) mostrou Backend/Web/Demo/scanners aplicáveis PASS; Mobile Expo e PR Gate FAIL por auditoria de dependência transitiva em PR separada #453. Provenance SBOM SKIPPED. Até resolver a condição do Mobile e validar o novo HEAD, #452 fica Draft e não está pronta para merge. Sem merge, deploy, DDL externa ou alteração de Render/Neon.

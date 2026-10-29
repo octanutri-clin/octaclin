@@ -16,7 +16,7 @@
 - PR446 permanece Ready for Review no HEAD aprovado2ed4ad40; sem mudança. Nenhum arquivo/G06 da outra worktree foi movido ou descartado; `next-env.d.ts` preexistente preservado lá.
 - FOOD07 não depende do motor FOOD05 nem de1079. A migration1080 foi criada/registrada em T02 após reconferência da base e reserva1079 da PR446; aplicação somente em banco descartável. Reconciliar antes de futura integração. Não importar1079 para esta branch nem encadear a PR em446.
 - A main contém FOOD04/1078; testes descartáveis poderão aplicar o conjunto do checkout. Integração futura com446 precisa reconciliação de registro TypeORM, DTO/API/UI e ensaio combinado, sem modificar a PR aprovada.
-- Nova PR individual Draft somente para FOOD07; execução autorizada nesta decisão, com gates ainda NOT RUN. G06 produtivo permanece separado/BLOCKED; main auto-deploy exige zero merge sem nova autorização.
+- Nova PR individual Draft somente para FOOD07; execução autorizada nesta decisão. (Nota: estado original deste item é histórico; consultar estado atual no checklist/handoff.) G06 produtivo permanece separado/BLOCKED; main auto-deploy exige zero merge sem nova autorização.
 
 ### Revisões de produto aprovadas e referência explícita
 
@@ -181,8 +181,8 @@ Arquivos BE relativos a `octaclin-backend/src/modulos/planos-alimentares/`: modi
 
 - [x] RED: base inteira500g/4/0,5→62,5; por_porção125g/1,5→187,5 mesmo com rendimento4; fração periódica com resultado half-up/resíduo, independência de cálculos sucessivos, por100g/tempo/instruções intactos, alternativas escaladas pela mesma razão.
 - [x] RED: ausência/zero/NaN/Infinity/precisão excessiva/limites, alvo0,001 e1000, gram/quantidade abaixo/acima da faixa, legado sem base e inteiro sem rendimento; não converter desconhecido em1, não clamp nem confirmar parte.
-- [x] RED: tags e normalização; unknown/null/objeto/chaves especiais, omissão vs limpeza. Fixture racional independente e resultados esperados fixados antes da implementação. Confirmação visual da mudança de base continua pendente em T06.
-- [x] GREEN e commit. Sem importar código446 ou adicionar dependência ao produto. R4 final e CI do novo HEAD ainda pendentes.
+- [x] RED: tags e normalização; unknown/null/objeto/chaves especiais, omissão vs limpeza. Fixture racional independente e resultados esperados fixados antes da implementação. Checkpoint T01: confirmação visual da mudança de base estava reservada a T06; T06 foi concluída depois, conforme a matriz atual.
+- [x] GREEN e commit. Sem importar código446 ou adicionar dependência ao produto. Status histórico de T01: R4 e CI do novo HEAD ainda pendentes naquele checkpoint; veja estado atual de T07 abaixo.
 
 ### T02 — persistência cifrada, índice e consulta
 
@@ -200,7 +200,7 @@ PASS técnico local específico no código `5e20b279`; CI próprio e confirmaç�
 Criar `aplicacao/servico-porcionamento-receita.ts`/spec; modificar módulo/controlador existente; reusar código autorizado de resolução de fonte e serviço receitas sem criar bypass de escopo.
 
 - [x] RED/GREEN: receita atual/legada, arquivada, versão stale, outra clínica/pessoal de outro profissional, fonte revogada; DTO manipulado com composição/fator/tenant é rejeitado. Nenhuma gravação na prévia.
-- [x] RED/GREEN: fingerprint muda com quantidades/base/versão/composição, não com serialização arbitrária de chaves. Reuso do EntityManager comprovado sem transação independente. Rejeição de confirmação de fingerprint antigo pertence à implementação T04/T06 ainda pendente.
+- [x] RED/GREEN: fingerprint muda com quantidades/base/versão/composição, não com serialização arbitrária de chaves. Reuso do EntityManager comprovado sem transação independente. Naquele checkpoint, rejeição de confirmação de fingerprint antigo ainda pertencia ao trabalho T04/T06 seguinte; comportamento e teste atuais estão registrados no bloco T06/handoff.
 - [x] RED/GREEN NUX-01: totais para 1/1,5/2,5 porções em ambas as bases, arredondamento efetivo, nutriente ausente permanece indisponível e demais indicadores calculáveis; denominador explícito T06.
 - [x] GREEN local serviço/controller/typecheck/build, PostgreSQL8/8 e re-revisão específica independente; CI próprio após commit. Não considerar fingerprint autorização.
 - Resolução do catálogo em JOIN bulk/um statement, sem FOR SHARE (runtime só SELECT). Prévia reusa normalização/porção/soma4 casas do plano para não prometer total diferente ao aplicar; fonte bruta intacta/fingerprint. Aritmética racional de quantidade3 casas permanece T01. Validações de materialização/publicação existentes não foram afrouxadas por permitir preview parcial.
@@ -228,20 +228,21 @@ Criar `octaclin-web/app/api/planos-alimentares/receitas/consulta/route.ts` e `[r
 - [x] RED sem sessão/perm, body inválido/>8KiB para consulta/prévia, query arbitrária e metadata interna injetada; private/no-store. Receitas legacy GET/PUT/POST/DELETE continuam.
 - [x] GREEN cliente `consultarReceitasNutricionais`, `preverPorcionamentoReceita` e envio estendido; BFF/authz/typecheck; commit. O novo campo do share não carrega ciphertext ou capability clínica no navegador.
 
-### T06 — biblioteca, prévia e portal
+### T06 — biblioteca, prévia e portal — PASS local (13/13 desktop, 13/13 mobile)
 
 Modificar componentes `biblioteca-receitas-nutricionais.tsx`/`receitas-compartilhadas-portal.tsx`; extrair formulário metadata/painel porcionamento apenas para evitar acoplamento. Nova spec visual `octaclin-web/tests/visual/food07-metadados-receitas.spec.mjs` no config desktop/mobile real.
 
-- [ ] RED duas bases, mudança confirmada sem conversão silenciosa, campos opcionais e limpeza; paginação101+, filtros/reset/estado vazio/erro/página após arquivar; seleção de compartilhamento preservada entre páginas com versões corretas.
-- [ ] RED prévia fracionária com original/efetivo/avisos, confirmar/cancelar, duplo clique/retry, resposta antiga/trocar paciente/perder posse PA07. Confirmar aplicação obtém resultado atual e insere uma vez; persistência só via autosave/ACK existentes.
-- [ ] RED lote: porções individuais por receita, prévia e confirmação explícita de envio, código indisponível explica bloqueio, acesso retirada/legado permanece; portal mostra “Quantidades para1,5porções” sem confundir rendimento original4, sem tags/hashes/contexto.
-- [ ] RED teclado/foco/reflow/Axe desktop/mobile, macros por peso efetivo, nenhum tempo/texto escalado. GREEN visual/BFF/portal/regressões310/FOOD04/PA07; commit.
-- [ ] RED NUX-01/02/04/05 e PUX-01–05: cumprir cenários/asserções da matriz própria, incluindo antes/depois/cancelar, correção de lote sem perder outras linhas, conferência invalidada por edição, 404 indistinguível e ausência de dupla orientação quantitativa. Reavaliar etapa B com interface real, depois C após gates; não marcar teste assistivo como PASS por mera leitura de código.
+- [x] RED/GREEN duas bases, mudança confirmada sem conversão silenciosa, campos opcionais/limpeza; paginação 101+, filtros, página após arquivar; testes da UI em [spec T06](../octaclin-web/tests/visual/food07-metadados-receitas.spec.mjs).
+- [x] RED/GREEN prévia fracionária, original/efetivo/ausência, confirmar/cancelar, revalidação fingerprint e resposta antiga/troca da seleção; chamada de escrita somente após confirmar, usando inserção/ACK do editor. PA07 focal 10/10 desktop/mobile.
+- [x] RED/GREEN lote: porções e instruções individuais, resumo e confirmação por receita; portal informa quantidades para 1,5 porções, rendimento original secundário, pt-BR, sem tags/hashes/contexto. Operações só com rotas sintéticas nos testes de browser; backend/BFF foram testados separadamente nos checkpoints T04/T05.
+- [x] RED/GREEN mobile nav: labels transbordavam em viewport 320 px e texto 200%; `min-w-0`/rótulo limitado à célula corrigiu sobreposição. Axe, reflow de card, desktop/mobile PASS. Lint 0 errors/1 warning preexistente; build PASS com avisos Next/Edge. A captura ainda mostra abreviações de nav em 200%, registradas como backlog P2, sem evidência de incompreensão.
+- [x] NUX/PUX cobertos dentro das limitações documentadas na matriz; etapas B/C realizadas por personas independentes, dados sintéticos. Sem teste com usuários, leitor de tela externo ou configuração assistiva real. Ver relatório UX B/C e limitações.
 
 ### T07 — gates, revisão independente e PR
 
-- [ ] Regressões backend/Web, domínio/snapshots/publicação/portal, PostgreSQL/RLS/concorrência/rollback; Node22, typechecks/builds/lint aplicáveis.
-- [ ] R4 independente da entrega completa, identificação/limitações e correções TDD dos achados; não confundir parecer próprio/estático com execução independente.
+- [ ] Regressões locais T06/PA07 concluídas em Node22, mas matriz T07 total e CI do novo HEAD ainda pendentes; gate Mobile/PR Gate base continua FAIL via #453. T01–T05 têm evidências históricas específicas; não presumir todo o gate G02 como PASS amplo.
+- [x] R4 independente estática integral FOOD07, sem achados materiais; não executou testes.
+- [ ] CI/scanners do novo HEAD e resolução do gate Mobile/#453; nenhum check do delta local é presumido até executar no commit enviado.
 - [ ] Atualizar roadmap/checklist/handoff e abrir PR individual Draft FOOD07; diff/segredos/links e CI/scanners no HEAD. Sem merge, migration externa, deploy, infra, cobrança ou FOOD05-MDL. Revisar composição com446 separadamente sem alterar PR aprovada.
 
 ## Review Focus — entradas com cobertura obrigatória
@@ -252,7 +253,7 @@ Modificar componentes `biblioteca-receitas-nutricionais.tsx`/`receitas-compartil
 4. Divisão duplicada na base por_porção, arredondamento acumulado ou composição por100g escalada → T01/T03, oráculo independente e limites antes de confirmar.
 5. Replay com porção nova, paciente transferido, snapshot recalculado ao disparar ou rollback para reader antigo → T04/T07, Postgres real e contrato operacional reader-first.
 
-## Gates e comandos previstos (ainda NOT RUN)
+## Plano original de gates — histórico; estado atual no checklist/handoff
 
 - G00 análise documental: branch/base/paths/referências/decisões rastreados; Q1–Q3/S1–S3 e melhorias UX enumeradas aprovadas; implementação autorizada. Evidência de planejamento não comprova G01–G05.
 - G01 domínio/DTO/service: `pnpm --dir octaclin-backend exec jest --runInBand metadados-receita porcionamento-receita dtos-receitas-metadados servico-receitas-nutricionais servico-porcionamento-receita snapshot-compartilhamento-receita servico-compartilhamento-receitas`; incluir novos testes de projeção/legacy.

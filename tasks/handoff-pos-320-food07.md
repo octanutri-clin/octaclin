@@ -1,4 +1,8 @@
-# FOOD07 — handoff: T01–T05, interface seguinte
+# FOOD07 — handoff: T06 fechado; gates finais pendentes
+
+## Estado atual — 29/10/2026
+
+Branch `docs/pos320-food07-planning`, PR #452 Draft. Base remota observada `4bd97a92`; delta T06 ainda precisa commit/push e CI. T01–T05 preservadas conforme histórico. T06 passou 13/13 Playwright em desktop e mobile; PA07 de posse/transferência/revogação 10/10 nos dois projetos. Typecheck/build Web PASS Node22.21.1; lint 0 errors/1 warning preexistente em `portal-shell.tsx:78`. R4 independente estática integral FOOD07 favorável, sem execução própria de testes. CI da base: Backend/Web/Demo/scanners aplicáveis verdes, Mobile Expo e PR Gate falharam na auditoria de dependência transitiva separada em #453; SBOM provenance skipped. R4 estática integral está concluída; para merge ainda faltam CI do novo HEAD e resolver a falha de Mobile/#453. Não misturar o fix Mobile. Relatório UX B/C: [revisao-ux-pos-320-food07-b-c.md](revisao-ux-pos-320-food07-b-c.md).
 
 ## Branch/base
 
@@ -7,6 +11,13 @@
 ## Objetivo e autorização
 
 Implementar FOOD07 após integrar decisões aprovadas na mensagem “Aprovação das sugestões UX da FOOD07 e continuidade da PR #451”, em 28/10/2026. Q1–Q3/S1–S3 preservadas; NUX-01–05 e PUX-01–05 enumerados aprovados, NUX-06 mantém a política 310, PUX-06 BACKLOG. Ver [matriz de aceite](aceite-pos-320-food07.md). Restrição anterior de somente planejamento superada por autorização expressa; sem merge, deploy, migrations externas, mudanças de Render/Neon ou FOOD05-MDL. Manter configuração atual; avisar e pausar antes de troca manual. Não é necessário novo aceite para executar detalhes de engenharia já autorizados.
+
+## T06 fechado localmente
+
+- Biblioteca: confirmação de mudança/remoção de base, campos opcionais/limpeza explícita, seleção própria de refeição de origem; destino da aplicação continua separado.
+- Prévia: 1/1,5/2,5 porções a partir dos originais, revalida fingerprint antes de confirmar, cancela sem persistir; envio mantém porções/instruções específicas e confirmação por receita. Paginação/filtros/arquivo cobertos por browser sintético.
+- Portal: quantidades ajustadas, rendimento contextual secundário, instruções da cópia, sem tags internas; teste em 320px/200%, Axe e medição de overflow horizontal. A revisão achou nav global sobrepondo rótulos em células a 320px/200%; RED/GREEN fix com `min-w-0` para links e label. Textos ainda podem ser abreviados nessa ampliação; backlog UX P2, não evidência de bloqueio funcional.
+- Evidências completas e limites: [execução](execucao-pos-320-food07.md), [matriz](aceite-pos-320-food07.md), [UX B/C](revisao-ux-pos-320-food07-b-c.md).
 
 ## Concluído
 
@@ -32,7 +43,7 @@ Implementar FOOD07 após integrar decisões aprovadas na mensagem “Aprovação
 
 ## Validações
 
-Checkpoint atual T04, código `f45d5132`: envio porcionado com texto próprio, contexto/hash cifrados e projeções validadas implementados. **3.620 PASS/161 skipped**, typecheck/build PASS;48/48 serviço e19/19 PostgreSQL descartável. A fixture agora executa1066 real (FK/RLS/trigger) junto de1033/1080, mantendo parent tables sintéticas e catálogo SELECT-only. Transferência, consentimento, CAS/versão, lotes recíprocos, replay, legado, rollback tardio e worker agendado comprovados. Uma falha adicional de retirada durante transferência foi reproduzida e corrigida; não ampliar grants/papéis. R4 integral/T05–T07/UX B/C ainda pendentes. Não confundir parecer específico T03 com revisão deste writer. [Registro completo](execucao-pos-320-food07.md).
+Checkpoint atual T04, código `f45d5132`: envio porcionado com texto próprio, contexto/hash cifrados e projeções validadas implementados. **3.620 PASS/161 skipped**, typecheck/build PASS;48/48 serviço e19/19 PostgreSQL descartável. A fixture agora executa1066 real (FK/RLS/trigger) junto de1033/1080, mantendo parent tables sintéticas e catálogo SELECT-only. Transferência, consentimento, CAS/versão, lotes recíprocos, replay, legado, rollback tardio e worker agendado comprovados. Uma falha adicional de retirada durante transferência foi reproduzida e corrigida; não ampliar grants/papéis. Checkpoint histórico após T04 — substituído pelo estado atual no topo: naquele momento R4 integral, T05–T07 e UX B/C estavam pendentes. Não confundir parecer específico T03 com revisão do writer T04. [Registro completo](execucao-pos-320-food07.md).
 
 CI anteriorff6cde0e/run40784685792: Backend/Web/Demo/AI/governança/operação/rollout/scanners PASS; Mobile audit e PR Gate FAIL. Não comprova delta T04. Fonte main continua2f24fcb1, sem encadeamento em446. Tags/contexto nunca saem ao paciente; novos leitores devem preceder novos writers na futura liberação G06. Não recalcular replay pela biblioteca viva.
 
