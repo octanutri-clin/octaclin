@@ -179,3 +179,64 @@ Concluir commit/push/CI próprios de T03 e seguir T04: compartilhamento porciona
 Node22.23.4/pnpm11.25.0, após as correções e re-revisão: suíte backend completa **3.577 PASS/150 skipped/zero falhas**,369 suítes PASS/9 integralmente skipped; typecheck e build/artefato PASS; guardas de controladores PASS; diff/segredos PASS. Os150 skipped são os142 legados identificados em T01 mais8 da integração1080 default; esses8 foram executados separadamente com PostgreSQL real. Não aprovar os142 restantes por equivalência. Oráculo T01 permanece21 casos reproduzidos; nenhuma troca de política quantitativa.
 
 As alterações no motor preexistente são extrações mínimas da normalização escalar, validação e soma para evitar divergência da prévia: sem mudar quatro casas, fórmulas, requisitos dos DTOs ou totais legados. Cálculo parcial é helper explícito para leitura, não autorização para salvar composição manual incompleta. Nenhuma dependência/migration adicional além da1080 já documentada; CI próprio T03 ainda pendente neste registro.
+
+## T04 — envio porcionado, PASS técnico local específico (29/10/2026)
+
+Código validado: `f45d5132`.
+
+Branch/PR preservadas: `docs/pos320-food07-planning`/#452 Draft, retomada do HEAD `ff6cde0e`. Fonte normativa: contratos S1–S3/NUX-03/PUX-01 e tarefa T04 do plano. Sem novas decisões de produto, dependências, migrations ou operação externa.
+
+### Ambiente recuperado
+
+Os temporários `/tmp/octaclin-food07-tools` não estavam presentes nesta retomada; a primeira tentativa nem iniciou o Jest e **não conta como RED**. Reutilizado Node **22.21.1** existente em `/workspace/.toolchains/food01`, dentro das engines. pnpm **11.25.0** recuperado do registry oficial com SHA512 comparado ao `packageManager` e ao `dist.integrity`, isolado em `/tmp`, sem reinstalar dependências do backend, alterar engines, symlinks entre worktrees ou políticas. Docker/imagem PostgreSQL15 local disponíveis. Espaço restrito (~237MB); nenhum trabalho alheio apagado.
+
+### Implementação / decisões de engenharia
+
+- `porcionamentos` opcional por receita: quantidade/fingerprint/conferência obrigatória, instruções opcionais até4.000 caracteres. DTO e serviço validam tipos, campos desconhecidos, IDs/duplicações/limites/protótipos/getters. Omissão conserva o modo de quantidades cadastradas.
+- Prévia refeita no EntityManager da operação e versão/fingerprint conferidos antes de gravar. Texto normalizado somente CRLF→LF/NFC; omissão usa original conferido, vazio remove só daquela cópia. Não há reescrita numérica/heurística que prometa compreender linguagem livre. Conferência explícita obrigatória para cada item porcionado.
+- Contexto interno versionado no ciphertext atual: hash do pedido, instrução original para replay por omissão, razão/porções/base/rendimento, quantidades originais e fontes congeladas. Sem tabela/coluna adicional, identificadores clínicos no navegador ou contexto do paciente na biblioteca.
+- Hash canônico inclui autor autenticado, paciente, receitas/versões/modos/porções/fingerprint/texto efetivo/conferência, canais normalizados e agendamento explícito; exclui horário dinâmico de “agora”. Chave pertence ao lote inteiro: consulta pelo prefixo UUID parametrizado encontra também tentativas que trocam todos os IDs. Prefixo validado não aceita curingas. Replay reautoriza carteira/receitas/consentimentos atuais e compara contexto congelado, sem recalcular por edição posterior da biblioteca.
+- Shares antigos sem contexto mantêm replay compatível do contrato310; personalização na mesma chave retorna409, sem preencher hashes ou reescrever bytes. Agendamento futuro é exigido apenas para uma nova intenção; retry válido após a data conserva o ACK.
+- Ordem de locks: intenção, paciente, preferência, receitas ordenadas por UUID, compartilhamentos. Paciente e consentimento são conferidos transacionalmente; atualização de consentimento usa o mesmo lock de paciente. Nenhuma transação aninhada ou grant ampliado no catálogo.
+- Leitor único valida snapshots antigos/novos em listagens e detalhe, antes de primeira leitura/auditoria. Projeção pública explicita porções recebidas e que ingredientes já estão ajustados; não retorna hash/contexto/fontes/quantidades originais/tags. Conferência interna da matemática evita aceitar razão/quantidades corrompidas.
+- Reenvio310 imediato substitui a versão ativa; agendado só na ativação. Worker não foi reescrito, não recalcula a biblioteca e mantém avisos externos genéricos. Snapshot anterior e biblioteca permanecem intactos.
+
+### RED/GREEN e achado de concorrência
+
+1. Rodada RED limpa: **3 falhas funcionais** — envio ignorava porções/texto específico, mesma chave aceitava porção diferente e instrução null era aceita. Erros iniciais de tipagem do harness não contaram como RED.
+2. GREEN inicial8/8, depois matriz **48/48** de serviço/fronteira: 1/1,5/2,5, texto vazio/limite/NFC/CRLF, desconhecidos/null/duplicações, fingerprint/versão stale, carteira/tenant/origem pessoal, troca integral de IDs, replay após editar biblioteca, legado sem hash, lote misto, agendamento, retirada sem reativação, projeções e snapshots inválidos.
+3. A matriz detectou duas expectativas afetadas pelo rollback simulado do harness (referências substituídas) e uma tentativa de gerar nova prévia já stale no próprio setup; corrigido **somente o harness/teste**, não removidos asserts do produto. Rollback simulado de unidade não é prova de PostgreSQL.
+4. PostgreSQL real reproduziu falha adicional na retirada: durante transferência não commitada, retornava **sucesso/retirado**, quando deveria aguardar o vínculo e negar404 ao antigo responsável. A ausência de lock também foi observada. Correção mínima: descobrir referência sem lock, bloquear/conferir paciente, reler/bloquear share; mesma ordem do envio. GREEN real comprova espera e404, estado ativo/ciphertext intactos. Não houve evidência de incidente em produção, nem mudança de quem pode retirar.
+
+### PostgreSQL/RLS real — 19/19 PASS
+
+Comando com `RLS_TESTCONTAINERS=true`, socket Docker local e Node22: Jest da integração1080. Banco **`food07_test` descartável**, owner apenas para fixture/migrations; runtime não owner, NOSUPERUSER/NOBYPASSRLS, sem DDL. Nesta rodada a fixture ensaia **1033 +1066 real +1080 registrada**, substituindo os campos1066 mínimos usados em T02/T03. Parent tables continuam fixtures sintéticas; não é ensaio do ledger integral/produção.1066 real cobre FKs, índices, FORCE RLS e trigger de snapshot imutável; catálogo global continua SELECT-only.
+
+As oito provas anteriores foram preservadas, mais11:
+
+| Prova T04 | Resultado observado |
+| --- | --- |
+| Cifra/projeção/imutabilidade | Porções/texto corretos; UPDATE de snapshot negado pelo trigger; portal sem contexto; tenant alheio sem linhas; biblioteca idêntica |
+| Idempotência concorrente | Duas sessões realmente esperando, uma criação física de share/entrega, mesmo ACK |
+| Lotes recíprocos | Pacientes distintos, ordem de IDs inversa, ambos aguardam mesma primeira receita sob barreira; ambos concluem sem deadlock, quatro shares |
+| Edição concorrente | Versão alterada entre prévia e lock;409 e zero share |
+| Transferência concorrente | Revalida novo responsável após lock;404 e zero share |
+| Consentimento concorrente | Revogação de e-mail confirmada sob lock;403 e zero share |
+| Falha tardia no segundo item | Rollback do lote inteiro, inclusive restauração do ativo anterior e seus bytes |
+| Worker agendado | Data de elegibilidade da fixture simula vencimento; ativa cópia congelada/substitui anterior sem recalcular biblioteca nem chamar provider externo |
+| Retirada concorrente | RED/GREEN descrito acima; antigo responsável negado após transferência |
+| Fonte atual/composição | Envio válido de catálogo; composição posterior/fonte inativa invalidam novas confirmações; snapshot válido anterior intacto |
+| Legado real | Snapshot sem hash mantém replay/leitura e bytes, não permite upgrade de modo |
+
+Não foram executadas chamadas externas, dados reais, DDL de staging/produção ou alterações nas migrations anteriores. Não confundir owner da fixture com a role runtime efetivamente usada pelas operações.
+
+### Verificações finais
+
+- Suíte backend completa Node22: **3.620 PASS,161 skipped,zero falhas**;370 suítes PASS/9 integralmente skipped. Os161 incluem19 casos de integração sob flag, executados separadamente acima, e142 skips legados já discriminados em T01. Não aprovar os142 por equivalência.
+- Typecheck e build backend/artefato: **PASS**. Guardas de controladores11/11, diff/segredos e oráculo21: PASS. Imagem Timescale local reconferida indisponível; gate amplo fica para CI, sem substituir a imagem para esconder setup.
+- CI do HEAD anterior `ff6cde0e`, run40784685792: Backend/Web/Demo/AI/governança/operação/rollout PASS; scanners associados PASS. Mobile audit e PR Gate FAIL. Esses resultados não aprovam T04 ainda não enviada. Não alterar #451/#453/#446 para ocultar a falha.
+- R4 integral FOOD07, UX B/C e UI ainda pendentes. Parecer específico anterior T03 não é revisão deste novo writer. CI do novo HEAD deve ser consultado após push.
+
+### Sequência e rollback
+
+T05 BFF/tipos é a próxima tarefa autorizada; T06 UI/portal e personas B, T07 regressões/personas C/R4 integral/CI. Não declarar FOOD07 concluída por T04. Novos snapshots exigem leitores compatíveis antes do writer; rollback para backend antigo que devolve JSON cru pode expor contexto, portanto manter reader/writer compatível ou corrigir adiante, sem descartar histórico. G06 BLOCKED; nenhuma autorização de merge/deploy/migrations externas/infra/cobrança foi inferida.

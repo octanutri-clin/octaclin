@@ -4,25 +4,25 @@
 
 Em 28/10/2026, na mensagem **“Aprovação das sugestões UX da FOOD07 e continuidade da PR #451”**, o proprietário aprovou os três conjuntos enumerados e autorizou a implementação do escopo. Isso não aprova outras sugestões implicitamente, não libera produção e não transforma personas em validação clínica.
 
-Plano vigente: [plan-pos-320-food07.md](plan-pos-320-food07.md). Checklist: [todo-pos-320-food07.md](todo-pos-320-food07.md). Q1–Q3/S1–S3 permanecem válidas. Gates de implementação estão **NOT RUN** neste checkpoint; aprovação de requisito não é PASS de teste.
+Plano vigente: [plan-pos-320-food07.md](plan-pos-320-food07.md). Checklist: [todo-pos-320-food07.md](todo-pos-320-food07.md). Q1–Q3/S1–S3 permanecem válidas. Estado observado29/10/2026, T04 código `f45d5132`: T01–T04 têm evidência técnica local no [registro](execucao-pos-320-food07.md); T05–T07, UI e UX B/C continuam pendentes. Aprovação do requisito não é aprovação irrestrita da jornada nem CI global verde.
 
 Piloto histórico, preservado sem reescrita: [PR #451](https://github.com/octanutri-clin/octaclin/pull/451), commit `0d3382b6d29dbaa297227cd648021daf61117ea4`, diretório `docs/agents/ux/reports/FOOD07-A-2026-10-28/`. Fonte avaliada no piloto: `9dd9bd6d`. Os relatórios são estáticos e sínteses editoriais de duas instâncias reais, não pesquisa com usuários ou UI executada.
 
-## Requisitos e provas futuras
+## Requisitos e provas por superfície
 
 | IDs | Decisão humana atual | Critério objetivo | Tarefa / prova esperada | Execução |
 | --- | --- | --- | --- | --- |
-| NUX-01 | APROVADO | Energia e quatro indicadores (energia/proteína/carboidrato/gordura) rotulados como totais para a quantidade solicitada, sobre pesos efetivos; ausências permanecem desconhecidas por indicador | T01/T03 domínio + T06 tela; 1/1,5/2,5 porções nas duas bases, nutriente ausente e arredondamento | NOT RUN |
-| NUX-02 | APROVADO | Antes/depois explica reinterpretação, não conversão; confirmar mantém números; cancelar não muda base/itens | T06 interação e CAS T02 | NOT RUN |
-| NUX-04 | APROVADO | Origem quando houver captura, receita/versão, base, quantidade e destino presentes na conferência; não inferir base | T06 cadastro/captura/aplicação e resposta tardia/PA07 | NOT RUN |
-| NUX-05 | APROVADO | Lote de até dez com resumo por item; corrigir linha preserva as demais; falha impede envio parcial | T04 transação/rollback + T06 formulário/lote | NOT RUN |
-| NUX-03, PUX-01 | APROVADO | Instruções pré-preenchidas e editáveis só na cópia; quantidades ao lado; conferência explícita por receita porcionada; nenhuma reescrita automática | T04 DTO/serviço/snapshot cifrado/idempotência + T05 BFF + T06 UI | NOT RUN |
-| NUX-03, PUX-01 — segurança | APROVADO | Mesma chave/texto diferente dá 409, sem novas entregas; snapshot e biblioteca anteriores intactos; texto e confirmação não aparecem em logs/auditoria | T04 PostgreSQL/RLS, rollback, replay após edição da biblioteca e agendamento | NOT RUN |
-| PUX-02 | APROVADO | “Os ingredientes abaixo já estão nas quantidades para X porções”; rendimento original secundário; sem segunda multiplicação | T06 portal nos três exemplos, com/sem rendimento conhecido | NOT RUN |
-| PUX-03 | APROVADO | Medida/peso agrupados somente se conversão daquela preparação for confiável; sem densidade inferida | T01/T06 conversão disponível/ausente/incompatível | NOT RUN |
+| NUX-01 | APROVADO | Energia e quatro indicadores (energia/proteína/carboidrato/gordura) rotulados como totais para a quantidade solicitada, sobre pesos efetivos; ausências permanecem desconhecidas por indicador | T01/T03 domínio + T06 tela; 1/1,5/2,5 porções nas duas bases, nutriente ausente e arredondamento | PASS backend T01/T03; UI T06 NOT RUN |
+| NUX-02 | APROVADO | Antes/depois explica reinterpretação, não conversão; confirmar mantém números; cancelar não muda base/itens | T06 interação e CAS T02 | CAS backend PASS T02; interação T06 NOT RUN |
+| NUX-04 | APROVADO | Origem quando houver captura, receita/versão, base, quantidade e destino presentes na conferência; não inferir base | T06 cadastro/captura/aplicação e resposta tardia/PA07 | Resposta/base backend PASS; jornada T06 NOT RUN |
+| NUX-05 | APROVADO | Lote de até dez com resumo por item; corrigir linha preserva as demais; falha impede envio parcial | T04 transação/rollback + T06 formulário/lote | Rollback/lote backend PASS T04; UI T06 NOT RUN |
+| NUX-03, PUX-01 | APROVADO | Instruções pré-preenchidas e editáveis só na cópia; quantidades ao lado; conferência explícita por receita porcionada; nenhuma reescrita automática | T04 DTO/serviço/snapshot cifrado/idempotência + T05 BFF + T06 UI | PASS backend T04; BFF/UI NOT RUN |
+| NUX-03, PUX-01 — segurança | APROVADO | Mesma chave/texto diferente dá 409, sem novas entregas; snapshot e biblioteca anteriores intactos; texto e confirmação não aparecem em logs/auditoria | T04 PostgreSQL/RLS, rollback, replay após edição da biblioteca e agendamento | PASS local T04/PG19; CI/R4 integral pendentes |
+| PUX-02 | APROVADO | “Os ingredientes abaixo já estão nas quantidades para X porções”; rendimento original secundário; sem segunda multiplicação | T06 portal nos três exemplos, com/sem rendimento conhecido | Payload de porções PASS T04; UI T06 NOT RUN |
+| PUX-03 | APROVADO | Medida/peso agrupados somente se conversão daquela preparação for confiável; sem densidade inferida | T01/T06 conversão disponível/ausente/incompatível | Preservação quantitativa PASS T01; UI T06 NOT RUN |
 | PUX-05 | APROVADO | pt-BR, precisão interna intacta, ingrediente/número/unidade associados; teclado, texto/zoom 200%, responsividade e avaliação assistiva proporcionais | T06 Playwright desktop/mobile/Axe, foco; teste assistivo real identificado ou limitação explícita, sem falso PASS | NOT RUN |
-| PUX-04 | APROVADO com limite de segurança | Mensagem genérica e retorno à lista; 404 indistinguível sem revelar existência/status de receita de outro paciente | T04/T05 negativo authz + T06 mensagem/ação | NOT RUN |
-| NUX-06 | Preservar semântica já existente | Reenvio imediato substitui cópia ativa anterior; agendado substitui ao ativar; versões anteriores não viram múltiplas cópias ativas | T04 regressão Fase 310/worker/portal | NOT RUN |
+| PUX-04 | APROVADO com limite de segurança | Mensagem genérica e retorno à lista; 404 indistinguível sem revelar existência/status de receita de outro paciente | T04/T05 negativo authz + T06 mensagem/ação | Negativos backend PASS; BFF/mensagem UI NOT RUN |
+| NUX-06 | Preservar semântica já existente | Reenvio imediato substitui cópia ativa anterior; agendado substitui ao ativar; versões anteriores não viram múltiplas cópias ativas | T04 regressão Fase 310/worker/portal | PASS T04/worker real descartável; portal UI NOT RUN |
 | PUX-06 | BACKLOG, não requisito desta entrega | Só avaliar continuidade após login se auditoria Fase 310 comprovar gap; sem redirect novo nesta fase | Fora de T01–T07; futuro planejamento próprio | NOT RUN / fora do escopo |
 
 ## Cenário sintético comum
@@ -39,7 +39,7 @@ Composições sintéticas por 100 g: A = 100 kcal, 10 g proteínas, 10 g carboid
 
 Texto original: “Misture 500 g de A com 200 g de B”; preparo 20 minutos. Para o envio de 1,5 porções, profissional adapta a cópia para “Misture 187,5 g de A com 75 g de B” e confirma conferência; receita da biblioteca segue com texto original, tempo não é escalado. Os testes não atribuem compreensão automática de texto livre ao backend.
 
-## Compatibilidade e limites identificados antes do runtime
+## Diagnóstico original de planejamento — histórico, implementações no registro
 
 1. **Snapshot:** `{nome,conteudo,versao}` já é cifrado; instruções personalizadas ficam em `conteudo.instrucoes` da cópia, contexto mínimo interno versionado registra comando e conferência. Sem tabela extra para texto. Leitura pública passa por allowlist antes do writer novo; versões antigas não são reescritas.
 2. **Idempotência:** comparação atual cobre receita/versão/canais/agendamento, não texto/porções. Extensão aprovada exige hash canônico e replay usando comando congelado, não biblioteca viva. Payload antigo sem personalização continua compatível; mesma chave antiga não pode ganhar personalização.
@@ -47,7 +47,7 @@ Texto original: “Misture 500 g de A com 200 g de B”; preparo 20 minutos. Par
 4. **Nutrientes:** DTO legado de composição manual exige energia e três macros; exibir ausência em uma projeção de prévia não autoriza persistir composição inválida ou flexibilizar esse DTO. Usar fontes existentes e resumo parcial sem completar com zero.
 5. **Rollback:** depois de gravar contexto novo, backend antigo que retorna snapshot cru não é rollback seguro. Usar reader/writer compatível ou correção adiante; preservar histórico cifrado. G06 separado, sem operação externa.
 
-Não foi identificada incompatibilidade que exija nova decisão de produto. Se evidência nova exigir alterar esses contratos, relatar antes da alteração. Migrations seguem candidatas até conferência da numeração e somente teste descartável autorizado.
+Não foi identificada incompatibilidade que exija nova decisão de produto. Se evidência nova exigir alterar esses contratos, relatar antes da alteração. Migration1080 criada/registrada e testada somente em ambiente descartável/CI; nenhuma aplicação externa. Conferir numeração e compatibilidade antes de futura integração.
 
 ## Etapas das personas e conclusão
 

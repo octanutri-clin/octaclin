@@ -207,14 +207,17 @@ Criar `aplicacao/servico-porcionamento-receita.ts`/spec; modificar módulo/contr
 
 ### T04 — compartilhamento porcionado e snapshot independente
 
+PASS técnico local específico no código `f45d5132`, em29/10/2026; ver registro de execução. Sem ativação nem prova de CI do delta por resultados históricos.
+
 Modificar `aplicacao/servico-compartilhamento-receitas.ts`, DTO compartilhamento e specs; criar `aplicacao/snapshot-compartilhamento-receita.ts`/spec; ampliar integração Postgres real de T02. Consome T01/T03 e transação310.
 
-- [ ] RED: preview1,5 confirmado gera quantidades congeladas corretas, tags/contexto interno ausentes do HTTP; histórico antigo igual; edição posterior da biblioteca não altera share; worker agendado não recalcula.
-- [ ] RED: lote misto modos legacy/porcionado, até10, sem IDs duplicados/extras; versões/fingerprint stale, fonte/consentimento/carteira revogados; uma falha não deixa share/entrega parcial.
-- [ ] RED: replay idêntico mantém UUID/ciphertext/entregas; mesma chave com porção diferente ou trocar modo recebe409; legado sem hash não aceita upgrade de modo; compare pedido original sem Date.now variável.
-- [ ] RED NUX-03/PUX-01: texto personalizado e conferência obrigatória por item, omissão vs original explícito, string vazia/null/4.000/4.001 caracteres; mesma chave/texto diferente → 409 e nenhuma escrita; edição da biblioteca após envio/retry não altera snapshot nem semântica da omissão; agendamento congela texto. Provar biblioteca e shares anteriores byte a byte intactos, rollback integral em erro do lote.
-- [ ] RED Postgres com contenção controlada: editar/compartilhar, lotes recíprocos com fontes em ordem inversa, transferência do paciente e revogação; locks ordenados, autorização transacional e rollback. Inspecionar linhas e bytes cifrados após rejeição.
-- [ ] GREEN serviço/snapshot/descartável/regressões310; commit. Não ampliar regra de acesso a pacientes.
+- [x] RED/GREEN: preview1,5 confirmado gera quantidades congeladas corretas, tags/contexto interno ausentes do HTTP; histórico antigo igual; edição posterior da biblioteca não altera share; worker agendado não recalcula.
+- [x] RED/GREEN: lote misto modos legacy/porcionado, até10, sem IDs duplicados/extras; versões/fingerprint stale, fonte/consentimento/carteira revogados; uma falha não deixa share/entrega parcial.
+- [x] RED/GREEN: replay idêntico mantém UUID/ciphertext/entregas; mesma chave com porção diferente ou trocar modo recebe409; legado sem hash não aceita upgrade de modo; compare pedido original sem Date.now variável.
+- [x] RED/GREEN NUX-03/PUX-01: texto personalizado e conferência obrigatória por item, omissão vs original explícito, string vazia/null/4.000/4.001 caracteres; mesma chave/texto diferente → 409 e nenhuma escrita; edição da biblioteca após envio/retry não altera snapshot nem semântica da omissão; agendamento congela texto. Provar biblioteca e shares anteriores byte a byte intactos, rollback integral em erro do lote.
+- [x] RED/GREEN Postgres com contenção controlada: editar/compartilhar, lotes recíprocos com fontes em ordem inversa, transferência do paciente e revogação; locks ordenados, autorização transacional e rollback. Inspecionar linhas e bytes cifrados após rejeição.
+- [x] GREEN local serviço/snapshot/PostgreSQL19/19/regressão/backend completo/typecheck/build; CI após commit. Sem ampliação de permissões. R4 integral e UI/BFF ainda nas tarefas seguintes.
+- Falha real na retirada durante transferência também corrigida com RED/GREEN PostgreSQL: lock de paciente antes de reler/alterar share, mantendo quem pode retirar e o contrato310.
 
 ### T05 — BFF e contratos tipados
 
