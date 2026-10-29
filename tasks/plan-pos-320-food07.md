@@ -242,7 +242,7 @@ Modificar componentes `biblioteca-receitas-nutricionais.tsx`/`receitas-compartil
 
 - [x] Regressões locais T06/PA07 concluídas em Node22; matriz de cobertura e limites registrados no relatório de execução. T01–T06 têm evidências específicas; skips de banco continuam identificados, sem presumir que mocks substituam RLS.
 - [x] R4 independente estática integral FOOD07, sem achados materiais; não executou testes.
-- [x] CI/scanners executados no HEAD `166cc03969c4fd351d1aa5d46db6201e2182c753`: Backend/Web/Demo/AI, governança, rollout/operação, CodeQL, Semgrep, Trivy e Dependency Review PASS; Mobile Expo e PR Gate FAIL pelo audit da base (`deepmerge@4.3.1`, `node-forge`); Provenance SBOM SKIPPED.
+- [x] CI/scanners executados no HEAD `a6659204cdc64e50b1a1841ad6bf7281096da3b9`: Backend/Web/Demo/AI, governança, rollout/operação, CodeQL, Semgrep, Trivy e Dependency Review PASS; Mobile Expo e PR Gate FAIL por três advisories, incluindo `decode-uri-component`; Provenance SBOM SKIPPED.
 - [ ] Depois da integração autorizada da correção Mobile #453 na base, reexecutar Mobile/PR Gate no HEAD atualizado e confirmar checks. PR #452 permanece Draft. Sem merge, migration externa, deploy, infra, cobrança ou FOOD05-MDL. Revisar composição com #446 separadamente sem alterar PR aprovada.
 
 ## Review Focus — entradas com cobertura obrigatória
