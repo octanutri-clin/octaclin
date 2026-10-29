@@ -10,6 +10,8 @@ import { ReceitaNutricionalOrm } from '../infraestrutura/receita-nutricional.orm
 import { CompartilhamentoReceitaNutricionalOrm } from '../infraestrutura/compartilhamento-receita-nutricional.orm';
 import { EntregaCompartilhamentoReceitaOrm } from '../infraestrutura/entrega-compartilhamento-receita.orm';
 import { PreferenciaCompartilhamentoReceitaOrm } from '../infraestrutura/preferencia-compartilhamento-receita.orm';
+import { ServicoReceitasNutricionais } from './servico-receitas-nutricionais';
+import { ServicoPorcionamentoReceita } from './servico-porcionamento-receita';
 import { ServicoCompartilhamentoReceitas } from './servico-compartilhamento-receitas';
 
 const T = '10000000-0000-4000-8000-000000000001', U = '10000000-0000-4000-8000-000000000002', P = '10000000-0000-4000-8000-000000000003';
@@ -44,7 +46,7 @@ describe('FOOD07 — fronteira pública antes do writer de metadados', () => {
       const repo = repos.get(entidade); if (!repo) throw new Error('Repositório não esperado no cenário'); return repo;
     } } as unknown as EntityManager;
     const executor = { executar: async (_t: string, fn: (g: EntityManager) => Promise<unknown>) => fn(manager) };
-    servico = new ServicoCompartilhamentoReceitas(executor as unknown as ExecutorTenant, crypto);
+    servico = new ServicoCompartilhamentoReceitas(executor as unknown as ExecutorTenant, crypto, new ServicoPorcionamentoReceita(executor as unknown as ExecutorTenant, new ServicoReceitasNutricionais(executor as unknown as ExecutorTenant, crypto)));
   });
   it('não inclui tags/base/contexto interno na resposta ao paciente nem reescreve o snapshot', async () => {
     const antes = Buffer.from(share.snapshotCriptografado);
