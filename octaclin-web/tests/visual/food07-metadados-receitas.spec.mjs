@@ -128,7 +128,16 @@ test('FOOD07 portal comunica quantidades ajustadas sem repetir o texto original'
   await preparar(context, { portal: true });
   await page.setViewportSize({ width: 320, height: 740 });
   await page.goto('/portal/receitas');
-  await page.addStyleTag({ content: 'html { font-size: 200% !important; }' });
+  await page.evaluate(() => {
+    const portador = Array.from(document.querySelectorAll('script, style, link')).find(
+      (elemento) => elemento.nonce
+    );
+    if (!portador) throw new Error('Nonce CSP não encontrado para simular ampliação de texto.');
+    const estilo = document.createElement('style');
+    estilo.nonce = portador.nonce;
+    estilo.textContent = 'html { font-size: 200% !important; }';
+    document.head.appendChild(estilo);
+  });
   await page.getByRole('button', { name: 'Abrir receita' }).click();
   await expect(page.getByText('Os ingredientes abaixo já estão nas quantidades para 1,5 porções.', { exact: true })).toBeVisible();
   await expect(page.getByText(/A preparação original rendia 4 porções/)).toBeVisible();
