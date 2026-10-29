@@ -240,3 +240,16 @@ Não foram executadas chamadas externas, dados reais, DDL de staging/produção 
 ### Sequência e rollback
 
 T05 BFF/tipos é a próxima tarefa autorizada; T06 UI/portal e personas B, T07 regressões/personas C/R4 integral/CI. Não declarar FOOD07 concluída por T04. Novos snapshots exigem leitores compatíveis antes do writer; rollback para backend antigo que devolve JSON cru pode expor contexto, portanto manter reader/writer compatível ou corrigir adiante, sem descartar histórico. G06 BLOCKED; nenhuma autorização de merge/deploy/migrations externas/infra/cobrança foi inferida.
+
+## T05 — BFF e contratos Web, PASS técnico local específico (29/10/2026)
+
+Reconfirmados branch/HEAD6778ab63 e delta intencional; nenhuma perda/alteração de trabalho externo. Node22.21.1/pnpm11.25.0; Web instalada `--frozen-lockfile --offline`, sem dependência, symlink entre worktrees ou lockfile novo.
+
+- Novos POST consulta/prévia e share estendido reutilizam `exigirPermissaoBff`/`requisitarBackendAutenticado`; autenticação precede leitura do body. Query rejeitada, request limitado antes de alocar corpo completo, respostas privadas/no-store. Tipos separados de preview parcial não enfraquecem DTO manual legado. GET/CRUD legados preservados.
+- Allowlist recursiva remove contexto/hash interno/ciphertext e campos não públicos; preview mantém nutrientes ausentes, dados do alimento/preparo e código/versão de fonte necessários à conferência, não hashRegistro. Resposta inválida/grande do backend falha503 genérico;409 não ecoa conteúdo. Tags vão somente no body, nunca query.
+- RED funcional:3 casos falhavam no código anterior (campo tenant adulterado aceito, body sem limite, cliente POST novo ausente). Erro inicial de tipo da constante de micros não foi RED. GREEN70/70 casos de BFF, preservando60 anteriores.
+- Um teste positivo máximo adicional reproduziu69/70:256KiB recusava lote válido com10 textos de4000 caracteres suplementares escapados em JSON. Limite512KiB derivado do tamanho máximo do contrato, mantendo teste negativo acima dele. Consulta/prévia permanecem8KiB. Resposta prévia limitada16MiB para100 ingredientes/20 alternativas e fontes; demais512KiB. Não alterada a política backend/global.
+- `pnpm --dir octaclin-web test:authz`: **332/332 PASS,26 scripts,zero falhas/skips/cancelamentos**,exit0. `pnpm --dir octaclin-web typecheck`:PASS. `pnpm --dir octaclin-web lint`:exit0,zero erros/70 avisos em arquivos não alterados. `git diff --check` e `pnpm security:secrets`:PASS. Logs temporários `t05-*`, não versionar artefatos.
+- Build Web local/CI do delta ainda NOT RUN; UI/Playwright/UX B/C e R4 integral pendentes. Não usar resultados do HEAD T04 para comprovar T05. CI T04 Backend/Web PASS e scanners PASS, Mobile audit FAIL; smoke ainda em acompanhamento no último checkpoint. Manter falha separada #453 e G06 BLOCKED.
+
+Nenhum banco/infra externa, merge/deploy ou mudança da #446/#451/#453. Continuar T06 conforme autorização.

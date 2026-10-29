@@ -1,4 +1,4 @@
-# FOOD07 — handoff: T01–T04, BFF e interface seguintes
+# FOOD07 — handoff: T01–T05, interface seguinte
 
 ## Branch/base
 
@@ -40,6 +40,10 @@ Histórico documental até ea2bd1d5, substituído quanto à execução por T01 a
 
 ## Próxima ação
 
-Conferir branch/HEAD/diff e CI da PR Draft #452; continuar T05 (BFF/tipos/body limits/no-store/autorização), depois T06 (UI/portal/UX B) e T07 (regressões/UX C/R4 integral/CI). Usar o contrato de `snapshot-compartilhamento-receita.ts` e a prévia realT03. Não refazer T01–T04 nem mexer #451/#446/#453 para esconder auditoria.
+Conferir branch/HEAD/diff e CI da PR Draft #452; T05 BFF concluída localmente; continuar T06 (UI/portal/UX B) e T07 (regressões/UX C/R4 integral/CI). Usar o contrato de `snapshot-compartilhamento-receita.ts` e a prévia realT03. Não refazer T01–T04 nem mexer #451/#446/#453 para esconder auditoria.
 
-Ferramentas temporárias anteriores desapareceram na retomada: Node22.21.1 persistente em `/workspace/.toolchains/food01`, pnpm11.25.0 verificado em `/tmp/octaclin-food07-tools/bin`. Backend node_modules preservado; Web ainda sem node_modules nesta worktree. Espaço ~237MB; store pnpm contém hardlinks reutilizáveis, conferir orçamento antes de instalação frozen necessária, sem symlink entre worktrees/alteração de políticas ou apagar trabalho alheio. Docker PG15 cached/socket local, Timescale local indisponível; CI anterior executou gates oficiais. G06 BLOCKED. Sem FOOD05-MDL/FOOD08, merge/deploy/DDL externo/infra/cobrança.
+Ferramentas temporárias anteriores desapareceram na retomada: Node22.21.1 persistente em `/workspace/.toolchains/food01`, pnpm11.25.0 verificado em `/tmp/octaclin-food07-tools/bin`. Backend node_modules preservado; Web instalada frozen/offline com hardlinks do store, sem alterações em dependências/lockfile. Espaço ~237MB; store pnpm contém hardlinks reutilizáveis, conferir orçamento antes de instalação frozen necessária, sem symlink entre worktrees/alteração de políticas ou apagar trabalho alheio. Docker PG15 cached/socket local, Timescale local indisponível; CI anterior executou gates oficiais. G06 BLOCKED. Sem FOOD05-MDL/FOOD08, merge/deploy/DDL externo/infra/cobrança.
+
+## Retomada T05 —29/10/2026
+
+BFFs consulta/prévia/share com sessão compartilhada, limites, projeções explícitas e private/no-store; clientes POST/body com AbortSignal. RED3 falhas funcionais, GREEN70/70; suíte Web autorização332/332 em26 scripts, zero skipped/falhas, exit0; typecheck PASS. Lint zero erros/70 avisos fora dos arquivos alterados. Orçamento de request do lote512KiB, confirmado com10 instruções válidas de4000 caracteres suplementares inclusive JSON escapado (256KiB rejeitava caso válido). Build local/CI do delta não comprovados ainda. Espaço ~220MB; navegadores Playwright cached. Próximo passo: T06 testes funcionais de interface reais desktop/mobile antes do código, metadados/prévia/lote/portal e personas B. Não usar CI T04 como aprovação T05.

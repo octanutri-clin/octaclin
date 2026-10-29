@@ -221,10 +221,12 @@ Modificar `aplicacao/servico-compartilhamento-receitas.ts`, DTO compartilhamento
 
 ### T05 — BFF e contratos tipados
 
+PASS técnico local específico em29/10/2026: 70/70 BFF, suíte Web `test:authz`332/332 (26 scripts), typecheck PASS em Node22.21.1; lint zero erros/70 avisos fora dos arquivos alterados. Build/CI do delta e UI permanecem pendentes. Ver registro de execução.
+
 Criar `octaclin-web/app/api/planos-alimentares/receitas/consulta/route.ts` e `[receitaId]/previa-porcionamento/route.ts`; modificar `lib/plano-alimentar-api.ts`, `scripts/test-planos-alimentares-bff.mjs` e `scripts/planos-alimentares-bff.spec.ts`; projetar respostas por allowlist backend.
 
-- [ ] RED sem sessão/perm, body inválido/>8KiB para consulta/prévia, query arbitrária e metadata interna injetada; private/no-store. Receitas legacy GET/PUT/POST/DELETE continuam.
-- [ ] GREEN cliente `consultarReceitasNutricionais`, `preverPorcionamentoReceita` e envio estendido; BFF/authz/typecheck; commit. O novo campo do share não carrega ciphertext ou capability clínica no navegador.
+- [x] RED sem sessão/perm, body inválido/>8KiB para consulta/prévia, query arbitrária e metadata interna injetada; private/no-store. Receitas legacy GET/PUT/POST/DELETE continuam.
+- [x] GREEN cliente `consultarReceitasNutricionais`, `preverPorcionamentoReceita` e envio estendido; BFF/authz/typecheck; commit. O novo campo do share não carrega ciphertext ou capability clínica no navegador.
 
 ### T06 — biblioteca, prévia e portal
 

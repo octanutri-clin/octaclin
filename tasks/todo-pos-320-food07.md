@@ -23,9 +23,9 @@ Contrato vigente: [plano](plan-pos-320-food07.md). [Matriz de aceite e aprovaç�
 - [ ] Avaliação etapa B das duas personas com interface real.
 - [ ] Avaliação etapa C das duas personas após testes, antes da conclusão da PR.
 
-## Execução autorizada — checkpoint T04
+## Execução autorizada — checkpoint T05
 
-T01–T03 preservadas. T04 código `f45d5132` **PASS técnico local específico**: envio porcionado/instruções/hash semântico, leitores/projeções e retirada transacional; **3.620 PASS/161 skipped**, typecheck/build PASS, matriz de serviço48/48 e PostgreSQL/RLS19/19. [Execução/RED/GREEN/limites](execucao-pos-320-food07.md). R4 integral, UX B/C, UI/BFF e CI do novo HEAD ainda pendentes. CI do HEAD anteriorff6cde0e: Backend/Web/Demo/scanners PASS; Mobile audit/PR Gate FAIL em fluxo separado #453. G06 BLOCKED.
+T01–T03 preservadas. T04 código `f45d5132` **PASS técnico local específico**: envio porcionado/instruções/hash semântico, leitores/projeções e retirada transacional; **3.620 PASS/161 skipped**, typecheck/build PASS, matriz de serviço48/48 e PostgreSQL/RLS19/19. [Execução/RED/GREEN/limites](execucao-pos-320-food07.md). T05 BFF:70/70, autorização Web332/332, typecheck PASS, lint zero erros/70 avisos externos ao delta. R4 integral, UX B/C, UI e CI do novo HEAD ainda pendentes. CI do HEAD anteriorff6cde0e: Backend/Web/Demo/scanners PASS; Mobile audit/PR Gate FAIL em fluxo separado #453. G06 BLOCKED.
 
 | Tarefa | Entrega / critério verificável | Gate |
 | --- | --- | --- |
@@ -33,7 +33,7 @@ T01–T03 preservadas. T04 código `f45d5132` **PASS técnico local específico*
 | T02 — PASS local específico | Ciphertext+índice tenant-aware/CAS, migração aditiva, count/paginação SQL e PostgreSQL real RLS/rollback | G02 |
 | T03 — PASS local específico | Prévia server-side autorizada, fonte/versão/fingerprint, totais por quantidade e ausência por indicador, nenhuma escrita e EntityManager compartilhado | G01/G04 |
 | T04 — PASS local específico | Share com instruções específicas/conferência por item, hash do pedido completo inclusive texto, replay409 divergente, snapshots/legados/agendamento, projeção pública e concorrência transacional | G02/G04 |
-| T05 | BFF/tipos/body/authz/no-store/limites e compatibilidade GET/cliente antigo | G03/G04 |
+| T05 — PASS local específico | BFF/tipos/body/authz/no-store/limites e compatibilidade GET/cliente antigo | G03/G04 |
 | T06 | Duas bases antes/depois, origem/destino, lote corrigível, instruções ao lado de quantidades, portal pt-BR/404 seguro, erros/respostas tardias/desktop/mobile/Axe/PA07; personas B | G03 |
 | T07 | Regressões, personas C, R4 independente e CI/scanners do HEAD, PR individual Draft | G04/G05 |
 
