@@ -17,8 +17,8 @@ overrides:
   '@xmldom/xmldom@>=0.9.0 <0.9.12': 0.9.12
 
 patchedDependencies:
+  '@expo/config@57.0.9': 78e5a2e8c4015b3a20506a8cf533db5dc51ff3a1db4fa1343058d5d0851b32b3
   braces@3.0.3: 7662c889fabee63233a590fc3b8bab66e77bf80008080dd01affbaad2b1e2619
-  deepmerge@4.3.1: d3ca73d14114658325509fa5157ab914d807ab286efcf506849c3ce142882af5
   node-forge@1.4.0: b6876574a5de19521a766856b293aeae2689848c5d8dab03f93040be0a64b8b4
 
 importers:
@@ -1502,9 +1502,6 @@ packages:
     resolution: {integrity: sha512-1BiQVoK8C9gUbQU6NzAtO/tkz2qOFpEObMWpcFvhx4fYnj4Oc5yzaJN/LD36ihkVUdXyh5ZekzX+yM+ty/SrPg==}
     engines: {node: '>=14.16'}
 
-  deepmerge@4.3.1:
-    resolution: {integrity: sha512-3sUqbMEc77XqpdNO7FRyRog+eW3ph+GYCbj+rK+uYyRMuwsVy0rMiVtPn+QJlKFvWP/1PYpapqYn0Me2knFn+A==}
-    engines: {node: '>=0.10.0'}
 
   defaults@1.0.4:
     resolution: {integrity: sha512-eFuaLoy/Rxalv2kr+lqMlUnrDWV+3j4pljOIJgLIhI058IQfWJ7vXhyEIHu+HtC738klGALYxOKDO0bQP3tg8A==}
@@ -3531,7 +3528,7 @@ snapshots:
   '@expo/cli@57.0.27(@expo/dom-webview@57.0.1)(@expo/metro-runtime@57.0.16)(expo-constants@57.0.19)(expo-font@57.0.4)(expo-router@57.0.23)(expo@57.0.25)(react-dom@19.2.3(react@19.2.3))(react-native@0.86.3(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.87.1(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.2.18)(react@19.2.3)(supports-color@8.1.1))(react@19.2.3)(supports-color@8.1.1)(typescript@7.0.2)':
     dependencies:
       '@expo/code-signing-certificates': 0.0.6
-      '@expo/config': 57.0.9(supports-color@8.1.1)(typescript@7.0.2)
+      '@expo/config': 57.0.9(patch_hash=78e5a2e8c4015b3a20506a8cf533db5dc51ff3a1db4fa1343058d5d0851b32b3)(supports-color@8.1.1)(typescript@7.0.2)
       '@expo/config-plugins': 57.0.9(supports-color@8.1.1)(typescript@7.0.2)
       '@expo/devcert': 1.2.1(supports-color@8.1.1)
       '@expo/env': 2.4.3(supports-color@8.1.1)
@@ -3631,13 +3628,12 @@ snapshots:
 
   '@expo/config-types@57.0.2': {}
 
-  '@expo/config@57.0.9(supports-color@8.1.1)(typescript@7.0.2)':
+  '@expo/config@57.0.9(patch_hash=78e5a2e8c4015b3a20506a8cf533db5dc51ff3a1db4fa1343058d5d0851b32b3)(supports-color@8.1.1)(typescript@7.0.2)':
     dependencies:
       '@expo/config-plugins': 57.0.9(supports-color@8.1.1)(typescript@7.0.2)
       '@expo/config-types': 57.0.2
       '@expo/json-file': 11.0.1
       '@expo/require-utils': 57.0.5(supports-color@8.1.1)(typescript@7.0.2)
-      deepmerge: 4.3.1(patch_hash=d3ca73d14114658325509fa5157ab914d807ab286efcf506849c3ce142882af5)
       getenv: 2.0.0
       glob: 13.0.6
       resolve-workspace-root: 2.0.1
@@ -3720,7 +3716,7 @@ snapshots:
 
   '@expo/local-build-cache-provider@57.0.8(supports-color@8.1.1)(typescript@7.0.2)':
     dependencies:
-      '@expo/config': 57.0.9(supports-color@8.1.1)(typescript@7.0.2)
+      '@expo/config': 57.0.9(patch_hash=78e5a2e8c4015b3a20506a8cf533db5dc51ff3a1db4fa1343058d5d0851b32b3)(supports-color@8.1.1)(typescript@7.0.2)
       chalk: 4.1.2
     transitivePeerDependencies:
       - supports-color
@@ -3740,7 +3736,7 @@ snapshots:
       '@babel/code-frame': 7.29.7
       '@babel/core': 7.29.7(supports-color@8.1.1)
       '@babel/generator': 7.29.7
-      '@expo/config': 57.0.9(supports-color@8.1.1)(typescript@7.0.2)
+      '@expo/config': 57.0.9(patch_hash=78e5a2e8c4015b3a20506a8cf533db5dc51ff3a1db4fa1343058d5d0851b32b3)(supports-color@8.1.1)(typescript@7.0.2)
       '@expo/env': 2.4.3(supports-color@8.1.1)
       '@expo/json-file': 11.0.1
       '@expo/metro': 56.0.2(supports-color@8.1.1)
@@ -3834,7 +3830,7 @@ snapshots:
 
   '@expo/prebuild-config@57.0.16(supports-color@8.1.1)(typescript@7.0.2)':
     dependencies:
-      '@expo/config': 57.0.9(supports-color@8.1.1)(typescript@7.0.2)
+      '@expo/config': 57.0.9(patch_hash=78e5a2e8c4015b3a20506a8cf533db5dc51ff3a1db4fa1343058d5d0851b32b3)(supports-color@8.1.1)(typescript@7.0.2)
       '@expo/config-plugins': 57.0.9(supports-color@8.1.1)(typescript@7.0.2)
       '@expo/config-types': 57.0.2
       '@expo/image-utils': 0.11.5(supports-color@8.1.1)(typescript@7.0.2)
@@ -4756,7 +4752,6 @@ snapshots:
 
   decode-uri-component@0.5.0: {}
 
-  deepmerge@4.3.1(patch_hash=d3ca73d14114658325509fa5157ab914d807ab286efcf506849c3ce142882af5): {}
 
   defaults@1.0.4:
     dependencies:
@@ -4972,7 +4967,7 @@ snapshots:
     dependencies:
       '@babel/runtime': 7.29.7
       '@expo/cli': 57.0.27(@expo/dom-webview@57.0.1)(@expo/metro-runtime@57.0.16)(expo-constants@57.0.19)(expo-font@57.0.4)(expo-router@57.0.23)(expo@57.0.25)(react-dom@19.2.3(react@19.2.3))(react-native@0.86.3(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.87.1(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.2.18)(react@19.2.3)(supports-color@8.1.1))(react@19.2.3)(supports-color@8.1.1)(typescript@7.0.2)
-      '@expo/config': 57.0.9(supports-color@8.1.1)(typescript@7.0.2)
+      '@expo/config': 57.0.9(patch_hash=78e5a2e8c4015b3a20506a8cf533db5dc51ff3a1db4fa1343058d5d0851b32b3)(supports-color@8.1.1)(typescript@7.0.2)
       '@expo/config-plugins': 57.0.9(supports-color@8.1.1)(typescript@7.0.2)
       '@expo/devtools': 57.0.1(react-native@0.86.3(@babel/core@7.29.7(supports-color@8.1.1))(@react-native/metro-config@0.87.1(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(@types/react@19.2.18)(react@19.2.3)(supports-color@8.1.1))(react@19.2.3)
       '@expo/fingerprint': 0.20.13(supports-color@8.1.1)
