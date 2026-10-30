@@ -23,16 +23,16 @@ Ambiente isolado limpo em `/tmp/octaclin-mobile-453-verify`, Node **22.21.1** e 
 - Em instalação limpa frozen: `pnpm test:security` **19/19 PASS**, `pnpm test:a11y` **15/15 PASS**, `pnpm typecheck` **PASS**, `pnpm audit:security` **PASS** (backport node-forge explicitamente reconhecido) e `pnpm build:validate` **PASS** para Web/iOS/Android.
 - Expo Doctor: **18/21**, BLOCKED/FAIL por indisponibilidade de rede ao consultar Expo API/React Native Directory e por divergências de versões Expo/TypeScript já presentes no projeto; dependências não foram alteradas para mascarar esses resultados.
 - Uma instalação anterior, na worktree mantida, conservou symlinks obsoletos de `deepmerge` após a regeneração intermediária. O teste falhou nesse estado local; a instalação clean reproduzível da árvore final removeu os links e passou 19/19. A worktree original não foi limpa nem descartada.
-- **CI do novo HEAD ainda pendente.** O CI anterior `572c20c40decdddcc690b19aa12ee6ca0866e156` falhou em Mobile audit e PR Gate, como esperado antes da atualização. Seus checks de scanners restantes passaram; Mobile build foi skipped após a falha, e Provenance SBOM permaneceu skipped.
+- **CI do HEAD `b2a20d34f783d2e181e9125e01752d80c9da7944`: PASS** (`OctaClin CI` run `41115735553`, CodeQL `41115735501`, Semgrep `41115735357`, Trivy `41115735333`, Dependency Review `41115735452`). Mobile Expo, inclusive audit e export, e PR Gate passaram. Web, Backend, AI e Demo smoke foram `skipped` pelo classificador de impacto; Provenance do SBOM também ficou `skipped`. Esses skipped não são PASS.
 - Revisão independente somente leitura do delta de versão/override: **sem achados**, conferiu faixa, lock e integridade SHA-512; não executou testes.
 - Revisão independente de segurança do patch `@expo/config`: **sem bypass/regressão concreto encontrado**; os cinco testes do contrato de merge passaram na worktree limpa. Escopo estático focado nos valores JSON comuns da configuração Expo; não caracterizou getters, `Symbol.toStringTag`, espécies de arrays ou protótipos JavaScript customizados e não substitui CI da PR.
 
 ### Próximos gates
 
-1. Confirmar CI, scanners e resultado final de Rollout seguro no HEAD atualizado.
-2. Manter #453 Draft até os checks aplicáveis concluírem. Depois da integração autorizada da correção de segurança, sincronizar #452 e executar os checks próprios dela.
+1. A correção e os gates da #453 estão prontos para revisão formal; não houve merge nem deploy.
+2. Após revisão e integração autorizadas da correção, sincronizar #452 e executar os checks próprios dela.
 
-**Sem autorização para merge ou deploy.** A auditoria do código local passou, mas #453 permanece Draft até CI e revisão independente. #452 continua bloqueada até sua base incluir a correção autorizada e seus próprios gates passarem. Mobile permanece NO-GO para distribuição.
+**Sem autorização para merge ou deploy.** #453 continua Draft neste checkpoint. #452 continua bloqueada até sua base incluir a correção por integração autorizada e seus próprios gates passarem. Mobile permanece NO-GO para distribuição até a decisão de liberação aplicável.
 
 ---
 
