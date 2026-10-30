@@ -10,6 +10,9 @@ Fonte de contrato: [plano](plan-pos-320-food06.md), base `68499c15`.
       nenhuma nova dependência necessária nesta inspeção.
 - [x] Obter páginas oficiais candidatas e hashes preliminares de Health Canada.
 - [x] Identificar licença OGL no registro oficial e exceção para terceiros.
+- [x] Preparar matriz semântica de todos os 22 códigos e regras F06-CL01–08.
+- [x] Criar coletor documental sem dependências e executar oito testes sintéticos.
+- [x] Registrar nova obtenção e hashes de bytes/texto; conservar histórico anterior.
 - [ ] T01: completar contrato de contexto diário e confirmar elegibilidade.
 - [ ] T02: mapear cada código a RDA/AI e UL com unidades, origem, notas e versão.
 - [ ] T02: fechar direitos do artefato específico e ficha clínica com ratificação.

@@ -137,6 +137,24 @@ interface real e registro explícito de leitura de código versus interação.
 
 ## Gates atuais e handoff
 
+### Continuação após aprovação inicial
+
+- Ficha de regras e matriz semântica dos 22 códigos preparada em
+  [FICHA_VALIDACAO_CLINICA_FOOD06.md](../docs/product/FICHA_VALIDACAO_CLINICA_FOOD06.md).
+  É proposta de regras, ainda sem valores de referência incorporados e sem aceite
+  humano. F06-CL01–08 concentram a ratificação; não são novas decisões já aprovadas.
+- Utilitário de pesquisa reproduzível em
+  [research/food06](../research/food06/README.md); manifesto de nova obtenção
+  preserva hashes anteriores desta página como checkpoint histórico. HTML dinâmico
+  mudou hashes brutos; o novo coletor registra também hash do texto principal,
+  sem tratá-lo como validador clínico ou dataset normalizado.
+- Oito testes sintéticos do coletor: PASS. Coleta GET pública de cinco fontes:
+  PASS técnico. Não equivalem a teste de cálculo clínico, RLS ou validação científica.
+- Timezone canônico localizado em `infraestrutura/tempo/timezone-clinico.ts`,
+  incluindo `obterTimezoneClinicoDoTenant`; não criar fuso fixo novo.
+- Ficha propõe confirmação do mesmo dia para seleção combinada; confirmação
+  clínica desta regra e das restrições dos ULs ainda pendente.
+
 - Inventário: PASS documental na base indicada; não implica execução de testes.
 - Fontes/direitos: BLOCKED; candidatos e ressalvas identificados, manifesto não concluído.
 - Clínica/população: BLOCKED; respostas iniciais e ratificação detalhada pendentes.
@@ -144,7 +162,9 @@ interface real e registro explícito de leitura de código versus interação.
 - Runtime/testes/CI da FOOD06: NOT RUN; nenhum código alterado.
 - G06 externo: BLOCKED operacional, fora desta entrega.
 
-Próxima ação: registrar respostas; conferir integralmente fontes/notas/direitos,
-completar ficha de elegibilidade e só então iniciar T03 nos itens liberados.
+Próxima ação: concluir o alcance de direitos/licença por artefato e a conferência
+dos valores/faixas por revisão científica; obter ratificação clínica da ficha
+consolidada antes de iniciar T03 nos itens liberados. A coleta automatizada de
+fontes é pesquisa de T02, sem nova rota ou tabela clínica no runtime.
 Worktree original preservada, inclusive alteração preexistente em
 `octaclin-web/next-env.d.ts`. Nenhuma alteração na PR #446.
