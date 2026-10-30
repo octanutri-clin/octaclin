@@ -1643,3 +1643,26 @@ Quando uma PR envolver:
 - exposição de dado ao paciente;
 
 o Codex deve tratar fonte, versão, população aplicável e limitações como parte obrigatória da implementação.
+
+---
+
+## Adendo de planejamento — FOOD06/FOOD08 (2026-10-30)
+
+A Fase FOOD07 está sendo desenvolvida na PR #452 em escopo aprovado mais amplo
+que o descrito historicamente nesta matriz como “somente gap residual da
+Fase 310”. A PR continua Draft e sua implementação ainda não integra a `main`;
+este adendo não declara FOOD07 concluída nem atualiza retroativamente seus
+gates.
+
+A sequência recomendada após resolver a fila de segurança/FOOD07 é: planejar
+FOOD06 primeiro, incluindo fontes clínicas, direitos, população e contrato de
+dados; planejar FOOD08 separadamente para publicação voluntária de receitas
+entre organizações. Os critérios, riscos, referências avaliadas, decisões
+humanas pendentes e condições de início estão em
+[`05_Plano_Sequencia_FOOD06_FOOD08_2026-10-30.md`](05_Plano_Sequencia_FOOD06_FOOD08_2026-10-30.md).
+
+Este adendo registra **planejamento apenas**. Não autoriza classificador,
+comparação clínica, publicação pública, migration, merge, deploy ou mudança em
+ambiente externo. FOOD06 depende de ratificação clínica e de direitos de uso;
+FOOD08 depende de decisões de publicação, direitos de conteúdo, privacidade e
+moderação. O NO-GO da TBCA permanece sem alteração.
