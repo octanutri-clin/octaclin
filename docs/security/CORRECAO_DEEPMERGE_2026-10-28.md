@@ -2,36 +2,37 @@
 
 > O checkpoint abaixo substitui a conclusão operacional histórica registrada para a primeira estratégia. As etapas antigas foram preservadas ao final para rastreabilidade.
 
-## Estado atual — PR #453 Draft, gates parciais
+## Estado atual — PR #453 Draft, correção local validada; CI/R4 pendentes
 
 **`deepmerge@4.3.1` foi removido do grafo instalado** por um patch versionado de `@expo/config@57.0.9`. A resolução a partir do consumidor Expo falha com `MODULE_NOT_FOUND`; o lockfile não contém mais o pacote. Nenhum waiver, waiver de auditoria, downgrade ou mudança de severidade foi usado.
 
-A auditoria global está **BLOCKED** por um advisory High recém-publicado, `GHSA-qr28-fpjm-wq7f`, que afeta `decode-uri-component@0.5.0` (`<=0.5.0`, primeira versão corrigida `0.5.1`). O pacote corrigido foi publicado em **29/10/2026 16:41:28 UTC**, dentro do cooldown obrigatório de 24 horas de `minimumReleaseAgeStrict: 1440`. Não foi atualizado prematuramente. A auditoria também reporta `GHSA-86w9-cpqp-85rv` em `node-forge@1.4.0`, que segue tratado apenas pelo backport e testes já aceitos pela política existente; a combinação atual reprova `audit:security`. Não se acrescentou exceção para `decode-uri-component`.
+A janela obrigatória de 24 horas expirou em **30/10/2026 16:41:28 UTC**. O override foi atualizado de `decode-uri-component@<0.5.0: 0.5.0` para `<0.5.1: 0.5.1` no workspace Mobile, e o lockfile agora resolve `query-string` para `decode-uri-component@0.5.1` com a integridade publicada no registry. O advisory `GHSA-qr28-fpjm-wq7f` deixou de aparecer no audit. A auditoria do projeto conclui com código 0 aceitando somente o backport local validado existente de `node-forge@1.4.0` (`GHSA-86w9-cpqp-85rv`); isso continua registrado como mitigação temporária, não como ausência de advisory upstream. Não foi incluído waiver, supressão ou alteração de severidade.
 
 A solução candidata altera só o consumidor Expo: substitui as duas chamadas a `deepmerge` em `mergeConfigModifications` por um merge recursivo local para valores de configuração JSON-like, preservando concatenação de arrays e usando propriedades de dados próprias para que `__proto__` não chame setter herdado. Mantém a licença MIT e o aviso de copyright de `@expo/config`; não copia código de `deepmerge`. A alteração é específica a `@expo/config@57.0.9`; upgrades desse pacote exigirão reaplicar/retirar o patch e repetir a compatibilidade.
 
 ### RED/GREEN e validação local descartável
 
-Ambiente isolado em `/tmp`, Node **22.23.4** e pnpm **11.25.0**. Nenhuma dependência, migration ou arquivo de runtime da aplicação foi alterado fora de `octaclin-mobile`.
+Ambiente isolado limpo em `/tmp/octaclin-mobile-453-verify`, Node **22.21.1** e pnpm **11.25.0**. Nenhuma dependência direta foi adicionada, migration ou configuração externa foi alterada.
 
 - **RED de grafo:** o novo teste de que Expo não resolve `deepmerge` falhou no estado original (`Missing expected exception`).
 - **RED de semântica:** a primeira versão do substituto falhou nos casos de concatenação de arrays aninhados e de propriedades de plugin. Corrigida para combinar arrays recursivamente.
 - **GREEN:** testes de segurança **19/19**, acessibilidade estática **15/15**, typecheck PASS, frozen install PASS e export Expo completo para Web/iOS/Android PASS.
 - Teste de integração atravessa `@expo/config.modifyConfigAsync` com fixtures sintéticas e `dryRun`, incluindo merge recursivo, arrays, propriedades de plugin, `__proto__`, `constructor`, `prototype`, configuração com e sem objeto `expo` e ausência de gravação.
 - Comparação suplementar com entradas JSON-like determinísticas: **100/100** resultados iguais ao comportamento padrão anterior do deepmerge. É evidência exploratória local; o gerador/oráculo usado em `/tmp` não faz parte do repositório e esse número não substitui os testes versionados.
-- `pnpm audit:security`: **FAIL** pelos advisories `GHSA-qr28-fpjm-wq7f` (`decode-uri-component@0.5.0`) e `GHSA-86w9-cpqp-85rv` (`node-forge@1.4.0`); não ocultar essa falha. No CI do HEAD `79416b29c408c1153704c8107ac6595b146c7ba8`, os passos anteriores do Mobile passaram: instalação frozen, licenças, typecheck, Expo Doctor (21/21), segurança (19/19) e acessibilidade (15/15). O job Mobile falhou no passo `audit:security`, e o PR Gate falhou em consequência.
-- No mesmo CI, Governança, CodeQL (JavaScript/TypeScript e Python), Semgrep, Trivy, Dependency Review e builds/identidade das imagens backend, IA e Web passaram. Web, backend, AI e demo smoke foram `skipped` pelo classificador de impacto; não contam como PASS. Provenance do SBOM foi `skipped`. O job Rollout seguro ainda aparece como pendente na consulta de checks, embora todos os seus passos listados estejam concluídos com sucesso; seu estado final precisa ser reconfirmado.
-- A revisão independente do patch atual de `@expo/config` ainda não ocorreu. As revisões registradas abaixo dizem respeito à estratégia anterior e não substituem esta revisão.
+- **RED/GREEN da auditoria:** no baseline, `pnpm audit:security` falhou pelos advisories de decode-uri-component e pelo backport node-forge. Com a versão corrigida, passou e informou somente a mitigação local validada de node-forge.
+- Em instalação limpa frozen: `pnpm test:security` **19/19 PASS**, `pnpm test:a11y` **15/15 PASS**, `pnpm typecheck` **PASS**, `pnpm audit:security` **PASS** (backport node-forge explicitamente reconhecido) e `pnpm build:validate` **PASS** para Web/iOS/Android.
+- Expo Doctor: **18/21**, BLOCKED/FAIL por indisponibilidade de rede ao consultar Expo API/React Native Directory e por divergências de versões Expo/TypeScript já presentes no projeto; dependências não foram alteradas para mascarar esses resultados.
+- Uma instalação anterior, na worktree mantida, conservou symlinks obsoletos de `deepmerge` após a regeneração intermediária. O teste falhou nesse estado local; a instalação clean reproduzível da árvore final removeu os links e passou 19/19. A worktree original não foi limpa nem descartada.
+- **CI do novo HEAD ainda pendente.** O CI anterior `572c20c40decdddcc690b19aa12ee6ca0866e156` falhou em Mobile audit e PR Gate, como esperado antes da atualização. Seus checks de scanners restantes passaram; Mobile build foi skipped após a falha, e Provenance SBOM permaneceu skipped.
+- Revisão independente somente leitura do delta de versão/override: **sem achados**, conferiu faixa, lock e integridade SHA-512; não executou testes. A R4 independente do patch atual `@expo/config` segue pendente e não é substituída por essa revisão estreita.
 
 ### Próximos gates
 
-1. Após **30/10/2026 16:41:28 UTC**, confirmar que `decode-uri-component@0.5.1` atende ao cooldown de 24 horas e atualizar o override de segurança existente sem waiver; então regenerar o lockfile sob as políticas atuais.
-2. Reexecutar instalação frozen, audit, testes Mobile, typecheck, Expo Doctor e export.
-3. Reconferir o resultado final do job Rollout seguro e solicitar revisão independente do patch atual de `@expo/config`.
-4. Executar novamente CI/scanners no novo HEAD. Manter a #453 Draft até audit, gates e revisão independente passarem.
-5. Manter a #452 Draft: ela não herda esta alteração até a integração autorizada da #453 na base e sua própria CI no HEAD atualizado.
+1. Concluir a R4 independente do patch atual de `@expo/config`.
+2. Commit/push da correção na branch existente #453 e confirmar CI, scanners e resultado final de Rollout seguro no novo HEAD.
+3. Manter #453 Draft até a revisão e CI aplicável concluírem. Depois da integração autorizada da correção de segurança, sincronizar #452 e executar os checks próprios dela.
 
-**Sem autorização para merge ou deploy.** O app Mobile continua NO-GO até audit e CI aprovarem; #452 e #453 permanecem Draft.
+**Sem autorização para merge ou deploy.** A auditoria do código local passou, mas #453 permanece Draft até CI e revisão independente. #452 continua bloqueada até sua base incluir a correção autorizada e seus próprios gates passarem. Mobile permanece NO-GO para distribuição.
 
 ---
 
