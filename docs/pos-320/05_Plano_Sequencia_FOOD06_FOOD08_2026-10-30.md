@@ -2,7 +2,7 @@
 
 **Atualizado em:** 2026-10-30
 
-**Base consultada:** `main` em `bcb68250` e estado das PRs #451, #452 e #453 consultado no GitHub nesta rodada.
+**Base consultada:** `main` em `87df565f` após merge da FOOD07 #452; correção Mobile #453 em `9697bc18`.
 **Estado:** planejamento documental; não autoriza implementação, merge, deploy ou migration externa.
 
 ## Objetivo e limites
@@ -15,15 +15,15 @@ Não altera runtime, schema, catálogo, configuração do Neon/Render ou a opera
 
 - O roadmap pós-320 coloca FOOD06 (comparação com IDR/DRI/UL) e FOOD08 (biblioteca pública de receitas entre organizações) na Onda 2; FOOD06 está listado antes de FOOD07.
 - A PA06 já fornece composição de micronutrientes e cálculo combinado. `docs/product/FONTES_MICRONUTRIENTES_PA06.md` registra whitelist, unidades, estados de ausência, fontes e snapshots; também afirma expressamente que IDR/DRI/UL pertencem à FOOD06. Isso cobre a base de composição, mas não a comparação com referências populacionais.
-- A descrição do roadmap de FOOD07 como “somente gap residual da Fase 310” não representa o escopo aprovado e desenvolvido na PR #452. O registro canônico da `main` não deve ser considerado atualizado por uma PR ainda não integrada.
-- A PR #452 permanece Draft. O corpo consultado registra T06 implementado, evidências locais e falha de Mobile Expo/PR Gate por advisories, com dependência da correção separada #453. A #453 também permanece Draft e aguarda a janela mínima do pacote `decode-uri-component@0.5.1` e revisão independente específica. A #451 continua separada, sem integração. Esses registros são retrato de PRs, não prova de CI novo ou de funcionamento em produção.
-- A branch local original está em `main`, 31 commits atrás no momento da conferência, e contém alteração preexistente em `octaclin-web/next-env.d.ts`. Nenhum arquivo dela foi modificado. Este planejamento foi preparado em worktree própria a partir da `origin/main` consultada.
+- A descrição histórica de FOOD07 como “somente gap residual da Fase 310” não representa o escopo aprovado. A FOOD07 foi integrada pela PR #452 no merge `87df565f`; o HEAD validado `7a963b16` concluiu os checks aplicáveis, com Provenance do SBOM `SKIPPED`. A PR #453 foi integrada antes no commit `9697bc18`; Mobile Expo passou no CI da #452 após sincronização com essa base.
+- Merge e CI não comprovam implantação, aplicação da migration 1080 em ambientes externos ou liberação operacional. G06 segue BLOCKED; nenhuma consulta ou operação de produção foi feita nesta atualização.
+- O planejamento foi atualizado em worktree própria e sincronizado com `main` no commit FOOD07. A worktree principal e alterações preexistentes nela não foram modificadas.
 
 ## Sequência recomendada
 
 | Ordem | Trabalho | Razão | Condição para avançar |
 |---|---|---|---|
-| 0 | Concluir a fila atual de segurança/FOOD07 nas PRs próprias (#451, #453 e #452) | Evita planejar sobre contratos que ainda estão mudando e deixa a segurança Mobile resolvida na base antes dos gates finais de FOOD07. | Respeitar o cooldown; sincronizar as PRs com a `main` após a integração autorizada da correção; repetir checks. Nenhum merge é autorizado aqui. |
+| 0 | Concluir a fila de segurança/FOOD07 (#453 e #452) | Evitou planejar sobre contratos ainda em mudança e deixou a correção Mobile na base antes dos gates FOOD07. | **CONCLUÍDO**: #453 integrada em `9697bc18`; #452 integrada em `87df565f`; checks aplicáveis do HEAD FOOD07 passaram, SBOM provenance `SKIPPED`. Isso não encerra G06. |
 | 1 | Planejamento e gates de FOOD06 | A PA06 fornece nutrientes, mas falta escolher e validar as referências de ingestão e UL. Fontes, direitos e populações têm maior antecedência clínica/documental. | Equipe clínica ratifica a referência/população; direitos de uso comercial ficam comprovados; contrato de dados incompletos e escopo de apresentação aprovados. |
 | 2 | Planejamento e gates de FOOD08 | A biblioteca pública amplia o acervo pessoal/clínico para publicação entre organizações; precisa de contrato de publicação, atribuição, revisão e retirada. | Decisões de produto, privacidade, direitos de conteúdo e moderação aprovadas; relação com FOOD07 reconciliada na `main`. |
 | Posterior | FOOD05-MDL | D18 é direção aprovada separadamente e não é pré-requisito para FOOD06/08. | Plano próprio e autorização de implementação; não iniciado neste documento. |
@@ -148,18 +148,18 @@ As perguntas não ratificam decisões clínicas ou legais. A equipe corresponden
 | FOOD08-G1 Publicação/direitos | BLOCKED | Público, autoria, licença, remoção e atribuição formalmente definidos. |
 | FOOD08-G2 Privacidade/moderação | BLOCKED | Allowlist e fluxo de revisão/denúncia/retirada aprovados e testáveis. |
 | FOOD08-G3 Arquitetura | NOT RUN | Auditoria do modelo atual FOOD07 integrado, fluxos 310 e capacidade de versionamento após a #452. |
-| PRs atuais #451/#453/#452 | INCOMPLETAS | Corrigir os gates observados, sincronizar com a base atual e confirmar CI no HEAD final; manter Draft até verde e revisão independente. |
+| FOOD07/#452 e correção Mobile/#453 | INTEGRADAS | Evidência do HEAD `7a963b16`: checks aplicáveis concluídos com sucesso; SBOM provenance `SKIPPED`. Produção/migration 1080 não inferidas. |
+| G06 FOOD04/FOOD07 | BLOCKED operacional | Após o retorno do proprietário, verificar Neon, schema/ledger 1078/1080, Render, backup/rollback e sequência operacional sob autorização específica. |
 
-1. Completar a correção Mobile somente após o cooldown, sem waiver ou relaxamento da auditoria.
-2. Atualizar #451 e #452 para a `main` que inclui a correção autorizada e reexecutar os checks aplicáveis, sem merge automático.
-3. Depois de FOOD07 integrada, auditar FOOD06 contra a implementação atual da PA06 e congelar sua ficha clínica/direitos antes de codificar.
-4. Em paralelo, resolver decisões de publicação/direitos de FOOD08; auditar seus contratos apenas quando a #452 estiver na base.
-5. Só iniciar implementação quando os gates humanos correspondentes e uma autorização explícita de escopo estiverem registrados.
+1. Auditar FOOD06 contra a implementação atual da PA06 e fechar a ficha de fontes/direitos/populações antes de qualquer implementação.
+2. Resolver decisões humanas de produto, conteúdo/direitos, privacidade e moderação de FOOD08; depois auditar os contratos da FOOD07 integrada.
+3. Manter a migration 1080 e G06 fora de operações externas até regularização e autorização operacional específicas.
+4. Só iniciar FOOD06 ou FOOD08 quando seus gates humanos correspondentes e autorização explícita de implementação estiverem registrados.
 
 ## Limitações desta rodada
 
-- Não houve revisão do código/runtime de FOOD07, migrações, CI atual ou estado operacional de produção além dos metadados declarados nos corpos das PRs.
-- A branch local original permaneceu intacta, inclusive sua alteração preexistente; a leitura documental veio da `main` remota em `bcb68250`.
+- Não houve revisão adicional do runtime, auditoria de migrações em bancos externos ou consulta ao estado operacional de produção. Os metadados do merge e checks FOOD07 foram lidos no GitHub; nenhuma implantação é inferida.
+- A leitura documental foi reconciliada com `main` em `87df565f`; mudanças de código incluídas pela atualização da base vêm do merge FOOD07 já integrado, não desta PR documental.
 - Não foram executados testes de software, testes clínicos, testes com profissionais/pacientes ou testes de acessibilidade de interface.
 - A licença de dados alimentares e referências clínicas precisa ser conferida separadamente da licença de código aberto.
 - Esta proposta não muda G06, produção FOOD04/FOOD05 ou o NO-GO da TBCA.

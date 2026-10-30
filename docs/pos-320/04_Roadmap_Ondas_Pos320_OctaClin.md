@@ -1646,23 +1646,25 @@ o Codex deve tratar fonte, versão, população aplicável e limitações como p
 
 ---
 
-## Adendo de planejamento — FOOD06/FOOD08 (2026-10-30)
+## Adendo de planejamento — FOOD06/FOOD08 (2026-10-30; reconciliado após FOOD07)
 
-A Fase FOOD07 está sendo desenvolvida na PR #452 em escopo aprovado mais amplo
-que o descrito historicamente nesta matriz como “somente gap residual da
-Fase 310”. A PR continua Draft e sua implementação ainda não integra a `main`;
-este adendo não declara FOOD07 concluída nem atualiza retroativamente seus
-gates.
+A FOOD07 foi integrada pela PR #452 em 2026-10-30, merge
+`87df565f1aa504328c8032c069cc6d4746499a59`. O HEAD validado foi
+`7a963b16748e0221e8e40f42c8ddd8691f3b4472`; os checks aplicáveis terminaram
+com sucesso, enquanto Provenance do SBOM ficou `SKIPPED`. A PR de segurança
+Mobile #453 foi integrada antes, pelo commit `9697bc18`. Esses resultados
+comprovam os gates do código nos escopos executados, não a implantação em
+produção ou a aplicação externa da migration 1080. G06 permanece BLOCKED.
 
-A sequência recomendada após resolver a fila de segurança/FOOD07 é: planejar
-FOOD06 primeiro, incluindo fontes clínicas, direitos, população e contrato de
-dados; planejar FOOD08 separadamente para publicação voluntária de receitas
-entre organizações. Os critérios, riscos, referências avaliadas, decisões
-humanas pendentes e condições de início estão em
+A sequência proposta agora é planejar primeiro FOOD06, incluindo fontes
+clínicas, direitos, população e contrato de dados; FOOD08 permanece uma entrega
+separada para publicação voluntária de receitas entre organizações. Critérios,
+riscos, referências avaliadas, decisões humanas pendentes e condições de início
+estão em
 [`05_Plano_Sequencia_FOOD06_FOOD08_2026-10-30.md`](05_Plano_Sequencia_FOOD06_FOOD08_2026-10-30.md).
 
-Este adendo registra **planejamento apenas**. Não autoriza classificador,
-comparação clínica, publicação pública, migration, merge, deploy ou mudança em
-ambiente externo. FOOD06 depende de ratificação clínica e de direitos de uso;
+Este adendo registra **planejamento apenas**. Não autoriza comparação clínica,
+publicação pública, implementação, migration, merge, deploy ou mudança em
+ambiente externo. FOOD06 depende de ratificação clínica e direitos de uso;
 FOOD08 depende de decisões de publicação, direitos de conteúdo, privacidade e
 moderação. O NO-GO da TBCA permanece sem alteração.
