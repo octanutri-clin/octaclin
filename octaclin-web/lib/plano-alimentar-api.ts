@@ -1,3 +1,4 @@
+import type { FonteGrupoSubstituicoes, GrupoSubstituicoesResumo, GrupoSubstituicoesDetalhe, CriarGrupoSubstituicoesEntrada, AtualizarGrupoSubstituicoesEntrada, DuplicarGrupoSubstituicoesEntrada, ConsultaGruposSubstituicoes } from './grupos-substituicoes-tipos';
 import type { DocumentoEdicaoPlano, SalvarEdicaoPlanoEntrada } from './edicao-plano';
 import type { PrecondicaoEdicaoPlano } from './coordenador-edicao-plano';
 import type { PreferenciasApresentacaoPlanoApi, EstadoApresentacaoPlanoApi } from './preferencias-apresentacao-plano';
@@ -50,6 +51,7 @@ export interface AlimentoComposicaoApi {
   metadadosOrigem?: Record<string, unknown>;
   nutrientesPor100g?: NutrientesPor100gApi;
   disponivelParaCalculo: boolean;
+  favorito?: boolean;
   fonte?: {
     codigo: string;
     nome: string;
@@ -293,6 +295,7 @@ export interface AlimentoPersonalizadoApi {
   escopo: 'pessoal' | 'clinica';
   revisao: number;
   ativo: boolean;
+  favorito?: boolean;
   baseOrigem: { tipo: 'por100g' | 'porcao'; pesoGramas: number };
   nutrientesPor100g: Partial<NutrientesPor100gApi>;
   micronutrientesPor100g: MicronutrientesPor100gApi;
@@ -686,6 +689,14 @@ export function buscarAlimentosPlanoAlimentar(
   );
 }
 
+export function alterarFavoritoAlimento(origem: OrigemBibliotecaAlimentoApi, alimentoId: string, favorito: boolean) {
+  const caminho = `/api/planos-alimentares/favoritos${favorito ? '' : `/${origem}/${encodeURIComponent(alimentoId)}`}`;
+  return requisitar<{ origem: OrigemBibliotecaAlimentoApi; alimentoId: string; favorito: boolean }>(caminho, {
+    method: favorito ? 'POST' : 'DELETE',
+    ...(favorito ? corpoJson({ origem, alimentoId }) : {})
+  });
+}
+
 export type OrigemBibliotecaAlimentoApi = 'catalogo' | 'custom';
 
 function caminhoMedidasCaseiras(alimentoId: string, origem: OrigemBibliotecaAlimentoApi) {
@@ -871,7 +882,36 @@ export function arquivarModeloPlanoAlimentar(modeloId: string) {
 export type TipoReceitaNutricionalApi = 'receita' | 'refeicao_pronta';
 export type OrigemReceitaNutricionalApi = 'pessoal' | 'clinica';
 
+export interface MetadadosReceitaApi {
+  schemaVersao: 1;
+  etiquetas: string[];
+  baseQuantidades?: 'receita_inteira' | 'por_porcao';
+  rendimentoPorcoes?: number;
+  tempoPreparoMinutos?: number;
+}
+export type CriarMetadadosReceitaApi = Omit<Partial<MetadadosReceitaApi>, 'schemaVersao'> & { schemaVersao?: 1 };
+export interface AlterarMetadadosReceitaApi {
+  etiquetas?: string[];
+  baseQuantidades?: 'receita_inteira' | 'por_porcao' | null;
+  rendimentoPorcoes?: number | null;
+  tempoPreparoMinutos?: number | null;
+}
+export type IngredientePreviaReceitaApi = Omit<ItemPlanoAlimentarEntrada, 'nutrientesPor100g' | 'substituicoes'> & {
+  nutrientesPor100g?: Partial<NutrientesPor100gApi>;
+  substituicoes?: Array<Omit<AlternativaPlanoAlimentarEntrada, 'nutrientesPor100g' | 'liberadaParaPaciente' | 'preferida'> & { nutrientesPor100g?: Partial<NutrientesPor100gApi>; liberadaParaPaciente?: boolean; preferida?: boolean }>;
+};
+export type IndicadorPreviaReceitaApi = { estado: 'conhecido'; valor: number; unidade: 'kcal' | 'g' } | { estado: 'ausente'; unidade: 'kcal' | 'g'; valor?: never };
+export type PreviaPorcionamentoReceitaApi = { receitaId: string; versao: number; fingerprint: string } & ({
+  estado: 'calculavel'; porcoesDesejadas: number; baseQuantidades: 'receita_inteira' | 'por_porcao'; rendimentoOriginalPorcoes?: number;
+  fatorExato: { numerador: string; denominador: string }; itens: IngredientePreviaReceitaApi[];
+  avisos: Array<{ codigo: 'ARREDONDAMENTO'; campo: 'quantidade' | 'porcaoGramas'; item: number; substituicao?: number }>;
+  totais: Record<'energiaKcal' | 'proteinasG' | 'carboidratosG' | 'gordurasG', IndicadorPreviaReceitaApi>;
+  denominador: { porcoes: number; descricao: string };
+  fontes: Array<{ alimentoComposicaoId: string; descricao: string; preparacao: string | null; fonte: { codigo: string; versao: string } }>;
+} | { estado: 'indisponivel'; motivos: Array<{ codigo: 'CONTEUDO_INVALIDO' | 'PORCOES_INVALIDAS' | 'BASE_NAO_INFORMADA' | 'RENDIMENTO_NAO_INFORMADO' | 'QUANTIDADE_FORA_DO_LIMITE'; item?: number; substituicao?: number }> });
+
 export interface ReceitaNutricionalResumoApi {
+  metadados?: MetadadosReceitaApi;
   id: string;
   nome: string;
   origem: OrigemReceitaNutricionalApi;
@@ -889,12 +929,14 @@ export interface ReceitaNutricionalApi extends ReceitaNutricionalResumoApi {
 }
 
 export interface ConsultaReceitasNutricionais extends ConsultaPaginadaPlanos {
+  etiqueta?: string;
   origem?: OrigemReceitaNutricionalApi;
   tipo?: TipoReceitaNutricionalApi;
   categoria?: string;
 }
 
 export interface EntradaReceitaNutricional {
+  metadados?: CriarMetadadosReceitaApi;
   nome: string;
   origem: OrigemReceitaNutricionalApi;
   tipo: TipoReceitaNutricionalApi;
@@ -903,7 +945,8 @@ export interface EntradaReceitaNutricional {
   itens: ItemPlanoAlimentarEntrada[];
 }
 
-export interface AtualizarReceitaNutricionalEntrada extends EntradaReceitaNutricional {
+export interface AtualizarReceitaNutricionalEntrada extends Omit<EntradaReceitaNutricional, 'metadados'> {
+  metadados?: AlterarMetadadosReceitaApi;
   versaoEsperada: number;
 }
 
@@ -914,6 +957,13 @@ export function listarReceitasNutricionais(consulta: ConsultaReceitasNutricionai
     `${BASE_RECEITAS}${montarConsulta({ pagina: consulta.pagina, limite: consulta.limite, origem: consulta.origem, tipo: consulta.tipo, categoria: consulta.categoria })}`,
     { signal }
   );
+}
+
+export function consultarReceitasNutricionais(consulta: ConsultaReceitasNutricionais = {}, signal?: AbortSignal) {
+  return requisitar<PaginaApi<ReceitaNutricionalResumoApi>>(`${BASE_RECEITAS}/consulta`, { method: 'POST', ...corpoJson(consulta), cache: 'no-store', signal });
+}
+export function preverPorcionamentoReceita(receitaId: string, entrada: { versaoEsperada: number; porcoesDesejadas: number }, signal?: AbortSignal) {
+  return requisitar<PreviaPorcionamentoReceitaApi>(`${BASE_RECEITAS}/${encodeURIComponent(receitaId)}/previa-porcionamento`, { method: 'POST', ...corpoJson(entrada), cache: 'no-store', signal });
 }
 
 export function obterReceitaNutricional(receitaId: string, signal?: AbortSignal) {
@@ -937,7 +987,12 @@ export function arquivarReceitaNutricional(receitaId: string) {
   });
 }
 
+export interface PorcionamentoEnvioReceitaApi {
+  receitaId: string; porcoesDesejadas: number; fingerprintPrevia: string;
+  instrucoesPersonalizadas?: string; confirmacaoConferenciaInstrucoes: true;
+}
 export interface CompartilharReceitasEntradaApi {
+  porcionamentos?: PorcionamentoEnvioReceitaApi[];
   pacienteId: string;
   chaveIdempotencia: string;
   receitaIds: string[];
@@ -990,7 +1045,7 @@ export function listarReceitasCompartilhadasPortal(signal?: AbortSignal) {
 }
 
 export function obterReceitaCompartilhadaPortal(id: string) {
-  return requisitar<{ id: string; enviadoEm?: string; receita: { nome: string; conteudo: { instrucoes?: string; itens: ItemPlanoAlimentarEntrada[] }; versao: number } }>(
+  return requisitar<{ id: string; enviadoEm?: string; receita: { nome: string; conteudo: { instrucoes?: string; itens: IngredientePreviaReceitaApi[]; metadados?: { schemaVersao: 1; rendimentoPorcoes?: number; tempoPreparoMinutos?: number } }; versao: number; porcionamento?: { porcoesDesejadas: number; rendimentoOriginalPorcoes?: number; ingredientesAjustados: true } } }>(
     `/api/portal/paciente/receitas/${encodeURIComponent(id)}`, { cache: 'no-store' }
   );
 }
@@ -1031,4 +1086,29 @@ export function obterApresentacaoPacientePlano(pacienteId: string, planoId: stri
     `${basePaciente(pacienteId)}/${encodeURIComponent(planoId)}/versoes/${encodeURIComponent(String(numero))}/apresentacao-paciente`,
     { signal }
   );
+}
+
+// FOOD04: escopo/tenant são derivados da sessão; nomes/filtros ficam no body.
+const baseGruposSubstituicoes=(administracao=false)=>`/api/planos-alimentares/${administracao?'grupos-substituicoes-administracao':'grupos-substituicoes'}`;
+export function consultarGruposSubstituicoes(consulta: ConsultaGruposSubstituicoes={},signal?: AbortSignal,administracao=false) {
+  return requisitar<PaginaApi<GrupoSubstituicoesResumo>>(`${baseGruposSubstituicoes(administracao)}/consulta`,{method:'POST',...corpoJson(consulta),signal});
+}
+export function obterGrupoSubstituicoes(id: string,signal?: AbortSignal,administracao=false) {
+  return requisitar<GrupoSubstituicoesDetalhe>(`${baseGruposSubstituicoes(administracao)}/${encodeURIComponent(id)}`,{signal});
+}
+export function criarGrupoSubstituicoes(entrada: CriarGrupoSubstituicoesEntrada,signal?: AbortSignal) {
+  return requisitar<GrupoSubstituicoesDetalhe>(baseGruposSubstituicoes(),{method:'POST',...corpoJson(entrada),signal});
+}
+export function atualizarGrupoSubstituicoes(id: string,entrada: AtualizarGrupoSubstituicoesEntrada,signal?: AbortSignal,administracao=false) {
+  return requisitar<GrupoSubstituicoesDetalhe>(`${baseGruposSubstituicoes(administracao)}/${encodeURIComponent(id)}`,{method:'PATCH',...corpoJson(entrada),signal});
+}
+export function duplicarGrupoSubstituicoes(id: string,entrada: DuplicarGrupoSubstituicoesEntrada,signal?: AbortSignal) {
+  return requisitar<GrupoSubstituicoesDetalhe>(`${baseGruposSubstituicoes()}/${encodeURIComponent(id)}/duplicar`,{method:'POST',...corpoJson(entrada),signal});
+}
+export function alterarFavoritoGrupoSubstituicoes(id: string,favorito: boolean,signal?: AbortSignal) {
+  return requisitar<{grupoId:string;favorito:boolean}>(`${baseGruposSubstituicoes()}/${encodeURIComponent(id)}/favorito`,{method:favorito?'POST':'DELETE',signal});
+}
+
+export function consultarFontesGruposAdministracao(consulta:{origem:'catalogo'|'custom';busca:string;pagina?:number;limite?:number},signal?:AbortSignal){
+  return requisitar<PaginaApi<FonteGrupoSubstituicoes>>(`${baseGruposSubstituicoes(true)}/alimentos/consulta`,{method:'POST',...corpoJson(consulta),signal});
 }

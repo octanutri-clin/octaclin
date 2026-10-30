@@ -1,8 +1,51 @@
 # OctaClin - Status atual do projeto
 
-Atualizado em 2026-10-18.
+Atualizado em 2026-10-30 após integração da FOOD07; registros anteriores preservados.
 
-## Fase ativa
+## Estado atual
+
+- **FOOD07 — integrada pela PR #452** em `87df565f1aa504328c8032c069cc6d4746499a59`.
+  O HEAD validado `7a963b16` teve os checks aplicáveis aprovados; Provenance do
+  SBOM ficou `SKIPPED`. A correção Mobile #453 já estava em `main` no commit
+  `9697bc18`; Mobile Expo passou no CI da FOOD07 após sincronização da base.
+  Evidências e limites: `tasks/execucao-pos-320-food07.md` e
+  `tasks/todo-pos-320-food07.md`. Isso não comprova implantação nem aplicação
+  externa da migration 1080.
+- **G06 permanece BLOCKED operacional** para FOOD04/FOOD05 e alterações de
+  produção. Neon, schema/ledger 1078/1079, Render, backup/rollback e deploy
+  continuam reservados à etapa operacional após o retorno do proprietário e
+  autorização específica. Nenhuma migration externa é inferida do merge.
+- **Próximos planejamentos:** PR #454, Draft, propõe FOOD06 primeiro (fontes,
+  direitos, população e contrato de dados) e FOOD08 separadamente (publicação,
+  conteúdo, privacidade e moderação). Não há autorização de implementação para
+  essas fases neste registro; as ratificações e direitos listados no plano
+  continuam pendentes. Consulte
+  `docs/pos-320/05_Plano_Sequencia_FOOD06_FOOD08_2026-10-30.md`.
+- Fase 316 continua em stand-by. O NO-GO da TBCA não muda; manter TACO, USDA e
+  IBGE conforme decisão registrada.
+
+## Checkpoint histórico FOOD04 (2026-10-24; substituído para fase ativa)
+
+- **FOOD04 — implementada na PR #441, em validacao final**, base `origin/main` `9e1984a2`, merge
+  documental #440 confirmado por fetch em 2026-10-22. Biblioteca de grupos
+  reutilizáveis; D01–D03 aprovadas e ampliadas em D01–D08. Especificação inclui
+  administração de compartilhados, duplicação, favoritos, aplicação seletiva,
+  dedup e arquivo/restauração. Desenvolvimento autorizado em “Pode seguir”;
+  domínio, biblioteca, migration1078, save/snapshots, BFF e UI implementados.
+  Revisao cruzada encontrou dois P2 em snapshots de catalogo e cancelamento de
+  aplicacao durante save; ambos corrigidos e reavaliados por outro agente
+  sem novos Critical/P1/P2 confirmados. Regressoes locais PASS (backend3244; visual20); CI final pendente.
+  A PR permanece Draft. Evidências e limitações em
+  `tasks/execucao-pos-320-food04.md`. Plano/checkpoints em `tasks/plan-pos-320-food04.md` e
+  `tasks/todo-pos-320-food04.md`; handoff ativo em `tasks/plan.md`.
+  Referências específicas recomendam código interno, sem biblioteca externa.
+  Sol medio conduz revisao e fechamento de seguranca. Alertas estruturados/lote/undo persistente
+  registrados como FOOD04-C01/C02/C03, sem antecipar implementação.
+- **FOOD03 — integrada #438 e fechamento #440**. Evidências históricas de
+  migration1077/RLS/deploy em `tasks/plan-pos-320-food03.md` e checklist vivo;
+  ambientes externos não foram reconsultados nesta rodada documental.
+
+### Checkpoints históricos anteriores (não são a fase ativa)
 
 - **FOOD02 — T01–T08 implementados; Draft PR #425 e CI pendentes**, base `95e9f33d`.
   D01–D03 confirmadas; desenvolvimento autorizado em “Pode seguir, sol médio”.

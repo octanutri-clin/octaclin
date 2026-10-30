@@ -324,12 +324,12 @@ export function PortalShell({
               href={item.href as Route}
               aria-current={pathname === item.href || pathname.startsWith(`${item.href}/`) ? 'page' : undefined}
               className={cn(
-                'flex min-h-12 flex-col items-center justify-center gap-1 rounded-md px-1 text-xs font-medium hover:bg-superficie-hover hover:text-tinta focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primaria',
+                'flex min-w-0 min-h-12 flex-col items-center justify-center gap-1 rounded-md px-1 text-xs font-medium hover:bg-superficie-hover hover:text-tinta focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primaria',
                 pathname === item.href || pathname.startsWith(`${item.href}/`) ? 'text-primaria' : 'text-texto-suave'
               )}
             >
               {item.icone ? <item.icone size={18} aria-hidden="true" /> : null}
-              <span className="truncate">{item.rotulo}</span>
+              <span className="block w-full min-w-0 truncate">{item.rotulo}</span>
             </Link>
           ))}
         </nav>

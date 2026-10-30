@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
+import { Star } from 'lucide-react';
 import { Botao } from '@/components/ui/botao';
 import { Campo, Rotulo, Selecao } from '@/components/ui/campo';
 import { mensagemFalhaInterface } from '@/lib/erros-interface';
@@ -8,6 +9,7 @@ import { useProtecaoAlteracoesNaoSalvas } from '@/lib/usar-protecao-alteracoes-n
 import { montarComposicaoAlimentoPersonalizado, montarCriacaoAlimentoPersonalizado, type FormularioAlimentoPersonalizadoApi } from '@/lib/alimento-personalizado-formulario';
 import {
   atualizarAlimentoPersonalizado,
+  alterarFavoritoAlimento,
   buscarAlimentosPersonalizados,
   criarAlimentoPersonalizado,
   ErroApiPlanoAlimentar,
@@ -85,6 +87,7 @@ export function AlimentosPersonalizados({ podeEditar, contextoSelecao, aoSelecio
   const [formularioAberto, setFormularioAberto] = useState(false);
   const [versaoFormulario, setVersaoFormulario] = useState(0);
   const [criacaoIncerta, setCriacaoIncerta] = useState(false);
+  const [favoritosEmAtualizacao, setFavoritosEmAtualizacao] = useState<Set<string>>(new Set());
   const formularioAlterado = formularioAberto && (Boolean(formulario.nome || formulario.preparacao || formulario.referenciaComposicao)
     || Object.values(formulario.nutrientes).some(Boolean) || Object.values(formulario.micronutrientes).some(Boolean));
   const buscaCurta = Boolean(busca.trim() && busca.trim().replace(/[^\p{L}\p{N}]+/gu, '').length < 3);
@@ -215,6 +218,17 @@ export function AlimentosPersonalizados({ podeEditar, contextoSelecao, aoSelecio
     finally { if (montado.current) setSalvando(false); }
   }
 
+  async function alternarFavorito(alimento: AlimentoPersonalizadoApi) {
+    const novoEstado = !alimento.favorito;
+    setFavoritosEmAtualizacao((atual) => new Set(atual).add(alimento.id)); setErro('');
+    try {
+      await alterarFavoritoAlimento('custom', alimento.id, novoEstado);
+      setItens((atuais) => atuais.map((item) => item.id === alimento.id ? { ...item, favorito: novoEstado } : item)
+        .sort((a, b) => Number(b.favorito) - Number(a.favorito)));
+    } catch (falha) { setErro(mensagemFalhaInterface(falha, 'Não foi possível atualizar o favorito.')); }
+    finally { setFavoritosEmAtualizacao((atual) => { const proximo = new Set(atual); proximo.delete(alimento.id); return proximo; }); }
+  }
+
   function atualizarCampo<K extends keyof Formulario>(campo: K, valor: Formulario[K]) { setFormulario(atual => ({ ...atual, [campo]: valor })); }
   function atualizarNutriente(codigo: keyof NutrientesPor100gApi, valor: string) { setFormulario(atual => ({ ...atual, nutrientes: { ...atual.nutrientes, [codigo]: valor } })); }
   function atualizarMicro(codigo: keyof MicronutrientesPor100gApi, valor: string) { setFormulario(atual => ({ ...atual, micronutrientes: { ...atual.micronutrientes, [codigo]: valor } })); }
@@ -236,7 +250,7 @@ export function AlimentosPersonalizados({ podeEditar, contextoSelecao, aoSelecio
       {!carregando && !erro && !buscaCurta && itens.length === 0 ? <p className="text-sm text-texto-suave">{busca.trim() ? 'Nenhum alimento encontrado.' : 'Ainda não há alimentos nesta biblioteca.'}</p> : null}
       {!buscaCurta && itens.length ? <><p className="text-xs text-texto-suave" role="status">Mostrando {itens.length} de {total} alimentos. Selecione para aplicar uma revisão ao item atual.</p><ul className="grid max-h-72 gap-2 overflow-auto">{itens.map(alimento => <li key={alimento.id} className="flex flex-wrap items-center justify-between gap-2 rounded border border-linha p-2">
         <div className="min-w-0"><p className="break-words text-sm font-medium text-tinta">{alimento.nome}{alimento.preparacao ? `, ${alimento.preparacao}` : ''}</p><p className="text-xs text-texto-suave">{alimento.escopo === 'pessoal' ? 'Pessoal' : 'Clínica'} · revisão {alimento.revisao} · base {alimento.baseOrigem.pesoGramas} g · {alimento.disponivelParaCalculo ? 'composição calculável' : 'composição parcial'}</p></div>
-        <div className="flex flex-wrap gap-2"><Botao type="button" tamanho="sm" disabled={!podeEditar || carregando || salvando || criacaoIncerta} onClick={() => selecionar(alimento)}>Aplicar revisão</Botao>{podeEditar && alimento.podeEditar ? <><Botao type="button" tamanho="sm" disabled={salvando || criacaoIncerta} onClick={() => void iniciarEdicao(alimento)}>Editar</Botao><Botao type="button" tamanho="sm" variante="fantasma" disabled={salvando || criacaoIncerta} onClick={() => void desativar(alimento)}>Desativar</Botao></> : null}</div>
+        <div className="flex flex-wrap gap-2"><button type="button" aria-pressed={alimento.favorito === true} aria-label={`${alimento.favorito ? 'Remover' : 'Adicionar'} ${alimento.nome} ${alimento.favorito ? 'dos' : 'aos'} favoritos`} disabled={favoritosEmAtualizacao.has(alimento.id)} onClick={() => void alternarFavorito(alimento)} className="min-h-11 min-w-11 rounded px-3 text-primaria hover:bg-superficie-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-primaria"><Star aria-hidden="true" size={18} fill={alimento.favorito ? 'currentColor' : 'none'} /></button><Botao type="button" tamanho="sm" disabled={!podeEditar || carregando || salvando || criacaoIncerta} onClick={() => selecionar(alimento)}>Aplicar revisão</Botao>{podeEditar && alimento.podeEditar ? <><Botao type="button" tamanho="sm" disabled={salvando || criacaoIncerta} onClick={() => void iniciarEdicao(alimento)}>Editar</Botao><Botao type="button" tamanho="sm" variante="fantasma" disabled={salvando || criacaoIncerta} onClick={() => void desativar(alimento)}>Desativar</Botao></> : null}</div>
       </li>)}</ul></> : null}
       {!buscaCurta && total > 25 ? <nav className="flex items-center justify-between" aria-label="Paginação dos alimentos personalizados"><Botao tamanho="sm" disabled={pagina <= 1 || carregando} onClick={() => setPagina(p => p - 1)}>Anterior</Botao><span aria-live="polite" className="text-sm">Página {pagina} de {Math.ceil(total / 25)}</span><Botao tamanho="sm" disabled={pagina >= Math.ceil(total / 25) || carregando} onClick={() => setPagina(p => p + 1)}>Próxima</Botao></nav> : null}
       {podeEditar ? <div className="flex flex-wrap gap-2 border-t border-linha pt-3"><Botao type="button" disabled={salvando || criacaoIncerta} onClick={iniciarCriacao}>Cadastrar alimento</Botao><p className="self-center text-xs text-texto-suave">Cadastro não aplica automaticamente ao plano.</p></div> : null}

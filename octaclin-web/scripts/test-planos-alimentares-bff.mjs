@@ -7,6 +7,14 @@ import { fileURLToPath } from 'node:url';
 const raiz = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const temporaria = mkdtempSync(join(tmpdir(), 'octaclin-planos-alimentares-bff-'));
 const arquivos = [
+  'app/api/planos-alimentares/grupos-substituicoes-administracao/alimentos/consulta/route.ts',
+  'app/api/planos-alimentares/grupos-substituicoes/consulta/route.ts',
+  'app/api/planos-alimentares/grupos-substituicoes/route.ts',
+  'app/api/planos-alimentares/grupos-substituicoes/[grupoId]/route.ts',
+  'app/api/planos-alimentares/grupos-substituicoes/[grupoId]/duplicar/route.ts',
+  'app/api/planos-alimentares/grupos-substituicoes/[grupoId]/favorito/route.ts',
+  'app/api/planos-alimentares/grupos-substituicoes-administracao/consulta/route.ts',
+  'app/api/planos-alimentares/grupos-substituicoes-administracao/[grupoId]/route.ts',
   'scripts/planos-alimentares-bff.spec.ts',
   'lib/ativacao-plano.ts',
   'app/api/pacientes/[id]/planos-alimentares/[planoId]/ativacao/route.ts',
@@ -23,6 +31,8 @@ const arquivos = [
   'app/api/pacientes/[id]/planos-alimentares/[planoId]/escolhas-paciente/route.ts',
   'app/api/pacientes/[id]/planos-alimentares/alimentos/route.ts',
   'app/api/planos-alimentares/alimentos/route.ts',
+  'app/api/planos-alimentares/favoritos/route.ts',
+  'app/api/planos-alimentares/favoritos/[origem]/[alimentoId]/route.ts',
   'app/api/planos-alimentares/alimentos/[alimentoId]/medidas-caseiras/route.ts',
   'app/api/planos-alimentares/alimentos/[alimentoId]/medidas-caseiras/[medidaId]/route.ts',
   'app/api/planos-alimentares/alimentos-personalizados/_proxy.ts',
@@ -36,6 +46,9 @@ const arquivos = [
   'app/api/planos-alimentares/modelos/[modeloId]/versoes/route.ts',
   'app/api/planos-alimentares/modelos/[modeloId]/versoes/[numero]/route.ts',
   'app/api/planos-alimentares/modelos/[modeloId]/versoes/[numero]/restaurar/route.ts',
+  'app/api/planos-alimentares/receitas/compartilhamentos/route.ts',
+  'app/api/planos-alimentares/receitas/consulta/route.ts',
+  'app/api/planos-alimentares/receitas/[receitaId]/previa-porcionamento/route.ts',
   'app/api/planos-alimentares/receitas/route.ts',
   'app/api/planos-alimentares/receitas/[receitaId]/route.ts',
   'app/api/pacientes/[id]/planos-alimentares/[planoId]/rascunho/route.ts',

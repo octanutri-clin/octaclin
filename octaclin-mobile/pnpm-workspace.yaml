@@ -15,7 +15,7 @@ packages:
 overrides:
   uuid@<11.1.1: 11.1.1
   js-yaml@>=4.0.0 <4.3.2: 4.3.2
-  decode-uri-component@<0.5.0: 0.5.0
+  decode-uri-component@<0.5.1: 0.5.1
   browserslist@<4.28.7: 4.28.7
   # GHSA-68fv-2mgg-jv7q: valida offsets de indexed source maps via 1.2.2.
   source-map-js@>=1.0.0 <1.2.2: 1.2.2
@@ -23,6 +23,10 @@ overrides:
   compression@<1.8.2: 1.8.2
   # GHSA-pqg4-j6r4-53mv: shell-quote 1.12.0 inclui a correcao upstream >=1.11.0.
   shell-quote@>=1.8.4 <1.11.0: 1.12.0
+  # GHSA-mrhx-c7xc-m3w5: Zod 3 nao tem backport upstream. Limitar o override
+  # aos dois consumidores de schemas da CLI Expo 57; testes reais de plugin,
+  # parametros MCP e curto-circuito de colecoes comprovam a compatibilidade.
+  '@expo/cli@57.0.27>zod': 4.6.7
   # GHSA-6gmq-8vp8-gcm6 (moderate): injecao de fragmento XML via
   # EntityReference.nodeName invalido na serializacao com requireWellFormed.
   # Chega por `expo > @expo/cli > @expo/config-plugins > ... > @xmldom/xmldom`,
@@ -71,5 +75,6 @@ blockExoticSubdeps: true
 verifyStoreIntegrity: true
 strictStorePkgContentCheck: true
 patchedDependencies:
+  '@expo/config@57.0.9': patches/@expo__config@57.0.9.patch
   braces@3.0.3: patches/braces@3.0.3.patch
   node-forge@1.4.0: patches/node-forge@1.4.0.patch

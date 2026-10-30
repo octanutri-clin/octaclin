@@ -1,10 +1,11 @@
 import { BadRequestException, ConflictException, Injectable, NotFoundException, ServiceUnavailableException, UnprocessableEntityException } from '@nestjs/common';
-import { ArrayContains, EntityManager } from 'typeorm';
+import { ArrayContains, EntityManager, In } from 'typeorm';
 import { ExecutorTenant } from '../../../infraestrutura/banco-dados/executor-tenant';
 import { CriptografiaDadosSensiveis } from '../../../infraestrutura/seguranca/criptografia-dados-sensiveis';
 import { UsuarioAutenticado } from '../../auth/dominio/usuario-autenticado';
 import { AlimentoPersonalizadoOrm } from '../infraestrutura/alimento-personalizado.orm';
-import { ComposicaoPersonalizada, NORMALIZACAO_CUSTOM, normalizarComposicaoPersonalizada, selecionarConteudoPersonalizado } from '../dominio/alimentos-personalizados';
+import { FavoritoAlimentoOrm } from '../infraestrutura/favorito-alimento.orm';
+import { ComposicaoPersonalizada, validarSnapshotPersonalizado, normalizarComposicaoPersonalizada, selecionarConteudoPersonalizado } from '../dominio/alimentos-personalizados';
 import { LimitePrecisaoNutricionalError } from '../dominio/micronutrientes';
 import { AtualizarAlimentoPersonalizadoDto, BuscarAlimentosPersonalizadosDto, CriarAlimentoPersonalizadoDto, ListarAlimentosPersonalizadosDto } from './dtos-alimentos-personalizados';
 import { identidadeBiblioteca } from './identidade-biblioteca-alimentos';
@@ -18,12 +19,7 @@ export class ServicoAlimentosPersonalizados {
   }
   private ler(m: AlimentoPersonalizadoOrm): ComposicaoPersonalizada {
     try {
-      const s = JSON.parse(this.crypto.descriptografar(m.conteudoCriptografado));
-      const c = s.composicao;
-      if (s.schemaVersao !== 1 || c?.normalizacaoVersao !== NORMALIZACAO_CUSTOM) throw new Error();
-      const r = normalizarComposicaoPersonalizada({ nome: c.nome, ...(c.preparacao ? { preparacao: c.preparacao } : {}), ...(c.referenciaComposicao ? { referenciaComposicao: c.referenciaComposicao } : {}), base: c.baseOrigem, ...c.composicaoOrigem });
-      if (JSON.stringify(r) !== JSON.stringify(c)) throw new Error();
-      return r;
+      return validarSnapshotPersonalizado(JSON.parse(this.crypto.descriptografar(m.conteudoCriptografado)));
     } catch { throw new ServiceUnavailableException('Alimento personalizado indisponível.'); }
   }
   private projetar(m: AlimentoPersonalizadoOrm, profissionalId: string, detalhe = false) {
@@ -49,10 +45,31 @@ export class ServicoAlimentosPersonalizados {
         hashes = this.crypto.gerarHashesConsultaPii(tenantId, busca);
         if (!hashes.length || termos.some(t => t.length > 32)) throw new BadRequestException('Use palavras com 3 a 32 caracteres para buscar.');
       }
-      const base = { tenantId, ativo: true, ...(hashes ? { buscaHashes: ArrayContains(hashes) } : {}) };
-      const where = [ ...(q.escopo !== 'pessoal' ? [{ ...base, escopo: 'clinica' as const }] : []), ...(q.escopo !== 'clinica' ? [{ ...base, escopo: 'pessoal' as const, profissionalId }] : []) ];
-      const [itens, total] = await g.getRepository(AlimentoPersonalizadoOrm).findAndCount({ where, order: { criadoEm: 'DESC', id: 'DESC' }, skip: (pagina - 1) * limite, take: limite });
-      return { itens: itens.map(m => this.projetar(m, profissionalId)), total, pagina, limite };
+      const repo = g.getRepository(AlimentoPersonalizadoOrm);
+      if (typeof repo.createQueryBuilder !== 'function') {
+        const base = { tenantId, ativo: true, ...(hashes ? { buscaHashes: ArrayContains(hashes) } : {}) };
+        const where = [ ...(q.escopo !== 'pessoal' ? [{ ...base, escopo: 'clinica' as const }] : []), ...(q.escopo !== 'clinica' ? [{ ...base, escopo: 'pessoal' as const, profissionalId }] : []) ];
+        const [itens, total] = await repo.findAndCount({ where, order: { criadoEm: 'DESC', id: 'DESC' }, skip: (pagina - 1) * limite, take: limite });
+        return { itens: itens.map(m => this.projetar(m, profissionalId)), total, pagina, limite };
+      }
+      const consulta = repo.createQueryBuilder('alimento')
+        .leftJoin(FavoritoAlimentoOrm, 'favorito', 'favorito.alimento_personalizado_id=alimento.id AND favorito.tenant_id=:tenantId AND favorito.profissional_id=:profissionalId', { tenantId, profissionalId })
+        .addSelect('CASE WHEN favorito.id IS NULL THEN 1 ELSE 0 END', 'ordem_favorito')
+        .where('alimento.tenant_id=:tenantId AND alimento.ativo=true', { tenantId })
+        .andWhere(q.escopo === 'pessoal' ? 'alimento.escopo=\'pessoal\' AND alimento.profissional_id=:profissionalId'
+          : q.escopo === 'clinica' ? 'alimento.escopo=\'clinica\''
+            : '(alimento.escopo=\'clinica\' OR (alimento.escopo=\'pessoal\' AND alimento.profissional_id=:profissionalId))', { profissionalId });
+      if (hashes) consulta.andWhere('alimento.busca_hashes @> :hashes', { hashes });
+      const [itens, total] = await consulta
+        .orderBy('ordem_favorito', 'ASC')
+        .addOrderBy('alimento.criado_em', 'DESC')
+        .addOrderBy('alimento.id', 'DESC')
+        .skip((pagina - 1) * limite).take(limite).getManyAndCount();
+      const favoritoRepo = g.getRepository(FavoritoAlimentoOrm);
+      const favoritos = itens.length && typeof favoritoRepo.find === 'function' ? new Set((await favoritoRepo.find({
+        where: { tenantId, profissionalId, alimentoPersonalizadoId: In(itens.map((m) => m.id)) }
+      })).map((f) => f.alimentoPersonalizadoId)) : new Set<string>();
+      return { itens: itens.map(m => ({ ...this.projetar(m, profissionalId), favorito: favoritos.has(m.id) })), total, pagina, limite };
     });
   }
   listar(tenantId: string, usuario: UsuarioAutenticado, q: ListarAlimentosPersonalizadosDto) { return this.consultar(tenantId, usuario, q); }

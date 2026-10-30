@@ -1,6 +1,57 @@
 # OctaClin - Checklist vivo de fases futuras ate producao
 
-Atualizado em 2026-10-14. Fase 320: NO-GO para ingestão TBCA nesta rodada por ausência de autorização de uso; manter TACO, USDA e IBGE. O handoff formal e a primeira tarefa da Onda 0 (FND02) estão nesta PR. A ingestão poderá ser reavaliada após autorização escrita e revisão de direitos.
+Atualizado em 2026-10-30 após integração da FOOD07. A Fase 320 continua NO-GO para ingestão TBCA; manter TACO, USDA e IBGE.
+
+## Estado vigente reconciliado em 2026-10-30
+
+- **FOOD07:** PR #452 integrada em `87df565f1aa504328c8032c069cc6d4746499a59`.
+  Checks aplicáveis do HEAD `7a963b16` passaram; Provenance do SBOM ficou
+  `SKIPPED`. A #453 foi integrada antes em `9697bc18`; Mobile Expo passou no
+  CI após atualizar a base da FOOD07. Evidências detalhadas em
+  `tasks/execucao-pos-320-food07.md`.
+- **Não inferir produção:** merge e CI não provam deploy ou aplicação externa
+  da migration 1080. G06 continua BLOCKED; sem consulta/escrita operacional
+  nesta atualização. A revisão de produção de FOOD04/FOOD05 segue para etapa
+  própria, após retorno e autorização do proprietário.
+- **Próximas entregas em planejamento:** PR #454 (Draft) propõe FOOD06 primeiro,
+  com gates científicos, clínicos e de direitos; FOOD08 fica como entrega
+  separada, dependente de decisões de publicação, conteúdo, privacidade e
+  moderação. Isso não autoriza implementação. Ver
+  `docs/pos-320/05_Plano_Sequencia_FOOD06_FOOD08_2026-10-30.md`.
+- Fase 316 permanece em stand-by; TBCA segue NO-GO.
+
+## Checkpoint de 2026-10-22 (histórico, supersedido pelo estado vigente acima)
+
+- **Base desta atualização:** `main`/`origin/main` no merge #438, commit
+  `9f13b80a3984f36f1259fcd798eba54dd9d8070a`.
+- **FOOD02:** PRs #425 e #426 integradas; o registro histórico de implementação
+  abaixo foi supersedido. Estado de migrations/deploy externos não foi
+  reconsultado nesta atualização e não é inferido do merge.
+- **Backup:** PR #437 integrada; workflow
+  [39727168790](https://github.com/octanutri-clin/octaclin/actions/runs/39727168790)
+  terminou `success`, incluindo restauração e validação em destino dedicado.
+  O tempo observado para restore+validação foi 102s, dentro do objetivo de
+  30min; idade do snapshot 133s, dentro do objetivo RPO de 24h. Retenção foi
+  explicitamente ignorada nesta execução (`configurar_retencao=false`), portanto
+  esse resultado não valida a política de retenção.
+- **Saúde/ClamAV:** consulta pública a `/health/detalhado` em 2026-10-22
+  retornou estado degradado por ClamAV não configurado. O scanner real continua
+  ausente, uploads não recebem detecção real de malware, e a issue #234 segue
+  aberta. Não criar serviço pago nem declarar mitigação sem decisão operacional.
+- **FOOD03:** PR #438, migration 1077 e deploy reconciliados; ver
+  `tasks/plan-pos-320-food03.md`.
+- **Próxima entrega funcional / planejamento ativo:** FOOD04, grupos
+  reutilizáveis de substituições. Base `9e1984a2` (merge #440) conferida em
+  2026-10-22; D01–D03 aprovadas e ampliadas para D01–D08. Administração,
+  duplicação, filtros/favoritos, aplicação seletiva, dedup e restauração fazem
+  parte da entrega essencial. Backend/BFF, migration1078 e UI implementados na
+  PR #441 (Draft); correções de snapshot catálogo e cancelamento durante save
+  reavaliadas por outro agente, sem novos Critical/P1/P2 confirmados no delta.
+  Regressões locais PASS (backend3244; visual20), CI do HEAD final pendente. Provas reais e limites em
+  `tasks/execucao-pos-320-food04.md`; nenhuma migration externa aplicada.
+  Plano: `tasks/plan-pos-320-food04.md`; tarefas: `tasks/todo-pos-320-food04.md`.
+  Referência específica recomenda primitives/código atual, sem nova biblioteca.
+  Fase 316 permanece em stand-by.
 
 ## Estado reconciliado em 2026-10-14
 
@@ -4670,16 +4721,17 @@ auditoria estão ordenados na seção 15 de
   descartável nesta entrega; estado externo não verificado. Preservar leitor
   compatível no rollback. Evidências/limites:
   `docs/governance/RELATORIO_FOOD01_2026-10-17.md`.
-- [~] FOOD02 — T01–T08 implementados sobre base `95e9f33d`; D01–D03
-  confirmadas. Migration1076 ensaiada só em PG descartável, sem aplicação
-  externa. BFF52/52, helpers67/67, typecheck, origem9/9, autorização30/30 e
-  Playwright FOOD02/regressões desktop/mobile PASS. R4 independente encontrou
-  três achados Important, reproduzidos e corrigidos com RED/GREEN. PA07 desktop
-  19/19, testes FOOD02 finais desktop/mobile4/4 por projeto, `test:authz`, lint
-  focal e Web build PASS. Draft PR #425 aberta; checks do HEAD `778b7906` estavam
-  QUEUED. Estado externo da migration ainda não verificado.
-  Evidências em `docs/governance/EVIDENCIAS_FOOD02_WEB_2026-10-17.md` e plano/
-  checklist em `tasks/plan-pos-320-food02.md`/`tasks/todo-pos-320-food02.md`.
+- [x] FOOD02 — integrada pela PR #425; estabilização visual complementar na
+  #426. O bloco histórico acima sobre Draft/checks QUEUED foi supersedido pelo
+  estado reconciliado em 2026-10-22. Estado externo da migration1076 e deploy
+  não foram reconsultados nesta atualização; não inferir do merge. Evidências:
+  `docs/governance/EVIDENCIAS_FOOD02_WEB_2026-10-17.md`,
+  `docs/governance/REVISAO_R4_FOOD02_2026-10-18.md` e
+  `tasks/plan-pos-320-food02.md`/`tasks/todo-pos-320-food02.md`.
+- [x] FOOD03 — PR #438 mergeada; migration 1077 aplicada e verificada em
+  staging/produção; backend e Web `live` nos dois ambientes. A preferência
+  profissional permanece separada do campo `preferida` do snapshot do plano.
+  Evidências: `tasks/plan-pos-320-food03.md`.
 
 
 

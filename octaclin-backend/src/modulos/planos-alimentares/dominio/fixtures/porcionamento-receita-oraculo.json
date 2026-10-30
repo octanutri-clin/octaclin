@@ -1,0 +1,320 @@
+{
+  "oraculo": "python-fraction-decimal-half-up-v1",
+  "casos": [
+    {
+      "base": "receita_inteira",
+      "rendimento": 4,
+      "quantidade": 500.0,
+      "gramas": 500.0,
+      "porcoes": 0.001,
+      "fator": {
+        "numerador": "1",
+        "denominador": "4000"
+      },
+      "esperado": {
+        "quantidade": 0.125,
+        "porcaoGramas": 0.125
+      }
+    },
+    {
+      "base": "receita_inteira",
+      "rendimento": 4,
+      "quantidade": 500.0,
+      "gramas": 500.0,
+      "porcoes": 0.5,
+      "fator": {
+        "numerador": "1",
+        "denominador": "8"
+      },
+      "esperado": {
+        "quantidade": 62.5,
+        "porcaoGramas": 62.5
+      }
+    },
+    {
+      "base": "receita_inteira",
+      "rendimento": 4,
+      "quantidade": 500.0,
+      "gramas": 500.0,
+      "porcoes": 1.0,
+      "fator": {
+        "numerador": "1",
+        "denominador": "4"
+      },
+      "esperado": {
+        "quantidade": 125.0,
+        "porcaoGramas": 125.0
+      }
+    },
+    {
+      "base": "receita_inteira",
+      "rendimento": 4,
+      "quantidade": 500.0,
+      "gramas": 500.0,
+      "porcoes": 1.5,
+      "fator": {
+        "numerador": "3",
+        "denominador": "8"
+      },
+      "esperado": {
+        "quantidade": 187.5,
+        "porcaoGramas": 187.5
+      }
+    },
+    {
+      "base": "receita_inteira",
+      "rendimento": 4,
+      "quantidade": 500.0,
+      "gramas": 500.0,
+      "porcoes": 2.5,
+      "fator": {
+        "numerador": "5",
+        "denominador": "8"
+      },
+      "esperado": {
+        "quantidade": 312.5,
+        "porcaoGramas": 312.5
+      }
+    },
+    {
+      "base": "receita_inteira",
+      "rendimento": 4,
+      "quantidade": 500.0,
+      "gramas": 500.0,
+      "porcoes": 4.0,
+      "fator": {
+        "numerador": "1",
+        "denominador": "1"
+      },
+      "esperado": {
+        "quantidade": 500.0,
+        "porcaoGramas": 500.0
+      }
+    },
+    {
+      "base": "receita_inteira",
+      "rendimento": 4,
+      "quantidade": 500.0,
+      "gramas": 500.0,
+      "porcoes": 10.0,
+      "fator": {
+        "numerador": "5",
+        "denominador": "2"
+      },
+      "esperado": {
+        "quantidade": 1250.0,
+        "porcaoGramas": 1250.0
+      }
+    },
+    {
+      "base": "por_porcao",
+      "rendimento": 4,
+      "quantidade": 125.0,
+      "gramas": 125.0,
+      "porcoes": 0.001,
+      "fator": {
+        "numerador": "1",
+        "denominador": "1000"
+      },
+      "esperado": {
+        "quantidade": 0.125,
+        "porcaoGramas": 0.125
+      }
+    },
+    {
+      "base": "por_porcao",
+      "rendimento": 4,
+      "quantidade": 125.0,
+      "gramas": 125.0,
+      "porcoes": 0.5,
+      "fator": {
+        "numerador": "1",
+        "denominador": "2"
+      },
+      "esperado": {
+        "quantidade": 62.5,
+        "porcaoGramas": 62.5
+      }
+    },
+    {
+      "base": "por_porcao",
+      "rendimento": 4,
+      "quantidade": 125.0,
+      "gramas": 125.0,
+      "porcoes": 1.0,
+      "fator": {
+        "numerador": "1",
+        "denominador": "1"
+      },
+      "esperado": {
+        "quantidade": 125.0,
+        "porcaoGramas": 125.0
+      }
+    },
+    {
+      "base": "por_porcao",
+      "rendimento": 4,
+      "quantidade": 125.0,
+      "gramas": 125.0,
+      "porcoes": 1.5,
+      "fator": {
+        "numerador": "3",
+        "denominador": "2"
+      },
+      "esperado": {
+        "quantidade": 187.5,
+        "porcaoGramas": 187.5
+      }
+    },
+    {
+      "base": "por_porcao",
+      "rendimento": 4,
+      "quantidade": 125.0,
+      "gramas": 125.0,
+      "porcoes": 2.5,
+      "fator": {
+        "numerador": "5",
+        "denominador": "2"
+      },
+      "esperado": {
+        "quantidade": 312.5,
+        "porcaoGramas": 312.5
+      }
+    },
+    {
+      "base": "por_porcao",
+      "rendimento": 4,
+      "quantidade": 125.0,
+      "gramas": 125.0,
+      "porcoes": 4.0,
+      "fator": {
+        "numerador": "4",
+        "denominador": "1"
+      },
+      "esperado": {
+        "quantidade": 500.0,
+        "porcaoGramas": 500.0
+      }
+    },
+    {
+      "base": "por_porcao",
+      "rendimento": 4,
+      "quantidade": 125.0,
+      "gramas": 125.0,
+      "porcoes": 10.0,
+      "fator": {
+        "numerador": "10",
+        "denominador": "1"
+      },
+      "esperado": {
+        "quantidade": 1250.0,
+        "porcaoGramas": 1250.0
+      }
+    },
+    {
+      "base": "receita_inteira",
+      "rendimento": 3,
+      "quantidade": 1.0,
+      "gramas": 500.0,
+      "porcoes": 1.0,
+      "fator": {
+        "numerador": "1",
+        "denominador": "3"
+      },
+      "esperado": {
+        "quantidade": 0.333,
+        "porcaoGramas": 166.667
+      }
+    },
+    {
+      "base": "receita_inteira",
+      "rendimento": 4,
+      "quantidade": 2.0,
+      "gramas": 2.0,
+      "porcoes": 0.003,
+      "fator": {
+        "numerador": "3",
+        "denominador": "4000"
+      },
+      "esperado": {
+        "quantidade": 0.002,
+        "porcaoGramas": 0.002
+      }
+    },
+    {
+      "base": "receita_inteira",
+      "rendimento": 1000,
+      "quantidade": 10000.0,
+      "gramas": 10000.0,
+      "porcoes": 0.001,
+      "fator": {
+        "numerador": "1",
+        "denominador": "1000000"
+      },
+      "esperado": {
+        "quantidade": 0.01,
+        "porcaoGramas": 0.01
+      }
+    },
+    {
+      "base": "por_porcao",
+      "rendimento": 1,
+      "quantidade": 0.001,
+      "gramas": 0.001,
+      "porcoes": 1000.0,
+      "fator": {
+        "numerador": "1000",
+        "denominador": "1"
+      },
+      "esperado": {
+        "quantidade": 1.0,
+        "porcaoGramas": 1.0
+      }
+    },
+    {
+      "base": "receita_inteira",
+      "rendimento": 1,
+      "quantidade": 10000.0,
+      "gramas": 10000.0,
+      "porcoes": 1.0,
+      "fator": {
+        "numerador": "1",
+        "denominador": "1"
+      },
+      "esperado": {
+        "quantidade": 10000.0,
+        "porcaoGramas": 10000.0
+      }
+    },
+    {
+      "base": "receita_inteira",
+      "rendimento": 7,
+      "quantidade": 123.456,
+      "gramas": 789.123,
+      "porcoes": 2.5,
+      "fator": {
+        "numerador": "5",
+        "denominador": "14"
+      },
+      "esperado": {
+        "quantidade": 44.091,
+        "porcaoGramas": 281.83
+      }
+    },
+    {
+      "base": "receita_inteira",
+      "rendimento": 999,
+      "quantidade": 3456.789,
+      "gramas": 9876.543,
+      "porcoes": 2.501,
+      "fator": {
+        "numerador": "2501",
+        "denominador": "999000"
+      },
+      "esperado": {
+        "quantidade": 8.654,
+        "porcaoGramas": 24.726
+      }
+    }
+  ]
+}

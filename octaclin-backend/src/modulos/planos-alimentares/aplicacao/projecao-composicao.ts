@@ -6,7 +6,7 @@ function campos(v: object | undefined, permitidos: readonly string[]) {
 const MACROS = ['energiaKcal', 'proteinasG', 'carboidratosG', 'gordurasG', 'fibrasG', 'sodioMg'];
 /** Não altera projeção/hash legado; custom nunca transporta metadados de biblioteca. */
 export function projetarComposicao(s: SnapshotComposicao): SnapshotComposicao {
-  if (s.origem !== 'custom') return s;
+  if (s.origem !== 'custom') { const { origemGrupo: _interna, ...publico } = s; return publico; }
   const r = campos(s, ['origem', 'descricao', 'preparacao', 'composicaoInformada', 'nutrientesPor100g', 'nutrientesPorcao', 'micronutrientes']);
   r.nutrientesPor100g = campos(s.nutrientesPor100g, MACROS);
   r.nutrientesPorcao = campos(s.nutrientesPorcao, MACROS);

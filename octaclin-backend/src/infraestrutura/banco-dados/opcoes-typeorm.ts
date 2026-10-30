@@ -1,6 +1,11 @@
+import { GruposSubstituicoes1720000001078 } from './migracoes/1720000001078-GruposSubstituicoes';
+import { MetadadosReceitasNutricionais1720000001080 } from './migracoes/1720000001080-MetadadosReceitasNutricionais';
+import { GrupoSubstituicoesOrm, FavoritoGrupoSubstituicoesOrm } from '../../modulos/planos-alimentares/infraestrutura/grupo-substituicoes.orm';
 import { AlimentosPersonalizados1720000001076 } from './migracoes/1720000001076-AlimentosPersonalizados';
 import { AlimentoPersonalizadoOrm } from '../../modulos/planos-alimentares/infraestrutura/alimento-personalizado.orm';
+import { FavoritoAlimentoOrm } from '../../modulos/planos-alimentares/infraestrutura/favorito-alimento.orm';
 import { MedidasCaseiras1720000001075 } from './migracoes/1720000001075-MedidasCaseiras';
+import { FavoritosAlimentosProfissional1720000001077 } from './migracoes/1720000001077-FavoritosAlimentosProfissional';
 import { MedidaCaseiraOrm } from '../../modulos/planos-alimentares/infraestrutura/medida-caseira.orm';
 import { ApresentacaoPlanos1720000001072 } from './migracoes/1720000001072-ApresentacaoPlanos';
 import { AtivacaoPlanos1720000001074 } from './migracoes/1720000001074-AtivacaoPlanos';
@@ -372,6 +377,9 @@ export function criarOpcoesTypeOrm(): TypeOrmModuleOptions & DataSourceOptions {
       AlimentoComposicaoOrm,
       MedidaCaseiraOrm,
       AlimentoPersonalizadoOrm,
+      GrupoSubstituicoesOrm,
+      FavoritoGrupoSubstituicoesOrm,
+      FavoritoAlimentoOrm,
       UserActionLogOrm,
       OutboxEventoOrm,
       ApiChaveOrm,
@@ -468,7 +476,10 @@ export function criarOpcoesTypeOrm(): TypeOrmModuleOptions & DataSourceOptions {
         EdicaoPlanos1720000001073,
         AtivacaoPlanos1720000001074,
         MedidasCaseiras1720000001075,
-        AlimentosPersonalizados1720000001076
+        AlimentosPersonalizados1720000001076,
+        FavoritosAlimentosProfissional1720000001077,
+        GruposSubstituicoes1720000001078,
+        MetadadosReceitasNutricionais1720000001080
       ],
     migrationsRun: executarMigracoesNoBoot(),
     synchronize: false,

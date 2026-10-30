@@ -1,3 +1,12 @@
+import { POST as consultarReceitasFood07 } from '../app/api/planos-alimentares/receitas/consulta/route';
+import { POST as preverReceitasFood07 } from '../app/api/planos-alimentares/receitas/[receitaId]/previa-porcionamento/route';
+import { POST as compartilharReceitasFood07 } from '../app/api/planos-alimentares/receitas/compartilhamentos/route';
+import * as receitasFood07Api from '../lib/plano-alimentar-api';
+import { POST as consultarFontesGruposFood04 } from '../app/api/planos-alimentares/grupos-substituicoes-administracao/alimentos/consulta/route';
+import { POST as consultarGruposFood04 } from '../app/api/planos-alimentares/grupos-substituicoes/consulta/route';
+import { POST as criarGrupoFood04 } from '../app/api/planos-alimentares/grupos-substituicoes/route';
+import { PATCH as editarGrupoFood04 } from '../app/api/planos-alimentares/grupos-substituicoes/[grupoId]/route';
+import { POST as consultarGruposAdminFood04 } from '../app/api/planos-alimentares/grupos-substituicoes-administracao/consulta/route';
 import { GET as obterApresentacaoPaciente } from '../app/api/pacientes/[id]/planos-alimentares/[planoId]/versoes/[numero]/apresentacao-paciente/route';
 import assert from 'node:assert/strict';
 import test from 'node:test';
@@ -13,6 +22,8 @@ import { GET as obterPlanoPortal } from '../app/api/portal/paciente/planos-alime
 import { GET as listarEscolhasPaciente } from '../app/api/pacientes/[id]/planos-alimentares/[planoId]/escolhas-paciente/route';
 import { GET as buscarAlimentos } from '../app/api/pacientes/[id]/planos-alimentares/alimentos/route';
 import { GET as buscarAlimentosModelo } from '../app/api/planos-alimentares/alimentos/route';
+import { GET as listarFavoritos, POST as favoritar } from '../app/api/planos-alimentares/favoritos/route';
+import { DELETE as desfavoritar } from '../app/api/planos-alimentares/favoritos/[origem]/[alimentoId]/route';
 import { GET as listarMedidasCaseiras, POST as criarMedidaCaseira } from '../app/api/planos-alimentares/alimentos/[alimentoId]/medidas-caseiras/route';
 import { PATCH as editarMedidaCaseira } from '../app/api/planos-alimentares/alimentos/[alimentoId]/medidas-caseiras/[medidaId]/route';
 import { GET as listarPersonalizados, POST as criarPersonalizado } from '../app/api/planos-alimentares/alimentos-personalizados/route';
@@ -34,7 +45,7 @@ import { GET as obterVersaoModelo } from '../app/api/planos-alimentares/modelos/
 import { POST as restaurarVersaoModelo } from '../app/api/planos-alimentares/modelos/[modeloId]/versoes/[numero]/restaurar/route';
 import { GET as listarReceitas, POST as criarReceita } from '../app/api/planos-alimentares/receitas/route';
 import { GET as obterReceita, PUT as atualizarReceita, DELETE as arquivarReceita } from '../app/api/planos-alimentares/receitas/[receitaId]/route';
-import { alterarAtivacaoPlanoAlimentar, alterarAtivacaoRefeicaoPlanoAlimentar, obterAcompanhamentoVersaoPlanoAlimentar, listarAlimentosPersonalizados, buscarAlimentosPersonalizados, criarAlimentoPersonalizado, atualizarAlimentoPersonalizado, listarMedidasCaseirasAlimento } from '../lib/plano-alimentar-api';
+import { alterarAtivacaoPlanoAlimentar, alterarAtivacaoRefeicaoPlanoAlimentar, obterAcompanhamentoVersaoPlanoAlimentar, listarAlimentosPersonalizados, buscarAlimentosPersonalizados, criarAlimentoPersonalizado, atualizarAlimentoPersonalizado, listarMedidasCaseirasAlimento, alterarFavoritoAlimento } from '../lib/plano-alimentar-api';
 import { calcularPlanosCombinados as calcularPlanosCombinadosApi, obterSelecaoCalculoPlano } from '../lib/calculo-combinado-planos-api';
 import { listarPlanosAlimentaresPortalPaciente, obterPlanoAlimentarPortalPaciente } from '../lib/portal-api';
 import { aplicarAckAtivacao, ativacaoOperacionalEstaDesatualizada, localizarAtivacaoRefeicao, mesclarProjecaoAtivacao } from '../lib/ativacao-plano';
@@ -189,6 +200,65 @@ test('BFF de medidas personalizadas usa permissão, UUIDs, paginação e limite 
       [`http://backend.octaclin.local/planos-alimentares/alimentos-personalizados/${alimentoId}/medidas-caseiras/${medidaId}`, 'PATCH']
     ]);
     for (const resposta of [lista, criada, editada, excessiva]) assert.equal(resposta.headers.get('cache-control'), 'private, no-store');
+  } finally { restaurarFetch(original); }
+});
+
+test('FOOD03 BFF protege favoritos por sessão e permissão, valida identidade e não usa cache', async () => {
+  __clearCookies();
+  const original = global.fetch;
+  let chamadas = 0;
+  global.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+    chamadas += 1;
+    const url = new URL(String(input));
+    assert.match(url.pathname, /^\/planos-alimentares\/favoritos(?:\/catalogo\/aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa)?$/);
+    assert.equal(init?.cache, 'no-store');
+    return Response.json({ itens: [{ origem: 'catalogo', alimentoId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa' }] });
+  }) as typeof global.fetch;
+  try {
+    const semSessao = await listarFavoritos();
+    assert.equal(semSessao.status, 401);
+    assert.equal(chamadas, 0);
+
+    __setCookies(cookiesSessaoValida(['planos_alimentares.ler']));
+    const lista = await listarFavoritos();
+    assert.equal(lista.status, 200);
+    assert.equal(chamadas, 1);
+
+    __setCookies(cookiesSessaoValida(['planos_alimentares.ler']));
+    const negado = await favoritar(new Request('http://localhost/api/favoritos', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ origem: 'catalogo', alimentoId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa' })
+    }));
+    assert.ok(negado);
+    assert.equal(negado.status, 403);
+    assert.equal(chamadas, 1);
+
+    __setCookies(cookiesSessaoValida(['planos_alimentares.gerenciar']));
+    const uuid = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+    const removido = await desfavoritar(new Request('http://localhost/api/favoritos', { method: 'DELETE' }), {
+      params: Promise.resolve({ origem: 'catalogo', alimentoId: uuid })
+    });
+    assert.equal(removido.status, 200);
+    assert.equal(chamadas, 2);
+    const invalido = await desfavoritar(new Request('http://localhost/api/favoritos', { method: 'DELETE' }), {
+      params: Promise.resolve({ origem: 'paciente', alimentoId: uuid })
+    });
+    assert.equal(invalido.status, 400);
+  } finally { restaurarFetch(original); __clearCookies(); }
+});
+
+test('FOOD03 cliente de favorito usa origem discriminada, body restrito e no-store', async () => {
+  const original = global.fetch;
+  let requisicao: RequestInit | undefined;
+  global.fetch = (async (_input: RequestInfo | URL, init?: RequestInit) => {
+    requisicao = init;
+    return Response.json({ origem: 'custom', alimentoId: 'id', favorito: true });
+  }) as typeof global.fetch;
+  try {
+    await alterarFavoritoAlimento('custom', 'id', true);
+    assert.equal(requisicao?.method, 'POST');
+    assert.equal(requisicao?.cache, 'no-store');
+    assert.deepEqual(JSON.parse(String(requisicao?.body)), { origem: 'custom', alimentoId: 'id' });
   } finally { restaurarFetch(original); }
 });
 
@@ -1170,4 +1240,181 @@ test('FOOD01 BFF responde falha de backend sem detalhes e com no-store', async (
     assert.equal(resposta.headers.get('Cache-Control'), 'private, no-store');
     assert.deepEqual(await resposta.json(), { mensagem: 'Não foi possível conectar ao backend configurado para esta sessão.' });
   } finally { restaurarFetch(original); __clearCookies(); }
+});
+
+const idGrupoFood04='70000000-0000-4000-8000-000000000001';
+const requestGrupoFood04=(body:unknown)=>new Request('http://localhost/api/grupos',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+test('FOOD04 BFF nega sem sessão/capacidade administrativa antes de fetch',async()=>{
+  const original=global.fetch;let calls=0;global.fetch=(async()=>{calls++;return Response.json({});})as typeof global.fetch;
+  try{
+    __clearCookies();assert.equal((await consultarGruposFood04(requestGrupoFood04({}))).status,401);
+    __setCookies(cookiesSessaoValida(['planos_alimentares.ler']));assert.equal((await consultarGruposAdminFood04(requestGrupoFood04({}))).status,403);
+    assert.equal(calls,0);
+  }finally{restaurarFetch(original);}
+});
+test('FOOD04 BFF admin usa capacidade própria e projeção sem campos internos',async()=>{
+  __setCookies(cookiesSessaoValida(['grupos_substituicoes.administrar']));
+  const original=global.fetch;let path='';
+  global.fetch=(async(url:unknown)=>{path=String(url);return Response.json({itens:[{id:idGrupoFood04,nome:'Grupo sintético',escopo:'clinica',estado:'ativo',revisao:1,quantidadeEntradas:1,podeEditar:true,favorito:false,tenantId:'interno-nao-projetar',origemCopia:'interno-nao-projetar',conteudoCriptografado:'interno-nao-projetar'}],total:1,pagina:1,limite:25});})as typeof global.fetch;
+  try{
+    const r=await consultarGruposAdminFood04(requestGrupoFood04({}));assert.equal(r.status,200);assert.equal(r.headers.get('cache-control'),'private, no-store');
+    assert.match(path,/grupos-substituicoes-administracao\/consulta$/);assert.doesNotMatch(JSON.stringify(await r.json()),/interno-nao-projetar/);
+  }finally{restaurarFetch(original);}
+});
+test('FOOD04 BFF recusa propriedades de identidade, conteúdo excessivo e UUID inseguro',async()=>{
+  __setCookies(cookiesSessaoValida(['planos_alimentares.gerenciar']));const original=global.fetch;let calls=0;global.fetch=(async()=>{calls++;return Response.json({});})as typeof global.fetch;
+  try{
+    assert.equal((await criarGrupoFood04(requestGrupoFood04({tenantId:idGrupoFood04}))).status,400);
+    assert.equal((await criarGrupoFood04(requestGrupoFood04({nome:'x'.repeat(100000)}))).status,413);
+    assert.equal((await editarGrupoFood04(requestGrupoFood04({revisaoEsperada:1,estado:'ativo'}),{params:Promise.resolve({grupoId:'../outro'})})).status,400);
+    assert.equal(calls,0);
+  }finally{restaurarFetch(original);}
+});
+test('FOOD04 BFF não repassa detalhes internos de falha do backend',async()=>{
+  __setCookies(cookiesSessaoValida(['planos_alimentares.ler']));const original=global.fetch;global.fetch=(async()=>Response.json({message:'interno-nao-projetar',stack:'interno-nao-projetar'},{status:500}))as typeof global.fetch;
+  try{const r=await consultarGruposFood04(requestGrupoFood04({}));assert.equal(r.status,500);assert.doesNotMatch(JSON.stringify(await r.json()),/interno-nao-projetar/);}
+  finally{restaurarFetch(original);}
+});
+
+test('FOOD04 BFF rejeita grupo pessoal na resposta administrativa e escalares adulterados',async()=>{
+  __setCookies(cookiesSessaoValida(['grupos_substituicoes.administrar']));const original=global.fetch;
+  try{
+    for(const extra of [{escopo:'pessoal'},{descricao:{conteudo:'interno-nao-projetar'}}]){
+      global.fetch=(async()=>Response.json({itens:[{id:idGrupoFood04,nome:'Grupo sintético',escopo:'clinica',estado:'ativo',revisao:1,quantidadeEntradas:1,podeEditar:true,favorito:false,...extra}],total:1,pagina:1,limite:25}))as typeof global.fetch;
+      const r=await consultarGruposAdminFood04(requestGrupoFood04({}));assert.equal(r.status,503);assert.doesNotMatch(JSON.stringify(await r.json()),/interno-nao-projetar/);
+    }
+  }finally{restaurarFetch(original);}
+});
+
+test('FOOD04 BFF fonte administrativa não abre biblioteca pessoal e projeta composição mínima',async()=>{
+  const original=global.fetch;let caminho='';
+  global.fetch=(async(url:unknown)=>{caminho=String(url);return Response.json({itens:[{id:idGrupoFood04,origem:'custom',alimentoId:idGrupoFood04,revisao:1,nome:'Produto sintético',profissionalId:'interno-nao-projetar',composicao:{descricao:'Produto sintético',nutrientesPor100g:{energiaKcal:100,owner:'interno-nao-projetar'},composicaoCustom:'interno-nao-projetar'}}],total:1,pagina:1,limite:25});})as typeof global.fetch;
+  try{
+    __setCookies(cookiesSessaoValida(['planos_alimentares.ler']));assert.equal((await consultarFontesGruposFood04(requestGrupoFood04({origem:'custom',busca:'produto'}))).status,403);
+    __setCookies(cookiesSessaoValida(['grupos_substituicoes.administrar']));const r=await consultarFontesGruposFood04(requestGrupoFood04({origem:'custom',busca:'produto'}));
+    assert.equal(r.status,200);assert.match(caminho,/administracao\/alimentos\/consulta$/);assert.doesNotMatch(JSON.stringify(await r.json()),/interno-nao-projetar/);
+  }finally{restaurarFetch(original);}
+});
+
+
+test('FOOD07 BFF rejeita escopo/contexto injetado antes de encaminhar compartilhamento', async () => {
+  __setCookies(cookiesSessaoValida(['planos_alimentares.gerenciar']));
+  const original = global.fetch; let chamadas = 0;
+  global.fetch = (async () => { chamadas++; return Response.json({ quantidade: 1, agendadoPara: null, itens: [] }); }) as typeof fetch;
+  try {
+    const r = await compartilharReceitasFood07(new Request('http://localhost/api/receitas/compartilhamentos', { method: 'POST', body: JSON.stringify({ tenantId: 'injetado' }) }));
+    assert.equal(r.status, 400); assert.equal(chamadas, 0);
+  } finally { restaurarFetch(original); }
+});
+test('FOOD07 BFF limita compartilhamento mesmo sem content-length', async () => {
+  __setCookies(cookiesSessaoValida(['planos_alimentares.gerenciar']));
+  const original = global.fetch; let chamadas = 0;
+  global.fetch = (async () => { chamadas++; return Response.json({ quantidade: 0, agendadoPara: null, itens: [] }); }) as typeof fetch;
+  try {
+    const r = await compartilharReceitasFood07(new Request('http://localhost/api/receitas/compartilhamentos', { method: 'POST', body: 'x'.repeat(512 * 1024 + 1) }));
+    assert.equal(r.status, 413); assert.equal(chamadas, 0); assert.equal(r.headers.get('cache-control'), 'private, no-store');
+  } finally { restaurarFetch(original); }
+});
+test('FOOD07 cliente expõe consulta POST e prévia por body', () => {
+  const api = receitasFood07Api as unknown as Record<string, unknown>;
+  assert.equal(typeof api.consultarReceitasNutricionais, 'function');
+  assert.equal(typeof api.preverPorcionamentoReceita, 'function');
+});
+
+const FOOD07_R = '10000000-0000-4000-8000-000000000001';
+const FOOD07_P = '10000000-0000-4000-8000-000000000002';
+const FOOD07_K = '10000000-0000-4000-8000-000000000003';
+function pedidoFood07() { return { pacienteId: FOOD07_P, chaveIdempotencia: FOOD07_K, receitaIds: [FOOD07_R], versoesEsperadas: [{ receitaId: FOOD07_R, versao: 1 }], canais: ['portal'] }; }
+function respostaPreviaFood07() { return {
+  receitaId: FOOD07_R, versao: 1, fingerprint: 'a'.repeat(64), estado: 'calculavel', porcoesDesejadas: 1.5, baseQuantidades: 'receita_inteira', rendimentoOriginalPorcoes: 4,
+  fatorExato: { numerador: '3', denominador: '8', contextoCompartilhamento: 'NAO_PUBLICO' },
+  itens: [{ alimentoComposicaoId: FOOD07_R, descricao: 'Ingrediente sintético', quantidade: 1.5, unidade: 'colher', porcaoGramas: 37.5,
+    nutrientesPor100g: { energiaKcal: 100 }, contextoCompartilhamento: 'NAO_PUBLICO', substituicoes: [] }], avisos: [],
+  totais: { energiaKcal: { estado: 'conhecido', valor: 37.5, unidade: 'kcal' }, proteinasG: { estado: 'ausente', unidade: 'g' }, carboidratosG: { estado: 'ausente', unidade: 'g' }, gordurasG: { estado: 'ausente', unidade: 'g' } },
+  denominador: { porcoes: 1.5, descricao: 'Total para as porções solicitadas' },
+  fontes: [{ alimentoComposicaoId: FOOD07_R, descricao: 'Ingrediente sintético', preparacao: 'cozido', fonte: { codigo: 'SINTETICA', versao: '1', contextoCompartilhamento: 'NAO_PUBLICO' }, hashRegistro: 'NAO_PUBLICO' }],
+  contextoCompartilhamento: 'NAO_PUBLICO'
+}; }
+
+test('FOOD07 BFF suporta lote máximo e instruções Unicode serializadas por escape JSON', async () => {
+  __setCookies(cookiesSessaoValida(['planos_alimentares.gerenciar']));
+  const ids = Array.from({ length: 10 }, (_, i) => `10000000-0000-4000-8000-${String(i + 10).padStart(12, '0')}`);
+  const dados = { ...pedidoFood07(), receitaIds: ids, versoesEsperadas: ids.map(receitaId => ({ receitaId, versao: 1 })), porcionamentos: ids.map(receitaId => ({ receitaId, porcoesDesejadas: 1.5, fingerprintPrevia: 'a'.repeat(64), confirmacaoConferenciaInstrucoes: true, instrucoesPersonalizadas: '🍋'.repeat(4000) })) };
+  const body = JSON.stringify(dados).replace(/[^\x00-\x7f]/g, c => '\\u' + c.charCodeAt(0).toString(16).padStart(4, '0'));
+  assert.ok(new TextEncoder().encode(body).byteLength > 256 * 1024);
+  const original = global.fetch;
+  global.fetch = (async () => Response.json({ quantidade: 10, agendadoPara: null, itens: ids.map(id => ({ id, receitaId: id, status: 'ativo' })) }, { status: 201 })) as typeof fetch;
+  try { const r = await compartilharReceitasFood07(new Request('http://localhost/api/receitas/compartilhamentos', { method: 'POST', body })); assert.equal(r.status, 201); }
+  finally { restaurarFetch(original); }
+});
+test('FOOD07 consulta/prévia exigem sessão e permissão antes de consumir body inválido', async () => {
+  const original = global.fetch; let chamadas = 0;
+  global.fetch = (async () => { chamadas++; return Response.json({}); }) as typeof fetch;
+  try {
+    for (const sessao of [false, true]) {
+      if (sessao) __setCookies(cookiesSessaoValida([])); else __clearCookies();
+      const r = await consultarReceitasFood07(new Request('http://localhost/api/receitas/consulta', { method: 'POST', body: 'não-json' }));
+      const p = await preverReceitasFood07(new Request('http://localhost/api/receitas/previa', { method: 'POST', body: 'não-json' }), { params: Promise.resolve({ receitaId: FOOD07_R }) });
+      assert.deepEqual([r.status, p.status], sessao ? [403, 403] : [401, 401]);
+    }
+    assert.equal(chamadas, 0);
+  } finally { restaurarFetch(original); }
+});
+test('FOOD07 consulta leva etiqueta no body, limita metadados e não devolve entidade interna', async () => {
+  __setCookies(cookiesSessaoValida(['planos_alimentares.ler']));
+  const original = global.fetch; let caminho = '', corpo = '';
+  global.fetch = (async (u, init) => { caminho = String(u); corpo = String(init?.body); return Response.json({ itens: [{ id: FOOD07_R, nome: 'Receita sintética', origem: 'clinica', tipo: 'receita', categoria: null, versaoAtual: 1, totalItens: 1, atualizadoEm: '2026-10-29T00:00:00Z', conteudoCriptografado: 'NAO_PUBLICO', metadados: { schemaVersao: 1, etiquetas: ['Etiqueta sintética'], contextoCompartilhamento: 'NAO_PUBLICO' } }], total: 1, pagina: 1, limite: 25, tenantId: 'NAO_PUBLICO' }); }) as typeof fetch;
+  try {
+    const r = await consultarReceitasFood07(new Request('http://localhost/api/receitas/consulta', { method: 'POST', body: JSON.stringify({ etiqueta: 'Etiqueta sintética' }) }));
+    assert.equal(r.status, 200); assert.equal(caminho, 'http://backend.octaclin.local/planos-alimentares/receitas/consulta');
+    assert.deepEqual(JSON.parse(corpo), { etiqueta: 'Etiqueta sintética' }); assert.equal(r.headers.get('cache-control'), 'private, no-store');
+    assert.doesNotMatch(JSON.stringify(await r.json()), /NAO_PUBLICO|conteudoCriptografado|tenantId|contextoCompartilhamento/);
+  } finally { restaurarFetch(original); }
+});
+test('FOOD07 prévia preserva indicador ausente e filtra contexto em todos os níveis', async () => {
+  __setCookies(cookiesSessaoValida(['planos_alimentares.ler']));
+  const original = global.fetch; global.fetch = (async () => Response.json(respostaPreviaFood07())) as typeof fetch;
+  try {
+    const r = await preverReceitasFood07(new Request('http://localhost/api/receitas/previa', { method: 'POST', body: JSON.stringify({ versaoEsperada: 1, porcoesDesejadas: 1.5 }) }), { params: Promise.resolve({ receitaId: FOOD07_R }) });
+    assert.equal(r.status, 200); const p = await r.json(); assert.deepEqual(p.totais.proteinasG, { estado: 'ausente', unidade: 'g' });
+    assert.equal(p.totais.energiaKcal.valor, 37.5); assert.doesNotMatch(JSON.stringify(p), /NAO_PUBLICO|contextoCompartilhamento|hashRegistro/);
+  } finally { restaurarFetch(original); }
+});
+test('FOOD07 bodies inválidos, query arbitrária e limite8KiB não chegam ao backend', async () => {
+  __setCookies(cookiesSessaoValida(['planos_alimentares.ler']));
+  const original = global.fetch; let chamadas = 0; global.fetch = (async () => { chamadas++; return Response.json({}); }) as typeof fetch;
+  try {
+    for (const body of ['null', '[]', '{', '{"tenantId":"fora"}', '{"pagina":"1"}', '{"etiqueta":null}']) {
+      assert.equal((await consultarReceitasFood07(new Request('http://localhost/api/receitas/consulta', { method: 'POST', body }))).status, 400);
+    }
+    assert.equal((await consultarReceitasFood07(new Request('http://localhost/api/receitas/consulta?etiqueta=fora', { method: 'POST', body: '{}' }))).status, 400);
+    assert.equal((await consultarReceitasFood07(new Request('http://localhost/api/receitas/consulta', { method: 'POST', body: 'x'.repeat(8193) }))).status, 413);
+    const props = { params: Promise.resolve({ receitaId: FOOD07_R }) };
+    assert.equal((await preverReceitasFood07(new Request('http://localhost/api/receitas/previa', { method: 'POST', body: '{"versaoEsperada":1,"porcoesDesejadas":1.5,"fator":1}' }), props)).status, 400);
+    assert.equal(chamadas, 0);
+  } finally { restaurarFetch(original); }
+});
+test('FOOD07 resposta grande/inválida e erro backend não expõem conteúdo', async () => {
+  __setCookies(cookiesSessaoValida(['planos_alimentares.ler'])); const original = global.fetch;
+  try {
+    for (const resposta of [new Response('x'.repeat(512 * 1024 + 1)), Response.json({ itens: 'NAO_PUBLICO' })]) {
+      global.fetch = (async () => resposta) as typeof fetch;
+      const r = await consultarReceitasFood07(new Request('http://localhost/api/receitas/consulta', { method: 'POST', body: '{}' }));
+      assert.equal(r.status, 503); assert.doesNotMatch(await r.text(), /NAO_PUBLICO/);
+    }
+    global.fetch = (async () => Response.json({ message: 'NAO_PUBLICO' }, { status: 409 })) as typeof fetch;
+    const r = await consultarReceitasFood07(new Request('http://localhost/api/receitas/consulta', { method: 'POST', body: '{}' }));
+    assert.equal(r.status, 409); assert.doesNotMatch(await r.text(), /NAO_PUBLICO/);
+  } finally { restaurarFetch(original); }
+});
+test('FOOD07 cliente usa POST sem etiqueta em URL e propaga AbortSignal/no-store', async () => {
+  const original = global.fetch, chamadas: Array<{ url: string; init?: RequestInit }> = [], ctl = new AbortController();
+  global.fetch = (async (u, init) => { chamadas.push({ url: String(u), init }); return Response.json({}); }) as typeof fetch;
+  try {
+    await receitasFood07Api.consultarReceitasNutricionais({ etiqueta: 'Etiqueta sintética' }, ctl.signal);
+    await receitasFood07Api.preverPorcionamentoReceita(FOOD07_R, { versaoEsperada: 1, porcoesDesejadas: 1.5 }, ctl.signal);
+    assert.deepEqual(chamadas.map(c => c.url), ['/api/planos-alimentares/receitas/consulta', `/api/planos-alimentares/receitas/${FOOD07_R}/previa-porcionamento`]);
+    for (const c of chamadas) { assert.equal(c.init?.method, 'POST'); assert.equal(c.init?.cache, 'no-store'); assert.equal(c.init?.signal, ctl.signal); }
+    assert.deepEqual(JSON.parse(String(chamadas[0].init?.body)), { etiqueta: 'Etiqueta sintética' });
+  } finally { restaurarFetch(original); }
 });

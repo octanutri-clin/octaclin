@@ -192,6 +192,8 @@ async function preparar(page, { falharRevalidacaoOrigem = false, alterarVersaoNa
   });
 
   await page.goto(`/pacientes/${paciente.id}?aba=plano_alimentar`, { waitUntil: 'domcontentloaded' });
+  // Aguarda a reconferência de posse entre abas antes de interagir com o editor.
+  await expect(page.getByLabel('Objetivo clínico')).toBeEnabled({ timeout: 30_000 });
   if (!manterRefeicoesRecolhidas) {
     const expandir = page.getByRole('button', { name: 'Expandir todas' });
     await expandir.focus();
@@ -251,6 +253,10 @@ test.describe('PA06 - integridade editorial', () => {
     await expect.poll(() => contexto.entradaSalva?.percentuaisMacrosEdicao?.carboidratosBasisPoints).toBe('1,25');
     await expect(page.getByText('Existem alterações não salvas neste rascunho.')).toHaveCount(0);
     await page.reload({ waitUntil: 'domcontentloaded' });
+    // O relógio fica controlado entre navegações; avance a hidratação e os
+    // timers de reconciliação antes de procurar campos do editor reidratado.
+    await page.clock.runFor(1_000);
+    await expect(page.getByRole('heading', { name: 'Plano destino' })).toBeVisible();
     await expect(campo).toHaveValue('1,25');
   });
 
@@ -524,6 +530,8 @@ test.describe('PA02 - copiar refeições sem substituir o plano de destino', () 
 
     await page.evaluate(() => { window.__pa02NavegacaoSintetica = true; });
     await page.getByRole('link', { name: 'Voltar', exact: true }).click();
+    await expect(page.getByRole('heading', { name: 'Pacientes', exact: true })).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByRole('link', { name: 'Abrir prontuário', exact: true })).toBeVisible({ timeout: 30_000 });
     await page.getByRole('link', { name: 'Abrir prontuário', exact: true }).click();
     await page.getByRole('tab', { name: 'Plano', exact: true }).click();
     await page.getByRole('tab', { name: 'Plano alimentar', exact: true }).click();

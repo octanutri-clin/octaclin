@@ -3607,12 +3607,14 @@ async function prepararOperacoes(page, opcoes = {}) {
     comunicacoes = {},
     lgpd = {},
     retencao = {},
-    assinaturas = {}
+    assinaturas = {},
+    permissoes = permissoesOperacoes
   } = opcoes;
 
   const chamadas = {
     naoMockadas: [],
-    mutacoes: []
+    mutacoes: [],
+    gruposAdmin: []
   };
 
   await page.context().addCookies([
@@ -3640,7 +3642,7 @@ async function prepararOperacoes(page, opcoes = {}) {
       tenantSlug: 'clinica-sintetica',
       email: 'operacoes@octaclin.test',
       expiraEm: '2026-12-31T18:00:00.000Z',
-      permissoes: permissoesOperacoes,
+      permissoes,
       destinoInicial: '/operacoes'
     })
   }));
@@ -3764,6 +3766,14 @@ async function prepararOperacoes(page, opcoes = {}) {
     responderJson(route, { corpo: featureFlagsOperacoesFixture })
   );
 
+  await page.route('**/api/planos-alimentares/grupos-substituicoes-administracao/consulta', (route) => {
+    chamadas.gruposAdmin.push(`${route.request().method()} ${new URL(route.request().url()).pathname}`);
+    return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ itens: [], total: 0, pagina: 1, limite: 25 }) });
+  });
+  await page.route('**/api/planos-alimentares/grupos-substituicoes-administracao/alimentos/consulta', (route) =>
+    route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ itens: [], total: 0, pagina: 1, limite: 10 }) })
+  );
+
   return chamadas;
 }
 
@@ -3826,6 +3836,29 @@ async function abrirAreaOperacoes(page, rotulo) {
 }
 
 test.describe('gate de acessibilidade - operacoes (PR 26)', () => {
+  test('FOOD04 SuperAdmin com capacidade vê somente grupos compartilhados', async ({ page }) => {
+    const chamadas = await prepararOperacoes(page, {
+      permissoes: [...permissoesOperacoes, 'grupos_substituicoes.administrar']
+    });
+    await abrirPainelOperacoes(page, chamadas);
+
+    const abaGrupos = page.getByRole('tab', { name: 'Grupos alimentares' });
+    await expect(abaGrupos).toBeVisible();
+    await abaGrupos.click();
+    const painel = page.getByRole('region', { name: 'Administração de grupos compartilhados' });
+    await expect(painel).toBeVisible();
+    await expect(painel.getByRole('heading', { name: 'Grupos compartilhados da clínica' })).toBeVisible();
+    await expect(painel.getByRole('button', { name: 'Novo grupo' })).toHaveCount(0);
+    await expect(painel.getByText('Nenhum grupo encontrado')).toBeVisible();
+    const acessibilidade = await new AxeBuilder({ page }).include('[aria-label="Administração de grupos compartilhados"]')
+      .withTags(['wcag2a', 'wcag2aa', 'wcag21aa']).analyze();
+    expect(acessibilidade.violations).toEqual([]);
+    expect(chamadas.gruposAdmin.length).toBeGreaterThan(0);
+    expect(chamadas.gruposAdmin.every((chamada) => chamada === 'POST /api/planos-alimentares/grupos-substituicoes-administracao/consulta')).toBe(true);
+    expect(chamadas.naoMockadas).toEqual([]);
+    expect(chamadas.mutacoes).toEqual([]);
+  });
+
   test('area Saude carregada com as metricas de outbox', async ({ page }) => {
     const chamadas = await prepararOperacoes(page);
     await abrirPainelOperacoes(page, chamadas);

@@ -123,3 +123,13 @@ describe('Matriz de permissoes OctaClin', () => {
     expect(destinoInicialPorPapel('Client')).toBe('/cliente');
   });
 });
+
+describe('FOOD04 capacidades segregadas', () => {
+  it('administra compartilhados sem conceder prontuário ao gestor', () => {
+    expect(obterPermissoesPorPapel('Client')).toContain('grupos_substituicoes.administrar');
+    expect(obterPermissoesPorPapel('Client')).not.toContain('planos_alimentares.gerenciar');
+    expect(obterPermissoesPorPapel('Professional')).toContain('grupos_substituicoes.compartilhar');
+    for (const p of ['Professional','Collaborator','Patient'] as const) expect(obterPermissoesPorPapel(p)).not.toContain('grupos_substituicoes.administrar');
+    for (const p of ['Collaborator','Patient','Client'] as const) expect(obterPermissoesPorPapel(p)).not.toContain('grupos_substituicoes.compartilhar');
+  });
+});

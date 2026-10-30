@@ -4,7 +4,7 @@
 >
 > **Princípio central:** cada recurso ou melhoria deste roadmap deve ser implementado em **um Pull Request individual**, com escopo pequeno, revisável e reversível. As PRs são agrupadas em **ondas de implementação** apenas para organizar dependências e sequência de trabalho.
 >
-> Versão reconciliada em **2026-10-14** com o roadmap canônico `docs/product/ROADMAP_POS_AUDITORIA_FASES_302_320.md` e os PRs integrados mais recentes. Os status são registros históricos e DEVEM ser revalidados na data de cada nova execução.
+> Versão reconciliada em **2026-10-22** com o roadmap canônico `docs/product/ROADMAP_POS_AUDITORIA_FASES_302_320.md` e os PRs integrados mais recentes. Os status são registros históricos e DEVEM ser revalidados na data de cada nova execução.
 
 ---
 
@@ -527,7 +527,17 @@ somente após checkpoint e troca manual; revisão final Sol médio.
 
 **Origem:** item 30.
 
-**Status atual:** não existe favorito de substituição.
+**Status atual (2026-10-22):** concluída pela PR #438 (`9f13b80a`). Migration 1077 aplicada e conferida em staging e produção; deploy automático do backend/Web nos dois ambientes está `live`, com `/health` e `/login` respondendo HTTP 200. Revisão R4 foi confirmada pelo proprietário. Evidências e limites em `tasks/plan-pos-320-food03.md`.
+
+**Planejamento técnico atualizado em 2026-10-22:** `tasks/plan-pos-320-food03.md`.
+O contrato separa a preferência privada do profissional do campo `preferida`
+existente no snapshot de substituição do plano, que afeta a apresentação ao
+paciente. FOOD02 (#425/#426) foi integrada. Favoritos devem usar identidade
+persistente de catálogo/alimento personalizado quando disponível, ser isolados
+por tenant+profissional e ordenar o seletor sem alterar publicação, macros,
+escolhas ou planos existentes. A autorização de implementação foi dada em
+2026-10-22; o teste RLS em PostgreSQL descartável e regressões são gates antes
+de encerrar a PR.
 
 **Implementação sugerida:**
 - favorito por profissional;
@@ -543,6 +553,16 @@ somente após checkpoint e troca manual; revisão final Sol médio.
 
 ## [FOOD04] Grupos reutilizáveis de substituições
 
+**Planejamento ativo (2026-10-22):** main `9e1984a2`, após merge #440.
+[Plano e gaps](../../tasks/plan-pos-320-food04.md) e
+[tarefas/checkpoints](../../tasks/todo-pos-320-food04.md).
+D01–D03 aprovadas e ampliadas para D01–D08 pelo proprietário: grupos pessoais
+  e compartilhados, administração específica e continuidade institucional,
+  duplicação independente, descrição/categoria/etiquetas, favoritos/filtros,
+  aplicação seletiva/porções/dedup, arquivo/restauração e proveniência cifrada.
+  Undo local seguro incluído; sem implementação ou PR FOOD04 nesta etapa.
+Referência específica: primitives/código atual, sem repositório externo recomendado.
+
 **Origem:** itens 49 e parte do 17.
 
 **Status atual:** substituições são ancoradas diretamente ao item principal.
@@ -555,8 +575,19 @@ somente após checkpoint e troca manual; revisão final Sol médio.
 
 **Aceite:**
 - mesmo grupo aplicável a itens diferentes;
-- editar biblioteca não altera versão publicada;
-- histórico do plano preservado.
+- criar, editar, duplicar, arquivar e restaurar conforme matriz de permissões;
+- seleção parcial e porções personalizadas, sem repetir principal ou duplicata
+  exata; divergência de porções exige decisão explícita;
+- preservar alternativas anteriores; novas sem preferência ou liberação automática;
+- editar biblioteca não altera cópias aplicadas, rascunhos ou versões publicadas;
+- autosave, RLS, CAS, snapshots, cálculos e histórico do plano preservados.
+
+**Complementares propostos, sem execução antecipada:** FOOD04-C01 avisos de
+incompatibilidade, dependentes de cadastro estruturado e regras clínicas validadas
+(hoje não demonstrados); FOOD04-C02 aplicação simultânea em múltiplos destinos;
+FOOD04-C03 undo persistente e histórico navegável/diff da biblioteca. Auditoria e
+rastreabilidade essenciais continuam na PR principal. Equivalência automática
+permanece exclusivamente FOOD05.
 
 ---
 
@@ -1612,3 +1643,28 @@ Quando uma PR envolver:
 - exposição de dado ao paciente;
 
 o Codex deve tratar fonte, versão, população aplicável e limitações como parte obrigatória da implementação.
+
+---
+
+## Adendo de planejamento — FOOD06/FOOD08 (2026-10-30; reconciliado após FOOD07)
+
+A FOOD07 foi integrada pela PR #452 em 2026-10-30, merge
+`87df565f1aa504328c8032c069cc6d4746499a59`. O HEAD validado foi
+`7a963b16748e0221e8e40f42c8ddd8691f3b4472`; os checks aplicáveis terminaram
+com sucesso, enquanto Provenance do SBOM ficou `SKIPPED`. A PR de segurança
+Mobile #453 foi integrada antes, pelo commit `9697bc18`. Esses resultados
+comprovam os gates do código nos escopos executados, não a implantação em
+produção ou a aplicação externa da migration 1080. G06 permanece BLOCKED.
+
+A sequência proposta agora é planejar primeiro FOOD06, incluindo fontes
+clínicas, direitos, população e contrato de dados; FOOD08 permanece uma entrega
+separada para publicação voluntária de receitas entre organizações. Critérios,
+riscos, referências avaliadas, decisões humanas pendentes e condições de início
+estão em
+[`05_Plano_Sequencia_FOOD06_FOOD08_2026-10-30.md`](05_Plano_Sequencia_FOOD06_FOOD08_2026-10-30.md).
+
+Este adendo registra **planejamento apenas**. Não autoriza comparação clínica,
+publicação pública, implementação, migration, merge, deploy ou mudança em
+ambiente externo. FOOD06 depende de ratificação clínica e direitos de uso;
+FOOD08 depende de decisões de publicação, direitos de conteúdo, privacidade e
+moderação. O NO-GO da TBCA permanece sem alteração.

@@ -1,6 +1,13 @@
+import { GrupoSubstituicoesOrm, FavoritoGrupoSubstituicoesOrm } from './infraestrutura/grupo-substituicoes.orm';
+import { ServicoGruposSubstituicoes } from './aplicacao/servico-grupos-substituicoes';
+import { FontesGruposSubstituicoes } from './aplicacao/fontes-grupos-substituicoes';
+import { ControladorGruposSubstituicoes, ControladorAdministracaoGrupos } from './apresentacao/controlador-grupos-substituicoes';
 import { AlimentoPersonalizadoOrm } from './infraestrutura/alimento-personalizado.orm';
 import { ServicoAlimentosPersonalizados } from './aplicacao/servico-alimentos-personalizados';
 import { ControladorAlimentosPersonalizados } from './apresentacao/controlador-alimentos-personalizados';
+import { ControladorFavoritosAlimentos } from './apresentacao/controlador-favoritos-alimentos';
+import { ServicoFavoritosAlimentos } from './aplicacao/servico-favoritos-alimentos';
+import { FavoritoAlimentoOrm } from './infraestrutura/favorito-alimento.orm';
 import { ControladorMedidasCaseiras, ControladorMedidasCaseirasPersonalizadas } from './apresentacao/controlador-medidas-caseiras';
 import { ServicoMedidasCaseiras } from './aplicacao/servico-medidas-caseiras';
 import { MedidaCaseiraOrm } from './infraestrutura/medida-caseira.orm';
@@ -20,6 +27,7 @@ import { ModuloTenancy } from '../tenancy/modulo-tenancy';
 import { ServicoModelosPlanoAlimentar } from './aplicacao/servico-modelos-plano-alimentar';
 import { ServicoPlanosAlimentares } from './aplicacao/servico-planos-alimentares';
 import { ServicoReceitasNutricionais } from './aplicacao/servico-receitas-nutricionais';
+import { ServicoPorcionamentoReceita } from './aplicacao/servico-porcionamento-receita';
 import { ServicoCompartilhamentoReceitas } from './aplicacao/servico-compartilhamento-receitas';
 import {
   ControladorCatalogoAlimentos,
@@ -70,6 +78,9 @@ const processadoresCompartilhamento = deveExecutarProcessadores() ? [Processador
       AlimentoComposicaoOrm,
       MedidaCaseiraOrm,
       AlimentoPersonalizadoOrm,
+      GrupoSubstituicoesOrm,
+      FavoritoGrupoSubstituicoesOrm,
+      FavoritoAlimentoOrm,
       PacienteOrm,
       AvaliacaoAntropometricaOrm,
       LogDiarioRapidoOrm,
@@ -93,6 +104,9 @@ const processadoresCompartilhamento = deveExecutarProcessadores() ? [Processador
     ControladorMedidasCaseiras,
     ControladorMedidasCaseirasPersonalizadas,
     ControladorAlimentosPersonalizados,
+    ControladorFavoritosAlimentos,
+    ControladorGruposSubstituicoes,
+    ControladorAdministracaoGrupos,
     ControladorModelosPlanoAlimentar,
     ControladorReceitasNutricionais
   ],
@@ -100,8 +114,12 @@ const processadoresCompartilhamento = deveExecutarProcessadores() ? [Processador
     ServicoPlanosAlimentares,
     ServicoMedidasCaseiras,
     ServicoAlimentosPersonalizados,
+    ServicoFavoritosAlimentos,
+    ServicoGruposSubstituicoes,
+    FontesGruposSubstituicoes,
     ServicoModelosPlanoAlimentar,
     ServicoReceitasNutricionais,
+    ServicoPorcionamentoReceita,
     ServicoCompartilhamentoReceitas,
     CriptografiaDadosSensiveis,
     ...processadoresCompartilhamento
