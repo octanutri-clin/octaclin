@@ -1,5 +1,9 @@
 import type { PapelUsuario } from '../../auth/dominio/usuario-autenticado';
 import type { ItemModeloPlanoAlimentar } from './modelos-plano-alimentar';
+import { normalizarMetadadosReceita, type MetadadosReceitaV1 } from './metadados-receita';
+export { normalizarMetadadosReceita, mesclarMetadadosReceita } from './metadados-receita';
+export { lerConteudoReceita, projetarConteudoReceitaPaciente } from './conteudo-receita';
+export { porcionarReceita } from './porcionamento-receita';
 
 export const ORIGENS_RECEITA_NUTRICIONAL = ['pessoal', 'clinica'] as const;
 export type OrigemReceitaNutricional = (typeof ORIGENS_RECEITA_NUTRICIONAL)[number];
@@ -28,6 +32,7 @@ export function normalizarCategoriaReceita(valor: string): string {
 export interface ConteudoReceitaNutricional {
   instrucoes?: string;
   itens: ItemModeloPlanoAlimentar[];
+  metadados?: MetadadosReceitaV1;
 }
 
 export interface EscopoAcessoReceita {
@@ -42,6 +47,7 @@ export interface IdentidadeReceita {
 
 export function contarItensReceita(conteudo: ConteudoReceitaNutricional): number {
   if (!conteudo.itens.length) throw new Error('Receita precisa de ao menos um alimento.');
+  if (conteudo.metadados !== undefined) normalizarMetadadosReceita(conteudo.metadados);
   return conteudo.itens.length;
 }
 
