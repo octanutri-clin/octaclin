@@ -13,6 +13,12 @@ Fonte de contrato: [plano](plan-pos-320-food06.md), base `68499c15`.
 - [x] Preparar matriz semântica de todos os 22 códigos e regras F06-CL01–08.
 - [x] Criar coletor documental sem dependências e executar oito testes sintéticos.
 - [x] Registrar nova obtenção e hashes de bytes/texto; conservar histórico anterior.
+- [x] Extrair quadro adulto candidato com unidades RDA/AI versus UL separadas.
+- [x] Registrar confronto com outras publicações oficiais e limites 403/CAPTCHA.
+- [x] Conferir cadeia registro OGL → índice → páginas atuais; documentar ressalvas.
+- [x] Executar RED/GREEN do extrator; 19 testes sintéticos locais aprovados.
+- [x] Adicionar workflow específico para executar os testes documentais no CI.
+- [ ] Observar o primeiro CI do workflow específico no novo HEAD.
 - [ ] T01: completar contrato de contexto diário e confirmar elegibilidade.
 - [ ] T02: mapear cada código a RDA/AI e UL com unidades, origem, notas e versão.
 - [ ] T02: fechar direitos do artefato específico e ficha clínica com ratificação.

@@ -28,3 +28,26 @@ atuais permanecem em conferência. O script nunca concede aprovação de uso.
 Oito testes usam HTML/JSON sintéticos ou falha de rede simulada. Resultado desta
 rodada: PASS 8/8. São testes do coletor, não RED/GREEN de domínio clínico nem
 validação científica independente. Nenhuma comparação clínica é ativada.
+
+## Extração e quadro de conferência
+
+O checkpoint posterior acrescentou 11 testes do extrator (19 no total), com
+RED/GREEN funcional. Células são vinculadas por `headers` literais; cabeçalhos
+duplicados, ausentes, incompatíveis e células repetidas falham. Notas de
+sobrescrito são conservadas como vínculos, sem virar parte do número. ND não é zero.
+
+```sh
+python research/food06/extrair_tabelas.py --vitaminas /tmp/food06-fontes/vitaminas.html --elementos /tmp/food06-fontes/elementos.html --saida /tmp/food06-valores-candidatos.json
+python research/food06/gerar_quadro.py --entrada /tmp/food06-valores-candidatos.json --vitaminas /tmp/food06-fontes/vitaminas.html --elementos /tmp/food06-fontes/elementos.html --saida /tmp/quadro-food06.md
+```
+
+Os HTMLs são entradas temporárias obtidas das URLs fixas, não versionados.
+O quadro candidato registra os hashes exatos dessas entradas. Para reproduzir,
+obter as fontes, comparar os hashes e investigar alterações antes de aceitar os
+resultados. A data/hashes do manifesto são de outra obtenção e não devem ser
+atribuídos aos arquivos da extração. Não converter JSON de pesquisa em dataset
+runtime sem gates de ciência/direitos e ratificação.
+
+O workflow isolado `.github/workflows/food06-research.yml` executa somente a suíte
+sintética em PRs afetadas, sem consultas aos sites oficiais. O primeiro resultado
+deve ser conferido no HEAD enviado; teste local não comprova CI.

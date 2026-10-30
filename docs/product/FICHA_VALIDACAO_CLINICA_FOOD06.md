@@ -83,6 +83,18 @@ atribuído ao proprietário nesta rodada.
 
 ## Oráculos e critérios de liberação
 
+O [quadro adulto candidato](VALORES_CANDIDATOS_DRI_FOOD06.md) agora apresenta os
+números por sexo/faixa e unidades de referência e UL separadamente. O
+[parecer de fontes](PARECER_FONTES_DRI_FOOD06.md) registra concordâncias documentais,
+limitações de acesso, direitos e diferenças de protocolo. Esses anexos integram
+o material a revisar, sem ratificação presumida.
+
+Na CL08, ratificar expressamente que ULs DRI para B6 (100 mg/dia) e selênio
+(400 mcg/dia) diferem dos valores EFSA 2023 (12 mg/dia e 255 mcg/dia). D03
+selecionou DRI norte-americana; isso não deve ocultar a diferença nem criar
+garantia de segurança. Vitamina E permanece com comparação UL indisponível,
+pois o total PA06 não identifica a origem/fração abrangida por cada redação.
+
 - Conferir cada valor/faixa/nota com fonte oficial independente e da mesma revisão.
   Uma tabela antiga não valida alterações de 2019. Identificar valores sem
   concordância e impedir ativação do nutriente até resolução.

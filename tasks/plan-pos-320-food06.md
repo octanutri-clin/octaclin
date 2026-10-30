@@ -137,7 +137,27 @@ interface real e registro explícito de leitura de código versus interação.
 
 ## Gates atuais e handoff
 
-### Continuação após aprovação inicial
+### Conferência numérica e checkpoint posterior
+
+- O CI de `644397a3` concluiu 21 checks com sucesso e SBOM provenance SKIPPED.
+  Evidência histórica: não valida commits posteriores. A PR foi marcada Ready for
+  Review por `octanutri-clin` no GitHub em 2026-10-30T23:00:08Z; a mudança de estado
+  não foi executada pelo agente e não equivale a conclusão funcional da FOOD06.
+- [Valores candidatos](../docs/product/VALORES_CANDIDATOS_DRI_FOOD06.md) detalham
+  19 referências adultas relacionadas aos 22 códigos. UL usa unidade própria
+  quando diferente da RDA/AI; totais PA06 não ganham origem química por inferência.
+- [Parecer de fontes](../docs/product/PARECER_FONTES_DRI_FOOD06.md) registra links
+  atuais do recurso licenciado, outra publicação oficial para confronto, limites
+  de 403/CAPTCHA e diferenças B6/selênio entre DRI e EFSA. Escopo de terceiros
+  continua em revisão; nenhum livro citado foi distribuído.
+- Extrator documental desenvolvido com RED/GREEN funcional; cabeçalhos e notas
+  validados sem posição de coluna como identidade. Total: 19 testes sintéticos
+  locais PASS. Quadro Markdown regenerado idêntico; não é um oráculo clínico.
+- Workflow isolado `food06-research.yml` passa a executar exatamente essa suíte
+  em PRs afetadas, sem downloads de tabelas ou serviços externos nos testes.
+  Seu primeiro CI ainda precisa ser observado no novo HEAD.
+
+### Histórico: primeiro checkpoint de fontes
 
 - Ficha de regras e matriz semântica dos 22 códigos preparada em
   [FICHA_VALIDACAO_CLINICA_FOOD06.md](../docs/product/FICHA_VALIDACAO_CLINICA_FOOD06.md).
