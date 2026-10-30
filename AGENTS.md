@@ -155,3 +155,22 @@ Uma tarefa so esta pronta quando o escopo aprovado foi entregue, os gates foram
 nomeados com seus resultados, a documentacao necessaria foi atualizada, nao ha
 secret ou dado sensivel no diff e os checks aplicaveis passaram. Para detalhes,
 use `docs/agents/REGRAS.md`.
+
+## Revisão recorrente de experiência e produto
+
+Antes de implementar mudanças com impacto no usuário, executar as perspectivas
+`octaclin-nutricionista-ux` e, se houver impacto ao paciente, `octaclin-paciente-ux`.
+O procedimento obrigatório A/B/C/D, briefing sanitizado, fallback e formato de
+relatório estão em [docs/agents/ux/PROCEDIMENTO.md](docs/agents/ux/PROCEDIMENTO.md).
+Na primeira interface utilizável e antes de concluir a PR, reavaliar jornadas e
+registrar evidências/limitações; no início da fase seguinte, consultar decisões e
+backlog relevantes. Paciente N/A exige justificativa. Use os papéis TOML nativos
+quando suportados; caso contrário, aplique as instruções separadamente e registre
+se foram subagentes distintos ou simulações sequenciais do agente principal.
+
+Os revisores recebem apenas casos sintéticos e evidência sanitizada e não escrevem
+no projeto. O agente principal consolida sugestões e mantém o histórico. Mudanças
+de produto relevantes precisam de aprovação do proprietário antes de implementar;
+backlog não autoriza escopo novo. Essas avaliações complementam engenharia,
+segurança, validação clínica e revisão R4, sem substituí-las. As demais regras
+deste arquivo continuam obrigatórias.
