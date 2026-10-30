@@ -24,13 +24,13 @@ Ambiente isolado limpo em `/tmp/octaclin-mobile-453-verify`, Node **22.21.1** e 
 - Expo Doctor: **18/21**, BLOCKED/FAIL por indisponibilidade de rede ao consultar Expo API/React Native Directory e por divergências de versões Expo/TypeScript já presentes no projeto; dependências não foram alteradas para mascarar esses resultados.
 - Uma instalação anterior, na worktree mantida, conservou symlinks obsoletos de `deepmerge` após a regeneração intermediária. O teste falhou nesse estado local; a instalação clean reproduzível da árvore final removeu os links e passou 19/19. A worktree original não foi limpa nem descartada.
 - **CI do novo HEAD ainda pendente.** O CI anterior `572c20c40decdddcc690b19aa12ee6ca0866e156` falhou em Mobile audit e PR Gate, como esperado antes da atualização. Seus checks de scanners restantes passaram; Mobile build foi skipped após a falha, e Provenance SBOM permaneceu skipped.
-- Revisão independente somente leitura do delta de versão/override: **sem achados**, conferiu faixa, lock e integridade SHA-512; não executou testes. A R4 independente do patch atual `@expo/config` segue pendente e não é substituída por essa revisão estreita.
+- Revisão independente somente leitura do delta de versão/override: **sem achados**, conferiu faixa, lock e integridade SHA-512; não executou testes.
+- Revisão independente de segurança do patch `@expo/config`: **sem bypass/regressão concreto encontrado**; os cinco testes do contrato de merge passaram na worktree limpa. Escopo estático focado nos valores JSON comuns da configuração Expo; não caracterizou getters, `Symbol.toStringTag`, espécies de arrays ou protótipos JavaScript customizados e não substitui CI da PR.
 
 ### Próximos gates
 
-1. Concluir a R4 independente do patch atual de `@expo/config`.
-2. Commit/push da correção na branch existente #453 e confirmar CI, scanners e resultado final de Rollout seguro no novo HEAD.
-3. Manter #453 Draft até a revisão e CI aplicável concluírem. Depois da integração autorizada da correção de segurança, sincronizar #452 e executar os checks próprios dela.
+1. Confirmar CI, scanners e resultado final de Rollout seguro no HEAD atualizado.
+2. Manter #453 Draft até os checks aplicáveis concluírem. Depois da integração autorizada da correção de segurança, sincronizar #452 e executar os checks próprios dela.
 
 **Sem autorização para merge ou deploy.** A auditoria do código local passou, mas #453 permanece Draft até CI e revisão independente. #452 continua bloqueada até sua base incluir a correção autorizada e seus próprios gates passarem. Mobile permanece NO-GO para distribuição.
 
