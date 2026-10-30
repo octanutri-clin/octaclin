@@ -1,8 +1,30 @@
 # OctaClin - Status atual do projeto
 
-Atualizado em 2026-10-24 (validacao final FOOD04; registros anteriores preservados).
+Atualizado em 2026-10-30 após integração da FOOD07; registros anteriores preservados.
 
-## Fase ativa
+## Estado atual
+
+- **FOOD07 — integrada pela PR #452** em `87df565f1aa504328c8032c069cc6d4746499a59`.
+  O HEAD validado `7a963b16` teve os checks aplicáveis aprovados; Provenance do
+  SBOM ficou `SKIPPED`. A correção Mobile #453 já estava em `main` no commit
+  `9697bc18`; Mobile Expo passou no CI da FOOD07 após sincronização da base.
+  Evidências e limites: `tasks/execucao-pos-320-food07.md` e
+  `tasks/todo-pos-320-food07.md`. Isso não comprova implantação nem aplicação
+  externa da migration 1080.
+- **G06 permanece BLOCKED operacional** para FOOD04/FOOD05 e alterações de
+  produção. Neon, schema/ledger 1078/1079, Render, backup/rollback e deploy
+  continuam reservados à etapa operacional após o retorno do proprietário e
+  autorização específica. Nenhuma migration externa é inferida do merge.
+- **Próximos planejamentos:** PR #454, Draft, propõe FOOD06 primeiro (fontes,
+  direitos, população e contrato de dados) e FOOD08 separadamente (publicação,
+  conteúdo, privacidade e moderação). Não há autorização de implementação para
+  essas fases neste registro; as ratificações e direitos listados no plano
+  continuam pendentes. Consulte
+  `docs/pos-320/05_Plano_Sequencia_FOOD06_FOOD08_2026-10-30.md`.
+- Fase 316 continua em stand-by. O NO-GO da TBCA não muda; manter TACO, USDA e
+  IBGE conforme decisão registrada.
+
+## Checkpoint histórico FOOD04 (2026-10-24; substituído para fase ativa)
 
 - **FOOD04 — implementada na PR #441, em validacao final**, base `origin/main` `9e1984a2`, merge
   documental #440 confirmado por fetch em 2026-10-22. Biblioteca de grupos
