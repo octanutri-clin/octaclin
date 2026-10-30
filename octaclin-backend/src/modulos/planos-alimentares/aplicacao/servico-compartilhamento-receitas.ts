@@ -1,6 +1,6 @@
 import { ConflictException, ForbiddenException, Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { createHash, randomUUID } from 'crypto';
-import { EntityManager, In, IsNull } from 'typeorm';
+import { EntityManager, In, IsNull, Like } from 'typeorm';
 import { registrarAuditoriaNaTransacao } from '../../../infraestrutura/auditoria/servico-auditoria';
 import { ExecutorTenant } from '../../../infraestrutura/banco-dados/executor-tenant';
 import { CriptografiaDadosSensiveis } from '../../../infraestrutura/seguranca/criptografia-dados-sensiveis';
@@ -14,149 +14,130 @@ import { PreferenciaCompartilhamentoReceitaOrm } from '../infraestrutura/prefere
 import { SubscriptionPushPacienteOrm } from '../infraestrutura/subscription-push-paciente.orm';
 import { CompartilharReceitasNutricionaisDto, AtualizarConsentimentoReceitasDto, CriarSubscriptionPushDto, RevogarSubscriptionPushDto } from './dtos-compartilhamento-receita';
 import { resumirAlimentosDaReceita } from '../dominio/receitas-nutricionais';
+import { lerConteudoReceita, projetarConteudoReceitaPaciente } from '../dominio/conteudo-receita';
 import { AlimentoComposicaoOrm } from '../infraestrutura/alimento-composicao.orm';
 import { FonteComposicaoAlimentoOrm } from '../infraestrutura/fonte-composicao-alimento.orm';
+
+import { ServicoPorcionamentoReceita } from './servico-porcionamento-receita';
+import { hashPedidoCompartilhamento, lerSnapshotCompartilhamentoReceita, normalizarInstrucoesReceita, projetarSnapshotCompartilhamentoPaciente, quantidadesOriginaisReceita, validarPedidoCompartilhamento, type SnapshotCompartilhamentoReceita } from './snapshot-compartilhamento-receita';
 
 const CANAIS_EXTERNOS = ['email', 'whatsapp', 'push'] as const;
 
 @Injectable()
 export class ServicoCompartilhamentoReceitas {
-  constructor(private readonly executorTenant: ExecutorTenant, private readonly criptografia: CriptografiaDadosSensiveis) {}
+  constructor(private readonly executorTenant: ExecutorTenant, private readonly criptografia: CriptografiaDadosSensiveis, private readonly porcionamento: ServicoPorcionamentoReceita) {}
 
-  async compartilhar(tenantId: string, usuario: UsuarioAutenticado, dados: CompartilharReceitasNutricionaisDto) {
+  async compartilhar(tenantId: string, usuario: UsuarioAutenticado, entrada: CompartilharReceitasNutricionaisDto) {
     this.garantirProfissional(usuario);
-    if (new Set(dados.receitaIds).size !== dados.receitaIds.length) throw new BadRequestException('Remova receitas duplicadas do lote.');
-    if (!dados.versoesEsperadas || new Set(dados.versoesEsperadas.map((item) => item.receitaId)).size !== dados.versoesEsperadas.length ||
-        dados.versoesEsperadas.length !== dados.receitaIds.length || dados.receitaIds.some((id) => !dados.versoesEsperadas.some((item) => item.receitaId === id))) {
-      throw new BadRequestException('Informe a versao revisada de cada receita selecionada.');
-    }
-    if (new Set(dados.canais).size !== dados.canais.length) throw new BadRequestException('Remova canais duplicados.');
-    const agendadoPara = dados.agendadoPara ? new Date(dados.agendadoPara) : new Date();
-    if (!Number.isFinite(agendadoPara.getTime()) || (dados.agendadoPara && agendadoPara.getTime() < Date.now() + 60_000)) {
-      throw new BadRequestException('O agendamento deve ocorrer pelo menos um minuto no futuro.');
-    }
-
+    const dados = validarPedidoCompartilhamento(entrada);
     return this.executorTenant.executar(tenantId, async (gerenciador) => {
+      // Ordem: chave da intenção, paciente, preferências, receitas por UUID, shares.
+      await gerenciador.query('select pg_advisory_xact_lock(hashtextextended($1, 0))', [`receita-share-request:${tenantId}:${dados.chaveIdempotencia}`]);
       const paciente = await gerenciador.getRepository(PacienteOrm).findOne({
-        where: { tenantId, id: dados.pacienteId, arquivadoEm: IsNull() }
+        where: { tenantId, id: dados.pacienteId, arquivadoEm: IsNull() }, lock: { mode: 'pessimistic_write' }
       });
       if (!paciente) throw new NotFoundException('Paciente nao encontrado.');
       if (!paciente.usuarioId) throw new BadRequestException('O paciente precisa ter acesso ao portal antes de receber receitas.');
-      const profissionalId = usuario.papel === 'Professional'
-        ? await resolverProfissionalIdDoUsuario(gerenciador, tenantId, usuario)
-        : undefined;
-      if (usuario.papel !== 'SuperAdmin' && paciente.profissionalResponsavelId !== profissionalId) {
-        throw new NotFoundException('Paciente nao encontrado.');
-      }
-      const preferencia = await gerenciador.getRepository(PreferenciaCompartilhamentoReceitaOrm).findOne({ where: { tenantId, pacienteId: paciente.id } });
+      const profissionalId = usuario.papel === 'Professional' ? await resolverProfissionalIdDoUsuario(gerenciador, tenantId, usuario) : undefined;
+      if (usuario.papel !== 'SuperAdmin' && paciente.profissionalResponsavelId !== profissionalId) throw new NotFoundException('Paciente nao encontrado.');
+      const preferencia = await gerenciador.getRepository(PreferenciaCompartilhamentoReceitaOrm).findOne({ where: { tenantId, pacienteId: paciente.id }, lock: { mode: 'pessimistic_read' } });
       for (const canal of dados.canais.filter((item): item is (typeof CANAIS_EXTERNOS)[number] => CANAIS_EXTERNOS.includes(item as (typeof CANAIS_EXTERNOS)[number]))) {
         if (!this.consentido(preferencia, canal)) throw new ForbiddenException(`O paciente nao autorizou avisos por ${canal}.`);
         if (!this.possuiContato(paciente, canal)) throw new BadRequestException(`O paciente nao possui contato atual para ${canal}.`);
-        if (canal === 'push') {
-          const ativos = await gerenciador.getRepository(SubscriptionPushPacienteOrm).count({ where: { tenantId, pacienteId: paciente.id, usuarioId: paciente.usuarioId, revogadaEm: IsNull() } });
-          if (!ativos) throw new BadRequestException('O paciente nao possui dispositivo push ativo.');
+        if (canal === 'push' && !await gerenciador.getRepository(SubscriptionPushPacienteOrm).count({ where: { tenantId, pacienteId: paciente.id, usuarioId: paciente.usuarioId, revogadaEm: IsNull() } })) {
+          throw new BadRequestException('O paciente nao possui dispositivo push ativo.');
         }
       }
-
       const repositorioReceitas = gerenciador.getRepository(ReceitaNutricionalOrm);
       const repositorioShares = gerenciador.getRepository(CompartilhamentoReceitaNutricionalOrm);
-      await gerenciador.query('select pg_advisory_xact_lock(hashtextextended($1, 0))', [`receita-share-request:${tenantId}:${dados.chaveIdempotencia}`]);
-      const existentes = await repositorioShares.find({ where: { tenantId, idempotencia: In(dados.receitaIds.map((receitaId) => `${dados.chaveIdempotencia}:${receitaId}`)) } });
-      if (existentes.length) {
-        const idsExistentes = new Set(existentes.map((share) => share.receitaId));
-        const mesmoAgendamento = existentes.every((share) => {
-          if (!dados.agendadoPara) return !share.agendadoPara;
-          return share.agendadoPara?.getTime() === agendadoPara.getTime();
-        });
-        const canaisEsperados = new Set<CanalEntregaReceita>(['portal', ...dados.canais]);
-        const entregasExistentes = await gerenciador.getRepository(EntregaCompartilhamentoReceitaOrm).find({
-          where: { tenantId, compartilhamentoId: In(existentes.map((share) => share.id)) }
-        });
-        const canaisPorShare = new Map<string, Set<string>>();
-        for (const entrega of entregasExistentes) {
-          const canais = canaisPorShare.get(entrega.compartilhamentoId) ?? new Set<string>();
-          canais.add(entrega.canal);
-          canaisPorShare.set(entrega.compartilhamentoId, canais);
-        }
-        const mesmoContratoDeEntrega = existentes.every((share) => {
-          const canais = canaisPorShare.get(share.id);
-          return canais?.size === canaisEsperados.size && [...canaisEsperados].every((canal) => canais.has(canal));
-        });
-        const versoesPorReceita = new Map(dados.versoesEsperadas.map((item) => [item.receitaId, item.versao]));
-        const mesmasVersoes = existentes.every((share) => versoesPorReceita.get(share.receitaId) === share.versaoOrigem);
-        const mesmaAcao = existentes.length === dados.receitaIds.length && existentes.every((share) => share.pacienteId === paciente.id) &&
-          dados.receitaIds.every((receitaId) => idsExistentes.has(receitaId)) && mesmoAgendamento && mesmoContratoDeEntrega && mesmasVersoes;
-        if (!mesmaAcao) throw new ConflictException('A chave de envio ja foi usada para outra acao.');
-        return { quantidade: existentes.length, agendadoPara: existentes[0].agendadoPara ?? null, itens: existentes.map((share) => ({ id: share.id, receitaId: share.receitaId, status: share.status })) };
+      const receitas = await repositorioReceitas.find({ where: { tenantId, id: In([...dados.receitaIds].sort()), arquivadoEm: IsNull() }, order: { id: 'ASC' }, lock: { mode: 'pessimistic_write' } });
+      if (receitas.length !== dados.receitaIds.length || receitas.some(r => r.origem === 'pessoal' && r.profissionalId !== profissionalId && usuario.papel !== 'SuperAdmin')) {
+        throw new NotFoundException('Uma ou mais receitas nao foram encontradas.');
       }
-      const receitas = await repositorioReceitas.find({ where: { tenantId, id: In(dados.receitaIds), arquivadoEm: IsNull() }, lock: { mode: 'pessimistic_write' } });
-      if (receitas.length !== dados.receitaIds.length) throw new NotFoundException('Uma ou mais receitas nao foram encontradas.');
-      const versoesPorReceita = new Map(dados.versoesEsperadas.map((item) => [item.receitaId, item.versao]));
+      // A chave vale para o lote inteiro, inclusive troca completa dos IDs.
+      const existentes = await repositorioShares.find({ where: { tenantId, idempotencia: Like(`${dados.chaveIdempotencia}:%`) }, order: { receitaId: 'ASC' } });
+      if (existentes.length) return this.repetirCompartilhamento(gerenciador, tenantId, usuario, dados, existentes);
+      const agendadoPara = dados.agendadoPara ? new Date(dados.agendadoPara) : new Date();
+      if (dados.agendadoPara && agendadoPara.getTime() < Date.now() + 60_000) throw new BadRequestException('O agendamento deve ocorrer pelo menos um minuto no futuro.');
+      const versoes = new Map(dados.versoesEsperadas.map(x => [x.receitaId, x.versao]));
+      const originais = new Map<string, string>();
+      const snapshots = new Map<string, SnapshotCompartilhamentoReceita>();
+      for (const receita of receitas) {
+        if (versoes.get(receita.id) !== (receita.versaoAtual ?? 1)) throw new ConflictException('Uma receita foi alterada depois da revisao. Atualize a biblioteca e confirme novamente.');
+        if (!receita.categoria) throw new BadRequestException('Classifique a receita antes de compartilhar.');
+        let conteudoReceita: ReturnType<typeof lerConteudoReceita>;
+        try { conteudoReceita = lerConteudoReceita(JSON.parse(this.criptografia.descriptografar(receita.conteudoCriptografado))); }
+        catch { throw new BadRequestException('Não foi possível ler a receita.'); }
+        const idsCatalogo = resumirAlimentosDaReceita(conteudoReceita);
+        if (!idsCatalogo.length && !dados.confirmacaoRevisaoManual) throw new BadRequestException('Confirme a revisao profissional do conteudo manual antes de compartilhar.');
+        const p = dados.porcionamentos?.find(x => x.receitaId === receita.id);
+        const conteudo = projetarConteudoReceitaPaciente(conteudoReceita);
+        const snapshot: SnapshotCompartilhamentoReceita = { nome: this.criptografia.descriptografar(receita.nomeCriptografado), conteudo, versao: receita.versaoAtual ?? 1 };
+        if (p) {
+          const previa = await this.porcionamento.preverNaTransacao(gerenciador, tenantId, receita.id, usuario, { versaoEsperada: snapshot.versao, porcoesDesejadas: p.porcoesDesejadas });
+          if (previa.estado !== 'calculavel' || previa.fingerprint !== p.fingerprintPrevia) throw new ConflictException('A prévia foi alterada ou não está disponível. Confira novamente antes de enviar.');
+          const instrucaoOriginal = normalizarInstrucoesReceita(conteudoReceita.instrucoes ?? '');
+          originais.set(receita.id, instrucaoOriginal);
+          snapshot.conteudo = { ...conteudo, itens: previa.itens, instrucoes: p.instrucoesPersonalizadas ?? instrucaoOriginal };
+          snapshot.contextoCompartilhamento = { schemaVersao: 1, hashPedidoCompartilhamento: '', instrucaoOriginal,
+            porcionamento: { algoritmo: 'porcionamento-receita-v1', baseQuantidades: previa.baseQuantidades,
+              ...(previa.rendimentoOriginalPorcoes === undefined ? {} : { rendimentoOriginalPorcoes: previa.rendimentoOriginalPorcoes }),
+              porcoesDesejadas: previa.porcoesDesejadas, fatorExato: previa.fatorExato, fingerprint: previa.fingerprint,
+              originais: quantidadesOriginaisReceita(conteudoReceita.itens), fontes: previa.fontes } };
+        } else if (idsCatalogo.length) {
+          const alimentos = await gerenciador.getRepository(AlimentoComposicaoOrm).find({ where: { id: In(idsCatalogo) } });
+          const fontes = alimentos.length ? await gerenciador.getRepository(FonteComposicaoAlimentoOrm).find({ where: { id: In([...new Set(alimentos.map(x => x.fonteId))]), situacao: 'ativa', direitoUsoStatus: 'aprovado' } }) : [];
+          const ativos = new Set(alimentos.filter(x => fontes.some(f => f.id === x.fonteId)).map(x => x.id));
+          if (idsCatalogo.some(id => !ativos.has(id))) throw new BadRequestException('Revise os alimentos indisponiveis antes de compartilhar.');
+        }
+        snapshots.set(receita.id, snapshot);
+      }
+      const hash = hashPedidoCompartilhamento(dados, originais, usuario.usuarioId);
       const shares: CompartilhamentoReceitaNutricionalOrm[] = [];
       const repositorioEntregas = gerenciador.getRepository(EntregaCompartilhamentoReceitaOrm);
       for (const receita of receitas) {
-        if (versoesPorReceita.get(receita.id) !== (receita.versaoAtual ?? 1)) {
-          throw new ConflictException('Uma receita foi alterada depois da revisao. Atualize a biblioteca e confirme novamente.');
-        }
-        if (receita.origem === 'pessoal' && receita.profissionalId !== profissionalId && usuario.papel !== 'SuperAdmin') {
-          throw new NotFoundException('Receita nao encontrada.');
-        }
-        if (!receita.categoria) throw new BadRequestException('Classifique a receita antes de compartilhar.');
-        const conteudoReceita = JSON.parse(this.criptografia.descriptografar(receita.conteudoCriptografado));
-        const idsCatalogo = resumirAlimentosDaReceita(conteudoReceita);
-        if (!idsCatalogo.length && !dados.confirmacaoRevisaoManual) {
-          throw new BadRequestException('Confirme a revisao profissional do conteudo manual antes de compartilhar.');
-        }
-        if (idsCatalogo.length) {
-          const alimentos = await gerenciador.getRepository(AlimentoComposicaoOrm).find({ where: { id: In(idsCatalogo) } });
-          const fontes = alimentos.length ? await gerenciador.getRepository(FonteComposicaoAlimentoOrm).find({ where: { id: In([...new Set(alimentos.map((item) => item.fonteId))]), situacao: 'ativa' } }) : [];
-          const ativos = new Set(alimentos.filter((item) => fontes.some((fonte) => fonte.id === item.fonteId)).map((item) => item.id));
-          if (idsCatalogo.some((id) => !ativos.has(id))) throw new BadRequestException('Revise os alimentos indisponiveis antes de compartilhar.');
-        }
-        const snapshot = {
-          nome: this.criptografia.descriptografar(receita.nomeCriptografado),
-          conteudo: conteudoReceita,
-          versao: receita.versaoAtual ?? 1
-        };
-        const status = dados.agendadoPara ? 'agendado' as const : 'ativo' as const;
+        const snapshot = snapshots.get(receita.id)!;
+        snapshot.contextoCompartilhamento ??= { schemaVersao: 1, hashPedidoCompartilhamento: hash };
+        snapshot.contextoCompartilhamento.hashPedidoCompartilhamento = hash;
+        try { lerSnapshotCompartilhamentoReceita(snapshot); } catch { throw new BadRequestException('Não foi possível preparar a receita para envio.'); }
         if (!dados.agendadoPara) {
           await gerenciador.query('select pg_advisory_xact_lock(hashtextextended($1, 0))', [`receita-share:${tenantId}:${paciente.id}:${receita.id}`]);
           await repositorioShares.update({ tenantId, pacienteId: paciente.id, receitaId: receita.id, status: 'ativo' }, { status: 'substituido', atualizadoEm: new Date() });
         }
-        const novo = repositorioShares.create({
-          tenantId,
-          receitaId: receita.id,
-          idempotencia: `${dados.chaveIdempotencia}:${receita.id}`,
-          pacienteId: paciente.id,
-          enviadoPorUsuarioId: usuario.usuarioId,
-          versaoOrigem: snapshot.versao,
-          snapshotCriptografado: this.criptografia.criptografar(JSON.stringify(snapshot)),
-          status,
-          agendadoPara: dados.agendadoPara ? agendadoPara : null,
-          enviadoEm: dados.agendadoPara ? null : new Date()
-        });
-        const salvo = await repositorioShares.save(novo);
-        // O conteudo fica disponivel somente no portal autenticado. Canais externos carregam aviso generico.
-        const canaisEntrega = [...new Set<CanalEntregaReceita>(['portal', ...dados.canais.filter((canal) => canal !== 'portal')])];
-        const entregas = canaisEntrega.map((canal) => repositorioEntregas.create({
-          tenantId,
-          compartilhamentoId: salvo.id,
-          canal,
-          status: canal === 'portal' && !dados.agendadoPara ? 'enviado' : 'pendente',
-          agendadoPara,
-          confirmadoEm: canal === 'portal' && !dados.agendadoPara ? new Date() : null,
-          idempotencia: `receita:${salvo.id}:${canal}`
-        }));
-        await repositorioEntregas.save(entregas);
+        const salvo = await repositorioShares.save(repositorioShares.create({ tenantId, receitaId: receita.id,
+          idempotencia: `${dados.chaveIdempotencia}:${receita.id}`, pacienteId: paciente.id, enviadoPorUsuarioId: usuario.usuarioId,
+          versaoOrigem: snapshot.versao, snapshotCriptografado: this.criptografia.criptografar(JSON.stringify(snapshot)),
+          status: dados.agendadoPara ? 'agendado' : 'ativo', agendadoPara: dados.agendadoPara ? agendadoPara : null,
+          enviadoEm: dados.agendadoPara ? null : new Date() }));
+        const canaisEntrega = [...new Set<CanalEntregaReceita>(['portal', ...dados.canais])];
+        await repositorioEntregas.save(canaisEntrega.map(canal => repositorioEntregas.create({ tenantId, compartilhamentoId: salvo.id, canal,
+          status: canal === 'portal' && !dados.agendadoPara ? 'enviado' : 'pendente', agendadoPara,
+          confirmadoEm: canal === 'portal' && !dados.agendadoPara ? new Date() : null, idempotencia: `receita:${salvo.id}:${canal}` })));
         shares.push(salvo);
       }
-      await registrarAuditoriaNaTransacao(gerenciador, {
-        tenantId, usuarioId: usuario.usuarioId, acao: 'planos_alimentares.receita_compartilhar',
-        recursoTipo: 'compartilhamento_receita', recursoId: paciente.id,
-        metadados: { quantidade: shares.length, canais: dados.canais, agendado: Boolean(dados.agendadoPara) }
-      });
-      return { quantidade: shares.length, agendadoPara: dados.agendadoPara ? agendadoPara : null, itens: shares.map((share) => ({ id: share.id, receitaId: share.receitaId, status: share.status })) };
+      await registrarAuditoriaNaTransacao(gerenciador, { tenantId, usuarioId: usuario.usuarioId, acao: 'planos_alimentares.receita_compartilhar',
+        recursoTipo: 'compartilhamento_receita', recursoId: paciente.id, metadados: { quantidade: shares.length, canais: dados.canais, agendado: Boolean(dados.agendadoPara) } });
+      return { quantidade: shares.length, agendadoPara: dados.agendadoPara ? agendadoPara : null, itens: shares.map(s => ({ id: s.id, receitaId: s.receitaId, status: s.status })) };
     });
+  }
+
+  private async repetirCompartilhamento(g: EntityManager, tenantId: string, usuario: UsuarioAutenticado, dados: CompartilharReceitasNutricionaisDto, existentes: CompartilhamentoReceitaNutricionalOrm[]) {
+    const conflito = () => new ConflictException('A chave de envio ja foi usada para outra acao.');
+    if (existentes.length !== dados.receitaIds.length || existentes.some(s => s.pacienteId !== dados.pacienteId || !dados.receitaIds.includes(s.receitaId))) throw conflito();
+    const snapshots = existentes.map(s => this.lerSnapshot(s));
+    const contextos = snapshots.map(s => s.contextoCompartilhamento);
+    if (contextos.some(Boolean)) {
+      const originais = new Map(existentes.map((s, i) => [s.receitaId, contextos[i]?.instrucaoOriginal ?? '']));
+      const hash = hashPedidoCompartilhamento(dados, originais, usuario.usuarioId);
+      if (contextos.some(c => !c || c.hashPedidoCompartilhamento !== hash)) throw conflito();
+    } else {
+      if (dados.porcionamentos?.length || existentes.some(s => dados.versoesEsperadas.find(x => x.receitaId === s.receitaId)?.versao !== s.versaoOrigem ||
+        (dados.agendadoPara ? s.agendadoPara?.getTime() !== new Date(dados.agendadoPara).getTime() : Boolean(s.agendadoPara)))) throw conflito();
+      const entregas = await g.getRepository(EntregaCompartilhamentoReceitaOrm).find({ where: { tenantId, compartilhamentoId: In(existentes.map(s => s.id)) } });
+      const canais = [...new Set(['portal', ...dados.canais])].sort().join(',');
+      if (existentes.some(s => [...new Set(entregas.filter(e => e.compartilhamentoId === s.id).map(e => e.canal))].sort().join(',') !== canais)) throw conflito();
+    }
+    return { quantidade: existentes.length, agendadoPara: existentes[0].agendadoPara ?? null, itens: existentes.map(s => ({ id: s.id, receitaId: s.receitaId, status: s.status })) };
   }
 
   async obterConsentimentoParaEnvio(tenantId: string, usuario: UsuarioAutenticado, pacienteId: string) {
@@ -191,7 +172,7 @@ export class ServicoCompartilhamentoReceitas {
       const entregasPorShare = new Map<string, EntregaCompartilhamentoReceitaOrm[]>();
       for (const entrega of entregas) entregasPorShare.set(entrega.compartilhamentoId, [...(entregasPorShare.get(entrega.compartilhamentoId) ?? []), entrega]);
       return compartilhamentos.map((share) => {
-        const snapshot = JSON.parse(this.criptografia.descriptografar(share.snapshotCriptografado)) as { nome: string };
+        const snapshot = this.lerSnapshot(share);
         return {
           id: share.id, receitaId: share.receitaId, nome: snapshot.nome, versao: share.versaoOrigem,
           status: share.status, agendadoPara: share.agendadoPara ?? null, enviadoEm: share.enviadoEm ?? null,
@@ -208,7 +189,7 @@ export class ServicoCompartilhamentoReceitas {
       throw new BadRequestException('Avisos push nao estao configurados para este servico.');
     }
     return this.executorTenant.executar(tenantId, async (gerenciador) => {
-      const paciente = await this.pacienteDoUsuario(gerenciador, tenantId, usuario.usuarioId);
+      const paciente = await this.pacienteDoUsuario(gerenciador, tenantId, usuario.usuarioId, true);
       const repo = gerenciador.getRepository(PreferenciaCompartilhamentoReceitaOrm);
       let preferencias = await repo.findOne({ where: { tenantId, pacienteId: paciente.id } });
       const agora = new Date();
@@ -295,7 +276,7 @@ export class ServicoCompartilhamentoReceitas {
       const paciente = await this.pacienteDoUsuario(gerenciador, tenantId, usuario.usuarioId);
       const shares = await gerenciador.getRepository(CompartilhamentoReceitaNutricionalOrm).find({ where: { tenantId, pacienteId: paciente.id, status: 'ativo' }, order: { enviadoEm: 'DESC', criadoEm: 'DESC' }, take: 100 });
       return shares.map((share) => {
-        const snapshot = JSON.parse(this.criptografia.descriptografar(share.snapshotCriptografado)) as { nome: string };
+        const snapshot = this.lerSnapshot(share);
         return { id: share.id, nome: snapshot.nome, enviadoEm: share.enviadoEm, visualizadoEm: share.visualizadoEm };
       });
     });
@@ -308,6 +289,7 @@ export class ServicoCompartilhamentoReceitas {
       const repo = gerenciador.getRepository(CompartilhamentoReceitaNutricionalOrm);
       const share = await repo.findOne({ where: { tenantId, pacienteId: paciente.id, id: shareId, status: 'ativo' }, lock: { mode: 'pessimistic_write' } });
       if (!share) throw new NotFoundException('Receita compartilhada nao encontrada.');
+      const snapshot = this.snapshotPaciente(share);
       if (!share.visualizadoEm) {
         share.visualizadoEm = new Date();
         await repo.save(share);
@@ -316,7 +298,6 @@ export class ServicoCompartilhamentoReceitas {
           recursoTipo: 'compartilhamento_receita', recursoId: share.id, metadados: { primeiraLeitura: true }
         });
       }
-      const snapshot = JSON.parse(this.criptografia.descriptografar(share.snapshotCriptografado));
       return { id: share.id, enviadoEm: share.enviadoEm, receita: snapshot };
     });
   }
@@ -325,13 +306,15 @@ export class ServicoCompartilhamentoReceitas {
     this.garantirProfissional(usuario);
     return this.executorTenant.executar(tenantId, async (gerenciador) => {
       const repo = gerenciador.getRepository(CompartilhamentoReceitaNutricionalOrm);
-      const share = await repo.findOne({ where: { tenantId, id: shareId, status: In(['ativo', 'agendado']) as never }, lock: { mode: 'pessimistic_write' } });
-      if (!share) throw new NotFoundException('Compartilhamento nao encontrado.');
+      // Descobrir o vínculo sem bloquear share; adquirir paciente antes de share,
+      // como no envio, e reler o recurso após revalidar a carteira.
+      const referencia = await repo.findOne({ where: { tenantId, id: shareId, status: In(['ativo', 'agendado']) as never }, select: { id: true, pacienteId: true } });
+      if (!referencia) throw new NotFoundException('Compartilhamento nao encontrado.');
+      const paciente = await gerenciador.getRepository(PacienteOrm).findOne({ where: { tenantId, id: referencia.pacienteId }, lock: { mode: 'pessimistic_write' } });
       const profissionalId = usuario.papel === 'Professional' ? await resolverProfissionalIdDoUsuario(gerenciador, tenantId, usuario) : undefined;
-      const paciente = await gerenciador.getRepository(PacienteOrm).findOne({ where: { tenantId, id: share.pacienteId } });
-      if (usuario.papel !== 'SuperAdmin' && (!paciente || paciente.profissionalResponsavelId !== profissionalId)) {
-        throw new NotFoundException('Compartilhamento nao encontrado.');
-      }
+      if (!paciente || (usuario.papel !== 'SuperAdmin' && paciente.profissionalResponsavelId !== profissionalId)) throw new NotFoundException('Compartilhamento nao encontrado.');
+      const share = await repo.findOne({ where: { tenantId, id: shareId, pacienteId: paciente.id, status: In(['ativo', 'agendado']) as never }, lock: { mode: 'pessimistic_write' } });
+      if (!share) throw new NotFoundException('Compartilhamento nao encontrado.');
       share.status = 'retirado';
       share.retiradoEm = new Date();
       await repo.save(share);
@@ -352,8 +335,17 @@ export class ServicoCompartilhamentoReceitas {
     return { chavePublica: configurado ? process.env.WEB_PUSH_VAPID_PUBLIC_KEY!.trim() : null };
   }
 
-  private async pacienteDoUsuario(gerenciador: EntityManager, tenantId: string, usuarioId: string) {
-    const paciente = await gerenciador.getRepository(PacienteOrm).findOne({ where: { tenantId, usuarioId, arquivadoEm: IsNull() } });
+  private lerSnapshot(share: CompartilhamentoReceitaNutricionalOrm) {
+    try { return lerSnapshotCompartilhamentoReceita(JSON.parse(this.criptografia.descriptografar(share.snapshotCriptografado))); }
+    catch { throw new BadRequestException('Não foi possível ler a receita compartilhada.'); }
+  }
+
+  private snapshotPaciente(share: CompartilhamentoReceitaNutricionalOrm) {
+    return projetarSnapshotCompartilhamentoPaciente(this.lerSnapshot(share));
+  }
+
+  private async pacienteDoUsuario(gerenciador: EntityManager, tenantId: string, usuarioId: string, bloquear = false) {
+    const paciente = await gerenciador.getRepository(PacienteOrm).findOne({ where: { tenantId, usuarioId, arquivadoEm: IsNull() }, ...(bloquear ? { lock: { mode: 'pessimistic_write' as const } } : {}) });
     if (!paciente) throw new ForbiddenException('Usuario nao possui paciente vinculado.');
     return paciente;
   }

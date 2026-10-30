@@ -1,0 +1,102 @@
+diff --git a/build/Config.js b/build/Config.js
+index ba9bf73103ac9e84a75915b72a46c6d4d0914f23..89b6466827dc6b59c421cee908a8a3db5c3ee61b 100644
+--- a/build/Config.js
++++ b/build/Config.js
+@@ -37,13 +37,6 @@ function _requireUtils() {
+   };
+   return data;
+ }
+-function _deepmerge() {
+-  const data = _interopRequireDefault(require("deepmerge"));
+-  _deepmerge = function () {
+-    return data;
+-  };
+-  return data;
+-}
+ function _glob() {
+   const data = require("glob");
+   _glob = function () {
+@@ -408,11 +401,58 @@ async function modifyConfigAsync(projectRoot, modifications, readOptions = {}, w
+  * Merge the config modifications, using an optional possible top-level `expo` object.
+  * Note, changes in the plugins are merged differently to avoid duplicate entries.
+  */
++// Expo config objects are JSON-like. Keep deepmerge's recursive object merge
++// and array concatenation semantics while defining keys as own data properties.
++// In particular, assigning an own "__proto__" key must never invoke the
++// inherited setter on the destination object.
++function mergeExpoConfig(target, source) {
++  const isMergeable = value => value !== null && typeof value === 'object' && Object.prototype.toString.call(value) === '[object Object]';
++  const enumerableKeys = value => [
++    ...Object.keys(value),
++    ...Object.getOwnPropertySymbols(value).filter(symbol => Object.prototype.propertyIsEnumerable.call(value, symbol))
++  ];
++  const defineOwn = (object, key, value) => Object.defineProperty(object, key, {
++    value,
++    enumerable: true,
++    configurable: true,
++    writable: true
++  });
++  const clone = value => {
++    if (Array.isArray(value)) return value.map(clone);
++    if (!isMergeable(value)) return value;
++    const copy = {};
++    for (const key of enumerableKeys(value)) defineOwn(copy, key, clone(value[key]));
++    return copy;
++  };
++
++  if (Array.isArray(source)) {
++    const base = Array.isArray(target) ? target : [];
++    return base.concat(source).map(clone);
++  }
++  if (!isMergeable(source)) return clone(source);
++
++  const destination = {};
++  if (isMergeable(target)) {
++    for (const key of enumerableKeys(target)) defineOwn(destination, key, clone(target[key]));
++  }
++  for (const key of enumerableKeys(source)) {
++    const sourceValue = source[key];
++    const targetValue = target != null && Object.prototype.hasOwnProperty.call(target, key) ? target[key] : undefined;
++    const value = Array.isArray(sourceValue) && Array.isArray(targetValue)
++      ? mergeExpoConfig(targetValue, sourceValue)
++      : isMergeable(sourceValue) && isMergeable(targetValue)
++        ? mergeExpoConfig(targetValue, sourceValue)
++        : clone(sourceValue);
++    defineOwn(destination, key, value);
++  }
++  return destination;
++}
++
+ function mergeConfigModifications(config, {
+   plugins,
+   ...modifications
+ }) {
+-  const modifiedExpoConfig = !config.rootConfig.expo ? (0, _deepmerge().default)(config.rootConfig, modifications) : (0, _deepmerge().default)(config.rootConfig.expo, modifications);
++  const modifiedExpoConfig = !config.rootConfig.expo ? mergeExpoConfig(config.rootConfig, modifications) : mergeExpoConfig(config.rootConfig.expo, modifications);
+   if (plugins?.length) {
+     // When adding plugins, ensure the config has a plugin list
+     if (!modifiedExpoConfig.plugins) {
+@@ -447,10 +487,9 @@ function mergeConfigModifications(config, {
+           if (typeof existingPlugin === 'string') {
+             return [existingPlugin, pluginProps];
+           }
+-
+           // Merge the props to the existing plugin properties
+           if (Array.isArray(existingPlugin) && existingPlugin[0]) {
+-            return [existingPlugin[0], (0, _deepmerge().default)(existingPlugin[1] ?? {}, pluginProps)];
++            return [existingPlugin[0], mergeExpoConfig(existingPlugin[1] ?? {}, pluginProps)];
+           }
+           return existingPlugin;
+         });
+diff --git a/package.json b/package.json
+index f0785d28a6648ecd2c0bcf54eec498df9bed5e18..1450934a3d41ecf782ec8262859c898d05a8b918 100644
+--- a/package.json
++++ b/package.json
+@@ -28,7 +28,6 @@
+     "@expo/config-types": "^57.0.2",
+     "@expo/json-file": "^11.0.1",
+     "@expo/require-utils": "^57.0.5",
+-    "deepmerge": "^4.3.1",
+     "getenv": "^2.0.0",
+     "glob": "^13.0.0",
+     "resolve-workspace-root": "^2.0.0",

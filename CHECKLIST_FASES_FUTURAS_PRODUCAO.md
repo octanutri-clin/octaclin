@@ -1,8 +1,26 @@
 # OctaClin - Checklist vivo de fases futuras ate producao
 
-Atualizado em 2026-10-22. Fase 320: NO-GO para ingestão TBCA nesta rodada por ausência de autorização de uso; manter TACO, USDA e IBGE. FOOD02 (#425/#426), FOOD03 (#438) e PR #437 estão integradas. Migration 1077 aplicada e verificada em staging e produção; deploys Render do backend e Web estão live e os smokes de saúde/login retornaram HTTP 200. O workflow de backup/restauração dedicada concluiu com sucesso. O monitor de produção ainda sinaliza ClamAV ausente (issue #234 aberta); Fase 316 permanece em stand-by.
+Atualizado em 2026-10-30 após integração da FOOD07. A Fase 320 continua NO-GO para ingestão TBCA; manter TACO, USDA e IBGE.
 
-## Estado reconciliado em 2026-10-22
+## Estado vigente reconciliado em 2026-10-30
+
+- **FOOD07:** PR #452 integrada em `87df565f1aa504328c8032c069cc6d4746499a59`.
+  Checks aplicáveis do HEAD `7a963b16` passaram; Provenance do SBOM ficou
+  `SKIPPED`. A #453 foi integrada antes em `9697bc18`; Mobile Expo passou no
+  CI após atualizar a base da FOOD07. Evidências detalhadas em
+  `tasks/execucao-pos-320-food07.md`.
+- **Não inferir produção:** merge e CI não provam deploy ou aplicação externa
+  da migration 1080. G06 continua BLOCKED; sem consulta/escrita operacional
+  nesta atualização. A revisão de produção de FOOD04/FOOD05 segue para etapa
+  própria, após retorno e autorização do proprietário.
+- **Próximas entregas em planejamento:** PR #454 (Draft) propõe FOOD06 primeiro,
+  com gates científicos, clínicos e de direitos; FOOD08 fica como entrega
+  separada, dependente de decisões de publicação, conteúdo, privacidade e
+  moderação. Isso não autoriza implementação. Ver
+  `docs/pos-320/05_Plano_Sequencia_FOOD06_FOOD08_2026-10-30.md`.
+- Fase 316 permanece em stand-by; TBCA segue NO-GO.
+
+## Checkpoint de 2026-10-22 (histórico, supersedido pelo estado vigente acima)
 
 - **Base desta atualização:** `main`/`origin/main` no merge #438, commit
   `9f13b80a3984f36f1259fcd798eba54dd9d8070a`.
