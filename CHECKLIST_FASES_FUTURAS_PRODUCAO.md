@@ -19,7 +19,9 @@ Atualizado em 2026-10-31 durante FOOD06. A Fase 320 continua NO-GO para ingestã
   continuam bloqueando a integração assistencial. M01–M12 aprovadas como escopo
   obrigatório; planejamento/UX A na #455 e domínio de cobertura/contexto na
   #456 Draft dependente; integração factual R4 em #457 Draft, com Backend/RLS
-  de código80763589 aprovados no CI. Ondas e aceites não concluídos. Ver plano/matriz em
+  de código80763589 aprovados no CI. Interface factual em branch própria sobre
+  #457, com testes locais/UX B/C/revisão independente delimitados; CI próprio
+  pendente. Ondas e aceites não concluídos. Ver plano/matriz em
   `tasks/*pos-320-food06.md` e execução `tasks/execucao-pos-320-food06-contexto.md`.
   FOOD08 mantém planejamento e decisões separados.
 - Fase 316 permanece em stand-by; TBCA segue NO-GO.

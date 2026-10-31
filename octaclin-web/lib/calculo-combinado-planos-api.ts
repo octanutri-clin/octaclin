@@ -1,3 +1,4 @@
+import { lerAnaliseMicronutrientesFactual, type AnaliseMicronutrientesFactual } from './micronutrientes-factuais';
 import { ErroApiPlanoAlimentar, type CalcularCombinadoEntradaApi, type ResultadoCalculoCombinadoApi, type SelecaoCalculoPlanoApi } from './plano-alimentar-api';
 
 async function lerJson<T>(resposta: Response): Promise<T> {
@@ -27,4 +28,11 @@ export function calcularPlanosCombinados(pacienteId: string, entrada: CalcularCo
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(entrada)
   }).then(lerJson<ResultadoCalculoCombinadoApi>);
+}
+
+export async function analisarMicronutrientesPlanejados(pacienteId: string, entrada: CalcularCombinadoEntradaApi, signal?: AbortSignal): Promise<AnaliseMicronutrientesFactual> {
+  const resposta = await fetch(`/api/pacientes/${encodeURIComponent(pacienteId)}/planos-alimentares/analise-micronutrientes`, {
+    method: 'POST', cache: 'no-store', signal, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(entrada)
+  });
+  return lerAnaliseMicronutrientesFactual(await lerJson<unknown>(resposta), entrada);
 }

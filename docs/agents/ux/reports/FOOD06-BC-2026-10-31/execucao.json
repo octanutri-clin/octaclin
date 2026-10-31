@@ -1,0 +1,50 @@
+{
+  "fase": "FOOD06",
+  "incremento": "interface factual M01/M03/M06 parcial",
+  "base": "6317a0c0",
+  "etapas": [
+    "B",
+    "C"
+  ],
+  "modo": "duas instâncias independentes com papel fornecido; follow-up C na própria instância",
+  "roles": {
+    "octaclin-nutricionista-ux": {
+      "commit": "0d3382b6",
+      "sha256": "6259b40a98e2c49053cbc6adbc0c59d0312b14e191b228ab73de2f2eac53af6d",
+      "modo": "instruções resumidas fornecidas na ponte textual; seleção TOML nativa não comprovada"
+    },
+    "octaclin-paciente-ux": {
+      "commit": "0d3382b6",
+      "sha256": "a40b1ded5e47739a2710caa5ec9a9a7871b57be7efc11deefaae0515028ff7d7",
+      "modo": "instruções resumidas fornecidas na ponte textual; seleção TOML nativa não comprovada"
+    }
+  },
+  "agentes": {
+    "nutricionista": "/root/food06_nutricionista_ux_b",
+    "paciente": "/root/food06_paciente_ux_b"
+  },
+  "contexto_herdado": "fork_turns=none na criação, brief mínimo sintético; cada agente viu somente seu parecer B no follow-up C",
+  "snapshot_interface_C": {
+    "algoritmo": "SHA256(path UTF8 + NUL + bytes + NUL, em ordem)",
+    "arquivos": [
+      "octaclin-web/components/pacientes/micronutrientes-factuais.tsx",
+      "octaclin-web/components/pacientes/calculo-combinado-planos.tsx",
+      "octaclin-web/lib/micronutrientes-factuais.ts",
+      "octaclin-web/lib/calculo-combinado-planos-api.ts"
+    ],
+    "sha256": "af092bad752da52b76fdccf730702dc1cdafb64aba91c2f07c532e6cee3cf3f2"
+  },
+  "evidencias_imagens": {
+    "mobile-c.png": "4fc5c77f9e8262146c14b0ec633261157dc9b1ad616a78cfba9380e90a4264a1",
+    "desktop-c.png": "053a73251b35e7f77a21824e2000144e3646f09cf4b7eac4c85c11fd9fe0f213"
+  },
+  "limites": [
+    "Personas não usaram ferramentas observadas; restrição textual não equivale a sandbox técnico",
+    "Personas não viram PNGs/interagiram diretamente: DOM e observações do coordenador",
+    "Coordenador executou browser real com fixtures sintéticas",
+    "Imagens B não versionadas; as imagens incluídas são finais C",
+    "Relatórios são sínteses editoriais; originais na atividade",
+    "Sem usuários reais, validação clínica ou AT humana",
+    "Não é R4 ou aceite integral FOOD06"
+  ]
+}

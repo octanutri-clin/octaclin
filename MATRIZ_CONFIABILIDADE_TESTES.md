@@ -309,3 +309,23 @@ CI do HEAD completo continuam gates separados. Estado observado, comandos e
 limites: `tasks/execucao-pos-320-food04.md`; aceite: `tasks/todo-pos-320-food04.md`.
 Rollout exige autorização própria, migration aditiva fora de banda e leitor
 compatível com snapshots; rollback não apaga tabelas nem histórico.
+
+### FOOD06 — apresentação factual e invalidação compartilhada
+
+O detalhe de micronutrientes usa a seleção PA06 e não habilita referências
+científicas. Consumidor valida/projeta schema, revisões e cobertura sem criar um
+segundo somador; desconhecido não vira zero. Toda invalidação do pai deve retirar
+imediatamente o resultado da filha, abortar pedidos e impedir repintura tardia
+enquanto o contexto estiver em revalidação/conflito/erro.
+
+Provas versionadas: `scripts/micronutrientes-factuais.spec.ts`, o harness de
+seleção PA06 e `tests/visual/food06-tabela-factual.spec.mjs` na Web; regressão
+conjunta com `pa06-calculo-combinado.spec.mjs`. Os casos exercitam foco, online,
+recálculo, revogação, seleção alterada, resposta tardia,409, payload inválido,
+zero/ausência, teclado/axe e ampliação de texto em desktop/mobile.
+
+Não equivalem a usuário real, AT humana ou nova prova de RLS. Backend/autorização
+são os da integração factual; não há mudança de banco nesta UI. Revisão R4,
+comandos/limites, UX B/C e estado do CI: `tasks/food06-interface-factual.md`.
+Todas as melhorias FOOD06 continuam obrigatórias; direitos/G06 e funcionalidades
+não implementadas não são liberados pela cobertura da tabela.

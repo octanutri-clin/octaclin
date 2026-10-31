@@ -9,7 +9,7 @@ Fontes: [especificação](especificacao-pos-320-food06-melhorias.md),
 | --- | --- | --- | --- |
 | M01-C1 | Zero conhecido ≠ ausência; cobertura por nutriente, não por alimento global | RED/GREEN: dois alimentos, ferro zero+ausente e cálcio completo | PASS domínio A1: zero/ausência por nutriente; integração/interface/exportação pendentes |
 | M01-C2 | Completo/parcial/desconhecido/incompatível/indisponível com motivos/fontes | Mistura de unidade/forma/schema/fonte/erro; soma apenas compatíveis; nenhuma confiança científica percentual | PARCIAL A1: cinco estados/causas/contagens; resolução autorizada de fontes pendente |
-| M01-C3 | Subtotal parcial explícito, sem percentual de referência; mesmos dados nas saídas | Backend/BFF/tabela/exportação e fonte legada; total desconhecido não vira zero | PARCIAL: serviço/BFF/RLS factuais comprovados em80763589; CI global, tabela e exportação pendentes |
+| M01-C3 | Subtotal parcial explícito, sem percentual de referência; mesmos dados nas saídas | Backend/BFF/tabela/exportação e fonte legada; total desconhecido não vira zero | PARCIAL: serviço/BFF/RLS em80763589 e tabela factual testada; fontes/saídas futuras e CI próprio pendentes |
 | M02-C1 | Total→refeição→alimento, quantidade/preparo/fonte e cobertura | Soma hierárquica reconcilia com PA06, receita1,5porções, conhecido zero/ausente | PENDENTE |
 | M02-C2 | Denominador completo/positivo, sem dupla contagem | Alternativa escolhida exclui principal; disponíveis não contam; alimento repetido em refeições legítimas conta ambas | PENDENTE |
 | M02-C3 | Ordenação/expansão/atalho autorizado | Testes componente/Playwright, leitura/editável e acesso negado ao destino | PENDENTE |
@@ -19,8 +19,8 @@ Fontes: [especificação](especificacao-pos-320-food06-melhorias.md),
 | M04-C2 | Sem gravação; confirmação CAS e rollback | PostgreSQL descartável: revisão stale, duas abas/PA07, perda de acesso, idempotência/replay, falha intermediária | PENDENTE |
 | M05-C1 | Fonte/autoridade/documento/versão/ID/unidade/população/regras | Registro server-side imutável e manifesto com direitos/atribuição | PARCIAL: IDs de referência no núcleo; direitos BLOCKED |
 | M05-C2 | Reproduzir análise original sem atualização silenciosa | Atualização de tabela, mesma análise anterior, nova análise versionada, snapshots cifrados | PENDENTE persistência |
-| M06-C1 | Colunas, todos filtros aprovados e ordenação determinística | Tabela de verdade abaixo/acima/igual, completo/parcial, ausência/UL incompatível; decisão antes do arredondamento | PENDENTE |
-| M06-C2 | Texto/filtros ativos/limpar, sem ranking clínico ou cor única | Componentes e Playwright desktop/mobile, teclado, leitor, zoom; ausente não ordena como zero | PENDENTE |
+| M06-C1 | Colunas, todos filtros aprovados e ordenação determinística | Tabela de verdade abaixo/acima/igual, completo/parcial, ausência/UL incompatível; decisão antes do arredondamento | PARCIAL: filtros factuais e ordem implementados; referências/percentuais pendentes |
+| M06-C2 | Texto/filtros ativos/limpar, sem ranking clínico ou cor única | Componentes e Playwright desktop/mobile, teclado, leitor, zoom; ausente não ordena como zero | PARCIAL:32 Playwright/axe/teclado/fonte200% neste incremento; sem AT humana ou UI de comparação clínica |
 | M07-C1 | Duas versões autorizadas com contexto e deltas válidos | Versões publicadas/rascunho com revisão exata; paciente/tenant adversário negados | PENDENTE |
 | M07-C2 | Distinguir dieta/fonte/ref/contexto/cobertura | Cada causa isolada e combinada; causa incerta declarada; referência comum só se aplicável a ambos | PENDENTE |
 | M08-C1 | PDF fiel à análise autorizada e minimizada | Mesmos números/revisões/contexto/fontes; teste autorização/revogação/PII canário | PENDENTE |

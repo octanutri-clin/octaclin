@@ -215,3 +215,15 @@ reproduzido e GREEN confirmado em PostgreSQL real. Como não repetir: em suítes
 com estado persistente, separar a identidade dos fixtures por cenário e conferir
 as leituras posteriores que dependem dos mesmos recursos. CI integral permanece
 obrigatório; prova parcial não encerra esse gate.
+
+## 2026-10-31 — Detalhe assíncrono não pode escapar da invalidação do painel
+
+Na primeira integração factual FOOD06, o painel PA06 limpava o próprio resultado
+ao conferir foco/online, mas o detalhe filho mantinha os números antigos. Uma
+revogação confirmada não retirava a tabela. Controle: revisão monotônica de
+leitura compartilhada, gate de apresentação e abort no detalhe, além da chave de
+paciente/seleção/revisão. Testar tanto a resposta antiga liberada durante a
+revalidação quanto a revogação posterior. Não basta comprovar o fluxo positivo
+ou mudar somente o texto do erro; a prova deve observar que os dados saem da tela.
+Revisão independente identificou/reproduziu e reavaliou a correção. Isso preserva
+a autorização do backend, não a substitui por controle visual.

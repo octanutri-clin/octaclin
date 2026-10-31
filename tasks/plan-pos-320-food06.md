@@ -16,6 +16,11 @@ reutilizam PA06 sem habilitar referências. Backend/Web/PostgreSQL/RLS do códig
 80763589 aprovados no CI; Demo/CI final permanecem gates, Mobile FAIL.
 [Execução factual](food06-integracao-factual.md). Isso não conclui Onda A/M01–M12.
 
+Interface factual em branch própria `feat/food06-tabela-factual`, dependente
+da #457/6317a0c0: [execução](food06-interface-factual.md). Tabela sob demanda,
+sem habilitar referências; UX B/C do incremento e32 Playwright locais aprovados.
+Não conclui M01–M12 ou UX da FOOD06 integral.
+
 ## Escopo vigente ampliado — 2026-10-31
 
 O proprietário aprovou integralmente F06-M01–M12 para planejamento e implementação

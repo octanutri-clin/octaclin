@@ -27,6 +27,10 @@ Atualizado em 2026-10-31 durante o desenvolvimento isolado da FOOD06; histórico
   Backend/Web/PostgreSQL/RLS de código80763589 aprovados no CI; Demo smoke
   em execução e auditoria Mobile FAIL.
   Sem referências científicas habilitadas. Registro: `tasks/food06-integracao-factual.md`.
+  Interface factual em branch `feat/food06-tabela-factual`, base6317a0c0/#457:
+  tabela sob demanda, UX B/C e revisão independente delimitadas;32 Playwright,
+  24 testes de seleção/modelo/cliente e27 scripts authz locais aprovados.
+  CI próprio pendente; execução em `tasks/food06-interface-factual.md`.
   Direitos
   continuam bloqueando T03-B/integração assistencial. Evidências e limitações de
   ferramentas em `tasks/execucao-pos-320-food06.md`; plano em
