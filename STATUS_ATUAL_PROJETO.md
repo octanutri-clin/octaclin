@@ -30,7 +30,10 @@ Atualizado em 2026-10-31 durante o desenvolvimento isolado da FOOD06; histórico
   Interface factual em branch `feat/food06-tabela-factual`, base6317a0c0/#457:
   tabela sob demanda, UX B/C e revisão independente delimitadas;32 Playwright,
   24 testes de seleção/modelo/cliente e27 scripts authz locais aprovados.
-  CI próprio pendente; execução em `tasks/food06-interface-factual.md`.
+  CI b4ccc2dd: Backend/Web/scanners PASS; Mobile FAIL; Demo em execução na última consulta.
+  Execução em `tasks/food06-interface-factual.md`. Fundamento M02 em branch própria
+  `feat/food06-contribuicoes-dominio`: decomposição interna PA06, sem API/UI;
+  `tasks/food06-contribuicoes-dominio.md` registra provas e pendências de integração.
   Direitos
   continuam bloqueando T03-B/integração assistencial. Evidências e limitações de
   ferramentas em `tasks/execucao-pos-320-food06.md`; plano em

@@ -27,12 +27,18 @@ function objeto(valor: unknown): Record<string, unknown> | undefined {
 function valorConhecido(valor: unknown): valor is number {
   return typeof valor === 'number' && Number.isFinite(valor) && valor >= 0;
 }
-/** Seleção comum da PA06 e das projeções de cobertura, sem ler itens desligados. */
-export function selecionarItensCombinados(planos: EntradaPlanoCombinado[]): {
-  itens: unknown[]; exclusoes: ResultadoCalculoCombinado['exclusoes'];
+export interface RefeicaoCombinadaSelecionada {
+  planoId: string;
+  identidadeRefeicao: string;
+  itens: unknown[];
+}
+/** Seleção comum. Referências a snapshots são internas, nunca projeção HTTP. */
+export function selecionarRefeicoesCombinadas(planos: EntradaPlanoCombinado[]): {
+  refeicoes: RefeicaoCombinadaSelecionada[]; exclusoes: ResultadoCalculoCombinado['exclusoes'];
 } {
-  const itens: unknown[] = [];
+  const refeicoes: RefeicaoCombinadaSelecionada[] = [];
   const exclusoes: ResultadoCalculoCombinado['exclusoes'] = [];
+  let quantidadeItens = 0;
   for (const plano of planos) {
     if (!plano.selecionado) continue;
     if (!plano.ativo) { exclusoes.push({ planoId: plano.planoId, motivo: 'plano_desativado' }); continue; }
@@ -41,10 +47,21 @@ export function selecionarItensCombinados(planos: EntradaPlanoCombinado[]): {
       if (!refeicao.ativa) {
         exclusoes.push({ planoId: plano.planoId, identidadeRefeicao: refeicao.identidadeId, motivo: 'refeicao_desativada' }); continue;
       }
-      itens.push(...refeicao.itens);
-      if (itens.length > 10000) throw new Error('Limite de itens do cálculo combinado excedido.');
+      quantidadeItens += refeicao.itens.length;
+      if (quantidadeItens > 10000) throw new Error('Limite de itens do cálculo combinado excedido.');
+      refeicoes.push({ planoId: plano.planoId, identidadeRefeicao: refeicao.identidadeId, itens: refeicao.itens });
     }
   }
+  return { refeicoes, exclusoes };
+}
+/** Flatten da mesma seleção, mantendo o contrato legado da PA06. */
+export function selecionarItensCombinados(planos: EntradaPlanoCombinado[]): {
+  itens: unknown[]; exclusoes: ResultadoCalculoCombinado['exclusoes'];
+} {
+  const { refeicoes, exclusoes } = selecionarRefeicoesCombinadas(planos);
+  const itens: unknown[] = [];
+  // Spread preserva holes como undefined, como no seletor legado.
+  for (const refeicao of refeicoes) itens.push(...refeicao.itens);
   return { itens, exclusoes };
 }
 /** Só valores de porção congelados. Não multiplica quantidade, não consulta catálogo. */

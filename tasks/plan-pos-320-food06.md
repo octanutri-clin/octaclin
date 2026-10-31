@@ -21,6 +21,12 @@ da #457/6317a0c0: [execução](food06-interface-factual.md). Tabela sob demanda,
 sem habilitar referências; UX B/C do incremento e32 Playwright locais aprovados.
 Não conclui M01–M12 ou UX da FOOD06 integral.
 
+Fundamento M02 em branch própria `feat/food06-contribuicoes-dominio`, base
+#458/b4ccc2dd: [execução e próximos contratos](food06-contribuicoes-dominio.md).
+Decomposição interna PA06 por refeição/item, sem API/UI ou direitos novos.
+M02 permanece parcial: identidades públicas autorizadas, fontes/quantidades,
+paginação e navegação ainda não implementadas.
+
 ## Escopo vigente ampliado — 2026-10-31
 
 O proprietário aprovou integralmente F06-M01–M12 para planejamento e implementação

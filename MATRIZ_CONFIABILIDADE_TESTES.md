@@ -329,3 +329,18 @@ são os da integração factual; não há mudança de banco nesta UI. Revisão R
 comandos/limites, UX B/C e estado do CI: `tasks/food06-interface-factual.md`.
 Todas as melhorias FOOD06 continuam obrigatórias; direitos/G06 e funcionalidades
 não implementadas não são liberados pela cobertura da tabela.
+
+### FOOD06 — decomposição interna M02
+
+A seleção comum de refeições deve preservar a PA06: OFF/não selecionado não
+lê itens, posições ausentes não desaparecem, repetições legítimas contam e
+porção congelada não é multiplicada de novo. Contribuições usam o somador e
+classificador existentes; percentual factual exige denominador completo positivo.
+Provas: `dominio/contribuicoes-dieteticas.spec.ts` no módulo backend de planos,
+com regressões de `calculo-combinado.spec.ts` e `cobertura-dietetica.spec.ts`.
+
+Não há contrato público novo. Posição interna não substitui identidade persistente
+nem autorização. Integração futura exige reautorização transacional, projeção
+mínima, paginação com cobertura integral e prova de carga concorrente; o benchmark
+local não aprova HTTP. Revisão/P2 corrigido, comandos e limites em
+`tasks/food06-contribuicoes-dominio.md`. Nenhum gate científico/operacional liberado.

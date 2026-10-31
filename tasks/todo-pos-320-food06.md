@@ -16,6 +16,8 @@ Fonte de contrato: [plano](plan-pos-320-food06.md), base `68499c15`.
 - [ ] Onda A: M01 cobertura, M03 causas, M05 rastreabilidade, M09 explicações.
 - [x] B-factual: implementar/testar tabela de cobertura e filtros, UX B/C do incremento.
 - [ ] B-factual: conferir CI próprio, auditoria Mobile ainda pendente.
+- [x] M02-fundamento: decomposição interna sem segundo somador, RED/GREEN e revisão independente delimitada.
+- [ ] M02-integração: API paginada/identidades autorizadas, quantidades/fontes e interface; ver [execução](food06-contribuicoes-dominio.md).
 - [ ] Onda B: concluir M02 contribuições e M06 com referências elegíveis.
 - [ ] Onda C: M04 prévias, M11 consulta assistida/restrições e M12 cenários.
 - [ ] Onda D: M07 versões, M08 PDF seguro e M10 longitudinal.
