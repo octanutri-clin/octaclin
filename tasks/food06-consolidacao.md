@@ -128,3 +128,36 @@ para evitar delegação involuntária do pnpm run a outro Node da máquina.
 Manifesto sanitizado da auditoria RED/GREEN e hashes dos lockfiles:
 `research/food06/mobile-audit-consolidacao.json`. Nenhum dado real de paciente,
 credencial, URL assinada ou corpo de log foi incorporado.
+
+
+## Reconferência do CI consolidado e correção da política SPDX
+
+HEAD39bf016f: Mobile Expo **PASS no CI**, inclusive gate de auditoria antes
+bloqueado. Dependency Review FAIL por licença dual de forge. A API de comparação
+de dependências informa `(BSD-3-Clause OR GPL-2.0)`. A action no pin vigente,
+`src/licenses.ts`, usa `satisfiesAny` em deny e assim nega também uma alternativa
+não escolhida. A política já aprovada e seus testes permitem selecionar BSD no OR.
+
+Correção sem exceção: gerar a lista allow a partir de `permitidas` e
+`revisaoObrigatoria` da política existente, excluindo qualquer bloqueada e validando
+IDs simples. Usar `allow-licenses` da mesma action, cuja implementação usa
+`satisfies` e respeita OR/AND. Não mudar `fail-on-severity`, `warn-only`, ledger,
+lista de licenças ou exceções por pacote. A revisão individual de pacotes de
+licenças sujeitas a revisão continua nos inventários instalados de cada job.
+
+TDD do gerador:11 PASS/2 FAIL contra stub,13/13 após implementação; uma prova
+adicional executa o trecho real do workflow e confere GITHUB_OUTPUT,14/14. Os
+testes existentes preservam GPL isolada/AND bloqueados e OR com ramo BSD permitido.
+A interpretação da action ainda exige o CI do novo HEAD; não declarar PASS só
+com testes do gerador. Node22 fixado para executar o gerador no workflow.
+
+Revisor independente confirmou a causa no código público da action, sem novo
+bloqueador estático e sem executar testes próprios. Também identificou que o novo
+teste de extglob usava negação global: corrigido com `nonegate:true` e caso negativo
+`foo.spec.ts`, preservando os demais asserts;4/4 testes de compatibilidade PASS.
+
+Estado das PRs após consolidação: GitHub reconheceu #456 como integrada à sua base
+#455 ao avançar a branch; #457–#459 foram encerradas como supersedidas. Não houve
+comando de merge na main nem remoção de branches. O estado remoto de main pode
+mudar por operações externas; isso não autoriza deploy ou operações produtivas
+neste trabalho. #455 continua Draft, CI final em execução após o envio.

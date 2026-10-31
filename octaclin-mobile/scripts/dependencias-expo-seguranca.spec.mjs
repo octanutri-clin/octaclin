@@ -44,7 +44,8 @@ test('minimatch usado por fingerprint preserva dot/matchBase/extglob e interface
   assert.equal(minimatch('.expo/config.json', '**/*.json'), false);
   assert.equal(minimatch('.expo/config.json', '**/*.json', { dot: true }), true);
   assert.equal(minimatch('src/app.ts', '*.ts', { matchBase: true }), true);
-  assert.equal(minimatch('foo.test.ts', '!(*.spec).ts'), true);
+  assert.equal(minimatch('foo.test.ts', '!(*.spec).ts', { nonegate: true }), true);
+  assert.equal(minimatch('foo.spec.ts', '!(*.spec).ts', { nonegate: true }), false);
   const matcher = new Minimatch('src/*.{ts,tsx}');
   assert.equal(matcher.match('src/a.ts'), true);
   assert.equal(matcher.match('src/a.json'), false);
