@@ -5,7 +5,7 @@ from datetime import datetime, timezone
 from html.parser import HTMLParser
 import json
 from pathlib import Path
-from urllib.request import urlopen
+from urllib.request import HTTPRedirectHandler, build_opener
 
 BASE = 'https://www.canada.ca/en/health-canada/services/food-nutrition/healthy-eating/dietary-reference-intakes'
 DATASET = '77fae12d-1ef0-431e-98df-451a4f7951c3'
@@ -17,6 +17,30 @@ FONTES = {
     'metadados': 'https://open.canada.ca/data/api/3/action/package_show?id=' + DATASET,
 }
 MAX_BYTES = 2_000_000
+URLS_DOCUMENTAIS = frozenset(FONTES.values())
+
+
+def autorizar_destino(url):
+    # Comparação literal: não aceitar esquemas, hosts ou formas alternativas.
+    if not isinstance(url, str) or url not in URLS_DOCUMENTAIS:
+        raise ValueError('Destino documental não autorizado.')
+
+
+class RedirecionamentoOficial(HTTPRedirectHandler):
+    max_redirections = 5
+    max_repeats = 2
+
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        # urllib resolve Location relativo antes desta chamada. Validar antes
+        # de parent.open evita conexão com destino não autorizado, não apenas
+        # rejeição tardia do corpo obtido.
+        autorizar_destino(newurl)
+        return super().redirect_request(req, fp, code, msg, headers, newurl)
+
+
+def abrir_fonte(url):
+    autorizar_destino(url)
+    return build_opener(RedirecionamentoOficial()).open(url, timeout=25)
 
 
 class ConteudoPrincipal(HTMLParser):
@@ -82,8 +106,9 @@ def analisar(nome, url, final_url, dados):
 def coletar():
     registros = []
     for nome, url in FONTES.items():
-        with urlopen(url, timeout=25) as resposta:
-            if resposta.status != 200 or not resposta.url.startswith('https://'):
+        with abrir_fonte(url) as resposta:
+            autorizar_destino(resposta.url)
+            if resposta.status != 200:
                 raise ValueError('Resposta documental inesperada.')
             dados = resposta.read(MAX_BYTES + 1)
             registros.append(analisar(nome, url, resposta.url, dados))

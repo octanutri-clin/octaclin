@@ -63,3 +63,26 @@ precisão 60, arredondamento half-up para oito casas. Usa 15 razões sintéticas
 sem tabelas DRI ou dados clínicos. O teste do núcleo TypeScript confronta esses
 resultados sem importar o algoritmo Python ou reutilizar o cálculo de produção
 como valor esperado. Não é validação independente da ciência das DRI.
+
+## Estabilização do transporte documental
+
+O coletor agora autoriza literalmente as cinco URLs cadastradas **antes** da
+abertura inicial e de cada redirecionamento. Destino fora dessa lista, inclusive
+HTTP, `file:`, IP, userinfo, domínio semelhante ou fragmento inesperado, falha
+antes de ser requisitado. Redirecionamento relativo que resulte em outra URL
+explicitamente cadastrada continua permitido; novos destinos oficiais exigem
+conferência e atualização explícita da lista. TLS/proxy, timeout25s e fechamento
+permanecem na biblioteca padrão; não foi introduzido cliente HTTP externo.
+
+O alerta de urllib dinâmico não demonstrava entrada SSRF inicial controlada por
+usuário: a CLI só aceita saída e as fontes são constantes. A lacuna reproduzida
+era a validação tardia de redirecionamentos. Testes percorrem o pipeline urllib
+real com transporte totalmente sintético, sem sockets ou arquivos locais.
+
+Checkpoint desta correção:14 testes do coletor e11 do extrator,25/25 PASS.
+RED anterior:8 falhas (duas cadeias de redirect e seis variantes de destino
+inicial); GREEN confirma rejeição antes de nova conexão, controles legítimos e
+ciclo limitado. A revisão independente executou14 testes e nove representações
+adicionais de redirects, sem bypass encontrado. Não houve consulta às fontes
+reais nem nova validação de ciência/direitos. Semgrep/CI do novo HEAD devem ser
+conferidos separadamente; sucesso de um job warning não prova ausência de alerta.

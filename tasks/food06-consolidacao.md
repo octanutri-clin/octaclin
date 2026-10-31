@@ -161,3 +161,46 @@ Estado das PRs após consolidação: GitHub reconheceu #456 como integrada à su
 comando de merge na main nem remoção de branches. O estado remoto de main pode
 mudar por operações externas; isso não autoriza deploy ou operações produtivas
 neste trabalho. #455 continua Draft, CI final em execução após o envio.
+
+## Estabilização autorizada em Sol médio — transporte da pesquisa
+
+Na retomada, worktree limpa e HEADd63e6f5b confirmados. Dependency Review passou;
+Mobile completou auditoria, segurança e export no CI. Os demais checks estavam
+em execução. Um comentário Semgrep ainda aberto apontava uso dinâmico de urllib
+no coletor documental; a API direta de code-scanning retornou403, mas a thread e
+as anotações do check são acessíveis. Não se presume poder dispensar o alerta.
+
+Investigação independente `/root/food06_coletor_boundary`: não demonstrou SSRF
+inicial controlado por usuário (fontes constantes, CLI somente saída). Demonstrou
+fronteira de redirect validada apenas depois da conexão. A correção candidata
+usa a stdlib existente com lista imutável das cinco URLs exatas e handler de
+redirect que valida antes de abrir cada salto; preserva GET/TLS/proxy/timeout25s,
+leitura limitada, hash, análise e manifesto somente após sucesso integral.
+Não altera runtime SaaS, API, fontes clínicas, licenças ou permissões.
+
+TDD:8 falhas funcionais RED em14 testes, incluindo HTTPS externo, downgrade e
+cadeia HTTPS→HTTP→HTTPS, destino inicial local/esquema/host/IP/userinfo/fragmento.
+Após correção:25/25 da suíte inteira de pesquisa PASS; nenhuma conexão externa.
+Controles legítimos: cinco URLs originais, redirect relativo permitido, falha de
+rede propagada e ciclo limitado. Análise pura continua aceitando fixtures
+sintéticas sem depender da autorização de transporte.
+
+Revisor fresco `/root/food06_coletor_patch_review`, sem coautoria, executou14
+unitários do coletor e nove representações adicionais de redirect antes da
+segunda chamada de transporte: sem bypass/regressão concretos. Não verificou
+rede oficial/canonicalizações atuais ou scanner. Redirect oficial para URL fora
+das cinco falha fechado por desenho; identidade/hash de conteúdo continua
+sujeita à conferência documental, nunca aprovação automática clínica.
+
+Semgrep não está instalado localmente. O check warning anterior passou mesmo
+com uma anotação; portanto apenas PASS desse job não encerra o finding. É
+necessário conferir a anotação/summary Semgrep OSS do HEAD corrigido e o CI final.
+Acesso403 ao painel de alertas e ausência de scanner local ficam registrados;
+nenhuma dispensa ou supressão foi adicionada. Skill de correção orientou revisão
+pré-patch e revisão independente posterior; seu recurso auxiliar de armazenamento
+não estava acessível pela ferramenta, e não foi criado diretório de scan.
+
+Comandos desta rodada: `python3 -m unittest discover -s research/food06 -p
+ 'test_*.py' -v` (25 PASS), `node --test scripts/validar-licencas.spec.mjs`
+(14 PASS com Node22), `git diff --check` e scanner local de segredos antes do push.
+Nova API M02 segue pausada até estabilizar os checks e confirmar o scanner.

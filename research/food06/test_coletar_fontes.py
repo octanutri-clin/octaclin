@@ -45,9 +45,100 @@ class ManifestoSinteticoTest(unittest.TestCase):
         self.assertNotIn('aprovacaoComercial', r)
 
     def test_falha_de_rede_interrompe_coleta(self):
-        with patch('coletar_fontes.urlopen', side_effect=OSError('falha sintética')):
+        with patch('coletar_fontes.abrir_fonte', side_effect=OSError('falha sintética')):
             with self.assertRaises(OSError):
                 coletar()
+
+
+class TransporteOficialTest(unittest.TestCase):
+    """Exercita o pipeline urllib real com transporte sintético, sem sockets."""
+    def setUp(self):
+        from email.message import Message
+        from io import BytesIO
+        from urllib.request import BaseHandler, build_opener
+        from urllib.response import addinfourl
+        import coletar_fontes as modulo
+        self.modulo = modulo
+        self.fontes = dict(modulo.FONTES)
+        self.chamadas = []
+        self.redirecionamentos = {}
+        teste = self
+
+        class TransporteSintetico(BaseHandler):
+            handler_order = 100
+
+            def abrir(self, req):
+                url = req.full_url
+                teste.chamadas.append(url)
+                headers = Message()
+                if url in teste.redirecionamentos:
+                    headers['Location'] = teste.redirecionamentos[url]
+                    status, dados = 302, b''
+                else:
+                    status = 200
+                    dados = (json.dumps({'success': True, 'result': {'id': DATASET}}).encode()
+                             if url == teste.fontes['metadados'] else b'<main>Sintetico</main>')
+                resposta = addinfourl(BytesIO(dados), headers, url, status)
+                resposta.msg = 'synthetic'
+                return resposta
+
+            https_open = http_open = file_open = abrir
+
+        def construtor(*handlers):
+            return build_opener(*handlers, TransporteSintetico())
+
+        patcher = patch('coletar_fontes.build_opener', construtor)
+        patcher.start()
+        self.addCleanup(patcher.stop)
+
+    def test_cinco_fontes_legitimas_preservam_manifesto_e_limites(self):
+        r = coletar()
+        self.assertEqual(self.chamadas, list(self.fontes.values()))
+        self.assertEqual(len(r['fontes']), 5)
+        self.assertEqual(r['direitos'], 'PENDENTE_conferencia_escopo_e_terceiros')
+
+    def test_bloqueia_redirecionamento_https_externo_antes_da_conexao(self):
+        origem = self.fontes['vitaminas']
+        self.redirecionamentos[origem] = 'https://example.invalid/fora'
+        with self.assertRaises(ValueError):
+            coletar()
+        self.assertEqual(self.chamadas, [origem])
+
+    def test_bloqueia_downgrade_e_cadeia_https_http_https_no_primeiro_salto(self):
+        origem = self.fontes['vitaminas']
+        externo = 'http://example.invalid/intermediario'
+        self.redirecionamentos.update({origem: externo, externo: self.fontes['elementos']})
+        with self.assertRaises(ValueError):
+            coletar()
+        self.assertEqual(self.chamadas, [origem])
+
+    def test_rejeita_destino_inicial_nao_autorizado_sem_transporte(self):
+        for url in ['file:///sintetico', 'http://www.canada.ca/sintetico',
+                    'https://www.canada.ca.example.invalid/', 'https://127.0.0.1/',
+                    'https://www.canada.ca@localhost/', self.fontes['vitaminas'] + '#fragmento']:
+            with self.subTest(url=url):
+                self.chamadas.clear()
+                with patch.dict(self.modulo.FONTES, {'vitaminas': url}, clear=True):
+                    with self.assertRaises(ValueError):
+                        coletar()
+                self.assertEqual(self.chamadas, [])
+
+    def test_redirect_relativo_para_outra_fonte_explicitamente_permitida(self):
+        from urllib.parse import urlsplit
+        origem = self.fontes['vitaminas']
+        destino = self.fontes['elementos']
+        self.redirecionamentos[origem] = urlsplit(destino).path
+        r = coletar()
+        self.assertEqual(r['fontes'][0]['urlFinal'], destino)
+        self.assertEqual(self.chamadas[:2], [origem, destino])
+
+    def test_ciclo_de_redirecionamento_falha_sem_manifesto(self):
+        from urllib.error import HTTPError
+        origem = self.fontes['vitaminas']
+        self.redirecionamentos[origem] = origem
+        with self.assertRaises(HTTPError):
+            coletar()
+        self.assertLessEqual(len(self.chamadas), 6)
 
 
 if __name__ == '__main__':
