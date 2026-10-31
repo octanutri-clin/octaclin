@@ -77,8 +77,9 @@ publicações, identidades, estados ON/OFF e locks na ordem preexistente.
 | Typecheck backend/Web | PASS, Node22.23.4 |
 | Build Nest/verificação do artefato | PASS, não é deploy |
 | ESLint arquivos Web alterados | PASS |
-| Web build e scripts authz | Em execução; consolidar resultado antes do encerramento |
-| PostgreSQL/RLS | Cinco testes adicionados ao gate oficial, execução real pendente CI |
+| Web build local | Compilação Web concluída; comando FAIL ao carregar runtime Next a partir dos artefatos temporários. Arquivo existe no cache. Aguardar build normal CI; não alterar config/deps para contornar |
+| Cadeia local authz | PASS27/27 scripts executados diretamente, Node22; todas saídas exit0 |
+| PostgreSQL/RLS CI do código80763589 | PASS: suíte completa com banco real e etapa Testcontainers adicional concluídas. Cinco casos novos incluídos sem filtro na suíte oficial |
 
 Os166 skipped incluem os cinco casos novos e integrações opt-in. Não são prova
 de banco. Testes sintéticos em memória validam comportamento do serviço, sem
@@ -100,7 +101,7 @@ Local: daemon Docker acessível, mas a imagem Timescale do harness integral não
 está instalada e o overlay tem cerca de139MiB livres. Não iniciar download que
 esgotaria a worktree. Imagem PostgreSQL15 disponível não substitui a dependência
 Timescale nem comprova o inventário integral. Gate real deve executar no CI;
-até sua evidência, permanece BLOCKED/NOT RUN localmente.
+localmente continua NOT RUN. A evidência obtida no CI está registrada abaixo.
 
 ## Ambiente e limites
 
@@ -132,9 +133,68 @@ Mobile já falhava naquela consulta; não alterar lock ou suprimir auditoria aqu
 - Branch: `feat/food06-analise-factual`, dependência explícita #456/`1aba388a`.
 - Concluído: serviço, projeção, rota e BFF factuais, TDD e testes de segurança
   sintéticos; cinco provas reais preparadas no gate oficial.
-- Pendente: comprovação PostgreSQL/RLS no HEAD próprio, revisão independente
-  final, CI/scanners e demais ondas obrigatórias. Nenhum gate não executado PASS.
-- Próxima ação: enviar delta intencional em PR Draft e observar o Backend/gate
-  PostgreSQL do HEAD; corrigir qualquer achado reproduzível antes de fechar R4.
+- Comprovado: revisão independente delimitada e PostgreSQL/RLS no CI de código80763589.
+- Comprovado: Web CI/build e authz, além dos27 scripts locais de autorização.
+- Pendente: CI global/Demo smoke e demais ondas obrigatórias. Nenhum gate não
+  executado PASS; auditoria Mobile segue FAIL e não é dispensada.
+- Próxima ação: verificar os checks do HEAD documental final e o Demo smoke,
+  mantendo a auditoria Mobile em fluxo separado. Não herdar aprovação global do
+  código80763589 para outro commit. Corrigir novos achados reproduzíveis.
 - Rollback: código aditivo e helper comum; sem schema, dado persistido ou recálculo
   retroativo. Sem merge/deploy/migrations externas/G06 ou FOOD05-MDL.
+
+
+## Evidência CI do commit de código80763589
+
+Run[41211610808](https://github.com/octanutri-clin/octaclin/actions/runs/41211610808),
+job[Backend124567639420](https://github.com/octanutri-clin/octaclin/actions/runs/41211610808/job/124567639420).
+Consulta da API GitHub: job `completed/success`. Etapas aprovadas:
+instalação `--frozen-lockfile`, auditoria de licenças das dependências, typecheck,
+build, migrations exclusivamente no banco descartável CI, role runtime de prova
+sem BYPASSRLS/ownership, suíte completa, Redis real e Testcontainers/RLS.
+
+O workflow versionado `ci.yml` configura a role de prova para a suíte completa;
+o runner Testcontainers remove configurações externas e define
+`RLS_TESTCONTAINERS=true`. Ambos incluem a suíte de isolamento, com os cinco
+casos FOOD06 incondicionais dentro do describe habilitado. Prova por estado das
+etapas/API e contratos do workflow; não inventar contagens por caso dos logs.
+Não reutilizar os números locais como se fossem contagens extraídas do CI.
+O download dos logs completos ficou indisponível no destino de redirecionamento
+(HTTP403). Não copiar URLs temporárias assinadas nem contornar política de rede.
+
+Essas etapas aprovadas validam o código80763589, não commits futuros. A auditoria
+de licenças de dependências não libera direitos das tabelas DRI. Web foi posteriormente concluído com `success`, incluindo authz e build normal.
+O build normal CI comprova a compilação no ambiente suportado; a falha local
+continua registrada e não motivou mudança de config/dependências. Demo smoke
+seguia em execução na consulta; Mobile FAIL e SBOM provenance SKIPPED. Sem
+aprovação assistencial, merge, deploy ou disponibilidade em produção.
+
+
+Conferência de ambiente: a worktree principal permanece com a alteração
+preexistente em `octaclin-web/next-env.d.ts`, sem descarte ou inclusão neste delta.
+As worktrees/dependências reutilizadas não receberam alteração versionada.
+
+### Integração de interface seguinte — auditoria concreta
+
+`CalculoCombinadoPlanos` já mantém a seleção PA06 em memória e invalida respostas
+por chave (paciente/seleção/revisão/publicação), geração e AbortController. Reusar
+esse contexto na futura tabela FOOD06, sem nova seleção paralela, storage ou
+confirmação clínica presumida. Não modificar a resposta do endpoint PA06 legado.
+Reusar `CAMPOS_MICRONUTRIENTES_PLANO`, formatação pt-BR e os cenários desktop/mobile
+`pa06-calculo-combinado.spec.mjs` para testar zero, parcial, OFF e revalidação.
+A análise factual adicional pode ser carregada sob demanda quando o detalhe for
+aberto; respostas tardias devem seguir a mesma proteção por chave/geração. Nenhuma
+interface implementada por este registro; UX B/C exigem interface real.
+
+
+### Fechamento documental do incremento
+
+Após código80763589, a consolidação muda somente documentação/checklists/status.
+Backend/Web/banco real e revisão independente registrados acima continuam como
+prova daquele código. Antes do push documental, Demo visual Playwright ainda
+estava em execução (Smoke UI e Smoke E2E BFF já aprovados). A atualização normal
+da branch pode cancelar o run anterior; cancelled não será interpretado como
+PASS ou falha funcional. O novo HEAD deve executar seus próprios checks, sem
+skip-ci, waiver ou bypass. CI global permanece aberto/FAIL por Mobile até a
+correção separada e comprovação do HEAD final. Nenhuma prontidão de FOOD06 plena
+ou autorização de merge decorre deste incremento.

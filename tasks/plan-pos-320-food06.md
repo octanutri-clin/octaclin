@@ -11,6 +11,11 @@ Contexto: [execução A2-fundamento](execucao-pos-320-food06-contexto.md).
 Evidências A1 e limites em
 [execução A1](execucao-pos-320-food06-a1.md). Não habilita comparação clínica.
 
+Integração factual R4 em PR #457 separada, dependente da #456: serviço/BFF
+reutilizam PA06 sem habilitar referências. Backend/Web/PostgreSQL/RLS do código
+80763589 aprovados no CI; Demo/CI final permanecem gates, Mobile FAIL.
+[Execução factual](food06-integracao-factual.md). Isso não conclui Onda A/M01–M12.
+
 ## Escopo vigente ampliado — 2026-10-31
 
 O proprietário aprovou integralmente F06-M01–M12 para planejamento e implementação

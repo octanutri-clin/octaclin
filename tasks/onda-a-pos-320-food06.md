@@ -92,7 +92,8 @@ allowlists e limites. Nenhum corpo clínico nos erros/auditoria. Base de composi
 
 Incremento factual R4 separado em `feat/food06-analise-factual`, dependente da
 #456: [plano/execução](food06-integracao-factual.md). Serviço e BFF não habilitam
-comparações; provas PostgreSQL novas aguardam o gate oficial.
+comparações; provas PostgreSQL aprovadas no CI de código80763589.
+Demo/CI do HEAD final e demais aceites da Onda A continuam pendentes.
 
 ## Testes por incremento e saída da Onda A
 

@@ -48,7 +48,9 @@ anteriores e não equivalem à conclusão das ondas ou dos aceites M01–M12.
 - [ ] T03-A: verificar CI do novo HEAD com ferramentas/dependências exatas.
 - [ ] T03-B: referências clínicas versionadas, direitos e resolução de contexto/faixas.
 - [x] T04-factual: implementar serviço/rota/BFF sobre PA06, sem referências habilitadas.
-- [ ] T04-factual: comprovar cinco cenários PostgreSQL/RLS e CI próprios.
+- [x] T04-factual: PostgreSQL/RLS comprovado no Backend CI de código80763589.
+- [x] T04-factual: Web/authz CI e27 scripts locais aprovados para código80763589.
+- [ ] T04-factual: concluir Demo/CI do HEAD final, auditoria Mobile ainda FAIL.
 - [ ] T04: concluir integração clínica de backend/BFF com permissões, revisões e projeções.
 - [ ] T05: interface acessível e avaliações UX etapa B.
 - [ ] T06: banco descartável/RLS, regressões e revisão R4 independente.

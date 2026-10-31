@@ -22,7 +22,12 @@ Atualizado em 2026-10-31 durante o desenvolvimento isolado da FOOD06; histórico
   contexto, sem tabela clínica, rota ou interface. Execução e revisão delimitadas
   em `tasks/execucao-pos-320-food06-a1.md` e
   `tasks/execucao-pos-320-food06-contexto.md`. UX A independente registrada;
-  UX B/C, integração/RLS e R4 integral ainda pendentes. Direitos
+  UX B/C e R4 integral de todas as ondas ainda pendentes. Incremento factual
+  R4 separado na PR #457, dependente da #456: serviço/BFF reutilizam PA06;
+  Backend/Web/PostgreSQL/RLS de código80763589 aprovados no CI; Demo smoke
+  em execução e auditoria Mobile FAIL.
+  Sem referências científicas habilitadas. Registro: `tasks/food06-integracao-factual.md`.
+  Direitos
   continuam bloqueando T03-B/integração assistencial. Evidências e limitações de
   ferramentas em `tasks/execucao-pos-320-food06.md`; plano em
   `tasks/plan-pos-320-food06.md`. FOOD08 permanece planejamento separado, sujeito
