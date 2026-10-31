@@ -24,3 +24,7 @@ jobs:
           persist-credentials: false
       - name: Testar ferramentas documentais sem chamadas externas
         run: python3 -m unittest discover -s research/food06 -p 'test_*.py' -v
+      - name: Conferir fixture do oraculo aritmetico independente
+        run: |
+          python3 research/food06/gerar_oraculo_aritmetico.py --saida "$RUNNER_TEMP/food06-oraculo.json"
+          cmp research/food06/oraculo-fracoes-sinteticas.json "$RUNNER_TEMP/food06-oraculo.json"

@@ -1,6 +1,7 @@
 # FOOD06 — checklist
 
-Estado vigente: planejamento detalhado; nenhuma comparação clínica implementada.
+Estado vigente: ficha/quadro ratificados em 2026-10-31; núcleo T03-A isolado
+implementado, sem comparação assistencial ou referência clínica habilitada.
 Fonte de contrato: [plano](plan-pos-320-food06.md), base `68499c15`.
 
 - [x] Criar branch/worktree isoladas e preservar delta preexistente.
@@ -18,11 +19,15 @@ Fonte de contrato: [plano](plan-pos-320-food06.md), base `68499c15`.
 - [x] Conferir cadeia registro OGL → índice → páginas atuais; documentar ressalvas.
 - [x] Executar RED/GREEN do extrator; 19 testes sintéticos locais aprovados.
 - [x] Adicionar workflow específico para executar os testes documentais no CI.
-- [ ] Observar o primeiro CI do workflow específico no novo HEAD.
-- [ ] T01: completar contrato de contexto diário e confirmar elegibilidade.
+- [x] CI de `cb8a9c47`: 22 checks success, incluindo suíte específica; SBOM provenance SKIPPED.
+- [x] Ratificação humana CL01–CL08 e quadro adulto DRI de `cb8a9c47` registrada.
+- [x] T01: confirmar contexto diário e regras de elegibilidade; implementação da resolução ainda pertence a T03-B/T04.
 - [ ] T02: mapear cada código a RDA/AI e UL com unidades, origem, notas e versão.
-- [ ] T02: fechar direitos do artefato específico e ficha clínica com ratificação.
-- [ ] T03: TDD do domínio puro com fixtures sintéticas e oráculo independente.
+- [x] T02: ficha clínica e valores ratificados pelo proprietário/equipe clínica.
+- [ ] T02: fechar direitos do artefato específico e revisão institucional aplicável.
+- [x] T03-A: implementar núcleo puro com TDD, referências sintéticas e oráculo Python Decimal, sem registro/rotas.
+- [ ] T03-A: verificar CI do novo HEAD com ferramentas/dependências exatas.
+- [ ] T03-B: referências clínicas versionadas, direitos e resolução de contexto/faixas.
 - [ ] T04: integração de backend/BFF com permissões, revisões e projeções.
 - [ ] T05: interface acessível e avaliações UX etapa B.
 - [ ] T06: banco descartável/RLS, regressões e revisão R4 independente.

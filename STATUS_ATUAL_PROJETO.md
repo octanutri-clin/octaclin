@@ -1,6 +1,6 @@
 # OctaClin - Status atual do projeto
 
-Atualizado em 2026-10-30 após integração da FOOD07; registros anteriores preservados.
+Atualizado em 2026-10-31 durante o desenvolvimento isolado da FOOD06; histórico preservado.
 
 ## Estado atual
 
@@ -15,12 +15,13 @@ Atualizado em 2026-10-30 após integração da FOOD07; registros anteriores pres
   produção. Neon, schema/ledger 1078/1079, Render, backup/rollback e deploy
   continuam reservados à etapa operacional após o retorno do proprietário e
   autorização específica. Nenhuma migration externa é inferida do merge.
-- **Próximos planejamentos:** PR #454, Draft, propõe FOOD06 primeiro (fontes,
-  direitos, população e contrato de dados) e FOOD08 separadamente (publicação,
-  conteúdo, privacidade e moderação). Não há autorização de implementação para
-  essas fases neste registro; as ratificações e direitos listados no plano
-  continuam pendentes. Consulte
-  `docs/pos-320/05_Plano_Sequencia_FOOD06_FOOD08_2026-10-30.md`.
+- **FOOD06 — desenvolvimento técnico autorizado na PR #455:** CL01–CL08 e quadro
+  adulto DRI ratificados pelo proprietário/equipe clínica em 2026-10-31. Núcleo
+  matemático T03-A isolado, sem tabela clínica, rota ou interface. Direitos
+  continuam bloqueando T03-B/integração assistencial. Evidências e limitações de
+  ferramentas em `tasks/execucao-pos-320-food06.md`; plano em
+  `tasks/plan-pos-320-food06.md`. FOOD08 permanece planejamento separado, sujeito
+  a decisões de publicação, conteúdo, privacidade e moderação; sem implementação.
 - Fase 316 continua em stand-by. O NO-GO da TBCA não muda; manter TACO, USDA e
   IBGE conforme decisão registrada.
 

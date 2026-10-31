@@ -1,5 +1,11 @@
 # FOOD06 — parecer de fontes, direitos e concordância documental
 
+**Atualização de estado em 2026-10-31:** proprietário/equipe clínica ratificaram
+CL01–CL08 e o quadro adulto de `cb8a9c47`, incluindo diferenças DRI/EFSA, dia
+planejado e +35 mg somente à RDA C no tabagismo confirmado. As pendências de
+ratificação abaixo descrevem o checkpoint histórico anterior; direitos e
+validações de implementação continuam independentes. Registro canônico na ficha.
+
 Rodada de 2026-10-30, na branch `docs/food06-contratos-fontes` (#455).
 O CI de `644397a3` concluiu 21 checks com sucesso e SBOM provenance SKIPPED.
 Esses checks não validam o delta desta rodada nem as tabelas clínicas.

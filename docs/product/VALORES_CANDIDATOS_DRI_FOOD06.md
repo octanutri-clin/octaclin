@@ -1,6 +1,6 @@
 # FOOD06 — valores adultos candidatos para conferência
 
-Pesquisa documental de 2026-10-30. **Sem ratificação clínica e sem uso no runtime.**
+Pesquisa documental de 2026-10-30. **Estado de ratificação: consultar a [ficha canônica](FICHA_VALIDACAO_CLINICA_FOOD06.md).** Sem uso no runtime.
 
 Valores de referência por dia; M/F designam as populações das tabelas, não inferência de identidade.
 Cada sequência segue **19–30 / 31–50 / 51–70 / 71+ anos**.

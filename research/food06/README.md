@@ -51,3 +51,15 @@ runtime sem gates de ciência/direitos e ratificação.
 O workflow isolado `.github/workflows/food06-research.yml` executa somente a suíte
 sintética em PRs afetadas, sem consultas aos sites oficiais. O primeiro resultado
 deve ser conferido no HEAD enviado; teste local não comprova CI.
+
+## Oráculo do núcleo matemático
+
+```sh
+python research/food06/gerar_oraculo_aritmetico.py --saida /tmp/oraculo-food06.json
+```
+
+O JSON versionado `oraculo-fracoes-sinteticas.json` foi gerado por Python Decimal,
+precisão 60, arredondamento half-up para oito casas. Usa 15 razões sintéticas,
+sem tabelas DRI ou dados clínicos. O teste do núcleo TypeScript confronta esses
+resultados sem importar o algoritmo Python ou reutilizar o cálculo de produção
+como valor esperado. Não é validação independente da ciência das DRI.

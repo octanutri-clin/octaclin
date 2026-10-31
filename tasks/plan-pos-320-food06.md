@@ -1,6 +1,7 @@
 # FOOD06 — comparação factual com referências dietéticas
 
-Estado: planejamento em execução; decisões e validações clínicas pendentes.
+Estado: CL01–CL08 e quadro DRI ratificados em 2026-10-31; núcleo técnico isolado
+autorizado. Direitos de tabelas e integração assistencial permanecem gates.
 Base inspecionada em 2026-10-30: `68499c15`, após integração da #454.
 Branch isolada: `docs/food06-contratos-fontes`.
 
@@ -37,9 +38,9 @@ ULs. A existência de um total numérico não comprova compatibilidade com a ref
 | F06-D02 | Plano publicado individual e seleção combinada PA06, console profissional, alimentação planejada | APROVADA pelo proprietário em 2026-10-30 |
 | F06-D03 | RDA/AI e UL oficiais DRI, sem diagnóstico nem meta individual automática | APROVADA pelo proprietário em 2026-10-30; licença e revisão clínica continuam gates separados |
 
-Ainda exigem ficha detalhada: seleção explícita da referência por sexo/população,
+Ficha detalhada ratificada: seleção explícita da referência por sexo/população,
 idade na data civil clínica, elegibilidade fisiológica, condições clínicas fora da
-população de referência, revisão humana do protocolo e permissão de uso dos dados.
+população de referência e revisão humana do protocolo. Direitos continuam separados.
 Não deduzir sexo de nome/identidade, condição fisiológica ou exceções de texto livre.
 
 ## Contrato candidato de domínio
@@ -135,6 +136,16 @@ UX A: usar o relatório sintético existente na #454 (UX-FOOD06-01–03) como en
 nova avaliação de ambos os papéis após fechar a proposta detalhada. B/C exigem
 interface real e registro explícito de leitura de código versus interação.
 
+### Execução controlada de T03
+
+T03-A prepara o núcleo matemático puro, usando referências injetadas sintéticas
+nos testes, sem tabela clínica, registro em módulo, rota ou interface. Independe
+dos direitos de tabelas e não libera uso assistencial. Reutiliza PA06 e aritmética
+decimal existente. Risco R2: sem auth, dados de pacientes, persistência ou banco.
+T03-B integra o conjunto clínico versionado e continua dependente do gate de
+direitos e oráculos específicos. Essa divisão isola o bloqueio no artefato
+afetado sem eliminar requisitos da entrega final. T04–T07 preservam seus gates.
+
 ## Gates atuais e handoff
 
 ### Conferência numérica e checkpoint posterior
@@ -175,16 +186,20 @@ interface real e registro explícito de leitura de código versus interação.
 - Ficha propõe confirmação do mesmo dia para seleção combinada; confirmação
   clínica desta regra e das restrições dos ULs ainda pendente.
 
-- Inventário: PASS documental na base indicada; não implica execução de testes.
+### Gates vigentes após ratificação e núcleo isolado (2026-10-31)
+
+- Inventário: PASS documental na base indicada; não implica conclusão funcional.
 - Fontes/direitos: BLOCKED; candidatos e ressalvas identificados, manifesto não concluído.
-- Clínica/população: BLOCKED; respostas iniciais e ratificação detalhada pendentes.
-- Contrato de produto: decisões iniciais D01/D02/D03 APROVADAS; relação seleção/dia e ficha detalhada ainda precisam de conferência clínica.
-- Runtime/testes/CI da FOOD06: NOT RUN; nenhum código alterado.
+- Clínica/população: PASS de ratificação humana da ficha/quadro `cb8a9c47`, CL01–CL08, em 2026-10-31. Não equivale a validação da implementação.
+- Produto: D01–03, confirmação do mesmo dia e tabagismo confirmados; +35 mg apenas à RDA de vitamina C, nunca ao UL.
+- T03-A: núcleo puro implementado e validado localmente com ferramentas em cache;
+  suíte de domínio 109 testes PASS. Typecheck/build locais PASS com ressalva de
+  instalação exata bloqueada; CI do novo delta pendente. Ver registro de execução.
+- T03-B/T04–T07: pendentes; não há conjunto clínico registrado, rota ou interface.
 - G06 externo: BLOCKED operacional, fora desta entrega.
 
-Próxima ação: concluir o alcance de direitos/licença por artefato e a conferência
-dos valores/faixas por revisão científica; obter ratificação clínica da ficha
-consolidada antes de iniciar T03 nos itens liberados. A coleta automatizada de
+Próxima ação: observar CI do núcleo T03-A e manter o gate de direitos
+e oráculos específicos para T03-B. A coleta automatizada de
 fontes é pesquisa de T02, sem nova rota ou tabela clínica no runtime.
 Worktree original preservada, inclusive alteração preexistente em
 `octaclin-web/next-env.d.ts`. Nenhuma alteração na PR #446.

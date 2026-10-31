@@ -1,6 +1,9 @@
 # FOOD06 — ficha de referências e aplicabilidade
 
-Proposta para revisão humana em 2026-10-30. Não representa ratificação clínica.
+**Estado atual (2026-10-31): CL01–CL08 e quadro adulto DRI ratificados pelo
+proprietário/equipe clínica nas três respostas explícitas registradas nesta sessão.**
+A proposta de 2026-10-30 e suas ressalvas abaixo ficam preservadas como base da
+ratificação. O aceite não cobre direitos de terceiros, testes ou ativação externa.
 Decisões de produto aprovadas: adultos 19+, sem gestação/lactação; plano publicado
 individual ou seleção combinada; somente console; RDA/AI e UL oficiais DRI sem
 diagnóstico ou meta individual automática. Plano: [FOOD06](../../tasks/plan-pos-320-food06.md).
@@ -76,10 +79,26 @@ vitamina K ou outros nutrientes fora da whitelist para serem inventados.
 | F06-CL07 | Vitamina C: exigir confirmação de tabagismo; manter comparação indisponível quando desconhecido; sub-regra de ajuste só após validação explícita | Ignorar a nota ou inferir condição muda a referência indevidamente | Definir/ratificar aplicação do ajuste e variável confirmada |
 | F06-CL08 | Ferro/vitamina E e demais notas de forma/biodisponibilidade precisam de compatibilidade demonstrada antes de habilitar a comparação afetada | Nome/unidade iguais não provam mesma definição | Ratificar mapeamentos e condições de indisponibilidade por fonte |
 
-Direitos são gate distinto da ratificação clínica. A aprovação D01–03 não
-constitui aprovação automática desta ficha. Responsável, data, versão da ficha,
-decisões e ressalvas devem constar do registro de ratificação; nenhum aceite foi
-atribuído ao proprietário nesta rodada.
+Direitos são gate distinto da ratificação clínica. D01–03 não foram tratados
+como aprovação automática; os aceites explícitos posteriores seguem abaixo.
+
+### Registro de ratificação — 2026-10-31
+
+Responsável declarado: proprietário/equipe clínica, conforme respostas humanas
+nesta sessão, sobre ficha e quadro disponíveis em `cb8a9c47` na PR #455.
+
+- CL01, CL02, CL04–CL06, CL08 e valores DRI: “Ficha e valores revisados;
+  ratificamos essas regras DRI”. Inclui ciência das diferenças DRI/EFSA para UL
+  de B6 e selênio; nenhuma troca de autoridade foi autorizada.
+- CL03: “Sim, confirmar o mesmo dia planejado”. Sem confirmação, conservar
+  totais factuais e indisponibilizar a comparação com referências diárias.
+- CL07: “Sim, confirmar a condição e aplicar essa regra”. Tabagismo deve ser
+  confirmado pelo profissional; acrescentar 35 mg/dia somente à RDA de vitamina C
+  se confirmado. UL não muda. Sem informação, indisponibilizar essa comparação
+  RDA e preservar resultados independentes.
+
+Não inferir contexto clínico de texto livre. Formalização institucional adicional,
+se exigida pela clínica, permanece separada deste registro do produto.
 
 ## Oráculos e critérios de liberação
 
@@ -87,7 +106,7 @@ O [quadro adulto candidato](VALORES_CANDIDATOS_DRI_FOOD06.md) agora apresenta os
 números por sexo/faixa e unidades de referência e UL separadamente. O
 [parecer de fontes](PARECER_FONTES_DRI_FOOD06.md) registra concordâncias documentais,
 limitações de acesso, direitos e diferenças de protocolo. Esses anexos integram
-o material a revisar, sem ratificação presumida.
+o material ratificado conforme registro acima, sem aceite presumido.
 
 Na CL08, ratificar expressamente que ULs DRI para B6 (100 mg/dia) e selênio
 (400 mcg/dia) diferem dos valores EFSA 2023 (12 mg/dia e 255 mcg/dia). D03

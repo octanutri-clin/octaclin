@@ -1,0 +1,81 @@
+{
+  "sintetico": true,
+  "metodo": "python-stdlib-decimal-precision60-half-up-8",
+  "casos": [
+    {
+      "total": "1",
+      "referencia": "3",
+      "percentual": "33.33333333"
+    },
+    {
+      "total": "12.34567891",
+      "referencia": "0.0043",
+      "percentual": "287108.81186047"
+    },
+    {
+      "total": "0.125",
+      "referencia": "7",
+      "percentual": "1.78571429"
+    },
+    {
+      "total": "19.9",
+      "referencia": "6",
+      "percentual": "331.66666667"
+    },
+    {
+      "total": "0.000001",
+      "referencia": "0.3",
+      "percentual": "0.00033333"
+    },
+    {
+      "total": "123456",
+      "referencia": "789",
+      "percentual": "15647.14828897"
+    },
+    {
+      "total": "0",
+      "referencia": "5",
+      "percentual": "0E-8"
+    },
+    {
+      "total": "7",
+      "referencia": "4",
+      "percentual": "175.00000000"
+    },
+    {
+      "total": "100",
+      "referencia": "100",
+      "percentual": "100.00000000"
+    },
+    {
+      "total": "0.1",
+      "referencia": "0.2",
+      "percentual": "50.00000000"
+    },
+    {
+      "total": "999.99999999",
+      "referencia": "0.01234567",
+      "percentual": "8100005.91292332"
+    },
+    {
+      "total": "0.3",
+      "referencia": "0.9",
+      "percentual": "33.33333333"
+    },
+    {
+      "total": "1",
+      "referencia": "3.0000000049",
+      "percentual": "33.33333328"
+    },
+    {
+      "total": "0.00000001",
+      "referencia": "0.0000000149",
+      "percentual": "67.11409396"
+    },
+    {
+      "total": "1",
+      "referencia": "51200",
+      "percentual": "0.00195313"
+    }
+  ]
+}
