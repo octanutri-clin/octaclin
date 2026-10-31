@@ -1,8 +1,12 @@
 # FOOD06 — comparação factual com referências dietéticas
 
+Incremento vigente: API M02 de contribuições na mesma #455, com paginação,
+reautorização e locks PA06. [Contrato, execução e gates](food06-api-contribuicoes.md).
+Provas PostgreSQL do novo delta aguardam CI; não é conclusão da FOOD06.
+
 Estado vigente: os incrementos #455–#459 foram reunidos por fast-forward na
-branch da #455, preservando commits, revisões e limites. A API de detalhamento
-M02 aguarda estabilização do CI consolidado. Ver [consolidação](food06-consolidacao.md).
+branch da #455, preservando commits, revisões e limites. A baseec3690b1 terminou o CI sem falhas; o incremento
+API M02 agora está em validação, com seus próprios gates. Ver [consolidação](food06-consolidacao.md).
 
 Estado: CL01–CL08 e quadro DRI ratificados em 2026-10-31; núcleo técnico isolado
 autorizado. Direitos de tabelas e integração assistencial permanecem gates.

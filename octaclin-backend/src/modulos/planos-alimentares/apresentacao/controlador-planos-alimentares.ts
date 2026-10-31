@@ -1,3 +1,4 @@
+import { ContribuicoesMicronutrientesDto } from '../aplicacao/dtos-contribuicoes-micronutrientes';
 import { CalculoCombinadoDto } from '../aplicacao/dtos-calculo-combinado';
 import { AlterarAtivacaoPlanoDto } from '../aplicacao/dtos-ativacao';
 import { Body, Controller, Delete, Get, Header, Param, ParseIntPipe, ParseUUIDPipe, Post, Put, Query, UseGuards } from '@nestjs/common';
@@ -81,6 +82,17 @@ export class ControladorPlanosAlimentares {
     @Body() dados: AlterarAtivacaoPlanoDto
   ) {
     return this.servico.alterarAtivacao(usuario.tenantId,pacienteId,planoId,usuario,dados,identidadeId);
+  }
+
+  @Post('analise-micronutrientes/contribuicoes')
+  @Permissoes('planos_alimentares.ler')
+  @Header('Cache-Control', 'private, no-store')
+  detalharMicronutrientes(
+    @UsuarioAtual() usuario: UsuarioAutenticado,
+    @Param('pacienteId', ParseUUIDPipe) pacienteId: string,
+    @Body() dados: ContribuicoesMicronutrientesDto
+  ) {
+    return this.servico.detalharMicronutrientes(usuario.tenantId, pacienteId, usuario, dados);
   }
 
   @Post('analise-micronutrientes')

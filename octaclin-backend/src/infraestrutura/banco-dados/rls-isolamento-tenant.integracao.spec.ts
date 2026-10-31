@@ -1924,6 +1924,49 @@ descrever('RLS e isolamento multi-tenant integral em Postgres real', () => {
     return {selecoes:[{planoId:c.planoId,versaoIdEsperada:c.versaoId,ativacaoRevisaoEsperada:selecao.ativacaoRevisao,identidadesRefeicoes:selecao.refeicoes.map(r=>r.identidadeId)}]};
   }
 
+  it('FOOD06 detalhe pagina identidades reais sem alterar snapshots sob role runtime/RLS', async () => {
+    const c=await prepararCenarioPa06('food06-pagina');
+    c.documento.refeicoes[0].itens.push({...c.documento.refeicoes[0].itens[0],chaveCliente:'segundo-sintetico'});
+    for (const item of c.documento.refeicoes[0].itens) Object.assign(item,{micronutrientesPor100g:{ferroMg:2}});
+    await publicarCenarioPa06(c);
+    const entrada={...await selecaoFactualFood06(c),codigo:'ferroMg',pagina:1,limite:1};
+    await comoTenant(tenantA);
+    const antes=await cliente!.query('select * from plano_alimentar_versoes where id=$1',[c.versaoId]);
+    const itensAntes=await cliente!.query('select i.* from plano_alimentar_itens i join plano_alimentar_refeicoes r on r.id=i.refeicao_id where r.versao_id=$1 order by i.id',[c.versaoId]);
+    const primeira=await c.servico.detalharMicronutrientes(tenantA,c.pacienteId,c.usuario,entrada);
+    const segunda=await c.servico.detalharMicronutrientes(tenantA,c.pacienteId,c.usuario,{...entrada,pagina:2});
+    expect(primeira).toMatchObject({total:2,cobertura:{estado:'COMPLETO',total:4}});
+    expect(segunda.cobertura).toEqual(primeira.cobertura);
+    expect(primeira.refeicoes[0].itens[0].itemId).not.toBe(segunda.refeicoes[0].itens[0].itemId);
+    expect((await c.servico.detalharMicronutrientes(tenantA,c.pacienteId,c.usuario,{...entrada,pagina:3})).refeicoes).toEqual([]);
+    expect(JSON.stringify(primeira)).not.toMatch(/Criptograf|objetivos|contextoInterno|indiceItem/);
+    for (const usuario of [{...c.usuario,papel:'Client' as const},{...c.usuario,permissoes:[]}]) await expect(c.servico.detalharMicronutrientes(tenantA,c.pacienteId,usuario,entrada)).rejects.toThrow();
+    await expect(c.servico.detalharMicronutrientes(tenantB,c.pacienteId,{...c.usuario,tenantId:tenantB},entrada)).rejects.toThrow();
+    await comoTenant(tenantA);
+    expect((await cliente!.query('select * from plano_alimentar_versoes where id=$1',[c.versaoId])).rows).toEqual(antes.rows);
+    expect((await cliente!.query('select i.* from plano_alimentar_itens i join plano_alimentar_refeicoes r on r.id=i.refeicao_id where r.versao_id=$1 order by i.id',[c.versaoId])).rows).toEqual(itensAntes.rows);
+    await comoTenant(tenantB);
+    expect((await cliente!.query('select id from plano_alimentar_itens where id=$1',[primeira.refeicoes[0].itens[0].itemId])).rows).toEqual([]);
+  });
+
+  it('FOOD06 detalhe invalida próxima página após OFF concorrente', async () => {
+    const c=await prepararCenarioPa06('food06-pagina-off'); await publicarCenarioPa06(c);
+    const entrada={...await selecaoFactualFood06(c),codigo:'ferroMg',pagina:1,limite:1};
+    const resultados=await disputarPa06(exec=>new ServicoPlanosAlimentares(exec,c.cripto).alterarAtivacao(tenantA,c.pacienteId,c.planoId,c.usuario,{ativo:false,ativacaoRevisaoEsperada:entrada.selecoes[0].ativacaoRevisaoEsperada}),()=>c.servico.detalharMicronutrientes(tenantA,c.pacienteId,c.usuario,entrada),PlanoAlimentarOrm);
+    expect(resultados[0].status).toBe('fulfilled'); expect(resultados[1].status).toBe('rejected');
+    if(resultados[1].status==='rejected')expect(resultados[1].reason.getStatus()).toBe(409);
+  });
+
+  it('FOOD06 detalhe mantém leitura consistente e reautoriza após transferência concorrente', async () => {
+    const c=await prepararCenarioPa06('food06-pagina-transf'); await publicarCenarioPa06(c);
+    const novo=await prepararCenarioPa06('food06-pagina-novo');
+    const entrada={...await selecaoFactualFood06(c),codigo:'ferroMg',pagina:1,limite:1};
+    const resultados=await disputarPa06(exec=>new ServicoPlanosAlimentares(exec,c.cripto).detalharMicronutrientes(tenantA,c.pacienteId,c.usuario,entrada),()=>executorTenant!.executar(tenantA,m=>m.query('update pacientes set profissional_responsavel_id=$1 where id=$2',[novo.profissionalId,c.pacienteId])),PacienteOrm,'pessimistic_read');
+    expect(resultados.map(r=>r.status)).toEqual(['fulfilled','fulfilled']);
+    if(resultados[0].status==='fulfilled')expect(resultados[0].value.total).toBe(1);
+    await expect(c.servico.detalharMicronutrientes(tenantA,c.pacienteId,c.usuario,{...entrada,pagina:2})).rejects.toThrow();
+  });
+
   it('FOOD06 analisa cobertura factual sob RLS sem modificar snapshots cifrados', async () => {
     const c=await prepararCenarioPa06('food06-factual');
     Object.assign(c.documento.refeicoes[0].itens[0],{micronutrientesPor100g:{ferroMg:2,calcioMg:0}});
@@ -1967,6 +2010,18 @@ descrever('RLS e isolamento multi-tenant integral em Postgres real', () => {
     if(resultados[1].status==='rejected')expect(resultados[1].reason.getStatus()).toBe(409);
     entrada.selecoes[0].ativacaoRevisaoEsperada++;
     expect((await c.servico.analisarMicronutrientes(tenantA,c.pacienteId,c.usuario,entrada)).calculo.itensIncluidos).toBe(0);
+  });
+
+  it('FOOD06 detalhe rejeita publicação obsoleta e conserva a versão histórica', async () => {
+    const c=await prepararCenarioPa06('food06-detalhe-publicacao'); await publicarCenarioPa06(c);
+    const entrada={...await selecaoFactualFood06(c),codigo:'ferroMg',pagina:1,limite:1};
+    const antiga=await c.servico.obterVersao(tenantA,c.pacienteId,c.planoId,1,c.usuario);
+    const nova=await c.servico.criarNovaVersao(tenantA,c.pacienteId,c.planoId,c.usuario);
+    const revisada=await c.servico.revisar(tenantA,c.pacienteId,c.planoId,c.usuario,{rascunhoIdEsperado:nova.id,rascunhoRevisaoEsperada:nova.rascunhoRevisao});
+    const resultados=await disputarPa06(exec=>new ServicoPlanosAlimentares(exec,c.cripto).publicar(tenantA,c.pacienteId,c.planoId,c.usuario,{rascunhoIdEsperado:nova.id,rascunhoRevisaoEsperada:revisada.rascunhoRevisao}),()=>c.servico.detalharMicronutrientes(tenantA,c.pacienteId,c.usuario,entrada),PlanoAlimentarOrm);
+    expect(resultados[0].status).toBe('fulfilled'); expect(resultados[1].status).toBe('rejected');
+    if(resultados[1].status==='rejected')expect(resultados[1].reason.getStatus()).toBe(409);
+    expect((await c.servico.obterVersao(tenantA,c.pacienteId,c.planoId,1,c.usuario)).hashConteudo).toBe(antiga.hashConteudo);
   });
 
   it('FOOD06 rejeita publicação obsoleta e conserva a versão histórica', async () => {

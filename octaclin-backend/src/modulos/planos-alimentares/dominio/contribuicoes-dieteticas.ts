@@ -43,20 +43,27 @@ function coberturaItens(itens: unknown[], codigo: CodigoMicronutriente): Cobertu
  * Ordem original preservada para junção server-side com identidades autorizadas.
  * Não interpreta a seleção como um dia sem confirmação do profissional.
  */
-export function decomporContribuicoesDieteticas(planos: EntradaPlanoCombinado[], codigo: CodigoMicronutriente): ContribuicoesDieteticas {
+export function decomporContribuicoesDieteticas(planos: EntradaPlanoCombinado[], codigo: CodigoMicronutriente, janela?: { inicio: number; limite: number }): ContribuicoesDieteticas {
   if (!CODIGOS_MICRONUTRIENTES.includes(codigo)) throw new Error('Micronutriente inválido.');
+  if (janela && (!Number.isInteger(janela.inicio) || janela.inicio < 0 || !Number.isInteger(janela.limite) || janela.limite < 1 || janela.limite > 100)) throw new Error('Janela inválida.');
   const { refeicoes } = selecionarRefeicoesCombinadas(planos);
+  let deslocamento = 0;
   const cobertura = analisarCoberturaDietetica(planos).nutrientes[codigo];
   return {
     schemaVersao: 1, codigo, cobertura,
-    refeicoes: refeicoes.map(refeicao => {
+    refeicoes: refeicoes.flatMap(refeicao => {
+      const inicio = janela ? Math.max(0, janela.inicio - deslocamento) : 0;
+      const fim = janela ? Math.min(refeicao.itens.length, janela.inicio + janela.limite - deslocamento) : refeicao.itens.length;
+      deslocamento += refeicao.itens.length;
+      if (janela && inicio >= fim) return [];
       const coberturaRefeicao = coberturaItens(refeicao.itens, codigo);
       const percentual = participacao(coberturaRefeicao, cobertura);
-      return {
+      return [{
         planoId: refeicao.planoId, identidadeRefeicao: refeicao.identidadeRefeicao,
         cobertura: coberturaRefeicao,
         ...(percentual !== undefined ? { participacaoSelecaoPercentual: percentual } : {}),
-        itens: Array.from(refeicao.itens, (item, indiceItem) => {
+        itens: Array.from(refeicao.itens.slice(inicio, fim), (item, posicao) => {
+          const indiceItem = inicio + posicao;
           const coberturaItem = coberturaItens([item], codigo);
           const percentualSelecao = participacao(coberturaItem, cobertura);
           const percentualRefeicao = participacao(coberturaItem, coberturaRefeicao);
@@ -66,7 +73,7 @@ export function decomporContribuicoesDieteticas(planos: EntradaPlanoCombinado[],
             ...(percentualRefeicao !== undefined ? { participacaoRefeicaoPercentual: percentualRefeicao } : {})
           };
         })
-      };
+      }];
     })
   };
 }

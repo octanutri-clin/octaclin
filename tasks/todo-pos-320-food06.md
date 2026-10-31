@@ -1,8 +1,12 @@
 # FOOD06 — checklist
 
+Incremento vigente: API M02 de contribuições na mesma #455, com paginação,
+reautorização e locks PA06. [Contrato, execução e gates](food06-api-contribuicoes.md).
+Provas PostgreSQL do novo delta aguardam CI; não é conclusão da FOOD06.
+
 Estado vigente: os incrementos #455–#459 foram reunidos por fast-forward na
-branch da #455, preservando commits, revisões e limites. A API de detalhamento
-M02 aguarda estabilização do CI consolidado. Ver [consolidação](food06-consolidacao.md).
+branch da #455, preservando commits, revisões e limites. A baseec3690b1 terminou o CI sem falhas; o incremento
+API M02 agora está em validação, com seus próprios gates. Ver [consolidação](food06-consolidacao.md).
 
 Estado vigente: ficha/quadro ratificados em 2026-10-31; núcleo T03-A isolado
 implementado, sem comparação assistencial ou referência clínica habilitada.
@@ -21,6 +25,8 @@ Fonte de contrato: [plano](plan-pos-320-food06.md), base `68499c15`.
 - [x] B-factual: implementar/testar tabela de cobertura e filtros, UX B/C do incremento.
 - [ ] B-factual: conferir CI próprio, auditoria Mobile ainda pendente.
 - [x] M02-fundamento: decomposição interna sem segundo somador, RED/GREEN e revisão independente delimitada.
+- [x] M02 API: backend/BFF de leitura, paginação, IDs persistentes e precondições por página.
+- [ ] M02 API: comprovar cenários novos PostgreSQL/RLS/concorrência no CI do delta.
 - [ ] M02-integração: API paginada/identidades autorizadas, quantidades/fontes e interface; ver [execução](food06-contribuicoes-dominio.md).
 - [ ] Onda B: concluir M02 contribuições e M06 com referências elegíveis.
 - [ ] Onda C: M04 prévias, M11 consulta assistida/restrições e M12 cenários.

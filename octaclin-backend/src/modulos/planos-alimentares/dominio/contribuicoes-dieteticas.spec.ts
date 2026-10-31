@@ -94,6 +94,16 @@ describe('FOOD06 M02 contribuições internas sobre a PA06', () => {
       cobertura: { estado: 'INDISPONIVEL', causas: [{ codigo: 'snapshot_indisponivel', quantidade: 1 }] } });
     expect(JSON.parse(JSON.stringify(r.refeicoes[0].itens))[1]).not.toBeNull();
   });
+  it('janela não muda o denominador integral nem calcula componentes fora da página', () => {
+    const p = [plano([refeicao('a',[item(1),item(2)]),refeicao('b',[item(7)])])];
+    const completa = decomporContribuicoesDieteticas(p,'calcioMg');
+    const segunda = decomporContribuicoesDieteticas(p,'calcioMg',{inicio:1,limite:1});
+    expect(segunda.cobertura).toEqual(completa.cobertura);
+    expect(segunda.refeicoes).toHaveLength(1);
+    expect(segunda.refeicoes[0].cobertura.total).toBe(3);
+    expect(segunda.refeicoes[0].itens).toMatchObject([{indiceItem:1,cobertura:{total:2},participacaoSelecaoPercentual:20}]);
+    expect(decomporContribuicoesDieteticas(p,'calcioMg',{inicio:3,limite:1}).refeicoes).toEqual([]);
+  });
   it('rejeita código desconhecido inclusive propriedades de protótipo', () => {
     for (const codigo of ['inventado', '__proto__', 'constructor', null]) {
       expect(() => decomporContribuicoesDieteticas([], codigo as never)).toThrow('Micronutriente inválido.');

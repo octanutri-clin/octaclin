@@ -404,6 +404,27 @@ describe('ServicoPlanosAlimentares', () => {
       entrada.selecoes.push({...entrada.selecoes[0],planoId:'10000000-0000-4000-8000-000000000099'});
       await expect(servico.calcularCombinado(TENANT_ID,PACIENTE_ID,usuarioProfissional(),entrada)).rejects.toBeInstanceOf(NotFoundException);
     });
+    it('FOOD06 detalhe usa identidade persistente, página limitada e total integral sem escrita', async () => {
+      const entrada = await publicarParaCalculo();
+      const antes = JSON.stringify([...repositorios].map(([tipo, repo]) => ({ tipo: tipo.name, registros: repo.registros })));
+      const r = await servico.detalharMicronutrientes(TENANT_ID,PACIENTE_ID,usuarioProfissional(),{...entrada,codigo:'calcioMg',pagina:1,limite:1});
+      expect(r).toMatchObject({schemaVersao:1,motorVersao:'food06-contribuicoes-v1',total:1,pagina:1,limite:1,
+        refeicoes:[{planoId:PLANO_ID,itens:[{itemId:repositorios.get(PlanoAlimentarItemOrm)!.registros[0].id,descricao:'Alimento manual'}]}]});
+      expect(JSON.stringify(r)).not.toMatch(/indiceItem|Criptograf|contextoInterno/);
+      expect(JSON.stringify([...repositorios].map(([tipo, repo]) => ({ tipo: tipo.name, registros: repo.registros })))).toBe(antes);
+      const vazia = await servico.detalharMicronutrientes(TENANT_ID,PACIENTE_ID,usuarioProfissional(),{...entrada,codigo:'calcioMg',pagina:2,limite:1});
+      expect(vazia).toMatchObject({total:1,refeicoes:[]});
+    });
+    it('FOOD06 detalhe reautoriza e rejeita revisão stale em cada página', async () => {
+      const entrada = {...await publicarParaCalculo(),codigo:'calcioMg',pagina:1,limite:1};
+      await expect(servico.detalharMicronutrientes('outro-tenant',PACIENTE_ID,usuarioProfissional(),entrada)).rejects.toBeInstanceOf(NotFoundException);
+      await expect(servico.detalharMicronutrientes(TENANT_ID,PACIENTE_ID,{...usuarioProfissional(),permissoes:[]},entrada)).rejects.toBeInstanceOf(ForbiddenException);
+      repositorios.get(PlanoAlimentarOrm)!.registros[0].ativacaoRevisao = 1;
+      await expect(servico.detalharMicronutrientes(TENANT_ID,PACIENTE_ID,usuarioProfissional(),entrada)).rejects.toBeInstanceOf(ConflictException);
+      repositorios.get(PlanoAlimentarOrm)!.registros[0].ativacaoRevisao = 0;
+      repositorios.get(PacienteOrm)!.registros[0].profissionalResponsavelId = 'transferido';
+      await expect(servico.detalharMicronutrientes(TENANT_ID,PACIENTE_ID,usuarioProfissional(),entrada)).rejects.toBeInstanceOf(NotFoundException);
+    });
     it('FOOD06 analisa fatos/cobertura sem referências clínicas, escrita ou projeção de texto', async () => {
       const entrada = await publicarParaCalculo();
       const registro = repositorios.get(PlanoAlimentarItemOrm)!.registros[0];
