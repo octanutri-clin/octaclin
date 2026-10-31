@@ -47,7 +47,9 @@ anteriores e não equivalem à conclusão das ondas ou dos aceites M01–M12.
 - [x] T03-A: implementar núcleo puro com TDD, referências sintéticas e oráculo Python Decimal, sem registro/rotas.
 - [ ] T03-A: verificar CI do novo HEAD com ferramentas/dependências exatas.
 - [ ] T03-B: referências clínicas versionadas, direitos e resolução de contexto/faixas.
-- [ ] T04: integração de backend/BFF com permissões, revisões e projeções.
+- [x] T04-factual: implementar serviço/rota/BFF sobre PA06, sem referências habilitadas.
+- [ ] T04-factual: comprovar cinco cenários PostgreSQL/RLS e CI próprios.
+- [ ] T04: concluir integração clínica de backend/BFF com permissões, revisões e projeções.
 - [ ] T05: interface acessível e avaliações UX etapa B.
 - [ ] T06: banco descartável/RLS, regressões e revisão R4 independente.
 - [ ] T07: UX C, CI/scanners e PR Draft com evidências rastreáveis.

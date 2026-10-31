@@ -1,3 +1,5 @@
+import { analisarCoberturaDietetica } from '../dominio/cobertura-dietetica';
+import type { AnaliseFactualMicronutrientes } from './contrato-analise-micronutrientes';
 import { normalizarNutrienteCatalogoPor100g } from '../dominio/calculo-nutricional';
 import { lerOrigensMaterializadas, possuiGruposMaterializados } from './origens-grupos-materializadas';
 import { ContextosCatalogoGrupo, lerSnapshotEdicaoGrupos, mesmaOrigemGrupo, serializarSnapshotEdicaoGrupos } from './snapshot-edicao-grupos';
@@ -168,7 +170,25 @@ export class ServicoPlanosAlimentares {
     });
   }
 
+  async analisarMicronutrientes(tenantId: string, pacienteId: string, usuario: UsuarioAutenticado, dados: CalculoCombinadoDto): Promise<AnaliseFactualMicronutrientes> {
+    return this.executarCalculoCombinado(tenantId, pacienteId, usuario, dados, planos => ({
+      schemaVersao: 1 as const,
+      motorVersao: 'food06-factual-v1' as const,
+      calculo: calcularNutrientesCombinados(planos),
+      cobertura: analisarCoberturaDietetica(planos),
+      comparacoes: { estado: 'indisponivel' as const, motivo: 'referencias_nao_habilitadas' as const }
+    }));
+  }
+
   async calcularCombinado(tenantId: string, pacienteId: string, usuario: UsuarioAutenticado, dados: CalculoCombinadoDto) {
+    return this.executarCalculoCombinado(tenantId, pacienteId, usuario, dados, calcularNutrientesCombinados);
+  }
+
+  /** Uma única fronteira transacional para PA06 e projeções factuais autorizadas. */
+  private async executarCalculoCombinado<T extends object>(
+    tenantId: string, pacienteId: string, usuario: UsuarioAutenticado, dados: CalculoCombinadoDto,
+    projetar: (planos: EntradaPlanoCombinado[]) => T
+  ) {
     this.garantirPapelProfissional(usuario);
     this.garantirPermissao(usuario, 'planos_alimentares.ler');
     let entrada: CalculoCombinadoDto;
@@ -213,7 +233,7 @@ export class ServicoPlanosAlimentares {
         }
         efetivos.push(entradaPlano);
       }
-      try { return { ...calcularNutrientesCombinados(efetivos), calculadoEm: new Date().toISOString(),
+      try { return { ...projetar(efetivos), calculadoEm: new Date().toISOString(),
         publicacoes:planos.map(({plano,selecao})=>({planoId:plano.id,versaoId:selecao.versaoIdEsperada,ativacaoRevisao:selecao.ativacaoRevisaoEsperada})) }; }
       catch { throw new UnprocessableEntityException('Limite técnico de precisão nutricional excedido.'); }
     });

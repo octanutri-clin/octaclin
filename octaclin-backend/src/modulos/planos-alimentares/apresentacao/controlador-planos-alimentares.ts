@@ -83,6 +83,17 @@ export class ControladorPlanosAlimentares {
     return this.servico.alterarAtivacao(usuario.tenantId,pacienteId,planoId,usuario,dados,identidadeId);
   }
 
+  @Post('analise-micronutrientes')
+  @Permissoes('planos_alimentares.ler')
+  @Header('Cache-Control', 'private, no-store')
+  analisarMicronutrientes(
+    @UsuarioAtual() usuario: UsuarioAutenticado,
+    @Param('pacienteId', ParseUUIDPipe) pacienteId: string,
+    @Body() dados: CalculoCombinadoDto
+  ) {
+    return this.servico.analisarMicronutrientes(usuario.tenantId, pacienteId, usuario, dados);
+  }
+
   @Post('calculo-combinado')
   @Permissoes('planos_alimentares.ler')
   @Header('Cache-Control', 'private, no-store')

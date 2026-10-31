@@ -9,7 +9,7 @@ Fontes: [especificação](especificacao-pos-320-food06-melhorias.md),
 | --- | --- | --- | --- |
 | M01-C1 | Zero conhecido ≠ ausência; cobertura por nutriente, não por alimento global | RED/GREEN: dois alimentos, ferro zero+ausente e cálcio completo | PASS domínio A1: zero/ausência por nutriente; integração/interface/exportação pendentes |
 | M01-C2 | Completo/parcial/desconhecido/incompatível/indisponível com motivos/fontes | Mistura de unidade/forma/schema/fonte/erro; soma apenas compatíveis; nenhuma confiança científica percentual | PARCIAL A1: cinco estados/causas/contagens; resolução autorizada de fontes pendente |
-| M01-C3 | Subtotal parcial explícito, sem percentual de referência; mesmos dados nas saídas | Backend/BFF/tabela/exportação e fonte legada; total desconhecido não vira zero | PENDENTE integração |
+| M01-C3 | Subtotal parcial explícito, sem percentual de referência; mesmos dados nas saídas | Backend/BFF/tabela/exportação e fonte legada; total desconhecido não vira zero | PARCIAL: serviço/BFF factuais implementados; PostgreSQL/CI, tabela e exportação pendentes |
 | M02-C1 | Total→refeição→alimento, quantidade/preparo/fonte e cobertura | Soma hierárquica reconcilia com PA06, receita1,5porções, conhecido zero/ausente | PENDENTE |
 | M02-C2 | Denominador completo/positivo, sem dupla contagem | Alternativa escolhida exclui principal; disponíveis não contam; alimento repetido em refeições legítimas conta ambas | PENDENTE |
 | M02-C3 | Ordenação/expansão/atalho autorizado | Testes componente/Playwright, leitura/editável e acesso negado ao destino | PENDENTE |

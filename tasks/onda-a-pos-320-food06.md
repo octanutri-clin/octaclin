@@ -90,6 +90,10 @@ Locks/revisões exatas e fontes são resolvidos na mesma visão transacional. No
 allowlists e limites. Nenhum corpo clínico nos erros/auditoria. Base de composição
 é congelada; nova análise não recalcula snapshot antigo pelo catálogo atual.
 
+Incremento factual R4 separado em `feat/food06-analise-factual`, dependente da
+#456: [plano/execução](food06-integracao-factual.md). Serviço e BFF não habilitam
+comparações; provas PostgreSQL novas aguardam o gate oficial.
+
 ## Testes por incremento e saída da Onda A
 
 - A1 RED/GREEN: completo, zero, parcial, desconhecido, incompatível e técnico;

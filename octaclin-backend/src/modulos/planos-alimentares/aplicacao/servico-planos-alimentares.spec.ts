@@ -1,3 +1,4 @@
+import { criarSnapshotMicronutrientes } from '../dominio/micronutrientes';
 import { ServicoGruposSubstituicoes } from './servico-grupos-substituicoes';
 import { ServiceUnavailableException } from '@nestjs/common';
 import { ServicoAlimentosPersonalizados } from './servico-alimentos-personalizados';
@@ -402,6 +403,57 @@ describe('ServicoPlanosAlimentares', () => {
       await expect(servico.calcularCombinado(TENANT_ID,PACIENTE_ID,usuarioProfissional(),invalida)).rejects.toBeInstanceOf(ConflictException);
       entrada.selecoes.push({...entrada.selecoes[0],planoId:'10000000-0000-4000-8000-000000000099'});
       await expect(servico.calcularCombinado(TENANT_ID,PACIENTE_ID,usuarioProfissional(),entrada)).rejects.toBeInstanceOf(NotFoundException);
+    });
+    it('FOOD06 analisa fatos/cobertura sem referências clínicas, escrita ou projeção de texto', async () => {
+      const entrada = await publicarParaCalculo();
+      const registro = repositorios.get(PlanoAlimentarItemOrm)!.registros[0];
+      const snapshot = JSON.parse(criptografia.descriptografar(registro.composicaoSnapshotCriptografada));
+      snapshot.micronutrientes = criarSnapshotMicronutrientes({ calcioMg: { estado: 'conhecido', valor: 0 } }, 100, 100);
+      snapshot.contextoInterno = 'canario-factual-sintetico';
+      registro.composicaoSnapshotCriptografada = criptografia.criptografar(JSON.stringify(snapshot));
+      const antes = JSON.stringify([...repositorios].map(([tipo, repo]) => ({ tipo: tipo.name, registros: repo.registros })));
+      const r = await servico.analisarMicronutrientes(TENANT_ID,PACIENTE_ID,usuarioProfissional(),entrada);
+      expect(r).toMatchObject({ schemaVersao:1, motorVersao:'food06-factual-v1', comparacoes:{estado:'indisponivel',motivo:'referencias_nao_habilitadas'} });
+      expect(r.calculo.nutrientes.energiaKcal.total).toBe(120);
+      expect(r.cobertura.nutrientes.calcioMg).toMatchObject({estado:'COMPLETO',total:0});
+      expect(r.cobertura.nutrientes.ferroMg).toMatchObject({estado:'DESCONHECIDO'});
+      expect(r.cobertura.nutrientes.ferroMg).not.toHaveProperty('total');
+      expect(r.publicacoes).toEqual([{planoId:PLANO_ID,versaoId:VERSAO_ID,ativacaoRevisao:0}]);
+      expect(JSON.stringify(r)).not.toMatch(/Criptograf|objetivos|Alimento manual|canario-factual-sintetico/);
+      const repetido = await servico.analisarMicronutrientes(TENANT_ID,PACIENTE_ID,usuarioProfissional(),entrada);
+      expect(repetido.calculo).toEqual(r.calculo);
+      expect(JSON.stringify([...repositorios].map(([tipo, repo]) => ({ tipo: tipo.name, registros: repo.registros })))).toBe(antes);
+      const legado = await servico.calcularCombinado(TENANT_ID,PACIENTE_ID,usuarioProfissional(),entrada);
+      const { calculadoEm: _data, publicacoes: _publicacoes, ...calculoLegado } = legado;
+      expect(r.calculo).toEqual(calculoLegado);
+    });
+    it('FOOD06 preserva impedimento técnico de snapshot sem expor conteúdo', async () => {
+      const entrada = await publicarParaCalculo();
+      repositorios.get(PlanoAlimentarItemOrm)!.registros[0].composicaoSnapshotCriptografada = Buffer.from('corrompido-sintetico');
+      const r = await servico.analisarMicronutrientes(TENANT_ID,PACIENTE_ID,usuarioProfissional(),entrada);
+      expect(r.cobertura.nutrientes.ferroMg).toMatchObject({estado:'INDISPONIVEL',causas:[{codigo:'snapshot_indisponivel',quantidade:1}]});
+      expect(JSON.stringify(r)).not.toContain('corrompido-sintetico');
+    });
+    it('FOOD06 seleção vazia e OFF continuam factuais e rejeitam revisão obsoleta', async () => {
+      expect((await servico.analisarMicronutrientes(TENANT_ID,PACIENTE_ID,usuarioProfissional(),{selecoes:[]})).calculo.estado).toBe('sem_selecao');
+      const entrada = await publicarParaCalculo();
+      repositorios.get(PlanoAlimentarOrm)!.registros[0].ativoParaPaciente = false;
+      expect((await servico.analisarMicronutrientes(TENANT_ID,PACIENTE_ID,usuarioProfissional(),entrada)).calculo.itensIncluidos).toBe(0);
+      repositorios.get(PlanoAlimentarOrm)!.registros[0].ativacaoRevisao = 1;
+      await expect(servico.analisarMicronutrientes(TENANT_ID,PACIENTE_ID,usuarioProfissional(),entrada)).rejects.toBeInstanceOf(ConflictException);
+    });
+    it('FOOD06 nega tenant, carteira, paciente/plano alheio e permissão revogada sem subtotal', async () => {
+      const entrada = await publicarParaCalculo();
+      await expect(servico.analisarMicronutrientes('outro-tenant',PACIENTE_ID,usuarioProfissional(),entrada)).rejects.toBeInstanceOf(NotFoundException);
+      await expect(servico.analisarMicronutrientes(TENANT_ID,PACIENTE_ID,{...usuarioProfissional(),usuarioId:'outro-profissional'},entrada)).rejects.toThrow();
+      await expect(servico.analisarMicronutrientes(TENANT_ID,PACIENTE_ID,{...usuarioProfissional(),papel:'Client'},entrada)).rejects.toBeInstanceOf(ForbiddenException);
+      await expect(servico.analisarMicronutrientes(TENANT_ID,PACIENTE_ID,{...usuarioProfissional(),permissoes:[]},entrada)).rejects.toBeInstanceOf(ForbiddenException);
+      await expect(servico.analisarMicronutrientes(TENANT_ID,PACIENTE_ID,usuarioProfissional(),{selecoes:[...entrada.selecoes,{...entrada.selecoes[0],planoId:randomUUID()}]})).rejects.toBeInstanceOf(NotFoundException);
+      repositorios.get(PacienteOrm)!.registros[0].profissionalResponsavelId = 'transferido';
+      await expect(servico.analisarMicronutrientes(TENANT_ID,PACIENTE_ID,usuarioProfissional(),entrada)).rejects.toBeInstanceOf(NotFoundException);
+    });
+    it.each([{tenantId:'adulterado'}, {coeficientes:{ferroMg:9}}, {elegivel:true}, {snapshots:[]}])('FOOD06 rejeita payload extra %o', async extra => {
+      await expect(servico.analisarMicronutrientes(TENANT_ID,PACIENTE_ID,usuarioProfissional(),{selecoes:[],...extra})).rejects.toBeInstanceOf(BadRequestException);
     });
   });
 
