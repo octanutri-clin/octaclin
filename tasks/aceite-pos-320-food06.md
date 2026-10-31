@@ -39,6 +39,8 @@ Fontes: [especificação](especificacao-pos-320-food06-melhorias.md),
 
 ## Gates transversais
 
+- Contexto puro A2: datas/19anos/confirmações implementados; obtenção autorizada,
+  fontes/referências e integração ainda PENDENTES. Ver execução/contexto.
 - CL01–CL08: PASS de ratificação humana da ficha/quadro de `cb8a9c47`, não de software.
 - Direitos: BLOCKED; nenhum aceite das melhorias concede direitos ou licença nova.
 - Núcleo T03-A: testes locais e re-revisão estática favoráveis nos limites registrados.

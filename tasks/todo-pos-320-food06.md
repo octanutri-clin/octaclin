@@ -11,6 +11,7 @@ Fonte de contrato: [plano](plan-pos-320-food06.md), base `68499c15`.
 - [x] Produzir matriz de aceite rastreável e detalhar Onda A.
 - [x] Executar UX A por duas instâncias separadas, referenciando #451/0d3382b6.
 - [x] A1: cobertura com causas/contagens + catálogo estático M03/M09, TDD e revisão independente delimitada.
+- [x] A2-fundamento: contexto puro19+, confirmações e datas civis, sem ativação/rota.
 - [ ] A2: fontes/contexto autorizados, direitos, integração e rastreabilidade persistida.
 - [ ] Onda A: M01 cobertura, M03 causas, M05 rastreabilidade, M09 explicações.
 - [ ] Onda B: M02 contribuições e M06 tabela profissional acessível.

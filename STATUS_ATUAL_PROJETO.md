@@ -17,7 +17,12 @@ Atualizado em 2026-10-31 durante o desenvolvimento isolado da FOOD06; histórico
   autorização específica. Nenhuma migration externa é inferida do merge.
 - **FOOD06 — desenvolvimento técnico autorizado na PR #455:** CL01–CL08 e quadro
   adulto DRI ratificados pelo proprietário/equipe clínica em 2026-10-31. Núcleo
-  matemático T03-A isolado, sem tabela clínica, rota ou interface. Direitos
+  matemático T03-A isolado; M01–M12 obrigatórias aprovadas e planejadas em ondas.
+  PR #456 Draft, dependente da #455: cobertura, explicações e fundamento puro de
+  contexto, sem tabela clínica, rota ou interface. Execução e revisão delimitadas
+  em `tasks/execucao-pos-320-food06-a1.md` e
+  `tasks/execucao-pos-320-food06-contexto.md`. UX A independente registrada;
+  UX B/C, integração/RLS e R4 integral ainda pendentes. Direitos
   continuam bloqueando T03-B/integração assistencial. Evidências e limitações de
   ferramentas em `tasks/execucao-pos-320-food06.md`; plano em
   `tasks/plan-pos-320-food06.md`. FOOD08 permanece planejamento separado, sujeito

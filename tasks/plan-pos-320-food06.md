@@ -6,7 +6,9 @@ Base inspecionada em 2026-10-30: `68499c15`, após integração da #454.
 Branch isolada: `docs/food06-contratos-fontes`.
 
 Incremento A1 separado: branch `feat/food06-onda-a1`, base #455/`0ec4cd31`.
-Cobertura e explicações aditivas no domínio; evidências e limites em
+Cobertura, explicações e fundamento de contexto aditivos no domínio.
+Contexto: [execução A2-fundamento](execucao-pos-320-food06-contexto.md).
+Evidências A1 e limites em
 [execução A1](execucao-pos-320-food06-a1.md). Não habilita comparação clínica.
 
 ## Escopo vigente ampliado — 2026-10-31

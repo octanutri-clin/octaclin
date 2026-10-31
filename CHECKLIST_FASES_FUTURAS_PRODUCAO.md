@@ -16,8 +16,11 @@ Atualizado em 2026-10-31 durante FOOD06. A Fase 320 continua NO-GO para ingestã
 - **FOOD06 / PR #455:** desenvolvimento técnico autorizado; ficha CL01–CL08 e
   quadro adulto ratificados em 2026-10-31. Núcleo T03-A usa apenas referências
   injetadas e fixtures sintéticas, sem rota/registro de tabelas clínicas. Direitos
-  continuam bloqueando a integração assistencial. Ver plano, checklist e execução
-  em `tasks/*pos-320-food06.md`. FOOD08 mantém planejamento e decisões separados.
+  continuam bloqueando a integração assistencial. M01–M12 aprovadas como escopo
+  obrigatório; planejamento/UX A na #455 e domínio de cobertura/contexto na
+  #456 Draft dependente. Ondas e aceites não concluídos. Ver plano/matriz em
+  `tasks/*pos-320-food06.md` e execução `tasks/execucao-pos-320-food06-contexto.md`.
+  FOOD08 mantém planejamento e decisões separados.
 - Fase 316 permanece em stand-by; TBCA segue NO-GO.
 
 ## Checkpoint de 2026-10-22 (histórico, supersedido pelo estado vigente acima)

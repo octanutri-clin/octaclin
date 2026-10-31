@@ -59,6 +59,13 @@ persona pode aprovar redação que mude o protocolo ou libere comparação bloqu
 
 ## A2 — rastreabilidade e integração protegidas
 
+Fundamento puro de contexto implementado em incremento da #456, sem rota ou
+registro científico. Datas e anos completos reutilizam Fase314; fuso reutiliza
+resolvedor canônico sem alterar seu fallback. Casos de confirmação diária e
+vitamina C/UL são independentes. [Execução/contexto](execucao-pos-320-food06-contexto.md).
+Não equivale a A2 completo ou comprovação de origem autorizada do dado.
+
+
 M05: registro científico imutável de referência/conjunto com ID/revisão, autoridade,
 documento/ano, código/forma/origem/unidade, população/faixas, valor/tipo/UL,
 restrições, fonte/atribuição/direitos, checksum e motor. Sem liberdade para cliente
@@ -100,5 +107,6 @@ allowlists e limites. Nenhum corpo clínico nos erros/auditoria. Base de composi
   por personas. CI identifica HEAD; falha Mobile não é dispensada por falta de relação.
 
 Onda A só conclui com M01/M03/M05/M09 integradas e comprovadas, não com A1 puro.
-Próxima ação: incorporar os relatórios A e executar o primeiro contrato A1 com TDD
-em branch/PR própria ou incremento empilhado explícito; manter #455 delimitada.
+Próxima ação: integrar entradas autorizadas PA06 com projeções factuais e contexto,
+sem habilitar referências com direitos pendentes. Provar autorização/RLS/concorrência
+no incremento integrado; manter #455 e #456 delimitadas.
