@@ -1,5 +1,26 @@
 # FOOD06 — execução técnica
 
+## Expansão M01–M12 e auditoria (2026-10-31)
+
+Todas as12 melhorias foram aprovadas para planejamento/implementação isolada.
+Especificação, aceite e Onda A agora detalham requisitos, reuso, gaps, divisão de
+PRs e provas. Núcleo isolado não equivale a conclusão funcional. UX A executada
+por duas instâncias separadas, sem ferramentas/interação/dados reais; sínteses e
+manifesto em `docs/agents/ux/reports/FOOD06-A-2026-10-31/`. Não são R4 ou validação
+de interface. Portal paciente N/A, relatório/efeitos do plano avaliados.
+
+CI de `eeb552fa`: **FAIL Mobile Expo e PR Gate**, 20 outros checks success e
+SBOM provenance SKIPPED. Job `124490037570`, run `41184991822`: falhou em
+`Run pnpm audit:security`, exit1. Log lista14 identificadores GHSA; não fornece
+nessa mensagem o diagnóstico completo por pacote. Prefixo textual “OK” não muda
+o exit1/reprovação. Segurança Mobile deve ter fluxo separado; não dispensar gate
+ou alterar severidade/política para aprovar FOOD06.
+
+Auditoria documental executada por leitura do código/contratos. Nenhum teste de
+implementação das12 novas melhorias foi aprovado nesta rodada. Migrações, banco
+externo, UI, PDF real, Playwright e R4 integral: NOT RUN. Fontes/direitos e G06
+mantêm seus bloqueios. As evidências do núcleo a seguir são históricas do delta.
+
 ## Checkpoint de 2026-10-31
 
 Branch `docs/food06-contratos-fontes`, PR #455. Base remota preservada em

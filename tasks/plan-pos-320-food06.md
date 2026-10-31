@@ -5,6 +5,32 @@ autorizado. Direitos de tabelas e integração assistencial permanecem gates.
 Base inspecionada em 2026-10-30: `68499c15`, após integração da #454.
 Branch isolada: `docs/food06-contratos-fontes`.
 
+## Escopo vigente ampliado — 2026-10-31
+
+O proprietário aprovou integralmente F06-M01–M12 para planejamento e implementação
+isolada. Todas são obrigatórias; o núcleo anterior não conclui FOOD06. Contrato
+completo em [especificação](especificacao-pos-320-food06-melhorias.md), rastreabilidade
+em [aceite](aceite-pos-320-food06.md), primeira onda em [Onda A](onda-a-pos-320-food06.md).
+T01–T07 abaixo são a sequência-base preservada, ampliada pelos incrementos A–D;
+nenhuma aprovação parcial vira aprovação irrestrita das melhorias.
+
+Auditoria: PA06 cobre soma/cobertura básica, não causas/contribuições; análise
+histórica com contexto/referências exige registro próprio sem mutar publicações;
+FOOD05 não está nesta base e seus caminhos dependentes serão protegidos. A prévia
+FOOD07 atual calcula quatro macros e deixa micros ao writer, exigindo integração
+do resolver existente, não multiplicação/somador novos. M11 tem gap de restrições
+estruturadas/compatibilidade a fechar antes do caminho individualizado.
+
+UX A: duas instâncias separadas, papéis da #451 por referência explícita
+`0d3382b6`, sem herdar conversa/ferramentas/dados reais; relatórios e manifesto em
+`docs/agents/ux/reports/FOOD06-A-2026-10-31/`. Sugestões mapeiam escopo aprovado;
+nenhum novo protocolo/portal foi autorizado pelas personas. B/C seguem pendentes.
+
+CI de `eeb552fa`: Mobile Expo e PR Gate FAIL; demais20 success e SBOM provenance
+SKIPPED. Auditoria Mobile terminou com exit1 e14 IDs GHSA no job124490037570;
+não inferir pacote/gravidade de todos sem triagem. Não corrigir por supressão ou
+misturar lockfile Mobile no incremento FOOD06. G06 operacional continua BLOCKED.
+
 ## Autorização e fronteiras
 
 O proprietário autorizou continuar planejamento e desenvolvimento enquanto integra

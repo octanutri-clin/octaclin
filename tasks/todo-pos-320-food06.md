@@ -4,6 +4,21 @@ Estado vigente: ficha/quadro ratificados em 2026-10-31; núcleo T03-A isolado
 implementado, sem comparação assistencial ou referência clínica habilitada.
 Fonte de contrato: [plano](plan-pos-320-food06.md), base `68499c15`.
 
+## Expansão obrigatória aprovada em 2026-10-31
+
+- [x] Registrar M01–M12 integralmente e auditar compatibilidade PA06/04/05/07.
+- [x] Produzir matriz de aceite rastreável e detalhar Onda A.
+- [x] Executar UX A por duas instâncias separadas, referenciando #451/0d3382b6.
+- [ ] Onda A: M01 cobertura, M03 causas, M05 rastreabilidade, M09 explicações.
+- [ ] Onda B: M02 contribuições e M06 tabela profissional acessível.
+- [ ] Onda C: M04 prévias, M11 consulta assistida/restrições e M12 cenários.
+- [ ] Onda D: M07 versões, M08 PDF seguro e M10 longitudinal.
+- [ ] UX B/C com interface/artefatos reais e R4 independente integral.
+- [ ] Resolver falhas de CI atuais: Mobile Expo/PR Gate em eeb552fa.
+
+Nenhuma melhoria é opcional. As linhas existentes abaixo registram fundamentos
+anteriores e não equivalem à conclusão das ondas ou dos aceites M01–M12.
+
 - [x] Criar branch/worktree isoladas e preservar delta preexistente.
 - [x] Inventariar motor PA06, escala decimal, serviço, DTO, BFF e interface.
 - [x] Registrar decisões humanas F06-D01, F06-D02 e F06-D03.

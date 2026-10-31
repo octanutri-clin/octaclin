@@ -1,0 +1,57 @@
+{
+  "etapa": "A",
+  "baseAvaliada": "eeb552fa",
+  "modo": "subagentes-runtime-com-papel-textual-resumido",
+  "selecaoNativaToml": "NAO_COMPROVADA",
+  "instancias": [
+    "/root/food06_nutricionista_ux_a",
+    "/root/food06_paciente_ux_a"
+  ],
+  "janelaInicioUTC": "2026-10-31T09:01:05.380440+00:00",
+  "janelaFimUTC": "2026-10-31T09:11:46.537599+00:00",
+  "tempos": "Janela de preparação/recebimento do coordenador, não cronometragem individual dos agentes.",
+  "papeis": {
+    "nutricionista": {
+      "commit": "0d3382b6",
+      "path": ".codex/agents/octaclin-nutricionista-ux.toml",
+      "sha256": "6259b40a98e2c49053cbc6adbc0c59d0312b14e191b228ab73de2f2eac53af6d"
+    },
+    "paciente": {
+      "commit": "0d3382b6",
+      "path": ".codex/agents/octaclin-paciente-ux.toml",
+      "sha256": "a40b1ded5e47739a2710caa5ec9a9a7871b57be7efc11deefaae0515028ff7d7"
+    }
+  },
+  "procedimento": {
+    "commit": "0d3382b6",
+    "path": "docs/agents/ux/PROCEDIMENTO.md",
+    "sha256": "00ee799fa4435bbc1af022752fc1a9dbce4a3196cd1b188a9a4b6017c47bff29"
+  },
+  "brief": {
+    "path": "docs/agents/ux/reports/FOOD06-A-2026-10-31/brief.md",
+    "sha256": "5eeeea7f438b4dead819bb7005ab9a57fdb34b5f7251576a4156030b4a5120a3",
+    "entradaEfetiva": "Mesma síntese factual do brief em ambos os prompts, com instruções textuais resumidas de cada papel; sem herdar conversa. Não se afirma identidade byte a byte com TOML ou brief completo."
+  },
+  "ferramentas": "Nenhuma ferramenta observada/reportada nos retornos; restrição instrucional, sem alegar sandbox forte.",
+  "artefatos": {
+    "nutricionista.md": {
+      "sha256": "0020dc9c309c33b7cb087facdbd48f80f49cd1ffefea2019b8f6ef7d40ed745a",
+      "modalidade": "Síntese editorial do coordenador; original na trilha de atividade, não assinatura do revisor."
+    },
+    "paciente.md": {
+      "sha256": "f71a39c98f35ed1056cfffe866c141332b3ba804354e045cee1fe43e22362dc1",
+      "modalidade": "Síntese editorial do coordenador; original na trilha de atividade, não assinatura do revisor."
+    },
+    "consolidado.md": {
+      "sha256": "4ce0ae00956bc540404502a43861746d2fac4a2f45eb0aff10d1d6e5605753a6",
+      "modalidade": "Síntese editorial do coordenador; original na trilha de atividade, não assinatura do revisor."
+    }
+  },
+  "limitacoes": [
+    "Somente plano/auditoria, sem interface/PDF real",
+    "Sem usuários reais, validação clínica/jurídica/científica ou R4",
+    "B/C não executadas",
+    "Portal paciente N/A; relatório/efeitos do plano avaliados sem exposição nova"
+  ],
+  "resultado": "Relatórios independentes recebidos, achados rastreados aos requisitos; sem P0 ou alteração de escopo automática."
+}
