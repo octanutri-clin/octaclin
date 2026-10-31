@@ -1,8 +1,13 @@
 # OctaClin - Checklist vivo de fases futuras ate producao
 
-Atualizado em 2026-10-30 após integração da FOOD07. A Fase 320 continua NO-GO para ingestão TBCA; manter TACO, USDA e IBGE.
+**FOOD06 — checkpoint vigente:** PR #455 passa a concentrar os incrementos
+#456–#459, sem merge na main. Correção da auditoria Mobile e CI consolidado
+precedem a API de detalhe M02; [evidências e limites](tasks/food06-consolidacao.md).
+As descrições de PRs separadas abaixo são o histórico da construção incremental.
 
-## Estado vigente reconciliado em 2026-10-30
+Atualizado em 2026-10-31 durante FOOD06. A Fase 320 continua NO-GO para ingestão TBCA; manter TACO, USDA e IBGE.
+
+## Estado vigente reconciliado em 2026-10-31
 
 - **FOOD07:** PR #452 integrada em `87df565f1aa504328c8032c069cc6d4746499a59`.
   Checks aplicáveis do HEAD `7a963b16` passaram; Provenance do SBOM ficou
@@ -13,11 +18,18 @@ Atualizado em 2026-10-30 após integração da FOOD07. A Fase 320 continua NO-GO
   da migration 1080. G06 continua BLOCKED; sem consulta/escrita operacional
   nesta atualização. A revisão de produção de FOOD04/FOOD05 segue para etapa
   própria, após retorno e autorização do proprietário.
-- **Próximas entregas em planejamento:** PR #454 (Draft) propõe FOOD06 primeiro,
-  com gates científicos, clínicos e de direitos; FOOD08 fica como entrega
-  separada, dependente de decisões de publicação, conteúdo, privacidade e
-  moderação. Isso não autoriza implementação. Ver
-  `docs/pos-320/05_Plano_Sequencia_FOOD06_FOOD08_2026-10-30.md`.
+- **FOOD06 / PR #455:** desenvolvimento técnico autorizado; ficha CL01–CL08 e
+  quadro adulto ratificados em 2026-10-31. Núcleo T03-A usa apenas referências
+  injetadas e fixtures sintéticas, sem rota/registro de tabelas clínicas. Direitos
+  continuam bloqueando a integração assistencial. M01–M12 aprovadas como escopo
+  obrigatório; planejamento/UX A na #455 e domínio de cobertura/contexto na
+  #456 Draft dependente; integração factual R4 em #457 Draft, com Backend/RLS
+  de código80763589 aprovados no CI. Interface factual em branch própria sobre
+  #457, com testes locais/UX B/C/revisão independente delimitados; CI próprio
+  pendente. M02 tem fundamento interno em branch própria, sem API/UI, conforme
+  `tasks/food06-contribuicoes-dominio.md`. Ondas e aceites não concluídos. Ver plano/matriz em
+  `tasks/*pos-320-food06.md` e execução `tasks/execucao-pos-320-food06-contexto.md`.
+  FOOD08 mantém planejamento e decisões separados.
 - Fase 316 permanece em stand-by; TBCA segue NO-GO.
 
 ## Checkpoint de 2026-10-22 (histórico, supersedido pelo estado vigente acima)

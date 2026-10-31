@@ -575,3 +575,14 @@ Nenhuma dessas etapas executa deploy.
 | `pnpm test:actions-imutaveis` | Actions por SHA completo, inclusive as novas |
 | `node scripts/validar-licencas.mjs node_modules` | inventario real instalado por componente |
 | `node scripts/validar-sbom.mjs a.json b.json` | duas execucoes do Trivy com inventario identico |
+
+
+### SPDX no Dependency Review
+
+O scanner de dependências novas deriva `allow-licenses` das listas `permitidas`
+e `revisaoObrigatoria` da política versionada. Isso preserva a escolha de um ramo
+permitido em `A OR B`; `A AND B` exige ambos aceitáveis. A presença nessa lista
+não dispensa a revisão **por pacote** exigida pelos inventários instalados.
+Licenças bloqueadas não entram na lista; conflitos na política falham fechados.
+Não usar uma denylist que rejeite a alternativa não escolhida de uma licença dual,
+nem criar exceção por pacote para contornar essa divergência semântica.

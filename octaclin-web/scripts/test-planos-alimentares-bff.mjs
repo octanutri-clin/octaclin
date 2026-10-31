@@ -20,6 +20,7 @@ const arquivos = [
   'app/api/pacientes/[id]/planos-alimentares/[planoId]/ativacao/route.ts',
   'app/api/pacientes/[id]/planos-alimentares/[planoId]/selecao-calculo/route.ts',
   'app/api/pacientes/[id]/planos-alimentares/calculo-combinado/route.ts',
+  'app/api/pacientes/[id]/planos-alimentares/analise-micronutrientes/route.ts',
   'app/api/pacientes/[id]/planos-alimentares/[planoId]/refeicoes/[identidadeId]/ativacao/route.ts',
   'app/api/portal/paciente/planos-alimentares/route.ts',
   'app/api/portal/paciente/planos-alimentares/[planoId]/route.ts',

@@ -1,0 +1,135 @@
+{
+  "tipo": "evidencia-tecnica-supply-chain-sem-dados-clinicos",
+  "coletadoEm": "2026-10-31T20:35:57.136398+00:00",
+  "ferramentas": {
+    "node": "22.23.4",
+    "pnpm": "11.25.0"
+  },
+  "red": {
+    "base": "4b23e8bf",
+    "lockfileSha256": "f1ec75b90e1a6bcb47827596db304e179107eb86a5bfbd772f1928760c2d8ae4",
+    "vulnerabilities": {
+      "info": 0,
+      "low": 3,
+      "moderate": 5,
+      "high": 6,
+      "critical": 0
+    },
+    "advisories": [
+      {
+        "github_advisory_id": "GHSA-86w9-cpqp-85rv",
+        "module_name": "node-forge",
+        "severity": "high",
+        "vulnerable_versions": "<=1.4.0",
+        "patched_versions": ">=1.4.1"
+      },
+      {
+        "github_advisory_id": "GHSA-g3hv-75wg-m249",
+        "module_name": "minimatch",
+        "severity": "moderate",
+        "vulnerable_versions": "<11.0.1",
+        "patched_versions": ">=11.0.1"
+      },
+      {
+        "github_advisory_id": "GHSA-3g3m-2fjr-6pw4",
+        "module_name": "glob",
+        "severity": "moderate",
+        "vulnerable_versions": ">=9.0.0 <=14.0.1",
+        "patched_versions": ">=14.0.2"
+      },
+      {
+        "github_advisory_id": "GHSA-4642-5mcj-2rqw",
+        "module_name": "node-forge",
+        "severity": "low",
+        "vulnerable_versions": "<=1.4.0",
+        "patched_versions": ">=1.4.1"
+      },
+      {
+        "github_advisory_id": "GHSA-6wvx-3r32-xmcg",
+        "module_name": "node-forge",
+        "severity": "moderate",
+        "vulnerable_versions": "<=1.4.0",
+        "patched_versions": ">=1.4.1"
+      },
+      {
+        "github_advisory_id": "GHSA-525v-9gp9-w22h",
+        "module_name": "node-forge",
+        "severity": "moderate",
+        "vulnerable_versions": "<=1.4.0",
+        "patched_versions": ">=1.4.1"
+      },
+      {
+        "github_advisory_id": "GHSA-7wch-p9px-956x",
+        "module_name": "node-forge",
+        "severity": "high",
+        "vulnerable_versions": "<=1.4.0",
+        "patched_versions": ">=1.4.1"
+      },
+      {
+        "github_advisory_id": "GHSA-h6cr-wjv9-3cpp",
+        "module_name": "node-forge",
+        "severity": "low",
+        "vulnerable_versions": "<=1.4.0",
+        "patched_versions": ">=1.4.1"
+      },
+      {
+        "github_advisory_id": "GHSA-4487-j8r4-4g2f",
+        "module_name": "node-forge",
+        "severity": "low",
+        "vulnerable_versions": "<=1.4.0",
+        "patched_versions": ">=1.4.1"
+      },
+      {
+        "github_advisory_id": "GHSA-5cwg-6vw7-rj6p",
+        "module_name": "node-forge",
+        "severity": "moderate",
+        "vulnerable_versions": "<=1.4.0",
+        "patched_versions": ">=1.4.1"
+      },
+      {
+        "github_advisory_id": "GHSA-jc66-7q78-782g",
+        "module_name": "node-forge",
+        "severity": "high",
+        "vulnerable_versions": "<=1.4.0",
+        "patched_versions": ">=1.4.1"
+      },
+      {
+        "github_advisory_id": "GHSA-8hrf-8g6f-7xwp",
+        "module_name": "node-forge",
+        "severity": "high",
+        "vulnerable_versions": "<=1.4.0",
+        "patched_versions": ">=1.4.1"
+      },
+      {
+        "github_advisory_id": "GHSA-hqq3-7jhf-c5jx",
+        "module_name": "node-forge",
+        "severity": "high",
+        "vulnerable_versions": "<=1.4.0",
+        "patched_versions": ">=1.4.1"
+      },
+      {
+        "github_advisory_id": "GHSA-5x38-2vff-x55p",
+        "module_name": "node-forge",
+        "severity": "high",
+        "vulnerable_versions": "<=1.4.0",
+        "patched_versions": ">=1.4.1"
+      }
+    ]
+  },
+  "green": {
+    "lockfileSha256": "f3d574da3f209286a1c395918d6a5b0b6d8bae7fbfdd67e1e09485a9c2019d55",
+    "vulnerabilities": {
+      "info": 0,
+      "low": 0,
+      "moderate": 0,
+      "high": 0,
+      "critical": 0
+    },
+    "advisories": []
+  },
+  "limites": [
+    "Auditoria usa o feed no instante da coleta, não prova ausência universal de vulnerabilidades.",
+    "Doctor local bloqueado em duas consultas externas; export e38 testes passaram.",
+    "Não substitui o CI do HEAD consolidado nem revisão integral FOOD06."
+  ]
+}

@@ -6,6 +6,7 @@ import {
   carregarPolitica,
   classificarExpressao,
   validarPolitica,
+  licencasParaDependencyReview,
 } from './validar-licencas.mjs';
 
 const politica = carregarPolitica();
@@ -114,4 +115,39 @@ test('so conta manifests em posicao real de dependencia instalada', async () => 
     ),
     false
   );
+});
+
+
+test('Dependency Review deriva opções SPDX aprovadas e sujeitas a revisão, sem liberar bloqueadas', () => {
+  const lista = licencasParaDependencyReview(politica);
+  assert.deepEqual(lista, [...new Set([...politica.permitidas, ...politica.revisaoObrigatoria])].sort());
+  assert.ok(lista.includes('BSD-3-Clause'));
+  assert.ok(lista.includes('MPL-2.0'));
+  for (const bloqueada of politica.bloqueadas) assert.equal(lista.includes(bloqueada), false);
+});
+
+test('Dependency Review falha fechado se uma opção aprovada também for bloqueada', () => {
+  assert.throws(() => licencasParaDependencyReview({ ...politica, permitidas: [...politica.permitidas, 'GPL-3.0-only'] }), /conflitante/);
+});
+
+
+test('workflow exporta uma linha real de allowlist sem deny ou exceção por pacote', async () => {
+  const { readFileSync, mkdtempSync, rmSync } = await import('node:fs');
+  const { tmpdir } = await import('node:os');
+  const { join } = await import('node:path');
+  const { spawnSync } = await import('node:child_process');
+  const texto = readFileSync(new URL('../.github/workflows/dependency-review.yml', import.meta.url), 'utf8');
+  assert.doesNotMatch(texto, /deny-licenses:|allow-dependencies-licenses:/);
+  assert.match(texto, /allow-licenses: \$\{\{ steps\.license-policy\.outputs\.allow \}\}/);
+  const trecho = texto.match(/node --input-type=module <<'NODE'\n([\s\S]*?)          NODE/)[1];
+  const pasta = mkdtempSync(join(tmpdir(), 'octaclin-licencas-'));
+  try {
+    const output = join(pasta, 'output');
+    const resultado = spawnSync(process.execPath, ['--input-type=module'], {
+      input: trecho, cwd: new URL('..', import.meta.url), encoding: 'utf8',
+      env: { ...process.env, GITHUB_OUTPUT: output }
+    });
+    assert.equal(resultado.status, 0, resultado.stderr);
+    assert.equal(readFileSync(output, 'utf8'), `allow=${licencasParaDependencyReview(politica).join(',')}\n`);
+  } finally { rmSync(pasta, { recursive: true, force: true }); }
 });

@@ -1,6 +1,11 @@
 # OctaClin - Status atual do projeto
 
-Atualizado em 2026-10-30 após integração da FOOD07; registros anteriores preservados.
+**FOOD06 — checkpoint vigente:** PR #455 passa a concentrar os incrementos
+#456–#459, sem merge na main. Correção da auditoria Mobile e CI consolidado
+precedem a API de detalhe M02; [evidências e limites](tasks/food06-consolidacao.md).
+As descrições de PRs separadas abaixo são o histórico da construção incremental.
+
+Atualizado em 2026-10-31 durante o desenvolvimento isolado da FOOD06; histórico preservado.
 
 ## Estado atual
 
@@ -15,12 +20,30 @@ Atualizado em 2026-10-30 após integração da FOOD07; registros anteriores pres
   produção. Neon, schema/ledger 1078/1079, Render, backup/rollback e deploy
   continuam reservados à etapa operacional após o retorno do proprietário e
   autorização específica. Nenhuma migration externa é inferida do merge.
-- **Próximos planejamentos:** PR #454, Draft, propõe FOOD06 primeiro (fontes,
-  direitos, população e contrato de dados) e FOOD08 separadamente (publicação,
-  conteúdo, privacidade e moderação). Não há autorização de implementação para
-  essas fases neste registro; as ratificações e direitos listados no plano
-  continuam pendentes. Consulte
-  `docs/pos-320/05_Plano_Sequencia_FOOD06_FOOD08_2026-10-30.md`.
+- **FOOD06 — desenvolvimento técnico autorizado na PR #455:** CL01–CL08 e quadro
+  adulto DRI ratificados pelo proprietário/equipe clínica em 2026-10-31. Núcleo
+  matemático T03-A isolado; M01–M12 obrigatórias aprovadas e planejadas em ondas.
+  PR #456 Draft, dependente da #455: cobertura, explicações e fundamento puro de
+  contexto, sem tabela clínica, rota ou interface. Execução e revisão delimitadas
+  em `tasks/execucao-pos-320-food06-a1.md` e
+  `tasks/execucao-pos-320-food06-contexto.md`. UX A independente registrada;
+  UX B/C e R4 integral de todas as ondas ainda pendentes. Incremento factual
+  R4 separado na PR #457, dependente da #456: serviço/BFF reutilizam PA06;
+  Backend/Web/PostgreSQL/RLS de código80763589 aprovados no CI; Demo smoke
+  em execução e auditoria Mobile FAIL.
+  Sem referências científicas habilitadas. Registro: `tasks/food06-integracao-factual.md`.
+  Interface factual em branch `feat/food06-tabela-factual`, base6317a0c0/#457:
+  tabela sob demanda, UX B/C e revisão independente delimitadas;32 Playwright,
+  24 testes de seleção/modelo/cliente e27 scripts authz locais aprovados.
+  CI b4ccc2dd: Backend/Web/scanners PASS; Mobile FAIL; Demo em execução na última consulta.
+  Execução em `tasks/food06-interface-factual.md`. Fundamento M02 em branch própria
+  `feat/food06-contribuicoes-dominio`: decomposição interna PA06, sem API/UI;
+  `tasks/food06-contribuicoes-dominio.md` registra provas e pendências de integração.
+  Direitos
+  continuam bloqueando T03-B/integração assistencial. Evidências e limitações de
+  ferramentas em `tasks/execucao-pos-320-food06.md`; plano em
+  `tasks/plan-pos-320-food06.md`. FOOD08 permanece planejamento separado, sujeito
+  a decisões de publicação, conteúdo, privacidade e moderação; sem implementação.
 - Fase 316 continua em stand-by. O NO-GO da TBCA não muda; manter TACO, USDA e
   IBGE conforme decisão registrada.
 

@@ -11,6 +11,6 @@ function executar(comando, args) {
   if (resultado.status !== 0) { rmSync(temporaria, { recursive: true, force: true }); process.exit(resultado.status ?? 1); }
 }
 executar(process.execPath, [join(raiz, 'node_modules/typescript/bin/tsc'), '--ignoreConfig', '--target', 'ES2022', '--module', 'commonjs', '--moduleResolution', 'node', '--ignoreDeprecations', '6.0', '--types', 'node', '--esModuleInterop', '--skipLibCheck', '--outDir', temporaria,
-  'scripts/calculo-combinado-planos.spec.ts', 'lib/calculo-combinado-planos.ts', 'lib/plano-alimentar-api.ts']);
-executar(process.execPath, ['--test', join(temporaria, 'scripts/calculo-combinado-planos.spec.js')]);
+  'scripts/calculo-combinado-planos.spec.ts', 'scripts/micronutrientes-factuais.spec.ts', 'lib/calculo-combinado-planos.ts', 'lib/plano-alimentar-api.ts']);
+executar(process.execPath, ['--test', join(temporaria, 'scripts/calculo-combinado-planos.spec.js'), join(temporaria, 'scripts/micronutrientes-factuais.spec.js')]);
 rmSync(temporaria, { recursive: true, force: true });

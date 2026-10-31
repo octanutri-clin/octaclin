@@ -1,3 +1,4 @@
+import { POST as analisarMicronutrientesFood06 } from '../app/api/pacientes/[id]/planos-alimentares/analise-micronutrientes/route';
 import { POST as consultarReceitasFood07 } from '../app/api/planos-alimentares/receitas/consulta/route';
 import { POST as preverReceitasFood07 } from '../app/api/planos-alimentares/receitas/[receitaId]/previa-porcionamento/route';
 import { POST as compartilharReceitasFood07 } from '../app/api/planos-alimentares/receitas/compartilhamentos/route';
@@ -1417,4 +1418,46 @@ test('FOOD07 cliente usa POST sem etiqueta em URL e propaga AbortSignal/no-store
     for (const c of chamadas) { assert.equal(c.init?.method, 'POST'); assert.equal(c.init?.cache, 'no-store'); assert.equal(c.init?.signal, ctl.signal); }
     assert.deepEqual(JSON.parse(String(chamadas[0].init?.body)), { etiqueta: 'Etiqueta sintética' });
   } finally { restaurarFetch(original); }
+});
+
+test('FOOD06 BFF encaminha análise factual protegida e mantém resposta sem cache', async () => {
+  __setCookies(cookiesSessaoValida(['planos_alimentares.ler']));
+  const original=global.fetch;
+  let chamada: {url:string;body?:string}|undefined;
+  const analise={schemaVersao:1,comparacoes:{estado:'indisponivel',motivo:'referencias_nao_habilitadas'}};
+  global.fetch=(async(url:string|URL|Request,init?:RequestInit)=>{chamada={url:String(url),body:init?.body?.toString()};return Response.json(analise);}) as typeof global.fetch;
+  try {
+    const corpo=JSON.stringify({selecoes:[]});
+    const r=await analisarMicronutrientesFood06(new Request('http://localhost/api/analise',{method:'POST',body:corpo}),{params:Promise.resolve({id:'paciente/1'})});
+    assert.equal(r.status,200);assert.equal(r.headers.get('Cache-Control'),'private, no-store');
+    assert.deepEqual(await r.json(),analise);
+    assert.deepEqual(chamada,{url:'http://backend.octaclin.local/pacientes/paciente%2F1/planos-alimentares/analise-micronutrientes',body:corpo});
+  } finally {restaurarFetch(original);}
+});
+
+test('FOOD06 BFF nega sessão/permissão ausente e payload maior que 64KiB sem chamar backend', async () => {
+  const original=global.fetch;let chamadas=0;
+  global.fetch=(async()=>{chamadas++;return Response.json({});}) as typeof global.fetch;
+  try {
+    __setCookies({});
+    const request=(body='{}')=>new Request('http://localhost/api/analise',{method:'POST',body});
+    const props={params:Promise.resolve({id:'paciente-1'})};
+    assert.equal((await analisarMicronutrientesFood06(request(),props)).status,401);
+    __setCookies(cookiesSessaoValida(['pacientes.ler']));
+    assert.equal((await analisarMicronutrientesFood06(request(),props)).status,403);
+    __setCookies(cookiesSessaoValida(['planos_alimentares.ler']));
+    const grande=await analisarMicronutrientesFood06(request('x'.repeat(65*1024)),props);
+    assert.equal(grande.status,413);assert.equal(grande.headers.get('Cache-Control'),'private, no-store');
+    assert.equal(chamadas,0);
+  } finally {restaurarFetch(original);}
+});
+
+test('FOOD06 BFF preserva conflito sem retry automático', async () => {
+  __setCookies(cookiesSessaoValida(['planos_alimentares.ler']));
+  const original=global.fetch;let chamadas=0;
+  global.fetch=(async()=>{chamadas++;return Response.json({message:'Seleção alterada.'},{status:409});}) as typeof global.fetch;
+  try {
+    const r=await analisarMicronutrientesFood06(new Request('http://localhost/api/analise',{method:'POST',body:'{"selecoes":[]}'}),{params:Promise.resolve({id:'paciente-1'})});
+    assert.equal(r.status,409);assert.equal(chamadas,1);assert.equal(r.headers.get('Cache-Control'),'private, no-store');
+  } finally {restaurarFetch(original);}
 });

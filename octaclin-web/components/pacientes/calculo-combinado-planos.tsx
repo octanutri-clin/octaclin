@@ -1,4 +1,5 @@
 'use client';
+import { MicronutrientesFactuais } from './micronutrientes-factuais';
 
 import { type Dispatch, type SetStateAction, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { RefreshCcw } from 'lucide-react';
@@ -33,6 +34,7 @@ interface Props {
 
 export function CalculoCombinadoPlanos({ pacienteId, planos, selecoes, aoMudarSelecoes, revisaoOperacional, versaoPublicadaSelecionada }: Props) {
   const [planoParaAdicionar, setPlanoParaAdicionar] = useState('');
+  const [revisaoLeituraFactual, setRevisaoLeituraFactual] = useState(0);
   const [resultadoEstado, setResultadoEstado] = useState<{ chave: string; resultado: ResultadoCalculoCombinadoApi } | null>(null);
   const [erroEstado, setErroEstado] = useState<{ chave: string; mensagem: string } | null>(null);
   const [conflitoChave, setConflitoChave] = useState<string | null>(null);
@@ -64,6 +66,7 @@ export function CalculoCombinadoPlanos({ pacienteId, planos, selecoes, aoMudarSe
   const invalidar = useCallback(() => {
     cancelarCalculo();
     setResultadoEstado(null);
+    setRevisaoLeituraFactual(v => v + 1);
   }, [cancelarCalculo]);
 
   const calcular = useCallback(async () => {
@@ -184,7 +187,7 @@ export function CalculoCombinadoPlanos({ pacienteId, planos, selecoes, aoMudarSe
         try { return await obterSelecaoCalculoPlano(pacienteId, selecao.planoId, controller.signal); }
         catch { return null; }
       }));
-      if (controller.signal.aborted || chaveAtualizada !== chaveAtualRef.current) return;
+      if (controller.signal.aborted || chaveAtualizada !== chaveAtualRef.current) return false;
       if (respostas.some(resposta => !resposta)) throw new Error('atualizacao indisponivel');
       const novas = antigas.flatMap((antiga, indice) => {
         const resposta = respostas[indice];
@@ -194,8 +197,10 @@ export function CalculoCombinadoPlanos({ pacienteId, planos, selecoes, aoMudarSe
       invalidar();
       aoMudarSelecoes(novas);
       setConflitoChave(null);
+      return true;
     } catch {
       if (!controller.signal.aborted && chaveAtualizada === chaveAtualRef.current) setErroEstado({ chave: chaveAtualRef.current, mensagem: 'Não foi possível atualizar todos os planos. A seleção anterior foi mantida.' });
+      return false;
     } finally { setAtualizando(false); }
   }
 
@@ -251,6 +256,7 @@ export function CalculoCombinadoPlanos({ pacienteId, planos, selecoes, aoMudarSe
         {calculando ? <span role="status" className="text-sm text-texto-suave">Atualizando resultado…</span> : null}
       </div>
       {erro ? <p role="alert" className="rounded-md border border-alerta-borda bg-alerta-suave p-3 text-sm text-alerta-forte">{erro}</p> : null}
+      {selecoes.length ? <MicronutrientesFactuais key={pacienteId} pacienteId={pacienteId} entrada={montarEntradaCalculoCombinado(selecoes)} chaveContexto={JSON.stringify([chaveAtual,revisaoLeituraFactual])} leituraPermitida={!calculando && !atualizando && !conflito && !erro} aoAtualizarSelecao={atualizarSelecao} atualizando={atualizando} /> : null}
       {resultado ? <div className="grid gap-3" aria-live="polite">
         <p className="text-sm text-texto-suave">{resultado.estado === 'calculado' ? `${resultado.itensIncluidos} alimentos previstos somados · cálculo em ${new Date(resultado.calculadoEm).toLocaleString('pt-BR')}` : resultado.estado === 'sem_selecao' ? 'Selecione planos e refeições para calcular.' : 'Nenhum alimento ativo incluído no cálculo.'}</p>
         <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">

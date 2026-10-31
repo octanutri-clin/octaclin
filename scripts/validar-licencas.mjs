@@ -26,6 +26,15 @@ export function carregarPolitica({ caminho = CAMINHO_POLITICA } = {}) {
   return JSON.parse(readFileSync(caminho, 'utf8'));
 }
 
+/** Opções SPDX do scanner; revisão por pacote continua no inventário instalado. */
+export function licencasParaDependencyReview(politica = carregarPolitica()) {
+  const lista = [...new Set([...politica.permitidas, ...politica.revisaoObrigatoria])].sort();
+  if (lista.some(id => typeof id !== 'string' || !/^[A-Za-z0-9][A-Za-z0-9.+-]*$/.test(id) || politica.bloqueadas.includes(id))) {
+    throw new Error('Politica SPDX conflitante ou invalida.');
+  }
+  return lista;
+}
+
 function classificarToken(token, politica) {
   const limpo = token.trim().replace(/\+$/, '');
   if (limpo === '') return 'desconhecida';
