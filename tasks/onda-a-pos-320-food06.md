@@ -5,7 +5,13 @@ assistencial habilitada por padrão. Direitos continuam gate para tabelas; itens
 independentes de tabelas podem avançar. Risco R2 no domínio puro; R4 ao alcançar
 dados clínicos, API, persistência, tenant/RLS/exportação.
 
-## A1 — domínio/contratos sem tocar PA06 legada
+## A1 — domínio/contratos sem alterar saídas da PA06 legada
+
+Implementado em incremento separado, com extração do seletor PA06 compartilhado,
+sem mudar a soma ou o contrato do endpoint. Cobertura e explicações são puras,
+sem registrar rota/provider. [Execução A1](execucao-pos-320-food06-a1.md).
+Fontes, causas específicas na interface, revisão de redação e integração continuam
+pendentes; este resultado não conclui M01/M03/M09 integralmente.
 
 Reutilizar o resultado PA06 e seu somador de snapshots. Projeção nova enriquecida
 é aditiva e versionada; não alterar silenciosamente `ResultadoCalculoCombinadoApi`

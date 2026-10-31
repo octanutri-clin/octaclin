@@ -27,8 +27,10 @@ function objeto(valor: unknown): Record<string, unknown> | undefined {
 function valorConhecido(valor: unknown): valor is number {
   return typeof valor === 'number' && Number.isFinite(valor) && valor >= 0;
 }
-/** Só valores de porção congelados. Não multiplica quantidade, não consulta catálogo. */
-export function calcularNutrientesCombinados(planos: EntradaPlanoCombinado[]): ResultadoCalculoCombinado {
+/** Seleção comum da PA06 e das projeções de cobertura, sem ler itens desligados. */
+export function selecionarItensCombinados(planos: EntradaPlanoCombinado[]): {
+  itens: unknown[]; exclusoes: ResultadoCalculoCombinado['exclusoes'];
+} {
   const itens: unknown[] = [];
   const exclusoes: ResultadoCalculoCombinado['exclusoes'] = [];
   for (const plano of planos) {
@@ -43,6 +45,11 @@ export function calcularNutrientesCombinados(planos: EntradaPlanoCombinado[]): R
       if (itens.length > 10000) throw new Error('Limite de itens do cálculo combinado excedido.');
     }
   }
+  return { itens, exclusoes };
+}
+/** Só valores de porção congelados. Não multiplica quantidade, não consulta catálogo. */
+export function calcularNutrientesCombinados(planos: EntradaPlanoCombinado[]): ResultadoCalculoCombinado {
+  const { itens, exclusoes } = selecionarItensCombinados(planos);
   const codigos = [...Object.keys(CAMPOS_LEGADOS), ...CODIGOS_MICRONUTRIENTES] as CodigoNutrienteCombinado[];
   const nutrientes = Object.fromEntries(codigos.map(codigo => {
     const valores: number[] = [];

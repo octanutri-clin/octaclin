@@ -2,6 +2,7 @@
 
 Estado vigente: ficha/quadro ratificados em 2026-10-31; núcleo T03-A isolado
 implementado, sem comparação assistencial ou referência clínica habilitada.
+Incremento A1 em `feat/food06-onda-a1`, empilhado sobre #455/`0ec4cd31`: cobertura e explicações em domínio puro; ver [execução A1](execucao-pos-320-food06-a1.md). Não conclui a Onda A.
 Fonte de contrato: [plano](plan-pos-320-food06.md), base `68499c15`.
 
 ## Expansão obrigatória aprovada em 2026-10-31
@@ -9,6 +10,8 @@ Fonte de contrato: [plano](plan-pos-320-food06.md), base `68499c15`.
 - [x] Registrar M01–M12 integralmente e auditar compatibilidade PA06/04/05/07.
 - [x] Produzir matriz de aceite rastreável e detalhar Onda A.
 - [x] Executar UX A por duas instâncias separadas, referenciando #451/0d3382b6.
+- [x] A1: cobertura com causas/contagens + catálogo estático M03/M09, TDD e revisão independente delimitada.
+- [ ] A2: fontes/contexto autorizados, direitos, integração e rastreabilidade persistida.
 - [ ] Onda A: M01 cobertura, M03 causas, M05 rastreabilidade, M09 explicações.
 - [ ] Onda B: M02 contribuições e M06 tabela profissional acessível.
 - [ ] Onda C: M04 prévias, M11 consulta assistida/restrições e M12 cenários.
@@ -56,5 +59,5 @@ carteira, tenant adversário, acesso revogado, cancelamento e resposta tardia.
 
 Fora do escopo: EAR/CDRR como substituto de UL, diagnóstico, consumo real presumido,
 suplementação automática, ajuste de prescrição, portal, TBCA e operação externa.
-Nenhum teste de implementação executado nesta etapa documental. G06 permanece
+Registro histórico da etapa inicial: não havia testes de implementação naquela etapa; evidências posteriores estão na execução principal e no incremento A1. G06 permanece
 fora desta entrega. Uma PR documental não comprova ativação ou disponibilidade.

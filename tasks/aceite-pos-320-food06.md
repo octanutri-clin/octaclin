@@ -7,13 +7,13 @@ Fontes: [especificação](especificacao-pos-320-food06-melhorias.md),
 
 | ID obrigatório | Comportamento/contrato | Evidência de aceite exigida | Estado observado nesta auditoria |
 | --- | --- | --- | --- |
-| M01-C1 | Zero conhecido ≠ ausência; cobertura por nutriente, não por alimento global | RED/GREEN: dois alimentos, ferro zero+ausente e cálcio completo | PARCIAL: PA06 já tem contagens/estados básicos |
-| M01-C2 | Completo/parcial/desconhecido/incompatível/indisponível com motivos/fontes | Mistura de unidade/forma/schema/fonte/erro; soma apenas compatíveis; nenhuma confiança científica percentual | PENDENTE enriquecimento |
+| M01-C1 | Zero conhecido ≠ ausência; cobertura por nutriente, não por alimento global | RED/GREEN: dois alimentos, ferro zero+ausente e cálcio completo | PASS domínio A1: zero/ausência por nutriente; integração/interface/exportação pendentes |
+| M01-C2 | Completo/parcial/desconhecido/incompatível/indisponível com motivos/fontes | Mistura de unidade/forma/schema/fonte/erro; soma apenas compatíveis; nenhuma confiança científica percentual | PARCIAL A1: cinco estados/causas/contagens; resolução autorizada de fontes pendente |
 | M01-C3 | Subtotal parcial explícito, sem percentual de referência; mesmos dados nas saídas | Backend/BFF/tabela/exportação e fonte legada; total desconhecido não vira zero | PENDENTE integração |
 | M02-C1 | Total→refeição→alimento, quantidade/preparo/fonte e cobertura | Soma hierárquica reconcilia com PA06, receita1,5porções, conhecido zero/ausente | PENDENTE |
 | M02-C2 | Denominador completo/positivo, sem dupla contagem | Alternativa escolhida exclui principal; disponíveis não contam; alimento repetido em refeições legítimas conta ambas | PENDENTE |
 | M02-C3 | Ordenação/expansão/atalho autorizado | Testes componente/Playwright, leitura/editável e acesso negado ao destino | PENDENTE |
-| M03-C1 | Motivos clínicos/técnicos/contratuais estruturados, backend autoritativo | Contratos negativos por motivo, texto seguro e ação válida quando existir | PARCIAL: códigos do núcleo, sem catálogo/serviço |
+| M03-C1 | Motivos clínicos/técnicos/contratuais estruturados, backend autoritativo | Contratos negativos por motivo, texto seguro e ação válida quando existir | PARCIAL A1: 11 motivos com texto/ação; causas de cobertura e serviço pendentes |
 | M03-C2 | Tabela/detalhes/relatório concordam, sem dados nos logs | Canários sintéticos em logs/erros/projeções e mesma revisão | PENDENTE |
 | M04-C1 | Prévia antes/depois, percentuais válidos, cobertura/eligibilidade | Troca alimento/porção/preparo/receita; principal e alternativa não somados; zero no denominador sem percentual | PENDENTE |
 | M04-C2 | Sem gravação; confirmação CAS e rollback | PostgreSQL descartável: revisão stale, duas abas/PA07, perda de acesso, idempotência/replay, falha intermediária | PENDENTE |
@@ -26,7 +26,7 @@ Fontes: [especificação](especificacao-pos-320-food06-melhorias.md),
 | M08-C1 | PDF fiel à análise autorizada e minimizada | Mesmos números/revisões/contexto/fontes; teste autorização/revogação/PII canário | PENDENTE |
 | M08-C2 | Arquivo seguro, sem publicação/entrega automática | Sem URL/objeto público/cache persistente; política retenção/descarte; cancelamento/erro | PENDENTE |
 | M08-C3 | Artefato PDF legível e acessível | PDF real: texto selecionável, ordem/cabeçalhos/limites próximos, celular e tecnologia assistiva | PENDENTE; HTML acessível não comprova PDF |
-| M09-C1 | Explicar RDA/AI/UL, planejado/consumido, parcial e limitações | Conteúdo próprio revisado, fonte identificável, sem diagnóstico ou recomendação de suplemento | PENDENTE catálogo/interface |
+| M09-C1 | Explicar RDA/AI/UL, planejado/consumido, parcial e limitações | Conteúdo próprio revisado, fonte identificável, sem diagnóstico ou recomendação de suplemento | PARCIAL A1: catálogo estático e testes; revisão de redação/interface pendentes |
 | M09-C2 | Explicações curtas e detalhes acessíveis | Texto perto do dado, expansão teclado/leitor; zero e desconhecido distinguíveis | PENDENTE |
 | M10-C1 | Histórico paginado e pontos reproduzíveis | Data/plano/revisão/nutriente/cobertura/ref e autorização atual/carteira | PENDENTE |
 | M10-C2 | Gráfico e tabela equivalentes, sem interpolação indevida | Lacunas, parcial, mudança de fonte/ref/contexto, não ligar bases incompatíveis ou inferir melhora clínica | PENDENTE |
@@ -42,8 +42,8 @@ Fontes: [especificação](especificacao-pos-320-food06-melhorias.md),
 - CL01–CL08: PASS de ratificação humana da ficha/quadro de `cb8a9c47`, não de software.
 - Direitos: BLOCKED; nenhum aceite das melhorias concede direitos ou licença nova.
 - Núcleo T03-A: testes locais e re-revisão estática favoráveis nos limites registrados.
-- CI `eeb552fa`: Mobile Expo FAIL em `Run pnpm audit:security`; Demo ainda em
-  execução na consulta inicial desta rodada. Não atribuir PASS global. Falha não
+- CI `eeb552fa`: 20 success, Mobile Expo e PR Gate FAIL; SBOM provenance SKIPPED.
+  CI `0ec4cd31`: na consulta seguinte, Mobile FAIL e Web em execução. Não atribuir PASS global. Falha não
   autoriza mudar severidade, exceção ou dependências em FOOD06 por conveniência.
 - PostgreSQL/RLS, exportação, migração local nova, BFF e UI: NOT RUN para M01–M12.
 - UX A: avaliações por instâncias separadas; sugestões são hipóteses, não testes

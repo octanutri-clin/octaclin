@@ -5,6 +5,10 @@ autorizado. Direitos de tabelas e integração assistencial permanecem gates.
 Base inspecionada em 2026-10-30: `68499c15`, após integração da #454.
 Branch isolada: `docs/food06-contratos-fontes`.
 
+Incremento A1 separado: branch `feat/food06-onda-a1`, base #455/`0ec4cd31`.
+Cobertura e explicações aditivas no domínio; evidências e limites em
+[execução A1](execucao-pos-320-food06-a1.md). Não habilita comparação clínica.
+
 ## Escopo vigente ampliado — 2026-10-31
 
 O proprietário aprovou integralmente F06-M01–M12 para planejamento e implementação
