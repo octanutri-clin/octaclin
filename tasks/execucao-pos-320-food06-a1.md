@@ -1,5 +1,9 @@
 # FOOD06 — execução/handoff do incremento A1 (2026-10-31)
 
+> Checkpoint histórico do incremento. O estado vigente consolidado da PR #455
+> está em [consolidação](food06-consolidacao.md); evidências originais abaixo
+> permanecem válidas somente para os commits e escopos indicados.
+
 ## Estado vigente e escopo
 
 Branch `feat/food06-onda-a1`, base `0ec4cd31` da PR #455

@@ -1,5 +1,9 @@
 # FOOD06 — checklist
 
+Estado vigente: os incrementos #455–#459 foram reunidos por fast-forward na
+branch da #455, preservando commits, revisões e limites. A API de detalhamento
+M02 aguarda estabilização do CI consolidado. Ver [consolidação](food06-consolidacao.md).
+
 Estado vigente: ficha/quadro ratificados em 2026-10-31; núcleo T03-A isolado
 implementado, sem comparação assistencial ou referência clínica habilitada.
 Incremento A1 em `feat/food06-onda-a1`, empilhado sobre #455/`0ec4cd31`: cobertura e explicações em domínio puro; ver [execução A1](execucao-pos-320-food06-a1.md). Não conclui a Onda A.

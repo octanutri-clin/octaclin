@@ -1,5 +1,10 @@
 # OctaClin - Checklist vivo de fases futuras ate producao
 
+**FOOD06 — checkpoint vigente:** PR #455 passa a concentrar os incrementos
+#456–#459, sem merge na main. Correção da auditoria Mobile e CI consolidado
+precedem a API de detalhe M02; [evidências e limites](tasks/food06-consolidacao.md).
+As descrições de PRs separadas abaixo são o histórico da construção incremental.
+
 Atualizado em 2026-10-31 durante FOOD06. A Fase 320 continua NO-GO para ingestão TBCA; manter TACO, USDA e IBGE.
 
 ## Estado vigente reconciliado em 2026-10-31

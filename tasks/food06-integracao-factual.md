@@ -1,5 +1,9 @@
 # FOOD06 — integração factual PA06 (R4)
 
+> Checkpoint histórico do incremento. O estado vigente consolidado da PR #455
+> está em [consolidação](food06-consolidacao.md); evidências originais abaixo
+> permanecem válidas somente para os commits e escopos indicados.
+
 Branch própria `feat/food06-analise-factual`, base `1aba388a` da #456, dependente
 explicitamente de #456 e #455. PR própria Draft. Não integra branches na main.
 

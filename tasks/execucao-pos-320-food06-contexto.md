@@ -1,5 +1,9 @@
 # FOOD06 — fundamento de contexto A2 (2026-10-31)
 
+> Checkpoint histórico do incremento. O estado vigente consolidado da PR #455
+> está em [consolidação](food06-consolidacao.md); evidências originais abaixo
+> permanecem válidas somente para os commits e escopos indicados.
+
 ## Estado e delimitação
 
 Incremento na branch `feat/food06-onda-a1`, PR #456 Draft, dependente da

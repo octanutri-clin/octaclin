@@ -1,5 +1,9 @@
 # FOOD06 — matriz obrigatória de aceite
 
+Estado vigente: os incrementos #455–#459 foram reunidos por fast-forward na
+branch da #455, preservando commits, revisões e limites. A API de detalhamento
+M02 aguarda estabilização do CI consolidado. Ver [consolidação](food06-consolidacao.md).
+
 Escopo M01–M12 aprovado integralmente em 2026-10-31. Esta matriz não atribui
 conclusão funcional a uma aprovação de produto ou a testes apenas do núcleo.
 Fontes: [especificação](especificacao-pos-320-food06-melhorias.md),

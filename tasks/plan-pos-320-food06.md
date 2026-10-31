@@ -1,5 +1,9 @@
 # FOOD06 — comparação factual com referências dietéticas
 
+Estado vigente: os incrementos #455–#459 foram reunidos por fast-forward na
+branch da #455, preservando commits, revisões e limites. A API de detalhamento
+M02 aguarda estabilização do CI consolidado. Ver [consolidação](food06-consolidacao.md).
+
 Estado: CL01–CL08 e quadro DRI ratificados em 2026-10-31; núcleo técnico isolado
 autorizado. Direitos de tabelas e integração assistencial permanecem gates.
 Base inspecionada em 2026-10-30: `68499c15`, após integração da #454.

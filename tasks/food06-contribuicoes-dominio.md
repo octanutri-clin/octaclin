@@ -1,5 +1,9 @@
 # FOOD06 — fundamento interno de contribuições (M02)
 
+> Checkpoint histórico do incremento. O estado vigente consolidado da PR #455
+> está em [consolidação](food06-consolidacao.md); evidências originais abaixo
+> permanecem válidas somente para os commits e escopos indicados.
+
 ## Escopo e fronteiras
 
 Branch `feat/food06-contribuicoes-dominio`, base `b4ccc2dd` da PR #458.

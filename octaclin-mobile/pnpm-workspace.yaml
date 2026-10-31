@@ -13,6 +13,13 @@ packages:
 # remediacao e por override e nao por bump direto. `js-yaml` 4.3.2 remedia
 # GHSA-2883-xcg3-v3hh, trazido pela CLI do Expo.
 overrides:
+  # Correções upstream de segurança, sem supressão; validar APIs usadas pelo Expo.
+  node-forge@<=1.4.0: 1.4.1
+  glob@>=9.0.0 <14.0.2: 14.0.2
+  minimatch@<11.0.1: 11.0.1
+  # O patch já remove o uso de deepmerge no config Expo; declarar também a
+  # remoção no grafo evita reintrodução órfã ao regenerar o lockfile.
+  '@expo/config@57.0.9>deepmerge': '-'
   uuid@<11.1.1: 11.1.1
   js-yaml@>=4.0.0 <4.3.2: 4.3.2
   decode-uri-component@<0.5.1: 0.5.1
@@ -77,4 +84,3 @@ strictStorePkgContentCheck: true
 patchedDependencies:
   '@expo/config@57.0.9': patches/@expo__config@57.0.9.patch
   braces@3.0.3: patches/braces@3.0.3.patch
-  node-forge@1.4.0: patches/node-forge@1.4.0.patch

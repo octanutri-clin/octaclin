@@ -1,5 +1,9 @@
 # FOOD06 — interface factual (incremento M01/M03/M06)
 
+> Checkpoint histórico do incremento. O estado vigente consolidado da PR #455
+> está em [consolidação](food06-consolidacao.md); evidências originais abaixo
+> permanecem válidas somente para os commits e escopos indicados.
+
 Branch `feat/food06-tabela-factual`, base6317a0c0/#457, PR Draft própria.
 Escopo: tabela factual sob demanda sobre a mesma seleção PA06. Sem cálculos
 científicos, persistência clínica, portal ou integração nova de catálogo.
