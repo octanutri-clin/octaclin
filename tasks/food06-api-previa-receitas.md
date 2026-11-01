@@ -2,7 +2,12 @@
 
 ## Estado e escopo
 
-Checkpoint posterior: remoto4c1e2317/local3efe6588. CI41349977153 FAIL Backend e
+Evidência posterior: setup corrigido no remoto373c1ddf/local39257f78; Backend do
+CI41355886047 PASS com4.041testes/65skip e gate descartável141PASS/0skip, inclusive
+as3provas novas. O FAIL anterior abaixo é histórico, sem descarte de evidência.
+A [integração Web](food06-interface-previa-receitas.md) tem gates próprios.
+
+Checkpoint histórico: remoto4c1e2317/local3efe6588. CI41349977153 FAIL Backend e
 PR Gate; Web/Demo/Mobile/scanners PASS. Os3novos casos de banco falharam no setup:
 EntityMetadataNotFoundError para ReceitaNutricionalOrm, ausente apenas na lista
 explícita de entidades do DataSource runtime do teste (o runtime do produto já a

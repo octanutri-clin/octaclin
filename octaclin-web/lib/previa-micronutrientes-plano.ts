@@ -5,6 +5,10 @@ export interface PedidoPreviaMicronutrientes {
  rascunhoIdEsperado:string;rascunhoRevisaoEsperada:number;ativacaoRevisaoEsperada:number;
  operacao:{tipo:'definir_porcao_manual'|'substituir_catalogo';refeicaoChave:string;itemChave:string;quantidade:number;unidade:string;porcaoGramas:number;alimentoComposicaoId?:string};
 }
+export interface PedidoPreviaReceita extends Omit<PedidoPreviaMicronutrientes,'operacao'> {
+ operacao:{tipo:'inserir_receita';refeicaoChave:string;receitaId:string;receitaVersaoEsperada:number;porcoesDesejadas:number};
+}
+export type PedidoOperacaoPrevia = PedidoPreviaMicronutrientes | PedidoPreviaReceita;
 export interface ValorPrevia {estado:LinhaMicronutrienteFactual['estado'];valor?:number}
 export interface LinhaPrevia {codigo:string;rotulo:string;unidade:string;antes:ValorPrevia;depois:ValorPrevia;delta?:{valor:number;percentual?:number}}
 export interface PreviaMicronutrientes {fingerprint:string;linhas:LinhaPrevia[]}
@@ -24,7 +28,7 @@ function valorMacro(v:unknown,codigo:string,unidade:string):ValorPrevia {
  return {estado:n.estado==='completo'?'COMPLETO':n.estado==='parcial'?'PARCIAL':'DESCONHECIDO',...(vConhecido!==undefined?{valor:vConhecido as number}:{})};
 }
 /** Allowlist de exibição. Verifica coerência; não calcula composição ou referências. */
-export function lerPreviaMicronutrientes(valor:unknown,pedido:PedidoPreviaMicronutrientes):PreviaMicronutrientes {
+export function lerPreviaMicronutrientes(valor:unknown,pedido:PedidoOperacaoPrevia):PreviaMicronutrientes {
  const r=obj(valor),c=obj(r.comparacao),ref=obj(c.referencias);
  if(r.schemaVersao!==1||r.motorVersao!=='food06-previa-api-v1'||r.escopo!=='rascunho_refeicoes_ativas'||r.rascunhoId!==pedido.rascunhoIdEsperado||r.rascunhoRevisao!==pedido.rascunhoRevisaoEsperada||r.ativacaoRevisao!==pedido.ativacaoRevisaoEsperada||typeof r.fingerprint!=='string'||!/^[a-f0-9]{64}$/.test(r.fingerprint)||c.schemaVersao!==1||c.motorVersao!=='food06-previa-factual-v1'||ref.estado!=='indisponivel'||ref.motivo!=='referencias_nao_habilitadas')return falhar();
  const antes=obj(c.antes),depois=obj(c.depois),dif=obj(c.diferencas);
@@ -55,22 +59,23 @@ export function lerPreviaMicronutrientes(valor:unknown,pedido:PedidoPreviaMicron
  for(const m of CAMPOS_MICRONUTRIENTES_PLANO){const a=lerLinhaMicronutrienteFactual(ca[m.codigo],m.codigo),b=lerLinhaMicronutrienteFactual(cb[m.codigo],m.codigo);linhas.push(linha(m,{estado:a.estado,...(a.valor!==undefined?{valor:a.valor}:{})},{estado:b.estado,...(b.valor!==undefined?{valor:b.valor}:{})}));}
  return {fingerprint:r.fingerprint,linhas};
 }
-export function lerAckPrevia(valor:unknown,pedido:PedidoPreviaMicronutrientes):{id:string;rascunhoRevisao:number} {
+export function lerAckPrevia(valor:unknown,pedido:PedidoOperacaoPrevia):{id:string;rascunhoRevisao:number} {
  const r=obj(valor);
  if(r.id!==pedido.rascunhoIdEsperado||r.rascunhoRevisao!==pedido.rascunhoRevisaoEsperada+1||r.edicaoEstado!=='materializada')return falhar();
  return {id:r.id as string,rascunhoRevisao:r.rascunhoRevisao as number};
 }
-function corpoPedido(p:PedidoPreviaMicronutrientes){const o=p.operacao;return {rascunhoIdEsperado:p.rascunhoIdEsperado,rascunhoRevisaoEsperada:p.rascunhoRevisaoEsperada,ativacaoRevisaoEsperada:p.ativacaoRevisaoEsperada,operacao:{tipo:o.tipo,refeicaoChave:o.refeicaoChave,itemChave:o.itemChave,quantidade:o.quantidade,unidade:o.unidade,porcaoGramas:o.porcaoGramas,...(o.tipo==='substituir_catalogo'?{alimentoComposicaoId:o.alimentoComposicaoId}:{})}};}
-async function solicitar(pacienteId:string,planoId:string,pedido:PedidoPreviaMicronutrientes,signal:AbortSignal,fingerprint?:string){
+function corpoPedido(p:PedidoOperacaoPrevia){const o=p.operacao;return {rascunhoIdEsperado:p.rascunhoIdEsperado,rascunhoRevisaoEsperada:p.rascunhoRevisaoEsperada,ativacaoRevisaoEsperada:p.ativacaoRevisaoEsperada,operacao:o.tipo==='inserir_receita'?{tipo:o.tipo,refeicaoChave:o.refeicaoChave,receitaId:o.receitaId,receitaVersaoEsperada:o.receitaVersaoEsperada,porcoesDesejadas:o.porcoesDesejadas}:{tipo:o.tipo,refeicaoChave:o.refeicaoChave,itemChave:o.itemChave,quantidade:o.quantidade,unidade:o.unidade,porcaoGramas:o.porcaoGramas,...(o.tipo==='substituir_catalogo'?{alimentoComposicaoId:o.alimentoComposicaoId}:{})}};}
+
+async function solicitar(pacienteId:string,planoId:string,pedido:PedidoOperacaoPrevia,signal:AbortSignal,fingerprint?:string){
  const resposta=await fetch(`/api/pacientes/${encodeURIComponent(pacienteId)}/planos-alimentares/${encodeURIComponent(planoId)}/rascunho/previa-micronutrientes${fingerprint===undefined?'':'/confirmar'}`,{method:'POST',cache:'no-store',signal,headers:{'Content-Type':'application/json'},body:JSON.stringify({...corpoPedido(pedido),...(fingerprint!==undefined?{fingerprintEsperado:fingerprint}:{})})});
  if(!resposta.ok)throw new ErroApiPlanoAlimentar(resposta.status,resposta.status===409?'A versão ou os dados mudaram. Recarregue e confira o rascunho.':'Não foi possível concluir a simulação. Confira o acesso, o alimento e o rascunho.');
  return resposta.json() as Promise<unknown>;
 }
-export async function preverMicronutrientesPlano(pacienteId:string,planoId:string,pedido:PedidoPreviaMicronutrientes,signal:AbortSignal){
+export async function preverMicronutrientesPlano(pacienteId:string,planoId:string,pedido:PedidoOperacaoPrevia,signal:AbortSignal){
  const resposta=await solicitar(pacienteId,planoId,pedido,signal);
  try{return lerPreviaMicronutrientes(resposta,pedido);}catch{throw new ErroApiPlanoAlimentar(502,'A prévia não pôde ser conferida. Refaça a simulação.');}
 }
-export async function confirmarPreviaMicronutrientesPlano(pacienteId:string,planoId:string,pedido:PedidoPreviaMicronutrientes,fingerprint:string,signal:AbortSignal){
+export async function confirmarPreviaMicronutrientesPlano(pacienteId:string,planoId:string,pedido:PedidoOperacaoPrevia,fingerprint:string,signal:AbortSignal){
  const resposta=await solicitar(pacienteId,planoId,pedido,signal,fingerprint);
  try{return lerAckPrevia(resposta,pedido);}catch{throw new ErroApiPlanoAlimentar(502,'A confirmação não pôde ser conferida. Recarregue o rascunho antes de tentar novamente.');}
 }

@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { type ReactNode, useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { Archive, BookOpenCheck, Plus, Send, UtensilsCrossed } from 'lucide-react';
 import { Botao } from '@/components/ui/botao';
 import { AreaTexto, Campo, Selecao } from '@/components/ui/campo';
@@ -42,6 +42,7 @@ interface BibliotecaReceitasNutricionaisProps {
   aoInserir: (chaveRefeicao: string, itens: ItemPlanoAlimentarEntrada[]) => void;
   validarAntesDeSalvar?: (chaveRefeicao: string) => void;
   desabilitado?: boolean;
+  renderizarImpactoReceita?: (receita:{receitaId:string;versao:number;porcoes:number;refeicaoChave:string;receitaNome:string;refeicaoNome:string},eventos:{aoAtivar:(ativo:boolean)=>void;aoConfirmando:(confirmando:boolean)=>void;aoConcluir:()=>void})=>ReactNode;
 }
 
 const ROTULO_TIPO: Record<TipoReceitaNutricionalApi, string> = {
@@ -79,6 +80,7 @@ function BibliotecaReceitasNutricionaisInterna({
   refeicoes,
   aoInserir,
   validarAntesDeSalvar,
+  renderizarImpactoReceita,
   desabilitado = false
 }: BibliotecaReceitasNutricionaisProps) {
   const id = useId();
@@ -129,6 +131,8 @@ function BibliotecaReceitasNutricionaisInterna({
   const aplicacoesEmCurso = useRef(new Set<string>());
   const compartilhamentosEmCurso = useRef(new Set<string>());
   const [porcoesDesejadas, setPorcoesDesejadas] = useState('1');
+  const [impactoAtivo,setImpactoAtivo]=useState(false);
+  const [impactoConfirmando,setImpactoConfirmando]=useState(false);
   const [previaAplicacao, setPreviaAplicacao] = useState<{
     receitaId: string;
     versao: number;
@@ -251,6 +255,7 @@ function BibliotecaReceitasNutricionaisInterna({
           setErro('Não foi possível calcular esta quantidade. Confira a base, o rendimento e os dados dos ingredientes.');
           return;
         }
+        setImpactoAtivo(false);
         setPreviaAplicacao({ receitaId: receita.id, versao: receita.versaoAtual, fingerprint: dados.fingerprint, pacienteId: contexto.pacienteId, refeicaoDestino: contexto.refeicaoDestino, quantidade, dados, itensOriginais: receita.itens });
         return;
       }
@@ -265,6 +270,8 @@ function BibliotecaReceitasNutricionaisInterna({
   }
 
   function cancelarPreviaAplicacao() {
+    if(impactoConfirmando)return;
+    setImpactoAtivo(false);
     geracaoRequisicao.current += 1;
     setPreviaAplicacao(null);
   }
@@ -773,9 +780,10 @@ function BibliotecaReceitasNutricionaisInterna({
           {previaAplicacao.dados.avisos.length ? <ul className="grid gap-1 text-sm text-aviso-forte" aria-label="Avisos do cálculo">
             {previaAplicacao.dados.avisos.map((aviso, indice) => <li key={`${aviso.codigo}-${indice}`}>A quantidade de um ingrediente exigiu arredondamento. Confira antes de inserir.</li>)}
           </ul> : null}
+          {renderizarImpactoReceita?.({receitaId:previaAplicacao.receitaId,versao:previaAplicacao.versao,porcoes:previaAplicacao.quantidade,refeicaoChave:previaAplicacao.refeicaoDestino,receitaNome:receitaAtual?.nome??'Receita selecionada',refeicaoNome:refeicoesAtuais.find(r=>r.chave===previaAplicacao.refeicaoDestino)?.nome??'Refeição selecionada'},{aoAtivar:setImpactoAtivo,aoConfirmando:setImpactoConfirmando,aoConcluir:()=>{setImpactoAtivo(false);setImpactoConfirmando(false);setPreviaAplicacao(null);}})}
           <div className="flex flex-wrap justify-end gap-2 border-t border-linha pt-3">
-            <Botao type="button" variante="secundario" onClick={cancelarPreviaAplicacao} disabled={ocupado !== null}>Cancelar</Botao>
-            <Botao type="button" onClick={() => void confirmarAplicacao()} carregando={ocupado === 'aplicando'} disabled={desabilitado || ocupado !== null}>Confirmar e inserir</Botao>
+            <Botao type="button" variante="secundario" onClick={cancelarPreviaAplicacao} disabled={ocupado !== null || impactoConfirmando}>Cancelar</Botao>
+            <Botao type="button" onClick={() => void confirmarAplicacao()} carregando={ocupado === 'aplicando'} disabled={desabilitado || ocupado !== null || impactoAtivo || impactoConfirmando}>Confirmar e inserir</Botao>
           </div>
         </div> : null}
       </Modal>

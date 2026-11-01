@@ -1,3 +1,4 @@
+import type {PedidoPreviaReceita} from '../lib/previa-micronutrientes-plano';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { CAMPOS_MICRONUTRIENTES_PLANO } from '../lib/micronutrientes-plano';
@@ -43,4 +44,13 @@ test('M04 erros de acesso/conflito não expõem mensagens internas',async()=>{
   global.fetch=(async()=>Response.json({message:'CANARIO_PRIVADO'},{status})) as typeof global.fetch;
   await assert.rejects(api.preverMicronutrientesPlano('p','a',pedido,new AbortController().signal),e=>{assert.equal(Reflect.get(e as object,'status'),status);assert.ok(!String(e).includes('CANARIO_PRIVADO'));return true;});
  }}finally{global.fetch=original;}
+});
+test('M04 HTTP receita usa identidade e porções e não envia ingredientes/composição',async()=>{
+ const api=await import('../lib/previa-micronutrientes-plano');const original=global.fetch;let corpo:Record<string,unknown>={};
+ const operacao={tipo:'inserir_receita',refeicaoChave:'r',receitaId:'receita-1',receitaVersaoEsperada:3,porcoesDesejadas:1.5};
+ global.fetch=(async(_u,o)=>{corpo=JSON.parse(String(o?.body));return Response.json(resposta());}) as typeof global.fetch;
+ try{
+  await api.preverMicronutrientesPlano('p','a',{...pedido,operacao:{...operacao,itens:[{privado:true}]}} as PedidoPreviaReceita,new AbortController().signal);
+  assert.deepEqual(corpo.operacao,operacao);
+ }finally{global.fetch=original;}
 });

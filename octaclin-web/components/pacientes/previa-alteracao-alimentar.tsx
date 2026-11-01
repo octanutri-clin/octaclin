@@ -4,8 +4,8 @@ import {Botao} from '@/components/ui/botao';
 import {Campo,Selecao} from '@/components/ui/campo';
 import {Modal} from '@/components/ui/modal';
 import {buscarAlimentosPlanoAlimentar,type AlimentoComposicaoApi} from '@/lib/plano-alimentar-api';
-import {preverMicronutrientesPlano,type PedidoPreviaMicronutrientes,type PreviaMicronutrientes,type ValorPrevia} from '@/lib/previa-micronutrientes-plano';
-import {formatarNutrientePlano} from '@/lib/micronutrientes-plano';
+import {preverMicronutrientesPlano,type PedidoPreviaMicronutrientes,type PreviaMicronutrientes} from '@/lib/previa-micronutrientes-plano';
+import {ComparacaoPreviaAlimentar} from './comparacao-previa-alimentar';
 interface Props {
  pacienteId:string;planoId:string;contexto:string;descricao:string;refeicaoNome:string;
  pedido:PedidoPreviaMicronutrientes;podeEditar:boolean;bloqueio?:string;
@@ -13,9 +13,7 @@ interface Props {
  aoConfirmar:(p:PedidoPreviaMicronutrientes,fingerprint:string,signal:AbortSignal)=>Promise<boolean>;
  aoInvalidar:(status:number)=>void;
 }
-const estados={COMPLETO:'Completo',PARCIAL:'Parcial',DESCONHECIDO:'Desconhecido',INCOMPATIVEL:'Incompatível',INDISPONIVEL:'Indisponível'};
 function numero(v:string){return /^\d+(?:[.,]\d{1,3})?$/.test(v.trim())?Number(v.trim().replace(',','.')):NaN;}
-function mostrar(v:ValorPrevia,codigo:string){return v.valor===undefined?estados[v.estado]:`${formatarNutrientePlano(codigo,v.valor)}${v.estado==='COMPLETO'?'':' contabilizados; total desconhecido'}`;}
 export function PreviaAlteracaoAlimentar({pacienteId,planoId,contexto,descricao,refeicaoNome,pedido,podeEditar,bloqueio,conferirBase,aoConfirmar,aoInvalidar}:Props){
  const id=useId();
  const [aberto,setAberto]=useState(false),[tipo,setTipo]=useState<'definir_porcao_manual'|'substituir_catalogo'>('definir_porcao_manual');
@@ -79,13 +77,7 @@ export function PreviaAlteracaoAlimentar({pacienteId,planoId,contexto,descricao,
     {erro?<p role="alert" className="text-sm">{erro}</p>:null}
     {previa&&!bloqueio?<>
      <p className="text-sm">Proposta: {quantidade} {unidade} · {gramas} g{alimento&&tipo==='substituir_catalogo'?` de ${alimento.nome}`:''}. Apenas refeições e plano ativos entram nos totais.</p>
-     <p className="text-xs text-texto-suave">Fontes são conferidas como no salvamento. Diferenças podem incluir atualização de composição; não representam diagnóstico ou ingestão real. Comparações RDA, AI e UL indisponíveis.</p>
-     <p className="text-xs text-texto-suave">O percentual mostra a variação em relação ao valor anterior, não a adequação nutricional.</p>
-     <div className="min-w-0 overflow-x-auto" tabIndex={0} role="region" aria-label="Comparação nutricional da proposta">
-      <table className="w-full text-sm"><caption className="sr-only">Antes e depois no rascunho, cobertura e diferença em relação ao próprio valor anterior</caption><thead><tr>{['Nutriente','Antes','Depois','Diferença'].map(t=><th key={t} scope="col" className="p-2 text-left">{t}</th>)}</tr></thead>
-       <tbody>{previa.dados.linhas.map(l=><tr key={l.codigo}><th scope="row" className="p-2 text-left">{l.rotulo} ({l.unidade})</th><td className="p-2">{mostrar(l.antes,l.codigo)}{l.antes.valor!==undefined?` · ${estados[l.antes.estado]}`:''}</td><td className="p-2">{mostrar(l.depois,l.codigo)}{l.depois.valor!==undefined?` · ${estados[l.depois.estado]}`:''}</td><td className="p-2">{l.delta?`${l.delta.valor>0?'+':''}${new Intl.NumberFormat('pt-BR',{maximumFractionDigits:8}).format(l.delta.valor)}${l.delta.percentual!==undefined?` (${new Intl.NumberFormat('pt-BR',{maximumFractionDigits:8}).format(l.delta.percentual)}%)`:''}`:'Indisponível'}</td></tr>)}</tbody>
-      </table>
-     </div>
+     <ComparacaoPreviaAlimentar dados={previa.dados}/>
      <Botao type="button" onClick={()=>void confirmar()} disabled={Boolean(ocupado)||Boolean(bloqueio)}>Confirmar alteração no rascunho</Botao>
     </>:null}
     {ocupado==='confirmando'?<p role="status">Confirmando e conferindo o rascunho. Aguarde antes de sair.</p>:null}

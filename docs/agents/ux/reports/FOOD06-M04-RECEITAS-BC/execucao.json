@@ -1,0 +1,23 @@
+{
+  "papelReferencia": "PR451/0d3382b6",
+  "selecaoTOMLNativa": false,
+  "instancias": [
+    "/root/m04_nutricionista_ux_final",
+    "/root/m04_paciente_ux_final"
+  ],
+  "modo": "independentes; leitura e imagens; sem interação própria/usuários reais",
+  "browserCoordenador": {
+    "matriz": 150,
+    "pass": 150,
+    "skipped": 0,
+    "reexecucaoAposMicrocopy": 2,
+    "novosCasosReceitaDoisProjetos": 12
+  },
+  "imagensFinalBuild": {
+    "mobile-topo.png": "b1c112201acb932ced5940647e48735b95aaca5258af37ac44eef3fc4d342c4a",
+    "desktop-topo.png": "dd54c7238113612cbc6e08b6b324d4ba2687e53cb657bd1f03ce8552e54232cf",
+    "mobile-acao.png": "e36897e350414ad33131184156a4a1e2bf408a215a0083dc6545aa706d0a52b2",
+    "desktop-acao.png": "2d876c3001cee067b57a312e4a2204d30087175b3b691684f2bc72f3af7503ae"
+  },
+  "limite": "personas viram capturas da primeira build; final difere apenas pela frase reformulada; coordenador repetiu visual/axe/teclado/fonte200%"
+}

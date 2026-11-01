@@ -1,7 +1,8 @@
 'use client';
 
+import { PreviaReceitaPlano } from './previa-receita-plano';
 import { PreviaAlteracaoAlimentar } from './previa-alteracao-alimentar';
-import { confirmarPreviaMicronutrientesPlano, type PedidoPreviaMicronutrientes } from '@/lib/previa-micronutrientes-plano';
+import { confirmarPreviaMicronutrientesPlano, type PedidoPreviaMicronutrientes, type PedidoOperacaoPrevia } from '@/lib/previa-micronutrientes-plano';
 
 import { type ReactNode, type Dispatch, type SetStateAction, useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 import { flushSync } from 'react-dom';
@@ -1955,7 +1956,7 @@ export function PlanoAlimentarProfissional({ pacienteId, podeGerenciar, aoAltera
     if(!conferirBasePrevia(p))return;
     coordenadorEdicaoRef.current?.invalidar(status===409?'conflito':'acesso-negado');
   }
-  async function confirmarPreviaEditor(p:PedidoPreviaMicronutrientes,fingerprint:string,signal:AbortSignal):Promise<boolean>{
+  async function confirmarPreviaEditor(p:PedidoOperacaoPrevia,fingerprint:string,signal:AbortSignal):Promise<boolean>{
     if(!plano?.draft||copiaEmAndamentoRef.current||!conferirBasePrevia(p))return false;
     const planoConfirmado=plano.id,coordenadorOriginal=coordenadorEdicaoRef.current;
     const contextoOriginal=contextoEdicao;
@@ -2715,6 +2716,15 @@ export function PlanoAlimentarProfissional({ pacienteId, podeGerenciar, aoAltera
 
                   <BibliotecaReceitasNutricionais
                     pacienteId={pacienteId}
+                    renderizarImpactoReceita={plano.draft?.edicaoEstado==='materializada'?(receita,eventos)=><PreviaReceitaPlano
+                      key={`${pacienteId}:${plano.id}:${plano.draft!.id}:${plano.draft!.rascunhoRevisao}:${contextoEdicao}:${receita.receitaId}:${receita.versao}:${receita.porcoes}:${edicaoEntreAbas.podeEditar}`}
+                      pacienteId={pacienteId} planoId={plano.id} contexto={`${pacienteId}:${plano.id}:${contextoEdicao}`}
+                      receitaNome={receita.receitaNome} refeicaoNome={receita.refeicaoNome} podeEditar={edicaoEntreAbas.podeEditar}
+                      bloqueio={alterado||estadoAutosave!=='salvo'?'Salve e confira as alterações do rascunho antes de simular.':operacao&&operacao!=='confirmando-previa'?'Aguarde a operação atual antes de simular.':undefined}
+                      pedido={{rascunhoIdEsperado:plano.draft!.id,rascunhoRevisaoEsperada:plano.draft!.rascunhoRevisao??0,ativacaoRevisaoEsperada:plano.ativacaoRevisao??0,operacao:{tipo:'inserir_receita',refeicaoChave:receita.refeicaoChave,receitaId:receita.receitaId,receitaVersaoEsperada:receita.versao,porcoesDesejadas:receita.porcoes}}}
+                      conferirBase={()=>conferirBasePrevia({rascunhoIdEsperado:plano.draft!.id,rascunhoRevisaoEsperada:plano.draft!.rascunhoRevisao??0})}
+                      aoConfirmar={confirmarPreviaEditor} aoInvalidar={status=>invalidarBasePrevia(status,{rascunhoIdEsperado:plano.draft!.id,rascunhoRevisaoEsperada:plano.draft!.rascunhoRevisao??0})}
+                      {...eventos}/>:undefined}
                     validarAntesDeSalvar={(chaveRefeicao) => validarMicronutrientesFormulario(formularioAtualRef.current, chaveRefeicao)}
                     refeicoes={() => formulario.refeicoes.map((refeicao) => ({
                       chave: refeicao.chaveCliente,

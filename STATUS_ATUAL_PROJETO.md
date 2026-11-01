@@ -1,12 +1,12 @@
 # OctaClin - Status atual do projeto
 
-**FOOD06 — incremento vigente M04 receitas (backend):**
-[Contrato, evidências e handoff](tasks/food06-api-previa-receitas.md).431focados e
-3.926backend PASS,180SKIPPED; typecheck/build Node22 e R4 delimitada favoráveis.
-Novos3PG aguardam CI; integração da interface de receitas ainda pendente.
-Base anterior c8389ebc passou no CI41338861846, inclusive Backend/Web/Demo/PG/RLS
-e scanners.29,2% administrativos,0/12 encerradas; direitos/G06 BLOCKED.
-Sem merge/deploy/migrations externas. Blocos anteriores abaixo são históricos.
+**FOOD06 — incremento vigente M04 receitas (Web integrada):**
+[Execução/handoff](tasks/food06-interface-previa-receitas.md):48unitários,150browser
+e2retestes visuais/axe/fonte200%/teclado PASS; build/typecheck Node22, R4 delimitada
+e UX B/C com limites registrados. API373c1ddf com Backend/PG/RLS PASS (141/141
+no gate descartável). Novo delta Web aguarda CI próprio.29,2% administrativos,
+0/12 encerradas; referências/direitos/G06 BLOCKED. Sem merge/deploy/migrations
+externas. Blocos anteriores abaixo são históricos.
 
 **Checkpoint histórico FOOD06/M02:** interface de contribuições M02 em validação na #455,
 base992fee05 com CI aprovado. [Progresso](tasks/progresso-food06.md):25% estimados,
