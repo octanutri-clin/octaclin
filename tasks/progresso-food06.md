@@ -9,14 +9,14 @@ esforço, prazo, prontidão assistencial ou critérios integralmente aceitos.
 Não alterar os pesos para aparentar avanço. Evidências e exceções continuam na
 [matriz de aceite](aceite-pos-320-food06.md). Nenhuma melhoria pode ser retirada.
 
-## Checkpoint da interface M02
+## Checkpoint M04 — núcleo factual interno
 
 | Melhoria | Estado | Entregue / falta |
 | --- | --- | --- |
 | M01 cobertura | PARCIAL | Domínio/API/tabela factual; fontes completas e saídas futuras pendentes |
-| M02 contribuições | PARCIAL | Domínio/API/UI paginada, fonte/preparo, ordem global e origem em validação final; PG/CI do delta e integrações receitas/substituições pendentes |
+| M02 contribuições | PARCIAL | Domínio/API/UI, fonte/preparo/ordem/origem com PG PASS no CIa35a22dd; receitas testadas em memória, novas provas PG e troca explícita aplicada pendentes |
 | M03 explicações | PARCIAL | Motivos de cobertura e catálogo; integração clínica/relatórios pendentes |
-| M04 prévias | PENDENTE | Implementação ainda necessária |
+| M04 prévias | PARCIAL | Núcleo factual antes/depois com deltas/limites e cobertura testado; API, fontes autorizadas, CAS/confirmação e UI pendentes |
 | M05 rastreabilidade | PARCIAL | Identificadores do núcleo; direitos e persistência de análise pendentes |
 | M06 tabela | PARCIAL | Tabela/filtros factuais; referências/percentuais pendentes |
 | M07 versões | PENDENTE | Implementação ainda necessária |
@@ -26,11 +26,11 @@ Não alterar os pesos para aparentar avanço. Evidências e exceções continuam
 | M11 sugestões | PENDENTE | Catálogo e restrições confiáveis ainda exigem implementação/contrato |
 | M12 cenários | PENDENTE | Implementação ainda necessária |
 
-**25% estimados;0/12 melhorias integralmente encerradas.** Seis parciais, seis
-pendentes. CI verde de uma API não encerra uma melhoria inteira nem a fase.
+**29,2% estimados;0/12 melhorias integralmente encerradas.** Sete parciais, cinco
+pendentes (100×3,5/12, arredondado a uma casa). CI verde de uma API não encerra uma melhoria inteira nem a fase.
 
-Agora: finalizar gates de fonte/ordem/origem M02; ver [execução](food06-m02-origem-ordenacao.md).
-Depois: completar matriz de receitas/substituição planejada explícita M02; avançar
-então para M04 e integrações
-conforme dependências. Direitos de referências e G06 continuam BLOCKED, sem
-merge/deploy/migrations externas ou disponibilização clínica presumida.
+Agora: validar o núcleo M04 e as novas provas de receitas M02; ver
+[execução](food06-previa-factual-dominio.md). Depois: API de prévia autorizada com
+identidades estáveis, revisão/fingerprint e confirmação CAS, e integração UI.
+A troca factual de estados não é uma aplicação clínica concluída. Direitos e
+G06 continuam BLOCKED; sem merge/deploy/migrations externas ou prontidão presumida.

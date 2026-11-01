@@ -1,3 +1,4 @@
+import { porcionarReceita } from '../../modulos/planos-alimentares/dominio/porcionamento-receita';
 import { ServicoGruposSubstituicoes } from '../../modulos/planos-alimentares/aplicacao/servico-grupos-substituicoes';
 import { FontesGruposSubstituicoes } from '../../modulos/planos-alimentares/aplicacao/fontes-grupos-substituicoes';
 import { GrupoSubstituicoesOrm, FavoritoGrupoSubstituicoesOrm } from '../../modulos/planos-alimentares/infraestrutura/grupo-substituicoes.orm';
@@ -1923,6 +1924,32 @@ descrever('RLS e isolamento multi-tenant integral em Postgres real', () => {
     const selecao = await c.servico.obterSelecaoCalculo(tenantA,c.pacienteId,c.planoId,c.usuario);
     return {selecoes:[{planoId:c.planoId,versaoIdEsperada:c.versaoId,ativacaoRevisaoEsperada:selecao.ativacaoRevisao,identidadesRefeicoes:selecao.refeicoes.map(r=>r.identidadeId)}]};
   }
+
+  it.each(['receita_inteira','por_porcao'] as const)('FOOD06 receita %s materializada em1,5porções mantém fatos e histórico sob RLS',async base=>{
+    const c=await prepararCenarioPa06('food06-receita-'+base);
+    const original={metadados:{schemaVersao:1,baseQuantidades:base,rendimentoPorcoes:4},itens:[{
+      descricao:'Receita sintética',quantidade:base==='receita_inteira'?4:1,unidade:'porção',porcaoGramas:base==='receita_inteira'?500:125,
+      nutrientesPor100g:{energiaKcal:100,proteinasG:10,carboidratosG:20,gordurasG:2},micronutrientesPor100g:{ferroMg:2,calcioMg:0}
+    }]};
+    const antesReceita=JSON.stringify(original),p=porcionarReceita(original,1.5);
+    if(p.estado!=='calculavel')throw new Error('Porcionamento sintético indisponível');
+    Object.assign(c.documento.refeicoes[0],{itens:p.itens.map((item,indice)=>({...item,chaveCliente:'ingrediente-'+indice,substituicoes:[]}))});
+    await publicarCenarioPa06(c);
+    const entrada=await selecaoFactualFood06(c);
+    await comoTenant(tenantA);
+    const antes=await cliente!.query('select * from plano_alimentar_versoes where id=$1',[c.versaoId]);
+    const analise=await c.servico.analisarMicronutrientes(tenantA,c.pacienteId,c.usuario,entrada);
+    expect(analise.calculo.nutrientes.energiaKcal.total).toBe(187.5);
+    expect(analise.cobertura.nutrientes.ferroMg).toMatchObject({estado:'COMPLETO',total:3.75});
+    expect(analise.cobertura.nutrientes.calcioMg).toMatchObject({estado:'COMPLETO',total:0});
+    expect(analise.cobertura.nutrientes.selenioMcg.estado).toBe('DESCONHECIDO');
+    const detalhe=await c.servico.detalharMicronutrientes(tenantA,c.pacienteId,c.usuario,{...entrada,codigo:'ferroMg',pagina:1,limite:25});
+    expect(detalhe.refeicoes[0].itens[0]).toMatchObject({porcaoGramas:'187.500',cobertura:{total:3.75}});
+    await expect(c.servico.detalharMicronutrientes(tenantB,c.pacienteId,{...c.usuario,tenantId:tenantB},{...entrada,codigo:'ferroMg',pagina:1,limite:25})).rejects.toThrow();
+    await comoTenant(tenantA);
+    expect((await cliente!.query('select * from plano_alimentar_versoes where id=$1',[c.versaoId])).rows).toEqual(antes.rows);
+    expect(JSON.stringify(original)).toBe(antesReceita);
+  });
 
   it('FOOD06 detalhe pagina identidades reais sem alterar snapshots sob role runtime/RLS', async () => {
     const c=await prepararCenarioPa06('food06-pagina');

@@ -1,10 +1,11 @@
 # OctaClin - Status atual do projeto
 
-**FOOD06 — incremento M02 vigente:** fonte/preparo, ordenação global e consulta da
-origem publicada na #455 Draft; [execução](tasks/food06-m02-origem-ordenacao.md).
-Base36223bcd CI aprovado, delta com provas próprias em fechamento.25% estimados,
-0/12 melhorias encerradas. Blocos anteriores abaixo são históricos, não PASS
-irrestrito nem autorização de operação/merge.
+**FOOD06 — incremento vigente M04 interno:** comparação factual antes/depois e
+regressões de receitas M02 na #455 Draft; [evidências e limites](tasks/food06-previa-factual-dominio.md).
+Backend/Web/PG/RLS/scanners da basea35a22dd aprovados; Demo ainda em execução na
+retomada. Novo delta tem gates próprios.29,2% estimados (7parciais/5pendentes),
+0/12 encerradas. Sem rota/aplicação M04, direitos e G06 BLOCKED.
+Blocos anteriores abaixo são checkpoints históricos.
 
 **Incremento atual FOOD06:** interface de contribuições M02 em validação na #455,
 base992fee05 com CI aprovado. [Progresso](tasks/progresso-food06.md):25% estimados,

@@ -1,3 +1,4 @@
+import { porcionarReceita } from '../dominio/porcionamento-receita';
 import { criarSnapshotMicronutrientes } from '../dominio/micronutrientes';
 import { ServicoGruposSubstituicoes } from './servico-grupos-substituicoes';
 import { ServiceUnavailableException } from '@nestjs/common';
@@ -361,13 +362,53 @@ describe('ServicoPlanosAlimentares', () => {
   });
 
   describe('PA06c cálculo combinado', () => {
-    async function publicarParaCalculo() {
-      const v = await servico.atualizarRascunho(TENANT_ID,PACIENTE_ID,PLANO_ID,usuarioProfissional(),dadosRascunho());
+    async function publicarParaCalculo(dados = dadosRascunho()) {
+      const v = await servico.atualizarRascunho(TENANT_ID,PACIENTE_ID,PLANO_ID,usuarioProfissional(),dados);
       const versao = repositorios.get(PlanoAlimentarVersaoOrm)!.registros[0];
       versao.publicadaEm = new Date('2026-10-16T12:00:00Z');
       Object.assign(repositorios.get(PlanoAlimentarOrm)!.registros[0], { versaoPublicadaAtualId:VERSAO_ID, ativoParaPaciente:true, ativacaoRevisao:0, ativacaoDefinida:true });
       return { selecoes:[{planoId:PLANO_ID,versaoIdEsperada:VERSAO_ID,ativacaoRevisaoEsperada:0,identidadesRefeicoes:[v.ativacaoRefeicoes[0].identidadeId]}] };
     }
+    it.each(['receita_inteira','por_porcao'] as const)('FOOD06 lê receita %s de1,5porções uma vez e não soma alternativas/preferência',async base=>{
+      const macros={energiaKcal:120,proteinasG:10,carboidratosG:20,gordurasG:4};
+      const original={instrucoes:'Preparo sintético',metadados:{schemaVersao:1,baseQuantidades:base,rendimentoPorcoes:4},itens:[{
+        descricao:'Ingrediente receita',quantidade:base==='receita_inteira'?4:1,unidade:'porção',porcaoGramas:base==='receita_inteira'?500:125,
+        nutrientesPor100g:macros,micronutrientesPor100g:{ferroMg:2,calcioMg:0},substituicoes:[{descricao:'Alternativa não contar',quantidade:1,unidade:'porção',porcaoGramas:100,nutrientesPor100g:macros,micronutrientesPor100g:{ferroMg:900},liberadaParaPaciente:true,preferida:true}]
+      }]};
+      const preservado=JSON.stringify(original),p=porcionarReceita(original,1.5);
+      if(p.estado!=='calculavel')throw new Error('Porcionamento indisponível');
+      expect(p.itens[0].porcaoGramas).toBe(187.5);
+      const dados=dadosRascunho();Object.assign(dados.refeicoes[0],{itens:p.itens});
+      const entrada=await publicarParaCalculo(dados);
+      const antes=JSON.stringify([...repositorios].map(([tipo,repo])=>({tipo:tipo.name,registros:repo.registros})));
+      const r=await servico.analisarMicronutrientes(TENANT_ID,PACIENTE_ID,usuarioProfissional(),entrada);
+      expect(r.calculo.nutrientes.energiaKcal.total).toBe(225);
+      expect(r.cobertura.nutrientes.ferroMg).toMatchObject({estado:'COMPLETO',total:3.75,contagens:{incluidos:1,conhecidos:1}});
+      expect(r.cobertura.nutrientes.calcioMg).toMatchObject({estado:'COMPLETO',total:0});
+      expect(r.cobertura.nutrientes.selenioMcg.estado).toBe('DESCONHECIDO');
+      const d=await servico.detalharMicronutrientes(TENANT_ID,PACIENTE_ID,usuarioProfissional(),{...entrada,codigo:'ferroMg',pagina:1,limite:25});
+      expect(d.refeicoes[0].itens[0]).toMatchObject({porcaoGramas:'187.500',cobertura:{total:3.75}});
+      expect(JSON.stringify([...repositorios].map(([tipo,repo])=>({tipo:tipo.name,registros:repo.registros})))).toBe(antes);
+      expect(JSON.stringify(original)).toBe(preservado);
+    });
+    it('FOOD06 receita de catálogo usa base nutricional autorizada e conserva publicação após mudança de fonte',async()=>{
+      const alimentoId='10000000-0000-4000-8000-000000000061',fonteId='10000000-0000-4000-8000-000000000062';
+      const fonte={id:fonteId,codigo:'usda_fdc_foundation',nome:'Fonte sintética original',versao:'v1',situacao:'ativa',direitoUsoStatus:'aprovado',esquemaVersao:'octaclin-composicao-v1',hashConteudo:'a'.repeat(64)};
+      const alimento={id:alimentoId,fonteId,codigoOrigem:'SINTETICO',nome:'Ingrediente catálogo',preparacao:'Cozido',baseGramas:'10',energiaKcal:'10',proteinasG:'1',carboidratosG:'2',lipidiosG:'0.4',micronutrientes:{metadadosOrigem:{nutrientsOriginal:[{nutrient:{id:1089,unitName:'MG'},amount:2}]}}};
+      repositorios.get(AlimentoComposicaoOrm)!.registros.push(alimento);repositorios.get(FonteComposicaoAlimentoOrm)!.registros.push(fonte);
+      const original={metadados:{schemaVersao:1,baseQuantidades:'receita_inteira',rendimentoPorcoes:4},itens:[{alimentoComposicaoId:alimentoId,quantidade:4,unidade:'porção',porcaoGramas:500}]};
+      const p=porcionarReceita(original,1.5);if(p.estado!=='calculavel')throw new Error('Prévia indisponível');
+      const dados=dadosRascunho();Object.assign(dados.refeicoes[0],{itens:p.itens});
+      const entrada=await publicarParaCalculo(dados);
+      const consultar=()=>servico.detalharMicronutrientes(TENANT_ID,PACIENTE_ID,usuarioProfissional(),{...entrada,codigo:'ferroMg',pagina:1,limite:25});
+      const r=await consultar();expect(r.cobertura).toMatchObject({estado:'COMPLETO',total:37.5});
+      expect(r.refeicoes[0].itens[0].composicao).toMatchObject({preparacao:'Cozido',baseGramas:10,fonte:{versao:'v1'}});
+      fonte.versao='v2';fonte.situacao='inativa';alimento.micronutrientes.metadadosOrigem.nutrientsOriginal[0].amount=999;
+      expect((await consultar()).refeicoes).toEqual(r.refeicoes);
+      await servico.criarNovaVersao(TENANT_ID,PACIENTE_ID,PLANO_ID,usuarioProfissional());
+      await expect(servico.atualizarRascunho(TENANT_ID,PACIENTE_ID,PLANO_ID,usuarioProfissional(),dados)).rejects.toThrow('Fonte do alimento nao esta ativa');
+      expect((await consultar()).refeicoes).toEqual(r.refeicoes);
+    });
     it('projeta somente seleção mínima e calcula sem gravar nem enriquecer legado', async () => {
       const entrada = await publicarParaCalculo();
       const selecao = await servico.obterSelecaoCalculo(TENANT_ID,PACIENTE_ID,PLANO_ID,usuarioProfissional());

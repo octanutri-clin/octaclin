@@ -1,9 +1,9 @@
 # FOOD06 — checklist
 
-> Checkpoint vigente: fonte/preparo congelados, ordenação global e consulta da
-> origem publicada M02 na mesma #455 Draft. [Execução e gates](food06-m02-origem-ordenacao.md).
-> Base36223bcd com22 checks success e SBOM provenance SKIPPED; o delta atual
-> possui provas próprias e não herda PASS de CI.25% estimados,0/12 encerradas.
+> Checkpoint vigente: núcleo interno M04 e regressões de receitas M02, na mesma
+> #455 Draft. [Contrato/evidências/limites](food06-previa-factual-dominio.md).
+> Basea35a22dd com Backend/Web/PG/RLS/scanners PASS; Demo ainda em execução na
+> retomada. Novo delta com gates próprios.29,2% estimados,0/12 encerradas.
 > Direitos/G06 BLOCKED. Checkpoints anteriores abaixo são históricos.
 
 ## Estado vigente
@@ -41,7 +41,9 @@ Fonte de contrato: [plano](plan-pos-320-food06.md), base `68499c15`.
 - [x] M02 factual: fonte/preparo por allowlist, ordenação global e consulta somente leitura da origem exata; provas locais em execução documentada.
 - [ ] M02: conferir PG/CI deste delta e concluir integrações específicas de receitas/substituição planejada explícita.
 - [ ] Onda B: concluir M02 contribuições e M06 com referências elegíveis.
-- [ ] Onda C: M04 prévias, M11 consulta assistida/restrições e M12 cenários.
+- [x] M04-fundamento: núcleo factual antes/depois, diferenças, cobertura e limites; TDD/R4 delimitados, sem rota/aplicação.
+- [ ] M04-integração: API/BFF/fontes autorizadas, revisões/fingerprint, CAS/confirmação e UI.
+- [ ] Onda C completa: M04 prévias, M11 consulta assistida/restrições e M12 cenários.
 - [ ] Onda D: M07 versões, M08 PDF seguro e M10 longitudinal.
 - [ ] UX B/C com interface/artefatos reais e R4 independente integral.
 - [x] Resolver falhas Mobile/PR Gate dos checkpoints históricos na consolidação992fee05.
