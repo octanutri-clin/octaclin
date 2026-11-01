@@ -1,9 +1,13 @@
 import { milesimosReceita } from '../dominio/conteudo-receita';
 import { isUUID, IsInt, IsUUID, Max, Min, Matches, Validate, ValidatorConstraint, ValidatorConstraintInterface } from 'class-validator';
-export interface OperacaoPreviaMicronutrientes {
+export interface OperacaoAlimentoPrevia {
  tipo:'definir_porcao_manual'|'substituir_catalogo';refeicaoChave:string;itemChave:string;
  quantidade:number;unidade:string;porcaoGramas:number;alimentoComposicaoId?:string;
 }
+export interface OperacaoReceitaPrevia {
+ tipo:'inserir_receita';refeicaoChave:string;receitaId:string;receitaVersaoEsperada:number;porcoesDesejadas:number;
+}
+export type OperacaoPreviaMicronutrientes = OperacaoAlimentoPrevia | OperacaoReceitaPrevia;
 export interface EntradaPreviaMicronutrientes {
  rascunhoIdEsperado:string;rascunhoRevisaoEsperada:number;ativacaoRevisaoEsperada:number;operacao:OperacaoPreviaMicronutrientes;
 }
@@ -17,11 +21,18 @@ function objeto(v:unknown,campos:string[],protos:unknown[]=[Object.prototype,nul
 function texto(v:unknown,max:number):v is string {return typeof v==='string'&&v.trim().length>0&&v.length<=max;}
 function revisao(v:unknown):v is number {return Number.isSafeInteger(v)&&(v as number)>=0&&(v as number)<=2147483646;}
 export function validarOperacaoPrevia(valor:unknown):OperacaoPreviaMicronutrientes {
- const v=objeto(valor,['tipo','refeicaoChave','itemChave','quantidade','unidade','porcaoGramas','alimentoComposicaoId']);
+ const v=objeto(valor,['tipo','refeicaoChave','itemChave','quantidade','unidade','porcaoGramas','alimentoComposicaoId','receitaId','receitaVersaoEsperada','porcoesDesejadas']);
+ if(v.tipo==='inserir_receita'){
+  objeto(v,['tipo','refeicaoChave','receitaId','receitaVersaoEsperada','porcoesDesejadas']);
+  if(!texto(v.refeicaoChave,180)||!isUUID(v.receitaId as string)||!revisao(v.receitaVersaoEsperada)||v.receitaVersaoEsperada<1)return falhar();
+  milesimosReceita(v.porcoesDesejadas,1000);
+  return {tipo:v.tipo,refeicaoChave:v.refeicaoChave,receitaId:v.receitaId as string,receitaVersaoEsperada:v.receitaVersaoEsperada,porcoesDesejadas:v.porcoesDesejadas as number};
+ }
+ objeto(v,['tipo','refeicaoChave','itemChave','quantidade','unidade','porcaoGramas','alimentoComposicaoId']);
  if((typeof v.tipo!=='string'||!['definir_porcao_manual','substituir_catalogo'].includes(v.tipo))||!texto(v.refeicaoChave,180)||!texto(v.itemChave,180)||!texto(v.unidade,40))return falhar();
  milesimosReceita(v.quantidade);milesimosReceita(v.porcaoGramas);
  if(v.tipo==='substituir_catalogo'?!isUUID(v.alimentoComposicaoId as string):Object.hasOwn(v,'alimentoComposicaoId'))return falhar();
- return {tipo:v.tipo as OperacaoPreviaMicronutrientes['tipo'],refeicaoChave:v.refeicaoChave,itemChave:v.itemChave,quantidade:v.quantidade as number,unidade:v.unidade,porcaoGramas:v.porcaoGramas as number,...(v.tipo==='substituir_catalogo'?{alimentoComposicaoId:v.alimentoComposicaoId as string}:{})};
+ return {tipo:v.tipo as OperacaoAlimentoPrevia['tipo'],refeicaoChave:v.refeicaoChave,itemChave:v.itemChave,quantidade:v.quantidade as number,unidade:v.unidade,porcaoGramas:v.porcaoGramas as number,...(v.tipo==='substituir_catalogo'?{alimentoComposicaoId:v.alimentoComposicaoId as string}:{})};
 }
 export function validarPreviaMicronutrientes(valor:unknown,confirmar=false):EntradaPreviaMicronutrientes|EntradaConfirmacaoPrevia {
  const v=objeto(valor,['rascunhoIdEsperado','rascunhoRevisaoEsperada','ativacaoRevisaoEsperada','operacao',...(confirmar?['fingerprintEsperado']:[])],[Object.prototype,null,PreviaMicronutrientesDto.prototype,ConfirmarPreviaMicronutrientesDto.prototype]);

@@ -2,6 +2,11 @@
 
 ## Checkpoint
 
+Evidência posterior consultada: commit remoto c8389ebc/árvore local9111b625
+com CI41338861846 aprovado, incluindo Backend/Web/Demo/PG/RLS e scanners.
+A [extensão para receitas](food06-api-previa-receitas.md) tem gates próprios.
+
+
 PR455 Draft. Base remota a657e696/local54030c56 com árvore idêntica; commits
 irmãos preservados após publicação por conector. CI41312592535 da base terminou
 Backend/Web/Mobile/Demo/PRGate PASS; scanners e pesquisa PASS. Prova PG dedicada

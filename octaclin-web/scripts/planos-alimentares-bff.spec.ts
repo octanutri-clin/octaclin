@@ -1534,3 +1534,16 @@ for (const [nome,rota,sufixo] of [['prévia',previaMicros,''],['confirmação',c
   }finally{restaurarFetch(original);__clearCookies();}
  });
 }
+
+for (const [nome,rota] of [['prévia',previaMicros],['confirmação',confirmarMicros]] as const) {
+ test(`FOOD06 receita ${nome}: encaminha o comando e mantém conflito sem retry`,async()=>{
+  __setCookies(cookiesSessaoValida(['planos_alimentares.gerenciar']));
+  const original=global.fetch;let chamadas=0;
+  const comando={rascunhoIdEsperado:'10000000-0000-4000-8000-000000000001',rascunhoRevisaoEsperada:3,ativacaoRevisaoEsperada:1,operacao:{tipo:'inserir_receita',refeicaoChave:'refeicao',receitaId:'10000000-0000-4000-8000-000000000002',receitaVersaoEsperada:4,porcoesDesejadas:1.5},...(nome==='confirmação'?{fingerprintEsperado:'a'.repeat(64)}:{})};
+  global.fetch=(async(_input,init)=>{chamadas++;assert.deepEqual(JSON.parse(String(init?.body)),comando);assert.equal(init?.cache,'no-store');return Response.json({mensagem:'A receita mudou.'},{status:409});}) as typeof global.fetch;
+  try{
+   const r=await rota(new Request('http://localhost/api/previa',{method:'POST',body:JSON.stringify(comando)}),{params:Promise.resolve({id:'paciente',planoId:'plano'})});
+   assert.equal(r.status,409);assert.equal(chamadas,1);assert.match(r.headers.get('Cache-Control')??'',/no-store/);
+  }finally{restaurarFetch(original);__clearCookies();}
+ });
+}

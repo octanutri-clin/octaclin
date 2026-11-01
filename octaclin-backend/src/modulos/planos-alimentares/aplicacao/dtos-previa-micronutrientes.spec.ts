@@ -9,6 +9,15 @@ describe('FOOD06 M04 contrato estrito da prévia',()=>{
   const c=comando();Object.assign(c.operacao,{tipo:'substituir_catalogo',alimentoComposicaoId:uuid});
   expect(validarPreviaMicronutrientes(c)).toEqual(c);
  });
+ it('aceita receita por identidade/versão e porções, sem ingredientes enviados pelo cliente',()=>{
+  const c={...comando(),operacao:{tipo:'inserir_receita',refeicaoChave:'refeicao',receitaId:uuid,receitaVersaoEsperada:2,porcoesDesejadas:1.5}};
+  expect(validarPreviaMicronutrientes(c)).toEqual(c);
+  expect(validateSync(plainToInstance(PreviaMicronutrientesDto,c),{whitelist:true,forbidNonWhitelisted:true})).toHaveLength(0);
+ });
+ it.each([{itemChave:'item'},{quantidade:1},{porcaoGramas:100},{itens:[]},{receitaId:'invalido'},{receitaVersaoEsperada:0},{receitaVersaoEsperada:1.5},{porcoesDesejadas:0},{porcoesDesejadas:1000.001},{porcoesDesejadas:'1'},{porcoesDesejadas:1.0001}])('receita rejeita composição/parâmetros indevidos %#',extra=>{
+  const c={...comando(),operacao:{tipo:'inserir_receita',refeicaoChave:'refeicao',receitaId:uuid,receitaVersaoEsperada:2,porcoesDesejadas:1.5,...extra}};
+  expect(()=>validarPreviaMicronutrientes(c)).toThrow();
+ });
  it.each([null,[],{},42,'prévia'])('recusa envelope %j',v=>expect(()=>validarPreviaMicronutrientes(v)).toThrow());
  it.each([{tenantId:uuid},{pacienteId:uuid},{totais:{}},{fingerprintEsperado:'a'.repeat(64)},{documento:{}},{__proto__:null,inventado:1}])('recusa campos adicionais %#',extra=>expect(()=>validarPreviaMicronutrientes({...comando(),...extra})).toThrow());
  it.each([0,-1,10000.001,Infinity,NaN,'1',null,0.0001,1.00001])('recusa quantidade/peso inválido %p',valor=>{

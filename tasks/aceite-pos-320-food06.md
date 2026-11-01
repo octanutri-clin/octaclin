@@ -1,6 +1,10 @@
 # FOOD06 — matriz obrigatória de aceite
 
-> Checkpoint vigente — M04 editor: [execução e handoff](food06-interface-previa.md).
+> Checkpoint vigente — M04 receitas, backend em validação: [contrato/handoff](food06-api-previa-receitas.md).
+> CI anterior c8389ebc aprovado;431focados/3.926backend PASS,180SKIPPED. Novos3PG aguardam CI.
+> Interface de receitas ainda pendente; M04 parcial,29,2%,0/12. Direitos/G06 BLOCKED.
+
+> Checkpoint histórico — M04 editor: [execução e handoff](food06-interface-previa.md).
 > API/PG da base a657e696 aprovados;50browser/47unitários/build Node22 PASS no editor.
 > PA07 legado62/62 PASS; CI do novo delta pendente. M04 parcial,29,2%,0/12.
 
@@ -33,7 +37,7 @@ Fontes: [especificação](especificacao-pos-320-food06-melhorias.md),
 | M02-C3 | Ordenação/expansão/atalho autorizado | Testes componente/Playwright, leitura/editável e acesso negado ao destino | PASS delimitado ao incrementoa35a22dd: expansão, paginação, ordem global e consulta somente leitura;35Web/76BFF/38browser finais e PG/RLS no CI. Não encerra M02-C1/C2 |
 | M03-C1 | Motivos clínicos/técnicos/contratuais estruturados, backend autoritativo | Contratos negativos por motivo, texto seguro e ação válida quando existir | PARCIAL A1: 11 motivos com texto/ação; causas de cobertura e serviço pendentes |
 | M03-C2 | Tabela/detalhes/relatório concordam, sem dados nos logs | Canários sintéticos em logs/erros/projeções e mesma revisão | PENDENTE |
-| M04-C1 | Prévia antes/depois, percentuais válidos, cobertura/eligibilidade | Troca alimento/porção/preparo/receita; principal e alternativa não somados; zero no denominador sem percentual | PARCIAL: núcleo19casos e API inicial autorizada de porção manual/troca catálogo; DTO39/serviço/rotas200focados e BFF80; receita/preparo ainda pendentes; UI inicial47unitários/50browser/build Node22 PASS; [API](food06-api-previa-micronutrientes.md) e [UI](food06-interface-previa.md) |
+| M04-C1 | Prévia antes/depois, percentuais válidos, cobertura/eligibilidade | Troca alimento/porção/preparo/receita; principal e alternativa não somados; zero no denominador sem percentual | PARCIAL: núcleo19casos e API inicial autorizada de porção manual/troca catálogo; DTO39/serviço/rotas200focados e BFF80; API de receita em validação com431focados/82BFF/3.926backend PASS (180SKIPPED),3PG novos pendentes; interface de receitas e preparo ainda pendentes; UI inicial47unitários/50browser/build Node22 PASS; [API](food06-api-previa-micronutrientes.md) e [UI](food06-interface-previa.md) |
 | M04-C2 | Sem gravação; confirmação CAS e rollback | PostgreSQL descartável: revisão stale, duas abas/PA07, perda de acesso, idempotência/replay, falha intermediária | PARCIAL: locks/revisões/fingerprint, reautorização e CAS com rejeição de replay implementados;5provas PG novas PASS no CI a657e696 (suíte dedicada138PASS/0skip); UI/ACK/autosave60s e barreira PA07 com RED/GREEN desktop/mobile PASS; regressão legada PA07/FOOD01–04 com62/62 PASS; CI do delta pendente |
 | M05-C1 | Fonte/autoridade/documento/versão/ID/unidade/população/regras | Registro server-side imutável e manifesto com direitos/atribuição | PARCIAL: IDs de referência no núcleo; direitos BLOCKED |
 | M05-C2 | Reproduzir análise original sem atualização silenciosa | Atualização de tabela, mesma análise anterior, nova análise versionada, snapshots cifrados | PENDENTE persistência |

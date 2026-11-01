@@ -1,6 +1,10 @@
 # FOOD06 — checklist
 
-> Checkpoint vigente — M04 editor: [execução e handoff](food06-interface-previa.md).
+> Checkpoint vigente — M04 receitas, backend em validação: [contrato/handoff](food06-api-previa-receitas.md).
+> CI anterior c8389ebc aprovado;431focados/3.926backend PASS,180SKIPPED. Novos3PG aguardam CI.
+> Interface de receitas ainda pendente; M04 parcial,29,2%,0/12. Direitos/G06 BLOCKED.
+
+> Checkpoint histórico — M04 editor: [execução e handoff](food06-interface-previa.md).
 > API/PG da base a657e696 aprovados;50browser/47unitários/build Node22 PASS no editor.
 > PA07 legado62/62 PASS; CI do novo delta pendente. M04 parcial,29,2%,0/12.
 

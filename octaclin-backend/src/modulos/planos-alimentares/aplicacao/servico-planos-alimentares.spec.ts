@@ -1,3 +1,4 @@
+import { ReceitaNutricionalOrm } from '../infraestrutura/receita-nutricional.orm';
 import { porcionarReceita } from '../dominio/porcionamento-receita';
 import { criarSnapshotMicronutrientes } from '../dominio/micronutrientes';
 import { ServicoGruposSubstituicoes } from './servico-grupos-substituicoes';
@@ -368,6 +369,72 @@ describe('ServicoPlanosAlimentares', () => {
       await servico.salvarEdicaoRascunho(TENANT_ID,PACIENTE_ID,PLANO_ID,usuarioProfissional(),{rascunhoIdEsperado:VERSAO_ID,rascunhoRevisaoEsperada:0,documento});
       return {rascunhoIdEsperado:VERSAO_ID,rascunhoRevisaoEsperada:1,ativacaoRevisaoEsperada:0,operacao:{tipo:'definir_porcao_manual',refeicaoChave:'refeicao',itemChave:'item',quantidade:1.5,unidade:'porção',porcaoGramas:150}};
     }
+    async function prepararReceita() {
+      const base=await preparar();
+      const receitaId='50000000-0000-4000-8000-000000000051';
+      const conteudo={metadados:{schemaVersao:1,baseQuantidades:'receita_inteira',rendimentoPorcoes:3},instrucoes:'Preparação sintética original',itens:[{descricao:'Ingrediente da receita',quantidade:3,unidade:'porção',porcaoGramas:300,nutrientesPor100g:{energiaKcal:100,proteinasG:10,carboidratosG:20,gordurasG:2},micronutrientesPor100g:{ferroMg:2},substituicoes:[{descricao:'Alternativa da receita',quantidade:3,unidade:'porção',porcaoGramas:300,nutrientesPor100g:{energiaKcal:900,proteinasG:10,carboidratosG:20,gordurasG:2},liberadaParaPaciente:true,preferida:true}]}]};
+      const receita={id:receitaId,tenantId:TENANT_ID,profissionalId:PROFISSIONAL_ID,origem:'pessoal',tipo:'receita',versaoAtual:1,nomeCriptografado:criptografia.criptografar('Receita sintética'),conteudoCriptografado:criptografia.criptografar(JSON.stringify(conteudo)),etiquetasHashes:[]};
+      repositorios.set(ReceitaNutricionalOrm,criarRepositorio([receita]));
+      return {receita,conteudo,comando:{...base,operacao:{tipo:'inserir_receita',refeicaoChave:'refeicao',receitaId,receitaVersaoEsperada:1,porcoesDesejadas:1.5}}};
+    }
+    it('receita M04 usa porcionamento original uma vez, sem gravação nem soma de alternativas',async()=>{
+      const c=await prepararReceita(),antes=estado();
+      const p=await servico.preverMicronutrientes(TENANT_ID,PACIENTE_ID,PLANO_ID,usuarioProfissional(),c.comando);
+      expect(p.comparacao.antes.calculo.nutrientes.energiaKcal.total).toBe(100);
+      expect(p.comparacao.depois.calculo.nutrientes.energiaKcal.total).toBe(250);
+      expect(p.comparacao.depois.cobertura.nutrientes.ferroMg.total).toBe(5);
+      expect(p.comparacao.depois.cobertura.nutrientes.selenioMcg.estado).toBe('DESCONHECIDO');
+      expect(estado()).toBe(antes);
+      expect((await servico.preverMicronutrientes(TENANT_ID,PACIENTE_ID,PLANO_ID,usuarioProfissional(),c.comando)).fingerprint).toBe(p.fingerprint);
+      const salvo=await servico.confirmarPreviaMicronutrientes(TENANT_ID,PACIENTE_ID,PLANO_ID,usuarioProfissional(),{...c.comando,fingerprintEsperado:p.fingerprint});
+      expect(salvo.rascunhoRevisao).toBe(2);expect(salvo.refeicoes[0].itens).toHaveLength(2);
+      expect(salvo.documentoEdicao!.refeicoes[0].itens[1]).toMatchObject({porcaoGramas:150,quantidade:1.5,substituicoes:[{liberadaParaPaciente:false,preferida:false}]});
+      expect(salvo.documentoEdicao!.refeicoes[0].itens[1].chaveCliente).not.toBe('item');
+      expect(JSON.parse(criptografia.descriptografar(c.receita.conteudoCriptografado))).toEqual(c.conteudo);
+      const final=estado();await expect(servico.confirmarPreviaMicronutrientes(TENANT_ID,PACIENTE_ID,PLANO_ID,usuarioProfissional(),{...c.comando,fingerprintEsperado:p.fingerprint})).rejects.toBeInstanceOf(ConflictException);expect(estado()).toBe(final);
+    });
+    it('receita M04 fixa versão e reautoriza origem pessoal na confirmação',async()=>{
+      const c=await prepararReceita(),p=await servico.preverMicronutrientes(TENANT_ID,PACIENTE_ID,PLANO_ID,usuarioProfissional(),c.comando);
+      c.receita.versaoAtual=2;const antes=estado();
+      await expect(servico.confirmarPreviaMicronutrientes(TENANT_ID,PACIENTE_ID,PLANO_ID,usuarioProfissional(),{...c.comando,fingerprintEsperado:p.fingerprint})).rejects.toBeInstanceOf(ConflictException);expect(estado()).toBe(antes);
+      c.receita.versaoAtual=1;c.receita.profissionalId='outro-profissional';
+      await expect(servico.preverMicronutrientes(TENANT_ID,PACIENTE_ID,PLANO_ID,usuarioProfissional(),c.comando)).rejects.toBeInstanceOf(NotFoundException);
+    });
+    it('receita M04 não infere base legada, rejeita destino inexistente e confirmação adulterada',async()=>{
+      const c=await prepararReceita();
+      await expect(servico.preverMicronutrientes(TENANT_ID,PACIENTE_ID,PLANO_ID,usuarioProfissional(),{...c.comando,operacao:{...c.comando.operacao,refeicaoChave:'alheia'}})).rejects.toBeInstanceOf(ConflictException);
+      const p=await servico.preverMicronutrientes(TENANT_ID,PACIENTE_ID,PLANO_ID,usuarioProfissional(),c.comando),antes=estado();
+      await expect(servico.confirmarPreviaMicronutrientes(TENANT_ID,PACIENTE_ID,PLANO_ID,usuarioProfissional(),{...c.comando,operacao:{...c.comando.operacao,porcoesDesejadas:2.5},fingerprintEsperado:p.fingerprint})).rejects.toBeInstanceOf(ConflictException);expect(estado()).toBe(antes);
+      c.receita.conteudoCriptografado=criptografia.criptografar(JSON.stringify({itens:c.conteudo.itens}));
+      await expect(servico.preverMicronutrientes(TENANT_ID,PACIENTE_ID,PLANO_ID,usuarioProfissional(),c.comando)).rejects.toThrow('porções');
+    });
+    it.each([[1,200,4],[1.5,250,5],[2.5,350,7]])('receita M04 %s porções usa a receita original, não uma prévia arredondada',async(porcoes,energia,ferro)=>{
+      const c=await prepararReceita();
+      for(const n of [1.333,porcoes]){
+        const p=await servico.preverMicronutrientes(TENANT_ID,PACIENTE_ID,PLANO_ID,usuarioProfissional(),{...c.comando,operacao:{...c.comando.operacao,porcoesDesejadas:n}});
+        if(n===porcoes){expect(p.comparacao.depois.calculo.nutrientes.energiaKcal.total).toBe(energia);expect(p.comparacao.depois.cobertura.nutrientes.ferroMg.total).toBe(ferro);}
+      }
+    });
+    it('receita M04 bases equivalentes dão os mesmos fatos e mudanças de composição invalidam a prévia',async()=>{
+      const c=await prepararReceita(),p=await servico.preverMicronutrientes(TENANT_ID,PACIENTE_ID,PLANO_ID,usuarioProfissional(),c.comando);
+      const conteudo={...c.conteudo,metadados:{...c.conteudo.metadados,baseQuantidades:'por_porcao'},itens:c.conteudo.itens.map(i=>({...i,quantidade:1,porcaoGramas:100,substituicoes:i.substituicoes.map(a=>({...a,quantidade:1,porcaoGramas:100}))}))};
+      c.receita.conteudoCriptografado=criptografia.criptografar(JSON.stringify(conteudo));
+      const igual=await servico.preverMicronutrientes(TENANT_ID,PACIENTE_ID,PLANO_ID,usuarioProfissional(),c.comando);
+      expect(igual.comparacao).toEqual(p.comparacao);
+      const item=conteudo.itens[0];item.nutrientesPor100g.energiaKcal=200;
+      c.receita.conteudoCriptografado=criptografia.criptografar(JSON.stringify(conteudo));
+      const antes=estado();await expect(servico.confirmarPreviaMicronutrientes(TENANT_ID,PACIENTE_ID,PLANO_ID,usuarioProfissional(),{...c.comando,fingerprintEsperado:igual.fingerprint})).rejects.toBeInstanceOf(ConflictException);expect(estado()).toBe(antes);
+    });
+    it('receita M04 compartilhada exige tenant e estado ativo e respeita limites de expansão',async()=>{
+      const c=await prepararReceita();
+      c.receita.origem='clinica';c.receita.profissionalId='outro-profissional';
+      await expect(servico.preverMicronutrientes(TENANT_ID,PACIENTE_ID,PLANO_ID,usuarioProfissional(),c.comando)).resolves.toHaveProperty('fingerprint');
+      c.receita.tenantId='outro-tenant';await expect(servico.preverMicronutrientes(TENANT_ID,PACIENTE_ID,PLANO_ID,usuarioProfissional(),c.comando)).rejects.toBeInstanceOf(NotFoundException);
+      c.receita.tenantId=TENANT_ID;Object.assign(c.receita,{arquivadoEm:new Date()});
+      await expect(servico.preverMicronutrientes(TENANT_ID,PACIENTE_ID,PLANO_ID,usuarioProfissional(),c.comando)).rejects.toBeInstanceOf(NotFoundException);
+      Object.assign(c.receita,{arquivadoEm:null,conteudoCriptografado:criptografia.criptografar(JSON.stringify({...c.conteudo,itens:Array.from({length:100},()=>c.conteudo.itens[0])}))});
+      const antes=estado();await expect(servico.preverMicronutrientes(TENANT_ID,PACIENTE_ID,PLANO_ID,usuarioProfissional(),c.comando)).rejects.toThrow('limites');expect(estado()).toBe(antes);
+    });
     const estado=()=>JSON.stringify([...repositorios].map(([tipo,repo])=>({tipo:tipo.name,registros:repo.registros})));
     it('prévia não grava, calcula uma vez, não devolve texto/cifra e tem fingerprint estável',async()=>{
       const entrada=await preparar(),antes=estado();
