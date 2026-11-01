@@ -2,6 +2,15 @@
 
 ## Estado e escopo
 
+Checkpoint posterior: remoto4c1e2317/local3efe6588. CI41349977153 FAIL Backend e
+PR Gate; Web/Demo/Mobile/scanners PASS. Os3novos casos de banco falharam no setup:
+EntityMetadataNotFoundError para ReceitaNutricionalOrm, ausente apenas na lista
+explícita de entidades do DataSource runtime do teste (o runtime do produto já a
+registra). Corrigido o registro do harness, sem alterar schema/permissões ou os
+asserts. Reexecução real desses casos continua pendente; erro de setup não é RED
+funcional nem prova de vulnerabilidade do produto. Nenhum PASS de banco presumido.
+
+
 Incremento R4 da mesma PR455 Draft. Base publicada c8389ebc (árvore local
 9111b625) com CI41338861846 COMPLETED/SUCCESS: Backend, Web, Mobile, Demo,
 PR Gate, pesquisa e scanners aprovados, consultados nesta retomada. Isso não

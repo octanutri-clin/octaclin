@@ -1,3 +1,4 @@
+import { ReceitaNutricionalOrm } from '../../modulos/planos-alimentares/infraestrutura/receita-nutricional.orm';
 import { ServicoReceitasNutricionais } from '../../modulos/planos-alimentares/aplicacao/servico-receitas-nutricionais';
 import { porcionarReceita } from '../../modulos/planos-alimentares/dominio/porcionamento-receita';
 import { ServicoGruposSubstituicoes } from '../../modulos/planos-alimentares/aplicacao/servico-grupos-substituicoes';
@@ -240,6 +241,7 @@ descrever('RLS e isolamento multi-tenant integral em Postgres real', () => {
       synchronize: false,
       logging: false,
       entities: [
+        ReceitaNutricionalOrm,
         PerfilCadastroPacienteOrm,
         PacienteOrm,
         AvaliacaoAntropometricaOrm,
