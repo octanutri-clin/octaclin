@@ -1,6 +1,11 @@
 # FOOD06 — matriz obrigatória de aceite
 
-> Checkpoint vigente: M04 API factual de prévia/confirmação de porção manual e
+> Checkpoint vigente — M04 editor: [execução e handoff](food06-interface-previa.md).
+> API/PG da base a657e696 aprovados;50browser/47unitários/build Node22 PASS no editor.
+> PA07 legado62/62 PASS; CI do novo delta pendente. M04 parcial,29,2%,0/12.
+
+
+> Checkpoint histórico substituído: M04 API factual de prévia/confirmação de porção manual e
 > troca de catálogo, na mesma #455 Draft. [Contrato/evidências/limites](food06-api-previa-micronutrientes.md).
 > Base53835d72: Backend/Web/PG/RLS/scanners PASS; CI global FAIL em Demo/microcopy,
 > reproduzido e corrigido no marcador sintético do teste. Novo delta tem gates próprios.
@@ -24,12 +29,12 @@ Fontes: [especificação](especificacao-pos-320-food06-melhorias.md),
 | M01-C2 | Completo/parcial/desconhecido/incompatível/indisponível com motivos/fontes | Mistura de unidade/forma/schema/fonte/erro; soma apenas compatíveis; nenhuma confiança científica percentual | PARCIAL A1: cinco estados/causas/contagens; resolução autorizada de fontes pendente |
 | M01-C3 | Subtotal parcial explícito, sem percentual de referência; mesmos dados nas saídas | Backend/BFF/tabela/exportação e fonte legada; total desconhecido não vira zero | PARCIAL: serviço/BFF/RLS em80763589 e tabela factual testada; fontes/saídas futuras e CI próprio pendentes |
 | M02-C1 | Total→refeição→alimento, quantidade/preparo/fonte e cobertura | Soma hierárquica reconcilia com PA06, receita1,5porções, conhecido zero/ausente | PARCIAL: decomposição interna reconciliada com PA06 e porções congeladas; API paginada/IDs persistentes/quantidades implementados com PG PASS no CI992fee05; UI35Web/38browser, fonte/preparo/origem e PG no CIa35a22dd; três regressões de receitas em memória PASS, duas provas PG PASS no Backend do CI53835d72 (global FAIL microcopy); [execução](food06-contribuicoes-dominio.md) |
-| M02-C2 | Denominador completo/positivo, sem dupla contagem | Alternativa escolhida exclui principal; disponíveis não contam; alimento repetido em refeições legítimas conta ambas | PARCIAL: denominador e repetições/disponíveis testados no domínio; troca explícita entre estados demonstrada no núcleo M04; confirmação/API integrada pendentes |
+| M02-C2 | Denominador completo/positivo, sem dupla contagem | Alternativa escolhida exclui principal; disponíveis não contam; alimento repetido em refeições legítimas conta ambas | PARCIAL: denominador e repetições/disponíveis testados no domínio; troca explícita entre estados demonstrada no núcleo M04; confirmação/API integrada inicial de porção/troca catálogo com PG no CI a657e696 e UI M04; demais operações ainda pendentes |
 | M02-C3 | Ordenação/expansão/atalho autorizado | Testes componente/Playwright, leitura/editável e acesso negado ao destino | PASS delimitado ao incrementoa35a22dd: expansão, paginação, ordem global e consulta somente leitura;35Web/76BFF/38browser finais e PG/RLS no CI. Não encerra M02-C1/C2 |
 | M03-C1 | Motivos clínicos/técnicos/contratuais estruturados, backend autoritativo | Contratos negativos por motivo, texto seguro e ação válida quando existir | PARCIAL A1: 11 motivos com texto/ação; causas de cobertura e serviço pendentes |
 | M03-C2 | Tabela/detalhes/relatório concordam, sem dados nos logs | Canários sintéticos em logs/erros/projeções e mesma revisão | PENDENTE |
-| M04-C1 | Prévia antes/depois, percentuais válidos, cobertura/eligibilidade | Troca alimento/porção/preparo/receita; principal e alternativa não somados; zero no denominador sem percentual | PARCIAL: núcleo19casos e API inicial autorizada de porção manual/troca catálogo; DTO39/serviço/rotas200focados e BFF80; receita/preparo e UI ainda pendentes; [evidências](food06-api-previa-micronutrientes.md) |
-| M04-C2 | Sem gravação; confirmação CAS e rollback | PostgreSQL descartável: revisão stale, duas abas/PA07, perda de acesso, idempotência/replay, falha intermediária | PARCIAL: locks/revisões/fingerprint, reautorização e CAS com rejeição de replay implementados;5provas PG novas pendentes CI, UI/PA07/ACK/autosave ainda não integrados |
+| M04-C1 | Prévia antes/depois, percentuais válidos, cobertura/eligibilidade | Troca alimento/porção/preparo/receita; principal e alternativa não somados; zero no denominador sem percentual | PARCIAL: núcleo19casos e API inicial autorizada de porção manual/troca catálogo; DTO39/serviço/rotas200focados e BFF80; receita/preparo ainda pendentes; UI inicial47unitários/50browser/build Node22 PASS; [API](food06-api-previa-micronutrientes.md) e [UI](food06-interface-previa.md) |
+| M04-C2 | Sem gravação; confirmação CAS e rollback | PostgreSQL descartável: revisão stale, duas abas/PA07, perda de acesso, idempotência/replay, falha intermediária | PARCIAL: locks/revisões/fingerprint, reautorização e CAS com rejeição de replay implementados;5provas PG novas PASS no CI a657e696 (suíte dedicada138PASS/0skip); UI/ACK/autosave60s e barreira PA07 com RED/GREEN desktop/mobile PASS; regressão legada PA07/FOOD01–04 com62/62 PASS; CI do delta pendente |
 | M05-C1 | Fonte/autoridade/documento/versão/ID/unidade/população/regras | Registro server-side imutável e manifesto com direitos/atribuição | PARCIAL: IDs de referência no núcleo; direitos BLOCKED |
 | M05-C2 | Reproduzir análise original sem atualização silenciosa | Atualização de tabela, mesma análise anterior, nova análise versionada, snapshots cifrados | PENDENTE persistência |
 | M06-C1 | Colunas, todos filtros aprovados e ordenação determinística | Tabela de verdade abaixo/acima/igual, completo/parcial, ausência/UL incompatível; decisão antes do arredondamento | PARCIAL: filtros factuais e ordem implementados; referências/percentuais pendentes |
@@ -60,7 +65,7 @@ Fontes: [especificação](especificacao-pos-320-food06-melhorias.md),
 - CI `eeb552fa`: 20 success, Mobile Expo e PR Gate FAIL; SBOM provenance SKIPPED.
   CI `0ec4cd31`: na consulta seguinte, Mobile FAIL e Web em execução. Não atribuir PASS global. Falha não
   autoriza mudar severidade, exceção ou dependências em FOOD06 por conveniência.
-- Checkpoint histórico da auditoria inicial: PostgreSQL/RLS, exportação, BFF e UI não executados naquele instante. As provas posteriores são delimitadas nas linhas e relatórios; novos5PG M04 pendentes CI, PDF ainda NOT RUN.
+- Checkpoint histórico da auditoria inicial: PostgreSQL/RLS, exportação, BFF e UI não executados naquele instante. As provas posteriores são delimitadas nas linhas e relatórios; novos5PG M04 PASS no CI a657e696; novo delta UI tem gates próprios, PDF ainda NOT RUN.
 - UX A: avaliações por instâncias separadas; sugestões são hipóteses, não testes
   reais ou nova autorização clínica. UX B/C e R4 integral: PENDENTES.
 - G06 externo BLOCKED, FOOD05-MDL fora do escopo, sem merge/deploy/migration externa.
