@@ -1,3 +1,4 @@
+import { projetarOrigemContribuicao } from './projecao-origem-contribuicao';
 import { validarContribuicoes } from './dtos-contribuicoes-micronutrientes';
 import { decomporContribuicoesDieteticas } from '../dominio/contribuicoes-dieteticas';
 import { analisarCoberturaDietetica } from '../dominio/cobertura-dietetica';
@@ -179,18 +180,20 @@ export class ServicoPlanosAlimentares {
     try { entrada = validarContribuicoes(dados); }
     catch { throw new BadRequestException('Detalhamento de micronutrientes inválido.'); }
     return this.executarCalculoCombinado(tenantId, pacienteId, usuario, {selecoes:entrada.selecoes}, (planos, detalhes) => {
-      const d = decomporContribuicoesDieteticas(planos, entrada.codigo, {inicio:(entrada.pagina-1)*entrada.limite,limite:entrada.limite});
+      const d = decomporContribuicoesDieteticas(planos, entrada.codigo, {inicio:(entrada.pagina-1)*entrada.limite,limite:entrada.limite,ordem:entrada.ordem});
       return { schemaVersao:1 as const, motorVersao:'food06-contribuicoes-v1' as const,
-        codigo:entrada.codigo, pagina:entrada.pagina, limite:entrada.limite, total:d.cobertura.contagens.incluidos,
+        codigo:entrada.codigo, pagina:entrada.pagina, limite:entrada.limite, ordem:entrada.ordem??'plano', total:d.cobertura.contagens.incluidos,
         cobertura:d.cobertura, comparacoes:{estado:'indisponivel',motivo:'referencias_nao_habilitadas'},
         refeicoes:d.refeicoes.map(r => {
           const meta = detalhes.get(r.planoId + ':' + r.identidadeRefeicao)!;
-          return {planoId:r.planoId,identidadeRefeicao:r.identidadeRefeicao,
+          return {planoId:r.planoId,identidadeRefeicao:r.identidadeRefeicao,refeicaoId:meta.refeicaoId,versaoNumero:meta.versaoNumero,
             nome:this.criptografia.descriptografar(meta.nome), cobertura:r.cobertura,
             ...(r.participacaoSelecaoPercentual !== undefined ? {participacaoSelecaoPercentual:r.participacaoSelecaoPercentual} : {}),
             itens:r.itens.map(i => {
               const item = meta.itens[i.indiceItem];
-              return {itemId:item.id, descricao:this.criptografia.descriptografar(item.descricaoCriptografada),
+              const snapshot=planos.find(p=>p.planoId===r.planoId)?.refeicoes.find(m=>m.identidadeId===r.identidadeRefeicao)?.itens[i.indiceItem];
+              return {itemId:item.id, composicao:projetarOrigemContribuicao(snapshot),
+                ...(i.posicaoSelecao!==undefined?{posicaoSelecao:i.posicaoSelecao}:{}), descricao:this.criptografia.descriptografar(item.descricaoCriptografada),
                 quantidade:item.quantidade,unidade:item.unidade,porcaoGramas:item.porcaoGramas,
                 cobertura:i.cobertura,
                 ...(i.participacaoSelecaoPercentual !== undefined ? {participacaoSelecaoPercentual:i.participacaoSelecaoPercentual} : {}),
@@ -217,7 +220,7 @@ export class ServicoPlanosAlimentares {
   /** Uma única fronteira transacional para PA06 e projeções factuais autorizadas. */
   private async executarCalculoCombinado<T extends object>(
     tenantId: string, pacienteId: string, usuario: UsuarioAutenticado, dados: CalculoCombinadoDto,
-    projetar: (planos: EntradaPlanoCombinado[], detalhes: Map<string, {nome:Buffer;itens:PlanoAlimentarItemOrm[]}>) => T,
+    projetar: (planos: EntradaPlanoCombinado[], detalhes: Map<string, {nome:Buffer;refeicaoId:string;versaoNumero:number;itens:PlanoAlimentarItemOrm[]}>) => T,
     carregarDetalhes = false
   ) {
     this.garantirPapelProfissional(usuario);
@@ -234,7 +237,7 @@ export class ServicoPlanosAlimentares {
         planos.push({plano,selecao});
       }
       const efetivos: EntradaPlanoCombinado[] = [];
-      const detalhes = new Map<string, {nome:Buffer;itens:PlanoAlimentarItemOrm[]}>();
+      const detalhes = new Map<string, {nome:Buffer;refeicaoId:string;versaoNumero:number;itens:PlanoAlimentarItemOrm[]}>();
       let quantidadeItens = 0;
       for (const {plano,selecao} of planos) {
         if (plano.versaoPublicadaAtualId !== selecao.versaoIdEsperada || (plano.ativacaoRevisao ?? 0) !== selecao.ativacaoRevisaoEsperada) {
@@ -254,7 +257,7 @@ export class ServicoPlanosAlimentares {
             const registros = await gerenciador.getRepository(PlanoAlimentarItemOrm).find({
               where:{tenantId,refeicaoId:r.id},select:{id:true,composicaoSnapshotCriptografada:true,...(carregarDetalhes ? {descricaoCriptografada:true,quantidade:true,unidade:true,porcaoGramas:true} : {})},order:{ordem:'ASC',id:'ASC'},take:10001
             });
-            if (carregarDetalhes) detalhes.set(plano.id + ':' + estado.identidade_id,{nome:r.nomeCriptografado,itens:registros});
+            if (carregarDetalhes) detalhes.set(plano.id + ':' + estado.identidade_id,{nome:r.nomeCriptografado,refeicaoId:r.id,versaoNumero:versao.numero,itens:registros});
             quantidadeItens += registros.length;
             if (quantidadeItens > 10000) throw new UnprocessableEntityException('Limite de itens do cálculo combinado excedido.');
             for (const item of registros) {

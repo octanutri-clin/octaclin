@@ -415,6 +415,17 @@ describe('ServicoPlanosAlimentares', () => {
       const vazia = await servico.detalharMicronutrientes(TENANT_ID,PACIENTE_ID,usuarioProfissional(),{...entrada,codigo:'calcioMg',pagina:2,limite:1});
       expect(vazia).toMatchObject({total:1,refeicoes:[]});
     });
+    it('FOOD06 projeta fonte/preparo congelados e coordenadas exatas sem contexto clínico',async()=>{
+      const entrada=await publicarParaCalculo();
+      const registro=repositorios.get(PlanoAlimentarItemOrm)!.registros[0];
+      const snapshot=JSON.parse(criptografia.descriptografar(registro.composicaoSnapshotCriptografada));
+      Object.assign(snapshot,{origem:'catalogo',preparacao:'Cozido',fonte:{codigo:'TACO',nome:'Tabela sintética',versao:'sintetica-v1',hashConteudo:'CANARIO_INTERNO'},contextoClinico:'CANARIO_INTERNO'});
+      registro.composicaoSnapshotCriptografada=criptografia.criptografar(JSON.stringify(snapshot));
+      const r=await servico.detalharMicronutrientes(TENANT_ID,PACIENTE_ID,usuarioProfissional(),{...entrada,codigo:'ferroMg',pagina:1,limite:1});
+      expect(r.refeicoes[0]).toMatchObject({refeicaoId:registro.refeicaoId,versaoNumero:1});
+      expect(r.refeicoes[0].itens[0]).toMatchObject({composicao:{origem:'catalogo',preparacao:'Cozido',fonte:{codigo:'TACO',nome:'Tabela sintética',versao:'sintetica-v1'}}});
+      expect(JSON.stringify(r)).not.toContain('CANARIO_INTERNO');
+    });
     it('FOOD06 detalhe reautoriza e rejeita revisão stale em cada página', async () => {
       const entrada = {...await publicarParaCalculo(),codigo:'calcioMg',pagina:1,limite:1};
       await expect(servico.detalharMicronutrientes('outro-tenant',PACIENTE_ID,usuarioProfissional(),entrada)).rejects.toBeInstanceOf(NotFoundException);

@@ -5,6 +5,7 @@ import { CODIGOS_MICRONUTRIENTES, decimalParaEscala8, numeroDaEscala8, type Codi
 export interface ContribuicaoItemDietetica {
   /** Posição interna nesta leitura; não é identidade persistente nem capability. */
   indiceItem: number;
+  posicaoSelecao?: number;
   cobertura: CoberturaNutrienteDietetica;
   participacaoSelecaoPercentual?: number;
   participacaoRefeicaoPercentual?: number;
@@ -43,9 +44,27 @@ function coberturaItens(itens: unknown[], codigo: CodigoMicronutriente): Cobertu
  * Ordem original preservada para junção server-side com identidades autorizadas.
  * Não interpreta a seleção como um dia sem confirmação do profissional.
  */
-export function decomporContribuicoesDieteticas(planos: EntradaPlanoCombinado[], codigo: CodigoMicronutriente, janela?: { inicio: number; limite: number }): ContribuicoesDieteticas {
+export function decomporContribuicoesDieteticas(planos: EntradaPlanoCombinado[], codigo: CodigoMicronutriente, janela?: { inicio: number; limite: number; ordem?: 'plano' | 'contribuicao' }): ContribuicoesDieteticas {
   if (!CODIGOS_MICRONUTRIENTES.includes(codigo)) throw new Error('Micronutriente inválido.');
   if (janela && (!Number.isInteger(janela.inicio) || janela.inicio < 0 || !Number.isInteger(janela.limite) || janela.limite < 1 || janela.limite > 100)) throw new Error('Janela inválida.');
+  if(janela?.ordem!==undefined && janela.ordem!=='plano' && janela.ordem!=='contribuicao') throw new Error('Ordem inválida.');
+  if(janela?.ordem==='contribuicao') {
+    // Reutiliza o classificador e a mesma porção congelada, sem segundo motor.
+    const completa=decomporContribuicoesDieteticas(planos,codigo);
+    const todos=completa.refeicoes.flatMap((m,refeicao)=>m.itens.map(i=>({refeicao,item:i})));
+    todos.sort((a,b)=>{
+      const av=a.item.cobertura.total, bv=b.item.cobertura.total;
+      if(av===undefined || bv===undefined) return Number(av===undefined)-Number(bv===undefined);
+      const x=decimalParaEscala8(av),y=decimalParaEscala8(bv);
+      return x===y?0:x>y?-1:1;
+    });
+    const grupos=new Map<number,ContribuicaoRefeicaoDietetica>();
+    todos.slice(janela.inicio,janela.inicio+janela.limite).forEach((v,indice)=>{
+      if(!grupos.has(v.refeicao))grupos.set(v.refeicao,{...completa.refeicoes[v.refeicao],itens:[]});
+      grupos.get(v.refeicao)!.itens.push({...v.item,posicaoSelecao:janela.inicio+indice+1});
+    });
+    return {...completa,refeicoes:[...grupos.values()]};
+  }
   const { refeicoes } = selecionarRefeicoesCombinadas(planos);
   let deslocamento = 0;
   const cobertura = analisarCoberturaDietetica(planos).nutrientes[codigo];

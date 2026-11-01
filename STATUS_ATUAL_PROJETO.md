@@ -1,5 +1,11 @@
 # OctaClin - Status atual do projeto
 
+**FOOD06 — incremento M02 vigente:** fonte/preparo, ordenação global e consulta da
+origem publicada na #455 Draft; [execução](tasks/food06-m02-origem-ordenacao.md).
+Base36223bcd CI aprovado, delta com provas próprias em fechamento.25% estimados,
+0/12 melhorias encerradas. Blocos anteriores abaixo são históricos, não PASS
+irrestrito nem autorização de operação/merge.
+
 **Incremento atual FOOD06:** interface de contribuições M02 em validação na #455,
 base992fee05 com CI aprovado. [Progresso](tasks/progresso-food06.md):25% estimados,
 0/12 melhorias encerradas; [execução da interface](tasks/food06-interface-contribuicoes.md).

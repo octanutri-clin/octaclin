@@ -130,3 +130,43 @@ test('FOOD06 contribuições pagina, usa a seleção inteira e oculta tudo após
   await expect(r).not.toContainText('Alimento sintético');await expect(r).not.toContainText('canario-segredo');
   await expect(page.getByText('2.600 kcal',{exact:true})).toHaveCount(0);
 });
+
+test('FOOD06 fonte, ordem global e consulta exata da origem publicada',async({page},testInfo)=>{
+  const refeicaoId='10000000-0000-4000-8000-000000000010';
+  const ids=['10000000-0000-4000-8000-000000000011','10000000-0000-4000-8000-000000000012'];
+  let origemPedidos=0,ultimaOrdem;
+  await page.route(u=>u.pathname.endsWith('/analise-micronutrientes'),r=>r.fulfill({status:200,json:analise(r.request().postDataJSON())}));
+  await page.route(u=>u.pathname.endsWith('/analise-micronutrientes/contribuicoes'),r=>{
+    const q=r.request().postDataJSON(),a=analise(q);ultimaOrdem=q.ordem;
+    const c=a.cobertura.nutrientes[q.codigo],porcao={...c,contagens:{incluidos:1,conhecidos:1,semComposicao:0,incompativeis:0,naoResolvidos:0}};
+    return r.fulfill({status:200,json:{...a,motorVersao:'food06-contribuicoes-v1',codigo:q.codigo,pagina:q.pagina,limite:q.limite,ordem:q.ordem,total:2,cobertura:c,refeicoes:[{planoId:q.selecoes[0].planoId,identidadeRefeicao:q.selecoes[0].identidadesRefeicoes[0],refeicaoId,versaoNumero:1,nome:'Almoço sintético',cobertura:c,itens:ids.map((id,i)=>({itemId:id,posicaoSelecao:i+1,descricao:`Original ${i+1}`,quantidade:'1.5',unidade:'porção',porcaoGramas:'100',cobertura:porcao,composicao:{origem:'catalogo',preparacao:'Cozido',fonte:{codigo:'TACO',nome:'Fonte sintética',versao:'v1'}}}))}]}});
+  });
+  await page.route(u=>u.pathname.endsWith('/versoes/1'),r=>{origemPedidos++;return r.fulfill({status:200,json:{id:'versao-a',numero:1,status:'publicada',publicadaEm:'2026-10-31T12:00:00Z',objetivos:'CANARIO_NAO_EXIBIR',refeicoes:[{id:refeicaoId,nome:'Almoço sintético',itens:ids.map((id,i)=>({id,descricao:`Original ${i+1}`,quantidade:1.5,unidade:'porção',porcaoGramas:100}))}]}});});
+  await preparar(page);await page.getByRole('button',{name:'Ver micronutrientes e cobertura',exact:true}).click();
+  await page.getByRole('button',{name:'Ver alimentos de Cálcio',exact:true}).click();
+  const detalhe=page.getByRole('region',{name:'Alimentos de Cálcio',exact:true});
+  await expect(detalhe).toContainText('Preparo: Cozido');expect(origemPedidos).toBe(0);
+  if(testInfo.project.name==='mobile-chromium')expect((await detalhe.boundingBox()).width).toBeLessThanOrEqual(page.viewportSize().width-32);
+  await detalhe.getByLabel('Ordenar alimentos de Cálcio').selectOption('contribuicao');
+  await expect.poll(()=>ultimaOrdem).toBe('contribuicao');
+  if(testInfo.project.name==='mobile-chromium'){expect((await detalhe.boundingBox()).width).toBeLessThanOrEqual(page.viewportSize().width-32);expect(await detalhe.evaluate(el=>el.scrollWidth<=el.clientWidth)).toBe(true);}
+  await detalhe.screenshot({path:testInfo.outputPath('food06-fonte-ordem.png')});
+  const botao=detalhe.getByRole('button',{name:'Consultar origem de Original 1',exact:true});
+  await botao.focus();await page.keyboard.press('Enter');
+  const dialogo=page.getByRole('dialog',{name:'Origem publicada',exact:true});await expect(dialogo).toContainText('Versão 1');
+  await expect(dialogo).toContainText('Almoço sintético');await expect(dialogo).toContainText('Original 2');
+  await expect(dialogo).not.toContainText('CANARIO_NAO_EXIBIR');
+  await dialogo.screenshot({path:testInfo.outputPath('food06-origem-publicada.png')});
+  expect((await new AxeBuilder({page}).include('[role="dialog"]').analyze()).violations).toEqual([]);
+  await page.keyboard.press('Escape');await expect(dialogo).toHaveCount(0);await expect(botao).toBeFocused();
+  await page.route(u=>u.pathname.endsWith('/versoes/1'),r=>r.fulfill({status:200,json:{id:'versao-errada',numero:1,status:'publicada',publicadaEm:'2026-10-31T12:00:00Z',refeicoes:[]}}));
+  await botao.click();await expect(dialogo.getByRole('alert')).toContainText('Não foi possível confirmar');
+  await expect(dialogo).not.toContainText('Original 2');await page.keyboard.press('Escape');
+  let liberar,solicitado=false;const barreira=new Promise(resolve=>liberar=resolve);
+  await page.route(u=>u.pathname.endsWith('/versoes/1'),async r=>{solicitado=true;await barreira;try{await r.fulfill({status:200,json:{id:'versao-a',numero:1,status:'publicada',publicadaEm:'2026-10-31T12:00:00Z',refeicoes:[{id:refeicaoId,nome:'Resposta tardia sintética',itens:ids.map(id=>({id,descricao:'Tardia',quantidade:1,unidade:'porção',porcaoGramas:100}))}]}});}catch{/* Fetch sintético cancelado. */}});
+  await botao.click();await expect.poll(()=>solicitado).toBe(true);await page.keyboard.press('Escape');liberar();
+  await expect(dialogo).toHaveCount(0);await expect(page.locator('body')).not.toContainText('Resposta tardia sintética');
+  await page.route(u=>u.pathname.endsWith('/versoes/1'),r=>r.fulfill({status:403,json:{message:'CANARIO_INTERNO'}}));
+  await botao.click();await expect(page.getByText('200 kcal',{exact:true})).toHaveCount(0);
+  await expect(page.getByRole('dialog')).toHaveCount(0);await expect(page.locator('body')).not.toContainText('CANARIO_INTERNO');
+});

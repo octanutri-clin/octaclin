@@ -1,5 +1,11 @@
 # FOOD06 — execução técnica
 
+> Checkpoint vigente: fonte/preparo congelados, ordenação global e consulta da
+> origem publicada M02 na mesma #455 Draft. [Execução e gates](food06-m02-origem-ordenacao.md).
+> Base36223bcd com22 checks success e SBOM provenance SKIPPED; o delta atual
+> possui provas próprias e não herda PASS de CI.25% estimados,0/12 encerradas.
+> Direitos/G06 BLOCKED. Checkpoints anteriores abaixo são históricos.
+
 ## Estado vigente do incremento M02
 
 A implementação da interface de contribuições e suas provas estão em

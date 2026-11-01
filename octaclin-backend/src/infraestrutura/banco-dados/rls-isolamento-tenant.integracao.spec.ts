@@ -1927,7 +1927,7 @@ descrever('RLS e isolamento multi-tenant integral em Postgres real', () => {
   it('FOOD06 detalhe pagina identidades reais sem alterar snapshots sob role runtime/RLS', async () => {
     const c=await prepararCenarioPa06('food06-pagina');
     c.documento.refeicoes[0].itens.push({...c.documento.refeicoes[0].itens[0],chaveCliente:'segundo-sintetico'});
-    for (const item of c.documento.refeicoes[0].itens) Object.assign(item,{micronutrientesPor100g:{ferroMg:2}});
+    for (const [indice,item] of c.documento.refeicoes[0].itens.entries()) Object.assign(item,{micronutrientesPor100g:{ferroMg:indice?8:2}});
     await publicarCenarioPa06(c);
     const entrada={...await selecaoFactualFood06(c),codigo:'ferroMg',pagina:1,limite:1};
     await comoTenant(tenantA);
@@ -1935,8 +1935,14 @@ descrever('RLS e isolamento multi-tenant integral em Postgres real', () => {
     const itensAntes=await cliente!.query('select i.* from plano_alimentar_itens i join plano_alimentar_refeicoes r on r.id=i.refeicao_id where r.versao_id=$1 order by i.id',[c.versaoId]);
     const primeira=await c.servico.detalharMicronutrientes(tenantA,c.pacienteId,c.usuario,entrada);
     const segunda=await c.servico.detalharMicronutrientes(tenantA,c.pacienteId,c.usuario,{...entrada,pagina:2});
-    expect(primeira).toMatchObject({total:2,cobertura:{estado:'COMPLETO',total:4}});
+    expect(primeira).toMatchObject({total:2,cobertura:{estado:'COMPLETO',total:10}});
     expect(segunda.cobertura).toEqual(primeira.cobertura);
+    const ordenada=await c.servico.detalharMicronutrientes(tenantA,c.pacienteId,c.usuario,{...entrada,ordem:'contribuicao'});
+    expect(ordenada).toMatchObject({ordem:'contribuicao',total:2,cobertura:primeira.cobertura,
+      refeicoes:[{versaoNumero:1,itens:[{itemId:segunda.refeicoes[0].itens[0].itemId,posicaoSelecao:1,cobertura:{total:8},composicao:{origem:'manual',baseGramas:100}}]}]});
+    const finalOrdenada=await c.servico.detalharMicronutrientes(tenantA,c.pacienteId,c.usuario,{...entrada,ordem:'contribuicao',pagina:2});
+    expect(finalOrdenada.refeicoes[0].itens[0]).toMatchObject({itemId:primeira.refeicoes[0].itens[0].itemId,posicaoSelecao:2,cobertura:{total:2}});
+
     expect(primeira.refeicoes[0].itens[0].itemId).not.toBe(segunda.refeicoes[0].itens[0].itemId);
     expect((await c.servico.detalharMicronutrientes(tenantA,c.pacienteId,c.usuario,{...entrada,pagina:3})).refeicoes).toEqual([]);
     expect(JSON.stringify(primeira)).not.toMatch(/Criptograf|objetivos|contextoInterno|indiceItem/);

@@ -37,3 +37,40 @@ test('FOOD06 compara a cobertura integral da tabela com detalhe, incluindo causa
  const c=structuredClone(a);c.causas[0].codigo='traco';assert.equal(mesmaCoberturaFactual(a,c),false);
  a.causas=[{codigo:'ausente',quantidade:1},{codigo:'nao_analisado',quantidade:1}];const d=structuredClone(a);d.causas.reverse();assert.equal(mesmaCoberturaFactual(a,d),true);
 });
+
+test('FOOD06 detalhe projeta fonte/preparo e exige ordem, posições e origem exatas',()=>{
+ const r=resposta();Object.assign(r,{ordem:'contribuicao'});
+ Object.assign(r.refeicoes[0],{refeicaoId:'10000000-0000-4000-8000-000000000003',versaoNumero:1});
+ Object.assign(r.refeicoes[0].itens[0],{posicaoSelecao:1,composicao:{origem:'catalogo',preparacao:'Cozido',fonte:{codigo:'TACO',nome:'Tabela sintética',versao:'v1',hash:'canario'},baseGramas:100,contexto:'canario'}});
+ const pedidoOrdenado={...pedido,ordem:'contribuicao' as const};
+ const p=lerPaginaContribuicoes(r,pedidoOrdenado);
+ assert.match(JSON.stringify(p),/Cozido/);assert.ok(!JSON.stringify(p).includes('canario'));
+ const errada=structuredClone(r);Object.assign(errada,{ordem:'plano'});assert.throws(()=>lerPaginaContribuicoes(errada,pedidoOrdenado));
+ Object.assign(r.refeicoes[0].itens[0],{posicaoSelecao:2});assert.throws(()=>lerPaginaContribuicoes(r,pedidoOrdenado));
+});
+
+test('FOOD06 original exige versão publicada, refeição e item exatos e descarta contexto',async()=>{
+ const {lerOrigemContribuicao}=await import('../lib/origem-contribuicao');
+ const ref={versaoId:'v1',versaoNumero:1,refeicaoId:'r1',itemId:'i1'};
+ const v={id:'v1',numero:1,status:'publicada',publicadaEm:'2026-10-31T12:00:00Z',objetivos:'CANARIO',refeicoes:[{id:'r1',nome:'Almoço',itens:[{id:'i1',descricao:'Alimento',quantidade:1.5,unidade:'porção',porcaoGramas:75,composicaoSnapshot:{contexto:'CANARIO'}}]}]};
+ const r=lerOrigemContribuicao(v,ref);assert.equal(r.itens[0].gramas,75);assert.ok(!JSON.stringify(r).includes('CANARIO'));
+ for(const mudar of [(x:typeof v)=>x.id='v2',(x:typeof v)=>x.status='rascunho',(x:typeof v)=>x.refeicoes[0].id='outra',(x:typeof v)=>x.refeicoes[0].itens[0].id='outro',(x:typeof v)=>x.refeicoes[0].itens[0].quantidade=NaN]){
+  const x=structuredClone(v);mudar(x);assert.throws(()=>lerOrigemContribuicao(x,ref));
+ }
+});
+
+test('FOOD06 ordem global recusa posições com quantidades conhecidas invertidas',()=>{
+ const r=resposta();Object.assign(r,{ordem:'contribuicao',limite:2});
+ const a=r.refeicoes[0].itens[0];a.cobertura.total=1;Object.assign(a,{posicaoSelecao:1});
+ const b=structuredClone(a);b.itemId='10000000-0000-4000-8000-000000000002';b.cobertura.total=3;Object.assign(b,{posicaoSelecao:2});r.refeicoes[0].itens.push(b);
+ assert.throws(()=>lerPaginaContribuicoes(r,{...pedido,limite:2,ordem:'contribuicao'}));
+});
+
+test('FOOD06 ordem global rejeita desconhecido antes de conhecido, sem converter ausência em zero',()=>{
+ const r=resposta();Object.assign(r,{ordem:'contribuicao',limite:2});
+ const parcial={codigo:'ferroMg',unidade:'mg',estado:'PARCIAL',quantidadeConhecida:3,contagens:{incluidos:2,conhecidos:1,semComposicao:1,incompativeis:0,naoResolvidos:0},causas:[{codigo:'ausente',quantidade:1}]};
+ Object.assign(r.cobertura,parcial,{total:undefined});Object.assign(r.refeicoes[0].cobertura,parcial,{total:undefined});
+ const a=r.refeicoes[0].itens[0];const b=structuredClone(a);b.itemId='10000000-0000-4000-8000-000000000002';b.cobertura.total=3;Object.assign(b,{posicaoSelecao:2});
+ Object.assign(a,{posicaoSelecao:1});Object.assign(a.cobertura,{estado:'DESCONHECIDO',total:undefined,contagens:{incluidos:1,conhecidos:0,semComposicao:1,incompativeis:0,naoResolvidos:0},causas:[{codigo:'ausente',quantidade:1}]});r.refeicoes[0].itens.push(b);
+ assert.throws(()=>lerPaginaContribuicoes(r,{...pedido,limite:2,ordem:'contribuicao'}));
+});

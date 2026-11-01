@@ -1,5 +1,11 @@
 # FOOD06 — checklist
 
+> Checkpoint vigente: fonte/preparo congelados, ordenação global e consulta da
+> origem publicada M02 na mesma #455 Draft. [Execução e gates](food06-m02-origem-ordenacao.md).
+> Base36223bcd com22 checks success e SBOM provenance SKIPPED; o delta atual
+> possui provas próprias e não herda PASS de CI.25% estimados,0/12 encerradas.
+> Direitos/G06 BLOCKED. Checkpoints anteriores abaixo são históricos.
+
 ## Estado vigente
 
 Interface M02 paginada em validação na #455 Draft, sobre992fee05 com API,
@@ -32,7 +38,8 @@ Fonte de contrato: [plano](plan-pos-320-food06.md), base `68499c15`.
 - [x] M02 API: backend/BFF de leitura, paginação, IDs persistentes e precondições por página.
 - [x] M02 API: PostgreSQL/RLS/concorrência aprovados no CI992fee05.
 - [x] M02-UI: detalhe sob demanda/paginação, cobertura, teclado/axe, desktop/mobile e invalidação de leitura; [provas e limites](food06-interface-contribuicoes.md). CI próprio ainda pendente.
-- [ ] M02-integração restante: fonte/preparo, ordenação global e navegação autorizada à origem.
+- [x] M02 factual: fonte/preparo por allowlist, ordenação global e consulta somente leitura da origem exata; provas locais em execução documentada.
+- [ ] M02: conferir PG/CI deste delta e concluir integrações específicas de receitas/substituição planejada explícita.
 - [ ] Onda B: concluir M02 contribuições e M06 com referências elegíveis.
 - [ ] Onda C: M04 prévias, M11 consulta assistida/restrições e M12 cenários.
 - [ ] Onda D: M07 versões, M08 PDF seguro e M10 longitudinal.

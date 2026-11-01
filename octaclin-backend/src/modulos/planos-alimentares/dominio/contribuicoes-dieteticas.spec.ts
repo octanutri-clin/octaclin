@@ -135,3 +135,32 @@ describe('FOOD06 M02 contribuições internas sobre a PA06', () => {
     }
   });
 });
+
+
+describe('FOOD06 ordenação global das contribuições', () => {
+  it('ordena a seleção antes de paginar e preserva índices e cobertura', () => {
+    const entrada=[plano([refeicao('a',[item(1),item(9)]),refeicao('b',[item(5),item(),item(0)])])];
+    const janela={inicio:0,limite:2,ordem:'contribuicao' as const};
+    const r=decomporContribuicoesDieteticas(entrada,'calcioMg',janela);
+    expect(r.refeicoes.flatMap(m=>m.itens.map(i=>i.cobertura.total))).toEqual([9,5]);
+    expect(r.refeicoes[0].itens[0].indiceItem).toBe(1);
+    expect(r.cobertura).toEqual(analisarCoberturaDietetica(entrada).nutrientes.calcioMg);
+    const segunda=decomporContribuicoesDieteticas(entrada,'calcioMg',{...janela,inicio:2});
+    expect(segunda.refeicoes.flatMap(m=>m.itens.map(i=>i.cobertura.total))).toEqual([1,0]);
+    const fim=decomporContribuicoesDieteticas(entrada,'calcioMg',{...janela,inicio:4});
+    expect(fim.refeicoes[0].itens[0].cobertura.estado).toBe('DESCONHECIDO');
+  });
+  it('ordena sem arredondamento de tela e desempata na ordem original',()=>{
+    const entrada=[plano([refeicao('a',[item(0.00000001),item(0.00000002),item(0.00000002)])])];
+    const janela={inicio:0,limite:2,ordem:'contribuicao' as const};
+    expect(decomporContribuicoesDieteticas(entrada,'calcioMg',janela).refeicoes[0].itens.map(i=>i.indiceItem)).toEqual([1,2]);
+  });
+});
+
+it('FOOD06 conserva posição global quando um grupo reaparece entre outras refeições',()=>{
+ const entrada=[plano([refeicao('a',[item(9),item(7)]),refeicao('b',[item(8)])])];
+ const r=decomporContribuicoesDieteticas(entrada,'calcioMg',{inicio:0,limite:3,ordem:'contribuicao'});
+ const ordenados=r.refeicoes.flatMap(m=>m.itens).sort((a,b)=>a.posicaoSelecao!-b.posicaoSelecao!);
+ expect(ordenados.map(i=>i.cobertura.total)).toEqual([9,8,7]);
+ expect(r.refeicoes).toHaveLength(2);expect(r.cobertura.total).toBe(24);
+});

@@ -25,3 +25,15 @@ describe('FOOD06 detalhe paginado', () => {
     { ...entrada, tenantId: 'x' }, { ...entrada, snapshots: [] }, { ...entrada, selecoes: [null] }
   ])('rejeita entrada manipulada %#', valor => expect(() => validarContribuicoes(valor)).toThrow());
 });
+
+it('FOOD06 aceita ordem explícita validada, preservando clientes sem ordenação',()=>{
+ const r={selecoes:[],codigo:'ferroMg',pagina:1,limite:25};
+ expect(()=>validarContribuicoes({...r,ordem:'contribuicao'})).not.toThrow();
+ for(const ordem of [null,{},'__proto__','total','CONTRIBUICAO']) expect(()=>validarContribuicoes({...r,ordem})).toThrow();
+ expect(validateSync(plainToInstance(ContribuicoesMicronutrientesDto,{...r,ordem:'contribuicao'}),{whitelist:true,forbidNonWhitelisted:true})).toHaveLength(0);
+});
+
+it.each([null,42,{},'__proto__'])('FOOD06 pipe rejeita ordem inválida %j',ordem=>{
+ const erro=validateSync(plainToInstance(ContribuicoesMicronutrientesDto,{selecoes:[],codigo:'ferroMg',pagina:1,limite:25,ordem}),{whitelist:true,forbidNonWhitelisted:true});
+ expect(erro.length).toBeGreaterThan(0);
+});

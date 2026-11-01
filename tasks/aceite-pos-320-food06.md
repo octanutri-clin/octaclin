@@ -1,5 +1,11 @@
 # FOOD06 — matriz obrigatória de aceite
 
+> Checkpoint vigente: fonte/preparo congelados, ordenação global e consulta da
+> origem publicada M02 na mesma #455 Draft. [Execução e gates](food06-m02-origem-ordenacao.md).
+> Base36223bcd com22 checks success e SBOM provenance SKIPPED; o delta atual
+> possui provas próprias e não herda PASS de CI.25% estimados,0/12 encerradas.
+> Direitos/G06 BLOCKED. Checkpoints anteriores abaixo são históricos.
+
 Estado vigente: PR única #455 Draft; API M02/PG/RLS/concorrência aprovados no
 CI992fee05. Incremento Web paginado com evidências locais próprias em
 [execução](food06-interface-contribuicoes.md); CI do novo delta pendente.
@@ -16,9 +22,9 @@ Fontes: [especificação](especificacao-pos-320-food06-melhorias.md),
 | M01-C1 | Zero conhecido ≠ ausência; cobertura por nutriente, não por alimento global | RED/GREEN: dois alimentos, ferro zero+ausente e cálcio completo | PASS domínio A1: zero/ausência por nutriente; integração/interface/exportação pendentes |
 | M01-C2 | Completo/parcial/desconhecido/incompatível/indisponível com motivos/fontes | Mistura de unidade/forma/schema/fonte/erro; soma apenas compatíveis; nenhuma confiança científica percentual | PARCIAL A1: cinco estados/causas/contagens; resolução autorizada de fontes pendente |
 | M01-C3 | Subtotal parcial explícito, sem percentual de referência; mesmos dados nas saídas | Backend/BFF/tabela/exportação e fonte legada; total desconhecido não vira zero | PARCIAL: serviço/BFF/RLS em80763589 e tabela factual testada; fontes/saídas futuras e CI próprio pendentes |
-| M02-C1 | Total→refeição→alimento, quantidade/preparo/fonte e cobertura | Soma hierárquica reconcilia com PA06, receita1,5porções, conhecido zero/ausente | PARCIAL: decomposição interna reconciliada com PA06 e porções congeladas; API paginada/IDs persistentes/quantidades implementados com PG PASS no CI992fee05; UI paginada31 unitários/36 browser PASS; preparo/fonte pendentes; [execução](food06-contribuicoes-dominio.md) |
+| M02-C1 | Total→refeição→alimento, quantidade/preparo/fonte e cobertura | Soma hierárquica reconcilia com PA06, receita1,5porções, conhecido zero/ausente | PARCIAL: decomposição interna reconciliada com PA06 e porções congeladas; API paginada/IDs persistentes/quantidades implementados com PG PASS no CI992fee05; UI paginada31 unitários/36 browser PASS; preparo/fonte e origem implementados neste delta, PG/CI próprio pendente; [execução](food06-contribuicoes-dominio.md) |
 | M02-C2 | Denominador completo/positivo, sem dupla contagem | Alternativa escolhida exclui principal; disponíveis não contam; alimento repetido em refeições legítimas conta ambas | PARCIAL: denominador e repetições/disponíveis testados no domínio; troca explicitamente selecionada e integração pendentes |
-| M02-C3 | Ordenação/expansão/atalho autorizado | Testes componente/Playwright, leitura/editável e acesso negado ao destino | PARCIAL: expansão/paginação e negativa403 propagada até PA06 testadas; ordenação global e atalho seguro pendentes |
+| M02-C3 | Ordenação/expansão/atalho autorizado | Testes componente/Playwright, leitura/editável e acesso negado ao destino | PARCIAL: expansão/paginação, ordem global e modal de origem implementados;35Web/76BFF,38browser antes do ajuste de largura; CI/PG do delta pendentes |
 | M03-C1 | Motivos clínicos/técnicos/contratuais estruturados, backend autoritativo | Contratos negativos por motivo, texto seguro e ação válida quando existir | PARCIAL A1: 11 motivos com texto/ação; causas de cobertura e serviço pendentes |
 | M03-C2 | Tabela/detalhes/relatório concordam, sem dados nos logs | Canários sintéticos em logs/erros/projeções e mesma revisão | PENDENTE |
 | M04-C1 | Prévia antes/depois, percentuais válidos, cobertura/eligibilidade | Troca alimento/porção/preparo/receita; principal e alternativa não somados; zero no denominador sem percentual | PENDENTE |

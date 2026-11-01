@@ -1470,7 +1470,7 @@ test('FOOD06 detalhe BFF encaminha análise factual protegida e mantém resposta
   const analise={schemaVersao:1,comparacoes:{estado:'indisponivel',motivo:'referencias_nao_habilitadas'}};
   global.fetch=(async(url:string|URL|Request,init?:RequestInit)=>{chamada={url:String(url),body:init?.body?.toString()};return Response.json(analise);}) as typeof global.fetch;
   try {
-    const corpo=JSON.stringify({selecoes:[],codigo:'calcioMg',pagina:1,limite:50});
+    const corpo=JSON.stringify({selecoes:[],codigo:'calcioMg',pagina:1,limite:50,ordem:'contribuicao'});
     const r=await detalharMicronutrientesFood06(new Request('http://localhost/api/analise',{method:'POST',body:corpo}),{params:Promise.resolve({id:'paciente/1'})});
     assert.equal(r.status,200);assert.equal(r.headers.get('Cache-Control'),'private, no-store');
     assert.deepEqual(await r.json(),analise);

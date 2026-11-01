@@ -14,7 +14,7 @@ Não alterar os pesos para aparentar avanço. Evidências e exceções continuam
 | Melhoria | Estado | Entregue / falta |
 | --- | --- | --- |
 | M01 cobertura | PARCIAL | Domínio/API/tabela factual; fontes completas e saídas futuras pendentes |
-| M02 contribuições | PARCIAL | Domínio/API paginada e interface testada localmente; CI próprio, fonte/preparo, ordenação global e navegação até origem pendentes |
+| M02 contribuições | PARCIAL | Domínio/API/UI paginada, fonte/preparo, ordem global e origem em validação final; PG/CI do delta e integrações receitas/substituições pendentes |
 | M03 explicações | PARCIAL | Motivos de cobertura e catálogo; integração clínica/relatórios pendentes |
 | M04 prévias | PENDENTE | Implementação ainda necessária |
 | M05 rastreabilidade | PARCIAL | Identificadores do núcleo; direitos e persistência de análise pendentes |
@@ -29,7 +29,8 @@ Não alterar os pesos para aparentar avanço. Evidências e exceções continuam
 **25% estimados;0/12 melhorias integralmente encerradas.** Seis parciais, seis
 pendentes. CI verde de uma API não encerra uma melhoria inteira nem a fase.
 
-Agora: finalizar envio/CI da interface de contribuições M02. Depois: completar os critérios
-restantes M02, antes de encerrar a melhoria; avançar então para M04 e integrações
+Agora: finalizar gates de fonte/ordem/origem M02; ver [execução](food06-m02-origem-ordenacao.md).
+Depois: completar matriz de receitas/substituição planejada explícita M02; avançar
+então para M04 e integrações
 conforme dependências. Direitos de referências e G06 continuam BLOCKED, sem
 merge/deploy/migrations externas ou disponibilização clínica presumida.
