@@ -48,6 +48,18 @@ describe('ControladorPlanosAlimentares', () => {
     }
   });
 
+  it.each(['preverMicronutrientes','confirmarPreviaMicronutrientes'])('M04 %s exige profissional, gerenciamento, no-store e encaminha contexto verificado', async nome => {
+    const metodo = (ControladorPlanosAlimentares.prototype as unknown as Record<string,Function>)[nome];
+    expect(typeof metodo).toBe('function');
+    expect(Reflect.getMetadata(CHAVE_PAPEIS,metodo)).toEqual(['Professional']);
+    expect(Reflect.getMetadata(CHAVE_PERMISSOES,metodo)).toEqual(['planos_alimentares.gerenciar']);
+    expect(Reflect.getMetadata(HEADERS_METADATA,metodo)).toContainEqual({name:'Cache-Control',value:'private, no-store'});
+    expect(Reflect.getMetadata(PATH_METADATA,metodo)).toBe(':planoId/rascunho/previa-micronutrientes'+(nome.startsWith('confirmar')?'/confirmar':''));
+    servico[nome]=jest.fn().mockResolvedValue({schemaVersao:1});
+    await metodo.call(controlador,usuario,pacienteId,planoId,{});
+    expect(servico[nome]).toHaveBeenCalledWith(usuario.tenantId,pacienteId,planoId,usuario,{});
+  });
+
   it('restringe toda a API a SuperAdmin e Professional', () => {
     expect(Reflect.getMetadata(CHAVE_PAPEIS, ControladorPlanosAlimentares)).toEqual([
       'SuperAdmin',

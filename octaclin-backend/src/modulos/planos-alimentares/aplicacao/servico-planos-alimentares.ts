@@ -1,3 +1,5 @@
+import { compararCenariosFactuais } from '../dominio/previa-dietetica';
+import { validarPreviaMicronutrientes, type EntradaPreviaMicronutrientes, type EntradaConfirmacaoPrevia } from './dtos-previa-micronutrientes';
 import { projetarOrigemContribuicao } from './projecao-origem-contribuicao';
 import { validarContribuicoes } from './dtos-contribuicoes-micronutrientes';
 import { decomporContribuicoesDieteticas } from '../dominio/contribuicoes-dieteticas';
@@ -158,6 +160,108 @@ export class ServicoPlanosAlimentares {
     private readonly alimentosPersonalizados: ServicoAlimentosPersonalizados = new ServicoAlimentosPersonalizados(executorTenant, criptografia),
     private readonly gruposSubstituicoes: ServicoGruposSubstituicoes = new ServicoGruposSubstituicoes(executorTenant, criptografia, new FontesGruposSubstituicoes(criptografia))
   ) {}
+
+  async preverMicronutrientes(tenantId: string, pacienteId: string, planoId: string, usuario: UsuarioAutenticado, dados: unknown) {
+    if (usuario.papel !== 'Professional') throw new ForbiddenException('A prévia exige o profissional responsável.');
+    this.garantirPermissao(usuario, 'planos_alimentares.gerenciar');
+    const entrada = this.validarEntradaPrevia(dados, false);
+    return this.executorTenant.executar(tenantId, async gerenciador => {
+      const { resposta } = await this.prepararPreviaMicronutrientes(gerenciador, tenantId, pacienteId, planoId, usuario, entrada, false);
+      return resposta;
+    });
+  }
+
+  async confirmarPreviaMicronutrientes(tenantId: string, pacienteId: string, planoId: string, usuario: UsuarioAutenticado, dados: unknown) {
+    if (usuario.papel !== 'Professional') throw new ForbiddenException('A prévia exige o profissional responsável.');
+    this.garantirPermissao(usuario, 'planos_alimentares.gerenciar');
+    const entrada = this.validarEntradaPrevia(dados, true) as EntradaConfirmacaoPrevia;
+    return this.executorTenant.executar(tenantId, async gerenciador => {
+      const { resposta, plano, rascunho, preparada } = await this.prepararPreviaMicronutrientes(gerenciador, tenantId, pacienteId, planoId, usuario, entrada, true);
+      if (resposta.fingerprint !== entrada.fingerprintEsperado) throw new ConflictException('A prévia mudou. Confira novamente antes de confirmar.');
+      // Uma única transação e o writer editorial existente. Replay recebe conflito
+      // de revisão; não há recibo persistente nem retry automático desta operação.
+      return this.persistirEdicaoPreparada(gerenciador, tenantId, pacienteId, plano, rascunho, preparada, true);
+    });
+  }
+
+  private validarEntradaPrevia(dados: unknown, confirmar: boolean) {
+    try { return validarPreviaMicronutrientes(dados, confirmar); }
+    catch { throw new BadRequestException('Prévia de micronutrientes inválida.'); }
+  }
+
+  private async prepararPreviaMicronutrientes(
+    gerenciador: EntityManager, tenantId: string, pacienteId: string, planoId: string,
+    usuario: UsuarioAutenticado, entrada: EntradaPreviaMicronutrientes, confirmar: boolean
+  ) {
+    const lock = confirmar ? true : 'pessimistic_read';
+    const plano = await this.obterPlanoNoEscopo(gerenciador, tenantId, pacienteId, planoId, usuario, lock);
+    const rascunho = await this.obterRascunhoAtivo(gerenciador, tenantId, plano.id, lock);
+    this.conferirRevisaoEdicao(rascunho, entrada);
+    if ((plano.ativacaoRevisao ?? 0) !== entrada.ativacaoRevisaoEsperada) throw new ConflictException('A ativação mudou. Confira novamente o plano.');
+    const edicao = this.lerEdicao(rascunho);
+    if (edicao.edicaoEstado !== 'materializada' || !edicao.documentoEdicao) throw new ConflictException('Salve e confira um rascunho calculável antes de solicitar a prévia.');
+    const documento = validarDocumentoEdicaoPlano(edicao.documentoEdicao);
+    const { operacao } = entrada;
+    const refeicao = documento.refeicoes.find(r => r.chaveCliente === operacao.refeicaoChave);
+    const item = refeicao?.itens.find(i => i.chaveCliente === operacao.itemChave);
+    if (!item) throw new ConflictException('O alimento da prévia mudou. Recarregue o rascunho.');
+    item.quantidade = operacao.quantidade;
+    item.unidade = operacao.unidade;
+    item.porcaoGramas = operacao.porcaoGramas;
+    // Intenção explícita em gramas: nenhuma conversão caseira é inferida.
+    item.medidaCaseira = null;
+    if (operacao.tipo === 'substituir_catalogo') {
+      item.alimentoComposicaoId = operacao.alimentoComposicaoId;
+      item.alimentoPersonalizado = null;
+      delete item.nutrientesPor100g;
+      delete item.micronutrientesPor100g;
+      delete item.fonteRotulo;
+    }
+    const { refeicoes, estados } = await this.obterRefeicoesCalculo(gerenciador, plano, rascunho.id);
+    const aliases = new Map(this.identidadesAtuaisEdicao(rascunho).map(a => [a.chaveCliente, a.identidadeId]));
+    const porIdentidade = new Map(Array.from(estados.entries()).map(([id,e]) => [e.identidade_id, { id, ativa:e.ativa }]));
+    if (refeicoes.length !== documento.refeicoes.length || aliases.size !== documento.refeicoes.length || documento.refeicoes.some(r => !porIdentidade.has(aliases.get(r.chaveCliente)!))) {
+      throw new ConflictException('Identidades das refeições indisponíveis. Recarregue o rascunho.');
+    }
+    const antes: EntradaPlanoCombinado = {planoId:plano.id,ativo:plano.ativoParaPaciente === true,selecionado:true,refeicoes:[]};
+    for (const r of documento.refeicoes) {
+      const identidadeId = aliases.get(r.chaveCliente)!;
+      const estado = porIdentidade.get(identidadeId)!;
+      const registros = await gerenciador.getRepository(PlanoAlimentarItemOrm).find({where:{tenantId,refeicaoId:estado.id},select:{id:true,composicaoSnapshotCriptografada:true},order:{ordem:'ASC',id:'ASC'},take:201});
+      if (registros.length !== r.itens.length || registros.length > 200) throw new ConflictException('Materialização do rascunho indisponível.');
+      const itens = registros.map(i => {
+        try { return this.lerJsonCriptografado<unknown>(i.composicaoSnapshotCriptografada); }
+        catch { throw new ConflictException('Composição do rascunho indisponível.'); }
+      });
+      antes.refeicoes.push({identidadeId,ativa:estado.ativa,selecionada:true,itens});
+    }
+    const preparada = await this.prepararEdicaoRascunho(gerenciador, tenantId, pacienteId, usuario, rascunho, documento);
+    if (validateSync(preparada.clinico, {whitelist:true,forbidNonWhitelisted:true}).length) throw new UnprocessableEntityException('Rascunho não calculável. Confira os dados antes da prévia.');
+    this.validarDadosClinicosRascunho(preparada.clinico);
+    const estrutura = await this.resolverEstrutura(gerenciador, preparada.clinico, preparada.composicoesCustom, preparada.provenienciasGrupo, preparada.composicoesCatalogoGrupo);
+    if (operacao.tipo === 'substituir_catalogo') {
+      const indiceRefeicao = documento.refeicoes.findIndex(r => r.chaveCliente === operacao.refeicaoChave);
+      const indiceItem = documento.refeicoes[indiceRefeicao].itens.findIndex(i => i.chaveCliente === operacao.itemChave);
+      documento.refeicoes[indiceRefeicao].itens[indiceItem].descricao = (estrutura.refeicoes[indiceRefeicao].itens[indiceItem] as ItemPlanoAlimentar & {snapshot:SnapshotComposicao}).snapshot.descricao;
+    }
+    try { validarEstruturaPlano(estrutura); }
+    catch { throw new UnprocessableEntityException('Estrutura nutricional indisponível para a prévia.'); }
+    const depois: EntradaPlanoCombinado = {...antes,refeicoes:estrutura.refeicoes.map((r,i) => ({...antes.refeicoes[i],itens:r.itens.map(item => (item as ItemPlanoAlimentar & {snapshot:SnapshotComposicao}).snapshot)}))};
+    let comparacao: ReturnType<typeof compararCenariosFactuais>;
+    try { comparacao = compararCenariosFactuais([antes], [depois]); }
+    catch { throw new UnprocessableEntityException('Limite técnico de precisão nutricional excedido.'); }
+    // Hash de parâmetros e fatos nutricionais autorizados, nunca de texto clínico,
+    // contextos cifrados ou proveniência clínica. Não substitui a reautorização.
+    const fato = (s:SnapshotComposicao) => ({origem:s.origem,alimentoComposicaoId:s.alimentoComposicaoId,
+      fonte:s.fonte ? {codigo:s.fonte.codigo,versao:s.fonte.versao,hashConteudo:s.fonte.hashConteudo,esquemaVersao:s.fonte.esquemaVersao} : undefined,
+      nutrientesPor100g:s.nutrientesPor100g,nutrientesPorcao:s.nutrientesPorcao,micronutrientes:s.micronutrientes});
+    const composicoes = estrutura.refeicoes.map(r => r.itens.map(i => ({principal:fato((i as ItemPlanoAlimentar & {snapshot:SnapshotComposicao}).snapshot),alternativas:i.substituicoes?.map(a => fato((a as AlternativaPlanoAlimentar & {snapshot:SnapshotComposicao}).snapshot))})));
+    const fingerprint = createHash('sha256').update(this.serializarEstavel({motor:'food06-previa-api-v1',tenantId,pacienteId,planoId,usuarioId:usuario.usuarioId,rascunhoId:rascunho.id,revisao:rascunho.rascunhoRevisao,apresentacaoRevisao:rascunho.apresentacaoRevisao ?? 0,ativacaoRevisao:plano.ativacaoRevisao ?? 0,operacao,comparacao,composicoes})).digest('hex');
+    const resposta = {schemaVersao:1 as const,motorVersao:'food06-previa-api-v1' as const,escopo:'rascunho_refeicoes_ativas' as const,
+      rascunhoId:rascunho.id,rascunhoRevisao:rascunho.rascunhoRevisao,ativacaoRevisao:plano.ativacaoRevisao ?? 0,
+      fingerprint,comparacao,avisos:['fontes_resolvidas_como_no_salvamento']};
+    return {resposta,plano,rascunho,preparada};
+  }
 
   async obterSelecaoCalculo(tenantId: string, pacienteId: string, planoId: string, usuario: UsuarioAutenticado) {
     this.garantirPapelProfissional(usuario);
@@ -809,6 +913,15 @@ export class ServicoPlanosAlimentares {
       const plano = await this.obterPlanoNoEscopo(gerenciador, tenantId, pacienteId, planoId, usuario, true);
       const rascunho = await this.obterRascunhoAtivo(gerenciador, tenantId, plano.id, true);
       this.conferirRevisaoEdicao(rascunho, dados);
+      const preparada = await this.prepararEdicaoRascunho(gerenciador, tenantId, pacienteId, usuario, rascunho, documento);
+      return this.persistirEdicaoPreparada(gerenciador, tenantId, pacienteId, plano, rascunho, preparada);
+    });
+  }
+
+  private async prepararEdicaoRascunho(
+    gerenciador: EntityManager, tenantId: string, pacienteId: string, usuario: UsuarioAutenticado,
+    rascunho: PlanoAlimentarVersaoOrm, documento: DocumentoEdicaoPlano
+  ) {
       const estadoAnterior = this.lerEdicao(rascunho);
       if (estadoAnterior.edicaoEstado === 'indisponivel') throw new ConflictException('Snapshot de edição indisponível. Reconfira o rascunho.');
       const anteriorEdicao=estadoAnterior.documentoEdicao??null;
@@ -886,6 +999,16 @@ export class ServicoPlanosAlimentares {
         }
       }
       await this.validarReferenciasEdicao(gerenciador, tenantId, pacienteId, documento, catalogosGrupos);
+      return {documento,clinico,contextosCustom,contextosMedidas,catalogosGrupos,composicoesCustom,provenienciasGrupo,composicoesCatalogoGrupo};
+  }
+
+  private async persistirEdicaoPreparada(
+    gerenciador: EntityManager, tenantId: string, pacienteId: string, plano: PlanoAlimentarOrm,
+    rascunho: PlanoAlimentarVersaoOrm,
+    preparada: Awaited<ReturnType<ServicoPlanosAlimentares['prepararEdicaoRascunho']>>,
+    exigirMaterializacao = false
+  ) {
+      const {documento,clinico,contextosCustom,contextosMedidas,catalogosGrupos,composicoesCustom,provenienciasGrupo,composicoesCatalogoGrupo}=preparada;
       const identidades = await this.prepararIdentidadesEdicao(gerenciador, plano, rascunho, documento);
       let materializada = false;
       if (!validateSync(clinico, { whitelist: true, forbidNonWhitelisted: true }).length && this.lerApresentacao(rascunho).apresentacaoEstado !== 'indisponivel') {
@@ -898,6 +1021,7 @@ export class ServicoPlanosAlimentares {
           if (!(erro instanceof BadRequestException)) throw erro;
         }
       }
+      if(exigirMaterializacao&&!materializada)throw new UnprocessableEntityException('A alteração não pôde ser materializada. Confira o rascunho.');
       rascunho.edicaoSnapshotCriptografado = this.criptografia.criptografar(serializarSnapshotEdicaoGrupos(documento, catalogosGrupos));
       rascunho.alimentosPersonalizadosSnapshotCriptografado = Object.keys(contextosCustom).length ? this.criptografia.criptografar(JSON.stringify({ schemaVersao: 1, contextos: contextosCustom })) : null;
       rascunho.medidasCaseirasSnapshotCriptografado = Object.keys(contextosMedidas).length ? this.criptografia.criptografar(JSON.stringify({schemaVersao:1,contextos:contextosMedidas})) : null;
@@ -909,7 +1033,6 @@ export class ServicoPlanosAlimentares {
       rascunho.hashConteudo = null;
       await gerenciador.getRepository(PlanoAlimentarVersaoOrm).save(rascunho);
       return this.montarVersao(gerenciador, rascunho);
-    });
   }
 
   private lerContextosCustom(versao: PlanoAlimentarVersaoOrm): ContextosAlimentosPersonalizados {
@@ -1482,10 +1605,10 @@ export class ServicoPlanosAlimentares {
     return plano;
   }
 
-  private async obterRascunhoAtivo(gerenciador: EntityManager, tenantId: string, planoId: string, bloquear = false) {
+  private async obterRascunhoAtivo(gerenciador: EntityManager, tenantId: string, planoId: string, bloquear: boolean | 'pessimistic_read' = false) {
     const rascunho = await gerenciador.getRepository(PlanoAlimentarVersaoOrm).findOne({
       where: { tenantId, planoId, publicadaEm: IsNull(), descartadaEm: IsNull() },
-      ...(bloquear ? { lock: { mode: 'pessimistic_write' as const } } : {})
+      ...(bloquear ? { lock: { mode: bloquear === 'pessimistic_read' ? 'pessimistic_read' as const : 'pessimistic_write' as const } } : {})
     });
     if (!rascunho) throw new NotFoundException('Rascunho do plano alimentar nao encontrado.');
     return rascunho;

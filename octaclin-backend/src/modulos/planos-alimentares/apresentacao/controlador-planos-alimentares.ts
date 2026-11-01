@@ -1,3 +1,4 @@
+import { PreviaMicronutrientesDto, ConfirmarPreviaMicronutrientesDto } from '../aplicacao/dtos-previa-micronutrientes';
 import { ContribuicoesMicronutrientesDto } from '../aplicacao/dtos-contribuicoes-micronutrientes';
 import { CalculoCombinadoDto } from '../aplicacao/dtos-calculo-combinado';
 import { AlterarAtivacaoPlanoDto } from '../aplicacao/dtos-ativacao';
@@ -82,6 +83,32 @@ export class ControladorPlanosAlimentares {
     @Body() dados: AlterarAtivacaoPlanoDto
   ) {
     return this.servico.alterarAtivacao(usuario.tenantId,pacienteId,planoId,usuario,dados,identidadeId);
+  }
+
+  @Post(':planoId/rascunho/previa-micronutrientes')
+  @Papeis('Professional')
+  @Permissoes('planos_alimentares.gerenciar')
+  @Header('Cache-Control', 'private, no-store')
+  preverMicronutrientes(
+    @UsuarioAtual() usuario: UsuarioAutenticado,
+    @Param('pacienteId', ParseUUIDPipe) pacienteId: string,
+    @Param('planoId', ParseUUIDPipe) planoId: string,
+    @Body() dados: PreviaMicronutrientesDto
+  ) {
+    return this.servico.preverMicronutrientes(usuario.tenantId, pacienteId, planoId, usuario, dados);
+  }
+
+  @Post(':planoId/rascunho/previa-micronutrientes/confirmar')
+  @Papeis('Professional')
+  @Permissoes('planos_alimentares.gerenciar')
+  @Header('Cache-Control', 'private, no-store')
+  confirmarPreviaMicronutrientes(
+    @UsuarioAtual() usuario: UsuarioAutenticado,
+    @Param('pacienteId', ParseUUIDPipe) pacienteId: string,
+    @Param('planoId', ParseUUIDPipe) planoId: string,
+    @Body() dados: ConfirmarPreviaMicronutrientesDto
+  ) {
+    return this.servico.confirmarPreviaMicronutrientes(usuario.tenantId, pacienteId, planoId, usuario, dados);
   }
 
   @Post('analise-micronutrientes/contribuicoes')

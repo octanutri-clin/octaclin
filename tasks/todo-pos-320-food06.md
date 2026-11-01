@@ -1,12 +1,13 @@
 # FOOD06 — checklist
 
-> Checkpoint vigente: núcleo interno M04 e regressões de receitas M02, na mesma
-> #455 Draft. [Contrato/evidências/limites](food06-previa-factual-dominio.md).
-> Basea35a22dd com Backend/Web/PG/RLS/scanners PASS; Demo ainda em execução na
-> retomada. Novo delta com gates próprios.29,2% estimados,0/12 encerradas.
-> Direitos/G06 BLOCKED. Checkpoints anteriores abaixo são históricos.
+> Checkpoint vigente: M04 API factual de prévia/confirmação de porção manual e
+> troca de catálogo, na mesma #455 Draft. [Contrato/evidências/limites](food06-api-previa-micronutrientes.md).
+> Base53835d72: Backend/Web/PG/RLS/scanners PASS; CI global FAIL em Demo/microcopy,
+> reproduzido e corrigido no marcador sintético do teste. Novo delta tem gates próprios.
+>29,2% administrativos,0/12 encerradas. Direitos/G06 BLOCKED.
+> Checkpoints anteriores abaixo são históricos; não representam o estado vigente.
 
-## Estado vigente
+## Histórico — estado anterior M02
 
 Interface M02 paginada em validação na #455 Draft, sobre992fee05 com API,
 PostgreSQL/RLS e concorrência aprovados no CI. [Evidências do delta Web](food06-interface-contribuicoes.md).
@@ -42,7 +43,9 @@ Fonte de contrato: [plano](plan-pos-320-food06.md), base `68499c15`.
 - [ ] M02: conferir PG/CI deste delta e concluir integrações específicas de receitas/substituição planejada explícita.
 - [ ] Onda B: concluir M02 contribuições e M06 com referências elegíveis.
 - [x] M04-fundamento: núcleo factual antes/depois, diferenças, cobertura e limites; TDD/R4 delimitados, sem rota/aplicação.
-- [ ] M04-integração: API/BFF/fontes autorizadas, revisões/fingerprint, CAS/confirmação e UI.
+- [x] M04-API inicial: porção manual/troca catálogo, DTO/BFF, autorização, revisão/fingerprint, writer único e RED/GREEN/R4 delimitados.
+- [ ] M04-API: comprovar os cinco novos cenários PostgreSQL/RLS e CI do HEAD.
+- [ ] M04-integração: UI/PA07/ACK/autosave, demais operações e UX B/C; M04 permanece parcial.
 - [ ] Onda C completa: M04 prévias, M11 consulta assistida/restrições e M12 cenários.
 - [ ] Onda D: M07 versões, M08 PDF seguro e M10 longitudinal.
 - [ ] UX B/C com interface/artefatos reais e R4 independente integral.

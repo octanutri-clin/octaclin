@@ -1,12 +1,13 @@
 # FOOD06 — comparação factual com referências dietéticas
 
-> Checkpoint vigente: núcleo interno M04 e regressões de receitas M02, na mesma
-> #455 Draft. [Contrato/evidências/limites](food06-previa-factual-dominio.md).
-> Basea35a22dd com Backend/Web/PG/RLS/scanners PASS; Demo ainda em execução na
-> retomada. Novo delta com gates próprios.29,2% estimados,0/12 encerradas.
-> Direitos/G06 BLOCKED. Checkpoints anteriores abaixo são históricos.
+> Checkpoint vigente: M04 API factual de prévia/confirmação de porção manual e
+> troca de catálogo, na mesma #455 Draft. [Contrato/evidências/limites](food06-api-previa-micronutrientes.md).
+> Base53835d72: Backend/Web/PG/RLS/scanners PASS; CI global FAIL em Demo/microcopy,
+> reproduzido e corrigido no marcador sintético do teste. Novo delta tem gates próprios.
+>29,2% administrativos,0/12 encerradas. Direitos/G06 BLOCKED.
+> Checkpoints anteriores abaixo são históricos; não representam o estado vigente.
 
-## Estado vigente — incremento de interface M02
+## Histórico — incremento de interface M02
 
 PR única #455 em Draft, sobre a API de contribuições do commit992fee05, cujo CI
 aprovou inclusive PostgreSQL/RLS e concorrência. Interface paginada agora testada

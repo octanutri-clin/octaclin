@@ -15,6 +15,8 @@ const arquivos = [
   'app/api/planos-alimentares/grupos-substituicoes/[grupoId]/favorito/route.ts',
   'app/api/planos-alimentares/grupos-substituicoes-administracao/consulta/route.ts',
   'app/api/planos-alimentares/grupos-substituicoes-administracao/[grupoId]/route.ts',
+  'app/api/pacientes/[id]/planos-alimentares/[planoId]/rascunho/previa-micronutrientes/route.ts',
+  'app/api/pacientes/[id]/planos-alimentares/[planoId]/rascunho/previa-micronutrientes/confirmar/route.ts',
   'scripts/planos-alimentares-bff.spec.ts',
   'lib/ativacao-plano.ts',
   'app/api/pacientes/[id]/planos-alimentares/[planoId]/ativacao/route.ts',

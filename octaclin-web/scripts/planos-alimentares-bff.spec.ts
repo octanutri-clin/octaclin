@@ -1,3 +1,5 @@
+import { POST as previaMicros } from '../app/api/pacientes/[id]/planos-alimentares/[planoId]/rascunho/previa-micronutrientes/route';
+import { POST as confirmarMicros } from '../app/api/pacientes/[id]/planos-alimentares/[planoId]/rascunho/previa-micronutrientes/confirmar/route';
 import { POST as detalharMicronutrientesFood06 } from '../app/api/pacientes/[id]/planos-alimentares/analise-micronutrientes/contribuicoes/route';
 import { POST as analisarMicronutrientesFood06 } from '../app/api/pacientes/[id]/planos-alimentares/analise-micronutrientes/route';
 import { POST as consultarReceitasFood07 } from '../app/api/planos-alimentares/receitas/consulta/route';
@@ -1504,3 +1506,31 @@ test('FOOD06 detalhe BFF preserva conflito sem retry automático', async () => {
     assert.equal(r.status,409);assert.equal(chamadas,1);assert.equal(r.headers.get('Cache-Control'),'private, no-store');
   } finally {restaurarFetch(original);}
 });
+
+for (const [nome,rota,sufixo] of [['prévia',previaMicros,''],['confirmação',confirmarMicros,'/confirmar']] as const) {
+ test(`FOOD06 ${nome}: destino, encode, corpo, autorização e no-store`,async()=>{
+  __setCookies(cookiesSessaoValida(['planos_alimentares.gerenciar']));
+  const original=global.fetch;
+  let url='',corpo:unknown,cache:unknown;
+  global.fetch=(async(input,init)=>{url=String(input);corpo=init?.body;cache=init?.cache;return Response.json({schemaVersao:1});}) as typeof global.fetch;
+  try{
+   const r=await rota(new Request('http://localhost/api/previa',{method:'POST',body:'{"operacao":"sintetica"}'}),{params:Promise.resolve({id:'paciente/1',planoId:'plano/2'})});
+   assert.equal(r.status,200);assert.ok(url.endsWith('/pacientes/paciente%2F1/planos-alimentares/plano%2F2/rascunho/previa-micronutrientes'+sufixo));
+   assert.equal(corpo,'{"operacao":"sintetica"}');assert.equal(cache,'no-store');assert.match(r.headers.get('Cache-Control')??'',/no-store/);
+   url='';__setCookies(cookiesSessaoValida(['planos_alimentares.ler']));
+   const negado=await rota(new Request('http://localhost/api/previa',{method:'POST',body:'{}'}),{params:Promise.resolve({id:'paciente',planoId:'plano'})});
+   assert.equal(negado.status,403);assert.equal(url,'');
+   __clearCookies();
+   assert.equal((await rota(new Request('http://localhost/api/previa',{method:'POST',body:'{}'}),{params:Promise.resolve({id:'paciente',planoId:'plano'})})).status,401);
+   assert.equal(url,'');
+  }finally{restaurarFetch(original);__clearCookies();}
+ });
+ test(`FOOD06 ${nome}: limita corpo por bytes e não chama backend`,async()=>{
+  __setCookies(cookiesSessaoValida(['planos_alimentares.gerenciar']));const original=global.fetch;let chamou=false;
+  global.fetch=(async()=>{chamou=true;return Response.json({});}) as typeof global.fetch;
+  try{
+   const r=await rota(new Request('http://localhost/api/previa',{method:'POST',body:'é'.repeat(4097)}),{params:Promise.resolve({id:'paciente',planoId:'plano'})});
+   assert.equal(r.status,413);assert.equal(chamou,false);assert.match(r.headers.get('Cache-Control')??'',/no-store/);
+  }finally{restaurarFetch(original);__clearCookies();}
+ });
+}

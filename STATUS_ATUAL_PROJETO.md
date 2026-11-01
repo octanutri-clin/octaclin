@@ -1,13 +1,13 @@
 # OctaClin - Status atual do projeto
 
-**FOOD06 — incremento vigente M04 interno:** comparação factual antes/depois e
-regressões de receitas M02 na #455 Draft; [evidências e limites](tasks/food06-previa-factual-dominio.md).
-Backend/Web/PG/RLS/scanners da basea35a22dd aprovados; Demo ainda em execução na
-retomada. Novo delta tem gates próprios.29,2% estimados (7parciais/5pendentes),
-0/12 encerradas. Sem rota/aplicação M04, direitos e G06 BLOCKED.
+**FOOD06 — incremento vigente M04 API:** prévia factual e confirmação por writer
+existente para porção manual/troca catálogo na #455 Draft; [evidências e limites](tasks/food06-api-previa-micronutrientes.md).
+Base53835d72: Backend/Web/PG/RLS/scanners PASS; CI global FAIL Demo/microcopy,
+reproduzido e corrigido em marcador sintético do teste. Novo delta com gates próprios.
+29,2% administrativos,0/12 encerradas. UI M04/PA07 ainda pendentes; direitos/G06 BLOCKED.
 Blocos anteriores abaixo são checkpoints históricos.
 
-**Incremento atual FOOD06:** interface de contribuições M02 em validação na #455,
+**Checkpoint histórico FOOD06/M02:** interface de contribuições M02 em validação na #455,
 base992fee05 com CI aprovado. [Progresso](tasks/progresso-food06.md):25% estimados,
 0/12 melhorias encerradas; [execução da interface](tasks/food06-interface-contribuicoes.md).
 Os checkpoints anteriores abaixo preservam a história e não encerram M01–M12.
