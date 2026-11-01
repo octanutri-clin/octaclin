@@ -1,12 +1,16 @@
 # FOOD06 — checklist
 
-Incremento vigente: API M02 de contribuições na mesma #455, com paginação,
-reautorização e locks PA06. [Contrato, execução e gates](food06-api-contribuicoes.md).
-Provas PostgreSQL do novo delta aguardam CI; não é conclusão da FOOD06.
+## Estado vigente
 
-Estado vigente: os incrementos #455–#459 foram reunidos por fast-forward na
-branch da #455, preservando commits, revisões e limites. A baseec3690b1 terminou o CI sem falhas; o incremento
-API M02 agora está em validação, com seus próprios gates. Ver [consolidação](food06-consolidacao.md).
+Interface M02 paginada em validação na #455 Draft, sobre992fee05 com API,
+PostgreSQL/RLS e concorrência aprovados no CI. [Evidências do delta Web](food06-interface-contribuicoes.md).
+[Progresso](progresso-food06.md):25% estimados,0/12 melhorias encerradas.
+M02 permanece parcial; direitos e G06 BLOCKED. CI do delta Web separado da base.
+
+## Histórico da consolidação
+
+Branches #456–#459 consolidadas na #455, sem merge na main. Estados antigos
+abaixo são checkpoints históricos; não representam falha atual da base992fee05.
 
 Estado vigente: ficha/quadro ratificados em 2026-10-31; núcleo T03-A isolado
 implementado, sem comparação assistencial ou referência clínica habilitada.
@@ -23,16 +27,17 @@ Fonte de contrato: [plano](plan-pos-320-food06.md), base `68499c15`.
 - [ ] A2: fontes/contexto autorizados, direitos, integração e rastreabilidade persistida.
 - [ ] Onda A: M01 cobertura, M03 causas, M05 rastreabilidade, M09 explicações.
 - [x] B-factual: implementar/testar tabela de cobertura e filtros, UX B/C do incremento.
-- [ ] B-factual: conferir CI próprio, auditoria Mobile ainda pendente.
+- [x] B-factual: CI consolidado992fee05 aprovado; Mobile corrigido, SBOM provenance SKIPPED.
 - [x] M02-fundamento: decomposição interna sem segundo somador, RED/GREEN e revisão independente delimitada.
 - [x] M02 API: backend/BFF de leitura, paginação, IDs persistentes e precondições por página.
-- [ ] M02 API: comprovar cenários novos PostgreSQL/RLS/concorrência no CI do delta.
-- [ ] M02-integração: API paginada/identidades autorizadas, quantidades/fontes e interface; ver [execução](food06-contribuicoes-dominio.md).
+- [x] M02 API: PostgreSQL/RLS/concorrência aprovados no CI992fee05.
+- [x] M02-UI: detalhe sob demanda/paginação, cobertura, teclado/axe, desktop/mobile e invalidação de leitura; [provas e limites](food06-interface-contribuicoes.md). CI próprio ainda pendente.
+- [ ] M02-integração restante: fonte/preparo, ordenação global e navegação autorizada à origem.
 - [ ] Onda B: concluir M02 contribuições e M06 com referências elegíveis.
 - [ ] Onda C: M04 prévias, M11 consulta assistida/restrições e M12 cenários.
 - [ ] Onda D: M07 versões, M08 PDF seguro e M10 longitudinal.
 - [ ] UX B/C com interface/artefatos reais e R4 independente integral.
-- [ ] Resolver falhas de CI atuais: Mobile Expo/PR Gate em eeb552fa.
+- [x] Resolver falhas Mobile/PR Gate dos checkpoints históricos na consolidação992fee05.
 
 Nenhuma melhoria é opcional. As linhas existentes abaixo registram fundamentos
 anteriores e não equivalem à conclusão das ondas ou dos aceites M01–M12.
@@ -80,3 +85,10 @@ Fora do escopo: EAR/CDRR como substituto de UL, diagnóstico, consumo real presu
 suplementação automática, ajuste de prescrição, portal, TBCA e operação externa.
 Registro histórico da etapa inicial: não havia testes de implementação naquela etapa; evidências posteriores estão na execução principal e no incremento A1. G06 permanece
 fora desta entrega. Uma PR documental não comprova ativação ou disponibilidade.
+
+## Comunicação de progresso por entrega
+
+Ver [painel das12 melhorias](progresso-food06.md). Checkpoint atual:25% estimados,
+0/12 encerradas. M02 interface em validação; não converter testes de incremento
+em aceite global. A cada entrega informar feito, próximo, critérios abertos e
+percentual pelo método fixo, sem alterar escopo/pesos para produzir avanço.

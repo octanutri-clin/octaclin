@@ -93,3 +93,8 @@ test('FOOD06 ordenação por quantidade agrupa unidades sem converter ou tratar 
   const a=lerAnaliseMicronutrientesFactual(r,entrada);
   assert.deepEqual(filtrarMicronutrientesFactuais(a.linhas,{grupo:'todos',cobertura:'todas',ordem:'quantidade'}).slice(0,2).map(x=>[x.codigo,x.valor]),[['selenioMcg',1],['calcioMg',0]]);
 });
+
+test('FOOD06 não aceita números de alimentos diferentes entre nutrientes da mesma seleção',()=>{
+ const r=resposta();conhecido(r,'calcioMg',0);r.cobertura.nutrientes.calcioMg.contagens.incluidos=3;r.cobertura.nutrientes.calcioMg.contagens.conhecidos=3;
+ assert.throws(()=>lerAnaliseMicronutrientesFactual(r,entrada));
+});

@@ -1,5 +1,11 @@
 # FOOD06 — API de contribuições paginadas (M02)
 
+Checkpoint posterior: CI992fee05 PASS, incluindo Backend, suíte completa,
+PostgreSQL/RLS/Testcontainers, Web/BFF, Mobile, Demo e PR Gate; SBOM provenance
+SKIPPED. Quatro cenários PG novos estavam habilitados na suíte oficial sem filtro.
+As indicações de pendência abaixo registram o instante anterior ao envio.
+UI M02 é incremento separado em validação, sem herdar este PASS automaticamente.
+
 ## Escopo e base
 
 Implementação autorizada pelo proprietário após estabilização, na mesma PR #455

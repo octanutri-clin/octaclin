@@ -1,8 +1,8 @@
 import { expect, test } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 import { pacienteId, planoIds, idsRefeicoes, resultado, prepararConsole } from './fixtures/console-pa06.mjs';
-function analise(entrada) {
-  const incluidos=entrada.selecoes.reduce((n,s)=>n+s.identidadesRefeicoes.length*2,0);
+function analise(entrada,quantidade) {
+  const incluidos=quantidade??entrada.selecoes.reduce((n,s)=>n+s.identidadesRefeicoes.length*2,0);
   const macros=new Set(['energiaKcal','proteinasG','carboidratosG','gordurasG','fibrasG','sodioMg']);
   const nutrientes=Object.fromEntries(Object.entries(resultado(0).nutrientes).filter(([c])=>!macros.has(c)).map(([codigo,n])=>[codigo,{
     codigo,unidade:n.unidade,estado:incluidos?'DESCONHECIDO':'INDISPONIVEL',contagens:{incluidos,conhecidos:0,semComposicao:incluidos,incompativeis:0,naoResolvidos:0},causas:[{codigo:incluidos?'ausente':'sem_componentes',quantidade:incluidos}]
@@ -13,14 +13,14 @@ function analise(entrada) {
   }
   return {schemaVersao:1,motorVersao:'food06-factual-v1',calculadoEm:'2026-10-31T12:00:00.000Z',publicacoes:entrada.selecoes.map(s=>({planoId:s.planoId,versaoId:s.versaoIdEsperada,ativacaoRevisao:s.ativacaoRevisaoEsperada})),comparacoes:{estado:'indisponivel',motivo:'referencias_nao_habilitadas'},cobertura:{schemaVersao:1,nutrientes}};
 }
-async function preparar(page) {
+async function preparar(page,quantidade) {
   await prepararConsole(page);
   await page.route(url=>url.pathname.endsWith('/selecao-calculo'),route=>route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({planoId:planoIds[0],ativoParaPaciente:true,ativacaoRevisao:1,versao:{id:'versao-a',numero:1,publicadaEm:'2026-10-15T12:00:00.000Z'},refeicoes:[{identidadeId:idsRefeicoes[0],nome:'Refeição A',ordem:0,ativa:true}]})}));
-  await page.route(url=>url.pathname.endsWith('/calculo-combinado'),route=>route.fulfill({status:200,contentType:'application/json',body:JSON.stringify(resultado(route.request().postDataJSON().selecoes.reduce((n,s)=>n+s.identidadesRefeicoes.length*2,0)))}));
+  await page.route(url=>url.pathname.endsWith('/calculo-combinado'),route=>route.fulfill({status:200,contentType:'application/json',body:JSON.stringify(resultado(quantidade??route.request().postDataJSON().selecoes.reduce((n,s)=>n+s.identidadesRefeicoes.length*2,0)))}));
   await page.goto(`/pacientes/${pacienteId}?aba=plano_alimentar`,{waitUntil:'domcontentloaded'});
   await page.getByLabel('Adicionar plano desta página').selectOption(planoIds[0]);
   await page.getByRole('button',{name:'Adicionar',exact:true}).click();
-  await expect(page.getByText('200 kcal')).toBeVisible();
+  await expect(page.getByText(`${new Intl.NumberFormat('pt-BR').format((quantidade??2)*100)} kcal`)).toBeVisible();
 }
 const regiao=page=>page.getByRole('region',{name:'Micronutrientes da seleção',exact:true});
 test('FOOD06 carrega sob demanda, diferencia zero/parcial/ausente, filtra e atende teclado/axe',async({page},testInfo)=>{
@@ -97,4 +97,36 @@ test('FOOD06 resposta inválida não apresenta composição completa nem erro in
   await expect(page.locator('body')).not.toContainText('canario-interno-sintetico');
   await regiao(page).getByRole('button',{name:'Tentar novamente',exact:true}).click();
   await expect(regiao(page).getByRole('rowheader',{name:'Cálcio',exact:true})).toBeVisible();
+});
+
+test('FOOD06 contribuições abre sob demanda e permite teclado',async({page})=>{
+  await page.route(url=>url.pathname.endsWith('/analise-micronutrientes'),route=>route.fulfill({status:200,contentType:'application/json',body:JSON.stringify(analise(route.request().postDataJSON()))}));
+  await preparar(page);await page.getByRole('button',{name:'Ver micronutrientes e cobertura',exact:true}).click();
+  await expect(regiao(page).getByRole('button',{name:'Ver alimentos de Cálcio',exact:true})).toBeVisible();
+});
+
+test('FOOD06 contribuições pagina, usa a seleção inteira e oculta tudo após403',async({page},testInfo)=>{
+  await page.route(url=>url.pathname.endsWith('/analise-micronutrientes'),route=>route.fulfill({status:200,contentType:'application/json',body:JSON.stringify(analise(route.request().postDataJSON(),26))}));
+  let pedidos=0;
+  await page.route(url=>url.pathname.endsWith('/analise-micronutrientes/contribuicoes'),route=>{
+    pedidos++;const q=route.request().postDataJSON(),a=analise(q,26),c=a.cobertura.nutrientes[q.codigo];
+    const porcao={codigo:q.codigo,unidade:'mg',estado:'COMPLETO',total:0,contagens:{incluidos:1,conhecidos:1,semComposicao:0,incompativeis:0,naoResolvidos:0},causas:[]};
+    return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({...a,motorVersao:'food06-contribuicoes-v1',codigo:q.codigo,pagina:q.pagina,limite:q.limite,total:26,cobertura:c,refeicoes:[{planoId:q.selecoes[0].planoId,identidadeRefeicao:q.selecoes[0].identidadesRefeicoes[0],nome:'Almoço sintético',cobertura:c,itens:Array.from({length:q.pagina===1?25:1},(_,i)=>({itemId:`10000000-0000-4000-8000-${String((q.pagina-1)*25+i+1).padStart(12,'0')}`,descricao:`Alimento sintético ${(q.pagina-1)*25+i+1}`,quantidade:'1.5',unidade:'porção',porcaoGramas:'100',cobertura:porcao}))}]})});
+  });
+  await preparar(page,26);await page.getByRole('button',{name:'Ver micronutrientes e cobertura',exact:true}).click();
+  const r=regiao(page);await expect(r.getByRole('rowheader',{name:'Cálcio',exact:true})).toBeVisible();expect(pedidos).toBe(0);
+  await r.getByRole('button',{name:'Ver alimentos de Cálcio',exact:true}).focus();await page.keyboard.press('Enter');
+  await expect(r.getByText('Alimento sintético 1',{exact:true})).toBeVisible();
+  await expect(r).toContainText('1,5 porção');await expect(r).toContainText('Página 1 de 2: 26 alimentos');
+  expect((await new AxeBuilder({page}).include('[aria-label="Micronutrientes da seleção"]').analyze()).violations).toEqual([]);
+  await r.getByRole('button',{name:'Próxima página de Cálcio',exact:true}).click();
+  await expect(r.getByText('Alimento sintético 26',{exact:true})).toBeVisible();await expect(r.getByText('Alimento sintético 1',{exact:true})).toHaveCount(0);
+  await expect(r.getByRole('button',{name:'Próxima página de Cálcio',exact:true})).toBeDisabled();
+  await r.getByRole('region',{name:'Alimentos de Cálcio',exact:true}).scrollIntoViewIfNeeded();
+  await r.getByRole('region',{name:'Alimentos de Cálcio',exact:true}).screenshot({path:testInfo.outputPath('food06-contribuicoes.png')});
+  await page.route(url=>url.pathname.endsWith('/analise-micronutrientes/contribuicoes'),route=>route.fulfill({status:403,contentType:'application/json',body:'{"message":"canario-segredo"}'}));
+  await r.getByRole('button',{name:'Página anterior de Cálcio',exact:true}).click();
+  await expect(r.getByRole('rowheader',{name:'Cálcio',exact:true})).toHaveCount(0);
+  await expect(r).not.toContainText('Alimento sintético');await expect(r).not.toContainText('canario-segredo');
+  await expect(page.getByText('2.600 kcal',{exact:true})).toHaveCount(0);
 });

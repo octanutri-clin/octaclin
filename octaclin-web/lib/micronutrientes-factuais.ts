@@ -32,17 +32,28 @@ export function lerAnaliseMicronutrientesFactual(valor: unknown, entrada: Calcul
     comparacoes.estado!=='indisponivel' || comparacoes.motivo!=='referencias_nao_habilitadas' ||
     typeof r.calculadoEm!=='string' || !Number.isFinite(Date.parse(r.calculadoEm)) || !Array.isArray(r.publicacoes) ||
     r.publicacoes.length!==entrada.selecoes.length) return falhar();
+  validarPublicacoesFactuais(r.publicacoes,entrada);
+  const nutrientes=objeto(cobertura.nutrientes);
+  const linhas=CAMPOS_MICRONUTRIENTES_PLANO.map(c=>lerLinhaMicronutrienteFactual(nutrientes[c.codigo],c.codigo));
+  if(new Set(linhas.map(l=>l.contagens.incluidos)).size!==1)return falhar();
+  return {calculadoEm:r.calculadoEm,linhas};
+}
+export function validarPublicacoesFactuais(valor:unknown,entrada:CalcularCombinadoEntradaApi):void {
+  if(!Array.isArray(valor)||valor.length!==entrada.selecoes.length)return falhar();
   const recebidas=new Set<string>();
-  for(const publicacao of r.publicacoes) {
+  for(const publicacao of valor) {
     const p=objeto(publicacao);
     if(typeof p.planoId!=='string' || typeof p.versaoId!=='string' || recebidas.has(p.planoId.toLowerCase())) return falhar();
     recebidas.add(p.planoId.toLowerCase());
     if(!entrada.selecoes.some(s=>s.planoId.toLowerCase()===String(p.planoId).toLowerCase() &&
       s.versaoIdEsperada.toLowerCase()===String(p.versaoId).toLowerCase() && s.ativacaoRevisaoEsperada===p.ativacaoRevisao)) return falhar();
   }
-  const nutrientes=objeto(cobertura.nutrientes);
+}
+export function lerLinhaMicronutrienteFactual(valor: unknown, codigo: CodigoMicronutrienteApi): LinhaMicronutrienteFactual {
+  const campo=CAMPOS_MICRONUTRIENTES_PLANO.find(c=>c.codigo===codigo);
+  if(!campo)return falhar();
+  const nutrientes={ [codigo]:valor };
   const minerais=new Set(['calcioMg','magnesioMg','manganesMg','fosforoMg','ferroMg','potassioMg','cobreMg','zincoMg','selenioMcg']);
-  const linhas=CAMPOS_MICRONUTRIENTES_PLANO.map((campo): LinhaMicronutrienteFactual=>{
     const n=objeto(nutrientes[campo.codigo]),c=objeto(n.contagens);
     if(n.codigo!==campo.codigo || n.unidade!==campo.unidade || !ESTADOS.includes(n.estado as EstadoCoberturaFactual)) return falhar();
     const chaves=['incluidos','conhecidos','semComposicao','incompativeis','naoResolvidos'] as const;
@@ -70,9 +81,8 @@ export function lerAnaliseMicronutrientesFactual(valor: unknown, entrada: Calcul
     if(estado!=='INDISPONIVEL' && (tecnico || contagens.incluidos===0)) return falhar();
     if(estado!=='INDISPONIVEL' && estado!=='INCOMPATIVEL' && contagens.incompativeis>0) return falhar();
     return {...campo,grupo:minerais.has(campo.codigo)?'minerais':'vitaminas',estado,contagens,causas,...(valorConhecido!==undefined?{valor:valorConhecido as number}:{})};
-  });
-  return {calculadoEm:r.calculadoEm,linhas};
 }
+
 export function filtrarMicronutrientesFactuais(linhas: LinhaMicronutrienteFactual[], filtros: FiltrosMicronutrientesFactuais): LinhaMicronutrienteFactual[] {
   const nome=(a:LinhaMicronutrienteFactual,b:LinhaMicronutrienteFactual)=>a.rotulo.localeCompare(b.rotulo,'pt-BR') || a.codigo.localeCompare(b.codigo);
   return linhas.filter(l=>(filtros.grupo==='todos'||l.grupo===filtros.grupo)&&(filtros.cobertura==='todas'||l.estado===filtros.cobertura)).sort((a,b)=>{

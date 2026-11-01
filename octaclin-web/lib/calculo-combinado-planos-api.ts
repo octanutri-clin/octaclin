@@ -1,3 +1,4 @@
+import { lerPaginaContribuicoes, type PedidoContribuicoes } from './contribuicoes-micronutrientes';
 import { lerAnaliseMicronutrientesFactual, type AnaliseMicronutrientesFactual } from './micronutrientes-factuais';
 import { ErroApiPlanoAlimentar, type CalcularCombinadoEntradaApi, type ResultadoCalculoCombinadoApi, type SelecaoCalculoPlanoApi } from './plano-alimentar-api';
 
@@ -35,4 +36,11 @@ export async function analisarMicronutrientesPlanejados(pacienteId: string, entr
     method: 'POST', cache: 'no-store', signal, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(entrada)
   });
   return lerAnaliseMicronutrientesFactual(await lerJson<unknown>(resposta), entrada);
+}
+
+export async function obterContribuicoesMicronutrientes(pacienteId:string,pedido:PedidoContribuicoes,signal?:AbortSignal) {
+  const resposta=await fetch(`/api/pacientes/${encodeURIComponent(pacienteId)}/planos-alimentares/analise-micronutrientes/contribuicoes`,{
+    method:'POST',cache:'no-store',signal,headers:{'Content-Type':'application/json'},body:JSON.stringify(pedido)
+  });
+  return lerPaginaContribuicoes(await lerJson<unknown>(resposta),pedido);
 }

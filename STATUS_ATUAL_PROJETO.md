@@ -1,8 +1,13 @@
 # OctaClin - Status atual do projeto
 
-**FOOD06 — checkpoint vigente:** PR #455 passa a concentrar os incrementos
-#456–#459, sem merge na main. Correção da auditoria Mobile e CI consolidado
-precedem a API de detalhe M02; [evidências e limites](tasks/food06-consolidacao.md).
+**Incremento atual FOOD06:** interface de contribuições M02 em validação na #455,
+base992fee05 com CI aprovado. [Progresso](tasks/progresso-food06.md):25% estimados,
+0/12 melhorias encerradas; [execução da interface](tasks/food06-interface-contribuicoes.md).
+Os checkpoints anteriores abaixo preservam a história e não encerram M01–M12.
+
+**FOOD06 — checkpoint histórico de consolidação:** PR #455 reuniu os incrementos
+#456–#459, sem merge na main. Auditoria Mobile e CI consolidado foram resolvidos
+antes da API M02; [evidências e limites](tasks/food06-consolidacao.md).
 As descrições de PRs separadas abaixo são o histórico da construção incremental.
 
 Atualizado em 2026-10-31 durante o desenvolvimento isolado da FOOD06; histórico preservado.

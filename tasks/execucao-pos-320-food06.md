@@ -1,5 +1,15 @@
 # FOOD06 — execução técnica
 
+## Estado vigente do incremento M02
+
+A implementação da interface de contribuições e suas provas estão em
+[execução M02 Web](food06-interface-contribuicoes.md). Base992fee05 com CI
+aprovado; o delta Web tem testes locais próprios e aguarda seu CI.
+[Progresso das12 melhorias](progresso-food06.md):25% estimados,0/12 encerradas.
+Os resultados abaixo são históricos dos respectivos commits; Mobile FAIL e
+provas PG pendentes desses checkpoints foram substituídos pela base992fee05.
+Direitos e G06 continuam BLOCKED; nenhuma comparação clínica foi ativada.
+
 ## Expansão M01–M12 e auditoria (2026-10-31)
 
 Todas as12 melhorias foram aprovadas para planejamento/implementação isolada.

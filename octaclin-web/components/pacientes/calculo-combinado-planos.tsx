@@ -69,6 +69,13 @@ export function CalculoCombinadoPlanos({ pacienteId, planos, selecoes, aoMudarSe
     setRevisaoLeituraFactual(v => v + 1);
   }, [cancelarCalculo]);
 
+  const invalidarLeituraDetalhe=useCallback((status:number)=>{
+    invalidar();
+    setCalculandoChave(null);
+    if(status===409)setConflitoChave(chaveAtualRef.current);
+    setErroEstado({chave:chaveAtualRef.current,mensagem:status===409?'A publicação ou a ativação mudou. Atualize a seleção antes de calcular novamente.':'Não foi possível confirmar o acesso à seleção. Atualize e tente novamente.'});
+  },[invalidar]);
+
   const calcular = useCallback(async () => {
     const selecoesAtuais = selecoesRef.current;
     const chaveCalculo = chaveAtualRef.current;
@@ -256,7 +263,7 @@ export function CalculoCombinadoPlanos({ pacienteId, planos, selecoes, aoMudarSe
         {calculando ? <span role="status" className="text-sm text-texto-suave">Atualizando resultado…</span> : null}
       </div>
       {erro ? <p role="alert" className="rounded-md border border-alerta-borda bg-alerta-suave p-3 text-sm text-alerta-forte">{erro}</p> : null}
-      {selecoes.length ? <MicronutrientesFactuais key={pacienteId} pacienteId={pacienteId} entrada={montarEntradaCalculoCombinado(selecoes)} chaveContexto={JSON.stringify([chaveAtual,revisaoLeituraFactual])} leituraPermitida={!calculando && !atualizando && !conflito && !erro} aoAtualizarSelecao={atualizarSelecao} atualizando={atualizando} /> : null}
+      {selecoes.length ? <MicronutrientesFactuais aoInvalidarLeitura={invalidarLeituraDetalhe} nomesPlanos={Object.fromEntries(selecoes.map(s=>[s.planoId,s.titulo]))} key={pacienteId} pacienteId={pacienteId} entrada={montarEntradaCalculoCombinado(selecoes)} chaveContexto={JSON.stringify([chaveAtual,revisaoLeituraFactual])} leituraPermitida={!calculando && !atualizando && !conflito && !erro} aoAtualizarSelecao={atualizarSelecao} atualizando={atualizando} /> : null}
       {resultado ? <div className="grid gap-3" aria-live="polite">
         <p className="text-sm text-texto-suave">{resultado.estado === 'calculado' ? `${resultado.itensIncluidos} alimentos previstos somados · cálculo em ${new Date(resultado.calculadoEm).toLocaleString('pt-BR')}` : resultado.estado === 'sem_selecao' ? 'Selecione planos e refeições para calcular.' : 'Nenhum alimento ativo incluído no cálculo.'}</p>
         <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">

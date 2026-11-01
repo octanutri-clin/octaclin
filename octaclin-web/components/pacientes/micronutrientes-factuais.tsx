@@ -1,5 +1,6 @@
 'use client';
-import { useEffect, useId, useState } from 'react';
+import { ContribuicoesMicronutrientes } from './contribuicoes-micronutrientes';
+import { useCallback, useEffect, useId, useState } from 'react';
 import { analisarMicronutrientesPlanejados } from '@/lib/calculo-combinado-planos-api';
 import { ErroApiPlanoAlimentar, type CalcularCombinadoEntradaApi } from '@/lib/plano-alimentar-api';
 import { CAUSAS_COBERTURA_FACTUAL, filtrarMicronutrientesFactuais, type AnaliseMicronutrientesFactual, type EstadoCoberturaFactual, type FiltrosMicronutrientesFactuais } from '@/lib/micronutrientes-factuais';
@@ -8,8 +9,8 @@ const ESTADOS: Record<EstadoCoberturaFactual,string> = {
   COMPLETO:'Dados completos', PARCIAL:'Dados parciais', DESCONHECIDO:'Composição desconhecida', INCOMPATIVEL:'Dados incompatíveis', INDISPONIVEL:'Cálculo indisponível'
 };
 const FILTROS_INICIAIS: FiltrosMicronutrientesFactuais = {grupo:'todos',cobertura:'todas',ordem:'nome'};
-interface Props { pacienteId: string; entrada: CalcularCombinadoEntradaApi; chaveContexto: string; aoAtualizarSelecao: () => Promise<boolean>; atualizando: boolean; leituraPermitida: boolean }
-export function MicronutrientesFactuais({pacienteId,entrada,chaveContexto,aoAtualizarSelecao,atualizando,leituraPermitida}:Props) {
+interface Props { aoInvalidarLeitura:(status:number)=>void; nomesPlanos:Record<string,string>; pacienteId: string; entrada: CalcularCombinadoEntradaApi; chaveContexto: string; aoAtualizarSelecao: () => Promise<boolean>; atualizando: boolean; leituraPermitida: boolean }
+export function MicronutrientesFactuais({aoInvalidarLeitura,nomesPlanos,pacienteId,entrada,chaveContexto,aoAtualizarSelecao,atualizando,leituraPermitida}:Props) {
   const id=useId();
   const [aberta,setAberta]=useState(false),[tentativa,setTentativa]=useState(0);
   const [armazenado,setArmazenado]=useState<{chave:string;dados:AnaliseMicronutrientesFactual}|null>(null);
@@ -17,6 +18,11 @@ export function MicronutrientesFactuais({pacienteId,entrada,chaveContexto,aoAtua
   const [filtros,setFiltros]=useState<FiltrosMicronutrientesFactuais>(FILTROS_INICIAIS);
   const corpo=JSON.stringify(entrada);
   const chave=JSON.stringify({pacienteId,corpo,chaveContexto,tentativa});
+  const invalidarDetalhe=useCallback((status:number)=>{
+    setArmazenado(null);
+    aoInvalidarLeitura(status);
+    setFalha({chave,conflito:status===409,mensagem:status===409?'A publicação ou a ativação mudou. Atualize a seleção antes de tentar novamente.':'Não foi possível confirmar o acesso à seleção. Atualize e tente novamente.'});
+  },[chave,aoInvalidarLeitura]);
   const dados=leituraPermitida&&armazenado?.chave===chave?armazenado.dados:null;
   const falhaAtual=leituraPermitida&&falha?.chave===chave?falha:null;
   const erro=falhaAtual?.mensagem;
@@ -61,7 +67,7 @@ export function MicronutrientesFactuais({pacienteId,entrada,chaveContexto,aoAtua
               <tbody>{linhas.map(l=><tr key={l.codigo}>
                 <th scope="row" className="border-b border-linha p-2 align-top font-medium">{l.rotulo}</th>
                 <td className="border-b border-linha p-2 align-top tabular-nums">{l.valor===undefined?'—':`${formatarNutrientePlano(l.codigo,l.valor)} ${l.unidade}${l.estado==='COMPLETO'?'':' contabilizados'}`}{l.valor!==undefined&&l.estado!=='COMPLETO'?<p className="text-xs text-texto-suave">total real desconhecido</p>:null}</td>
-                <td className="border-b border-linha p-2 align-top"><p>{ESTADOS[l.estado]}</p><p className="text-xs text-texto-suave">{l.contagens.conhecidos}/{l.contagens.incluidos} alimentos com composição conhecida</p><details><summary className="min-h-11 cursor-pointer py-2 text-primaria underline">Detalhes de {l.rotulo}</summary><p>Sem composição: {l.contagens.semComposicao}. Incompatíveis: {l.contagens.incompativeis}. Não resolvidos: {l.contagens.naoResolvidos}.</p>{l.causas.length?<ul>{l.causas.map(c=><li key={c.codigo}>{CAUSAS_COBERTURA_FACTUAL[c.codigo]}: {c.quantidade}</li>)}</ul>:<p>Todos os alimentos incluídos possuem composição conhecida para este nutriente.</p>}</details></td>
+                <td className="border-b border-linha p-2 align-top"><p>{ESTADOS[l.estado]}</p><p className="text-xs text-texto-suave">{l.contagens.conhecidos}/{l.contagens.incluidos} alimentos com composição conhecida</p><details><summary className="min-h-11 cursor-pointer py-2 text-primaria underline">Detalhes de {l.rotulo}</summary><p>Sem composição: {l.contagens.semComposicao}. Incompatíveis: {l.contagens.incompativeis}. Não resolvidos: {l.contagens.naoResolvidos}.</p>{l.causas.length?<ul>{l.causas.map(c=><li key={c.codigo}>{CAUSAS_COBERTURA_FACTUAL[c.codigo]}: {c.quantidade}</li>)}</ul>:<p>Todos os alimentos incluídos possuem composição conhecida para este nutriente.</p>}</details><ContribuicoesMicronutrientes key={chave+':'+l.codigo} pacienteId={pacienteId} entrada={entrada} linha={l} nomesPlanos={nomesPlanos} aoInvalidar={invalidarDetalhe} /></td>
                 <td className="border-b border-linha p-2 align-top">Indisponível</td>
               </tr>)}</tbody>
             </table>
