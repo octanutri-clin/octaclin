@@ -1,10 +1,16 @@
 # FOOD06 — comparação factual com referências dietéticas
 
-> Follow-up vigente: [liberação efetiva PA07](food06-pa07-release.md). Fragilidade
+> Estado vigente — M07 fundamento interno: [execução e contrato](food06-comparacao-versoes-dominio.md).
+>39testes M07 e44regressões focadas PASS; backend3.970PASS/180SKIPPED; R4 delimitada favorável.
+> Sem API/UI/registro novo; M07 parcial. Baseb9ed65bc:22checksSUCCESS/ProvenanceSKIPPED.
+> M09 concluída tecnicamente nos critérios existentes. Progresso37,5%;1/12encerrada.
+> CI do novo delta pendente; direitos/DRI/G06 BLOCKED. Checkpoints abaixo são históricos.
+
+> Histórico PA07: [liberação efetiva PA07](food06-pa07-release.md). Fragilidade
 > reproduzida com2RED e corrigida;72unitários/4browser controlados/build Node22PASS.
 > Matriz162/162PASS, zero skipped; CI do novo delta pendente. M09 abaixo é checkpoint histórico.
 
-> Checkpoint vigente — M09: ajuda explicativa própria na tabela factual e nas prévias.
+> Histórico M09: ajuda explicativa própria na tabela factual e nas prévias.
 > [Execução, testes e limites](food06-interface-ajuda.md). Backend3.931PASS/180SKIPPED;
 > Web61PASS; browser157PASS/1FAIL PA07; isolado6PASS e suíte PA07 posterior61PASS/1FAIL.
 > Regressão intermitente em investigação; não é gate verde irrestrito. CI próprio pendente. Comparações DRI continuam indisponíveis.

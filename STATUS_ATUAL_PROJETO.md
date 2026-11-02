@@ -1,6 +1,15 @@
 # OctaClin - Status atual do projeto
 
-**FOOD06 — follow-up vigente PA07:** [handoff](tasks/food06-pa07-release.md).
+**FOOD06 — vigente: fundamento M07, comparação de versões.**
+[Contrato, execução e limites](tasks/food06-comparacao-versoes-dominio.md):39novos
+unitários/83focados e3.970backend PASS,180SKIPPED; Node22/build/typecheck e R4
+delimitada favoráveis. Sem API/UI/registro novo; novo CI pendente. Baseb9ed65bc
+concluiu23checks:22SUCCESS e Provenance do SBOM SKIPPED. M09 técnica encerrada;
+[progresso](tasks/progresso-food06.md)37,5%,1/12encerrada,7parciais/4pendentes.
+Direitos/DRI/G06 BLOCKED; sem merge/deploy/migrations externas. Histórico abaixo
+não representa os gates atuais.
+
+**FOOD06 — histórico PA07:** [handoff](tasks/food06-pa07-release.md).
 Fragilidade reproduzida: ACK podia preceder release efetivo. Corrigida com
 72unitários/4browser controlados/build Node22PASS e revisão independente delimitada.
 Matriz final162/162PASS, zero skipped; CI do novo delta pendente.29,2%

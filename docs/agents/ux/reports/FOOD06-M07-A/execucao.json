@@ -1,0 +1,16 @@
+{
+  "etapa": "A complementar",
+  "referencia": "PR451/0d3382b6",
+  "baseRemota": "b9ed65bc1c40a48c91821f15301aa81a27ece8bc",
+  "instancias": [
+    "/root/food06_m09_nutricionista_ux",
+    "/root/food06_m09_paciente_ux"
+  ],
+  "modo": "instâncias independentes reutilizadas, brief textual sintético",
+  "selecaoTOMLNativa": false,
+  "ferramentasPersonas": false,
+  "imagensOuInteracao": false,
+  "portalDireto": "N/A",
+  "novasDecisoesDeProduto": false,
+  "etapasBC": "pendentes para futura interface"
+}

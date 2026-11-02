@@ -1,10 +1,16 @@
 # FOOD06 — matriz obrigatória de aceite
 
-> Follow-up vigente: [liberação efetiva PA07](food06-pa07-release.md). Fragilidade
+> Estado vigente — M07 fundamento interno: [execução e contrato](food06-comparacao-versoes-dominio.md).
+>39testes M07 e44regressões focadas PASS; backend3.970PASS/180SKIPPED; R4 delimitada favorável.
+> Sem API/UI/registro novo; M07 parcial. Baseb9ed65bc:22checksSUCCESS/ProvenanceSKIPPED.
+> M09 concluída tecnicamente nos critérios existentes. Progresso37,5%;1/12encerrada.
+> CI do novo delta pendente; direitos/DRI/G06 BLOCKED. Checkpoints abaixo são históricos.
+
+> Histórico PA07: [liberação efetiva PA07](food06-pa07-release.md). Fragilidade
 > reproduzida com2RED e corrigida;72unitários/4browser controlados/build Node22PASS.
 > Matriz162/162PASS, zero skipped; CI do novo delta pendente. M09 abaixo é checkpoint histórico.
 
-> Checkpoint vigente — M09: ajuda explicativa própria na tabela factual e nas prévias.
+> Histórico M09: ajuda explicativa própria na tabela factual e nas prévias.
 > [Execução, testes e limites](food06-interface-ajuda.md). Backend3.931PASS/180SKIPPED;
 > Web61PASS; browser157PASS/1FAIL PA07; isolado6PASS e suíte PA07 posterior61PASS/1FAIL.
 > Regressão intermitente em investigação; não é gate verde irrestrito. CI próprio pendente. Comparações DRI continuam indisponíveis.
@@ -58,13 +64,13 @@ Fontes: [especificação](especificacao-pos-320-food06-melhorias.md),
 | M05-C2 | Reproduzir análise original sem atualização silenciosa | Atualização de tabela, mesma análise anterior, nova análise versionada, snapshots cifrados | PENDENTE persistência |
 | M06-C1 | Colunas, todos filtros aprovados e ordenação determinística | Tabela de verdade abaixo/acima/igual, completo/parcial, ausência/UL incompatível; decisão antes do arredondamento | PARCIAL: filtros factuais e ordem implementados; referências/percentuais pendentes |
 | M06-C2 | Texto/filtros ativos/limpar, sem ranking clínico ou cor única | Componentes e Playwright desktop/mobile, teclado, leitor, zoom; ausente não ordena como zero | PARCIAL:32 Playwright/axe/teclado/fonte200% neste incremento; sem AT humana ou UI de comparação clínica |
-| M07-C1 | Duas versões autorizadas com contexto e deltas válidos | Versões publicadas/rascunho com revisão exata; paciente/tenant adversário negados | PENDENTE |
-| M07-C2 | Distinguir dieta/fonte/ref/contexto/cobertura | Cada causa isolada e combinada; causa incerta declarada; referência comum só se aplicável a ambos | PENDENTE |
+| M07-C1 | Duas versões autorizadas com contexto e deltas válidos | Versões publicadas/rascunho com revisão exata; paciente/tenant adversário negados | PARCIAL:39testes do núcleo de identidade/revisão/vínculo e reuso PA06/M04; sem autorização HTTP/PG, construtor ou análise registrada. Não é prova de RLS |
+| M07-C2 | Distinguir dieta/fonte/ref/contexto/cobertura | Cada causa isolada e combinada; causa incerta declarada; referência comum só se aplicável a ambos | PARCIAL: contrato de marcadores internos por dimensão/cobertura, ausência/esquema e causalidade não estabelecida; construtor canônico/contexto persistido/referência comum/UI pendentes |
 | M08-C1 | PDF fiel à análise autorizada e minimizada | Mesmos números/revisões/contexto/fontes; teste autorização/revogação/PII canário | PENDENTE |
 | M08-C2 | Arquivo seguro, sem publicação/entrega automática | Sem URL/objeto público/cache persistente; política retenção/descarte; cancelamento/erro | PENDENTE |
 | M08-C3 | Artefato PDF legível e acessível | PDF real: texto selecionável, ordem/cabeçalhos/limites próximos, celular e tecnologia assistiva | PENDENTE; HTML acessível não comprova PDF |
-| M09-C1 | Explicar RDA/AI/UL, planejado/consumido, parcial e limitações | Conteúdo próprio revisado, fonte identificável, sem diagnóstico ou recomendação de suplemento | PARCIAL M09: texto próprio do catálogo integrado ao guia, fonte NIH verificada e revisão independente delimitada; CI do novo delta pendente |
-| M09-C2 | Explicações curtas e detalhes acessíveis | Texto perto do dado, expansão teclado/leitor; zero e desconhecido distinguíveis | PARCIAL M09: details/summary nativos, zero e parcial preservados; 8browser M09/axe/teclado e matriz final162/162PASS após correção PA07; CI do novo HEAD pendente, sem AT humana |
+| M09-C1 | Explicar RDA/AI/UL, planejado/consumido, parcial e limitações | Conteúdo próprio revisado, fonte identificável, sem diagnóstico ou recomendação de suplemento | PASS técnico M09: texto próprio do catálogo, fonte NIH verificada, revisão independente delimitada e CIb9ed65bc aprovado; sem tabela DRI ou nova ratificação clínica |
+| M09-C2 | Explicações curtas e detalhes acessíveis | Texto perto do dado, expansão teclado/leitor; zero e desconhecido distinguíveis | PASS técnico M09: details/summary nativos, zero e parcial preservados;8browser M09/axe/teclado e matriz162/162PASS, CIb9ed65bc aprovado; sem execução humana de AT e sem fechar demais melhorias |
 | M10-C1 | Histórico paginado e pontos reproduzíveis | Data/plano/revisão/nutriente/cobertura/ref e autorização atual/carteira | PENDENTE |
 | M10-C2 | Gráfico e tabela equivalentes, sem interpolação indevida | Lacunas, parcial, mudança de fonte/ref/contexto, não ligar bases incompatíveis ou inferir melhora clínica | PENDENTE |
 | M11-C1 | Catálogo autorizado por porção/preparo/teor conhecido | Fonte ativa/autorizada, unidade/base clara, ausência fora do ranking sem virar zero | PENDENTE |

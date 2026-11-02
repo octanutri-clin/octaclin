@@ -1,5 +1,10 @@
 # FOOD06 — regressão PA07: término efetivo da liberação
 
+> Encerramento técnico deste incremento: CIb9ed65bc, run41398826715, aprovado.
+>23checks:22SUCCESS e Provenance do SBOM SKIPPED; Backend/PG-RLS/Web/Demo/PRGate
+>e scanners SUCCESS. Pendências de CI abaixo são históricas. Próximo delta:
+>[M07 fundamento](food06-comparacao-versoes-dominio.md), com CI próprio.
+
 ## Escopo e estado
 
 PR455 Draft, follow-up da ajuda M09 publicada no remotob1c6d839 e local4473d6e7,
