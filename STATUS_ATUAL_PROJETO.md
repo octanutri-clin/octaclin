@@ -1,6 +1,14 @@
 # OctaClin - Status atual do projeto
 
-**FOOD06 — incremento vigente M09 (ajuda explicativa):**
+**FOOD06 — follow-up vigente PA07:** [handoff](tasks/food06-pa07-release.md).
+Fragilidade reproduzida: ACK podia preceder release efetivo. Corrigida com
+72unitários/4browser controlados/build Node22PASS e revisão independente delimitada.
+Matriz final162/162PASS, zero skipped; CI do novo delta pendente.29,2%
+administrativos,0/12 encerradas.
+Sem merge/deploy/migrations externas; direitos/G06 BLOCKED. Checkpoints abaixo
+preservam o histórico e não são o estado vigente da regressão.
+
+**FOOD06 — checkpoint M09 (ajuda explicativa):**
 [Execução/handoff](tasks/food06-interface-ajuda.md): conteúdo próprio versionado,
 fonte NIH identificada, sete tópicos recolhíveis na tabela e nas prévias, sem
 habilitar referências clínicas. Backend3.931PASS/180SKIPPED, Web61PASS;

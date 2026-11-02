@@ -5,7 +5,8 @@ export interface CanalAbasPlano {
   ouvir: (ouvinte: (mensagem: unknown) => void) => () => void;
   fechar: () => void;
 }
-export interface TravaAbasPlano { adquirir: (signal: AbortSignal) => Promise<(() => void) | null> }
+export type LiberarTravaAbasPlano = () => void | Promise<void>;
+export interface TravaAbasPlano { adquirir: (signal: AbortSignal) => Promise<LiberarTravaAbasPlano | null> }
 export interface OpcoesCoordenacaoAbasPlano {
   instancia: string;
   iniciarEmConsulta?: boolean;
@@ -27,7 +28,7 @@ function mensagemValida(valor: unknown): valor is MensagemAbasPlano {
 export class CoordenacaoAbasPlano {
   private atual: EstadoCoordenacaoAbasPlano = 'inicializando';
   private readonly controlador = new AbortController();
-  private liberar?: () => void;
+  private liberar?: LiberarTravaAbasPlano;
   private desouvir?: () => void;
   private iniciado = false;
   private operacao = 0;
@@ -43,7 +44,10 @@ export class CoordenacaoAbasPlano {
     this.atual = estado;
     this.opcoes.notificar?.();
   }
-  private liberarTrava() { const liberar = this.liberar; this.liberar = undefined; liberar?.(); }
+  private async liberarTrava(): Promise<boolean> {
+    const liberar = this.liberar; this.liberar = undefined;
+    try { await liberar?.(); return true; } catch { return false; }
+  }
   private cancelarEspera() {
     const espera = this.espera; this.espera = undefined;
     if (espera) { clearTimeout(espera.timer); espera.concluir(); }
@@ -62,12 +66,12 @@ export class CoordenacaoAbasPlano {
     this.mudar('reconferir');
     try {
       const liberar = this.opcoes.trava ? await this.opcoes.trava.adquirir(this.controlador.signal) : undefined;
-      if (this.controlador.signal.aborted || operacao !== this.operacao) { liberar?.(); return 'concluido'; }
+      if (this.controlador.signal.aborted || operacao !== this.operacao) { await liberar?.(); return 'concluido'; }
       if (liberar === null) { this.mudar('consulta'); return 'ocupado'; }
       this.liberar = liberar;
       await this.conferir(operacao);
     } catch {
-      if (operacao === this.operacao) { this.liberarTrava(); this.mudar('reconferir'); }
+      if (operacao === this.operacao) { await this.liberarTrava(); this.mudar('reconferir'); }
     }
     finally { this.conferindo = false; }
     return 'concluido';
@@ -75,7 +79,7 @@ export class CoordenacaoAbasPlano {
   private async conferir(operacao: number) {
     const permitido = await this.opcoes.conferir(this.controlador.signal);
     if (this.controlador.signal.aborted || operacao !== this.operacao) return;
-    if (!permitido) { this.liberarTrava(); this.mudar('reconferir'); return; }
+    if (!permitido) { await this.liberarTrava(); this.mudar('reconferir'); return; }
     this.mudar(this.opcoes.trava ? 'editando' : 'indisponivel');
   }
   async assumir() {
@@ -113,10 +117,12 @@ export class CoordenacaoAbasPlano {
     try {
       await this.opcoes.drenar();
       if (this.controlador.signal.aborted || operacao !== this.operacao) return;
-      this.liberarTrava(); this.mudar('consulta');
+      if (!await this.liberarTrava()) { this.mudar('reconferir'); return; }
+      if (this.controlador.signal.aborted || operacao !== this.operacao) return;
+      this.mudar('consulta');
       this.opcoes.canal?.enviar({ v: 1, tipo: 'liberado', de: this.opcoes.instancia, para: valor.de, pedido: valor.pedido });
     } catch {
-      if (operacao === this.operacao) { this.liberarTrava(); this.mudar('reconferir'); }
+      if (operacao === this.operacao) { await this.liberarTrava(); this.mudar('reconferir'); }
     }
   }
   async revalidar() {
@@ -128,7 +134,7 @@ export class CoordenacaoAbasPlano {
       await this.opcoes.drenar();
       if (!this.controlador.signal.aborted && operacao === this.operacao) await this.conferir(operacao);
     } catch {
-      if (operacao === this.operacao) { this.liberarTrava(); this.mudar('reconferir'); }
+      if (operacao === this.operacao) { await this.liberarTrava(); this.mudar('reconferir'); }
     } finally { this.conferindo = false; }
   }
   encerrar() {
@@ -136,7 +142,7 @@ export class CoordenacaoAbasPlano {
     this.operacao++;
     this.controlador.abort();
     this.cancelarEspera();
-    this.liberarTrava();
+    void this.liberarTrava();
     this.desouvir?.(); this.opcoes.canal?.fechar();
     this.mudar('encerrado');
   }

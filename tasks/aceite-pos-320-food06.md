@@ -1,5 +1,9 @@
 # FOOD06 — matriz obrigatória de aceite
 
+> Follow-up vigente: [liberação efetiva PA07](food06-pa07-release.md). Fragilidade
+> reproduzida com2RED e corrigida;72unitários/4browser controlados/build Node22PASS.
+> Matriz162/162PASS, zero skipped; CI do novo delta pendente. M09 abaixo é checkpoint histórico.
+
 > Checkpoint vigente — M09: ajuda explicativa própria na tabela factual e nas prévias.
 > [Execução, testes e limites](food06-interface-ajuda.md). Backend3.931PASS/180SKIPPED;
 > Web61PASS; browser157PASS/1FAIL PA07; isolado6PASS e suíte PA07 posterior61PASS/1FAIL.
@@ -60,7 +64,7 @@ Fontes: [especificação](especificacao-pos-320-food06-melhorias.md),
 | M08-C2 | Arquivo seguro, sem publicação/entrega automática | Sem URL/objeto público/cache persistente; política retenção/descarte; cancelamento/erro | PENDENTE |
 | M08-C3 | Artefato PDF legível e acessível | PDF real: texto selecionável, ordem/cabeçalhos/limites próximos, celular e tecnologia assistiva | PENDENTE; HTML acessível não comprova PDF |
 | M09-C1 | Explicar RDA/AI/UL, planejado/consumido, parcial e limitações | Conteúdo próprio revisado, fonte identificável, sem diagnóstico ou recomendação de suplemento | PARCIAL M09: texto próprio do catálogo integrado ao guia, fonte NIH verificada e revisão independente delimitada; CI do novo delta pendente |
-| M09-C2 | Explicações curtas e detalhes acessíveis | Texto perto do dado, expansão teclado/leitor; zero e desconhecido distinguíveis | PARCIAL M09: details/summary nativos, zero e parcial preservados; 8browser M09/axe/teclado PASS; regressão PA07 intermitente (6retestesPASS), sem AT humana e sem CI próprio ainda |
+| M09-C2 | Explicações curtas e detalhes acessíveis | Texto perto do dado, expansão teclado/leitor; zero e desconhecido distinguíveis | PARCIAL M09: details/summary nativos, zero e parcial preservados; 8browser M09/axe/teclado e matriz final162/162PASS após correção PA07; CI do novo HEAD pendente, sem AT humana |
 | M10-C1 | Histórico paginado e pontos reproduzíveis | Data/plano/revisão/nutriente/cobertura/ref e autorização atual/carteira | PENDENTE |
 | M10-C2 | Gráfico e tabela equivalentes, sem interpolação indevida | Lacunas, parcial, mudança de fonte/ref/contexto, não ligar bases incompatíveis ou inferir melhora clínica | PENDENTE |
 | M11-C1 | Catálogo autorizado por porção/preparo/teor conhecido | Fonte ativa/autorizada, unidade/base clara, ausência fora do ranking sem virar zero | PENDENTE |

@@ -31,7 +31,8 @@ pendentes (100×3,5/12, arredondado a uma casa). CI verde de uma API não encerr
 
 Agora: finalizar os gates da [ajuda M09](food06-interface-ajuda.md). A integração
 M04 de receitas teve CI completo aprovado no HEADc949821b; não encerra a
-comparação clínica futura. Antes do próximo incremento: investigar as falhas intermitentes PA07 e conferir
+comparação clínica futura. Matriz final após correção PA07:162/162PASS
+([prova e handoff](food06-pa07-release.md)). Antes do próximo incremento, conferir
 CI do novo HEAD. Depois: histórico/comparação factual M07, reutilizando snapshots
 autorizados e preservando lacunas, com contrato e TDD próprios.
 Direitos/G06 BLOCKED; sem merge/deploy/migrations externas ou prontidão presumida.

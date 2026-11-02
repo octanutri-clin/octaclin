@@ -1,5 +1,9 @@
 # FOOD06 — comparação factual com referências dietéticas
 
+> Follow-up vigente: [liberação efetiva PA07](food06-pa07-release.md). Fragilidade
+> reproduzida com2RED e corrigida;72unitários/4browser controlados/build Node22PASS.
+> Matriz162/162PASS, zero skipped; CI do novo delta pendente. M09 abaixo é checkpoint histórico.
+
 > Checkpoint vigente — M09: ajuda explicativa própria na tabela factual e nas prévias.
 > [Execução, testes e limites](food06-interface-ajuda.md). Backend3.931PASS/180SKIPPED;
 > Web61PASS; browser157PASS/1FAIL PA07; isolado6PASS e suíte PA07 posterior61PASS/1FAIL.

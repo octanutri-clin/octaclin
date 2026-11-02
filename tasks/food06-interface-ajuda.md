@@ -1,5 +1,9 @@
 # FOOD06 M09 — ajuda de interpretação
 
+> Follow-up da regressão: prova determinística2RED, correção72unitários/4browser
+> controlados e matriz final162/162PASS; [estado vigente PA07](food06-pa07-release.md). As falhas e
+> hipóteses abaixo são o registro anterior à correção, preservado como evidência.
+
 ## Estado e escopo
 
 PR455 Draft, branch docs/food06-contratos-fontes. Base localc5c20ad3 e remota

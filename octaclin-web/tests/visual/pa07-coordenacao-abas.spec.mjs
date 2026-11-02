@@ -1081,3 +1081,41 @@ test('FOOD04 cancelar aplicacao aguardando save impede acrescentar alternativas 
   await expect.poll(()=>fixture.escritas.length).toBe(2);
   expect(fixture.escritas[1].documento.refeicoes[0].itens[0].substituicoes).toHaveLength(0);
 });
+
+for (const relogioSimulado of [false, true]) test(`PA07 aguarda término nativo da liberação antes do ACK (${relogioSimulado ? 'relógio simulado' : 'relógio real'})`, async ({context,page}) => {
+  const fixture = await preparar(context);
+  await page.addInitScript(() => {
+    const request = navigator.locks.request.bind(navigator.locks);
+    let reter = false, pendente = false, resolver;
+    const barreira = new Promise(resolve => { resolver = resolve; });
+    window.__pa07ReleaseSintetico = {
+      reter: () => { reter = true; },
+      liberar: () => { resolver(); },
+      pendente: () => pendente
+    };
+    navigator.locks.request = async (...args) => {
+      const resultado = await request(...args);
+      if (reter) { pendente = true; await barreira; }
+      return resultado;
+    };
+  });
+  if (relogioSimulado) await page.clock.install();
+  await abrir(page);
+  const origem = page.getByRole('textbox', {name:'Objetivo clínico',exact:true});
+  await expect(origem).toBeEditable();
+  const segunda = await context.newPage();
+  if (relogioSimulado) await segunda.clock.install();
+  await abrir(segunda);
+  await expect(segunda.getByRole('button',{name:'Editar nesta aba'})).toBeVisible();
+  await page.evaluate(() => window.__pa07ReleaseSintetico.reter());
+  try {
+    await segunda.getByRole('button',{name:'Editar nesta aba'}).click();
+    await page.waitForFunction(() => window.__pa07ReleaseSintetico.pendente());
+    await expect(origem).toBeDisabled();
+    await expect(segunda.getByRole('textbox',{name:'Objetivo clínico',exact:true})).toBeDisabled();
+    expect(fixture.escritas).toHaveLength(0);
+    await page.evaluate(() => window.__pa07ReleaseSintetico.liberar());
+    await expect(segunda.getByRole('textbox',{name:'Objetivo clínico',exact:true})).toBeEditable();
+    await expect(origem).toBeDisabled(); expect(fixture.escritas).toHaveLength(0);
+  } finally { await page.evaluate(() => window.__pa07ReleaseSintetico.liberar()); }
+});

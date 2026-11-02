@@ -1,5 +1,9 @@
 # FOOD06 — checklist
 
+> Follow-up vigente: [liberação efetiva PA07](food06-pa07-release.md). Fragilidade
+> reproduzida com2RED e corrigida;72unitários/4browser controlados/build Node22PASS.
+> Matriz162/162PASS, zero skipped; CI do novo delta pendente. M09 abaixo é checkpoint histórico.
+
 > Checkpoint vigente — M09: ajuda explicativa própria na tabela factual e nas prévias.
 > [Execução, testes e limites](food06-interface-ajuda.md). Backend3.931PASS/180SKIPPED;
 > Web61PASS; browser157PASS/1FAIL PA07; isolado6PASS e suíte PA07 posterior61PASS/1FAIL.
@@ -52,7 +56,9 @@ Fonte de contrato: [plano](plan-pos-320-food06.md), base `68499c15`.
 - [x] Backend completo/build, Web build/typecheck, lint e microcopy em Node22.
 - [x] R4 independente delimitada e UX B/C por brief, com limitações explícitas.
 - [x] Executar matriz browser final com fixture exata e registrar capturas/resultados.
-- [ ] Diagnosticar as duas falhas intermitentes PA07; gate de regressão não encerrado.
+- [x] Reproduzir fragilidade PA07 com barreira e corrigir ACK após release efetivo.
+- [x] Matriz final162/162PASS após correção PA07, zero skipped; falhas históricas preservadas.
+- [ ] CI do novo HEAD; não atribuir causa retrospectiva aos timeouts sem prova.
 - [ ] Commit/push intencional, CI/scanners do HEAD novo e decisão de fechamento M09.
 
 ## Expansão obrigatória aprovada em 2026-10-31
