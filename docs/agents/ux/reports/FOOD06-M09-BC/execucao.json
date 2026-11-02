@@ -1,0 +1,50 @@
+{
+  "papelReferencia": "PR451/0d3382b6",
+  "selecaoTOMLNativa": false,
+  "instancias": [
+    "/root/food06_m09_nutricionista_ux",
+    "/root/food06_m09_paciente_ux"
+  ],
+  "etapas": [
+    "B",
+    "C"
+  ],
+  "modo": "Subagentes independentes, brief textual sintético; sem ferramentas, imagens ou interação próprios",
+  "portalDireto": "N/A — console profissional",
+  "browserCoordenador": {
+    "primeiraMatriz": 158,
+    "primeiraPass": 158,
+    "final": {
+      "pass": 157,
+      "fail": 1,
+      "skipped": 0,
+      "falha": "timeout PA07 aquisição de edição desktop",
+      "M09": {
+        "pass": 8,
+        "fail": 0
+      },
+      "repeticoesIsoladasPA07": {
+        "pass": 6,
+        "fail": 0
+      }
+    },
+    "PA07posterior": {
+      "pass": 61,
+      "fail": 1,
+      "skipped": 0,
+      "falha": "retorno com texto antigo mobile — campo disabled após assumir",
+      "estado": "em investigação, causa não comprovada"
+    }
+  },
+  "limites": [
+    "Sem usuários reais",
+    "Sem ratificação clínica",
+    "Sem execução humana de tecnologia assistiva",
+    "Não é R4 nem UX integral FOOD06"
+  ],
+  "capturasCoordenador": {
+    "desktop.png": "d1834d2e06087f2b572cfba310a6379a0c8fd5f410937508aea4a953a01cc545",
+    "mobile.png": "8d40f86664970600cf5fd6ceb1b3f4c91d86bdfaae779324b1c2b03bf7549bbd"
+  },
+  "capturasPersonas": false
+}

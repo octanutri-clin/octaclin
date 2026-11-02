@@ -1,3 +1,4 @@
+import * as projecaoAjuda from './projecao-ajuda-dietetica';
 import { ReceitaNutricionalOrm } from '../infraestrutura/receita-nutricional.orm';
 import { porcionarReceita } from '../dominio/porcionamento-receita';
 import { criarSnapshotMicronutrientes } from '../dominio/micronutrientes';
@@ -434,6 +435,29 @@ describe('ServicoPlanosAlimentares', () => {
       await expect(servico.preverMicronutrientes(TENANT_ID,PACIENTE_ID,PLANO_ID,usuarioProfissional(),c.comando)).rejects.toBeInstanceOf(NotFoundException);
       Object.assign(c.receita,{arquivadoEm:null,conteudoCriptografado:criptografia.criptografar(JSON.stringify({...c.conteudo,itens:Array.from({length:100},()=>c.conteudo.itens[0])}))});
       const antes=estado();await expect(servico.preverMicronutrientes(TENANT_ID,PACIENTE_ID,PLANO_ID,usuarioProfissional(),c.comando)).rejects.toThrow('limites');expect(estado()).toBe(antes);
+    });
+    it('M09 oferece texto explicativo próprio na prévia sem habilitar referências',async()=>{
+      const entrada=await preparar();
+      const r=await servico.preverMicronutrientes(TENANT_ID,PACIENTE_ID,PLANO_ID,usuarioProfissional(),entrada);
+      expect(r).toHaveProperty('ajuda.schemaVersao',1);
+      expect(r).toHaveProperty('ajuda.comparacoesHabilitadas',false);
+      expect(r).toHaveProperty('ajuda.topicos',expect.arrayContaining([expect.objectContaining({codigo:'RDA',texto:expect.stringContaining('não comprova deficiência')})]));
+      expect(JSON.stringify(r)).not.toContain('CANARIO_PRIVADO');
+    });
+    it('M09 análise sem seleção possui ajuda mas nenhuma comparação habilitada',async()=>{
+      const r=await servico.analisarMicronutrientes(TENANT_ID,PACIENTE_ID,usuarioProfissional(),{selecoes:[]});
+      expect(r).toHaveProperty('ajuda.topicos',expect.arrayContaining([expect.objectContaining({codigo:'UL',texto:expect.stringContaining('não garante segurança individual')})]));
+      expect(r.comparacoes.estado).toBe('indisponivel');expect(r.calculo.estado).toBe('sem_selecao');
+    });
+    it('M09 alteração somente do título da ajuda não muda fingerprint ou fatos da prévia',async()=>{
+      const entrada=await preparar(),antes=await servico.preverMicronutrientes(TENANT_ID,PACIENTE_ID,PLANO_ID,usuarioProfissional(),entrada);
+      const original=projecaoAjuda.projetarAjudaDietetica;
+      const stub=jest.spyOn(projecaoAjuda,'projetarAjudaDietetica').mockImplementation(()=>{const a=original();a.topicos[0].titulo='Ajuda sobre ingestão recomendada';return a;});
+      try{
+        const depois=await servico.preverMicronutrientes(TENANT_ID,PACIENTE_ID,PLANO_ID,usuarioProfissional(),entrada);
+        expect(depois.ajuda.topicos[0].titulo).not.toBe(antes.ajuda.topicos[0].titulo);
+        expect(depois.fingerprint).toBe(antes.fingerprint);expect(depois.comparacao).toEqual(antes.comparacao);
+      }finally{stub.mockRestore();}
     });
     const estado=()=>JSON.stringify([...repositorios].map(([tipo,repo])=>({tipo:tipo.name,registros:repo.registros})));
     it('prévia não grava, calcula uma vez, não devolve texto/cifra e tem fingerprint estável',async()=>{

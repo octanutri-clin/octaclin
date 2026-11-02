@@ -1,3 +1,4 @@
+import {lerAjudaDietetica,type AjudaDietetica} from './ajuda-dietetica';
 import { ErroApiPlanoAlimentar } from './plano-alimentar-api';
 import { CAMPOS_MICRONUTRIENTES_PLANO,lerLinhaMicronutrienteFactual } from './micronutrientes-factuais';
 import type { LinhaMicronutrienteFactual } from './micronutrientes-factuais';
@@ -11,7 +12,7 @@ export interface PedidoPreviaReceita extends Omit<PedidoPreviaMicronutrientes,'o
 export type PedidoOperacaoPrevia = PedidoPreviaMicronutrientes | PedidoPreviaReceita;
 export interface ValorPrevia {estado:LinhaMicronutrienteFactual['estado'];valor?:number}
 export interface LinhaPrevia {codigo:string;rotulo:string;unidade:string;antes:ValorPrevia;depois:ValorPrevia;delta?:{valor:number;percentual?:number}}
-export interface PreviaMicronutrientes {fingerprint:string;linhas:LinhaPrevia[]}
+export interface PreviaMicronutrientes {ajuda?:AjudaDietetica|null;fingerprint:string;linhas:LinhaPrevia[]}
 const MACROS = [{codigo:'energiaKcal',rotulo:'Energia',unidade:'kcal'},{codigo:'proteinasG',rotulo:'Proteínas',unidade:'g'},{codigo:'carboidratosG',rotulo:'Carboidratos',unidade:'g'},{codigo:'gordurasG',rotulo:'Gorduras totais',unidade:'g'}];
 function falhar():never {throw new Error('A prévia não pôde ser conferida. Refaça a simulação.');}
 function obj(v:unknown):Record<string,unknown> {if(!v||typeof v!=='object'||Array.isArray(v))return falhar();return v as Record<string,unknown>;}
@@ -57,7 +58,7 @@ export function lerPreviaMicronutrientes(valor:unknown,pedido:PedidoOperacaoPrev
  const ma=macros(antes),mb=macros(depois),ca=micros(antes),cb=micros(depois);
  const linhas=MACROS.map(m=>linha(m,valorMacro(ma[m.codigo],m.codigo,m.unidade),valorMacro(mb[m.codigo],m.codigo,m.unidade)));
  for(const m of CAMPOS_MICRONUTRIENTES_PLANO){const a=lerLinhaMicronutrienteFactual(ca[m.codigo],m.codigo),b=lerLinhaMicronutrienteFactual(cb[m.codigo],m.codigo);linhas.push(linha(m,{estado:a.estado,...(a.valor!==undefined?{valor:a.valor}:{})},{estado:b.estado,...(b.valor!==undefined?{valor:b.valor}:{})}));}
- return {fingerprint:r.fingerprint,linhas};
+ return {fingerprint:r.fingerprint,linhas,...(r.ajuda!==undefined?{ajuda:lerAjudaDietetica(r.ajuda)}:{})};
 }
 export function lerAckPrevia(valor:unknown,pedido:PedidoOperacaoPrevia):{id:string;rascunhoRevisao:number} {
  const r=obj(valor);

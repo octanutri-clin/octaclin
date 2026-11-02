@@ -1,5 +1,10 @@
 # FOOD06 M04 — integração da prévia de receitas
 
+> Encerramento do CI deste incremento: HEADremoto c949821b, run41357758927
+> SUCCESS, incluindo Demo e PRGate, consultado em2026-11-02. Scanners também
+> SUCCESS. As referências a CI pendente abaixo são o registro histórico anterior
+> à conclusão. Próximo incremento em [M09](food06-interface-ajuda.md).
+
 ## Estado e continuidade
 
 PR455 Draft. Base local39257f78/remota373c1ddf, árvore idêntica, históricos

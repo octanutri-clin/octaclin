@@ -1,3 +1,4 @@
+import {AjudaInterpretacaoMicronutrientes} from './ajuda-interpretacao-micronutrientes';
 import type {PreviaMicronutrientes,ValorPrevia} from '@/lib/previa-micronutrientes-plano';
 import {formatarNutrientePlano} from '@/lib/micronutrientes-plano';
 const estados={COMPLETO:'Completo',PARCIAL:'Parcial',DESCONHECIDO:'Desconhecido',INCOMPATIVEL:'Incompatível',INDISPONIVEL:'Indisponível'};
@@ -5,6 +6,7 @@ function mostrar(v:ValorPrevia,codigo:string){return v.valor===undefined?estados
 /** Projeção compartilhada de fatos; não resolve fontes nem calcula composição. */
 export function ComparacaoPreviaAlimentar({dados}:{dados:PreviaMicronutrientes}){
  return <>
+     <AjudaInterpretacaoMicronutrientes ajuda={dados.ajuda}/>
      <p className="text-xs text-texto-suave">Fontes são conferidas como no salvamento. Diferenças podem incluir atualização de composição; não representam diagnóstico ou ingestão real. Comparações RDA, AI e UL indisponíveis.</p>
      <p className="text-xs text-texto-suave">O percentual mostra a variação em relação ao valor anterior, não a adequação nutricional.</p>
      <div className="min-w-0 overflow-x-auto" tabIndex={0} role="region" aria-label="Comparação nutricional da proposta">

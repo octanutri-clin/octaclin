@@ -1,6 +1,13 @@
 # FOOD06 — matriz obrigatória de aceite
 
-> Checkpoint vigente — M04 receitas integrada na Web: [execução/handoff](food06-interface-previa-receitas.md).
+> Checkpoint vigente — M09: ajuda explicativa própria na tabela factual e nas prévias.
+> [Execução, testes e limites](food06-interface-ajuda.md). Backend3.931PASS/180SKIPPED;
+> Web61PASS; browser157PASS/1FAIL PA07; isolado6PASS e suíte PA07 posterior61PASS/1FAIL.
+> Regressão intermitente em investigação; não é gate verde irrestrito. CI próprio pendente. Comparações DRI continuam indisponíveis.
+> CI da base c949821b concluído com sucesso; novo delta exige CI próprio.29,2%,0/12.
+> Direitos/G06 BLOCKED. Os checkpoints abaixo são históricos, não o estado vigente.
+
+> Histórico — M04 receitas integrada na Web: [execução/handoff](food06-interface-previa-receitas.md).
 >48unitários/150browser e2retestes visuais/build/typecheck Node22 PASS; R4 delimitada favorável.
 > API373c1ddf com PG/RLS141PASS/0skip; novo delta tem CI próprio. M04 parcial,29,2%,0/12.
 
@@ -42,7 +49,7 @@ Fontes: [especificação](especificacao-pos-320-food06-melhorias.md),
 | M03-C1 | Motivos clínicos/técnicos/contratuais estruturados, backend autoritativo | Contratos negativos por motivo, texto seguro e ação válida quando existir | PARCIAL A1: 11 motivos com texto/ação; causas de cobertura e serviço pendentes |
 | M03-C2 | Tabela/detalhes/relatório concordam, sem dados nos logs | Canários sintéticos em logs/erros/projeções e mesma revisão | PENDENTE |
 | M04-C1 | Prévia antes/depois, percentuais válidos, cobertura/eligibilidade | Troca alimento/porção/preparo/receita; principal e alternativa não somados; zero no denominador sem percentual | PARCIAL: núcleo19casos e API inicial autorizada de porção manual/troca catálogo; DTO39/serviço/rotas200focados e BFF80; API de receita e3PG PASS no backend373c1ddf (dedicada141PASS/0skip); UI receitas48unitários/150browser+2retestes PASS; comparação clínica e aceite global pendentes; UI inicial47unitários/50browser/build Node22 PASS; [API](food06-api-previa-micronutrientes.md) e [UI](food06-interface-previa.md) |
-| M04-C2 | Sem gravação; confirmação CAS e rollback | PostgreSQL descartável: revisão stale, duas abas/PA07, perda de acesso, idempotência/replay, falha intermediária | PARCIAL: locks/revisões/fingerprint, reautorização e CAS com rejeição de replay implementados;5provas PG novas PASS no CI a657e696 (suíte dedicada138PASS/0skip); UI/ACK/autosave60s e barreira PA07 com RED/GREEN desktop/mobile PASS; regressão legada PA07/FOOD01–04 com62/62 PASS e receitas integradas na matriz150/150; CI do delta Web novo pendente |
+| M04-C2 | Sem gravação; confirmação CAS e rollback | PostgreSQL descartável: revisão stale, duas abas/PA07, perda de acesso, idempotência/replay, falha intermediária | PARCIAL: locks/revisões/fingerprint, reautorização e CAS com rejeição de replay implementados;5provas PG novas PASS no CI a657e696 (suíte dedicada138PASS/0skip); UI/ACK/autosave60s e barreira PA07 com RED/GREEN desktop/mobile PASS; regressão legada PA07/FOOD01–04 com62/62 PASS e receitas integradas na matriz150/150; CI c949821b PASS; evidências de banco pertencem à API, não a uma nova execução local |
 | M05-C1 | Fonte/autoridade/documento/versão/ID/unidade/população/regras | Registro server-side imutável e manifesto com direitos/atribuição | PARCIAL: IDs de referência no núcleo; direitos BLOCKED |
 | M05-C2 | Reproduzir análise original sem atualização silenciosa | Atualização de tabela, mesma análise anterior, nova análise versionada, snapshots cifrados | PENDENTE persistência |
 | M06-C1 | Colunas, todos filtros aprovados e ordenação determinística | Tabela de verdade abaixo/acima/igual, completo/parcial, ausência/UL incompatível; decisão antes do arredondamento | PARCIAL: filtros factuais e ordem implementados; referências/percentuais pendentes |
@@ -52,8 +59,8 @@ Fontes: [especificação](especificacao-pos-320-food06-melhorias.md),
 | M08-C1 | PDF fiel à análise autorizada e minimizada | Mesmos números/revisões/contexto/fontes; teste autorização/revogação/PII canário | PENDENTE |
 | M08-C2 | Arquivo seguro, sem publicação/entrega automática | Sem URL/objeto público/cache persistente; política retenção/descarte; cancelamento/erro | PENDENTE |
 | M08-C3 | Artefato PDF legível e acessível | PDF real: texto selecionável, ordem/cabeçalhos/limites próximos, celular e tecnologia assistiva | PENDENTE; HTML acessível não comprova PDF |
-| M09-C1 | Explicar RDA/AI/UL, planejado/consumido, parcial e limitações | Conteúdo próprio revisado, fonte identificável, sem diagnóstico ou recomendação de suplemento | PARCIAL A1: catálogo estático e testes; revisão de redação/interface pendentes |
-| M09-C2 | Explicações curtas e detalhes acessíveis | Texto perto do dado, expansão teclado/leitor; zero e desconhecido distinguíveis | PENDENTE |
+| M09-C1 | Explicar RDA/AI/UL, planejado/consumido, parcial e limitações | Conteúdo próprio revisado, fonte identificável, sem diagnóstico ou recomendação de suplemento | PARCIAL M09: texto próprio do catálogo integrado ao guia, fonte NIH verificada e revisão independente delimitada; CI do novo delta pendente |
+| M09-C2 | Explicações curtas e detalhes acessíveis | Texto perto do dado, expansão teclado/leitor; zero e desconhecido distinguíveis | PARCIAL M09: details/summary nativos, zero e parcial preservados; 8browser M09/axe/teclado PASS; regressão PA07 intermitente (6retestesPASS), sem AT humana e sem CI próprio ainda |
 | M10-C1 | Histórico paginado e pontos reproduzíveis | Data/plano/revisão/nutriente/cobertura/ref e autorização atual/carteira | PENDENTE |
 | M10-C2 | Gráfico e tabela equivalentes, sem interpolação indevida | Lacunas, parcial, mudança de fonte/ref/contexto, não ligar bases incompatíveis ou inferir melhora clínica | PENDENTE |
 | M11-C1 | Catálogo autorizado por porção/preparo/teor conhecido | Fonte ativa/autorizada, unidade/base clara, ausência fora do ranking sem virar zero | PENDENTE |

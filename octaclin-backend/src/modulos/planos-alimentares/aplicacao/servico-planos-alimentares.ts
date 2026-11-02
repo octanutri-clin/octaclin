@@ -1,3 +1,4 @@
+import {projetarAjudaDietetica} from './projecao-ajuda-dietetica';
 import { ServicoPorcionamentoReceita } from './servico-porcionamento-receita';
 import { ServicoReceitasNutricionais } from './servico-receitas-nutricionais';
 import { compararCenariosFactuais } from '../dominio/previa-dietetica';
@@ -281,7 +282,7 @@ export class ServicoPlanosAlimentares {
     const fingerprint = createHash('sha256').update(this.serializarEstavel({motor:'food06-previa-api-v1',tenantId,pacienteId,planoId,usuarioId:usuario.usuarioId,rascunhoId:rascunho.id,revisao:rascunho.rascunhoRevisao,apresentacaoRevisao:rascunho.apresentacaoRevisao ?? 0,ativacaoRevisao:plano.ativacaoRevisao ?? 0,operacao,...(receitaFingerprint?{receitaFingerprint}:{}),comparacao,composicoes})).digest('hex');
     const resposta = {schemaVersao:1 as const,motorVersao:'food06-previa-api-v1' as const,escopo:'rascunho_refeicoes_ativas' as const,
       rascunhoId:rascunho.id,rascunhoRevisao:rascunho.rascunhoRevisao,ativacaoRevisao:plano.ativacaoRevisao ?? 0,
-      fingerprint,comparacao,avisos:['fontes_resolvidas_como_no_salvamento']};
+      fingerprint,comparacao,ajuda:projetarAjudaDietetica(),avisos:['fontes_resolvidas_como_no_salvamento']};
     return {resposta,plano,rascunho,preparada};
   }
 
@@ -335,7 +336,8 @@ export class ServicoPlanosAlimentares {
       motorVersao: 'food06-factual-v1' as const,
       calculo: calcularNutrientesCombinados(planos),
       cobertura: analisarCoberturaDietetica(planos),
-      comparacoes: { estado: 'indisponivel' as const, motivo: 'referencias_nao_habilitadas' as const }
+      comparacoes: { estado: 'indisponivel' as const, motivo: 'referencias_nao_habilitadas' as const },
+      ajuda:projetarAjudaDietetica()
     }));
   }
 

@@ -1,3 +1,4 @@
+import {lerAjudaDietetica,type AjudaDietetica} from './ajuda-dietetica';
 import type { CalcularCombinadoEntradaApi, CodigoMicronutrienteApi } from './plano-alimentar-api';
 import { CAMPOS_MICRONUTRIENTES_PLANO } from './micronutrientes-plano';
 export type EstadoCoberturaFactual = 'COMPLETO' | 'PARCIAL' | 'DESCONHECIDO' | 'INCOMPATIVEL' | 'INDISPONIVEL';
@@ -7,7 +8,7 @@ export interface LinhaMicronutrienteFactual {
   contagens: { incluidos: number; conhecidos: number; semComposicao: number; incompativeis: number; naoResolvidos: number };
   causas: { codigo: string; quantidade: number }[];
 }
-export interface AnaliseMicronutrientesFactual { calculadoEm: string; linhas: LinhaMicronutrienteFactual[] }
+export interface AnaliseMicronutrientesFactual { ajuda?:AjudaDietetica|null; calculadoEm: string; linhas: LinhaMicronutrienteFactual[] }
 export interface FiltrosMicronutrientesFactuais {
   grupo: 'todos' | 'minerais' | 'vitaminas'; cobertura: 'todas' | EstadoCoberturaFactual;
   ordem: 'nome' | 'quantidade' | 'cobertura';
@@ -36,7 +37,7 @@ export function lerAnaliseMicronutrientesFactual(valor: unknown, entrada: Calcul
   const nutrientes=objeto(cobertura.nutrientes);
   const linhas=CAMPOS_MICRONUTRIENTES_PLANO.map(c=>lerLinhaMicronutrienteFactual(nutrientes[c.codigo],c.codigo));
   if(new Set(linhas.map(l=>l.contagens.incluidos)).size!==1)return falhar();
-  return {calculadoEm:r.calculadoEm,linhas};
+  return {calculadoEm:r.calculadoEm,linhas,...(r.ajuda!==undefined?{ajuda:lerAjudaDietetica(r.ajuda)}:{})};
 }
 export function validarPublicacoesFactuais(valor:unknown,entrada:CalcularCombinadoEntradaApi):void {
   if(!Array.isArray(valor)||valor.length!==entrada.selecoes.length)return falhar();

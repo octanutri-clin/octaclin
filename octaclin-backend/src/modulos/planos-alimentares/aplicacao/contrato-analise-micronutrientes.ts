@@ -1,3 +1,4 @@
+import type {AjudaDieteticaProjetada} from './projecao-ajuda-dietetica';
 import type { ResultadoCalculoCombinado } from '../dominio/calculo-combinado';
 import type { CoberturaDietetica } from '../dominio/cobertura-dietetica';
 export interface PublicacaoAnaliseFactual {
@@ -7,6 +8,7 @@ export interface PublicacaoAnaliseFactual {
 }
 /** Projeção factual, sem coeficientes ou comparações clínicas habilitados. */
 export interface AnaliseFactualMicronutrientes {
+  ajuda:AjudaDieteticaProjetada;
   schemaVersao: 1;
   motorVersao: 'food06-factual-v1';
   calculadoEm: string;

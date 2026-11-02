@@ -1,4 +1,5 @@
 'use client';
+import {AjudaInterpretacaoMicronutrientes} from './ajuda-interpretacao-micronutrientes';
 import { ContribuicoesMicronutrientes } from './contribuicoes-micronutrientes';
 import { useCallback, useEffect, useId, useState } from 'react';
 import { analisarMicronutrientesPlanejados } from '@/lib/calculo-combinado-planos-api';
@@ -49,6 +50,7 @@ export function MicronutrientesFactuais({aoInvalidarLeitura,nomesPlanos,paciente
       {aberta?<div className="grid min-w-0 gap-3">
         <p className="text-sm text-texto-suave">Composição da seleção planejada, não do consumo real. Dados ausentes não equivalem a zero.</p>
         <p className="text-sm text-texto-suave">Comparações RDA/AI/UL e seus percentuais estão indisponíveis para esta análise. Cobertura informa presença de dados, não confiança científica.</p>
+        <AjudaInterpretacaoMicronutrientes ajuda={dados?.ajuda}/>
         {!leituraPermitida?<p role="status">Resultado oculto: confira os avisos e atualize ou recalcule a seleção no painel acima.</p>:!dados&&!erro?<p role="status">Carregando composição e cobertura…</p>:null}
         {erro?<div className="grid gap-2"><p role="alert">{erro}</p>{falhaAtual?.conflito?<button type="button" disabled={atualizando} className="min-h-11 text-left text-primaria underline" onClick={()=>{void aoAtualizarSelecao().then(sucesso=>{if(sucesso)setTentativa(v=>v+1);});}}>Atualizar seleção</button>:<button type="button" className="min-h-11 text-left text-primaria underline" onClick={()=>setTentativa(v=>v+1)}>Tentar novamente</button>}</div>:null}
         {dados?<>

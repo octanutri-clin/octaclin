@@ -1,6 +1,13 @@
 # FOOD06 — checklist
 
-> Checkpoint vigente — M04 receitas integrada na Web: [execução/handoff](food06-interface-previa-receitas.md).
+> Checkpoint vigente — M09: ajuda explicativa própria na tabela factual e nas prévias.
+> [Execução, testes e limites](food06-interface-ajuda.md). Backend3.931PASS/180SKIPPED;
+> Web61PASS; browser157PASS/1FAIL PA07; isolado6PASS e suíte PA07 posterior61PASS/1FAIL.
+> Regressão intermitente em investigação; não é gate verde irrestrito. CI próprio pendente. Comparações DRI continuam indisponíveis.
+> CI da base c949821b concluído com sucesso; novo delta exige CI próprio.29,2%,0/12.
+> Direitos/G06 BLOCKED. Os checkpoints abaixo são históricos, não o estado vigente.
+
+> Histórico — M04 receitas integrada na Web: [execução/handoff](food06-interface-previa-receitas.md).
 >48unitários/150browser e2retestes visuais/build/typecheck Node22 PASS; R4 delimitada favorável.
 > API373c1ddf com PG/RLS141PASS/0skip; novo delta tem CI próprio. M04 parcial,29,2%,0/12.
 
@@ -36,6 +43,17 @@ Estado vigente: ficha/quadro ratificados em 2026-10-31; núcleo T03-A isolado
 implementado, sem comparação assistencial ou referência clínica habilitada.
 Incremento A1 em `feat/food06-onda-a1`, empilhado sobre #455/`0ec4cd31`: cobertura e explicações em domínio puro; ver [execução A1](execucao-pos-320-food06-a1.md). Não conclui a Onda A.
 Fonte de contrato: [plano](plan-pos-320-food06.md), base `68499c15`.
+
+## Incremento M09 — estado observado
+
+- [x] Projeção própria versionada, sem valores DRI ou contexto do paciente.
+- [x] Mesmo guia na tabela e prévias, compatibilidade legada e falha isolada.
+- [x] TDD Backend/Web, parser negativo e fingerprint independente da redação.
+- [x] Backend completo/build, Web build/typecheck, lint e microcopy em Node22.
+- [x] R4 independente delimitada e UX B/C por brief, com limitações explícitas.
+- [x] Executar matriz browser final com fixture exata e registrar capturas/resultados.
+- [ ] Diagnosticar as duas falhas intermitentes PA07; gate de regressão não encerrado.
+- [ ] Commit/push intencional, CI/scanners do HEAD novo e decisão de fechamento M09.
 
 ## Expansão obrigatória aprovada em 2026-10-31
 

@@ -1,3 +1,4 @@
+type AjudaTeste=ReturnType<typeof import('./fixtures/ajuda-dietetica').ajudaSintetica>;
 import { analisarMicronutrientesPlanejados } from '../lib/calculo-combinado-planos-api';
 import { ErroApiPlanoAlimentar } from '../lib/plano-alimentar-api';
 import assert from 'node:assert/strict';
@@ -97,4 +98,27 @@ test('FOOD06 ordenação por quantidade agrupa unidades sem converter ou tratar 
 test('FOOD06 não aceita números de alimentos diferentes entre nutrientes da mesma seleção',()=>{
  const r=resposta();conhecido(r,'calcioMg',0);r.cobertura.nutrientes.calcioMg.contagens.incluidos=3;r.cobertura.nutrientes.calcioMg.contagens.conhecidos=3;
  assert.throws(()=>lerAnaliseMicronutrientesFactual(r,entrada));
+});
+test('M09 tabela projeta ajuda profissional sem permitir dados livres ou habilitar referências',async()=>{
+ const {ajudaSintetica}=await import('./fixtures/ajuda-dietetica');const r=resposta();Reflect.set(r,'ajuda',{...ajudaSintetica(),contextoPaciente:'CANARIO_PRIVADO'});
+ const a=lerAnaliseMicronutrientesFactual(r,entrada);assert.equal(Reflect.get(a,'ajuda')?.conteudoVersao,'food06-ajuda-v1');assert.ok(!JSON.stringify(a).includes('CANARIO_PRIVADO'));
+});
+for(const [nome,mutar] of [
+ ['href executável',(a:AjudaTeste)=>{a.fontes[0].url='javascript:alert(1)';}],
+ ['domínio semelhante',(a:AjudaTeste)=>{a.fontes[0].url='https://ods.od.nih.gov.example.invalid/HealthInformation/nutrientrecommendations.aspx';}],
+ ['query externa',(a:AjudaTeste)=>{a.fontes[0].url+='?paciente=CANARIO_PRIVADO';}],
+ ['comparação habilitada',(a:AjudaTeste)=>{a.comparacoesHabilitadas=true;}],
+ ['versão desconhecida',(a:AjudaTeste)=>{a.conteudoVersao='novo';}],
+ ['data inválida',(a:AjudaTeste)=>{a.fontes[0].consultadaEm='2026-02-31';}],
+ ['tópico duplicado',(a:AjudaTeste)=>{a.topicos[1].codigo='RDA';}],
+ ['texto excessivo',(a:AjudaTeste)=>{a.topicos[0].texto='a'.repeat(4001);}],
+ ['tópico ausente',(a:AjudaTeste)=>{a.topicos.pop();}]
+] as const)test(`M09 ajuda inválida ${nome} não elimina o zero factual válido`,async()=>{
+ const {ajudaSintetica}=await import('./fixtures/ajuda-dietetica');const a=ajudaSintetica(),r=resposta();mutar(a);Reflect.set(r,'ajuda',a);conhecido(r,'calcioMg',0);
+ const p=lerAnaliseMicronutrientesFactual(r,entrada);assert.equal(Reflect.get(p,'ajuda'),null);assert.equal(p.linhas.find(l=>l.codigo==='calcioMg')?.valor,0);assert.ok(!JSON.stringify(p).includes('CANARIO_PRIVADO'));
+});
+test('M09 ajuda com getter não executa código e análise permanece disponível',async()=>{
+ const {ajudaSintetica}=await import('./fixtures/ajuda-dietetica');const a=ajudaSintetica(),r=resposta();let executou=false;
+ Object.defineProperty(a.topicos[0],'texto',{enumerable:true,get(){executou=true;return 'CANARIO_PRIVADO';}});Reflect.set(r,'ajuda',a);
+ assert.equal(Reflect.get(lerAnaliseMicronutrientesFactual(r,entrada),'ajuda'),null);assert.equal(executou,false);
 });

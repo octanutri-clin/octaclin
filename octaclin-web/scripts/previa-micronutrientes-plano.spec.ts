@@ -54,3 +54,14 @@ test('M04 HTTP receita usa identidade e porções e não envia ingredientes/comp
   assert.deepEqual(corpo.operacao,operacao);
  }finally{global.fetch=original;}
 });
+test('M09 prévia projeta ajuda explicativa sem dados livres nem comparações habilitadas',async()=>{
+ const {ajudaSintetica}=await import('./fixtures/ajuda-dietetica');const r=resposta();Reflect.set(r,'ajuda',{...ajudaSintetica(),contextoPaciente:'CANARIO_PRIVADO'});
+ const p=lerPreviaMicronutrientes(r,pedido);
+ assert.equal(Reflect.get(p,'ajuda')?.conteudoVersao,'food06-ajuda-v1');assert.ok(!JSON.stringify(p).includes('CANARIO_PRIVADO'));
+});
+
+test('M09 ajuda inválida na prévia não altera linhas nem fingerprint',async()=>{
+ const {ajudaSintetica}=await import('./fixtures/ajuda-dietetica');const r=resposta(),antes=lerPreviaMicronutrientes(r,pedido);
+ Reflect.set(r,'ajuda',{...ajudaSintetica(),comparacoesHabilitadas:true});const depois=lerPreviaMicronutrientes(r,pedido);
+ assert.equal(Reflect.get(depois,'ajuda'),null);assert.equal(depois.fingerprint,antes.fingerprint);assert.deepEqual(depois.linhas,antes.linhas);
+});

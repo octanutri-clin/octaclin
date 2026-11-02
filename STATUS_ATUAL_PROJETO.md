@@ -1,12 +1,13 @@
 # OctaClin - Status atual do projeto
 
-**FOOD06 — incremento vigente M04 receitas (Web integrada):**
-[Execução/handoff](tasks/food06-interface-previa-receitas.md):48unitários,150browser
-e2retestes visuais/axe/fonte200%/teclado PASS; build/typecheck Node22, R4 delimitada
-e UX B/C com limites registrados. API373c1ddf com Backend/PG/RLS PASS (141/141
-no gate descartável). Novo delta Web aguarda CI próprio.29,2% administrativos,
-0/12 encerradas; referências/direitos/G06 BLOCKED. Sem merge/deploy/migrations
-externas. Blocos anteriores abaixo são históricos.
+**FOOD06 — incremento vigente M09 (ajuda explicativa):**
+[Execução/handoff](tasks/food06-interface-ajuda.md): conteúdo próprio versionado,
+fonte NIH identificada, sete tópicos recolhíveis na tabela e nas prévias, sem
+habilitar referências clínicas. Backend3.931PASS/180SKIPPED, Web61PASS;
+8browser M09PASS; matriz157PASS/1FAIL PA07, isolado6PASS, suíte PA07 posterior
+61PASS/1FAIL. Regressão intermitente em investigação; CI do delta pendente. CI completo da basec949821b PASS,
+incluindo Demo e PRGate.29,2% administrativos,0/12 encerradas; direitos/G06
+BLOCKED. Sem merge/deploy/migrations externas. Blocos anteriores são históricos.
 
 **Checkpoint histórico FOOD06/M02:** interface de contribuições M02 em validação na #455,
 base992fee05 com CI aprovado. [Progresso](tasks/progresso-food06.md):25% estimados,

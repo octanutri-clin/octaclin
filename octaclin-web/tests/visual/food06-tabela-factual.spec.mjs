@@ -1,3 +1,4 @@
+import {ajudaSintetica} from '../../scripts/fixtures/ajuda-dietetica.ts';
 import { expect, test } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 import { pacienteId, planoIds, idsRefeicoes, resultado, prepararConsole } from './fixtures/console-pa06.mjs';
@@ -11,7 +12,7 @@ function analise(entrada,quantidade) {
     Object.assign(nutrientes.calcioMg,{estado:'COMPLETO',total:0,contagens:{incluidos,conhecidos:incluidos,semComposicao:0,incompativeis:0,naoResolvidos:0},causas:[]});
     Object.assign(nutrientes.ferroMg,{estado:'PARCIAL',quantidadeConhecida:1.2,contagens:{incluidos,conhecidos:1,semComposicao:incluidos-1,incompativeis:0,naoResolvidos:0},causas:[{codigo:'ausente',quantidade:incluidos-1}]});
   }
-  return {schemaVersao:1,motorVersao:'food06-factual-v1',calculadoEm:'2026-10-31T12:00:00.000Z',publicacoes:entrada.selecoes.map(s=>({planoId:s.planoId,versaoId:s.versaoIdEsperada,ativacaoRevisao:s.ativacaoRevisaoEsperada})),comparacoes:{estado:'indisponivel',motivo:'referencias_nao_habilitadas'},cobertura:{schemaVersao:1,nutrientes}};
+  return {ajuda:ajudaSintetica(),schemaVersao:1,motorVersao:'food06-factual-v1',calculadoEm:'2026-10-31T12:00:00.000Z',publicacoes:entrada.selecoes.map(s=>({planoId:s.planoId,versaoId:s.versaoIdEsperada,ativacaoRevisao:s.ativacaoRevisaoEsperada})),comparacoes:{estado:'indisponivel',motivo:'referencias_nao_habilitadas'},cobertura:{schemaVersao:1,nutrientes}};
 }
 async function preparar(page,quantidade) {
   await prepararConsole(page);

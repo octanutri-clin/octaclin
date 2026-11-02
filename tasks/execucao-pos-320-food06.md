@@ -1,6 +1,13 @@
 # FOOD06 — execução técnica
 
-> Checkpoint vigente — M04 receitas integrada na Web: [execução/handoff](food06-interface-previa-receitas.md).
+> Checkpoint vigente — M09: ajuda explicativa própria na tabela factual e nas prévias.
+> [Execução, testes e limites](food06-interface-ajuda.md). Backend3.931PASS/180SKIPPED;
+> Web61PASS; browser157PASS/1FAIL PA07; isolado6PASS e suíte PA07 posterior61PASS/1FAIL.
+> Regressão intermitente em investigação; não é gate verde irrestrito. CI próprio pendente. Comparações DRI continuam indisponíveis.
+> CI da base c949821b concluído com sucesso; novo delta exige CI próprio.29,2%,0/12.
+> Direitos/G06 BLOCKED. Os checkpoints abaixo são históricos, não o estado vigente.
+
+> Histórico — M04 receitas integrada na Web: [execução/handoff](food06-interface-previa-receitas.md).
 >48unitários/150browser e2retestes visuais/build/typecheck Node22 PASS; R4 delimitada favorável.
 > API373c1ddf com PG/RLS141PASS/0skip; novo delta tem CI próprio. M04 parcial,29,2%,0/12.
 
