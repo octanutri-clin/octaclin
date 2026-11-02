@@ -13,7 +13,7 @@
 # `pnpm test:versao-pnpm` falha se divergirem.
 # A base compartilhada corrige zlib tambem nos estagios de build. O runtime
 # herda o artefato pronto e continua sem instalacao de pacotes no estagio final.
-FROM node:22.23.3-alpine3.24@sha256:0a7108bf6c7bf5de370ffb1a3ed6be93d405b43ff159f681a8d18c0e2bc2e402 AS base
+FROM node:22.23.4-alpine3.24@sha256:fe4f6d74e20370acb04ad889077d14d0f64a9c8ea6a42bc60cddf1e844699914 AS base
 RUN apk add --no-cache --upgrade zlib=1.3.2-r1
 
 FROM base AS deps
