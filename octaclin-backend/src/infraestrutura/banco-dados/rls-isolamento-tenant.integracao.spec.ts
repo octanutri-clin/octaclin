@@ -792,11 +792,12 @@ descrever('RLS e isolamento multi-tenant integral em Postgres real', () => {
         (comando === 'INSERT' || expressaoIsolaTenant(p.usando)) &&
         (!['INSERT','UPDATE'].includes(comando) || expressaoIsolaTenant(p.comVerificacao)));
       const comandosSeparados = ['SELECT','INSERT','UPDATE','DELETE'].every(politicaPorComando);
-      // Esta tabela é intencionalmente append-only: exigir ALL abriria UPDATE e
-      // DELETE. A exceção é nominal, exige exatamente SELECT/INSERT por tenant.
-      const eventosAppendOnly = tabela.tabela === 'plano_alimentar_ativacao_eventos' && politicas.length === 2 &&
+      // Estas tabelas são intencionalmente append-only: exigir ALL abriria UPDATE
+      // e DELETE. A lista é nominal e exige exatamente SELECT/INSERT por tenant.
+      const appendOnly = ['plano_alimentar_ativacao_eventos', 'registros_analises_factuais'].includes(tabela.tabela);
+      const eventosAppendOnly = appendOnly && politicas.length === 2 &&
         politicaPorComando('SELECT') && politicaPorComando('INSERT');
-      const policyCompleta = tabela.tabela === 'plano_alimentar_ativacao_eventos'
+      const policyCompleta = appendOnly
         ? eventosAppendOnly : policyAll || comandosSeparados;
       expect({ tabela: tabela.tabela, policyCompleta, politicas }).toEqual(
         expect.objectContaining({ policyCompleta: true })

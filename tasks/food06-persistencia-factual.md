@@ -150,3 +150,24 @@ identidade da árvore local/remota e histórico, sem reset/rebase/force-push.
    depois UI e UX B/C, desktop/mobile/teclado/tabela e testes de jornada.
 5. Referências comuns e direitos permanecem gates separados. Não habilitar DRI,
    recalcular históricos, implementar FOOD05-MDL ou executar operação externa.
+
+## Retomada — falha do inventário global RLS
+
+HEAD remoto a56cf204: CI41671191108 FAIL no Backend job126040315172,
+suíte rls-isolamento-tenant, inventário de policies. 4.119PASS/1FAIL/78SKIPPED
+nesse job. Migrations completas passaram antes da falha. Demo, Web, Mobile, AI,
+governança e scanners SUCCESS; PR Gate FAIL por dependência do Backend.
+Não classificar CI global como aprovado.
+
+Causa comprovada: o inventário só reconhecia plano_alimentar_ativacao_eventos
+como append-only. A1081 tem exatamente SELECT USING tenant e INSERT WITH CHECK
+tenant, sem UPDATE/DELETE. Exigir ALL seria ampliar privilégios indevidamente.
+Correção mínima: incluir nominalmente registros_analises_factuais na mesma
+verificação restrita existente, mantendo exigência de exatamente duas policies
+e expressões de tenant para ambas. Nenhuma policy/grant/migration foi relaxada.
+RED é a falha funcional do CI citada; GREEN integral depende do novo CI com banco
+completamente migrado. Testes específicos schema/PG16/16 PASS em Node22.23.4 nesta retomada.
+R4 independente food06_persistence_r4 favorável ao patch estático: ALL,
+UPDATE/DELETE, policy extra/ausente continuam falhando por construção.
+Revisor não executou inventário global; o predicado lexical de tenant existente
+não equivale a prova semântica de qualquer SQL arbitrário.
