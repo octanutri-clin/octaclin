@@ -1,6 +1,12 @@
 # FOOD06 — matriz obrigatória de aceite
 
-> Estado vigente — M07 fundamento interno: [execução e contrato](food06-comparacao-versoes-dominio.md).
+> Estado vigente — construtor M05/M07: [envelope factual](food06-construtor-registro-factual.md).
+> Envelope em memória e marcadores derivados dos snapshots; não é persistência em banco.
+>115focados/4.002backend PASS,180SKIPPED; build/typecheck Node22 e R4 delimitada favoráveis.
+> Base d8d63d62 com CI aprovado (22SUCCESS/ProvenanceSKIPPED). Novo CI pendente.
+>37,5% administrativos; M05/M07 parciais; direitos/DRI/G06 BLOCKED. Histórico abaixo.
+
+> Histórico — M07 fundamento interno: [execução e contrato](food06-comparacao-versoes-dominio.md).
 >39testes M07 e44regressões focadas PASS; backend3.970PASS/180SKIPPED; R4 delimitada favorável.
 > Sem API/UI/registro novo; M07 parcial. Baseb9ed65bc:22checksSUCCESS/ProvenanceSKIPPED.
 > M09 concluída tecnicamente nos critérios existentes. Progresso37,5%;1/12encerrada.
@@ -60,12 +66,12 @@ Fontes: [especificação](especificacao-pos-320-food06-melhorias.md),
 | M03-C2 | Tabela/detalhes/relatório concordam, sem dados nos logs | Canários sintéticos em logs/erros/projeções e mesma revisão | PENDENTE |
 | M04-C1 | Prévia antes/depois, percentuais válidos, cobertura/eligibilidade | Troca alimento/porção/preparo/receita; principal e alternativa não somados; zero no denominador sem percentual | PARCIAL: núcleo19casos e API inicial autorizada de porção manual/troca catálogo; DTO39/serviço/rotas200focados e BFF80; API de receita e3PG PASS no backend373c1ddf (dedicada141PASS/0skip); UI receitas48unitários/150browser+2retestes PASS; comparação clínica e aceite global pendentes; UI inicial47unitários/50browser/build Node22 PASS; [API](food06-api-previa-micronutrientes.md) e [UI](food06-interface-previa.md) |
 | M04-C2 | Sem gravação; confirmação CAS e rollback | PostgreSQL descartável: revisão stale, duas abas/PA07, perda de acesso, idempotência/replay, falha intermediária | PARCIAL: locks/revisões/fingerprint, reautorização e CAS com rejeição de replay implementados;5provas PG novas PASS no CI a657e696 (suíte dedicada138PASS/0skip); UI/ACK/autosave60s e barreira PA07 com RED/GREEN desktop/mobile PASS; regressão legada PA07/FOOD01–04 com62/62 PASS e receitas integradas na matriz150/150; CI c949821b PASS; evidências de banco pertencem à API, não a uma nova execução local |
-| M05-C1 | Fonte/autoridade/documento/versão/ID/unidade/população/regras | Registro server-side imutável e manifesto com direitos/atribuição | PARCIAL: IDs de referência no núcleo; direitos BLOCKED |
-| M05-C2 | Reproduzir análise original sem atualização silenciosa | Atualização de tabela, mesma análise anterior, nova análise versionada, snapshots cifrados | PENDENTE persistência |
+| M05-C1 | Fonte/autoridade/documento/versão/ID/unidade/população/regras | Registro server-side imutável e manifesto com direitos/atribuição | PARCIAL: IDs e construtor interno de envelope/fonte/contexto derivados; referências numéricas/direitos BLOCKED, sem persistência |
+| M05-C2 | Reproduzir análise original sem atualização silenciosa | Atualização de tabela, mesma análise anterior, nova análise versionada, snapshots cifrados | PENDENTE persistência; envelope congelado em memória não é registro histórico durável |
 | M06-C1 | Colunas, todos filtros aprovados e ordenação determinística | Tabela de verdade abaixo/acima/igual, completo/parcial, ausência/UL incompatível; decisão antes do arredondamento | PARCIAL: filtros factuais e ordem implementados; referências/percentuais pendentes |
 | M06-C2 | Texto/filtros ativos/limpar, sem ranking clínico ou cor única | Componentes e Playwright desktop/mobile, teclado, leitor, zoom; ausente não ordena como zero | PARCIAL:32 Playwright/axe/teclado/fonte200% neste incremento; sem AT humana ou UI de comparação clínica |
-| M07-C1 | Duas versões autorizadas com contexto e deltas válidos | Versões publicadas/rascunho com revisão exata; paciente/tenant adversário negados | PARCIAL:39testes do núcleo de identidade/revisão/vínculo e reuso PA06/M04; sem autorização HTTP/PG, construtor ou análise registrada. Não é prova de RLS |
-| M07-C2 | Distinguir dieta/fonte/ref/contexto/cobertura | Cada causa isolada e combinada; causa incerta declarada; referência comum só se aplicável a ambos | PARCIAL: contrato de marcadores internos por dimensão/cobertura, ausência/esquema e causalidade não estabelecida; construtor canônico/contexto persistido/referência comum/UI pendentes |
+| M07-C1 | Duas versões autorizadas com contexto e deltas válidos | Versões publicadas/rascunho com revisão exata; paciente/tenant adversário negados | PARCIAL:39testes do núcleo de identidade/revisão/vínculo e reuso PA06/M04; construtor em memória testado, mas sem autorização HTTP/PG ou análise registrada. Não é prova de RLS |
+| M07-C2 | Distinguir dieta/fonte/ref/contexto/cobertura | Cada causa isolada e combinada; causa incerta declarada; referência comum só se aplicável a ambos | PARCIAL: contrato de marcadores internos por dimensão/cobertura, ausência/esquema e causalidade não estabelecida; construtor canônico de envelope em memória implementado; persistência/contexto registrado/referência comum/UI pendentes |
 | M08-C1 | PDF fiel à análise autorizada e minimizada | Mesmos números/revisões/contexto/fontes; teste autorização/revogação/PII canário | PENDENTE |
 | M08-C2 | Arquivo seguro, sem publicação/entrega automática | Sem URL/objeto público/cache persistente; política retenção/descarte; cancelamento/erro | PENDENTE |
 | M08-C3 | Artefato PDF legível e acessível | PDF real: texto selecionável, ordem/cabeçalhos/limites próximos, celular e tecnologia assistiva | PENDENTE; HTML acessível não comprova PDF |

@@ -1,5 +1,10 @@
 # FOOD06 M07 — comparação factual de versões: fundamento interno
 
+> CI deste fundamento encerrado: remotod8d63d62, run41419402009SUCCESS.
+>22checksSUCCESS/ProvenanceSKIPPED; sem fechar M07 inteira.
+>Próximo incremento: [construtor de envelope](food06-construtor-registro-factual.md),
+>com CI próprio. Pendências de CI abaixo são históricas.
+
 ## Estado
 
 PR455 Draft, branch docs/food06-contratos-fontes. Base local96e3345b e remota

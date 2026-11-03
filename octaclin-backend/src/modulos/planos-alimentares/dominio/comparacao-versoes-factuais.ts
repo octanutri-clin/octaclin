@@ -45,7 +45,7 @@ function identidade(v:unknown):IdentidadeVersaoFactual {
   return {planoId:o.planoId,versaoId:o.versaoId,numero:o.numero,status:o.status as IdentidadeVersaoFactual['status'],
     registradaEm:o.registradaEm,...(o.status==='rascunho'?{rascunhoRevisao:o.rascunhoRevisao as number}:{})};
 }
-function validar(v:VersaoFactualResolvida) {
+export function validarVersaoFactualResolvida(v:VersaoFactualResolvida) {
   const o=objeto(v),escopo=objeto(o?.escopo),estado=objeto(o?.estado);
   if(!o||!escopo||!texto(escopo.tenantId)||!texto(escopo.pacienteId)||!estado)throw new ComparacaoVersoesInvalidaError();
   const origem=identidade(o.origem);
@@ -77,7 +77,7 @@ function compararBase(a:unknown,b:unknown):EstadoBaseVersao {
  * não prova de causalidade. Sem normalização temporal ou comparação diária DRI.
  */
 export function compararVersoesFactuais(antes:VersaoFactualResolvida,depois:VersaoFactualResolvida):ComparacaoVersoesFactuais {
-  const a=validar(antes),b=validar(depois);
+  const a=validarVersaoFactualResolvida(antes),b=validarVersaoFactualResolvida(depois);
   if(a.escopo.tenantId!==b.escopo.tenantId||a.escopo.pacienteId!==b.escopo.pacienteId)throw new ComparacaoVersoesInvalidaError();
   const comparacao=compararCenariosFactuais([a.estado],[b.estado]);
   const bases=Object.fromEntries(DIMENSOES_VERSAO.map(d=>[d,compararBase(a.bases?.[d],b.bases?.[d])])) as ComparacaoVersoesFactuais['bases'];

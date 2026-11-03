@@ -1,6 +1,12 @@
 # FOOD06 — comparação factual com referências dietéticas
 
-> Estado vigente — M07 fundamento interno: [execução e contrato](food06-comparacao-versoes-dominio.md).
+> Estado vigente — construtor M05/M07: [envelope factual](food06-construtor-registro-factual.md).
+> Envelope em memória e marcadores derivados dos snapshots; não é persistência em banco.
+>115focados/4.002backend PASS,180SKIPPED; build/typecheck Node22 e R4 delimitada favoráveis.
+> Base d8d63d62 com CI aprovado (22SUCCESS/ProvenanceSKIPPED). Novo CI pendente.
+>37,5% administrativos; M05/M07 parciais; direitos/DRI/G06 BLOCKED. Histórico abaixo.
+
+> Histórico — M07 fundamento interno: [execução e contrato](food06-comparacao-versoes-dominio.md).
 >39testes M07 e44regressões focadas PASS; backend3.970PASS/180SKIPPED; R4 delimitada favorável.
 > Sem API/UI/registro novo; M07 parcial. Baseb9ed65bc:22checksSUCCESS/ProvenanceSKIPPED.
 > M09 concluída tecnicamente nos critérios existentes. Progresso37,5%;1/12encerrada.

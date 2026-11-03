@@ -1,6 +1,12 @@
 # FOOD06 — checklist
 
-> Estado vigente — M07 fundamento interno: [execução e contrato](food06-comparacao-versoes-dominio.md).
+> Estado vigente — construtor M05/M07: [envelope factual](food06-construtor-registro-factual.md).
+> Envelope em memória e marcadores derivados dos snapshots; não é persistência em banco.
+>115focados/4.002backend PASS,180SKIPPED; build/typecheck Node22 e R4 delimitada favoráveis.
+> Base d8d63d62 com CI aprovado (22SUCCESS/ProvenanceSKIPPED). Novo CI pendente.
+>37,5% administrativos; M05/M07 parciais; direitos/DRI/G06 BLOCKED. Histórico abaixo.
+
+> Histórico — M07 fundamento interno: [execução e contrato](food06-comparacao-versoes-dominio.md).
 >39testes M07 e44regressões focadas PASS; backend3.970PASS/180SKIPPED; R4 delimitada favorável.
 > Sem API/UI/registro novo; M07 parcial. Baseb9ed65bc:22checksSUCCESS/ProvenanceSKIPPED.
 > M09 concluída tecnicamente nos critérios existentes. Progresso37,5%;1/12encerrada.
@@ -54,6 +60,17 @@ implementado, sem comparação assistencial ou referência clínica habilitada.
 Incremento A1 em `feat/food06-onda-a1`, empilhado sobre #455/`0ec4cd31`: cobertura e explicações em domínio puro; ver [execução A1](execucao-pos-320-food06-a1.md). Não conclui a Onda A.
 Fonte de contrato: [plano](plan-pos-320-food06.md), base `68499c15`.
 
+## Construtor M05/M07 — estado observado
+
+- [x] Recuperar executor sem descartar delta e reproduzir testes pendentes com Node22.
+- [x] Derivar marcadores e contexto do mesmo snapshot factual, por allowlist e sem fonte atual.
+- [x] Preservar fatos/ausências/zero e não inventar identidade estável de manual/legado.
+- [x] Tratar divergências por conferência, sem reparo histórico ou diagnóstico de corrupção.
+- [x] Corrigir2P2 com RED/GREEN, re-revisão independente e regressões finais.
+- [x]115focados/4.002backend PASS,180SKIPPED; build/typecheck final PASS.
+- [ ] CI/scanners do novo HEAD; não reutilizar verde da base para este delta.
+- [ ] Persistência cifrada/append-only, autorização, CAS/idempotência, PG/RLS e API/UI.
+
 ## Incremento M07 — fundamento
 
 - [x] Identidade/revisão exatas e separação de escopo no contrato interno.
@@ -61,7 +78,8 @@ Fonte de contrato: [plano](plan-pos-320-food06.md), base `68499c15`.
 - [x] Dimensões documentais/cobertura sem atribuição causal ou contexto bruto.
 - [x] TDD,83focados, backend completo, build/typecheck e R4 delimitada.
 - [x] UX A complementar; B/C pendentes de interface real.
-- [ ] Construtor canônico server-side e registro imutável M05/M07, com gates próprios.
+- [x] Construtor canônico de envelope em memória, sem habilitar registro histórico.
+- [ ] Registro persistente imutável M05/M07, com gates próprios.
 - [ ] API/BFF/autorização/RLS/concorrência/paginação, UI e referência comum quando autorizada.
 - [ ] CI/scanners do novo HEAD; não herdar o verde da base.
 
