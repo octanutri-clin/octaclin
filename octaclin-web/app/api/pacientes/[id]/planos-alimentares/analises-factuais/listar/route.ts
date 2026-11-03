@@ -1,2 +1,2 @@
-import { executarProxyAnaliseFactual,type ParametrosAnaliseFactual } from '../_proxy';
-export async function POST(request:Request,props:ParametrosAnaliseFactual){return executarProxyAnaliseFactual(request,props,'listar');}
+import { executarProxyAnaliseFactual } from '../_proxy';
+export async function POST(request:Request,props:{params:Promise<{id:string}>}){const params=await props.params;return executarProxyAnaliseFactual(request,{params:Promise.resolve(params)},'listar');}

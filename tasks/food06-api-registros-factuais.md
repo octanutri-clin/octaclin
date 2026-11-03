@@ -10,7 +10,7 @@ Sem migration nova, dependência nova, merge, deploy ou operação externa.
 
 O CI da base c6dd0a3d concluiu com sucesso os seis workflows, incluindo Backend,
 Web, Demo e PR Gate (run principal41725726612). Não valida este novo delta.
-CI do novo HEAD: PENDING até publicação e consulta exata.
+CI do commit API inicial6c738e79: Web falhou em test:apis-dinamicas porque rotas delegavam o tipo Promise por alias compartilhado que checker estático não reconhecia; PR Gate falhou em consequência e Demo foi skipped. Follow-up corrigiu tipos inline, imports secundários e harness que omitia o helper. APIs dinâmicas168PASS, BFF101PASS, typecheck PASS; comando pnpm test:authz completo e CI do HEAD follow-up aguardam resultado.
 
 ## Contratos
 
@@ -74,11 +74,12 @@ leitura diferida foi adicionada como parâmetro opcional para estas quatro rotas
 | API + PostgreSQL15/RLS real |38/38 PASS, inclui persistência cifrada/consulta/comparação e negação das quatro operações após transferência |
 | Regressões PG FOOD04/receitas/registro |61/61 PASS,3 suítes com runtime sem owner/bypass e FORCE RLS |
 | Backend completo |4.086PASS/218SKIPPED,387suítesPASS/10SKIPPED; skips não são provas de banco/provider,61PG executados separadamente |
+| APIs dinâmicas Next |RED CI/local nas quatro rotas novas; cada `route.ts` declara `params: Promise` inline e resolve com `await`; helper relativo e fixture corrigidos; verificador PASS nas168 rotas |
 | Typecheck backend/Web |PASS Node22.23.4 |
 | Lint Web afetado |PASS |
 | Build backend |PASS Nest + artefato dist/main.js Node22 |
-| Build Web |PASS Node22 no processo com NODE_PATH do node_modules já instalado;194 páginas geradas. Histórico: duas tentativas ENOENT por destinos temporários ausentes e outra MODULE_NOT_FOUND pela resolução de dependências através de .next em /tmp. Não foram PASS nem RED funcional. Reexecução aprovada com NODE_PATH restrito ao node_modules já instalado, somente no processo local, sem editar config/deps/engines |
-| Authz Web completa |PENDING:27 scripts existentes em execução sequencial, sem mudar parâmetros/asserts. BFF afetado101/101 já comprovado; não equivale ao gate completo |
+| Build Web |PASS Node22 no processo com NODE_PATH do node_modules já instalado;194 páginas geradas. Histórico: duas tentativas ENOENT por destinos temporários ausentes e outra MODULE_NOT_FOUND pela resolução de dependências através de .next em /tmp. Não foram PASS nem RED funcional. Build compilou, typecheck interno e194 páginas; falhou ao coletar devido ao symlink PNPM entre worktrees não resolver next runtime no diretório .next externo. Execução NODE_PATH restrita ao node_modules já instalado, somente no processo local, ultrapassou static generation/optimization e está registrada no log; verificar encerramento/artefato. Nenhuma config/deps/engines alterada |
+| Authz Web completa |`pnpm test:authz` oficial reexecutado após ajuste do harness; resultado em validação. BFF afetado101/101 PASS e scripts anteriores individuais não substituem o comando completo |
 | R4 independente delimitada |food06_registros_api_r4: achado P2 corrigido, re-revisão sem pendências; execução própria42HTTP/projeções/bootstrap e101BFF PASS;38PG próprios anteriores com código PG inalterado. Reprodução própria inclui gzip e caixa |
 | Governança/segredos |48/48PASS;52controladores verificados;93migrations declaradas/91fora de banda; scanner local sem segredos detectados |
 | CI novo |PENDING HEAD próprio; base não substitui este gate |
