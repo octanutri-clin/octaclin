@@ -1,6 +1,12 @@
 # FOOD06 — checklist
 
-> Estado vigente — construtor M05/M07: [envelope factual](food06-construtor-registro-factual.md).
+> Estado vigente — armazenamento interno M05/M07: [contrato e evidências](food06-persistencia-factual.md).
+> Migration1081 aditiva e serviço cifrado;16/16 testes schema/PG e R4 independente delimitada PASS.
+> Typecheck/build Node22 PASS. Sem fonte clínica real integrada, leitura clínica ou API/UI.
+> M05/M07 parciais;37,5% administrativos. CI do delta pendente; direitos/DRI/G06 BLOCKED.
+> Nenhuma migration externa, merge ou deploy. Checkpoints abaixo são históricos.
+
+> Histórico — construtor M05/M07: [envelope factual](food06-construtor-registro-factual.md).
 > Envelope em memória e marcadores derivados dos snapshots; não é persistência em banco.
 >115focados/4.002backend PASS,180SKIPPED; build/typecheck Node22 e R4 delimitada favoráveis.
 > Base d8d63d62 com CI aprovado (22SUCCESS/ProvenanceSKIPPED). Novo CI pendente.

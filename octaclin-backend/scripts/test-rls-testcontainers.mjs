@@ -5,7 +5,8 @@ const diretorioBackend = fileURLToPath(new URL('..', import.meta.url));
 const ambiente = {
   ...process.env,
   RLS_TESTCONTAINERS: 'true',
-  FOOD04_RLS_TESTCONTAINERS: 'true'
+  FOOD04_RLS_TESTCONTAINERS: 'true',
+  FOOD06_REGISTRO_TESTCONTAINERS: 'true'
 };
 
 for (const nome of [
@@ -33,7 +34,8 @@ const argumentosJest = [
   'src/infraestrutura/banco-dados/rls-isolamento-tenant.integracao.spec.ts',
   'src/modulos/gamificacao/aplicacao/piloto-gamificacao.integracao.spec.ts',
   'src/infraestrutura/banco-dados/migracoes/1720000001078-GruposSubstituicoes.integracao.spec.ts',
-  'src/infraestrutura/banco-dados/migracoes/1720000001080-MetadadosReceitasNutricionais.integracao.spec.ts'
+  'src/infraestrutura/banco-dados/migracoes/1720000001080-MetadadosReceitasNutricionais.integracao.spec.ts',
+  'src/infraestrutura/banco-dados/migracoes/1720000001081-RegistrosAnalisesFactuais.integracao.spec.ts'
 ];
 const windows = process.platform === 'win32';
 const comandoPnpm = windows ? (process.env.ComSpec ?? 'cmd.exe') : 'pnpm';

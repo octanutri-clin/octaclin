@@ -1,6 +1,14 @@
 # OctaClin - Status atual do projeto
 
-**FOOD06 — vigente: construtor M05/M07 de envelope factual em memória.**
+**FOOD06 — vigente: persistência cifrada interna M05/M07.**
+[Contrato/handoff](tasks/food06-persistencia-factual.md):1081 aditiva apenas em
+PostgreSQL descartável, gravação/índice mínimo transacionais;16schema/PG PASS,
+R4 independente delimitada favorável após correção concorrente com TDD.
+Typecheck/build Node22 PASS. Adapter real/CAS/leitura clínica/API/UI pendentes;
+CI do delta ainda pendente.37,5% administrativos,1encerrada/7parciais/4pendentes.
+Direitos/DRI/G06 BLOCKED. Sem merge/deploy/migrations externas. Histórico abaixo.
+
+**FOOD06 — histórico: construtor M05/M07 de envelope factual em memória.**
 [Contrato/handoff](tasks/food06-construtor-registro-factual.md): marcadores derivados,
 projeção mínima e fatos congelados preservados;2P2 corrigidos com TDD e re-revisão
 independente favorável.115focados/4.002backend PASS,180SKIPPED; build/typecheck

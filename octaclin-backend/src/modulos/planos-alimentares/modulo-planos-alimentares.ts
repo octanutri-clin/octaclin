@@ -1,3 +1,5 @@
+import { ServicoRegistrosAnaliseFactual } from './aplicacao/servico-registros-analise-factual';
+import { RegistroAnaliseFactualOrm } from './infraestrutura/registro-analise-factual.orm';
 import { GrupoSubstituicoesOrm, FavoritoGrupoSubstituicoesOrm } from './infraestrutura/grupo-substituicoes.orm';
 import { ServicoGruposSubstituicoes } from './aplicacao/servico-grupos-substituicoes';
 import { FontesGruposSubstituicoes } from './aplicacao/fontes-grupos-substituicoes';
@@ -60,6 +62,7 @@ const processadoresCompartilhamento = deveExecutarProcessadores() ? [Processador
 @Module({
   imports: [
     TypeOrmModule.forFeature([
+      RegistroAnaliseFactualOrm,
       PlanoAlimentarOrm,
       PlanoAlimentarVersaoOrm,
       PlanoAlimentarRefeicaoOrm,
@@ -111,6 +114,7 @@ const processadoresCompartilhamento = deveExecutarProcessadores() ? [Processador
     ControladorReceitasNutricionais
   ],
   providers: [
+    ServicoRegistrosAnaliseFactual,
     ServicoPlanosAlimentares,
     ServicoMedidasCaseiras,
     ServicoAlimentosPersonalizados,

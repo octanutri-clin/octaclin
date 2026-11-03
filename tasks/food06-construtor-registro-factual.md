@@ -1,5 +1,9 @@
 # FOOD06 M05/M07 — construtor de envelope factual
 
+> Checkpoint histórico do construtor em memória. Continuidade atual:
+> [persistência interna cifrada](food06-persistencia-factual.md). As limitações
+> deste incremento original foram preservadas; não representam todo o delta novo.
+
 ## Estado e limite da entrega
 
 PR455 Draft, branch docs/food06-contratos-fontes. Base local33b4be0c/remotad8d63d62,
