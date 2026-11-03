@@ -1,12 +1,12 @@
 # OctaClin - Status atual do projeto
 
-**FOOD06 — vigente: leitor cifrado e comparação interna M05/M07.**
-[Contrato/handoff](tasks/food06-leitura-factual.md): revalidação de acesso e binding,
-consistência dos fatos gravados, precisão/zero/ausência preservados; sem regravar
-histórico ou consultar fonte viva. Adapter DB/CAS/API/UI pendentes. Base80f658c4
-com CI/RLS/scanners SUCCESS;142focados/41PG e R4 delimitada PASS. Novo CI pendente.
-37,5% administrativos,
-1concluída/7parciais/4pendentes. Direitos/G06 BLOCKED; sem operações externas.
+**FOOD06 — vigente: carregamento DB de versão salva M05/M07.**
+[Contrato/handoff](tasks/food06-fonte-versao.md): origem/revisão exatas sob lock,
+materialização atual, seleção/ON-OFF explícitos e confirmação cifrada v2.
+170focados/60PG PASS;4.064backendPASS/217SKIPPED, R4 independente delimitada favorável.
+API/BFF/UI e contexto clínico integrados ainda pendentes;37,5% administrativos,
+1concluída/7parciais/4pendentes. Novo CI pendente. Direitos/G06 BLOCKED.
+Downgrade de código anterior não lê v2; gate operacional separado. Sem operações externas.
 
 **FOOD06 — histórico: construtor M05/M07 de envelope factual em memória.**
 [Contrato/handoff](tasks/food06-construtor-registro-factual.md): marcadores derivados,

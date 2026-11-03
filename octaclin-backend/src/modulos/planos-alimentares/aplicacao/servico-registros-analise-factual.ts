@@ -8,10 +8,20 @@ import { ProfissionalOrm } from '../../profissionais/infraestrutura/profissional
 import { registrarAuditoriaNaTransacao } from '../../../infraestrutura/auditoria/servico-auditoria';
 import { PacienteOrm } from '../../pacientes/infraestrutura/paciente.orm';
 import { RegistroAnaliseFactualOrm } from '../infraestrutura/registro-analise-factual.orm';
+import { PlanoAlimentarOrm } from '../infraestrutura/plano-alimentar.orm';
+import { PlanoAlimentarVersaoOrm } from '../infraestrutura/plano-alimentar-versao.orm';
+import { PlanoAlimentarRefeicaoOrm } from '../infraestrutura/plano-alimentar-refeicao.orm';
+import { PlanoAlimentarItemOrm } from '../infraestrutura/plano-alimentar-item.orm';
+import { lerEstadosRefeicoes } from '../infraestrutura/estados-refeicoes';
+import { lerEstadoEdicaoPersistida } from './estado-edicao-persistida';
 import type { UsuarioAutenticado } from '../../auth/dominio/usuario-autenticado';
 import { construirAnaliseFactual, lerRegistroAnaliseFactual, type EntradaConstrutorAnaliseFactual, type RegistroAnaliseFactual } from './construtor-analise-factual';
 import { compararVersoesFactuais, type IdentidadeVersaoFactual, type ComparacaoVersoesFactuais } from '../dominio/comparacao-versoes-factuais';
 export interface ComandoRegistroFactual { chaveIdempotencia:string;origem:Omit<IdentidadeVersaoFactual,'registradaEm'> }
+export interface ComandoRegistroDeVersaoFactual {
+ registro:ComandoRegistroFactual;
+ selecao:{ativacaoRevisaoEsperada:number;identidadesRefeicoes:string[]};
+}
 /** Carregador server-side deve revalidar fonte, identidade e revisão na MESMA transação. Não é body HTTP. */
 export type CarregarAnaliseFactual=(g:EntityManager)=>Promise<EntradaConstrutorAnaliseFactual>;
 const LIMITE_CIPHER = 10 * 1024 * 1024;
@@ -36,10 +46,68 @@ function validarComando(v: ComandoRegistroFactual): ComandoRegistroFactual {
  return {chaveIdempotencia:uuid(c.chaveIdempotencia),origem:{planoId:uuid(o.planoId),versaoId:uuid(o.versaoId),numero:o.numero as number,status:o.status as 'publicada'|'rascunho',
   ...(o.status==='rascunho'?{rascunhoRevisao:o.rascunhoRevisao as number}:{})}};
 }
-/** Infraestrutura interna: sem endpoint e sem carregador de planos integrado neste incremento. */
+/** Infraestrutura interna. Nunca aceitar callbacks, snapshots ou totais como body HTTP. */
 @Injectable()
 export class ServicoRegistrosAnaliseFactual {
  constructor(private readonly executor:ExecutorTenant,private readonly crypto:CriptografiaDadosSensiveis){}
+ async registrarVersao(tenant:string,paciente:string,usuario:UsuarioAutenticado,entrada:ComandoRegistroDeVersaoFactual):Promise<MetadadosRegistro>{
+  const tenantId=uuid(tenant),pacienteId=uuid(paciente);this.autorizar(tenantId,usuario,true);
+  const e=campos(entrada,['registro','selecao']),s=campos(e.selecao,['ativacaoRevisaoEsperada','identidadesRefeicoes']);
+  const registro=validarComando(e.registro as ComandoRegistroFactual),ids=s.identidadesRefeicoes;
+  if(!Number.isSafeInteger(s.ativacaoRevisaoEsperada)||Number(s.ativacaoRevisaoEsperada)<0||!Array.isArray(ids)||
+   Object.getPrototypeOf(ids)!==Array.prototype||ids.length>50||Object.getOwnPropertySymbols(ids).length||
+   Object.keys(ids).length!==ids.length||Object.entries(Object.getOwnPropertyDescriptors(ids)).some(([k,d])=>
+    k!=='length'&&(!/^(0|[1-9]\d*)$/.test(k)||Number(k)>=ids.length||!d.enumerable||!Object.hasOwn(d,'value'))))throw new BadRequestException('Seleção inválida.');
+  const identidadesRefeicoes=ids.map(uuid);
+  if(new Set(identidadesRefeicoes).size!==ids.length)throw new BadRequestException('Seleção inválida.');
+  const selecao={ativacaoRevisaoEsperada:s.ativacaoRevisaoEsperada as number,identidadesRefeicoes};
+  const confirmacaoOrigem=JSON.stringify({contrato:'food06-fonte-salva-v1',origem:registro.origem,ativacaoRevisao:selecao.ativacaoRevisaoEsperada,identidades:[...identidadesRefeicoes].sort()});
+  return this.registrar(tenantId,pacienteId,usuario,registro,g=>this.carregarVersao(g,tenantId,pacienteId,registro.origem,selecao),confirmacaoOrigem);
+ }
+ private async carregarVersao(g:EntityManager,tenantId:string,pacienteId:string,origem:ComandoRegistroFactual['origem'],selecao:ComandoRegistroDeVersaoFactual['selecao']):Promise<EntradaConstrutorAnaliseFactual>{
+  // Carteira/profissional/chave já bloqueados por registrar. Writers editoriais
+  // também bloqueiam paciente/plano antes da versão; não há transação aninhada.
+  const plano=await g.getRepository(PlanoAlimentarOrm).findOne({select:{id:true,ativoParaPaciente:true,ativacaoRevisao:true},
+   where:{id:origem.planoId,tenantId,pacienteId,arquivadoEm:IsNull()},lock:{mode:'pessimistic_read'}});
+  if(!plano)throw new NotFoundException('Plano indisponível.');
+  if(plano.ativacaoRevisao!==selecao.ativacaoRevisaoEsperada)throw new ConflictException('Ativação alterada. Confira novamente a seleção.');
+  const versao=await g.getRepository(PlanoAlimentarVersaoOrm).findOne({select:{id:true,numero:true,publicadaEm:true,descartadaEm:true,criadoEm:true,
+   rascunhoRevisao:true,edicaoProtegida:true,edicaoSnapshotCriptografado:true,edicaoMaterializadaRevisao:true},
+   where:{id:origem.versaoId,tenantId,planoId:plano.id},lock:{mode:'pessimistic_read'}});
+  if(!versao||versao.descartadaEm||versao.numero!==origem.numero||(versao.publicadaEm?'publicada':'rascunho')!==origem.status||
+   (origem.status==='rascunho'&&versao.rascunhoRevisao!==origem.rascunhoRevisao))throw new ConflictException('Origem alterada. Confira novamente a versão.');
+  if(origem.status==='rascunho'){
+   const edicao=lerEstadoEdicaoPersistida(versao,b=>this.crypto.descriptografar(b));
+   if(edicao.edicaoEstado==='pendente'||edicao.edicaoEstado==='indisponivel')throw new ConflictException('Materialização da revisão indisponível. Confira e salve o plano.');
+  }
+  const data=versao.publicadaEm??versao.criadoEm;
+  if(!(data instanceof Date)||!Number.isFinite(data.getTime()))throw new UnprocessableEntityException('Data da versão indisponível.');
+  const refeicoes=await g.getRepository(PlanoAlimentarRefeicaoOrm).find({select:{id:true,ordem:true},where:{tenantId,versaoId:versao.id},order:{ordem:'ASC',id:'ASC'},take:51});
+  if(refeicoes.length>50)throw new UnprocessableEntityException('Limite de refeições excedido.');
+  const estados=await lerEstadosRefeicoes(g,tenantId,plano.id,versao.id),mapa=new Map(estados.map(e=>[e.refeicao_id,e]));
+  if(estados.length!==refeicoes.length||mapa.size!==refeicoes.length||new Set(estados.map(e=>e.identidade_id)).size!==estados.length||
+   refeicoes.some(r=>!mapa.has(r.id))||estados.some(e=>typeof e.ativa!=='boolean')||selecao.identidadesRefeicoes.some(id=>!estados.some(e=>e.identidade_id===id)))
+   throw new ConflictException('Identidades das refeições indisponíveis. Confira a seleção.');
+  const selecionadas=new Set(selecao.identidadesRefeicoes),entrada:EntradaConstrutorAnaliseFactual={escopo:{tenantId,pacienteId},
+   origem:{...origem,registradaEm:data.toISOString()},ativo:plano.ativoParaPaciente,selecionado:true,refeicoes:[]};
+  let quantidade=0;
+  for(const r of refeicoes){
+   const estado=mapa.get(r.id)!,itens:EntradaConstrutorAnaliseFactual['refeicoes'][number]['itens']=[],selecionada=selecionadas.has(estado.identidade_id);
+   if(entrada.ativo&&estado.ativa&&selecionada){
+    const linhas=await g.getRepository(PlanoAlimentarItemOrm).find({select:{id:true,porcaoGramas:true,composicaoSnapshotCriptografada:true},
+     where:{tenantId,refeicaoId:r.id},order:{ordem:'ASC',id:'ASC'},take:10001});
+    quantidade+=linhas.length;if(quantidade>10000)throw new UnprocessableEntityException('Limite de itens excedido.');
+    for(const item of linhas){
+     let snapshot:unknown;
+     try{snapshot=JSON.parse(this.crypto.descriptografar(item.composicaoSnapshotCriptografada));}
+     catch{throw new UnprocessableEntityException('Composição indisponível para registro.');}
+     itens.push({porcaoGramas:item.porcaoGramas,snapshot});
+    }
+   }
+   entrada.refeicoes.push({identidadeId:estado.identidade_id,ativa:estado.ativa,selecionada,itens});
+  }
+  return entrada;
+ }
  /** Retorno protegido para composição interna, nunca entidade/DTO HTTP. */
  async ler(tenant:string,paciente:string,usuario:UsuarioAutenticado,registroId:string):Promise<RegistroAnaliseFactual>{
   const tenantId=uuid(tenant),pacienteId=uuid(paciente),id=uuid(registroId);this.autorizar(tenantId,usuario,false);
@@ -64,7 +132,7 @@ export class ServicoRegistrosAnaliseFactual {
  }
  private decifrarRegistro(r:RegistroAnaliseFactualOrm):RegistroAnaliseFactual{
   try{
-   const registro=lerRegistroAnaliseFactual(this.conteudoAnterior(r));
+   const registro=lerRegistroAnaliseFactual(this.abrirEnvelope(r).conteudo);
    if(registro.versao.escopo.tenantId!==r.tenantId||registro.versao.escopo.pacienteId!==r.pacienteId)throw new Error();
    return registro;
   }catch{throw new UnprocessableEntityException('Registro indisponível para conferência.');}
@@ -87,19 +155,20 @@ export class ServicoRegistrosAnaliseFactual {
  private vinculo(r:RegistroAnaliseFactualOrm) {
   return {id:r.id,tenantId:r.tenantId,pacienteId:r.pacienteId,profissionalId:r.profissionalId,usuarioId:r.usuarioId,chaveIdempotencia:r.chaveIdempotencia};
  }
- private conteudoAnterior(r:RegistroAnaliseFactualOrm):string {
+ private abrirEnvelope(r:RegistroAnaliseFactualOrm):{conteudo:string;confirmacaoOrigem?:string} {
   try {
-   const e=campos(JSON.parse(this.crypto.descriptografar(r.conteudoCriptografado)),['schemaVersao','tipo','vinculo','conteudo']);
+   const e=campos(JSON.parse(this.crypto.descriptografar(r.conteudoCriptografado)),['schemaVersao','tipo','vinculo','conteudo','confirmacaoOrigem']);
    const vinculo=campos(e.vinculo,['id','tenantId','pacienteId','profissionalId','usuarioId','chaveIdempotencia']);
-   if(!e||e.schemaVersao!==1||e.tipo!=='food06-registro-protegido-v1'||typeof e.conteudo!=='string'||
+   if((e.schemaVersao!==1&&e.schemaVersao!==2)||e.tipo!==`food06-registro-protegido-v${e.schemaVersao}`||typeof e.conteudo!=='string'||
+    (e.schemaVersao===1?Object.hasOwn(e,'confirmacaoOrigem'):typeof e.confirmacaoOrigem!=='string'||!e.confirmacaoOrigem||e.confirmacaoOrigem.length>4096)||
     Object.keys(vinculo).length!==6||Object.entries(this.vinculo(r)).some(([k,v])=>vinculo[k]!==v))throw new Error();
-   return e.conteudo;
+   return {conteudo:e.conteudo,...(e.schemaVersao===2?{confirmacaoOrigem:e.confirmacaoOrigem as string}:{})};
   }catch{throw new UnprocessableEntityException('Registro indisponível para conferência.');}
  }
- async registrar(tenant:string,paciente:string,usuario:UsuarioAutenticado,entrada:ComandoRegistroFactual,carregar:CarregarAnaliseFactual):Promise<MetadadosRegistro>{
+ async registrar(tenant:string,paciente:string,usuario:UsuarioAutenticado,entrada:ComandoRegistroFactual,carregar:CarregarAnaliseFactual,confirmacaoOrigem?:string):Promise<MetadadosRegistro>{
   const tenantId=uuid(tenant),pacienteId=uuid(paciente);this.autorizar(tenantId,usuario,true);
   const comando=validarComando(entrada),usuarioId=uuid(usuario.usuarioId);
-  if(typeof carregar!=='function')throw new BadRequestException('Carregador indisponível.');
+  if(typeof carregar!=='function'||(confirmacaoOrigem!==undefined&&(typeof confirmacaoOrigem!=='string'||!confirmacaoOrigem||confirmacaoOrigem.length>4096)))throw new BadRequestException('Carregador indisponível.');
   return this.executor.executar(tenantId,async g=>{
    const profissionalId=await this.carteira(g,tenantId,pacienteId,usuario);
    // Mesma ordem: profissional -> paciente -> chave. Sem retries cegos.
@@ -112,11 +181,15 @@ export class ServicoRegistrosAnaliseFactual {
    const anterior=await repo.findOne({where:{tenantId,usuarioId,chaveIdempotencia:comando.chaveIdempotencia}});
    if(anterior){
     if(anterior.pacienteId!==pacienteId||anterior.profissionalId!==profissionalId)throw new ConflictException('Chave já utilizada em outra operação.');
-    if(this.conteudoAnterior(anterior)!==conteudo)throw new ConflictException('Chave já utilizada com conteúdo diferente.');
+    const anteriorAberto=this.abrirEnvelope(anterior);
+    if(anteriorAberto.conteudo!==conteudo||anteriorAberto.confirmacaoOrigem!==confirmacaoOrigem)throw new ConflictException('Chave já utilizada com conteúdo diferente.');
     return projetar(anterior);
    }
    const r=repo.create({id:randomUUID(),tenantId,pacienteId,profissionalId,usuarioId,chaveIdempotencia:comando.chaveIdempotencia});
-   const envelope=JSON.stringify({schemaVersao:1,tipo:'food06-registro-protegido-v1',vinculo:this.vinculo(r),conteudo});
+   // v1 continua legível. Fonte real usa v2, que vincula também a confirmação
+   // operacional, sem expor metadados clínicos ou inventar fatos no cálculo.
+   const schemaVersao=confirmacaoOrigem===undefined?1:2;
+   const envelope=JSON.stringify({schemaVersao,tipo:`food06-registro-protegido-v${schemaVersao}`,vinculo:this.vinculo(r),conteudo,...(confirmacaoOrigem===undefined?{}:{confirmacaoOrigem})});
    if(Buffer.byteLength(envelope)>LIMITE_CIPHER-1024)throw new BadRequestException('Análise excede o limite de registro.');
    r.conteudoCriptografado=this.crypto.criptografar(envelope);
    await repo.insert(r);

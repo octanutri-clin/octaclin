@@ -1,6 +1,9 @@
 # FOOD06 M05/M07 — leitura cifrada e comparação interna
 
-## Estado e alcance
+> Histórico do leitor. Continuidade atual:
+> [fonte DB de versões/revisões](food06-fonte-versao.md), sem API ou ativação.
+
+## Checkpoint do leitor e comparação interna
 
 PR455 Draft, branch docs/food06-contratos-fontes. Base local0cedaccd/remota80f658c4,
 árvore idênticaf4b5276d. CI41679598259 e scanners dessa base SUCCESS: migrations

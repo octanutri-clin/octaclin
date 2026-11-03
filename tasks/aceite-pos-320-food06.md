@@ -1,10 +1,10 @@
 # FOOD06 — matriz obrigatória de aceite
 
-> Estado vigente — leitor e comparação interna M05/M07: [contrato/evidências](food06-leitura-factual.md).
-> Reautoriza carteira/tenant antes de abrir registros, valida envelope e fatos congelados.
-> Sem API/UI ou carregador DB de versões/revisões; M05/M07 parciais,37,5% administrativos.
->142focados/41PG PASS; R4 independente favorável. Base80f658c4 CI/RLS/scanners SUCCESS; novo CI pendente.
-> Direitos/DRI/G06 BLOCKED; sem merge/deploy/migrations externas. Histórico abaixo.
+> Estado vigente — fonte DB de versão salva M05/M07: [contrato/evidências](food06-fonte-versao.md).
+> Origem exata, revisão sob lock e materialização atual; confirmação operacional cifrada v2.
+>170focados/60PG e R4 delimitada PASS. Sem nova migration, API/UI ou contexto clínico integrado.
+> M05/M07 parciais;37,5% administrativos. CI novo pendente; direitos/DRI/G06 BLOCKED.
+> Sem merge/deploy/migrations externas. Checkpoints abaixo são históricos.
 
 > Histórico — construtor M05/M07: [envelope factual](food06-construtor-registro-factual.md).
 > Envelope em memória e marcadores derivados dos snapshots; não é persistência em banco.

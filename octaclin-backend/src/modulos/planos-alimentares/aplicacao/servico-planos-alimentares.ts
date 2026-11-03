@@ -1,3 +1,4 @@
+import { lerEstadoEdicaoPersistida } from './estado-edicao-persistida';
 import {projetarAjudaDietetica} from './projecao-ajuda-dietetica';
 import { ServicoPorcionamentoReceita } from './servico-porcionamento-receita';
 import { ServicoReceitasNutricionais } from './servico-receitas-nutricionais';
@@ -2425,13 +2426,7 @@ export class ServicoPlanosAlimentares {
     edicaoEstado: 'legado' | 'pendente' | 'materializada' | 'indisponivel';
     documentoEdicao?: DocumentoEdicaoPlano;
   } {
-    if (!versao.edicaoSnapshotCriptografado) return {
-      edicaoEstado: versao.edicaoProtegida && versao.edicaoMaterializadaRevisao !== versao.rascunhoRevisao ? 'indisponivel' : 'legado'
-    };
-    try {
-      const documentoEdicao = lerSnapshotEdicaoGrupos(this.lerJsonCriptografado(versao.edicaoSnapshotCriptografado)).documento;
-      return { documentoEdicao, edicaoEstado: versao.edicaoMaterializadaRevisao === versao.rascunhoRevisao ? 'materializada' : 'pendente' };
-    } catch { return { edicaoEstado: 'indisponivel' }; }
+    return lerEstadoEdicaoPersistida(versao, valor => this.criptografia.descriptografar(valor));
   }
 
   private lerApresentacao(versao: PlanoAlimentarVersaoOrm) {

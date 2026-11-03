@@ -5,13 +5,17 @@ import { DataSource,type MigrationInterface } from 'typeorm';
 import { GenericContainer,Wait,type StartedTestContainer } from 'testcontainers';
 import { RegistrosAnalisesFactuais1720000001081 } from './1720000001081-RegistrosAnalisesFactuais';
 import { RegistroAnaliseFactualOrm } from '../../../modulos/planos-alimentares/infraestrutura/registro-analise-factual.orm';
+import { PlanoAlimentarOrm } from '../../../modulos/planos-alimentares/infraestrutura/plano-alimentar.orm';
+import { PlanoAlimentarVersaoOrm } from '../../../modulos/planos-alimentares/infraestrutura/plano-alimentar-versao.orm';
+import { PlanoAlimentarRefeicaoOrm } from '../../../modulos/planos-alimentares/infraestrutura/plano-alimentar-refeicao.orm';
+import { PlanoAlimentarItemOrm } from '../../../modulos/planos-alimentares/infraestrutura/plano-alimentar-item.orm';
 import { PacienteOrm } from '../../../modulos/pacientes/infraestrutura/paciente.orm';
 import { ProfissionalOrm } from '../../../modulos/profissionais/infraestrutura/profissional.orm';
 import { UserActionLogOrm } from '../../auditoria/user-action-log.orm';
 import { ExecutorTenant } from '../executor-tenant';
 import { CriptografiaDadosSensiveis } from '../../seguranca/criptografia-dados-sensiveis';
-import { ServicoRegistrosAnaliseFactual,type ComandoRegistroFactual } from '../../../modulos/planos-alimentares/aplicacao/servico-registros-analise-factual';
-import type { EntradaConstrutorAnaliseFactual } from '../../../modulos/planos-alimentares/aplicacao/construtor-analise-factual';
+import { ServicoRegistrosAnaliseFactual,type ComandoRegistroFactual,type ComandoRegistroDeVersaoFactual } from '../../../modulos/planos-alimentares/aplicacao/servico-registros-analise-factual';
+import { construirAnaliseFactual,type EntradaConstrutorAnaliseFactual } from '../../../modulos/planos-alimentares/aplicacao/construtor-analise-factual';
 import type { UsuarioAutenticado } from '../../../modulos/auth/dominio/usuario-autenticado';
 const suite=process.env.FOOD06_REGISTRO_TESTCONTAINERS==='true'?describe:describe.skip;
 suite('FOOD06 registro cifrado PostgreSQL15 descartável/RLS/runtime',()=>{
@@ -21,6 +25,18 @@ suite('FOOD06 registro cifrado PostgreSQL15 descartável/RLS/runtime',()=>{
  const crypto=new CriptografiaDadosSensiveis();
  function dados():EntradaConstrutorAnaliseFactual {return {escopo:{tenantId:tenant,pacienteId:paciente},origem:{planoId:plano,versaoId:versao,numero:1,status:'publicada',registradaEm:'2026-11-03T12:00:00.000Z'},ativo:true,selecionado:true,refeicoes:[{identidadeId:randomUUID(),ativa:true,selecionada:true,itens:[{porcaoGramas:100,snapshot:{origem:'manual',descricao:'CANARIO_PRIVADO',nutrientesPor100g:{energiaKcal:100},nutrientesPorcao:{energiaKcal:100}}}]}]};}
  const comando=(key=randomUUID()):ComandoRegistroFactual=>({chaveIdempotencia:key,origem:{planoId:plano,versaoId:versao,numero:1,status:'publicada'}});
+ async function fonte(status:'publicada'|'rascunho'='publicada'){
+  const planoId=randomUUID(),versaoId=randomUUID(),refeicaoId=randomUUID(),identidade=randomUUID(),itemId=randomUUID();
+  const documento={schemaVersao:1,refeicoes:[{chaveCliente:refeicaoId,nome:'PRIVADO_EDITOR',itens:[{chaveCliente:itemId,descricao:'PRIVADO_ALIMENTO',quantidade:100,unidade:'g',porcaoGramas:100,nutrientesPor100g:{energiaKcal:100}}]}]};
+  await owner.query('insert into planos_alimentares values($1,$2,$3,$4,true,0,null)',[planoId,tenant,paciente,p]);
+  await owner.query('insert into plano_alimentar_versoes values($1,$2,$3,1,$4,null,1,1,true,$5,$6)',[versaoId,tenant,planoId,status==='publicada'?'2026-11-03T12:00:00.000Z':null,crypto.criptografar(JSON.stringify(documento)),'2026-11-01T12:00:00.000Z']);
+  await owner.query('insert into plano_alimentar_refeicoes values($1,$2,$3,0)',[refeicaoId,tenant,versaoId]);
+  await owner.query('insert into plano_alimentar_refeicao_estados values($1,$2,$3,true)',[identidade,tenant,planoId]);
+  await owner.query('insert into plano_alimentar_refeicao_vinculos values($1,$2,$3,$4,$5)',[tenant,planoId,versaoId,refeicaoId,identidade]);
+  await owner.query('insert into plano_alimentar_itens values($1,$2,$3,0,100,$4)',[itemId,tenant,refeicaoId,crypto.criptografar(JSON.stringify({origem:'manual',nutrientesPor100g:{energiaKcal:100},nutrientesPorcao:{energiaKcal:100}}))]);
+  const c:ComandoRegistroDeVersaoFactual={registro:{chaveIdempotencia:randomUUID(),origem:{planoId,versaoId,numero:1,status,...(status==='rascunho'?{rascunhoRevisao:1}:{})}},selecao:{ativacaoRevisaoEsperada:0,identidadesRefeicoes:[identidade]}};
+  return {planoId,versaoId,refeicaoId,identidade,itemId,c};
+ }
  beforeAll(async()=>{
   container=await new GenericContainer('postgres:15-alpine').withTmpFs({'/var/lib/postgresql/data':'rw,noexec,nosuid,size=256m'}).withEnvironment({POSTGRES_USER:'owner',POSTGRES_PASSWORD:'owner-test',POSTGRES_DB:'food06_registry_test'}).withExposedPorts(5432).withWaitStrategy(Wait.forLogMessage(/database system is ready to accept connections/i,2)).withStartupTimeout(60000).start();
   const conn={host:container.getHost(),port:container.getMappedPort(5432),database:'food06_registry_test'};
@@ -29,7 +45,14 @@ suite('FOOD06 registro cifrado PostgreSQL15 descartável/RLS/runtime',()=>{
    create table usuarios(id uuid primary key,tenant_id uuid not null references tenants(id),unique(tenant_id,id));
    create table profissionais(id uuid primary key,tenant_id uuid not null references tenants(id),usuario_id uuid not null,nome_criptografado bytea not null,registro_profissional varchar(80),especialidade varchar(120),arquivado_em timestamptz,criado_em timestamptz default now(),atualizado_em timestamptz default now(),unique(tenant_id,id));
    create table pacientes(id uuid primary key,tenant_id uuid not null,profissional_responsavel_id uuid not null,arquivado_em timestamptz,unique(tenant_id,id));
+   create table planos_alimentares(id uuid primary key,tenant_id uuid not null,paciente_id uuid not null,profissional_id uuid not null,ativo_para_paciente boolean not null,ativacao_revisao integer not null,arquivado_em timestamptz);
+   create table plano_alimentar_versoes(id uuid primary key,tenant_id uuid not null,plano_id uuid not null,numero integer not null,publicada_em timestamptz,descartada_em timestamptz,rascunho_revisao integer not null,edicao_materializada_revisao integer,edicao_protegida boolean not null,edicao_snapshot_criptografado bytea,criado_em timestamptz not null);
+   create table plano_alimentar_refeicoes(id uuid primary key,tenant_id uuid not null,versao_id uuid not null,ordem integer not null);
+   create table plano_alimentar_itens(id uuid primary key,tenant_id uuid not null,refeicao_id uuid not null,ordem integer not null,porcao_gramas numeric(12,3) not null,composicao_snapshot_criptografada bytea not null);
+   create table plano_alimentar_refeicao_estados(id uuid primary key,tenant_id uuid not null,plano_id uuid not null,ativa boolean not null);
+   create table plano_alimentar_refeicao_vinculos(tenant_id uuid not null,plano_id uuid not null,versao_id uuid not null,refeicao_id uuid not null,identidade_id uuid not null);
    create table user_action_logs(id uuid primary key default gen_random_uuid(),tenant_id uuid not null,usuario_id uuid,acao varchar(120) not null,recurso_tipo varchar(120),recurso_id uuid,ip inet,user_agent text,metadados jsonb default '{}',criado_em timestamptz default now());`);
+  for(const tabela of ['profissionais','pacientes','planos_alimentares','plano_alimentar_versoes','plano_alimentar_refeicoes','plano_alimentar_itens','plano_alimentar_refeicao_estados','plano_alimentar_refeicao_vinculos'])await owner.query(`alter table ${tabela} enable row level security;alter table ${tabela} force row level security;create policy tenant_fixture on ${tabela} using(tenant_id=nullif(current_setting('app.tenant_id',true),'')::uuid) with check(tenant_id=nullif(current_setting('app.tenant_id',true),'')::uuid)`);
   await owner.query('insert into tenants values($1),($2)',[tenant,otherTenant]);
   await owner.query('insert into usuarios values($1,$2)',[usuarioId,tenant]);
   for(const id of [p,p2])await owner.query("insert into profissionais(id,tenant_id,usuario_id,nome_criptografado) values($1,$2,$3,decode('00','hex'))",[id,tenant,id===p?usuarioId:randomUUID()]);
@@ -39,7 +62,7 @@ suite('FOOD06 registro cifrado PostgreSQL15 descartável/RLS/runtime',()=>{
   await owner.query(`create role food06_runtime login password 'runtime-test' nosuperuser nocreatedb nocreaterole nobypassrls;
    grant connect on database food06_registry_test to food06_runtime;grant usage on schema public to food06_runtime;
    grant select,insert,update,delete on all tables in schema public to food06_runtime;`);
-  ds=new DataSource({type:'postgres',...conn,username:'food06_runtime',password:'runtime-test',entities:[RegistroAnaliseFactualOrm,PacienteOrm,ProfissionalOrm,UserActionLogOrm],synchronize:false,logging:false,extra:{max:6}});await ds.initialize();
+  ds=new DataSource({type:'postgres',...conn,username:'food06_runtime',password:'runtime-test',entities:[RegistroAnaliseFactualOrm,PacienteOrm,ProfissionalOrm,UserActionLogOrm,PlanoAlimentarOrm,PlanoAlimentarVersaoOrm,PlanoAlimentarRefeicaoOrm,PlanoAlimentarItemOrm],synchronize:false,logging:false,extra:{max:6}});await ds.initialize();
   s=new ServicoRegistrosAnaliseFactual(new ExecutorTenant(ds),crypto);
  },90000);
  afterAll(async()=>{if(ds?.isInitialized)await ds.destroy();await owner?.end();await container?.stop();},30000);
@@ -192,6 +215,150 @@ suite('FOOD06 registro cifrado PostgreSQL15 descartável/RLS/runtime',()=>{
    const historico=await s.ler(tenant,paciente,{...u,usuarioId:novoId},x.id);expect(historico.analise.calculo.nutrientes.energiaKcal.total).toBe(100);
   }finally{await owner.query('update pacientes set profissional_responsavel_id=$1 where id=$2',[p,paciente]);await owner.query('delete from usuarios where id=$1',[novoId]);}
   await expect(s.ler(otherTenant,paciente,{...u,tenantId:otherTenant},x.id)).rejects.toMatchObject({status:404});
+ });
+ it.each(['publicada','rascunho'] as const)('registra fonte DB exata %s com snapshots, sem catálogo vivo e replay estável',async status=>{
+  const f=await fonte(status),r=await s.registrarVersao(tenant,paciente,u,f.c);
+  const lido=await s.ler(tenant,paciente,u,r.id);
+  expect(lido.versao.origem).toMatchObject({planoId:f.planoId,versaoId:f.versaoId,numero:1,status});expect(lido.analise.calculo.nutrientes.energiaKcal.total).toBe(100);
+  expect(lido.contexto).toBeUndefined();expect(JSON.stringify(lido)).not.toMatch(/PRIVADO|descricao|nascimento/);
+  expect((await s.registrarVersao(tenant,paciente,u,f.c)).id).toBe(r.id);
+ });
+ it('não usa última versão, número solto, revisão ou seleção divergentes',async()=>{
+  const f=await fonte('rascunho');
+  for(const origem of [{...f.c.registro.origem,versaoId:randomUUID()},{...f.c.registro.origem,numero:2},{...f.c.registro.origem,rascunhoRevisao:2},{...f.c.registro.origem,status:'publicada' as const,rascunhoRevisao:undefined}])
+   await expect(s.registrarVersao(tenant,paciente,u,{...f.c,registro:{...f.c.registro,origem}})).rejects.toMatchObject({status:409});
+  await expect(s.registrarVersao(tenant,paciente,u,{...f.c,selecao:{...f.c.selecao,ativacaoRevisaoEsperada:1}})).rejects.toMatchObject({status:409});
+  await expect(s.registrarVersao(tenant,paciente,u,{...f.c,selecao:{...f.c.selecao,identidadesRefeicoes:[randomUUID()]}})).rejects.toMatchObject({status:409});
+  expect((await owner.query('select id from registros_analises_factuais where chave_idempotencia=$1',[f.c.registro.chaveIdempotencia])).rows).toHaveLength(0);
+ });
+ it('não registra materialização obsoleta ou edição cifrada inválida como revisão atual',async()=>{
+  const f=await fonte('rascunho');await owner.query('update plano_alimentar_versoes set edicao_materializada_revisao=0 where id=$1',[f.versaoId]);
+  await expect(s.registrarVersao(tenant,paciente,u,f.c)).rejects.toMatchObject({status:409});
+  await owner.query('update plano_alimentar_versoes set edicao_materializada_revisao=1,edicao_snapshot_criptografado=$1 where id=$2',[Buffer.alloc(40),f.versaoId]);
+  await expect(s.registrarVersao(tenant,paciente,u,f.c)).rejects.toMatchObject({status:409});
+ });
+ it('estado OFF e seleção vazia preservam fatos excluídos sem abrir sua composição',async()=>{
+  const f=await fonte();await owner.query('update plano_alimentar_itens set composicao_snapshot_criptografada=$1 where id=$2',[Buffer.alloc(40),f.itemId]);
+  const r=await s.registrarVersao(tenant,paciente,u,{...f.c,selecao:{...f.c.selecao,identidadesRefeicoes:[]}});
+  expect((await s.ler(tenant,paciente,u,r.id)).versao.estado.refeicoes[0].itens).toEqual([]);
+  await owner.query('update planos_alimentares set ativo_para_paciente=false,ativacao_revisao=1 where id=$1',[f.planoId]);
+  const off=await s.registrarVersao(tenant,paciente,u,{...f.c,registro:{...f.c.registro,chaveIdempotencia:randomUUID()},selecao:{...f.c.selecao,ativacaoRevisaoEsperada:1}});
+  expect((await s.ler(tenant,paciente,u,off.id)).versao.estado.ativo).toBe(false);
+ });
+ it('não acessa plano de outro paciente/tenant, arquivado ou versão descartada',async()=>{
+  const f=await fonte();await owner.query('update planos_alimentares set paciente_id=$1 where id=$2',[outroPaciente,f.planoId]);
+  await expect(s.registrarVersao(tenant,paciente,u,f.c)).rejects.toMatchObject({status:404});
+  await owner.query('update planos_alimentares set paciente_id=$1,arquivado_em=now() where id=$2',[paciente,f.planoId]);
+  await expect(s.registrarVersao(tenant,paciente,u,f.c)).rejects.toMatchObject({status:404});
+  await owner.query('update planos_alimentares set arquivado_em=null where id=$1',[f.planoId]);await owner.query('update plano_alimentar_versoes set descartada_em=now() where id=$1',[f.versaoId]);
+  await expect(s.registrarVersao(tenant,paciente,u,f.c)).rejects.toMatchObject({status:409});
+  await expect(s.registrarVersao(otherTenant,paciente,{...u,tenantId:otherTenant},f.c)).rejects.toMatchObject({status:404});
+ });
+ it('composição inválida ou vínculos ambíguos falham sem gravar análise parcial',async()=>{
+  const f=await fonte();await owner.query('update plano_alimentar_itens set composicao_snapshot_criptografada=$1 where id=$2',[Buffer.alloc(40),f.itemId]);
+  await expect(s.registrarVersao(tenant,paciente,u,f.c)).rejects.toMatchObject({status:422});
+  await owner.query('delete from plano_alimentar_refeicao_vinculos where versao_id=$1',[f.versaoId]);
+  await expect(s.registrarVersao(tenant,paciente,u,f.c)).rejects.toMatchObject({status:409});
+  expect((await owner.query('select id from registros_analises_factuais where chave_idempotencia=$1',[f.c.registro.chaveIdempotencia])).rows).toHaveLength(0);
+ });
+ it.each(['revisao','ativacao','carteira'])('fonte serializa alteração concorrente de %s antes do registro',async caso=>{
+  const f=await fonte('rascunho'),tabela=caso==='revisao'?'plano_alimentar_versoes':caso==='ativacao'?'planos_alimentares':'pacientes',id=caso==='revisao'?f.versaoId:caso==='ativacao'?f.planoId:paciente;
+  await owner.query('begin');await owner.query(`select id from ${tabela} where id=$1 for update`,[id]);
+  const pedido=s.registrarVersao(tenant,paciente,u,f.c).then(valor=>({valor,erro:undefined}),erro=>({valor:undefined,erro}));
+  try{
+   let aguardando=false;
+   for(let i=0;i<60&&!aguardando;i++){
+    await owner.query('select pg_stat_clear_snapshot()');
+    aguardando=(await owner.query("select pid from pg_stat_activity where usename='food06_runtime' and wait_event_type='Lock' and query ilike $1",['%'+tabela+'%'])).rows.length>0;
+    if(!aguardando)await new Promise(r=>setTimeout(r,50));
+   }
+   expect(aguardando).toBe(true);
+   if(caso==='revisao')await owner.query('update plano_alimentar_versoes set rascunho_revisao=2 where id=$1',[id]);
+   if(caso==='ativacao')await owner.query('update planos_alimentares set ativo_para_paciente=false,ativacao_revisao=1 where id=$1',[id]);
+   if(caso==='carteira')await owner.query('update pacientes set profissional_responsavel_id=$1 where id=$2',[p2,id]);
+   await owner.query('commit');const resultado=await pedido;expect(resultado.erro).toMatchObject({status:caso==='carteira'?404:409});
+   expect((await owner.query('select id from registros_analises_factuais where chave_idempotencia=$1',[f.c.registro.chaveIdempotencia])).rows).toHaveLength(0);
+   if(caso==='revisao'){
+    await owner.query('update plano_alimentar_versoes set edicao_materializada_revisao=2 where id=$1',[id]);
+    await expect(s.registrarVersao(tenant,paciente,u,{...f.c,registro:{...f.c.registro,origem:{...f.c.registro.origem,rascunhoRevisao:2}}})).resolves.toHaveProperty('id');
+   }
+  }finally{await owner.query('rollback');await pedido;if(caso==='carteira')await owner.query('update pacientes set profissional_responsavel_id=$1 where id=$2',[p,paciente]);}
+ });
+ it('fonte mantém idempotência concorrente e rollback da auditoria com a mesma revisão',async()=>{
+  const f=await fonte();const respostas=await Promise.all(Array.from({length:4},()=>s.registrarVersao(tenant,paciente,u,f.c)));
+  expect(new Set(respostas.map(r=>r.id)).size).toBe(1);expect((await owner.query('select id from user_action_logs where recurso_id=$1',[respostas[0].id])).rows).toHaveLength(1);
+  const c={...f.c,registro:{...f.c.registro,chaveIdempotencia:randomUUID()}};
+  await owner.query("alter table user_action_logs add constraint falha_fonte_audit check(acao <> 'analises_factuais.registrar') not valid");
+  try{await expect(s.registrarVersao(tenant,paciente,u,c)).rejects.toThrow();expect((await owner.query('select id from registros_analises_factuais where chave_idempotencia=$1',[c.registro.chaveIdempotencia])).rows).toHaveLength(0);}
+  finally{await owner.query('alter table user_action_logs drop constraint falha_fonte_audit');}
+  await expect(s.registrarVersao(tenant,paciente,u,c)).resolves.toHaveProperty('id');
+ });
+ it('fonte rejeita payload manipulado, seleção esparsa ou duplicada e preserva leitura legado',async()=>{
+  const f=await fonte('rascunho');
+  const esparsa=Array(1) as string[];
+  const casos=[null,{...f.c,totais:{}},{...f.c,selecao:{...f.c.selecao,extra:true}},{...f.c,selecao:{...f.c.selecao,ativacaoRevisaoEsperada:-1}},
+   {...f.c,selecao:{...f.c.selecao,identidadesRefeicoes:esparsa}},{...f.c,selecao:{...f.c.selecao,identidadesRefeicoes:[f.identidade,f.identidade]}},{...f.c,selecao:{...f.c.selecao,identidadesRefeicoes:['invalida']}},
+   {...f.c,selecao:{...f.c.selecao,identidadesRefeicoes:Array.from({length:51},()=>randomUUID())}}];
+  for(const c of casos)await expect(s.registrarVersao(tenant,paciente,u,c as ComandoRegistroDeVersaoFactual)).rejects.toMatchObject({status:400});
+  await owner.query('update plano_alimentar_versoes set edicao_snapshot_criptografado=null,edicao_protegida=false,edicao_materializada_revisao=null where id=$1',[f.versaoId]);
+  await expect(s.registrarVersao(tenant,paciente,u,f.c)).resolves.toHaveProperty('id');
+ });
+ it('fonte de publicação anterior não troca pela versão mais recente nem soma alternativas',async()=>{
+  const f=await fonte(),v2=randomUUID(),r2=randomUUID();
+  await owner.query('update plano_alimentar_itens set composicao_snapshot_criptografada=$1 where id=$2',[crypto.criptografar(JSON.stringify({origem:'manual',nutrientesPor100g:{energiaKcal:100},nutrientesPorcao:{energiaKcal:100},substituicoes:[{nutrientesPorcao:{energiaKcal:777}}]})),f.itemId]);
+  await owner.query('insert into plano_alimentar_versoes select $1,tenant_id,plano_id,2,$2,null,1,1,true,edicao_snapshot_criptografado,criado_em from plano_alimentar_versoes where id=$3',[v2,'2026-11-03T13:00:00.000Z',f.versaoId]);
+  await owner.query('insert into plano_alimentar_refeicoes values($1,$2,$3,0)',[r2,tenant,v2]);
+  await owner.query('insert into plano_alimentar_refeicao_vinculos values($1,$2,$3,$4,$5)',[tenant,f.planoId,v2,r2,f.identidade]);
+  await owner.query('insert into plano_alimentar_itens values($1,$2,$3,0,100,$4)',[randomUUID(),tenant,r2,crypto.criptografar(JSON.stringify({origem:'manual',nutrientesPorcao:{energiaKcal:999},substituicoes:[{nutrientesPorcao:{energiaKcal:777}}]}))]);
+  const r=await s.registrarVersao(tenant,paciente,u,f.c),lido=await s.ler(tenant,paciente,u,r.id);
+  expect(lido.versao.origem.versaoId).toBe(f.versaoId);expect(lido.versao.origem.registradaEm).toBe('2026-11-03T12:00:00.000Z');expect(lido.analise.calculo.nutrientes.energiaKcal.total).toBe(100);
+ });
+ it('refeição OFF selecionada permanece excluída sem abrir composição inválida',async()=>{
+  const f=await fonte();await owner.query('update plano_alimentar_refeicao_estados set ativa=false where id=$1',[f.identidade]);
+  await owner.query('update planos_alimentares set ativacao_revisao=1 where id=$1',[f.planoId]);await owner.query('update plano_alimentar_itens set composicao_snapshot_criptografada=$1 where id=$2',[Buffer.alloc(40),f.itemId]);
+  await expect(s.registrarVersao(tenant,paciente,u,f.c)).rejects.toMatchObject({status:409});
+  const r=await s.registrarVersao(tenant,paciente,u,{...f.c,selecao:{...f.c.selecao,ativacaoRevisaoEsperada:1}}),lido=await s.ler(tenant,paciente,u,r.id);
+  expect(lido.versao.estado.refeicoes[0]).toMatchObject({ativa:false,selecionada:true,itens:[]});
+ });
+ it('fonte mantém zero conhecido e composição incompleta sem total inventado',async()=>{
+  const f=await fonte();await owner.query('update plano_alimentar_itens set composicao_snapshot_criptografada=$1 where id=$2',[crypto.criptografar(JSON.stringify({origem:'manual',nutrientesPor100g:{energiaKcal:0},nutrientesPorcao:{energiaKcal:0}})),f.itemId]);
+  const r=await s.registrarVersao(tenant,paciente,u,f.c),lido=await s.ler(tenant,paciente,u,r.id);
+  expect(lido.analise.calculo.nutrientes.energiaKcal.total).toBe(0);expect(lido.analise.cobertura.nutrientes.ferroMg.estado).toBe('DESCONHECIDO');expect(lido.referencias.estado).toBe('indisponivel');
+ });
+ it('recusa limite de refeições e itens antes de qualquer gravação',async()=>{
+  const f=await fonte();await owner.query('insert into plano_alimentar_refeicoes select gen_random_uuid(),$1,$2,i from generate_series(1,50) i',[tenant,f.versaoId]);
+  await expect(s.registrarVersao(tenant,paciente,u,f.c)).rejects.toMatchObject({status:422});
+  const g=await fonte();await owner.query('insert into plano_alimentar_itens select gen_random_uuid(),$1,$2,i,100,$3 from generate_series(1,10000) i',[tenant,g.refeicaoId,crypto.criptografar('{}')]);
+  await expect(s.registrarVersao(tenant,paciente,u,g.c)).rejects.toMatchObject({status:422});
+  for(const chave of [f.c.registro.chaveIdempotencia,g.c.registro.chaveIdempotencia])expect((await owner.query('select id from registros_analises_factuais where chave_idempotencia=$1',[chave])).rows).toHaveLength(0);
+ });
+ it('não executa getters nem aceita propriedades extras na seleção',async()=>{
+  const f=await fonte(),ids=[f.identidade],getter=jest.fn(()=>f.identidade);Object.defineProperty(ids,'0',{enumerable:true,get:getter});
+  await expect(s.registrarVersao(tenant,paciente,u,{...f.c,selecao:{...f.c.selecao,identidadesRefeicoes:ids}})).rejects.toMatchObject({status:400});expect(getter).not.toHaveBeenCalled();
+  const extra=[f.identidade];Object.defineProperty(extra,'extra',{value:'CANARIO'});
+  await expect(s.registrarVersao(tenant,paciente,u,{...f.c,selecao:{...f.c.selecao,identidadesRefeicoes:extra}})).rejects.toMatchObject({status:400});
+ });
+ it('mesma chave não confirma outra revisão operacional após OFF→ON com fatos idênticos',async()=>{
+  const f=await fonte();await s.registrarVersao(tenant,paciente,u,f.c);
+  await owner.query('update planos_alimentares set ativo_para_paciente=false,ativacao_revisao=1 where id=$1',[f.planoId]);
+  await owner.query('update planos_alimentares set ativo_para_paciente=true,ativacao_revisao=2 where id=$1',[f.planoId]);
+  await expect(s.registrarVersao(tenant,paciente,u,f.c)).rejects.toMatchObject({status:409});
+  await expect(s.registrarVersao(tenant,paciente,u,{...f.c,selecao:{...f.c.selecao,ativacaoRevisaoEsperada:2}})).rejects.toMatchObject({status:409});
+ });
+ it('envelope v2 preserva v1 e não permite retirar vínculo da confirmação para reutilizar chave',async()=>{
+  const f=await fonte(),r=await s.registrarVersao(tenant,paciente,u,f.c);
+  const row=(await owner.query('select conteudo_criptografado from registros_analises_factuais where id=$1',[r.id])).rows[0];
+  const original=row.conteudo_criptografado as Buffer,envelope=JSON.parse(crypto.descriptografar(original));
+  expect(envelope).toMatchObject({schemaVersao:2,tipo:'food06-registro-protegido-v2'});expect(JSON.parse(envelope.confirmacaoOrigem)).toMatchObject({ativacaoRevisao:0,identidades:[f.identidade]});
+  const e=dados();e.origem={...f.c.registro.origem,registradaEm:'2026-11-03T12:00:00.000Z'};e.refeicoes[0].identidadeId=f.identidade;
+  expect(construirAnaliseFactual(e)).toEqual(await s.ler(tenant,paciente,u,r.id));
+  await expect(s.registrar(tenant,paciente,u,f.c.registro,async()=>e)).rejects.toMatchObject({status:409});
+  for(const alterado of [{...envelope,schemaVersao:1,tipo:'food06-registro-protegido-v1'},{...envelope,confirmacaoOrigem:null},{...envelope,confirmacaoOrigem:''},{...envelope,extra:true}]){
+   await owner.query('update registros_analises_factuais set conteudo_criptografado=$1 where id=$2',[crypto.criptografar(JSON.stringify(alterado)),r.id]);
+   await expect(s.ler(tenant,paciente,u,r.id)).rejects.toMatchObject({status:422});
+  }
+  await owner.query('update registros_analises_factuais set conteudo_criptografado=$1 where id=$2',[original,r.id]);
+  await expect(s.ler(tenant,paciente,u,r.id)).resolves.toHaveProperty('schemaVersao',1);
  });
  it('índice paginado permite somente metadados, respeitando limites e não abre cipher',async()=>{
   const r=await s.listar(tenant,paciente,u,1,2);expect(r.itens).toHaveLength(2);expect(r.total).toBeGreaterThan(2);
