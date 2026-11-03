@@ -1,10 +1,10 @@
 # FOOD06 — matriz obrigatória de aceite
 
-> Estado vigente — armazenamento interno M05/M07: [contrato e evidências](food06-persistencia-factual.md).
-> Migration1081 aditiva e serviço cifrado;16/16 testes schema/PG e R4 independente delimitada PASS.
-> Typecheck/build Node22 PASS. Sem fonte clínica real integrada, leitura clínica ou API/UI.
-> M05/M07 parciais;37,5% administrativos. CI do delta pendente; direitos/DRI/G06 BLOCKED.
-> Nenhuma migration externa, merge ou deploy. Checkpoints abaixo são históricos.
+> Estado vigente — leitor e comparação interna M05/M07: [contrato/evidências](food06-leitura-factual.md).
+> Reautoriza carteira/tenant antes de abrir registros, valida envelope e fatos congelados.
+> Sem API/UI ou carregador DB de versões/revisões; M05/M07 parciais,37,5% administrativos.
+>142focados/41PG PASS; R4 independente favorável. Base80f658c4 CI/RLS/scanners SUCCESS; novo CI pendente.
+> Direitos/DRI/G06 BLOCKED; sem merge/deploy/migrations externas. Histórico abaixo.
 
 > Histórico — construtor M05/M07: [envelope factual](food06-construtor-registro-factual.md).
 > Envelope em memória e marcadores derivados dos snapshots; não é persistência em banco.

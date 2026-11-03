@@ -123,11 +123,16 @@ suite('FOOD06 registro cifrado PostgreSQL15 descartável/RLS/runtime',()=>{
  it('revogação concorrente do profissional é serializada antes de gravar',async()=>{
   const c=comando();await owner.query('begin');
   await owner.query('select id from profissionais where id=$1 for update',[p]);
+  // Inicializa deliberadamente o snapshot estatístico ANTES do concorrente.
+  await owner.query("select pid from pg_stat_activity where usename='food06_runtime'");
   const resultado=s.registrar(tenant,paciente,u,c,async()=>dados()).then(valor=>({valor,erro:undefined}),erro=>({valor:undefined,erro}));
   let aguardando=false;
   try{
    // Observa bloqueio real no banco; dormir por si só não é prova de concorrência.
    for(let i=0;i<60&&!aguardando;i++){
+    // A transação owner mantém snapshot de estatísticas; renovar a observação
+    // sem alterar o snapshot dos dados, o lock, o prazo ou os asserts.
+    await owner.query('select pg_stat_clear_snapshot()');
     const linhas=(await owner.query("select pid from pg_stat_activity where usename='food06_runtime' and wait_event_type='Lock' and query ilike '%profissionais%'")).rows;
     aguardando=linhas.length>0;if(!aguardando)await new Promise(r=>setTimeout(r,50));
    }
@@ -135,6 +140,58 @@ suite('FOOD06 registro cifrado PostgreSQL15 descartável/RLS/runtime',()=>{
    const r=await resultado;expect(aguardando).toBe(true);expect(r.erro).toMatchObject({status:404});
    expect((await owner.query('select id from registros_analises_factuais where chave_idempotencia=$1',[c.chaveIdempotencia])).rows).toHaveLength(0);
   }finally{await owner.query('rollback');await resultado;await owner.query('update profissionais set arquivado_em=null where id=$1',[p]);}
+ });
+ it('leitura e comparação autorizadas usam fatos cifrados sem regravar história',async()=>{
+  const a=dados(),b=dados();b.origem={...b.origem,versaoId:randomUUID(),numero:2};b.refeicoes[0].itens[0].snapshot={origem:'manual',nutrientesPor100g:{energiaKcal:150},nutrientesPorcao:{energiaKcal:150}};
+  const c=comando(),d={...comando(),origem:{...comando().origem,versaoId:b.origem.versaoId,numero:2}};
+  const x=await s.registrar(tenant,paciente,u,c,async()=>a),y=await s.registrar(tenant,paciente,u,d,async()=>b);
+  const antes=(await owner.query('select conteudo_criptografado from registros_analises_factuais where id=$1',[x.id])).rows[0].conteudo_criptografado;
+  const lido=await s.ler(tenant,paciente,u,x.id);expect(lido.analise.calculo.nutrientes.energiaKcal.total).toBe(100);expect(Object.isFrozen(lido)).toBe(true);
+  const comparacao=await s.comparar(tenant,paciente,u,x.id,y.id);expect(comparacao.comparacao.depois.calculo.nutrientes.energiaKcal.total).toBe(150);expect(comparacao.atribuicaoCausal).toBe('nao_estabelecida');
+  expect(JSON.stringify(comparacao)).not.toMatch(/tenantId|pacienteId|conteudoHash|nascimento|CANARIO/);
+  expect((await owner.query('select conteudo_criptografado from registros_analises_factuais where id=$1',[x.id])).rows[0].conteudo_criptografado).toEqual(antes);
+ });
+ it('revalida carteira e tenant antes de decifrar leitura ou comparação',async()=>{
+  const x=await s.registrar(tenant,paciente,u,comando(),async()=>dados());const decifrar=jest.spyOn(crypto,'descriptografar');
+  await owner.query('update pacientes set profissional_responsavel_id=$1 where id=$2',[p2,paciente]);
+  try{await expect(s.ler(tenant,paciente,u,x.id)).rejects.toMatchObject({status:404});await expect(s.comparar(tenant,paciente,u,x.id,x.id)).rejects.toMatchObject({status:404});expect(decifrar).not.toHaveBeenCalled();}
+  finally{decifrar.mockRestore();await owner.query('update pacientes set profissional_responsavel_id=$1 where id=$2',[p,paciente]);}
+  await expect(s.ler(otherTenant,paciente,u,x.id)).rejects.toMatchObject({status:403});
+  await expect(s.ler(tenant,paciente,{...u,papel:'SuperAdmin'},x.id)).rejects.toMatchObject({status:403});
+  await expect(s.ler(tenant,paciente,{...u,permissoes:[]},x.id)).rejects.toMatchObject({status:403});
+  await expect(s.ler(tenant,paciente,u,randomUUID())).rejects.toMatchObject({status:404});
+ });
+ it('nega registro de outro paciente antes de decifrar qualquer lado da comparação',async()=>{
+  const a=await s.registrar(tenant,paciente,u,comando(),async()=>dados());
+  await owner.query('update pacientes set profissional_responsavel_id=$1 where id=$2',[p,outroPaciente]);
+  let b:{id:string};
+  try{const e=dados();e.escopo.pacienteId=outroPaciente;b=await s.registrar(tenant,outroPaciente,u,comando(),async()=>e);}
+  finally{await owner.query('update pacientes set profissional_responsavel_id=$1 where id=$2',[p2,outroPaciente]);}
+  const decifrar=jest.spyOn(crypto,'descriptografar');
+  try{await expect(s.comparar(tenant,paciente,u,a.id,b!.id)).rejects.toMatchObject({status:404});expect(decifrar).not.toHaveBeenCalled();}
+  finally{decifrar.mockRestore();}
+ });
+ it('leitor recusa cipher inválido, binding trocado, schema desconhecido e corpo divergente sem alterar banco',async()=>{
+  const e=dados(),a=await s.registrar(tenant,paciente,u,comando(),async()=>e),b=await s.registrar(tenant,paciente,u,comando(),async()=>e);
+  const obter=async(id:string)=>(await owner.query('select conteudo_criptografado from registros_analises_factuais where id=$1',[id])).rows[0].conteudo_criptografado as Buffer;
+  const original=await obter(a.id),envelope=JSON.parse(crypto.descriptografar(original));
+  const schema={...envelope,conteudo:JSON.stringify({...JSON.parse(envelope.conteudo),motorVersao:'futuro'})};
+  const escopo=JSON.parse(envelope.conteudo);escopo.versao.escopo.pacienteId=outroPaciente;
+  for(const cipher of [Buffer.alloc(40),await obter(b.id),crypto.criptografar(JSON.stringify(schema)),crypto.criptografar(JSON.stringify({...envelope,conteudo:JSON.stringify(escopo)}))]){
+   await owner.query('update registros_analises_factuais set conteudo_criptografado=$1 where id=$2',[cipher,a.id]);
+   await expect(s.ler(tenant,paciente,u,a.id)).rejects.toMatchObject({status:422,message:'Registro indisponível para conferência.'});expect(await obter(a.id)).toEqual(cipher);
+  }
+ });
+ it('preserva leitura histórica pelo novo responsável sem restaurar acesso do anterior',async()=>{
+  const x=await s.registrar(tenant,paciente,u,comando(),async()=>dados());
+  const novoId=(await owner.query('select usuario_id from profissionais where id=$1',[p2])).rows[0].usuario_id;
+  await owner.query('insert into usuarios values($1,$2)',[novoId,tenant]);
+  await owner.query('update pacientes set profissional_responsavel_id=$1 where id=$2',[p2,paciente]);
+  try{
+   await expect(s.ler(tenant,paciente,u,x.id)).rejects.toMatchObject({status:404});
+   const historico=await s.ler(tenant,paciente,{...u,usuarioId:novoId},x.id);expect(historico.analise.calculo.nutrientes.energiaKcal.total).toBe(100);
+  }finally{await owner.query('update pacientes set profissional_responsavel_id=$1 where id=$2',[p,paciente]);await owner.query('delete from usuarios where id=$1',[novoId]);}
+  await expect(s.ler(otherTenant,paciente,{...u,tenantId:otherTenant},x.id)).rejects.toMatchObject({status:404});
  });
  it('índice paginado permite somente metadados, respeitando limites e não abre cipher',async()=>{
   const r=await s.listar(tenant,paciente,u,1,2);expect(r.itens).toHaveLength(2);expect(r.total).toBeGreaterThan(2);

@@ -9,8 +9,8 @@ import { registrarAuditoriaNaTransacao } from '../../../infraestrutura/auditoria
 import { PacienteOrm } from '../../pacientes/infraestrutura/paciente.orm';
 import { RegistroAnaliseFactualOrm } from '../infraestrutura/registro-analise-factual.orm';
 import type { UsuarioAutenticado } from '../../auth/dominio/usuario-autenticado';
-import { construirAnaliseFactual, type EntradaConstrutorAnaliseFactual } from './construtor-analise-factual';
-import type { IdentidadeVersaoFactual } from '../dominio/comparacao-versoes-factuais';
+import { construirAnaliseFactual, lerRegistroAnaliseFactual, type EntradaConstrutorAnaliseFactual, type RegistroAnaliseFactual } from './construtor-analise-factual';
+import { compararVersoesFactuais, type IdentidadeVersaoFactual, type ComparacaoVersoesFactuais } from '../dominio/comparacao-versoes-factuais';
 export interface ComandoRegistroFactual { chaveIdempotencia:string;origem:Omit<IdentidadeVersaoFactual,'registradaEm'> }
 /** Carregador server-side deve revalidar fonte, identidade e revisão na MESMA transação. Não é body HTTP. */
 export type CarregarAnaliseFactual=(g:EntityManager)=>Promise<EntradaConstrutorAnaliseFactual>;
@@ -40,6 +40,35 @@ function validarComando(v: ComandoRegistroFactual): ComandoRegistroFactual {
 @Injectable()
 export class ServicoRegistrosAnaliseFactual {
  constructor(private readonly executor:ExecutorTenant,private readonly crypto:CriptografiaDadosSensiveis){}
+ /** Retorno protegido para composição interna, nunca entidade/DTO HTTP. */
+ async ler(tenant:string,paciente:string,usuario:UsuarioAutenticado,registroId:string):Promise<RegistroAnaliseFactual>{
+  const tenantId=uuid(tenant),pacienteId=uuid(paciente),id=uuid(registroId);this.autorizar(tenantId,usuario,false);
+  return this.executor.executar(tenantId,async g=>{
+   await this.carteira(g,tenantId,pacienteId,usuario);
+   return this.decifrarRegistro(await this.obterRegistro(g,tenantId,pacienteId,id));
+  });
+ }
+ async comparar(tenant:string,paciente:string,usuario:UsuarioAutenticado,antesId:string,depoisId:string):Promise<ComparacaoVersoesFactuais>{
+  const tenantId=uuid(tenant),pacienteId=uuid(paciente),a=uuid(antesId),b=uuid(depoisId);this.autorizar(tenantId,usuario,false);
+  return this.executor.executar(tenantId,async g=>{
+   await this.carteira(g,tenantId,pacienteId,usuario);
+   // Autorizar os DOIS recursos antes de abrir qualquer conteúdo. Sem nested tx.
+   const antes=await this.obterRegistro(g,tenantId,pacienteId,a),depois=await this.obterRegistro(g,tenantId,pacienteId,b);
+   return compararVersoesFactuais(this.decifrarRegistro(antes).versao,this.decifrarRegistro(depois).versao);
+  });
+ }
+ private async obterRegistro(g:EntityManager,tenantId:string,pacienteId:string,id:string):Promise<RegistroAnaliseFactualOrm>{
+  const r=await g.getRepository(RegistroAnaliseFactualOrm).findOne({where:{tenantId,pacienteId,id}});
+  if(!r)throw new NotFoundException('Registro indisponível.');
+  return r;
+ }
+ private decifrarRegistro(r:RegistroAnaliseFactualOrm):RegistroAnaliseFactual{
+  try{
+   const registro=lerRegistroAnaliseFactual(this.conteudoAnterior(r));
+   if(registro.versao.escopo.tenantId!==r.tenantId||registro.versao.escopo.pacienteId!==r.pacienteId)throw new Error();
+   return registro;
+  }catch{throw new UnprocessableEntityException('Registro indisponível para conferência.');}
+ }
  private autorizar(tenantId:string,u:UsuarioAutenticado,escrita:boolean):void {
   if(u.papel!=='Professional'||uuid(u.tenantId)!==tenantId||!u.permissoes.includes('planos_alimentares.ler')||
    (escrita&&!u.permissoes.includes('planos_alimentares.gerenciar')))throw new ForbiddenException('Operação não autorizada.');
@@ -60,9 +89,10 @@ export class ServicoRegistrosAnaliseFactual {
  }
  private conteudoAnterior(r:RegistroAnaliseFactualOrm):string {
   try {
-   const e=JSON.parse(this.crypto.descriptografar(r.conteudoCriptografado));
+   const e=campos(JSON.parse(this.crypto.descriptografar(r.conteudoCriptografado)),['schemaVersao','tipo','vinculo','conteudo']);
+   const vinculo=campos(e.vinculo,['id','tenantId','pacienteId','profissionalId','usuarioId','chaveIdempotencia']);
    if(!e||e.schemaVersao!==1||e.tipo!=='food06-registro-protegido-v1'||typeof e.conteudo!=='string'||
-    !e.vinculo||Object.keys(e.vinculo).length!==6||Object.entries(this.vinculo(r)).some(([k,v])=>e.vinculo[k]!==v))throw new Error();
+    Object.keys(vinculo).length!==6||Object.entries(this.vinculo(r)).some(([k,v])=>vinculo[k]!==v))throw new Error();
    return e.conteudo;
   }catch{throw new UnprocessableEntityException('Registro indisponível para conferência.');}
  }

@@ -5,6 +5,7 @@ import { validarVersaoFactualResolvida,type VersaoFactualResolvida,type Identida
 import { resolverContextoDietetico,type EntradaContextoDietetico,type ContextoDieteticoResolvido } from '../dominio/contexto-dietetico';
 import { calcularNutrientesCombinados,type ResultadoCalculoCombinado } from '../dominio/calculo-combinado';
 import { analisarCoberturaDietetica,type CoberturaDietetica } from '../dominio/cobertura-dietetica';
+import { instanteCivil } from '../../pacientes/dominio/idade-pediatrica';
 /** Contrato interno do carregador autorizado, nunca body HTTP ou totais do cliente. */
 export interface EntradaConstrutorAnaliseFactual {
  escopo:VersaoFactualResolvida['escopo'];origem:IdentidadeVersaoFactual;
@@ -22,6 +23,64 @@ export interface RegistroAnaliseFactual {
 }
 export class AnaliseFactualInvalidaError extends Error {
  constructor(){super('Não foi possível registrar os dados factuais desta versão.');this.name='AnaliseFactualInvalidaError';}
+}
+/** Leitor versionado interno; não é autorização nem DTO HTTP. */
+export function lerRegistroAnaliseFactual(conteudo: string): RegistroAnaliseFactual {
+ try {
+  if(typeof conteudo!=='string'||Buffer.byteLength(conteudo)>10*1024*1024)throw new AnaliseFactualInvalidaError();
+  const r=objeto(JSON.parse(conteudo)),v=objeto(r.versao),e=objeto(v.estado);
+  lista(e.refeicoes,50);
+  // Reconferência exclusivamente contra os fatos gravados. Não consulta catálogo,
+  // altera porções ou regrava a análise; versão de motor desconhecida falha fechada.
+  const reconstruido=JSON.parse(JSON.stringify(construirAnaliseFactual({escopo:v.escopo as EntradaConstrutorAnaliseFactual['escopo'],
+   origem:v.origem as IdentidadeVersaoFactual,ativo:e.ativo as boolean,selecionado:e.selecionado as boolean,
+   refeicoes:(e.refeicoes as unknown[]).map(ref=>{
+    const f=objeto(ref);lista(f.itens,10000);
+    return {identidadeId:f.identidadeId as string,ativa:f.ativa as boolean,selecionada:f.selecionada as boolean,
+     itens:(f.itens as unknown[]).map(snapshot=>({snapshot,porcaoGramas:snapshot===null?undefined:decimalDaRazao(objeto(snapshot).porcaoRegistroGramas)}))};
+   })})));
+  if(r.contexto!==undefined){
+   const c=objeto(r.contexto),res=objeto(c.resolvido),ctx=objeto(res.contexto);
+   if(Object.keys(c).some(k=>!['dataAnalise','resolvido'].includes(k))||Object.keys(res).some(k=>!['contexto','motivos','idadeAnos','populacaoReferencia'].includes(k))||
+    Object.keys(ctx).some(k=>!['elegivel','mesmoDiaPlanejado','tabagismo'].includes(k))||typeof c.dataAnalise!=='string')throw new AnaliseFactualInvalidaError();
+   instanteCivil(c.dataAnalise);
+   lista(res.motivos,10);
+   const motivos=res.motivos as unknown[],permitidos=['nascimento_nao_informado','nascimento_futuro','idade_fora_do_escopo','populacao_nao_confirmada','gestacao_fora_do_escopo',
+    'lactacao_fora_do_escopo','fisiologia_nao_confirmada','aplicabilidade_nao_confirmada','confirmacao_invalida'];
+   if(new Set(motivos).size!==motivos.length||motivos.some(m=>typeof m!=='string'||!permitidos.includes(m))||
+    typeof ctx.elegivel!=='boolean'||typeof ctx.mesmoDiaPlanejado!=='boolean'||!['sim','nao','nao_informado'].includes(ctx.tabagismo as string)||
+    ctx.elegivel!==(motivos.length===0)||
+    (res.idadeAnos!==undefined&&(!Number.isSafeInteger(res.idadeAnos)||Number(res.idadeAnos)<0||Number(res.idadeAnos)>9999))||
+    (res.idadeAnos===undefined?
+     Number(motivos.includes('nascimento_nao_informado'))+Number(motivos.includes('nascimento_futuro'))!==1||motivos.includes('idade_fora_do_escopo'):
+     motivos.includes('nascimento_nao_informado')||motivos.includes('nascimento_futuro'))||
+    (res.idadeAnos!==undefined&&(Number(res.idadeAnos)<19)!==motivos.includes('idade_fora_do_escopo'))||
+    (res.populacaoReferencia!==undefined&&!['masculina','feminina'].includes(res.populacaoReferencia as string))||
+    (res.populacaoReferencia===undefined)!==motivos.includes('populacao_nao_confirmada'))throw new AnaliseFactualInvalidaError();
+   reconstruido.contexto=c;reconstruido.versao.bases.contexto=marcador(c);
+  }
+  // Igualdade canônica detecta campos extras, totais/avisos/markers divergentes
+  // sem aceitar o conteúdo cifrado apenas porque seu TypeScript parece correto.
+  if(serializar(r)!==serializar(reconstruido))throw new AnaliseFactualInvalidaError();
+  congelar(r);return r as unknown as RegistroAnaliseFactual;
+ }catch{throw new AnaliseFactualInvalidaError();}
+}
+/** Decodifica a razão decimal gravada sem converter por Number ou arredondar. */
+function decimalDaRazao(v:unknown):string|undefined {
+ if(v===undefined)return;
+ lista(v,2);const a=v as unknown[];
+ if(a.length!==2||a.some(x=>typeof x!=='string'||! /^[1-9]\d{0,1100}$/.test(x)))throw new AnaliseFactualInvalidaError();
+ const n=BigInt(a[0] as string),d=BigInt(a[1] as string);let resto=d,dois=0,cinco=0;
+ while(resto%2n===0n){resto/=2n;dois++;}
+ while(resto%5n===0n){resto/=5n;cinco++;}
+ if(resto!==1n)throw new AnaliseFactualInvalidaError();
+ const escala=Math.max(dois,cinco),coef=(n*2n**BigInt(escala-dois)*5n**BigInt(escala-cinco)).toString();
+ const inteiro=escala===0?coef:coef.length>escala?coef.slice(0,-escala)+'.'+coef.slice(-escala):'0.'+'0'.repeat(escala-coef.length)+coef;
+ const expoente=coef.length-1-escala,digitos=coef.replace(/0+$/,'');
+ const cientifico=expoente < -999?'0.'+'0'.repeat(-999-expoente-1)+digitos+'e-999':digitos[0]+(digitos.length>1?'.'+digitos.slice(1):'')+'e'+expoente;
+ const candidatos=[inteiro,cientifico].filter(c=>c.length<=64).sort((a,b)=>a.length-b.length);
+ for(const c of candidatos){const x=razao(c,true);if(x[0]===a[0]&&x[1]===a[1])return c;}
+ throw new AnaliseFactualInvalidaError();
 }
 const MACROS=['energiaKcal','proteinasG','carboidratosG','gordurasG','fibrasG','sodioMg'];
 function objeto(v:unknown):Record<string,unknown> {

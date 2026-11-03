@@ -1,6 +1,10 @@
 # FOOD06 M05/M07 — persistência factual cifrada
 
-## Estado vigente e limites
+> Histórico do armazenamento. Continuidade atual:
+> [leitor e comparação interna](food06-leitura-factual.md). O CI da correção do
+> inventário80f658c4 concluiu com sucesso; isso não valida o delta do leitor.
+
+## Checkpoint do incremento de persistência
 
 PR #455 Draft, branch `docs/food06-contratos-fontes`. Base local `5ecb21b0`,
 remota `5ac34b60`, mesma árvore `f678af73`; históricos preservados. Incremento
@@ -171,3 +175,7 @@ R4 independente food06_persistence_r4 favorável ao patch estático: ALL,
 UPDATE/DELETE, policy extra/ausente continuam falhando por construção.
 Revisor não executou inventário global; o predicado lexical de tenant existente
 não equivale a prova semântica de qualquer SQL arbitrário.
+
+CI da correção80f658c4 confirmado: run41679598259 SUCCESS, incluindo migrations,
+inventário/suíte completa/RLS/Testcontainers, Backend/Web/Demo/PRGate. Dependency
+Review, fontes documentais, CodeQL, Semgrep e Trivy SUCCESS.
