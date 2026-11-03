@@ -12,10 +12,22 @@ export async function executarProxyPlanoAlimentar(
   caminho: string,
   permissao: 'planos_alimentares.ler' | 'planos_alimentares.gerenciar' | 'grupos_substituicoes.administrar',
   init?: RequestInit,
-  limiteCorpoBytes?: number
+  limiteCorpoBytes?: number,
+  requisicaoCorpo?: Request
 ) {
   try {
     await exigirPermissaoBff(permissao);
+    if(requisicaoCorpo){
+      try{
+        if(limiteCorpoBytes===undefined)throw new Error('Limite ausente.');
+        const body=await lerCorpoLimitado(requisicaoCorpo,limiteCorpoBytes);
+        if(requisicaoCorpo.signal.aborted)throw new Error('Leitura interrompida.');
+        init={...init,body};
+      }catch(erro){
+        if(erro instanceof ErroCorpoAcimaDoLimite)throw erro;
+        return NextResponse.json({mensagem:'Solicitação inválida.'},{status:400,headers:CABECALHOS_PRIVADOS});
+      }
+    }
     if (limiteCorpoBytes !== undefined && typeof init?.body === 'string'
       && new TextEncoder().encode(init.body).byteLength > limiteCorpoBytes) {
       return NextResponse.json({ mensagem: 'Solicitação acima do limite.' }, { status: 413, headers: CABECALHOS_PRIVADOS });
@@ -29,6 +41,9 @@ export async function executarProxyPlanoAlimentar(
       }
     });
   } catch (erro) {
+    if(erro instanceof ErroCorpoAcimaDoLimite){
+      return NextResponse.json({mensagem:'Solicitação acima do limite.'},{status:413,headers:CABECALHOS_PRIVADOS});
+    }
     if (erro instanceof ErroSessaoAusente) {
       return NextResponse.json({ mensagem: erro.message }, { status: 401, headers: CABECALHOS_PRIVADOS });
     }

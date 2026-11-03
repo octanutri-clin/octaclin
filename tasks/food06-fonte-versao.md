@@ -1,5 +1,10 @@
 # FOOD06 M05/M07 — fonte de versão salva e confirmação operacional
 
+> Checkpoint histórico da fonte DB, preservado. Continuidade:
+> [API/BFF de registros factuais](food06-api-registros-factuais.md).
+> CI deste incremento no remoto c6dd0a3d posteriormente concluído com sucesso
+> (run41725726612 e scanners). Não valida o novo delta da API/BFF.
+
 ## Estado e limites
 
 PR455 Draft, branch docs/food06-contratos-fontes. Base local7fd70c24/remota2de6462b,

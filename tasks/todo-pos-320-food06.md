@@ -1,6 +1,12 @@
 # FOOD06 — checklist
 
-> Estado vigente — fonte DB de versão salva M05/M07: [contrato/evidências](food06-fonte-versao.md).
+> Estado vigente — API/BFF factual M05/M07: [contratos, testes e handoff](food06-api-registros-factuais.md).
+> Quatro POSTs, projeções mínimas, paginação e reautorização; P2 caixa corrigido com RED/GREEN.
+>42HTTP/projeções/bootstrap,101BFF e61PG PASS; R4 delimitada sem achados pendentes.
+> M05/M07 parciais,37,5% administrativos. Builds/typechecks Node22 PASS; CI próprio/authz completa em validação.
+> Contexto/UI e direitos/DRI/G06 pendentes; sem operações externas. Histórico abaixo substituído.
+
+> Histórico — fonte DB de versão salva M05/M07: [contrato/evidências](food06-fonte-versao.md).
 > Origem exata, revisão sob lock e materialização atual; confirmação operacional cifrada v2.
 >170focados/60PG e R4 delimitada PASS. Sem nova migration, API/UI ou contexto clínico integrado.
 > M05/M07 parciais;37,5% administrativos. CI novo pendente; direitos/DRI/G06 BLOCKED.

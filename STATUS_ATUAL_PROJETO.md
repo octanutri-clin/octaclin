@@ -1,6 +1,13 @@
 # OctaClin - Status atual do projeto
 
-**FOOD06 — vigente: carregamento DB de versão salva M05/M07.**
+**FOOD06 — vigente: API/BFF de registros factuais M05/M07.**
+[Contrato/handoff](tasks/food06-api-registros-factuais.md): quatro POSTs protegidos,
+projeções allowlist e paginação; P2 caixa corrigido com RED/GREEN.42HTTP/projeções,
+101BFF e61PG PASS; R4 delimitada sem achados pendentes. Builds/typechecks Node22 PASS; authz completa e CI próprio em
+validação. M05/M07 parciais;37,5%,1concluída/7parciais/4pendentes.
+Contexto clínico/UI pendentes; direitos/DRI/G06 BLOCKED. Sem operações externas.
+
+**FOOD06 — histórico: carregamento DB de versão salva M05/M07.**
 [Contrato/handoff](tasks/food06-fonte-versao.md): origem/revisão exatas sob lock,
 materialização atual, seleção/ON-OFF explícitos e confirmação cifrada v2.
 170focados/60PG PASS;4.064backendPASS/217SKIPPED, R4 independente delimitada favorável.

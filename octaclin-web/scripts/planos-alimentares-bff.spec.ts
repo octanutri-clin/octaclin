@@ -1,3 +1,7 @@
+import { POST as registrarFactual } from '../app/api/pacientes/[id]/planos-alimentares/analises-factuais/route';
+import { POST as listarFactuais } from '../app/api/pacientes/[id]/planos-alimentares/analises-factuais/listar/route';
+import { POST as consultarFactual } from '../app/api/pacientes/[id]/planos-alimentares/analises-factuais/consultar/route';
+import { POST as compararFactuais } from '../app/api/pacientes/[id]/planos-alimentares/analises-factuais/comparar/route';
 import { POST as previaMicros } from '../app/api/pacientes/[id]/planos-alimentares/[planoId]/rascunho/previa-micronutrientes/route';
 import { POST as confirmarMicros } from '../app/api/pacientes/[id]/planos-alimentares/[planoId]/rascunho/previa-micronutrientes/confirmar/route';
 import { POST as detalharMicronutrientesFood06 } from '../app/api/pacientes/[id]/planos-alimentares/analise-micronutrientes/contribuicoes/route';
@@ -1547,3 +1551,41 @@ for (const [nome,rota] of [['prévia',previaMicros],['confirmação',confirmarMi
   }finally{restaurarFetch(original);__clearCookies();}
  });
 }
+
+for(const [nome,acao,fim,perm] of [['registro',registrarFactual,'','planos_alimentares.gerenciar'],['listar',listarFactuais,'/listar','planos_alimentares.ler'],['consultar',consultarFactual,'/consultar','planos_alimentares.ler'],['comparar',compararFactuais,'/comparar','planos_alimentares.ler']] as const){
+ test(`FOOD06 registros ${nome}: proxy autorizado, body privado e sem query`,async()=>{
+  __setCookies(cookiesSessaoValida([perm]));const original=global.fetch;let chamadas=0;
+  global.fetch=(async(entrada:string|URL|Request,init?:RequestInit)=>{chamadas++;assert.equal(String(entrada),'http://backend.octaclin.local/pacientes/paciente%2F1/planos-alimentares/analises-factuais'+fim);assert.equal(init?.method,'POST');assert.equal(init?.body,'{"registroId":"sintetico"}');return Response.json({schemaVersao:1});}) as typeof fetch;
+  try{const r=await acao(new Request('http://localhost/analise?tenantId=alheio',{method:'POST',body:'{"registroId":"sintetico"}'}),{params:Promise.resolve({id:'paciente/1'})});assert.equal(r.status,200);assert.equal(r.headers.get('cache-control'),'private, no-store');assert.equal(chamadas,1);}finally{restaurarFetch(original);__clearCookies();}
+ });
+ test(`FOOD06 registros ${nome}: sessão/permissão antes de ler corpo`,async()=>{
+  const original=global.fetch;let chamadas=0;global.fetch=(async()=>{chamadas++;return Response.json({});}) as typeof fetch;
+  const request=()=>new Request('http://localhost/analise',{method:'POST',body:'x'.repeat(17000)}),props={params:Promise.resolve({id:'paciente'})};
+  try{__clearCookies();assert.equal((await acao(request(),props)).status,401);__setCookies(cookiesSessaoValida(['pacientes.ler']));assert.equal((await acao(request(),props)).status,403);assert.equal(chamadas,0);}finally{restaurarFetch(original);__clearCookies();}
+ });
+ test(`FOOD06 registros ${nome}: limita bytes reais sem executar backend`,async()=>{
+  __setCookies(cookiesSessaoValida([perm]));const original=global.fetch;let chamadas=0;global.fetch=(async()=>{chamadas++;return Response.json({});}) as typeof fetch;
+  try{const r=await acao(new Request('http://localhost/analise',{method:'POST',headers:{'content-length':'1'},body:'€'.repeat(6000)}),{params:Promise.resolve({id:'paciente'})});assert.equal(r.status,413);assert.equal(r.headers.get('cache-control'),'private, no-store');assert.equal(chamadas,0);}finally{restaurarFetch(original);__clearCookies();}
+ });
+ test(`FOOD06 registros ${nome}: preserva409 e sem retry de negócio`,async()=>{
+  __setCookies(cookiesSessaoValida([perm]));const original=global.fetch;let chamadas=0;global.fetch=(async()=>{chamadas++;return Response.json({message:'Reconferir.'},{status:409});}) as typeof fetch;
+  try{const r=await acao(new Request('http://localhost/analise',{method:'POST',body:'{}'}),{params:Promise.resolve({id:'paciente'})});assert.equal(r.status,409);assert.equal(chamadas,1);assert.equal(r.headers.get('cache-control'),'private, no-store');}finally{restaurarFetch(original);__clearCookies();}
+ });
+}
+test('FOOD06 registros: erro de upstream não propaga corpo ou detalhes internos',async()=>{
+ __setCookies(cookiesSessaoValida(['planos_alimentares.ler']));const original=global.fetch;
+ global.fetch=(async()=>new Response('CANARIO_SQL_TOKEN',{status:500,headers:{'content-type':'text/html'}})) as typeof fetch;
+ try{const r=await consultarFactual(new Request('http://localhost/analise',{method:'POST',body:'{}'}),{params:Promise.resolve({id:'paciente'})});assert.equal(r.status,502);assert.equal(r.headers.get('cache-control'),'private, no-store');assert.doesNotMatch(await r.text(),/CANARIO_SQL_TOKEN/);}finally{restaurarFetch(original);__clearCookies();}
+});
+
+test('FOOD06 registros: JSON de erro upstream preserva status e retira detalhes',async()=>{
+ __setCookies(cookiesSessaoValida(['planos_alimentares.ler']));const original=global.fetch;
+ global.fetch=(async()=>Response.json({message:'CANARIO_SQL_TOKEN'},{status:500})) as typeof fetch;
+ try{const r=await consultarFactual(new Request('http://localhost/analise',{method:'POST',body:'{}'}),{params:Promise.resolve({id:'paciente'})});assert.equal(r.status,500);assert.equal(r.headers.get('cache-control'),'private, no-store');assert.doesNotMatch(await r.text(),/CANARIO_SQL_TOKEN/);}finally{restaurarFetch(original);__clearCookies();}
+});
+test('FOOD06 registros: leitura interrompida não chama backend nem revela erro',async()=>{
+ __setCookies(cookiesSessaoValida(['planos_alimentares.ler']));const original=global.fetch;let chamadas=0;
+ global.fetch=(async()=>{chamadas++;return Response.json({});}) as typeof fetch;
+ const stream=new ReadableStream<Uint8Array>({start(c){c.error(new Error('CANARIO_STREAM'));}});
+ try{const r=await consultarFactual(new Request('http://localhost/analise',{method:'POST',body:stream,duplex:'half'} as RequestInit),{params:Promise.resolve({id:'paciente'})});assert.equal(r.status,400);assert.equal(r.headers.get('cache-control'),'private, no-store');assert.doesNotMatch(await r.text(),/CANARIO_STREAM/);assert.equal(chamadas,0);}finally{restaurarFetch(original);__clearCookies();}
+});

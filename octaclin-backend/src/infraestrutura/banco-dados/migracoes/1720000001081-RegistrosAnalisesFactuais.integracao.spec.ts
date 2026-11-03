@@ -1,3 +1,12 @@
+import { Test } from '@nestjs/testing';
+import { ExecutionContext,UnauthorizedException } from '@nestjs/common';
+import type { NestExpressApplication } from '@nestjs/platform-express';
+import type { AddressInfo } from 'node:net';
+import { GuardaJwt } from '../../../modulos/auth/apresentacao/guarda-jwt';
+import { ServicoAuditoria } from '../../auditoria/servico-auditoria';
+import { criarPipeValidacaoHttp } from '../../http/pipe-validacao-http';
+import { middlewareAnalisesFactuais,middlewareLimiteAnalisesFactuais,middlewareErroAnalisesFactuais } from '../../http/middleware-analises-factuais';
+import { ControladorRegistrosFactuais } from '../../../modulos/planos-alimentares/apresentacao/controlador-registros-factuais';
 import 'reflect-metadata';
 import { randomUUID } from 'node:crypto';
 import { Client } from 'pg';
@@ -359,6 +368,24 @@ suite('FOOD06 registro cifrado PostgreSQL15 descartável/RLS/runtime',()=>{
   }
   await owner.query('update registros_analises_factuais set conteudo_criptografado=$1 where id=$2',[original,r.id]);
   await expect(s.ler(tenant,paciente,u,r.id)).resolves.toHaveProperty('schemaVersao',1);
+ });
+ it('API real projeta registro cifrado em PostgreSQL e revoga cada leitura após transferência',async()=>{
+  const f=await fonte();
+  const module=await Test.createTestingModule({controllers:[ControladorRegistrosFactuais],providers:[{provide:ServicoRegistrosAnaliseFactual,useValue:s},{provide:ServicoAuditoria,useValue:{registrar:async()=>undefined}}]})
+   .overrideGuard(GuardaJwt).useValue({canActivate(c:ExecutionContext){const r=c.switchToHttp().getRequest();if(r.headers['x-identidade-sintetica']!=='profissional')throw new UnauthorizedException();r.usuarioAutenticado=u;return true;}}).compile();
+  const app=module.createNestApplication<NestExpressApplication>({rawBody:true});app.useLogger(false);app.use(middlewareAnalisesFactuais);app.useBodyParser('json',{limit:'100kb'});app.use(middlewareErroAnalisesFactuais,middlewareLimiteAnalisesFactuais);app.useGlobalPipes(criarPipeValidacaoHttp());await app.listen(0,'127.0.0.1');
+  const url=`http://127.0.0.1:${(app.getHttpServer().address() as AddressInfo).port}/pacientes/${paciente}/planos-alimentares/analises-factuais`;
+  const chamar=(fim:string,body:unknown)=>fetch(url+fim,{method:'POST',headers:{'content-type':'application/json','x-identidade-sintetica':'profissional'},body:JSON.stringify(body)});
+  try{
+   const criado=await chamar('',f.c);expect(criado.status).toBe(200);const ack=await criado.json() as {registro:{id:string}};expect(ack.registro.id).toBeDefined();
+   const consulta=await chamar('/consultar',{registroId:ack.registro.id});expect(consulta.status).toBe(200);const factual=await consulta.json() as any;expect(factual.analise.calculo.nutrientes.energiaKcal.total).toBe(100);
+   expect(JSON.stringify(factual)).not.toMatch(/conteudoHash|conteudoCriptografado|confirmacaoOrigem|tenantId|pacienteId|PRIVADO/);expect(consulta.headers.get('cache-control')).toBe('private, no-store');
+   const cmp=await chamar('/comparar',{antesId:ack.registro.id,depoisId:ack.registro.id});expect(cmp.status).toBe(200);expect((await cmp.json() as any).atribuicaoCausal).toBe('nao_estabelecida');
+   await owner.query('update pacientes set profissional_responsavel_id=$1 where id=$2',[p2,paciente]);
+   for(const [fim,body] of [['/consultar',{registroId:ack.registro.id}],['/comparar',{antesId:ack.registro.id,depoisId:ack.registro.id}],['/listar',{pagina:1,limite:25}],['',f.c]] as const){
+    const negada=await chamar(fim,body);expect(negada.status).toBe(404);expect(negada.headers.get('cache-control')).toBe('private, no-store');
+   }
+  }finally{await owner.query('update pacientes set profissional_responsavel_id=$1 where id=$2',[p,paciente]);await app.close();}
  });
  it('índice paginado permite somente metadados, respeitando limites e não abre cipher',async()=>{
   const r=await s.listar(tenant,paciente,u,1,2);expect(r.itens).toHaveLength(2);expect(r.total).toBeGreaterThan(2);

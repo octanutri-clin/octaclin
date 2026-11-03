@@ -1,3 +1,4 @@
+import { projetarRegistroFactual,projetarComparacaoFactual } from './projecao-registro-factual';
 import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException, UnprocessableEntityException } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
 import { isUUID } from 'class-validator';
@@ -46,12 +47,7 @@ function validarComando(v: ComandoRegistroFactual): ComandoRegistroFactual {
  return {chaveIdempotencia:uuid(c.chaveIdempotencia),origem:{planoId:uuid(o.planoId),versaoId:uuid(o.versaoId),numero:o.numero as number,status:o.status as 'publicada'|'rascunho',
   ...(o.status==='rascunho'?{rascunhoRevisao:o.rascunhoRevisao as number}:{})}};
 }
-/** Infraestrutura interna. Nunca aceitar callbacks, snapshots ou totais como body HTTP. */
-@Injectable()
-export class ServicoRegistrosAnaliseFactual {
- constructor(private readonly executor:ExecutorTenant,private readonly crypto:CriptografiaDadosSensiveis){}
- async registrarVersao(tenant:string,paciente:string,usuario:UsuarioAutenticado,entrada:ComandoRegistroDeVersaoFactual):Promise<MetadadosRegistro>{
-  const tenantId=uuid(tenant),pacienteId=uuid(paciente);this.autorizar(tenantId,usuario,true);
+export function validarRegistroDeVersaoFactual(entrada:unknown):ComandoRegistroDeVersaoFactual {
   const e=campos(entrada,['registro','selecao']),s=campos(e.selecao,['ativacaoRevisaoEsperada','identidadesRefeicoes']);
   const registro=validarComando(e.registro as ComandoRegistroFactual),ids=s.identidadesRefeicoes;
   if(!Number.isSafeInteger(s.ativacaoRevisaoEsperada)||Number(s.ativacaoRevisaoEsperada)<0||!Array.isArray(ids)||
@@ -61,6 +57,25 @@ export class ServicoRegistrosAnaliseFactual {
   const identidadesRefeicoes=ids.map(uuid);
   if(new Set(identidadesRefeicoes).size!==ids.length)throw new BadRequestException('Seleção inválida.');
   const selecao={ativacaoRevisaoEsperada:s.ativacaoRevisaoEsperada as number,identidadesRefeicoes};
+  return {registro,selecao};
+}
+/** Infraestrutura interna. Nunca aceitar callbacks, snapshots ou totais como body HTTP. */
+@Injectable()
+export class ServicoRegistrosAnaliseFactual {
+ constructor(private readonly executor:ExecutorTenant,private readonly crypto:CriptografiaDadosSensiveis){}
+ async consultarApi(tenant:string,paciente:string,usuario:UsuarioAutenticado,registroId:string){
+  const tenantId=uuid(tenant),pacienteId=uuid(paciente),id=uuid(registroId);this.autorizar(tenantId,usuario,false);
+  return this.executor.executar(tenantId,async g=>{
+   await this.carteira(g,tenantId,pacienteId,usuario);const r=await this.obterRegistro(g,tenantId,pacienteId,id);
+   return projetarRegistroFactual(r,this.decifrarRegistro(r));
+  });
+ }
+ async compararApi(tenant:string,paciente:string,usuario:UsuarioAutenticado,antesId:string,depoisId:string){
+  return this.executarComparacao(tenant,paciente,usuario,antesId,depoisId,projetarComparacaoFactual);
+ }
+ async registrarVersao(tenant:string,paciente:string,usuario:UsuarioAutenticado,entrada:ComandoRegistroDeVersaoFactual):Promise<MetadadosRegistro>{
+  const tenantId=uuid(tenant),pacienteId=uuid(paciente);this.autorizar(tenantId,usuario,true);
+  const {registro,selecao}=validarRegistroDeVersaoFactual(entrada),identidadesRefeicoes=selecao.identidadesRefeicoes;
   const confirmacaoOrigem=JSON.stringify({contrato:'food06-fonte-salva-v1',origem:registro.origem,ativacaoRevisao:selecao.ativacaoRevisaoEsperada,identidades:[...identidadesRefeicoes].sort()});
   return this.registrar(tenantId,pacienteId,usuario,registro,g=>this.carregarVersao(g,tenantId,pacienteId,registro.origem,selecao),confirmacaoOrigem);
  }
@@ -117,12 +132,17 @@ export class ServicoRegistrosAnaliseFactual {
   });
  }
  async comparar(tenant:string,paciente:string,usuario:UsuarioAutenticado,antesId:string,depoisId:string):Promise<ComparacaoVersoesFactuais>{
+  return this.executarComparacao(tenant,paciente,usuario,antesId,depoisId,(_a,_b,r)=>r);
+ }
+ private async executarComparacao<T>(tenant:string,paciente:string,usuario:UsuarioAutenticado,antesId:string,depoisId:string,
+  projetar:(a:RegistroAnaliseFactualOrm,b:RegistroAnaliseFactualOrm,r:ComparacaoVersoesFactuais,registroAntes:RegistroAnaliseFactual,registroDepois:RegistroAnaliseFactual)=>T):Promise<T>{
   const tenantId=uuid(tenant),pacienteId=uuid(paciente),a=uuid(antesId),b=uuid(depoisId);this.autorizar(tenantId,usuario,false);
   return this.executor.executar(tenantId,async g=>{
    await this.carteira(g,tenantId,pacienteId,usuario);
    // Autorizar os DOIS recursos antes de abrir qualquer conteúdo. Sem nested tx.
    const antes=await this.obterRegistro(g,tenantId,pacienteId,a),depois=await this.obterRegistro(g,tenantId,pacienteId,b);
-   return compararVersoesFactuais(this.decifrarRegistro(antes).versao,this.decifrarRegistro(depois).versao);
+   const registroAntes=this.decifrarRegistro(antes),registroDepois=this.decifrarRegistro(depois);
+   return projetar(antes,depois,compararVersoesFactuais(registroAntes.versao,registroDepois.versao),registroAntes,registroDepois);
   });
  }
  private async obterRegistro(g:EntityManager,tenantId:string,pacienteId:string,id:string):Promise<RegistroAnaliseFactualOrm>{

@@ -1,3 +1,4 @@
+import { ControladorRegistrosFactuais } from './apresentacao/controlador-registros-factuais';
 import { ServicoRegistrosAnaliseFactual } from './aplicacao/servico-registros-analise-factual';
 import { RegistroAnaliseFactualOrm } from './infraestrutura/registro-analise-factual.orm';
 import { GrupoSubstituicoesOrm, FavoritoGrupoSubstituicoesOrm } from './infraestrutura/grupo-substituicoes.orm';
@@ -102,6 +103,7 @@ const processadoresCompartilhamento = deveExecutarProcessadores() ? [Processador
     ModuloComunicacoes
   ],
   controllers: [
+    ControladorRegistrosFactuais,
     ControladorPlanosAlimentares,
     ControladorCatalogoAlimentos,
     ControladorMedidasCaseiras,

@@ -30,8 +30,8 @@ Não alterar os pesos para aparentar avanço. Evidências e exceções continuam
 quatro pendentes (100×(1+7×0,5)/12). Não é percentual de esforço, prazo ou prontidão
 assistencial. M07 não se encerra por um comparador interno testado.
 
-Agora: conferir CI da [fonte DB M05/M07](food06-fonte-versao.md).
-170focados/60PG e R4 delimitada PASS; novo delta exige CI próprio.
-Depois: API/BFF por projeções mínimas e contexto clínico confirmado; UI/UX B/C
-terão gates próprios. O indicador não sobe por subdividir melhoria ainda parcial.
+Agora: validar CI da [API/BFF factual M05/M07](food06-api-registros-factuais.md).
+42HTTP/projeções/bootstrap,101BFF e61PG PASS, R4 delimitada favorável.
+Depois: contexto clínico confirmado e UI/UX B/C, com gates próprios.
+M05/M07 continuam parciais; o indicador não sobe por subdividir melhoria parcial.
 Direitos/G06 BLOCKED; sem operações externas.
