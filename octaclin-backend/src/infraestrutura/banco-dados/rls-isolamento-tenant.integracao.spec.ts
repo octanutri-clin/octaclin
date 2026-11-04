@@ -2084,7 +2084,12 @@ descrever('RLS e isolamento multi-tenant integral em Postgres real', () => {
     const biblioteca=new ServicoMedidasCaseiras(executorTenant!,c.cripto);
     const criar={chaveIdempotencia:randomUUID(),nome:'colher rasa',quantidadeReferencia:1,pesoReferenciaGramas:25};
     const medida=await biblioteca.criar(tenantA,alimentoId,c.usuario,criar);
-    c.documento.refeicoes[0].itens[0]={...c.documento.refeicoes[0].itens[0],alimentoComposicaoId:alimentoId,quantidade:2.5,porcaoGramas:999,medidaCaseira:{id:medida.id,revisao:1,aplicacaoId:randomUUID()}};
+    Object.defineProperties(c.documento.refeicoes[0].itens[0], {
+      alimentoComposicaoId: { value: alimentoId, enumerable: true, configurable: true, writable: true },
+      quantidade: { value: 2.5, enumerable: true, configurable: true, writable: true },
+      porcaoGramas: { value: 999, enumerable: true, configurable: true, writable: true },
+      medidaCaseira: { value: { id: medida.id, revisao: 1, aplicacaoId: randomUUID() }, enumerable: true, configurable: true, writable: true }
+    });
     return {...c,biblioteca,criar,medida,alimentoId};
   }
 
@@ -2093,7 +2098,9 @@ descrever('RLS e isolamento multi-tenant integral em Postgres real', () => {
     const c = await prepararCenarioPa06(`food02-${randomUUID()}`);
     const biblioteca = new ServicoAlimentosPersonalizados(executorTenant!, c.cripto);
     const entrada = entradaCustom(), alimento = await biblioteca.criar(tenantA, c.usuario, entrada);
-    c.documento.refeicoes[0].itens[0] = { ...c.documento.refeicoes[0].itens[0], alimentoPersonalizado: { id: alimento.id, revisao: 1, aplicacaoId: randomUUID() } };
+    Object.defineProperty(c.documento.refeicoes[0].itens[0], 'alimentoPersonalizado', {
+      value: { id: alimento.id, revisao: 1, aplicacaoId: randomUUID() }, enumerable: true, configurable: true, writable: true
+    });
     return { ...c, biblioteca, entrada, alimento };
   }
   it('FOOD02 RLS, vínculo, pesquisa e projeções isolam tenant e proprietário', async () => {
@@ -2148,7 +2155,10 @@ descrever('RLS e isolamento multi-tenant integral em Postgres real', () => {
   it('FOOD02 snapshots sobrevivem a edição/desativação/transferência sem conceder nova aplicação', async () => {
     const c = await prepararFood02(), medidas = new ServicoMedidasCaseiras(executorTenant!, c.cripto);
     const medida = await medidas.criar(tenantA, c.alimento.id, c.usuario, { chaveIdempotencia: randomUUID(), nome: 'colher', quantidadeReferencia: 1, pesoReferenciaGramas: 25 }, 'custom');
-    c.documento.refeicoes[0].itens[0] = { ...c.documento.refeicoes[0].itens[0], quantidade: 2.5, medidaCaseira: { id: medida.id, revisao: 1, aplicacaoId: randomUUID() } };
+    Object.defineProperties(c.documento.refeicoes[0].itens[0], {
+      quantidade: { value: 2.5, enumerable: true, configurable: true, writable: true },
+      medidaCaseira: { value: { id: medida.id, revisao: 1, aplicacaoId: randomUUID() }, enumerable: true, configurable: true, writable: true }
+    });
     const salvar = (d: any, revisao: number, u = c.usuario) => c.servico.salvarEdicaoRascunho(tenantA, c.pacienteId, c.planoId, u, { rascunhoIdEsperado: c.versaoId, rascunhoRevisaoEsperada: revisao, documento: d });
     const r = await salvar(c.documento, 0);
     expect(r.edicaoEstado).toBe('materializada');
@@ -2247,7 +2257,9 @@ descrever('RLS e isolamento multi-tenant integral em Postgres real', () => {
 
   it('PA06c calcula snapshots cifrados com micros, ausência explícita e projeções mínimas sob RLS', async () => {
     const c = await prepararCenarioPa06('pa06c-snapshots');
-    c.documento.refeicoes[0].itens[0] = { ...c.documento.refeicoes[0].itens[0], micronutrientesPor100g: { ferroMg:2, calcioMg:0 } };
+    Object.defineProperty(c.documento.refeicoes[0].itens[0], 'micronutrientesPor100g', {
+      value: { ferroMg: 2, calcioMg: 0 }, enumerable: true, configurable: true, writable: true
+    });
     await publicarCenarioPa06(c);
     const selecao = await c.servico.obterSelecaoCalculo(tenantA,c.pacienteId,c.planoId,c.usuario);
     const entrada = {selecoes:[{planoId:c.planoId,versaoIdEsperada:selecao.versao!.id,ativacaoRevisaoEsperada:selecao.ativacaoRevisao,identidadesRefeicoes:selecao.refeicoes.map(r=>r.identidadeId)}]};
@@ -2293,7 +2305,9 @@ descrever('RLS e isolamento multi-tenant integral em Postgres real', () => {
 
   it('PA06c serializa publicação nova, rejeita versão antiga e conserva snapshot clonado', async () => {
     const c=await prepararCenarioPa06('pa06c-concorrencia-publicacao');
-    c.documento.refeicoes[0].itens[0]={...c.documento.refeicoes[0].itens[0],micronutrientesPor100g:{ferroMg:2}};
+    Object.defineProperty(c.documento.refeicoes[0].itens[0], 'micronutrientesPor100g', {
+      value: { ferroMg: 2 }, enumerable: true, configurable: true, writable: true
+    });
     await publicarCenarioPa06(c);
     const selecao=await c.servico.obterSelecaoCalculo(tenantA,c.pacienteId,c.planoId,c.usuario);
     const antiga=await c.servico.obterVersao(tenantA,c.pacienteId,c.planoId,1,c.usuario);
