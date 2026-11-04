@@ -1,4 +1,5 @@
 import { readFile } from 'node:fs/promises';
+import { randomUUID } from 'node:crypto';
 import { exigirSegredoTotpSintetico, gerarCodigoTotp } from './e2e-mfa.mjs';
 
 const config = {
@@ -8,6 +9,7 @@ const config = {
   tenantBeta: 'octaclin-e2e-beta',
   emailAlfa: 'admin.alfa@octaclin.test',
   emailBeta: 'admin.beta@octaclin.test',
+  emailProfissionalBeta: 'profissional.beta@octaclin.test',
   senha: 'OctaClinE2E@231',
   profissionalAlfaId: '23110000-0000-4000-8000-000000000001',
   categoriaAlfaId: '23120000-0000-4000-8000-000000000001'
@@ -147,8 +149,7 @@ async function executar() {
   const sessaoBff = await bff('/api/auth/session');
   assert(sessaoBff?.autenticado === true, 'Sessao BFF do tenant Alfa nao foi estabelecida.');
 
-  const tokenAlfa = await loginDireto(config.tenantAlfa, 'profissional.alfa@octaclin.test');
-  const tokenBeta = await loginDireto(config.tenantBeta, config.emailBeta);
+  const tokenBeta = await loginDireto(config.tenantBeta, config.emailProfissionalBeta);
 
   const paciente = await bff('/api/pacientes', {
     method: 'POST',
@@ -172,6 +173,102 @@ async function executar() {
   await api(`/pacientes/${paciente.id}`, { token: tokenBeta, status: 404 });
   const listaBeta = await api('/pacientes?pagina=1&limite=100', { token: tokenBeta });
   assert(!listaBeta.itens.some((item) => item.id === paciente.id), 'Tenant Beta enxergou paciente do tenant Alfa.');
+
+  // A prévia FOOD05 usa somente composições criadas neste banco descartável.
+  // Ela passa pela sessão profissional do BFF e pelo serviço autenticado real,
+  // mas não salva nem publica o plano nem a equivalência.
+  cookies.clear();
+  await loginBff('profissional.alfa@octaclin.test');
+  const sessaoProfissional = await bff('/api/auth/session');
+  assert(sessaoProfissional?.autenticado === true, 'Sessao BFF profissional da FOOD05 nao foi estabelecida.');
+
+  const principalFood05 = await bff('/api/planos-alimentares/alimentos-personalizados', {
+    method: 'POST',
+    status: 201,
+    body: JSON.stringify({
+      chaveIdempotencia: randomUUID(),
+      escopo: 'pessoal',
+      nome: `Principal FOOD05 E2E ${sufixo}`,
+      preparacao: 'sintetico',
+      referenciaComposicao: 'fixture sintética E2E',
+      base: { tipo: 'por100g' },
+      nutrientes: { energiaKcal: 200, proteinasG: 10, carboidratosG: 20, gordurasG: 5 }
+    })
+  });
+  const alternativaFood05 = await bff('/api/planos-alimentares/alimentos-personalizados', {
+    method: 'POST',
+    status: 201,
+    body: JSON.stringify({
+      chaveIdempotencia: randomUUID(),
+      escopo: 'pessoal',
+      nome: `Alternativa FOOD05 E2E ${sufixo}`,
+      preparacao: 'sintetico',
+      referenciaComposicao: 'fixture sintética E2E',
+      base: { tipo: 'por100g' },
+      nutrientes: { energiaKcal: 100, proteinasG: 5, carboidratosG: 10, gordurasG: 2.5 }
+    })
+  });
+  assert(principalFood05?.id && principalFood05?.revisao === 1, 'Composicao principal FOOD05 sintetica nao foi criada.');
+  assert(alternativaFood05?.id && alternativaFood05?.revisao === 1, 'Composicao alternativa FOOD05 sintetica nao foi criada.');
+
+  const planoFood05 = await bff(`/api/pacientes/${paciente.id}/planos-alimentares`, {
+    method: 'POST',
+    status: 201,
+    body: JSON.stringify({ titulo: `Plano FOOD05 E2E ${sufixo}` })
+  });
+  assert(planoFood05?.id, 'Plano FOOD05 sintetico nao foi criado.');
+  const rascunhoFood05 = await bff(`/api/pacientes/${paciente.id}/planos-alimentares/${planoFood05.id}/rascunho`);
+  assert(rascunhoFood05?.id && Number.isInteger(rascunhoFood05?.rascunhoRevisao), 'Rascunho FOOD05 nao retornou identidade e revisao.');
+
+  const itemFood05 = `item-food05-${sufixo}`;
+  const refeicaoFood05 = `refeicao-food05-${sufixo}`;
+  const pedidoFood05 = {
+    versaoId: rascunhoFood05.id,
+    rascunhoRevisaoEsperada: rascunhoFood05.rascunhoRevisao,
+    itemChave: itemFood05,
+    nutriente: 'energiaKcal',
+    politica: { passoPorcaoGramas: '1' },
+    documentoEdicao: {
+      schemaVersao: 1,
+      refeicoes: [{
+        chaveCliente: refeicaoFood05,
+        nome: 'Refeicao sintetica FOOD05',
+        itens: [{
+          chaveCliente: itemFood05,
+          descricao: principalFood05.nome,
+          alimentoPersonalizado: { id: principalFood05.id, revisao: principalFood05.revisao, aplicacaoId: randomUUID() },
+          quantidade: 50,
+          unidade: 'g',
+          porcaoGramas: 50,
+          substituicoes: []
+        }]
+      }]
+    },
+    alternativas: [{
+      chaveCliente: `alternativa-food05-${sufixo}`,
+      descricao: alternativaFood05.nome,
+      alimentoPersonalizado: { id: alternativaFood05.id, revisao: alternativaFood05.revisao, aplicacaoId: randomUUID() },
+      quantidade: 1,
+      unidade: 'g'
+    }]
+  };
+  const previaFood05 = await bff(`/api/pacientes/${paciente.id}/planos-alimentares/${planoFood05.id}/equivalencias/previa`, {
+    method: 'POST',
+    status: 201,
+    body: JSON.stringify(pedidoFood05)
+  });
+  const resultadoFood05 = previaFood05?.alternativas?.[0]?.resultado;
+  assert(previaFood05?.nutriente === 'energiaKcal' && resultadoFood05?.estado === 'calculavel', 'Prévia autenticada FOOD05 nao calculou a alternativa sintetica.');
+  assert(Number(resultadoFood05?.nutrienteAlvo) === 100 && Number(resultadoFood05?.porcaoSugeridaGramas) === 100, 'Prévia FOOD05 nao preservou o resultado matematico esperado.');
+  const rascunhoDepoisDaPrevia = await bff(`/api/pacientes/${paciente.id}/planos-alimentares/${planoFood05.id}/rascunho`);
+  assert(rascunhoDepoisDaPrevia?.id === rascunhoFood05.id && rascunhoDepoisDaPrevia?.rascunhoRevisao === rascunhoFood05.rascunhoRevisao, 'Prévia FOOD05 alterou o rascunho sem confirmação.');
+
+  await api(`/pacientes/${paciente.id}/planos-alimentares/${planoFood05.id}/equivalencias/previa`, {
+    token: tokenBeta,
+    method: 'POST',
+    status: 404,
+    body: JSON.stringify(pedidoFood05)
+  });
 
   const consulta = await bff('/api/agenda/consultas', {
     method: 'POST',
@@ -344,7 +441,7 @@ async function executar() {
   assert(ativacao?.pacienteId === paciente.id, 'Convite nao ativou o paciente esperado.');
   await loginDireto(config.tenantAlfa, `portal.${sufixo}@octaclin.test`, 'PortalE2E@231');
 
-  await api(`/pacientes/${paciente.id}`, { token: tokenAlfa });
+  await bff(`/api/pacientes/${paciente.id}`);
   await api(`/pacientes/${paciente.id}`, { token: tokenBeta, status: 404 });
 
   console.log(
@@ -359,7 +456,8 @@ async function executar() {
           comunicacao: 'persistida_e_enfileirada_sem_envio_externo',
           convite: 'ativado_com_login_paciente',
           formulario: 'rascunho_upload_resposta_leitura_clinica',
-          isolamentoTenant: 'negado_em_leitura_cruzada'
+          isolamentoTenant: 'negado_em_leitura_cruzada',
+          food05: 'previa_autenticada_calculada_sem_persistencia_e_acesso_cross_tenant_negado'
         }
       },
       null,
