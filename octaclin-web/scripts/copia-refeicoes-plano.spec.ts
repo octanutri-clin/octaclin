@@ -32,6 +32,49 @@ test('FOOD04 cópia factual entre planos não transplanta a autoridade do grupo'
   assert.equal(referencia.revisao, 1);
 });
 
+test('FOOD05 cópia de refeição salva exige e preserva referência opaca para revalidação no servidor', () => {
+  const origem = refeicaoApi();
+  origem.itens[0].substituicoes[0].equivalenciaAplicada = true;
+  origem.itens[0].substituicoes[0].liberadaParaPaciente = true;
+  origem.itens[0].substituicoes[0].preferida = true;
+  origem.itens[0].substituicoes[0].referenciaEquivalencia = { itemChave: 'orig-item', alternativaChave: 'orig-alt' };
+  assert.throws(() => copiarRefeicaoParaFormulario(origem, gerarChave), /sem referência de origem verificável/i);
+  const copia = copiarRefeicaoParaFormulario(origem, gerarChave, {
+    pacienteId: '10000000-0000-4000-8000-000000000001',
+    planoId: '10000000-0000-4000-8000-000000000002',
+    versaoId: '10000000-0000-4000-8000-000000000003',
+    numeroVersao: 4,
+    rascunhoRevisao: 7
+  });
+  const item = copia.itens[0];
+  const alternativa = item.substituicoes[0];
+  assert.equal(alternativa.liberadaParaPaciente, false);
+  assert.equal(alternativa.preferida, false);
+  assert.equal(alternativa.provenienciaEquivalencia, true);
+  assert.deepEqual(alternativa.origemCopiaEquivalencia, {
+    pacienteOrigemId: '10000000-0000-4000-8000-000000000001',
+    planoOrigemId: '10000000-0000-4000-8000-000000000002',
+    versaoIdOrigem: '10000000-0000-4000-8000-000000000003',
+    numeroVersaoOrigem: 4,
+    rascunhoRevisaoOrigemEsperada: 7,
+    itemChaveOrigem: 'orig-item',
+    alternativaChaveOrigem: 'orig-alt'
+  });
+  const acrescentada = acrescentarItensDeRefeicao(refeicaoFormulario('alvo'), copia.itens, gerarChave);
+  const alternativaRemapeada = acrescentada.itens[1].substituicoes[0];
+  assert.notEqual(alternativaRemapeada.chaveCliente, alternativa.chaveCliente);
+  assert.equal(alternativaRemapeada.origemCopiaEquivalencia?.alternativaChaveOrigem, 'orig-alt');
+  assert.equal(alternativaRemapeada.provenienciaEquivalencia, true);
+});
+
+test('FOOD05 duplicação local recusa converter equivalência calculada em alternativa manual', () => {
+  const origem = refeicaoFormulario('food05-origem');
+  origem.itens[0].substituicoes.push({ ...origem.itens[0], chaveCliente: 'food05-alternativa', liberadaParaPaciente: false, preferida: false, provenienciaEquivalencia: true });
+  assert.throws(() => duplicarRefeicaoNoRascunho([origem], 0, gerarChave), /equivalência FOOD05.*proveniência/i);
+  Object.assign(origem.itens[0].substituicoes[0], { equivalencia: { aplicacaoId: 'aplicacao-sintetica' } });
+  assert.throws(() => duplicarRefeicaoNoRascunho([origem], 0, gerarChave), /equivalência FOOD05.*proveniência/i);
+});
+
 test('FOOD04 duplicação local mantém fatos independentes e não reutiliza intenção antiga', () => {
   const origem = refeicaoFormulario('origem-grupo');
   const alternativa = { chaveCliente: 'alternativa-grupo', descricao: 'Alternativa sintética',
