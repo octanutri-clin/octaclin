@@ -22,13 +22,15 @@ testes confirmam que Expo nao resolve `deepmerge` e que a auditoria bruta nao
 encontra advisories. Se o patch de `@expo/config` mudar, esses testes e a
 resolucao do grafo devem ser reavaliados juntos.
 
-O check `Dependency Review` ainda bloqueia o bump de `node-forge@1.4.2` porque
-o SPDX publicado e `(BSD-3-Clause OR GPL-2.0)` e a action trata a alternativa
-GPL como incompatível com a denylist, embora a mesma expressao SPDX ja estivesse
-na versao 1.4.0 da base. Nenhuma excecao de pacote ou alteracao da politica foi
-adicionada. A PR continua Draft ate o responsavel por licencas decidir se a
-alternativa BSD ja permitida pode ser registrada para este pacote, ou indicar
-uma alternativa tecnica que passe pela politica sem excecao.
+O `Dependency Review` interpreta qualquer termo bloqueado em uma expressao OR
+como incompatibilidade e nao permite registrar qual alternativa SPDX foi
+escolhida. O proprietario ratificou o uso de `node-forge@1.4.2` sob
+`BSD-3-Clause`, alternativa ja permitida pela politica e descrita no LICENSE do
+pacote. A politica central registra a selecao; o workflow concede ao Dependency
+Review uma permissao apenas para o PURL exato `pkg:npm/node-forge@1.4.2`. A
+denylist global continua intacta, e qualquer outra versao volta a exigir a
+revisao normal. O teste de licencas confirma a expressao real como permitida
+pela alternativa BSD e verifica que o PURL do workflow e versionado.
 
 O lockfile ainda resolve `braces@3.0.3`, atingido pelo advisory abaixo. Seu
 patch local continua temporario e nao representa release upstream corrigida.

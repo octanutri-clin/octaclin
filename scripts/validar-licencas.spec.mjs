@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import test from 'node:test';
 
 import {
@@ -21,6 +22,19 @@ test('OR aceita quando ao menos um operando e permitido', () => {
   assert.equal(classificarExpressao('(BSD-3-Clause OR GPL-2.0-only)', politica), 'permitida');
   assert.equal(classificarExpressao('GPL-3.0-only OR AGPL-3.0-only', politica), 'bloqueada');
   assert.equal(classificarExpressao('MPL-2.0 OR GPL-3.0-only', politica), 'revisao');
+});
+
+test('node-forge 1.4.2 usa a alternativa BSD ratificada e a excecao de CI e exata', () => {
+  const selecao = politica.selecoesDeLicenca.find(
+    (item) => item.pacote === 'node-forge' && item.versao === '1.4.2',
+  );
+  assert.ok(selecao, 'a decisao do proprietario deve estar registrada para a versao exata');
+  assert.equal(selecao.licencaSelecionada, 'BSD-3-Clause');
+  assert.equal(classificarExpressao(selecao.expressaoSpdx, politica), 'permitida');
+
+  const workflow = readFileSync(new URL('../.github/workflows/dependency-review.yml', import.meta.url), 'utf8');
+  const purlExemptado = workflow.match(/^\s*allow-dependencies-licenses:\s*(.+)$/m)?.[1];
+  assert.equal(purlExemptado, 'pkg:npm/node-forge@1.4.2');
 });
 
 test('AND exige que todos os operandos sejam aceitaveis', () => {
