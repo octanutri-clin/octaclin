@@ -116,8 +116,13 @@ export function validarEstruturaPlano(estrutura: EstruturaPlanoAlimentar): void 
 export function calcularTotaisPlano(estrutura: EstruturaPlanoAlimentar): NutrientesPorcaoPlano {
   validarEstruturaPlano(estrutura);
   const itens = estrutura.refeicoes.flatMap((refeicao) => refeicao.itens);
+  return somarNutrientesParciais(itens.map(item => item.nutrientes)) as NutrientesPorcaoPlano;
+}
+
+/** Mesma soma usada no plano e na prévia; ausência em um item mantém o total desconhecido. */
+export function somarNutrientesParciais(itens: readonly Partial<NutrientesPorcaoPlano>[]): Partial<NutrientesPorcaoPlano> {
   const somar = (campo: keyof NutrientesPorcaoPlano): number | undefined => {
-    const valores = itens.map((item) => item.nutrientes[campo]);
+    const valores = itens.map((item) => item[campo]);
     if (valores.some((valor) => valor === undefined)) return undefined;
     return arredondar4((valores as number[]).reduce((soma, valor) => soma + valor, 0));
   };

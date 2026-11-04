@@ -1,0 +1,46 @@
+{
+  "schemaVersao": 1,
+  "registradoEmUtc": "2026-10-28T16:45:24.196008+00:00",
+  "etapa": "A",
+  "entrega": "FOOD07",
+  "fonte": {
+    "commit": "9dd9bd6d",
+    "path": "tasks/plan-pos-320-food07.md",
+    "sha256": "02e8d1d3b07650e50666dc7a6079bf3bc585e117b76633e62048e2371969cbdb"
+  },
+  "modalidadeReal": "subagentes-runtime-com-papel-fornecido",
+  "selecaoAutomaticaToml": "NAO_COMPROVADA",
+  "smokeCli": "BLOCKED_AUTH",
+  "execucoes": [
+    {
+      "papel": "octaclin-nutricionista-ux",
+      "runtimeTask": "/root/octaclin_nutricionista_ux",
+      "fork_turns": "none",
+      "estado": "completed",
+      "ferramentasUsadas": []
+    },
+    {
+      "papel": "octaclin-paciente-ux",
+      "runtimeTask": "/root/octaclin_paciente_ux",
+      "fork_turns": "none",
+      "estado": "completed",
+      "ferramentasUsadas": []
+    }
+  ],
+  "evidenciaAtividade": "Chamadas spawn_agent e retornos FINAL_ANSWER distintos na trilha desta conversa; IDs sao task names, nao UUIDs inventados. Sem timestamp de inicio individual coletado.",
+  "limites": [
+    "brief derivado do plano; prompts adaptaram instrucoes, nao carregamento nativo dos arquivos",
+    "hashes abaixo identificam artefatos versionados, nao os bytes exatos dos prompts enviados",
+    "relatorios sao sinteses editoriais; original na trilha do runtime",
+    "nenhuma UI/interacao/pessoa real; nao e R4 nem validacao clinica"
+  ],
+  "artefatosSha256": {
+    ".codex/agents/octaclin-nutricionista-ux.toml": "6259b40a98e2c49053cbc6adbc0c59d0312b14e191b228ab73de2f2eac53af6d",
+    ".codex/agents/octaclin-paciente-ux.toml": "a40b1ded5e47739a2710caa5ec9a9a7871b57be7efc11deefaae0515028ff7d7",
+    "docs/agents/ux/reports/FOOD07-A-2026-10-28/brief.md": "0031d7b2ae21a0c73af47d944d12614791da8aafe6632d5e8d545c2b44768d3b",
+    "docs/agents/ux/reports/FOOD07-A-2026-10-28/nutricionista.md": "095a8a2450a4c4ec6fd1a56126dfb02154af9ad7081ed7628ce595c3f2ae8dd4",
+    "docs/agents/ux/reports/FOOD07-A-2026-10-28/paciente.md": "645c3b6a6ac73a11fdb31453067b62450bea0bdb6be4d48787f4402e242c447a",
+    "docs/agents/ux/reports/FOOD07-A-2026-10-28/consolidado.md": "eba90f4e499583a08fd5960cf8f1264a6f91dbfc8db9bea2ec244f43409e4886",
+    "docs/agents/ux/reports/FOOD07-A-2026-10-28/capacidades.md": "0c04ca72371a0f815546646c7452f66921ba0f66ffe26e9c58dcc6a8acf0974a"
+  }
+}

@@ -1,5 +1,19 @@
 # OctaClin - Resumo das fases concluidas
 
+## Reconciliação pós-FOOD07 — 2026-10-30
+
+- FOOD07 integrada pela PR #452, merge
+  `87df565f1aa504328c8032c069cc6d4746499a59`. O HEAD validado `7a963b16`
+  concluiu os checks aplicáveis; Provenance do SBOM ficou `SKIPPED`.
+- A correção de segurança Mobile #453 entrou antes, no commit `9697bc18`;
+  Mobile Expo passou na execução da #452 após sincronização com a nova base.
+- Esse resultado registra código/CI, não implantação nem aplicação externa da
+  migration 1080. G06 operacional permanece BLOCKED; sem inferência de schema,
+  deploy ou disponibilidade em produção.
+- Evidências e limitações em `tasks/execucao-pos-320-food07.md`,
+  `tasks/todo-pos-320-food07.md` e no planejamento
+  `docs/pos-320/05_Plano_Sequencia_FOOD06_FOOD08_2026-10-30.md`.
+
 ## Reconciliação pós-320 — 2026-10-14
 
 - PA02 integrada pelas PRs #415/#416, main `5b47fb1`: duplicação de refeições,

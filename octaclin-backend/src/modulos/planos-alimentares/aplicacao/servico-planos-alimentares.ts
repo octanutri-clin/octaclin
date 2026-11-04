@@ -4,7 +4,7 @@ import { clonarContextoEquivalenciaParaCopia, resolverEquivalenciasDocumento, as
 import { projetarEquivalenciasProfissional } from './projecao-equivalencias-profissional';
 import { resolverFatosEquivalencia, FatosPreservadosEquivalencia, identidadeFatoEquivalencia } from './fatos-equivalencia-plano';
 import { FatosComposicaoEquivalencia } from '../dominio/equivalencia-nutriente';
-import { calcularNutrientesDaPorcaoDecimal, normalizarComposicaoDecimal, POLITICA_NUTRICAO_DECIMAL } from '../dominio/calculo-nutricional';
+import { calcularNutrientesDaPorcaoDecimal, normalizarComposicaoDecimal, normalizarNutrienteCatalogoPor100g, POLITICA_NUTRICAO_DECIMAL } from '../dominio/calculo-nutricional';
 import { lerOrigensMaterializadas, possuiGruposMaterializados } from './origens-grupos-materializadas';
 import { ContextosCatalogoGrupo, lerSnapshotEdicaoGrupos, mesmaOrigemGrupo, serializarSnapshotEdicaoGrupos } from './snapshot-edicao-grupos';
 import { resolverGruposDocumento, ConflitoAplicacaoGrupo, DocumentoGrupoInvalido } from '../dominio/aplicacao-grupos-substituicoes';
@@ -1942,8 +1942,7 @@ export class ServicoPlanosAlimentares {
       if (obrigatorio) throw new BadRequestException('Alimento do catalogo possui base nutricional invalida.');
       return undefined;
     }
-    const fator = 100 / baseGramas;
-    const normalizar = (valor?: string) => Math.round(Number(valor) * fator * 10_000) / 10_000;
+    const normalizar = (valor?: string) => normalizarNutrienteCatalogoPor100g(Number(valor), baseGramas);
     const nutrientes: NutrientesPor100gPlano = {
       energiaKcal: normalizar(alimento.energiaKcal),
       proteinasG: normalizar(alimento.proteinasG),

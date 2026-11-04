@@ -30,6 +30,7 @@ import { ModuloTenancy } from '../tenancy/modulo-tenancy';
 import { ServicoModelosPlanoAlimentar } from './aplicacao/servico-modelos-plano-alimentar';
 import { ServicoPlanosAlimentares } from './aplicacao/servico-planos-alimentares';
 import { ServicoReceitasNutricionais } from './aplicacao/servico-receitas-nutricionais';
+import { ServicoPorcionamentoReceita } from './aplicacao/servico-porcionamento-receita';
 import { ServicoCompartilhamentoReceitas } from './aplicacao/servico-compartilhamento-receitas';
 import {
   ControladorCatalogoAlimentos,
@@ -125,6 +126,7 @@ const processadoresCompartilhamento = deveExecutarProcessadores() ? [Processador
     FontesGruposSubstituicoes,
     ServicoModelosPlanoAlimentar,
     ServicoReceitasNutricionais,
+    ServicoPorcionamentoReceita,
     ServicoCompartilhamentoReceitas,
     CriptografiaDadosSensiveis,
     ...processadoresCompartilhamento

@@ -1,24 +1,26 @@
 # OctaClin - Checklist vivo de fases futuras ate producao
 
-Atualizado em 2026-10-24; reconciliação FOOD04 abaixo. Histórico anterior: 2026-10-22. Fase 320: NO-GO para ingestão TBCA nesta rodada por ausência de autorização de uso; manter TACO, USDA e IBGE. FOOD02 (#425/#426), FOOD03 (#438) e PR #437 estão integradas. Migration 1077 aplicada e verificada em staging e produção; deploys Render do backend e Web estão live e os smokes de saúde/login retornaram HTTP 200. O workflow de backup/restauração dedicada concluiu com sucesso. O monitor de produção ainda sinaliza ClamAV ausente (issue #234 aberta); Fase 316 permanece em stand-by.
+Atualizado em 2026-10-30 após integração da FOOD07. A Fase 320 continua NO-GO para ingestão TBCA; manter TACO, USDA e IBGE.
 
-## Estado reconciliado em 2026-10-24
+## Estado vigente reconciliado em 2026-10-30
 
-- PR #441 mergeada (`02a51be8`), CI/scanners finais SUCCESS; SBOM provenance SKIPPED.
-- Migration1078: staging PASS (ledger/schema/RLS/runtime, ensaio isolado sintético).
-- Produção BLOCKED por quota Neon HTTP402; backend Render update_failed com esse
-  erro. Nenhuma aplicação em produção ou redeploy executado nesta rodada.
-- Probes HTTP atuais inconclusivos por timeout; não reutilizar os200 históricos
-  como evidência atual. Jornada autenticada pós-aplicação não executada.
-- [Evidência e próximos passos](docs/governance/EVIDENCIAS_ROLLOUT_FOOD04_2026-10-24.md).
-- **FOOD05:** escopo D01–D14/M01–M08 integral aprovado. Planejamento técnico
-  consolidado para revisão; implementação não autorizada. [Plano e propostas](tasks/plan-pos-320-food05.md),
-  [T01–T18](tasks/todo-pos-320-food05.md); sem runtime/infra/migration nesta rodada.
-  G00 documental PASS; G01–G05 NOT RUN; G06 BLOCKED por liberação FOOD04 em produção.
+- **FOOD07:** PR #452 integrada em `87df565f1aa504328c8032c069cc6d4746499a59`.
+  Checks aplicáveis do HEAD `7a963b16` passaram; Provenance do SBOM ficou
+  `SKIPPED`. A #453 foi integrada antes em `9697bc18`; Mobile Expo passou no
+  CI após atualizar a base da FOOD07. Evidências detalhadas em
+  `tasks/execucao-pos-320-food07.md`.
+- **Não inferir produção:** merge e CI não provam deploy ou aplicação externa
+  da migration 1080. G06 continua BLOCKED; sem consulta/escrita operacional
+  nesta atualização. A revisão de produção de FOOD04/FOOD05 segue para etapa
+  própria, após retorno e autorização do proprietário.
+- **Próximas entregas em planejamento:** PR #454 (Draft) propõe FOOD06 primeiro,
+  com gates científicos, clínicos e de direitos; FOOD08 fica como entrega
+  separada, dependente de decisões de publicação, conteúdo, privacidade e
+  moderação. Isso não autoriza implementação. Ver
+  `docs/pos-320/05_Plano_Sequencia_FOOD06_FOOD08_2026-10-30.md`.
+- Fase 316 permanece em stand-by; TBCA segue NO-GO.
 
-### Histórico anterior, supersedido no estado FOOD04
-
-## Estado reconciliado em 2026-10-22
+## Checkpoint de 2026-10-22 (histórico, supersedido pelo estado vigente acima)
 
 - **Base desta atualização:** `main`/`origin/main` no merge #438, commit
   `9f13b80a3984f36f1259fcd798eba54dd9d8070a`.
@@ -4745,3 +4747,11 @@ O programa de hardening
 PR 36-56 permanece como trilha separada --
 PR 55 permanece adiado e pendente; PR 56 continua condicionado a decisao
 explicita de distribuir o Mobile.
+
+## FOOD05 #446 — conferência G06 (2026-11-04)
+
+- A PR permanece aberta e Ready for Review no HEAD `2ed4ad40`. A sincronização com a `main` atual encontrou conflitos em checklist/status e nos contratos compartilhados de planos alimentares; validar os conflitos e os checks no novo HEAD antes de considerar a PR mergeável.
+- Render: os quatro serviços continuam em `main`, com auto-deploy por commit. Web de staging/produção no commit `02a51be8`; backend de staging no merge de dependências `bcb68250`; backend de produção permanece no FOOD03 `9f13b80`. As tentativas recentes de atualizar o backend de produção falharam.
+- Neon, consultado somente por metadados SQL: 1078 consta no ledger de staging e produção; tabelas de grupos/favoritos têm RLS e FORCE RLS. 1079 não consta no ledger e as colunas de preferências não existem nos dois bancos. As roles de aplicação listadas não têm BYPASSRLS; a role efetiva usada pelo Render não foi comprovada.
+- Log do backend de produção registrou HTTP 402 por quota ao iniciar em 30/10. Consulta SQL de metadados respondeu em 03/11, mas isso não comprova a conexão do runtime Render nem a regularização integral da quota.
+- G06 segue **BLOCKED**. Nenhuma migration, DDL, mudança de quota/configuração, deploy ou smoke pós-implantação foi executado.

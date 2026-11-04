@@ -1,5 +1,6 @@
 import { PreferenciasEquivalencia1720000001079 } from './migracoes/1720000001079-PreferenciasEquivalencia';
 import { GruposSubstituicoes1720000001078 } from './migracoes/1720000001078-GruposSubstituicoes';
+import { MetadadosReceitasNutricionais1720000001080 } from './migracoes/1720000001080-MetadadosReceitasNutricionais';
 import { GrupoSubstituicoesOrm, FavoritoGrupoSubstituicoesOrm } from '../../modulos/planos-alimentares/infraestrutura/grupo-substituicoes.orm';
 import { AlimentosPersonalizados1720000001076 } from './migracoes/1720000001076-AlimentosPersonalizados';
 import { AlimentoPersonalizadoOrm } from '../../modulos/planos-alimentares/infraestrutura/alimento-personalizado.orm';
@@ -479,7 +480,8 @@ export function criarOpcoesTypeOrm(): TypeOrmModuleOptions & DataSourceOptions {
         AlimentosPersonalizados1720000001076,
         FavoritosAlimentosProfissional1720000001077,
         GruposSubstituicoes1720000001078,
-        PreferenciasEquivalencia1720000001079
+        PreferenciasEquivalencia1720000001079,
+        MetadadosReceitasNutricionais1720000001080
       ],
     migrationsRun: executarMigracoesNoBoot(),
     synchronize: false,

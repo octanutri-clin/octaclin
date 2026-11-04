@@ -32,7 +32,8 @@ const argumentosJest = [
   '--runInBand',
   'src/infraestrutura/banco-dados/rls-isolamento-tenant.integracao.spec.ts',
   'src/modulos/gamificacao/aplicacao/piloto-gamificacao.integracao.spec.ts',
-  'src/infraestrutura/banco-dados/migracoes/1720000001078-GruposSubstituicoes.integracao.spec.ts'
+  'src/infraestrutura/banco-dados/migracoes/1720000001078-GruposSubstituicoes.integracao.spec.ts',
+  'src/infraestrutura/banco-dados/migracoes/1720000001080-MetadadosReceitasNutricionais.integracao.spec.ts'
 ];
 const windows = process.platform === 'win32';
 const comandoPnpm = windows ? (process.env.ComSpec ?? 'cmd.exe') : 'pnpm';

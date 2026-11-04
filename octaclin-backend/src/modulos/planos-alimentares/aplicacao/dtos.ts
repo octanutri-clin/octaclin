@@ -1,4 +1,6 @@
 import { validarMicronutrientesManuais, MicronutrientesPor100gEntrada } from '../dominio/micronutrientes';
+export { CriarMetadadosReceitaDto, AtualizarMetadadosReceitaDto, PreverPorcionamentoReceitaDto } from './dtos-receitas-metadados';
+import { ValidadorMetadadosReceita, ValidadorAlteracaoMetadadosReceita } from './dtos-receitas-metadados';
 import { Type } from 'class-transformer';
 import {
   ArrayMaxSize,
@@ -391,7 +393,15 @@ export class ListarReceitasNutricionaisDto {
   categoria?: string;
 }
 
-export class CriarReceitaNutricionalDto {
+export class ConsultarReceitasNutricionaisDto extends ListarReceitasNutricionaisDto {
+  @ValidateIf(o => o.etiqueta !== undefined)
+  @IsString()
+  @MinLength(1)
+  @MaxLength(40)
+  etiqueta?: string;
+}
+
+class CamposReceitaNutricionalDto {
   @IsString()
   @MinLength(1)
   @MaxLength(180)
@@ -421,7 +431,17 @@ export class CriarReceitaNutricionalDto {
   itens: ItemPlanoAlimentarDto[];
 }
 
-export class AtualizarReceitaNutricionalDto extends CriarReceitaNutricionalDto {
+export class CriarReceitaNutricionalDto extends CamposReceitaNutricionalDto {
+  @ValidateIf(o => o.metadados !== undefined)
+  @Validate(ValidadorMetadadosReceita)
+  metadados?: unknown;
+}
+
+export class AtualizarReceitaNutricionalDto extends CamposReceitaNutricionalDto {
+  @ValidateIf(o => o.metadados !== undefined)
+  @Validate(ValidadorAlteracaoMetadadosReceita)
+  metadados?: unknown;
+
   @IsInt()
   @Min(1)
   versaoEsperada: number;

@@ -1,6 +1,28 @@
-import { ArrayMaxSize, ArrayMinSize, IsArray, IsBoolean, IsDateString, IsIn, IsInt, IsObject, IsOptional, IsString, IsUUID, Max, Matches, Min, MaxLength, ValidateNested } from 'class-validator';
+import { ArrayMaxSize, ArrayMinSize, Equals, IsArray, IsBoolean, IsDateString, IsIn, IsInt, IsNumber, IsObject, IsOptional, IsString, IsUUID, Max, Matches, Min, MaxLength, ValidateIf, ValidateNested } from 'class-validator';
 import { Type } from 'class-transformer';
 import type { CanalEntregaReceita } from '../infraestrutura/entrega-compartilhamento-receita.orm';
+
+export class PorcionamentoCompartilhamentoReceitaDto {
+  @IsUUID('4')
+  receitaId: string;
+
+  @IsNumber({ maxDecimalPlaces: 3 })
+  @Min(0.001)
+  @Max(1000)
+  porcoesDesejadas: number;
+
+  @IsString()
+  @Matches(/^[a-f0-9]{64}$/)
+  fingerprintPrevia: string;
+
+  @ValidateIf(o => o.instrucoesPersonalizadas !== undefined)
+  @IsString()
+  @MaxLength(4000)
+  instrucoesPersonalizadas?: string;
+
+  @Equals(true)
+  confirmacaoConferenciaInstrucoes: true;
+}
 
 export class CompartilharReceitasNutricionaisDto {
   @IsUUID()
@@ -27,6 +49,13 @@ export class CompartilharReceitasNutricionaisDto {
   @ArrayMaxSize(4)
   @IsIn(['portal', 'email', 'whatsapp', 'push'], { each: true })
   canais: CanalEntregaReceita[];
+
+  @ValidateIf(o => o.porcionamentos !== undefined)
+  @IsArray()
+  @ArrayMaxSize(10)
+  @ValidateNested({ each: true })
+  @Type(() => PorcionamentoCompartilhamentoReceitaDto)
+  porcionamentos?: PorcionamentoCompartilhamentoReceitaDto[];
 
   @IsOptional()
   @IsDateString()

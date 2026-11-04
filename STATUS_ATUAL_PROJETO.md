@@ -1,26 +1,46 @@
 # OctaClin - Status atual do projeto
 
-Atualizado em 2026-10-24 (planejamento FOOD05; registros anteriores preservados).
+Atualizado em 2026-10-30 após integração da FOOD07; registros anteriores preservados.
 
-## Fase ativa
+## Estado atual
 
-- **FOOD05 — planejamento técnico para revisão**, escopo D01–D14 e M01–M08
-  integralmente aprovado; implementação NÃO autorizada. Base main2f24fcb1;
-  [plano](tasks/plan-pos-320-food05.md), [T01–T18](tasks/todo-pos-320-food05.md)
-  e [handoff](tasks/handoff-pos-320-food05-luna.md). Reutilizar motor/FOOD04,
-  cálculos determinísticos e snapshots cifrados; propostas de precisão, avisos,
-  preferências, revisão/publicação e papéis aguardam revisão do plano. Nenhuma
-  dependência/runtime/migration ou infraestrutura alterada nesta rodada.
+- **FOOD07 — integrada pela PR #452** em `87df565f1aa504328c8032c069cc6d4746499a59`.
+  O HEAD validado `7a963b16` teve os checks aplicáveis aprovados; Provenance do
+  SBOM ficou `SKIPPED`. A correção Mobile #453 já estava em `main` no commit
+  `9697bc18`; Mobile Expo passou no CI da FOOD07 após sincronização da base.
+  Evidências e limites: `tasks/execucao-pos-320-food07.md` e
+  `tasks/todo-pos-320-food07.md`. Isso não comprova implantação nem aplicação
+  externa da migration 1080.
+- **G06 permanece BLOCKED operacional** para FOOD04/FOOD05 e alterações de
+  produção. Neon, schema/ledger 1078/1079, Render, backup/rollback e deploy
+  continuam reservados à etapa operacional após o retorno do proprietário e
+  autorização específica. Nenhuma migration externa é inferida do merge.
+- **Próximos planejamentos:** PR #454, Draft, propõe FOOD06 primeiro (fontes,
+  direitos, população e contrato de dados) e FOOD08 separadamente (publicação,
+  conteúdo, privacidade e moderação). Não há autorização de implementação para
+  essas fases neste registro; as ratificações e direitos listados no plano
+  continuam pendentes. Consulte
+  `docs/pos-320/05_Plano_Sequencia_FOOD06_FOOD08_2026-10-30.md`.
+- Fase 316 continua em stand-by. O NO-GO da TBCA não muda; manter TACO, USDA e
+  IBGE conforme decisão registrada.
 
+## Checkpoint histórico FOOD04 (2026-10-24; substituído para fase ativa)
 
-- **FOOD04 integrada pela PR #441**, merge `02a51be8`, CI final PASS e revisão
-  cruzada corretiva concluída. Migration1078 aplicada e verificada em staging,
-  com ensaio sintético PostgreSQL/RLS e runtime sem bypass. **Produção BLOCKED
-  por quota Neon HTTP402**: nenhuma migration aplicada nesta rodada nesse alvo;
-  último deploy automático do backend está update_failed pelo mesmo erro.
-  Smokes HTTP desta rodada inconclusivos por timeout; não declarar disponibilidade.
-  [Evidências e retomada](docs/governance/EVIDENCIAS_ROLLOUT_FOOD04_2026-10-24.md).
-  FOOD05 aguarda definição de escopo pelo proprietário, sem implementação.
+- **FOOD04 — implementada na PR #441, em validacao final**, base `origin/main` `9e1984a2`, merge
+  documental #440 confirmado por fetch em 2026-10-22. Biblioteca de grupos
+  reutilizáveis; D01–D03 aprovadas e ampliadas em D01–D08. Especificação inclui
+  administração de compartilhados, duplicação, favoritos, aplicação seletiva,
+  dedup e arquivo/restauração. Desenvolvimento autorizado em “Pode seguir”;
+  domínio, biblioteca, migration1078, save/snapshots, BFF e UI implementados.
+  Revisao cruzada encontrou dois P2 em snapshots de catalogo e cancelamento de
+  aplicacao durante save; ambos corrigidos e reavaliados por outro agente
+  sem novos Critical/P1/P2 confirmados. Regressoes locais PASS (backend3244; visual20); CI final pendente.
+  A PR permanece Draft. Evidências e limitações em
+  `tasks/execucao-pos-320-food04.md`. Plano/checkpoints em `tasks/plan-pos-320-food04.md` e
+  `tasks/todo-pos-320-food04.md`; handoff ativo em `tasks/plan.md`.
+  Referências específicas recomendam código interno, sem biblioteca externa.
+  Sol medio conduz revisao e fechamento de seguranca. Alertas estruturados/lote/undo persistente
+  registrados como FOOD04-C01/C02/C03, sem antecipar implementação.
 - **FOOD03 — integrada #438 e fechamento #440**. Evidências históricas de
   migration1077/RLS/deploy em `tasks/plan-pos-320-food03.md` e checklist vivo;
   ambientes externos não foram reconsultados nesta rodada documental.
@@ -2330,3 +2350,11 @@ controlada.
 Permanece como melhoria operacional futura o rollout da Fase 201 no Render (separar
 os papeis `web` e `worker` e registrar a entrega sintetica unica exigida pelo
 aceite).
+
+## FOOD05 #446 — conferência G06 (2026-11-04)
+
+- A PR permanece aberta e Ready for Review no HEAD `2ed4ad40`. A sincronização com a `main` atual encontrou conflitos em checklist/status e nos contratos compartilhados de planos alimentares; validar os conflitos e os checks no novo HEAD antes de considerar a PR mergeável.
+- Render: os quatro serviços continuam em `main`, com auto-deploy por commit. Web de staging/produção no commit `02a51be8`; backend de staging no merge de dependências `bcb68250`; backend de produção permanece no FOOD03 `9f13b80`. As tentativas recentes de atualizar o backend de produção falharam.
+- Neon, consultado somente por metadados SQL: 1078 consta no ledger de staging e produção; tabelas de grupos/favoritos têm RLS e FORCE RLS. 1079 não consta no ledger e as colunas de preferências não existem nos dois bancos. As roles de aplicação listadas não têm BYPASSRLS; a role efetiva usada pelo Render não foi comprovada.
+- Log do backend de produção registrou HTTP 402 por quota ao iniciar em 30/10. Consulta SQL de metadados respondeu em 03/11, mas isso não comprova a conexão do runtime Render nem a regularização integral da quota.
+- G06 segue **BLOCKED**. Nenhuma migration, DDL, mudança de quota/configuração, deploy ou smoke pós-implantação foi executado.

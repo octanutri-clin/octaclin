@@ -38,6 +38,9 @@ export class ReceitaNutricionalOrm {
   @Column({ name: 'total_itens', type: 'integer' })
   totalItens: number;
 
+  @Column({ name: 'etiquetas_hashes', type: 'text', array: true, default: () => "'{}'" })
+  etiquetasHashes: string[];
+
   @Column({ name: 'criado_por_usuario_id', type: 'uuid' })
   criadoPorUsuarioId: string;
 
