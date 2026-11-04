@@ -77,6 +77,7 @@ writeFileSync(join(temporaria, 'tsconfig.json'), JSON.stringify({
   compilerOptions: {
     noEmit: false,
     outDir: temporaria,
+    tsBuildInfoFile: join(temporaria, 'tsconfig.tsbuildinfo'),
     rootDir: raiz,
     module: 'commonjs',
     moduleResolution: 'node',
