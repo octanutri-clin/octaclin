@@ -1,7 +1,7 @@
 {
   "versao": 1,
   "descricao": "Politica de licencas de dependencias do OctaClin (PR 49). O objetivo e tecnico: impedir que licenca incompativel entre em silencio. Nao substitui parecer juridico.",
-  "revisadoEm": "2026-09-01",
+  "revisadoEm": "2026-11-03",
   "owner": "octanutri-clin/octaclin (proprietario do repositorio)",
   "permitidas": [
     "0BSD",
@@ -40,6 +40,20 @@
     "SSPL-1.0"
   ],
   "desconhecidas": ["NOASSERTION", "UNKNOWN", "UNLICENSED", "SEE LICENSE IN"],
+  "selecoesDeLicenca": [
+    {
+      "pacote": "node-forge",
+      "versao": "1.4.2",
+      "expressaoSpdx": "(BSD-3-Clause OR GPL-2.0)",
+      "licencaSelecionada": "BSD-3-Clause",
+      "decisao": "alternativa-spdx-selecionada",
+      "justificativa": "O proprietario ratificou a alternativa BSD-3-Clause, ja permitida pela politica OctaClin. O pacote declara duas alternativas SPDX; esta distribuicao utiliza a alternativa BSD e preserva o LICENSE e os avisos originais. A excecao do Dependency Review e restrita ao PURL exato pkg:npm/node-forge@1.4.2; qualquer upgrade exige nova revisao.",
+      "owner": "octanutri-clin/octaclin (proprietario do repositorio)",
+      "aprovadoPor": "Proprietario do produto (ratificacao registrada)",
+      "revisadoEm": "2026-11-03",
+      "condicaoDeReabertura": "Reabrir se pacote, versao, expressao SPDX, politica de distribuicao ou alternativa selecionada mudar."
+    }
+  ],
   "revisoesConcluidas": [
     {
       "licenca": "MPL-2.0",
