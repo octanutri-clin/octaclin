@@ -254,6 +254,7 @@ async function executar() {
   };
   const previaFood05 = await bff(`/api/pacientes/${paciente.id}/planos-alimentares/${planoFood05.id}/equivalencias/previa`, {
     method: 'POST',
+    status: 201,
     body: JSON.stringify(pedidoFood05)
   });
   const resultadoFood05 = previaFood05?.alternativas?.[0]?.resultado;
