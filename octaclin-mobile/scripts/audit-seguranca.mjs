@@ -33,16 +33,13 @@ if (![0, 1].includes(resultado.status)) {
 const advisoryIds = Object.values(relatorio.advisories ?? {}).map(
   (advisory) => advisory.github_advisory_id ?? advisory.id,
 );
-const exigeBackportsLocais = advisoryIds.some((id) =>
-  ['GHSA-86w9-cpqp-85rv', 'GHSA-vfj7-8cjw-p6xm'].includes(id),
-);
+const exigeBackportsLocais = advisoryIds.includes('GHSA-vfj7-8cjw-p6xm');
 
 let backportsValidados = false;
 if (exigeBackportsLocais) {
   const lockfile = readFileSync(join(process.cwd(), 'pnpm-lock.yaml'), 'utf8');
   const patchesConfigurados =
-    /^  braces@3\.0\.3: [a-f0-9]{64}$/m.test(lockfile) &&
-    /^  node-forge@1\.4\.0: [a-f0-9]{64}$/m.test(lockfile);
+    /^  braces@3\.0\.3: [a-f0-9]{64}$/m.test(lockfile);
   const provas = patchesConfigurados
     ? spawnSync(process.execPath, ['--test', 'scripts/backports-seguranca.spec.mjs'], {
         cwd: process.cwd(),

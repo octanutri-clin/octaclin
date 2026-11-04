@@ -1,9 +1,5 @@
 const BACKPORTS_TEMPORARIOS = new Map([
   [
-    'GHSA-86w9-cpqp-85rv',
-    { pacote: 'node-forge', faixa: '<=1.4.0' },
-  ],
-  [
     'GHSA-vfj7-8cjw-p6xm',
     { pacote: 'braces', faixa: '<=3.0.3' },
   ],
