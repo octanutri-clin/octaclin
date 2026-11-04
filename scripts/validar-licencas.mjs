@@ -251,6 +251,27 @@ export function validarPolitica({ caminho = CAMINHO_POLITICA } = {}) {
     }
   }
 
+  for (const selecao of politica.selecoesDeLicenca ?? []) {
+    if (!NOME_NPM_VALIDO.test(selecao.pacote ?? '') || !/^\d+\.\d+\.\d+(?:[-+][\w.-]+)?$/.test(selecao.versao ?? '')) {
+      throw new Error('Politica de licencas invalida: selecao SPDX sem pacote ou versao exatos.');
+    }
+    if (
+      selecao.decisao !== 'alternativa-spdx-selecionada' ||
+      !politica.permitidas.includes(selecao.licencaSelecionada) ||
+      !selecao.expressaoSpdx.split(/\s+OR\s+|\s+AND\s+|[()]/).includes(selecao.licencaSelecionada)
+    ) {
+      throw new Error(`Politica de licencas invalida: selecao nao permitida para ${selecao.pacote}@${selecao.versao}.`);
+    }
+    for (const campo of ['justificativa', 'owner', 'aprovadoPor', 'revisadoEm', 'condicaoDeReabertura']) {
+      if (typeof selecao[campo] !== 'string' || selecao[campo].trim().length < 8) {
+        throw new Error(`Politica de licencas invalida: selecao ${selecao.pacote}@${selecao.versao} sem "${campo}" util.`);
+      }
+    }
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(selecao.revisadoEm)) {
+      throw new Error(`Politica de licencas invalida: data da selecao SPDX de ${selecao.pacote} fora de ISO-8601.`);
+    }
+  }
+
   return `Politica de licencas coerente: ${politica.permitidas.length} permitidas, ${politica.revisaoObrigatoria.length} em revisao, ${politica.bloqueadas.length} bloqueadas.`;
 }
 
