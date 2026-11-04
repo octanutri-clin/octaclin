@@ -1329,6 +1329,7 @@ test('FOOD05 cliente usa POST privado/cancelável e preferências me sem IDs no 
   global.fetch=(async()=>new Response('<html>PRIVADO</html>',{status:500})) as typeof global.fetch;
   await assert.rejects(()=>preverEquivalenciasPlano('p','pl',{} as Parameters<typeof preverEquivalenciasPlano>[2]),e=>e instanceof Error&&!e.message.includes('PRIVADO'));
  }finally{restaurarFetch(original);}
+});
 
 test('FOOD07 BFF rejeita escopo/contexto injetado antes de encaminhar compartilhamento', async () => {
   __setCookies(cookiesSessaoValida(['planos_alimentares.gerenciar']));
