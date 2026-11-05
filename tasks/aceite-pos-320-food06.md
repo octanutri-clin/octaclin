@@ -1,10 +1,12 @@
 # FOOD06 — matriz obrigatória de aceite
 
-> Estado vigente — API/BFF factual M05/M07: [contratos, testes e handoff](food06-api-registros-factuais.md).
-> Quatro POSTs, projeções mínimas, paginação e reautorização; P2 caixa corrigido com RED/GREEN.
->42HTTP/projeções/bootstrap,101BFF e61PG PASS; R4 delimitada sem achados pendentes.
-> M05/M07 parciais,37,5% administrativos. Builds/typechecks Node22 PASS; CI próprio/authz completa em validação.
-> Contexto/UI e direitos/DRI/G06 pendentes; sem operações externas. Histórico abaixo substituído.
+> Estado vigente local — M10 histórico factual: [execução, contrato e limitações](food06-m10-historico.md).
+> Backend/PG-RLS 41/41, BFF 105/105, Web 68/68, typechecks/lint/builds e Playwright desktop/mobile 24/24 PASS local com Node22.
+> M10 PARCIAL: direitos/DRI não habilitados, causalidade de mudanças de composição não determinada, authz agregado bloqueado pelo harness, CI/scanners GitHub do novo delta, UX B/C e R4 pendentes.
+> HEAD remoto base f731c807; delta local não enviado, sem migration/merge/deploy ou operações externas. G06 permanece BLOCKED.
+
+> Checkpoint anterior — API/BFF factual M05/M07: [contratos, testes e handoff](food06-api-registros-factuais.md).
+> Os estados e CI daquele incremento são históricos e não validam este delta M10.
 
 > Histórico — fonte DB de versão salva M05/M07: [contrato/evidências](food06-fonte-versao.md).
 > Origem exata, revisão sob lock e materialização atual; confirmação operacional cifrada v2.
@@ -89,8 +91,8 @@ Fontes: [especificação](especificacao-pos-320-food06-melhorias.md),
 | M08-C3 | Artefato PDF legível e acessível | PDF real: texto selecionável, ordem/cabeçalhos/limites próximos, celular e tecnologia assistiva | PENDENTE; HTML acessível não comprova PDF |
 | M09-C1 | Explicar RDA/AI/UL, planejado/consumido, parcial e limitações | Conteúdo próprio revisado, fonte identificável, sem diagnóstico ou recomendação de suplemento | PASS técnico M09: texto próprio do catálogo, fonte NIH verificada, revisão independente delimitada e CIb9ed65bc aprovado; sem tabela DRI ou nova ratificação clínica |
 | M09-C2 | Explicações curtas e detalhes acessíveis | Texto perto do dado, expansão teclado/leitor; zero e desconhecido distinguíveis | PASS técnico M09: details/summary nativos, zero e parcial preservados;8browser M09/axe/teclado e matriz162/162PASS, CIb9ed65bc aprovado; sem execução humana de AT e sem fechar demais melhorias |
-| M10-C1 | Histórico paginado e pontos reproduzíveis | Data/plano/revisão/nutriente/cobertura/ref e autorização atual/carteira | PENDENTE |
-| M10-C2 | Gráfico e tabela equivalentes, sem interpolação indevida | Lacunas, parcial, mudança de fonte/ref/contexto, não ligar bases incompatíveis ou inferir melhora clínica | PENDENTE |
+| M10-C1 | Histórico paginado e pontos reproduzíveis | Data/plano/revisão/nutriente/cobertura/ref e autorização atual/carteira | PARCIAL: endpoint protegido por tenant/carteira/RLS, paginação keyset e projeção factual autorizada; PG descartável e cursor concorrente testados. Referências exibidas indisponíveis pelo gate DRI/direitos; CI novo e R4 pendentes |
+| M10-C2 | Gráfico e tabela equivalentes, sem interpolação indevida | Lacunas, parcial, mudança de fonte/ref/contexto, não ligar bases incompatíveis ou inferir melhora clínica | PARCIAL: pontos completos isolados e tabela acessível preservam parcial/desconhecido, data/versão/base documentada; sem interpolação. Compara marcador agregado de composição/fonte sem expor hash, mas não distingue alimento alterado versus fonte atualizada nem estabelece causa; referências/UX B/C/R4 pendentes |
 | M11-C1 | Catálogo autorizado por porção/preparo/teor conhecido | Fonte ativa/autorizada, unidade/base clara, ausência fora do ranking sem virar zero | PENDENTE |
 | M11-C2 | Restrições confiáveis e mínimas, sem alegar compatibilidade por omissão | Contrato validado por IDs, negativos de alergia/restrição e acesso; nenhuma inferência de texto livre | BLOCKED no caminho individualizado até contrato comprovado |
 | M11-C3 | Prévia/confirmação e dependência FOOD05 protegida | Sem tratamento/absorção/suplementação automática; capacidade ausente não chama implementação paralela | PENDENTE |

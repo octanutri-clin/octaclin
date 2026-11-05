@@ -18,12 +18,13 @@ describe('API factual M05/M07',()=>{
  let app:NestExpressApplication,url:string;
  const registrarVersao=jest.fn(async()=>({id,criadoEm:data,segredo:'CANARIO'}));
  const listar=jest.fn(async()=>({itens:[{id,criadoEm:data,segredo:'CANARIO'}],total:1,pagina:1,limite:25,segredo:'CANARIO'}));
+ const historico=jest.fn(async()=>({itens:[{schemaVersao:1,registro:{id,criadoEm:data.toISOString()},nutrientes:{}}],temMais:false}));
  const consultarApi=jest.fn(async()=>({schemaVersao:1,motorVersao:'food06-registro-api-v1'}));
  const compararApi=jest.fn(async()=>({schemaVersao:1,motorVersao:'food06-comparacao-api-v1'}));
  const prefixo=()=>`${url}/pacientes/${id}/planos-alimentares/analises-factuais`;
  const chamar=(sufixo:string,body:unknown,papel='Professional',perms='planos_alimentares.ler,planos_alimentares.gerenciar')=>fetch(prefixo()+sufixo,{method:'POST',headers:{'content-type':'application/json',...(papel?{'x-papel-sintetico':papel,'x-permissoes-sinteticas':perms}:{})},body:JSON.stringify(body)});
  beforeAll(async()=>{
-  const module=await Test.createTestingModule({controllers:[ControladorRegistrosFactuais],providers:[{provide:ServicoRegistrosAnaliseFactual,useValue:{registrarVersao,listar,consultarApi,compararApi}},{provide:ServicoAuditoria,useValue:{registrar:async()=>undefined}}]})
+  const module=await Test.createTestingModule({controllers:[ControladorRegistrosFactuais],providers:[{provide:ServicoRegistrosAnaliseFactual,useValue:{registrarVersao,listar,historico,consultarApi,compararApi}},{provide:ServicoAuditoria,useValue:{registrar:async()=>undefined}}]})
    .overrideGuard(GuardaJwt).useValue({canActivate(c:ExecutionContext){const r=c.switchToHttp().getRequest();if(!r.headers['x-papel-sintetico'])throw new UnauthorizedException();r.usuarioAutenticado={tenantId:id,usuarioId:id,papel:r.headers['x-papel-sintetico'],permissoes:String(r.headers['x-permissoes-sinteticas']??'').split(','),emailHash:''};return true;}}).compile();
   app=module.createNestApplication<NestExpressApplication>({rawBody:true});app.useLogger(false);app.use(middlewareAnalisesFactuais);app.useBodyParser('json',{limit:'100kb'});app.use(middlewareErroAnalisesFactuais,middlewareLimiteAnalisesFactuais);app.useGlobalPipes(criarPipeValidacaoHttp());await app.listen(0,'127.0.0.1');url=`http://127.0.0.1:${(app.getHttpServer().address() as AddressInfo).port}`;
  });
@@ -33,6 +34,7 @@ describe('API factual M05/M07',()=>{
   expect(registrarVersao.mock.calls).toEqual([[id,id,expect.objectContaining({usuarioId:id,tenantId:id}),fonte]]);
  });
  it('índice é paginado por corpo, mínimo e sem valores clínicos em query',async()=>{const r=await chamar('/listar',{pagina:1,limite:25});expect(r.status).toBe(200);expect(await r.json()).toEqual({schemaVersao:1,itens:[{id,criadoEm:data.toISOString()}],total:1,pagina:1,limite:25});});
+ it('histórico é paginado e usa resumo server-side, sem campo extra',async()=>{const r=await chamar('/historico',{limite:10});expect(r.status).toBe(200);expect(await r.json()).toEqual({schemaVersao:1,itens:[{schemaVersao:1,registro:{id,criadoEm:data.toISOString()},nutrientes:{}}],temMais:false});});
  it('consulta/comparação chamam apenas métodos de projeção, nunca leitor bruto',async()=>{
   expect((await chamar('/consultar',{registroId:id})).status).toBe(200);expect((await chamar('/comparar',{antesId:id,depoisId:outro})).status).toBe(200);
  });
@@ -49,6 +51,7 @@ describe('API factual M05/M07',()=>{
    const r=await chamar('',body);expect(r.status).toBe(400);expect(await r.text()).not.toMatch(/CANARIO|tenantId|confirmacaoOrigem/);
   }
   for(const body of [{pagina:'1',limite:25},{pagina:0,limite:25},{pagina:1,limite:101},{pagina:1,limite:25,extra:'CANARIO'}])expect((await chamar('/listar',body)).status).toBe(400);
+  for(const body of [{limite:11},{limite:10,extra:'CANARIO'},{limite:'10'},{limite:10,cursorId:id},{limite:10,cursorId:id,cursorCriadoEm:'2026-11-03'}]){const resposta=await chamar('/historico',body);if(resposta.status!==400)throw new Error(`body sintético aceito: ${JSON.stringify(body)} status=${resposta.status}`);}
  });
  it('limites e JSON inválido são genéricos e sem cache antes do handler',async()=>{
   for(const body of ['{"CANARIO":',JSON.stringify({extra:'x'.repeat(17000)})]){

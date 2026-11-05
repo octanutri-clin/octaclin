@@ -39,3 +39,30 @@ export function projetarComparacaoFactual(a:Meta,b:Meta,r:ComparacaoVersoesFactu
   bases:Object.fromEntries(DIMENSOES_VERSAO.map(c=>[c,r.bases[c]])),cobertura:Object.fromEntries(CODIGOS_MICRONUTRIENTES.map(c=>[c,r.cobertura[c]])),
   atribuicaoCausal:r.atribuicaoCausal,referencias:referencias(),ajuda:projetarAjudaDietetica()};
 }
+
+export type ComparacaoBaseComposicaoHistorica='IGUAL'|'DIFERENTE'|'NAO_COMPARAVEL'|'SEM_REGISTRO_ANTERIOR';
+/** Compara internamente os marcadores; nunca devolve hash nem identifica causa clínica. */
+export function compararBaseComposicaoHistorica(atual:RegistroAnaliseFactual,anterior?:RegistroAnaliseFactual):ComparacaoBaseComposicaoHistorica{
+ if(!anterior)return 'SEM_REGISTRO_ANTERIOR';
+ const base=(r:RegistroAnaliseFactual)=>{
+  const bases=r.versao.bases as Record<string,unknown>|undefined,m=bases?.composicao_fonte as Record<string,unknown>|undefined;
+  if(!m||m.esquemaVersao!=='food06-bases-v1'||typeof m.conteudoHash!=='string'||! /^[a-f0-9]{64}$/.test(m.conteudoHash))return;
+  return m.conteudoHash;
+ };
+ const a=base(atual),b=base(anterior);if(!a||!b)return 'NAO_COMPARAVEL';return a===b?'IGUAL':'DIFERENTE';
+}
+/** Resumo M10 sem envelope, hash ou contexto identificável; só totais e cobertura factuais. */
+export function projetarResumoHistoricoFactual(meta:Meta,r:RegistroAnaliseFactual,comparacaoBaseComposicao:ComparacaoBaseComposicaoHistorica='SEM_REGISTRO_ANTERIOR'){
+ const nutrientes=Object.fromEntries(CODIGOS_MICRONUTRIENTES.map(codigo=>{
+  const n=r.analise.cobertura.nutrientes[codigo];
+  return [codigo,{codigo,unidade:n.unidade,estado:n.estado,
+   contagens:{incluidos:n.contagens.incluidos,conhecidos:n.contagens.conhecidos,semComposicao:n.contagens.semComposicao,
+    incompativeis:n.contagens.incompativeis,naoResolvidos:n.contagens.naoResolvidos},causas:n.causas.map(x=>({codigo:x.codigo,quantidade:x.quantidade})),
+   ...(n.estado==='COMPLETO'&&n.total!==undefined?{total:n.total}:{}),...(n.estado==='PARCIAL'&&n.quantidadeConhecida!==undefined?{quantidadeConhecida:n.quantidadeConhecida}:{})}];
+ }));
+ return {schemaVersao:1 as const,registro:projetarMetadadosRegistro(meta),origem:origem(r.versao.origem),comparacaoBaseComposicao,
+  motorVersao:r.analise.calculo.motorVersao,nutrientes,
+  referencias:referencias(),
+  bases:{planejamentoDocumentado:Boolean(r.versao.bases?.planejamento),composicaoDocumentada:Boolean(r.versao.bases?.composicao_fonte),
+   contextoDocumentado:Boolean(r.versao.bases?.contexto)}};
+}

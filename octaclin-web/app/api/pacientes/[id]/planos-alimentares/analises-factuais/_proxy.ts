@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { executarProxyPlanoAlimentar } from '../_proxy';
 export interface ParametrosAnaliseFactual {params:Promise<{id:string}>}
-export async function executarProxyAnaliseFactual(request:Request,props:ParametrosAnaliseFactual,operacao:''|'listar'|'consultar'|'comparar'){
+export async function executarProxyAnaliseFactual(request:Request,props:ParametrosAnaliseFactual,operacao:''|'listar'|'historico'|'consultar'|'comparar'){
  try{
   const {id}=await props.params;
   const resposta=await executarProxyPlanoAlimentar(`/pacientes/${encodeURIComponent(id)}/planos-alimentares/analises-factuais${operacao?'/'+operacao:''}`,

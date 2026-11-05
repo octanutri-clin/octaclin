@@ -24,6 +24,7 @@ import { UserActionLogOrm } from '../../auditoria/user-action-log.orm';
 import { ExecutorTenant } from '../executor-tenant';
 import { CriptografiaDadosSensiveis } from '../../seguranca/criptografia-dados-sensiveis';
 import { ServicoRegistrosAnaliseFactual,type ComandoRegistroFactual,type ComandoRegistroDeVersaoFactual } from '../../../modulos/planos-alimentares/aplicacao/servico-registros-analise-factual';
+import { criarSnapshotMicronutrientes } from '../../../modulos/planos-alimentares/dominio/micronutrientes';
 import { construirAnaliseFactual,type EntradaConstrutorAnaliseFactual } from '../../../modulos/planos-alimentares/aplicacao/construtor-analise-factual';
 import type { UsuarioAutenticado } from '../../../modulos/auth/dominio/usuario-autenticado';
 const suite=process.env.FOOD06_REGISTRO_TESTCONTAINERS==='true'?describe:describe.skip;
@@ -108,7 +109,7 @@ suite('FOOD06 registro cifrado PostgreSQL15 descartável/RLS/runtime',()=>{
  });
  it('carteira/transferência/revogação são revalidadas antes de carregar ou listar',async()=>{
   const carregar=jest.fn(async()=>dados());await owner.query('update pacientes set profissional_responsavel_id=$1 where id=$2',[p2,paciente]);
-  try{await expect(s.registrar(tenant,paciente,u,comando(),carregar)).rejects.toMatchObject({status:404});await expect(s.listar(tenant,paciente,u)).rejects.toMatchObject({status:404});expect(carregar).not.toHaveBeenCalled();}
+  try{await expect(s.registrar(tenant,paciente,u,comando(),carregar)).rejects.toMatchObject({status:404});await expect(s.listar(tenant,paciente,u)).rejects.toMatchObject({status:404});await expect(s.historico(tenant,paciente,u)).rejects.toMatchObject({status:404});expect(carregar).not.toHaveBeenCalled();}
   finally{await owner.query('update pacientes set profissional_responsavel_id=$1 where id=$2',[p,paciente]);}
   await expect(s.registrar(otherTenant,paciente,u,comando(),carregar)).rejects.toMatchObject({status:403});
   for(const papel of ['SuperAdmin','Client','Collaborator','Patient'] as const)await expect(s.registrar(tenant,paciente,{...u,papel},comando(),carregar)).rejects.toMatchObject({status:403});
@@ -143,6 +144,9 @@ suite('FOOD06 registro cifrado PostgreSQL15 descartável/RLS/runtime',()=>{
    await expect(s.registrar(tenant,paciente,u,c as ComandoRegistroFactual,carregar)).rejects.toMatchObject({status:400});
   expect(carregar).not.toHaveBeenCalled();
   for(const [pagina,limite] of [[0,1],[1,0],[1,101],[10001,1],[1.5,1]])await expect(s.listar(tenant,paciente,u,pagina,limite)).rejects.toMatchObject({status:400});
+  for(const limite of [0,11,1.5])await expect(s.historico(tenant,paciente,u,limite)).rejects.toMatchObject({status:400});
+  await expect(s.historico(tenant,paciente,u,10,randomUUID())).rejects.toMatchObject({status:400});
+  await expect(s.historico(tenant,paciente,u,10,randomUUID(),'2026-11-04')).rejects.toMatchObject({status:400});
  });
  it('arquivamento de paciente ou profissional bloqueia índice e escrita',async()=>{
   for(const tabela of ['pacientes','profissionais']){
@@ -382,10 +386,44 @@ suite('FOOD06 registro cifrado PostgreSQL15 descartável/RLS/runtime',()=>{
    expect(JSON.stringify(factual)).not.toMatch(/conteudoHash|conteudoCriptografado|confirmacaoOrigem|tenantId|pacienteId|PRIVADO/);expect(consulta.headers.get('cache-control')).toBe('private, no-store');
    const cmp=await chamar('/comparar',{antesId:ack.registro.id,depoisId:ack.registro.id});expect(cmp.status).toBe(200);expect((await cmp.json() as any).atribuicaoCausal).toBe('nao_estabelecida');
    await owner.query('update pacientes set profissional_responsavel_id=$1 where id=$2',[p2,paciente]);
-   for(const [fim,body] of [['/consultar',{registroId:ack.registro.id}],['/comparar',{antesId:ack.registro.id,depoisId:ack.registro.id}],['/listar',{pagina:1,limite:25}],['',f.c]] as const){
+   for(const [fim,body] of [['/consultar',{registroId:ack.registro.id}],['/comparar',{antesId:ack.registro.id,depoisId:ack.registro.id}],['/listar',{pagina:1,limite:25}],['/historico',{limite:10}],['',f.c]] as const){
     const negada=await chamar(fim,body);expect(negada.status).toBe(404);expect(negada.headers.get('cache-control')).toBe('private, no-store');
    }
   }finally{await owner.query('update pacientes set profissional_responsavel_id=$1 where id=$2',[p,paciente]);await app.close();}
+ });
+ it('histórico decifra apenas a página autorizada e projeta zero/ausência sem expor envelopes ou marcadores',async()=>{
+  const e=dados();e.refeicoes[0].itens[0].snapshot={origem:'catalogo',alimentoComposicaoId:'alimento-sintetico',codigoOrigem:'A1',descricao:'CANARIO_HISTORICO',preparacao:'Cozido',
+   fonte:{codigo:'TACO-v1',baseCodigo:'TACO',versao:'1',nome:'Fonte sintética',hashConteudo:'a'.repeat(64)},nutrientesPor100g:{energiaKcal:100},nutrientesPorcao:{energiaKcal:100},
+   micronutrientes:criarSnapshotMicronutrientes({ferroMg:{estado:'conhecido',valor:0}},100,100)};
+  const r=await s.registrar(tenant,paciente,u,comando(),async()=>e);expect((await s.ler(tenant,paciente,u,r.id)).analise.cobertura.nutrientes.ferroMg.total).toBe(0);const antes=(await owner.query('select conteudo_criptografado from registros_analises_factuais where id=$1',[r.id])).rows[0].conteudo_criptografado;
+  const historico=await s.historico(tenant,paciente,u,10);expect(historico.itens.length).toBeGreaterThan(0);expect(historico.itens.some(x=>x.registro.id===r.id)).toBe(true);const ponto=historico.itens.find(x=>x.registro.id===r.id)!;expect(ponto.nutrientes.ferroMg).toMatchObject({estado:'COMPLETO',total:0});
+  expect(ponto.referencias).toEqual({estado:'indisponivel',motivo:'referencias_nao_habilitadas'});
+  expect(JSON.stringify(historico)).not.toMatch(/tenantId|pacienteId|conteudoCriptografado|hashConteudo|CANARIO_HISTORICO/);
+  expect((await owner.query('select conteudo_criptografado from registros_analises_factuais where id=$1',[r.id])).rows[0].conteudo_criptografado).toEqual(antes);
+ });
+ it('cursor histórico permanece estável quando uma análise mais nova entra entre páginas, inclusive timestamp de microssegundos',async()=>{
+  const pacienteHistorico=randomUUID();await owner.query('insert into pacientes values($1,$2,$3,null)',[pacienteHistorico,tenant,p]);
+  for(let i=0;i<11;i++){const e=dados();e.escopo.pacienteId=pacienteHistorico;await s.registrar(tenant,pacienteHistorico,u,comando(),async()=>e);}
+  const primeira=await s.historico(tenant,pacienteHistorico,u,10);expect(primeira.itens).toHaveLength(10);expect(primeira.temMais).toBe(true);
+  expect(primeira.proximoCursor?.criadoEm).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{6}Z$/);
+  const e=dados();e.escopo.pacienteId=pacienteHistorico;const nova=await s.registrar(tenant,pacienteHistorico,u,comando(),async()=>e);
+  const segunda=await s.historico(tenant,pacienteHistorico,u,10,primeira.proximoCursor!.id,primeira.proximoCursor!.criadoEm);
+  expect(segunda.itens).toHaveLength(1);expect(segunda.temMais).toBe(false);
+  expect(segunda.itens[0].registro.id).not.toBe(nova.id);
+  expect(new Set([...primeira.itens,...segunda.itens].map(x=>x.registro.id)).size).toBe(11);
+ });
+ it('histórico compara base documentada com registro mais antigo sem expor hashes nem atribuir causa',async()=>{
+  const pacienteHistorico=randomUUID();await owner.query('insert into pacientes values($1,$2,$3,null)',[pacienteHistorico,tenant,p]);
+  for(const valor of [1,2]){
+   const e=dados();e.escopo.pacienteId=pacienteHistorico;
+   e.refeicoes[0].itens[0].snapshot={origem:'catalogo',alimentoComposicaoId:'alimento-sintetico',codigoOrigem:'A1',preparacao:'Cozido',
+    fonte:{codigo:'TACO-v1',baseCodigo:'TACO',versao:'1',nome:'Fonte sintética',hashConteudo:'a'.repeat(64)},nutrientesPor100g:{energiaKcal:10},nutrientesPorcao:{energiaKcal:10},
+    micronutrientes:criarSnapshotMicronutrientes({ferroMg:{estado:'conhecido',valor}},100,100)};
+   await s.registrar(tenant,pacienteHistorico,u,comando(),async()=>e);
+  }
+  const historico=await s.historico(tenant,pacienteHistorico,u,10);
+  expect(historico.itens.map(x=>x.comparacaoBaseComposicao)).toEqual(['DIFERENTE','SEM_REGISTRO_ANTERIOR']);
+  expect(JSON.stringify(historico)).not.toMatch(/conteudoHash|hashConteudo/);
  });
  it('índice paginado permite somente metadados, respeitando limites e não abre cipher',async()=>{
   const r=await s.listar(tenant,paciente,u,1,2);expect(r.itens).toHaveLength(2);expect(r.total).toBeGreaterThan(2);

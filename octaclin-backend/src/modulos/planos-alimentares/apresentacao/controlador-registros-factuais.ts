@@ -7,7 +7,7 @@ import { GuardaPapeis } from '../../auth/apresentacao/guarda-papeis';
 import { GuardaPermissoes } from '../../auth/apresentacao/guarda-permissoes';
 import type { UsuarioAutenticado } from '../../auth/dominio/usuario-autenticado';
 import { ServicoRegistrosAnaliseFactual } from '../aplicacao/servico-registros-analise-factual';
-import { RegistrarVersaoFactualDto,ListarRegistrosFactuaisDto,ConsultarRegistroFactualDto,CompararRegistrosFactuaisDto } from '../aplicacao/dtos-registros-factuais';
+import { RegistrarVersaoFactualDto,ListarRegistrosFactuaisDto,HistoricoRegistrosFactuaisDto,ConsultarRegistroFactualDto,CompararRegistrosFactuaisDto } from '../aplicacao/dtos-registros-factuais';
 @Controller('pacientes/:pacienteId/planos-alimentares/analises-factuais')
 @UseGuards(GuardaJwt,GuardaPapeis,GuardaPermissoes)
 @Papeis('Professional')
@@ -22,6 +22,8 @@ export class ControladorRegistrosFactuais {
  async listar(@UsuarioAtual() u:UsuarioAutenticado,@Param('pacienteId',ParseUUIDPipe) p:string,@Body() d:ListarRegistrosFactuaisDto){
   const r=await this.servico.listar(u.tenantId,p,u,d.pagina,d.limite);return {schemaVersao:1,itens:r.itens.map(projetarMetadadosRegistro),total:r.total,pagina:r.pagina,limite:r.limite};
  }
+ @Post('historico') @HttpCode(200) @Permissoes('planos_alimentares.ler') @Header('Cache-Control','private, no-store')
+ async historico(@UsuarioAtual() u:UsuarioAutenticado,@Param('pacienteId',ParseUUIDPipe) p:string,@Body() d:HistoricoRegistrosFactuaisDto){return {schemaVersao:1,...await this.servico.historico(u.tenantId,p,u,d.limite,d.cursorId,d.cursorCriadoEm)};}
  @Post('consultar') @HttpCode(200) @Permissoes('planos_alimentares.ler') @Header('Cache-Control','private, no-store')
  consultar(@UsuarioAtual() u:UsuarioAutenticado,@Param('pacienteId',ParseUUIDPipe) p:string,@Body() d:ConsultarRegistroFactualDto){return this.servico.consultarApi(u.tenantId,p,u,d.registroId);}
  @Post('comparar') @HttpCode(200) @Permissoes('planos_alimentares.ler') @Header('Cache-Control','private, no-store')

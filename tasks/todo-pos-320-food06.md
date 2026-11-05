@@ -1,10 +1,9 @@
 # FOOD06 — checklist
 
-> Estado vigente — API/BFF factual M05/M07: [contratos, testes e handoff](food06-api-registros-factuais.md).
-> Quatro POSTs, projeções mínimas, paginação e reautorização; P2 caixa corrigido com RED/GREEN.
->42HTTP/projeções/bootstrap,101BFF e61PG PASS; R4 delimitada sem achados pendentes.
-> M05/M07 parciais,37,5% administrativos. Builds/typechecks Node22 PASS; CI próprio/authz completa em validação.
-> Contexto/UI e direitos/DRI/G06 pendentes; sem operações externas. Histórico abaixo substituído.
+> Estado vigente local — M10 longitudinal em andamento: [execução e limites](food06-m10-historico.md).
+> UI/API implementadas; PG/RLS41, BFF105, Web68, typecheck/lint e Playwright desktop/mobile24 PASS com Node22.
+> M10 PARCIAL. CI/scanners/build completo, UX B/C e R4 NÃO EXECUTADOS; direitos/DRI e G06 BLOCKED.
+> Delta sobre remoto f731c807, não enviado; sem merge, deploy, migration externa ou produção.
 
 > Histórico — fonte DB de versão salva M05/M07: [contrato/evidências](food06-fonte-versao.md).
 > Origem exata, revisão sob lock e materialização atual; confirmação operacional cifrada v2.
@@ -131,7 +130,9 @@ Fonte de contrato: [plano](plan-pos-320-food06.md), base `68499c15`.
 - [ ] M04-API: comprovar os cinco novos cenários PostgreSQL/RLS e CI do HEAD.
 - [ ] M04-integração: UI/PA07/ACK/autosave, demais operações e UX B/C; M04 permanece parcial.
 - [ ] Onda C completa: M04 prévias, M11 consulta assistida/restrições e M12 cenários.
-- [ ] Onda D: M07 versões, M08 PDF seguro e M10 longitudinal.
+- [ ] Onda D: M07 versões e M08 PDF seguro continuam pendentes; M10 está PARCIAL, com histórico paginado/UI básica e provas locais documentadas.
+- [x] M10: leitura protegida, cursor keyset estável, projeção de cobertura/valores, tabela e pontos sem interpolação; testes PG/RLS, BFF, domínio, typecheck, lint e Playwright desktop/mobile PASS. Ver `food06-m10-historico.md`.
+- [ ] M10: comparação de mudança de composição/fonte/contexto, UX B/C, CI/scanners, build completo e R4 independente.
 - [ ] UX B/C com interface/artefatos reais e R4 independente integral.
 - [x] Resolver falhas Mobile/PR Gate dos checkpoints históricos na consolidação992fee05.
 
@@ -184,7 +185,7 @@ fora desta entrega. Uma PR documental não comprova ativação ou disponibilidad
 
 ## Comunicação de progresso por entrega
 
-Ver [painel das12 melhorias](progresso-food06.md). Checkpoint atual:25% estimados,
-0/12 encerradas. M02 interface em validação; não converter testes de incremento
+Ver [painel das12 melhorias](progresso-food06.md). Checkpoint atual:41,7% estimados,
+1/12 encerrada; oito parciais e três pendentes. M10 é parcial, não concluída; não converter testes de incremento
 em aceite global. A cada entrega informar feito, próximo, critérios abertos e
 percentual pelo método fixo, sem alterar escopo/pesos para produzir avanço.

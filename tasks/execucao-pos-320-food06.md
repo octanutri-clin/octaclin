@@ -1,10 +1,10 @@
 # FOOD06 — execução técnica
 
-> Estado vigente — API/BFF factual M05/M07: [contratos, testes e handoff](food06-api-registros-factuais.md).
-> Quatro POSTs, projeções mínimas, paginação e reautorização; P2 caixa corrigido com RED/GREEN.
->42HTTP/projeções/bootstrap,101BFF e61PG PASS; R4 delimitada sem achados pendentes.
-> M05/M07 parciais,37,5% administrativos. Builds/typechecks Node22 PASS; CI próprio/authz completa em validação.
-> Contexto/UI e direitos/DRI/G06 pendentes; sem operações externas. Histórico abaixo substituído.
+> Estado vigente local — M10 histórico: [contrato e provas](food06-m10-historico.md).
+> PG/RLS 41/41, testes Web68/68, BFF105/105, typechecks, lint, builds e Playwright desktop/mobile24/24 PASS local (Node22).
+> Rotas assíncronas 169 e scanner local de segredos PASS; `git diff --check` limpo.
+> M10 PARCIAL; delta não enviado no HEAD remoto base f731c807. Authz agregado BLOCKED pelo harness local antes dos testes; CI/scanners GitHub, UX B/C e R4 NÃO EXECUTADOS.
+> Sem migration externa, merge, deploy ou alteração de G06/direitos/DRI. Checkpoints anteriores abaixo são históricos.
 
 > Histórico — fonte DB de versão salva M05/M07: [contrato/evidências](food06-fonte-versao.md).
 > Origem exata, revisão sob lock e materialização atual; confirmação operacional cifrada v2.

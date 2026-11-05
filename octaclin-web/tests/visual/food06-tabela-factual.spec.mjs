@@ -24,6 +24,12 @@ async function preparar(page,quantidade) {
   await expect(page.getByText(`${new Intl.NumberFormat('pt-BR').format((quantidade??2)*100)} kcal`)).toBeVisible();
 }
 const regiao=page=>page.getByRole('region',{name:'Micronutrientes da seleção',exact:true});
+function registroHistorico(id,criadoEm,estado='COMPLETO',valor=0){
+ const codigos=Object.keys(analise({selecoes:[{planoId:planoIds[0],versaoIdEsperada:'versao-a',ativacaoRevisaoEsperada:1,identidadesRefeicoes:[idsRefeicoes[0]]}]},1).cobertura.nutrientes);
+ const nutrientes=Object.fromEntries(codigos.map(codigo=>{const unidade=analise({selecoes:[{planoId:planoIds[0],versaoIdEsperada:'versao-a',ativacaoRevisaoEsperada:1,identidadesRefeicoes:[idsRefeicoes[0]]}]},1).cobertura.nutrientes[codigo].unidade;return [codigo,{codigo,unidade,estado:'DESCONHECIDO',contagens:{incluidos:2,conhecidos:0,semComposicao:2,incompativeis:0,naoResolvidos:0},causas:[{codigo:'ausente',quantidade:2}]}];}));
+ const n=nutrientes.ferroMg;n.estado=estado;n.contagens={incluidos:2,conhecidos:estado==='COMPLETO'?2:1,semComposicao:estado==='COMPLETO'?0:1,incompativeis:0,naoResolvidos:0};n.causas=estado==='COMPLETO'?[]:[{codigo:'ausente',quantidade:1}];if(estado==='COMPLETO')n.total=valor;else n.quantidadeConhecida=valor;
+ return {schemaVersao:1,registro:{id,criadoEm},origem:{planoId:planoIds[0],versaoId:'versao-a',numero:1,status:'publicada',registradaEm:'2026-10-15T12:00:00.000Z'},comparacaoBaseComposicao:estado==='COMPLETO'?'DIFERENTE':'SEM_REGISTRO_ANTERIOR',motorVersao:'food06-v1',nutrientes,referencias:{estado:'indisponivel',motivo:'referencias_nao_habilitadas'},bases:{planejamentoDocumentado:true,composicaoDocumentada:true,contextoDocumentado:true}};
+}
 test('FOOD06 carrega sob demanda, diferencia zero/parcial/ausente, filtra e atende teclado/axe',async({page},testInfo)=>{
   let pedidos=0;
   await page.route(url=>url.pathname.endsWith('/analise-micronutrientes'),route=>{pedidos++;return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify(analise(route.request().postDataJSON()))});});
@@ -170,4 +176,39 @@ test('FOOD06 fonte, ordem global e consulta exata da origem publicada',async({pa
   await page.route(u=>u.pathname.endsWith('/versoes/1'),r=>r.fulfill({status:403,json:{message:'CANARIO_INTERNO'}}));
   await botao.click();await expect(page.getByText('200 kcal',{exact:true})).toHaveCount(0);
   await expect(page.getByRole('dialog')).toHaveCount(0);await expect(page.locator('body')).not.toContainText('CANARIO_INTERNO');
+});
+
+test('FOOD06 M10 histórico pagina registros parciais sem interpolar e mantém tabela acessível',async({page})=>{
+ const idAtual='20000000-0000-4000-8000-000000000010',idAnterior='20000000-0000-4000-8000-000000000011';let chamadas=0;
+ await page.route(u=>u.pathname.endsWith('/analise-micronutrientes'),r=>r.fulfill({status:200,json:analise(r.request().postDataJSON())}));
+ await page.route(u=>u.pathname.endsWith('/analises-factuais/historico'),r=>{
+  chamadas++;
+  const atual=chamadas===1,registro=registroHistorico(atual?idAtual:idAnterior,atual?'2026-11-05T12:00:00.000Z':'2026-11-04T12:00:00.000Z',atual?'COMPLETO':'PARCIAL',atual?0:1.25);
+  return r.fulfill({status:200,json:{schemaVersao:1,itens:[registro],temMais:atual,...(atual?{proximoCursor:{id:idAtual,criadoEm:'2026-11-05T12:00:00.000000Z'}}:{})}});
+ });
+ await preparar(page);await page.getByRole('button',{name:'Ver histórico de micronutrientes',exact:true}).click();
+ const historico=page.getByRole('region',{name:'Histórico de micronutrientes planejados',exact:true});
+ await expect(historico.getByRole('row')).toHaveCount(2);await expect(historico).toContainText('0 mg');await expect(historico).toContainText('Os pontos não são ligados');
+ await expect(historico).toContainText('causa não estabelecida');
+ await expect(historico.locator('polyline,path')).toHaveCount(0);await expect(historico.locator('circle')).toHaveCount(1);
+ await historico.getByRole('button',{name:'Carregar registros anteriores',exact:true}).click();
+ await expect(historico.getByRole('row')).toHaveCount(3);await expect(historico).toContainText('1,25 mg contabilizados; total real desconhecido');await expect(historico).toContainText('Fim do histórico disponível.');
+ expect(chamadas).toBe(2);
+ await historico.getByLabel('Nutriente no histórico').selectOption('selenioMcg');await expect(historico).toContainText('Composição desconhecida');await expect(historico.locator('circle')).toHaveCount(0);
+ expect((await new AxeBuilder({page}).include('[aria-label="Histórico de micronutrientes planejados"]').analyze()).violations).toEqual([]);
+});
+
+test('FOOD06 M10 revogação de acesso no histórico invalida também a análise atual',async({page})=>{
+ const id='20000000-0000-4000-8000-000000000020';
+ await page.route(u=>u.pathname.endsWith('/analise-micronutrientes'),r=>r.fulfill({status:200,json:analise(r.request().postDataJSON())}));
+ await page.route(u=>u.pathname.endsWith('/analises-factuais/historico'),r=>r.fulfill({status:200,json:{schemaVersao:1,itens:[registroHistorico(id,'2026-11-05T12:00:00.000Z')],temMais:true,proximoCursor:{id,criadoEm:'2026-11-05T12:00:00.000000Z'}}}));
+ await preparar(page);await page.getByRole('button',{name:'Ver histórico de micronutrientes',exact:true}).click();
+ const historico=page.getByRole('region',{name:'Histórico de micronutrientes planejados',exact:true});
+ await expect(historico).toContainText('0 mg');
+ await page.route(u=>u.pathname.endsWith('/analises-factuais/historico'),r=>r.fulfill({status:403,contentType:'application/json',body:'{"message":"CANARIO_ACESSO_NEGADO"}'}));
+ await historico.getByRole('button',{name:'Carregar registros anteriores',exact:true}).click();
+ await expect(historico.getByRole('button',{name:'Ver histórico de micronutrientes',exact:true})).toBeDisabled();
+ await expect(regiao(page).getByRole('rowheader')).toHaveCount(0);
+ await expect(page.locator('body')).not.toContainText('CANARIO_ACESSO_NEGADO');
+ await expect(page.locator('body')).not.toContainText('200 kcal');
 });

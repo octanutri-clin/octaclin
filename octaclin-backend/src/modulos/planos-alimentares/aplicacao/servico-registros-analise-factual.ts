@@ -1,5 +1,5 @@
-import { projetarRegistroFactual,projetarComparacaoFactual } from './projecao-registro-factual';
-import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException, UnprocessableEntityException } from '@nestjs/common';
+import { compararBaseComposicaoHistorica,projetarRegistroFactual,projetarComparacaoFactual,projetarResumoHistoricoFactual } from './projecao-registro-factual';
+import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException, PayloadTooLargeException, UnprocessableEntityException } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
 import { isUUID } from 'class-validator';
 import { IsNull, type EntityManager } from 'typeorm';
@@ -217,6 +217,32 @@ export class ServicoRegistrosAnaliseFactual {
    // O timestamp é gerado pelo banco; não reconstruir uma data de aplicação.
    const salvo=await repo.findOneOrFail({select:{id:true,criadoEm:true},where:{tenantId,id:r.id}});
    return projetar(salvo);
+  });
+ }
+ async historico(tenant:string,paciente:string,usuario:UsuarioAutenticado,limite=10,cursorId?:string,cursorCriadoEm?:string){
+  const tenantId=uuid(tenant),pacienteId=uuid(paciente);this.autorizar(tenantId,usuario,false);
+  if(!Number.isSafeInteger(limite)||limite<1||limite>10||(cursorId===undefined)!==(cursorCriadoEm===undefined))throw new BadRequestException('Paginação inválida.');
+  let cursorData:string|undefined,cursorUuid:string|undefined;
+  if(cursorId!==undefined&&cursorCriadoEm!==undefined){
+   cursorUuid=uuid(cursorId);cursorData=cursorCriadoEm;
+   if(!Number.isFinite(Date.parse(cursorData))||!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{6}Z$/.test(cursorData))throw new BadRequestException('Paginação inválida.');
+  }
+  return this.executor.executar(tenantId,async g=>{
+   await this.carteira(g,tenantId,pacienteId,usuario);
+   const q=g.getRepository(RegistroAnaliseFactualOrm).createQueryBuilder('registro')
+    .select(['registro.id','registro.tenantId','registro.pacienteId','registro.profissionalId','registro.usuarioId','registro.chaveIdempotencia','registro.criadoEm','registro.conteudoCriptografado'])
+    .where('registro.tenant_id = :tenantId AND registro.paciente_id = :pacienteId',{tenantId,pacienteId})
+    .addSelect(`to_char(registro.criado_em AT TIME ZONE 'UTC', 'YYYY-MM-DD\"T\"HH24:MI:SS.US\"Z\"')`,'cursor_criado_em')
+    .orderBy('registro.criado_em','DESC').addOrderBy('registro.id','DESC').take(limite+1);
+   if(cursorData&&cursorUuid)q.andWhere('(registro.criado_em < :cursorData OR (registro.criado_em = :cursorData AND registro.id < :cursorUuid))',{cursorData,cursorUuid});
+   const resultado=await q.getRawAndEntities(),consultados=resultado.entities,temMais=consultados.length>limite,itens=consultados.slice(0,limite);
+   const bytes=itens.reduce((soma,r)=>soma+(Buffer.isBuffer(r.conteudoCriptografado)?r.conteudoCriptografado.byteLength:Infinity),0);
+   if(!Number.isSafeInteger(bytes)||bytes>10*1024*1024)throw new PayloadTooLargeException('Reduza a quantidade de registros por página.');
+   const registros=itens.map(r=>this.decifrarRegistro(r)),maisAntigoConsultado=temMais?this.decifrarRegistro(consultados[limite]):undefined;
+   const resumos=registros.map((r,i)=>projetarResumoHistoricoFactual(itens[i],r,compararBaseComposicaoHistorica(r,registros[i+1]??maisAntigoConsultado)));
+   const ultimo=itens.at(-1),ultimoRaw=resultado.raw.at(limite-1) as {cursor_criado_em?:unknown}|undefined;
+   if(temMais&&ultimo&&(typeof ultimoRaw?.cursor_criado_em!=='string'))throw new UnprocessableEntityException('Cursor do histórico indisponível.');
+   return {itens:resumos,temMais,...(temMais&&ultimo?{proximoCursor:{id:ultimo.id,criadoEm:ultimoRaw!.cursor_criado_em as string}}:{})};
   });
  }
  async listar(tenant:string,paciente:string,usuario:UsuarioAutenticado,pagina=1,limite=25):Promise<{itens:MetadadosRegistro[];total:number;pagina:number;limite:number}>{

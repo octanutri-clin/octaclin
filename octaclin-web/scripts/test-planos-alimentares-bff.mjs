@@ -9,6 +9,7 @@ const temporaria = mkdtempSync(join(tmpdir(), 'octaclin-planos-alimentares-bff-'
 const arquivos = [
   'app/api/pacientes/[id]/planos-alimentares/analises-factuais/route.ts',
   'app/api/pacientes/[id]/planos-alimentares/analises-factuais/listar/route.ts',
+  'app/api/pacientes/[id]/planos-alimentares/analises-factuais/historico/route.ts',
   'app/api/pacientes/[id]/planos-alimentares/analises-factuais/consultar/route.ts',
   'app/api/pacientes/[id]/planos-alimentares/analises-factuais/comparar/route.ts',
   'app/api/pacientes/[id]/planos-alimentares/analises-factuais/_proxy.ts',
@@ -83,6 +84,7 @@ writeFileSync(join(temporaria, 'tsconfig.json'), JSON.stringify({
   extends: join(raiz, 'tsconfig.json'),
   compilerOptions: {
     noEmit: false,
+    incremental: false,
     outDir: temporaria,
     rootDir: raiz,
     module: 'commonjs',

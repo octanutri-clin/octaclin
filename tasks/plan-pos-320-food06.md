@@ -1,10 +1,9 @@
 # FOOD06 — comparação factual com referências dietéticas
 
-> Estado vigente — API/BFF factual M05/M07: [contratos, testes e handoff](food06-api-registros-factuais.md).
-> Quatro POSTs, projeções mínimas, paginação e reautorização; P2 caixa corrigido com RED/GREEN.
->42HTTP/projeções/bootstrap,101BFF e61PG PASS; R4 delimitada sem achados pendentes.
-> M05/M07 parciais,37,5% administrativos. Builds/typechecks Node22 PASS; CI próprio/authz completa em validação.
-> Contexto/UI e direitos/DRI/G06 pendentes; sem operações externas. Histórico abaixo substituído.
+> Estado vigente local — M10 longitudinal iniciou sobre a base remota f731c807; implementação ainda não enviada.
+> API de histórico keyset, projeção mínima e UI profissional estão implementadas com testes locais; M10 PARCIAL.
+> Evidências e limitações: [checkpoint M10](food06-m10-historico.md). Nenhuma referência DRI ou dado clínico externo foi habilitado.
+> CI novo, build completo, revisão UX B/C e R4 pendentes; G06 operacional, direitos/DRI e produção permanecem BLOCKED.
 
 > Histórico — fonte DB de versão salva M05/M07: [contrato/evidências](food06-fonte-versao.md).
 > Origem exata, revisão sob lock e materialização atual; confirmação operacional cifrada v2.

@@ -1,6 +1,6 @@
 # FOOD06 — API/BFF de registros factuais M05/M07
 
-## Estado e limites
+## Estado do incremento M05/M07 (checkpoint anterior)
 
 Incremento da PR #455 Draft, sobre remoto `c6dd0a3d` (mesma árvore do local
 `cc630629`). API factual autorizada, sem habilitar DRI, sem contexto clínico
@@ -60,6 +60,24 @@ Leitores v1/v2, confirmação de origem cifrada v2 e histórico imutável preser
 Código anterior ao v2 não é rollback seguro após novas gravações; continua gate
 operacional separado. O proxy legado mantém comportamento dos chamadores antigos;
 leitura diferida foi adicionada como parâmetro opcional para estas quatro rotas.
+
+## Continuidade local — leitura histórica M10
+
+O incremento mais recente acrescenta um quinto POST `historico`, com DTO de limite
+até10 e cursor keyset (`registroId` + timestamp UTC em microssegundos), endpoint
+BFF e tela profissional sob demanda. A projeção mantém somente totais completos,
+subtotais parciais identificados, cobertura, origem da versão e marcas booleanas
+das bases documentais; referências seguem explicitamente indisponíveis. O histórico
+permanece cifrado e imutável; não há migration.
+
+Testes atuais no delta local da branch `feat/food06-main-sync` sobre o HEAD base
+remoto `f731c807`: integração PostgreSQL/RLS41/41, BFF105/105, testes Web68/68,
+typecheck/lint PASS, Playwright desktop/mobile24/24. Isso não é CI do HEAD enviado:
+o delta ainda não foi commitado/pushado. Build backend/Web, rotas assíncronas,
+scanner local de segredos e `git diff --check` também passaram. O authz agregado não
+executou testes porque o harness falhou ao criar `tsbuildinfo` sem permissão; CI e
+scanners GitHub do novo HEAD, UX B/C e R4 continuam pendentes. Consulte
+[M10 histórico](food06-m10-historico.md).
 
 ## TDD e evidências
 

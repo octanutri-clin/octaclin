@@ -1,5 +1,6 @@
 import { POST as registrarFactual } from '../app/api/pacientes/[id]/planos-alimentares/analises-factuais/route';
 import { POST as listarFactuais } from '../app/api/pacientes/[id]/planos-alimentares/analises-factuais/listar/route';
+import { POST as historicoFactuais } from '../app/api/pacientes/[id]/planos-alimentares/analises-factuais/historico/route';
 import { POST as consultarFactual } from '../app/api/pacientes/[id]/planos-alimentares/analises-factuais/consultar/route';
 import { POST as compararFactuais } from '../app/api/pacientes/[id]/planos-alimentares/analises-factuais/comparar/route';
 import { POST as previaMicros } from '../app/api/pacientes/[id]/planos-alimentares/[planoId]/rascunho/previa-micronutrientes/route';
@@ -1552,7 +1553,7 @@ for (const [nome,rota] of [['prévia',previaMicros],['confirmação',confirmarMi
  });
 }
 
-for(const [nome,acao,fim,perm] of [['registro',registrarFactual,'','planos_alimentares.gerenciar'],['listar',listarFactuais,'/listar','planos_alimentares.ler'],['consultar',consultarFactual,'/consultar','planos_alimentares.ler'],['comparar',compararFactuais,'/comparar','planos_alimentares.ler']] as const){
+for(const [nome,acao,fim,perm] of [['registro',registrarFactual,'','planos_alimentares.gerenciar'],['listar',listarFactuais,'/listar','planos_alimentares.ler'],['histórico',historicoFactuais,'/historico','planos_alimentares.ler'],['consultar',consultarFactual,'/consultar','planos_alimentares.ler'],['comparar',compararFactuais,'/comparar','planos_alimentares.ler']] as const){
  test(`FOOD06 registros ${nome}: proxy autorizado, body privado e sem query`,async()=>{
   __setCookies(cookiesSessaoValida([perm]));const original=global.fetch;let chamadas=0;
   global.fetch=(async(entrada:string|URL|Request,init?:RequestInit)=>{chamadas++;assert.equal(String(entrada),'http://backend.octaclin.local/pacientes/paciente%2F1/planos-alimentares/analises-factuais'+fim);assert.equal(init?.method,'POST');assert.equal(init?.body,'{"registroId":"sintetico"}');return Response.json({schemaVersao:1});}) as typeof fetch;

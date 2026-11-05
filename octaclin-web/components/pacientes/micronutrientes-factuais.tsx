@@ -1,6 +1,7 @@
 'use client';
 import {AjudaInterpretacaoMicronutrientes} from './ajuda-interpretacao-micronutrientes';
 import { ContribuicoesMicronutrientes } from './contribuicoes-micronutrientes';
+import { HistoricoMicronutrientesFactuais } from './historico-micronutrientes-factuais';
 import { useCallback, useEffect, useId, useState } from 'react';
 import { analisarMicronutrientesPlanejados } from '@/lib/calculo-combinado-planos-api';
 import { ErroApiPlanoAlimentar, type CalcularCombinadoEntradaApi } from '@/lib/plano-alimentar-api';
@@ -78,5 +79,6 @@ export function MicronutrientesFactuais({aoInvalidarLeitura,nomesPlanos,paciente
         </>:null}
       </div>:null}
     </div>
+    <HistoricoMicronutrientesFactuais key={`${pacienteId}:${leituraPermitida?'leitura':'bloqueado'}`} pacienteId={pacienteId} nomesPlanos={nomesPlanos} leituraPermitida={leituraPermitida} aoInvalidar={invalidarDetalhe}/>
   </section>;
 }
