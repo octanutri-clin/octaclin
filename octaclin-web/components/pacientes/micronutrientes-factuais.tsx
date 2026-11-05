@@ -1,19 +1,21 @@
 'use client';
+import { RegistroAnaliseFactual } from './registro-analise-factual';
 import {AjudaInterpretacaoMicronutrientes} from './ajuda-interpretacao-micronutrientes';
 import { ContribuicoesMicronutrientes } from './contribuicoes-micronutrientes';
 import { HistoricoMicronutrientesFactuais } from './historico-micronutrientes-factuais';
 import { useCallback, useEffect, useId, useState } from 'react';
 import { analisarMicronutrientesPlanejados } from '@/lib/calculo-combinado-planos-api';
-import { ErroApiPlanoAlimentar, type CalcularCombinadoEntradaApi } from '@/lib/plano-alimentar-api';
+import { ErroApiPlanoAlimentar, type SelecaoCalculoLocal, type CalcularCombinadoEntradaApi } from '@/lib/plano-alimentar-api';
 import { CAUSAS_COBERTURA_FACTUAL, filtrarMicronutrientesFactuais, type AnaliseMicronutrientesFactual, type EstadoCoberturaFactual, type FiltrosMicronutrientesFactuais } from '@/lib/micronutrientes-factuais';
 import { formatarNutrientePlano } from '@/lib/micronutrientes-plano';
 const ESTADOS: Record<EstadoCoberturaFactual,string> = {
   COMPLETO:'Dados completos', PARCIAL:'Dados parciais', DESCONHECIDO:'Composição desconhecida', INCOMPATIVEL:'Dados incompatíveis', INDISPONIVEL:'Cálculo indisponível'
 };
 const FILTROS_INICIAIS: FiltrosMicronutrientesFactuais = {grupo:'todos',cobertura:'todas',ordem:'nome'};
-interface Props { aoInvalidarLeitura:(status:number)=>void; nomesPlanos:Record<string,string>; pacienteId: string; entrada: CalcularCombinadoEntradaApi; chaveContexto: string; aoAtualizarSelecao: () => Promise<boolean>; atualizando: boolean; leituraPermitida: boolean }
-export function MicronutrientesFactuais({aoInvalidarLeitura,nomesPlanos,pacienteId,entrada,chaveContexto,aoAtualizarSelecao,atualizando,leituraPermitida}:Props) {
+interface Props { planosRegistro:SelecaoCalculoLocal[];  aoInvalidarLeitura:(status:number)=>void; nomesPlanos:Record<string,string>; pacienteId: string; entrada: CalcularCombinadoEntradaApi; chaveContexto: string; aoAtualizarSelecao: () => Promise<boolean>; atualizando: boolean; leituraPermitida: boolean }
+export function MicronutrientesFactuais({planosRegistro,aoInvalidarLeitura,nomesPlanos,pacienteId,entrada,chaveContexto,aoAtualizarSelecao,atualizando,leituraPermitida}:Props) {
   const id=useId();
+  const [revisaoHistorico,setRevisaoHistorico]=useState(0);
   const [aberta,setAberta]=useState(false),[tentativa,setTentativa]=useState(0);
   const [armazenado,setArmazenado]=useState<{chave:string;dados:AnaliseMicronutrientesFactual}|null>(null);
   const [falha,setFalha]=useState<{chave:string;mensagem:string;conflito:boolean}|null>(null);
@@ -79,6 +81,7 @@ export function MicronutrientesFactuais({aoInvalidarLeitura,nomesPlanos,paciente
         </>:null}
       </div>:null}
     </div>
-    <HistoricoMicronutrientesFactuais key={`${pacienteId}:${leituraPermitida?'leitura':'bloqueado'}`} pacienteId={pacienteId} nomesPlanos={nomesPlanos} leituraPermitida={leituraPermitida} aoInvalidar={invalidarDetalhe}/>
+    <RegistroAnaliseFactual pacienteId={pacienteId} planos={planosRegistro} contexto={chaveContexto} permitido={leituraPermitida} aoSalvar={()=>setRevisaoHistorico(v=>v+1)} aoInvalidar={invalidarDetalhe}/>
+    <HistoricoMicronutrientesFactuais key={`${revisaoHistorico}:${pacienteId}:${leituraPermitida?'leitura':'bloqueado'}`} pacienteId={pacienteId} nomesPlanos={nomesPlanos} leituraPermitida={leituraPermitida} aoInvalidar={invalidarDetalhe}/>
   </section>;
 }
