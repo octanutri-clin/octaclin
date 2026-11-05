@@ -1,3 +1,5 @@
+import { resumirFontesRegistro } from './fontes-relatorio-factual';
+import { prepararRelatorioFactual } from './relatorio-analise-factual';
 import { compararBasesHistoricas,projetarRegistroFactual,projetarComparacaoFactual,projetarResumoHistoricoFactual } from './projecao-registro-factual';
 import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException, PayloadTooLargeException, UnprocessableEntityException } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
@@ -63,11 +65,16 @@ export function validarRegistroDeVersaoFactual(entrada:unknown):ComandoRegistroD
 @Injectable()
 export class ServicoRegistrosAnaliseFactual {
  constructor(private readonly executor:ExecutorTenant,private readonly crypto:CriptografiaDadosSensiveis){}
- async consultarApi(tenant:string,paciente:string,usuario:UsuarioAutenticado,registroId:string){
-  const tenantId=uuid(tenant),pacienteId=uuid(paciente),id=uuid(registroId);this.autorizar(tenantId,usuario,false);
+ async prepararRelatorioApi(tenant:string,paciente:string,usuario:UsuarioAutenticado,registroId:string){
+  this.autorizar(uuid(tenant),usuario,true);
+  // Consulta reautoriza carteira e escopo antes de decifrar, na transação existente.
+  return prepararRelatorioFactual(await this.consultarApi(tenant,paciente,usuario,registroId,true));
+ }
+ async consultarApi(tenant:string,paciente:string,usuario:UsuarioAutenticado,registroId:string,incluirFontesDoRelatorio=false){
+  const tenantId=uuid(tenant),pacienteId=uuid(paciente),id=uuid(registroId);this.autorizar(tenantId,usuario,incluirFontesDoRelatorio);
   return this.executor.executar(tenantId,async g=>{
    await this.carteira(g,tenantId,pacienteId,usuario);const r=await this.obterRegistro(g,tenantId,pacienteId,id);
-   return projetarRegistroFactual(r,this.decifrarRegistro(r));
+   const registro=this.decifrarRegistro(r),projecao=projetarRegistroFactual(r,registro);return incluirFontesDoRelatorio?{...projecao,fontesComposicao:resumirFontesRegistro(registro)}:projecao;
   });
  }
  async compararApi(tenant:string,paciente:string,usuario:UsuarioAutenticado,antesId:string,depoisId:string){

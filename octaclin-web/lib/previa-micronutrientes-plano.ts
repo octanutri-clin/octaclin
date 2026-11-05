@@ -13,11 +13,11 @@ export type PedidoOperacaoPrevia = PedidoPreviaMicronutrientes | PedidoPreviaRec
 export interface ValorPrevia {estado:LinhaMicronutrienteFactual['estado'];valor?:number}
 export interface LinhaPrevia {codigo:string;rotulo:string;unidade:string;antes:ValorPrevia;depois:ValorPrevia;delta?:{valor:number;percentual?:number}}
 export interface PreviaMicronutrientes {ajuda?:AjudaDietetica|null;fingerprint:string;linhas:LinhaPrevia[]}
-const MACROS = [{codigo:'energiaKcal',rotulo:'Energia',unidade:'kcal'},{codigo:'proteinasG',rotulo:'Proteínas',unidade:'g'},{codigo:'carboidratosG',rotulo:'Carboidratos',unidade:'g'},{codigo:'gordurasG',rotulo:'Gorduras totais',unidade:'g'}];
+export const CAMPOS_MACRO_FACTUAL = [{codigo:'energiaKcal',rotulo:'Energia',unidade:'kcal'},{codigo:'proteinasG',rotulo:'Proteínas',unidade:'g'},{codigo:'carboidratosG',rotulo:'Carboidratos',unidade:'g'},{codigo:'gordurasG',rotulo:'Gorduras totais',unidade:'g'}];
 function falhar():never {throw new Error('A prévia não pôde ser conferida. Refaça a simulação.');}
 function obj(v:unknown):Record<string,unknown> {if(!v||typeof v!=='object'||Array.isArray(v))return falhar();return v as Record<string,unknown>;}
 function numero(v:unknown):v is number {return typeof v==='number'&&Number.isFinite(v);}
-function valorMacro(v:unknown,codigo:string,unidade:string):ValorPrevia {
+export function lerValorMacroFactual(v:unknown,codigo:string,unidade:string):ValorPrevia {
  const n=obj(v);
  if(n.codigo!==codigo||n.unidade!==unidade||!['completo','parcial','indisponivel'].includes(String(n.estado))||!Number.isSafeInteger(n.itensIncluidos)||Number(n.itensIncluidos)<0||Number(n.itensIncluidos)>10000||!Number.isSafeInteger(n.itensComValor)||Number(n.itensComValor)<0||Number(n.itensComValor)>Number(n.itensIncluidos))return falhar();
  const vConhecido=n.estado==='completo'?n.total:n.quantidadeConhecida;
@@ -62,7 +62,7 @@ export function lerLinhasComparacaoFactual(valor:unknown):LinhaPrevia[] {
  const macros=(e:Record<string,unknown>)=>obj(obj(e.calculo).nutrientes);
  const micros=(e:Record<string,unknown>)=>{const cobertura=obj(e.cobertura);if(cobertura.schemaVersao!==1)return falhar();return obj(cobertura.nutrientes);};
  const ma=macros(antes),mb=macros(depois),ca=micros(antes),cb=micros(depois);
- const linhas=MACROS.map(m=>linha(m,valorMacro(ma[m.codigo],m.codigo,m.unidade),valorMacro(mb[m.codigo],m.codigo,m.unidade)));
+ const linhas=CAMPOS_MACRO_FACTUAL.map(m=>linha(m,lerValorMacroFactual(ma[m.codigo],m.codigo,m.unidade),lerValorMacroFactual(mb[m.codigo],m.codigo,m.unidade)));
  for(const m of CAMPOS_MICRONUTRIENTES_PLANO){const a=lerLinhaMicronutrienteFactual(ca[m.codigo],m.codigo),b=lerLinhaMicronutrienteFactual(cb[m.codigo],m.codigo);linhas.push(linha(m,{estado:a.estado,...(a.valor!==undefined?{valor:a.valor}:{})},{estado:b.estado,...(b.valor!==undefined?{valor:b.valor}:{})}));}
  return linhas;
 }

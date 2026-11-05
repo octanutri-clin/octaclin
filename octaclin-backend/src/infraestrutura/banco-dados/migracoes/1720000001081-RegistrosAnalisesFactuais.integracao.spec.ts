@@ -384,12 +384,26 @@ suite('FOOD06 registro cifrado PostgreSQL15 descartável/RLS/runtime',()=>{
    const criado=await chamar('',f.c);expect(criado.status).toBe(200);const ack=await criado.json() as {registro:{id:string}};expect(ack.registro.id).toBeDefined();
    const consulta=await chamar('/consultar',{registroId:ack.registro.id});expect(consulta.status).toBe(200);const factual=await consulta.json() as any;expect(factual.analise.calculo.nutrientes.energiaKcal.total).toBe(100);
    expect(JSON.stringify(factual)).not.toMatch(/conteudoHash|conteudoCriptografado|confirmacaoOrigem|tenantId|pacienteId|PRIVADO/);expect(consulta.headers.get('cache-control')).toBe('private, no-store');
+   const relatorio=await chamar('/relatorio',{registroId:ack.registro.id});expect(relatorio.status).toBe(200);expect(relatorio.headers.get('cache-control')).toBe('private, no-store');expect((await relatorio.json() as any).analise.calculo.nutrientes.energiaKcal.total).toBe(100);
    const cmp=await chamar('/comparar',{antesId:ack.registro.id,depoisId:ack.registro.id});expect(cmp.status).toBe(200);expect((await cmp.json() as any).atribuicaoCausal).toBe('nao_estabelecida');
    await owner.query('update pacientes set profissional_responsavel_id=$1 where id=$2',[p2,paciente]);
-   for(const [fim,body] of [['/consultar',{registroId:ack.registro.id}],['/comparar',{antesId:ack.registro.id,depoisId:ack.registro.id}],['/listar',{pagina:1,limite:25}],['/historico',{limite:10}],['',f.c]] as const){
+   for(const [fim,body] of [['/relatorio',{registroId:ack.registro.id}],['/consultar',{registroId:ack.registro.id}],['/comparar',{antesId:ack.registro.id,depoisId:ack.registro.id}],['/listar',{pagina:1,limite:25}],['/historico',{limite:10}],['',f.c]] as const){
     const negada=await chamar(fim,body);expect(negada.status).toBe(404);expect(negada.headers.get('cache-control')).toBe('private, no-store');
    }
   }finally{await owner.query('update pacientes set profissional_responsavel_id=$1 where id=$2',[p,paciente]);await app.close();}
+ });
+ it('relatório lê snapshot imutável com fontes sob runtime/RLS e não atualiza registro',async()=>{
+  const f=await fonte();const snapshot={origem:'catalogo',fonte:{baseCodigo:'TACO',codigo:'TACO-v1',versao:'1',hashConteudo:'a'.repeat(64)},nutrientesPor100g:{energiaKcal:100},nutrientesPorcao:{energiaKcal:100},micronutrientes:criarSnapshotMicronutrientes({ferroMg:{estado:'conhecido',valor:0}},100,100)};
+  await owner.query('update plano_alimentar_itens set composicao_snapshot_criptografada=$1 where id=$2',[crypto.criptografar(JSON.stringify(snapshot)),f.itemId]);
+  const registro=await s.registrarVersao(tenant,paciente,u,f.c),cipher=(await owner.query('select conteudo_criptografado from registros_analises_factuais where id=$1',[registro.id])).rows[0].conteudo_criptografado;
+  await owner.query('update plano_alimentar_itens set composicao_snapshot_criptografada=$1 where id=$2',[crypto.criptografar(JSON.stringify({...snapshot,nutrientesPorcao:{energiaKcal:999}})),f.itemId]);
+  const r=await s.prepararRelatorioApi(tenant,paciente,u,registro.id);
+  expect(r.analise.calculo.nutrientes.energiaKcal.total).toBe(100);expect(r.analise.cobertura.nutrientes.ferroMg.total).toBe(0);expect(r.fontesComposicao).toMatchObject({estado:'resumo_documentado',itensIncluidos:1,fontes:[{tipo:'TACO',versao:'1',quantidade:1}]});
+  expect(JSON.stringify(r)).not.toMatch(/hashConteudo|conteudoHash|confirmacaoOrigem|conteudoCriptografado|PRIVADO/);
+  expect((await owner.query('select conteudo_criptografado from registros_analises_factuais where id=$1',[registro.id])).rows[0].conteudo_criptografado).toEqual(cipher);
+  await expect(s.prepararRelatorioApi(tenant,outroPaciente,u,registro.id)).rejects.toMatchObject({status:404});
+  await expect(s.prepararRelatorioApi(otherTenant,paciente,u,registro.id)).rejects.toMatchObject({status:403});
+  await expect(s.prepararRelatorioApi(tenant,paciente,{...u,permissoes:['planos_alimentares.ler']},registro.id)).rejects.toMatchObject({status:403});
  });
  it('histórico decifra apenas a página autorizada e projeta zero/ausência sem expor envelopes ou marcadores',async()=>{
   const e=dados();e.refeicoes[0].itens[0].snapshot={origem:'catalogo',alimentoComposicaoId:'alimento-sintetico',codigoOrigem:'A1',descricao:'CANARIO_HISTORICO',preparacao:'Cozido',

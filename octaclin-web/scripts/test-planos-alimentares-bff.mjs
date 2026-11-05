@@ -8,6 +8,7 @@ const raiz = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const temporaria = mkdtempSync(join(tmpdir(), 'octaclin-planos-alimentares-bff-'));
 const arquivos = [
   'app/api/pacientes/[id]/planos-alimentares/analises-factuais/route.ts',
+  'app/api/pacientes/[id]/planos-alimentares/analises-factuais/relatorio/route.ts',
   'app/api/pacientes/[id]/planos-alimentares/analises-factuais/listar/route.ts',
   'app/api/pacientes/[id]/planos-alimentares/analises-factuais/historico/route.ts',
   'app/api/pacientes/[id]/planos-alimentares/analises-factuais/consultar/route.ts',

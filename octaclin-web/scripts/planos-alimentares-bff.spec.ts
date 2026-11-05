@@ -1,3 +1,4 @@
+import { POST as relatorioFactual } from '../app/api/pacientes/[id]/planos-alimentares/analises-factuais/relatorio/route';
 import { POST as registrarFactual } from '../app/api/pacientes/[id]/planos-alimentares/analises-factuais/route';
 import { POST as listarFactuais } from '../app/api/pacientes/[id]/planos-alimentares/analises-factuais/listar/route';
 import { POST as historicoFactuais } from '../app/api/pacientes/[id]/planos-alimentares/analises-factuais/historico/route';
@@ -1587,7 +1588,7 @@ for (const [nome,rota] of [['prévia',previaMicros],['confirmação',confirmarMi
  });
 }
 
-for(const [nome,acao,fim,perm] of [['registro',registrarFactual,'','planos_alimentares.gerenciar'],['listar',listarFactuais,'/listar','planos_alimentares.ler'],['histórico',historicoFactuais,'/historico','planos_alimentares.ler'],['consultar',consultarFactual,'/consultar','planos_alimentares.ler'],['comparar',compararFactuais,'/comparar','planos_alimentares.ler']] as const){
+for(const [nome,acao,fim,perm] of [['relatório',relatorioFactual,'/relatorio','planos_alimentares.gerenciar'],['registro',registrarFactual,'','planos_alimentares.gerenciar'],['listar',listarFactuais,'/listar','planos_alimentares.ler'],['histórico',historicoFactuais,'/historico','planos_alimentares.ler'],['consultar',consultarFactual,'/consultar','planos_alimentares.ler'],['comparar',compararFactuais,'/comparar','planos_alimentares.ler']] as const){
  test(`FOOD06 registros ${nome}: proxy autorizado, body privado e sem query`,async()=>{
   __setCookies(cookiesSessaoValida([perm]));const original=global.fetch;let chamadas=0;
   global.fetch=(async(entrada:string|URL|Request,init?:RequestInit)=>{chamadas++;assert.equal(String(entrada),'http://backend.octaclin.local/pacientes/paciente%2F1/planos-alimentares/analises-factuais'+fim);assert.equal(init?.method,'POST');assert.equal(init?.body,'{"registroId":"sintetico"}');return Response.json({schemaVersao:1});}) as typeof fetch;
@@ -1623,4 +1624,9 @@ test('FOOD06 registros: leitura interrompida não chama backend nem revela erro'
  global.fetch=(async()=>{chamadas++;return Response.json({});}) as typeof fetch;
  const stream=new ReadableStream<Uint8Array>({start(c){c.error(new Error('CANARIO_STREAM'));}});
  try{const r=await consultarFactual(new Request('http://localhost/analise',{method:'POST',body:stream,duplex:'half'} as RequestInit),{params:Promise.resolve({id:'paciente'})});assert.equal(r.status,400);assert.equal(r.headers.get('cache-control'),'private, no-store');assert.doesNotMatch(await r.text(),/CANARIO_STREAM/);assert.equal(chamadas,0);}finally{restaurarFetch(original);__clearCookies();}
+});
+
+test('FOOD06 relatório: leitura isolada não concede exportação',async()=>{
+ __setCookies(cookiesSessaoValida(['planos_alimentares.ler']));const original=global.fetch;let chamadas=0;global.fetch=(async()=>{chamadas++;return Response.json({});}) as typeof fetch;
+ try{const r=await relatorioFactual(new Request('http://localhost/relatorio',{method:'POST',body:'{}'}),{params:Promise.resolve({id:'paciente'})});assert.equal(r.status,403);assert.equal(chamadas,0);}finally{restaurarFetch(original);__clearCookies();}
 });

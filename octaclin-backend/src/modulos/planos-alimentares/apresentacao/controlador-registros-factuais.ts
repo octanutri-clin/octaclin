@@ -24,6 +24,8 @@ export class ControladorRegistrosFactuais {
  }
  @Post('historico') @HttpCode(200) @Permissoes('planos_alimentares.ler') @Header('Cache-Control','private, no-store')
  async historico(@UsuarioAtual() u:UsuarioAutenticado,@Param('pacienteId',ParseUUIDPipe) p:string,@Body() d:HistoricoRegistrosFactuaisDto){return {schemaVersao:1,...await this.servico.historico(u.tenantId,p,u,d.limite,d.cursorId,d.cursorCriadoEm)};}
+ @Post('relatorio') @HttpCode(200) @Permissoes('planos_alimentares.ler','planos_alimentares.gerenciar') @Header('Cache-Control','private, no-store')
+ prepararRelatorio(@UsuarioAtual() u:UsuarioAutenticado,@Param('pacienteId',ParseUUIDPipe) p:string,@Body() d:ConsultarRegistroFactualDto){return this.servico.prepararRelatorioApi(u.tenantId,p,u,d.registroId);}
  @Post('consultar') @HttpCode(200) @Permissoes('planos_alimentares.ler') @Header('Cache-Control','private, no-store')
  consultar(@UsuarioAtual() u:UsuarioAutenticado,@Param('pacienteId',ParseUUIDPipe) p:string,@Body() d:ConsultarRegistroFactualDto){return this.servico.consultarApi(u.tenantId,p,u,d.registroId);}
  @Post('comparar') @HttpCode(200) @Permissoes('planos_alimentares.ler') @Header('Cache-Control','private, no-store')

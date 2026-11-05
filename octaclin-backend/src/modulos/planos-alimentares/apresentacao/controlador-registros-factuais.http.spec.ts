@@ -20,15 +20,23 @@ describe('API factual M05/M07',()=>{
  const listar=jest.fn(async()=>({itens:[{id,criadoEm:data,segredo:'CANARIO'}],total:1,pagina:1,limite:25,segredo:'CANARIO'}));
  const historico=jest.fn(async()=>({itens:[{schemaVersao:1,registro:{id,criadoEm:data.toISOString()},nutrientes:{}}],temMais:false}));
  const consultarApi=jest.fn(async()=>({schemaVersao:1,motorVersao:'food06-registro-api-v1'}));
+ const prepararRelatorioApi=jest.fn(async()=>({schemaVersao:1,motorVersao:'food06-relatorio-factual-v1'}));
  const compararApi=jest.fn(async()=>({schemaVersao:1,motorVersao:'food06-comparacao-api-v1'}));
  const prefixo=()=>`${url}/pacientes/${id}/planos-alimentares/analises-factuais`;
  const chamar=(sufixo:string,body:unknown,papel='Professional',perms='planos_alimentares.ler,planos_alimentares.gerenciar')=>fetch(prefixo()+sufixo,{method:'POST',headers:{'content-type':'application/json',...(papel?{'x-papel-sintetico':papel,'x-permissoes-sinteticas':perms}:{})},body:JSON.stringify(body)});
  beforeAll(async()=>{
-  const module=await Test.createTestingModule({controllers:[ControladorRegistrosFactuais],providers:[{provide:ServicoRegistrosAnaliseFactual,useValue:{registrarVersao,listar,historico,consultarApi,compararApi}},{provide:ServicoAuditoria,useValue:{registrar:async()=>undefined}}]})
+  const module=await Test.createTestingModule({controllers:[ControladorRegistrosFactuais],providers:[{provide:ServicoRegistrosAnaliseFactual,useValue:{registrarVersao,listar,historico,consultarApi,compararApi,prepararRelatorioApi}},{provide:ServicoAuditoria,useValue:{registrar:async()=>undefined}}]})
    .overrideGuard(GuardaJwt).useValue({canActivate(c:ExecutionContext){const r=c.switchToHttp().getRequest();if(!r.headers['x-papel-sintetico'])throw new UnauthorizedException();r.usuarioAutenticado={tenantId:id,usuarioId:id,papel:r.headers['x-papel-sintetico'],permissoes:String(r.headers['x-permissoes-sinteticas']??'').split(','),emailHash:''};return true;}}).compile();
   app=module.createNestApplication<NestExpressApplication>({rawBody:true});app.useLogger(false);app.use(middlewareAnalisesFactuais);app.useBodyParser('json',{limit:'100kb'});app.use(middlewareErroAnalisesFactuais,middlewareLimiteAnalisesFactuais);app.useGlobalPipes(criarPipeValidacaoHttp());await app.listen(0,'127.0.0.1');url=`http://127.0.0.1:${(app.getHttpServer().address() as AddressInfo).port}`;
  });
  afterAll(async()=>{await app?.close();});
+ it('relatório exige ler e gerenciar, usa registro exato e não guarda cache',async()=>{
+  prepararRelatorioApi.mockClear();
+  const r=await chamar('/relatorio',{registroId:id});expect(r.status).toBe(200);expect(r.headers.get('cache-control')).toBe('private, no-store');expect(await r.json()).toEqual({schemaVersao:1,motorVersao:'food06-relatorio-factual-v1'});
+  expect(prepararRelatorioApi).toHaveBeenCalledWith(id,id,expect.objectContaining({usuarioId:id}),id);
+  expect((await chamar('/relatorio',{registroId:id},'Professional','planos_alimentares.ler')).status).toBe(403);
+  expect((await chamar('/relatorio',{registroId:id,analise:{valor:'CANARIO'}})).status).toBe(400);expect((await chamar('/relatorio',{registroId:id,incluirFontesDoRelatorio:true})).status).toBe(400);
+ });
  it('registro usa identidade autenticada e projeta metadados sem campos extras',async()=>{
   registrarVersao.mockClear();const r=await chamar('',fonte);expect(r.status).toBe(200);expect(await r.json()).toEqual({schemaVersao:1,registro:{id,criadoEm:data.toISOString()}});expect(r.headers.get('cache-control')).toBe('private, no-store');
   expect(registrarVersao.mock.calls).toEqual([[id,id,expect.objectContaining({usuarioId:id,tenantId:id}),fonte]]);
