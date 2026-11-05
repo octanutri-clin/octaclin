@@ -32,6 +32,12 @@ function valorMacro(v:unknown,codigo:string,unidade:string):ValorPrevia {
 export function lerPreviaMicronutrientes(valor:unknown,pedido:PedidoOperacaoPrevia):PreviaMicronutrientes {
  const r=obj(valor),c=obj(r.comparacao),ref=obj(c.referencias);
  if(r.schemaVersao!==1||r.motorVersao!=='food06-previa-api-v1'||r.escopo!=='rascunho_refeicoes_ativas'||r.rascunhoId!==pedido.rascunhoIdEsperado||r.rascunhoRevisao!==pedido.rascunhoRevisaoEsperada||r.ativacaoRevisao!==pedido.ativacaoRevisaoEsperada||typeof r.fingerprint!=='string'||!/^[a-f0-9]{64}$/.test(r.fingerprint)||c.schemaVersao!==1||c.motorVersao!=='food06-previa-factual-v1'||ref.estado!=='indisponivel'||ref.motivo!=='referencias_nao_habilitadas')return falhar();
+ return {fingerprint:r.fingerprint,linhas:lerLinhasComparacaoFactual(c),...(r.ajuda!==undefined?{ajuda:lerAjudaDietetica(r.ajuda)}:{})};
+}
+/** Valida a mesma comparação factual usada em prévias e registros históricos. */
+export function lerLinhasComparacaoFactual(valor:unknown):LinhaPrevia[] {
+ const c=obj(valor);
+ if(c.schemaVersao!==1||c.motorVersao!=='food06-previa-factual-v1')return falhar();
  const antes=obj(c.antes),depois=obj(c.depois),dif=obj(c.diferencas);
  const linha=(campo:{codigo:string;rotulo:string;unidade:string},a:ValorPrevia,b:ValorPrevia):LinhaPrevia=>{
   const d=obj(dif[campo.codigo]),delta=obj(d.delta),completos=a.estado==='COMPLETO'&&b.estado==='COMPLETO';
@@ -58,7 +64,7 @@ export function lerPreviaMicronutrientes(valor:unknown,pedido:PedidoOperacaoPrev
  const ma=macros(antes),mb=macros(depois),ca=micros(antes),cb=micros(depois);
  const linhas=MACROS.map(m=>linha(m,valorMacro(ma[m.codigo],m.codigo,m.unidade),valorMacro(mb[m.codigo],m.codigo,m.unidade)));
  for(const m of CAMPOS_MICRONUTRIENTES_PLANO){const a=lerLinhaMicronutrienteFactual(ca[m.codigo],m.codigo),b=lerLinhaMicronutrienteFactual(cb[m.codigo],m.codigo);linhas.push(linha(m,{estado:a.estado,...(a.valor!==undefined?{valor:a.valor}:{})},{estado:b.estado,...(b.valor!==undefined?{valor:b.valor}:{})}));}
- return {fingerprint:r.fingerprint,linhas,...(r.ajuda!==undefined?{ajuda:lerAjudaDietetica(r.ajuda)}:{})};
+ return linhas;
 }
 export function lerAckPrevia(valor:unknown,pedido:PedidoOperacaoPrevia):{id:string;rascunhoRevisao:number} {
  const r=obj(valor);

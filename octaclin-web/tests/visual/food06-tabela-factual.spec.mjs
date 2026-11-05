@@ -216,3 +216,40 @@ test('FOOD06 M10 revogação de acesso no histórico invalida também a análise
  await expect(page.locator('body')).not.toContainText('CANARIO_ACESSO_NEGADO');
  await expect(page.locator('body')).not.toContainText('200 kcal');
 });
+
+test('FOOD06 M07 compara duas análises salvas e apresenta cobertura sem diagnóstico',async({page})=>{
+ const antes='20000000-0000-4000-8000-000000000031',depois='20000000-0000-4000-8000-000000000032';let pedido;
+ const a=registroHistorico(antes,'2026-11-04T12:00:00.000Z','COMPLETO',2),b=registroHistorico(depois,'2026-11-05T12:00:00.000Z','COMPLETO',3);
+ await page.route(u=>u.pathname.endsWith('/analises-factuais/historico'),r=>r.fulfill({status:200,json:{schemaVersao:1,itens:[b,a],temMais:false}}));
+ await page.route(u=>u.pathname.endsWith('/analises-factuais/comparar'),r=>{
+  pedido=r.request().postDataJSON();const macros=['energiaKcal','proteinasG','carboidratosG','gordurasG'];
+  const estado=(registro,valor)=>({calculo:{nutrientes:Object.fromEntries(macros.map(c=>[c,{codigo:c,unidade:c==='energiaKcal'?'kcal':'g',estado:'completo',total:valor,itensComValor:1,itensIncluidos:1}]))},cobertura:{schemaVersao:1,nutrientes:registro.nutrientes}});
+  const campos=[...macros.map(c=>({codigo:c,unidade:c==='energiaKcal'?'kcal':'g'})),...Object.values(a.nutrientes).map(n=>({codigo:n.codigo,unidade:n.unidade}))];
+  const diferencas=Object.fromEntries(campos.map(c=>[c.codigo,{...c,delta:c.codigo==='ferroMg'||macros.includes(c.codigo)?{estado:'calculavel',diferenca:c.codigo==='ferroMg'?1:50,percentual:{estado:'calculavel',valor:50,arredondado:false}}:{estado:'indisponivel',motivo:'composicao_incompleta'}}]));
+  return r.fulfill({status:200,json:{schemaVersao:1,motorVersao:'food06-comparacao-api-v1',escopoComparacao:'total_de_cada_versao_separadamente',antes:{registro:a.registro},depois:{registro:b.registro},atribuicaoCausal:'nao_estabelecida',referencias:{estado:'indisponivel',motivo:'referencias_nao_habilitadas'},bases:{planejamento:'alterada',composicao_fonte:'igual',referencia:'nao_documentada',contexto:'nao_documentada'},cobertura:Object.fromEntries(Object.keys(a.nutrientes).map(c=>[c,'igual'])),comparacao:{schemaVersao:1,motorVersao:'food06-previa-factual-v1',antes:estado(a,100),depois:estado(b,150),diferencas}}});
+ });
+ await preparar(page);await page.getByRole('button',{name:'Ver histórico de micronutrientes',exact:true}).click();
+ const secao=page.getByRole('region',{name:'Comparar análises salvas'});await secao.getByRole('combobox',{name:'Antes',exact:true}).selectOption(antes);await secao.getByRole('combobox',{name:'Depois',exact:true}).selectOption(depois);await secao.getByRole('button',{name:'Comparar análises',exact:true}).click();
+ await expect(secao.getByRole('row',{name:/^Ferro /})).toContainText('1 mg (50%)');await expect(secao).toContainText('Diferenças documentais não estabelecem causa');expect(pedido).toEqual({antesId:antes,depoisId:depois});
+ expect((await new AxeBuilder({page}).include('[aria-label="Comparar análises salvas"]').analyze()).violations).toEqual([]);
+});
+
+test('FOOD06 M07 revogação de acesso oculta a comparação e a análise corrente',async({page})=>{
+ const antes='20000000-0000-4000-8000-000000000041',depois='20000000-0000-4000-8000-000000000042';
+ const a=registroHistorico(antes,'2026-11-04T12:00:00.000Z','COMPLETO',2),b=registroHistorico(depois,'2026-11-05T12:00:00.000Z','COMPLETO',3);
+ await page.route(u=>u.pathname.endsWith('/analises-factuais/historico'),r=>r.fulfill({status:200,json:{schemaVersao:1,itens:[b,a],temMais:false}}));
+ await page.route(u=>u.pathname.endsWith('/analises-factuais/comparar'),r=>r.fulfill({status:403,json:{message:'CANARIO_INTERNO'}}));
+ await preparar(page);await page.getByRole('button',{name:'Ver histórico de micronutrientes',exact:true}).click();
+ const secao=page.getByRole('region',{name:'Comparar análises salvas'});await secao.getByRole('combobox',{name:'Antes',exact:true}).selectOption(antes);await secao.getByRole('combobox',{name:'Depois',exact:true}).selectOption(depois);await secao.getByRole('button',{name:'Comparar análises',exact:true}).click();
+ await expect(page.getByRole('button',{name:'Ver histórico de micronutrientes',exact:true})).toBeDisabled();await expect(page.locator('body')).not.toContainText('CANARIO_INTERNO');await expect(page.locator('body')).not.toContainText('200 kcal');
+});
+
+test('FOOD06 M07 ignora resposta tardia após alterar a seleção',async({page})=>{
+ const antes='20000000-0000-4000-8000-000000000051',depois='20000000-0000-4000-8000-000000000052';let liberar,solicitado=false;const barreira=new Promise(resolve=>liberar=resolve);
+ const a=registroHistorico(antes,'2026-11-04T12:00:00.000Z','COMPLETO',2),b=registroHistorico(depois,'2026-11-05T12:00:00.000Z','COMPLETO',3);
+ await page.route(u=>u.pathname.endsWith('/analises-factuais/historico'),r=>r.fulfill({status:200,json:{schemaVersao:1,itens:[b,a],temMais:false}}));
+ await page.route(u=>u.pathname.endsWith('/analises-factuais/comparar'),async r=>{solicitado=true;await barreira;await r.fulfill({status:403,json:{message:'CANARIO_TARDIO'}}).catch(()=>{});});
+ await preparar(page);await page.getByRole('button',{name:'Ver histórico de micronutrientes',exact:true}).click();const secao=page.getByRole('region',{name:'Comparar análises salvas'});
+ await secao.getByRole('combobox',{name:'Antes',exact:true}).selectOption(antes);await secao.getByRole('combobox',{name:'Depois',exact:true}).selectOption(depois);await secao.getByRole('button',{name:'Comparar análises',exact:true}).click();await expect.poll(()=>solicitado).toBe(true);
+ await secao.getByRole('combobox',{name:'Depois',exact:true}).selectOption(antes);liberar();await expect(secao).toContainText('Escolha duas análises diferentes.');await expect(secao.getByRole('alert')).toHaveCount(0);await expect(page.locator('body')).not.toContainText('CANARIO_TARDIO');await expect(page.getByRole('button',{name:'Fechar histórico de micronutrientes',exact:true})).toBeEnabled();
+});
