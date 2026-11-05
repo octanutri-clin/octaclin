@@ -15,7 +15,7 @@ export async function prepararPrevia(page,compartilhado){
  compartilhado?.ajustarDetalhe?.(d);
  const pedidos=[],confirmacoes=[],saves=[];let falha=0;
  await page.route(u=>[planoId,d.id].some(id=>u.pathname===`/api/pacientes/${pacienteId}/planos-alimentares/${id}`),r=>r.fulfill({status:200,json:d}));
- await page.route(u=>u.pathname.endsWith('/rascunho/edicao'),r=>{const p=r.request().postDataJSON();saves.push(p);d.draft.rascunhoRevisao++;d.draft.documentoEdicao=p.documento;return r.fulfill({status:200,json:d.draft});});
+ await page.route(u=>u.pathname.endsWith('/rascunho/edicao'),r=>{const p=r.request().postDataJSON();saves.push(p);d.draft.rascunhoRevisao++;d.draft.documentoEdicao=p.documento;compartilhado?.aposSalvar?.(d,saves.length);return r.fulfill({status:200,json:d.draft});});
  await page.route(u=>u.pathname.includes('/rascunho/previa-micronutrientes'),async r=>{
   const p=r.request().postDataJSON();
   if(r.request().url().endsWith('/confirmar')){
