@@ -7,6 +7,9 @@ import { POST as previaMicros } from '../app/api/pacientes/[id]/planos-alimentar
 import { POST as confirmarMicros } from '../app/api/pacientes/[id]/planos-alimentares/[planoId]/rascunho/previa-micronutrientes/confirmar/route';
 import { POST as detalharMicronutrientesFood06 } from '../app/api/pacientes/[id]/planos-alimentares/analise-micronutrientes/contribuicoes/route';
 import { POST as analisarMicronutrientesFood06 } from '../app/api/pacientes/[id]/planos-alimentares/analise-micronutrientes/route';
+import { preverEquivalenciasPlano, obterPreferenciasEquivalencia, salvarPreferenciasEquivalencia } from '../lib/equivalencias-plano-api';
+import { POST as preverFood05 } from '../app/api/pacientes/[id]/planos-alimentares/[planoId]/equivalencias/previa/route';
+import { GET as obterPreferenciasFood05, PUT as salvarPreferenciasFood05 } from '../app/api/profissionais/me/preferencias-equivalencia/route';
 import { POST as consultarReceitasFood07 } from '../app/api/planos-alimentares/receitas/consulta/route';
 import { POST as preverReceitasFood07 } from '../app/api/planos-alimentares/receitas/[receitaId]/previa-porcionamento/route';
 import { POST as compartilharReceitasFood07 } from '../app/api/planos-alimentares/receitas/compartilhamentos/route';
@@ -1305,6 +1308,37 @@ test('FOOD04 BFF fonte administrativa não abre biblioteca pessoal e projeta com
   }finally{restaurarFetch(original);}
 });
 
+test('FOOD05 BFF sessão/permissão, corpo limitado, cancelamento e erros sanitizados',async()=>{
+ const original=global.fetch;const chamadas:Array<{url:string;init?:RequestInit}>=[];
+ global.fetch=(async(url:string|URL|Request,init?:RequestInit)=>{chamadas.push({url:String(url),init});return Response.json({alternativas:[]});}) as typeof global.fetch;
+ const parametros={params:Promise.resolve({id:'paciente/1',planoId:'plano/1'})};
+ const req=(body='{}',signal?:AbortSignal)=>new Request('http://localhost/previa',{method:'POST',body,signal});
+ try{
+  __clearCookies();assert.equal((await preverFood05(req(),parametros)).status,401);
+  __setCookies(cookiesSessaoValida(['planos_alimentares.ler']));assert.equal((await preverFood05(req(),parametros)).status,403);assert.equal(chamadas.length,0);
+  __setCookies(cookiesSessaoValida(['planos_alimentares.gerenciar','planos_alimentares.ler']));
+  assert.equal((await preverFood05(req('x'.repeat(96*1024+1)),parametros)).status,413);assert.equal(chamadas.length,0);
+  const ctrl=new AbortController(),request=req('{"sintetico":true}',ctrl.signal);const r=await preverFood05(request,parametros);
+  assert.equal(r.headers.get('cache-control'),'private, no-store');assert.equal(chamadas[0].url,'http://backend.octaclin.local/pacientes/paciente%2F1/planos-alimentares/plano%2F1/equivalencias/previa');
+  assert.equal(chamadas[0].init?.body,'{"sintetico":true}');assert.equal(chamadas[0].init?.cache,'no-store');assert.equal(chamadas[0].init?.signal,request.signal);
+  await obterPreferenciasFood05(new Request('http://localhost/preferencias'));
+  assert.equal(chamadas[1].url,'http://backend.octaclin.local/profissionais/me/preferencias-equivalencia');
+  assert.equal((await salvarPreferenciasFood05(new Request('http://localhost/preferencias',{method:'PUT',body:'x'.repeat(4097)}))).status,413);
+  global.fetch=(async()=>{throw new Error('CHAVE_E_DADO_PRIVADO');}) as typeof global.fetch;
+  const erro=await preverFood05(req(),parametros);assert.equal(erro.status,502);assert.doesNotMatch(await erro.text(),/CHAVE_E_DADO_PRIVADO/);
+ }finally{restaurarFetch(original);__clearCookies();}
+});
+
+test('FOOD05 cliente usa POST privado/cancelável e preferências me sem IDs no corpo',async()=>{
+ const original=global.fetch,c=new AbortController();const chamadas:Array<{url:string;init?:RequestInit}>=[];
+ global.fetch=(async(url:string|URL|Request,init?:RequestInit)=>{chamadas.push({url:String(url),init});return Response.json({});}) as typeof global.fetch;
+ try{
+  await preverEquivalenciasPlano('p/1','pl/1',{} as Parameters<typeof preverEquivalenciasPlano>[2],c.signal);await obterPreferenciasEquivalencia(c.signal);await salvarPreferenciasEquivalencia({revisaoEsperada:0,preferencias:{} as Parameters<typeof salvarPreferenciasEquivalencia>[0]['preferencias']},c.signal);
+  assert.deepEqual(chamadas.map(x=>[x.url,x.init?.method,x.init?.cache]),[['/api/pacientes/p%2F1/planos-alimentares/pl%2F1/equivalencias/previa','POST','no-store'],['/api/profissionais/me/preferencias-equivalencia',undefined,'no-store'],['/api/profissionais/me/preferencias-equivalencia','PUT','no-store']]);assert.ok(chamadas.every(x=>x.init?.signal===c.signal));
+  global.fetch=(async()=>new Response('<html>PRIVADO</html>',{status:500})) as typeof global.fetch;
+  await assert.rejects(()=>preverEquivalenciasPlano('p','pl',{} as Parameters<typeof preverEquivalenciasPlano>[2]),e=>e instanceof Error&&!e.message.includes('PRIVADO'));
+ }finally{restaurarFetch(original);}
+});
 
 test('FOOD07 BFF rejeita escopo/contexto injetado antes de encaminhar compartilhamento', async () => {
   __setCookies(cookiesSessaoValida(['planos_alimentares.gerenciar']));

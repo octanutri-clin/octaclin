@@ -1,0 +1,887 @@
+# Execução FOOD05 — plano tasks/plan-pos-320-food05.md
+
+> **Estado vigente — preparação para Ready for Review (27/10/2026):** código `8ed85259`, CI documental `81e738f3` confirmado verde; P2-01/P2-02, T07-A/T14 e critérios executados T15–T18 reconhecidos como PASS técnico. R4 independente integral **estática** favorável, sem testes pelo revisor; CI Node 22 compatível com engines. Provenance SBOM **SKIPPED**. G06 operacional **BLOCKED**, separado do código. PR #446 **Draft**; revisão formal, merge e operação exigem autorizações distintas. Estado e evidências por requisito: [matriz vigente e checklist pré-merge](aceite-pos-320-food05.md). Qualquer checkpoint anterior conflitante abaixo é histórico e está substituído por esta matriz; requisitos normativos continuam vigentes.
+
+Autorização: proprietário “Pode seguir, sol médio”. T01–T18 autorizadas;
+produção/infra/migrations externas não. Base e3b47da1, PR446 Draft, árvore limpa.
+
+Ruling: uma PR funcional, commits pequenos — leitores/writers/UI precisam de
+integração atômica; divisão3 ou1 já aprovada no plano. Custo: diff final maior,
+mitigado com focados/commits e revisão distinta final.
+Ruling: scripts de skill cloud não estão disponíveis no filesystem; usar este
+ledger e logs /tmp/food05-exec, sem alegar execução de helpers inexistentes.
+
+## Preflight
+
+- T01→T04/T09: DTO leva documento/intenção, nunca fatos confiáveis do cliente.
+- T02→T03/T05: razões exatas/half-up e porção0,001–10000g/3 casas.
+- T04→T06: prévia sem escrita e save com revalidação/CAS no mesmo escopo.
+- T06→T07/T11/T13: ACK devolve referência; pendência não recalcula;
+  omissão/null/tombstone não apagam/ressuscitam contexto.
+- T08→T10: preferência pessoal não guarda PHI nem altera valores persistidos.
+- T10→T11/T12: painel/AbortSignal compartilhado, cancelar não modifica documento.
+- T14→T18: banco local/CI não é liberação produtiva.
+
+## Progresso
+
+T01 em execução. Tentativa inicial de shell usou cwd do backend com paths de
+root e não criou arquivos; não conta como RED de feature. Corrigido o cwd.
+
+T01: focais23/23 PASS. RED inicial por módulos ausentes (TS2307,0 testes),
+seguido de22 PASS; teste adicional pelo pipeline real class-transformer/validator
+reproduziu1 RED/22 PASS: instância DTO era recusada como objeto não plano.
+Validador adapta somente a raiz e mantém allowlist; repetição23/23 GREEN.
+Logs t01-red/t01-green/t01-dto-red/t01-final em /tmp/food05-exec.
+Cálculos/casos de base são exercitados em T02/T03; DTO não confere fatos autorizados.
+T02: focais de aritmética+micros+DTO55/55 PASS, com4000 vetores Python Fraction
+(seed314159,1000/alvo), sem tolerância float. RED por módulo ausente antes da
+implementação. Parser decimal existente apenas exportado; sem semântica global nova.
+Suite completa/build/CI ainda NOT RUN: focais não equivalem a feature concluída.
+
+T03 focais47/47 PASS (4 suites), com casos energia/macros/base diferente,
+zero/ausente, resíduos/edição, limites/avisos, simulação350→300 e comparação
+com4000 casos independentes no motor. RED inicial por funções/módulo ausentes.
+Nova política decimal é aditiva no motor; defaults legados não mudaram.
+
+T04 prévia focada9/9 PASS. RED por serviço ausente, depois fonte real/preparo/base,
+composição de catálogo manipulada ignorada, papel/permissão/tenant/carteira,
+revisão vencida e resultado parcial por alternativa verificados. Nenhum save no
+harness de leitura. Rotas/provider ainda não registrados; sem superfície liberada.
+Ruling: não acrescentar campos à composição canônica de grupos antigos apenas
+para preparo — FOOD04 compara snapshots JSON e isso invalidaria referências
+legítimas. O resolver FOOD05 enriquece a sua própria projeção autorizada, mantendo
+origem/base originais e contratos de grupo intactos. Custo: leitura adicional da
+origem sob o lock já obtido, deduplicável por pedido; sem alterar biblioteca.
+
+T05 focais54/54 PASS (4 suites). RED: medida ausente na projeção de prévia
+(1 falha/9 PASS) e helper novo inexistente; GREEN após integração com resolução
+FOOD01/medidas registradas e conversão exata. Caso real de DTO transformado
+adicional reproduziu1 RED/10 PASS no serviço, corrigido sem abrir a allowlist.
+Peso ao aplicar quantidade doméstica é recalculado e seu resíduo mostrado;
+medida de revisão vencida fica indisponível. Referência preservada de histórico
+será integrada/validada junto a T06/T07; não declarar M02 integral ainda.
+
+T06 em consolidação; T07 iniciado pelas projeções e cópia histórica.
+- RED de fingerprint: formatação decimal e porção explícita equivalente davam
+  identidade diferente; normalização semântica corrigida. Focais45/45 PASS.
+- Envelope3:2 RED/2 PASS antes do reader/writer;21/21 PASS após integração,
+  preservando formatos1/2 e vínculo pai/filho/identidade.
+- Projeção explícita: catálogo/manual vazavam campos internos (2 RED/6 PASS);
+  allowlists corrigidas,29/29 PASS com envelopes/resolver.
+- Writer:3 RED comportamentais iniciais (intenção ignorada/fingerprint sem
+  validação), depois2 RED (fonte inativa e edição legada do SuperAdmin).
+  Integração autoriza comandos somente ao responsável; mantém edição ordinária
+  legada, snapshots, ACK estável e revisão pendente persistente.
+- Regressão publicada:1 FAIL/118 PASS por leitura do cipher editorial ao invés
+  dos filhos históricos; corrigido sem recalcular. Serviço completo119/119 PASS
+  em t06-save-full-final.log. Não equivale ao backend inteiro nem RLS real.
+- Negativos adicionais:2 RED/30 PASS reproduziram composição principal parcial
+  aplicável indevidamente e reutilização de UUID de desvinculação em outro filho.
+  Corrigidos:36/36 GREEN incluindo envelope (t06-negativos-{red,green}.log).
+- Revisar/publicar bloqueiam equivalência pendente; omissão não desvincula,
+  replay não ressuscita, fontes aplicadas conservam composição/micros.
+
+Pendências T06/T07: cópia/reabertura; fonte principal preservada na materialização;
+prévia com fonte/medida histórica inativa; captura de fatos após troca explícita;
+marcador decimal por filho; cópias entre planos/modelos e regressões completas.
+T08–T18 ainda não concluídos. Nenhum gate final ou clínico declarado PASS.
+
+T07 parcial:
+- Cópia de versão: a primeira tentativa do teste usava revisão anterior à ação
+  Revisar e falhou no CAS correto (não é RED da cópia). Corrigido o teste para2,
+  RED comprovou referência perdida. Nova versão FOOD05 conserva ciphers/chaves
+  editoriais e revisão0 protegida; planos sem FOOD05 mantêm reconstrução legada.
+- Fonte congelada na prévia e principal:3 RED/6 PASS incluindo cópia; ajustes
+  reutilizam somente contexto autenticado e vínculo editorial correspondente.
+  Serviço completo122/122 PASS em t07-save-full-green.log.
+- Medida salva:1 RED/12 PASS, prévia dependia da biblioteca atual. Reutilizado o
+  resolver FOOD01 com contexto cifrado da versão, sem novas conversões. Novo
+  nonce exige autorização atual. Focais e regressões em t07-medida-green.log.
+- Typecheck backend executado: PASS (t06-typecheck.log), antes dos últimos ajustes.
+  Reexecutar no checkpoint consolidado. Nenhum teste PG/CI/UI concluído ainda.
+
+T07 continuidade: teste RED1 comprovou que composição explicitamente trocada
+não era preservada após a fonte ficar inativa. Captura `aplicados` cifrada separa
+fatos atuais da matemática original; cálculo/resíduo original continuam imutáveis
+com revisão pendente. Focais138/138 PASS (t07-troca-green.log).
+Marcador por filho:1 RED comprovou que FOOD05 ainda dizia motor1; corrigido para
+nutricao-decimal-v1 somente nos filhos FOOD05, sem trocar motor global legado.
+Repetição consolidada em t07-final-green.log.
+
+T07 retomada (24/10): novo ciclo RED/GREEN para cópia FOOD05 de refeição/plano
+salvo. DTO fechado aceita apenas referências (IDs de origem, versão e chaves editoriais),
+limitadas a200. O browser não recebe nem envia fatos, hashes, contexto cifrado ou
+capability. Backend exige papel/profissional atual, revalida acesso ao plano de origem
+no mesmo tenant e lock transacional, confere contexto cifrado e associação origem↔chave,
+gera nova aplicação/chaves, registra autoria/linhagem cifrada e mantém estado pendente.
+Auditoria registra somente contagem/versão destino. Rascunho e snapshot materializado
+publicado têm resoluções separadas; publicação não depende de snapshot editorial apagado.
+Origem inacessível é recusada antes de persistir; replay da referência na chave destino
+é conflito porque já existe contexto.
+
+RED: helper/DTO ausentes inicialmente; depois teste do service sem remapeamento falhou
+por não retornar contexto no destino. Após implementação, backend focused `FOOD05`
+30 PASS (DTO, resolver, serviço), inclusive origem inacessível e cópia de versão
+publicada. Web `test:copia-refeicoes` 14/14 PASS; TypeScript Web `tsc --noEmit` PASS;
+backend build/artefato PASS; BFF de planos 62/62 PASS. Validado localmente em
+24/10/2026, sem dados de pacientes e sem banco externo.
+
+Playwright da cópia: Desktop Chromium 2/2 PASS e Mobile Chromium 2/2 PASS para
+cópia FOOD05 de versão publicada e recusa explícita de salvar como modelo. Um
+primeiro comando Playwright não iniciou o editor porque o Turbopack do worktree
+detectou symlink de node_modules fora do root; o teste foi repetido com servidor
+local Webpack reutilizado. Outra tentativa usou 127.0.0.1, incompatível com os
+cookies da fixture localhost; repetição em localhost PASS. Não foram defeitos
+funcionais.
+
+PostgreSQL/RLS sintético: adicionada prova que publica a origem, copia para novo
+rascunho, verifica nova aplicação pendente e lineage cifrada, revoga o profissional
+e confirma 404/rollback para nova cópia. O Testcontainers de imagem
+`timescale/timescaledb-ha:pg15` não iniciou nesta execução (daemon retornou 404,
+imagem local ausente). Repetida a matriz pelo runner descartável `postgres:15-alpine`:
+7 PASS/67 SKIPPED no filtro FOOD05. Isso comprova transação/RLS no PostgreSQL local,
+mas omite vector/Timescale e não substitui o gate CI integral.
+
+Limite restante: gravar ou aplicar por modelo continua bloqueado. A biblioteca é
+compartilhável na clínica; guardar referências de paciente no conteúdo acessível
+a todos não atende minimização, e o fluxo atual entrega refeições ao browser antes
+do save. Não implementar transporte da proveniência em modelos até haver aplicação
+server-side que reautorize a origem sem expor identificadores clínicos. T07 não está
+completo; PostgreSQL/RLS real para cópias, regressões e revisão R4 ainda faltam.
+
+T08 iniciado: testes de contrato, serviço/CAS e migration escritos antes dos
+módulos (RED por TS2307,0 testes; não é vulnerabilidade reproduzida). Após código,
+21/21 PASS em t08-green.log. Dois campos em profissionais, JSON fechado, sem PHI,
+CAS próprio e rollback conservador. Migration1079 registrada;1078 não alterada.
+Não executada em banco externo. Provas PostgreSQL/RLS/role seguem para T14;
+testes de migration até aqui inspecionam SQL e registro, não provam o banco real.
+
+T08 typecheck inicial detectou3 fixtures legadas sem campos novos do ORM.
+Tipagem admite projeções parciais, sem enfraquecer NOT NULL/checks no schema;
+repetição t08-typecheck-final.log PASS.
+T09 parcial:
+- Controller/DTO novos: RED por módulo ausente, depois7/7 PASS.
+- Prévia HTTP por allowlist, sem identidade interna/fatos de auditoria. Comparação
+  individual não depende da completude de outros itens:1 RED/13 PASS, depois
+ 21/21 PASS com controlador (t09-comparacao-{red,green}.log).
+- Ruling de rota: Next já usa `[id]`; não criar sibling `[pacienteId]`. Checklist
+  corrigido. BFF reutiliza os wrappers existentes de sessão, stream limitado,
+  no-store e erro sanitizado; não cria proxy/parâmetro de tenant paralelo.
+- BFF: primeiro comando em cwd incorreto (não é RED funcional). Repetição correta
+  reproduziu arquivos ausentes; após rotas, typecheck apontou retorno possivelmente
+  undefined; corrigido por discriminação explícita. Caso de falha de conexão
+  esperava503, mas contrato canônico sessao-bff.ts retorna502 sanitizado; teste
+  ajustado ao contrato comprovado, sem alterar runtime legado.61/61 PASS no harness
+  completo (t09-bff-final.log), sem chamadas externas.
+- T14 iniciado antecipadamente para conferir fundação antes da UI: reutiliza o
+  provisionador FOOD04 somente com filtro --fase-food05; nenhum alvo externo aceito.
+  PostgreSQL15 local já disponível. Extensões vector/Timescale são omitidas pelo
+  provisionador preexistente; resultado não comprova a cadeia integral oficial.
+
+T14 provas reais:
+- Primeira execução provisionou fixture mas imports novos tinham um nível relativo
+  errado (TS2307,0 testes); corrigidos, não era falha de isolamento reproduzida.
+- Segunda execução:4 PASS/67 SKIPPED por filtro FOOD05. Com matriz ampliada:
+ 6 PASS/67 SKIPPED em t14-local-final.log; banco e container encerrados pelo runner.
+- Provados com serviços reais: CAS concorrente, fingerprint adulterado sem gravação,
+  carteira/tenant, rollback depois de falha ao gravar filho, nova versão/histórico,
+  pendência que bloqueia publicação, JSON de preferências fechado/CAS, FORCE RLS,
+  role sem bypass/owner/DDL, transferência serializada e revogação, desvinculação
+  com autoria e replay da referência antiga recusado. Somente dados sintéticos.
+- Prova não cobre vector/Timescale nem substitui CI/matriz completa da T14.
+
+Revisão adicional de consumo:2 RED/11 PASS reproduziram falta de autoria da
+resolução manual e consumo sem ator na função pura. Corrigidos;17/17 GREEN com
+snapshot. Autor do cálculo original não é sobrescrito pelo autor da resolução.
+M05/M04 precisão:1 RED/3 PASS demonstrou soma de contribuições arredondadas e
+resíduo falsamente zero. Motor existente agora fornece razões exatas; total recebe
+um único arredondamento e delta pequeno é explícito.52/52 GREEN com motor/prévia.
+BFF+cliente tipado62/62 PASS (t09-api-green.log); autorização de rotas30/30 PASS.
+Web typecheck PASS (checkpoint-web-typecheck.log).
+
+Regressão backend primeira execução completa:1 FAIL/3378 PASS/148 SKIPPED;
+falha foi o caso de precisão acima, inserido/corrigido durante aquele checkpoint.
+Essa execução não é evidência GREEN do HEAD final. Nova execução estável solicitada.
+Writer:2 RED comprovaram que flags positivas de nova aplicação eram aceitas;
+backend agora recusa novas alternativas já liberadas/preferidas, sem sobrescrever
+as decisões legítimas de uma alternativa manual já salva.126/126 PASS no serviço
+(t06-flags-{red,green}.log).
+
+## Checkpoint estável de fundação/API — HEAD de código78117bc7
+
+- Backend geral:374 suites PASS/8 SKIPPED;3382 testes PASS/148 SKIPPED,
+ 3530 totais (checkpoint-backend-final.log), após correções de precisão/flags.
+- Build Nest PASS (checkpoint-build-estavel.log); verificador do artefato PASS,
+  dist/main.js (checkpoint-artefato.log). Typecheck Web PASS.
+- Repetida prova real PG no código estável:6 PASS/67 SKIPPED por filtro,
+  t14-head-estavel.log; fixture removida. Não é prova das extensões omitidas.
+- BFF62/62 e autorização30/30 permanecem PASS; sem alteração de UI nesta rodada.
+- Triagem estática limitada de segredos no patch: sem correspondências para chaves
+  OpenAI/privadas e URLs PostgreSQL com senha; não substitui revisão de segurança.
+- Migration1078 sem diff; checkout raiz conserva somente a alteração preexistente
+  em octaclin-web/next-env.d.ts, que não foi editada nesta worktree.
+- Nenhum ambiente externo, merge, deploy ou flag foi alterado. FOOD04 produção
+  continua BLOCKED pelo último registro de quota; não revalidada externamente.
+
+Próxima troca proposta: Luna alto para UI T10–T13 com contrato existente, aguardando
+mudança manual. T07 cópias/modelos e gates finais exigem retomada/revisão Sol médio;
+nenhuma melhoria M01–M08 removida e nenhum gate final declarado PASS.
+
+Fechamento do checkpoint intermediário:
+- Typecheck backend explícito PASS (checkpoint-backend-typecheck-estavel.log).
+- Lint Web focado inicialmente3 FAIL por `any` nas novas fixtures de transporte;
+  substituídos por tipos Parameters, sem mudança de comportamento. Repetição
+  t09-web-lint-final.log PASS e BFF repetido62/62 PASS em t09-bff-head-estavel.log.
+- UI/Playwright, revisão distinta final e CI do conjunto funcional ainda NOT RUN.
+  PR446 mantém Draft: este checkpoint não libera M01–M08 nem autoriza merge.
+
+## Retomada UI — preview individual e integração inicial FOOD04
+
+- Em `PainelEquivalenciaNutriente`, o cálculo continua autoritativo no backend;
+  painel oferece alvo, políticas/preferências, M02 medida caseira do alimento,
+  diferenças/resíduos e escolha de linhas. Confirmação aguarda fingerprint e
+  revisão do rascunho atuais; mudanças explícitas de medida/gramas voltam à API.
+- Integrado ao item do editor e à prévia de grupo FOOD04. Grupo oferece modo
+  manual existente ou “Calcular por nutriente”; opções calculadas conservam
+  `origemGrupo`, `equivalencia`, porção/unidade e referência de medida caseira ao
+  passar pelo callback do editor. Conflitos por mesma identidade e porção diversa
+  exigem checkbox explícito; principal e original do grupo não mudam. O painel
+  fica bloqueado quando editor/rascunho/revisão não está apto para preview.
+- Playwright sintético desktop PASS: preview de alternativa selecionada, medida
+  caseira e flags; regressão de aplicação manual FOOD04; integração de cálculo
+  através do grupo e autosave, preservando os dois metadados. Testes executados
+  individualmente/serialmente para evitar conflito do artifact writer Playwright.
+- Playwright sintético mobile PASS: preview individual e medida caseira; cálculo
+  FOOD04 por grupo, confirmação seletiva e persistência da origem + intenção.
+- Web `tsc --noEmit` PASS após integração. ESLint focado PASS, 0 erros e 8 avisos
+  preexistentes no grande `plano-alimentar-profissional.tsx`, fora do novo painel/
+  adaptador. `git diff --check` PASS.
+- O Next dev gera imports de rota em `next-env.d.ts`; após desligar o servidor o
+  arquivo foi restaurado a HEAD; nenhum delta funcional mantido nele.
+- Limite naquele checkpoint intermediário: aquela integração não fechava M07/T13. O status/projeção de
+  equivalências já existe na API profissional, mas o frontend ainda precisa
+  carregar/apresentar `revisao_pendente`, histórico reproduzível e ações de
+  recálculo/desvinculação explícitas. Não marque M07 como concluído.
+- Cópias entre planos/modelos (T07) ainda exigem remapeamento seguro server-side
+  da proveniência cifrada, sem transportar contextos/capacidades pela BFF ou
+  browser. Não se declarou essa lacuna resolvida.
+- Esta verificação não é revisão independente, não executa a matriz CI integral,
+  gates R4, build completo da PR nem confirma comportamento em produção. Draft
+  permanece. Sem commit/push, migrations externas, flags ou deploy.
+
+## Retomada FOOD05 — T13 projeção/revisão no editor
+
+- O editor tipou e apresenta o mapa `equivalenciasAplicadas` recebido do backend
+  (projeção profissional allowlisted, rota privada `no-store`, tenant/paciente/plano
+  conferidos no serviço). Cada alternativa vinculada mostra estado e detalhe
+  reproduzível do cálculo salvo: algoritmo, nutriente, porção principal/efetiva,
+  descrição/preparo, fonte/revisão, valores-base, alvo, obtido, delta e delta%.
+  A ausência/falha da projeção fica explícita; não é tratada como ausência de contexto.
+- Para `revisao_pendente`, ação “Recalcular equivalência” reabre o painel com o
+  nutriente e alternativa originais selecionados; precisa carregar a prévia atual e
+  clicar “Confirmar recálculo”. A ação “Desvincular equivalência” pede confirmação,
+  envia identidade anterior/fingerprint de resolução e salva sem alterar a porção.
+  A validação final permanece no backend; snapshots publicados não são editados.
+- Testes sintéticos novos/verificados: detalhe e recálculo pendente com confirmação
+  desktop/mobile; desvinculação confirmada/cancelada e porção preservada desktop/mobile.
+  Preferências pessoais M08: atualização CAS de casas decimais/comparação, sem gravar
+  o plano, desktop/mobile.
+  Regressões focadas desktop: prévia individual, aplicação manual FOOD04 e cálculo
+  FOOD05 originado em grupo; mobile: prévia individual e cálculo FOOD04 por grupo.
+  Resultado dos cenários focados: PASS. Uma tentativa de teste desktop expirou na
+  navegação fria enquanto a compilação Next levou 18,7s (limite do helper 15s); o
+  mesmo teste isolado passou depois do cache aquecido. Uma repetição em lote teve
+  timeout semelhante e passou isolada. Registrar como instabilidade de compilação
+  local, não como teste green da primeira tentativa.
+- TypeScript Web `tsc --noEmit`: PASS após integração. ESLint focado: 0 erros; 8
+  avisos preexistentes em `plano-alimentar-profissional.tsx`. `git diff --check`: PASS.
+- Build Web: `next build --webpack` PASS (compile, TypeScript, 194 páginas,
+  otimização e traces). Dois avisos preexistentes de API Node `process.cwd` na
+  cadeia Edge Runtime. `next build` padrão/Turbopack BLOCKED pelo ambiente: symlink
+  `node_modules` aponta para fora da raiz; não alterei o symlink/dependências.
+  Next dev desligado e `next-env.d.ts` restaurado; sem mudança residual gerada.
+- T07 e parte de T13 seguem BLOQUEADOS: API de versão publicada não correlaciona
+  `chaveCliente` com a identidade relacional de cada alternativa, e modelos não têm
+  contrato de proveniência. Cópias não podem transportar o contexto cifrado como
+  capability nem remover vínculo silenciosamente. Exigir solução server-side segura
+  antes de habilitar cópia de planos FOOD05 e antes de encerrar T13.
+- Salvaguarda parcial adicionada nesta retomada: a projeção profissional da alternativa
+  retorna somente `equivalenciaAplicada`, derivado do snapshot cifrado e omitido quando
+  a resposta não pede equivalências. Não expõe contexto, fingerprints nem capabilities.
+  Salvar plano como modelo, duplicar plano, copiar refeição salva e duplicar refeição local
+  agora recusam converter uma alternativa FOOD05 para manual enquanto o formato de
+  destino não preservar sua proveniência. Testes focados do serviço backend, cópia pura
+  (14/14) e Playwright desktop sintético (1/1) passaram; o rascunho não foi alterado.
+  Isto reduz perda silenciosa, mas não conclui T07: a cópia de cálculos continua
+  bloqueada até haver contrato de proveniência de ponta a ponta.
+- Não repetidos neste checkpoint: suite geral backend/build, PostgreSQL/RLS, CI da PR,
+  Axe global, segurança R4 independente. Sem commit/push, merge, migration externa,
+  deploy, ativação ou uso de dados reais.
+
+## Retomada — proteção de proveniência em cópias e fechamento de verificações locais
+
+- `equivalenciaAplicada` só aparece na projeção profissional solicitada; é um
+  booleano derivado do snapshot cifrado e fica omitido para equivalência já
+  desvinculada. Não transporta fingerprints ou contexto cifrado. A projeção do
+  paciente explicitamente remove esse campo; teste de allowlist PASS.
+- Escrita como modelo, duplicação de plano, cópia de refeição publicada e cópia
+  local agora recusam a conversão para substituição manual quando há vínculo FOOD05.
+  O alerta não envia requisição nem altera rascunho. Ainda não se preserva a
+  proveniência nos formatos de cópia; bloqueio é uma salvaguarda deliberada e T07
+  continua parcial/BLOCKED.
+- Testes: `test-copia-refeicoes-plano.mjs` 14/14 PASS; suites completas do serviço de
+  planos e projeção paciente 139/139 PASS; Playwright
+  sintético desktop e mobile: bloqueio de cópia de refeição e bloqueio ao salvar modelo
+  2/2 em cada projeto PASS. Typecheck Web PASS; typecheck backend PASS; build backend PASS; build Web
+  `next build --webpack` PASS, compile, TS e 194 páginas. ESLint focado sem erros e
+  8 avisos preexistentes no componente editor.
+- RLS/PostgreSQL descartável: BLOCKED antes da inicialização do banco: Testcontainers
+  recebeu HTTP 404 do Docker para `timescale/timescaledb-ha:pg15` (“No such image”).
+  Não houve conexão a staging/produção nem tentativa de substituir a imagem.
+- Playwright tentou inicialmente executar com o dev-server padrão/Turbopack e foi
+  BLOCKED pelo symlink de `node_modules` fora da raiz; o mesmo gate, servido por
+  Next webpack já iniciado e reutilizado, passou. `next-env.d.ts` foi restaurado
+  após o build/dev e `git diff --check` PASS.
+- Não executados neste checkpoint: suite integral, CI GitHub, PostgreSQL/RLS real,
+  Playwright global/Axe global e revisão R4 independente. Sem commit/push/merge,
+  migration externa, deploy ou ativação. FOOD04 produção continua com o bloqueio
+  operacional anteriormente documentado (HTTP 402), sem nova consulta externa.
+
+## Revalidação — invalidação de prévia concorrente
+
+- TDD para mudança de entrada durante uma prévia: o teste segurou a segunda resposta
+  HTTP depois de trocar a medida caseira. A versão anterior da interface ainda permitia
+  confirmar durante a janela de atualização (RED reproduzido). A correção vincula cada
+  prévia à assinatura dos fatos usados no pedido, invalida a aplicação imediatamente
+  quando essa assinatura muda e só permite confirmar a resposta que corresponde aos
+  dados correntes.
+- O teste Playwright sintético foi repetido e ficou GREEN em desktop e mobile. A suíte
+  focalizada de FOOD05/PA07 passou 14/14 nos dois projetos, incluindo FOOD04, recálculo,
+  preferências, desvinculação e bloqueios de cópia que perderiam proveniência.
+- Web `tsc --noEmit`: PASS. `next build --webpack`: PASS, 194 páginas. ESLint focado:
+  0 erros e 8 avisos preexistentes no editor grande. `test:copia-refeicoes`: 14/14 PASS;
+  `git diff --check`: PASS. Build/dev não deixou alteração gerada em `next-env.d.ts`.
+- Ambiente de execução usou Node 24.19.0 embora o projeto declare Node 22; pnpm reportou
+  aviso de engine. O build e testes concluíram, mas a validação com a versão de runtime
+  declarada continua recomendável no CI.
+- Continuam fora desta evidência: PostgreSQL/RLS real (bloqueado pela imagem ausente do
+  Testcontainers, anotada acima), CI GitHub, revisão R4 independente e smoke global.
+
+## CI da PR — falha de fixture corrigida
+
+- O primeiro CI do HEAD `dc7e177c` executou PostgreSQL real, migrações, suite backend,
+  Redis e RLS. RLS da FOOD05 passou; a suite de integração da migration 1078 falhou
+  porque sua fixture criava `profissionais` sem as colunas da migration aditiva 1079,
+  mas o ORM atual já as seleciona. O erro observado foi `column
+  ProfissionalOrm.preferencias_equivalencia does not exist` em `identidadeBiblioteca`.
+- A fixture agora aplica a migration 1079 depois da 1078 no Testcontainers descartável,
+  sem editar migration histórica nem tocar ambientes externos. HEAD atual
+  `bb513d1d` foi executado no GitHub Actions, run `40124900107`: Backend NestJS,
+  PostgreSQL/migrations, Redis/idempotência e RLS concluíram PASS; Web Next.js,
+  Mobile Expo, AI FastAPI, governança, rollout seguro, operação de lançamento e
+  scanners Dependency Review, Semgrep, CodeQL e Trivy também concluíram PASS.
+- O run concluiu com `success`: Smoke visual Playwright, testes de estados/recuperação,
+  densidade/responsividade, linguagem e jornada de microcopy finalizaram PASS; o
+  `PR Gate` também concluiu PASS. O conjunto Playwright local focalizado FOOD05/PA07
+  passou 14/14 em desktop e mobile.
+- A verificação da projeção pós-desvinculação em RLS foi corrigida para consultar o
+  GET profissional do rascunho, onde `equivalenciaAplicada` é projetado; os dados
+  editoriais/autosave não carregam esse marcador de leitura.
+- A spec unitária da migration 1079 passou 2/2 e o build backend validou `dist/main.js`.
+  A integração PostgreSQL/RLS foi repetida no GitHub e passou no run acima. O Docker
+  local ainda não consegue iniciar a imagem Testcontainers deste ambiente.
+- O run não representa revisão independente R4, liberação de T07, validação da
+  FOOD04 em produção, nem autorização para migration externa, deploy ou ativação.
+- Resultado final conferido no GitHub Actions para o run `40124900107`, HEAD
+  `bb513d1d`: todos os jobs concluídos com `success`. O registro descreve apenas esse
+  HEAD; qualquer atualização posterior da PR exige seus próprios checks.
+
+## FOOD05 T07 — limite do envelope de cópia (24/10/2026)
+
+Revisão do caminho de cópia encontrou que o limite de 96 KiB cobria somente o
+documento editorial. As referências fechadas de proveniência seguem como campos do
+mesmo pedido HTTP; portanto um documento válido perto do teto podia fazer o envelope
+ultrapassar o parser Nest de 100 KB. O limite de 200 referências não impedia esse
+caso.
+
+- RED: teste DTO com documento estruturalmente válido e referências de tamanho máximo
+  aceitou o pedido, apesar do envelope serializado exceder 96 KiB.
+- GREEN: o validador do documento também mede o objeto completo de `SalvarEdicaoPlanoDto`
+  em UTF-8 e rejeita envelopes acima de 96 KiB. Mantém margem em relação ao parser
+  global de 100 KB; não muda rotas, persistência nem limites de conteúdo clínico.
+- Validação posterior: DTO, serviço de planos e resolver focal — 155/155 PASS;
+  `pnpm build` do Nest e verificação do artefato `dist/main.js` — PASS;
+  `git diff --check` — PASS.
+- Commit `571d93a` enviado à mesma PR Draft #446. CI do novo HEAD ainda precisa concluir;
+  revisão R4 independente e T07 para modelos continuam pendentes. Nenhuma migration,
+  consulta externa, merge, deploy ou ativação foi realizada.
+
+## CI PR #446 — falhas de governança e smoke corrigidas (25/10/2026)
+
+No run `40135661731` do HEAD `571d93a`, backend, Web, Mobile, AI FastAPI e scanners
+passaram. Governança e Demo local smoke falharam, fazendo o PR Gate reprovar.
+
+- Governança: o gate de redação apontou `quantidadeEquivalencias` e `versaoDestino`
+  na auditoria da cópia FOOD05 sem justificativas na allowlist. Foram incluídas
+  justificativas de que são apenas contagem e ordinal da versão destino; nenhum
+  identificador, composição ou fato clínico é gravado. `pnpm test:redacao-auditoria`
+  passou 24/24.
+- Smoke visual: quatro casos desktop/mobile da Fase 269 falharam porque a fixture
+  interceptava o resumo do plano de origem, mas não o novo GET da versão salva exata.
+  A fixture passou a responder esse endpoint com a versão sintética já definida.
+  Playwright focal passou 4/4 em desktop e mobile usando servidor Webpack local.
+  Turbopack local não iniciou por symlink de `node_modules` fora do filesystem root;
+  essa limitação do ambiente não reproduziu o erro funcional.
+- Backend, Web, Mobile e scans do run falho já estavam PASS. PR Gate precisa rodar
+  novamente sobre o novo HEAD. O relatório documental atual permanece apenas na
+  worktree até a sincronização desse commit.
+
+## T10 — cancelamento de prévia e mensagens de indisponibilidade (25/10/2026)
+
+RED reproduziu que cancelar uma prévia em andamento abortava o fetch e invalidava
+sua geração, mas deixava `carregando=true`; como o `finally` antigo respeita a
+geração invalidada, o botão permanecia desabilitado. GREEN: limpar carregamento ao
+iniciar outra geração e nas ações de cancelar, fechar o painel e abrir recálculo.
+
+Um segundo RED mostrou que o caso 0/0 aparecia como código técnico
+`alvo_zero_indeterminado`. O painel agora traduz códigos conhecidos em explicações
+objetivas e usa fallback genérico para códigos desconhecidos; não libera seleção ou
+aplicação quando o resultado é indeterminado.
+
+- Playwright FOOD05/PA07 após ambas as mudanças: 18/18 PASS, 9 cenários em desktop e
+  mobile, incluindo cancelamento, zero/zero, aplicação individual, FOOD04, recálculo,
+  desvinculação, preferências e bloqueio de modelos. Axe no painel já coberto pelo
+  cenário comparativo.
+- Web typecheck e ESLint focal: PASS. A primeira execução local do Playwright usando
+  Turbopack falhou pela resolução do symlink de `node_modules`; a bateria foi repetida
+  com Next Webpack em `localhost:3018` e passou.
+- T10 permanece parcial: esta prova não fecha, por si só, todas as combinações de
+  limites de 20 alternativas, resposta obsoleta após cada tipo de mudança, nem toda a
+  matriz de teclado/reflow. CI será repetido no novo HEAD; Draft/R4 continuam abertos.
+
+### T10 — troca do nutriente durante prévia pendente (25/10/2026)
+
+Adicionado cenário Playwright sintético em que a primeira resposta para energia fica
+pendente, o profissional troca o alvo para proteínas e a segunda resposta chega
+primeiro. A resposta antiga é então liberada; a comparação permanece no alvo de
+proteínas e nenhuma escrita é realizada. Isso valida especificamente a invalidação
+por geração/AbortSignal desta alteração de entrada; não cobre, por si só, todas as
+outras dimensões (porção, alternativa, medida, arredondamento e troca de contexto).
+
+O teste foi endurecido para retirar o `AbortSignal` apenas do fetch da prévia sintética,
+simulando transporte que ainda entrega resposta depois do cancelamento. Com a guarda
+`generationRef` temporariamente removida, o teste falhou porque a resposta de energia
+substituiu a comparação de proteínas (RED). Restaurada a guarda, passou (GREEN) em
+desktop e mobile. Essa prova exercita resposta HTTP tardia real do mock, não apenas
+uma rejeição causada pelo abort.
+
+- Playwright focal: desktop-chromium 1/1 PASS e mobile-chromium 1/1 PASS, com dados
+  sintéticos e servidor Webpack local em `localhost:3018`. A tentativa inicial sem
+  reutilização do servidor falhou ao tentar iniciar uma segunda instância Next; a
+  repetição usando o servidor existente passou.
+- Reexecução da bateria FOOD05 e cópia FOOD05 após o novo cenário: 20/20 PASS
+  (10 testes em desktop e 10 em mobile; duração 3m06s), já com o mock endurecido para
+  entregar resposta apesar do abort.
+- `git diff --check`: PASS. T10 continua parcial; os checks GitHub do HEAD `7dacf56b`
+  incluem este cenário e seguem em andamento na última consulta.
+
+### T10 — tabela comparativa acessível por teclado em viewport estreito (25/10/2026)
+
+RED: o cenário de comparação não encontrava uma região nomeada para a área rolável;
+em viewport de 320 px a tabela tem largura mínima de 720 px e o contêiner não tinha
+tab stop para rolagem por teclado. GREEN: a área agora é uma região rotulada e
+focalizável; `ArrowRight` desloca a tabela sem exigir navegação horizontal por mouse.
+
+- Playwright do cenário comparativo: desktop 1/1 PASS e mobile 1/1 PASS, com Axe sem
+  violações após a região ser adicionada.
+- Playwright do lote máximo: 20 alternativas renderizadas em 20 linhas; uma seleção
+  individual habilita aplicação e mantém as outras 19 desmarcadas — desktop 1/1 e
+  mobile 1/1 PASS.
+- DTO de prévia: Jest 23/23 PASS; acrescentada prova de fronteira, com exatamente 20
+  alternativas aceitas e 21/duplicatas rejeitadas.
+- Bateria FOOD05/PA07/copiar FOOD05 após essa expansão: 22/22 PASS (11 testes por
+  projeto, desktop e mobile).
+- ESLint focal e `git diff --check`: PASS. T10 permanece parcial: renderização e
+  seleção da matriz completa de 20 linhas, demais dimensões de respostas obsoletas e
+  revisão independente ainda requerem evidência; este cenário não fecha esses itens.
+
+### T10 — edição da porção efetiva e atualização do residual (25/10/2026)
+
+Adicionado teste Playwright sintético para editar a porção efetiva após uma prévia
+válida. A fixture verifica que o novo pedido envia a porção escolhida e que a UI
+atualiza porção, valor obtido, diferença absoluta e percentual antes de qualquer
+confirmação; não ocorre escrita no plano durante a prévia.
+
+- RED: a primeira execução falhou por uma expectativa de texto incompatível com a
+  apresentação real localizada (vírgula decimal e duas casas); não indicou falha do
+  comportamento do produto. A expectativa foi alinhada ao contrato visual existente.
+- GREEN: cenário focal passou em desktop e mobile (2/2). A bateria FOOD05 na suíte
+  PA07/copiar passou 24/24 (12 cenários por projeto, desktop/mobile), incluindo o
+  lote máximo, resposta tardia após troca de alvo, recálculo e integração FOOD04.
+- ESLint focal, `git diff --check`: PASS. Playwright foi iniciado com Next Webpack
+  em localhost porque o Turbopack desta worktree rejeita o symlink de dependências
+  para fora da raiz do app; `next-env.d.ts` gerado pelo servidor foi restaurado.
+- O HEAD `5a1ad869` teve todos os checks remotos PASS, incluindo Backend, Web,
+  PostgreSQL/RLS, Demo local smoke, PR Gate e scanners. Esta alteração cria novo
+  HEAD e precisa de execução CI própria. T10/T07/T14–T18 e R4 independente continuam
+  abertos; FOOD05 permanece Draft e sem liberação operacional.
+
+### T14 — preferências FOOD05 no PostgreSQL descartável com RLS (25/10/2026)
+
+Expandido o teste de integração PostgreSQL 15 descartável existente que aplica as
+migrations reais 1078 e 1079. A mesma suite agora instancia o serviço de preferências
+FOOD05 contra uma role runtime `NOSUPERUSER/NOBYPASSRLS`, com FORCE RLS e policy de
+tenant; não consulta staging nem produção.
+
+- Prova defaults isolados por profissional e tenant, vínculo forjado entre tenant e
+  usuário negado, duas atualizações CAS concorrentes com a mesma revisão convergindo
+  em exatamente um sucesso/uma recusa, e role runtime sem permissão de DDL.
+- Prova constraint da migration 1079 contra JSON fora do contrato, FORCE RLS ativo
+  na tabela `profissionais` e invisibilidade de registros sem tenant de sessão.
+- Execução real: `FOOD04_RLS_TESTCONTAINERS=true pnpm exec jest --runInBand
+  src/infraestrutura/banco-dados/migracoes/1720000001078-GruposSubstituicoes.integracao.spec.ts`
+  — 6/6 PASS, Postgres 15 em Testcontainers. Uma primeira execução apontou erro no
+  fixture (cast de tenant vazio); a policy sintética foi corrigida com `NULLIF` e a
+  repetição completa passou.
+- Esta prova fecha somente os casos listados; não comprova toda a matriz T14 de
+  concorrência do fluxo de edição/snapshot, rollback parcial ou integração completa
+  das equivalências. CI do HEAD atualizado ainda será necessário.
+- O runner completo `pnpm test:rls:testcontainers` foi tentado, mas 106 casos de
+  suites que usam `timescale/timescaledb-ha:pg15` falharam antes de iniciar por
+  imagem ausente no daemon local (`No such image`); 6 casos da integração específica
+  1078/1079 passaram. Classificar o runner local completo como BLOCKED ambiental,
+  não como regressão FOOD05 nem PASS global. A imagem Postgres 15 usada pelo teste
+  direcionado estava disponível e executou os testes em banco real descartável.
+
+### Retomada — verificação do HEAD e limite do fluxo de modelos (25/10/2026)
+
+- Worktree limpa no início, branch `docs/pos320-food05-planning`, HEAD
+  `f72a5320e9d30359eba42eac324f8e43792a8589`; PR #446 continua Draft.
+- Checks do GitHub consultados nesse HEAD: Backend NestJS, Web Next.js, PostgreSQL/RLS,
+  Demo local smoke, PR Gate, governança, mobile, imagens e scanners aplicáveis PASS;
+  provenance do SBOM SKIPPED pelo workflow. Nenhum deploy, merge ou migration externa.
+- Suítes backend focadas (`equivalencia-nutriente`, `resolver-equivalencias-edicao`,
+  `servico-preferencias-equivalencia`, `servico-planos-alimentares`): 4 suites,
+  173/173 testes PASS.
+- Reconfirmação de T07: modelos atuais devolvem `refeicoes` ao navegador, sem rota
+  de aplicação server-side nem vínculo de origem reautorizável no save. Levar
+  proveniência/capability do paciente a modelos compartilhados exporia contexto de
+  origem; manter o bloqueio de conversão/aplicação de cálculo por modelo até existir
+  contrato server-side transacional com nova autorização e remapeamento. Esse fluxo
+  precisa preservar os dados do modelo e não persistir identificadores do paciente
+  de origem no conteúdo compartilhado.
+- Tentativa de ampliar o teste visual para uma segunda mudança de porção durante a
+  prévia revelou uma limitação intencional do fluxo: ao mudar entradas, a tabela e a
+  linha editável são removidas enquanto a nova prévia carrega. A segunda edição não
+  pode ser produzida pela interface nesse estado; o teste experimental foi revertido
+  e não há mudança pendente no editor. A cobertura existente de resposta tardia após
+  troca de nutriente permanece válida, assim como o cenário de edição da porção com
+  recálculo de residual.
+- Tentativa local do Playwright foi inicialmente bloqueada pelo Turbopack, que rejeita
+  o symlink de `node_modules` fora da raiz do app. A tentativa via Webpack falhou no
+  cenário experimental acima; não contar como PASS. O `next-env.d.ts` gerado durante
+  a execução foi restaurado e `git status` confirmou que nenhum artefato de teste
+  ficou na worktree. O smoke e a suíte visual do HEAD continuam comprovados pelo CI.
+- T07 por modelos, matriz integral de T14, T15–T18 funcionalmente completos e revisão
+  R4 independente seguem abertos; nenhum bloqueio foi reclassificado por inferência.
+
+### T07 — modelo compartilhável rejeita contexto clínico inesperado (25/10/2026)
+
+- RED: dois testes novos demonstraram que `ServicoModelosPlanoAlimentar.criar`
+  persistia uma propriedade aninhada `equivalencia` com identificador de paciente,
+  e `obter` devolvia a mesma propriedade de um snapshot armazenado. O serviço era
+  chamado atrás do DTO HTTP, mas não revalidava o limite ao persistir/ler.
+- GREEN: serviço agora aplica allowlist aninhada também em criação/edição e antes de
+  retornar ou restaurar snapshots. Campo FOOD05 inesperado resulta em 400 na entrada;
+  snapshot inválido resulta em 503 genérico, sem devolver seu conteúdo. Não persiste
+  o campo e não altera modelos/plano em caso de rejeição.
+- Verificações: `pnpm exec jest --runInBand
+  src/modulos/planos-alimentares/aplicacao/servico-modelos-plano-alimentar.spec.ts`
+  — 32/32 PASS após correção (RED reproduzido nos dois casos antes); `pnpm typecheck`
+  — PASS; integração serviço/DTO/controlador — 3 suites, 55/55 PASS;
+  `pnpm typecheck` — PASS (exit 0); `git diff --check` — PASS.
+- Limite: isso fecha a fronteira de conteúdo inesperado, não a aplicação de equivalência
+  por modelo. T07 segue parcial: será necessário um comando server-side que autorize
+  modelo e origem, remapeie chaves no destino e nunca exponha IDs/contextos do paciente
+  de origem ao consumidor de um modelo compartilhado.
+
+### Alertas de atribuição de objeto na revisão da PR #446 (26/10/2026)
+
+- O comentário CodeQL ancorava a cópia de contextos de equivalência cujas chaves
+  vêm do documento editável. A tabela de destino já tinha protótipo nulo; para tornar
+  a garantia explícita e independente de futuros callers, a mesclagem passou a definir
+  propriedades próprias. Um teste sintético inclui `__proto__` e `constructor` e
+  verifica que `Object.prototype` não muda.
+- O comentário Semgrep ancorava `Object.assign` usado para montar uma fixture no teste
+  PostgreSQL. O teste agora atribui os dois campos explicitamente, sem alterar o cenário.
+- Validações locais: Jest do resolver de equivalências 16/16 PASS; backend typecheck
+  PASS; `pnpm security:secrets` PASS; `git diff --check` PASS. Typecheck executado com
+  Node 24.19.0 apesar do intervalo declarado pelo pacote ser Node 22.x.
+- A integração PostgreSQL/RLS não foi executada nesta rodada; depende do container
+  descartável. CodeQL/Semgrep remotos ainda precisam reavaliar o novo HEAD.
+- A tentativa de consultar/reexecutar a revisão R4 Strix retornou exigência de
+  reautenticação da conexão; não marcar revisão independente como refeita ou PASS.
+- A correção mantém os bloqueios de proveniência por modelos: a conversão segue
+  fail-closed até existir aplicação server-side autorizada e sem vazamento de IDs.
+
+### Revalidação do HEAD 9e0aa1bc — rodada local e CI (25/10/2026)
+
+- PR #446 permanece aberta em Draft; HEAD `9e0aa1bcff27c1f98e0882e3d6ed869deabc12a7`.
+- CI consultado neste HEAD: Backend NestJS, Web Next.js, Demo local smoke, PR Gate,
+  PostgreSQL/RLS, governança, Mobile, AI, imagens e scanners aplicáveis PASS;
+  provenance do SBOM SKIPPED pelo workflow.
+- Backend focal: 4 suites/184 testes PASS para aritmética, resolução, preferências,
+  planos e fronteira de modelos (o Jest descobriu quatro suites). Typecheck backend PASS.
+- Web local: typecheck PASS; cópia FOOD04/FOOD05 14/14, aplicação de grupos FOOD04
+  4/4, nutrição do plano 67/67 e cálculo combinado 4/4 PASS. Total destes scripts:
+  89 testes PASS. Os comandos emitiram aviso de engine: ambiente Node 24.19.0,
+  projeto requer Node >=22 <23; a execução passou, mas não substitui validação local
+  com a versão declarada.
+- `pnpm test:authz` foi iniciado como regressão ampla. Os primeiros scripts de
+  correlação, origem do backend, rotas/sessão e alguns módulos passaram, mas o comando
+  foi interrompido após vários minutos (SIGINT, exit 130) para não duplicar toda a
+  matriz já executada pelo CI; portanto o pacote completo fica INCONCLUSIVO, não PASS.
+- Nenhuma edição de runtime, migration, merge, deploy, flag ou consulta a ambiente
+  externo nesta rodada. T07 por modelos, T14 matriz integral de save/snapshot, T15–T18
+  e revisão R4 independente continuam abertos. Os checks green não removem esses
+  bloqueios nem tornam a FOOD05 pronta para uso clínico/produção.
+
+### T14 — atomicidade ao aplicar múltiplas alternativas selecionadas (25/10/2026)
+
+- Acrescentada prova de integração PostgreSQL com duas alternativas sintéticas:
+  calcula ambas na prévia, adultera o fingerprint da segunda e exige rollback completo
+  sem revisão/snapshot no rascunho e sem linhas filhas parciais.
+- Typecheck backend PASS e `git diff --check` PASS.
+- Execução local direcionada da spec RLS foi BLOCKED antes dos testes: Testcontainers
+  requer `timescale/timescaledb-ha:pg15`, que não existe no daemon local (HTTP 404).
+  Não é falha do caso nem evidência GREEN; o PostgreSQL/RLS CI deverá executar a prova
+  no novo HEAD. Nenhuma imagem foi trocada e nenhum banco externo foi consultado.
+
+### D15–D18 — correções delimitadas e ratificação (27/10/2026)
+
+- D15: toda chamada de `clonarContextoEquivalenciaParaCopia` agora força
+  `revisao_pendente` antes de recalcular o fingerprint. Mantém nova identidade,
+  cálculo/fatos originais e linhagem cifrada. Histórico e aplicação existente
+  não são reclassificados retroativamente. Cópias idênticas entre contextos de
+  plano/paciente, catálogo com dependências iguais, roundtrip do snapshot,
+  autosaves repetidos e recálculo explícito têm testes focados.
+- D16: todas as falhas de `validateSync` são consideradas. Pré-validação limita
+  conteúdo ao teto editorial existente (96KiB), profundidade12 e dados JSON sem
+  null/não finitos. Campos descrição/composição fornecidos para catálogo são
+  validados mesmo quando `ValidateIf` do DTO clínico os dispensaria. Edição
+  verifica snapshot atual antes de arquivá-lo; leitura/versões/restauração falham
+  com503 genérico; entrada inválida com400, sem gravação.
+- RED comprovado: primeira rodada2 suites,28 FAIL/51 PASS; casos adicionais de
+  campos opcionais de catálogo6 FAIL/60 PASS; edição de snapshot atual inválido
+  1 FAIL/66 SKIPPED. Uma fixture antiga de edição sem descrição nem vínculo foi
+  corrigida para usar catálogo válido, preservando a finalidade de versionamento.
+- GREEN: regressões de resolver/serviço de planos/modelos/projeção4 suites,
+  223/223 PASS. Depois de ampliar raízes/limites de arrays, suíte de modelos
+  77/77 PASS. Testes abrangem criação, edição, leitura, versão e restauração,
+  erros de tipo, obrigatórios, faixa, nesting, arrays, null, não finitos,
+  tamanho, desconhecidos, proveniência e modelos legados válidos.
+- Backend `pnpm typecheck`: PASS. Engine local Node24.19.0, fora do intervalo
+  declarado22.x; execução CI no Node previsto continua necessária.
+- PostgreSQL descartável: tentativa `RLS_TESTCONTAINERS=true ...jest ... -t
+  'FOOD05 PostgreSQL: cópia de versão publicada'` BLOCKED no preparo: hook180s
+  excedido antes da prova; resultado1 FAIL/74 SKIPPED. Processo Jest com handles
+  abertos foi encerrado deliberadamente após o diagnóstico. Não comprova GREEN
+  de RLS/concorrência/persistência e não consultou banco externo.
+- D17 ratificada: autorização de paciente original permanece; modelo clínico
+  compartilhado continua bloqueado com mensagem explícita. D18 registrada como
+  direção futura, exigindo proposta/aprovação próprias; nenhuma arquitetura de
+  artefato matemático compartilhável foi implementada.
+- T07 permanece parcial; A04/A05, matriz integrada e revisão independente não
+  foram aprovadas por estas correções. Rollback de código conserva snapshots;
+  D16 pode bloquear modelos legados fora dos limites atuais sem apagar conteúdo.
+  Investigar/corrigir conteúdo pelo fluxo autorizado, nunca desabilitar validação
+  nem fazer reescrita silenciosa para contornar esse bloqueio.
+- Build local: primeira tentativa BLOCKED por `TS5033/ENOSPC` ao gravar dist,
+  durante o preparo do container. Após encerramento do teste/preparo e recuperação
+  de espaço local, nova execução de `pnpm build` PASS (exit0), incluindo
+  `verificar-artefato-producao.mjs` e `dist/main.js`. Nenhuma limpeza global Docker,
+  mudança de quota/plano ou operação de infraestrutura externa foi executada.
+- `pnpm security:secrets` e `git diff --check`: PASS. CI/scanners do novo commit
+  devem rodar novamente; revisão R4 independente não foi reexecutada nesta rodada.
+- Handoff atualizado para troca manual a Luna alto: acompanhar CI, reproduzir
+  PostgreSQL em ambiente descartável viável e fechar a matriz restante dos fluxos
+  existentes. Não iniciar D18, remover bloqueio D17, mergear ou operar ambientes
+  externos. Manter T07 parcial e discriminar teste unitário de prova em banco.
+
+### Reavaliação de arquitetura e CI remoto — HEAD `c7df3bfe7a280959b69093c3cca3ccb0db5bb1a1` (27/10/2026)
+
+- Revisão de impacto limitada ao commit range D15/D16 `7af23a86..c7df3bfe`;
+  patch SHA-256 `f7fbabc47de893b91cb9c6258577bb9b7095a943159c73edd44c0ae6dfee699f`.
+- A02/D15 corrigido e A03/D16 corrigido, com evidências RED/GREEN acima. A01
+  permanece contido pelo bloqueio de equivalência em modelos. A04 (ordem global
+  de locks), A05 (revisão exata da origem editável) e A06 (identidade estável nas
+  entradas de modelo) permanecem abertos e impedem marcar T07 concluído.
+- CI OctaClin run `40496482809` no HEAD exato: Backend NestJS, incluindo
+  PostgreSQL/RLS descartável, Web Next.js e Governança concluíram PASS. CodeQL,
+  Semgrep, Trivy e Dependency Review concluíram PASS em seus runs do mesmo HEAD.
+  Demo local smoke permanecia em andamento na última consulta; por isso CI global
+  não é declarado totalmente green.
+- A tentativa de revisão R4 independente não foi concluída. Revisão própria do
+  patch é análise técnica interna e não substitui autoria/revisão independente.
+- D18: proposta técnica registrada em `tasks/revisao-arquitetura-t07-food05.md`.
+  Recomenda envelope genérico versionado no armazenamento cifrado existente, nova
+  prévia/confirmador server-side, resolução das fontes no destino e uso do writer
+  atual; nenhuma migration parece necessária, condicionada à prova dos leitores.
+  Não foi implementada; requer autorização específica.
+- Estado: PR #446 continua Draft; sem merge, migration externa, deploy ou ativação.
+
+## A04/A05 — cópias seguras, atualização 27/10/2026
+
+Decisão: FOOD05 principal exige T07-A (cópias de refeições/planos autorizados); T07-B/A06/D18 vai para FOOD05-MDL separada e não foi implementada. D15/D16 permanecem corrigidos tecnicamente. PR #446 segue Draft.
+
+**A05 RED:** `pnpm exec jest --runInBand src/modulos/planos-alimentares/aplicacao/servico-planos-alimentares.spec.ts -t 'recusa cópia quando'` reproduziu 3 falhas nos casos versão UUID divergente, revisão draft obsoleta e revisão ausente: o código anterior aceitava a cópia.
+
+**A05 GREEN focado:** após tornar UUID de versão obrigatório, exigir revisão esperada em draft, resolver versão pelo `id + tenant + plano + número` e comparar revisão sob lock, o teste focal passou 4 casos (3 negativos + cópia de versão publicada), 128 casos não selecionados. O DTO e o caminho do navegador também propagam/comparam identidade e revisão.
+
+**A04 RED/GREEN unitário:** o manifesto de locks foi extraído para função pura e testado. A ordenação consistente por UUID de pacientes antes de planos garante que chamadas recíprocas concordem na sequência; destino usa escrita, origens leitura; duplicatas são consolidadas e associação plano/paciente ambígua falha. 3/3 testes unitários PASS. Isto não fecha a prova PostgreSQL.
+
+### Resultado dos gates neste checkpoint
+
+- PASS — focado serviço A05: 4 selecionados; 128 skipped por filtro.
+- PASS — helper A04: 3/3.
+- PASS — `git diff --check` no checkpoint atual.
+- BLOCKED/PENDING — prova PostgreSQL descartável com role runtime/RLS, concorrência recíproca A→B/B→A, CAS de revisão, autorização transferida/revogada e rollback. Está em execução neste ambiente; registrar saída final antes de alterar o estado.
+- NOT RUN — suítes integrais backend, BFF/Web, Playwright, regressões FOOD04/PA07, CI do HEAD atualizado e revisão R4 independente.
+- NOT AUTHORIZED — migrations externas, merge, deploy, produção e ativação. Nenhuma migration foi criada ou aplicada.
+
+Não reportar T07-A ou T14 como PASS até completar o banco e as regressões. T07-B/A06/D18 permanece futuro; D17 segue bloqueando aplicação por modelo no backend e frontend.
+
+### A04/A05 — tentativa PostgreSQL descartável e bloqueio de ambiente (27/10/2026)
+
+- A prova focal `RLS_TESTCONTAINERS=true pnpm exec jest --runInBand src/infraestrutura/banco-dados/rls-isolamento-tenant.integracao.spec.ts -t 'cópias recíprocas entre rascunhos'` foi compilada, mas o `beforeAll` estourou 180s preparando `timescale/timescaledb-ha:pg15`; o teste alvo não iniciou. Resultado: **BLOCKED por setup do container**, não PASS nem FAIL do comportamento.
+- Testei a tag local `timescale/timescaledb:2.17.2-pg15`; o pull falhou com `no space left on device` e a imagem não foi instalada. Não removi imagens, volumes ou arquivos para liberar espaço.
+- Ajuste no harness: `RLS_TESTCONTAINERS_IMAGE` permite selecionar uma tag local; o default do CI continua `timescale/timescaledb-ha:pg15`. A nova tag não foi validada, por isso o harness alterado também precisa passar no CI.
+- Não houve conexão com staging/produção, nem migration externa.
+- Backend `pnpm run typecheck`: PASS after the lock manifest and copy-reference changes (Node v24.19.0; project engine declares Node >=22 <23, so the environment emitted a compatibility warning).
+- Web `pnpm run typecheck`: PASS with the same Node engine warning.
+- `pnpm security:secrets`: PASS, local patterns found no real secret.
+- `pnpm run test:copia-refeicoes`: PASS 14/14. Does not execute Playwright.
+- DTO de edição/cópia `pnpm exec jest --runInBand src/modulos/planos-alimentares/aplicacao/dtos-edicao-plano.spec.ts`: PASS 26/26, incluindo UUID/revisão obrigatórios pela validação da referência.
+- A04 TDD: mutação temporária reproduzindo ordem antiga de inserção falhou especificamente na comparação recíproca de pacientes (1 FAIL/2 PASS); mutação foi removida imediatamente. GREEN da versão ordenada já havia passado 3/3 antes da mutação e será repetido após restaurar.
+- A04 RED/GREEN repetido após remover mutação: 3/3 PASS no manifesto global ordenado. O teste de manifesto valida a ordem; ainda não substitui a prova PostgreSQL concorrente bloqueada pelo setup.
+
+- Revisão adicional A04: identificada e corrigida possibilidade de deadlock por promoção de lock do paciente. Agora o lock write do paciente destino é adquirido na sequência global inicial; teste PostgreSQL foi ampliado para pacientes distintos. A prova permanece BLOCKED por falha de setup do container.
+- Playwright A05 novo (desktop, caso de revisão editorial): FAIL no setup local por timeout de 15s ao navegar para `/pacientes/:id`; Webpack ainda compilava a rota após vários minutos. Turbopack falhou pelo symlink externo. Não houve assertion do caso; resultado é BLOCKED por ambiente, não regressão confirmada. Retry após compilação da rota pendente.
+
+### R4 independente e reforço das provas A04/A05 — 27/10/2026
+
+- A revisão independente específica A04/A05 não encontrou vulnerabilidade confirmada, mas manteve **A04 BLOCKED**: concorrência não determinística e ausência de rollback pós-escrita; **A05 BLOCKED**: falta prova PostgreSQL da edição da origem durante a confirmação e da revalidação de autorização/revisão no mesmo fluxo. Revisão completa em `tasks/revisao-arquitetura-t07-food05.md`.
+- Reforcei o teste PostgreSQL A04 usando a barreira já existente `disputarPa06`: a primeira operação mantém o lock de escrita no paciente ordenado; a segunda deve aparecer aguardando lock antes da liberação. O teste exige uma cópia concluída, um conflito 409 recuperável e revisão final sem linhas parciais.
+- Adicionei falha injetada após gravar a versão do destino, verificando rollback da revisão e das substituições em PostgreSQL. Adicionei corrida A05 entre cópia e edição da origem, exigindo espera observável e serialização; depois a referência antiga deve resultar em 409 sem alterar o destino.
+- Esses novos cenários ainda **não foram executados**: Testcontainers não iniciou devido ao timeout ao preparar a imagem Timescale/PostgreSQL e a tentativa de obter imagem alternativa encontrou falta de espaço. Permanecem BLOCKED, sem inferir PASS.
+- Backend `pnpm run typecheck` está em execução após as novas provas; registrar o resultado final. `next-env.d.ts` foi restaurado após alteração gerada pelo Next e não integra o patch.
+- Resultado R4 independente: revisão somente leitura, sem testes; A04/A05 continuam bloqueados até execução PostgreSQL controlada. Não equivale à revisão final de todo o HEAD/PR.
+- Complemento independente A05: revisão do delta encontrou que a origem era checada mas a revisão validada não era preservada na proveniência cifrada. Corrigido para persistir revisão de origem de draft na cópia e no elo inicial da linhagem, mantendo leitura histórica compatível; published segue por UUID. O teste da integração agora cobre também edição-primeiro e deve rejeitar a cópia obsoleta sem alterar o destino. A R4 pediu nova leitura deste delta; teste PostgreSQL ainda não executado.
+- A revisão complementar identificou risco de atribuir revisão do rascunho intermediário a uma linhagem legada cuja revisão inicial é desconhecida. Corrigido: uma linhagem existente sem revisão preserva a ausência; só uma aplicação sem linhagem anterior inicializa a revisão inicial a partir da fonte atual. Adicionado teste unitário de cópia em cadeia legado; aguarda execução e nova leitura independente.
+- Reexecução dos testes direcionados após a correção da linhagem: **PASS, 14 selecionados**, 143 filtrados, 3 suítes aprovadas. Inclui a cópia em cadeia legado.
+- Backend `pnpm run typecheck` após a correção final: **PASS**; ambiente Node v24.19.0 fora do range declarado >=22 <23 (warn). `pnpm security:secrets`: **PASS**, nenhum segredo real identificado por padrões locais.
+- O primeiro CI PostgreSQL/RLS do HEAD `6aa2c77b` executou os cenários novos e revelou 2 falhas entre 3.554 testes PASS / 48 SKIPPED: os dois testes de concorrência recebiam conflito no domínio. As execuções seguintes preservaram a causa, identificando `resolverEquivalenciasDocumento` na linha que rejeita a referência editorial.
+- Causa de teste: a prova recíproca e a segunda corrida A05 montavam o documento destino a partir do documento de origem, substituindo as referências de equivalência próprias do destino. Isso não representava o fluxo real de copiar item para o rascunho atual do destino. Os testes foram corrigidos para começar no snapshot atual do destino e acrescentar apenas o item de origem com chaves novas. Reexecução PostgreSQL/RLS necessária; A04/A05/T07-A/T14 continuam BLOCKED.
+- Revisão R4 independente estática final dos deltas A04/A05: **sem achados adicionais**, código-review portion encerrado para esses deltas. O revisor não executou testes; PostgreSQL não executado, A04/A05/T14 permanecem BLOCKED até as provas RLS e concorrência passarem.
+- Testes focados após essas correções: `pnpm exec jest --runInBand src/modulos/planos-alimentares/aplicacao/resolver-equivalencias-edicao.spec.ts src/modulos/planos-alimentares/aplicacao/servico-planos-alimentares.spec.ts src/modulos/planos-alimentares/aplicacao/ordenacao-locks-copia.spec.ts -t 'copia proveniência|cópia idêntica|revisão editorial inválida|recusa cópia quando|ordenação de locks'`: **PASS, 13 selecionados**, 143 filtrados; 3 suítes passaram. Esse resultado cobre unidade/serviço, não PostgreSQL/RLS concorrente.
+- A barreira PostgreSQL foi refinada para só liberar depois de observar `pg_stat_activity` indicando que uma sessão está bloqueada especificamente pelo PID da primeira transação (`pg_blocking_pids`), reduzindo falsos positivos de espera de lock de outras sessões.
+
+### Reexecução CI e correção adicional dos fixtures — 27/10/2026
+
+- O CI do HEAD `643076ba` executou Postgres/RLS, mas falhou em dois novos testes: no caso stale, o destino recém-criado não tinha snapshot editorial; no caso de corrida A05, o documento da origem ainda era usado como destino. As outras suítes reportaram 3.554 testes PASS e 48 SKIPPED.
+- Correção local: salvar primeiro o destino stale sem substituições, então conferir revisão do destino 1 e garantir que permanece 1 após recusa por origem stale. Na corrida de cópia-primeiro, manter o snapshot salvo do destino como base e clonar item/equivalência do snapshot de origem.
+- Revisão independente estática destes dois deltas: sem achados adicionais; revisor não executou testes.
+- `pnpm run typecheck` backend: PASS, com aviso de ambiente Node v24.19.0 fora do range declarado >=22 <23. Regressões focadas resolver/serviço/ordenação: 13 PASS, 144 filtrados; 3 suítes PASS. `git diff --check`: PASS.
+- A execução focal local da suíte RLS com Testcontainers foi interrompida após mais de 3 minutos sem iniciar o container; classificada BLOCKED de setup, não resultado dos testes. Rodada sem `RLS_TESTCONTAINERS=true` pulou a suíte e não conta como validação.
+- Scanners do HEAD `643076ba`: CodeQL, Semgrep, Trivy e Dependency Review PASS; Governança, AI e Mobile PASS. Backend CI falhou nos dois casos acima; Web ainda estava em execução na última consulta. O delta corrigido precisa de nova execução PostgreSQL/RLS no próximo HEAD.
+- Estados: A04/A05/T07-A/T14 seguem BLOCKED. PR #446 Draft. Nenhuma operação externa, migration, merge ou deploy.
+
+### CI Postgres `403bbc11` — diagnóstico e ajuste final de fixture — 27/10/2026
+
+- A nova execução com PostgreSQL/RLS ainda falhou em dois testes. No caso stale, o plano C era criado para o paciente cujo cenário selecionado venceu, mas o documento inicial era de outro paciente e referenciava avaliação alheia; corrigi para iniciar a partir do documento da mesma origem/paciente e remover substituições antes de salvar.
+- A prova A05 com duas ordens de corrida excedeu o timeout de 60s; ampliei somente esse limite de teste para 120s, sem mudar asserts ou aceitar resultado parcial. A cópia-primeiro mantém snapshot destino + item da origem; a ordem edição-primeiro continua exigindo 409 sem escrita.
+- R4 independente estática dos dois ajustes finais: sem achados adicionais; não executou testes. `git diff --check` PASS. Backend typecheck local repetido PASS (Node 24.19 fora do range declarado >=22 <23).
+- CI `40528993006`: 3.554 testes PASS, 48 SKIPPED; os 2 testes concorrentes continuam falhando no HEAD `403bbc11` pelos motivos de fixture/timeout acima. Scanners e demais jobs aplicáveis reportaram PASS; não considerar CI global verde.
+- Os novos ajustes estão na worktree e requerem commit/push e nova execução Postgres/RLS. A04/A05/T07-A/T14 seguem BLOCKED. Nenhuma alteração no runtime clínico, migration externa, merge ou deploy.
+
+### CI Postgres `3e45f1dc` — prova A05 separada por ordem — 27/10/2026
+
+- Backend CI executou Postgres/RLS e reportou 3.555 testes PASS, 48 SKIPPED; o único fail foi a prova A05 agregada, que excedeu 120s, sem falha de assertion capturada.
+- Dividi em duas corridas independentes com timeout de 90s: (1) cópia adquire locks primeiro, ambas as operações concluem, cópia fica `revisao_pendente` e a revisão da origem avança; (2) edição adquire locks primeiro, a origem avança, cópia com revisão antiga recebe 409 e o destino permanece inalterado. Nenhuma asserção foi removida.
+- R4 independente estática do delta de divisão: sem achados adicionais; revisor não executou testes. Nova execução CI/Postgres/RLS necessária. A04/A05/T07-A/T14 seguem BLOCKED.
+
+### CI `40532192140` e redução do fixture A05 — 27/10/2026
+
+- O Postgres/RLS real executou 3.556 testes PASS e 48 SKIPPED; a prova “edição da origem vence e cópia stale não grava” excedeu 90s sem registrar falha de assertion. Backend permanece FAIL. Web concluiu PASS; Demo local smoke foi cancelado e PR Gate ficou na fila quando chegou o novo commit. CodeQL, Semgrep, Trivy, Dependency Review, Governança, Operação, Rollout, Mobile e AI FastAPI passaram.
+- A05 foi ajustado para criar o rascunho destino como segundo plano do mesmo paciente, reutilizando o cenário sintético já preparado. Isso reduz uma preparação completa de paciente sem retirar a contenção, a edição primeiro, a revisão esperada stale, o 409 ou a verificação de que o destino continua na revisão 1.
+- R4 independente estática deste ajuste: sem achados; o revisor confirmou que o cenário ainda exercita edição primeiro e cópia bloqueada até a edição concluir. O revisor não executou testes.
+- Typecheck backend após o ajuste: **PASS** (Node local v24 continua fora do range declarado >=22 <23). Testes focados: **PASS**, 8 selecionados em 2 suítes; 127 testes filtrados/skipped.
+- O próximo CI deve executar novamente a prova PostgreSQL/RLS após o fixture reduzido. Não aumentar timeouts nem relaxar assertions como substituto da causa-raiz.
+- No HEAD `86f5873e`, Dependency Review PASS; CodeQL, Trivy e Semgrep em andamento e OctaClin CI pendente na consulta.
+
+### Causa-raiz confirmada do timeout edit-first — 27/10/2026
+
+- CI `40534905458` no HEAD `f799760f`: PostgreSQL/RLS reportou 3.556 testes PASS, 48 SKIPPED e uma falha de timeout (90s) somente em “edição da origem vence e cópia stale não grava”. A suite global continuou; Web ainda executava na consulta.
+- Causa: o callback de edição ignorava o `ExecutorTenant` instrumentado por `disputarPa06` e chamava `origem.servico` com executor normal. Assim, a transação de edição nunca sinalizava a barreira; o teste esperava até timeout. A redução do fixture não corrigia esse defeito do harness.
+- Correção: construir o serviço da primeira operação com o executor recebido do helper. A barreira passa a observar a edição antes de iniciar a cópia concorrente; as assertions de edição concluída/revisão 2, cópia 409 e destino inalterado/revisão 1 são preservadas.
+- R4 independente estática do delta: sem achados; confirmou que o executor instrumentado sinaliza a barreira e mantém as verificações. O revisor não executou testes.
+- Backend typecheck local foi reiniciado para este delta e ainda aguarda resultado. Nova prova PostgreSQL/RLS/CI obrigatória; A04/A05/T07-A/T14 permanecem BLOCKED.
+- A04/A05/T07-A/T14 permanecem BLOCKED. PR #446 continua Draft; sem migration externa, merge ou deploy.
+
+### Resultado CI `40536581786` — HEAD `919ce32f` — 27/10/2026
+
+- Backend NestJS: **PASS**, 3.557 testes passaram e 48 foram skipped; Testcontainers/RLS descartável também **PASS**. A04 e A05 ficam **PASS técnico** para concorrência, ordem de locks, rollback, CAS/revisão stale e ausência de escrita em destino após conflito.
+- Causa dos dois timeouts anteriores: callback edit-first usava executor normal, então `disputarPa06` nunca sinalizava a barreira. Corrigido usando o executor instrumentado. R4 independente estática confirmou a correção, sem achados; reviewer não executou testes.
+- Web Next.js, Mobile Expo, AI FastAPI, Governança, Operação, Rollout, CodeQL, Semgrep, Trivy e Dependency Review: **PASS**.
+- Demo local smoke: **em andamento** em “Smoke visual Playwright”; PR Gate ainda não estava fechado na consulta.
+- Portanto T07-A/T14 seguem BLOCKED até regressões FOOD04/autosave/PA07, os demais critérios de aceitação, smoke/PR Gate e R4 independente final. PR #446 permanece Draft; sem migration externa, merge ou deploy.
+
+### Retomada, flags e segurança — 27/10/2026
+
+- Worktree PR recuperada em `docs/pos320-food05-planning`, HEAD/upstream `a4039561fd4260c2cb87dc3cd5e0f648ec712846`; preservado o delta não commitado de cinco arquivos. Nenhum reset/clean/rebase ou acesso externo.
+- RED/GREEN: helper Web define flags false somente para equivalências FOOD05; backend rejeita flags positivas nas referências de cópia. A revisão independente identificou também recálculo pendente + liberação no mesmo save. Teste RED reproduziu aceitação; backend agora rejeita essa combinação antes da persistência. GREEN comprova revisão/snapshot sem alteração, recálculo false, estado `calculada_revisada`, revisão/publicação sem liberar, e ativação separada posterior aceita.
+- Node 22.21.1: `test:copia-refeicoes` 14/14; `servico-planos-alimentares.spec.ts` 134/134 (e teste adicional focado aprovado); `resolver-equivalencias-edicao.spec.ts` 22/22; typecheck backend/Web e ESLint Web PASS; diff check PASS. Backend ESLint não disponível no pacote local. Playwright completo e suíte global não foram executados nesta retomada.
+- Tentativa RLS Testcontainers bloqueada no setup: imagem Timescale não estava em cache e pull falhou por falta de espaço no filesystem (97% usado). Nenhuma asserção do cenário de banco foi executada; sem banco externo. Classificação BLOCKED, não FAIL funcional.
+- CodeQL: discussão `r4367826603` sobre antigo `Object.assign` conferida contra `Object.create(null)` + `Object.defineProperty`; teste `__proto__`/`constructor` PASS (na suíte 22/22) e CodeQL remoto do HEAD a4039561 PASS (`40539879968`). Comentário respondido com evidências e thread resolvida.
+- CI remoto confirmado no HEAD `a4039561`: run OctaClin `40539879848`, CodeQL `40539879968`, Semgrep `40539879930`, Trivy `40539880199`, Dependency Review `40539879900` PASS nos jobs aplicáveis (Backend/Postgres-RLS, Web, Demo, PR Gate, Mobile, AI, Governança); SBOM provenance SKIPPED. Estas execuções antecedem o delta e não o validam.
+- A04/A05 permanecem PASS técnico do commit `919ce32f`; D15/D16 corrigidos. R4 independente do delta encontrou inicialmente o bypass no recalcular; correção implementada e aguarda re-revisão. R4 integral não concluída. T07-A/T14 BLOCKED; T15–T18 sem fechamento individual nesta rodada. #446 continua Draft.
+
+### Follow-up dos achados R4 — 27/10/2026
+
+- R4 independente encontrou um falso bloqueio: flags true já salvas antes da equivalência ficar pendente eram rejeitadas no recálculo. RED confirmou; comparação agora bloqueia só ativação nova false→true na mesma gravação. Teste verifica recalcular equivalência previamente liberada sem desativar sua escolha.
+- R4 também encontrou perda da linhagem e cálculo inicial ao recalcular cópia. O snapshot cifrado agora carrega `copiaOrigem` e `calculoOriginalCopia` imutável (fatos, parâmetros, resultado, hashes e snapshots); teste de domínio e teste de serviço conferem persistência após recálculo.
+- Regressões finais após os ajustes: serviço 136/136, resolvedor 23/23, Web cópia 14/14, backend/Web typecheck e ESLint Web PASS (Node 22.21.1). Diffs continuam locais; Postgres/RLS CI do delta e re-revisão R4 independente ainda pendentes.
+- Releitura independente final do delta prioritário: sem achados materiais adicionais. Escopo foi estático, não executou testes; a aprovação técnica depende da execução CI Postgres/RLS e dos outros gates integrais.
+- O teste de integração RLS foi reforçado depois da revisão: inspeciona flags materializadas no banco, captura snapshot cifrado e linhas existentes antes de payload adulterado, e exige igualdade integral depois da rejeição.
+
+### Retomada final P2 — 27/10/2026
+
+- Preflight: branch `docs/pos320-food05-planning`, HEAD `c3616081cfa483a3cbc157964cb4e089e771aeef`; worktree contém o delta FOOD05 ainda não enviado. `octaclin-web/next-env.d.ts` é alteração separada preexistente, preservada fora do patch. Nenhum reset, clean ou rebase.
+- P2-01: cálculo exige nutriente-alvo válido, mas não bloqueia pela ausência de macros não alvo. Ausências permanecem omitidas. Snapshots parciais só são aceitos no envelope schema 3 com contexto FOOD05 válido, mesma identidade de catálogo e alvo presente; caminhos legados/sem FOOD05 seguem estritos. Cobertura inclui macros ausentes, materialização individual, FOOD04, snapshot sem zeros e impacto incompleto.
+- P2-02: dependências versão 2 usam identidade/preparo/base/nutrientes usados no cálculo; formatação e metadados editoriais isolados não marcam stale. Contextos legados sem versão preservam assinatura antiga versão 1. Mudanças nutricionais autorizadas marcam revisão sem mudar porção/snapshot; recálculo exige fatos atuais e falha fechado se fonte inativa/indisponível.
+- Backend Node 22.21.1: 5 suítes focadas **205/205 PASS**, incluindo o teste FOOD04 interrompido e o recálculo com fonte inativa. Typecheck backend **PASS** (exit 0). Web typecheck **PASS** (exit 0); BFF planos **62/62 PASS** e BFF Fase 314 **1/1 PASS**. `git diff --check` **PASS**.
+- Re-review R4 independente dos dois P2: favorável, sem achados estáticos adicionais; cobriu composição parcial/schema 3, mudanças de composição, recálculo e fonte indisponível. Não executou testes, logo não substitui CI nem R4 integral.
+- PA07 Playwright desktop/mobile: **BLOCKED no setup local**, sem assertions. A worktree usa symlink de `node_modules` para outra worktree; Next compilou mas respondeu 500 por `Cannot find module 'next/dist/compiled/next-server/app-page.runtime.dev.js` e `react/jsx-runtime`; Playwright não conseguiu reutilizar o servidor e falhou ao iniciar um segundo servidor em porta ocupada. Nenhuma configuração, dependência ou código foi alterado para contornar. CI precisa provar PA07; se o workflow não executar esses cenários, manter BLOCKED.
+- PostgreSQL/RLS, build completo, scanners e CI do delta ainda **NOT RUN**. Prova RLS disponível para FOOD05 cobre preferências/FOOD04, não a nova materialização parcial; validar o job oficial e seus cenários no novo HEAD.
+- P2-01/P2-02 corrigidos localmente e focados verdes; A04/A05 seguem PASS técnico, sem reabertura. T07-A/T14/T15–T18 continuam BLOCKED até CI/RLS, regressões integradas, PA07 e R4 final integral. D17 mantém equivalências por modelos bloqueadas; T07-B/D18/A06 seguem na FOOD05-MDL. PR #446 Draft.
+
+### Fechamento de CI e correção R4 read→recalc — 27/10/2026
+
+- Commit `59f7ecaa78cb68d682c671939220196cd5ab38c7`: CI run `40583522721` concluído verde em Backend NestJS (inclui suíte completa e PostgreSQL/Testcontainers/RLS descartável), Web Next.js, Mobile, AI, Demo local smoke, PR Gate, rollout, governança, operação e impacto. Smoke visual Playwright e testes de responsividade/linguagem passaram. CodeQL `40583522582`, Semgrep `40583522776`, Trivy/imagens `40583522709` e Dependency Review `40583522517` passaram; provenance SBOM ficou SKIPPED. Esses resultados pertencem somente ao commit `59f7ecaa`, anterior ao fix R4 abaixo.
+- Revisão R4 independente do commit `59f7ecaa` encontrou gap P2: a composição atualizada só aparecia pendente após salvar, não na leitura normal; revisar/publicar também podiam usar estado persistido antigo. TDD RED reproduziu `obter()` retornando `calculada_revisada` após mutação nutricional.
+- Fix local: projeção autenticada do estado atual no caminho real `obter() → montarPlano() → montarVersao()`, sem gravar ao ler, recalcular porção ou modificar snapshot. Revisão e publicação revalidam a fonte atual. O recálculo explícito aceita contexto ainda persistido como revisado somente quando re-resolução autorizada comprova mudança real na assinatura versionada; mantém identidade, revisão, fingerprint/CAS e falha fechado se a fonte ficar indisponível. O fluxo RED/GREEN cobre leitura, rejeição de revisar/publicar, prévia atual e recálculo/salvamento.
+- Re-review R4 independente focada no fix read→recalc: **PASS estático**, sem achados materiais; revisor não executou testes. Isso não equivale à R4 integral final.
+- Testes locais após fix: 5 suítes backend **206/206 PASS**; typecheck backend **PASS**. Este executor só expôs Node `24.19.0` nesta rodada, fora de `>=22 <23`; CI do novo commit precisa confirmar com Node 22. O teste FOOD04, PA07 desktop/mobile, RLS, build, scanners e PR Gate verdes reportados acima são do commit anterior `59f7ecaa`, não do patch read→recalc ainda local.
+- Estado após o fix local: novo delta ainda não commitado/enviado; T07-A/T14/T15–T18 e prontidão de merge **BLOCKED** até CI/RLS do HEAD atualizado, cobertura final e revisão R4 integral da FOOD05. PR #446 permanece Draft; sem migration, deploy ou merge.
+
+
+## Fechamento da retomada P2 — HEAD `8ed8525926a3548d7f6630205fd885ccd6fb785d` (27/10/2026)
+
+- P2-01/P2-02: 206/206 em cinco suítes FOOD05 e typecheck backend local; execução local Node 24.19.0 (fora de `>=22 <23`). CI do commit exato validou Backend em Node 22, suíte completa e PostgreSQL/Testcontainers/RLS descartável.
+- O teste FOOD04 que não tivera resultado foi executado: PASS. `test:copia-refeicoes` Web: PASS no CI.
+- PA07 desktop/mobile: PASS dentro de `pnpm smoke:visual` no Demo local smoke do HEAD, com projetos Chromium desktop e mobile.
+- Backend, Web, Mobile, AI, Governança, Rollout, operação, PR Gate e scanners aplicáveis: PASS. Runs: OctaClin CI `40588351876`, CodeQL `40588351862`, Semgrep `40588351786`, Trivy `40588351895`, Dependency Review `40588351845`. Provenance SBOM: SKIPPED pelo workflow.
+- PostgreSQL/RLS PASS em Testcontainers descartável, role runtime, no CI exato; cenários FOOD05 cobrem CAS/stale, cópia/revisão, concorrência/locks, autorização/carteira, rollback e integridade materializada/snapshot. Sem banco externo ou migration externa.
+- R4 independente integral FOOD05 no commit exato: PASS estático sem achados materiais. O revisor não executou testes; CI/testes são evidência separada.
+- T07-A, T14 e T15–T18 estão registrados no checklist conforme evidência e limites. T07-B/FOOD05-MDL, A06 e D18 não implementados; D17 continua bloqueando aplicação por modelos. Pendência operacional da FOOD04 em produção é separada.
+- Commit enviado `8ed8525926a3548d7f6630205fd885ccd6fb785d`; #446 permanece Draft. `octaclin-web/next-env.d.ts` preexistente ficou fora do commit.

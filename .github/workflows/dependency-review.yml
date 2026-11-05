@@ -38,9 +38,9 @@ jobs:
         with:
           # Politica de vulnerabilidade: critical/high novo nao entra.
           fail-on-severity: high
-          # A allowlist respeita OR/AND SPDX da politica aprovada; revisao
-          # por pacote continua obrigatoria nos inventarios instalados do CI.
+          # Permite apenas licenças aprovadas e mantém a exceção específica revisada.
           allow-licenses: ${{ steps.license-policy.outputs.allow }}
+          allow-dependencies-licenses: pkg:npm/node-forge@1.4.2
           # Sem comentario no PR: manteria a necessidade de pull-requests: write.
           comment-summary-in-pr: never
           warn-only: false

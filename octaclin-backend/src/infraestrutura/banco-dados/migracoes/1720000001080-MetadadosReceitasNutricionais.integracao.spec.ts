@@ -23,6 +23,7 @@ import { ReceitaNutricionalOrm } from '../../../modulos/planos-alimentares/infra
 import { ServicoReceitasNutricionais } from '../../../modulos/planos-alimentares/aplicacao/servico-receitas-nutricionais';
 import { ServicoPorcionamentoReceita } from '../../../modulos/planos-alimentares/aplicacao/servico-porcionamento-receita';
 import type { UsuarioAutenticado } from '../../../modulos/auth/dominio/usuario-autenticado';
+import { PreferenciasEquivalencia1720000001079 } from './1720000001079-PreferenciasEquivalencia';
 
 const executar = process.env.RLS_TESTCONTAINERS === 'true';
 (executar ? describe : describe.skip)('FOOD07 PostgreSQL descartável — metadados/CAS/RLS', () => {
@@ -68,6 +69,9 @@ const executar = process.env.RLS_TESTCONTAINERS === 'true';
       await new CriarReceitasNutricionais1720000001033().up(runner);
       // T04 agora ensaia a1066 real, incluindo FKs, RLS, índices e trigger imutável.
       await new CompartilharReceitasNutricionais1720000001066().up(runner);
+      // A entidade profissional carregada pelo runtime já inclui os campos da 1079.
+      // A fixture integrada precisa seguir a mesma cadeia de schema antes da 1080.
+      await new PreferenciasEquivalencia1720000001079().up(runner);
       await runner.query('insert into receitas_nutricionais(id,tenant_id,profissional_id,criado_por_usuario_id,origem,tipo,nome_criptografado,conteudo_criptografado,total_itens) values($1,$2,$3,$3,\'pessoal\',\'receita\',$4,$5,1)', [legadoId, tenant, p1, crypto.criptografar('Legado'), legadoCipher]);
       const alvo = (criarOpcoesTypeOrm().migrations as (new () => MigrationInterface)[]).find(m => m.name === 'MetadadosReceitasNutricionais1720000001080');
       if (alvo) await new alvo().up(runner); // Ausente no RED: primeira asserção prova coluna ausente, não erro de setup.

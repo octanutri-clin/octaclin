@@ -4759,3 +4759,11 @@ O programa de hardening
 PR 36-56 permanece como trilha separada --
 PR 55 permanece adiado e pendente; PR 56 continua condicionado a decisao
 explicita de distribuir o Mobile.
+
+## FOOD05 #446 — conferência G06 (2026-11-04)
+
+- A PR permanece aberta e Ready for Review no HEAD `2ed4ad40`. A sincronização com a `main` atual encontrou conflitos em checklist/status e nos contratos compartilhados de planos alimentares; validar os conflitos e os checks no novo HEAD antes de considerar a PR mergeável.
+- Render: os quatro serviços continuam em `main`, com auto-deploy por commit. Web de staging/produção no commit `02a51be8`; backend de staging no merge de dependências `bcb68250`; backend de produção permanece no FOOD03 `9f13b80`. As tentativas recentes de atualizar o backend de produção falharam.
+- Neon, consultado somente por metadados SQL: 1078 consta no ledger de staging e produção; tabelas de grupos/favoritos têm RLS e FORCE RLS. 1079 não consta no ledger e as colunas de preferências não existem nos dois bancos. As roles de aplicação listadas não têm BYPASSRLS; a role efetiva usada pelo Render não foi comprovada.
+- Log do backend de produção registrou HTTP 402 por quota ao iniciar em 30/10. Consulta SQL de metadados respondeu em 03/11, mas isso não comprova a conexão do runtime Render nem a regularização integral da quota.
+- G06 segue **BLOCKED**. Nenhuma migration, DDL, mudança de quota/configuração, deploy ou smoke pós-implantação foi executado.

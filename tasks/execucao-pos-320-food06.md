@@ -1,5 +1,9 @@
 # FOOD06 — execução técnica
 
+> Integração com `main` 3b35e104: conflitos FOOD05/FOOD06 conciliados em branch Draft.
+> Prévia FOOD06 preserva materiais e proveniência FOOD05; teste reproduziu falha sem materiais e passou com a correção, inclusive composição parcial. Backend focado 192/192, BFF 107/107, typechecks e licenças 15/15 PASS.
+> PostgreSQL/RLS local BLOCKED: imagem TimescaleDB indisponível e filesystem do Docker sem espaço; prova real deve ser executada no CI. Playwright desktop/mobile em andamento; R4 independente ainda não executada. Nenhum deploy ou migration externa.
+
 > Estado vigente local — extensão M10-C2: [contrato e provas](food06-m10-historico.md).
 > Backend unit 4/4, PostgreSQL descartável/RLS 41/41, Web 69/69, Playwright 2/2 desktop/mobile, typechecks backend/Web e ESLint afetado PASS com Node22.21.1.
 > Build backend/Web, scanner local de segredos e `git diff --check` PASS; CI/scanners GitHub do novo HEAD ainda precisam ser concluídos.

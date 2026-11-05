@@ -13,13 +13,6 @@ packages:
 # remediacao e por override e nao por bump direto. `js-yaml` 4.3.2 remedia
 # GHSA-2883-xcg3-v3hh, trazido pela CLI do Expo.
 overrides:
-  # Correções upstream de segurança, sem supressão; validar APIs usadas pelo Expo.
-  node-forge@<=1.4.0: 1.4.1
-  glob@>=9.0.0 <14.0.2: 14.0.2
-  minimatch@<11.0.1: 11.0.1
-  # O patch já remove o uso de deepmerge no config Expo; declarar também a
-  # remoção no grafo evita reintrodução órfã ao regenerar o lockfile.
-  '@expo/config@57.0.9>deepmerge': '-'
   uuid@<11.1.1: 11.1.1
   js-yaml@>=4.0.0 <4.3.2: 4.3.2
   decode-uri-component@<0.5.1: 0.5.1
@@ -30,6 +23,17 @@ overrides:
   compression@<1.8.2: 1.8.2
   # GHSA-pqg4-j6r4-53mv: shell-quote 1.12.0 inclui a correcao upstream >=1.11.0.
   shell-quote@>=1.8.4 <1.11.0: 1.12.0
+  # Advisories de node-forge foram corrigidos upstream em 1.4.1; 1.4.2 e a menor
+  # release publicada aprovada pela janela de maturacao atual.
+  node-forge@>=1.4.0 <1.4.1: 1.4.2
+  # glob 14.0.2 corrige cancelamento e usa minimatch 11 corrigido.
+  glob@>=13.0.0 <14.0.2: 14.0.2
+  # O patch versionado de @expo/config remove deepmerge do consumidor; manter
+  # a aresta removida tambem no grafo que o pnpm gera a partir do registry.
+  '@expo/config@57.0.9>deepmerge': '-'
+  # GHSA-g3hv-75wg-m249: a versao do Expo fingerprint declara minimatch 10,
+  # mas o caminho precisa da correcao publicada em 11.0.1 ou superior.
+  '@expo/fingerprint@0.20.13>minimatch': 11.0.4
   # GHSA-mrhx-c7xc-m3w5: Zod 3 nao tem backport upstream. Limitar o override
   # aos dois consumidores de schemas da CLI Expo 57; testes reais de plugin,
   # parametros MCP e curto-circuito de colecoes comprovam a compatibilidade.

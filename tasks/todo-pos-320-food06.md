@@ -1,5 +1,8 @@
 # FOOD06 — checklist
 
+> Integração de `main` 3b35e104 em validação: fluxo editorial FOOD05/FOOD06 conciliado e sem marcadores de conflito. Backend focado 192/192, BFF 107/107, typechecks e licenças 15/15 PASS; teste cruzado reproduziu falha e passou após preservar materiais de equivalência.
+> RLS PostgreSQL local BLOCKED por imagem TimescaleDB ausente e filesystem Docker cheio; executar no CI. Playwright em andamento, CI do merge e revisão R4 independente pendentes. A PR continua Draft.
+
 > Estado vigente local — M10-C2 em validação: [execução e limites](food06-m10-historico.md).
 > Comparação histórica por planejamento, composição/fonte, referência, contexto e cobertura: unitário 4/4, PG/RLS 41/41, Web69/69, browser2/2 desktop/mobile, typecheck e ESLint PASS com Node22.21.1.
 > M10 PARCIAL. Builds, typechecks, lint e scanner local PASS; CI/scanners GitHub do novo delta ainda pendentes. UX B/C e R4 independente NÃO EXECUTADOS; direitos/DRI e G06 BLOCKED.
