@@ -1,0 +1,5 @@
+# Brief factual — FOOD06 M07, etapa B delimitada
+
+Base10d7257f. Síntese editorial dos briefs textuais enviados separadamente aos dois papéis, sem conversa herdada. Conteúdo factual comum: console profissional somente, sem envio/alteração de plano/portal. Captura explícita de uma publicação ou rascunho materializado, com revisão e seleção confirmadas. Valores congelados, zero/ausência e cobertura preservados; DRI não habilitadas. Tentativa conservada após503 e bloqueada após edição/rematerialização. Comparação Antes/Depois e tabela com diferenças sem atribuição causal. Histórico paginado, somente registros carregados.
+
+Rótulos reais antes do ajuste: data/hora em minutos, título conhecido ou Plano, número da versão/estado; registros distintos poderiam repetir rótulos. Coordenador informou evidências históricas79unitários/10browser/2rematerialização, exclusivamente sintéticas. Nenhuma screenshot foi fornecida aos revisores. O coordenador depois reproduziu a colisão via Playwright e inspecionou screenshot sintética local, sem que isso constitua avaliação visual própria das personas.

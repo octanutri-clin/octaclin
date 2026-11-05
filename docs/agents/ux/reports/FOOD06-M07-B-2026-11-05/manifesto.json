@@ -1,0 +1,22 @@
+{
+  "base": "10d7257f",
+  "modalidade": "subagentes runtime com papel textual; não seleção nativa TOML",
+  "fork_turns": "none",
+  "instancias": [
+    "/root/food06_m07_nux_b",
+    "/root/food06_m07_pux_b"
+  ],
+  "ferramentas_dos_revisores": "nenhuma chamada observada; proibidas no prompt, sem sandbox técnico independente",
+  "registradoEm": "2026-11-05T16:47:34.345559-03:00",
+  "inicio_fim_individual": "horários não capturados; atividade dos IDs no runtime é a evidência",
+  "brief": "síntese editorial do conjunto factual comum; prompts individuais distintos",
+  "hashes": {
+    ".codex/agents/octaclin-nutricionista-ux.toml": "6259b40a98e2c49053cbc6adbc0c59d0312b14e191b228ab73de2f2eac53af6d",
+    ".codex/agents/octaclin-paciente-ux.toml": "a40b1ded5e47739a2710caa5ec9a9a7871b57be7efc11deefaae0515028ff7d7",
+    "docs/agents/ux/reports/FOOD06-M07-B-2026-11-05/consolidado.md": "39924dcb81831a2a3d453a16879f67c672857f47de85e366657a45ad53c2e2a6",
+    "docs/agents/ux/reports/FOOD06-M07-B-2026-11-05/paciente.md": "21ead924461445f04bab72591dbbd4e1b65322f1fa6308c0fc820a1562927268",
+    "docs/agents/ux/reports/FOOD06-M07-B-2026-11-05/nutricionista.md": "031d88b2432229f44c876631f51cdf6af3a8b6834d3a49c3b4288aa1eff008aa",
+    "docs/agents/ux/reports/FOOD06-M07-B-2026-11-05/brief.md": "6d94a1e363da621be2f3e2372cb677498975ad9b666ca8787f17f57008f4c9cb"
+  },
+  "limites": "sem visual/interação própria das personas; saídas preservadas como sínteses editoriais, não transcrições verbatim; não R4 nem pesquisa humana"
+}

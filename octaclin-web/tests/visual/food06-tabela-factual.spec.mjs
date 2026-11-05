@@ -272,3 +272,12 @@ for(const finalStatus of [200,409,403])test(`FOOD06 registro explícito repete o
  await r.getByRole('button',{name:'Conferir resultado da mesma tentativa'}).click();if(finalStatus===200)await expect(r.getByRole('status')).toContainText('Análise salva');else await expect(page.getByText(/Uma gravação anterior pode ter ocorrido/)).toBeVisible();expect(comandos).toHaveLength(2);expect(comandos[0]).toEqual(comandos[1]);expect(comandos[0].registro.origem.versaoId).toBe(versao);
  if(finalStatus===200)expect((await new AxeBuilder({page}).include('[aria-label="Salvar análise factual"]').analyze()).violations).toEqual([]);
 });
+test('FOOD06 M07 distingue análises de planos não selecionados registradas no mesmo minuto',async({page})=>{
+ const a=registroHistorico('20000000-0000-4000-8000-000000000061','2026-11-05T12:00:00.000Z','COMPLETO',2),b=registroHistorico('20000000-0000-4000-8000-000000000062','2026-11-05T12:00:00.000Z','COMPLETO',3);
+ a.origem.planoId='20000000-0000-4000-8000-000000000071';b.origem.planoId='20000000-0000-4000-8000-000000000072';
+ await page.route(u=>u.pathname.endsWith('/analises-factuais/historico'),r=>r.fulfill({status:200,json:{schemaVersao:1,itens:[b,a],temMais:false}}));
+ await preparar(page);await page.getByRole('button',{name:'Ver histórico de micronutrientes',exact:true}).click();
+ const secao=page.getByRole('region',{name:'Comparar análises salvas'}),seletor=secao.getByRole('combobox',{name:'Antes',exact:true});
+ const rotulos=await seletor.locator('option').allTextContents();expect(rotulos).toHaveLength(3);expect(new Set(rotulos).size).toBe(rotulos.length);await expect(page.getByRole('rowheader',{name:/Análise 2/})).toBeVisible();
+ await seletor.selectOption(a.registro.id);await expect(seletor).toHaveValue(a.registro.id);
+});
