@@ -1,4 +1,6 @@
 'use client';
+import { RegistroAnaliseFactual } from './registro-analise-factual';
+import { fonteRegistroRascunho } from '@/lib/registro-analise-factual';
 
 import { PreviaReceitaPlano } from './previa-receita-plano';
 import { PreviaAlteracaoAlimentar } from './previa-alteracao-alimentar';
@@ -2770,6 +2772,7 @@ export function PlanoAlimentarProfissional({ pacienteId, podeGerenciar, aoAltera
                   compondoRef.current = false;
                   coordenadorEdicaoRef.current?.configurar({ suspenso: copiaEmAndamento });
                 }} className="grid gap-4 pb-16 lg:pb-0">
+                  {(() => {const fonte=fonteRegistroRascunho(plano);return <RegistroAnaliseFactual key={`registro-factual:${pacienteId}:${plano.id}:${plano.draft!.id}`} pacienteId={pacienteId} planos={fonte?[fonte]:[]} contexto={JSON.stringify([contextoEdicao,fonte,alterado,estadoAutosave,edicaoEntreAbas.podeEditar])} permitido={!!fonte&&edicaoEntreAbas.podeEditar&&!alterado&&estadoAutosave==='salvo'&&!operacao&&!copiaEmAndamento} aoSalvar={()=>setSucesso('Análise do rascunho salva para comparação no histórico de micronutrientes.')} aoInvalidar={status=>invalidarBasePrevia(status,{rascunhoIdEsperado:plano.draft!.id,rascunhoRevisaoEsperada:plano.draft!.rascunhoRevisao??0})}/>;})()}
                   {plano.draft.apresentacaoEstado === 'indisponivel' ? (
                     <div role="alert" className="rounded-md border border-alerta-borda bg-alerta-suave p-4 text-sm text-alerta-forte">
                       A configuração de exibição salva não pode ser lida. Revise as opções abaixo e salve novamente para reconferir esta versão antes de revisar ou publicar.

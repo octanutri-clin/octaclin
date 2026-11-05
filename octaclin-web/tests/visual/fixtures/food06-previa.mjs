@@ -12,8 +12,9 @@ export async function prepararPrevia(page,compartilhado){
  await prepararConsole(page);
  const documento={schemaVersao:1,avaliacaoAntropometricaId:'av-sintetica',formula:'mifflin_st_jeor_1990',fatorAtividade:1.4,carboidratosBasisPoints:5000,proteinasBasisPoints:2000,gordurasBasisPoints:3000,possuiCondicaoEspecial:false,aplicabilidadeFormulaConfirmada:true,objetivos:'Planejamento sintético',refeicoes:[{chaveCliente:'r-sintetica',nome:'Almoço sintético',itens:[{chaveCliente:'i-sintetico',descricao:'Alimento sintético',quantidade:1,unidade:'porção',porcaoGramas:100,nutrientesPor100g:{energiaKcal:100,proteinasG:10,carboidratosG:20,gordurasG:2},micronutrientesPor100g:{ferroMg:2},substituicoes:[]}]}]};
  const d=compartilhado?.detalhe??{id:planoId,pacienteId,titulo:'Plano A sintético',profissionalId:'profissional-sintetico',ativoParaPaciente:true,ativacaoRevisao:1,historico:[],draft:{id:'draft-sintetico',numero:2,status:'rascunho',rascunhoRevisao:1,edicaoEstado:'materializada',documentoEdicao:documento,apresentacaoEstado:'padrao',ativoParaPaciente:true,ativacaoRevisao:1,ativacaoEdicao:[{chaveCliente:'r-sintetica',identidadeId:'r-id',ativa:true}],refeicoes:[]}};
+ compartilhado?.ajustarDetalhe?.(d);
  const pedidos=[],confirmacoes=[],saves=[];let falha=0;
- await page.route(u=>u.pathname===`/api/pacientes/${pacienteId}/planos-alimentares/${planoId}`,r=>r.fulfill({status:200,json:d}));
+ await page.route(u=>[planoId,d.id].some(id=>u.pathname===`/api/pacientes/${pacienteId}/planos-alimentares/${id}`),r=>r.fulfill({status:200,json:d}));
  await page.route(u=>u.pathname.endsWith('/rascunho/edicao'),r=>{const p=r.request().postDataJSON();saves.push(p);d.draft.rascunhoRevisao++;d.draft.documentoEdicao=p.documento;return r.fulfill({status:200,json:d.draft});});
  await page.route(u=>u.pathname.includes('/rascunho/previa-micronutrientes'),async r=>{
   const p=r.request().postDataJSON();
