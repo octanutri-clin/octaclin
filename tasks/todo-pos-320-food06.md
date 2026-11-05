@@ -1,5 +1,7 @@
 # FOOD06 — checklist
 
+> Correção de concorrência FOOD05/FOOD06 em validação: mudanças ou indisponibilidade da composição de equivalências entre prévia e confirmação devem invalidar o fingerprint. RED sintético reproduzido; GREEN focado, CI do novo delta e R4 independente pendentes. CI do merge anterior `57620570` e 102/102 testes visuais locais passaram; não transferir esses resultados ao novo delta.
+
 > Integração de `main` 3b35e104 em validação: fluxo editorial FOOD05/FOOD06 conciliado e sem marcadores de conflito. Backend focado 192/192, BFF 107/107, typechecks e licenças 15/15 PASS; teste cruzado reproduziu falha e passou após preservar materiais de equivalência.
 > RLS PostgreSQL local BLOCKED por imagem TimescaleDB ausente e filesystem Docker cheio; executar no CI. Playwright em andamento, CI do merge e revisão R4 independente pendentes. A PR continua Draft.
 

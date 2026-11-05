@@ -282,13 +282,17 @@ export class ServicoPlanosAlimentares {
     let comparacao: ReturnType<typeof compararCenariosFactuais>;
     try { comparacao = compararCenariosFactuais([antes], [depois]); }
     catch { throw new UnprocessableEntityException('Limite técnico de precisão nutricional excedido.'); }
-    // Hash de parâmetros e fatos nutricionais autorizados, nunca de texto clínico,
-    // contextos cifrados ou proveniência clínica. Não substitui a reautorização.
+    // Hash de parâmetros, fatos autorizados e marcadores opacos de resolução das
+    // equivalências; não inclui contexto cifrado ou proveniência clínica.
     const fato = (s:SnapshotComposicao) => ({origem:s.origem,alimentoComposicaoId:s.alimentoComposicaoId,
       fonte:s.fonte ? {codigo:s.fonte.codigo,versao:s.fonte.versao,hashConteudo:s.fonte.hashConteudo,esquemaVersao:s.fonte.esquemaVersao} : undefined,
       nutrientesPor100g:s.nutrientesPor100g,nutrientesPorcao:s.nutrientesPorcao,micronutrientes:s.micronutrientes});
     const composicoes = estrutura.refeicoes.map(r => r.itens.map(i => ({principal:fato((i as ItemPlanoAlimentar & {snapshot:SnapshotComposicao}).snapshot),alternativas:i.substituicoes?.map(a => fato((a as AlternativaPlanoAlimentar & {snapshot:SnapshotComposicao}).snapshot))})));
-    const fingerprint = createHash('sha256').update(this.serializarEstavel({motor:'food06-previa-api-v1',tenantId,pacienteId,planoId,usuarioId:usuario.usuarioId,rascunhoId:rascunho.id,revisao:rascunho.rascunhoRevisao,apresentacaoRevisao:rascunho.apresentacaoRevisao ?? 0,ativacaoRevisao:plano.ativacaoRevisao ?? 0,operacao,...(receitaFingerprint?{receitaFingerprint}:{}),comparacao,composicoes})).digest('hex');
+    const equivalencias=Object.entries(preparada.contextosEquivalencias).map(([chave,c])=>({chave,marcador:c.fingerprintResolucao})).sort((a,b)=>a.chave<b.chave?-1:a.chave>b.chave?1:0);
+    const anteriores=this.lerContextosEquivalencias(rascunho);
+    const atuais=Object.keys(anteriores).length?await this.projetarEquivalenciasAtuais(gerenciador,rascunho,usuario,anteriores):{};
+    const fontesAtuais=Object.entries(atuais).map(([chave,c])=>({chave,marcador:c.fingerprintResolucao})).sort((a,b)=>a.chave<b.chave?-1:a.chave>b.chave?1:0);
+    const fingerprint = createHash('sha256').update(this.serializarEstavel({motor:'food06-previa-api-v1',tenantId,pacienteId,planoId,usuarioId:usuario.usuarioId,rascunhoId:rascunho.id,revisao:rascunho.rascunhoRevisao,apresentacaoRevisao:rascunho.apresentacaoRevisao ?? 0,ativacaoRevisao:plano.ativacaoRevisao ?? 0,operacao,...(receitaFingerprint?{receitaFingerprint}:{}),comparacao,composicoes,equivalencias,fontesAtuais})).digest('hex');
     const resposta = {schemaVersao:1 as const,motorVersao:'food06-previa-api-v1' as const,escopo:'rascunho_refeicoes_ativas' as const,
       rascunhoId:rascunho.id,rascunhoRevisao:rascunho.rascunhoRevisao,ativacaoRevisao:plano.ativacaoRevisao ?? 0,
       fingerprint,comparacao,ajuda:projetarAjudaDietetica(),avisos:['fontes_resolvidas_como_no_salvamento']};

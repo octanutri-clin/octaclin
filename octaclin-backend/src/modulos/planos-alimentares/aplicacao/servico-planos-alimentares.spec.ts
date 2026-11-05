@@ -2152,6 +2152,20 @@ describe('ServicoPlanosAlimentares', () => {
       expect(salvo.documentoEdicao.refeicoes[0].itens[0].substituicoes[0]).toMatchObject({liberadaParaPaciente:false,preferida:false});
       expect(JSON.parse(criptografia.descriptografar(versao.edicaoSnapshotCriptografado)).equivalencias.equivalente.aplicacaoId).toBe(aplicacaoId);
     });
+    it.each(['alterada','indisponivel'] as const)('FOOD06 rejeita confirmação se a fonte da equivalência ficar %s após a prévia',async cenario=>{
+      Object.assign(repositorios.get(PlanoAlimentarOrm)!.registros[0],{ativoParaPaciente:true,ativacaoRevisao:0});
+      const {d}=await prepararEquivalencia(true);await salvarEdicao(d);
+      const comando={rascunhoIdEsperado:VERSAO_ID,rascunhoRevisaoEsperada:1,ativacaoRevisaoEsperada:0,operacao:{tipo:'definir_porcao_manual',refeicaoChave:'refeicao-sintetica',itemChave:'item-sintetico',quantidade:1.5,unidade:'porção',porcaoGramas:120}};
+      const previa=await servico.preverMicronutrientes(TENANT_ID,PACIENTE_ID,PLANO_ID,usuarioProfissional(),comando);
+      expect(JSON.stringify(previa)).not.toMatch(/fingerprintResolucao|dependenciasHash|copiaOrigem/);
+      const versao=repositorios.get(PlanoAlimentarVersaoOrm)!.registros[0],antes=versao.edicaoSnapshotCriptografado;
+      const catalogo=repositorios.get(AlimentoComposicaoOrm)!.registros.find((r:any)=>r.id==='10000000-0000-4000-8000-000000000087')!;
+      if(cenario==='alterada')catalogo.energiaKcal='161';
+      else repositorios.get(AlimentoComposicaoOrm)!.registros.splice(repositorios.get(AlimentoComposicaoOrm)!.registros.indexOf(catalogo),1);
+      await expect(servico.confirmarPreviaMicronutrientes(TENANT_ID,PACIENTE_ID,PLANO_ID,usuarioProfissional(),{...comando,fingerprintEsperado:previa.fingerprint})).rejects.toBeInstanceOf(ConflictException);
+      expect(versao.edicaoSnapshotCriptografado).toBe(antes);
+      expect(versao.rascunhoRevisao).toBe(1);
+    });
     it('FOOD05 permite equivalência em grupo FOOD04 quando o nutriente alvo existe e os demais macros estão ausentes',async()=>{
       const {d}=await prepararEquivalencia(true);const principal=d.refeicoes[0].itens[0],alternativa=principal.substituicoes[0];
       delete alternativa.nutrientesPor100g;

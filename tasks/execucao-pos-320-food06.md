@@ -1,5 +1,8 @@
 # FOOD06 — execução técnica
 
+> Correção posterior à integração FOOD05/FOOD06: prévia passa a incorporar marcadores opacos das equivalências preparadas e da conferência atual das fontes no fingerprint; não projeta proveniência ou marcadores internos. Alteração ou indisponibilidade da fonte entre prévia e confirmação invalida a operação sem persistir a edição. RED sintético reproduzido em ambos os casos; GREEN em testes focados. CI e R4 independente do novo delta pendentes.
+> CI do merge `57620570`: concluído com sucesso incluindo Demo local smoke e PostgreSQL/RLS; 102/102 testes visuais locais PASS. Essa evidência não valida o delta posterior.
+
 > Integração com `main` 3b35e104: conflitos FOOD05/FOOD06 conciliados em branch Draft.
 > Prévia FOOD06 preserva materiais e proveniência FOOD05; teste reproduziu falha sem materiais e passou com a correção, inclusive composição parcial. Backend focado 192/192, BFF 107/107, typechecks e licenças 15/15 PASS.
 > PostgreSQL/RLS local BLOCKED: imagem TimescaleDB indisponível e filesystem do Docker sem espaço; prova real deve ser executada no CI. Playwright desktop/mobile em andamento; R4 independente ainda não executada. Nenhum deploy ou migration externa.
