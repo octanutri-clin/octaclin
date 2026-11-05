@@ -5,6 +5,12 @@ import type { CoberturaDietetica } from '../dominio/cobertura-dietetica';
 import type { DeltaFactual } from '../dominio/previa-dietetica';
 import { CODIGOS_MICRONUTRIENTES } from '../dominio/micronutrientes';
 import { projetarAjudaDietetica } from './projecao-ajuda-dietetica';
+type DimensaoBase='planejamento'|'composicao_fonte'|'referencia'|'contexto';
+export type EstadoComparacaoHistorica='IGUAL'|'DIFERENTE'|'NAO_COMPARAVEL'|'SEM_REGISTRO_ANTERIOR';
+export interface ComparacaoBasesHistoricas {
+ planejamento:EstadoComparacaoHistorica;composicaoFonte:EstadoComparacaoHistorica;referencia:EstadoComparacaoHistorica;contexto:EstadoComparacaoHistorica;
+ cobertura:Record<typeof CODIGOS_MICRONUTRIENTES[number],EstadoComparacaoHistorica>;
+}
 type Meta={id:string;criadoEm:Date};
 const CODIGOS:CodigoNutrienteCombinado[]=['energiaKcal','proteinasG','carboidratosG','gordurasG','fibrasG','sodioMg',...CODIGOS_MICRONUTRIENTES];
 const referencias=()=>({estado:'indisponivel' as const,motivo:'referencias_nao_habilitadas' as const});
@@ -40,19 +46,33 @@ export function projetarComparacaoFactual(a:Meta,b:Meta,r:ComparacaoVersoesFactu
   atribuicaoCausal:r.atribuicaoCausal,referencias:referencias(),ajuda:projetarAjudaDietetica()};
 }
 
-export type ComparacaoBaseComposicaoHistorica='IGUAL'|'DIFERENTE'|'NAO_COMPARAVEL'|'SEM_REGISTRO_ANTERIOR';
-/** Compara internamente os marcadores; nunca devolve hash nem identifica causa clínica. */
-export function compararBaseComposicaoHistorica(atual:RegistroAnaliseFactual,anterior?:RegistroAnaliseFactual):ComparacaoBaseComposicaoHistorica{
- if(!anterior)return 'SEM_REGISTRO_ANTERIOR';
- const base=(r:RegistroAnaliseFactual)=>{
-  const bases=r.versao.bases as Record<string,unknown>|undefined,m=bases?.composicao_fonte as Record<string,unknown>|undefined;
-  if(!m||m.esquemaVersao!=='food06-bases-v1'||typeof m.conteudoHash!=='string'||! /^[a-f0-9]{64}$/.test(m.conteudoHash))return;
-  return m.conteudoHash;
+const DIMENSOES_HISTORICAS:readonly [DimensaoBase,string][]=[['planejamento','planejamento'],['composicao_fonte','composicaoFonte'],['referencia','referencia'],['contexto','contexto']];
+function compararMarcadorBase(atual:RegistroAnaliseFactual,anterior:RegistroAnaliseFactual,dimensao:DimensaoBase):EstadoComparacaoHistorica{
+ const ler=(r:RegistroAnaliseFactual)=>{
+  const bases=r.versao.bases as Record<string,unknown>|undefined,m=bases?.[dimensao];
+  if(!m||typeof m!=='object'||Array.isArray(m))return;
+  const o=m as Record<string,unknown>;
+  if(o.esquemaVersao!=='food06-bases-v1'||typeof o.conteudoHash!=='string'||! /^[a-f0-9]{64}$/i.test(o.conteudoHash))return;
+  return o.conteudoHash.toLowerCase();
  };
- const a=base(atual),b=base(anterior);if(!a||!b)return 'NAO_COMPARAVEL';return a===b?'IGUAL':'DIFERENTE';
+ const a=ler(atual),b=ler(anterior);if(!a||!b)return 'NAO_COMPARAVEL';return a===b?'IGUAL':'DIFERENTE';
+}
+function resumoCobertura(r:RegistroAnaliseFactual,codigo:typeof CODIGOS_MICRONUTRIENTES[number]):string{
+ const n=r.analise.cobertura.nutrientes[codigo],causas=[...n.causas].map(x=>[x.codigo,x.quantidade] as const).sort(([a],[b])=>a<b?-1:a>b?1:0);
+ return JSON.stringify([n.estado,n.contagens.incluidos,n.contagens.conhecidos,n.contagens.semComposicao,n.contagens.incompativeis,n.contagens.naoResolvidos,causas]);
+}
+/** Compara apenas marcadores/dimensões já congelados; nunca devolve hash ou estabelece causalidade. */
+export function compararBasesHistoricas(atual:RegistroAnaliseFactual,anterior?:RegistroAnaliseFactual):ComparacaoBasesHistoricas{
+ if(!anterior){
+  const sem='SEM_REGISTRO_ANTERIOR' as const;
+  return {planejamento:sem,composicaoFonte:sem,referencia:sem,contexto:sem,cobertura:Object.fromEntries(CODIGOS_MICRONUTRIENTES.map(c=>[c,sem])) as ComparacaoBasesHistoricas['cobertura']};
+ }
+ const bases=Object.fromEntries(DIMENSOES_HISTORICAS.map(([dimensao,chave])=>[chave,compararMarcadorBase(atual,anterior,dimensao)])) as Pick<ComparacaoBasesHistoricas,'planejamento'|'composicaoFonte'|'referencia'|'contexto'>;
+ const cobertura=Object.fromEntries(CODIGOS_MICRONUTRIENTES.map(c=>[c,resumoCobertura(atual,c)===resumoCobertura(anterior,c)?'IGUAL':'DIFERENTE'])) as ComparacaoBasesHistoricas['cobertura'];
+ return {...bases,cobertura};
 }
 /** Resumo M10 sem envelope, hash ou contexto identificável; só totais e cobertura factuais. */
-export function projetarResumoHistoricoFactual(meta:Meta,r:RegistroAnaliseFactual,comparacaoBaseComposicao:ComparacaoBaseComposicaoHistorica='SEM_REGISTRO_ANTERIOR'){
+export function projetarResumoHistoricoFactual(meta:Meta,r:RegistroAnaliseFactual,comparacaoAnterior:ComparacaoBasesHistoricas=compararBasesHistoricas(r)){
  const nutrientes=Object.fromEntries(CODIGOS_MICRONUTRIENTES.map(codigo=>{
   const n=r.analise.cobertura.nutrientes[codigo];
   return [codigo,{codigo,unidade:n.unidade,estado:n.estado,
@@ -60,7 +80,7 @@ export function projetarResumoHistoricoFactual(meta:Meta,r:RegistroAnaliseFactua
     incompativeis:n.contagens.incompativeis,naoResolvidos:n.contagens.naoResolvidos},causas:n.causas.map(x=>({codigo:x.codigo,quantidade:x.quantidade})),
    ...(n.estado==='COMPLETO'&&n.total!==undefined?{total:n.total}:{}),...(n.estado==='PARCIAL'&&n.quantidadeConhecida!==undefined?{quantidadeConhecida:n.quantidadeConhecida}:{})}];
  }));
- return {schemaVersao:1 as const,registro:projetarMetadadosRegistro(meta),origem:origem(r.versao.origem),comparacaoBaseComposicao,
+ return {schemaVersao:1 as const,registro:projetarMetadadosRegistro(meta),origem:origem(r.versao.origem),comparacaoAnterior,
   motorVersao:r.analise.calculo.motorVersao,nutrientes,
   referencias:referencias(),
   bases:{planejamentoDocumentado:Boolean(r.versao.bases?.planejamento),composicaoDocumentada:Boolean(r.versao.bases?.composicao_fonte),

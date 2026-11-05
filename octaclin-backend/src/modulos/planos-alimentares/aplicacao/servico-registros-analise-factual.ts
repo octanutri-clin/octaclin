@@ -1,4 +1,4 @@
-import { compararBaseComposicaoHistorica,projetarRegistroFactual,projetarComparacaoFactual,projetarResumoHistoricoFactual } from './projecao-registro-factual';
+import { compararBasesHistoricas,projetarRegistroFactual,projetarComparacaoFactual,projetarResumoHistoricoFactual } from './projecao-registro-factual';
 import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException, PayloadTooLargeException, UnprocessableEntityException } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
 import { isUUID } from 'class-validator';
@@ -239,7 +239,7 @@ export class ServicoRegistrosAnaliseFactual {
    const bytes=itens.reduce((soma,r)=>soma+(Buffer.isBuffer(r.conteudoCriptografado)?r.conteudoCriptografado.byteLength:Infinity),0);
    if(!Number.isSafeInteger(bytes)||bytes>10*1024*1024)throw new PayloadTooLargeException('Reduza a quantidade de registros por página.');
    const registros=itens.map(r=>this.decifrarRegistro(r)),maisAntigoConsultado=temMais?this.decifrarRegistro(consultados[limite]):undefined;
-   const resumos=registros.map((r,i)=>projetarResumoHistoricoFactual(itens[i],r,compararBaseComposicaoHistorica(r,registros[i+1]??maisAntigoConsultado)));
+   const resumos=registros.map((r,i)=>projetarResumoHistoricoFactual(itens[i],r,compararBasesHistoricas(r,registros[i+1]??maisAntigoConsultado)));
    const ultimo=itens.at(-1),ultimoRaw=resultado.raw.at(limite-1) as {cursor_criado_em?:unknown}|undefined;
    if(temMais&&ultimo&&(typeof ultimoRaw?.cursor_criado_em!=='string'))throw new UnprocessableEntityException('Cursor do histórico indisponível.');
    return {itens:resumos,temMais,...(temMais&&ultimo?{proximoCursor:{id:ultimo.id,criadoEm:ultimoRaw!.cursor_criado_em as string}}:{})};

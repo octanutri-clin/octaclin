@@ -1,9 +1,9 @@
 # FOOD06 — execução técnica
 
-> Estado vigente local — M10 histórico: [contrato e provas](food06-m10-historico.md).
-> PG/RLS 41/41, testes Web68/68, BFF105/105, typechecks, lint, builds e Playwright desktop/mobile24/24 PASS local (Node22).
-> Rotas assíncronas 169 e scanner local de segredos PASS; `git diff --check` limpo.
-> M10 PARCIAL; delta não enviado no HEAD remoto base f731c807. Authz agregado BLOCKED pelo harness local antes dos testes; CI/scanners GitHub, UX B/C e R4 NÃO EXECUTADOS.
+> Estado vigente local — extensão M10-C2: [contrato e provas](food06-m10-historico.md).
+> Backend unit 4/4, PostgreSQL descartável/RLS 41/41, Web 69/69, Playwright 2/2 desktop/mobile, typechecks backend/Web e ESLint afetado PASS com Node22.21.1.
+> Build backend/Web, scanner local de segredos e `git diff --check` PASS; CI/scanners GitHub do novo HEAD ainda precisam ser concluídos.
+> M10 PARCIAL; extensão não enviada, CI anterior 4447146d não valida este delta. UX B/C e R4 independente PENDENTES.
 > Sem migration externa, merge, deploy ou alteração de G06/direitos/DRI. Checkpoints anteriores abaixo são históricos.
 
 > Histórico — fonte DB de versão salva M05/M07: [contrato/evidências](food06-fonte-versao.md).

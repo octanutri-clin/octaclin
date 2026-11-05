@@ -422,8 +422,12 @@ suite('FOOD06 registro cifrado PostgreSQL15 descartável/RLS/runtime',()=>{
    await s.registrar(tenant,pacienteHistorico,u,comando(),async()=>e);
   }
   const historico=await s.historico(tenant,pacienteHistorico,u,10);
-  expect(historico.itens.map(x=>x.comparacaoBaseComposicao)).toEqual(['DIFERENTE','SEM_REGISTRO_ANTERIOR']);
-  expect(JSON.stringify(historico)).not.toMatch(/conteudoHash|hashConteudo/);
+  expect(historico.itens.map(x=>x.comparacaoAnterior.composicaoFonte)).toEqual(['DIFERENTE','SEM_REGISTRO_ANTERIOR']);
+  expect(historico.itens[0].comparacaoAnterior).toMatchObject({
+   planejamento:'IGUAL',composicaoFonte:'DIFERENTE',referencia:'NAO_COMPARAVEL',contexto:'NAO_COMPARAVEL',
+  });
+  expect(historico.itens[0].comparacaoAnterior.cobertura.ferroMg).toBe('IGUAL');
+  expect(JSON.stringify(historico)).not.toMatch(/conteudoHash|hashConteudo|tenantId|pacienteId/);
  });
  it('índice paginado permite somente metadados, respeitando limites e não abre cipher',async()=>{
   const r=await s.listar(tenant,paciente,u,1,2);expect(r.itens).toHaveLength(2);expect(r.total).toBeGreaterThan(2);

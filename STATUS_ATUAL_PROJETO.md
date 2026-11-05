@@ -1,5 +1,16 @@
 # OctaClin - Status atual do projeto
 
+**FOOD06 — retomada M10-C2 em 2026-11-05, PR #455 Draft.** O incremento local
+estende a comparação factual do histórico a planejamento, composição/fonte,
+referência, contexto e cobertura por nutriente, projetando apenas estados e sem
+hashes/causalidade. Unitários backend 4/4, PostgreSQL descartável/RLS 41/41,
+contratos Web 69/69, Playwright desktop/mobile 2/2, typechecks e ESLint afetado
+PASS com Node 22.21.1. O delta ainda não foi enviado. Builds backend/Web, scanner
+local e diff-check passaram; CI/scanners do novo HEAD e revisão R4 independente
+final estão pendentes. M10 permanece PARCIAL; direitos DRI/G06 BLOCKED.
+Sem merge, deploy ou migrations externas. Evidências em
+[`tasks/food06-m10-historico.md`](tasks/food06-m10-historico.md).
+
 **FOOD06 — vigente: API/BFF de registros factuais M05/M07.**
 [Contrato/handoff](tasks/food06-api-registros-factuais.md): quatro POSTs protegidos,
 projeções allowlist e paginação; P2 caixa corrigido com RED/GREEN.42HTTP/projeções,

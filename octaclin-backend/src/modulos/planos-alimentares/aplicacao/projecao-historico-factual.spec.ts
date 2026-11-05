@@ -1,6 +1,6 @@
 import { construirAnaliseFactual } from './construtor-analise-factual';
 import type { EntradaConstrutorAnaliseFactual } from './construtor-analise-factual';
-import { compararBaseComposicaoHistorica, projetarResumoHistoricoFactual } from './projecao-registro-factual';
+import { compararBasesHistoricas, projetarResumoHistoricoFactual } from './projecao-registro-factual';
 import { criarSnapshotMicronutrientes } from '../dominio/micronutrientes';
 
 function entrada(valores:Record<string,{estado:'conhecido';valor:number}>|undefined):EntradaConstrutorAnaliseFactual {
@@ -31,7 +31,7 @@ describe('M10 projeção de histórico factual',()=>{
   const registro=construirAnaliseFactual(entrada({ferroMg:{estado:'conhecido',valor:3}}));
   const resumo=projetarResumoHistoricoFactual(meta,registro);
   expect(resumo).toMatchObject({schemaVersao:1,registro:{id:meta.id},origem:{planoId:'plano-sintetico',numero:1},referencias:{estado:'indisponivel',motivo:'referencias_nao_habilitadas'}});
-  expect(resumo.comparacaoBaseComposicao).toBe('SEM_REGISTRO_ANTERIOR');
+  expect(resumo.comparacaoAnterior.composicaoFonte).toBe('SEM_REGISTRO_ANTERIOR');
   expect(JSON.stringify(resumo)).not.toMatch(/tenantId|pacienteId|hashConteudo|composicao_fonte|CANARIO|alimento-sintetico/);
   expect(resumo.nutrientes.calcioMg).toHaveProperty('unidade','mg');
  });
@@ -40,10 +40,35 @@ describe('M10 projeção de histórico factual',()=>{
   const igual=construirAnaliseFactual(entrada({ferroMg:{estado:'conhecido',valor:1}}));
   const diferente=construirAnaliseFactual(entrada({ferroMg:{estado:'conhecido',valor:2}}));
   const entradaSemBase=entrada(undefined);const semBase=construirAnaliseFactual({...entradaSemBase,refeicoes:[{...entradaSemBase.refeicoes[0],itens:[{porcaoGramas:100,snapshot:null}]}]});
-  expect(compararBaseComposicaoHistorica(igual,anterior)).toBe('IGUAL');
-  expect(compararBaseComposicaoHistorica(diferente,anterior)).toBe('DIFERENTE');
-  expect(compararBaseComposicaoHistorica(semBase,anterior)).toBe('NAO_COMPARAVEL');
-  expect(compararBaseComposicaoHistorica(anterior,undefined)).toBe('SEM_REGISTRO_ANTERIOR');
+  expect(compararBasesHistoricas(igual,anterior).composicaoFonte).toBe('IGUAL');
+  expect(compararBasesHistoricas(diferente,anterior).composicaoFonte).toBe('DIFERENTE');
+  expect(compararBasesHistoricas(semBase,anterior).composicaoFonte).toBe('NAO_COMPARAVEL');
+  expect(compararBasesHistoricas(anterior).composicaoFonte).toBe('SEM_REGISTRO_ANTERIOR');
   expect(JSON.stringify(projetarResumoHistoricoFactual(meta,diferente))).not.toMatch(/conteudoHash|hashConteudo/);
+ });
+ it('M10 distingue mudança de planejamento, composição, referência, contexto e cobertura sem atribuir causalidade',()=>{
+  const base=construirAnaliseFactual(entrada({ferroMg:{estado:'conhecido',valor:1}}));
+  const igual=construirAnaliseFactual(entrada({ferroMg:{estado:'conhecido',valor:1}}));
+  const composição=construirAnaliseFactual(entrada({ferroMg:{estado:'conhecido',valor:2}}));
+  const ausente=construirAnaliseFactual(entrada(undefined));
+  const planejamento=JSON.parse(JSON.stringify(base));
+  planejamento.versao.bases.planejamento={esquemaVersao:'food06-bases-v1',conteudoHash:'f'.repeat(64)};
+  const anterior=JSON.parse(JSON.stringify(base));
+  const posterior=JSON.parse(JSON.stringify(igual));
+  anterior.versao.bases.referencia={esquemaVersao:'food06-bases-v1',conteudoHash:'b'.repeat(64)};
+  posterior.versao.bases.referencia={esquemaVersao:'food06-bases-v1',conteudoHash:'c'.repeat(64)};
+  anterior.versao.bases.contexto={esquemaVersao:'food06-bases-v1',conteudoHash:'d'.repeat(64)};
+  posterior.versao.bases.contexto={esquemaVersao:'food06-bases-v1',conteudoHash:'e'.repeat(64)};
+  expect(compararBasesHistoricas(igual,base)).toMatchObject({
+   planejamento:'IGUAL',composicaoFonte:'IGUAL',referencia:'NAO_COMPARAVEL',contexto:'NAO_COMPARAVEL',cobertura:{ferroMg:'IGUAL'}
+  });
+  expect(compararBasesHistoricas(composição,base)).toMatchObject({planejamento:'IGUAL',composicaoFonte:'DIFERENTE',cobertura:{ferroMg:'IGUAL'}});
+  expect(compararBasesHistoricas(planejamento,base)).toMatchObject({planejamento:'DIFERENTE',composicaoFonte:'IGUAL'});
+  expect(compararBasesHistoricas(posterior as typeof base,anterior as typeof base)).toMatchObject({referencia:'DIFERENTE',contexto:'DIFERENTE'});
+  expect(compararBasesHistoricas(base,ausente)).toMatchObject({cobertura:{ferroMg:'DIFERENTE'}});
+  const semAnterior=compararBasesHistoricas(base);
+  expect(semAnterior.planejamento).toBe('SEM_REGISTRO_ANTERIOR');
+  expect(semAnterior.cobertura.ferroMg).toBe('SEM_REGISTRO_ANTERIOR');
+  expect(JSON.stringify(semAnterior)).not.toMatch(/conteudoHash|hashConteudo|pacienteId|tenantId/);
  });
 });

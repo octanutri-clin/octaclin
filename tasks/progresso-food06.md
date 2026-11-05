@@ -22,7 +22,7 @@ Não alterar os pesos para aparentar avanço. Evidências e exceções continuam
 | M07 versões | PARCIAL | Núcleo comparador congelado, identidade/revisão e dimensões documentais testados; fonte de versão/revisão exata e comparação cifrada testadas em PG/RLS; API/UI/referência comum e CI próprio pendentes |
 | M08 PDF | PENDENTE | Implementação ainda necessária |
 | M09 explicações curtas | CONCLUÍDA E VALIDADA | Guia próprio versionado, fonte/revisão técnica/UX delimitadas, teclado/axe/fonte200% e CIb9ed65bc aprovado; sem habilitar referências numéricas ou afirmar AT humana |
-| M10 longitudinal | PARCIAL | Endpoint histórico keyset, projeção factual mínima, cursor sub-millisecond, UI profissional, pontos sem linhas e tabela de lacunas implementados localmente; backend compara apenas estado agregado da composição/fonte sem revelar hash. Provas backend/PG-RLS, BFF, domínio, typecheck/lint e browser desktop/mobile PASS. CI novo, build integral, R4/UX B/C, distinção causal e direitos/referências continuam pendentes |
+| M10 longitudinal | PARCIAL | Endpoint histórico keyset e UI factual; extensão M10-C2 compara estados dos marcadores de planejamento, composição/fonte, referência, contexto e cobertura por nutriente, sem projetar hashes nem atribuir causa. Unitário 4/4, PostgreSQL descartável/RLS 41/41, Web69/69, Playwright desktop/mobile2/2, typechecks, lint, builds e scanner local de segredos PASS em Node22.21.1. CI/scanners do novo delta, UX B/C, R4 independente e direitos/DRI continuam pendentes |
 | M11 sugestões | PENDENTE | Catálogo e restrições confiáveis ainda exigem implementação/contrato |
 | M12 cenários | PENDENTE | Implementação ainda necessária |
 
@@ -30,6 +30,6 @@ Não alterar os pesos para aparentar avanço. Evidências e exceções continuam
 três pendentes (100×(1+8×0,5)/12). Não é percentual de esforço, prazo ou prontidão
 assistencial. M10 continua parcial e M07 não se encerra por um comparador interno testado.
 
-Agora: revisar/fechar o delta local M10, remover a linha em branco final detectada em um DTO, rodar build/authz completo/scanners e atualizar a PR somente após diff e segredos.
-R4 independente integral e CI do novo HEAD ainda não executados. M05/M07 permanecem parciais.
+Agora: fechar o diff/documentação M10-C2, validar build e regressões proporcionais, fazer commit/push fast-forward à #455 e verificar CI/scanners do novo HEAD. M10 permanece parcial; M05/M07 permanecem parciais.
+R4 independente integral e UX B/C ainda não executados. O CI bem-sucedido de `4447146d` é evidência somente daquele commit; este delta ainda não tem CI.
 Direitos/DRI e G06 BLOCKED; sem operações externas ou mudança de escopo.

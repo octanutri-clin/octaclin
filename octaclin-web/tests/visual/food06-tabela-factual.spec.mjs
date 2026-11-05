@@ -28,7 +28,8 @@ function registroHistorico(id,criadoEm,estado='COMPLETO',valor=0){
  const codigos=Object.keys(analise({selecoes:[{planoId:planoIds[0],versaoIdEsperada:'versao-a',ativacaoRevisaoEsperada:1,identidadesRefeicoes:[idsRefeicoes[0]]}]},1).cobertura.nutrientes);
  const nutrientes=Object.fromEntries(codigos.map(codigo=>{const unidade=analise({selecoes:[{planoId:planoIds[0],versaoIdEsperada:'versao-a',ativacaoRevisaoEsperada:1,identidadesRefeicoes:[idsRefeicoes[0]]}]},1).cobertura.nutrientes[codigo].unidade;return [codigo,{codigo,unidade,estado:'DESCONHECIDO',contagens:{incluidos:2,conhecidos:0,semComposicao:2,incompativeis:0,naoResolvidos:0},causas:[{codigo:'ausente',quantidade:2}]}];}));
  const n=nutrientes.ferroMg;n.estado=estado;n.contagens={incluidos:2,conhecidos:estado==='COMPLETO'?2:1,semComposicao:estado==='COMPLETO'?0:1,incompativeis:0,naoResolvidos:0};n.causas=estado==='COMPLETO'?[]:[{codigo:'ausente',quantidade:1}];if(estado==='COMPLETO')n.total=valor;else n.quantidadeConhecida=valor;
- return {schemaVersao:1,registro:{id,criadoEm},origem:{planoId:planoIds[0],versaoId:'versao-a',numero:1,status:'publicada',registradaEm:'2026-10-15T12:00:00.000Z'},comparacaoBaseComposicao:estado==='COMPLETO'?'DIFERENTE':'SEM_REGISTRO_ANTERIOR',motorVersao:'food06-v1',nutrientes,referencias:{estado:'indisponivel',motivo:'referencias_nao_habilitadas'},bases:{planejamentoDocumentado:true,composicaoDocumentada:true,contextoDocumentado:true}};
+ const comparacaoAnterior={planejamento:'IGUAL',composicaoFonte:estado==='COMPLETO'?'DIFERENTE':'SEM_REGISTRO_ANTERIOR',referencia:'NAO_COMPARAVEL',contexto:'IGUAL',cobertura:Object.fromEntries(codigos.map(codigo=>[codigo,estado==='COMPLETO'?'DIFERENTE':'SEM_REGISTRO_ANTERIOR']))};
+ return {schemaVersao:1,registro:{id,criadoEm},origem:{planoId:planoIds[0],versaoId:'versao-a',numero:1,status:'publicada',registradaEm:'2026-10-15T12:00:00.000Z'},comparacaoAnterior,motorVersao:'food06-v1',nutrientes,referencias:{estado:'indisponivel',motivo:'referencias_nao_habilitadas'},bases:{planejamentoDocumentado:true,composicaoDocumentada:true,contextoDocumentado:true}};
 }
 test('FOOD06 carrega sob demanda, diferencia zero/parcial/ausente, filtra e atende teclado/axe',async({page},testInfo)=>{
   let pedidos=0;
@@ -189,7 +190,10 @@ test('FOOD06 M10 histórico pagina registros parciais sem interpolar e mantém t
  await preparar(page);await page.getByRole('button',{name:'Ver histórico de micronutrientes',exact:true}).click();
  const historico=page.getByRole('region',{name:'Histórico de micronutrientes planejados',exact:true});
  await expect(historico.getByRole('row')).toHaveCount(2);await expect(historico).toContainText('0 mg');await expect(historico).toContainText('Os pontos não são ligados');
- await expect(historico).toContainText('causa não estabelecida');
+ await expect(historico).toContainText('causa não é determinada');
+ await historico.getByText('Ver dimensões',{exact:true}).first().click();
+ await expect(historico).toContainText('Composição e fonte: Diferente (a causa não é determinada)');
+ await expect(historico).toContainText('o contexto inclui data e confirmações registradas');
  await expect(historico.locator('polyline,path')).toHaveCount(0);await expect(historico.locator('circle')).toHaveCount(1);
  await historico.getByRole('button',{name:'Carregar registros anteriores',exact:true}).click();
  await expect(historico.getByRole('row')).toHaveCount(3);await expect(historico).toContainText('1,25 mg contabilizados; total real desconhecido');await expect(historico).toContainText('Fim do histórico disponível.');

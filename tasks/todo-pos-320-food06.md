@@ -1,9 +1,9 @@
 # FOOD06 — checklist
 
-> Estado vigente local — M10 longitudinal em andamento: [execução e limites](food06-m10-historico.md).
-> UI/API implementadas; PG/RLS41, BFF105, Web68, typecheck/lint e Playwright desktop/mobile24 PASS com Node22.
-> M10 PARCIAL. CI/scanners/build completo, UX B/C e R4 NÃO EXECUTADOS; direitos/DRI e G06 BLOCKED.
-> Delta sobre remoto f731c807, não enviado; sem merge, deploy, migration externa ou produção.
+> Estado vigente local — M10-C2 em validação: [execução e limites](food06-m10-historico.md).
+> Comparação histórica por planejamento, composição/fonte, referência, contexto e cobertura: unitário 4/4, PG/RLS 41/41, Web69/69, browser2/2 desktop/mobile, typecheck e ESLint PASS com Node22.21.1.
+> M10 PARCIAL. Builds, typechecks, lint e scanner local PASS; CI/scanners GitHub do novo delta ainda pendentes. UX B/C e R4 independente NÃO EXECUTADOS; direitos/DRI e G06 BLOCKED.
+> Sobre 4447146d, ainda não enviado; sem merge, deploy, migration externa ou produção.
 
 > Histórico — fonte DB de versão salva M05/M07: [contrato/evidências](food06-fonte-versao.md).
 > Origem exata, revisão sob lock e materialização atual; confirmação operacional cifrada v2.
