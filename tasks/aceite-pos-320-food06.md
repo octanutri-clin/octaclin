@@ -1,6 +1,8 @@
 # FOOD06 — matriz obrigatória de aceite
 
-> Estado vigente — [interface factual M11](food06-m11-interface-catalogo.md).Consulta genérica integrada;74browserPASS/6PDFSKIPPED (20novosPASS),150BFFPASS, lint integral0erros/71avisos. R4 estática e UX delimitadas favoráveis. M11 PARCIAL,50%administrativos; prévia/aplicação/M12 e direitos/DRI/G06 pendentes. Build/typecheck isolados Node22 PASS; authz agregado em execução e CI do delta pendente; checkpoints abaixo históricos.
+> Estado vigente — [M11 integrada à prévia M04](food06-m11-previa-editor.md).46browser/180serviço/150BFF PASS, lint/typecheck/linguagem/buildNode22 PASS; revisões estáticas/UX delimitadas favoráveis. CI da basef9c35427:22SUCCESS/1SBOMSKIPPED; CI do novo delta pendente. M11 PARCIAL,50%administrativos, M12 e direitos/DRI/G06 pendentes/bloqueados. Sem operações externas. Checkpoints abaixo históricos.
+
+> Checkpoint anterior — [interface factual M11](food06-m11-interface-catalogo.md).Consulta genérica integrada;74browserPASS/6PDFSKIPPED (20novosPASS),150BFFPASS, lint integral0erros/71avisos. R4 estática e UX delimitadas favoráveis. M11 PARCIAL,50%administrativos; prévia/aplicação/M12 e direitos/DRI/G06 pendentes. Build/typecheck isolados Node22 PASS; authz agregado em execução e CI do delta pendente; checkpoints abaixo históricos.
 
 > Checkpoint anterior — [BFF factual M11](food06-m11-bff-catalogo.md):150BFF/30autorização central PASS; typecheck/lint/linguagem/buildNode22 PASS. Gate agregado authz BLOCKED no harness; novo CI e imagens ainda pendentes, com [correção zlib](food06-ci-zlib.md). Sem UI/aplicação; M11 PENDENTE e45,8% mantidos. Direitos/DRI/G06 BLOCKED; checkpoints abaixo históricos.
 

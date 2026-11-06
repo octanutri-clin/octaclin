@@ -1,6 +1,15 @@
 # OctaClin - Status atual do projeto
 
-**FOOD06 — vigente: consulta factual M11, PR #455 Draft.** Interface profissional
+**FOOD06 — vigente: seleção M11 integrada à prévia M04, PR #455 Draft.**
+Consulta preenche proposta em gramas, sem alterar plano antes da confirmação.
+46browser/180serviço/150BFF PASS; lint/typecheck/linguagem/buildNode22 PASS.
+R4 estática e UX delimitadas favoráveis. M11 PARCIAL,50%administrativos.
+CI da basef9c35427:22SUCCESS/1SBOMSKIPPED; novo CI pendente.
+Direitos/DRI/G06 BLOCKED e M12 pendente. Sem operações externas.
+[Contrato, limites e próximo passo](tasks/food06-m11-previa-editor.md).
+Checkpoints abaixo são históricos.
+
+**FOOD06 — histórico: consulta factual M11, PR #455 Draft.** Interface profissional
 integrada à API/BFF, sem individualização ou escrita no plano. Browser74PASS/
 6PDFSKIPPED,20cenários novos PASS;150BFFPASS e lint integral0erros/71avisos.
 M11 PARCIAL,50% administrativos, sem nova melhoria integralmente encerrada.

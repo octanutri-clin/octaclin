@@ -21,3 +21,7 @@ Não autoriza implementação nem modifica decisões aprovadas. IDs e evidência
 ## FOOD06 M11 — revisão B/C delimitada, 2026-11-06
 
 NUX01–04: ordem restrita à página, bases/estados, limpeza contextual e rolagem identificada incorporadas e verificadas nos cenários sintéticos. [Relatórios e limites](reports/FOOD06-M11-INTERFACE-B-2026-11-06/consolidado.md). BACKLOG de avaliação com leitor de tela humano; automação não a substitui. Não autoriza nova funcionalidade, produção ou ratificação clínica. Paciente N/A; C integral FOOD06 pendente.
+
+## FOOD06 M11→M04 — revisão C delimitada, 2026-11-06
+
+Seleção sem gravação, porção explícita, resumo da origem e foco no peso incorporados; [relatórios](reports/FOOD06-M11-PREVIA-C-2026-11-06/consolidado.md). BACKLOG de teste direto de reconsulta sem seleção preservando destino e avaliação humana com tecnologia assistiva. Não autoriza novo escopo. PacienteN/A e C global FOOD06 pendente.

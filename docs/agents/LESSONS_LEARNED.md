@@ -236,3 +236,14 @@ no cenário negativo, sem silenciar a regra ou reduzir asserts. Controle: execut
 lint sobre todos os arquivos alterados, inclusive testes, e o lint integral antes
 do checkpoint de interface. O PASS de um subconjunto continua limitado aos paths
 executados; não substitui o CI do HEAD.
+
+## 2026-11-06 — Submit de formulário em portal React
+
+Ao integrar a consulta M11 em um modal do editor, o submit do formulário filho
+propagou pela árvore React até o formulário do editor, apesar de o portal estar
+fora dele no DOM. A consulta fechou durante a tentativa de submissão do pai;
+a trace verificada não demonstrou gravação clínica. Correção delimitada:
+preventDefault e stopPropagation no submit da consulta. Controle: testar Enter
+com o componente dentro do modal real, exigir lookup utilizável e nenhuma
+confirmação/save antes da ação explícita. A prova isolada do componente fora do
+editor não cobre essa fronteira de interação.

@@ -5,6 +5,8 @@ import {Campo,Selecao} from '@/components/ui/campo';
 import {Modal} from '@/components/ui/modal';
 import {buscarAlimentosPlanoAlimentar,type AlimentoComposicaoApi} from '@/lib/plano-alimentar-api';
 import {preverMicronutrientesPlano,type PedidoPreviaMicronutrientes,type PreviaMicronutrientes} from '@/lib/previa-micronutrientes-plano';
+import {ConsultaTeorCatalogo} from './consulta-teor-catalogo';
+import {CAMPOS_MICRONUTRIENTES_PLANO} from '@/lib/micronutrientes-plano';
 import {ComparacaoPreviaAlimentar} from './comparacao-previa-alimentar';
 interface Props {
  pacienteId:string;planoId:string;contexto:string;descricao:string;refeicaoNome:string;
@@ -18,9 +20,10 @@ export function PreviaAlteracaoAlimentar({pacienteId,planoId,contexto,descricao,
  const id=useId();
  const [aberto,setAberto]=useState(false),[tipo,setTipo]=useState<'definir_porcao_manual'|'substituir_catalogo'>('definir_porcao_manual');
  const [gramas,setGramas]=useState(String(pedido.operacao.porcaoGramas).replace('.',',')),[quantidade,setQuantidade]=useState(String(pedido.operacao.quantidade).replace('.',',')),[unidade,setUnidade]=useState(pedido.operacao.unidade);
- const [busca,setBusca]=useState(''),[resultados,setResultados]=useState<AlimentoComposicaoApi[]>([]),[alimento,setAlimento]=useState<AlimentoComposicaoApi|null>(null);
+ const [busca,setBusca]=useState(''),[resultados,setResultados]=useState<AlimentoComposicaoApi[]>([]),[alimento,setAlimento]=useState<Pick<AlimentoComposicaoApi,'id'|'nome'|'preparacao'>|null>(null);
+ const [origemConsulta,setOrigemConsulta]=useState<{fonte:string;nutriente:string;porcao:number}|null>(null);
  const [previa,setPrevia]=useState<{dados:PreviaMicronutrientes;pedido:PedidoPreviaMicronutrientes}|null>(null),[erro,setErro]=useState<string|null>(null),[ocupado,setOcupado]=useState<'previa'|'confirmando'|null>(null);
- const controle=useRef<AbortController|null>(null),geracao=useRef(0);
+ const controle=useRef<AbortController|null>(null),geracao=useRef(0),pesoPropostoRef=useRef<HTMLInputElement|null>(null);
  const podeRef=useRef(podeEditar);useLayoutEffect(()=>{podeRef.current=podeEditar;});
  function invalidar(){geracao.current++;controle.current?.abort();controle.current=null;setPrevia(null);setOcupado(null);}
  function fechar(){if(ocupado==='confirmando')return;invalidar();setErro(null);setAberto(false);}
@@ -29,7 +32,7 @@ export function PreviaAlteracaoAlimentar({pacienteId,planoId,contexto,descricao,
   const c=new AbortController();const t=setTimeout(()=>{void buscarAlimentosPlanoAlimentar(pacienteId,{busca:busca.trim(),pagina:1,limite:20},c.signal).then(r=>{if(!c.signal.aborted)setResultados(r.itens);}).catch(()=>{if(!c.signal.aborted)setErro('Não foi possível consultar o catálogo.');});},350);
   return()=>{clearTimeout(t);c.abort();};
  },[aberto,tipo,busca,pacienteId]);
- function alterar(tarefa:()=>void){invalidar();setErro(null);tarefa();}
+ function alterar(tarefa:()=>void){invalidar();setErro(null);setOrigemConsulta(null);tarefa();}
  async function calcular(){
   if(!podeRef.current||bloqueio||!conferirBase())return;
   invalidar();setErro(null);
@@ -38,7 +41,7 @@ export function PreviaAlteracaoAlimentar({pacienteId,planoId,contexto,descricao,
   const p:PedidoPreviaMicronutrientes={...pedido,operacao:{...pedido.operacao,tipo,quantidade:q,porcaoGramas:g,unidade:unidade.trim(),...(tipo==='substituir_catalogo'?{alimentoComposicaoId:alimento!.id}:{})}};
   const c=new AbortController();controle.current=c;const seq=++geracao.current;setOcupado('previa');
   try{const dados=await preverMicronutrientesPlano(pacienteId,planoId,p,c.signal);if(!c.signal.aborted&&seq===geracao.current&&podeRef.current)setPrevia({dados,pedido:p});}
-  catch(e){if(!c.signal.aborted&&seq===geracao.current){setErro('Não foi possível conferir a prévia. Confira o acesso, a fonte e a versão salva antes de tentar novamente.');const status=typeof e==='object'&&e?Reflect.get(e,'status'):0;if([401,403,404,409].includes(status))aoInvalidar(status);}}
+  catch(e){if(!c.signal.aborted&&seq===geracao.current){setErro('Não foi possível conferir a prévia. Confira o acesso, os dados de composição, a fonte e a versão salva antes de tentar novamente.');const status=typeof e==='object'&&e?Reflect.get(e,'status'):0;if([401,403,404,409].includes(status))aoInvalidar(status);}}
   finally{if(seq===geracao.current)setOcupado(null);}
  }
  async function confirmar(){
@@ -64,12 +67,17 @@ export function PreviaAlteracaoAlimentar({pacienteId,planoId,contexto,descricao,
       <label className="grid gap-1 text-sm">Buscar alimento de destino<Campo value={busca} onChange={e=>alterar(()=>{setBusca(e.target.value);setResultados([]);setAlimento(null);})} maxLength={100}/></label>
       <p className="text-xs text-texto-suave">Até 20 resultados por busca. Confira o preparo e a fonte; refine o nome para localizar outros alimentos.</p>
       <ul className="grid gap-1">{resultados.map(a=><li key={a.id}><Botao type="button" variante="secundario" disabled={!a.disponivelParaCalculo} onClick={()=>alterar(()=>{setAlimento(a);setResultados([]);})}>{a.nome}{a.preparacao?` · ${a.preparacao}`:''}{a.fonte?` · ${a.fonte.nome} ${a.fonte.versao}`:''}</Botao></li>)}</ul>
+      <ConsultaTeorCatalogo key={JSON.stringify([contexto,pedido.rascunhoIdEsperado,pedido.rascunhoRevisaoEsperada,podeEditar,bloqueio,ocupado])} permitido={podeEditar&&!bloqueio&&!ocupado} aoInvalidar={aoInvalidar} aoSelecionar={(item,consulta)=>{
+       if(item.nutriente.estado!=='conhecido'||!podeRef.current||bloqueio||ocupado||!conferirBase())return;
+       alterar(()=>{setAlimento({id:item.alimento.id,nome:item.alimento.nome,preparacao:item.alimento.preparacao});const peso=String(consulta.porcaoGramas).replace('.',',');setQuantidade(peso);setUnidade('g');setGramas(peso);setOrigemConsulta({fonte:`${item.fonte.baseCodigo} · ${item.fonte.codigo} · ${item.fonte.versao}`,nutriente:CAMPOS_MICRONUTRIENTES_PLANO.find(n=>n.codigo===consulta.codigo)!.rotulo,porcao:consulta.porcaoGramas});});pesoPropostoRef.current?.focus();
+      }}/>
+      {origemConsulta?<p role="status" className="text-sm">Consulta usada para preencher a proposta: {origemConsulta.nutriente} · {new Intl.NumberFormat('pt-BR',{maximumFractionDigits:3}).format(origemConsulta.porcao)} g · {origemConsulta.fonte}. A seleção não calcula equivalência nem verifica alergias. Calcule a prévia para conferir os dados resolvidos novamente; o plano ainda não foi alterado.</p>:null}
       {alimento?<p className="text-sm">Destino: {alimento.nome}{alimento.preparacao?` · ${alimento.preparacao}`:''}</p>:null}
      </div>:null}
      <div className="grid gap-3 sm:grid-cols-3">
       <label className="grid gap-1 text-sm">Quantidade proposta<Campo inputMode="decimal" value={quantidade} onChange={e=>alterar(()=>setQuantidade(e.target.value))} maxLength={16}/></label>
       <label className="grid gap-1 text-sm">Unidade proposta<Campo value={unidade} onChange={e=>alterar(()=>setUnidade(e.target.value))} maxLength={40}/></label>
-      <label className="grid gap-1 text-sm">Peso proposto (g)<Campo inputMode="decimal" value={gramas} onChange={e=>alterar(()=>setGramas(e.target.value))} maxLength={16}/></label>
+      <label className="grid gap-1 text-sm">Peso proposto (g)<Campo ref={pesoPropostoRef} inputMode="decimal" value={gramas} onChange={e=>alterar(()=>setGramas(e.target.value))} maxLength={16}/></label>
      </div>
      <p className="text-xs text-texto-suave">Peso em gramas explícito. Esta operação desvincula a medida caseira do item; não calcula conversões automaticamente.</p>
      <Botao type="button" onClick={()=>void calcular()} disabled={Boolean(ocupado)||Boolean(bloqueio)}>{ocupado==='previa'?'Calculando prévia…':'Calcular prévia'}</Botao>

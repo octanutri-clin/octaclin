@@ -1,5 +1,7 @@
 # FOOD06 M11 — primeira interface factual do catálogo
 
+> Complemento posterior: [seleção no editor e prévia M04](food06-m11-previa-editor.md). Este arquivo preserva o checkpoint da consulta; CI f9c35427 posteriormente22SUCCESS/1SBOMSKIPPED.
+
 ## Escopo do incremento
 
 Base b0c1f4dc, PR455 Draft. Consulta genérica profissional integrada ao painel de micronutrientes do cálculo combinado. Reutiliza BFF/API/motor existentes; não altera alimento, refeição, plano, publicação, snapshot ou grupo FOOD04. Não apresenta adequação, referência DRI, ranking global ou compatibilidade individual com restrições. Individualização continua bloqueada pelo contrato de restrições não validado. Prévia/aplicação da seleção e demais requisitos M11 continuam pendentes; M12 não implementada.

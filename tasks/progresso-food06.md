@@ -9,7 +9,7 @@ esforço, prazo, prontidão assistencial ou critérios integralmente aceitos.
 Não alterar os pesos para aparentar avanço. Evidências e exceções continuam na
 [matriz de aceite](aceite-pos-320-food06.md). Nenhuma melhoria pode ser retirada.
 
-## Checkpoint vigente — interface factual M11
+## Checkpoint vigente — seleção M11 e prévia M04
 
 | Melhoria | Estado | Entregue / falta |
 | --- | --- | --- |
@@ -23,10 +23,10 @@ Não alterar os pesos para aparentar avanço. Evidências e exceções continuam
 | M08 PDF | PARCIAL | Relatório factual1 preservado, formato2 contextual negociado e reautorizado;28browserconjuntos com8PDFsreais locais,44PG/92Web/115BFF PASS. Não é PDF plenamente acessível nem relatório científico com DRI habilitada; fontes/referências completas, UX C/R4 globais e aceite integral pendentes. Novo CI próprio deve ser conferido. [Evidências](food06-contexto-historico-relatorio.md) |
 | M09 explicações curtas | CONCLUÍDA E VALIDADA | Guia próprio versionado, fonte/revisão técnica/UX delimitadas, teclado/axe/fonte200% e CIb9ed65bc aprovado; sem habilitar referências numéricas ou afirmar AT humana |
 | M10 longitudinal | PARCIAL | Endpoint histórico keyset e UI factual; extensão M10-C2 compara estados dos marcadores de planejamento, composição/fonte, referência, contexto e cobertura por nutriente, sem projetar hashes nem atribuir causa. Unitário 4/4, PostgreSQL descartável/RLS 41/41, Web69/69, Playwright desktop/mobile2/2, typechecks, lint, builds e scanner local de segredos PASS em Node22.21.1. CI/scanners do novo delta, UX B/C, R4 independente e direitos/DRI continuam pendentes |
-| M11 sugestões | PARCIAL | Consulta genérica API/BFF/UI,20novos cenários desktop/mobile PASS; prévia/aplicação e individualização por restrições confiáveis ainda pendentes/bloqueadas. [Contrato e evidências](food06-m11-interface-catalogo.md) |
+| M11 sugestões | PARCIAL | Consulta API/BFF/UI e seleção explícita para prévia/confirmação M04;46browser/180serviço/150BFF PASS. Individualização com restrições confiáveis e critérios globais ainda pendentes; [evidências](food06-m11-previa-editor.md) |
 | M12 cenários | PENDENTE | Implementação ainda necessária |
 
-**50,0% administrativos;1/12 melhoria integralmente encerrada (M09).** Dez parciais e uma pendente (100×(1+10×0,5)/12). A passagem M11 de PENDENTE para PARCIAL registra a consulta factual utilizável e testada, não conclusão das sugestões ou habilitação clínica. Prévia/aplicação, M12, direitos/DRI/G06 e critérios globais continuam pendentes. Não é percentual de esforço ou prazo. Checkpoints abaixo são históricos dos respectivos commits.
+**50,0% administrativos;1/12 melhoria integralmente encerrada (M09).** Dez parciais e uma pendente (100×(1+10×0,5)/12). A passagem M11 de PENDENTE para PARCIAL registra a consulta factual utilizável e testada, não conclusão das sugestões ou habilitação clínica. Prévia/confirmação individual integrada; individualização, M12, direitos/DRI/G06 e critérios globais continuam pendentes. Não é percentual de esforço ou prazo. Checkpoints abaixo são históricos dos respectivos commits.
 
 Histórico anterior M08 (substituído pelo checkpoint contextual): verificar CI manual42131762437 do incremento agrupado d04551e0 e a sincronização do HEAD da #455, que ainda informa159ced04. Evitar pushes por pequenas etapas: CI leva cerca de40min, conforme proprietário. R4 estática delimitada de impressão favorável após correções; R4 integral FOOD06 e UX B/C aplicáveis seguem pendentes. CI do remoto159ced04 concluído com sucesso; não valida M08. O CI manual falhou em linguagem do canário de teste; correção RED/GREEN local concluída e novo CI pendente.
 Direitos/DRI e G06 BLOCKED; sem operações externas ou mudança de escopo.
@@ -58,3 +58,6 @@ BFF autenticado, limitado, allowlist aninhada/validação de contexto da consult
 
 ### Continuidade — interface M11
 Consulta profissional explícita com busca/nutriente/porção/fonte e paginação; sem recomendação individual ou escrita no plano. Browser74PASS/6PDFSKIPPED (20novosPASS), BFF150PASS, lint integral0erros/71avisos e revisão R4 estática delimitada favorável. UX A/B/C do incremento textual mediada pelo coordenador, pacienteN/A. Build/typecheck isolados Node22 PASS; authz em execução, novoCIpendente. M11 PARCIAL,50%administrativos; [handoff](food06-m11-interface-catalogo.md).
+
+### Continuidade — seleção M11→M04
+Seleção preenche proposta emg; sem cálculo/gravação automática, confirmação pelo writer existente.46browser/180serviço/150BFF PASS, build/typecheckNode22 PASS; R4 estática e UX delimitadas favoráveis.50%mantidos, M11 PARCIAL. CI basef9c35427 aprovado, novoHEADpendente. [Handoff](food06-m11-previa-editor.md).
