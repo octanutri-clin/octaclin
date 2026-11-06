@@ -16,7 +16,7 @@ export class ControladorRegistrosFactuais {
  constructor(private readonly servico:ServicoRegistrosAnaliseFactual){}
  @Post() @HttpCode(200) @Permissoes('planos_alimentares.ler','planos_alimentares.gerenciar') @Header('Cache-Control','private, no-store')
  async registrar(@UsuarioAtual() u:UsuarioAutenticado,@Param('pacienteId',ParseUUIDPipe) p:string,@Body() d:RegistrarVersaoFactualDto){
-  const r=await this.servico.registrarVersao(u.tenantId,p,u,{registro:d.registro,selecao:d.selecao});return {schemaVersao:1,registro:projetarMetadadosRegistro(r)};
+  const r=await this.servico.registrarVersao(u.tenantId,p,u,{registro:d.registro,selecao:d.selecao,...(d.confirmacoes===undefined?{}:{confirmacoes:d.confirmacoes})});return {schemaVersao:1,registro:projetarMetadadosRegistro(r)};
  }
  @Post('listar') @HttpCode(200) @Permissoes('planos_alimentares.ler') @Header('Cache-Control','private, no-store')
  async listar(@UsuarioAtual() u:UsuarioAutenticado,@Param('pacienteId',ParseUUIDPipe) p:string,@Body() d:ListarRegistrosFactuaisDto){

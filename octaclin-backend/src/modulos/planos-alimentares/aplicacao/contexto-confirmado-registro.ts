@@ -30,7 +30,7 @@ export function validarConfirmacoesContexto(entrada: unknown): ConfirmacoesConte
 export async function carregarContextoConfirmado(g: EntityManager, tenantId: string, pacienteId: string,
   confirmacoes: ConfirmacoesContextoRegistro): Promise<EntradaContextoDietetico> {
   const confirmadas = validarConfirmacoesContexto(confirmacoes);
-  const paciente = await g.getRepository(PacienteOrm).findOne({select:{dataNascimento:true},
+  const paciente = await g.getRepository(PacienteOrm).findOne({select:{id:true,dataNascimento:true},
     where:{id:pacienteId,tenantId,arquivadoEm:IsNull()},lock:{mode:'pessimistic_read'}});
   if (!paciente) throw new NotFoundException('Paciente indisponível.');
   const timezone = await obterTimezoneClinicoDoTenant(g,tenantId);

@@ -1,3 +1,4 @@
+import { carregarContextoConfirmado, validarConfirmacoesContexto, type ConfirmacoesContextoRegistro } from './contexto-confirmado-registro';
 import { resumirFontesRegistro } from './fontes-relatorio-factual';
 import { prepararRelatorioFactual } from './relatorio-analise-factual';
 import { compararBasesHistoricas,projetarRegistroFactual,projetarComparacaoFactual,projetarResumoHistoricoFactual } from './projecao-registro-factual';
@@ -24,6 +25,7 @@ export interface ComandoRegistroFactual { chaveIdempotencia:string;origem:Omit<I
 export interface ComandoRegistroDeVersaoFactual {
  registro:ComandoRegistroFactual;
  selecao:{ativacaoRevisaoEsperada:number;identidadesRefeicoes:string[]};
+ confirmacoes?:ConfirmacoesContextoRegistro;
 }
 /** Carregador server-side deve revalidar fonte, identidade e revisão na MESMA transação. Não é body HTTP. */
 export type CarregarAnaliseFactual=(g:EntityManager)=>Promise<EntradaConstrutorAnaliseFactual>;
@@ -50,7 +52,7 @@ function validarComando(v: ComandoRegistroFactual): ComandoRegistroFactual {
   ...(o.status==='rascunho'?{rascunhoRevisao:o.rascunhoRevisao as number}:{})}};
 }
 export function validarRegistroDeVersaoFactual(entrada:unknown):ComandoRegistroDeVersaoFactual {
-  const e=campos(entrada,['registro','selecao']),s=campos(e.selecao,['ativacaoRevisaoEsperada','identidadesRefeicoes']);
+  const e=campos(entrada,['registro','selecao','confirmacoes']),s=campos(e.selecao,['ativacaoRevisaoEsperada','identidadesRefeicoes']);
   const registro=validarComando(e.registro as ComandoRegistroFactual),ids=s.identidadesRefeicoes;
   if(!Number.isSafeInteger(s.ativacaoRevisaoEsperada)||Number(s.ativacaoRevisaoEsperada)<0||!Array.isArray(ids)||
    Object.getPrototypeOf(ids)!==Array.prototype||ids.length>50||Object.getOwnPropertySymbols(ids).length||
@@ -59,7 +61,7 @@ export function validarRegistroDeVersaoFactual(entrada:unknown):ComandoRegistroD
   const identidadesRefeicoes=ids.map(uuid);
   if(new Set(identidadesRefeicoes).size!==ids.length)throw new BadRequestException('Seleção inválida.');
   const selecao={ativacaoRevisaoEsperada:s.ativacaoRevisaoEsperada as number,identidadesRefeicoes};
-  return {registro,selecao};
+  return {registro,selecao,...(Object.hasOwn(e,'confirmacoes')?{confirmacoes:validarConfirmacoesContexto(e.confirmacoes)}:{})};
 }
 /** Infraestrutura interna. Nunca aceitar callbacks, snapshots ou totais como body HTTP. */
 @Injectable()
@@ -82,9 +84,15 @@ export class ServicoRegistrosAnaliseFactual {
  }
  async registrarVersao(tenant:string,paciente:string,usuario:UsuarioAutenticado,entrada:ComandoRegistroDeVersaoFactual):Promise<MetadadosRegistro>{
   const tenantId=uuid(tenant),pacienteId=uuid(paciente);this.autorizar(tenantId,usuario,true);
-  const {registro,selecao}=validarRegistroDeVersaoFactual(entrada),identidadesRefeicoes=selecao.identidadesRefeicoes;
-  const confirmacaoOrigem=JSON.stringify({contrato:'food06-fonte-salva-v1',origem:registro.origem,ativacaoRevisao:selecao.ativacaoRevisaoEsperada,identidades:[...identidadesRefeicoes].sort()});
-  return this.registrar(tenantId,pacienteId,usuario,registro,g=>this.carregarVersao(g,tenantId,pacienteId,registro.origem,selecao),confirmacaoOrigem);
+  const {registro,selecao,confirmacoes}=validarRegistroDeVersaoFactual(entrada),identidadesRefeicoes=selecao.identidadesRefeicoes;
+  const confirmacaoOrigem=JSON.stringify({contrato:'food06-fonte-salva-v1',origem:registro.origem,ativacaoRevisao:selecao.ativacaoRevisaoEsperada,identidades:[...identidadesRefeicoes].sort(),...(confirmacoes?{confirmacoes}:{})});
+  return this.registrar(tenantId,pacienteId,usuario,registro,async g=>{
+   const fonte=await this.carregarVersao(g,tenantId,pacienteId,registro.origem,selecao);
+   // registrar já autorizou/bloqueou carteira. O contexto usa a mesma transação,
+   // com data do tenant e nascimento server-side; não recebe snapshots do cliente.
+   if(confirmacoes)fonte.contexto=await carregarContextoConfirmado(g,tenantId,pacienteId,confirmacoes);
+   return fonte;
+  },confirmacaoOrigem);
  }
  private async carregarVersao(g:EntityManager,tenantId:string,pacienteId:string,origem:ComandoRegistroFactual['origem'],selecao:ComandoRegistroDeVersaoFactual['selecao']):Promise<EntradaConstrutorAnaliseFactual>{
   // Carteira/profissional/chave já bloqueados por registrar. Writers editoriais

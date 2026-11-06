@@ -1,3 +1,4 @@
+import * as tempoClinico from '../../tempo/timezone-clinico';
 import { Test } from '@nestjs/testing';
 import { ExecutionContext,UnauthorizedException } from '@nestjs/common';
 import type { NestExpressApplication } from '@nestjs/platform-express';
@@ -54,19 +55,20 @@ suite('FOOD06 registro cifrado PostgreSQL15 descartável/RLS/runtime',()=>{
   await owner.query(`create table tenants(id uuid primary key);
    create table usuarios(id uuid primary key,tenant_id uuid not null references tenants(id),unique(tenant_id,id));
    create table profissionais(id uuid primary key,tenant_id uuid not null references tenants(id),usuario_id uuid not null,nome_criptografado bytea not null,registro_profissional varchar(80),especialidade varchar(120),arquivado_em timestamptz,criado_em timestamptz default now(),atualizado_em timestamptz default now(),unique(tenant_id,id));
-   create table pacientes(id uuid primary key,tenant_id uuid not null,profissional_responsavel_id uuid not null,arquivado_em timestamptz,unique(tenant_id,id));
+   create table pacientes(id uuid primary key,tenant_id uuid not null,profissional_responsavel_id uuid not null,arquivado_em timestamptz,data_nascimento date,unique(tenant_id,id));
    create table planos_alimentares(id uuid primary key,tenant_id uuid not null,paciente_id uuid not null,profissional_id uuid not null,ativo_para_paciente boolean not null,ativacao_revisao integer not null,arquivado_em timestamptz);
    create table plano_alimentar_versoes(id uuid primary key,tenant_id uuid not null,plano_id uuid not null,numero integer not null,publicada_em timestamptz,descartada_em timestamptz,rascunho_revisao integer not null,edicao_materializada_revisao integer,edicao_protegida boolean not null,edicao_snapshot_criptografado bytea,criado_em timestamptz not null);
    create table plano_alimentar_refeicoes(id uuid primary key,tenant_id uuid not null,versao_id uuid not null,ordem integer not null);
    create table plano_alimentar_itens(id uuid primary key,tenant_id uuid not null,refeicao_id uuid not null,ordem integer not null,porcao_gramas numeric(12,3) not null,composicao_snapshot_criptografada bytea not null);
    create table plano_alimentar_refeicao_estados(id uuid primary key,tenant_id uuid not null,plano_id uuid not null,ativa boolean not null);
    create table plano_alimentar_refeicao_vinculos(tenant_id uuid not null,plano_id uuid not null,versao_id uuid not null,refeicao_id uuid not null,identidade_id uuid not null);
+   create table tenant_configuracoes(tenant_id uuid not null,chave text not null,valor jsonb not null);
    create table user_action_logs(id uuid primary key default gen_random_uuid(),tenant_id uuid not null,usuario_id uuid,acao varchar(120) not null,recurso_tipo varchar(120),recurso_id uuid,ip inet,user_agent text,metadados jsonb default '{}',criado_em timestamptz default now());`);
-  for(const tabela of ['profissionais','pacientes','planos_alimentares','plano_alimentar_versoes','plano_alimentar_refeicoes','plano_alimentar_itens','plano_alimentar_refeicao_estados','plano_alimentar_refeicao_vinculos'])await owner.query(`alter table ${tabela} enable row level security;alter table ${tabela} force row level security;create policy tenant_fixture on ${tabela} using(tenant_id=nullif(current_setting('app.tenant_id',true),'')::uuid) with check(tenant_id=nullif(current_setting('app.tenant_id',true),'')::uuid)`);
+  for(const tabela of ['tenant_configuracoes','profissionais','pacientes','planos_alimentares','plano_alimentar_versoes','plano_alimentar_refeicoes','plano_alimentar_itens','plano_alimentar_refeicao_estados','plano_alimentar_refeicao_vinculos'])await owner.query(`alter table ${tabela} enable row level security;alter table ${tabela} force row level security;create policy tenant_fixture on ${tabela} using(tenant_id=nullif(current_setting('app.tenant_id',true),'')::uuid) with check(tenant_id=nullif(current_setting('app.tenant_id',true),'')::uuid)`);
   await owner.query('insert into tenants values($1),($2)',[tenant,otherTenant]);
   await owner.query('insert into usuarios values($1,$2)',[usuarioId,tenant]);
   for(const id of [p,p2])await owner.query("insert into profissionais(id,tenant_id,usuario_id,nome_criptografado) values($1,$2,$3,decode('00','hex'))",[id,tenant,id===p?usuarioId:randomUUID()]);
-  await owner.query('insert into pacientes values($1,$2,$3,null),($4,$2,$5,null)',[paciente,tenant,p,outroPaciente,p2]);
+  await owner.query('insert into pacientes(id,tenant_id,profissional_responsavel_id,arquivado_em) values($1,$2,$3,null),($4,$2,$5,null)',[paciente,tenant,p,outroPaciente,p2]);
   const migrator=new DataSource({type:'postgres',...conn,username:'owner',password:'owner-test',entities:[],synchronize:false,logging:false});await migrator.initialize();const q=migrator.createQueryRunner();
   try{await new RegistrosAnalisesFactuais1720000001081().up(q);}finally{await q.release();await migrator.destroy();}
   await owner.query(`create role food06_runtime login password 'runtime-test' nosuperuser nocreatedb nocreaterole nobypassrls;
@@ -134,7 +136,7 @@ suite('FOOD06 registro cifrado PostgreSQL15 descartável/RLS/runtime',()=>{
   const executor=new ExecutorTenant(ds);
   const sql="insert into registros_analises_factuais(tenant_id,paciente_id,profissional_id,usuario_id,chave_idempotencia,conteudo_criptografado) values($1,$2,$3,$4,$5,$6)";
   await expect(executor.executar(otherTenant,g=>g.query(sql,[tenant,paciente,p,usuarioId,randomUUID(),Buffer.alloc(40)]))).rejects.toMatchObject({code:'42501'});
-  const outro=randomUUID();await owner.query('insert into pacientes values($1,$2,$3,null)',[outro,otherTenant,p2]);
+  const outro=randomUUID();await owner.query('insert into pacientes(id,tenant_id,profissional_responsavel_id,arquivado_em) values($1,$2,$3,null)',[outro,otherTenant,p2]);
   await expect(executor.executar(tenant,g=>g.query(sql,[tenant,outro,p,usuarioId,randomUUID(),Buffer.alloc(40)]))).rejects.toMatchObject({code:'23503'});
  });
  it('rejeita comandos malformados, campos extras e limites de paginação antes de carregar',async()=>{
@@ -229,6 +231,29 @@ suite('FOOD06 registro cifrado PostgreSQL15 descartável/RLS/runtime',()=>{
   }finally{await owner.query('update pacientes set profissional_responsavel_id=$1 where id=$2',[p,paciente]);await owner.query('delete from usuarios where id=$1',[novoId]);}
   await expect(s.ler(otherTenant,paciente,{...u,tenantId:otherTenant},x.id)).rejects.toMatchObject({status:404});
  });
+ it('contexto confirmado usa fonte autorizada, permanece cifrado e protege replay/alterações',async()=>{
+  const confirmacoes={populacaoReferencia:'feminina' as const,populacaoConfirmada:true,gestacao:'nao' as const,lactacao:'nao' as const,aplicabilidade:'confirmada' as const,mesmoDiaPlanejado:true,tabagismo:'nao_informado' as const};
+  await owner.query("update pacientes set data_nascimento='2000-11-06' where id=$1",[paciente]);
+  await owner.query("insert into tenant_configuracoes values($1,'conta_cliente',$2)",[tenant,{timezone:'America/Sao_Paulo'}]);
+  const data=jest.spyOn(tempoClinico,'dataIsoNoTimezoneClinico').mockReturnValue('2026-11-06');
+  try{
+   const f=await fonte(),c={...f.c,confirmacoes},r=await s.registrarVersao(tenant,paciente,u,c);
+   const antes=(await owner.query('select conteudo_criptografado from registros_analises_factuais where id=$1',[r.id])).rows[0].conteudo_criptografado;
+   const registro=await s.ler(tenant,paciente,u,r.id);expect(registro.contexto).toMatchObject({dataAnalise:'2026-11-06',resolvido:{idadeAnos:26,contexto:{elegivel:true,mesmoDiaPlanejado:true,tabagismo:'nao_informado'}}});
+   expect(antes.toString()).not.toMatch(/2000-11-06|feminina|tabagismo/);expect(data).toHaveBeenCalledWith('America/Sao_Paulo');
+   expect(JSON.stringify(await s.consultarApi(tenant,paciente,u,r.id))).not.toContain('2000-11-06');
+   expect((await s.registrarVersao(tenant,paciente,u,c)).id).toBe(r.id);
+   const alterado={...c,confirmacoes:{...confirmacoes,tabagismo:'sim' as const}};await expect(s.registrarVersao(tenant,paciente,u,alterado)).rejects.toMatchObject({status:409});
+   await expect(s.registrarVersao(tenant,paciente,u,{...c,selecao:{...c.selecao,identidadesRefeicoes:[]}})).rejects.toMatchObject({status:409});
+   await owner.query("update pacientes set data_nascimento='2001-11-06' where id=$1",[paciente]);await expect(s.registrarVersao(tenant,paciente,u,c)).rejects.toMatchObject({status:409});
+   await owner.query("update pacientes set data_nascimento='2000-11-06' where id=$1",[paciente]);
+   data.mockReturnValue('2026-11-07');await expect(s.registrarVersao(tenant,paciente,u,c)).rejects.toMatchObject({status:409});
+   expect((await s.ler(tenant,paciente,u,r.id)).contexto?.dataAnalise).toBe('2026-11-06');
+   expect((await owner.query('select conteudo_criptografado from registros_analises_factuais where id=$1',[r.id])).rows[0].conteudo_criptografado).toEqual(antes);
+   await owner.query('update pacientes set profissional_responsavel_id=$1 where id=$2',[p2,paciente]);
+   await expect(s.registrarVersao(tenant,paciente,u,c)).rejects.toMatchObject({status:404});
+  }finally{data.mockRestore();await owner.query('update pacientes set profissional_responsavel_id=$1,data_nascimento=null where id=$2',[p,paciente]);await owner.query('delete from tenant_configuracoes where tenant_id=$1',[tenant]);}
+ });
  it.each(['publicada','rascunho'] as const)('registra fonte DB exata %s com snapshots, sem catálogo vivo e replay estável',async status=>{
   const f=await fonte(status),r=await s.registrarVersao(tenant,paciente,u,f.c);
   const lido=await s.ler(tenant,paciente,u,r.id);
@@ -297,8 +322,9 @@ suite('FOOD06 registro cifrado PostgreSQL15 descartável/RLS/runtime',()=>{
    }
   }finally{await owner.query('rollback');await pedido;if(caso==='carteira')await owner.query('update pacientes set profissional_responsavel_id=$1 where id=$2',[p,paciente]);}
  });
- it('fonte mantém idempotência concorrente e rollback da auditoria com a mesma revisão',async()=>{
-  const f=await fonte();const respostas=await Promise.all(Array.from({length:4},()=>s.registrarVersao(tenant,paciente,u,f.c)));
+ it.each([false,true])('fonte mantém idempotência concorrente e rollback da auditoria com a mesma revisão, contexto=%s',async comContexto=>{
+  const f=await fonte();
+  if(comContexto)f.c.confirmacoes={populacaoReferencia:'nao_informada',populacaoConfirmada:false,gestacao:'nao_informada',lactacao:'nao_informada',aplicabilidade:'nao_informada',mesmoDiaPlanejado:false,tabagismo:'nao_informado'};const respostas=await Promise.all(Array.from({length:4},()=>s.registrarVersao(tenant,paciente,u,f.c)));
   expect(new Set(respostas.map(r=>r.id)).size).toBe(1);expect((await owner.query('select id from user_action_logs where recurso_id=$1',[respostas[0].id])).rows).toHaveLength(1);
   const c={...f.c,registro:{...f.c.registro,chaveIdempotencia:randomUUID()}};
   await owner.query("alter table user_action_logs add constraint falha_fonte_audit check(acao <> 'analises_factuais.registrar') not valid");
@@ -374,7 +400,7 @@ suite('FOOD06 registro cifrado PostgreSQL15 descartável/RLS/runtime',()=>{
   await expect(s.ler(tenant,paciente,u,r.id)).resolves.toHaveProperty('schemaVersao',1);
  });
  it('API real projeta registro cifrado em PostgreSQL e revoga cada leitura após transferência',async()=>{
-  const f=await fonte();
+  const f=await fonte();f.c.confirmacoes={populacaoReferencia:'nao_informada',populacaoConfirmada:false,gestacao:'nao_informada',lactacao:'nao_informada',aplicabilidade:'nao_informada',mesmoDiaPlanejado:false,tabagismo:'nao_informado'};
   const module=await Test.createTestingModule({controllers:[ControladorRegistrosFactuais],providers:[{provide:ServicoRegistrosAnaliseFactual,useValue:s},{provide:ServicoAuditoria,useValue:{registrar:async()=>undefined}}]})
    .overrideGuard(GuardaJwt).useValue({canActivate(c:ExecutionContext){const r=c.switchToHttp().getRequest();if(r.headers['x-identidade-sintetica']!=='profissional')throw new UnauthorizedException();r.usuarioAutenticado=u;return true;}}).compile();
   const app=module.createNestApplication<NestExpressApplication>({rawBody:true});app.useLogger(false);app.use(middlewareAnalisesFactuais);app.useBodyParser('json',{limit:'100kb'});app.use(middlewareErroAnalisesFactuais,middlewareLimiteAnalisesFactuais);app.useGlobalPipes(criarPipeValidacaoHttp());await app.listen(0,'127.0.0.1');
@@ -382,6 +408,7 @@ suite('FOOD06 registro cifrado PostgreSQL15 descartável/RLS/runtime',()=>{
   const chamar=(fim:string,body:unknown)=>fetch(url+fim,{method:'POST',headers:{'content-type':'application/json','x-identidade-sintetica':'profissional'},body:JSON.stringify(body)});
   try{
    const criado=await chamar('',f.c);expect(criado.status).toBe(200);const ack=await criado.json() as {registro:{id:string}};expect(ack.registro.id).toBeDefined();
+   expect((await s.ler(tenant,paciente,u,ack.registro.id)).contexto?.resolvido.motivos).toContain('nascimento_nao_informado');
    const consulta=await chamar('/consultar',{registroId:ack.registro.id});expect(consulta.status).toBe(200);const factual=await consulta.json() as any;expect(factual.analise.calculo.nutrientes.energiaKcal.total).toBe(100);
    expect(JSON.stringify(factual)).not.toMatch(/conteudoHash|conteudoCriptografado|confirmacaoOrigem|tenantId|pacienteId|PRIVADO/);expect(consulta.headers.get('cache-control')).toBe('private, no-store');
    const relatorio=await chamar('/relatorio',{registroId:ack.registro.id});expect(relatorio.status).toBe(200);expect(relatorio.headers.get('cache-control')).toBe('private, no-store');expect((await relatorio.json() as any).analise.calculo.nutrientes.energiaKcal.total).toBe(100);
@@ -416,7 +443,7 @@ suite('FOOD06 registro cifrado PostgreSQL15 descartável/RLS/runtime',()=>{
   expect((await owner.query('select conteudo_criptografado from registros_analises_factuais where id=$1',[r.id])).rows[0].conteudo_criptografado).toEqual(antes);
  });
  it('cursor histórico permanece estável quando uma análise mais nova entra entre páginas, inclusive timestamp de microssegundos',async()=>{
-  const pacienteHistorico=randomUUID();await owner.query('insert into pacientes values($1,$2,$3,null)',[pacienteHistorico,tenant,p]);
+  const pacienteHistorico=randomUUID();await owner.query('insert into pacientes(id,tenant_id,profissional_responsavel_id,arquivado_em) values($1,$2,$3,null)',[pacienteHistorico,tenant,p]);
   for(let i=0;i<11;i++){const e=dados();e.escopo.pacienteId=pacienteHistorico;await s.registrar(tenant,pacienteHistorico,u,comando(),async()=>e);}
   const primeira=await s.historico(tenant,pacienteHistorico,u,10);expect(primeira.itens).toHaveLength(10);expect(primeira.temMais).toBe(true);
   expect(primeira.proximoCursor?.criadoEm).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{6}Z$/);
@@ -427,7 +454,7 @@ suite('FOOD06 registro cifrado PostgreSQL15 descartável/RLS/runtime',()=>{
   expect(new Set([...primeira.itens,...segunda.itens].map(x=>x.registro.id)).size).toBe(11);
  });
  it('histórico compara base documentada com registro mais antigo sem expor hashes nem atribuir causa',async()=>{
-  const pacienteHistorico=randomUUID();await owner.query('insert into pacientes values($1,$2,$3,null)',[pacienteHistorico,tenant,p]);
+  const pacienteHistorico=randomUUID();await owner.query('insert into pacientes(id,tenant_id,profissional_responsavel_id,arquivado_em) values($1,$2,$3,null)',[pacienteHistorico,tenant,p]);
   for(const valor of [1,2]){
    const e=dados();e.escopo.pacienteId=pacienteHistorico;
    e.refeicoes[0].itens[0].snapshot={origem:'catalogo',alimentoComposicaoId:'alimento-sintetico',codigoOrigem:'A1',preparacao:'Cozido',

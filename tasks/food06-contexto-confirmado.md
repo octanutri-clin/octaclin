@@ -1,6 +1,36 @@
-# FOOD06 — captura de contexto confirmado (fundamento)
+# FOOD06 — captura de contexto confirmado
 
-## Estado vigente — 2026-11-06
+## Estado vigente — integração backend 2026-11-06
+
+Base39ffdaddfcfc8cc691db695ed17ba280ec9842eb com CI42216708582 success (não valida o delta seguinte). Campo opcional confirmacoes integrado à captura HTTP existente. Referências DRI continuam indisponíveis; projeções públicas/relatório ainda não apresentam o novo contexto. Sem UI nova ou encerramento da melhoria. PR455 Draft;45,8% administrativos.
+
+- DTO/controlador/serviço aceitam somente confirmações estritas; null, data/nascimento/elegibilidade extras e tipos inválidos falham fechados. Ausência conserva comandos e registros legados.
+- Na transação existente: papel/permissões -> carteira/profissional/paciente -> chave idempotente -> fonte/revisão/ativação/seleção -> contexto server-side. Nenhuma transação aninhada, retry cego ou contexto do navegador.
+- Confirmações canônicas entram na confirmação operacional cifrada v2, vinculadas à origem e seleção exatas. Conteúdo construído congela contexto resolvido/data/idade/motivos, sem persistir nascimento bruto. Auditoria permanece vazia de conteúdo clínico.
+- Mesma chave com confirmação, seleção, idade efetiva ou dia clínico diferentes retorna409. Exigir nova conferência/chave para operação nova; não reaproveitar confirmação de mesmo dia após mudar seleção. Não regravar registro para acomodar retry após meia-noite.
+- Leitores/envelopes/snapshots existentes preservados. Não houve migration runtime, schema externo ou permissões novas. A fixture PG foi ampliada só no teste (nascimento/configuração do tenant com FORCE RLS); não é alteração de migration nem prova da cadeia completa.
+
+### TDD e regressão específica
+
+RED HTTP funcional1FAIL/19PASS: confirmações válidas retornavam400. RED PostgreSQL1FAIL/42PASS: serviço rejeitava campo novo; tentativa prévia de compilar teste com literal inline incompatível foi erro de setup, não RED. Após integração, GREEN inicial92/92 foco e43/43PG.
+
+A ampliação de concorrência encontrou RED real (1FAIL/43PASS): com nascimento nulo, findOne selecionando somente essa coluna pode hidratar null apesar da linha existir. Corrigido select interno para id+nascimento e expectativa unitária atualizada. O ID não entra na resposta de contexto. Isso demonstra a limitação do mock inicial e da revisão estática, sem ocultar a regressão descoberta.
+
+GREEN final:92/92 em3suítes (HTTP20, fundamento22, leitor50) e PostgreSQL15 Testcontainers44/44,0SKIPPED. PG usa role runtime não owner/nobypass e FORCE RLS; inclui rota HTTP real com confirmações desconhecidas, transferência negando cada leitura, registro cifrado, replay, mudanças de confirmação/seleção/cadastro/dia, ciphertext imutável, quatro reenvios concorrentes com e sem contexto e rollback de auditoria. Nascimento ausente produz motivo próprio e mantém registro factual. Teste de dia distinto espiona exclusivamente a data civil do helper; fronteiras reais de timezone são provas unitárias anteriores, não relógio independente no PG.
+
+Typecheck backend e buildNest finais PASS Node22.21.1; verificador dist/main.js PASS. Diff-check e scanner local executados antes do envio. Backend completo/CI do novo delta e matriz BFF/UI/PA07 contextual: ainda NOT RUN localmente; não herdar o verde da base. Backend sem script/config ESLint neste checkout, como registrado no fundamento.
+
+### Revisão e limites
+
+Revisão independente /root/food06_contexto_fundamento_r4 reavaliou estaticamente integração e correção de hidratação: favorável, sem novo achado concreto. Somente leitura, sem testes/SQL próprios; reconheceu que não antecipou comportamento de hidratação demonstrado no PG. Não é R4 integral FOOD06, revisão clínica ou prova de produção. UX A anterior preservada; B/C da interface contextual NOT RUN porque ainda não existe tela.
+
+### Próxima ação exata
+
+Após enviar este checkpoint e acompanhar seu CI: preparar projeção mínima versionada do contexto e integrar confirmações à captura no console/BFF, com limpeza por paciente/seleção, revisão UX B, cancelamento/PA07 e provas próprias. Não ativar números DRI. Resolver direitos/fontes continua gate separado. Rollback técnico deste incremento: leitores anteriores já leem o contexto resolvido v1; remover aceitação do campo opcional pode fazer clientes novos receberem400, mas não requer apagar registros ou desfazer schema. Não há UI nova neste checkpoint. Sem merge/deploy/migrations externas.
+
+---
+
+## Checkpoint histórico — fundamento 2026-11-06
 
 Base remota7abb1c99405fdd625d67d33e8caa766148d11d34 confirmada com CI42137723558 concluído success. Backend, Web, Demo smoke e PR Gate PASS; Provenance do SBOM SKIPPED. PR455 Draft e HEAD sincronizado. A cópia antiga em /tmp desapareceu no reinício; nenhum trabalho enviado foi perdido. Checkout recuperado do remoto sem modificar main ou o next-env.d.ts preexistente.
 

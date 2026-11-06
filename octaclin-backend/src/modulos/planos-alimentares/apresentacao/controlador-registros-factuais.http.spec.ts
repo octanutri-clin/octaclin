@@ -54,6 +54,15 @@ describe('API factual M05/M07',()=>{
   expect((await chamar('',fonte,'Professional','planos_alimentares.ler')).status).toBe(403);
   expect((await chamar('/listar',{pagina:1,limite:25},'Professional','planos_alimentares.ler')).status).toBe(200);
  });
+ it('aceita confirmações explícitas opcionais sem permitir nascimento ou data do navegador',async()=>{
+  const confirmacoes={populacaoReferencia:'feminina',populacaoConfirmada:true,gestacao:'nao',lactacao:'nao',aplicabilidade:'confirmada',mesmoDiaPlanejado:true,tabagismo:'nao_informado'};
+  registrarVersao.mockClear();const body={...fonte,confirmacoes};
+  const r=await chamar('',body);expect(r.status).toBe(200);
+  expect(registrarVersao).toHaveBeenCalledWith(id,id,expect.anything(),body);
+  for(const c of [null,{}, {...confirmacoes,nascimento:'2000-01-01'}, {...confirmacoes,dataAnalise:'2026-11-06'}, {...confirmacoes,elegivel:true}, {...confirmacoes,gestacao:false}]){
+   registrarVersao.mockClear();const erro=await chamar('',{...fonte,confirmacoes:c});expect(erro.status).toBe(400);expect(await erro.text()).not.toMatch(/2000-01-01|2026-11-06/);expect(registrarVersao).not.toHaveBeenCalled();
+  }
+ });
  it('nega campos extras/tipos/faixas/proveniência e não reflete o payload no erro',async()=>{
   for(const body of [{...fonte,tenantId:id},{...fonte,confirmacaoOrigem:'CANARIO'},{...fonte,registro:{...fonte.registro,origem:{...fonte.registro.origem,numero:'1'}}},{...fonte,selecao:{...fonte.selecao,identidadesRefeicoes:[id,id]}}]){
    const r=await chamar('',body);expect(r.status).toBe(400);expect(await r.text()).not.toMatch(/CANARIO|tenantId|confirmacaoOrigem/);

@@ -2,12 +2,13 @@ import { IsInt,IsISO8601,IsOptional,IsUUID,Matches,Max,Min,Validate,ValidatorCon
 import { validarRegistroDeVersaoFactual,type ComandoRegistroDeVersaoFactual } from './servico-registros-analise-factual';
 @ValidatorConstraint({name:'fonteRegistroFactual',async:false})
 class ValidadorFonteRegistro implements ValidatorConstraintInterface {
- validate(_valor:unknown,args:ValidationArguments){try{const d=args.object as ComandoRegistroDeVersaoFactual;validarRegistroDeVersaoFactual({registro:d.registro,selecao:d.selecao});return true;}catch{return false;}}
+ validate(_valor:unknown,args:ValidationArguments){try{const d=args.object as ComandoRegistroDeVersaoFactual;validarRegistroDeVersaoFactual({registro:d.registro,selecao:d.selecao,...(d.confirmacoes===undefined?{}:{confirmacoes:d.confirmacoes})});return true;}catch{return false;}}
  defaultMessage(){return 'Fonte de registro inválida.';}
 }
 export class RegistrarVersaoFactualDto implements ComandoRegistroDeVersaoFactual {
  @Validate(ValidadorFonteRegistro) registro:ComandoRegistroDeVersaoFactual['registro'];
  @Validate(ValidadorFonteRegistro) selecao:ComandoRegistroDeVersaoFactual['selecao'];
+ @Validate(ValidadorFonteRegistro) confirmacoes?:ComandoRegistroDeVersaoFactual['confirmacoes'];
 }
 export class ListarRegistrosFactuaisDto {
  @IsInt() @Min(1) @Max(10000) pagina:number;

@@ -33,7 +33,7 @@ describe('confirmações de contexto do registro',()=>{
   expect(r.dataAnalise).toBe(data);expect(resolverContextoDietetico(r).idadeAnos).toBe(idade);
   expect(query.mock.calls[0]).toEqual([expect.stringContaining('tenant_configuracoes'),[tenant]]);
   expect(getRepository).toHaveBeenCalledWith(PacienteOrm);
-  expect(findOne).toHaveBeenCalledWith(expect.objectContaining({select:{dataNascimento:true},where:expect.objectContaining({id:paciente,tenantId:tenant}),lock:{mode:'pessimistic_read'}}));
+  expect(findOne).toHaveBeenCalledWith(expect.objectContaining({select:{id:true,dataNascimento:true},where:expect.objectContaining({id:paciente,tenantId:tenant}),lock:{mode:'pessimistic_read'}}));
  });
  it('mantém nascimento ausente como desconhecido e recusa paciente indisponível',async()=>{
   const findOne=jest.fn().mockResolvedValueOnce({dataNascimento:null}).mockResolvedValueOnce(null),query=jest.fn(async()=>[{timezone:'America/Sao_Paulo'}]);
