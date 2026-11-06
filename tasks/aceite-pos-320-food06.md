@@ -1,6 +1,8 @@
 # FOOD06 — matriz obrigatória de aceite
 
-> Estado vigente — [M11: auditoria e fundamento interno](food06-m11-consulta-catalogo.md).63testes/typecheck/buildNode22 PASS; revisão independente estática delimitada favorável. Sem API/UI; M11 permanece PENDENTE e45,8% administrativos mantidos. CI da base6c0ca464 PASS; CI do novo delta pendente. Direitos/DRI/G06 BLOCKED. Checkpoints abaixo são históricos.
+> Estado vigente — [API factual M11](food06-m11-api-catalogo.md):100testesfoco/233regressões (sobreposição), incluindo7PostgreSQL/HTTP, typecheck/buildNode22 PASS. Paginação corrigida após RED real e R4 estática. Sem BFF/UI; M11 PENDENTE,45,8% mantidos. CI próprio pendente; direitos/DRI/G06 BLOCKED. Checkpoints abaixo são históricos.
+
+> Checkpoint anterior — [M11: auditoria e fundamento interno](food06-m11-consulta-catalogo.md).63testes/typecheck/buildNode22 PASS; revisão independente estática delimitada favorável. Sem API/UI; M11 permanece PENDENTE e45,8% administrativos mantidos. CI da base6c0ca464 PASS; CI do novo delta pendente. Direitos/DRI/G06 BLOCKED. Checkpoints abaixo são históricos.
 
 > Checkpoint anterior — contexto histórico e relatório formato2: [contratos, execução e limites](food06-contexto-historico-relatorio.md).
 >33backend/44PG/92Web/115BFF,28browserconjuntos PASS; buildsNode22 PASS. Novo CI ainda pendente.45,8% administrativos, melhorias parciais e direitos/DRI/G06 bloqueados.

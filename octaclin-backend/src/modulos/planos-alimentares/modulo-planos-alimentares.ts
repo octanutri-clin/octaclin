@@ -1,3 +1,5 @@
+import { ControladorConsultaTeorCatalogo } from './apresentacao/controlador-consulta-teor-catalogo';
+import { ServicoConsultaTeorCatalogo } from './aplicacao/servico-consulta-teor-catalogo';
 import { ControladorRegistrosFactuais } from './apresentacao/controlador-registros-factuais';
 import { ServicoRegistrosAnaliseFactual } from './aplicacao/servico-registros-analise-factual';
 import { RegistroAnaliseFactualOrm } from './infraestrutura/registro-analise-factual.orm';
@@ -106,6 +108,7 @@ const processadoresCompartilhamento = deveExecutarProcessadores() ? [Processador
     ModuloComunicacoes
   ],
   controllers: [
+    ControladorConsultaTeorCatalogo,
     ControladorRegistrosFactuais,
     ControladorEquivalenciasPlano,
     ControladorPreferenciasEquivalencia,
@@ -121,6 +124,7 @@ const processadoresCompartilhamento = deveExecutarProcessadores() ? [Processador
     ControladorReceitasNutricionais
   ],
   providers: [
+    ServicoConsultaTeorCatalogo,
     ServicoRegistrosAnaliseFactual,
     ServicoEquivalenciasPlano,
     ServicoPreferenciasEquivalencia,
