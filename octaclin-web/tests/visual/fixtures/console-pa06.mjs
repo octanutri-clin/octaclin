@@ -29,6 +29,12 @@ export async function prepararConsole(page) {
     { name: 'octaclin_destino_inicial', value: encodeURIComponent('/pacientes'), domain: 'localhost', path: '/' }
   ]);
   await page.route(url => url.pathname === '/api/auth/session', route => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ autenticado: true, apiUrl: 'http://localhost:3001', tenantSlug: 'clinica-sintetica', email: 'profissional@example.test', expiraEm: '2026-10-30T12:00:00.000Z', papel: 'Professional', permissoes, destinoInicial: '/pacientes' }) }));
+  // Bootstrap auxiliar da sessão sintética: não deixar callbacks fora do cenário
+  // atingirem o backend real e invalidarem a seleção com um 401 incidental.
+  await page.route(url => url.pathname === '/api/notificacoes', route => route.fulfill({status:200,json:{naoLidas:0,itens:[],resumos:[]}}));
+  await page.route(url => url.pathname === '/api/notificacoes/resumos/gerar', route => route.fulfill({status:200,json:{gerado:false}}));
+  await page.route(url => url.pathname === `/api/pacientes/${pacienteId}/prioridade-acompanhamento`, route => route.fulfill({status:200,json:{pacienteId,apurado:false,valorCalculado:{faixa:'baixa',fatores:[]},valorEfetivo:{faixa:'baixa',origem:'calculado'}}}));
+  await page.route(url => url.pathname.startsWith(`/api/pacientes/${pacienteId}/planos-alimentares/`) && url.pathname.endsWith('/acompanhamento'), route => route.fulfill({status:200,contentType:'application/json',body:'null'}));
   await page.route(url => url.pathname === '/api/profissionais', route => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ itens: [{ id: 'profissional-sintetico', nome: 'Profissional sintético' }], total: 1 }) }));
   await page.route(url => url.pathname === `/api/pacientes/${pacienteId}/prontuario`, route => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({
     paciente: { id: pacienteId, tenantId: 'tenant-sintetico', profissionalResponsavelId: 'profissional-sintetico', nome: 'Paciente sintético', statusAdesao: 'aderente' },

@@ -16,3 +16,14 @@ test('rascunho usa chaves explícitas e falha fechado sem materialização ou ma
  const f=fonteRegistroRascunho(p)!;assert.equal(f.refeicoes[0].identidadeId,plano.refeicoes[0].identidadeId);assert.equal(f.refeicoes[1].ativa,false);const origem=prepararRegistroFactual(f,chave).registro.origem;assert.ok(origem.status==='rascunho');assert.equal(origem.rascunhoRevisao,7);
  for(const campo of [{edicaoEstado:'pendente'},{ativacaoEdicao:[]},{rascunhoRevisao:undefined}])assert.equal(fonteRegistroRascunho({...p,draft:{...p.draft,...campo}} as PlanoAlimentarApi),null);
 });
+
+test('congela somente confirmações explícitas sem nascimento ou inferência de tabagismo',()=>{
+ const confirmacoes={populacaoReferencia:'feminina' as const,populacaoConfirmada:true,gestacao:'nao' as const,lactacao:'nao' as const,aplicabilidade:'confirmada' as const,mesmoDiaPlanejado:false,tabagismo:'nao_informado' as const};
+ const c=prepararRegistroFactual(plano,chave,confirmacoes) as unknown as {confirmacoes:typeof confirmacoes};assert.deepEqual(c.confirmacoes,confirmacoes);assert.notEqual(c.confirmacoes,confirmacoes);confirmacoes.populacaoConfirmada=false;assert.equal(c.confirmacoes.populacaoConfirmada,true);
+ assert.equal(c.confirmacoes.tabagismo,'nao_informado');assert.equal(c.confirmacoes.mesmoDiaPlanejado,false);
+});
+test('não encaminha contextos malformados, datas ou campos não autorizados',()=>{
+ const c={populacaoReferencia:'nao_informada',populacaoConfirmada:false,gestacao:'nao_informada',lactacao:'nao_informada',aplicabilidade:'nao_informada',mesmoDiaPlanejado:false,tabagismo:'nao_informado'};
+ for(const invalido of [null,{}, {...c,nascimento:'1990-01-01'},{...c,dataAnalise:'2026-11-06'},{...c,populacaoConfirmada:'true'},{...c,gestacao:null},{...c,tabagismo:'talvez'}])assert.throws(()=>prepararRegistroFactual(plano,chave,invalido as never));
+ const getter=()=>{throw new Error('Accessor não pode ser lido.');};assert.throws(()=>prepararRegistroFactual(plano,chave,Object.defineProperty({...c},'tabagismo',{get:getter}) as never),/Confirmações inválidas/);
+});

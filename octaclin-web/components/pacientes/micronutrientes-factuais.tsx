@@ -81,7 +81,7 @@ export function MicronutrientesFactuais({planosRegistro,aoInvalidarLeitura,nomes
         </>:null}
       </div>:null}
     </div>
-    <RegistroAnaliseFactual pacienteId={pacienteId} planos={planosRegistro} contexto={chaveContexto} permitido={leituraPermitida} aoSalvar={()=>setRevisaoHistorico(v=>v+1)} aoInvalidar={invalidarDetalhe}/>
+    <RegistroAnaliseFactual key={pacienteId} pacienteId={pacienteId} planos={planosRegistro} contexto={chaveContexto} permitido={leituraPermitida} aoSalvar={()=>setRevisaoHistorico(v=>v+1)} aoInvalidar={invalidarDetalhe}/>
     <HistoricoMicronutrientesFactuais key={`${revisaoHistorico}:${pacienteId}:${leituraPermitida?'leitura':'bloqueado'}`} pacienteId={pacienteId} nomesPlanos={nomesPlanos} leituraPermitida={leituraPermitida} aoInvalidar={invalidarDetalhe}/>
   </section>;
 }

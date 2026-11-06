@@ -1,6 +1,31 @@
 # FOOD06 — captura de contexto confirmado
 
-## Estado vigente — integração backend 2026-11-06
+## Estado vigente — captura no console e projeção mínima
+
+Incremento sobrec5e55e35, sem merge/deploy/DDL externo. A captura publicada e a de rascunho usam formulário opcional compartilhado; o caminho sem contexto permanece. Defaults desconhecidos e confirmações desmarcadas, sem deduzir sexo/gestação/lactação/tabagismo. Prévia distingue escolha conferida, exibe resumo congelado e avisa que cancelar descarta o preenchimento. Key paciente/contexto/plano reinicia o formulário; key paciente remonta a captura e aborta o envio anterior. Nenhum armazenamento persistente no navegador.
+
+A leitura autorizada do registro acrescenta somente quando houver contexto o subcontrato contextoConfirmado schemaVersao1: data civil, idade/população opcionais, mesmoDiaPlanejado, tabagismo e motivos. Sem nascimento, elegibilidade calculável, hashes, confirmações livres ou dados de outro paciente. Legado sem contexto conserva a resposta anterior; relatório/PDF mantém seu contrato sem contexto. Não há número DRI habilitado.
+
+### TDD, achados e limites do incremento
+
+- RED projeção1FAIL/5PASS: resumo ainda ausente; GREEN9/9 incluindo relatório legado. REDcliente1FAIL/85PASS: confirmações ainda não copiadas; GREENfinal87/87 com negativos de datas/campos/tipos/accessors.
+- REDbrowser: checkbox ausente em contexto=true. Uma primeira tentativa em127.0.0.1 perdeu cookies da fixture vinculados a localhost (setup, não RED); reexecução localhost reproduziu a ausência funcional.
+- RED de ACK tardio: mudar refeições enquanto a segunda tentativa esperava resposta permitia200 antigo exibir Análise salva e chamar aoSalvar no contexto novo. Corrigidos sucesso e catch: contexto divergente preserva comando, marca incerto_bloqueado, não chama callbacks; finally libera ocupado. Cancelar não desfaz gravação; aviso de conferir histórico permanece.
+- Matriz inicial12/12 PASS; ampliação com ACKteve13PASS/1FAIL mobile ao perder a seleção antes da conferência. Trace mostrou requisições auxiliares da fixture recebendo401 e tela com sessão expirada. Completar mocks sintéticos de notificações/prioridade/acompanhamento corrigiu a fixture; endpoints sob teste e seus403/409 preservados. Não foram alterados auth, dependências, timeouts ou asserts para mascarar falha.
+- Matrizfinal14/14 desktop/mobile PASS,0skip: contexto opcional/legado, reset por plano/cancelamento, retry200/403/409 com comando idêntico, ACKretardado com seleção nova. Tab inicial, axe do formulário/prévia, fonte200% e ausência de overflow local; screenshots reais inspecionadas pelo coordenador em desktop/mobile. Não é leitor de tela humano, zoom nativo de navegador ou UX visual própria das personas.
+- Rascunho6/6 PASS: revisão exata, materialização, tentativa incerta e bloqueio de alterações locais. PA07subset6/6 PASS: segunda aba/retomada e restauração sem autosave implícito. Não são todas as jornadas PA07/autosave.
+- PostgreSQL15/runtimeFORCERLS44/44PASS,0skip, incluindo nova projeção sobre contexto cifrado e HTTP; fixture representativa+migration1081, não cadeia completa nem produção. BFF113/113PASS, inclui confirmações no body/no-store/destino sem query.
+- Typechecks backend/Web, buildNest+dist/main.js, lintWeb afetado, linguagem8/8+varredura integral: PASS Node22.21.1. BuildWeb final: PASS Node22/webpack,195páginas, avisosNext preexistentes. Backend completo e CI do novo delta: NOT RUN antes do envio. Resultados da base não validam o delta.
+- R4 independente estática /root/food06_contexto_fundamento_r4 favorável após re-revisão do ACK. Revisor não executou testes e reconheceu que não identificou o sucesso antigo aplicado ao novo contexto no parecer anterior. Sem fechar R4 integral FOOD06.
+- UX A/B textual por /root/food06_contexto_ux_a, sem ferramentas próprias; B recebeu observações reais do coordenador, não screenshots visualizados pela persona. Relatório próprio; pacienteN/A (sem portal/prescrição/documento entregue alterado), C integral pendente.
+
+### Próximo passo e rollback
+
+Verificar CI do checkpoint; depois preparar apresentação do contexto já registrado no histórico/relatório por contrato explícito, sem quebrar leitores antigos nem habilitar referências. Completar jornadas de mudança de paciente/permissão e matriz global antes de fechar M05/M08. Rollback aditivo de UI/projeção não exige apagar registros cifrados; API opcional anterior continua aceitando os comandos. Não alterar registros históricos nem supor que rollback do código restaura dados. FOOD0645,8% administrativos, M05/M08 parciais; direitos/DRI/G06 BLOCKED.
+
+---
+
+## Checkpoint histórico — integração backend 2026-11-06
 
 Base39ffdaddfcfc8cc691db695ed17ba280ec9842eb com CI42216708582 success (não valida o delta seguinte). Campo opcional confirmacoes integrado à captura HTTP existente. Referências DRI continuam indisponíveis; projeções públicas/relatório ainda não apresentam o novo contexto. Sem UI nova ou encerramento da melhoria. PR455 Draft;45,8% administrativos.
 

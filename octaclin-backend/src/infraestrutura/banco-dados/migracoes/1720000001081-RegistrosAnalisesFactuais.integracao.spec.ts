@@ -241,7 +241,7 @@ suite('FOOD06 registro cifrado PostgreSQL15 descartável/RLS/runtime',()=>{
    const antes=(await owner.query('select conteudo_criptografado from registros_analises_factuais where id=$1',[r.id])).rows[0].conteudo_criptografado;
    const registro=await s.ler(tenant,paciente,u,r.id);expect(registro.contexto).toMatchObject({dataAnalise:'2026-11-06',resolvido:{idadeAnos:26,contexto:{elegivel:true,mesmoDiaPlanejado:true,tabagismo:'nao_informado'}}});
    expect(antes.toString()).not.toMatch(/2000-11-06|feminina|tabagismo/);expect(data).toHaveBeenCalledWith('America/Sao_Paulo');
-   expect(JSON.stringify(await s.consultarApi(tenant,paciente,u,r.id))).not.toContain('2000-11-06');
+   const projetado=await s.consultarApi(tenant,paciente,u,r.id);expect(JSON.stringify(projetado)).not.toContain('2000-11-06');expect(projetado.contextoConfirmado).toMatchObject({schemaVersao:1,dataAnalise:'2026-11-06',idadeAnos:26,tabagismo:'nao_informado'});
    expect((await s.registrarVersao(tenant,paciente,u,c)).id).toBe(r.id);
    const alterado={...c,confirmacoes:{...confirmacoes,tabagismo:'sim' as const}};await expect(s.registrarVersao(tenant,paciente,u,alterado)).rejects.toMatchObject({status:409});
    await expect(s.registrarVersao(tenant,paciente,u,{...c,selecao:{...c.selecao,identidadesRefeicoes:[]}})).rejects.toMatchObject({status:409});

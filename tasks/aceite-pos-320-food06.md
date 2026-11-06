@@ -1,6 +1,10 @@
 # FOOD06 — matriz obrigatória de aceite
 
-> Estado vigente local — M10 histórico factual: [execução, contrato e limitações](food06-m10-historico.md).
+> Estado vigente — contexto no console/projeção mínima, M05/M08 parciais;45,8% administrativos.
+> [Contrato, testes e handoff](food06-contexto-confirmado.md):44PG/87Web/113BFF,14browsercaptura+6rascunho+6PA07subset PASS, revisão R4 estática delimitada. BuildWebNode22/webpack PASS; CI do delta ainda pendente; não herdar verde da base.
+> Direitos/DRI/G06 BLOCKED; M11/M12 pendentes; sem merge/deploy/migrations externas. Checkpoints abaixo são históricos dos respectivos commits.
+
+> Checkpoint histórico — M10 histórico factual: [execução, contrato e limitações](food06-m10-historico.md).
 > Backend/PG-RLS 41/41, BFF 105/105, Web 68/68, typechecks/lint/builds e Playwright desktop/mobile 24/24 PASS local com Node22.
 > M10 PARCIAL: direitos/DRI não habilitados, causalidade de mudanças de composição não determinada, authz agregado bloqueado pelo harness, CI/scanners GitHub do novo delta, UX B/C e R4 pendentes.
 > HEAD remoto base f731c807; delta local não enviado, sem migration/merge/deploy ou operações externas. G06 permanece BLOCKED.

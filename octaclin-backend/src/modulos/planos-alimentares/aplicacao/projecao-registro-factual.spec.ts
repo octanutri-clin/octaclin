@@ -27,3 +27,11 @@ it('expõe apenas a seleção congelada necessária para interpretar o total, se
  expect((p as any).selecao).toEqual({planoAtivo:true,planoSelecionado:true,refeicoes:[{identidadeId:r.versao.estado.refeicoes[0].identidadeId,ativa:true,selecionada:true}]});
  expect(JSON.stringify((p as any).selecao)).not.toMatch(/itens|snapshot|descricao|nutrientes/);
 });
+
+it('projeta contexto confirmado mínimo e versionado sem nascimento ou ativação DRI',()=>{
+ const base=criar(),r=construirAnaliseFactual({escopo:base.versao.escopo,origem:base.versao.origem,ativo:true,selecionado:true,refeicoes:[],contexto:{nascimento:'1990-01-01',dataAnalise:'2026-11-06',populacaoReferencia:'feminina',populacaoConfirmada:true,gestacao:'nao',lactacao:'nao',aplicabilidade:'confirmada',mesmoDiaPlanejado:false,tabagismo:'nao_informado'}});
+ const p=projetarRegistroFactual(m,r) as unknown as Record<string,unknown>;
+ expect(p.contextoConfirmado).toEqual({schemaVersao:1,dataAnalise:'2026-11-06',idadeAnos:36,populacaoReferencia:'feminina',mesmoDiaPlanejado:false,tabagismo:'nao_informado',motivos:[]});
+ expect(JSON.stringify(p)).not.toMatch(/1990-01-01|"nascimento"|confirmacaoOrigem|"elegivel"/);expect(p.referencias).toEqual({estado:'indisponivel',motivo:'referencias_nao_habilitadas'});
+ expect(projetarRegistroFactual(m,criar())).not.toHaveProperty('contextoConfirmado');
+});

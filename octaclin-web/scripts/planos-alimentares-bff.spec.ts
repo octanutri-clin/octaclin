@@ -1630,3 +1630,10 @@ test('FOOD06 relatório: leitura isolada não concede exportação',async()=>{
  __setCookies(cookiesSessaoValida(['planos_alimentares.ler']));const original=global.fetch;let chamadas=0;global.fetch=(async()=>{chamadas++;return Response.json({});}) as typeof fetch;
  try{const r=await relatorioFactual(new Request('http://localhost/relatorio',{method:'POST',body:'{}'}),{params:Promise.resolve({id:'paciente'})});assert.equal(r.status,403);assert.equal(chamadas,0);}finally{restaurarFetch(original);__clearCookies();}
 });
+
+test('FOOD06 registro: confirmações explícitas permanecem somente no body do proxy autorizado',async()=>{
+ __setCookies(cookiesSessaoValida(['planos_alimentares.gerenciar']));const original=global.fetch;
+ const body={registro:{chaveIdempotencia:'00000000-0000-4000-8000-000000000001',origem:{planoId:'00000000-0000-4000-8000-000000000002',versaoId:'00000000-0000-4000-8000-000000000003',numero:1,status:'publicada'}},selecao:{ativacaoRevisaoEsperada:1,identidadesRefeicoes:[]},confirmacoes:{populacaoReferencia:'nao_informada',populacaoConfirmada:false,gestacao:'nao_informada',lactacao:'nao_informada',aplicabilidade:'nao_informada',mesmoDiaPlanejado:false,tabagismo:'nao_informado'}};
+ let chamadas=0;global.fetch=(async(url:string|URL|Request,init?:RequestInit)=>{chamadas++;assert.equal(String(url),'http://backend.octaclin.local/pacientes/paciente%2F1/planos-alimentares/analises-factuais');assert.equal(init?.method,'POST');assert.deepEqual(JSON.parse(String(init?.body)),body);return Response.json({schemaVersao:1});}) as typeof fetch;
+ try{const r=await registrarFactual(new Request('http://localhost/analise',{method:'POST',body:JSON.stringify(body)}),{params:Promise.resolve({id:'paciente/1'})});assert.equal(r.status,200);assert.equal(r.headers.get('cache-control'),'private, no-store');assert.equal(chamadas,1);}finally{restaurarFetch(original);__clearCookies();}
+});

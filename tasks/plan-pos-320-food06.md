@@ -1,6 +1,10 @@
 # FOOD06 — comparação factual com referências dietéticas
 
-> Estado vigente local — M10 longitudinal iniciou sobre a base remota f731c807; implementação ainda não enviada.
+> Estado vigente — contexto no console/projeção mínima, M05/M08 parciais;45,8% administrativos.
+> [Contrato, testes e handoff](food06-contexto-confirmado.md):44PG/87Web/113BFF,14browsercaptura+6rascunho+6PA07subset PASS, revisão R4 estática delimitada. BuildWebNode22/webpack PASS; CI do delta ainda pendente; não herdar verde da base.
+> Direitos/DRI/G06 BLOCKED; M11/M12 pendentes; sem merge/deploy/migrations externas. Checkpoints abaixo são históricos dos respectivos commits.
+
+> Checkpoint histórico — M10 longitudinal iniciou sobre a base remota f731c807; implementação ainda não enviada.
 > API de histórico keyset, projeção mínima e UI profissional estão implementadas com testes locais; M10 PARCIAL.
 > Evidências e limitações: [checkpoint M10](food06-m10-historico.md). Nenhuma referência DRI ou dado clínico externo foi habilitado.
 > CI novo, build completo, revisão UX B/C e R4 pendentes; G06 operacional, direitos/DRI e produção permanecem BLOCKED.

@@ -1,0 +1,25 @@
+{
+  "base": "c5e55e35832ca307a6c053b0338cf5fff17b34a7",
+  "agente": "/root/food06_contexto_ux_a",
+  "etapas": [
+    "A complementar textual",
+    "B textual sobre observações do coordenador"
+  ],
+  "ferramentas_do_revisor": [],
+  "data": "2026-11-06",
+  "inicio_fim": "durante esta retomada; horários exatos não registrados",
+  "paciente": "N/A, não invocado",
+  "sha256": {
+    "consolidado.md": "a6f2a2162224815d5167218f244a811e2f7280c30e16415d4ab8e58fac8ded3d",
+    "paciente.md": "f01c7e17fe9cfb91b22c44ed0fee6ae4d251a1fc8daf84401a533c8cb973f85f",
+    "nutricionista.md": "983fcc50d5abdbfcf71f6e97a19d9fce07619ccc463b00faba7c402ff242a017",
+    "brief.md": "82ffa63acc7a886b07c226c48c11cab0e6e764ad1d3c7d77c989636896626b9a"
+  },
+  "fontes_sha256": {
+    ".codex/agents/octaclin-nutricionista-ux.toml": "6259b40a98e2c49053cbc6adbc0c59d0312b14e191b228ab73de2f2eac53af6d",
+    "docs/agents/ux/PROCEDIMENTO.md": "00ee799fa4435bbc1af022752fc1a9dbce4a3196cd1b188a9a4b6017c47bff29",
+    "octaclin-web/components/pacientes/confirmacoes-contexto-factual.tsx": "95fedc50665a4bc76a751d6cfd5cda0edd044e9162c83435637724a6bf4ef3ac",
+    "octaclin-web/components/pacientes/registro-analise-factual.tsx": "a5f2e0e6e18d077dcdab89d030bb2f32073822469fdaf1993ad434de65592eb5"
+  },
+  "artefatos": "Gerados por Playwright em test.info().outputPath: contexto-formulario.png, contexto-formulario-fonte200.png, contexto-resumo.png. Não versionados como dados clínicos; fixtures somente sintéticas. Reprodução no spec food06-tabela-factual, registro explícito repete."
+}

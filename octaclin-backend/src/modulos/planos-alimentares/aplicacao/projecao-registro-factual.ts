@@ -35,7 +35,11 @@ function delta(d:DeltaFactual){
 export function projetarRegistroFactual(m:Meta,r:RegistroAnaliseFactual){
  if(r.avisos.some(a=>!['porcao_divergente','planejamento_nao_documentado','composicao_nao_documentada'].includes(a)))throw new AnaliseFactualInvalidaError();
  return {schemaVersao:1 as const,motorVersao:'food06-registro-api-v1' as const,registro:projetarMetadadosRegistro(m),origem:origem(r.versao.origem),
-  selecao:selecao(r),analise:estado(r.analise),referencias:referencias(),avisos:[...r.avisos],ajuda:projetarAjudaDietetica()};
+  selecao:selecao(r),analise:estado(r.analise),referencias:referencias(),
+  ...(r.contexto?{contextoConfirmado:{schemaVersao:1 as const,dataAnalise:r.contexto.dataAnalise,
+   ...(r.contexto.resolvido.idadeAnos===undefined?{}:{idadeAnos:r.contexto.resolvido.idadeAnos}),
+   ...(r.contexto.resolvido.populacaoReferencia===undefined?{}:{populacaoReferencia:r.contexto.resolvido.populacaoReferencia}),
+   mesmoDiaPlanejado:r.contexto.resolvido.contexto.mesmoDiaPlanejado,tabagismo:r.contexto.resolvido.contexto.tabagismo,motivos:[...r.contexto.resolvido.motivos]}}:{}),avisos:[...r.avisos],ajuda:projetarAjudaDietetica()};
 }
 export function projetarComparacaoFactual(a:Meta,b:Meta,r:ComparacaoVersoesFactuais,registroAntes:RegistroAnaliseFactual,registroDepois:RegistroAnaliseFactual){
  return {schemaVersao:1 as const,motorVersao:'food06-comparacao-api-v1' as const,escopoComparacao:r.escopoComparacao,
