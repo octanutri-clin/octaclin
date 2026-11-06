@@ -1,0 +1,36 @@
+{
+  "base": "36223bcd",
+  "registradoEmUTC": "2026-11-01T08:13:04.648631+00:00",
+  "papeis": "PR451/0d3382b6 por invocação explícita; seleção nativa TOML não comprovada",
+  "nutricionista": "/root/food06_m02_origem_nux",
+  "paciente": "/root/food06_m02_origem_pux",
+  "personaLimites": "Brief sintético do coordenador; sem ferramentas, screenshot próprio, browser próprio ou usuários reais.",
+  "r4": "/root/food06_m02_ui_r4",
+  "r4Limites": "Revisão delimitada estática e35Node próprios; sem browser/CI/novoPG/benchmark próprios; não revisão integral FOOD06. P2 ordenação corrigido. Ajuste CSS final conferido estaticamente.",
+  "coordenador": {
+    "node": "22.23.4",
+    "backend": {
+      "pass": 3832,
+      "skipped": 170
+    },
+    "webUnitarios": 35,
+    "bff": 76,
+    "playwrightBuildLocalOtimizado": 38,
+    "buildWebPaginas": 194,
+    "typechecks": "backend/Web PASS",
+    "lint": "PASS",
+    "postgresNovo": "NOT RUN local; aguarda CI",
+    "CI": "Pendente para novo HEAD antes do push"
+  },
+  "semDadosReais": true,
+  "sourceSha256": {
+    "octaclin-backend/src/modulos/planos-alimentares/aplicacao/dtos-contribuicoes-micronutrientes.ts": "ff244f348487f1867f0b21ad0e014b8e3a8c5580b91f844c382c7eb629706995",
+    "octaclin-backend/src/modulos/planos-alimentares/aplicacao/projecao-origem-contribuicao.ts": "632795d14ccefb2957e5e797efb435e842f72dd006185f3ae93069793631c669",
+    "octaclin-backend/src/modulos/planos-alimentares/aplicacao/servico-planos-alimentares.ts": "2da944ea7410c9749722311ee26fb16bc84453cefc9f08313095525b5362c1e7",
+    "octaclin-backend/src/modulos/planos-alimentares/dominio/contribuicoes-dieteticas.ts": "3a013c661e61f65525770575d171053eebc9b726f6dfc597c1a29a8178439954",
+    "octaclin-web/components/pacientes/contribuicoes-micronutrientes.tsx": "ae916b3049027ae21cc087e4d570a424ea784f036cb1842c2c1dead4c7d9c14c",
+    "octaclin-web/components/pacientes/origem-contribuicao-publicada.tsx": "d520d9a3c8ef9101f2fffd8e25b8fffd09d5ad021491286cebff24edab78af3c",
+    "octaclin-web/lib/contribuicoes-micronutrientes.ts": "05705f0c5ac6286a96c5d84c0c7000b6820cd8be1492bd4be575a2e939b54b86",
+    "octaclin-web/lib/origem-contribuicao.ts": "adafa9f8b3c102242c696b49bed877f74f07f0b8a0522c83fe3c994b064c98f5"
+  }
+}

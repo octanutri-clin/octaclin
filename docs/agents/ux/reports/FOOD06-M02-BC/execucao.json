@@ -1,0 +1,22 @@
+{
+  "etapa": "B/C delimitada do incremento M02",
+  "base": "992fee05",
+  "instantesRegistroUTC": "2026-10-31T23:50:18.915452+00:00",
+  "execucao": "subagentes distintos por papel explícito, não seleção nativa TOML comprovada",
+  "papeisOrigem": "0d3382b6",
+  "nutricionista": "/root/food06_m02_nux",
+  "paciente": "/root/food06_m02_pux",
+  "personaModalidade": "brief e relatos DOM/testes do coordenador; sem interação ou screenshot observado pelas personas",
+  "coordenadorEvidencias": "Playwright desktop/mobile, axe e inspeção do screenshot mobile sintético",
+  "r4": "/root/food06_m02_ui_r4",
+  "r4Limites": "Node31 testes próprios; sem browser, CI, provider, lint ou typecheck próprio; não revisão integral FOOD06",
+  "sourceSha256": {
+    "octaclin-web/components/pacientes/contribuicoes-micronutrientes.tsx": "41b70be7079a53f8c57ceaab040789e466f8572002df17f8b2819bdf516af504",
+    "octaclin-web/components/pacientes/micronutrientes-factuais.tsx": "8f17ee67c32d14247c5e77eb7d11001687c36539855edd3692652ae4b5f93bdf",
+    "octaclin-web/components/pacientes/calculo-combinado-planos.tsx": "aead148c32225d794cda5de1c2cf09beb1ee1741ef18147074ef4dcd42d0271d",
+    "octaclin-web/lib/contribuicoes-micronutrientes.ts": "bb846a7ae3ce766121a285bbdd7579e16a58528f3370566d151e9e955d183dac",
+    "octaclin-web/lib/micronutrientes-factuais.ts": "9d95fcc5e96918368c0db27ccbb8de8054470c41fc2a31fecce51189e2dfaa38",
+    "octaclin-web/lib/calculo-combinado-planos-api.ts": "9ad94eb54b090ad5513bf68775665198faf8d0f697b28432e6d629297d03d660"
+  },
+  "semDadosReais": true
+}

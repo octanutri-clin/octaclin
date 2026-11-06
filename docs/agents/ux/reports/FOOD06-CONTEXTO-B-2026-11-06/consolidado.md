@@ -1,0 +1,2 @@
+# Consolidação do incremento
+Perspectiva nutricionista executada por subagente com papel explícito, sem seleção nativaTOML ou isolamento forte comprovados. Coordenador executou testes e inspecionou screenshots sintéticos; revisor recebeu descrição textual. Bfavorável condicionado ao teste de ACK; condição satisfeita na execução final14/14, sem transformar isso em UX humana ou R4 dinâmica. Achado de ACK e falha de fixture estão preservados no contrato de execução. R4 independente estática separada e reavaliada após correção. Sem novo escopo ou liberação de DRI.

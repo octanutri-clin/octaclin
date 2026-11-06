@@ -14,7 +14,7 @@
 # A base compartilhada corrige zlib tambem nos estagios de build. O runtime
 # herda o artefato pronto e continua sem instalacao de pacotes no estagio final.
 FROM node:22.23.3-alpine3.24@sha256:0a7108bf6c7bf5de370ffb1a3ed6be93d405b43ff159f681a8d18c0e2bc2e402 AS base
-RUN apk add --no-cache --upgrade zlib=1.3.2-r1
+RUN apk add --no-cache --upgrade zlib=1.4-r0
 
 FROM base AS deps
 WORKDIR /app

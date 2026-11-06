@@ -1,3 +1,6 @@
+import { ReceitaNutricionalOrm } from '../../modulos/planos-alimentares/infraestrutura/receita-nutricional.orm';
+import { ServicoReceitasNutricionais } from '../../modulos/planos-alimentares/aplicacao/servico-receitas-nutricionais';
+import { porcionarReceita } from '../../modulos/planos-alimentares/dominio/porcionamento-receita';
 import { ServicoEquivalenciasPlano } from '../../modulos/planos-alimentares/aplicacao/servico-equivalencias-plano';
 import { ServicoPreferenciasEquivalencia } from '../../modulos/planos-alimentares/aplicacao/servico-preferencias-equivalencia';
 import { PREFERENCIAS_EQUIVALENCIA_PADRAO } from '../../modulos/planos-alimentares/dominio/preferencias-equivalencia';
@@ -241,6 +244,7 @@ descrever('RLS e isolamento multi-tenant integral em Postgres real', () => {
       synchronize: false,
       logging: false,
       entities: [
+        ReceitaNutricionalOrm,
         PerfilCadastroPacienteOrm,
         PacienteOrm,
         AvaliacaoAntropometricaOrm,
@@ -793,11 +797,12 @@ descrever('RLS e isolamento multi-tenant integral em Postgres real', () => {
         (comando === 'INSERT' || expressaoIsolaTenant(p.usando)) &&
         (!['INSERT','UPDATE'].includes(comando) || expressaoIsolaTenant(p.comVerificacao)));
       const comandosSeparados = ['SELECT','INSERT','UPDATE','DELETE'].every(politicaPorComando);
-      // Esta tabela é intencionalmente append-only: exigir ALL abriria UPDATE e
-      // DELETE. A exceção é nominal, exige exatamente SELECT/INSERT por tenant.
-      const eventosAppendOnly = tabela.tabela === 'plano_alimentar_ativacao_eventos' && politicas.length === 2 &&
+      // Estas tabelas são intencionalmente append-only: exigir ALL abriria UPDATE
+      // e DELETE. A lista é nominal e exige exatamente SELECT/INSERT por tenant.
+      const appendOnly = ['plano_alimentar_ativacao_eventos', 'registros_analises_factuais'].includes(tabela.tabela);
+      const eventosAppendOnly = appendOnly && politicas.length === 2 &&
         politicaPorComando('SELECT') && politicaPorComando('INSERT');
-      const policyCompleta = tabela.tabela === 'plano_alimentar_ativacao_eventos'
+      const policyCompleta = appendOnly
         ? eventosAppendOnly : policyAll || comandosSeparados;
       expect({ tabela: tabela.tabela, policyCompleta, politicas }).toEqual(
         expect.objectContaining({ policyCompleta: true })
@@ -2254,6 +2259,306 @@ descrever('RLS e isolamento multi-tenant integral em Postgres real', () => {
     expect(resultado.every(r=>r.status==='fulfilled')).toBe(true);
     await expect(executorTenant!.executar(tenantA,g=>c.biblioteca.resolverAplicacao(g,tenantA,c.usuario,c.alimentoId,{id:c.medida.id,revisao:1},1))).rejects.toThrow('alterada ou desativada');
   },60000);
+
+  async function selecaoFactualFood06(c: Awaited<ReturnType<typeof prepararCenarioPa06>>) {
+    const selecao = await c.servico.obterSelecaoCalculo(tenantA,c.pacienteId,c.planoId,c.usuario);
+    return {selecoes:[{planoId:c.planoId,versaoIdEsperada:c.versaoId,ativacaoRevisaoEsperada:selecao.ativacaoRevisao,identidadesRefeicoes:selecao.refeicoes.map(r=>r.identidadeId)}]};
+  }
+
+  async function prepararPreviaFood06(sufixo:string) {
+    const c=await prepararCenarioPa06('food06-previa-'+sufixo);
+    Object.assign(c.documento.refeicoes[0].itens[0],{micronutrientesPor100g:{ferroMg:2,calcioMg:0}});
+    await publicarCenarioPa06(c);
+    const nova=await c.servico.criarNovaVersao(tenantA,c.pacienteId,c.planoId,c.usuario);
+    const salva=await c.servico.salvarEdicaoRascunho(tenantA,c.pacienteId,c.planoId,c.usuario,{rascunhoIdEsperado:nova.id,rascunhoRevisaoEsperada:nova.rascunhoRevisao,documento:c.documento});
+    const plano=await c.servico.obterSelecaoCalculo(tenantA,c.pacienteId,c.planoId,c.usuario);
+    const comando={rascunhoIdEsperado:salva.id,rascunhoRevisaoEsperada:salva.rascunhoRevisao,ativacaoRevisaoEsperada:plano.ativacaoRevisao,operacao:{tipo:'definir_porcao_manual' as const,refeicaoChave:'r-sintetica',itemChave:'i-sintetico',quantidade:1.5,unidade:'porção',porcaoGramas:150}};
+    const previa=await c.servico.preverMicronutrientes(tenantA,c.pacienteId,c.planoId,c.usuario,comando);
+    return {...c,comando,previa,confirmacao:{...comando,fingerprintEsperado:previa.fingerprint}};
+  }
+
+  async function estadoPreviaFood06(c:Pick<Awaited<ReturnType<typeof prepararPreviaFood06>>,'planoId'>) {
+    await comoTenant(tenantA);
+    return {
+      versoes:(await cliente!.query('select * from plano_alimentar_versoes where tenant_id=$1 and plano_id=$2 order by id',[tenantA,c.planoId])).rows,
+      vinculos:(await cliente!.query('select * from plano_alimentar_refeicao_vinculos where tenant_id=$1 and plano_id=$2 order by refeicao_id',[tenantA,c.planoId])).rows,
+      estados:(await cliente!.query('select * from plano_alimentar_refeicao_estados where tenant_id=$1 and plano_id=$2 order by id',[tenantA,c.planoId])).rows,
+      refeicoes:(await cliente!.query('select r.* from plano_alimentar_refeicoes r join plano_alimentar_versoes v on v.id=r.versao_id where v.tenant_id=$1 and v.plano_id=$2 order by r.id',[tenantA,c.planoId])).rows,
+      itens:(await cliente!.query('select i.* from plano_alimentar_itens i join plano_alimentar_refeicoes r on r.id=i.refeicao_id join plano_alimentar_versoes v on v.id=r.versao_id where v.tenant_id=$1 and v.plano_id=$2 order by i.id',[tenantA,c.planoId])).rows
+    };
+  }
+
+  it('FOOD06 M04 prévia não grava, confirmação materializa sob runtime/RLS e preserva publicação',async()=>{
+    const c=await prepararPreviaFood06('persistencia'),antes=await estadoPreviaFood06(c);
+    const previa=await c.servico.preverMicronutrientes(tenantA,c.pacienteId,c.planoId,c.usuario,c.comando);
+    expect(previa.comparacao.diferencas.ferroMg.delta).toMatchObject({estado:'calculavel',diferenca:1});
+    expect(previa.comparacao.depois.cobertura.nutrientes.calcioMg.total).toBe(0);
+    expect(previa.comparacao.depois.cobertura.nutrientes.selenioMcg.estado).toBe('DESCONHECIDO');
+    expect(await estadoPreviaFood06(c)).toEqual(antes);
+    for(const u of [{...c.usuario,papel:'Client' as const},{...c.usuario,papel:'SuperAdmin' as const},{...c.usuario,permissoes:[]}])await expect(c.servico.confirmarPreviaMicronutrientes(tenantA,c.pacienteId,c.planoId,u,c.confirmacao)).rejects.toThrow();
+    await expect(c.servico.confirmarPreviaMicronutrientes(tenantB,c.pacienteId,c.planoId,{...c.usuario,tenantId:tenantB},c.confirmacao)).rejects.toThrow();
+    const salvo=await c.servico.confirmarPreviaMicronutrientes(tenantA,c.pacienteId,c.planoId,c.usuario,c.confirmacao);
+    expect(salvo).toMatchObject({edicaoEstado:'materializada',rascunhoRevisao:c.comando.rascunhoRevisaoEsperada+1});
+    expect(salvo.refeicoes[0].itens[0].composicaoSnapshot.micronutrientes?.nutrientes.ferroMg.porcao).toBe(3);
+    await expect(c.servico.confirmarPreviaMicronutrientes(tenantA,c.pacienteId,c.planoId,c.usuario,c.confirmacao)).rejects.toThrow();
+    const depois=await estadoPreviaFood06(c);
+    expect(depois.versoes.find(v=>v.id===c.versaoId)).toEqual(antes.versoes.find(v=>v.id===c.versaoId));
+    expect(depois.itens.filter(i=>antes.refeicoes.filter(r=>r.versao_id===c.versaoId).some(r=>r.id===i.refeicao_id))).toEqual(antes.itens.filter(i=>antes.refeicoes.filter(r=>r.versao_id===c.versaoId).some(r=>r.id===i.refeicao_id)));
+    await comoTenant(tenantB);expect((await cliente!.query('select id from plano_alimentar_versoes where id=$1',[c.comando.rascunhoIdEsperado])).rows).toEqual([]);
+  });
+
+  it('FOOD06 M04 duas confirmações concorrentes: um ACK, um CAS409 e nenhuma duplicação',async()=>{
+    const c=await prepararPreviaFood06('concorrencia');
+    const r=await disputarPa06(e=>new ServicoPlanosAlimentares(e,c.cripto).confirmarPreviaMicronutrientes(tenantA,c.pacienteId,c.planoId,c.usuario,c.confirmacao),()=>c.servico.confirmarPreviaMicronutrientes(tenantA,c.pacienteId,c.planoId,c.usuario,c.confirmacao));
+    expect(r.map(v=>v.status)).toEqual(['fulfilled','rejected']);
+    if(r[1].status==='rejected')expect(r[1].reason.getStatus()).toBe(409);
+    const salva=await c.servico.obterRascunho(tenantA,c.pacienteId,c.planoId,c.usuario);
+    expect(salva.rascunhoRevisao).toBe(c.comando.rascunhoRevisaoEsperada+1);expect(salva.refeicoes[0].itens).toHaveLength(1);
+  });
+
+  it('FOOD06 M04 autosave e OFF concorrentes invalidam confirmação anterior',async()=>{
+    const c=await prepararPreviaFood06('autosave');
+    const r=await disputarPa06(e=>new ServicoPlanosAlimentares(e,c.cripto).salvarEdicaoRascunho(tenantA,c.pacienteId,c.planoId,c.usuario,{rascunhoIdEsperado:c.comando.rascunhoIdEsperado,rascunhoRevisaoEsperada:c.comando.rascunhoRevisaoEsperada,documento:c.documento}),()=>c.servico.confirmarPreviaMicronutrientes(tenantA,c.pacienteId,c.planoId,c.usuario,c.confirmacao));
+    expect(r.map(v=>v.status)).toEqual(['fulfilled','rejected']);if(r[1].status==='rejected')expect(r[1].reason.getStatus()).toBe(409);
+    const d=await prepararPreviaFood06('off');
+    const off=await disputarPa06(e=>new ServicoPlanosAlimentares(e,d.cripto).alterarAtivacao(tenantA,d.pacienteId,d.planoId,d.usuario,{ativo:false,ativacaoRevisaoEsperada:d.comando.ativacaoRevisaoEsperada}),()=>d.servico.confirmarPreviaMicronutrientes(tenantA,d.pacienteId,d.planoId,d.usuario,d.confirmacao),PlanoAlimentarOrm);
+    expect(off.map(v=>v.status)).toEqual(['fulfilled','rejected']);if(off[1].status==='rejected')expect(off[1].reason.getStatus()).toBe(409);
+  });
+
+  it('FOOD06 M04 transferência concorrente impede confirmar a prévia da carteira anterior',async()=>{
+    const c=await prepararPreviaFood06('transferencia'),outro=await prepararCenarioPa06('food06-previa-novo-profissional');
+    const r=await disputarPa06(e=>e.executar(tenantA,async g=>{
+      await g.getRepository(PacienteOrm).findOne({where:{id:c.pacienteId,tenantId:tenantA},lock:{mode:'pessimistic_write'}});
+      return g.query('update pacientes set profissional_responsavel_id=$1 where tenant_id=$2 and id=$3',[outro.profissionalId,tenantA,c.pacienteId]);
+    }),()=>c.servico.confirmarPreviaMicronutrientes(tenantA,c.pacienteId,c.planoId,c.usuario,c.confirmacao),PacienteOrm);
+    expect(r.map(v=>v.status)).toEqual(['fulfilled','rejected']);if(r[1].status==='rejected')expect(r[1].reason.getStatus()).toBe(404);
+  });
+
+  it('FOOD06 M04 falha após remoção dos filhos reverte versões, identidades e materialização',async()=>{
+    const c=await prepararPreviaFood06('rollback'),antes=await estadoPreviaFood06(c);
+    const executorFalha={executar:<R>(tenantId:string,operacao:(g:EntityManager)=>Promise<R>)=>executorTenant!.executar(tenantId,g=>{
+      const proxy=new Proxy(g,{get(alvo,chave){
+        if(chave==='getRepository')return (tipo:Function)=>{
+          const repo=alvo.getRepository(tipo as never);
+          if(tipo!==PlanoAlimentarItemOrm)return repo;
+          return new Proxy(repo,{get(r,k){if(k==='save')return async()=>{throw new Error('falha sintética de persistência');};const v=Reflect.get(r,k,r);return typeof v==='function'?v.bind(r):v;}});
+        };
+        const v=Reflect.get(alvo,chave,alvo);return typeof v==='function'?v.bind(alvo):v;
+      }});return operacao(proxy);
+    })} as ExecutorTenant;
+    await expect(new ServicoPlanosAlimentares(executorFalha,c.cripto).confirmarPreviaMicronutrientes(tenantA,c.pacienteId,c.planoId,c.usuario,c.confirmacao)).rejects.toThrow('falha sintética');
+    expect(await estadoPreviaFood06(c)).toEqual(antes);
+  });
+
+  async function prepararReceitaPreviaFood06(sufixo:string) {
+    const c=await prepararPreviaFood06('receita-'+sufixo);
+    const biblioteca=new ServicoReceitasNutricionais(executorTenant!,c.cripto);
+    const original={nome:'Receita sintética M04',origem:'pessoal' as const,tipo:'receita' as const,categoria:'Teste',metadados:{schemaVersao:1,baseQuantidades:'receita_inteira',rendimentoPorcoes:3},instrucoes:'Preparação original sintética',itens:[{descricao:'Ingrediente sintético',quantidade:3,unidade:'porção',porcaoGramas:300,nutrientesPor100g:{energiaKcal:100,proteinasG:10,carboidratosG:20,gordurasG:2},micronutrientesPor100g:{ferroMg:2},substituicoes:[{descricao:'Alternativa sintética',quantidade:3,unidade:'porção',porcaoGramas:300,nutrientesPor100g:{energiaKcal:999,proteinasG:10,carboidratosG:20,gordurasG:2},liberadaParaPaciente:true,preferida:true}]}]};
+    const receita=await biblioteca.criar(tenantA,c.usuario,original);
+    const comando={...c.comando,operacao:{tipo:'inserir_receita' as const,refeicaoChave:'r-sintetica',receitaId:receita.id,receitaVersaoEsperada:receita.versaoAtual,porcoesDesejadas:1.5}};
+    const previa=await c.servico.preverMicronutrientes(tenantA,c.pacienteId,c.planoId,c.usuario,comando);
+    return {...c,biblioteca,receita,original,comando,previa,confirmacao:{...comando,fingerprintEsperado:previa.fingerprint}};
+  }
+
+  it('FOOD06 M04 receita preserva origem e publicação, materializa uma vez com flags fechadas sob RLS',async()=>{
+    const c=await prepararReceitaPreviaFood06('persistencia'),antes=await estadoPreviaFood06(c);
+    const origem=await c.biblioteca.obter(tenantA,c.receita.id,c.usuario);
+    const previa=await c.servico.preverMicronutrientes(tenantA,c.pacienteId,c.planoId,c.usuario,c.comando);
+    expect(await estadoPreviaFood06(c)).toEqual(antes);
+    expect(previa.comparacao.diferencas.ferroMg.delta).toMatchObject({estado:'calculavel',diferenca:3});
+    await expect(c.servico.confirmarPreviaMicronutrientes(tenantB,c.pacienteId,c.planoId,{...c.usuario,tenantId:tenantB},c.confirmacao)).rejects.toThrow();
+    const salvo=await c.servico.confirmarPreviaMicronutrientes(tenantA,c.pacienteId,c.planoId,c.usuario,c.confirmacao);
+    expect(salvo.refeicoes[0].itens).toHaveLength(2);
+    expect(salvo.refeicoes[0].itens[1].composicaoSnapshot).toMatchObject({micronutrientes:{nutrientes:{ferroMg:{porcao:3}}}});
+    expect(salvo.documentoEdicao!.refeicoes[0].itens[1]).toMatchObject({quantidade:1.5,porcaoGramas:150,substituicoes:[{liberadaParaPaciente:false,preferida:false}]});
+    const depois=await estadoPreviaFood06(c);
+    expect(depois.versoes.filter(v=>v.id!==salvo.id)).toEqual(antes.versoes.filter(v=>v.id!==salvo.id));
+    expect(await c.biblioteca.obter(tenantA,c.receita.id,c.usuario)).toEqual(origem);
+    await expect(c.servico.confirmarPreviaMicronutrientes(tenantA,c.pacienteId,c.planoId,c.usuario,c.confirmacao)).rejects.toThrow();
+    expect(await estadoPreviaFood06(c)).toEqual(depois);
+  });
+
+  it('FOOD06 M04 receita arquivada após prévia falha sem gravar o destino',async()=>{
+    const c=await prepararReceitaPreviaFood06('arquivada');
+    await c.biblioteca.arquivar(tenantA,c.receita.id,c.usuario);
+    const antes=await estadoPreviaFood06(c);
+    await expect(c.servico.confirmarPreviaMicronutrientes(tenantA,c.pacienteId,c.planoId,c.usuario,c.confirmacao)).rejects.toThrow('nao encontrada');
+    expect(await estadoPreviaFood06(c)).toEqual(antes);
+  });
+
+  it('FOOD06 M04 receita concorrente usa CAS e falha intermediária reverte a expansão inteira',async()=>{
+    const c=await prepararReceitaPreviaFood06('concorrente');
+    const resultados=await disputarPa06(e=>new ServicoPlanosAlimentares(e,c.cripto).confirmarPreviaMicronutrientes(tenantA,c.pacienteId,c.planoId,c.usuario,c.confirmacao),()=>c.servico.confirmarPreviaMicronutrientes(tenantA,c.pacienteId,c.planoId,c.usuario,c.confirmacao));
+    expect(resultados.filter(r=>r.status==='fulfilled')).toHaveLength(1);
+    expect(resultados.filter(r=>r.status==='rejected')).toHaveLength(1);
+    const salvo=await c.servico.obterRascunho(tenantA,c.pacienteId,c.planoId,c.usuario);
+    expect(salvo.refeicoes[0].itens).toHaveLength(2);
+    const d=await prepararReceitaPreviaFood06('rollback'),antes=await estadoPreviaFood06(d);
+    const executorFalha={executar:<R>(tenantId:string,op:(g:EntityManager)=>Promise<R>)=>executorTenant!.executar(tenantId,g=>op(new Proxy(g,{get(alvo,chave){
+      if(chave==='getRepository')return (tipo:Function)=>{
+        const repo=alvo.getRepository(tipo as never);
+        if(tipo!==PlanoAlimentarItemOrm)return repo;
+        return new Proxy(repo,{get(r,k){if(k==='save')return async()=>{throw new Error('falha sintética receita');};const v=Reflect.get(r,k,r);return typeof v==='function'?v.bind(r):v;}});
+      };
+      const v=Reflect.get(alvo,chave,alvo);return typeof v==='function'?v.bind(alvo):v;
+    }})))} as ExecutorTenant;
+    await expect(new ServicoPlanosAlimentares(executorFalha,d.cripto).confirmarPreviaMicronutrientes(tenantA,d.pacienteId,d.planoId,d.usuario,d.confirmacao)).rejects.toThrow('falha sintética receita');
+    expect(await estadoPreviaFood06(d)).toEqual(antes);
+  });
+
+  it.each(['receita_inteira','por_porcao'] as const)('FOOD06 receita %s materializada em1,5porções mantém fatos e histórico sob RLS',async base=>{
+    const c=await prepararCenarioPa06('food06-receita-'+base);
+    const original={metadados:{schemaVersao:1,baseQuantidades:base,rendimentoPorcoes:4},itens:[{
+      descricao:'Receita sintética',quantidade:base==='receita_inteira'?4:1,unidade:'porção',porcaoGramas:base==='receita_inteira'?500:125,
+      nutrientesPor100g:{energiaKcal:100,proteinasG:10,carboidratosG:20,gordurasG:2},micronutrientesPor100g:{ferroMg:2,calcioMg:0}
+    }]};
+    const antesReceita=JSON.stringify(original),p=porcionarReceita(original,1.5);
+    if(p.estado!=='calculavel')throw new Error('Porcionamento sintético indisponível');
+    Object.assign(c.documento.refeicoes[0],{itens:p.itens.map((item,indice)=>({...item,chaveCliente:'ingrediente-'+indice,substituicoes:[]}))});
+    await publicarCenarioPa06(c);
+    const entrada=await selecaoFactualFood06(c);
+    await comoTenant(tenantA);
+    const antes=await cliente!.query('select * from plano_alimentar_versoes where id=$1',[c.versaoId]);
+    const analise=await c.servico.analisarMicronutrientes(tenantA,c.pacienteId,c.usuario,entrada);
+    expect(analise.calculo.nutrientes.energiaKcal.total).toBe(187.5);
+    expect(analise.cobertura.nutrientes.ferroMg).toMatchObject({estado:'COMPLETO',total:3.75});
+    expect(analise.cobertura.nutrientes.calcioMg).toMatchObject({estado:'COMPLETO',total:0});
+    expect(analise.cobertura.nutrientes.selenioMcg.estado).toBe('DESCONHECIDO');
+    const detalhe=await c.servico.detalharMicronutrientes(tenantA,c.pacienteId,c.usuario,{...entrada,codigo:'ferroMg',pagina:1,limite:25});
+    expect(detalhe.refeicoes[0].itens[0]).toMatchObject({porcaoGramas:'187.500',cobertura:{total:3.75}});
+    await expect(c.servico.detalharMicronutrientes(tenantB,c.pacienteId,{...c.usuario,tenantId:tenantB},{...entrada,codigo:'ferroMg',pagina:1,limite:25})).rejects.toThrow();
+    await comoTenant(tenantA);
+    expect((await cliente!.query('select * from plano_alimentar_versoes where id=$1',[c.versaoId])).rows).toEqual(antes.rows);
+    expect(JSON.stringify(original)).toBe(antesReceita);
+  });
+
+  it('FOOD06 detalhe pagina identidades reais sem alterar snapshots sob role runtime/RLS', async () => {
+    const c=await prepararCenarioPa06('food06-pagina');
+    c.documento.refeicoes[0].itens.push({...c.documento.refeicoes[0].itens[0],chaveCliente:'segundo-sintetico'});
+    for (const [indice,item] of c.documento.refeicoes[0].itens.entries()) Object.assign(item,{micronutrientesPor100g:{ferroMg:indice?8:2}});
+    await publicarCenarioPa06(c);
+    const entrada={...await selecaoFactualFood06(c),codigo:'ferroMg',pagina:1,limite:1};
+    await comoTenant(tenantA);
+    const antes=await cliente!.query('select * from plano_alimentar_versoes where id=$1',[c.versaoId]);
+    const itensAntes=await cliente!.query('select i.* from plano_alimentar_itens i join plano_alimentar_refeicoes r on r.id=i.refeicao_id where r.versao_id=$1 order by i.id',[c.versaoId]);
+    const primeira=await c.servico.detalharMicronutrientes(tenantA,c.pacienteId,c.usuario,entrada);
+    const segunda=await c.servico.detalharMicronutrientes(tenantA,c.pacienteId,c.usuario,{...entrada,pagina:2});
+    expect(primeira).toMatchObject({total:2,cobertura:{estado:'COMPLETO',total:10}});
+    expect(segunda.cobertura).toEqual(primeira.cobertura);
+    const ordenada=await c.servico.detalharMicronutrientes(tenantA,c.pacienteId,c.usuario,{...entrada,ordem:'contribuicao'});
+    expect(ordenada).toMatchObject({ordem:'contribuicao',total:2,cobertura:primeira.cobertura,
+      refeicoes:[{versaoNumero:1,itens:[{itemId:segunda.refeicoes[0].itens[0].itemId,posicaoSelecao:1,cobertura:{total:8},composicao:{origem:'manual',baseGramas:100}}]}]});
+    const finalOrdenada=await c.servico.detalharMicronutrientes(tenantA,c.pacienteId,c.usuario,{...entrada,ordem:'contribuicao',pagina:2});
+    expect(finalOrdenada.refeicoes[0].itens[0]).toMatchObject({itemId:primeira.refeicoes[0].itens[0].itemId,posicaoSelecao:2,cobertura:{total:2}});
+
+    expect(primeira.refeicoes[0].itens[0].itemId).not.toBe(segunda.refeicoes[0].itens[0].itemId);
+    expect((await c.servico.detalharMicronutrientes(tenantA,c.pacienteId,c.usuario,{...entrada,pagina:3})).refeicoes).toEqual([]);
+    expect(JSON.stringify(primeira)).not.toMatch(/Criptograf|objetivos|contextoInterno|indiceItem/);
+    for (const usuario of [{...c.usuario,papel:'Client' as const},{...c.usuario,permissoes:[]}]) await expect(c.servico.detalharMicronutrientes(tenantA,c.pacienteId,usuario,entrada)).rejects.toThrow();
+    await expect(c.servico.detalharMicronutrientes(tenantB,c.pacienteId,{...c.usuario,tenantId:tenantB},entrada)).rejects.toThrow();
+    await comoTenant(tenantA);
+    expect((await cliente!.query('select * from plano_alimentar_versoes where id=$1',[c.versaoId])).rows).toEqual(antes.rows);
+    expect((await cliente!.query('select i.* from plano_alimentar_itens i join plano_alimentar_refeicoes r on r.id=i.refeicao_id where r.versao_id=$1 order by i.id',[c.versaoId])).rows).toEqual(itensAntes.rows);
+    await comoTenant(tenantB);
+    expect((await cliente!.query('select id from plano_alimentar_itens where id=$1',[primeira.refeicoes[0].itens[0].itemId])).rows).toEqual([]);
+  });
+
+  it('FOOD06 detalhe invalida próxima página após OFF concorrente', async () => {
+    const c=await prepararCenarioPa06('food06-pagina-off'); await publicarCenarioPa06(c);
+    const entrada={...await selecaoFactualFood06(c),codigo:'ferroMg',pagina:1,limite:1};
+    const resultados=await disputarPa06(exec=>new ServicoPlanosAlimentares(exec,c.cripto).alterarAtivacao(tenantA,c.pacienteId,c.planoId,c.usuario,{ativo:false,ativacaoRevisaoEsperada:entrada.selecoes[0].ativacaoRevisaoEsperada}),()=>c.servico.detalharMicronutrientes(tenantA,c.pacienteId,c.usuario,entrada),PlanoAlimentarOrm);
+    expect(resultados[0].status).toBe('fulfilled'); expect(resultados[1].status).toBe('rejected');
+    if(resultados[1].status==='rejected')expect(resultados[1].reason.getStatus()).toBe(409);
+  });
+
+  it('FOOD06 detalhe mantém leitura consistente e reautoriza após transferência concorrente', async () => {
+    const c=await prepararCenarioPa06('food06-pagina-transf'); await publicarCenarioPa06(c);
+    const novo=await prepararCenarioPa06('food06-pagina-novo');
+    const entrada={...await selecaoFactualFood06(c),codigo:'ferroMg',pagina:1,limite:1};
+    const resultados=await disputarPa06(exec=>new ServicoPlanosAlimentares(exec,c.cripto).detalharMicronutrientes(tenantA,c.pacienteId,c.usuario,entrada),()=>executorTenant!.executar(tenantA,m=>m.query('update pacientes set profissional_responsavel_id=$1 where id=$2',[novo.profissionalId,c.pacienteId])),PacienteOrm,'pessimistic_read');
+    expect(resultados.map(r=>r.status)).toEqual(['fulfilled','fulfilled']);
+    if(resultados[0].status==='fulfilled')expect(resultados[0].value.total).toBe(1);
+    await expect(c.servico.detalharMicronutrientes(tenantA,c.pacienteId,c.usuario,{...entrada,pagina:2})).rejects.toThrow();
+  });
+
+  it('FOOD06 analisa cobertura factual sob RLS sem modificar snapshots cifrados', async () => {
+    const c=await prepararCenarioPa06('food06-factual');
+    Object.assign(c.documento.refeicoes[0].itens[0],{micronutrientesPor100g:{ferroMg:2,calcioMg:0}});
+    await publicarCenarioPa06(c);
+    const entrada=await selecaoFactualFood06(c);
+    await comoTenant(tenantA);
+    const antes=await cliente!.query('select * from plano_alimentar_versoes where id=$1',[c.versaoId]);
+    const r=await c.servico.analisarMicronutrientes(tenantA,c.pacienteId,c.usuario,entrada);
+    expect(r.calculo.nutrientes.energiaKcal.total).toBe(100);
+    expect(r.cobertura.nutrientes.ferroMg).toMatchObject({estado:'COMPLETO',total:2});
+    expect(r.cobertura.nutrientes.calcioMg).toMatchObject({estado:'COMPLETO',total:0});
+    expect(r.cobertura.nutrientes.selenioMcg.estado).toBe('DESCONHECIDO');
+    expect(r.comparacoes).toEqual({estado:'indisponivel',motivo:'referencias_nao_habilitadas'});
+    expect(JSON.stringify(r)).not.toMatch(/Criptograf|Objetivo sintético|Item sintético/);
+    expect((await c.servico.analisarMicronutrientes(tenantA,c.pacienteId,c.usuario,entrada)).calculo).toEqual(r.calculo);
+    await comoTenant(tenantA);
+    expect((await cliente!.query('select * from plano_alimentar_versoes where id=$1',[c.versaoId])).rows).toEqual(antes.rows);
+    await comoTenant(tenantB);
+    expect((await cliente!.query('select id from plano_alimentar_versoes where id=$1',[c.versaoId])).rows).toEqual([]);
+  });
+
+  it('FOOD06 nega outra carteira/tenant, seleção mista, papel e permissão revogados', async () => {
+    const c=await prepararCenarioPa06('food06-escopo'); await publicarCenarioPa06(c);
+    const outro=await prepararCenarioPa06('food06-alheio'); await publicarCenarioPa06(outro);
+    const entrada=await selecaoFactualFood06(c);
+    for(const usuario of [{...c.usuario,papel:'Client' as const},{...c.usuario,permissoes:[]},outro.usuario]) {
+      await expect(c.servico.analisarMicronutrientes(tenantA,c.pacienteId,usuario,entrada)).rejects.toThrow();
+    }
+    await expect(c.servico.analisarMicronutrientes(tenantB,c.pacienteId,{...c.usuario,tenantId:tenantB},entrada)).rejects.toThrow();
+    await expect(c.servico.analisarMicronutrientes(tenantA,c.pacienteId,c.usuario,{selecoes:[...entrada.selecoes,{...entrada.selecoes[0],planoId:outro.planoId,versaoIdEsperada:outro.versaoId}]})).rejects.toThrow();
+    await comoTenant(tenantA);
+    await cliente!.query('update pacientes set profissional_responsavel_id=$1 where id=$2',[outro.profissionalId,c.pacienteId]);
+    await expect(c.servico.analisarMicronutrientes(tenantA,c.pacienteId,c.usuario,entrada)).rejects.toThrow();
+  });
+
+  it('FOOD06 serializa OFF e rejeita confirmação com revisão de ativação obsoleta', async () => {
+    const c=await prepararCenarioPa06('food06-toggle'); await publicarCenarioPa06(c);
+    const entrada=await selecaoFactualFood06(c);
+    const resultados=await disputarPa06(exec=>new ServicoPlanosAlimentares(exec,c.cripto).alterarAtivacao(tenantA,c.pacienteId,c.planoId,c.usuario,{ativo:false,ativacaoRevisaoEsperada:entrada.selecoes[0].ativacaoRevisaoEsperada}),()=>c.servico.analisarMicronutrientes(tenantA,c.pacienteId,c.usuario,entrada),PlanoAlimentarOrm);
+    expect(resultados[0].status).toBe('fulfilled'); expect(resultados[1].status).toBe('rejected');
+    if(resultados[1].status==='rejected')expect(resultados[1].reason.getStatus()).toBe(409);
+    entrada.selecoes[0].ativacaoRevisaoEsperada++;
+    expect((await c.servico.analisarMicronutrientes(tenantA,c.pacienteId,c.usuario,entrada)).calculo.itensIncluidos).toBe(0);
+  });
+
+  it('FOOD06 detalhe rejeita publicação obsoleta e conserva a versão histórica', async () => {
+    const c=await prepararCenarioPa06('food06-detalhe-publicacao'); await publicarCenarioPa06(c);
+    const entrada={...await selecaoFactualFood06(c),codigo:'ferroMg',pagina:1,limite:1};
+    const antiga=await c.servico.obterVersao(tenantA,c.pacienteId,c.planoId,1,c.usuario);
+    const nova=await c.servico.criarNovaVersao(tenantA,c.pacienteId,c.planoId,c.usuario);
+    const revisada=await c.servico.revisar(tenantA,c.pacienteId,c.planoId,c.usuario,{rascunhoIdEsperado:nova.id,rascunhoRevisaoEsperada:nova.rascunhoRevisao});
+    const resultados=await disputarPa06(exec=>new ServicoPlanosAlimentares(exec,c.cripto).publicar(tenantA,c.pacienteId,c.planoId,c.usuario,{rascunhoIdEsperado:nova.id,rascunhoRevisaoEsperada:revisada.rascunhoRevisao}),()=>c.servico.detalharMicronutrientes(tenantA,c.pacienteId,c.usuario,entrada),PlanoAlimentarOrm);
+    expect(resultados[0].status).toBe('fulfilled'); expect(resultados[1].status).toBe('rejected');
+    if(resultados[1].status==='rejected')expect(resultados[1].reason.getStatus()).toBe(409);
+    expect((await c.servico.obterVersao(tenantA,c.pacienteId,c.planoId,1,c.usuario)).hashConteudo).toBe(antiga.hashConteudo);
+  });
+
+  it('FOOD06 rejeita publicação obsoleta e conserva a versão histórica', async () => {
+    const c=await prepararCenarioPa06('food06-publicacao'); await publicarCenarioPa06(c);
+    const entrada=await selecaoFactualFood06(c);
+    const antiga=await c.servico.obterVersao(tenantA,c.pacienteId,c.planoId,1,c.usuario);
+    const nova=await c.servico.criarNovaVersao(tenantA,c.pacienteId,c.planoId,c.usuario);
+    const revisada=await c.servico.revisar(tenantA,c.pacienteId,c.planoId,c.usuario,{rascunhoIdEsperado:nova.id,rascunhoRevisaoEsperada:nova.rascunhoRevisao});
+    const resultados=await disputarPa06(exec=>new ServicoPlanosAlimentares(exec,c.cripto).publicar(tenantA,c.pacienteId,c.planoId,c.usuario,{rascunhoIdEsperado:nova.id,rascunhoRevisaoEsperada:revisada.rascunhoRevisao}),()=>c.servico.analisarMicronutrientes(tenantA,c.pacienteId,c.usuario,entrada),PlanoAlimentarOrm);
+    expect(resultados[0].status).toBe('fulfilled'); expect(resultados[1].status).toBe('rejected');
+    if(resultados[1].status==='rejected')expect(resultados[1].reason.getStatus()).toBe(409);
+    expect((await c.servico.obterVersao(tenantA,c.pacienteId,c.planoId,1,c.usuario)).hashConteudo).toBe(antiga.hashConteudo);
+  });
+
+  it('FOOD06 mantém leitura consistente e perde acesso após transferência concorrente', async () => {
+    const c=await prepararCenarioPa06('food06-transferencia'); await publicarCenarioPa06(c);
+    const novo=await prepararCenarioPa06('food06-novo-responsavel');
+    const entrada=await selecaoFactualFood06(c);
+    const resultados=await disputarPa06(exec=>new ServicoPlanosAlimentares(exec,c.cripto).analisarMicronutrientes(tenantA,c.pacienteId,c.usuario,entrada),()=>executorTenant!.executar(tenantA,m=>m.query('update pacientes set profissional_responsavel_id=$1 where id=$2',[novo.profissionalId,c.pacienteId])),PacienteOrm,'pessimistic_read');
+    expect(resultados.map(r=>r.status)).toEqual(['fulfilled','fulfilled']);
+    if(resultados[0].status==='fulfilled')expect(resultados[0].value.calculo.nutrientes.energiaKcal.total).toBe(100);
+    await expect(c.servico.analisarMicronutrientes(tenantA,c.pacienteId,c.usuario,entrada)).rejects.toThrow();
+  });
 
   it('PA06c calcula snapshots cifrados com micros, ausência explícita e projeções mínimas sob RLS', async () => {
     const c = await prepararCenarioPa06('pa06c-snapshots');

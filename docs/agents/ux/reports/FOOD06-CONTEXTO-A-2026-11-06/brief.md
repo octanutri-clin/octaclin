@@ -1,0 +1,2 @@
+# Brief sintético — FOOD06 contexto, etapa A
+Base7abb1c99. Confirmar população, fisiologia, aplicabilidade, mesmo dia e tabagismo ao registrar análise factual; nascimento/data vêm exclusivamente do servidor autorizado e fuso clínico canônico. Campo futuro opcional; legado sem contexto preservado. Backend preparatório, sem UI/portal/exportação ou ativação DRI. Casos:19anos em fronteira de fuso; tabagismo desconhecido; gestação; troca de seleção após confirmar mesmo dia. Papel nutricionista fornecido em instância nova sem herdar conversa, sem ferramentas; pacienteN/A.

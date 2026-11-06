@@ -1,0 +1,19 @@
+{
+  "base": "6c0ca464aa97bbe6f3dc5d806ff1ba38e6bef7c5",
+  "data": "2026-11-06",
+  "agente": "/root/food06_contexto_ux_a",
+  "etapa": "A textual",
+  "ferramentas_do_revisor": [],
+  "horarios": "Não registrados; avaliação nesta retomada",
+  "paciente": "N/A não invocado",
+  "sha256": {
+    "brief.md": "4de721642501e90af0e00a832ded3d92b01ab8de8c05400ec7edac52a989be23",
+    "nutricionista.md": "0c6b7f49572a4f61f4b1f495280a0e96c229b3d2d746b4646cf9b2a55f4f115b",
+    "paciente.md": "f5b30c8d5772435a0676939a91ad52e5cadc1fdcdf58a2c31d0bf79aac04de2a",
+    "consolidado.md": "7d0a05786fc6d5e8b802fb21ab4df669477d0b2e2e3335dea7ea8c9e6fa4c732"
+  },
+  "fontes_sha256": {
+    ".codex/agents/octaclin-nutricionista-ux.toml": "6259b40a98e2c49053cbc6adbc0c59d0312b14e191b228ab73de2f2eac53af6d",
+    "docs/agents/ux/PROCEDIMENTO.md": "00ee799fa4435bbc1af022752fc1a9dbce4a3196cd1b188a9a4b6017c47bff29"
+  }
+}

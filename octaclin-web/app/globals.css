@@ -161,3 +161,10 @@ time,
     margin: 20mm;
   }
 }
+
+/* Isolamento de impressão factual: permanece mesmo se a prévia for desmontada. */
+@media print {
+  body[data-food06-imprimindo] > :not([data-food06-exportacao]) {
+    display: none !important;
+  }
+}

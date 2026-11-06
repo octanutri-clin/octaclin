@@ -1,0 +1,59 @@
+# FOOD06 — handoff da captura de análise factual
+
+> Estado vigente — [M11 integrada à prévia M04](food06-m11-previa-editor.md).46browser/180serviço/150BFF PASS, lint/typecheck/linguagem/buildNode22 PASS; revisões estáticas/UX delimitadas favoráveis. CI da basef9c35427:22SUCCESS/1SBOMSKIPPED; CI do novo delta pendente. M11 PARCIAL,50%administrativos, M12 e direitos/DRI/G06 pendentes/bloqueados. Sem operações externas. Checkpoints abaixo históricos.
+
+> Checkpoint anterior — [interface factual M11](food06-m11-interface-catalogo.md).Consulta genérica integrada;74browserPASS/6PDFSKIPPED (20novosPASS),150BFFPASS, lint integral0erros/71avisos. R4 estática e UX delimitadas favoráveis. M11 PARCIAL,50%administrativos; prévia/aplicação/M12 e direitos/DRI/G06 pendentes. Build/typecheck isolados Node22 PASS; authz agregado em execução e CI do delta pendente; checkpoints abaixo históricos.
+
+> Checkpoint anterior — [BFF factual M11](food06-m11-bff-catalogo.md):150BFF/30autorização central PASS; typecheck/lint/linguagem/buildNode22 PASS. Gate agregado authz BLOCKED no harness; novo CI e imagens ainda pendentes, com [correção zlib](food06-ci-zlib.md). Sem UI/aplicação; M11 PENDENTE e45,8% mantidos. Direitos/DRI/G06 BLOCKED; checkpoints abaixo históricos.
+
+> Checkpoint anterior — [API factual M11](food06-m11-api-catalogo.md):100testesfoco/233regressões (sobreposição), incluindo7PostgreSQL/HTTP, typecheck/buildNode22 PASS. Paginação corrigida após RED real e R4 estática. Sem BFF/UI; M11 PENDENTE,45,8% mantidos. CI próprio pendente; direitos/DRI/G06 BLOCKED. Checkpoints abaixo são históricos.
+
+> Checkpoint anterior — [M11: auditoria e fundamento interno](food06-m11-consulta-catalogo.md).63testes/typecheck/buildNode22 PASS; revisão independente estática delimitada favorável. Sem API/UI; M11 permanece PENDENTE e45,8% administrativos mantidos. CI da base6c0ca464 PASS; CI do novo delta pendente. Direitos/DRI/G06 BLOCKED. Checkpoints abaixo são históricos.
+
+Base da PR #455: 0bb48ead; CI OctaClin e scanners dos workflows consultados concluíram com sucesso. Build Web local Node 22 concluiu, com avisos Next sobre Edge Runtime. Provenance SBOM foi skipped, não é PASS.
+
+Checkpoint inicial, substituído pelo incremento abaixo: `octaclin-web/lib/registro-analise-factual.ts`, seus testes e inclusão no runner. A função prepara um comando a partir de uma versão publicada e de identidades selecionadas, com validação local e cópia da seleção; a autorização e a validação efetivas continuam no servidor. Isto não cria registros, não tem interface, não comprova idempotência nem fecha M07. O teste com implementação provisória que lança erro teve 2 falhas funcionais esperadas; implementação atual passou 3 testes. Suíte combinada: 75/75 com Node 22. Primeira tentativa com caminho de teste incorreto foi erro de setup, não RED.
+
+Avaliação simulada de nutricionista, leitura de código e proposta por subagente: distinguir claramente o plano e refeições que serão salvos do total combinado; permitir repetição com a mesma chave após resultado incerto; exigir atualização e nova confirmação após 409; indicar como atualizar histórico e distinguir data da versão da data do registro. Sem teste com usuário real ou interação visual. Paciente N/A: operação restrita ao console profissional, sem novo envio ao portal. O subagente herdou contexto da sessão, portanto a invocação não comprova execução de TOML nativo nem isolamento pleno de contexto.
+
+Próximo: criar cliente BFF com resposta minimizada e sanitizada; projetar estado de tentativa imutável com mesma chave e payload após falha incerta; confirmação explícita exibindo plano, versão, refeições e exclusões; impedir resposta tardia após mudança de paciente/seleção; atualizar histórico após sucesso; cobrir rejeição, acesso revogado, replay, concorrência e erros de rede em testes unitários e Playwright desktop/mobile. Confirmar semântica das refeições selecionadas mas inativas contra materialização antes de apresentar resumo; backend é autoridade. Executar lint, typecheck, testes focados e regressões, UX B/C e R4 aplicáveis. Não enviar código incompleto à PR; não fazer merge/deploy/migrations externas. M07 e FOOD06 continuam parciais; direitos das DRI seguem bloqueados.
+
+## Incremento de interface publicada — checkpoint anterior
+
+Captura explícita integrada ao console para uma versão publicada selecionada: resumo de origem e refeições, confirmação, comando mínimo, ACK validado e renovação do histórico por invalidação da leitura local após sucesso. Refeições selecionadas desativadas são identificadas e excluídas dos totais pelo backend existente. Não muda a publicação nem ativa DRI. A criação de registros de rascunhos pela interface e o contexto clínico completo continuam pendentes.
+
+Testes locais: suíte combinada 77/77; Playwright 6/6 desktop/mobile para 503→200, 503→409 e 503→403; axe no fluxo de sucesso, typecheck Node22, lint, scanner local de segredos e diff-check PASS. As tentativas iniciais de browser falharam por fixture sem detalhe do plano e por conferência antes do cálculo combinado terminar; corrigidas sem ampliar timeout. Nenhum desses erros é RED clínico ou prova de vulnerabilidade.
+
+R4 independente `captura_r4`, leitura estática: identificou perda de incerteza depois de 409 após ACK perdido; corrigida preservando tentativa e aviso genérico, sem expor origem quando leitura é negada. Reavaliação favorável e sem execução independente de testes. Refinamento de mensagem quando repetição bloqueada também incorporado. Esta revisão é delimitada ao incremento, não fecha R4 integral FOOD06. API/PG/RLS reutilizados sem alteração; não foi executada nova prova de PostgreSQL neste incremento. Build anterior 0bb48ead PASS; build/CI do novo delta ainda não comprovados.
+
+UX nutricionista: avaliação de planejamento em subagente de leitura; escopo salvo, resultado incerto, conflitos e atualização do histórico incorporados. Paciente N/A justificado acima. Etapas B/C e avaliação humana permanecem pendentes; testes Playwright não substituem avaliações de persona. M07 permanece PARCIAL e percentual administrativo não muda.
+
+## Continuidade — captura do rascunho (delta posterior ao 098a7d36)
+
+CI consultado do 098a7d36: checks aplicáveis SUCCESS, SBOM provenance SKIPPED. Não comprova este delta. Interface do editor estendida para registrar rascunho materializado, com revisão editorial exata e mapeamento de identidades por chaveCliente fornecido pelo servidor. Sem inferência por ordem/nome, sem alteração de snapshot/plano, bloqueada para alterações locais, PA07 sem posse e salvamento não confirmado. Plano inativo continua fora do registro factual ativo.
+
+TDD: teste novo RED funcional (origem rascunho tratada como publicada) → GREEN. Suíte combinada79/79 PASS. Teste adicional de mapa reordenado, materialização pendente e revisão ausente; nenhum dado desconhecido vira zero. Typecheck final Node22 PASS; lint sem erros (8 avisos no editor legado). Browser unificado10/10 PASS desktop/mobile: captura do rascunho com ACK e resposta incerta, bloqueio após edição local e regressão de publicação 503→200/409/403. Build/CI do novo HEAD ainda pendentes; não herdar PASS da base.
+
+Revisão independente estática draft_capture_review identificou perda da tentativa ao desmontar em estado pendente. Componente agora mantém chave estável por paciente/plano/versão, opções vazias e bloqueio; aviso genérico incerto preservado sem revelar fonte. Re-revisão favorável para esse caminho, sem testes próprios. Ciclo completo materializada→pendente→materializada e seus conflitos permanece critério de regressão a ampliar; não fechar R4 integral ou M07 por esta revisão.
+
+Limitações: dois runs Playwright sobrepostos compartilharam diretório de artefatos e falharam com ENOENT ao fechar traces; matriz sendo repetida numa só execução, sem mudar timeout/dependências. Teste inicial usava rótulo inexistente Objetivos e fixture sem interceptação da releitura PA07, corrigidos sem mudar runtime. Nenhum desses incidentes é RED funcional clínico. UX B/C, contexto clínico/referência comum, direitos DRI e gates globais permanecem pendentes. Não há nova prova de PostgreSQL local neste incremento, e nenhum acesso externo mutável foi realizado.
+
+## Regressão do ciclo de rematerialização
+
+Em continuidade ao d95ac7fe, cenário adicional browser desktop/mobile2/2 PASS: POST com503, edição local, ACK de salvamento com revisão2 pendente, nova edição e ACK materializado na revisão3. O aviso de possível gravação permanece durante o bloqueio. A tentativa antiga reaparece bloqueada; nenhuma segunda chamada ocorre antes de cancelamento explícito e nova conferência. A nova chamada possui outra chave e revisão3.
+
+Somente teste e fixture foram ampliados: o hook opcional aposSalvar controla o ACK sintético, sem mudar o runtime. Esta é prova da jornada da interface, não prova de PostgreSQL nem da materialização real do backend. Lint dos dois arquivos, diff-check e scanner local PASS. Não há novo RED funcional, pois a regressão verifica a correção existente. Reexecução de build/unitários de runtime N/A neste delta exclusivo de testes. Revisão independente estática anterior mantém seus limites; este teste não representa execução independente.
+
+CI d95ac7fe reconferido: workflow OctaClin CI42078400745 concluído SUCCESS, assim como workflows de fontes, Dependency Review, CodeQL, Semgrep e Trivy. Provenance do SBOM SKIPPED. CI do commit de testes deverá ser conferido separadamente. M07 e FOOD06 permanecem parciais; não concluir gates científicos, UX B/C, histórico integral ou operação por esta evidência.
+
+## Revisão de jornadas factuais M07 — base10d7257f
+
+CI da base10d7257f reconferido: workflows aplicáveis concluídos SUCCESS, SBOM provenance SKIPPED. Avaliações de UX independentes textuais realizadas em duas instâncias sem herdar conversa, papéis fornecidos por prompt; manifesto e sínteses em docs/agents/ux/reports/FOOD06-M07-B-2026-11-05. Sem ferramentas dos revisores e sem seleção nativa TOML comprovada. Paciente N/A justificado, B visual pelas personas não executado e C integral pendente.
+
+NUX-01 reproduzido em RED funcional: registros de planos fora da seleção, mesmo minuto/versão, tinham labels iguais. Correção de apresentação: Análise1/2 nos selects e na linha correspondente do histórico carregado; valor/key/identidade da API continuam os IDs autorizados. Sem índice como identidade persistente ou autorização. Instrução explica que a numeração pertence à lista carregada. Regressão8/8 desktop/mobile PASS, incluindo comparação, acesso revogado, resposta tardia e colisão. Lint PASS, diff-check e scanner local executados antes de envio. Sem nova prova PG ou novo motor clínico. Typecheck Node22 PASS; CI/build do novo delta devem ser conferidos; não concluir M07 nem aumentar percentual administrativo por esta correção. NUX-02 já coberto pela instrução de reconferência; NUX-03 proximidade do carregamento fica no backlog.
+
+## Continuidade contextual — 2026-11-06
+Captura opcional backend integrada emc5e55e35; próximo delta acrescenta formulário compartilhado e resumo contextual por allowlist à leitura. Estado vigente/evidências/próxima ação em [contexto confirmado](food06-contexto-confirmado.md). PDF continua sem contexto neste contrato. Não confundir UI de confirmações com referência DRI liberada. Preservar a correção RED/GREEN de ACKtardio com seleção nova, além de identidades/revisões/idempotência e comportamento incerto.
+
+## Continuidade — contexto histórico e relatório2
+Histórico opt-in e formato2 negociado implementados sobre e67ec236; relatório1 permanece padrão. Contratos/provas/compatibilidade/rollback/próximo passo no [handoff contextual](food06-contexto-historico-relatorio.md). Preservar correção401 que limpa itens/cursor/modal e reconstrução por allowlist.28browserconjuntos e demais gates locais PASS; CI do novo SHA deve ser conferido. Não fechar FOOD06 ou ativar DRI.

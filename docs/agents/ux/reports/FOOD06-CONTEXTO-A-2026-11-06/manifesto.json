@@ -1,0 +1,19 @@
+{
+  "modalidade": "subagente com papel fornecido, prompt sintético, sem ferramentas; síntese editorial do coordenador",
+  "agente": "/root/food06_contexto_ux_a",
+  "base": "7abb1c99405fdd625d67d33e8caa766148d11d34",
+  "data": "2026-11-06",
+  "paciente": "N/A, não invocado",
+  "inicio_fim": "durante esta retomada; horário exato não registrado, não inferido",
+  "ferramentas_do_revisor": [],
+  "sha256": {
+    "brief.md": "ec30af82c72948f61abfe50cc9abac08a36bc65f7b3d2f96f940b3464fa496c9",
+    "nutricionista.md": "521ceaae29d6956421167cf5ac8c5e5f85a239d2b26daed49959c8f811ee6016",
+    "paciente.md": "15701cf7bb63fdc1275617df3f6434dd7ee19c8189002ebd8c94b287e71dcc2f",
+    "consolidado.md": "ed3826dfa69591d506c9a287e7a22dce4cd727910efc808fb7feecbf8fd8a339"
+  },
+  "fontes_sha256": {
+    ".codex/agents/octaclin-nutricionista-ux.toml": "6259b40a98e2c49053cbc6adbc0c59d0312b14e191b228ab73de2f2eac53af6d",
+    "docs/agents/ux/PROCEDIMENTO.md": "00ee799fa4435bbc1af022752fc1a9dbce4a3196cd1b188a9a4b6017c47bff29"
+  }
+}

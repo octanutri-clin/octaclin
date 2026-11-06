@@ -48,3 +48,28 @@ test('PA07 transporte BroadcastChannel real transfere só envelope e encerra lis
   await x.iniciar(); await y.iniciar(); await y.assumir();
   assert.equal(x.estado, 'consulta'); assert.equal(y.podeEditar, true);
 });
+
+test('PA07 liberação nativa só confirma após término efetivo de locks.request', async () => {
+  let concluir!: () => void;
+  const barreira = new Promise<void>(resolve => { concluir = resolve; });
+  const gerente = { request: async (_chave: string, _opcoes: LockOptions, cb: LockGrantedCallback<void>) => {
+    await cb({ name: 'sintetico', mode: 'exclusive' } as Lock);
+    await barreira;
+  } } as unknown as LockManager;
+  const trava = criarTravaAbasPlano(gerente, 'recurso-sintetico');
+  const liberar = await trava.adquirir(new AbortController().signal);
+  let confirmada = false;
+  const fim = Promise.resolve(liberar!()).then(() => { confirmada = true; });
+  try { await drenar(); assert.equal(confirmada, false); }
+  finally { concluir(); await fim; }
+  assert.equal(confirmada, true);
+});
+
+test('PA07 falha no término do LockManager não se converte em ACK de liberação', async () => {
+  const gerente = { request: async (_chave: string, _opcoes: LockOptions, cb: LockGrantedCallback<void>) => {
+    await cb({ name: 'sintetico', mode: 'exclusive' } as Lock);
+    throw new Error('Falha sintética de release');
+  } } as unknown as LockManager;
+  const liberar = await criarTravaAbasPlano(gerente, 'recurso-sintetico').adquirir(new AbortController().signal);
+  await assert.rejects(Promise.resolve(liberar!()), /Falha sintética de release/);
+});
