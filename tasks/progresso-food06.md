@@ -32,3 +32,7 @@ assistencial. M10 continua parcial e M07 não se encerra por um comparador inter
 
 Agora: verificar CI manual42131762437 do incremento agrupado d04551e0 e a sincronização do HEAD da #455, que ainda informa159ced04. Evitar pushes por pequenas etapas: CI leva cerca de40min, conforme proprietário. R4 estática delimitada de impressão favorável após correções; R4 integral FOOD06 e UX B/C aplicáveis seguem pendentes. CI do remoto159ced04 concluído com sucesso; não valida M08. O CI manual falhou em linguagem do canário de teste; correção RED/GREEN local concluída e novo CI pendente.
 Direitos/DRI e G06 BLOCKED; sem operações externas ou mudança de escopo.
+
+## Retomada — contexto confirmado, fundamento2026-11-06
+
+CI42137723558 do HEAD7abb1c99 PASS (Demo/Backend/Web/PR Gate incluídos); SBOM provenance SKIPPED. PR sincronizada e Draft. Próximo incremento documentado em [contexto confirmado](food06-contexto-confirmado.md): validador/carregador interno com75testes e typecheckPASS; sem integração API/UI ou referência DRI habilitada. Não acrescenta melhoria concluída nem altera45,8%. Nova orientação: checkpoints remotos menores para preservar trabalho, sem esperar toda a matriz global; cada envio declara gates pendentes.

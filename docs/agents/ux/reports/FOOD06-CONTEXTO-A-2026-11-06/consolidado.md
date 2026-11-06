@@ -1,0 +1,2 @@
+# Consolidação
+Revisão A proposta/estática, por subagente com papel explícito, sem seleção TOML nativa ou sandbox independente comprovado. Fonte das regras: .codex/agents/octaclin-nutricionista-ux.toml e docs/agents/ux/PROCEDIMENTO.md na base. Síntese no relatório nutricionista; riscos permanecem critérios da futura integração, sem escopo novo ou inferência clínica. B/C NOT RUN, não há interface neste incremento. Revisão R4 separada e não substituída por persona.
