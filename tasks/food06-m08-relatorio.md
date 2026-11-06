@@ -1,10 +1,10 @@
-# FOOD06 M08 — relatório factual em desenvolvimento local
+# FOOD06 M08 — relatório factual, correção do gate de linguagem
 
 ## Estado
 
 Incremento local sobre árvore a428f0cbf74145255eafc18b7c3400cedc354e55: local973b3765 e remoto159ced04 são commits distintos com a mesma árvore. Sem reset/rebase/descarte. Novos envios devem comparar pai remoto e árvore, usando Git/conector autenticado. Credencial CLI expirou no ciclo anterior; não ler/expor tokens para recuperar.
 
-Solicitação vigente: agrupar uma entrega maior e validar localmente antes de novo push, pois o CI leva cerca de40min. Nenhuma alteração M08 foi enviada; PR455 continua Draft e gates científicos/operacionais bloqueados.
+Solicitação vigente: agrupar uma entrega maior e validar localmente antes de novo push, pois o CI leva cerca de40min. Incremento M08 enviado em d04551e08e3a2326b0952dbdbdd729ace4bba2a4; PR455 continua Draft e gates científicos/operacionais bloqueados. Os checkpoints abaixo são históricos e não substituem o estado vigente.
 
 ## Checkpoint inicial — backend/BFF
 
@@ -89,3 +89,23 @@ Contexto confirmado depende de integração nova na captura, não de inferência
 - RebuildWeb corrigido PASS Node22/webpack,195páginas; avisosNext existentes. Lint afetado, diff-check e scanner local PASS. DomínioWeb85/85 e BFF112/112 do incremento permanecem evidências delimitadas;14browserfinais PASS apósP2, com PDFreal opt-in.
 - R4 integral estática do incremento factual reavaliada favoravelmente apósP2, sem execução independente de testes. UXBdelimitada/manifesto arquivados; Bvisual própria das personas, C/R4 integrais da FOOD06 e AT/PDF integral não concluídos.
 - Próximo: único envio agrupado necessário ao CI da branch existente. Não herdar CI da base159ced04, nem marcar software completo enquanto restarem requisitos. M08 parcial e45,8% administrativos. Sem autorização/ação de merge, deploy, DDL externo ou ativação de comparadores.
+
+## Estado vigente — envio agrupado e CI manual confirmado
+
+Árvore local d05ee0d3 e commit remoto d04551e0 compartilham a árvore testada6aeecaae250c0f61e52c6a84dddb2cdc85506121. A publicação agrupou28arquivos sem reset, force-push ou descarte. O pai remoto159ced04 foi preservado; os SHAs locais diferem pela ancestralidade, não pelo conteúdo testado.
+
+Consulta nesta retomada confirmou a branch remota emd04551e0, enquanto a API da PR e refs/pull/455/head ainda informam159ced04. Essa inconsistência continua BLOCKED; CI da base não valida M08. A chamada workflow_dispatch por ID retornou HTTP500 anteriormente; o disparo posterior pelo arquivo ci.yml foi aceito e criou o run [42131762437](https://github.com/octanutri-clin/octaclin/actions/runs/42131762437), evento workflow_dispatch, head_sha d04551e08e3a2326b0952dbdbdd729ace4bba2a4.
+
+CI do novo SHA: EM EXECUÇÃO, não PASS. Mobile e gates iniciais de governança passaram na consulta; Backend/Web ainda em execução. Evidência de workflow manual deve ser distinguida da sincronização/checks da PR. Não foram criados commits vazios nem alterados workflows, permissões, estado Draft ou infraestrutura para disparar execução.
+
+Próxima ação: verificar conclusão do run exato, corrigir falhas reproduzíveis se surgirem e reconciliar o HEAD interno da PR sem descarte ou bypass. Atualizações documentais deste checkpoint ficam locais, para agrupamento posterior; não consomem nova rodada de CI. M08 parcial, FOOD06 em45,8% administrativos, direitos/DRI/G06 bloqueados.
+
+Scanners manuais confirmados no mesmo SHA d04551e0: CodeQL42132150892, Semgrep42132154639 e Trivy42132158223 (queued/in_progress na consulta, não PASS). Não substituem Dependency Review/eventos específicos de PR ainda não executados no novo HEAD interno. O ci.yml usa suíte completa em workflow_dispatch, incluindo Backend/PostgreSQL e Demo smoke conforme dependências. Diff-check e scanner local de segredos deste checkpoint documental PASS. Nenhum novo push.
+
+## Correção de linguagem — 2026-11-06
+
+Run42131762437 terminou FAIL: Backend/Web/Mobile PASS; Demo smoke falhou no passo Linguagem e microcopy e PR Gate falhou em consequência. CodeQL42132150892, Semgrep42132154639 e Trivy42132158223 concluíram success no SHA d04551e0. Esses resultados não aprovam a correção posterior.
+
+RED local reproduzido com Node22: test-linguagem-interface.mjs recusou o canário sintético CANARIO_TARDIO_RELATORIO no seletor Playwright. Corrigidas somente as duas ocorrências correspondentes para CANARIO_TARDIO_RELATÓRIO (resposta simulada e asserção negativa); verificador/asserções/políticas preservados. GREEN:8/8 testes da biblioteca e varredura integral de linguagem aprovada, sintaxe do spec, diff-check e scanner local de segredos PASS. Não foi reexecutada a matriz browser nesta correção textual; novo CI exigido.
+
+Worktree anterior preservada. Delta documental já existente consolidado neste envio corretivo, sem mudanças runtime. PR permanece Draft; FOOD06 parcial, direitos/DRI/G06 bloqueados.
