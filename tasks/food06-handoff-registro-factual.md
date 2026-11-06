@@ -1,5 +1,7 @@
 # FOOD06 — handoff da captura de análise factual
 
+> Estado vigente — [M11: auditoria e fundamento interno](food06-m11-consulta-catalogo.md).63testes/typecheck/buildNode22 PASS; revisão independente estática delimitada favorável. Sem API/UI; M11 permanece PENDENTE e45,8% administrativos mantidos. CI da base6c0ca464 PASS; CI do novo delta pendente. Direitos/DRI/G06 BLOCKED. Checkpoints abaixo são históricos.
+
 Base da PR #455: 0bb48ead; CI OctaClin e scanners dos workflows consultados concluíram com sucesso. Build Web local Node 22 concluiu, com avisos Next sobre Edge Runtime. Provenance SBOM foi skipped, não é PASS.
 
 Checkpoint inicial, substituído pelo incremento abaixo: `octaclin-web/lib/registro-analise-factual.ts`, seus testes e inclusão no runner. A função prepara um comando a partir de uma versão publicada e de identidades selecionadas, com validação local e cópia da seleção; a autorização e a validação efetivas continuam no servidor. Isto não cria registros, não tem interface, não comprova idempotência nem fecha M07. O teste com implementação provisória que lança erro teve 2 falhas funcionais esperadas; implementação atual passou 3 testes. Suíte combinada: 75/75 com Node 22. Primeira tentativa com caminho de teste incorreto foi erro de setup, não RED.

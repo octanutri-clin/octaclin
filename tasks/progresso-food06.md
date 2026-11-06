@@ -9,7 +9,7 @@ esforço, prazo, prontidão assistencial ou critérios integralmente aceitos.
 Não alterar os pesos para aparentar avanço. Evidências e exceções continuam na
 [matriz de aceite](aceite-pos-320-food06.md). Nenhuma melhoria pode ser retirada.
 
-## Checkpoint vigente — contexto histórico e relatório formato2
+## Checkpoint vigente — fundamento interno M11
 
 | Melhoria | Estado | Entregue / falta |
 | --- | --- | --- |
@@ -23,7 +23,7 @@ Não alterar os pesos para aparentar avanço. Evidências e exceções continuam
 | M08 PDF | PARCIAL | Relatório factual1 preservado, formato2 contextual negociado e reautorizado;28browserconjuntos com8PDFsreais locais,44PG/92Web/115BFF PASS. Não é PDF plenamente acessível nem relatório científico com DRI habilitada; fontes/referências completas, UX C/R4 globais e aceite integral pendentes. Novo CI próprio deve ser conferido. [Evidências](food06-contexto-historico-relatorio.md) |
 | M09 explicações curtas | CONCLUÍDA E VALIDADA | Guia próprio versionado, fonte/revisão técnica/UX delimitadas, teclado/axe/fonte200% e CIb9ed65bc aprovado; sem habilitar referências numéricas ou afirmar AT humana |
 | M10 longitudinal | PARCIAL | Endpoint histórico keyset e UI factual; extensão M10-C2 compara estados dos marcadores de planejamento, composição/fonte, referência, contexto e cobertura por nutriente, sem projetar hashes nem atribuir causa. Unitário 4/4, PostgreSQL descartável/RLS 41/41, Web69/69, Playwright desktop/mobile2/2, typechecks, lint, builds e scanner local de segredos PASS em Node22.21.1. CI/scanners do novo delta, UX B/C, R4 independente e direitos/DRI continuam pendentes |
-| M11 sugestões | PENDENTE | Catálogo e restrições confiáveis ainda exigem implementação/contrato |
+| M11 sugestões | PENDENTE | Auditoria e fundamento interno factual com63testes/typecheck/build PASS; sem API/UI. Individualização bloqueada por contrato de restrições ausente; [evidências e próximo passo](food06-m11-consulta-catalogo.md) |
 | M12 cenários | PENDENTE | Implementação ainda necessária |
 
 **45,8% estimados;1/12 melhoria integralmente encerrada (M09).** Nove parciais,
@@ -48,3 +48,6 @@ Histórico do incremento anterior: enviar checkpoint contextual à mesmaPR455 Dr
 ## Checkpoint — histórico contextual e relatório2
 Implementados opt-in do histórico e negociação explícita de relatório2, resumo de época sem cadastro atual e defaultsv1 preservados.33backend/44PG/92Web/115BFF,28browserconjuntos, builds/typechecksNode22 PASS. Corrigidos allowlist do resumo e401que mantinha página anterior, ambos com RED/GREEN. [Contrato e handoff](food06-contexto-historico-relatorio.md).
 Agora: conferir CI do checkpoint e avançar auditoria de catálogo/restrições para M11; M12 continua pendente.45,8% administrativos mantidos, sem melhoria integral adicional fechada; direitos/DRI/G06 bloqueados.
+
+## Continuidade — fundamento interno M11
+CI da base6c0ca464/run42236610758 SUCCESS. Consulta genérica interna reutiliza adaptadores e motor;63testes PASS, typecheck/build Node22 PASS; revisão estática independente favorável delimitada. Sem API/UI nem individualização habilitada. M11 segue PENDENTE,45,8% mantidos; [handoff](food06-m11-consulta-catalogo.md). Novo CI ainda pendente.

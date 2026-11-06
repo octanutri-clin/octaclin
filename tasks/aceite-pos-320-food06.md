@@ -1,6 +1,8 @@
 # FOOD06 — matriz obrigatória de aceite
 
-> Estado vigente — contexto histórico e relatório formato2: [contratos, execução e limites](food06-contexto-historico-relatorio.md).
+> Estado vigente — [M11: auditoria e fundamento interno](food06-m11-consulta-catalogo.md).63testes/typecheck/buildNode22 PASS; revisão independente estática delimitada favorável. Sem API/UI; M11 permanece PENDENTE e45,8% administrativos mantidos. CI da base6c0ca464 PASS; CI do novo delta pendente. Direitos/DRI/G06 BLOCKED. Checkpoints abaixo são históricos.
+
+> Checkpoint anterior — contexto histórico e relatório formato2: [contratos, execução e limites](food06-contexto-historico-relatorio.md).
 >33backend/44PG/92Web/115BFF,28browserconjuntos PASS; buildsNode22 PASS. Novo CI ainda pendente.45,8% administrativos, melhorias parciais e direitos/DRI/G06 bloqueados.
 > Contratos anteriores preservados por default/negociação; revisões estáticas/UX delimitadas não encerram FOOD06. Checkpoints abaixo são históricos.
 
