@@ -227,3 +227,12 @@ revalidação quanto a revogação posterior. Não basta comprovar o fluxo posit
 ou mudar somente o texto do erro; a prova deve observar que os dados saem da tela.
 Revisão independente identificou/reproduziu e reavaliou a correção. Isso preserva
 a autorização do backend, não a substitui por controle visual.
+## 2026-11-06 — Lint focado inclui fixtures e testes novos
+
+O lint local do incremento BFF FOOD06 cobriu rota e biblioteca, mas não a fixture
+adicionada ao spec. O CI identificou `no-explicit-any` nesse teste e bloqueou Web
+/ PR Gate. Correção: tipagem inferida da fixture e remoção de campos com Reflect
+no cenário negativo, sem silenciar a regra ou reduzir asserts. Controle: executar
+lint sobre todos os arquivos alterados, inclusive testes, e o lint integral antes
+do checkpoint de interface. O PASS de um subconjunto continua limitado aos paths
+executados; não substitui o CI do HEAD.

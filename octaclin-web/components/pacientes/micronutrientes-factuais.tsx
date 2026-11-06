@@ -1,4 +1,5 @@
 'use client';
+import {ConsultaTeorCatalogo} from './consulta-teor-catalogo';
 import { RegistroAnaliseFactual } from './registro-analise-factual';
 import {AjudaInterpretacaoMicronutrientes} from './ajuda-interpretacao-micronutrientes';
 import { ContribuicoesMicronutrientes } from './contribuicoes-micronutrientes';
@@ -81,6 +82,7 @@ export function MicronutrientesFactuais({planosRegistro,aoInvalidarLeitura,nomes
         </>:null}
       </div>:null}
     </div>
+    <ConsultaTeorCatalogo key={JSON.stringify([pacienteId,chaveContexto,leituraPermitida])} permitido={leituraPermitida} aoInvalidar={invalidarDetalhe}/>
     <RegistroAnaliseFactual key={pacienteId} pacienteId={pacienteId} planos={planosRegistro} contexto={chaveContexto} permitido={leituraPermitida} aoSalvar={()=>setRevisaoHistorico(v=>v+1)} aoInvalidar={invalidarDetalhe}/>
     <HistoricoMicronutrientesFactuais key={`${revisaoHistorico}:${pacienteId}:${leituraPermitida?'leitura':'bloqueado'}`} pacienteId={pacienteId} nomesPlanos={nomesPlanos} leituraPermitida={leituraPermitida} aoInvalidar={invalidarDetalhe}/>
   </section>;

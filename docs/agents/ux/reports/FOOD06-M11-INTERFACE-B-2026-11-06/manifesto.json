@@ -1,0 +1,30 @@
+{
+  "base": "b0c1f4dc57c02034720fb85b0393c4b99c8f9a3b",
+  "data": "2026-11-06",
+  "agente": "/root/food06_contexto_ux_a",
+  "etapas": [
+    "A proposta",
+    "B interface por evidências textuais do coordenador",
+    "C delimitada ao incremento"
+  ],
+  "modalidade": "Subagente do runtime com papel explícito; seleção nativa do TOML não comprovada",
+  "horarios": "Início/fim exatos não registrados; avaliações nesta retomada",
+  "ferramentas_do_revisor": [],
+  "paciente": "N/A não invocado",
+  "sha256": {
+    "conclusao-c.md": "efe968ccd3f7617484eb1a76cc3bd815a03e771ecfb5ad59c90c515ca00c1f2c",
+    "consolidado.md": "a40afb2f28424a467b545860fee3d02b7ad74e3991241b69308236f8425e857f",
+    "paciente.md": "355eeeae9ca2a36f36a9f49e6106919306fd69bcccbe6a925173900bea9875b0",
+    "nutricionista.md": "bf61f6a330b2f10cf407a7b69e5a7c33131ce8a51d7bc8b687847764ad07873a",
+    "brief.md": "463df696421489a6ddd1fef7d32accdb76ee0bbfba6d672783ca9e6ff24df82e"
+  },
+  "fontes_sha256": {
+    ".codex/agents/octaclin-nutricionista-ux.toml": "6259b40a98e2c49053cbc6adbc0c59d0312b14e191b228ab73de2f2eac53af6d",
+    "docs/agents/ux/PROCEDIMENTO.md": "00ee799fa4435bbc1af022752fc1a9dbce4a3196cd1b188a9a4b6017c47bff29",
+    "octaclin-web/components/pacientes/consulta-teor-catalogo.tsx": "ecf951e562a355bf9d8b0cd66c5f0d822cb2207ac83c252ef087d89949182123",
+    "octaclin-web/components/pacientes/micronutrientes-factuais.tsx": "efa9e98116323eaced7ce910cd39ffd968b29c09d83b631ea67eae8f6278d71d",
+    "octaclin-web/lib/consulta-teor-catalogo-api.ts": "77fae977a02da48d27285cbe9ada9ad1cf9880fd411207e54ff765495f169d20",
+    "octaclin-web/tests/visual/food06-consulta-teor.spec.mjs": "5c119550795306b4cc80b6305b3df0126bcdc35f34e8a32b21bb68f25cfb1c9e"
+  },
+  "artefatos": "Screenshots sintéticos locais consulta-teor.png reproduzíveis pelo spec; coordenador viu desktop, mobile automatizado. Não versionados."
+}

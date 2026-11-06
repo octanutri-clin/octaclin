@@ -1,6 +1,15 @@
 # OctaClin - Status atual do projeto
 
-**FOOD06 — retomada M10-C2 em 2026-11-05, PR #455 Draft.** O incremento local
+**FOOD06 — vigente: consulta factual M11, PR #455 Draft.** Interface profissional
+integrada à API/BFF, sem individualização ou escrita no plano. Browser74PASS/
+6PDFSKIPPED,20cenários novos PASS;150BFFPASS e lint integral0erros/71avisos.
+M11 PARCIAL,50% administrativos, sem nova melhoria integralmente encerrada.
+Build/typecheck isolados Node22 PASS; authz em execução e CI do delta pendente.
+Direitos/DRI e G06 BLOCKED; prévia/aplicação e M12 ainda pendentes.
+[Evidências, limites e próximo passo](tasks/food06-m11-interface-catalogo.md).
+Sem merge/deploy/migrations externas. Checkpoints abaixo são históricos.
+
+**FOOD06 — histórico: retomada M10-C2 em 2026-11-05, PR #455 Draft.** O incremento local
 estende a comparação factual do histórico a planejamento, composição/fonte,
 referência, contexto e cobertura por nutriente, projetando apenas estados e sem
 hashes/causalidade. Unitários backend 4/4, PostgreSQL descartável/RLS 41/41,
@@ -11,7 +20,7 @@ final estão pendentes. M10 permanece PARCIAL; direitos DRI/G06 BLOCKED.
 Sem merge, deploy ou migrations externas. Evidências em
 [`tasks/food06-m10-historico.md`](tasks/food06-m10-historico.md).
 
-**FOOD06 — vigente: API/BFF de registros factuais M05/M07.**
+**FOOD06 — histórico: API/BFF de registros factuais M05/M07.**
 [Contrato/handoff](tasks/food06-api-registros-factuais.md): quatro POSTs protegidos,
 projeções allowlist e paginação; P2 caixa corrigido com RED/GREEN.42HTTP/projeções,
 101BFF e61PG PASS; R4 delimitada sem achados pendentes. Builds/typechecks Node22 PASS; authz completa e CI próprio em
