@@ -1,6 +1,8 @@
 # FOOD06 M08 — relatório factual, correção do gate de linguagem
 
-## Estado
+> Estado vigente: [contexto histórico/relatório2](food06-contexto-historico-relatorio.md). Contratos default preservados, novo formato negociado e provas33backend/44PG/92Web/115BFF/28browser PASS. Novo CI pendente; M05/M08 parciais,45,8% administrativos. Registros abaixo são históricos.
+
+## Checkpoint inicial histórico
 
 Incremento local sobre árvore a428f0cbf74145255eafc18b7c3400cedc354e55: local973b3765 e remoto159ced04 são commits distintos com a mesma árvore. Sem reset/rebase/descarte. Novos envios devem comparar pai remoto e árvore, usando Git/conector autenticado. Credencial CLI expirou no ciclo anterior; não ler/expor tokens para recuperar.
 
@@ -90,7 +92,7 @@ Contexto confirmado depende de integração nova na captura, não de inferência
 - R4 integral estática do incremento factual reavaliada favoravelmente apósP2, sem execução independente de testes. UXBdelimitada/manifesto arquivados; Bvisual própria das personas, C/R4 integrais da FOOD06 e AT/PDF integral não concluídos.
 - Próximo: único envio agrupado necessário ao CI da branch existente. Não herdar CI da base159ced04, nem marcar software completo enquanto restarem requisitos. M08 parcial e45,8% administrativos. Sem autorização/ação de merge, deploy, DDL externo ou ativação de comparadores.
 
-## Estado vigente — envio agrupado e CI manual confirmado
+## Checkpoint histórico — envio agrupado e CI manual confirmado
 
 Árvore local d05ee0d3 e commit remoto d04551e0 compartilham a árvore testada6aeecaae250c0f61e52c6a84dddb2cdc85506121. A publicação agrupou28arquivos sem reset, force-push ou descarte. O pai remoto159ced04 foi preservado; os SHAs locais diferem pela ancestralidade, não pelo conteúdo testado.
 

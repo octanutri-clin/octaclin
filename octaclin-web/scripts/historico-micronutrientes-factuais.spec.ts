@@ -48,3 +48,20 @@ test('M10 cliente envia cursor mínimo, sem cache e propaga cancelamento',async(
   assert.equal(chamada!.init!.body,JSON.stringify({limite:10,cursorId:cursor.id,cursorCriadoEm:cursor.criadoEm}));
  }finally{global.fetch=original;}
 });
+
+test('contexto registrado tem data civil estrita e projeção mínima sem inferir população ou tabagismo',async()=>{
+ const {lerContextoRegistradoFactual}=await import('../lib/contexto-registrado-factual');
+ const c={schemaVersao:1,dataAnalise:'2026-11-06',idadeAnos:36,populacaoReferencia:'feminina',mesmoDiaPlanejado:false,tabagismo:'nao_informado',motivos:[]};
+ assert.deepEqual(lerContextoRegistradoFactual(c),c);
+ for(const alterado of [{dataAnalise:'2026-02-30'},{schemaVersao:2},{idadeAnos:-1},{populacaoReferencia:'não informada'},{tabagismo:null},{nascimento:'1990-01-01'},{motivos:['texto livre']},{motivos:['idade_fora_do_escopo','idade_fora_do_escopo']}])assert.throws(()=>lerContextoRegistradoFactual({...c,...alterado}));
+});
+
+test('histórico só admite resumo quando solicitado, sem completar registro antigo',()=>{
+ const entrada=pagina();const resumo={schemaVersao:1,dataAnalise:'2026-11-06',idadeAnos:36,mesmoDiaPlanejado:false,tabagismo:'nao_informado',motivos:[]};Object.assign(entrada.itens[0],{contextoConfirmado:resumo});
+ assert.throws(()=>lerPaginaHistoricoMicronutrientesFactual(entrada));assert.equal(lerPaginaHistoricoMicronutrientesFactual(entrada,true).itens[0].contextoConfirmado?.idadeAnos,36);
+ entrada.itens[0].bases.contextoDocumentado=false;assert.throws(()=>lerPaginaHistoricoMicronutrientesFactual(entrada,true));
+ assert.equal(lerPaginaHistoricoMicronutrientesFactual(pagina(),true).itens[0].contextoConfirmado,undefined);
+});
+test('consulta de contexto preserva a flag no body e não usa parâmetros clínicos em URL',async()=>{
+ const original=globalThis.fetch;try{globalThis.fetch=async(url,init)=>{assert.ok(!String(url).includes('?'));assert.equal(init?.cache,'no-store');assert.deepEqual(JSON.parse(String(init?.body)),{limite:10,incluirContexto:true});return Response.json(pagina({temMais:false,proximoCursor:undefined}));};await obterHistoricoMicronutrientesFactual('paciente',undefined,new AbortController().signal,true);}finally{globalThis.fetch=original;}
+});

@@ -36,10 +36,10 @@ suite('FOOD06 registro cifrado PostgreSQL15 descartável/RLS/runtime',()=>{
  const crypto=new CriptografiaDadosSensiveis();
  function dados():EntradaConstrutorAnaliseFactual {return {escopo:{tenantId:tenant,pacienteId:paciente},origem:{planoId:plano,versaoId:versao,numero:1,status:'publicada',registradaEm:'2026-11-03T12:00:00.000Z'},ativo:true,selecionado:true,refeicoes:[{identidadeId:randomUUID(),ativa:true,selecionada:true,itens:[{porcaoGramas:100,snapshot:{origem:'manual',descricao:'CANARIO_PRIVADO',nutrientesPor100g:{energiaKcal:100},nutrientesPorcao:{energiaKcal:100}}}]}]};}
  const comando=(key=randomUUID()):ComandoRegistroFactual=>({chaveIdempotencia:key,origem:{planoId:plano,versaoId:versao,numero:1,status:'publicada'}});
- async function fonte(status:'publicada'|'rascunho'='publicada'){
+ async function fonte(status:'publicada'|'rascunho'='publicada',pacienteDaFonte=paciente){
   const planoId=randomUUID(),versaoId=randomUUID(),refeicaoId=randomUUID(),identidade=randomUUID(),itemId=randomUUID();
   const documento={schemaVersao:1,refeicoes:[{chaveCliente:refeicaoId,nome:'PRIVADO_EDITOR',itens:[{chaveCliente:itemId,descricao:'PRIVADO_ALIMENTO',quantidade:100,unidade:'g',porcaoGramas:100,nutrientesPor100g:{energiaKcal:100}}]}]};
-  await owner.query('insert into planos_alimentares values($1,$2,$3,$4,true,0,null)',[planoId,tenant,paciente,p]);
+  await owner.query('insert into planos_alimentares values($1,$2,$3,$4,true,0,null)',[planoId,tenant,pacienteDaFonte,p]);
   await owner.query('insert into plano_alimentar_versoes values($1,$2,$3,1,$4,null,1,1,true,$5,$6)',[versaoId,tenant,planoId,status==='publicada'?'2026-11-03T12:00:00.000Z':null,crypto.criptografar(JSON.stringify(documento)),'2026-11-01T12:00:00.000Z']);
   await owner.query('insert into plano_alimentar_refeicoes values($1,$2,$3,0)',[refeicaoId,tenant,versaoId]);
   await owner.query('insert into plano_alimentar_refeicao_estados values($1,$2,$3,true)',[identidade,tenant,planoId]);
@@ -232,14 +232,19 @@ suite('FOOD06 registro cifrado PostgreSQL15 descartável/RLS/runtime',()=>{
   await expect(s.ler(otherTenant,paciente,{...u,tenantId:otherTenant},x.id)).rejects.toMatchObject({status:404});
  });
  it('contexto confirmado usa fonte autorizada, permanece cifrado e protege replay/alterações',async()=>{
+  const paciente=randomUUID();await owner.query('insert into pacientes(id,tenant_id,profissional_responsavel_id,arquivado_em) values($1,$2,$3,null)',[paciente,tenant,p]);
   const confirmacoes={populacaoReferencia:'feminina' as const,populacaoConfirmada:true,gestacao:'nao' as const,lactacao:'nao' as const,aplicabilidade:'confirmada' as const,mesmoDiaPlanejado:true,tabagismo:'nao_informado' as const};
   await owner.query("update pacientes set data_nascimento='2000-11-06' where id=$1",[paciente]);
   await owner.query("insert into tenant_configuracoes values($1,'conta_cliente',$2)",[tenant,{timezone:'America/Sao_Paulo'}]);
   const data=jest.spyOn(tempoClinico,'dataIsoNoTimezoneClinico').mockReturnValue('2026-11-06');
   try{
-   const f=await fonte(),c={...f.c,confirmacoes},r=await s.registrarVersao(tenant,paciente,u,c);
+   const f=await fonte('publicada',paciente),c={...f.c,confirmacoes},r=await s.registrarVersao(tenant,paciente,u,c);
    const antes=(await owner.query('select conteudo_criptografado from registros_analises_factuais where id=$1',[r.id])).rows[0].conteudo_criptografado;
    const registro=await s.ler(tenant,paciente,u,r.id);expect(registro.contexto).toMatchObject({dataAnalise:'2026-11-06',resolvido:{idadeAnos:26,contexto:{elegivel:true,mesmoDiaPlanejado:true,tabagismo:'nao_informado'}}});
+   const padrao=await s.historico(tenant,paciente,u,10);expect(padrao.itens.find(i=>i.registro.id===r.id)).not.toHaveProperty('contextoConfirmado');
+   const comContexto=await s.historico(tenant,paciente,u,10,undefined,undefined,true);expect(comContexto.itens.find(i=>i.registro.id===r.id)?.contextoConfirmado).toMatchObject({dataAnalise:'2026-11-06',idadeAnos:26});
+   expect(await s.prepararRelatorioApi(tenant,paciente,u,r.id)).toMatchObject({schemaVersao:1,contextoClinico:{estado:'nao_documentado_no_relatorio'}});
+   expect(await s.prepararRelatorioApi(tenant,paciente,u,r.id,2)).toMatchObject({schemaVersao:2,contextoClinico:{estado:'resumo_documentado',resumo:{dataAnalise:'2026-11-06',idadeAnos:26}}});
    expect(antes.toString()).not.toMatch(/2000-11-06|feminina|tabagismo/);expect(data).toHaveBeenCalledWith('America/Sao_Paulo');
    const projetado=await s.consultarApi(tenant,paciente,u,r.id);expect(JSON.stringify(projetado)).not.toContain('2000-11-06');expect(projetado.contextoConfirmado).toMatchObject({schemaVersao:1,dataAnalise:'2026-11-06',idadeAnos:26,tabagismo:'nao_informado'});
    expect((await s.registrarVersao(tenant,paciente,u,c)).id).toBe(r.id);
@@ -249,9 +254,12 @@ suite('FOOD06 registro cifrado PostgreSQL15 descartável/RLS/runtime',()=>{
    await owner.query("update pacientes set data_nascimento='2000-11-06' where id=$1",[paciente]);
    data.mockReturnValue('2026-11-07');await expect(s.registrarVersao(tenant,paciente,u,c)).rejects.toMatchObject({status:409});
    expect((await s.ler(tenant,paciente,u,r.id)).contexto?.dataAnalise).toBe('2026-11-06');
+   expect(await s.prepararRelatorioApi(tenant,paciente,u,r.id,2)).toMatchObject({contextoClinico:{resumo:{dataAnalise:'2026-11-06',idadeAnos:26}}});
    expect((await owner.query('select conteudo_criptografado from registros_analises_factuais where id=$1',[r.id])).rows[0].conteudo_criptografado).toEqual(antes);
    await owner.query('update pacientes set profissional_responsavel_id=$1 where id=$2',[p2,paciente]);
    await expect(s.registrarVersao(tenant,paciente,u,c)).rejects.toMatchObject({status:404});
+   await expect(s.prepararRelatorioApi(tenant,paciente,u,r.id,2)).rejects.toMatchObject({status:404});
+   await expect(s.historico(tenant,paciente,u,10,undefined,undefined,true)).rejects.toMatchObject({status:404});
   }finally{data.mockRestore();await owner.query('update pacientes set profissional_responsavel_id=$1,data_nascimento=null where id=$2',[p,paciente]);await owner.query('delete from tenant_configuracoes where tenant_id=$1',[tenant]);}
  });
  it.each(['publicada','rascunho'] as const)('registra fonte DB exata %s com snapshots, sem catálogo vivo e replay estável',async status=>{

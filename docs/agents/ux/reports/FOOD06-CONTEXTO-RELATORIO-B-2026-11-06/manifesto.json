@@ -1,0 +1,26 @@
+{
+  "base": "e67ec236bd97b7409677dc2589d0334767f5e310",
+  "agente": "/root/food06_contexto_ux_a",
+  "data": "2026-11-06",
+  "etapas": [
+    "A textual",
+    "B textual sobre evidências do coordenador"
+  ],
+  "inicio_fim": "durante esta retomada; horários exatos não registrados",
+  "ferramentas_do_revisor": [],
+  "paciente": "N/A não invocado",
+  "sha256": {
+    "consolidado.md": "9d8b9e769cbf269346002e995545ac135e7e95fefb531343806d5dc2ed3a8535",
+    "paciente.md": "f7c27ec3145ec5de2dd3ca6fc5e0f2ed6dadc87ff367916acdc292a6ed7379b0",
+    "nutricionista.md": "3a6054612c3924fbd3c611cddc09c046da69a5bca41a772d41561d8abe91b4cf",
+    "brief.md": "25d5a64129a9092ba3ff2ee6b0850a4af0f031e28e2971e1683ad47326bf17bb"
+  },
+  "fontes_sha256": {
+    ".codex/agents/octaclin-nutricionista-ux.toml": "6259b40a98e2c49053cbc6adbc0c59d0312b14e191b228ab73de2f2eac53af6d",
+    "docs/agents/ux/PROCEDIMENTO.md": "00ee799fa4435bbc1af022752fc1a9dbce4a3196cd1b188a9a4b6017c47bff29",
+    "octaclin-web/components/pacientes/contexto-registrado-factual.tsx": "9c7ff9d741faac02e05c0ff71227fc07f84b96239cab156b19e99c18b99d7acc",
+    "octaclin-web/components/pacientes/historico-micronutrientes-factuais.tsx": "aea79b4c8c42c7aa96ecbcc60e751185e2105d11138cf47b844a3097ac37a538",
+    "octaclin-web/components/pacientes/relatorio-factual.tsx": "1a1ba5054c86ce482369d7da92ceaab53a655d1c48c9aff8a0d47c628e21acb3"
+  },
+  "artefatos": "Reproduzíveis no spec food06-contexto-historico: contexto-relatorio.png e relatorio-contextual.pdf; sem dados reais. Artefatos locais não versionados, testes geram na pasta de resultados do Playwright."
+}

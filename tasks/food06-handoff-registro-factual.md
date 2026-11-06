@@ -44,3 +44,6 @@ NUX-01 reproduzido em RED funcional: registros de planos fora da seleção, mesm
 
 ## Continuidade contextual — 2026-11-06
 Captura opcional backend integrada emc5e55e35; próximo delta acrescenta formulário compartilhado e resumo contextual por allowlist à leitura. Estado vigente/evidências/próxima ação em [contexto confirmado](food06-contexto-confirmado.md). PDF continua sem contexto neste contrato. Não confundir UI de confirmações com referência DRI liberada. Preservar a correção RED/GREEN de ACKtardio com seleção nova, além de identidades/revisões/idempotência e comportamento incerto.
+
+## Continuidade — contexto histórico e relatório2
+Histórico opt-in e formato2 negociado implementados sobre e67ec236; relatório1 permanece padrão. Contratos/provas/compatibilidade/rollback/próximo passo no [handoff contextual](food06-contexto-historico-relatorio.md). Preservar correção401 que limpa itens/cursor/modal e reconstrução por allowlist.28browserconjuntos e demais gates locais PASS; CI do novo SHA deve ser conferido. Não fechar FOOD06 ou ativar DRI.

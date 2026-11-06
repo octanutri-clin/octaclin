@@ -31,15 +31,18 @@ function delta(d:DeltaFactual){
  return {estado:d.estado,diferenca:d.diferenca,percentual:d.percentual.estado==='indisponivel'?{estado:d.percentual.estado,motivo:d.percentual.motivo}:
   {estado:d.percentual.estado,valor:d.percentual.valor,arredondado:d.percentual.arredondado}};
 }
+function projetarContextoConfirmado(c:NonNullable<RegistroAnaliseFactual['contexto']>){
+ return {schemaVersao:1 as const,dataAnalise:c.dataAnalise,
+  ...(c.resolvido.idadeAnos===undefined?{}:{idadeAnos:c.resolvido.idadeAnos}),
+  ...(c.resolvido.populacaoReferencia===undefined?{}:{populacaoReferencia:c.resolvido.populacaoReferencia}),
+  mesmoDiaPlanejado:c.resolvido.contexto.mesmoDiaPlanejado,tabagismo:c.resolvido.contexto.tabagismo,motivos:[...c.resolvido.motivos]};
+}
 /** Projeções por allowlist de fontes já validadas/autorizadas. Nunca serializar o registro interno. */
 export function projetarRegistroFactual(m:Meta,r:RegistroAnaliseFactual){
  if(r.avisos.some(a=>!['porcao_divergente','planejamento_nao_documentado','composicao_nao_documentada'].includes(a)))throw new AnaliseFactualInvalidaError();
  return {schemaVersao:1 as const,motorVersao:'food06-registro-api-v1' as const,registro:projetarMetadadosRegistro(m),origem:origem(r.versao.origem),
   selecao:selecao(r),analise:estado(r.analise),referencias:referencias(),
-  ...(r.contexto?{contextoConfirmado:{schemaVersao:1 as const,dataAnalise:r.contexto.dataAnalise,
-   ...(r.contexto.resolvido.idadeAnos===undefined?{}:{idadeAnos:r.contexto.resolvido.idadeAnos}),
-   ...(r.contexto.resolvido.populacaoReferencia===undefined?{}:{populacaoReferencia:r.contexto.resolvido.populacaoReferencia}),
-   mesmoDiaPlanejado:r.contexto.resolvido.contexto.mesmoDiaPlanejado,tabagismo:r.contexto.resolvido.contexto.tabagismo,motivos:[...r.contexto.resolvido.motivos]}}:{}),avisos:[...r.avisos],ajuda:projetarAjudaDietetica()};
+  ...(r.contexto?{contextoConfirmado:projetarContextoConfirmado(r.contexto)}:{}),avisos:[...r.avisos],ajuda:projetarAjudaDietetica()};
 }
 export function projetarComparacaoFactual(a:Meta,b:Meta,r:ComparacaoVersoesFactuais,registroAntes:RegistroAnaliseFactual,registroDepois:RegistroAnaliseFactual){
  return {schemaVersao:1 as const,motorVersao:'food06-comparacao-api-v1' as const,escopoComparacao:r.escopoComparacao,
@@ -75,8 +78,8 @@ export function compararBasesHistoricas(atual:RegistroAnaliseFactual,anterior?:R
  const cobertura=Object.fromEntries(CODIGOS_MICRONUTRIENTES.map(c=>[c,resumoCobertura(atual,c)===resumoCobertura(anterior,c)?'IGUAL':'DIFERENTE'])) as ComparacaoBasesHistoricas['cobertura'];
  return {...bases,cobertura};
 }
-/** Resumo M10 sem envelope, hash ou contexto identificável; só totais e cobertura factuais. */
-export function projetarResumoHistoricoFactual(meta:Meta,r:RegistroAnaliseFactual,comparacaoAnterior:ComparacaoBasesHistoricas=compararBasesHistoricas(r)){
+/** Resumo M10 por allowlist; contexto mínimo somente por opt-in explícito. */
+export function projetarResumoHistoricoFactual(meta:Meta,r:RegistroAnaliseFactual,comparacaoAnterior:ComparacaoBasesHistoricas=compararBasesHistoricas(r),incluirContexto=false){
  const nutrientes=Object.fromEntries(CODIGOS_MICRONUTRIENTES.map(codigo=>{
   const n=r.analise.cobertura.nutrientes[codigo];
   return [codigo,{codigo,unidade:n.unidade,estado:n.estado,
@@ -87,6 +90,7 @@ export function projetarResumoHistoricoFactual(meta:Meta,r:RegistroAnaliseFactua
  return {schemaVersao:1 as const,registro:projetarMetadadosRegistro(meta),origem:origem(r.versao.origem),comparacaoAnterior,
   motorVersao:r.analise.calculo.motorVersao,nutrientes,
   referencias:referencias(),
+  ...(incluirContexto&&r.contexto?{contextoConfirmado:projetarContextoConfirmado(r.contexto)}:{}),
   bases:{planejamentoDocumentado:Boolean(r.versao.bases?.planejamento),composicaoDocumentada:Boolean(r.versao.bases?.composicao_fonte),
    contextoDocumentado:Boolean(r.versao.bases?.contexto)}};
 }

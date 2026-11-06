@@ -9,7 +9,7 @@ esforço, prazo, prontidão assistencial ou critérios integralmente aceitos.
 Não alterar os pesos para aparentar avanço. Evidências e exceções continuam na
 [matriz de aceite](aceite-pos-320-food06.md). Nenhuma melhoria pode ser retirada.
 
-## Checkpoint vigente — contexto no console e projeção mínima
+## Checkpoint vigente — contexto histórico e relatório formato2
 
 | Melhoria | Estado | Entregue / falta |
 | --- | --- | --- |
@@ -17,10 +17,10 @@ Não alterar os pesos para aparentar avanço. Evidências e exceções continuam
 | M02 contribuições | PARCIAL | Domínio/API/UI, fonte/preparo/ordem/origem com PG PASS no CIa35a22dd; receitas com PG PASS no Backend53835d72; troca explícita/receitas exercitadas na API/UI M04; matriz global de contribuições ainda pendente |
 | M03 explicações | PARCIAL | Motivos de cobertura e catálogo; integração clínica/relatórios pendentes |
 | M04 prévias | PARCIAL | Núcleo e API inicial porção/troca catálogo, fontes/revisões/fingerprint/CAS; 5PG e CI da API aprovados; UI inicial com50browser e62PA07 PASS, CI c8389ebc aprovado; API receitas com PG/RLS141PASS/0skip; UI integrada48unitários/150browser+2retestes PASS, CI c949821b PASS; comparação clínica/matriz global pendentes |
-| M05 rastreabilidade | PARCIAL | Construtor, armazenamento/leitor cifrados, fonte DB autorizada e API/BFF de registros implementados; captura factual e comparação na UI. Captura opcional backend/console e projeção mínima testadas; apresentação contextual no relatório/histórico, referências científicas e direitos permanecem pendentes |
+| M05 rastreabilidade | PARCIAL | Construtor, armazenamento/leitor cifrados, fonte DB autorizada e API/BFF de registros implementados; captura factual e comparação na UI. Captura opcional, projeção e contexto histórico/relatório2 testados por negociação; referências científicas, direitos e gates globais permanecem pendentes |
 | M06 tabela | PARCIAL | Tabela/filtros factuais; referências/percentuais pendentes |
 | M07 versões | PARCIAL | Núcleo e API/BFF de comparação de registros factuais autorizados implementados; leitura cifrada, identidade/revisão e isolamento testados em PostgreSQL/RLS. Interface inicial permite selecionar e comparar registros já salvos; captura explícita de publicação integrada à interface com repetição idempotente e 6 testes browser. Captura de rascunho materializado com revisão exata integrada; referência comum e validação integral da jornada pendentes. Revisão UX e correção de rótulos com 8 testes browser; ver [handoff](food06-handoff-registro-factual.md). Evidência: [API factual](food06-api-registros-factuais.md) |
-| M08 PDF | PARCIAL | Agrupamento factual enviado em d04551e0, CI42131762437 falhou em linguagem; correção textual validada localmente, novo CI pendente: backend/BFF autorizados, parser compartilhado de macros/cobertura, seleção congelada, prévia e impressão reautorizada; PDF sintético real e testes de isolamento/cancelamento. Contexto/referências completos, acessibilidade integral, UX C/R4 globais e aceite integral permanecem pendentes. PG42/42, builds e R4 estática do incremento executados; CI próprio ainda em execução. [Evidências](food06-m08-relatorio.md) |
+| M08 PDF | PARCIAL | Relatório factual1 preservado, formato2 contextual negociado e reautorizado;28browserconjuntos com8PDFsreais locais,44PG/92Web/115BFF PASS. Não é PDF plenamente acessível nem relatório científico com DRI habilitada; fontes/referências completas, UX C/R4 globais e aceite integral pendentes. Novo CI próprio deve ser conferido. [Evidências](food06-contexto-historico-relatorio.md) |
 | M09 explicações curtas | CONCLUÍDA E VALIDADA | Guia próprio versionado, fonte/revisão técnica/UX delimitadas, teclado/axe/fonte200% e CIb9ed65bc aprovado; sem habilitar referências numéricas ou afirmar AT humana |
 | M10 longitudinal | PARCIAL | Endpoint histórico keyset e UI factual; extensão M10-C2 compara estados dos marcadores de planejamento, composição/fonte, referência, contexto e cobertura por nutriente, sem projetar hashes nem atribuir causa. Unitário 4/4, PostgreSQL descartável/RLS 41/41, Web69/69, Playwright desktop/mobile2/2, typechecks, lint, builds e scanner local de segredos PASS em Node22.21.1. CI/scanners do novo delta, UX B/C, R4 independente e direitos/DRI continuam pendentes |
 | M11 sugestões | PENDENTE | Catálogo e restrições confiáveis ainda exigem implementação/contrato |
@@ -43,4 +43,8 @@ Campo opcional integrado em DTO/HTTP/serviço, com contexto server-side na trans
 ### Contexto — console e projeção mínima
 Captura compartilhada com resumo explícito, desconhecidos preservados e reset por contexto/plano/paciente; projeção aditiva versionada sem nascimento.44PG/87domínioWeb/113BFF,14browsercaptura+6rascunho+6PA07subset PASS. Corrigido ACKtardio após seleção nova com RED/GREEN. BuildWebNode22/webpack PASS; CI próprio ainda pendente neste checkpoint local; demais limites no [contrato](food06-contexto-confirmado.md). Mantido45,8% administrativos.
 
-Agora: enviar checkpoint contextual à mesmaPR455 Draft e conferir o CI exato. Próximo: apresentação de contexto já salvo no histórico/relatório por contrato explícito, mantendo DRI bloqueada e M11/M12 no escopo obrigatório. Não há autorização de merge/deploy/migration externa.
+Histórico do incremento anterior: enviar checkpoint contextual à mesmaPR455 Draft e conferir o CI exato. Próximo então previsto: contexto histórico/relatório. Não há autorização de merge/deploy/migration externa.
+
+## Checkpoint — histórico contextual e relatório2
+Implementados opt-in do histórico e negociação explícita de relatório2, resumo de época sem cadastro atual e defaultsv1 preservados.33backend/44PG/92Web/115BFF,28browserconjuntos, builds/typechecksNode22 PASS. Corrigidos allowlist do resumo e401que mantinha página anterior, ambos com RED/GREEN. [Contrato e handoff](food06-contexto-historico-relatorio.md).
+Agora: conferir CI do checkpoint e avançar auditoria de catálogo/restrições para M11; M12 continua pendente.45,8% administrativos mantidos, sem melhoria integral adicional fechada; direitos/DRI/G06 bloqueados.

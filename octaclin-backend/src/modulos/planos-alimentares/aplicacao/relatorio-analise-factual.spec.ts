@@ -21,3 +21,15 @@ it('serviço exige gerenciamento também quando consultado diretamente e não to
 });
 
 it('flag interna de fontes também exige gerenciamento na consulta direta',async()=>{const s=new ServicoRegistrosAnaliseFactual(null!,null!);await expect(s.consultarApi(tenant,paciente,{...usuario,permissoes:['planos_alimentares.ler']},id,true)).rejects.toBeInstanceOf(ForbiddenException);});
+
+it('formato2 solicitado usa somente resumo congelado e preserva formato1 padrão',()=>{
+ const p={...fonte(),contextoConfirmado:{schemaVersao:1 as const,dataAnalise:'2026-11-06',idadeAnos:36,populacaoReferencia:'feminina' as const,mesmoDiaPlanejado:false,tabagismo:'nao_informado' as const,motivos:[]}};
+ const v2=prepararRelatorioFactual(p,new Date('2026-11-06T12:00:00.000Z'),2);expect(v2).toMatchObject({schemaVersao:2,motorVersao:'food06-relatorio-factual-v2',contextoClinico:{estado:'resumo_documentado',resumo:p.contextoConfirmado}});
+ expect(prepararRelatorioFactual(p).contextoClinico).toEqual({estado:'nao_documentado_no_relatorio'});
+ expect(prepararRelatorioFactual(fonte(),new Date(),2).contextoClinico).toEqual({estado:'nao_registrado'});
+});
+
+it('formato2 não transporta campos livres adicionados ao resumo projetado',()=>{
+ const p={...fonte(),contextoConfirmado:{schemaVersao:1 as const,dataAnalise:'2026-11-06',mesmoDiaPlanejado:false,tabagismo:'nao_informado' as const,motivos:[],segredo:'CANARIO_CONTEXTUAL',nascimento:'1990-01-01'}};
+ expect(JSON.stringify(prepararRelatorioFactual(p,new Date(),2))).not.toMatch(/CANARIO_CONTEXTUAL|1990-01-01/);
+});

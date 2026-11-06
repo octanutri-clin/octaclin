@@ -67,10 +67,11 @@ export function validarRegistroDeVersaoFactual(entrada:unknown):ComandoRegistroD
 @Injectable()
 export class ServicoRegistrosAnaliseFactual {
  constructor(private readonly executor:ExecutorTenant,private readonly crypto:CriptografiaDadosSensiveis){}
- async prepararRelatorioApi(tenant:string,paciente:string,usuario:UsuarioAutenticado,registroId:string){
+ async prepararRelatorioApi(tenant:string,paciente:string,usuario:UsuarioAutenticado,registroId:string,versaoRelatorio:1|2=1){
+  if(versaoRelatorio!==1&&versaoRelatorio!==2)throw new BadRequestException('Formato de relatório inválido.');
   this.autorizar(uuid(tenant),usuario,true);
   // Consulta reautoriza carteira e escopo antes de decifrar, na transação existente.
-  return prepararRelatorioFactual(await this.consultarApi(tenant,paciente,usuario,registroId,true));
+  return prepararRelatorioFactual(await this.consultarApi(tenant,paciente,usuario,registroId,true),new Date(),versaoRelatorio);
  }
  async consultarApi(tenant:string,paciente:string,usuario:UsuarioAutenticado,registroId:string,incluirFontesDoRelatorio=false){
   const tenantId=uuid(tenant),pacienteId=uuid(paciente),id=uuid(registroId);this.autorizar(tenantId,usuario,incluirFontesDoRelatorio);
@@ -234,9 +235,9 @@ export class ServicoRegistrosAnaliseFactual {
    return projetar(salvo);
   });
  }
- async historico(tenant:string,paciente:string,usuario:UsuarioAutenticado,limite=10,cursorId?:string,cursorCriadoEm?:string){
+ async historico(tenant:string,paciente:string,usuario:UsuarioAutenticado,limite=10,cursorId?:string,cursorCriadoEm?:string,incluirContexto=false){
   const tenantId=uuid(tenant),pacienteId=uuid(paciente);this.autorizar(tenantId,usuario,false);
-  if(!Number.isSafeInteger(limite)||limite<1||limite>10||(cursorId===undefined)!==(cursorCriadoEm===undefined))throw new BadRequestException('Paginação inválida.');
+  if(typeof incluirContexto!=='boolean'||!Number.isSafeInteger(limite)||limite<1||limite>10||(cursorId===undefined)!==(cursorCriadoEm===undefined))throw new BadRequestException('Paginação inválida.');
   let cursorData:string|undefined,cursorUuid:string|undefined;
   if(cursorId!==undefined&&cursorCriadoEm!==undefined){
    cursorUuid=uuid(cursorId);cursorData=cursorCriadoEm;
@@ -254,7 +255,7 @@ export class ServicoRegistrosAnaliseFactual {
    const bytes=itens.reduce((soma,r)=>soma+(Buffer.isBuffer(r.conteudoCriptografado)?r.conteudoCriptografado.byteLength:Infinity),0);
    if(!Number.isSafeInteger(bytes)||bytes>10*1024*1024)throw new PayloadTooLargeException('Reduza a quantidade de registros por página.');
    const registros=itens.map(r=>this.decifrarRegistro(r)),maisAntigoConsultado=temMais?this.decifrarRegistro(consultados[limite]):undefined;
-   const resumos=registros.map((r,i)=>projetarResumoHistoricoFactual(itens[i],r,compararBasesHistoricas(r,registros[i+1]??maisAntigoConsultado)));
+   const resumos=registros.map((r,i)=>projetarResumoHistoricoFactual(itens[i],r,compararBasesHistoricas(r,registros[i+1]??maisAntigoConsultado),incluirContexto));
    const ultimo=itens.at(-1),ultimoRaw=resultado.raw.at(limite-1) as {cursor_criado_em?:unknown}|undefined;
    if(temMais&&ultimo&&(typeof ultimoRaw?.cursor_criado_em!=='string'))throw new UnprocessableEntityException('Cursor do histórico indisponível.');
    return {itens:resumos,temMais,...(temMais&&ultimo?{proximoCursor:{id:ultimo.id,criadoEm:ultimoRaw!.cursor_criado_em as string}}:{})};

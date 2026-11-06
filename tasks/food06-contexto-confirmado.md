@@ -1,6 +1,8 @@
 # FOOD06 — captura de contexto confirmado
 
-## Estado vigente — captura no console e projeção mínima
+> Estado vigente: [contexto histórico/relatório2](food06-contexto-historico-relatorio.md). Contratos default preservados, novo formato negociado e provas33backend/44PG/92Web/115BFF/28browser PASS. Novo CI pendente; M05/M08 parciais,45,8% administrativos. Registros abaixo são históricos.
+
+## Checkpoint anterior — captura no console e projeção mínima
 
 Incremento sobrec5e55e35, sem merge/deploy/DDL externo. A captura publicada e a de rascunho usam formulário opcional compartilhado; o caminho sem contexto permanece. Defaults desconhecidos e confirmações desmarcadas, sem deduzir sexo/gestação/lactação/tabagismo. Prévia distingue escolha conferida, exibe resumo congelado e avisa que cancelar descarta o preenchimento. Key paciente/contexto/plano reinicia o formulário; key paciente remonta a captura e aborta o envio anterior. Nenhum armazenamento persistente no navegador.
 

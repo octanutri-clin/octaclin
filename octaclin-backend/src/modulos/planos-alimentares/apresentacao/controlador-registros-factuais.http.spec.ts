@@ -54,6 +54,15 @@ describe('API factual M05/M07',()=>{
   expect((await chamar('',fonte,'Professional','planos_alimentares.ler')).status).toBe(403);
   expect((await chamar('/listar',{pagina:1,limite:25},'Professional','planos_alimentares.ler')).status).toBe(200);
  });
+ it('contexto no histórico exige opt-in booleano e preserva o pedido padrão',async()=>{
+  historico.mockClear();expect((await chamar('/historico',{limite:10,incluirContexto:true})).status).toBe(200);expect(historico).toHaveBeenCalledWith(id,id,expect.anything(),10,undefined,undefined,true);
+  for(const incluirContexto of [null,'true',1,{}])expect((await chamar('/historico',{limite:10,incluirContexto})).status).toBe(400);
+ });
+ it('negocia formato2 de relatório sem alterar o pedido legado ou aceitar versão nula',async()=>{
+  prepararRelatorioApi.mockClear();expect((await chamar('/relatorio',{registroId:id,versaoRelatorio:2})).status).toBe(200);
+  expect(prepararRelatorioApi).toHaveBeenCalledWith(id,id,expect.anything(),id,2);expect((await chamar('/relatorio',{registroId:id,versaoRelatorio:2},'Professional','planos_alimentares.ler')).status).toBe(403);
+  for(const versaoRelatorio of [null,1,3,'2',false])expect((await chamar('/relatorio',{registroId:id,versaoRelatorio})).status).toBe(400);
+ });
  it('aceita confirmações explícitas opcionais sem permitir nascimento ou data do navegador',async()=>{
   const confirmacoes={populacaoReferencia:'feminina',populacaoConfirmada:true,gestacao:'nao',lactacao:'nao',aplicabilidade:'confirmada',mesmoDiaPlanejado:true,tabagismo:'nao_informado'};
   registrarVersao.mockClear();const body={...fonte,confirmacoes};

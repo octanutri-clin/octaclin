@@ -1,8 +1,10 @@
+import {lerContextoRegistradoFactual,type ContextoRegistradoFactual} from './contexto-registrado-factual';
 import { lerLinhaMicronutrienteFactual, type LinhaMicronutrienteFactual } from './micronutrientes-factuais';
 import type { CodigoMicronutrienteApi } from './plano-alimentar-api';
 import { CAMPOS_MICRONUTRIENTES_PLANO } from './micronutrientes-plano';
 
 export interface PontoHistoricoMicronutrienteFactual {
+  contextoConfirmado?:ContextoRegistradoFactual;
   registro: { id: string; criadoEm: string };
   origem: { planoId: string; versaoId: string; numero: number; status: 'publicada' | 'rascunho'; registradaEm: string; rascunhoRevisao?: number };
   comparacaoAnterior: {
@@ -47,22 +49,22 @@ function validarComparacaoAnterior(valor:unknown):PontoHistoricoMicronutrienteFa
   referencia:c.referencia as EstadoComparacaoHistorica,contexto:c.contexto as EstadoComparacaoHistorica,
   cobertura:Object.fromEntries(codigos.map(k=>[k,cobertura[k]])) as PontoHistoricoMicronutrienteFactual['comparacaoAnterior']['cobertura']};
 }
-function validarPonto(valor:unknown):PontoHistoricoMicronutrienteFactual{
+function validarPonto(valor:unknown,incluirContexto=false):PontoHistoricoMicronutrienteFactual{
  const r=objeto(valor),reg=objeto(r.registro),n=objeto(r.nutrientes),ref=objeto(r.referencias),bases=objeto(r.bases);
- if(r.schemaVersao!==1||Object.keys(r).some(k=>!['schemaVersao','registro','origem','comparacaoAnterior','motorVersao','nutrientes','referencias','bases'].includes(k))||
+ if((r.contextoConfirmado!==undefined&&bases.contextoDocumentado!==true)||r.schemaVersao!==1||Object.keys(r).some(k=>!['schemaVersao','registro','origem','comparacaoAnterior','motorVersao','nutrientes','referencias','bases',...(incluirContexto?['contextoConfirmado']:[])].includes(k))||
   Object.keys(reg).some(k=>!['id','criadoEm'].includes(k))||!string(reg.id,80)||!iso(reg.criadoEm,'ms')||!string(r.motorVersao,100)||
   ref.estado!=='indisponivel'||ref.motivo!=='referencias_nao_habilitadas'||Object.keys(ref).some(k=>!['estado','motivo'].includes(k))||
   Object.keys(bases).some(k=>!['planejamentoDocumentado','composicaoDocumentada','contextoDocumentado'].includes(k))||
   ['planejamentoDocumentado','composicaoDocumentada','contextoDocumentado'].some(k=>typeof bases[k]!=='boolean')||
   Object.keys(n).length!==CAMPOS_MICRONUTRIENTES_PLANO.length)return falhar();
  const nutrientes=Object.fromEntries(CAMPOS_MICRONUTRIENTES_PLANO.map(c=>[c.codigo,lerLinhaMicronutrienteFactual(n[c.codigo],c.codigo)])) as PontoHistoricoMicronutrienteFactual['nutrientes'];
- return {registro:{id:reg.id,criadoEm:reg.criadoEm},origem:validarOrigem(r.origem),comparacaoAnterior:validarComparacaoAnterior(r.comparacaoAnterior),motorVersao:r.motorVersao,nutrientes,referencias:{estado:'indisponivel',motivo:'referencias_nao_habilitadas'},bases:{
+ return {...(r.contextoConfirmado===undefined?{}:{contextoConfirmado:lerContextoRegistradoFactual(r.contextoConfirmado)}),registro:{id:reg.id,criadoEm:reg.criadoEm},origem:validarOrigem(r.origem),comparacaoAnterior:validarComparacaoAnterior(r.comparacaoAnterior),motorVersao:r.motorVersao,nutrientes,referencias:{estado:'indisponivel',motivo:'referencias_nao_habilitadas'},bases:{
   planejamentoDocumentado:bases.planejamentoDocumentado as boolean,composicaoDocumentada:bases.composicaoDocumentada as boolean,contextoDocumentado:bases.contextoDocumentado as boolean}};
 }
-export function lerPaginaHistoricoMicronutrientesFactual(valor:unknown):PaginaHistoricoMicronutrientesFactual{
+export function lerPaginaHistoricoMicronutrientesFactual(valor:unknown,incluirContexto=false):PaginaHistoricoMicronutrientesFactual{
  const p=objeto(valor),permitidos=['schemaVersao','itens','temMais','proximoCursor'];
  if(p.schemaVersao!==1||Object.keys(p).some(k=>!permitidos.includes(k))||!Array.isArray(p.itens)||p.itens.length>10||typeof p.temMais!=='boolean')return falhar();
- const itens=p.itens.map(validarPonto);
+ const itens=p.itens.map(v=>validarPonto(v,incluirContexto));
  for(let i=1;i<itens.length;i++)if(Date.parse(itens[i-1].registro.criadoEm)<Date.parse(itens[i].registro.criadoEm))return falhar();
  if(new Set(itens.map(x=>x.registro.id)).size!==itens.length)return falhar();
  if(p.temMais){const c=objeto(p.proximoCursor);if(Object.keys(c).some(k=>!['id','criadoEm'].includes(k))||!string(c.id,80)||!iso(c.criadoEm,'us')||!itens.length||c.id!==itens.at(-1)!.registro.id)return falhar();return {itens,temMais:true,proximoCursor:{id:c.id,criadoEm:c.criadoEm}};}

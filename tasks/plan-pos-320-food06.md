@@ -1,6 +1,10 @@
 # FOOD06 — comparação factual com referências dietéticas
 
-> Estado vigente — contexto no console/projeção mínima, M05/M08 parciais;45,8% administrativos.
+> Estado vigente — contexto histórico e relatório formato2: [contratos, execução e limites](food06-contexto-historico-relatorio.md).
+>33backend/44PG/92Web/115BFF,28browserconjuntos PASS; buildsNode22 PASS. Novo CI ainda pendente.45,8% administrativos, melhorias parciais e direitos/DRI/G06 bloqueados.
+> Contratos anteriores preservados por default/negociação; revisões estáticas/UX delimitadas não encerram FOOD06. Checkpoints abaixo são históricos.
+
+> Checkpoint anterior — contexto no console/projeção mínima, M05/M08 parciais;45,8% administrativos.
 > [Contrato, testes e handoff](food06-contexto-confirmado.md):44PG/87Web/113BFF,14browsercaptura+6rascunho+6PA07subset PASS, revisão R4 estática delimitada. BuildWebNode22/webpack PASS; CI do delta ainda pendente; não herdar verde da base.
 > Direitos/DRI/G06 BLOCKED; M11/M12 pendentes; sem merge/deploy/migrations externas. Checkpoints abaixo são históricos dos respectivos commits.
 
