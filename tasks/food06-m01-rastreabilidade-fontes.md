@@ -107,6 +107,7 @@ inalterado). Cada linha foi executada neste ciclo.
 | Browser desktop+mobile, `food06-tabela-factual` e `food06-contexto-historico` | 74 PASS, 8 SKIPPED (PDF real sem opt-in), 0 FAIL |
 | Browser, PDF real com `FOOD06_PDF_REAL=true` (opt-in, `pdftotext`) | PASS, 8 testes; teste M01 do relatório com extração de texto do PDF também PASS |
 | axe nas áreas alteradas (tabela e prévia do relatório) | Sem violações; não equivale a PDF/UA nem a leitor de tela humano |
+| Web `pnpm build` (Next 16) | PASS, 196 páginas estáticas geradas |
 | `scan-secrets` e `git diff --check` | PASS antes de cada commit |
 
 Limite do PDF: `pdftotext` intercala linhas quebradas de células vizinhas; por isso o teste conta
