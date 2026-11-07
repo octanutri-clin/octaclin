@@ -113,14 +113,15 @@ inalterado). Cada linha foi executada neste ciclo.
 Limite do PDF: `pdftotext` intercala linhas quebradas de células vizinhas; por isso o teste conta
 o prefixo "Sem valor" (21 ocorrências) em vez da frase inteira.
 
-Não executados:
+Limite do CI: o resultado da etapa do Testcontainers foi lido pelo conclusão da etapa, não por teste individual. O script liga `FOOD06_REGISTRO_TESTCONTAINERS`, então a suíte do registro factual executa nessa etapa.
 
-- **PostgreSQL/Testcontainers/RLS: BLOCKED.** O cliente Docker existe, mas o daemon não está
-  acessível. Nada foi feito para contornar. O CI do GitHub executa essa etapa para o código
-  existente, mas não substitui prova específica do delta.
+Não executados localmente:
+
+- **PostgreSQL/Testcontainers/RLS: BLOCKED localmente.** O cliente Docker existe, mas o daemon não está
+  acessível. A prova veio do CI (ver FT07, FT15, FT16 e FT17).
 - `test:authz`: NA, nenhum BFF, permissão ou autorização foi alterado.
 - HawkScan: NA. É DAST e esta mudança não cria rota nem endpoint novo; a chave também está ausente.
-- CI do novo HEAD: pendente até a PR existir.
+- CI: verde em `9e4c1fe5` (21 checks com sucesso e 1 SKIPPED, o Provenance do SBOM, SKIPPED também no histórico). Os commits posteriores ainda não têm CI.
 
 ## 6. FT01–FT20
 
@@ -132,44 +133,66 @@ Não executados:
 | FT04 | PASS | Zero conhecido contribui; browser mostra "0 mg" com origem |
 | FT05 | PASS | Ausência não vira fonte nem zero |
 | FT06 | PASS | Vínculo declarado como origem do registro; ferro desconhecido não herda a fonte do cálcio; limitação visível |
-| FT07 | PARCIAL | Em memória: PASS. Em PostgreSQL: teste escrito (fonte e porção alteradas após o registro; relatório formato 2 idêntico antes e depois), **NOT RUN localmente, aguarda o CI** |
+| FT07 | PASS | Em memória e em PostgreSQL (fonte e porção alteradas após o registro; relatório formato 2 idêntico antes e depois). Etapa do Testcontainers concluiu com sucesso: [run 42417421782, job Backend NestJS, commit `9e4c1fe5`](https://github.com/octanutri-clin/octaclin/actions/runs/42417421782/job/128538564935) |
 | FT08 | PASS (domínio) | Quantidade, rendimento e fator no snapshot não alteram contagem nem origem. A matemática da receita não faz parte desta função |
 | FT09 | PASS (escopo da função) | Só o que o seletor entrega contribui; refeição não selecionada fica fora. A escolha principal ou alternativa pertence ao seletor de M02, fora deste incremento |
 | FT10 | PASS | Repetição em duas refeições conta duas vezes |
 | FT11 | PASS | Estados incompatíveis não contribuem como fonte |
 | FT12 | PASS | Item legado e resposta sem o campo continuam aceitos, com incerteza explícita |
-| FT13 | PARCIAL | Paridade backend (ao vivo e registro) e reconciliação no leitor Web. Sem teste fullstack único |
-| FT14 | PARCIAL | Prévia e PDF real com respostas sintéticas simuladas. Sem fullstack |
-| FT15 | PARCIAL | Negativas do formato 2 (outro paciente, outro tenant, sem permissão de gerenciar) escritas no spec PostgreSQL; **NOT RUN localmente, aguardam o CI**. Autorização inalterada |
-| FT16 | PARCIAL | Revogação por transferência de carteira no relatório formato 2 pela API real, escrita no spec PostgreSQL; **NOT RUN localmente, aguarda o CI** |
-| FT17 | PARCIAL | Em memória: PASS. Em PostgreSQL: cipher inalterado após alteração da fonte, asserido no spec estendido; **NOT RUN localmente, aguarda o CI** |
+| FT13 | PASS (contrato) | Teste de contrato: backend gera as respostas com o código real e a Web as lê com os leitores reais, comparando as mesmas linhas. Não passa por HTTP nem por banco; ver seção 10 |
+| FT14 | PASS (contrato e navegador) | Relatório formato 2 no contrato, na prévia e no PDF real, inclusive com 50 grupos de fonte e com origem ausente. Respostas simuladas, sem HTTP real |
+| FT15 | PASS | Negativas do formato 2 (outro paciente 404, outro tenant 403, sem permissão de gerenciar 403) no spec PostgreSQL; etapa do Testcontainers com sucesso no CI ([run 42417421782, job Backend NestJS, commit `9e4c1fe5`](https://github.com/octanutri-clin/octaclin/actions/runs/42417421782/job/128538564935)) |
+| FT16 | PASS | Revogação por transferência de carteira no relatório formato 2 pela API real (404), no spec PostgreSQL; etapa do Testcontainers com sucesso no CI ([run 42417421782, job Backend NestJS, commit `9e4c1fe5`](https://github.com/octanutri-clin/octaclin/actions/runs/42417421782/job/128538564935)) |
+| FT17 | PASS | Cipher inalterado após alteração da fonte, em PostgreSQL; etapa do Testcontainers com sucesso no CI ([run 42417421782, job Backend NestJS, commit `9e4c1fe5`](https://github.com/octanutri-clin/octaclin/actions/runs/42417421782/job/128538564935)) |
 | FT18 | PASS | Manual e custom só com o tipo, sem versão ou código fictícios |
 | FT19 | PASS | Limite de 50 grupos, não detalhadas reconciliadas, ordem determinística (backend e Web) |
 | FT20 | PASS | Referências continuam indisponíveis; nenhum percentual ou RDA/AI/UL |
 
 ## 7. Revisões
 
-- UX: etapa A **não** foi executada antes da implementação (lacuna de processo). Etapas B/C como
-  simulações sequenciais do agente principal, não independentes. Paciente N/A justificado. Ver
-  `docs/agents/ux/reports/FOOD06-M01-BC-2026-11-07/consolidado.md`. Backlog M01-NUX01 a 03 pendente.
-- R4: autoavaliação, **não independente**. Verificado por leitura: o tenant continua resolvido pelo
-  servidor; a função é pura e roda depois da autorização existente, na mesma transação; sem consulta
-  nova; saída por allowlist sem hash, nome livre nem ID clínico; limites de grupos e de campos. Falta
-  revisão cruzada independente e prova PostgreSQL.
+- **R4 independente (somente leitura):** feita por um subagente revisor, que não escreveu o código, sobre `9e4c1fe5`.
+  Nenhum P0 ou P1; 4 achados P3. Ele **não executou testes**. Ver `tasks/food06-m01-revisao-r4.md`. Não substitui
+  revisão humana de segurança.
+- **UX:** a etapa A **não** foi executada antes da implementação (lacuna). A etapa C foi repetida com um subagente
+  de runtime com o papel de nutricionista, sem ferramentas e sem ver a interface (modalidade "papel fornecido").
+  Paciente N/A justificado. Ver `docs/agents/ux/reports/FOOD06-M01-BC-2026-11-07/`. O subagente não encontrou defeito
+  comprovado e pediu NUX06 e NUX07 como condição de aceite; ambos foram cobertos por teste de navegador. NUX01 a 03,
+  09, 10 e 13 seguem para decisão do proprietário.
 
 ## 8. Critérios e maturidade
 
 | Critério | Estado | Observação |
 | --- | --- | --- |
-| M01-C1 | PARCIAL | Zero conhecido preservado em domínio, projeções, UI e PDF. Falta prova fullstack e PostgreSQL |
-| M01-C2 | PARCIAL | Origem registrada por nutriente em API, tabela, detalhes e relatório formato 2. Vínculo por célula **não** é afirmado. Incerteza explícita |
-| M01-C3 | PARCIAL | Subtotal parcial preservado, sem percentual de referência. Falta reconciliação fullstack |
+| M01-C1 | Provado pelo teste de contrato; **não promovido** | Zero conhecido e cobertura por nutriente, nas três superfícies do backend e nos leitores Web |
+| M01-C2 | Provado pelo teste de contrato; **não promovido** | Cinco estados com motivos, contagens e origens documentadas. O vínculo por célula **não** é afirmado |
+| M01-C3 | Provado pelo teste de contrato; **não promovido** | Subtotal parcial sem total nem percentual; mesmos dados em API ao vivo, registro e relatório formato 2; legados legíveis |
 
-Três eixos: **implementação** concluída localmente para o escopo; **validação** parcial (acima);
-**dependências** abertas (CI do novo HEAD, PostgreSQL/RLS, revisão R4 independente). Os 50%
-administrativos da matriz permanecem inalterados. M02/M03/M05/M08 não recebem promoção.
+"Provado pelo teste de contrato" significa: verificado por teste automatizado com dados sintéticos, sem HTTP real
+entre processos. Fechar o critério na matriz canônica é decisão do proprietário e a matriz não foi alterada. Os 50%
+administrativos permanecem inalterados. M02, M03, M05 e M08 não recebem promoção.
+
+Três eixos: **implementação** concluída para o escopo; **validação** forte (domínio, projeções, contrato, PostgreSQL
+no CI, navegador e PDF real); **dependências** abertas: revisão humana, decisão do proprietário e CI dos commits novos.
 
 ## 9. Próxima tarefa única recomendada
 
-Ler o resultado do CI da PR para os testes PostgreSQL de FT07, FT15, FT16 e FT17. Se passarem, atualizar
-esses estados para PASS com o link da execução; se falharem, corrigir. Depois, revisão R4 independente.
+Decisão do proprietário sobre fechar M01-C1, C2 e C3 na matriz canônica e sobre o backlog de UX (M01-NUX10 em
+especial). Não iniciada.
+
+## 10. Teste de contrato de M01-C1, C2 e C3
+
+- Backend: `aplicacao/fontes-por-nutriente-contrato.spec.ts` (12 testes). Usa o código real para gerar, de um cenário
+  sintético, as respostas do cálculo ao vivo, da projeção do registro e do relatório formatos 1 e 2, e as grava no
+  fixture `octaclin-web/scripts/fixtures/food06-m01-contrato.json`. **Falha se o fixture divergir do que o backend
+  produz hoje**; regenerar de propósito com `ATUALIZAR_FIXTURE_FOOD06_M01=true`.
+- Web: `scripts/food06-m01-contrato.spec.ts` (5 testes), no runner `test:calculo-combinado-planos`. Lê o mesmo fixture
+  com os leitores reais da tabela e do relatório.
+- Cenário: três alimentos (TACO 4.1, USDA Foundation 2025.4, composição manual) que produzem COMPLETO (zinco),
+  PARCIAL (cálcio e ferro, este com zero conhecido), DESCONHECIDO (magnésio), INCOMPATIVEL (manganês) e, em um segundo
+  cenário sem alimentos, INDISPONIVEL.
+- O que o teste prova: C1 (zero conhecido contribui, ausência não; contagens diferentes por nutriente com os mesmos
+  alimentos), C2 (cinco estados, motivos, contagens, origens separadas por tipo e fonte, reconciliação), C3 (subtotal
+  parcial sem total, sem chave de percentual ou referência, cobertura e origem idênticas nas três saídas, formato 1 e
+  respostas antigas legíveis, adulteração recusada).
+- Limite: não passa por HTTP nem por banco; isso é coberto pelo spec PostgreSQL e pelos testes de navegador, que
+  usam respostas simuladas. O teste de contrato impede que o backend e a Web divirjam, mas não prova a rede real.

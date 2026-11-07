@@ -58,3 +58,48 @@ test('FOOD06 M01 relatório formato 2 mostra a origem registrada por nutriente e
  await expect.poll(()=>page.evaluate(()=>window.__impressaoOrigem??0)).toBe(1);
  if(pdfReal){await expect.poll(()=>textoPdf.length).toBeGreaterThan(0);const t=textoPdf.replace(/\s+/g,' ');expect(t).toContain('Origem registrada');expect(t).toContain('Composição manual');/* pdftotext intercala linhas quebradas de células vizinhas: conta o prefixo, não a frase inteira. */expect((t.match(/Sem valor/g)??[]).length).toBe(21);expect(t).toContain('Não comprova que a base mediu este nutriente');expect(t).toContain('0 mg');}
 });
+
+/* FOOD06 M01 — NUX06/NUX07: origem ausente no relatório e PDF com 50 grupos de fonte. */
+async function abrirRelatorioM01(page,montar){
+ await prepararConsole(page);
+ await page.route(u=>u.pathname.endsWith('/selecao-calculo'),r=>r.fulfill({status:200,json:{planoId:planoIds[0],ativoParaPaciente:true,ativacaoRevisao:1,versao:{id:'versao-a',numero:1,publicadaEm:'2026-10-15T12:00:00.000Z'},refeicoes:[{identidadeId:idsRefeicoes[0],nome:'Refeição A',ordem:0,ativa:true}]}}));
+ await page.route(u=>u.pathname.endsWith('/calculo-combinado'),r=>r.fulfill({status:200,json:resultado(2)}));
+ await page.route(u=>u.pathname.endsWith('/analises-factuais/historico'),r=>{const body=r.request().postDataJSON();return r.fulfill({status:200,json:{schemaVersao:1,itens:[{...registro(),...(body.incluirContexto?{contextoConfirmado:contexto}:{})}],temMais:false}});});
+ await page.route(u=>u.pathname.endsWith('/analises-factuais/relatorio'),r=>r.fulfill({status:200,json:montar(relatorio())}));
+ await page.goto(`/pacientes/${pacienteId}?aba=plano_alimentar`,{waitUntil:'domcontentloaded'});await page.getByLabel('Adicionar plano desta página').selectOption(planoIds[0]);await page.getByRole('button',{name:'Adicionar',exact:true}).click();await expect(page.getByText('200 kcal',{exact:true})).toBeVisible();
+ await page.getByRole('button',{name:'Ver histórico de micronutrientes',exact:true}).click();await page.getByRole('checkbox',{name:'Carregar contextos registrados',exact:true}).check();
+ const detalhes=page.getByRole('row',{name:/^Análise 1/}).getByText('Contexto registrado',{exact:true});await detalhes.focus();await page.keyboard.press('Enter');
+ await page.getByRole('button',{name:'Conferir relatório com contexto da análise 1',exact:true}).click();
+ return page.getByRole('region',{name:'Prévia do relatório factual',exact:true});
+}
+test('FOOD06 M01 relatório formato 2 sem origem por nutriente diz que ela não foi disponibilizada, sem coluna vazia',async({page})=>{
+ const previa=await abrirRelatorioM01(page,p=>p);
+ await expect(previa).toContainText('Origem por nutriente não disponibilizada neste relatório.');
+ await expect(previa.getByRole('columnheader',{name:'Origem registrada',exact:true})).toHaveCount(0);
+ await expect(previa.getByRole('row',{name:/^Ferro /})).toContainText('0 mg');
+});
+test('FOOD06 M01 relatório com 50 grupos de fonte não corta linhas e declara as fontes adicionais, inclusive no PDF real',async({page},testInfo)=>{
+ const pdfReal=process.env.FOOD06_PDF_REAL==='true';let textoPdf='';
+ if(pdfReal){const {execFileSync}=await import('node:child_process');await page.exposeFunction('__pdf50',async()=>{await page.pdf({path:testInfo.outputPath('m01-50-grupos.pdf'),format:'A4',tagged:true,printBackground:true});textoPdf=execFileSync('pdftotext',[testInfo.outputPath('m01-50-grupos.pdf'),'-'],{encoding:'utf8'});});}
+ await page.addInitScript(pdf=>{window.print=async()=>{if(pdf)await window.__pdf50();window.__impressao50=1;window.dispatchEvent(new Event('afterprint'));};},pdfReal);
+ const GRUPOS=50,EXTRAS=7;
+ const previa=await abrirRelatorioM01(page,p=>{
+  const n=p.analise.cobertura.nutrientes,ferro=n.ferroMg;
+  // 57 itens conhecidos de ferro: 50 grupos detalhados (1 item cada) + 7 em fontes adicionais.
+  const total=GRUPOS+EXTRAS;
+  for(const nut of Object.values(n)){Object.assign(nut.contagens,{incluidos:total,conhecidos:nut===ferro?total:0,semComposicao:nut===ferro?0:total});nut.causas=nut===ferro?[]:[{codigo:'ausente',quantidade:total}];}
+  for(const m of Object.values(p.analise.calculo.nutrientes)){m.itensIncluidos=total;if(m.estado==='completo')m.itensComValor=total;}
+  p.fontesComposicao={estado:'nao_projetadas_neste_contrato'};
+  p.fontesPorNutriente={schemaVersao:1,vinculo:'origem_do_registro_de_composicao',nutrientes:Object.fromEntries(Object.keys(n).map(codigo=>[codigo,codigo==='ferroMg'
+   ?{contribuintes:total,fontes:Array.from({length:GRUPOS},(_,i)=>({tipo:'USDA',codigo:'usda_fdc_foundation',versao:`2025.${i+1}`,quantidade:1})),semOrigemDocumentada:0,fontesNaoDetalhadas:EXTRAS}
+   :{contribuintes:0,fontes:[],semOrigemDocumentada:0,fontesNaoDetalhadas:0}]))};
+  return p;
+ });
+ const linha=previa.getByRole('row',{name:/^Ferro /});
+ await expect(linha).toContainText('versão 2025.1 ·');await expect(linha).toContainText('versão 2025.50 ·');
+ await expect(linha).toContainText('7 alimentos em fontes adicionais não detalhadas');
+ expect(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth)).toBe(true);
+ await previa.getByRole('button',{name:'Imprimir / salvar PDF',exact:true}).click();
+ await expect.poll(()=>page.evaluate(()=>window.__impressao50??0)).toBe(1);
+ if(pdfReal){await expect.poll(()=>textoPdf.length).toBeGreaterThan(0);const t=textoPdf.replace(/\s+/g,' ');expect(t).toContain('versão 2025.1 ');expect(t).toContain('versão 2025.50 ');expect(t).toContain('7 alimentos em fontes adicionais não detalhadas');expect(t).toContain('Não comprova que a base mediu este nutriente');}
+});
