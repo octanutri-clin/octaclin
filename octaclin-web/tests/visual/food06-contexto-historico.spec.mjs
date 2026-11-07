@@ -39,7 +39,9 @@ test('FOOD06 M01 relatório formato 2 mostra a origem registrada por nutriente e
   p.fontesPorNutriente={schemaVersao:1,vinculo:'origem_do_registro_de_composicao',nutrientes:Object.fromEntries(Object.entries(n).map(([codigo,v])=>[codigo,{contribuintes:v.contagens.conhecidos,fontes:codigo==='ferroMg'&&v.contagens.conhecidos?[{tipo:'manual',quantidade:v.contagens.conhecidos}]:[],semOrigemDocumentada:codigo==='ferroMg'?0:v.contagens.conhecidos,fontesNaoDetalhadas:0}]))};
   return r.fulfill({status:200,json:p});
  });
- await page.addInitScript(()=>{window.print=()=>{window.__impressaoOrigem=(window.__impressaoOrigem??0)+1;window.dispatchEvent(new Event('afterprint'));};});
+ const pdfReal=process.env.FOOD06_PDF_REAL==='true';let textoPdf='';
+ if(pdfReal){const {execFileSync}=await import('node:child_process');await page.exposeFunction('__pdfOrigem',async()=>{await page.pdf({path:testInfo.outputPath('m01-origem.pdf'),format:'A4',tagged:true,printBackground:true});textoPdf=execFileSync('pdftotext',[testInfo.outputPath('m01-origem.pdf'),'-'],{encoding:'utf8'});});}
+ await page.addInitScript(pdf=>{window.print=async()=>{window.__impressaoOrigem=(window.__impressaoOrigem??0)+1;if(pdf)await window.__pdfOrigem();window.dispatchEvent(new Event('afterprint'));};},pdfReal);
  await page.goto(`/pacientes/${pacienteId}?aba=plano_alimentar`,{waitUntil:'domcontentloaded'});await page.getByLabel('Adicionar plano desta página').selectOption(planoIds[0]);await page.getByRole('button',{name:'Adicionar',exact:true}).click();await expect(page.getByText('200 kcal',{exact:true})).toBeVisible();
  await page.getByRole('button',{name:'Ver histórico de micronutrientes',exact:true}).click();await page.getByRole('checkbox',{name:'Carregar contextos registrados',exact:true}).check();
  const detalhes=page.getByRole('row',{name:/^Análise 1/}).getByText('Contexto registrado',{exact:true});await detalhes.focus();await page.keyboard.press('Enter');
@@ -54,4 +56,5 @@ test('FOOD06 M01 relatório formato 2 mostra a origem registrada por nutriente e
  await previa.screenshot({path:testInfo.outputPath('m01-relatorio-origem.png')});
  await previa.getByRole('button',{name:'Imprimir / salvar PDF',exact:true}).click();
  await expect.poll(()=>page.evaluate(()=>window.__impressaoOrigem??0)).toBe(1);
+ if(pdfReal){await expect.poll(()=>textoPdf.length).toBeGreaterThan(0);const t=textoPdf.replace(/\s+/g,' ');expect(t).toContain('Origem registrada');expect(t).toContain('Composição manual');/* pdftotext intercala linhas quebradas de células vizinhas: conta o prefixo, não a frase inteira. */expect((t.match(/Sem valor/g)??[]).length).toBe(21);expect(t).toContain('Não comprova que a base mediu este nutriente');expect(t).toContain('0 mg');}
 });

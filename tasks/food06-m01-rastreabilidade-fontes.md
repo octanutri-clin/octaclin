@@ -72,28 +72,103 @@ quantidades das origens + `semOrigemDocumentada` + `fontesNaoDetalhadas` é igua
   ciphertext. Ordem determinística e limite de 50 grupos por nutriente com
   `fontesNaoDetalhadas`.
 
-## 4. Plano e estado
+## 4. O que foi implementado
 
-| Etapa | Estado |
+- `dominio/fontes-por-nutriente.ts` (novo): `analisarFontesPorNutriente(planos)`. Mesma seleção
+  (`selecionarItensCombinados`) e mesmo classificador da cobertura, agora exportado como
+  `classificarContribuicao` sem mudar comportamento. Contribuinte = item `conhecidos`.
+- Backend: campo aditivo `fontes` no cálculo ao vivo (`food06-factual-v1`, motor inalterado),
+  `fontesPorNutriente` em `projetarRegistroFactual` e no relatório formato 2. Relatório formato 1 e
+  o padrão ficam sem o campo. Nada novo é gravado: o registro persistido, seu hash e a igualdade
+  canônica de `lerRegistroAnaliseFactual` não mudam; a origem é derivada na projeção.
+- Web: `lerFontesPorNutrienteFactual` estrito e fail-closed, reconciliado com as contagens da mesma
+  resposta; componente `origem-nutriente-factual.tsx`; detalhes da tabela e coluna "Origem
+  registrada" no relatório formato 2. Resposta sem o campo continua legível e diz que a origem não
+  foi disponibilizada, sem presumir fonte.
+- Sem migration, dependência, lockfile, workflow, DRI ou alteração do BFF (o proxy repassa o corpo).
+
+Exemplo sintético (cálcio, dois itens TACO 4.1 com zero conhecido): origem registrada com
+"TACO · NEPA/Unicamp · versão 4.1 · 2 alimentos", `semOrigemDocumentada: 0`.
+
+## 5. Evidências deste ciclo
+
+Ambiente: Node 22.23.4, pnpm 11.25.0, dependências instaladas com `--frozen-lockfile` (lockfile
+inalterado). Cada linha foi executada neste ciclo.
+
+| Gate | Resultado |
 | --- | --- |
-| Diagnóstico (este documento) | feito |
-| Domínio `fontes-por-nutriente` com RED/GREEN | pendente |
-| API cálculo ao vivo + registro + relatório formato 2 | pendente |
-| Web: leitores, tabela/detalhes, relatório | pendente |
-| Revisão UX (A/B/C), R4 e regressões | pendente |
-| PDF real e PostgreSQL/RLS | pendente; dependem de ambiente |
+| Backend, domínio novo (`fontes-por-nutriente.spec.ts`), RED antes da implementação | RED funcional: 21 falhas e 2 passes triviais; depois GREEN, 23 testes |
+| Backend, integração das projeções (`fontes-por-nutriente-registro.spec.ts`) | PASS, 7 testes. Mutação comportamental da projeção: 3 falham, confirmando sensibilidade |
+| Backend, árvore `src/modulos/planos-alimentares` | PASS: 87 suítes, 1.744 testes; 1 suíte SKIPPED (7 testes, integração PostgreSQL opt-in) |
+| Backend `pnpm typecheck` e `pnpm build` | PASS |
+| Web, runner `test:calculo-combinado-planos`, RED antes da implementação | RED funcional (13 e 3 falhas); depois PASS, 112 testes (92 anteriores + 20 novos) |
+| Web `test:planos-alimentares:bff` e `test:linguagem` | PASS (150 testes; linguagem aprovada) |
+| Web `typecheck` e ESLint dos arquivos alterados | PASS; 1 aviso preexistente em spec que não alterei |
+| Browser desktop+mobile, `food06-tabela-factual` e `food06-contexto-historico` | 74 PASS, 8 SKIPPED (PDF real sem opt-in), 0 FAIL |
+| Browser, PDF real com `FOOD06_PDF_REAL=true` (opt-in, `pdftotext`) | PASS, 8 testes; teste M01 do relatório com extração de texto do PDF também PASS |
+| axe nas áreas alteradas (tabela e prévia do relatório) | Sem violações; não equivale a PDF/UA nem a leitor de tela humano |
+| `scan-secrets` e `git diff --check` | PASS antes de cada commit |
 
-## 5. FT01–FT20
+Limite do PDF: `pdftotext` intercala linhas quebradas de células vizinhas; por isso o teste conta
+o prefixo "Sem valor" (21 ocorrências) em vez da frase inteira.
 
-Todos **NOT RUN** neste momento. Serão atualizados com comando, commit e resultado
-reais. PASS só com evidência produzida neste ciclo.
+Não executados:
 
-## 6. Critérios
+- **PostgreSQL/Testcontainers/RLS: BLOCKED.** O cliente Docker existe, mas o daemon não está
+  acessível. Nada foi feito para contornar. O CI do GitHub executa essa etapa para o código
+  existente, mas não substitui prova específica do delta.
+- `test:authz`: NA, nenhum BFF, permissão ou autorização foi alterado.
+- HawkScan: SKIPPED, exige aplicação em execução e `HAWK_API_KEY`, ausente.
+- CI do novo HEAD: pendente até a PR existir.
+
+## 6. FT01–FT20
+
+| FT | Estado | Prova ou motivo |
+| --- | --- | --- |
+| FT01 | PASS | Spec de domínio e de projeção |
+| FT02 | PASS | Fontes separadas e ordenadas, inclusive USDA Foundation e SR Legacy |
+| FT03 | PASS | Só contribuintes conhecidos aparecem |
+| FT04 | PASS | Zero conhecido contribui; browser mostra "0 mg" com origem |
+| FT05 | PASS | Ausência não vira fonte nem zero |
+| FT06 | PASS | Vínculo declarado como origem do registro; ferro desconhecido não herda a fonte do cálcio; limitação visível |
+| FT07 | PARCIAL | Provado em memória: derivado só do snapshot recebido. Sem prova em banco com catálogo alterado |
+| FT08 | NOT RUN | O cálculo e a porção não mudaram. Sem teste novo de receita fracionária |
+| FT09 | PARCIAL | Refeição desativada ou não selecionada não contribui. Alternativa excludente depende do seletor de M02, não testado aqui |
+| FT10 | PASS | Repetição em duas refeições conta duas vezes |
+| FT11 | PASS | Estados incompatíveis não contribuem como fonte |
+| FT12 | PASS | Item legado e resposta sem o campo continuam aceitos, com incerteza explícita |
+| FT13 | PARCIAL | Paridade backend (ao vivo e registro) e reconciliação no leitor Web. Sem teste fullstack único |
+| FT14 | PARCIAL | Prévia e PDF real com respostas sintéticas simuladas. Sem fullstack |
+| FT15 | NOT RUN | Autorização inalterada e anterior à leitura. Sem prova PostgreSQL nova (BLOCKED) |
+| FT16 | NOT RUN | Idem FT15 |
+| FT17 | PARCIAL | Registro congelado, não mutado e relido igual. Imutabilidade de ciphertext não provada em banco |
+| FT18 | PASS | Manual e custom só com o tipo, sem versão ou código fictícios |
+| FT19 | PASS | Limite de 50 grupos, não detalhadas reconciliadas, ordem determinística (backend e Web) |
+| FT20 | PASS | Referências continuam indisponíveis; nenhum percentual ou RDA/AI/UL |
+
+## 7. Revisões
+
+- UX: etapa A **não** foi executada antes da implementação (lacuna de processo). Etapas B/C como
+  simulações sequenciais do agente principal, não independentes. Paciente N/A justificado. Ver
+  `docs/agents/ux/reports/FOOD06-M01-BC-2026-11-07/consolidado.md`. Backlog M01-NUX01 a 03 pendente.
+- R4: autoavaliação, **não independente**. Verificado por leitura: o tenant continua resolvido pelo
+  servidor; a função é pura e roda depois da autorização existente, na mesma transação; sem consulta
+  nova; saída por allowlist sem hash, nome livre nem ID clínico; limites de grupos e de campos. Falta
+  revisão cruzada independente e prova PostgreSQL.
+
+## 8. Critérios e maturidade
 
 | Critério | Estado | Observação |
 | --- | --- | --- |
-| M01-C1 | PARCIAL ponta a ponta (domínio preservado) | Aguarda prova nas novas projeções |
-| M01-C2 | PARCIAL | Aguarda origem por nutriente nas superfícies |
-| M01-C3 | PARCIAL | Aguarda reconciliação API/tabela/detalhes/relatório |
+| M01-C1 | PARCIAL | Zero conhecido preservado em domínio, projeções, UI e PDF. Falta prova fullstack e PostgreSQL |
+| M01-C2 | PARCIAL | Origem registrada por nutriente em API, tabela, detalhes e relatório formato 2. Vínculo por célula **não** é afirmado. Incerteza explícita |
+| M01-C3 | PARCIAL | Subtotal parcial preservado, sem percentual de referência. Falta reconciliação fullstack |
 
-Os 50% administrativos da matriz permanecem inalterados.
+Três eixos: **implementação** concluída localmente para o escopo; **validação** parcial (acima);
+**dependências** abertas (CI do novo HEAD, PostgreSQL/RLS, revisão R4 independente). Os 50%
+administrativos da matriz permanecem inalterados. M02/M03/M05/M08 não recebem promoção.
+
+## 9. Próxima tarefa única recomendada
+
+Prova fullstack com PostgreSQL descartável para FT07, FT15, FT16 e FT17 (catálogo alterado após o
+registro, outro tenant, acesso revogado), quando houver daemon Docker. Não iniciada.
