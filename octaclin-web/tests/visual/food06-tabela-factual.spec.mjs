@@ -319,3 +319,54 @@ test('FOOD06 cancela relatório em carregamento e ignora resposta tardia',async(
  await preparar(page);await page.getByRole('button',{name:'Ver histórico de micronutrientes',exact:true}).click();await page.getByRole('button',{name:'Conferir relatório da análise 1',exact:true}).click();await expect.poll(()=>solicitado).toBe(true);await page.getByRole('button',{name:'Fechar relatório',exact:true}).click();liberar();
  await expect(page.getByRole('region',{name:'Prévia do relatório factual'})).toHaveCount(0);await expect(page.locator('body')).not.toContainText('CANARIO_TARDIO_RELATÓRIO');await expect(page.locator('body')).not.toContainText('Não foi possível conferir o relatório autorizado');await expect(page.getByRole('button',{name:'Conferir relatório da análise 1',exact:true})).toBeFocused();
 });
+
+/* FOOD06 M01 — origem registrada por nutriente, nos detalhes da tabela. */
+function comOrigem(a) {
+  const nutrientes=Object.fromEntries(Object.entries(a.cobertura.nutrientes).map(([codigo,n])=>{
+    const base={contribuintes:n.contagens.conhecidos,fontes:[],semOrigemDocumentada:0,fontesNaoDetalhadas:0};
+    if(codigo==='calcioMg')base.fontes=[{tipo:'TACO',codigo:'taco_nepa_unicamp',versao:'4.1',quantidade:n.contagens.conhecidos}];
+    else if(codigo==='ferroMg')base.fontes=[{tipo:'manual',quantidade:n.contagens.conhecidos}];
+    return [codigo,base];
+  }));
+  return {...a,fontes:{schemaVersao:1,vinculo:'origem_do_registro_de_composicao',nutrientes}};
+}
+test('FOOD06 M01 detalhes mostram a origem registrada por nutriente com a limitação, por teclado e sem violações axe',async({page},testInfo)=>{
+  await page.route(url=>url.pathname.endsWith('/analise-micronutrientes'),route=>route.fulfill({status:200,contentType:'application/json',body:JSON.stringify(comOrigem(analise(route.request().postDataJSON())))}));
+  await preparar(page);
+  await page.getByRole('button',{name:'Ver micronutrientes e cobertura',exact:true}).focus();await page.keyboard.press('Enter');
+  const r=regiao(page);
+  await expect(r.getByRole('row',{name:/^Cálcio /})).toContainText('0 mg');
+  const resumo=r.getByText('Detalhes de Cálcio',{exact:true});await resumo.focus();await page.keyboard.press('Enter');
+  await expect(r).toContainText('Origem registrada · 2 alimentos com valor conhecido');
+  await expect(r).toContainText('TACO · NEPA/Unicamp · versão 4.1 · 2 alimentos');
+  await r.getByText('Detalhes de Ferro',{exact:true}).click();
+  await expect(r).toContainText('Origem registrada · 1 alimento com valor conhecido');
+  await expect(r).toContainText('Composição manual · 1 alimento');
+  await expect(r).toContainText('Não comprova que a base mediu este nutriente nem indica confiança científica.');
+  await r.getByText('Detalhes de Selênio',{exact:true}).click();
+  await expect(r).toContainText('Nenhum alimento com valor conhecido de Selênio: não há origem a informar.');
+  await expect(r.getByRole('row',{name:/^Selênio /})).toContainText('Composição desconhecida');
+  await expect(r.getByRole('row',{name:/^Ferro /})).toContainText('1,2 mg contabilizados');
+  await resumo.scrollIntoViewIfNeeded();
+  await page.screenshot({path:testInfo.outputPath('food06-m01-origem.png'),fullPage:false});
+  await page.evaluate(()=>document.documentElement.style.fontSize='32px');
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth)).toBe(true);
+  expect((await new AxeBuilder({page}).include('[aria-label="Micronutrientes da seleção"]').analyze()).violations).toEqual([]);
+});
+test('FOOD06 M01 resposta sem origem por nutriente não presume fonte',async({page})=>{
+  await page.route(url=>url.pathname.endsWith('/analise-micronutrientes'),route=>route.fulfill({status:200,contentType:'application/json',body:JSON.stringify(analise(route.request().postDataJSON()))}));
+  await preparar(page);
+  await page.getByRole('button',{name:'Ver micronutrientes e cobertura',exact:true}).click();
+  const r=regiao(page);await r.getByText('Detalhes de Cálcio',{exact:true}).click();
+  await expect(r).toContainText('Origem por nutriente não disponibilizada nesta resposta.');
+  await expect(r).not.toContainText('TACO');
+});
+test('FOOD06 M01 resposta com origem inconsistente não apresenta composição nem erro interno',async({page})=>{
+  await page.route(url=>url.pathname.endsWith('/analise-micronutrientes'),route=>{const a=comOrigem(analise(route.request().postDataJSON()));a.fontes.nutrientes.calcioMg.contribuintes=1;return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify(a)});});
+  await preparar(page);
+  await page.getByRole('button',{name:'Ver micronutrientes e cobertura',exact:true}).click();
+  const r=regiao(page);
+  await expect(r.getByRole('alert')).toContainText('Não foi possível carregar uma análise válida.');
+  await expect(r.getByRole('row',{name:/^Cálcio /})).toHaveCount(0);
+  await expect(r).not.toContainText('TACO');
+});

@@ -1,6 +1,6 @@
 import {lerContextoRegistradoFactual,type ContextoRegistradoFactual} from './contexto-registrado-factual';
 import {CAMPOS_MACRO_FACTUAL,lerValorMacroFactual} from './previa-micronutrientes-plano';
-import {lerLinhaMicronutrienteFactual} from './micronutrientes-factuais';
+import {lerLinhaMicronutrienteFactual,lerFontesPorNutrienteFactual} from './micronutrientes-factuais';
 import {CAMPOS_MICRONUTRIENTES_PLANO} from './micronutrientes-plano';
 import {ErroApiPlanoAlimentar} from './plano-alimentar-api';
 function falhar():never{throw new Error('Não foi possível conferir o relatório.');}
@@ -19,6 +19,8 @@ export function lerRelatorioFactual(valor:unknown,registroId:string){
  if(!Array.isArray(r.limites)||r.limites.length!==LIMITES.length||new Set(r.limites).size!==LIMITES.length||LIMITES.some(l=>!(r.limites as unknown[]).includes(l)))return falhar();
  if(!Array.isArray(r.avisos)||r.avisos.some(a=>!['porcao_divergente','planejamento_nao_documentado','composicao_nao_documentada'].includes(String(a)))||new Set(r.avisos).size!==r.avisos.length)return falhar();
  const linhas=CAMPOS_MICRONUTRIENTES_PLANO.map(c=>lerLinhaMicronutrienteFactual(nutrientes[c.codigo],c.codigo));if(new Set(linhas.map(l=>l.contagens.incluidos)).size!==1)return falhar();
+ if(r.schemaVersao===1&&r.fontesPorNutriente!==undefined)return falhar();
+ if(r.schemaVersao===2&&r.fontesPorNutriente!==undefined){const origens=lerFontesPorNutrienteFactual(r.fontesPorNutriente,linhas);for(const l of linhas)l.origem=origens[l.codigo];}
  const f=obj(r.fontesComposicao);let fontes: {tipo:string;versao?:string;quantidade:number}[]|undefined;let semReferencia=0,fontesNaoDetalhadas=0;
  if(f.estado==='resumo_documentado'){
   const inteiro=(v:unknown)=>Number.isSafeInteger(v)&&Number(v)>=0&&Number(v)<=10000;

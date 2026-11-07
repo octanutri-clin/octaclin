@@ -7,6 +7,30 @@ export interface LinhaMicronutrienteFactual {
   estado: EstadoCoberturaFactual; valor?: number;
   contagens: { incluidos: number; conhecidos: number; semComposicao: number; incompativeis: number; naoResolvidos: number };
   causas: { codigo: string; quantidade: number }[];
+  /** Origem registrada dos alimentos com valor conhecido; ausente quando a resposta não a traz. */
+  origem?: OrigemNutrienteFactual;
+}
+export const TIPOS_FONTE_FACTUAL = ['TACO','USDA','IBGE','manual','custom'] as const;
+export type TipoFonteFactual = typeof TIPOS_FONTE_FACTUAL[number];
+export interface FonteNutrienteFactual { tipo: TipoFonteFactual; codigo?: string; versao?: string; quantidade: number }
+export interface OrigemNutrienteFactual { contribuintes: number; fontes: FonteNutrienteFactual[]; semOrigemDocumentada: number; fontesNaoDetalhadas: number }
+export const LIMITE_GRUPOS_FONTE_FACTUAL = 50;
+export const ROTULOS_FONTE_FACTUAL: Readonly<Record<TipoFonteFactual,string>> = Object.freeze({
+  TACO:'TACO', USDA:'USDA', IBGE:'IBGE', manual:'Composição manual', custom:'Alimento personalizado'
+});
+const ROTULOS_CODIGO_FONTE: Readonly<Record<string,string>> = Object.freeze({
+  taco_nepa_unicamp:'NEPA/Unicamp', usda_fdc_foundation:'Foundation Foods', usda_fdc_sr_legacy:'SR Legacy', ibge_pof_2008_2009:'POF 2008-2009'
+});
+export function rotuloQuantidadeAlimentos(n: number): string { return `${n} ${n===1?'alimento':'alimentos'}`; }
+/** Texto único para tabela, detalhes e relatório. Versão ausente permanece "não informada". */
+export function descreverFonteFactual(f: FonteNutrienteFactual): string {
+  const partes: string[] = [ROTULOS_FONTE_FACTUAL[f.tipo]];
+  if (f.tipo!=='manual' && f.tipo!=='custom') {
+    if (f.codigo) partes.push(ROTULOS_CODIGO_FONTE[f.codigo] ?? `código ${f.codigo}`);
+    partes.push(f.versao ? `versão ${f.versao}` : 'versão não informada');
+  }
+  partes.push(rotuloQuantidadeAlimentos(f.quantidade));
+  return partes.join(' · ');
 }
 export interface AnaliseMicronutrientesFactual { ajuda?:AjudaDietetica|null; calculadoEm: string; linhas: LinhaMicronutrienteFactual[] }
 export interface FiltrosMicronutrientesFactuais {
@@ -37,7 +61,38 @@ export function lerAnaliseMicronutrientesFactual(valor: unknown, entrada: Calcul
   const nutrientes=objeto(cobertura.nutrientes);
   const linhas=CAMPOS_MICRONUTRIENTES_PLANO.map(c=>lerLinhaMicronutrienteFactual(nutrientes[c.codigo],c.codigo));
   if(new Set(linhas.map(l=>l.contagens.incluidos)).size!==1)return falhar();
+  if(r.fontes!==undefined){const origens=lerFontesPorNutrienteFactual(r.fontes,linhas);for(const l of linhas)l.origem=origens[l.codigo];}
   return {calculadoEm:r.calculadoEm,linhas,...(r.ajuda!==undefined?{ajuda:lerAjudaDietetica(r.ajuda)}:{})};
+}
+const CODIGO_FONTE_FACTUAL = /^[A-Za-z0-9_.-]{1,80}$/;
+const VERSAO_FONTE_FACTUAL = /^\d+(?:[._-]\d+){0,7}$/;
+/** Valida contra a cobertura da mesma resposta e falha fechado; devolve só o que a interface usa. */
+export function lerFontesPorNutrienteFactual(valor: unknown, linhas: LinhaMicronutrienteFactual[]): Record<string,OrigemNutrienteFactual> {
+  const raiz=objeto(valor);
+  if(raiz.schemaVersao!==1 || raiz.vinculo!=='origem_do_registro_de_composicao') return falhar();
+  const nutrientes=objeto(raiz.nutrientes), resultado: Record<string,OrigemNutrienteFactual>={};
+  for(const linha of linhas) {
+    const n=objeto(nutrientes[linha.codigo]);
+    if(!inteiro(n.contribuintes) || !inteiro(n.semOrigemDocumentada) || !inteiro(n.fontesNaoDetalhadas) ||
+      !Array.isArray(n.fontes) || n.fontes.length>LIMITE_GRUPOS_FONTE_FACTUAL ||
+      n.contribuintes!==linha.contagens.conhecidos) return falhar();
+    const chaves=new Set<string>();
+    const fontes=n.fontes.map(v=>{
+      const f=objeto(v);
+      if(!(TIPOS_FONTE_FACTUAL as readonly unknown[]).includes(f.tipo) || !inteiro(f.quantidade) || f.quantidade<1) return falhar();
+      const tipo=f.tipo as TipoFonteFactual, catalogo=tipo!=='manual'&&tipo!=='custom';
+      if(!catalogo && (f.codigo!==undefined || f.versao!==undefined)) return falhar();
+      if(f.codigo!==undefined && (typeof f.codigo!=='string' || !CODIGO_FONTE_FACTUAL.test(f.codigo))) return falhar();
+      if(f.versao!==undefined && (typeof f.versao!=='string' || f.versao.length>64 || !VERSAO_FONTE_FACTUAL.test(f.versao))) return falhar();
+      const chave=JSON.stringify([tipo,f.codigo,f.versao]);
+      if(chaves.has(chave)) return falhar();
+      chaves.add(chave);
+      return {tipo,...(f.codigo!==undefined?{codigo:f.codigo as string}:{}),...(f.versao!==undefined?{versao:f.versao as string}:{}),quantidade:f.quantidade};
+    });
+    if(fontes.reduce((soma,f)=>soma+f.quantidade,0)+n.semOrigemDocumentada+n.fontesNaoDetalhadas!==n.contribuintes) return falhar();
+    resultado[linha.codigo]={contribuintes:n.contribuintes,fontes,semOrigemDocumentada:n.semOrigemDocumentada,fontesNaoDetalhadas:n.fontesNaoDetalhadas};
+  }
+  return resultado;
 }
 export function validarPublicacoesFactuais(valor:unknown,entrada:CalcularCombinadoEntradaApi):void {
   if(!Array.isArray(valor)||valor.length!==entrada.selecoes.length)return falhar();

@@ -4,6 +4,7 @@ import { RegistroAnaliseFactual } from './registro-analise-factual';
 import {AjudaInterpretacaoMicronutrientes} from './ajuda-interpretacao-micronutrientes';
 import { ContribuicoesMicronutrientes } from './contribuicoes-micronutrientes';
 import { HistoricoMicronutrientesFactuais } from './historico-micronutrientes-factuais';
+import { OrigemNutrienteFactual } from './origem-nutriente-factual';
 import { useCallback, useEffect, useId, useState } from 'react';
 import { analisarMicronutrientesPlanejados } from '@/lib/calculo-combinado-planos-api';
 import { ErroApiPlanoAlimentar, type SelecaoCalculoLocal, type CalcularCombinadoEntradaApi } from '@/lib/plano-alimentar-api';
@@ -73,7 +74,7 @@ export function MicronutrientesFactuais({planosRegistro,aoInvalidarLeitura,nomes
               <tbody>{linhas.map(l=><tr key={l.codigo}>
                 <th scope="row" className="border-b border-linha p-2 align-top font-medium">{l.rotulo}</th>
                 <td className="border-b border-linha p-2 align-top tabular-nums">{l.valor===undefined?'—':`${formatarNutrientePlano(l.codigo,l.valor)} ${l.unidade}${l.estado==='COMPLETO'?'':' contabilizados'}`}{l.valor!==undefined&&l.estado!=='COMPLETO'?<p className="text-xs text-texto-suave">total real desconhecido</p>:null}</td>
-                <td className="border-b border-linha p-2 align-top"><p>{ESTADOS[l.estado]}</p><p className="text-xs text-texto-suave">{l.contagens.conhecidos}/{l.contagens.incluidos} alimentos com composição conhecida</p><details><summary className="min-h-11 cursor-pointer py-2 text-primaria underline">Detalhes de {l.rotulo}</summary><p>Sem composição: {l.contagens.semComposicao}. Incompatíveis: {l.contagens.incompativeis}. Não resolvidos: {l.contagens.naoResolvidos}.</p>{l.causas.length?<ul>{l.causas.map(c=><li key={c.codigo}>{CAUSAS_COBERTURA_FACTUAL[c.codigo]}: {c.quantidade}</li>)}</ul>:<p>Todos os alimentos incluídos possuem composição conhecida para este nutriente.</p>}</details><ContribuicoesMicronutrientes key={chave+':'+l.codigo} pacienteId={pacienteId} entrada={entrada} linha={l} nomesPlanos={nomesPlanos} aoInvalidar={invalidarDetalhe} /></td>
+                <td className="border-b border-linha p-2 align-top"><p>{ESTADOS[l.estado]}</p><p className="text-xs text-texto-suave">{l.contagens.conhecidos}/{l.contagens.incluidos} alimentos com composição conhecida</p><details><summary className="min-h-11 cursor-pointer py-2 text-primaria underline">Detalhes de {l.rotulo}</summary><p>Sem composição: {l.contagens.semComposicao}. Incompatíveis: {l.contagens.incompativeis}. Não resolvidos: {l.contagens.naoResolvidos}.</p>{l.causas.length?<ul>{l.causas.map(c=><li key={c.codigo}>{CAUSAS_COBERTURA_FACTUAL[c.codigo]}: {c.quantidade}</li>)}</ul>:<p>Todos os alimentos incluídos possuem composição conhecida para este nutriente.</p>}<OrigemNutrienteFactual origem={l.origem} rotulo={l.rotulo}/></details><ContribuicoesMicronutrientes key={chave+':'+l.codigo} pacienteId={pacienteId} entrada={entrada} linha={l} nomesPlanos={nomesPlanos} aoInvalidar={invalidarDetalhe} /></td>
                 <td className="border-b border-linha p-2 align-top">Indisponível</td>
               </tr>)}</tbody>
             </table>

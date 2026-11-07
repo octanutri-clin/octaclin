@@ -20,3 +20,34 @@ test('formato2 lê contexto congelado e diferencia legado sem registro',()=>{
 test('pedido explícito de formato2 exige a mesma versão na resposta',async()=>{
  const {obterRelatorioFactual}=await import('../lib/relatorio-factual');const original=globalThis.fetch;try{globalThis.fetch=async(_url,init)=>{assert.deepEqual(JSON.parse(String(init?.body)),{registroId:'registro',versaoRelatorio:2});return Response.json({...fixture(),schemaVersao:2,motorVersao:'food06-relatorio-factual-v2',contextoClinico:{estado:'nao_registrado'}});};assert.equal((await obterRelatorioFactual('paciente','registro',new AbortController().signal,2)).motorVersao,'food06-relatorio-factual-v2');globalThis.fetch=async()=>Response.json(fixture());await assert.rejects(()=>obterRelatorioFactual('paciente','registro',new AbortController().signal,2));}finally{globalThis.fetch=original;}
 });
+
+/* FOOD06 M01 — origem por nutriente no relatório formato 2 (aditivo). */
+function v2Com(fontes?:unknown){const f={...fixture(),schemaVersao:2,motorVersao:'food06-relatorio-factual-v2',contextoClinico:{estado:'nao_registrado'}};return fontes===undefined?f:{...f,fontesPorNutriente:fontes};}
+function fontesPorNutrienteOk(){return {schemaVersao:1,vinculo:'origem_do_registro_de_composicao',nutrientes:Object.fromEntries(CAMPOS_MICRONUTRIENTES_PLANO.map(c=>[c.codigo,c.codigo==='ferroMg'?{contribuintes:1,fontes:[{tipo:'manual',quantidade:1}],semOrigemDocumentada:0,fontesNaoDetalhadas:0}:{contribuintes:0,fontes:[],semOrigemDocumentada:0,fontesNaoDetalhadas:0}]))};}
+type LinhasRelatorio={linhas:{codigo:string;valor?:number;origem?:{contribuintes:number;fontes:{tipo:string;quantidade:number}[]}}[]};
+test('formato2 anexa a origem registrada por nutriente sem alterar valor nem cobertura (zero conhecido preservado)',()=>{
+ const r=lerRelatorioFactual(v2Com(fontesPorNutrienteOk()),'registro') as unknown as LinhasRelatorio;
+ const ferro=r.linhas.find(l=>l.codigo==='ferroMg')!;
+ assert.equal(ferro.valor,0);assert.deepEqual(ferro.origem,{contribuintes:1,fontes:[{tipo:'manual',quantidade:1}],semOrigemDocumentada:0,fontesNaoDetalhadas:0});
+ assert.deepEqual(r.linhas.find(l=>l.codigo==='selenioMcg')!.origem,{contribuintes:0,fontes:[],semOrigemDocumentada:0,fontesNaoDetalhadas:0});
+ assert.equal(r.linhas.find(l=>l.codigo==='selenioMcg')!.valor,undefined);
+});
+test('formato2 anterior, sem origem por nutriente, continua legível e não presume origem',()=>{
+ const r=lerRelatorioFactual(v2Com(),'registro') as unknown as LinhasRelatorio;
+ assert.ok(r.linhas.every(l=>l.origem===undefined));
+});
+test('formato1 não carrega origem por nutriente: campo presente é recusado',()=>{
+ assert.throws(()=>lerRelatorioFactual({...fixture(),fontesPorNutriente:fontesPorNutrienteOk()},'registro'),/relatório/);
+});
+test('formato2 recusa origem por nutriente inconsistente com a cobertura do mesmo relatório',()=>{
+ const f=fontesPorNutrienteOk();f.nutrientes.ferroMg.contribuintes=0;f.nutrientes.ferroMg.fontes=[] as never;
+ assert.throws(()=>lerRelatorioFactual(v2Com(f),'registro'),/interpretar|conferir/);
+ const g=fontesPorNutrienteOk();g.nutrientes.calcioMg.contribuintes=1;g.nutrientes.calcioMg.semOrigemDocumentada=1;
+ assert.throws(()=>lerRelatorioFactual(v2Com(g),'registro'),/interpretar|conferir/);
+ const h=fontesPorNutrienteOk();(h as {vinculo:string}).vinculo='medicao_por_nutriente';
+ assert.throws(()=>lerRelatorioFactual(v2Com(h),'registro'),/interpretar|conferir/);
+});
+test('formato2 não replica campos extras de origem por nutriente',()=>{
+ const f=fontesPorNutrienteOk();Object.assign(f,{segredo:'CANARIO_RAIZ'});Object.assign(f.nutrientes.ferroMg,{segredo:'CANARIO_NUT'});Object.assign(f.nutrientes.ferroMg.fontes[0],{hashConteudo:'CANARIO_HASH'});
+ assert.ok(!/CANARIO/.test(JSON.stringify(lerRelatorioFactual(v2Com(f),'registro'))));
+});

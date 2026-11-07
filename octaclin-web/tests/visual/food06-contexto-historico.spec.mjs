@@ -27,3 +27,31 @@ for(const modo of ['normal','revogado','alterado','formato_invalido','pdf','lega
  if(modo==='revogado'||modo==='alterado'){await expect(previa).toHaveCount(0);if(modo==='revogado'){await expect(page.getByRole('alert').filter({hasText:'Não foi possível confirmar o acesso à seleção.'})).toBeVisible();await expect(page.getByText('Tabagismo: não informado',{exact:true})).toHaveCount(0);}else await expect(page.getByRole('alert').filter({hasText:'Não foi possível conferir o relatório autorizado.'})).toContainText('Nenhum conteúdo foi enviado à impressão');expect(await page.evaluate(()=>window.__impressaoContexto??0)).toBe(0);}else{await expect.poll(()=>page.evaluate(()=>window.__impressaoContexto??0)).toBe(1);if(modo==='pdf'){expect(terminou).toBe(true);expect(textoPdf).toContain('06/11/2026');expect(textoPdf).toContain('Contexto registrado nesta análise');expect(textoPdf).toContain('Tabagismo: não informado');expect(textoPdf).not.toContain('CANARIO_PRIVADO');expect(textoPdf).not.toContain('CANARIO_OUTRA_FOLHA');expect(textoPdf).not.toContain('Paciente sintético');expect(textoPdf).not.toContain('Imprimir / salvar PDF');}await previa.getByRole('button',{name:'Cancelar prévia',exact:true}).click();}
  expect(pedidos.length).toBe(antesImprimir+1);for(const pedido of pedidos)expect(pedido).toEqual({registroId:id,versaoRelatorio:2});expect(pedidosHistorico).toEqual([{limite:10},{limite:10,incluirContexto:true}]);
 });
+
+/* FOOD06 M01 — origem registrada por nutriente no relatório formato 2 (aditivo). */
+test('FOOD06 M01 relatório formato 2 mostra a origem registrada por nutriente e a limitação, sem violações axe',async({page},testInfo)=>{
+ await prepararConsole(page);
+ await page.route(u=>u.pathname.endsWith('/selecao-calculo'),r=>r.fulfill({status:200,json:{planoId:planoIds[0],ativoParaPaciente:true,ativacaoRevisao:1,versao:{id:'versao-a',numero:1,publicadaEm:'2026-10-15T12:00:00.000Z'},refeicoes:[{identidadeId:idsRefeicoes[0],nome:'Refeição A',ordem:0,ativa:true}]}}));
+ await page.route(u=>u.pathname.endsWith('/calculo-combinado'),r=>r.fulfill({status:200,json:resultado(2)}));
+ await page.route(u=>u.pathname.endsWith('/analises-factuais/historico'),r=>{const body=r.request().postDataJSON();return r.fulfill({status:200,json:{schemaVersao:1,itens:[{...registro(),...(body.incluirContexto?{contextoConfirmado:contexto}:{})}],temMais:false}});});
+ await page.route(u=>u.pathname.endsWith('/analises-factuais/relatorio'),r=>{
+  const p=relatorio(),n=p.analise.cobertura.nutrientes;
+  p.fontesPorNutriente={schemaVersao:1,vinculo:'origem_do_registro_de_composicao',nutrientes:Object.fromEntries(Object.entries(n).map(([codigo,v])=>[codigo,{contribuintes:v.contagens.conhecidos,fontes:codigo==='ferroMg'&&v.contagens.conhecidos?[{tipo:'manual',quantidade:v.contagens.conhecidos}]:[],semOrigemDocumentada:codigo==='ferroMg'?0:v.contagens.conhecidos,fontesNaoDetalhadas:0}]))};
+  return r.fulfill({status:200,json:p});
+ });
+ await page.addInitScript(()=>{window.print=()=>{window.__impressaoOrigem=(window.__impressaoOrigem??0)+1;window.dispatchEvent(new Event('afterprint'));};});
+ await page.goto(`/pacientes/${pacienteId}?aba=plano_alimentar`,{waitUntil:'domcontentloaded'});await page.getByLabel('Adicionar plano desta página').selectOption(planoIds[0]);await page.getByRole('button',{name:'Adicionar',exact:true}).click();await expect(page.getByText('200 kcal',{exact:true})).toBeVisible();
+ await page.getByRole('button',{name:'Ver histórico de micronutrientes',exact:true}).click();await page.getByRole('checkbox',{name:'Carregar contextos registrados',exact:true}).check();
+ const detalhes=page.getByRole('row',{name:/^Análise 1/}).getByText('Contexto registrado',{exact:true});await detalhes.focus();await page.keyboard.press('Enter');
+ await page.getByRole('button',{name:'Conferir relatório com contexto da análise 1',exact:true}).click();
+ const previa=page.getByRole('region',{name:'Prévia do relatório factual',exact:true});
+ await expect(previa.getByRole('columnheader',{name:'Origem registrada',exact:true})).toBeVisible();
+ await expect(previa.getByRole('row',{name:/^Ferro /})).toContainText('0 mg');
+ await expect(previa.getByRole('row',{name:/^Ferro /})).toContainText('Composição manual · 2 alimentos');
+ await expect(previa.getByRole('row',{name:/^Selênio /})).toContainText('Sem valor conhecido');
+ await expect(previa).toContainText('Não comprova que a base mediu este nutriente nem indica confiança científica.');
+ expect((await new AxeBuilder({page}).include('[data-food06-exportacao]').analyze()).violations).toEqual([]);
+ await previa.screenshot({path:testInfo.outputPath('m01-relatorio-origem.png')});
+ await previa.getByRole('button',{name:'Imprimir / salvar PDF',exact:true}).click();
+ await expect.poll(()=>page.evaluate(()=>window.__impressaoOrigem??0)).toBe(1);
+});
