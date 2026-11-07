@@ -5,6 +5,12 @@ e um índice de leitura, não uma substituição de `AGENTS.md`, das regras de s
 do cliente ou das decisões do proprietário. Leia-o integralmente antes de agir.
 Reconfirme os fatos operacionais: caminhos, branches, espaço e checks podem mudar.
 
+Atualização documental: os seis arquivos de auditoria listados na seção5 foram
+reconstruídos posteriormente neste mesmo ramo. Leia primeiro
+[food06-auditoria-consolidada.md](food06-auditoria-consolidada.md), que identifica
+base, evidências e limites. As menções abaixo à perda dizem respeito aos originais
+do TEMP/cfaa42f5: as reconstruções não recuperam o código M01 perdido nem seus testes.
+
 ## 1. Missão e resultado esperado
 
 Você está assumindo o projeto sem contexto de conversa. Atue como engenheiro sênior
@@ -170,8 +176,9 @@ Depois, aprofunde os contratos diretamente envolvidos:
 | `tasks/food06-m02-origem-ordenacao.md` | Identificação de origem autorizada, preparo e paginação |
 | `tasks/food06-m11-previa-editor.md` | Incremento M11 que precisa permanecer intacto |
 
-Os seis documentos perdidos da auditoria tinham estes nomes: não os trate como
-presentes se `rg --files` não os encontrar:
+Os seis documentos originais perdidos tinham os nomes abaixo. Nesta branch há
+reconstruções explicitamente identificadas nesses caminhos; confirme a presença
+com `rg --files` e não confunda esses novos relatórios com os originais:
 
 - `tasks/food06-auditoria-consolidada.md`
 - `tasks/food06-matriz-maturidade.md`
