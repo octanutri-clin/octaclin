@@ -156,4 +156,27 @@ describe('FOOD06 M01 fontes factuais por nutriente', () => {
     expect(calcio([alterado]).fontes[0]!.versao).toBe('5.0');
     expect(calcio([p]).fontes[0]!.versao).toBe('4.1');
   });
+
+  it('FT08 receita já porcionada: quantidade, rendimento e fator no snapshot não alteram a contagem nem a origem', () => {
+    const receita = { ...item(7, TACO), quantidade: '1.5', unidade: 'porcao', fatorRendimento: 0.4, rendimento: { fator: 3 }, porcaoRegistroGramas: ['150', '1'] };
+    const simples = item(7, TACO);
+    expect(calcio([plano([receita])])).toEqual(calcio([plano([simples])]));
+    expect(calcio([plano([receita])]).fontes).toEqual([{ tipo: 'TACO', codigo: 'taco_nepa_unicamp', versao: '4.1', quantidade: 1 }]);
+    expect(JSON.stringify(calcio([plano([receita])]))).not.toMatch(/fator|rendimento|quantidade":1\.5/);
+  });
+
+  it('FT09 só o que o seletor entrega contribui: a alternativa não escolhida, fora da seleção, não aparece; a escolhida substitui a principal', () => {
+    const principal = item(5, TACO), alternativa = item(5, USDA_F);
+    const comPrincipal = calcio([plano([principal])]);
+    const comAlternativa = calcio([plano([alternativa])]);
+    expect(comPrincipal.fontes.map(f => f.tipo)).toEqual(['TACO']);
+    expect(comAlternativa.fontes.map(f => f.tipo)).toEqual(['USDA']);
+    expect(comAlternativa.contribuintes).toBe(1);
+    // Principal e alternativa excludentes em refeições não selecionadas distintas não somam.
+    const p: EntradaPlanoCombinado = { planoId: 'p', ativo: true, selecionado: true, refeicoes: [
+      { identidadeId: 'a', ativa: true, selecionada: true, itens: [principal] },
+      { identidadeId: 'b', ativa: true, selecionada: false, itens: [alternativa] }
+    ] };
+    expect(calcio([p])).toEqual(comPrincipal);
+  });
 });

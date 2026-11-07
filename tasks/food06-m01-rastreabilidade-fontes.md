@@ -119,7 +119,7 @@ Não executados:
   acessível. Nada foi feito para contornar. O CI do GitHub executa essa etapa para o código
   existente, mas não substitui prova específica do delta.
 - `test:authz`: NA, nenhum BFF, permissão ou autorização foi alterado.
-- HawkScan: SKIPPED, exige aplicação em execução e `HAWK_API_KEY`, ausente.
+- HawkScan: NA. É DAST e esta mudança não cria rota nem endpoint novo; a chave também está ausente.
 - CI do novo HEAD: pendente até a PR existir.
 
 ## 6. FT01–FT20
@@ -132,17 +132,17 @@ Não executados:
 | FT04 | PASS | Zero conhecido contribui; browser mostra "0 mg" com origem |
 | FT05 | PASS | Ausência não vira fonte nem zero |
 | FT06 | PASS | Vínculo declarado como origem do registro; ferro desconhecido não herda a fonte do cálcio; limitação visível |
-| FT07 | PARCIAL | Provado em memória: derivado só do snapshot recebido. Sem prova em banco com catálogo alterado |
-| FT08 | NOT RUN | O cálculo e a porção não mudaram. Sem teste novo de receita fracionária |
-| FT09 | PARCIAL | Refeição desativada ou não selecionada não contribui. Alternativa excludente depende do seletor de M02, não testado aqui |
+| FT07 | PARCIAL | Em memória: PASS. Em PostgreSQL: teste escrito (fonte e porção alteradas após o registro; relatório formato 2 idêntico antes e depois), **NOT RUN localmente, aguarda o CI** |
+| FT08 | PASS (domínio) | Quantidade, rendimento e fator no snapshot não alteram contagem nem origem. A matemática da receita não faz parte desta função |
+| FT09 | PASS (escopo da função) | Só o que o seletor entrega contribui; refeição não selecionada fica fora. A escolha principal ou alternativa pertence ao seletor de M02, fora deste incremento |
 | FT10 | PASS | Repetição em duas refeições conta duas vezes |
 | FT11 | PASS | Estados incompatíveis não contribuem como fonte |
 | FT12 | PASS | Item legado e resposta sem o campo continuam aceitos, com incerteza explícita |
 | FT13 | PARCIAL | Paridade backend (ao vivo e registro) e reconciliação no leitor Web. Sem teste fullstack único |
 | FT14 | PARCIAL | Prévia e PDF real com respostas sintéticas simuladas. Sem fullstack |
-| FT15 | NOT RUN | Autorização inalterada e anterior à leitura. Sem prova PostgreSQL nova (BLOCKED) |
-| FT16 | NOT RUN | Idem FT15 |
-| FT17 | PARCIAL | Registro congelado, não mutado e relido igual. Imutabilidade de ciphertext não provada em banco |
+| FT15 | PARCIAL | Negativas do formato 2 (outro paciente, outro tenant, sem permissão de gerenciar) escritas no spec PostgreSQL; **NOT RUN localmente, aguardam o CI**. Autorização inalterada |
+| FT16 | PARCIAL | Revogação por transferência de carteira no relatório formato 2 pela API real, escrita no spec PostgreSQL; **NOT RUN localmente, aguarda o CI** |
+| FT17 | PARCIAL | Em memória: PASS. Em PostgreSQL: cipher inalterado após alteração da fonte, asserido no spec estendido; **NOT RUN localmente, aguarda o CI** |
 | FT18 | PASS | Manual e custom só com o tipo, sem versão ou código fictícios |
 | FT19 | PASS | Limite de 50 grupos, não detalhadas reconciliadas, ordem determinística (backend e Web) |
 | FT20 | PASS | Referências continuam indisponíveis; nenhum percentual ou RDA/AI/UL |
@@ -171,5 +171,5 @@ administrativos da matriz permanecem inalterados. M02/M03/M05/M08 não recebem p
 
 ## 9. Próxima tarefa única recomendada
 
-Prova fullstack com PostgreSQL descartável para FT07, FT15, FT16 e FT17 (catálogo alterado após o
-registro, outro tenant, acesso revogado), quando houver daemon Docker. Não iniciada.
+Ler o resultado do CI da PR para os testes PostgreSQL de FT07, FT15, FT16 e FT17. Se passarem, atualizar
+esses estados para PASS com o link da execução; se falharem, corrigir. Depois, revisão R4 independente.
