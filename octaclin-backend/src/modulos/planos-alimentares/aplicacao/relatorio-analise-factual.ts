@@ -11,6 +11,6 @@ export function prepararRelatorioFactual(p:ProjecaoRegistro & {fontesComposicao?
   contextoClinico:{estado:'nao_documentado_no_relatorio' as const},fontesComposicao:p.fontesComposicao??{estado:'nao_projetadas_neste_contrato' as const},avisos:[...p.avisos],ajuda:p.ajuda,
   limites:['alimentacao_planejada_nao_consumo_real','ausencia_nao_equivale_a_zero','sem_diagnostico_ou_recomendacao','composicao_congelada_sem_catalogo_atual'] as const};
  if(versaoRelatorio===1)return legado;
- return {...legado,schemaVersao:2 as const,motorVersao:'food06-relatorio-factual-v2' as const,
+ return {...legado,schemaVersao:2 as const,motorVersao:'food06-relatorio-factual-v2' as const,fontesPorNutriente:p.fontesPorNutriente,
   contextoClinico:p.contextoConfirmado?{estado:'resumo_documentado' as const,resumo:{schemaVersao:1 as const,dataAnalise:p.contextoConfirmado.dataAnalise,...(p.contextoConfirmado.idadeAnos===undefined?{}:{idadeAnos:p.contextoConfirmado.idadeAnos}),...(p.contextoConfirmado.populacaoReferencia===undefined?{}:{populacaoReferencia:p.contextoConfirmado.populacaoReferencia}),mesmoDiaPlanejado:p.contextoConfirmado.mesmoDiaPlanejado,tabagismo:p.contextoConfirmado.tabagismo,motivos:[...p.contextoConfirmado.motivos]}}:{estado:'nao_registrado' as const}};
 }
