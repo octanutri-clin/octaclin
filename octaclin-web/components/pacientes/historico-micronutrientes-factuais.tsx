@@ -44,7 +44,7 @@ export function HistoricoMicronutrientesFactuais({pacienteId,nomesPlanos,leitura
   if(!leituraPermitida||carregando)return;
   cancelar();const atual=geracao.current,controller=new AbortController();controle.current=controller;setCarregando(true);setErro(false);
   try{
-   const pagina=await obterHistoricoMicronutrientesFactual(pacienteId,proximo,controller.signal,contextual);
+   const pagina=await obterHistoricoMicronutrientesFactual(pacienteId,proximo,controller.signal,contextual,true);
    if(controller.signal.aborted||atual!==geracao.current)return;
    setItens(v=>proximo?[...v,...pagina.itens]:pagina.itens);setTemMais(pagina.temMais);setCursor(pagina.proximoCursor);setErro(false);
   }catch(e){if(controller.signal.aborted||atual!==geracao.current)return;setErro(true);if(e instanceof ErroApiPlanoAlimentar&&(e.status===401||e.status===403||e.status===404)){setItens([]);setCursor(undefined);setTemMais(false);setRegistroRelatorio(null);aoInvalidar(e.status);}}

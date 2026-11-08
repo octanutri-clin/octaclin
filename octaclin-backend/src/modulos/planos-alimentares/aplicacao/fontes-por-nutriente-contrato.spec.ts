@@ -69,11 +69,12 @@ async function gerar() {
   const r = registro(), meta = { id: REGISTRO, criadoEm: new Date('2026-11-07T11:00:00.000Z') };
   const projecao = projetarRegistroFactual(meta, r);
   const comFontes = { ...projecao, fontesComposicao: resumirFontesRegistro(r) };
+  const comFontesECodigo = { ...projecao, fontesComposicao: resumirFontesRegistro(r, true) };
   const agora = new Date('2026-11-07T13:00:00.000Z');
   const rz = registroDe(itensSoZero()), pz = projetarRegistroFactual(meta, rz);
   const zero = {
-    aoVivo: null as unknown, historico: json(projetarResumoHistoricoFactual(meta, rz)),
-    relatorioV2: json(prepararRelatorioFactual({ ...pz, fontesComposicao: resumirFontesRegistro(rz) }, agora, 2))
+    aoVivo: null as unknown, historico: json(projetarResumoHistoricoFactual(meta, rz, undefined, false, true)),
+    relatorioV2: json(prepararRelatorioFactual({ ...pz, fontesComposicao: resumirFontesRegistro(rz, true) }, agora, 2, true))
   };
   return {
     zero: { historico: zero.historico, relatorioV2: zero.relatorioV2 },
@@ -84,9 +85,11 @@ async function gerar() {
     aoVivoSemComponentes: await aoVivo([plano([])]),
     aoVivoZero: await aoVivo([plano(itensSoZero())]),
     registro: json(projecao),
-    historico: json(projetarResumoHistoricoFactual(meta, r)),
+    historico: json(projetarResumoHistoricoFactual(meta, r, undefined, false, true)),
+    historicoSemOrigem: json(projetarResumoHistoricoFactual(meta, r)),
     relatorioV1: json(prepararRelatorioFactual(comFontes, agora, 1)),
-    relatorioV2: json(prepararRelatorioFactual(comFontes, agora, 2))
+    relatorioV2: json(prepararRelatorioFactual(comFontesECodigo, agora, 2, true)),
+    relatorioV2SemOrigem: json(prepararRelatorioFactual(comFontes, agora, 2))
   };
 }
 const CHAVES_COBERTURA = ['codigo', 'unidade', 'estado', 'contagens', 'causas', 'total', 'quantidadeConhecida'];
@@ -209,6 +212,13 @@ describe('FOOD06 M01-C1/C2/C3: contrato entre API ao vivo, registro, detalhes e 
       }
       expect((g.historico.nutrientes as Record<string, Nut>).manganesMg).toMatchObject({ estado: 'INCOMPATIVEL', quantidadeConhecida: 6 });
       expect((g.historico.nutrientes as Record<string, Nut>).manganesMg).not.toHaveProperty('total');
+    });
+    it('sem o pedido de origem, histórico e relatório formato 2 mantêm o formato anterior (compatível com uma Web antiga)', () => {
+      expect(g.historicoSemOrigem).not.toHaveProperty('fontesPorNutriente');
+      expect(g.relatorioV2SemOrigem).not.toHaveProperty('fontesPorNutriente');
+      expect(g.relatorioV2SemOrigem.schemaVersao).toBe(2);
+      expect((g.relatorioV2SemOrigem as any).fontesComposicao.fontes.some((f: Record<string, unknown>) => 'codigo' in f)).toBe(false);
+      expect(g.relatorioV2SemOrigem.analise).toEqual(g.relatorioV2.analise);
     });
     it('formato 1 do relatório permanece sem o campo novo e com a mesma cobertura', () => {
       expect(g.relatorioV1).not.toHaveProperty('fontesPorNutriente');

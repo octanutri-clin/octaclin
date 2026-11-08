@@ -15,7 +15,11 @@ export class ListarRegistrosFactuaisDto {
  @IsInt() @Min(1) @Max(100) limite:number;
 }
 export class ConsultarRegistroFactualDto { @IsUUID() registroId:string; }
-export class PrepararRelatorioFactualDto extends ConsultarRegistroFactualDto { @ValidateIf((_o,v)=>v!==undefined) @IsIn([2]) versaoRelatorio?:2; }
+export class PrepararRelatorioFactualDto extends ConsultarRegistroFactualDto {
+ @ValidateIf((_o,v)=>v!==undefined) @IsIn([2]) versaoRelatorio?:2;
+ /** Opt-in aditivo: só o formato 2 aceita. Clientes anteriores nunca o enviam e recebem o formato de sempre. */
+ @ValidateIf((_o,v)=>v!==undefined) @IsBoolean() incluirOrigem?:boolean;
+}
 export class CompararRegistrosFactuaisDto { @IsUUID() antesId:string; @IsUUID() depoisId:string; }
 
 @ValidatorConstraint({name:'cursorHistoricoFactual',async:false})
@@ -26,6 +30,8 @@ class ValidadorCursorHistorico implements ValidatorConstraintInterface {
 /** Cursor keyset mantém as páginas estáveis quando análises novas são registradas. */
 export class HistoricoRegistrosFactuaisDto {
  @ValidateIf((_o,v)=>v!==undefined) @IsBoolean() incluirContexto?:boolean;
+ /** Opt-in aditivo, como `incluirContexto`: clientes anteriores recusam chaves novas no histórico. */
+ @ValidateIf((_o,v)=>v!==undefined) @IsBoolean() incluirOrigem?:boolean;
  @IsInt() @Min(1) @Max(10) limite:number;
  @IsOptional() @Validate(ValidadorCursorHistorico) @IsUUID() cursorId?:string;
  @IsOptional() @Validate(ValidadorCursorHistorico) @IsISO8601({strict:true}) @Matches(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{6}Z$/) cursorCriadoEm?:string;

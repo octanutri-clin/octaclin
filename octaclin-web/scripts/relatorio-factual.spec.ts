@@ -71,3 +71,17 @@ test('M01 resumo global do relatório lê o código da fonte e separa fontes que
  assert.throws(()=>lerRelatorioFactual({...f,fontesComposicao:resumo([{tipo:'USDA',codigo:'usda_fdc_foundation',versao:'1',quantidade:1},{tipo:'USDA',codigo:'usda_fdc_foundation',versao:'1',quantidade:1}])},'registro'));
  assert.doesNotThrow(()=>lerRelatorioFactual({...f,fontesComposicao:resumo([{tipo:'TACO',versao:'taco-4a-cmvcol-taco3-v1',quantidade:2}])},'registro'));
 });
+
+test('M01 cliente do relatório só envia incluirOrigem no formato 2 e quando pedido',async()=>{
+ const {obterRelatorioFactual}=await import('../lib/relatorio-factual');
+ const original=globalThis.fetch;const corpos:unknown[]=[];
+ try{
+  globalThis.fetch=async(_u,init)=>{const c=JSON.parse(String(init?.body));corpos.push(c);return Response.json(c.versaoRelatorio===2?{...fixture(),schemaVersao:2,motorVersao:'food06-relatorio-factual-v2',contextoClinico:{estado:'nao_registrado'}}:fixture());};
+  const chamar=obterRelatorioFactual as unknown as (...a:unknown[])=>Promise<unknown>;
+  await chamar('paciente','registro',new AbortController().signal,1);
+  await chamar('paciente','registro',new AbortController().signal,2);
+  await chamar('paciente','registro',new AbortController().signal,2,true);
+  await chamar('paciente','registro',new AbortController().signal,1,true);
+ }finally{globalThis.fetch=original;}
+ assert.deepEqual(corpos,[{registroId:'registro'},{registroId:'registro',versaoRelatorio:2},{registroId:'registro',versaoRelatorio:2,incluirOrigem:true},{registroId:'registro'}]);
+});

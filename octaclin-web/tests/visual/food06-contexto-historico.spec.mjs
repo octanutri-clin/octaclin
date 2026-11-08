@@ -25,7 +25,7 @@ for(const modo of ['normal','revogado','alterado','formato_invalido','pdf','lega
  if(modo==='normal'){expect((await new AxeBuilder({page}).include('[data-food06-exportacao]').analyze()).violations).toEqual([]);await previa.screenshot({path:testInfo.outputPath('contexto-relatorio.png')});}
  if(modo==='pdf')await page.evaluate(()=>{const outra=document.createElement('article');outra.className='folha-documento';outra.textContent='CANARIO_OUTRA_FOLHA';document.body.append(outra);});const antesImprimir=pedidos.length;conferirImpressao=true;await previa.getByRole('button',{name:'Imprimir / salvar PDF',exact:true}).click();
  if(modo==='revogado'||modo==='alterado'){await expect(previa).toHaveCount(0);if(modo==='revogado'){await expect(page.getByRole('alert').filter({hasText:'Não foi possível confirmar o acesso à seleção.'})).toBeVisible();await expect(page.getByText('Tabagismo: não informado',{exact:true})).toHaveCount(0);}else await expect(page.getByRole('alert').filter({hasText:'Não foi possível conferir o relatório autorizado.'})).toContainText('Nenhum conteúdo foi enviado à impressão');expect(await page.evaluate(()=>window.__impressaoContexto??0)).toBe(0);}else{await expect.poll(()=>page.evaluate(()=>window.__impressaoContexto??0)).toBe(1);if(modo==='pdf'){await expect.poll(()=>terminou).toBe(true);expect(textoPdf).toContain('06/11/2026');expect(textoPdf).toContain('Contexto registrado nesta análise');expect(textoPdf).toContain('Tabagismo: não informado');expect(textoPdf).not.toContain('CANARIO_PRIVADO');expect(textoPdf).not.toContain('CANARIO_OUTRA_FOLHA');expect(textoPdf).not.toContain('Paciente sintético');expect(textoPdf).not.toContain('Imprimir / salvar PDF');}await previa.getByRole('button',{name:'Cancelar prévia',exact:true}).click();}
- expect(pedidos.length).toBe(antesImprimir+1);for(const pedido of pedidos)expect(pedido).toEqual({registroId:id,versaoRelatorio:2});expect(pedidosHistorico).toEqual([{limite:10},{limite:10,incluirContexto:true}]);
+ expect(pedidos.length).toBe(antesImprimir+1);for(const pedido of pedidos)expect(pedido).toEqual({registroId:id,versaoRelatorio:2,incluirOrigem:true});expect(pedidosHistorico).toEqual([{limite:10,incluirOrigem:true},{limite:10,incluirContexto:true,incluirOrigem:true}]);
 });
 
 /* FOOD06 M01 — origem registrada por nutriente no relatório formato 2 (aditivo). */
@@ -139,6 +139,6 @@ test('FOOD06 M01 histórico mostra a origem do nutriente e oferece o relatório 
  await expect(previa.getByRole('columnheader',{name:/^Origem registrada/})).toBeVisible();
  await expect(previa.getByRole('row',{name:/^Ferro /})).toContainText('Entrada manual · 2 alimentos');
  await expect(previa).toContainText('Contexto não registrado nesta análise');
- expect(pedidos.length).toBeGreaterThan(0);for(const pedido of pedidos)expect(pedido).toEqual({registroId:id,versaoRelatorio:2});
+ expect(pedidos.length).toBeGreaterThan(0);for(const pedido of pedidos)expect(pedido).toEqual({registroId:id,versaoRelatorio:2,incluirOrigem:true});
  expect((await new AxeBuilder({page}).include('[data-food06-exportacao]').analyze()).violations).toEqual([]);
 });

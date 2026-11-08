@@ -17,6 +17,8 @@ const g = JSON.parse(readFileSync(resolve(process.cwd(), 'scripts/fixtures/food0
   relatorioV1: Record<string, unknown>; relatorioV2: Record<string, unknown>;
   historico: { nutrientes: Record<string, unknown> };
   aoVivoZero: Record<string, unknown>;
+  historicoSemOrigem: Record<string, unknown>;
+  relatorioV2SemOrigem: Record<string, unknown>;
   zero: { historico: Record<string, unknown>; relatorioV2: Record<string, unknown> };
 };
 type Origem = { contribuintes: number; fontes: { tipo: string; codigo?: string; versao?: string; quantidade: number }[]; semOrigemDocumentada: number; fontesNaoDetalhadas: number };
@@ -96,7 +98,8 @@ test('R4C2-02 Web: resumo histórico lê todos os estados, inclusive INCOMPATIVE
   assert.equal((lerLinhaMicronutrienteFactual(g.historico.nutrientes.manganesMg, 'manganesMg') as unknown as Linha).valor, 6);
 });
 
-const paginaHistorico = (ponto: Record<string, unknown>) => lerPaginaHistoricoMicronutrientesFactual({ schemaVersao: 1, itens: [ponto], temMais: false });
+const lerHistorico = lerPaginaHistoricoMicronutrientesFactual as unknown as (v: unknown, incluirContexto?: boolean, incluirOrigem?: boolean) => ReturnType<typeof lerPaginaHistoricoMicronutrientesFactual>;
+const paginaHistorico = (ponto: Record<string, unknown>, incluirOrigem = true) => lerHistorico({ schemaVersao: 1, itens: [ponto], temMais: false }, false, incluirOrigem);
 const linhasDoHistorico = (ponto: Record<string, unknown>) => Object.values(paginaHistorico(ponto).itens[0]!.nutrientes) as unknown as Linha[];
 
 test('M01-C3 Web: o histórico passa pelo leitor real e concorda com a tabela em estado, valor, contagens, causas e origem', () => {
@@ -131,4 +134,15 @@ test('M01 Web: histórico recusa origem adulterada e aceita ponto sem origem (re
   assert.ok(linhasDoHistorico(sem).every(l => l.origem === undefined));
   ponto.fontesPorNutriente.nutrientes.calcioMg.contribuintes += 1;
   assert.throws(() => paginaHistorico(ponto));
+});
+
+test('M01 Web: sem o pedido de origem, histórico e relatório formato 2 continuam legíveis e sem origem (compatibilidade)', () => {
+  const hist = paginaHistorico(g.historicoSemOrigem, false).itens[0]!.nutrientes as unknown as Record<string, Linha>;
+  assert.ok(Object.values(hist).every(l => l.origem === undefined));
+  assert.equal(hist.ferroMg!.valor, 3);
+  // Uma Web que não pediu a origem recusa a chave se ela vier: o backend nunca a envia sem o pedido.
+  assert.throws(() => paginaHistorico(g.historico as unknown as Record<string, unknown>, false));
+  const rel = lerRelatorioFactual(g.relatorioV2SemOrigem, g.registroId).linhas as unknown as Linha[];
+  assert.ok(rel.every(l => l.origem === undefined));
+  assert.equal(por(rel, 'zincoMg').valor, 4);
 });

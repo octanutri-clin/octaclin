@@ -116,8 +116,9 @@ export function lerAnaliseMicronutrientesFactual(valor: unknown, entrada: Calcul
   return {calculadoEm:r.calculadoEm,linhas,...(r.ajuda!==undefined?{ajuda:lerAjudaDietetica(r.ajuda)}:{})};
 }
 const CODIGO_FONTE_FACTUAL = /^[A-Za-z0-9_.-]{1,80}$/;
-/** Mesmo formato do backend: rótulo livre do operador do catálogo, até 64 caracteres, sem markup nem controle. */
-const VERSAO_FONTE_FACTUAL = /^[\p{L}\p{N}][\p{L}\p{N} ._:/()+,-]{0,63}$/u;
+/** Mesmo formato do backend: rótulo livre do operador do catálogo (coluna varchar(80)), sem markup, controle nem espaço nas pontas. */
+export const VERSAO_FONTE_FACTUAL = /^[^\s\p{C}<>][^\p{C}<>]{0,79}$/u;
+export const versaoFonteFactualValida = (v: unknown): v is string => typeof v==='string' && v===v.trim() && VERSAO_FONTE_FACTUAL.test(v);
 /** Valida contra a cobertura da mesma resposta e falha fechado; devolve só o que a interface usa. */
 export function lerFontesPorNutrienteFactual(valor: unknown, linhas: LinhaMicronutrienteFactual[]): Record<string,OrigemNutrienteFactual> {
   const raiz=objeto(valor);
@@ -135,7 +136,7 @@ export function lerFontesPorNutrienteFactual(valor: unknown, linhas: LinhaMicron
       const tipo=f.tipo as TipoFonteFactual, catalogo=ehCatalogada(tipo);
       if(!catalogo && (f.codigo!==undefined || f.versao!==undefined)) return falhar();
       if(f.codigo!==undefined && (typeof f.codigo!=='string' || !CODIGO_FONTE_FACTUAL.test(f.codigo))) return falhar();
-      if(f.versao!==undefined && (typeof f.versao!=='string' || !VERSAO_FONTE_FACTUAL.test(f.versao))) return falhar();
+      if(f.versao!==undefined && !versaoFonteFactualValida(f.versao)) return falhar();
       const chave=JSON.stringify([tipo,f.codigo,f.versao]);
       if(chaves.has(chave)) return falhar();
       chaves.add(chave);

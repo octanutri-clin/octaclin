@@ -67,6 +67,7 @@ test('consulta de contexto preserva a flag no body e não usa parâmetros clíni
 });
 
 /* FOOD06 M01 — o histórico também carrega a origem por nutriente (aditivo). */
+const lerComOrigem=lerPaginaHistoricoMicronutrientesFactual as unknown as (v:unknown,incluirContexto?:boolean,incluirOrigem?:boolean)=>ReturnType<typeof lerPaginaHistoricoMicronutrientesFactual>;
 type PontoComOrigem={nutrientes:Record<string,{origem?:{contribuintes:number;fontes:{tipo:string;quantidade:number}[]}}>};
 function fontesDoHistorico(pag:{itens:{nutrientes:Record<string,{contagens:{conhecidos:number}}>}[]}){
  const n=pag.itens[0]!.nutrientes;
@@ -79,7 +80,7 @@ test('M01 histórico aceita a origem por nutriente e a anexa sem mudar valor, es
  const base=pagina() as {itens:Record<string,unknown>[]};
  const sem=lerPaginaHistoricoMicronutrientesFactual(JSON.parse(JSON.stringify(base)));
  base.itens[0]!.fontesPorNutriente=fontesDoHistorico(base as never);
- const a=lerPaginaHistoricoMicronutrientesFactual(base);
+ const a=lerComOrigem(base,false,true);
  const p=a.itens[0] as unknown as PontoComOrigem;
  assert.deepEqual(p.nutrientes.ferroMg!.origem,{contribuintes:1,fontes:[{tipo:'manual',quantidade:1}],semOrigemDocumentada:0,fontesNaoDetalhadas:0});
  assert.equal(p.nutrientes.selenioMcg!.origem?.contribuintes,0);
@@ -92,5 +93,24 @@ test('M01 histórico recusa origem inconsistente com a cobertura do mesmo ponto'
  const f=fontesDoHistorico(base as never) as {nutrientes:Record<string,{contribuintes:number}>};
  f.nutrientes.ferroMg!.contribuintes=2;
  base.itens[0]!.fontesPorNutriente=f;
+ assert.throws(()=>lerComOrigem(base,false,true),/interpretar|histórico|conferir/i);
+});
+
+test('M01 histórico recusa a origem quando ela não foi pedida (como o contexto), para não aceitar chave inesperada',()=>{
+ const base=pagina() as {itens:Record<string,unknown>[]};
+ base.itens[0]!.fontesPorNutriente=fontesDoHistorico(base as never);
  assert.throws(()=>lerPaginaHistoricoMicronutrientesFactual(base),/interpretar|histórico|conferir/i);
+ assert.throws(()=>lerComOrigem(base,true),/interpretar|histórico|conferir/i);
+});
+test('M01 cliente do histórico só envia incluirOrigem quando pedido, sem alterar o corpo anterior',async()=>{
+ const original=globalThis.fetch;const corpos:unknown[]=[];
+ try{
+  globalThis.fetch=async(_u,init)=>{corpos.push(JSON.parse(String(init?.body)));return Response.json(pagina({temMais:false,proximoCursor:undefined}));};
+  const chamar=obterHistoricoMicronutrientesFactual as unknown as (...a:unknown[])=>Promise<unknown>;
+  await chamar('paciente',undefined,new AbortController().signal);
+  await chamar('paciente',undefined,new AbortController().signal,true);
+  await chamar('paciente',undefined,new AbortController().signal,false,true);
+  await chamar('paciente',undefined,new AbortController().signal,true,true);
+ }finally{globalThis.fetch=original;}
+ assert.deepEqual(corpos,[{limite:10},{limite:10,incluirContexto:true},{limite:10,incluirOrigem:true},{limite:10,incluirContexto:true,incluirOrigem:true}]);
 });

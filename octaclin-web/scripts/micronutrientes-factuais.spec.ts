@@ -238,8 +238,9 @@ test('R4C2-01 Web aceita as versões reais do catálogo (rótulos com letras) e 
   const a=lerAnaliseMicronutrientesFactual(montar('taco-4a-cmvcol-taco3-v1'),entrada);
   assert.equal((Reflect.get(a.linhas.find(l=>l.codigo==='calcioMg')!,'origem') as {fontes:{versao:string}[]}).fontes[0]!.versao,'taco-4a-cmvcol-taco3-v1');
   assert.doesNotThrow(()=>lerAnaliseMicronutrientesFactual(montar('pof-2008-2009-v1'),entrada));
+  for(const ok of ['v#1*','R&D 1.0','taco 4ª ed. — rev. 2','a'.repeat(80),'x;y','-começa-com-hífen'])assert.doesNotThrow(()=>lerAnaliseMicronutrientesFactual(montar(ok),entrada),ok);
   assert.doesNotThrow(()=>lerAnaliseMicronutrientesFactual(montar('FoodData Central 2025-04-24 (release 3)'),entrada));
-  for(const ruim of ['versão <x>','<b>x</b>','a'.repeat(65),'-começa-com-hífen','x;y','a\nb'])assert.throws(()=>lerAnaliseMicronutrientesFactual(montar(ruim),entrada),/interpretar/,ruim);
+  for(const ruim of ['versão <x>','<b>x</b>','a'.repeat(81),' espaço-inicial','espaço-final ','x\u0000y','a\nb'])assert.throws(()=>lerAnaliseMicronutrientesFactual(montar(ruim),entrada),/interpretar/,ruim);
 });
 const causasInconsistentes:[string,(r:ReturnType<typeof resposta>)=>void][]=[
   ['causa de incompatibilidade em contagem de ausência',r=>{r.cobertura.nutrientes.calcioMg.causas=[{codigo:'unidade_incompativel',quantidade:2}];}],

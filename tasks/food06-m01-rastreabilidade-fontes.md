@@ -245,3 +245,58 @@ Origem: avaliação crítica do que foi feito (NUX das etapas A, B e C e lacunas
 ### Estado dos critérios
 
 C1, C2 e C3 seguem **provados pelo teste de contrato e não promovidos** na matriz canônica; a decisão continua do proprietário. O contrato agora cobre quatro superfícies (tabela, registro, histórico e relatório), o zero conhecido como valor `0` e o método real do serviço.
+
+## 13. Pontos remanescentes tratados em seguida
+
+### Ponto 2: versão de fonte com caracteres fora do conjunto aceito
+A coluna `fontes_composicao_alimentos.versao` é `varchar(80)` e a governança só exige que a versão não seja vazia; a regra
+anterior (rótulo "seguro" de até 64 caracteres) descartaria versões legítimas e mostraria "versão não informada" mesmo com
+versão registrada. Nova regra, igual no backend e na Web: qualquer caractere imprimível, até 80, sem espaço nas pontas;
+recusa markup (`<`, `>`) e caracteres de controle. Testes com `#`, `&`, acentos, travessão e 80 caracteres (aceitos) e com
+81 caracteres, markup, controle, quebra de linha e espaço nas pontas (recusados).
+
+### Ponto 4: origem derivada na leitura muda retroativamente se o mapa mudar
+Não foi gravado o campo no registro (mudaria o envelope persistido, R4). O mapa de fontes agora é **append-only e
+congelado por teste** (`dominio/fonte-catalogo.spec.ts`): as quatro entradas, um corpus de 14 snapshots históricos com
+resultado esperado e a imutabilidade em execução. Alterar uma entrada existente quebra o CI (verificado por mutação: 2
+testes falham). Acrescentar uma entrada exige decisão do proprietário, nova versão do mapa e novas linhas no teste.
+Alternativa não adotada: gravar a origem no registro, o que exigiria nova versão de envelope e aprovação própria.
+
+### Ponto 5: deploy desencontrado entre Web e backend
+Havia duas quebras com uma Web antiga e o backend novo: o leitor do histórico recusa chaves extras e o resumo global do
+relatório recusa grupos que só diferem por código. Resolvido com o padrão que o código já usa para `incluirContexto`:
+`incluirOrigem` é **opt-in booleano** no histórico e no relatório (este só no formato 2). Sem a flag, a resposta é a de
+antes, byte a byte no formato (o resumo global volta a agrupar por tipo e versão, sem `codigo`). A Web nova pede a origem.
+
+**Ordem de implantação: backend primeiro, depois a Web.** Uma Web nova contra um backend antigo recebe 400 do DTO (campo
+não permitido) ao pedir a origem. O inverso (Web antiga, backend novo) funciona sem mudança.
+
+### Ponto 6: tamanho da resposta do histórico
+Não há teto de resposta no BFF nem no backend (os limites existentes são de corpo de pedido: 16 KiB no BFF e 100 KiB no
+backend; o único limite do servidor é 10 MiB de texto cifrado lido por página). Medido (bytes, uma página de 10 análises):
+
+| Cenário | Sem origem | Com origem | Relatório formato 2 | `fontes` ao vivo |
+| --- | --- | --- | --- | --- |
+| Típico (3 fontes) | 58.144 | 120.104 | 17.383 | 6.174 |
+| Realista alto (15 grupos por nutriente) | 58.814 | 302.274 | 36.493 | 24.324 |
+| Limite do contrato (50 grupos) | 58.794 | 971.934 | 106.487 | 91.292 |
+
+A origem **dobra** a página mesmo no caso típico, porque é enviada para os 22 nutrientes e a tela mostra um por vez. O pior
+caso do contrato fica abaixo de 1 MiB. Orçamentos fixados em teste (`projecao-historico-tamanho.spec.ts`, com ~25% de
+folga) e a página sem origem protegida para clientes que não a pedem. O gzip local (2 a 16 KB) é só um limite inferior,
+pois comprimiu cópias idênticas; não há compressão configurada no backend. Opções futuras, não feitas: enviar a origem só do
+nutriente selecionado ou uma tabela de fontes única referenciada por índice.
+
+### Inventário de segurança (`SQ-2026-003` / `SQ-2026-004`)
+- **`SQ-2026-003` não existe** no inventário. IDs: `SQ-2026-004`, `139`, `239` a `249`.
+- Vencidas por data em 07/11: `SQ-2026-004`, `SQ-2026-240` e `SQ-2026-248` (as três críticas). Vencem hoje (08/11): `139`,
+  `239`, `241`, `242`, `243` e `244`.
+- O validador limita `revisarEm` a um teto (14 dias para crítica) contado a partir de `capturadoEm` (24/10). Estender a data
+  sem **recapturar** os alertas exige uma `excecao` rastreável, e o próprio repositório descreve isso como "a máquina de falso
+  verde que o inventário existe para impedir".
+- Disparei o workflow de captura do repositório (somente leitura). O passo "Capturar inventário" falhou com
+  **`401 Bad credentials`** em `/branches/main`: o segredo `INVENTARIO_GITHUB_TOKEN` existe, mas está inválido, expirado ou
+  revogado. Sem ele não há dados novos de alertas e a revisão não pode ser feita de forma legítima. **Nenhum campo do
+  inventário foi alterado.**
+- Ação do proprietário: renovar o token (Dependabot alerts: read, Code scanning alerts: read, Secret scanning alerts: read),
+  reexecutar o workflow `Inventario Security & Quality` e então triar as nove causas acima com a captura nova.

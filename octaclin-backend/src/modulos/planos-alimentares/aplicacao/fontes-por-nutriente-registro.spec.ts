@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { construirAnaliseFactual, lerRegistroAnaliseFactual } from './construtor-analise-factual';
-import { projetarRegistroFactual } from './projecao-registro-factual';
+import { projetarRegistroFactual, projetarResumoHistoricoFactual } from './projecao-registro-factual';
+import { resumirFontesRegistro } from './fontes-relatorio-factual';
 import { prepararRelatorioFactual } from './relatorio-analise-factual';
 import { analisarFontesPorNutriente } from '../dominio/fontes-por-nutriente';
 import { criarSnapshotMicronutrientes, CODIGOS_MICRONUTRIENTES } from '../dominio/micronutrientes';
@@ -80,16 +81,30 @@ describe('FOOD06 M01 fontes por nutriente nas projeções do registro e do relat
     expect(json).not.toMatch(/CANARIO_|aaaaaaaa|Nome livre|Descrição sintética|ALIMENTO-SINTETICO/);
   });
 
-  it('relatório formato 2 transporta as fontes por nutriente; formato 1 e padrão permanecem sem o campo', () => {
+  it('relatório formato 2 só transporta a origem por nutriente quando pedida; sem o pedido mantém o formato anterior', () => {
     const p = projetarRegistroFactual(meta, criar(itens())), agora = new Date('2026-11-07T13:00:00.000Z');
-    const v2 = prepararRelatorioFactual(p, agora, 2);
-    expect(v2).toMatchObject({ schemaVersao: 2, motorVersao: 'food06-relatorio-factual-v2' });
-    expect((v2 as { fontesPorNutriente?: unknown }).fontesPorNutriente).toEqual(p.fontesPorNutriente);
-    expect(v2.analise).toEqual(p.analise);
+    const preparar = prepararRelatorioFactual as unknown as (...a: unknown[]) => Record<string, any>;
+    const com = preparar({ ...p, fontesComposicao: (resumirFontesRegistro as unknown as (r: unknown, c?: boolean) => unknown)(criar(itens()), true) }, agora, 2, true);
+    expect(com).toMatchObject({ schemaVersao: 2, motorVersao: 'food06-relatorio-factual-v2' });
+    expect(com.fontesPorNutriente).toEqual(p.fontesPorNutriente);
+    expect(com.analise).toEqual(p.analise);
+    expect(com.fontesComposicao.fontes.every((f: { tipo: string; codigo?: string }) => f.tipo === 'manual' || typeof f.codigo === 'string')).toBe(true);
+    const sem = preparar({ ...p, fontesComposicao: resumirFontesRegistro(criar(itens())) }, agora, 2);
+    expect(sem).toMatchObject({ schemaVersao: 2 });
+    expect(sem).not.toHaveProperty('fontesPorNutriente');
+    expect(sem.fontesComposicao.fontes.some((f: Record<string, unknown>) => 'codigo' in f)).toBe(false);
     for (const v1 of [prepararRelatorioFactual(p, agora), prepararRelatorioFactual(p, agora, 1)]) {
       expect(v1).not.toHaveProperty('fontesPorNutriente');
       expect(v1.schemaVersao).toBe(1);
     }
+    expect(() => preparar(p, agora, 1, true)).toThrow();
+  });
+  it('resumo histórico só traz a origem por nutriente quando pedida', () => {
+    const r = criar(itens());
+    const resumo = projetarResumoHistoricoFactual as unknown as (...a: unknown[]) => Record<string, unknown>;
+    expect(resumo(meta, r)).not.toHaveProperty('fontesPorNutriente');
+    expect(resumo(meta, r, undefined, true)).not.toHaveProperty('fontesPorNutriente');
+    expect(resumo(meta, r, undefined, false, true).fontesPorNutriente).toEqual(projetarRegistroFactual(meta, r).fontesPorNutriente);
   });
 
   it('FT20 nenhuma referência é habilitada pela presença de origem', () => {

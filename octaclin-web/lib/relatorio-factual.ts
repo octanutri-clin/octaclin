@@ -1,6 +1,6 @@
 import {lerContextoRegistradoFactual,type ContextoRegistradoFactual} from './contexto-registrado-factual';
 import {CAMPOS_MACRO_FACTUAL,lerValorMacroFactual} from './previa-micronutrientes-plano';
-import {lerLinhaMicronutrienteFactual,lerFontesPorNutrienteFactual} from './micronutrientes-factuais';
+import {lerLinhaMicronutrienteFactual,lerFontesPorNutrienteFactual,versaoFonteFactualValida} from './micronutrientes-factuais';
 import {CAMPOS_MICRONUTRIENTES_PLANO} from './micronutrientes-plano';
 import {ErroApiPlanoAlimentar} from './plano-alimentar-api';
 function falhar():never{throw new Error('Não foi possível conferir o relatório.');}
@@ -25,7 +25,7 @@ export function lerRelatorioFactual(valor:unknown,registroId:string){
  if(f.estado==='resumo_documentado'){
   const inteiro=(v:unknown)=>Number.isSafeInteger(v)&&Number(v)>=0&&Number(v)<=10000;
   if(!inteiro(f.itensIncluidos)||f.itensIncluidos!==linhas[0]?.contagens.incluidos||!inteiro(f.semReferencia)||!inteiro(f.fontesNaoDetalhadas)||!Array.isArray(f.fontes)||f.fontes.length>50)return falhar();
-  fontes=f.fontes.map(v=>{const n=obj(v);if(!['TACO','USDA','IBGE','manual','custom'].includes(String(n.tipo))||!inteiro(n.quantidade)||!Number(n.quantidade)||(n.codigo!==undefined&&(typeof n.codigo!=='string'||!/^[A-Za-z0-9_.-]{1,80}$/.test(n.codigo)))||(n.versao!==undefined&&(typeof n.versao!=='string'||!/^[\p{L}\p{N}][\p{L}\p{N} ._:/()+,-]{0,63}$/u.test(n.versao))))return falhar();return {tipo:String(n.tipo),...(n.codigo!==undefined?{codigo:n.codigo as string}:{}),...(n.versao!==undefined?{versao:n.versao as string}:{}),quantidade:n.quantidade as number};});
+  fontes=f.fontes.map(v=>{const n=obj(v);if(!['TACO','USDA','IBGE','manual','custom'].includes(String(n.tipo))||!inteiro(n.quantidade)||!Number(n.quantidade)||(n.codigo!==undefined&&(typeof n.codigo!=='string'||!/^[A-Za-z0-9_.-]{1,80}$/.test(n.codigo)))||(n.versao!==undefined&&!versaoFonteFactualValida(n.versao)))return falhar();return {tipo:String(n.tipo),...(n.codigo!==undefined?{codigo:n.codigo as string}:{}),...(n.versao!==undefined?{versao:n.versao as string}:{}),quantidade:n.quantidade as number};});
   semReferencia=f.semReferencia as number;fontesNaoDetalhadas=f.fontesNaoDetalhadas as number;
   if(new Set(fontes.map(n=>JSON.stringify([n.tipo,n.codigo,n.versao]))).size!==fontes.length||fontes.reduce((n,x)=>n+x.quantidade,0)+semReferencia+fontesNaoDetalhadas!==f.itensIncluidos)return falhar();
  }
@@ -35,8 +35,8 @@ export function lerRelatorioFactual(valor:unknown,registroId:string){
  return {motorVersao:r.schemaVersao===2?'food06-relatorio-factual-v2' as const:'food06-relatorio-factual-v1' as const,contextoRegistrado,geradoEm:data(r.geradoEm),registro:{id:texto(registro.id),criadoEm:data(registro.criadoEm)},origem:{planoId:texto(o.planoId),versaoId:texto(o.versaoId),numero:o.numero as number,status:o.status as 'publicada'|'rascunho',registradaEm:data(o.registradaEm),...(o.status==='rascunho'?{rascunhoRevisao:o.rascunhoRevisao as number}:{})},selecao:{planoAtivo:selecao.planoAtivo,planoSelecionado:selecao.planoSelecionado,refeicoes},fontes,semReferencia,fontesNaoDetalhadas,macros,linhas,avisos:r.avisos.map(String)};
 }
 export type RelatorioFactual=ReturnType<typeof lerRelatorioFactual>;
-export async function obterRelatorioFactual(pacienteId:string,registroId:string,signal:AbortSignal,versaoRelatorio:1|2=1):Promise<RelatorioFactual>{
- const resposta=await fetch(`/api/pacientes/${encodeURIComponent(pacienteId)}/planos-alimentares/analises-factuais/relatorio`,{method:'POST',cache:'no-store',signal,headers:{'Content-Type':'application/json'},body:JSON.stringify({registroId,...(versaoRelatorio===2?{versaoRelatorio:2}:{})})});
+export async function obterRelatorioFactual(pacienteId:string,registroId:string,signal:AbortSignal,versaoRelatorio:1|2=1,incluirOrigem=false):Promise<RelatorioFactual>{
+ const resposta=await fetch(`/api/pacientes/${encodeURIComponent(pacienteId)}/planos-alimentares/analises-factuais/relatorio`,{method:'POST',cache:'no-store',signal,headers:{'Content-Type':'application/json'},body:JSON.stringify({registroId,...(versaoRelatorio===2?{versaoRelatorio:2}:{}),...(versaoRelatorio===2&&incluirOrigem?{incluirOrigem:true}:{})})});
  if(!resposta.ok)throw new ErroApiPlanoAlimentar(resposta.status,'Não foi possível preparar o relatório autorizado.');
  try{const r=lerRelatorioFactual(await resposta.json(),registroId);if(r.motorVersao!==`food06-relatorio-factual-v${versaoRelatorio}`)throw new Error();return r;}catch{throw new ErroApiPlanoAlimentar(502,'Não foi possível conferir o relatório.');}
 }

@@ -228,10 +228,15 @@ describe('FOOD06 M01 fontes factuais por nutriente', () => {
       const r = calcio([plano([item(1, { ...REAIS.foundation, versao: 'FoodData Central 2025-04-24 (release 3)' })])]);
       expect(r.fontes).toEqual([{ tipo: 'USDA', codigo: 'usda_fdc_foundation', versao: 'FoodData Central 2025-04-24 (release 3)', quantidade: 1 }]);
     });
-    it('versão com markup ou acima de 64 caracteres fica desconhecida, sem expor texto livre', () => {
-      const r = calcio([plano([item(1, { ...REAIS.taco, versao: 'CANARIO <script>' }), item(1, { ...REAIS.taco, versao: 'a'.repeat(65) }), item(1, { ...REAIS.taco, versao: '<b>x</b>' })])]);
-      expect(r.fontes).toEqual([{ tipo: 'TACO', codigo: 'taco_nepa_unicamp', quantidade: 3 }]);
-      expect(JSON.stringify(r)).not.toMatch(/CANARIO|<b>/);
+    it('qualquer caractere imprimível, até o tamanho da coluna (80), é versão válida; só markup e controle são recusados', () => {
+      for (const versao of ['v#1*', 'FoodData Central 2025-04-24 (release 3)', 'taco 4ª ed. — rev. 2', 'a'.repeat(80), 'R&D 1.0']) {
+        expect(calcio([plano([item(1, { ...REAIS.taco, versao })])]).fontes).toEqual([{ tipo: 'TACO', codigo: 'taco_nepa_unicamp', versao, quantidade: 1 }]);
+      }
+    });
+    it('versão com markup, controle, espaço nas pontas ou acima de 80 caracteres fica desconhecida, sem expor texto livre', () => {
+      const r = calcio([plano([item(1, { ...REAIS.taco, versao: 'CANARIO <script>' }), item(1, { ...REAIS.taco, versao: 'a'.repeat(81) }), item(1, { ...REAIS.taco, versao: ' com-espaco' }), item(1, { ...REAIS.taco, versao: 'x\u0000y' }), item(1, { ...REAIS.taco, versao: 'quebra\nlinha' }), item(1, { ...REAIS.taco, versao: '<b>x</b>' })])]);
+      expect(r.fontes).toEqual([{ tipo: 'TACO', codigo: 'taco_nepa_unicamp', quantidade: 6 }]); // seis versões inválidas, todas desconhecidas
+      expect(JSON.stringify(r)).not.toMatch(/CANARIO|<b>|script/);
     });
   });
 });

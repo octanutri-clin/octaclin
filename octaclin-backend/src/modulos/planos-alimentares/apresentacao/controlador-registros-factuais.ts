@@ -1,6 +1,6 @@
 import { FiltroRegistrosFactuais } from './filtro-registros-factuais';
 import { projetarMetadadosRegistro } from '../aplicacao/projecao-registro-factual';
-import { Body,Controller,Header,HttpCode,Param,ParseUUIDPipe,Post,UseGuards,UseFilters } from '@nestjs/common';
+import { BadRequestException,Body,Controller,Header,HttpCode,Param,ParseUUIDPipe,Post,UseGuards,UseFilters } from '@nestjs/common';
 import { Papeis,Permissoes,UsuarioAtual } from '../../auth/apresentacao/decorators';
 import { GuardaJwt } from '../../auth/apresentacao/guarda-jwt';
 import { GuardaPapeis } from '../../auth/apresentacao/guarda-papeis';
@@ -23,9 +23,17 @@ export class ControladorRegistrosFactuais {
   const r=await this.servico.listar(u.tenantId,p,u,d.pagina,d.limite);return {schemaVersao:1,itens:r.itens.map(projetarMetadadosRegistro),total:r.total,pagina:r.pagina,limite:r.limite};
  }
  @Post('historico') @HttpCode(200) @Permissoes('planos_alimentares.ler') @Header('Cache-Control','private, no-store')
- async historico(@UsuarioAtual() u:UsuarioAutenticado,@Param('pacienteId',ParseUUIDPipe) p:string,@Body() d:HistoricoRegistrosFactuaisDto){return {schemaVersao:1,...(d.incluirContexto===undefined?await this.servico.historico(u.tenantId,p,u,d.limite,d.cursorId,d.cursorCriadoEm):await this.servico.historico(u.tenantId,p,u,d.limite,d.cursorId,d.cursorCriadoEm,d.incluirContexto))};}
+ async historico(@UsuarioAtual() u:UsuarioAutenticado,@Param('pacienteId',ParseUUIDPipe) p:string,@Body() d:HistoricoRegistrosFactuaisDto){
+  // Cada flag só altera a chamada quando enviada: o pedido padrão e o de `incluirContexto` seguem idênticos.
+  const base=[u.tenantId,p,u,d.limite,d.cursorId,d.cursorCriadoEm] as const;
+  const resultado=d.incluirOrigem!==undefined?await this.servico.historico(...base,d.incluirContexto??false,d.incluirOrigem)
+   :d.incluirContexto===undefined?await this.servico.historico(...base):await this.servico.historico(...base,d.incluirContexto);
+  return {schemaVersao:1,...resultado};}
  @Post('relatorio') @HttpCode(200) @Permissoes('planos_alimentares.ler','planos_alimentares.gerenciar') @Header('Cache-Control','private, no-store')
- prepararRelatorio(@UsuarioAtual() u:UsuarioAutenticado,@Param('pacienteId',ParseUUIDPipe) p:string,@Body() d:PrepararRelatorioFactualDto){return d.versaoRelatorio===2?this.servico.prepararRelatorioApi(u.tenantId,p,u,d.registroId,2):this.servico.prepararRelatorioApi(u.tenantId,p,u,d.registroId);}
+ prepararRelatorio(@UsuarioAtual() u:UsuarioAutenticado,@Param('pacienteId',ParseUUIDPipe) p:string,@Body() d:PrepararRelatorioFactualDto){
+  if(d.incluirOrigem!==undefined&&d.versaoRelatorio!==2)throw new BadRequestException('A origem por nutriente exige o formato 2.');
+  if(d.versaoRelatorio!==2)return this.servico.prepararRelatorioApi(u.tenantId,p,u,d.registroId);
+  return d.incluirOrigem===true?this.servico.prepararRelatorioApi(u.tenantId,p,u,d.registroId,2,true):this.servico.prepararRelatorioApi(u.tenantId,p,u,d.registroId,2);}
  @Post('consultar') @HttpCode(200) @Permissoes('planos_alimentares.ler') @Header('Cache-Control','private, no-store')
  consultar(@UsuarioAtual() u:UsuarioAutenticado,@Param('pacienteId',ParseUUIDPipe) p:string,@Body() d:ConsultarRegistroFactualDto){return this.servico.consultarApi(u.tenantId,p,u,d.registroId);}
  @Post('comparar') @HttpCode(200) @Permissoes('planos_alimentares.ler') @Header('Cache-Control','private, no-store')
