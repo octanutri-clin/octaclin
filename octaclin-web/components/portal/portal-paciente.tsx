@@ -1086,7 +1086,7 @@ export function PortalPaciente({ secao }: { secao: SecaoPortal }) {
                               href={material.url}
                               target="_blank"
                               rel="noreferrer"
-                              aria-label={`Abrir ${material.titulo}`}
+                              aria-label={`Abrir material: ${material.titulo}`}
                               className={classesBotao({ tamanho: 'sm', className: 'max-w-full' })}
                             >
                               <ExternalLink className="h-4 w-4 shrink-0" />
