@@ -18,7 +18,9 @@ import { copiarRefeicaoParaFormulario, type RefeicaoFormularioCopia, type Refeic
 interface ReferenciaRefeicaoSalva {
   pacienteOrigemId: string;
   planoOrigemId: string;
+  versaoId: string;
   numeroVersao: number;
+  rascunhoRevisao?: number;
   refeicaoId: string;
   atualizadoEm: string;
   status: 'publicada' | 'rascunho';
@@ -211,7 +213,9 @@ export function CopiarRefeicaoDePlano({
       setReferencia({
         pacienteOrigemId,
         planoOrigemId: origem.id,
+        versaoId: versao.id,
         numeroVersao: versao.numero,
+        rascunhoRevisao: versao.status === 'rascunho' ? versao.rascunhoRevisao ?? 0 : undefined,
         refeicaoId: '',
         atualizadoEm: versao.atualizadoEm,
         status: versao.status
@@ -261,7 +265,9 @@ export function CopiarRefeicaoDePlano({
         setErro('O plano de destino mudou. Selecione a refeição de origem novamente.');
         return;
       }
-      if (versao.status !== referencia.status || versao.atualizadoEm !== referencia.atualizadoEm) {
+      if (versao.id !== referencia.versaoId || versao.numero !== referencia.numeroVersao ||
+          versao.status !== referencia.status || versao.atualizadoEm !== referencia.atualizadoEm ||
+          (referencia.status === 'rascunho' && (versao.rascunhoRevisao ?? 0) !== referencia.rascunhoRevisao)) {
         setErro('A versão de origem foi alterada. Carregue-a novamente antes de copiar.');
         return;
       }
@@ -270,7 +276,13 @@ export function CopiarRefeicaoDePlano({
         setErro('A refeição de origem não está mais disponível. Carregue a versão novamente.');
         return;
       }
-      const copia = copiarRefeicaoParaFormulario(refeicao, gerarChave);
+      const copia = copiarRefeicaoParaFormulario(refeicao, gerarChave, {
+        pacienteId: referencia.pacienteOrigemId,
+        planoId: referencia.planoOrigemId,
+        versaoId: referencia.versaoId,
+        numeroVersao: referencia.numeroVersao,
+        rascunhoRevisao: referencia.rascunhoRevisao
+      });
       const destino = destinoTipo === 'acrescentar'
         ? { tipo: 'acrescentar' as const, chaveRefeicao: destinoRefeicaoChave }
         : { tipo: 'nova' as const };
