@@ -10,6 +10,7 @@ import { mensagemFalhaInterface } from '@/lib/erros-interface';
 import {
   listarPlanosAlimentares,
   obterPlanoAlimentar,
+  obterVersaoPlanoAlimentar,
   type PlanoAlimentarResumoApi,
   type VersaoPlanoAlimentarApi
 } from '@/lib/plano-alimentar-api';
@@ -18,7 +19,7 @@ export interface DuplicarPlanoDeOutroPacienteProps {
   /** Paciente deste rascunho: fica fora da busca, duplicar dele mesmo nao faz sentido. */
   pacienteIdAtual: string;
   /** Recebe a versao de origem; o chamador converte as refeicoes como ja faz com modelo. */
-  aoAplicar: (versao: VersaoPlanoAlimentarApi) => void;
+  aoAplicar: (versao: VersaoPlanoAlimentarApi, origem: { pacienteId: string; planoId: string }) => void;
   desabilitado?: boolean;
 }
 
@@ -96,12 +97,21 @@ export function DuplicarPlanoDeOutroPaciente({
     setAviso(null);
     try {
       const plano = await obterPlanoAlimentar(pacienteOrigemId, planoId);
-      const versao = versaoParaCopiar(plano);
-      if (!versao?.refeicoes.length) {
+      const resumoVersao = versaoParaCopiar(plano);
+      if (!resumoVersao) {
         setErro('O plano escolhido não tem refeições para duplicar.');
         return;
       }
-      aoAplicar(versao);
+      const versao = await obterVersaoPlanoAlimentar(pacienteOrigemId, plano.id, resumoVersao.numero);
+      if (versao.id !== resumoVersao.id || versao.numero !== resumoVersao.numero || versao.status !== resumoVersao.status ||
+          (resumoVersao.status === 'rascunho' && (versao.rascunhoRevisao ?? 0) !== (resumoVersao.rascunhoRevisao ?? 0))) {
+        throw new Error('A versão de origem mudou. Carregue o plano novamente antes de copiar.');
+      }
+      if (!versao.refeicoes.length) {
+        setErro('O plano escolhido não tem refeições para duplicar.');
+        return;
+      }
+      aoAplicar(versao, { pacienteId: pacienteOrigemId, planoId: plano.id });
       setAviso('Refeições duplicadas para o rascunho. Revise as quantidades e salve para recalcular.');
     } catch (falha) {
       setErro(mensagemFalhaInterface(falha, 'Não foi possível duplicar o plano.'));
