@@ -45,7 +45,7 @@ function versao({ id, numero, status, refeicoes, objetivos = 'Objetivo sintétic
   };
 }
 
-async function preparar(page, { falharRevalidacaoOrigem = false, alterarVersaoNaColagem = false, planosPaginados = false, atrasarLeituraExterna = false, atrasarRevalidacaoOrigem = false, duasRefeicoesDestino = false, limiteRefeicoesDestino = false, manterRefeicoesRecolhidas = false, nutrientesIncompletos = false, refeicaoSemAlimentos = false, atualizarNutrientesAoSalvar = false, documentoInicial } = {}) {
+async function preparar(page, { falharRevalidacaoOrigem = false, alterarVersaoNaColagem = false, alterarSomenteRevisaoNaColagem = false, planosPaginados = false, atrasarLeituraExterna = false, atrasarRevalidacaoOrigem = false, duasRefeicoesDestino = false, limiteRefeicoesDestino = false, manterRefeicoesRecolhidas = false, nutrientesIncompletos = false, refeicaoSemAlimentos = false, atualizarNutrientesAoSalvar = false, documentoInicial } = {}) {
   let leiturasOrigemExterna = 0;
   let leiturasExternasPendentes = 0;
   let liberarLeituraExterna;
@@ -149,6 +149,8 @@ async function preparar(page, { falharRevalidacaoOrigem = false, alterarVersaoNa
     leiturasOrigemExterna += 1;
     const versaoAtual = alterarVersaoNaColagem && leiturasOrigemExterna > 1
       ? { ...sourceDraft, atualizadoEm: '2026-10-02T12:00:00.000Z' }
+      : alterarSomenteRevisaoNaColagem && leiturasOrigemExterna > 1
+        ? { ...sourceDraft, rascunhoRevisao: (sourceDraft.rascunhoRevisao ?? 0) + 1 }
       : sourceDraft;
     return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(versaoAtual) });
   });
@@ -627,6 +629,24 @@ test.describe('PA02 - copiar refeições sem substituir o plano de destino', () 
 
   test('se o rascunho salvo mudar após a seleção, exige carregá-lo novamente', async ({ page }) => {
     await preparar(page, { alterarVersaoNaColagem: true });
+    const painel = painelCopia(page);
+    await painel.getByLabel('Buscar outro paciente autorizado (opcional)').fill('Outra');
+    await painel.getByRole('button', { name: 'Buscar paciente' }).click();
+    await painel.getByLabel('Paciente de origem').selectOption(outroPaciente.id);
+    await painel.getByLabel('Plano de origem').selectOption('pa02-plano-origem');
+    await painel.getByLabel('Versão salva').selectOption('rascunho');
+    await painel.getByRole('button', { name: 'Carregar refeições' }).click();
+    await painel.getByLabel('Refeição salva').selectOption({ label: 'Jantar em rascunho (1 alimentos)' });
+    await painel.getByLabel('Criar nova refeição').check();
+    await painel.getByRole('button', { name: 'Copiar refeição' }).click();
+
+    await expect(painel.getByRole('alert')).toContainText('A versão de origem foi alterada. Carregue-a novamente antes de copiar.');
+    await expect(page.getByRole('textbox', { name: 'Nome da refeição' })).toHaveCount(1);
+    await expect(page.getByText('Existem alterações não salvas neste rascunho.')).toHaveCount(0);
+  });
+
+  test('se só a revisão editorial da origem mudar, exige nova conferência sem copiar dados obsoletos', async ({ page }) => {
+    await preparar(page, { alterarSomenteRevisaoNaColagem: true });
     const painel = painelCopia(page);
     await painel.getByLabel('Buscar outro paciente autorizado (opcional)').fill('Outra');
     await painel.getByRole('button', { name: 'Buscar paciente' }).click();
