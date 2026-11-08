@@ -593,23 +593,36 @@ permanece exclusivamente FOOD05.
 
 ## [FOOD05] Equivalência automática por nutriente-alvo
 
-**Origem:** item 45.
+**Origem:** item45. **Atualização24/10/2026:** escopo integral aprovado;
+escopo integral aprovado e desenvolvimento autorizado. O checkpoint atualizado, incluindo T07-A/T07-B e bloqueios correntes, aparece ao final do roadmap.
 
-**Status atual:** há composição nutricional e substituições, mas não equivalência automática por nutriente selecionado.
+**Entrega obrigatória:** energia/proteínas/carboidratos/gorduras, um alvo por
+operação; substituição individual e prévia dos grupos FOOD04 usam o mesmo motor.
+M01 preparo, M02 medidas caseiras confiáveis, M03 precisão/resíduos, M04 impacto
+hipotético da refeição, M05 avisos objetivos de praticidade, M06 comparação
+simultânea/seleção parcial, M07 revisão pendente/recálculo explícito e M08
+preferências pessoais. Nenhum M é opcional ou removível por divisão de PRs.
 
-**Dependência:** catálogo nutricional confiável.
+**Preservar:** principal/grupos/substituições existentes, autosave/PA07,
+fontes autorizadas, cifra/RLS/CAS, snapshots publicados e revisão humana.
+Novas alternativas sem liberação automática ao paciente. Zero/ausente não são
+intercambiáveis; sem otimização multinutriente, micronutrientes-alvo ou IA.
 
-**Implementação sugerida:**
-- escolher energia, proteína, carboidrato, gordura ou outro nutriente suportado;
-- calcular porção equivalente no backend;
-- tratar nutriente zero/ausente;
-- mostrar diferenças dos demais nutrientes antes de aplicar.
+**Aceite:** porção confirmada reproduz os números mostrados; cancelamento sem
+efeito parcial; todas M01–M08 e os dois contextos implementados/testados, matriz
+de autorização e regressões/CI concluídos. Prévia não grava nem soma todas as
+alternativas como consumo. Gates operacionais separados do aceite de código.
 
-**Aceite:**
-- cálculo reproduzível;
-- fonte do alimento preservada;
-- usuário revisa antes de inserir;
-- nenhum nutriente ausente é presumido como zero.
+**Dependência operacional:** FOOD04 #441 mergeada;1078 comprovada apenas em
+staging no último registro. Produção BLOCKED por quota Neon HTTP402/deploy backend
+falho. Sem nova autorização para cobrança/infra/migration/deploy. Esse bloqueio
+não impede planejamento/testes descartáveis, mas impede declarar rollout pronto.
+
+**Documentos:** [plano](../../tasks/plan-pos-320-food05.md),
+[tarefas](../../tasks/todo-pos-320-food05.md),
+[referências específicas](../../tasks/referencias-pos-320-food05.md).
+Esses links sobem a partir de docs/pos-320; o contrato detalhado fixa prioridades,
+propostas ainda para revisão e critérios objetivos por M01–M08.
 
 ---
 
@@ -1618,6 +1631,15 @@ Implementação apenas em branch deve ser registrada como:
 `IMPLEMENTADO — AGUARDANDO INTEGRAÇÃO`
 
 e não como concluída.
+
+
+### Atualização FOOD05 / FOOD05-MDL — decisão de 27/10/2026
+
+A autorização de desenvolvimento da FOOD05 principal está vigente. Seu escopo inclui D01–D17 aplicáveis, M01–M08 e T07-A (cópias entre planos/refeições autorizados, reautorização de origem, proveniência cifrada, nova identidade/pendência, revisão exata, locks, CAS, idempotência e rollback). A cópia por modelos não é requisito da entrega principal.
+
+**T07-B / FOOD05-MDL — entrega futura, ainda indisponível:** D18 e A06 foram transferidos para uma fase/PR complementar de prioridade alta após estabilizar FOOD05. Deve planejar artefato matemático genérico versionado, resolução e cálculo novo no destino, sem proveniência/paciente de origem transportado. Exige revisão técnica e autorização de execução próprias. D17 mantém bloqueio de modelo no backend e interface enquanto isso. Não tratar como concluída nem disponível.
+
+D15 e D16 estão reconhecidos como corrigidos tecnicamente; A04/A05 e a prova PostgreSQL concorrente permanecem pendentes até evidência. T07-A e T14 não recebem PASS antes de testes reais em PostgreSQL/RLS, regressões e revisão R4 independente. PR #446 permanece Draft. FOOD04 produção segue uma dependência operacional não confirmada como resolvida; CI/staging não comprovam produção. Nenhuma migration externa, merge ou deploy está autorizado neste checkpoint.
 
 ---
 
