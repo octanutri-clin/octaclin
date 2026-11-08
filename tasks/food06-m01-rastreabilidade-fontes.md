@@ -99,12 +99,12 @@ inalterado). Cada linha foi executada neste ciclo.
 | --- | --- |
 | Backend, domínio novo (`fontes-por-nutriente.spec.ts`), RED antes da implementação | RED funcional: 21 falhas e 2 passes triviais; depois GREEN, 23 testes |
 | Backend, integração das projeções (`fontes-por-nutriente-registro.spec.ts`) | PASS, 7 testes. Mutação comportamental da projeção: 3 falham, confirmando sensibilidade |
-| Backend, árvore `src/modulos/planos-alimentares` (após as correções de C2) | PASS: 89 suítes, 1.772 testes; 1 suíte SKIPPED (7 testes, integração PostgreSQL opt-in, executada no CI) |
+| Backend, árvore `src/modulos/planos-alimentares` (rodada de fechamento de lacunas) | PASS: 89 suítes, 1.781 testes; 1 suíte SKIPPED (7 testes, integração PostgreSQL opt-in, executada no CI) |
 | Backend `pnpm typecheck` e `pnpm build` | PASS |
-| Web, runner `test:calculo-combinado-planos`, RED antes de cada implementação | RED funcional em cada rodada; PASS final, 127 testes (92 anteriores + 35 novos) |
+| Web, runner `test:calculo-combinado-planos`, RED antes de cada implementação | RED funcional em cada rodada; PASS final, 134 testes (92 anteriores + 42 novos) |
 | Web `test:planos-alimentares:bff` e `test:linguagem` | PASS (150 testes; linguagem aprovada) |
 | Web `typecheck` e ESLint dos arquivos alterados | PASS; 1 aviso preexistente em spec que não alterei |
-| Browser desktop+mobile, `food06-tabela-factual` e `food06-contexto-historico`, com `FOOD06_PDF_REAL=true`, após as correções de C2 e as melhorias NUX | 88 PASS, 0 SKIPPED, 0 FAIL |
+| Browser desktop+mobile, `food06-tabela-factual` e `food06-contexto-historico`, com `FOOD06_PDF_REAL=true`, rodada de fechamento de lacunas | 93 PASS e 1 FAIL na rodada completa: corrida de tempo preexistente no teste de PDF do relatório versionado (mobile), que afirmava o fim do PDF antes de ele terminar. Passou 12 de 12 isolado; corrigida a espera e o spec do histórico passou 22 de 22. Não foi ignorado nem pulado |
 | Browser, PDF real com `FOOD06_PDF_REAL=true` (opt-in, `pdftotext`) | PASS, 8 testes; teste M01 do relatório com extração de texto do PDF também PASS |
 | axe nas áreas alteradas (tabela e prévia do relatório) | Sem violações; não equivale a PDF/UA nem a leitor de tela humano |
 | Web `pnpm build` (Next 16) | PASS, 196 páginas estáticas geradas |
@@ -211,3 +211,37 @@ especial). Não iniciada.
 - Snapshots históricos congelados com outra identificação de fonte aparecem como "sem origem documentada".
 - Cabeçalho repetido por página em impressão de várias páginas e a continuação de uma célula longa sem o nome do
   nutriente não foram medidos (dependem do navegador; só o PDF real com 50 grupos foi verificado).
+
+## 12. Rodada de fechamento de lacunas
+
+Origem: avaliação crítica do que foi feito (NUX das etapas A, B e C e lacunas do trabalho). Itens resolvidos, com a prova:
+
+| # | Lacuna ou erro | Resolução | Prova |
+| --- | --- | --- | --- |
+| 1 | A origem por nutriente só estava no relatório com contexto (formato 2), que exigia marcar "Carregar contextos registrados" e expandir o contexto; análises sem contexto só tinham o formato 1 | Botão "Conferir relatório com origem por nutriente" para toda análise sem contexto; o formato padrão da API não mudou | Teste de navegador: o pedido sai com `versaoRelatorio: 2`, a coluna aparece e o axe não acusa violação |
+| 2 | O histórico não mostrava origem | O resumo histórico carrega `fontesPorNutriente`; a célula de cobertura do nutriente selecionado mostra a linha de origem | Contrato backend→leitor Web **real** do histórico; teste de navegador |
+| 2b | **Erro meu, achado nesta rodada:** a mudança acima faria o leitor Web do histórico recusar o campo novo (lista estrita de chaves), quebrando a tela | O leitor passou a aceitar e validar `fontesPorNutriente`, reconciliado com as contagens do mesmo ponto | RED funcional antes da correção; teste de contrato com o leitor real |
+| 3 | Rótulo "composição informada manualmente" nos detalhes por alimento (M02) | "Entrada manual (valores digitados no cadastro do alimento)" | Busca no código: nenhum texto antigo restante |
+| 4 | "Fonte não catalogada" era código morto e uma fonte desconhecida virava "sem origem documentada" | O backend emite o grupo `nao_catalogada` (sem código, versão ou texto livre); a interface o trata como ponto de atenção | Testes de domínio e de leitor; canário de texto livre |
+| 5 | Resumo global (M08) agrupava por tipo e versão, juntando USDA Foundation e SR Legacy | Agrupa também por código; leitor Web e relatório mostram o código | Testes backend e Web |
+| 6 | Ordenação do backend dependia de ICU | Ordem por minúsculas e depois binária | Teste de ordem |
+| 8 | Severidade só visual | Texto oculto "Atenção:" ou "Informação:" | Verificado no markup e no axe |
+| 9 | O contrato não exercia o método real do serviço | `analisarMicronutrientes` real é chamado; só o wrapper privado é simulado | Mutação no serviço: 5 testes falham |
+| — | A11 (contagem-resumo) e filtro por origem | "Entrada manual em N de 22 nutrientes", linha de "origem a conferir" e filtro "Origem dos dados" (só aparece quando a resposta traz origem) | Testes unitários e de navegador (desktop e mobile) |
+| — | Prova de C1 só com valor somado | Cenário em que o **único** valor de ferro é zero: `0` estrito na tabela, no histórico e no relatório; cálcio ausente sem valor nem origem | Contrato backend e Web |
+
+### Itens que estavam "não verificados" e o que se apurou
+
+| Item | Resultado |
+| --- | --- |
+| Snapshots históricos com outra identificação de fonte | A migração 1028 define `base_codigo = codigo` para as fontes existentes e `baseCodigo` é opcional no snapshot: snapshots anteriores não têm `baseCodigo`. Passaram a ser reconhecidos pelo código; `baseCodigo` presente e divergente continua recusado |
+| Versões reais de USDA e IBGE | **Não estão no repositório.** A versão de USDA é argumento livre (`--versao`) e a governança só exige que não seja vazia. O formato aceito foi relaxado para rótulo livre (letras, números, espaço e pontuação comum, até 64 caracteres, sem markup). Os valores reais de produção continuam não confirmados |
+| Impressão de várias páginas | Medido em PDF real de 8 páginas (A4): o cabeçalho com a legenda se repete em todas as páginas. **Encontrado e corrigido** um defeito: as páginas que continuavam a lista longa não traziam o nome do nutriente |
+| Celular real | **Não verificável aqui.** Só Chromium em viewport mobile |
+| CI dos últimos commits | A falha "Governanca de repositorio" é o job do inventário de segurança: `SQ-2026-004` com revisão vencida por data (hoje, 08/11). Reproduz localmente, a branch não altera o inventário e o histórico do repositório registra a mesma falha preexistente na `main`. **Não foi alterada a data**, por ser uma revisão de segurança do proprietário |
+| Resultado por teste do PostgreSQL | **Não recuperável** pelo log do CI (a saída do Jest fica fora da janela do log); só a conclusão da etapa |
+| Independência das revisões | **Não resolvível por mim:** as duas revisões de segurança e a UX são de subagentes; falta revisão humana |
+
+### Estado dos critérios
+
+C1, C2 e C3 seguem **provados pelo teste de contrato e não promovidos** na matriz canônica; a decisão continua do proprietário. O contrato agora cobre quatro superfícies (tabela, registro, histórico e relatório), o zero conhecido como valor `0` e o método real do serviço.
