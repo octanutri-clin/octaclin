@@ -13,7 +13,7 @@ export function OrigemNutrienteLinha({origem}:{origem?:Origem}) {
   const resumo=origem?resumirOrigemLinha(origem):undefined;
   if(!resumo)return null;
   return <div className="grid gap-0.5 text-sm" data-origem-linha="true">
-    {resumo.excecoes.map(e=><p key={e.texto} className="font-medium"><span aria-hidden="true">{e.atencao?'▲ ':'● '}</span>{e.texto}</p>)}
+    {resumo.excecoes.map(e=><p key={e.texto} className="font-medium"><span aria-hidden="true">{e.atencao?'▲ ':'● '}</span><span className="sr-only">{e.atencao?'Atenção: ':'Informação: '}</span>{e.texto}</p>)}
     {resumo.fontes.length?<p>
       <span className="sm:hidden">Origem registrada: {formatarFontesCurtas(resumo.fontes,1)}</span>
       <span className="hidden sm:inline">Origem registrada: {formatarFontesCurtas(resumo.fontes,2)}</span>
@@ -33,17 +33,20 @@ export function OrigemNutrienteFactual({origem,rotulo}:{origem?:Origem;rotulo:st
     {origem.semOrigemDocumentada>0?<p>{rotuloQuantidadeAlimentos(origem.semOrigemDocumentada)} sem origem documentada.</p>:null}
     {origem.fontesNaoDetalhadas>0?<p>{rotuloQuantidadeAlimentos(origem.fontesNaoDetalhadas)} em fontes adicionais não detalhadas.</p>:null}
     {temManual?<p>Entrada manual: valores digitados no cadastro do alimento; não vêm de uma base catalogada.</p>:null}
-    {temNaoCatalogada?<p>Fonte não catalogada: o registro cita um código que este sistema não reconhece.</p>:null}
+    {temNaoCatalogada?<p>Fonte não catalogada: o registro cita uma fonte que este sistema não reconhece.</p>:null}
     <p>{LIMITACAO}</p>
   </div>;
 }
 
 /** Célula do relatório impresso: uma origem por linha, na mesma ordem da tabela, para quebrar bem entre páginas. */
-export function OrigemNutrienteResumo({origem}:{origem?:Origem}) {
+/** Acima deste tamanho a célula pode atravessar páginas; cada item passa a carregar o nome do nutriente. */
+export const LIMITE_LISTA_CURTA_RELATORIO=6;
+export function OrigemNutrienteResumo({origem,rotulo}:{origem?:Origem;rotulo:string}) {
   if(!origem)return <>Não disponibilizada</>;
   if(origem.contribuintes===0)return <>Sem valor conhecido</>;
   const itens=[...ordenarFontesParaExibicao(origem.fontes).map(descreverFonteFactual)];
   if(origem.semOrigemDocumentada>0)itens.push(`${rotuloQuantidadeAlimentos(origem.semOrigemDocumentada)} sem origem documentada`);
   if(origem.fontesNaoDetalhadas>0)itens.push(`${rotuloQuantidadeAlimentos(origem.fontesNaoDetalhadas)} em fontes adicionais não detalhadas`);
-  return <ul className="m-0 list-none break-words p-0">{itens.map(t=><li key={t}>{t}</li>)}</ul>;
+  const longa=itens.length>LIMITE_LISTA_CURTA_RELATORIO;
+  return <ul className="m-0 list-none break-words p-0">{itens.map(t=><li key={t}>{longa?`${rotulo}: ${t}`:t}</li>)}</ul>;
 }

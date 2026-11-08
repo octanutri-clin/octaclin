@@ -65,3 +65,32 @@ test('histórico só admite resumo quando solicitado, sem completar registro ant
 test('consulta de contexto preserva a flag no body e não usa parâmetros clínicos em URL',async()=>{
  const original=globalThis.fetch;try{globalThis.fetch=async(url,init)=>{assert.ok(!String(url).includes('?'));assert.equal(init?.cache,'no-store');assert.deepEqual(JSON.parse(String(init?.body)),{limite:10,incluirContexto:true});return Response.json(pagina({temMais:false,proximoCursor:undefined}));};await obterHistoricoMicronutrientesFactual('paciente',undefined,new AbortController().signal,true);}finally{globalThis.fetch=original;}
 });
+
+/* FOOD06 M01 — o histórico também carrega a origem por nutriente (aditivo). */
+type PontoComOrigem={nutrientes:Record<string,{origem?:{contribuintes:number;fontes:{tipo:string;quantidade:number}[]}}>};
+function fontesDoHistorico(pag:{itens:{nutrientes:Record<string,{contagens:{conhecidos:number}}>}[]}){
+ const n=pag.itens[0]!.nutrientes;
+ return {schemaVersao:1,vinculo:'origem_do_registro_de_composicao',nutrientes:Object.fromEntries(CAMPOS_MICRONUTRIENTES_PLANO.map(c=>{
+  const k=n[c.codigo]!.contagens.conhecidos;
+  return [c.codigo,{contribuintes:k,fontes:k?[{tipo:'manual',quantidade:k}]:[],semOrigemDocumentada:0,fontesNaoDetalhadas:0}];
+ }))};
+}
+test('M01 histórico aceita a origem por nutriente e a anexa sem mudar valor, estado ou contagens',()=>{
+ const base=pagina() as {itens:Record<string,unknown>[]};
+ const sem=lerPaginaHistoricoMicronutrientesFactual(JSON.parse(JSON.stringify(base)));
+ base.itens[0]!.fontesPorNutriente=fontesDoHistorico(base as never);
+ const a=lerPaginaHistoricoMicronutrientesFactual(base);
+ const p=a.itens[0] as unknown as PontoComOrigem;
+ assert.deepEqual(p.nutrientes.ferroMg!.origem,{contribuintes:1,fontes:[{tipo:'manual',quantidade:1}],semOrigemDocumentada:0,fontesNaoDetalhadas:0});
+ assert.equal(p.nutrientes.selenioMcg!.origem?.contribuintes,0);
+ assert.equal(a.itens[0]!.nutrientes.calcioMg.valor,sem.itens[0]!.nutrientes.calcioMg.valor);
+ assert.equal(a.itens[0]!.nutrientes.ferroMg.valor,1.25);
+ assert.ok(sem.itens[0] && Object.values((sem.itens[0] as unknown as PontoComOrigem).nutrientes).every(x=>x.origem===undefined));
+});
+test('M01 histórico recusa origem inconsistente com a cobertura do mesmo ponto',()=>{
+ const base=pagina() as {itens:Record<string,unknown>[]};
+ const f=fontesDoHistorico(base as never) as {nutrientes:Record<string,{contribuintes:number}>};
+ f.nutrientes.ferroMg!.contribuintes=2;
+ base.itens[0]!.fontesPorNutriente=f;
+ assert.throws(()=>lerPaginaHistoricoMicronutrientesFactual(base),/interpretar|histórico|conferir/i);
+});

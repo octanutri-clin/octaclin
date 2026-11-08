@@ -3,7 +3,7 @@ import { classificarContribuicao } from './cobertura-dietetica';
 import { CODIGOS_MICRONUTRIENTES, type CodigoMicronutriente } from './micronutrientes';
 import { identificarFonteCatalogo } from './fonte-catalogo';
 
-export type TipoFonteNutriente = 'TACO' | 'USDA' | 'IBGE' | 'manual' | 'custom';
+export type TipoFonteNutriente = 'TACO' | 'USDA' | 'IBGE' | 'manual' | 'custom' | 'nao_catalogada';
 export interface FonteNutrienteDietetica {
   tipo: TipoFonteNutriente;
   codigo?: string;
@@ -41,9 +41,16 @@ function origemDoItem(item: unknown): Origem | undefined {
   if (!snapshot) return undefined;
   if (snapshot.origem === 'manual' || snapshot.origem === 'custom') return { tipo: snapshot.origem };
   if (snapshot.origem !== 'catalogo') return undefined;
-  return identificarFonteCatalogo(snapshot.fonte);
+  const fonte = objeto(snapshot.fonte);
+  if (!fonte || Object.keys(fonte).length === 0) return undefined;
+  // Há fonte registrada, mas não é uma das fontes governadas: informa o fato sem expor código, versão ou texto livre.
+  return identificarFonteCatalogo(fonte) ?? { tipo: 'nao_catalogada' };
 }
-const comparar = (a?: string, b?: string) => (a ?? '').localeCompare(b ?? '', 'pt-BR', { numeric: true });
+/** Ordem sem ICU: minúsculas e depois binário, para que a mesma entrada dê sempre a mesma saída. */
+const comparar = (a?: string, b?: string) => {
+  const x = a ?? '', y = b ?? '', lx = x.toLowerCase(), ly = y.toLowerCase();
+  return lx < ly ? -1 : lx > ly ? 1 : x < y ? -1 : x > y ? 1 : 0;
+};
 
 /**
  * Origem registrada dos contribuintes conhecidos, por nutriente. Usa a mesma seleção e o

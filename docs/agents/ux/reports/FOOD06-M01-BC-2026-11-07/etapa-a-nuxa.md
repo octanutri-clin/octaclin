@@ -16,16 +16,23 @@ Resumo de origem **sempre visível** na linha, com peso baixo, e **exceções em
 | NUXA02 | "+N fontes" não pode esconder exceção | P1 | Implementado. Exceções integrais e fora do "+N"; "+N" só para bases catalogadas reconhecidas |
 | NUXA03 | A origem vale só para os alimentos conhecidos | P1 | Implementado. Linha colada à cobertura; sem linha quando 0 conhecidos; legenda acima da tabela |
 | NUXA04 | Densidade em celular | P2 | Implementado. 1 fonte + "+N" no celular e 2 no desktop; exceções sempre integrais. Verificado em Chromium mobile |
-| NUXA05 | Limitação onde se lê | P1 | Implementado. Legenda acima da tabela e no cabeçalho do relatório; frase completa em tamanho de corpo abaixo e nos detalhes |
-| NUXA06 | Rótulos e ordem | P2 | Implementado. "Entrada manual"; ordem manual, personalizado, não catalogada e bases por quantidade; mesma ordem na linha, nos detalhes e no relatório |
-| NUXA07 | Fonte não catalogada | P2 | Implementado. "Fonte não catalogada (código x)", com quebra permitida |
-| NUXA08 | Legenda na célula e cabeçalho repetido | P1 | Implementado a legenda no cabeçalho. Repetição do cabeçalho por página não foi medida em impressão de várias páginas (depende do navegador) |
-| NUXA09 | Lista em célula com até 50 grupos | P1 | Implementado em lista, com linhas que não se partem até 6 itens. PDF real com 50 grupos sem corte (teste de navegador). A continuação sem o nome do nutriente em página seguinte não foi avaliada |
+| NUXA05 | Limitação onde se lê | P1 | Implementado e **medido**: a legenda é o elemento imediatamente acima da tabela (distância < 40 px, desktop e mobile, em Chromium); no relatório está no cabeçalho da coluna e acima da tabela |
+| NUXA06 | Rótulos e ordem | P2 | Implementado em **todos** os lugares: linha, detalhes por nutriente, detalhes por alimento (M02, que ainda dizia "composição informada manualmente") e relatório. Ordem manual, personalizado, não catalogada e bases por quantidade |
+| NUXA07 | Fonte não catalogada | P2 | Reimplementado. A versão anterior ("código x") era **inalcançável** com o backend. Agora o backend emite um grupo `nao_catalogada` quando há fonte registrada que não é uma das governadas, sem expor código, versão ou texto livre; a interface mostra "Fonte não catalogada (N alimentos)" como ponto de atenção |
+| NUXA08 | Legenda na célula e cabeçalho repetido | P1 | Implementado e **medido** em PDF real de 8 páginas (A4, Chromium): o cabeçalho com a legenda aparece em todas as páginas |
+| NUXA09 | Lista em célula com até 50 grupos | P1 | Implementado em lista, com linhas que não se partem até 6 itens. **Medição no PDF real encontrou um defeito**: as páginas que continuavam a lista de origens do ferro não traziam o nome do nutriente. Corrigido: em listas com mais de 6 itens, cada item leva o nome do nutriente; agora todas as páginas com a lista o trazem. "Mostrando 50 de X fontes" não foi feito: o backend informa alimentos nas fontes adicionais, não grupos |
 | NUXA10 | Não adicionar passo ao fluxo | P2 | Atendido: sem modal nem campo novo; "Detalhes" continua com a lista completa |
-| NUXA11 | Contagem-resumo "entrada manual em X de 22" | P3 | BACKLOG, pedido do próprio parecer: depende de decisão de produto |
+| NUXA11 | Contagem-resumo "entrada manual em X de 22" | P3 | **Implementado** acima da tabela ("Entrada manual em N de 22 nutrientes." e, quando houver, "Origem a conferir … em N de 22 nutrientes."), por decisão posterior do proprietário. Acompanha um filtro "Origem dos dados" (todas, com entrada manual, com origem a conferir), que só aparece quando a resposta traz a origem |
 
 **Pergunta 6 (quem registrou a composição manual e quando):** não implementada. O dado não existe no snapshot congelado, e incluí-lo seria dado novo de persistência e identidade, com análise de privacidade. Se aprovado depois: só em detalhes e relatório, com "Autoria não registrada" para itens antigos.
 
 ## Limitações
 
 Sem tela real avaliada pelo subagente; celular e impressão reais não foram medidos por pessoas. A etapa C com a interface pronta deve repetir essa avaliação com evidência real.
+
+## Acréscimos desta rodada
+
+- **Origem alcançável no relatório principal:** o relatório com origem por nutriente (formato 2) só era oferecido dentro do bloco de contexto, depois de marcar "Carregar contextos registrados" e expandir o contexto. Análises salvas sem contexto só tinham o formato 1. Agora toda análise sem contexto tem o botão "Conferir relatório com origem por nutriente", sem passo extra. O formato padrão da API não mudou.
+- **Origem no histórico:** a célula de cobertura do nutriente selecionado mostra a mesma linha de origem da tabela.
+- **Severidade para leitor de tela:** o ícone (`▲` atenção, `●` informativo) continua `aria-hidden`; agora há texto oculto "Atenção:" ou "Informação:" antes da mensagem.
+- Continua não feito: autoria da entrada manual (dado novo de persistência e privacidade).

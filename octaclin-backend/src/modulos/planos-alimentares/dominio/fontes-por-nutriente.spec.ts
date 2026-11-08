@@ -91,18 +91,19 @@ describe('FOOD06 M01 fontes factuais por nutriente', () => {
 
   it('FT12 legado e itens sem origem utilizável: conhecido sem fonte vai para semOrigemDocumentada, sem falhar', () => {
     const r = calcio([plano([{}, item(4), item(4, { baseCodigo: 'DESCONHECIDA', codigo: 'x', versao: '1' }), item(4, TACO), null])]);
-    expect(r).toEqual({ contribuintes: 3, semOrigemDocumentada: 2, fontesNaoDetalhadas: 0,
-      fontes: [{ tipo: 'TACO', codigo: 'taco_nepa_unicamp', versao: '4.1', quantidade: 1 }] });
+    expect(r).toEqual({ contribuintes: 3, semOrigemDocumentada: 1, fontesNaoDetalhadas: 0,
+      fontes: [{ tipo: 'nao_catalogada', quantidade: 1 }, { tipo: 'TACO', codigo: 'taco_nepa_unicamp', versao: '4.1', quantidade: 1 }] });
   });
 
   it('código ausente ou malformado não identifica fonte; versão fora do formato fica desconhecida, sem preencher', () => {
     const r = calcio([plano([
-      item(1, { baseCodigo: 'cmvcol_taco3', codigo: 'taco_nepa_unicamp', versao: 'versão com espaço' }),
+      item(1, { baseCodigo: 'cmvcol_taco3', codigo: 'taco_nepa_unicamp', versao: 'v<1>' }),
       item(1, { baseCodigo: 'cmvcol_taco3' }),
       item(1, { baseCodigo: 'cmvcol_taco3', codigo: 'com espaço <script>', versao: '1' })
     ])]);
-    expect(r.fontes).toEqual([{ tipo: 'TACO', codigo: 'taco_nepa_unicamp', quantidade: 1 }]);
-    expect(r.semOrigemDocumentada).toBe(2);
+    expect(r.fontes).toEqual([{ tipo: 'nao_catalogada', quantidade: 2 }, { tipo: 'TACO', codigo: 'taco_nepa_unicamp', quantidade: 1 }]);
+    expect(r.semOrigemDocumentada).toBe(0);
+    expect(JSON.stringify(r)).not.toMatch(/script|com espaço/);
   });
 
   it('FT18 manual e custom expõem somente o tipo, sem versão ou código fictícios', () => {
@@ -118,7 +119,8 @@ describe('FOOD06 M01 fontes factuais por nutriente', () => {
     expect(r.fontesNaoDetalhadas).toBe(10);
     expect(r.fontes.reduce((n, f) => n + f.quantidade, 0) + r.semOrigemDocumentada + r.fontesNaoDetalhadas).toBe(r.contribuintes);
     const ordem = r.fontes.map(f => f.versao);
-    expect(ordem).toEqual([...ordem].sort((a, b) => a!.localeCompare(b!, 'pt-BR', { numeric: true })));
+    expect(ordem).toEqual([...ordem].sort()); // ordem binária, independente de ICU
+    expect(r.fontes.map(f => f.versao)).toContain('2025.10');
   });
 
   it('canário: campos extras do snapshot não vazam (hash, nome livre, descrição, extras na raiz)', () => {
@@ -194,17 +196,40 @@ describe('FOOD06 M01 fontes factuais por nutriente', () => {
         { tipo: 'USDA', codigo: 'usda_fdc_sr_legacy', versao: 'sr-legacy-2018', quantidade: 1 }
       ]);
     });
-    it('par incoerente, código desconhecido e identificação sintética antiga não viram origem oficial', () => {
+    it('par incoerente, código desconhecido e identificação sintética antiga viram "fonte não catalogada", nunca origem oficial', () => {
       const r = calcio([plano([
         item(1, { ...REAIS.taco, baseCodigo: 'foundation-foods' }),
         item(1, { codigo: 'fonte_desconhecida', baseCodigo: 'cmvcol_taco3', versao: '1' }),
         item(1, { baseCodigo: 'cmvcol_taco3', versao: '1' }),
         item(1, { codigo: 'taco_nepa_unicamp', baseCodigo: 'TACO', versao: '4.1' })
       ])]);
-      expect(r).toEqual({ contribuintes: 4, fontes: [], semOrigemDocumentada: 4, fontesNaoDetalhadas: 0 });
+      expect(r).toEqual({ contribuintes: 4, fontes: [{ tipo: 'nao_catalogada', quantidade: 4 }], semOrigemDocumentada: 0, fontesNaoDetalhadas: 0 });
     });
-    it('versão com espaço, símbolo ou acima de 64 caracteres fica desconhecida, sem expor texto livre', () => {
-      const r = calcio([plano([item(1, { ...REAIS.taco, versao: 'CANARIO com espaço' }), item(1, { ...REAIS.taco, versao: 'a'.repeat(65) }), item(1, { ...REAIS.taco, versao: '<b>x</b>' })])]);
+    it('snapshot histórico sem baseCodigo (anterior à governança do catálogo) é reconhecido pelo código', () => {
+      const r = calcio([plano([item(1, { codigo: 'taco_nepa_unicamp', versao: 'taco-4a-cmvcol-taco3-v1' }), item(1, { codigo: 'usda_fdc_foundation', versao: '2025-10-30' })])]);
+      expect(r.semOrigemDocumentada).toBe(0);
+      expect(r.fontes).toEqual([
+        { tipo: 'TACO', codigo: 'taco_nepa_unicamp', versao: 'taco-4a-cmvcol-taco3-v1', quantidade: 1 },
+        { tipo: 'USDA', codigo: 'usda_fdc_foundation', versao: '2025-10-30', quantidade: 1 }]);
+    });
+    it('baseCodigo presente e divergente do código continua recusado, mesmo com código conhecido', () => {
+      expect(calcio([plano([item(1, { codigo: 'taco_nepa_unicamp', baseCodigo: 'foundation-foods', versao: '1' })])]).fontes).toEqual([{ tipo: 'nao_catalogada', quantidade: 1 }]);
+    });
+    it('fonte vazia ou ausente é "sem origem documentada", não "não catalogada"', () => {
+      const r = calcio([plano([item(1, {}), item(1), item(1, undefined, 'catalogo')])]);
+      expect(r).toEqual({ contribuintes: 3, fontes: [], semOrigemDocumentada: 3, fontesNaoDetalhadas: 0 });
+    });
+    it('fonte não catalogada não expõe código, versão nem texto livre', () => {
+      const r = calcio([plano([item(1, { codigo: 'CANARIO_CODIGO', baseCodigo: 'CANARIO_BASE', versao: 'CANARIO_VERSAO', nome: 'CANARIO_NOME' })])]);
+      expect(r.fontes).toEqual([{ tipo: 'nao_catalogada', quantidade: 1 }]);
+      expect(JSON.stringify(r)).not.toContain('CANARIO');
+    });
+    it('versão com espaços e pontuação comum, como rótulo livre do operador, é preservada', () => {
+      const r = calcio([plano([item(1, { ...REAIS.foundation, versao: 'FoodData Central 2025-04-24 (release 3)' })])]);
+      expect(r.fontes).toEqual([{ tipo: 'USDA', codigo: 'usda_fdc_foundation', versao: 'FoodData Central 2025-04-24 (release 3)', quantidade: 1 }]);
+    });
+    it('versão com markup ou acima de 64 caracteres fica desconhecida, sem expor texto livre', () => {
+      const r = calcio([plano([item(1, { ...REAIS.taco, versao: 'CANARIO <script>' }), item(1, { ...REAIS.taco, versao: 'a'.repeat(65) }), item(1, { ...REAIS.taco, versao: '<b>x</b>' })])]);
       expect(r.fontes).toEqual([{ tipo: 'TACO', codigo: 'taco_nepa_unicamp', quantidade: 3 }]);
       expect(JSON.stringify(r)).not.toMatch(/CANARIO|<b>/);
     });

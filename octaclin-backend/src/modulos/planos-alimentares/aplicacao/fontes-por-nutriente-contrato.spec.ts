@@ -15,7 +15,7 @@ import { construirAnaliseFactual } from './construtor-analise-factual';
 import { projetarRegistroFactual, projetarResumoHistoricoFactual } from './projecao-registro-factual';
 import { prepararRelatorioFactual } from './relatorio-analise-factual';
 import { resumirFontesRegistro } from './fontes-relatorio-factual';
-import { projetarAjudaDietetica } from './projecao-ajuda-dietetica';
+import { ServicoPlanosAlimentares } from './servico-planos-alimentares';
 import { analisarCoberturaDietetica } from '../dominio/cobertura-dietetica';
 import { analisarFontesPorNutriente } from '../dominio/fontes-por-nutriente';
 import { calcularNutrientesCombinados, type EntradaPlanoCombinado } from '../dominio/calculo-combinado';
@@ -37,33 +37,52 @@ const itens = () => [
   catalogo('usda_fdc_foundation', '2025.4', 'foundation-foods', { calcioMg: { estado: 'conhecido', valor: 5 }, zincoMg: { estado: 'conhecido', valor: 2 }, manganesMg: { estado: 'conhecido', valor: 4 } }),
   { origem: 'manual', nutrientesPor100g: macros, nutrientesPorcao: macros, micronutrientes: criarSnapshotMicronutrientes({ ferroMg: { estado: 'conhecido', valor: 3 }, zincoMg: { estado: 'conhecido', valor: 1 }, manganesMg: { estado: 'conhecido', valor: 2 } }, 100, 100) }
 ];
+// Cenário de C1: o único valor conhecido de ferro é ZERO (continua conhecido); cálcio está ausente (não é zero).
+const itensSoZero = () => [catalogo('taco_nepa_unicamp', '4.1', 'cmvcol_taco3', { ferroMg: { estado: 'conhecido', valor: 0 } })];
 const plano = (it: unknown[]): EntradaPlanoCombinado => ({ planoId: PLANO, ativo: true, selecionado: true, refeicoes: [{ identidadeId: REFEICAO, ativa: true, selecionada: true, itens: it }] });
-const registro = () => construirAnaliseFactual({
+const registroDe = (it: unknown[]) => construirAnaliseFactual({
   escopo: { tenantId: TENANT, pacienteId: PACIENTE },
   origem: { planoId: PLANO, versaoId: VERSAO, numero: 1, status: 'publicada', registradaEm: '2026-11-01T12:00:00.000Z' },
   ativo: true, selecionado: true,
-  refeicoes: [{ identidadeId: REFEICAO, ativa: true, selecionada: true, itens: itens().map(snapshot => ({ porcaoGramas: 100, snapshot })) }]
+  refeicoes: [{ identidadeId: REFEICAO, ativa: true, selecionada: true, itens: it.map(snapshot => ({ porcaoGramas: 100, snapshot })) }]
 });
+const registro = () => registroDe(itens());
 const json = <T>(v: T): T => JSON.parse(JSON.stringify(v));
-/** Mesma composição de `analisarMicronutrientes` (resposta do cálculo ao vivo). */
-const aoVivo = (planos: EntradaPlanoCombinado[]) => json({
-  schemaVersao: 1, motorVersao: 'food06-factual-v1', calculadoEm: '2026-11-07T12:00:00.000Z',
-  publicacoes: [{ planoId: PLANO, versaoId: VERSAO, ativacaoRevisao: 1 }],
-  calculo: calcularNutrientesCombinados(planos), cobertura: analisarCoberturaDietetica(planos),
-  fontes: analisarFontesPorNutriente(planos),
-  comparacoes: { estado: 'indisponivel', motivo: 'referencias_nao_habilitadas' }, ajuda: projetarAjudaDietetica()
-});
-function gerar() {
+/**
+ * Resposta do cálculo ao vivo produzida pelo MÉTODO REAL `analisarMicronutrientes`. Só o wrapper privado
+ * `executarCalculoCombinado` (autorização, locks e decifragem) é simulado, e ele apenas acrescenta
+ * `calculadoEm` e `publicacoes` ao que a projeção devolve. Se alguém remover `fontes` do serviço,
+ * este contrato falha.
+ */
+async function aoVivo(planos: EntradaPlanoCombinado[]) {
+  const servico = Object.create(ServicoPlanosAlimentares.prototype) as unknown as {
+    executarCalculoCombinado: (...a: unknown[]) => Promise<unknown>;
+    analisarMicronutrientes: (...a: unknown[]) => Promise<unknown>;
+  };
+  servico.executarCalculoCombinado = async (_t, _p, _u, _d, projetar) => ({
+    ...(projetar as (p: EntradaPlanoCombinado[], d: Map<string, never>) => object)(planos, new Map<string, never>()),
+    calculadoEm: '2026-11-07T12:00:00.000Z', publicacoes: [{ planoId: PLANO, versaoId: VERSAO, ativacaoRevisao: 1 }]
+  });
+  return json(await servico.analisarMicronutrientes('tenant', 'paciente', {}, {})) as Record<string, any>;
+}
+async function gerar() {
   const r = registro(), meta = { id: REGISTRO, criadoEm: new Date('2026-11-07T11:00:00.000Z') };
   const projecao = projetarRegistroFactual(meta, r);
   const comFontes = { ...projecao, fontesComposicao: resumirFontesRegistro(r) };
   const agora = new Date('2026-11-07T13:00:00.000Z');
+  const rz = registroDe(itensSoZero()), pz = projetarRegistroFactual(meta, rz);
+  const zero = {
+    aoVivo: null as unknown, historico: json(projetarResumoHistoricoFactual(meta, rz)),
+    relatorioV2: json(prepararRelatorioFactual({ ...pz, fontesComposicao: resumirFontesRegistro(rz) }, agora, 2))
+  };
   return {
+    zero: { historico: zero.historico, relatorioV2: zero.relatorioV2 },
     descricao: 'Fixture gerado por fontes-por-nutriente-contrato.spec.ts. Dados 100% sintéticos. Não editar à mão.',
     entrada: { selecoes: [{ planoId: PLANO, versaoIdEsperada: VERSAO, ativacaoRevisaoEsperada: 1, identidadesRefeicoes: [REFEICAO] }] },
     registroId: REGISTRO,
-    aoVivo: aoVivo([plano(itens())]),
-    aoVivoSemComponentes: aoVivo([plano([])]),
+    aoVivo: await aoVivo([plano(itens())]),
+    aoVivoSemComponentes: await aoVivo([plano([])]),
+    aoVivoZero: await aoVivo([plano(itensSoZero())]),
     registro: json(projecao),
     historico: json(projetarResumoHistoricoFactual(meta, r)),
     relatorioV1: json(prepararRelatorioFactual(comFontes, agora, 1)),
@@ -77,10 +96,16 @@ const cob = (o: any, c: string): Nut => o.cobertura.nutrientes[c];
 const fon = (o: any, c: string): Fon => o.fontes.nutrientes[c];
 
 describe('FOOD06 M01-C1/C2/C3: contrato entre API ao vivo, registro, detalhes e relatório', () => {
-  const g = gerar();
-  const registroComoSuperficie = { cobertura: g.registro.analise.cobertura, fontes: g.registro.fontesPorNutriente };
-  const relatorioComoSuperficie = { cobertura: g.relatorioV2.analise.cobertura, fontes: (g.relatorioV2 as any).fontesPorNutriente };
-  const superficies = { aoVivo: g.aoVivo, registro: registroComoSuperficie, relatorioV2: relatorioComoSuperficie } as Record<string, any>;
+  let g: Awaited<ReturnType<typeof gerar>>;
+  let registroComoSuperficie: any, relatorioComoSuperficie: any, historicoComoSuperficie: any, superficies: Record<string, any>;
+  const NOMES_SUPERFICIES = ['aoVivo', 'registro', 'relatorioV2', 'historico'];
+  beforeAll(async () => {
+    g = await gerar();
+    registroComoSuperficie = { cobertura: g.registro.analise.cobertura, fontes: g.registro.fontesPorNutriente };
+    relatorioComoSuperficie = { cobertura: g.relatorioV2.analise.cobertura, fontes: (g.relatorioV2 as any).fontesPorNutriente };
+    historicoComoSuperficie = { cobertura: { nutrientes: g.historico.nutrientes }, fontes: g.historico.fontesPorNutriente };
+    superficies = { aoVivo: g.aoVivo, registro: registroComoSuperficie, relatorioV2: relatorioComoSuperficie, historico: historicoComoSuperficie };
+  });
 
   it('o fixture compartilhado com a Web é exatamente o que o backend produz hoje', () => {
     if (process.env.ATUALIZAR_FIXTURE_FOOD06_M01 === 'true') writeFileSync(FIXTURE, JSON.stringify(g, null, 1) + '\n');
@@ -88,7 +113,7 @@ describe('FOOD06 M01-C1/C2/C3: contrato entre API ao vivo, registro, detalhes e 
   });
 
   describe('M01-C1 zero conhecido é diferente de ausência; cobertura por nutriente, não por alimento', () => {
-    it.each(Object.keys(superficies))('%s: ferro com zero conhecido contribui; magnésio ausente não tem valor nem origem', nome => {
+    it.each(NOMES_SUPERFICIES)('%s: ferro com zero conhecido contribui; magnésio ausente não tem valor nem origem', nome => {
       const s = superficies[nome];
       expect(cob(s, 'ferroMg')).toMatchObject({ estado: 'PARCIAL', quantidadeConhecida: 3, contagens: { incluidos: 3, conhecidos: 2, semComposicao: 1 } });
       expect(fon(s, 'ferroMg').fontes).toEqual([{ tipo: 'manual', quantidade: 1 }, { tipo: 'TACO', codigo: 'taco_nepa_unicamp', versao: '4.1', quantidade: 1 }]);
@@ -101,6 +126,25 @@ describe('FOOD06 M01-C1/C2/C3: contrato entre API ao vivo, registro, detalhes e 
       const conhecidos = ['calcioMg', 'ferroMg', 'zincoMg', 'magnesioMg'].map(c => cob(g.aoVivo, c).contagens.conhecidos);
       expect(conhecidos).toEqual([2, 2, 3, 0]);
       expect(new Set(['calcioMg', 'ferroMg', 'zincoMg', 'magnesioMg'].map(c => cob(g.aoVivo, c).contagens.incluidos))).toEqual(new Set([3]));
+    });
+  });
+
+  describe('M01-C1 (zero conhecido) em todas as superfícies, com o valor 0 visível', () => {
+    it('ferro com zero conhecido é COMPLETO com total 0 e origem; cálcio ausente é DESCONHECIDO sem valor nem origem', () => {
+      const zeroSup = {
+        aoVivo: g.aoVivoZero,
+        historico: { cobertura: { nutrientes: g.zero.historico.nutrientes }, fontes: g.zero.historico.fontesPorNutriente },
+        relatorioV2: { cobertura: g.zero.relatorioV2.analise.cobertura, fontes: (g.zero.relatorioV2 as any).fontesPorNutriente }
+      } as Record<string, any>;
+      for (const [nome, s] of Object.entries(zeroSup)) {
+        expect(cob(s, 'ferroMg')).toMatchObject({ estado: 'COMPLETO', total: 0 });
+        expect(cob(s, 'ferroMg').total).toBe(0);
+        expect(fon(s, 'ferroMg')).toEqual({ contribuintes: 1, fontes: [{ tipo: 'TACO', codigo: 'taco_nepa_unicamp', versao: '4.1', quantidade: 1 }], semOrigemDocumentada: 0, fontesNaoDetalhadas: 0 });
+        expect(cob(s, 'calcioMg')).toMatchObject({ estado: 'DESCONHECIDO', contagens: { incluidos: 1, conhecidos: 0, semComposicao: 1 } });
+        expect(cob(s, 'calcioMg')).not.toHaveProperty('total');
+        expect(cob(s, 'calcioMg')).not.toHaveProperty('quantidadeConhecida');
+        expect(fon(s, 'calcioMg')).toEqual({ contribuintes: 0, fontes: [], semOrigemDocumentada: 0, fontesNaoDetalhadas: 0 });
+      }
     });
   });
 
@@ -149,11 +193,12 @@ describe('FOOD06 M01-C1/C2/C3: contrato entre API ao vivo, registro, detalhes e 
       expect(g.relatorioV2.referencias).toEqual({ estado: 'indisponivel', motivo: 'referencias_nao_habilitadas' });
       expect(JSON.stringify([g.aoVivo.cobertura, g.aoVivo.fontes, g.registro.analise.cobertura, g.registro.fontesPorNutriente])).not.toMatch(/percentual|adequa|rda|"ul"|"ai"/i);
     });
-    it('cobertura e origem são idênticas na API ao vivo, no registro e no relatório formato 2', () => {
+    it('cobertura e origem são idênticas na API ao vivo, no registro, no histórico e no relatório formato 2', () => {
       for (const c of CODIGOS_MICRONUTRIENTES) {
         const base = { cobertura: cob(g.aoVivo, c), fontes: fon(g.aoVivo, c) };
         expect({ cobertura: cob(registroComoSuperficie, c), fontes: fon(registroComoSuperficie, c) }).toEqual(base);
         expect({ cobertura: cob(relatorioComoSuperficie, c), fontes: fon(relatorioComoSuperficie, c) }).toEqual(base);
+        expect({ cobertura: cob(historicoComoSuperficie, c), fontes: fon(historicoComoSuperficie, c) }).toEqual(base);
       }
     });
     it('R4C2-02 resumo histórico preserva o subtotal conhecido também quando há incompatibilidade, igual às outras superfícies', () => {

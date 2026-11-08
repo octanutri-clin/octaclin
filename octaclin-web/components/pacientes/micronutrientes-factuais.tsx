@@ -8,12 +8,12 @@ import { OrigemNutrienteFactual, OrigemNutrienteLinha, LEGENDA_ORIGEM_TABELA } f
 import { useCallback, useEffect, useId, useState } from 'react';
 import { analisarMicronutrientesPlanejados } from '@/lib/calculo-combinado-planos-api';
 import { ErroApiPlanoAlimentar, type SelecaoCalculoLocal, type CalcularCombinadoEntradaApi } from '@/lib/plano-alimentar-api';
-import { CAUSAS_COBERTURA_FACTUAL, filtrarMicronutrientesFactuais, type AnaliseMicronutrientesFactual, type EstadoCoberturaFactual, type FiltrosMicronutrientesFactuais } from '@/lib/micronutrientes-factuais';
+import { CAUSAS_COBERTURA_FACTUAL, filtrarMicronutrientesFactuais, resumirOrigemTabela, type AnaliseMicronutrientesFactual, type EstadoCoberturaFactual, type FiltrosMicronutrientesFactuais } from '@/lib/micronutrientes-factuais';
 import { formatarNutrientePlano } from '@/lib/micronutrientes-plano';
 const ESTADOS: Record<EstadoCoberturaFactual,string> = {
   COMPLETO:'Dados completos', PARCIAL:'Dados parciais', DESCONHECIDO:'Composição desconhecida', INCOMPATIVEL:'Dados incompatíveis', INDISPONIVEL:'Cálculo indisponível'
 };
-const FILTROS_INICIAIS: FiltrosMicronutrientesFactuais = {grupo:'todos',cobertura:'todas',ordem:'nome'};
+const FILTROS_INICIAIS: FiltrosMicronutrientesFactuais = {grupo:'todos',cobertura:'todas',ordem:'nome',origem:'todas'};
 interface Props { planosRegistro:SelecaoCalculoLocal[];  aoInvalidarLeitura:(status:number)=>void; nomesPlanos:Record<string,string>; pacienteId: string; entrada: CalcularCombinadoEntradaApi; chaveContexto: string; aoAtualizarSelecao: () => Promise<boolean>; atualizando: boolean; leituraPermitida: boolean }
 export function MicronutrientesFactuais({planosRegistro,aoInvalidarLeitura,nomesPlanos,pacienteId,entrada,chaveContexto,aoAtualizarSelecao,atualizando,leituraPermitida}:Props) {
   const id=useId();
@@ -64,9 +64,14 @@ export function MicronutrientesFactuais({planosRegistro,aoInvalidarLeitura,nomes
             <label className="grid gap-1 text-sm">Grupo de nutrientes<select value={filtros.grupo} onChange={e=>setFiltros(v=>({...v,grupo:e.target.value as FiltrosMicronutrientesFactuais['grupo']}))} className="min-h-11 min-w-0 rounded border border-linha bg-white px-2"><option value="todos">Vitaminas e minerais</option><option value="vitaminas">Vitaminas</option><option value="minerais">Minerais</option></select></label>
             <label className="grid gap-1 text-sm">Cobertura dos dados<select value={filtros.cobertura} onChange={e=>setFiltros(v=>({...v,cobertura:e.target.value as FiltrosMicronutrientesFactuais['cobertura']}))} className="min-h-11 min-w-0 rounded border border-linha bg-white px-2"><option value="todas">Todas as coberturas</option>{Object.entries(ESTADOS).map(([valor,rotulo])=><option key={valor} value={valor}>{rotulo}</option>)}</select></label>
             <label className="grid gap-1 text-sm">Ordenar nutrientes<select value={filtros.ordem} onChange={e=>setFiltros(v=>({...v,ordem:e.target.value as FiltrosMicronutrientesFactuais['ordem']}))} className="min-h-11 min-w-0 rounded border border-linha bg-white px-2"><option value="nome">Nome</option><option value="quantidade">Quantidade por unidade</option><option value="cobertura">Cobertura</option></select></label>
+            {dados.linhas.some(l=>l.origem)?<label className="grid gap-1 text-sm">Origem dos dados<select value={filtros.origem??'todas'} onChange={e=>setFiltros(v=>({...v,origem:e.target.value as NonNullable<FiltrosMicronutrientesFactuais['origem']>}))} className="min-h-11 min-w-0 rounded border border-linha bg-white px-2"><option value="todas">Todas as origens</option><option value="entrada_manual">Com entrada manual</option><option value="atencao">Com origem a conferir</option></select></label>:null}
           </div>
           <div className="flex flex-wrap items-center gap-3 text-sm"><p role="status">{linhas.length} de {dados.linhas.length} nutrientes exibidos.</p><button type="button" className="min-h-11 text-primaria underline" onClick={()=>setFiltros(FILTROS_INICIAIS)}>Limpar filtros</button></div>
           {filtros.ordem==='quantidade'?<p className="text-xs text-texto-suave">Quantidades agrupadas por unidade; dados sem valor vêm por último. A ordem não indica adequação nutricional.</p>:null}
+          {resumirOrigemTabela(dados.linhas)?(()=>{const r=resumirOrigemTabela(dados.linhas)!;return <div className="grid gap-0.5 text-sm" data-origem-resumo="true">
+            <p className="font-medium">{r.entradaManual>0?`Entrada manual em ${r.entradaManual} de ${r.total} nutrientes.`:'Nenhum nutriente com entrada manual.'}</p>
+            {r.atencao>0?<p className="font-medium">{`Origem a conferir (sem origem documentada ou fonte não catalogada) em ${r.atencao} de ${r.total} nutrientes.`}</p>:null}
+          </div>;})():null}
           {dados.linhas.some(l=>l.origem)?<p className="text-sm">{LEGENDA_ORIGEM_TABELA}</p>:null}
           <div tabIndex={0} role="region" aria-label="Tabela de micronutrientes, role horizontalmente se necessário" className="max-w-full overflow-x-auto focus-visible:outline focus-visible:outline-2 focus-visible:outline-primaria">
             <table className="w-full min-w-[38rem] border-collapse text-left text-sm">

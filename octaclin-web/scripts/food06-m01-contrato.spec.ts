@@ -9,12 +9,15 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { lerAnaliseMicronutrientesFactual, lerLinhaMicronutrienteFactual, CAMPOS_MICRONUTRIENTES_PLANO } from '../lib/micronutrientes-factuais';
 import { lerRelatorioFactual } from '../lib/relatorio-factual';
+import { lerPaginaHistoricoMicronutrientesFactual } from '../lib/historico-micronutrientes-factuais';
 
 type Entrada = Parameters<typeof lerAnaliseMicronutrientesFactual>[1];
 const g = JSON.parse(readFileSync(resolve(process.cwd(), 'scripts/fixtures/food06-m01-contrato.json'), 'utf8')) as {
   entrada: Entrada; registroId: string; aoVivo: Record<string, unknown>; aoVivoSemComponentes: Record<string, unknown>;
   relatorioV1: Record<string, unknown>; relatorioV2: Record<string, unknown>;
   historico: { nutrientes: Record<string, unknown> };
+  aoVivoZero: Record<string, unknown>;
+  zero: { historico: Record<string, unknown>; relatorioV2: Record<string, unknown> };
 };
 type Origem = { contribuintes: number; fontes: { tipo: string; codigo?: string; versao?: string; quantidade: number }[]; semOrigemDocumentada: number; fontesNaoDetalhadas: number };
 type Linha = { codigo: string; estado: string; valor?: number; contagens: Record<string, number>; causas: { codigo: string; quantidade: number }[]; origem?: Origem };
@@ -91,4 +94,41 @@ test('R4C2-02 Web: resumo histórico lê todos os estados, inclusive INCOMPATIVE
     assert.deepEqual({ estado: h.estado, valor: h.valor, contagens: h.contagens, causas: h.causas }, { estado: base.estado, valor: base.valor, contagens: base.contagens, causas: base.causas }, c.codigo);
   }
   assert.equal((lerLinhaMicronutrienteFactual(g.historico.nutrientes.manganesMg, 'manganesMg') as unknown as Linha).valor, 6);
+});
+
+const paginaHistorico = (ponto: Record<string, unknown>) => lerPaginaHistoricoMicronutrientesFactual({ schemaVersao: 1, itens: [ponto], temMais: false });
+const linhasDoHistorico = (ponto: Record<string, unknown>) => Object.values(paginaHistorico(ponto).itens[0]!.nutrientes) as unknown as Linha[];
+
+test('M01-C3 Web: o histórico passa pelo leitor real e concorda com a tabela em estado, valor, contagens, causas e origem', () => {
+  const vivo = aoVivo(), hist = linhasDoHistorico(g.historico as unknown as Record<string, unknown>);
+  assert.equal(hist.length, CAMPOS_MICRONUTRIENTES_PLANO.length);
+  for (const c of CAMPOS_MICRONUTRIENTES_PLANO) assert.deepEqual(por(hist, c.codigo), por(vivo, c.codigo), c.codigo);
+  assert.equal(por(hist, 'manganesMg').estado, 'INCOMPATIVEL');
+  assert.equal(por(hist, 'manganesMg').valor, 6);
+});
+
+test('M01-C1 Web: zero conhecido aparece como valor 0 na tabela, no histórico e no relatório; ausência continua sem valor', () => {
+  const vivoZero = lerAnaliseMicronutrientesFactual(g.aoVivoZero, g.entrada).linhas as unknown as Linha[];
+  const histZero = linhasDoHistorico(g.zero.historico);
+  const relZero = lerRelatorioFactual(g.zero.relatorioV2, g.registroId).linhas as unknown as Linha[];
+  const origemTaco = { contribuintes: 1, fontes: [{ tipo: 'TACO', codigo: 'taco_nepa_unicamp', versao: '4.1', quantidade: 1 }], semOrigemDocumentada: 0, fontesNaoDetalhadas: 0 };
+  for (const [nome, linhas] of [['tabela', vivoZero], ['historico', histZero], ['relatorio', relZero]] as const) {
+    const ferro = por(linhas, 'ferroMg'), calcio = por(linhas, 'calcioMg');
+    assert.strictEqual(ferro.valor, 0, `${nome}: zero conhecido deve ser o número 0`);
+    assert.equal(ferro.estado, 'COMPLETO', nome);
+    assert.deepEqual(ferro.origem, origemTaco, nome);
+    assert.strictEqual(calcio.valor, undefined, `${nome}: ausência não pode virar zero`);
+    assert.equal(calcio.estado, 'DESCONHECIDO', nome);
+    assert.deepEqual(calcio.origem, { contribuintes: 0, fontes: [], semOrigemDocumentada: 0, fontesNaoDetalhadas: 0 }, nome);
+  }
+});
+
+test('M01 Web: histórico recusa origem adulterada e aceita ponto sem origem (registro anterior)', () => {
+  type PontoAdulteravel = Record<string, unknown> & { fontesPorNutriente: { nutrientes: Record<string, { contribuintes: number }> } };
+  const ponto = JSON.parse(JSON.stringify(g.historico)) as PontoAdulteravel;
+  const sem = JSON.parse(JSON.stringify(g.historico)) as PontoAdulteravel;
+  delete (sem as Record<string, unknown>).fontesPorNutriente;
+  assert.ok(linhasDoHistorico(sem).every(l => l.origem === undefined));
+  ponto.fontesPorNutriente.nutrientes.calcioMg.contribuintes += 1;
+  assert.throws(() => paginaHistorico(ponto));
 });

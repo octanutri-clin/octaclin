@@ -161,7 +161,7 @@ const invalidas:[string,(r:ReturnType<typeof comFontes>)=>void][]=[
   ['soma não reconcilia',r=>{r.fontes.nutrientes.calcioMg.fontes=[{...TACO_4_1,quantidade:1}] as never;}],
   ['quantidade zero',r=>{r.fontes.nutrientes.calcioMg.fontes=[{...TACO_4_1,quantidade:0}] as never;r.fontes.nutrientes.calcioMg.semOrigemDocumentada=2;}],
   ['tipo fora da lista',r=>{r.fontes.nutrientes.calcioMg.fontes=[{...TACO_4_1,tipo:'OUTRA'}] as never;r.fontes.nutrientes.calcioMg.semOrigemDocumentada=0;}],
-  ['versão malformada',r=>{r.fontes.nutrientes.calcioMg.fontes=[{...TACO_4_1,versao:'versão com espaço'}] as never;r.fontes.nutrientes.calcioMg.semOrigemDocumentada=0;}],
+  ['versão malformada',r=>{r.fontes.nutrientes.calcioMg.fontes=[{...TACO_4_1,versao:'versão <x>'}] as never;r.fontes.nutrientes.calcioMg.semOrigemDocumentada=0;}],
   ['código malformado',r=>{r.fontes.nutrientes.calcioMg.fontes=[{...TACO_4_1,codigo:'com espaço'}] as never;r.fontes.nutrientes.calcioMg.semOrigemDocumentada=0;}],
   ['grupos duplicados',r=>{r.fontes.nutrientes.calcioMg.fontes=[{...TACO_4_1,quantidade:1},{...TACO_4_1,quantidade:1}] as never;r.fontes.nutrientes.calcioMg.semOrigemDocumentada=0;}],
   ['vínculo diferente',r=>{(r.fontes as {vinculo:string}).vinculo='medicao_por_nutriente';}],
@@ -197,20 +197,26 @@ const TACO_F:FonteT={tipo:'TACO',codigo:'taco_nepa_unicamp',versao:'4.1',quantid
 const USDA_F:FonteT={tipo:'USDA',codigo:'usda_fdc_foundation',versao:'2025.4',quantidade:5};
 const IBGE_F:FonteT={tipo:'IBGE',codigo:'ibge_pof_2008_2009',versao:'2008.2009',quantidade:1};
 test('NUXA06/09 entrada manual é rotulada, ordenada primeiro e descrita sem adjetivo de qualidade',()=>{
-  const ordem=lib.ordenarFontesParaExibicao([USDA_F,TACO_F,{tipo:'custom',quantidade:1},{tipo:'manual',quantidade:1},IBGE_F,{tipo:'TACO',codigo:'codigo_novo',quantidade:9}]);
-  assert.deepEqual(ordem.map(f=>f.tipo+':'+(f.codigo??'')),['manual:','custom:','TACO:codigo_novo','USDA:usda_fdc_foundation','TACO:taco_nepa_unicamp','IBGE:ibge_pof_2008_2009']);
+  const ordem=lib.ordenarFontesParaExibicao([USDA_F,TACO_F,{tipo:'custom',quantidade:1},{tipo:'manual',quantidade:1},IBGE_F,{tipo:'nao_catalogada',quantidade:9}]);
+  assert.deepEqual(ordem.map(f=>f.tipo+':'+(f.codigo??'')),['manual:','custom:','nao_catalogada:','USDA:usda_fdc_foundation','TACO:taco_nepa_unicamp','IBGE:ibge_pof_2008_2009']);
   assert.equal(lib.descreverFonteFactual({tipo:'manual',quantidade:2}),'Entrada manual · 2 alimentos');
   assert.ok(!/Composição manual/.test(JSON.stringify(ordem.map(lib.descreverFonteFactual))));
 });
-test('NUXA07 fonte com código não catalogado é nomeada e não estoura em código longo',()=>{
-  const f:FonteT={tipo:'TACO',codigo:'x'.repeat(40),versao:'1.0',quantidade:1};
+test('NUXA07 fonte não catalogada é nomeada sem expor código, versão ou texto livre',()=>{
+  const f:FonteT={tipo:'nao_catalogada',quantidade:1};
   assert.equal(lib.fonteNaoCatalogada(f),true);assert.equal(lib.fonteNaoCatalogada(TACO_F),false);assert.equal(lib.fonteNaoCatalogada({tipo:'manual',quantidade:1}),false);
-  assert.equal(lib.descreverFonteFactual(f),`TACO · Fonte não catalogada (código ${'x'.repeat(40)}) · versão 1.0 · 1 alimento`);
-  assert.ok(!/código x\b(?!x)/.test(lib.descreverFonteFactual({...f,codigo:'abc'}).replace('(código abc)','')));
+  assert.equal(lib.descreverFonteFactual(f),'Fonte não catalogada · 1 alimento');
+  assert.equal(lib.descreverFonteFactual({...f,quantidade:3}),'Fonte não catalogada · 3 alimentos');
+  const r=resposta();conhecido(r,'calcioMg',3);
+  const rf=comFontes(r,{calcioMg:{fontes:[{tipo:'nao_catalogada',quantidade:2}],semOrigemDocumentada:0}});
+  assert.deepEqual((Reflect.get(lerAnaliseMicronutrientesFactual(rf,entrada).linhas.find(l=>l.codigo==='calcioMg')!,'origem') as {fontes:FonteT[]}).fontes,[{tipo:'nao_catalogada',quantidade:2}]);
+  const ruim=resposta();conhecido(ruim,'calcioMg',3);
+  const rg=comFontes(ruim,{calcioMg:{fontes:[{tipo:'nao_catalogada',codigo:'qualquer',quantidade:2}],semOrigemDocumentada:0}});
+  assert.throws(()=>lerAnaliseMicronutrientesFactual(rg,entrada),/interpretar/);
 });
 test('NUXA01/02/03 resumo da linha: exceções integrais fora do +N, só bases catalogadas contam no +N, 0 conhecidos sem linha',()=>{
-  const r=lib.resumirOrigemLinha({contribuintes:14,fontes:[TACO_F,USDA_F,IBGE_F,{tipo:'manual',quantidade:2},{tipo:'TACO',codigo:'outra',quantidade:1}],semOrigemDocumentada:2,fontesNaoDetalhadas:0})!;
-  assert.deepEqual(r.excecoes.map(e=>e.texto),['Inclui entrada manual (2 alimentos)','2 alimentos sem origem documentada','1 fonte não catalogada']);
+  const r=lib.resumirOrigemLinha({contribuintes:14,fontes:[TACO_F,USDA_F,IBGE_F,{tipo:'manual',quantidade:2},{tipo:'nao_catalogada',quantidade:1}],semOrigemDocumentada:2,fontesNaoDetalhadas:0})!;
+  assert.deepEqual(r.excecoes.map(e=>e.texto),['Inclui entrada manual (2 alimentos)','2 alimentos sem origem documentada','Fonte não catalogada (1 alimento)']);
   assert.deepEqual(r.excecoes.map(e=>e.atencao),[false,true,true]);
   assert.deepEqual(r.fontes,['USDA Foundation 2025.4','TACO 4.1','IBGE 2008.2009']);
   assert.equal(lib.formatarFontesCurtas(r.fontes,2),'USDA Foundation 2025.4 · TACO 4.1 · +1 fonte');
@@ -232,7 +238,8 @@ test('R4C2-01 Web aceita as versões reais do catálogo (rótulos com letras) e 
   const a=lerAnaliseMicronutrientesFactual(montar('taco-4a-cmvcol-taco3-v1'),entrada);
   assert.equal((Reflect.get(a.linhas.find(l=>l.codigo==='calcioMg')!,'origem') as {fontes:{versao:string}[]}).fontes[0]!.versao,'taco-4a-cmvcol-taco3-v1');
   assert.doesNotThrow(()=>lerAnaliseMicronutrientesFactual(montar('pof-2008-2009-v1'),entrada));
-  for(const ruim of ['versão com espaço','<b>x</b>','a'.repeat(65),'-começa-com-hífen','x;y'])assert.throws(()=>lerAnaliseMicronutrientesFactual(montar(ruim),entrada),/interpretar/,ruim);
+  assert.doesNotThrow(()=>lerAnaliseMicronutrientesFactual(montar('FoodData Central 2025-04-24 (release 3)'),entrada));
+  for(const ruim of ['versão <x>','<b>x</b>','a'.repeat(65),'-começa-com-hífen','x;y','a\nb'])assert.throws(()=>lerAnaliseMicronutrientesFactual(montar(ruim),entrada),/interpretar/,ruim);
 });
 const causasInconsistentes:[string,(r:ReturnType<typeof resposta>)=>void][]=[
   ['causa de incompatibilidade em contagem de ausência',r=>{r.cobertura.nutrientes.calcioMg.causas=[{codigo:'unidade_incompativel',quantidade:2}];}],
@@ -246,4 +253,22 @@ for(const [nome,mutar] of causasInconsistentes)test(`R4C2-04 recusa causa fora d
 test('R4C2-03 motivo de composição de micronutrientes não registrada não afirma "registro antigo"',()=>{
   const causas=Reflect.get(origemLib,'CAUSAS_COBERTURA_FACTUAL') as Record<string,string>;
   assert.equal(causas.legado_sem_composicao,'Composição de micronutrientes não registrada no item');
+});
+
+test('M01 filtro por origem e resumo da tabela contam entrada manual e pontos de atenção',()=>{
+  const L=origemLib as unknown as {resumirOrigemTabela:(l:unknown[])=>{entradaManual:number;atencao:number;total:number}|undefined;filtrarMicronutrientesFactuais:typeof origemLib.filtrarMicronutrientesFactuais};
+  const r=resposta();conhecido(r,'calcioMg',3);conhecido(r,'ferroMg',1,true);
+  const rf=comFontes(r,{
+    calcioMg:{fontes:[{tipo:'manual',quantidade:2}],semOrigemDocumentada:0},
+    ferroMg:{fontes:[],semOrigemDocumentada:1}
+  });
+  const linhas=lerAnaliseMicronutrientesFactual(rf,entrada).linhas;
+  assert.deepEqual(L.resumirOrigemTabela(linhas),{entradaManual:1,atencao:1,total:22});
+  const base={grupo:'todos',cobertura:'todas',ordem:'nome'} as const;
+  assert.deepEqual(L.filtrarMicronutrientesFactuais(linhas,{...base,origem:'entrada_manual'} as never).map(l=>l.codigo),['calcioMg']);
+  assert.deepEqual(L.filtrarMicronutrientesFactuais(linhas,{...base,origem:'atencao'} as never).map(l=>l.codigo),['ferroMg']);
+  assert.equal(L.filtrarMicronutrientesFactuais(linhas,{...base,origem:'todas'} as never).length,22);
+  assert.equal(L.filtrarMicronutrientesFactuais(linhas,base).length,22);
+  const sem=lerAnaliseMicronutrientesFactual(resposta(),entrada).linhas;
+  assert.equal(L.resumirOrigemTabela(sem),undefined);
 });

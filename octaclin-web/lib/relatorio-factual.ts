@@ -21,13 +21,13 @@ export function lerRelatorioFactual(valor:unknown,registroId:string){
  const linhas=CAMPOS_MICRONUTRIENTES_PLANO.map(c=>lerLinhaMicronutrienteFactual(nutrientes[c.codigo],c.codigo));if(new Set(linhas.map(l=>l.contagens.incluidos)).size!==1)return falhar();
  if(r.schemaVersao===1&&r.fontesPorNutriente!==undefined)return falhar();
  if(r.schemaVersao===2&&r.fontesPorNutriente!==undefined){const origens=lerFontesPorNutrienteFactual(r.fontesPorNutriente,linhas);for(const l of linhas)l.origem=origens[l.codigo];}
- const f=obj(r.fontesComposicao);let fontes: {tipo:string;versao?:string;quantidade:number}[]|undefined;let semReferencia=0,fontesNaoDetalhadas=0;
+ const f=obj(r.fontesComposicao);let fontes: {tipo:string;codigo?:string;versao?:string;quantidade:number}[]|undefined;let semReferencia=0,fontesNaoDetalhadas=0;
  if(f.estado==='resumo_documentado'){
   const inteiro=(v:unknown)=>Number.isSafeInteger(v)&&Number(v)>=0&&Number(v)<=10000;
   if(!inteiro(f.itensIncluidos)||f.itensIncluidos!==linhas[0]?.contagens.incluidos||!inteiro(f.semReferencia)||!inteiro(f.fontesNaoDetalhadas)||!Array.isArray(f.fontes)||f.fontes.length>50)return falhar();
-  fontes=f.fontes.map(v=>{const n=obj(v);if(!['TACO','USDA','IBGE','manual','custom'].includes(String(n.tipo))||!inteiro(n.quantidade)||!Number(n.quantidade)||(n.versao!==undefined&&(typeof n.versao!=='string'||!/^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$/.test(n.versao))))return falhar();return {tipo:String(n.tipo),...(n.versao!==undefined?{versao:n.versao as string}:{}),quantidade:n.quantidade as number};});
+  fontes=f.fontes.map(v=>{const n=obj(v);if(!['TACO','USDA','IBGE','manual','custom'].includes(String(n.tipo))||!inteiro(n.quantidade)||!Number(n.quantidade)||(n.codigo!==undefined&&(typeof n.codigo!=='string'||!/^[A-Za-z0-9_.-]{1,80}$/.test(n.codigo)))||(n.versao!==undefined&&(typeof n.versao!=='string'||!/^[\p{L}\p{N}][\p{L}\p{N} ._:/()+,-]{0,63}$/u.test(n.versao))))return falhar();return {tipo:String(n.tipo),...(n.codigo!==undefined?{codigo:n.codigo as string}:{}),...(n.versao!==undefined?{versao:n.versao as string}:{}),quantidade:n.quantidade as number};});
   semReferencia=f.semReferencia as number;fontesNaoDetalhadas=f.fontesNaoDetalhadas as number;
-  if(new Set(fontes.map(n=>JSON.stringify([n.tipo,n.versao]))).size!==fontes.length||fontes.reduce((n,x)=>n+x.quantidade,0)+semReferencia+fontesNaoDetalhadas!==f.itensIncluidos)return falhar();
+  if(new Set(fontes.map(n=>JSON.stringify([n.tipo,n.codigo,n.versao]))).size!==fontes.length||fontes.reduce((n,x)=>n+x.quantidade,0)+semReferencia+fontesNaoDetalhadas!==f.itensIncluidos)return falhar();
  }
  const selecao=obj(r.selecao);if(typeof selecao.planoAtivo!=='boolean'||typeof selecao.planoSelecionado!=='boolean'||!Array.isArray(selecao.refeicoes)||selecao.refeicoes.length>50)return falhar();
  const refeicoes=selecao.refeicoes.map(v=>{const f=obj(v);if(typeof f.ativa!=='boolean'||typeof f.selecionada!=='boolean')return falhar();return {identidadeId:texto(f.identidadeId),ativa:f.ativa,selecionada:f.selecionada};});if(new Set(refeicoes.map(f=>f.identidadeId)).size!==refeicoes.length)return falhar();

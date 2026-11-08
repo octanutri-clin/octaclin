@@ -8,7 +8,7 @@ test('recusa registro alheio, referências ativadas e revisão editorial inváli
 test('consulta autenticada usa body mínimo e não retorna erros internos',async()=>{const {obterRelatorioFactual}=await import('../lib/relatorio-factual');const original=globalThis.fetch;const signal=new AbortController().signal;try{globalThis.fetch=async(_url,init)=>{assert.equal(init?.cache,'no-store');assert.equal(init?.signal,signal);assert.deepEqual(JSON.parse(String(init?.body)),{registroId:'registro'});return Response.json(fixture());};assert.equal((await obterRelatorioFactual('paciente','registro',signal)).registro.id,'registro');globalThis.fetch=async()=>new Response('CANARIO_PRIVADO',{status:403});await assert.rejects(()=>obterRelatorioFactual('paciente','registro',signal),(e:Error)=>!e.message.includes('CANARIO_PRIVADO'));}finally{globalThis.fetch=original;}});
 test('relatório inclui energia, macros e seleção congelada sem tratar ausência como zero',()=>{const f=fixture();const r=lerRelatorioFactual(f,'registro') as unknown as {macros:{codigo:string;valor?:number}[];selecao:{planoAtivo:boolean}};assert.equal(r.macros.find(m=>m.codigo==='energiaKcal')?.valor,0);assert.equal(r.macros.find(m=>m.codigo==='proteinasG')?.valor,undefined);assert.equal(r.selecao.planoAtivo,true);});
 test('recusa seleção duplicada ou malformada e contagens macro incompatíveis com cobertura',()=>{const f=fixture();assert.throws(()=>lerRelatorioFactual({...f,selecao:{...f.selecao,planoAtivo:'sim'}},'registro'));assert.throws(()=>lerRelatorioFactual({...f,selecao:{...f.selecao,refeicoes:[f.selecao.refeicoes[0],f.selecao.refeicoes[0]]}},'registro'));const invalida=fixture();invalida.analise.calculo.nutrientes.energiaKcal.itensIncluidos=2;assert.throws(()=>lerRelatorioFactual(invalida,'registro'));});
-test('projeta fontes congeladas sem metadados livres e rejeita totais ou tipos inconsistentes',()=>{const fonte={estado:'resumo_documentado',itensIncluidos:1,semReferencia:0,fontesNaoDetalhadas:0,fontes:[{tipo:'TACO',versao:'1',quantidade:1,hashConteudo:'CANARIO'}]};const r=lerRelatorioFactual({...fixture(),fontesComposicao:fonte},'registro');assert.deepEqual(r.fontes,[{tipo:'TACO',versao:'1',quantidade:1}]);assert.ok(!JSON.stringify(r).includes('CANARIO'));for(const f of [{...fonte,itensIncluidos:2},{...fonte,fontes:[{tipo:'CANARIO',quantidade:1}]},{...fonte,fontes:[{tipo:'TACO',versao:'texto livre',quantidade:1}]}])assert.throws(()=>lerRelatorioFactual({...fixture(),fontesComposicao:f},'registro'));});
+test('projeta fontes congeladas sem metadados livres e rejeita totais ou tipos inconsistentes',()=>{const fonte={estado:'resumo_documentado',itensIncluidos:1,semReferencia:0,fontesNaoDetalhadas:0,fontes:[{tipo:'TACO',versao:'1',quantidade:1,hashConteudo:'CANARIO'}]};const r=lerRelatorioFactual({...fixture(),fontesComposicao:fonte},'registro');assert.deepEqual(r.fontes,[{tipo:'TACO',versao:'1',quantidade:1}]);assert.ok(!JSON.stringify(r).includes('CANARIO'));for(const f of [{...fonte,itensIncluidos:2},{...fonte,fontes:[{tipo:'CANARIO',quantidade:1}]},{...fonte,fontes:[{tipo:'TACO',versao:'<script>x</script>',quantidade:1}]}])assert.throws(()=>lerRelatorioFactual({...fixture(),fontesComposicao:f},'registro'));});
 
 test('formato2 lê contexto congelado e diferencia legado sem registro',()=>{
  const f={...fixture(),schemaVersao:2,motorVersao:'food06-relatorio-factual-v2',contextoClinico:{estado:'resumo_documentado',resumo:{schemaVersao:1,dataAnalise:'2026-11-06',idadeAnos:36,populacaoReferencia:'feminina',mesmoDiaPlanejado:false,tabagismo:'nao_informado',motivos:[]}}};
@@ -50,4 +50,24 @@ test('formato2 recusa origem por nutriente inconsistente com a cobertura do mesm
 test('formato2 não replica campos extras de origem por nutriente',()=>{
  const f=fontesPorNutrienteOk();Object.assign(f,{segredo:'CANARIO_RAIZ'});Object.assign(f.nutrientes.ferroMg,{segredo:'CANARIO_NUT'});Object.assign(f.nutrientes.ferroMg.fontes[0],{hashConteudo:'CANARIO_HASH'});
  assert.ok(!/CANARIO/.test(JSON.stringify(lerRelatorioFactual(v2Com(f),'registro'))));
+});
+
+function fixtureComDoisItens(){
+ const f=fixture() as unknown as {analise:{calculo:{nutrientes:Record<string,{itensIncluidos:number;itensComValor:number;estado:string}>};cobertura:{nutrientes:Record<string,{estado:string;total?:number;contagens:Record<string,number>;causas:unknown[]}>}}};
+ for(const m of Object.values(f.analise.calculo.nutrientes)){m.itensIncluidos=2;if(m.estado==='completo')m.itensComValor=2;}
+ for(const [codigo,n] of Object.entries(f.analise.cobertura.nutrientes)){
+  const conhecidos=codigo==='ferroMg'?2:0;
+  n.contagens={incluidos:2,conhecidos,semComposicao:2-conhecidos,incompativeis:0,naoResolvidos:0};
+  n.causas=conhecidos===2?[]:[{codigo:'ausente',quantidade:2}];
+ }
+ return f as unknown as Record<string,unknown>;
+}
+test('M01 resumo global do relatório lê o código da fonte e separa fontes que só diferem por ele',()=>{
+ const f=fixtureComDoisItens();
+ const resumo=(fontes:unknown[],itens=2)=>({estado:'resumo_documentado',itensIncluidos:itens,semReferencia:0,fontesNaoDetalhadas:0,fontes});
+ const ok=lerRelatorioFactual({...f,fontesComposicao:resumo([{tipo:'USDA',codigo:'usda_fdc_foundation',versao:'2025-10-30',quantidade:1},{tipo:'USDA',codigo:'usda_fdc_sr_legacy',versao:'2025-10-30',quantidade:1}])},'registro') as unknown as {fontes:{tipo:string;codigo?:string}[]};
+ assert.deepEqual(ok.fontes.map(x=>x.codigo),['usda_fdc_foundation','usda_fdc_sr_legacy']);
+ assert.throws(()=>lerRelatorioFactual({...f,fontesComposicao:resumo([{tipo:'USDA',codigo:'com espaço',versao:'1',quantidade:2}])},'registro'));
+ assert.throws(()=>lerRelatorioFactual({...f,fontesComposicao:resumo([{tipo:'USDA',codigo:'usda_fdc_foundation',versao:'1',quantidade:1},{tipo:'USDA',codigo:'usda_fdc_foundation',versao:'1',quantidade:1}])},'registro'));
+ assert.doesNotThrow(()=>lerRelatorioFactual({...f,fontesComposicao:resumo([{tipo:'TACO',versao:'taco-4a-cmvcol-taco3-v1',quantidade:2}])},'registro'));
 });

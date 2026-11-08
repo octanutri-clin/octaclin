@@ -399,3 +399,32 @@ test('FOOD06 M01 NUXA origem na própria linha: resumo sempre, exceção integra
   await page.screenshot({path:testInfo.outputPath('food06-m01-linha.png'),fullPage:false});
   expect((await new AxeBuilder({page}).include('[aria-label="Micronutrientes da seleção"]').analyze()).violations).toEqual([]);
 });
+
+test('FOOD06 M01 resumo da tabela, filtro por origem e legenda colada à tabela',async({page})=>{
+  await page.route(url=>url.pathname.endsWith('/analise-micronutrientes'),route=>route.fulfill({status:200,contentType:'application/json',body:JSON.stringify(comOrigem(analise(route.request().postDataJSON())))}));
+  await preparar(page);
+  await page.getByRole('button',{name:'Ver micronutrientes e cobertura',exact:true}).click();
+  const r=regiao(page);
+  await expect(r.locator('[data-origem-resumo]')).toContainText('Entrada manual em 1 de 22 nutrientes.');
+  await expect(r.locator('[data-origem-resumo]')).not.toContainText('Origem a conferir');
+  // A legenda é o elemento imediatamente acima da tabela (sem rolar para achá-la).
+  const legenda=r.getByText('A origem vale só para os alimentos com composição conhecida',{exact:false}).first(),tabela=r.getByRole('region',{name:'Tabela de micronutrientes, role horizontalmente se necessário'});
+  const l=await legenda.boundingBox(),t=await tabela.boundingBox();
+  expect(t.y-(l.y+l.height)).toBeLessThan(40);expect(t.y).toBeGreaterThan(l.y);
+  const origem=r.getByLabel('Origem dos dados');
+  await origem.selectOption('entrada_manual');
+  await expect(r.getByRole('rowheader')).toHaveText(['Ferro']);
+  await origem.selectOption('atencao');
+  await expect(r.getByText('Nenhum nutriente corresponde aos filtros.')).toBeVisible();
+  await r.getByRole('button',{name:'Limpar filtros'}).click();
+  await expect(origem).toHaveValue('todas');
+  await expect(r.getByText('22 de 22 nutrientes exibidos.')).toBeVisible();
+  expect((await new AxeBuilder({page}).include('[aria-label="Micronutrientes da seleção"]').analyze()).violations).toEqual([]);
+});
+test('FOOD06 M01 sem origem na resposta não há filtro nem resumo de origem',async({page})=>{
+  await page.route(url=>url.pathname.endsWith('/analise-micronutrientes'),route=>route.fulfill({status:200,contentType:'application/json',body:JSON.stringify(analise(route.request().postDataJSON()))}));
+  await preparar(page);
+  await page.getByRole('button',{name:'Ver micronutrientes e cobertura',exact:true}).click();
+  const r=regiao(page);await expect(r.getByLabel('Grupo de nutrientes')).toBeVisible();
+  await expect(r.getByLabel('Origem dos dados')).toHaveCount(0);await expect(r.locator('[data-origem-resumo]')).toHaveCount(0);
+});

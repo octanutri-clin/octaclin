@@ -1,5 +1,5 @@
 import {lerContextoRegistradoFactual,type ContextoRegistradoFactual} from './contexto-registrado-factual';
-import { lerLinhaMicronutrienteFactual, type LinhaMicronutrienteFactual } from './micronutrientes-factuais';
+import { lerLinhaMicronutrienteFactual, lerFontesPorNutrienteFactual, type LinhaMicronutrienteFactual } from './micronutrientes-factuais';
 import type { CodigoMicronutrienteApi } from './plano-alimentar-api';
 import { CAMPOS_MICRONUTRIENTES_PLANO } from './micronutrientes-plano';
 
@@ -51,13 +51,14 @@ function validarComparacaoAnterior(valor:unknown):PontoHistoricoMicronutrienteFa
 }
 function validarPonto(valor:unknown,incluirContexto=false):PontoHistoricoMicronutrienteFactual{
  const r=objeto(valor),reg=objeto(r.registro),n=objeto(r.nutrientes),ref=objeto(r.referencias),bases=objeto(r.bases);
- if((r.contextoConfirmado!==undefined&&bases.contextoDocumentado!==true)||r.schemaVersao!==1||Object.keys(r).some(k=>!['schemaVersao','registro','origem','comparacaoAnterior','motorVersao','nutrientes','referencias','bases',...(incluirContexto?['contextoConfirmado']:[])].includes(k))||
+ if((r.contextoConfirmado!==undefined&&bases.contextoDocumentado!==true)||r.schemaVersao!==1||Object.keys(r).some(k=>!['schemaVersao','registro','origem','comparacaoAnterior','motorVersao','nutrientes','fontesPorNutriente','referencias','bases',...(incluirContexto?['contextoConfirmado']:[])].includes(k))||
   Object.keys(reg).some(k=>!['id','criadoEm'].includes(k))||!string(reg.id,80)||!iso(reg.criadoEm,'ms')||!string(r.motorVersao,100)||
   ref.estado!=='indisponivel'||ref.motivo!=='referencias_nao_habilitadas'||Object.keys(ref).some(k=>!['estado','motivo'].includes(k))||
   Object.keys(bases).some(k=>!['planejamentoDocumentado','composicaoDocumentada','contextoDocumentado'].includes(k))||
   ['planejamentoDocumentado','composicaoDocumentada','contextoDocumentado'].some(k=>typeof bases[k]!=='boolean')||
   Object.keys(n).length!==CAMPOS_MICRONUTRIENTES_PLANO.length)return falhar();
  const nutrientes=Object.fromEntries(CAMPOS_MICRONUTRIENTES_PLANO.map(c=>[c.codigo,lerLinhaMicronutrienteFactual(n[c.codigo],c.codigo)])) as PontoHistoricoMicronutrienteFactual['nutrientes'];
+ if(r.fontesPorNutriente!==undefined){const origens=lerFontesPorNutrienteFactual(r.fontesPorNutriente,Object.values(nutrientes));for(const l of Object.values(nutrientes))l.origem=origens[l.codigo];}
  return {...(r.contextoConfirmado===undefined?{}:{contextoConfirmado:lerContextoRegistradoFactual(r.contextoConfirmado)}),registro:{id:reg.id,criadoEm:reg.criadoEm},origem:validarOrigem(r.origem),comparacaoAnterior:validarComparacaoAnterior(r.comparacaoAnterior),motorVersao:r.motorVersao,nutrientes,referencias:{estado:'indisponivel',motivo:'referencias_nao_habilitadas'},bases:{
   planejamentoDocumentado:bases.planejamentoDocumentado as boolean,composicaoDocumentada:bases.composicaoDocumentada as boolean,contextoDocumentado:bases.contextoDocumentado as boolean}};
 }

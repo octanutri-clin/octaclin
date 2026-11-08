@@ -10,13 +10,13 @@ export interface LinhaMicronutrienteFactual {
   /** Origem registrada dos alimentos com valor conhecido; ausente quando a resposta não a traz. */
   origem?: OrigemNutrienteFactual;
 }
-export const TIPOS_FONTE_FACTUAL = ['TACO','USDA','IBGE','manual','custom'] as const;
+export const TIPOS_FONTE_FACTUAL = ['TACO','USDA','IBGE','manual','custom','nao_catalogada'] as const;
 export type TipoFonteFactual = typeof TIPOS_FONTE_FACTUAL[number];
 export interface FonteNutrienteFactual { tipo: TipoFonteFactual; codigo?: string; versao?: string; quantidade: number }
 export interface OrigemNutrienteFactual { contribuintes: number; fontes: FonteNutrienteFactual[]; semOrigemDocumentada: number; fontesNaoDetalhadas: number }
 export const LIMITE_GRUPOS_FONTE_FACTUAL = 50;
 export const ROTULOS_FONTE_FACTUAL: Readonly<Record<TipoFonteFactual,string>> = Object.freeze({
-  TACO:'TACO', USDA:'USDA', IBGE:'IBGE', manual:'Entrada manual', custom:'Alimento personalizado'
+  TACO:'TACO', USDA:'USDA', IBGE:'IBGE', manual:'Entrada manual', custom:'Alimento personalizado', nao_catalogada:'Fonte não catalogada'
 });
 const ROTULOS_CODIGO_FONTE: Readonly<Record<string,string>> = Object.freeze({
   taco_nepa_unicamp:'NEPA/Unicamp', usda_fdc_foundation:'Foundation Foods', usda_fdc_sr_legacy:'SR Legacy', ibge_pof_2008_2009:'POF 2008-2009'
@@ -27,13 +27,12 @@ const ROTULOS_CURTOS_CODIGO_FONTE: Readonly<Record<string,string>> = Object.free
 });
 export function rotuloQuantidadeAlimentos(n: number): string { return `${n} ${n===1?'alimento':'alimentos'}`; }
 const rotuloFontes=(n:number)=>`${n} ${n===1?'fonte':'fontes'}`;
-const ehEntradaDigitada=(f: FonteNutrienteFactual)=>f.tipo==='manual'||f.tipo==='custom';
-/** Base catalogada cujo código este sistema não reconhece. Nunca presume nome ou direitos. */
-export function fonteNaoCatalogada(f: FonteNutrienteFactual): boolean {
-  return !ehEntradaDigitada(f) && f.codigo!==undefined && !Object.hasOwn(ROTULOS_CODIGO_FONTE,f.codigo);
-}
+const ehCatalogada=(tipo: string)=>tipo==='TACO'||tipo==='USDA'||tipo==='IBGE';
+/** Há fonte registrada, mas que este sistema não reconhece. Nunca presume nome, código ou direitos. */
+export function fonteNaoCatalogada(f: FonteNutrienteFactual): boolean { return f.tipo==='nao_catalogada'; }
+export function rotuloCodigoFonteFactual(codigo: string): string|undefined { return Object.hasOwn(ROTULOS_CODIGO_FONTE,codigo)?ROTULOS_CODIGO_FONTE[codigo]:undefined; }
 function classeDeExibicao(f: FonteNutrienteFactual): number {
-  return f.tipo==='manual'?0:f.tipo==='custom'?1:fonteNaoCatalogada(f)?2:3;
+  return f.tipo==='manual'?0:f.tipo==='custom'?1:f.tipo==='nao_catalogada'?2:3;
 }
 /** Ordem única para a linha, os detalhes e o relatório: entrada manual, personalizado, não catalogada e bases. */
 export function ordenarFontesParaExibicao(fontes: FonteNutrienteFactual[]): FonteNutrienteFactual[] {
@@ -44,8 +43,8 @@ export function ordenarFontesParaExibicao(fontes: FonteNutrienteFactual[]): Font
 /** Texto único para tabela, detalhes e relatório. Versão ausente permanece "não informada". */
 export function descreverFonteFactual(f: FonteNutrienteFactual): string {
   const partes: string[] = [ROTULOS_FONTE_FACTUAL[f.tipo]];
-  if (!ehEntradaDigitada(f)) {
-    if (f.codigo) partes.push(fonteNaoCatalogada(f) ? `Fonte não catalogada (código ${f.codigo})` : ROTULOS_CODIGO_FONTE[f.codigo]!);
+  if (ehCatalogada(f.tipo)) {
+    if (f.codigo) partes.push(rotuloCodigoFonteFactual(f.codigo) ?? `código ${f.codigo}`);
     partes.push(f.versao ? `versão ${f.versao}` : 'versão não informada');
   }
   partes.push(rotuloQuantidadeAlimentos(f.quantidade));
@@ -67,8 +66,7 @@ export function resumirOrigemLinha(o: OrigemNutrienteFactual): ResumoOrigemLinha
   if (soma('manual')) excecoes.push({texto:`Inclui entrada manual (${rotuloQuantidadeAlimentos(soma('manual'))})`,atencao:false});
   if (soma('custom')) excecoes.push({texto:`Inclui alimento personalizado (${rotuloQuantidadeAlimentos(soma('custom'))})`,atencao:false});
   if (o.semOrigemDocumentada>0) excecoes.push({texto:`${rotuloQuantidadeAlimentos(o.semOrigemDocumentada)} sem origem documentada`,atencao:true});
-  const naoCatalogadas=ordenadas.filter(fonteNaoCatalogada).length;
-  if (naoCatalogadas>0) excecoes.push({texto:`${naoCatalogadas} ${naoCatalogadas===1?'fonte não catalogada':'fontes não catalogadas'}`,atencao:true});
+  if (soma('nao_catalogada')>0) excecoes.push({texto:`Fonte não catalogada (${rotuloQuantidadeAlimentos(soma('nao_catalogada'))})`,atencao:true});
   if (o.fontesNaoDetalhadas>0) excecoes.push({texto:`${rotuloQuantidadeAlimentos(o.fontesNaoDetalhadas)} em fontes adicionais não detalhadas`,atencao:true});
   return {excecoes,fontes:ordenadas.filter(f=>classeDeExibicao(f)===3).map(rotuloCurtoFonteFactual)};
 }
@@ -80,6 +78,8 @@ export interface AnaliseMicronutrientesFactual { ajuda?:AjudaDietetica|null; cal
 export interface FiltrosMicronutrientesFactuais {
   grupo: 'todos' | 'minerais' | 'vitaminas'; cobertura: 'todas' | EstadoCoberturaFactual;
   ordem: 'nome' | 'quantidade' | 'cobertura';
+  /** Só tem efeito quando a resposta traz a origem por nutriente. */
+  origem?: 'todas' | 'entrada_manual' | 'atencao';
 }
 const ESTADOS: EstadoCoberturaFactual[] = ['COMPLETO','PARCIAL','DESCONHECIDO','INCOMPATIVEL','INDISPONIVEL'];
 export const CAUSAS_COBERTURA_FACTUAL: Readonly<Record<string,string>> = Object.freeze({
@@ -116,8 +116,8 @@ export function lerAnaliseMicronutrientesFactual(valor: unknown, entrada: Calcul
   return {calculadoEm:r.calculadoEm,linhas,...(r.ajuda!==undefined?{ajuda:lerAjudaDietetica(r.ajuda)}:{})};
 }
 const CODIGO_FONTE_FACTUAL = /^[A-Za-z0-9_.-]{1,80}$/;
-/** Mesmo formato do backend: rótulo do catálogo (ex.: `taco-4a-cmvcol-taco3-v1`), até 64 caracteres seguros. */
-const VERSAO_FONTE_FACTUAL = /^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$/;
+/** Mesmo formato do backend: rótulo livre do operador do catálogo, até 64 caracteres, sem markup nem controle. */
+const VERSAO_FONTE_FACTUAL = /^[\p{L}\p{N}][\p{L}\p{N} ._:/()+,-]{0,63}$/u;
 /** Valida contra a cobertura da mesma resposta e falha fechado; devolve só o que a interface usa. */
 export function lerFontesPorNutrienteFactual(valor: unknown, linhas: LinhaMicronutrienteFactual[]): Record<string,OrigemNutrienteFactual> {
   const raiz=objeto(valor);
@@ -132,7 +132,7 @@ export function lerFontesPorNutrienteFactual(valor: unknown, linhas: LinhaMicron
     const fontes=n.fontes.map(v=>{
       const f=objeto(v);
       if(!(TIPOS_FONTE_FACTUAL as readonly unknown[]).includes(f.tipo) || !inteiro(f.quantidade) || f.quantidade<1) return falhar();
-      const tipo=f.tipo as TipoFonteFactual, catalogo=tipo!=='manual'&&tipo!=='custom';
+      const tipo=f.tipo as TipoFonteFactual, catalogo=ehCatalogada(tipo);
       if(!catalogo && (f.codigo!==undefined || f.versao!==undefined)) return falhar();
       if(f.codigo!==undefined && (typeof f.codigo!=='string' || !CODIGO_FONTE_FACTUAL.test(f.codigo))) return falhar();
       if(f.versao!==undefined && (typeof f.versao!=='string' || !VERSAO_FONTE_FACTUAL.test(f.versao))) return falhar();
@@ -196,10 +196,27 @@ export function lerLinhaMicronutrienteFactual(valor: unknown, codigo: CodigoMicr
 
 export function filtrarMicronutrientesFactuais(linhas: LinhaMicronutrienteFactual[], filtros: FiltrosMicronutrientesFactuais): LinhaMicronutrienteFactual[] {
   const nome=(a:LinhaMicronutrienteFactual,b:LinhaMicronutrienteFactual)=>a.rotulo.localeCompare(b.rotulo,'pt-BR') || a.codigo.localeCompare(b.codigo);
-  return linhas.filter(l=>(filtros.grupo==='todos'||l.grupo===filtros.grupo)&&(filtros.cobertura==='todas'||l.estado===filtros.cobertura)).sort((a,b)=>{
+  const origemAceita=(l:LinhaMicronutrienteFactual)=>{
+    const f=filtros.origem??'todas';if(f==='todas')return true;
+    const r=l.origem?resumirOrigemLinha(l.origem):undefined;if(!r)return false;
+    return f==='entrada_manual'?r.excecoes.some(e=>!e.atencao):r.excecoes.some(e=>e.atencao);
+  };
+  return linhas.filter(l=>(filtros.grupo==='todos'||l.grupo===filtros.grupo)&&(filtros.cobertura==='todas'||l.estado===filtros.cobertura)&&origemAceita(l)).sort((a,b)=>{
     if(filtros.ordem==='quantidade') return Number(a.valor===undefined)-Number(b.valor===undefined) || a.unidade.localeCompare(b.unidade) || (a.valor??0)-(b.valor??0) || nome(a,b);
     if(filtros.ordem==='cobertura') return ESTADOS.indexOf(a.estado)-ESTADOS.indexOf(b.estado) || nome(a,b);
     return nome(a,b);
   });
 }
 export { CAMPOS_MICRONUTRIENTES_PLANO };
+
+/** Contagem para a linha de resumo acima da tabela. Sem origem na resposta, não há resumo. */
+export function resumirOrigemTabela(linhas: LinhaMicronutrienteFactual[]): { entradaManual: number; atencao: number; total: number } | undefined {
+  if (!linhas.some(l=>l.origem)) return undefined;
+  let entradaManual=0, atencao=0;
+  for (const l of linhas) {
+    const r=l.origem?resumirOrigemLinha(l.origem):undefined;
+    if (r?.excecoes.some(e=>!e.atencao)) entradaManual++;
+    if (r?.excecoes.some(e=>e.atencao)) atencao++;
+  }
+  return { entradaManual, atencao, total: linhas.length };
+}

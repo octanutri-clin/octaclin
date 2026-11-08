@@ -91,7 +91,7 @@ export function projetarResumoHistoricoFactual(meta:Meta,r:RegistroAnaliseFactua
    ...(n.estado==='COMPLETO'&&n.total!==undefined?{total:n.total}:{}),...(n.estado!=='COMPLETO'&&n.quantidadeConhecida!==undefined?{quantidadeConhecida:n.quantidadeConhecida}:{})}];
  }));
  return {schemaVersao:1 as const,registro:projetarMetadadosRegistro(meta),origem:origem(r.versao.origem),comparacaoAnterior,
-  motorVersao:r.analise.calculo.motorVersao,nutrientes,
+  motorVersao:r.analise.calculo.motorVersao,nutrientes,fontesPorNutriente:projetarFontesPorNutriente(r),
   referencias:referencias(),
   ...(incluirContexto&&r.contexto?{contextoConfirmado:projetarContextoConfirmado(r.contexto)}:{}),
   bases:{planejamentoDocumentado:Boolean(r.versao.bases?.planejamento),composicaoDocumentada:Boolean(r.versao.bases?.composicao_fonte),

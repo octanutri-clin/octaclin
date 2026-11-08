@@ -1,6 +1,6 @@
 import type {RegistroAnaliseFactual} from './construtor-analise-factual';
 import {identificarFonteCatalogo} from '../dominio/fonte-catalogo';
-type Fonte={tipo:'TACO'|'USDA'|'IBGE'|'manual'|'custom';versao?:string;quantidade:number};
+type Fonte={tipo:'TACO'|'USDA'|'IBGE'|'manual'|'custom';codigo?:string;versao?:string;quantidade:number};
 /** Resumo de proveniência congelada; não atesta cobertura de nutrientes nem direitos. */
 export function resumirFontesRegistro(r:RegistroAnaliseFactual){
  const fontes=new Map<string,Fonte>();let itensIncluidos=0,semReferencia=0;
@@ -12,9 +12,10 @@ export function resumirFontesRegistro(r:RegistroAnaliseFactual){
    const tipo=s.origem==='manual'?'manual':s.origem==='custom'?'custom':catalogo?.tipo;
    if(!tipo){semReferencia++;continue;}
    const versao=catalogo?.versao;
-   const chave=JSON.stringify([tipo,versao]);const anterior=fontes.get(chave);if(anterior)anterior.quantidade++;else fontes.set(chave,{tipo,...(versao?{versao}:{}),quantidade:1});
+   const codigo=catalogo?.codigo;
+   const chave=JSON.stringify([tipo,codigo,versao]);const anterior=fontes.get(chave);if(anterior)anterior.quantidade++;else fontes.set(chave,{tipo,...(codigo?{codigo}:{}),...(versao?{versao}:{}),quantidade:1});
   }
  }
- const ordenadas=[...fontes.values()].sort((a,b)=>a.tipo.localeCompare(b.tipo,'pt-BR')||(a.versao??'').localeCompare(b.versao??''));
+ const ordenadas=[...fontes.values()].sort((a,b)=>a.tipo.localeCompare(b.tipo,'pt-BR')||(a.codigo??'').localeCompare(b.codigo??'')||(a.versao??'').localeCompare(b.versao??''));
  return {estado:'resumo_documentado' as const,itensIncluidos,semReferencia,fontesNaoDetalhadas:ordenadas.slice(50).reduce((n,f)=>n+f.quantidade,0),fontes:ordenadas.slice(0,50)};
 }
