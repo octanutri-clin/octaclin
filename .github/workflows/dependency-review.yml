@@ -36,6 +36,10 @@ jobs:
             GPL-3.0-only,
             GPL-3.0-or-later,
             SSPL-1.0
+          # A politica da licenca BSD escolhida para node-forge@1.4.2 esta
+          # registrada em docs/governance/politica-licencas.json. O PURL e
+          # fixado na versao; upgrades voltam a exigir revisao.
+          allow-dependencies-licenses: pkg:npm/node-forge@1.4.2
           # Sem comentario no PR: manteria a necessidade de pull-requests: write.
           comment-summary-in-pr: never
           warn-only: false

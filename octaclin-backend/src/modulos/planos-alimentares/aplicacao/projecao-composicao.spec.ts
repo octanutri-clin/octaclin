@@ -22,3 +22,10 @@ describe('FOOD04 proveniência interna',()=>{
     expect(r).not.toHaveProperty('origemGrupo');expect(r.nutrientesPorcao.energiaKcal).toBe(50);
   });
 });
+
+describe('FOOD05 cálculo interno não é dado do portal/PDF',()=>{
+ it.each(['catalogo','manual','custom'])('omite contexto e campos privados aninhados em %s',origem=>{
+  const r=projetarComposicao({origem,descricao:'Alimento',equivalencia:{ator:'PRIVADO_FOOD05'},snapshotAlternativa:{segredo:'PRIVADO_FOOD05'},origemGrupo:{grupoId:'PRIVADO_FOOD05'},fonte:{codigo:'sintetica',versao:'1',interno:'PRIVADO_FOOD05'},nutrientesPor100g:{energiaKcal:100,equivalencia:'PRIVADO_FOOD05'},nutrientesPorcao:{energiaKcal:50,segredo:'PRIVADO_FOOD05'}}as any);
+  expect(JSON.stringify(r)).not.toContain('PRIVADO_FOOD05');expect(r.nutrientesPorcao.energiaKcal).toBe(50);
+ });
+});

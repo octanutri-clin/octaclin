@@ -1,4 +1,6 @@
-import { ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException, ServiceUnavailableException } from '@nestjs/common';
+import { plainToInstance } from 'class-transformer';
+import { validateSync } from 'class-validator';
 import { EntityManager, FindOptionsWhere, In, IsNull } from 'typeorm';
 import { registrarAuditoriaNaTransacao } from '../../../infraestrutura/auditoria/servico-auditoria';
 import { ExecutorTenant } from '../../../infraestrutura/banco-dados/executor-tenant';
@@ -8,6 +10,7 @@ import type { PermissaoOctaClin } from '../../auth/dominio/permissoes';
 import { UsuarioAutenticado } from '../../auth/dominio/usuario-autenticado';
 import { TenantConfiguracaoOrm } from '../../tenancy/infraestrutura/tenant-configuracao.orm';
 import { CHAVE_KIT_INICIAL_CLINICA, interpretarMarcadorKitInicial } from '../../tenancy/kit-inicial-clinica';
+import { LIMITE_BYTES_EDICAO_PLANO } from '../dominio/edicao-plano';
 import { listarEstruturasIniciaisPlano } from '../dominio/estruturas-iniciais-plano';
 import {
   contarEstruturaModelo,
@@ -24,7 +27,8 @@ import {
   EditarModeloPlanoAlimentarDto,
   ListarModelosPlanoAlimentarDto,
   ListarVersoesModeloPlanoAlimentarDto,
-  PAGINA_MAXIMA
+  PAGINA_MAXIMA,
+  NutrientesPor100gDto
 } from './dtos';
 import { RevisaoModeloPlanoAlimentarOrm } from '../infraestrutura/revisao-modelo-plano-alimentar.orm';
 
@@ -47,7 +51,7 @@ export class ServicoModelosPlanoAlimentar {
   async criar(tenantId: string, usuario: UsuarioAutenticado, dados: CriarModeloPlanoAlimentarDto) {
     this.garantirPapelProfissional(usuario);
     this.garantirPermissao(usuario, 'planos_alimentares.gerenciar');
-    const refeicoes = dados.refeicoes as unknown as RefeicaoModeloPlanoAlimentar[];
+    const refeicoes = this.validarRefeicoesModelo(dados.refeicoes, false);
     const { totalRefeicoes, totalItens } = contarEstruturaModelo(refeicoes);
 
     return this.executorTenant.executar(tenantId, async (gerenciador) => {
@@ -137,9 +141,14 @@ export class ServicoModelosPlanoAlimentar {
 
     return this.executorTenant.executar(tenantId, async (gerenciador) => {
       const modelo = await this.obterNoEscopo(gerenciador, tenantId, modeloId, usuario);
-      const refeicoes = JSON.parse(
-        this.criptografia.descriptografar(modelo.conteudoCriptografado)
-      ) as RefeicaoModeloPlanoAlimentar[];
+      let refeicoes: RefeicaoModeloPlanoAlimentar[];
+      try {
+        refeicoes = this.validarRefeicoesModelo(JSON.parse(
+          this.criptografia.descriptografar(modelo.conteudoCriptografado)
+        ), true);
+      } catch {
+        throw new ServiceUnavailableException('Conteúdo do modelo indisponível.');
+      }
       return {
         id: modelo.id,
         nome: this.criptografia.descriptografar(modelo.nomeCriptografado),
@@ -163,7 +172,7 @@ export class ServicoModelosPlanoAlimentar {
   ) {
     this.garantirPapelProfissional(usuario);
     this.garantirPermissao(usuario, 'planos_alimentares.gerenciar');
-    const refeicoes = dados.refeicoes as unknown as RefeicaoModeloPlanoAlimentar[];
+    const refeicoes = this.validarRefeicoesModelo(dados.refeicoes, false);
     const { totalRefeicoes, totalItens } = contarEstruturaModelo(refeicoes);
 
     return this.executorTenant.executar(tenantId, async (gerenciador) => {
@@ -172,6 +181,12 @@ export class ServicoModelosPlanoAlimentar {
       const versaoAtual = modelo.versaoAtual ?? 1;
       if (dados.versaoEsperada !== versaoAtual) {
         throw new ConflictException('O modelo foi alterado. Recarregue o historico antes de salvar.');
+      }
+
+      try {
+        this.validarRefeicoesModelo(JSON.parse(this.criptografia.descriptografar(modelo.conteudoCriptografado)), true);
+      } catch {
+        throw new ServiceUnavailableException('Conteúdo do modelo indisponível.');
       }
 
       const revisoes = gerenciador.getRepository(RevisaoModeloPlanoAlimentarOrm);
@@ -242,7 +257,12 @@ export class ServicoModelosPlanoAlimentar {
         ? modelo
         : undefined);
       if (!snapshot) throw new NotFoundException('Versao do modelo nao encontrada.');
-      const refeicoes = JSON.parse(this.criptografia.descriptografar(snapshot.conteudoCriptografado)) as RefeicaoModeloPlanoAlimentar[];
+      let refeicoes: RefeicaoModeloPlanoAlimentar[];
+      try {
+        refeicoes = this.validarRefeicoesModelo(JSON.parse(this.criptografia.descriptografar(snapshot.conteudoCriptografado)), true);
+      } catch {
+        throw new ServiceUnavailableException('Conteúdo da versão do modelo indisponível.');
+      }
       return {
         id: revisao?.id ?? `${modelo.id}:1`, numero,
         nome: this.criptografia.descriptografar(snapshot.nomeCriptografado),
@@ -274,6 +294,11 @@ export class ServicoModelosPlanoAlimentar {
       const origem = await revisoes.findOne({ where: { tenantId, modeloId, numero } });
       const snapshot = origem ?? ((numero === 1 && versaoAtual === 1) ? modelo : undefined);
       if (!snapshot) throw new NotFoundException('Versao do modelo nao encontrada.');
+      try {
+        this.validarRefeicoesModelo(JSON.parse(this.criptografia.descriptografar(snapshot.conteudoCriptografado)), true);
+      } catch {
+        throw new ServiceUnavailableException('Conteúdo da versão do modelo indisponível.');
+      }
       if (!origem) await this.persistirRevisao(gerenciador, modelo, 1, usuario.usuarioId);
 
       modelo.nomeCriptografado = Buffer.from(snapshot.nomeCriptografado);
@@ -400,6 +425,51 @@ export class ServicoModelosPlanoAlimentar {
       alimentos.filter((alimento) => fontesPermitidas.has(alimento.fonteId)).map((alimento) => alimento.id)
     );
     return ids.filter((id) => !disponiveis.has(id));
+  }
+
+  /**
+   * O conteúdo persistido de um modelo é compartilhável e não pode transportar
+   * capabilities ou proveniência clínica de equivalências. A validação aqui
+   * duplica deliberadamente a fronteira HTTP para cobrir chamadas internas e
+   * snapshots antigos/adulterados; leituras falham fechadas sem devolver JSON
+   * desconhecido ao navegador.
+   */
+  private validarRefeicoesModelo(valor: unknown, armazenado: boolean): RefeicaoModeloPlanoAlimentar[] {
+    const falhar = (): never => {
+      if (armazenado) throw new Error('Conteúdo de modelo fora do contrato.');
+      throw new BadRequestException('Estrutura do modelo inválida.');
+    };
+    // O mesmo teto editorial de 96 KiB precede transformação/validação recursiva.
+    // Campos opcionais podem estar ausentes; null nunca representa uma refeição
+    // ou um campo opcional válido no contrato de modelos.
+    const conferirJson = (v: unknown, profundidade = 0): boolean => {
+      if (profundidade > 12 || v === null) return false;
+      if (typeof v === 'number') return Number.isFinite(v);
+      if (typeof v !== 'object') return ['string', 'boolean', 'undefined'].includes(typeof v);
+      if (!Array.isArray(v) && ![Object.prototype, null].includes(Object.getPrototypeOf(v))) return false;
+      return Object.values(v).every(filho => conferirJson(filho, profundidade + 1));
+    };
+    try {
+      if (Buffer.byteLength(JSON.stringify(valor), 'utf8') > LIMITE_BYTES_EDICAO_PLANO || !conferirJson(valor)) falhar();
+    } catch { falhar(); }
+    const dto = plainToInstance(CriarModeloPlanoAlimentarDto, {
+      nome: 'Modelo', origem: 'pessoal', refeicoes: valor
+    });
+    if (validateSync(dto, { whitelist: true, forbidNonWhitelisted: true, forbidUnknownValues: true }).length) falhar();
+    // ValidateIf no DTO clínico dispensa os valores do cliente para catálogo.
+    // Em um modelo eles serão armazenados/devolvidos: quando fornecidos, também
+    // precisam obedecer integralmente ao contrato, mesmo sem serem autoritativos.
+    for (const refeicao of dto.refeicoes) for (const item of refeicao.itens) {
+      for (const alimento of [item, ...(item.substituicoes ?? [])]) {
+        if (alimento.descricao !== undefined && (typeof alimento.descricao !== 'string' || !alimento.descricao.trim() || alimento.descricao.length > 240)) falhar();
+        if (alimento.nutrientesPor100g !== undefined) {
+          const nutrientes = alimento.nutrientesPor100g;
+          if (typeof nutrientes !== 'object' || Array.isArray(nutrientes) ||
+              validateSync(plainToInstance(NutrientesPor100gDto, nutrientes), { whitelist: true, forbidNonWhitelisted: true, forbidUnknownValues: true }).length) falhar();
+        }
+      }
+    }
+    return dto.refeicoes as unknown as RefeicaoModeloPlanoAlimentar[];
   }
 
   private async resolverProfissional(
