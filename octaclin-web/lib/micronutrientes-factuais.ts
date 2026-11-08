@@ -16,21 +16,65 @@ export interface FonteNutrienteFactual { tipo: TipoFonteFactual; codigo?: string
 export interface OrigemNutrienteFactual { contribuintes: number; fontes: FonteNutrienteFactual[]; semOrigemDocumentada: number; fontesNaoDetalhadas: number }
 export const LIMITE_GRUPOS_FONTE_FACTUAL = 50;
 export const ROTULOS_FONTE_FACTUAL: Readonly<Record<TipoFonteFactual,string>> = Object.freeze({
-  TACO:'TACO', USDA:'USDA', IBGE:'IBGE', manual:'Composição manual', custom:'Alimento personalizado'
+  TACO:'TACO', USDA:'USDA', IBGE:'IBGE', manual:'Entrada manual', custom:'Alimento personalizado'
 });
 const ROTULOS_CODIGO_FONTE: Readonly<Record<string,string>> = Object.freeze({
   taco_nepa_unicamp:'NEPA/Unicamp', usda_fdc_foundation:'Foundation Foods', usda_fdc_sr_legacy:'SR Legacy', ibge_pof_2008_2009:'POF 2008-2009'
 });
+/** Sufixo curto, só para a linha compacta da tabela. */
+const ROTULOS_CURTOS_CODIGO_FONTE: Readonly<Record<string,string>> = Object.freeze({
+  taco_nepa_unicamp:'', usda_fdc_foundation:' Foundation', usda_fdc_sr_legacy:' SR Legacy', ibge_pof_2008_2009:''
+});
 export function rotuloQuantidadeAlimentos(n: number): string { return `${n} ${n===1?'alimento':'alimentos'}`; }
+const rotuloFontes=(n:number)=>`${n} ${n===1?'fonte':'fontes'}`;
+const ehEntradaDigitada=(f: FonteNutrienteFactual)=>f.tipo==='manual'||f.tipo==='custom';
+/** Base catalogada cujo código este sistema não reconhece. Nunca presume nome ou direitos. */
+export function fonteNaoCatalogada(f: FonteNutrienteFactual): boolean {
+  return !ehEntradaDigitada(f) && f.codigo!==undefined && !Object.hasOwn(ROTULOS_CODIGO_FONTE,f.codigo);
+}
+function classeDeExibicao(f: FonteNutrienteFactual): number {
+  return f.tipo==='manual'?0:f.tipo==='custom'?1:fonteNaoCatalogada(f)?2:3;
+}
+/** Ordem única para a linha, os detalhes e o relatório: entrada manual, personalizado, não catalogada e bases. */
+export function ordenarFontesParaExibicao(fontes: FonteNutrienteFactual[]): FonteNutrienteFactual[] {
+  const bin=(a:string,b:string)=>a<b?-1:a>b?1:0;
+  return [...fontes].sort((a,b)=>classeDeExibicao(a)-classeDeExibicao(b) || b.quantidade-a.quantidade ||
+    bin(a.tipo,b.tipo) || bin(a.codigo??'',b.codigo??'') || (a.versao??'').localeCompare(b.versao??'','pt-BR',{numeric:true}) || bin(a.versao??'',b.versao??''));
+}
 /** Texto único para tabela, detalhes e relatório. Versão ausente permanece "não informada". */
 export function descreverFonteFactual(f: FonteNutrienteFactual): string {
   const partes: string[] = [ROTULOS_FONTE_FACTUAL[f.tipo]];
-  if (f.tipo!=='manual' && f.tipo!=='custom') {
-    if (f.codigo) partes.push(ROTULOS_CODIGO_FONTE[f.codigo] ?? `código ${f.codigo}`);
+  if (!ehEntradaDigitada(f)) {
+    if (f.codigo) partes.push(fonteNaoCatalogada(f) ? `Fonte não catalogada (código ${f.codigo})` : ROTULOS_CODIGO_FONTE[f.codigo]!);
     partes.push(f.versao ? `versão ${f.versao}` : 'versão não informada');
   }
   partes.push(rotuloQuantidadeAlimentos(f.quantidade));
   return partes.join(' · ');
+}
+export function rotuloCurtoFonteFactual(f: FonteNutrienteFactual): string {
+  return `${f.tipo}${ROTULOS_CURTOS_CODIGO_FONTE[f.codigo??'']??''} ${f.versao??'versão não informada'}`;
+}
+export interface ResumoOrigemLinha { excecoes: { texto: string; atencao: boolean }[]; fontes: string[] }
+/**
+ * Resumo para a linha da tabela. Exceções (entrada digitada, sem origem, não catalogada, fontes não detalhadas)
+ * ficam integrais e fora do "+N"; só bases catalogadas e reconhecidas entram na linha de origem.
+ * Sem alimento conhecido não há resumo: um traço poderia ser lido como zero.
+ */
+export function resumirOrigemLinha(o: OrigemNutrienteFactual): ResumoOrigemLinha | undefined {
+  if (o.contribuintes===0) return undefined;
+  const ordenadas=ordenarFontesParaExibicao(o.fontes), excecoes: ResumoOrigemLinha['excecoes']=[];
+  const soma=(tipo:string)=>ordenadas.filter(f=>f.tipo===tipo).reduce((n,f)=>n+f.quantidade,0);
+  if (soma('manual')) excecoes.push({texto:`Inclui entrada manual (${rotuloQuantidadeAlimentos(soma('manual'))})`,atencao:false});
+  if (soma('custom')) excecoes.push({texto:`Inclui alimento personalizado (${rotuloQuantidadeAlimentos(soma('custom'))})`,atencao:false});
+  if (o.semOrigemDocumentada>0) excecoes.push({texto:`${rotuloQuantidadeAlimentos(o.semOrigemDocumentada)} sem origem documentada`,atencao:true});
+  const naoCatalogadas=ordenadas.filter(fonteNaoCatalogada).length;
+  if (naoCatalogadas>0) excecoes.push({texto:`${naoCatalogadas} ${naoCatalogadas===1?'fonte não catalogada':'fontes não catalogadas'}`,atencao:true});
+  if (o.fontesNaoDetalhadas>0) excecoes.push({texto:`${rotuloQuantidadeAlimentos(o.fontesNaoDetalhadas)} em fontes adicionais não detalhadas`,atencao:true});
+  return {excecoes,fontes:ordenadas.filter(f=>classeDeExibicao(f)===3).map(rotuloCurtoFonteFactual)};
+}
+export function formatarFontesCurtas(fontes: string[], limite: number): string {
+  const visiveis=fontes.slice(0,limite), resto=fontes.length-visiveis.length;
+  return visiveis.join(' · ')+(resto>0?` · +${rotuloFontes(resto)}`:'');
 }
 export interface AnaliseMicronutrientesFactual { ajuda?:AjudaDietetica|null; calculadoEm: string; linhas: LinhaMicronutrienteFactual[] }
 export interface FiltrosMicronutrientesFactuais {

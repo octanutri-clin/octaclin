@@ -309,7 +309,7 @@ for(const modo of ['normal','cancelar','desmontar'])test(`FOOD06 PDF real imprim
  await preparar(page);await page.getByRole('button',{name:'Ver histórico de micronutrientes',exact:true}).click();await page.getByRole('button',{name:'Conferir relatório da análise 1',exact:true}).click();const r=page.getByRole('region',{name:'Prévia do relatório factual'});await expect(r.getByRole('row',{name:/^Ferro /})).toContainText('0 mg');
  await page.evaluate(()=>{const folha=document.createElement('article');folha.className='folha-documento';folha.textContent='CANARIO_OUTRA_FOLHA';document.body.append(folha);});
  await r.getByRole('button',{name:'Imprimir / salvar PDF',exact:true}).click();await expect.poll(()=>terminou).toBe(true);
- if(modo!=='desmontar'){expect(textoPdf).toContain('OctaClin');expect(textoPdf).toContain('Ferro');expect(textoPdf).toContain('0 mg');expect(textoPdf).toContain('Energia');expect(textoPdf).toContain('200 kcal');expect(textoPdf).toContain('Seleção congelada');expect(textoPdf).toContain('TACO');expect(textoPdf).toContain('Composição manual');expect(textoPdf).toContain('Limitações');expect(textoPdf).toContain('Não disponível');}else expect(textoPdf.trim()).toBe('');expect(textoPdf).not.toContain('CANARIO_OUTRA_FOLHA');expect(textoPdf).not.toContain('Paciente sintético');expect(textoPdf).not.toContain('Imprimir / salvar PDF');
+ if(modo!=='desmontar'){expect(textoPdf).toContain('OctaClin');expect(textoPdf).toContain('Ferro');expect(textoPdf).toContain('0 mg');expect(textoPdf).toContain('Energia');expect(textoPdf).toContain('200 kcal');expect(textoPdf).toContain('Seleção congelada');expect(textoPdf).toContain('TACO');expect(textoPdf).toContain('Entrada manual');expect(textoPdf).toContain('Limitações');expect(textoPdf).toContain('Não disponível');}else expect(textoPdf.trim()).toBe('');expect(textoPdf).not.toContain('CANARIO_OUTRA_FOLHA');expect(textoPdf).not.toContain('Paciente sintético');expect(textoPdf).not.toContain('Imprimir / salvar PDF');
  await expect(page.locator('body[data-food06-imprimindo]')).toHaveCount(0);
 });
 test('FOOD06 cancela relatório em carregamento e ignora resposta tardia',async({page})=>{
@@ -341,7 +341,8 @@ test('FOOD06 M01 detalhes mostram a origem registrada por nutriente com a limita
   await expect(r).toContainText('TACO · NEPA/Unicamp · versão 4.1 · 2 alimentos');
   await r.getByText('Detalhes de Ferro',{exact:true}).click();
   await expect(r).toContainText('Origem registrada · 1 alimento com valor conhecido');
-  await expect(r).toContainText('Composição manual · 1 alimento');
+  await expect(r).toContainText('Entrada manual · 1 alimento');
+  await expect(r).toContainText('Entrada manual: valores digitados no cadastro do alimento; não vêm de uma base catalogada.');
   await expect(r).toContainText('Não comprova que a base mediu este nutriente nem indica confiança científica.');
   await r.getByText('Detalhes de Selênio',{exact:true}).click();
   await expect(r).toContainText('Nenhum alimento com valor conhecido de Selênio: não há origem a informar.');
@@ -369,4 +370,32 @@ test('FOOD06 M01 resposta com origem inconsistente não apresenta composição n
   await expect(r.getByRole('alert')).toContainText('Não foi possível carregar uma análise válida.');
   await expect(r.getByRole('row',{name:/^Cálcio /})).toHaveCount(0);
   await expect(r).not.toContainText('TACO');
+});
+
+test('FOOD06 M01 NUXA origem na própria linha: resumo sempre, exceção integral, sem linha sem valor e legenda acima da tabela',async({page},testInfo)=>{
+  await page.route(url=>url.pathname.endsWith('/analise-micronutrientes'),route=>{
+    const a=comOrigem(analise(route.request().postDataJSON()));
+    // Cálcio: TACO + USDA + IBGE (3 bases) para provar o "+N"; ferro: entrada manual + 1 sem origem documentada.
+    const incl=a.cobertura.nutrientes.calcioMg.contagens.incluidos;
+    Object.assign(a.cobertura.nutrientes.calcioMg,{contagens:{incluidos:incl,conhecidos:incl,semComposicao:0,incompativeis:0,naoResolvidos:0}});
+    a.fontes.nutrientes.calcioMg={contribuintes:incl,fontes:[{tipo:'TACO',codigo:'taco_nepa_unicamp',versao:'4.1',quantidade:1},{tipo:'USDA',codigo:'usda_fdc_foundation',versao:'2025.4',quantidade:1}],semOrigemDocumentada:0,fontesNaoDetalhadas:0};
+    return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify(a)});
+  });
+  await preparar(page);
+  await page.getByRole('button',{name:'Ver micronutrientes e cobertura',exact:true}).click();
+  const r=regiao(page);
+  await expect(r).toContainText('A origem vale só para os alimentos com composição conhecida de cada nutriente.');
+  const calcio=r.getByRole('row',{name:/^Cálcio /}),ferro=r.getByRole('row',{name:/^Ferro /}),selenio=r.getByRole('row',{name:/^Selênio /});
+  const mobile=testInfo.project.name.startsWith('mobile');
+  const linhaOrigem=(row)=>row.locator(mobile?'span.sm\\:hidden':'span.hidden').first();
+  await expect(linhaOrigem(calcio)).toBeVisible();
+  await expect(linhaOrigem(calcio)).toContainText(mobile?'Origem registrada: TACO 4.1 · +1 fonte':'Origem registrada: TACO 4.1 · USDA Foundation 2025.4');
+  await expect(ferro).toContainText('Inclui entrada manual (1 alimento)');
+  await expect(ferro.locator('[data-origem-linha] p').first()).toContainText('Inclui entrada manual (1 alimento)');
+  await expect(ferro.locator('span.sm\\:hidden, span.hidden')).toHaveCount(0);
+  await expect(selenio.locator('[data-origem-linha]')).toHaveCount(0);
+  const legenda=r.getByText('A origem vale só para os alimentos com composição conhecida',{exact:false}).first(),tabela=r.getByRole('region',{name:'Tabela de micronutrientes, role horizontalmente se necessário'});
+  expect((await legenda.boundingBox()).y).toBeLessThan((await tabela.boundingBox()).y);
+  await page.screenshot({path:testInfo.outputPath('food06-m01-linha.png'),fullPage:false});
+  expect((await new AxeBuilder({page}).include('[aria-label="Micronutrientes da seleção"]').analyze()).violations).toEqual([]);
 });

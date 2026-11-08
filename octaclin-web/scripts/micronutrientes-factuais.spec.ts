@@ -182,3 +182,46 @@ test('FOOD06 M01 recusa mais de 50 grupos e aceita 50 com não detalhadas reconc
   assert.doesNotThrow(()=>lerAnaliseMicronutrientesFactual(montar(50,10),{selecoes:entrada.selecoes}));
   assert.throws(()=>lerAnaliseMicronutrientesFactual(montar(51,0),{selecoes:entrada.selecoes}),/interpretar/);
 });
+
+/* FOOD06 M01 — melhorias NUXA (apresentação da origem). */
+import * as origemLib from '../lib/micronutrientes-factuais';
+type FonteT={tipo:string;codigo?:string;versao?:string;quantidade:number};
+const lib=origemLib as unknown as {
+  ordenarFontesParaExibicao:(f:FonteT[])=>FonteT[];
+  descreverFonteFactual:(f:FonteT)=>string;
+  resumirOrigemLinha:(o:{contribuintes:number;fontes:FonteT[];semOrigemDocumentada:number;fontesNaoDetalhadas:number})=>{excecoes:{texto:string;atencao:boolean}[];fontes:string[]}|undefined;
+  formatarFontesCurtas:(f:string[],limite:number)=>string;
+  fonteNaoCatalogada:(f:FonteT)=>boolean;
+};
+const TACO_F:FonteT={tipo:'TACO',codigo:'taco_nepa_unicamp',versao:'4.1',quantidade:3};
+const USDA_F:FonteT={tipo:'USDA',codigo:'usda_fdc_foundation',versao:'2025.4',quantidade:5};
+const IBGE_F:FonteT={tipo:'IBGE',codigo:'ibge_pof_2008_2009',versao:'2008.2009',quantidade:1};
+test('NUXA06/09 entrada manual é rotulada, ordenada primeiro e descrita sem adjetivo de qualidade',()=>{
+  const ordem=lib.ordenarFontesParaExibicao([USDA_F,TACO_F,{tipo:'custom',quantidade:1},{tipo:'manual',quantidade:1},IBGE_F,{tipo:'TACO',codigo:'codigo_novo',quantidade:9}]);
+  assert.deepEqual(ordem.map(f=>f.tipo+':'+(f.codigo??'')),['manual:','custom:','TACO:codigo_novo','USDA:usda_fdc_foundation','TACO:taco_nepa_unicamp','IBGE:ibge_pof_2008_2009']);
+  assert.equal(lib.descreverFonteFactual({tipo:'manual',quantidade:2}),'Entrada manual · 2 alimentos');
+  assert.ok(!/Composição manual/.test(JSON.stringify(ordem.map(lib.descreverFonteFactual))));
+});
+test('NUXA07 fonte com código não catalogado é nomeada e não estoura em código longo',()=>{
+  const f:FonteT={tipo:'TACO',codigo:'x'.repeat(40),versao:'1.0',quantidade:1};
+  assert.equal(lib.fonteNaoCatalogada(f),true);assert.equal(lib.fonteNaoCatalogada(TACO_F),false);assert.equal(lib.fonteNaoCatalogada({tipo:'manual',quantidade:1}),false);
+  assert.equal(lib.descreverFonteFactual(f),`TACO · Fonte não catalogada (código ${'x'.repeat(40)}) · versão 1.0 · 1 alimento`);
+  assert.ok(!/código x\b(?!x)/.test(lib.descreverFonteFactual({...f,codigo:'abc'}).replace('(código abc)','')));
+});
+test('NUXA01/02/03 resumo da linha: exceções integrais fora do +N, só bases catalogadas contam no +N, 0 conhecidos sem linha',()=>{
+  const r=lib.resumirOrigemLinha({contribuintes:14,fontes:[TACO_F,USDA_F,IBGE_F,{tipo:'manual',quantidade:2},{tipo:'TACO',codigo:'outra',quantidade:1}],semOrigemDocumentada:2,fontesNaoDetalhadas:0})!;
+  assert.deepEqual(r.excecoes.map(e=>e.texto),['Inclui entrada manual (2 alimentos)','2 alimentos sem origem documentada','1 fonte não catalogada']);
+  assert.deepEqual(r.excecoes.map(e=>e.atencao),[false,true,true]);
+  assert.deepEqual(r.fontes,['USDA Foundation 2025.4','TACO 4.1','IBGE 2008.2009']);
+  assert.equal(lib.formatarFontesCurtas(r.fontes,2),'USDA Foundation 2025.4 · TACO 4.1 · +1 fonte');
+  assert.equal(lib.formatarFontesCurtas(r.fontes,1),'USDA Foundation 2025.4 · +2 fontes');
+  assert.equal(lib.formatarFontesCurtas(r.fontes.slice(0,2),2),'USDA Foundation 2025.4 · TACO 4.1');
+  assert.equal(lib.resumirOrigemLinha({contribuintes:0,fontes:[],semOrigemDocumentada:0,fontesNaoDetalhadas:0}),undefined);
+  const so=lib.resumirOrigemLinha({contribuintes:1,fontes:[{tipo:'manual',quantidade:1}],semOrigemDocumentada:0,fontesNaoDetalhadas:0})!;
+  assert.deepEqual(so.fontes,[]);assert.deepEqual(so.excecoes.map(e=>e.texto),['Inclui entrada manual (1 alimento)']);
+});
+test('NUXA01 fontes adicionais não detalhadas viram exceção, pois podem esconder entrada manual',()=>{
+  const r=lib.resumirOrigemLinha({contribuintes:60,fontes:Array.from({length:50},(_,i)=>({tipo:'USDA',codigo:'usda_fdc_foundation',versao:`2025.${i+1}`,quantidade:1})),semOrigemDocumentada:0,fontesNaoDetalhadas:10})!;
+  assert.deepEqual(r.excecoes.map(e=>e.texto),['10 alimentos em fontes adicionais não detalhadas']);
+  assert.equal(r.excecoes[0]!.atencao,true);
+});

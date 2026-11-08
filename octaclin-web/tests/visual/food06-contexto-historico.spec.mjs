@@ -47,16 +47,16 @@ test('FOOD06 M01 relatório formato 2 mostra a origem registrada por nutriente e
  const detalhes=page.getByRole('row',{name:/^Análise 1/}).getByText('Contexto registrado',{exact:true});await detalhes.focus();await page.keyboard.press('Enter');
  await page.getByRole('button',{name:'Conferir relatório com contexto da análise 1',exact:true}).click();
  const previa=page.getByRole('region',{name:'Prévia do relatório factual',exact:true});
- await expect(previa.getByRole('columnheader',{name:'Origem registrada',exact:true})).toBeVisible();
+ await expect(previa.getByRole('columnheader',{name:/^Origem registrada/})).toBeVisible();
  await expect(previa.getByRole('row',{name:/^Ferro /})).toContainText('0 mg');
- await expect(previa.getByRole('row',{name:/^Ferro /})).toContainText('Composição manual · 2 alimentos');
+ await expect(previa.getByRole('row',{name:/^Ferro /})).toContainText('Entrada manual · 2 alimentos');
  await expect(previa.getByRole('row',{name:/^Selênio /})).toContainText('Sem valor conhecido');
  await expect(previa).toContainText('Não comprova que a base mediu este nutriente nem indica confiança científica.');
  expect((await new AxeBuilder({page}).include('[data-food06-exportacao]').analyze()).violations).toEqual([]);
  await previa.screenshot({path:testInfo.outputPath('m01-relatorio-origem.png')});
  await previa.getByRole('button',{name:'Imprimir / salvar PDF',exact:true}).click();
  await expect.poll(()=>page.evaluate(()=>window.__impressaoOrigem??0)).toBe(1);
- if(pdfReal){await expect.poll(()=>textoPdf.length).toBeGreaterThan(0);const t=textoPdf.replace(/\s+/g,' ');expect(t).toContain('Origem registrada');expect(t).toContain('Composição manual');/* pdftotext intercala linhas quebradas de células vizinhas: conta o prefixo, não a frase inteira. */expect((t.match(/Sem valor/g)??[]).length).toBe(21);expect(t).toContain('Não comprova que a base mediu este nutriente');expect(t).toContain('0 mg');}
+ if(pdfReal){await expect.poll(()=>textoPdf.length).toBeGreaterThan(0);const t=textoPdf.replace(/\s+/g,' ');expect(t).toContain('Origem registrada');expect(t).toContain('do registro de composição; não prova medição');expect(t).toContain('Entrada manual');/* pdftotext intercala linhas quebradas de células vizinhas: conta o prefixo, não a frase inteira. */expect((t.match(/Sem valor/g)??[]).length).toBe(21);expect(t).toContain('Não comprova que a base mediu este nutriente');expect(t).toContain('0 mg');}
 });
 
 /* FOOD06 M01 — NUX06/NUX07: origem ausente no relatório e PDF com 50 grupos de fonte. */
@@ -75,7 +75,7 @@ async function abrirRelatorioM01(page,montar){
 test('FOOD06 M01 relatório formato 2 sem origem por nutriente diz que ela não foi disponibilizada, sem coluna vazia',async({page})=>{
  const previa=await abrirRelatorioM01(page,p=>p);
  await expect(previa).toContainText('Origem por nutriente não disponibilizada neste relatório.');
- await expect(previa.getByRole('columnheader',{name:'Origem registrada',exact:true})).toHaveCount(0);
+ await expect(previa.getByRole('columnheader',{name:/^Origem registrada/})).toHaveCount(0);
  await expect(previa.getByRole('row',{name:/^Ferro /})).toContainText('0 mg');
 });
 test('FOOD06 M01 relatório com 50 grupos de fonte não corta linhas e declara as fontes adicionais, inclusive no PDF real',async({page},testInfo)=>{
