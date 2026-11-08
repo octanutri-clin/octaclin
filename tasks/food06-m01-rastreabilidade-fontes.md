@@ -300,3 +300,9 @@ nutriente selecionado ou uma tabela de fontes única referenciada por índice.
   inventário foi alterado.**
 - Ação do proprietário: renovar o token (Dependabot alerts: read, Code scanning alerts: read, Secret scanning alerts: read),
   reexecutar o workflow `Inventario Security & Quality` e então triar as nove causas acima com a captura nova.
+
+### Validação desta rodada
+
+Backend: 91 suítes e 1.807 testes (1 suíte SKIPPED, PostgreSQL, executada no CI), typecheck e build. Web: typecheck, build,
+lint sem erros, 138 no runner, 152 no BFF e linguagem aprovada. Navegador, desktop e mobile, com `FOOD06_PDF_REAL=true`: 94
+PASS, 0 FAIL, 0 SKIPPED.
