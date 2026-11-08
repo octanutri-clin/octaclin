@@ -86,6 +86,9 @@ import { MedidasCaseirasAlimento } from '@/components/pacientes/medidas-caseiras
 import { AlimentosPersonalizados } from '@/components/pacientes/alimentos-personalizados';
 import { BibliotecaGruposSubstituicoes } from '@/components/pacientes/biblioteca-grupos-substituicoes';
 import { AplicarGrupoSubstituicoes } from '@/components/pacientes/aplicar-grupo-substituicoes';
+import { PainelEquivalenciaNutriente } from '@/components/pacientes/painel-equivalencia-nutriente';
+import type { IntencaoEquivalenciaEdicao } from '@/lib/equivalencias-plano-api';
+import type { EquivalenciaAplicadaApi } from '@/lib/equivalencias-plano-api';
 import type { IntencaoGrupoSubstituicoesEdicao } from '@/lib/grupos-substituicoes-tipos';
 import type { AlternativaAplicadaGrupo } from '@/lib/aplicacao-grupo-substituicoes';
 import { novasPreferenciasApresentacaoPlano, type PreferenciasApresentacaoPlanoApi, type PreferenciasExibicaoRefeicoesApi } from '@/lib/preferencias-apresentacao-plano';
@@ -136,6 +139,9 @@ interface AlternativaFormulario extends AlimentoFormulario {
   liberadaParaPaciente: boolean;
   preferida: boolean;
   origemGrupo?: IntencaoGrupoSubstituicoesEdicao | null;
+  equivalencia?: IntencaoEquivalenciaEdicao;
+  provenienciaEquivalencia?: true;
+  origemCopiaEquivalencia?: NonNullable<import('@/lib/copia-refeicoes-plano').AlternativaFormularioCopia['origemCopiaEquivalencia']>;
 }
 
 interface ItemFormulario extends AlimentoFormulario {
@@ -265,7 +271,8 @@ function alimentoDaVersao(
       substituicoes: alimento.substituicoes.map((substituicao) => ({
         ...alimentoDaVersao(substituicao),
         liberadaParaPaciente: substituicao.liberadaParaPaciente === true,
-        preferida: substituicao.preferida === true
+        preferida: substituicao.preferida === true,
+        ...(substituicao.equivalenciaAplicada ? { provenienciaEquivalencia: true as const } : {})
       })),
       substituicoesVisiveisInicialmente: alimento.substituicoesVisiveisInicialmente
     };
@@ -273,7 +280,7 @@ function alimentoDaVersao(
   return base;
 }
 
-function formularioDaVersao(versao: VersaoPlanoAlimentarApi, avaliacaoPadrao = ''): FormularioPlano {
+function formularioDaVersao(versao: VersaoPlanoAlimentarApi, avaliacaoPadrao = '', origemCopia?: { pacienteId: string; planoId: string }): FormularioPlano {
   const calculo = versao.calculo;
   return {
     avaliacaoAntropometricaId: versao.avaliacaoAntropometricaId ?? avaliacaoPadrao,
@@ -303,7 +310,29 @@ function formularioDaVersao(versao: VersaoPlanoAlimentarApi, avaliacaoPadrao = '
           nome: refeicao.nome,
           horarioLocal: refeicao.horarioLocal?.slice(0, 5) ?? '',
           orientacoes: refeicao.orientacoes ?? '',
-          itens: refeicao.itens.map((item) => alimentoDaVersao(item))
+          itens: refeicao.itens.map((item) => {
+            const mapeado = alimentoDaVersao(item) as ItemFormulario;
+            if (!origemCopia) return mapeado;
+            return {
+              ...mapeado,
+              substituicoes: mapeado.substituicoes.map((alternativa, indice) => {
+                const fonte = item.substituicoes[indice];
+                if (!fonte?.equivalenciaAplicada || !fonte.referenciaEquivalencia) return alternativa;
+                return {
+                  ...alternativa,
+                  origemCopiaEquivalencia: {
+                    pacienteOrigemId: origemCopia.pacienteId,
+                    planoOrigemId: origemCopia.planoId,
+                    versaoIdOrigem: versao.id,
+                    numeroVersaoOrigem: versao.numero,
+                    ...(versao.status === 'rascunho' ? { rascunhoRevisaoOrigemEsperada: versao.rascunhoRevisao ?? 0 } : {}),
+                    itemChaveOrigem: fonte.referenciaEquivalencia.itemChave,
+                    alternativaChaveOrigem: fonte.referenciaEquivalencia.alternativaChave
+                  }
+                };
+              })
+            };
+          })
         }))
       : [novaRefeicao()]
   };
@@ -349,6 +378,11 @@ function validarMicronutrientesFormulario(formulario: FormularioPlano, chaveRefe
 
 function refeicoesParaModelo(formulario: FormularioPlano): RefeicaoPlanoAlimentarEntrada[] {
   validarMicronutrientesFormulario(formulario);
+  if (formulario.refeicoes.some((refeicao) => refeicao.itens.some((item) => item.substituicoes.some((alternativa) =>
+    alternativa.provenienciaEquivalencia === true || alternativa.equivalencia !== undefined
+  )))) {
+    throw new Error('Este plano contém equivalências FOOD05. Salvar ou copiar como modelo ficará disponível quando o modelo preservar a proveniência do cálculo.');
+  }
   return formulario.refeicoes.map((refeicao) => ({
     nome: refeicao.nome.trim(),
     horarioLocal: refeicao.horarioLocal || undefined,
@@ -477,7 +511,8 @@ function documentoDoFormulario(formulario: FormularioPlano): DocumentoEdicaoPlan
           liberadaParaPaciente: alternativa.liberadaParaPaciente,
           preferida: alternativa.preferida,
           medidaCaseira: alternativa.medidaCaseira,
-          origemGrupo: alternativa.origemGrupo
+          origemGrupo: alternativa.origemGrupo,
+          equivalencia: alternativa.equivalencia
         })),
         substituicoesVisiveisInicialmente: item.substituicoesVisiveisInicialmente
       }))
@@ -537,7 +572,8 @@ function formularioDoDocumento(documento: DocumentoEdicaoPlano, versao: VersaoPl
         substituicoes: (item.substituicoes ?? []).map((alternativa) => ({
           ...mapearAlimento(alternativa, alternativa.origemGrupo),
           liberadaParaPaciente: alternativa.liberadaParaPaciente === true,
-          preferida: alternativa.preferida === true
+          preferida: alternativa.preferida === true,
+          equivalencia: alternativa.equivalencia
         })),
         substituicoesVisiveisInicialmente: item.substituicoesVisiveisInicialmente == null
           ? undefined
@@ -1128,6 +1164,7 @@ function EditorAlimento({ pacienteId, contextoEdicao, podeEditar, rotulo, valor,
 
 interface EditorItemProps {
   pacienteId: string;
+  planoId: string;
   contextoEdicao: string;
   podeEditar: boolean;
   item: ItemFormulario;
@@ -1141,11 +1178,64 @@ interface EditorItemProps {
   aoAplicarGrupo?: (item: ItemFormulario, alternativas: AlternativaAplicadaGrupo[], contexto: string, signal: AbortSignal) => Promise<boolean>;
   aoDesfazerGrupo?: (contexto: string) => Promise<boolean>;
   podeDesfazerGrupo?: boolean;
+  versaoId?: string;
+  rascunhoRevisao?: number;
+  documentoEdicao: DocumentoEdicaoPlano;
+  equivalenciaDesabilitada: boolean;
+  equivalenciasAplicadas?: Record<string, EquivalenciaAplicadaApi>;
+  equivalenciasEstado?: 'disponivel' | 'indisponivel';
 }
 
-function EditorItem({ pacienteId, contextoEdicao, podeEditar, item, resumo, indice, total, aoAlterar, aoRemover, aoMover, mostrarResumo, aoAplicarGrupo, aoDesfazerGrupo, podeDesfazerGrupo }: EditorItemProps) {
+function DetalheEquivalenciaAplicada({ equivalencia }: { equivalencia: EquivalenciaAplicadaApi }) {
+  const unidade = equivalencia.nutriente === 'energiaKcal' ? 'kcal' : 'g';
+  const nutrientePrincipal = equivalencia.principal.nutrientes[equivalencia.nutriente] ?? 'indisponível';
+  const nutrienteAlternativa = equivalencia.alternativa.nutrientes[equivalencia.nutriente] ?? 'indisponível';
+  const fonte = (fatos: EquivalenciaAplicadaApi['principal']) => fatos.fonte
+    ? `${fatos.fonte.codigo}${fatos.fonte.versao ? ` · ${fatos.fonte.versao}` : ''}${fatos.fonte.revisao ? ` · revisão ${fatos.fonte.revisao}` : ''}`
+    : 'fonte indisponível';
+  return <details className="text-xs text-texto-suave">
+    <summary className="min-h-11 cursor-pointer py-2 font-medium">Detalhes do cálculo salvo</summary>
+    <dl className="grid gap-1 border-l-2 border-linha pl-3">
+      <div><dt className="inline font-semibold">Algoritmo e nutriente: </dt><dd className="inline">{equivalencia.algoritmo} · {equivalencia.nutriente}</dd></div>
+      <div><dt className="inline font-semibold">Principal: </dt><dd className="inline">{equivalencia.principal.descricao}{equivalencia.principal.preparacao ? ` · ${equivalencia.principal.preparacao}` : ''} · {equivalencia.porcaoPrincipalGramas} g · {nutrientePrincipal} {unidade}/{equivalencia.principal.baseGramas} g · {fonte(equivalencia.principal)}</dd></div>
+      <div><dt className="inline font-semibold">Alternativa: </dt><dd className="inline">{equivalencia.alternativa.descricao}{equivalencia.alternativa.preparacao ? ` · ${equivalencia.alternativa.preparacao}` : ''} · {equivalencia.porcaoEfetivaGramas} g · {nutrienteAlternativa} {unidade}/{equivalencia.alternativa.baseGramas} g · {fonte(equivalencia.alternativa)}</dd></div>
+      <div><dt className="inline font-semibold">Alvo / obtido / diferença: </dt><dd className="inline">{equivalencia.resultado.nutrienteAlvo} / {equivalencia.resultado.obtido} / {equivalencia.resultado.delta} {unidade}</dd></div>
+      <div><dt className="inline font-semibold">Diferença percentual: </dt><dd className="inline">{equivalencia.resultado.deltaPercentual}%</dd></div>
+    </dl>
+  </details>;
+}
+
+function EditorItem({ pacienteId, planoId, contextoEdicao, podeEditar, item, resumo, indice, total, aoAlterar, aoRemover, aoMover, mostrarResumo, aoAplicarGrupo, aoDesfazerGrupo, podeDesfazerGrupo, versaoId, rascunhoRevisao, documentoEdicao, equivalenciaDesabilitada, equivalenciasAplicadas, equivalenciasEstado }: EditorItemProps) {
+  const [alternativaParaDesvincular, setAlternativaParaDesvincular] = useState<string | null>(null);
+  const recalculosPendentes = item.substituicoes.flatMap((alternativa) => {
+    const estado = equivalenciasAplicadas?.[alternativa.chaveCliente];
+    if (estado?.estado !== 'revisao_pendente' || !alternativa.equivalencia || !('aplicacaoId' in alternativa.equivalencia) || alternativa.equivalencia.aplicacaoId !== estado.aplicacaoId) return [];
+    return [{ chaveCliente: alternativa.chaveCliente, descricao: alternativa.descricao || 'alternativa', nutriente: estado.nutriente }];
+  });
   return (
     <div className="grid gap-3 border-t border-linha py-4 first:border-t-0 first:pt-0">
+      <ModalConfirmacao
+        aberto={Boolean(alternativaParaDesvincular)}
+        titulo="Desvincular equivalência"
+        mensagem="A porção salva será preservada. Esta alternativa deixará de ter o cálculo FOOD05 associado; a ação será registrada no próximo salvamento do rascunho."
+        rotuloConfirmar="Desvincular cálculo"
+        aoCancelar={() => setAlternativaParaDesvincular(null)}
+        aoConfirmar={() => {
+          const chave = alternativaParaDesvincular;
+          const alternativa = item.substituicoes.find((atual) => atual.chaveCliente === chave);
+          const estado = chave ? equivalenciasAplicadas?.[chave] : undefined;
+          if (!chave || !alternativa || !estado || estado.estado === 'desvinculada_manualmente' || !alternativa.equivalencia || !('aplicacaoId' in alternativa.equivalencia) || alternativa.equivalencia.aplicacaoId !== estado.aplicacaoId || !/^[a-f0-9]{64}$/.test(estado.fingerprintResolucao)) {
+            setAlternativaParaDesvincular(null);
+            return;
+          }
+          const comando: IntencaoEquivalenciaEdicao = {
+            acao: 'desvincular', aplicacaoId: globalThis.crypto.randomUUID(), anteriorAplicacaoId: estado.aplicacaoId,
+            fingerprintEsperado: estado.fingerprintResolucao
+          };
+          aoAlterar({ ...item, substituicoes: item.substituicoes.map((atual) => atual.chaveCliente === chave ? { ...atual, equivalencia: comando } : atual) });
+          setAlternativaParaDesvincular(null);
+        }}
+      />
       <div className="flex flex-wrap justify-end gap-1">
         <Botao type="button" variante="fantasma" tamanho="sm" className="min-h-11 min-w-11" onClick={() => aoMover(indice - 1)} disabled={indice === 0} aria-label="Mover alimento para cima">
           <ArrowUp size={15} />
@@ -1165,6 +1255,11 @@ function EditorItem({ pacienteId, contextoEdicao, podeEditar, item, resumo, indi
           aoDesfazer={aoDesfazerGrupo}
           podeDesfazer={podeDesfazerGrupo}
           desabilitado={!podeEditar}
+          equivalencia={{
+            pacienteId, planoId, versaoId, rascunhoRevisao, documentoEdicao,
+            itemChave: item.chaveCliente, principalDescricao: item.descricao || 'alimento principal',
+            porcaoPrincipalGramas: item.porcaoGramas, desabilitado: equivalenciaDesabilitada
+          }}
         /> : null}
         <div className="flex flex-wrap items-center justify-between gap-2">
           <p className="text-xs font-semibold uppercase text-texto-suave">Substituicoes</p>
@@ -1196,6 +1291,19 @@ function EditorItem({ pacienteId, contextoEdicao, podeEditar, item, resumo, indi
               }) })}
               aoRemover={() => aoAlterar({ ...item, substituicoes: item.substituicoes.filter((_, posicao) => posicao !== indiceSubstituicao) })}
             />
+            {(() => {
+              const estado = equivalenciasAplicadas?.[substituicao.chaveCliente];
+              const vinculada = Boolean(substituicao.equivalencia && 'aplicacaoId' in substituicao.equivalencia);
+              if (estado?.estado === 'revisao_pendente' && vinculada && substituicao.equivalencia && 'aplicacaoId' in substituicao.equivalencia && substituicao.equivalencia.aplicacaoId === estado.aplicacaoId) {
+                return <div className="grid gap-1"><div className="flex flex-wrap items-center justify-between gap-2"><p className="text-sm text-aviso-forte" role="status">Equivalência — revisão pendente. A porção salva foi preservada; confira um novo cálculo antes de alterar.</p><Botao type="button" variante="fantasma" tamanho="sm" disabled={!podeEditar || equivalenciaDesabilitada} onClick={() => setAlternativaParaDesvincular(substituicao.chaveCliente)}>Desvincular equivalência</Botao></div><DetalheEquivalenciaAplicada equivalencia={estado} /></div>;
+              }
+              if (estado?.estado === 'calculada_revisada' && vinculada && substituicao.equivalencia && 'aplicacaoId' in substituicao.equivalencia && substituicao.equivalencia.aplicacaoId === estado.aplicacaoId) {
+                return <div className="grid gap-1"><div className="flex flex-wrap items-center justify-between gap-2"><p className="text-xs text-texto-suave" role="status">Equivalência revisada: {estado.nutriente} · alvo {estado.resultado.nutrienteAlvo} · porção confirmada {estado.porcaoEfetivaGramas} g.</p><Botao type="button" variante="fantasma" tamanho="sm" disabled={!podeEditar || equivalenciaDesabilitada} onClick={() => setAlternativaParaDesvincular(substituicao.chaveCliente)}>Desvincular equivalência</Botao></div><DetalheEquivalenciaAplicada equivalencia={estado} /></div>;
+              }
+              if (estado?.estado === 'desvinculada_manualmente') return <div className="grid gap-1"><p className="text-xs text-texto-suave" role="status">Equivalência desvinculada manualmente; a porção salva permanece independente.</p><DetalheEquivalenciaAplicada equivalencia={estado} /></div>;
+              if (vinculada && (!estado || equivalenciasEstado === 'indisponivel')) return <p className="text-xs text-aviso-forte" role="status">Estado da equivalência indisponível. Atualize o rascunho antes de revisar.</p>;
+              return null;
+            })()}
             <div className="flex flex-wrap gap-4">
               <label className="flex items-center gap-2 text-xs text-texto-suave">
                 <input
@@ -1233,6 +1341,21 @@ function EditorItem({ pacienteId, contextoEdicao, podeEditar, item, resumo, indi
             <p className="text-xs text-texto-suave">Em branco mostra todas as trocas liberadas ao paciente.</p>
           </div>
         ) : null}
+        <PainelEquivalenciaNutriente
+          key={`equivalencia:${contextoEdicao}:${item.chaveCliente}`}
+          pacienteId={pacienteId}
+          planoId={planoId}
+          versaoId={versaoId}
+          rascunhoRevisao={rascunhoRevisao}
+          documentoEdicao={documentoEdicao}
+          itemChave={item.chaveCliente}
+          principalDescricao={item.descricao || 'alimento principal'}
+          porcaoPrincipalGramas={item.porcaoGramas}
+          alternativas={item.substituicoes}
+          recalculosPendentes={recalculosPendentes}
+          desabilitado={equivalenciaDesabilitada}
+          aoConfirmar={(substituicoes) => aoAlterar({ ...item, substituicoes })}
+        />
       </div>
     </div>
   );
@@ -1790,11 +1913,55 @@ export function PlanoAlimentarProfissional({ pacienteId, podeGerenciar, aoAltera
       enviar: async (documento, precondicao, signal) => {
         const bytes = new TextEncoder().encode(JSON.stringify(documento)).byteLength;
         if (bytes > LIMITE_BYTES_DOCUMENTO_EDICAO) throw Object.assign(new Error('O rascunho ultrapassa o limite de segurança.'), { status: 413 });
-        const salvo = await salvarEdicaoPlanoAlimentar(pacienteId, plano.id, { ...precondicao, documento }, signal);
+        const chavesDocumento = new Set(documento.refeicoes.flatMap((refeicao) => refeicao.itens.flatMap((item) => [
+          ...item.substituicoes ?? []
+        ].map((alternativa) => alternativa.chaveCliente))));
+        const itensDocumento = new Map(documento.refeicoes.flatMap((refeicao) => refeicao.itens.map((item) => [item.chaveCliente, new Set((item.substituicoes ?? []).map((alternativa) => alternativa.chaveCliente))] as const)));
+        const copiasEquivalencia = formularioAtualRef.current.refeicoes.flatMap((refeicao) => refeicao.itens.flatMap((item) => item.substituicoes.flatMap((alternativa) => {
+          const origem = alternativa.origemCopiaEquivalencia;
+          if (!origem || !chavesDocumento.has(alternativa.chaveCliente) || !itensDocumento.get(item.chaveCliente)?.has(alternativa.chaveCliente)) return [];
+          return [{
+            pacienteOrigemId: origem.pacienteOrigemId,
+            planoOrigemId: origem.planoOrigemId,
+            versaoIdOrigem: origem.versaoIdOrigem,
+            numeroVersaoOrigem: origem.numeroVersaoOrigem,
+            ...(origem.rascunhoRevisaoOrigemEsperada !== undefined ? { rascunhoRevisaoOrigemEsperada: origem.rascunhoRevisaoOrigemEsperada } : {}),
+            itemChaveOrigem: origem.itemChaveOrigem,
+            alternativaChaveOrigem: origem.alternativaChaveOrigem,
+            itemChaveDestino: item.chaveCliente,
+            alternativaChaveDestino: alternativa.chaveCliente
+          }];
+        })));
+        const salvo = await salvarEdicaoPlanoAlimentar(pacienteId, plano.id, {
+          ...precondicao,
+          documento,
+          ...(copiasEquivalencia.length ? { copiasEquivalencia } : {})
+        }, signal);
         if (salvo.id !== precondicao.rascunhoIdEsperado || !Number.isSafeInteger(salvo.rascunhoRevisao) || salvo.rascunhoRevisao !== precondicao.rascunhoRevisaoEsperada + 1) {
           throw Object.assign(new Error('A confirmação da revisão não pôde ser reconciliada.'), { status: 502 });
         }
         if (!signal.aborted && pacienteAtualRef.current === pacienteId && planoAtualRef.current?.id === plano.id) {
+          if (copiasEquivalencia.length) {
+            const chavesConfirmadas = new Set(copiasEquivalencia.map((copia) => `${copia.itemChaveDestino}:${copia.alternativaChaveDestino}`));
+            const atual = formularioAtualRef.current;
+            const reconciliado = {
+              ...atual,
+              refeicoes: atual.refeicoes.map((refeicao) => ({
+                ...refeicao,
+                itens: refeicao.itens.map((item) => ({
+                  ...item,
+                  substituicoes: item.substituicoes.map((alternativa) => {
+                    if (!chavesConfirmadas.has(`${item.chaveCliente}:${alternativa.chaveCliente}`)) return alternativa;
+                    const persistida = { ...alternativa };
+                    delete persistida.origemCopiaEquivalencia;
+                    return persistida;
+                  })
+                }))
+              }))
+            };
+            formularioAtualRef.current = reconciliado;
+            setFormulario(reconciliado);
+          }
           setPlano((atual) => {
             if (!atual || atual.id !== plano.id || atual.draft?.id !== salvo.id) return atual;
             const ativacaoObsoleta = (salvo.ativacaoRevisao ?? 0) < Math.max(
@@ -1967,6 +2134,9 @@ export function PlanoAlimentarProfissional({ pacienteId, podeGerenciar, aoAltera
         nutrientesPor100g: alternativa.nutrientesPor100g as NutrientesEdicao,
         micronutrientesPor100g: alternativa.micronutrientesPor100g as MicronutrientesEdicao | undefined,
         fonteRotulo: alternativa.origem === 'custom' ? 'Alimento personalizado' : 'Catálogo',
+        medidaCaseira: alternativa.medidaCaseira,
+        referenciaMedidaCaseira: alternativa.referenciaMedidaCaseira,
+        equivalencia: alternativa.equivalencia,
         preferida: false,
         liberadaParaPaciente: false,
         origemGrupo: alternativa.origemGrupo
@@ -2331,6 +2501,27 @@ export function PlanoAlimentarProfissional({ pacienteId, podeGerenciar, aoAltera
     setRefeicoesAbertas(new Set(refeicoes.map((refeicao) => refeicao.chaveCliente)));
   }
 
+  function aplicarPlanoCopiado(versao: VersaoPlanoAlimentarApi, origem: { pacienteId: string; planoId: string }) {
+    if (!permiteEscreverRascunho()) return;
+    const refeicoes = formularioDaVersao(versao, '', origem).refeicoes.map((refeicao) => ({
+      ...refeicao,
+      chaveCliente: novaChaveCliente('refeicao'),
+      itens: refeicao.itens.map((item) => ({
+        ...item,
+        chaveCliente: novaChaveCliente('alimento'),
+        substituicoes: item.substituicoes.map((alternativa) => ({ ...alternativa, chaveCliente: novaChaveCliente('alimento') }))
+      }))
+    }));
+    if (refeicoes.length > LIMITE_REFEICOES_PLANO || refeicoes.some((refeicao) => refeicao.itens.length > 100)) {
+      setErro('O plano de origem excede os limites aceitos para cópia. Nenhuma alteração foi aplicada.');
+      return;
+    }
+    atualizar((atual) => ({ ...atual, refeicoes }));
+    setRefeicoesAbertas(new Set(refeicoes.map((refeicao) => refeicao.chaveCliente)));
+    setSucesso('Plano copiado para o rascunho. Revise os itens e salve para validar novamente as equivalências.');
+    setErro(null);
+  }
+
 
 
   function duplicarRefeicaoLocal(indice: number) {
@@ -2662,7 +2853,7 @@ export function PlanoAlimentarProfissional({ pacienteId, podeGerenciar, aoAltera
                       item completo, sem um segundo caminho de copia para divergir. */}
                   <DuplicarPlanoDeOutroPaciente
                     pacienteIdAtual={pacienteId}
-                    aoAplicar={(versao) => aplicarRefeicoesDeModelo(refeicoesParaModelo(formularioDaVersao(versao)))}
+                    aoAplicar={aplicarPlanoCopiado}
                     desabilitado={!edicaoEntreAbas.podeEditar || Boolean(operacao)}
                   />
 
@@ -2790,8 +2981,15 @@ export function PlanoAlimentarProfissional({ pacienteId, podeGerenciar, aoAltera
                             <EditorItem
                               key={item.chaveCliente}
                               pacienteId={pacienteId}
+                              planoId={plano.id}
                               contextoEdicao={`${pacienteId}:${plano.id}:${plano.draft?.id ?? ''}:${contextoEdicao}`}
                               podeEditar={edicaoEntreAbas.podeEditar}
+                              versaoId={plano.draft?.id}
+                              rascunhoRevisao={plano.draft?.rascunhoRevisao}
+                              documentoEdicao={documentoDoFormulario(formulario)}
+                              equivalenciaDesabilitada={!edicaoEntreAbas.podeEditar || Boolean(operacao) || copiaEmAndamento || alterado || !resultadosVigentes || estadoAutosave !== 'salvo'}
+                              equivalenciasAplicadas={plano.draft?.equivalenciasAplicadas}
+                              equivalenciasEstado={plano.draft?.equivalenciasEstado}
                               aoAplicarGrupo={aplicarGrupoAoItem}
                               aoDesfazerGrupo={desfazerGrupo}
                               podeDesfazerGrupo={podeDesfazerGrupo}
