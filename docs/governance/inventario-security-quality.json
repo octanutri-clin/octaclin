@@ -1,11 +1,11 @@
 {
   "schemaVersion": 1,
   "repositorio": "octanutri-clin/octaclin",
-  "commitBase": "9e1984a277e89469581b620d8c637324327a9342",
-  "capturadoEm": "2026-10-24T07:11:22.967Z",
+  "commitBase": "3b35e104f5ceeebda10b7bf98355ebfb7272b496",
+  "capturadoEm": "2026-11-08T11:36:46.227Z",
   "snapshot": {
     "codeScanning": {
-      "total": 171,
+      "total": 205,
       "alertas": [
         {
           "numero": 154,
@@ -1744,8 +1744,8 @@
           "pacote": "zlib1g",
           "versaoInstalada": "1:1.3.dfsg+really1.3.1-1+b1",
           "versaoCorrigida": null,
-          "severidade": "medium",
-          "severidadeQualidade": "warning"
+          "severidade": "high",
+          "severidadeQualidade": "error"
         },
         {
           "numero": 414,
@@ -1816,8 +1816,8 @@
           "pacote": "perl-base",
           "versaoInstalada": "5.40.1-6+deb13u1",
           "versaoCorrigida": null,
-          "severidade": "none",
-          "severidadeQualidade": "note"
+          "severidade": "medium",
+          "severidadeQualidade": "warning"
         },
         {
           "numero": 426,
@@ -1952,30 +1952,6 @@
           "severidadeQualidade": "warning"
         },
         {
-          "numero": 489,
-          "ferramenta": "Trivy",
-          "regra": "CVE-2026-93687",
-          "categoria": ".github/workflows/trivy.yml:analisar",
-          "caminho": "octaclin-mobile/pnpm-lock.yaml",
-          "pacote": "braces",
-          "versaoInstalada": "3.0.3",
-          "versaoCorrigida": null,
-          "severidade": "high",
-          "severidadeQualidade": "error"
-        },
-        {
-          "numero": 490,
-          "ferramenta": "Trivy",
-          "regra": "CVE-2026-85393",
-          "categoria": ".github/workflows/trivy.yml:analisar",
-          "caminho": "octaclin-mobile/pnpm-lock.yaml",
-          "pacote": "node-forge",
-          "versaoInstalada": "1.4.0",
-          "versaoCorrigida": null,
-          "severidade": "high",
-          "severidadeQualidade": "error"
-        },
-        {
           "numero": 491,
           "ferramenta": "Trivy",
           "regra": "CVE-2026-95619",
@@ -2044,8 +2020,8 @@
           "pacote": "musl-utils",
           "versaoInstalada": "1.2.6-r2",
           "versaoCorrigida": "1.2.6-r3",
-          "severidade": "none",
-          "severidadeQualidade": "note"
+          "severidade": "high",
+          "severidadeQualidade": "error"
         },
         {
           "numero": 515,
@@ -2056,52 +2032,710 @@
           "pacote": "musl-utils",
           "versaoInstalada": "1.2.6-r2",
           "versaoCorrigida": "1.2.6-r3",
-          "severidade": "none",
+          "severidade": "high",
+          "severidadeQualidade": "error"
+        },
+        {
+          "numero": 516,
+          "ferramenta": "Trivy",
+          "regra": "GHSA-2464-fhr4-w9xw",
+          "categoria": ".github/workflows/trivy.yml:analisar",
+          "caminho": "octaclin-web/pnpm-lock.yaml",
+          "pacote": "next",
+          "versaoInstalada": "16.3.8",
+          "versaoCorrigida": "15.5.28, 16.4.1",
+          "severidade": "critical",
+          "severidadeQualidade": "error"
+        },
+        {
+          "numero": 517,
+          "ferramenta": "Trivy",
+          "regra": "GHSA-673q-mjm6-r5xr",
+          "categoria": ".github/workflows/trivy.yml:analisar",
+          "caminho": "octaclin-web/pnpm-lock.yaml",
+          "pacote": "next",
+          "versaoInstalada": "16.3.8",
+          "versaoCorrigida": "16.4.1",
+          "severidade": "critical",
+          "severidadeQualidade": "error"
+        },
+        {
+          "numero": 518,
+          "ferramenta": "Trivy",
+          "regra": "CVE-2026-94482",
+          "categoria": ".github/workflows/trivy.yml:analisar",
+          "caminho": "octaclin-web/pnpm-lock.yaml",
+          "pacote": "next",
+          "versaoInstalada": "16.3.8",
+          "versaoCorrigida": "15.5.28, 16.4.1",
+          "severidade": "high",
+          "severidadeQualidade": "error"
+        },
+        {
+          "numero": 519,
+          "ferramenta": "Trivy",
+          "regra": "GHSA-2464-fhr4-w9xw",
+          "categoria": "trivy-imagem-web",
+          "caminho": "app/node_modules/.pnpm/next@16.3.8_@babel+core@7.29.7_supports-color@7.2.0__@playwright+test@1.63.0_@types+nod_353c35e946a2c38db811eb86bbf50eb8/node_modules/next/package.json",
+          "pacote": "next",
+          "versaoInstalada": "16.3.8",
+          "versaoCorrigida": "15.5.28, 16.4.1",
+          "severidade": "critical",
+          "severidadeQualidade": "error"
+        },
+        {
+          "numero": 520,
+          "ferramenta": "Trivy",
+          "regra": "GHSA-673q-mjm6-r5xr",
+          "categoria": "trivy-imagem-web",
+          "caminho": "app/node_modules/.pnpm/next@16.3.8_@babel+core@7.29.7_supports-color@7.2.0__@playwright+test@1.63.0_@types+nod_353c35e946a2c38db811eb86bbf50eb8/node_modules/next/package.json",
+          "pacote": "next",
+          "versaoInstalada": "16.3.8",
+          "versaoCorrigida": "16.4.1",
+          "severidade": "critical",
+          "severidadeQualidade": "error"
+        },
+        {
+          "numero": 521,
+          "ferramenta": "Trivy",
+          "regra": "CVE-2026-94482",
+          "categoria": "trivy-imagem-web",
+          "caminho": "app/node_modules/.pnpm/next@16.3.8_@babel+core@7.29.7_supports-color@7.2.0__@playwright+test@1.63.0_@types+nod_353c35e946a2c38db811eb86bbf50eb8/node_modules/next/package.json",
+          "pacote": "next",
+          "versaoInstalada": "16.3.8",
+          "versaoCorrigida": "15.5.28, 16.4.1",
+          "severidade": "high",
+          "severidadeQualidade": "error"
+        },
+        {
+          "numero": 522,
+          "ferramenta": "Trivy",
+          "regra": "CVE-2026-111181",
+          "categoria": ".github/workflows/trivy.yml:analisar",
+          "caminho": "octaclin-backend/pnpm-lock.yaml",
+          "pacote": "body-parser",
+          "versaoInstalada": "2.3.0",
+          "versaoCorrigida": "2.4.0, 1.20.9",
+          "severidade": "high",
+          "severidadeQualidade": "error"
+        },
+        {
+          "numero": 523,
+          "ferramenta": "Trivy",
+          "regra": "CVE-2026-113872",
+          "categoria": ".github/workflows/trivy.yml:analisar",
+          "caminho": "octaclin-backend/pnpm-lock.yaml",
+          "pacote": "multer",
+          "versaoInstalada": "2.4.0",
+          "versaoCorrigida": "2.5.0",
+          "severidade": "high",
+          "severidadeQualidade": "error"
+        },
+        {
+          "numero": 528,
+          "ferramenta": "Trivy",
+          "regra": "CVE-2026-111181",
+          "categoria": "trivy-imagem-backend",
+          "caminho": "app/node_modules/.pnpm/body-parser@2.3.0_supports-color@8.1.1/node_modules/body-parser/package.json",
+          "pacote": "body-parser",
+          "versaoInstalada": "2.3.0",
+          "versaoCorrigida": "2.4.0, 1.20.9",
+          "severidade": "high",
+          "severidadeQualidade": "error"
+        },
+        {
+          "numero": 529,
+          "ferramenta": "Trivy",
+          "regra": "CVE-2026-113872",
+          "categoria": "trivy-imagem-backend",
+          "caminho": "app/node_modules/.pnpm/multer@2.4.0/node_modules/multer/package.json",
+          "pacote": "multer",
+          "versaoInstalada": "2.4.0",
+          "versaoCorrigida": "2.5.0",
+          "severidade": "high",
+          "severidadeQualidade": "error"
+        },
+        {
+          "numero": 533,
+          "ferramenta": "CodeQL",
+          "regra": "js/prototype-polluting-assignment",
+          "categoria": "/language:javascript-typescript",
+          "caminho": "octaclin-backend/src/modulos/planos-alimentares/aplicacao/servico-planos-alimentares.ts",
+          "pacote": null,
+          "versaoInstalada": null,
+          "versaoCorrigida": null,
+          "severidade": "medium",
+          "severidadeQualidade": "warning"
+        },
+        {
+          "numero": 535,
+          "ferramenta": "Trivy",
+          "regra": "CVE-2026-110816",
+          "categoria": ".github/workflows/trivy.yml:analisar",
+          "caminho": "octaclin-backend/pnpm-lock.yaml",
+          "pacote": "qs",
+          "versaoInstalada": "6.16.0",
+          "versaoCorrigida": "6.16.1",
+          "severidade": "medium",
+          "severidadeQualidade": "warning"
+        },
+        {
+          "numero": 536,
+          "ferramenta": "Trivy",
+          "regra": "CVE-2026-110816",
+          "categoria": "trivy-imagem-backend",
+          "caminho": "app/node_modules/.pnpm/qs@6.16.0/node_modules/qs/package.json",
+          "pacote": "qs",
+          "versaoInstalada": "6.16.0",
+          "versaoCorrigida": "6.16.1",
+          "severidade": "medium",
+          "severidadeQualidade": "warning"
+        },
+        {
+          "numero": 553,
+          "ferramenta": "Trivy",
+          "regra": "CVE-2026-84243",
+          "categoria": "trivy-imagem-ia-service",
+          "caminho": "library/octaclin-ia-service",
+          "pacote": "libc-bin",
+          "versaoInstalada": "2.41-12+deb13u4",
+          "versaoCorrigida": null,
+          "severidade": "medium",
+          "severidadeQualidade": "warning"
+        },
+        {
+          "numero": 554,
+          "ferramenta": "Trivy",
+          "regra": "CVE-2026-84243",
+          "categoria": "trivy-imagem-ia-service",
+          "caminho": "library/octaclin-ia-service",
+          "pacote": "libc6",
+          "versaoInstalada": "2.41-12+deb13u4",
+          "versaoCorrigida": null,
+          "severidade": "medium",
+          "severidadeQualidade": "warning"
+        },
+        {
+          "numero": 556,
+          "ferramenta": "Trivy",
+          "regra": "CVE-2026-119373",
+          "categoria": "trivy-imagem-ia-service",
+          "caminho": "library/octaclin-ia-service",
+          "pacote": "libsqlite3-0",
+          "versaoInstalada": "3.46.1-7+deb13u2",
+          "versaoCorrigida": null,
+          "severidade": "high",
+          "severidadeQualidade": "error"
+        },
+        {
+          "numero": 558,
+          "ferramenta": "Trivy",
+          "regra": "CVE-2026-119378",
+          "categoria": "trivy-imagem-ia-service",
+          "caminho": "library/octaclin-ia-service",
+          "pacote": "libsqlite3-0",
+          "versaoInstalada": "3.46.1-7+deb13u2",
+          "versaoCorrigida": null,
+          "severidade": "medium",
+          "severidadeQualidade": "warning"
+        },
+        {
+          "numero": 559,
+          "ferramenta": "Trivy",
+          "regra": "CVE-2026-119591",
+          "categoria": "trivy-imagem-ia-service",
+          "caminho": "library/octaclin-ia-service",
+          "pacote": "libsqlite3-0",
+          "versaoInstalada": "3.46.1-7+deb13u2",
+          "versaoCorrigida": null,
+          "severidade": "medium",
+          "severidadeQualidade": "warning"
+        },
+        {
+          "numero": 560,
+          "ferramenta": "Trivy",
+          "regra": "CVE-2026-119371",
+          "categoria": "trivy-imagem-ia-service",
+          "caminho": "library/octaclin-ia-service",
+          "pacote": "libsqlite3-0",
+          "versaoInstalada": "3.46.1-7+deb13u2",
+          "versaoCorrigida": null,
+          "severidade": "medium",
+          "severidadeQualidade": "warning"
+        },
+        {
+          "numero": 561,
+          "ferramenta": "Trivy",
+          "regra": "CVE-2026-119372",
+          "categoria": "trivy-imagem-ia-service",
+          "caminho": "library/octaclin-ia-service",
+          "pacote": "libsqlite3-0",
+          "versaoInstalada": "3.46.1-7+deb13u2",
+          "versaoCorrigida": null,
+          "severidade": "medium",
+          "severidadeQualidade": "warning"
+        },
+        {
+          "numero": 562,
+          "ferramenta": "Trivy",
+          "regra": "CVE-2026-119374",
+          "categoria": "trivy-imagem-ia-service",
+          "caminho": "library/octaclin-ia-service",
+          "pacote": "libsqlite3-0",
+          "versaoInstalada": "3.46.1-7+deb13u2",
+          "versaoCorrigida": null,
+          "severidade": "high",
+          "severidadeQualidade": "error"
+        },
+        {
+          "numero": 563,
+          "ferramenta": "Trivy",
+          "regra": "CVE-2026-119375",
+          "categoria": "trivy-imagem-ia-service",
+          "caminho": "library/octaclin-ia-service",
+          "pacote": "libsqlite3-0",
+          "versaoInstalada": "3.46.1-7+deb13u2",
+          "versaoCorrigida": null,
+          "severidade": "medium",
+          "severidadeQualidade": "warning"
+        },
+        {
+          "numero": 564,
+          "ferramenta": "Trivy",
+          "regra": "CVE-2026-119376",
+          "categoria": "trivy-imagem-ia-service",
+          "caminho": "library/octaclin-ia-service",
+          "pacote": "libsqlite3-0",
+          "versaoInstalada": "3.46.1-7+deb13u2",
+          "versaoCorrigida": null,
+          "severidade": "medium",
+          "severidadeQualidade": "warning"
+        },
+        {
+          "numero": 565,
+          "ferramenta": "Trivy",
+          "regra": "CVE-2026-119377",
+          "categoria": "trivy-imagem-ia-service",
+          "caminho": "library/octaclin-ia-service",
+          "pacote": "libsqlite3-0",
+          "versaoInstalada": "3.46.1-7+deb13u2",
+          "versaoCorrigida": null,
+          "severidade": "low",
           "severidadeQualidade": "note"
+        },
+        {
+          "numero": 566,
+          "ferramenta": "Trivy",
+          "regra": "CVE-2026-119379",
+          "categoria": "trivy-imagem-ia-service",
+          "caminho": "library/octaclin-ia-service",
+          "pacote": "libsqlite3-0",
+          "versaoInstalada": "3.46.1-7+deb13u2",
+          "versaoCorrigida": null,
+          "severidade": "high",
+          "severidadeQualidade": "error"
+        },
+        {
+          "numero": 567,
+          "ferramenta": "Trivy",
+          "regra": "CVE-2026-114690",
+          "categoria": "trivy-imagem-ia-service",
+          "caminho": "library/octaclin-ia-service",
+          "pacote": "gcc-14-base",
+          "versaoInstalada": "14.2.0-19",
+          "versaoCorrigida": null,
+          "severidade": "medium",
+          "severidadeQualidade": "warning"
+        },
+        {
+          "numero": 568,
+          "ferramenta": "Trivy",
+          "regra": "CVE-2026-114691",
+          "categoria": "trivy-imagem-ia-service",
+          "caminho": "library/octaclin-ia-service",
+          "pacote": "gcc-14-base",
+          "versaoInstalada": "14.2.0-19",
+          "versaoCorrigida": null,
+          "severidade": "medium",
+          "severidadeQualidade": "warning"
+        },
+        {
+          "numero": 569,
+          "ferramenta": "Trivy",
+          "regra": "CVE-2026-115455",
+          "categoria": "trivy-imagem-ia-service",
+          "caminho": "library/octaclin-ia-service",
+          "pacote": "gcc-14-base",
+          "versaoInstalada": "14.2.0-19",
+          "versaoCorrigida": null,
+          "severidade": "medium",
+          "severidadeQualidade": "warning"
+        },
+        {
+          "numero": 570,
+          "ferramenta": "Trivy",
+          "regra": "CVE-2026-114690",
+          "categoria": "trivy-imagem-ia-service",
+          "caminho": "library/octaclin-ia-service",
+          "pacote": "libgcc-s1",
+          "versaoInstalada": "14.2.0-19",
+          "versaoCorrigida": null,
+          "severidade": "medium",
+          "severidadeQualidade": "warning"
+        },
+        {
+          "numero": 571,
+          "ferramenta": "Trivy",
+          "regra": "CVE-2026-114691",
+          "categoria": "trivy-imagem-ia-service",
+          "caminho": "library/octaclin-ia-service",
+          "pacote": "libgcc-s1",
+          "versaoInstalada": "14.2.0-19",
+          "versaoCorrigida": null,
+          "severidade": "medium",
+          "severidadeQualidade": "warning"
+        },
+        {
+          "numero": 572,
+          "ferramenta": "Trivy",
+          "regra": "CVE-2026-115455",
+          "categoria": "trivy-imagem-ia-service",
+          "caminho": "library/octaclin-ia-service",
+          "pacote": "libgcc-s1",
+          "versaoInstalada": "14.2.0-19",
+          "versaoCorrigida": null,
+          "severidade": "medium",
+          "severidadeQualidade": "warning"
+        },
+        {
+          "numero": 573,
+          "ferramenta": "Trivy",
+          "regra": "CVE-2026-114690",
+          "categoria": "trivy-imagem-ia-service",
+          "caminho": "library/octaclin-ia-service",
+          "pacote": "libstdc++6",
+          "versaoInstalada": "14.2.0-19",
+          "versaoCorrigida": null,
+          "severidade": "medium",
+          "severidadeQualidade": "warning"
+        },
+        {
+          "numero": 574,
+          "ferramenta": "Trivy",
+          "regra": "CVE-2026-114691",
+          "categoria": "trivy-imagem-ia-service",
+          "caminho": "library/octaclin-ia-service",
+          "pacote": "libstdc++6",
+          "versaoInstalada": "14.2.0-19",
+          "versaoCorrigida": null,
+          "severidade": "medium",
+          "severidadeQualidade": "warning"
+        },
+        {
+          "numero": 575,
+          "ferramenta": "Trivy",
+          "regra": "CVE-2026-115455",
+          "categoria": "trivy-imagem-ia-service",
+          "caminho": "library/octaclin-ia-service",
+          "pacote": "libstdc++6",
+          "versaoInstalada": "14.2.0-19",
+          "versaoCorrigida": null,
+          "severidade": "medium",
+          "severidadeQualidade": "warning"
+        },
+        {
+          "numero": 576,
+          "ferramenta": "Trivy",
+          "regra": "CVE-2026-109518",
+          "categoria": "trivy-imagem-ia-service",
+          "caminho": "library/octaclin-ia-service",
+          "pacote": "apt",
+          "versaoInstalada": "3.0.3",
+          "versaoCorrigida": "3.0.4",
+          "severidade": "high",
+          "severidadeQualidade": "error"
+        },
+        {
+          "numero": 577,
+          "ferramenta": "Trivy",
+          "regra": "CVE-2026-109518",
+          "categoria": "trivy-imagem-ia-service",
+          "caminho": "library/octaclin-ia-service",
+          "pacote": "libapt-pkg7.0",
+          "versaoInstalada": "3.0.3",
+          "versaoCorrigida": "3.0.4",
+          "severidade": "high",
+          "severidadeQualidade": "error"
         }
       ],
       "porFerramenta": {
-        "Trivy": 171
+        "CodeQL": 1,
+        "Trivy": 204
       }
     },
     "dependabot": {
-      "total": 4,
+      "total": 29,
       "alertas": [
         {
-          "numero": 98,
-          "advisory": "GHSA-86w9-cpqp-85rv",
+          "numero": 118,
+          "advisory": "GHSA-27r3-jxmh-p828",
           "severidade": "high",
           "ecossistema": "npm",
-          "pacote": "node-forge",
-          "manifesto": "octaclin-mobile/pnpm-lock.yaml",
-          "versaoCorrigida": null
+          "pacote": "body-parser",
+          "manifesto": "octaclin-backend/pnpm-lock.yaml",
+          "versaoCorrigida": "2.4.0"
         },
         {
-          "numero": 99,
-          "advisory": "GHSA-vfj7-8cjw-p6xm",
+          "numero": 119,
+          "advisory": "GHSA-333x-w4r6-6crp",
+          "severidade": "low",
+          "ecossistema": "npm",
+          "pacote": "fast-uri",
+          "manifesto": "octaclin-backend/pnpm-lock.yaml",
+          "versaoCorrigida": "3.1.9"
+        },
+        {
+          "numero": 120,
+          "advisory": "GHSA-wjr9-j795-jxcr",
+          "severidade": "medium",
+          "ecossistema": "npm",
+          "pacote": "fast-uri",
+          "manifesto": "octaclin-backend/pnpm-lock.yaml",
+          "versaoCorrigida": "3.1.9"
+        },
+        {
+          "numero": 121,
+          "advisory": "GHSA-xhq7-xmqj-769h",
+          "severidade": "low",
+          "ecossistema": "npm",
+          "pacote": "fast-uri",
+          "manifesto": "octaclin-backend/pnpm-lock.yaml",
+          "versaoCorrigida": "3.1.9"
+        },
+        {
+          "numero": 122,
+          "advisory": "GHSA-w74x-v6f9-j3xg",
+          "severidade": "medium",
+          "ecossistema": "npm",
+          "pacote": "fast-uri",
+          "manifesto": "octaclin-backend/pnpm-lock.yaml",
+          "versaoCorrigida": "3.1.9"
+        },
+        {
+          "numero": 126,
+          "advisory": "GHSA-q7qp-rjg7-q26m",
           "severidade": "high",
           "ecossistema": "npm",
-          "pacote": "braces",
-          "manifesto": "octaclin-mobile/pnpm-lock.yaml",
-          "versaoCorrigida": null
+          "pacote": "multer",
+          "manifesto": "octaclin-backend/pnpm-lock.yaml",
+          "versaoCorrigida": "2.5.0"
         },
         {
-          "numero": 113,
+          "numero": 130,
+          "advisory": "GHSA-p3m5-59mp-jv5r",
+          "severidade": "high",
+          "ecossistema": "npm",
+          "pacote": "next",
+          "manifesto": "octaclin-web/pnpm-lock.yaml",
+          "versaoCorrigida": "16.4.1"
+        },
+        {
+          "numero": 131,
+          "advisory": "GHSA-2464-fhr4-w9xw",
+          "severidade": "critical",
+          "ecossistema": "npm",
+          "pacote": "next",
+          "manifesto": "octaclin-web/pnpm-lock.yaml",
+          "versaoCorrigida": "16.4.1"
+        },
+        {
+          "numero": 132,
+          "advisory": "GHSA-673q-mjm6-r5xr",
+          "severidade": "critical",
+          "ecossistema": "npm",
+          "pacote": "next",
+          "manifesto": "octaclin-web/pnpm-lock.yaml",
+          "versaoCorrigida": "16.4.1"
+        },
+        {
+          "numero": 134,
+          "advisory": "GHSA-v4x8-3wr5-3wq8",
+          "severidade": "high",
+          "ecossistema": "pip",
+          "pacote": "filelock",
+          "manifesto": "research/fase319/requirements-lab-lock.txt",
+          "versaoCorrigida": "4.2.1"
+        },
+        {
+          "numero": 135,
+          "advisory": "GHSA-crv4-6mhj-j5jh",
+          "severidade": "medium",
+          "ecossistema": "pip",
+          "pacote": "filelock",
+          "manifesto": "research/fase319/requirements-lab-lock.txt",
+          "versaoCorrigida": "4.2.1"
+        },
+        {
+          "numero": 136,
+          "advisory": "GHSA-2g95-wg33-c5x2",
+          "severidade": "medium",
+          "ecossistema": "pip",
+          "pacote": "filelock",
+          "manifesto": "research/fase319/requirements-lab-lock.txt",
+          "versaoCorrigida": "4.2.1"
+        },
+        {
+          "numero": 137,
+          "advisory": "GHSA-567q-5qvw-pf92",
+          "severidade": "low",
+          "ecossistema": "pip",
+          "pacote": "filelock",
+          "manifesto": "research/fase319/requirements-lab-lock.txt",
+          "versaoCorrigida": "4.2.1"
+        },
+        {
+          "numero": 138,
+          "advisory": "GHSA-9vhv-jxww-xfm5",
+          "severidade": "low",
+          "ecossistema": "pip",
+          "pacote": "filelock",
+          "manifesto": "research/fase319/requirements-lab-lock.txt",
+          "versaoCorrigida": "4.2.1"
+        },
+        {
+          "numero": 139,
+          "advisory": "GHSA-jqc4-5cvw-7w85",
+          "severidade": "medium",
+          "ecossistema": "pip",
+          "pacote": "filelock",
+          "manifesto": "research/fase319/requirements-lab-lock.txt",
+          "versaoCorrigida": "4.2.1"
+        },
+        {
+          "numero": 140,
           "advisory": "GHSA-6q48-6c7w-9gw2",
           "severidade": "critical",
           "ecossistema": "pip",
           "pacote": "certifi",
           "manifesto": "octaclin-ai-service/requirements.lock.txt",
-          "versaoCorrigida": "2026.10.19"
+          "versaoCorrigida": "2026.10.18"
         },
         {
-          "numero": 114,
-          "advisory": "GHSA-6q48-6c7w-9gw2",
-          "severidade": "critical",
+          "numero": 141,
+          "advisory": "GHSA-6pq8-jhm2-2vcw",
+          "severidade": "medium",
+          "ecossistema": "npm",
+          "pacote": "qs",
+          "manifesto": "octaclin-backend/pnpm-lock.yaml",
+          "versaoCorrigida": "6.16.1"
+        },
+        {
+          "numero": 142,
+          "advisory": "GHSA-gcqx-w48m-w2h4",
+          "severidade": "low",
+          "ecossistema": "npm",
+          "pacote": "deepmerge",
+          "manifesto": "octaclin-backend/pnpm-lock.yaml",
+          "versaoCorrigida": null
+        },
+        {
+          "numero": 145,
+          "advisory": "GHSA-fq56-3cx3-fjxp",
+          "severidade": "medium",
           "ecossistema": "pip",
-          "pacote": "certifi",
+          "pacote": "filelock",
           "manifesto": "research/fase319/requirements-lab-lock.txt",
-          "versaoCorrigida": "2026.10.19"
+          "versaoCorrigida": "4.2.1"
+        },
+        {
+          "numero": 146,
+          "advisory": "GHSA-fj95-fr6c-h845",
+          "severidade": "medium",
+          "ecossistema": "pip",
+          "pacote": "filelock",
+          "manifesto": "research/fase319/requirements-lab-lock.txt",
+          "versaoCorrigida": "4.2.1"
+        },
+        {
+          "numero": 147,
+          "advisory": "GHSA-m462-7rxw-wvpg",
+          "severidade": "medium",
+          "ecossistema": "pip",
+          "pacote": "filelock",
+          "manifesto": "research/fase319/requirements-lab-lock.txt",
+          "versaoCorrigida": "4.2.1"
+        },
+        {
+          "numero": 148,
+          "advisory": "GHSA-69hj-f68j-2879",
+          "severidade": "medium",
+          "ecossistema": "pip",
+          "pacote": "filelock",
+          "manifesto": "research/fase319/requirements-lab-lock.txt",
+          "versaoCorrigida": "4.2.1"
+        },
+        {
+          "numero": 149,
+          "advisory": "GHSA-9j6q-wvj5-jgjg",
+          "severidade": "low",
+          "ecossistema": "pip",
+          "pacote": "filelock",
+          "manifesto": "research/fase319/requirements-lab-lock.txt",
+          "versaoCorrigida": "4.2.1"
+        },
+        {
+          "numero": 150,
+          "advisory": "GHSA-rfpc-qcw5-3pc4",
+          "severidade": "medium",
+          "ecossistema": "pip",
+          "pacote": "filelock",
+          "manifesto": "research/fase319/requirements-lab-lock.txt",
+          "versaoCorrigida": "4.2.1"
+        },
+        {
+          "numero": 151,
+          "advisory": "GHSA-cwqr-hh33-gh44",
+          "severidade": "medium",
+          "ecossistema": "pip",
+          "pacote": "filelock",
+          "manifesto": "research/fase319/requirements-lab-lock.txt",
+          "versaoCorrigida": "4.2.1"
+        },
+        {
+          "numero": 152,
+          "advisory": "GHSA-8mx5-7m5m-r77g",
+          "severidade": "medium",
+          "ecossistema": "pip",
+          "pacote": "filelock",
+          "manifesto": "research/fase319/requirements-lab-lock.txt",
+          "versaoCorrigida": "4.2.1"
+        },
+        {
+          "numero": 153,
+          "advisory": "GHSA-9c4x-gm8v-wgc4",
+          "severidade": "medium",
+          "ecossistema": "pip",
+          "pacote": "filelock",
+          "manifesto": "research/fase319/requirements-lab-lock.txt",
+          "versaoCorrigida": "4.2.1"
+        },
+        {
+          "numero": 154,
+          "advisory": "GHSA-6627-m3xw-93mp",
+          "severidade": "medium",
+          "ecossistema": "pip",
+          "pacote": "filelock",
+          "manifesto": "research/fase319/requirements-lab-lock.txt",
+          "versaoCorrigida": "4.2.1"
+        },
+        {
+          "numero": 155,
+          "advisory": "GHSA-wfhq-q4j2-c37m",
+          "severidade": "low",
+          "ecossistema": "pip",
+          "pacote": "filelock",
+          "manifesto": "research/fase319/requirements-lab-lock.txt",
+          "versaoCorrigida": "4.2.1"
         }
       ]
     },
@@ -2280,12 +2914,35 @@
         "code-scanning:492",
         "code-scanning:493",
         "code-scanning:504",
-        "code-scanning:512"
+        "code-scanning:512",
+        "code-scanning:553",
+        "code-scanning:554",
+        "code-scanning:556",
+        "code-scanning:558",
+        "code-scanning:559",
+        "code-scanning:560",
+        "code-scanning:561",
+        "code-scanning:562",
+        "code-scanning:563",
+        "code-scanning:564",
+        "code-scanning:565",
+        "code-scanning:566",
+        "code-scanning:567",
+        "code-scanning:568",
+        "code-scanning:569",
+        "code-scanning:570",
+        "code-scanning:571",
+        "code-scanning:572",
+        "code-scanning:573",
+        "code-scanning:574",
+        "code-scanning:575",
+        "code-scanning:576",
+        "code-scanning:577"
       ],
       "disposicao": "corrigir",
       "severidadeContextual": "critical",
       "owner": "octanutri-clin/octaclin (proprietario do repositorio)",
-      "revisarEm": "2026-11-07",
+      "revisarEm": "2026-11-15",
       "ondaDestino": "SQ-1A",
       "evidencia": [
         "Recaptura da main 98b6e5f em 2026-09-08: 173 alertas Trivy na imagem final library/octaclin-ia-service; 3 critical, 51 high, 57 medium, 57 low e 5 none.",
@@ -2304,7 +2961,9 @@
         "Reconciliacao SQ-4 de 2026-10-09: referencias atualizadas a partir da captura autenticada; nenhuma nova referencia IA ficou sem causa.",
         "Recaptura autenticada da main 9e1984a277e89469581b620d8c637324327a9342 em 2026-10-24T07:11:22.967Z, run 40073140896; SHA-256 3e8cb7400759f9a22b6ce8d7e1975f0dd4b78cead1788c69590ab207ed89985c: 171 Code Scanning, 4 Dependabot e zero Secret Scanning. Referencias ausentes nesta captura: code-scanning:436, code-scanning:437, code-scanning:438, code-scanning:439, code-scanning:440, code-scanning:441, code-scanning:442, code-scanning:443, code-scanning:444, code-scanning:445, code-scanning:446, code-scanning:447, code-scanning:448, code-scanning:449, code-scanning:450, code-scanning:451, code-scanning:452, code-scanning:453, code-scanning:454, code-scanning:455, code-scanning:456, code-scanning:457, code-scanning:458, code-scanning:459, code-scanning:460, code-scanning:461, code-scanning:462, code-scanning:463, code-scanning:464, code-scanning:465, code-scanning:466, code-scanning:467, code-scanning:468, code-scanning:469, code-scanning:470, code-scanning:471, code-scanning:472, code-scanning:473, code-scanning:474, code-scanning:488.",
         "Recaptura autenticada da main 9e1984a277e89469581b620d8c637324327a9342 em 2026-10-24T07:11:22.967Z, run 40073140896; SHA-256 3e8cb7400759f9a22b6ce8d7e1975f0dd4b78cead1788c69590ab207ed89985c: 171 Code Scanning, 4 Dependabot e zero Secret Scanning. Imagem IA: 167 alertas, severidades {'low': 61, 'medium': 58, 'high': 44, 'none': 4}; 3 informam patch (liblzma5 e ca-certificates), todos com severidade none. O alerta novo code-scanning:512 foi vinculado; os demais IDs remanescentes foram reconciliados individualmente.",
-        "Inspecao do Dockerfile atual confirma Python 3.14-slim fixado pelo indice sha256:a2b82f3c48559aa0a8446d9af49826b6e2b2016f4cd2afabfe6013ec53729170, com atualizacao documentada em 2026-10-12. A captura comprova a reducao de 206 para 167 alertas IA; nao comprova ausencia de risco dos residuos. A severidade contextual critical conservadora e mantida e revisada em 14 dias."
+        "Inspecao do Dockerfile atual confirma Python 3.14-slim fixado pelo indice sha256:a2b82f3c48559aa0a8446d9af49826b6e2b2016f4cd2afabfe6013ec53729170, com atualizacao documentada em 2026-10-12. A captura comprova a reducao de 206 para 167 alertas IA; nao comprova ausencia de risco dos residuos. A severidade contextual critical conservadora e mantida e revisada em 14 dias.",
+        "Captura autenticada da main 3b35e104f5ceeebda10b7bf98355ebfb7272b496 em 2026-11-08T11:36:46.227Z, run 42476505880 (workflow_dispatch); SHA-256 aa5dee6473b8d0abbd44a492be8f93212f8f76b1ee9a0f72579f07e64d051867, remontado do eco do log do job e conferido contra o hash declarado: 205 Code Scanning, 29 Dependabot e zero Secret Scanning. Imagem do servico IA: 190 alertas Trivy abertos.",
+        "Correcao parcial preparada: base python:3.14.10-slim por digest (9aaa474097d0..., resolvido em 2026-11-08 no Docker Hub; o digest fixado anterior era a2b82f3c4855...). Sem Docker daemon nesta sessao, a imagem nao foi construida nem varrida: o efeito so aparece na varredura da main. A maioria dos alertas continua sem versao corrigida no scanner. A correcao esta na branch claude/inventario-sq-2026-11-08 (PR de inventario separada da PR #470) e ainda nao esta na main."
       ],
       "preCondicoes": [
         "A exploracao depende do pacote Debian estar alcancavel pelo fluxo do servico; ausencia de patch nao demonstra falso positivo.",
@@ -2318,287 +2977,22 @@
       "condicaoSaida": "Atualizar a imagem Python oficial para digest suportado que incorpore os patches disponiveis, validar compatibilidade, runtime, SBOM e Trivy; recapturar a main e reconciliar todas as referencias que fecharem."
     },
     {
-      "id": "SQ-2026-139",
-      "titulo": "OpenSSL corrigido disponivel na nova imagem oficial Node 22 Alpine",
-      "alertas": [],
-      "disposicao": "mitigado",
-      "severidadeContextual": "high",
-      "owner": "octanutri-clin/octaclin (proprietario do repositorio)",
-      "revisarEm": "2026-11-08",
-      "ondaDestino": "SQ-1A",
-      "evidencia": [
-        "Recaptura da main 98b6e5f em 2026-09-08: 20 alertas Trivy no backend e 20 no web, todos em libcrypto3/libssl3 3.5.7-r0 com versao corrigida 3.5.8-r0.",
-        "Consulta autenticada ao registry-1.docker.io em 2026-09-08T17:41:35Z confirmou node:22-alpine no digest sha256:c610fcdfb1d5b4740dd70c284ed3cb16bb857e0f7166196e36a5501df7a3aa32, o mesmo fixado nos dois Dockerfiles.",
-        "Nova consulta ao Docker Hub oficial em 2026-09-15 confirmou que node:22-alpine continua no mesmo digest sha256:c610fcdfb1d5b4740dd70c284ed3cb16bb857e0f7166196e36a5501df7a3aa32, publicado em 2026-07-29; ainda nao existe artefato oficial novo para adotar.",
-        "Os 40 alertas permanecem abertos no Security tab; nao houve dismiss, supressao ou upgrade mutavel.",
-        "Recaptura completa da main em 2026-09-25T00:20:06.782Z confirmou os mesmos 40 alertas ainda abertos: 20 na imagem backend e 20 na imagem web; todos seguem com versao corrigida reportada pelo scanner, sem indicio no snapshot de que a imagem oficial fixada ja a incorpore.",
-        "Consulta ao registry oficial do Docker Hub em 2026-09-28 resolveu node:22.23.2-alpine3.24 para o indice OCI sha256:b6f26b36c8ff49624cfdac716b8ea1138d606df02586a77d364bb5536a634f85; os manifests linux/amd64 e linux/arm64 sao sha256:b64da1de5a51067ab8e75f0bc8dbd0905d8894baa22261f439a4572f41291e50 e sha256:451d2ebc48dd4484ae9c3b865e2ed1a5ce2dd7be03d4344b506e41ed948e105d.",
-        "Inspecao de /lib/apk/db/installed nos manifests oficiais amd64 e arm64 confirmou libcrypto3 e libssl3 em 3.5.8-r0. A atualizacao do digest e dos builds backend/web aguarda validacao por CI; os 40 alertas da main continuam abertos ate novo scan apos integracao.",
-        "Captura autenticada completa da main em 2026-10-09T14:22:51.422Z confirmou o fechamento dos 40 alertas OpenSSL antes vinculados a esta causa (20 backend e 20 web)."
-      ],
-      "preCondicoes": [
-        "Adotar o indice OCI oficial Node 22 Alpine fixado por digest que contem libcrypto3 e libssl3 3.5.8-r0 ou superior em linux/amd64 e linux/arm64.",
-        "Preservar Node 22, artefatos, healthcheck e runtime minimo de backend e web; reconstruir, exercitar o harness e escanear as duas imagens."
-      ],
-      "mitigacoes": [
-        "A main permanece no digest oficial anterior ate a integracao; nao foi usado apk upgrade mutavel nem dismissal/supressao dos alertas.",
-        "O runtime continua sem npm, npx, pnpm e corepack; o novo digest sera validado por builds, healthcheck, harness, SBOM e Trivy antes do merge."
-      ],
-      "impacto": "Os 40 alertas OpenSSL anteriormente vinculados fecharam na captura atual da main; a causa esta mitigada conforme a condicao de saida registrada.",
-      "condicaoSaida": "Concluida em 2026-10-09: captura autenticada da main sem os 40 alertas OpenSSL anteriormente vinculados. Reabrir somente se nova captura apontar regressao relacionada."
-    },
-    {
-      "id": "SQ-2026-239",
-      "titulo": "image-size transitivo do Metro sem versao corrigida",
-      "alertas": [],
-      "disposicao": "mitigado",
-      "severidadeContextual": "high",
-      "owner": "octanutri-clin/octaclin (proprietario do repositorio)",
-      "revisarEm": "2026-11-08",
-      "ondaDestino": "SQ-3",
-      "evidencia": [
-        "Recaptura da main 98b6e5f em 2026-09-08: Dependabot #35 e #36, ambos high, pacote image-size no octaclin-mobile/pnpm-lock.yaml e versaoCorrigida null.",
-        "Em 2026-09-15, Metro 0.84.6 foi resolvido dentro da faixa suportada e removeu image-size da arvore transitiva; pnpm audit:security passou sem vulnerabilidades.",
-        "A excecao SC-2026-005 foi removida do ledger e o gate mobile voltou a reprovar qualquer advisory ou supressao.",
-        "A captura completa da main em 2026-09-25T00:20:06.782Z retornou zero alertas Dependabot abertos. Consultas da API aos alertas #35 e #36 retornaram HTTP 410 (withdrawn), confirmando a condicao de saida registrada.",
-        "A captura autenticada da main em 2026-10-09T14:22:51.422Z mantem zero alertas para os advisories historicos image-size #35 e #36; os sete alertas Dependabot atuais sao causas novas e estao triados separadamente."
-      ],
-      "preCondicoes": [
-        "A exploracao exige asset malicioso processado pelo bundler Metro durante o build Mobile."
-      ],
-      "mitigacoes": [
-        "O lockfile congelado fixa Metro 0.84.6 e o gate mobile reprova qualquer advisory ou supressao."
-      ],
-      "impacto": "O pacote image-size ja foi removido da arvore transitiva do Metro; o snapshot atual nao contem alertas Dependabot abertos e a API confirma que os dois alertas historicos foram retirados.",
-      "condicaoSaida": "Concluida em 2026-09-25: captura completa da main sem alertas Dependabot abertos e API confirmando #35 e #36 como withdrawn."
-    },
-    {
-      "id": "SQ-2026-240",
-      "titulo": "proxy-addr vulneravel no backend (CVE-2026-90711)",
-      "alertas": [],
-      "disposicao": "mitigado",
-      "severidadeContextual": "critical",
-      "owner": "octanutri-clin/octaclin (proprietario do repositorio)",
-      "revisarEm": "2026-11-07",
-      "ondaDestino": "SQ-1A",
-      "evidencia": [
-        "Captura autenticada da main 104a154688241a2581200f28ad1ff7d7f4261f90 em 2026-10-09T14:22:51.422Z; referencias Code Scanning e Dependabot reconciliadas.",
-        "Trivy no lockfile e/ou alerta Dependabot identificam o pacote e a versao instalada no lockfile da main.",
-        "Trivy na imagem final confirma que o pacote vulneravel integra o artefato publicado pela main.",
-        "Dependabot #101 e Trivy #494/#498 mostram proxy-addr 2.0.7; o snapshot oferece 2.0.8 como versao corrigida.",
-        "Recaptura autenticada da main 9e1984a277e89469581b620d8c637324327a9342 em 2026-10-24T07:11:22.967Z, run 40073140896; SHA-256 3e8cb7400759f9a22b6ce8d7e1975f0dd4b78cead1788c69590ab207ed89985c: 171 Code Scanning, 4 Dependabot e zero Secret Scanning. Referencias ausentes nesta captura: code-scanning:494, code-scanning:498, dependabot:101.",
-        "Condicao de saida anterior: Atualizar o pacote para a versao corrigida em lockfile/base suportada, validar build e testes, e exigir nova captura da main sem as referencias vinculadas.",
-        "Conferencia do lock backend na main capturada: proxy-addr 2.0.8, corrigindo a versao 2.0.7 anteriormente sinalizada."
-      ],
-      "preCondicoes": [
-        "A versao vulneravel esta presente no artefato ou lockfile indicado no snapshot."
-      ],
-      "mitigacoes": [
-        "Os checks de seguranca continuam ativos; nenhuma mitigacao funcional foi assumida sem teste."
-      ],
-      "impacto": "A captura autenticada de 2026-10-24 nao contem nenhuma referencia anteriormente vinculada a esta causa; o historico de evidencias foi preservado.",
-      "condicaoSaida": "Atendida pela captura autenticada da main em 2026-10-24: nenhuma referencia vinculada permanece aberta. Reabrir se uma captura futura demonstrar regressao."
-    },
-    {
-      "id": "SQ-2026-241",
-      "titulo": "source-map-js vulneravel no web (CVE-2026-93749)",
-      "alertas": [],
-      "disposicao": "mitigado",
-      "severidadeContextual": "high",
-      "owner": "octanutri-clin/octaclin (proprietario do repositorio)",
-      "revisarEm": "2026-11-08",
-      "ondaDestino": "SQ-1A",
-      "evidencia": [
-        "Captura autenticada da main 104a154688241a2581200f28ad1ff7d7f4261f90 em 2026-10-09T14:22:51.422Z; referencias Code Scanning e Dependabot reconciliadas.",
-        "Trivy no lockfile e/ou alerta Dependabot identificam o pacote e a versao instalada no lockfile da main.",
-        "Trivy na imagem final confirma que o pacote vulneravel integra o artefato publicado pela main.",
-        "Dependabot #104 e Trivy #497/#499 mostram source-map-js 1.2.1; o snapshot oferece 1.2.2 como versao corrigida.",
-        "Recaptura autenticada da main 9e1984a277e89469581b620d8c637324327a9342 em 2026-10-24T07:11:22.967Z, run 40073140896; SHA-256 3e8cb7400759f9a22b6ce8d7e1975f0dd4b78cead1788c69590ab207ed89985c: 171 Code Scanning, 4 Dependabot e zero Secret Scanning. Referencias ausentes nesta captura: code-scanning:497, code-scanning:499, dependabot:104.",
-        "Condicao de saida anterior: Atualizar o pacote para a versao corrigida em lockfile/base suportada, validar build e testes, e exigir nova captura da main sem as referencias vinculadas.",
-        "Conferencia do lock web na main capturada: source-map-js 1.2.2, corrigindo 1.2.1."
-      ],
-      "preCondicoes": [
-        "A versao vulneravel esta presente no artefato ou lockfile indicado no snapshot."
-      ],
-      "mitigacoes": [
-        "Os checks de seguranca continuam ativos; nenhuma mitigacao funcional foi assumida sem teste."
-      ],
-      "impacto": "A captura autenticada de 2026-10-24 nao contem nenhuma referencia anteriormente vinculada a esta causa; o historico de evidencias foi preservado.",
-      "condicaoSaida": "Atendida pela captura autenticada da main em 2026-10-24: nenhuma referencia vinculada permanece aberta. Reabrir se uma captura futura demonstrar regressao."
-    },
-    {
-      "id": "SQ-2026-242",
-      "titulo": "sharp vulneravel no web (GHSA-wq5f-xc86-pv6w)",
-      "alertas": [],
-      "disposicao": "mitigado",
-      "severidadeContextual": "high",
-      "owner": "octanutri-clin/octaclin (proprietario do repositorio)",
-      "revisarEm": "2026-11-08",
-      "ondaDestino": "SQ-1A",
-      "evidencia": [
-        "Captura autenticada da main 104a154688241a2581200f28ad1ff7d7f4261f90 em 2026-10-09T14:22:51.422Z; referencias Code Scanning e Dependabot reconciliadas.",
-        "Trivy no lockfile e/ou alerta Dependabot identificam o pacote e a versao instalada no lockfile da main.",
-        "Trivy na imagem final confirma que o pacote vulneravel integra o artefato publicado pela main.",
-        "Dependabot #105 e Trivy #500/#503 mostram sharp 0.35.4; o snapshot oferece 0.35.5 como versao corrigida.",
-        "Recaptura autenticada da main 9e1984a277e89469581b620d8c637324327a9342 em 2026-10-24T07:11:22.967Z, run 40073140896; SHA-256 3e8cb7400759f9a22b6ce8d7e1975f0dd4b78cead1788c69590ab207ed89985c: 171 Code Scanning, 4 Dependabot e zero Secret Scanning. Referencias ausentes nesta captura: code-scanning:500, code-scanning:503, dependabot:105.",
-        "Condicao de saida anterior: Atualizar o pacote para a versao corrigida em lockfile/base suportada, validar build e testes, e exigir nova captura da main sem as referencias vinculadas.",
-        "Conferencia do lock web na main capturada: sharp 0.35.5, corrigindo 0.35.4."
-      ],
-      "preCondicoes": [
-        "A versao vulneravel esta presente no artefato ou lockfile indicado no snapshot."
-      ],
-      "mitigacoes": [
-        "Os checks de seguranca continuam ativos; nenhuma mitigacao funcional foi assumida sem teste."
-      ],
-      "impacto": "A captura autenticada de 2026-10-24 nao contem nenhuma referencia anteriormente vinculada a esta causa; o historico de evidencias foi preservado.",
-      "condicaoSaida": "Atendida pela captura autenticada da main em 2026-10-24: nenhuma referencia vinculada permanece aberta. Reabrir se uma captura futura demonstrar regressao."
-    },
-    {
-      "id": "SQ-2026-243",
-      "titulo": "braces vulneravel no Mobile sem patch reportado",
-      "alertas": [
-        "code-scanning:489",
-        "dependabot:99"
-      ],
-      "disposicao": "aguardando_upstream",
-      "severidadeContextual": "high",
-      "owner": "octanutri-clin/octaclin (proprietario do repositorio)",
-      "revisarEm": "2026-11-08",
-      "ondaDestino": "SQ-3",
-      "evidencia": [
-        "Captura autenticada da main 104a154688241a2581200f28ad1ff7d7f4261f90 em 2026-10-09T14:22:51.422Z; referencias Code Scanning e Dependabot reconciliadas.",
-        "Trivy no lockfile e/ou alerta Dependabot identificam o pacote e a versao instalada no lockfile da main.",
-        "Dependabot #99 e Trivy #489 apontam braces 3.0.3 no lockfile Mobile; a captura nao reporta versao corrigida."
-      ],
-      "preCondicoes": [
-        "A versao vulneravel esta presente no artefato ou lockfile indicado no snapshot."
-      ],
-      "mitigacoes": [
-        "O pipeline Mobile e os checks de dependencia seguem ativos; nao ha versao corrigida publicada no snapshot."
-      ],
-      "impacto": "braces 3.0.3 esta na arvore de build Mobile; o scanner reporta severidade high e nao indica patch.",
-      "condicaoSaida": "Quando upstream publicar versao corrigida, atualizar lockfile, validar build Mobile e confirmar fechamento em nova captura."
-    },
-    {
-      "id": "SQ-2026-244",
-      "titulo": "node-forge vulneravel no Mobile sem patch reportado",
-      "alertas": [
-        "code-scanning:490",
-        "dependabot:98"
-      ],
-      "disposicao": "aguardando_upstream",
-      "severidadeContextual": "high",
-      "owner": "octanutri-clin/octaclin (proprietario do repositorio)",
-      "revisarEm": "2026-11-08",
-      "ondaDestino": "SQ-3",
-      "evidencia": [
-        "Captura autenticada da main 104a154688241a2581200f28ad1ff7d7f4261f90 em 2026-10-09T14:22:51.422Z; referencias Code Scanning e Dependabot reconciliadas.",
-        "Trivy no lockfile e/ou alerta Dependabot identificam o pacote e a versao instalada no lockfile da main.",
-        "Dependabot #98 e Trivy #490 apontam node-forge 1.4.0 no lockfile Mobile; a captura nao reporta versao corrigida."
-      ],
-      "preCondicoes": [
-        "A versao vulneravel esta presente no artefato ou lockfile indicado no snapshot."
-      ],
-      "mitigacoes": [
-        "O pipeline Mobile e os checks de dependencia seguem ativos; nao ha versao corrigida publicada no snapshot."
-      ],
-      "impacto": "node-forge 1.4.0 esta na arvore de build Mobile; o scanner reporta severidade high e nao indica patch.",
-      "condicaoSaida": "Quando upstream publicar versao corrigida, atualizar lockfile, validar build Mobile e confirmar fechamento em nova captura."
-    },
-    {
-      "id": "SQ-2026-245",
-      "titulo": "sprintf-js vulneravel no backend sem patch reportado",
-      "alertas": [],
-      "disposicao": "mitigado",
-      "severidadeContextual": "medium",
-      "owner": "octanutri-clin/octaclin (proprietario do repositorio)",
-      "revisarEm": "2027-01-07",
-      "ondaDestino": "SQ-3",
-      "evidencia": [
-        "Captura autenticada da main 104a154688241a2581200f28ad1ff7d7f4261f90 em 2026-10-09T14:22:51.422Z; referencias Code Scanning e Dependabot reconciliadas.",
-        "Trivy no lockfile e/ou alerta Dependabot identificam o pacote e a versao instalada no lockfile da main.",
-        "Dependabot #102 aponta sprintf-js no lockfile backend; a captura nao reporta versao corrigida.",
-        "Recaptura autenticada da main 9e1984a277e89469581b620d8c637324327a9342 em 2026-10-24T07:11:22.967Z, run 40073140896; SHA-256 3e8cb7400759f9a22b6ce8d7e1975f0dd4b78cead1788c69590ab207ed89985c: 171 Code Scanning, 4 Dependabot e zero Secret Scanning. Referencias ausentes nesta captura: dependabot:102.",
-        "Condicao de saida anterior: Quando upstream publicar versao corrigida, atualizar lockfile, validar backend e confirmar fechamento em nova captura.",
-        "Consulta a GitHub Advisory API em 2026-10-24 confirma GHSA-hp3w-g68c-fv3c retirado (withdrawn_at 2026-10-22T19:21:04Z). sprintf-js 1.0.3 permanece no lock; nao foi declarada correcao por upgrade. A referencia #102 deixou a lista de abertos por retirada do advisory."
-      ],
-      "preCondicoes": [
-        "A versao vulneravel esta presente no artefato ou lockfile indicado no snapshot."
-      ],
-      "mitigacoes": [
-        "O backend permanece coberto pelos testes e pela auditoria de dependencias; nao ha versao corrigida publicada no snapshot."
-      ],
-      "impacto": "A captura autenticada de 2026-10-24 nao contem nenhuma referencia anteriormente vinculada a esta causa; o historico de evidencias foi preservado.",
-      "condicaoSaida": "Atendida pela captura autenticada da main em 2026-10-24: nenhuma referencia vinculada permanece aberta. Reabrir se uma captura futura demonstrar regressao."
-    },
-    {
-      "id": "SQ-2026-246",
-      "titulo": "postcss-selector-parser vulneravel no web com patch disponivel",
-      "alertas": [],
-      "disposicao": "mitigado",
-      "severidadeContextual": "medium",
-      "owner": "octanutri-clin/octaclin (proprietario do repositorio)",
-      "revisarEm": "2027-01-07",
-      "ondaDestino": "SQ-1B",
-      "evidencia": [
-        "Captura autenticada da main 104a154688241a2581200f28ad1ff7d7f4261f90 em 2026-10-09T14:22:51.422Z; referencias Code Scanning e Dependabot reconciliadas.",
-        "Trivy no lockfile e/ou alerta Dependabot identificam o pacote e a versao instalada no lockfile da main.",
-        "Dependabot #103 reporta postcss-selector-parser no lockfile web e versao corrigida 7.1.6.",
-        "Recaptura autenticada da main 9e1984a277e89469581b620d8c637324327a9342 em 2026-10-24T07:11:22.967Z, run 40073140896; SHA-256 3e8cb7400759f9a22b6ce8d7e1975f0dd4b78cead1788c69590ab207ed89985c: 171 Code Scanning, 4 Dependabot e zero Secret Scanning. Referencias ausentes nesta captura: dependabot:103.",
-        "Condicao de saida anterior: Atualizar o pacote para a versao corrigida em lockfile/base suportada, validar build e testes, e exigir nova captura da main sem as referencias vinculadas.",
-        "Conferencia do lock web na main capturada: postcss-selector-parser 7.1.6, versao corrigida indicada pelo advisory anterior."
-      ],
-      "preCondicoes": [
-        "A versao vulneravel esta presente no artefato ou lockfile indicado no snapshot."
-      ],
-      "mitigacoes": [
-        "Os checks de seguranca continuam ativos; nenhuma mitigacao funcional foi assumida sem teste."
-      ],
-      "impacto": "A captura autenticada de 2026-10-24 nao contem nenhuma referencia anteriormente vinculada a esta causa; o historico de evidencias foi preservado.",
-      "condicaoSaida": "Atendida pela captura autenticada da main em 2026-10-24: nenhuma referencia vinculada permanece aberta. Reabrir se uma captura futura demonstrar regressao."
-    },
-    {
-      "id": "SQ-2026-247",
-      "titulo": "zlib vulneravel nas imagens backend e web com patch disponivel",
-      "alertas": [],
-      "disposicao": "mitigado",
-      "severidadeContextual": "medium",
-      "owner": "octanutri-clin/octaclin (proprietario do repositorio)",
-      "revisarEm": "2027-01-07",
-      "ondaDestino": "SQ-1B",
-      "evidencia": [
-        "Captura autenticada da main 104a154688241a2581200f28ad1ff7d7f4261f90 em 2026-10-09T14:22:51.422Z; referencias Code Scanning e Dependabot reconciliadas.",
-        "Trivy na imagem final confirma que o pacote vulneravel integra o artefato publicado pela main.",
-        "Trivy #501/#502 encontra zlib 1.3.2-r0 nas imagens backend e web; o snapshot reporta patch 1.3.2-r1.",
-        "Recaptura autenticada da main 9e1984a277e89469581b620d8c637324327a9342 em 2026-10-24T07:11:22.967Z, run 40073140896; SHA-256 3e8cb7400759f9a22b6ce8d7e1975f0dd4b78cead1788c69590ab207ed89985c: 171 Code Scanning, 4 Dependabot e zero Secret Scanning. Referencias ausentes nesta captura: code-scanning:501, code-scanning:502.",
-        "Condicao de saida anterior: Atualizar o pacote para a versao corrigida em lockfile/base suportada, validar build e testes, e exigir nova captura da main sem as referencias vinculadas.",
-        "Dockerfiles backend e web da main capturada instalam explicitamente zlib=1.3.2-r1, corrigindo 1.3.2-r0; ambas as imagens usam o digest Node 22 Alpine fixado."
-      ],
-      "preCondicoes": [
-        "A versao vulneravel esta presente no artefato ou lockfile indicado no snapshot."
-      ],
-      "mitigacoes": [
-        "Os checks de seguranca continuam ativos; nenhuma mitigacao funcional foi assumida sem teste."
-      ],
-      "impacto": "A captura autenticada de 2026-10-24 nao contem nenhuma referencia anteriormente vinculada a esta causa; o historico de evidencias foi preservado.",
-      "condicaoSaida": "Atendida pela captura autenticada da main em 2026-10-24: nenhuma referencia vinculada permanece aberta. Reabrir se uma captura futura demonstrar regressao."
-    },
-    {
       "id": "SQ-2026-248",
       "titulo": "certifi com raizes emSign comprometidas em locks Python",
       "alertas": [
-        "dependabot:113",
-        "dependabot:114"
+        "dependabot:140"
       ],
       "disposicao": "corrigir",
       "severidadeContextual": "critical",
       "owner": "octanutri-clin/octaclin (proprietario do repositorio)",
-      "revisarEm": "2026-11-07",
+      "revisarEm": "2026-11-15",
       "ondaDestino": "SQ-1A",
       "evidencia": [
         "Recaptura autenticada da main 9e1984a277e89469581b620d8c637324327a9342 em 2026-10-24T07:11:22.967Z, run 40073140896; SHA-256 3e8cb7400759f9a22b6ce8d7e1975f0dd4b78cead1788c69590ab207ed89985c: 171 Code Scanning, 4 Dependabot e zero Secret Scanning.",
         "GHSA-6q48-6c7w-9gw2 consultado na API publica em 2026-10-24: certifi >=2019.03.09 e <2026.10.19 afetado; primeira correcao 2026.10.19.",
-        "O lock atual do servico IA ja fixa certifi 2026.10.19 com hashes, mas Dependabot #113 permanece aberto nesta captura. O lock de pesquisa Fase 319 ainda fixa 2026.7.22 (#114). A pesquisa esta encerrada em NO-GO; nao foi executada nova PoC."
+        "O lock atual do servico IA ja fixa certifi 2026.10.19 com hashes, mas Dependabot #113 permanece aberto nesta captura. O lock de pesquisa Fase 319 ainda fixa 2026.7.22 (#114). A pesquisa esta encerrada em NO-GO; nao foi executada nova PoC.",
+        "Captura autenticada da main 3b35e104f5ceeebda10b7bf98355ebfb7272b496 em 2026-11-08T11:36:46.227Z, run 42476505880 (workflow_dispatch); SHA-256 aa5dee6473b8d0abbd44a492be8f93212f8f76b1ee9a0f72579f07e64d051867, remontado do eco do log do job e conferido contra o hash declarado: 205 Code Scanning, 29 Dependabot e zero Secret Scanning. Os alertas #113 e #114 nao estao mais abertos; o Dependabot #140 (critical, certifi, octaclin-ai-service/requirements.lock.txt, versao corrigida 2026.10.18) esta aberto embora o lock da main ja estivesse em 2026.10.19.",
+        "Correcao preparada: certifi 2026.10.23 em octaclin-ai-service/requirements.lock.txt, regenerado com uv pip compile --generate-hashes --universal --python-version 3.12 --upgrade-package certifi (so a linha do certifi e seus hashes mudaram). Nenhuma PoC foi executada. A correcao esta na branch claude/inventario-sq-2026-11-08 (PR de inventario separada da PR #470) e ainda nao esta na main."
       ],
       "preCondicoes": [
         "Validacao TLS com o trust store afetado em um ambiente que instale o lock vulneravel."
@@ -2607,8 +3001,8 @@
         "Servico IA fixa a versao corrigida no lock; falta fechamento comprovado de #113 pela API.",
         "Fase 319 encerrada como pesquisa NO-GO, sem novas execucoes autorizadas."
       ],
-      "impacto": "Dois alertas critical continuam abertos. O servico IA tem correcao no codigo; o ambiente de pesquisa requer atualizacao antes de qualquer uso futuro. Nenhum alerta foi dispensado.",
-      "condicaoSaida": "Atualizar o lock de pesquisa com a versao corrigida sem rodar a PoC, validar os locks e obter nova captura da main com #113 e #114 fechados."
+      "impacto": "Um alerta critical permanece aberto no Dependabot ate a nova varredura da main; o lock do servico IA ja estava em versao posterior a corrigida listada.",
+      "condicaoSaida": "Mergear a atualizacao do lock e recapturar a main com #140 fechado; se continuar aberto, tratar como alerta stale e registrar a evidencia da API do Dependabot."
     },
     {
       "id": "SQ-2026-249",
@@ -2620,11 +3014,13 @@
       "disposicao": "corrigir",
       "severidadeContextual": "none",
       "owner": "octanutri-clin/octaclin (proprietario do repositorio)",
-      "revisarEm": "2026-11-23",
+      "revisarEm": "2026-11-15",
       "ondaDestino": "SQ-1A",
       "evidencia": [
         "Recaptura autenticada da main 9e1984a277e89469581b620d8c637324327a9342 em 2026-10-24T07:11:22.967Z, run 40073140896; SHA-256 3e8cb7400759f9a22b6ce8d7e1975f0dd4b78cead1788c69590ab207ed89985c: 171 Code Scanning, 4 Dependabot e zero Secret Scanning.",
-        "Trivy #514 e #515: musl-utils 1.2.6-r2 nas imagens backend e web, CVE-2026-107891, patch 1.2.6-r3, severidade none no snapshot."
+        "Trivy #514 e #515: musl-utils 1.2.6-r2 nas imagens backend e web, CVE-2026-107891, patch 1.2.6-r3, severidade none no snapshot.",
+        "Captura autenticada da main 3b35e104f5ceeebda10b7bf98355ebfb7272b496 em 2026-11-08T11:36:46.227Z, run 42476505880 (workflow_dispatch); SHA-256 aa5dee6473b8d0abbd44a492be8f93212f8f76b1ee9a0f72579f07e64d051867, remontado do eco do log do job e conferido contra o hash declarado: 205 Code Scanning, 29 Dependabot e zero Secret Scanning. Trivy #514 e #515 continuam abertos.",
+        "Correcao preparada: base node:22.23.4-alpine3.24 por digest (0e1754758c2d..., resolvido em 2026-11-08 no Docker Hub, equivalente a tag 22-alpine3.24 nesse dia) nos Dockerfiles do backend e do web. Sem Docker daemon, nao foi construida nem varrida; se a base inclui musl-utils 1.2.6-r3 so a varredura da main confirma. A correcao esta na branch claude/inventario-sq-2026-11-08 (PR de inventario separada da PR #470) e ainda nao esta na main."
       ],
       "preCondicoes": [
         "O artefato final inclui a versao sinalizada de musl-utils; o scanner nao fornece gravidade clinica ou alcancabilidade."
@@ -2634,6 +3030,167 @@
       ],
       "impacto": "Dois alertas informativos com patch permanecem rastreados sem supressao.",
       "condicaoSaida": "Atualizar a base suportada por digest que incorpore 1.2.6-r3, validar builds, runtime e SBOM, e recapturar a main sem as duas referencias."
+    },
+    {
+      "id": "SQ-2026-250",
+      "titulo": "next 16.3.8 vulneravel no web (GHSA-p3m5-59mp-jv5r, GHSA-2464-fhr4-w9xw, GHSA-673q-mjm6-r5xr)",
+      "alertas": [
+        "code-scanning:516",
+        "code-scanning:517",
+        "code-scanning:518",
+        "code-scanning:519",
+        "code-scanning:520",
+        "code-scanning:521",
+        "dependabot:130",
+        "dependabot:131",
+        "dependabot:132"
+      ],
+      "disposicao": "corrigir",
+      "severidadeContextual": "critical",
+      "owner": "octanutri-clin/octaclin (proprietario do repositorio)",
+      "revisarEm": "2026-11-15",
+      "ondaDestino": "SQ-1A",
+      "evidencia": [
+        "Captura autenticada da main 3b35e104f5ceeebda10b7bf98355ebfb7272b496 em 2026-11-08T11:36:46.227Z, run 42476505880 (workflow_dispatch); SHA-256 aa5dee6473b8d0abbd44a492be8f93212f8f76b1ee9a0f72579f07e64d051867, remontado do eco do log do job e conferido contra o hash declarado: 205 Code Scanning, 29 Dependabot e zero Secret Scanning.",
+        "Dependabot #130, #131 e #132 e Trivy #516 a #521 apontam next instalado em 16.3.8 no lockfile e nas imagens web; versao corrigida 16.4.1.",
+        "Correcao preparada: next e eslint-config-next 16.4.5 em octaclin-web (package.json e pnpm-lock.yaml). Validado localmente: pnpm typecheck, pnpm lint (0 erros), pnpm build e a cadeia pnpm test:authz. A correcao esta na branch claude/inventario-sq-2026-11-08 (PR de inventario separada da PR #470) e ainda nao esta na main."
+      ],
+      "preCondicoes": [
+        "O frontend publicado usa next 16.3.8 ate o merge desta correcao; o scanner nao informa alcancabilidade por rota."
+      ],
+      "mitigacoes": [
+        "Navegador fala com o BFF e o backend continua sendo a fronteira de autorizacao; imagem executada sem root. Isso nao remove o advisory."
+      ],
+      "impacto": "Tres alertas Dependabot e seis Trivy (dois critical em lockfile, dois critical em imagem) permanecem abertos ate o merge e a nova varredura da main.",
+      "condicaoSaida": "Mergear a correcao, aguardar o Trivy e o Dependabot da main e recapturar sem as nove referencias."
+    },
+    {
+      "id": "SQ-2026-251",
+      "titulo": "body-parser, multer, qs e fast-uri vulneraveis no backend",
+      "alertas": [
+        "code-scanning:522",
+        "code-scanning:523",
+        "code-scanning:528",
+        "code-scanning:529",
+        "code-scanning:535",
+        "code-scanning:536",
+        "dependabot:118",
+        "dependabot:119",
+        "dependabot:120",
+        "dependabot:121",
+        "dependabot:122",
+        "dependabot:126",
+        "dependabot:141"
+      ],
+      "disposicao": "corrigir",
+      "severidadeContextual": "high",
+      "owner": "octanutri-clin/octaclin (proprietario do repositorio)",
+      "revisarEm": "2026-11-15",
+      "ondaDestino": "SQ-1A",
+      "evidencia": [
+        "Captura autenticada da main 3b35e104f5ceeebda10b7bf98355ebfb7272b496 em 2026-11-08T11:36:46.227Z, run 42476505880 (workflow_dispatch); SHA-256 aa5dee6473b8d0abbd44a492be8f93212f8f76b1ee9a0f72579f07e64d051867, remontado do eco do log do job e conferido contra o hash declarado: 205 Code Scanning, 29 Dependabot e zero Secret Scanning.",
+        "Dependabot #118, #119 a #122, #126 e #141 e Trivy #522, #523, #528, #529, #535 e #536 apontam body-parser 2.3.0, multer 2.4.0, qs 6.16.0 e fast-uri 3.1.7; versoes corrigidas 2.4.0, 2.5.0, 6.16.1 e 3.1.9.",
+        "Correcao preparada: overrides em octaclin-backend/pnpm-workspace.yaml (body-parser@2 2.4.0, multer@2 2.5.0, qs@6 6.17.1, fast-uri@3 3.1.9) e pnpm-lock.yaml regenerado. Validado localmente: instalacao congelada, pnpm build com verificacao do artefato e pnpm test (383 suites passaram; 9 suites de Testcontainers puladas por falta de Docker daemon, SKIPPED nao e aprovado). A correcao esta na branch claude/inventario-sq-2026-11-08 (PR de inventario separada da PR #470) e ainda nao esta na main."
+      ],
+      "preCondicoes": [
+        "O backend recebe requisicoes HTTP e upload multipart autenticados; o scanner nao informa alcancabilidade por rota."
+      ],
+      "mitigacoes": [
+        "Autenticacao, autorizacao por tenant e validacao de DTO permanecem; imagem executada sem root. Isso nao remove o advisory."
+      ],
+      "impacto": "Alertas high e medium permanecem abertos ate o merge e a nova varredura da main.",
+      "condicaoSaida": "Mergear a correcao e recapturar a main sem as treze referencias."
+    },
+    {
+      "id": "SQ-2026-252",
+      "titulo": "filelock vulneravel no lock do laboratorio de pesquisa",
+      "alertas": [
+        "dependabot:134",
+        "dependabot:135",
+        "dependabot:136",
+        "dependabot:137",
+        "dependabot:138",
+        "dependabot:139",
+        "dependabot:145",
+        "dependabot:146",
+        "dependabot:147",
+        "dependabot:148",
+        "dependabot:149",
+        "dependabot:150",
+        "dependabot:151",
+        "dependabot:152",
+        "dependabot:153",
+        "dependabot:154",
+        "dependabot:155"
+      ],
+      "disposicao": "corrigir",
+      "severidadeContextual": "high",
+      "owner": "octanutri-clin/octaclin (proprietario do repositorio)",
+      "revisarEm": "2026-11-15",
+      "ondaDestino": "SQ-1A",
+      "evidencia": [
+        "Captura autenticada da main 3b35e104f5ceeebda10b7bf98355ebfb7272b496 em 2026-11-08T11:36:46.227Z, run 42476505880 (workflow_dispatch); SHA-256 aa5dee6473b8d0abbd44a492be8f93212f8f76b1ee9a0f72579f07e64d051867, remontado do eco do log do job e conferido contra o hash declarado: 205 Code Scanning, 29 Dependabot e zero Secret Scanning.",
+        "Dependabot #134 a #139, #145 a #155: filelock instalado em 4.1.1 em research/fase319/requirements-lab-lock.txt; versao corrigida 4.2.1.",
+        "Correcao preparada: filelock 4.2.9 no lock do laboratorio. Nenhum codigo do laboratorio foi executado. A correcao esta na branch claude/inventario-sq-2026-11-08 (PR de inventario separada da PR #470) e ainda nao esta na main."
+      ],
+      "preCondicoes": [
+        "O laboratorio de pesquisa fase319 nao faz parte do runtime de producao; o lock so e instalado em experimento manual."
+      ],
+      "mitigacoes": [
+        "Nao ha imagem nem job de producao que instale este lock."
+      ],
+      "impacto": "Dezessete alertas Dependabot, um deles high, permanecem abertos ate o merge e a nova varredura da main.",
+      "condicaoSaida": "Mergear a correcao e recapturar a main sem as dezessete referencias."
+    },
+    {
+      "id": "SQ-2026-253",
+      "titulo": "CodeQL js/prototype-polluting-assignment em servico-planos-alimentares",
+      "alertas": [
+        "code-scanning:533"
+      ],
+      "disposicao": "corrigir",
+      "severidadeContextual": "medium",
+      "owner": "octanutri-clin/octaclin (proprietario do repositorio)",
+      "revisarEm": "2026-11-15",
+      "ondaDestino": "SQ-1A",
+      "evidencia": [
+        "Captura autenticada da main 3b35e104f5ceeebda10b7bf98355ebfb7272b496 em 2026-11-08T11:36:46.227Z, run 42476505880 (workflow_dispatch); SHA-256 aa5dee6473b8d0abbd44a492be8f93212f8f76b1ee9a0f72579f07e64d051867, remontado do eco do log do job e conferido contra o hash declarado: 205 Code Scanning, 29 Dependabot e zero Secret Scanning.",
+        "CodeQL #533, regra js/prototype-polluting-assignment, octaclin-backend/src/modulos/planos-alimentares/aplicacao/servico-planos-alimentares.ts. A API de alertas nao e legivel por esta sessao, entao a linha exata nao foi confirmada.",
+        "Correcao preparada com a mesma intencao: contextosCustomAnteriores deixa de ser objeto comum copiado por spread e passa a Object.create(null), como os demais dicionarios indexados por chaveCliente do mesmo servico. tsc e a spec do servico (141 testes) passam; a efetividade so e confirmada pela nova varredura CodeQL. A correcao esta na branch claude/inventario-sq-2026-11-08 (PR de inventario separada da PR #470) e ainda nao esta na main."
+      ],
+      "preCondicoes": [
+        "A chave vem de chaveCliente enviada pelo cliente; atribuicao a __proto__ em objeto comum altera o prototipo do objeto local."
+      ],
+      "mitigacoes": [
+        "Nao confirmado: se o DTO restringe o formato de chaveCliente. Os outros dicionarios do servico ja usam Object.create(null) e Object.hasOwn."
+      ],
+      "impacto": "Um alerta medium permanece aberto ate o merge e a nova varredura.",
+      "condicaoSaida": "Mergear a correcao e confirmar que o CodeQL fecha o alerta; se continuar, localizar a linha e corrigir.",
+      "correcaoSemBump": "Correcao de codigo, nao de dependencia: dicionario indexado por chave do cliente passa a ser criado sem prototipo."
+    },
+    {
+      "id": "SQ-2026-254",
+      "titulo": "deepmerge sem versao corrigida em dependencia de desenvolvimento do backend",
+      "alertas": [
+        "dependabot:142"
+      ],
+      "disposicao": "aguardando_upstream",
+      "severidadeContextual": "low",
+      "owner": "octanutri-clin/octaclin (proprietario do repositorio)",
+      "revisarEm": "2027-02-08",
+      "ondaDestino": "SQ-1A",
+      "evidencia": [
+        "Captura autenticada da main 3b35e104f5ceeebda10b7bf98355ebfb7272b496 em 2026-11-08T11:36:46.227Z, run 42476505880 (workflow_dispatch); SHA-256 aa5dee6473b8d0abbd44a492be8f93212f8f76b1ee9a0f72579f07e64d051867, remontado do eco do log do job e conferido contra o hash declarado: 205 Code Scanning, 29 Dependabot e zero Secret Scanning.",
+        "Dependabot #142 aponta deepmerge 4.3.1 no pnpm-lock.yaml do backend, sem versao corrigida. pnpm why mostra o pacote apenas sob @nestjs/cli > fork-ts-checker-webpack-plugin e jest-config (devDependencies)."
+      ],
+      "preCondicoes": [
+        "Pacote presente apenas em ferramentas de build e teste; nao entra no artefato de producao validado por verificar-artefato-producao."
+      ],
+      "mitigacoes": [
+        "Nenhuma entrada de usuario chega a esse caminho no runtime."
+      ],
+      "impacto": "Alerta low sem patch, restrito a dependencias de desenvolvimento.",
+      "condicaoSaida": "Quando existir versao corrigida, atualizar o lockfile, validar build e recapturar a main."
     }
   ]
 }

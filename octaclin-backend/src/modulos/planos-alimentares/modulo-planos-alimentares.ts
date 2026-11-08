@@ -1,3 +1,6 @@
+import { ServicoEquivalenciasPlano } from './aplicacao/servico-equivalencias-plano';
+import { ServicoPreferenciasEquivalencia } from './aplicacao/servico-preferencias-equivalencia';
+import { ControladorEquivalenciasPlano, ControladorPreferenciasEquivalencia } from './apresentacao/controlador-equivalencias-plano';
 import { GrupoSubstituicoesOrm, FavoritoGrupoSubstituicoesOrm } from './infraestrutura/grupo-substituicoes.orm';
 import { ServicoGruposSubstituicoes } from './aplicacao/servico-grupos-substituicoes';
 import { FontesGruposSubstituicoes } from './aplicacao/fontes-grupos-substituicoes';
@@ -99,6 +102,8 @@ const processadoresCompartilhamento = deveExecutarProcessadores() ? [Processador
     ModuloComunicacoes
   ],
   controllers: [
+    ControladorEquivalenciasPlano,
+    ControladorPreferenciasEquivalencia,
     ControladorPlanosAlimentares,
     ControladorCatalogoAlimentos,
     ControladorMedidasCaseiras,
@@ -111,6 +116,8 @@ const processadoresCompartilhamento = deveExecutarProcessadores() ? [Processador
     ControladorReceitasNutricionais
   ],
   providers: [
+    ServicoEquivalenciasPlano,
+    ServicoPreferenciasEquivalencia,
     ServicoPlanosAlimentares,
     ServicoMedidasCaseiras,
     ServicoAlimentosPersonalizados,
