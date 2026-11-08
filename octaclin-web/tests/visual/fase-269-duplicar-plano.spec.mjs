@@ -239,6 +239,10 @@ async function prepararPlanos(page) {
     (url) => url.pathname === `/api/pacientes/${pacienteOrigem.id}/planos-alimentares/${planoOrigem.id}`,
     (route) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(planoOrigem) })
   );
+  await page.route(
+    (url) => url.pathname === `/api/pacientes/${pacienteOrigem.id}/planos-alimentares/${planoOrigem.id}/versoes/${publicadaOrigem.numero}`,
+    (route) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(publicadaOrigem) })
+  );
 }
 
 function prepararBuscaPacientes(page, { itens }) {

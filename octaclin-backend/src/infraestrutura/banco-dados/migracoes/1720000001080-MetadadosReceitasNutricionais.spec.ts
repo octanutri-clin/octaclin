@@ -9,7 +9,7 @@ describe('FOOD07 — registro e contrato migration aditiva 1080', () => {
     if (!alvo) throw new Error('Migration ausente.');
     return new alvo();
   }
-  it('registra a migration após 1078, sem importar a 1079 da PR446', async () => {
+  it('mantém o contrato aditivo da migration 1080 sem depender dos campos da 1079', async () => {
     const m = migracao();
     const query = jest.fn(async (_sql: string) => []);
     await m.up({ query } as unknown as QueryRunner);
