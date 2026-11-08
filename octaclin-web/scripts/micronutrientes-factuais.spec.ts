@@ -161,7 +161,7 @@ const invalidas:[string,(r:ReturnType<typeof comFontes>)=>void][]=[
   ['soma não reconcilia',r=>{r.fontes.nutrientes.calcioMg.fontes=[{...TACO_4_1,quantidade:1}] as never;}],
   ['quantidade zero',r=>{r.fontes.nutrientes.calcioMg.fontes=[{...TACO_4_1,quantidade:0}] as never;r.fontes.nutrientes.calcioMg.semOrigemDocumentada=2;}],
   ['tipo fora da lista',r=>{r.fontes.nutrientes.calcioMg.fontes=[{...TACO_4_1,tipo:'OUTRA'}] as never;r.fontes.nutrientes.calcioMg.semOrigemDocumentada=0;}],
-  ['versão malformada',r=>{r.fontes.nutrientes.calcioMg.fontes=[{...TACO_4_1,versao:'latest'}] as never;r.fontes.nutrientes.calcioMg.semOrigemDocumentada=0;}],
+  ['versão malformada',r=>{r.fontes.nutrientes.calcioMg.fontes=[{...TACO_4_1,versao:'versão com espaço'}] as never;r.fontes.nutrientes.calcioMg.semOrigemDocumentada=0;}],
   ['código malformado',r=>{r.fontes.nutrientes.calcioMg.fontes=[{...TACO_4_1,codigo:'com espaço'}] as never;r.fontes.nutrientes.calcioMg.semOrigemDocumentada=0;}],
   ['grupos duplicados',r=>{r.fontes.nutrientes.calcioMg.fontes=[{...TACO_4_1,quantidade:1},{...TACO_4_1,quantidade:1}] as never;r.fontes.nutrientes.calcioMg.semOrigemDocumentada=0;}],
   ['vínculo diferente',r=>{(r.fontes as {vinculo:string}).vinculo='medicao_por_nutriente';}],
@@ -224,4 +224,26 @@ test('NUXA01 fontes adicionais não detalhadas viram exceção, pois podem escon
   const r=lib.resumirOrigemLinha({contribuintes:60,fontes:Array.from({length:50},(_,i)=>({tipo:'USDA',codigo:'usda_fdc_foundation',versao:`2025.${i+1}`,quantidade:1})),semOrigemDocumentada:0,fontesNaoDetalhadas:10})!;
   assert.deepEqual(r.excecoes.map(e=>e.texto),['10 alimentos em fontes adicionais não detalhadas']);
   assert.equal(r.excecoes[0]!.atencao,true);
+});
+
+/* FOOD06 M01 — achados da revisão de segurança de C2. */
+test('R4C2-01 Web aceita as versões reais do catálogo (rótulos com letras) e recusa formato inseguro',()=>{
+  const montar=(versao:string)=>{const r=resposta();conhecido(r,'calcioMg',3);return comFontes(r,{calcioMg:{fontes:[{tipo:'TACO',codigo:'taco_nepa_unicamp',versao,quantidade:2}],semOrigemDocumentada:0}});};
+  const a=lerAnaliseMicronutrientesFactual(montar('taco-4a-cmvcol-taco3-v1'),entrada);
+  assert.equal((Reflect.get(a.linhas.find(l=>l.codigo==='calcioMg')!,'origem') as {fontes:{versao:string}[]}).fontes[0]!.versao,'taco-4a-cmvcol-taco3-v1');
+  assert.doesNotThrow(()=>lerAnaliseMicronutrientesFactual(montar('pof-2008-2009-v1'),entrada));
+  for(const ruim of ['versão com espaço','<b>x</b>','a'.repeat(65),'-começa-com-hífen','x;y'])assert.throws(()=>lerAnaliseMicronutrientesFactual(montar(ruim),entrada),/interpretar/,ruim);
+});
+const causasInconsistentes:[string,(r:ReturnType<typeof resposta>)=>void][]=[
+  ['causa de incompatibilidade em contagem de ausência',r=>{r.cobertura.nutrientes.calcioMg.causas=[{codigo:'unidade_incompativel',quantidade:2}];}],
+  ['causa técnica em contagem de ausência',r=>{r.cobertura.nutrientes.calcioMg.causas=[{codigo:'schema_nao_suportado',quantidade:2}];}],
+  ['causa de ausência em contagem de não resolvidos',r=>{Object.assign(r.cobertura.nutrientes.calcioMg.contagens,{semComposicao:0,naoResolvidos:2});}]
+];
+for(const [nome,mutar] of causasInconsistentes)test(`R4C2-04 recusa causa fora da categoria da contagem: ${nome}`,()=>{
+  const r=resposta();mutar(r);
+  assert.throws(()=>lerAnaliseMicronutrientesFactual(r,entrada),/interpretar/);
+});
+test('R4C2-03 motivo de composição de micronutrientes não registrada não afirma "registro antigo"',()=>{
+  const causas=Reflect.get(origemLib,'CAUSAS_COBERTURA_FACTUAL') as Record<string,string>;
+  assert.equal(causas.legado_sem_composicao,'Composição de micronutrientes não registrada no item');
 });

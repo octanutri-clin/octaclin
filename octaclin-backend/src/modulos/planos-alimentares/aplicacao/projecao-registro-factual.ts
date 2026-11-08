@@ -88,7 +88,7 @@ export function projetarResumoHistoricoFactual(meta:Meta,r:RegistroAnaliseFactua
   return [codigo,{codigo,unidade:n.unidade,estado:n.estado,
    contagens:{incluidos:n.contagens.incluidos,conhecidos:n.contagens.conhecidos,semComposicao:n.contagens.semComposicao,
     incompativeis:n.contagens.incompativeis,naoResolvidos:n.contagens.naoResolvidos},causas:n.causas.map(x=>({codigo:x.codigo,quantidade:x.quantidade})),
-   ...(n.estado==='COMPLETO'&&n.total!==undefined?{total:n.total}:{}),...(n.estado==='PARCIAL'&&n.quantidadeConhecida!==undefined?{quantidadeConhecida:n.quantidadeConhecida}:{})}];
+   ...(n.estado==='COMPLETO'&&n.total!==undefined?{total:n.total}:{}),...(n.estado!=='COMPLETO'&&n.quantidadeConhecida!==undefined?{quantidadeConhecida:n.quantidadeConhecida}:{})}];
  }));
  return {schemaVersao:1 as const,registro:projetarMetadadosRegistro(meta),origem:origem(r.versao.origem),comparacaoAnterior,
   motorVersao:r.analise.calculo.motorVersao,nutrientes,

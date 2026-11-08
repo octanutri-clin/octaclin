@@ -84,11 +84,18 @@ export interface FiltrosMicronutrientesFactuais {
 const ESTADOS: EstadoCoberturaFactual[] = ['COMPLETO','PARCIAL','DESCONHECIDO','INCOMPATIVEL','INDISPONIVEL'];
 export const CAUSAS_COBERTURA_FACTUAL: Readonly<Record<string,string>> = Object.freeze({
   sem_componentes:'Nenhum alimento ativo incluído', snapshot_indisponivel:'Composição não pôde ser lida',
-  legado_sem_composicao:'Registro antigo sem composição detalhada', schema_nao_suportado:'Formato de composição não suportado',
+  legado_sem_composicao:'Composição de micronutrientes não registrada no item', schema_nao_suportado:'Formato de composição não suportado',
   ausente:'Composição ausente', traco:'Traço sem quantidade determinada', nao_analisado:'Nutriente não analisado',
   abaixo_loq:'Quantidade abaixo do limite de quantificação', em_reavaliacao:'Dado em reavaliação',
   duplicado:'Dado nutricional duplicado', invalido:'Dado nutricional inválido', unidade_incompativel:'Unidade incompatível',
   definicao_incompativel:'Forma nutricional incompatível', estado_nao_suportado:'Estado de composição não suportado'
+});
+/** Categoria de contagem a que cada motivo pertence; a soma por categoria precisa fechar com as contagens. */
+const CATEGORIA_CAUSA_FACTUAL: Readonly<Record<string,'semComposicao'|'incompativeis'|'naoResolvidos'>> = Object.freeze({
+  ausente:'semComposicao', traco:'semComposicao', nao_analisado:'semComposicao', abaixo_loq:'semComposicao', legado_sem_composicao:'semComposicao',
+  unidade_incompativel:'incompativeis', definicao_incompativel:'incompativeis',
+  em_reavaliacao:'naoResolvidos', duplicado:'naoResolvidos', invalido:'naoResolvidos', estado_nao_suportado:'naoResolvidos',
+  snapshot_indisponivel:'naoResolvidos', schema_nao_suportado:'naoResolvidos'
 });
 function falhar(): never { throw new Error('Não foi possível interpretar a análise factual. Atualize a seleção e tente novamente.'); }
 function objeto(v: unknown): Record<string,unknown> { if (!v || typeof v!=='object' || Array.isArray(v)) return falhar(); return v as Record<string,unknown>; }
@@ -109,7 +116,8 @@ export function lerAnaliseMicronutrientesFactual(valor: unknown, entrada: Calcul
   return {calculadoEm:r.calculadoEm,linhas,...(r.ajuda!==undefined?{ajuda:lerAjudaDietetica(r.ajuda)}:{})};
 }
 const CODIGO_FONTE_FACTUAL = /^[A-Za-z0-9_.-]{1,80}$/;
-const VERSAO_FONTE_FACTUAL = /^\d+(?:[._-]\d+){0,7}$/;
+/** Mesmo formato do backend: rótulo do catálogo (ex.: `taco-4a-cmvcol-taco3-v1`), até 64 caracteres seguros. */
+const VERSAO_FONTE_FACTUAL = /^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$/;
 /** Valida contra a cobertura da mesma resposta e falha fechado; devolve só o que a interface usa. */
 export function lerFontesPorNutrienteFactual(valor: unknown, linhas: LinhaMicronutrienteFactual[]): Record<string,OrigemNutrienteFactual> {
   const raiz=objeto(valor);
@@ -127,7 +135,7 @@ export function lerFontesPorNutrienteFactual(valor: unknown, linhas: LinhaMicron
       const tipo=f.tipo as TipoFonteFactual, catalogo=tipo!=='manual'&&tipo!=='custom';
       if(!catalogo && (f.codigo!==undefined || f.versao!==undefined)) return falhar();
       if(f.codigo!==undefined && (typeof f.codigo!=='string' || !CODIGO_FONTE_FACTUAL.test(f.codigo))) return falhar();
-      if(f.versao!==undefined && (typeof f.versao!=='string' || f.versao.length>64 || !VERSAO_FONTE_FACTUAL.test(f.versao))) return falhar();
+      if(f.versao!==undefined && (typeof f.versao!=='string' || !VERSAO_FONTE_FACTUAL.test(f.versao))) return falhar();
       const chave=JSON.stringify([tipo,f.codigo,f.versao]);
       if(chaves.has(chave)) return falhar();
       chaves.add(chave);
@@ -175,6 +183,9 @@ export function lerLinhaMicronutrienteFactual(valor: unknown, codigo: CodigoMicr
     if(new Set(causas.map(c=>c.codigo)).size!==causas.length ||
       causas.reduce((s,c)=>s+c.quantidade,0)!==contagens.incluidos-contagens.conhecidos ||
       causas.some(c=>c.quantidade===0 && (c.codigo!=='sem_componentes'||contagens.incluidos!==0))) return falhar();
+    const porCategoria={semComposicao:0,incompativeis:0,naoResolvidos:0};
+    for(const c of causas){const categoria=CATEGORIA_CAUSA_FACTUAL[c.codigo];if(categoria)porCategoria[categoria]+=c.quantidade;}
+    if(porCategoria.semComposicao!==contagens.semComposicao || porCategoria.incompativeis!==contagens.incompativeis || porCategoria.naoResolvidos!==contagens.naoResolvidos) return falhar();
     const tecnico=causas.some(c=>c.codigo==='snapshot_indisponivel'||c.codigo==='schema_nao_suportado');
     if(estado==='INCOMPATIVEL' && contagens.incompativeis===0) return falhar();
     if(estado==='INDISPONIVEL' && contagens.incluidos>0 && !tecnico) return falhar();

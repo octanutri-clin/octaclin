@@ -4,10 +4,10 @@ import type { EntradaPlanoCombinado } from './calculo-combinado';
 import { criarSnapshotMicronutrientes, CODIGOS_MICRONUTRIENTES } from './micronutrientes';
 
 type Fonte = { codigo?: string; versao?: string; baseCodigo?: string; hashConteudo?: string; nome?: string };
-const TACO: Fonte = { codigo: 'taco_nepa_unicamp', versao: '4.1', baseCodigo: 'TACO' };
-const USDA_F: Fonte = { codigo: 'usda_fdc_foundation', versao: '2025.4', baseCodigo: 'USDA' };
-const USDA_S: Fonte = { codigo: 'usda_fdc_sr_legacy', versao: '2025.4', baseCodigo: 'USDA' };
-const IBGE: Fonte = { codigo: 'ibge_pof_2008_2009', versao: '2008.2009', baseCodigo: 'IBGE' };
+const TACO: Fonte = { codigo: 'taco_nepa_unicamp', versao: '4.1', baseCodigo: 'cmvcol_taco3' };
+const USDA_F: Fonte = { codigo: 'usda_fdc_foundation', versao: '2025.4', baseCodigo: 'foundation-foods' };
+const USDA_S: Fonte = { codigo: 'usda_fdc_sr_legacy', versao: '2025.4', baseCodigo: 'sr-legacy' };
+const IBGE: Fonte = { codigo: 'ibge_pof_2008_2009', versao: '2008.2009', baseCodigo: 'pof-2008-2009-composicao' };
 /** Item sintético: calcio conhecido (ou ausente) com a origem informada. */
 const item = (calcio: number | undefined, fonte?: Fonte, origem: string = 'catalogo') => ({
   origem, ...(fonte ? { fonte } : {}),
@@ -95,17 +95,14 @@ describe('FOOD06 M01 fontes factuais por nutriente', () => {
       fontes: [{ tipo: 'TACO', codigo: 'taco_nepa_unicamp', versao: '4.1', quantidade: 1 }] });
   });
 
-  it('versão ou código desconhecidos/malformados permanecem desconhecidos, sem preencher', () => {
+  it('código ausente ou malformado não identifica fonte; versão fora do formato fica desconhecida, sem preencher', () => {
     const r = calcio([plano([
-      item(1, { baseCodigo: 'TACO', codigo: taco(), versao: 'latest' }),
-      item(1, { baseCodigo: 'TACO' }),
-      item(1, { baseCodigo: 'TACO', codigo: 'com espaço <script>', versao: '1'.repeat(65) })
+      item(1, { baseCodigo: 'cmvcol_taco3', codigo: 'taco_nepa_unicamp', versao: 'versão com espaço' }),
+      item(1, { baseCodigo: 'cmvcol_taco3' }),
+      item(1, { baseCodigo: 'cmvcol_taco3', codigo: 'com espaço <script>', versao: '1' })
     ])]);
-    expect(r.fontes).toEqual([
-      { tipo: 'TACO', quantidade: 2 },
-      { tipo: 'TACO', codigo: 'taco_nepa_unicamp', quantidade: 1 }
-    ]);
-    function taco() { return 'taco_nepa_unicamp'; }
+    expect(r.fontes).toEqual([{ tipo: 'TACO', codigo: 'taco_nepa_unicamp', quantidade: 1 }]);
+    expect(r.semOrigemDocumentada).toBe(2);
   });
 
   it('FT18 manual e custom expõem somente o tipo, sem versão ou código fictícios', () => {
@@ -115,7 +112,7 @@ describe('FOOD06 M01 fontes factuais por nutriente', () => {
   });
 
   it('FT19 limita grupos, mantém contagens reconciliadas e ordem determinística', () => {
-    const itens = Array.from({ length: 60 }, (_, i) => item(1, { baseCodigo: 'USDA', codigo: 'usda_fdc_foundation', versao: `2025.${i + 1}` }));
+    const itens = Array.from({ length: 60 }, (_, i) => item(1, { baseCodigo: 'foundation-foods', codigo: 'usda_fdc_foundation', versao: `2025.${i + 1}` }));
     const r = calcio([plano(itens)]);
     expect(r.fontes).toHaveLength(50);
     expect(r.fontesNaoDetalhadas).toBe(10);
@@ -178,5 +175,38 @@ describe('FOOD06 M01 fontes factuais por nutriente', () => {
       { identidadeId: 'b', ativa: true, selecionada: false, itens: [alternativa] }
     ] };
     expect(calcio([p])).toEqual(comPrincipal);
+  });
+
+  describe('R4C2-01 fontes reais de produção (par codigo/baseCodigo e versões livres do catálogo)', () => {
+    const REAIS = {
+      taco: { codigo: 'taco_nepa_unicamp', baseCodigo: 'cmvcol_taco3', versao: 'taco-4a-cmvcol-taco3-v1' },
+      foundation: { codigo: 'usda_fdc_foundation', baseCodigo: 'foundation-foods', versao: '2025-10-30' },
+      legacy: { codigo: 'usda_fdc_sr_legacy', baseCodigo: 'sr-legacy', versao: 'sr-legacy-2018' },
+      pof: { codigo: 'ibge_pof_2008_2009', baseCodigo: 'pof-2008-2009-composicao', versao: 'pof-2008-2009-v1' }
+    };
+    it('reconhece as quatro fontes reais e preserva a versão registrada', () => {
+      const r = calcio([plano([item(1, REAIS.taco), item(1, REAIS.foundation), item(1, REAIS.legacy), item(1, REAIS.pof)])]);
+      expect(r.semOrigemDocumentada).toBe(0);
+      expect(r.fontes).toEqual([
+        { tipo: 'IBGE', codigo: 'ibge_pof_2008_2009', versao: 'pof-2008-2009-v1', quantidade: 1 },
+        { tipo: 'TACO', codigo: 'taco_nepa_unicamp', versao: 'taco-4a-cmvcol-taco3-v1', quantidade: 1 },
+        { tipo: 'USDA', codigo: 'usda_fdc_foundation', versao: '2025-10-30', quantidade: 1 },
+        { tipo: 'USDA', codigo: 'usda_fdc_sr_legacy', versao: 'sr-legacy-2018', quantidade: 1 }
+      ]);
+    });
+    it('par incoerente, código desconhecido e identificação sintética antiga não viram origem oficial', () => {
+      const r = calcio([plano([
+        item(1, { ...REAIS.taco, baseCodigo: 'foundation-foods' }),
+        item(1, { codigo: 'fonte_desconhecida', baseCodigo: 'cmvcol_taco3', versao: '1' }),
+        item(1, { baseCodigo: 'cmvcol_taco3', versao: '1' }),
+        item(1, { codigo: 'taco_nepa_unicamp', baseCodigo: 'TACO', versao: '4.1' })
+      ])]);
+      expect(r).toEqual({ contribuintes: 4, fontes: [], semOrigemDocumentada: 4, fontesNaoDetalhadas: 0 });
+    });
+    it('versão com espaço, símbolo ou acima de 64 caracteres fica desconhecida, sem expor texto livre', () => {
+      const r = calcio([plano([item(1, { ...REAIS.taco, versao: 'CANARIO com espaço' }), item(1, { ...REAIS.taco, versao: 'a'.repeat(65) }), item(1, { ...REAIS.taco, versao: '<b>x</b>' })])]);
+      expect(r.fontes).toEqual([{ tipo: 'TACO', codigo: 'taco_nepa_unicamp', quantidade: 3 }]);
+      expect(JSON.stringify(r)).not.toMatch(/CANARIO|<b>/);
+    });
   });
 });

@@ -25,7 +25,7 @@ export function lerRelatorioFactual(valor:unknown,registroId:string){
  if(f.estado==='resumo_documentado'){
   const inteiro=(v:unknown)=>Number.isSafeInteger(v)&&Number(v)>=0&&Number(v)<=10000;
   if(!inteiro(f.itensIncluidos)||f.itensIncluidos!==linhas[0]?.contagens.incluidos||!inteiro(f.semReferencia)||!inteiro(f.fontesNaoDetalhadas)||!Array.isArray(f.fontes)||f.fontes.length>50)return falhar();
-  fontes=f.fontes.map(v=>{const n=obj(v);if(!['TACO','USDA','IBGE','manual','custom'].includes(String(n.tipo))||!inteiro(n.quantidade)||!Number(n.quantidade)||(n.versao!==undefined&&(typeof n.versao!=='string'||n.versao.length>64||!/^\d+(?:[._-]\d+){0,7}$/.test(n.versao))))return falhar();return {tipo:String(n.tipo),...(n.versao!==undefined?{versao:n.versao as string}:{}),quantidade:n.quantidade as number};});
+  fontes=f.fontes.map(v=>{const n=obj(v);if(!['TACO','USDA','IBGE','manual','custom'].includes(String(n.tipo))||!inteiro(n.quantidade)||!Number(n.quantidade)||(n.versao!==undefined&&(typeof n.versao!=='string'||!/^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$/.test(n.versao))))return falhar();return {tipo:String(n.tipo),...(n.versao!==undefined?{versao:n.versao as string}:{}),quantidade:n.quantidade as number};});
   semReferencia=f.semReferencia as number;fontesNaoDetalhadas=f.fontesNaoDetalhadas as number;
   if(new Set(fontes.map(n=>JSON.stringify([n.tipo,n.versao]))).size!==fontes.length||fontes.reduce((n,x)=>n+x.quantidade,0)+semReferencia+fontesNaoDetalhadas!==f.itensIncluidos)return falhar();
  }

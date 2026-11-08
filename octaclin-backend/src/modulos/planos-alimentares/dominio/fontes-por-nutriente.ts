@@ -1,6 +1,7 @@
 import { selecionarItensCombinados, type EntradaPlanoCombinado } from './calculo-combinado';
 import { classificarContribuicao } from './cobertura-dietetica';
 import { CODIGOS_MICRONUTRIENTES, type CodigoMicronutriente } from './micronutrientes';
+import { identificarFonteCatalogo } from './fonte-catalogo';
 
 export type TipoFonteNutriente = 'TACO' | 'USDA' | 'IBGE' | 'manual' | 'custom';
 export interface FonteNutrienteDietetica {
@@ -27,9 +28,6 @@ export interface FontesPorNutrienteDietetica {
 export const LIMITE_GRUPOS_FONTE_POR_NUTRIENTE = 50;
 
 type Origem = Pick<FonteNutrienteDietetica, 'tipo' | 'codigo' | 'versao'>;
-const BASES_CATALOGO: readonly string[] = ['TACO', 'USDA', 'IBGE'];
-const CODIGO_FONTE = /^[A-Za-z0-9_.-]{1,80}$/;
-const VERSAO_FONTE = /^\d+(?:[._-]\d+){0,7}$/;
 
 function objeto(valor: unknown): Record<string, unknown> | undefined {
   return valor && typeof valor === 'object' && !Array.isArray(valor) ? valor as Record<string, unknown> : undefined;
@@ -43,11 +41,7 @@ function origemDoItem(item: unknown): Origem | undefined {
   if (!snapshot) return undefined;
   if (snapshot.origem === 'manual' || snapshot.origem === 'custom') return { tipo: snapshot.origem };
   if (snapshot.origem !== 'catalogo') return undefined;
-  const fonte = objeto(snapshot.fonte);
-  if (!fonte || typeof fonte.baseCodigo !== 'string' || !BASES_CATALOGO.includes(fonte.baseCodigo)) return undefined;
-  const codigo = typeof fonte.codigo === 'string' && CODIGO_FONTE.test(fonte.codigo) ? fonte.codigo : undefined;
-  const versao = typeof fonte.versao === 'string' && fonte.versao.length <= 64 && VERSAO_FONTE.test(fonte.versao) ? fonte.versao : undefined;
-  return { tipo: fonte.baseCodigo as TipoFonteNutriente, ...(codigo ? { codigo } : {}), ...(versao ? { versao } : {}) };
+  return identificarFonteCatalogo(snapshot.fonte);
 }
 const comparar = (a?: string, b?: string) => (a ?? '').localeCompare(b ?? '', 'pt-BR', { numeric: true });
 

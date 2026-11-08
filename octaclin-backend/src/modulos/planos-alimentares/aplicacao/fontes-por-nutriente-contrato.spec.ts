@@ -12,7 +12,7 @@
 import { readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { construirAnaliseFactual } from './construtor-analise-factual';
-import { projetarRegistroFactual } from './projecao-registro-factual';
+import { projetarRegistroFactual, projetarResumoHistoricoFactual } from './projecao-registro-factual';
 import { prepararRelatorioFactual } from './relatorio-analise-factual';
 import { resumirFontesRegistro } from './fontes-relatorio-factual';
 import { projetarAjudaDietetica } from './projecao-ajuda-dietetica';
@@ -33,8 +33,8 @@ const catalogo = (codigo: string, versao: string, baseCodigo: string, micros: Pa
 });
 // A: TACO 4.1. B: USDA Foundation 2025.4. C: composição manual.
 const itens = () => [
-  catalogo('taco_nepa_unicamp', '4.1', 'TACO', { calcioMg: { estado: 'conhecido', valor: 10 }, ferroMg: { estado: 'conhecido', valor: 0 }, zincoMg: { estado: 'conhecido', valor: 1 }, manganesMg: { estado: 'unidade_incompativel' } }),
-  catalogo('usda_fdc_foundation', '2025.4', 'USDA', { calcioMg: { estado: 'conhecido', valor: 5 }, zincoMg: { estado: 'conhecido', valor: 2 }, manganesMg: { estado: 'conhecido', valor: 4 } }),
+  catalogo('taco_nepa_unicamp', '4.1', 'cmvcol_taco3', { calcioMg: { estado: 'conhecido', valor: 10 }, ferroMg: { estado: 'conhecido', valor: 0 }, zincoMg: { estado: 'conhecido', valor: 1 }, manganesMg: { estado: 'unidade_incompativel' } }),
+  catalogo('usda_fdc_foundation', '2025.4', 'foundation-foods', { calcioMg: { estado: 'conhecido', valor: 5 }, zincoMg: { estado: 'conhecido', valor: 2 }, manganesMg: { estado: 'conhecido', valor: 4 } }),
   { origem: 'manual', nutrientesPor100g: macros, nutrientesPorcao: macros, micronutrientes: criarSnapshotMicronutrientes({ ferroMg: { estado: 'conhecido', valor: 3 }, zincoMg: { estado: 'conhecido', valor: 1 }, manganesMg: { estado: 'conhecido', valor: 2 } }, 100, 100) }
 ];
 const plano = (it: unknown[]): EntradaPlanoCombinado => ({ planoId: PLANO, ativo: true, selecionado: true, refeicoes: [{ identidadeId: REFEICAO, ativa: true, selecionada: true, itens: it }] });
@@ -65,6 +65,7 @@ function gerar() {
     aoVivo: aoVivo([plano(itens())]),
     aoVivoSemComponentes: aoVivo([plano([])]),
     registro: json(projecao),
+    historico: json(projetarResumoHistoricoFactual(meta, r)),
     relatorioV1: json(prepararRelatorioFactual(comFontes, agora, 1)),
     relatorioV2: json(prepararRelatorioFactual(comFontes, agora, 2))
   };
@@ -154,6 +155,15 @@ describe('FOOD06 M01-C1/C2/C3: contrato entre API ao vivo, registro, detalhes e 
         expect({ cobertura: cob(registroComoSuperficie, c), fontes: fon(registroComoSuperficie, c) }).toEqual(base);
         expect({ cobertura: cob(relatorioComoSuperficie, c), fontes: fon(relatorioComoSuperficie, c) }).toEqual(base);
       }
+    });
+    it('R4C2-02 resumo histórico preserva o subtotal conhecido também quando há incompatibilidade, igual às outras superfícies', () => {
+      for (const c of CODIGOS_MICRONUTRIENTES) {
+        const h = (g.historico.nutrientes as Record<string, Nut>)[c], base = cob(g.aoVivo, c);
+        expect({ estado: h.estado, contagens: h.contagens, causas: h.causas, total: h.total, quantidadeConhecida: h.quantidadeConhecida })
+          .toEqual({ estado: base.estado, contagens: base.contagens, causas: base.causas, total: base.total, quantidadeConhecida: base.quantidadeConhecida });
+      }
+      expect((g.historico.nutrientes as Record<string, Nut>).manganesMg).toMatchObject({ estado: 'INCOMPATIVEL', quantidadeConhecida: 6 });
+      expect((g.historico.nutrientes as Record<string, Nut>).manganesMg).not.toHaveProperty('total');
     });
     it('formato 1 do relatório permanece sem o campo novo e com a mesma cobertura', () => {
       expect(g.relatorioV1).not.toHaveProperty('fontesPorNutriente');

@@ -72,4 +72,23 @@ describe('FOOD06 Onda A1 cobertura aditiva sobre PA06', () => {
     const r = analisarCoberturaDietetica([plano([{ ...item(3), descricao: 'canario-sintetico', contextoInterno: 'canario-sintetico' }])]);
     expect(JSON.stringify(r)).not.toContain('canario-sintetico');
   });
+  it('R4C2 micronutrientes nulo não vira ausência: o nutriente fica indisponível', () => {
+    const r = analisarCoberturaDietetica([plano([{ micronutrientes: null }])]).nutrientes.calcioMg;
+    expect(r).toMatchObject({ estado: 'INDISPONIVEL', causas: [{ codigo: 'schema_nao_suportado', quantidade: 1 }] });
+    expect(r).not.toHaveProperty('total');
+  });
+  it('R4C2 estado conhecido sem porção não é conhecido nem zero', () => {
+    const sem = item(5);
+    sem.micronutrientes.nutrientes.calcioMg = { estado: 'conhecido' } as never;
+    const r = analisarCoberturaDietetica([plano([item(5), sem])]).nutrientes.calcioMg;
+    expect(r).toMatchObject({ estado: 'PARCIAL', quantidadeConhecida: 5, contagens: { conhecidos: 1, naoResolvidos: 1 }, causas: [{ codigo: 'invalido', quantidade: 1 }] });
+    expect(r).not.toHaveProperty('total');
+  });
+  it('R4C2 buraco de array é item indisponível, nunca ausência nem zero', () => {
+    const esparso = new Array(2);
+    esparso[0] = item(5);
+    const r = analisarCoberturaDietetica([plano(esparso)]).nutrientes.calcioMg;
+    expect(r).toMatchObject({ estado: 'INDISPONIVEL', contagens: { incluidos: 2, conhecidos: 1, naoResolvidos: 1 }, causas: [{ codigo: 'snapshot_indisponivel', quantidade: 1 }] });
+    expect(r).not.toHaveProperty('total');
+  });
 });

@@ -1,4 +1,5 @@
 import type {RegistroAnaliseFactual} from './construtor-analise-factual';
+import {identificarFonteCatalogo} from '../dominio/fonte-catalogo';
 type Fonte={tipo:'TACO'|'USDA'|'IBGE'|'manual'|'custom';versao?:string;quantidade:number};
 /** Resumo de proveniência congelada; não atesta cobertura de nutrientes nem direitos. */
 export function resumirFontesRegistro(r:RegistroAnaliseFactual){
@@ -7,9 +8,10 @@ export function resumirFontesRegistro(r:RegistroAnaliseFactual){
   if(!refeicao.ativa||!refeicao.selecionada)continue;
   for(const item of refeicao.itens){itensIncluidos++;if(!item||typeof item!=='object'){semReferencia++;continue;}
    const s=item as Record<string,unknown>,f=s.fonte as Record<string,unknown>|undefined;
-   const tipo=s.origem==='manual'?'manual':s.origem==='custom'?'custom':s.origem==='catalogo'&&f&&['TACO','USDA','IBGE'].includes(String(f.baseCodigo))?f.baseCodigo as Fonte['tipo']:undefined;
+   const catalogo=s.origem==='catalogo'?identificarFonteCatalogo(f):undefined;
+   const tipo=s.origem==='manual'?'manual':s.origem==='custom'?'custom':catalogo?.tipo;
    if(!tipo){semReferencia++;continue;}
-   const versao=s.origem==='catalogo'&&typeof f?.versao==='string'&&/^\d+(?:[._-]\d+){0,7}$/.test(f.versao)&&f.versao.length<=64?f.versao:undefined;
+   const versao=catalogo?.versao;
    const chave=JSON.stringify([tipo,versao]);const anterior=fontes.get(chave);if(anterior)anterior.quantidade++;else fontes.set(chave,{tipo,...(versao?{versao}:{}),quantidade:1});
   }
  }

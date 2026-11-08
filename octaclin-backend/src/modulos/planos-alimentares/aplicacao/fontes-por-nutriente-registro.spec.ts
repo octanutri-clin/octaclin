@@ -10,7 +10,7 @@ const meta = { id: randomUUID(), criadoEm: new Date('2026-11-07T12:00:00.000Z') 
 const origemVersao = () => ({ planoId: randomUUID(), versaoId: randomUUID(), numero: 1, status: 'publicada' as const, registradaEm: '2026-11-01T12:00:00.000Z' });
 const taco = (calcio?: number) => ({
   origem: 'catalogo', codigoOrigem: 'ALIMENTO-SINTETICO-1', descricao: 'Descrição sintética',
-  fonte: { codigo: 'taco_nepa_unicamp', nome: 'Nome livre', versao: '4.1', baseCodigo: 'TACO', hashConteudo: HASH, esquemaVersao: 'octaclin-composicao-v2-micros1' },
+  fonte: { codigo: 'taco_nepa_unicamp', nome: 'Nome livre', versao: '4.1', baseCodigo: 'cmvcol_taco3', hashConteudo: HASH, esquemaVersao: 'octaclin-composicao-v2-micros1' },
   nutrientesPor100g: { energiaKcal: 0 }, nutrientesPorcao: { energiaKcal: 0 },
   micronutrientes: criarSnapshotMicronutrientes(calcio === undefined ? {} : { calcioMg: { estado: 'conhecido', valor: calcio } }, 100, 100)
 });

@@ -7,13 +7,14 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { lerAnaliseMicronutrientesFactual, CAMPOS_MICRONUTRIENTES_PLANO } from '../lib/micronutrientes-factuais';
+import { lerAnaliseMicronutrientesFactual, lerLinhaMicronutrienteFactual, CAMPOS_MICRONUTRIENTES_PLANO } from '../lib/micronutrientes-factuais';
 import { lerRelatorioFactual } from '../lib/relatorio-factual';
 
 type Entrada = Parameters<typeof lerAnaliseMicronutrientesFactual>[1];
 const g = JSON.parse(readFileSync(resolve(process.cwd(), 'scripts/fixtures/food06-m01-contrato.json'), 'utf8')) as {
   entrada: Entrada; registroId: string; aoVivo: Record<string, unknown>; aoVivoSemComponentes: Record<string, unknown>;
   relatorioV1: Record<string, unknown>; relatorioV2: Record<string, unknown>;
+  historico: { nutrientes: Record<string, unknown> };
 };
 type Origem = { contribuintes: number; fontes: { tipo: string; codigo?: string; versao?: string; quantidade: number }[]; semOrigemDocumentada: number; fontesNaoDetalhadas: number };
 type Linha = { codigo: string; estado: string; valor?: number; contagens: Record<string, number>; causas: { codigo: string; quantidade: number }[]; origem?: Origem };
@@ -80,4 +81,14 @@ test('M01-C3 Web: origem adulterada em qualquer superfície é recusada, sem com
   assert.throws(() => lerRelatorioFactual(rel, g.registroId));
   const v1 = { ...JSON.parse(JSON.stringify(g.relatorioV1)), fontesPorNutriente: (g.relatorioV2 as Adulteravel).fontesPorNutriente };
   assert.throws(() => lerRelatorioFactual(v1, g.registroId));
+});
+
+test('R4C2-02 Web: resumo histórico lê todos os estados, inclusive INCOMPATIVEL com subtotal conhecido', () => {
+  const vivo = aoVivo();
+  for (const c of CAMPOS_MICRONUTRIENTES_PLANO) {
+    const h = lerLinhaMicronutrienteFactual(g.historico.nutrientes[c.codigo], c.codigo) as unknown as Linha;
+    const base = por(vivo, c.codigo);
+    assert.deepEqual({ estado: h.estado, valor: h.valor, contagens: h.contagens, causas: h.causas }, { estado: base.estado, valor: base.valor, contagens: base.contagens, causas: base.causas }, c.codigo);
+  }
+  assert.equal((lerLinhaMicronutrienteFactual(g.historico.nutrientes.manganesMg, 'manganesMg') as unknown as Linha).valor, 6);
 });

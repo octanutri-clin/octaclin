@@ -431,7 +431,7 @@ suite('FOOD06 registro cifrado PostgreSQL15 descartável/RLS/runtime',()=>{
   }finally{await owner.query('update pacientes set profissional_responsavel_id=$1 where id=$2',[p,paciente]);await app.close();}
  });
  it('relatório lê snapshot imutável com fontes sob runtime/RLS e não atualiza registro',async()=>{
-  const f=await fonte();const snapshot={origem:'catalogo',fonte:{baseCodigo:'TACO',codigo:'TACO-v1',versao:'1',hashConteudo:'a'.repeat(64)},nutrientesPor100g:{energiaKcal:100},nutrientesPorcao:{energiaKcal:100},micronutrientes:criarSnapshotMicronutrientes({ferroMg:{estado:'conhecido',valor:0}},100,100)};
+  const f=await fonte();const snapshot={origem:'catalogo',fonte:{baseCodigo:'cmvcol_taco3',codigo:'taco_nepa_unicamp',versao:'1',hashConteudo:'a'.repeat(64)},nutrientesPor100g:{energiaKcal:100},nutrientesPorcao:{energiaKcal:100},micronutrientes:criarSnapshotMicronutrientes({ferroMg:{estado:'conhecido',valor:0}},100,100)};
   await owner.query('update plano_alimentar_itens set composicao_snapshot_criptografada=$1 where id=$2',[crypto.criptografar(JSON.stringify(snapshot)),f.itemId]);
   const registro=await s.registrarVersao(tenant,paciente,u,f.c),cipher=(await owner.query('select conteudo_criptografado from registros_analises_factuais where id=$1',[registro.id])).rows[0].conteudo_criptografado;
   const antesFormato2=await s.prepararRelatorioApi(tenant,paciente,u,registro.id,2) as {fontesPorNutriente?:unknown};
@@ -443,7 +443,7 @@ suite('FOOD06 registro cifrado PostgreSQL15 descartável/RLS/runtime',()=>{
   expect(r).not.toHaveProperty('fontesPorNutriente');
   const depoisFormato2=await s.prepararRelatorioApi(tenant,paciente,u,registro.id,2) as {fontesPorNutriente:{nutrientes:Record<string,unknown>}};
   expect(depoisFormato2.fontesPorNutriente).toEqual(antesFormato2.fontesPorNutriente);
-  expect(depoisFormato2.fontesPorNutriente.nutrientes.ferroMg).toEqual({contribuintes:1,fontes:[{tipo:'TACO',codigo:'TACO-v1',versao:'1',quantidade:1}],semOrigemDocumentada:0,fontesNaoDetalhadas:0});
+  expect(depoisFormato2.fontesPorNutriente.nutrientes.ferroMg).toEqual({contribuintes:1,fontes:[{tipo:'TACO',codigo:'taco_nepa_unicamp',versao:'1',quantidade:1}],semOrigemDocumentada:0,fontesNaoDetalhadas:0});
   expect(depoisFormato2.fontesPorNutriente.nutrientes.calcioMg).toEqual({contribuintes:0,fontes:[],semOrigemDocumentada:0,fontesNaoDetalhadas:0});
   expect(JSON.stringify(depoisFormato2)).not.toMatch(/hashConteudo|conteudoHash|aaaaaaaa|confirmacaoOrigem|conteudoCriptografado|PRIVADO/);
   expect((await owner.query('select conteudo_criptografado from registros_analises_factuais where id=$1',[registro.id])).rows[0].conteudo_criptografado).toEqual(cipher);
@@ -457,7 +457,7 @@ suite('FOOD06 registro cifrado PostgreSQL15 descartável/RLS/runtime',()=>{
  });
  it('histórico decifra apenas a página autorizada e projeta zero/ausência sem expor envelopes ou marcadores',async()=>{
   const e=dados();e.refeicoes[0].itens[0].snapshot={origem:'catalogo',alimentoComposicaoId:'alimento-sintetico',codigoOrigem:'A1',descricao:'CANARIO_HISTORICO',preparacao:'Cozido',
-   fonte:{codigo:'TACO-v1',baseCodigo:'TACO',versao:'1',nome:'Fonte sintética',hashConteudo:'a'.repeat(64)},nutrientesPor100g:{energiaKcal:100},nutrientesPorcao:{energiaKcal:100},
+   fonte:{codigo:'taco_nepa_unicamp',baseCodigo:'cmvcol_taco3',versao:'1',nome:'Fonte sintética',hashConteudo:'a'.repeat(64)},nutrientesPor100g:{energiaKcal:100},nutrientesPorcao:{energiaKcal:100},
    micronutrientes:criarSnapshotMicronutrientes({ferroMg:{estado:'conhecido',valor:0}},100,100)};
   const r=await s.registrar(tenant,paciente,u,comando(),async()=>e);expect((await s.ler(tenant,paciente,u,r.id)).analise.cobertura.nutrientes.ferroMg.total).toBe(0);const antes=(await owner.query('select conteudo_criptografado from registros_analises_factuais where id=$1',[r.id])).rows[0].conteudo_criptografado;
   const historico=await s.historico(tenant,paciente,u,10);expect(historico.itens.length).toBeGreaterThan(0);expect(historico.itens.some(x=>x.registro.id===r.id)).toBe(true);const ponto=historico.itens.find(x=>x.registro.id===r.id)!;expect(ponto.nutrientes.ferroMg).toMatchObject({estado:'COMPLETO',total:0});
@@ -481,7 +481,7 @@ suite('FOOD06 registro cifrado PostgreSQL15 descartável/RLS/runtime',()=>{
   for(const valor of [1,2]){
    const e=dados();e.escopo.pacienteId=pacienteHistorico;
    e.refeicoes[0].itens[0].snapshot={origem:'catalogo',alimentoComposicaoId:'alimento-sintetico',codigoOrigem:'A1',preparacao:'Cozido',
-    fonte:{codigo:'TACO-v1',baseCodigo:'TACO',versao:'1',nome:'Fonte sintética',hashConteudo:'a'.repeat(64)},nutrientesPor100g:{energiaKcal:10},nutrientesPorcao:{energiaKcal:10},
+    fonte:{codigo:'taco_nepa_unicamp',baseCodigo:'cmvcol_taco3',versao:'1',nome:'Fonte sintética',hashConteudo:'a'.repeat(64)},nutrientesPor100g:{energiaKcal:10},nutrientesPorcao:{energiaKcal:10},
     micronutrientes:criarSnapshotMicronutrientes({ferroMg:{estado:'conhecido',valor}},100,100)};
    await s.registrar(tenant,pacienteHistorico,u,comando(),async()=>e);
   }

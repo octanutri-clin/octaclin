@@ -2586,6 +2586,457 @@
    ]
   }
  },
+ "historico": {
+  "schemaVersao": 1,
+  "registro": {
+   "id": "10000000-0000-4000-8000-000000000004",
+   "criadoEm": "2026-11-07T11:00:00.000Z"
+  },
+  "origem": {
+   "planoId": "10000000-0000-4000-8000-000000000001",
+   "versaoId": "10000000-0000-4000-8000-000000000002",
+   "numero": 1,
+   "status": "publicada",
+   "registradaEm": "2026-11-01T12:00:00.000Z"
+  },
+  "comparacaoAnterior": {
+   "planejamento": "SEM_REGISTRO_ANTERIOR",
+   "composicaoFonte": "SEM_REGISTRO_ANTERIOR",
+   "referencia": "SEM_REGISTRO_ANTERIOR",
+   "contexto": "SEM_REGISTRO_ANTERIOR",
+   "cobertura": {
+    "calcioMg": "SEM_REGISTRO_ANTERIOR",
+    "magnesioMg": "SEM_REGISTRO_ANTERIOR",
+    "manganesMg": "SEM_REGISTRO_ANTERIOR",
+    "fosforoMg": "SEM_REGISTRO_ANTERIOR",
+    "ferroMg": "SEM_REGISTRO_ANTERIOR",
+    "potassioMg": "SEM_REGISTRO_ANTERIOR",
+    "cobreMg": "SEM_REGISTRO_ANTERIOR",
+    "zincoMg": "SEM_REGISTRO_ANTERIOR",
+    "selenioMcg": "SEM_REGISTRO_ANTERIOR",
+    "retinolMcg": "SEM_REGISTRO_ANTERIOR",
+    "vitaminaAReMcg": "SEM_REGISTRO_ANTERIOR",
+    "vitaminaARaeMcg": "SEM_REGISTRO_ANTERIOR",
+    "tiaminaMg": "SEM_REGISTRO_ANTERIOR",
+    "riboflavinaMg": "SEM_REGISTRO_ANTERIOR",
+    "vitaminaB6Mg": "SEM_REGISTRO_ANTERIOR",
+    "niacinaMg": "SEM_REGISTRO_ANTERIOR",
+    "niacinaNeMg": "SEM_REGISTRO_ANTERIOR",
+    "vitaminaB12Mcg": "SEM_REGISTRO_ANTERIOR",
+    "folatoDfeMcg": "SEM_REGISTRO_ANTERIOR",
+    "vitaminaDMcg": "SEM_REGISTRO_ANTERIOR",
+    "vitaminaEAlfaTocoferolMg": "SEM_REGISTRO_ANTERIOR",
+    "vitaminaCMg": "SEM_REGISTRO_ANTERIOR"
+   }
+  },
+  "motorVersao": "pa06-combinado-v1",
+  "nutrientes": {
+   "calcioMg": {
+    "codigo": "calcioMg",
+    "unidade": "mg",
+    "estado": "PARCIAL",
+    "contagens": {
+     "incluidos": 3,
+     "conhecidos": 2,
+     "semComposicao": 1,
+     "incompativeis": 0,
+     "naoResolvidos": 0
+    },
+    "causas": [
+     {
+      "codigo": "ausente",
+      "quantidade": 1
+     }
+    ],
+    "quantidadeConhecida": 15
+   },
+   "magnesioMg": {
+    "codigo": "magnesioMg",
+    "unidade": "mg",
+    "estado": "DESCONHECIDO",
+    "contagens": {
+     "incluidos": 3,
+     "conhecidos": 0,
+     "semComposicao": 3,
+     "incompativeis": 0,
+     "naoResolvidos": 0
+    },
+    "causas": [
+     {
+      "codigo": "ausente",
+      "quantidade": 3
+     }
+    ]
+   },
+   "manganesMg": {
+    "codigo": "manganesMg",
+    "unidade": "mg",
+    "estado": "INCOMPATIVEL",
+    "contagens": {
+     "incluidos": 3,
+     "conhecidos": 2,
+     "semComposicao": 0,
+     "incompativeis": 1,
+     "naoResolvidos": 0
+    },
+    "causas": [
+     {
+      "codigo": "unidade_incompativel",
+      "quantidade": 1
+     }
+    ],
+    "quantidadeConhecida": 6
+   },
+   "fosforoMg": {
+    "codigo": "fosforoMg",
+    "unidade": "mg",
+    "estado": "DESCONHECIDO",
+    "contagens": {
+     "incluidos": 3,
+     "conhecidos": 0,
+     "semComposicao": 3,
+     "incompativeis": 0,
+     "naoResolvidos": 0
+    },
+    "causas": [
+     {
+      "codigo": "ausente",
+      "quantidade": 3
+     }
+    ]
+   },
+   "ferroMg": {
+    "codigo": "ferroMg",
+    "unidade": "mg",
+    "estado": "PARCIAL",
+    "contagens": {
+     "incluidos": 3,
+     "conhecidos": 2,
+     "semComposicao": 1,
+     "incompativeis": 0,
+     "naoResolvidos": 0
+    },
+    "causas": [
+     {
+      "codigo": "ausente",
+      "quantidade": 1
+     }
+    ],
+    "quantidadeConhecida": 3
+   },
+   "potassioMg": {
+    "codigo": "potassioMg",
+    "unidade": "mg",
+    "estado": "DESCONHECIDO",
+    "contagens": {
+     "incluidos": 3,
+     "conhecidos": 0,
+     "semComposicao": 3,
+     "incompativeis": 0,
+     "naoResolvidos": 0
+    },
+    "causas": [
+     {
+      "codigo": "ausente",
+      "quantidade": 3
+     }
+    ]
+   },
+   "cobreMg": {
+    "codigo": "cobreMg",
+    "unidade": "mg",
+    "estado": "DESCONHECIDO",
+    "contagens": {
+     "incluidos": 3,
+     "conhecidos": 0,
+     "semComposicao": 3,
+     "incompativeis": 0,
+     "naoResolvidos": 0
+    },
+    "causas": [
+     {
+      "codigo": "ausente",
+      "quantidade": 3
+     }
+    ]
+   },
+   "zincoMg": {
+    "codigo": "zincoMg",
+    "unidade": "mg",
+    "estado": "COMPLETO",
+    "contagens": {
+     "incluidos": 3,
+     "conhecidos": 3,
+     "semComposicao": 0,
+     "incompativeis": 0,
+     "naoResolvidos": 0
+    },
+    "causas": [],
+    "total": 4
+   },
+   "selenioMcg": {
+    "codigo": "selenioMcg",
+    "unidade": "mcg",
+    "estado": "DESCONHECIDO",
+    "contagens": {
+     "incluidos": 3,
+     "conhecidos": 0,
+     "semComposicao": 3,
+     "incompativeis": 0,
+     "naoResolvidos": 0
+    },
+    "causas": [
+     {
+      "codigo": "ausente",
+      "quantidade": 3
+     }
+    ]
+   },
+   "retinolMcg": {
+    "codigo": "retinolMcg",
+    "unidade": "mcg",
+    "estado": "DESCONHECIDO",
+    "contagens": {
+     "incluidos": 3,
+     "conhecidos": 0,
+     "semComposicao": 3,
+     "incompativeis": 0,
+     "naoResolvidos": 0
+    },
+    "causas": [
+     {
+      "codigo": "ausente",
+      "quantidade": 3
+     }
+    ]
+   },
+   "vitaminaAReMcg": {
+    "codigo": "vitaminaAReMcg",
+    "unidade": "mcg",
+    "estado": "DESCONHECIDO",
+    "contagens": {
+     "incluidos": 3,
+     "conhecidos": 0,
+     "semComposicao": 3,
+     "incompativeis": 0,
+     "naoResolvidos": 0
+    },
+    "causas": [
+     {
+      "codigo": "ausente",
+      "quantidade": 3
+     }
+    ]
+   },
+   "vitaminaARaeMcg": {
+    "codigo": "vitaminaARaeMcg",
+    "unidade": "mcg",
+    "estado": "DESCONHECIDO",
+    "contagens": {
+     "incluidos": 3,
+     "conhecidos": 0,
+     "semComposicao": 3,
+     "incompativeis": 0,
+     "naoResolvidos": 0
+    },
+    "causas": [
+     {
+      "codigo": "ausente",
+      "quantidade": 3
+     }
+    ]
+   },
+   "tiaminaMg": {
+    "codigo": "tiaminaMg",
+    "unidade": "mg",
+    "estado": "DESCONHECIDO",
+    "contagens": {
+     "incluidos": 3,
+     "conhecidos": 0,
+     "semComposicao": 3,
+     "incompativeis": 0,
+     "naoResolvidos": 0
+    },
+    "causas": [
+     {
+      "codigo": "ausente",
+      "quantidade": 3
+     }
+    ]
+   },
+   "riboflavinaMg": {
+    "codigo": "riboflavinaMg",
+    "unidade": "mg",
+    "estado": "DESCONHECIDO",
+    "contagens": {
+     "incluidos": 3,
+     "conhecidos": 0,
+     "semComposicao": 3,
+     "incompativeis": 0,
+     "naoResolvidos": 0
+    },
+    "causas": [
+     {
+      "codigo": "ausente",
+      "quantidade": 3
+     }
+    ]
+   },
+   "vitaminaB6Mg": {
+    "codigo": "vitaminaB6Mg",
+    "unidade": "mg",
+    "estado": "DESCONHECIDO",
+    "contagens": {
+     "incluidos": 3,
+     "conhecidos": 0,
+     "semComposicao": 3,
+     "incompativeis": 0,
+     "naoResolvidos": 0
+    },
+    "causas": [
+     {
+      "codigo": "ausente",
+      "quantidade": 3
+     }
+    ]
+   },
+   "niacinaMg": {
+    "codigo": "niacinaMg",
+    "unidade": "mg",
+    "estado": "DESCONHECIDO",
+    "contagens": {
+     "incluidos": 3,
+     "conhecidos": 0,
+     "semComposicao": 3,
+     "incompativeis": 0,
+     "naoResolvidos": 0
+    },
+    "causas": [
+     {
+      "codigo": "ausente",
+      "quantidade": 3
+     }
+    ]
+   },
+   "niacinaNeMg": {
+    "codigo": "niacinaNeMg",
+    "unidade": "mg",
+    "estado": "DESCONHECIDO",
+    "contagens": {
+     "incluidos": 3,
+     "conhecidos": 0,
+     "semComposicao": 3,
+     "incompativeis": 0,
+     "naoResolvidos": 0
+    },
+    "causas": [
+     {
+      "codigo": "ausente",
+      "quantidade": 3
+     }
+    ]
+   },
+   "vitaminaB12Mcg": {
+    "codigo": "vitaminaB12Mcg",
+    "unidade": "mcg",
+    "estado": "DESCONHECIDO",
+    "contagens": {
+     "incluidos": 3,
+     "conhecidos": 0,
+     "semComposicao": 3,
+     "incompativeis": 0,
+     "naoResolvidos": 0
+    },
+    "causas": [
+     {
+      "codigo": "ausente",
+      "quantidade": 3
+     }
+    ]
+   },
+   "folatoDfeMcg": {
+    "codigo": "folatoDfeMcg",
+    "unidade": "mcg",
+    "estado": "DESCONHECIDO",
+    "contagens": {
+     "incluidos": 3,
+     "conhecidos": 0,
+     "semComposicao": 3,
+     "incompativeis": 0,
+     "naoResolvidos": 0
+    },
+    "causas": [
+     {
+      "codigo": "ausente",
+      "quantidade": 3
+     }
+    ]
+   },
+   "vitaminaDMcg": {
+    "codigo": "vitaminaDMcg",
+    "unidade": "mcg",
+    "estado": "DESCONHECIDO",
+    "contagens": {
+     "incluidos": 3,
+     "conhecidos": 0,
+     "semComposicao": 3,
+     "incompativeis": 0,
+     "naoResolvidos": 0
+    },
+    "causas": [
+     {
+      "codigo": "ausente",
+      "quantidade": 3
+     }
+    ]
+   },
+   "vitaminaEAlfaTocoferolMg": {
+    "codigo": "vitaminaEAlfaTocoferolMg",
+    "unidade": "mg",
+    "estado": "DESCONHECIDO",
+    "contagens": {
+     "incluidos": 3,
+     "conhecidos": 0,
+     "semComposicao": 3,
+     "incompativeis": 0,
+     "naoResolvidos": 0
+    },
+    "causas": [
+     {
+      "codigo": "ausente",
+      "quantidade": 3
+     }
+    ]
+   },
+   "vitaminaCMg": {
+    "codigo": "vitaminaCMg",
+    "unidade": "mg",
+    "estado": "DESCONHECIDO",
+    "contagens": {
+     "incluidos": 3,
+     "conhecidos": 0,
+     "semComposicao": 3,
+     "incompativeis": 0,
+     "naoResolvidos": 0
+    },
+    "causas": [
+     {
+      "codigo": "ausente",
+      "quantidade": 3
+     }
+    ]
+   }
+  },
+  "referencias": {
+   "estado": "indisponivel",
+   "motivo": "referencias_nao_habilitadas"
+  },
+  "bases": {
+   "planejamentoDocumentado": false,
+   "composicaoDocumentada": true,
+   "contextoDocumentado": false
+  }
+ },
  "relatorioV1": {
   "schemaVersao": 1,
   "motorVersao": "food06-relatorio-factual-v1",

@@ -99,9 +99,9 @@ inalterado). Cada linha foi executada neste ciclo.
 | --- | --- |
 | Backend, domínio novo (`fontes-por-nutriente.spec.ts`), RED antes da implementação | RED funcional: 21 falhas e 2 passes triviais; depois GREEN, 23 testes |
 | Backend, integração das projeções (`fontes-por-nutriente-registro.spec.ts`) | PASS, 7 testes. Mutação comportamental da projeção: 3 falham, confirmando sensibilidade |
-| Backend, árvore `src/modulos/planos-alimentares` | PASS: 87 suítes, 1.744 testes; 1 suíte SKIPPED (7 testes, integração PostgreSQL opt-in) |
+| Backend, árvore `src/modulos/planos-alimentares` (após as correções de C2) | PASS: 89 suítes, 1.772 testes; 1 suíte SKIPPED (7 testes, integração PostgreSQL opt-in, executada no CI) |
 | Backend `pnpm typecheck` e `pnpm build` | PASS |
-| Web, runner `test:calculo-combinado-planos`, RED antes da implementação | RED funcional (13 e 3 falhas); depois PASS, 112 testes (92 anteriores + 20 novos) |
+| Web, runner `test:calculo-combinado-planos`, RED antes de cada implementação | RED funcional em cada rodada; PASS final, 127 testes (92 anteriores + 35 novos) |
 | Web `test:planos-alimentares:bff` e `test:linguagem` | PASS (150 testes; linguagem aprovada) |
 | Web `typecheck` e ESLint dos arquivos alterados | PASS; 1 aviso preexistente em spec que não alterei |
 | Browser desktop+mobile, `food06-tabela-factual` e `food06-contexto-historico` | 74 PASS, 8 SKIPPED (PDF real sem opt-in), 0 FAIL |
@@ -150,21 +150,28 @@ Não executados localmente:
 
 ## 7. Revisões
 
-- **R4 independente (somente leitura):** feita por um subagente revisor, que não escreveu o código, sobre `9e4c1fe5`.
-  Nenhum P0 ou P1; 4 achados P3. Ele **não executou testes**. Ver `tasks/food06-m01-revisao-r4.md`. Não substitui
-  revisão humana de segurança.
-- **UX:** a etapa A **não** foi executada antes da implementação (lacuna). A etapa C foi repetida com um subagente
-  de runtime com o papel de nutricionista, sem ferramentas e sem ver a interface (modalidade "papel fornecido").
-  Paciente N/A justificado. Ver `docs/agents/ux/reports/FOOD06-M01-BC-2026-11-07/`. O subagente não encontrou defeito
-  comprovado e pediu NUX06 e NUX07 como condição de aceite; ambos foram cobertos por teste de navegador. NUX01 a 03,
-  09, 10 e 13 seguem para decisão do proprietário.
+- **R4 independente do incremento (somente leitura):** subagente revisor sobre `9e4c1fe5`; nenhum P0 ou P1; 4 achados
+  P3. Não executou testes. Ver `tasks/food06-m01-revisao-r4.md`.
+- **Revisão de segurança de C2 (pode executar testes, sem editar):** subagente revisor sobre `05e7f1f8`. Confirmou que
+  **não há caminho de falsa procedência** (o servidor decide `origem` e `fonte`; o DTO recusa os campos), mas encontrou um
+  **defeito P1 real**: a origem exigia `baseCodigo` TACO/USDA/IBGE e versão numérica, valores que a produção não grava.
+  Com dados reais todo contribuinte de catálogo cairia em "sem origem documentada", e a suíte passava porque usava
+  valores sintéticos. **Confirmei nas migrações e no serviço de catálogos e corrigi** (resolvedor único por par
+  `codigo`/`baseCodigo`, usado também pelo resumo global do M08, que tinha o mesmo defeito antes deste trabalho). Também
+  corrigidos o resumo histórico (R4C2-02), o rótulo (R4C2-03) e a correspondência causa→categoria (R4C2-04). Ver
+  `tasks/food06-m01-revisao-c2.md`.
+- **UX:** a etapa A da entrega original **não** foi executada antes da implementação (lacuna). Depois, uma etapa A real
+  foi feita sobre as melhorias NUX, antes de implementá-las (`etapa-a-nuxa.md`). A etapa C foi repetida com um subagente
+  (papel fornecido, sem ferramentas, sem ver a interface). Paciente N/A justificado. O proprietário leu e considerou
+  válidas as melhorias NUX01, 02, 03, 09, 10 e 13, que foram implementadas. NUXA11 (contagem-resumo) e a autoria da
+  entrada manual ficam fora, por serem escopo novo.
 
 ## 8. Critérios e maturidade
 
 | Critério | Estado | Observação |
 | --- | --- | --- |
 | M01-C1 | Provado pelo teste de contrato; **não promovido** | Zero conhecido e cobertura por nutriente, nas três superfícies do backend e nos leitores Web |
-| M01-C2 | Provado pelo teste de contrato; **não promovido** | Cinco estados com motivos, contagens e origens documentadas. O vínculo por célula **não** é afirmado |
+| M01-C2 | Provado pelo teste de contrato com os pares reais de produção; **não promovido** | Cinco estados com motivos, contagens e origens documentadas. O vínculo por célula **não** é afirmado. Antes da correção de R4C2-01 a prova usava valores sintéticos e **não valia para dados reais** |
 | M01-C3 | Provado pelo teste de contrato; **não promovido** | Subtotal parcial sem total nem percentual; mesmos dados em API ao vivo, registro e relatório formato 2; legados legíveis |
 
 "Provado pelo teste de contrato" significa: verificado por teste automatizado com dados sintéticos, sem HTTP real
@@ -181,11 +188,11 @@ especial). Não iniciada.
 
 ## 10. Teste de contrato de M01-C1, C2 e C3
 
-- Backend: `aplicacao/fontes-por-nutriente-contrato.spec.ts` (12 testes). Usa o código real para gerar, de um cenário
+- Backend: `aplicacao/fontes-por-nutriente-contrato.spec.ts` (13 testes; inclui o resumo histórico). Usa o código real para gerar, de um cenário
   sintético, as respostas do cálculo ao vivo, da projeção do registro e do relatório formatos 1 e 2, e as grava no
   fixture `octaclin-web/scripts/fixtures/food06-m01-contrato.json`. **Falha se o fixture divergir do que o backend
   produz hoje**; regenerar de propósito com `ATUALIZAR_FIXTURE_FOOD06_M01=true`.
-- Web: `scripts/food06-m01-contrato.spec.ts` (5 testes), no runner `test:calculo-combinado-planos`. Lê o mesmo fixture
+- Web: `scripts/food06-m01-contrato.spec.ts` (6 testes), no runner `test:calculo-combinado-planos`. Lê o mesmo fixture
   com os leitores reais da tabela e do relatório.
 - Cenário: três alimentos (TACO 4.1, USDA Foundation 2025.4, composição manual) que produzem COMPLETO (zinco),
   PARCIAL (cálcio e ferro, este com zero conhecido), DESCONHECIDO (magnésio), INCOMPATIVEL (manganês) e, em um segundo
@@ -196,3 +203,11 @@ especial). Não iniciada.
   respostas antigas legíveis, adulteração recusada).
 - Limite: não passa por HTTP nem por banco; isso é coberto pelo spec PostgreSQL e pelos testes de navegador, que
   usam respostas simuladas. O teste de contrato impede que o backend e a Web divirjam, mas não prova a rede real.
+
+## 11. Limites que o contrato e as correções não cobrem
+
+- O contrato usa os **pares reais** `codigo`/`baseCodigo` do catálogo governado, mas não foi executado contra o banco
+  real; as versões de USDA e IBGE usadas nos testes são exemplos de formato, não valores confirmados.
+- Snapshots históricos congelados com outra identificação de fonte aparecem como "sem origem documentada".
+- Cabeçalho repetido por página em impressão de várias páginas e a continuação de uma célula longa sem o nome do
+  nutriente não foram medidos (dependem do navegador; só o PDF real com 50 grupos foi verificado).
