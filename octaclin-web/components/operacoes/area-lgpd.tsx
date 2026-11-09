@@ -205,7 +205,7 @@ export function AreaLgpd({ controlador }: { controlador: PainelOperacoesControla
             <Botao
               type="button"
               onClick={() => exportarSolicitacaoLgpd(detalheLgpd.protocolo)}
-              aria-label={`Exportar protocolo ${detalheLgpd.protocolo}`}
+              aria-label={`Exportar protocolo ${detalheLgpd.protocolo} em CSV`}
             >
               <Download size={16} />
               CSV

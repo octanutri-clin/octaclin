@@ -1009,7 +1009,7 @@ export class ServicoPlanosAlimentares {
         if(erro instanceof DocumentoGrupoInvalido)throw new BadRequestException(erro.message);
         throw erro;
       }
-      const contextosCustomAnteriores={...this.lerContextosCustom(rascunho)};
+      const contextosCustomAnteriores:ContextosAlimentosPersonalizados=Object.assign(Object.create(null),this.lerContextosCustom(rascunho));
       for(const r of documento.refeicoes)for(const i of r.itens)for(const a of i.substituicoes??[]){
         const herdado=materializadas.custom[a.chaveCliente];
         if(herdado&&a.origemGrupo&&!a.alimentoPersonalizado){
