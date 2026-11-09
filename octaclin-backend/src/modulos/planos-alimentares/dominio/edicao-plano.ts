@@ -54,6 +54,7 @@ export const LIMITE_BYTES_EDICAO_PLANO = 96 * 1024;
 const camposNumero = ['fatorAtividade', 'ajusteEnergeticoKcal', 'carboidratosBasisPoints', 'proteinasBasisPoints', 'gordurasBasisPoints', 'metaEnergeticaManualKcal', 'carboidratosGPorKg', 'proteinasGPorKg', 'gordurasGPorKg'];
 const camposAlimento = ['chaveCliente', 'alimentoComposicaoId', 'descricao', 'quantidade', 'unidade', 'porcaoGramas', 'nutrientesPor100g', 'micronutrientesPor100g', 'fonteRotulo', 'medidaCaseira', 'alimentoPersonalizado'];
 const camposNutriente = ['energiaKcal', 'proteinasG', 'carboidratosG', 'gordurasG', 'fibrasG', 'sodioMg'];
+const CHAVES_RESERVADAS = new Set(['__proto__', 'constructor', 'prototype']);
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 function falhar(): never { throw new Error('Documento de edição do plano inválido.'); }
@@ -105,6 +106,9 @@ export function validarDocumentoEdicaoPlano(valor: unknown): DocumentoEdicaoPlan
   const chaves = new Set<string>();
   function chave(v: unknown) {
     texto(v, 100, true);
+    // chaveCliente indexa dicionários de contexto; nomes que alcançam o protótipo
+    // são recusados aqui, na entrada (CodeQL #533).
+    if (CHAVES_RESERVADAS.has(v as string)) falhar();
     if (chaves.has(v as string)) falhar();
     chaves.add(v as string);
   }
