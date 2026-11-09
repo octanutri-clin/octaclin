@@ -11,12 +11,17 @@ mesclados silenciosamente.
 
 ## Estado das fontes
 
+USDA FDC (`usda_fdc_foundation` 2026-04 e `usda_fdc_sr_legacy` 2018-04) e TACO
+estao ativas com direito aprovado em producao (conferido por leitura em 2026-11-09);
+o staging nao tem a TACO carregada.
+
+
 | Familia | Versao/base | Estado | Condicao para avancar |
 | --- | --- | --- | --- |
 | TACO | `taco-4a-cmvcol-taco3-v1` / `cmvcol_taco3` | Ativa no banco de integracao | Manter atribuicao, hashes e artefato conhecidos. |
-| TBCA | 7.3 / `BD-AIN` e `BD-B` | Desabilitada | Artefato oficial, direito comercial escrito e importador testado. |
-| IBGE/POF | A definir por edicao/base | Desabilitada | Edicao oficial, metodologia, licenca e redistribuicao aprovadas. |
-| Tucunduva | A definir | Bloqueada | Contrato/licenca escrita e entrega estruturada. |
+| TBCA | 7.3 / `BD-AIN` e `BD-B` | Desabilitada (nao carregada) | Direito declarado pelo proprietario em 2026-11-09; faltam artefato oficial e importador testado. |
+| IBGE/POF | `pof-2008-2009-2011-v1` / `pof-2008-2009-composicao` | Ativa, direito aprovado (producao e staging, conferido em 2026-11-09) | Manter atribuicao e artefato conhecidos. |
+| Tucunduva | A definir | **Sem direito de uso** (proprietario, 2026-11-09) | Nao importar, nao carregar, nao citar como fonte. Reabrir so com contrato/licenca escrita. |
 
 TBCA 7.3 nao e uma segunda familia. `BD-AIN` e `BD-B` sao bases da mesma
 versao e podem coexistir pela chave `catalogo_id + versao + base_codigo`.

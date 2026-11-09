@@ -45,6 +45,14 @@ updates:
           - "class-transformer"
           - "class-validator"
           - "reflect-metadata"
+    # NestJS 12 e ESM-only e o backend e CommonJS: @nestjs/jwt 12 quebrou o Jest
+    # ("Must use import to load ES Module") nas PRs #463/#464, e @nestjs/config 12
+    # (#489) so carregava via require(esm) do Node 22. O major volta a ser proposto
+    # quando o backend migrar para ESM; o comentario "@dependabot ignore" nao
+    # fechou essas PRs, entao a decisao fica versionada aqui.
+    ignore:
+      - dependency-name: "@nestjs/*"
+        update-types: ["version-update:semver-major"]
 
   - package-ecosystem: npm
     directory: /octaclin-web
@@ -139,6 +147,15 @@ updates:
       - dependency-name: "@types/react"
       - dependency-name: "react-native-safe-area-context"
       - dependency-name: "react-native-screens"
+      # Major do Expo e atualizacao de SDK inteiro: pacotes 58 soltos num projeto
+      # no SDK 57 reprovam o expo-doctor (#447-#450). Mobile segue NO-GO; a troca
+      # de SDK vem em PR propria, nao pacote a pacote.
+      - dependency-name: "expo"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "expo-*"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "@expo/*"
+        update-types: ["version-update:semver-major"]
 
   - package-ecosystem: pip
     directory: /octaclin-ai-service
