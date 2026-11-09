@@ -3,6 +3,17 @@
 Base137aa547,07/11/2026. Um ID por dependência. Não duplicar uma aprovação jurídica
 para cada melhoria. Riscos indicam consequências possíveis, não incidentes provados.
 
+**Atualização 2026-11-09:**
+
+- **B01 encerrado** por decisão do proprietário: direito de uso de todas as fontes,
+  exceto Tucunduva (sem direito, fora de qualquer ambiente). As 19 referências DRI
+  adultas foram reconferidas contra as tabelas oficiais atuais da Health Canada
+  (2025-11-19), sem divergência. Ver `docs/product/PARECER_FONTES_DRI_FOOD06.md`.
+- **B02 desbloqueado para implementação:** a integração científica das referências
+  nas saídas agora depende só de engenharia e dos testes positivos/negativos.
+- **B06 diagnosticado:** 1079/1080 aplicadas nos dois bancos; 1081/1082 ausentes;
+  staging sem TACO. Plano em `tasks/food06-g06-diagnostico-2026-11-09.md`.
+
 | ID/categoria | Causa e evidência | Afetadas | Responsável sugerido / dependência | Resolução imediata / ação | Risco e critério de encerramento |
 | --- | --- | --- | --- | --- | --- |
 | B01 FONTES/DIREITOS | Parecer DRI ainda possui gates; ratificação CL01–CL08 não libera todo uso/importação. `docs/product/PARECER_FONTES_DRI_FOOD06.md` | M03–M08/M10 e partes científicas M12 | Proprietário + jurídico/fontes | Não por código; consolidar artefatos/atribuições/escopo autorizados | Uso sem direitos ou mistura de referência; encerra com autorização documental aplicável à versão e finalidade exatas |
