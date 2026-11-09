@@ -262,3 +262,20 @@ test('builds Node nao desativam a referencia de package manager verificada', () 
     );
   }
 });
+
+// O job "AI FastAPI" testava em 3.12 enquanto a imagem rodava 3.14: o código nunca era
+// testado na versão que vai para produção, e um bump da imagem (ex.: #481, 3.15) passava
+// verde sem teste algum na versão nova. Trava: major.minor do CI igual ao da imagem.
+test('CI testa o servico de IA no mesmo Python da imagem', () => {
+  const dockerfile = readFileSync('octaclin-ai-service/Dockerfile', 'utf8');
+  const versoesImagem = [...dockerfile.matchAll(/^FROM python:(\d+\.\d+)[.\w-]*@sha256:[0-9a-f]{64}/gm)].map((m) => m[1]);
+  assert.ok(versoesImagem.length > 0, 'Dockerfile do servico de IA sem FROM python fixado');
+  assert.equal(new Set(versoesImagem).size, 1, 'estagios do servico de IA com Python diferentes');
+  const ci = readFileSync('.github/workflows/ci.yml', 'utf8');
+  const inicio = ci.indexOf('\n  ai-service:');
+  assert.ok(inicio >= 0, 'job ai-service ausente no CI');
+  const proximoJob = ci.slice(inicio + 1).search(/\n  [a-z0-9-]+:\n/);
+  const job = proximoJob < 0 ? ci.slice(inicio) : ci.slice(inicio, inicio + 1 + proximoJob);
+  const versaoCi = job.match(/python-version:\s*"(\d+\.\d+)"/)?.[1];
+  assert.equal(versaoCi, versoesImagem[0], `CI do servico de IA em ${versaoCi}, imagem em ${versoesImagem[0]}`);
+});
