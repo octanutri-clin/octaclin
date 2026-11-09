@@ -5,6 +5,7 @@ import type { CoberturaDietetica } from '../dominio/cobertura-dietetica';
 import type { DeltaFactual } from '../dominio/previa-dietetica';
 import { CODIGOS_MICRONUTRIENTES } from '../dominio/micronutrientes';
 import { projetarAjudaDietetica } from './projecao-ajuda-dietetica';
+import { analisarFontesPorNutriente } from '../dominio/fontes-por-nutriente';
 type DimensaoBase='planejamento'|'composicao_fonte'|'referencia'|'contexto';
 export type EstadoComparacaoHistorica='IGUAL'|'DIFERENTE'|'NAO_COMPARAVEL'|'SEM_REGISTRO_ANTERIOR';
 export interface ComparacaoBasesHistoricas {
@@ -37,11 +38,13 @@ function projetarContextoConfirmado(c:NonNullable<RegistroAnaliseFactual['contex
   ...(c.resolvido.populacaoReferencia===undefined?{}:{populacaoReferencia:c.resolvido.populacaoReferencia}),
   mesmoDiaPlanejado:c.resolvido.contexto.mesmoDiaPlanejado,tabagismo:c.resolvido.contexto.tabagismo,motivos:[...c.resolvido.motivos]};
 }
+/** Derivada dos itens congelados do registro, nunca gravada: o envelope persistido e seu hash não mudam. */
+function projetarFontesPorNutriente(r:RegistroAnaliseFactual){return analisarFontesPorNutriente([r.versao.estado]);}
 /** Projeções por allowlist de fontes já validadas/autorizadas. Nunca serializar o registro interno. */
 export function projetarRegistroFactual(m:Meta,r:RegistroAnaliseFactual){
  if(r.avisos.some(a=>!['porcao_divergente','planejamento_nao_documentado','composicao_nao_documentada'].includes(a)))throw new AnaliseFactualInvalidaError();
  return {schemaVersao:1 as const,motorVersao:'food06-registro-api-v1' as const,registro:projetarMetadadosRegistro(m),origem:origem(r.versao.origem),
-  selecao:selecao(r),analise:estado(r.analise),referencias:referencias(),
+  selecao:selecao(r),analise:estado(r.analise),fontesPorNutriente:projetarFontesPorNutriente(r),referencias:referencias(),
   ...(r.contexto?{contextoConfirmado:projetarContextoConfirmado(r.contexto)}:{}),avisos:[...r.avisos],ajuda:projetarAjudaDietetica()};
 }
 export function projetarComparacaoFactual(a:Meta,b:Meta,r:ComparacaoVersoesFactuais,registroAntes:RegistroAnaliseFactual,registroDepois:RegistroAnaliseFactual){
@@ -79,16 +82,16 @@ export function compararBasesHistoricas(atual:RegistroAnaliseFactual,anterior?:R
  return {...bases,cobertura};
 }
 /** Resumo M10 por allowlist; contexto mínimo somente por opt-in explícito. */
-export function projetarResumoHistoricoFactual(meta:Meta,r:RegistroAnaliseFactual,comparacaoAnterior:ComparacaoBasesHistoricas=compararBasesHistoricas(r),incluirContexto=false){
+export function projetarResumoHistoricoFactual(meta:Meta,r:RegistroAnaliseFactual,comparacaoAnterior:ComparacaoBasesHistoricas=compararBasesHistoricas(r),incluirContexto=false,incluirOrigem=false){
  const nutrientes=Object.fromEntries(CODIGOS_MICRONUTRIENTES.map(codigo=>{
   const n=r.analise.cobertura.nutrientes[codigo];
   return [codigo,{codigo,unidade:n.unidade,estado:n.estado,
    contagens:{incluidos:n.contagens.incluidos,conhecidos:n.contagens.conhecidos,semComposicao:n.contagens.semComposicao,
     incompativeis:n.contagens.incompativeis,naoResolvidos:n.contagens.naoResolvidos},causas:n.causas.map(x=>({codigo:x.codigo,quantidade:x.quantidade})),
-   ...(n.estado==='COMPLETO'&&n.total!==undefined?{total:n.total}:{}),...(n.estado==='PARCIAL'&&n.quantidadeConhecida!==undefined?{quantidadeConhecida:n.quantidadeConhecida}:{})}];
+   ...(n.estado==='COMPLETO'&&n.total!==undefined?{total:n.total}:{}),...(n.estado!=='COMPLETO'&&n.quantidadeConhecida!==undefined?{quantidadeConhecida:n.quantidadeConhecida}:{})}];
  }));
  return {schemaVersao:1 as const,registro:projetarMetadadosRegistro(meta),origem:origem(r.versao.origem),comparacaoAnterior,
-  motorVersao:r.analise.calculo.motorVersao,nutrientes,
+  motorVersao:r.analise.calculo.motorVersao,nutrientes,...(incluirOrigem?{fontesPorNutriente:projetarFontesPorNutriente(r)}:{}),
   referencias:referencias(),
   ...(incluirContexto&&r.contexto?{contextoConfirmado:projetarContextoConfirmado(r.contexto)}:{}),
   bases:{planejamentoDocumentado:Boolean(r.versao.bases?.planejamento),composicaoDocumentada:Boolean(r.versao.bases?.composicao_fonte),

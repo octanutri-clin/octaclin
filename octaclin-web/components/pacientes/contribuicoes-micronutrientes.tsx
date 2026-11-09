@@ -39,7 +39,7 @@ export function ContribuicoesMicronutrientes({pacienteId,entrada,linha,nomesPlan
       {contexto?<p>{i.posicaoSelecao}. {nomesPlanos[r.planoId]??'Plano da seleção'} — {r.nome}</p>:null}
       <strong>{i.descricao}</strong><p>{numero(i.quantidade)} {i.unidade} · peso já considerado no cálculo: {numero(i.gramas)} g</p>
       <p>Preparo: {i.composicao?.preparacao??'não informado no registro'}</p>
-      <p>Fonte: {i.composicao?.fonte?`${i.composicao.fonte.nome} (${i.composicao.fonte.codigo}, ${i.composicao.fonte.versao})`:i.composicao?.origem==='manual'?'composição informada manualmente':i.composicao?.origem==='custom'?'alimento personalizado; referência não registrada nesta projeção':'não registrada nesta composição'}</p>
+      <p>Fonte: {i.composicao?.fonte?`${i.composicao.fonte.nome} (${i.composicao.fonte.codigo}, ${i.composicao.fonte.versao})`:i.composicao?.origem==='manual'?'Entrada manual (valores digitados no cadastro do alimento)':i.composicao?.origem==='custom'?'alimento personalizado; referência não registrada nesta projeção':'não registrada nesta composição'}</p>
       {i.composicao?.baseGramas?<p>Base de origem: {numero(String(i.composicao.baseGramas))} g; resultado referente ao peso salvo.</p>:null}
       <p>{linha.rotulo}: {valor(i.cobertura)}</p>
       {versaoId&&r.refeicaoId&&r.versaoNumero?<button type="button" className="min-h-11 text-left text-primaria underline" onClick={()=>setOrigem({planoId:r.planoId,referencia:{versaoId,versaoNumero:r.versaoNumero!,refeicaoId:r.refeicaoId!,itemId:i.id}})}>Consultar origem de {i.descricao}</button>:<p className="text-xs text-texto-suave">Consulta detalhada da origem indisponível neste registro.</p>}

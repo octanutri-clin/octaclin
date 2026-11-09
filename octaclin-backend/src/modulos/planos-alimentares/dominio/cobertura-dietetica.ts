@@ -19,11 +19,12 @@ export interface CoberturaDietetica {
   nutrientes: Record<CodigoMicronutriente, CoberturaNutrienteDietetica>;
 }
 type Contagem = Exclude<keyof CoberturaNutrienteDietetica['contagens'], 'incluidos'>;
-interface Classificacao { contagem: Contagem; causa?: CausaCobertura; impedimentoTecnico?: true }
+export interface Classificacao { contagem: Contagem; causa?: CausaCobertura; impedimentoTecnico?: true }
 function objeto(valor: unknown): Record<string, unknown> | undefined {
   return valor && typeof valor === 'object' && !Array.isArray(valor) ? valor as Record<string, unknown> : undefined;
 }
-function classificar(item: unknown, codigo: CodigoMicronutriente): Classificacao {
+/** Classificador único de cobertura; reutilizado para que fontes e cobertura nunca divirjam. */
+export function classificarContribuicao(item: unknown, codigo: CodigoMicronutriente): Classificacao {
   const snapshot = objeto(item);
   if (!snapshot) return { contagem: 'naoResolvidos', causa: 'snapshot_indisponivel', impedimentoTecnico: true };
   if (snapshot.micronutrientes === undefined) return { contagem: 'semComposicao', causa: 'legado_sem_composicao' };
@@ -62,7 +63,7 @@ export function analisarCoberturaDietetica(planos: EntradaPlanoCombinado[]): Cob
     let impedimentoTecnico = !itens.length;
     if (!itens.length) causas.set('sem_componentes', 0);
     for (const item of itens) {
-      const classificacao = classificar(item, codigo);
+      const classificacao = classificarContribuicao(item, codigo);
       contagens[classificacao.contagem]++;
       if (classificacao.causa) causas.set(classificacao.causa, (causas.get(classificacao.causa) ?? 0) + 1);
       impedimentoTecnico ||= classificacao.impedimentoTecnico === true;

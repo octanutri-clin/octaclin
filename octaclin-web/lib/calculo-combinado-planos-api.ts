@@ -46,10 +46,10 @@ export async function obterContribuicoesMicronutrientes(pacienteId:string,pedido
   return lerPaginaContribuicoes(await lerJson<unknown>(resposta),pedido);
 }
 
-export async function obterHistoricoMicronutrientesFactual(pacienteId:string,cursor?:CursorHistoricoMicronutrientesFactual,signal?:AbortSignal,incluirContexto=false):Promise<PaginaHistoricoMicronutrientesFactual>{
+export async function obterHistoricoMicronutrientesFactual(pacienteId:string,cursor?:CursorHistoricoMicronutrientesFactual,signal?:AbortSignal,incluirContexto=false,incluirOrigem=false):Promise<PaginaHistoricoMicronutrientesFactual>{
   const resposta=await fetch(`/api/pacientes/${encodeURIComponent(pacienteId)}/planos-alimentares/analises-factuais/historico`,{
     method:'POST',cache:'no-store',signal,headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({limite:10,...(incluirContexto?{incluirContexto:true}:{}),...(cursor?{cursorId:cursor.id,cursorCriadoEm:cursor.criadoEm}:{})})
+    body:JSON.stringify({limite:10,...(incluirContexto?{incluirContexto:true}:{}),...(incluirOrigem?{incluirOrigem:true}:{}),...(cursor?{cursorId:cursor.id,cursorCriadoEm:cursor.criadoEm}:{})})
   });
-  return lerPaginaHistoricoMicronutrientesFactual(await lerJson<unknown>(resposta),incluirContexto);
+  return lerPaginaHistoricoMicronutrientesFactual(await lerJson<unknown>(resposta),incluirContexto,incluirOrigem);
 }
