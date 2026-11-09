@@ -14,6 +14,7 @@ import { Client } from 'pg';
 import { DataSource,type MigrationInterface } from 'typeorm';
 import { GenericContainer,Wait,type StartedTestContainer } from 'testcontainers';
 import { RegistrosAnalisesFactuais1720000001081 } from './1720000001081-RegistrosAnalisesFactuais';
+import { RegistrosFactuaisAppendOnly1720000001082 } from './1720000001082-RegistrosFactuaisAppendOnly';
 import { RegistroAnaliseFactualOrm } from '../../../modulos/planos-alimentares/infraestrutura/registro-analise-factual.orm';
 import { PlanoAlimentarOrm } from '../../../modulos/planos-alimentares/infraestrutura/plano-alimentar.orm';
 import { PlanoAlimentarVersaoOrm } from '../../../modulos/planos-alimentares/infraestrutura/plano-alimentar-versao.orm';
@@ -74,9 +75,20 @@ suite('FOOD06 registro cifrado PostgreSQL15 descartável/RLS/runtime',()=>{
   await owner.query(`create role food06_runtime login password 'runtime-test' nosuperuser nocreatedb nocreaterole nobypassrls;
    grant connect on database food06_registry_test to food06_runtime;grant usage on schema public to food06_runtime;
    grant select,insert,update,delete on all tables in schema public to food06_runtime;`);
+  { const m2=new DataSource({type:'postgres',...conn,username:'owner',password:'owner-test',entities:[],synchronize:false,logging:false});await m2.initialize();const q2=m2.createQueryRunner();
+    try{await new RegistrosFactuaisAppendOnly1720000001082().up(q2);}finally{await q2.release();await m2.destroy();} }
   ds=new DataSource({type:'postgres',...conn,username:'food06_runtime',password:'runtime-test',entities:[RegistroAnaliseFactualOrm,PacienteOrm,ProfissionalOrm,UserActionLogOrm,PlanoAlimentarOrm,PlanoAlimentarVersaoOrm,PlanoAlimentarRefeicaoOrm,PlanoAlimentarItemOrm],synchronize:false,logging:false,extra:{max:6}});await ds.initialize();
   s=new ServicoRegistrosAnaliseFactual(new ExecutorTenant(ds),crypto);
  },90000);
+
+ // Adulteração no nível de administrador do banco: desliga a trigger append-only da 1082 só durante
+ // a escrita, como faria um owner. É o limite declarado da 1082; o leitor ainda precisa recusar o resultado.
+ async function adulterarComoAdmin(sql:string,params:unknown[]){
+  await owner.query('begin');
+  try{await owner.query('alter table registros_analises_factuais disable trigger trg_registros_factuais_append_only');await owner.query(sql,params);
+   await owner.query('alter table registros_analises_factuais enable always trigger trg_registros_factuais_append_only');await owner.query('commit');}
+  catch(e){await owner.query('rollback');throw e;}
+ }
  afterAll(async()=>{if(ds?.isInitialized)await ds.destroy();await owner?.end();await container?.stop();},30000);
  it('grava de fato cifrado, vinculado ao registro, sem corpo clínico na projeção/auditoria',async()=>{
   const e=dados(),r=await s.registrar(tenant,paciente,u,comando(),async()=>e);
@@ -91,7 +103,8 @@ suite('FOOD06 registro cifrado PostgreSQL15 descartável/RLS/runtime',()=>{
   const r=await s.registrar(tenant,paciente,u,comando(),async()=>dados());expect(await ds.query('select id from registros_analises_factuais')).toEqual([]);
   const cipherAntes=(await owner.query('select conteudo_criptografado from registros_analises_factuais where id=$1',[r.id])).rows[0].conteudo_criptografado;
   const executor=new ExecutorTenant(ds);expect(await executor.executar(otherTenant,g=>g.query('select id from registros_analises_factuais'))).toEqual([]);
-  await executor.executar(tenant,async g=>{await g.query('update registros_analises_factuais set conteudo_criptografado=$1 where id=$2',[Buffer.alloc(40),r.id]);await g.query('delete from registros_analises_factuais where id=$1',[r.id]);});
+  await expect(executor.executar(tenant,g=>g.query('update registros_analises_factuais set conteudo_criptografado=$1 where id=$2',[Buffer.alloc(40),r.id]))).rejects.toMatchObject({code:'42501'});
+  await expect(executor.executar(tenant,g=>g.query('delete from registros_analises_factuais where id=$1',[r.id]))).rejects.toMatchObject({code:'42501'});
   expect((await owner.query('select conteudo_criptografado from registros_analises_factuais where id=$1',[r.id])).rows[0].conteudo_criptografado).toEqual(cipherAntes);
   await expect(executor.executar(tenant,g=>g.query('truncate registros_analises_factuais'))).rejects.toMatchObject({code:'42501'});
  });
@@ -129,7 +142,7 @@ suite('FOOD06 registro cifrado PostgreSQL15 descartável/RLS/runtime',()=>{
  });
  it('cipher trocado entre registros não vira ACK idempotente nem revela conteúdo',async()=>{
   const a=comando(),b=comando(),e=dados();const x=await s.registrar(tenant,paciente,u,a,async()=>e),y=await s.registrar(tenant,paciente,u,b,async()=>e);
-  await owner.query('update registros_analises_factuais set conteudo_criptografado=(select conteudo_criptografado from registros_analises_factuais where id=$1) where id=$2',[y.id,x.id]);
+  await adulterarComoAdmin('update registros_analises_factuais set conteudo_criptografado=(select conteudo_criptografado from registros_analises_factuais where id=$1) where id=$2',[y.id,x.id]);
   await expect(s.registrar(tenant,paciente,u,a,async()=>e)).rejects.toMatchObject({status:422});
  });
  it('RLS rejeita INSERT cross-tenant e FK composta não admite paciente de outra clínica',async()=>{
@@ -216,7 +229,7 @@ suite('FOOD06 registro cifrado PostgreSQL15 descartável/RLS/runtime',()=>{
   const schema={...envelope,conteudo:JSON.stringify({...JSON.parse(envelope.conteudo),motorVersao:'futuro'})};
   const escopo=JSON.parse(envelope.conteudo);escopo.versao.escopo.pacienteId=outroPaciente;
   for(const cipher of [Buffer.alloc(40),await obter(b.id),crypto.criptografar(JSON.stringify(schema)),crypto.criptografar(JSON.stringify({...envelope,conteudo:JSON.stringify(escopo)}))]){
-   await owner.query('update registros_analises_factuais set conteudo_criptografado=$1 where id=$2',[cipher,a.id]);
+   await adulterarComoAdmin('update registros_analises_factuais set conteudo_criptografado=$1 where id=$2',[cipher,a.id]);
    await expect(s.ler(tenant,paciente,u,a.id)).rejects.toMatchObject({status:422,message:'Registro indisponível para conferência.'});expect(await obter(a.id)).toEqual(cipher);
   }
  });
@@ -401,10 +414,10 @@ suite('FOOD06 registro cifrado PostgreSQL15 descartável/RLS/runtime',()=>{
   expect(construirAnaliseFactual(e)).toEqual(await s.ler(tenant,paciente,u,r.id));
   await expect(s.registrar(tenant,paciente,u,f.c.registro,async()=>e)).rejects.toMatchObject({status:409});
   for(const alterado of [{...envelope,schemaVersao:1,tipo:'food06-registro-protegido-v1'},{...envelope,confirmacaoOrigem:null},{...envelope,confirmacaoOrigem:''},{...envelope,extra:true}]){
-   await owner.query('update registros_analises_factuais set conteudo_criptografado=$1 where id=$2',[crypto.criptografar(JSON.stringify(alterado)),r.id]);
+   await adulterarComoAdmin('update registros_analises_factuais set conteudo_criptografado=$1 where id=$2',[crypto.criptografar(JSON.stringify(alterado)),r.id]);
    await expect(s.ler(tenant,paciente,u,r.id)).rejects.toMatchObject({status:422});
   }
-  await owner.query('update registros_analises_factuais set conteudo_criptografado=$1 where id=$2',[original,r.id]);
+  await adulterarComoAdmin('update registros_analises_factuais set conteudo_criptografado=$1 where id=$2',[original,r.id]);
   await expect(s.ler(tenant,paciente,u,r.id)).resolves.toHaveProperty('schemaVersao',1);
  });
  it('API real projeta registro cifrado em PostgreSQL e revoga cada leitura após transferência',async()=>{
@@ -499,5 +512,34 @@ suite('FOOD06 registro cifrado PostgreSQL15 descartável/RLS/runtime',()=>{
   const r=await s.listar(tenant,paciente,u,1,2);expect(r.itens).toHaveLength(2);expect(r.total).toBeGreaterThan(2);
   expect(r.itens.every(x=>Object.keys(x).sort().join(',')==='criadoEm,id')).toBe(true);
   expect((await s.listar(tenant,paciente,u,2,2)).itens.map(x=>x.id)).not.toEqual(r.itens.map(x=>x.id));
+ });
+
+ it('R4/1082: UPDATE, DELETE e TRUNCATE falham com 42501 até para o owner, mesmo sem linha visível',async()=>{
+  const r=await s.registrar(tenant,paciente,u,comando(),async()=>dados());
+  await expect(owner.query('update registros_analises_factuais set criado_em=criado_em where id=$1',[r.id])).rejects.toMatchObject({code:'42501'});
+  await expect(owner.query('delete from registros_analises_factuais where id=$1',[r.id])).rejects.toMatchObject({code:'42501'});
+  await expect(owner.query('truncate registros_analises_factuais')).rejects.toMatchObject({code:'42501'});
+  // runtime sem tenant não enxerga linha nenhuma e, ainda assim, a mutação falha alto
+  await expect(ds.query('update registros_analises_factuais set criado_em=criado_em')).rejects.toMatchObject({code:'42501'});
+  expect((await owner.query('select count(*)::int n from registros_analises_factuais where id=$1',[r.id])).rows[0].n).toBe(1);
+ });
+ it('R4/1082: índice cobre a FK (tenant_id, profissional_id)',async()=>{
+  const idx=(await owner.query("select indexdef from pg_indexes where tablename='registros_analises_factuais' and indexname='idx_registros_analises_profissional'")).rows;
+  expect(idx).toHaveLength(1);expect(idx[0].indexdef).toMatch(/\(tenant_id, profissional_id\)/);
+ });
+ it('R4: histórico recusa por tamanho antes de decifrar, contando também a linha extra da página',async()=>{
+  const pacienteGrande=randomUUID();
+  await owner.query('insert into pacientes(id,tenant_id,profissional_responsavel_id,arquivado_em) values($1,$2,$3,null)',[pacienteGrande,tenant,p]);
+  // Conteúdo inválido de propósito: se o serviço tentar decifrar, o erro é outro, não 413.
+  for(let i=0;i<2;i++)await owner.query('insert into registros_analises_factuais(tenant_id,paciente_id,profissional_id,usuario_id,chave_idempotencia,conteudo_criptografado) values($1,$2,$3,$4,$5,$6)',[tenant,pacienteGrande,p,usuarioId,randomUUID(),Buffer.alloc(6*1024*1024,1)]);
+  await expect(s.historico(tenant,pacienteGrande,u,1)).rejects.toMatchObject({status:413});
+ });
+ it('R4: relatório gera auditoria mínima na mesma transação, sem conteúdo clínico',async()=>{
+  const r=await s.registrar(tenant,paciente,u,comando(),async()=>dados());
+  await s.prepararRelatorioApi(tenant,paciente,u,r.id);
+  const audit=(await owner.query("select acao,recurso_tipo,metadados from user_action_logs where recurso_id=$1 and acao='analises_factuais.relatorio'",[r.id])).rows;
+  expect(audit).toEqual([{acao:'analises_factuais.relatorio',recurso_tipo:'analise_factual',metadados:{}}]);
+  await s.consultarApi(tenant,paciente,u,r.id);
+  expect((await owner.query("select count(*)::int n from user_action_logs where recurso_id=$1 and acao='analises_factuais.relatorio'",[r.id])).rows[0].n).toBe(1);
  });
 });
