@@ -1,5 +1,26 @@
 # FOOD06 — parecer de fontes, direitos e concordância documental
 
+**Atualização de estado em 2026-11-09 (decisão do proprietário e reconferência):**
+
+- **Direitos de uso:** o proprietário declarou que o OctaClin tem direito de uso de
+  todas as fontes em uso ou previstas, **exceto a Tucunduva**, que continua sem
+  direito e fora de qualquer ambiente. Isso encerra a pendência de direitos para as
+  DRI Health Canada (OGL-Canada) e para os catálogos de composição. A guarda do
+  comprovante documental de cada direito é do proprietário; este registro não o
+  substitui.
+- **Reconferência das 19 referências adultas** contra as tabelas oficiais atuais
+  da Health Canada (vitaminas e elementos, ambas com *Date modified* 2025-11-19):
+  todos os valores RDA/AI e UL do [quadro candidato](VALORES_CANDIDATOS_DRI_FOOD06.md)
+  coincidem, inclusive as transições por idade (cálcio 51/71+, ferro feminino
+  51+, B6 51+, vitamina D 71+, fósforo UL 71+) e os ND de UL (potássio, tiamina,
+  riboflavina, B12). A leitura foi feita na tabela crua da página.
+- **Ressalva de método:** uma extração estruturada automática da mesma página
+  (LLM) produziu valores errados (ferro masculino 19–30 = 18, UL de potássio 4700,
+  UL de fósforo 71+ = 4000). Extração por IA não serve como prova de valor de
+  referência; usar a tabela publicada ou o extrator testado deste repositório.
+- Fora do quadro ratificado: crianças, gestação e lactação estão nas mesmas
+  tabelas oficiais, mas exigem nova ratificação clínica antes de qualquer uso.
+
 **Atualização de estado em 2026-10-31:** proprietário/equipe clínica ratificaram
 CL01–CL08 e o quadro adulto de `cb8a9c47`, incluindo diferenças DRI/EFSA, dia
 planejado e +35 mg somente à RDA C no tabagismo confirmado. As pendências de

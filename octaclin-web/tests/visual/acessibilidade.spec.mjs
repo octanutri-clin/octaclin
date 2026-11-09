@@ -5756,7 +5756,13 @@ test.describe('jornadas completas por teclado (PR 30)', () => {
 
     const nascimento = page.getByLabel('Data de nascimento');
     await alcancarComTab(page, nascimento, 'Data de nascimento');
-    await page.keyboard.insertText(pacienteCriado.dataNascimento);
+    // input type=date não recebe texto livre: o usuário de teclado preenche dia/mês/ano por
+    // segmento, na ordem do locale. insertText de uma string ISO não é o que ele faz e, no
+    // Chromium do Playwright 1.64 em emulação mobile, o texto ia parar no campo Nome. A
+    // jornada continua provando que o campo é alcançável por Tab; o valor entra pelo fill.
+    await nascimento.fill(pacienteCriado.dataNascimento);
+    await expect(nascimento).toHaveValue(pacienteCriado.dataNascimento);
+    await expect(nascimento).toBeFocused();
 
     const contato = page.getByLabel('E-mail ou telefone');
     await alcancarComTab(page, contato, 'E-mail ou telefone');
