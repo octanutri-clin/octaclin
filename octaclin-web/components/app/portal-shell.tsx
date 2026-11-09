@@ -104,7 +104,7 @@ export function PortalShell({
       gatilho={
         <button
           type="button"
-          aria-label={`Abrir menu da conta: ${contextoUsuario.email}, ${contextoUsuario.papel}`}
+          aria-label={`Abrir menu da conta: ${contextoUsuario.email} ${contextoUsuario.papel}`}
           className={cn(
             'flex min-h-11 items-center gap-2 rounded-md border border-linha bg-white px-2 text-left text-sm transition-colors',
             'hover:bg-superficie-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primaria'
@@ -112,7 +112,7 @@ export function PortalShell({
         >
           <Avatar id={contextoUsuario.email} nome={contextoUsuario.email} tamanho="sm" />
           <span className="hidden min-w-0 sm:block">
-            <span className="block max-w-44 truncate text-xs font-semibold text-tinta">{contextoUsuario.email}</span>
+            <span className="block max-w-44 truncate text-xs font-semibold text-tinta">{contextoUsuario.email}</span>{' '}
             <span className="block text-xs text-texto-suave">{contextoUsuario.papel}</span>
           </span>
           <ChevronDown size={15} className="text-texto-suave" aria-hidden="true" />

@@ -1,8 +1,8 @@
 # PR 50 — Containers e runtime.
 #
 # Base fixada por digest imutavel (indice OCI multi-arch linux/amd64+arm64),
-# resolvido em 2026-09-28 no Docker Hub oficial
-# (library/node:22.23.3-alpine3.24). A tag humana permanece para legibilidade;
+# resolvido em 2026-11-08 no Docker Hub oficial
+# (library/node:22.23.4-alpine3.24). A tag humana permanece para legibilidade;
 # o digest e a ancora real. Atualizacao do
 # digest segue o processo em docs/governance/RELATORIO_SEGURANCA_PR50_2026-09-01.md
 # (Dependabot/humano -> scan -> build -> harness -> SBOM -> review -> merge).
@@ -13,7 +13,7 @@
 # `pnpm test:versao-pnpm` falha se divergirem.
 # A base compartilhada corrige zlib tambem nos estagios de build. O runtime
 # herda o artefato pronto e continua sem instalacao de pacotes no estagio final.
-FROM node:22.23.3-alpine3.24@sha256:0a7108bf6c7bf5de370ffb1a3ed6be93d405b43ff159f681a8d18c0e2bc2e402 AS base
+FROM node:22.23.4-alpine3.24@sha256:0e1754758c2df4cfa3e68d59e2e1b7374bb7fd9ea6328eaaacf15cc934af8202 AS base
 RUN apk add --no-cache --upgrade zlib=1.4-r0
 
 FROM base AS deps

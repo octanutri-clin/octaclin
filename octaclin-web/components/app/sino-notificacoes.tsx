@@ -149,6 +149,7 @@ export function SinoNotificacoes() {
           <button type="button" aria-label={rotulo} className={classesBotao({ className: 'relative' })}>
             <Bell size={16} />
             <span className="hidden xl:inline">Notificações</span>
+            {naoLidas ? ' ' : null}
             {naoLidas ? (
               <span
                 aria-hidden="true"

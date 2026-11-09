@@ -36,9 +36,13 @@ export function Avatar({ id, nome, tamanho = 'md', className }: AvatarProps) {
   return (
     <span
       aria-hidden="true"
-      className={cn('inline-flex shrink-0 items-center justify-center rounded-full font-semibold', dimensao, corPorId(id), className)}
-    >
-      {iniciais(nome)}
-    </span>
+      data-iniciais={iniciais(nome)}
+      className={cn(
+        'inline-flex shrink-0 items-center justify-center rounded-full font-semibold before:content-[attr(data-iniciais)]',
+        dimensao,
+        corPorId(id),
+        className
+      )}
+    />
   );
 }
