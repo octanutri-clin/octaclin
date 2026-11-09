@@ -1,6 +1,6 @@
 import {lerContextoRegistradoFactual,type ContextoRegistradoFactual} from './contexto-registrado-factual';
 import {CAMPOS_MACRO_FACTUAL,lerValorMacroFactual} from './previa-micronutrientes-plano';
-import {lerLinhaMicronutrienteFactual} from './micronutrientes-factuais';
+import {lerLinhaMicronutrienteFactual,lerFontesPorNutrienteFactual,versaoFonteFactualValida} from './micronutrientes-factuais';
 import {CAMPOS_MICRONUTRIENTES_PLANO} from './micronutrientes-plano';
 import {ErroApiPlanoAlimentar} from './plano-alimentar-api';
 function falhar():never{throw new Error('Não foi possível conferir o relatório.');}
@@ -19,13 +19,15 @@ export function lerRelatorioFactual(valor:unknown,registroId:string){
  if(!Array.isArray(r.limites)||r.limites.length!==LIMITES.length||new Set(r.limites).size!==LIMITES.length||LIMITES.some(l=>!(r.limites as unknown[]).includes(l)))return falhar();
  if(!Array.isArray(r.avisos)||r.avisos.some(a=>!['porcao_divergente','planejamento_nao_documentado','composicao_nao_documentada'].includes(String(a)))||new Set(r.avisos).size!==r.avisos.length)return falhar();
  const linhas=CAMPOS_MICRONUTRIENTES_PLANO.map(c=>lerLinhaMicronutrienteFactual(nutrientes[c.codigo],c.codigo));if(new Set(linhas.map(l=>l.contagens.incluidos)).size!==1)return falhar();
- const f=obj(r.fontesComposicao);let fontes: {tipo:string;versao?:string;quantidade:number}[]|undefined;let semReferencia=0,fontesNaoDetalhadas=0;
+ if(r.schemaVersao===1&&r.fontesPorNutriente!==undefined)return falhar();
+ if(r.schemaVersao===2&&r.fontesPorNutriente!==undefined){const origens=lerFontesPorNutrienteFactual(r.fontesPorNutriente,linhas);for(const l of linhas)l.origem=origens[l.codigo];}
+ const f=obj(r.fontesComposicao);let fontes: {tipo:string;codigo?:string;versao?:string;quantidade:number}[]|undefined;let semReferencia=0,fontesNaoDetalhadas=0;
  if(f.estado==='resumo_documentado'){
   const inteiro=(v:unknown)=>Number.isSafeInteger(v)&&Number(v)>=0&&Number(v)<=10000;
   if(!inteiro(f.itensIncluidos)||f.itensIncluidos!==linhas[0]?.contagens.incluidos||!inteiro(f.semReferencia)||!inteiro(f.fontesNaoDetalhadas)||!Array.isArray(f.fontes)||f.fontes.length>50)return falhar();
-  fontes=f.fontes.map(v=>{const n=obj(v);if(!['TACO','USDA','IBGE','manual','custom'].includes(String(n.tipo))||!inteiro(n.quantidade)||!Number(n.quantidade)||(n.versao!==undefined&&(typeof n.versao!=='string'||n.versao.length>64||!/^\d+(?:[._-]\d+){0,7}$/.test(n.versao))))return falhar();return {tipo:String(n.tipo),...(n.versao!==undefined?{versao:n.versao as string}:{}),quantidade:n.quantidade as number};});
+  fontes=f.fontes.map(v=>{const n=obj(v);if(!['TACO','USDA','IBGE','manual','custom'].includes(String(n.tipo))||!inteiro(n.quantidade)||!Number(n.quantidade)||(n.codigo!==undefined&&(typeof n.codigo!=='string'||!/^[A-Za-z0-9_.-]{1,80}$/.test(n.codigo)))||(n.versao!==undefined&&!versaoFonteFactualValida(n.versao)))return falhar();return {tipo:String(n.tipo),...(n.codigo!==undefined?{codigo:n.codigo as string}:{}),...(n.versao!==undefined?{versao:n.versao as string}:{}),quantidade:n.quantidade as number};});
   semReferencia=f.semReferencia as number;fontesNaoDetalhadas=f.fontesNaoDetalhadas as number;
-  if(new Set(fontes.map(n=>JSON.stringify([n.tipo,n.versao]))).size!==fontes.length||fontes.reduce((n,x)=>n+x.quantidade,0)+semReferencia+fontesNaoDetalhadas!==f.itensIncluidos)return falhar();
+  if(new Set(fontes.map(n=>JSON.stringify([n.tipo,n.codigo,n.versao]))).size!==fontes.length||fontes.reduce((n,x)=>n+x.quantidade,0)+semReferencia+fontesNaoDetalhadas!==f.itensIncluidos)return falhar();
  }
  const selecao=obj(r.selecao);if(typeof selecao.planoAtivo!=='boolean'||typeof selecao.planoSelecionado!=='boolean'||!Array.isArray(selecao.refeicoes)||selecao.refeicoes.length>50)return falhar();
  const refeicoes=selecao.refeicoes.map(v=>{const f=obj(v);if(typeof f.ativa!=='boolean'||typeof f.selecionada!=='boolean')return falhar();return {identidadeId:texto(f.identidadeId),ativa:f.ativa,selecionada:f.selecionada};});if(new Set(refeicoes.map(f=>f.identidadeId)).size!==refeicoes.length)return falhar();
@@ -33,8 +35,8 @@ export function lerRelatorioFactual(valor:unknown,registroId:string){
  return {motorVersao:r.schemaVersao===2?'food06-relatorio-factual-v2' as const:'food06-relatorio-factual-v1' as const,contextoRegistrado,geradoEm:data(r.geradoEm),registro:{id:texto(registro.id),criadoEm:data(registro.criadoEm)},origem:{planoId:texto(o.planoId),versaoId:texto(o.versaoId),numero:o.numero as number,status:o.status as 'publicada'|'rascunho',registradaEm:data(o.registradaEm),...(o.status==='rascunho'?{rascunhoRevisao:o.rascunhoRevisao as number}:{})},selecao:{planoAtivo:selecao.planoAtivo,planoSelecionado:selecao.planoSelecionado,refeicoes},fontes,semReferencia,fontesNaoDetalhadas,macros,linhas,avisos:r.avisos.map(String)};
 }
 export type RelatorioFactual=ReturnType<typeof lerRelatorioFactual>;
-export async function obterRelatorioFactual(pacienteId:string,registroId:string,signal:AbortSignal,versaoRelatorio:1|2=1):Promise<RelatorioFactual>{
- const resposta=await fetch(`/api/pacientes/${encodeURIComponent(pacienteId)}/planos-alimentares/analises-factuais/relatorio`,{method:'POST',cache:'no-store',signal,headers:{'Content-Type':'application/json'},body:JSON.stringify({registroId,...(versaoRelatorio===2?{versaoRelatorio:2}:{})})});
+export async function obterRelatorioFactual(pacienteId:string,registroId:string,signal:AbortSignal,versaoRelatorio:1|2=1,incluirOrigem=false):Promise<RelatorioFactual>{
+ const resposta=await fetch(`/api/pacientes/${encodeURIComponent(pacienteId)}/planos-alimentares/analises-factuais/relatorio`,{method:'POST',cache:'no-store',signal,headers:{'Content-Type':'application/json'},body:JSON.stringify({registroId,...(versaoRelatorio===2?{versaoRelatorio:2}:{}),...(versaoRelatorio===2&&incluirOrigem?{incluirOrigem:true}:{})})});
  if(!resposta.ok)throw new ErroApiPlanoAlimentar(resposta.status,'Não foi possível preparar o relatório autorizado.');
  try{const r=lerRelatorioFactual(await resposta.json(),registroId);if(r.motorVersao!==`food06-relatorio-factual-v${versaoRelatorio}`)throw new Error();return r;}catch{throw new ErroApiPlanoAlimentar(502,'Não foi possível conferir o relatório.');}
 }

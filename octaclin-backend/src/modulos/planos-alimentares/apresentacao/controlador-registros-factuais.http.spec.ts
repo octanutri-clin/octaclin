@@ -63,6 +63,25 @@ describe('API factual M05/M07',()=>{
   expect(prepararRelatorioApi).toHaveBeenCalledWith(id,id,expect.anything(),id,2);expect((await chamar('/relatorio',{registroId:id,versaoRelatorio:2},'Professional','planos_alimentares.ler')).status).toBe(403);
   for(const versaoRelatorio of [null,1,3,'2',false])expect((await chamar('/relatorio',{registroId:id,versaoRelatorio})).status).toBe(400);
  });
+ it('origem no histórico é opt-in booleano e não altera o pedido padrão (Web antiga nunca a recebe)',async()=>{
+  historico.mockClear();expect((await chamar('/historico',{limite:10,incluirOrigem:true})).status).toBe(200);
+  expect(historico).toHaveBeenCalledWith(id,id,expect.anything(),10,undefined,undefined,false,true);
+  historico.mockClear();expect((await chamar('/historico',{limite:10,incluirContexto:true,incluirOrigem:true})).status).toBe(200);
+  expect(historico).toHaveBeenCalledWith(id,id,expect.anything(),10,undefined,undefined,true,true);
+  historico.mockClear();expect((await chamar('/historico',{limite:10})).status).toBe(200);
+  expect(historico).toHaveBeenCalledWith(id,id,expect.anything(),10,undefined,undefined);
+  for(const incluirOrigem of [null,'true',1,{}])expect((await chamar('/historico',{limite:10,incluirOrigem})).status).toBe(400);
+ });
+ it('origem no relatório só existe no formato 2 e é opt-in booleano; o pedido do formato 2 sem a flag não muda',async()=>{
+  prepararRelatorioApi.mockClear();expect((await chamar('/relatorio',{registroId:id,versaoRelatorio:2,incluirOrigem:true})).status).toBe(200);
+  expect(prepararRelatorioApi).toHaveBeenCalledWith(id,id,expect.anything(),id,2,true);
+  prepararRelatorioApi.mockClear();expect((await chamar('/relatorio',{registroId:id,versaoRelatorio:2})).status).toBe(200);
+  expect(prepararRelatorioApi).toHaveBeenCalledWith(id,id,expect.anything(),id,2);
+  prepararRelatorioApi.mockClear();expect((await chamar('/relatorio',{registroId:id,incluirOrigem:true})).status).toBe(400);
+  expect((await chamar('/relatorio',{registroId:id,versaoRelatorio:2,incluirOrigem:false})).status).toBe(200);
+  for(const incluirOrigem of [null,'true',1,{}])expect((await chamar('/relatorio',{registroId:id,versaoRelatorio:2,incluirOrigem})).status).toBe(400);
+  expect(prepararRelatorioApi).not.toHaveBeenCalledWith(id,id,expect.anything(),id,expect.anything(),'true');
+ });
  it('aceita confirmações explícitas opcionais sem permitir nascimento ou data do navegador',async()=>{
   const confirmacoes={populacaoReferencia:'feminina',populacaoConfirmada:true,gestacao:'nao',lactacao:'nao',aplicabilidade:'confirmada',mesmoDiaPlanejado:true,tabagismo:'nao_informado'};
   registrarVersao.mockClear();const body={...fonte,confirmacoes};

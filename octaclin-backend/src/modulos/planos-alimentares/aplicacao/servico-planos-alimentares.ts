@@ -8,6 +8,7 @@ import { projetarOrigemContribuicao } from './projecao-origem-contribuicao';
 import { validarContribuicoes } from './dtos-contribuicoes-micronutrientes';
 import { decomporContribuicoesDieteticas } from '../dominio/contribuicoes-dieteticas';
 import { analisarCoberturaDietetica } from '../dominio/cobertura-dietetica';
+import { analisarFontesPorNutriente } from '../dominio/fontes-por-nutriente';
 import type { AnaliseFactualMicronutrientes } from './contrato-analise-micronutrientes';
 import { ServicoEquivalenciasPlano } from './servico-equivalencias-plano';
 import { ordenarEscoposCopia } from './ordenacao-locks-copia';
@@ -349,6 +350,7 @@ export class ServicoPlanosAlimentares {
       motorVersao: 'food06-factual-v1' as const,
       calculo: calcularNutrientesCombinados(planos),
       cobertura: analisarCoberturaDietetica(planos),
+      fontes: analisarFontesPorNutriente(planos),
       comparacoes: { estado: 'indisponivel' as const, motivo: 'referencias_nao_habilitadas' as const },
       ajuda:projetarAjudaDietetica()
     }));

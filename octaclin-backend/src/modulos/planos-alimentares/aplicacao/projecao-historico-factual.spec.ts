@@ -6,7 +6,7 @@ import { criarSnapshotMicronutrientes } from '../dominio/micronutrientes';
 function entrada(valores:Record<string,{estado:'conhecido';valor:number}>|undefined):EntradaConstrutorAnaliseFactual {
  const micronutrientes=valores?criarSnapshotMicronutrientes(valores,100,100):undefined;
  const snapshot={origem:'catalogo',alimentoComposicaoId:'alimento-sintetico',codigoOrigem:'A1',descricao:'Alimento sintético',preparacao:'Cozido',
-  fonte:{codigo:'TACO-v1',baseCodigo:'TACO',versao:'1',nome:'Fonte sintética',hashConteudo:'a'.repeat(64)},
+  fonte:{codigo:'taco_nepa_unicamp',baseCodigo:'cmvcol_taco3',versao:'1',nome:'Fonte sintética',hashConteudo:'a'.repeat(64)},
   nutrientesPor100g:{energiaKcal:10},nutrientesPorcao:{energiaKcal:10},...(micronutrientes?{micronutrientes}:{})};
  return {escopo:{tenantId:'tenant-sintetico',pacienteId:'paciente-sintetico'},
   origem:{planoId:'plano-sintetico',versaoId:'versao-sintetica',numero:1,status:'publicada',registradaEm:'2026-11-04T12:00:00.000Z'},
