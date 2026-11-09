@@ -269,7 +269,20 @@ export async function exigirPermissaoBff(permissao: string): Promise<SessaoBff> 
   return sessao;
 }
 
+/**
+ * Caminho relativo seguro para o backend: começa com uma barra e não tem segmento
+ * `.`/`..` (nem a forma `%2e`), que o `fetch` resolveria e levaria a outra rota.
+ * `encodeURIComponent` não escapa pontos, então um parâmetro de rota `..` montado
+ * em `/pacientes/${id}/...` subiria um nível. Revisão R4 da #455.
+ */
+export function caminhoBackendSeguro(caminho: string): boolean {
+  if (typeof caminho !== 'string' || !caminho.startsWith('/') || caminho.startsWith('//')) return false;
+  const semConsulta = caminho.split(/[?#]/, 1)[0];
+  return semConsulta.split('/').every((segmento) => !/^(?:\.|%2e){1,2}$/i.test(segmento));
+}
+
 export async function requisitarBackendAutenticado(caminho: string, init?: RequestInit): Promise<Response> {
+  if (!caminhoBackendSeguro(caminho)) return respostaJsonBff(400, 'Solicitação inválida.');
   let sessao = await obterSessaoValidaBff();
   let apiUrl: string;
 
