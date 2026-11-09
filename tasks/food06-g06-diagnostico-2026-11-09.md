@@ -46,3 +46,27 @@ ambiente identificado e role owner, conforme `RUNBOOK_PRODUCAO.md`.
    (`/health/detalhado`, login, captura de registro factual sintético,
    isolamento entre tenants) e rollback documentado (código anterior, sem `down`).
 6. Registrar a evidência e só então marcar G06 como resolvido.
+
+## Execução autorizada — 1081 e 1082 (2026-11-09, ~11:53–11:55 UTC)
+
+Autorização do proprietário nesta sessão ("Tá autorizado"), para staging e depois
+produção. Execução via Neon, role owner (`neondb_owner`), com o SQL extraído
+literalmente dos arquivos da `main` (sha256 do arquivo 1081 `41deceb0…`, 1082
+`4ae47753…`), 14 comandos numa única transação, incluindo o registro no ledger
+`migrations` (timestamps 1720000001081 e 1720000001082).
+
+| Passo | Staging (`silent-snow-21079677`) | Produção (`royal-tooth-92809187`, `Octaclin-db-producao`) |
+| --- | --- | --- |
+| Ponto de restauração | branch `backup-pre-1081-1082-2026-11-09` (`br-fancy-leaf-atb6g4v7`) | branch `backup-pre-1081-1082-2026-11-09` (`br-raspy-butterfly-awe85wfz`) |
+| Pré-requisitos | ledger em 1080; índices únicos `(tenant_id, id)` em pacientes, profissionais, usuarios | idem |
+| Aplicação | transação concluída | transação concluída |
+| Ledger | 1081 e 1082 registradas | 1081 e 1082 registradas |
+| RLS | ENABLE e FORCE | ENABLE e FORCE |
+| Policies | só `select` e `insert` | só `select` e `insert` |
+| Trigger append-only | `A` (enable always) | `A` (enable always) |
+| Grants da runtime | `octaclin_app_staging`: SELECT/INSERT/UPDATE/DELETE, **sem TRUNCATE** (nome fora da lista do REVOKE; a trigger protege) | `octaclin_app_producao`: **só SELECT/INSERT**; `octaclin_backup_producao`: só SELECT |
+| Prova funcional (UPDATE `where false` como runtime) | `42501` da trigger | `42501` `permission denied` (REVOKE) |
+
+Não foi feito: deploy, conferência do Render, smoke de aplicação com registro
+factual sintético, carga da TACO no staging. Os pontos de restauração podem ser
+removidos pelo proprietário depois que o backend novo estiver validado.
