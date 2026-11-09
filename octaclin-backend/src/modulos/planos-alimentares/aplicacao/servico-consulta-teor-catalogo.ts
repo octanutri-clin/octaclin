@@ -3,7 +3,7 @@ import { ExecutorTenant } from '../../../infraestrutura/banco-dados/executor-ten
 import { UsuarioAutenticado } from '../../auth/dominio/usuario-autenticado';
 import { AlimentoComposicaoOrm } from '../infraestrutura/alimento-composicao.orm';
 import { FonteComposicaoAlimentoOrm } from '../infraestrutura/fonte-composicao-alimento.orm';
-import { ConsultaTeorCatalogoDto, validarConsultaTeorCatalogo } from './dto-consulta-teor-catalogo';
+import { ConsultaTeorCatalogoDto, JANELA_MAXIMA_CONSULTA_TEOR, validarConsultaTeorCatalogo } from './dto-consulta-teor-catalogo';
 import { identidadeBiblioteca } from './identidade-biblioteca-alimentos';
 import { prepararConsultaTeorCatalogo } from './consulta-teor-catalogo';
 
@@ -49,7 +49,8 @@ export class ServicoConsultaTeorCatalogo {
             baseCodigo: linha.baseCodigo, esquemaVersao: linha.esquemaVersao,
             situacao: linha.situacao, direitoUsoStatus: linha.direitoUsoStatus } })));
       return { ...resultado, paginacao: { pagina: consulta.pagina, limite: consulta.limite,
-        temProxima: linhas.length > consulta.limite, ordemSelecao: 'nome_identificador' as const,
+        // Não oferece página que o teto recusaria: o profissional refina a busca.
+        temProxima: linhas.length > consulta.limite && (consulta.pagina + 1) * consulta.limite <= JANELA_MAXIMA_CONSULTA_TEOR, ordemSelecao: 'nome_identificador' as const,
         ordenacaoTeor: 'somente_pagina' as const, visao: 'catalogo_atual_sem_snapshot' as const } };
     });
   }

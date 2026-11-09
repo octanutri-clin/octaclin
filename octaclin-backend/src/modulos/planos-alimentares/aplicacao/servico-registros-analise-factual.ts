@@ -5,7 +5,7 @@ import { compararBasesHistoricas,projetarRegistroFactual,projetarComparacaoFactu
 import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException, PayloadTooLargeException, UnprocessableEntityException } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
 import { isUUID } from 'class-validator';
-import { IsNull, type EntityManager } from 'typeorm';
+import { IsNull, type EntityManager, In } from 'typeorm';
 import { ExecutorTenant } from '../../../infraestrutura/banco-dados/executor-tenant';
 import { CriptografiaDadosSensiveis } from '../../../infraestrutura/seguranca/criptografia-dados-sensiveis';
 import { ProfissionalOrm } from '../../profissionais/infraestrutura/profissional.orm';
@@ -80,7 +80,12 @@ export class ServicoRegistrosAnaliseFactual {
   const tenantId=uuid(tenant),pacienteId=uuid(paciente),id=uuid(registroId);this.autorizar(tenantId,usuario,incluirFontesDoRelatorio);
   return this.executor.executar(tenantId,async g=>{
    await this.carteira(g,tenantId,pacienteId,usuario);const r=await this.obterRegistro(g,tenantId,pacienteId,id);
-   const registro=this.decifrarRegistro(r),projecao=projetarRegistroFactual(r,registro);return incluirFontesDoRelatorio?{...projecao,fontesComposicao:resumirFontesRegistro(registro,comCodigoFonte)}:projecao;
+   const registro=this.decifrarRegistro(r),projecao=projetarRegistroFactual(r,registro);
+   if(!incluirFontesDoRelatorio)return projecao;
+   // Relatório é o ponto em que o dado sai do sistema (impressão): auditado como as
+   // exportações, na mesma transação e sem conteúdo clínico (revisão R4 da #455).
+   await registrarAuditoriaNaTransacao(g,{tenantId,usuarioId:usuario.usuarioId,acao:'analises_factuais.relatorio',recursoTipo:'analise_factual',recursoId:r.id,metadados:{}});
+   return {...projecao,fontesComposicao:resumirFontesRegistro(registro,comCodigoFonte)};
   });
  }
  async compararApi(tenant:string,paciente:string,usuario:UsuarioAutenticado,antesId:string,depoisId:string){
@@ -249,14 +254,22 @@ export class ServicoRegistrosAnaliseFactual {
   return this.executor.executar(tenantId,async g=>{
    await this.carteira(g,tenantId,pacienteId,usuario);
    const q=g.getRepository(RegistroAnaliseFactualOrm).createQueryBuilder('registro')
-    .select(['registro.id','registro.tenantId','registro.pacienteId','registro.profissionalId','registro.usuarioId','registro.chaveIdempotencia','registro.criadoEm','registro.conteudoCriptografado'])
+    .select(['registro.id','registro.tenantId','registro.pacienteId','registro.profissionalId','registro.usuarioId','registro.chaveIdempotencia','registro.criadoEm'])
+    // Só o tamanho nesta etapa: o conteúdo cifrado não é carregado antes do teto (revisão R4 da #455).
+    .addSelect('octet_length(registro.conteudo_criptografado)','tamanho_cifrado')
     .where('registro.tenant_id = :tenantId AND registro.paciente_id = :pacienteId',{tenantId,pacienteId})
     .addSelect(`to_char(registro.criado_em AT TIME ZONE 'UTC', 'YYYY-MM-DD\"T\"HH24:MI:SS.US\"Z\"')`,'cursor_criado_em')
     .orderBy('registro.criado_em','DESC').addOrderBy('registro.id','DESC').take(limite+1);
    if(cursorData&&cursorUuid)q.andWhere('(registro.criado_em < :cursorData OR (registro.criado_em = :cursorData AND registro.id < :cursorUuid))',{cursorData,cursorUuid});
    const resultado=await q.getRawAndEntities(),consultados=resultado.entities,temMais=consultados.length>limite,itens=consultados.slice(0,limite);
-   const bytes=itens.reduce((soma,r)=>soma+(Buffer.isBuffer(r.conteudoCriptografado)?r.conteudoCriptografado.byteLength:Infinity),0);
-   if(!Number.isSafeInteger(bytes)||bytes>10*1024*1024)throw new PayloadTooLargeException('Reduza a quantidade de registros por página.');
+   // O teto inclui a linha extra da página, que também é decifrada para a comparação.
+   const bytes=resultado.raw.reduce((soma:number,linha:{tamanho_cifrado?:unknown})=>soma+(Number.isSafeInteger(Number(linha.tamanho_cifrado))?Number(linha.tamanho_cifrado):Infinity),0);
+   if(resultado.raw.length!==consultados.length||!Number.isSafeInteger(bytes)||bytes>10*1024*1024)throw new PayloadTooLargeException('Reduza a quantidade de registros por página.');
+   if(consultados.length){
+    const conteudos=await g.getRepository(RegistroAnaliseFactualOrm).find({select:{id:true,conteudoCriptografado:true},where:{tenantId,pacienteId,id:In(consultados.map(r=>r.id))}});
+    const porId=new Map(conteudos.map(c=>[c.id,c.conteudoCriptografado]));
+    for(const r of consultados){const c=porId.get(r.id);if(!Buffer.isBuffer(c))throw new UnprocessableEntityException('Registro do histórico indisponível.');r.conteudoCriptografado=c;}
+   }
    const registros=itens.map(r=>this.decifrarRegistro(r)),maisAntigoConsultado=temMais?this.decifrarRegistro(consultados[limite]):undefined;
    const resumos=registros.map((r,i)=>projetarResumoHistoricoFactual(itens[i],r,compararBasesHistoricas(r,registros[i+1]??maisAntigoConsultado),incluirContexto,incluirOrigem));
    const ultimo=itens.at(-1),ultimoRaw=resultado.raw.at(limite-1) as {cursor_criado_em?:unknown}|undefined;
