@@ -7,7 +7,7 @@ import { DELETE as encerrarSessao } from '../app/api/auth/sessoes/[referencia]/r
 import { POST as encerrarOutras } from '../app/api/auth/sessoes/encerrar-outras/route';
 import { POST as encerrarTodas } from '../app/api/auth/sessoes/encerrar-todas/route';
 import { DELETE as limparHistorico } from '../app/api/auth/sessoes/historico/route';
-import { obterSessaoBff, salvarSessaoBff } from '../lib/server/sessao-bff';
+import { caminhoBackendSeguro, obterSessaoBff, salvarSessaoBff } from '../lib/server/sessao-bff';
 
 const { __clearCookies, __setCookies, __opcoesCookie } = nextHeaders as typeof nextHeaders & {
   __clearCookies: () => void;
@@ -264,4 +264,11 @@ test('sem duracao de renovacao declarada, o cookie cai no padrao de 30 dias', as
   );
 
   assert.equal(__opcoesCookie('octaclin_refresh_token')?.maxAge, 60 * 60 * 24 * 30);
+});
+
+test('caminho para o backend recusa segmentos de ponto em qualquer grafia (R4 #455)', () => {
+  for (const valido of ['/pacientes/paciente%2F1/planos-alimentares', '/a/b?x=..', '/a/...', '/a/.b', '/a/b.'])
+    assert.equal(caminhoBackendSeguro(valido), true, valido);
+  for (const invalido of ['/pacientes/../planos', '/pacientes/./x', '/a/%2e%2e/b', '/a/%2E/b', '/a/.%2e', '/a/..', '//outro-host/x', 'relativo/x', ''])
+    assert.equal(caminhoBackendSeguro(invalido), false, invalido);
 });
