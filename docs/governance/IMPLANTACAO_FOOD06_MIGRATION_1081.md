@@ -7,7 +7,8 @@ A migration `1720000001081-RegistrosAnalisesFactuais` cria a tabela
 `registros_analises_factuais` (registros factuais cifrados de análise de
 micronutrientes, PR #455). É aditiva: não altera nem lê tabelas existentes. A
 classe declara `@aplicacao fora-de-banda`, então o runtime não consegue aplicá-la
-no boot (ver `RUNBOOK_PRODUCAO.md`, seção `BANCO_EXECUTAR_MIGRACOES`).
+no boot (ver `RUNBOOK_PRODUCAO.md`, seções `BANCO_EXECUTAR_MIGRACOES` e `FOOD06 — registros
+factuais e migration1081`).
 
 ## O que a migration cria
 
@@ -61,6 +62,9 @@ backend não depende dela. Por isso a ordem é: migration primeiro, deploy depoi
      lista só as políticas de `SELECT` (`r`) e `INSERT` (`a`);
    - `select grantee, privilege_type from information_schema.role_table_grants where table_name='registros_analises_factuais';`
      mostra a role de runtime e, se existir, a de backup só com `SELECT`.
+     A role de runtime **não pode ter `TRUNCATE`** (TRUNCATE ignora RLS). Se
+     aparecer, o owner revoga antes do deploy:
+     `revoke truncate on registros_analises_factuais from <role_runtime>;`
 3. **Publicar backend e web** compatíveis só depois do passo 2.
 4. **Validar o fluxo** com dado sintético: capturar um registro factual, listar o
    histórico e conferir que outro tenant não o vê. Não usar paciente real.
