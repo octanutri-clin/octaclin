@@ -2225,22 +2225,28 @@ O `down`1076 recusa perda de dados. Correção estrutural usa migration aditiva.
 Rotação da chave do índice HMAC segue o procedimento vigente de índices cegos e
 precisa contemplar esta biblioteca; não trocar chave assumindo busca inalterada.
 
-## FOOD06 — registros factuais e migration1081
+## FOOD06 — registros factuais e migrations1081/1082
 
 Operação posterior, somente em alvo e roles confirmados e com autorização
 específica. Não inferir aplicação da1081 de merge ou testes descartáveis.
 Procedimento detalhado: `docs/governance/IMPLANTACAO_FOOD06_MIGRATION_1081.md`.
 
 1. Conferir migrations registradas, backup e ambiente. Se houver pendência além
-   da1081, parar e tratar cada uma pelo próprio procedimento.
-2. Aplicar a1081 com owner, fora de banda, antes de publicar o backend.
-3. Verificar registro `RegistrosAnalisesFactuais1720000001081`, tabela
+   da1081/1082, parar e tratar cada uma pelo próprio procedimento.
+2. Aplicar a1081 e, em seguida, a1082 com owner, fora de banda, antes de
+   publicar o backend. A1082 torna a tabela append-only por trigger de instrução
+   (UPDATE/DELETE/TRUNCATE falham com 42501) e indexa a FK de profissional.
+3. Verificar registros `RegistrosAnalisesFactuais1720000001081` e
+   `RegistrosFactuaisAppendOnly1720000001082`, tabela
    `registros_analises_factuais`, ENABLE/FORCE RLS e somente policies de SELECT e
    INSERT. Não consultar conteúdo para conferir estrutura.
 4. Verificar grants da role runtime: SELECT/INSERT efetivos, sem TRUNCATE, sem
    owner/BYPASSRLS/DDL. UPDATE/DELETE concedidos por default privileges não têm
    policy e não alteram linhas sob FORCE RLS. TRUNCATE presente deve ser revogado
-   pelo owner antes do deploy. Falha de grant não autoriza desativar RLS.
+   pelo owner antes do deploy. Conferir a trigger
+   `trg_registros_factuais_append_only` ativa (`tgenabled = 'A'`). Falha de
+   grant não autoriza desativar RLS nem a trigger.
 5. Publicar backend e Web/BFF e validar com fixture sintética: captura,
    histórico e isolamento entre tenants. O `down`1081 recusa rollback; reverter
-   só o código, mantendo a tabela.
+   só o código, mantendo a tabela. Não reverter a1082 para apagar ou alterar
+   registro: eliminação exige procedimento fora de banda próprio.

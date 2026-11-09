@@ -1,4 +1,4 @@
-# FOOD06 — plano de implantação da migration 1081
+# FOOD06 — plano de implantação das migrations 1081 e 1082
 
 Procedimento planejado, **não executado** em staging ou produção. Escrever este
 documento não autoriza migration externa, merge ou deploy.
@@ -30,6 +30,23 @@ schema (`HANDOFF_CODEX_MIGRATION_1031.md`): a role de runtime recebe
 `select, insert, update, delete`, mas o RLS limita a `SELECT`/`INSERT` do próprio
 tenant. **Confirmar os grants depois de aplicar**, sem presumir.
 
+## Migration 1082 (achados da revisão R4)
+
+`1720000001082-RegistrosFactuaisAppendOnly`, também `fora-de-banda`, aplicada
+**logo depois da 1081**, no mesmo passo:
+
+- trigger **por instrução** que recusa `UPDATE`, `DELETE` e `TRUNCATE` com
+  `42501`, para qualquer role (inclusive owner), mesmo quando o RLS não deixa
+  nenhuma linha visível. Sem ela, a tentativa da runtime terminava em "0 linhas"
+  sem erro;
+- `REVOKE UPDATE, DELETE, TRUNCATE` de `public` e das roles conhecidas
+  (`octaclin_runtime_integracao`, `octaclin_app_producao`), como defesa em
+  profundidade;
+- índice `(tenant_id, profissional_id)` para a checagem da FK.
+
+Limite: o owner ainda pode desabilitar a trigger no catálogo. Eliminação de
+registro (LGPD) exige procedimento fora de banda com role administrativa.
+
 ## O que acontece se o código chegar antes da migration
 
 Os endpoints de registros factuais (captura, histórico, comparação e relatório
@@ -45,8 +62,9 @@ backend não depende dela. Por isso a ordem é: migration primeiro, deploy depoi
    credenciais para terminal compartilhado, Git ou PR.
 3. Conferir quais migrations o banco já tem:
    `pnpm --dir octaclin-backend run typeorm -- migration:show`.
-   A única pendente deve ser a 1081. **Se aparecer qualquer outra pendente
-   (por exemplo 1077 a 1080), parar** e tratar cada uma pelo seu procedimento.
+   As pendentes devem ser só a 1081 e a 1082. **Se aparecer qualquer outra
+   pendente (por exemplo 1077 a 1080), parar** e tratar cada uma pelo seu
+   procedimento.
 4. Confirmar backup recente conforme `RUNBOOK_BACKUP_RESTORE.md`.
 
 ## Sequência por ambiente
@@ -55,7 +73,9 @@ backend não depende dela. Por isso a ordem é: migration primeiro, deploy depoi
    `pnpm --dir octaclin-backend migration:run` e observar tempo e locks (tabela
    nova; não deve bloquear tabelas existentes, exceto as checagens de FK).
 2. **Verificar por leitura**, com a role owner:
-   - `select name from migrations where name like '%1081%';` retorna a linha;
+   - `select name from migrations where name like '%108_%' order by name;` retorna a 1081 e a 1082;
+   - `select tgname, tgenabled from pg_trigger where tgrelid='registros_analises_factuais'::regclass and not tgisinternal;`
+     retorna `trg_registros_factuais_append_only` com `A` (enable always);
    - `select relrowsecurity, relforcerowsecurity from pg_class where relname='registros_analises_factuais';`
      retorna `true, true`;
    - `select polname, polcmd from pg_policy where polrelid='registros_analises_factuais'::regclass;`
