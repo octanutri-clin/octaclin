@@ -11,7 +11,7 @@ const dockerfiles = [
 test('Node usa uma base compartilhada com zlib corrigida antes dos estagios de aplicacao', () => {
   for (const caminho of dockerfiles.slice(0, 2)) {
     const conteudo = readFileSync(caminho, 'utf8');
-    assert.match(conteudo, /^FROM node:[^\n]+ AS base\nRUN apk add --no-cache --upgrade zlib=1\.3\.2-r1$/m);
+    assert.match(conteudo, /^FROM node:[^\n]+ AS base\nRUN apk add --no-cache --upgrade zlib=1\.4-r0$/m);
     assert.equal((conteudo.match(/^FROM .+ AS base$/gm) ?? []).length, 1);
     for (const estagio of ['deps', 'build', 'deps-prod', 'runtime']) {
       assert.match(conteudo, new RegExp(`^FROM base AS ${estagio}$`, 'm'));
