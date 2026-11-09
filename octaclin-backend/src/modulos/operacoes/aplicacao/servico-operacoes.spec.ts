@@ -843,6 +843,12 @@ describe('ServicoOperacoes', () => {
             id: 'arquivos_midia_administrativos',
             diasRetencao: 90,
             acao: 'excluir'
+          }),
+          expect.objectContaining({
+            id: 'registros_analises_factuais',
+            entidade: 'registros_analises_factuais',
+            diasRetencao: 7300,
+            acao: 'preservar'
           })
         ]),
         resumo: expect.objectContaining({
@@ -856,7 +862,8 @@ describe('ServicoOperacoes', () => {
             expect.objectContaining({ politicaId: 'consentimentos_lgpd', vencidos: 1 }),
             expect.objectContaining({ politicaId: 'arquivos_midia_clinicos', vencidos: 9 }),
             expect.objectContaining({ politicaId: 'arquivos_midia_temporarios', vencidos: 6 }),
-            expect.objectContaining({ politicaId: 'arquivos_midia_administrativos', vencidos: 5 })
+            expect.objectContaining({ politicaId: 'arquivos_midia_administrativos', vencidos: 5 }),
+            expect.objectContaining({ politicaId: 'registros_analises_factuais', vencidos: 0 })
           ])
         })
       })
