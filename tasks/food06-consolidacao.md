@@ -1,0 +1,206 @@
+# FOOD06 — consolidação #455–#459 e auditoria Mobile
+
+## Decisão e estado vigente
+
+O proprietário solicitou reunir as cinco PRs e corrigir os erros antes da API
+seguinte. A #455 permanece a PR única em Draft, base main. Os seis commits de
+#456–#459 foram incorporados por **fast-forward**, sem squash, rebase, descarte,
+merge na main ou escrita externa. Ramos e relatórios antigos são preservados.
+PRs intermediárias serão encerradas como supersedidas depois de verificar que o
+HEAD remoto da #455 contém integralmente4b23e8bf.
+
+Nenhum requisito M01–M12 foi retirado ou declarado concluído pela consolidação.
+A API factual já implementada é preservada. A nova API de **detalhamento M02**
+fica para depois do CI consolidado, projeção/paginação e prova de capacidade.
+Direitos de referências e G06 operacional continuam BLOCKED.
+
+## Evidências históricas reconciliadas
+
+| PR | Último HEAD antes de consolidar | Estado observado no GitHub |
+| --- | --- | --- |
+| #455 |0ec4cd31|20 success, Mobile Expo e PR Gate FAIL, SBOM provenance SKIPPED|
+| #456 |1aba388a|19 success, Mobile Expo e PR Gate FAIL, SBOM provenance SKIPPED|
+| #457 |6317a0c0|19 success, Mobile Expo e PR Gate FAIL, SBOM provenance SKIPPED|
+| #458 |b4ccc2dd|19 success, Mobile Expo e PR Gate FAIL, SBOM provenance SKIPPED|
+| #459 |4b23e8bf|19 success, Mobile Expo e PR Gate FAIL, SBOM provenance SKIPPED|
+
+Demo smoke já terminou com sucesso nesses checkpoints. A falha comum é
+`pnpm audit:security` no Mobile; typecheck, segurança e a11y passaram antes da
+falha no job124593586540. O PR Gate falhou como consequência, não como prova de
+regressão nutricional. Esses checks não aprovam o novo HEAD consolidado.
+
+## Causa e correção delimitada
+
+Auditoria bruta reproduzida com Node22.23.4/pnpm11.25.0:14 advisories —6 high,
+5 moderate e3 low — concentrados em `node-forge@1.4.0`, `glob@13.0.6` e
+`minimatch@10.2.6`. Não houve novo bypass, waiver ou redução de severidade.
+
+- `node-forge`: override para1.4.1, corrigido upstream. Remove-se apenas a aplicação
+  do antigo patch1.4.0; o arquivo histórico e teste RSA permanecem preservados.
+- `glob`:14.0.2 corrige cancelamento AbortSignal; usa `path-scurry@3.0.0`.
+- `minimatch`:11.0.1 corrige amplificação de globparts e usa
+  `@isaacs/nonrecursive-glob-match@1.0.3`.
+- Regenerar o lockfile trouxe `deepmerge` como nó órfão da metadata de
+  `@expo/config@57.0.9`. O patch já existente havia removido seu uso. Um override
+  de remoção **restrito a esse consumidor e versão** torna a mesma remoção
+  reproduzível na resolução, sem apagar uso legítimo de outro consumidor nem
+  mascarar a auditoria. Os testes reais de merge/prototype permanecem.
+
+Registry npm confirmou publicação em27/10/2026, engines compatíveis com Node22,
+integridades SHA512 fixadas no lockfile. Licenças: BlueOak-1.0.0 para glob,
+minimatch e transitivos novos; forge permite BSD-3-Clause pela opção da licença
+BSD-3-Clause OR GPL-2.0. Auditoria da política existente:586 pacotes aprovados.
+Não se declara parecer jurídico geral nem direito de fontes clínicas DRI.
+
+## RED/GREEN e compatibilidade
+
+RED: auditoria original14 alertas. Primeiro ajuste deixou um low de deepmerge
+reintroduzido; não foi declarado aprovado. Após a resolução coerente com o patch
+existente: auditoria bruta0 e gate `audit-seguranca.mjs` **OK sem vulnerabilidades**.
+Não se alterou a implementação do auditor, suas exceções ou limiares.
+
+Verificação em cópia isolada `/tmp`, apenas arquivos versionados e casos
+sintéticos; instalação frozen sem lifecycle, respeitando minimumReleaseAge,
+trustPolicy e integridade existentes. Nenhum node_modules da worktree foi
+sobrescrito ou reinstalado para contornar falha.
+
+| Verificação | Resultado |
+| --- | --- |
+| Instalação frozen | PASS, pnpm11.25.0/Node22.23.4 |
+| Segurança existente | PASS19/19, incluindo RSA e merge seguro do config |
+| Compatibilidade nova | PASS4/4: glob sync/async/braces/ignore, cancelamento, matcher e fingerprint real |
+| Segurança + a11y + compatibilidade | PASS38/38, nenhum skipped |
+| Typecheck Mobile | PASS |
+| Licenças | PASS586 pacotes, política inalterada |
+| Audit bruto/gate existente | PASS0 advisories, nenhuma supressão |
+| Expo doctor offline | BLOCKED:19/21 checks; dois requerem API Expo/React Native Directory e falharam por ECONNREFUSED |
+| Export Android/iOS/Web | PASS, bundles e metadata gerados em diretório temporário |
+| CI consolidado | PENDENTE antes do push |
+
+O teste novo de compatibilidade inicialmente pressupôs `Minimatch.makeRe`, API
+removida na versão11. Não é API utilizada pelo consumidor fingerprint instalado:
+a inspeção mostrou `pattern`, `negate` e `match`. A prova foi corrigida para o
+contrato **real**, incluindo a função `isIgnoredPath` do próprio fingerprint e
+negação/reinclusão/dotfiles. Não se enfraqueceu teste preexistente nem contrato
+prometido. As provas novas são caracterização/compatibilidade; o RED de segurança
+é a auditoria reproduzida, não um alegado exploit de cada advisory.
+
+## Revisão independente e limites
+
+Revisor `/root/food06_mobile_audit_review`, somente leitura, sem coautoria ou
+execução própria dos testes. Não identificou bloqueador estático. Conferiu
+exports/engines/licenças, remoção coerente de deepmerge e risco do major matcher.
+Pediu prova semântica de fingerprint/glob, atendida pelos quatro testes sintéticos.
+Não é revisão independente integral FOOD06, validação dinâmica própria ou aceite
+clínico. Novas correções futuras exigem revisar o delta correspondente.
+
+As evidências de backend3797 PASS/166 SKIPPED e63 testes focados do fundamento
+M02 permanecem históricas de4b23e8bf. A consolidação não altera esses fontes,
+autorização, RLS, snapshot ou DTO. CI final deve comprovar novamente a integração,
+incluindo PostgreSQL descartável; skipped local não equivale a RLS aprovado.
+
+## Próximos passos e modelos
+
+1. Finalizar export, diff/segredos; enviar consolidação à #455 ainda Draft.
+2. Confirmar que contém4b23e8bf e encerrar #456–#459 como supersedidas, sem apagar
+   ramos/revisões. Não realizar merge de PR ou operação de produção.
+3. Conferir CI do HEAD exato; tratar qualquer falha real, não repetir checks por
+   conveniência ou chamar Mobile/PR Gate de verde antes da evidência.
+4. Somente então avançar com contrato da API paginada/autorizada M02.
+
+Recomendação ao proprietário: GPT-6.1 Sol/médio para consolidação e correções
+bem delimitadas; Sol/alto para API, autorização/paginação e concorrência. Terra/alto
+é opção para revisão independente complexa. Luna(GPT-6)/alto pode cuidar de
+ajustes documentais e testes simples delimitados depois do contrato estabilizado.
+Não há benchmark de custo/qualidade neste projeto para alegar economia percentual.
+A troca da conversa é manual, deve ser avisada; não se presume modelo efetivo a
+partir desta recomendação nem se muda modelo de subagente silenciosamente.
+
+
+Comandos adicionais realmente executados na cópia isolada: instalação
+`pnpm install --frozen-lockfile --ignore-scripts`, auditoria JSON, o auditor
+versionado sem alterações, `tsc --noEmit`, todos os seis arquivos node:test de
+segurança/compatibilidade/a11y, `expo-doctor` com EXPO_OFFLINE=1 e
+`expo export --platform all`. Licenças auditadas pelo script da raiz sobre a
+árvore instalada temporária. Scripts/libraries executados diretamente com Node22
+para evitar delegação involuntária do pnpm run a outro Node da máquina.
+
+Manifesto sanitizado da auditoria RED/GREEN e hashes dos lockfiles:
+`research/food06/mobile-audit-consolidacao.json`. Nenhum dado real de paciente,
+credencial, URL assinada ou corpo de log foi incorporado.
+
+
+## Reconferência do CI consolidado e correção da política SPDX
+
+HEAD39bf016f: Mobile Expo **PASS no CI**, inclusive gate de auditoria antes
+bloqueado. Dependency Review FAIL por licença dual de forge. A API de comparação
+de dependências informa `(BSD-3-Clause OR GPL-2.0)`. A action no pin vigente,
+`src/licenses.ts`, usa `satisfiesAny` em deny e assim nega também uma alternativa
+não escolhida. A política já aprovada e seus testes permitem selecionar BSD no OR.
+
+Correção sem exceção: gerar a lista allow a partir de `permitidas` e
+`revisaoObrigatoria` da política existente, excluindo qualquer bloqueada e validando
+IDs simples. Usar `allow-licenses` da mesma action, cuja implementação usa
+`satisfies` e respeita OR/AND. Não mudar `fail-on-severity`, `warn-only`, ledger,
+lista de licenças ou exceções por pacote. A revisão individual de pacotes de
+licenças sujeitas a revisão continua nos inventários instalados de cada job.
+
+TDD do gerador:11 PASS/2 FAIL contra stub,13/13 após implementação; uma prova
+adicional executa o trecho real do workflow e confere GITHUB_OUTPUT,14/14. Os
+testes existentes preservam GPL isolada/AND bloqueados e OR com ramo BSD permitido.
+A interpretação da action ainda exige o CI do novo HEAD; não declarar PASS só
+com testes do gerador. Node22 fixado para executar o gerador no workflow.
+
+Revisor independente confirmou a causa no código público da action, sem novo
+bloqueador estático e sem executar testes próprios. Também identificou que o novo
+teste de extglob usava negação global: corrigido com `nonegate:true` e caso negativo
+`foo.spec.ts`, preservando os demais asserts;4/4 testes de compatibilidade PASS.
+
+Estado das PRs após consolidação: GitHub reconheceu #456 como integrada à sua base
+#455 ao avançar a branch; #457–#459 foram encerradas como supersedidas. Não houve
+comando de merge na main nem remoção de branches. O estado remoto de main pode
+mudar por operações externas; isso não autoriza deploy ou operações produtivas
+neste trabalho. #455 continua Draft, CI final em execução após o envio.
+
+## Estabilização autorizada em Sol médio — transporte da pesquisa
+
+Na retomada, worktree limpa e HEADd63e6f5b confirmados. Dependency Review passou;
+Mobile completou auditoria, segurança e export no CI. Os demais checks estavam
+em execução. Um comentário Semgrep ainda aberto apontava uso dinâmico de urllib
+no coletor documental; a API direta de code-scanning retornou403, mas a thread e
+as anotações do check são acessíveis. Não se presume poder dispensar o alerta.
+
+Investigação independente `/root/food06_coletor_boundary`: não demonstrou SSRF
+inicial controlado por usuário (fontes constantes, CLI somente saída). Demonstrou
+fronteira de redirect validada apenas depois da conexão. A correção candidata
+usa a stdlib existente com lista imutável das cinco URLs exatas e handler de
+redirect que valida antes de abrir cada salto; preserva GET/TLS/proxy/timeout25s,
+leitura limitada, hash, análise e manifesto somente após sucesso integral.
+Não altera runtime SaaS, API, fontes clínicas, licenças ou permissões.
+
+TDD:8 falhas funcionais RED em14 testes, incluindo HTTPS externo, downgrade e
+cadeia HTTPS→HTTP→HTTPS, destino inicial local/esquema/host/IP/userinfo/fragmento.
+Após correção:25/25 da suíte inteira de pesquisa PASS; nenhuma conexão externa.
+Controles legítimos: cinco URLs originais, redirect relativo permitido, falha de
+rede propagada e ciclo limitado. Análise pura continua aceitando fixtures
+sintéticas sem depender da autorização de transporte.
+
+Revisor fresco `/root/food06_coletor_patch_review`, sem coautoria, executou14
+unitários do coletor e nove representações adicionais de redirect antes da
+segunda chamada de transporte: sem bypass/regressão concretos. Não verificou
+rede oficial/canonicalizações atuais ou scanner. Redirect oficial para URL fora
+das cinco falha fechado por desenho; identidade/hash de conteúdo continua
+sujeita à conferência documental, nunca aprovação automática clínica.
+
+Semgrep não está instalado localmente. O check warning anterior passou mesmo
+com uma anotação; portanto apenas PASS desse job não encerra o finding. É
+necessário conferir a anotação/summary Semgrep OSS do HEAD corrigido e o CI final.
+Acesso403 ao painel de alertas e ausência de scanner local ficam registrados;
+nenhuma dispensa ou supressão foi adicionada. Skill de correção orientou revisão
+pré-patch e revisão independente posterior; seu recurso auxiliar de armazenamento
+não estava acessível pela ferramenta, e não foi criado diretório de scan.
+
+Comandos desta rodada: `python3 -m unittest discover -s research/food06 -p
+ 'test_*.py' -v` (25 PASS), `node --test scripts/validar-licencas.spec.mjs`
+(14 PASS com Node22), `git diff --check` e scanner local de segredos antes do push.
+Nova API M02 segue pausada até estabilizar os checks e confirmar o scanner.

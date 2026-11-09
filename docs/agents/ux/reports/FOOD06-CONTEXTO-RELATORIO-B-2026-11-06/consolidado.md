@@ -1,0 +1,2 @@
+# Consolidação
+Critérios A rastreados nos testes e UI; B mediada por observações do coordenador, sem observação visual/interação da persona. Coordenador gerou PDF contextual3A4 e inspecionou primeira/última páginas, não todas visualmente; texto/paginação e exclusão de canários testados automaticamente.28browserconjuntos (8PDFsopt-in) PASS. Isso não certifica acessibilidade integral PDF/AThumana ou C integral FOOD06. R4 estática separada favorável depois de401/allowlist, sem testes próprios. Sugestões não ampliaram escopo.

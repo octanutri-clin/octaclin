@@ -13,11 +13,16 @@ export function criarTravaAbasPlano(gerente: LockManager, chave: string): TravaA
     if (signal.aborted) { rejeitar(new DOMException('Aquisição encerrada', 'AbortError')); return; }
     // A plataforma proíbe signal com ifAvailable. Não há fila: conferir antes
     // e dentro do callback libera qualquer aquisição entregue após cleanup.
-    void gerente.request(chave, { mode: 'exclusive', ifAvailable: true }, async trava => {
+    const requisicao = gerente.request(chave, { mode: 'exclusive', ifAvailable: true }, async trava => {
       if (signal.aborted) { rejeitar(new DOMException('Aquisição encerrada', 'AbortError')); return; }
       if (!trava) { resolver(null); return; }
-      await new Promise<void>(liberar => { resolver(liberar); });
-    }).catch(rejeitar);
+      await new Promise<void>(liberar => {
+        // Resolver o callback solicita release; somente request concluída prova
+        // que o LockManager terminou a posse antes do ACK entre abas.
+        resolver(async () => { liberar(); await requisicao; });
+      });
+    });
+    void requisicao.catch(rejeitar);
   }) };
 }
 

@@ -1,5 +1,5 @@
 import { CHAVE_PAPEIS, CHAVE_PERMISSOES } from '../../auth/apresentacao/decorators';
-import { HEADERS_METADATA } from '@nestjs/common/constants';
+import { HEADERS_METADATA, PATH_METADATA, METHOD_METADATA } from '@nestjs/common/constants';
 import { UsuarioAutenticado } from '../../auth/dominio/usuario-autenticado';
 import { ServicoPlanosAlimentares } from '../aplicacao/servico-planos-alimentares';
 import { ControladorCatalogoAlimentos, ControladorPlanosAlimentares } from './controlador-planos-alimentares';
@@ -35,6 +35,29 @@ describe('ControladorPlanosAlimentares', () => {
       arquivar: jest.fn().mockResolvedValue({ id: planoId })
     };
     controlador = new ControladorPlanosAlimentares(servico as unknown as ServicoPlanosAlimentares);
+  });
+
+  it('FOOD06 registra análise factual com leitura e resposta sem cache', () => {
+    const metodo = (ControladorPlanosAlimentares.prototype as unknown as Record<string, unknown>).analisarMicronutrientes;
+    expect(typeof metodo).toBe('function');
+    if (typeof metodo === 'function') {
+      expect(Reflect.getMetadata(PATH_METADATA, metodo)).toBe('analise-micronutrientes');
+      expect(Reflect.getMetadata(METHOD_METADATA, metodo)).toBe(1);
+      expect(Reflect.getMetadata(CHAVE_PERMISSOES, metodo)).toEqual(['planos_alimentares.ler']);
+      expect(Reflect.getMetadata(HEADERS_METADATA, metodo)).toContainEqual({name:'Cache-Control',value:'private, no-store'});
+    }
+  });
+
+  it.each(['preverMicronutrientes','confirmarPreviaMicronutrientes'])('M04 %s exige profissional, gerenciamento, no-store e encaminha contexto verificado', async nome => {
+    const metodo = (ControladorPlanosAlimentares.prototype as unknown as Record<string,Function>)[nome];
+    expect(typeof metodo).toBe('function');
+    expect(Reflect.getMetadata(CHAVE_PAPEIS,metodo)).toEqual(['Professional']);
+    expect(Reflect.getMetadata(CHAVE_PERMISSOES,metodo)).toEqual(['planos_alimentares.gerenciar']);
+    expect(Reflect.getMetadata(HEADERS_METADATA,metodo)).toContainEqual({name:'Cache-Control',value:'private, no-store'});
+    expect(Reflect.getMetadata(PATH_METADATA,metodo)).toBe(':planoId/rascunho/previa-micronutrientes'+(nome.startsWith('confirmar')?'/confirmar':''));
+    servico[nome]=jest.fn().mockResolvedValue({schemaVersao:1});
+    await metodo.call(controlador,usuario,pacienteId,planoId,{});
+    expect(servico[nome]).toHaveBeenCalledWith(usuario.tenantId,pacienteId,planoId,usuario,{});
   });
 
   it('restringe toda a API a SuperAdmin e Professional', () => {

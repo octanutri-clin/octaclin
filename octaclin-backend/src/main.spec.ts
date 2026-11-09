@@ -243,6 +243,10 @@ describe('inicializacao da aplicacao', () => {
 
     expect(mockCriarAplicacao).toHaveBeenCalledWith(expect.any(Function), { rawBody: true });
     expect(mockAplicacao.useBodyParser).toHaveBeenCalledWith('json', { limit: '100kb' });
+    expect(mockAplicacao.use.mock.calls[0][0].name).toBe('middlewareAnalisesFactuais');
+    expect(mockAplicacao.use.mock.calls[1].map((fn:Function)=>fn.name)).toEqual(['middlewareErroAnalisesFactuais','middlewareLimiteAnalisesFactuais']);
+    expect(mockAplicacao.use.mock.invocationCallOrder[0]).toBeLessThan(mockAplicacao.useBodyParser.mock.invocationCallOrder[0]);
+    expect(mockAplicacao.useBodyParser.mock.invocationCallOrder[0]).toBeLessThan(mockAplicacao.use.mock.invocationCallOrder[1]);
     expect(mockServidorHttp.set).toHaveBeenCalledWith('trust proxy', 1);
     expect(mockAplicacao.enableShutdownHooks).toHaveBeenCalledTimes(1);
   });

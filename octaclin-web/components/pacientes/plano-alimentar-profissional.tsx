@@ -1,6 +1,12 @@
 'use client';
+import { RegistroAnaliseFactual } from './registro-analise-factual';
+import { fonteRegistroRascunho } from '@/lib/registro-analise-factual';
 
-import { type Dispatch, type SetStateAction, useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
+import { PreviaReceitaPlano } from './previa-receita-plano';
+import { PreviaAlteracaoAlimentar } from './previa-alteracao-alimentar';
+import { confirmarPreviaMicronutrientesPlano, type PedidoPreviaMicronutrientes, type PedidoOperacaoPrevia } from '@/lib/previa-micronutrientes-plano';
+
+import { type ReactNode, type Dispatch, type SetStateAction, useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 import { flushSync } from 'react-dom';
 import { closestCenter, DndContext, KeyboardSensor, PointerSensor, type DragEndEvent, useSensor, useSensors } from '@dnd-kit/core';
 import { arrayMove, sortableKeyboardCoordinates, SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
@@ -1163,6 +1169,7 @@ function EditorAlimento({ pacienteId, contextoEdicao, podeEditar, rotulo, valor,
 }
 
 interface EditorItemProps {
+  ferramentaPrevia?: ReactNode;
   pacienteId: string;
   planoId: string;
   contextoEdicao: string;
@@ -1205,7 +1212,7 @@ function DetalheEquivalenciaAplicada({ equivalencia }: { equivalencia: Equivalen
   </details>;
 }
 
-function EditorItem({ pacienteId, planoId, contextoEdicao, podeEditar, item, resumo, indice, total, aoAlterar, aoRemover, aoMover, mostrarResumo, aoAplicarGrupo, aoDesfazerGrupo, podeDesfazerGrupo, versaoId, rascunhoRevisao, documentoEdicao, equivalenciaDesabilitada, equivalenciasAplicadas, equivalenciasEstado }: EditorItemProps) {
+function EditorItem({ ferramentaPrevia, pacienteId, planoId, contextoEdicao, podeEditar, item, resumo, indice, total, aoAlterar, aoRemover, aoMover, mostrarResumo, aoAplicarGrupo, aoDesfazerGrupo, podeDesfazerGrupo, versaoId, rascunhoRevisao, documentoEdicao, equivalenciaDesabilitada, equivalenciasAplicadas, equivalenciasEstado }: EditorItemProps) {
   const [alternativaParaDesvincular, setAlternativaParaDesvincular] = useState<string | null>(null);
   const recalculosPendentes = item.substituicoes.flatMap((alternativa) => {
     const estado = equivalenciasAplicadas?.[alternativa.chaveCliente];
@@ -1245,6 +1252,7 @@ function EditorItem({ pacienteId, planoId, contextoEdicao, podeEditar, item, res
         </Botao>
       </div>
       <EditorAlimento pacienteId={pacienteId} contextoEdicao={contextoEdicao} podeEditar={podeEditar} rotulo={`Alimento ${indice + 1}`} valor={item} resumo={resumo} aoAlterar={(valor) => aoAlterar({ ...item, ...valor })} aoRemover={aoRemover} mostrarResumo={mostrarResumo} />
+      {ferramentaPrevia}
       <div className="ml-0 grid gap-3 border-l-2 border-primaria-suave pl-3 sm:ml-4">
         {aoAplicarGrupo && (item.alimentoComposicaoId || item.alimentoPersonalizado?.id) ? <AplicarGrupoSubstituicoes
           key={`${contextoEdicao}:${item.chaveCliente}`}
@@ -1663,6 +1671,7 @@ export function PlanoAlimentarProfissional({ pacienteId, podeGerenciar, aoAltera
   const [ultimoSalvamentoConfirmado, setUltimoSalvamentoConfirmado] = useState<{ chave: string; data: Date } | null>(null);
   const [edicaoIndisponivel, setEdicaoIndisponivel] = useState(false);
   const [contextoEdicao, setContextoEdicao] = useState(0);
+  const contextoEdicaoAtualRef = useRef(contextoEdicao);
   const [refeicoesAbertas, setRefeicoesAbertas] = useState<Set<string>>(() => new Set());
   const [alterado, setAlterado] = useState(false);
   const [copiaEmAndamento, setCopiaEmAndamento] = useState(false);
@@ -1694,7 +1703,8 @@ export function PlanoAlimentarProfissional({ pacienteId, podeGerenciar, aoAltera
   useLayoutEffect(() => {
     planoAtualRef.current = plano;
     pacienteAtualRef.current = pacienteId;
-  }, [plano, pacienteId]);
+    contextoEdicaoAtualRef.current = contextoEdicao;
+  }, [plano, pacienteId, contextoEdicao]);
   const [confirmarArquivo, setConfirmarArquivo] = useState(false);
   const [confirmarCriacao, setConfirmarCriacao] = useState(false);
   const [confirmarReconciliacao, setConfirmarReconciliacao] = useState(false);
@@ -2085,7 +2095,7 @@ export function PlanoAlimentarProfissional({ pacienteId, podeGerenciar, aoAltera
   useProtecaoAlteracoesNaoSalvas(alterado);
 
   function atualizar(mutacao: (atual: FormularioPlano) => FormularioPlano) {
-    if (!podeGerenciar || !permiteEscreverRascunho() || operacao === 'revisando' || operacao === 'publicando') return;
+    if (!podeGerenciar || !permiteEscreverRascunho() || operacao === 'revisando' || operacao === 'publicando' || operacao === 'confirmando-previa') return;
     controladorProjecao.current?.abort();
     sequenciaProjecao.current += 1;
     setCarregandoProjecao(false);
@@ -2105,6 +2115,46 @@ export function PlanoAlimentarProfissional({ pacienteId, podeGerenciar, aoAltera
     }
     setSucesso(null);
     setProjecaoPaciente(null);
+  }
+
+  function conferirBasePrevia(p:Pick<PedidoPreviaMicronutrientes,'rascunhoIdEsperado'|'rascunhoRevisaoEsperada'>, operacaoPermitida?:Promise<void>) {
+    const c=coordenadorEdicaoRef.current,operacaoAtual=operacaoRascunhoRef.current;
+    return Boolean(contextoEdicaoAtualRef.current===contextoEdicao&&(!operacaoAtual||operacaoAtual===operacaoPermitida)&&permiteEscreverRascunho()&&posseEdicaoRef.current&&c&&!c.estado.alterado&&c.estado.status==='salvo'&&c.estado.precondicao.rascunhoIdEsperado===p.rascunhoIdEsperado&&c.estado.precondicao.rascunhoRevisaoEsperada===p.rascunhoRevisaoEsperada&&pacienteAtualRef.current===pacienteId&&planoAtualRef.current?.id===plano?.id);
+  }
+  function invalidarBasePrevia(status:number,p:Pick<PedidoPreviaMicronutrientes,'rascunhoIdEsperado'|'rascunhoRevisaoEsperada'>){
+    if(!conferirBasePrevia(p))return;
+    coordenadorEdicaoRef.current?.invalidar(status===409?'conflito':'acesso-negado');
+  }
+  async function confirmarPreviaEditor(p:PedidoOperacaoPrevia,fingerprint:string,signal:AbortSignal):Promise<boolean>{
+    if(!plano?.draft||copiaEmAndamentoRef.current||!conferirBasePrevia(p))return false;
+    const planoConfirmado=plano.id,coordenadorOriginal=coordenadorEdicaoRef.current;
+    const contextoOriginal=contextoEdicao;
+    let sequenciaEsperada=sequenciaCarregamento.current;
+    const pertence=()=>pacienteAtualRef.current===pacienteId&&planoAtualRef.current?.id===planoConfirmado&&contextoEdicaoAtualRef.current===contextoOriginal&&coordenadorEdicaoRef.current===coordenadorOriginal&&sequenciaCarregamento.current===sequenciaEsperada;
+    const abertasConfirmadas=new Set(refeicoesAbertas);
+    let concluir!:()=>void;const fim=new Promise<void>(resolve=>{concluir=resolve;});
+    operacaoRascunhoRef.current=fim;
+    const liberar=iniciarCopia();setOperacao('confirmando-previa');setErro(null);
+    try{
+      await coordenadorOriginal?.aguardarEnvio();
+      if(signal.aborted||!conferirBasePrevia(p,fim))return false;
+      await confirmarPreviaMicronutrientesPlano(pacienteId,planoConfirmado,p,fingerprint,signal);
+      if(signal.aborted||!pertence()||!conferirBasePrevia(p,fim))return false;
+      sequenciaEsperada=sequenciaCarregamento.current+1;
+      const recarregado=await carregar(planoConfirmado);
+      if(signal.aborted||sequenciaCarregamento.current!==sequenciaEsperada||pacienteAtualRef.current!==pacienteId||planoAtualRef.current?.id!==planoConfirmado)return false;
+      if(!recarregado)throw new Error('Leitura posterior à confirmação indisponível.');
+      setRefeicoesAbertas(new Set(formularioAtualRef.current.refeicoes.filter(r=>abertasConfirmadas.has(r.chaveCliente)).map(r=>r.chaveCliente)));
+      setSucesso('Alteração confirmada no rascunho. A publicação permanece separada.');return true;
+    }catch(e){
+      if(signal.aborted||!pertence())return false;
+      const status=e instanceof ErroApiPlanoAlimentar?e.status:0;
+      coordenadorOriginal?.invalidar(status===409?'conflito':[401,403,404].includes(status)?'acesso-negado':'incerto');
+      setErro('Não foi possível confirmar a alteração. Suas informações locais foram preservadas; confira o rascunho antes de continuar.');return false;
+    }finally{
+      if(operacaoRascunhoRef.current===fim)operacaoRascunhoRef.current=null;
+      concluir();liberar();setOperacao(atual=>atual==='confirmando-previa'?null:atual);
+    }
   }
 
   async function aplicarGrupoAoItem(itemAlvo: ItemFormulario, alternativas: AlternativaAplicadaGrupo[], contexto: string, signal: AbortSignal): Promise<boolean> {
@@ -2722,6 +2772,7 @@ export function PlanoAlimentarProfissional({ pacienteId, podeGerenciar, aoAltera
                   compondoRef.current = false;
                   coordenadorEdicaoRef.current?.configurar({ suspenso: copiaEmAndamento });
                 }} className="grid gap-4 pb-16 lg:pb-0">
+                  {(() => {const fonte=fonteRegistroRascunho(plano);return <RegistroAnaliseFactual key={`registro-factual:${pacienteId}:${plano.id}:${plano.draft!.id}`} pacienteId={pacienteId} planos={fonte?[fonte]:[]} contexto={JSON.stringify([contextoEdicao,fonte,alterado,estadoAutosave,edicaoEntreAbas.podeEditar])} permitido={!!fonte&&edicaoEntreAbas.podeEditar&&!alterado&&estadoAutosave==='salvo'&&!operacao&&!copiaEmAndamento} aoSalvar={()=>setSucesso('Análise do rascunho salva para comparação no histórico de micronutrientes.')} aoInvalidar={status=>invalidarBasePrevia(status,{rascunhoIdEsperado:plano.draft!.id,rascunhoRevisaoEsperada:plano.draft!.rascunhoRevisao??0})}/>;})()}
                   {plano.draft.apresentacaoEstado === 'indisponivel' ? (
                     <div role="alert" className="rounded-md border border-alerta-borda bg-alerta-suave p-4 text-sm text-alerta-forte">
                       A configuração de exibição salva não pode ser lida. Revise as opções abaixo e salve novamente para reconferir esta versão antes de revisar ou publicar.
@@ -2859,6 +2910,15 @@ export function PlanoAlimentarProfissional({ pacienteId, podeGerenciar, aoAltera
 
                   <BibliotecaReceitasNutricionais
                     pacienteId={pacienteId}
+                    renderizarImpactoReceita={plano.draft?.edicaoEstado==='materializada'?(receita,eventos)=><PreviaReceitaPlano
+                      key={`${pacienteId}:${plano.id}:${plano.draft!.id}:${plano.draft!.rascunhoRevisao}:${contextoEdicao}:${receita.receitaId}:${receita.versao}:${receita.porcoes}:${edicaoEntreAbas.podeEditar}`}
+                      pacienteId={pacienteId} planoId={plano.id} contexto={`${pacienteId}:${plano.id}:${contextoEdicao}`}
+                      receitaNome={receita.receitaNome} refeicaoNome={receita.refeicaoNome} podeEditar={edicaoEntreAbas.podeEditar}
+                      bloqueio={alterado||estadoAutosave!=='salvo'?'Salve e confira as alterações do rascunho antes de simular.':operacao&&operacao!=='confirmando-previa'?'Aguarde a operação atual antes de simular.':undefined}
+                      pedido={{rascunhoIdEsperado:plano.draft!.id,rascunhoRevisaoEsperada:plano.draft!.rascunhoRevisao??0,ativacaoRevisaoEsperada:plano.ativacaoRevisao??0,operacao:{tipo:'inserir_receita',refeicaoChave:receita.refeicaoChave,receitaId:receita.receitaId,receitaVersaoEsperada:receita.versao,porcoesDesejadas:receita.porcoes}}}
+                      conferirBase={()=>conferirBasePrevia({rascunhoIdEsperado:plano.draft!.id,rascunhoRevisaoEsperada:plano.draft!.rascunhoRevisao??0})}
+                      aoConfirmar={confirmarPreviaEditor} aoInvalidar={status=>invalidarBasePrevia(status,{rascunhoIdEsperado:plano.draft!.id,rascunhoRevisaoEsperada:plano.draft!.rascunhoRevisao??0})}
+                      {...eventos}/>:undefined}
                     validarAntesDeSalvar={(chaveRefeicao) => validarMicronutrientesFormulario(formularioAtualRef.current, chaveRefeicao)}
                     refeicoes={() => formulario.refeicoes.map((refeicao) => ({
                       chave: refeicao.chaveCliente,
@@ -2984,6 +3044,15 @@ export function PlanoAlimentarProfissional({ pacienteId, podeGerenciar, aoAltera
                               planoId={plano.id}
                               contextoEdicao={`${pacienteId}:${plano.id}:${plano.draft?.id ?? ''}:${contextoEdicao}`}
                               podeEditar={edicaoEntreAbas.podeEditar}
+                              ferramentaPrevia={plano.draft?.edicaoEstado==='materializada'?<PreviaAlteracaoAlimentar
+                                key={`${pacienteId}:${plano.id}:${plano.draft.id}:${plano.draft.rascunhoRevisao}:${contextoEdicao}:${item.chaveCliente}:${edicaoEntreAbas.podeEditar}`}
+                                pacienteId={pacienteId} planoId={plano.id} contexto={`${pacienteId}:${plano.id}:${contextoEdicao}`}
+                                descricao={item.descricao} refeicaoNome={refeicao.nome} podeEditar={edicaoEntreAbas.podeEditar}
+                                bloqueio={alterado||estadoAutosave!=='salvo'?'Salve e confira as alterações do rascunho antes de simular.':operacao&&operacao!=='confirmando-previa'?'Aguarde a operação atual antes de simular.':undefined}
+                                pedido={{rascunhoIdEsperado:plano.draft.id,rascunhoRevisaoEsperada:plano.draft.rascunhoRevisao??0,ativacaoRevisaoEsperada:plano.ativacaoRevisao??0,operacao:{tipo:'definir_porcao_manual',refeicaoChave:refeicao.chaveCliente,itemChave:item.chaveCliente,quantidade:interpretarNumeroEdicao(item.quantidade)??0,unidade:item.unidade,porcaoGramas:interpretarNumeroEdicao(item.porcaoGramas)??0}}}
+                                conferirBase={()=>conferirBasePrevia({rascunhoIdEsperado:plano.draft!.id,rascunhoRevisaoEsperada:plano.draft!.rascunhoRevisao??0})}
+                                aoConfirmar={confirmarPreviaEditor} aoInvalidar={status=>invalidarBasePrevia(status,{rascunhoIdEsperado:plano.draft!.id,rascunhoRevisaoEsperada:plano.draft!.rascunhoRevisao??0})}
+                              />:undefined}
                               versaoId={plano.draft?.id}
                               rascunhoRevisao={plano.draft?.rascunhoRevisao}
                               documentoEdicao={documentoDoFormulario(formulario)}

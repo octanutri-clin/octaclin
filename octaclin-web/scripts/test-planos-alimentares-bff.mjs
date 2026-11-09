@@ -7,6 +7,14 @@ import { fileURLToPath } from 'node:url';
 const raiz = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const temporaria = mkdtempSync(join(tmpdir(), 'octaclin-planos-alimentares-bff-'));
 const arquivos = [
+  'app/api/planos-alimentares/catalogo/teor-micronutriente/consulta/route.ts',
+  'app/api/pacientes/[id]/planos-alimentares/analises-factuais/route.ts',
+  'app/api/pacientes/[id]/planos-alimentares/analises-factuais/relatorio/route.ts',
+  'app/api/pacientes/[id]/planos-alimentares/analises-factuais/listar/route.ts',
+  'app/api/pacientes/[id]/planos-alimentares/analises-factuais/historico/route.ts',
+  'app/api/pacientes/[id]/planos-alimentares/analises-factuais/consultar/route.ts',
+  'app/api/pacientes/[id]/planos-alimentares/analises-factuais/comparar/route.ts',
+  'app/api/pacientes/[id]/planos-alimentares/analises-factuais/_proxy.ts',
   'app/api/pacientes/[id]/planos-alimentares/[planoId]/equivalencias/previa/route.ts',
   'app/api/profissionais/me/preferencias-equivalencia/route.ts',
   'app/api/planos-alimentares/grupos-substituicoes-administracao/alimentos/consulta/route.ts',
@@ -17,11 +25,15 @@ const arquivos = [
   'app/api/planos-alimentares/grupos-substituicoes/[grupoId]/favorito/route.ts',
   'app/api/planos-alimentares/grupos-substituicoes-administracao/consulta/route.ts',
   'app/api/planos-alimentares/grupos-substituicoes-administracao/[grupoId]/route.ts',
+  'app/api/pacientes/[id]/planos-alimentares/[planoId]/rascunho/previa-micronutrientes/route.ts',
+  'app/api/pacientes/[id]/planos-alimentares/[planoId]/rascunho/previa-micronutrientes/confirmar/route.ts',
   'scripts/planos-alimentares-bff.spec.ts',
   'lib/ativacao-plano.ts',
   'app/api/pacientes/[id]/planos-alimentares/[planoId]/ativacao/route.ts',
   'app/api/pacientes/[id]/planos-alimentares/[planoId]/selecao-calculo/route.ts',
   'app/api/pacientes/[id]/planos-alimentares/calculo-combinado/route.ts',
+  'app/api/pacientes/[id]/planos-alimentares/analise-micronutrientes/route.ts',
+  'app/api/pacientes/[id]/planos-alimentares/analise-micronutrientes/contribuicoes/route.ts',
   'app/api/pacientes/[id]/planos-alimentares/[planoId]/refeicoes/[identidadeId]/ativacao/route.ts',
   'app/api/portal/paciente/planos-alimentares/route.ts',
   'app/api/portal/paciente/planos-alimentares/[planoId]/route.ts',
@@ -76,6 +88,7 @@ writeFileSync(join(temporaria, 'tsconfig.json'), JSON.stringify({
   extends: join(raiz, 'tsconfig.json'),
   compilerOptions: {
     noEmit: false,
+    incremental: false,
     outDir: temporaria,
     tsBuildInfoFile: join(temporaria, 'tsconfig.tsbuildinfo'),
     rootDir: raiz,

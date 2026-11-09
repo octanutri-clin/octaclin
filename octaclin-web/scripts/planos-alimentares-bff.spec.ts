@@ -1,3 +1,14 @@
+import { POST as consultarTeorM11 } from '../app/api/planos-alimentares/catalogo/teor-micronutriente/consulta/route';
+import { POST as relatorioFactual } from '../app/api/pacientes/[id]/planos-alimentares/analises-factuais/relatorio/route';
+import { POST as registrarFactual } from '../app/api/pacientes/[id]/planos-alimentares/analises-factuais/route';
+import { POST as listarFactuais } from '../app/api/pacientes/[id]/planos-alimentares/analises-factuais/listar/route';
+import { POST as historicoFactuais } from '../app/api/pacientes/[id]/planos-alimentares/analises-factuais/historico/route';
+import { POST as consultarFactual } from '../app/api/pacientes/[id]/planos-alimentares/analises-factuais/consultar/route';
+import { POST as compararFactuais } from '../app/api/pacientes/[id]/planos-alimentares/analises-factuais/comparar/route';
+import { POST as previaMicros } from '../app/api/pacientes/[id]/planos-alimentares/[planoId]/rascunho/previa-micronutrientes/route';
+import { POST as confirmarMicros } from '../app/api/pacientes/[id]/planos-alimentares/[planoId]/rascunho/previa-micronutrientes/confirmar/route';
+import { POST as detalharMicronutrientesFood06 } from '../app/api/pacientes/[id]/planos-alimentares/analise-micronutrientes/contribuicoes/route';
+import { POST as analisarMicronutrientesFood06 } from '../app/api/pacientes/[id]/planos-alimentares/analise-micronutrientes/route';
 import { preverEquivalenciasPlano, obterPreferenciasEquivalencia, salvarPreferenciasEquivalencia } from '../lib/equivalencias-plano-api';
 import { POST as preverFood05 } from '../app/api/pacientes/[id]/planos-alimentares/[planoId]/equivalencias/previa/route';
 import { GET as obterPreferenciasFood05, PUT as salvarPreferenciasFood05 } from '../app/api/profissionais/me/preferencias-equivalencia/route';
@@ -1452,3 +1463,197 @@ test('FOOD07 cliente usa POST sem etiqueta em URL e propaga AbortSignal/no-store
     assert.deepEqual(JSON.parse(String(chamadas[0].init?.body)), { etiqueta: 'Etiqueta sintética' });
   } finally { restaurarFetch(original); }
 });
+
+test('FOOD06 BFF encaminha análise factual protegida e mantém resposta sem cache', async () => {
+  __setCookies(cookiesSessaoValida(['planos_alimentares.ler']));
+  const original=global.fetch;
+  let chamada: {url:string;body?:string}|undefined;
+  const analise={schemaVersao:1,comparacoes:{estado:'indisponivel',motivo:'referencias_nao_habilitadas'}};
+  global.fetch=(async(url:string|URL|Request,init?:RequestInit)=>{chamada={url:String(url),body:init?.body?.toString()};return Response.json(analise);}) as typeof global.fetch;
+  try {
+    const corpo=JSON.stringify({selecoes:[]});
+    const r=await analisarMicronutrientesFood06(new Request('http://localhost/api/analise',{method:'POST',body:corpo}),{params:Promise.resolve({id:'paciente/1'})});
+    assert.equal(r.status,200);assert.equal(r.headers.get('Cache-Control'),'private, no-store');
+    assert.deepEqual(await r.json(),analise);
+    assert.deepEqual(chamada,{url:'http://backend.octaclin.local/pacientes/paciente%2F1/planos-alimentares/analise-micronutrientes',body:corpo});
+  } finally {restaurarFetch(original);}
+});
+
+test('FOOD06 BFF nega sessão/permissão ausente e payload maior que 64KiB sem chamar backend', async () => {
+  const original=global.fetch;let chamadas=0;
+  global.fetch=(async()=>{chamadas++;return Response.json({});}) as typeof global.fetch;
+  try {
+    __setCookies({});
+    const request=(body='{}')=>new Request('http://localhost/api/analise',{method:'POST',body});
+    const props={params:Promise.resolve({id:'paciente-1'})};
+    assert.equal((await analisarMicronutrientesFood06(request(),props)).status,401);
+    __setCookies(cookiesSessaoValida(['pacientes.ler']));
+    assert.equal((await analisarMicronutrientesFood06(request(),props)).status,403);
+    __setCookies(cookiesSessaoValida(['planos_alimentares.ler']));
+    const grande=await analisarMicronutrientesFood06(request('x'.repeat(65*1024)),props);
+    assert.equal(grande.status,413);assert.equal(grande.headers.get('Cache-Control'),'private, no-store');
+    assert.equal(chamadas,0);
+  } finally {restaurarFetch(original);}
+});
+
+test('FOOD06 BFF preserva conflito sem retry automático', async () => {
+  __setCookies(cookiesSessaoValida(['planos_alimentares.ler']));
+  const original=global.fetch;let chamadas=0;
+  global.fetch=(async()=>{chamadas++;return Response.json({message:'Seleção alterada.'},{status:409});}) as typeof global.fetch;
+  try {
+    const r=await analisarMicronutrientesFood06(new Request('http://localhost/api/analise',{method:'POST',body:'{"selecoes":[]}'}),{params:Promise.resolve({id:'paciente-1'})});
+    assert.equal(r.status,409);assert.equal(chamadas,1);assert.equal(r.headers.get('Cache-Control'),'private, no-store');
+  } finally {restaurarFetch(original);}
+});
+
+test('FOOD06 detalhe BFF encaminha análise factual protegida e mantém resposta sem cache', async () => {
+  __setCookies(cookiesSessaoValida(['planos_alimentares.ler']));
+  const original=global.fetch;
+  let chamada: {url:string;body?:string}|undefined;
+  const analise={schemaVersao:1,comparacoes:{estado:'indisponivel',motivo:'referencias_nao_habilitadas'}};
+  global.fetch=(async(url:string|URL|Request,init?:RequestInit)=>{chamada={url:String(url),body:init?.body?.toString()};return Response.json(analise);}) as typeof global.fetch;
+  try {
+    const corpo=JSON.stringify({selecoes:[],codigo:'calcioMg',pagina:1,limite:50,ordem:'contribuicao'});
+    const r=await detalharMicronutrientesFood06(new Request('http://localhost/api/analise',{method:'POST',body:corpo}),{params:Promise.resolve({id:'paciente/1'})});
+    assert.equal(r.status,200);assert.equal(r.headers.get('Cache-Control'),'private, no-store');
+    assert.deepEqual(await r.json(),analise);
+    assert.deepEqual(chamada,{url:'http://backend.octaclin.local/pacientes/paciente%2F1/planos-alimentares/analise-micronutrientes/contribuicoes',body:corpo});
+  } finally {restaurarFetch(original);}
+});
+
+test('FOOD06 detalhe BFF nega sessão/permissão ausente e payload maior que 64KiB sem chamar backend', async () => {
+  const original=global.fetch;let chamadas=0;
+  global.fetch=(async()=>{chamadas++;return Response.json({});}) as typeof global.fetch;
+  try {
+    __setCookies({});
+    const request=(body='{}')=>new Request('http://localhost/api/analise',{method:'POST',body});
+    const props={params:Promise.resolve({id:'paciente-1'})};
+    assert.equal((await detalharMicronutrientesFood06(request(),props)).status,401);
+    __setCookies(cookiesSessaoValida(['pacientes.ler']));
+    assert.equal((await detalharMicronutrientesFood06(request(),props)).status,403);
+    __setCookies(cookiesSessaoValida(['planos_alimentares.ler']));
+    const grande=await detalharMicronutrientesFood06(request('x'.repeat(65*1024)),props);
+    assert.equal(grande.status,413);assert.equal(grande.headers.get('Cache-Control'),'private, no-store');
+    assert.equal(chamadas,0);
+  } finally {restaurarFetch(original);}
+});
+
+test('FOOD06 detalhe BFF preserva conflito sem retry automático', async () => {
+  __setCookies(cookiesSessaoValida(['planos_alimentares.ler']));
+  const original=global.fetch;let chamadas=0;
+  global.fetch=(async()=>{chamadas++;return Response.json({message:'Seleção alterada.'},{status:409});}) as typeof global.fetch;
+  try {
+    const r=await detalharMicronutrientesFood06(new Request('http://localhost/api/analise',{method:'POST',body:'{"selecoes":[]}'}),{params:Promise.resolve({id:'paciente-1'})});
+    assert.equal(r.status,409);assert.equal(chamadas,1);assert.equal(r.headers.get('Cache-Control'),'private, no-store');
+  } finally {restaurarFetch(original);}
+});
+
+for (const [nome,rota,sufixo] of [['prévia',previaMicros,''],['confirmação',confirmarMicros,'/confirmar']] as const) {
+ test(`FOOD06 ${nome}: destino, encode, corpo, autorização e no-store`,async()=>{
+  __setCookies(cookiesSessaoValida(['planos_alimentares.gerenciar']));
+  const original=global.fetch;
+  let url='',corpo:unknown,cache:unknown;
+  global.fetch=(async(input,init)=>{url=String(input);corpo=init?.body;cache=init?.cache;return Response.json({schemaVersao:1});}) as typeof global.fetch;
+  try{
+   const r=await rota(new Request('http://localhost/api/previa',{method:'POST',body:'{"operacao":"sintetica"}'}),{params:Promise.resolve({id:'paciente/1',planoId:'plano/2'})});
+   assert.equal(r.status,200);assert.ok(url.endsWith('/pacientes/paciente%2F1/planos-alimentares/plano%2F2/rascunho/previa-micronutrientes'+sufixo));
+   assert.equal(corpo,'{"operacao":"sintetica"}');assert.equal(cache,'no-store');assert.match(r.headers.get('Cache-Control')??'',/no-store/);
+   url='';__setCookies(cookiesSessaoValida(['planos_alimentares.ler']));
+   const negado=await rota(new Request('http://localhost/api/previa',{method:'POST',body:'{}'}),{params:Promise.resolve({id:'paciente',planoId:'plano'})});
+   assert.equal(negado.status,403);assert.equal(url,'');
+   __clearCookies();
+   assert.equal((await rota(new Request('http://localhost/api/previa',{method:'POST',body:'{}'}),{params:Promise.resolve({id:'paciente',planoId:'plano'})})).status,401);
+   assert.equal(url,'');
+  }finally{restaurarFetch(original);__clearCookies();}
+ });
+ test(`FOOD06 ${nome}: limita corpo por bytes e não chama backend`,async()=>{
+  __setCookies(cookiesSessaoValida(['planos_alimentares.gerenciar']));const original=global.fetch;let chamou=false;
+  global.fetch=(async()=>{chamou=true;return Response.json({});}) as typeof global.fetch;
+  try{
+   const r=await rota(new Request('http://localhost/api/previa',{method:'POST',body:'é'.repeat(4097)}),{params:Promise.resolve({id:'paciente',planoId:'plano'})});
+   assert.equal(r.status,413);assert.equal(chamou,false);assert.match(r.headers.get('Cache-Control')??'',/no-store/);
+  }finally{restaurarFetch(original);__clearCookies();}
+ });
+}
+
+for (const [nome,rota] of [['prévia',previaMicros],['confirmação',confirmarMicros]] as const) {
+ test(`FOOD06 receita ${nome}: encaminha o comando e mantém conflito sem retry`,async()=>{
+  __setCookies(cookiesSessaoValida(['planos_alimentares.gerenciar']));
+  const original=global.fetch;let chamadas=0;
+  const comando={rascunhoIdEsperado:'10000000-0000-4000-8000-000000000001',rascunhoRevisaoEsperada:3,ativacaoRevisaoEsperada:1,operacao:{tipo:'inserir_receita',refeicaoChave:'refeicao',receitaId:'10000000-0000-4000-8000-000000000002',receitaVersaoEsperada:4,porcoesDesejadas:1.5},...(nome==='confirmação'?{fingerprintEsperado:'a'.repeat(64)}:{})};
+  global.fetch=(async(_input,init)=>{chamadas++;assert.deepEqual(JSON.parse(String(init?.body)),comando);assert.equal(init?.cache,'no-store');return Response.json({mensagem:'A receita mudou.'},{status:409});}) as typeof global.fetch;
+  try{
+   const r=await rota(new Request('http://localhost/api/previa',{method:'POST',body:JSON.stringify(comando)}),{params:Promise.resolve({id:'paciente',planoId:'plano'})});
+   assert.equal(r.status,409);assert.equal(chamadas,1);assert.match(r.headers.get('Cache-Control')??'',/no-store/);
+  }finally{restaurarFetch(original);__clearCookies();}
+ });
+}
+
+for(const [nome,acao,fim,perm] of [['relatório',relatorioFactual,'/relatorio','planos_alimentares.gerenciar'],['registro',registrarFactual,'','planos_alimentares.gerenciar'],['listar',listarFactuais,'/listar','planos_alimentares.ler'],['histórico',historicoFactuais,'/historico','planos_alimentares.ler'],['consultar',consultarFactual,'/consultar','planos_alimentares.ler'],['comparar',compararFactuais,'/comparar','planos_alimentares.ler']] as const){
+ test(`FOOD06 registros ${nome}: proxy autorizado, body privado e sem query`,async()=>{
+  __setCookies(cookiesSessaoValida([perm]));const original=global.fetch;let chamadas=0;
+  global.fetch=(async(entrada:string|URL|Request,init?:RequestInit)=>{chamadas++;assert.equal(String(entrada),'http://backend.octaclin.local/pacientes/paciente%2F1/planos-alimentares/analises-factuais'+fim);assert.equal(init?.method,'POST');assert.equal(init?.body,'{"registroId":"sintetico"}');return Response.json({schemaVersao:1});}) as typeof fetch;
+  try{const r=await acao(new Request('http://localhost/analise?tenantId=alheio',{method:'POST',body:'{"registroId":"sintetico"}'}),{params:Promise.resolve({id:'paciente/1'})});assert.equal(r.status,200);assert.equal(r.headers.get('cache-control'),'private, no-store');assert.equal(chamadas,1);}finally{restaurarFetch(original);__clearCookies();}
+ });
+ test(`FOOD06 registros ${nome}: sessão/permissão antes de ler corpo`,async()=>{
+  const original=global.fetch;let chamadas=0;global.fetch=(async()=>{chamadas++;return Response.json({});}) as typeof fetch;
+  const request=()=>new Request('http://localhost/analise',{method:'POST',body:'x'.repeat(17000)}),props={params:Promise.resolve({id:'paciente'})};
+  try{__clearCookies();assert.equal((await acao(request(),props)).status,401);__setCookies(cookiesSessaoValida(['pacientes.ler']));assert.equal((await acao(request(),props)).status,403);assert.equal(chamadas,0);}finally{restaurarFetch(original);__clearCookies();}
+ });
+ test(`FOOD06 registros ${nome}: limita bytes reais sem executar backend`,async()=>{
+  __setCookies(cookiesSessaoValida([perm]));const original=global.fetch;let chamadas=0;global.fetch=(async()=>{chamadas++;return Response.json({});}) as typeof fetch;
+  try{const r=await acao(new Request('http://localhost/analise',{method:'POST',headers:{'content-length':'1'},body:'€'.repeat(6000)}),{params:Promise.resolve({id:'paciente'})});assert.equal(r.status,413);assert.equal(r.headers.get('cache-control'),'private, no-store');assert.equal(chamadas,0);}finally{restaurarFetch(original);__clearCookies();}
+ });
+ test(`FOOD06 registros ${nome}: preserva409 e sem retry de negócio`,async()=>{
+  __setCookies(cookiesSessaoValida([perm]));const original=global.fetch;let chamadas=0;global.fetch=(async()=>{chamadas++;return Response.json({message:'Reconferir.'},{status:409});}) as typeof fetch;
+  try{const r=await acao(new Request('http://localhost/analise',{method:'POST',body:'{}'}),{params:Promise.resolve({id:'paciente'})});assert.equal(r.status,409);assert.equal(chamadas,1);assert.equal(r.headers.get('cache-control'),'private, no-store');}finally{restaurarFetch(original);__clearCookies();}
+ });
+}
+test('FOOD06 registros: erro de upstream não propaga corpo ou detalhes internos',async()=>{
+ __setCookies(cookiesSessaoValida(['planos_alimentares.ler']));const original=global.fetch;
+ global.fetch=(async()=>new Response('CANARIO_SQL_TOKEN',{status:500,headers:{'content-type':'text/html'}})) as typeof fetch;
+ try{const r=await consultarFactual(new Request('http://localhost/analise',{method:'POST',body:'{}'}),{params:Promise.resolve({id:'paciente'})});assert.equal(r.status,502);assert.equal(r.headers.get('cache-control'),'private, no-store');assert.doesNotMatch(await r.text(),/CANARIO_SQL_TOKEN/);}finally{restaurarFetch(original);__clearCookies();}
+});
+
+test('FOOD06 registros: JSON de erro upstream preserva status e retira detalhes',async()=>{
+ __setCookies(cookiesSessaoValida(['planos_alimentares.ler']));const original=global.fetch;
+ global.fetch=(async()=>Response.json({message:'CANARIO_SQL_TOKEN'},{status:500})) as typeof fetch;
+ try{const r=await consultarFactual(new Request('http://localhost/analise',{method:'POST',body:'{}'}),{params:Promise.resolve({id:'paciente'})});assert.equal(r.status,500);assert.equal(r.headers.get('cache-control'),'private, no-store');assert.doesNotMatch(await r.text(),/CANARIO_SQL_TOKEN/);}finally{restaurarFetch(original);__clearCookies();}
+});
+test('FOOD06 registros: leitura interrompida não chama backend nem revela erro',async()=>{
+ __setCookies(cookiesSessaoValida(['planos_alimentares.ler']));const original=global.fetch;let chamadas=0;
+ global.fetch=(async()=>{chamadas++;return Response.json({});}) as typeof fetch;
+ const stream=new ReadableStream<Uint8Array>({start(c){c.error(new Error('CANARIO_STREAM'));}});
+ try{const r=await consultarFactual(new Request('http://localhost/analise',{method:'POST',body:stream,duplex:'half'} as RequestInit),{params:Promise.resolve({id:'paciente'})});assert.equal(r.status,400);assert.equal(r.headers.get('cache-control'),'private, no-store');assert.doesNotMatch(await r.text(),/CANARIO_STREAM/);assert.equal(chamadas,0);}finally{restaurarFetch(original);__clearCookies();}
+});
+
+test('FOOD06 relatório: leitura isolada não concede exportação',async()=>{
+ __setCookies(cookiesSessaoValida(['planos_alimentares.ler']));const original=global.fetch;let chamadas=0;global.fetch=(async()=>{chamadas++;return Response.json({});}) as typeof fetch;
+ try{const r=await relatorioFactual(new Request('http://localhost/relatorio',{method:'POST',body:'{}'}),{params:Promise.resolve({id:'paciente'})});assert.equal(r.status,403);assert.equal(chamadas,0);}finally{restaurarFetch(original);__clearCookies();}
+});
+
+test('FOOD06 registro: confirmações explícitas permanecem somente no body do proxy autorizado',async()=>{
+ __setCookies(cookiesSessaoValida(['planos_alimentares.gerenciar']));const original=global.fetch;
+ const body={registro:{chaveIdempotencia:'00000000-0000-4000-8000-000000000001',origem:{planoId:'00000000-0000-4000-8000-000000000002',versaoId:'00000000-0000-4000-8000-000000000003',numero:1,status:'publicada'}},selecao:{ativacaoRevisaoEsperada:1,identidadesRefeicoes:[]},confirmacoes:{populacaoReferencia:'nao_informada',populacaoConfirmada:false,gestacao:'nao_informada',lactacao:'nao_informada',aplicabilidade:'nao_informada',mesmoDiaPlanejado:false,tabagismo:'nao_informado'}};
+ let chamadas=0;global.fetch=(async(url:string|URL|Request,init?:RequestInit)=>{chamadas++;assert.equal(String(url),'http://backend.octaclin.local/pacientes/paciente%2F1/planos-alimentares/analises-factuais');assert.equal(init?.method,'POST');assert.deepEqual(JSON.parse(String(init?.body)),body);return Response.json({schemaVersao:1});}) as typeof fetch;
+ try{const r=await registrarFactual(new Request('http://localhost/analise',{method:'POST',body:JSON.stringify(body)}),{params:Promise.resolve({id:'paciente/1'})});assert.equal(r.status,200);assert.equal(r.headers.get('cache-control'),'private, no-store');assert.equal(chamadas,1);}finally{restaurarFetch(original);__clearCookies();}
+});
+
+for(const [nome,acao,body,permissao,fim] of [['relatório contextual',relatorioFactual,{registroId:'registro',versaoRelatorio:2},'planos_alimentares.gerenciar','/relatorio'],['relatório com origem',relatorioFactual,{registroId:'registro',versaoRelatorio:2,incluirOrigem:true},'planos_alimentares.gerenciar','/relatorio'],['histórico contextual',historicoFactuais,{limite:10,incluirContexto:true},'planos_alimentares.ler','/historico'],['histórico com origem',historicoFactuais,{limite:10,incluirOrigem:true},'planos_alimentares.ler','/historico']] as const)test(`FOOD06 ${nome}: negociação explícita fica no body privado`,async()=>{
+ __setCookies(cookiesSessaoValida([permissao]));const original=global.fetch;let chamadas=0;
+ global.fetch=(async(url:string|URL|Request,init?:RequestInit)=>{chamadas++;assert.equal(String(url),'http://backend.octaclin.local/pacientes/paciente%2F1/planos-alimentares/analises-factuais'+fim);assert.deepEqual(JSON.parse(String(init?.body)),body);return Response.json({schemaVersao:1});}) as typeof fetch;
+ try{const r=await acao(new Request('http://localhost/analise',{method:'POST',body:JSON.stringify(body)}),{params:Promise.resolve({id:'paciente/1'})});assert.equal(r.status,200);assert.equal(r.headers.get('cache-control'),'private, no-store');assert.equal(chamadas,1);}finally{restaurarFetch(original);__clearCookies();}
+});
+
+const entradaTeorM11={codigo:'ferroMg',porcaoGramas:50,busca:'Arroz',pagina:1,limite:25};
+function respostaTeorM11(){return {schemaVersao:1,motorVersao:'food06-consulta-teor-v1',codigo:'ferroMg',porcaoGramas:50,itens:[{alimento:{id:'30000000-0000-4000-8000-000000000001',nome:'Arroz sintético',privado:'CANARIO_INTERNO'},fonte:{id:'40000000-0000-4000-8000-000000000001',codigo:'taco_nepa_unicamp',versao:'synthetic-v1',baseCodigo:'TACO',esquemaVersao:'octaclin-composicao-v2-micros1',aprovador:'CANARIO_INTERNO'},baseGramas:100,porcaoGramas:50,nutriente:{codigo:'ferroMg',rotulo:'Ferro',unidade:'mg',estado:'conhecido',valorPor100g:4,valorPorcao:2,arredondadoParaZero:{por100g:false,porcao:false},privado:'CANARIO_INTERNO'},contextoCifrado:'CANARIO_INTERNO'}],cobertura:{recebidos:1,considerados:1,comValor:1,semValor:0},exclusoes:{fonteInativa:0,direitoNaoAprovado:0,dadosInvalidos:0},ordenacao:{escopo:'lote_consultado',criterio:'teor_apresentado_na_porcao_decrescente',precisaoDecimal:8,desempate:'identificador_ascendente',desconhecidos:'ao_final'},individualizacao:{estado:'bloqueada',motivo:'contrato_restricoes_nao_validado'},paginacao:{pagina:1,limite:25,temProxima:false,ordemSelecao:'nome_identificador',ordenacaoTeor:'somente_pagina',visao:'catalogo_atual_sem_snapshot'},privado:'CANARIO_INTERNO'};}
+const pedidoTeor=(v:unknown=entradaTeorM11)=>new Request('http://localhost/api/consulta',{method:'POST',body:JSON.stringify(v)});
+async function comTeorM11(resposta:()=>Response,executar:()=>Promise<void>){__setCookies(cookiesSessaoValida(['planos_alimentares.ler']));const original=global.fetch;global.fetch=(async()=>resposta()) as typeof fetch;try{await executar();}finally{restaurarFetch(original);__clearCookies();}}
+test('M11 BFF exige sessão/permissão sem backend',async()=>{let n=0;await comTeorM11(()=>{n++;throw Error();},async()=>{__clearCookies();assert.equal((await consultarTeorM11(pedidoTeor())).status,401);__setCookies(cookiesSessaoValida(['pacientes.ler']));assert.equal((await consultarTeorM11(pedidoTeor())).status,403);assert.equal(n,0);});});
+test('M11 BFF encaminha body privado e projeta allowlist em todos os níveis',async()=>{await comTeorM11(()=>Response.json(respostaTeorM11()),async()=>{let chamada:unknown;global.fetch=(async(url,init)=>{chamada={url:String(url),body:JSON.parse(String(init?.body)),cache:init?.cache};return Response.json(respostaTeorM11());}) as typeof fetch;const r=await consultarTeorM11(pedidoTeor());assert.equal(r.status,200);assert.equal(r.headers.get('cache-control'),'private, no-store');const p=await r.json();assert.equal(p.itens[0].nutriente.valorPorcao,2);assert.doesNotMatch(JSON.stringify(p),/CANARIO|contextoCifrado|aprovador/);assert.deepEqual(chamada,{url:'http://backend.octaclin.local/planos-alimentares/catalogo/teor-micronutriente/consulta',body:entradaTeorM11,cache:'no-store'});});});
+for(const delta of [{pacienteId:'CANARIO'},{tenantId:'CANARIO'},{porcaoGramas:'50'},{porcaoGramas:0},{porcaoGramas:1.2345},{codigo:'invalido'},{pagina:10001},{limite:101},{busca:' '},{fonteCodigo:null},{versao:''}])test('M11 BFF recusa pedido manipulado '+JSON.stringify(delta),async()=>{let n=0;await comTeorM11(()=>{n++;return Response.json(respostaTeorM11());},async()=>{assert.equal((await consultarTeorM11(pedidoTeor({...entradaTeorM11,...delta}))).status,400);assert.equal(n,0);});});
+test('M11 BFF limita corpo e JSON inválido',async()=>{let n=0;await comTeorM11(()=>{n++;return Response.json({});},async()=>{assert.equal((await consultarTeorM11(new Request('http://localhost',{method:'POST',body:'x'.repeat(4097)}))).status,413);assert.equal((await consultarTeorM11(new Request('http://localhost',{method:'POST',body:'{'}))).status,400);assert.equal(n,0);});});
+for(const status of [400,403,404,409,413,422,429,500])test('M11 BFF sanitiza erro '+status,async()=>{await comTeorM11(()=>new Response('CANARIO_INTERNO',{status}),async()=>{const r=await consultarTeorM11(pedidoTeor());assert.equal(r.status,status>=500?503:status);assert.doesNotMatch(await r.text(),/CANARIO/);assert.equal(r.headers.get('cache-control'),'private, no-store');});});
+for(const tipo of ['codigo','porcaoGramas','paginacao','cobertura','individualizacao','unidade','negativo','ausenteComValor','excesso','duplicado','oversize'])test('M11 BFF recusa resposta inconsistente '+tipo,async()=>{const p=respostaTeorM11();if(tipo==='codigo')p.codigo='calcioMg';if(tipo==='porcaoGramas')p.porcaoGramas=60;if(tipo==='paginacao')p.paginacao.pagina=2;if(tipo==='cobertura')p.cobertura.comValor=2;if(tipo==='individualizacao')p.individualizacao.estado='liberada';if(tipo==='unidade')p.itens[0].nutriente.unidade='mcg';if(tipo==='negativo')p.itens[0].nutriente.valorPorcao=-1;if(tipo==='ausenteComValor')p.itens[0].nutriente.estado='ausente';if(tipo==='excesso')p.itens=Array(101).fill(p.itens[0]);if(tipo==='duplicado'){p.itens.push(p.itens[0]);p.cobertura={recebidos:2,considerados:2,comValor:2,semValor:0};}await comTeorM11(()=>tipo==='oversize'?new Response('x'.repeat(256*1024+1)):Response.json(p),async()=>{const r=await consultarTeorM11(pedidoTeor());assert.equal(r.status,503);assert.doesNotMatch(await r.text(),/CANARIO|Arroz/);});});
+test('M11 BFF preserva zero conhecido e desconhecido sem número',async()=>{const p=respostaTeorM11();p.itens[0].nutriente.valorPor100g=0;p.itens[0].nutriente.valorPorcao=0;await comTeorM11(()=>Response.json(p),async()=>{const r=await consultarTeorM11(pedidoTeor());assert.equal(r.status,200);assert.equal((await r.json()).itens[0].nutriente.valorPorcao,0);p.itens[0].nutriente.estado='ausente';for(const chave of ['valorPor100g','valorPorcao','arredondadoParaZero'])Reflect.deleteProperty(p.itens[0].nutriente,chave);p.cobertura.comValor=0;p.cobertura.semValor=1;const a=await consultarTeorM11(pedidoTeor());assert.equal(a.status,200);assert.equal((await a.json()).itens[0].nutriente.valorPorcao,undefined);});});
+test('M11 BFF propaga cancelamento e não lê corpo sem autenticação',async()=>{await comTeorM11(()=>Response.json(respostaTeorM11()),async()=>{const req=pedidoTeor();let sinal:AbortSignal|null|undefined;global.fetch=(async(_url,init)=>{sinal=init?.signal;return Response.json(respostaTeorM11());}) as typeof fetch;assert.equal((await consultarTeorM11(req)).status,200);assert.equal(sinal,req.signal);__clearCookies();let leu=false;const semSessao=pedidoTeor();Object.defineProperty(semSessao,'body',{get(){leu=true;throw Error('CANARIO');}});assert.equal((await consultarTeorM11(semSessao)).status,401);assert.equal(leu,false);});});

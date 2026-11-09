@@ -1,3 +1,8 @@
+import { ControladorConsultaTeorCatalogo } from './apresentacao/controlador-consulta-teor-catalogo';
+import { ServicoConsultaTeorCatalogo } from './aplicacao/servico-consulta-teor-catalogo';
+import { ControladorRegistrosFactuais } from './apresentacao/controlador-registros-factuais';
+import { ServicoRegistrosAnaliseFactual } from './aplicacao/servico-registros-analise-factual';
+import { RegistroAnaliseFactualOrm } from './infraestrutura/registro-analise-factual.orm';
 import { ServicoEquivalenciasPlano } from './aplicacao/servico-equivalencias-plano';
 import { ServicoPreferenciasEquivalencia } from './aplicacao/servico-preferencias-equivalencia';
 import { ControladorEquivalenciasPlano, ControladorPreferenciasEquivalencia } from './apresentacao/controlador-equivalencias-plano';
@@ -63,6 +68,7 @@ const processadoresCompartilhamento = deveExecutarProcessadores() ? [Processador
 @Module({
   imports: [
     TypeOrmModule.forFeature([
+      RegistroAnaliseFactualOrm,
       PlanoAlimentarOrm,
       PlanoAlimentarVersaoOrm,
       PlanoAlimentarRefeicaoOrm,
@@ -102,6 +108,8 @@ const processadoresCompartilhamento = deveExecutarProcessadores() ? [Processador
     ModuloComunicacoes
   ],
   controllers: [
+    ControladorConsultaTeorCatalogo,
+    ControladorRegistrosFactuais,
     ControladorEquivalenciasPlano,
     ControladorPreferenciasEquivalencia,
     ControladorPlanosAlimentares,
@@ -116,6 +124,8 @@ const processadoresCompartilhamento = deveExecutarProcessadores() ? [Processador
     ControladorReceitasNutricionais
   ],
   providers: [
+    ServicoConsultaTeorCatalogo,
+    ServicoRegistrosAnaliseFactual,
     ServicoEquivalenciasPlano,
     ServicoPreferenciasEquivalencia,
     ServicoPlanosAlimentares,

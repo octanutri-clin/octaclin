@@ -1,0 +1,19 @@
+{
+  "baseRemota": "159ced04",
+  "baseLocal": "973b3765",
+  "estado": "delta local não enviado no momento do relatório",
+  "modalidade": "papel textual em subagente runtime, não TOML nativo",
+  "instancia": "/root/food06_m08_ux_a",
+  "ferramentasRevisor": "nenhuma chamada observada",
+  "paciente": "N/A justificado pelo coordenador, sem segunda instância B",
+  "horarios": "não capturados individualmente; data do registro 2026-11-05 America/Sao_Paulo",
+  "evidencias": "brief textual, saídas preservadas em síntese editorial; atividade registrada no runtime",
+  "hashes": {
+    ".codex/agents/octaclin-nutricionista-ux.toml": "6259b40a98e2c49053cbc6adbc0c59d0312b14e191b228ab73de2f2eac53af6d",
+    "docs/agents/ux/reports/FOOD06-M08-B-2026-11-05/consolidado.md": "14890e15448a1ec8985579adc433c46be77f6ab3419b5bbc29f20ba119bce3ad",
+    "docs/agents/ux/reports/FOOD06-M08-B-2026-11-05/paciente.md": "044bdce1819133a6080fbd2fba4bb5b468849324472f1087f851f5dcf49f71f9",
+    "docs/agents/ux/reports/FOOD06-M08-B-2026-11-05/nutricionista.md": "383413e6d813dcf0e4667a80fbe579e916465466df87f8d58a82332431a80310",
+    "docs/agents/ux/reports/FOOD06-M08-B-2026-11-05/brief.md": "cfe664a7824f34f121cdc4bbad3b2031ad510ca94b80f39e6487856c13272d82",
+    "octaclin-web/components/pacientes/relatorio-factual.tsx": "10d4665e5d66f2c6d80490166a3a7656dd35d5ea6749e3080a0b153084fb6ce6"
+  }
+}

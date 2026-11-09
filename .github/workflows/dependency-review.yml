@@ -20,25 +20,26 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
+        with:
+          node-version: '22'
+
+      - name: Derivar licencas da politica versionada
+        id: license-policy
+        run: |
+          node --input-type=module <<'NODE'
+          import { appendFileSync } from 'node:fs';
+          import { licencasParaDependencyReview } from './scripts/validar-licencas.mjs';
+          appendFileSync(process.env.GITHUB_OUTPUT, `allow=${licencasParaDependencyReview().join(',')}\n`);
+          NODE
+
       - name: Revisar dependencias novas ou atualizadas
         uses: actions/dependency-review-action@a1d282b36b6f3519aa1f3fc636f609c47dddb294 # v5.0.0
         with:
           # Politica de vulnerabilidade: critical/high novo nao entra.
           fail-on-severity: high
-          # Espelha docs/governance/politica-licencas.json (lista "bloqueadas").
-          # Alteracoes aqui e la precisam andar juntas.
-          deny-licenses: >-
-            AGPL-3.0-only,
-            AGPL-3.0-or-later,
-            BUSL-1.1,
-            GPL-2.0-only,
-            GPL-2.0-or-later,
-            GPL-3.0-only,
-            GPL-3.0-or-later,
-            SSPL-1.0
-          # A politica da licenca BSD escolhida para node-forge@1.4.2 esta
-          # registrada em docs/governance/politica-licencas.json. O PURL e
-          # fixado na versao; upgrades voltam a exigir revisao.
+          # Permite apenas licenças aprovadas e mantém a exceção específica revisada.
+          allow-licenses: ${{ steps.license-policy.outputs.allow }}
           allow-dependencies-licenses: pkg:npm/node-forge@1.4.2
           # Sem comentario no PR: manteria a necessidade de pull-requests: write.
           comment-summary-in-pr: never

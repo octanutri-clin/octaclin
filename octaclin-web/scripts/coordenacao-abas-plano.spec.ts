@@ -4,7 +4,7 @@ import { CoordenacaoAbasPlano, type CanalAbasPlano, type TravaAbasPlano } from '
 
 const drenar = () => new Promise<void>(resolve => setImmediate(resolve));
 function adiar<T>() { let resolver!: (v: T) => void; const promessa = new Promise<T>(r => { resolver = r; }); return { promessa, resolver }; }
-function ambiente() {
+function ambiente(liberacaoEfetiva?: Promise<void>) {
   let ocupada = false;
   const ouvintes = new Map<string, (m: unknown) => void>();
   const mensagens: unknown[] = [];
@@ -12,7 +12,11 @@ function ambiente() {
     if (ocupada || signal.aborted) return null;
     ocupada = true;
     let liberada = false;
-    return () => { if (!liberada) { liberada = true; ocupada = false; } };
+    return () => {
+      if (liberada) return; liberada = true;
+      if (liberacaoEfetiva) return liberacaoEfetiva.then(() => { ocupada = false; });
+      ocupada = false;
+    };
   } };
   function aba(id: string, opcoes: { conferir?: (s: AbortSignal) => Promise<boolean>; drenar?: () => Promise<void>; trava?: boolean; canal?: boolean } = {}) {
     let conferir = 0; let suspender = 0;
@@ -125,4 +129,42 @@ test('PA07 restauração BFCache começa em consulta e exige retomada explícita
   const c = new CoordenacaoAbasPlano(opcoes);
   await c.iniciar(); assert.equal(c.estado, 'consulta'); assert.equal(c.podeEditar, false); assert.equal(conferencias, 0);
   await c.assumir(); assert.equal(c.podeEditar, true); assert.equal(conferencias, 1); c.encerrar();
+});
+
+
+test('PA07 não publica liberação antes da barreira efetiva nem adquire otimisticamente', async () => {
+  const barreira = adiar<void>(); const a = ambiente(barreira.promessa);
+  const x = a.aba('aba-a'); const y = a.aba('aba-b');
+  await x.c.iniciar(); await y.c.iniciar(); const assumir = y.c.assumir();
+  try {
+    await drenar(); assert.equal(x.c.estado, 'transferindo');
+    assert.equal(y.c.podeEditar, false); assert.equal(y.conferencias(), 0);
+    assert.equal(a.mensagens.some(m => (m as {tipo:string}).tipo === 'liberado'), false);
+    barreira.resolver(); await assumir;
+    assert.equal(x.c.estado, 'consulta'); assert.equal(y.c.podeEditar, true);
+    assert.equal(y.conferencias(), 1);
+  } finally { barreira.resolver(); x.c.encerrar(); y.c.encerrar(); await assumir; }
+});
+
+
+test('PA07 encerramento enquanto release efetivo aguarda não publica ACK tardio', async () => {
+  const barreira = adiar<void>(); const a = ambiente(barreira.promessa);
+  const x = a.aba('aba-a'); const y = a.aba('aba-b');
+  await x.c.iniciar(); await y.c.iniciar(); const assumir = y.c.assumir(); await drenar();
+  x.c.encerrar(); barreira.resolver(); await drenar();
+  assert.equal(a.mensagens.some(m => (m as {tipo:string}).tipo === 'liberado'), false);
+  assert.equal(y.c.podeEditar, false); assert.equal(y.conferencias(), 0);
+  y.c.encerrar(); await assumir;
+});
+
+test('PA07 release rejeitado mantém as duas abas sem escrita e não envia ACK', async () => {
+  let rejeitar!: (erro: Error) => void;
+  const barreira = new Promise<void>((_resolve, reject) => { rejeitar = reject; });
+  const a = ambiente(barreira); const x = a.aba('aba-a'); const y = a.aba('aba-b');
+  await x.c.iniciar(); await y.c.iniciar(); const assumir = y.c.assumir();
+  await drenar(); rejeitar(new Error('Release sintético recusado')); await drenar();
+  assert.equal(x.c.estado, 'reconferir'); assert.equal(x.c.podeEditar, false);
+  assert.equal(y.c.podeEditar, false); assert.equal(y.conferencias(), 0);
+  assert.equal(a.mensagens.some(m => (m as {tipo:string}).tipo === 'liberado'), false);
+  x.c.encerrar(); y.c.encerrar(); await assumir;
 });

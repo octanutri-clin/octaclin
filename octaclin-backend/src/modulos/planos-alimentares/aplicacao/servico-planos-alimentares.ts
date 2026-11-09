@@ -1,3 +1,15 @@
+import { lerEstadoEdicaoPersistida } from './estado-edicao-persistida';
+import {projetarAjudaDietetica} from './projecao-ajuda-dietetica';
+import { ServicoPorcionamentoReceita } from './servico-porcionamento-receita';
+import { ServicoReceitasNutricionais } from './servico-receitas-nutricionais';
+import { compararCenariosFactuais } from '../dominio/previa-dietetica';
+import { validarPreviaMicronutrientes, type EntradaPreviaMicronutrientes, type EntradaConfirmacaoPrevia } from './dtos-previa-micronutrientes';
+import { projetarOrigemContribuicao } from './projecao-origem-contribuicao';
+import { validarContribuicoes } from './dtos-contribuicoes-micronutrientes';
+import { decomporContribuicoesDieteticas } from '../dominio/contribuicoes-dieteticas';
+import { analisarCoberturaDietetica } from '../dominio/cobertura-dietetica';
+import { analisarFontesPorNutriente } from '../dominio/fontes-por-nutriente';
+import type { AnaliseFactualMicronutrientes } from './contrato-analise-micronutrientes';
 import { ServicoEquivalenciasPlano } from './servico-equivalencias-plano';
 import { ordenarEscoposCopia } from './ordenacao-locks-copia';
 import { clonarContextoEquivalenciaParaCopia, resolverEquivalenciasDocumento, assinaturaDependenciasEquivalencia, ContextoEquivalencia, ContextosEquivalencias, validarContextosEquivalencias, ConflitoEquivalenciaEdicao, mesclarContextosEquivalenciaSeguro } from './resolver-equivalencias-edicao';
@@ -159,8 +171,134 @@ export class ServicoPlanosAlimentares {
     private readonly medidasCaseiras: ServicoMedidasCaseiras = new ServicoMedidasCaseiras(executorTenant, criptografia),
     private readonly alimentosPersonalizados: ServicoAlimentosPersonalizados = new ServicoAlimentosPersonalizados(executorTenant, criptografia),
     private readonly gruposSubstituicoes: ServicoGruposSubstituicoes = new ServicoGruposSubstituicoes(executorTenant, criptografia, new FontesGruposSubstituicoes(criptografia)),
+    private readonly porcionamentoReceitas: ServicoPorcionamentoReceita = new ServicoPorcionamentoReceita(executorTenant, new ServicoReceitasNutricionais(executorTenant, criptografia)),
     private readonly equivalencias: ServicoEquivalenciasPlano = new ServicoEquivalenciasPlano(executorTenant,criptografia,new FontesGruposSubstituicoes(criptografia),gruposSubstituicoes,medidasCaseiras)
   ) {}
+
+  async preverMicronutrientes(tenantId: string, pacienteId: string, planoId: string, usuario: UsuarioAutenticado, dados: unknown) {
+    if (usuario.papel !== 'Professional') throw new ForbiddenException('A prévia exige o profissional responsável.');
+    this.garantirPermissao(usuario, 'planos_alimentares.gerenciar');
+    const entrada = this.validarEntradaPrevia(dados, false);
+    return this.executorTenant.executar(tenantId, async gerenciador => {
+      const { resposta } = await this.prepararPreviaMicronutrientes(gerenciador, tenantId, pacienteId, planoId, usuario, entrada, false);
+      return resposta;
+    });
+  }
+
+  async confirmarPreviaMicronutrientes(tenantId: string, pacienteId: string, planoId: string, usuario: UsuarioAutenticado, dados: unknown) {
+    if (usuario.papel !== 'Professional') throw new ForbiddenException('A prévia exige o profissional responsável.');
+    this.garantirPermissao(usuario, 'planos_alimentares.gerenciar');
+    const entrada = this.validarEntradaPrevia(dados, true) as EntradaConfirmacaoPrevia;
+    return this.executorTenant.executar(tenantId, async gerenciador => {
+      const { resposta, plano, rascunho, preparada } = await this.prepararPreviaMicronutrientes(gerenciador, tenantId, pacienteId, planoId, usuario, entrada, true);
+      if (resposta.fingerprint !== entrada.fingerprintEsperado) throw new ConflictException('A prévia mudou. Confira novamente antes de confirmar.');
+      // Uma única transação e o writer editorial existente. Replay recebe conflito
+      // de revisão; não há recibo persistente nem retry automático desta operação.
+      return this.persistirEdicaoPreparada(gerenciador, tenantId, pacienteId, plano, rascunho, preparada, true);
+    });
+  }
+
+  private validarEntradaPrevia(dados: unknown, confirmar: boolean) {
+    try { return validarPreviaMicronutrientes(dados, confirmar); }
+    catch { throw new BadRequestException('Prévia de micronutrientes inválida.'); }
+  }
+
+  private async prepararPreviaMicronutrientes(
+    gerenciador: EntityManager, tenantId: string, pacienteId: string, planoId: string,
+    usuario: UsuarioAutenticado, entrada: EntradaPreviaMicronutrientes, confirmar: boolean
+  ) {
+    const lock = confirmar ? true : 'pessimistic_read';
+    const plano = await this.obterPlanoNoEscopo(gerenciador, tenantId, pacienteId, planoId, usuario, lock);
+    const rascunho = await this.obterRascunhoAtivo(gerenciador, tenantId, plano.id, lock);
+    this.conferirRevisaoEdicao(rascunho, entrada);
+    if ((plano.ativacaoRevisao ?? 0) !== entrada.ativacaoRevisaoEsperada) throw new ConflictException('A ativação mudou. Confira novamente o plano.');
+    const edicao = this.lerEdicao(rascunho);
+    if (edicao.edicaoEstado !== 'materializada' || !edicao.documentoEdicao) throw new ConflictException('Salve e confira um rascunho calculável antes de solicitar a prévia.');
+    let documento = validarDocumentoEdicaoPlano(edicao.documentoEdicao);
+    const { operacao } = entrada;
+    const refeicao = documento.refeicoes.find(r => r.chaveCliente === operacao.refeicaoChave);
+    if (!refeicao) throw new ConflictException('A refeição da prévia mudou. Recarregue o rascunho.');
+    if (operacao.tipo !== 'inserir_receita') {
+      const item = refeicao.itens.find(i => i.chaveCliente === operacao.itemChave);
+      if (!item) throw new ConflictException('O alimento da prévia mudou. Recarregue o rascunho.');
+      item.quantidade = operacao.quantidade;
+      item.unidade = operacao.unidade;
+      item.porcaoGramas = operacao.porcaoGramas;
+      // Intenção explícita em gramas: nenhuma conversão caseira é inferida.
+      item.medidaCaseira = null;
+      if (operacao.tipo === 'substituir_catalogo') {
+        item.alimentoComposicaoId = operacao.alimentoComposicaoId;
+        item.alimentoPersonalizado = null;
+        delete item.nutrientesPor100g;
+        delete item.micronutrientesPor100g;
+        delete item.fonteRotulo;
+      }
+    }
+    const { refeicoes, estados } = await this.obterRefeicoesCalculo(gerenciador, plano, rascunho.id);
+    const aliases = new Map(this.identidadesAtuaisEdicao(rascunho).map(a => [a.chaveCliente, a.identidadeId]));
+    const porIdentidade = new Map(Array.from(estados.entries()).map(([id,e]) => [e.identidade_id, { id, ativa:e.ativa }]));
+    if (refeicoes.length !== documento.refeicoes.length || aliases.size !== documento.refeicoes.length || documento.refeicoes.some(r => !porIdentidade.has(aliases.get(r.chaveCliente)!))) {
+      throw new ConflictException('Identidades das refeições indisponíveis. Recarregue o rascunho.');
+    }
+    const antes: EntradaPlanoCombinado = {planoId:plano.id,ativo:plano.ativoParaPaciente === true,selecionado:true,refeicoes:[]};
+    for (const r of documento.refeicoes) {
+      const identidadeId = aliases.get(r.chaveCliente)!;
+      const estado = porIdentidade.get(identidadeId)!;
+      const registros = await gerenciador.getRepository(PlanoAlimentarItemOrm).find({where:{tenantId,refeicaoId:estado.id},select:{id:true,composicaoSnapshotCriptografada:true},order:{ordem:'ASC',id:'ASC'},take:201});
+      if (registros.length !== r.itens.length || registros.length > 200) throw new ConflictException('Materialização do rascunho indisponível.');
+      const itens = registros.map(i => {
+        try { return this.lerJsonCriptografado<unknown>(i.composicaoSnapshotCriptografada); }
+        catch { throw new ConflictException('Composição do rascunho indisponível.'); }
+      });
+      antes.refeicoes.push({identidadeId,ativa:estado.ativa,selecionada:true,itens});
+    }
+    let receitaFingerprint: string | undefined;
+    if (operacao.tipo === 'inserir_receita') {
+      // Paciente -> plano -> rascunho -> receita (read). Reutiliza o reader e
+      // porcionamento FOOD07 no mesmo EntityManager, sem transação aninhada.
+      const receita = await this.porcionamentoReceitas.preverNaTransacao(gerenciador, tenantId, operacao.receitaId, usuario, {versaoEsperada:operacao.receitaVersaoEsperada,porcoesDesejadas:operacao.porcoesDesejadas});
+      if (receita.estado !== 'calculavel') throw new UnprocessableEntityException('Não foi possível calcular as porções da receita. Confira a base e o rendimento.');
+      receitaFingerprint = receita.fingerprint;
+      const chave = createHash('sha256').update(this.serializarEstavel({rascunhoId:rascunho.id,revisao:rascunho.rascunhoRevisao,operacao})).digest('hex');
+      const usadas = new Set(documento.refeicoes.flatMap(r => r.itens.flatMap(i => [i.chaveCliente,...(i.substituicoes??[]).map(a=>a.chaveCliente)])));
+      const novaChave = (sufixo: string) => {const id=`m04-${chave}-${sufixo}`;if(usadas.has(id))throw new ConflictException('Identidades da receita indisponíveis. Confira novamente o rascunho.');usadas.add(id);return id;};
+      const { itens } = receita;
+      refeicao.itens.push(...itens.map((i,indice) => ({...i,chaveCliente:novaChave(String(indice)),substituicoes:(i.substituicoes??[]).map((s,sub) => ({...s,chaveCliente:novaChave(`${indice}-${sub}`),liberadaParaPaciente:false,preferida:false}))})));
+      // Limites editoriais/bytes e contrato legado também valem para expansão.
+      try { documento = validarDocumentoEdicaoPlano(documento); }
+      catch { throw new UnprocessableEntityException('A receita excede os limites ou contém dados incompatíveis com o rascunho.'); }
+    }
+    const preparada = await this.prepararEdicaoRascunho(gerenciador, tenantId, pacienteId, usuario, plano, rascunho, documento);
+    if (validateSync(preparada.clinico, {whitelist:true,forbidNonWhitelisted:true}).length) throw new UnprocessableEntityException('Rascunho não calculável. Confira os dados antes da prévia.');
+    this.validarDadosClinicosRascunho(preparada.clinico);
+    const estrutura = await this.resolverEstrutura(gerenciador, preparada.clinico, preparada.composicoesCustom, preparada.provenienciasGrupo, preparada.composicoesCatalogoGrupo, preparada.materiaisEquivalencia);
+    if (operacao.tipo === 'substituir_catalogo') {
+      const indiceRefeicao = documento.refeicoes.findIndex(r => r.chaveCliente === operacao.refeicaoChave);
+      const indiceItem = documento.refeicoes[indiceRefeicao].itens.findIndex(i => i.chaveCliente === operacao.itemChave);
+      documento.refeicoes[indiceRefeicao].itens[indiceItem].descricao = (estrutura.refeicoes[indiceRefeicao].itens[indiceItem] as ItemPlanoAlimentar & {snapshot:SnapshotComposicao}).snapshot.descricao;
+    }
+    try { validarEstruturaPlano(estrutura); }
+    catch { throw new UnprocessableEntityException('Estrutura nutricional indisponível para a prévia.'); }
+    const depois: EntradaPlanoCombinado = {...antes,refeicoes:estrutura.refeicoes.map((r,i) => ({...antes.refeicoes[i],itens:r.itens.map(item => (item as ItemPlanoAlimentar & {snapshot:SnapshotComposicao}).snapshot)}))};
+    let comparacao: ReturnType<typeof compararCenariosFactuais>;
+    try { comparacao = compararCenariosFactuais([antes], [depois]); }
+    catch { throw new UnprocessableEntityException('Limite técnico de precisão nutricional excedido.'); }
+    // Hash de parâmetros, fatos autorizados e marcadores opacos de resolução das
+    // equivalências; não inclui contexto cifrado ou proveniência clínica.
+    const fato = (s:SnapshotComposicao) => ({origem:s.origem,alimentoComposicaoId:s.alimentoComposicaoId,
+      fonte:s.fonte ? {codigo:s.fonte.codigo,versao:s.fonte.versao,hashConteudo:s.fonte.hashConteudo,esquemaVersao:s.fonte.esquemaVersao} : undefined,
+      nutrientesPor100g:s.nutrientesPor100g,nutrientesPorcao:s.nutrientesPorcao,micronutrientes:s.micronutrientes});
+    const composicoes = estrutura.refeicoes.map(r => r.itens.map(i => ({principal:fato((i as ItemPlanoAlimentar & {snapshot:SnapshotComposicao}).snapshot),alternativas:i.substituicoes?.map(a => fato((a as AlternativaPlanoAlimentar & {snapshot:SnapshotComposicao}).snapshot))})));
+    const equivalencias=Object.entries(preparada.contextosEquivalencias).map(([chave,c])=>({chave,marcador:c.fingerprintResolucao})).sort((a,b)=>a.chave<b.chave?-1:a.chave>b.chave?1:0);
+    const anteriores=this.lerContextosEquivalencias(rascunho);
+    const atuais=Object.keys(anteriores).length?await this.projetarEquivalenciasAtuais(gerenciador,rascunho,usuario,anteriores):{};
+    const fontesAtuais=Object.entries(atuais).map(([chave,c])=>({chave,marcador:c.fingerprintResolucao})).sort((a,b)=>a.chave<b.chave?-1:a.chave>b.chave?1:0);
+    const fingerprint = createHash('sha256').update(this.serializarEstavel({motor:'food06-previa-api-v1',tenantId,pacienteId,planoId,usuarioId:usuario.usuarioId,rascunhoId:rascunho.id,revisao:rascunho.rascunhoRevisao,apresentacaoRevisao:rascunho.apresentacaoRevisao ?? 0,ativacaoRevisao:plano.ativacaoRevisao ?? 0,operacao,...(receitaFingerprint?{receitaFingerprint}:{}),comparacao,composicoes,equivalencias,fontesAtuais})).digest('hex');
+    const resposta = {schemaVersao:1 as const,motorVersao:'food06-previa-api-v1' as const,escopo:'rascunho_refeicoes_ativas' as const,
+      rascunhoId:rascunho.id,rascunhoRevisao:rascunho.rascunhoRevisao,ativacaoRevisao:plano.ativacaoRevisao ?? 0,
+      fingerprint,comparacao,ajuda:projetarAjudaDietetica(),avisos:['fontes_resolvidas_como_no_salvamento']};
+    return {resposta,plano,rascunho,preparada};
+  }
 
   async obterSelecaoCalculo(tenantId: string, pacienteId: string, planoId: string, usuario: UsuarioAutenticado) {
     this.garantirPapelProfissional(usuario);
@@ -176,7 +314,58 @@ export class ServicoPlanosAlimentares {
     });
   }
 
+  async detalharMicronutrientes(tenantId: string, pacienteId: string, usuario: UsuarioAutenticado, dados: unknown) {
+    this.garantirPapelProfissional(usuario);
+    this.garantirPermissao(usuario, 'planos_alimentares.ler');
+    let entrada: ReturnType<typeof validarContribuicoes>;
+    try { entrada = validarContribuicoes(dados); }
+    catch { throw new BadRequestException('Detalhamento de micronutrientes inválido.'); }
+    return this.executarCalculoCombinado(tenantId, pacienteId, usuario, {selecoes:entrada.selecoes}, (planos, detalhes) => {
+      const d = decomporContribuicoesDieteticas(planos, entrada.codigo, {inicio:(entrada.pagina-1)*entrada.limite,limite:entrada.limite,ordem:entrada.ordem});
+      return { schemaVersao:1 as const, motorVersao:'food06-contribuicoes-v1' as const,
+        codigo:entrada.codigo, pagina:entrada.pagina, limite:entrada.limite, ordem:entrada.ordem??'plano', total:d.cobertura.contagens.incluidos,
+        cobertura:d.cobertura, comparacoes:{estado:'indisponivel',motivo:'referencias_nao_habilitadas'},
+        refeicoes:d.refeicoes.map(r => {
+          const meta = detalhes.get(r.planoId + ':' + r.identidadeRefeicao)!;
+          return {planoId:r.planoId,identidadeRefeicao:r.identidadeRefeicao,refeicaoId:meta.refeicaoId,versaoNumero:meta.versaoNumero,
+            nome:this.criptografia.descriptografar(meta.nome), cobertura:r.cobertura,
+            ...(r.participacaoSelecaoPercentual !== undefined ? {participacaoSelecaoPercentual:r.participacaoSelecaoPercentual} : {}),
+            itens:r.itens.map(i => {
+              const item = meta.itens[i.indiceItem];
+              const snapshot=planos.find(p=>p.planoId===r.planoId)?.refeicoes.find(m=>m.identidadeId===r.identidadeRefeicao)?.itens[i.indiceItem];
+              return {itemId:item.id, composicao:projetarOrigemContribuicao(snapshot),
+                ...(i.posicaoSelecao!==undefined?{posicaoSelecao:i.posicaoSelecao}:{}), descricao:this.criptografia.descriptografar(item.descricaoCriptografada),
+                quantidade:item.quantidade,unidade:item.unidade,porcaoGramas:item.porcaoGramas,
+                cobertura:i.cobertura,
+                ...(i.participacaoSelecaoPercentual !== undefined ? {participacaoSelecaoPercentual:i.participacaoSelecaoPercentual} : {}),
+                ...(i.participacaoRefeicaoPercentual !== undefined ? {participacaoRefeicaoPercentual:i.participacaoRefeicaoPercentual} : {})};
+            })};
+        })};
+    }, true);
+  }
+
+  async analisarMicronutrientes(tenantId: string, pacienteId: string, usuario: UsuarioAutenticado, dados: CalculoCombinadoDto): Promise<AnaliseFactualMicronutrientes> {
+    return this.executarCalculoCombinado(tenantId, pacienteId, usuario, dados, planos => ({
+      schemaVersao: 1 as const,
+      motorVersao: 'food06-factual-v1' as const,
+      calculo: calcularNutrientesCombinados(planos),
+      cobertura: analisarCoberturaDietetica(planos),
+      fontes: analisarFontesPorNutriente(planos),
+      comparacoes: { estado: 'indisponivel' as const, motivo: 'referencias_nao_habilitadas' as const },
+      ajuda:projetarAjudaDietetica()
+    }));
+  }
+
   async calcularCombinado(tenantId: string, pacienteId: string, usuario: UsuarioAutenticado, dados: CalculoCombinadoDto) {
+    return this.executarCalculoCombinado(tenantId, pacienteId, usuario, dados, calcularNutrientesCombinados);
+  }
+
+  /** Uma única fronteira transacional para PA06 e projeções factuais autorizadas. */
+  private async executarCalculoCombinado<T extends object>(
+    tenantId: string, pacienteId: string, usuario: UsuarioAutenticado, dados: CalculoCombinadoDto,
+    projetar: (planos: EntradaPlanoCombinado[], detalhes: Map<string, {nome:Buffer;refeicaoId:string;versaoNumero:number;itens:PlanoAlimentarItemOrm[]}>) => T,
+    carregarDetalhes = false
+  ) {
     this.garantirPapelProfissional(usuario);
     this.garantirPermissao(usuario, 'planos_alimentares.ler');
     let entrada: CalculoCombinadoDto;
@@ -191,6 +380,7 @@ export class ServicoPlanosAlimentares {
         planos.push({plano,selecao});
       }
       const efetivos: EntradaPlanoCombinado[] = [];
+      const detalhes = new Map<string, {nome:Buffer;refeicaoId:string;versaoNumero:number;itens:PlanoAlimentarItemOrm[]}>();
       let quantidadeItens = 0;
       for (const {plano,selecao} of planos) {
         if (plano.versaoPublicadaAtualId !== selecao.versaoIdEsperada || (plano.ativacaoRevisao ?? 0) !== selecao.ativacaoRevisaoEsperada) {
@@ -208,8 +398,9 @@ export class ServicoPlanosAlimentares {
           const itens: unknown[] = [];
           if (entradaPlano.ativo && selecionada && estado.ativa) {
             const registros = await gerenciador.getRepository(PlanoAlimentarItemOrm).find({
-              where:{tenantId,refeicaoId:r.id},select:{id:true,composicaoSnapshotCriptografada:true},take:10001
+              where:{tenantId,refeicaoId:r.id},select:{id:true,composicaoSnapshotCriptografada:true,...(carregarDetalhes ? {descricaoCriptografada:true,quantidade:true,unidade:true,porcaoGramas:true} : {})},order:{ordem:'ASC',id:'ASC'},take:10001
             });
+            if (carregarDetalhes) detalhes.set(plano.id + ':' + estado.identidade_id,{nome:r.nomeCriptografado,refeicaoId:r.id,versaoNumero:versao.numero,itens:registros});
             quantidadeItens += registros.length;
             if (quantidadeItens > 10000) throw new UnprocessableEntityException('Limite de itens do cálculo combinado excedido.');
             for (const item of registros) {
@@ -221,7 +412,7 @@ export class ServicoPlanosAlimentares {
         }
         efetivos.push(entradaPlano);
       }
-      try { return { ...calcularNutrientesCombinados(efetivos), calculadoEm: new Date().toISOString(),
+      try { return { ...projetar(efetivos, detalhes), calculadoEm: new Date().toISOString(),
         publicacoes:planos.map(({plano,selecao})=>({planoId:plano.id,versaoId:selecao.versaoIdEsperada,ativacaoRevisao:selecao.ativacaoRevisaoEsperada})) }; }
       catch { throw new UnprocessableEntityException('Limite técnico de precisão nutricional excedido.'); }
     });
@@ -238,7 +429,7 @@ export class ServicoPlanosAlimentares {
 
   private async obterRefeicoesCalculo(gerenciador: EntityManager, plano: PlanoAlimentarOrm, versaoId: string) {
     const refeicoes = await gerenciador.getRepository(PlanoAlimentarRefeicaoOrm).find({
-      where:{tenantId:plano.tenantId,versaoId},select:{id:true,nomeCriptografado:true,ordem:true},order:{ordem:'ASC'},take:51
+      where:{tenantId:plano.tenantId,versaoId},select:{id:true,nomeCriptografado:true,ordem:true},order:{ordem:'ASC',id:'ASC'},take:51
     });
     if (refeicoes.length > 50) throw new UnprocessableEntityException('Limite de refeições do cálculo combinado excedido.');
     const linhas = await lerEstadosRefeicoes(gerenciador,plano.tenantId,plano.id,versaoId);
@@ -763,6 +954,17 @@ export class ServicoPlanosAlimentares {
       const plano = await this.obterPlanoNoEscopo(gerenciador, tenantId, pacienteId, planoId, usuario, true);
       const rascunho = await this.obterRascunhoAtivo(gerenciador, tenantId, plano.id, true);
       this.conferirRevisaoEdicao(rascunho, dados);
+      const preparada = await this.prepararEdicaoRascunho(gerenciador, tenantId, pacienteId, usuario, plano, rascunho, documento, dados.copiasEquivalencia);
+      const resultado = await this.persistirEdicaoPreparada(gerenciador, tenantId, pacienteId, plano, rascunho, preparada);
+      if(dados.copiasEquivalencia?.length) await registrarAuditoriaNaTransacao(gerenciador,{tenantId,usuarioId:usuario.usuarioId,acao:'planos_alimentares.equivalencia_copiar',recursoTipo:'plano_alimentar_versao',recursoId:rascunho.id,metadados:{quantidadeEquivalencias:dados.copiasEquivalencia.length,versaoDestino:rascunho.numero}});
+      return resultado;
+    });
+  }
+
+  private async prepararEdicaoRascunho(
+    gerenciador: EntityManager, tenantId: string, pacienteId: string, usuario: UsuarioAutenticado,
+    plano: PlanoAlimentarOrm, rascunho: PlanoAlimentarVersaoOrm, documento: DocumentoEdicaoPlano, copiasEquivalencia?: SalvarEdicaoPlanoDto['copiasEquivalencia']
+  ) {
       const estadoAnterior = this.lerEdicao(rascunho);
       if (estadoAnterior.edicaoEstado === 'indisponivel') throw new ConflictException('Snapshot de edição indisponível. Reconfira o rascunho.');
       const anteriorEdicao=estadoAnterior.documentoEdicao??null;
@@ -774,7 +976,7 @@ export class ServicoPlanosAlimentares {
           if(!anterior)throw new BadRequestException('Novas alternativas de equivalência começam sem liberação ou preferência. Configure após confirmar.');
         }
       }
-      const equivalenciasAnteriores=await this.resolverCopiasEquivalencia(gerenciador,tenantId,pacienteId,plano,rascunho,usuario,documento,dados.copiasEquivalencia);
+      const equivalenciasAnteriores=await this.resolverCopiasEquivalencia(gerenciador,tenantId,pacienteId,plano,rascunho,usuario,documento,copiasEquivalencia);
       for(const refeicao of documento.refeicoes)for(const item of refeicao.itens)for(const alternativa of item.substituicoes??[]){
         const intencao=alternativa.equivalencia;
         const anterior=equivalenciasAnteriores[alternativa.chaveCliente];
@@ -786,7 +988,7 @@ export class ServicoPlanosAlimentares {
           &&(ativandoLiberacao||ativandoPreferencia))
           throw new BadRequestException('Resolva e salve a revisão da equivalência antes de liberar ou marcar preferência.');
       }
-      for(const referencia of dados.copiasEquivalencia??[]){
+      for(const referencia of copiasEquivalencia??[]){
         const alternativa=documento.refeicoes.flatMap(refeicao=>refeicao.itens
           .filter(item=>item.chaveCliente===referencia.itemChaveDestino)
           .flatMap(item=>item.substituicoes??[]))
@@ -895,7 +1097,7 @@ export class ServicoPlanosAlimentares {
           // retirada, o resolver mantém o snapshot; se mudou, marca pendente.
           dependencias:async(i,a,c)=>assinaturaDependenciasEquivalencia(i,a,await fatosAtuais(i),await fatosAtuais(a,i.chaveCliente),c.nutriente,c.politica,c.dependenciasVersao??1),
           prever:async(d,i,a,c)=>{
-            const previa=await this.equivalencias.preverNaTransacao(gerenciador,tenantId,pacienteId,planoId,usuario,{versaoId:rascunho.id,rascunhoRevisaoEsperada:rascunho.rascunhoRevisao??0,documentoEdicao:d,itemChave:i.chaveCliente,nutriente:c.nutriente!,politica:c.politica!,alternativas:[a],...(c.acao==='recalcular'?{recalculoExplicitoChaves:[a.chaveCliente]}:{})});
+            const previa=await this.equivalencias.preverNaTransacao(gerenciador,tenantId,pacienteId,plano.id,usuario,{versaoId:rascunho.id,rascunhoRevisaoEsperada:rascunho.rascunhoRevisao??0,documentoEdicao:d,itemChave:i.chaveCliente,nutriente:c.nutriente!,politica:c.politica!,alternativas:[a],...(c.acao==='recalcular'?{recalculoExplicitoChaves:[a.chaveCliente]}:{})});
             const linha=previa.alternativas[0];if(!linha.alimento||!linha.fingerprint)throw new ConflitoEquivalenciaEdicao();
             const pi=localizar(i.chaveCliente),ai=(i.substituicoes??[]).findIndex(x=>x.chaveCliente===a.chaveCliente),pa=pi.substituicoes![ai];
             const snapshotPrincipal=(await this.resolverItem(gerenciador,pi,composicoesCustom.get(pi),composicoesCatalogoGrupo.get(pi))).snapshot;
@@ -923,6 +1125,16 @@ export class ServicoPlanosAlimentares {
         }}
       }
       await this.validarReferenciasEdicao(gerenciador, tenantId, pacienteId, documento, catalogosGrupos, contextosEquivalencias);
+      return {documento,clinico,contextosCustom,contextosMedidas,catalogosGrupos,composicoesCustom,provenienciasGrupo,composicoesCatalogoGrupo,contextosEquivalencias,materiaisEquivalencia};
+  }
+
+  private async persistirEdicaoPreparada(
+    gerenciador: EntityManager, tenantId: string, pacienteId: string, plano: PlanoAlimentarOrm,
+    rascunho: PlanoAlimentarVersaoOrm,
+    preparada: Awaited<ReturnType<ServicoPlanosAlimentares['prepararEdicaoRascunho']>>,
+    exigirMaterializacao = false
+  ) {
+      const {documento,clinico,contextosCustom,contextosMedidas,catalogosGrupos,composicoesCustom,provenienciasGrupo,composicoesCatalogoGrupo,contextosEquivalencias,materiaisEquivalencia}=preparada;
       const identidades = await this.prepararIdentidadesEdicao(gerenciador, plano, rascunho, documento);
       let materializada = false;
       if (!validateSync(clinico, { whitelist: true, forbidNonWhitelisted: true }).length && this.lerApresentacao(rascunho).apresentacaoEstado !== 'indisponivel') {
@@ -935,6 +1147,7 @@ export class ServicoPlanosAlimentares {
           if (!(erro instanceof BadRequestException)) throw erro;
         }
       }
+      if(exigirMaterializacao&&!materializada)throw new UnprocessableEntityException('A alteração não pôde ser materializada. Confira o rascunho.');
       rascunho.edicaoSnapshotCriptografado = this.criptografia.criptografar(serializarSnapshotEdicaoGrupos(documento, catalogosGrupos, contextosEquivalencias));
       rascunho.alimentosPersonalizadosSnapshotCriptografado = Object.keys(contextosCustom).length ? this.criptografia.criptografar(JSON.stringify({ schemaVersao: 1, contextos: contextosCustom })) : null;
       rascunho.medidasCaseirasSnapshotCriptografado = Object.keys(contextosMedidas).length ? this.criptografia.criptografar(JSON.stringify({schemaVersao:1,contextos:contextosMedidas})) : null;
@@ -945,13 +1158,7 @@ export class ServicoPlanosAlimentares {
       rascunho.revisadaPorUsuarioId = null;
       rascunho.hashConteudo = null;
       await gerenciador.getRepository(PlanoAlimentarVersaoOrm).save(rascunho);
-      if(dados.copiasEquivalencia?.length)await registrarAuditoriaNaTransacao(gerenciador,{
-        tenantId,usuarioId:usuario.usuarioId,acao:'planos_alimentares.equivalencia_copiar',
-        recursoTipo:'plano_alimentar_versao',recursoId:rascunho.id,
-        metadados:{quantidadeEquivalencias:dados.copiasEquivalencia.length,versaoDestino:rascunho.numero}
-      });
       return this.montarVersao(gerenciador, rascunho, true);
-    });
   }
 
   private lerContextosEquivalencias(versao:PlanoAlimentarVersaoOrm):ContextosEquivalencias {
@@ -1696,10 +1903,10 @@ export class ServicoPlanosAlimentares {
     return plano;
   }
 
-  private async obterRascunhoAtivo(gerenciador: EntityManager, tenantId: string, planoId: string, bloquear = false) {
+  private async obterRascunhoAtivo(gerenciador: EntityManager, tenantId: string, planoId: string, bloquear: boolean | 'pessimistic_read' = false) {
     const rascunho = await gerenciador.getRepository(PlanoAlimentarVersaoOrm).findOne({
       where: { tenantId, planoId, publicadaEm: IsNull(), descartadaEm: IsNull() },
-      ...(bloquear ? { lock: { mode: 'pessimistic_write' as const } } : {})
+      ...(bloquear ? { lock: { mode: bloquear === 'pessimistic_read' ? 'pessimistic_read' as const : 'pessimistic_write' as const } } : {})
     });
     if (!rascunho) throw new NotFoundException('Rascunho do plano alimentar nao encontrado.');
     return rascunho;
@@ -2560,13 +2767,7 @@ export class ServicoPlanosAlimentares {
     edicaoEstado: 'legado' | 'pendente' | 'materializada' | 'indisponivel';
     documentoEdicao?: DocumentoEdicaoPlano;
   } {
-    if (!versao.edicaoSnapshotCriptografado) return {
-      edicaoEstado: versao.edicaoProtegida && versao.edicaoMaterializadaRevisao !== versao.rascunhoRevisao ? 'indisponivel' : 'legado'
-    };
-    try {
-      const documentoEdicao = lerSnapshotEdicaoGrupos(this.lerJsonCriptografado(versao.edicaoSnapshotCriptografado)).documento;
-      return { documentoEdicao, edicaoEstado: versao.edicaoMaterializadaRevisao === versao.rascunhoRevisao ? 'materializada' : 'pendente' };
-    } catch { return { edicaoEstado: 'indisponivel' }; }
+    return lerEstadoEdicaoPersistida(versao, valor => this.criptografia.descriptografar(valor));
   }
 
   private lerApresentacao(versao: PlanoAlimentarVersaoOrm) {

@@ -1,6 +1,95 @@
 # OctaClin - Status atual do projeto
 
-Atualizado em 2026-10-30 após integração da FOOD07; registros anteriores preservados.
+**FOOD06 — vigente: seleção M11 integrada à prévia M04, PR #455 Draft.**
+Consulta preenche proposta em gramas, sem alterar plano antes da confirmação.
+46browser/180serviço/150BFF PASS; lint/typecheck/linguagem/buildNode22 PASS.
+R4 estática e UX delimitadas favoráveis. M11 PARCIAL,50%administrativos.
+CI da basef9c35427:22SUCCESS/1SBOMSKIPPED; novo CI pendente.
+Direitos/DRI/G06 BLOCKED e M12 pendente. Sem operações externas.
+[Contrato, limites e próximo passo](tasks/food06-m11-previa-editor.md).
+Checkpoints abaixo são históricos.
+
+**FOOD06 — histórico: consulta factual M11, PR #455 Draft.** Interface profissional
+integrada à API/BFF, sem individualização ou escrita no plano. Browser74PASS/
+6PDFSKIPPED,20cenários novos PASS;150BFFPASS e lint integral0erros/71avisos.
+M11 PARCIAL,50% administrativos, sem nova melhoria integralmente encerrada.
+Build/typecheck isolados Node22 PASS; authz em execução e CI do delta pendente.
+Direitos/DRI e G06 BLOCKED; prévia/aplicação e M12 ainda pendentes.
+[Evidências, limites e próximo passo](tasks/food06-m11-interface-catalogo.md).
+Sem merge/deploy/migrations externas. Checkpoints abaixo são históricos.
+
+**FOOD06 — histórico: retomada M10-C2 em 2026-11-05, PR #455 Draft.** O incremento local
+estende a comparação factual do histórico a planejamento, composição/fonte,
+referência, contexto e cobertura por nutriente, projetando apenas estados e sem
+hashes/causalidade. Unitários backend 4/4, PostgreSQL descartável/RLS 41/41,
+contratos Web 69/69, Playwright desktop/mobile 2/2, typechecks e ESLint afetado
+PASS com Node 22.21.1. O delta ainda não foi enviado. Builds backend/Web, scanner
+local e diff-check passaram; CI/scanners do novo HEAD e revisão R4 independente
+final estão pendentes. M10 permanece PARCIAL; direitos DRI/G06 BLOCKED.
+Sem merge, deploy ou migrations externas. Evidências em
+[`tasks/food06-m10-historico.md`](tasks/food06-m10-historico.md).
+
+**FOOD06 — histórico: API/BFF de registros factuais M05/M07.**
+[Contrato/handoff](tasks/food06-api-registros-factuais.md): quatro POSTs protegidos,
+projeções allowlist e paginação; P2 caixa corrigido com RED/GREEN.42HTTP/projeções,
+101BFF e61PG PASS; R4 delimitada sem achados pendentes. Builds/typechecks Node22 PASS; authz completa e CI próprio em
+validação. M05/M07 parciais;37,5%,1concluída/7parciais/4pendentes.
+Contexto clínico/UI pendentes; direitos/DRI/G06 BLOCKED. Sem operações externas.
+
+**FOOD06 — histórico: carregamento DB de versão salva M05/M07.**
+[Contrato/handoff](tasks/food06-fonte-versao.md): origem/revisão exatas sob lock,
+materialização atual, seleção/ON-OFF explícitos e confirmação cifrada v2.
+170focados/60PG PASS;4.064backendPASS/217SKIPPED, R4 independente delimitada favorável.
+API/BFF/UI e contexto clínico integrados ainda pendentes;37,5% administrativos,
+1concluída/7parciais/4pendentes. Novo CI pendente. Direitos/G06 BLOCKED.
+Downgrade de código anterior não lê v2; gate operacional separado. Sem operações externas.
+
+**FOOD06 — histórico: construtor M05/M07 de envelope factual em memória.**
+[Contrato/handoff](tasks/food06-construtor-registro-factual.md): marcadores derivados,
+projeção mínima e fatos congelados preservados;2P2 corrigidos com TDD e re-revisão
+independente favorável.115focados/4.002backend PASS,180SKIPPED; build/typecheck
+Node22PASS. Novo CI pendente. Base d8d63d62 com22SUCCESS/ProvenanceSKIPPED.
+Não é registro durável: persistência cifrada, serviço transacional, PG/RLS/API/UI
+pendentes.37,5% administrativos;1/12encerrada,7parciais/4pendentes. Direitos/G06
+BLOCKED; sem merge/deploy/migrations externas. Checkpoints abaixo são históricos.
+
+**FOOD06 — histórico: fundamento M07, comparação de versões.**
+[Contrato, execução e limites](tasks/food06-comparacao-versoes-dominio.md):39novos
+unitários/83focados e3.970backend PASS,180SKIPPED; Node22/build/typecheck e R4
+delimitada favoráveis. Sem API/UI/registro novo; novo CI pendente. Baseb9ed65bc
+concluiu23checks:22SUCCESS e Provenance do SBOM SKIPPED. M09 técnica encerrada;
+[progresso](tasks/progresso-food06.md)37,5%,1/12encerrada,7parciais/4pendentes.
+Direitos/DRI/G06 BLOCKED; sem merge/deploy/migrations externas. Histórico abaixo
+não representa os gates atuais.
+
+**FOOD06 — histórico PA07:** [handoff](tasks/food06-pa07-release.md).
+Fragilidade reproduzida: ACK podia preceder release efetivo. Corrigida com
+72unitários/4browser controlados/build Node22PASS e revisão independente delimitada.
+Matriz final162/162PASS, zero skipped; CI do novo delta pendente.29,2%
+administrativos,0/12 encerradas.
+Sem merge/deploy/migrations externas; direitos/G06 BLOCKED. Checkpoints abaixo
+preservam o histórico e não são o estado vigente da regressão.
+
+**FOOD06 — checkpoint M09 (ajuda explicativa):**
+[Execução/handoff](tasks/food06-interface-ajuda.md): conteúdo próprio versionado,
+fonte NIH identificada, sete tópicos recolhíveis na tabela e nas prévias, sem
+habilitar referências clínicas. Backend3.931PASS/180SKIPPED, Web61PASS;
+8browser M09PASS; matriz157PASS/1FAIL PA07, isolado6PASS, suíte PA07 posterior
+61PASS/1FAIL. Regressão intermitente em investigação; CI do delta pendente. CI completo da basec949821b PASS,
+incluindo Demo e PRGate.29,2% administrativos,0/12 encerradas; direitos/G06
+BLOCKED. Sem merge/deploy/migrations externas. Blocos anteriores são históricos.
+
+**Checkpoint histórico FOOD06/M02:** interface de contribuições M02 em validação na #455,
+base992fee05 com CI aprovado. [Progresso](tasks/progresso-food06.md):25% estimados,
+0/12 melhorias encerradas; [execução da interface](tasks/food06-interface-contribuicoes.md).
+Os checkpoints anteriores abaixo preservam a história e não encerram M01–M12.
+
+**FOOD06 — checkpoint histórico de consolidação:** PR #455 reuniu os incrementos
+#456–#459, sem merge na main. Auditoria Mobile e CI consolidado foram resolvidos
+antes da API M02; [evidências e limites](tasks/food06-consolidacao.md).
+As descrições de PRs separadas abaixo são o histórico da construção incremental.
+
+Atualizado em 2026-10-31 durante o desenvolvimento isolado da FOOD06; histórico preservado.
 
 ## Estado atual
 
@@ -15,12 +104,30 @@ Atualizado em 2026-10-30 após integração da FOOD07; registros anteriores pres
   produção. Neon, schema/ledger 1078/1079, Render, backup/rollback e deploy
   continuam reservados à etapa operacional após o retorno do proprietário e
   autorização específica. Nenhuma migration externa é inferida do merge.
-- **Próximos planejamentos:** PR #454, Draft, propõe FOOD06 primeiro (fontes,
-  direitos, população e contrato de dados) e FOOD08 separadamente (publicação,
-  conteúdo, privacidade e moderação). Não há autorização de implementação para
-  essas fases neste registro; as ratificações e direitos listados no plano
-  continuam pendentes. Consulte
-  `docs/pos-320/05_Plano_Sequencia_FOOD06_FOOD08_2026-10-30.md`.
+- **FOOD06 — desenvolvimento técnico autorizado na PR #455:** CL01–CL08 e quadro
+  adulto DRI ratificados pelo proprietário/equipe clínica em 2026-10-31. Núcleo
+  matemático T03-A isolado; M01–M12 obrigatórias aprovadas e planejadas em ondas.
+  PR #456 Draft, dependente da #455: cobertura, explicações e fundamento puro de
+  contexto, sem tabela clínica, rota ou interface. Execução e revisão delimitadas
+  em `tasks/execucao-pos-320-food06-a1.md` e
+  `tasks/execucao-pos-320-food06-contexto.md`. UX A independente registrada;
+  UX B/C e R4 integral de todas as ondas ainda pendentes. Incremento factual
+  R4 separado na PR #457, dependente da #456: serviço/BFF reutilizam PA06;
+  Backend/Web/PostgreSQL/RLS de código80763589 aprovados no CI; Demo smoke
+  em execução e auditoria Mobile FAIL.
+  Sem referências científicas habilitadas. Registro: `tasks/food06-integracao-factual.md`.
+  Interface factual em branch `feat/food06-tabela-factual`, base6317a0c0/#457:
+  tabela sob demanda, UX B/C e revisão independente delimitadas;32 Playwright,
+  24 testes de seleção/modelo/cliente e27 scripts authz locais aprovados.
+  CI b4ccc2dd: Backend/Web/scanners PASS; Mobile FAIL; Demo em execução na última consulta.
+  Execução em `tasks/food06-interface-factual.md`. Fundamento M02 em branch própria
+  `feat/food06-contribuicoes-dominio`: decomposição interna PA06, sem API/UI;
+  `tasks/food06-contribuicoes-dominio.md` registra provas e pendências de integração.
+  Direitos
+  continuam bloqueando T03-B/integração assistencial. Evidências e limitações de
+  ferramentas em `tasks/execucao-pos-320-food06.md`; plano em
+  `tasks/plan-pos-320-food06.md`. FOOD08 permanece planejamento separado, sujeito
+  a decisões de publicação, conteúdo, privacidade e moderação; sem implementação.
 - Fase 316 continua em stand-by. O NO-GO da TBCA não muda; manter TACO, USDA e
   IBGE conforme decisão registrada.
 

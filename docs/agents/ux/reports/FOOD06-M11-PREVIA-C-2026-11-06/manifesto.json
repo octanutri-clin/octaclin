@@ -1,0 +1,28 @@
+{
+  "base": "f9c354275a0ce74ac46ab4b155970564838cceb2",
+  "data": "2026-11-06",
+  "agente": "/root/food06_contexto_ux_a",
+  "etapas": [
+    "A proposta",
+    "B textual mediada",
+    "C delimitada ao incremento"
+  ],
+  "modalidade": "Subagente runtime com papel explícito, sem seleção TOML nativa comprovada",
+  "horarios": "Início/fim exatos não registrados; retornos nesta retomada",
+  "ferramentas_do_revisor": [],
+  "paciente": "N/A não invocado",
+  "sha256": {
+    "brief.md": "63e3baf7749a2761f2fddbd1f2731b0f647d6596f8ae12e51ab669333f2f24cc",
+    "nutricionista.md": "32ce98205a19d9e0927bc51f1721983eef6a7020a2987afc3c605dd39cef0f31",
+    "paciente.md": "6c856ecd36edb730f3303c682549269c8e565a123ccdde63fd61a249a1f2ed39",
+    "consolidado.md": "3227e720c4892e78bf7a530b4e472aebd0c653bf6dd45a3f74385f696b287e1e"
+  },
+  "fontes_sha256": {
+    ".codex/agents/octaclin-nutricionista-ux.toml": "6259b40a98e2c49053cbc6adbc0c59d0312b14e191b228ab73de2f2eac53af6d",
+    "docs/agents/ux/PROCEDIMENTO.md": "00ee799fa4435bbc1af022752fc1a9dbce4a3196cd1b188a9a4b6017c47bff29",
+    "octaclin-web/components/pacientes/consulta-teor-catalogo.tsx": "610ce544bb012689e21425f6b58a2ea4af58a28e47d5e16a848a686f1b9e226f",
+    "octaclin-web/components/pacientes/previa-alteracao-alimentar.tsx": "a485dfc2dfa4c8cd72c9a94b75941092c7d6e7cbea7c7a5309f2620668ace0c4",
+    "octaclin-web/tests/visual/food06-consulta-previa.spec.mjs": "36afef8959a9dd3c4e391cc6e78797f558919f88a1dc33ddae87a2f2ad7732ec"
+  },
+  "artefatos": "food06-m11-selecao.png sintético, gerado pelo spec, visto pelo coordenador no desktop. Não versionado."
+}

@@ -1,3 +1,6 @@
+import { lerPaginaContribuicoes, type PedidoContribuicoes } from './contribuicoes-micronutrientes';
+import { lerAnaliseMicronutrientesFactual, type AnaliseMicronutrientesFactual } from './micronutrientes-factuais';
+import { lerPaginaHistoricoMicronutrientesFactual, type CursorHistoricoMicronutrientesFactual, type PaginaHistoricoMicronutrientesFactual } from './historico-micronutrientes-factuais';
 import { ErroApiPlanoAlimentar, type CalcularCombinadoEntradaApi, type ResultadoCalculoCombinadoApi, type SelecaoCalculoPlanoApi } from './plano-alimentar-api';
 
 async function lerJson<T>(resposta: Response): Promise<T> {
@@ -27,4 +30,26 @@ export function calcularPlanosCombinados(pacienteId: string, entrada: CalcularCo
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(entrada)
   }).then(lerJson<ResultadoCalculoCombinadoApi>);
+}
+
+export async function analisarMicronutrientesPlanejados(pacienteId: string, entrada: CalcularCombinadoEntradaApi, signal?: AbortSignal): Promise<AnaliseMicronutrientesFactual> {
+  const resposta = await fetch(`/api/pacientes/${encodeURIComponent(pacienteId)}/planos-alimentares/analise-micronutrientes`, {
+    method: 'POST', cache: 'no-store', signal, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(entrada)
+  });
+  return lerAnaliseMicronutrientesFactual(await lerJson<unknown>(resposta), entrada);
+}
+
+export async function obterContribuicoesMicronutrientes(pacienteId:string,pedido:PedidoContribuicoes,signal?:AbortSignal) {
+  const resposta=await fetch(`/api/pacientes/${encodeURIComponent(pacienteId)}/planos-alimentares/analise-micronutrientes/contribuicoes`,{
+    method:'POST',cache:'no-store',signal,headers:{'Content-Type':'application/json'},body:JSON.stringify(pedido)
+  });
+  return lerPaginaContribuicoes(await lerJson<unknown>(resposta),pedido);
+}
+
+export async function obterHistoricoMicronutrientesFactual(pacienteId:string,cursor?:CursorHistoricoMicronutrientesFactual,signal?:AbortSignal,incluirContexto=false,incluirOrigem=false):Promise<PaginaHistoricoMicronutrientesFactual>{
+  const resposta=await fetch(`/api/pacientes/${encodeURIComponent(pacienteId)}/planos-alimentares/analises-factuais/historico`,{
+    method:'POST',cache:'no-store',signal,headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({limite:10,...(incluirContexto?{incluirContexto:true}:{}),...(incluirOrigem?{incluirOrigem:true}:{}),...(cursor?{cursorId:cursor.id,cursorCriadoEm:cursor.criadoEm}:{})})
+  });
+  return lerPaginaHistoricoMicronutrientesFactual(await lerJson<unknown>(resposta),incluirContexto,incluirOrigem);
 }
