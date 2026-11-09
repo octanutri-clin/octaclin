@@ -37,3 +37,15 @@ describe('DTO da consulta factual',()=>{
  });
 
 });
+describe('R4: teto da janela de resultados da consulta M11',()=>{
+ it('recusa página além de 1000 resultados antes de abrir transação',async()=>{
+  for(const [pagina,limite] of [[11,100],[51,20],[1001,1],[10000,100]] as const){const s=setup();await expect(s.servico.consultar(tenant,usuario,{...consulta,pagina,limite})).rejects.toBeInstanceOf(BadRequestException);expect(s.executar).not.toHaveBeenCalled();}
+ });
+ it('aceita a última página dentro do teto e não oferece próxima além dele',async()=>{
+  const linhas=Array.from({length:101},(_,i)=>row(i+1));
+  const r=await setup(linhas).servico.consultar(tenant,usuario,{...consulta,pagina:10,limite:100});
+  expect(r.paginacao.temProxima).toBe(false);
+  const antes=await setup(linhas).servico.consultar(tenant,usuario,{...consulta,pagina:9,limite:100});
+  expect(antes.paginacao.temProxima).toBe(true);
+ });
+});
