@@ -103,3 +103,20 @@ describe('PA06 DTO de edição parcial', () => {
   });
 
 });
+
+// CodeQL #533 (js/prototype-polluting-assignment): chaveCliente indexa vários
+// dicionários; nomes que alcançam o protótipo são recusados na entrada.
+describe('chaveCliente recusa nomes de protótipo', () => {
+  const reservados = ['__proto__', 'constructor', 'prototype'];
+  it.each(reservados)('recusa %s em refeição, item e substituição', (reservado) => {
+    const emRefeicao = documento(); emRefeicao.refeicoes[0].chaveCliente = reservado;
+    const emItem = documento(); emItem.refeicoes[0].itens[0].chaveCliente = reservado;
+    const emSubstituicao = documento() as any;
+    emSubstituicao.refeicoes[0].itens[0].substituicoes = [{ chaveCliente: reservado, descricao: '', porcaoGramas: '' }];
+    for (const d of [emRefeicao, emItem, emSubstituicao]) expect(() => validarDocumentoEdicaoPlano(d)).toThrow();
+  });
+  it('continua aceitando chaves comuns, inclusive as que só contêm esses nomes', () => {
+    const d = documento(); d.refeicoes[0].chaveCliente = 'meu__proto__x'; d.refeicoes[0].itens[0].chaveCliente = 'constructor-1';
+    expect(() => validarDocumentoEdicaoPlano(d)).not.toThrow();
+  });
+});
