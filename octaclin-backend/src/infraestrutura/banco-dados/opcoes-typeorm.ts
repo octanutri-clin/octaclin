@@ -1,4 +1,5 @@
 import { RegistrosAnalisesFactuais1720000001081 } from './migracoes/1720000001081-RegistrosAnalisesFactuais';
+import { RegistrosFactuaisAppendOnly1720000001082 } from './migracoes/1720000001082-RegistrosFactuaisAppendOnly';
 import { RegistroAnaliseFactualOrm } from '../../modulos/planos-alimentares/infraestrutura/registro-analise-factual.orm';
 import { PreferenciasEquivalencia1720000001079 } from './migracoes/1720000001079-PreferenciasEquivalencia';
 import { GruposSubstituicoes1720000001078 } from './migracoes/1720000001078-GruposSubstituicoes';
@@ -485,7 +486,8 @@ export function criarOpcoesTypeOrm(): TypeOrmModuleOptions & DataSourceOptions {
         GruposSubstituicoes1720000001078,
         PreferenciasEquivalencia1720000001079,
         MetadadosReceitasNutricionais1720000001080,
-        RegistrosAnalisesFactuais1720000001081
+        RegistrosAnalisesFactuais1720000001081,
+        RegistrosFactuaisAppendOnly1720000001082
       ],
     migrationsRun: executarMigracoesNoBoot(),
     synchronize: false,

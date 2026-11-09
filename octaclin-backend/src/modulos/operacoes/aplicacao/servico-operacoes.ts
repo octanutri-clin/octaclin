@@ -1395,6 +1395,17 @@ export class ServicoOperacoes {
         acao: 'excluir',
         baseLegal: 'Minimizacao operacional',
         descricao: 'Anexo puramente administrativo/de suporte tem 90 dias apos o encerramento, salvo necessidade legal especifica (Fase 261).'
+      },
+      {
+        id: 'registros_analises_factuais',
+        rotulo: 'Registros factuais de análise nutricional',
+        entidade: 'registros_analises_factuais',
+        campoData: 'criadoEm',
+        diasRetencao: 7300,
+        acao: 'preservar',
+        baseLegal: 'Guarda de prontuario (CFM) e obrigacao legal',
+        descricao:
+          'Registro cifrado e append-only da análise factual (FOOD06) herda os 20 anos de guarda do prontuário; eliminação exige procedimento fora de banda (migration 1082).'
       }
     ];
   }
@@ -1464,6 +1475,13 @@ export class ServicoOperacoes {
     if (politicaId === 'mensagens_portal_paciente') {
       return gerenciador.query<Array<{ total: string }>>(
         'select count(*)::text as total from mensagens_portal_paciente where tenant_id = $1 and criado_em <= $2',
+        [tenantId, corteEm]
+      ).then((linhas) => Number(linhas[0]?.total ?? 0));
+    }
+
+    if (politicaId === 'registros_analises_factuais') {
+      return gerenciador.query<Array<{ total: string }>>(
+        'select count(*)::text as total from registros_analises_factuais where tenant_id = $1 and criado_em <= $2',
         [tenantId, corteEm]
       ).then((linhas) => Number(linhas[0]?.total ?? 0));
     }
