@@ -2,6 +2,13 @@ import { IsIn, IsInt, IsNumber, IsString, Max, MaxLength, Min, MinLength, Valida
 import { BadRequestException } from '@nestjs/common';
 import { CODIGOS_MICRONUTRIENTES, type CodigoMicronutriente } from '../dominio/micronutrientes';
 
+/**
+ * Janela máxima de resultados (página × limite). Busca por `LIKE '%…%'` com
+ * deslocamento grande vira varredura do catálogo; quem precisa ir além refina a
+ * busca. Revisão R4 da #455.
+ */
+export const JANELA_MAXIMA_CONSULTA_TEOR = 1000;
+
 export class ConsultaTeorCatalogoDto {
   @IsIn(CODIGOS_MICRONUTRIENTES) codigo: CodigoMicronutriente;
   @IsNumber({ maxDecimalPlaces: 3 }) @Min(0.001) @Max(10000) porcaoGramas: number;
@@ -23,6 +30,7 @@ export function validarConsultaTeorCatalogo(valor: unknown): ConsultaTeorCatalog
   const dto = Object.assign(new ConsultaTeorCatalogoDto(), valor);
   if (validateSync(dto, { whitelist: true, forbidNonWhitelisted: true, forbidUnknownValues: true }).length
     || dto.busca.trim().length < 2
+    || dto.pagina * dto.limite > JANELA_MAXIMA_CONSULTA_TEOR
     || (['fonteCodigo', 'versao', 'baseCodigo'] as const).some(k => dto[k] !== undefined && !dto[k]!.trim().length))
     throw new BadRequestException('Consulta factual inválida.');
   return dto;
