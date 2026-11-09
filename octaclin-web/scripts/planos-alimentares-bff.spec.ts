@@ -1657,3 +1657,59 @@ for(const status of [400,403,404,409,413,422,429,500])test('M11 BFF sanitiza err
 for(const tipo of ['codigo','porcaoGramas','paginacao','cobertura','individualizacao','unidade','negativo','ausenteComValor','excesso','duplicado','oversize'])test('M11 BFF recusa resposta inconsistente '+tipo,async()=>{const p=respostaTeorM11();if(tipo==='codigo')p.codigo='calcioMg';if(tipo==='porcaoGramas')p.porcaoGramas=60;if(tipo==='paginacao')p.paginacao.pagina=2;if(tipo==='cobertura')p.cobertura.comValor=2;if(tipo==='individualizacao')p.individualizacao.estado='liberada';if(tipo==='unidade')p.itens[0].nutriente.unidade='mcg';if(tipo==='negativo')p.itens[0].nutriente.valorPorcao=-1;if(tipo==='ausenteComValor')p.itens[0].nutriente.estado='ausente';if(tipo==='excesso')p.itens=Array(101).fill(p.itens[0]);if(tipo==='duplicado'){p.itens.push(p.itens[0]);p.cobertura={recebidos:2,considerados:2,comValor:2,semValor:0};}await comTeorM11(()=>tipo==='oversize'?new Response('x'.repeat(256*1024+1)):Response.json(p),async()=>{const r=await consultarTeorM11(pedidoTeor());assert.equal(r.status,503);assert.doesNotMatch(await r.text(),/CANARIO|Arroz/);});});
 test('M11 BFF preserva zero conhecido e desconhecido sem número',async()=>{const p=respostaTeorM11();p.itens[0].nutriente.valorPor100g=0;p.itens[0].nutriente.valorPorcao=0;await comTeorM11(()=>Response.json(p),async()=>{const r=await consultarTeorM11(pedidoTeor());assert.equal(r.status,200);assert.equal((await r.json()).itens[0].nutriente.valorPorcao,0);p.itens[0].nutriente.estado='ausente';for(const chave of ['valorPor100g','valorPorcao','arredondadoParaZero'])Reflect.deleteProperty(p.itens[0].nutriente,chave);p.cobertura.comValor=0;p.cobertura.semValor=1;const a=await consultarTeorM11(pedidoTeor());assert.equal(a.status,200);assert.equal((await a.json()).itens[0].nutriente.valorPorcao,undefined);});});
 test('M11 BFF propaga cancelamento e não lê corpo sem autenticação',async()=>{await comTeorM11(()=>Response.json(respostaTeorM11()),async()=>{const req=pedidoTeor();let sinal:AbortSignal|null|undefined;global.fetch=(async(_url,init)=>{sinal=init?.signal;return Response.json(respostaTeorM11());}) as typeof fetch;assert.equal((await consultarTeorM11(req)).status,200);assert.equal(sinal,req.signal);__clearCookies();let leu=false;const semSessao=pedidoTeor();Object.defineProperty(semSessao,'body',{get(){leu=true;throw Error('CANARIO');}});assert.equal((await consultarTeorM11(semSessao)).status,401);assert.equal(leu,false);});});
+
+// Revisão R4 (#455): permissão antes de ler o corpo e caminho sem segmentos de ponto.
+const rotasCorpoFood06: Array<[string, (r: Request, p: { params: Promise<{ id: string; planoId: string }> }) => Promise<Response>, string]> = [
+  ['prévia', previaMicros as never, 'planos_alimentares.gerenciar'],
+  ['confirmação', confirmarMicros as never, 'planos_alimentares.gerenciar'],
+  ['análise', analisarMicronutrientesFood06 as never, 'planos_alimentares.ler'],
+  ['contribuições', detalharMicronutrientesFood06 as never, 'planos_alimentares.ler'],
+  ['cálculo combinado', calcularPlanosCombinados as never, 'planos_alimentares.ler']
+];
+function corpoQueFalha() {
+  return new Request('http://localhost/api/x', {
+    method: 'POST',
+    body: new ReadableStream({ pull(controle) { controle.error(new Error('leitura interrompida')); } }),
+    duplex: 'half'
+  } as RequestInit);
+}
+for (const [nome, rota, permissao] of rotasCorpoFood06) {
+  test(`R4 ${nome}: sem permissão responde 403 sem ler o corpo nem chamar o backend`, async () => {
+    const original = global.fetch;
+    let chamadas = 0;
+    global.fetch = (async () => { chamadas += 1; return Response.json({}); }) as typeof global.fetch;
+    try {
+      __setCookies(cookiesSessaoValida(['pacientes.ler']));
+      const resposta = await rota(corpoQueFalha(), { params: Promise.resolve({ id: 'paciente-1', planoId: 'plano-1' }) });
+      assert.equal(resposta.status, 403);
+      assert.equal(chamadas, 0);
+    } finally { restaurarFetch(original); }
+  });
+  test(`R4 ${nome}: falha de leitura do corpo vira 400 seguro, não 500`, async () => {
+    const original = global.fetch;
+    let chamadas = 0;
+    global.fetch = (async () => { chamadas += 1; return Response.json({}); }) as typeof global.fetch;
+    try {
+      __setCookies(cookiesSessaoValida([permissao]));
+      const resposta = await rota(corpoQueFalha(), { params: Promise.resolve({ id: 'paciente-1', planoId: 'plano-1' }) });
+      assert.equal(resposta.status, 400);
+      assert.equal(resposta.headers.get('Cache-Control'), 'private, no-store');
+      assert.equal(chamadas, 0);
+    } finally { restaurarFetch(original); }
+  });
+}
+for (const idForjado of ['..', '.']) {
+  test(`R4 BFF recusa segmento de caminho "${idForjado}" antes de chamar o backend`, async () => {
+    const original = global.fetch;
+    const urls: string[] = [];
+    global.fetch = (async (entrada: string | URL | Request) => { urls.push(String(entrada)); return Response.json({}); }) as typeof global.fetch;
+    try {
+      __setCookies(cookiesSessaoValida(['planos_alimentares.ler', 'planos_alimentares.gerenciar']));
+      const calculo = await calcularPlanosCombinados(new Request('http://localhost/api/x', { method: 'POST', body: '{}' }), { params: Promise.resolve({ id: idForjado }) });
+      assert.equal(calculo.status, 400);
+      const detalhe = await obterPlano(new Request('http://localhost/api/x'), { params: Promise.resolve({ id: idForjado, planoId: 'plano-1' }) });
+      assert.equal(detalhe.status, 400);
+      assert.deepEqual(urls, []);
+    } finally { restaurarFetch(original); }
+  });
+}
