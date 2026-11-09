@@ -1109,7 +1109,7 @@ export class ServicoPlanosAlimentares {
         // propriedades próprias e não executa setters de protótipo.
         mesclarContextosEquivalenciaSeguro(contextosEquivalencias,resolvidos);
         for(const r of documento.refeicoes)for(const i of r.itens){const pi=localizar(i.chaveCliente);for(let ai=0;ai<(i.substituicoes??[]).length;ai++){
-          const a=i.substituicoes![ai],c=resolvidos[a.chaveCliente];if(!c)continue;const pa=pi.substituicoes![ai],f=await fatos(a,i.chaveCliente);
+          const a=i.substituicoes![ai],c=Object.hasOwn(resolvidos,a.chaveCliente)?resolvidos[a.chaveCliente]:undefined;if(!c)continue;const pa=pi.substituicoes![ai],f=await fatos(a,i.chaveCliente);
           const atual=c.aplicados??c;
           if(atual.snapshotPrincipal?.origem==='catalogo'&&i.alimentoComposicaoId===atual.snapshotPrincipal.alimentoComposicaoId)composicoesCatalogoGrupo.set(pi,atual.snapshotPrincipal);
           if(atual.snapshotAlternativa?.origem==='catalogo'&&a.alimentoComposicaoId===atual.snapshotAlternativa.alimentoComposicaoId)composicoesCatalogoGrupo.set(pa,atual.snapshotAlternativa);
