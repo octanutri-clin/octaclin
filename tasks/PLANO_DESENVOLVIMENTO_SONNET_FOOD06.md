@@ -45,9 +45,10 @@ clínica, jurídica ou de produto nova, pare só aquele item e registre a pergun
   (Python 3.15): `httptools` 0.8.0 do lock não tem wheel cp315 e a imagem não tem
   compilador. Correção: #485 (`httptools` 0.9.0, que tem wheel cp315). Prioridade
   do gerente de merges. `watchfiles` usa wheel abi3 e `pyyaml` cai para Python puro.
-- Operação (G06): migrations **1081 e 1082 não aplicadas** em staging nem em
-  produção; aplicação depende de autorização do proprietário. Ver
-  `tasks/food06-g06-diagnostico-2026-11-09.md`. **Não aplique migrations.**
+- Operação (G06): migrations **1081 e 1082 aplicadas em staging e produção em
+  2026-11-09**, com autorização do proprietário, ponto de restauração e conferência
+  (evidência em `tasks/food06-g06-diagnostico-2026-11-09.md`). Qualquer migration
+  nova continua exigindo autorização própria: **não aplique migrations**.
 
 ## 2. Tarefas, em ordem
 
@@ -181,7 +182,7 @@ clínica, jurídica ou de produto nova, pare só aquele item e registre a pergun
 
 - Merges: subagente Sonnet com lista permitida explícita, squash, só com todos os
   checks verdes; branch atrás → atualizar; Dependabot → `@dependabot rebase`.
-- **Aguardando o proprietário (não fazer sem autorização):** aplicar 1081/1082
-  em staging e produção; conferir commit dos serviços no Render; carregar TACO no
+- **Aguardando o proprietário (não fazer sem autorização):** conferir commit dos
+  serviços no Render e smoke do backend novo; carregar TACO no
   staging; decidir os 189 alertas Debian do serviço de IA; #490 (`dotenv` 18,
   depois das migrations).
