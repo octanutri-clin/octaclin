@@ -52,7 +52,7 @@ clínica, jurídica ou de produto nova, pare só aquele item e registre a pergun
 
 ## 2. Tarefas, em ordem
 
-### T1 — Conjunto versionado de referências DRI adultas (domínio puro) [ ]
+### T1 — Conjunto versionado de referências DRI adultas (domínio puro) [x]
 
 - **Objetivo:** módulo `dominio/referencias-dri.ts` com os 19 nutrientes do
   quadro ratificado, por sexo de referência e faixa (19–30, 31–50, 51–70, 71+),
