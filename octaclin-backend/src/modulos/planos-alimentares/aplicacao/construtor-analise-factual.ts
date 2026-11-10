@@ -76,7 +76,10 @@ export function lerRegistroAnaliseFactual(conteudo: string): RegistroAnaliseFact
    const ref=objeto(r.referencias);
    if(r.contexto===undefined||Object.keys(ref).length!==2||ref.estado!=='registrada'||typeof ref.versao!=='string'||!IDENTIDADE_VERSAO_REFERENCIAS.test(ref.versao))throw new AnaliseFactualInvalidaError();
    const referencias={estado:'registrada' as const,versao:ref.versao};
-   Object.assign(reconstruido,{schemaVersao:2,motorVersao:'food06-registro-factual-v2',referencias});
+   // Chaves fixas: nenhuma propriedade do registro de entrada é mesclada.
+   reconstruido.schemaVersao=2;
+   reconstruido.motorVersao='food06-registro-factual-v2';
+   reconstruido.referencias=referencias;
   }else if(r.schemaVersao!==1)throw new AnaliseFactualInvalidaError();
   // Igualdade canônica detecta campos extras, totais/avisos/markers divergentes
   // sem aceitar o conteúdo cifrado apenas porque seu TypeScript parece correto.
