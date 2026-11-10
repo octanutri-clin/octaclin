@@ -17,10 +17,11 @@ export function formatarPercentualReferencia(p: number): string {
 const POSICAO_UL = { abaixo: 'abaixo de', igual: 'igual a', acima: 'acima de' } as const;
 
 /** Duas linhas do mesmo padrão em todo nutriente; o período ("do dia") está no cabeçalho da coluna. */
-export function textoReferencia(codigo: string, c: Extract<ComparacaoNutrienteFactual, { estado: 'comparavel' }>): string {
+export function textoReferencia(codigo: string, c: Extract<ComparacaoNutrienteFactual, { estado: 'comparavel' }>, paraFolha = false): string {
   const pct = formatarPercentualReferencia(c.percentual);
   const base = `Planejado: ${formatarNutrientePlano(codigo, c.quantidadePlanejada)} ${c.unidadePlanejada} = ${pct === '<1' ? 'menos de 1' : pct}% da ${c.tipo} (${formatarNutrientePlano(codigo, c.valorReferencia)} ${c.unidadeReferencia})`;
-  return c.ajusteTabagismoMg ? `${base}, com +${c.ajusteTabagismoMg} mg por tabagismo confirmado` : base;
+  // Na folha o ajuste aparece sem dizer o motivo: tabagismo é dado de saúde e a folha pode ser lida por terceiros.
+  return c.ajusteTabagismoMg ? `${base}, ${paraFolha ? `com ajuste de +${c.ajusteTabagismoMg} mg na referência` : `com +${c.ajusteTabagismoMg} mg por tabagismo confirmado`}` : base;
 }
 export function textoUl(codigo: string, c: Extract<ComparacaoNutrienteFactual, { estado: 'comparavel' }>): string {
   return `Limite superior (UL): total planejado ${POSICAO_UL[c.posicao ?? 'abaixo']} ${formatarNutrientePlano(codigo, c.valorReferencia)} ${c.unidadeReferencia}`;

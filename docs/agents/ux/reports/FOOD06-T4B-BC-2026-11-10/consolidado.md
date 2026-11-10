@@ -12,7 +12,7 @@
 | NUX-24 | FECHADO (técnico) | Teste com PDF real do caso "acima": "Limite superior (UL): total planejado acima de 45 mg", sem aviso de tela e sem palavras proibidas. |
 | NUX-25 | FECHADO (técnico) | Falha na busca com a escolha mostra erro, mantém Imprimir desabilitado e oferece "Tentar novamente" (teste). Falha na reconferência já retirava a prévia sem imprimir. |
 | NUX-27 | FECHADO (técnico) | "o novo registro usa o plano e a versão de referência atuais". |
-| NUX-22 | JÁ COBERTO / DECISÃO | A folha formato 2 já tem "Contexto registrado nesta análise" (data, idade, população, dia, tabagismo), anterior a esta entrega. Imprimir tabagismo é decisão do proprietário (minimização de dados), não alterada aqui. |
+| NUX-22 | FECHADO (técnico), decisão do proprietário 2026-11-10 | O tabagismo sai da folha: o contexto impresso mantém data, idade, população e dia completo; a célula da vitamina C diz "com ajuste de +35 mg na referência". Vale para toda folha formato 2, com ou sem comparação. Tela do profissional e registro continuam com o dado. PDF real prova ausência de "tabagismo" e "fuma". |
 | NUX-26, PUX-10, 14, 15 | BACKLOG | Redação de "faltam dados" para leigo; leitor de tela real; identificador de versão; casos "<1" e mcg no papel. |
 | NUX-15 | BACKLOG | Indicador no histórico continua decisão futura do proprietário. |
 

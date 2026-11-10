@@ -119,6 +119,8 @@ test('FOOD06 T4b com a escolha: seção em página própria com "Como ler", font
   await expect(secao.getByRole('row', { name: /^Ferro/ })).toContainText('Planejado: 9 mg = 50% da RDA (18 mg)');
   await expect(secao.getByRole('row', { name: /^Ferro/ })).toContainText('Limite superior (UL): total planejado abaixo de 45 mg');
   await expect(folha(previa)).toContainText('A comparação usa a versão de referência registrada nesta análise.');
+  // Tabagismo (dado de saúde) não vai para a folha, nem no contexto nem na célula.
+  await expect(folha(previa)).not.toContainText(/Tabagismo|fuma/);
   await expect(folha(previa)).not.toContainText('Referências RDA/AI/UL e percentuais indisponíveis.');
   // Lembrete e controles ficam fora da folha.
   await expect(folha(previa)).not.toContainText('pode ser lida pelo paciente');
@@ -134,6 +136,7 @@ test('FOOD06 T4b com a escolha: seção em página própria com "Como ler", font
     expect(pagina).toContain('Converse com seu nutricionista');
     expect(pagina).toMatch(/Cálcio/);
     expect(textoPdf()).toContain('Planejado: 9 mg = 50% da RDA (18 mg)');
+    expect(textoPdf()).not.toMatch(/Tabagismo|tabagismo|fuma/);
     expect(textoPdf()).not.toMatch(/pode ser lida pelo paciente|Incluir comparação|Atualizando/);
     // A tabela continua em outra página: cabeçalho e rodapé ("não é diagnóstico" + conversa) se repetem em cada uma.
     const daSecao = paginas.filter(p => p.includes('Comparação (total planejado do dia)'));
