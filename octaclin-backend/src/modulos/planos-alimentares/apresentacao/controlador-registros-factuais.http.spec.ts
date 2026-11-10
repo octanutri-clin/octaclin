@@ -82,6 +82,32 @@ describe('API factual M05/M07',()=>{
   for(const incluirOrigem of [null,'true',1,{}])expect((await chamar('/relatorio',{registroId:id,versaoRelatorio:2,incluirOrigem})).status).toBe(400);
   expect(prepararRelatorioApi).not.toHaveBeenCalledWith(id,id,expect.anything(),id,expect.anything(),'true');
  });
+ it('FOOD06 T3b: referências são opt-in booleano em consultar, histórico e relatório formato 2; pedidos sem a flag não mudam',async()=>{
+  consultarApi.mockClear();expect((await chamar('/consultar',{registroId:id,incluirReferencias:true})).status).toBe(200);
+  expect(consultarApi).toHaveBeenCalledWith(id,id,expect.anything(),id,false,false,true);
+  for(const corpo of [{registroId:id},{registroId:id,incluirReferencias:false}]){
+   consultarApi.mockClear();expect((await chamar('/consultar',corpo)).status).toBe(200);expect(consultarApi).toHaveBeenCalledWith(id,id,expect.anything(),id);
+  }
+  historico.mockClear();expect((await chamar('/historico',{limite:10,incluirReferencias:true})).status).toBe(200);
+  expect(historico).toHaveBeenCalledWith(id,id,expect.anything(),10,undefined,undefined,false,false,true);
+  historico.mockClear();expect((await chamar('/historico',{limite:10,incluirContexto:true,incluirOrigem:true,incluirReferencias:true})).status).toBe(200);
+  expect(historico).toHaveBeenCalledWith(id,id,expect.anything(),10,undefined,undefined,true,true,true);
+  historico.mockClear();expect((await chamar('/historico',{limite:10,incluirReferencias:false})).status).toBe(200);
+  expect(historico).toHaveBeenCalledWith(id,id,expect.anything(),10,undefined,undefined);
+  prepararRelatorioApi.mockClear();expect((await chamar('/relatorio',{registroId:id,versaoRelatorio:2,incluirReferencias:true})).status).toBe(200);
+  expect(prepararRelatorioApi).toHaveBeenCalledWith(id,id,expect.anything(),id,2,false,true);
+  prepararRelatorioApi.mockClear();expect((await chamar('/relatorio',{registroId:id,versaoRelatorio:2,incluirOrigem:true,incluirReferencias:true})).status).toBe(200);
+  expect(prepararRelatorioApi).toHaveBeenCalledWith(id,id,expect.anything(),id,2,true,true);
+  prepararRelatorioApi.mockClear();expect((await chamar('/relatorio',{registroId:id,versaoRelatorio:2,incluirReferencias:false})).status).toBe(200);
+  expect(prepararRelatorioApi).toHaveBeenCalledWith(id,id,expect.anything(),id,2);
+  prepararRelatorioApi.mockClear();expect((await chamar('/relatorio',{registroId:id,incluirReferencias:true})).status).toBe(400);
+  expect(prepararRelatorioApi).not.toHaveBeenCalled();
+  for(const incluirReferencias of [null,'true',1,{}]){
+   expect((await chamar('/consultar',{registroId:id,incluirReferencias})).status).toBe(400);
+   expect((await chamar('/historico',{limite:10,incluirReferencias})).status).toBe(400);
+   expect((await chamar('/relatorio',{registroId:id,versaoRelatorio:2,incluirReferencias})).status).toBe(400);
+  }
+ });
  it('aceita confirmações explícitas opcionais sem permitir nascimento ou data do navegador',async()=>{
   const confirmacoes={populacaoReferencia:'feminina',populacaoConfirmada:true,gestacao:'nao',lactacao:'nao',aplicabilidade:'confirmada',mesmoDiaPlanejado:true,tabagismo:'nao_informado'};
   registrarVersao.mockClear();const body={...fonte,confirmacoes};

@@ -6,6 +6,7 @@ import { resolverContextoDietetico,type EntradaContextoDietetico,type ContextoDi
 import { calcularNutrientesCombinados,type ResultadoCalculoCombinado } from '../dominio/calculo-combinado';
 import { analisarCoberturaDietetica,type CoberturaDietetica } from '../dominio/cobertura-dietetica';
 import { instanteCivil } from '../../pacientes/dominio/idade-pediatrica';
+import { VERSAO_REFERENCIAS_DRI_ADULTO } from '../dominio/referencias-dri';
 /** Contrato interno do carregador autorizado, nunca body HTTP ou totais do cliente. */
 export interface EntradaConstrutorAnaliseFactual {
  escopo:VersaoFactualResolvida['escopo'];origem:IdentidadeVersaoFactual;
@@ -13,14 +14,23 @@ export interface EntradaConstrutorAnaliseFactual {
  refeicoes:{identidadeId:string;ativa:boolean;selecionada:boolean;itens:{porcaoGramas?:number|string;snapshot:unknown}[]}[];
  contexto?:EntradaContextoDietetico;
 }
+/**
+ * v1: sem versão de referência (todo registro anterior à T3b e todo registro sem contexto).
+ * v2 (FOOD06 T3b): só com contexto confirmado; grava a IDENTIDADE da versão DRI
+ * vigente na captura, nunca valores ou comparação prontos. A projeção usa essa versão.
+ */
+export type ReferenciasRegistroFactual =
+ | {estado:'indisponivel';motivo:'referencias_nao_habilitadas'}
+ | {estado:'registrada';versao:string};
 export interface RegistroAnaliseFactual {
- schemaVersao:1;motorVersao:'food06-registro-factual-v1';
+ schemaVersao:1|2;motorVersao:'food06-registro-factual-v1'|'food06-registro-factual-v2';
  versao:VersaoFactualResolvida;
  analise:{calculo:ResultadoCalculoCombinado;cobertura:CoberturaDietetica};
  contexto?:{dataAnalise:string;resolvido:ContextoDieteticoResolvido};
- referencias:{estado:'indisponivel';motivo:'referencias_nao_habilitadas'};
+ referencias:ReferenciasRegistroFactual;
  avisos:string[];
 }
+const IDENTIDADE_VERSAO_REFERENCIAS=/^[a-z0-9][a-z0-9_.:-]{0,99}$/;
 export class AnaliseFactualInvalidaError extends Error {
  constructor(){super('Não foi possível registrar os dados factuais desta versão.');this.name='AnaliseFactualInvalidaError';}
 }
@@ -59,6 +69,15 @@ export function lerRegistroAnaliseFactual(conteudo: string): RegistroAnaliseFact
     (res.populacaoReferencia===undefined)!==motivos.includes('populacao_nao_confirmada'))throw new AnaliseFactualInvalidaError();
    reconstruido.contexto=c;reconstruido.versao.bases.contexto=marcador(c);
   }
+  // v1 legado (com ou sem contexto) segue exatamente o reconstruído acima. v2 exige
+  // contexto e só a identidade da versão; versão desconhecida bem formada é legível
+  // (a projeção a declara indisponível), forma diferente falha fechada.
+  if(r.schemaVersao===2){
+   const ref=objeto(r.referencias);
+   if(r.contexto===undefined||Object.keys(ref).length!==2||ref.estado!=='registrada'||typeof ref.versao!=='string'||!IDENTIDADE_VERSAO_REFERENCIAS.test(ref.versao))throw new AnaliseFactualInvalidaError();
+   const referencias={estado:'registrada' as const,versao:ref.versao};
+   Object.assign(reconstruido,{schemaVersao:2,motorVersao:'food06-registro-factual-v2',referencias});reconstruido.versao.bases.referencia=marcador(referencias);
+  }else if(r.schemaVersao!==1)throw new AnaliseFactualInvalidaError();
   // Igualdade canônica detecta campos extras, totais/avisos/markers divergentes
   // sem aceitar o conteúdo cifrado apenas porque seu TypeScript parece correto.
   if(serializar(r)!==serializar(reconstruido))throw new AnaliseFactualInvalidaError();
@@ -213,9 +232,11 @@ export function construirAnaliseFactual(entrada:EntradaConstrutorAnaliseFactual)
    if(resolvido.motivos.includes('data_invalida'))throw new AnaliseFactualInvalidaError();
    contexto={dataAnalise:entrada.contexto!.dataAnalise,resolvido};versao.bases!.contexto=marcador(contexto);
   }
-  const r:RegistroAnaliseFactual={schemaVersao:1,motorVersao:'food06-registro-factual-v1',versao,
+  let referencias:ReferenciasRegistroFactual={estado:'indisponivel',motivo:'referencias_nao_habilitadas'};
+  if(contexto){referencias={estado:'registrada',versao:VERSAO_REFERENCIAS_DRI_ADULTO};versao.bases!.referencia=marcador(referencias);}
+  const r:RegistroAnaliseFactual={...(contexto?{schemaVersao:2 as const,motorVersao:'food06-registro-factual-v2' as const}:{schemaVersao:1 as const,motorVersao:'food06-registro-factual-v1' as const}),versao,
    analise:{calculo:calcularNutrientesCombinados([versao.estado]),cobertura:analisarCoberturaDietetica([versao.estado])},
-   ...(contexto?{contexto}:{}),referencias:{estado:'indisponivel',motivo:'referencias_nao_habilitadas'},avisos:[...avisos].sort()};
+   ...(contexto?{contexto}:{}),referencias,avisos:[...avisos].sort()};
   congelar(r);return r;
  }catch(erro){if(erro instanceof LimitePrecisaoNutricionalError)throw erro;throw new AnaliseFactualInvalidaError();}
 }

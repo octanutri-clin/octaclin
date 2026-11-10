@@ -6,6 +6,8 @@ import type { DeltaFactual } from '../dominio/previa-dietetica';
 import { CODIGOS_MICRONUTRIENTES } from '../dominio/micronutrientes';
 import { projetarAjudaDietetica } from './projecao-ajuda-dietetica';
 import { analisarFontesPorNutriente } from '../dominio/fontes-por-nutriente';
+import { compararAnaliseComReferencias } from '../dominio/comparacao-referencias';
+import { FONTE_REFERENCIAS_DRI_ADULTO, VERSAO_REFERENCIAS_DRI_ADULTO } from '../dominio/referencias-dri';
 type DimensaoBase='planejamento'|'composicao_fonte'|'referencia'|'contexto';
 export type EstadoComparacaoHistorica='IGUAL'|'DIFERENTE'|'NAO_COMPARAVEL'|'SEM_REGISTRO_ANTERIOR';
 export interface ComparacaoBasesHistoricas {
@@ -15,6 +17,18 @@ export interface ComparacaoBasesHistoricas {
 type Meta={id:string;criadoEm:Date};
 const CODIGOS:CodigoNutrienteCombinado[]=['energiaKcal','proteinasG','carboidratosG','gordurasG','fibrasG','sodioMg',...CODIGOS_MICRONUTRIENTES];
 const referencias=()=>({estado:'indisponivel' as const,motivo:'referencias_nao_habilitadas' as const});
+/**
+ * FOOD06 T3b, só por opt-in: compara com a versão DRI e o contexto GRAVADOS no registro.
+ * Registro v1 (antigo ou sem contexto) não ganha referência retroativa, e versão gravada
+ * diferente da conhecida pelo código nunca é recalculada com a atual. Ao publicar uma nova
+ * versão, a tabela antiga precisa continuar resolvível pela sua identidade.
+ */
+export function projetarReferenciasRegistro(r:RegistroAnaliseFactual){
+ if(r.schemaVersao!==2||r.referencias.estado!=='registrada'||!r.contexto)return {estado:'indisponivel' as const,motivo:'registro_sem_referencias' as const};
+ if(r.referencias.versao!==VERSAO_REFERENCIAS_DRI_ADULTO)return {estado:'indisponivel' as const,motivo:'versao_referencias_indisponivel' as const};
+ return {estado:'calculado' as const,fonteReferencias:FONTE_REFERENCIAS_DRI_ADULTO,...compararAnaliseComReferencias(r.analise.calculo.nutrientes,r.contexto.resolvido)};
+}
+type ReferenciasProjetadas=ReturnType<typeof referencias>|ReturnType<typeof projetarReferenciasRegistro>;
 function origem(o:IdentidadeVersaoFactual){return {planoId:o.planoId,versaoId:o.versaoId,numero:o.numero,status:o.status,registradaEm:o.registradaEm,...(o.status==='rascunho'?{rascunhoRevisao:o.rascunhoRevisao}:{})};}
 function selecao(r:RegistroAnaliseFactual){return {planoAtivo:r.versao.estado.ativo,planoSelecionado:r.versao.estado.selecionado,refeicoes:r.versao.estado.refeicoes.map(f=>({identidadeId:f.identidadeId,ativa:f.ativa,selecionada:f.selecionada}))};}
 export function projetarMetadadosRegistro(m:Meta){return {id:m.id,criadoEm:m.criadoEm.toISOString()};}
@@ -41,10 +55,11 @@ function projetarContextoConfirmado(c:NonNullable<RegistroAnaliseFactual['contex
 /** Derivada dos itens congelados do registro, nunca gravada: o envelope persistido e seu hash não mudam. */
 function projetarFontesPorNutriente(r:RegistroAnaliseFactual){return analisarFontesPorNutriente([r.versao.estado]);}
 /** Projeções por allowlist de fontes já validadas/autorizadas. Nunca serializar o registro interno. */
-export function projetarRegistroFactual(m:Meta,r:RegistroAnaliseFactual){
+export function projetarRegistroFactual(m:Meta,r:RegistroAnaliseFactual,incluirReferencias=false){
  if(r.avisos.some(a=>!['porcao_divergente','planejamento_nao_documentado','composicao_nao_documentada'].includes(a)))throw new AnaliseFactualInvalidaError();
  return {schemaVersao:1 as const,motorVersao:'food06-registro-api-v1' as const,registro:projetarMetadadosRegistro(m),origem:origem(r.versao.origem),
-  selecao:selecao(r),analise:estado(r.analise),fontesPorNutriente:projetarFontesPorNutriente(r),referencias:referencias(),
+  selecao:selecao(r),analise:estado(r.analise),fontesPorNutriente:projetarFontesPorNutriente(r),
+  referencias:(incluirReferencias===true?projetarReferenciasRegistro(r):referencias()) as ReferenciasProjetadas,
   ...(r.contexto?{contextoConfirmado:projetarContextoConfirmado(r.contexto)}:{}),avisos:[...r.avisos],ajuda:projetarAjudaDietetica()};
 }
 export function projetarComparacaoFactual(a:Meta,b:Meta,r:ComparacaoVersoesFactuais,registroAntes:RegistroAnaliseFactual,registroDepois:RegistroAnaliseFactual){
@@ -82,7 +97,7 @@ export function compararBasesHistoricas(atual:RegistroAnaliseFactual,anterior?:R
  return {...bases,cobertura};
 }
 /** Resumo M10 por allowlist; contexto mínimo somente por opt-in explícito. */
-export function projetarResumoHistoricoFactual(meta:Meta,r:RegistroAnaliseFactual,comparacaoAnterior:ComparacaoBasesHistoricas=compararBasesHistoricas(r),incluirContexto=false,incluirOrigem=false){
+export function projetarResumoHistoricoFactual(meta:Meta,r:RegistroAnaliseFactual,comparacaoAnterior:ComparacaoBasesHistoricas=compararBasesHistoricas(r),incluirContexto=false,incluirOrigem=false,incluirReferencias=false){
  const nutrientes=Object.fromEntries(CODIGOS_MICRONUTRIENTES.map(codigo=>{
   const n=r.analise.cobertura.nutrientes[codigo];
   return [codigo,{codigo,unidade:n.unidade,estado:n.estado,
@@ -92,7 +107,7 @@ export function projetarResumoHistoricoFactual(meta:Meta,r:RegistroAnaliseFactua
  }));
  return {schemaVersao:1 as const,registro:projetarMetadadosRegistro(meta),origem:origem(r.versao.origem),comparacaoAnterior,
   motorVersao:r.analise.calculo.motorVersao,nutrientes,...(incluirOrigem?{fontesPorNutriente:projetarFontesPorNutriente(r)}:{}),
-  referencias:referencias(),
+  referencias:(incluirReferencias===true?projetarReferenciasRegistro(r):referencias()) as ReferenciasProjetadas,
   ...(incluirContexto&&r.contexto?{contextoConfirmado:projetarContextoConfirmado(r.contexto)}:{}),
   bases:{planejamentoDocumentado:Boolean(r.versao.bases?.planejamento),composicaoDocumentada:Boolean(r.versao.bases?.composicao_fonte),
    contextoDocumentado:Boolean(r.versao.bases?.contexto)}};

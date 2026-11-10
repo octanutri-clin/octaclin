@@ -82,3 +82,53 @@ it.each(['idade_com_futuro','idade_com_ausente','dois_motivos_sem_idade','fora_e
  r.versao.bases.contexto.conteudoHash=require('node:crypto').createHash('sha256').update(JSON.stringify(canonico(r.contexto))).digest('hex');
  expect(()=>lerRegistroAnaliseFactual(JSON.stringify(r))).toThrow(AnaliseFactualInvalidaError);
 });
+
+describe('FOOD06 T3b: envelope v2 com a versao das referencias', () => {
+ const VERSAO='dri-hc-2025-11-19-adulto-v1';
+ const hash=(v:unknown)=>require('node:crypto').createHash('sha256').update(JSON.stringify(Object.fromEntries(Object.keys(v as object).sort().map(k=>[k,(v as any)[k]])))).digest('hex');
+ // Registro gravado antes da T3b: contexto confirmado, sem versao de referencia.
+ const legadoV1ComContexto=()=>{
+  const r=registro(comContexto());r.schemaVersao=1;r.motorVersao='food06-registro-factual-v1';
+  r.referencias={estado:'indisponivel',motivo:'referencias_nao_habilitadas'};delete r.versao.bases.referencia;return r;
+ };
+ it('com contexto confirmado grava v2 com a versao vigente e o marcador da dimensao referencia',()=>{
+  const r=registro(comContexto());
+  expect(r.schemaVersao).toBe(2);expect(r.motorVersao).toBe('food06-registro-factual-v2');
+  expect(r.referencias).toEqual({estado:'registrada',versao:VERSAO});
+  expect(r.versao.bases.referencia).toEqual({esquemaVersao:'food06-bases-v1',conteudoHash:hash(r.referencias)});
+ });
+ it('sem contexto o registro continua v1, identico ao de antes',()=>{
+  const r=registro();
+  expect(r.schemaVersao).toBe(1);expect(r.motorVersao).toBe('food06-registro-factual-v1');
+  expect(r.referencias).toEqual({estado:'indisponivel',motivo:'referencias_nao_habilitadas'});
+  expect(r.versao.bases).not.toHaveProperty('referencia');
+ });
+ it('registro v1 antigo com contexto continua legivel e nao ganha referencia',()=>{
+  const r=legadoV1ComContexto();expect(lerRegistroAnaliseFactual(JSON.stringify(r))).toEqual(r);
+ });
+ it('versao de referencia desconhecida mas bem formada continua legivel (a projecao decide)',()=>{
+  const r=registro(comContexto());r.referencias.versao='dri-hc-2030-01-01-adulto-v9';r.versao.bases.referencia.conteudoHash=hash(r.referencias);
+  expect(lerRegistroAnaliseFactual(JSON.stringify(r))).toEqual(r);
+ });
+ it.each([
+  ['v2 sem contexto',(r:any)=>{delete r.contexto;delete r.versao.bases.contexto;}],
+  ['v2 com placeholder',(r:any)=>{r.referencias={estado:'indisponivel',motivo:'referencias_nao_habilitadas'};delete r.versao.bases.referencia;}],
+  ['v2 sem marcador',(r:any)=>{delete r.versao.bases.referencia;}],
+  ['marcador adulterado',(r:any)=>{r.versao.bases.referencia.conteudoHash='a'.repeat(64);}],
+  ['versao trocada sem marcador',(r:any)=>{r.referencias.versao='dri-hc-2030-01-01-adulto-v9';}],
+  ['versao malformada',(r:any)=>{r.referencias.versao='DRI atual';r.versao.bases.referencia.conteudoHash=hash(r.referencias);}],
+  ['chave extra nas referencias',(r:any)=>{r.referencias.valores=[];r.versao.bases.referencia.conteudoHash=hash(r.referencias);}],
+  ['comparacao pronta gravada',(r:any)=>{r.referencias={estado:'calculado',versao:VERSAO};r.versao.bases.referencia.conteudoHash=hash(r.referencias);}],
+  ['motor v1 em schema 2',(r:any)=>{r.motorVersao='food06-registro-factual-v1';}],
+  ['schema 3',(r:any)=>{r.schemaVersao=3;}]
+ ])('rejeita %s',(_nome,alterar)=>{
+  const r=registro(comContexto());alterar(r);expect(()=>lerRegistroAnaliseFactual(JSON.stringify(r))).toThrow(AnaliseFactualInvalidaError);
+ });
+ it.each([
+  ['v1 com referencia registrada',(r:any)=>{r.referencias={estado:'registrada',versao:VERSAO};}],
+  ['v1 com marcador de referencia',(r:any)=>{r.versao.bases.referencia={esquemaVersao:'food06-bases-v1',conteudoHash:hash({estado:'registrada',versao:VERSAO})};}],
+  ['v1 com motor v2',(r:any)=>{r.motorVersao='food06-registro-factual-v2';}]
+ ])('rejeita %s',(_nome,alterar)=>{
+  const r=legadoV1ComContexto();alterar(r);expect(()=>lerRegistroAnaliseFactual(JSON.stringify(r))).toThrow(AnaliseFactualInvalidaError);
+ });
+});

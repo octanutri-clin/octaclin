@@ -330,6 +330,25 @@ comandos/limites, UX B/C e estado do CI: `tasks/food06-interface-factual.md`.
 Todas as melhorias FOOD06 continuam obrigatórias; direitos/G06 e funcionalidades
 não implementadas não são liberados pela cobertura da tabela.
 
+### FOOD06 — referências DRI (T1–T3)
+
+Comparação com DRI adulta só por opt-in `incluirReferencias`; sem a flag, toda
+resposta fica idêntica. Nascimento e data vêm do servidor, depois da carteira e
+na mesma transação; somente `Professional`. O registro factual com contexto
+confirmado grava só a identidade da versão DRI (envelope interno v2) e a projeção
+usa essa versão e o contexto gravados. Registro v1 fica `registro_sem_referencias`,
+e versão gravada desconhecida fica `versao_referencias_indisponivel`: nunca há
+recálculo com a versão atual. ND nunca vira zero; UL só para o total abrangido.
+
+Provas no módulo backend de planos: `referencias-dri`, `comparacao-referencias`,
+`dtos-analise-micronutrientes`, o bloco T3a de `servico-planos-alimentares`,
+`leitor-registro-analise-factual` (v1/v2 e adulterações),
+`projecao-referencias-registro`, `relatorio-analise-factual` e o controlador
+HTTP de registros. Limite: a fixture de contrato Web da forma `calculado` entra
+com a T4. Rollback: reverter só a escrita do v2 mantém legíveis os registros v2
+já gravados; reverter também o leitor os torna ilegíveis (falha fechada), sem
+corromper dado.
+
 ### FOOD06 — decomposição interna M02
 
 A seleção comum de refeições deve preservar a PA06: OFF/não selecionado não

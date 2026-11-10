@@ -87,7 +87,7 @@ clínica, jurídica ou de produto nova, pare só aquele item e registre a pergun
   indisponíveis com o motivo do contexto.
 - **Pronto quando:** domínio + testes com oráculo decimal independente.
 
-### T3 — Integração nas saídas (backend) [ ] — R4 se tocar registro persistido
+### T3 — Integração nas saídas (backend) [x] — R4 se tocar registro persistido
 
 - **Objetivo:** substituir `referencias_nao_habilitadas` pela comparação de T2
   na análise ao vivo, na projeção do registro factual, no histórico e no
@@ -108,7 +108,7 @@ clínica, jurídica ou de produto nova, pare só aquele item e registre a pergun
     `incluirReferencias` + as 7 confirmações do registro; nascimento e data da
     análise resolvidos no servidor depois da autorização da carteira, na mesma
     transação. Sem envelope novo; sem a flag, resposta idêntica.
-  - **T3b [ ]** — R4: envelope v2 do registro com a versão da referência, leitura
+  - **T3b [x]** — R4: envelope v2 do registro com a versão da referência, leitura
     v1/v2, projeção/histórico/relatório formato 2 por opt-in; registros v1 ficam
     "indisponível com motivo". Exige revisão independente.
   - A fixture de contrato Web da forma `calculado` entra com o leitor na T4.
