@@ -1,6 +1,7 @@
 import { PreviaMicronutrientesDto, ConfirmarPreviaMicronutrientesDto } from '../aplicacao/dtos-previa-micronutrientes';
 import { ContribuicoesMicronutrientesDto } from '../aplicacao/dtos-contribuicoes-micronutrientes';
 import { CalculoCombinadoDto } from '../aplicacao/dtos-calculo-combinado';
+import { AnaliseMicronutrientesDto } from '../aplicacao/dtos-analise-micronutrientes';
 import { AlterarAtivacaoPlanoDto } from '../aplicacao/dtos-ativacao';
 import { Body, Controller, Delete, Get, Header, Param, ParseIntPipe, ParseUUIDPipe, Post, Put, Query, UseGuards } from '@nestjs/common';
 import { Papeis, Permissoes, UsuarioAtual } from '../../auth/apresentacao/decorators';
@@ -128,7 +129,7 @@ export class ControladorPlanosAlimentares {
   analisarMicronutrientes(
     @UsuarioAtual() usuario: UsuarioAutenticado,
     @Param('pacienteId', ParseUUIDPipe) pacienteId: string,
-    @Body() dados: CalculoCombinadoDto
+    @Body() dados: AnaliseMicronutrientesDto
   ) {
     return this.servico.analisarMicronutrientes(usuario.tenantId, pacienteId, usuario, dados);
   }

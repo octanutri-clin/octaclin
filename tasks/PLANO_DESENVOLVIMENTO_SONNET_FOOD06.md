@@ -103,6 +103,15 @@ clínica, jurídica ou de produto nova, pare só aquele item e registre a pergun
   de v1/v2.
 - **Testes:** contrato backend↔Web por fixture; negativos de opt-in; PostgreSQL
   da suíte 1081/1082 (ver seção 4 para rodar sem Docker).
+- **Divisão:** a T3 entra em duas PRs.
+  - **T3a [x]** — análise ao vivo (`POST analise-micronutrientes`): opt-in
+    `incluirReferencias` + as 7 confirmações do registro; nascimento e data da
+    análise resolvidos no servidor depois da autorização da carteira, na mesma
+    transação. Sem envelope novo; sem a flag, resposta idêntica.
+  - **T3b [ ]** — R4: envelope v2 do registro com a versão da referência, leitura
+    v1/v2, projeção/histórico/relatório formato 2 por opt-in; registros v1 ficam
+    "indisponível com motivo". Exige revisão independente.
+  - A fixture de contrato Web da forma `calculado` entra com o leitor na T4.
 
 ### T4 — Interface: percentual e UL na tabela, detalhes e relatório (M06/M08) [ ]
 

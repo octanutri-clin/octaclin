@@ -1,4 +1,5 @@
 import * as projecaoAjuda from './projecao-ajuda-dietetica';
+import * as comparacaoReferencias from '../dominio/comparacao-referencias';
 import { ReceitaNutricionalOrm } from '../infraestrutura/receita-nutricional.orm';
 import { porcionarReceita } from '../dominio/porcionamento-receita';
 import { criarSnapshotMicronutrientes } from '../dominio/micronutrientes';
@@ -10,7 +11,7 @@ import { ServicoAlimentosPersonalizados } from './servico-alimentos-personalizad
 import { normalizarComposicaoPersonalizada } from '../dominio/alimentos-personalizados';
 import { ServicoMedidasCaseiras } from './servico-medidas-caseiras';
 import { randomUUID } from 'crypto';
-import { BadRequestException, ConflictException, ForbiddenException, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, ForbiddenException, InternalServerErrorException, NotFoundException, UnprocessableEntityException } from '@nestjs/common';
 import { EntityManager } from 'typeorm';
 import { UserActionLogOrm } from '../../../infraestrutura/auditoria/user-action-log.orm';
 import { OutboxEventoOrm } from '../../../infraestrutura/outbox/outbox-evento.orm';
@@ -757,6 +758,113 @@ describe('ServicoPlanosAlimentares', () => {
     });
     it.each([{tenantId:'adulterado'}, {coeficientes:{ferroMg:9}}, {elegivel:true}, {snapshots:[]}])('FOOD06 rejeita payload extra %o', async extra => {
       await expect(servico.analisarMicronutrientes(TENANT_ID,PACIENTE_ID,usuarioProfissional(),{selecoes:[],...extra})).rejects.toBeInstanceOf(BadRequestException);
+    });
+    describe('FOOD06 T3a: referencias DRI por opt-in na analise ao vivo', () => {
+      // Confirmacoes sinteticas do profissional; nascimento e data vem so do servidor.
+      const confirmacoes = (extra: Record<string, unknown> = {}) => ({ populacaoReferencia:'feminina', populacaoConfirmada:true, gestacao:'nao', lactacao:'nao',
+        aplicabilidade:'confirmada', mesmoDiaPlanejado:true, tabagismo:'nao', ...extra });
+      const comCalcioZero = async () => {
+        const entrada = await publicarParaCalculo();
+        const registro = repositorios.get(PlanoAlimentarItemOrm)!.registros[0];
+        const snapshot = JSON.parse(criptografia.descriptografar(registro.composicaoSnapshotCriptografada));
+        snapshot.micronutrientes = criarSnapshotMicronutrientes({ calcioMg: { estado: 'conhecido', valor: 0 } }, 100, 100);
+        registro.composicaoSnapshotCriptografada = criptografia.criptografar(JSON.stringify(snapshot));
+        return entrada;
+      };
+      it('sem a flag a resposta e identica a de antes (mesmas chaves e placeholder)', async () => {
+        const entrada = await comCalcioZero();
+        const r = await servico.analisarMicronutrientes(TENANT_ID,PACIENTE_ID,usuarioProfissional(),entrada);
+        expect(Object.keys(r).sort()).toEqual(['ajuda','calculadoEm','calculo','cobertura','comparacoes','fontes','motorVersao','publicacoes','schemaVersao']);
+        expect(r.comparacoes).toEqual({estado:'indisponivel',motivo:'referencias_nao_habilitadas'});
+        const comFlagFalse = await servico.analisarMicronutrientes(TENANT_ID,PACIENTE_ID,usuarioProfissional(),{...entrada,incluirReferencias:false});
+        expect(comFlagFalse.comparacoes).toEqual({estado:'indisponivel',motivo:'referencias_nao_habilitadas'});
+      });
+      it('com a flag compara com as referencias da versao vigente usando o nascimento do servidor', async () => {
+        const entrada = await comCalcioZero();
+        repositorios.get(PacienteOrm)!.registros[0].dataNascimento = '1985-06-15';
+        const r = await servico.analisarMicronutrientes(TENANT_ID,PACIENTE_ID,usuarioProfissional(),{...entrada,incluirReferencias:true,confirmacoes:confirmacoes()});
+        expect(r.comparacoes).toMatchObject({estado:'calculado',versaoReferencias:'dri-hc-2025-11-19-adulto-v1',contextoElegivel:true,motivosContexto:[],
+          fonteReferencias:{autoridade:'Health Canada',licenca:'OGL-Canada'}});
+        if (r.comparacoes.estado !== 'calculado') throw new Error('esperado calculado');
+        expect(r.comparacoes.nutrientes).toHaveLength(22);
+        const calcio = r.comparacoes.nutrientes.find(n => n.codigo === 'calcioMg')!;
+        // Calcio conhecido 0 mg (zero conhecido e valido) contra a RDA feminina 31-50 de 1000 mg.
+        expect(calcio.referencia).toMatchObject({estado:'comparavel',tipo:'RDA',percentual:0,valorReferencia:1000});
+        expect(calcio.ul).toMatchObject({estado:'comparavel',posicao:'abaixo',valorReferencia:2500});
+        // Ferro sem valor conhecido: cobertura incompleta, nunca percentual.
+        expect(r.comparacoes.nutrientes.find(n => n.codigo === 'ferroMg')!.referencia).toEqual({estado:'indisponivel',motivo:'dados_incompletos'});
+        expect(JSON.stringify(r.comparacoes)).not.toMatch(/1985|nascimento|idadeAnos|deficien|toxic|adequad|segur/i);
+        // O calculo factual nao muda com a flag.
+        const semFlag = await servico.analisarMicronutrientes(TENANT_ID,PACIENTE_ID,usuarioProfissional(),entrada);
+        expect(r.calculo).toEqual(semFlag.calculo);
+        expect(r.cobertura).toEqual(semFlag.cobertura);
+      });
+      it('sem nascimento cadastrado, ou com gestacao confirmada, a comparacao fica indisponivel com o motivo do contexto', async () => {
+        const entrada = await comCalcioZero();
+        const semNascimento = await servico.analisarMicronutrientes(TENANT_ID,PACIENTE_ID,usuarioProfissional(),{...entrada,incluirReferencias:true,confirmacoes:confirmacoes()});
+        expect(semNascimento.comparacoes).toMatchObject({estado:'calculado',contextoElegivel:false,motivosContexto:['nascimento_nao_informado']});
+        if (semNascimento.comparacoes.estado !== 'calculado') throw new Error('esperado calculado');
+        expect(semNascimento.comparacoes.nutrientes.every(n => n.referencia.estado === 'indisponivel' && n.ul.estado === 'indisponivel')).toBe(true);
+        repositorios.get(PacienteOrm)!.registros[0].dataNascimento = '1985-06-15';
+        const gestante = await servico.analisarMicronutrientes(TENANT_ID,PACIENTE_ID,usuarioProfissional(),{...entrada,incluirReferencias:true,confirmacoes:confirmacoes({gestacao:'sim'})});
+        expect(gestante.comparacoes).toMatchObject({estado:'calculado',contextoElegivel:false,motivosContexto:['gestacao_fora_do_escopo']});
+      });
+      it('reautoriza antes de ler o nascimento: tenant, carteira e permissao negados com a flag', async () => {
+        const entrada = await comCalcioZero();
+        repositorios.get(PacienteOrm)!.registros[0].dataNascimento = '1985-06-15';
+        const corpo = {...entrada,incluirReferencias:true,confirmacoes:confirmacoes()};
+        const consultasPaciente = repositorios.get(PacienteOrm)!.findOne;
+        const leuNascimento = () => consultasPaciente.mock.calls.some(([opcoes]) => opcoes?.select?.dataNascimento);
+        consultasPaciente.mockClear();
+        await expect(servico.analisarMicronutrientes('outro-tenant',PACIENTE_ID,usuarioProfissional(),corpo)).rejects.toBeInstanceOf(NotFoundException);
+        expect(leuNascimento()).toBe(false);
+        await expect(servico.analisarMicronutrientes(TENANT_ID,PACIENTE_ID,{...usuarioProfissional(),permissoes:[]},corpo)).rejects.toBeInstanceOf(ForbiddenException);
+        await expect(servico.analisarMicronutrientes(TENANT_ID,PACIENTE_ID,{...usuarioProfissional(),papel:'Client'},corpo)).rejects.toBeInstanceOf(ForbiddenException);
+        repositorios.get(PacienteOrm)!.registros[0].profissionalResponsavelId = 'transferido';
+        await expect(servico.analisarMicronutrientes(TENANT_ID,PACIENTE_ID,usuarioProfissional(),corpo)).rejects.toBeInstanceOf(NotFoundException);
+        // Carteira negada: o nascimento nunca chega a ser lido (a autorização vem antes).
+        expect(leuNascimento()).toBe(false);
+      });
+      it('SuperAdmin nao recebe referencias (dispensa a carteira); a analise sem a flag continua como antes', async () => {
+        const entrada = await comCalcioZero();
+        repositorios.get(PacienteOrm)!.registros[0].dataNascimento = '1985-06-15';
+        const admin = {...usuarioProfissional(),papel:'SuperAdmin' as const};
+        const consultasPaciente = repositorios.get(PacienteOrm)!.findOne;
+        consultasPaciente.mockClear();
+        await expect(servico.analisarMicronutrientes(TENANT_ID,PACIENTE_ID,admin,{...entrada,incluirReferencias:true,confirmacoes:confirmacoes()})).rejects.toBeInstanceOf(ForbiddenException);
+        expect(consultasPaciente.mock.calls.some(([opcoes]) => opcoes?.select?.dataNascimento)).toBe(false);
+        const legado: any = await servico.analisarMicronutrientes(TENANT_ID,PACIENTE_ID,admin,entrada);
+        expect(legado.comparacoes).toEqual({estado:'indisponivel',motivo:'referencias_nao_habilitadas'});
+        const semFlag: any = await servico.analisarMicronutrientes(TENANT_ID,PACIENTE_ID,admin,{...entrada,incluirReferencias:false});
+        expect(semFlag.comparacoes).toEqual({estado:'indisponivel',motivo:'referencias_nao_habilitadas'});
+      });
+      it('defeito no comparador nao e mascarado como limite de precisao', async () => {
+        const entrada = await comCalcioZero();
+        repositorios.get(PacienteOrm)!.registros[0].dataNascimento = '1985-06-15';
+        const espiao = jest.spyOn(comparacaoReferencias, 'compararAnaliseComReferencias').mockImplementation(() => { throw new Error('defeito sintetico'); });
+        try {
+          const erro = await servico.analisarMicronutrientes(TENANT_ID,PACIENTE_ID,usuarioProfissional(),{...entrada,incluirReferencias:true,confirmacoes:confirmacoes()}).then(() => undefined, (e: unknown) => e);
+          expect(erro).toBeInstanceOf(InternalServerErrorException);
+          expect(erro).not.toBeInstanceOf(UnprocessableEntityException);
+        } finally { espiao.mockRestore(); }
+      });
+      it.each([
+        [{incluirReferencias:true}],
+        [{confirmacoes:{}}],
+        [{incluirReferencias:true,confirmacoes:{nascimento:'1990-01-01'}}],
+        [{incluirReferencias:'true'}],
+        [{incluirReferencias:true,contexto:{elegivel:true}}]
+      ])('rejeita opt-in malformado %o sem calcular', async extra => {
+        const entrada = await comCalcioZero();
+        await expect(servico.analisarMicronutrientes(TENANT_ID,PACIENTE_ID,usuarioProfissional(),{...entrada,...extra} as never)).rejects.toBeInstanceOf(BadRequestException);
+      });
+      it('a analise com referencias continua somente leitura', async () => {
+        const entrada = await comCalcioZero();
+        repositorios.get(PacienteOrm)!.registros[0].dataNascimento = '1985-06-15';
+        const antes = JSON.stringify([...repositorios].map(([tipo, repo]) => ({ tipo: tipo.name, registros: repo.registros })));
+        await servico.analisarMicronutrientes(TENANT_ID,PACIENTE_ID,usuarioProfissional(),{...entrada,incluirReferencias:true,confirmacoes:confirmacoes()});
+        expect(JSON.stringify([...repositorios].map(([tipo, repo]) => ({ tipo: tipo.name, registros: repo.registros })))).toBe(antes);
+      });
     });
   });
 
