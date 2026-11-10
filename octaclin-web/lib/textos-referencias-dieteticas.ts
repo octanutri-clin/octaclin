@@ -125,3 +125,14 @@ export const RELATORIO_REFERENCIAS = Object.freeze({
   conversa: 'Dúvidas sobre estes números? Converse com seu nutricionista.',
   limitacao: 'A comparação usa a versão de referência registrada nesta análise. Os percentuais só comparam números: não avaliam a saúde nem indicam mudanças na alimentação.'
 });
+
+/** Indicador por registro no histórico (NUX-15): só texto, sem números nem percentuais. */
+export const INDICADOR_REFERENCIAS_HISTORICO = Object.freeze({
+  semReferencias: 'Sem referências registradas',
+  versaoIndisponivel: 'Referências registradas em versão não disponível nesta versão do sistema',
+  explicacaoSem: 'Este registro foi salvo sem as confirmações de contexto ou antes desta versão. Para incluir referências, salve um novo registro com a comparação ativa na tabela.',
+  registrada: (modificadaEm: string): string => {
+    const d = /^(\d{4})-(\d{2})-(\d{2})$/.exec(modificadaEm);
+    return `Referências registradas · tabela DRI de ${d ? `${d[3]}/${d[2]}/${d[1]}` : modificadaEm}`;
+  }
+});

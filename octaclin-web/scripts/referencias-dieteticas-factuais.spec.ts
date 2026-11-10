@@ -4,7 +4,7 @@ import { analisarMicronutrientesPlanejados } from '../lib/calculo-combinado-plan
 import { lerAnaliseMicronutrientesFactual } from '../lib/micronutrientes-factuais';
 import { CAMPOS_MICRONUTRIENTES_PLANO } from '../lib/micronutrientes-plano';
 import { MOTIVOS_COMPARACAO_FACTUAL, MOTIVOS_CONTEXTO_FACTUAL, montarConfirmacoesReferencias, resumirComparacao, respostasPacienteIniciais, situacaoRespostas, type ComparacaoNutrienteFactual } from '../lib/referencias-dieteticas-factuais';
-import { AVISO_FORA_DO_ESCOPO, COMO_LER, MOTIVO_COMPARACAO_CURTO, MOTIVO_COMPARACAO_LONGO, MOTIVO_CONTEXTO_TEXTO, formatarPercentualReferencia, RELATORIO_REFERENCIAS, textoFonteReferencias, textoReferencia, textoRespostasAtivas, textoResumoComparacao, textoUl } from '../lib/textos-referencias-dieteticas';
+import { AVISO_FORA_DO_ESCOPO, COMO_LER, MOTIVO_COMPARACAO_CURTO, MOTIVO_COMPARACAO_LONGO, MOTIVO_CONTEXTO_TEXTO, formatarPercentualReferencia, INDICADOR_REFERENCIAS_HISTORICO, RELATORIO_REFERENCIAS, textoFonteReferencias, textoReferencia, textoRespostasAtivas, textoResumoComparacao, textoUl } from '../lib/textos-referencias-dieteticas';
 
 const VERSAO = 'dri-hc-2025-11-19-adulto-v1';
 const entrada = { selecoes: [{ planoId: 'p1', versaoIdEsperada: 'v1', ativacaoRevisaoEsperada: 2, identidadesRefeicoes: ['r1'] }] };
@@ -131,7 +131,7 @@ test('FOOD06 T4a: textos factuais aprovados, sem palavras proibidas nem verbo de
   const vitC: Comparavel = { estado: 'comparavel', tipo: 'RDA', quantidadePlanejada: 60, unidadePlanejada: 'mg', valorReferencia: 125, unidadeReferencia: 'mg', percentual: 48, ajusteTabagismoMg: 35 };
   assert.equal(textoReferencia('vitaminaCMg', vitC, true), 'Planejado: 60 mg = 48% da RDA (125 mg), com ajuste de +35 mg na referência');
   assert.doesNotMatch(textoReferencia('vitaminaCMg', vitC, true), /tabagismo|fuma/i);
-  const todos = [...Object.values(MOTIVO_COMPARACAO_CURTO), ...Object.values(MOTIVO_COMPARACAO_LONGO), ...Object.values(MOTIVO_CONTEXTO_TEXTO), ...Object.values(AVISO_FORA_DO_ESCOPO), ...COMO_LER, ...Object.values(RELATORIO_REFERENCIAS),
+  const todos = [...Object.values(MOTIVO_COMPARACAO_CURTO), ...Object.values(MOTIVO_COMPARACAO_LONGO), ...Object.values(MOTIVO_CONTEXTO_TEXTO), ...Object.values(AVISO_FORA_DO_ESCOPO), ...COMO_LER, ...Object.values(RELATORIO_REFERENCIAS), INDICADOR_REFERENCIAS_HISTORICO.semReferencias, INDICADOR_REFERENCIAS_HISTORICO.versaoIndisponivel, INDICADOR_REFERENCIAS_HISTORICO.explicacaoSem, INDICADOR_REFERENCIAS_HISTORICO.registrada('2025-11-19'),
     textoReferencia('calcioMg', ref), textoUl('calcioMg', ul)].join('\n');
   assert.doesNotMatch(todos, /\b(seguro|segura|excesso|risco|toxic|defici|alerta|perigo|reduza|evite|cuidado|recomenda[çc][ãa]o)\b/i);
   // Todo motivo do contrato tem texto curto e longo.
