@@ -247,3 +247,18 @@ preventDefault e stopPropagation no submit da consulta. Controle: testar Enter
 com o componente dentro do modal real, exigir lookup utilizável e nenhuma
 confirmação/save antes da ação explícita. A prova isolada do componente fora do
 editor não cobre essa fronteira de interação.
+
+## 2026-11-09 — Bump de base Python deixou o gate de limpeza do pip vacuamente verde
+
+A #481 subiu a base da imagem do serviço de IA de Python 3.14 para 3.15. As rotas
+de remoção do pip em `octaclin-ai-service/Dockerfile`, o `caminhos_ausentes` do
+harness em `trivy.yml` e o teste de Dockerfile continuavam em `python3.14`. O
+harness fazia `test ! -e` num caminho que não existia mais: passava sempre, e o pip
+vendorizado (certifi, urllib3, msgpack, setuptools) voltou à imagem. A recaptura do
+inventário da main revelou 9 alertas novos, um critical (SQ-2026-257), sem que
+nenhum check de PR reprovasse. Controle: o teste de Dockerfile agora deriva a
+versão menor do Python da tag do `FROM` e exige a mesma versão no `Dockerfile` e no
+`trivy.yml`. Regra geral: um gate "ausente" que aponta para um caminho versionado
+precisa derivar a versão da mesma fonte da imagem; prova negativa sobre um caminho
+inexistente não prova nada. Confirmar o efeito real exige o build/harness do CI e a
+próxima varredura da main (não verificado localmente: sem Docker daemon).
