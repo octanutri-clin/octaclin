@@ -25,3 +25,11 @@ NUX01–04: ordem restrita à página, bases/estados, limpeza contextual e rolag
 ## FOOD06 M11→M04 — revisão C delimitada, 2026-11-06
 
 Seleção sem gravação, porção explícita, resumo da origem e foco no peso incorporados; [relatórios](reports/FOOD06-M11-PREVIA-C-2026-11-06/consolidado.md). BACKLOG de teste direto de reconsulta sem seleção preservando destino e avaliação humana com tecnologia assistiva. Não autoriza novo escopo. PacienteN/A e C global FOOD06 pendente.
+
+## FOOD06 T4 — revisão A, 2026-11-10
+
+Comparação com a DRI na tabela, nos detalhes e no relatório. Decisões do proprietário (confirmações na memória da tela, relatório só por escolha explícita, texto factual reforçado) e BACKLOG de filtro "Comparáveis", ordenação por percentual, caminho de ida e volta ao cadastro do nascimento, layout impresso em tabela e indicador no histórico: [consolidado](reports/FOOD06-T4-A-2026-11-10/consolidado.md). Não autoriza escopo novo. B e C pendentes.
+
+## FOOD06 T4a — revisão B/C, 2026-11-10
+
+Addendum à revisão A de T4. Fechados tecnicamente com teste: NUX-06, 16, 17, 20, PUX-13, 15. Parciais: NUX-01, 02, 05, PUX-06, 14. BACKLOG: NUX-07 (caminho ao cadastro do nascimento), NUX-10 (filtro e ordenação), NUX-12 (atalho "Como ler"), NUX-18, 19 (medir o custo do formulário com pessoas), NUX-21, e leitor de tela real. Fica para a T4b o relatório impresso e o histórico. Não autoriza escopo novo: [consolidado](reports/FOOD06-T4A-BC-2026-11-10/consolidado.md).

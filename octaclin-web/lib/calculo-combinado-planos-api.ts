@@ -1,6 +1,7 @@
 import { lerPaginaContribuicoes, type PedidoContribuicoes } from './contribuicoes-micronutrientes';
 import { lerAnaliseMicronutrientesFactual, type AnaliseMicronutrientesFactual } from './micronutrientes-factuais';
 import { lerPaginaHistoricoMicronutrientesFactual, type CursorHistoricoMicronutrientesFactual, type PaginaHistoricoMicronutrientesFactual } from './historico-micronutrientes-factuais';
+import { copiarConfirmacoesContexto, type ConfirmacoesContextoFactual } from './registro-analise-factual';
 import { ErroApiPlanoAlimentar, type CalcularCombinadoEntradaApi, type ResultadoCalculoCombinadoApi, type SelecaoCalculoPlanoApi } from './plano-alimentar-api';
 
 async function lerJson<T>(resposta: Response): Promise<T> {
@@ -32,11 +33,16 @@ export function calcularPlanosCombinados(pacienteId: string, entrada: CalcularCo
   }).then(lerJson<ResultadoCalculoCombinadoApi>);
 }
 
-export async function analisarMicronutrientesPlanejados(pacienteId: string, entrada: CalcularCombinadoEntradaApi, signal?: AbortSignal): Promise<AnaliseMicronutrientesFactual> {
+/**
+ * Sem `confirmacoes`, o pedido e a leitura são os de sempre. Com elas, pede a comparação com a DRI:
+ * só as 7 confirmações do profissional vão no corpo; nascimento, data, idade e elegibilidade são do servidor.
+ */
+export async function analisarMicronutrientesPlanejados(pacienteId: string, entrada: CalcularCombinadoEntradaApi, signal?: AbortSignal, confirmacoes?: ConfirmacoesContextoFactual): Promise<AnaliseMicronutrientesFactual> {
+  const corpo = confirmacoes ? { ...entrada, incluirReferencias: true, confirmacoes: copiarConfirmacoesContexto(confirmacoes) } : entrada;
   const resposta = await fetch(`/api/pacientes/${encodeURIComponent(pacienteId)}/planos-alimentares/analise-micronutrientes`, {
-    method: 'POST', cache: 'no-store', signal, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(entrada)
+    method: 'POST', cache: 'no-store', signal, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(corpo)
   });
-  return lerAnaliseMicronutrientesFactual(await lerJson<unknown>(resposta), entrada);
+  return lerAnaliseMicronutrientesFactual(await lerJson<unknown>(resposta), entrada, confirmacoes ? { referencias: true } : undefined);
 }
 
 export async function obterContribuicoesMicronutrientes(pacienteId:string,pedido:PedidoContribuicoes,signal?:AbortSignal) {
