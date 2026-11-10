@@ -85,3 +85,39 @@ test('M01 cliente do relatório só envia incluirOrigem no formato 2 e quando pe
  }finally{globalThis.fetch=original;}
  assert.deepEqual(corpos,[{registroId:'registro'},{registroId:'registro',versaoRelatorio:2},{registroId:'registro',versaoRelatorio:2,incluirOrigem:true},{registroId:'registro'}]);
 });
+
+/* FOOD06 T4b — comparação com referências só por escolha explícita, só no formato 2. */
+function referenciasCalculadas(){
+ const ind=(motivo:string)=>({estado:'indisponivel',motivo});
+ const comp=(tipo:string,valor:number,extra:Record<string,unknown>={})=>({estado:'comparavel',tipo,referenciaId:'x',referenciaVersao:'dri-hc-2025-11-19-adulto-v1',quantidadePlanejada:0,unidadePlanejada:'mg',valorReferencia:valor,unidadeReferencia:'mg',percentual:0,diferencaNaUnidadePlanejada:-valor,diferencaArredondada:false,...extra});
+ return {estado:'calculado',fonteReferencias:{autoridade:'Health Canada',modificadaEm:'2025-11-19',licenca:'OGL-Canada',licencaId:'ca-ogl-lgo',urls:[]},versaoReferencias:'dri-hc-2025-11-19-adulto-v1',contextoElegivel:true,motivosContexto:[],
+  nutrientes:CAMPOS_MICRONUTRIENTES_PLANO.map(c=>c.codigo==='ferroMg'?{codigo:c.codigo,referencia:comp('RDA',18),ul:comp('UL',45,{posicao:'abaixo'})}:{codigo:c.codigo,referencia:ind('dados_incompletos'),ul:ind('dados_incompletos')})};
+}
+const v2Ref=(referencias:unknown)=>({...fixture(),schemaVersao:2,motorVersao:'food06-relatorio-factual-v2',contextoClinico:{estado:'nao_registrado'},referencias});
+type ComRef={referencias?:{estado:string;motivo?:string;dados?:{nutrientes:Record<string,{referencia:{estado:string}}>}}};
+test('T4b sem a escolha o relatório é o de sempre e exige o placeholder',()=>{
+ assert.equal((lerRelatorioFactual(v2Ref({estado:'indisponivel',motivo:'referencias_nao_habilitadas'}),'registro') as ComRef).referencias,undefined);
+ assert.throws(()=>lerRelatorioFactual(v2Ref(referenciasCalculadas()),'registro'));
+});
+test('T4b com a escolha lê a comparação do registro validada contra a cobertura da mesma resposta',()=>{
+ const r=lerRelatorioFactual(v2Ref(referenciasCalculadas()),'registro',{referencias:true}) as ComRef;
+ assert.equal(r.referencias?.estado,'calculado');assert.equal(r.referencias?.dados?.nutrientes.ferroMg.referencia.estado,'comparavel');
+ // Quantidade diferente da cobertura congelada: falha fechada.
+ const errada=referenciasCalculadas();(errada.nutrientes.find(n=>n.codigo==='ferroMg')!.referencia as Record<string,unknown>).quantidadePlanejada=5;
+ assert.throws(()=>lerRelatorioFactual(v2Ref(errada),'registro',{referencias:true}));
+});
+test('T4b registro sem referências ou versão desconhecida chegam como indisponível, sem comparação',()=>{
+ for(const motivo of ['registro_sem_referencias','versao_referencias_indisponivel']){const r=lerRelatorioFactual(v2Ref({estado:'indisponivel',motivo}),'registro',{referencias:true}) as ComRef;assert.deepEqual(r.referencias,{estado:'indisponivel',motivo});}
+ for(const ref of [{estado:'indisponivel',motivo:'referencias_nao_habilitadas'},{estado:'indisponivel',motivo:'inventado'},{estado:'indisponivel',motivo:'registro_sem_referencias',extra:1},{estado:'outro'}])assert.throws(()=>lerRelatorioFactual(v2Ref(ref),'registro',{referencias:true}));
+ // Formato 1 nunca traz comparação.
+ assert.throws(()=>lerRelatorioFactual({...fixture(),referencias:referenciasCalculadas()},'registro',{referencias:true}));
+});
+test('T4b o pedido leva incluirReferencias só no formato 2 com a escolha',async()=>{
+ const {obterRelatorioFactual}=await import('../lib/relatorio-factual');const original=globalThis.fetch;const corpos:unknown[]=[];
+ try{globalThis.fetch=async(_url,init)=>{const b=JSON.parse(String(init?.body));corpos.push(b);return Response.json(b.incluirReferencias?v2Ref(referenciasCalculadas()):b.versaoRelatorio===2?v2Ref({estado:'indisponivel',motivo:'referencias_nao_habilitadas'}):fixture());};
+  const s=new AbortController().signal;
+  assert.equal(((await obterRelatorioFactual('paciente','registro',s,2,false,true)) as ComRef).referencias?.estado,'calculado');
+  await obterRelatorioFactual('paciente','registro',s,2);await obterRelatorioFactual('paciente','registro',s,1,false,true);
+  assert.deepEqual(corpos,[{registroId:'registro',versaoRelatorio:2,incluirReferencias:true},{registroId:'registro',versaoRelatorio:2},{registroId:'registro'}]);
+ }finally{globalThis.fetch=original;}
+});

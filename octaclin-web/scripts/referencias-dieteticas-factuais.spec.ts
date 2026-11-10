@@ -4,7 +4,7 @@ import { analisarMicronutrientesPlanejados } from '../lib/calculo-combinado-plan
 import { lerAnaliseMicronutrientesFactual } from '../lib/micronutrientes-factuais';
 import { CAMPOS_MICRONUTRIENTES_PLANO } from '../lib/micronutrientes-plano';
 import { MOTIVOS_COMPARACAO_FACTUAL, MOTIVOS_CONTEXTO_FACTUAL, montarConfirmacoesReferencias, resumirComparacao, respostasPacienteIniciais, situacaoRespostas, type ComparacaoNutrienteFactual } from '../lib/referencias-dieteticas-factuais';
-import { AVISO_FORA_DO_ESCOPO, COMO_LER, MOTIVO_COMPARACAO_CURTO, MOTIVO_COMPARACAO_LONGO, MOTIVO_CONTEXTO_TEXTO, formatarPercentualReferencia, textoFonteReferencias, textoReferencia, textoRespostasAtivas, textoResumoComparacao, textoUl } from '../lib/textos-referencias-dieteticas';
+import { AVISO_FORA_DO_ESCOPO, COMO_LER, MOTIVO_COMPARACAO_CURTO, MOTIVO_COMPARACAO_LONGO, MOTIVO_CONTEXTO_TEXTO, formatarPercentualReferencia, RELATORIO_REFERENCIAS, textoFonteReferencias, textoReferencia, textoRespostasAtivas, textoResumoComparacao, textoUl } from '../lib/textos-referencias-dieteticas';
 
 const VERSAO = 'dri-hc-2025-11-19-adulto-v1';
 const entrada = { selecoes: [{ planoId: 'p1', versaoIdEsperada: 'v1', ativacaoRevisaoEsperada: 2, identidadesRefeicoes: ['r1'] }] };
@@ -128,7 +128,7 @@ test('FOOD06 T4a: textos factuais aprovados, sem palavras proibidas nem verbo de
   assert.equal(textoResumoComparacao({ comparados: 1, dadosIncompletos: 21, semReferencia: 0, total: 22 }), 'Comparado em 1 de 22 nutrientes. Faltam dados de alguns alimentos do plano em 21.');
   assert.equal(textoResumoComparacao({ comparados: 10, dadosIncompletos: 8, semReferencia: 4, total: 22 }), 'Comparado em 10 de 22 nutrientes. Faltam dados de alguns alimentos do plano em 8. Sem valor de referência para 4.');
   assert.equal(textoReferencia('vitaminaCMg', { estado: 'comparavel', tipo: 'RDA', quantidadePlanejada: 60, unidadePlanejada: 'mg', valorReferencia: 125, unidadeReferencia: 'mg', percentual: 48, ajusteTabagismoMg: 35 }), 'Planejado: 60 mg = 48% da RDA (125 mg), com +35 mg por tabagismo confirmado');
-  const todos = [...Object.values(MOTIVO_COMPARACAO_CURTO), ...Object.values(MOTIVO_COMPARACAO_LONGO), ...Object.values(MOTIVO_CONTEXTO_TEXTO), ...Object.values(AVISO_FORA_DO_ESCOPO), ...COMO_LER,
+  const todos = [...Object.values(MOTIVO_COMPARACAO_CURTO), ...Object.values(MOTIVO_COMPARACAO_LONGO), ...Object.values(MOTIVO_CONTEXTO_TEXTO), ...Object.values(AVISO_FORA_DO_ESCOPO), ...COMO_LER, ...Object.values(RELATORIO_REFERENCIAS),
     textoReferencia('calcioMg', ref), textoUl('calcioMg', ul)].join('\n');
   assert.doesNotMatch(todos, /\b(seguro|segura|excesso|risco|toxic|defici|alerta|perigo|reduza|evite|cuidado|recomenda[çc][ãa]o)\b/i);
   // Todo motivo do contrato tem texto curto e longo.
