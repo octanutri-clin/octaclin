@@ -51,7 +51,9 @@ describe('M05/M07 construtor canônico factual interno',()=>{
  });
  it('contexto é resolvido pelo domínio existente, sem nascimento/texto livre no envelope',()=>{
   const e=entrada();e.contexto={nascimento:'1990-01-01',dataAnalise:'2026-11-02',populacaoReferencia:'feminina',populacaoConfirmada:true,gestacao:'nao',lactacao:'nao',aplicabilidade:'confirmada',mesmoDiaPlanejado:true,tabagismo:'nao'};
-  const r=construirAnaliseFactual(e);expect(r.contexto?.resolvido.idadeAnos).toBe(36);expect(r.versao.bases?.contexto).toBeDefined();expect(r.versao.bases?.referencia).toBeUndefined();
+  const r=construirAnaliseFactual(e);expect(r.contexto?.resolvido.idadeAnos).toBe(36);expect(r.versao.bases?.contexto).toBeDefined();
+  // T3b: grava só a identidade da versão DRI (sem valores ou comparação prontos).
+  expect(r.versao.bases?.referencia).toBeUndefined();expect(r.referencias).toEqual({estado:'registrada',versao:'dri-hc-2025-11-19-adulto-v1'});
   expect(JSON.stringify(r)).not.toMatch(/1990-01-01|CANARIO_INTERNO|Nome sintético|Fonte sintética/);
  });
  it('não assume contexto ausente saudável nem cria referência autorizada',()=>{

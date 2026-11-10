@@ -26,16 +26,20 @@ export class ControladorRegistrosFactuais {
  async historico(@UsuarioAtual() u:UsuarioAutenticado,@Param('pacienteId',ParseUUIDPipe) p:string,@Body() d:HistoricoRegistrosFactuaisDto){
   // Cada flag só altera a chamada quando enviada: o pedido padrão e o de `incluirContexto` seguem idênticos.
   const base=[u.tenantId,p,u,d.limite,d.cursorId,d.cursorCriadoEm] as const;
-  const resultado=d.incluirOrigem!==undefined?await this.servico.historico(...base,d.incluirContexto??false,d.incluirOrigem)
+  const resultado=d.incluirReferencias===true?await this.servico.historico(...base,d.incluirContexto??false,d.incluirOrigem??false,true)
+   :d.incluirOrigem!==undefined?await this.servico.historico(...base,d.incluirContexto??false,d.incluirOrigem)
    :d.incluirContexto===undefined?await this.servico.historico(...base):await this.servico.historico(...base,d.incluirContexto);
   return {schemaVersao:1,...resultado};}
  @Post('relatorio') @HttpCode(200) @Permissoes('planos_alimentares.ler','planos_alimentares.gerenciar') @Header('Cache-Control','private, no-store')
  prepararRelatorio(@UsuarioAtual() u:UsuarioAutenticado,@Param('pacienteId',ParseUUIDPipe) p:string,@Body() d:PrepararRelatorioFactualDto){
   if(d.incluirOrigem!==undefined&&d.versaoRelatorio!==2)throw new BadRequestException('A origem por nutriente exige o formato 2.');
+  if(d.incluirReferencias!==undefined&&d.versaoRelatorio!==2)throw new BadRequestException('As referências exigem o formato 2.');
+  if(d.incluirReferencias===true)return this.servico.prepararRelatorioApi(u.tenantId,p,u,d.registroId,2,d.incluirOrigem===true,true);
   if(d.versaoRelatorio!==2)return this.servico.prepararRelatorioApi(u.tenantId,p,u,d.registroId);
   return d.incluirOrigem===true?this.servico.prepararRelatorioApi(u.tenantId,p,u,d.registroId,2,true):this.servico.prepararRelatorioApi(u.tenantId,p,u,d.registroId,2);}
  @Post('consultar') @HttpCode(200) @Permissoes('planos_alimentares.ler') @Header('Cache-Control','private, no-store')
- consultar(@UsuarioAtual() u:UsuarioAutenticado,@Param('pacienteId',ParseUUIDPipe) p:string,@Body() d:ConsultarRegistroFactualDto){return this.servico.consultarApi(u.tenantId,p,u,d.registroId);}
+ consultar(@UsuarioAtual() u:UsuarioAutenticado,@Param('pacienteId',ParseUUIDPipe) p:string,@Body() d:ConsultarRegistroFactualDto){
+  return d.incluirReferencias===true?this.servico.consultarApi(u.tenantId,p,u,d.registroId,false,false,true):this.servico.consultarApi(u.tenantId,p,u,d.registroId);}
  @Post('comparar') @HttpCode(200) @Permissoes('planos_alimentares.ler') @Header('Cache-Control','private, no-store')
  comparar(@UsuarioAtual() u:UsuarioAutenticado,@Param('pacienteId',ParseUUIDPipe) p:string,@Body() d:CompararRegistrosFactuaisDto){return this.servico.compararApi(u.tenantId,p,u,d.antesId,d.depoisId);}
 }

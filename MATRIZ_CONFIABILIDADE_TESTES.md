@@ -330,6 +330,33 @@ comandos/limites, UX B/C e estado do CI: `tasks/food06-interface-factual.md`.
 Todas as melhorias FOOD06 continuam obrigatórias; direitos/G06 e funcionalidades
 não implementadas não são liberados pela cobertura da tabela.
 
+### FOOD06 — referências DRI (T1–T3)
+
+Comparação com DRI adulta só por opt-in `incluirReferencias`; sem a flag, toda
+resposta fica idêntica. Nascimento e data vêm do servidor, depois da carteira e
+na mesma transação; somente `Professional`. O registro factual com contexto
+confirmado grava só a identidade da versão DRI (envelope interno v2, sem marcador
+`bases.referencia`, para que histórico e `/comparar` não mudem sem opt-in) e a
+projeção usa essa versão e o contexto gravados. Contexto inelegível também grava a
+versão adulta; a projeção o declara não elegível. Registro v1 fica `registro_sem_referencias`,
+e versão gravada desconhecida fica `versao_referencias_indisponivel`: nunca há
+recálculo com a versão atual. ND nunca vira zero; UL só para o total abrangido.
+
+Provas no módulo backend de planos: `referencias-dri`, `comparacao-referencias`,
+`dtos-analise-micronutrientes`, o bloco T3a de `servico-planos-alimentares`,
+`leitor-registro-analise-factual` (v1/v2 e adulterações),
+`projecao-referencias-registro`, `relatorio-analise-factual` e o controlador
+HTTP de registros, com registros v1 congelados em `aplicacao/fixtures` (bytes do
+escritor anterior) e a integração 1081 em PostgreSQL. Limites: a fixture de
+contrato Web da forma `calculado` entra com a T4. A captura repetida com a mesma
+chave depois do deploy recebe 409 (conteúdo agora v2), como já ocorre ao cruzar a
+meia-noite; o registro original existe. Nova versão DRI exige resolver a tabela
+antiga pela identidade, ou todo registro existente fica
+`versao_referencias_indisponivel`. Rollback: reverter só a escrita do v2 mantém
+legíveis os registros v2 já gravados. Reverter também o leitor os torna ilegíveis
+(falha fechada, sem corromper dado) e, como o histórico decifra a página inteira,
+derruba o histórico e o `/comparar` de todo paciente com um registro v2.
+
 ### FOOD06 — decomposição interna M02
 
 A seleção comum de refeições deve preservar a PA06: OFF/não selecionado não

@@ -67,20 +67,27 @@ export function validarRegistroDeVersaoFactual(entrada:unknown):ComandoRegistroD
 @Injectable()
 export class ServicoRegistrosAnaliseFactual {
  constructor(private readonly executor:ExecutorTenant,private readonly crypto:CriptografiaDadosSensiveis){}
- async prepararRelatorioApi(tenant:string,paciente:string,usuario:UsuarioAutenticado,registroId:string,versaoRelatorio:1|2=1,incluirOrigem=false){
+ async prepararRelatorioApi(tenant:string,paciente:string,usuario:UsuarioAutenticado,registroId:string,versaoRelatorio:1|2=1,incluirOrigem=false,incluirReferencias=false){
   if(versaoRelatorio!==1&&versaoRelatorio!==2)throw new BadRequestException('Formato de relatório inválido.');
   if(typeof incluirOrigem!=='boolean'||(incluirOrigem&&versaoRelatorio!==2))throw new BadRequestException('Origem por nutriente exige o formato 2.');
+  if(typeof incluirReferencias!=='boolean'||(incluirReferencias&&versaoRelatorio!==2))throw new BadRequestException('As referências exigem o formato 2.');
   this.autorizar(uuid(tenant),usuario,true);
+  if(incluirReferencias){
+   const projecao=await this.consultarApi(tenant,paciente,usuario,registroId,true,incluirOrigem,true);
+   return prepararRelatorioFactual(projecao,new Date(),versaoRelatorio,incluirOrigem,true);
+  }
   // Consulta reautoriza carteira e escopo antes de decifrar, na transação existente.
   // A chamada sem a flag permanece idêntica à anterior; só quem pede a origem usa o argumento novo.
   const projecao=incluirOrigem?await this.consultarApi(tenant,paciente,usuario,registroId,true,true):await this.consultarApi(tenant,paciente,usuario,registroId,true);
   return incluirOrigem?prepararRelatorioFactual(projecao,new Date(),versaoRelatorio,true):prepararRelatorioFactual(projecao,new Date(),versaoRelatorio);
  }
- async consultarApi(tenant:string,paciente:string,usuario:UsuarioAutenticado,registroId:string,incluirFontesDoRelatorio=false,comCodigoFonte=false){
+ async consultarApi(tenant:string,paciente:string,usuario:UsuarioAutenticado,registroId:string,incluirFontesDoRelatorio=false,comCodigoFonte=false,incluirReferencias=false){
   const tenantId=uuid(tenant),pacienteId=uuid(paciente),id=uuid(registroId);this.autorizar(tenantId,usuario,incluirFontesDoRelatorio);
+  if(typeof incluirReferencias!=='boolean')throw new BadRequestException('Consulta inválida.');
   return this.executor.executar(tenantId,async g=>{
    await this.carteira(g,tenantId,pacienteId,usuario);const r=await this.obterRegistro(g,tenantId,pacienteId,id);
-   const registro=this.decifrarRegistro(r),projecao=projetarRegistroFactual(r,registro);
+   // Referências usam só a versão e o contexto gravados no registro (T3b), depois da carteira.
+   const registro=this.decifrarRegistro(r),projecao=projetarRegistroFactual(r,registro,incluirReferencias);
    if(!incluirFontesDoRelatorio)return projecao;
    // Relatório é o ponto em que o dado sai do sistema (impressão): auditado como as
    // exportações, na mesma transação e sem conteúdo clínico (revisão R4 da #455).
@@ -243,9 +250,9 @@ export class ServicoRegistrosAnaliseFactual {
    return projetar(salvo);
   });
  }
- async historico(tenant:string,paciente:string,usuario:UsuarioAutenticado,limite=10,cursorId?:string,cursorCriadoEm?:string,incluirContexto=false,incluirOrigem=false){
+ async historico(tenant:string,paciente:string,usuario:UsuarioAutenticado,limite=10,cursorId?:string,cursorCriadoEm?:string,incluirContexto=false,incluirOrigem=false,incluirReferencias=false){
   const tenantId=uuid(tenant),pacienteId=uuid(paciente);this.autorizar(tenantId,usuario,false);
-  if(typeof incluirContexto!=='boolean'||typeof incluirOrigem!=='boolean'||!Number.isSafeInteger(limite)||limite<1||limite>10||(cursorId===undefined)!==(cursorCriadoEm===undefined))throw new BadRequestException('Paginação inválida.');
+  if(typeof incluirContexto!=='boolean'||typeof incluirOrigem!=='boolean'||typeof incluirReferencias!=='boolean'||!Number.isSafeInteger(limite)||limite<1||limite>10||(cursorId===undefined)!==(cursorCriadoEm===undefined))throw new BadRequestException('Paginação inválida.');
   let cursorData:string|undefined,cursorUuid:string|undefined;
   if(cursorId!==undefined&&cursorCriadoEm!==undefined){
    cursorUuid=uuid(cursorId);cursorData=cursorCriadoEm;
@@ -271,7 +278,7 @@ export class ServicoRegistrosAnaliseFactual {
     for(const r of consultados){const c=porId.get(r.id);if(!Buffer.isBuffer(c))throw new UnprocessableEntityException('Registro do histórico indisponível.');r.conteudoCriptografado=c;}
    }
    const registros=itens.map(r=>this.decifrarRegistro(r)),maisAntigoConsultado=temMais?this.decifrarRegistro(consultados[limite]):undefined;
-   const resumos=registros.map((r,i)=>projetarResumoHistoricoFactual(itens[i],r,compararBasesHistoricas(r,registros[i+1]??maisAntigoConsultado),incluirContexto,incluirOrigem));
+   const resumos=registros.map((r,i)=>projetarResumoHistoricoFactual(itens[i],r,compararBasesHistoricas(r,registros[i+1]??maisAntigoConsultado),incluirContexto,incluirOrigem,incluirReferencias));
    const ultimo=itens.at(-1),ultimoRaw=resultado.raw.at(limite-1) as {cursor_criado_em?:unknown}|undefined;
    if(temMais&&ultimo&&(typeof ultimoRaw?.cursor_criado_em!=='string'))throw new UnprocessableEntityException('Cursor do histórico indisponível.');
    return {itens:resumos,temMais,...(temMais&&ultimo?{proximoCursor:{id:ultimo.id,criadoEm:ultimoRaw!.cursor_criado_em as string}}:{})};
