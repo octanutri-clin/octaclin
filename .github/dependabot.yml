@@ -149,11 +149,13 @@ updates:
       - dependency-name: "react-native-screens"
       # `@react-native/*` (metro-config, babel-preset, ...) acompanha a versao do
       # `react-native` instalada: pelo semver `0.x`, cada minor deles e um major do
-      # React Native. Subir so o pacote de ferramenta deixa o projeto com tooling
-      # de uma linha do RN que o app nao usa. Em 2026-11-09 a #499 subiu
-      # `@react-native/metro-config` para 0.88.1 com `react-native` em 0.86.3; a CI
-      # passou, mas o desalinhamento nao e de rotina. A troca vem junto da
-      # atualizacao do React Native / SDK, em PR propria.
+      # React Native, entao bump solto do Dependabot nao e rotina.
+      #
+      # Decisao do proprietario (2026-11-10): manter `@react-native/metro-config`
+      # em 0.88.1 (entrou pela #499) com `react-native` em 0.86.3. A CI do mobile
+      # (typecheck, expo-doctor, build:validate) passou com essa combinacao. O
+      # `ignore` congela o estado aceito: novas versoes de `@react-native/*` so
+      # entram junto da atualizacao do React Native / SDK, em PR propria.
       - dependency-name: "@react-native/*"
       # Major do Expo e atualizacao de SDK inteiro: pacotes 58 soltos num projeto
       # no SDK 57 reprovam o expo-doctor (#447-#450). Mobile segue NO-GO; a troca
