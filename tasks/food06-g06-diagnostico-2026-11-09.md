@@ -68,5 +68,54 @@ literalmente dos arquivos da `main` (sha256 do arquivo 1081 `41deceb0…`, 1082
 | Prova funcional (UPDATE `where false` como runtime) | `42501` da trigger | `42501` `permission denied` (REVOKE) |
 
 Não foi feito: deploy, conferência do Render, smoke de aplicação com registro
-factual sintético, carga da TACO no staging. Os pontos de restauração podem ser
-removidos pelo proprietário depois que o backend novo estiver validado.
+factual sintético. A carga da TACO no staging foi feita depois e está registrada na
+seção seguinte. Os pontos de restauração podem ser removidos pelo proprietário
+depois que o backend novo estiver validado.
+
+## Execução autorizada — carga da TACO v1 no staging (2026-11-09)
+
+Autorização do proprietário nesta sessão ("Pode carregar a TACO no staging").
+Projeto `silent-snow-21079677`, banco `neondb`, via Neon com a role owner. Carga
+**aditiva** (catálogo, fonte, importação e alimentos novos; nada existente foi
+alterado). Produção não foi tocada: a TACO já estava ativa lá.
+
+| Item | Valor |
+| --- | --- |
+| Catálogo / fonte | `taco_nepa_unicamp` / `taco-4a-cmvcol-taco3-v1` (base `cmvcol_taco3`, esquema `octaclin-composicao-v1`) |
+| Direito de uso | `aprovado`, referência na URL oficial do NEPA/UNICAMP, responsável `proprietario-autorizacao-2026-11-09` |
+| Registros | 583 alimentos válidos, de 597 candidatos; 14 excluídos pelo motivo `valor_nutricional_em_reavaliacao_ou_invalido` (listados no manifesto da importação) |
+| Hashes | arquivo de origem `a66b8ec5…2d14`; conteúdo `82c22bc4…81e7`; combinado dos registros `6e811a55…1b5f` |
+
+**Como foi executada.**
+
+1. Primeira tentativa, numa única transação, **abortada** pela conferência de hash
+   (583 linhas, hash divergente) e revertida: nada foi gravado. Causa: erro de cópia
+   do payload feita pelo agente (a linha 597, "Noz, crua", saiu com sódio 1 em vez
+   de 5). O hash esperado foi recalculado localmente a partir das duas fontes
+   (`linhas.json` e o SQL ensaiado) e estava correto.
+2. Segunda tentativa, em etapas: (a) abertura numa transação (catálogo, fonte em
+   `em_validacao`, importação `em_execucao`); (b) 6 lotes de até 100 linhas, cada um
+   com o prefixo esperado do hash de **cada linha** (linha divergente aborta o lote
+   com o código dela); (c) fechamento numa transação: conferência da contagem e do
+   hash combinado, importação `concluida`, fonte `ativa` e tentativa registrada. A
+   fonte só ficou `ativa` depois da conferência.
+
+**Verificado por leitura depois da carga:** fonte `ativa`, direito `aprovado`, 583
+alimentos, importação `concluida`, 1 tentativa `concluida`, hash combinado igual ao
+esperado.
+
+**Limites e pendências.**
+
+- **Sem ponto de restauração novo:** `create_branch` falhou por limite de branches
+  do staging. O backup existente (`backup-pre-1081-1082-2026-11-09`) é anterior à
+  carga. A carga é aditiva; o rollback não foi ensaiado e exigiria procedimento
+  deliberado, porque a fonte ativa é protegida por triggers.
+- **v2 (micronutrientes) não foi carregada**: só a v1 (`taco-4a-cmvcol-taco3-v1`).
+- **Não comparado** com a TACO da produção (equivalência de versão e conteúdo não
+  verificada).
+- **Alimento 540 com nome "L"** (categoria "Alimentos preparados"): o nome já vem
+  assim do artefato de origem (`linhas.json`), não do SQL. Parece truncado na
+  extração da planilha; **conferir na fonte** (e na TACO da produção) antes de
+  expor o item a usuários. Os valores nutricionais dessa linha não foram revisados.
+- A tabela "Estado observado" acima registra o estado do início do dia (staging sem
+  TACO) e não foi reescrita.
