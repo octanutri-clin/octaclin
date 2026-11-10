@@ -40,7 +40,7 @@ jobs:
           trivyignores: .trivyignore.yaml
 
       - name: Publicar resultado no Security tab
-        uses: github/codeql-action/upload-sarif@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4
+        uses: github/codeql-action/upload-sarif@1fc58d04a4d4374f921bdac573c3811c240f9c26 # v4
         if: always()
         with:
           sarif_file: trivy-results.sarif
@@ -168,7 +168,7 @@ jobs:
 
       - name: Publicar scan da imagem no Security tab
         if: always()
-        uses: github/codeql-action/upload-sarif@9b3254085494b55a0f7c4c2b3d2d52cc712ce370 # v4
+        uses: github/codeql-action/upload-sarif@1fc58d04a4d4374f921bdac573c3811c240f9c26 # v4
         with:
           sarif_file: trivy-imagem-${{ matrix.nome }}.sarif
           category: trivy-imagem-${{ matrix.nome }}
