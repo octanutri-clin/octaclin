@@ -6,7 +6,7 @@ export function ConfirmacoesContextoFactual({desabilitado,aoConferir}:{desabilit
  const [incluir,setIncluir]=useState(false),[c,setC]=useState(confirmacoesContextoIniciais);
  return <fieldset disabled={desabilitado} className="grid gap-2"><legend className="sr-only">Contexto opcional da análise</legend>
   <label className="flex min-h-11 items-center gap-2"><input type="checkbox" checked={incluir} onChange={e=>{setIncluir(e.target.checked);setC(confirmacoesContextoIniciais());}}/>Registrar contexto desta análise</label>
-  <p className="text-sm text-texto-suave">Opcional: você pode salvar somente os valores factuais. As referências RDA/AI/UL continuam indisponíveis. As confirmações não alteram o cadastro do paciente.</p>
+  <p className="text-sm text-texto-suave">Opcional: você pode salvar somente os valores factuais. A comparação com referências é pedida na tabela; aqui só se registra o contexto. As confirmações não alteram o cadastro do paciente.</p>
   {incluir?<div className="grid gap-2 rounded border border-linha p-3">
    <p className="text-sm">A idade usa o nascimento cadastrado e a data local da clínica. Informações desconhecidas continuam desconhecidas; não estimamos condições clínicas.</p>
    <label className="grid gap-1">População de referência<select className={CAMPO} value={c.populacaoReferencia} onChange={e=>setC(v=>({...v,populacaoReferencia:e.target.value as ConfirmacoesContextoFactual['populacaoReferencia'],populacaoConfirmada:false}))}><option value="nao_informada">Não informada</option><option value="masculina">Masculina</option><option value="feminina">Feminina</option></select></label>
@@ -29,6 +29,6 @@ export function ResumoContextoFactual({confirmacoes:c}:{confirmacoes?:Confirmaco
   <p>Aplicabilidade: {c.aplicabilidade==='confirmada'?'confirmada':c.aplicabilidade==='nao_aplicavel'?'não aplicável':'não informada'}.</p>
   <p>Mesmo dia planejado: {c.mesmoDiaPlanejado?'confirmado':'não confirmado'}.</p>
   <p>Tabagismo: {c.tabagismo==='nao_informado'?'não informado':c.tabagismo==='sim'?'fuma':'não fuma'}.</p>
-  <p>As referências continuam indisponíveis. Cancelar a conferência descarta este preenchimento.</p>
+  <p>O registro guarda este contexto e a versão da referência. Cancelar a conferência descarta este preenchimento.</p>
  </div>;
 }

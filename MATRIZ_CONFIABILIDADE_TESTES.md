@@ -357,6 +357,22 @@ legíveis os registros v2 já gravados. Reverter também o leitor os torna ileg�
 (falha fechada, sem corromper dado) e, como o histórico decifra a página inteira,
 derruba o histórico e o `/comparar` de todo paciente com um registro v2.
 
+### FOOD06 — referências DRI na tabela (T4a, Web)
+
+Interface da análise ao vivo, só por opt-in do profissional. Sem o pedido o corpo é o de sempre e a
+coluna Referência mostra "Não solicitada". Com ele, vão só as 7 confirmações; nascimento, idade e
+elegibilidade são do servidor. O leitor Web falha fechado: comparação sobre nutriente parcial,
+quantidade ou unidade fora da cobertura da mesma resposta, versão divergente, UL sem posição ou
+posição contra os números, contexto inelegível com comparação. As respostas ficam só na memória da
+tela do paciente aberto; mudar resposta ou seleção desativa a comparação (nunca números de outra
+premissa) e só "dia completo" é reconfirmado.
+
+Provas: `scripts/referencias-dieteticas-factuais.spec.ts` (leitor, textos, respostas e corpo),
+`tests/visual/food06-referencias-tabela.spec.mjs` (desktop e celular, teclado, axe, ampliação de 200%)
+e regressão dos specs FOOD06 existentes. Limites: a prova de PDF real (`FOOD06_PDF_REAL`) e o
+relatório ficam na T4b; sem leitor de tela real nem pessoas; o texto de RDA/AI/UL aguarda validação
+de conteúdo por quem responde por ele; filtro "Comparáveis" e ordenação por percentual em BACKLOG.
+
 ### FOOD06 — decomposição interna M02
 
 A seleção comum de refeições deve preservar a PA06: OFF/não selecionado não

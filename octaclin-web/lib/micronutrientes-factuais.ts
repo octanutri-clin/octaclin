@@ -1,6 +1,7 @@
 import {lerAjudaDietetica,type AjudaDietetica} from './ajuda-dietetica';
 import type { CalcularCombinadoEntradaApi, CodigoMicronutrienteApi } from './plano-alimentar-api';
 import { CAMPOS_MICRONUTRIENTES_PLANO } from './micronutrientes-plano';
+import { lerReferenciasFactuais, type ReferenciasFactuais } from './referencias-dieteticas-factuais';
 export type EstadoCoberturaFactual = 'COMPLETO' | 'PARCIAL' | 'DESCONHECIDO' | 'INCOMPATIVEL' | 'INDISPONIVEL';
 export interface LinhaMicronutrienteFactual {
   codigo: CodigoMicronutrienteApi; rotulo: string; unidade: 'mg' | 'mcg'; grupo: 'minerais' | 'vitaminas';
@@ -74,7 +75,7 @@ export function formatarFontesCurtas(fontes: string[], limite: number): string {
   const visiveis=fontes.slice(0,limite), resto=fontes.length-visiveis.length;
   return visiveis.join(' · ')+(resto>0?` · +${rotuloFontes(resto)}`:'');
 }
-export interface AnaliseMicronutrientesFactual { ajuda?:AjudaDietetica|null; calculadoEm: string; linhas: LinhaMicronutrienteFactual[] }
+export interface AnaliseMicronutrientesFactual { ajuda?:AjudaDietetica|null; calculadoEm: string; linhas: LinhaMicronutrienteFactual[]; /** Só quando a comparação foi pedida (FOOD06 T4a). */ referencias?: ReferenciasFactuais }
 export interface FiltrosMicronutrientesFactuais {
   grupo: 'todos' | 'minerais' | 'vitaminas'; cobertura: 'todas' | EstadoCoberturaFactual;
   ordem: 'nome' | 'quantidade' | 'cobertura';
@@ -101,11 +102,14 @@ function falhar(): never { throw new Error('Não foi possível interpretar a an�
 function objeto(v: unknown): Record<string,unknown> { if (!v || typeof v!=='object' || Array.isArray(v)) return falhar(); return v as Record<string,unknown>; }
 function inteiro(v: unknown): v is number { return Number.isSafeInteger(v) && (v as number)>=0 && (v as number)<=10000; }
 function numero(v: unknown): v is number { return typeof v==='number' && Number.isFinite(v) && v>=0; }
-/** Projeta somente dados utilizados pela tabela; não interpreta nem habilita referências. */
-export function lerAnaliseMicronutrientesFactual(valor: unknown, entrada: CalcularCombinadoEntradaApi): AnaliseMicronutrientesFactual {
-  const r=objeto(valor), comparacoes=objeto(r.comparacoes), cobertura=objeto(r.cobertura);
+/**
+ * Projeta somente dados utilizados pela tabela. Sem `opcoes.referencias`, a resposta precisa trazer o
+ * placeholder de sempre (nada é habilitado); com ele, a comparação calculada pelo servidor é obrigatória.
+ */
+export function lerAnaliseMicronutrientesFactual(valor: unknown, entrada: CalcularCombinadoEntradaApi, opcoes?: { referencias?: boolean }): AnaliseMicronutrientesFactual {
+  const r=objeto(valor), comparacoes=objeto(r.comparacoes), cobertura=objeto(r.cobertura), pedeReferencias=opcoes?.referencias===true;
   if(r.schemaVersao!==1 || r.motorVersao!=='food06-factual-v1' || cobertura.schemaVersao!==1 ||
-    comparacoes.estado!=='indisponivel' || comparacoes.motivo!=='referencias_nao_habilitadas' ||
+    (pedeReferencias ? comparacoes.estado!=='calculado' : comparacoes.estado!=='indisponivel' || comparacoes.motivo!=='referencias_nao_habilitadas') ||
     typeof r.calculadoEm!=='string' || !Number.isFinite(Date.parse(r.calculadoEm)) || !Array.isArray(r.publicacoes) ||
     r.publicacoes.length!==entrada.selecoes.length) return falhar();
   validarPublicacoesFactuais(r.publicacoes,entrada);
@@ -113,7 +117,7 @@ export function lerAnaliseMicronutrientesFactual(valor: unknown, entrada: Calcul
   const linhas=CAMPOS_MICRONUTRIENTES_PLANO.map(c=>lerLinhaMicronutrienteFactual(nutrientes[c.codigo],c.codigo));
   if(new Set(linhas.map(l=>l.contagens.incluidos)).size!==1)return falhar();
   if(r.fontes!==undefined){const origens=lerFontesPorNutrienteFactual(r.fontes,linhas);for(const l of linhas)l.origem=origens[l.codigo];}
-  return {calculadoEm:r.calculadoEm,linhas,...(r.ajuda!==undefined?{ajuda:lerAjudaDietetica(r.ajuda)}:{})};
+  return {calculadoEm:r.calculadoEm,linhas,...(r.ajuda!==undefined?{ajuda:lerAjudaDietetica(r.ajuda)}:{}),...(pedeReferencias?{referencias:lerReferenciasFactuais(comparacoes,linhas)}:{})};
 }
 const CODIGO_FONTE_FACTUAL = /^[A-Za-z0-9_.-]{1,80}$/;
 /** Mesmo formato do backend: rótulo livre do operador do catálogo (coluna varchar(80)), sem markup, controle nem espaço nas pontas. */

@@ -115,6 +115,15 @@ clínica, jurídica ou de produto nova, pare só aquele item e registre a pergun
 
 ### T4 — Interface: percentual e UL na tabela, detalhes e relatório (M06/M08) [ ]
 
+- **Divisão:** T4a [x] tabela da análise ao vivo, detalhes por linha, bloco "Comparar com
+  referências DRI" e estado compartilhado com o registro (só depende da T3a). T4b [ ] relatório
+  formato 2 (comparação só por escolha explícita, desligada por padrão), "Como ler" impresso,
+  PDF real com `FOOD06_PDF_REAL=true` e histórico (depende da T3b, já integrada).
+- **Etapa A de UX:** `docs/agents/ux/reports/FOOD06-T4-A-2026-11-10`. Decisões do proprietário:
+  confirmações do paciente só na memória da tela (reconfirma só o "dia completo" ao mudar a
+  seleção); relatório só por escolha explícita; texto factual reforçado, centralizado em
+  `lib/textos-referencias-dieteticas.ts`.
+
 - **Antes:** etapa A de UX (nutricionista). Linguagem factual: "x% da RDA", "UL
   não comparável: motivo". Sem cores de diagnóstico.
 - **Web:** pedir `incluirReferencias`, mostrar coluna e legenda, motivo por

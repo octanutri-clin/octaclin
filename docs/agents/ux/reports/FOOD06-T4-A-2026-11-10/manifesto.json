@@ -1,0 +1,21 @@
+{
+  "modalidade": "duas instâncias novas com papel fornecido como prompt, sem ferramentas; síntese editorial do coordenador (não é seleção nativa de TOML)",
+  "agentes": "nutricionista e paciente, instâncias distintas do runtime desta sessão; os identificadores ficam na trilha do runtime e não são copiados para o repositório",
+  "base": "2959f1b9b259610ba9b5a2be6c446f7735136c69",
+  "data": "2026-11-10",
+  "paciente": "avaliado apenas quanto à folha impressa e à tela do profissional; demais jornadas N/A (portal e aplicativo não mudam)",
+  "inicio_fim": "durante esta sessão; horário exato não registrado, não inferido",
+  "observacoes": "o paciente foi interrompido por limite de uso e retomado na mesma instância, recebendo as decisões do proprietário sobre relatório e texto; nenhum recebeu o parecer do outro",
+  "ferramentas_do_revisor": [],
+  "sha256": {
+    "brief.md": "3d6767ac12ba6a58cdd7aa6608fbbff5848f95a922a2823508f411fbbcc1327e",
+    "nutricionista.md": "a2e268a6cc780542cd0da71da907e8795e88a15d1d39881103851ff65d0a88ff",
+    "paciente.md": "bf18438c693684027834a29c4f83d3724acc7db33844e330502811525be8941e",
+    "consolidado.md": "ab192803f505dfcf926501f5281f9105ddf5bfb7db9ffd0c605d1e47d8ab182e"
+  },
+  "fontes_sha256": {
+    ".codex/agents/octaclin-nutricionista-ux.toml": "6259b40a98e2c49053cbc6adbc0c59d0312b14e191b228ab73de2f2eac53af6d",
+    ".codex/agents/octaclin-paciente-ux.toml": "a40b1ded5e47739a2710caa5ec9a9a7871b57be7efc11deefaae0515028ff7d7",
+    "docs/agents/ux/PROCEDIMENTO.md": "00ee799fa4435bbc1af022752fc1a9dbce4a3196cd1b188a9a4b6017c47bff29"
+  }
+}
