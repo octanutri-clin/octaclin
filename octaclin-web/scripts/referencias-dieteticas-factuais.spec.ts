@@ -4,7 +4,7 @@ import { analisarMicronutrientesPlanejados } from '../lib/calculo-combinado-plan
 import { lerAnaliseMicronutrientesFactual } from '../lib/micronutrientes-factuais';
 import { CAMPOS_MICRONUTRIENTES_PLANO } from '../lib/micronutrientes-plano';
 import { MOTIVOS_COMPARACAO_FACTUAL, MOTIVOS_CONTEXTO_FACTUAL, montarConfirmacoesReferencias, resumirComparacao, respostasPacienteIniciais, situacaoRespostas, type ComparacaoNutrienteFactual } from '../lib/referencias-dieteticas-factuais';
-import { AVISO_FORA_DO_ESCOPO, COMO_LER, MOTIVO_COMPARACAO_CURTO, MOTIVO_COMPARACAO_LONGO, MOTIVO_CONTEXTO_TEXTO, formatarPercentualReferencia, textoFonteReferencias, textoReferencia, textoUl } from '../lib/textos-referencias-dieteticas';
+import { AVISO_FORA_DO_ESCOPO, COMO_LER, MOTIVO_COMPARACAO_CURTO, MOTIVO_COMPARACAO_LONGO, MOTIVO_CONTEXTO_TEXTO, formatarPercentualReferencia, textoFonteReferencias, textoReferencia, textoRespostasAtivas, textoResumoComparacao, textoUl } from '../lib/textos-referencias-dieteticas';
 
 const VERSAO = 'dri-hc-2025-11-19-adulto-v1';
 const entrada = { selecoes: [{ planoId: 'p1', versaoIdEsperada: 'v1', ativacaoRevisaoEsperada: 2, identidadesRefeicoes: ['r1'] }] };
@@ -123,6 +123,10 @@ test('FOOD06 T4a: textos factuais aprovados, sem palavras proibidas nem verbo de
   assert.equal(textoUl('calcioMg', ul), 'Limite superior (UL): total planejado abaixo de 2.500 mg');
   assert.equal(textoUl('calcioMg', { ...ul, posicao: 'acima' }), 'Limite superior (UL): total planejado acima de 2.500 mg');
   assert.equal(textoUl('calcioMg', { ...ul, posicao: 'igual' }), 'Limite superior (UL): total planejado igual a 2.500 mg');
+  assert.equal(textoReferencia('calcioMg', { ...ref, quantidadePlanejada: 2, percentual: 0.2 }), 'Planejado: 2 mg = menos de 1% da RDA (1.000 mg)');
+  assert.equal(textoReferencia('calcioMg', { ...ref, quantidadePlanejada: 0, percentual: 0 }), 'Planejado: 0 mg = 0% da RDA (1.000 mg)');
+  assert.equal(textoResumoComparacao({ comparados: 1, dadosIncompletos: 21, semReferencia: 0, total: 22 }), 'Comparado em 1 de 22 nutrientes. Faltam dados de alguns alimentos do plano em 21.');
+  assert.equal(textoResumoComparacao({ comparados: 10, dadosIncompletos: 8, semReferencia: 4, total: 22 }), 'Comparado em 10 de 22 nutrientes. Faltam dados de alguns alimentos do plano em 8. Sem valor de referência para 4.');
   assert.equal(textoReferencia('vitaminaCMg', { estado: 'comparavel', tipo: 'RDA', quantidadePlanejada: 60, unidadePlanejada: 'mg', valorReferencia: 125, unidadeReferencia: 'mg', percentual: 48, ajusteTabagismoMg: 35 }), 'Planejado: 60 mg = 48% da RDA (125 mg), com +35 mg por tabagismo confirmado');
   const todos = [...Object.values(MOTIVO_COMPARACAO_CURTO), ...Object.values(MOTIVO_COMPARACAO_LONGO), ...Object.values(MOTIVO_CONTEXTO_TEXTO), ...Object.values(AVISO_FORA_DO_ESCOPO), ...COMO_LER,
     textoReferencia('calcioMg', ref), textoUl('calcioMg', ul)].join('\n');
@@ -131,6 +135,14 @@ test('FOOD06 T4a: textos factuais aprovados, sem palavras proibidas nem verbo de
   for (const m of MOTIVOS_COMPARACAO_FACTUAL) { assert.ok(MOTIVO_COMPARACAO_CURTO[m]); assert.ok(MOTIVO_COMPARACAO_LONGO[m]); }
   for (const m of MOTIVOS_CONTEXTO_FACTUAL) assert.ok(MOTIVO_CONTEXTO_TEXTO[m]);
   assert.equal(textoFonteReferencias({ fonte: { autoridade: 'Health Canada', modificadaEm: '2025-11-19', licenca: 'OGL-Canada' }, versao: VERSAO }), `Fonte: Health Canada, tabela de 19/11/2025, licença OGL-Canada. Versão ${VERSAO}.`);
+});
+
+test('FOOD06 T4a: a linha de status usa os rotulos do formulario nos tres estados de tabagismo', () => {
+  const ok = { ...respostasPacienteIniciais(), populacaoReferencia: 'feminina' as const, gestacao: 'nao' as const, lactacao: 'nao' as const };
+  assert.equal(textoRespostasAtivas({ ...ok, tabagismo: 'nao' }), 'população de referência feminina, sem gestação nem lactação, não fuma');
+  assert.equal(textoRespostasAtivas({ ...ok, tabagismo: 'sim' }), 'população de referência feminina, sem gestação nem lactação, fuma');
+  assert.equal(textoRespostasAtivas({ ...ok, tabagismo: 'nao_informado' }), 'população de referência feminina, sem gestação nem lactação, tabagismo não informado (a vitamina C fica sem comparação)');
+  assert.equal(textoRespostasAtivas({ ...ok, populacaoReferencia: 'masculina', tabagismo: 'nao' }), 'população de referência masculina, sem gestação nem lactação, não fuma');
 });
 
 test('FOOD06 T4a: percentual nunca vira zero falso e zero conhecido continua zero', () => {

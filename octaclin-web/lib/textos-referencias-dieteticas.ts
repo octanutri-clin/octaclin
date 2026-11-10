@@ -1,5 +1,5 @@
 import { formatarNutrientePlano } from './micronutrientes-plano';
-import type { ComparacaoNutrienteFactual, MotivoComparacaoFactual, MotivoContextoFactual, ReferenciasFactuais, ResumoComparacao } from './referencias-dieteticas-factuais';
+import type { ComparacaoNutrienteFactual, MotivoComparacaoFactual, MotivoContextoFactual, ReferenciasFactuais, ResumoComparacao, RespostasPacienteReferencias } from './referencias-dieteticas-factuais';
 
 /**
  * Único lugar dos textos da comparação com a DRI (FOOD06 T4a). Linguagem factual: sem cor,
@@ -18,7 +18,8 @@ const POSICAO_UL = { abaixo: 'abaixo de', igual: 'igual a', acima: 'acima de' } 
 
 /** Duas linhas do mesmo padrão em todo nutriente; o período ("do dia") está no cabeçalho da coluna. */
 export function textoReferencia(codigo: string, c: Extract<ComparacaoNutrienteFactual, { estado: 'comparavel' }>): string {
-  const base = `Planejado: ${formatarNutrientePlano(codigo, c.quantidadePlanejada)} ${c.unidadePlanejada} = ${formatarPercentualReferencia(c.percentual)}% da ${c.tipo} (${formatarNutrientePlano(codigo, c.valorReferencia)} ${c.unidadeReferencia})`;
+  const pct = formatarPercentualReferencia(c.percentual);
+  const base = `Planejado: ${formatarNutrientePlano(codigo, c.quantidadePlanejada)} ${c.unidadePlanejada} = ${pct === '<1' ? 'menos de 1' : pct}% da ${c.tipo} (${formatarNutrientePlano(codigo, c.valorReferencia)} ${c.unidadeReferencia})`;
   return c.ajusteTabagismoMg ? `${base}, com +${c.ajusteTabagismoMg} mg por tabagismo confirmado` : base;
 }
 export function textoUl(codigo: string, c: Extract<ComparacaoNutrienteFactual, { estado: 'comparavel' }>): string {
@@ -81,15 +82,24 @@ export const PENDENCIA_TEXTO = Object.freeze({
 } as const);
 
 export function textoResumoComparacao(r: ResumoComparacao): string {
-  return `Referência comparada em ${r.comparados} de ${r.total} nutrientes. Faltam dados em ${r.dadosIncompletos}. Sem referência aplicável em ${r.semReferencia}.`;
+  const partes = [`Comparado em ${r.comparados} de ${r.total} nutrientes.`];
+  if (r.dadosIncompletos > 0) partes.push(`Faltam dados de alguns alimentos do plano em ${r.dadosIncompletos}.`);
+  if (r.semReferencia > 0) partes.push(`Sem valor de referência para ${r.semReferencia}.`);
+  return partes.join(' ');
+}
+
+/** Mesmos rótulos do formulário; "não informado" deixa explícito o efeito na vitamina C. */
+export function textoRespostasAtivas(r: RespostasPacienteReferencias): string {
+  const tabagismo = r.tabagismo === 'sim' ? 'fuma' : r.tabagismo === 'nao' ? 'não fuma' : 'tabagismo não informado (a vitamina C fica sem comparação)';
+  return `população de referência ${r.populacaoReferencia === 'masculina' ? 'masculina' : 'feminina'}, sem gestação nem lactação, ${tabagismo}`;
 }
 
 export const COMO_LER_TITULO = 'Como ler esta comparação';
 export const COMO_LER: readonly string[] = Object.freeze([
-  'Os números vêm do total planejado do dia (as refeições selecionadas formam o dia completo). Não mostram o que foi consumido.',
+  'DRI (Ingestões Dietéticas de Referência) é o conjunto de valores de referência usado aqui. Os números vêm do total planejado do dia (as refeições selecionadas formam o dia completo) e não mostram o que foi consumido.',
   'RDA (Ingestão Dietética Recomendada) e AI (Ingestão Adequada) são valores de referência diários para o grupo selecionado. Não são metas individuais nem um teto.',
   'UL (limite superior de ingestão) é um valor de referência que vale para o total dos alimentos do plano. Nem todo nutriente tem UL.',
-  'O total considera só o que está no plano alimentar; produtos fora do plano não são somados.',
+  'O total considera só o que está no plano alimentar. Produtos fora do plano, como suplementos que não foram lançados nele, não são somados.',
   'Quando faltam dados de alguns alimentos, o nutriente não é comparado. Ausência não equivale a zero.',
   'Perdas no preparo, absorção e necessidades individuais não são consideradas. Não é diagnóstico nem orientação para mudar a alimentação.'
 ]);

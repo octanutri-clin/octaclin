@@ -6,7 +6,7 @@ import {
 } from '@/lib/referencias-dieteticas-factuais';
 import {
   AVISO_CONTEXTO_TITULO, AVISO_FORA_DO_ESCOPO, COMO_LER, COMO_LER_TITULO, MOTIVO_COMPARACAO_CURTO, MOTIVO_COMPARACAO_LONGO, MOTIVO_CONTEXTO_TEXTO,
-  PENDENCIA_TEXTO, textoFonteReferencias, textoReferencia, textoResumoComparacao, textoUl
+  PENDENCIA_TEXTO, textoFonteReferencias, textoReferencia, textoRespostasAtivas, textoResumoComparacao, textoUl
 } from '@/lib/textos-referencias-dieteticas';
 
 const CAMPO = 'min-h-11 min-w-0 rounded border border-linha bg-white px-2';
@@ -26,11 +26,6 @@ export interface PropsComparacaoReferencias {
   aoDesativar: () => void;
 }
 
-function descreverRespostas(r: RespostasPacienteReferencias): string {
-  const tabagismo = r.tabagismo === 'sim' ? 'tabagismo: sim' : r.tabagismo === 'nao' ? 'tabagismo: não' : 'tabagismo não informado';
-  return `população ${r.populacaoReferencia === 'masculina' ? 'masculina' : 'feminina'}, sem gestação nem lactação, ${tabagismo}`;
-}
-
 /** Bloco opcional acima da tabela. As respostas ficam só na memória da tela; nada é salvo nem altera o cadastro. */
 export function ComparacaoReferencias(p: PropsComparacaoReferencias) {
   const id = useId();
@@ -43,7 +38,7 @@ export function ComparacaoReferencias(p: PropsComparacaoReferencias) {
   return <section aria-label="Comparação com referências DRI" className="grid min-w-0 gap-2 rounded border border-linha p-3">
     <h3 className="font-semibold">Comparar com referências DRI</h3>
     <p className="text-sm text-texto-suave">Opcional. Compara o total planejado do dia com valores de referência (DRI, adultos de 19 anos ou mais). As respostas valem só nesta tela e não alteram o cadastro do paciente.</p>
-    {p.ativa ? <p role="status" className="text-sm font-medium" data-referencias-ativas="true">Referências DRI ativas: {descreverRespostas(r)}. Dia completo confirmado.</p> : null}
+    {p.ativa ? <p role="status" className="text-sm font-medium" data-referencias-ativas="true">Referências DRI ativas: {textoRespostasAtivas(r)}. Dia completo confirmado.</p> : null}
     {p.selecaoMudou && !p.ativa ? <p role="status" className="text-sm">A seleção mudou. Confirme de novo que as refeições formam o dia completo para comparar.</p> : null}
     <div className="flex flex-wrap gap-x-4">
       <button type="button" className={BOTAO} aria-expanded={formVisivel} aria-controls={id} onClick={() => setAberto(!formVisivel)}>

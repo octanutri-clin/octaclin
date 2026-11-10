@@ -94,8 +94,8 @@ test('FOOD06 T4a aplica só com tudo respondido, envia só as 7 confirmações e
   await expect(linhaCalcio(page)).toContainText('Limite superior (UL): total planejado abaixo de 2.500 mg');
   await expect(regiao(page).getByRole('columnheader', { name: 'Referência (total planejado do dia)' })).toBeVisible();
   await expect(regiao(page).getByRole('row', { name: /Ferro/ })).toContainText('Não comparável: faltam dados de alguns alimentos do plano');
-  await expect(regiao(page)).toContainText('Referência comparada em 1 de 22 nutrientes. Faltam dados em 21. Sem referência aplicável em 0.');
-  await expect(b).toContainText('Referências DRI ativas: população feminina, sem gestação nem lactação, tabagismo: não. Dia completo confirmado.');
+  await expect(regiao(page)).toContainText('Comparado em 1 de 22 nutrientes. Faltam dados de alguns alimentos do plano em 21.');
+  await expect(b).toContainText('Referências DRI ativas: população de referência feminina, sem gestação nem lactação, não fuma. Dia completo confirmado.');
   const enviado = corpos.slice(antes).find(c => c.incluirReferencias === true);
   expect(enviado.confirmacoes).toEqual({ populacaoReferencia: 'feminina', populacaoConfirmada: true, gestacao: 'nao', lactacao: 'nao', aplicabilidade: 'confirmada', mesmoDiaPlanejado: true, tabagismo: 'nao' });
   expect(JSON.stringify(enviado)).not.toMatch(/"(nascimento|dataAnalise|idadeAnos|elegivel)"/);
@@ -123,6 +123,73 @@ test('FOOD06 T4a gestação ou lactação confirmadas ficam fora do escopo sem c
   // O texto não sugere mudar a resposta para "passar".
   await expect(b).not.toContainText(/altere|mude a resposta|tente novamente com/i);
   expect(corpos.length).toBe(antes);
+});
+
+test('FOOD06 T4a aplicabilidade não aplicável é fora do escopo e a conferência da população entra na lista de pendências', async ({ page }) => {
+  const corpos = await preparar(page, (c, r) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(analise(c)) }));
+  const antes = corpos.length, b = bloco(page);
+  await responder(page, { dia: true });
+  await b.getByLabel('Aplicabilidade da população').selectOption({ label: 'Não aplicável' });
+  await expect(b).toContainText('A população não é aplicável a esta comparação. Os valores factuais continuam disponíveis.');
+  await expect(b.getByRole('button', { name: 'Aplicar comparação', exact: true })).toBeDisabled();
+  await b.getByLabel('Aplicabilidade da população').selectOption({ label: 'Confirmada para esta análise' });
+  await b.getByRole('checkbox', { name: /Conferi a população/ }).uncheck();
+  await expect(b).toContainText('Falta responder: conferência da população.');
+  await expect(b.getByRole('button', { name: 'Aplicar comparação', exact: true })).toBeDisabled();
+  expect(corpos.length).toBe(antes);
+});
+
+test('FOOD06 T4a a linha de status usa os rótulos do formulário e avisa o efeito de tabagismo não informado', async ({ page }) => {
+  await preparar(page, (c, r) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(analise(c)) }));
+  await responder(page, { tabagismo: 'Não informado' });
+  await bloco(page).getByRole('button', { name: 'Aplicar comparação', exact: true }).click();
+  await expect(bloco(page)).toContainText('tabagismo não informado (a vitamina C fica sem comparação)');
+  await bloco(page).getByRole('button', { name: 'Alterar respostas', exact: true }).click();
+  await bloco(page).getByLabel(/^Tabagismo/).selectOption({ label: 'Fuma' });
+  await bloco(page).getByRole('button', { name: 'Aplicar comparação', exact: true }).click();
+  await expect(bloco(page)).toContainText('sem gestação nem lactação, fuma. Dia completo confirmado.');
+});
+
+test('FOOD06 T4a UL de forma restrita não fica em silêncio: a célula diz que não é comparável com o total de alimentos', async ({ page }) => {
+  await preparar(page, (c, r) => {
+    const corpo = analise(c);
+    if (corpo.comparacoes.estado === 'calculado') {
+      Object.assign(corpo.cobertura.nutrientes.magnesioMg, { estado: 'COMPLETO', total: 300, contagens: { incluidos: 2, conhecidos: 2, semComposicao: 0, incompativeis: 0, naoResolvidos: 0 }, causas: [] });
+      const n = corpo.comparacoes.nutrientes.find(x => x.codigo === 'magnesioMg');
+      n.referencia = { estado: 'comparavel', tipo: 'RDA', referenciaId: 'x', referenciaVersao: VERSAO, quantidadePlanejada: 300, unidadePlanejada: 'mg', valorReferencia: 320, unidadeReferencia: 'mg', percentual: 93.75, diferencaNaUnidadePlanejada: -20, diferencaArredondada: false };
+      n.ul = { estado: 'indisponivel', motivo: 'abrangencia_ul_incompativel' };
+    }
+    return r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(corpo) });
+  });
+  await responder(page);
+  await bloco(page).getByRole('button', { name: 'Aplicar comparação', exact: true }).click();
+  const linha = regiao(page).getByRole('row', { name: /Magnésio/ });
+  await expect(linha).toContainText('Planejado: 300 mg = 94% da RDA (320 mg)');
+  await expect(linha).toContainText('UL não comparável: o limite vale para uma forma específica');
+  // UL "não estabelecido" continua sem linha própria (o "Como ler" explica); aqui só o cálcio tem UL comparável.
+  // (O detalhe da linha, dentro de "Cobertura e detalhes", traz o motivo por extenso; a célula de Referência não.)
+  await expect(regiao(page).getByRole('row', { name: /Zinco/ }).locator('td').last()).not.toContainText('UL');
+  await expect(regiao(page).getByRole('row', { name: /Zinco/ })).toContainText('A fonte não estabelece limite superior para este nutriente e grupo.');
+});
+
+test('FOOD06 T4a resposta atrasada da comparação não aparece depois de mudar a seleção', async ({ page }) => {
+  let liberar; const barreira = new Promise(resolve => { liberar = resolve; }); let pedidosComReferencia = 0;
+  await preparar(page, async (c, r) => {
+    const corpo = analise(c);
+    if (c.incluirReferencias === true) { pedidosComReferencia++; await barreira; }
+    try { await r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(corpo) }); } catch { /* Pedido sintético abortado após mudar a seleção. */ }
+  });
+  await responder(page);
+  await bloco(page).getByRole('button', { name: 'Aplicar comparação', exact: true }).click();
+  await expect.poll(() => pedidosComReferencia).toBe(1);
+  await page.getByRole('checkbox', { name: 'Refeição A' }).uncheck();
+  await expect(regiao(page)).toContainText('Nenhum alimento ativo incluído');
+  await expect(bloco(page)).toContainText('A seleção mudou.');
+  liberar();
+  // O resultado da seleção anterior nunca é pintado sobre a seleção atual.
+  await expect(regiao(page)).not.toContainText('50% da RDA');
+  await expect(regiao(page)).not.toContainText('Comparado em 1 de 22');
+  await expect(linhaCalcio(page)).not.toContainText('RDA');
 });
 
 test('FOOD06 T4a contexto inelegível no servidor: aviso único e células sem repetir o motivo', async ({ page }) => {

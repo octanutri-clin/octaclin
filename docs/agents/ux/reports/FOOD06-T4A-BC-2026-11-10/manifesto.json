@@ -1,0 +1,19 @@
+{
+  "modalidade": "as mesmas duas instâncias da etapa A, retomadas, com papel fornecido como prompt, sem ferramentas; síntese editorial do coordenador (não é seleção nativa de TOML)",
+  "agentes": "nutricionista e paciente, instâncias distintas do runtime desta sessão; identificadores na trilha do runtime, não copiados",
+  "base": "5bc34c0a6b1ac5100bd4e9eb33621cc6063023c0",
+  "data": "2026-11-10",
+  "observacoes": "as personas receberam só o texto do brief e resultados de testes; nenhuma viu tela ou screenshot; nenhuma recebeu o parecer da outra",
+  "ferramentas_do_revisor": [],
+  "sha256": {
+    "brief.md": "d28afec0c6d8549e4b212f0892a5edc63147ffbbe967ec116f723d1a2f2bcb66",
+    "nutricionista.md": "eefecab81bb479b82144366125a22c70985862a21ce126dca1f655f7d8691077",
+    "paciente.md": "d54eee56349648eb2a2bf1d48bd4d6b7c52f40954316264f7f3da2dd2c1ae004",
+    "consolidado.md": "bac4be9b924d60de2a7f54c21dbc9cadc9df6bc0030d2c359152201d0aa48c7e"
+  },
+  "fontes_sha256": {
+    ".codex/agents/octaclin-nutricionista-ux.toml": "6259b40a98e2c49053cbc6adbc0c59d0312b14e191b228ab73de2f2eac53af6d",
+    ".codex/agents/octaclin-paciente-ux.toml": "a40b1ded5e47739a2710caa5ec9a9a7871b57be7efc11deefaae0515028ff7d7",
+    "docs/agents/ux/PROCEDIMENTO.md": "00ee799fa4435bbc1af022752fc1a9dbce4a3196cd1b188a9a4b6017c47bff29"
+  }
+}
