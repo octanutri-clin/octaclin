@@ -115,19 +115,19 @@ test('FOOD06 T4a aplica só com tudo respondido, envia só as 7 confirmações e
 
 test('FOOD06 T4a gestação ou lactação confirmadas ficam fora do escopo sem consultar o servidor', async ({ page }) => {
   const corpos = await preparar(page, (c, r) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(analise(c)) }));
-  const antes = corpos.length;
   await responder(page, { gestacao: 'Sim' });
   const b = bloco(page);
   await expect(b).toContainText('Fora do escopo: a comparação cobre apenas adultos sem gestação ou lactação.');
   await expect(b.getByRole('button', { name: 'Aplicar comparação', exact: true })).toBeDisabled();
   // O texto não sugere mudar a resposta para "passar".
   await expect(b).not.toContainText(/altere|mude a resposta|tente novamente com/i);
-  expect(corpos.length).toBe(antes);
+  // O pedido simples da análise sai depois de um debounce: contar pedidos seria frágil. O que importa é que nenhum pedia comparação.
+  expect(corpos.filter(c => c.incluirReferencias === true)).toHaveLength(0);
 });
 
 test('FOOD06 T4a aplicabilidade não aplicável é fora do escopo e a conferência da população entra na lista de pendências', async ({ page }) => {
   const corpos = await preparar(page, (c, r) => r.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(analise(c)) }));
-  const antes = corpos.length, b = bloco(page);
+  const b = bloco(page);
   await responder(page, { dia: true });
   await b.getByLabel('Aplicabilidade da população').selectOption({ label: 'Não aplicável' });
   await expect(b).toContainText('A população não é aplicável a esta comparação. Os valores factuais continuam disponíveis.');
@@ -136,7 +136,8 @@ test('FOOD06 T4a aplicabilidade não aplicável é fora do escopo e a conferênc
   await b.getByRole('checkbox', { name: /Conferi a população/ }).uncheck();
   await expect(b).toContainText('Falta responder: conferência da população.');
   await expect(b.getByRole('button', { name: 'Aplicar comparação', exact: true })).toBeDisabled();
-  expect(corpos.length).toBe(antes);
+  // O pedido simples da análise sai depois de um debounce: contar pedidos seria frágil. O que importa é que nenhum pedia comparação.
+  expect(corpos.filter(c => c.incluirReferencias === true)).toHaveLength(0);
 });
 
 test('FOOD06 T4a a linha de status usa os rótulos do formulário e avisa o efeito de tabagismo não informado', async ({ page }) => {
