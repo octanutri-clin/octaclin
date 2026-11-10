@@ -25,6 +25,12 @@ export type ComparacaoDietetica = { estado: 'indisponivel'; motivo: MotivoCompar
   quantidadePlanejada: number; unidadePlanejada: 'mg' | 'mcg';
   valorReferencia: number; unidadeReferencia: 'mg' | 'mcg'; percentual: number;
   diferencaNaUnidadePlanejada: number; diferencaArredondada: boolean; ajusteTabagismoMg?: 35;
+  /**
+   * Só no UL: onde o total planejado está em relação ao limite, decidido pela razão
+   * exata (nunca pelo número arredondado). Posição factual, não classificação de
+   * risco ou toxicidade (CL06). RDA e AI trazem percentual e diferença, sem posição.
+   */
+  posicao?: 'abaixo' | 'igual' | 'acima';
 };
 export interface ConfrontoDietetico { referencia: ComparacaoDietetica; ul: ComparacaoDietetica }
 
@@ -84,7 +90,8 @@ function confrontoNumerico(
       percentual: numeroDaEscala8(arredondarRazao(quantidadeNumerador * 100n * ESCALA, referenciaNumerador)),
       diferencaNaUnidadePlanejada: numeroComSinal(diferencaNumerador < 0n ? -diferencaMagnitude : diferencaMagnitude),
       diferencaArredondada: diferencaMagnitude * diferencaDenominador !== (diferencaNumerador < 0n ? -diferencaNumerador : diferencaNumerador) * ESCALA,
-      ...(ajusteMg ? { ajusteTabagismoMg: ajusteMg } : {})
+      ...(ajusteMg ? { ajusteTabagismoMg: ajusteMg } : {}),
+      ...(tipo === 'UL' ? { posicao: diferencaNumerador < 0n ? 'abaixo' as const : diferencaNumerador > 0n ? 'acima' as const : 'igual' as const } : {})
     };
   } catch { return indisponivel('limite_precisao'); }
 }

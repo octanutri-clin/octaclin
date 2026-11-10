@@ -70,7 +70,7 @@ clínica, jurídica ou de produto nova, pare só aquele item e registre a pergun
 - **Fora de escopo:** crianças, gestação, lactação (exigem nova ratificação).
 - **Pronto quando:** módulo + testes, sem API/UI, typecheck e suíte do backend.
 
-### T2 — Comparador por nutriente (domínio puro) [ ]
+### T2 — Comparador por nutriente (domínio puro) [x]
 
 - **Objetivo:** `dominio/comparacao-referencias.ts` que recebe a análise factual
   (total, cobertura por nutriente) e o contexto resolvido e devolve, por nutriente:
