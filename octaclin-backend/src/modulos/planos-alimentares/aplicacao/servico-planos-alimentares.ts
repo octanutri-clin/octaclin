@@ -30,6 +30,11 @@ import { capturarFatosCustom, ContextosAlimentosPersonalizados, ReferenciaCustom
 import { ServicoMedidasCaseiras } from './servico-medidas-caseiras';
 import { ContextosMedidas, resolverMedidasDocumento } from '../dominio/medidas-caseiras';
 import { CalculoCombinadoDto, validarSelecoesCalculo } from './dtos-calculo-combinado';
+import { validarAnaliseMicronutrientes } from './dtos-analise-micronutrientes';
+import { carregarContextoConfirmado } from './contexto-confirmado-registro';
+import { resolverContextoDietetico, type EntradaContextoDietetico } from '../dominio/contexto-dietetico';
+import { compararAnaliseComReferencias } from '../dominio/comparacao-referencias';
+import { FONTE_REFERENCIAS_DRI_ADULTO } from '../dominio/referencias-dri';
 import { calcularNutrientesCombinados, EntradaPlanoCombinado } from '../dominio/calculo-combinado';
 import { criarSnapshotMicronutrientes, LimitePrecisaoNutricionalError, SnapshotMicronutrientesV1, validarMicronutrientesManuais, ValoresMicronutrientesOrigem } from '../dominio/micronutrientes';
 import { extrairMicronutrientesFonte } from '../dados/micronutrientes-fonte';
@@ -40,7 +45,9 @@ import {
   BadRequestException,
   ConflictException,
   ForbiddenException,
+  HttpException,
   Injectable,
+  InternalServerErrorException,
   NotFoundException,
   UnprocessableEntityException,
   ServiceUnavailableException
@@ -344,16 +351,52 @@ export class ServicoPlanosAlimentares {
     }, true);
   }
 
-  async analisarMicronutrientes(tenantId: string, pacienteId: string, usuario: UsuarioAutenticado, dados: CalculoCombinadoDto): Promise<AnaliseFactualMicronutrientes> {
-    return this.executarCalculoCombinado(tenantId, pacienteId, usuario, dados, planos => ({
-      schemaVersao: 1 as const,
-      motorVersao: 'food06-factual-v1' as const,
-      calculo: calcularNutrientesCombinados(planos),
-      cobertura: analisarCoberturaDietetica(planos),
-      fontes: analisarFontesPorNutriente(planos),
-      comparacoes: { estado: 'indisponivel' as const, motivo: 'referencias_nao_habilitadas' as const },
-      ajuda:projetarAjudaDietetica()
-    }));
+  async analisarMicronutrientes(tenantId: string, pacienteId: string, usuario: UsuarioAutenticado, dados: CalculoCombinadoDto & { incluirReferencias?: boolean; confirmacoes?: unknown }): Promise<AnaliseFactualMicronutrientes> {
+    const pedeReferencias = !!dados && typeof dados === 'object' &&
+      (Object.hasOwn(dados, 'incluirReferencias') || Object.hasOwn(dados, 'confirmacoes'));
+    let selecoes: unknown = dados;
+    let confirmacoes: ReturnType<typeof validarAnaliseMicronutrientes>['confirmacoes'];
+    if (pedeReferencias) {
+      // Só o caminho com opt-in passa por aqui; sem ele, a delegação é a de sempre.
+      // Papel/permissão antes de validar, na mesma ordem do executor.
+      this.garantirPapelProfissional(usuario);
+      this.garantirPermissao(usuario, 'planos_alimentares.ler');
+      let entrada: ReturnType<typeof validarAnaliseMicronutrientes>;
+      try { entrada = validarAnaliseMicronutrientes(dados); }
+      catch { throw new BadRequestException('Análise de micronutrientes inválida.'); }
+      // Mesma regra da captura do registro factual, que também lê o nascimento:
+      // só o profissional da carteira, nunca SuperAdmin (que dispensa a carteira).
+      if (entrada.confirmacoes && usuario.papel !== 'Professional') {
+        throw new ForbiddenException('Papel sem acesso às referências dietéticas.');
+      }
+      selecoes = { selecoes: entrada.selecoes };
+      confirmacoes = entrada.confirmacoes;
+    }
+    // O contexto só é carregado depois de autorizar paciente/carteira e planos, na
+    // mesma transação; nascimento e data nunca vêm do navegador (FOOD06 T3a).
+    const carregarContexto = confirmacoes
+      ? (g: EntityManager) => carregarContextoConfirmado(g, tenantId, pacienteId, confirmacoes)
+      : undefined;
+    return this.executarCalculoCombinado(tenantId, pacienteId, usuario, selecoes as CalculoCombinadoDto, (planos, _detalhes, contexto) => {
+      const calculo = calcularNutrientesCombinados(planos);
+      return {
+        schemaVersao: 1 as const,
+        motorVersao: 'food06-factual-v1' as const,
+        calculo,
+        cobertura: analisarCoberturaDietetica(planos),
+        fontes: analisarFontesPorNutriente(planos),
+        comparacoes: contexto
+          ? { estado: 'calculado' as const, fonteReferencias: FONTE_REFERENCIAS_DRI_ADULTO, ...this.compararReferencias(calculo, contexto) }
+          : { estado: 'indisponivel' as const, motivo: 'referencias_nao_habilitadas' as const },
+        ajuda:projetarAjudaDietetica()
+      };
+    }, false, carregarContexto);
+  }
+
+  /** Falha do comparador é defeito, não limite de precisão: não vira o 422 do cálculo. */
+  private compararReferencias(calculo: ReturnType<typeof calcularNutrientesCombinados>, contexto: EntradaContextoDietetico) {
+    try { return compararAnaliseComReferencias(calculo.nutrientes, resolverContextoDietetico(contexto)); }
+    catch { throw new InternalServerErrorException('Comparação com referências indisponível.'); }
   }
 
   async calcularCombinado(tenantId: string, pacienteId: string, usuario: UsuarioAutenticado, dados: CalculoCombinadoDto) {
@@ -363,8 +406,9 @@ export class ServicoPlanosAlimentares {
   /** Uma única fronteira transacional para PA06 e projeções factuais autorizadas. */
   private async executarCalculoCombinado<T extends object>(
     tenantId: string, pacienteId: string, usuario: UsuarioAutenticado, dados: CalculoCombinadoDto,
-    projetar: (planos: EntradaPlanoCombinado[], detalhes: Map<string, {nome:Buffer;refeicaoId:string;versaoNumero:number;itens:PlanoAlimentarItemOrm[]}>) => T,
-    carregarDetalhes = false
+    projetar: (planos: EntradaPlanoCombinado[], detalhes: Map<string, {nome:Buffer;refeicaoId:string;versaoNumero:number;itens:PlanoAlimentarItemOrm[]}>, contexto?: EntradaContextoDietetico) => T,
+    carregarDetalhes = false,
+    carregarContexto?: (gerenciador: EntityManager) => Promise<EntradaContextoDietetico>
   ) {
     this.garantirPapelProfissional(usuario);
     this.garantirPermissao(usuario, 'planos_alimentares.ler');
@@ -412,9 +456,14 @@ export class ServicoPlanosAlimentares {
         }
         efetivos.push(entradaPlano);
       }
-      try { return { ...projetar(efetivos, detalhes), calculadoEm: new Date().toISOString(),
+      // Depois de toda a autorização e dos locks; falha aqui (paciente indisponível) não vira subtotal.
+      const contexto = carregarContexto ? await carregarContexto(gerenciador) : undefined;
+      try { return { ...projetar(efetivos, detalhes, contexto), calculadoEm: new Date().toISOString(),
         publicacoes:planos.map(({plano,selecao})=>({planoId:plano.id,versaoId:selecao.versaoIdEsperada,ativacaoRevisao:selecao.ativacaoRevisaoEsperada})) }; }
-      catch { throw new UnprocessableEntityException('Limite técnico de precisão nutricional excedido.'); }
+      catch (erro) {
+        if (erro instanceof HttpException) throw erro;
+        throw new UnprocessableEntityException('Limite técnico de precisão nutricional excedido.');
+      }
     });
   }
 
