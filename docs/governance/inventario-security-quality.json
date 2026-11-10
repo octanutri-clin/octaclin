@@ -1,11 +1,11 @@
 {
   "schemaVersion": 1,
   "repositorio": "octanutri-clin/octaclin",
-  "commitBase": "55553a913babd6508656dfd8b21acfe9fe526563",
-  "capturadoEm": "2026-11-09T00:18:46.890Z",
+  "commitBase": "903f4fecad579b7182a29ebb749787ff442e424a",
+  "capturadoEm": "2026-11-09T23:56:51.831Z",
   "snapshot": {
     "codeScanning": {
-      "total": 192,
+      "total": 201,
       "alertas": [
         {
           "numero": 154,
@@ -14,7 +14,7 @@
           "categoria": "trivy-imagem-ia-service",
           "caminho": "library/octaclin-ia-service",
           "pacote": "apt",
-          "versaoInstalada": "3.0.4",
+          "versaoInstalada": "3.0.3",
           "versaoCorrigida": null,
           "severidade": "low",
           "severidadeQualidade": "note"
@@ -146,7 +146,7 @@
           "categoria": "trivy-imagem-ia-service",
           "caminho": "library/octaclin-ia-service",
           "pacote": "libapt-pkg7.0",
-          "versaoInstalada": "3.0.4",
+          "versaoInstalada": "3.0.3",
           "versaoCorrigida": null,
           "severidade": "low",
           "severidadeQualidade": "note"
@@ -1304,6 +1304,42 @@
           "severidadeQualidade": "warning"
         },
         {
+          "numero": 353,
+          "ferramenta": "Trivy",
+          "regra": "GHSA-6v7p-g79w-8964",
+          "categoria": "trivy-imagem-ia-service",
+          "caminho": "Python",
+          "pacote": "msgpack",
+          "versaoInstalada": "1.1.2",
+          "versaoCorrigida": "1.2.1",
+          "severidade": "high",
+          "severidadeQualidade": "error"
+        },
+        {
+          "numero": 354,
+          "ferramenta": "Trivy",
+          "regra": "CVE-2025-47273",
+          "categoria": "trivy-imagem-ia-service",
+          "caminho": "Python",
+          "pacote": "setuptools",
+          "versaoInstalada": "70.3.0",
+          "versaoCorrigida": "78.1.1",
+          "severidade": "high",
+          "severidadeQualidade": "error"
+        },
+        {
+          "numero": 355,
+          "ferramenta": "Trivy",
+          "regra": "CVE-2026-59890",
+          "categoria": "trivy-imagem-ia-service",
+          "caminho": "Python",
+          "pacote": "setuptools",
+          "versaoInstalada": "70.3.0",
+          "versaoCorrigida": "83.0.0",
+          "severidade": "medium",
+          "severidadeQualidade": "warning"
+        },
+        {
           "numero": 361,
           "ferramenta": "Trivy",
           "regra": "CVE-2026-76642",
@@ -1976,18 +2012,6 @@
           "severidadeQualidade": "warning"
         },
         {
-          "numero": 533,
-          "ferramenta": "CodeQL",
-          "regra": "js/prototype-polluting-assignment",
-          "categoria": "/language:javascript-typescript",
-          "caminho": "octaclin-backend/src/modulos/planos-alimentares/aplicacao/servico-planos-alimentares.ts",
-          "pacote": null,
-          "versaoInstalada": null,
-          "versaoCorrigida": null,
-          "severidade": "medium",
-          "severidadeQualidade": "warning"
-        },
-        {
           "numero": 553,
           "ferramenta": "Trivy",
           "regra": "CVE-2026-84243",
@@ -2009,6 +2033,18 @@
           "versaoInstalada": "2.41-12+deb13u4",
           "versaoCorrigida": null,
           "severidade": "medium",
+          "severidadeQualidade": "warning"
+        },
+        {
+          "numero": 555,
+          "ferramenta": "Semgrep OSS",
+          "regra": "javascript.lang.security.insecure-object-assign.insecure-object-assign",
+          "categoria": ".github/workflows/semgrep.yml:analisar",
+          "caminho": "octaclin-backend/src/modulos/planos-alimentares/aplicacao/servico-planos-alimentares.spec.ts",
+          "pacote": null,
+          "versaoInstalada": null,
+          "versaoCorrigida": null,
+          "severidade": "none",
           "severidadeQualidade": "warning"
         },
         {
@@ -2240,6 +2276,30 @@
           "severidadeQualidade": "warning"
         },
         {
+          "numero": 576,
+          "ferramenta": "Trivy",
+          "regra": "CVE-2026-109518",
+          "categoria": "trivy-imagem-ia-service",
+          "caminho": "library/octaclin-ia-service",
+          "pacote": "apt",
+          "versaoInstalada": "3.0.3",
+          "versaoCorrigida": "3.0.4",
+          "severidade": "high",
+          "severidadeQualidade": "error"
+        },
+        {
+          "numero": 577,
+          "ferramenta": "Trivy",
+          "regra": "CVE-2026-109518",
+          "categoria": "trivy-imagem-ia-service",
+          "caminho": "library/octaclin-ia-service",
+          "pacote": "libapt-pkg7.0",
+          "versaoInstalada": "3.0.3",
+          "versaoCorrigida": "3.0.4",
+          "severidade": "high",
+          "severidadeQualidade": "error"
+        },
+        {
           "numero": 578,
           "ferramenta": "Trivy",
           "regra": "CVE-2026-76844",
@@ -2288,33 +2348,81 @@
           "severidadeQualidade": "note"
         },
         {
-          "numero": 582,
+          "numero": 584,
           "ferramenta": "Trivy",
-          "regra": "CVE-2026-4738",
-          "categoria": "trivy-imagem-backend",
-          "caminho": "library/octaclin-backend",
-          "pacote": "zlib",
-          "versaoInstalada": "1.3.2-r1",
-          "versaoCorrigida": "1.4-r0",
-          "severidade": "medium",
-          "severidadeQualidade": "warning"
+          "regra": "GHSA-6q48-6c7w-9gw2",
+          "categoria": "trivy-imagem-ia-service",
+          "caminho": "Python",
+          "pacote": "certifi",
+          "versaoInstalada": "2026.6.17",
+          "versaoCorrigida": "2026.10.18",
+          "severidade": "critical",
+          "severidadeQualidade": "error"
         },
         {
-          "numero": 583,
+          "numero": 585,
           "ferramenta": "Trivy",
-          "regra": "CVE-2026-4738",
-          "categoria": "trivy-imagem-web",
-          "caminho": "library/octaclin-web",
-          "pacote": "zlib",
-          "versaoInstalada": "1.3.2-r1",
-          "versaoCorrigida": "1.4-r0",
+          "regra": "CVE-2026-114613",
+          "categoria": "trivy-imagem-ia-service",
+          "caminho": "Python",
+          "pacote": "msgpack",
+          "versaoInstalada": "1.1.2",
+          "versaoCorrigida": "1.2.3",
+          "severidade": "high",
+          "severidadeQualidade": "error"
+        },
+        {
+          "numero": 586,
+          "ferramenta": "Trivy",
+          "regra": "GHSA-xmj3-9gf7-h52w",
+          "categoria": "trivy-imagem-ia-service",
+          "caminho": "Python",
+          "pacote": "setuptools",
+          "versaoInstalada": "70.3.0",
+          "versaoCorrigida": "84.1.0",
+          "severidade": "low",
+          "severidadeQualidade": "note"
+        },
+        {
+          "numero": 587,
+          "ferramenta": "Trivy",
+          "regra": "CVE-2026-97687",
+          "categoria": "trivy-imagem-ia-service",
+          "caminho": "Python",
+          "pacote": "urllib3",
+          "versaoInstalada": "2.7.0",
+          "versaoCorrigida": "2.8.0",
+          "severidade": "high",
+          "severidadeQualidade": "error"
+        },
+        {
+          "numero": 588,
+          "ferramenta": "Trivy",
+          "regra": "CVE-2026-97689",
+          "categoria": "trivy-imagem-ia-service",
+          "caminho": "Python",
+          "pacote": "urllib3",
+          "versaoInstalada": "2.7.0",
+          "versaoCorrigida": "2.8.0",
+          "severidade": "high",
+          "severidadeQualidade": "error"
+        },
+        {
+          "numero": 589,
+          "ferramenta": "Trivy",
+          "regra": "CVE-2026-97688",
+          "categoria": "trivy-imagem-ia-service",
+          "caminho": "Python",
+          "pacote": "urllib3",
+          "versaoInstalada": "2.7.0",
+          "versaoCorrigida": "2.8.0",
           "severidade": "medium",
           "severidadeQualidade": "warning"
         }
       ],
       "porFerramenta": {
-        "CodeQL": 1,
-        "Trivy": 191
+        "Semgrep OSS": 1,
+        "Trivy": 200
       }
     },
     "dependabot": {
@@ -2546,7 +2654,9 @@
         "code-scanning:578",
         "code-scanning:579",
         "code-scanning:580",
-        "code-scanning:581"
+        "code-scanning:581",
+        "code-scanning:576",
+        "code-scanning:577"
       ],
       "disposicao": "corrigir",
       "severidadeContextual": "critical",
@@ -2574,44 +2684,20 @@
         "Captura autenticada da main 3b35e104f5ceeebda10b7bf98355ebfb7272b496 em 2026-11-08T11:36:46.227Z, run 42476505880 (workflow_dispatch); SHA-256 aa5dee6473b8d0abbd44a492be8f93212f8f76b1ee9a0f72579f07e64d051867, remontado do eco do log do job e conferido contra o hash declarado: 205 Code Scanning, 29 Dependabot e zero Secret Scanning. Imagem do servico IA: 190 alertas Trivy abertos.",
         "Correcao parcial preparada: base python:3.14.10-slim por digest (9aaa474097d0..., resolvido em 2026-11-08 no Docker Hub; o digest fixado anterior era a2b82f3c4855...). Sem Docker daemon nesta sessao, a imagem nao foi construida nem varrida: o efeito so aparece na varredura da main. A maioria dos alertas continua sem versao corrigida no scanner. A correcao esta na branch claude/inventario-sq-2026-11-08 (PR de inventario separada da PR #470) e ainda nao esta na main.",
         "Captura autenticada da main 55553a913babd6508656dfd8b21acfe9fe526563 em 2026-11-09T00:18:46.890Z, run 42539482821 (workflow_dispatch); SHA-256 619a4165a77feceb6e7bac6085f6396f59410c305c726081afce40f87160555d, remontado do eco do log do job e conferido contra o hash e a contagem de partes declarados: 192 Code Scanning, 3 Dependabot e zero Secret Scanning (234 na captura anterior de 2026-11-08). Imagem do servico IA: 189 alertas Trivy abertos (190 em 2026-11-08). Novos #578 (zlib1g, high, versao corrigida 1:1.3.dfsg+really1.3.1-1+deb13u1) e #579 a #581 (gcc, low, sem versao corrigida).",
-        "Inferencia, sem inspecionar a imagem: como #578 segue aberto com a base python:3.14.10-slim fixada em #471, essa base ainda nao traz o zlib1g corrigido. Resolver exige uma base Debian mais nova ou outra decisao de base."
+        "Inferencia, sem inspecionar a imagem: como #578 segue aberto com a base python:3.14.10-slim fixada em #471, essa base ainda nao traz o zlib1g corrigido. Resolver exige uma base Debian mais nova ou outra decisao de base.",
+        "Captura autenticada da main 903f4fecad579b7182a29ebb749787ff442e424a em 2026-11-09T23:56:51.831Z, run 42724463312 (workflow_dispatch); SHA-256 75d42f15da27e851f433822a837d0922807a96ca56a1242f38909f09bae3aa19, remontado do eco do log do job e conferido contra o hash e a contagem de partes declarados (25 partes, 54960 bytes): 201 Code Scanning, 3 Dependabot e zero Secret Scanning (192 e 3 na captura de 2026-11-09T00:18:46.890Z). Bytes em docs/governance/evidencias/2026-11-10/inventario-capturado.json.",
+        "Trivy #576 (apt) e #577 (libapt-pkg7.0): 3.0.3 instalado, versao corrigida 3.0.4, CVE-2026-109518, high. Entram nesta causa por serem pacotes Debian da imagem IA; a correcao e a atualizacao do digest da base. A base atual e a linha python 3.15 (#481); o digest nao foi inspecionado nesta sessao."
       ],
       "preCondicoes": [
         "A exploracao depende do pacote Debian estar alcancavel pelo fluxo do servico; ausencia de patch nao demonstra falso positivo.",
         "Troca de base exige preservar Python, FastAPI, Uvicorn, lock por hash, health e arquiteturas suportadas."
       ],
       "mitigacoes": [
-        "Runtime final sem pip global e executado como usuario nao-root octaclin; dependencias da aplicacao permanecem travadas por hash.",
+        "Runtime final executado como usuario nao-root octaclin; dependencias da aplicacao permanecem travadas por hash. A remocao do pip global regrediu depois da #481 e e tratada em SQ-2026-257.",
         "A integracao de IA e opcional e exige IA_SERVICE_URL e IA_SERVICE_TOKEN em conjunto; configuracao parcial degrada de forma visivel sem expor token."
       ],
-      "impacto": "Imagem IA da main com 167 alertas abertos: {'low': 61, 'medium': 58, 'high': 44, 'none': 4}. Ha 3 patches reportados com severidade none; os demais residuos continuam sem correcao informada. Critical e a classificacao contextual conservadora, nao uma contagem de scanner critical.",
+      "impacto": "Imagem IA da main com 191 alertas Debian abertos: {'low': 65, 'medium': 75, 'high': 51}. Ha patches reportados (3 com severidade none e o apt 3.0.4 high); os demais residuos continuam sem correcao informada. Critical e a classificacao contextual conservadora, nao uma contagem de scanner critical.",
       "condicaoSaida": "Atualizar a imagem Python oficial para digest suportado que incorpore os patches disponiveis, validar compatibilidade, runtime, SBOM e Trivy; recapturar a main e reconciliar todas as referencias que fecharem."
-    },
-    {
-      "id": "SQ-2026-253",
-      "titulo": "CodeQL js/prototype-polluting-assignment em servico-planos-alimentares",
-      "alertas": [
-        "code-scanning:533"
-      ],
-      "disposicao": "investigar",
-      "severidadeContextual": "medium",
-      "owner": "octanutri-clin/octaclin (proprietario do repositorio)",
-      "revisarEm": "2026-11-30",
-      "ondaDestino": "SQ-1A",
-      "evidencia": [
-        "Captura autenticada da main 3b35e104f5ceeebda10b7bf98355ebfb7272b496 em 2026-11-08T11:36:46.227Z, run 42476505880 (workflow_dispatch); SHA-256 aa5dee6473b8d0abbd44a492be8f93212f8f76b1ee9a0f72579f07e64d051867, remontado do eco do log do job e conferido contra o hash declarado: 205 Code Scanning, 29 Dependabot e zero Secret Scanning.",
-        "CodeQL #533, regra js/prototype-polluting-assignment, octaclin-backend/src/modulos/planos-alimentares/aplicacao/servico-planos-alimentares.ts. A API de alertas nao e legivel por esta sessao, entao a linha exata nao foi confirmada.",
-        "Correcao preparada com a mesma intencao: contextosCustomAnteriores deixa de ser objeto comum copiado por spread e passa a Object.create(null), como os demais dicionarios indexados por chaveCliente do mesmo servico. tsc e a spec do servico (141 testes) passam; a efetividade so e confirmada pela nova varredura CodeQL. A correcao esta na branch claude/inventario-sq-2026-11-08 (PR de inventario separada da PR #470) e ainda nao esta na main.",
-        "Captura autenticada da main 55553a913babd6508656dfd8b21acfe9fe526563 em 2026-11-09T00:18:46.890Z, run 42539482821 (workflow_dispatch); SHA-256 619a4165a77feceb6e7bac6085f6396f59410c305c726081afce40f87160555d, remontado do eco do log do job e conferido contra o hash e a contagem de partes declarados: 192 Code Scanning, 3 Dependabot e zero Secret Scanning (234 na captura anterior de 2026-11-08). CodeQL #533 continua aberto depois de #471, que trocou contextosCustomAnteriores por Object.create(null): o alerta aponta outra atribuicao, ou a correcao nao foi reconhecida. A linha exata continua nao confirmada porque a API de Code Scanning nao e legivel nesta sessao."
-      ],
-      "preCondicoes": [
-        "A chave vem de chaveCliente enviada pelo cliente; atribuicao a __proto__ em objeto comum altera o prototipo do objeto local."
-      ],
-      "mitigacoes": [
-        "Nao confirmado: se o DTO restringe o formato de chaveCliente. Os outros dicionarios do servico ja usam Object.create(null) e Object.hasOwn."
-      ],
-      "impacto": "Um alerta medium permanece aberto ate o merge e a nova varredura.",
-      "condicaoSaida": "Ler a linha do alerta #533 na aba Security, corrigir a atribuicao apontada com teste e recapturar a main sem #533."
     },
     {
       "id": "SQ-2026-254",
@@ -2627,7 +2713,8 @@
       "evidencia": [
         "Captura autenticada da main 3b35e104f5ceeebda10b7bf98355ebfb7272b496 em 2026-11-08T11:36:46.227Z, run 42476505880 (workflow_dispatch); SHA-256 aa5dee6473b8d0abbd44a492be8f93212f8f76b1ee9a0f72579f07e64d051867, remontado do eco do log do job e conferido contra o hash declarado: 205 Code Scanning, 29 Dependabot e zero Secret Scanning.",
         "Dependabot #142 aponta deepmerge 4.3.1 no pnpm-lock.yaml do backend, sem versao corrigida. pnpm why mostra o pacote apenas sob @nestjs/cli > fork-ts-checker-webpack-plugin e jest-config (devDependencies).",
-        "Captura autenticada da main 55553a913babd6508656dfd8b21acfe9fe526563 em 2026-11-09T00:18:46.890Z, run 42539482821 (workflow_dispatch); SHA-256 619a4165a77feceb6e7bac6085f6396f59410c305c726081afce40f87160555d, remontado do eco do log do job e conferido contra o hash e a contagem de partes declarados: 192 Code Scanning, 3 Dependabot e zero Secret Scanning (234 na captura anterior de 2026-11-08). Dependabot #142 continua aberto, sem versao corrigida."
+        "Captura autenticada da main 55553a913babd6508656dfd8b21acfe9fe526563 em 2026-11-09T00:18:46.890Z, run 42539482821 (workflow_dispatch); SHA-256 619a4165a77feceb6e7bac6085f6396f59410c305c726081afce40f87160555d, remontado do eco do log do job e conferido contra o hash e a contagem de partes declarados: 192 Code Scanning, 3 Dependabot e zero Secret Scanning (234 na captura anterior de 2026-11-08). Dependabot #142 continua aberto, sem versao corrigida.",
+        "Captura autenticada da main 903f4fecad579b7182a29ebb749787ff442e424a em 2026-11-09T23:56:51.831Z, run 42724463312 (workflow_dispatch); SHA-256 75d42f15da27e851f433822a837d0922807a96ca56a1242f38909f09bae3aa19, remontado do eco do log do job e conferido contra o hash e a contagem de partes declarados (25 partes, 54960 bytes): 201 Code Scanning, 3 Dependabot e zero Secret Scanning (192 e 3 na captura de 2026-11-09T00:18:46.890Z). Bytes em docs/governance/evidencias/2026-11-10/inventario-capturado.json. O alerta continua aberto, sem mudanca."
       ],
       "preCondicoes": [
         "Pacote presente apenas em ferramentas de build e teste; nao entra no artefato de producao validado por verificar-artefato-producao."
@@ -2652,7 +2739,8 @@
       "ondaDestino": "SQ-1A",
       "evidencia": [
         "Captura autenticada da main 55553a913babd6508656dfd8b21acfe9fe526563 em 2026-11-09T00:18:46.890Z, run 42539482821 (workflow_dispatch); SHA-256 619a4165a77feceb6e7bac6085f6396f59410c305c726081afce40f87160555d, remontado do eco do log do job e conferido contra o hash e a contagem de partes declarados: 192 Code Scanning, 3 Dependabot e zero Secret Scanning (234 na captura anterior de 2026-11-08).",
-        "Dependabot #172 (backend) e #173 (web): minimatch >=7 <11.0.1 afetado; versao corrigida 11.0.1. pnpm audit no backend lista minimatch 9.0.9, 10.2.5 e 10.2.6, vindos de glob 10 e 13 sob jest, testcontainers/archiver e @nestjs/cli. A cadeia do web nao foi inspecionada."
+        "Dependabot #172 (backend) e #173 (web): minimatch >=7 <11.0.1 afetado; versao corrigida 11.0.1. pnpm audit no backend lista minimatch 9.0.9, 10.2.5 e 10.2.6, vindos de glob 10 e 13 sob jest, testcontainers/archiver e @nestjs/cli. A cadeia do web nao foi inspecionada.",
+        "Captura autenticada da main 903f4fecad579b7182a29ebb749787ff442e424a em 2026-11-09T23:56:51.831Z, run 42724463312 (workflow_dispatch); SHA-256 75d42f15da27e851f433822a837d0922807a96ca56a1242f38909f09bae3aa19, remontado do eco do log do job e conferido contra o hash e a contagem de partes declarados (25 partes, 54960 bytes): 201 Code Scanning, 3 Dependabot e zero Secret Scanning (192 e 3 na captura de 2026-11-09T00:18:46.890Z). Bytes em docs/governance/evidencias/2026-11-10/inventario-capturado.json. O alerta continua aberto, sem mudanca."
       ],
       "preCondicoes": [
         "Pacote presente so em ferramentas de build e teste; nao conferido contra o artefato de producao do web."
@@ -2665,30 +2753,63 @@
       "bloqueioUpstream": "Sobrescrever minimatch@9 e @10 para 11 em glob 10/13 nao foi validado; o pnpm audit tambem lista glob GHSA-3g3m-2fjr-6pw4 (corrigido em glob 14.0.2), que depende da mesma cadeia de atualizacao."
     },
     {
-      "id": "SQ-2026-256",
-      "titulo": "zlib das imagens Node com versao corrigida disponivel (CVE-2026-4738)",
+      "id": "SQ-2026-257",
+      "titulo": "pip vendorizado voltou ao runtime da imagem IA depois da base 3.15 (certifi, urllib3, msgpack, setuptools)",
       "alertas": [
-        "code-scanning:582",
-        "code-scanning:583"
+        "code-scanning:353",
+        "code-scanning:354",
+        "code-scanning:355",
+        "code-scanning:584",
+        "code-scanning:585",
+        "code-scanning:586",
+        "code-scanning:587",
+        "code-scanning:588",
+        "code-scanning:589"
       ],
       "disposicao": "corrigir",
-      "severidadeContextual": "medium",
+      "severidadeContextual": "critical",
       "owner": "octanutri-clin/octaclin (proprietario do repositorio)",
-      "revisarEm": "2026-11-16",
-      "ondaDestino": "SQ-1A",
+      "revisarEm": "2026-11-20",
+      "ondaDestino": "SQ-1C",
       "evidencia": [
-        "Captura autenticada da main 55553a913babd6508656dfd8b21acfe9fe526563 em 2026-11-09T00:18:46.890Z, run 42539482821 (workflow_dispatch); SHA-256 619a4165a77feceb6e7bac6085f6396f59410c305c726081afce40f87160555d, remontado do eco do log do job e conferido contra o hash e a contagem de partes declarados: 192 Code Scanning, 3 Dependabot e zero Secret Scanning (234 na captura anterior de 2026-11-08).",
-        "Trivy #582 (backend) e #583 (web): zlib 1.3.2-r1 instalado, versao corrigida 1.4-r0, severidade medium.",
-        "Correcao preparada: pin zlib=1.4-r0 nos Dockerfiles do backend e do web e no teste scripts/validar-dockerfiles-runtime.spec.mjs (RED: 1 falha; GREEN: 13 de 13). A disponibilidade de 1.4-r0 no indice Alpine 3.24 foi registrada na PR #455 (tasks/food06-ci-zlib.md) e nao foi reverificada aqui: o acesso ao indice foi bloqueado pelo proxy. O build das imagens (CI 'Imagem backend/web') e a prova. Sem Docker daemon nesta sessao."
+        "Captura autenticada da main 903f4fecad579b7182a29ebb749787ff442e424a em 2026-11-09T23:56:51.831Z, run 42724463312 (workflow_dispatch); SHA-256 75d42f15da27e851f433822a837d0922807a96ca56a1242f38909f09bae3aa19, remontado do eco do log do job e conferido contra o hash e a contagem de partes declarados (25 partes, 54960 bytes): 201 Code Scanning, 3 Dependabot e zero Secret Scanning (192 e 3 na captura de 2026-11-09T00:18:46.890Z). Bytes em docs/governance/evidencias/2026-11-10/inventario-capturado.json.",
+        "Trivy, caminho Python, categoria trivy-imagem-ia-service: #584 certifi 2026.6.17 critical (corrigida 2026.10.18); #353 e #585 msgpack 1.1.2 high; #587 e #588 urllib3 2.7.0 high e #589 medium (2.8.0); #354, #355 e #586 setuptools 70.3.0 high, medium e low. O requirements.lock.txt da aplicacao ja traz certifi==2026.10.23, acima da versao corrigida: as versoes alertadas sao as vendorizadas pelo pip da imagem base (inferencia; a imagem nao foi inspecionada, sem Docker daemon nesta sessao).",
+        "Causa verificada no repositorio: a #481 subiu a base para Python 3.15, mas as rotas de remocao do pip em octaclin-ai-service/Dockerfile, o caminho proibido no harness do trivy.yml e o teste continuavam em python3.14. O `test ! -e` do harness passava porque o caminho nao existia mais, e o pip vendorizado voltou a imagem sem nenhum gate perceber (o SQ-1C o havia removido).",
+        "Correcao nesta PR: validar-dockerfiles-runtime.spec.mjs passou a derivar a versao menor da tag do FROM (RED: 2 falhas; GREEN: 14 de 14) e Dockerfile e trivy.yml foram para python3.15. O build da imagem e o harness do CI sao a prova; a varredura da main confirma o fechamento."
       ],
       "preCondicoes": [
-        "O artefato final inclui zlib 1.3.2-r1 ate o merge desta correcao."
+        "Os alertas so deixam de existir se o pip estiver de fato em /usr/local/lib/python3.15/site-packages na imagem final; isso so o build e o harness do CI provam."
       ],
       "mitigacoes": [
-        "Imagens fixadas por digest e executadas sem root; isso nao remove o advisory."
+        "Runtime executado como usuario nao-root octaclin, sem instalacao de pacotes em runtime; o pip presente e o da base e nao participa do caminho de requisicao do servico.",
+        "certifi e urllib3 da aplicacao vem do lock verificado por hash, nao das copias vendorizadas do pip."
       ],
-      "impacto": "Dois alertas medium com patch permanecem abertos ate o merge e a nova varredura.",
-      "condicaoSaida": "Mergear a correcao, confirmar o build das imagens e recapturar a main sem #582 e #583."
+      "impacto": "Um alerta critical, cinco high, dois medium e um low ({'high': 5, 'medium': 2, 'critical': 1, 'low': 1}) nas copias vendorizadas do pip da imagem IA; nenhuma e dependencia da aplicacao. Ate o merge e a nova varredura continuam abertos.",
+      "condicaoSaida": "Mergear a correcao, confirmar no CI o build da imagem IA e o harness (caminho python3.15 ausente) e recapturar a main sem esses 9 alertas."
+    },
+    {
+      "id": "SQ-2026-258",
+      "titulo": "Semgrep insecure-object-assign em arquivo de teste do servico de planos alimentares",
+      "alertas": [
+        "code-scanning:555"
+      ],
+      "disposicao": "falso_positivo",
+      "severidadeContextual": "none",
+      "owner": "octanutri-clin/octaclin (proprietario do repositorio)",
+      "revisarEm": "2027-02-08",
+      "ondaDestino": "SQ-3",
+      "evidencia": [
+        "Captura autenticada da main 903f4fecad579b7182a29ebb749787ff442e424a em 2026-11-09T23:56:51.831Z, run 42724463312 (workflow_dispatch); SHA-256 75d42f15da27e851f433822a837d0922807a96ca56a1242f38909f09bae3aa19, remontado do eco do log do job e conferido contra o hash e a contagem de partes declarados (25 partes, 54960 bytes): 201 Code Scanning, 3 Dependabot e zero Secret Scanning (192 e 3 na captura de 2026-11-09T00:18:46.890Z). Bytes em docs/governance/evidencias/2026-11-10/inventario-capturado.json.",
+        "Semgrep OSS #555, regra javascript.lang.security.insecure-object-assign (severidade none, qualidade warning), em octaclin-backend/src/modulos/planos-alimentares/aplicacao/servico-planos-alimentares.spec.ts. O arquivo usa Object.assign para montar fixtures a partir de objetos criados no proprio caso de teste. A linha exata nao foi lida nesta sessao."
+      ],
+      "preCondicoes": [
+        "So permanece falso positivo enquanto o arquivo for apenas de teste e os objetos de origem forem literais ou fixtures do proprio teste."
+      ],
+      "mitigacoes": [
+        "Arquivo .spec.ts executado so pelo Jest; nenhum codigo de producao o importa. O job Semgrep e warning e nao required check."
+      ],
+      "impacto": "Aviso Semgrep de severidade none em arquivo de teste; sem efeito em runtime.",
+      "condicaoSaida": "Trocar por spread se o Semgrep passar a apontar mais ocorrencias ou se o arquivo deixar de ser so de teste; caso contrario revisar na data."
     }
   ]
 }

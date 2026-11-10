@@ -190,6 +190,20 @@ test('o runtime backend remove o npm global e as interfaces de package manager',
   }
 });
 
+// A limpeza do pip da imagem IA depende do diretorio versionado da base
+// (`/usr/local/lib/python3.X/...`). Depois do bump para 3.15 (#481) o Dockerfile e
+// o harness continuaram apontando para 3.14: o `test ! -e` do harness passava por
+// o caminho nem existir e o pip vendorizado (certifi, urllib3, msgpack, setuptools)
+// voltou a imagem sem nenhum gate perceber. Por isso a versao e derivada da tag da
+// propria base, nunca digitada de novo.
+function pythonMenorDaBaseIa() {
+  const dockerfile = readFileSync('octaclin-ai-service/Dockerfile', 'utf8');
+  const bases = [...dockerfile.matchAll(/^FROM python:(\d+\.\d+)\.\d+[\w.-]*@sha256:/gm)].map((m) => m[1]);
+  assert.ok(bases.length >= 2, 'octaclin-ai-service/Dockerfile: bases python:X.Y.Z nao encontradas.');
+  assert.equal(new Set(bases).size, 1, 'octaclin-ai-service/Dockerfile: estagios com versoes de Python diferentes.');
+  return bases[0];
+}
+
 test('o runtime IA remove o pip global e os componentes vendorizados da imagem base', () => {
   const ia = estagioFinal(readFileSync('octaclin-ai-service/Dockerfile', 'utf8'));
   const inicioLimpeza = ia.indexOf('RUN rm -rf \\\n');
@@ -199,12 +213,13 @@ test('o runtime IA remove o pip global e os componentes vendorizados da imagem b
   assert.notEqual(proximaCopia, -1, 'octaclin-ai-service/Dockerfile: limpeza deve ocorrer antes da copia das dependencias.');
   const limpeza = ia.slice(inicioLimpeza, proximaCopia);
 
+  const menor = pythonMenorDaBaseIa();
   for (const caminho of [
     '/usr/local/bin/pip',
     '/usr/local/bin/pip3',
-    '/usr/local/bin/pip3.14',
-    '/usr/local/lib/python3.14/site-packages/pip',
-    '/usr/local/lib/python3.14/site-packages/pip-*.dist-info',
+    `/usr/local/bin/pip${menor}`,
+    `/usr/local/lib/python${menor}/site-packages/pip`,
+    `/usr/local/lib/python${menor}/site-packages/pip-*.dist-info`,
   ]) {
     assert.ok(limpeza.includes(caminho), `octaclin-ai-service/Dockerfile: runtime ainda nao remove ${caminho}.`);
   }
@@ -245,8 +260,8 @@ test('o CI prova nos containers que comandos e diretorios globais estao ausentes
   }
   assert.ok(ia.includes('comandos_ausentes: "pip pip3"'), 'ia-service: comandos pip proibidos nao configurados.');
   assert.ok(
-    ia.includes('caminhos_ausentes: "/usr/local/lib/python3.14/site-packages/pip"'),
-    'ia-service: pacote global do pip nao configurado como caminho proibido.',
+    ia.includes(`caminhos_ausentes: "/usr/local/lib/python${pythonMenorDaBaseIa()}/site-packages/pip"`),
+    'ia-service: pacote global do pip nao configurado como caminho proibido (versao do Python da base).',
   );
   assert.ok(workflow.includes('COMANDOS_AUSENTES: ${{ matrix.comandos_ausentes }}'));
   assert.ok(workflow.includes('CAMINHOS_AUSENTES: ${{ matrix.caminhos_ausentes }}'));

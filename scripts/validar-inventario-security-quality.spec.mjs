@@ -228,8 +228,8 @@ test('rejeita campos incompletos ou com tipo errado em Dependabot', () => {
 const INVENTARIO_REAL = new URL('../docs/governance/inventario-security-quality.json', import.meta.url);
 
 test('snapshot revisado preserva byte e cobertura da captura autenticada', () => {
-  const bytes = readFileSync(new URL('../docs/governance/evidencias/2026-11-09/inventario-capturado.json', import.meta.url));
-  assert.equal(createHash('sha256').update(bytes).digest('hex'), '619a4165a77feceb6e7bac6085f6396f59410c305c726081afce40f87160555d');
+  const bytes = readFileSync(new URL('../docs/governance/evidencias/2026-11-10/inventario-capturado.json', import.meta.url));
+  assert.equal(createHash('sha256').update(bytes).digest('hex'), '75d42f15da27e851f433822a837d0922807a96ca56a1242f38909f09bae3aa19');
   const captura = JSON.parse(bytes);
   const inventario = JSON.parse(readFileSync(INVENTARIO_REAL, 'utf8'));
   assert.equal(inventario.commitBase, captura.commitBase);
@@ -239,31 +239,32 @@ test('snapshot revisado preserva byte e cobertura da captura autenticada', () =>
 
 test('valida estrutura e cobertura do inventario real na data da captura', () => {
   const inventario = JSON.parse(readFileSync(INVENTARIO_REAL, 'utf8'));
-  // Recaptura autenticada de 2026-11-09: as causas 248 a 252 sairam porque nenhuma
-  // referencia delas segue aberta; entram minimatch e zlib, e o CodeQL #533
-  // volta para investigacao porque a correcao anterior nao o fechou.
+  // Recaptura autenticada de 2026-11-09T23:56 (main 903f4fec): o CodeQL #533 e o
+  // zlib (#582, #583) fecharam, entao 253 e 256 sairam; entram a regressao do pip
+  // vendorizado na imagem IA (257) e um aviso Semgrep em arquivo de teste (258), e
+  // os dois `apt` novos foram para a 004.
   assert.equal(inventario.gateEncerramentoSq4, undefined);
   assert.deepEqual(inventario.causas.map(({ id }) => id), [
-    'SQ-2026-004', 'SQ-2026-253', 'SQ-2026-254', 'SQ-2026-255', 'SQ-2026-256',
+    'SQ-2026-004', 'SQ-2026-254', 'SQ-2026-255', 'SQ-2026-257', 'SQ-2026-258',
   ]);
-  assert.deepEqual(inventario.causas.map(({ alertas }) => alertas.length), [189, 1, 1, 2, 2]);
+  assert.deepEqual(inventario.causas.map(({ alertas }) => alertas.length), [191, 1, 2, 9, 1]);
   assert.deepEqual(inventario.causas.map(({ disposicao }) => disposicao), [
     'corrigir',
-    'investigar',
     'aguardando_upstream',
     'aguardando_upstream',
     'corrigir',
+    'falso_positivo',
   ]);
-  assert.match(carregarEValidarInventario(undefined, { hoje: new Date(inventario.capturadoEm) }), /195 alertas cobertos/);
+  assert.match(carregarEValidarInventario(undefined, { hoje: new Date(inventario.capturadoEm) }), /204 alertas cobertos/);
 });
 
-// Fronteira ancorada no `revisarEm` mais proximo (SQ-2026-256, 2026-11-16): a data
+// Fronteira ancorada no `revisarEm` mais proximo (SQ-2026-004, 2026-11-20): a data
 // de revisao ainda vale durante todo o dia; no dia seguinte reprova. Ao renovar
 // a data na causa, mova estes casos junto para provar que a CLI aplica o relogio.
 for (const [data, status, mensagem] of [
-  ['2026-11-15T23:59:59.999Z', 0, /195 alertas cobertos/],
-  ['2026-11-16T00:00:00.000Z', 0, /195 alertas cobertos/],
-  ['2026-11-17T00:00:00.000Z', 1, /SQ-2026-256 esta com revisao vencida/],
+  ['2026-11-19T23:59:59.999Z', 0, /204 alertas cobertos/],
+  ['2026-11-20T00:00:00.000Z', 0, /204 alertas cobertos/],
+  ['2026-11-21T00:00:00.000Z', 1, /SQ-2026-004 esta com revisao vencida/],
 ]) {
   test(`CLI do gate de CI aplica o relogio corrente em ${data}`, () => {
     const pacote = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8'));

@@ -1,8 +1,8 @@
 # PR 50 — Containers e runtime.
 #
 # Base fixada por digest imutavel (indice OCI multi-arch linux/amd64+arm64),
-# resolvido em 2026-11-08 no Docker Hub oficial (library/python:3.14.10-slim). A tag
-# humana permanece para legibilidade; o digest e a ancora real. Atualizacao do
+# no Docker Hub oficial (library/python, linha 3.15). A tag humana permanece para
+# legibilidade; o digest e a ancora real. Atualizacao do
 # digest segue o processo em docs/governance/RELATORIO_SEGURANCA_PR50_2026-09-01.md:
 # novo digest -> scan -> build -> harness de runtime -> SBOM -> review -> merge.
 #
@@ -25,15 +25,19 @@ ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 RUN groupadd --system --gid 10001 octaclin \
     && useradd --system --uid 10001 --gid octaclin --home-dir /app --shell /usr/sbin/nologin octaclin
+# ATENCAO: os caminhos abaixo carregam a versao menor do Python da base. Ao subir a
+# base (ex.: 3.15 -> 3.16) atualize-os junto: `validar-dockerfiles-runtime.spec.mjs`
+# e o harness do trivy.yml reprovam se divergirem da tag do FROM. Em 2026-11-09 isso
+# ficou em 3.14 depois da #481 e o pip vendorizado voltou para a imagem.
 # SQ-1C: o servico executa uvicorn diretamente e recebe as dependencias prontas
 # do estagio de build. O pip da imagem oficial, inclusive seus componentes
 # vendorizados, nao pertence ao grafo da aplicacao nem e necessario no runtime.
 RUN rm -rf \
     /usr/local/bin/pip \
     /usr/local/bin/pip3 \
-    /usr/local/bin/pip3.14 \
-    /usr/local/lib/python3.14/site-packages/pip \
-    /usr/local/lib/python3.14/site-packages/pip-*.dist-info
+    /usr/local/bin/pip3.15 \
+    /usr/local/lib/python3.15/site-packages/pip \
+    /usr/local/lib/python3.15/site-packages/pip-*.dist-info
 COPY --from=build /install /usr/local
 COPY --chown=octaclin:octaclin app ./app
 EXPOSE 8001
