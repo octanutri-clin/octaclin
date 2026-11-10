@@ -373,6 +373,22 @@ e regressão dos specs FOOD06 existentes. Limites: a prova de PDF real (`FOOD06_
 relatório ficam na T4b; sem leitor de tela real nem pessoas; o texto de RDA/AI/UL aguarda validação
 de conteúdo por quem responde por ele; filtro "Comparáveis" e ordenação por percentual em BACKLOG.
 
+### FOOD06 — referências DRI no relatório impresso (T4b, Web)
+
+A comparação só entra na folha por escolha explícita no formato 2 ("Incluir comparação com
+referências DRI nesta folha", desmarcada por padrão). Desmarcada, pedido e folha são os de antes.
+Marcada, o servidor projeta a versão e o contexto gravados no registro; registro sem referências ou
+com versão desconhecida chega como indisponível e a explicação fica só na tela, nunca no papel. A
+impressão reconfere o relatório com a mesma escolha. Na folha, a seção começa em página nova com
+"Como ler", fonte e a frase "Converse com seu nutricionista" na mesma página do início da tabela;
+o aviso de total acima do UL é só para o profissional.
+
+Provas: `scripts/relatorio-factual.spec.ts` (leitor e corpo do pedido) e
+`tests/visual/food06-referencias-relatorio.spec.mjs`, com PDF real (`FOOD06_PDF_REAL=true`,
+`pdftotext`) verificando página, ausência de textos de tela no papel e palavras proibidas. Limites:
+sem rodapé repetido em cada página; sem leitor de tela real nem pessoas; texto de conteúdo pendente
+de validação; histórico sem indicador (decisão futura).
+
 ### FOOD06 — decomposição interna M02
 
 A seleção comum de refeições deve preservar a PA06: OFF/não selecionado não

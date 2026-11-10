@@ -3,14 +3,18 @@ import {CAMPOS_MACRO_FACTUAL,lerValorMacroFactual} from './previa-micronutriente
 import {lerLinhaMicronutrienteFactual,lerFontesPorNutrienteFactual,versaoFonteFactualValida} from './micronutrientes-factuais';
 import {CAMPOS_MICRONUTRIENTES_PLANO} from './micronutrientes-plano';
 import {ErroApiPlanoAlimentar} from './plano-alimentar-api';
+import {lerReferenciasFactuais,type ReferenciasFactuais} from './referencias-dieteticas-factuais';
+/** FOOD06 T4b: só quando o profissional pede; registro sem referências nunca é recalculado com a versão atual. */
+export type ReferenciasRelatorioFactual={estado:'calculado';dados:ReferenciasFactuais}|{estado:'indisponivel';motivo:'registro_sem_referencias'|'versao_referencias_indisponivel'};
 function falhar():never{throw new Error('Não foi possível conferir o relatório.');}
 function obj(v:unknown):Record<string,unknown>{if(!v||typeof v!=='object'||Array.isArray(v))return falhar();return v as Record<string,unknown>;}
 function texto(v:unknown):string{if(typeof v!=='string'||!v.length||v.length>128)return falhar();return v;}
 function data(v:unknown):string{const s=texto(v);if(!Number.isFinite(Date.parse(s))||new Date(s).toISOString()!==s)return falhar();return s;}
 const LIMITES=['alimentacao_planejada_nao_consumo_real','ausencia_nao_equivale_a_zero','sem_diagnostico_ou_recomendacao','composicao_congelada_sem_catalogo_atual'];
-export function lerRelatorioFactual(valor:unknown,registroId:string){
+export function lerRelatorioFactual(valor:unknown,registroId:string,opcoes?:{referencias?:boolean}){
+ const pedeReferencias=opcoes?.referencias===true;
  const r=obj(valor),registro=obj(r.registro),o=obj(r.origem),ref=obj(r.referencias),analise=obj(r.analise),cobertura=obj(analise.cobertura),nutrientes=obj(cobertura.nutrientes);
- if(!registroId||registro.id!==registroId||!((r.schemaVersao===1&&r.motorVersao==='food06-relatorio-factual-v1')||(r.schemaVersao===2&&r.motorVersao==='food06-relatorio-factual-v2'))||ref.estado!=='indisponivel'||ref.motivo!=='referencias_nao_habilitadas'||!['nao_projetadas_neste_contrato','resumo_documentado'].includes(String(obj(r.fontesComposicao).estado))||cobertura.schemaVersao!==1)return falhar();
+ if(!registroId||registro.id!==registroId||!((r.schemaVersao===1&&r.motorVersao==='food06-relatorio-factual-v1')||(r.schemaVersao===2&&r.motorVersao==='food06-relatorio-factual-v2'))||(pedeReferencias?r.schemaVersao!==2:ref.estado!=='indisponivel'||ref.motivo!=='referencias_nao_habilitadas')||!['nao_projetadas_neste_contrato','resumo_documentado'].includes(String(obj(r.fontesComposicao).estado))||cobertura.schemaVersao!==1)return falhar();
  const c=obj(r.contextoClinico);let contextoRegistrado:ContextoRegistradoFactual|undefined;
  if(r.schemaVersao===1){if(c.estado!=='nao_documentado_no_relatorio'||Object.keys(c).some(k=>k!=='estado'))return falhar();}
  else if(c.estado==='resumo_documentado'){if(Object.keys(c).some(k=>!['estado','resumo'].includes(k)))return falhar();contextoRegistrado=lerContextoRegistradoFactual(c.resumo);}
@@ -31,12 +35,19 @@ export function lerRelatorioFactual(valor:unknown,registroId:string){
  }
  const selecao=obj(r.selecao);if(typeof selecao.planoAtivo!=='boolean'||typeof selecao.planoSelecionado!=='boolean'||!Array.isArray(selecao.refeicoes)||selecao.refeicoes.length>50)return falhar();
  const refeicoes=selecao.refeicoes.map(v=>{const f=obj(v);if(typeof f.ativa!=='boolean'||typeof f.selecionada!=='boolean')return falhar();return {identidadeId:texto(f.identidadeId),ativa:f.ativa,selecionada:f.selecionada};});if(new Set(refeicoes.map(f=>f.identidadeId)).size!==refeicoes.length)return falhar();
+ let referencias:ReferenciasRelatorioFactual|undefined;
+ if(pedeReferencias){
+  if(ref.estado==='calculado')referencias={estado:'calculado',dados:lerReferenciasFactuais(ref,linhas)};
+  else if(ref.estado==='indisponivel'&&Object.keys(ref).length===2&&(ref.motivo==='registro_sem_referencias'||ref.motivo==='versao_referencias_indisponivel'))referencias={estado:'indisponivel',motivo:ref.motivo};
+  else return falhar();
+ }
  const nutrientesMacro=obj(obj(analise.calculo).nutrientes);const macros=CAMPOS_MACRO_FACTUAL.map(c=>{const n=obj(nutrientesMacro[c.codigo]);if(n.itensIncluidos!==linhas[0]?.contagens.incluidos)return falhar();return {...c,...lerValorMacroFactual(n,c.codigo,c.unidade)};});
- return {motorVersao:r.schemaVersao===2?'food06-relatorio-factual-v2' as const:'food06-relatorio-factual-v1' as const,contextoRegistrado,geradoEm:data(r.geradoEm),registro:{id:texto(registro.id),criadoEm:data(registro.criadoEm)},origem:{planoId:texto(o.planoId),versaoId:texto(o.versaoId),numero:o.numero as number,status:o.status as 'publicada'|'rascunho',registradaEm:data(o.registradaEm),...(o.status==='rascunho'?{rascunhoRevisao:o.rascunhoRevisao as number}:{})},selecao:{planoAtivo:selecao.planoAtivo,planoSelecionado:selecao.planoSelecionado,refeicoes},fontes,semReferencia,fontesNaoDetalhadas,macros,linhas,avisos:r.avisos.map(String)};
+ return {...(referencias?{referencias}:{}),motorVersao:r.schemaVersao===2?'food06-relatorio-factual-v2' as const:'food06-relatorio-factual-v1' as const,contextoRegistrado,geradoEm:data(r.geradoEm),registro:{id:texto(registro.id),criadoEm:data(registro.criadoEm)},origem:{planoId:texto(o.planoId),versaoId:texto(o.versaoId),numero:o.numero as number,status:o.status as 'publicada'|'rascunho',registradaEm:data(o.registradaEm),...(o.status==='rascunho'?{rascunhoRevisao:o.rascunhoRevisao as number}:{})},selecao:{planoAtivo:selecao.planoAtivo,planoSelecionado:selecao.planoSelecionado,refeicoes},fontes,semReferencia,fontesNaoDetalhadas,macros,linhas,avisos:r.avisos.map(String)};
 }
 export type RelatorioFactual=ReturnType<typeof lerRelatorioFactual>;
-export async function obterRelatorioFactual(pacienteId:string,registroId:string,signal:AbortSignal,versaoRelatorio:1|2=1,incluirOrigem=false):Promise<RelatorioFactual>{
- const resposta=await fetch(`/api/pacientes/${encodeURIComponent(pacienteId)}/planos-alimentares/analises-factuais/relatorio`,{method:'POST',cache:'no-store',signal,headers:{'Content-Type':'application/json'},body:JSON.stringify({registroId,...(versaoRelatorio===2?{versaoRelatorio:2}:{}),...(versaoRelatorio===2&&incluirOrigem?{incluirOrigem:true}:{})})});
+export async function obterRelatorioFactual(pacienteId:string,registroId:string,signal:AbortSignal,versaoRelatorio:1|2=1,incluirOrigem=false,incluirReferencias=false):Promise<RelatorioFactual>{
+ const comReferencias=versaoRelatorio===2&&incluirReferencias===true;
+ const resposta=await fetch(`/api/pacientes/${encodeURIComponent(pacienteId)}/planos-alimentares/analises-factuais/relatorio`,{method:'POST',cache:'no-store',signal,headers:{'Content-Type':'application/json'},body:JSON.stringify({registroId,...(versaoRelatorio===2?{versaoRelatorio:2}:{}),...(versaoRelatorio===2&&incluirOrigem?{incluirOrigem:true}:{}),...(comReferencias?{incluirReferencias:true}:{})})});
  if(!resposta.ok)throw new ErroApiPlanoAlimentar(resposta.status,'Não foi possível preparar o relatório autorizado.');
- try{const r=lerRelatorioFactual(await resposta.json(),registroId);if(r.motorVersao!==`food06-relatorio-factual-v${versaoRelatorio}`)throw new Error();return r;}catch{throw new ErroApiPlanoAlimentar(502,'Não foi possível conferir o relatório.');}
+ try{const r=lerRelatorioFactual(await resposta.json(),registroId,comReferencias?{referencias:true}:undefined);if(r.motorVersao!==`food06-relatorio-factual-v${versaoRelatorio}`)throw new Error();return r;}catch{throw new ErroApiPlanoAlimentar(502,'Não foi possível conferir o relatório.');}
 }

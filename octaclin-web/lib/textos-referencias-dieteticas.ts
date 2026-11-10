@@ -17,10 +17,11 @@ export function formatarPercentualReferencia(p: number): string {
 const POSICAO_UL = { abaixo: 'abaixo de', igual: 'igual a', acima: 'acima de' } as const;
 
 /** Duas linhas do mesmo padrão em todo nutriente; o período ("do dia") está no cabeçalho da coluna. */
-export function textoReferencia(codigo: string, c: Extract<ComparacaoNutrienteFactual, { estado: 'comparavel' }>): string {
+export function textoReferencia(codigo: string, c: Extract<ComparacaoNutrienteFactual, { estado: 'comparavel' }>, paraFolha = false): string {
   const pct = formatarPercentualReferencia(c.percentual);
   const base = `Planejado: ${formatarNutrientePlano(codigo, c.quantidadePlanejada)} ${c.unidadePlanejada} = ${pct === '<1' ? 'menos de 1' : pct}% da ${c.tipo} (${formatarNutrientePlano(codigo, c.valorReferencia)} ${c.unidadeReferencia})`;
-  return c.ajusteTabagismoMg ? `${base}, com +${c.ajusteTabagismoMg} mg por tabagismo confirmado` : base;
+  // Na folha o ajuste aparece sem dizer o motivo: tabagismo é dado de saúde e a folha pode ser lida por terceiros.
+  return c.ajusteTabagismoMg ? `${base}, ${paraFolha ? `com ajuste de +${c.ajusteTabagismoMg} mg na referência` : `com +${c.ajusteTabagismoMg} mg por tabagismo confirmado`}` : base;
 }
 export function textoUl(codigo: string, c: Extract<ComparacaoNutrienteFactual, { estado: 'comparavel' }>): string {
   return `Limite superior (UL): total planejado ${POSICAO_UL[c.posicao ?? 'abaixo']} ${formatarNutrientePlano(codigo, c.valorReferencia)} ${c.unidadeReferencia}`;
@@ -98,8 +99,8 @@ export const COMO_LER_TITULO = 'Como ler esta comparação';
 export const COMO_LER: readonly string[] = Object.freeze([
   'DRI (Ingestões Dietéticas de Referência) é o conjunto de valores de referência usado aqui. Os números vêm do total planejado do dia (as refeições selecionadas formam o dia completo) e não mostram o que foi consumido.',
   'RDA (Ingestão Dietética Recomendada) e AI (Ingestão Adequada) são valores de referência diários para o grupo selecionado. Não são metas individuais nem um teto.',
-  'UL (limite superior de ingestão) é um valor de referência que vale para o total dos alimentos do plano. Nem todo nutriente tem UL.',
-  'O total considera só o que está no plano alimentar. Produtos fora do plano, como suplementos que não foram lançados nele, não são somados.',
+  'UL (limite superior de ingestão) é um valor de referência que vale para o total dos alimentos do plano. Nem todo nutriente tem UL. Ficar acima ou abaixo de um valor de referência, por si só, não é diagnóstico.',
+  'O total considera só o que está no plano alimentar. Produtos fora do plano, como suplementos que não foram incluídos nele, não são somados.',
   'Quando faltam dados de alguns alimentos, o nutriente não é comparado. Ausência não equivale a zero.',
   'Perdas no preparo, absorção e necessidades individuais não são consideradas. Não é diagnóstico nem orientação para mudar a alimentação.'
 ]);
@@ -108,3 +109,19 @@ export function textoFonteReferencias(r: Pick<ReferenciasFactuais, 'fonte' | 've
   const data = d ? `${d[3]}/${d[2]}/${d[1]}` : r.fonte.modificadaEm;
   return `Fonte: ${r.fonte.autoridade}, tabela de ${data}, licença ${r.fonte.licenca}. Versão ${r.versao}.`;
 }
+
+/** Relatório impresso (T4b). A comparação só entra por escolha explícita; desligada, a folha é a de sempre. */
+export const RELATORIO_REFERENCIAS = Object.freeze({
+  controle: 'Incluir comparação com referências DRI nesta folha',
+  lembrete: 'Desligada por padrão. A folha impressa pode ser lida pelo paciente sem você por perto.',
+  registroSemReferencias: 'Este registro não tem referências: foi salvo sem as confirmações de contexto ou antes desta versão. Para incluí-las, salve um novo registro com a comparação ativa na tabela; o novo registro usa o plano e a versão de referência atuais. Nada sobre referências vai para a folha.',
+  versaoIndisponivel: 'A versão de referência registrada neste registro não está disponível nesta versão do sistema. Nada é recalculado com a versão atual, e nada sobre referências vai para a folha.',
+  avisoAcima: 'Há nutrientes com total planejado acima do limite superior (UL). Confira antes de entregar a folha.',
+  atualizando: 'Atualizando a prévia com a sua escolha…',
+  falhaAtualizar: 'Não foi possível atualizar a prévia com a sua escolha. Nada foi enviado à impressão.',
+  ligacao: 'Esta parte compara os totais do dia, mostrados acima, com valores de referência.',
+  rodape: 'Comparação com referências DRI do total planejado do dia; não é diagnóstico. Dúvidas sobre estes números? Converse com seu nutricionista.',
+  titulo: 'Comparação com referências DRI (total planejado do dia)',
+  conversa: 'Dúvidas sobre estes números? Converse com seu nutricionista.',
+  limitacao: 'A comparação usa a versão de referência registrada nesta análise. Os percentuais só comparam números: não avaliam a saúde nem indicam mudanças na alimentação.'
+});

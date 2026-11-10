@@ -93,12 +93,12 @@ export function AvisosReferencias({ referencias }: { referencias: ReferenciasFac
 }
 
 /** Célula da coluna Referência: duas linhas curtas do mesmo padrão em todo nutriente. */
-export function CelulaReferencia({ codigo, ativa, comparacao }: { codigo: string; ativa: boolean; comparacao?: ReferenciaNutrienteFactual }) {
+export function CelulaReferencia({ codigo, ativa, comparacao, paraFolha = false }: { codigo: string; ativa: boolean; comparacao?: ReferenciaNutrienteFactual; paraFolha?: boolean }) {
   if (!ativa) return <span className="text-texto-suave">Não solicitada</span>;
   if (!comparacao) return <>—</>;
   const { referencia: r, ul } = comparacao;
   const linhas: { chave: string; texto: string }[] = [];
-  if (r.estado === 'comparavel') linhas.push({ chave: 'ref', texto: textoReferencia(codigo, r) });
+  if (r.estado === 'comparavel') linhas.push({ chave: 'ref', texto: textoReferencia(codigo, r, paraFolha) });
   if (ul.estado === 'comparavel') linhas.push({ chave: 'ul', texto: textoUl(codigo, ul) });
   const curto = (m: keyof typeof MOTIVO_COMPARACAO_CURTO) => m === 'contexto_nao_elegivel' ? '' : `: ${MOTIVO_COMPARACAO_CURTO[m]}`;
   if (r.estado === 'indisponivel' && ul.estado === 'indisponivel' && r.motivo === ul.motivo) {

@@ -33,3 +33,7 @@ Comparação com a DRI na tabela, nos detalhes e no relatório. Decisões do pro
 ## FOOD06 T4a — revisão B/C, 2026-11-10
 
 Addendum à revisão A de T4. Fechados tecnicamente com teste: NUX-06, 16, 17, 20, PUX-13, 15. Parciais: NUX-01, 02, 05, PUX-06, 14. BACKLOG: NUX-07 (caminho ao cadastro do nascimento), NUX-10 (filtro e ordenação), NUX-12 (atalho "Como ler"), NUX-18, 19 (medir o custo do formulário com pessoas), NUX-21, e leitor de tela real. Fica para a T4b o relatório impresso e o histórico. Não autoriza escopo novo: [consolidado](reports/FOOD06-T4A-BC-2026-11-10/consolidado.md).
+
+## FOOD06 T4b — revisão B/C, 2026-11-10
+
+Relatório impresso com a comparação só por escolha explícita. Fechados tecnicamente com teste e PDF real: PUX-06, 11, 16, 19, NUX-23, 24, 25, 27. BACKLOG: jargão pré-existente da seção Limitações (PUX-17), rodapé da folha inteira, "faltam dados" para leigo (NUX-26), leitor de tela real, casos "<1" e mcg no papel, indicador no histórico (NUX-15). Decisão do proprietário (2026-11-10, NUX-22): tabagismo não é impresso na folha; fica no registro e na tela do profissional. [Consolidado](reports/FOOD06-T4B-BC-2026-11-10/consolidado.md).

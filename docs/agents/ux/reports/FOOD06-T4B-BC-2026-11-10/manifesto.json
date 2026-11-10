@@ -1,0 +1,14 @@
+{
+  "modalidade": "as mesmas duas instâncias, retomadas, com papel fornecido como prompt, sem ferramentas; síntese editorial do coordenador",
+  "agentes": "nutricionista e paciente, instâncias distintas do runtime desta sessão; identificadores na trilha do runtime, não copiados",
+  "base": "d417c61d",
+  "data": "2026-11-10",
+  "observacoes": "o paciente recebeu o texto real extraído do PDF (dados sintéticos); nenhuma persona viu imagem ou tela; nenhuma recebeu o parecer da outra",
+  "ferramentas_do_revisor": [],
+  "sha256": {
+    "brief.md": "f809b43b843be1a80055a37e5b12a5147e2f9c5496b4dd1fc24321eb6d314a79",
+    "nutricionista.md": "6dc23dd9334e98794193212f51dd1a194aad9903a2f9658fe5bc4e621225e735",
+    "paciente.md": "eb0a33a7c852e262750137ee504e3fe53cf523b29e9814a9d83c7fd731dd679b",
+    "consolidado.md": "e9aefe0292335810f7cca800338b32a0e1116abc26650863b08f828e1a9acabe"
+  }
+}
