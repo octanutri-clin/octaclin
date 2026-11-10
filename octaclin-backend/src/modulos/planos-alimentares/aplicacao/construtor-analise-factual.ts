@@ -76,7 +76,7 @@ export function lerRegistroAnaliseFactual(conteudo: string): RegistroAnaliseFact
    const ref=objeto(r.referencias);
    if(r.contexto===undefined||Object.keys(ref).length!==2||ref.estado!=='registrada'||typeof ref.versao!=='string'||!IDENTIDADE_VERSAO_REFERENCIAS.test(ref.versao))throw new AnaliseFactualInvalidaError();
    const referencias={estado:'registrada' as const,versao:ref.versao};
-   Object.assign(reconstruido,{schemaVersao:2,motorVersao:'food06-registro-factual-v2',referencias});reconstruido.versao.bases.referencia=marcador(referencias);
+   Object.assign(reconstruido,{schemaVersao:2,motorVersao:'food06-registro-factual-v2',referencias});
   }else if(r.schemaVersao!==1)throw new AnaliseFactualInvalidaError();
   // Igualdade canônica detecta campos extras, totais/avisos/markers divergentes
   // sem aceitar o conteúdo cifrado apenas porque seu TypeScript parece correto.
@@ -233,7 +233,10 @@ export function construirAnaliseFactual(entrada:EntradaConstrutorAnaliseFactual)
    contexto={dataAnalise:entrada.contexto!.dataAnalise,resolvido};versao.bases!.contexto=marcador(contexto);
   }
   let referencias:ReferenciasRegistroFactual={estado:'indisponivel',motivo:'referencias_nao_habilitadas'};
-  if(contexto){referencias={estado:'registrada',versao:VERSAO_REFERENCIAS_DRI_ADULTO};versao.bases!.referencia=marcador(referencias);}
+  // Sem marcador `bases.referencia`: ele mudaria histórico e /comparar sem opt-in, e a
+  // integridade já vem da igualdade canônica do registro inteiro. Contexto inelegível
+  // (ex.: gestação) também grava a versão adulta; a projeção o declara não elegível.
+  if(contexto)referencias={estado:'registrada',versao:VERSAO_REFERENCIAS_DRI_ADULTO};
   const r:RegistroAnaliseFactual={...(contexto?{schemaVersao:2 as const,motorVersao:'food06-registro-factual-v2' as const}:{schemaVersao:1 as const,motorVersao:'food06-registro-factual-v1' as const}),versao,
    analise:{calculo:calcularNutrientesCombinados([versao.estado]),cobertura:analisarCoberturaDietetica([versao.estado])},
    ...(contexto?{contexto}:{}),referencias,avisos:[...avisos].sort()};

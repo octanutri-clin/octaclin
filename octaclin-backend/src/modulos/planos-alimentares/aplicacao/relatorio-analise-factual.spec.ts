@@ -75,4 +75,16 @@ describe('FOOD06 T3b: referências no serviço de registros', () => {
   await expect(s.historico(tenant,paciente,usuario,10,undefined,undefined,false,false,'true')).rejects.toThrow('Paginação inválida.');
   expect(executor.executar).not.toHaveBeenCalled();
  });
+ it('histórico com opt-in numa página mista: v2 compara, v1 legado fica indisponível com motivo',async()=>{
+  const id2=randomUUID(),qb:any={};for(const m of ['select','addSelect','where','orderBy','addOrderBy','take','andWhere'])qb[m]=()=>qb;
+  qb.getRawAndEntities=async()=>({raw:[{tamanho_cifrado:64},{tamanho_cifrado:64}],entities:[{id,criadoEm:new Date('2026-11-04T12:00:00.000Z')},{id:id2,criadoEm:new Date('2026-11-03T12:00:00.000Z')}]});
+  const g={getRepository:()=>({createQueryBuilder:()=>qb,find:async()=>[{id,conteudoCriptografado:Buffer.alloc(64)},{id:id2,conteudoCriptografado:Buffer.alloc(64)}]})};
+  const s=new ServicoRegistrosAnaliseFactual({executar:async(_t:string,fn:(g:never)=>unknown)=>fn(g as never)} as never,null!) as any;
+  const legado={...JSON.parse(JSON.stringify(registroV2())),schemaVersao:1,motorVersao:'food06-registro-factual-v1',referencias:{estado:'indisponivel',motivo:'referencias_nao_habilitadas'}};
+  jest.spyOn(s,'carteira').mockResolvedValue('profissional');jest.spyOn(s,'decifrarRegistro').mockReturnValueOnce(registroV2()).mockReturnValueOnce(legado);
+  const {itens}=await s.historico(tenant,paciente,usuario,10,undefined,undefined,false,false,true);
+  expect(itens.map((i:any)=>i.referencias.estado)).toEqual(['calculado','indisponivel']);
+  expect(itens[1].referencias).toEqual({estado:'indisponivel',motivo:'registro_sem_referencias'});
+  expect(itens[0].comparacaoAnterior.referencia).toBe('NAO_COMPARAVEL');
+ });
 });

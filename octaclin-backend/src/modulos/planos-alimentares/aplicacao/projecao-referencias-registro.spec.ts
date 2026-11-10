@@ -4,6 +4,7 @@ import { criarSnapshotMicronutrientes } from '../dominio/micronutrientes';
 import { compararBasesHistoricas, projetarRegistroFactual, projetarResumoHistoricoFactual } from './projecao-registro-factual';
 import { prepararRelatorioFactual } from './relatorio-analise-factual';
 import * as comparacaoReferencias from '../dominio/comparacao-referencias';
+import { compararVersoesFactuais } from '../dominio/comparacao-versoes-factuais';
 
 // FOOD06 T3b: projeções usam a versão de referência gravada no registro, só por opt-in.
 const m = { id: randomUUID(), criadoEm: new Date('2026-11-03T12:00:00.000Z') };
@@ -22,7 +23,7 @@ const criar = (comContexto: EntradaConstrutorAnaliseFactual['contexto'] | null =
 const clonar = (r: RegistroAnaliseFactual): any => JSON.parse(JSON.stringify(r));
 // Registro gravado antes da T3b, com contexto confirmado e sem versão de referência.
 const legadoV1 = () => {
-  const r = clonar(criar()); r.schemaVersao = 1; r.motorVersao = 'food06-registro-factual-v1'; r.referencias = { ...PLACEHOLDER }; delete r.versao.bases.referencia;
+  const r = clonar(criar()); r.schemaVersao = 1; r.motorVersao = 'food06-registro-factual-v1'; r.referencias = { ...PLACEHOLDER };
   return r as RegistroAnaliseFactual;
 };
 
@@ -77,10 +78,14 @@ describe('FOOD06 T3b: referencias projetadas do registro factual', () => {
       .toEqual({ estado: 'indisponivel', motivo: 'registro_sem_referencias' });
   });
 
-  it('historico: a dimensao referencia passa a ser comparavel entre registros v2', () => {
-    expect(compararBasesHistoricas(criar(), criar()).referencia).toBe('IGUAL');
+  it('sem opt-in, historico e /comparar entre registros v2 mostram a dimensao referencia como antes', () => {
+    // Habilitar essa dimensao e decisao propria (UX da T4), nao efeito colateral do envelope v2.
+    expect(compararBasesHistoricas(criar(), criar()).referencia).toBe('NAO_COMPARAVEL');
     expect(compararBasesHistoricas(criar(), legadoV1()).referencia).toBe('NAO_COMPARAVEL');
-    expect(compararBasesHistoricas(legadoV1(), legadoV1()).referencia).toBe('NAO_COMPARAVEL');
+    // Mesmo escopo (tenant/paciente): /comparar so aceita registros do mesmo paciente.
+    const v2 = criar(), v1 = legadoV1();
+    expect(compararVersoesFactuais(v2.versao, v2.versao).bases.referencia).toBe('nao_documentada');
+    expect(compararVersoesFactuais(v1.versao, v1.versao).bases.referencia).toBe('nao_documentada');
   });
 
   it('relatorio: so o formato 2 com opt-in leva a comparacao; formato 1 recusa a flag', () => {
