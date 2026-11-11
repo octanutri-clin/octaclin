@@ -1,0 +1,23 @@
+{
+  "modalidade": "duas instâncias distintas do runtime desta sessão, com o papel fornecido como prompt, sem ferramentas; síntese editorial do coordenador",
+  "agentes": {
+    "nutricionista": "a202adf0550ed3759",
+    "paciente": "ace5912bb09e520a3"
+  },
+  "papeis_toml_sha256": {
+    "octaclin-nutricionista-ux.toml": "6259b40a98e2c49053cbc6adbc0c59d0312b14e191b228ab73de2f2eac53af6d",
+    "octaclin-paciente-ux.toml": "a40b1ded5e47739a2710caa5ec9a9a7871b57be7efc11deefaae0515028ff7d7"
+  },
+  "base": "d84b0f11",
+  "data": "2026-11-11",
+  "etapa": "A (segunda rodada)",
+  "observacoes": "as personas receberam apenas o brief (não o documento do contrato v2); nenhuma recebeu o parecer da outra; não são independentes do coordenador, que escreveu o brief; a persona paciente descreveu a si mesma como 'simulação por um único agente', o que é impreciso; nenhuma evidência de tela, teclado ou leitor de tela; a numeração dos achados continua a da primeira rodada",
+  "ferramentas_do_revisor": [],
+  "ferramentas_observacao": "o runtime reportou uma chamada por instância, a de devolver o relatório",
+  "sha256": {
+    "brief.md": "c430b0cf351929f679979004f8b8b18ab6527c913fb69b4f20205df888e28d06",
+    "nutricionista.md": "bc8cb98f2eac52bc490cfc17bdba0a2574676034689733a5639f4932177c2f15",
+    "paciente.md": "3f88444c605633cc06dba3ff7a28e35cc6f64f5d1f67c466a0f3d7a10515a155",
+    "consolidado.md": "bf52fe291016282dd7503080b94584f3792daa9415474f0781cb6b57a059789e"
+  }
+}

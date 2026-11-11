@@ -437,17 +437,17 @@ tabagismo removido. Limites: não cobre renderização React (sem rota de JSX ne
 pelos Playwright da T4a/T4b) nem canários em logs de infraestrutura do provedor; o backend não registra
 payload de comparação (sem `Logger` nesse caminho) e a falha do comparador vira 500 com mensagem fixa.
 
-### FOOD06 — restrições alimentares individualizadas (proposta T8, M11)
+### FOOD06 — restrições alimentares individualizadas (contrato v2 da T8, M11)
 
-Só proposta: nenhum teste, código ou contrato novo, e o bloqueio B04 / M11-C2 continua aberto até a decisão do
-proprietário. Se aprovada, a implementação deve provar estas propriedades antes de qualquer saída individualizada
-(`tasks/food06-m11-restricoes-contrato-proposta.md`, seção 9): ausência de restrição, avaliação não informada ou vencida
-nunca produz `sem_conflito_registrado`; texto livre e resposta de questionário nunca alteram resultado; restrição em
-rascunho não gera conflito; alimento sem classificação é `indeterminado` em todo caminho; isolamento por tenant e por
-carteira (resposta idêntica, sem revelar existência) e SuperAdmin sem carteira não lê; CAS na edição concorrente;
-auditoria e erros sem conteúdo clínico (canários); preferência nunca vira conflito; mapeamento versionado e citado no
-resultado; consistência entre tabela, detalhe e relatório (como na T6). Validação clínica humana da lista de
-alérgenos e da regra de conflito não é substituível por teste.
+Só contrato: nenhum teste, código ou schema novo, e o bloqueio B04 / critério M11-C2 continua aberto. O contrato v2 (`tasks/food06-m11-restricoes-contrato-v2.md`)
+fixa a **matriz de decisão** (natureza e subtipo × confirmação × relação do item × avaliação × regra → resultado e ação de aplicar, seção 5.1), os
+**20 critérios de aceite** do proprietário com o teste que prova cada um (seção 5.2) e os critérios de UX (seção 9.3). Propriedades a provar na implementação:
+ausência de avaliação, avaliação vencida ou item sem classificação nunca produz `sem_conflito_registrado`; texto livre e resposta de questionário nunca alteram o motor;
+restrição pendente não gera conflito confirmado; `em_reavaliacao` continua valendo; preferência nunca bloqueia; leite e lactose, trigo e doença celíaca são alvos distintos;
+a **prévia e o aplicar usam a mesma função pura** e o fingerprint inclui revisão das restrições, versão do mapeamento, da regra e da composição (TOCTOU); isolamento por
+tenant e carteira com resposta idêntica para inexistente e não autorizado; `SuperAdmin` sem carteira não lê; `Collaborator` e paciente não confirmam; CAS na confirmação;
+`nao_contem_confirmado` sem evidência e `conflita` sem regra validada são recusados; auditoria e erros sem conteúdo clínico (canários); rollback por flag sem apagar dado.
+A validação clínica da taxonomia, do mapeamento e das regras de aplicar não é substituível por teste.
 
 ### FOOD06 — decomposição interna M02
 

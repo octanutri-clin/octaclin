@@ -1,6 +1,6 @@
 # FOOD06 M11 individualizada — proposta de contrato de restrições alimentares (T8)
 
-**Status:** PROPOSTA, aguardando decisão do proprietário. **Nada foi implementado**: sem código, rota,
+**Status:** PROPOSTA v1, **substituída pelo contrato v2** (`tasks/food06-m11-restricoes-contrato-v2.md`) onde as decisões D1 a D11 do proprietário a alteram; mantida como histórico. Texto original abaixo: aguardava decisão do proprietário. **Nada foi implementado**: sem código, rota,
 migration, flag nem alteração de contrato. Esta proposta **não aprova** o contrato nem libera o caminho
 individualizado de M11, M04 ou M12 (bloqueio B04 / critério M11-C2 continuam abertos até a decisão).
 
