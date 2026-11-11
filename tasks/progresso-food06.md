@@ -9,7 +9,32 @@ esforço, prazo, prontidão assistencial ou critérios integralmente aceitos.
 Não alterar os pesos para aparentar avanço. Evidências e exceções continuam na
 [matriz de aceite](aceite-pos-320-food06.md). Nenhuma melhoria pode ser retirada.
 
-## Checkpoint vigente — seleção M11 e prévia M04
+## Checkpoint vigente — 2026-11-12 (referências DRI, cenários e restrições)
+
+Atualização de documentação; **nenhuma suíte foi reexecutada para produzi-la**: cada linha cita PRs já mergeadas na `main`, com a CI da época. B01, B05 e G06 encerrados por **declaração do
+proprietário** em 2026-11-12, sem artefato anexado; isso **não** muda o estado de nenhuma melhoria por si só.
+
+| Melhoria | Estado | O que mudou desde 2026-11-08 / o que falta |
+| --- | --- | --- |
+| M01 cobertura | PARCIAL | Sem mudança. Falta provar zero ≠ ausência ponta a ponta e a origem por nutriente nas saídas. |
+| M02 contribuições | PARCIAL | T7: matriz da soma e da cobertura contra oráculo independente. Faltam provas integradas e a matriz de operações efetivas. |
+| M03 explicações | PARCIAL | T6: tabela ao vivo e relatório coincidem; canários. Faltam todas as causas integradas, renderização e logs de infraestrutura. |
+| M04 prévias | PARCIAL | Referências DRI entraram na análise, no registro e no relatório, **não na prévia**. Faltam elegibilidade científica na prévia e a matriz de concorrência do aplicar. |
+| M05 rastreabilidade | PARCIAL (avançada) | T1 a T3b: referência versionada; o registro v2 nunca recalcula com a versão atual. Falta prova integrada de reprodução sob RLS e B07. |
+| M06 tabela | PARCIAL | T4a: coluna de referência. Faltam filtros por situação da referência, ordenação e jornada final com tecnologia assistiva. |
+| M07 versões | PARCIAL | Sem mudança. Faltam referência comum entre versões e isolamento das dimensões. |
+| M08 PDF | PARCIAL | T4b: seção DRI opcional com PDF real. Faltam acessibilidade do PDF e fontes por nutriente completas. |
+| M09 explicações curtas | CONCLUÍDA E VALIDADA | Ressalva: textos novos de RDA/AI/UL (T4) aguardam validação de conteúdo pelo responsável. |
+| M10 longitudinal | PARCIAL | NUX-15: indicador por registro. Faltam referências nos pontos históricos e gráfico e tabela equivalentes. |
+| M11 sugestões | PARCIAL | **C2 bloqueada (B04).** Contrato v2 (#524) e motor (#526) propostos, não mergeados. Faltam P1b a P4, decisões Q1 a Q11, validação clínica, jurídica e de privacidade. |
+| M12 cenários | **PARCIAL (proposta) só no domínio** | T5: núcleo em memória, sem gravar. Faltam API/BFF, interface com aviso de descarte e o aplicar pelo fluxo M04 (CAS, fingerprint, PA07). |
+
+**Indicador:** com M12 em PARCIAL, **54,2%** administrativos (100×(1+11×0,5)/12), 1/12 encerrada (M09), onze parciais. **A mudança de M12 de PENDENTE para PARCIAL é proposta e aguarda a confirmação do proprietário;
+até lá o indicador oficial permanece 50,0%.** É estimativa administrativa por macroentregas, não prontidão assistencial nem critérios integralmente aceitos. Os pesos não foram alterados.
+
+Para registrar como PASS o que o proprietário testou (B05), falta o artefato: commit testado, cenários, dispositivos e tecnologia assistiva.
+
+## Checkpoint anterior — 2026-11-08 (seleção M11 e prévia M04)
 
 | Melhoria | Estado | Entregue / falta |
 | --- | --- | --- |

@@ -1,5 +1,7 @@
 # FOOD06 — matriz obrigatória de aceite
 
+> **Atualização 2026-11-12.** Entregas T1 a T7 e T9 na `main` (ver `food06-pendencias-por-criterio.md`, bloco de 2026-11-12). B01, B05 e G06 encerrados **por declaração do proprietário**, sem artefato anexado: **nenhuma linha abaixo foi alterada**, porque cada linha só vira PASS com teste e evidência do commit correspondente. Mudanças recomendadas de estado (a confirmar): M03-C2 PENDENTE para PARCIAL; M12-C1 e M12-C2 PENDENTE para PARCIAL **só no domínio**; M12-C3 e M11-C2 seguem como estão. Indicador administrativo: ver `progresso-food06.md`.
+
 > Estado vigente — [M11 integrada à prévia M04](food06-m11-previa-editor.md).46browser/180serviço/150BFF PASS, lint/typecheck/linguagem/buildNode22 PASS; revisões estáticas/UX delimitadas favoráveis. CI da basef9c35427:22SUCCESS/1SBOMSKIPPED; CI do novo delta pendente. M11 PARCIAL,50%administrativos, M12 e direitos/DRI/G06 pendentes/bloqueados. Sem operações externas. Checkpoints abaixo históricos.
 
 > Checkpoint anterior — [interface factual M11](food06-m11-interface-catalogo.md).Consulta genérica integrada;74browserPASS/6PDFSKIPPED (20novosPASS),150BFFPASS, lint integral0erros/71avisos. R4 estática e UX delimitadas favoráveis. M11 PARCIAL,50%administrativos; prévia/aplicação/M12 e direitos/DRI/G06 pendentes. Build/typecheck isolados Node22 PASS; authz agregado em execução e CI do delta pendente; checkpoints abaixo históricos.

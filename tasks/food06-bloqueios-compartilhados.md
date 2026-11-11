@@ -14,6 +14,15 @@ para cada melhoria. Riscos indicam consequências possíveis, não incidentes pr
 - **B06 diagnosticado:** 1079/1080 aplicadas nos dois bancos; 1081/1082 ausentes;
   staging sem TACO. Plano em `tasks/food06-g06-diagnostico-2026-11-09.md`.
 
+**Atualização 2026-11-12 (declarações do proprietário; não verificadas por mim nesta sessão):**
+
+- **B01 ENCERRADO formalmente.** Direito de uso das fontes concedido, **exceto Tucunduva** (sem direito, fora de qualquer ambiente): essa exceção continua valendo. Já decidido em 2026-11-09; agora fechado também neste registro.
+- **B06 / G06 ENCERRADO por declaração do proprietário:** as migrations **1081 e 1082 estão em staging e em produção**. O último diagnóstico lido por mim (`food06-g06-diagnostico-2026-11-09.md`) as mostrava ausentes; **não reconsultei os bancos** e não há evidência anexa desta mudança. Para auditoria, registrar a evidência (ledger por ambiente) quando disponível.
+- **B05 ENCERRADO por declaração do proprietário:** testou pessoalmente. **Sem artefato registrado** (commit, cenários, dispositivos, tecnologia assistiva). As linhas da matriz de aceite que dependiam só de B05 **continuam PARCIAL** até esse registro existir, porque a matriz exige "teste/evidência do commit correspondente".
+- **B02 implementado para as referências DRI adultas** nas saídas (T1 a T4b, PRs #502, #509, #510, #511, #513, #514, #515). Resta onde o critério ainda pede (prévia M04, filtros do M06, comparação de versões do M07).
+- **B04 CONTINUA ABERTO.** Contrato v2 (PR #524) e motor de avaliação (PR #526) estão **propostos e não mergeados**; faltam as decisões Q1 a Q11 e D7-a, a validação clínica, jurídica e de privacidade e as fases P1b a P4.
+- B03, B07 e B08: sem mudança de estado nesta atualização.
+
 | ID/categoria | Causa e evidência | Afetadas | Responsável sugerido / dependência | Resolução imediata / ação | Risco e critério de encerramento |
 | --- | --- | --- | --- | --- | --- |
 | B01 FONTES/DIREITOS | Parecer DRI ainda possui gates; ratificação CL01–CL08 não libera todo uso/importação. `docs/product/PARECER_FONTES_DRI_FOOD06.md` | M03–M08/M10 e partes científicas M12 | Proprietário + jurídico/fontes | Não por código; consolidar artefatos/atribuições/escopo autorizados | Uso sem direitos ou mistura de referência; encerra com autorização documental aplicável à versão e finalidade exatas |

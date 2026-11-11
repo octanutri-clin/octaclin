@@ -12,6 +12,27 @@ contém PASS de domínio ou PENDENTE que ficou desatualizado. Os testes citados 
 históricos identificados nos handoffs; nenhuma suíte funcional nova foi executada
 nesta reconstrução. CI137aa547 foi consultado, sem converter verde em aceite total.
 
+## Atualização 2026-11-12 (evidência nova desde 2026-11-08)
+
+Esta tabela foi reconstruída em 07/11 sobre a base `137aa547`. Desde então entraram na `main` (CI verde na época de cada PR): T1 referências DRI adultas
+versionadas (#502), T2 comparador em lote (#509), T3a análise ao vivo com referências por opt-in (#510), T3b registro factual v2 com a versão das referências (#511),
+T4a tabela com referências (#513), T4b relatório impresso (#514), NUX-15 indicador no histórico (#515), T5 núcleo de cenários em memória (#516), T6 consistência entre
+saídas e canários (#518) e T7 matriz com oráculo decimal (#523). Bloqueios: ver `food06-bloqueios-compartilhados.md` (B01, B05 e B06 encerrados por declaração do proprietário em 2026-11-12).
+
+| Critério | Evidência nova | Estado recomendado |
+| --- | --- | --- |
+| M02-C2 | T7: soma e cobertura contra oráculo independente (domínio) | PARCIAL (faltam operações efetivas integradas) |
+| M03-C2 | T6: leitores da tabela ao vivo e do relatório coincidem; canários nos leitores e nas projeções | PARCIAL (antes PENDENTE; falta renderização e logs de infraestrutura) |
+| M05-C1, M05-C2 | T1 a T3b: referência versionada e registro v2 que nunca recalcula com a versão atual | PARCIAL, avançada (falta prova integrada de reprodução sob RLS e B07) |
+| M06-C1 | T4a: coluna de referência (RDA/AI/UL, percentuais) | PARCIAL (faltam filtros por situação da referência e ordenação) |
+| M08-C1 | T4b: seção DRI opcional na folha, com PDF real | PARCIAL |
+| M10-C1 | NUX-15: indicador por registro (só texto) | PARCIAL |
+| M11-C2 | Contrato v2 (#524) e motor (#526), **propostos, não mergeados** | **BLOQUEADO (B04)** |
+| M12-C1, M12-C2 | T5: núcleo de domínio, cenários não gravados, sem API nem tela | PARCIAL **só no domínio** (antes PENDENTE) |
+| M12-C3 | Nenhuma | PENDENTE |
+
+Nenhuma linha vira PASS por esta atualização: a matriz exige teste e evidência do commit correspondente.
+
 ## M01
 
 | Critério oficial / requisito | Implementação / evidência existente | Lacuna / categoria / dependência | Próxima ação / prova necessária | Status recomendado |
