@@ -141,7 +141,7 @@ clínica, jurídica ou de produto nova, pare só aquele item e registre a pergun
 - Depois, em PRs separadas: API/BFF (sem persistência), interface com aviso de
   descarte, aplicação via fluxo M04 existente (CAS/fingerprint/PA07).
 
-### T6 — M03-C2: consistência entre saídas e canários de log [ ]
+### T6 — M03-C2: consistência entre saídas e canários de log [x]
 
 - Teste que monta uma análise sintética e confere que tabela, detalhes e
   relatório mostram os mesmos números e motivos; canários sintéticos em logs,
