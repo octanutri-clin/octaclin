@@ -157,10 +157,11 @@ clínica, jurídica ou de produto nova, pare só aquele item e registre a pergun
 - **Só documento**, para aprovação do proprietário: quais dados estruturados,
   quem preenche, como mapeiam para alimentos, negativos. Não implementar.
 
-### T9 — Inventário Security & Quality (recorrente, prazo duro) [ ]
+### T9 — Inventário Security & Quality (recorrente, prazo duro) [x] rodada de 2026-11-11; recorrente
 
-- **Prazo:** a causa com `revisarEm` mais próximo vence em **2026-11-16**; a partir
-  de 2026-11-17 o check `Governanca de repositorio` reprova todas as PRs.
+- **Prazo (atualizado em 2026-11-11):** a causa com `revisarEm` mais próximo é a
+  `SQ-2026-004`, em **2026-11-20**; a partir de 2026-11-21 o check
+  `Governanca de repositorio` reprova todas as PRs, salvo decisão do proprietário.
 - **Procedimento:** disparar o workflow `inventario-security-quality.yml` na
   `main`; remontar o JSON do eco em base64 do log do job (hash e número de partes
   declarados no próprio log); triar alertas em causas (aposentar as sem alerta
