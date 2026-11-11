@@ -132,7 +132,7 @@ clínica, jurídica ou de produto nova, pare só aquele item e registre a pergun
 - **Testes:** Playwright desktop/mobile, `test:a11y` relevante, PDF real com
   `FOOD06_PDF_REAL=true`.
 
-### T5 — M12 cenários: núcleo de domínio [ ]
+### T5 — M12 cenários: núcleo de domínio [x]
 
 - **Escopo** em `tasks/especificacao-pos-320-food06-melhorias.md` (seção M12).
 - Núcleo em memória que reaproveita PA06 e a prévia M04: original × troca,

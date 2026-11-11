@@ -403,6 +403,20 @@ Provas: `scripts/historico-micronutrientes-factuais.spec.ts` (indicador, motivos
 `tests/visual/food06-referencias-relatorio.spec.mjs` (desktop e celular, PDF real), com regressão
 dos specs de histórico, tabela e contexto.
 
+### FOOD06 — núcleo de cenários M12 (T5, domínio puro)
+
+`dominio/cenarios-dieteticos.ts`: um cenário original e de 1 a 6 alternativas, em memória, lado a lado.
+Cada cenário é calculado sozinho pela PA06 (mesmo somador e cobertura): alternativas excludentes nunca
+são somadas entre si nem com o original. As diferenças são as da prévia M04, original × alternativa
+(ausente não vira zero); referências usam o comparador em lote da T2 com o contexto já resolvido, e sem
+contexto ficam indisponíveis com motivo. Sinaliza escopo diferente, cenário sem itens e cobertura que
+difere entre os lados. Resultado declara `simulacao_nao_gravada`; entrada fechada (chaves extras,
+ids repetidos, rótulo com controle e excesso de alternativas são recusados) e sem ecoar conteúdo.
+
+Prova: `dominio/cenarios-dieteticos.spec.ts` (23 casos, 6 mutações detectadas). Sem rota, persistência,
+UI ou aplicação: API/BFF, interface com aviso de descarte e aplicação pelo fluxo M04 (CAS, fingerprint,
+PA07) são PRs seguintes e continuam exigindo autorização e reautorização no servidor.
+
 ### FOOD06 — decomposição interna M02
 
 A seleção comum de refeições deve preservar a PA06: OFF/não selecionado não
