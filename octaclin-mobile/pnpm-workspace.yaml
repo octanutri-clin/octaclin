@@ -23,9 +23,10 @@ overrides:
   compression@<1.8.2: 1.8.2
   # GHSA-pqg4-j6r4-53mv: shell-quote 1.12.0 inclui a correcao upstream >=1.11.0.
   shell-quote@>=1.8.4 <1.11.0: 1.12.0
-  # Advisories de node-forge foram corrigidos upstream em 1.4.1; 1.4.2 e a menor
-  # release publicada aprovada pela janela de maturacao atual.
-  node-forge@>=1.4.0 <1.4.1: 1.4.2
+  # GHSA-6889-vf6x-f3g5, GHSA-w4xr-hqv8-ch44, GHSA-6cv4-p8m7-4r25 e GHSA-j8rw-jp99-435v
+  # (<=1.4.2) corrigidos em 1.4.3, publicada em 2026-11-04 (fora da janela de maturacao
+  # de 24h). Chega transitivo por @expo/cli > @expo/code-signing-certificates.
+  node-forge@<1.4.3: 1.4.3
   # glob 14.0.2 corrige cancelamento e usa minimatch 11 corrigido.
   glob@>=13.0.0 <14.0.2: 14.0.2
   # O patch versionado de @expo/config remove deepmerge do consumidor; manter
