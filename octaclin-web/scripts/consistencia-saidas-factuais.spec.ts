@@ -138,7 +138,7 @@ test('canários em campos extras não atravessam leitores, textos nem mensagens 
   for (const saida of [JSON.stringify(vivo), JSON.stringify(folha), textos, textoFonteReferencias(vivo.referencias!)]) assert.ok(!saida.includes('CANARIO'), 'campo extra vazou');
   // Mensagens de erro não ecoam o conteúdo recebido.
   const invalida = relatorio() as { referencias: Solto };
-  Object.assign(invalida.referencias, { versaoReferencias: `${CANARIO}<script>` });
+  Object.assign(invalida.referencias, { versaoReferencias: `${CANARIO} invalida` });
   assert.throws(() => lerRelatorioFactual(invalida, 'registro', { referencias: true }), (e: Error) => !e.message.includes('CANARIO'));
   assert.throws(() => lerAnaliseMicronutrientesFactual({ ...analiseAoVivo(), comparacoes: { estado: 'calculado', canario: CANARIO } }, entrada, { referencias: true }), (e: Error) => !e.message.includes('CANARIO'));
 });
