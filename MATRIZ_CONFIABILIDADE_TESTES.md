@@ -417,6 +417,26 @@ Prova: `dominio/cenarios-dieteticos.spec.ts` (23 casos, 6 mutações detectadas)
 UI ou aplicação: API/BFF, interface com aviso de descarte e aplicação pelo fluxo M04 (CAS, fingerprint,
 PA07) são PRs seguintes e continuam exigindo autorização e reautorização no servidor.
 
+### FOOD06 — consistência entre saídas e canários (T6, M03-C2)
+
+Uma única análise sintética passa por todas as saídas e exige os mesmos números e motivos. Servidor:
+comparador ao vivo, projeção do registro, histórico e relatório formato 2 devolvem referências idênticas;
+o total comparado é o da cobertura da mesma saída; o ajuste de tabagismo só existe com tabagismo
+confirmado e nenhuma saída expõe nascimento, idade nem a resposta de tabagismo; campos extras
+(canários) gravados no registro não atravessam nenhuma projeção. Web: o mesmo payload passa pelo leitor
+da tabela ao vivo e pelo do relatório registrado e produz referências iguais; os textos da célula, dos
+detalhes e da folha são os mesmos (a folha só omite o motivo do tabagismo); total adulterado é recusado
+nos dois leitores; canários em campos extras não aparecem em leitores, textos nem mensagens de erro;
+contexto fora do escopo mostra o mesmo motivo e nenhum número nos dois lados.
+
+Prova: `aplicacao/consistencia-saidas-factuais.spec.ts` (backend, 4 casos) e
+`octaclin-web/scripts/consistencia-saidas-factuais.spec.ts` (6 casos, no runner
+`test:calculo-combinado-planos`). Mutações detectadas: folha revelando tabagismo, leitor ecoando campo
+extra, leitor sem conferir o total com a cobertura, projeção vazando o contexto bruto e ajuste de
+tabagismo removido. Limites: não cobre renderização React (sem rota de JSX neste runner; a tela é coberta
+pelos Playwright da T4a/T4b) nem canários em logs de infraestrutura do provedor; o backend não registra
+payload de comparação (sem `Logger` nesse caminho) e a falha do comparador vira 500 com mensagem fixa.
+
 ### FOOD06 — decomposição interna M02
 
 A seleção comum de refeições deve preservar a PA06: OFF/não selecionado não
