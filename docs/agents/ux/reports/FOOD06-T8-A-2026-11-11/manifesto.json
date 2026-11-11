@@ -1,0 +1,23 @@
+{
+  "modalidade": "duas instâncias distintas do runtime desta sessão, com o papel fornecido como prompt, sem ferramentas; síntese editorial do coordenador",
+  "agentes": {
+    "nutricionista": "a7c9e973de3036e36",
+    "paciente": "a558752bf3c135c1d"
+  },
+  "papeis_toml_sha256": {
+    "octaclin-nutricionista-ux.toml": "6259b40a98e2c49053cbc6adbc0c59d0312b14e191b228ab73de2f2eac53af6d",
+    "octaclin-paciente-ux.toml": "a40b1ded5e47739a2710caa5ec9a9a7871b57be7efc11deefaae0515028ff7d7"
+  },
+  "base": "d84b0f11",
+  "data": "2026-11-11",
+  "etapa": "A",
+  "observacoes": "as personas receberam apenas o brief (não o documento da proposta); nenhuma recebeu o parecer da outra; não são independentes do coordenador, que escreveu o brief; a persona paciente descreveu a si mesma como 'fallback do agente principal', o que é impreciso; nenhuma evidência de tela, teclado ou leitor de tela",
+  "ferramentas_do_revisor": [],
+  "ferramentas_observacao": "o runtime reportou uma chamada por instância, a de devolver o relatório",
+  "sha256": {
+    "brief.md": "92be689044c752002fc7ea4ae2de5cdfbb50ec0c6a0c23acc3805f31e5849e7d",
+    "nutricionista.md": "7e9e5cdfb121600335543b39c0c6dcd97ba481168733bf5d04e5a2884eaf22ed",
+    "paciente.md": "5acf0a77af8dd142884f93f880dabe248a32324189e3226a2cb7a637d2b46c06",
+    "consolidado.md": "fe740252100468e3d2796b1b220537b91f9f1a7eb4f0586a1a6ba6717029f52b"
+  }
+}

@@ -152,7 +152,7 @@ clínica, jurídica ou de produto nova, pare só aquele item e registre a pergun
 - Matriz de combinações (receita, porção, troca, estados de cobertura) contra um
   oráculo decimal independente do motor.
 
-### T8 — Proposta de contrato de restrições alimentares (M11 individualizada) [ ]
+### T8 — Proposta de contrato de restrições alimentares (M11 individualizada) [x] proposta entregue em 2026-11-11, **não aprovada**
 
 - **Só documento**, para aprovação do proprietário: quais dados estruturados,
   quem preenche, como mapeiam para alimentos, negativos. Não implementar.

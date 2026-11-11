@@ -437,6 +437,18 @@ tabagismo removido. Limites: não cobre renderização React (sem rota de JSX ne
 pelos Playwright da T4a/T4b) nem canários em logs de infraestrutura do provedor; o backend não registra
 payload de comparação (sem `Logger` nesse caminho) e a falha do comparador vira 500 com mensagem fixa.
 
+### FOOD06 — restrições alimentares individualizadas (proposta T8, M11)
+
+Só proposta: nenhum teste, código ou contrato novo, e o bloqueio B04 / M11-C2 continua aberto até a decisão do
+proprietário. Se aprovada, a implementação deve provar estas propriedades antes de qualquer saída individualizada
+(`tasks/food06-m11-restricoes-contrato-proposta.md`, seção 9): ausência de restrição, avaliação não informada ou vencida
+nunca produz `sem_conflito_registrado`; texto livre e resposta de questionário nunca alteram resultado; restrição em
+rascunho não gera conflito; alimento sem classificação é `indeterminado` em todo caminho; isolamento por tenant e por
+carteira (resposta idêntica, sem revelar existência) e SuperAdmin sem carteira não lê; CAS na edição concorrente;
+auditoria e erros sem conteúdo clínico (canários); preferência nunca vira conflito; mapeamento versionado e citado no
+resultado; consistência entre tabela, detalhe e relatório (como na T6). Validação clínica humana da lista de
+alérgenos e da regra de conflito não é substituível por teste.
+
 ### FOOD06 — decomposição interna M02
 
 A seleção comum de refeições deve preservar a PA06: OFF/não selecionado não

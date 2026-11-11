@@ -41,3 +41,7 @@ Relatório impresso com a comparação só por escolha explícita. Fechados tecn
 ## FOOD06 NUX-15 — indicador no histórico, 2026-11-10
 
 Decisão do proprietário (2026-11-10): indicador mínimo, só texto, sem números, por registro, e caixa do relatório já desabilitada com a explicação quando o registro não tem referências. Implementado sem backend novo; o resumo completo por registro e a comparação entre registros com referências continuam fora de escopo e dependem de uso real. B/C de UX: indicador é texto factual já aprovado nos pareceres de T4b; sem nova revisão por personas, que deve ser feita se o indicador ganhar mais conteúdo.
+
+## FOOD06 T8 — revisão A, 2026-11-11
+
+Proposta de contrato de restrições alimentares (M11 individualizada), só documento. Incorporados à proposta: NUX-01 a 03, 06 a 10 e PUX-01 a 03 e 05. Dependem de decisão do proprietário: NUX-04 e 05, NUX-07 (D4, D7, D10, D11). BACKLOG para as etapas B/C: PUX-04 (fluxo de correção por teclado e leitor de tela) e PUX-06 (nota de troca na receita do paciente). Sem P0. Duas instâncias do runtime com o papel fornecido como prompt, sem ferramentas e sem ver o documento (só o brief): não independentes do coordenador, sem pessoas reais, sem tela. [Relatórios e limites](reports/FOOD06-T8-A-2026-11-11/consolidado.md).
