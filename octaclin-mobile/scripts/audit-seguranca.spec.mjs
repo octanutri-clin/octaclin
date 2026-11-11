@@ -8,11 +8,11 @@ const totaisZerados = { info: 0, low: 0, moderate: 0, high: 0, critical: 0 };
 
 test('lockfile Expo resolve releases upstream corrigidos para node-forge, glob e minimatch', () => {
   const lock = readFileSync(new URL('../pnpm-lock.yaml', import.meta.url), 'utf8');
-  assert.ok(/^  node-forge@1\.4\.2:/m.test(lock), 'node-forge upstream corrigido deve estar no lockfile');
+  assert.ok(/^  node-forge@1\.4\.(?:[3-9]|[1-9][0-9]+):/m.test(lock), 'node-forge upstream corrigido (>=1.4.3) deve estar no lockfile');
   assert.ok(/^  glob@14\.0\.2:/m.test(lock), 'glob upstream corrigido deve estar no lockfile');
   assert.ok(/^  minimatch@11\.0\.[1-9][0-9]*:/m.test(lock), 'minimatch upstream corrigido deve estar no lockfile');
   assert.ok(
-    !/node-forge@1\.4\.0|glob@13\.0\.6|minimatch@10\.2\.6|deepmerge@4\.3\.1/.test(lock),
+    !/node-forge@1\.[0-3]\.|node-forge@1\.4\.[0-2]\b|glob@13\.0\.6|minimatch@10\.2\.6|deepmerge@4\.3\.1/.test(lock),
     'lockfile nao deve incluir releases vulneraveis nem deepmerge removido do consumidor Expo',
   );
 });
