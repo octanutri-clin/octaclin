@@ -389,6 +389,20 @@ Provas: `scripts/relatorio-factual.spec.ts` (leitor e corpo do pedido) e
 sem rodapé repetido em cada página; sem leitor de tela real nem pessoas; texto de conteúdo pendente
 de validação; histórico sem indicador (decisão futura).
 
+### FOOD06 — indicador de referências no histórico (NUX-15, Web)
+
+O histórico pede `incluirReferencias` e mostra por registro só um texto: "Referências registradas ·
+tabela DRI de dd/mm/aaaa" ou "Sem referências registradas" (versão desconhecida tem texto próprio).
+Sem números, percentuais nem tendência. O leitor valida a comparação do próprio registro contra a
+cobertura dele (falha fechada) e descarta os valores; sem o pedido, o placeholder continua
+obrigatório. Registro sem referências abre o relatório com a caixa já desabilitada e explicada.
+Custo conhecido: o servidor devolve as 22 comparações de cada registro da página; se pesar em uso
+real, o próximo passo é um campo leve só com o estado (mudança de backend, fora desta entrega).
+
+Provas: `scripts/historico-micronutrientes-factuais.spec.ts` (indicador, motivos, corpo do pedido) e
+`tests/visual/food06-referencias-relatorio.spec.mjs` (desktop e celular, PDF real), com regressão
+dos specs de histórico, tabela e contexto.
+
 ### FOOD06 — decomposição interna M02
 
 A seleção comum de refeições deve preservar a PA06: OFF/não selecionado não

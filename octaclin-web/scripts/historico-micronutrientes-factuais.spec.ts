@@ -102,6 +102,44 @@ test('M01 histórico recusa a origem quando ela não foi pedida (como o contexto
  assert.throws(()=>lerPaginaHistoricoMicronutrientesFactual(base),/interpretar|histórico|conferir/i);
  assert.throws(()=>lerComOrigem(base,true),/interpretar|histórico|conferir/i);
 });
+/* FOOD06 NUX-15 — indicador de referências por registro, só quando pedido, sem números. */
+const comIndicador=(referencias:unknown)=>{const p=pagina() as {itens:Record<string,unknown>[]};p.itens[0]!.referencias=referencias;return p;};
+const lerRef=(v:unknown)=>lerPaginaHistoricoMicronutrientesFactual(v,false,false,true);
+test('NUX-15 sem o pedido o histórico exige o placeholder e não ganha indicador',()=>{
+ assert.equal(lerPaginaHistoricoMicronutrientesFactual(pagina()).itens[0].indicadorReferencias,undefined);
+ assert.throws(()=>lerPaginaHistoricoMicronutrientesFactual(comIndicador({estado:'indisponivel',motivo:'registro_sem_referencias'})));
+ assert.throws(()=>lerRef(pagina()));
+});
+test('NUX-15 registro sem referências ou com versão desconhecida vira indicador, sem comparação',()=>{
+ for(const motivo of ['registro_sem_referencias','versao_referencias_indisponivel'])assert.deepEqual(lerRef(comIndicador({estado:'indisponivel',motivo})).itens[0].indicadorReferencias,{estado:'indisponivel',motivo});
+ for(const ref of [{estado:'indisponivel',motivo:'inventado'},{estado:'indisponivel',motivo:'registro_sem_referencias',extra:1},{estado:'outro'}])assert.throws(()=>lerRef(comIndicador(ref)));
+});
+test('NUX-15 registro com referências guarda só versão e data da tabela, sem números',()=>{
+ const base=pagina() as {itens:{nutrientes:Record<string,{estado:string;total?:number}>}[]};
+ // Cálcio COMPLETO (total 0) comparável; os demais sem dados.
+ const ind=(motivo:string)=>({estado:'indisponivel',motivo});
+ const comp=(tipo:string,valor:number,extra:Record<string,unknown>={})=>({estado:'comparavel',tipo,referenciaId:'x',referenciaVersao:'dri-hc-2025-11-19-adulto-v1',quantidadePlanejada:0,unidadePlanejada:'mg',valorReferencia:valor,unidadeReferencia:'mg',percentual:0,diferencaNaUnidadePlanejada:-valor,diferencaArredondada:false,...extra});
+ const ref={estado:'calculado',fonteReferencias:{autoridade:'Health Canada',modificadaEm:'2025-11-19',licenca:'OGL-Canada',licencaId:'ca-ogl-lgo',urls:[]},versaoReferencias:'dri-hc-2025-11-19-adulto-v1',contextoElegivel:true,motivosContexto:[],
+  nutrientes:CAMPOS_MICRONUTRIENTES_PLANO.map(c=>c.codigo==='calcioMg'?{codigo:c.codigo,referencia:comp('RDA',1000),ul:comp('UL',2500,{posicao:'abaixo'})}:{codigo:c.codigo,referencia:ind('dados_incompletos'),ul:ind('dados_incompletos')})};
+ const r=lerRef(comIndicador(ref));
+ assert.deepEqual(r.itens[0].indicadorReferencias,{estado:'registrada',versao:'dri-hc-2025-11-19-adulto-v1',modificadaEm:'2025-11-19'});
+ assert.doesNotMatch(JSON.stringify(r.itens[0].indicadorReferencias),/percentual|valorReferencia|posicao/);
+ // Comparação incoerente com a cobertura do próprio registro: falha fechada.
+ const errada=JSON.parse(JSON.stringify(ref));errada.nutrientes.find((n:{codigo:string})=>n.codigo==='ferroMg').referencia=JSON.parse(JSON.stringify(errada.nutrientes[0].referencia));
+ assert.throws(()=>lerRef(comIndicador(errada)));
+ void base;
+});
+test('NUX-15 cliente só envia incluirReferencias quando pedido',async()=>{
+ const original=globalThis.fetch;const corpos:unknown[]=[];
+ try{
+  globalThis.fetch=async(_u,init)=>{const b=JSON.parse(String(init?.body));corpos.push(b);return Response.json(b.incluirReferencias?comIndicador({estado:'indisponivel',motivo:'registro_sem_referencias'}):pagina());};
+  const chamar=obterHistoricoMicronutrientesFactual as unknown as (...a:unknown[])=>Promise<{itens:{indicadorReferencias?:unknown}[]}>;
+  const s=new AbortController().signal;
+  assert.equal((await chamar('paciente',undefined,s,false,true,true)).itens[0].indicadorReferencias!==undefined,true);
+  assert.equal((await chamar('paciente',undefined,s,false,true)).itens[0].indicadorReferencias,undefined);
+ }finally{globalThis.fetch=original;}
+ assert.deepEqual(corpos,[{limite:10,incluirOrigem:true,incluirReferencias:true},{limite:10,incluirOrigem:true}]);
+});
 test('M01 cliente do histórico só envia incluirOrigem quando pedido, sem alterar o corpo anterior',async()=>{
  const original=globalThis.fetch;const corpos:unknown[]=[];
  try{

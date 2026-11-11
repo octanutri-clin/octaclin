@@ -37,3 +37,7 @@ Addendum à revisão A de T4. Fechados tecnicamente com teste: NUX-06, 16, 17, 2
 ## FOOD06 T4b — revisão B/C, 2026-11-10
 
 Relatório impresso com a comparação só por escolha explícita. Fechados tecnicamente com teste e PDF real: PUX-06, 11, 16, 19, NUX-23, 24, 25, 27. BACKLOG: jargão pré-existente da seção Limitações (PUX-17), rodapé da folha inteira, "faltam dados" para leigo (NUX-26), leitor de tela real, casos "<1" e mcg no papel, indicador no histórico (NUX-15). Decisão do proprietário (2026-11-10, NUX-22): tabagismo não é impresso na folha; fica no registro e na tela do profissional. [Consolidado](reports/FOOD06-T4B-BC-2026-11-10/consolidado.md).
+
+## FOOD06 NUX-15 — indicador no histórico, 2026-11-10
+
+Decisão do proprietário (2026-11-10): indicador mínimo, só texto, sem números, por registro, e caixa do relatório já desabilitada com a explicação quando o registro não tem referências. Implementado sem backend novo; o resumo completo por registro e a comparação entre registros com referências continuam fora de escopo e dependem de uso real. B/C de UX: indicador é texto factual já aprovado nos pareceres de T4b; sem nova revisão por personas, que deve ser feita se o indicador ganhar mais conteúdo.

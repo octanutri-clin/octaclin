@@ -17,7 +17,7 @@ function nutrientes(ferro) {
 function registroHistorico() {
   return {
     schemaVersao: 1, registro: { id, criadoEm: '2026-11-06T12:00:00.000Z' }, origem: { planoId: planoIds[0], versaoId: 'versao-a', numero: 1, status: 'publicada', registradaEm: '2026-10-15T12:00:00.000Z' },
-    motorVersao: 'food06-v1', referencias: { estado: 'indisponivel', motivo: 'referencias_nao_habilitadas' }, bases: { planejamentoDocumentado: true, composicaoDocumentada: true, contextoDocumentado: true },
+    motorVersao: 'food06-v1', referencias: { estado: 'indisponivel', motivo: 'registro_sem_referencias' }, bases: { planejamentoDocumentado: true, composicaoDocumentada: true, contextoDocumentado: true },
     comparacaoAnterior: { planejamento: 'SEM_REGISTRO_ANTERIOR', composicaoFonte: 'SEM_REGISTRO_ANTERIOR', referencia: 'SEM_REGISTRO_ANTERIOR', contexto: 'SEM_REGISTRO_ANTERIOR', cobertura: Object.fromEntries(CAMPOS_MICRONUTRIENTES_PLANO.map(c => [c.codigo, 'SEM_REGISTRO_ANTERIOR'])) },
     nutrientes: nutrientes(0)
   };
@@ -62,7 +62,7 @@ async function abrir(page, testInfo, modo = 'normal') {
   await prepararConsole(page);
   await page.route(u => u.pathname.endsWith('/selecao-calculo'), r => r.fulfill({ status: 200, json: { planoId: planoIds[0], ativoParaPaciente: true, ativacaoRevisao: 1, versao: { id: 'versao-a', numero: 1, publicadaEm: '2026-10-15T12:00:00.000Z' }, refeicoes: [{ identidadeId: idsRefeicoes[0], nome: 'Refeição A', ordem: 0, ativa: true }] } }));
   await page.route(u => u.pathname.endsWith('/calculo-combinado'), r => r.fulfill({ status: 200, json: resultado(2) }));
-  await page.route(u => u.pathname.endsWith('/analises-factuais/historico'), r => { const b = r.request().postDataJSON(); return r.fulfill({ status: 200, json: { schemaVersao: 1, itens: [{ ...registroHistorico(), ...(b.incluirContexto ? { contextoConfirmado: contexto } : {}) }], temMais: false } }); });
+  await page.route(u => u.pathname.endsWith('/analises-factuais/historico'), r => { const b = r.request().postDataJSON(); return r.fulfill({ status: 200, json: { schemaVersao: 1, itens: [{ ...registroHistorico(), ...(modo !== 'sem_referencias' ? { referencias: comparacao(ferro), nutrientes: nutrientes(ferro) } : {}), ...(b.incluirContexto ? { contextoConfirmado: contexto } : {}) }], temMais: false } }); });
   await page.route(u => u.pathname.endsWith('/analises-factuais/relatorio'), r => {
     const b = r.request().postDataJSON(); pedidos.push(b);
     if (modo === 'falha' && b.incluirReferencias && pedidos.filter(p => p.incluirReferencias).length === 1) return r.fulfill({ status: 500, json: { message: 'CANARIO_INTERNO' } });
@@ -151,12 +151,14 @@ test('FOOD06 T4b com a escolha: seção em página própria com "Como ler", font
 });
 
 test('FOOD06 T4b registro sem referências: explicação só na tela, nada no papel', async ({ page }, testInfo) => {
-  const { previa, pdfReal, textoPdf } = await abrir(page, testInfo, 'sem_referencias');
-  await caixa(previa).check();
+  const { previa, pedidos, pdfReal, textoPdf } = await abrir(page, testInfo, 'sem_referencias');
+  // O histórico já sabe (NUX-15): a caixa vem desabilitada, com a explicação, e nenhum pedido pede a comparação.
+  await expect(caixa(previa)).toBeDisabled();
   await expect(previa).toContainText('Este registro não tem referências');
   await expect(folha(previa)).not.toContainText('Comparação com referências DRI');
   await expect(folha(previa)).not.toContainText('não tem referências');
   await imprimir(page, previa);
+  for (const p of pedidos) expect(p.incluirReferencias).toBeUndefined();
   if (pdfReal) {
     await expect.poll(textoPdf).not.toBe('');
     expect(textoPdf()).not.toMatch(/não tem referências|não registradas|Comparação com referências/);
@@ -188,4 +190,24 @@ test('FOOD06 T4b falha ao buscar com a escolha: erro na tela, nada imprimível e
   await previa.getByRole('button', { name: 'Tentar novamente', exact: true }).click();
   await expect(folha(previa).locator('[data-folha-referencias="true"]')).toContainText('Como ler esta comparação');
   await expect(previa.getByRole('button', { name: 'Imprimir / salvar PDF', exact: true })).toBeEnabled();
+});
+
+test('FOOD06 NUX-15 histórico mostra por registro se há referências, sem números, e a caixa do relatório já vem explicada', async ({ page }, testInfo) => {
+  await abrir(page, testInfo, 'normal');
+  await page.getByRole('button', { name: 'Cancelar prévia', exact: true }).click();
+  const linha = page.getByRole('row', { name: /^Análise 1/ });
+  await expect(linha.locator('[data-indicador-referencias="registrada"]')).toHaveText('Referências registradas · tabela DRI de 19/11/2025');
+  await expect(linha).not.toContainText(/% da RDA|Planejado:|Limite superior/);
+});
+
+test('FOOD06 NUX-15 registro sem referências: indicador no histórico e caixa do relatório desabilitada com a explicação', async ({ page }, testInfo) => {
+  const { previa } = await abrir(page, testInfo, 'sem_referencias');
+  await expect(previa).toContainText('Este registro não tem referências');
+  await expect(caixa(previa)).toBeDisabled();
+  await expect(caixa(previa)).not.toBeChecked();
+  await expect(folha(previa)).not.toContainText('Comparação com referências DRI');
+  await previa.getByRole('button', { name: 'Cancelar prévia', exact: true }).click();
+  const linha = page.getByRole('row', { name: /^Análise 1/ });
+  await expect(linha.locator('[data-indicador-referencias="indisponivel"]')).toHaveText('Sem referências registradas');
+  await expect(linha.getByText('Sem referências registradas')).toHaveCount(1);
 });
