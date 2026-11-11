@@ -147,7 +147,7 @@ clínica, jurídica ou de produto nova, pare só aquele item e registre a pergun
   relatório mostram os mesmos números e motivos; canários sintéticos em logs,
   erros e projeções (nada clínico vaza).
 
-### T7 — M02/M04: matriz global com oráculo [ ]
+### T7 — M02/M04: matriz global com oráculo [x]
 
 - Matriz de combinações (receita, porção, troca, estados de cobertura) contra um
   oráculo decimal independente do motor.

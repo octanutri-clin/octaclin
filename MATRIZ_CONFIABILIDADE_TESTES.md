@@ -448,6 +448,35 @@ carteira (resposta idêntica, sem revelar existência) e SuperAdmin sem carteira
 auditoria e erros sem conteúdo clínico (canários); preferência nunca vira conflito; mapeamento versionado e citado no
 resultado; consistência entre tabela, detalhe e relatório (como na T6). Validação clínica humana da lista de
 alérgenos e da regra de conflito não é substituível por teste.
+### FOOD06 — matriz global com oráculo decimal independente (T7, M02/M04)
+
+Uma matriz determinística, sem aleatoriedade, compara o encadeamento receita, porção, soma PA06, cobertura M02 e
+prévia M04 com um **oráculo escrito no próprio spec**: aritmética racional em BigInt, sem importar
+`decimal-nutricional.ts` nem os helpers de escala de `micronutrientes.ts`. Os valores entram como strings
+decimais e o motor recebe `Number(texto)`. Regras do oráculo: porção = valor × porção ÷ base com half-up em
+1e-8; soma de valores já quantizados por item; delta e percentual sobre os totais quantizados (`base_zero`,
+`limite_precisao`, `arredondado`); receita em milésimos com limites e aviso `ARREDONDAMENTO`.
+
+Cobertura da matriz: porção do snapshot (7 valores × 3 bases × 5 porções); soma e cobertura para todas as
+sequências de 0 a 3 itens de um catálogo de 16 estados (conhecido, zero conhecido, ausente, traço, não analisado,
+abaixo do LOQ, em reavaliação, duplicado, inválido, unidade e definição incompatíveis, estado futuro, legado sem
+composição, schema não suportado e item nulo), por nutriente e para energia, inclusive divisões que arredondam e
+energias com mais de 8 casas; seleção compartilhada (plano e refeição desativados ou não selecionados, com a
+exclusão registrada); troca A para B com base não zero e base zero; limite de precisão do percentual; e receita
+(5 bases × 10 porções desejadas × 6 linhas, com alternativa, fronteiras de 0,001 g e 10.000 g e porções fora de
+[0,001; 1000]), encadeada com a porção do snapshot e a soma.
+
+Prova: `dominio/matriz-oraculo-dietetico.spec.ts` (5 casos, cerca de 6 s). **Nenhuma divergência do motor foi
+encontrada.** Um erro do próprio oráculo (limite de 1000 porções) foi achado e corrigido durante a escrita; o
+motor estava certo. Mutações detectadas e revertidas: truncar em vez de half-up na porção, somar sem quantizar
+item a item, `INDISPONIVEL` e `PARCIAL` com precedência trocada em relação a `INCOMPATIVEL`, base zero do
+percentual, limites superior e inferior da receita e truncamento do fator de receita. Um oráculo errado de
+propósito (half-up trocado por truncamento) reprova 4 dos 5 casos. Duas mutações iniciais eram fracas ou
+equivalentes (trocar `INCOMPATIVEL` por `COMPLETO` é impossível por exclusão mútua) e foram substituídas.
+
+Limites: é verificação cruzada de aritmética e de classificação, não prova de correção nutricional nem de fonte
+de composição; o oráculo foi derivado das regras documentadas e pode compartilhar uma interpretação errada delas.
+Não cobre API, persistência, autorização nem interface.
 
 ### FOOD06 — decomposição interna M02
 
