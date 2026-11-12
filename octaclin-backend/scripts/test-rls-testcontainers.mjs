@@ -7,7 +7,8 @@ const ambiente = {
   RLS_TESTCONTAINERS: 'true',
   FOOD04_RLS_TESTCONTAINERS: 'true',
   FOOD06_REGISTRO_TESTCONTAINERS: 'true',
-  FOOD06_CATALOGO_TESTCONTAINERS: 'true'
+  FOOD06_CATALOGO_TESTCONTAINERS: 'true',
+  FOOD06_RESTRICOES_TESTCONTAINERS: 'true'
 };
 
 for (const nome of [
@@ -37,6 +38,7 @@ const argumentosJest = [
   'src/infraestrutura/banco-dados/migracoes/1720000001078-GruposSubstituicoes.integracao.spec.ts',
   'src/infraestrutura/banco-dados/migracoes/1720000001080-MetadadosReceitasNutricionais.integracao.spec.ts',
   'src/infraestrutura/banco-dados/migracoes/1720000001081-RegistrosAnalisesFactuais.integracao.spec.ts',
+  'src/infraestrutura/banco-dados/migracoes/1720000001083-RestricoesAlimentares.integracao.spec.ts',
   'src/modulos/planos-alimentares/aplicacao/consulta-teor-catalogo.integracao.spec.ts'
 ];
 const windows = process.platform === 'win32';

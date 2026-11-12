@@ -449,6 +449,17 @@ tenant e carteira com resposta idêntica para inexistente e não autorizado; `Su
 `nao_contem_confirmado` sem evidência e `conflita` sem regra validada são recusados; auditoria e erros sem conteúdo clínico (canários); rollback por flag sem apagar dado.
 A validação clínica da taxonomia, do mapeamento e das regras de aplicar não é substituível por teste.
 
+### FOOD06 — tabelas de restrições alimentares (P1b, migration 1083, R4)
+
+Migration **aditiva e vazia** (`1720000001083-RestricoesAlimentares.ts`), sem backfill, sem consumidor e **nunca aplicada em ambiente real**. Sete tabelas por
+tenant com RLS `ENABLE` + `FORCE`, policies só por `app.tenant_id`, nenhuma policy de DELETE; histórico (revisões, reconfirmações, mapeamento local) append-only por
+trigger por instrução `ENABLE ALWAYS`; estado sem DELETE/TRUNCATE e com transições mínimas no banco (revisão +1, identidade imutável, `inativa` e solicitação encerrada
+terminais). Conteúdo clínico só em `bytea` cifrado pela aplicação; sem `razao` (Q4); mapeamento do tenant só `local_profissional`. Provas: spec estático
+(`1720000001083-RestricoesAlimentares.spec.ts`) e integração em PostgreSQL 15 descartável com role runtime sem superuser/BYPASSRLS/ownership
+(`…integracao.spec.ts`, `FOOD06_RESTRICOES_TESTCONTAINERS=true`, incluída em `test:rls:testcontainers`): RLS sem tenant e cross-tenant, FKs compostas, append-only
+para runtime e owner (inclusive `session_replication_role = replica`), Q3, Q10, D7-a, origem e `down` (vazio remove; com linha recusa). Bloqueia merge qualquer
+regressão desses testes. Não prova: aplicação em staging/produção (ATV-8), autorização por usuário (Q6), serviço/DTO (P2) nem conteúdo clínico (Q1).
+
 ### FOOD06 — matriz global com oráculo decimal independente (T7, M02/M04)
 
 Uma matriz determinística, sem aleatoriedade, compara o encadeamento receita, porção, soma PA06, cobertura M02 e
