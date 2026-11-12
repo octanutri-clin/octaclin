@@ -20,7 +20,7 @@ const restricao = (extra: Partial<RestricaoEntrada> = {}): RestricaoEntrada => (
 });
 const avaliacao = (extra: Partial<AvaliacaoEntrada> = {}): AvaliacaoEntrada => ({ situacao: 'restricoes_registradas', revisao: 1, venceEm: VALIDA, ...extra });
 const mapeamento = (relacao: RelacaoMapeamento, extra: Partial<MapeamentoEntrada> = {}): MapeamentoEntrada => ({
-  alvoId: 'alvo-a', relacao, versaoMapeamento: 'map-v1', cobertura: 'suficiente', ...(relacao === 'nao_contem_confirmado' ? { evidenciaReferencia: 'evid-1' } : {}), ...extra
+  alvoId: 'alvo-a', relacao, versaoMapeamento: 'map-v1', origem: 'global', cobertura: 'suficiente', ...(relacao === 'nao_contem_confirmado' ? { evidenciaReferencia: 'evid-1' } : {}), ...extra
 });
 const regra = (extra: Partial<RegraEntrada> = {}): RegraEntrada => ({
   subtipo: 'alergia_alimentar', acaoContem: 'impedir', acaoPodeConter: 'exigir_esclarecimento', versaoRegra: 'regra-v1', validadaPor: 'responsavel-1', validadaEm: '2026-11-01', ...extra
@@ -335,7 +335,48 @@ describe('FOOD06 P1a: entrada fechada, sem mutação e sem vazamento', () => {
   });
   it('declara que é avaliação e nunca autorização ou diagnóstico', () => {
     const r = avaliarItem(entrada());
-    expect(r).toMatchObject({ schemaVersao: 1, motorVersao: 'food06-restricoes-v1', natureza: 'avaliacao_nao_gravada' });
+    expect(r).toMatchObject({ schemaVersao: 1, motorVersao: 'food06-restricoes-v2', natureza: 'avaliacao_nao_gravada' });
     expect(JSON.stringify(r)).not.toMatch(/seguro|liberado|adequado|diagn/i);
+  });
+});
+
+describe('FOOD06 PR-D: origem do mapeamento (Q1/Q4, contrato v3)', () => {
+  const local = (relacao: RelacaoMapeamento, extra: Partial<MapeamentoEntrada> = {}) => mapeamento(relacao, { origem: 'local_profissional', ...extra });
+  it('restrição local (contém) vale como a global', () => {
+    const r = individuo(entrada({ item: item([local('contem')]) }));
+    expect(r).toMatchObject({ resultado: 'conflita', acaoAplicar: 'impedido' });
+  });
+  it('liberação local com evidência nunca é permitida em silêncio: exige confirmação', () => {
+    const r = individuo(entrada({ item: item([local('nao_contem_confirmado')]) }));
+    expect(r).toMatchObject({ resultado: 'sem_conflito_registrado', acaoAplicar: 'exige_confirmacao' });
+  });
+  it('liberação local sem evidência continua indeterminada', () => {
+    const r = individuo(entrada({ item: item([local('nao_contem_confirmado', { evidenciaReferencia: undefined })]) }));
+    expect(r).toMatchObject({ resultado: 'indeterminado', motivo: 'mapeamento_sem_evidencia' });
+  });
+  it('liberação local não anula o "contém" global', () => {
+    const r = individuo(entrada({ item: item([mapeamento('contem'), local('nao_contem_confirmado', { versaoMapeamento: 'map-l1' })]) }));
+    expect(r).toMatchObject({ resultado: 'conflita', acaoAplicar: 'impedido' });
+  });
+  it('global liberando junto de local liberando: qualquer linha local exige confirmação', () => {
+    const r = individuo(entrada({ item: item([mapeamento('nao_contem_confirmado'), local('nao_contem_confirmado', { versaoMapeamento: 'map-l1' })]) }));
+    expect(r.acaoAplicar).toBe('exige_confirmacao');
+  });
+  it('liberação global continua permitida', () => {
+    expect(individuo(entrada({ item: item([mapeamento('nao_contem_confirmado')]) })).acaoAplicar).toBe('permitido');
+  });
+  it('liberação local com avaliação vencida segue indeterminada (não vira confirmação)', () => {
+    const r = individuo(entrada({ avaliacao: avaliacao({ venceEm: VENCIDA }), item: item([local('nao_contem_confirmado')]) }));
+    expect(r).toMatchObject({ resultado: 'indeterminado', motivo: 'avaliacao_vencida' });
+  });
+  it('origem é obrigatória e fechada', () => {
+    const sem = { ...mapeamento('contem') } as Partial<MapeamentoEntrada>; delete sem.origem;
+    expect(() => avaliarItem(entrada({ item: item([sem as MapeamentoEntrada]) }))).toThrow(RestricoesInvalidasError);
+    expect(() => avaliarItem(entrada({ item: item([mapeamento('contem', { origem: 'outra' as never })]) }))).toThrow(RestricoesInvalidasError);
+  });
+  it('a impressão muda quando só a origem muda (prévia × aplicar)', () => {
+    const a = avaliarItem(entrada({ item: item([mapeamento('nao_contem_confirmado')]) }));
+    const b = avaliarItem(entrada({ item: item([local('nao_contem_confirmado')]) }));
+    expect(a.impressao).not.toBe(b.impressao);
   });
 });

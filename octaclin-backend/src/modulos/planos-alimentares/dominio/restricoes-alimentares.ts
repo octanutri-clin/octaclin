@@ -15,7 +15,7 @@ import { createHash } from 'crypto';
  * A prévia e o aplicar devem chamar a MESMA função com as mesmas entradas e comparar o resultado
  * com `compararPreviaComAplicacao` (a impressão cobre revisões e versões, contra TOCTOU).
  */
-export const MOTOR_RESTRICOES_VERSAO = 'food06-restricoes-v1' as const;
+export const MOTOR_RESTRICOES_VERSAO = 'food06-restricoes-v2' as const;
 export const LIMITE_RESTRICOES_AVALIACAO = 200;
 export const LIMITE_INGREDIENTES_RECEITA = 100;
 
@@ -26,6 +26,8 @@ export type ConfirmacaoRestricao = 'pendente' | 'confirmada' | 'rejeitada';
 export type AlvoTipo = 'alergeno' | 'constituinte' | 'grupo' | 'alimento' | 'categoria_escolha' | 'nao_catalogado';
 export type GravidadeRestricao = 'leve' | 'moderada' | 'grave' | 'nao_informada';
 export type SituacaoAvaliacao = 'nao_informado' | 'sem_restricoes_confirmadas' | 'restricoes_registradas';
+/** Origem do mapeamento: `global` (catálogo curado) ou `local_profissional` (composição declarada no atendimento). */
+export type OrigemMapeamento = 'global' | 'local_profissional';
 export type RelacaoMapeamento = 'contem' | 'pode_conter' | 'nao_contem_confirmado';
 /** Ação de uma regra clínica validada. Não existe "nenhuma": uma regra nunca silencia um alerta. */
 export type AcaoRegra = 'impedir' | 'exigir_esclarecimento' | 'exigir_revisao' | 'exigir_confirmacao';
@@ -42,7 +44,7 @@ export interface RestricaoEntrada {
 }
 export interface AvaliacaoEntrada { situacao: SituacaoAvaliacao; revisao: number; venceEm?: string }
 export interface MapeamentoEntrada {
-  alvoId: string; relacao: RelacaoMapeamento; versaoMapeamento: string; evidenciaReferencia?: string; cobertura: 'suficiente' | 'insuficiente';
+  alvoId: string; relacao: RelacaoMapeamento; versaoMapeamento: string; origem: OrigemMapeamento; evidenciaReferencia?: string; cobertura: 'suficiente' | 'insuficiente';
 }
 export interface RegraEntrada {
   subtipo: SubtipoClinico; alvoId?: string; acaoContem: AcaoRegra; acaoPodeConter: AcaoRegra; versaoRegra: string; validadaPor: string; validadaEm: string;
@@ -121,9 +123,9 @@ function lerAvaliacao(v: unknown): AvaliacaoEntrada {
   return { situacao: opcao(o.situacao, SITUACOES), revisao: inteiroPositivo(o.revisao), ...(o.venceEm === undefined ? {} : { venceEm: instante(o.venceEm) }) };
 }
 function lerMapeamento(v: unknown): MapeamentoEntrada {
-  const o = simples(v, ['alvoId', 'relacao', 'versaoMapeamento', 'evidenciaReferencia', 'cobertura']);
+  const o = simples(v, ['alvoId', 'relacao', 'versaoMapeamento', 'origem', 'evidenciaReferencia', 'cobertura']);
   return {
-    alvoId: id(o.alvoId), relacao: opcao(o.relacao, RELACOES), versaoMapeamento: id(o.versaoMapeamento),
+    alvoId: id(o.alvoId), relacao: opcao(o.relacao, RELACOES), versaoMapeamento: id(o.versaoMapeamento), origem: opcao(o.origem, ['global', 'local_profissional'] as const),
     ...(o.evidenciaReferencia === undefined ? {} : { evidenciaReferencia: texto(o.evidenciaReferencia) }), cobertura: opcao(o.cobertura, ['suficiente', 'insuficiente'] as const)
   };
 }
@@ -162,7 +164,7 @@ const ACAO_DA_REGRA: Record<AcaoRegra, AcaoAplicar> = {
   impedir: 'impedido', exigir_esclarecimento: 'exige_esclarecimento', exigir_revisao: 'exige_revisao', exigir_confirmacao: 'exige_confirmacao'
 };
 type Contexto = ReturnType<typeof lerContexto>;
-interface Relacao { relacao?: RelacaoMapeamento; versao?: string; evidenciaOk: boolean }
+interface Relacao { relacao?: RelacaoMapeamento; versao?: string; evidenciaOk: boolean; local?: boolean }
 
 function relacaoDoAlvo(item: ItemEntrada, alvoId: string): Relacao {
   const entradas = item.mapeamentos.filter(m => m.alvoId === alvoId).sort((a, b) => a.versaoMapeamento.localeCompare(b.versaoMapeamento));
@@ -172,7 +174,9 @@ function relacaoDoAlvo(item: ItemEntrada, alvoId: string): Relacao {
   // `nao_contem_confirmado` só vale com evidência positiva e cobertura suficiente em TODAS as linhas do alvo.
   return {
     relacao: 'nao_contem_confirmado', versao: entradas[0].versaoMapeamento,
-    evidenciaOk: entradas.every(m => !!m.evidenciaReferencia?.trim() && m.cobertura === 'suficiente')
+    evidenciaOk: entradas.every(m => !!m.evidenciaReferencia?.trim() && m.cobertura === 'suficiente'),
+    // Liberação com qualquer linha local nunca é silenciosa (contrato v3, Q1/Q4).
+    local: entradas.some(m => m.origem === 'local_profissional')
   };
 }
 function regraPara(regras: RegraEntrada[], subtipo: SubtipoClinico, alvoId: string): RegraEntrada | undefined {
@@ -222,7 +226,7 @@ function avaliarRestricao(r: RestricaoEntrada, c: Contexto, item: ItemEntrada, a
   // nao_contem_confirmado
   if (!rel.evidenciaOk) return indeterminado(r, 'mapeamento_sem_evidencia', revisarSeClinica, comVersao);
   if (!aval.valida) return indeterminado(r, aval.motivo as MotivoIndeterminado, revisarSeClinica, comVersao);
-  return { restricaoId: r.id, resultado: 'sem_conflito_registrado', acaoAplicar: 'permitido', ...comVersao };
+  return { restricaoId: r.id, resultado: 'sem_conflito_registrado', acaoAplicar: rel.local ? 'exige_confirmacao' : 'permitido', ...comVersao };
 }
 
 function agregar(individuais: ResultadoIndividual[], aval: { valida: boolean; motivo?: MotivoIndeterminado }): AgregadoAvaliacao {
@@ -255,7 +259,7 @@ function impressaoDe(c: Contexto, item: ItemEntrada, avaliacaoValida: boolean): 
       .sort((x, y) => JSON.stringify(x).localeCompare(JSON.stringify(y))),
     item: {
       id: item.id, composicaoHash: item.composicaoHash, identificado: item.ingredienteIdentificado,
-      mapeamentos: item.mapeamentos.map(m => ({ a: m.alvoId, r: m.relacao, v: m.versaoMapeamento, e: !!m.evidenciaReferencia?.trim(), c: m.cobertura }))
+      mapeamentos: item.mapeamentos.map(m => ({ a: m.alvoId, r: m.relacao, v: m.versaoMapeamento, o: m.origem, e: !!m.evidenciaReferencia?.trim(), c: m.cobertura }))
         .sort((x, y) => JSON.stringify(x).localeCompare(JSON.stringify(y)))
     }
   });
