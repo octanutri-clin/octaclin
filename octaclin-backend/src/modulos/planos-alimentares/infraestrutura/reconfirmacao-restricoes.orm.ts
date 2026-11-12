@@ -1,4 +1,5 @@
 import { Column, Entity, PrimaryGeneratedColumn } from 'typeorm';
+import type { MeioReconfirmacao } from '../dominio/reconfirmacao-restricao';
 
 /**
  * FOOD06 P1b (Q10). Atestação append-only de reconfirmação: paciente, profissional, data e hora, meio, resultado
@@ -15,9 +16,10 @@ export class ReconfirmacaoRestricoesOrm {
   @Column({ name: 'revisao_restricao', type: 'int', nullable: true }) revisaoRestricao?: number | null;
   @Column({ name: 'atestado_por_usuario_id', type: 'uuid' }) atestadoPorUsuarioId: string;
   @Column({ name: 'atestado_em', type: 'timestamptz' }) atestadoEm: Date;
-  @Column({ name: 'meio', type: 'varchar' }) meio: 'presencial' | 'teleconsulta' | 'portal' | 'contato_documentado';
+  @Column({ name: 'meio', type: 'varchar' }) meio: MeioReconfirmacao;
   @Column({ name: 'resultado_criptografado', type: 'bytea' }) resultadoCriptografado: Buffer;
-  @Column({ name: 'vence_em', type: 'timestamptz' }) venceEm: Date;
+  /** Só reconfirmação global que renova a avaliação tem vencimento (D4); individual e pendência mantida ficam nulas. */
+  @Column({ name: 'vence_em', type: 'timestamptz', nullable: true }) venceEm?: Date | null;
   @Column({ name: 'chave_idempotencia', type: 'uuid' }) chaveIdempotencia: string;
   @Column({ name: 'criado_em', type: 'timestamptz', insert: false, update: false }) criadoEm: Date;
 }

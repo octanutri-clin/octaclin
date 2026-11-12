@@ -2,7 +2,8 @@ import { Column, Entity, PrimaryGeneratedColumn } from 'typeorm';
 
 /**
  * FOOD06 P1b. Estado atual de uma restrição do paciente; o conteúdo clínico (natureza, subtipo, alvo, gravidade,
- * observação) fica só em `conteudoCriptografado`. Sem `razao` (Q4). Nunca retornar entidade crua por HTTP.
+ * observação) fica só em `conteudoCriptografado`, escrito e lido SOMENTE por `codec-conteudo-restricao.ts` (D2, #531).
+ * Sem `razao` (Q4). Nunca retornar entidade crua por HTTP.
  */
 @Entity('restricoes_pacientes')
 export class RestricaoPacienteOrm {

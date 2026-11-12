@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { RestricoesAlimentares1720000001083, TABELAS_RESTRICOES_ALIMENTARES } from './1720000001083-RestricoesAlimentares';
 import { criarOpcoesTypeOrm } from '../opcoes-typeorm';
+import { ESTADOS_SOLICITACAO, ESTADOS_FINAIS_SOLICITACAO } from '../../../modulos/planos-alimentares/dominio/solicitacao-restricao-paciente';
 import { RestricaoPacienteOrm } from '../../../modulos/planos-alimentares/infraestrutura/restricao-paciente.orm';
 import { RevisaoRestricaoPacienteOrm } from '../../../modulos/planos-alimentares/infraestrutura/revisao-restricao-paciente.orm';
 import { AvaliacaoRestricoesPacienteOrm } from '../../../modulos/planos-alimentares/infraestrutura/avaliacao-restricoes-paciente.orm';
@@ -88,11 +89,25 @@ describe('1083 restrições alimentares (P1b): schema aditivo e vazio', () => {
       "meio varchar(24) not null check (meio in ('presencial', 'teleconsulta', 'portal', 'contato_documentado'))", 'resultado_criptografado bytea not null',
       'revisao_avaliacao integer not null']) expect(sql).toContain(c);
     expect(sql).toMatch(/foreign key \(tenant_id, avaliacao_id, revisao_avaliacao\) references avaliacoes_restricoes_revisoes\(tenant_id, avaliacao_id, numero\)/);
+    // D4 (#531): avaliação obrigatória, restrição opcional com revisão; individual nunca renova a avaliação global
+    expect(sql).toContain('avaliacao_id uuid not null');
+    expect(sql).toContain('check ((restricao_id is null) = (revisao_restricao is null))');
+    expect(sql).toContain('check (restricao_id is null or vence_em is null)');
+    expect(sql).toContain('check (vence_em is null or vence_em > atestado_em)');
   });
 
   it('D7-a: solicitação guarda explicação ao paciente separada da justificativa interna e decisão exige explicação', () => {
-    expect(sql).toMatch(/check \(estado not in \('atendida', 'recusada'\) or explicacao_paciente_criptografada is not null\)/);
-    expect(sql).toMatch(/estado varchar\(24\) not null default 'criada' check \(estado in \('criada', 'em_analise', 'atendida', 'recusada', 'cancelada_pelo_paciente'\)\)/);
+    expect(sql).toMatch(/check \(estado not in \('atendida', 'parcial', 'recusada'\) or explicacao_paciente_criptografada is not null\)/);
+    expect(sql).toMatch(/check \(\(estado in \('atendida', 'parcial', 'recusada'\)\) = \(desfecho_criptografado is not null\)\)/);
+    expect(sql).toContain('desfecho_criptografado bytea check');
+  });
+
+  it('D1 (#531): os estados do banco são exatamente os do domínio, com parcial terminal e só a partir de em_analise', () => {
+    const lista = ESTADOS_SOLICITACAO.map(e => `'${e}'`).join(', ');
+    expect(sql).toContain(`estado varchar(24) not null default 'criada' check (estado in (${lista}))`);
+    expect(sql).toContain(`if old.estado in (${ESTADOS_FINAIS_SOLICITACAO.map(e => `'${e}'`).join(', ')}) then`);
+    expect(sql).toContain("('em_analise', 'parcial')");
+    expect(sql).not.toMatch(/\('criada', 'parcial'\)/);
   });
 
   it('FKs compostas por tenant, nunca cascade', () => {

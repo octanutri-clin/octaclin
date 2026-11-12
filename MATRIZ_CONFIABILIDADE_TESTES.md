@@ -459,6 +459,10 @@ terminais). Conteúdo clínico só em `bytea` cifrado pela aplicação; sem `raz
 (`…integracao.spec.ts`, `FOOD06_RESTRICOES_TESTCONTAINERS=true`, incluída em `test:rls:testcontainers`): RLS sem tenant e cross-tenant, FKs compostas, append-only
 para runtime e owner (inclusive `session_replication_role = replica`), Q3, Q10, D7-a, origem e `down` (vazio remove; com linha recusa). Bloqueia merge qualquer
 regressão desses testes. Não prova: aplicação em staging/produção (ATV-8), autorização por usuário (Q6), serviço/DTO (P2) nem conteúdo clínico (Q1).
+Decisões D1–D4 da PR #531: `parcial` terminal com explicação e desfecho (domínio e banco); conteúdo clínico validado por `validarConteudoRestricao` e
+escrito só pelo codec `codec-conteudo-restricao.ts`, que vincula a cifra a tenant, paciente, restrição e revisão e falha fechada (nunca vira ausência), com
+guarda estática `guarda-escrita-restricoes.spec.ts`; reconfirmação com avaliação obrigatória e restrição opcional, individual nunca renova nem declara
+ausência. Bloqueia merge: estado do banco divergente de `ESTADOS_SOLICITACAO`, consumidor das entidades sem o codec, ou cifra de outra linha aceita.
 
 ### FOOD06 — matriz global com oráculo decimal independente (T7, M02/M04)
 

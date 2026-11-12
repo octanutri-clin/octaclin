@@ -1,6 +1,9 @@
 import { Column, Entity, PrimaryGeneratedColumn } from 'typeorm';
 
-/** FOOD06 P1b. Histórico append-only numerado da restrição (snapshot e justificativa cifrados). Nunca retornar cru por HTTP. */
+/**
+ * FOOD06 P1b. Histórico append-only numerado da restrição (snapshot e justificativa cifrados). O snapshot usa o codec
+ * `codec-conteudo-restricao.ts` com finalidade `revisao_restricao` (D2, #531). Nunca retornar cru por HTTP.
+ */
 @Entity('restricoes_pacientes_revisoes')
 export class RevisaoRestricaoPacienteOrm {
   @PrimaryGeneratedColumn('uuid') id: string;

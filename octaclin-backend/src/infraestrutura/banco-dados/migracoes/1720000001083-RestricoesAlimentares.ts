@@ -13,6 +13,9 @@ import type { MigrationInterface, QueryRunner } from 'typeorm';
  *   resultado da reconfirmação) só em `bytea` cifrado pela aplicação (`CriptografiaDadosSensiveis`, padrão das
  *   gestações). Em claro ficam só identificadores, estados e datas necessários a constraints e consultas.
  *   Sem coluna `razao` (Q4) e sem reutilizar `resposta_valores`/`respostas_rascunho` (auditoria Q5).
+ * - D2 (#531): o conteúdo de `restricoes_pacientes` e das revisões só é escrito pelo codec
+ *   `codec-conteudo-restricao.ts`, que valida o objeto clínico e vincula a cifra a tenant, paciente, restrição e revisão.
+ *   O banco garante só o que enxerga (tamanho do bytea, estados, FKs); os invariantes clínicos são da aplicação.
  * - FKs compostas por tenant, sempre RESTRICT.
  * - Mapeamento: esta tabela é só a LOCAL do tenant (`origem = 'local_profissional'`, Q9 nível 1); um tenant não
  *   consegue forjar mapeamento `global`. O catálogo global (Q9 nível 2) tem outro modelo de acesso e fica para a
@@ -129,8 +132,10 @@ export class RestricoesAlimentares1720000001083 implements MigrationInterface {
         foreign key (tenant_id, paciente_id, avaliacao_id) references avaliacoes_restricoes_pacientes(tenant_id, paciente_id, id) on delete restrict,
         foreign key (tenant_id, autor_usuario_id) references usuarios(tenant_id, id) on delete restrict
       )`);
-    // Q10: atestação do profissional. O sistema não verifica que a pergunta ocorreu; registra quem atestou, quando,
-    // por qual meio, o resultado (cifrado) e a revisão REAL da avaliação a que se refere.
+    // Q10 + D4 (#531): atestação do profissional. O sistema não verifica que a pergunta ocorreu; registra quem atestou,
+    // quando, por qual meio, o resultado (cifrado) e a revisão REAL da avaliação (obrigatória). A restrição é opcional;
+    // reconfirmação individual nunca renova a avaliação global (`vence_em` nulo), e `vence_em` nulo também registra
+    // pendência mantida sem declaração falsa.
     await q.query(`
       create table reconfirmacoes_restricoes (
         id uuid primary key default gen_random_uuid(),
@@ -144,19 +149,22 @@ export class RestricoesAlimentares1720000001083 implements MigrationInterface {
         atestado_em timestamptz not null,
         meio varchar(24) not null check (meio in ('presencial', 'teleconsulta', 'portal', 'contato_documentado')),
         ${CIFRADO('resultado_criptografado')},
-        vence_em timestamptz not null,
+        vence_em timestamptz,
         chave_idempotencia uuid not null,
         criado_em timestamptz not null default now(),
         constraint ux_reconfirmacoes_idempotencia unique (tenant_id, atestado_por_usuario_id, chave_idempotencia),
-        check (vence_em > atestado_em),
+        check (vence_em is null or vence_em > atestado_em),
         check ((restricao_id is null) = (revisao_restricao is null)),
+        check (restricao_id is null or vence_em is null),
         foreign key (tenant_id, paciente_id, avaliacao_id) references avaliacoes_restricoes_pacientes(tenant_id, paciente_id, id) on delete restrict,
         foreign key (tenant_id, avaliacao_id, revisao_avaliacao) references avaliacoes_restricoes_revisoes(tenant_id, avaliacao_id, numero) on delete restrict,
         foreign key (tenant_id, paciente_id, restricao_id) references restricoes_pacientes(tenant_id, paciente_id, id) on delete restrict,
         foreign key (tenant_id, restricao_id, revisao_restricao) references restricoes_pacientes_revisoes(tenant_id, restricao_id, numero) on delete restrict,
         foreign key (tenant_id, atestado_por_usuario_id) references usuarios(tenant_id, id) on delete restrict
       )`);
-    // D7-a: explicação AO PACIENTE (visível) separada da justificativa INTERNA (nunca exibida). Estados = domínio PR-D.
+    // D7-a + D1 (#531): explicação AO PACIENTE (visível) separada da justificativa INTERNA (nunca exibida). Estados =
+    // domínio (`ESTADOS_SOLICITACAO`), com `parcial` terminal. Toda decisão guarda o desfecho cifrado (itens alterados,
+    // com a revisão da operação clínica, e inalterados); a solicitação nunca altera a restrição por si.
     await q.query(`
       create table solicitacoes_restricoes_pacientes (
         id uuid primary key default gen_random_uuid(),
@@ -164,12 +172,13 @@ export class RestricoesAlimentares1720000001083 implements MigrationInterface {
         paciente_id uuid not null,
         restricao_id uuid,
         tipo varchar(12) not null check (tipo in ('inclusao', 'correcao', 'remocao')),
-        estado varchar(24) not null default 'criada' check (estado in ('criada', 'em_analise', 'atendida', 'recusada', 'cancelada_pelo_paciente')),
+        estado varchar(24) not null default 'criada' check (estado in ('criada', 'em_analise', 'atendida', 'parcial', 'recusada', 'cancelada_pelo_paciente')),
         autor_usuario_id uuid not null,
         chave_criacao uuid not null,
         ${CIFRADO('conteudo_criptografado')},
         ${CIFRADO('explicacao_paciente_criptografada', false)},
         ${CIFRADO('justificativa_interna_criptografada', false)},
+        ${CIFRADO('desfecho_criptografado', false)},
         decidido_por_usuario_id uuid,
         decidido_em timestamptz,
         revisao integer not null default 1 check (revisao > 0),
@@ -177,9 +186,10 @@ export class RestricoesAlimentares1720000001083 implements MigrationInterface {
         atualizado_em timestamptz not null default now(),
         constraint ux_solicitacoes_restricoes_criacao unique (tenant_id, autor_usuario_id, chave_criacao),
         check ((tipo = 'inclusao') = (restricao_id is null)),
-        check ((estado in ('atendida', 'recusada')) = (decidido_por_usuario_id is not null and decidido_em is not null)
+        check ((estado in ('atendida', 'parcial', 'recusada')) = (decidido_por_usuario_id is not null and decidido_em is not null)
           and (decidido_por_usuario_id is null) = (decidido_em is null)),
-        check (estado not in ('atendida', 'recusada') or explicacao_paciente_criptografada is not null),
+        check (estado not in ('atendida', 'parcial', 'recusada') or explicacao_paciente_criptografada is not null),
+        check ((estado in ('atendida', 'parcial', 'recusada')) = (desfecho_criptografado is not null)),
         foreign key (tenant_id, paciente_id) references pacientes(tenant_id, id) on delete restrict,
         foreign key (tenant_id, paciente_id, restricao_id) references restricoes_pacientes(tenant_id, paciente_id, id) on delete restrict,
         foreign key (tenant_id, autor_usuario_id) references usuarios(tenant_id, id) on delete restrict,
@@ -274,12 +284,13 @@ export class RestricoesAlimentares1720000001083 implements MigrationInterface {
         if new.revisao <> old.revisao + 1 then
           raise exception 'Revisao da solicitacao deve avancar uma unidade.' using errcode = '23514';
         end if;
-        if old.estado in ('atendida', 'recusada', 'cancelada_pelo_paciente') then
+        if old.estado in ('atendida', 'parcial', 'recusada', 'cancelada_pelo_paciente') then
           raise exception 'Solicitacao encerrada e terminal.' using errcode = '23514';
         end if;
         if new.estado <> old.estado and (old.estado, new.estado) not in (
           ('criada', 'em_analise'), ('criada', 'cancelada_pelo_paciente'),
-          ('em_analise', 'atendida'), ('em_analise', 'recusada'), ('em_analise', 'cancelada_pelo_paciente')) then
+          ('em_analise', 'atendida'), ('em_analise', 'parcial'), ('em_analise', 'recusada'),
+          ('em_analise', 'cancelada_pelo_paciente')) then
           raise exception 'Transicao de solicitacao invalida.' using errcode = '23514';
         end if;
         return new;

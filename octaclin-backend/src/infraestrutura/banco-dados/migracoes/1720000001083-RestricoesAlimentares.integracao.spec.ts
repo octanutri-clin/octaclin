@@ -13,6 +13,8 @@ import { RevisaoAvaliacaoRestricoesOrm } from '../../../modulos/planos-alimentar
 import { ReconfirmacaoRestricoesOrm } from '../../../modulos/planos-alimentares/infraestrutura/reconfirmacao-restricoes.orm';
 import { SolicitacaoRestricaoPacienteOrm } from '../../../modulos/planos-alimentares/infraestrutura/solicitacao-restricao-paciente.orm';
 import { MapeamentoAlimentoAlvoLocalOrm } from '../../../modulos/planos-alimentares/infraestrutura/mapeamento-alimento-alvo-local.orm';
+import { cifrarConteudoRestricao, decifrarConteudoRestricao, ConteudoRestricaoIlegivelError } from '../../../modulos/planos-alimentares/infraestrutura/codec-conteudo-restricao';
+import { validarDesfechoSolicitacao } from '../../../modulos/planos-alimentares/dominio/solicitacao-restricao-paciente';
 
 /**
  * FOOD06 P1b: prova da 1083 em PostgreSQL 15 DESCARTÁVEL (Testcontainers, tmpfs), nunca em ambiente real.
@@ -65,12 +67,17 @@ suite('FOOD06 P1b 1083 restrições: PostgreSQL 15 descartável, RLS FORCE, role
   afterAll(async () => { if (ds?.isInitialized) await ds.destroy(); await owner?.end(); await container?.stop(); }, 30000);
 
   const comoA = <T>(f: (m: EntityManager) => Promise<T>) => executor.executar(tA, f);
+  const CONTEUDO = { schemaVersao: 1, natureza: 'clinica', subtipoClinico: 'alergia_alimentar', alvo: { tipo: 'alergeno', id: 'sintetico-1' }, observacao: CANARIO };
+  // D2: o conteúdo clínico só entra pelo codec validado, vinculado a tenant, paciente, restrição e revisão.
   async function novaRestricao(m: EntityManager, extra: Partial<RestricaoPacienteOrm> = {}) {
-    return m.getRepository(RestricaoPacienteOrm).save(m.getRepository(RestricaoPacienteOrm).create({
-      tenantId: tA, pacienteId: pacA, autorUsuarioId: uA, chaveCriacao: randomUUID(), origem: 'profissional', estado: 'ativa', confirmacao: 'pendente',
-      conteudoCriptografado: cifra({ natureza: 'clinica', subtipoClinico: 'alergia_alimentar', alvo: { tipo: 'alergeno', id: 'sintetico-1' }, observacao: CANARIO }),
-      revisao: 1, ...extra
-    }));
+    const id = randomUUID(), tenantId = extra.tenantId ?? tA, pacienteId = extra.pacienteId ?? pacA;
+    const linha = {
+      id, tenantId, pacienteId, autorUsuarioId: uA, chaveCriacao: randomUUID(), origem: 'profissional' as const, estado: 'ativa' as const,
+      confirmacao: 'pendente' as const, revisao: 1,
+      conteudoCriptografado: cifrarConteudoRestricao(crypto, CONTEUDO, { finalidade: 'restricao', tenantId, pacienteId, restricaoId: id, revisao: 1 }), ...extra
+    };
+    await m.getRepository(RestricaoPacienteOrm).insert(linha);
+    return linha;
   }
   async function novaAvaliacao(m: EntityManager, pacienteId = pacA) {
     const a = await m.getRepository(AvaliacaoRestricoesPacienteOrm).save(m.getRepository(AvaliacaoRestricoesPacienteOrm).create({
@@ -97,11 +104,11 @@ suite('FOOD06 P1b 1083 restrições: PostgreSQL 15 descartável, RLS FORCE, role
     const ids = await comoA(async m => {
       const r = await novaRestricao(m);
       await m.getRepository(RevisaoRestricaoPacienteOrm).insert({ tenantId: tA, pacienteId: pacA, restricaoId: r.id, numero: 1, evento: 'criacao',
-        autorUsuarioId: uA, conteudoCriptografado: cifra({ snapshot: CANARIO }) });
+        autorUsuarioId: uA, conteudoCriptografado: cifrarConteudoRestricao(crypto, CONTEUDO, { finalidade: 'revisao_restricao', tenantId: tA, pacienteId: pacA, restricaoId: r.id, revisao: 1 }) });
       const a = await novaAvaliacao(m);
       await m.getRepository(ReconfirmacaoRestricoesOrm).insert({ tenantId: tA, pacienteId: pacA, avaliacaoId: a.id, revisaoAvaliacao: 1,
         restricaoId: r.id, revisaoRestricao: 1, atestadoPorUsuarioId: uA, atestadoEm: new Date('2026-11-12T10:00:00Z'), meio: 'teleconsulta',
-        resultadoCriptografado: cifra({ resultado: CANARIO }), venceEm: new Date('2027-05-11T10:00:00Z'), chaveIdempotencia: randomUUID() });
+        resultadoCriptografado: cifra({ resultado: CANARIO }), venceEm: null, chaveIdempotencia: randomUUID() });
       const s = await m.getRepository(SolicitacaoRestricaoPacienteOrm).save(m.getRepository(SolicitacaoRestricaoPacienteOrm).create({
         tenantId: tA, pacienteId: pacA, restricaoId: r.id, tipo: 'correcao', estado: 'criada', autorUsuarioId: uA, chaveCriacao: randomUUID(),
         conteudoCriptografado: cifra({ pedido: CANARIO }), revisao: 1 }));
@@ -117,7 +124,8 @@ suite('FOOD06 P1b 1083 restrições: PostgreSQL 15 descartável, RLS FORCE, role
       expect(bruto).not.toMatch(/alergia_alimentar|alergeno/);
     }
     const lida = await comoA(m => m.getRepository(RestricaoPacienteOrm).findOneByOrFail({ id: ids.r }));
-    expect(JSON.parse(crypto.descriptografar(lida.conteudoCriptografado)).observacao).toBe(CANARIO);
+    expect(decifrarConteudoRestricao(crypto, lida.conteudoCriptografado, { finalidade: 'restricao', tenantId: tA, pacienteId: pacA, restricaoId: ids.r, revisao: 1 }))
+      .toEqual(CONTEUDO);
     expect(lida).toMatchObject({ tenantId: tA, pacienteId: pacA, revisao: 1, confirmacao: 'pendente', estado: 'ativa' });
   });
 
@@ -231,6 +239,29 @@ suite('FOOD06 P1b 1083 restrições: PostgreSQL 15 descartável, RLS FORCE, role
     await expect(comoA(m => repo(m).insert({ ...base, revisaoAvaliacao: 1, meio: 'clique' as never, chaveIdempotencia: randomUUID() }))).rejects.toMatchObject({ code: '23514' });
     await expect(comoA(m => repo(m).insert({ ...base, revisaoAvaliacao: 1, meio: 'portal', venceEm: base.atestadoEm, chaveIdempotencia: randomUUID() }))).rejects.toMatchObject({ code: '23514' });
     await expect(comoA(m => repo(m).insert({ ...base, revisaoAvaliacao: 1, meio: 'portal', restricaoId: randomUUID(), chaveIdempotencia: randomUUID() }))).rejects.toMatchObject({ code: '23514' });
+    // D4: restrição individual é opcional, exige a revisão real, é do mesmo paciente e nunca renova a avaliação global
+    const ind = await comoA(async m => {
+      const x = await novaRestricao(m, { pacienteId: pacA2 });
+      await m.getRepository(RevisaoRestricaoPacienteOrm).insert({ tenantId: tA, pacienteId: pacA2, restricaoId: x.id, numero: 1, evento: 'criacao', autorUsuarioId: uA,
+        conteudoCriptografado: cifrarConteudoRestricao(crypto, CONTEUDO, { finalidade: 'revisao_restricao', tenantId: tA, pacienteId: pacA2, restricaoId: x.id, revisao: 1 }) });
+      return x;
+    });
+    // restrição de outro paciente COM revisão 1 real: só a FK composta tenant+paciente+restrição pode barrar
+    const deOutroPaciente = await comoA(async m => {
+      const x = await novaRestricao(m);
+      await m.getRepository(RevisaoRestricaoPacienteOrm).insert({ tenantId: tA, pacienteId: pacA, restricaoId: x.id, numero: 1, evento: 'criacao', autorUsuarioId: uA,
+        conteudoCriptografado: cifrarConteudoRestricao(crypto, CONTEUDO, { finalidade: 'revisao_restricao', tenantId: tA, pacienteId: pacA, restricaoId: x.id, revisao: 1 }) });
+      return x;
+    });
+    await expect(comoA(m => repo(m).insert({ ...base, revisaoAvaliacao: 1, meio: 'portal', restricaoId: ind.id, revisaoRestricao: 1, chaveIdempotencia: randomUUID() })))
+      .rejects.toMatchObject({ code: '23514' });
+    await expect(comoA(m => repo(m).insert({ ...base, venceEm: null, revisaoAvaliacao: 1, meio: 'portal', restricaoId: ind.id, revisaoRestricao: 9, chaveIdempotencia: randomUUID() })))
+      .rejects.toMatchObject({ code: '23503' });
+    await expect(comoA(m => repo(m).insert({ ...base, venceEm: null, revisaoAvaliacao: 1, meio: 'portal', restricaoId: deOutroPaciente.id, revisaoRestricao: 1, chaveIdempotencia: randomUUID() })))
+      .rejects.toMatchObject({ code: '23503' });
+    await comoA(m => repo(m).insert({ ...base, venceEm: null, revisaoAvaliacao: 1, meio: 'portal', restricaoId: ind.id, revisaoRestricao: 1, chaveIdempotencia: randomUUID() }));
+    // pendência mantida: global sem vencimento, sem declaração falsa
+    await comoA(m => repo(m).insert({ ...base, venceEm: null, revisaoAvaliacao: 1, meio: 'presencial', chaveIdempotencia: randomUUID() }));
     const chave = randomUUID();
     await comoA(m => repo(m).insert({ ...base, revisaoAvaliacao: 1, meio: 'contato_documentado', chaveIdempotencia: chave }));
     await expect(comoA(m => repo(m).insert({ ...base, revisaoAvaliacao: 1, meio: 'portal', chaveIdempotencia: chave }))).rejects.toMatchObject({ code: '23505' });
@@ -251,8 +282,13 @@ suite('FOOD06 P1b 1083 restrições: PostgreSQL 15 descartável, RLS FORCE, role
     await upd("update solicitacoes_restricoes_pacientes set estado='em_analise', revisao=2 where id=$1");
     await expect(upd("update solicitacoes_restricoes_pacientes set estado='recusada', decidido_por_usuario_id=$1, decidido_em=now(), revisao=3 where id=$2", [uA]))
       .rejects.toMatchObject({ code: '23514' });
+    // D1: toda decisão guarda o desfecho (o que mudou e o que não mudou); sem ele, recusada também é barrada
+    await expect(upd(`update solicitacoes_restricoes_pacientes set estado='recusada', decidido_por_usuario_id=$1, decidido_em=now(),
+      explicacao_paciente_criptografada=$2, revisao=3 where id=$3`, [uA, cifra({ p: 1 })])).rejects.toMatchObject({ code: '23514' });
+    const desfecho = cifra(validarDesfechoSolicitacao({ estadoFinal: 'recusada', alterados: [], inalterados: ['item-1'] }));
     await upd(`update solicitacoes_restricoes_pacientes set estado='recusada', decidido_por_usuario_id=$1, decidido_em=now(),
-      explicacao_paciente_criptografada=$2, justificativa_interna_criptografada=$3, revisao=3 where id=$4`, [uA, cifra({ p: 1 }), cifra({ i: CANARIO })]);
+      explicacao_paciente_criptografada=$2, justificativa_interna_criptografada=$3, desfecho_criptografado=$4, revisao=3 where id=$5`,
+    [uA, cifra({ p: 1 }), cifra({ i: CANARIO }), desfecho]);
     await expect(upd("update solicitacoes_restricoes_pacientes set estado='em_analise', decidido_por_usuario_id=null, decidido_em=null, revisao=4 where id=$1"))
       .rejects.toMatchObject({ code: '23514' });
     // encerrada é terminal mesmo sem mudar o estado: explicação e justificativa não são reescritas depois da decisão
@@ -260,9 +296,71 @@ suite('FOOD06 P1b 1083 restrições: PostgreSQL 15 descartável, RLS FORCE, role
       .rejects.toMatchObject({ code: '23514' });
     const linha = (await owner.query('select explicacao_paciente_criptografada e, justificativa_interna_criptografada j from solicitacoes_restricoes_pacientes where id=$1', [s.id])).rows[0];
     expect(Buffer.compare(linha.e, linha.j)).not.toBe(0);
+    // a restrição apontada não mudou por causa da solicitação
+    expect((await owner.query('select revisao, estado from restricoes_pacientes where id=$1', [r.id])).rows[0]).toEqual({ revisao: 1, estado: 'ativa' });
     // inclusão nunca aponta restrição; correção/remoção sempre apontam
     await expect(comoA(m => m.getRepository(SolicitacaoRestricaoPacienteOrm).insert({ tenantId: tA, pacienteId: pacA, tipo: 'correcao', estado: 'criada',
       autorUsuarioId: uA, chaveCriacao: randomUUID(), conteudoCriptografado: cifra({}), revisao: 1 }))).rejects.toMatchObject({ code: '23514' });
+  });
+
+  it('D1 (#531): em_analise → parcial com explicação e desfecho; parcial é terminal e não nasce de criada', async () => {
+    const r = await comoA(m => novaRestricao(m));
+    const nova = () => comoA(async m => {
+      const x = m.getRepository(SolicitacaoRestricaoPacienteOrm).create({ tenantId: tA, pacienteId: pacA, restricaoId: r.id, tipo: 'correcao', estado: 'criada',
+        autorUsuarioId: uA, chaveCriacao: randomUUID(), conteudoCriptografado: cifra({ pedido: 1 }), revisao: 1 });
+      return m.getRepository(SolicitacaoRestricaoPacienteOrm).save(x);
+    });
+    const desfecho = cifra(validarDesfechoSolicitacao({ estadoFinal: 'parcial', alterados: [{ item: 'item-1', restricaoId: r.id, revisaoResultante: 2 }], inalterados: ['item-2'] }));
+    const parcial = (id: string, revisao: number, extra = '', p: unknown[] = []) => comoA(m => m.query(
+      `update solicitacoes_restricoes_pacientes set estado='parcial', decidido_por_usuario_id=$1, decidido_em=now(), revisao=${revisao}${extra} where id=$2`, [uA, id, ...p]));
+    const a = await nova();
+    await expect(parcial(a.id, 2, ', explicacao_paciente_criptografada=$3, desfecho_criptografado=$4', [cifra({ e: 1 }), desfecho])).rejects.toMatchObject({ code: '23514' });
+    await comoA(m => m.query("update solicitacoes_restricoes_pacientes set estado='em_analise', revisao=2 where id=$1", [a.id]));
+    await expect(parcial(a.id, 3, ', desfecho_criptografado=$3', [desfecho])).rejects.toMatchObject({ code: '23514' });
+    await expect(parcial(a.id, 3, ', explicacao_paciente_criptografada=$3', [cifra({ e: 1 })])).rejects.toMatchObject({ code: '23514' });
+    await parcial(a.id, 3, ', explicacao_paciente_criptografada=$3, desfecho_criptografado=$4', [cifra({ e: 1 }), desfecho]);
+    for (const sql of ["estado='em_analise', decidido_por_usuario_id=null, decidido_em=null", "estado='atendida'", "desfecho_criptografado=$2"]) {
+      await expect(comoA(m => m.query(`update solicitacoes_restricoes_pacientes set ${sql}, revisao=4 where id=$1`, sql.includes('$2') ? [a.id, desfecho] : [a.id])))
+        .rejects.toMatchObject({ code: '23514' });
+    }
+    expect((await owner.query('select estado, revisao from solicitacoes_restricoes_pacientes where id=$1', [a.id])).rows[0]).toEqual({ estado: 'parcial', revisao: 3 });
+    // desfecho fora do estado decidido é recusado
+    const b = await nova();
+    await expect(comoA(m => m.query("update solicitacoes_restricoes_pacientes set desfecho_criptografado=$1, revisao=2 where id=$2", [desfecho, b.id]))).rejects.toMatchObject({ code: '23514' });
+    // CAS: revisão que não avança uma unidade é recusada
+    await expect(comoA(m => m.query("update solicitacoes_restricoes_pacientes set estado='em_analise', revisao=1 where id=$1", [b.id]))).rejects.toMatchObject({ code: '23514' });
+    // idempotência de criação
+    const chave = randomUUID();
+    const base = { tenantId: tA, pacienteId: pacA, restricaoId: r.id, tipo: 'correcao' as const, estado: 'criada' as const, autorUsuarioId: uA, chaveCriacao: chave,
+      conteudoCriptografado: cifra({}), revisao: 1 };
+    await comoA(m => m.getRepository(SolicitacaoRestricaoPacienteOrm).insert(base));
+    await expect(comoA(m => m.getRepository(SolicitacaoRestricaoPacienteOrm).insert(base))).rejects.toMatchObject({ code: '23505' });
+  });
+
+  it('D2 (#531): cifra copiada de outra restrição, de outra revisão ou de outro tenant falha fechada ao decifrar (nunca vira ausência)', async () => {
+    const x = await comoA(m => novaRestricao(m));
+    const y = await comoA(m => novaRestricao(m));
+    const vy = { finalidade: 'restricao' as const, tenantId: tA, pacienteId: pacA, restricaoId: y.id, revisao: 2 };
+    // administrador copia a cifra de X para Y (a trigger exige revisão +1; o conteúdo não é coluna imutável)
+    await owner.query('update restricoes_pacientes set conteudo_criptografado=(select conteudo_criptografado from restricoes_pacientes where id=$1), revisao=2 where id=$2', [x.id, y.id]);
+    const lidaY = await comoA(m => m.getRepository(RestricaoPacienteOrm).findOneByOrFail({ id: y.id }));
+    expect(() => decifrarConteudoRestricao(crypto, lidaY.conteudoCriptografado, vy)).toThrow(ConteudoRestricaoIlegivelError);
+    // cifra legítima de Y na revisão 1 não vale para a linha na revisão 2
+    await owner.query('update restricoes_pacientes set conteudo_criptografado=$1, revisao=3 where id=$2',
+      [cifrarConteudoRestricao(crypto, CONTEUDO, { ...vy, revisao: 2 }), y.id]);
+    const lida3 = await comoA(m => m.getRepository(RestricaoPacienteOrm).findOneByOrFail({ id: y.id }));
+    expect(() => decifrarConteudoRestricao(crypto, lida3.conteudoCriptografado, { ...vy, revisao: 3 })).toThrow(ConteudoRestricaoIlegivelError);
+    // cifra feita para o tenant B não é aceita numa linha de A
+    const deB = cifrarConteudoRestricao(crypto, CONTEUDO, { ...vy, tenantId: tB, revisao: 4 });
+    await owner.query('update restricoes_pacientes set conteudo_criptografado=$1, revisao=4 where id=$2', [deB, y.id]);
+    const lida4 = await comoA(m => m.getRepository(RestricaoPacienteOrm).findOneByOrFail({ id: y.id }));
+    expect(() => decifrarConteudoRestricao(crypto, lida4.conteudoCriptografado, { ...vy, revisao: 4 })).toThrow(ConteudoRestricaoIlegivelError);
+    // bytes adulterados
+    const adulterado = Buffer.from(lida4.conteudoCriptografado); adulterado[adulterado.length - 1] ^= 1;
+    expect(() => decifrarConteudoRestricao(crypto, adulterado, { ...vy, tenantId: tB, revisao: 4 })).toThrow(ConteudoRestricaoIlegivelError);
+    // e o conteúdo legítimo de X continua legível pelo seu vínculo
+    const lidaX = await comoA(m => m.getRepository(RestricaoPacienteOrm).findOneByOrFail({ id: x.id }));
+    expect(decifrarConteudoRestricao(crypto, lidaX.conteudoCriptografado, { ...vy, restricaoId: x.id, revisao: 1 })).toEqual(CONTEUDO);
   });
 });
 
