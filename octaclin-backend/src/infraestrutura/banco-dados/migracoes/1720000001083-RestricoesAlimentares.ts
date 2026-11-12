@@ -252,8 +252,11 @@ export class RestricoesAlimentares1720000001083 implements MigrationInterface {
         if old.estado = 'inativa' then
           raise exception 'Restricao inativa e terminal; recorrencia cria um registro novo.' using errcode = '23514';
         end if;
-        if old.confirmacao <> 'pendente' and new.confirmacao = 'pendente' then
-          raise exception 'Decisao de confirmacao nao volta a pendente.' using errcode = '23514';
+        -- Contrato v2 §4.3: só pendente → confirmada ou rejeitada. A decisão, quem decidiu e quando são imutáveis
+        -- (revisão R4 da #531): não volta a pendente, não troca confirmada ↔ rejeitada nem reescreve a autoria.
+        if old.confirmacao <> 'pendente' and (new.confirmacao, new.confirmado_por_usuario_id, new.confirmado_em)
+           is distinct from (old.confirmacao, old.confirmado_por_usuario_id, old.confirmado_em) then
+          raise exception 'Decisao de confirmacao e imutavel.' using errcode = '23514';
         end if;
         return new;
       end;
@@ -367,6 +370,9 @@ export class RestricoesAlimentares1720000001083 implements MigrationInterface {
     // Só reverte antes de haver dado (contrato v2 §6, PR C). Com qualquer linha, recusa e não toca em nada.
     // Sob FORCE RLS um owner comum veria zero linhas: `row_security = off` faz a consulta falhar em vez de mentir.
     await q.query('set local row_security = off');
+    // Fora de transação o `set local` não tem efeito: um owner sem BYPASSRLS contaria zero linhas sob FORCE.
+    const rs: Array<{ rs: string }> = await q.query("select current_setting('row_security') as rs");
+    if (rs[0]?.rs !== 'off') throw new Error('Rollback recusado: execute o down dentro de transacao (row_security nao ficou off).');
     const linhas: Array<{ existe: boolean }> = await q.query(
       `select ${TABELAS_RESTRICOES_ALIMENTARES.map(t => `exists(select 1 from ${t})`).join(' or ')} as existe`
     );

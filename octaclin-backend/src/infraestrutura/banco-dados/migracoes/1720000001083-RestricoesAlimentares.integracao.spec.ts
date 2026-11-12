@@ -207,6 +207,21 @@ suite('FOOD06 P1b 1083 restrições: PostgreSQL 15 descartável, RLS FORCE, role
     await comoA(m => m.query("update restricoes_pacientes set confirmacao='confirmada', confirmado_por_usuario_id=$1, confirmado_em=now(), revisao=2 where id=$2", [uA, c.id]));
     await expect(comoA(m => m.query("update restricoes_pacientes set confirmacao='pendente', confirmado_por_usuario_id=null, confirmado_em=null, revisao=3 where id=$1", [c.id])))
       .rejects.toMatchObject({ code: '23514' });
+    // revisão R4 (#531): decisão de confirmação é imutável — nem quem confirmou, nem quando, nem confirmada↔rejeitada
+    const u2 = randomUUID();
+    await owner.query('insert into usuarios values($1,$2)', [u2, tA]);
+    await expect(comoA(m => m.query('update restricoes_pacientes set confirmado_por_usuario_id=$1, revisao=3 where id=$2', [u2, c.id]))).rejects.toMatchObject({ code: '23514' });
+    await expect(comoA(m => m.query("update restricoes_pacientes set confirmado_em=now() - interval '1 day', revisao=3 where id=$1", [c.id]))).rejects.toMatchObject({ code: '23514' });
+    await expect(comoA(m => m.query("update restricoes_pacientes set confirmacao='rejeitada', confirmado_por_usuario_id=null, confirmado_em=null, revisao=3 where id=$1", [c.id])))
+      .rejects.toMatchObject({ code: '23514' });
+    const rj = await comoA(m => novaRestricao(m));
+    await comoA(m => m.query("update restricoes_pacientes set confirmacao='rejeitada', revisao=2 where id=$1", [rj.id]));
+    await expect(comoA(m => m.query("update restricoes_pacientes set confirmacao='confirmada', confirmado_por_usuario_id=$1, confirmado_em=now(), revisao=3 where id=$2", [uA, rj.id])))
+      .rejects.toMatchObject({ code: '23514' });
+    // estado clínico continua podendo mudar com a decisão preservada
+    await comoA(m => m.query("update restricoes_pacientes set estado='em_reavaliacao', revisao=3 where id=$1", [c.id]));
+    // identidade do paciente não muda em nenhuma tabela de estado
+    await expect(comoA(m => m.query('update restricoes_pacientes set paciente_id=$1, revisao=4 where id=$2', [pacA2, c.id]))).rejects.toMatchObject({ code: '23514' });
   });
 
   it('Q3: revisão de inativação sem motivo, sem justificativa cifrada ou sem dois passos é recusada', async () => {
@@ -389,6 +404,11 @@ suite('FOOD06 P1b 1083 down em PostgreSQL 15 descartável', () => {
     await owner.query('insert into tenants values($1)', [t]); await owner.query('insert into usuarios values($1,$2)', [u, t]); await owner.query('insert into pacientes values($1,$2)', [p, t]);
     await owner.query(`insert into avaliacoes_restricoes_pacientes(tenant_id,paciente_id) values($1,$2)`, [t, p]);
     await expect(aplicar(conn, 'down')).rejects.toThrow('Rollback recusado');
+    expect(await existentes()).toBe(7);
+    // revisão R4 (#531): fora de transação o `set local` não vale; o down recusa em vez de contar sob RLS
+    const m = new DataSource({ type: 'postgres', ...conn, username: 'owner', password: 'owner-test', entities: [], synchronize: false, logging: false } as never);
+    await m.initialize(); const q = m.createQueryRunner();
+    try { await expect(new RestricoesAlimentares1720000001083().down(q)).rejects.toThrow('Rollback recusado'); } finally { await q.release(); await m.destroy(); }
     expect(await existentes()).toBe(7);
     expect((await owner.query('select count(*)::int n from avaliacoes_restricoes_pacientes')).rows[0].n).toBe(1);
   });

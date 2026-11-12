@@ -55,6 +55,22 @@ Invariantes já aprovados preservados: restrição confirmada não vence (motor,
 | Mapeamento do tenant nunca `global`; liberação com evidência | `check` | motor (`exige_confirmacao`) |
 | Permissão clínica específica (Q6) | **não** | Auth (pendente) |
 
+## Revisão `tenant-security-reviewer` (2026-11-12, NÃO independente)
+
+Subagente do mesmo tipo de modelo do autor, somente leitura, sobre `a794aee` e `beda2b1`. Veredito: sem achado crítico ou alto, sem caminho cross-tenant;
+não bloqueia o merge. Não substitui a revisão R4 independente (ATV-9).
+
+| Achado | Severidade | Tratamento |
+| --- | --- | --- |
+| Depois de confirmada, a restrição aceitava trocar `confirmado_por`/`confirmado_em` e passar `confirmada` ↔ `rejeitada` | MÉDIA | **Corrigido nesta PR:** a decisão de confirmação é imutável (contrato v2 §4.3 só admite `pendente` → `confirmada` ou `rejeitada`); testes e mutações |
+| `down` fora de transação: `set local` sem efeito e contagem enganosa sob FORCE para owner sem BYPASSRLS | BAIXA | **Corrigido nesta PR:** recusa se `row_security` não ficou `off` |
+| Demais `bytea` (justificativas, resultado da reconfirmação, pedido, explicação, desfecho, evidência) cifrados **sem vínculo** de linha/tenant | MÉDIA | **Condição de entrada da P2:** codec com vínculo (novas finalidades) para esses campos e guarda estendida antes do primeiro consumidor |
+| Guarda estática contornável (aspas duplas, `require`, barrel, nome da tabela em SQL cru, só 2 de 7 entidades) | BAIXA | **P2:** allowlist nominal por entidade e nome de tabela, mais teste comportamental do repositório |
+| Revisão do vínculo exige recifrar o conteúdo a cada UPDATE de estado | INFO | **P2:** documentar e testar no serviço (falha fechada se esquecer) |
+| Autor da solicitação não é amarrado ao próprio paciente no banco; PK global pode virar oráculo se o DTO aceitar `id` do cliente | INFO | **P2/Auth:** negativo de paciente do portal pedindo por outro; DTO nunca aceita `id` |
+| Metadados em claro com sinal clínico (`situacao`, `motivo_inativacao`, `origem`, `tipo`, `meio`) | BAIXA | Registrar na classificação de dados (Q4/ATV-2); decisão documentada de manter estados em claro |
+| Avaliação: `revisao` não amarrada a uma linha de histórico | BAIXA | **P2:** gravar estado e histórico na mesma transação, com teste |
+
 ## Fora de escopo (sem tabela nesta PR)
 
 Taxonomia, regras clínicas, decisões de aplicação (P4), pedidos de curadoria e catálogo global (D3, ATV-5), auditoria específica (a P2 usa
