@@ -78,3 +78,19 @@ export function validarDesfechoSolicitacao(entrada: unknown): DesfechoSolicitaca
     estadoFinal, alterados: alterados.sort((a, b) => (a.item < b.item ? -1 : 1)), inalterados: inalterados.sort(), alteraRestricao: false
   };
 }
+
+/** Pedido do paciente (conteúdo cifrado da solicitação): itens com chave própria, que o desfecho referencia. */
+export interface PedidoSolicitacao { itens: Array<{ item: string; texto: string }> }
+const TEXTO_PEDIDO = /^(?:[^\p{C}]|[\n\t])+$/u;
+export function validarPedidoSolicitacao(entrada: unknown): PedidoSolicitacao {
+  const o = simples(entrada, ['itens']);
+  if (!Array.isArray(o.itens) || o.itens.length < 1 || o.itens.length > LIMITE_ITENS) return invalida();
+  const itens = o.itens.map(i => {
+    const x = simples(i, ['item', 'texto']);
+    if (typeof x.item !== 'string' || !ID.test(x.item) || typeof x.texto !== 'string' || x.texto.trim() === '' || x.texto.length > 1000 ||
+      !TEXTO_PEDIDO.test(x.texto)) return invalida();
+    return { item: x.item, texto: x.texto };
+  });
+  if (new Set(itens.map(i => i.item)).size !== itens.length) return invalida();
+  return { itens };
+}

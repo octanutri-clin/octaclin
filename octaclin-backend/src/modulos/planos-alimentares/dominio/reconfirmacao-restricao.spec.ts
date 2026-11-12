@@ -1,4 +1,4 @@
-import { registrarReconfirmacao, PRAZO_RECONFIRMACAO_DIAS, ReconfirmacaoInvalidaError } from './reconfirmacao-restricao';
+import { registrarReconfirmacao, validarResultadoReconfirmacao, PRAZO_RECONFIRMACAO_DIAS, ReconfirmacaoInvalidaError } from './reconfirmacao-restricao';
 
 /**
  * FOOD06 PR-D (Q10) alinhado à decisão D4 da PR #531: a AVALIAÇÃO global e sua revisão exata são a referência
@@ -66,6 +66,16 @@ describe('FOOD06 Q10/D4: reconfirmação referenciada à avaliação global', ()
       try { registrarReconfirmacao(ruim as never); fail('deveria falhar'); } catch (e) {
         expect(e).toBeInstanceOf(ReconfirmacaoInvalidaError); expect(String((e as Error).message)).not.toContain(CANARIO);
       }
+    }
+  });
+});
+
+describe('FOOD06 R3: resultado cifrado da reconfirmação', () => {
+  it('só o vocabulário fechado, com observação opcional', () => {
+    expect(validarResultadoReconfirmacao({ resultado: 'pendencia_mantida' })).toEqual({ resultado: 'pendencia_mantida' });
+    expect(validarResultadoReconfirmacao({ resultado: 'sem_alteracao', observacao: 'nota' })).toEqual({ resultado: 'sem_alteracao', observacao: 'nota' });
+    for (const ruim of [{ resultado: 'ok' }, {}, { resultado: 'sem_alteracao', observacao: '' }, { resultado: 'sem_alteracao', extra: 1 }, null]) {
+      expect(() => validarResultadoReconfirmacao(ruim)).toThrow(ReconfirmacaoInvalidaError);
     }
   });
 });

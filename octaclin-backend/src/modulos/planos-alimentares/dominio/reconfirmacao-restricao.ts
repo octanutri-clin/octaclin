@@ -67,3 +67,13 @@ export function registrarReconfirmacao(entrada: unknown): ReconfirmacaoRegistrad
     declaraAusenciaRestricoes: ausencia, alteraRestricao: false
   };
 }
+
+/** Resultado cifrado da reconfirmação (campo de resultado registrado no codec de restrições). */
+export interface ResultadoReconfirmacaoCifrado { resultado: ResultadoReconfirmacao; observacao?: string }
+const TEXTO_OBS = /^(?:[^\p{C}]|[\n\t])+$/u;
+export function validarResultadoReconfirmacao(entrada: unknown): ResultadoReconfirmacaoCifrado {
+  const o = simples(entrada, ['resultado', 'observacao']);
+  if (typeof o.resultado !== 'string' || !RESULTADOS.includes(o.resultado)) return invalida();
+  if (o.observacao !== undefined && (typeof o.observacao !== 'string' || o.observacao.trim() === '' || o.observacao.length > 4000 || !TEXTO_OBS.test(o.observacao))) return invalida();
+  return { resultado: o.resultado as ResultadoReconfirmacao, ...(o.observacao !== undefined ? { observacao: o.observacao as string } : {}) };
+}

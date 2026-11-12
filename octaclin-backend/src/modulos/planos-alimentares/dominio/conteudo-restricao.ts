@@ -71,3 +71,14 @@ export function validarConteudoRestricao(entrada: unknown): ConteudoRestricaoV1 
     ...(gravidade ? { gravidade } : {}), ...(o.observacao !== undefined ? { observacao: o.observacao as string } : {})
   });
 }
+
+const TEXTO_PROTEGIDO = /^(?:[^\p{C}]|[\n\t])+$/u;
+export const LIMITE_TEXTO_PROTEGIDO = 4000;
+/**
+ * Texto livre protegido (justificativas, explicação ao paciente, evidência). Nunca altera alvo, gravidade ou resultado.
+ * Não vazio, até 4000 caracteres, sem caracteres de controle além de quebra de linha e tabulação.
+ */
+export function validarTextoProtegido(entrada: unknown): string {
+  if (typeof entrada !== 'string' || entrada.trim() === '' || entrada.length > LIMITE_TEXTO_PROTEGIDO || !TEXTO_PROTEGIDO.test(entrada)) return invalido();
+  return entrada;
+}

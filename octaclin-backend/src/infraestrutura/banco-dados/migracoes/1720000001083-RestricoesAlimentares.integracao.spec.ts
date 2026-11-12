@@ -13,7 +13,7 @@ import { RevisaoAvaliacaoRestricoesOrm } from '../../../modulos/planos-alimentar
 import { ReconfirmacaoRestricoesOrm } from '../../../modulos/planos-alimentares/infraestrutura/reconfirmacao-restricoes.orm';
 import { SolicitacaoRestricaoPacienteOrm } from '../../../modulos/planos-alimentares/infraestrutura/solicitacao-restricao-paciente.orm';
 import { MapeamentoAlimentoAlvoLocalOrm } from '../../../modulos/planos-alimentares/infraestrutura/mapeamento-alimento-alvo-local.orm';
-import { cifrarConteudoRestricao, decifrarConteudoRestricao, ConteudoRestricaoIlegivelError } from '../../../modulos/planos-alimentares/infraestrutura/codec-conteudo-restricao';
+import { cifrarConteudoRestricao, decifrarConteudoRestricao, cifrarCampo, decifrarCampo, ConteudoRestricaoIlegivelError } from '../../../modulos/planos-alimentares/infraestrutura/codec-conteudo-restricao';
 import { validarDesfechoSolicitacao } from '../../../modulos/planos-alimentares/dominio/solicitacao-restricao-paciente';
 
 /**
@@ -376,6 +376,63 @@ suite('FOOD06 P1b 1083 restrições: PostgreSQL 15 descartável, RLS FORCE, role
     // e o conteúdo legítimo de X continua legível pelo seu vínculo
     const lidaX = await comoA(m => m.getRepository(RestricaoPacienteOrm).findOneByOrFail({ id: x.id }));
     expect(decifrarConteudoRestricao(crypto, lidaX.conteudoCriptografado, { ...vy, restricaoId: x.id, revisao: 1 })).toEqual(CONTEUDO);
+  });
+
+  it('R3 (#531): os 10 campos cifrados gravados pelo codec só decifram no próprio registro, campo, revisão, paciente e tenant', async () => {
+    const r = await comoA(m => novaRestricao(m));
+    const pacR3 = randomUUID();
+    await owner.query('insert into pacientes values($1,$2)', [pacR3, tA]);
+    const a = await comoA(m => novaAvaliacao(m, pacR3));
+    const ids = { rev: r.id, reconf: randomUUID(), sol: randomUUID(), solB: randomUUID(), map: randomUUID() };
+    const vP = (registroId: string, revisao: number, pacienteId = pacA) => ({ tenantId: tA, registroId, revisao, pacienteId });
+    await comoA(async m => {
+      await m.getRepository(RevisaoRestricaoPacienteOrm).insert({ tenantId: tA, pacienteId: pacA, restricaoId: r.id, numero: 1, evento: 'criacao', autorUsuarioId: uA,
+        conteudoCriptografado: cifrarCampo(crypto, 'restricoes_pacientes_revisoes.conteudo_criptografado', CONTEUDO, vP(r.id, 1)) });
+      await m.getRepository(RevisaoRestricaoPacienteOrm).insert({ tenantId: tA, pacienteId: pacA, restricaoId: r.id, numero: 2, evento: 'inativacao', autorUsuarioId: uA,
+        motivoInativacao: 'registro_incorreto', confirmacaoDoisPassos: true,
+        conteudoCriptografado: cifrarCampo(crypto, 'restricoes_pacientes_revisoes.conteudo_criptografado', CONTEUDO, vP(r.id, 2)),
+        justificativaCriptografada: cifrarCampo(crypto, 'restricoes_pacientes_revisoes.justificativa_criptografada', 'justificativa ' + CANARIO, vP(r.id, 2)) });
+      await m.getRepository(ReconfirmacaoRestricoesOrm).insert({ id: ids.reconf, tenantId: tA, pacienteId: pacR3, avaliacaoId: a.id, revisaoAvaliacao: 1, atestadoPorUsuarioId: uA,
+        atestadoEm: new Date('2026-11-12T10:00:00Z'), meio: 'presencial', venceEm: null, chaveIdempotencia: randomUUID(),
+        resultadoCriptografado: cifrarCampo(crypto, 'reconfirmacoes_restricoes.resultado_criptografado', { resultado: 'pendencia_mantida', observacao: CANARIO }, vP(ids.reconf, 1, pacR3)) });
+      for (const id of [ids.sol, ids.solB]) {
+        await m.getRepository(SolicitacaoRestricaoPacienteOrm).insert({ id, tenantId: tA, pacienteId: pacA, restricaoId: r.id, tipo: 'correcao', estado: 'criada',
+          autorUsuarioId: uA, chaveCriacao: randomUUID(), revisao: 1,
+          conteudoCriptografado: cifrarCampo(crypto, 'solicitacoes_restricoes_pacientes.conteudo_criptografado', { itens: [{ item: 'item-1', texto: CANARIO }, { item: 'item-2', texto: 'b' }] }, vP(id, 1)) });
+      }
+      await m.query("update solicitacoes_restricoes_pacientes set estado='em_analise', revisao=2 where id=$1", [ids.sol]);
+      await m.query(`update solicitacoes_restricoes_pacientes set estado='parcial', decidido_por_usuario_id=$1, decidido_em=now(), revisao=3,
+        explicacao_paciente_criptografada=$2, justificativa_interna_criptografada=$3, desfecho_criptografado=$4 where id=$5`, [uA,
+        cifrarCampo(crypto, 'solicitacoes_restricoes_pacientes.explicacao_paciente_criptografada', 'explicação ' + CANARIO, vP(ids.sol, 3)),
+        cifrarCampo(crypto, 'solicitacoes_restricoes_pacientes.justificativa_interna_criptografada', 'interna ' + CANARIO, vP(ids.sol, 3)),
+        cifrarCampo(crypto, 'solicitacoes_restricoes_pacientes.desfecho_criptografado',
+          { estadoFinal: 'parcial', alterados: [{ item: 'item-1', restricaoId: r.id, revisaoResultante: 2 }], inalterados: ['item-2'] }, vP(ids.sol, 3)), ids.sol]);
+      await m.getRepository(MapeamentoAlimentoAlvoLocalOrm).insert({ id: ids.map, tenantId: tA, fonteId: 'fonte-r3', codigoOrigem: 'item-r3', alvoId: 'sintetico-1',
+        relacao: 'nao_contem_confirmado', granularidade: 'alimento', origem: 'local_profissional', cobertura: 'suficiente', versaoMapeamento: 'r3', autorUsuarioId: uA,
+        evidenciaCriptografada: cifrarCampo(crypto, 'mapeamentos_alimento_alvo_locais.evidencia_criptografada', 'evidência ' + CANARIO, { tenantId: tA, registroId: ids.map, revisao: 1 }),
+        justificativaCriptografada: cifrarCampo(crypto, 'mapeamentos_alimento_alvo_locais.justificativa_criptografada', 'justificativa ' + CANARIO, { tenantId: tA, registroId: ids.map, revisao: 1 }) });
+    });
+    // nada em claro no banco
+    for (const t of TABELAS_RESTRICOES_ALIMENTARES) expect(JSON.stringify((await owner.query(`select * from ${t}`)).rows)).not.toContain(CANARIO);
+    // leitura certa funciona
+    const sol = (await comoA(m => m.query('select * from solicitacoes_restricoes_pacientes where id=$1', [ids.sol])))[0];
+    expect(decifrarCampo(crypto, 'solicitacoes_restricoes_pacientes.explicacao_paciente_criptografada', sol.explicacao_paciente_criptografada, vP(ids.sol, 3))).toBe('explicação ' + CANARIO);
+    const rev2 = (await comoA(m => m.query('select * from restricoes_pacientes_revisoes where restricao_id=$1 and numero=2', [r.id])))[0];
+    expect(decifrarCampo(crypto, 'restricoes_pacientes_revisoes.justificativa_criptografada', rev2.justificativa_criptografada, vP(r.id, 2))).toBe('justificativa ' + CANARIO);
+    const rec = (await comoA(m => m.query('select * from reconfirmacoes_restricoes where id=$1', [ids.reconf])))[0];
+    expect(decifrarCampo(crypto, 'reconfirmacoes_restricoes.resultado_criptografado', rec.resultado_criptografado, vP(ids.reconf, 1, pacR3))).toEqual({ resultado: 'pendencia_mantida', observacao: CANARIO });
+    const map = (await comoA(m => m.query('select * from mapeamentos_alimento_alvo_locais where id=$1', [ids.map])))[0];
+    expect(decifrarCampo(crypto, 'mapeamentos_alimento_alvo_locais.evidencia_criptografada', map.evidencia_criptografada, { tenantId: tA, registroId: ids.map, revisao: 1 })).toBe('evidência ' + CANARIO);
+    // cópias entre campos, registros, revisões e tenant falham fechadas
+    const falha = (f: () => unknown) => expect(f).toThrow(ConteudoRestricaoIlegivelError);
+    falha(() => decifrarCampo(crypto, 'solicitacoes_restricoes_pacientes.justificativa_interna_criptografada', sol.explicacao_paciente_criptografada, vP(ids.sol, 3)));
+    falha(() => decifrarCampo(crypto, 'solicitacoes_restricoes_pacientes.explicacao_paciente_criptografada', sol.explicacao_paciente_criptografada, vP(ids.solB, 3)));
+    falha(() => decifrarCampo(crypto, 'solicitacoes_restricoes_pacientes.explicacao_paciente_criptografada', sol.explicacao_paciente_criptografada, vP(ids.sol, 2)));
+    falha(() => decifrarCampo(crypto, 'solicitacoes_restricoes_pacientes.explicacao_paciente_criptografada', sol.explicacao_paciente_criptografada, { ...vP(ids.sol, 3), tenantId: tB }));
+    falha(() => decifrarCampo(crypto, 'solicitacoes_restricoes_pacientes.conteudo_criptografado', sol.conteudo_criptografado, vP(ids.solB, 1)));
+    falha(() => decifrarCampo(crypto, 'mapeamentos_alimento_alvo_locais.justificativa_criptografada', map.evidencia_criptografada, { tenantId: tA, registroId: ids.map, revisao: 1 }));
+    falha(() => decifrarCampo(crypto, 'restricoes_pacientes_revisoes.justificativa_criptografada', rev2.justificativa_criptografada, vP(r.id, 1)));
+    falha(() => decifrarCampo(crypto, 'reconfirmacoes_restricoes.resultado_criptografado', rec.resultado_criptografado, vP(ids.reconf, 1, pacA)));
   });
 });
 

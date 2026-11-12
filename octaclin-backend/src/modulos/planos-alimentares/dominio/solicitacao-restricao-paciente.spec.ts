@@ -1,4 +1,4 @@
-import { transicionarSolicitacao, validarDesfechoSolicitacao, SolicitacaoInvalidaError, ESTADOS_SOLICITACAO, ESTADOS_FINAIS_SOLICITACAO, type EstadoSolicitacao } from './solicitacao-restricao-paciente';
+import { transicionarSolicitacao, validarDesfechoSolicitacao, validarPedidoSolicitacao, SolicitacaoInvalidaError, ESTADOS_SOLICITACAO, ESTADOS_FINAIS_SOLICITACAO, type EstadoSolicitacao } from './solicitacao-restricao-paciente';
 
 /** FOOD06 PR-D (D7-a, contrato v3): máquina de estados da solicitação do paciente. Só dados sintéticos. */
 const CANARIO = 'CANARIO_SOLICITACAO_NAO_VAZAR';
@@ -87,6 +87,17 @@ describe('FOOD06 D1 (#531): desfecho distingue o que mudou do que não mudou, se
       try { validarDesfechoSolicitacao(ruim as never); fail('deveria falhar'); } catch (e) {
         expect(e).toBeInstanceOf(SolicitacaoInvalidaError); expect(String((e as Error).message)).not.toContain(CANARIO);
       }
+    }
+  });
+});
+
+describe('FOOD06 R3: pedido do paciente (conteúdo cifrado da solicitação)', () => {
+  it('itens com chave única e texto; recusa vazio, duplicado, extra, controle e limites', () => {
+    expect(validarPedidoSolicitacao({ itens: [{ item: 'a', texto: 'x' }] })).toEqual({ itens: [{ item: 'a', texto: 'x' }] });
+    for (const ruim of [{ itens: [] }, { itens: [{ item: 'a', texto: 'x' }, { item: 'a', texto: 'y' }] }, { itens: [{ item: 'a', texto: '' }] },
+      { itens: [{ item: 'a b', texto: 'x' }] }, { itens: [{ item: 'a', texto: 'x', extra: 1 }] }, { itens: [{ item: 'a', texto: 'x\u0007' }] },
+      { itens: [{ item: 'a', texto: 'x'.repeat(1001) }] }, { itens: Array.from({ length: 201 }, (_, i) => ({ item: `i${i}`, texto: 'x' })) }, { itens: [], extra: 1 }, null]) {
+      expect(() => validarPedidoSolicitacao(ruim)).toThrow(SolicitacaoInvalidaError);
     }
   });
 });

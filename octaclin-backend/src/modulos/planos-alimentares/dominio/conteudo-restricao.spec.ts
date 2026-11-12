@@ -1,4 +1,4 @@
-import { validarConteudoRestricao, ConteudoRestricaoInvalidoError, ESQUEMA_CONTEUDO_RESTRICAO } from './conteudo-restricao';
+import { validarConteudoRestricao, validarTextoProtegido, ConteudoRestricaoInvalidoError, ESQUEMA_CONTEUDO_RESTRICAO } from './conteudo-restricao';
 
 /** FOOD06 D2 (#531): o objeto clínico é validado por inteiro ANTES de cifrar e persistir. Só dados sintéticos. */
 const CANARIO = 'CANARIO_CONTEUDO_NAO_VAZAR';
@@ -39,5 +39,12 @@ describe('FOOD06 D2: conteúdo clínico da restrição', () => {
     try { validarConteudoRestricao({ ...alergia, observacao: CANARIO + '\u0007' }); fail('deveria falhar'); } catch (e) {
       expect(e).toBeInstanceOf(ConteudoRestricaoInvalidoError); expect(String((e as Error).message)).not.toContain(CANARIO);
     }
+  });
+});
+
+describe('FOOD06 R3: texto protegido', () => {
+  it('aceita texto com quebra de linha e recusa vazio, só espaço, controle, tamanho e tipo errado', () => {
+    expect(validarTextoProtegido('linha 1\nlinha 2\tok')).toBe('linha 1\nlinha 2\tok');
+    for (const ruim of ['', '   ', 'a\u0000', 'a\u202e', 'a'.repeat(4001), 1, null, ['a']]) expect(() => validarTextoProtegido(ruim)).toThrow(ConteudoRestricaoInvalidoError);
   });
 });

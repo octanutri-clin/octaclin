@@ -51,7 +51,7 @@ Invariantes já aprovados preservados: restrição confirmada não vence (motor,
 | Decisão da solicitação exige explicação e desfecho | `check` (presença) | `validarDesfechoSolicitacao` (conteúdo) |
 | Reconfirmação ligada à revisão real; individual sem vencimento | FKs e `check` | `registrarReconfirmacao` (resultado, ausência explícita) |
 | Natureza, subtipo, gravidade, alvo e combinações clínicas | **não** (cifrado) | **só** `validarConteudoRestricao` |
-| Cifra pertence à linha e à revisão | **não** | **só** o vínculo do codec |
+| Cifra pertence ao campo, à linha, à revisão, ao paciente e ao tenant (10 campos) | **não** | **só** o vínculo do codec (`CAMPOS_CIFRADOS`) |
 | Mapeamento do tenant nunca `global`; liberação com evidência | `check` | motor (`exige_confirmacao`) |
 | Permissão clínica específica (Q6) | **não** | Auth (pendente) |
 
@@ -64,12 +64,38 @@ não bloqueia o merge. Não substitui a revisão R4 independente (ATV-9).
 | --- | --- | --- |
 | Depois de confirmada, a restrição aceitava trocar `confirmado_por`/`confirmado_em` e passar `confirmada` ↔ `rejeitada` | MÉDIA | **Corrigido nesta PR:** a decisão de confirmação é imutável (contrato v2 §4.3 só admite `pendente` → `confirmada` ou `rejeitada`); testes e mutações |
 | `down` fora de transação: `set local` sem efeito e contagem enganosa sob FORCE para owner sem BYPASSRLS | BAIXA | **Corrigido nesta PR:** recusa se `row_security` não ficou `off` |
-| Demais `bytea` (justificativas, resultado da reconfirmação, pedido, explicação, desfecho, evidência) cifrados **sem vínculo** de linha/tenant | MÉDIA | **Condição de entrada da P2:** codec com vínculo (novas finalidades) para esses campos e guarda estendida antes do primeiro consumidor |
-| Guarda estática contornável (aspas duplas, `require`, barrel, nome da tabela em SQL cru, só 2 de 7 entidades) | BAIXA | **P2:** allowlist nominal por entidade e nome de tabela, mais teste comportamental do repositório |
+| Demais `bytea` (justificativas, resultado da reconfirmação, pedido, explicação, desfecho, evidência) cifrados **sem vínculo** de linha/tenant | MÉDIA | **Corrigido nesta PR (R3):** o mesmo codec cobre os 10 campos (`CAMPOS_CIFRADOS`), com vínculo de campo, tenant, registro, revisão e paciente; teste confere o registro contra as colunas da 1083 |
+| Guarda estática contornável (aspas duplas, `require`, barrel, nome da tabela em SQL cru, só 2 de 7 entidades) | BAIXA | **Corrigido nesta PR (R4):** 7 entidades, 7 tabelas, listas nominais com motivo e testes de regressão dos contornos; o teste comportamental dos serviços fica na P2 |
 | Revisão do vínculo exige recifrar o conteúdo a cada UPDATE de estado | INFO | **P2:** documentar e testar no serviço (falha fechada se esquecer) |
 | Autor da solicitação não é amarrado ao próprio paciente no banco; PK global pode virar oráculo se o DTO aceitar `id` do cliente | INFO | **P2/Auth:** negativo de paciente do portal pedindo por outro; DTO nunca aceita `id` |
-| Metadados em claro com sinal clínico (`situacao`, `motivo_inativacao`, `origem`, `tipo`, `meio`) | BAIXA | Registrar na classificação de dados (Q4/ATV-2); decisão documentada de manter estados em claro |
+| Metadados em claro com sinal clínico (`situacao`, `motivo_inativacao`, `origem`, `tipo`, `meio`) | BAIXA | **Decidido (R7):** mantidos em claro, justificados e classificados como derivados protegidos em `docs/agents/DATA_CLASSIFICATION.md`; não é parecer jurídico (ATV-2) |
 | Avaliação: `revisao` não amarrada a uma linha de histórico | BAIXA | **P2:** gravar estado e histórico na mesma transação, com teste |
+
+## Acompanhamento único (prompt mestre FOOD06, §18)
+
+Estados: RESOLVIDO · EM IMPLEMENTAÇÃO · AGUARDA VALIDAÇÃO HUMANA · AGUARDA AUTORIZAÇÃO OPERACIONAL · BLOQUEADO.
+
+| ID | Estado | O que foi resolvido | Evidência | O que falta |
+| --- | --- | --- | --- | --- |
+| R1 | RESOLVIDO | Decisão de confirmação imutável (quem, quando, `confirmada`↔`rejeitada`, volta a `pendente`) | Trigger da 1083; integração "estado: UPDATE…"; mutações `r4_decisao_reescrita`, `r4_volta_pendente`, `volta_pendente` | — |
+| R2 | RESOLVIDO | `down` só com tabelas vazias e só em transação; com dado ou sem `row_security = off`, recusa | Specs estático e de integração do `down`; mutações `down_sem_guarda`, `r4_down_sem_transacao` | — |
+| R3 | RESOLVIDO | Um codec para os 10 campos cifrados, vínculo de campo/tenant/registro/revisão/paciente, falha fechada | `codec-conteudo-restricao.spec.ts` (registro × colunas da 1083, cópias, versão, adulteração); integração "R3 (#531)"; mutações `r3_*` | — |
+| R4 | RESOLVIDO (escopo P1b) | Guarda cobre 7 entidades e 7 tabelas, aspas, `require`, `import()`, barrel e SQL cru; listas nominais | `guarda-escrita-restricoes.spec.ts`; mutações `r4_*` | P2: testes comportamentais dos serviços reais (validar, cifrar, autorizar, sem entidade crua por HTTP) |
+| R5 | EM IMPLEMENTAÇÃO (P2) | — | — | Recifrar na mesma transação ao avançar a revisão; testes de conflito e rollback |
+| R6 | EM IMPLEMENTAÇÃO (Auth/P2) | — | — | Identidade e carteira pelo servidor; negativos de outro paciente/tenant; resposta idêntica para inexistente e não autorizado |
+| R7 | RESOLVIDO | Metadados em claro mantidos, justificados e classificados | `docs/agents/DATA_CLASSIFICATION.md` | Parecer jurídico segue no ATV-2 |
+| R8 | EM IMPLEMENTAÇÃO (P2) | — | — | Estado e histórico da avaliação na mesma transação; concorrência e rollback |
+| B04 | EM IMPLEMENTAÇÃO | Persistência cifrada, transições, origem e evidência de mapeamento, falha fechada, histórico (P1b) | Esta PR | Auth (Q6), P2 (serviços e integração com o motor), depois AGUARDA VALIDAÇÃO HUMANA (Q1, Q4) |
+| M11-C2 | EM IMPLEMENTAÇÃO | Base de dados e domínio | Esta PR, #526, #529 | Jornada integrada (P2–P4) e prova dos critérios |
+| ATV-1 | AGUARDA VALIDAÇÃO HUMANA | Motor inerte sem regra validada | #526 | Ficha clínica e aprovação real do responsável clínico |
+| ATV-2 | AGUARDA VALIDAÇÃO HUMANA | Classificação de dados (R7) | `DATA_CLASSIFICATION.md` | Matriz LGPD preenchida e revisada por jurídico/privacidade |
+| ATV-3 | EM IMPLEMENTAÇÃO | Fluxos novos com cifragem autenticada e vínculo, RLS FORCE | Esta PR | Autorização (P2); plano do histórico do questionário; avaliação de privacidade |
+| ATV-4 | AGUARDA VALIDAÇÃO HUMANA | — | — | Registro regulatório atualizado em fonte oficial |
+| ATV-5 | EM IMPLEMENTAÇÃO | Tabela local separada; tenant não forja `global` | Esta PR | Fluxo mínimo da curadoria global e teste ponta a ponta |
+| ATV-6 | EM IMPLEMENTAÇÃO (P2/P3) | — | — | Negar o novo fluxo do portal quando a representação não for suportada, com negativos |
+| ATV-7 | EM IMPLEMENTAÇÃO (P3) | — | — | Interface; depois testes com pessoas reais |
+| ATV-8 | AGUARDA AUTORIZAÇÃO OPERACIONAL | Ensaios só em PostgreSQL descartável | Integração da 1083 | Checklist por ambiente e execução autorizada |
+| ATV-9 | AGUARDA VALIDAÇÃO HUMANA | Pacote para revisão independente (ChatGPT/Codex) | Briefing da #531 | Parecer independente e correção dos achados confirmados |
 
 ## Fora de escopo (sem tabela nesta PR)
 
