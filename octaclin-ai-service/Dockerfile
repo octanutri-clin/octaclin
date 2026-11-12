@@ -10,7 +10,19 @@
 # grafo transitivo resolvido em versoes exatas e verificado por hash. Regenerar:
 #   uv pip compile requirements.txt --generate-hashes --universal \
 #     --python-version 3.12 --output-file requirements.lock.txt
-FROM python:3.15.2-slim@sha256:65a65fc7b30b06cb6df4930fd4650697cb23f4c2698ab81fc87e4b031bc36928 AS build
+# Base compartilhada: o zlib1g corrigido entra aqui, antes dos estagios de aplicacao, para o
+# estagio final nao executar gerenciador de pacotes (regra de `validar-dockerfiles-runtime.spec.mjs`).
+# SQ-2026-004: a base 3.15.2 traz zlib1g 1:1.3.dfsg+really1.3.1-1+b1, anterior a correcao
+# 1:1.3.dfsg+really1.3.1-1+deb13u1 (trixie-security). Atualiza so o zlib1g e reprova o build
+# se a versao final ficar abaixo da corrigida. Sem pin exato: quando a base ja trouxer a
+# correcao (ou uma posterior) o passo vira no-op em vez de quebrar.
+FROM python:3.15.2-slim@sha256:65a65fc7b30b06cb6df4930fd4650697cb23f4c2698ab81fc87e4b031bc36928 AS base
+RUN apt-get update \
+    && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends --only-upgrade zlib1g \
+    && dpkg --compare-versions "$(dpkg-query -W -f='${Version}' zlib1g)" ge '1:1.3.dfsg+really1.3.1-1+deb13u1' \
+    && rm -rf /var/lib/apt/lists/*
+
+FROM base AS build
 WORKDIR /app
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
@@ -19,7 +31,7 @@ COPY requirements.txt requirements.lock.txt ./
 # Assim o runtime nao executa pip: sem gerenciador de pacotes no estagio final.
 RUN pip install --no-cache-dir --require-hashes --prefix=/install -r requirements.lock.txt
 
-FROM python:3.15.2-slim@sha256:65a65fc7b30b06cb6df4930fd4650697cb23f4c2698ab81fc87e4b031bc36928 AS runtime
+FROM base AS runtime
 WORKDIR /app
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1

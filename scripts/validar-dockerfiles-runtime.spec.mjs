@@ -199,7 +199,9 @@ test('o runtime backend remove o npm global e as interfaces de package manager',
 function pythonMenorDaBaseIa() {
   const dockerfile = readFileSync('octaclin-ai-service/Dockerfile', 'utf8');
   const bases = [...dockerfile.matchAll(/^FROM python:(\d+\.\d+)\.\d+[\w.-]*@sha256:/gm)].map((m) => m[1]);
-  assert.ok(bases.length >= 2, 'octaclin-ai-service/Dockerfile: bases python:X.Y.Z nao encontradas.');
+  assert.ok(bases.length >= 1, 'octaclin-ai-service/Dockerfile: base python:X.Y.Z nao encontrada.');
+  assert.match(dockerfile, /^FROM base AS build$/m, 'octaclin-ai-service/Dockerfile: build precisa derivar da base compartilhada.');
+  assert.match(dockerfile, /^FROM base AS runtime$/m, 'octaclin-ai-service/Dockerfile: runtime precisa derivar da base compartilhada.');
   assert.equal(new Set(bases).size, 1, 'octaclin-ai-service/Dockerfile: estagios com versoes de Python diferentes.');
   return bases[0];
 }
@@ -293,4 +295,22 @@ test('CI testa o servico de IA no mesmo Python da imagem', () => {
   const job = proximoJob < 0 ? ci.slice(inicio) : ci.slice(inicio, inicio + 1 + proximoJob);
   const versaoCi = job.match(/python-version:\s*"(\d+\.\d+)"/)?.[1];
   assert.equal(versaoCi, versoesImagem[0], `CI do servico de IA em ${versaoCi}, imagem em ${versoesImagem[0]}`);
+});
+
+// SQ-2026-004: a base python:3.15.2-slim traz zlib1g 1:1.3.dfsg+really1.3.1-1+b1, anterior a
+// 1:1.3.dfsg+really1.3.1-1+deb13u1 (trixie-security). A base compartilhada (nao o estagio final,
+// que nao executa gerenciador de pacotes) atualiza so o zlib1g e falha o build se a versao
+// instalada ficar abaixo da corrigida, sem pin exato (um pin exato quebraria quando a base
+// passar a trazer a correcao ou uma posterior).
+test('servico de IA atualiza o zlib1g na base compartilhada e falha fechado abaixo da versao corrigida', () => {
+  const dockerfile = readFileSync('octaclin-ai-service/Dockerfile', 'utf8').replace(/\r\n/g, '\n');
+  const base = dockerfile.match(/^FROM python:[^\n]+ AS base\n(?:RUN[\s\S]*?)(?=\n\n|\nFROM |(?![\s\S]))/m)?.[0] ?? '';
+  assert.notEqual(base, '', 'base compartilhada com o passo de zlib1g ausente');
+  assert.equal((dockerfile.match(/^FROM .+ AS base$/gm) ?? []).length, 1);
+  assert.match(base, /apt-get install -y --no-install-recommends --only-upgrade zlib1g(?!=)/, 'atualiza apenas o zlib1g, sem pin exato');
+  assert.match(base, /dpkg --compare-versions "\$\(dpkg-query -W -f='\$\{Version\}' zlib1g\)" ge '1:1\.3\.dfsg\+really1\.3\.1-1\+deb13u1'/, 'reprova se a versao ficar abaixo da corrigida');
+  assert.match(base, /rm -rf \/var\/lib\/apt\/lists\/\*/, 'nao deixa o indice do apt na imagem');
+  assert.doesNotMatch(base, /apt-get (upgrade|dist-upgrade)/, 'nao atualiza o sistema inteiro');
+  // Os estagios de aplicacao derivam da base; nenhum repete a atualizacao nem usa outra imagem.
+  for (const estagio of ['build', 'runtime']) assert.match(dockerfile, new RegExp(`^FROM base AS ${estagio}$`, 'm'));
 });

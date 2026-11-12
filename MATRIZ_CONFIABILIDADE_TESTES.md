@@ -437,6 +437,18 @@ tabagismo removido. Limites: não cobre renderização React (sem rota de JSX ne
 pelos Playwright da T4a/T4b) nem canários em logs de infraestrutura do provedor; o backend não registra
 payload de comparação (sem `Logger` nesse caminho) e a falha do comparador vira 500 com mensagem fixa.
 
+### FOOD06 — restrições alimentares individualizadas (contrato v2 da T8, M11)
+
+Só contrato: nenhum teste, código ou schema novo, e o bloqueio B04 / critério M11-C2 continua aberto. O contrato v2 (`tasks/food06-m11-restricoes-contrato-v2.md`)
+fixa a **matriz de decisão** (natureza e subtipo × confirmação × relação do item × avaliação × regra → resultado e ação de aplicar, seção 5.1), os
+**20 critérios de aceite** do proprietário com o teste que prova cada um (seção 5.2) e os critérios de UX (seção 9.3). Propriedades a provar na implementação:
+ausência de avaliação, avaliação vencida ou item sem classificação nunca produz `sem_conflito_registrado`; texto livre e resposta de questionário nunca alteram o motor;
+restrição pendente não gera conflito confirmado; `em_reavaliacao` continua valendo; preferência nunca bloqueia; leite e lactose, trigo e doença celíaca são alvos distintos;
+a **prévia e o aplicar usam a mesma função pura** e o fingerprint inclui revisão das restrições, versão do mapeamento, da regra e da composição (TOCTOU); isolamento por
+tenant e carteira com resposta idêntica para inexistente e não autorizado; `SuperAdmin` sem carteira não lê; `Collaborator` e paciente não confirmam; CAS na confirmação;
+`nao_contem_confirmado` sem evidência e `conflita` sem regra validada são recusados; auditoria e erros sem conteúdo clínico (canários); rollback por flag sem apagar dado.
+A validação clínica da taxonomia, do mapeamento e das regras de aplicar não é substituível por teste.
+
 ### FOOD06 — matriz global com oráculo decimal independente (T7, M02/M04)
 
 Uma matriz determinística, sem aleatoriedade, compara o encadeamento receita, porção, soma PA06, cobertura M02 e
@@ -466,6 +478,7 @@ equivalentes (trocar `INCOMPATIVEL` por `COMPLETO` é impossível por exclusão 
 Limites: é verificação cruzada de aritmética e de classificação, não prova de correção nutricional nem de fonte
 de composição; o oráculo foi derivado das regras documentadas e pode compartilhar uma interpretação errada delas.
 Não cobre API, persistência, autorização nem interface.
+
 
 ### FOOD06 — decomposição interna M02
 
