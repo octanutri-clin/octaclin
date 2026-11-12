@@ -27,7 +27,7 @@ saídas e canários (#518) e T7 matriz com oráculo decimal (#523). Bloqueios: v
 | M06-C1 | T4a: coluna de referência (RDA/AI/UL, percentuais) | PARCIAL (faltam filtros por situação da referência e ordenação) |
 | M08-C1 | T4b: seção DRI opcional na folha, com PDF real | PARCIAL |
 | M10-C1 | NUX-15: indicador por registro (só texto) | PARCIAL |
-| M11-C2 | Contrato v2 (#524) e motor (#526), **propostos, não mergeados** | **BLOQUEADO (B04)** |
+| M11-C2 | Contrato v2 (#524) e motor (#526) mergeados; contrato v3 com as respostas de 2026-11-12 proposto | **BLOQUEADO (B04)** |
 | M12-C1, M12-C2 | T5: núcleo de domínio, cenários não gravados, sem API nem tela | PARCIAL **só no domínio** (antes PENDENTE) |
 | M12-C3 | Nenhuma | PENDENTE |
 
@@ -111,7 +111,7 @@ Nenhuma linha vira PASS por esta atualização: a matriz exige teste e evidênci
 | Critério oficial / requisito | Implementação / evidência existente | Lacuna / categoria / dependência | Próxima ação / prova necessária | Status recomendado |
 | --- | --- | --- | --- | --- |
 | **M11-C1** — Catálogo autorizado por porção/preparo/teor conhecido | Consulta por teor API/BFF/UI implementada. E11; consulta/handoff e CI137aa547 | Canônica PENDENTE desatualizada; critérios finais de integração. Categoria:Teste/integração. B05 | Propor PARCIAL com evidência e conferir cobertura dos filtros/fontes. Aceite:Conhecido/zero/ausente, preparo, porção, fonte ativa autorizada e paginação | PARCIAL recomendado; oficial ainda PENDENTE |
-| **M11-C2** — Restrições confiáveis e mínimas, sem alegar compatibilidade por omissão | Caminho individualizado bloqueado; consulta genérica existe. E11; decisão explícita de não inferir restrições | Contrato estruturado de alergias/restrições confiável. Categoria:Dados/clínica/segurança. B04 | Planejar contrato e obter decisões realmente novas antes de individualizar. **Contrato v2 publicado em 2026-11-11** (`tasks/food06-m11-restricoes-contrato-v2.md`) com as decisões D1 a D11 do proprietário; as questões Q1 a Q11 seguem abertas e a validação clínica, jurídica e de privacidade não ocorreu. **Critério não atendido.** Aceite:IDs/regras/autorização/negações, sem compatibilidade presumida por omissão | BLOCKED |
+| **M11-C2** — Restrições confiáveis e mínimas, sem alegar compatibilidade por omissão | Caminho individualizado bloqueado; consulta genérica existe. E11; decisão explícita de não inferir restrições | Contrato estruturado de alergias/restrições confiável. Categoria:Dados/clínica/segurança. B04 | Planejar contrato e obter decisões realmente novas antes de individualizar. **Contrato v2 (D1 a D11) mergeado; contrato v3** (`tasks/food06-m11-restricoes-contrato-v3.md`) incorpora as respostas de 2026-11-12 (D7-a, Q1 a Q11) com matriz de 9 colunas e bloqueios DEV/ATV; a validação clínica, jurídica e de privacidade não ocorreu. **Critério não atendido.** Aceite:IDs/regras/autorização/negações, sem compatibilidade presumida por omissão | BLOCKED |
 | **M11-C3** — Prévia/confirmação e dependência FOOD05 protegida | Seleção→prévia e confirmação M04 existentes. E11/E04; 46browser/180serviço/150BFF históricos | Canônica PENDENTE desatualizada; dependência FOOD05 e jornada completa. Categoria:Integração/teste. B05; B04 quando individualizada | Registrar PARCIAL e provar capacidades/ausências sem mecanismo paralelo. Aceite:Sem gravação automática; prévia/confirmar/cancelar/stale; FOOD05 ausente bloqueia caminho dependente | PARCIAL recomendado; oficial ainda PENDENTE |
 
 ## M12
