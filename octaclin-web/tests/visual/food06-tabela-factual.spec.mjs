@@ -284,7 +284,8 @@ test('FOOD06 M07 distingue análises de planos não selecionados registradas no 
  await page.route(u=>u.pathname.endsWith('/analises-factuais/historico'),r=>r.fulfill({status:200,json:{schemaVersao:1,itens:[b,a],temMais:false}}));
  await preparar(page);await page.getByRole('button',{name:'Ver histórico de micronutrientes',exact:true}).click();
  const secao=page.getByRole('region',{name:'Comparar análises salvas'}),seletor=secao.getByRole('combobox',{name:'Antes',exact:true});
- const rotulos=await seletor.locator('option').allTextContents();expect(rotulos).toHaveLength(3);expect(new Set(rotulos).size).toBe(rotulos.length);await expect(page.getByRole('rowheader',{name:/Análise 2/})).toBeVisible();
+ // allTextContents() não espera: sem aguardar o histórico carregar a lista pode estar vazia (corrida vista no CI em máquina lenta).
+ await expect(seletor.locator('option')).toHaveCount(3);const rotulos=await seletor.locator('option').allTextContents();expect(rotulos).toHaveLength(3);expect(new Set(rotulos).size).toBe(rotulos.length);await expect(page.getByRole('rowheader',{name:/Análise 2/})).toBeVisible();
  await seletor.selectOption(a.registro.id);await expect(seletor).toHaveValue(a.registro.id);
 });
 for(const revogar of [false,true,'cancelar'])test(`FOOD06 relatório reautoriza antes de imprimir: revogado=${revogar}`,async({page})=>{
