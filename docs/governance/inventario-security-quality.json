@@ -1,11 +1,11 @@
 {
   "schemaVersion": 1,
   "repositorio": "octanutri-clin/octaclin",
-  "commitBase": "5ced18e637a4b5e028ce81b3be5fa34536e91c79",
-  "capturadoEm": "2026-11-11T21:27:26.287Z",
+  "commitBase": "d84b0f119068277d2a8179c50363e4a26fbe81b8",
+  "capturadoEm": "2026-11-11T22:17:29.136Z",
   "snapshot": {
     "codeScanning": {
-      "total": 207,
+      "total": 205,
       "alertas": [
         {
           "numero": 154,
@@ -14,7 +14,7 @@
           "categoria": "trivy-imagem-ia-service",
           "caminho": "library/octaclin-ia-service",
           "pacote": "apt",
-          "versaoInstalada": "3.0.3",
+          "versaoInstalada": "3.0.4",
           "versaoCorrigida": null,
           "severidade": "low",
           "severidadeQualidade": "note"
@@ -146,7 +146,7 @@
           "categoria": "trivy-imagem-ia-service",
           "caminho": "library/octaclin-ia-service",
           "pacote": "libapt-pkg7.0",
-          "versaoInstalada": "3.0.3",
+          "versaoInstalada": "3.0.4",
           "versaoCorrigida": null,
           "severidade": "low",
           "severidadeQualidade": "note"
@@ -2240,30 +2240,6 @@
           "severidadeQualidade": "warning"
         },
         {
-          "numero": 576,
-          "ferramenta": "Trivy",
-          "regra": "CVE-2026-109518",
-          "categoria": "trivy-imagem-ia-service",
-          "caminho": "library/octaclin-ia-service",
-          "pacote": "apt",
-          "versaoInstalada": "3.0.3",
-          "versaoCorrigida": "3.0.4",
-          "severidade": "high",
-          "severidadeQualidade": "error"
-        },
-        {
-          "numero": 577,
-          "ferramenta": "Trivy",
-          "regra": "CVE-2026-109518",
-          "categoria": "trivy-imagem-ia-service",
-          "caminho": "library/octaclin-ia-service",
-          "pacote": "libapt-pkg7.0",
-          "versaoInstalada": "3.0.3",
-          "versaoCorrigida": "3.0.4",
-          "severidade": "high",
-          "severidadeQualidade": "error"
-        },
-        {
           "numero": 578,
           "ferramenta": "Trivy",
           "regra": "CVE-2026-76844",
@@ -2494,7 +2470,7 @@
       ],
       "porFerramenta": {
         "Semgrep OSS": 1,
-        "Trivy": 206
+        "Trivy": 204
       }
     },
     "dependabot": {
@@ -2723,8 +2699,6 @@
         "code-scanning:573",
         "code-scanning:574",
         "code-scanning:575",
-        "code-scanning:576",
-        "code-scanning:577",
         "code-scanning:578",
         "code-scanning:579",
         "code-scanning:580",
@@ -2774,7 +2748,8 @@
         "Inferencia, sem inspecionar a imagem: como #578 segue aberto com a base python:3.14.10-slim fixada em #471, essa base ainda nao traz o zlib1g corrigido. Resolver exige uma base Debian mais nova ou outra decisao de base.",
         "Captura autenticada da main 903f4fecad579b7182a29ebb749787ff442e424a em 2026-11-09T23:56:51.831Z, run 42724463312 (workflow_dispatch); SHA-256 75d42f15da27e851f433822a837d0922807a96ca56a1242f38909f09bae3aa19, remontado do eco do log do job e conferido contra o hash e a contagem de partes declarados (25 partes, 54960 bytes): 201 Code Scanning, 3 Dependabot e zero Secret Scanning (192 e 3 na captura de 2026-11-09T00:18:46.890Z). Bytes em docs/governance/evidencias/2026-11-10/inventario-capturado.json.",
         "Trivy #576 (apt) e #577 (libapt-pkg7.0): 3.0.3 instalado, versao corrigida 3.0.4, CVE-2026-109518, high. Entram nesta causa por serem pacotes Debian da imagem IA; a correcao e a atualizacao do digest da base. A base atual e a linha python 3.15 (#481); o digest nao foi inspecionado nesta sessao.",
-        "Captura autenticada da main 5ced18e637a4b5e028ce81b3be5fa34536e91c79 em 2026-11-11T21:27:26.287Z, run 43103169438 (workflow_dispatch); SHA-256 a16c1dabe55bbe834871476cc919cb7db67f96c05faeb8a6c18eb6c9077b4b38, remontado do eco do log do job e conferido contra o hash e a contagem de partes declarados (26 partes, 56847 bytes): 207 Code Scanning, 3 Dependabot e zero Secret Scanning (201 e 3 na captura de 2026-11-09T23:56:51Z). Bytes em docs/governance/evidencias/2026-11-11/inventario-capturado.json. Novos #591 a #605: CVE-2026-107496, 88822, 88823, 95691 e 95692 em libssl3t64, openssl e openssl-provider-legacy 3.5.7-1~deb13u3, severidade none, sem versao corrigida. Entram nesta causa por serem pacotes Debian da imagem IA; nao ha correcao disponivel alem de uma base nova. #576 e #577 (apt 3.0.4) continuam abertos: o digest da base nao foi atualizado."
+        "Captura autenticada da main 5ced18e637a4b5e028ce81b3be5fa34536e91c79 em 2026-11-11T21:27:26.287Z, run 43103169438 (workflow_dispatch); SHA-256 a16c1dabe55bbe834871476cc919cb7db67f96c05faeb8a6c18eb6c9077b4b38, remontado do eco do log do job e conferido contra o hash e a contagem de partes declarados (26 partes, 56847 bytes): 207 Code Scanning, 3 Dependabot e zero Secret Scanning (201 e 3 na captura de 2026-11-09T23:56:51Z). Bytes em docs/governance/evidencias/2026-11-11/inventario-capturado.json. Novos #591 a #605: CVE-2026-107496, 88822, 88823, 95691 e 95692 em libssl3t64, openssl e openssl-provider-legacy 3.5.7-1~deb13u3, severidade none, sem versao corrigida. Entram nesta causa por serem pacotes Debian da imagem IA; nao ha correcao disponivel alem de uma base nova. #576 e #577 (apt 3.0.4) continuam abertos: o digest da base nao foi atualizado.",
+        "Recaptura da main d84b0f119068277d2a8179c50363e4a26fbe81b8 em 2026-11-11T22:17:29.136Z, run 43110480135 (workflow_dispatch), depois do merge da #520 (base python:3.15.2-slim, digest 65a65fc7b30b) e do Trivy da main concluido com sucesso; SHA-256 6a5228d66d78a3f5b022f1564bcabc4b4717df94e616f1d3621f351611d3b6e5, remontado do eco do log do job e conferido contra o hash e a contagem de partes declarados (26 partes, 56323 bytes): 205 Code Scanning, 3 Dependabot e zero Secret Scanning. Fecharam #576 e #577 (apt e libapt-pkg7.0 3.0.4, high), como previsto pela leitura da camada base da imagem; nenhum alerta novo. Bytes em docs/governance/evidencias/2026-11-11/inventario-capturado-pos-520.json. Permanecem abertos com versao corrigida os tres alertas de zlib1g (#289, #400 e #578): a camada base da 3.15.2 traz 1:1.3.dfsg+really1.3.1-1+b1, e a correcao esta em 1:1.3.dfsg+really1.3.1-1+deb13u1."
       ],
       "preCondicoes": [
         "A exploracao depende do pacote Debian estar alcancavel pelo fluxo do servico; ausencia de patch nao demonstra falso positivo.",
@@ -2784,7 +2759,7 @@
         "Runtime final executado como usuario nao-root octaclin; dependencias da aplicacao permanecem travadas por hash. A remocao do pip global regrediu depois da #481, foi corrigida na #500 e confirmada na recaptura de 2026-11-11 (SQ-2026-257 aposentada).",
         "A integracao de IA e opcional e exige IA_SERVICE_URL e IA_SERVICE_TOKEN em conjunto; configuracao parcial degrada de forma visivel sem expor token."
       ],
-      "impacto": "Imagem IA da main com 206 alertas Debian abertos: {'low': 65, 'medium': 75, 'high': 51, 'none': 15}. Ha patches reportados (o apt 3.0.4 high, #576 e #577); os demais residuos continuam sem correcao informada, inclusive os 15 de openssl com severidade none. Critical e a classificacao contextual conservadora, nao uma contagem de scanner critical.",
+      "impacto": "Imagem IA da main com 204 alertas Debian abertos: {'low': 65, 'medium': 75, 'high': 49, 'none': 15}. Tres deles (zlib1g, #289, #400 e #578) tem versao corrigida informada pelo scanner, 1:1.3.dfsg+really1.3.1-1+deb13u1, e a base python:3.15.2-slim traz 1:1.3.dfsg+really1.3.1-1+b1, anterior a ela; esses tres sao corrigiveis na imagem. Os outros 201 continuam sem correcao informada, inclusive os 15 de openssl com severidade none. Critical e a classificacao contextual conservadora, nao uma contagem de scanner critical.",
       "condicaoSaida": "Atualizar a imagem Python oficial para digest suportado que incorpore os patches disponiveis, validar compatibilidade, runtime, SBOM e Trivy; recapturar a main e reconciliar todas as referencias que fecharem."
     },
     {

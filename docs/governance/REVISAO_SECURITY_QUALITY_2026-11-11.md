@@ -65,3 +65,24 @@ recapturar; renovar a data so se o proprietario decidir aceitar o risco.
 
 - Decisao do proprietario sobre `SQ-2026-004` ate 2026-11-20.
 - Se a base for atualizada: recapturar depois do merge e reconciliar o que fechar.
+
+## Atualizacao depois da #520 (recaptura de 2026-11-11T22:17Z)
+
+- Run 43110480135 (`workflow_dispatch`, `main` `d84b0f11`), feito depois do merge da #520 e do
+  Trivy da `main` concluido com sucesso (capturar antes mostraria o estado anterior). JSON
+  remontado do eco e conferido contra hash e partes declarados
+  (`sha256=6a5228d6...b6e5`, 56323 bytes, 26 partes). Bytes em
+  [inventario-capturado-pos-520.json](evidencias/2026-11-11/inventario-capturado-pos-520.json).
+- Resultado: 205 Code Scanning, 3 Dependabot, zero Secret Scanning. Delta: **2 fechados
+  (#576 e #577, `apt` 3.0.4, high), 0 novos**. Os high caem de 51 para 49. Era o previsto pela
+  leitura da camada base da imagem antes da #520.
+- **Achado novo:** os alertas de `zlib1g` (#289, #400 e #578) continuam abertos e **tem versao
+  corrigida** (`1:1.3.dfsg+really1.3.1-1+deb13u1`). A camada base da `3.15.2-slim` traz
+  `1:1.3.dfsg+really1.3.1-1+b1`, anterior a essa versao. Sao corrigiveis na imagem (por
+  exemplo, fixar a versao do `zlib1g` no estagio final, como ja e feito com `zlib` nas imagens
+  Node); isso e uma PR propria, R4, e **nao** esta nesta.
+- `SQ-2026-004`: 204 alertas, 3 corrigiveis (zlib1g) e 201 sem correcao informada. `revisarEm`
+  segue em **2026-11-20**, sem renovar: a decisao de aceitar os 201 com prazo continua do
+  proprietario.
+- Gates: `pnpm test:inventario-security-quality` PASS (73 testes; 208 alertas cobertos) e RED antes
+  da atualizacao (inventario antigo, spec novo).
