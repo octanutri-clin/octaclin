@@ -262,3 +262,13 @@ versão menor do Python da tag do `FROM` e exige a mesma versão no `Dockerfile`
 precisa derivar a versão da mesma fonte da imagem; prova negativa sobre um caminho
 inexistente não prova nada. Confirmar o efeito real exige o build/harness do CI e a
 próxima varredura da main (não verificado localmente: sem Docker daemon).
+
+## 2026-11-13 — Inventário RLS deve preservar tabelas sem exclusão
+
+A tabela de concessões foi criada com SELECT/INSERT/UPDATE por tenant e exclusão
+proibida para preservar histórico. O inventário RLS agregado ainda exigia DELETE
+por padrão, reprovando o backend nas duas PRs empilhadas apesar das provas dedicadas.
+Controle: incluir a tabela na lista nominal de estado sem exclusão, que exige
+exatamente as três políticas isoladas e recusa DELETE/ALL. Ao adicionar uma tabela
+com retenção, executar também o inventário agregado; a prova dedicada da migration
+não substitui esse gate. Nunca ampliar privilégios para satisfazer o verificador.
