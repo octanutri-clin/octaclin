@@ -44,7 +44,7 @@ describe('confirmação de restrição', () => {
     expect(autorizarRestricaoClinica).toHaveBeenCalledWith(c.g, expect.anything(), ator, 'paciente');
     expect(decifrarConteudoRestricao).toHaveBeenCalled();
     expect(cifrarConteudoRestricao).toHaveBeenCalledTimes(2);
-    expect(c.atual.update).toHaveBeenCalledWith(expect.objectContaining({ id: 'restricao', tenantId: 'tenant', pacienteId: 'paciente', revisao: 1 }), expect.objectContaining({ confirmacao: 'confirmada', revisao: 2 }));
+    expect(c.atual.update).toHaveBeenCalledWith(expect.objectContaining({ id: 'restricao', tenantId: 'tenant', pacienteId: 'paciente', revisao: 1 }), expect.objectContaining({ confirmacao: 'confirmada', revisao: 2, atualizadoEm: expect.any(Function) }));
     expect(c.revisoes.insert).toHaveBeenCalledWith(expect.objectContaining({ evento: 'confirmacao', numero: 2, tenantId: 'tenant', pacienteId: 'paciente' }));
     expect(registrarAuditoriaNaTransacao).toHaveBeenCalledWith(c.g, expect.objectContaining({ metadados: {} }));
   });
@@ -91,7 +91,7 @@ describe('confirmação de restrição', () => {
   it('inativa restrição confirmada com justificativa cifrada, confirmação e histórico', async () => {
     const c = preparar(); c.linha.confirmacao = 'confirmada';
     await expect(c.inativar({ motivo: 'informacao_clinica_revisada', justificativa: 'Justificativa sintética', confirmacaoEmDoisPassos: true })).resolves.toMatchObject({ id: 'restricao', revisao: 2, estado: 'inativa' });
-    expect(c.atual.update).toHaveBeenCalledWith(expect.objectContaining({ revisao: 1, tenantId: 'tenant', pacienteId: 'paciente' }), expect.objectContaining({ estado: 'inativa', revisao: 2 }));
+    expect(c.atual.update).toHaveBeenCalledWith(expect.objectContaining({ revisao: 1, tenantId: 'tenant', pacienteId: 'paciente' }), expect.objectContaining({ estado: 'inativa', revisao: 2, atualizadoEm: expect.any(Function) }));
     expect(cifrarCampo).toHaveBeenCalled();
     expect(c.revisoes.insert).toHaveBeenCalledWith(expect.objectContaining({ evento: 'inativacao', motivoInativacao: 'informacao_clinica_revisada', confirmacaoDoisPassos: true }));
     expect(registrarAuditoriaNaTransacao).toHaveBeenCalledWith(c.g, expect.objectContaining({ metadados: {} }));

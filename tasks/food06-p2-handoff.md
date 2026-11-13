@@ -49,6 +49,12 @@
 - CI `43451100835` do HEAD `d0e93bf6`: Backend PASS, incluindo confirmação,
   invalidação e rollback em banco; suíte geral 5.068 PASS/181 SKIPPED e etapa
   RLS 270/270 PASS, conjuntos sobrepostos. Não estender esse resultado ao novo HEAD.
+- CI `43455691278` do HEAD `14574a47`: Backend PASS; 5.078 testes PASS e 181
+  SKIPPED na suíte geral, RLS/Testcontainers 270/270 PASS (conjuntos sobrepostos).
+  Inativação positiva e negativas de tenant/carteira foram executadas em banco.
+  Incremento posterior adiciona prova de concorrência com barreira, rollback na
+  segunda auditoria e atualização de timestamps; CI desse novo HEAD pendente.
+  A prova da corrida ausência × restrição e integração do serviço seguem pendentes.
 - Segundo incremento em preparação: confirmação transacional da restrição com
   CAS, codec e histórico/auditoria; 29 testes focados PASS, incluindo guarda e
   helper. Serviço ainda sem provider/rota/flag. Revisão independente encontrou

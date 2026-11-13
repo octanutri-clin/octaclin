@@ -53,12 +53,12 @@ export class ServicoConfirmacaoRestricao {
       const snapshot = cifrarConteudoRestricao(this.cripto, conteudo, { ...base, revisao: proxima, finalidade: 'revisao_restricao' });
       const motivoCifrado = cifrarCampo(this.cripto, 'restricoes_pacientes_revisoes.justificativa_criptografada', justificativa,
         { tenantId: usuario.tenantId, pacienteId, registroId: restricaoId, revisao: proxima });
-      const alterado = await repo.update({ ...where, revisao }, { revisao: proxima, estado: 'inativa', conteudoCriptografado: atual });
+      const alterado = await repo.update({ ...where, revisao }, { revisao: proxima, estado: 'inativa', conteudoCriptografado: atual, atualizadoEm: () => 'clock_timestamp()' });
       if (alterado.affected !== 1) throw new ConflictException('Restrição alterada ou indisponível.');
       if (avaliacao?.situacao === 'restricoes_registradas') {
         const filtro = { id: avaliacao.id, tenantId: usuario.tenantId, pacienteId, revisao: avaliacao.revisao };
         const mudou = await avaliacoes.update(filtro, { situacao: 'nao_informado', revisao: avaliacao.revisao + 1,
-          confirmadoPorUsuarioId: null, confirmadoEm: null, venceEm: null });
+          confirmadoPorUsuarioId: null, confirmadoEm: null, venceEm: null, atualizadoEm: () => 'clock_timestamp()' });
         if (mudou.affected !== 1) throw new ConflictException('Avaliação alterada; tente novamente.');
         await g.getRepository(RevisaoAvaliacaoRestricoesOrm).insert({ tenantId: usuario.tenantId, pacienteId,
           avaliacaoId: avaliacao.id, numero: avaliacao.revisao + 1, situacao: 'nao_informado', autorUsuarioId: usuario.usuarioId, venceEm: null });
@@ -96,12 +96,12 @@ export class ServicoConfirmacaoRestricao {
       const proxima = revisao + 1;
       const atual = cifrarConteudoRestricao(this.cripto, conteudo, { ...base, revisao: proxima, finalidade: 'restricao' });
       const snapshot = cifrarConteudoRestricao(this.cripto, conteudo, { ...base, revisao: proxima, finalidade: 'revisao_restricao' });
-      const alterado = await repo.update({ ...where, revisao }, { revisao: proxima, confirmacao: 'confirmada', confirmadoPorUsuarioId: usuario.usuarioId, confirmadoEm: new Date(), conteudoCriptografado: atual });
+      const alterado = await repo.update({ ...where, revisao }, { revisao: proxima, confirmacao: 'confirmada', confirmadoPorUsuarioId: usuario.usuarioId, confirmadoEm: new Date(), conteudoCriptografado: atual, atualizadoEm: () => 'clock_timestamp()' });
       if (alterado.affected !== 1) throw new ConflictException('Restrição alterada ou indisponível.');
       if (avaliacao?.situacao === 'sem_restricoes_confirmadas') {
         const filtro = { id: avaliacao.id, tenantId: usuario.tenantId, pacienteId, revisao: avaliacao.revisao };
         const mudou = await avaliacoes.update(filtro, { situacao: 'nao_informado', revisao: avaliacao.revisao + 1,
-          confirmadoPorUsuarioId: null, confirmadoEm: null, venceEm: null });
+          confirmadoPorUsuarioId: null, confirmadoEm: null, venceEm: null, atualizadoEm: () => 'clock_timestamp()' });
         if (mudou.affected !== 1) throw new ConflictException('Avaliação alterada; tente novamente.');
         await g.getRepository(RevisaoAvaliacaoRestricoesOrm).insert({ tenantId: usuario.tenantId, pacienteId,
           avaliacaoId: avaliacao.id, numero: avaliacao.revisao + 1, situacao: 'nao_informado', autorUsuarioId: usuario.usuarioId, venceEm: null });
