@@ -470,3 +470,70 @@ suite('FOOD06 P1b 1083 down em PostgreSQL 15 descartável', () => {
     expect((await owner.query('select count(*)::int n from avaliacoes_restricoes_pacientes')).rows[0].n).toBe(1);
   });
 });
+
+suite('FOOD06 P1b 1083 down × escrita concorrente (R4-01 do parecer independente)', () => {
+  let container: StartedTestContainer, owner: Client, escritor: Client, conn: Record<string, unknown>;
+  const t = randomUUID(), p = randomUUID();
+  beforeAll(async () => {
+    container = await new GenericContainer('postgres:15-alpine').withTmpFs({ '/var/lib/postgresql/data': 'rw,noexec,nosuid,size=128m' })
+      .withEnvironment({ POSTGRES_USER: 'owner', POSTGRES_PASSWORD: 'owner-test', POSTGRES_DB: 'food06_restricoes_corrida' }).withExposedPorts(5432)
+      .withWaitStrategy(Wait.forLogMessage(/database system is ready to accept connections/i, 2)).withStartupTimeout(60000).start();
+    conn = { host: container.getHost(), port: container.getMappedPort(5432), database: 'food06_restricoes_corrida' };
+    owner = new Client({ ...conn, user: 'owner', password: 'owner-test' } as never); await owner.connect();
+    await fixture(owner);
+    await owner.query('insert into tenants values($1)', [t]); await owner.query('insert into pacientes values($1,$2)', [p, t]);
+    await aplicar(conn, 'up');
+    await owner.query(`create role food06_runtime login password 'runtime-test' nosuperuser nocreatedb nocreaterole nobypassrls;
+      grant connect on database food06_restricoes_corrida to food06_runtime; grant usage on schema public to food06_runtime;
+      grant select,insert,update on all tables in schema public to food06_runtime;`);
+    escritor = new Client({ ...conn, user: 'food06_runtime', password: 'runtime-test' } as never); await escritor.connect();
+  }, 120000);
+  afterAll(async () => { await escritor?.end(); await owner?.end(); await container?.stop(); }, 30000);
+
+  it('com a sessão em row_security=off e sem transação, o down com tabelas VAZIAS recusa e não remove nada', async () => {
+    const m = new DataSource({ type: 'postgres', ...conn, username: 'owner', password: 'owner-test', entities: [], synchronize: false, logging: false } as never);
+    await m.initialize(); const q = m.createQueryRunner();
+    try {
+      await q.query('set row_security = off'); // nível de sessão, como na prova do revisor
+      expect(q.isTransactionActive).toBe(false);
+      await expect(new RestricoesAlimentares1720000001083().down(q)).rejects.toThrow('Rollback recusado');
+    } finally { await q.release(); await m.destroy(); }
+    expect((await owner.query("select count(*)::int n from pg_class where relkind='r' and relname = any($1)", [[...TABELAS_RESTRICOES_ALIMENTARES]])).rows[0].n).toBe(7);
+  });
+
+  it('escrita da runtime iniciada depois da checagem espera o lock e nunca é confirmada para depois sumir', async () => {
+    const m = new DataSource({ type: 'postgres', ...conn, username: 'owner', password: 'owner-test', entities: [], synchronize: false, logging: false } as never);
+    await m.initialize(); const q = m.createQueryRunner();
+    let escrita: Promise<unknown> | undefined;
+    const original = q.query.bind(q);
+    // Intercala exatamente onde o parecer demonstrou a corrida: logo depois da checagem de existência, antes dos DROP.
+    (q as unknown as { query: (s: string, p?: unknown[]) => Promise<unknown> }).query = async (sql: string, params?: unknown[]) => {
+      const r = await original(sql, params);
+      if (/^\s*select exists/i.test(sql) && !escrita) {
+        escrita = (async () => {
+          await escritor.query('begin');
+          await escritor.query("select set_config('app.tenant_id', $1, true)", [t]);
+          await escritor.query('insert into avaliacoes_restricoes_pacientes(tenant_id,paciente_id) values($1,$2)', [t, p]);
+          await escritor.query('commit');
+        })().catch(async e => { await escritor.query('rollback').catch(() => undefined); throw e; });
+        escrita.catch(() => undefined);
+        // a escrita precisa estar BLOQUEADA no lock antes de o down seguir
+        let esperando = false;
+        for (let i = 0; i < 100 && !esperando; i++) {
+          esperando = (await owner.query("select 1 from pg_stat_activity where usename='food06_runtime' and wait_event_type='Lock'")).rows.length > 0;
+          if (!esperando) await new Promise(res => setTimeout(res, 50));
+        }
+        expect(esperando).toBe(true);
+      }
+      return r;
+    };
+    try {
+      await q.startTransaction();
+      await new RestricoesAlimentares1720000001083().down(q);
+      await q.commitTransaction();
+    } finally { await q.release(); await m.destroy(); }
+    // a escrita concorrente falha (tabela removida); nada foi confirmado e depois apagado
+    await expect(escrita).rejects.toBeTruthy();
+    expect((await owner.query("select to_regclass('public.avaliacoes_restricoes_pacientes') tbl")).rows[0].tbl).toBeNull();
+  });
+});

@@ -20,6 +20,8 @@ import { validarResultadoReconfirmacao } from '../dominio/reconfirmacao-restrica
  */
 export const FORMATO_CAMPO_RESTRICOES = 'food06-restricoes-campo' as const;
 export const VERSAO_ENVELOPE_RESTRICOES = 1 as const;
+/** Mesmo teto do `check (octet_length(...) between 32 and 65536)` da 1083 (R4-02 do parecer independente). */
+export const LIMITE_BYTES_CIFRA = 65536 as const;
 
 /** O desfecho persiste só os dados (sem o marcador derivado `alteraRestricao`), e é revalidado na leitura. */
 function desfechoPersistido(v: unknown) {
@@ -74,7 +76,10 @@ export function cifrarCampo(cripto: CriptografiaDadosSensiveis, campo: CampoCifr
   const v = normalizarVinculo(d, vinculo);
   let valido: unknown;
   try { valido = d.validar(valor); } catch { throw new ConteudoRestricaoInvalidoError(); }
-  return cripto.criptografar(JSON.stringify({ formato: FORMATO_CAMPO_RESTRICOES, versao: VERSAO_ENVELOPE_RESTRICOES, campo, vinculo: v, valor: valido }));
+  const cifra = cripto.criptografar(JSON.stringify({ formato: FORMATO_CAMPO_RESTRICOES, versao: VERSAO_ENVELOPE_RESTRICOES, campo, vinculo: v, valor: valido }));
+  // Recusa com erro de domínio o que a coluna recusaria no INSERT: nunca entrega uma cifra impersistível.
+  if (cifra.length > LIMITE_BYTES_CIFRA) throw new ConteudoRestricaoInvalidoError();
+  return cifra;
 }
 
 export function decifrarCampo(cripto: CriptografiaDadosSensiveis, campo: CampoCifrado, cifrado: Buffer, esperado: VinculoCampo): unknown {

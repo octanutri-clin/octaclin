@@ -368,11 +368,16 @@ export class RestricoesAlimentares1720000001083 implements MigrationInterface {
 
   public async down(q: QueryRunner): Promise<void> {
     // Só reverte antes de haver dado (contrato v2 §6, PR C). Com qualquer linha, recusa e não toca em nada.
+    // Parecer R4 independente (R4-01): exige transação explícita e trava as sete tabelas em ACCESS EXCLUSIVE ANTES da
+    // checagem, até o commit. Uma escrita concorrente espera o lock e falha depois do DROP; nunca é confirmada para
+    // depois desaparecer. A checagem roda depois do lock (leitura atual em READ COMMITTED, o padrão do TypeORM).
+    if (q.isTransactionActive !== true) throw new Error('Rollback recusado: execute o down dentro de transacao explicita.');
     // Sob FORCE RLS um owner comum veria zero linhas: `row_security = off` faz a consulta falhar em vez de mentir.
     await q.query('set local row_security = off');
     // Fora de transação o `set local` não tem efeito: um owner sem BYPASSRLS contaria zero linhas sob FORCE.
     const rs: Array<{ rs: string }> = await q.query("select current_setting('row_security') as rs");
     if (rs[0]?.rs !== 'off') throw new Error('Rollback recusado: execute o down dentro de transacao (row_security nao ficou off).');
+    await q.query(`lock table ${TABELAS_RESTRICOES_ALIMENTARES.join(', ')} in access exclusive mode`);
     const linhas: Array<{ existe: boolean }> = await q.query(
       `select ${TABELAS_RESTRICOES_ALIMENTARES.map(t => `exists(select 1 from ${t})`).join(' or ')} as existe`
     );

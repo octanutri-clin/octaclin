@@ -55,6 +55,19 @@ Invariantes já aprovados preservados: restrição confirmada não vence (motor,
 | Mapeamento do tenant nunca `global`; liberação com evidência | `check` | motor (`exige_confirmacao`) |
 | Permissão clínica específica (Q6) | **não** | Auth (pendente) |
 
+## Parecer R4 independente (Codex, 2026-11-12, HEAD `f6121c0`)
+
+Revisor sem participação na implementação. Veredito sobre `f6121c0`: **BLOQUEAR MERGE**, só pelo R4-01. RLS, FKs com MATCH SIMPLE,
+histórico, estado, constraints, privilégios, registro e os 10 campos cifrados foram confirmados sem achado.
+
+| Achado | Severidade | Tratamento |
+| --- | --- | --- |
+| **R4-01:** a checagem de tabelas vazias do `down` não serializava com escritores; uma linha confirmada depois da checagem era apagada pelo DROP. A guarda de transação também era contornável com `row_security=off` na sessão | ALTA | **Corrigido:** transação explícita obrigatória e `LOCK TABLE … IN ACCESS EXCLUSIVE MODE` nas 7 tabelas antes da checagem, mantido até o commit. Testes em PostgreSQL descartável com duas conexões (a escrita espera o lock e falha depois do DROP, sem confirmar nada que depois some) e com sessão em `row_security=off` sem transação |
+| **R4-02:** o codec aceitava um pedido (200 × 1000) cuja cifra (205.641 bytes) a coluna recusa (`octet_length ≤ 65536`) | MÉDIA | **Corrigido agora** (o parecer admitia a P2): o codec recusa com erro de domínio cifras acima de `LIMITE_BYTES_CIFRA`, conferido contra a migration, com teste de fronteira em Unicode |
+| Owner sem BYPASSRLS recusa o rollback vazio com 42501 | INFO | Falha fechada, sem falso zero; registrado no procedimento (R2) |
+| O banco não obriga histórico por atualização de estado | INFO | R8, na P2, para avaliação e restrição |
+| Falha do teste do catálogo TACO no checkout Windows (CRLF) | NA | Ambiente do revisor; o blob é idêntico na base e no HEAD, não é regressão do diff |
+
 ## Revisão `tenant-security-reviewer` (2026-11-12, NÃO independente)
 
 Subagente do mesmo tipo de modelo do autor, somente leitura, sobre `a794aee` e `beda2b1`. Veredito: sem achado crítico ou alto, sem caminho cross-tenant;
@@ -78,13 +91,13 @@ Estados: RESOLVIDO · EM IMPLEMENTAÇÃO · AGUARDA VALIDAÇÃO HUMANA · AGUARD
 | ID | Estado | O que foi resolvido | Evidência | O que falta |
 | --- | --- | --- | --- | --- |
 | R1 | RESOLVIDO | Decisão de confirmação imutável (quem, quando, `confirmada`↔`rejeitada`, volta a `pendente`) | Trigger da 1083; integração "estado: UPDATE…"; mutações `r4_decisao_reescrita`, `r4_volta_pendente`, `volta_pendente` | — |
-| R2 | RESOLVIDO | `down` só com tabelas vazias e só em transação; com dado ou sem `row_security = off`, recusa | Specs estático e de integração do `down`; mutações `down_sem_guarda`, `r4_down_sem_transacao` | — |
+| R2 | RESOLVIDO | `down` exige transação explícita (`isTransactionActive`), trava as 7 tabelas em `ACCESS EXCLUSIVE` antes da checagem de existência (corrige a corrida R4-01 do parecer independente) e só remove com tabelas vazias | Specs estático e de integração do `down`, inclusive duas conexões com escrita concorrente e sessão com `row_security=off` sem transação; mutações `sem_lock`, `lock_fraco`, `sem_transacao_explicita`, `down_sem_guarda` | Procedimento: o rollback vazio exige owner superusuário ou com BYPASSRLS, fora de banda; owner sem bypass recusa com 42501 (falha fechada). Nunca conceder esse poder ao runtime |
 | R3 | RESOLVIDO | Um codec para os 10 campos cifrados, vínculo de campo/tenant/registro/revisão/paciente, falha fechada | `codec-conteudo-restricao.spec.ts` (registro × colunas da 1083, cópias, versão, adulteração); integração "R3 (#531)"; mutações `r3_*` | — |
 | R4 | RESOLVIDO (escopo P1b) | Guarda cobre 7 entidades e 7 tabelas, aspas, `require`, `import()`, barrel e SQL cru; listas nominais | `guarda-escrita-restricoes.spec.ts`; mutações `r4_*` | P2: testes comportamentais dos serviços reais (validar, cifrar, autorizar, sem entidade crua por HTTP) |
 | R5 | EM IMPLEMENTAÇÃO (P2) | — | — | Recifrar na mesma transação ao avançar a revisão; testes de conflito e rollback |
 | R6 | EM IMPLEMENTAÇÃO (Auth/P2) | — | — | Identidade e carteira pelo servidor; negativos de outro paciente/tenant; resposta idêntica para inexistente e não autorizado |
 | R7 | RESOLVIDO | Metadados em claro mantidos, justificados e classificados | `docs/agents/DATA_CLASSIFICATION.md` | Parecer jurídico segue no ATV-2 |
-| R8 | EM IMPLEMENTAÇÃO (P2) | — | — | Estado e histórico da avaliação na mesma transação; concorrência e rollback |
+| R8 | EM IMPLEMENTAÇÃO (P2) | — | — | Estado e histórico na mesma transação, para a avaliação **e para a restrição** (revisões, eventos e Q3): o banco não obriga uma linha de histórico por atualização de estado |
 | B04 | EM IMPLEMENTAÇÃO | Persistência cifrada, transições, origem e evidência de mapeamento, falha fechada, histórico (P1b) | Esta PR | Auth (Q6), P2 (serviços e integração com o motor), depois AGUARDA VALIDAÇÃO HUMANA (Q1, Q4) |
 | M11-C2 | EM IMPLEMENTAÇÃO | Base de dados e domínio | Esta PR, #526, #529 | Jornada integrada (P2–P4) e prova dos critérios |
 | ATV-1 | AGUARDA VALIDAÇÃO HUMANA | Motor inerte sem regra validada | #526 | Ficha clínica e aprovação real do responsável clínico |
@@ -95,7 +108,7 @@ Estados: RESOLVIDO · EM IMPLEMENTAÇÃO · AGUARDA VALIDAÇÃO HUMANA · AGUARD
 | ATV-6 | EM IMPLEMENTAÇÃO (P2/P3) | — | — | Negar o novo fluxo do portal quando a representação não for suportada, com negativos |
 | ATV-7 | EM IMPLEMENTAÇÃO (P3) | — | — | Interface; depois testes com pessoas reais |
 | ATV-8 | AGUARDA AUTORIZAÇÃO OPERACIONAL | Ensaios só em PostgreSQL descartável | Integração da 1083 | Checklist por ambiente e execução autorizada |
-| ATV-9 | AGUARDA VALIDAÇÃO HUMANA | Pacote para revisão independente (ChatGPT/Codex) | Briefing da #531 | Parecer independente e correção dos achados confirmados |
+| ATV-9 | EM IMPLEMENTAÇÃO | Parecer R4 independente do Codex recebido (HEAD `f6121c0`, veredito BLOQUEAR por R4-01); R4-01 e R4-02 corrigidos | Seção "Parecer R4 independente" abaixo | Confirmação do revisor sobre as correções; UX B/C quando houver interface |
 
 ## Fora de escopo (sem tabela nesta PR)
 

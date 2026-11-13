@@ -128,3 +128,27 @@ describe('FOOD06 R3: vínculo contextual em todos os campos cifrados', () => {
     }
   });
 });
+
+/* ───────────── R4-02 (parecer independente): limite em bytes coerente com a coluna ───────────── */
+import { LIMITE_BYTES_CIFRA } from './codec-conteudo-restricao';
+describe('FOOD06 R4-02: o codec nunca entrega cifra que a coluna recusaria', () => {
+  const campo: CampoCifrado = 'solicitacoes_restricoes_pacientes.conteudo_criptografado';
+  it('o limite do codec é o mesmo octet_length máximo da migration', () => {
+    const sql = readFileSync(join(__dirname, '..', '..', '..', 'infraestrutura', 'banco-dados', 'migracoes', '1720000001083-RestricoesAlimentares.ts'), 'utf8');
+    expect(sql).toContain(`between 32 and ${LIMITE_BYTES_CIFRA}`);
+    expect(LIMITE_BYTES_CIFRA).toBe(65536);
+  });
+  it('pedido válido no domínio mas grande demais (200 × 1000) é recusado com erro de domínio, sem cifra', () => {
+    const itens = Array.from({ length: 200 }, (_, i) => ({ item: `i${i}`, texto: 'x'.repeat(1000) }));
+    expect(() => cifrarCampo(cripto, campo, { itens }, vinc(campo))).toThrow(ConteudoRestricaoInvalidoError);
+  });
+  it('fronteira em bytes com Unicode multibyte: o que passa cabe na coluna, o que não cabe é recusado', () => {
+    const v = vinc(campo);
+    const tamanho = (n: number) => { try { return cifrarCampo(cripto, campo, { itens: Array.from({ length: n }, (_, i) => ({ item: `i${i}`, texto: 'ç'.repeat(1000) })) }, v).length; } catch (e) { if (e instanceof ConteudoRestricaoInvalidoError) return -1; throw e; } };
+    let ultimoOk = 0;
+    for (let n = 1; n <= 200; n++) { const t = tamanho(n); if (t === -1) break; expect(t).toBeLessThanOrEqual(LIMITE_BYTES_CIFRA); ultimoOk = n; }
+    expect(ultimoOk).toBeGreaterThan(0);
+    expect(ultimoOk).toBeLessThan(200);
+    expect(tamanho(ultimoOk + 1)).toBe(-1);
+  });
+});
