@@ -9,7 +9,7 @@ import { UsuarioOrm } from '../../usuarios/infraestrutura/usuario.orm';
 import { UserActionLogOrm } from '../../../infraestrutura/auditoria/user-action-log.orm';
 import { ConcessaoPermissaoUsuarioOrm } from '../infraestrutura/concessao-permissao-usuario.orm';
 import type { UsuarioAutenticado, PapelUsuario } from '../dominio/usuario-autenticado';
-import { ServicoConcessoesPermissao } from './servico-concessoes-permissao';
+import { revogarConcessoesPorAlteracaoAcesso, ServicoConcessoesPermissao } from './servico-concessoes-permissao';
 
 const suite = process.env.RLS_TESTCONTAINERS === 'true' ? describe : describe.skip;
 suite('Auth-2 serviço real com PostgreSQL15 descartável e runtime RLS', () => {
@@ -147,6 +147,25 @@ suite('Auth-2 serviço real com PostgreSQL15 descartável e runtime RLS', () => 
       expect(bloqueada).toBe(true);expect((await linhas(u.usuarioId))[0].revogada_em).toBeNull();
     }finally{liberar();await acao;await revogacao;}
     await expect(s.exigir(tenant,u.usuarioId,'restricoes.confirmar')).rejects.toMatchObject({status:403});
+  });
+  it('cascata persiste usuário, revogação e auditoria atomicamente, preservando outros usuários e o histórico',async()=>{
+    const ator=await usuario('Client'),u=await usuario(),outro=await usuario();
+    await s.conceder(u,dados(u));await s.conceder(outro,dados(outro));
+    const alterar=async(g:import('typeorm').EntityManager)=>{
+      await g.getRepository(UsuarioOrm).update({tenantId:tenant,id:u.usuarioId},{ativo:false});
+      await revogarConcessoesPorAlteracaoAcesso(g,tenant,u.usuarioId,ator.usuarioId);
+    };
+    await expect(executor.executar(tenant,async g=>{await alterar(g);throw new Error('Falha sintética posterior');})).rejects.toThrow('Falha sintética posterior');
+    expect((await linhas(u.usuarioId))[0].revogada_em).toBeNull();
+    expect((await owner.query('select ativo from usuarios where id=$1',[u.usuarioId])).rows[0].ativo).toBe(true);
+    expect((await owner.query("select id from user_action_logs where acao='permissoes_usuario.revogar_por_alteracao_acesso' and recurso_id=$1",[(await linhas(u.usuarioId))[0].id])).rows).toHaveLength(0);
+    await executor.executar(tenant,alterar);await executor.executar(tenant,alterar);
+    expect((await linhas(u.usuarioId))[0]).toMatchObject({revogada_por:ator.usuarioId,usuario_id:u.usuarioId});
+    expect((await linhas(u.usuarioId))[0].revogada_em).not.toBeNull();expect((await linhas(outro.usuarioId))[0].revogada_em).toBeNull();
+    await expect(s.conceder(outro,dados(u))).rejects.toMatchObject({status:403});
+    await owner.query('update usuarios set ativo=true where id=$1',[u.usuarioId]);
+    await expect(s.exigir(tenant,u.usuarioId,'restricoes.confirmar')).rejects.toMatchObject({status:403});
+    expect((await owner.query("select metadados from user_action_logs where acao='permissoes_usuario.revogar_por_alteracao_acesso' and recurso_id=$1",[(await linhas(u.usuarioId))[0].id])).rows).toEqual([{metadados:{}}]);
   });
   it('falha da auditoria faz rollback integral da concessão e da revogação',async()=>{
     const u=await usuario();await owner.query("alter table user_action_logs add constraint audit_fail check(acao <> 'permissoes_usuario.conceder') not valid");

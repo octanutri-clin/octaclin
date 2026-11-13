@@ -41,7 +41,7 @@ sem migrations novas. O guard síncrono e a matriz de papéis permanecem intacto
 - Dependências reaproveitadas em modo leitura: grafo local não corresponde
   integralmente ao lock (TypeORM 1.1.1/Testcontainers 12.1.0); CI com lock exato
   continua necessário. Não foram alterados manifestos, engines ou lockfiles.
-- Endpoints e ligação ao ciclo de vida: ainda pendentes neste checkpoint.
+- Checkpoint inicial do serviço; complementado pela etapa 2 abaixo.
 - R4 independente e CI desta branch: NOT RUN neste checkpoint.
 
 ## Limites e rollback
@@ -51,3 +51,25 @@ Migration 1084 pertence à Auth-1 e só foi usada no PostgreSQL descartável.
 Reverter código não apaga concessões nem auditoria; não executar `down` para
 apagar histórico. Futuro consumidor clínico deve permanecer fechado enquanto o
 contrato e os gates de ativação não forem liberados.
+
+## Etapa 2 — HTTP e ciclo de vida
+
+- POST `/auth/concessoes-permissao`: usuário alvo, permissão fechada, motivo
+  administrativo fechado e confirmação estrita; 201. POST `/:id/revogar`: somente
+  confirmação; 200 e replay seguro por ID. GET `/usuarios/:usuarioId`: histórico
+  paginado (página 1–1000, limite 1–50, padrão 25). Guardas de sessão, papel e
+  `console.acessar`; serviço revalida o banco. Respostas `private, no-store`.
+- DTOs por allowlist e parâmetros UUID; nenhuma credencial adicional ou tenant
+  aceito no payload. Provider exportado no ModuloAuth; guard síncrono intacto.
+- Cascata em `modulos/clientes/aplicacao/servico-usuarios-cliente.ts` (o caminho
+  em `integracoes` citado no handoff não existe). Reusa a mesma transação de
+  desativação, revogação de convite e mudança de papel; reativar não recria grant.
+- RED HTTP: 6 falhas funcionais por rotas ausentes; GREEN: 6/6 PASS.
+- RED cascata: 1 falha funcional / 16 PASS (não contada a primeira execução
+  interrompida por erro de compilação da fixture, corrigido antes do RED).
+- GREEN HTTP + ciclo de vida + piloto legado: 24/24 PASS em 3 suítes.
+- GREEN PostgreSQL ampliado: 23/23 PASS; cascata confirma estado persistido,
+  auditoria única, preservação de outro usuário, não reabilitação implícita e
+  rollback conjunto de usuário/concessão/auditoria.
+- Typecheck: PASS. Redação de auditoria: 24/24 PASS; nenhuma chave nova livre.
+- Novo teste adicionado ao runner oficial `test:rls:testcontainers`.
