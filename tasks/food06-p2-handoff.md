@@ -38,6 +38,17 @@
   (270/270), incluindo esta prova; suíte geral 5.059 PASS, 181 SKIPPED. São grupos
   sobrepostos, não somar. O CI do HEAD seguinte deve ser conferido separadamente.
 - Nenhum SQL externo, migration, deploy, merge ou configuração externa alterada.
+- Terceiro incremento: método de inativação ainda desconectado, com motivo fechado,
+  confirmação explícita, justificativa cifrada, CAS, histórico/auditoria e
+  invalidação conservadora da avaliação. Não prova P4 nem invalidação efetiva de
+  prévias. Revisão independente apontou inconsistência entre validadores de texto;
+  corrigida com erro 400 genérico e testes sem eco. Atualização contraditória da
+  avaliação falha fechado. Prova PostgreSQL de inativação preparada para CI.
+  Faltam provas de corrida e rollback em banco para inativação, integração Nest,
+  flag e rotas; não ativar nem considerar P2 concluída.
+- CI `43451100835` do HEAD `d0e93bf6`: Backend PASS, incluindo confirmação,
+  invalidação e rollback em banco; suíte geral 5.068 PASS/181 SKIPPED e etapa
+  RLS 270/270 PASS, conjuntos sobrepostos. Não estender esse resultado ao novo HEAD.
 - Segundo incremento em preparação: confirmação transacional da restrição com
   CAS, codec e histórico/auditoria; 29 testes focados PASS, incluindo guarda e
   helper. Serviço ainda sem provider/rota/flag. Revisão independente encontrou
