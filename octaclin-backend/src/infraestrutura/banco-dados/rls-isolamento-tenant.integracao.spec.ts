@@ -884,6 +884,44 @@ descrever('RLS e isolamento multi-tenant integral em Postgres real', () => {
     expect(avaliada.rows).toEqual([{ situacao: 'nao_informado', revisao: 2, confirmado_por_usuario_id: null, confirmado_em: null, vence_em: null }]);
     const historicoAvaliacao = await cliente.query('select numero,situacao from avaliacoes_restricoes_revisoes where avaliacao_id=$1', [avaliacao.rows[0].id]);
     expect(historicoAvaliacao.rows).toEqual([{ numero: 2, situacao: 'nao_informado' }]);
+    const auditorias = await cliente.query('select acao,usuario_id,tenant_id,metadados from user_action_logs where recurso_id = any($1::uuid[]) order by acao', [[avaliacao.rows[0].id, restricaoId]]);
+    expect(auditorias.rows).toEqual([
+      { acao: 'restricoes.avaliacao_invalidada', usuario_id: dados.usuarioId, tenant_id: tenantP2, metadados: {} },
+      { acao: 'restricoes.confirmar', usuario_id: dados.usuarioId, tenant_id: tenantP2, metadados: {} }
+    ]);
+    const idRollback = randomUUID();
+    const pacienteRollback = randomUUID();
+    await cliente.query(`insert into pacientes(id,tenant_id,profissional_responsavel_id,nome_criptografado)
+      values ($1,$2,$3,$4)`, [pacienteRollback, tenantP2, dados.profissionalId, Buffer.from('paciente-sintetico')]);
+    const avaliacaoRollback = await cliente.query<{ id: string }>(`insert into avaliacoes_restricoes_pacientes
+      (tenant_id,paciente_id,situacao,confirmado_por_usuario_id,confirmado_em,vence_em)
+      values ($1,$2,'sem_restricoes_confirmadas',$3,now(),now() + interval '10 days') returning id`,
+      [tenantP2, pacienteRollback, dados.usuarioId]);
+    const antesRollback = await cliente.query('select situacao,revisao,confirmado_por_usuario_id,confirmado_em,vence_em from avaliacoes_restricoes_pacientes where id=$1', [avaliacaoRollback.rows[0].id]);
+    const cifraRollback = cifrarConteudoRestricao(crypto, conteudo,
+      { ...vinculo, pacienteId: pacienteRollback, restricaoId: idRollback, finalidade: 'restricao' });
+    await cliente.query(`insert into restricoes_pacientes
+      (id, tenant_id, paciente_id, autor_usuario_id, chave_criacao, origem, conteudo_criptografado)
+      values ($1,$2,$3,$4,$5,'profissional',$6)`,
+      [idRollback, tenantP2, pacienteRollback, dados.usuarioId, randomUUID(), cifraRollback]);
+    const executorFalho = { executar: <T>(tenantId: string, fn: (g: EntityManager) => Promise<T>) =>
+      executorTenant!.executar(tenantId, async g => {
+        const original = g.getRepository.bind(g);
+        const spy = jest.spyOn(g, 'getRepository').mockImplementation(((entidade: unknown) => {
+          const repo = original(entidade as never);
+          if (entidade === UserActionLogOrm) jest.spyOn(repo, 'save').mockRejectedValueOnce(new Error('auditoria sintética indisponível') as never);
+          return repo;
+        }) as typeof g.getRepository);
+        try { return await fn(g); } finally { spy.mockRestore(); }
+      }) };
+    const confirmarComFalha = new ServicoConfirmacaoRestricao(executorFalho as ExecutorTenant, crypto, concessoes);
+    await expect(confirmarComFalha.confirmar(usuario, pacienteRollback, idRollback, 1)).rejects.toThrow('auditoria sintética indisponível');
+    const rollback = await cliente.query('select confirmacao,revisao,conteudo_criptografado from restricoes_pacientes where id=$1', [idRollback]);
+    expect(rollback.rows).toEqual([{ confirmacao: 'pendente', revisao: 1, conteudo_criptografado: cifraRollback }]);
+    expect((await cliente.query('select numero from restricoes_pacientes_revisoes where restricao_id=$1', [idRollback])).rows).toEqual([]);
+    expect((await cliente.query('select situacao,revisao,confirmado_por_usuario_id,confirmado_em,vence_em from avaliacoes_restricoes_pacientes where id=$1', [avaliacaoRollback.rows[0].id])).rows).toEqual(antesRollback.rows);
+    expect((await cliente.query('select numero from avaliacoes_restricoes_revisoes where avaliacao_id=$1', [avaliacaoRollback.rows[0].id])).rows).toEqual([]);
+    expect((await cliente.query('select id from user_action_logs where recurso_id = any($1::uuid[])', [[avaliacaoRollback.rows[0].id, idRollback]])).rows).toEqual([]);
     let liberar!: () => void;
     let avisar!: () => void;
     const aguardando = new Promise<void>(resolve => { liberar = resolve; });
