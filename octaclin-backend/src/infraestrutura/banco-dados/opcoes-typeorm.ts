@@ -1,3 +1,5 @@
+import { ConcessaoPermissaoUsuarioOrm } from '../../modulos/auth/infraestrutura/concessao-permissao-usuario.orm';
+import { ConcessoesPermissaoUsuario1720000001084 } from './migracoes/1720000001084-ConcessoesPermissaoUsuario';
 import { RegistrosAnalisesFactuais1720000001081 } from './migracoes/1720000001081-RegistrosAnalisesFactuais';
 import { RegistrosFactuaisAppendOnly1720000001082 } from './migracoes/1720000001082-RegistrosFactuaisAppendOnly';
 import { RegistroAnaliseFactualOrm } from '../../modulos/planos-alimentares/infraestrutura/registro-analise-factual.orm';
@@ -281,6 +283,7 @@ export function criarOpcoesTypeOrm(): TypeOrmModuleOptions & DataSourceOptions {
     type: 'postgres',
     ...conexao,
     entities: [
+      ConcessaoPermissaoUsuarioOrm,
       RegistroAnaliseFactualOrm,
       RestricaoPacienteOrm,
       RevisaoRestricaoPacienteOrm,
@@ -503,7 +506,8 @@ export function criarOpcoesTypeOrm(): TypeOrmModuleOptions & DataSourceOptions {
         MetadadosReceitasNutricionais1720000001080,
         RegistrosAnalisesFactuais1720000001081,
         RegistrosFactuaisAppendOnly1720000001082,
-        RestricoesAlimentares1720000001083
+        RestricoesAlimentares1720000001083,
+        ConcessoesPermissaoUsuario1720000001084
       ],
     migrationsRun: executarMigracoesNoBoot(),
     synchronize: false,
