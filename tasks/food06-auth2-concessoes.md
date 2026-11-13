@@ -73,3 +73,83 @@ contrato e os gates de ativação não forem liberados.
   rollback conjunto de usuário/concessão/auditoria.
 - Typecheck: PASS. Redação de auditoria: 24/24 PASS; nenhuma chave nova livre.
 - Novo teste adicionado ao runner oficial `test:rls:testcontainers`.
+
+## Fechamento técnico local
+
+Código validado: `31c1f4b9f80396ba9369563ba60a16cab7546c2b` (a atualização
+seguinte deste documento não modifica o código). Sem mudanças em workflows,
+lockfiles, guards síncronos, matriz de papéis ou contratos clínicos.
+
+| Gate | Resultado local e limite |
+| --- | --- |
+| Backend completo, Node 22.21.1 | PASS: 430 suítes / 4.922 testes; 308 testes em 14 suítes SKIPPED pelos opt-ins/ambientes da configuração padrão. Não são aprovados pelo resultado global. |
+| PostgreSQL/RLS dedicado | PASS: 59/59, zero skipped, migrations 1083/1084 + serviço Auth-2, runtime sem owner/superuser/BYPASSRLS, em PostgreSQL 15 criado e destruído por Testcontainers. Não utiliza shim local ou banco externo. |
+| Foco após mutações/restauração | PASS: 47/47 em 4 suítes (serviço PG, HTTP, usuários cliente e piloto legado). Há sobreposição com os gates anteriores; não somar contagens. |
+| Typecheck backend | PASS: `node node_modules/typescript/bin/tsc --noEmit`, sem relaxar flags/config. |
+| Build/artefato | PASS: Nest build e `verificar-artefato-producao.mjs`, `dist/main.js` validado. |
+| Web test:authz completo | PASS: 27 scripts com exit 0, incluindo 591/591 testes reportados em 26 grupos TAP, Node 22; primeiro intento sem dependências foi erro de setup, não RED. |
+| Auditoria | PASS: 24/24, nenhuma chave livre nova. |
+| Tooling dos agentes | PASS: 12 testes Node + 5 Python. |
+| Guardas/migrations fora de banda | PASS: 24/24; nenhuma exceção adicionada. |
+| Matriz de confiabilidade | PASS: 40 referências críticas válidas. |
+| Scanner de segredos / diff | PASS nos dois pushes de implementação; repetir antes do push documental final. |
+| Runner RLS agregado completo | SKIPPED local: imagem Timescale padrão ausente e menos de 1 GiB livre; não forçado pull nem substituído Timescale por PostgreSQL. Os 59 testes dedicados acima efetivamente executaram PostgreSQL; o runner completo fica para CI. |
+| Preflight PowerShell | SKIPPED: `pwsh` ausente. |
+| Grafo canônico local | SKIPPED: reutilização somente leitura das dependências existentes, sem espaço para instalação isolada. TypeORM/Testcontainers locais diferem do lock. CI congelado é obrigatório antes de integração. |
+| R4 independente | Parecer estático favorável do subagente `/root/auth2_r4`, contra a base Auth-1 `f8cf057b`, sem achados reproduzíveis. Leu serviço, controller/DTOs, módulo, cascata e testes; não executou testes, SQL ou boot. Não é revisão humana formal da PR nem prova de CI. |
+| UX/Playwright | N/A: nenhum fluxo/tela/consumidor clínico implementado em Auth-2. Q3/Q6 existentes preservados; perspectivas A/B/C e interface profissional/paciente pertencem às entregas de UI. N/A não constitui validação visual. |
+| Smoke runtime completo | SKIPPED: sem serviços externos/Redis e schema completo implantado; build e HTTP Nest isolado não provam disponibilidade operacional. |
+| CI/scanners do HEAD final | PENDING na abertura da PR; não herdar o resultado da Auth-1 nem declarar CI verde antes dos checks. |
+
+### Mutações temporárias (fonte restaurada integralmente)
+
+As três mutações foram mortas por falha funcional de negativa, não por setup ou
+compilação. Cada execução subiu seu PostgreSQL descartável:
+
+1. Remover `if (!concessao) throw negar()` em `exigir`: teste “JWT com claim
+   clínica não supre ausência” passou a resolver indevidamente (1 falha).
+2. Remover verificação do papel Professional do alvo em `conceder`: matriz de
+   alvos não elegíveis passou a aceitar quatro papéis (4 falhas).
+3. Remover filtro `revogadaEm: IsNull()` na consulta de `exigir`: teste de
+   revogação com mesmo JWT passou a resolver indevidamente (1 falha).
+
+Confirmado `git diff --exit-code 31c1f4b9 -- octaclin-backend/src` após restaurar;
+47/47 GREEN após restauração. Nenhuma mutação foi commitada.
+
+### Reprodução mínima
+
+No diretório `octaclin-backend`, com Node 22 e dependências canônicas do lock:
+
+```sh
+pnpm typecheck
+pnpm build
+pnpm test --runInBand
+RLS_TESTCONTAINERS=true FOOD06_RESTRICOES_TESTCONTAINERS=true pnpm exec jest --runInBand --runTestsByPath src/infraestrutura/banco-dados/migracoes/1720000001083-RestricoesAlimentares.integracao.spec.ts src/infraestrutura/banco-dados/migracoes/1720000001084-ConcessoesPermissaoUsuario.integracao.spec.ts src/modulos/auth/aplicacao/servico-concessoes-permissao.integracao.spec.ts
+```
+
+No runner local desta execução, equivalentes Node 22 foram usados diretamente,
+pois o wrapper pnpm disponível força Node 24. Nenhum requisito de engine ou
+manifesto foi alterado. O primeiro intento de `test:authz` Web falhou por ausência
+de `node_modules`; isso foi erro de setup, não RED funcional. Reutilização somente
+leitura do grafo Web existente permitiu retomar o comando, sem instalar dependências.
+
+## Estado de integração e próxima ação
+
+Auth-2 deve permanecer Draft e empilhada sobre `claude/food06-auth-concessoes`.
+Integrar Auth-1 primeiro por decisão do proprietário, depois conferir base/diff,
+retarget da Auth-2 para main e repetir CI aplicável; não fazer merge implícito.
+Revisão humana formal, CI do lock exato e pendências operacionais continuam gates.
+A migração 1084 não foi executada em staging/produção. **BLOCKED operacional:**
+antes de disponibilizar este backend, é necessário comprovar a 1084 e RLS no
+ambiente alvo, em procedimento autorizado separado. Merge da Auth-1 não comprova
+schema aplicado. A nova cascata usa a tabela mesmo sem tela/flag clínica ativa;
+backend Auth-2 com schema anterior falharia ao desativar/alterar acesso. Não
+silenciar ausência da tabela nem contornar a revogação para permitir rollout.
+
+O futuro P2 deve chamar `exigir(tenantId, usuarioId, permissao, gerenciador)`
+dentro da transação da ação clínica, além de autorizar paciente/carteira. Não usar
+um `exigir` independente seguido de escrita em outra transação. A API administrativa
+não valida conselho profissional e não ativa regras clínicas ou flags.
+
+Encerrar a execução após abrir a PR. Nenhum P2/P3/P4, tela, merge, deploy,
+migration externa, Neon, Render ou cobrança autorizado/realizado nesta tarefa.
