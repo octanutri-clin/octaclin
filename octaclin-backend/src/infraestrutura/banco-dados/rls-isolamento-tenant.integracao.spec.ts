@@ -75,6 +75,7 @@ import { ServicoConfirmacaoRestricao } from '../../modulos/planos-alimentares/ap
 import { RestricaoPacienteOrm } from '../../modulos/planos-alimentares/infraestrutura/restricao-paciente.orm';
 import { RevisaoRestricaoPacienteOrm } from '../../modulos/planos-alimentares/infraestrutura/revisao-restricao-paciente.orm';
 import { AvaliacaoRestricoesPacienteOrm } from '../../modulos/planos-alimentares/infraestrutura/avaliacao-restricoes-paciente.orm';
+import { RevisaoAvaliacaoRestricoesOrm } from '../../modulos/planos-alimentares/infraestrutura/revisao-avaliacao-restricoes.orm';
 import { cifrarConteudoRestricao, decifrarConteudoRestricao } from '../../modulos/planos-alimentares/infraestrutura/codec-conteudo-restricao';
 
 /**
@@ -268,6 +269,7 @@ descrever('RLS e isolamento multi-tenant integral em Postgres real', () => {
         RestricaoPacienteOrm,
         RevisaoRestricaoPacienteOrm,
         AvaliacaoRestricoesPacienteOrm,
+        RevisaoAvaliacaoRestricoesOrm,
         PermissaoIntegracaoProfissionalOrm,
         UserActionLogOrm,
         NotificacaoOrm,
@@ -864,6 +866,10 @@ descrever('RLS e isolamento multi-tenant integral em Postgres real', () => {
       (id, tenant_id, paciente_id, autor_usuario_id, chave_criacao, origem, conteudo_criptografado)
       values ($1,$2,$3,$4,$5,'profissional',$6)`,
       [restricaoId, tenantP2, dados.pacienteId, dados.usuarioId, randomUUID(), cifra]);
+    const avaliacao = await cliente.query<{ id: string }>(`insert into avaliacoes_restricoes_pacientes
+      (tenant_id,paciente_id,situacao,confirmado_por_usuario_id,confirmado_em,vence_em)
+      values ($1,$2,'sem_restricoes_confirmadas',$3,now(),now() + interval '10 days') returning id`,
+      [tenantP2, dados.pacienteId, dados.usuarioId]);
     const confirmar = new ServicoConfirmacaoRestricao(executorTenant, crypto, concessoes);
     await expect(confirmar.confirmar(usuario, dados.pacienteId, restricaoId, 1)).resolves.toEqual({ id: restricaoId, revisao: 2, confirmacao: 'confirmada' });
     await expect(confirmar.confirmar(usuario, dados.pacienteId, restricaoId, 1)).rejects.toMatchObject({ status: 409 });
@@ -874,6 +880,10 @@ descrever('RLS e isolamento multi-tenant integral em Postgres real', () => {
       { ...vinculo, revisao: 2, finalidade: 'restricao' })).toEqual(conteudo);
     const historico = await cliente.query('select numero, evento from restricoes_pacientes_revisoes where restricao_id=$1', [restricaoId]);
     expect(historico.rows).toEqual([{ numero: 2, evento: 'confirmacao' }]);
+    const avaliada = await cliente.query('select situacao,revisao,confirmado_por_usuario_id,confirmado_em,vence_em from avaliacoes_restricoes_pacientes where id=$1', [avaliacao.rows[0].id]);
+    expect(avaliada.rows).toEqual([{ situacao: 'nao_informado', revisao: 2, confirmado_por_usuario_id: null, confirmado_em: null, vence_em: null }]);
+    const historicoAvaliacao = await cliente.query('select numero,situacao from avaliacoes_restricoes_revisoes where avaliacao_id=$1', [avaliacao.rows[0].id]);
+    expect(historicoAvaliacao.rows).toEqual([{ numero: 2, situacao: 'nao_informado' }]);
     let liberar!: () => void;
     let avisar!: () => void;
     const aguardando = new Promise<void>(resolve => { liberar = resolve; });

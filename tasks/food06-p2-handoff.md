@@ -42,11 +42,15 @@
   CAS, codec e histórico/auditoria; 29 testes focados PASS, incluindo guarda e
   helper. Serviço ainda sem provider/rota/flag. Revisão independente encontrou
   risco de inconsistência com avaliação global `sem_restricoes_confirmadas`.
-  Implementado bloqueio provisório por conflito e lock exclusivo no paciente;
-  reconciliação transacional funcional e teste de corrida continuam obrigatórios
-  antes de expor a operação. Não tratar conflito provisório como produto aceito.
-  Prova PostgreSQL da confirmação foi adicionada, mas aguarda CI; não há Docker
-  local. Faltam negativas reais e rollback de auditoria/cifra em banco.
+  A confirmação agora bloqueia o paciente e invalida a avaliação de ausência para
+  `nao_informado`, com revisão e auditoria transacionais. Revisão estática posterior
+  considerou o caso sequencial coerente; corrida entre escritores de ausência e
+  restrição, rollback em banco e proteção da API continuam obrigatórios.
+  Prova PostgreSQL da confirmação e invalidação foi adicionada, mas aguarda CI;
+  não há Docker local. Faltam negativas reais e rollback de auditoria/cifra em banco.
+  Futuras operações devem manter a ordem concessão/usuário → profissional →
+  paciente → avaliação → restrição e reler o estado sob lock. Não expor o serviço
+  sem provider Nest correto, flag fechada, DTO, rota e prova HTTP.
 - Próxima ação: usar o helper no serviço transacional, implementar os testes e
   operações P2; manter o acesso clínico indisponível até proteção por flag.
 - Pendente: todas as operações P2, API/DTOs,

@@ -6,6 +6,7 @@ import { registrarAuditoriaNaTransacao } from '../../../infraestrutura/auditoria
 import { AvaliacaoRestricoesPacienteOrm } from '../infraestrutura/avaliacao-restricoes-paciente.orm';
 import { RestricaoPacienteOrm } from '../infraestrutura/restricao-paciente.orm';
 import { RevisaoRestricaoPacienteOrm } from '../infraestrutura/revisao-restricao-paciente.orm';
+import { RevisaoAvaliacaoRestricoesOrm } from '../infraestrutura/revisao-avaliacao-restricoes.orm';
 
 jest.mock('./autorizacao-restricao-clinica', () => ({ autorizarRestricaoClinica: jest.fn(async () => undefined) }));
 jest.mock('../infraestrutura/codec-conteudo-restricao', () => ({
@@ -19,16 +20,18 @@ function preparar() {
   const linha = { id: 'restricao', tenantId: 'tenant', pacienteId: 'paciente', estado: 'ativa', confirmacao: 'pendente', revisao: 1, conteudoCriptografado: Buffer.from('anterior') };
   const atual = { findOne: jest.fn(async () => linha), update: jest.fn(async () => ({ affected: 1 })) };
   const revisoes = { insert: jest.fn(async () => undefined) };
-  const avaliacao = { findOne: jest.fn(async (): Promise<{ situacao: string } | null> => null) };
+  const avaliacao = { findOne: jest.fn(async (): Promise<{ id: string; revisao: number; situacao: string } | null> => null), update: jest.fn(async () => ({ affected: 1 })) };
+  const historicoAvaliacao = { insert: jest.fn(async () => undefined) };
   const g = { getRepository: jest.fn((entidade: unknown) => {
     if (entidade === RestricaoPacienteOrm) return atual;
     if (entidade === RevisaoRestricaoPacienteOrm) return revisoes;
     if (entidade === AvaliacaoRestricoesPacienteOrm) return avaliacao;
+    if (entidade === RevisaoAvaliacaoRestricoesOrm) return historicoAvaliacao;
     throw new Error('Repositório inesperado');
   }) };
   const executor = { executar: jest.fn(async (_tenant: string, fn: (g: unknown) => unknown) => fn(g)) };
   const servico = new ServicoConfirmacaoRestricao(executor as never, {} as never, {} as never);
-  return { linha, atual, revisoes, avaliacao, g, executor, confirmar: (revisao = 1) => servico.confirmar(ator as never, 'paciente', 'restricao', revisao) };
+  return { linha, atual, revisoes, avaliacao, historicoAvaliacao, g, executor, confirmar: (revisao = 1) => servico.confirmar(ator as never, 'paciente', 'restricao', revisao) };
 }
 beforeEach(() => jest.clearAllMocks());
 describe('confirmação de restrição', () => {
@@ -60,9 +63,25 @@ describe('confirmação de restrição', () => {
     const c = preparar(); await expect(c.confirmar()).rejects.toBeInstanceOf(ConflictException);
     expect(c.atual.update).not.toHaveBeenCalled(); expect(c.revisoes.insert).not.toHaveBeenCalled();
   });
-  it('não confirma enquanto uma avaliação de ausência ainda não foi reconciliada', async () => {
-    const c = preparar(); c.avaliacao.findOne.mockResolvedValueOnce({ situacao: 'sem_restricoes_confirmadas' });
+  it('invalida avaliação de ausência e registra revisão na mesma transação', async () => {
+    const c = preparar(); c.avaliacao.findOne.mockResolvedValueOnce({ id: 'avaliacao', revisao: 3, situacao: 'sem_restricoes_confirmadas' });
+    await expect(c.confirmar()).resolves.toMatchObject({ confirmacao: 'confirmada', revisao: 2 });
+    expect(c.avaliacao.update).toHaveBeenCalledWith(expect.objectContaining({ id: 'avaliacao', tenantId: 'tenant', pacienteId: 'paciente', revisao: 3 }),
+      expect.objectContaining({ situacao: 'nao_informado', revisao: 4, confirmadoPorUsuarioId: null, confirmadoEm: null, venceEm: null }));
+    expect(c.historicoAvaliacao.insert).toHaveBeenCalledWith(expect.objectContaining({ avaliacaoId: 'avaliacao', numero: 4, situacao: 'nao_informado', autorUsuarioId: 'usuario' }));
+  });
+  it('rejeita CAS sem efeito e não registra histórico', async () => {
+    const c = preparar(); c.atual.update.mockResolvedValueOnce({ affected: 0 });
     await expect(c.confirmar()).rejects.toBeInstanceOf(ConflictException);
+    expect(c.revisoes.insert).not.toHaveBeenCalled();
+  });
+  it('não grava se conteúdo cifrado for ilegível', async () => {
+    jest.mocked(decifrarConteudoRestricao).mockImplementationOnce(() => { throw new Error('ilegível'); });
+    const c = preparar(); await expect(c.confirmar()).rejects.toThrow();
     expect(c.atual.update).not.toHaveBeenCalled(); expect(c.revisoes.insert).not.toHaveBeenCalled();
+  });
+  it('propaga falha de auditoria para abortar a transação', async () => {
+    jest.mocked(registrarAuditoriaNaTransacao).mockRejectedValueOnce(new Error('auditoria indisponível'));
+    const c = preparar(); await expect(c.confirmar()).rejects.toThrow('auditoria indisponível');
   });
 });
