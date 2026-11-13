@@ -1,6 +1,14 @@
 import { RegistrosAnalisesFactuais1720000001081 } from './migracoes/1720000001081-RegistrosAnalisesFactuais';
 import { RegistrosFactuaisAppendOnly1720000001082 } from './migracoes/1720000001082-RegistrosFactuaisAppendOnly';
 import { RegistroAnaliseFactualOrm } from '../../modulos/planos-alimentares/infraestrutura/registro-analise-factual.orm';
+import { RestricoesAlimentares1720000001083 } from './migracoes/1720000001083-RestricoesAlimentares';
+import { RestricaoPacienteOrm } from '../../modulos/planos-alimentares/infraestrutura/restricao-paciente.orm';
+import { RevisaoRestricaoPacienteOrm } from '../../modulos/planos-alimentares/infraestrutura/revisao-restricao-paciente.orm';
+import { AvaliacaoRestricoesPacienteOrm } from '../../modulos/planos-alimentares/infraestrutura/avaliacao-restricoes-paciente.orm';
+import { RevisaoAvaliacaoRestricoesOrm } from '../../modulos/planos-alimentares/infraestrutura/revisao-avaliacao-restricoes.orm';
+import { ReconfirmacaoRestricoesOrm } from '../../modulos/planos-alimentares/infraestrutura/reconfirmacao-restricoes.orm';
+import { SolicitacaoRestricaoPacienteOrm } from '../../modulos/planos-alimentares/infraestrutura/solicitacao-restricao-paciente.orm';
+import { MapeamentoAlimentoAlvoLocalOrm } from '../../modulos/planos-alimentares/infraestrutura/mapeamento-alimento-alvo-local.orm';
 import { PreferenciasEquivalencia1720000001079 } from './migracoes/1720000001079-PreferenciasEquivalencia';
 import { GruposSubstituicoes1720000001078 } from './migracoes/1720000001078-GruposSubstituicoes';
 import { MetadadosReceitasNutricionais1720000001080 } from './migracoes/1720000001080-MetadadosReceitasNutricionais';
@@ -274,6 +282,13 @@ export function criarOpcoesTypeOrm(): TypeOrmModuleOptions & DataSourceOptions {
     ...conexao,
     entities: [
       RegistroAnaliseFactualOrm,
+      RestricaoPacienteOrm,
+      RevisaoRestricaoPacienteOrm,
+      AvaliacaoRestricoesPacienteOrm,
+      RevisaoAvaliacaoRestricoesOrm,
+      ReconfirmacaoRestricoesOrm,
+      SolicitacaoRestricaoPacienteOrm,
+      MapeamentoAlimentoAlvoLocalOrm,
       TenantOrm,
       TenantConfiguracaoOrm,
       UsuarioOrm,
@@ -487,7 +502,8 @@ export function criarOpcoesTypeOrm(): TypeOrmModuleOptions & DataSourceOptions {
         PreferenciasEquivalencia1720000001079,
         MetadadosReceitasNutricionais1720000001080,
         RegistrosAnalisesFactuais1720000001081,
-        RegistrosFactuaisAppendOnly1720000001082
+        RegistrosFactuaisAppendOnly1720000001082,
+        RestricoesAlimentares1720000001083
       ],
     migrationsRun: executarMigracoesNoBoot(),
     synchronize: false,

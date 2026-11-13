@@ -37,3 +37,25 @@ As APIs usam sessão e `private, no-store`, sem Cache Storage clínico. O portal
 recebe somente a projeção autorizada após liberação e aceite específico atuais;
 notas internas e fingerprints não são projetados. Termo público e tabela MS/UFS
 não contêm dados de pacientes. Testes/demo usam exclusivamente fixtures sintéticas.
+
+## Restrições alimentares (FOOD06 P1b, migration 1083)
+
+Todo conteúdo clínico, de convicção ou texto livre é PHI e fica só em `bytea` cifrado pelo codec
+`codec-conteudo-restricao.ts`, com vínculo de campo, tenant, registro, revisão e paciente: natureza, subtipo, alvo,
+gravidade, observação, justificativas, pedido do paciente, explicação ao paciente, justificativa interna, desfecho,
+resultado da reconfirmação e evidência de mapeamento. Não existe campo de motivação religiosa (Q4). Nada disso vai a
+log, auditoria, GitHub, telemetria ou provider externo.
+
+Metadados operacionais ficam em claro (decisão R7 da revisão da #531). São **derivados protegidos**: indicam que o
+paciente tem algum registro, mas não qual restrição. Ficam sob RLS FORCE por tenant e, a partir da P2, com autorização
+por carteira e permissão. Nenhum deles vai a log ou telemetria com identificador do paciente.
+
+| Campo | Por que fica em claro | Exposição mínima |
+| --- | --- | --- |
+| `avaliacoes_restricoes_pacientes.situacao` (e histórico) | Constraints de confirmação e vencimento; pendência de reconfirmação sem decifrar | Só a quem pode ver a avaliação do paciente; o portal recebe texto por chave, nunca o valor |
+| `restricoes_pacientes_revisoes.motivo_inativacao` | `check` do Q3 (motivo obrigatório na inativação); auditoria da transição | Vocabulário fechado de 4 valores, sem texto livre; nunca vai ao portal |
+| `restricoes_pacientes.origem` | Distinguir declaração do paciente e registro da equipe (Q11) | Vocabulário fechado; o portal recebe só a chave de texto |
+| `solicitacoes_restricoes_pacientes.tipo` | `check` de inclusão sem restrição e de correção/remoção com restrição | Vocabulário fechado; conteúdo do pedido cifrado |
+| `reconfirmacoes_restricoes.meio` | Q10 exige registrar o meio; não revela dado clínico | Vocabulário fechado; resultado cifrado |
+
+Isto não é parecer jurídico: a base legal, a retenção e os direitos do titular continuam no ATV-2 (Q4).

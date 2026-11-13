@@ -449,6 +449,23 @@ tenant e carteira com resposta idêntica para inexistente e não autorizado; `Su
 `nao_contem_confirmado` sem evidência e `conflita` sem regra validada são recusados; auditoria e erros sem conteúdo clínico (canários); rollback por flag sem apagar dado.
 A validação clínica da taxonomia, do mapeamento e das regras de aplicar não é substituível por teste.
 
+### FOOD06 — tabelas de restrições alimentares (P1b, migration 1083, R4)
+
+Migration **aditiva e vazia** (`1720000001083-RestricoesAlimentares.ts`), sem backfill, sem consumidor e **nunca aplicada em ambiente real**. Sete tabelas por
+tenant com RLS `ENABLE` + `FORCE`, policies só por `app.tenant_id`, nenhuma policy de DELETE; histórico (revisões, reconfirmações, mapeamento local) append-only por
+trigger por instrução `ENABLE ALWAYS`; estado sem DELETE/TRUNCATE e com transições mínimas no banco (revisão +1, identidade imutável, `inativa` e solicitação encerrada
+terminais). Conteúdo clínico só em `bytea` cifrado pela aplicação; sem `razao` (Q4); mapeamento do tenant só `local_profissional`. Provas: spec estático
+(`1720000001083-RestricoesAlimentares.spec.ts`) e integração em PostgreSQL 15 descartável com role runtime sem superuser/BYPASSRLS/ownership
+(`…integracao.spec.ts`, `FOOD06_RESTRICOES_TESTCONTAINERS=true`, incluída em `test:rls:testcontainers`): RLS sem tenant e cross-tenant, FKs compostas, append-only
+para runtime e owner (inclusive `session_replication_role = replica`), Q3, Q10, D7-a, origem e `down` (vazio remove; com linha recusa). Bloqueia merge qualquer
+regressão desses testes. Não prova: aplicação em staging/produção (ATV-8), autorização por usuário (Q6), serviço/DTO (P2) nem conteúdo clínico (Q1).
+Decisões D1–D4 da PR #531: `parcial` terminal com explicação e desfecho (domínio e banco); conteúdo clínico validado por `validarConteudoRestricao` e
+escrito só pelo codec `codec-conteudo-restricao.ts`, que vincula a cifra a tenant, paciente, restrição e revisão e falha fechada (nunca vira ausência), com
+guarda estática `guarda-escrita-restricoes.spec.ts`; reconfirmação com avaliação obrigatória e restrição opcional, individual nunca renova nem declara
+ausência. Bloqueia merge: estado do banco divergente de `ESTADOS_SOLICITACAO`, consumidor das entidades sem o codec, ou cifra de outra linha aceita.
+R3/R4 da revisão: os 10 campos `bytea` da 1083 passam pelo mesmo codec (`CAMPOS_CIFRADOS`, conferido contra as colunas da migration) com vínculo de campo, tenant, registro, revisão e paciente; a guarda cobre as 7 entidades e as 7 tabelas com listas nominais. Bloqueia merge: coluna cifrada fora do registro ou arquivo fora das listas citando as tabelas.
+Parecer R4 independente (R4-01/R4-02): o `down` exige transação explícita e trava as 7 tabelas em ACCESS EXCLUSIVE antes de checar existência, com prova de duas conexões em PostgreSQL descartável; o codec recusa cifra acima do teto da coluna. Bloqueia merge: `down` sem o lock antes da checagem, `down` aceito fora de READ COMMITTED (snapshot fixo esconde escrita confirmada) ou cifra maior que o `octet_length` da 1083.
+
 ### FOOD06 — matriz global com oráculo decimal independente (T7, M02/M04)
 
 Uma matriz determinística, sem aleatoriedade, compara o encadeamento receita, porção, soma PA06, cobertura M02 e

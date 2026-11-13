@@ -799,11 +799,20 @@ descrever('RLS e isolamento multi-tenant integral em Postgres real', () => {
       const comandosSeparados = ['SELECT','INSERT','UPDATE','DELETE'].every(politicaPorComando);
       // Estas tabelas são intencionalmente append-only: exigir ALL abriria UPDATE
       // e DELETE. A lista é nominal e exige exatamente SELECT/INSERT por tenant.
-      const appendOnly = ['plano_alimentar_ativacao_eventos', 'registros_analises_factuais'].includes(tabela.tabela);
+      const appendOnly = ['plano_alimentar_ativacao_eventos', 'registros_analises_factuais',
+        // FOOD06 P1b (1083): histórico de restrições, reconfirmações e mapeamento local.
+        'restricoes_pacientes_revisoes', 'avaliacoes_restricoes_revisoes', 'reconfirmacoes_restricoes',
+        'mapeamentos_alimento_alvo_locais'].includes(tabela.tabela);
       const eventosAppendOnly = appendOnly && politicas.length === 2 &&
         politicaPorComando('SELECT') && politicaPorComando('INSERT');
+      // FOOD06 P1b (1083): estado de restrição nunca é apagado (inativar não exclui). Lista nominal,
+      // exatamente SELECT/INSERT/UPDATE por tenant e nenhuma policy de DELETE ou ALL.
+      const semExclusao = ['restricoes_pacientes', 'avaliacoes_restricoes_pacientes',
+        'solicitacoes_restricoes_pacientes'].includes(tabela.tabela);
+      const estadoSemExclusao = semExclusao && politicas.length === 3 &&
+        politicaPorComando('SELECT') && politicaPorComando('INSERT') && politicaPorComando('UPDATE');
       const policyCompleta = appendOnly
-        ? eventosAppendOnly : policyAll || comandosSeparados;
+        ? eventosAppendOnly : semExclusao ? estadoSemExclusao : policyAll || comandosSeparados;
       expect({ tabela: tabela.tabela, policyCompleta, politicas }).toEqual(
         expect.objectContaining({ policyCompleta: true })
       );
