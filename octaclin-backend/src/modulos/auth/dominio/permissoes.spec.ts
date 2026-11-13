@@ -133,3 +133,12 @@ describe('FOOD04 capacidades segregadas', () => {
     for (const p of ['Collaborator','Patient','Client'] as const) expect(obterPermissoesPorPapel(p)).not.toContain('grupos_substituicoes.compartilhar');
   });
 });
+
+// Auth-1: a permissão existe no tipo, mas somente uma concessão futura pode habilitá-la.
+describe('restricoes.confirmar sem concessão implícita por papel', () => {
+  const permissao: PermissaoOctaClin = 'restricoes.confirmar';
+  it.each<PapelUsuario>(['SuperAdmin', 'Professional', 'Collaborator', 'Patient', 'Client'])('%s não recebe a permissão', papel => {
+    expect(possuiPermissao(papel, permissao)).toBe(false);
+    expect(obterPermissoesPorPapel(papel)).not.toContain(permissao);
+  });
+});
