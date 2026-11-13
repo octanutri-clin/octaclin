@@ -68,6 +68,9 @@ import { AdicionarEncaminhamentoDocumento1720000001067 } from './migracoes/17200
 import { PlanoAlimentarOrm } from '../../modulos/planos-alimentares/infraestrutura/plano-alimentar.orm';
 import { PlanoAlimentarVersaoOrm } from '../../modulos/planos-alimentares/infraestrutura/plano-alimentar-versao.orm';
 import { ServicoPlanosAlimentares } from '../../modulos/planos-alimentares/aplicacao/servico-planos-alimentares';
+import { autorizarRestricaoClinica } from '../../modulos/planos-alimentares/aplicacao/autorizacao-restricao-clinica';
+import { ServicoConcessoesPermissao } from '../../modulos/auth/aplicacao/servico-concessoes-permissao';
+import { ConcessaoPermissaoUsuarioOrm } from '../../modulos/auth/infraestrutura/concessao-permissao-usuario.orm';
 
 /**
  * Prova integral de isolamento por tenant em Postgres real (PR 43).
@@ -256,6 +259,7 @@ descrever('RLS e isolamento multi-tenant integral em Postgres real', () => {
         TenantConfiguracaoOrm,
         ConsentimentoLgpdOrm,
         UsuarioOrm,
+        ConcessaoPermissaoUsuarioOrm,
         PermissaoIntegracaoProfissionalOrm,
         UserActionLogOrm,
         NotificacaoOrm,
@@ -819,6 +823,52 @@ descrever('RLS e isolamento multi-tenant integral em Postgres real', () => {
         expect.objectContaining({ policyCompleta: true })
       );
     }
+  });
+
+  it('P2 exige concessão e carteira na mesma transação com RLS real', async () => {
+    if (!cliente || !executorTenant) throw new Error('ExecutorTenant da prova RLS nao foi inicializado.');
+    const tenantP2 = randomUUID();
+    await cliente.query('insert into tenants (id, nome, slug) values ($1, $2, $3)',
+      [tenantP2, 'Prova P2 sintetica', `prova-p2-${tenantP2}`]);
+    const dados = await prepararDadosRepresentativos(tenantP2, `p2-${randomUUID()}`);
+    const outro = await prepararDadosRepresentativos(tenantP2, `p2-outro-${randomUUID()}`);
+    const usuario: UsuarioAutenticado = {
+      tenantId: tenantP2, usuarioId: dados.usuarioId, papel: 'Professional', emailHash: '', permissoes: []
+    };
+    const concessoes = new ServicoConcessoesPermissao(executorTenant);
+    const conferir = (paciente: string) => executorTenant!.executar(tenantP2, g =>
+      autorizarRestricaoClinica(g, concessoes, usuario, paciente));
+    await expect(conferir(dados.pacienteId)).rejects.toMatchObject({ status: 403 });
+    await comoTenant(tenantP2);
+    const linha = await cliente.query<{ id: string }>(`insert into concessoes_permissao_usuario
+      (tenant_id, usuario_id, permissao, concedida_por, motivo)
+      values ($1, $2, 'restricoes.confirmar', $2, 'habilitacao_administrativa') returning id`,
+      [tenantP2, dados.usuarioId]);
+    await expect(conferir(dados.pacienteId)).resolves.toBeUndefined();
+    await expect(conferir(outro.pacienteId)).rejects.toMatchObject({ status: 403 });
+    await expect(conferir(pacienteIdTenantB)).rejects.toMatchObject({ status: 403 });
+    let liberar!: () => void;
+    let avisar!: () => void;
+    const aguardando = new Promise<void>(resolve => { liberar = resolve; });
+    const autorizado = new Promise<void>(resolve => { avisar = resolve; });
+    const transacao = executorTenant.executar(tenantP2, async g => {
+      await autorizarRestricaoClinica(g, concessoes, usuario, dados.pacienteId);
+      avisar();
+      await aguardando;
+    });
+    try {
+      await Promise.race([autorizado, transacao.then(() => { throw new Error('Transação encerrou cedo.'); })]);
+      await cliente.query("set lock_timeout = '200ms'");
+      await expect(cliente.query(`update concessoes_permissao_usuario set revogada_por=$1, revogada_em=clock_timestamp()
+        where id=$2`, [dados.usuarioId, linha.rows[0].id])).rejects.toMatchObject({ code: '55P03' });
+    } finally {
+      liberar();
+      await transacao;
+      await cliente.query('reset lock_timeout');
+    }
+    await cliente.query(`update concessoes_permissao_usuario set revogada_por=$1, revogada_em=clock_timestamp()
+      where id=$2`, [dados.usuarioId, linha.rows[0].id]);
+    await expect(conferir(dados.pacienteId)).rejects.toMatchObject({ status: 403 });
   });
 
   it('FOOD03 protege favoritos com FORCE RLS e oculta registros ao trocar tenant', async () => {
