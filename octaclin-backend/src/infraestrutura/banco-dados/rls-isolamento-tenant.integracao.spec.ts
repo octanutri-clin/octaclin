@@ -808,7 +808,9 @@ descrever('RLS e isolamento multi-tenant integral em Postgres real', () => {
       // FOOD06 P1b (1083): estado de restrição nunca é apagado (inativar não exclui). Lista nominal,
       // exatamente SELECT/INSERT/UPDATE por tenant e nenhuma policy de DELETE ou ALL.
       const semExclusao = ['restricoes_pacientes', 'avaliacoes_restricoes_pacientes',
-        'solicitacoes_restricoes_pacientes'].includes(tabela.tabela);
+        'solicitacoes_restricoes_pacientes',
+        // Auth-1 (1084): revogar preserva a concessão e seu histórico; DELETE é proibido.
+        'concessoes_permissao_usuario'].includes(tabela.tabela);
       const estadoSemExclusao = semExclusao && politicas.length === 3 &&
         politicaPorComando('SELECT') && politicaPorComando('INSERT') && politicaPorComando('UPDATE');
       const policyCompleta = appendOnly

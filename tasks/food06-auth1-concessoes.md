@@ -129,3 +129,33 @@ foram preservadas. Conferir SHA final no Git/PR, sem fixá-lo neste próprio arq
 O proprietário determinou parar ao abrir a PR. Não executar Auth-2/P2/P3/P4,
 merge, deploy, migration externa ou ativação. Revisão e gates pendentes devem
 permanecer visíveis na descrição da PR.
+
+## Correção do CI — 2026-11-13
+
+O run `43408141732`, job Backend `131827534576`, falhou no inventário RLS:
+`concessoes_permissao_usuario` tem três políticas isoladas (SELECT/INSERT/UPDATE),
+mas não estava na lista nominal de tabelas sem exclusão. A mesma falha foi herdada
+pela Auth-2 (run `43411884871`, job `131840120678`). Correção limitada ao inventário:
+exatamente três políticas continuam obrigatórias, DELETE/ALL continuam recusados.
+Nenhuma migration, política SQL, permissão de runtime ou código de aplicação mudou.
+Rollback desta correção: reverter o ajuste do teste; não há mudança persistente.
+
+Validação desta correção em Windows, Node 22.23.3 / pnpm 11.25.0:
+
+- PASS: instalação congelada, typecheck, build e artefato `dist/main.js`.
+- PASS: execução isolada do bloco real do inventário com políticas sintéticas:
+  RED no HEAD anterior, GREEN na correção e 12 controles negativos/regressões
+  (DELETE/ALL, comandos ausentes, ausência de escopo e modos existentes).
+- FAIL: suíte local completa: 426 suítes/4.907 testes aprovados, dois testes
+  falharam; 291 testes em 14 suítes SKIPPED. Falhas fora do diff:
+  serialização byte a byte do catálogo TACO (checkout CRLF versus saída LF) e
+  grafo de imports REV14 (comparação de paths Windows com separador do TypeScript).
+  Esses testes passaram nos runs Linux originais; não foram alterados ou suprimidos.
+- PASS: scanner local de segredos e `git diff --check` antes do push.
+- SKIPPED: PostgreSQL/RLS local; Docker indisponível. O novo CI deve executar
+  o inventário sobre PostgreSQL real e o runner Testcontainers antes de aceite.
+- NA: UX/Playwright e revisão de mudança funcional, pois o delta é apenas teste
+  e documentação; sem mudança de jornada, autorização ou schema.
+
+CI do novo HEAD permanece pendente no momento deste registro. A correção não
+aprova merge, implantação, aplicação da 1084 ou disponibilização da Auth-2.
