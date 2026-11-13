@@ -15,6 +15,8 @@ export type PermissaoOctaClin =
   | 'pacientes.gerenciar'
   | 'planos_alimentares.ler'
   | 'planos_alimentares.gerenciar'
+  // Exige concessão por usuário; não incluir em nenhuma matriz de papel.
+  | 'restricoes.confirmar'
   | 'grupos_substituicoes.compartilhar'
   | 'grupos_substituicoes.administrar'
   | 'questionarios.ler'
