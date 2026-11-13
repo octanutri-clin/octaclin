@@ -119,3 +119,11 @@
   (5.115 PASS, 181 SKIPPED, 2 TODO) e na etapa PostgreSQL/Testcontainers
   (271 PASS; grupos sobrepostos); workflow geral ainda em andamento nesta anotação.
   Este resultado não prova P2 completa nem configuração de produção.
+- Decisão adicional: equipe da clínica registra a representação e verifica a
+  autorização. A solução deve exigir vínculo ativo e seleção autorizada para
+  cada paciente; não há liberação implícita de acesso clínico a toda a equipe.
+  Os papéis e fluxo de evidência devem respeitar a matriz existente; não inferir
+  autorização de Collaborator ou Client apenas pela expressão “equipe”.
+- CI `43505519637`, HEAD `db911b7b`: workflow OctaClin CI PASS, incluindo Backend,
+  Web, governança, smoke e PR Gate; provenance de SBOM em workflow separado foi
+  SKIPPED. O resultado não prova P2 completa, deploy ou estado de produção.
