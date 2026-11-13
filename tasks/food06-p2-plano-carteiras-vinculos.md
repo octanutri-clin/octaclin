@@ -57,6 +57,10 @@ de `servico-portal-paciente.ts`. Isso não demonstra exposição real, mas não 
 seleção determinística nem autorização de representação para múltiplos pacientes.
 Inventariar e revisar esses fluxos antes de habilitar representação múltipla;
 não presumir que o contrato de P2 corrige automaticamente o portal existente.
+Busca textual inicial nos módulos `pacientes` e `auth` não encontrou modelo
+nomeado de representante legal; isso não é inventário completo nem prova de
+ausência em todo o sistema. A autoridade para criar e revogar representação e
+suas evidências continuam pendentes de decisão e revisão específica.
 
 Preparar plano distinto para inventariar duplicatas apenas com agregados
 sanitizados, revisão de cada caso no ambiente apropriado, decisão de resolução,
