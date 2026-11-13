@@ -109,3 +109,13 @@
   Desligar logging reduz diagnóstico SQL, descrito no playbook; rollback do código
   reintroduz risco de exposição de parâmetros fora de produção. Nenhuma alteração
   externa de ambiente ou banco foi realizada.
+- Decisões adicionais do proprietário: profissional titular concede e revoga
+  acesso do colaborador à carteira inteira; uma conta pode representar vários
+  pacientes ativos na clínica. Portanto unicidade por `(tenant_id, usuario_id)`
+  é incompatível com o produto. Planejar vínculo individual e seleção autorizada;
+  `findOne` por conta no portal existente requer revisão antes de habilitar múltiplos
+  representados. Decisões e perspectivas UX A estão no plano de carteiras/vínculos.
+- Backend do CI `43503848895`, HEAD `2e14b975`: PASS na suíte completa
+  (5.115 PASS, 181 SKIPPED, 2 TODO) e na etapa PostgreSQL/Testcontainers
+  (271 PASS; grupos sobrepostos); workflow geral ainda em andamento nesta anotação.
+  Este resultado não prova P2 completa nem configuração de produção.

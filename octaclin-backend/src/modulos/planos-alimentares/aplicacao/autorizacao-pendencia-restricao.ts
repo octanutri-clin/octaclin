@@ -8,8 +8,8 @@ import { PacienteOrm } from '../../pacientes/infraestrutura/paciente.orm';
 
 export async function autorizarPendenciaRestricao(g: EntityManager, u: UsuarioAutenticado, pacienteId: string): Promise<'profissional'> {
   const negar = () => new ForbiddenException('Operação não autorizada.');
-  // Patient e Collaborator permanecem fechados enquanto vínculo único e
-  // carteira delegada não puderem ser comprovados sob concorrência.
+  // Patient e Collaborator permanecem fechados enquanto representação,
+  // seleção de paciente e carteira delegada não forem comprovadas.
   if (!g.queryRunner?.isTransactionActive || !u || !isUUID(u.tenantId) || !isUUID(u.usuarioId) || !isUUID(pacienteId) ||
     u.papel !== 'Professional') throw negar();
   const usuario = await g.getRepository(UsuarioOrm).findOne({
