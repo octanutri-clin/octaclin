@@ -40,6 +40,7 @@ const argumentosJest = [
   'src/infraestrutura/banco-dados/migracoes/1720000001081-RegistrosAnalisesFactuais.integracao.spec.ts',
   'src/infraestrutura/banco-dados/migracoes/1720000001083-RestricoesAlimentares.integracao.spec.ts',
   'src/infraestrutura/banco-dados/migracoes/1720000001084-ConcessoesPermissaoUsuario.integracao.spec.ts',
+  'src/modulos/auth/aplicacao/servico-concessoes-permissao.integracao.spec.ts',
   'src/modulos/planos-alimentares/aplicacao/consulta-teor-catalogo.integracao.spec.ts'
 ];
 const windows = process.platform === 'win32';
