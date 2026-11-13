@@ -23,7 +23,7 @@ describe('Autorização da ação clínica de restrição', () => {
     await expect(c.executar()).resolves.toBeUndefined();
     expect(c.concessoes.exigir).toHaveBeenCalledWith('tenant', 'usuario', 'restricoes.confirmar', c.g);
     expect(c.profissional.findOne).toHaveBeenCalledWith(expect.objectContaining({ where: expect.objectContaining({ tenantId: 'tenant', usuarioId: 'usuario' }) }));
-    expect(c.paciente.findOne).toHaveBeenCalledWith(expect.objectContaining({ where: expect.objectContaining({ id: 'paciente', tenantId: 'tenant', profissionalResponsavelId: 'profissional' }), lock: { mode: 'pessimistic_read' } }));
+    expect(c.paciente.findOne).toHaveBeenCalledWith(expect.objectContaining({ where: expect.objectContaining({ id: 'paciente', tenantId: 'tenant', profissionalResponsavelId: 'profissional' }), lock: { mode: 'pessimistic_write' } }));
   });
   it.each(['SuperAdmin', 'Collaborator', 'Patient', 'Client'] as const)('nega papel %s mesmo com concessão aparente', async papel => {
     const c = preparar();

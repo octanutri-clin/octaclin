@@ -71,6 +71,11 @@ import { ServicoPlanosAlimentares } from '../../modulos/planos-alimentares/aplic
 import { autorizarRestricaoClinica } from '../../modulos/planos-alimentares/aplicacao/autorizacao-restricao-clinica';
 import { ServicoConcessoesPermissao } from '../../modulos/auth/aplicacao/servico-concessoes-permissao';
 import { ConcessaoPermissaoUsuarioOrm } from '../../modulos/auth/infraestrutura/concessao-permissao-usuario.orm';
+import { ServicoConfirmacaoRestricao } from '../../modulos/planos-alimentares/aplicacao/servico-confirmacao-restricao';
+import { RestricaoPacienteOrm } from '../../modulos/planos-alimentares/infraestrutura/restricao-paciente.orm';
+import { RevisaoRestricaoPacienteOrm } from '../../modulos/planos-alimentares/infraestrutura/revisao-restricao-paciente.orm';
+import { AvaliacaoRestricoesPacienteOrm } from '../../modulos/planos-alimentares/infraestrutura/avaliacao-restricoes-paciente.orm';
+import { cifrarConteudoRestricao, decifrarConteudoRestricao } from '../../modulos/planos-alimentares/infraestrutura/codec-conteudo-restricao';
 
 /**
  * Prova integral de isolamento por tenant em Postgres real (PR 43).
@@ -260,6 +265,9 @@ descrever('RLS e isolamento multi-tenant integral em Postgres real', () => {
         ConsentimentoLgpdOrm,
         UsuarioOrm,
         ConcessaoPermissaoUsuarioOrm,
+        RestricaoPacienteOrm,
+        RevisaoRestricaoPacienteOrm,
+        AvaliacaoRestricoesPacienteOrm,
         PermissaoIntegracaoProfissionalOrm,
         UserActionLogOrm,
         NotificacaoOrm,
@@ -847,6 +855,25 @@ descrever('RLS e isolamento multi-tenant integral em Postgres real', () => {
     await expect(conferir(dados.pacienteId)).resolves.toBeUndefined();
     await expect(conferir(outro.pacienteId)).rejects.toMatchObject({ status: 403 });
     await expect(conferir(pacienteIdTenantB)).rejects.toMatchObject({ status: 403 });
+    const restricaoId = randomUUID();
+    const crypto = new CriptografiaDadosSensiveis();
+    const vinculo = { tenantId: tenantP2, pacienteId: dados.pacienteId, restricaoId, revisao: 1 };
+    const conteudo = { schemaVersao: 1, natureza: 'clinica', subtipoClinico: 'alergia_alimentar', alvo: { tipo: 'alimento', id: 'alvo-sintetico' } };
+    const cifra = cifrarConteudoRestricao(crypto, conteudo, { ...vinculo, finalidade: 'restricao' });
+    await cliente.query(`insert into restricoes_pacientes
+      (id, tenant_id, paciente_id, autor_usuario_id, chave_criacao, origem, conteudo_criptografado)
+      values ($1,$2,$3,$4,$5,'profissional',$6)`,
+      [restricaoId, tenantP2, dados.pacienteId, dados.usuarioId, randomUUID(), cifra]);
+    const confirmar = new ServicoConfirmacaoRestricao(executorTenant, crypto, concessoes);
+    await expect(confirmar.confirmar(usuario, dados.pacienteId, restricaoId, 1)).resolves.toEqual({ id: restricaoId, revisao: 2, confirmacao: 'confirmada' });
+    await expect(confirmar.confirmar(usuario, dados.pacienteId, restricaoId, 1)).rejects.toMatchObject({ status: 409 });
+    const persistida = await cliente.query<{ revisao: number; conteudo_criptografado: Buffer }>(
+      'select revisao, conteudo_criptografado from restricoes_pacientes where id=$1', [restricaoId]);
+    expect(persistida.rows[0].revisao).toBe(2);
+    expect(decifrarConteudoRestricao(crypto, persistida.rows[0].conteudo_criptografado,
+      { ...vinculo, revisao: 2, finalidade: 'restricao' })).toEqual(conteudo);
+    const historico = await cliente.query('select numero, evento from restricoes_pacientes_revisoes where restricao_id=$1', [restricaoId]);
+    expect(historico.rows).toEqual([{ numero: 2, evento: 'confirmacao' }]);
     let liberar!: () => void;
     let avisar!: () => void;
     const aguardando = new Promise<void>(resolve => { liberar = resolve; });

@@ -19,7 +19,7 @@ export async function autorizarRestricaoClinica(
   if (!profissional) throw negar();
   const paciente = await gerenciador.getRepository(PacienteOrm).findOne({
     where: { id: pacienteId, tenantId: usuario.tenantId, profissionalResponsavelId: profissional.id, arquivadoEm: IsNull() },
-    lock: { mode: 'pessimistic_read' }
+    lock: { mode: 'pessimistic_write' }
   });
   if (!paciente) throw negar();
 }
