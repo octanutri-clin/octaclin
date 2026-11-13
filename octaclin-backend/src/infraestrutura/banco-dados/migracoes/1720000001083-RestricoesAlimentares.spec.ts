@@ -133,7 +133,7 @@ describe('1083 registro e rollback', () => {
   });
 
   it('down recusa se row_security não ficou off (fora de transação), sem apagar nada', async () => {
-    const query = jest.fn(async (s: string) => (/current_setting\('row_security'\)/i.test(s) ? [{ rs: 'on' }] : /select\s+exists/i.test(s) ? [{ existe: false }] : []));
+    const query = jest.fn(async (s: string) => (/transaction_isolation/i.test(s) ? [{ transaction_isolation: 'read committed' }] : /current_setting\('row_security'\)/i.test(s) ? [{ rs: 'on' }] : /select\s+exists/i.test(s) ? [{ existe: false }] : []));
     await expect(new RestricoesAlimentares1720000001083().down({ query, isTransactionActive: true } as unknown as QueryRunner)).rejects.toThrow('Rollback recusado');
     expect(query.mock.calls.map(c => c[0]).join('\n').toLowerCase()).not.toMatch(/drop /);
   });
@@ -145,8 +145,14 @@ describe('1083 registro e rollback', () => {
     expect(query).not.toHaveBeenCalled();
   });
 
+  it.each(['repeatable read', 'serializable'])('R4-01 (reverificação): isolamento %s é recusado antes de qualquer outro SQL', async isolamento => {
+    const query = jest.fn(async (s: string) => (/transaction_isolation/i.test(s) ? [{ transaction_isolation: isolamento }] : []));
+    await expect(new RestricoesAlimentares1720000001083().down({ query, isTransactionActive: true } as unknown as QueryRunner)).rejects.toThrow('Rollback recusado');
+    expect(query).toHaveBeenCalledTimes(1);
+  });
+
   it('R4-01: trava as 7 tabelas em ACCESS EXCLUSIVE antes da checagem de existência e só depois remove', async () => {
-    const sql = await sqlDe(q => new RestricoesAlimentares1720000001083().down(q), [[], [{ rs: 'off' }], [], [{ existe: false }]]);
+    const sql = await sqlDe(q => new RestricoesAlimentares1720000001083().down(q), [[{ transaction_isolation: 'read committed' }], [], [{ rs: 'off' }], [], [{ existe: false }]]);
     const lock = sql.indexOf('lock table'), existe = sql.indexOf('select exists'), drop = sql.indexOf('drop table');
     expect(lock).toBeGreaterThan(-1);
     expect(lock).toBeLessThan(existe); expect(existe).toBeLessThan(drop);
@@ -155,7 +161,7 @@ describe('1083 registro e rollback', () => {
   });
 
   it('down recusa quando existe qualquer linha, sem apagar nada', async () => {
-    const query = jest.fn(async (s: string) => (/current_setting\('row_security'\)/i.test(s) ? [{ rs: 'off' }] : /select\s+exists/i.test(s) ? [{ existe: true }] : []));
+    const query = jest.fn(async (s: string) => (/transaction_isolation/i.test(s) ? [{ transaction_isolation: 'read committed' }] : /current_setting\('row_security'\)/i.test(s) ? [{ rs: 'off' }] : /select\s+exists/i.test(s) ? [{ existe: true }] : []));
     await expect(new RestricoesAlimentares1720000001083().down({ query, isTransactionActive: true } as unknown as QueryRunner)).rejects.toThrow('Rollback recusado');
     const sql = query.mock.calls.map(c => c[0]).join('\n').toLowerCase();
     expect(sql).toMatch(/set local row_security = off/);
@@ -163,7 +169,7 @@ describe('1083 registro e rollback', () => {
   });
 
   it('down com tabelas vazias remove só o que a 1083 criou', async () => {
-    const sql = await sqlDe(q => new RestricoesAlimentares1720000001083().down(q), [[], [{ rs: 'off' }], [], [{ existe: false }]]);
+    const sql = await sqlDe(q => new RestricoesAlimentares1720000001083().down(q), [[{ transaction_isolation: 'read committed' }], [], [{ rs: 'off' }], [], [{ existe: false }]]);
     for (const t of TABELAS_RESTRICOES_ALIMENTARES) expect(sql).toContain(`drop table ${t}`);
     expect(sql).toContain('drop function rejeitar_mutacao_restricoes_alimentares()');
     expect(sql).not.toMatch(/drop table (pacientes|usuarios|tenants|registros_analises_factuais)|delete from|truncate /);

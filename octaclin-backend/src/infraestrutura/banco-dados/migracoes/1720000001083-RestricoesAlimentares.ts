@@ -368,10 +368,15 @@ export class RestricoesAlimentares1720000001083 implements MigrationInterface {
 
   public async down(q: QueryRunner): Promise<void> {
     // Só reverte antes de haver dado (contrato v2 §6, PR C). Com qualquer linha, recusa e não toca em nada.
-    // Parecer R4 independente (R4-01): exige transação explícita e trava as sete tabelas em ACCESS EXCLUSIVE ANTES da
-    // checagem, até o commit. Uma escrita concorrente espera o lock e falha depois do DROP; nunca é confirmada para
-    // depois desaparecer. A checagem roda depois do lock (leitura atual em READ COMMITTED, o padrão do TypeORM).
+    // Parecer R4 independente (R4-01): exige transação explícita, isolamento READ COMMITTED e trava as sete tabelas em
+    // ACCESS EXCLUSIVE ANTES da checagem, até o commit. Uma escrita concorrente espera o lock e falha depois do DROP; nunca
+    // é confirmada para depois desaparecer. A checagem roda depois do lock, com leitura atual.
     if (q.isTransactionActive !== true) throw new Error('Rollback recusado: execute o down dentro de transacao explicita.');
+    // Reverificação independente (R4-01): sob REPEATABLE READ/SERIALIZABLE o snapshot é fixado na primeira consulta, antes
+    // do lock, e uma linha confirmada nessa janela ficaria invisível à checagem. Só READ COMMITTED é aceito; a verificação
+    // usa SHOW, que não fixa snapshot, e roda antes de qualquer outra consulta.
+    const iso: Array<{ transaction_isolation: string }> = await q.query('show transaction_isolation');
+    if (iso[0]?.transaction_isolation !== 'read committed') throw new Error('Rollback recusado: o down exige isolamento READ COMMITTED.');
     // Sob FORCE RLS um owner comum veria zero linhas: `row_security = off` faz a consulta falhar em vez de mentir.
     await q.query('set local row_security = off');
     // Fora de transação o `set local` não tem efeito: um owner sem BYPASSRLS contaria zero linhas sob FORCE.

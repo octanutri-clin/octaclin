@@ -537,3 +537,55 @@ suite('FOOD06 P1b 1083 down × escrita concorrente (R4-01 do parecer independent
     expect((await owner.query("select to_regclass('public.avaliacoes_restricoes_pacientes') tbl")).rows[0].tbl).toBeNull();
   });
 });
+
+suite('FOOD06 P1b 1083 down sob snapshot fixo (R4-01 da reverificação independente)', () => {
+  let container: StartedTestContainer, owner: Client, escritor: Client, conn: Record<string, unknown>;
+  const t = randomUUID(), p1 = randomUUID(), p2 = randomUUID();
+  beforeAll(async () => {
+    container = await new GenericContainer('postgres:15-alpine').withTmpFs({ '/var/lib/postgresql/data': 'rw,noexec,nosuid,size=128m' })
+      .withEnvironment({ POSTGRES_USER: 'owner', POSTGRES_PASSWORD: 'owner-test', POSTGRES_DB: 'food06_restricoes_snapshot' }).withExposedPorts(5432)
+      .withWaitStrategy(Wait.forLogMessage(/database system is ready to accept connections/i, 2)).withStartupTimeout(60000).start();
+    conn = { host: container.getHost(), port: container.getMappedPort(5432), database: 'food06_restricoes_snapshot' };
+    owner = new Client({ ...conn, user: 'owner', password: 'owner-test' } as never); await owner.connect();
+    await fixture(owner);
+    await owner.query('insert into tenants values($1)', [t]); await owner.query('insert into pacientes values($1,$2),($3,$2)', [p1, t, p2]);
+    await aplicar(conn, 'up');
+    await owner.query(`create role food06_runtime login password 'runtime-test' nosuperuser nocreatedb nocreaterole nobypassrls;
+      grant connect on database food06_restricoes_snapshot to food06_runtime; grant usage on schema public to food06_runtime;
+      grant select,insert,update on all tables in schema public to food06_runtime;`);
+    escritor = new Client({ ...conn, user: 'food06_runtime', password: 'runtime-test' } as never); await escritor.connect();
+  }, 120000);
+  afterAll(async () => { await escritor?.end(); await owner?.end(); await container?.stop(); }, 30000);
+
+  it.each([['REPEATABLE READ', 0], ['SERIALIZABLE', 1]] as const)(
+    '%s: escrita confirmada depois da primeira consulta e antes do lock não é apagada; o down recusa', async (isolamento, i) => {
+      const paciente = [p1, p2][i];
+      const m = new DataSource({ type: 'postgres', ...conn, username: 'owner', password: 'owner-test', entities: [], synchronize: false, logging: false } as never);
+      await m.initialize(); const q = m.createQueryRunner();
+      const original = q.query.bind(q); let escrito = false;
+      const escrever = async () => {
+        escrito = true;
+        await escritor.query('begin');
+        await escritor.query("select set_config('app.tenant_id', $1, true)", [t]);
+        await escritor.query('insert into avaliacoes_restricoes_pacientes(tenant_id,paciente_id) values($1,$2)', [t, paciente]);
+        await escritor.query('commit');
+      };
+      // Intercala como na prova do revisor: logo DEPOIS da consulta que fixa o snapshot (SELECT; o SET não fixa) e antes do LOCK.
+      (q as unknown as { query: (s: string, p?: unknown[]) => Promise<unknown> }).query = async (sql: string, params?: unknown[]) => {
+        const r = await original(sql, params);
+        if (!escrito && /current_setting\('row_security'\)/.test(sql)) await escrever();
+        return r;
+      };
+      let resultado: 'recusado' | 'removeu';
+      try {
+        await q.startTransaction(isolamento);
+        try { await new RestricoesAlimentares1720000001083().down(q); resultado = 'removeu'; await q.commitTransaction(); }
+        catch (e) { expect(String((e as Error).message)).toContain('Rollback recusado'); resultado = 'recusado'; await q.rollbackTransaction(); }
+      } finally { await q.release(); await m.destroy(); }
+      // se o down recusou antes do ponto de intercalação, a escrita acontece agora: o dado precisa sobreviver de qualquer jeito
+      if (!escrito) await escrever();
+      expect(resultado).toBe('recusado');
+      expect((await owner.query("select to_regclass('public.avaliacoes_restricoes_pacientes') tbl")).rows[0].tbl).toBe('avaliacoes_restricoes_pacientes');
+      expect((await owner.query('select count(*)::int n from avaliacoes_restricoes_pacientes where paciente_id=$1', [paciente])).rows[0].n).toBe(1);
+    });
+});

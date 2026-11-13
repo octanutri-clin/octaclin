@@ -464,7 +464,7 @@ escrito só pelo codec `codec-conteudo-restricao.ts`, que vincula a cifra a tena
 guarda estática `guarda-escrita-restricoes.spec.ts`; reconfirmação com avaliação obrigatória e restrição opcional, individual nunca renova nem declara
 ausência. Bloqueia merge: estado do banco divergente de `ESTADOS_SOLICITACAO`, consumidor das entidades sem o codec, ou cifra de outra linha aceita.
 R3/R4 da revisão: os 10 campos `bytea` da 1083 passam pelo mesmo codec (`CAMPOS_CIFRADOS`, conferido contra as colunas da migration) com vínculo de campo, tenant, registro, revisão e paciente; a guarda cobre as 7 entidades e as 7 tabelas com listas nominais. Bloqueia merge: coluna cifrada fora do registro ou arquivo fora das listas citando as tabelas.
-Parecer R4 independente (R4-01/R4-02): o `down` exige transação explícita e trava as 7 tabelas em ACCESS EXCLUSIVE antes de checar existência, com prova de duas conexões em PostgreSQL descartável; o codec recusa cifra acima do teto da coluna. Bloqueia merge: `down` sem o lock antes da checagem ou cifra maior que o `octet_length` da 1083.
+Parecer R4 independente (R4-01/R4-02): o `down` exige transação explícita e trava as 7 tabelas em ACCESS EXCLUSIVE antes de checar existência, com prova de duas conexões em PostgreSQL descartável; o codec recusa cifra acima do teto da coluna. Bloqueia merge: `down` sem o lock antes da checagem, `down` aceito fora de READ COMMITTED (snapshot fixo esconde escrita confirmada) ou cifra maior que o `octet_length` da 1083.
 
 ### FOOD06 — matriz global com oráculo decimal independente (T7, M02/M04)
 
