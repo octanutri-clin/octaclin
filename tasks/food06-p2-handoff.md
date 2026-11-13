@@ -79,6 +79,19 @@
   trigger da 1083 recusou, como previsto. Fixture corrigida incrementando revisão;
   CI do novo HEAD necessário para verificar o GREEN em PostgreSQL. Não alterar ou
   desabilitar o trigger para fazer o teste passar.
+- CI `43457560352`, job Backend `131995936498`, HEAD `bdae5bbc`: PASS após
+  corrigir a fixture; prova de banco inclui concorrência e rollback do incremento.
+- Novo helper de pendência permanece desconectado: só Professional ativo no banco,
+  com IDs válidos, transação e carteira. Testes locais 9 PASS e 2 TODO, typecheck
+  PASS. Patient e Collaborator NEGADOS provisoriamente, não implementados: revisão
+  independente detectou corrida de vínculo único do paciente e falta de modelo de
+  carteira delegada do colaborador. Não declarar a P2 pronta nem tratar negação
+  provisória como decisão de produto. Prova PostgreSQL para Professional adicionada,
+  pendente CI; precisa de provas dos outros papéis quando a solução for definida.
+- Ordem de trabalho: prosseguir nos itens independentes para Professional e clínica;
+  paciente/colaborador aguardam decisão/protocolo e testes de concorrência. O usuário
+  recebeu questões sobre delegação e unicidade; registrar resposta antes de alterar
+  contrato ou schema. Nenhuma migration externa ou de produção foi autorizada.
 - Pendente: todas as operações P2, API/DTOs,
   testes negativos de banco e de concorrência,
   provas RLS, UX B/C, revisão R4 independente, gates completos e PR.

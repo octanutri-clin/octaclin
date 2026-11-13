@@ -69,6 +69,7 @@ import { PlanoAlimentarOrm } from '../../modulos/planos-alimentares/infraestrutu
 import { PlanoAlimentarVersaoOrm } from '../../modulos/planos-alimentares/infraestrutura/plano-alimentar-versao.orm';
 import { ServicoPlanosAlimentares } from '../../modulos/planos-alimentares/aplicacao/servico-planos-alimentares';
 import { autorizarRestricaoClinica } from '../../modulos/planos-alimentares/aplicacao/autorizacao-restricao-clinica';
+import { autorizarPendenciaRestricao } from '../../modulos/planos-alimentares/aplicacao/autorizacao-pendencia-restricao';
 import { ServicoConcessoesPermissao } from '../../modulos/auth/aplicacao/servico-concessoes-permissao';
 import { ConcessaoPermissaoUsuarioOrm } from '../../modulos/auth/infraestrutura/concessao-permissao-usuario.orm';
 import { ServicoConfirmacaoRestricao } from '../../modulos/planos-alimentares/aplicacao/servico-confirmacao-restricao';
@@ -846,6 +847,11 @@ descrever('RLS e isolamento multi-tenant integral em Postgres real', () => {
       tenantId: tenantP2, usuarioId: dados.usuarioId, papel: 'Professional', emailHash: '', permissoes: []
     };
     const concessoes = new ServicoConcessoesPermissao(executorTenant);
+    const pendencia = (paciente: string) => executorTenant!.executar(tenantP2, g =>
+      autorizarPendenciaRestricao(g, usuario, paciente));
+    await expect(pendencia(dados.pacienteId)).resolves.toBe('profissional');
+    await expect(pendencia(outro.pacienteId)).rejects.toMatchObject({ status: 403 });
+    await expect(pendencia(pacienteIdTenantB)).rejects.toMatchObject({ status: 403 });
     const conferir = (paciente: string) => executorTenant!.executar(tenantP2, g =>
       autorizarRestricaoClinica(g, concessoes, usuario, paciente));
     await expect(conferir(dados.pacienteId)).rejects.toMatchObject({ status: 403 });
