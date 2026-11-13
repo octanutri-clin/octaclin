@@ -153,3 +153,29 @@ não valida conselho profissional e não ativa regras clínicas ou flags.
 
 Encerrar a execução após abrir a PR. Nenhum P2/P3/P4, tela, merge, deploy,
 migration externa, Neon, Render ou cobrança autorizado/realizado nesta tarefa.
+
+## Correção do CI herdada da Auth-1 — 2026-11-13
+
+O Backend do run `43411884871` falhou no inventário agregado RLS, pelo mesmo
+motivo da Auth-1: concessões não estavam na lista nominal de tabelas sem DELETE.
+Incorporada a correção `3999559d` da branch base por merge local, mantendo a PR
+empilhada. O inventário exige exatamente SELECT/INSERT/UPDATE por tenant, sem
+DELETE/ALL. Sem mudança funcional, migration ou política SQL.
+
+Evidências adicionais em Windows, Node 22.23.3 / pnpm 11.25.0:
+
+- PASS: instalação congelada, typecheck, build e artefato `dist/main.js`.
+- PASS: migration unitária 1084, 7/7; HTTP de concessões, usuários/cliente e
+  permissões, 38/38 em três suítes (grupos distintos).
+- FAIL de preparação: primeira seleção focada citou dois paths de spec
+  inexistentes; corrigida a seleção, sem alterar testes ou expectativas.
+- PASS: `git diff --check` e scanner local de segredos antes do push.
+- SKIPPED: suíte completa local Auth-2 e PostgreSQL/RLS local. Docker indisponível;
+  regressão completa Auth-1 apresentou duas falhas de plataforma fora do diff,
+  detalhadas em `tasks/food06-auth1-concessoes.md`. CI Linux do novo HEAD obrigatório.
+- NA: UX/Playwright neste delta de inventário e documentação, sem nova jornada.
+
+CI do novo HEAD pendente no registro. Não herdar verde da base; confirmar Backend
+incluindo inventário PostgreSQL e runner Testcontainers nesta PR. Rollback do delta:
+reverter ajuste do teste, sem alterar schema ou histórico. Permanecem os gates
+operacionais e a dependência da Auth-1; nenhum merge de PR ou deploy foi realizado.
