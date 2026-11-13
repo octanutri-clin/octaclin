@@ -1,7 +1,15 @@
 import type { QueryRunner } from 'typeorm';
 import { ConcessoesPermissaoUsuario1720000001084 } from './1720000001084-ConcessoesPermissaoUsuario';
+import { criarOpcoesTypeOrm } from '../opcoes-typeorm';
+import { ConcessaoPermissaoUsuarioOrm } from '../../../modulos/auth/infraestrutura/concessao-permissao-usuario.orm';
 
 describe('1084 concessões de permissão por usuário', () => {
+  it('registra a migration e a entidade uma única vez, sem ativar synchronize', () => {
+    const opcoes = criarOpcoesTypeOrm();
+    expect((opcoes.migrations as unknown[]).filter(m => m === ConcessoesPermissaoUsuario1720000001084)).toHaveLength(1);
+    expect((opcoes.entities as unknown[]).filter(e => e === ConcessaoPermissaoUsuarioOrm)).toHaveLength(1);
+    expect(opcoes.synchronize).toBe(false);
+  });
   it('cria somente a estrutura de concessões, com permissão fechada, unicidade ativa, FKs tenant e RLS FORCE', async () => {
     const query = jest.fn(async () => []);
     await new ConcessoesPermissaoUsuario1720000001084().up({ query } as unknown as QueryRunner);

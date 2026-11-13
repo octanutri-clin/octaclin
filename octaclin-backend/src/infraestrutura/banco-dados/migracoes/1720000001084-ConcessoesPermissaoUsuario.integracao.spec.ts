@@ -147,6 +147,7 @@ suite('Auth-1 1084: constraints, histórico, ORM, RLS FORCE e rollback em Postgr
   });
 
   it('down recusa tabela com histórico e rollback mantém os registros legíveis', async () => {
+    const alvo = await usuario(); await como(tenantA, m => inserir(m, alvo));
     const antes = (await owner.query('select count(*)::int n from concessoes_permissao_usuario')).rows[0].n;
     expect(antes).toBeGreaterThan(0);
     await expect(aplicar(conn, 'down')).rejects.toThrow('Rollback recusado');
