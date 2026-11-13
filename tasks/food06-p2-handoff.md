@@ -70,6 +70,15 @@
   sem provider Nest correto, flag fechada, DTO, rota e prova HTTP.
 - Próxima ação: usar o helper no serviço transacional, implementar os testes e
   operações P2; manter o acesso clínico indisponível até proteção por flag.
+- Avanço subsequente: serviço anotado `@Injectable` com dependências runtime;
+  teste Nest isolado teve RED/GREEN e revisão independente. A prova usa providers
+  e autorização simulados: não comprova boot/wiring do módulo real nem flag/rota.
+  Serviço ainda não registrado nem exposto. Necessário smoke com módulo real.
+- CI `43456710334` do HEAD `6146314a`: FAIL no preparo sintético da prova de
+  rollback porque alteração manual da avaliação não incrementava a revisão; o
+  trigger da 1083 recusou, como previsto. Fixture corrigida incrementando revisão;
+  CI do novo HEAD necessário para verificar o GREEN em PostgreSQL. Não alterar ou
+  desabilitar o trigger para fazer o teste passar.
 - Pendente: todas as operações P2, API/DTOs,
   testes negativos de banco e de concorrência,
   provas RLS, UX B/C, revisão R4 independente, gates completos e PR.

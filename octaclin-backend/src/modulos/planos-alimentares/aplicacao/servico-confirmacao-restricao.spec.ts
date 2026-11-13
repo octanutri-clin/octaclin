@@ -1,4 +1,8 @@
 import { BadRequestException, ConflictException, ForbiddenException } from '@nestjs/common';
+import { Test } from '@nestjs/testing';
+import { ExecutorTenant } from '../../../infraestrutura/banco-dados/executor-tenant';
+import { CriptografiaDadosSensiveis } from '../../../infraestrutura/seguranca/criptografia-dados-sensiveis';
+import { ServicoConcessoesPermissao } from '../../auth/aplicacao/servico-concessoes-permissao';
 import { ServicoConfirmacaoRestricao } from './servico-confirmacao-restricao';
 import { autorizarRestricaoClinica } from './autorizacao-restricao-clinica';
 import { decifrarConteudoRestricao, cifrarConteudoRestricao } from '../infraestrutura/codec-conteudo-restricao';
@@ -39,6 +43,24 @@ function preparar() {
 }
 beforeEach(() => jest.clearAllMocks());
 describe('confirmação de restrição', () => {
+  it('pode ser construído pelo Nest com as dependências de transação e concessão', async () => {
+    const g = { getRepository: jest.fn((entidade: unknown) => {
+      if (entidade === AvaliacaoRestricoesPacienteOrm) return { findOne: async () => null };
+      if (entidade === RestricaoPacienteOrm) return { findOne: async () => null };
+      if (entidade === RevisaoRestricaoPacienteOrm) return {};
+      throw new Error('Repositório inesperado');
+    }) };
+    const executor = { executar: jest.fn(async (_tenant: string, fn: (g: unknown) => unknown) => fn(g)) };
+    const concessoes = { exigir: jest.fn() };
+    const modulo = await Test.createTestingModule({ providers: [ServicoConfirmacaoRestricao,
+      { provide: ExecutorTenant, useValue: executor }, { provide: CriptografiaDadosSensiveis, useValue: {} },
+      { provide: ServicoConcessoesPermissao, useValue: concessoes }] }).compile();
+    try {
+      const servico = modulo.get(ServicoConfirmacaoRestricao);
+      await expect(servico.confirmar(ator as never, 'paciente', 'restricao', 1)).rejects.toBeInstanceOf(ForbiddenException);
+      expect(autorizarRestricaoClinica).toHaveBeenCalledWith(g, concessoes, ator, 'paciente');
+    } finally { await modulo.close(); }
+  });
   it('autoriza na mesma transação, preserva histórico cifrado e audita sem conteúdo', async () => {
     const c = preparar(); await expect(c.confirmar()).resolves.toEqual({ id: 'restricao', revisao: 2, confirmacao: 'confirmada' });
     expect(autorizarRestricaoClinica).toHaveBeenCalledWith(c.g, expect.anything(), ator, 'paciente');

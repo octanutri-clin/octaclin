@@ -1002,7 +1002,7 @@ descrever('RLS e isolamento multi-tenant integral em Postgres real', () => {
     expect((await cliente.query('select estado,revisao from restricoes_pacientes where id=$1', [concorrenteId])).rows)
       .toEqual([{ estado: 'inativa', revisao: 2 }]);
     expect((await cliente.query("select id from user_action_logs where recurso_id=$1 and acao='restricoes.inativar'", [concorrenteId])).rows).toHaveLength(1);
-    await cliente.query("update avaliacoes_restricoes_pacientes set situacao='restricoes_registradas' where id=$1", [avaliacaoRollback.rows[0].id]);
+    await cliente.query("update avaliacoes_restricoes_pacientes set situacao='restricoes_registradas', revisao=revisao+1 where id=$1", [avaliacaoRollback.rows[0].id]);
     const avaliacaoAntesInativacao = await cliente.query('select situacao,revisao,confirmado_por_usuario_id,confirmado_em,vence_em from avaliacoes_restricoes_pacientes where id=$1', [avaliacaoRollback.rows[0].id]);
     const idInativacaoRollback = randomUUID();
     const cifraInativacaoRollback = cifrarConteudoRestricao(crypto, conteudo,

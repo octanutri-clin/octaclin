@@ -1,7 +1,7 @@
-import { BadRequestException, ConflictException, ForbiddenException } from '@nestjs/common';
-import type { ExecutorTenant } from '../../../infraestrutura/banco-dados/executor-tenant';
-import type { CriptografiaDadosSensiveis } from '../../../infraestrutura/seguranca/criptografia-dados-sensiveis';
-import type { ServicoConcessoesPermissao } from '../../auth/aplicacao/servico-concessoes-permissao';
+import { BadRequestException, ConflictException, ForbiddenException, Injectable } from '@nestjs/common';
+import { ExecutorTenant } from '../../../infraestrutura/banco-dados/executor-tenant';
+import { CriptografiaDadosSensiveis } from '../../../infraestrutura/seguranca/criptografia-dados-sensiveis';
+import { ServicoConcessoesPermissao } from '../../auth/aplicacao/servico-concessoes-permissao';
 import type { UsuarioAutenticado } from '../../auth/dominio/usuario-autenticado';
 import { registrarAuditoriaNaTransacao } from '../../../infraestrutura/auditoria/servico-auditoria';
 import { RestricaoPacienteOrm } from '../infraestrutura/restricao-paciente.orm';
@@ -13,6 +13,7 @@ import { avaliarInativacao, InativacaoInvalidaError } from '../dominio/inativaca
 import { validarTextoProtegido } from '../dominio/conteudo-restricao';
 import { autorizarRestricaoClinica } from './autorizacao-restricao-clinica';
 
+@Injectable()
 export class ServicoConfirmacaoRestricao {
   constructor(private readonly executor: ExecutorTenant, private readonly cripto: CriptografiaDadosSensiveis,
     private readonly concessoes: ServicoConcessoesPermissao) {}
