@@ -1,6 +1,42 @@
 # FOOD06 Auth-2 — serviço e administração de concessões
 
-## Escopo e base
+## Integração do delta em main — 2026-11-13
+
+A #533 entrou em `main` por squash (`df191f33`), mas a #534 foi mergeada na
+branch `claude/food06-auth-concessoes` (`5999bfc2`), deixando Auth-2 fora da main.
+A branch `codex/auth2-integracao-main` parte de `df191f33` e reaplica somente o
+commit de delta `5999bfc2`. Diff contra main: dez arquivos, sem repetir Auth-1.
+O backend é idêntico ao merge da #534 (`git diff --exit-code 5999bfc2 HEAD --
+octaclin-backend`); a única atualização adicional é este registro documental.
+Risco R4; escopo funcional e rollback originais abaixo permanecem aplicáveis.
+
+Validações repetidas neste ciclo (Windows, Node 22.23.3 / pnpm 11.25.0):
+
+- PASS: typecheck, build e artefato `dist/main.js`; 45/45 testes em quatro suítes
+  (migration unitária, HTTP, usuários/cliente e permissões), sem skipped.
+- PASS: tooling Node 12/12, redação de auditoria 24/24 e guardas 11/11.
+- FAIL de ambiente: wrapper `test:tooling-agentes` não encontra `python3`.
+  Repetição com `python` (3.14) resulta em quatro PASS e um ERROR: Windows recusa
+  criar symlink (WinError 1314). Nenhum teste ou privilégio foi alterado.
+- PASS: scanner de segredos e `git diff --check` antes do push.
+- SKIPPED: instalação congelada e regressão integral repetidas localmente nesta
+  integração; dependências congeladas da validação anterior foram preservadas.
+  PostgreSQL/Testcontainers local indisponível por ausência de Docker.
+- Evidência anterior reconferida: CI da #534 `43415526124` com todos os jobs
+  SUCCESS, incluindo Backend, Governança, Web e Demo. Backend: 5.049 aprovados /
+  181 skipped na suíte completa; RLS/Testcontainers 269/269, sem skipped.
+  Essa evidência refere-se ao HEAD anterior, não aprova o novo HEAD desta PR.
+- SKIPPED: nova revisão R4 independente nesta integração, sem mudança de código
+  frente à #534; revisão estática anterior registrada abaixo. Revisão humana e
+  checks da nova PR permanecem gates próprios.
+- NA: UX/Playwright adicional, sem alteração de interface ou jornada neste delta.
+
+Próximo passo: CI desta PR contra main e revisão do proprietário. Não mergear
+automaticamente. Antes de disponibilizar Auth-2, comprovar 1084/RLS no ambiente
+alvo por procedimento autorizado separado; a cascata depende da tabela mesmo
+com flags clínicas desligadas. Sem migration externa, deploy ou início de P2.
+
+## Escopo e base da abertura original (histórico)
 
 Risco R4 (auth/authz). Branch `claude/food06-auth2-servico`, baseada em
 `f8cf057b4c9f12e6e777e02b702d5d83584aef15` da Auth-1 (#533, ainda Draft).
