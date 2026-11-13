@@ -73,6 +73,7 @@ import { autorizarPendenciaRestricao } from '../../modulos/planos-alimentares/ap
 import { ServicoConcessoesPermissao } from '../../modulos/auth/aplicacao/servico-concessoes-permissao';
 import { ConcessaoPermissaoUsuarioOrm } from '../../modulos/auth/infraestrutura/concessao-permissao-usuario.orm';
 import { ServicoConfirmacaoRestricao } from '../../modulos/planos-alimentares/aplicacao/servico-confirmacao-restricao';
+import { ServicoRegistroPendenciaRestricao } from '../../modulos/planos-alimentares/aplicacao/servico-registro-pendencia-restricao';
 import { RestricaoPacienteOrm } from '../../modulos/planos-alimentares/infraestrutura/restricao-paciente.orm';
 import { RevisaoRestricaoPacienteOrm } from '../../modulos/planos-alimentares/infraestrutura/revisao-restricao-paciente.orm';
 import { AvaliacaoRestricoesPacienteOrm } from '../../modulos/planos-alimentares/infraestrutura/avaliacao-restricoes-paciente.orm';
@@ -580,6 +581,31 @@ descrever('RLS e isolamento multi-tenant integral em Postgres real', () => {
     await encerrarRecursos();
   }, 30_000);
 
+  it('não registra parâmetros sintéticos em consulta PostgreSQL ou erro', async () => {
+    if (!configuracaoRuntime) throw new Error('Conexao da prova RLS nao foi inicializada.');
+    const saida = jest.spyOn(console, 'log').mockImplementation(() => undefined);
+    const erros = jest.spyOn(console, 'error').mockImplementation(() => undefined);
+    const avisos = jest.spyOn(console, 'warn').mockImplementation(() => undefined);
+    const fonte = new DataSource({
+      ...criarOpcoesTypeOrm(),
+      type: 'postgres', host: configuracaoRuntime.host, port: configuracaoRuntime.porta,
+      username: configuracaoRuntime.usuario, password: configuracaoRuntime.senha,
+      database: configuracaoRuntime.banco, ssl: false, entities: [], migrations: [],
+      migrationsRun: false, synchronize: false
+    } as DataSourceOptions);
+    try {
+      await fonte.initialize();
+      await fonte.query('SELECT $1::text', ['CANARIO_SINTETICO_SQL']);
+      await expect(fonte.query('SELECT $1::integer', ['CANARIO_SINTETICO_SQL'])).rejects.toThrow();
+      expect(JSON.stringify([saida.mock.calls, erros.mock.calls, avisos.mock.calls])).not.toContain('CANARIO_SINTETICO_SQL');
+    } finally {
+      if (fonte.isInitialized) await fonte.destroy();
+      saida.mockRestore();
+      erros.mockRestore();
+      avisos.mockRestore();
+    }
+  });
+
   it('usa role runtime restrita, sem ownership, SUPERUSER ou BYPASSRLS', async () => {
     if (!cliente || !configuracaoRuntime) throw new Error('Cliente da prova RLS nao foi inicializado.');
     const papel = await cliente.query<{
@@ -852,6 +878,62 @@ descrever('RLS e isolamento multi-tenant integral em Postgres real', () => {
     await expect(pendencia(dados.pacienteId)).resolves.toBe('profissional');
     await expect(pendencia(outro.pacienteId)).rejects.toMatchObject({ status: 403 });
     await expect(pendencia(pacienteIdTenantB)).rejects.toMatchObject({ status: 403 });
+    const crypto = new CriptografiaDadosSensiveis();
+    const registro = new ServicoRegistroPendenciaRestricao(executorTenant, crypto);
+    const chave = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+    const conteudo = { schemaVersao: 1, natureza: 'clinica', subtipoClinico: 'alergia_alimentar', alvo: { tipo: 'alimento', id: 'alvo-sintetico' } };
+    const simultaneos = await Promise.all([
+      registro.registrar(usuario, dados.pacienteId, { chaveCriacao: chave, conteudo }),
+      registro.registrar(usuario, dados.pacienteId.toUpperCase(), { chaveCriacao: chave.toUpperCase(), conteudo })
+    ]);
+    expect(simultaneos[0]).toEqual(simultaneos[1]);
+    const pendenteId = (simultaneos[0] as { id: string }).id;
+    await comoTenant(tenantP2);
+    const pendente = await cliente.query('select confirmacao,revisao from restricoes_pacientes where id=$1', [pendenteId]);
+    expect(pendente.rows).toEqual([{ confirmacao: 'pendente', revisao: 1 }]);
+    expect((await cliente.query('select numero,evento from restricoes_pacientes_revisoes where restricao_id=$1', [pendenteId])).rows)
+      .toEqual([{ numero: 1, evento: 'criacao' }]);
+    expect((await cliente.query("select id from user_action_logs where recurso_id=$1 and acao='restricoes.registrar_pendencia'", [pendenteId])).rows).toHaveLength(1);
+    const pacienteAvaliacao = randomUUID();
+    await cliente.query('insert into pacientes(id,tenant_id,profissional_responsavel_id,nome_criptografado) values ($1,$2,$3,$4)',
+      [pacienteAvaliacao, tenantP2, dados.profissionalId, Buffer.from('paciente-sintetico')]);
+    const avalPendente = await cliente.query<{ id: string }>(`insert into avaliacoes_restricoes_pacientes
+      (tenant_id,paciente_id,situacao,confirmado_por_usuario_id,confirmado_em,vence_em)
+      values ($1,$2,'sem_restricoes_confirmadas',$3,now(),now() + interval '10 days') returning id`,
+      [tenantP2, pacienteAvaliacao, dados.usuarioId]);
+    await registro.registrar(usuario, pacienteAvaliacao,
+      { chaveCriacao: 'ffffffff-ffff-4fff-8fff-ffffffffffff', conteudo });
+    expect((await cliente.query('select situacao,revisao,confirmado_em,vence_em from avaliacoes_restricoes_pacientes where id=$1', [avalPendente.rows[0].id])).rows)
+      .toEqual([{ situacao: 'nao_informado', revisao: 2, confirmado_em: null, vence_em: null }]);
+    expect((await cliente.query('select numero,situacao from avaliacoes_restricoes_revisoes where avaliacao_id=$1', [avalPendente.rows[0].id])).rows)
+      .toEqual([{ numero: 2, situacao: 'nao_informado' }]);
+    expect((await cliente.query("select metadados from user_action_logs where recurso_id=$1 and acao='restricoes.avaliacao_invalidada'", [avalPendente.rows[0].id])).rows)
+      .toEqual([{ metadados: {} }]);
+    const outroDaCarteira = randomUUID();
+    await cliente.query('insert into pacientes(id,tenant_id,profissional_responsavel_id,nome_criptografado) values ($1,$2,$3,$4)',
+      [outroDaCarteira, tenantP2, dados.profissionalId, Buffer.from('paciente-sintetico')]);
+    const chaveConcorrente = 'cccccccc-cccc-4ccc-8ccc-cccccccccccc';
+    let liberarChave!: () => void;
+    let avisarChave!: () => void;
+    const esperarChave = new Promise<void>(resolve => { liberarChave = resolve; });
+    const chaveBloqueada = new Promise<void>(resolve => { avisarChave = resolve; });
+    const detentorChave = executorTenant.executar(tenantP2, async g => {
+      await g.query('select pg_advisory_xact_lock(hashtextextended($1, 0))', [`${tenantP2}:${dados.usuarioId}:${chaveConcorrente}`]);
+      avisarChave(); await esperarChave;
+    });
+    try {
+      await Promise.race([chaveBloqueada, detentorChave.then(() => { throw new Error('Transação encerrou cedo.'); })]);
+      const executorPrazo = { executar: <T>(t: string, fn: (g: EntityManager) => Promise<T>) =>
+        executorTenant!.executar(t, async g => { await g.query("set local lock_timeout = '200ms'"); return fn(g); }) };
+      const registroPrazo = new ServicoRegistroPendenciaRestricao(executorPrazo as ExecutorTenant, crypto);
+      await expect(registroPrazo.registrar(usuario, outroDaCarteira, { chaveCriacao: chaveConcorrente.toUpperCase(), conteudo }))
+        .rejects.toMatchObject({ status: 409, message: 'Operação concorrente. Tente novamente.' });
+    } finally { liberarChave(); await detentorChave; }
+    await registro.registrar(usuario, dados.pacienteId, { chaveCriacao: chaveConcorrente, conteudo });
+    await expect(registro.registrar(usuario, outroDaCarteira, { chaveCriacao: chaveConcorrente.toUpperCase(), conteudo }))
+      .rejects.toMatchObject({ status: 409 });
+    expect((await cliente.query('select count(*)::int n from restricoes_pacientes where tenant_id=$1 and autor_usuario_id=$2 and chave_criacao=$3',
+      [tenantP2, dados.usuarioId, chaveConcorrente])).rows).toEqual([{ n: 1 }]);
     const conferir = (paciente: string) => executorTenant!.executar(tenantP2, g =>
       autorizarRestricaoClinica(g, concessoes, usuario, paciente));
     await expect(conferir(dados.pacienteId)).rejects.toMatchObject({ status: 403 });
@@ -864,9 +946,7 @@ descrever('RLS e isolamento multi-tenant integral em Postgres real', () => {
     await expect(conferir(outro.pacienteId)).rejects.toMatchObject({ status: 403 });
     await expect(conferir(pacienteIdTenantB)).rejects.toMatchObject({ status: 403 });
     const restricaoId = randomUUID();
-    const crypto = new CriptografiaDadosSensiveis();
     const vinculo = { tenantId: tenantP2, pacienteId: dados.pacienteId, restricaoId, revisao: 1 };
-    const conteudo = { schemaVersao: 1, natureza: 'clinica', subtipoClinico: 'alergia_alimentar', alvo: { tipo: 'alimento', id: 'alvo-sintetico' } };
     const cifra = cifrarConteudoRestricao(crypto, conteudo, { ...vinculo, finalidade: 'restricao' });
     await cliente.query(`insert into restricoes_pacientes
       (id, tenant_id, paciente_id, autor_usuario_id, chave_criacao, origem, conteudo_criptografado)
@@ -931,13 +1011,24 @@ descrever('RLS e isolamento multi-tenant integral em Postgres real', () => {
         try { return await fn(g); } finally { spy.mockRestore(); }
       }) };
     const confirmarComFalha = new ServicoConfirmacaoRestricao(executorFalho as ExecutorTenant, crypto, concessoes);
-    await expect(confirmarComFalha.confirmar(usuario, pacienteRollback, idRollback, 1)).rejects.toThrow('auditoria sintética indisponível');
+    await expect(confirmarComFalha.confirmar(usuario, pacienteRollback, idRollback, 1)).rejects.toMatchObject({ status: 500, message: 'Operação indisponível.' });
     const rollback = await cliente.query('select confirmacao,revisao,conteudo_criptografado from restricoes_pacientes where id=$1', [idRollback]);
     expect(rollback.rows).toEqual([{ confirmacao: 'pendente', revisao: 1, conteudo_criptografado: cifraRollback }]);
     expect((await cliente.query('select numero from restricoes_pacientes_revisoes where restricao_id=$1', [idRollback])).rows).toEqual([]);
     expect((await cliente.query('select situacao,revisao,confirmado_por_usuario_id,confirmado_em,vence_em from avaliacoes_restricoes_pacientes where id=$1', [avaliacaoRollback.rows[0].id])).rows).toEqual(antesRollback.rows);
     expect((await cliente.query('select numero from avaliacoes_restricoes_revisoes where avaliacao_id=$1', [avaliacaoRollback.rows[0].id])).rows).toEqual([]);
     expect((await cliente.query('select id from user_action_logs where recurso_id = any($1::uuid[])', [[avaliacaoRollback.rows[0].id, idRollback]])).rows).toEqual([]);
+    const chaveRegistroRollback = 'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee';
+    const registroComFalha = new ServicoRegistroPendenciaRestricao(executorFalho as ExecutorTenant, crypto);
+    const auditoriasAntesRegistro = await cliente.query<{ n: number }>(
+      'select count(*)::int n from user_action_logs where tenant_id=$1 and usuario_id=$2', [tenantP2, dados.usuarioId]);
+    await expect(registroComFalha.registrar(usuario, pacienteRollback, { chaveCriacao: chaveRegistroRollback, conteudo }))
+      .rejects.toMatchObject({ status: 500, message: 'Operação indisponível.' });
+    expect((await cliente.query('select id from restricoes_pacientes where tenant_id=$1 and autor_usuario_id=$2 and chave_criacao=$3',
+      [tenantP2, dados.usuarioId, chaveRegistroRollback])).rows).toEqual([]);
+    expect((await cliente.query('select situacao,revisao,confirmado_por_usuario_id,confirmado_em,vence_em from avaliacoes_restricoes_pacientes where id=$1', [avaliacaoRollback.rows[0].id])).rows).toEqual(antesRollback.rows);
+    expect((await cliente.query('select numero from avaliacoes_restricoes_revisoes where avaliacao_id=$1', [avaliacaoRollback.rows[0].id])).rows).toEqual([]);
+    expect((await cliente.query('select count(*)::int n from user_action_logs where tenant_id=$1 and usuario_id=$2', [tenantP2, dados.usuarioId])).rows).toEqual(auditoriasAntesRegistro.rows);
     await cliente.query(`update avaliacoes_restricoes_pacientes set situacao='restricoes_registradas',
       confirmado_por_usuario_id=$1, confirmado_em=now(), vence_em=now() + interval '10 days', revisao=3 where id=$2`,
       [dados.usuarioId, avaliacao.rows[0].id]);
@@ -991,7 +1082,7 @@ descrever('RLS e isolamento multi-tenant integral em Postgres real', () => {
       const executorComPrazo = { executar: <T>(t: string, fn: (g: EntityManager) => Promise<T>) =>
         executorTenant!.executar(t, async g => { await g.query("set local lock_timeout = '200ms'"); return fn(g); }) };
       const comPrazo = new ServicoConfirmacaoRestricao(executorComPrazo as ExecutorTenant, crypto, concessoes);
-      await expect(comPrazo.inativar(usuario, dados.pacienteId, concorrenteId, 1, pedido)).rejects.toMatchObject({ code: '55P03' });
+      await expect(comPrazo.inativar(usuario, dados.pacienteId, concorrenteId, 1, pedido)).rejects.toMatchObject({ status: 409, message: 'Operação concorrente. Tente novamente.' });
     } finally {
       liberarPaciente();
       await detentor;
@@ -1018,7 +1109,7 @@ descrever('RLS e isolamento multi-tenant integral em Postgres real', () => {
       values ($1,$2,$3,$4,$5,'profissional','confirmada',$4,now(),$6)`,
       [idInativacaoRollback, tenantP2, pacienteRollback, dados.usuarioId, randomUUID(), cifraInativacaoRollback]);
     await expect(confirmarComFalha.inativar(usuario, pacienteRollback, idInativacaoRollback, 1, pedido))
-      .rejects.toThrow('auditoria sintética indisponível');
+      .rejects.toMatchObject({ status: 500, message: 'Operação indisponível.' });
     expect((await cliente.query('select estado,revisao,conteudo_criptografado from restricoes_pacientes where id=$1', [idInativacaoRollback])).rows)
       .toEqual([{ estado: 'ativa', revisao: 1, conteudo_criptografado: cifraInativacaoRollback }]);
     expect((await cliente.query('select situacao,revisao,confirmado_por_usuario_id,confirmado_em,vence_em from avaliacoes_restricoes_pacientes where id=$1', [avaliacaoRollback.rows[0].id])).rows)

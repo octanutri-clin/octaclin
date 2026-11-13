@@ -1,5 +1,6 @@
 import { readdirSync } from 'fs';
 import { join } from 'path';
+import { DataSource, DataSourceOptions } from 'typeorm';
 import { criarOpcoesTypeOrm } from './opcoes-typeorm';
 import { AdicionarDesfechosConsultaAgenda1720000001002 } from './migracoes/1720000001002-AdicionarDesfechosConsultaAgenda';
 import { AdicionarRevisaoClinicaEnviosQuestionario1720000001003 } from './migracoes/1720000001003-AdicionarRevisaoClinicaEnviosQuestionario';
@@ -44,6 +45,31 @@ describe('criarOpcoesTypeOrm', () => {
 
   afterAll(() => {
     process.env = ambienteOriginal;
+  });
+
+  it.each(['development', 'test', 'staging', 'production'])('não habilita logs de SQL ou parâmetros em NODE_ENV=%s', ambiente => {
+    process.env.NODE_ENV = ambiente;
+    process.env.BANCO_SSL = 'true';
+    const opcoes = criarOpcoesTypeOrm();
+    expect(opcoes.logging).toBe(false);
+    // O logger padrão registra consultas lentas mesmo com logging=false.
+    expect(opcoes.maxQueryExecutionTime).toBeUndefined();
+  });
+
+  it('não escreve parâmetros sintéticos nem erros de consulta no logger padrão', () => {
+    const saida = jest.spyOn(console, 'log').mockImplementation(() => undefined);
+    const erros = jest.spyOn(console, 'error').mockImplementation(() => undefined);
+    const avisos = jest.spyOn(console, 'warn').mockImplementation(() => undefined);
+    try {
+      const logger = new DataSource(criarOpcoesTypeOrm() as DataSourceOptions).logger;
+      logger.logQuery('SELECT $1', ['CANARIO_SINTETICO_SQL']);
+      logger.logQueryError('CANARIO_SINTETICO_SQL', 'SELECT $1', ['CANARIO_SINTETICO_SQL']);
+      expect(JSON.stringify([saida.mock.calls, erros.mock.calls, avisos.mock.calls])).not.toContain('CANARIO_SINTETICO_SQL');
+    } finally {
+      saida.mockRestore();
+      erros.mockRestore();
+      avisos.mockRestore();
+    }
   });
 
   it('usa DATABASE_URL quando informada', () => {

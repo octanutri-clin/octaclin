@@ -89,9 +89,23 @@
   provisória como decisão de produto. Prova PostgreSQL para Professional adicionada,
   pendente CI; precisa de provas dos outros papéis quando a solução for definida.
 - Ordem de trabalho: prosseguir nos itens independentes para Professional e clínica;
-  paciente/colaborador aguardam decisão/protocolo e testes de concorrência. O usuário
-  recebeu questões sobre delegação e unicidade; registrar resposta antes de alterar
-  contrato ou schema. Nenhuma migration externa ou de produção foi autorizada.
+  paciente/colaborador aguardam implementação/protocolo e testes de concorrência.
+- Decisão do proprietário de 2026-11-13: planejar delegação explícita de carteira
+  para Collaborator e unicidade no banco para o vínculo ativo do paciente, com
+  tratamento de duplicatas. Essas decisões autorizam planejamento, não aplicam
+  migrations nem autorizam saneamento de dados reais. Patient e Collaborator
+  continuam fechados até protocolo, revisão R4, provas negativas e procedimento
+  de migração/rollback aprovados; continuar itens independentes para Professional.
 - Pendente: todas as operações P2, API/DTOs,
   testes negativos de banco e de concorrência,
   provas RLS, UX B/C, revisão R4 independente, gates completos e PR.
+- Incremento local: registro profissional idempotente, auditoria e invalidação
+  transacionais; sanitização de erros e logger SQL desabilitado globalmente.
+  Revisão R4 independente não encontrou vazamento cross-tenant demonstrável no
+  fluxo examinado e apontou risco futuro do logger de consultas lentas; o teste
+  agora veda a configuração do limiar. Provas PostgreSQL do incremento e canário
+  de log aguardam CI; logger e HTTP sintéticos não provam provider nem rota real.
+  O plano de delegação e unicidade está em `food06-p2-plano-carteiras-vinculos.md`.
+  Desligar logging reduz diagnóstico SQL, descrito no playbook; rollback do código
+  reintroduz risco de exposição de parâmetros fora de produção. Nenhuma alteração
+  externa de ambiente ou banco foi realizada.

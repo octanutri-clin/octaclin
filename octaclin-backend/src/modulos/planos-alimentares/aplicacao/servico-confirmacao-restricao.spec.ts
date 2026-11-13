@@ -1,5 +1,7 @@
-import { BadRequestException, ConflictException, ForbiddenException } from '@nestjs/common';
+import { BadRequestException, ConflictException, ForbiddenException, InternalServerErrorException } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
+import { inspect } from 'node:util';
+import { QueryFailedError } from 'typeorm';
 import { ExecutorTenant } from '../../../infraestrutura/banco-dados/executor-tenant';
 import { CriptografiaDadosSensiveis } from '../../../infraestrutura/seguranca/criptografia-dados-sensiveis';
 import { ServicoConcessoesPermissao } from '../../auth/aplicacao/servico-concessoes-permissao';
@@ -21,9 +23,9 @@ jest.mock('../infraestrutura/codec-conteudo-restricao', () => ({
 }));
 jest.mock('../../../infraestrutura/auditoria/servico-auditoria', () => ({ registrarAuditoriaNaTransacao: jest.fn(async () => undefined) }));
 
-const ator = { tenantId: 'tenant', usuarioId: 'usuario', papel: 'Professional', emailHash: '', permissoes: [] } as const;
+const ator = { tenantId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', usuarioId: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', papel: 'Professional', emailHash: '', permissoes: [] } as const;
 function preparar() {
-  const linha = { id: 'restricao', tenantId: 'tenant', pacienteId: 'paciente', estado: 'ativa', confirmacao: 'pendente', revisao: 1, conteudoCriptografado: Buffer.from('anterior') };
+  const linha = { id: 'dddddddd-dddd-4ddd-8ddd-dddddddddddd', tenantId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', pacienteId: 'cccccccc-cccc-4ccc-8ccc-cccccccccccc', estado: 'ativa', confirmacao: 'pendente', revisao: 1, conteudoCriptografado: Buffer.from('anterior') };
   const atual = { findOne: jest.fn(async () => linha), update: jest.fn(async () => ({ affected: 1 })) };
   const revisoes = { insert: jest.fn(async () => undefined) };
   const avaliacao = { findOne: jest.fn(async (): Promise<{ id: string; revisao: number; situacao: string } | null> => null), update: jest.fn(async () => ({ affected: 1 })) };
@@ -38,8 +40,10 @@ function preparar() {
   const executor = { executar: jest.fn(async (_tenant: string, fn: (g: unknown) => unknown) => fn(g)) };
   const servico = new ServicoConfirmacaoRestricao(executor as never, {} as never, {} as never);
   return { linha, atual, revisoes, avaliacao, historicoAvaliacao, g, executor,
-    confirmar: (revisao = 1) => servico.confirmar(ator as never, 'paciente', 'restricao', revisao),
-    inativar: (dados: { motivo: string; justificativa: string; confirmacaoEmDoisPassos: boolean }) => servico.inativar(ator as never, 'paciente', 'restricao', 1, dados) };
+    confirmar: (revisao = 1) => servico.confirmar(ator as never, 'cccccccc-cccc-4ccc-8ccc-cccccccccccc', 'dddddddd-dddd-4ddd-8ddd-dddddddddddd', revisao),
+    confirmarMaiusculo: () => servico.confirmar(ator as never, 'CCCCCCCC-CCCC-4CCC-8CCC-CCCCCCCCCCCC', 'DDDDDDDD-DDDD-4DDD-8DDD-DDDDDDDDDDDD', 1),
+    inativarMaiusculo: (dados: { motivo: string; justificativa: string; confirmacaoEmDoisPassos: boolean }) => servico.inativar(ator as never, 'CCCCCCCC-CCCC-4CCC-8CCC-CCCCCCCCCCCC', 'DDDDDDDD-DDDD-4DDD-8DDD-DDDDDDDDDDDD', 1, dados),
+    inativar: (dados: { motivo: string; justificativa: string; confirmacaoEmDoisPassos: boolean }) => servico.inativar(ator as never, 'cccccccc-cccc-4ccc-8ccc-cccccccccccc', 'dddddddd-dddd-4ddd-8ddd-dddddddddddd', 1, dados) };
 }
 beforeEach(() => jest.clearAllMocks());
 describe('confirmação de restrição', () => {
@@ -57,22 +61,27 @@ describe('confirmação de restrição', () => {
       { provide: ServicoConcessoesPermissao, useValue: concessoes }] }).compile();
     try {
       const servico = modulo.get(ServicoConfirmacaoRestricao);
-      await expect(servico.confirmar(ator as never, 'paciente', 'restricao', 1)).rejects.toBeInstanceOf(ForbiddenException);
-      expect(autorizarRestricaoClinica).toHaveBeenCalledWith(g, concessoes, ator, 'paciente');
+      await expect(servico.confirmar(ator as never, 'cccccccc-cccc-4ccc-8ccc-cccccccccccc', 'dddddddd-dddd-4ddd-8ddd-dddddddddddd', 1)).rejects.toBeInstanceOf(ForbiddenException);
+      expect(autorizarRestricaoClinica).toHaveBeenCalledWith(g, concessoes, ator, 'cccccccc-cccc-4ccc-8ccc-cccccccccccc');
     } finally { await modulo.close(); }
   });
   it('autoriza na mesma transação, preserva histórico cifrado e audita sem conteúdo', async () => {
-    const c = preparar(); await expect(c.confirmar()).resolves.toEqual({ id: 'restricao', revisao: 2, confirmacao: 'confirmada' });
-    expect(autorizarRestricaoClinica).toHaveBeenCalledWith(c.g, expect.anything(), ator, 'paciente');
+    const c = preparar(); await expect(c.confirmar()).resolves.toEqual({ id: 'dddddddd-dddd-4ddd-8ddd-dddddddddddd', revisao: 2, confirmacao: 'confirmada' });
+    expect(autorizarRestricaoClinica).toHaveBeenCalledWith(c.g, expect.anything(), ator, 'cccccccc-cccc-4ccc-8ccc-cccccccccccc');
     expect(decifrarConteudoRestricao).toHaveBeenCalled();
     expect(cifrarConteudoRestricao).toHaveBeenCalledTimes(2);
-    expect(c.atual.update).toHaveBeenCalledWith(expect.objectContaining({ id: 'restricao', tenantId: 'tenant', pacienteId: 'paciente', revisao: 1 }), expect.objectContaining({ confirmacao: 'confirmada', revisao: 2, atualizadoEm: expect.any(Function) }));
-    expect(c.revisoes.insert).toHaveBeenCalledWith(expect.objectContaining({ evento: 'confirmacao', numero: 2, tenantId: 'tenant', pacienteId: 'paciente' }));
+    expect(c.atual.update).toHaveBeenCalledWith(expect.objectContaining({ id: 'dddddddd-dddd-4ddd-8ddd-dddddddddddd', tenantId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', pacienteId: 'cccccccc-cccc-4ccc-8ccc-cccccccccccc', revisao: 1 }), expect.objectContaining({ confirmacao: 'confirmada', revisao: 2, atualizadoEm: expect.any(Function) }));
+    expect(c.revisoes.insert).toHaveBeenCalledWith(expect.objectContaining({ evento: 'confirmacao', numero: 2, tenantId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', pacienteId: 'cccccccc-cccc-4ccc-8ccc-cccccccccccc' }));
     expect(registrarAuditoriaNaTransacao).toHaveBeenCalledWith(c.g, expect.objectContaining({ metadados: {} }));
   });
   it('rejeita revisão desatualizada antes de gravar', async () => {
     const c = preparar(); await expect(c.confirmar(2)).rejects.toBeInstanceOf(ConflictException);
     expect(c.atual.update).not.toHaveBeenCalled(); expect(c.revisoes.insert).not.toHaveBeenCalled();
+  });
+  it('normaliza identificadores antes da autorização e do vínculo do codec', async () => {
+    const c = preparar(); await c.confirmarMaiusculo();
+    expect(autorizarRestricaoClinica).toHaveBeenCalledWith(c.g, expect.anything(), ator, 'cccccccc-cccc-4ccc-8ccc-cccccccccccc');
+    expect(decifrarConteudoRestricao).toHaveBeenCalledWith(expect.anything(), expect.anything(), expect.objectContaining({ pacienteId: 'cccccccc-cccc-4ccc-8ccc-cccccccccccc', restricaoId: 'dddddddd-dddd-4ddd-8ddd-dddddddddddd' }));
   });
   it('falha fechado se a autorização for negada', async () => {
     jest.mocked(autorizarRestricaoClinica).mockRejectedValueOnce(new ForbiddenException());
@@ -92,9 +101,9 @@ describe('confirmação de restrição', () => {
   it('invalida avaliação de ausência e registra revisão na mesma transação', async () => {
     const c = preparar(); c.avaliacao.findOne.mockResolvedValueOnce({ id: 'avaliacao', revisao: 3, situacao: 'sem_restricoes_confirmadas' });
     await expect(c.confirmar()).resolves.toMatchObject({ confirmacao: 'confirmada', revisao: 2 });
-    expect(c.avaliacao.update).toHaveBeenCalledWith(expect.objectContaining({ id: 'avaliacao', tenantId: 'tenant', pacienteId: 'paciente', revisao: 3 }),
+    expect(c.avaliacao.update).toHaveBeenCalledWith(expect.objectContaining({ id: 'avaliacao', tenantId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', pacienteId: 'cccccccc-cccc-4ccc-8ccc-cccccccccccc', revisao: 3 }),
       expect.objectContaining({ situacao: 'nao_informado', revisao: 4, confirmadoPorUsuarioId: null, confirmadoEm: null, venceEm: null }));
-    expect(c.historicoAvaliacao.insert).toHaveBeenCalledWith(expect.objectContaining({ avaliacaoId: 'avaliacao', numero: 4, situacao: 'nao_informado', autorUsuarioId: 'usuario' }));
+    expect(c.historicoAvaliacao.insert).toHaveBeenCalledWith(expect.objectContaining({ avaliacaoId: 'avaliacao', numero: 4, situacao: 'nao_informado', autorUsuarioId: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb' }));
   });
   it('rejeita CAS sem efeito e não registra histórico', async () => {
     const c = preparar(); c.atual.update.mockResolvedValueOnce({ affected: 0 });
@@ -107,16 +116,33 @@ describe('confirmação de restrição', () => {
     expect(c.atual.update).not.toHaveBeenCalled(); expect(c.revisoes.insert).not.toHaveBeenCalled();
   });
   it('propaga falha de auditoria para abortar a transação', async () => {
-    jest.mocked(registrarAuditoriaNaTransacao).mockRejectedValueOnce(new Error('auditoria indisponível'));
-    const c = preparar(); await expect(c.confirmar()).rejects.toThrow('auditoria indisponível');
+    jest.mocked(registrarAuditoriaNaTransacao).mockRejectedValueOnce(new Error('CANARIO_CLINICO_SINTETICO'));
+    const c = preparar(); const erro = await c.confirmar().catch(e => e);
+    expect(erro).toBeInstanceOf(InternalServerErrorException);
+    expect(String(erro)).not.toContain('CANARIO_CLINICO_SINTETICO');
+    if (!(erro instanceof InternalServerErrorException)) throw new Error('Exceção inesperada.');
+    expect(JSON.stringify(erro.getResponse())).not.toContain('CANARIO_CLINICO_SINTETICO');
+  });
+  it('não conserva query, parâmetros ou detalhes de QueryFailedError real', async () => {
+    const c = preparar();
+    c.executor.executar.mockRejectedValueOnce(new QueryFailedError('select CANARIO_QUERY', ['CANARIO_PARAMETRO'], Object.assign(new Error('CANARIO_ERRO'), { code: '23503', detail: 'CANARIO_DETALHE' })));
+    const erro = await c.confirmar().catch(e => e);
+    expect(erro).toBeInstanceOf(InternalServerErrorException);
+    expect(inspect(erro)).not.toMatch(/CANARIO_QUERY|CANARIO_PARAMETRO|CANARIO_ERRO|CANARIO_DETALHE/);
   });
   it('inativa restrição confirmada com justificativa cifrada, confirmação e histórico', async () => {
     const c = preparar(); c.linha.confirmacao = 'confirmada';
-    await expect(c.inativar({ motivo: 'informacao_clinica_revisada', justificativa: 'Justificativa sintética', confirmacaoEmDoisPassos: true })).resolves.toMatchObject({ id: 'restricao', revisao: 2, estado: 'inativa' });
-    expect(c.atual.update).toHaveBeenCalledWith(expect.objectContaining({ revisao: 1, tenantId: 'tenant', pacienteId: 'paciente' }), expect.objectContaining({ estado: 'inativa', revisao: 2, atualizadoEm: expect.any(Function) }));
+    await expect(c.inativar({ motivo: 'informacao_clinica_revisada', justificativa: 'Justificativa sintética', confirmacaoEmDoisPassos: true })).resolves.toMatchObject({ id: 'dddddddd-dddd-4ddd-8ddd-dddddddddddd', revisao: 2, estado: 'inativa' });
+    expect(c.atual.update).toHaveBeenCalledWith(expect.objectContaining({ revisao: 1, tenantId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', pacienteId: 'cccccccc-cccc-4ccc-8ccc-cccccccccccc' }), expect.objectContaining({ estado: 'inativa', revisao: 2, atualizadoEm: expect.any(Function) }));
     expect(cifrarCampo).toHaveBeenCalled();
     expect(c.revisoes.insert).toHaveBeenCalledWith(expect.objectContaining({ evento: 'inativacao', motivoInativacao: 'informacao_clinica_revisada', confirmacaoDoisPassos: true }));
     expect(registrarAuditoriaNaTransacao).toHaveBeenCalledWith(c.g, expect.objectContaining({ metadados: {} }));
+  });
+  it('normaliza UUIDs da inativação antes da autorização e da cifra', async () => {
+    const c = preparar(); c.linha.confirmacao = 'confirmada';
+    await c.inativarMaiusculo({ motivo: 'outro', justificativa: 'Sintético', confirmacaoEmDoisPassos: true });
+    expect(autorizarRestricaoClinica).toHaveBeenCalledWith(c.g, expect.anything(), ator, 'cccccccc-cccc-4ccc-8ccc-cccccccccccc');
+    expect(cifrarCampo).toHaveBeenCalledWith(expect.anything(), expect.anything(), 'Sintético', expect.objectContaining({ pacienteId: 'cccccccc-cccc-4ccc-8ccc-cccccccccccc', registroId: 'dddddddd-dddd-4ddd-8ddd-dddddddddddd' }));
   });
   it.each([{ motivo: '', justificativa: 'x', confirmacaoEmDoisPassos: true }, { motivo: 'outro', justificativa: '', confirmacaoEmDoisPassos: true }, { motivo: 'outro', justificativa: 'x', confirmacaoEmDoisPassos: false }])('recusa inativação sem pré-condições %p', async dados => {
     const c = preparar(); c.linha.confirmacao = 'confirmada';
@@ -141,6 +167,13 @@ describe('confirmação de restrição', () => {
     const c = preparar(); c.linha.confirmacao = 'confirmada';
     await expect(c.inativar({ motivo: 'outro', justificativa: 'Sintético', confirmacaoEmDoisPassos: true })).rejects.toBeInstanceOf(ForbiddenException);
     expect(c.atual.update).not.toHaveBeenCalled();
+  });
+  it('sanitiza falha inesperada durante inativação', async () => {
+    jest.mocked(registrarAuditoriaNaTransacao).mockRejectedValueOnce(new Error('CANARIO_CLINICO_SINTETICO'));
+    const c = preparar(); c.linha.confirmacao = 'confirmada';
+    const erro = await c.inativar({ motivo: 'outro', justificativa: 'Sintético', confirmacaoEmDoisPassos: true }).catch(e => e);
+    expect(erro).toBeInstanceOf(InternalServerErrorException);
+    expect(String(erro)).not.toContain('CANARIO_CLINICO_SINTETICO');
   });
   it.each(['linha\nseguinte', 'tab\taqui', 'x'.repeat(1001)])('rejeita justificativa incompatível sem eco', async justificativa => {
     const c = preparar(); c.linha.confirmacao = 'confirmada';

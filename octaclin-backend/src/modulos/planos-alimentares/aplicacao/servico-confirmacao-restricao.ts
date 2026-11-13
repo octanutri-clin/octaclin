@@ -1,4 +1,5 @@
 import { BadRequestException, ConflictException, ForbiddenException, Injectable } from '@nestjs/common';
+import { isUUID } from 'class-validator';
 import { ExecutorTenant } from '../../../infraestrutura/banco-dados/executor-tenant';
 import { CriptografiaDadosSensiveis } from '../../../infraestrutura/seguranca/criptografia-dados-sensiveis';
 import { ServicoConcessoesPermissao } from '../../auth/aplicacao/servico-concessoes-permissao';
@@ -12,6 +13,15 @@ import { cifrarCampo, cifrarConteudoRestricao, decifrarConteudoRestricao } from 
 import { avaliarInativacao, InativacaoInvalidaError } from '../dominio/inativacao-restricao-protegida';
 import { validarTextoProtegido } from '../dominio/conteudo-restricao';
 import { autorizarRestricaoClinica } from './autorizacao-restricao-clinica';
+import { falharRestricao } from './falha-restricao';
+
+function normalizarIdentidade(usuario: UsuarioAutenticado, pacienteId: string, restricaoId: string) {
+  if (!usuario || !isUUID(usuario.tenantId) || !isUUID(usuario.usuarioId) || !isUUID(pacienteId) || !isUUID(restricaoId)) {
+    throw new BadRequestException('Solicitação inválida.');
+  }
+  return { usuario: { ...usuario, tenantId: usuario.tenantId.toLowerCase(), usuarioId: usuario.usuarioId.toLowerCase() },
+    pacienteId: pacienteId.toLowerCase(), restricaoId: restricaoId.toLowerCase() };
+}
 
 @Injectable()
 export class ServicoConfirmacaoRestricao {
@@ -19,13 +29,14 @@ export class ServicoConfirmacaoRestricao {
     private readonly concessoes: ServicoConcessoesPermissao) {}
   async inativar(usuario: UsuarioAutenticado, pacienteId: string, restricaoId: string, revisao: number,
     dados: { motivo: string; justificativa: string; confirmacaoEmDoisPassos: boolean }): Promise<unknown> {
+    ({ usuario, pacienteId, restricaoId } = normalizarIdentidade(usuario, pacienteId, restricaoId));
     const motivos = ['registro_incorreto', 'informacao_clinica_revisada', 'solicitacao_fundamentada', 'outro'] as const;
     if (!Number.isSafeInteger(revisao) || revisao < 1 || !dados || typeof dados !== 'object' || Array.isArray(dados) ||
       Reflect.ownKeys(dados).some(k => typeof k !== 'string' || !['motivo', 'justificativa', 'confirmacaoEmDoisPassos'].includes(k)) ||
       !motivos.includes(dados.motivo as typeof motivos[number]) || dados.confirmacaoEmDoisPassos !== true) throw new BadRequestException('Solicitação inválida.');
     let justificativa: string;
     try { justificativa = validarTextoProtegido(dados.justificativa); } catch { throw new BadRequestException('Solicitação inválida.'); }
-    return this.executor.executar(usuario.tenantId, async g => {
+    try { return await this.executor.executar(usuario.tenantId, async g => {
       await autorizarRestricaoClinica(g, this.concessoes, usuario, pacienteId);
       const avaliacoes = g.getRepository(AvaliacaoRestricoesPacienteOrm);
       const avaliacao = await avaliacoes.findOne({ where: { tenantId: usuario.tenantId, pacienteId }, lock: { mode: 'pessimistic_write' } });
@@ -72,11 +83,12 @@ export class ServicoConfirmacaoRestricao {
       await registrarAuditoriaNaTransacao(g, { tenantId: usuario.tenantId, usuarioId: usuario.usuarioId,
         acao: 'restricoes.inativar', recursoTipo: 'restricao_paciente', recursoId: restricaoId, metadados: {} });
       return { id: restricaoId, revisao: proxima, estado: 'inativa' };
-    });
+    }); } catch (erro) { return falharRestricao(erro); }
   }
   async confirmar(usuario: UsuarioAutenticado, pacienteId: string, restricaoId: string, revisao: number): Promise<unknown> {
+    ({ usuario, pacienteId, restricaoId } = normalizarIdentidade(usuario, pacienteId, restricaoId));
     if (!Number.isSafeInteger(revisao) || revisao < 1) throw new ConflictException('Revisão inválida.');
-    return this.executor.executar(usuario.tenantId, async g => {
+    try { return await this.executor.executar(usuario.tenantId, async g => {
       await autorizarRestricaoClinica(g, this.concessoes, usuario, pacienteId);
       // Todos os escritores de avaliação/restrição devem serializar pelo paciente.
       const avaliacoes = g.getRepository(AvaliacaoRestricoesPacienteOrm);
@@ -112,6 +124,6 @@ export class ServicoConfirmacaoRestricao {
       await historico.insert({ tenantId: usuario.tenantId, pacienteId, restricaoId, numero: proxima, evento: 'confirmacao', autorUsuarioId: usuario.usuarioId, conteudoCriptografado: snapshot });
       await registrarAuditoriaNaTransacao(g, { tenantId: usuario.tenantId, usuarioId: usuario.usuarioId, acao: 'restricoes.confirmar', recursoTipo: 'restricao_paciente', recursoId: restricaoId, metadados: {} });
       return { id: restricaoId, revisao: proxima, confirmacao: 'confirmada' };
-    });
+    }); } catch (erro) { return falharRestricao(erro); }
   }
 }
