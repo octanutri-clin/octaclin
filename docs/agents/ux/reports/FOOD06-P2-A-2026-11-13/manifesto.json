@@ -1,0 +1,23 @@
+{
+  "limitacoes": "planejamento sintetico, sem interface ou pessoas reais",
+  "instancias": [
+    "/root/ux_nutri",
+    "/root/ux_paciente"
+  ],
+  "etapa": "A",
+  "ferramentas": "nenhuma declarada nos retornos finais; sem prova tecnica de restricao",
+  "modalidade": "papeis nativos; runtime nao garante isolamento de ferramentas",
+  "horario": "2026-11-13; horario exato nao recuperado",
+  "hashes": {
+    "brief.md": "45CBBB287CEB3CA229F443B1D5764912BB5EB300D35924C8B2D6A81F4756B38E",
+    "paciente.md": "39D1648F47F39AD588E7EA9C846B11043D31DE7366209486EAF799EBBDA3CF98",
+    "consolidado.md": "EE13F4375067D13EE3A7E7ADC1EE5F65B183ECCE92D249B727F6DBBB03084A80",
+    "nutricionista.md": "6D32D5E2966DC3A55D9F30BB640A91E3B9F138F699D9D19A0F0C6D53BE44D999"
+  },
+  "base": "312d6727",
+  "entrada": "brief.md",
+  "papeis_sha256": {
+    "octaclin-nutricionista-ux": "AB9CDF44868A34079F1F20D7CAAF38780870006047DB9C3B929098F79CA04BFE",
+    "octaclin-paciente-ux": "4D5E552DCB2C5E8C815A72DA9EC00B6A93ADC1ACFBA5694AB64A4CF7D8339739"
+  }
+}

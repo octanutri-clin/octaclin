@@ -33,12 +33,13 @@
 - Incremento posterior: prova P2 adicionada ao inventário RLS integrado, com
   tenant e pacientes sintéticos separados, concessão ausente/revogada, pacientes
   de outra carteira e tenant, e revogação bloqueada durante a transação. A prova
-  foi compilada, mas NÃO executada: Docker indisponível; na configuração padrão
-  a suíte real foi SKIPPED. Não interpretar sua existência como PASS de banco.
+  localmente foi SKIPPED por Docker indisponível. CI da PR #536, run `43432488847`,
+  job Backend `131909264184` no HEAD `6fd15558`: PASS na suíte RLS/Testcontainers
+  (270/270), incluindo esta prova; suíte geral 5.059 PASS, 181 SKIPPED. São grupos
+  sobrepostos, não somar. O CI do HEAD seguinte deve ser conferido separadamente.
 - Nenhum SQL externo, migration, deploy, merge ou configuração externa alterada.
-- Próxima ação: adicionar prova de integração PostgreSQL descartável para o helper
-  com as negativas e concorrência acima, depois usá-lo no serviço transacional;
-  manter o acesso clínico indisponível até existir a proteção por flag.
-- Pendente: registrar relatório UX A completo, todas as operações P2, API/DTOs,
+- Próxima ação: usar o helper no serviço transacional, implementar os testes e
+  operações P2; manter o acesso clínico indisponível até proteção por flag.
+- Pendente: todas as operações P2, API/DTOs,
   testes negativos de banco e de concorrência,
   provas RLS, UX B/C, revisão R4 independente, gates completos e PR.
