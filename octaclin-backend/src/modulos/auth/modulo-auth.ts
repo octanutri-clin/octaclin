@@ -17,6 +17,9 @@ import { ServicoMfa } from './aplicacao/servico-mfa';
 import { ServicoReautenticacao } from './aplicacao/servico-reautenticacao';
 import { ServicoTotp } from './aplicacao/servico-totp';
 import { REDIS_PROTECAO_ABUSO, ServicoProtecaoAbuso } from './aplicacao/servico-protecao-abuso';
+import { ConcessaoPermissaoUsuarioOrm } from './infraestrutura/concessao-permissao-usuario.orm';
+import { ServicoConcessoesPermissao } from './aplicacao/servico-concessoes-permissao';
+import { ControladorConcessoesPermissao } from './apresentacao/controlador-concessoes-permissao';
 import { ControladorAuth } from './apresentacao/controlador-auth';
 import { GuardaJwt } from './apresentacao/guarda-jwt';
 import { GuardaLimiteLogin } from './apresentacao/guarda-limite-login';
@@ -41,12 +44,14 @@ import { MfaDesafioOrm } from './infraestrutura/mfa-desafio.orm';
       MfaCodigoRecuperacaoOrm,
       MfaDesafioOrm,
       TenantOrm,
-      UsuarioOrm
+      UsuarioOrm,
+      ConcessaoPermissaoUsuarioOrm
     ])
   ],
-  controllers: [ControladorAuth],
+  controllers: [ControladorAuth, ControladorConcessoesPermissao],
   providers: [
     ServicoAuth,
+    ServicoConcessoesPermissao,
     ServicoSessoes,
     ServicoMfa,
     ServicoReautenticacao,
@@ -80,6 +85,7 @@ import { MfaDesafioOrm } from './infraestrutura/mfa-desafio.orm';
     GuardaPermissoes,
     GuardaReautenticacao,
     ServicoAuth,
+    ServicoConcessoesPermissao,
     ServicoSessoes,
     ServicoProtecaoAbuso,
     ServicoSenhas,

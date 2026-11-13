@@ -1,3 +1,4 @@
+import { ConcessaoPermissaoUsuarioOrm } from '../../auth/infraestrutura/concessao-permissao-usuario.orm';
 import { HttpException, HttpStatus } from '@nestjs/common';
 import { UsuarioOrm } from '../../usuarios/infraestrutura/usuario.orm';
 import { TokenRedefinicaoSenhaOrm } from '../../auth/infraestrutura/token-redefinicao-senha.orm';
@@ -71,6 +72,7 @@ function criarServico(
   const repositorioRefreshTokens = criarRepositorioFake([]);
   const repositorioSessoes = criarRepositorioFake([]);
   const repositorioPermissoesIntegracao = criarRepositorioFake(permissoesIntegracao);
+  const repositorioConcessoes = { find: jest.fn(async () => [] as Array<{ id: string }>), update: jest.fn(async () => ({ affected: 1 })) };
   const repositorioChaves = {
     find: jest.fn(async () => [] as Array<{ id: string }>),
     update: jest.fn(async () => ({ affected: 1 }))
@@ -84,6 +86,7 @@ function criarServico(
       callback({
         query: jest.fn(async()=>[]),
         getRepository: (entidade: any) => {
+          if (entidade === ConcessaoPermissaoUsuarioOrm) return repositorioConcessoes;
           if (entidade === UsuarioOrm) return repositorioUsuarios;
           if (entidade === TokenRedefinicaoSenhaOrm) return repositorioTokens;
           if (entidade === ProfissionalOrm) return repositorioProfissionais;
@@ -114,6 +117,7 @@ function criarServico(
       limites as never,
       protecaoAbuso as never
     ),
+    repositorioConcessoes,
     repositorioUsuarios,
     repositorioTokens,
     repositorioProfissionais,
@@ -131,6 +135,16 @@ function criarServico(
 }
 
 describe('ServicoUsuariosCliente', () => {
+  it('Auth-2 revoga concessões no mesmo executor ao desativar e não cria nova habilitação', async () => {
+    const { servico, repositorioConcessoes, executorTenant } = criarServico([
+      { id: 'profissional-1', tenantId: 'tenant-1', role: 'Professional', ativo: true }
+    ]);
+    repositorioConcessoes.find.mockResolvedValue([{ id: 'concessao-1' }]);
+    await servico.desativar('tenant-1', 'gestor-1', 'profissional-1');
+    expect(executorTenant.executar).toHaveBeenCalledTimes(1);
+    expect(repositorioConcessoes.find).toHaveBeenCalledWith(expect.objectContaining({ where: expect.objectContaining({ tenantId: 'tenant-1', usuarioId: 'profissional-1' }) }));
+    expect(repositorioConcessoes.update).toHaveBeenCalledWith(expect.objectContaining({ id: 'concessao-1', tenantId: 'tenant-1', usuarioId: 'profissional-1' }), expect.objectContaining({ revogadaPor: 'gestor-1' }));
+  });
   it('deve promover colaborador, provisionar perfil profissional e revogar sessoes anteriores', async () => {
     const { servico, repositorioUsuarios, repositorioProfissionais, repositorioRefreshTokens, repositorioSessoes } = criarServico([
       {
