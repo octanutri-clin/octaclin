@@ -133,3 +133,14 @@
   revisão independente não encontrou defeito material em objetos comuns/JSON.
   Proxy pode executar código durante introspecção; não há demonstração de impacto
   HTTP. O serviço transacional de reconfirmação e suas provas continuam pendentes.
+- Incremento seguinte: `ServicoReconfirmacaoRestricao` registra apenas a
+  atestação global de `pendencia_mantida`, com concessão clínica e carteira,
+  avaliação e revisão existentes, cifra, auditoria transacional e chave idempotente;
+  não altera nem renova a avaliação. Sem provider, rota ou flag. Testes com mocks
+  e typecheck passaram; revisão R4 estática não demonstrou vazamento. Provas
+  PostgreSQL adicionadas para grant ausente, idempotência concorrente, carteira e
+  tenant, rollback de auditoria e ausência de escrita em falha de cifra, mas ainda
+  não executadas localmente. Prova de lock da chave entre pacientes distintos usa
+  barreira explícita e aguarda execução no CI.
+  Faltam reconfirmações individuais, demais resultados, criação/renovação da
+  avaliação, concorrência com escrita da avaliação, HTTP e CI do commit final.
