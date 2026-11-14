@@ -68,6 +68,36 @@ describe('FOOD06 Q10/D4: reconfirmação referenciada à avaliação global', ()
       }
     }
   });
+  it('rejeita propriedades com getters sem executá-los, inclusive na restrição aninhada', () => {
+    const getter = jest.fn(() => 'CANARIO_RECONF_NAO_VAZAR');
+    const entrada = { ...base };
+    Object.defineProperty(entrada, 'resultado', { enumerable: true, get: getter });
+    expect(() => registrarReconfirmacao(entrada)).toThrow(ReconfirmacaoInvalidaError);
+    const restricao = { id: 'r1', revisao: 1 };
+    Object.defineProperty(restricao, 'id', { enumerable: true, get: getter });
+    expect(() => registrarReconfirmacao({ ...base, restricao })).toThrow(ReconfirmacaoInvalidaError);
+    const resultado = { resultado: 'pendencia_mantida' };
+    Object.defineProperty(resultado, 'observacao', { enumerable: true, get: getter });
+    expect(() => validarResultadoReconfirmacao(resultado)).toThrow(ReconfirmacaoInvalidaError);
+    const setter = { ...base };
+    Object.defineProperty(setter, 'resultado', { enumerable: true, set: jest.fn() });
+    expect(() => registrarReconfirmacao(setter)).toThrow(ReconfirmacaoInvalidaError);
+    const oculta = { ...base };
+    Object.defineProperty(oculta, 'resultado', { enumerable: false, value: 'sem_alteracao' });
+    expect(() => registrarReconfirmacao(oculta)).toThrow(ReconfirmacaoInvalidaError);
+    expect(getter).not.toHaveBeenCalled();
+  });
+  it('ignora propriedades herdadas e aceita entrada de protótipo nulo', () => {
+    const getter = jest.fn(() => { throw new Error('nao deve ler propriedade herdada'); });
+    Object.defineProperty(Object.prototype, 'restricao', { configurable: true, get: getter });
+    try {
+      expect(registrarReconfirmacao({ ...base }).escopo).toBe('avaliacao_global');
+      expect(registrarReconfirmacao(Object.assign(Object.create(null), base)).escopo).toBe('avaliacao_global');
+      expect(getter).not.toHaveBeenCalled();
+    } finally {
+      Reflect.deleteProperty(Object.prototype, 'restricao');
+    }
+  });
 });
 
 describe('FOOD06 R3: resultado cifrado da reconfirmação', () => {

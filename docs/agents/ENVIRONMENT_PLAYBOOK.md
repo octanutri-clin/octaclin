@@ -62,3 +62,11 @@ Diagnostico: URL, role, branch ou altura de migrations podem estar incorretas.
 Alternativas: use `migration:show`, confirme a identidade do alvo, aplique com
 role owner fora de banda e pare se houver pendencia inesperada. Runtime nao deve
 receber privilegio de migration por conveniencia.
+
+## Diagnóstico de consultas
+
+O logger SQL padrão do TypeORM fica desabilitado em todos os ambientes, inclusive
+para a CLI; consultas lentas não são configuradas. Para investigar, use erros e
+telemetria já sanitizados e reproduza em banco descartável com dados sintéticos.
+Não habilite registro de parâmetros em ambiente com dados reais. A configuração
+no código não comprova o estado efetivo nem os logs do provedor.
