@@ -127,3 +127,9 @@
 - CI `43505519637`, HEAD `db911b7b`: workflow OctaClin CI PASS, incluindo Backend,
   Web, governança, smoke e PR Gate; provenance de SBOM em workflow separado foi
   SKIPPED. O resultado não prova P2 completa, deploy ou estado de produção.
+- Reconfirmação: validador de domínio usa snapshot de descritores próprios em
+  objeto sem protótipo; rejeita acessores, símbolos e propriedades não enumeráveis.
+  Testes RED reproduziram getter próprio aceito e getter herdado executado;
+  revisão independente não encontrou defeito material em objetos comuns/JSON.
+  Proxy pode executar código durante introspecção; não há demonstração de impacto
+  HTTP. O serviço transacional de reconfirmação e suas provas continuam pendentes.
