@@ -997,6 +997,16 @@ descrever('RLS e isolamento multi-tenant integral em Postgres real', () => {
       { tenantId: tenantP2, pacienteId: dados.pacienteId, registroId: reconfirmacaoId, revisao: 1 })).toEqual({ resultado: 'pendencia_mantida' });
     expect((await cliente.query('select situacao,revisao,confirmado_por_usuario_id,confirmado_em,vence_em from avaliacoes_restricoes_pacientes where id=$1', [avaliacao.rows[0].id])).rows).toEqual(avaliada.rows);
     expect((await cliente.query("select id from user_action_logs where recurso_id=$1 and acao='restricoes.reconfirmacao_pendencia'", [reconfirmacaoId])).rows).toHaveLength(1);
+    const pedidoAlteracao = { ...pedidoReconfirmacao, chaveIdempotencia: randomUUID() };
+    const alteracao = await reconfirmar.registrarAlteracaoInformada(usuario, dados.pacienteId, pedidoAlteracao) as { id: string; resultado: string };
+    expect(alteracao.resultado).toBe('alteracao_informada');
+    const cifraAlteracao = await cliente.query('select resultado_criptografado,vence_em from reconfirmacoes_restricoes where id=$1', [alteracao.id]);
+    expect(cifraAlteracao.rows[0].vence_em).toBeNull();
+    expect(decifrarCampo(crypto, 'reconfirmacoes_restricoes.resultado_criptografado', cifraAlteracao.rows[0].resultado_criptografado,
+      { tenantId: tenantP2, pacienteId: dados.pacienteId, registroId: alteracao.id, revisao: 1 })).toEqual({ resultado: 'alteracao_informada' });
+    expect((await cliente.query("select id from user_action_logs where recurso_id=$1 and acao='restricoes.reconfirmacao_alteracao'", [alteracao.id])).rows).toHaveLength(1);
+    expect((await cliente.query('select situacao,revisao,confirmado_por_usuario_id,confirmado_em,vence_em from avaliacoes_restricoes_pacientes where id=$1', [avaliacao.rows[0].id])).rows).toEqual(avaliada.rows);
+    await expect(reconfirmar.registrarPendencia(usuario, dados.pacienteId, pedidoAlteracao)).rejects.toMatchObject({ status: 409 });
     await expect(reconfirmar.registrarPendencia(usuario, outro.pacienteId, pedidoReconfirmacao)).rejects.toMatchObject({ status: 403 });
     await expect(reconfirmar.registrarPendencia(usuario, pacienteIdTenantB, pedidoReconfirmacao)).rejects.toMatchObject({ status: 403 });
     await expect(reconfirmar.registrarPendencia(usuario, outroDaCarteira, pedidoReconfirmacao)).rejects.toMatchObject({ status: 409 });
@@ -1124,6 +1134,37 @@ descrever('RLS e isolamento multi-tenant integral em Postgres real', () => {
         }) as typeof g.getRepository);
         try { return await fn(g); } finally { spy.mockRestore(); }
       }) };
+    const pacienteAusenciaRecon = randomUUID();
+    await cliente.query('insert into pacientes(id,tenant_id,profissional_responsavel_id,nome_criptografado) values ($1,$2,$3,$4)',
+      [pacienteAusenciaRecon, tenantP2, dados.profissionalId, Buffer.from('paciente-sintetico')]);
+    const avaliacaoAusenciaRecon = await cliente.query<{ id: string }>(`insert into avaliacoes_restricoes_pacientes
+      (tenant_id,paciente_id,situacao,confirmado_por_usuario_id,confirmado_em,vence_em)
+      values ($1,$2,'sem_restricoes_confirmadas',$3,now(),now() + interval '10 days') returning id`,
+      [tenantP2, pacienteAusenciaRecon, dados.usuarioId]);
+    const idAvaliacaoAusenciaRecon = avaliacaoAusenciaRecon.rows[0].id;
+    await cliente.query(`insert into avaliacoes_restricoes_revisoes
+      (tenant_id,paciente_id,avaliacao_id,numero,situacao,autor_usuario_id,vence_em)
+      select tenant_id,paciente_id,id,1,situacao,$2,vence_em from avaliacoes_restricoes_pacientes where id=$1`,
+      [idAvaliacaoAusenciaRecon, dados.usuarioId]);
+    const estadoAusenciaAntes = await cliente.query('select situacao,revisao,confirmado_por_usuario_id,confirmado_em,vence_em from avaliacoes_restricoes_pacientes where id=$1', [idAvaliacaoAusenciaRecon]);
+    const pedidoAusenciaRecon = { avaliacaoId: idAvaliacaoAusenciaRecon, revisaoAvaliacao: 1, chaveIdempotencia: randomUUID(), meio: 'teleconsulta', atestacao: true };
+    const reconfirmarComFalha = new ServicoReconfirmacaoRestricao(executorFalho as ExecutorTenant, crypto, concessoes);
+    await expect(reconfirmarComFalha.registrarAlteracaoInformada(usuario, pacienteAusenciaRecon, pedidoAusenciaRecon))
+      .rejects.toMatchObject({ status: 500, message: 'Operação indisponível.' });
+    expect((await cliente.query('select situacao,revisao,confirmado_por_usuario_id,confirmado_em,vence_em from avaliacoes_restricoes_pacientes where id=$1', [idAvaliacaoAusenciaRecon])).rows).toEqual(estadoAusenciaAntes.rows);
+    expect((await cliente.query('select numero from avaliacoes_restricoes_revisoes where avaliacao_id=$1 order by numero', [idAvaliacaoAusenciaRecon])).rows).toEqual([{ numero: 1 }]);
+    expect((await cliente.query('select id from reconfirmacoes_restricoes where tenant_id=$1 and chave_idempotencia=$2', [tenantP2, pedidoAusenciaRecon.chaveIdempotencia])).rows).toEqual([]);
+    expect((await cliente.query('select id from user_action_logs where recurso_id=$1', [idAvaliacaoAusenciaRecon])).rows).toEqual([]);
+    const alteracaoAusencia = await reconfirmar.registrarAlteracaoInformada(usuario, pacienteAusenciaRecon, pedidoAusenciaRecon) as { id: string; resultado: string };
+    expect(alteracaoAusencia.resultado).toBe('alteracao_informada');
+    expect((await cliente.query('select situacao,revisao,confirmado_por_usuario_id,confirmado_em,vence_em from avaliacoes_restricoes_pacientes where id=$1', [idAvaliacaoAusenciaRecon])).rows)
+      .toEqual([{ situacao: 'nao_informado', revisao: 2, confirmado_por_usuario_id: null, confirmado_em: null, vence_em: null }]);
+    expect((await cliente.query('select numero,situacao from avaliacoes_restricoes_revisoes where avaliacao_id=$1 order by numero', [idAvaliacaoAusenciaRecon])).rows)
+      .toEqual([{ numero: 1, situacao: 'sem_restricoes_confirmadas' }, { numero: 2, situacao: 'nao_informado' }]);
+    expect((await cliente.query('select revisao_avaliacao from reconfirmacoes_restricoes where id=$1', [alteracaoAusencia.id])).rows).toEqual([{ revisao_avaliacao: 1 }]);
+    expect((await cliente.query('select acao from user_action_logs where recurso_id=any($1::uuid[]) order by acao', [[idAvaliacaoAusenciaRecon, alteracaoAusencia.id]])).rows)
+      .toEqual([{ acao: 'restricoes.avaliacao_invalidada' }, { acao: 'restricoes.reconfirmacao_alteracao' }]);
+    await expect(reconfirmar.registrarAlteracaoInformada(usuario, pacienteAusenciaRecon, pedidoAusenciaRecon)).resolves.toEqual(alteracaoAusencia);
     const confirmarComFalha = new ServicoConfirmacaoRestricao(executorFalho as ExecutorTenant, crypto, concessoes);
     await expect(confirmarComFalha.confirmar(usuario, pacienteRollback, idRollback, 1)).rejects.toMatchObject({ status: 500, message: 'Operação indisponível.' });
     const rollback = await cliente.query('select confirmacao,revisao,conteudo_criptografado from restricoes_pacientes where id=$1', [idRollback]);

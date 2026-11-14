@@ -134,9 +134,12 @@
   Proxy pode executar código durante introspecção; não há demonstração de impacto
   HTTP. O serviço transacional de reconfirmação e suas provas continuam pendentes.
 - Incremento seguinte: `ServicoReconfirmacaoRestricao` registra apenas a
-  atestação global de `pendencia_mantida`, com concessão clínica e carteira,
+  atestações globais de `pendencia_mantida` e `alteracao_informada`, com concessão clínica e carteira,
   avaliação e revisão existentes, cifra, auditoria transacional e chave idempotente;
-  não altera nem renova a avaliação. Sem provider, rota ou flag. Testes com mocks
+  não renova a avaliação. Após revisão apontar risco de ausência indevidamente
+  válida, uma avaliação confirmada é invalidada para `nao_informado`, com CAS,
+  histórico e auditoria na mesma transação; restrições são preservadas. Sem provider,
+  rota ou flag. Testes com mocks
   e typecheck passaram; revisão R4 estática não demonstrou vazamento. Provas
   PostgreSQL adicionadas para grant ausente, idempotência concorrente, carteira e
   tenant, rollback de auditoria e ausência de escrita em falha de cifra, mas ainda
@@ -145,5 +148,8 @@
   distintos, usando conexão pg separada porque o pool runtime tem duas conexões.
   A entidade de reconfirmação foi registrada no DataSource sintético. As provas
   aguardam execução no CI; revisão estática não substitui PostgreSQL.
-  Faltam reconfirmações individuais, demais resultados, criação/renovação da
+  O Backend CI `43610602804` do HEAD `5fdd0b74` passou (5.124 PASS, 181 SKIPPED,
+  2 TODO na suíte geral; PostgreSQL/Testcontainers 271 PASS, grupos sobrepostos),
+  antes desta invalidação e da alteração informada. Faltam provas PostgreSQL do
+  novo comportamento, reconfirmações individuais, demais resultados, criação/renovação da
   avaliação, concorrência com escrita da avaliação, HTTP e CI do commit final.
