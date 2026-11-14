@@ -1,35 +1,41 @@
 import { BadRequestException, ConflictException, Injectable } from '@nestjs/common';
 import { isUUID } from 'class-validator';
 import { randomUUID } from 'node:crypto';
+import { In } from 'typeorm';
 import { ExecutorTenant } from '../../../infraestrutura/banco-dados/executor-tenant';
 import { CriptografiaDadosSensiveis } from '../../../infraestrutura/seguranca/criptografia-dados-sensiveis';
 import { registrarAuditoriaNaTransacao } from '../../../infraestrutura/auditoria/servico-auditoria';
 import { ServicoConcessoesPermissao } from '../../auth/aplicacao/servico-concessoes-permissao';
 import type { UsuarioAutenticado } from '../../auth/dominio/usuario-autenticado';
 import { registrarReconfirmacao } from '../dominio/reconfirmacao-restricao';
-import { cifrarCampo, decifrarCampo } from '../infraestrutura/codec-conteudo-restricao';
+import { cifrarCampo, decifrarCampo, decifrarConteudoRestricao } from '../infraestrutura/codec-conteudo-restricao';
 import { AvaliacaoRestricoesPacienteOrm } from '../infraestrutura/avaliacao-restricoes-paciente.orm';
 import { RevisaoAvaliacaoRestricoesOrm } from '../infraestrutura/revisao-avaliacao-restricoes.orm';
 import { ReconfirmacaoRestricoesOrm } from '../infraestrutura/reconfirmacao-restricoes.orm';
+import { RestricaoPacienteOrm } from '../infraestrutura/restricao-paciente.orm';
 import { autorizarRestricaoClinica } from './autorizacao-restricao-clinica';
 import { falharRestricao } from './falha-restricao';
 
-/** Incremento não exposto: atestações que não renovam a avaliação. */
+/** Incremento não exposto: atestações globais referenciadas à revisão existente. */
 @Injectable()
 export class ServicoReconfirmacaoRestricao {
   constructor(private readonly executor: ExecutorTenant, private readonly cripto: CriptografiaDadosSensiveis,
     private readonly concessoes: ServicoConcessoesPermissao) {}
 
   async registrarPendencia(usuario: UsuarioAutenticado, pacienteId: string, dados: unknown): Promise<unknown> {
-    return this.registrarSemRenovacao(usuario, pacienteId, dados, 'pendencia_mantida');
+    return this.registrarResultado(usuario, pacienteId, dados, 'pendencia_mantida');
   }
 
   async registrarAlteracaoInformada(usuario: UsuarioAutenticado, pacienteId: string, dados: unknown): Promise<unknown> {
-    return this.registrarSemRenovacao(usuario, pacienteId, dados, 'alteracao_informada');
+    return this.registrarResultado(usuario, pacienteId, dados, 'alteracao_informada');
   }
 
-  private async registrarSemRenovacao(usuario: UsuarioAutenticado, pacienteId: string, dados: unknown,
-    resultado: 'pendencia_mantida' | 'alteracao_informada'): Promise<unknown> {
+  async registrarSemAlteracao(usuario: UsuarioAutenticado, pacienteId: string, dados: unknown): Promise<unknown> {
+    return this.registrarResultado(usuario, pacienteId, dados, 'sem_alteracao');
+  }
+
+  private async registrarResultado(usuario: UsuarioAutenticado, pacienteId: string, dados: unknown,
+    resultado: 'pendencia_mantida' | 'alteracao_informada' | 'sem_alteracao'): Promise<unknown> {
     if (!usuario || !isUUID(usuario.tenantId) || !isUUID(usuario.usuarioId) || !isUUID(pacienteId) ||
       !dados || typeof dados !== 'object' || Array.isArray(dados) || ![Object.prototype, null].includes(Object.getPrototypeOf(dados))) {
       throw new BadRequestException('Solicitação inválida.');
@@ -52,13 +58,17 @@ export class ServicoReconfirmacaoRestricao {
     catch { throw new BadRequestException('Solicitação inválida.'); }
     try {
       return await this.executor.executar(usuario.tenantId, async g => {
+        // Em isolamento com snapshot fixo, esperar pelo paciente não atualiza o
+        // conjunto de restrições visto pela transação iniciada anteriormente.
+        const isolamento: Array<{ transaction_isolation?: string }> = await g.query('show transaction_isolation');
+        if (isolamento.length !== 1 || isolamento[0].transaction_isolation !== 'read committed') throw new ConflictException('Operação indisponível.');
         await autorizarRestricaoClinica(g, this.concessoes, usuario, pacienteId);
         await g.query('select pg_advisory_xact_lock(hashtextextended($1, 0))', [`reconfirmacao:${usuario.tenantId}:${usuario.usuarioId}:${chaveIdempotencia}`]);
         const repo = g.getRepository(ReconfirmacaoRestricoesOrm);
         const existente = await repo.findOne({ where: { tenantId: usuario.tenantId, atestadoPorUsuarioId: usuario.usuarioId, chaveIdempotencia } });
         if (existente) {
           if (existente.pacienteId !== pacienteId || existente.avaliacaoId !== avaliacaoId || existente.revisaoAvaliacao !== revisaoAvaliacao ||
-            existente.meio !== atestacao.meio || existente.restricaoId || existente.venceEm) throw new ConflictException('Chave já utilizada.');
+            existente.meio !== atestacao.meio || existente.restricaoId || Boolean(existente.venceEm) !== (resultado === 'sem_alteracao')) throw new ConflictException('Chave já utilizada.');
           const valor = decifrarCampo(this.cripto, 'reconfirmacoes_restricoes.resultado_criptografado', existente.resultadoCriptografado,
             { tenantId: usuario.tenantId, pacienteId, registroId: existente.id, revisao: 1 });
           if (JSON.stringify(valor) !== JSON.stringify({ resultado })) throw new ConflictException('Chave já utilizada.');
@@ -69,7 +79,45 @@ export class ServicoReconfirmacaoRestricao {
         const revisao = await g.getRepository(RevisaoAvaliacaoRestricoesOrm).findOne({ where: { tenantId: usuario.tenantId, pacienteId, avaliacaoId, numero: revisaoAvaliacao } });
         if (!revisao) throw new ConflictException('Avaliação alterada ou indisponível.');
         if (!['nao_informado', 'sem_restricoes_confirmadas', 'restricoes_registradas'].includes(avaliacao.situacao)) throw new ConflictException('Avaliação indisponível.');
-        if (avaliacao.situacao !== 'nao_informado') {
+        const atestadoEm = new Date();
+        let venceEm: Date | null = null;
+        if (resultado === 'sem_alteracao') {
+          if (avaliacao.situacao === 'nao_informado') throw new ConflictException('Avaliação indisponível.');
+          const restricoes = g.getRepository(RestricaoPacienteOrm);
+          let confirmadas = 0;
+          let deslocamento = 0;
+          // O lock do paciente serializa os escritores P2; nunca inferir a natureza da coluna de estado.
+          for (;;) {
+            const pagina = await restricoes.find({ where: { tenantId: usuario.tenantId, pacienteId,
+              estado: In(['ativa', 'em_reavaliacao']), confirmacao: In(['pendente', 'confirmada']) },
+              select: { id: true, revisao: true, confirmacao: true, conteudoCriptografado: true },
+              order: { id: 'ASC' }, skip: deslocamento, take: 100 });
+            for (const linha of pagina) {
+              const conteudo = decifrarConteudoRestricao(this.cripto, linha.conteudoCriptografado,
+                { tenantId: usuario.tenantId, pacienteId, restricaoId: linha.id, revisao: linha.revisao, finalidade: 'restricao' });
+              if (conteudo.natureza === 'preferencia') continue;
+              if (linha.confirmacao === 'pendente') throw new ConflictException('Avaliação indisponível.');
+              confirmadas += 1;
+            }
+            if (pagina.length < 100) break;
+            deslocamento += pagina.length;
+          }
+          if ((avaliacao.situacao === 'sem_restricoes_confirmadas' && confirmadas > 0) ||
+            (avaliacao.situacao === 'restricoes_registradas' && confirmadas === 0)) throw new ConflictException('Avaliação indisponível.');
+          const validade = registrarReconfirmacao({ agora: atestadoEm.toISOString(), pacienteId, avaliacaoId, revisaoAvaliacao,
+            atestadoPor: usuario.usuarioId, meio: entrada.meio, atestacao: entrada.atestacao, resultado });
+          if (!validade.venceEm) throw new ConflictException('Avaliação indisponível.');
+          venceEm = new Date(validade.venceEm);
+          const alterada = await g.getRepository(AvaliacaoRestricoesPacienteOrm).update(
+            { id: avaliacaoId, tenantId: usuario.tenantId, pacienteId, revisao: revisaoAvaliacao },
+            { situacao: avaliacao.situacao, revisao: revisaoAvaliacao + 1, confirmadoPorUsuarioId: usuario.usuarioId,
+              confirmadoEm: atestadoEm, venceEm, atualizadoEm: () => 'clock_timestamp()' });
+          if (alterada.affected !== 1) throw new ConflictException('Avaliação alterada ou indisponível.');
+          await g.getRepository(RevisaoAvaliacaoRestricoesOrm).insert({ tenantId: usuario.tenantId, pacienteId, avaliacaoId,
+            numero: revisaoAvaliacao + 1, situacao: avaliacao.situacao, autorUsuarioId: usuario.usuarioId, venceEm });
+          await registrarAuditoriaNaTransacao(g, { tenantId: usuario.tenantId, usuarioId: usuario.usuarioId,
+            acao: 'restricoes.avaliacao_reconfirmada', recursoTipo: 'avaliacao_restricoes', recursoId: avaliacaoId, metadados: {} });
+        } else if (avaliacao.situacao !== 'nao_informado') {
           const alterada = await g.getRepository(AvaliacaoRestricoesPacienteOrm).update(
             { id: avaliacaoId, tenantId: usuario.tenantId, pacienteId, revisao: revisaoAvaliacao },
             { situacao: 'nao_informado', revisao: revisaoAvaliacao + 1, confirmadoPorUsuarioId: null, confirmadoEm: null, venceEm: null, atualizadoEm: () => 'clock_timestamp()' });
@@ -83,9 +131,9 @@ export class ServicoReconfirmacaoRestricao {
         const resultadoCriptografado = cifrarCampo(this.cripto, 'reconfirmacoes_restricoes.resultado_criptografado', { resultado },
           { tenantId: usuario.tenantId, pacienteId, registroId: id, revisao: 1 });
         await repo.insert({ id, tenantId: usuario.tenantId, pacienteId, avaliacaoId, revisaoAvaliacao, atestadoPorUsuarioId: usuario.usuarioId,
-          atestadoEm: new Date(), meio: atestacao.meio, resultadoCriptografado, venceEm: null, chaveIdempotencia });
+          atestadoEm, meio: atestacao.meio, resultadoCriptografado, venceEm, chaveIdempotencia });
         await registrarAuditoriaNaTransacao(g, { tenantId: usuario.tenantId, usuarioId: usuario.usuarioId,
-          acao: resultado === 'pendencia_mantida' ? 'restricoes.reconfirmacao_pendencia' : 'restricoes.reconfirmacao_alteracao',
+          acao: resultado === 'pendencia_mantida' ? 'restricoes.reconfirmacao_pendencia' : resultado === 'alteracao_informada' ? 'restricoes.reconfirmacao_alteracao' : 'restricoes.reconfirmacao_sem_alteracao',
           recursoTipo: 'reconfirmacao_restricoes', recursoId: id, metadados: {} });
         return { id, resultado };
       });

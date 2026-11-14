@@ -153,3 +153,17 @@
   antes desta invalidação e da alteração informada. Faltam provas PostgreSQL do
   novo comportamento, reconfirmações individuais, demais resultados, criação/renovação da
   avaliação, concorrência com escrita da avaliação, HTTP e CI do commit final.
+- Renovação global `sem_alteracao` em preparação: exige avaliação
+  confirmada e consistente, sem pendências clínicas vigentes; inclui `ativa` e
+  `em_reavaliacao`, usa codec paginado para distinguir preferências e falha
+  fechado se cifra ilegível. Prazo de 180 dias, revisão, atestação e auditoria
+  transacionais. Serviço exige `READ COMMITTED`; outros isolamentos são recusados.
+  Provas de banco preparam interleaving real nas duas ordens, verificando PID do
+  bloqueador, rejeição de `REPEATABLE READ`/`SERIALIZABLE`, rollback na segunda
+  auditoria, preferência e cifra ilegível. Local: 130 testes focados, typecheck,
+  auditoria e scanner PASS; revisão estática R4 apontou e levou à correção do caso
+  de `em_reavaliacao` e preferências. Não há prova local de PostgreSQL: essas
+  provas exigem CI descartável do HEAD resultante. Mantém-se sem rota/provider.
+- Backend CI `43611253404` do HEAD `23ffabe6`: 5.133 PASS, 181 SKIPPED, 2 TODO
+  na suíte geral e 271 PASS na etapa RLS/Testcontainers (grupos sobrepostos).
+  A renovação `sem_alteracao` e as novas provas não estão nesse HEAD.
