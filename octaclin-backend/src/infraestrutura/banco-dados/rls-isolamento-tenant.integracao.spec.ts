@@ -79,6 +79,7 @@ import { RestricaoPacienteOrm } from '../../modulos/planos-alimentares/infraestr
 import { RevisaoRestricaoPacienteOrm } from '../../modulos/planos-alimentares/infraestrutura/revisao-restricao-paciente.orm';
 import { AvaliacaoRestricoesPacienteOrm } from '../../modulos/planos-alimentares/infraestrutura/avaliacao-restricoes-paciente.orm';
 import { RevisaoAvaliacaoRestricoesOrm } from '../../modulos/planos-alimentares/infraestrutura/revisao-avaliacao-restricoes.orm';
+import { ReconfirmacaoRestricoesOrm } from '../../modulos/planos-alimentares/infraestrutura/reconfirmacao-restricoes.orm';
 import { cifrarConteudoRestricao, decifrarConteudoRestricao, decifrarCampo } from '../../modulos/planos-alimentares/infraestrutura/codec-conteudo-restricao';
 
 /**
@@ -273,6 +274,7 @@ descrever('RLS e isolamento multi-tenant integral em Postgres real', () => {
         RevisaoRestricaoPacienteOrm,
         AvaliacaoRestricoesPacienteOrm,
         RevisaoAvaliacaoRestricoesOrm,
+        ReconfirmacaoRestricoesOrm,
         PermissaoIntegracaoProfissionalOrm,
         UserActionLogOrm,
         NotificacaoOrm,
@@ -1021,6 +1023,53 @@ descrever('RLS e isolamento multi-tenant integral em Postgres real', () => {
     expect((await cliente.query('select count(*)::int n from reconfirmacoes_restricoes where tenant_id=$1 and atestado_por_usuario_id=$2 and chave_idempotencia=$3',
       [tenantP2, dados.usuarioId, chaveBarreiraRecon])).rows).toEqual([{ n: 1 }]);
     expect((await cliente.query("select id from user_action_logs where recurso_id=$1 and acao='restricoes.reconfirmacao_pendencia'", [vencedorRecon.id])).rows).toHaveLength(1);
+    const outraAvaliacao = await cliente.query<{ id: string }>(`insert into avaliacoes_restricoes_pacientes
+      (tenant_id,paciente_id,situacao) values ($1,$2,'nao_informado') returning id`, [tenantP2, outroDaCarteira]);
+    await cliente.query(`insert into avaliacoes_restricoes_revisoes
+      (tenant_id,paciente_id,avaliacao_id,numero,situacao,autor_usuario_id)
+      values ($1,$2,$3,1,'nao_informado',$4)`, [tenantP2, outroDaCarteira, outraAvaliacao.rows[0].id, dados.usuarioId]);
+    const chaveDuasChamadas = randomUUID();
+    let avisarDuas!: () => void;
+    let chegaram = 0;
+    const duasNoLock = new Promise<void>(resolve => { avisarDuas = resolve; });
+    let operacoes: Promise<PromiseSettledResult<unknown>[]> | undefined;
+    let prazoDuas: ReturnType<typeof setTimeout> | undefined;
+    await cliente.query('begin');
+    try {
+      // O cliente pg é uma conexão separada: o pool TypeORM da prova tem só duas.
+      await cliente.query('select pg_advisory_xact_lock(hashtextextended($1, 0))', [`reconfirmacao:${tenantP2}:${dados.usuarioId}:${chaveDuasChamadas}`]);
+      const executorObservado = { executar: <T>(t: string, fn: (g: EntityManager) => Promise<T>) =>
+        executorTenant!.executar(t, async g => {
+          await g.query("set local lock_timeout = '5s'");
+          const original = g.query.bind(g);
+          const spy = jest.spyOn(g, 'query').mockImplementation(async (...args) => {
+            if (String(args[0]).includes('pg_advisory_xact_lock') && ++chegaram === 2) avisarDuas();
+            return original(...args);
+          });
+          try { return await fn(g); } finally { spy.mockRestore(); }
+        }) };
+      const observado = new ServicoReconfirmacaoRestricao(executorObservado as ExecutorTenant, crypto, concessoes);
+      const primeira = observado.registrarPendencia(usuario, dados.pacienteId, { ...pedidoReconfirmacao, chaveIdempotencia: chaveDuasChamadas });
+      const segunda = observado.registrarPendencia(usuario, outroDaCarteira, { ...pedidoReconfirmacao, avaliacaoId: outraAvaliacao.rows[0].id,
+        revisaoAvaliacao: 1, chaveIdempotencia: chaveDuasChamadas.toUpperCase() });
+      operacoes = Promise.allSettled([primeira, segunda]);
+      const prazo = new Promise<never>((_resolve, rejeitar) => { prazoDuas = setTimeout(() => rejeitar(new Error('Duas operações não chegaram à barreira.')), 10_000); });
+      await Promise.race([duasNoLock, primeira.then(() => { throw new Error('Primeira operação não aguardou.'); }),
+        segunda.then(() => { throw new Error('Segunda operação não aguardou.'); }), prazo]);
+    } finally {
+      if (prazoDuas) clearTimeout(prazoDuas);
+      await cliente.query('commit');
+      if (operacoes) await operacoes;
+    }
+    const resultadosDuas = await operacoes!;
+    const sucessoDuas = resultadosDuas.filter((r): r is PromiseFulfilledResult<unknown> => r.status === 'fulfilled');
+    const falhaDuas = resultadosDuas.filter((r): r is PromiseRejectedResult => r.status === 'rejected');
+    expect(sucessoDuas).toHaveLength(1); expect(falhaDuas).toHaveLength(1);
+    expect(falhaDuas[0].reason).toMatchObject({ status: 409 });
+    const sucessoDuasId = (sucessoDuas[0].value as { id: string }).id;
+    expect((await cliente.query('select count(*)::int n from reconfirmacoes_restricoes where tenant_id=$1 and atestado_por_usuario_id=$2 and chave_idempotencia=$3',
+      [tenantP2, dados.usuarioId, chaveDuasChamadas])).rows).toEqual([{ n: 1 }]);
+    expect((await cliente.query("select id from user_action_logs where recurso_id=$1 and acao='restricoes.reconfirmacao_pendencia'", [sucessoDuasId])).rows).toHaveLength(1);
     const executorAuditoriaFalha = { executar: <T>(tenantId: string, fn: (g: EntityManager) => Promise<T>) =>
       executorTenant!.executar(tenantId, async g => {
         const repoAuditoria = g.getRepository(UserActionLogOrm);
@@ -1204,7 +1253,7 @@ descrever('RLS e isolamento multi-tenant integral em Postgres real', () => {
     await cliente.query(`update concessoes_permissao_usuario set revogada_por=$1, revogada_em=clock_timestamp()
       where id=$2`, [dados.usuarioId, linha.rows[0].id]);
     await expect(conferir(dados.pacienteId)).rejects.toMatchObject({ status: 403 });
-  });
+  }, 60_000);
 
   it('FOOD03 protege favoritos com FORCE RLS e oculta registros ao trocar tenant', async () => {
     if (!cliente) throw new Error('Cliente da prova RLS nao foi inicializado.');

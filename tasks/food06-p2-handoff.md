@@ -141,6 +141,9 @@
   PostgreSQL adicionadas para grant ausente, idempotência concorrente, carteira e
   tenant, rollback de auditoria e ausência de escrita em falha de cifra, mas ainda
   não executadas localmente. Prova de lock da chave entre pacientes distintos usa
-  barreira explícita e aguarda execução no CI.
+  barreira explícita; outra prova aguarda duas chamadas do serviço em pacientes
+  distintos, usando conexão pg separada porque o pool runtime tem duas conexões.
+  A entidade de reconfirmação foi registrada no DataSource sintético. As provas
+  aguardam execução no CI; revisão estática não substitui PostgreSQL.
   Faltam reconfirmações individuais, demais resultados, criação/renovação da
   avaliação, concorrência com escrita da avaliação, HTTP e CI do commit final.
