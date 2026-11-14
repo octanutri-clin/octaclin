@@ -167,3 +167,8 @@
 - Backend CI `43611253404` do HEAD `23ffabe6`: 5.133 PASS, 181 SKIPPED, 2 TODO
   na suíte geral e 271 PASS na etapa RLS/Testcontainers (grupos sobrepostos).
   A renovação `sem_alteracao` e as novas provas não estão nesse HEAD.
+- Backend CI `43612814094` do HEAD `38f00045`: 5.145 PASS, 181 SKIPPED, 2 TODO
+  na suíte geral e RLS/Testcontainers 271 PASS (grupos sobrepostos), incluindo
+  renovação e provas de concorrência. Depois foi acrescentada localmente comparação
+  da revisão histórica e estado atual, inclusive `vence_em` no PostgreSQL sem
+  perder microssegundos, com provas sintéticas específicas aguardando novo CI.

@@ -19,10 +19,14 @@ const dados = { avaliacaoId, revisaoAvaliacao: 2, chaveIdempotencia, meio: 'tele
 const restricao = { id: '66666666-6666-4666-8666-666666666666', revisao: 1, estado: 'em_reavaliacao', confirmacao: 'confirmada', conteudoCriptografado: Buffer.from('sintetico') };
 function preparar() {
   const avaliacoes = { findOne: jest.fn(async (): Promise<unknown> => ({ id: avaliacaoId, revisao: 2, situacao: 'nao_informado' })), update: jest.fn(async (_where: unknown, _changes: unknown) => ({ affected: 1 })) };
-  const revisoes = { findOne: jest.fn(async (): Promise<unknown> => ({ numero: 2 })), insert: jest.fn(async () => undefined) };
+  const revisoes = { findOne: jest.fn(async (): Promise<unknown> => {
+    const avaliacao = await avaliacoes.findOne.mock.results.at(-1)?.value as { situacao?: string; venceEm?: Date | null } | undefined;
+    return { numero: 2, situacao: avaliacao?.situacao, venceEm: avaliacao?.venceEm ?? null };
+  }), insert: jest.fn(async () => undefined) };
   const reconfirmacoes = { findOne: jest.fn(async (): Promise<unknown> => null), insert: jest.fn(async () => undefined) };
   const restricoes = { find: jest.fn(async (): Promise<unknown[]> => []) };
-  const g = { query: jest.fn(async (sql: string, _params?: unknown[]) => sql === 'show transaction_isolation' ? [{ transaction_isolation: 'read committed' }] : []), getRepository: jest.fn((entidade: unknown) => {
+  const g = { query: jest.fn(async (sql: string, _params?: unknown[]): Promise<Array<Record<string, unknown>>> =>
+    sql === 'show transaction_isolation' ? [{ transaction_isolation: 'read committed' }] : sql.includes('is not distinct from') ? [{ consistente: true }] : []), getRepository: jest.fn((entidade: unknown) => {
     if (entidade === AvaliacaoRestricoesPacienteOrm) return avaliacoes;
     if (entidade === RevisaoAvaliacaoRestricoesOrm) return revisoes;
     if (entidade === ReconfirmacaoRestricoesOrm) return reconfirmacoes;
@@ -57,6 +61,25 @@ it('não registra avaliação alterada ou sem histórico correspondente', async 
   c.revisoes.findOne.mockResolvedValueOnce(null);
   await expect(c.executar()).rejects.toBeInstanceOf(ConflictException);
   expect(c.reconfirmacoes.insert).not.toHaveBeenCalled();
+});
+it('recusa histórico com situação ou validade divergente do estado atual', async () => {
+  const c = preparar();
+  c.avaliacoes.findOne.mockResolvedValueOnce({ id: avaliacaoId, revisao: 2, situacao: 'sem_restricoes_confirmadas', venceEm: new Date('2026-12-01T00:00:00.000Z') });
+  c.revisoes.findOne.mockResolvedValueOnce({ numero: 2, situacao: 'nao_informado', venceEm: null });
+  await expect(c.executarSemAlteracao()).rejects.toBeInstanceOf(ConflictException);
+  c.avaliacoes.findOne.mockResolvedValueOnce({ id: avaliacaoId, revisao: 2, situacao: 'sem_restricoes_confirmadas', venceEm: new Date('2026-12-01T00:00:00.000Z') });
+  c.revisoes.findOne.mockResolvedValueOnce({ numero: 2, situacao: 'sem_restricoes_confirmadas', venceEm: new Date('2026-12-02T00:00:00.000Z') });
+  await expect(c.executarSemAlteracao()).rejects.toBeInstanceOf(ConflictException);
+  expect(c.avaliacoes.update).not.toHaveBeenCalled(); expect(c.reconfirmacoes.insert).not.toHaveBeenCalled();
+});
+it('recusa divergência de precisão identificada pelo banco mesmo quando as datas JavaScript coincidem', async () => {
+  const c = preparar();
+  const data = new Date('2026-12-01T00:00:00.000Z');
+  c.avaliacoes.findOne.mockResolvedValueOnce({ id: avaliacaoId, revisao: 2, situacao: 'sem_restricoes_confirmadas', venceEm: data });
+  c.revisoes.findOne.mockResolvedValueOnce({ numero: 2, situacao: 'sem_restricoes_confirmadas', venceEm: data });
+  c.g.query.mockResolvedValueOnce([{ transaction_isolation: 'read committed' }]).mockResolvedValueOnce([]).mockResolvedValueOnce([{ consistente: false }]);
+  await expect(c.executarSemAlteracao()).rejects.toBeInstanceOf(ConflictException);
+  expect(c.avaliacoes.update).not.toHaveBeenCalled(); expect(c.reconfirmacoes.insert).not.toHaveBeenCalled();
 });
 it('exige atestação explícita e não aceita chaves extras', async () => {
   const c = preparar();

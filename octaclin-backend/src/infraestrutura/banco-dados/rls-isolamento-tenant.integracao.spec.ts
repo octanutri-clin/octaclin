@@ -1268,6 +1268,37 @@ descrever('RLS e isolamento multi-tenant integral em Postgres real', () => {
         select tenant_id,paciente_id,id,1,situacao,$2,vence_em from avaliacoes_restricoes_pacientes where id=$1`, [id, dados.usuarioId]);
       return { paciente, id };
     }
+    for (const divergencia of ['situacao', 'validade'] as const) {
+      const caso = await prepararCorridaAvaliacao();
+      await cliente.query(`update avaliacoes_restricoes_pacientes set situacao='nao_informado', revisao=2,
+        confirmado_por_usuario_id=null, confirmado_em=null, vence_em=null where id=$1`, [caso.id]);
+      await cliente.query(`insert into avaliacoes_restricoes_revisoes
+        (tenant_id,paciente_id,avaliacao_id,numero,situacao,autor_usuario_id,vence_em)
+        values ($1,$2,$3,2,$4,$5,case when $6::text='situacao' then null else now() + interval '10 days' end)`,
+        [tenantP2, caso.paciente, caso.id, divergencia === 'situacao' ? 'sem_restricoes_confirmadas' : 'nao_informado', dados.usuarioId, divergencia]);
+      const chaveDivergente = randomUUID();
+      await expect(reconfirmar.registrarPendencia(usuario, caso.paciente,
+        { avaliacaoId: caso.id, revisaoAvaliacao: 2, chaveIdempotencia: chaveDivergente, meio: 'teleconsulta', atestacao: true }))
+        .rejects.toMatchObject({ status: 409 });
+      expect((await cliente.query('select id from reconfirmacoes_restricoes where tenant_id=$1 and chave_idempotencia=$2', [tenantP2, chaveDivergente])).rows).toEqual([]);
+      expect((await cliente.query('select situacao,revisao from avaliacoes_restricoes_pacientes where id=$1', [caso.id])).rows)
+        .toEqual([{ situacao: 'nao_informado', revisao: 2 }]);
+    }
+    const casoPrecisao = await prepararCorridaAvaliacao();
+    await cliente.query(`update avaliacoes_restricoes_pacientes set revisao=2,
+      vence_em=date_trunc('milliseconds', vence_em) + interval '1 microsecond' where id=$1`, [casoPrecisao.id]);
+    await cliente.query(`insert into avaliacoes_restricoes_revisoes
+      (tenant_id,paciente_id,avaliacao_id,numero,situacao,autor_usuario_id,vence_em)
+      select tenant_id,paciente_id,id,2,situacao,$2,vence_em + interval '1 microsecond' from avaliacoes_restricoes_pacientes where id=$1`,
+      [casoPrecisao.id, dados.usuarioId]);
+    const diferencaMicros = await cliente.query(`select extract(epoch from (r.vence_em-a.vence_em))*1000000 diferenca
+      from avaliacoes_restricoes_pacientes a join avaliacoes_restricoes_revisoes r on r.avaliacao_id=a.id and r.numero=2 where a.id=$1`, [casoPrecisao.id]);
+    expect(Number(diferencaMicros.rows[0].diferenca)).toBe(1);
+    const chavePrecisao = randomUUID();
+    await expect(reconfirmar.registrarPendencia(usuario, casoPrecisao.paciente,
+      { avaliacaoId: casoPrecisao.id, revisaoAvaliacao: 2, chaveIdempotencia: chavePrecisao, meio: 'teleconsulta', atestacao: true }))
+      .rejects.toMatchObject({ status: 409 });
+    expect((await cliente.query('select id from reconfirmacoes_restricoes where tenant_id=$1 and chave_idempotencia=$2', [tenantP2, chavePrecisao])).rows).toEqual([]);
     const casoPendenteReavaliacao = await prepararCorridaAvaliacao();
     const idPendenteReavaliacao = randomUUID();
     const cifraPendenteReavaliacao = cifrarConteudoRestricao(crypto, conteudo,
