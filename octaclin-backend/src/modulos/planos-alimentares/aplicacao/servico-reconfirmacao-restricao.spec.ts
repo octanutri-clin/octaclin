@@ -18,7 +18,8 @@ const chaveIdempotencia = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
 const dados = { avaliacaoId, revisaoAvaliacao: 2, chaveIdempotencia, meio: 'teleconsulta', atestacao: true };
 const restricao = { id: '66666666-6666-4666-8666-666666666666', revisao: 1, estado: 'em_reavaliacao', confirmacao: 'confirmada', conteudoCriptografado: Buffer.from('sintetico') };
 function preparar() {
-  const avaliacoes = { findOne: jest.fn(async (): Promise<unknown> => ({ id: avaliacaoId, revisao: 2, situacao: 'nao_informado' })), update: jest.fn(async (_where: unknown, _changes: unknown) => ({ affected: 1 })) };
+  const avaliacoes = { findOne: jest.fn(async (): Promise<unknown> => ({ id: avaliacaoId, revisao: 2, situacao: 'nao_informado' })),
+    insert: jest.fn(async () => undefined), update: jest.fn(async (_where: unknown, _changes: unknown) => ({ affected: 1 })) };
   const revisoes = { findOne: jest.fn(async (): Promise<unknown> => {
     const avaliacao = await avaliacoes.findOne.mock.results.at(-1)?.value as { situacao?: string; venceEm?: Date | null } | undefined;
     return { numero: 2, situacao: avaliacao?.situacao, venceEm: avaliacao?.venceEm ?? null };
@@ -37,9 +38,37 @@ function preparar() {
   const servico = new ServicoReconfirmacaoRestricao(executor as never, {} as never, {} as never);
   return { avaliacoes, revisoes, reconfirmacoes, restricoes, g, executar: (entrada: unknown = dados) => servico.registrarPendencia(usuario as never, paciente, entrada),
     executarAlteracao: (entrada: unknown = dados) => servico.registrarAlteracaoInformada(usuario as never, paciente, entrada),
-    executarSemAlteracao: (entrada: unknown = dados) => servico.registrarSemAlteracao(usuario as never, paciente, entrada) };
+    executarSemAlteracao: (entrada: unknown = dados) => servico.registrarSemAlteracao(usuario as never, paciente, entrada),
+    iniciarAvaliacao: () => servico.garantirAvaliacaoInicial(usuario as never, paciente) };
 }
 beforeEach(() => jest.clearAllMocks());
+it('cria avaliação inicial não informada com histórico e auditoria, sem presumir ausência', async () => {
+  const c = preparar(); c.avaliacoes.findOne.mockResolvedValueOnce(null);
+  const resposta = await c.iniciarAvaliacao() as { id: string; revisao: number; situacao: string };
+  expect(resposta).toEqual({ id: expect.any(String), revisao: 1, situacao: 'nao_informado' });
+  expect(c.avaliacoes.insert).toHaveBeenCalledWith(expect.objectContaining({ id: resposta.id, tenantId: usuario.tenantId,
+    pacienteId: paciente, situacao: 'nao_informado', revisao: 1, confirmadoPorUsuarioId: null, confirmadoEm: null, venceEm: null }));
+  expect(c.revisoes.insert).toHaveBeenCalledWith(expect.objectContaining({ avaliacaoId: resposta.id, numero: 1, situacao: 'nao_informado' }));
+  expect(registrarAuditoriaNaTransacao).toHaveBeenCalledWith(c.g, expect.objectContaining({ acao: 'restricoes.avaliacao_iniciada', metadados: {} }));
+});
+it('reusa avaliação existente coerente, sem gravações adicionais', async () => {
+  const c = preparar();
+  await expect(c.iniciarAvaliacao()).resolves.toEqual({ id: avaliacaoId, revisao: 2, situacao: 'nao_informado' });
+  expect(c.avaliacoes.insert).not.toHaveBeenCalled(); expect(c.revisoes.insert).not.toHaveBeenCalled();
+  expect(registrarAuditoriaNaTransacao).not.toHaveBeenCalled();
+});
+it('não cria avaliação sem autorização ou com histórico existente inconsistente', async () => {
+  jest.mocked(autorizarRestricaoClinica).mockRejectedValueOnce(new ForbiddenException());
+  const c = preparar(); await expect(c.iniciarAvaliacao()).rejects.toBeInstanceOf(ForbiddenException);
+  c.revisoes.findOne.mockResolvedValueOnce(null);
+  await expect(c.iniciarAvaliacao()).rejects.toBeInstanceOf(ConflictException);
+  expect(c.avaliacoes.insert).not.toHaveBeenCalled(); expect(c.revisoes.insert).not.toHaveBeenCalled();
+});
+it('não inicializa avaliação em isolamento que preserva snapshot', async () => {
+  const c = preparar(); c.g.query.mockResolvedValueOnce([{ transaction_isolation: 'repeatable read' }]);
+  await expect(c.iniciarAvaliacao()).rejects.toBeInstanceOf(ConflictException);
+  expect(autorizarRestricaoClinica).not.toHaveBeenCalled(); expect(c.avaliacoes.insert).not.toHaveBeenCalled();
+});
 it('registra atestação cifrada vinculada à revisão, sem declarar ausência ou atualizar avaliação', async () => {
   const c = preparar();
   const resultado = await c.executar();

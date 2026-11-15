@@ -1,7 +1,7 @@
 import { BadRequestException, ConflictException, Injectable } from '@nestjs/common';
 import { isUUID } from 'class-validator';
 import { randomUUID } from 'node:crypto';
-import { In } from 'typeorm';
+import { EntityManager, In } from 'typeorm';
 import { ExecutorTenant } from '../../../infraestrutura/banco-dados/executor-tenant';
 import { CriptografiaDadosSensiveis } from '../../../infraestrutura/seguranca/criptografia-dados-sensiveis';
 import { registrarAuditoriaNaTransacao } from '../../../infraestrutura/auditoria/servico-auditoria';
@@ -22,11 +22,57 @@ function instanteOuNulo(valor: Date | null | undefined): number | null {
   return valor.getTime();
 }
 
+async function exigirReadCommitted(g: EntityManager): Promise<void> {
+  // Snapshot fixo anterior ao lock do paciente não pode ser atualizado após espera.
+  const isolamento: Array<{ transaction_isolation?: string }> = await g.query('show transaction_isolation');
+  if (isolamento.length !== 1 || isolamento[0].transaction_isolation !== 'read committed') throw new ConflictException('Operação indisponível.');
+}
+
+async function exigirHistoricoConsistente(g: EntityManager, tenantId: string, pacienteId: string, avaliacao: AvaliacaoRestricoesPacienteOrm): Promise<void> {
+  const revisao = await g.getRepository(RevisaoAvaliacaoRestricoesOrm).findOne({ where: { tenantId, pacienteId, avaliacaoId: avaliacao.id, numero: avaliacao.revisao } });
+  if (!revisao || revisao.situacao !== avaliacao.situacao || instanteOuNulo(revisao.venceEm) !== instanteOuNulo(avaliacao.venceEm)) {
+    throw new ConflictException('Avaliação alterada ou indisponível.');
+  }
+  // O driver Date perde microssegundos: compare também os valores exatos no PostgreSQL.
+  const consistencia: Array<{ consistente: boolean }> = await g.query(`select
+    (r.situacao = a.situacao and r.vence_em is not distinct from a.vence_em) as consistente
+    from avaliacoes_restricoes_pacientes a
+    join avaliacoes_restricoes_revisoes r on r.tenant_id=a.tenant_id and r.paciente_id=a.paciente_id and r.avaliacao_id=a.id and r.numero=a.revisao
+    where a.tenant_id=$1 and a.paciente_id=$2 and a.id=$3 and a.revisao=$4`, [tenantId, pacienteId, avaliacao.id, avaliacao.revisao]);
+  if (consistencia.length !== 1 || consistencia[0].consistente !== true) throw new ConflictException('Avaliação alterada ou indisponível.');
+}
+
 /** Incremento não exposto: atestações globais referenciadas à revisão existente. */
 @Injectable()
 export class ServicoReconfirmacaoRestricao {
   constructor(private readonly executor: ExecutorTenant, private readonly cripto: CriptografiaDadosSensiveis,
     private readonly concessoes: ServicoConcessoesPermissao) {}
+
+  async garantirAvaliacaoInicial(usuario: UsuarioAutenticado, pacienteId: string): Promise<unknown> {
+    if (!usuario || !isUUID(usuario.tenantId) || !isUUID(usuario.usuarioId) || !isUUID(pacienteId)) throw new BadRequestException('Solicitação inválida.');
+    usuario = { ...usuario, tenantId: usuario.tenantId.toLowerCase(), usuarioId: usuario.usuarioId.toLowerCase() };
+    pacienteId = pacienteId.toLowerCase();
+    try {
+      return await this.executor.executar(usuario.tenantId, async g => {
+        await exigirReadCommitted(g);
+        await autorizarRestricaoClinica(g, this.concessoes, usuario, pacienteId);
+        const repo = g.getRepository(AvaliacaoRestricoesPacienteOrm);
+        const existente = await repo.findOne({ where: { tenantId: usuario.tenantId, pacienteId }, lock: { mode: 'pessimistic_write' } });
+        if (existente) {
+          await exigirHistoricoConsistente(g, usuario.tenantId, pacienteId, existente);
+          return { id: existente.id, revisao: existente.revisao, situacao: existente.situacao };
+        }
+        const id = randomUUID();
+        await repo.insert({ id, tenantId: usuario.tenantId, pacienteId, situacao: 'nao_informado', revisao: 1,
+          confirmadoPorUsuarioId: null, confirmadoEm: null, venceEm: null });
+        await g.getRepository(RevisaoAvaliacaoRestricoesOrm).insert({ tenantId: usuario.tenantId, pacienteId, avaliacaoId: id,
+          numero: 1, situacao: 'nao_informado', autorUsuarioId: usuario.usuarioId, venceEm: null });
+        await registrarAuditoriaNaTransacao(g, { tenantId: usuario.tenantId, usuarioId: usuario.usuarioId,
+          acao: 'restricoes.avaliacao_iniciada', recursoTipo: 'avaliacao_restricoes', recursoId: id, metadados: {} });
+        return { id, revisao: 1, situacao: 'nao_informado' };
+      });
+    } catch (erro) { return falharRestricao(erro); }
+  }
 
   async registrarPendencia(usuario: UsuarioAutenticado, pacienteId: string, dados: unknown): Promise<unknown> {
     return this.registrarResultado(usuario, pacienteId, dados, 'pendencia_mantida');
@@ -64,10 +110,7 @@ export class ServicoReconfirmacaoRestricao {
     catch { throw new BadRequestException('Solicitação inválida.'); }
     try {
       return await this.executor.executar(usuario.tenantId, async g => {
-        // Em isolamento com snapshot fixo, esperar pelo paciente não atualiza o
-        // conjunto de restrições visto pela transação iniciada anteriormente.
-        const isolamento: Array<{ transaction_isolation?: string }> = await g.query('show transaction_isolation');
-        if (isolamento.length !== 1 || isolamento[0].transaction_isolation !== 'read committed') throw new ConflictException('Operação indisponível.');
+        await exigirReadCommitted(g);
         await autorizarRestricaoClinica(g, this.concessoes, usuario, pacienteId);
         await g.query('select pg_advisory_xact_lock(hashtextextended($1, 0))', [`reconfirmacao:${usuario.tenantId}:${usuario.usuarioId}:${chaveIdempotencia}`]);
         const repo = g.getRepository(ReconfirmacaoRestricoesOrm);
@@ -82,18 +125,7 @@ export class ServicoReconfirmacaoRestricao {
         }
         const avaliacao = await g.getRepository(AvaliacaoRestricoesPacienteOrm).findOne({ where: { id: avaliacaoId, tenantId: usuario.tenantId, pacienteId }, lock: { mode: 'pessimistic_write' } });
         if (!avaliacao || avaliacao.revisao !== revisaoAvaliacao) throw new ConflictException('Avaliação alterada ou indisponível.');
-        const revisao = await g.getRepository(RevisaoAvaliacaoRestricoesOrm).findOne({ where: { tenantId: usuario.tenantId, pacienteId, avaliacaoId, numero: revisaoAvaliacao } });
-        if (!revisao || revisao.situacao !== avaliacao.situacao || instanteOuNulo(revisao.venceEm) !== instanteOuNulo(avaliacao.venceEm)) {
-          throw new ConflictException('Avaliação alterada ou indisponível.');
-        }
-        // O driver Date perde microssegundos: compare também os valores exatos no PostgreSQL.
-        const consistencia: Array<{ consistente: boolean }> = await g.query(`select
-          (r.situacao = a.situacao and r.vence_em is not distinct from a.vence_em) as consistente
-          from avaliacoes_restricoes_pacientes a
-          join avaliacoes_restricoes_revisoes r on r.tenant_id=a.tenant_id and r.paciente_id=a.paciente_id and r.avaliacao_id=a.id and r.numero=a.revisao
-          where a.tenant_id=$1 and a.paciente_id=$2 and a.id=$3 and a.revisao=$4`,
-        [usuario.tenantId, pacienteId, avaliacaoId, revisaoAvaliacao]);
-        if (consistencia.length !== 1 || consistencia[0].consistente !== true) throw new ConflictException('Avaliação alterada ou indisponível.');
+        await exigirHistoricoConsistente(g, usuario.tenantId, pacienteId, avaliacao);
         if (!['nao_informado', 'sem_restricoes_confirmadas', 'restricoes_registradas'].includes(avaliacao.situacao)) throw new ConflictException('Avaliação indisponível.');
         const atestadoEm = new Date();
         let venceEm: Date | null = null;

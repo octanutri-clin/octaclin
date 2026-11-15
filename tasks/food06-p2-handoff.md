@@ -172,3 +172,15 @@
   renovação e provas de concorrência. Depois foi acrescentada localmente comparação
   da revisão histórica e estado atual, inclusive `vence_em` no PostgreSQL sem
   perder microssegundos, com provas sintéticas específicas aguardando novo CI.
+- Avaliação inicial em preparação: `garantirAvaliacaoInicial` exige concessão e
+  carteira clínica, lock de paciente e READ COMMITTED; cria apenas `nao_informado`
+  com revisão 1 e auditoria ou reusa estado com histórico consistente. Revisão
+  R4 estática não encontrou bypass reproduzível; provas PG de criação concorrente,
+  rollback, outro tenant/carteira, histórico divergente e isolamento foram
+  adicionadas e ainda aguardam CI. Não há provider, rota, flag ou declaração de
+  ausência; autorização profissional sem concessão continua negada neste método.
+- CI `43613350758`, HEAD `ab7f611f`: workflow OctaClin CI PASS (Backend, Web,
+  RLS, smoke e PR Gate); backend 5.147 PASS, 181 SKIPPED e 2 TODO na suíte geral,
+  RLS/Testcontainers 271 PASS (grupos sobrepostos). Essa evidência antecede a
+  avaliação inicial. Seus testes atuais de espera usam prazos, mas timeout JS não
+  cancela operação subjacente; falhas de rede ainda exigem diagnóstico no CI.
