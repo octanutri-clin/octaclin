@@ -195,3 +195,15 @@
   ausência, mas isso não equivale à prova de banco. Provas PG novas cobrem oito
   combinações clínicas, preferência, paginação, rollback e duas ordens da corrida
   ausência × pendência; aguardam CI. A funcionalidade segue sem rota/flag/provider.
+- Backend CI `43659962354`, HEAD `4ca8c86e`: 5.154 PASS, 181 SKIPPED e 2 TODO
+  na suíte geral; RLS/Testcontainers 271 PASS (grupos sobrepostos). A falha do
+  HEAD `ee7269f6` foi causada por inferência incompatível de parâmetros SQL na
+  fixture e corrigida no HEAD seguinte. O workflow geral ainda executava ao anotar.
+- Reconfirmação individual `sem_alteracao` em preparação: somente restrição
+  confirmada e vigente (`ativa` ou `em_reavaliacao`), revisão da avaliação e da
+  restrição correntes, conteúdo atual e histórico decifrados e coerentes; não
+  renova a avaliação. Replay reautoriza e devolve ACK histórico com escopo e
+  revisões, não estado atual. Revisão R4 estática não identificou bypass; provas
+  PG de tenant/carteira, conteúdo inválido, rollback, revogação e corrida com
+  inativação nas duas ordens aguardam CI. Outros resultados/estados individuais
+  não foram implementados e não devem ser considerados liberados pelo contrato.
