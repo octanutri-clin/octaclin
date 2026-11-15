@@ -10,6 +10,7 @@ import { ServicoAuditoria } from '../../../infraestrutura/auditoria/servico-audi
 import { GuardaJwt } from '../../auth/apresentacao/guarda-jwt';
 import { ServicoLeituraRestricao } from '../aplicacao/servico-leitura-restricao';
 import { ServicoConfirmacaoRestricao } from '../aplicacao/servico-confirmacao-restricao';
+import { ServicoRegistroPendenciaRestricao } from '../aplicacao/servico-registro-pendencia-restricao';
 import { ControladorRestricoesClinicas } from './controlador-restricoes-clinicas';
 
 const tenant = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', usuario = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
@@ -21,6 +22,7 @@ const rejeitar = jest.fn(async (): Promise<unknown> => ({ id: restricao, revisao
 const inativar = jest.fn(async (): Promise<unknown> => ({ id: restricao, revisao: 2, estado: 'inativa', privado: 'CANARIO_INTERNO' }));
 const alterarReavaliacao = jest.fn(async (_u: unknown, _p: unknown, _r: unknown, _v: unknown, destino: unknown): Promise<unknown> =>
   ({ id: restricao, revisao: 2, estado: destino, privado: 'CANARIO_INTERNO' }));
+const registrar = jest.fn(async (): Promise<unknown> => ({ id: restricao, revisao: 1, estado: 'ativa', confirmacao: 'pendente', privado: 'CANARIO_INTERNO' }));
 
 describe('contrato HTTP clínico isolado de restrições', () => {
   let app: NestExpressApplication, url: string;
@@ -32,6 +34,7 @@ describe('contrato HTTP clínico isolado de restrições', () => {
     const modulo = await Test.createTestingModule({ controllers: [ControladorRestricoesClinicas], providers: [
       { provide: ServicoLeituraRestricao, useValue: { consultar } },
       { provide: ServicoConfirmacaoRestricao, useValue: { confirmar, rejeitar, inativar, alterarReavaliacao } },
+      { provide: ServicoRegistroPendenciaRestricao, useValue: { registrar } },
       { provide: ServicoAuditoria, useValue: { registrar: async () => undefined } }
     ] }).overrideGuard(GuardaJwt).useValue({ canActivate(c: ExecutionContext) {
       const r = c.switchToHttp().getRequest(); if (!r.headers['x-papel-sintetico']) throw new UnauthorizedException();
@@ -46,7 +49,7 @@ describe('contrato HTTP clínico isolado de restrições', () => {
     await app.listen(0, '127.0.0.1'); url = `http://127.0.0.1:${(app.getHttpServer().address() as AddressInfo).port}`;
   });
   afterAll(async () => { await app.close(); });
-  beforeEach(() => { consultar.mockClear(); confirmar.mockClear(); rejeitar.mockClear(); inativar.mockClear(); alterarReavaliacao.mockClear(); logs.length = 0; });
+  beforeEach(() => { consultar.mockClear(); confirmar.mockClear(); rejeitar.mockClear(); inativar.mockClear(); alterarReavaliacao.mockClear(); registrar.mockClear(); logs.length = 0; });
   afterEach(() => { expect(inspect(logs, { depth: 10 })).not.toMatch(/CANARIO_/); });
   it('usa identidade autenticada e retorna apenas a projeção clínica, sem cache', async () => {
     const resposta = await chamar({ restricaoId: restricao });
@@ -148,5 +151,24 @@ describe('contrato HTTP clínico isolado de restrições', () => {
     confirmar.mockResolvedValueOnce({ id: restricao, revisao: 2, confirmacao: 'CANARIO_RESULTADO' });
     const r = await acao('confirmar', { revisao: 1 }); expect(r.status).toBe(500);
     expect(r.headers.get('cache-control')).toBe('private, no-store'); expect(await r.text()).not.toContain('CANARIO_RESULTADO');
+  });
+  const registrarPendencia = (body: unknown, papel = 'Professional') => fetch(`${url}/pacientes/${paciente}/restricoes/registrar`, {
+    method: 'POST', headers: { 'content-type': 'application/json', ...(papel ? { 'x-papel-sintetico': papel } : {}) }, body: JSON.stringify(body)
+  });
+  it('registra pendência profissional com conteúdo validado e resposta mínima', async () => {
+    const r = await registrarPendencia({ chaveCriacao: restricao, conteudo }); expect(r.status).toBe(200);
+    expect(await r.json()).toEqual({ id: restricao, revisao: 1, estado: 'ativa', confirmacao: 'pendente' });
+    expect(registrar).toHaveBeenCalledWith(expect.objectContaining({ tenantId: tenant, usuarioId: usuario }), paciente, { chaveCriacao: restricao, conteudo });
+  });
+  it('mantém a resposta idempotente com estado atual ao repetir uma criação', async () => {
+    registrar.mockResolvedValueOnce({ id: restricao, revisao: 2, estado: 'ativa', confirmacao: 'confirmada', privado: 'CANARIO_INTERNO' });
+    const r = await registrarPendencia({ chaveCriacao: restricao, conteudo }); expect(r.status).toBe(200);
+    expect(await r.json()).toEqual({ id: restricao, revisao: 2, estado: 'ativa', confirmacao: 'confirmada' });
+  });
+  it('recusa conteúdo ou identidade extra e papéis ainda não implementados', async () => {
+    for (const body of [{ chaveCriacao: restricao, conteudo: { ...conteudo, segredo: 'CANARIO_CORPO' } },
+      { chaveCriacao: restricao, conteudo, tenantId: tenant }, { chaveCriacao: 'invalida', conteudo }]) expect((await registrarPendencia(body)).status).toBe(400);
+    for (const papel of ['Patient', 'Collaborator', 'Client', 'SuperAdmin']) expect((await registrarPendencia({ chaveCriacao: restricao, conteudo }, papel)).status).toBe(403);
+    expect(registrar).not.toHaveBeenCalled();
   });
 });

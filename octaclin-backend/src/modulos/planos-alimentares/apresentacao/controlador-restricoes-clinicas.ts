@@ -1,6 +1,6 @@
 import { ArgumentsHost, Body, Catch, Controller, ExceptionFilter, Header, HttpCode, HttpException, InternalServerErrorException,
   Param, ParseUUIDPipe, Post, UseFilters, UseGuards } from '@nestjs/common';
-import { Equals, IsBoolean, IsIn, IsInt, IsString, IsUUID, Max, MaxLength, Min, MinLength, isUUID } from 'class-validator';
+import { Allow, Equals, IsBoolean, IsDefined, IsIn, IsInt, IsString, IsUUID, Max, MaxLength, Min, MinLength, isUUID } from 'class-validator';
 import type { Response } from 'express';
 import { Papeis, Permissoes, UsuarioAtual } from '../../auth/apresentacao/decorators';
 import { GuardaJwt } from '../../auth/apresentacao/guarda-jwt';
@@ -10,9 +10,14 @@ import type { UsuarioAutenticado } from '../../auth/dominio/usuario-autenticado'
 import { validarConteudoRestricao } from '../dominio/conteudo-restricao';
 import { ServicoLeituraRestricao } from '../aplicacao/servico-leitura-restricao';
 import { ServicoConfirmacaoRestricao } from '../aplicacao/servico-confirmacao-restricao';
+import { ServicoRegistroPendenciaRestricao } from '../aplicacao/servico-registro-pendencia-restricao';
 
 class ConsultarRestricaoDto {
   @IsUUID() restricaoId: string;
+}
+class RegistrarPendenciaDto {
+  @IsUUID() chaveCriacao: string;
+  @IsDefined() @Allow() conteudo: unknown;
 }
 class RevisaoRestricaoDto {
   @IsInt() @Min(1) @Max(2147483646) revisao: number;
@@ -55,7 +60,22 @@ class FiltroRestricoesClinicas implements ExceptionFilter {
 @Papeis('Professional')
 @UseFilters(FiltroRestricoesClinicas)
 export class ControladorRestricoesClinicas {
-  constructor(private readonly leitura: ServicoLeituraRestricao, private readonly decisao: ServicoConfirmacaoRestricao) {}
+  constructor(private readonly leitura: ServicoLeituraRestricao, private readonly decisao: ServicoConfirmacaoRestricao,
+    private readonly registro: ServicoRegistroPendenciaRestricao) {}
+
+  @Post('registrar') @HttpCode(200) @Permissoes('pacientes.ler') @Header('Cache-Control', 'private, no-store')
+  async registrar(@UsuarioAtual() usuario: UsuarioAutenticado, @Param('pacienteId', ParseUUIDPipe) pacienteId: string,
+    @Body() dados: RegistrarPendenciaDto): Promise<unknown> {
+    let conteudo: ReturnType<typeof validarConteudoRestricao>;
+    try { conteudo = validarConteudoRestricao(dados.conteudo); } catch { throw new HttpException('Solicitação inválida.', 400); }
+    const valor = await this.registro.registrar(usuario, pacienteId, { chaveCriacao: dados.chaveCriacao, conteudo });
+    if (!valor || typeof valor !== 'object' || Array.isArray(valor)) throw new InternalServerErrorException('Operação indisponível.');
+    const r = valor as Record<string, unknown>;
+    if (typeof r.id !== 'string' || !isUUID(r.id) || !Number.isSafeInteger(r.revisao) || Number(r.revisao) < 1 ||
+      !['ativa', 'em_reavaliacao', 'inativa'].includes(r.estado as string) ||
+      !['pendente', 'confirmada', 'rejeitada'].includes(r.confirmacao as string)) throw new InternalServerErrorException('Operação indisponível.');
+    return { id: r.id, revisao: r.revisao, estado: r.estado, confirmacao: r.confirmacao };
+  }
 
   @Post('consultar')
   @HttpCode(200)
