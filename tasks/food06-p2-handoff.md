@@ -184,3 +184,14 @@
   RLS/Testcontainers 271 PASS (grupos sobrepostos). Essa evidência antecede a
   avaliação inicial. Seus testes atuais de espera usam prazos, mas timeout JS não
   cancela operação subjacente; falhas de rede ainda exigem diagnóstico no CI.
+- Backend CI `43658631328`, HEAD `87f0ede0`: 5.151 PASS, 181 SKIPPED, 2 TODO
+  na suíte geral e RLS/Testcontainers 271 PASS (grupos sobrepostos), incluindo
+  avaliação inicial; Web ainda executava ao registrar este resultado.
+- Declaração global `sem_restricoes_declaradas` em preparação: exige atestação e
+  confirmação explícitas; impede ausência se houver restrição clínica ou escolha
+  ativa/em reavaliação pendente ou confirmada, descarta preferências pelo codec e
+  falha fechado em cifra ilegível. Usa o mesmo lock, revisão, histórico, prazo,
+  isolamento e auditoria da renovação. Revisão R4 estática não demonstrou falsa
+  ausência, mas isso não equivale à prova de banco. Provas PG novas cobrem oito
+  combinações clínicas, preferência, paginação, rollback e duas ordens da corrida
+  ausência × pendência; aguardam CI. A funcionalidade segue sem rota/flag/provider.

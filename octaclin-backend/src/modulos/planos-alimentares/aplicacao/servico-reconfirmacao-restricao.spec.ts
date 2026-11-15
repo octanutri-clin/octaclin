@@ -39,6 +39,7 @@ function preparar() {
   return { avaliacoes, revisoes, reconfirmacoes, restricoes, g, executar: (entrada: unknown = dados) => servico.registrarPendencia(usuario as never, paciente, entrada),
     executarAlteracao: (entrada: unknown = dados) => servico.registrarAlteracaoInformada(usuario as never, paciente, entrada),
     executarSemAlteracao: (entrada: unknown = dados) => servico.registrarSemAlteracao(usuario as never, paciente, entrada),
+    executarAusencia: (entrada: unknown = { ...dados, confirmacaoExplicitaAusencia: true }) => servico.registrarAusenciaDeclarada(usuario as never, paciente, entrada),
     iniciarAvaliacao: () => servico.garantirAvaliacaoInicial(usuario as never, paciente) };
 }
 beforeEach(() => jest.clearAllMocks());
@@ -295,4 +296,32 @@ it('não cria reconfirmação se a revisão da avaliação mudar no CAS', async 
   c.avaliacoes.update.mockResolvedValueOnce({ affected: 0 });
   await expect(c.executarSemAlteracao()).rejects.toBeInstanceOf(ConflictException);
   expect(c.revisoes.insert).not.toHaveBeenCalled(); expect(c.reconfirmacoes.insert).not.toHaveBeenCalled();
+});
+it('registra ausência explícita a partir de avaliação não informada, com prazo e histórico', async () => {
+  const c = preparar();
+  const resultado = await c.executarAusencia();
+  expect(resultado).toEqual(expect.objectContaining({ id: expect.any(String), resultado: 'sem_restricoes_declaradas' }));
+  expect(c.avaliacoes.update).toHaveBeenCalledWith(expect.objectContaining({ id: avaliacaoId, revisao: 2 }),
+    expect.objectContaining({ situacao: 'sem_restricoes_confirmadas', revisao: 3, confirmadoPorUsuarioId: usuario.usuarioId,
+      confirmadoEm: expect.any(Date), venceEm: expect.any(Date) }));
+  expect(c.revisoes.insert).toHaveBeenCalledWith(expect.objectContaining({ numero: 3, situacao: 'sem_restricoes_confirmadas' }));
+  expect(cifrarCampo).toHaveBeenCalledWith(expect.anything(), 'reconfirmacoes_restricoes.resultado_criptografado', { resultado: 'sem_restricoes_declaradas' }, expect.anything());
+});
+it('ausência exige confirmação explícita e é recusada diante de restrição vigente ou pendente', async () => {
+  const c = preparar();
+  await expect(c.executarAusencia(dados)).rejects.toBeInstanceOf(BadRequestException);
+  for (const confirmacao of ['pendente', 'confirmada']) {
+    c.restricoes.find.mockResolvedValueOnce([{ ...restricao, confirmacao }]);
+    jest.mocked(decifrarConteudoRestricao).mockReturnValueOnce({ natureza: 'clinica' } as never);
+    await expect(c.executarAusencia()).rejects.toBeInstanceOf(ConflictException);
+  }
+  expect(c.avaliacoes.update).not.toHaveBeenCalled(); expect(c.reconfirmacoes.insert).not.toHaveBeenCalled();
+});
+it('não usa confirmação de ausência em resultados diferentes nem reaproveita a chave para outro resultado', async () => {
+  const c = preparar();
+  await expect(c.executar({ ...dados, confirmacaoExplicitaAusencia: true })).rejects.toBeInstanceOf(BadRequestException);
+  c.reconfirmacoes.findOne.mockResolvedValueOnce({ id: '55555555-5555-4555-8555-555555555555', pacienteId: paciente, avaliacaoId,
+    revisaoAvaliacao: 2, meio: dados.meio, venceEm: new Date('2027-01-01T00:00:00.000Z'), resultadoCriptografado: Buffer.from('sintetico') });
+  jest.mocked(decifrarCampo).mockReturnValueOnce({ resultado: 'sem_alteracao' });
+  await expect(c.executarAusencia()).rejects.toBeInstanceOf(ConflictException);
 });

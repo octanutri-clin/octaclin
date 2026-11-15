@@ -86,17 +86,22 @@ export class ServicoReconfirmacaoRestricao {
     return this.registrarResultado(usuario, pacienteId, dados, 'sem_alteracao');
   }
 
+  async registrarAusenciaDeclarada(usuario: UsuarioAutenticado, pacienteId: string, dados: unknown): Promise<unknown> {
+    return this.registrarResultado(usuario, pacienteId, dados, 'sem_restricoes_declaradas');
+  }
+
   private async registrarResultado(usuario: UsuarioAutenticado, pacienteId: string, dados: unknown,
-    resultado: 'pendencia_mantida' | 'alteracao_informada' | 'sem_alteracao'): Promise<unknown> {
+    resultado: 'pendencia_mantida' | 'alteracao_informada' | 'sem_alteracao' | 'sem_restricoes_declaradas'): Promise<unknown> {
     if (!usuario || !isUUID(usuario.tenantId) || !isUUID(usuario.usuarioId) || !isUUID(pacienteId) ||
       !dados || typeof dados !== 'object' || Array.isArray(dados) || ![Object.prototype, null].includes(Object.getPrototypeOf(dados))) {
       throw new BadRequestException('Solicitação inválida.');
     }
     const descritores = Object.getOwnPropertyDescriptors(dados);
-    if (Reflect.ownKeys(descritores).some(k => typeof k !== 'string' || !['avaliacaoId', 'revisaoAvaliacao', 'chaveIdempotencia', 'meio', 'atestacao'].includes(k)) ||
+    if (Reflect.ownKeys(descritores).some(k => typeof k !== 'string' || !['avaliacaoId', 'revisaoAvaliacao', 'chaveIdempotencia', 'meio', 'atestacao', 'confirmacaoExplicitaAusencia'].includes(k)) ||
       Object.values(descritores).some(d => !d.enumerable || !Object.hasOwn(d, 'value'))) throw new BadRequestException('Solicitação inválida.');
     const entrada: Record<string, unknown> = Object.create(null);
     for (const [k, d] of Object.entries(descritores)) entrada[k] = d.value;
+    if (resultado !== 'sem_restricoes_declaradas' && Object.hasOwn(entrada, 'confirmacaoExplicitaAusencia')) throw new BadRequestException('Solicitação inválida.');
     if (!isUUID(entrada.avaliacaoId) || !isUUID(entrada.chaveIdempotencia) || !Number.isSafeInteger(entrada.revisaoAvaliacao) ||
       (entrada.revisaoAvaliacao as number) < 1) throw new BadRequestException('Solicitação inválida.');
     usuario = { ...usuario, tenantId: usuario.tenantId.toLowerCase(), usuarioId: usuario.usuarioId.toLowerCase() };
@@ -106,7 +111,8 @@ export class ServicoReconfirmacaoRestricao {
     const revisaoAvaliacao = entrada.revisaoAvaliacao as number;
     let atestacao: ReturnType<typeof registrarReconfirmacao>;
     try { atestacao = registrarReconfirmacao({ agora: new Date().toISOString(), pacienteId, avaliacaoId, revisaoAvaliacao,
-      atestadoPor: usuario.usuarioId, meio: entrada.meio, atestacao: entrada.atestacao, resultado }); }
+      atestadoPor: usuario.usuarioId, meio: entrada.meio, atestacao: entrada.atestacao, resultado,
+      ...(resultado === 'sem_restricoes_declaradas' ? { confirmacaoExplicitaAusencia: entrada.confirmacaoExplicitaAusencia } : {}) }); }
     catch { throw new BadRequestException('Solicitação inválida.'); }
     try {
       return await this.executor.executar(usuario.tenantId, async g => {
@@ -117,7 +123,7 @@ export class ServicoReconfirmacaoRestricao {
         const existente = await repo.findOne({ where: { tenantId: usuario.tenantId, atestadoPorUsuarioId: usuario.usuarioId, chaveIdempotencia } });
         if (existente) {
           if (existente.pacienteId !== pacienteId || existente.avaliacaoId !== avaliacaoId || existente.revisaoAvaliacao !== revisaoAvaliacao ||
-            existente.meio !== atestacao.meio || existente.restricaoId || Boolean(existente.venceEm) !== (resultado === 'sem_alteracao')) throw new ConflictException('Chave já utilizada.');
+            existente.meio !== atestacao.meio || existente.restricaoId || Boolean(existente.venceEm) !== atestacao.renovaAvaliacao) throw new ConflictException('Chave já utilizada.');
           const valor = decifrarCampo(this.cripto, 'reconfirmacoes_restricoes.resultado_criptografado', existente.resultadoCriptografado,
             { tenantId: usuario.tenantId, pacienteId, registroId: existente.id, revisao: 1 });
           if (JSON.stringify(valor) !== JSON.stringify({ resultado })) throw new ConflictException('Chave já utilizada.');
@@ -129,8 +135,8 @@ export class ServicoReconfirmacaoRestricao {
         if (!['nao_informado', 'sem_restricoes_confirmadas', 'restricoes_registradas'].includes(avaliacao.situacao)) throw new ConflictException('Avaliação indisponível.');
         const atestadoEm = new Date();
         let venceEm: Date | null = null;
-        if (resultado === 'sem_alteracao') {
-          if (avaliacao.situacao === 'nao_informado') throw new ConflictException('Avaliação indisponível.');
+        if (resultado === 'sem_alteracao' || resultado === 'sem_restricoes_declaradas') {
+          if (resultado === 'sem_alteracao' && avaliacao.situacao === 'nao_informado') throw new ConflictException('Avaliação indisponível.');
           const restricoes = g.getRepository(RestricaoPacienteOrm);
           let confirmadas = 0;
           let deslocamento = 0;
@@ -150,19 +156,22 @@ export class ServicoReconfirmacaoRestricao {
             if (pagina.length < 100) break;
             deslocamento += pagina.length;
           }
-          if ((avaliacao.situacao === 'sem_restricoes_confirmadas' && confirmadas > 0) ||
-            (avaliacao.situacao === 'restricoes_registradas' && confirmadas === 0)) throw new ConflictException('Avaliação indisponível.');
+          if ((resultado === 'sem_restricoes_declaradas' && confirmadas > 0) ||
+            (resultado === 'sem_alteracao' && avaliacao.situacao === 'sem_restricoes_confirmadas' && confirmadas > 0) ||
+            (resultado === 'sem_alteracao' && avaliacao.situacao === 'restricoes_registradas' && confirmadas === 0)) throw new ConflictException('Avaliação indisponível.');
           const validade = registrarReconfirmacao({ agora: atestadoEm.toISOString(), pacienteId, avaliacaoId, revisaoAvaliacao,
-            atestadoPor: usuario.usuarioId, meio: entrada.meio, atestacao: entrada.atestacao, resultado });
+            atestadoPor: usuario.usuarioId, meio: entrada.meio, atestacao: entrada.atestacao, resultado,
+            ...(resultado === 'sem_restricoes_declaradas' ? { confirmacaoExplicitaAusencia: entrada.confirmacaoExplicitaAusencia } : {}) });
           if (!validade.venceEm) throw new ConflictException('Avaliação indisponível.');
           venceEm = new Date(validade.venceEm);
+          const situacao = resultado === 'sem_restricoes_declaradas' ? 'sem_restricoes_confirmadas' : avaliacao.situacao;
           const alterada = await g.getRepository(AvaliacaoRestricoesPacienteOrm).update(
             { id: avaliacaoId, tenantId: usuario.tenantId, pacienteId, revisao: revisaoAvaliacao },
-            { situacao: avaliacao.situacao, revisao: revisaoAvaliacao + 1, confirmadoPorUsuarioId: usuario.usuarioId,
+            { situacao, revisao: revisaoAvaliacao + 1, confirmadoPorUsuarioId: usuario.usuarioId,
               confirmadoEm: atestadoEm, venceEm, atualizadoEm: () => 'clock_timestamp()' });
           if (alterada.affected !== 1) throw new ConflictException('Avaliação alterada ou indisponível.');
           await g.getRepository(RevisaoAvaliacaoRestricoesOrm).insert({ tenantId: usuario.tenantId, pacienteId, avaliacaoId,
-            numero: revisaoAvaliacao + 1, situacao: avaliacao.situacao, autorUsuarioId: usuario.usuarioId, venceEm });
+            numero: revisaoAvaliacao + 1, situacao, autorUsuarioId: usuario.usuarioId, venceEm });
           await registrarAuditoriaNaTransacao(g, { tenantId: usuario.tenantId, usuarioId: usuario.usuarioId,
             acao: 'restricoes.avaliacao_reconfirmada', recursoTipo: 'avaliacao_restricoes', recursoId: avaliacaoId, metadados: {} });
         } else if (avaliacao.situacao !== 'nao_informado') {
@@ -181,7 +190,7 @@ export class ServicoReconfirmacaoRestricao {
         await repo.insert({ id, tenantId: usuario.tenantId, pacienteId, avaliacaoId, revisaoAvaliacao, atestadoPorUsuarioId: usuario.usuarioId,
           atestadoEm, meio: atestacao.meio, resultadoCriptografado, venceEm, chaveIdempotencia });
         await registrarAuditoriaNaTransacao(g, { tenantId: usuario.tenantId, usuarioId: usuario.usuarioId,
-          acao: resultado === 'pendencia_mantida' ? 'restricoes.reconfirmacao_pendencia' : resultado === 'alteracao_informada' ? 'restricoes.reconfirmacao_alteracao' : 'restricoes.reconfirmacao_sem_alteracao',
+          acao: resultado === 'pendencia_mantida' ? 'restricoes.reconfirmacao_pendencia' : resultado === 'alteracao_informada' ? 'restricoes.reconfirmacao_alteracao' : resultado === 'sem_alteracao' ? 'restricoes.reconfirmacao_sem_alteracao' : 'restricoes.reconfirmacao_ausencia',
           recursoTipo: 'reconfirmacao_restricoes', recursoId: id, metadados: {} });
         return { id, resultado };
       });
