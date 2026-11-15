@@ -1,5 +1,15 @@
 # FOOD06 P2 — preparação e handoff
 
+## Incremento em andamento: reavaliação clínica
+
+- Serviço interno permite `ativa` confirmada para `em_reavaliacao` e retorno
+  a `ativa`, sem reativar registros inativos; durante a reavaliação a restrição
+  continua confirmada. CAS, conteúdo/histórico cifrados e auditoria transacional.
+- Revisão cruzada independente não encontrou defeito concreto. Testes locais
+  focados e typecheck PASS; testes PostgreSQL preparados para autorização,
+  isolamento, rollback e disputa com inativação aguardam CI. Não provam a
+  invalidação fim a fim de prévias P4 nem disputa com reconfirmação.
+
 ## Incremento em andamento: rejeição clínica
 
 - Serviço ainda desconectado: rejeita somente pendência clínica ativa com

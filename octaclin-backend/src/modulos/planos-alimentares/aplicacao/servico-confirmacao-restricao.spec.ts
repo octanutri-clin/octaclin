@@ -44,6 +44,7 @@ function preparar() {
   const executor = { executar: jest.fn(async (_tenant: string, fn: (g: unknown) => unknown) => fn(g)) };
   const servico = new ServicoConfirmacaoRestricao(executor as never, {} as never, {} as never);
   return { linha, atual, revisoes, avaliacao, historicoAvaliacao, g, executor,
+    reavaliar: (destino: 'em_reavaliacao' | 'ativa', revisao = 1) => servico.alterarReavaliacao(ator as never, 'cccccccc-cccc-4ccc-8ccc-cccccccccccc', 'dddddddd-dddd-4ddd-8ddd-dddddddddddd', revisao, destino),
     confirmar: (revisao = 1) => servico.confirmar(ator as never, 'cccccccc-cccc-4ccc-8ccc-cccccccccccc', 'dddddddd-dddd-4ddd-8ddd-dddddddddddd', revisao),
     rejeitar: (dados: unknown = { justificativa: 'Justificativa sintética' }, revisao = 1) => servico.rejeitar(ator as never, 'cccccccc-cccc-4ccc-8ccc-cccccccccccc', 'dddddddd-dddd-4ddd-8ddd-dddddddddddd', revisao, dados),
     confirmarMaiusculo: () => servico.confirmar(ator as never, 'CCCCCCCC-CCCC-4CCC-8CCC-CCCCCCCCCCCC', 'DDDDDDDD-DDDD-4DDD-8DDD-DDDDDDDDDDDD', 1),
@@ -51,6 +52,43 @@ function preparar() {
     inativar: (dados: { motivo: string; justificativa: string; confirmacaoEmDoisPassos: boolean }) => servico.inativar(ator as never, 'cccccccc-cccc-4ccc-8ccc-cccccccccccc', 'dddddddd-dddd-4ddd-8ddd-dddddddddddd', 1, dados) };
 }
 beforeEach(() => jest.clearAllMocks());
+describe('reavaliação de restrição clínica', () => {
+  it.each([['ativa', 'em_reavaliacao', 'reavaliacao'], ['em_reavaliacao', 'ativa', 'reativacao']] as const)(
+    'transita de %s para %s com histórico cifrado e auditoria', async (estado, destino, evento) => {
+      const c = preparar(); c.linha.confirmacao = 'confirmada'; c.linha.estado = estado;
+      c.revisoes.findOne.mockResolvedValueOnce({ numero: 1, evento: 'confirmacao', conteudoCriptografado: Buffer.from('historico') });
+      await expect(c.reavaliar(destino)).resolves.toEqual({ id: c.linha.id, revisao: 2, estado: destino });
+      expect(c.atual.update).toHaveBeenCalledWith(expect.objectContaining({ revisao: 1, tenantId: ator.tenantId, pacienteId: c.linha.pacienteId }), expect.objectContaining({ revisao: 2, estado: destino }));
+      expect(c.revisoes.insert).toHaveBeenCalledWith(expect.objectContaining({ numero: 2, evento, conteudoCriptografado: expect.any(Buffer) }));
+      expect(c.avaliacao.update).not.toHaveBeenCalled();
+      expect(registrarAuditoriaNaTransacao).toHaveBeenCalledWith(c.g, expect.objectContaining({ metadados: {} }));
+    });
+  it('recusa pendente, estado incompatível, revisão obsoleta e histórico ausente', async () => {
+    const c = preparar(); await expect(c.reavaliar('em_reavaliacao')).rejects.toBeInstanceOf(ConflictException);
+    c.linha.confirmacao = 'confirmada'; await expect(c.reavaliar('ativa')).rejects.toBeInstanceOf(ConflictException);
+    await expect(c.reavaliar('em_reavaliacao', 2)).rejects.toBeInstanceOf(ConflictException);
+    c.revisoes.findOne.mockResolvedValueOnce(null); await expect(c.reavaliar('em_reavaliacao')).rejects.toBeInstanceOf(ConflictException);
+    expect(c.atual.update).not.toHaveBeenCalled();
+  });
+  it.each(['repeatable read', 'serializable'])('recusa %s antes da autorização', async isolamento => {
+    const c = preparar(); c.g.query.mockResolvedValueOnce([{ transaction_isolation: isolamento }]);
+    await expect(c.reavaliar('em_reavaliacao')).rejects.toBeInstanceOf(ConflictException);
+    expect(autorizarRestricaoClinica).not.toHaveBeenCalled(); expect(c.atual.update).not.toHaveBeenCalled();
+  });
+  it.each(['rejeicao', 'inativacao'])('recusa histórico terminal %s', async evento => {
+    const c = preparar(); c.linha.confirmacao = 'confirmada';
+    c.revisoes.findOne.mockResolvedValueOnce({ numero: 1, evento, conteudoCriptografado: Buffer.from('historico') });
+    await expect(c.reavaliar('em_reavaliacao')).rejects.toBeInstanceOf(ConflictException); expect(c.atual.update).not.toHaveBeenCalled();
+  });
+  it('recusa divergência de conteúdo ou avaliação sem restrições', async () => {
+    const c = preparar(); c.linha.confirmacao = 'confirmada';
+    jest.mocked(decifrarConteudoRestricao).mockReturnValueOnce({ schemaVersao: 1, natureza: 'clinica', subtipoClinico: 'alergia_alimentar', alvo: { tipo: 'alimento', id: 'a' } });
+    jest.mocked(decifrarConteudoRestricao).mockReturnValueOnce({ schemaVersao: 1, natureza: 'clinica', subtipoClinico: 'alergia_alimentar', alvo: { tipo: 'alimento', id: 'b' } });
+    await expect(c.reavaliar('em_reavaliacao')).rejects.toBeInstanceOf(ConflictException);
+    c.avaliacao.findOne.mockResolvedValueOnce({ id: 'avaliacao', revisao: 1, situacao: 'sem_restricoes_confirmadas' });
+    await expect(c.reavaliar('em_reavaliacao')).rejects.toBeInstanceOf(ConflictException); expect(c.atual.update).not.toHaveBeenCalled();
+  });
+});
 describe('rejeição de pendência clínica', () => {
   it('rejeita com justificativa cifrada, revisão e auditoria sem conteúdo', async () => {
     const c = preparar();

@@ -28,6 +28,43 @@ function normalizarIdentidade(usuario: UsuarioAutenticado, pacienteId: string, r
 export class ServicoConfirmacaoRestricao {
   constructor(private readonly executor: ExecutorTenant, private readonly cripto: CriptografiaDadosSensiveis,
     private readonly concessoes: ServicoConcessoesPermissao) {}
+  async alterarReavaliacao(usuario: UsuarioAutenticado, pacienteId: string, restricaoId: string, revisao: number,
+    destino: 'em_reavaliacao' | 'ativa'): Promise<unknown> {
+    ({ usuario, pacienteId, restricaoId } = normalizarIdentidade(usuario, pacienteId, restricaoId));
+    if (!Number.isSafeInteger(revisao) || revisao < 1 || !['em_reavaliacao', 'ativa'].includes(destino)) throw new BadRequestException('Solicitação inválida.');
+    try { return await this.executor.executar(usuario.tenantId, async g => {
+      await exigirReadCommitted(g);
+      await autorizarRestricaoClinica(g, this.concessoes, usuario, pacienteId);
+      const avaliacao = await g.getRepository(AvaliacaoRestricoesPacienteOrm).findOne({ where: { tenantId: usuario.tenantId, pacienteId }, lock: { mode: 'pessimistic_write' } });
+      if (avaliacao) {
+        await exigirHistoricoConsistente(g, usuario.tenantId, pacienteId, avaliacao);
+        if (avaliacao.situacao === 'sem_restricoes_confirmadas') throw new ConflictException('Avaliação inconsistente.');
+      }
+      const repo = g.getRepository(RestricaoPacienteOrm);
+      const where = { id: restricaoId, tenantId: usuario.tenantId, pacienteId };
+      const linha = await repo.findOne({ where, lock: { mode: 'pessimistic_write' } });
+      if (!linha) throw new ForbiddenException('Operação não autorizada.');
+      const origem = destino === 'ativa' ? 'em_reavaliacao' : 'ativa';
+      if (linha.revisao !== revisao || linha.confirmacao !== 'confirmada' || linha.estado !== origem) throw new ConflictException('Restrição alterada ou indisponível.');
+      const base = { tenantId: usuario.tenantId, pacienteId, restricaoId };
+      const historico = g.getRepository(RevisaoRestricaoPacienteOrm);
+      const anterior = await historico.findOne({ where: { ...base, numero: revisao } });
+      if (!anterior || ['inativacao', 'rejeicao'].includes(anterior.evento)) throw new ConflictException('Restrição alterada ou indisponível.');
+      const conteudo = decifrarConteudoRestricao(this.cripto, linha.conteudoCriptografado, { ...base, revisao, finalidade: 'restricao' });
+      const snapshotAnterior = decifrarConteudoRestricao(this.cripto, anterior.conteudoCriptografado, { ...base, revisao, finalidade: 'revisao_restricao' });
+      if (conteudo.natureza === 'preferencia' || JSON.stringify(conteudo) !== JSON.stringify(snapshotAnterior)) throw new ConflictException('Restrição alterada ou indisponível.');
+      const proxima = revisao + 1;
+      const atual = cifrarConteudoRestricao(this.cripto, conteudo, { ...base, revisao: proxima, finalidade: 'restricao' });
+      const snapshot = cifrarConteudoRestricao(this.cripto, conteudo, { ...base, revisao: proxima, finalidade: 'revisao_restricao' });
+      const alterado = await repo.update({ ...where, revisao }, { revisao: proxima, estado: destino, conteudoCriptografado: atual, atualizadoEm: () => 'clock_timestamp()' });
+      if (alterado.affected !== 1) throw new ConflictException('Restrição alterada ou indisponível.');
+      await historico.insert({ tenantId: usuario.tenantId, pacienteId, restricaoId, numero: proxima,
+        evento: destino === 'ativa' ? 'reativacao' : 'reavaliacao', autorUsuarioId: usuario.usuarioId, conteudoCriptografado: snapshot });
+      await registrarAuditoriaNaTransacao(g, { tenantId: usuario.tenantId, usuarioId: usuario.usuarioId,
+        acao: destino === 'ativa' ? 'restricoes.reativar' : 'restricoes.reavaliar', recursoTipo: 'restricao_paciente', recursoId: restricaoId, metadados: {} });
+      return { id: restricaoId, revisao: proxima, estado: destino };
+    }); } catch (erro) { return falharRestricao(erro); }
+  }
   async rejeitar(usuario: UsuarioAutenticado, pacienteId: string, restricaoId: string, revisao: number, dados: unknown): Promise<unknown> {
     ({ usuario, pacienteId, restricaoId } = normalizarIdentidade(usuario, pacienteId, restricaoId));
     if (!Number.isSafeInteger(revisao) || revisao < 1 || !dados || typeof dados !== 'object' || Array.isArray(dados) ||
