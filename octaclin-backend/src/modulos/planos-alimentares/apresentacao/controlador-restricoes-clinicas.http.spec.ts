@@ -9,12 +9,18 @@ import type { NestExpressApplication } from '@nestjs/platform-express';
 import { ServicoAuditoria } from '../../../infraestrutura/auditoria/servico-auditoria';
 import { GuardaJwt } from '../../auth/apresentacao/guarda-jwt';
 import { ServicoLeituraRestricao } from '../aplicacao/servico-leitura-restricao';
+import { ServicoConfirmacaoRestricao } from '../aplicacao/servico-confirmacao-restricao';
 import { ControladorRestricoesClinicas } from './controlador-restricoes-clinicas';
 
 const tenant = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', usuario = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
 const paciente = 'cccccccc-cccc-4ccc-8ccc-cccccccccccc', restricao = 'dddddddd-dddd-4ddd-8ddd-dddddddddddd';
 const conteudo = { schemaVersao: 1, natureza: 'clinica', subtipoClinico: 'alergia_alimentar', alvo: { tipo: 'alimento', id: 'sintetico' } };
 const consultar = jest.fn(async (): Promise<unknown> => ({ id: restricao, revisao: 1, origem: 'profissional', estado: 'ativa', confirmacao: 'pendente', conteudo, chaveCriacao: 'CANARIO_INTERNO' }));
+const confirmar = jest.fn(async (): Promise<unknown> => ({ id: restricao, revisao: 2, confirmacao: 'confirmada', privado: 'CANARIO_INTERNO' }));
+const rejeitar = jest.fn(async (): Promise<unknown> => ({ id: restricao, revisao: 2, confirmacao: 'rejeitada', privado: 'CANARIO_INTERNO' }));
+const inativar = jest.fn(async (): Promise<unknown> => ({ id: restricao, revisao: 2, estado: 'inativa', privado: 'CANARIO_INTERNO' }));
+const alterarReavaliacao = jest.fn(async (_u: unknown, _p: unknown, _r: unknown, _v: unknown, destino: unknown): Promise<unknown> =>
+  ({ id: restricao, revisao: 2, estado: destino, privado: 'CANARIO_INTERNO' }));
 
 describe('contrato HTTP clínico isolado de restrições', () => {
   let app: NestExpressApplication, url: string;
@@ -24,7 +30,9 @@ describe('contrato HTTP clínico isolado de restrições', () => {
   });
   beforeAll(async () => {
     const modulo = await Test.createTestingModule({ controllers: [ControladorRestricoesClinicas], providers: [
-      { provide: ServicoLeituraRestricao, useValue: { consultar } }, { provide: ServicoAuditoria, useValue: { registrar: async () => undefined } }
+      { provide: ServicoLeituraRestricao, useValue: { consultar } },
+      { provide: ServicoConfirmacaoRestricao, useValue: { confirmar, rejeitar, inativar, alterarReavaliacao } },
+      { provide: ServicoAuditoria, useValue: { registrar: async () => undefined } }
     ] }).overrideGuard(GuardaJwt).useValue({ canActivate(c: ExecutionContext) {
       const r = c.switchToHttp().getRequest(); if (!r.headers['x-papel-sintetico']) throw new UnauthorizedException();
       r.usuarioAutenticado = { tenantId: tenant, usuarioId: usuario, papel: r.headers['x-papel-sintetico'],
@@ -38,7 +46,7 @@ describe('contrato HTTP clínico isolado de restrições', () => {
     await app.listen(0, '127.0.0.1'); url = `http://127.0.0.1:${(app.getHttpServer().address() as AddressInfo).port}`;
   });
   afterAll(async () => { await app.close(); });
-  beforeEach(() => { consultar.mockClear(); logs.length = 0; });
+  beforeEach(() => { consultar.mockClear(); confirmar.mockClear(); rejeitar.mockClear(); inativar.mockClear(); alterarReavaliacao.mockClear(); logs.length = 0; });
   afterEach(() => { expect(inspect(logs, { depth: 10 })).not.toMatch(/CANARIO_/); });
   it('usa identidade autenticada e retorna apenas a projeção clínica, sem cache', async () => {
     const resposta = await chamar({ restricaoId: restricao });
@@ -92,5 +100,53 @@ describe('contrato HTTP clínico isolado de restrições', () => {
   it.each(['/outra-rota', `/pacientes/${paciente}/restricoes-extra`])('não intercepta erro do parser em %s', async caminho => {
     const resposta = await fetch(`${url}${caminho}`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{' });
     expect(resposta.status).toBe(400); expect(resposta.headers.get('cache-control')).toBeNull();
+  });
+  const acao = (nome: string, body: unknown, papel = 'Professional') => fetch(`${url}/pacientes/${paciente}/restricoes/${restricao}/${nome}`, {
+    method: 'POST', headers: { 'content-type': 'application/json', ...(papel ? { 'x-papel-sintetico': papel } : {}) }, body: JSON.stringify(body)
+  });
+  it('confirma revisão explícita e não retorna campos internos', async () => {
+    const r = await acao('confirmar', { revisao: 1 }); expect(r.status).toBe(200); expect(r.headers.get('cache-control')).toBe('private, no-store');
+    expect(await r.json()).toEqual({ id: restricao, revisao: 2, confirmacao: 'confirmada' });
+    expect(confirmar).toHaveBeenCalledWith(expect.objectContaining({ tenantId: tenant, usuarioId: usuario }), paciente, restricao, 1);
+  });
+  it('encaminha motivo de rejeição somente ao serviço', async () => {
+    const r = await acao('rejeitar', { revisao: 1, justificativa: 'Justificativa sintética' }); expect(r.status).toBe(200);
+    expect(await r.json()).toEqual({ id: restricao, revisao: 2, confirmacao: 'rejeitada' });
+    expect(rejeitar).toHaveBeenCalledWith(expect.objectContaining({ tenantId: tenant }), paciente, restricao, 1, { justificativa: 'Justificativa sintética' });
+  });
+  it('exige confirmação de dois passos para inativar e preserva a justificativa no pedido', async () => {
+    const pedido = { revisao: 1, motivo: 'outro', justificativa: 'Justificativa sintética', confirmacaoEmDoisPassos: true };
+    const r = await acao('inativar', pedido); expect(r.status).toBe(200); expect(await r.json()).toEqual({ id: restricao, revisao: 2, estado: 'inativa' });
+    expect(inativar).toHaveBeenCalledWith(expect.objectContaining({ tenantId: tenant }), paciente, restricao, 1,
+      { motivo: 'outro', justificativa: 'Justificativa sintética', confirmacaoEmDoisPassos: true });
+    inativar.mockClear(); expect((await acao('inativar', { ...pedido, confirmacaoEmDoisPassos: false })).status).toBe(400); expect(inativar).not.toHaveBeenCalled();
+  });
+  it.each(['em_reavaliacao', 'ativa'])('encaminha reavaliação para %s', async destino => {
+    const r = await acao('reavaliar', { revisao: 1, destino }); expect(r.status).toBe(200);
+    expect(await r.json()).toEqual({ id: restricao, revisao: 2, estado: destino });
+    expect(alterarReavaliacao).toHaveBeenCalledWith(expect.objectContaining({ tenantId: tenant }), paciente, restricao, 1, destino);
+  });
+  it('nega entradas extras, revisões inválidas e papéis não clínicos antes da chamada', async () => {
+    for (const corpo of [{}, { revisao: 0 }, { revisao: '1' }, { revisao: 1, tenantId: tenant }]) expect((await acao('confirmar', corpo)).status).toBe(400);
+    for (const papel of ['Patient', 'Collaborator', 'Client', 'SuperAdmin']) expect((await acao('confirmar', { revisao: 1 }, papel)).status).toBe(403);
+    expect((await acao('confirmar', { revisao: 1 }, '')).status).toBe(401);
+    const idInvalido = await fetch(`${url}/pacientes/${paciente}/restricoes/invalido/confirmar`, { method: 'POST',
+      headers: { 'content-type': 'application/json', 'x-papel-sintetico': 'Professional' }, body: JSON.stringify({ revisao: 1 }) });
+    expect(idInvalido.status).toBe(400);
+    expect((await acao('reavaliar', { revisao: 1, destino: 'inativa' })).status).toBe(400); expect(confirmar).not.toHaveBeenCalled(); expect(alterarReavaliacao).not.toHaveBeenCalled();
+  });
+  it('recusa motivo e justificativa inválidos ou campos adicionais sem executar mutação', async () => {
+    for (const corpo of [{ revisao: 1 }, { revisao: 1, justificativa: '' }, { revisao: 1, justificativa: 'a'.repeat(4001) },
+      { revisao: 1, justificativa: 'Motivo sintético', tenantId: tenant }]) expect((await acao('rejeitar', corpo)).status).toBe(400);
+    const base = { revisao: 1, justificativa: 'Justificativa sintética', confirmacaoEmDoisPassos: true };
+    expect((await acao('inativar', base)).status).toBe(400);
+    expect((await acao('inativar', { ...base, motivo: 'invalido' })).status).toBe(400);
+    expect((await acao('inativar', { ...base, motivo: 'outro', confirmacaoEmDoisPassos: 'true' })).status).toBe(400);
+    expect(rejeitar).not.toHaveBeenCalled(); expect(inativar).not.toHaveBeenCalled();
+  });
+  it('não divulga resultado inesperado da ação', async () => {
+    confirmar.mockResolvedValueOnce({ id: restricao, revisao: 2, confirmacao: 'CANARIO_RESULTADO' });
+    const r = await acao('confirmar', { revisao: 1 }); expect(r.status).toBe(500);
+    expect(r.headers.get('cache-control')).toBe('private, no-store'); expect(await r.text()).not.toContain('CANARIO_RESULTADO');
   });
 });

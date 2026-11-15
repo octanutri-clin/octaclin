@@ -2,7 +2,7 @@
 
 ## Incremento: contrato HTTP clínico isolado
 
-- Controlador de consulta e middleware para cabeçalhos/erros do parser foram
+- Controlador de consulta e ações clínicas, e middleware para cabeçalhos/erros do parser, foram
   preparados e testados em servidor Nest sintético. Não estão registrados no
   módulo nem no bootstrap; nenhuma rota foi exposta e não existe flag nova.
 - Testes HTTP usam JWT e serviço simulados. A autorização clínica real continua
@@ -12,6 +12,9 @@
   proposta precisa ser ligada antes e depois do parser ao integrar a rota, com
   teste do bootstrap real. Antes de registrar, implementar gate fechado por flag,
   confirmar ausência de dados clínicos em logs e executar authz/HTTP/R4 completos.
+- Uma resposta HTTP com erro pode ocorrer após o serviço ter confirmado uma
+  mutação, por falha de projeção ou conexão. O cliente futuro deve recarregar e
+  reconciliar a revisão antes de repetir; não presumir que erro significa rollback.
 
 ## Incremento: composição NestJS
 
