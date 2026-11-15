@@ -9,8 +9,8 @@
   focados e typecheck PASS; testes PostgreSQL preparados para autorização,
   isolamento, rollback e disputa com inativação passaram no Backend do CI
   do HEAD `32d2cfa6`. Testes das duas ordens de disputa com cada resultado de
-  reconfirmação individual foram preparados e aguardam CI. Não provam a
-  invalidação fim a fim de prévias P4.
+  reconfirmação individual, com avaliação não informada e confirmada, foram
+  preparados e aguardam CI. Não provam a invalidação fim a fim de prévias P4.
 
 ## Incremento em andamento: rejeição clínica
 

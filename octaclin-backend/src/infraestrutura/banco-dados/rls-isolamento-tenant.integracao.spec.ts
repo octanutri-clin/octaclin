@@ -1425,10 +1425,17 @@ descrever('RLS e isolamento multi-tenant integral em Postgres real', () => {
     }
     await provarCorridaReavaliacao('reavaliar');
     await provarCorridaReavaliacao('inativar');
-    async function provarCorridaReavaliacaoReconfirmacao(primeiro: 'reavaliar' | 'reconfirmar', resultado: 'sem_alteracao' | 'pendencia_mantida' | 'alteracao_informada') {
+    async function provarCorridaReavaliacaoReconfirmacao(primeiro: 'reavaliar' | 'reconfirmar', resultado: 'sem_alteracao' | 'pendencia_mantida' | 'alteracao_informada', avaliacaoConfirmada: boolean) {
       const caso = await prepararRejeicao();
       await confirmar.confirmar(usuario, caso.paciente, caso.restricaoId, 1);
-      const pedido = { avaliacaoId: caso.avaliacaoId, revisaoAvaliacao: 1, restricaoId: caso.restricaoId, revisaoRestricao: 2,
+      if (avaliacaoConfirmada) {
+        await cliente!.query(`update avaliacoes_restricoes_pacientes set situacao='restricoes_registradas',revisao=2,
+          confirmado_por_usuario_id=$2,confirmado_em=now(),vence_em=now()+interval '10 days' where id=$1`, [caso.avaliacaoId, dados.usuarioId]);
+        await cliente!.query(`insert into avaliacoes_restricoes_revisoes (tenant_id,paciente_id,avaliacao_id,numero,situacao,autor_usuario_id,vence_em)
+          select tenant_id,paciente_id,id,2,situacao,$2,vence_em from avaliacoes_restricoes_pacientes where id=$1`, [caso.avaliacaoId, dados.usuarioId]);
+      }
+      const revisaoAvaliacao = avaliacaoConfirmada ? 2 : 1;
+      const pedido = { avaliacaoId: caso.avaliacaoId, revisaoAvaliacao, restricaoId: caso.restricaoId, revisaoRestricao: 2,
         chaveIdempotencia: randomUUID(), meio: 'teleconsulta', atestacao: true };
       let liberar!: () => void, avisarEscritor!: (pid: number) => void, avisarObservado!: (pid: number) => void;
       const espera = new Promise<void>(resolve => { liberar = resolve; });
@@ -1474,16 +1481,29 @@ descrever('RLS e isolamento multi-tenant integral em Postgres real', () => {
       } else {
         expect(segunda.status).toBe('fulfilled');
         const ack = respostaPrimeiro as { id: string; resultado: string; escopo: string; revisaoAvaliacao: number; revisaoRestricao: number };
-        expect(ack).toEqual({ id: expect.any(String), resultado, escopo: 'restricao_individual', revisaoAvaliacao: 1, revisaoRestricao: 2 });
+        expect(ack).toEqual({ id: expect.any(String), resultado, escopo: 'restricao_individual', revisaoAvaliacao, revisaoRestricao: 2 });
         await expect(executar('reconfirmar', executorTenant!)).resolves.toEqual(ack);
         expect((await cliente!.query("select id from user_action_logs where recurso_id=$1 and acao='restricoes.reconfirmacao_individual'", [ack.id])).rows).toHaveLength(1);
       }
       expect((await cliente!.query('select estado,confirmacao,revisao from restricoes_pacientes where id=$1', [caso.restricaoId])).rows)
         .toEqual([{ estado: 'em_reavaliacao', confirmacao: 'confirmada', revisao: 3 }]);
+      const invalidada = avaliacaoConfirmada && primeiro === 'reconfirmar' && resultado !== 'sem_alteracao';
+      expect((await cliente!.query('select situacao,revisao from avaliacoes_restricoes_pacientes where id=$1', [caso.avaliacaoId])).rows)
+        .toEqual([{ situacao: invalidada || !avaliacaoConfirmada ? 'nao_informado' : 'restricoes_registradas', revisao: revisaoAvaliacao + (invalidada ? 1 : 0) }]);
+      const marcadores = await cliente!.query(`select confirmado_por_usuario_id is not null as autor, confirmado_em is not null as confirmado,
+        vence_em is not null as vencimento from avaliacoes_restricoes_pacientes where id=$1`, [caso.avaliacaoId]);
+      const confirmacaoPreservada = avaliacaoConfirmada && !invalidada;
+      expect(marcadores.rows).toEqual([{ autor: confirmacaoPreservada, confirmado: confirmacaoPreservada, vencimento: confirmacaoPreservada }]);
+      expect((await cliente!.query("select id from user_action_logs where recurso_id=$1 and acao='restricoes.avaliacao_invalidada'", [caso.avaliacaoId])).rows)
+        .toHaveLength(invalidada ? 1 : 0);
+      if (invalidada) expect((await cliente!.query('select situacao,vence_em from avaliacoes_restricoes_revisoes where avaliacao_id=$1 and numero=$2', [caso.avaliacaoId, revisaoAvaliacao + 1])).rows)
+        .toEqual([{ situacao: 'nao_informado', vence_em: null }]);
     }
-    for (const resultado of ['sem_alteracao', 'pendencia_mantida', 'alteracao_informada'] as const) {
-      await provarCorridaReavaliacaoReconfirmacao('reavaliar', resultado);
-      await provarCorridaReavaliacaoReconfirmacao('reconfirmar', resultado);
+    for (const avaliacaoConfirmada of [false, true]) {
+      for (const resultado of ['sem_alteracao', 'pendencia_mantida', 'alteracao_informada'] as const) {
+        await provarCorridaReavaliacaoReconfirmacao('reavaliar', resultado, avaliacaoConfirmada);
+        await provarCorridaReavaliacaoReconfirmacao('reconfirmar', resultado, avaliacaoConfirmada);
+      }
     }
     const casoRejeicao = await prepararRejeicao();
     const justificativaRejeicao = { justificativa: 'Justificativa sintética' };
