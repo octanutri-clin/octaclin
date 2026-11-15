@@ -11,6 +11,7 @@ import { GuardaJwt } from '../../auth/apresentacao/guarda-jwt';
 import { ServicoLeituraRestricao } from '../aplicacao/servico-leitura-restricao';
 import { ServicoConfirmacaoRestricao } from '../aplicacao/servico-confirmacao-restricao';
 import { ServicoRegistroPendenciaRestricao } from '../aplicacao/servico-registro-pendencia-restricao';
+import { ServicoReconfirmacaoRestricao } from '../aplicacao/servico-reconfirmacao-restricao';
 import { ControladorRestricoesClinicas } from './controlador-restricoes-clinicas';
 
 const tenant = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', usuario = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
@@ -23,6 +24,14 @@ const inativar = jest.fn(async (): Promise<unknown> => ({ id: restricao, revisao
 const alterarReavaliacao = jest.fn(async (_u: unknown, _p: unknown, _r: unknown, _v: unknown, destino: unknown): Promise<unknown> =>
   ({ id: restricao, revisao: 2, estado: destino, privado: 'CANARIO_INTERNO' }));
 const registrar = jest.fn(async (): Promise<unknown> => ({ id: restricao, revisao: 1, estado: 'ativa', confirmacao: 'pendente', privado: 'CANARIO_INTERNO' }));
+const avaliacao = 'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee';
+const garantirAvaliacaoInicial = jest.fn(async (): Promise<unknown> => ({ id: avaliacao, revisao: 1, situacao: 'nao_informado', privado: 'CANARIO_INTERNO' }));
+const resultadoGlobal = (resultado: string) => jest.fn(async (): Promise<unknown> => ({ id: restricao, resultado, privado: 'CANARIO_INTERNO' }));
+const resultadoIndividual = (resultado: string) => jest.fn(async (): Promise<unknown> => ({ id: restricao, resultado, escopo: 'restricao_individual', revisaoAvaliacao: 1, revisaoRestricao: 2, privado: 'CANARIO_INTERNO' }));
+const registrarPendenciaGlobal = resultadoGlobal('pendencia_mantida'), registrarAlteracaoGlobal = resultadoGlobal('alteracao_informada');
+const registrarSemAlteracao = resultadoGlobal('sem_alteracao'), registrarAusenciaDeclarada = resultadoGlobal('sem_restricoes_declaradas');
+const registrarPendenciaIndividual = resultadoIndividual('pendencia_mantida'), registrarAlteracaoIndividual = resultadoIndividual('alteracao_informada');
+const registrarSemAlteracaoIndividual = resultadoIndividual('sem_alteracao');
 
 describe('contrato HTTP clínico isolado de restrições', () => {
   let app: NestExpressApplication, url: string;
@@ -35,6 +44,9 @@ describe('contrato HTTP clínico isolado de restrições', () => {
       { provide: ServicoLeituraRestricao, useValue: { consultar } },
       { provide: ServicoConfirmacaoRestricao, useValue: { confirmar, rejeitar, inativar, alterarReavaliacao } },
       { provide: ServicoRegistroPendenciaRestricao, useValue: { registrar } },
+      { provide: ServicoReconfirmacaoRestricao, useValue: { garantirAvaliacaoInicial, registrarPendencia: registrarPendenciaGlobal,
+        registrarAlteracaoInformada: registrarAlteracaoGlobal, registrarSemAlteracao, registrarAusenciaDeclarada,
+        registrarPendenciaIndividual, registrarAlteracaoInformadaIndividual: registrarAlteracaoIndividual, registrarSemAlteracaoIndividual } },
       { provide: ServicoAuditoria, useValue: { registrar: async () => undefined } }
     ] }).overrideGuard(GuardaJwt).useValue({ canActivate(c: ExecutionContext) {
       const r = c.switchToHttp().getRequest(); if (!r.headers['x-papel-sintetico']) throw new UnauthorizedException();
@@ -49,7 +61,9 @@ describe('contrato HTTP clínico isolado de restrições', () => {
     await app.listen(0, '127.0.0.1'); url = `http://127.0.0.1:${(app.getHttpServer().address() as AddressInfo).port}`;
   });
   afterAll(async () => { await app.close(); });
-  beforeEach(() => { consultar.mockClear(); confirmar.mockClear(); rejeitar.mockClear(); inativar.mockClear(); alterarReavaliacao.mockClear(); registrar.mockClear(); logs.length = 0; });
+  beforeEach(() => { consultar.mockClear(); confirmar.mockClear(); rejeitar.mockClear(); inativar.mockClear(); alterarReavaliacao.mockClear(); registrar.mockClear();
+    garantirAvaliacaoInicial.mockClear(); registrarPendenciaGlobal.mockClear(); registrarAlteracaoGlobal.mockClear(); registrarSemAlteracao.mockClear(); registrarAusenciaDeclarada.mockClear();
+    registrarPendenciaIndividual.mockClear(); registrarAlteracaoIndividual.mockClear(); registrarSemAlteracaoIndividual.mockClear(); logs.length = 0; });
   afterEach(() => { expect(inspect(logs, { depth: 10 })).not.toMatch(/CANARIO_/); });
   it('usa identidade autenticada e retorna apenas a projeção clínica, sem cache', async () => {
     const resposta = await chamar({ restricaoId: restricao });
@@ -170,5 +184,55 @@ describe('contrato HTTP clínico isolado de restrições', () => {
       { chaveCriacao: restricao, conteudo, tenantId: tenant }, { chaveCriacao: 'invalida', conteudo }]) expect((await registrarPendencia(body)).status).toBe(400);
     for (const papel of ['Patient', 'Collaborator', 'Client', 'SuperAdmin']) expect((await registrarPendencia({ chaveCriacao: restricao, conteudo }, papel)).status).toBe(403);
     expect(registrar).not.toHaveBeenCalled();
+  });
+  const reconfirmar = (body: unknown) => fetch(`${url}/pacientes/${paciente}/restricoes/reconfirmar`, {
+    method: 'POST', headers: { 'content-type': 'application/json', 'x-papel-sintetico': 'Professional' }, body: JSON.stringify(body)
+  });
+  const atestacao = { avaliacaoId: avaliacao, revisaoAvaliacao: 1, chaveIdempotencia: restricao, meio: 'teleconsulta', atestacao: true };
+  it('obtém a avaliação inicial sem aceitar parâmetros arbitrários', async () => {
+    const r = await fetch(`${url}/pacientes/${paciente}/restricoes/avaliacao/inicial`, { method: 'POST', headers: { 'content-type': 'application/json', 'x-papel-sintetico': 'Professional' }, body: '{}' });
+    expect(r.status).toBe(200); expect(await r.json()).toEqual({ id: avaliacao, revisao: 1, situacao: 'nao_informado' });
+    expect(garantirAvaliacaoInicial).toHaveBeenCalledWith(expect.objectContaining({ tenantId: tenant }), paciente);
+    const extra = await fetch(`${url}/pacientes/${paciente}/restricoes/avaliacao/inicial`, { method: 'POST', headers: { 'content-type': 'application/json', 'x-papel-sintetico': 'Professional' }, body: JSON.stringify({ tenantId: tenant }) });
+    expect(extra.status).toBe(400); expect(garantirAvaliacaoInicial).toHaveBeenCalledTimes(1);
+  });
+  it.each([['pendencia_mantida', registrarPendenciaGlobal], ['alteracao_informada', registrarAlteracaoGlobal], ['sem_alteracao', registrarSemAlteracao]] as const)(
+    'encaminha reconfirmação global %s e devolve ACK mínimo', async (resultado, servico) => {
+      const r = await reconfirmar({ ...atestacao, resultado }); expect(r.status).toBe(200); expect(await r.json()).toEqual({ id: restricao, resultado });
+      expect(servico).toHaveBeenCalledWith(expect.objectContaining({ tenantId: tenant }), paciente, atestacao);
+    });
+  it('exige confirmação explícita para ausência global', async () => {
+    expect((await reconfirmar({ ...atestacao, resultado: 'sem_restricoes_declaradas' })).status).toBe(400);
+    const r = await reconfirmar({ ...atestacao, resultado: 'sem_restricoes_declaradas', confirmacaoExplicitaAusencia: true });
+    expect(r.status).toBe(200); expect(await r.json()).toEqual({ id: restricao, resultado: 'sem_restricoes_declaradas' });
+    expect(registrarAusenciaDeclarada).toHaveBeenCalledWith(expect.objectContaining({ tenantId: tenant }), paciente, { ...atestacao, confirmacaoExplicitaAusencia: true });
+  });
+  it.each([['pendencia_mantida', registrarPendenciaIndividual], ['alteracao_informada', registrarAlteracaoIndividual], ['sem_alteracao', registrarSemAlteracaoIndividual]] as const)(
+    'retorna ACK histórico individual %s com revisões', async (resultado, servico) => {
+      const r = await reconfirmar({ ...atestacao, resultado, restricaoId: restricao, revisaoRestricao: 2 });
+      expect(r.status).toBe(200); expect(await r.json()).toEqual({ id: restricao, resultado, escopo: 'restricao_individual', revisaoAvaliacao: 1, revisaoRestricao: 2 });
+      expect(servico).toHaveBeenCalledWith(expect.objectContaining({ tenantId: tenant }), paciente, { ...atestacao, restricaoId: restricao, revisaoRestricao: 2 });
+    });
+  it('recusa atestação incompleta, escopo inconsistente e identidade fornecida pelo cliente', async () => {
+    for (const pedido of [{ ...atestacao, resultado: 'sem_alteracao', atestacao: false }, { ...atestacao, resultado: 'sem_alteracao', restricaoId: restricao },
+      { ...atestacao, resultado: 'sem_alteracao', confirmacaoExplicitaAusencia: true }, { ...atestacao, resultado: 'sem_restricoes_declaradas', restricaoId: restricao, revisaoRestricao: 2, confirmacaoExplicitaAusencia: true },
+      { ...atestacao, resultado: 'sem_alteracao', tenantId: tenant }]) expect((await reconfirmar(pedido)).status).toBe(400);
+    expect(registrarSemAlteracao).not.toHaveBeenCalled(); expect(registrarAusenciaDeclarada).not.toHaveBeenCalled();
+  });
+  it('recusa nulos, revisões parciais, meios e resultados inválidos', async () => {
+    for (const pedido of [
+      { ...atestacao, resultado: 'sem_alteracao', restricaoId: null, revisaoRestricao: null },
+      { ...atestacao, resultado: 'sem_alteracao', revisaoRestricao: 2 },
+      { ...atestacao, resultado: 'sem_restricoes_declaradas', confirmacaoExplicitaAusencia: null },
+      { ...atestacao, resultado: 'sem_alteracao', confirmacaoExplicitaAusencia: null },
+      { ...atestacao, resultado: 'sem_alteracao', meio: 'invalido' },
+      { ...atestacao, resultado: 'invalido' }, { ...atestacao, resultado: 'sem_alteracao', revisaoAvaliacao: '1' }
+    ]) expect((await reconfirmar(pedido)).status).toBe(400);
+    expect(registrarSemAlteracao).not.toHaveBeenCalled(); expect(registrarAusenciaDeclarada).not.toHaveBeenCalled();
+  });
+  it.each(['Patient', 'Collaborator', 'Client', 'SuperAdmin'])('nega reconfirmação ao papel %s antes do serviço', async papel => {
+    const r = await fetch(`${url}/pacientes/${paciente}/restricoes/reconfirmar`, { method: 'POST',
+      headers: { 'content-type': 'application/json', 'x-papel-sintetico': papel }, body: JSON.stringify({ ...atestacao, resultado: 'sem_alteracao' }) });
+    expect(r.status).toBe(403); expect(registrarSemAlteracao).not.toHaveBeenCalled();
   });
 });

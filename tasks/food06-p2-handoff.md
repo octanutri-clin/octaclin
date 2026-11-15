@@ -2,7 +2,8 @@
 
 ## Incremento: contrato HTTP clínico isolado
 
-- Controlador de consulta, registro profissional e ações clínicas, e middleware para cabeçalhos/erros do parser, foram
+- Controlador de consulta, registro profissional, ações clínicas e avaliação/
+  reconfirmação global e individual, e middleware para cabeçalhos/erros do parser, foram
   preparados e testados em servidor Nest sintético. Não estão registrados no
   módulo nem no bootstrap; nenhuma rota foi exposta e não existe flag nova.
 - Testes HTTP usam JWT e serviço simulados. A autorização clínica real continua

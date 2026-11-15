@@ -1,6 +1,6 @@
 import { ArgumentsHost, Body, Catch, Controller, ExceptionFilter, Header, HttpCode, HttpException, InternalServerErrorException,
   Param, ParseUUIDPipe, Post, UseFilters, UseGuards } from '@nestjs/common';
-import { Allow, Equals, IsBoolean, IsDefined, IsIn, IsInt, IsString, IsUUID, Max, MaxLength, Min, MinLength, isUUID } from 'class-validator';
+import { Allow, Equals, IsBoolean, IsDefined, IsIn, IsInt, IsOptional, IsString, IsUUID, Max, MaxLength, Min, MinLength, isUUID } from 'class-validator';
 import type { Response } from 'express';
 import { Papeis, Permissoes, UsuarioAtual } from '../../auth/apresentacao/decorators';
 import { GuardaJwt } from '../../auth/apresentacao/guarda-jwt';
@@ -11,6 +11,7 @@ import { validarConteudoRestricao } from '../dominio/conteudo-restricao';
 import { ServicoLeituraRestricao } from '../aplicacao/servico-leitura-restricao';
 import { ServicoConfirmacaoRestricao } from '../aplicacao/servico-confirmacao-restricao';
 import { ServicoRegistroPendenciaRestricao } from '../aplicacao/servico-registro-pendencia-restricao';
+import { ServicoReconfirmacaoRestricao } from '../aplicacao/servico-reconfirmacao-restricao';
 
 class ConsultarRestricaoDto {
   @IsUUID() restricaoId: string;
@@ -31,6 +32,17 @@ class InativarRestricaoDto extends RejeitarRestricaoDto {
 }
 class ReavaliarRestricaoDto extends RevisaoRestricaoDto {
   @IsIn(['ativa', 'em_reavaliacao']) destino: 'ativa' | 'em_reavaliacao';
+}
+class ReconfirmarRestricaoDto {
+  @IsUUID() avaliacaoId: string;
+  @IsInt() @Min(1) @Max(2147483646) revisaoAvaliacao: number;
+  @IsUUID() chaveIdempotencia: string;
+  @IsIn(['presencial', 'teleconsulta', 'portal', 'contato_documentado']) meio: string;
+  @IsBoolean() @Equals(true) atestacao: boolean;
+  @IsIn(['pendencia_mantida', 'alteracao_informada', 'sem_alteracao', 'sem_restricoes_declaradas']) resultado: string;
+  @IsOptional() @IsUUID() restricaoId?: string;
+  @IsOptional() @IsInt() @Min(1) @Max(2147483646) revisaoRestricao?: number;
+  @IsOptional() @IsBoolean() @Equals(true) confirmacaoExplicitaAusencia?: boolean;
 }
 
 function projetarAcao(valor: unknown, id: string, revisao: number, campo: 'estado' | 'confirmacao', esperado: string): Record<string, unknown> {
@@ -61,7 +73,43 @@ class FiltroRestricoesClinicas implements ExceptionFilter {
 @UseFilters(FiltroRestricoesClinicas)
 export class ControladorRestricoesClinicas {
   constructor(private readonly leitura: ServicoLeituraRestricao, private readonly decisao: ServicoConfirmacaoRestricao,
-    private readonly registro: ServicoRegistroPendenciaRestricao) {}
+    private readonly registro: ServicoRegistroPendenciaRestricao, private readonly reconfirmacao: ServicoReconfirmacaoRestricao) {}
+
+  @Post('avaliacao/inicial') @HttpCode(200) @Permissoes('pacientes.ler') @Header('Cache-Control', 'private, no-store')
+  async avaliacaoInicial(@UsuarioAtual() usuario: UsuarioAutenticado, @Param('pacienteId', ParseUUIDPipe) pacienteId: string,
+    @Body() dados: unknown): Promise<unknown> {
+    if (!dados || typeof dados !== 'object' || Array.isArray(dados) || Reflect.ownKeys(dados).length !== 0) throw new HttpException('Solicitação inválida.', 400);
+    const valor = await this.reconfirmacao.garantirAvaliacaoInicial(usuario, pacienteId);
+    if (!valor || typeof valor !== 'object' || Array.isArray(valor)) throw new InternalServerErrorException('Operação indisponível.');
+    const r = valor as Record<string, unknown>;
+    if (typeof r.id !== 'string' || !isUUID(r.id) || !Number.isSafeInteger(r.revisao) || Number(r.revisao) < 1 ||
+      !['nao_informado', 'sem_restricoes_confirmadas', 'restricoes_registradas'].includes(r.situacao as string)) throw new InternalServerErrorException('Operação indisponível.');
+    return { id: r.id, revisao: r.revisao, situacao: r.situacao };
+  }
+
+  @Post('reconfirmar') @HttpCode(200) @Permissoes('pacientes.ler') @Header('Cache-Control', 'private, no-store')
+  async reconfirmar(@UsuarioAtual() usuario: UsuarioAutenticado, @Param('pacienteId', ParseUUIDPipe) pacienteId: string,
+    @Body() dados: ReconfirmarRestricaoDto): Promise<unknown> {
+    const individual = dados.restricaoId !== undefined || dados.revisaoRestricao !== undefined;
+    const ausencia = dados.resultado === 'sem_restricoes_declaradas';
+    if ((individual && (!isUUID(dados.restricaoId) || !Number.isSafeInteger(dados.revisaoRestricao))) ||
+      (ausencia && (individual || dados.confirmacaoExplicitaAusencia !== true)) ||
+      (!ausencia && dados.confirmacaoExplicitaAusencia !== undefined)) throw new HttpException('Solicitação inválida.', 400);
+    const entrada = { avaliacaoId: dados.avaliacaoId, revisaoAvaliacao: dados.revisaoAvaliacao, chaveIdempotencia: dados.chaveIdempotencia,
+      meio: dados.meio, atestacao: dados.atestacao, ...(individual ? { restricaoId: dados.restricaoId, revisaoRestricao: dados.revisaoRestricao } : {}),
+      ...(ausencia ? { confirmacaoExplicitaAusencia: true } : {}) };
+    let valor: unknown;
+    if (ausencia) valor = await this.reconfirmacao.registrarAusenciaDeclarada(usuario, pacienteId, entrada);
+    else if (dados.resultado === 'sem_alteracao') valor = individual ? await this.reconfirmacao.registrarSemAlteracaoIndividual(usuario, pacienteId, entrada) : await this.reconfirmacao.registrarSemAlteracao(usuario, pacienteId, entrada);
+    else if (dados.resultado === 'pendencia_mantida') valor = individual ? await this.reconfirmacao.registrarPendenciaIndividual(usuario, pacienteId, entrada) : await this.reconfirmacao.registrarPendencia(usuario, pacienteId, entrada);
+    else valor = individual ? await this.reconfirmacao.registrarAlteracaoInformadaIndividual(usuario, pacienteId, entrada) : await this.reconfirmacao.registrarAlteracaoInformada(usuario, pacienteId, entrada);
+    if (!valor || typeof valor !== 'object' || Array.isArray(valor)) throw new InternalServerErrorException('Operação indisponível.');
+    const r = valor as Record<string, unknown>;
+    if (typeof r.id !== 'string' || !isUUID(r.id) || r.resultado !== dados.resultado ||
+      (individual && (r.escopo !== 'restricao_individual' || r.revisaoAvaliacao !== dados.revisaoAvaliacao || r.revisaoRestricao !== dados.revisaoRestricao)) ||
+      (!individual && r.escopo !== undefined)) throw new InternalServerErrorException('Operação indisponível.');
+    return { id: r.id, resultado: r.resultado, ...(individual ? { escopo: 'restricao_individual', revisaoAvaliacao: dados.revisaoAvaliacao, revisaoRestricao: dados.revisaoRestricao } : {}) };
+  }
 
   @Post('registrar') @HttpCode(200) @Permissoes('pacientes.ler') @Header('Cache-Control', 'private, no-store')
   async registrar(@UsuarioAtual() usuario: UsuarioAutenticado, @Param('pacienteId', ParseUUIDPipe) pacienteId: string,
