@@ -62,6 +62,7 @@ import { SubscriptionPushPacienteOrm } from './infraestrutura/subscription-push-
 import { ModuloComunicacoes } from '../comunicacoes/modulo-comunicacoes';
 import { ProcessadorCompartilhamentoReceitas } from './aplicacao/processador-compartilhamento-receitas';
 import { deveExecutarProcessadores } from '../../infraestrutura/processamento/papel-processo';
+import { ModuloRestricoes } from './modulo-restricoes';
 
 const processadoresCompartilhamento = deveExecutarProcessadores() ? [ProcessadorCompartilhamentoReceitas] : [];
 
@@ -105,7 +106,8 @@ const processadoresCompartilhamento = deveExecutarProcessadores() ? [Processador
     ]),
     ModuloTenancy,
     ModuloAuth,
-    ModuloComunicacoes
+    ModuloComunicacoes,
+    ModuloRestricoes
   ],
   controllers: [
     ControladorConsultaTeorCatalogo,

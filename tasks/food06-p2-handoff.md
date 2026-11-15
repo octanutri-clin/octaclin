@@ -1,5 +1,14 @@
 # FOOD06 P2 — preparação e handoff
 
+## Incremento: composição NestJS
+
+- `ModuloRestricoes` integra os quatro serviços internos ao módulo de planos,
+  importando os módulos existentes de tenant e autorização. Não registra
+  controladores nem exporta serviços para outros módulos; nenhuma rota é aberta.
+- Teste compila o módulo real de restrições com módulos de tenant e auth
+  substituídos por dependências sintéticas e confere a importação pelo módulo
+  de planos. Não é prova de bootstrap completo da aplicação nem de HTTP.
+
 ## Incremento em andamento: leitura clínica individual
 
 - Serviço interno para Professional com concessão específica: autoriza tenant e
@@ -9,7 +18,7 @@
   incompatíveis com o último evento, agora recusados por matriz dos eventos
   implementados, com testes positivos e negativos. A leitura usa lock do
   paciente e cobre apenas Professional habilitado, não Collaborator ou Patient;
-  ainda não há provider, rota ou seleção de paciente do portal.
+  ainda não há rota ou seleção de paciente do portal.
 - Testes de autorização, histórico divergente, falha de auditoria, isolamento e
   disputa com inativação passaram no Backend do CI do HEAD `4c1d3b5c` com
   PostgreSQL descartável. Provas adicionais da serialização com revogação e transferência estão
