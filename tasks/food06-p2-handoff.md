@@ -11,7 +11,8 @@
 - Testes PostgreSQL sintéticos foram adicionados para isolamento, carteira,
   cifra, rollback na segunda auditoria e corrida confirmação/rejeição nas duas
   ordens. Execução local SKIPPED: Docker indisponível; depende de CI no novo HEAD.
-  Corrida específica entre rejeição e declaração de ausência ainda não foi provada.
+  Teste de corrida entre rejeição e declaração de ausência nas duas ordens também
+  foi preparado e aguarda execução no CI; não é evidência de aprovação ainda.
 - P2 continua incompleta: não ativar rotas, flag ou consumidores clínicos. Ver
   o restante deste histórico e os contratos para demais transições e integração.
 

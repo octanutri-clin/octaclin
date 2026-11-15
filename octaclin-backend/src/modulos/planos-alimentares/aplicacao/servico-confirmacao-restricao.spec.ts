@@ -114,6 +114,18 @@ describe('rejeição de pendência clínica', () => {
     await expect(c.rejeitar()).rejects.toBeInstanceOf(ConflictException);
     expect(c.atual.update).not.toHaveBeenCalled(); expect(c.avaliacao.update).not.toHaveBeenCalled();
   });
+  it.each(['confirmacao', 'rejeicao', 'inativacao'])('recusa pendência contradita pelo evento %s', async evento => {
+    const c = preparar(); c.revisoes.findOne.mockResolvedValueOnce({ numero: 1, evento, conteudoCriptografado: Buffer.from('historico') });
+    await expect(c.rejeitar()).rejects.toBeInstanceOf(ConflictException);
+    expect(c.atual.update).not.toHaveBeenCalled();
+  });
+  it('não transforma preferência em decisão clínica', async () => {
+    const c = preparar();
+    jest.mocked(decifrarConteudoRestricao).mockReturnValueOnce({ schemaVersao: 1, natureza: 'preferencia', alvo: { tipo: 'alimento', id: 'a' } });
+    jest.mocked(decifrarConteudoRestricao).mockReturnValueOnce({ schemaVersao: 1, natureza: 'preferencia', alvo: { tipo: 'alimento', id: 'a' } });
+    await expect(c.rejeitar()).rejects.toBeInstanceOf(ConflictException);
+    expect(c.atual.update).not.toHaveBeenCalled();
+  });
 });
 describe('confirmação de restrição', () => {
   it('pode ser construído pelo Nest com as dependências de transação e concessão', async () => {

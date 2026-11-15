@@ -1433,6 +1433,55 @@ descrever('RLS e isolamento multi-tenant integral em Postgres real', () => {
     }
     await provarCorridaRejeicao('confirmar');
     await provarCorridaRejeicao('rejeitar');
+    async function provarCorridaAusenciaRejeicao(primeiro: 'ausencia' | 'rejeicao') {
+      const caso = await prepararRejeicao();
+      const pedidoAusencia = { avaliacaoId: caso.avaliacaoId, revisaoAvaliacao: 1, chaveIdempotencia: randomUUID(),
+        meio: 'teleconsulta', atestacao: true, confirmacaoExplicitaAusencia: true };
+      let liberar!: () => void, avisarEscritor!: (pid: number) => void, avisarObservado!: (pid: number) => void;
+      const espera = new Promise<void>(resolve => { liberar = resolve; });
+      const escritorPronto = new Promise<number>(resolve => { avisarEscritor = resolve; });
+      const observadoPronto = new Promise<number>(resolve => { avisarObservado = resolve; });
+      const segurado = { executar: <T>(t: string, fn: (g: EntityManager) => Promise<T>) => executorTenant!.executar(t, async g => {
+        await g.query("set local statement_timeout = '12s'");
+        const pid = await g.query('select pg_backend_pid()::int as pid');
+        if (primeiro === 'ausencia') {
+          await autorizarRestricaoClinica(g, concessoes, usuario, caso.paciente);
+          avisarEscritor(pid[0].pid as number); await espera;
+          return fn(g);
+        }
+        const resposta = await fn(g); avisarEscritor(pid[0].pid as number); await espera; return resposta;
+      }) };
+      const observado = { executar: <T>(t: string, fn: (g: EntityManager) => Promise<T>) => executorTenant!.executar(t, async g => {
+        await g.query("set local statement_timeout = '12s'"); await g.query("set local lock_timeout = '10s'");
+        const pid = await g.query('select pg_backend_pid()::int as pid'); avisarObservado(pid[0].pid as number); return fn(g);
+      }) };
+      const executar = (tipo: 'ausencia' | 'rejeicao', executor: ExecutorTenant) => tipo === 'ausencia'
+        ? new ServicoReconfirmacaoRestricao(executor, crypto, concessoes).registrarAusenciaDeclarada(usuario, caso.paciente, pedidoAusencia)
+        : new ServicoConfirmacaoRestricao(executor, crypto, concessoes).rejeitar(usuario, caso.paciente, caso.restricaoId, 1, justificativaRejeicao);
+      const primeira = executar(primeiro, segurado as ExecutorTenant);
+      const resultadoPrimeiro = Promise.allSettled([primeira]);
+      let resultadoSegundo: Promise<PromiseSettledResult<unknown>[]> | undefined;
+      try {
+        const pidEscritor = await limitarEsperaInicial(Promise.race([escritorPronto, primeira.then(() => { throw new Error('Escritor encerrou cedo.'); })]));
+        const segunda = executar(primeiro === 'ausencia' ? 'rejeicao' : 'ausencia', observado as ExecutorTenant);
+        resultadoSegundo = Promise.allSettled([segunda]);
+        const pid = await limitarEsperaInicial(Promise.race([observadoPronto, segunda.then(() => { throw new Error('Operação encerrou cedo.'); })]));
+        await esperarBloqueioReal(pid, pidEscritor);
+      } finally { liberar(); }
+      const [a] = await limitarEsperaInicial(resultadoPrimeiro);
+      const [b] = await limitarEsperaInicial(resultadoSegundo!);
+      if (primeiro === 'ausencia') {
+        expect(a.status).toBe('rejected');
+        if (a.status !== 'rejected') throw new Error('Ausência com pendência deveria falhar.');
+        expect(a.reason).toMatchObject({ status: 409 }); expect(b.status).toBe('fulfilled');
+      } else { expect(a.status).toBe('fulfilled'); expect(b.status).toBe('fulfilled'); }
+      expect((await cliente!.query('select confirmacao,revisao from restricoes_pacientes where id=$1', [caso.restricaoId])).rows)
+        .toEqual([{ confirmacao: 'rejeitada', revisao: 2 }]);
+      expect((await cliente!.query('select situacao,revisao from avaliacoes_restricoes_pacientes where id=$1', [caso.avaliacaoId])).rows)
+        .toEqual([{ situacao: primeiro === 'ausencia' ? 'nao_informado' : 'sem_restricoes_confirmadas', revisao: primeiro === 'ausencia' ? 1 : 2 }]);
+    }
+    await provarCorridaAusenciaRejeicao('ausencia');
+    await provarCorridaAusenciaRejeicao('rejeicao');
     const pacienteAusenciaRecon = randomUUID();
     await cliente.query('insert into pacientes(id,tenant_id,profissional_responsavel_id,nome_criptografado) values ($1,$2,$3,$4)',
       [pacienteAusenciaRecon, tenantP2, dados.profissionalId, Buffer.from('paciente-sintetico')]);
