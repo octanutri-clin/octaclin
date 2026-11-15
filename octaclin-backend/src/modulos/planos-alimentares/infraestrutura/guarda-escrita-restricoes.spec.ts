@@ -42,7 +42,8 @@ const INFRAESTRUTURA: Record<string, string> = {
 const CONSUMIDORES: Record<string, string> = {
   'modulos/planos-alimentares/aplicacao/servico-confirmacao-restricao.ts': 'confirmação transacional com autorização e codec',
   'modulos/planos-alimentares/aplicacao/servico-registro-pendencia-restricao.ts': 'registro transacional com autorização e codec',
-  'modulos/planos-alimentares/aplicacao/servico-reconfirmacao-restricao.ts': 'atestação transacional com autorização e codec'
+  'modulos/planos-alimentares/aplicacao/servico-reconfirmacao-restricao.ts': 'atestação transacional com autorização e codec',
+  'modulos/planos-alimentares/aplicacao/integridade-avaliacao-restricoes.ts': 'verificação de isolamento e histórico sem conteúdo clínico'
 };
 
 const re = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -79,7 +80,7 @@ describe('FOOD06 R4: guarda de acesso às tabelas de restrições', () => {
   it('as exceções existem de fato e a lista de consumidores é nominal', () => {
     const citamRel = new Set(citam.map(f => f.rel));
     for (const e of Object.keys(INFRAESTRUTURA)) expect(citamRel.has(e)).toBe(true);
-    expect(Object.keys(CONSUMIDORES)).toEqual(['modulos/planos-alimentares/aplicacao/servico-confirmacao-restricao.ts', 'modulos/planos-alimentares/aplicacao/servico-registro-pendencia-restricao.ts', 'modulos/planos-alimentares/aplicacao/servico-reconfirmacao-restricao.ts']);
+    expect(Object.keys(CONSUMIDORES)).toEqual(['modulos/planos-alimentares/aplicacao/servico-confirmacao-restricao.ts', 'modulos/planos-alimentares/aplicacao/servico-registro-pendencia-restricao.ts', 'modulos/planos-alimentares/aplicacao/servico-reconfirmacao-restricao.ts', 'modulos/planos-alimentares/aplicacao/integridade-avaliacao-restricoes.ts']);
     for (const c of Object.keys(CONSUMIDORES)) expect(citamRel.has(c)).toBe(true);
     expect(todos.filter(f => ORM(f.rel))).toHaveLength(7);
   });

@@ -14,6 +14,7 @@ import { avaliarInativacao, InativacaoInvalidaError } from '../dominio/inativaca
 import { validarTextoProtegido } from '../dominio/conteudo-restricao';
 import { autorizarRestricaoClinica } from './autorizacao-restricao-clinica';
 import { falharRestricao } from './falha-restricao';
+import { exigirHistoricoConsistente, exigirReadCommitted } from './integridade-avaliacao-restricoes';
 
 function normalizarIdentidade(usuario: UsuarioAutenticado, pacienteId: string, restricaoId: string) {
   if (!usuario || !isUUID(usuario.tenantId) || !isUUID(usuario.usuarioId) || !isUUID(pacienteId) || !isUUID(restricaoId)) {
@@ -27,6 +28,57 @@ function normalizarIdentidade(usuario: UsuarioAutenticado, pacienteId: string, r
 export class ServicoConfirmacaoRestricao {
   constructor(private readonly executor: ExecutorTenant, private readonly cripto: CriptografiaDadosSensiveis,
     private readonly concessoes: ServicoConcessoesPermissao) {}
+  async rejeitar(usuario: UsuarioAutenticado, pacienteId: string, restricaoId: string, revisao: number, dados: unknown): Promise<unknown> {
+    ({ usuario, pacienteId, restricaoId } = normalizarIdentidade(usuario, pacienteId, restricaoId));
+    if (!Number.isSafeInteger(revisao) || revisao < 1 || !dados || typeof dados !== 'object' || Array.isArray(dados) ||
+      ![Object.prototype, null].includes(Object.getPrototypeOf(dados))) throw new BadRequestException('Solicitação inválida.');
+    const descritores = Object.getOwnPropertyDescriptors(dados);
+    if (Reflect.ownKeys(descritores).some(k => k !== 'justificativa') || !Object.hasOwn(descritores, 'justificativa') ||
+      !descritores.justificativa.enumerable || !Object.hasOwn(descritores.justificativa, 'value')) throw new BadRequestException('Solicitação inválida.');
+    let justificativa: string;
+    try { justificativa = validarTextoProtegido(descritores.justificativa.value); } catch { throw new BadRequestException('Solicitação inválida.'); }
+    try { return await this.executor.executar(usuario.tenantId, async g => {
+      await exigirReadCommitted(g);
+      await autorizarRestricaoClinica(g, this.concessoes, usuario, pacienteId);
+      const avaliacoes = g.getRepository(AvaliacaoRestricoesPacienteOrm);
+      const avaliacao = await avaliacoes.findOne({ where: { tenantId: usuario.tenantId, pacienteId }, lock: { mode: 'pessimistic_write' } });
+      if (avaliacao) await exigirHistoricoConsistente(g, usuario.tenantId, pacienteId, avaliacao);
+      const repo = g.getRepository(RestricaoPacienteOrm);
+      const where = { id: restricaoId, tenantId: usuario.tenantId, pacienteId };
+      const linha = await repo.findOne({ where, lock: { mode: 'pessimistic_write' } });
+      if (!linha) throw new ForbiddenException('Operação não autorizada.');
+      if (linha.revisao !== revisao || linha.confirmacao !== 'pendente' || linha.estado !== 'ativa') throw new ConflictException('Restrição alterada ou indisponível.');
+      const base = { tenantId: usuario.tenantId, pacienteId, restricaoId };
+      const anterior = await g.getRepository(RevisaoRestricaoPacienteOrm).findOne({ where: { ...base, numero: revisao } });
+      if (!anterior || ['inativacao', 'rejeicao', 'confirmacao'].includes(anterior.evento)) throw new ConflictException('Restrição alterada ou indisponível.');
+      const conteudo = decifrarConteudoRestricao(this.cripto, linha.conteudoCriptografado, { ...base, revisao, finalidade: 'restricao' });
+      const conteudoAnterior = decifrarConteudoRestricao(this.cripto, anterior.conteudoCriptografado, { ...base, revisao, finalidade: 'revisao_restricao' });
+      if (JSON.stringify(conteudo) !== JSON.stringify(conteudoAnterior)) throw new ConflictException('Restrição alterada ou indisponível.');
+      if (conteudo.natureza === 'preferencia') throw new ConflictException('Preferência não requer decisão clínica.');
+      const proxima = revisao + 1;
+      const atual = cifrarConteudoRestricao(this.cripto, conteudo, { ...base, revisao: proxima, finalidade: 'restricao' });
+      const snapshot = cifrarConteudoRestricao(this.cripto, conteudo, { ...base, revisao: proxima, finalidade: 'revisao_restricao' });
+      const motivo = cifrarCampo(this.cripto, 'restricoes_pacientes_revisoes.justificativa_criptografada', justificativa,
+        { tenantId: usuario.tenantId, pacienteId, registroId: restricaoId, revisao: proxima });
+      const mudou = await repo.update({ ...where, revisao }, { revisao: proxima, confirmacao: 'rejeitada', conteudoCriptografado: atual, atualizadoEm: () => 'clock_timestamp()' });
+      if (mudou.affected !== 1) throw new ConflictException('Restrição alterada ou indisponível.');
+      if (avaliacao && avaliacao.situacao !== 'nao_informado') {
+        const revisaoAvaliacao = avaliacao.revisao + 1;
+        const alterada = await avaliacoes.update({ id: avaliacao.id, tenantId: usuario.tenantId, pacienteId, revisao: avaliacao.revisao },
+          { situacao: 'nao_informado', revisao: revisaoAvaliacao, confirmadoPorUsuarioId: null, confirmadoEm: null, venceEm: null, atualizadoEm: () => 'clock_timestamp()' });
+        if (alterada.affected !== 1) throw new ConflictException('Avaliação alterada ou indisponível.');
+        await g.getRepository(RevisaoAvaliacaoRestricoesOrm).insert({ tenantId: usuario.tenantId, pacienteId, avaliacaoId: avaliacao.id,
+          numero: revisaoAvaliacao, situacao: 'nao_informado', autorUsuarioId: usuario.usuarioId, venceEm: null });
+        await registrarAuditoriaNaTransacao(g, { tenantId: usuario.tenantId, usuarioId: usuario.usuarioId,
+          acao: 'restricoes.avaliacao_invalidada', recursoTipo: 'avaliacao_restricoes', recursoId: avaliacao.id, metadados: {} });
+      }
+      await g.getRepository(RevisaoRestricaoPacienteOrm).insert({ tenantId: usuario.tenantId, pacienteId, restricaoId, numero: proxima,
+        evento: 'rejeicao', autorUsuarioId: usuario.usuarioId, conteudoCriptografado: snapshot, justificativaCriptografada: motivo });
+      await registrarAuditoriaNaTransacao(g, { tenantId: usuario.tenantId, usuarioId: usuario.usuarioId,
+        acao: 'restricoes.rejeitar', recursoTipo: 'restricao_paciente', recursoId: restricaoId, metadados: {} });
+      return { id: restricaoId, revisao: proxima, confirmacao: 'rejeitada' };
+    }); } catch (erro) { return falharRestricao(erro); }
+  }
   async inativar(usuario: UsuarioAutenticado, pacienteId: string, restricaoId: string, revisao: number,
     dados: { motivo: string; justificativa: string; confirmacaoEmDoisPassos: boolean }): Promise<unknown> {
     ({ usuario, pacienteId, restricaoId } = normalizarIdentidade(usuario, pacienteId, restricaoId));

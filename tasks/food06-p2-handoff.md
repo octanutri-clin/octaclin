@@ -1,5 +1,20 @@
 # FOOD06 P2 — preparação e handoff
 
+## Incremento em andamento: rejeição clínica
+
+- Serviço ainda desconectado: rejeita somente pendência clínica ativa com
+  concessão e carteira verificadas, justificativa cifrada, CAS, histórico e
+  auditoria na mesma transação; invalida avaliação anterior conservadoramente.
+- READ COMMITTED e consistência do histórico são exigidos antes da escrita.
+  Revisão cruzada independente não encontrou defeito concreto; identificou a
+  necessidade de prova PostgreSQL para isolamento, rollback e concorrência.
+- Testes PostgreSQL sintéticos foram adicionados para isolamento, carteira,
+  cifra, rollback na segunda auditoria e corrida confirmação/rejeição nas duas
+  ordens. Execução local SKIPPED: Docker indisponível; depende de CI no novo HEAD.
+  Corrida específica entre rejeição e declaração de ausência ainda não foi provada.
+- P2 continua incompleta: não ativar rotas, flag ou consumidores clínicos. Ver
+  o restante deste histórico e os contratos para demais transições e integração.
+
 - Branch `codex/food06-p2-restricoes`; base `312d6727`, conferida em 2026-11-13.
 - Objetivo: serviço e API de restrições (R4), conforme contratos v2/v3; flags
   desligadas e nenhum consumidor clínico novo ativado automaticamente.
