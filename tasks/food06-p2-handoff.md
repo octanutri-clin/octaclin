@@ -1,5 +1,20 @@
 # FOOD06 P2 — preparação e handoff
 
+## Incremento em andamento: leitura clínica individual
+
+- Serviço interno para Professional com concessão específica: autoriza tenant e
+  carteira antes de buscar, compara conteúdo cifrado ao histórico vigente e
+  devolve somente projeção explícita; audita sem conteúdo na mesma transação.
+- Revisão cruzada não identificou vazamento demonstrado; identificou estados
+  incompatíveis com o último evento, agora recusados por matriz dos eventos
+  implementados, com testes positivos e negativos. A leitura usa lock do
+  paciente e cobre apenas Professional habilitado, não Collaborator ou Patient;
+  ainda não há provider, rota ou seleção de paciente do portal.
+- Testes de autorização, histórico divergente, falha de auditoria, isolamento e
+  disputa com inativação foram preparados para PostgreSQL descartável e aguardam
+  CI. Provas de revogação/transferência concorrentes para esta leitura, projeção
+  do portal e invalidação das prévias permanecem pendentes.
+
 ## Incremento em andamento: reavaliação clínica
 
 - Serviço interno permite `ativa` confirmada para `em_reavaliacao` e retorno
