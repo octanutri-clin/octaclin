@@ -1425,6 +1425,66 @@ descrever('RLS e isolamento multi-tenant integral em Postgres real', () => {
     }
     await provarCorridaReavaliacao('reavaliar');
     await provarCorridaReavaliacao('inativar');
+    async function provarCorridaReavaliacaoReconfirmacao(primeiro: 'reavaliar' | 'reconfirmar', resultado: 'sem_alteracao' | 'pendencia_mantida' | 'alteracao_informada') {
+      const caso = await prepararRejeicao();
+      await confirmar.confirmar(usuario, caso.paciente, caso.restricaoId, 1);
+      const pedido = { avaliacaoId: caso.avaliacaoId, revisaoAvaliacao: 1, restricaoId: caso.restricaoId, revisaoRestricao: 2,
+        chaveIdempotencia: randomUUID(), meio: 'teleconsulta', atestacao: true };
+      let liberar!: () => void, avisarEscritor!: (pid: number) => void, avisarObservado!: (pid: number) => void;
+      const espera = new Promise<void>(resolve => { liberar = resolve; });
+      const escritorPronto = new Promise<number>(resolve => { avisarEscritor = resolve; });
+      const observadoPronto = new Promise<number>(resolve => { avisarObservado = resolve; });
+      const segurado = { executar: <T>(t: string, fn: (g: EntityManager) => Promise<T>) => executorTenant!.executar(t, async g => {
+        await g.query("set local statement_timeout = '12s'"); const pid = await g.query('select pg_backend_pid()::int as pid');
+        const resposta = await fn(g); avisarEscritor(pid[0].pid as number); await espera; return resposta;
+      }) };
+      const observado = { executar: <T>(t: string, fn: (g: EntityManager) => Promise<T>) => executorTenant!.executar(t, async g => {
+        await g.query("set local statement_timeout = '12s'"); await g.query("set local lock_timeout = '10s'");
+        const pid = await g.query('select pg_backend_pid()::int as pid'); avisarObservado(pid[0].pid as number); return fn(g);
+      }) };
+      const executar = (tipo: 'reavaliar' | 'reconfirmar', executor: ExecutorTenant) => {
+        if (tipo === 'reavaliar') return new ServicoConfirmacaoRestricao(executor, crypto, concessoes)
+          .alterarReavaliacao(usuario, caso.paciente, caso.restricaoId, 2, 'em_reavaliacao');
+        const servico = new ServicoReconfirmacaoRestricao(executor, crypto, concessoes);
+        return resultado === 'sem_alteracao' ? servico.registrarSemAlteracaoIndividual(usuario, caso.paciente, pedido)
+          : resultado === 'pendencia_mantida' ? servico.registrarPendenciaIndividual(usuario, caso.paciente, pedido)
+            : servico.registrarAlteracaoInformadaIndividual(usuario, caso.paciente, pedido);
+      };
+      const primeira = executar(primeiro, segurado as ExecutorTenant);
+      let resultadoSegundo: Promise<PromiseSettledResult<unknown>[]> | undefined;
+      let respostaPrimeiro: unknown;
+      try {
+        const pidEscritor = await limitarEsperaInicial(Promise.race([escritorPronto, primeira.then(() => { throw new Error('Escritor encerrou cedo.'); })]));
+        const segunda = executar(primeiro === 'reavaliar' ? 'reconfirmar' : 'reavaliar', observado as ExecutorTenant);
+        resultadoSegundo = Promise.allSettled([segunda]);
+        const pid = await limitarEsperaInicial(Promise.race([observadoPronto, segunda.then(() => { throw new Error('Operação encerrou cedo.'); })]));
+        await esperarBloqueioReal(pid, pidEscritor);
+      } finally {
+        liberar();
+        const encerradas = await Promise.allSettled([limitarEsperaInicial(primeira), ...(resultadoSegundo ? [limitarEsperaInicial(resultadoSegundo)] : [])]);
+        for (const encerrada of encerradas) if (encerrada.status === 'rejected') throw encerrada.reason;
+        if (encerradas[0].status === 'fulfilled') respostaPrimeiro = encerradas[0].value;
+      }
+      const [segunda] = await resultadoSegundo!;
+      if (primeiro === 'reavaliar') {
+        expect(segunda.status).toBe('rejected');
+        if (segunda.status !== 'rejected') throw new Error('Reconfirmação obsoleta deveria falhar.');
+        expect(segunda.reason).toMatchObject({ status: 409 });
+        expect((await cliente!.query('select id from reconfirmacoes_restricoes where tenant_id=$1 and chave_idempotencia=$2', [tenantP2, pedido.chaveIdempotencia])).rows).toEqual([]);
+      } else {
+        expect(segunda.status).toBe('fulfilled');
+        const ack = respostaPrimeiro as { id: string; resultado: string; escopo: string; revisaoAvaliacao: number; revisaoRestricao: number };
+        expect(ack).toEqual({ id: expect.any(String), resultado, escopo: 'restricao_individual', revisaoAvaliacao: 1, revisaoRestricao: 2 });
+        await expect(executar('reconfirmar', executorTenant!)).resolves.toEqual(ack);
+        expect((await cliente!.query("select id from user_action_logs where recurso_id=$1 and acao='restricoes.reconfirmacao_individual'", [ack.id])).rows).toHaveLength(1);
+      }
+      expect((await cliente!.query('select estado,confirmacao,revisao from restricoes_pacientes where id=$1', [caso.restricaoId])).rows)
+        .toEqual([{ estado: 'em_reavaliacao', confirmacao: 'confirmada', revisao: 3 }]);
+    }
+    for (const resultado of ['sem_alteracao', 'pendencia_mantida', 'alteracao_informada'] as const) {
+      await provarCorridaReavaliacaoReconfirmacao('reavaliar', resultado);
+      await provarCorridaReavaliacaoReconfirmacao('reconfirmar', resultado);
+    }
     const casoRejeicao = await prepararRejeicao();
     const justificativaRejeicao = { justificativa: 'Justificativa sintética' };
     await expect(confirmar.rejeitar(usuario, outro.pacienteId, casoRejeicao.restricaoId, 1, justificativaRejeicao)).rejects.toMatchObject({ status: 403 });

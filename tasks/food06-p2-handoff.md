@@ -7,8 +7,10 @@
   continua confirmada. CAS, conteúdo/histórico cifrados e auditoria transacional.
 - Revisão cruzada independente não encontrou defeito concreto. Testes locais
   focados e typecheck PASS; testes PostgreSQL preparados para autorização,
-  isolamento, rollback e disputa com inativação aguardam CI. Não provam a
-  invalidação fim a fim de prévias P4 nem disputa com reconfirmação.
+  isolamento, rollback e disputa com inativação passaram no Backend do CI
+  do HEAD `32d2cfa6`. Testes das duas ordens de disputa com cada resultado de
+  reconfirmação individual foram preparados e aguardam CI. Não provam a
+  invalidação fim a fim de prévias P4.
 
 ## Incremento em andamento: rejeição clínica
 
