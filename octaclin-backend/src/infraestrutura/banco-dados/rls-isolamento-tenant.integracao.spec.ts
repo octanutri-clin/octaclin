@@ -82,6 +82,15 @@ import { AvaliacaoRestricoesPacienteOrm } from '../../modulos/planos-alimentares
 import { RevisaoAvaliacaoRestricoesOrm } from '../../modulos/planos-alimentares/infraestrutura/revisao-avaliacao-restricoes.orm';
 import { ReconfirmacaoRestricoesOrm } from '../../modulos/planos-alimentares/infraestrutura/reconfirmacao-restricoes.orm';
 import { cifrarConteudoRestricao, decifrarConteudoRestricao, cifrarCampo, decifrarCampo } from '../../modulos/planos-alimentares/infraestrutura/codec-conteudo-restricao';
+import { ExecutionContext, UnauthorizedException } from '@nestjs/common';
+import { Test } from '@nestjs/testing';
+import type { NestExpressApplication } from '@nestjs/platform-express';
+import type { AddressInfo } from 'node:net';
+import { GuardaJwt } from '../../modulos/auth/apresentacao/guarda-jwt';
+import { ServicoAuditoria } from '../auditoria/servico-auditoria';
+import { criarPipeValidacaoHttp } from '../http/pipe-validacao-http';
+import { middlewareErroRestricoesClinicas, middlewareRestricoesClinicas } from '../http/middleware-restricoes-clinicas';
+import { ControladorRestricoesClinicas } from '../../modulos/planos-alimentares/apresentacao/controlador-restricoes-clinicas';
 
 /**
  * Prova integral de isolamento por tenant em Postgres real (PR 43).
@@ -1352,6 +1361,105 @@ descrever('RLS e isolamento multi-tenant integral em Postgres real', () => {
       const restricao = await registro.registrar(usuario, paciente, { chaveCriacao: randomUUID(), conteudo }) as { id: string };
       return { paciente, avaliacaoId: avaliacao.id, restricaoId: restricao.id };
     }
+    // Controlador real e serviços reais contra runtime/RLS; apenas autenticação é sintética.
+    const pacienteHttp = randomUUID();
+    await cliente.query('insert into pacientes(id,tenant_id,profissional_responsavel_id,nome_criptografado) values ($1,$2,$3,$4)',
+      [pacienteHttp, tenantP2, dados.profissionalId, Buffer.from('paciente-sintetico')]);
+    await cliente.query(`insert into concessoes_permissao_usuario (tenant_id,usuario_id,permissao,concedida_por,motivo)
+      values ($1,$2,'restricoes.confirmar',$3,'habilitacao_administrativa')`, [tenantP2, outro.usuarioId, dados.usuarioId]);
+    const tenantHttpOutro = randomUUID();
+    await cliente.query('insert into tenants(id,nome,slug) values ($1,$2,$3)', [tenantHttpOutro, 'Outro tenant HTTP sintético', `http-sintetico-${tenantHttpOutro}`]);
+    await comoTenant(tenantHttpOutro);
+    const usuarioHttpTenantB = randomUUID(), profissionalHttpTenantB = randomUUID();
+    await cliente.query(`insert into usuarios(id,tenant_id,email_hash,email_criptografado,senha_hash,role)
+      values ($1,$2,$3,$4,'senha-sintetica','Professional')`, [usuarioHttpTenantB, tenantHttpOutro, `http-sintetico-${randomUUID()}`, Buffer.from('usuario-sintetico')]);
+    await cliente.query('insert into profissionais(id,tenant_id,usuario_id,nome_criptografado) values ($1,$2,$3,$4)',
+      [profissionalHttpTenantB, tenantHttpOutro, usuarioHttpTenantB, Buffer.from('profissional-sintetico')]);
+    await cliente.query(`insert into concessoes_permissao_usuario (tenant_id,usuario_id,permissao,concedida_por,motivo)
+      values ($1,$2,'restricoes.confirmar',$2,'habilitacao_administrativa')`, [tenantHttpOutro, usuarioHttpTenantB]);
+    await comoTenant(tenantP2);
+    const usuarioSemConcessao = randomUUID(), profissionalSemConcessao = randomUUID(), pacienteSemConcessao = randomUUID();
+    await cliente.query(`insert into usuarios(id,tenant_id,email_hash,email_criptografado,senha_hash,role)
+      values ($1,$2,$3,$4,'senha-sintetica','Professional')`, [usuarioSemConcessao, tenantP2, `http-sem-concessao-${randomUUID()}`, Buffer.from('usuario-sintetico')]);
+    await cliente.query('insert into profissionais(id,tenant_id,usuario_id,nome_criptografado) values ($1,$2,$3,$4)',
+      [profissionalSemConcessao, tenantP2, usuarioSemConcessao, Buffer.from('profissional-sintetico')]);
+    await cliente.query('insert into pacientes(id,tenant_id,profissional_responsavel_id,nome_criptografado) values ($1,$2,$3,$4)',
+      [pacienteSemConcessao, tenantP2, profissionalSemConcessao, Buffer.from('paciente-sintetico')]);
+    const atorOutro: UsuarioAutenticado = { tenantId: tenantP2, usuarioId: outro.usuarioId, papel: 'Professional', emailHash: '', permissoes: ['pacientes.ler'] };
+    const atorHttp: UsuarioAutenticado = { ...usuario, permissoes: ['pacientes.ler'] };
+    const atorTenantB: UsuarioAutenticado = { tenantId: tenantHttpOutro, usuarioId: usuarioHttpTenantB, papel: 'Professional', emailHash: '', permissoes: ['pacientes.ler'] };
+    const atorSemConcessao: UsuarioAutenticado = { tenantId: tenantP2, usuarioId: usuarioSemConcessao, papel: 'Professional', emailHash: '', permissoes: ['pacientes.ler'] };
+    const moduloHttp = await Test.createTestingModule({ controllers: [ControladorRestricoesClinicas], providers: [
+      { provide: ServicoLeituraRestricao, useValue: new ServicoLeituraRestricao(executorTenant, crypto, concessoes) },
+      { provide: ServicoConfirmacaoRestricao, useValue: confirmar }, { provide: ServicoRegistroPendenciaRestricao, useValue: registro },
+      { provide: ServicoReconfirmacaoRestricao, useValue: reconfirmar }, { provide: ServicoAuditoria, useValue: { registrar: async () => undefined } }
+    ] }).overrideGuard(GuardaJwt).useValue({ canActivate(contexto: ExecutionContext) {
+      const req = contexto.switchToHttp().getRequest();
+      const identidade = req.headers['x-identidade-sintetica'];
+      if (!identidade) throw new UnauthorizedException();
+      req.usuarioAutenticado = identidade === 'titular' ? atorHttp : identidade === 'sem-concessao' ? atorSemConcessao : identidade === 'outra-carteira' ? atorOutro :
+        identidade === 'outro-tenant' ? atorTenantB : { ...atorHttp, papel: 'Patient' };
+      return true;
+    } }).compile();
+    const appHttp = moduloHttp.createNestApplication<NestExpressApplication>({ rawBody: true, logger: false });
+    appHttp.use(middlewareRestricoesClinicas); appHttp.useBodyParser('json', { limit: '100kb' }); appHttp.use(middlewareErroRestricoesClinicas);
+    appHttp.useGlobalPipes(criarPipeValidacaoHttp());
+    try {
+      await appHttp.listen(0, '127.0.0.1');
+      const baseHttp = `http://127.0.0.1:${(appHttp.getHttpServer().address() as AddressInfo).port}/pacientes/${pacienteHttp}/restricoes`;
+      const chamada = (caminho: string, body: unknown, identidade = 'titular') => fetch(`${baseHttp}${caminho}`, { method: 'POST',
+        headers: { 'content-type': 'application/json', 'x-identidade-sintetica': identidade }, body: JSON.stringify(body) });
+      const chaveHttp = randomUUID();
+      const primeiraHttp = await chamada('/registrar', { chaveCriacao: chaveHttp, conteudo });
+      expect(primeiraHttp.status).toBe(200); expect(primeiraHttp.headers.get('cache-control')).toBe('private, no-store');
+      const pendenciaHttp = await primeiraHttp.json() as { id: string; revisao: number; estado: string; confirmacao: string };
+      expect(pendenciaHttp).toEqual({ id: expect.any(String), revisao: 1, estado: 'ativa', confirmacao: 'pendente' });
+      const replayHttp = await chamada('/registrar', { chaveCriacao: chaveHttp, conteudo });
+      expect(replayHttp.status).toBe(200); expect(await replayHttp.json()).toEqual(pendenciaHttp);
+      expect((await cliente.query('select numero,evento from restricoes_pacientes_revisoes where restricao_id=$1', [pendenciaHttp.id])).rows)
+        .toEqual([{ numero: 1, evento: 'criacao' }]);
+      expect((await cliente.query("select id from user_action_logs where recurso_id=$1 and acao='restricoes.registrar_pendencia'", [pendenciaHttp.id])).rows).toHaveLength(1);
+      const outraCarteiraMesmoTitular = await fetch(`http://127.0.0.1:${(appHttp.getHttpServer().address() as AddressInfo).port}/pacientes/${outroDaCarteira}/restricoes/registrar`, {
+        method: 'POST', headers: { 'content-type': 'application/json', 'x-identidade-sintetica': 'titular' }, body: JSON.stringify({ chaveCriacao: chaveHttp, conteudo }) });
+      expect(outraCarteiraMesmoTitular.status).toBe(409);
+      expect((await cliente.query('select count(*)::int n from restricoes_pacientes where tenant_id=$1 and autor_usuario_id=$2 and chave_criacao=$3', [tenantP2, dados.usuarioId, chaveHttp])).rows).toEqual([{ n: 1 }]);
+      const propriaHttp = await chamada('/consultar', { restricaoId: pendenciaHttp.id });
+      expect(propriaHttp.status).toBe(200); expect(await propriaHttp.json()).toEqual({ ...pendenciaHttp, origem: 'profissional', conteudo });
+      const ausenteHttp = await chamada('/consultar', { restricaoId: randomUUID() });
+      expect(ausenteHttp.status).toBe(403); const respostaNegada = await ausenteHttp.json();
+      for (const identidade of ['outra-carteira', 'outro-tenant', 'patient']) {
+        const negada = await chamada('/consultar', { restricaoId: pendenciaHttp.id }, identidade);
+        expect(negada.status).toBe(403); expect(negada.headers.get('cache-control')).toBe('private, no-store');
+        expect(await negada.json()).toEqual(respostaNegada);
+      }
+      const inicialHttp = await chamada('/avaliacao/inicial', {});
+      expect(inicialHttp.status).toBe(200);
+      const avaliacaoHttp = await inicialHttp.json() as { id: string; revisao: number; situacao: string };
+      expect(avaliacaoHttp).toEqual({ id: expect.any(String), revisao: 1, situacao: 'nao_informado' });
+      const atestacaoHttp = { avaliacaoId: avaliacaoHttp.id, revisaoAvaliacao: 1, chaveIdempotencia: randomUUID(), meio: 'teleconsulta', atestacao: true, resultado: 'pendencia_mantida' };
+      const primeiraAtestacao = await chamada('/reconfirmar', atestacaoHttp); expect(primeiraAtestacao.status).toBe(200);
+      const ack = await primeiraAtestacao.json() as { id: string; resultado: string }; expect(ack).toEqual({ id: expect.any(String), resultado: 'pendencia_mantida' });
+      const repeticaoAtestacao = await chamada('/reconfirmar', atestacaoHttp); expect(repeticaoAtestacao.status).toBe(200); expect(await repeticaoAtestacao.json()).toEqual(ack);
+      expect((await cliente.query('select count(*)::int n from reconfirmacoes_restricoes where tenant_id=$1 and chave_idempotencia=$2', [tenantP2, atestacaoHttp.chaveIdempotencia])).rows).toEqual([{ n: 1 }]);
+      expect((await cliente.query("select id from user_action_logs where recurso_id=$1 and acao='restricoes.reconfirmacao_pendencia'", [ack.id])).rows).toHaveLength(1);
+      const confirmadaHttp = await chamada(`/${pendenciaHttp.id}/confirmar`, { revisao: 1 });
+      expect(confirmadaHttp.status).toBe(200); expect(await confirmadaHttp.json()).toEqual({ id: pendenciaHttp.id, revisao: 2, confirmacao: 'confirmada' });
+      expect((await chamada(`/${pendenciaHttp.id}/confirmar`, { revisao: 1 })).status).toBe(409);
+      const replayConfirmado = await chamada('/registrar', { chaveCriacao: chaveHttp, conteudo });
+      expect(replayConfirmado.status).toBe(200); expect(await replayConfirmado.json()).toEqual({ id: pendenciaHttp.id, revisao: 2, estado: 'ativa', confirmacao: 'confirmada' });
+      expect((await chamada('/reconfirmar', { ...atestacaoHttp, chaveIdempotencia: randomUUID(), resultado: 'sem_restricoes_declaradas', confirmacaoExplicitaAusencia: true })).status).toBe(409);
+      const reavaliadaHttp = await chamada(`/${pendenciaHttp.id}/reavaliar`, { revisao: 2, destino: 'em_reavaliacao' });
+      expect(reavaliadaHttp.status).toBe(200); expect(await reavaliadaHttp.json()).toEqual({ id: pendenciaHttp.id, revisao: 3, estado: 'em_reavaliacao' });
+      const inativadaHttp = await chamada(`/${pendenciaHttp.id}/inativar`, { revisao: 3, motivo: 'outro', justificativa: 'Justificativa sintética', confirmacaoEmDoisPassos: true });
+      expect(inativadaHttp.status).toBe(200); expect(await inativadaHttp.json()).toEqual({ id: pendenciaHttp.id, revisao: 4, estado: 'inativa' });
+      const baseSemConcessao = `http://127.0.0.1:${(appHttp.getHttpServer().address() as AddressInfo).port}/pacientes/${pacienteSemConcessao}/restricoes`;
+      const registrarSemConcessao = await fetch(`${baseSemConcessao}/registrar`, { method: 'POST', headers: { 'content-type': 'application/json', 'x-identidade-sintetica': 'sem-concessao' },
+        body: JSON.stringify({ chaveCriacao: randomUUID(), conteudo }) });
+      expect(registrarSemConcessao.status).toBe(200);
+      const criadaSemConcessao = await registrarSemConcessao.json() as { id: string };
+      const negarConfirmacao = await fetch(`${baseSemConcessao}/${criadaSemConcessao.id}/confirmar`, { method: 'POST', headers: { 'content-type': 'application/json', 'x-identidade-sintetica': 'sem-concessao' }, body: JSON.stringify({ revisao: 1 }) });
+      expect(negarConfirmacao.status).toBe(403); expect((await cliente.query('select confirmacao,revisao from restricoes_pacientes where id=$1', [criadaSemConcessao.id])).rows).toEqual([{ confirmacao: 'pendente', revisao: 1 }]);
+    } finally { await appHttp.close(); }
     const casoLeitura = await prepararRejeicao();
     const leitura = new ServicoLeituraRestricao(executorTenant, crypto, concessoes);
     const projetada = await leitura.consultar(usuario, casoLeitura.paciente, casoLeitura.restricaoId);

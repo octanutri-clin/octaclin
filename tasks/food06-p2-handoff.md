@@ -6,9 +6,10 @@
   reconfirmação global e individual, e middleware para cabeçalhos/erros do parser, foram
   preparados e testados em servidor Nest sintético. Não estão registrados no
   módulo nem no bootstrap; nenhuma rota foi exposta e não existe flag nova.
-- Testes HTTP usam JWT e serviço simulados. A autorização clínica real continua
-  no serviço, sob transação; o CI anterior cobre banco e isolamento, mas não é
-  prova fim a fim de JWT, flag, bootstrap ou rota de produção.
+- Testes HTTP unitários usam JWT e serviços simulados. Prova adicional HTTP com
+  controlador e serviços reais sobre PostgreSQL/RLS descartável foi preparada:
+  autenticação ainda é sintética e sua execução aguarda CI. Nenhuma das provas
+  demonstra JWT real, flag, bootstrap ou rota de produção.
 - A revisão cruzada identificou JSON malformado antes do controlador: a proteção
   proposta precisa ser ligada antes e depois do parser ao integrar a rota, com
   teste do bootstrap real. Antes de registrar, implementar gate fechado por flag,
