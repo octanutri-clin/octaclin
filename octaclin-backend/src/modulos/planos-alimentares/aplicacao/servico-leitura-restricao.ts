@@ -12,7 +12,7 @@ import { autorizarRestricaoClinica } from './autorizacao-restricao-clinica';
 import { exigirReadCommitted } from './integridade-avaliacao-restricoes';
 import { falharRestricao } from './falha-restricao';
 
-/** Leitura clínica individual; ainda não registrada como provider nem exposta por HTTP. */
+/** Leitura clínica individual; ainda não exposta por HTTP na aplicação. */
 @Injectable()
 export class ServicoLeituraRestricao {
   constructor(private readonly executor: ExecutorTenant, private readonly cripto: CriptografiaDadosSensiveis,

@@ -1,5 +1,18 @@
 # FOOD06 P2 — preparação e handoff
 
+## Incremento: contrato HTTP clínico isolado
+
+- Controlador de consulta e middleware para cabeçalhos/erros do parser foram
+  preparados e testados em servidor Nest sintético. Não estão registrados no
+  módulo nem no bootstrap; nenhuma rota foi exposta e não existe flag nova.
+- Testes HTTP usam JWT e serviço simulados. A autorização clínica real continua
+  no serviço, sob transação; o CI anterior cobre banco e isolamento, mas não é
+  prova fim a fim de JWT, flag, bootstrap ou rota de produção.
+- A revisão cruzada identificou JSON malformado antes do controlador: a proteção
+  proposta precisa ser ligada antes e depois do parser ao integrar a rota, com
+  teste do bootstrap real. Antes de registrar, implementar gate fechado por flag,
+  confirmar ausência de dados clínicos em logs e executar authz/HTTP/R4 completos.
+
 ## Incremento: composição NestJS
 
 - `ModuloRestricoes` integra os quatro serviços internos ao módulo de planos,
