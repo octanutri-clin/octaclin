@@ -282,3 +282,11 @@ sintético e não demonstra vazamento em ambiente real. Controle: manter o loggi
 SQL do TypeORM desabilitado em todos os ambientes e testar a configuração e o
 comportamento do logger com parâmetro sintético. Reativá-lo sem redação efetiva
 reintroduz o risco; os testes não comprovam configuração ou logs de provedores.
+
+## 2026-11-14 — Parâmetro SQL reutilizado em fixture PostgreSQL
+
+Na prova sintética de ausência FOOD06, o mesmo parâmetro era usado como coluna
+varchar e em comparações condicionais, e o PostgreSQL recusou a inferência de
+tipos; o Backend falhou antes de percorrer as combinações. A fixture passou a
+enviar autor e instante confirmados em parâmetros próprios. O controle é executar
+as combinações no PostgreSQL do CI: typecheck e mocks não validam inferência SQL.

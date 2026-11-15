@@ -1449,9 +1449,9 @@ descrever('RLS e isolamento multi-tenant integral em Postgres real', () => {
             { tenantId: tenantP2, pacienteId: caso.paciente, restricaoId: id, revisao: 1, finalidade: 'restricao' });
           await cliente.query(`insert into restricoes_pacientes
             (id,tenant_id,paciente_id,autor_usuario_id,chave_criacao,origem,estado,confirmacao,confirmado_por_usuario_id,confirmado_em,conteudo_criptografado)
-            values ($1,$2,$3,$4,$5,'profissional',$6,$7,case when $7='confirmada' then $4::uuid else null end,
-              case when $7='confirmada' then now() else null end,$8)`,
-            [id, tenantP2, caso.paciente, dados.usuarioId, randomUUID(), estado, confirmacao, cifraCaso]);
+            values ($1,$2,$3,$4,$5,'profissional',$6,$7,$8,$9,$10)`,
+            [id, tenantP2, caso.paciente, dados.usuarioId, randomUUID(), estado, confirmacao,
+              confirmacao === 'confirmada' ? dados.usuarioId : null, confirmacao === 'confirmada' ? new Date() : null, cifraCaso]);
           const chave = randomUUID();
           await expect(reconfirmar.registrarAusenciaDeclarada(usuario, caso.paciente,
             { avaliacaoId: caso.id, revisaoAvaliacao: 2, chaveIdempotencia: chave, meio: 'teleconsulta', atestacao: true, confirmacaoExplicitaAusencia: true }))
