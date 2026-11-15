@@ -11,9 +11,10 @@
   paciente e cobre apenas Professional habilitado, não Collaborator ou Patient;
   ainda não há provider, rota ou seleção de paciente do portal.
 - Testes de autorização, histórico divergente, falha de auditoria, isolamento e
-  disputa com inativação foram preparados para PostgreSQL descartável e aguardam
-  CI. Provas de revogação/transferência concorrentes para esta leitura, projeção
-  do portal e invalidação das prévias permanecem pendentes.
+  disputa com inativação passaram no Backend do CI do HEAD `4c1d3b5c` com
+  PostgreSQL descartável. Provas adicionais da serialização com revogação e transferência estão
+  preparadas para o próximo CI. Projeção do portal e invalidação de prévias
+  permanecem pendentes.
 
 ## Incremento em andamento: reavaliação clínica
 

@@ -2396,15 +2396,62 @@ descrever('RLS e isolamento multi-tenant integral em Postgres real', () => {
     expect((await cliente.query('select numero from restricoes_pacientes_revisoes where restricao_id=$1', [idInativacaoRollback])).rows).toEqual([]);
     expect((await cliente.query('select numero from avaliacoes_restricoes_revisoes where avaliacao_id=$1', [avaliacaoRollback.rows[0].id])).rows).toEqual([]);
     expect((await cliente.query('select id from user_action_logs where recurso_id=any($1::uuid[])', [[idInativacaoRollback, avaliacaoRollback.rows[0].id]])).rows).toEqual([]);
+    let liberarTransferencia!: () => void, avisarLeitura!: () => void;
+    const aguardandoTransferencia = new Promise<void>(resolve => { liberarTransferencia = resolve; });
+    const leituraPronta = new Promise<void>(resolve => { avisarLeitura = resolve; });
+    const executorLeituraTransferencia = { executar: <T>(t: string, fn: (g: EntityManager) => Promise<T>) => executorTenant!.executar(t, async g => {
+      const resposta = await fn(g); avisarLeitura(); await aguardandoTransferencia; return resposta;
+    }) };
+    const leituraAntesTransferencia = new ServicoLeituraRestricao(executorLeituraTransferencia as ExecutorTenant, crypto, concessoes)
+      .consultar(usuario, casoLeitura.paciente, casoLeitura.restricaoId);
+    try {
+      await Promise.race([leituraPronta, leituraAntesTransferencia.then(() => { throw new Error('Leitura encerrou cedo.'); })]);
+      await cliente.query("set lock_timeout = '200ms'");
+      await expect(cliente.query('update pacientes set profissional_responsavel_id=$1 where id=$2', [outro.profissionalId, casoLeitura.paciente]))
+        .rejects.toMatchObject({ code: '55P03' });
+    } finally {
+      liberarTransferencia(); await leituraAntesTransferencia; await cliente.query('reset lock_timeout');
+    }
+    let liberarMudanca!: () => void, avisarMudanca!: (pid: number) => void, avisarLeituraMudanca!: (pid: number) => void;
+    const esperaMudanca = new Promise<void>(resolve => { liberarMudanca = resolve; });
+    const mudancaPronta = new Promise<number>(resolve => { avisarMudanca = resolve; });
+    const leituraMudancaPronta = new Promise<number>(resolve => { avisarLeituraMudanca = resolve; });
+    const mudanca = executorTenant.executar(tenantP2, async g => {
+      await g.query("set local statement_timeout = '12s'"); const pid = await g.query('select pg_backend_pid()::int as pid');
+      await g.query('update pacientes set profissional_responsavel_id=$1 where id=$2', [outro.profissionalId, casoLeitura.paciente]);
+      avisarMudanca(pid[0].pid as number); await esperaMudanca;
+    });
+    const executorLeituraMudanca = { executar: <T>(t: string, fn: (g: EntityManager) => Promise<T>) => executorTenant!.executar(t, async g => {
+      await g.query("set local statement_timeout = '12s'"); await g.query("set local lock_timeout = '10s'");
+      const pid = await g.query('select pg_backend_pid()::int as pid'); avisarLeituraMudanca(pid[0].pid as number); return fn(g);
+    }) };
+    let leituraAguardandoMudanca: Promise<PromiseSettledResult<unknown>[]> | undefined;
+    try {
+      const pidEscritor = await limitarEsperaInicial(Promise.race([mudancaPronta, mudanca.then(() => { throw new Error('Transferência encerrou cedo.'); })]));
+      const chamada = new ServicoLeituraRestricao(executorLeituraMudanca as ExecutorTenant, crypto, concessoes).consultar(usuario, casoLeitura.paciente, casoLeitura.restricaoId);
+      leituraAguardandoMudanca = Promise.allSettled([chamada]);
+      const pid = await limitarEsperaInicial(Promise.race([leituraMudancaPronta, chamada.then(() => { throw new Error('Leitura encerrou cedo.'); })]));
+      await esperarBloqueioReal(pid, pidEscritor);
+    } finally {
+      liberarMudanca();
+      const encerradas = await Promise.allSettled([limitarEsperaInicial(mudanca), ...(leituraAguardandoMudanca ? [limitarEsperaInicial(leituraAguardandoMudanca)] : [])]);
+      for (const encerrada of encerradas) if (encerrada.status === 'rejected') throw encerrada.reason;
+    }
+    const [resultadoLeituraTransferida] = await leituraAguardandoMudanca!;
+    expect(resultadoLeituraTransferida.status).toBe('rejected');
+    if (resultadoLeituraTransferida.status !== 'rejected') throw new Error('Leitura após transferência deveria falhar.');
+    expect(resultadoLeituraTransferida.reason).toMatchObject({ status: 403 });
+    await cliente.query('update pacientes set profissional_responsavel_id=$1 where id=$2', [dados.profissionalId, casoLeitura.paciente]);
+    await expect(leitura.consultar(usuario, casoLeitura.paciente, casoLeitura.restricaoId)).resolves.toMatchObject({ id: casoLeitura.restricaoId, revisao: 1 });
     let liberar!: () => void;
     let avisar!: () => void;
     const aguardando = new Promise<void>(resolve => { liberar = resolve; });
     const autorizado = new Promise<void>(resolve => { avisar = resolve; });
-    const transacao = executorTenant.executar(tenantP2, async g => {
-      await autorizarRestricaoClinica(g, concessoes, usuario, dados.pacienteId);
-      avisar();
-      await aguardando;
-    });
+    const executorLeituraPausada = { executar: <T>(t: string, fn: (g: EntityManager) => Promise<T>) => executorTenant!.executar(t, async g => {
+      const resposta = await fn(g); avisar(); await aguardando; return resposta;
+    }) };
+    const transacao = new ServicoLeituraRestricao(executorLeituraPausada as ExecutorTenant, crypto, concessoes)
+      .consultar(usuario, casoLeitura.paciente, casoLeitura.restricaoId);
     try {
       await Promise.race([autorizado, transacao.then(() => { throw new Error('Transação encerrou cedo.'); })]);
       await cliente.query("set lock_timeout = '200ms'");
@@ -2415,10 +2462,39 @@ descrever('RLS e isolamento multi-tenant integral em Postgres real', () => {
       await transacao;
       await cliente.query('reset lock_timeout');
     }
-    await cliente.query(`update concessoes_permissao_usuario set revogada_por=$1, revogada_em=clock_timestamp()
-      where id=$2`, [dados.usuarioId, linha.rows[0].id]);
+    let liberarRevogacao!: () => void, avisarRevogacao!: (pid: number) => void, avisarLeituraRevogada!: (pid: number) => void;
+    const esperaRevogacao = new Promise<void>(resolve => { liberarRevogacao = resolve; });
+    const revogacaoPronta = new Promise<number>(resolve => { avisarRevogacao = resolve; });
+    const leituraRevogadaPronta = new Promise<number>(resolve => { avisarLeituraRevogada = resolve; });
+    const revogacao = executorTenant.executar(tenantP2, async g => {
+      await g.query("set local statement_timeout = '12s'");
+      const pid = await g.query('select pg_backend_pid()::int as pid');
+      await g.query('update concessoes_permissao_usuario set revogada_por=$1, revogada_em=clock_timestamp() where id=$2', [dados.usuarioId, linha.rows[0].id]);
+      avisarRevogacao(pid[0].pid as number); await esperaRevogacao;
+    });
+    const executorLeituraRevogada = { executar: <T>(t: string, fn: (g: EntityManager) => Promise<T>) => executorTenant!.executar(t, async g => {
+      await g.query("set local statement_timeout = '12s'"); await g.query("set local lock_timeout = '10s'");
+      const pid = await g.query('select pg_backend_pid()::int as pid'); avisarLeituraRevogada(pid[0].pid as number); return fn(g);
+    }) };
+    let leituraAguardandoRevogacao: Promise<PromiseSettledResult<unknown>[]> | undefined;
+    try {
+      const pidEscritor = await limitarEsperaInicial(Promise.race([revogacaoPronta, revogacao.then(() => { throw new Error('Revogação encerrou cedo.'); })]));
+      const chamada = new ServicoLeituraRestricao(executorLeituraRevogada as ExecutorTenant, crypto, concessoes).consultar(usuario, casoLeitura.paciente, casoLeitura.restricaoId);
+      leituraAguardandoRevogacao = Promise.allSettled([chamada]);
+      const pid = await limitarEsperaInicial(Promise.race([leituraRevogadaPronta, chamada.then(() => { throw new Error('Leitura encerrou cedo.'); })]));
+      await esperarBloqueioReal(pid, pidEscritor);
+    } finally {
+      liberarRevogacao();
+      const encerradas = await Promise.allSettled([limitarEsperaInicial(revogacao), ...(leituraAguardandoRevogacao ? [limitarEsperaInicial(leituraAguardandoRevogacao)] : [])]);
+      for (const encerrada of encerradas) if (encerrada.status === 'rejected') throw encerrada.reason;
+    }
+    const [resultadoLeituraRevogada] = await leituraAguardandoRevogacao!;
+    expect(resultadoLeituraRevogada.status).toBe('rejected');
+    if (resultadoLeituraRevogada.status !== 'rejected') throw new Error('Leitura após revogação deveria falhar.');
+    expect(resultadoLeituraRevogada.reason).toMatchObject({ status: 403 });
     await expect(conferir(dados.pacienteId)).rejects.toMatchObject({ status: 403 });
     await expect(reconfirmar.registrarSemAlteracaoIndividual(usuario, dados.pacienteId, pedidoIndividual)).rejects.toMatchObject({ status: 403 });
+    await expect(leitura.consultar(usuario, casoLeitura.paciente, casoLeitura.restricaoId)).rejects.toMatchObject({ status: 403, message: 'Operação não autorizada.' });
   }, 120_000);
 
   it('FOOD03 protege favoritos com FORCE RLS e oculta registros ao trocar tenant', async () => {
