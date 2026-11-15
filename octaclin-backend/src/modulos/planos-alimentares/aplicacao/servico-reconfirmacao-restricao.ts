@@ -95,6 +95,14 @@ export class ServicoReconfirmacaoRestricao {
     return this.registrarResultado(usuario, pacienteId, dados, 'sem_alteracao', true);
   }
 
+  async registrarPendenciaIndividual(usuario: UsuarioAutenticado, pacienteId: string, dados: unknown): Promise<unknown> {
+    return this.registrarResultado(usuario, pacienteId, dados, 'pendencia_mantida', true);
+  }
+
+  async registrarAlteracaoInformadaIndividual(usuario: UsuarioAutenticado, pacienteId: string, dados: unknown): Promise<unknown> {
+    return this.registrarResultado(usuario, pacienteId, dados, 'alteracao_informada', true);
+  }
+
   private async registrarResultado(usuario: UsuarioAutenticado, pacienteId: string, dados: unknown,
     resultado: 'pendencia_mantida' | 'alteracao_informada' | 'sem_alteracao' | 'sem_restricoes_declaradas', individual = false): Promise<unknown> {
     if (!usuario || !isUUID(usuario.tenantId) || !isUUID(usuario.usuarioId) || !isUUID(pacienteId) ||
@@ -148,9 +156,14 @@ export class ServicoReconfirmacaoRestricao {
         if (!['nao_informado', 'sem_restricoes_confirmadas', 'restricoes_registradas'].includes(avaliacao.situacao)) throw new ConflictException('Avaliação indisponível.');
         if (individual && restricaoId && revisaoRestricao) {
           const linha = await g.getRepository(RestricaoPacienteOrm).findOne({ where: { tenantId: usuario.tenantId, pacienteId, id: restricaoId }, lock: { mode: 'pessimistic_write' } });
-          if (!linha || linha.revisao !== revisaoRestricao || linha.confirmacao !== 'confirmada' || !['ativa', 'em_reavaliacao'].includes(linha.estado)) throw new ConflictException('Restrição indisponível.');
+          if (!linha || linha.revisao !== revisaoRestricao || !['ativa', 'em_reavaliacao'].includes(linha.estado) ||
+            !['pendente', 'confirmada'].includes(linha.confirmacao) || (resultado === 'sem_alteracao' && linha.confirmacao !== 'confirmada')) {
+            throw new ConflictException('Restrição indisponível.');
+          }
           const historico = await g.getRepository(RevisaoRestricaoPacienteOrm).findOne({ where: { tenantId: usuario.tenantId, pacienteId, restricaoId, numero: revisaoRestricao } });
           if (!historico) throw new ConflictException('Restrição indisponível.');
+          if (historico.evento === 'inativacao' || historico.evento === 'rejeicao' ||
+            (historico.evento === 'confirmacao' && linha.confirmacao !== 'confirmada')) throw new ConflictException('Restrição indisponível.');
           const base = { tenantId: usuario.tenantId, pacienteId, restricaoId, revisao: revisaoRestricao };
           const atual = decifrarConteudoRestricao(this.cripto, linha.conteudoCriptografado, { ...base, finalidade: 'restricao' });
           const anterior = decifrarConteudoRestricao(this.cripto, historico.conteudoCriptografado, { ...base, finalidade: 'revisao_restricao' });
@@ -197,7 +210,7 @@ export class ServicoReconfirmacaoRestricao {
             numero: revisaoAvaliacao + 1, situacao, autorUsuarioId: usuario.usuarioId, venceEm });
           await registrarAuditoriaNaTransacao(g, { tenantId: usuario.tenantId, usuarioId: usuario.usuarioId,
             acao: 'restricoes.avaliacao_reconfirmada', recursoTipo: 'avaliacao_restricoes', recursoId: avaliacaoId, metadados: {} });
-        } else if (!individual && avaliacao.situacao !== 'nao_informado') {
+        } else if (resultado !== 'sem_alteracao' && resultado !== 'sem_restricoes_declaradas' && avaliacao.situacao !== 'nao_informado') {
           const alterada = await g.getRepository(AvaliacaoRestricoesPacienteOrm).update(
             { id: avaliacaoId, tenantId: usuario.tenantId, pacienteId, revisao: revisaoAvaliacao },
             { situacao: 'nao_informado', revisao: revisaoAvaliacao + 1, confirmadoPorUsuarioId: null, confirmadoEm: null, venceEm: null, atualizadoEm: () => 'clock_timestamp()' });

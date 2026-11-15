@@ -207,3 +207,21 @@
   PG de tenant/carteira, conteúdo inválido, rollback, revogação e corrida com
   inativação nas duas ordens aguardam CI. Outros resultados/estados individuais
   não foram implementados e não devem ser considerados liberados pelo contrato.
+- Backend CI `43660537270`, HEAD `e6148143`: 5.164 PASS, 181 SKIPPED e 2 TODO
+  na suíte geral; RLS/Testcontainers 271 PASS (grupos sobrepostos), incluindo
+  reconfirmação individual `sem_alteracao`. Web ainda executava nesta anotação.
+- Ampliação individual em preparação: `pendencia_mantida` e `alteracao_informada`
+  aceitam restrição clínica/escolha vigente pendente ou confirmada; exigem revisão
+  e snapshot coerentes e invalidam avaliação confirmada sem alterar a restrição.
+  Invalidação é interpretação conservadora de segurança, não regra expressa de
+  produto. A matriz PG cobre 8 combinações e corrida com inativação nas duas ordens
+  para os três resultados; revisão R4 estática não encontrou defeito concreto, mas
+  PostgreSQL ainda aguarda CI. `sem_alteracao` segue exigindo confirmada vigente.
+- A revisão também identificou possível contradição entre linha vigente e evento
+  histórico terminal. O serviço agora recusa evento `inativacao` ou `rejeicao`,
+  e evento `confirmacao` com linha pendente, sem presumir transições de edição ou
+  reavaliação. Essa checagem não comprova toda a cadeia histórica. Provas PG de
+  eventos contraditórios e controles de edição/reavaliação foram adicionadas e
+  aguardam execução; os controles usam criação pendente rev1, confirmação real rev2
+  e edição/reavaliação simulada rev3. ACK de replay continua histórico, não estado
+  vigente. 160 testes focados, typecheck, auditoria 24/24 e scanner locais PASS.
