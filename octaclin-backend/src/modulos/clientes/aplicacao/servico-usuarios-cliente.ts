@@ -297,7 +297,8 @@ export class ServicoUsuariosCliente {
     return this.executorTenant.executar(tenantId, async (gerenciador) => {
       await bloquearContextoPiloto317(gerenciador, tenantId);
       const repositorioUsuarios = gerenciador.getRepository(UsuarioOrm);
-      const usuario = await repositorioUsuarios.findOne({ where: { id: usuarioId, tenantId } });
+      // FOOD06 P2d-2: trava a conta antes do perfil (ordem global usuários → delegação → profissional → paciente).
+      const usuario = await repositorioUsuarios.findOne({ where: { id: usuarioId, tenantId }, lock: { mode: 'pessimistic_write' } });
       if (!usuario || !this.ehPapelAdministrativo(usuario.role) || usuario.role === 'Client') {
         throw new NotFoundException('Usuario administrativo nao encontrado.');
       }

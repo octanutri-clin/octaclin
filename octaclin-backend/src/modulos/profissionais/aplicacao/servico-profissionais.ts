@@ -126,7 +126,7 @@ export class ServicoProfissionais {
     });
   }
 
-  async arquivar(tenantId: string, profissionalId: string): Promise<void> {
+  async arquivar(tenantId: string, profissionalId: string, atorUsuarioId: string): Promise<void> {
     await this.executorTenant.executar(tenantId, async (gerenciador) => {
       await bloquearContextoPiloto317(gerenciador, tenantId);
       const repositorio = gerenciador.getRepository(ProfissionalOrm);
@@ -134,6 +134,12 @@ export class ServicoProfissionais {
       if (!profissional) throw new NotFoundException('Profissional nao encontrado.');
 
       await invalidarContextoPiloto317(gerenciador, tenantId, { profissionalId });
+      // FOOD06 P2d-2: a conta é travada ANTES do perfil, na mesma ordem global da autorização delegada
+      // (usuários → delegação → profissional → paciente), para não haver deadlock com o colaborador.
+      await gerenciador.getRepository(UsuarioOrm).update(
+        { id: profissional.usuarioId, tenantId },
+        { ativo: false }
+      );
       const resultado = await repositorio.update(
         { id: profissionalId, tenantId, arquivadoEm: IsNull() },
         { arquivadoEm: new Date() }
@@ -142,13 +148,9 @@ export class ServicoProfissionais {
       if (!resultado.affected) {
         throw new NotFoundException('Profissional nao encontrado.');
       }
-      await gerenciador.getRepository(UsuarioOrm).update(
-        { id: profissional.usuarioId, tenantId },
-        { ativo: false }
-      );
-      // FOOD06 P2d-2: restaurar reativa a conta; a delegação da carteira não pode voltar junto. O ator (SuperAdmin)
-      // pode não pertencer ao tenant, então a revogação é registrada pela própria conta afetada.
-      await revogarDelegacoesPorAlteracaoAcesso(gerenciador, tenantId, profissional.usuarioId, profissional.usuarioId);
+      // Restaurar reativa a conta; a delegação da carteira não pode voltar junto. O ator é usuário do mesmo tenant
+      // (o controlador usa o tenant do JWT), então a revogação e a auditoria registram quem arquivou.
+      await revogarDelegacoesPorAlteracaoAcesso(gerenciador, tenantId, profissional.usuarioId, atorUsuarioId);
       await gerenciador.getRepository(RefreshTokenOrm).update(
         { tenantId, usuarioId: profissional.usuarioId },
         { revogadoEm: new Date() }

@@ -58,7 +58,7 @@ describe('ServicoProfissionais', () => {
       { gerarHash: jest.fn() } as never
     );
 
-    await servico.arquivar('tenant-1', 'profissional-1');
+    await servico.arquivar('tenant-1', 'profissional-1', 'ator-1');
 
     expect(repositorioUsuarios.update).toHaveBeenCalledWith(
       { id: 'usuario-1', tenantId: 'tenant-1' },
@@ -69,7 +69,8 @@ describe('ServicoProfissionais', () => {
       { revogadoEm: expect.any(Date) }
     );
     // FOOD06 P2d-2: a delegação da carteira cai junto e não volta ao restaurar.
-    expect(query.mock.calls.find(([sql]) => sql.includes('update delegacoes_carteira_profissional'))?.[1]).toEqual(['tenant-1', 'usuario-1', 'usuario-1']);
+    expect(query.mock.calls.find(([sql]) => sql.includes('update delegacoes_carteira_profissional'))?.[1]).toEqual(['tenant-1', 'usuario-1', 'ator-1']);
+    expect(repositorioUsuarios.update.mock.invocationCallOrder[0]).toBeLessThan(repositorioProfissionais.update.mock.invocationCallOrder[0]);
   });
 
   it('deve listar profissionais arquivados sem misturar ativos', async () => {

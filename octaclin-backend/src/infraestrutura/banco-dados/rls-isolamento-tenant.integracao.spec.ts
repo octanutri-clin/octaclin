@@ -82,6 +82,8 @@ import { AvaliacaoRestricoesPacienteOrm } from '../../modulos/planos-alimentares
 import { RevisaoAvaliacaoRestricoesOrm } from '../../modulos/planos-alimentares/infraestrutura/revisao-avaliacao-restricoes.orm';
 import { ReconfirmacaoRestricoesOrm } from '../../modulos/planos-alimentares/infraestrutura/reconfirmacao-restricoes.orm';
 import { SolicitacaoRestricaoPacienteOrm } from '../../modulos/planos-alimentares/infraestrutura/solicitacao-restricao-paciente.orm';
+import { ServicoProfissionais } from '../../modulos/profissionais/aplicacao/servico-profissionais';
+import { RefreshTokenOrm } from '../../modulos/auth/infraestrutura/refresh-token.orm';
 import { DelegacaoCarteiraProfissionalOrm } from '../../modulos/profissionais/infraestrutura/delegacao-carteira-profissional.orm';
 import { revogarDelegacoesPorAlteracaoAcesso, ServicoDelegacoesCarteira } from '../../modulos/profissionais/aplicacao/servico-delegacoes-carteira';
 import { cifrarConteudoRestricao, decifrarConteudoRestricao, cifrarCampo, decifrarCampo } from '../../modulos/planos-alimentares/infraestrutura/codec-conteudo-restricao';
@@ -294,6 +296,7 @@ descrever('RLS e isolamento multi-tenant integral em Postgres real', () => {
         ReconfirmacaoRestricoesOrm,
         SolicitacaoRestricaoPacienteOrm,
         DelegacaoCarteiraProfissionalOrm,
+        RefreshTokenOrm,
         PermissaoIntegracaoProfissionalOrm,
         UserActionLogOrm,
         NotificacaoOrm,
@@ -2887,6 +2890,26 @@ descrever('RLS e isolamento multi-tenant integral em Postgres real', () => {
     await expect(pendencia(colaborador, dados.pacienteId)).rejects.toMatchObject({ status: 403 });
     await expect(delegacoes.listar(titular)).rejects.toMatchObject({ status: 403 });
     await cliente.query('update usuarios set ativo=true where id=$1', [dados.usuarioId]);
+    // Arquivar o titular durante uma escrita do colaborador: espera o commit, sem 500; depois a delegação está revogada
+    // pelo ator real e o acesso cai (restaurar não a revive).
+    let liberarArq!: () => void, avisarArq!: () => void;
+    const esperaArq = new Promise<void>(r => { liberarArq = r; }), prontaArq = new Promise<void>(r => { avisarArq = r; });
+    const seguraArq = { executar: <T>(t: string, fn: (g: EntityManager) => Promise<T>) => executorTenant!.executar(t, async g => { const r = await fn(g); avisarArq(); await esperaArq; return r; }) };
+    const escritaArq = pendencia(colaborador, dados.pacienteId, new ServicoRegistroPendenciaRestricao(seguraArq as ExecutorTenant, crypto));
+    const profissionaisServico = new ServicoProfissionais(executorTenant, crypto, {} as never);
+    let arquivamento: Promise<unknown> | undefined;
+    try {
+      await Promise.race([prontaArq, escritaArq.then(() => { throw new Error('Transação encerrou cedo.'); })]);
+      arquivamento = profissionaisServico.arquivar(tenant, dados.profissionalId, outro.usuarioId);
+      await new Promise(r => setTimeout(r, 200));
+    } finally { liberarArq(); await escritaArq; }
+    await expect(arquivamento).resolves.toBeUndefined();
+    await comoTenant(tenant);
+    expect((await cliente.query('select revogada_por from delegacoes_carteira_profissional where colaborador_usuario_id=$1 and profissional_id=$2 order by concedida_em desc limit 1',
+      [colaboradorId, dados.profissionalId])).rows).toEqual([{ revogada_por: outro.usuarioId }]);
+    await profissionaisServico.restaurar(tenant, dados.profissionalId);
+    expect(await ativas()).toEqual([]);
+    await expect(pendencia(colaborador, dados.pacienteId)).rejects.toMatchObject({ status: 403 });
     // Outro tenant não enxerga a delegação nem por SQL direto (RLS).
     await comoTenant(tenantB);
     expect((await cliente.query('select id from delegacoes_carteira_profissional where colaborador_usuario_id=$1', [colaboradorId])).rows).toEqual([]);

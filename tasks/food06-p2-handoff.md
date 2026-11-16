@@ -50,8 +50,12 @@ função pura (`dominio/projecao-portal-solicitacao.ts`). **Criar e cancelar pel
      provada sob lock (usuários por id → delegação → profissional → paciente) e retorna origem `colaborador`;
      `consultarAutoria` lê só restrições do próprio colaborador. Rotas `colaborador/pacientes/:id/restricoes/{registrar,consultar}`
      e `profissional/delegacoes-carteira/{listar,conceder,:id/revogar}` atrás da flag. Delegação nunca dá ação clínica.
-     Limite declarado: encerramento de tenant desativa todos os usuários sem revogar as linhas; a leitura sob lock nega
-     enquanto as contas estiverem inativas.
+     Revisão R4 (subagente de tenant, mesmo modelo): sem bloqueantes; corrigidos a ordem de locks em `arquivar` e
+     `atualizarPapel` (conta antes do perfil) e a autoria da revogação ao arquivar (ator real). Limites declarados:
+     encerramento de tenant desativa todos os usuários sem revogar as linhas (terminal; a leitura sob lock nega); o
+     invariante "cai se desativado" depende de todo escritor de `usuarios.ativo`/`role` chamar a cascata (hoje todos
+     chamam); pendência do colaborador invalida avaliação `sem_restricoes_confirmadas` como a do profissional
+     (conservador; confirmar com o proprietário); sem limite de taxa por colaborador.
    - **P2d-3 (a seguir):** vínculo de representação e portal do paciente (criar/cancelar/listar pedidos e resumo Q11).
 4. Depois: P3 (telas, UX B/C) e P4 (M04/M12, apply com impressão e invalidação de prévias).
 

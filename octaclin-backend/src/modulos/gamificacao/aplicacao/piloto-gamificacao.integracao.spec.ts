@@ -365,7 +365,7 @@ const executar = process.env.RLS_TESTCONTAINERS === 'true';
           await usuarios.desativar(prof.tenantId,gestor.usuarioId,prof.usuarioId);
           await owner!.query('update usuarios set ativo=true where tenant_id=$1 and id=$2',[prof.tenantId,prof.usuarioId]);
         } else {
-          await profissionais.arquivar(prof.tenantId,profId);
+          await profissionais.arquivar(prof.tenantId,profId,gestor.usuarioId);
           await profissionais.restaurar(prof.tenantId,profId);
         }
         expect((await publicacoes.feed(prof,r.id,{})).itens.some(p=>p.id===post.id)).toBe(false);
@@ -392,7 +392,7 @@ const executar = process.env.RLS_TESTCONTAINERS === 'true';
       await servico.atualizar(prof.tenantId,pacienteId,{profissionalResponsavelId:pr.id},gestor);
       const share=await conquistas.compartilhar(atual,pacienteId,grant.id,{chave:randomUUID(),versaoEsperada:1,compartilhado:true});
       await conquistas.consentir(patient,grant.id,{chave:randomUUID(),versaoEsperada:0,aceitar:true,geracao:share.geracao,termoVersao:TERMO_CONQUISTAS});
-      await profissionais.arquivar(prof.tenantId,profId);
+      await profissionais.arquivar(prof.tenantId,profId,gestor.usuarioId);
       expect((await conquistas.listarPortal(patient,{})).itens.some(g=>g.id===grant.id)).toBe(true);
     } finally {
       await owner!.query('update profissionais set arquivado_em=null where id=$1',[profId]);
