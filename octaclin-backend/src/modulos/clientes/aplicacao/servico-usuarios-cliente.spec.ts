@@ -81,10 +81,11 @@ function criarServico(
     find: jest.fn(async () => [] as Array<{ id: string }>),
     update: jest.fn(async () => ({ affected: 1 }))
   };
+  const consultas = jest.fn(async (_sql: string, _params?: unknown[]) => [] as unknown[]);
   const executorTenant = {
     executar: jest.fn((_tenantId: string, callback: any) =>
       callback({
-        query: jest.fn(async()=>[]),
+        query: consultas,
         getRepository: (entidade: any) => {
           if (entidade === ConcessaoPermissaoUsuarioOrm) return repositorioConcessoes;
           if (entidade === UsuarioOrm) return repositorioUsuarios;
@@ -118,6 +119,7 @@ function criarServico(
       protecaoAbuso as never
     ),
     repositorioConcessoes,
+    consultas,
     repositorioUsuarios,
     repositorioTokens,
     repositorioProfissionais,
@@ -144,6 +146,15 @@ describe('ServicoUsuariosCliente', () => {
     expect(executorTenant.executar).toHaveBeenCalledTimes(1);
     expect(repositorioConcessoes.find).toHaveBeenCalledWith(expect.objectContaining({ where: expect.objectContaining({ tenantId: 'tenant-1', usuarioId: 'profissional-1' }) }));
     expect(repositorioConcessoes.update).toHaveBeenCalledWith(expect.objectContaining({ id: 'concessao-1', tenantId: 'tenant-1', usuarioId: 'profissional-1' }), expect.objectContaining({ revogadaPor: 'gestor-1' }));
+  });
+  it.each(['desativar', 'atualizarPapel'] as const)('FOOD06 P2d-2: %s revoga delegações de carteira da conta (titular ou colaboradora) no mesmo executor', async operacao => {
+    const { servico, consultas, executorTenant } = criarServico([
+      { id: 'colaborador-1', tenantId: 'tenant-1', role: 'Collaborator', ativo: true, emailCriptografado: Buffer.from('email:sintetico@octaclin.local') }
+    ]);
+    if (operacao === 'desativar') await servico.desativar('tenant-1', 'gestor-1', 'colaborador-1');
+    else await servico.atualizarPapel('tenant-1', 'gestor-1', 'colaborador-1', { role: 'Client' } as never);
+    expect(executorTenant.executar).toHaveBeenCalledTimes(1);
+    expect(consultas.mock.calls.find(([sql]) => sql.includes('update delegacoes_carteira_profissional'))?.[1]).toEqual(['tenant-1', 'colaborador-1', 'gestor-1']);
   });
   it('deve promover colaborador, provisionar perfil profissional e revogar sessoes anteriores', async () => {
     const { servico, repositorioUsuarios, repositorioProfissionais, repositorioRefreshTokens, repositorioSessoes } = criarServico([

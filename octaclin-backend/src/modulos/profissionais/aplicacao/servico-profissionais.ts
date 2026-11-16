@@ -9,6 +9,7 @@ import { UsuarioAutenticado } from '../../auth/dominio/usuario-autenticado';
 import { UsuarioOrm } from '../../usuarios/infraestrutura/usuario.orm';
 import { RefreshTokenOrm } from '../../auth/infraestrutura/refresh-token.orm';
 import { AtualizarProfissionalDto, CriarProfissionalDto, ProfissionalRespostaDto } from './dtos';
+import { revogarDelegacoesPorAlteracaoAcesso } from './servico-delegacoes-carteira';
 import { ProfissionalOrm } from '../infraestrutura/profissional.orm';
 
 @Injectable()
@@ -145,6 +146,9 @@ export class ServicoProfissionais {
         { id: profissional.usuarioId, tenantId },
         { ativo: false }
       );
+      // FOOD06 P2d-2: restaurar reativa a conta; a delegação da carteira não pode voltar junto. O ator (SuperAdmin)
+      // pode não pertencer ao tenant, então a revogação é registrada pela própria conta afetada.
+      await revogarDelegacoesPorAlteracaoAcesso(gerenciador, tenantId, profissional.usuarioId, profissional.usuarioId);
       await gerenciador.getRepository(RefreshTokenOrm).update(
         { tenantId, usuarioId: profissional.usuarioId },
         { revogadoEm: new Date() }

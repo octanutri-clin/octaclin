@@ -12,6 +12,9 @@ import { ServicoRegistroPendenciaRestricao } from './aplicacao/servico-registro-
 import { ModuloPlanosAlimentares } from './modulo-planos-alimentares';
 import { ModuloRestricoes } from './modulo-restricoes';
 import { ControladorRestricoesClinicas } from './apresentacao/controlador-restricoes-clinicas';
+import { ControladorRestricoesColaborador } from './apresentacao/controlador-restricoes-colaborador';
+import { ControladorDelegacoesCarteira } from '../profissionais/apresentacao/controlador-delegacoes-carteira';
+import { ServicoDelegacoesCarteira } from '../profissionais/aplicacao/servico-delegacoes-carteira';
 import { CHAVE_FEATURE_FLAG, GuardaFeatureFlag } from '../../infraestrutura/feature-flags/guarda-feature-flag';
 import { GuardaJwt } from '../auth/apresentacao/guarda-jwt';
 import { GuardaPapeis } from '../auth/apresentacao/guarda-papeis';
@@ -25,12 +28,14 @@ class TenancySintetico {}
 class AuthSintetico {}
 
 describe('módulo de restrições clínicas', () => {
-  it('publica só o controlador clínico, atrás da guarda de flag restricoes.clinicas, depois da guarda JWT (P2b)', () => {
-    expect(Reflect.getMetadata('controllers', ModuloRestricoes)).toEqual([ControladorRestricoesClinicas]);
-    expect(Reflect.getMetadata(CHAVE_FEATURE_FLAG, ControladorRestricoesClinicas)).toBe('restricoes.clinicas');
-    const guardas = Reflect.getMetadata('__guards__', ControladorRestricoesClinicas) as unknown[];
-    expect(guardas).toContain(GuardaFeatureFlag);
-    expect(guardas.indexOf(GuardaJwt)).toBeLessThan(guardas.indexOf(GuardaFeatureFlag));
+  it('publica só os controladores clínico, do colaborador e da delegação, todos atrás da flag restricoes.clinicas depois da guarda JWT (P2b/P2d-2)', () => {
+    const controladores = [ControladorRestricoesClinicas, ControladorRestricoesColaborador, ControladorDelegacoesCarteira];
+    expect(Reflect.getMetadata('controllers', ModuloRestricoes)).toEqual(controladores);
+    for (const c of controladores) {
+      expect(Reflect.getMetadata(CHAVE_FEATURE_FLAG, c)).toBe('restricoes.clinicas');
+      const guardas = Reflect.getMetadata('__guards__', c) as unknown[];
+      expect(guardas).toEqual([GuardaJwt, GuardaPapeis, GuardaPermissoes, GuardaFeatureFlag]);
+    }
     expect(Reflect.getMetadata('exports', ModuloRestricoes) ?? []).toEqual([]);
   });
   it('registra os serviços no módulo de planos sem exportá-los', async () => {
@@ -51,6 +56,7 @@ describe('módulo de restrições clínicas', () => {
         expect(servico.cripto).toBeInstanceOf(CriptografiaDadosSensiveis);
         if (tipo !== ServicoRegistroPendenciaRestricao) expect(servico.concessoes).toBe(concessoes);
       }
+      expect((escopo.get(ServicoDelegacoesCarteira, { strict: true }) as unknown as { executor: unknown }).executor).toBe(executor);
       expect(Reflect.getMetadata('exports', ModuloRestricoes) ?? []).toEqual([]);
     } finally { await modulo.close(); }
   });

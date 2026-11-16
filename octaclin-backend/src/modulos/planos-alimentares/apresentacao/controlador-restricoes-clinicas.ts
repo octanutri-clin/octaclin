@@ -15,10 +15,10 @@ import { ServicoRegistroPendenciaRestricao } from '../aplicacao/servico-registro
 import { ServicoReconfirmacaoRestricao } from '../aplicacao/servico-reconfirmacao-restricao';
 import { ServicoSolicitacoesRestricao } from '../aplicacao/servico-solicitacoes-restricao';
 
-class ConsultarRestricaoDto {
+export class ConsultarRestricaoDto {
   @IsUUID() restricaoId: string;
 }
-class RegistrarPendenciaDto {
+export class RegistrarPendenciaDto {
   @IsUUID() chaveCriacao: string;
   @IsDefined() @Allow() conteudo: unknown;
 }
@@ -73,9 +73,32 @@ function projetarAcao(valor: unknown, id: string, revisao: number, campo: 'estad
   return { id: r.id, revisao: r.revisao, [campo]: esperado };
 }
 
+/** Allowlist da resposta do registro de pendência (Professional e Collaborator). */
+export function projetarRegistro(valor: unknown): Record<string, unknown> {
+  if (!valor || typeof valor !== 'object' || Array.isArray(valor)) throw new InternalServerErrorException('Operação indisponível.');
+  const r = valor as Record<string, unknown>;
+  if (typeof r.id !== 'string' || !isUUID(r.id) || !Number.isSafeInteger(r.revisao) || Number(r.revisao) < 1 ||
+    !['ativa', 'em_reavaliacao', 'inativa'].includes(r.estado as string) ||
+    !['pendente', 'confirmada', 'rejeitada'].includes(r.confirmacao as string)) throw new InternalServerErrorException('Operação indisponível.');
+  return { id: r.id, revisao: r.revisao, estado: r.estado, confirmacao: r.confirmacao };
+}
+
+/** Allowlist da leitura individual; o conteúdo é revalidado antes de sair. */
+export function projetarConsulta(entrada: unknown): Record<string, unknown> {
+  try {
+    const valor = entrada as Record<string, unknown>;
+    const conteudo = validarConteudoRestricao(valor.conteudo);
+    if (typeof valor.id !== 'string' || !isUUID(valor.id) || !Number.isSafeInteger(valor.revisao) || Number(valor.revisao) < 1 ||
+      !['profissional', 'colaborador', 'declaracao_paciente', 'questionario_legado'].includes(valor.origem as string) ||
+      !['ativa', 'em_reavaliacao', 'inativa'].includes(valor.estado as string) ||
+      !['pendente', 'confirmada', 'rejeitada'].includes(valor.confirmacao as string)) throw new Error('Projeção inválida.');
+    return { id: valor.id, revisao: valor.revisao, origem: valor.origem, estado: valor.estado, confirmacao: valor.confirmacao, conteudo };
+  } catch { throw new InternalServerErrorException('Operação indisponível.'); }
+}
+
 /** Sanitiza erros inclusive das guardas; não registra conteúdo nem causa. */
 @Catch()
-class FiltroRestricoesClinicas implements ExceptionFilter {
+export class FiltroRestricoesClinicas implements ExceptionFilter {
   catch(erro: unknown, host: ArgumentsHost): void {
     const resposta = host.switchToHttp().getResponse<Response>();
     const original = erro instanceof HttpException ? erro.getStatus() : 500;
@@ -169,13 +192,7 @@ export class ControladorRestricoesClinicas {
     @Body() dados: RegistrarPendenciaDto): Promise<unknown> {
     let conteudo: ReturnType<typeof validarConteudoRestricao>;
     try { conteudo = validarConteudoRestricao(dados.conteudo); } catch { throw new HttpException('Solicitação inválida.', 400); }
-    const valor = await this.registro.registrar(usuario, pacienteId, { chaveCriacao: dados.chaveCriacao, conteudo });
-    if (!valor || typeof valor !== 'object' || Array.isArray(valor)) throw new InternalServerErrorException('Operação indisponível.');
-    const r = valor as Record<string, unknown>;
-    if (typeof r.id !== 'string' || !isUUID(r.id) || !Number.isSafeInteger(r.revisao) || Number(r.revisao) < 1 ||
-      !['ativa', 'em_reavaliacao', 'inativa'].includes(r.estado as string) ||
-      !['pendente', 'confirmada', 'rejeitada'].includes(r.confirmacao as string)) throw new InternalServerErrorException('Operação indisponível.');
-    return { id: r.id, revisao: r.revisao, estado: r.estado, confirmacao: r.confirmacao };
+    return projetarRegistro(await this.registro.registrar(usuario, pacienteId, { chaveCriacao: dados.chaveCriacao, conteudo }));
   }
 
   @Post('consultar')
@@ -184,15 +201,7 @@ export class ControladorRestricoesClinicas {
   @Header('Cache-Control', 'private, no-store')
   async consultar(@UsuarioAtual() usuario: UsuarioAutenticado, @Param('pacienteId', ParseUUIDPipe) pacienteId: string,
     @Body() dados: ConsultarRestricaoDto): Promise<unknown> {
-    const valor = await this.leitura.consultar(usuario, pacienteId, dados.restricaoId) as Record<string, unknown>;
-    try {
-      const conteudo = validarConteudoRestricao(valor.conteudo);
-      if (typeof valor.id !== 'string' || !isUUID(valor.id) || !Number.isSafeInteger(valor.revisao) || Number(valor.revisao) < 1 ||
-        !['profissional', 'colaborador', 'declaracao_paciente', 'questionario_legado'].includes(valor.origem as string) ||
-        !['ativa', 'em_reavaliacao', 'inativa'].includes(valor.estado as string) ||
-        !['pendente', 'confirmada', 'rejeitada'].includes(valor.confirmacao as string)) throw new Error('Projeção inválida.');
-      return { id: valor.id, revisao: valor.revisao, origem: valor.origem, estado: valor.estado, confirmacao: valor.confirmacao, conteudo };
-    } catch { throw new InternalServerErrorException('Operação indisponível.'); }
+    return projetarConsulta(await this.leitura.consultar(usuario, pacienteId, dados.restricaoId));
   }
 
   @Post(':restricaoId/confirmar') @HttpCode(200) @Permissoes('pacientes.ler', 'pacientes.gerenciar') @Header('Cache-Control', 'private, no-store')

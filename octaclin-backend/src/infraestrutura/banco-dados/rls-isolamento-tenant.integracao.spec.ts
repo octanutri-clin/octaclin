@@ -82,6 +82,8 @@ import { AvaliacaoRestricoesPacienteOrm } from '../../modulos/planos-alimentares
 import { RevisaoAvaliacaoRestricoesOrm } from '../../modulos/planos-alimentares/infraestrutura/revisao-avaliacao-restricoes.orm';
 import { ReconfirmacaoRestricoesOrm } from '../../modulos/planos-alimentares/infraestrutura/reconfirmacao-restricoes.orm';
 import { SolicitacaoRestricaoPacienteOrm } from '../../modulos/planos-alimentares/infraestrutura/solicitacao-restricao-paciente.orm';
+import { DelegacaoCarteiraProfissionalOrm } from '../../modulos/profissionais/infraestrutura/delegacao-carteira-profissional.orm';
+import { revogarDelegacoesPorAlteracaoAcesso, ServicoDelegacoesCarteira } from '../../modulos/profissionais/aplicacao/servico-delegacoes-carteira';
 import { cifrarConteudoRestricao, decifrarConteudoRestricao, cifrarCampo, decifrarCampo } from '../../modulos/planos-alimentares/infraestrutura/codec-conteudo-restricao';
 import { ExecutionContext, UnauthorizedException } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
@@ -291,6 +293,7 @@ descrever('RLS e isolamento multi-tenant integral em Postgres real', () => {
         RevisaoAvaliacaoRestricoesOrm,
         ReconfirmacaoRestricoesOrm,
         SolicitacaoRestricaoPacienteOrm,
+        DelegacaoCarteiraProfissionalOrm,
         PermissaoIntegracaoProfissionalOrm,
         UserActionLogOrm,
         NotificacaoOrm,
@@ -2742,6 +2745,151 @@ descrever('RLS e isolamento multi-tenant integral em Postgres real', () => {
     // Outro tenant não enxerga as solicitações nem por SQL direto (RLS).
     await comoTenant(tenantB);
     expect((await cliente.query('select id from solicitacoes_restricoes_pacientes where id=$1', [pedido])).rows).toEqual([]);
+  }, 120_000);
+
+  it('P2d-2: colaborador com carteira delegada registra pendência, lê só a própria e perde o acesso ao revogar, sob RLS e locks reais', async () => {
+    if (!cliente || !executorTenant) throw new Error('ExecutorTenant da prova RLS nao foi inicializado.');
+    const tenant = randomUUID();
+    await cliente.query('insert into tenants (id, nome, slug) values ($1, $2, $3)', [tenant, 'Prova P2d-2 sintetica', `prova-p2d2-${tenant}`]);
+    const dados = await prepararDadosRepresentativos(tenant, `p2d2-${randomUUID()}`);
+    const outro = await prepararDadosRepresentativos(tenant, `p2d2-outro-${randomUUID()}`);
+    const criarUsuario = async (t: string, role: string) => {
+      await comoTenant(t);
+      return (await cliente!.query<{ id: string }>(`insert into usuarios (tenant_id, email_hash, email_criptografado, senha_hash, role)
+        values ($1, $2, $3, 'prova-rls-senha', $4) returning id`, [t, `prova-p2d2-${randomUUID()}`, Buffer.from('usuario-sintetico'), role])).rows[0].id;
+    };
+    const colaboradorId = await criarUsuario(tenant, 'Collaborator');
+    const colaboradorOutroTenant = await criarUsuario(tenantB, 'Collaborator');
+    const titular: UsuarioAutenticado = { tenantId: tenant, usuarioId: dados.usuarioId, papel: 'Professional', emailHash: '', permissoes: [] };
+    const titularOutro: UsuarioAutenticado = { tenantId: tenant, usuarioId: outro.usuarioId, papel: 'Professional', emailHash: '', permissoes: [] };
+    const colaborador: UsuarioAutenticado = { tenantId: tenant, usuarioId: colaboradorId, papel: 'Collaborator', emailHash: '', permissoes: [] };
+    const crypto = new CriptografiaDadosSensiveis();
+    const concessoes = new ServicoConcessoesPermissao(executorTenant);
+    const delegacoes = new ServicoDelegacoesCarteira(executorTenant);
+    const registro = new ServicoRegistroPendenciaRestricao(executorTenant, crypto);
+    const leitura = new ServicoLeituraRestricao(executorTenant, crypto, concessoes);
+    const confirmar = new ServicoConfirmacaoRestricao(executorTenant, crypto, concessoes);
+    const conteudo = { schemaVersao: 1, natureza: 'clinica', subtipoClinico: 'alergia_alimentar', alvo: { tipo: 'alimento', id: 'alvo-sintetico' } };
+    const pendencia = (u: UsuarioAutenticado, paciente: string, r = registro) => r.registrar(u, paciente, { chaveCriacao: randomUUID(), conteudo }) as Promise<{ id: string }>;
+    const ativas = async () => { await comoTenant(tenant); return (await cliente!.query('select id, revogada_por from delegacoes_carteira_profissional where colaborador_usuario_id=$1 and revogada_em is null', [colaboradorId])).rows; };
+
+    // Sem delegação: o colaborador não registra nem lê.
+    await expect(pendencia(colaborador, dados.pacienteId)).rejects.toMatchObject({ status: 403 });
+    // Alvos inelegíveis: o próprio titular, um Professional, um colaborador de outro tenant (invisível sob RLS).
+    for (const alvo of [dados.usuarioId, outro.usuarioId, colaboradorOutroTenant]) await expect(delegacoes.conceder(titular, alvo)).rejects.toMatchObject({ status: 403 });
+    // Concessões simultâneas deixam uma única delegação vigente.
+    const corrida = await Promise.allSettled([delegacoes.conceder(titular, colaboradorId), delegacoes.conceder(titular, colaboradorId)]);
+    expect(corrida.some(r => r.status === 'fulfilled')).toBe(true);
+    for (const r of corrida) if (r.status === 'rejected') expect(r.reason).toMatchObject({ status: 409 });
+    const vigentes = await ativas(); expect(vigentes).toHaveLength(1);
+    await expect(delegacoes.conceder(titular, colaboradorId)).resolves.toMatchObject({ id: vigentes[0].id, colaboradorUsuarioId: colaboradorId });
+    expect((await cliente.query('select acao, metadados from user_action_logs where recurso_id=$1', [vigentes[0].id])).rows)
+      .toEqual([{ acao: 'carteira.delegacao.conceder', metadados: {} }]);
+    expect(await delegacoes.listar(titularOutro)).toEqual([]);
+    await expect(delegacoes.revogar(titularOutro, vigentes[0].id)).rejects.toMatchObject({ status: 403 });
+
+    // Com delegação: registra pendência na carteira do titular (origem colaborador), não na de outro profissional.
+    const propria = await pendencia(colaborador, dados.pacienteId);
+    await comoTenant(tenant);
+    expect((await cliente.query('select origem, confirmacao, autor_usuario_id from restricoes_pacientes where id=$1', [propria.id])).rows)
+      .toEqual([{ origem: 'colaborador', confirmacao: 'pendente', autor_usuario_id: colaboradorId }]);
+    await expect(pendencia(colaborador, outro.pacienteId)).rejects.toMatchObject({ status: 403 });
+    await expect(pendencia(colaborador, pacienteIdTenantB)).rejects.toMatchObject({ status: 403 });
+    // Lê só o que ele mesmo registrou; a restrição do titular é indistinguível de inexistente.
+    await expect(leitura.consultarAutoria(colaborador, dados.pacienteId, propria.id)).resolves.toMatchObject({ id: propria.id, origem: 'colaborador', conteudo });
+    const doTitular = await pendencia(titular, dados.pacienteId);
+    await expect(leitura.consultarAutoria(colaborador, dados.pacienteId, doTitular.id)).rejects.toMatchObject({ status: 403 });
+    // Delegação nunca dá ação clínica, mesmo com linha de concessão forjada no banco.
+    await comoTenant(tenant);
+    await cliente.query(`insert into concessoes_permissao_usuario (tenant_id, usuario_id, permissao, concedida_por, motivo)
+      values ($1, $2, 'restricoes.confirmar', $3, 'habilitacao_administrativa')`, [tenant, colaboradorId, dados.usuarioId]);
+    await expect(confirmar.confirmar(colaborador, dados.pacienteId, propria.id, 1)).rejects.toMatchObject({ status: 403 });
+    await expect(leitura.consultar(colaborador, dados.pacienteId, propria.id)).rejects.toMatchObject({ status: 403 });
+
+    // Troca de responsável: a delegação segue a carteira ATUAL.
+    await comoTenant(tenant);
+    await cliente.query('update pacientes set profissional_responsavel_id=$2 where id=$1', [dados.pacienteId, outro.profissionalId]);
+    await expect(pendencia(colaborador, dados.pacienteId)).rejects.toMatchObject({ status: 403 });
+    await expect(leitura.consultarAutoria(colaborador, dados.pacienteId, propria.id)).rejects.toMatchObject({ status: 403 });
+    await cliente.query('update pacientes set profissional_responsavel_id=$2 where id=$1', [dados.pacienteId, dados.profissionalId]);
+    await expect(pendencia(colaborador, dados.pacienteId)).resolves.toMatchObject({ revisao: 1 });
+    // Troca CONCORRENTE: a leitura prévia vê o responsável antigo, mas o lock final do paciente reavalia a carteira
+    // depois do commit da troca e nega (falha fechado).
+    let liberarTroca!: () => void, avisarTroca!: (pid: number) => void;
+    const esperaTroca = new Promise<void>(r => { liberarTroca = r; }), trocaPronta = new Promise<number>(r => { avisarTroca = r; });
+    const troca = executorTenant.executar(tenant, async g => {
+      await g.query('update pacientes set profissional_responsavel_id=$2 where id=$1', [dados.pacienteId, outro.profissionalId]);
+      avisarTroca((await g.query('select pg_backend_pid()::int as pid'))[0].pid as number); await esperaTroca;
+    });
+    let escritaDuranteTroca: Promise<unknown> | undefined;
+    try {
+      const pidTroca = await Promise.race([trocaPronta, troca.then(() => { throw new Error('Transação encerrou cedo.'); })]);
+      escritaDuranteTroca = pendencia(colaborador, dados.pacienteId).then(() => 'permitida', e => e);
+      for (let i = 0; ; i++) {
+        const b = await cliente.query<{ bloqueada: boolean }>('select exists(select 1 from pg_stat_activity a where $1 = any(pg_blocking_pids(a.pid))) as bloqueada', [pidTroca]);
+        if (b.rows[0].bloqueada) break;
+        if (i > 200) throw new Error('A escrita não chegou ao lock do paciente.');
+        await new Promise(r => setTimeout(r, 25));
+      }
+    } finally { liberarTroca(); await troca; }
+    expect(await escritaDuranteTroca).toMatchObject({ status: 403 });
+    await comoTenant(tenant);
+    await cliente.query('update pacientes set profissional_responsavel_id=$2 where id=$1', [dados.pacienteId, dados.profissionalId]);
+
+    // Corrida 1: escrita do colaborador em curso → a revogação espera (lock_timeout curto prova o bloqueio).
+    let liberar!: () => void, avisar!: () => void;
+    const espera = new Promise<void>(r => { liberar = r; }), pronta = new Promise<void>(r => { avisar = r; });
+    const segura = { executar: <T>(t: string, fn: (g: EntityManager) => Promise<T>) => executorTenant!.executar(t, async g => { const r = await fn(g); avisar(); await espera; return r; }) };
+    const prazo = { executar: <T>(t: string, fn: (g: EntityManager) => Promise<T>) => executorTenant!.executar(t, async g => { await g.query("set local lock_timeout = '200ms'"); return fn(g); }) };
+    const escrita = pendencia(colaborador, dados.pacienteId, new ServicoRegistroPendenciaRestricao(segura as ExecutorTenant, crypto));
+    try {
+      await Promise.race([pronta, escrita.then(() => { throw new Error('Transação encerrou cedo.'); })]);
+      await expect(new ServicoDelegacoesCarteira(prazo as ExecutorTenant).revogar(titular, vigentes[0].id)).rejects.toMatchObject({ status: 409 });
+    } finally { liberar(); await escrita; }
+    expect(await ativas()).toHaveLength(1);
+
+    // Corrida 2: revogação em curso → a escrita espera e, depois do commit, é negada (relê sob lock).
+    let liberarRev!: () => void, avisarRev!: () => void;
+    const esperaRev = new Promise<void>(r => { liberarRev = r; }), prontaRev = new Promise<void>(r => { avisarRev = r; });
+    const seguraRev = { executar: <T>(t: string, fn: (g: EntityManager) => Promise<T>) => executorTenant!.executar(t, async g => { const r = await fn(g); avisarRev(); await esperaRev; return r; }) };
+    const revogacao = new ServicoDelegacoesCarteira(seguraRev as ExecutorTenant).revogar(titular, vigentes[0].id);
+    try {
+      await Promise.race([prontaRev, revogacao.then(() => { throw new Error('Transação encerrou cedo.'); })]);
+      await expect(pendencia(colaborador, dados.pacienteId, new ServicoRegistroPendenciaRestricao(prazo as ExecutorTenant, crypto))).rejects.toMatchObject({ status: 409 });
+    } finally { liberarRev(); await revogacao; }
+    expect(await ativas()).toEqual([]);
+    await expect(pendencia(colaborador, dados.pacienteId)).rejects.toMatchObject({ status: 403 });
+    await expect(leitura.consultarAutoria(colaborador, dados.pacienteId, propria.id)).rejects.toMatchObject({ status: 403 });
+    await expect(delegacoes.revogar(titular, vigentes[0].id)).resolves.toEqual({ id: vigentes[0].id, revogada: true });
+    expect((await cliente.query('select acao from user_action_logs where recurso_id=$1 order by acao', [vigentes[0].id])).rows.map(r => r.acao))
+      .toEqual(['carteira.delegacao.conceder', 'carteira.delegacao.revogar']);
+    // A linha revogada é histórico: nem o runtime a reabre.
+    await comoTenant(tenant);
+    await expect(cliente.query('update delegacoes_carteira_profissional set revogada_por=null, revogada_em=null where id=$1', [vigentes[0].id])).rejects.toMatchObject({ code: '23514' });
+
+    // Nova delegação; desativar o colaborador (cascata Auth-2) derruba a delegação e o acesso.
+    const nova = await delegacoes.conceder(titular, colaboradorId);
+    await expect(pendencia(colaborador, dados.pacienteId)).resolves.toMatchObject({ revisao: 1 });
+    await executorTenant.executar(tenant, async g => {
+      await g.query('update usuarios set ativo=false where id=$1', [colaboradorId]);
+      await revogarDelegacoesPorAlteracaoAcesso(g, tenant, colaboradorId, dados.usuarioId);
+    });
+    await comoTenant(tenant);
+    expect((await cliente.query('select revogada_por, revogada_em is not null as revogada from delegacoes_carteira_profissional where id=$1', [nova.id])).rows)
+      .toEqual([{ revogada_por: dados.usuarioId, revogada: true }]);
+    await cliente.query('update usuarios set ativo=true where id=$1', [colaboradorId]);
+    await expect(pendencia(colaborador, dados.pacienteId)).rejects.toMatchObject({ status: 403 });
+
+    // Titular desativado: mesmo com a delegação vigente no registro, a leitura sob lock nega.
+    await delegacoes.conceder(titular, colaboradorId);
+    await comoTenant(tenant);
+    await cliente.query('update usuarios set ativo=false where id=$1', [dados.usuarioId]);
+    await expect(pendencia(colaborador, dados.pacienteId)).rejects.toMatchObject({ status: 403 });
+    await expect(delegacoes.listar(titular)).rejects.toMatchObject({ status: 403 });
+    await cliente.query('update usuarios set ativo=true where id=$1', [dados.usuarioId]);
+    // Outro tenant não enxerga a delegação nem por SQL direto (RLS).
+    await comoTenant(tenantB);
+    expect((await cliente.query('select id from delegacoes_carteira_profissional where colaborador_usuario_id=$1', [colaboradorId])).rows).toEqual([]);
   }, 120_000);
 
   it('FOOD03 protege favoritos com FORCE RLS e oculta registros ao trocar tenant', async () => {

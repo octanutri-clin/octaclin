@@ -3,6 +3,7 @@ import { UsuarioOrm } from '../../usuarios/infraestrutura/usuario.orm';
 import { ProfissionalOrm } from '../../profissionais/infraestrutura/profissional.orm';
 import { PacienteOrm } from '../../pacientes/infraestrutura/paciente.orm';
 import type { UsuarioAutenticado } from '../../auth/dominio/usuario-autenticado';
+import * as delegacoes from '../../profissionais/aplicacao/servico-delegacoes-carteira';
 import { autorizarPendenciaRestricao } from './autorizacao-pendencia-restricao';
 
 const tenant = '11111111-1111-4111-8111-111111111111';
@@ -21,7 +22,6 @@ function preparar() {
 }
 describe('autorização para registrar pendência', () => {
   it.todo('permitir Patient após garantir unicidade do vínculo em todos os escritores e testar concorrência');
-  it.todo('permitir Collaborator após comprovar carteira delegada e testar outro profissional');
   it('permite profissional ativo da carteira sem exigir concessão clínica', async () => {
     const c = preparar(); await expect(c.chamar()).resolves.toBe('profissional');
     expect(c.paciente.findOne).toHaveBeenCalledWith(expect.objectContaining({ where: expect.objectContaining({ id: pacienteId, tenantId: tenant, profissionalResponsavelId: 'profissional' }), lock: { mode: 'pessimistic_write' } }));
@@ -38,9 +38,22 @@ describe('autorização para registrar pendência', () => {
     const c = preparar(); c.usuario.findOne.mockResolvedValueOnce({ id: 'usuario', role: 'Patient', ativo: true });
     await expect(c.chamar({ ...ator, papel: 'Patient' })).rejects.toBeInstanceOf(ForbiddenException);
   });
-  it('mantém colaborador fechado até comprovar carteira delegada', async () => {
-    const c = preparar(); c.usuario.findOne.mockResolvedValueOnce({ id: 'usuario', role: 'Collaborator', ativo: true });
-    await expect(c.chamar({ ...ator, papel: 'Collaborator' })).rejects.toBeInstanceOf(ForbiddenException);
+  describe('Collaborator (P2d-2)', () => {
+    afterEach(() => jest.restoreAllMocks());
+    it('com delegação vigente do responsável atual registra como colaborador, sem tocar no caminho do profissional', async () => {
+      const c = preparar(); const prova = jest.spyOn(delegacoes, 'autorizarColaboradorDelegado').mockResolvedValue(undefined);
+      await expect(c.chamar({ ...ator, papel: 'Collaborator' })).resolves.toBe('colaborador');
+      expect(prova).toHaveBeenCalledWith(c.g, tenant, usuarioId, pacienteId);
+      expect(c.profissional.findOne).not.toHaveBeenCalled(); expect(c.paciente.findOne).not.toHaveBeenCalled();
+    });
+    it('sem delegação vigente (prova falha) nega', async () => {
+      const c = preparar(); jest.spyOn(delegacoes, 'autorizarColaboradorDelegado').mockRejectedValue(new ForbiddenException('Operação não autorizada.'));
+      await expect(c.chamar({ ...ator, papel: 'Collaborator' })).rejects.toBeInstanceOf(ForbiddenException);
+    });
+    it('Professional nunca usa o caminho da delegação', async () => {
+      const c = preparar(); const prova = jest.spyOn(delegacoes, 'autorizarColaboradorDelegado');
+      await expect(c.chamar()).resolves.toBe('profissional'); expect(prova).not.toHaveBeenCalled();
+    });
   });
   it.each(['SuperAdmin', 'Client'] as const)('nega papel %s', async papel => {
     const c = preparar(); await expect(c.chamar({ ...ator, papel })).rejects.toBeInstanceOf(ForbiddenException);

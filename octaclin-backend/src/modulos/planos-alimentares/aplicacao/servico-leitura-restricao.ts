@@ -1,5 +1,6 @@
 import { BadRequestException, ConflictException, ForbiddenException, Injectable } from '@nestjs/common';
 import { isUUID } from 'class-validator';
+import type { EntityManager } from 'typeorm';
 import { ExecutorTenant } from '../../../infraestrutura/banco-dados/executor-tenant';
 import { CriptografiaDadosSensiveis } from '../../../infraestrutura/seguranca/criptografia-dados-sensiveis';
 import { registrarAuditoriaNaTransacao } from '../../../infraestrutura/auditoria/servico-auditoria';
@@ -9,10 +10,11 @@ import { RestricaoPacienteOrm } from '../infraestrutura/restricao-paciente.orm';
 import { RevisaoRestricaoPacienteOrm } from '../infraestrutura/revisao-restricao-paciente.orm';
 import { decifrarConteudoRestricao } from '../infraestrutura/codec-conteudo-restricao';
 import { autorizarRestricaoClinica } from './autorizacao-restricao-clinica';
+import { autorizarPendenciaRestricao } from './autorizacao-pendencia-restricao';
 import { exigirReadCommitted } from './integridade-avaliacao-restricoes';
 import { falharRestricao } from './falha-restricao';
 
-/** Leitura clínica individual; ainda não exposta por HTTP na aplicação. */
+/** Leitura individual: clínica (Professional com concessão) ou de autoria (Collaborator delegado, P2d-2). */
 @Injectable()
 export class ServicoLeituraRestricao {
   constructor(private readonly executor: ExecutorTenant, private readonly cripto: CriptografiaDadosSensiveis,
@@ -25,7 +27,29 @@ export class ServicoLeituraRestricao {
     try { return await this.executor.executar(usuario.tenantId, async g => {
       await exigirReadCommitted(g);
       await autorizarRestricaoClinica(g, this.concessoes, usuario, pacienteId);
-      const linha = await g.getRepository(RestricaoPacienteOrm).findOne({ where: { id: restricaoId, tenantId: usuario.tenantId, pacienteId },
+      return this.lerVerificada(g, usuario, pacienteId, restricaoId, {}, 'restricoes.consultar');
+    }); } catch (erro) { return falharRestricao(erro); }
+  }
+
+  /**
+   * FOOD06 P2d-2 (Q6): o Collaborator com carteira delegada lê só restrições de SUA autoria, nunca as dos outros
+   * nem a decisão clínica além do estado. Mesma verificação de histórico e codec da leitura clínica.
+   */
+  async consultarAutoria(usuario: UsuarioAutenticado, pacienteId: string, restricaoId: string): Promise<unknown> {
+    if (!usuario || !isUUID(usuario.tenantId) || !isUUID(usuario.usuarioId) || !isUUID(pacienteId) || !isUUID(restricaoId)) throw new BadRequestException('Solicitação inválida.');
+    if (usuario.papel !== 'Collaborator') throw new ForbiddenException('Operação não autorizada.');
+    usuario = { ...usuario, tenantId: usuario.tenantId.toLowerCase(), usuarioId: usuario.usuarioId.toLowerCase() };
+    pacienteId = pacienteId.toLowerCase(); restricaoId = restricaoId.toLowerCase();
+    try { return await this.executor.executar(usuario.tenantId, async g => {
+      await exigirReadCommitted(g);
+      if (await autorizarPendenciaRestricao(g, usuario, pacienteId) !== 'colaborador') throw new ForbiddenException('Operação não autorizada.');
+      return this.lerVerificada(g, usuario, pacienteId, restricaoId, { autorUsuarioId: usuario.usuarioId }, 'restricoes.consultar_autoria');
+    }); } catch (erro) { return falharRestricao(erro); }
+  }
+
+  private async lerVerificada(g: EntityManager, usuario: UsuarioAutenticado, pacienteId: string, restricaoId: string,
+    filtro: { autorUsuarioId?: string }, acao: string): Promise<unknown> {
+      const linha = await g.getRepository(RestricaoPacienteOrm).findOne({ where: { id: restricaoId, tenantId: usuario.tenantId, pacienteId, ...filtro },
         select: { id: true, revisao: true, origem: true, estado: true, confirmacao: true, conteudoCriptografado: true } });
       if (!linha) throw new ForbiddenException('Operação não autorizada.');
       const base = { tenantId: usuario.tenantId, pacienteId, restricaoId, revisao: linha.revisao };
@@ -42,8 +66,7 @@ export class ServicoLeituraRestricao {
       const historico = decifrarConteudoRestricao(this.cripto, anterior.conteudoCriptografado, { ...base, finalidade: 'revisao_restricao' });
       if (JSON.stringify(conteudo) !== JSON.stringify(historico)) throw new ConflictException('Restrição indisponível.');
       await registrarAuditoriaNaTransacao(g, { tenantId: usuario.tenantId, usuarioId: usuario.usuarioId,
-        acao: 'restricoes.consultar', recursoTipo: 'restricao_paciente', recursoId: restricaoId, metadados: {} });
+        acao, recursoTipo: 'restricao_paciente', recursoId: restricaoId, metadados: {} });
       return { id: linha.id, revisao: linha.revisao, origem: linha.origem, estado: linha.estado, confirmacao: linha.confirmacao, conteudo };
-    }); } catch (erro) { return falharRestricao(erro); }
   }
 }

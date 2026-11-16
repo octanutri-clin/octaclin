@@ -42,6 +42,17 @@ função pura (`dominio/projecao-portal-solicitacao.ts`). **Criar e cancelar pel
 3. **P2d — carteiras e vínculos:** delegação da carteira pelo titular ao Collaborator e vínculo de representação
    separado de `pacientes.usuario_id` (vários representados por conta), conforme
    `tasks/food06-p2-plano-carteiras-vinculos.md`. Migrations novas; ensaio só em banco descartável.
+   - **P2d-1 (#550, mergeada):** migration 1085 com as duas tabelas vazias (nunca aplicada em ambiente real).
+   - **P2d-2 (branch `claude/food06-p2d2-delegacao-colaborador`):** `ServicoDelegacoesCarteira` (listar/conceder/revogar só
+     pelo titular Professional ativo; alvo Collaborator ativo do tenant; nunca o próprio titular nem SuperAdmin); cascata ao
+     desativar, trocar papel (`servico-usuarios-cliente`) e arquivar profissional (`servico-profissionais`, para restaurar não
+     reviver a delegação); `autorizarPendenciaRestricao` aceita Collaborator com delegação vigente do responsável ATUAL,
+     provada sob lock (usuários por id → delegação → profissional → paciente) e retorna origem `colaborador`;
+     `consultarAutoria` lê só restrições do próprio colaborador. Rotas `colaborador/pacientes/:id/restricoes/{registrar,consultar}`
+     e `profissional/delegacoes-carteira/{listar,conceder,:id/revogar}` atrás da flag. Delegação nunca dá ação clínica.
+     Limite declarado: encerramento de tenant desativa todos os usuários sem revogar as linhas; a leitura sob lock nega
+     enquanto as contas estiverem inativas.
+   - **P2d-3 (a seguir):** vínculo de representação e portal do paciente (criar/cancelar/listar pedidos e resumo Q11).
 4. Depois: P3 (telas, UX B/C) e P4 (M04/M12, apply com impressão e invalidação de prévias).
 
 

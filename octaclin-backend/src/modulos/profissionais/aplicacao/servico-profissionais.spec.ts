@@ -39,11 +39,12 @@ describe('ServicoProfissionais', () => {
     };
     const repositorioUsuarios = { update: jest.fn(async () => ({ affected: 1 })) };
     const repositorioRefreshTokens = { update: jest.fn(async () => ({ affected: 1 })) };
+    const query = jest.fn(async (_sql: string, _params?: unknown[]) => [] as unknown[]);
     const servico = new ServicoProfissionais(
       {
         executar: jest.fn((_tenantId: string, operacao: (gerenciador: unknown) => Promise<unknown>) =>
           operacao({
-            query: jest.fn(async () => []),
+            query,
             getRepository: jest.fn((entidade: unknown) => {
               if (entidade === ProfissionalOrm) return repositorioProfissionais;
               if (entidade === UsuarioOrm) return repositorioUsuarios;
@@ -67,6 +68,8 @@ describe('ServicoProfissionais', () => {
       { tenantId: 'tenant-1', usuarioId: 'usuario-1' },
       { revogadoEm: expect.any(Date) }
     );
+    // FOOD06 P2d-2: a delegação da carteira cai junto e não volta ao restaurar.
+    expect(query.mock.calls.find(([sql]) => sql.includes('update delegacoes_carteira_profissional'))?.[1]).toEqual(['tenant-1', 'usuario-1', 'usuario-1']);
   });
 
   it('deve listar profissionais arquivados sem misturar ativos', async () => {

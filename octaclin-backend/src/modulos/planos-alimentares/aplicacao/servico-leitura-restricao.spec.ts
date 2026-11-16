@@ -2,12 +2,14 @@ import { BadRequestException, ConflictException, ForbiddenException, InternalSer
 import { inspect } from 'node:util';
 import { ServicoLeituraRestricao } from './servico-leitura-restricao';
 import { autorizarRestricaoClinica } from './autorizacao-restricao-clinica';
+import { autorizarPendenciaRestricao } from './autorizacao-pendencia-restricao';
 import { decifrarConteudoRestricao } from '../infraestrutura/codec-conteudo-restricao';
 import { registrarAuditoriaNaTransacao } from '../../../infraestrutura/auditoria/servico-auditoria';
 import { RestricaoPacienteOrm } from '../infraestrutura/restricao-paciente.orm';
 import { RevisaoRestricaoPacienteOrm } from '../infraestrutura/revisao-restricao-paciente.orm';
 
 jest.mock('./autorizacao-restricao-clinica', () => ({ autorizarRestricaoClinica: jest.fn(async () => undefined) }));
+jest.mock('./autorizacao-pendencia-restricao', () => ({ autorizarPendenciaRestricao: jest.fn(async () => 'colaborador') }));
 jest.mock('../infraestrutura/codec-conteudo-restricao', () => ({ decifrarConteudoRestricao: jest.fn(() => ({ schemaVersao: 1, natureza: 'clinica', subtipoClinico: 'alergia_alimentar', alvo: { tipo: 'alimento', id: 'sintetico' } })) }));
 jest.mock('../../../infraestrutura/auditoria/servico-auditoria', () => ({ registrarAuditoriaNaTransacao: jest.fn(async () => undefined) }));
 const ator = { tenantId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', usuarioId: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', papel: 'Professional' } as const;
@@ -23,7 +25,7 @@ function preparar() {
   }) };
   const executor = { executar: jest.fn(async (_tenant: string, fn: (g: unknown) => unknown) => fn(g)) };
   const servico = new ServicoLeituraRestricao(executor as never, {} as never, {} as never);
-  return { linha, atual, revisoes, g, executor, consultar: () => servico.consultar(ator as never, paciente, id) };
+  return { linha, atual, revisoes, g, executor, servico, consultar: () => servico.consultar(ator as never, paciente, id) };
 }
 beforeEach(() => jest.clearAllMocks());
 describe('leitura clínica de restrição', () => {
@@ -82,5 +84,38 @@ describe('leitura clínica de restrição', () => {
   it('rejeita identificadores inválidos antes da transação', async () => {
     const c = preparar(); const servico = new ServicoLeituraRestricao(c.executor as never, {} as never, {} as never);
     await expect(servico.consultar(ator as never, 'invalido', id)).rejects.toBeInstanceOf(BadRequestException); expect(c.executor.executar).not.toHaveBeenCalled();
+  });
+});
+
+describe('leitura de autoria do colaborador (P2d-2)', () => {
+  const colaborador = { ...ator, papel: 'Collaborator' } as const;
+  it('prova a delegação antes de ler e filtra pela autoria do próprio colaborador, sem concessão clínica', async () => {
+    const c = preparar(); c.linha.origem = 'colaborador';
+    const r = await c.servico.consultarAutoria(colaborador as never, paciente, id);
+    expect(autorizarPendenciaRestricao).toHaveBeenCalledWith(c.g, colaborador, paciente);
+    expect(autorizarRestricaoClinica).not.toHaveBeenCalled();
+    expect(c.atual.findOne).toHaveBeenCalledWith(expect.objectContaining({ where: { id, tenantId: ator.tenantId, pacienteId: paciente, autorUsuarioId: ator.usuarioId } }));
+    expect(jest.mocked(autorizarPendenciaRestricao).mock.invocationCallOrder[0]).toBeLessThan(c.atual.findOne.mock.invocationCallOrder[0]);
+    expect(r).toMatchObject({ id, origem: 'colaborador' });
+    expect(registrarAuditoriaNaTransacao).toHaveBeenCalledWith(c.g, expect.objectContaining({ acao: 'restricoes.consultar_autoria', recursoId: id, metadados: {} }));
+  });
+  it('restrição de outro autor é indistinguível de inexistente (403)', async () => {
+    const c = preparar(); c.atual.findOne.mockResolvedValueOnce(null as never);
+    await expect(c.servico.consultarAutoria(colaborador as never, paciente, id)).rejects.toMatchObject({ status: 403, message: 'Operação não autorizada.' });
+  });
+  it.each(['Professional', 'Patient', 'SuperAdmin', 'Client'] as const)('papel %s não usa a leitura de autoria', async papel => {
+    const c = preparar();
+    await expect(c.servico.consultarAutoria({ ...ator, papel } as never, paciente, id)).rejects.toBeInstanceOf(ForbiddenException);
+    expect(c.executor.executar).not.toHaveBeenCalled();
+  });
+  it('sem delegação vigente nega antes de ler', async () => {
+    const c = preparar(); jest.mocked(autorizarPendenciaRestricao).mockRejectedValueOnce(new ForbiddenException());
+    await expect(c.servico.consultarAutoria(colaborador as never, paciente, id)).rejects.toBeInstanceOf(ForbiddenException);
+    expect(c.atual.findOne).not.toHaveBeenCalled();
+  });
+  it('se a autorização não for a do colaborador, nega', async () => {
+    const c = preparar(); jest.mocked(autorizarPendenciaRestricao).mockResolvedValueOnce('profissional');
+    await expect(c.servico.consultarAutoria(colaborador as never, paciente, id)).rejects.toBeInstanceOf(ForbiddenException);
+    expect(c.atual.findOne).not.toHaveBeenCalled();
   });
 });
