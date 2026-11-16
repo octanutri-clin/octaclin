@@ -15,6 +15,8 @@ export function falharRestricao(erro: unknown, conflitoCriacao = false): never {
   if (conflitoCriacao && code === '23505' && constraint === 'ux_restricoes_pacientes_criacao') {
     throw new ConflictException('Chave já utilizada.');
   }
+  // Corrida rara sob o lock consultivo: a repetição concorrente da mesma chave é conflito, não falha interna.
+  if (code === '23505' && constraint === 'ux_reconfirmacoes_idempotencia') throw new ConflictException('Chave já utilizada.');
   if (code === '55P03' || code === '40P01' || code === '40001') throw new ConflictException('Operação concorrente. Tente novamente.');
   throw new InternalServerErrorException('Operação indisponível.');
 }

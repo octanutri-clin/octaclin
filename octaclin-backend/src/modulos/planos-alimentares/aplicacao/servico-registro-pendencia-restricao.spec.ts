@@ -80,7 +80,7 @@ describe('registro de pendência de restrição', () => {
   });
   it('normaliza a chave antes do lock e gravação', async () => {
     const c = preparar(); await c.registrar({ chaveCriacao: chaveCriacao.toUpperCase(), conteudo });
-    expect(c.g.query).toHaveBeenCalledWith(expect.stringContaining('pg_advisory_xact_lock'), [expect.stringMatching(new RegExp(`${chaveCriacao}$`))]);
+    expect(c.g.query).toHaveBeenCalledWith(expect.stringContaining('pg_advisory_xact_lock'), [expect.stringMatching(new RegExp(`^registro:.*${chaveCriacao}$`))]);
     expect(c.atuais.insert).toHaveBeenCalledWith(expect.objectContaining({ chaveCriacao }));
   });
   it('normaliza paciente antes do vínculo cifrado e autorização', async () => {

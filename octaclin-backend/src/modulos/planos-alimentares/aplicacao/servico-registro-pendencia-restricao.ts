@@ -36,7 +36,7 @@ export class ServicoRegistroPendenciaRestricao {
       let conteudo: ReturnType<typeof validarConteudoRestricao>;
       try { conteudo = validarConteudoRestricao(entrada.conteudo); } catch { throw new BadRequestException('Solicitação inválida.'); }
       if (conteudo.natureza === 'preferencia') throw new BadRequestException('Preferência indisponível neste fluxo.');
-      await g.query('select pg_advisory_xact_lock(hashtextextended($1, 0))', [`${usuario.tenantId}:${usuario.usuarioId}:${chaveCriacao}`]);
+      await g.query('select pg_advisory_xact_lock(hashtextextended($1, 0))', [`registro:${usuario.tenantId}:${usuario.usuarioId}:${chaveCriacao}`]);
       const repo = g.getRepository(RestricaoPacienteOrm);
       const historico = g.getRepository(RevisaoRestricaoPacienteOrm);
       const existente = await repo.findOne({ where: { tenantId: usuario.tenantId, autorUsuarioId: usuario.usuarioId, chaveCriacao } });

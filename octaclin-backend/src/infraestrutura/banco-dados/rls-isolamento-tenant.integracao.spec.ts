@@ -931,7 +931,7 @@ descrever('RLS e isolamento multi-tenant integral em Postgres real', () => {
     const esperarChave = new Promise<void>(resolve => { liberarChave = resolve; });
     const chaveBloqueada = new Promise<void>(resolve => { avisarChave = resolve; });
     const detentorChave = executorTenant.executar(tenantP2, async g => {
-      await g.query('select pg_advisory_xact_lock(hashtextextended($1, 0))', [`${tenantP2}:${dados.usuarioId}:${chaveConcorrente}`]);
+      await g.query('select pg_advisory_xact_lock(hashtextextended($1, 0))', [`registro:${tenantP2}:${dados.usuarioId}:${chaveConcorrente}`]);
       avisarChave(); await esperarChave;
     });
     try {

@@ -66,7 +66,11 @@ class FiltroRestricoesClinicas implements ExceptionFilter {
   }
 }
 
-/** Contrato isolado para testes; não registrado no módulo enquanto P2 estiver incompleta. */
+/**
+ * Contrato isolado para testes; não registrado no módulo enquanto P2 estiver incompleta.
+ * Escritas exigem `pacientes.gerenciar` na guarda (defesa em profundidade); a autorização clínica real
+ * (concessão `restricoes.confirmar` e carteira) continua no serviço, na mesma transação.
+ */
 @Controller('pacientes/:pacienteId/restricoes')
 @UseGuards(GuardaJwt, GuardaPapeis, GuardaPermissoes)
 @Papeis('Professional')
@@ -75,7 +79,7 @@ export class ControladorRestricoesClinicas {
   constructor(private readonly leitura: ServicoLeituraRestricao, private readonly decisao: ServicoConfirmacaoRestricao,
     private readonly registro: ServicoRegistroPendenciaRestricao, private readonly reconfirmacao: ServicoReconfirmacaoRestricao) {}
 
-  @Post('avaliacao/inicial') @HttpCode(200) @Permissoes('pacientes.ler') @Header('Cache-Control', 'private, no-store')
+  @Post('avaliacao/inicial') @HttpCode(200) @Permissoes('pacientes.ler', 'pacientes.gerenciar') @Header('Cache-Control', 'private, no-store')
   async avaliacaoInicial(@UsuarioAtual() usuario: UsuarioAutenticado, @Param('pacienteId', ParseUUIDPipe) pacienteId: string,
     @Body() dados: unknown): Promise<unknown> {
     if (!dados || typeof dados !== 'object' || Array.isArray(dados) || Reflect.ownKeys(dados).length !== 0) throw new HttpException('Solicitação inválida.', 400);
@@ -87,7 +91,7 @@ export class ControladorRestricoesClinicas {
     return { id: r.id, revisao: r.revisao, situacao: r.situacao };
   }
 
-  @Post('reconfirmar') @HttpCode(200) @Permissoes('pacientes.ler') @Header('Cache-Control', 'private, no-store')
+  @Post('reconfirmar') @HttpCode(200) @Permissoes('pacientes.ler', 'pacientes.gerenciar') @Header('Cache-Control', 'private, no-store')
   async reconfirmar(@UsuarioAtual() usuario: UsuarioAutenticado, @Param('pacienteId', ParseUUIDPipe) pacienteId: string,
     @Body() dados: ReconfirmarRestricaoDto): Promise<unknown> {
     const individual = dados.restricaoId !== undefined || dados.revisaoRestricao !== undefined;
@@ -111,7 +115,7 @@ export class ControladorRestricoesClinicas {
     return { id: r.id, resultado: r.resultado, ...(individual ? { escopo: 'restricao_individual', revisaoAvaliacao: dados.revisaoAvaliacao, revisaoRestricao: dados.revisaoRestricao } : {}) };
   }
 
-  @Post('registrar') @HttpCode(200) @Permissoes('pacientes.ler') @Header('Cache-Control', 'private, no-store')
+  @Post('registrar') @HttpCode(200) @Permissoes('pacientes.ler', 'pacientes.gerenciar') @Header('Cache-Control', 'private, no-store')
   async registrar(@UsuarioAtual() usuario: UsuarioAutenticado, @Param('pacienteId', ParseUUIDPipe) pacienteId: string,
     @Body() dados: RegistrarPendenciaDto): Promise<unknown> {
     let conteudo: ReturnType<typeof validarConteudoRestricao>;
@@ -142,21 +146,21 @@ export class ControladorRestricoesClinicas {
     } catch { throw new InternalServerErrorException('Operação indisponível.'); }
   }
 
-  @Post(':restricaoId/confirmar') @HttpCode(200) @Permissoes('pacientes.ler') @Header('Cache-Control', 'private, no-store')
+  @Post(':restricaoId/confirmar') @HttpCode(200) @Permissoes('pacientes.ler', 'pacientes.gerenciar') @Header('Cache-Control', 'private, no-store')
   async confirmar(@UsuarioAtual() usuario: UsuarioAutenticado, @Param('pacienteId', ParseUUIDPipe) pacienteId: string,
     @Param('restricaoId', ParseUUIDPipe) restricaoId: string, @Body() dados: RevisaoRestricaoDto): Promise<unknown> {
     const valor = await this.decisao.confirmar(usuario, pacienteId, restricaoId, dados.revisao);
     return projetarAcao(valor, restricaoId, dados.revisao, 'confirmacao', 'confirmada');
   }
 
-  @Post(':restricaoId/rejeitar') @HttpCode(200) @Permissoes('pacientes.ler') @Header('Cache-Control', 'private, no-store')
+  @Post(':restricaoId/rejeitar') @HttpCode(200) @Permissoes('pacientes.ler', 'pacientes.gerenciar') @Header('Cache-Control', 'private, no-store')
   async rejeitar(@UsuarioAtual() usuario: UsuarioAutenticado, @Param('pacienteId', ParseUUIDPipe) pacienteId: string,
     @Param('restricaoId', ParseUUIDPipe) restricaoId: string, @Body() dados: RejeitarRestricaoDto): Promise<unknown> {
     const valor = await this.decisao.rejeitar(usuario, pacienteId, restricaoId, dados.revisao, { justificativa: dados.justificativa });
     return projetarAcao(valor, restricaoId, dados.revisao, 'confirmacao', 'rejeitada');
   }
 
-  @Post(':restricaoId/inativar') @HttpCode(200) @Permissoes('pacientes.ler') @Header('Cache-Control', 'private, no-store')
+  @Post(':restricaoId/inativar') @HttpCode(200) @Permissoes('pacientes.ler', 'pacientes.gerenciar') @Header('Cache-Control', 'private, no-store')
   async inativar(@UsuarioAtual() usuario: UsuarioAutenticado, @Param('pacienteId', ParseUUIDPipe) pacienteId: string,
     @Param('restricaoId', ParseUUIDPipe) restricaoId: string, @Body() dados: InativarRestricaoDto): Promise<unknown> {
     const valor = await this.decisao.inativar(usuario, pacienteId, restricaoId, dados.revisao,
@@ -164,7 +168,7 @@ export class ControladorRestricoesClinicas {
     return projetarAcao(valor, restricaoId, dados.revisao, 'estado', 'inativa');
   }
 
-  @Post(':restricaoId/reavaliar') @HttpCode(200) @Permissoes('pacientes.ler') @Header('Cache-Control', 'private, no-store')
+  @Post(':restricaoId/reavaliar') @HttpCode(200) @Permissoes('pacientes.ler', 'pacientes.gerenciar') @Header('Cache-Control', 'private, no-store')
   async reavaliar(@UsuarioAtual() usuario: UsuarioAutenticado, @Param('pacienteId', ParseUUIDPipe) pacienteId: string,
     @Param('restricaoId', ParseUUIDPipe) restricaoId: string, @Body() dados: ReavaliarRestricaoDto): Promise<unknown> {
     const valor = await this.decisao.alterarReavaliacao(usuario, pacienteId, restricaoId, dados.revisao, dados.destino);

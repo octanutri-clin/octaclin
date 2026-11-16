@@ -1,5 +1,38 @@
 # FOOD06 P2 — preparação e handoff
 
+## Estado em 2026-11-16 (Claude Code, Opus): P2a e próximos passos
+
+**Escopo da #536 redefinido como P2a:** serviços clínicos do `Professional` com concessão `restricoes.confirmar`
+e contrato HTTP isolado, **sem rota registrada, sem flag e sem bootstrap**. O restante da P2 sai em PRs próprias.
+
+**Revisão R4 integral independente (Claude Code, Opus, distinto do autor Codex)**, com segunda opinião do
+subagente `tenant-security-reviewer` (mesma família de modelo; não é revisão humana). Sem achado ALTO e sem
+vazamento entre tenants demonstrado. Achados corrigidos nesta PR com TDD (RED → GREEN):
+
+| ID | Sev. | Achado | Correção |
+| --- | --- | --- | --- |
+| R4-P2a-01 | MÉDIA | `confirmar` e `inativar` não exigiam READ COMMITTED, histórico consistente da avaliação, último evento compatível nem conteúdo igual ao snapshot (os demais escritores exigiam) | Mesmas checagens antes de gravar; `inativar` recusa último evento `criacao`, `rejeicao` e `inativacao`; `confirmar` recusa `confirmacao`, `rejeicao` e `inativacao` |
+| R4-P2a-02 | MÉDIA | Rotas de escrita do controlador isolado exigiam só `pacientes.ler` na guarda | Escritas exigem `pacientes.ler` + `pacientes.gerenciar`; consulta segue só com leitura. A autorização clínica real continua no serviço |
+| R4-P2a-03 | BAIXA | Corrida em `ux_reconfirmacoes_idempotencia` virava 500 | Vira 409 sem eco |
+| R4-P2a-04 | BAIXA | Lock consultivo do registro sem prefixo de namespace | Prefixo `registro:` (o da reconfirmação já tinha `reconfirmacao:`) |
+| R4-P2a-05 | MÉDIA (desenho) | Registro de pendência não exige a concessão clínica | **Mantido de propósito** (contrato v3, Q6: `Professional` sem a permissão registra pendência). Exige `Professional` ativo e carteira, na mesma transação |
+
+**Provas:** suíte PostgreSQL/RLS (`pnpm test:rls:testcontainers`) passou **localmente** no container do Claude Code,
+com Docker, antes e depois das correções (ver PR). Isso não substitui o CI do HEAD final.
+
+**Próximas PRs da P2 (cada uma R4, o proprietário mergeia):**
+1. **P2b — exposição fechada:** flag nova em `FEATURE_FLAGS_CONHECIDAS` (desligada por padrão); middlewares
+   no bootstrap (cabeçalhos antes do parser e erro depois dele); registrar o controlador só com a flag;
+   prova com a guarda JWT real e o bootstrap real (o spec JWT local do Codex não foi publicado e será recriado);
+   canário de log. Antes de expor, decidir permissão de escrita definitiva (R4-P2a-02 é defesa em profundidade).
+2. **P2c — solicitações do paciente (D7-a) e projeção do portal (Q11):** serviços e DTO por allowlist; Patient
+   continua sem acesso até a P2d.
+3. **P2d — carteiras e vínculos:** delegação da carteira pelo titular ao Collaborator e vínculo de representação
+   separado de `pacientes.usuario_id` (vários representados por conta), conforme
+   `tasks/food06-p2-plano-carteiras-vinculos.md`. Migrations novas; ensaio só em banco descartável.
+4. Depois: P3 (telas, UX B/C) e P4 (M04/M12, apply com impressão e invalidação de prévias).
+
+
 ## Incremento: contrato HTTP clínico isolado
 
 - Controlador de consulta, registro profissional, ações clínicas e avaliação/

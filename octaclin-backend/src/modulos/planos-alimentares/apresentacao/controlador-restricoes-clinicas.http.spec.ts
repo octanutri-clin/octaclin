@@ -51,7 +51,7 @@ describe('contrato HTTP clínico isolado de restrições', () => {
     ] }).overrideGuard(GuardaJwt).useValue({ canActivate(c: ExecutionContext) {
       const r = c.switchToHttp().getRequest(); if (!r.headers['x-papel-sintetico']) throw new UnauthorizedException();
       r.usuarioAutenticado = { tenantId: tenant, usuarioId: usuario, papel: r.headers['x-papel-sintetico'],
-        permissoes: r.headers['x-sem-permissao'] ? [] : ['pacientes.ler'], emailHash: '' }; return true;
+        permissoes: r.headers['x-sem-permissao'] ? [] : r.headers['x-somente-leitura'] ? ['pacientes.ler'] : ['pacientes.ler', 'pacientes.gerenciar'], emailHash: '' }; return true;
     } }).compile();
     const logger = { log: (...x: unknown[]) => logs.push(x), error: (...x: unknown[]) => logs.push(x), warn: (...x: unknown[]) => logs.push(x),
       debug: (...x: unknown[]) => logs.push(x), verbose: (...x: unknown[]) => logs.push(x) };
@@ -75,6 +75,23 @@ describe('contrato HTTP clínico isolado de restrições', () => {
   it.each(['', 'Patient', 'Collaborator', 'Client', 'SuperAdmin'])('nega papel %s antes do serviço', async papel => {
     const resposta = await chamar({ restricaoId: restricao }, papel); expect(resposta.status).toBe(papel ? 403 : 401);
     expect(resposta.headers.get('cache-control')).toBe('private, no-store'); expect(consultar).not.toHaveBeenCalled();
+  });
+  it.each([
+    ['avaliacao/inicial', {}], ['reconfirmar', {}], ['registrar', {}],
+    [`${restricao}/confirmar`, { revisao: 1 }], [`${restricao}/rejeitar`, { revisao: 1, justificativa: 'Sintético' }],
+    [`${restricao}/inativar`, { revisao: 1, justificativa: 'Sintético', motivo: 'outro', confirmacaoEmDoisPassos: true }],
+    [`${restricao}/reavaliar`, { revisao: 1, destino: 'em_reavaliacao' }]
+  ])('exige permissão de gestão (não só leitura) na escrita %s antes do serviço', async (rota, body) => {
+    const resposta = await fetch(`${url}/pacientes/${paciente}/restricoes/${rota}`, { method: 'POST',
+      headers: { 'content-type': 'application/json', 'x-papel-sintetico': 'Professional', 'x-somente-leitura': '1' }, body: JSON.stringify(body) });
+    expect(resposta.status).toBe(403);
+    for (const f of [garantirAvaliacaoInicial, registrar, confirmar, rejeitar, inativar, alterarReavaliacao, registrarPendenciaGlobal,
+      registrarAlteracaoGlobal, registrarSemAlteracao, registrarAusenciaDeclarada]) expect(f).not.toHaveBeenCalled();
+  });
+  it('consulta continua permitida só com permissão de leitura', async () => {
+    const resposta = await fetch(`${url}/pacientes/${paciente}/restricoes/consultar`, { method: 'POST',
+      headers: { 'content-type': 'application/json', 'x-papel-sintetico': 'Professional', 'x-somente-leitura': '1' }, body: JSON.stringify({ restricaoId: restricao }) });
+    expect(resposta.status).toBe(200);
   });
   it('nega profissional sem permissão genérica antes do serviço', async () => {
     const resposta = await fetch(`${url}/pacientes/${paciente}/restricoes/consultar`, { method: 'POST',

@@ -27,7 +27,7 @@ const ator = { tenantId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', usuarioId: 'bbb
 function preparar() {
   const linha = { id: 'dddddddd-dddd-4ddd-8ddd-dddddddddddd', tenantId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', pacienteId: 'cccccccc-cccc-4ccc-8ccc-cccccccccccc', estado: 'ativa', confirmacao: 'pendente', revisao: 1, conteudoCriptografado: Buffer.from('anterior') };
   const atual = { findOne: jest.fn(async () => linha), update: jest.fn(async () => ({ affected: 1 })) };
-  const revisoes = { findOne: jest.fn(async (): Promise<unknown> => ({ numero: 1, evento: 'criacao', conteudoCriptografado: Buffer.from('historico') })), insert: jest.fn(async () => undefined) };
+  const revisoes = { findOne: jest.fn(async (): Promise<unknown> => ({ numero: linha.revisao, evento: linha.confirmacao === 'confirmada' ? 'confirmacao' : 'criacao', conteudoCriptografado: Buffer.from('historico') })), insert: jest.fn(async () => undefined) };
   const avaliacao = { findOne: jest.fn(async (): Promise<{ id: string; revisao: number; situacao: string } | null> => null), update: jest.fn(async () => ({ affected: 1 })) };
   const historicoAvaliacao = { findOne: jest.fn(async (): Promise<unknown> => {
     const atual = await avaliacao.findOne.mock.results.at(-1)?.value as { situacao?: string; venceEm?: Date | null } | null | undefined;
@@ -167,7 +167,7 @@ describe('rejeição de pendência clínica', () => {
 });
 describe('confirmação de restrição', () => {
   it('pode ser construído pelo Nest com as dependências de transação e concessão', async () => {
-    const g = { getRepository: jest.fn((entidade: unknown) => {
+    const g = { query: jest.fn(async () => [{ transaction_isolation: 'read committed' }]), getRepository: jest.fn((entidade: unknown) => {
       if (entidade === AvaliacaoRestricoesPacienteOrm) return { findOne: async () => null };
       if (entidade === RestricaoPacienteOrm) return { findOne: async () => null };
       if (entidade === RevisaoRestricaoPacienteOrm) return {};
@@ -301,5 +301,49 @@ describe('confirmação de restrição', () => {
     if (!(erro instanceof BadRequestException)) throw new Error('Exceção inesperada.');
     expect(JSON.stringify(erro.getResponse())).not.toContain(justificativa);
     expect(c.atual.update).not.toHaveBeenCalled();
+  });
+});
+
+describe('integridade antes de confirmar ou inativar (revisão R4 da P2a)', () => {
+  const dadosInativar = { motivo: 'outro', justificativa: 'Justificativa sintética', confirmacaoEmDoisPassos: true };
+  const operacoes = {
+    confirmar: (c: ReturnType<typeof preparar>) => c.confirmar(),
+    inativar: (c: ReturnType<typeof preparar>) => { c.linha.confirmacao = 'confirmada'; return c.inativar(dadosInativar); }
+  } as const;
+  it.each(['confirmar', 'inativar'] as const)('%s recusa isolamento diferente de READ COMMITTED antes da autorização', async op => {
+    for (const isolamento of ['repeatable read', 'serializable']) {
+      jest.clearAllMocks();
+      const c = preparar(); c.g.query.mockResolvedValueOnce([{ transaction_isolation: isolamento }]);
+      await expect(operacoes[op](c)).rejects.toBeInstanceOf(ConflictException);
+      expect(autorizarRestricaoClinica).not.toHaveBeenCalled(); expect(c.atual.update).not.toHaveBeenCalled();
+    }
+  });
+  it.each(['confirmar', 'inativar'] as const)('%s recusa histórico da avaliação divergente antes de gravar', async op => {
+    const c = preparar(); c.avaliacao.findOne.mockResolvedValueOnce({ id: 'avaliacao', revisao: 3, situacao: 'nao_informado' });
+    c.historicoAvaliacao.findOne.mockResolvedValueOnce({ situacao: 'restricoes_registradas', venceEm: null });
+    await expect(operacoes[op](c)).rejects.toBeInstanceOf(ConflictException);
+    expect(c.atual.update).not.toHaveBeenCalled(); expect(c.revisoes.insert).not.toHaveBeenCalled();
+  });
+  it.each([
+    ['confirmar', null], ['confirmar', 'rejeicao'], ['confirmar', 'inativacao'], ['confirmar', 'confirmacao'],
+    ['inativar', null], ['inativar', 'rejeicao'], ['inativar', 'inativacao'], ['inativar', 'criacao']
+  ] as const)('%s recusa último evento contraditório %p', async (op, evento) => {
+    const c = preparar();
+    c.revisoes.findOne.mockResolvedValueOnce(evento ? { numero: 1, evento, conteudoCriptografado: Buffer.from('historico') } : null);
+    await expect(operacoes[op](c)).rejects.toBeInstanceOf(ConflictException);
+    expect(c.atual.update).not.toHaveBeenCalled(); expect(c.revisoes.insert).not.toHaveBeenCalled();
+  });
+  it.each(['confirmar', 'inativar'] as const)('%s recusa conteúdo atual divergente do snapshot histórico', async op => {
+    jest.mocked(decifrarConteudoRestricao)
+      .mockReturnValueOnce({ schemaVersao: 1, natureza: 'clinica', subtipoClinico: 'alergia_alimentar', alvo: { tipo: 'alimento', id: 'alvo' } })
+      .mockReturnValueOnce({ schemaVersao: 1, natureza: 'clinica', subtipoClinico: 'alergia_alimentar', alvo: { tipo: 'alimento', id: 'outro-alvo' } });
+    const c = preparar();
+    await expect(operacoes[op](c)).rejects.toBeInstanceOf(ConflictException);
+    expect(c.atual.update).not.toHaveBeenCalled();
+  });
+  it.each(['reavaliacao', 'reativacao'] as const)('inativar aceita último evento %s de restrição confirmada', async evento => {
+    const c = preparar(); c.linha.confirmacao = 'confirmada'; c.linha.estado = evento === 'reavaliacao' ? 'em_reavaliacao' : 'ativa';
+    c.revisoes.findOne.mockResolvedValueOnce({ numero: 1, evento, conteudoCriptografado: Buffer.from('historico') });
+    await expect(c.inativar(dadosInativar)).resolves.toMatchObject({ estado: 'inativa', revisao: 2 });
   });
 });
