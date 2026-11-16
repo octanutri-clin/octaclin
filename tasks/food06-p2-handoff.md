@@ -55,7 +55,7 @@ função pura (`dominio/projecao-portal-solicitacao.ts`). **Criar e cancelar pel
      encerramento de tenant desativa todos os usuários sem revogar as linhas (terminal; a leitura sob lock nega); o
      invariante "cai se desativado" depende de todo escritor de `usuarios.ativo`/`role` chamar a cascata (hoje todos
      chamam); pendência do colaborador invalida avaliação `sem_restricoes_confirmadas` como a do profissional
-     (conservador; confirmar com o proprietário); sem limite de taxa por colaborador.
+     (conservador; **aceito pelo proprietário em 2026-11-16**); sem limite de taxa por colaborador.
    - **P2d-3 (a seguir):** vínculo de representação e portal do paciente (criar/cancelar/listar pedidos e resumo Q11).
 4. Depois: P3 (telas, UX B/C) e P4 (M04/M12, apply com impressão e invalidação de prévias).
 
