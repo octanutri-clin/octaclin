@@ -81,6 +81,7 @@ import { RevisaoRestricaoPacienteOrm } from '../../modulos/planos-alimentares/in
 import { AvaliacaoRestricoesPacienteOrm } from '../../modulos/planos-alimentares/infraestrutura/avaliacao-restricoes-paciente.orm';
 import { RevisaoAvaliacaoRestricoesOrm } from '../../modulos/planos-alimentares/infraestrutura/revisao-avaliacao-restricoes.orm';
 import { ReconfirmacaoRestricoesOrm } from '../../modulos/planos-alimentares/infraestrutura/reconfirmacao-restricoes.orm';
+import { SolicitacaoRestricaoPacienteOrm } from '../../modulos/planos-alimentares/infraestrutura/solicitacao-restricao-paciente.orm';
 import { cifrarConteudoRestricao, decifrarConteudoRestricao, cifrarCampo, decifrarCampo } from '../../modulos/planos-alimentares/infraestrutura/codec-conteudo-restricao';
 import { ExecutionContext, UnauthorizedException } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
@@ -92,6 +93,8 @@ import { criarPipeValidacaoHttp } from '../http/pipe-validacao-http';
 import { middlewareErroRestricoesClinicas, middlewareRestricoesClinicas } from '../http/middleware-restricoes-clinicas';
 import { ControladorRestricoesClinicas } from '../../modulos/planos-alimentares/apresentacao/controlador-restricoes-clinicas';
 import { ServicoFeatureFlags } from '../feature-flags/servico-feature-flags';
+import { ServicoSolicitacoesRestricao } from '../../modulos/planos-alimentares/aplicacao/servico-solicitacoes-restricao';
+import { projetarSolicitacaoPortal } from '../../modulos/planos-alimentares/dominio/projecao-portal-solicitacao';
 import { GuardaFeatureFlag } from '../feature-flags/guarda-feature-flag';
 
 /**
@@ -287,6 +290,7 @@ descrever('RLS e isolamento multi-tenant integral em Postgres real', () => {
         AvaliacaoRestricoesPacienteOrm,
         RevisaoAvaliacaoRestricoesOrm,
         ReconfirmacaoRestricoesOrm,
+        SolicitacaoRestricaoPacienteOrm,
         PermissaoIntegracaoProfissionalOrm,
         UserActionLogOrm,
         NotificacaoOrm,
@@ -1413,7 +1417,8 @@ descrever('RLS e isolamento multi-tenant integral em Postgres real', () => {
       { provide: ServicoConfirmacaoRestricao, useValue: confirmar }, { provide: ServicoRegistroPendenciaRestricao, useValue: registro },
       { provide: ServicoReconfirmacaoRestricao, useValue: reconfirmar }, { provide: ServicoAuditoria, useValue: { registrar: async () => undefined } },
       // P2b: flag real lida de tenant_configuracoes sob RLS.
-      { provide: ServicoFeatureFlags, useValue: new ServicoFeatureFlags(executorTenant) }, GuardaFeatureFlag
+      { provide: ServicoFeatureFlags, useValue: new ServicoFeatureFlags(executorTenant) }, GuardaFeatureFlag,
+      { provide: ServicoSolicitacoesRestricao, useValue: new ServicoSolicitacoesRestricao(executorTenant, crypto, concessoes) }
     ] }).overrideGuard(GuardaJwt).useValue({ canActivate(contexto: ExecutionContext) {
       const req = contexto.switchToHttp().getRequest();
       const identidade = req.headers['x-identidade-sintetica'];
@@ -2649,6 +2654,92 @@ descrever('RLS e isolamento multi-tenant integral em Postgres real', () => {
     await expect(conferir(dados.pacienteId)).rejects.toMatchObject({ status: 403 });
     await expect(reconfirmar.registrarSemAlteracaoIndividual(usuario, dados.pacienteId, pedidoIndividual)).rejects.toMatchObject({ status: 403 });
     await expect(leitura.consultar(usuario, casoLeitura.paciente, casoLeitura.restricaoId)).rejects.toMatchObject({ status: 403, message: 'Operação não autorizada.' });
+  }, 120_000);
+
+  it('P2c: profissional analisa e decide pedidos do paciente com concessão, carteira e RLS real', async () => {
+    if (!cliente || !executorTenant) throw new Error('ExecutorTenant da prova RLS nao foi inicializado.');
+    const tenant = randomUUID();
+    await cliente.query('insert into tenants (id, nome, slug) values ($1, $2, $3)', [tenant, 'Prova P2c sintetica', `prova-p2c-${tenant}`]);
+    const dados = await prepararDadosRepresentativos(tenant, `p2c-${randomUUID()}`);
+    const outro = await prepararDadosRepresentativos(tenant, `p2c-outro-${randomUUID()}`);
+    const ator: UsuarioAutenticado = { tenantId: tenant, usuarioId: dados.usuarioId, papel: 'Professional', emailHash: '', permissoes: [] };
+    const atorOutro: UsuarioAutenticado = { tenantId: tenant, usuarioId: outro.usuarioId, papel: 'Professional', emailHash: '', permissoes: [] };
+    const concessoes = new ServicoConcessoesPermissao(executorTenant);
+    const crypto = new CriptografiaDadosSensiveis();
+    const registro = new ServicoRegistroPendenciaRestricao(executorTenant, crypto);
+    const confirmar = new ServicoConfirmacaoRestricao(executorTenant, crypto, concessoes);
+    const solicitacoes = new ServicoSolicitacoesRestricao(executorTenant, crypto, concessoes);
+    const conteudo = { schemaVersao: 1, natureza: 'clinica', subtipoClinico: 'alergia_alimentar', alvo: { tipo: 'alimento', id: 'alvo-sintetico' } };
+    const restricao = await registro.registrar(ator, dados.pacienteId, { chaveCriacao: randomUUID(), conteudo }) as { id: string };
+    // Pedido do paciente gravado como a P2d gravará: conteúdo cifrado e vinculado à linha (revisão 1).
+    const criarPedido = async (paciente: string, itens = ['i1', 'i2']) => {
+      const id = randomUUID();
+      await comoTenant(tenant);
+      await cliente!.query(`insert into solicitacoes_restricoes_pacientes (id,tenant_id,paciente_id,restricao_id,tipo,autor_usuario_id,chave_criacao,conteudo_criptografado)
+        values ($1,$2,$3,$4,'correcao',$5,$6,$7)`, [id, tenant, paciente, restricao.id, dados.usuarioId, randomUUID(),
+        cifrarCampo(crypto, 'solicitacoes_restricoes_pacientes.conteudo_criptografado', { itens: itens.map(item => ({ item, texto: `Texto sintético ${item}` })) },
+          { tenantId: tenant, pacienteId: paciente, registroId: id, revisao: 1 })]);
+      return id;
+    };
+    const pedido = await criarPedido(dados.pacienteId);
+    // Sem concessão clínica: 403 e nada muda.
+    await expect(solicitacoes.listar(ator, dados.pacienteId)).rejects.toMatchObject({ status: 403 });
+    await expect(solicitacoes.iniciarAnalise(ator, dados.pacienteId, pedido, 1)).rejects.toMatchObject({ status: 403 });
+    await comoTenant(tenant);
+    for (const u of [dados.usuarioId, outro.usuarioId]) await cliente.query(`insert into concessoes_permissao_usuario
+      (tenant_id, usuario_id, permissao, concedida_por, motivo) values ($1, $2, 'restricoes.confirmar', $2, 'habilitacao_administrativa')`, [tenant, u]);
+    // Com concessão, mas paciente de outra carteira ou de outro tenant: 403.
+    await expect(solicitacoes.iniciarAnalise(atorOutro, dados.pacienteId, pedido, 1)).rejects.toMatchObject({ status: 403 });
+    await expect(solicitacoes.listar(ator, pacienteIdTenantB)).rejects.toMatchObject({ status: 403 });
+    // Pedido de um paciente não é alcançável pela rota de outro paciente, mesmo autorizado para este.
+    await expect(solicitacoes.iniciarAnalise(atorOutro, outro.pacienteId, pedido, 1)).rejects.toMatchObject({ status: 403 });
+    await expect(solicitacoes.iniciarAnalise(ator, dados.pacienteId, pedido, 1)).resolves.toEqual({ id: pedido, revisao: 2, estado: 'em_analise' });
+    await expect(solicitacoes.iniciarAnalise(ator, dados.pacienteId, pedido, 1)).rejects.toMatchObject({ status: 409 });
+    const parcial = (revisaoResultante: number, extra: Record<string, unknown> = {}) => ({ estadoFinal: 'parcial', explicacaoPaciente: 'Atualizamos um item e mantivemos o outro.',
+      justificativaInterna: 'CANARIO_JUSTIFICATIVA_INTERNA', alterados: [{ item: 'i1', restricaoId: restricao.id, revisaoResultante }], inalterados: ['i2'], ...extra });
+    // A revisão de criação é ANTERIOR ao pedido: não pode ser apresentada como resultado dele.
+    await expect(solicitacoes.decidir(ator, dados.pacienteId, pedido, 2, parcial(1))).rejects.toMatchObject({ status: 409 });
+    // Desfecho que não responde a todos os itens do pedido.
+    await expect(solicitacoes.decidir(ator, dados.pacienteId, pedido, 2, parcial(1, { inalterados: [], estadoFinal: 'atendida' }))).rejects.toMatchObject({ status: 400 });
+    // A operação clínica autorizada acontece depois do pedido; só então o desfecho pode citá-la.
+    await expect(confirmar.confirmar(ator, dados.pacienteId, restricao.id, 1)).resolves.toMatchObject({ revisao: 2 });
+    await comoTenant(tenant);
+    const auditoriasAntes = await cliente.query<{ n: number }>('select count(*)::int n from user_action_logs where tenant_id=$1', [tenant]);
+    const corrida = await Promise.allSettled([
+      solicitacoes.decidir(ator, dados.pacienteId, pedido, 2, parcial(2)),
+      solicitacoes.decidir(ator, dados.pacienteId, pedido, 2, parcial(2))
+    ]);
+    expect(corrida.filter(r => r.status === 'fulfilled')).toHaveLength(1);
+    expect(corrida.find(r => r.status === 'rejected')).toMatchObject({ reason: { status: 409 } });
+    await comoTenant(tenant);
+    const linha = (await cliente.query(`select estado, revisao, decidido_por_usuario_id, decidido_em is not null as decidida,
+      justificativa_interna_criptografada as j, desfecho_criptografado as d from solicitacoes_restricoes_pacientes where id=$1`, [pedido])).rows[0];
+    expect(linha).toMatchObject({ estado: 'parcial', revisao: 3, decidido_por_usuario_id: dados.usuarioId, decidida: true });
+    const vinculo = { tenantId: tenant, pacienteId: dados.pacienteId, registroId: pedido, revisao: 3 };
+    expect(decifrarCampo(crypto, 'solicitacoes_restricoes_pacientes.desfecho_criptografado', linha.d, vinculo))
+      .toEqual({ estadoFinal: 'parcial', alterados: [{ item: 'i1', restricaoId: restricao.id, revisaoResultante: 2 }], inalterados: ['i2'] });
+    expect(Buffer.from(linha.j).toString('latin1')).not.toContain('CANARIO_JUSTIFICATIVA_INTERNA');
+    // A decisão não altera a restrição: ela segue na revisão da operação clínica.
+    expect((await cliente.query('select revisao, confirmacao from restricoes_pacientes where id=$1', [restricao.id])).rows).toEqual([{ revisao: 2, confirmacao: 'confirmada' }]);
+    expect((await cliente.query('select acao, metadados from user_action_logs where recurso_id=$1 order by acao', [pedido])).rows).toEqual([
+      { acao: 'restricoes.solicitacao_decidir', metadados: {} }, { acao: 'restricoes.solicitacao_iniciar_analise', metadados: {} }]);
+    expect((await cliente.query<{ n: number }>('select count(*)::int n from user_action_logs where tenant_id=$1', [tenant])).rows[0].n).toBe(auditoriasAntes.rows[0].n + 1);
+    // O trigger da 1083 impede transição fora da tabela e alteração de pedido terminal, mesmo por SQL direto.
+    const outroPedido = await criarPedido(dados.pacienteId);
+    await expect(cliente.query("update solicitacoes_restricoes_pacientes set estado='recusada', revisao=2 where id=$1", [outroPedido])).rejects.toMatchObject({ code: '23514' });
+    await expect(cliente.query('update solicitacoes_restricoes_pacientes set revisao=4 where id=$1', [pedido])).rejects.toMatchObject({ code: '23514' });
+    // Lista do profissional: pedido decifrado e decisão com justificativa interna (só para ele).
+    const lista = await solicitacoes.listar(ator, dados.pacienteId) as Array<Record<string, unknown>>;
+    expect(lista.map(i => i.id).sort()).toEqual([pedido, outroPedido].sort());
+    expect(lista.find(i => i.id === pedido)).toMatchObject({ estado: 'parcial', justificativaInterna: 'CANARIO_JUSTIFICATIVA_INTERNA',
+      explicacaoPaciente: 'Atualizamos um item e mantivemos o outro.', pedido: { itens: [{ item: 'i1', texto: 'Texto sintético i1' }, { item: 'i2', texto: 'Texto sintético i2' }] } });
+    // Projeção do portal (a rota vem com a P2d): sem justificativa interna nem estado interno.
+    const portal = projetarSolicitacaoPortal(lista.find(i => i.id === pedido) as never);
+    expect(portal).toMatchObject({ id: pedido, chaveTexto: 'restricoes.solicitacao.parcial', explicacao: 'Atualizamos um item e mantivemos o outro.' });
+    expect(JSON.stringify(portal)).not.toMatch(/CANARIO_|"estado"/);
+    // Outro tenant não enxerga as solicitações nem por SQL direto (RLS).
+    await comoTenant(tenantB);
+    expect((await cliente.query('select id from solicitacoes_restricoes_pacientes where id=$1', [pedido])).rows).toEqual([]);
   }, 120_000);
 
   it('FOOD03 protege favoritos com FORCE RLS e oculta registros ao trocar tenant', async () => {

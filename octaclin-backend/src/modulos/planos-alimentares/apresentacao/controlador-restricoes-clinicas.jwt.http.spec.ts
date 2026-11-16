@@ -21,6 +21,7 @@ import { ServicoLeituraRestricao } from '../aplicacao/servico-leitura-restricao'
 import { ServicoConfirmacaoRestricao } from '../aplicacao/servico-confirmacao-restricao';
 import { ServicoRegistroPendenciaRestricao } from '../aplicacao/servico-registro-pendencia-restricao';
 import { ServicoReconfirmacaoRestricao } from '../aplicacao/servico-reconfirmacao-restricao';
+import { ServicoSolicitacoesRestricao } from '../aplicacao/servico-solicitacoes-restricao';
 import { ControladorRestricoesClinicas } from './controlador-restricoes-clinicas';
 
 /**
@@ -64,7 +65,7 @@ describe('contrato HTTP clínico com guardas reais (P2b)', () => {
       { provide: ServicoFeatureFlags, useValue: flags }, { provide: ServicoAuditoria, useValue: auditoria },
       { provide: ServicoLeituraRestricao, useValue: { consultar } },
       { provide: ServicoConfirmacaoRestricao, useValue: {} }, { provide: ServicoRegistroPendenciaRestricao, useValue: {} },
-      { provide: ServicoReconfirmacaoRestricao, useValue: {} }
+      { provide: ServicoReconfirmacaoRestricao, useValue: {} }, { provide: ServicoSolicitacoesRestricao, useValue: {} }
     ] }).compile();
     const logger = { log: (...x: unknown[]) => logs.push(x), error: (...x: unknown[]) => logs.push(x), warn: (...x: unknown[]) => logs.push(x),
       debug: (...x: unknown[]) => logs.push(x), verbose: (...x: unknown[]) => logs.push(x) };

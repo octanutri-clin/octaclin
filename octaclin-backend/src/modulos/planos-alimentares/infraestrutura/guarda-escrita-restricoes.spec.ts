@@ -37,6 +37,7 @@ const INFRAESTRUTURA: Record<string, string> = {
   'modulos/planos-alimentares/aplicacao/servico-registro-pendencia-restricao.spec.ts': 'teste unitário sintético do registro de pendência',
   'modulos/planos-alimentares/aplicacao/servico-reconfirmacao-restricao.spec.ts': 'teste unitário sintético da reconfirmação',
   'modulos/planos-alimentares/aplicacao/servico-leitura-restricao.spec.ts': 'teste sintético da projeção clínica',
+  'modulos/planos-alimentares/aplicacao/servico-solicitacoes-restricao.spec.ts': 'teste unitário sintético das solicitações (P2c)',
   'modulos/planos-alimentares/dominio/conteudo-restricao.ts': 'comentário que nomeia as colunas protegidas'
 };
 /** Serviços que podem acessar as tabelas. Entram só por revisão (P2 em diante). */
@@ -45,7 +46,8 @@ const CONSUMIDORES: Record<string, string> = {
   'modulos/planos-alimentares/aplicacao/servico-registro-pendencia-restricao.ts': 'registro transacional com autorização e codec',
   'modulos/planos-alimentares/aplicacao/servico-reconfirmacao-restricao.ts': 'atestação transacional com autorização e codec',
   'modulos/planos-alimentares/aplicacao/integridade-avaliacao-restricoes.ts': 'verificação de isolamento e histórico sem conteúdo clínico',
-  'modulos/planos-alimentares/aplicacao/servico-leitura-restricao.ts': 'leitura clínica autorizada, auditada e decifrada pelo codec'
+  'modulos/planos-alimentares/aplicacao/servico-leitura-restricao.ts': 'leitura clínica autorizada, auditada e decifrada pelo codec',
+  'modulos/planos-alimentares/aplicacao/servico-solicitacoes-restricao.ts': 'análise e decisão de pedidos do paciente com autorização e codec (P2c)'
 };
 
 const re = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -82,7 +84,7 @@ describe('FOOD06 R4: guarda de acesso às tabelas de restrições', () => {
   it('as exceções existem de fato e a lista de consumidores é nominal', () => {
     const citamRel = new Set(citam.map(f => f.rel));
     for (const e of Object.keys(INFRAESTRUTURA)) expect(citamRel.has(e)).toBe(true);
-    expect(Object.keys(CONSUMIDORES)).toEqual(['modulos/planos-alimentares/aplicacao/servico-confirmacao-restricao.ts', 'modulos/planos-alimentares/aplicacao/servico-registro-pendencia-restricao.ts', 'modulos/planos-alimentares/aplicacao/servico-reconfirmacao-restricao.ts', 'modulos/planos-alimentares/aplicacao/integridade-avaliacao-restricoes.ts', 'modulos/planos-alimentares/aplicacao/servico-leitura-restricao.ts']);
+    expect(Object.keys(CONSUMIDORES)).toEqual(['modulos/planos-alimentares/aplicacao/servico-confirmacao-restricao.ts', 'modulos/planos-alimentares/aplicacao/servico-registro-pendencia-restricao.ts', 'modulos/planos-alimentares/aplicacao/servico-reconfirmacao-restricao.ts', 'modulos/planos-alimentares/aplicacao/integridade-avaliacao-restricoes.ts', 'modulos/planos-alimentares/aplicacao/servico-leitura-restricao.ts', 'modulos/planos-alimentares/aplicacao/servico-solicitacoes-restricao.ts']);
     for (const c of Object.keys(CONSUMIDORES)) expect(citamRel.has(c)).toBe(true);
     expect(todos.filter(f => ORM(f.rel))).toHaveLength(7);
   });

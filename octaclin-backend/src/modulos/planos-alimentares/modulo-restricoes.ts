@@ -6,6 +6,7 @@ import { ServicoConfirmacaoRestricao } from './aplicacao/servico-confirmacao-res
 import { ServicoLeituraRestricao } from './aplicacao/servico-leitura-restricao';
 import { ServicoReconfirmacaoRestricao } from './aplicacao/servico-reconfirmacao-restricao';
 import { ServicoRegistroPendenciaRestricao } from './aplicacao/servico-registro-pendencia-restricao';
+import { ServicoSolicitacoesRestricao } from './aplicacao/servico-solicitacoes-restricao';
 import { ControladorRestricoesClinicas } from './apresentacao/controlador-restricoes-clinicas';
 
 /** Rotas clínicas só respondem com a flag `restricoes.clinicas` ligada (padrão desligada); sem exports. */
@@ -13,6 +14,6 @@ import { ControladorRestricoesClinicas } from './apresentacao/controlador-restri
   imports: [ModuloTenancy, ModuloAuth],
   controllers: [ControladorRestricoesClinicas],
   providers: [CriptografiaDadosSensiveis, ServicoRegistroPendenciaRestricao, ServicoConfirmacaoRestricao,
-    ServicoReconfirmacaoRestricao, ServicoLeituraRestricao]
+    ServicoReconfirmacaoRestricao, ServicoLeituraRestricao, ServicoSolicitacoesRestricao]
 })
 export class ModuloRestricoes {}
