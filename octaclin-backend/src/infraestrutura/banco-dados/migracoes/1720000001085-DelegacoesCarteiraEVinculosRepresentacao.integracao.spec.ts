@@ -103,7 +103,34 @@ suite('FOOD06 P2d-1 1085: delegação de carteira e vínculo de representação 
     await expect(como(tenantA, m => vincular(m, rep, { pacienteId: pacienteB }))).rejects.toMatchObject({ code: '23503' });
     await expect(como(tenantA, m => vincular(m, colabB))).rejects.toMatchObject({ code: '23503' });
     await expect(como(tenantA, m => vincular(m, rep, { verificadoPor: autorB }))).rejects.toMatchObject({ code: '23503' });
+    // Revogação por autor de outro tenant (revisão R4 da P2d-1).
+    const d = await como(tenantA, m => delegar(m, colab)), v = await como(tenantA, m => vincular(m, rep));
+    await expect(como(tenantA, m => m.query('update delegacoes_carteira_profissional set revogada_por=$1, revogada_em=now() where id=$2', [autorB, d.id])))
+      .rejects.toMatchObject({ code: '23503' });
+    await expect(como(tenantA, m => m.query('update vinculos_representacao_paciente set revogado_por=$1, revogado_em=now() where id=$2', [autorB, v.id])))
+      .rejects.toMatchObject({ code: '23503' });
   });
+
+  it('delegação recusa colaborador que concede a si mesmo (revisão R4 da P2d-1)', async () => {
+    const colab = await usuario();
+    await expect(como(tenantA, m => delegar(m, colab, { concedidaPor: colab }))).rejects.toMatchObject({ code: '23514' });
+  });
+
+  it.each(['delegacoes_carteira_profissional', 'vinculos_representacao_paciente'] as const)(
+    '%s: o banco fixa as datas (concessão e revogação) e recusa linha que já nasce revogada', async tabela => {
+      const alvo = await usuario();
+      const [colEm, colPor, colRevEm] = tabela === 'delegacoes_carteira_profissional' ? ['concedida_em', 'revogada_por', 'revogada_em'] : ['verificado_em', 'revogado_por', 'revogado_em'];
+      const inserir = (extra: string, valores: unknown[]) => como(tenantA, m => m.query(tabela === 'delegacoes_carteira_profissional'
+        ? `insert into delegacoes_carteira_profissional (tenant_id, profissional_id, colaborador_usuario_id, concedida_por${extra}) values ($1,$2,$3,$4${valores.map((_, i) => `,$${5 + i}`).join('')}) returning *`
+        : `insert into vinculos_representacao_paciente (tenant_id, paciente_id, representante_usuario_id, verificado_por, tipo_verificacao${extra}) values ($1,$2,$3,$4,'presencial'${valores.map((_, i) => `,$${5 + i}`).join('')}) returning *`,
+      [tenantA, tabela === 'delegacoes_carteira_profissional' ? titularA : pacienteA, alvo, autorA, ...valores]));
+      await expect(inserir(`, ${colPor}, ${colRevEm}`, [autorA, '2999-01-01'])).rejects.toMatchObject({ code: '23514' });
+      const [linha] = await inserir(`, ${colEm}`, ['2000-01-01']) as Array<Record<string, Date>>;
+      expect(Math.abs(linha[colEm].getTime() - Date.now())).toBeLessThan(60_000);
+      await como(tenantA, m => m.query(`update ${tabela} set ${colPor}=$1, ${colRevEm}='2000-01-02' where id=$2`, [autorA, linha.id]));
+      const revogada = (await owner.query(`select ${colRevEm} as em from ${tabela} where id=$1`, [linha.id])).rows[0].em as Date;
+      expect(Math.abs(revogada.getTime() - Date.now())).toBeLessThan(60_000);
+    });
 
   it('vínculo recusa auto-outorga e tipo de verificação fora da lista; uma conta pode representar vários pacientes', async () => {
     const rep = await usuario();
@@ -158,6 +185,21 @@ suite('FOOD06 P2d-1 1085: delegação de carteira e vínculo de representação 
     }
   });
 
+  it('down recusa quando só a tabela de delegações tem linhas (banco dedicado)', async () => {
+    await owner.query('create database p2d1_down_delegacao_test');
+    const alvo = { ...conn, database: 'p2d1_down_delegacao_test' }, c = new Client({ ...alvo, user: 'owner', password: 'owner-synthetic' });
+    await c.connect();
+    try {
+      await fixture(c); await aplicar(alvo, 'up');
+      const t = randomUUID(), p = randomUUID(), u1 = randomUUID(), u2 = randomUUID();
+      await c.query('insert into tenants values($1)', [t]); await c.query('insert into profissionais values($1,$2)', [p, t]);
+      await c.query('insert into usuarios values($1,$3),($2,$3)', [u1, u2, t]);
+      await c.query('insert into delegacoes_carteira_profissional (tenant_id, profissional_id, colaborador_usuario_id, concedida_por) values ($1,$2,$3,$4)', [t, p, u1, u2]);
+      await expect(aplicar(alvo, 'down')).rejects.toThrow('Rollback recusado');
+      expect((await c.query("select to_regclass('delegacoes_carteira_profissional') t")).rows[0].t).toBe('delegacoes_carteira_profissional');
+    } finally { await c.end(); }
+  });
+
   it('down recusa enquanto houver linhas e mantém os registros', async () => {
     const antes = (await owner.query('select count(*)::int n from vinculos_representacao_paciente')).rows[0].n;
     expect(antes).toBeGreaterThan(0);
@@ -174,7 +216,7 @@ suite('FOOD06 P2d-1 1085: delegação de carteira e vínculo de representação 
       for (const t of ['delegacoes_carteira_profissional', 'vinculos_representacao_paciente']) {
         expect((await c.query('select to_regclass($1) tabela', [t])).rows[0].tabela).toBeNull();
       }
-      expect((await c.query("select proname from pg_proc where proname in ('validar_revogacao_delegacao_carteira','validar_revogacao_vinculo_representacao','rejeitar_exclusao_delegacao_vinculo')")).rows).toEqual([]);
+      expect((await c.query("select proname from pg_proc where proname in ('validar_revogacao_delegacao_carteira','validar_revogacao_vinculo_representacao','rejeitar_exclusao_delegacao_vinculo','validar_criacao_delegacao_carteira','validar_criacao_vinculo_representacao')")).rows).toEqual([]);
       expect((await c.query("select to_regclass('pacientes') tabela")).rows[0].tabela).toBe('pacientes');
     } finally { await c.end(); }
   });

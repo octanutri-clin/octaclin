@@ -31,6 +31,10 @@ describe('1085 delegação de carteira e vínculo de representação', () => {
     }
     expect(sql).toMatch(/create unique index ux_delegacoes_carteira_ativa[\s\S]*\(tenant_id, profissional_id, colaborador_usuario_id\)[\s\S]*where revogada_em is null/);
     expect(sql).toMatch(/\(revogada_por is null\) = \(revogada_em is null\)/);
+    expect(sql).toContain('check (concedida_por <> colaborador_usuario_id)');
+    expect(sql.match(/before insert on/g)).toHaveLength(2);
+    expect(sql).toContain('new.concedida_em := now()');
+    expect(sql).toContain('new.revogada_em := clock_timestamp()');
   });
 
   it('vínculo: tipo de verificação fechado, sem auto-outorga, um ativo por par e índice por representante', async () => {

@@ -36,6 +36,7 @@ export class DelegacoesCarteiraEVinculosRepresentacao1720000001085 implements Mi
         revogada_por uuid,
         revogada_em timestamptz,
         unique (tenant_id, id),
+        constraint ck_delegacoes_sem_auto_concessao check (concedida_por <> colaborador_usuario_id),
         constraint ck_delegacoes_carteira_revogacao check (
           (revogada_por is null) = (revogada_em is null)
           and (revogada_em is null or revogada_em >= concedida_em)),
@@ -82,6 +83,25 @@ export class DelegacoesCarteiraEVinculosRepresentacao1720000001085 implements Mi
         raise exception 'Delegacoes e vinculos preservam historico: exclusao recusada.' using errcode = '42501';
       end; $$;
 
+      -- Datas do histórico vêm do banco, nunca do cliente; nenhuma linha nasce revogada (revisão R4 da P2d-1).
+      create function validar_criacao_delegacao_carteira() returns trigger language plpgsql as $$
+      begin
+        if new.revogada_por is not null or new.revogada_em is not null then
+          raise exception 'Delegacao nasce vigente.' using errcode = '23514';
+        end if;
+        new.concedida_em := now();
+        return new;
+      end; $$;
+
+      create function validar_criacao_vinculo_representacao() returns trigger language plpgsql as $$
+      begin
+        if new.revogado_por is not null or new.revogado_em is not null then
+          raise exception 'Vinculo nasce vigente.' using errcode = '23514';
+        end if;
+        new.verificado_em := now();
+        return new;
+      end; $$;
+
       create function validar_revogacao_delegacao_carteira() returns trigger language plpgsql as $$
       begin
         if (new.id, new.tenant_id, new.profissional_id, new.colaborador_usuario_id, new.concedida_por, new.concedida_em)
@@ -89,6 +109,7 @@ export class DelegacoesCarteiraEVinculosRepresentacao1720000001085 implements Mi
            or old.revogada_em is not null or new.revogada_em is null or new.revogada_por is null then
           raise exception 'Delegacao imutavel: apenas revogacao unica e permitida.' using errcode = '23514';
         end if;
+        new.revogada_em := clock_timestamp();
         return new;
       end; $$;
 
@@ -99,6 +120,7 @@ export class DelegacoesCarteiraEVinculosRepresentacao1720000001085 implements Mi
            or old.revogado_em is not null or new.revogado_em is null or new.revogado_por is null then
           raise exception 'Vinculo imutavel: apenas revogacao unica e permitida.' using errcode = '23514';
         end if;
+        new.revogado_em := clock_timestamp();
         return new;
       end; $$;
 
@@ -107,6 +129,10 @@ export class DelegacoesCarteiraEVinculosRepresentacao1720000001085 implements Mi
         for each statement execute function rejeitar_exclusao_delegacao_vinculo();
       alter table delegacoes_carteira_profissional enable always trigger trg_delegacoes_carteira_sem_exclusao;
       revoke delete, truncate on delegacoes_carteira_profissional from public;
+      create trigger trg_delegacoes_carteira_criacao
+        before insert on delegacoes_carteira_profissional
+        for each row execute function validar_criacao_delegacao_carteira();
+      alter table delegacoes_carteira_profissional enable always trigger trg_delegacoes_carteira_criacao;
       create trigger trg_delegacoes_carteira_revogacao
         before update on delegacoes_carteira_profissional
         for each row execute function validar_revogacao_delegacao_carteira();
@@ -117,6 +143,10 @@ export class DelegacoesCarteiraEVinculosRepresentacao1720000001085 implements Mi
         for each statement execute function rejeitar_exclusao_delegacao_vinculo();
       alter table vinculos_representacao_paciente enable always trigger trg_vinculos_representacao_sem_exclusao;
       revoke delete, truncate on vinculos_representacao_paciente from public;
+      create trigger trg_vinculos_representacao_criacao
+        before insert on vinculos_representacao_paciente
+        for each row execute function validar_criacao_vinculo_representacao();
+      alter table vinculos_representacao_paciente enable always trigger trg_vinculos_representacao_criacao;
       create trigger trg_vinculos_representacao_revogacao
         before update on vinculos_representacao_paciente
         for each row execute function validar_revogacao_vinculo_representacao();
@@ -139,6 +169,8 @@ export class DelegacoesCarteiraEVinculosRepresentacao1720000001085 implements Mi
     await q.query(`drop table vinculos_representacao_paciente;
       drop table delegacoes_carteira_profissional;
       drop function validar_revogacao_vinculo_representacao();
+      drop function validar_criacao_vinculo_representacao();
+      drop function validar_criacao_delegacao_carteira();
       drop function validar_revogacao_delegacao_carteira();
       drop function rejeitar_exclusao_delegacao_vinculo();`);
   }
