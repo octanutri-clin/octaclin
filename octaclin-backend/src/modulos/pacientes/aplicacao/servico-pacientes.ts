@@ -442,7 +442,7 @@ export class ServicoPacientes {
         throw new NotFoundException('Paciente nao encontrado.');
       }
       // FOOD06 P2d-3a: arquivar encerra as representações no portal; restaurar não as revive.
-      await revogarVinculosDoPaciente(gerenciador, tenantId, pacienteId, usuario.usuarioId);
+      await revogarVinculosDoPaciente(gerenciador, tenantId, pacienteId, usuario.usuarioId, 'arquivamento');
       await invalidarContextoPiloto317(gerenciador, tenantId, { pacienteId });
       const perfil = await gerenciador.getRepository(PerfilCadastroPacienteOrm).findOne({ where: { tenantId, pacienteId } });
       const dataRevisao = lerDataRevisaoPerfil(this.criptografia, perfil?.operacaoCriptografada);
@@ -529,7 +529,7 @@ export class ServicoPacientes {
       paciente.statusCicloVida = 'DELETED';
       paciente.deletedAt = agora;
       // FOOD06 P2d-3a: eliminação encerra as representações no portal.
-      await revogarVinculosDoPaciente(gerenciador, tenantId, pacienteId, usuario.usuarioId);
+      await revogarVinculosDoPaciente(gerenciador, tenantId, pacienteId, usuario.usuarioId, 'eliminacao');
       paciente.retentionReason = undefined;
       paciente.retentionUntil = undefined;
       paciente.legalBasis = 'lgpd_art_18_v_eliminacao';
@@ -579,6 +579,8 @@ export class ServicoPacientes {
       );
       // FOOD06 P2d-3a: a conta do paciente pode representar outros pacientes; essas representações caem junto.
       await revogarVinculosPorAlteracaoAcesso(gerenciador, tenantId, paciente.usuarioId, usuario.usuarioId);
+      // Decisão do proprietário (2026-11-16): desativar a conta do paciente também derruba quem o representa.
+      await revogarVinculosDoPaciente(gerenciador, tenantId, pacienteId, usuario.usuarioId, 'desativacao_conta');
       await gerenciador.getRepository(RefreshTokenOrm).update(
         { tenantId, usuarioId: paciente.usuarioId },
         { revogadoEm: agora }

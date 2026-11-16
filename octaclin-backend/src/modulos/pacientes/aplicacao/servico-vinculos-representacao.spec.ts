@@ -25,6 +25,7 @@ function preparar() {
     if (sql === 'show transaction_isolation') return [{ transaction_isolation: 'read committed' }];
     if (sql.includes('insert into vinculos_representacao_paciente')) return [{ id: vinculoId, verificado_em: new Date(0) }];
     if (sql.includes('update vinculos_representacao_paciente')) return [{ id: vinculoId }];
+    if (sql.includes('as do_paciente')) return [{ do_paciente: 0, do_representante: 0 }];
     return [];
   });
   const g = { query, queryRunner: { isTransactionActive: true }, getRepository: jest.fn((e: unknown) => {
@@ -111,6 +112,14 @@ describe('ServicoVinculosRepresentacao (P2d-3a)', () => {
     await expect(c.s.revogar(profissional, pacienteId, vinculoId)).resolves.toEqual({ id: vinculoId, revogado: true });
     expect(c.vinculo.update).not.toHaveBeenCalled();
   });
+  it.each([[{ do_paciente: 100, do_representante: 0 }], [{ do_paciente: 0, do_representante: 100 }]])(
+    'limite de 100 vigentes (por paciente ou por representante) responde 409 sem gravar, sob trava consultiva', async limite => {
+      const c = preparar(); const base = c.query.getMockImplementation()!;
+      c.query.mockImplementation(async (sql: string, p?: unknown[]) => sql.includes('as do_paciente') ? [limite] : base(sql, p));
+      await expect(c.s.registrar(profissional, pacienteId, representante, 'presencial')).rejects.toMatchObject({ status: 409 });
+      expect(inseriu(c)).toBe(false);
+      expect(c.query.mock.calls.find(([sql]) => sql.includes('pg_advisory_xact_lock'))?.[1]).toEqual([`representante:${tenant}:${representante}`]);
+    });
   it('lista só vínculos vigentes do paciente, depois de autorizar', async () => {
     const c = preparar(); c.vinculo.find.mockResolvedValueOnce([{ id: vinculoId, representanteUsuarioId: representante, tipoVerificacao: 'presencial', verificadoEm: new Date(0), revogadoPor: 'CANARIO' }]);
     await expect(c.s.listar(profissional, pacienteId)).resolves.toEqual([{ id: vinculoId, representanteUsuarioId: representante, tipoVerificacao: 'presencial', verificadoEm: new Date(0) }]);
@@ -119,7 +128,7 @@ describe('ServicoVinculosRepresentacao (P2d-3a)', () => {
   it('cascatas revogam pela conta representante ou pelo paciente', async () => {
     const c = preparar();
     await revogarVinculosPorAlteracaoAcesso(c.g as never, tenant, representante, ator);
-    await revogarVinculosDoPaciente(c.g as never, tenant, pacienteId, ator);
+    await revogarVinculosDoPaciente(c.g as never, tenant, pacienteId, ator, 'arquivamento');
     const updates = c.query.mock.calls.filter(([sql]) => sql.includes('update vinculos_representacao_paciente'));
     expect(updates[0][0]).toMatch(/v\.representante_usuario_id = \$2/); expect(updates[0][1]).toEqual([tenant, representante, ator]);
     expect(updates[1][0]).toMatch(/v\.paciente_id = \$2/); expect(updates[1][1]).toEqual([tenant, pacienteId, ator]);

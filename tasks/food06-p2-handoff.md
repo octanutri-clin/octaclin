@@ -69,12 +69,19 @@ função pura (`dominio/projecao-portal-solicitacao.ts`). **Criar e cancelar pel
      Revisão R4 (subagente de tenant, mesmo modelo): 1 bloqueante corrigido (paciente eliminado por LGPD ficava acessível:
      agora negado no portal, fora do seletor e com vínculos revogados na eliminação); travas explícitas no registro; repetição
      com outro tipo de verificação = 409. Limites: `pacientes.usuario_id` sem unique (seletor falha fechado com dois "próprios";
-     unique fica para migration própria, R4, fora de banda); desativar a conta do próprio paciente não revoga quem o representa
-     (confirmar com o proprietário); a cascata em `servico-usuarios-cliente` não alcança contas Patient (o escritor real é
-     `desativarContaAcesso`); encerramento de tenant não revoga vínculos (o portal relê `ativo`); listas cortam em 100.
+     unique fica para migration própria, R4, fora de banda; o portal também falha fechado com conta "própria" de mais de uma
+     ficha); a cascata em `servico-usuarios-cliente` não alcança contas Patient (o escritor real é `desativarContaAcesso`);
+     encerramento de tenant não revoga vínculos (o portal relê `ativo`).
+     **Decisões do proprietário (2026-11-16, depois da revisão):** desativar a conta do paciente também derruba quem o
+     representa (`revogarVinculosDoPaciente(..., 'desativacao_conta')`); limites de 100 vigentes já na P2d-3a: delegações por
+     titular, representantes por paciente e representações por conta (409 acima; travas consultivas por titular e por
+     representante), então nenhuma lista corta sem aviso. Guarda textual `usuarios/infraestrutura/guarda-escritores-acesso.spec.ts`
+     exige que todo escritor de `usuarios.ativo`/`role` chame a cascata (exceção nominal: encerramento de tenant).
    - **P2d-3b (a seguir):** declaração, pedidos (criar, cancelar pelo autor, listar) e resumo Q11 no portal; encerra a P2.
-   - **Backlog para a P3 (decisão do proprietário, 2026-11-16):** limitar a concessão a 100 delegações vigentes por titular
-     (409 acima disso), para a lista nunca cortar sem aviso; se a tela mostrar o histórico de delegações, consulta paginada própria.
+   - **Backlog para a P3:** se a tela mostrar o histórico de delegações ou de vínculos (revogados), consulta paginada própria.
+     (O limite de 100 vigentes foi antecipado para a P2d-3a.)
+   - **PR própria a seguir:** unique parcial em `pacientes (tenant_id, usuario_id) where usuario_id is not null` (migration R4,
+     fora de banda, com checagem de duplicatas antes; ensaio só em PostgreSQL descartável).
 4. Depois: P3 (telas, UX B/C) e P4 (M04/M12, apply com impressão e invalidação de prévias).
 
 

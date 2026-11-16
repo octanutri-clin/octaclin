@@ -867,7 +867,7 @@ describe('ServicoPacientes', () => {
 
       expect(repositorio.update).toHaveBeenCalledWith(expect.any(Object), { arquivadoEm: expect.any(Date) });
       // FOOD06 P2d-3a: arquivar encerra as representações; restaurar não as revive.
-      expect(cascata).toHaveBeenCalledWith(expect.anything(), 'tenant-1', 'paciente-1', usuarioColaborador.usuarioId);
+      expect(cascata).toHaveBeenCalledWith(expect.anything(), 'tenant-1', 'paciente-1', usuarioColaborador.usuarioId, 'arquivamento');
       cascata.mockRestore();
     });
 
@@ -3693,7 +3693,7 @@ describe('ServicoPacientes - LGPD retencao e eliminacao', () => {
       ['tenant-1', 'paciente-1']
     );
     // FOOD06 P2d-3a: a eliminação revoga as representações no portal.
-    expect(cascataEliminacao).toHaveBeenCalledWith(expect.anything(), 'tenant-1', 'paciente-1', usuarioColaborador.usuarioId);
+    expect(cascataEliminacao).toHaveBeenCalledWith(expect.anything(), 'tenant-1', 'paciente-1', usuarioColaborador.usuarioId, 'eliminacao');
     cascataEliminacao.mockRestore();
     expect(resultado.deletedAt).toBeInstanceOf(Date);
     const salvo = await repositorioPaciente.save.mock.results[0].value;
@@ -3754,6 +3754,7 @@ describe('ServicoPacientes - LGPD retencao e eliminacao', () => {
       });
 
     const cascata = jest.spyOn(vinculosRepresentacao, 'revogarVinculosPorAlteracaoAcesso');
+    const cascataRepresentados = jest.spyOn(vinculosRepresentacao, 'revogarVinculosDoPaciente');
     await servico.desativarContaAcesso('tenant-1', 'paciente-1', usuarioColaborador);
 
     expect(repositorioUsuario.update).toHaveBeenCalledWith(
@@ -3764,6 +3765,9 @@ describe('ServicoPacientes - LGPD retencao e eliminacao', () => {
     expect(cascata).toHaveBeenCalledWith(expect.anything(), 'tenant-1', 'usuario-paciente-1', usuarioColaborador.usuarioId);
     expect(repositorioUsuario.update.mock.invocationCallOrder[0]).toBeLessThan(cascata.mock.invocationCallOrder[0]);
     cascata.mockRestore();
+    // Decisão do proprietário: desativar a conta do paciente também derruba quem o representa.
+    expect(cascataRepresentados).toHaveBeenCalledWith(expect.anything(), 'tenant-1', 'paciente-1', usuarioColaborador.usuarioId, 'desativacao_conta');
+    cascataRepresentados.mockRestore();
     expect(repositorioRefreshToken.update).toHaveBeenCalledWith(
       { tenantId: 'tenant-1', usuarioId: 'usuario-paciente-1' },
       expect.objectContaining({ revogadoEm: expect.any(Date) })

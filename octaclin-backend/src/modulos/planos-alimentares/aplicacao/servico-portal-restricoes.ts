@@ -37,7 +37,7 @@ export class ServicoPortalRestricoes {
             from vinculos_representacao_paciente v join pacientes p on p.tenant_id = v.tenant_id and p.id = v.paciente_id
            where v.tenant_id = $1 and v.representante_usuario_id = $2 and v.revogado_em is null and p.arquivado_em is null and p.status_ciclo_vida <> 'DELETED'
              and p.usuario_id is distinct from $2
-          order by via, id limit 100`, [tenantId, usuarioId]);
+          order by via, id limit 101`, [tenantId, usuarioId]);
         const itens = linhas.map(l => {
           if (!isUUID(l.id) || (l.via !== 'propria' && l.via !== 'representante') || !Buffer.isBuffer(l.nome)) throw new InternalServerErrorException('Operação indisponível.');
           return { pacienteId: l.id, via: l.via, nome: this.cripto.descriptografar(l.nome) };

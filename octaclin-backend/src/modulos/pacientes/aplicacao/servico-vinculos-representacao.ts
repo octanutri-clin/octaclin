@@ -13,6 +13,8 @@ export type TipoVerificacaoRepresentacao = typeof TIPOS_VERIFICACAO_REPRESENTACA
 export interface VinculoRepresentacaoResposta { id: string; representanteUsuarioId: string; tipoVerificacao: TipoVerificacaoRepresentacao; verificadoEm: Date }
 
 const negar = () => new ForbiddenException('Operação não autorizada.');
+/** Máximo de representantes vigentes por paciente e de representados por conta; as listas devolvem todos. */
+export const LIMITE_VINCULOS_VIGENTES = 100;
 
 async function exigirReadCommitted(g: EntityManager): Promise<void> {
   const isolamento: Array<{ transaction_isolation?: string }> = await g.query('show transaction_isolation');
@@ -48,9 +50,12 @@ export async function revogarVinculosPorAlteracaoAcesso(g: EntityManager, tenant
   await revogarEmLote(g, tenantId, 'v.representante_usuario_id = $2', usuarioId, revogadorUsuarioId, 'representacao.vinculo.revogar_por_alteracao_acesso');
 }
 
-/** Arquivar o paciente encerra as representações; restaurar não as revive. */
-export async function revogarVinculosDoPaciente(g: EntityManager, tenantId: string, pacienteId: string, revogadorUsuarioId: string): Promise<void> {
-  await revogarEmLote(g, tenantId, 'v.paciente_id = $2', pacienteId, revogadorUsuarioId, 'representacao.vinculo.revogar_por_arquivamento');
+export type MotivoRevogacaoVinculosPaciente = 'arquivamento' | 'eliminacao' | 'desativacao_conta';
+
+/** Arquivar, eliminar (LGPD) ou desativar a conta do paciente encerra quem o representa; nada disso revive depois. */
+export async function revogarVinculosDoPaciente(g: EntityManager, tenantId: string, pacienteId: string, revogadorUsuarioId: string,
+  motivo: MotivoRevogacaoVinculosPaciente): Promise<void> {
+  await revogarEmLote(g, tenantId, 'v.paciente_id = $2', pacienteId, revogadorUsuarioId, `representacao.vinculo.revogar_por_${motivo}`);
 }
 
 /**
@@ -77,7 +82,7 @@ export class ServicoVinculosRepresentacao {
         await autorizarPendenciaRestricao(g, u, paciente);
         const linhas = await g.getRepository(VinculoRepresentacaoPacienteOrm).find({
           where: { tenantId: u.tenantId, pacienteId: paciente, revogadoEm: IsNull() },
-          select: { id: true, representanteUsuarioId: true, tipoVerificacao: true, verificadoEm: true }, order: { verificadoEm: 'DESC' }, take: 100 });
+          select: { id: true, representanteUsuarioId: true, tipoVerificacao: true, verificadoEm: true }, order: { verificadoEm: 'DESC' }, take: LIMITE_VINCULOS_VIGENTES });
         return linhas.map(l => ({ id: l.id, representanteUsuarioId: l.representanteUsuarioId,
           tipoVerificacao: l.tipoVerificacao as TipoVerificacaoRepresentacao, verificadoEm: l.verificadoEm }));
       });
@@ -107,6 +112,15 @@ export class ServicoVinculosRepresentacao {
         if (existente && existente.tipoVerificacao !== tipoVerificacao) throw new ConflictException('Operação indisponível ou concorrente.');
         if (existente) return { id: existente.id, representanteUsuarioId: existente.representanteUsuarioId,
           tipoVerificacao: existente.tipoVerificacao as TipoVerificacaoRepresentacao, verificadoEm: existente.verificadoEm };
+        // Limites: por paciente (serializado pela trava do paciente) e por representante (trava consultiva própria).
+        await g.query('select pg_advisory_xact_lock(hashtextextended($1, 0))', [`representante:${u.tenantId}:${representante}`]);
+        const contagem: Array<{ do_paciente: number; do_representante: number }> = await g.query(`select
+            count(*) filter (where paciente_id = $2)::int as do_paciente, count(*) filter (where representante_usuario_id = $3)::int as do_representante
+          from vinculos_representacao_paciente where tenant_id = $1 and revogado_em is null and (paciente_id = $2 or representante_usuario_id = $3)`,
+          [u.tenantId, paciente, representante]);
+        if (contagem.length !== 1 || contagem[0].do_paciente >= LIMITE_VINCULOS_VIGENTES || contagem[0].do_representante >= LIMITE_VINCULOS_VIGENTES) {
+          throw new ConflictException('Operação indisponível ou concorrente.');
+        }
         const linhas: Array<{ id: string; verificado_em: Date }> = await g.query(`insert into vinculos_representacao_paciente
           (tenant_id, paciente_id, representante_usuario_id, verificado_por, tipo_verificacao) values ($1, $2, $3, $4, $5) returning id, verificado_em`,
           [u.tenantId, paciente, representante, u.usuarioId, tipoVerificacao]);

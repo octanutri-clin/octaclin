@@ -27,7 +27,7 @@ describe('seletor de pacientes do portal (P2d-3a)', () => {
     await expect(c.s.listarPacientes(ator as never)).resolves.toEqual([
       { pacienteId: p1, via: 'propria', nome: 'Nome sintético 1' }, { pacienteId: p2, via: 'representante', nome: 'Nome sintético 2' }]);
     const [sql, params] = c.query.mock.calls.find(([s]) => s.includes('from pacientes'))!;
-    expect(sql).toMatch(/v\.revogado_em is null/); expect(sql).toMatch(/p\.arquivado_em is null/); expect(sql).toMatch(/limit 100/);
+    expect(sql).toMatch(/v\.revogado_em is null/); expect(sql).toMatch(/p\.arquivado_em is null/); expect(sql).toMatch(/limit 101/);
     expect(sql.match(/p\.status_ciclo_vida <> 'DELETED'/g)).toHaveLength(2);
     expect(params).toEqual([tenant, conta]);
     expect(c.usuario.findOne).toHaveBeenCalledWith(expect.objectContaining({ lock: { mode: 'pessimistic_read' } }));

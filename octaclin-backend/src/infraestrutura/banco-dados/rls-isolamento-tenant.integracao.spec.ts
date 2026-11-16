@@ -84,6 +84,7 @@ import { ReconfirmacaoRestricoesOrm } from '../../modulos/planos-alimentares/inf
 import { SolicitacaoRestricaoPacienteOrm } from '../../modulos/planos-alimentares/infraestrutura/solicitacao-restricao-paciente.orm';
 import { ServicoProfissionais } from '../../modulos/profissionais/aplicacao/servico-profissionais';
 import { RefreshTokenOrm } from '../../modulos/auth/infraestrutura/refresh-token.orm';
+import { SessaoUsuarioOrm } from '../../modulos/auth/infraestrutura/sessao-usuario.orm';
 import { DelegacaoCarteiraProfissionalOrm } from '../../modulos/profissionais/infraestrutura/delegacao-carteira-profissional.orm';
 import { VinculoRepresentacaoPacienteOrm } from '../../modulos/pacientes/infraestrutura/vinculo-representacao-paciente.orm';
 import { revogarVinculosPorAlteracaoAcesso, ServicoVinculosRepresentacao } from '../../modulos/pacientes/aplicacao/servico-vinculos-representacao';
@@ -302,6 +303,7 @@ descrever('RLS e isolamento multi-tenant integral em Postgres real', () => {
         DelegacaoCarteiraProfissionalOrm,
         VinculoRepresentacaoPacienteOrm,
         RefreshTokenOrm,
+        SessaoUsuarioOrm,
         PermissaoIntegracaoProfissionalOrm,
         UserActionLogOrm,
         NotificacaoOrm,
@@ -3018,6 +3020,21 @@ descrever('RLS e isolamento multi-tenant integral em Postgres real', () => {
     expect(await vigentes(outro.pacienteId)).toEqual([]);
     await comoTenant(tenant); await cliente.query('update usuarios set ativo=true where id=$1', [representanteId]);
     await expect(acessar(representante, outro.pacienteId)).rejects.toMatchObject({ status: 403 });
+    // Desativar a conta do paciente pelo serviço real (decisão do proprietário): caem quem o representa E as
+    // representações que essa conta exercia sobre outro paciente.
+    await vinculos.registrar(titularOutro, outro.pacienteId, contaPacienteId, 'presencial');
+    expect(await vigentes(dados.pacienteId)).toHaveLength(1);
+    expect(await vigentes(outro.pacienteId)).toHaveLength(1);
+    await pacientes.desativarContaAcesso(tenant, dados.pacienteId, titular);
+    expect(await vigentes(dados.pacienteId)).toEqual([]);
+    expect(await vigentes(outro.pacienteId)).toEqual([]);
+    await expect(acessar(contaPaciente, dados.pacienteId)).rejects.toMatchObject({ status: 403 });
+    await expect(acessar(comoUsuario(segundoRep, 'Patient'), dados.pacienteId)).rejects.toMatchObject({ status: 403 });
+    expect((await cliente.query("select count(*)::int n from user_action_logs where tenant_id=$1 and acao='representacao.vinculo.revogar_por_desativacao_conta'", [tenant])).rows[0].n).toBe(1);
+    // Reativar a conta não revive nenhuma representação.
+    await comoTenant(tenant); await cliente.query('update usuarios set ativo=true where id=$1', [contaPacienteId]);
+    await expect(acessar(comoUsuario(segundoRep, 'Patient'), dados.pacienteId)).rejects.toMatchObject({ status: 403 });
+    await vinculos.registrar(titular, dados.pacienteId, segundoRep, 'presencial');
     // Arquivar o paciente (serviço real) revoga as representações; restaurar não as revive.
     expect(await vigentes(dados.pacienteId)).toHaveLength(1);
     await pacientes.arquivar(tenant, dados.pacienteId, titular);
